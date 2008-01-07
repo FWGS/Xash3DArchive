@@ -1254,7 +1254,7 @@ void R_StudioDrawMeshes ( mstudiotexture_t * ptexture, short *pskinref, int pass
                                         if ( m_pCurrentEntity->flags & RF_FULLBRIGHT )
 					lv = &fbright[0];
                                         if ( m_pCurrentEntity->flags & RF_MINLIGHT )//used for viewmodel only
-					VectorBound(0.1f, lv, 1.0f );
+					VectorBound(0.01f, lv, 1.0f );
 
 				if ( r_newrefdef.rdflags & RDF_IRGOGGLES && m_pCurrentEntity->flags & RF_IR_VISIBLE)
 					lv = &irgoggles[0];

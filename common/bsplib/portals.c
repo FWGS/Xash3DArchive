@@ -994,7 +994,7 @@ void FindPortalSide (portal_t *p)
 	}
 
 gotit:
-	if (!bestside) Msg("WARNING: side not found for portal\n");
+	if( !bestside ) MsgWarn("side not found for portal\n");
 
 	p->sidefound = true;
 	p->side = bestside;

@@ -12,6 +12,8 @@
 
 =============================================================
 */
+string	frame_prefix;
+
 /*
 ====================
 Sprite model loader
@@ -53,7 +55,7 @@ dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t **ppfra
 	
 	// extract sprite name from path
 	FS_FileBase( mod->name, name );
-	com.strcat(name, va("_%i", framenum ));
+	com.strcat(name, va("_%s_%i%i", frame_prefix, framenum/10, framenum%10 ));
 	spr_frame->size = width * height * 4; // for bounds checking
 	spr_frame->buffer = (byte *)Mem_Alloc( mod->mempool, spr_frame->size );
 
@@ -68,8 +70,9 @@ dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t **ppfra
 	if( image )
 	{
 		pspriteframe->texnum = image->texnum[0];
-		mod->skins[framenum] = image;
-          }
+		mod->skins[mod->numtexinfo] = image;
+		mod->numtexinfo++;
+	}
           else MsgDev(D_WARN, "%s has null frame %d\n", image->name, framenum );
 
 	FS_FreeImage( spr_frame );          
@@ -108,7 +111,7 @@ dframetype_t *R_SpriteLoadGroup (model_t *mod, void * pin, mspriteframe_t **ppfr
 	ptemp = (void *)pin_intervals;
 	for (i = 0; i < numframes; i++ )
 	{
-		ptemp = R_SpriteLoadFrame(mod, ptemp, &pspritegroup->frames[i], framenum + i);
+		ptemp = R_SpriteLoadFrame(mod, ptemp, &pspritegroup->frames[i], framenum * 10 + i );
 	}
 	return (dframetype_t *)ptemp;
 }
@@ -134,6 +137,7 @@ void R_SpriteLoadModel( model_t *mod, void *buffer )
 
 	psprite = Mem_Alloc(mod->mempool, size );
 	mod->extradata = psprite; //make link to extradata
+	mod->numtexinfo = 0; // reset frames
 	
 	psprite->type	= LittleLong(pin->type);
 	psprite->maxwidth	= LittleLong(pin->width);
@@ -146,7 +150,7 @@ void R_SpriteLoadModel( model_t *mod, void *buffer )
 	mod->maxs[2] = psprite->maxheight / 2;
 	pframetype = (dframetype_t *)(pin + 1);
 
-	Msg("load %s, rendermode %d\n", mod->name, psprite->rendermode );
+	MsgDev(D_LOAD, "%s, rendermode %d\n", mod->name, psprite->rendermode );
 		
 	if(numframes < 1)
 	{
@@ -154,7 +158,6 @@ void R_SpriteLoadModel( model_t *mod, void *buffer )
 		return;
 	}	
 
-	mod->numframes = mod->numtexinfo = numframes;
 	mod->registration_sequence = registration_sequence;
 
 	for (i = 0; i < numframes; i++ )
@@ -165,10 +168,15 @@ void R_SpriteLoadModel( model_t *mod, void *buffer )
 		switch( frametype )
 		{
 		case SPR_SINGLE:
+			com.strncpy( frame_prefix, "one", MAX_STRING );
 			pframetype = R_SpriteLoadFrame(mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		case SPR_GROUP:
+			com.strncpy( frame_prefix, "grp", MAX_STRING );
+			pframetype = R_SpriteLoadGroup(mod, pframetype + 1, &psprite->frames[i].frameptr, i );
+			break;
 		case SPR_ANGLED:
+			com.strncpy( frame_prefix, "ang", MAX_STRING );
 			pframetype = R_SpriteLoadGroup(mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		}
@@ -241,7 +249,7 @@ bool R_AcceptSpritePass( entity_t *e, int pass )
 		if(psprite->rendermode == SPR_NORMAL) return true;	// solid sprite
 		if(psprite->rendermode == SPR_ADDGLOW) return false;	// draw it at second pass
 		if(psprite->rendermode == SPR_ADDITIVE) return false;	// must be draw first always
-		if(psprite->rendermode == SPR_ALPHTEST) return true;	// already blended by alphatest
+		if(psprite->rendermode == SPR_ALPHTEST) return false;	// already blended by alphatest
 		if(psprite->rendermode == SPR_INDEXALPHA) return false;	// already blended by alphatest
 	}	
 	if(pass == RENDERPASS_ALPHA)
@@ -251,10 +259,31 @@ bool R_AcceptSpritePass( entity_t *e, int pass )
 		if(psprite->rendermode == SPR_NORMAL) return false;	// solid sprite
 		if(psprite->rendermode == SPR_ADDGLOW) return true;	// can draw
 		if(psprite->rendermode == SPR_ADDITIVE) return true;	// can draw
-		if(psprite->rendermode == SPR_ALPHTEST) return false;	// already drawed
+		if(psprite->rendermode == SPR_ALPHTEST) return true;	// already drawed
 		if(psprite->rendermode == SPR_INDEXALPHA) return true;	// already drawed
 	}
 	return true;
+}
+
+void R_SpriteSetupLighting( model_t *mod )
+{
+	int i;
+	vec3_t	vlight = {0.0f, 0.0f, -1.0f}; // get light from floor
+
+	if(currententity->flags & RF_FULLBRIGHT)
+	{
+		for (i = 0; i < 3; i++)
+			mod->lightcolor[i] = 1.0f;
+	}
+	else
+	{
+		R_LightPoint( currententity->origin, mod->lightcolor );
+
+		// doom sprite models	
+		if( currententity->flags & RF_WEAPONMODEL )
+			r_lightlevel->value = bound(0, VectorLength(mod->lightcolor) * 75.0f, 255); 
+
+	}
 }
 
 void R_DrawSpriteModel( int passnum )
@@ -263,8 +292,9 @@ void R_DrawSpriteModel( int passnum )
 	vec3_t		point, forward, right, up;
 	entity_t 		*e = currententity;
 	model_t		*mod = currentmodel;
-	float		alpha = 1.0f, realtime = r_newrefdef.time;
+	float		alpha = 1.0f, angle, sr, cr;
 	msprite_t		*psprite;
+	int		i;
 
 	if(!R_AcceptSpritePass( e, passnum )) return;
 
@@ -278,6 +308,8 @@ void R_DrawSpriteModel( int passnum )
 	// merge alpha value
 	if( e->flags & RF_TRANSLUCENT ) alpha = e->alpha;
 	if( e->scale == 0 ) e->scale = 1.0f; // merge scale
+
+	R_SpriteSetupLighting( mod );
 	
 	// setup oriented
 	switch( psprite->type )
@@ -302,19 +334,33 @@ void R_DrawSpriteModel( int passnum )
 		VectorCopy (vup, right);
 		VectorCopy (vforward, forward);
 		break;
-	default:
-		// normal sprite
+	case SPR_VP_PARALLEL_ORIENTED:
+		angle = e->angles[ROLL] * (M_PI*2/360);
+		sr = sin(angle);
+		cr = cos(angle);
+		for (i = 0; i < 3; i++)
+		{
+			forward[i] = vforward[i];
+			right[i] = vright[i] * cr + vup[i] * sr;
+			up[i] = vright[i] * -sr + vup[i] * cr;
+		}
+		break;
+	case SPR_VP_PARALLEL:
+	default: // normal sprite
 		VectorCopy (vup, up);
 		VectorCopy (vright, right);
 		VectorCopy (vforward, forward);
 		break;
 	}
 
+	GL_Bind( frame->texnum );
+	GL_TexEnv( GL_MODULATE );
+
 	// setup rendermode
 	switch( psprite->rendermode )
 	{
 	case SPR_NORMAL:
-		// solid sprite
+		// solid sprite ignore color and light values
 		break;
 	case SPR_ADDGLOW:
 		GL_DisableDepthTest();
@@ -322,16 +368,18 @@ void R_DrawSpriteModel( int passnum )
 	case SPR_ADDITIVE:
 		GL_EnableBlend();
 		qglBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		qglColor4f( 1.0f, 1.0f, 1.0f, alpha );
 		break;
 	case SPR_ALPHTEST:
 	case SPR_INDEXALPHA:
-		GL_EnableAlphaTest();
+		GL_EnableBlend();
+		qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		qglColor4f( mod->lightcolor[0], mod->lightcolor[1], mod->lightcolor[2], 1.0f );
 		break;
 	}                    			
- 	
-	GL_Bind( frame->texnum );
-	GL_TexEnv( GL_MODULATE );
-	qglColor4f( 1.0f, 1.0f, 1.0f, alpha );
+
+	if (currententity->flags & RF_DEPTHHACK) // hack the depth range to prevent view model from poking into walls
+		qglDepthRange (gldepthmin, gldepthmin + 0.3 * (gldepthmax-gldepthmin));
 
 	qglDisable(GL_CULL_FACE);
 	qglBegin (GL_QUADS);
@@ -358,10 +406,11 @@ void R_DrawSpriteModel( int passnum )
 
 	// restore states
 	GL_DisableBlend();
-	GL_DisableAlphaTest();
 	GL_EnableDepthTest();
 	GL_TexEnv(GL_REPLACE);
 	qglEnable(GL_CULL_FACE);
+	if(e->flags & RF_DEPTHHACK) qglDepthRange (gldepthmin, gldepthmax);
 	qglColor4f( 1, 1, 1, 1 );
+
 }
 

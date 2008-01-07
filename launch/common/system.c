@@ -13,7 +13,7 @@ FILE		*logfile;
 
 dll_info_t common_dll = { "common.dll", NULL, "CreateAPI", NULL, NULL, true, sizeof(launch_exp_t) };
 dll_info_t engine_dll = { "engine.dll", NULL, "CreateAPI", NULL, NULL, true, sizeof(launch_exp_t) };
-dll_info_t editor_dll = { "editor.dll", NULL, "CreateAPI", NULL, NULL, true, sizeof(launch_exp_t) };
+dll_info_t editor_dll = { "viewer.dll", NULL, "CreateAPI", NULL, NULL, true, sizeof(launch_exp_t) };
 dll_info_t ripper_dll = { "ripper.dll", NULL, "CreateAPI", NULL, NULL, true, sizeof(launch_exp_t) };
 
 static const char *show_credits = "\n\n\n\n\tCopyright XashXT Group 2007 ©\n\t\
@@ -249,8 +249,8 @@ void Sys_LookupInstance( void )
 		//don't show console as default
 		if(!Sys.debug) Sys.con_showalways = false;
 		Sys.linked_dll = &editor_dll;	// pointer to editor.dll info
-		com_strcpy(Sys.log_path, "editor.log" ); // xash3d root directory
-		com_strcpy(Sys.caption, va("Xash3D Editor ver.%g", XASH_VERSION ));
+		com_strcpy(Sys.log_path, "viewer.log" ); // xash3d root directory
+		com_strcpy(Sys.caption, va("Xash3D Resource Viewer ver.%g", XASH_VERSION ));
 	}
 	else if(!com_strcmp(Sys.progname, "splash"))
 	{
@@ -805,8 +805,11 @@ void Sys_WaitForQuit( void )
 
 	if(Sys.hooked_out)
 	{
-		Sys_Print("press any key to quit\n");
-		getchar(); // wait for quit
+		//if(abs((int)GetStdHandle(STD_OUTPUT_HANDLE)) < 100)
+		{
+			Sys_Print("press enter to quit\n");
+			getchar(); // wait for quit
+		}
 	}
 	else
 	{

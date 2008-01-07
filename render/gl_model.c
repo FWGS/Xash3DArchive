@@ -1026,11 +1026,10 @@ model_t *R_RegisterModel (char *name)
 			break;
 		case mod_studio:
 		case mod_sprite:
-			for (i=0 ; i<mod->numtexinfo ; i++)
+			for(i = 0; i < mod->numtexinfo; i++)
 				mod->skins[i]->registration_sequence = registration_sequence;
 			break;
-		default:
-			return NULL;
+		default: return NULL;
 		}
 	}
 	return mod;

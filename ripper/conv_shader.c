@@ -291,19 +291,18 @@ void Skin_WriteSequence( void )
 	// drop mirror frames too
 	if( flat.mirrorframes == 8 )
 	{
-		// mirrored group have offset with 90 degrees
-		// run simple sorting
+		// mirrored group is always flipped
 		FS_Print(f, "\n$angled\n{\n" );
 		FS_Printf(f, "\t// frame '%c' (mirrored form '%c')\n", flat.frame[0].name[6],flat.frame[0].name[4]);
 		for( i = 2; i > -1; i--)
 		{
-			FS_Printf(f,"\t$load\t\t%s.tga\n", flat.frame[i].name );
+			FS_Printf(f,"\t$load\t\t%s.tga flip_x\n", flat.frame[i].name );
 			FS_Printf(f,"\t$frame\t\t0 0 %d %d", flat.frame[i].width, flat.frame[i].height );
 			FS_Printf(f, " 0.1 %d %d\n", flat.frame[i].origin[0], flat.frame[i].origin[1] );
 		}
 		for( i = 7; i > 2; i--)
 		{
-			FS_Printf(f,"\t$load\t\t%s.tga\n", flat.frame[i].name );
+			FS_Printf(f,"\t$load\t\t%s.tga flip_x\n", flat.frame[i].name );
 			FS_Printf(f,"\t$frame\t\t0 0 %d %d", flat.frame[i].width, flat.frame[i].height );
 			FS_Printf(f, " 0.1 %d %d\n", flat.frame[i].origin[0], flat.frame[i].origin[1] );
 		}
@@ -316,11 +315,11 @@ void Skin_WriteSequence( void )
 
 void Skin_FindSequence( const char *name, rgbdata_t *pic )
 {
-	int	num, headlen;
-	char	header[8];
+	uint	headlen;
+	char	num, header[10];
 
 	// create header from flat name
-	com.strncpy( header, name, 9 );
+	com.strncpy( header, name, 10 );
 	headlen = com.strlen( name );
 
 	if( flat.animation != header[4] )
@@ -337,7 +336,7 @@ void Skin_FindSequence( const char *name, rgbdata_t *pic )
 		{
 			num = header[5] - '0';
 			if(num == 0) flat.normalframes++;	// animation frame
-			if(num == 8) num = 0;	// merge 
+			if(num == 8) num = 0;		// merge 
 			flat.angledframes++; 		// angleframe stored
 			com.strncpy( flat.frame[num].name, header, 9 );
 			flat.frame[num].width = pic->width;
@@ -361,7 +360,7 @@ void Skin_FindSequence( const char *name, rgbdata_t *pic )
 
 			if( header[4] != header[6] )
 			{
-				// tnt & plutonia issues
+				// mirrored groups
 				flat.mirrorframes++;
 				return;
 			}

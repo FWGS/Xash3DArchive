@@ -1777,7 +1777,7 @@ void CM_RoundUpHullSize(vec3_t size, bool down)
 	}
 }
 
-cmodel_t *CM_StudioModel( char *name, edict_t *ent, byte *buffer)
+cmodel_t *CM_StudioModel( char *name, edict_t *ent, byte *buffer, uint filesize )
 {
 	cmodel_t		*out;
 	studiohdr_t	*phdr;
@@ -1791,11 +1791,11 @@ cmodel_t *CM_StudioModel( char *name, edict_t *ent, byte *buffer)
 	}
 
 	out = &map_cmodels[numcmodels + numsmodels];
-	out->extradata = buffer;
 	out->numframes = 0;//reset sprite info
 	com.strncpy(out->name, name, sizeof(out->name));
 	if(!out->mempool) out->mempool = Mem_AllocPool( out->name );// create pool
-	else Mem_EmptyPool( out->mempool );			// clear pool
+	out->extradata = Mem_Alloc( out->mempool, filesize );
+	Mem_Move( out->mempool, &out->extradata, buffer, filesize );
 
 	// create convex mesh physbuffer
 	SV_CreateMeshBuffer( ent, out );
@@ -1804,7 +1804,7 @@ cmodel_t *CM_StudioModel( char *name, edict_t *ent, byte *buffer)
 	return out;
 }
 
-cmodel_t *CM_SpriteModel( char *name, edict_t *ent, byte *buffer)
+cmodel_t *CM_SpriteModel( char *name, edict_t *ent, byte *buffer, uint filesize )
 {
 	cmodel_t		*out;
 	dsprite_t		*phdr;
@@ -1820,13 +1820,13 @@ cmodel_t *CM_SpriteModel( char *name, edict_t *ent, byte *buffer)
 	out = &map_cmodels[numcmodels + numsmodels];
 	out->numframes = phdr->numframes;
 	com.strncpy(out->name, name, sizeof(out->name));
-	if(out->mempool) Mem_EmptyPool( out->mempool );	// clear pool
-	else out->mempool = Mem_AllocPool( out->name );	// create pool
-
+	if(out->mempool) Mem_FreePool( &out->mempool ); // clear previous pool
 	out->mins[0] = out->mins[1] = -phdr->width / 2;
 	out->maxs[0] = out->maxs[1] = phdr->width / 2;
 	out->mins[2] = -phdr->height / 2;
 	out->maxs[2] = phdr->height / 2;
+
+	Msg("register sprite %s, frames %d\n", name, out->numframes );
 
 	numsmodels++;
 	return out;
@@ -1838,7 +1838,7 @@ cmodel_t *CM_LoadModel( edict_t *ent )
 	byte		*buffer;
 	cmodel_t		*mod = NULL;
 	int		i, max_models = numcmodels + numsmodels;
-	int		modelindex = ent->progs.sv->modelindex;
+	int		size, modelindex = ent->progs.sv->modelindex;
 
 	// check for preloading
 	strncpy(name, sv.configstrings[CS_MODELS + modelindex], MAX_QPATH );
@@ -1864,16 +1864,16 @@ cmodel_t *CM_LoadModel( edict_t *ent )
 	}
 
 	MsgDev(D_NOTE, "CM_LoadModel: load %s\n", name );
-	buffer = FS_LoadFile( name, NULL );
+	buffer = FS_LoadFile( name, &size );
 
 	// call the apropriate loader
 	switch (LittleLong(*(uint *)buffer))
 	{
 	case IDSTUDIOHEADER:
-		mod = CM_StudioModel( name, ent, buffer );
+		mod = CM_StudioModel( name, ent, buffer, size );
 		break;
 	case IDSPRITEHEADER:
-		mod = CM_SpriteModel( name, ent, buffer );
+		mod = CM_SpriteModel( name, ent, buffer, size );
 		break;
 	}
 	return mod;

@@ -171,28 +171,28 @@ void ClusterMerge (int leafnum)
 
 	memset (portalvector, 0, portalbytes);
 	leaf = &leafs[leafnum];
-	for (i=0 ; i<leaf->numportals ; i++)
+	for (i = 0; i < leaf->numportals; i++)
 	{
 		p = leaf->portals[i];
-		if (p->status != stat_done)
+		if(p->status != stat_done)
 			Sys_Error ("portal not done");
-		for (j=0 ; j<portallongs ; j++)
+		for(j = 0; j < portallongs; j++)
 			((long *)portalvector)[j] |= ((long *)p->portalvis)[j];
 		pnum = p - portals;
 		portalvector[pnum>>3] |= 1<<(pnum&7);
 	}
 
 	// convert portal bits to leaf bits
-	numvis = LeafVectorFromPortalVector (portalvector, uncompressed);
+	numvis = LeafVectorFromPortalVector(portalvector, uncompressed);
 
 	if (uncompressed[leafnum>>3] & (1<<(leafnum&7)))
-		Msg ("WARNING: Leaf portals saw into leaf\n");
+		MsgWarn("Leaf portals saw into leaf\n");
 		
 	uncompressed[leafnum>>3] |= (1<<(leafnum&7));
-	numvis++;		// count the leaf itself
+	numvis++;	// count the leaf itself
 
 	// save uncompressed for PHS calculation
-	memcpy (uncompressedvis + leafnum*leafbytes, uncompressed, leafbytes);
+	Mem_Copy(uncompressedvis + leafnum*leafbytes, uncompressed, leafbytes);
 
 	// compress the bit string
 	totalvis += numvis;
@@ -205,9 +205,8 @@ void ClusterMerge (int leafnum)
 	if (vismap_p > vismap_end)
 		Sys_Error ("Vismap expansion overflow");
 
-	dvis->bitofs[leafnum][DVIS_PVS] = dest-vismap;
-
-	memcpy (dest, compressed, i);	
+	dvis->bitofs[leafnum][DVIS_PVS] = dest - vismap;
+	Mem_Copy(dest, compressed, i);	
 }
 
 
@@ -220,19 +219,17 @@ void CalcPortalVis (void)
 {
 	int		i;
 
-// fastvis just uses mightsee for a very loose bound
-	if (fastvis)
+	// fastvis just uses mightsee for a very loose bound
+	if(fastvis)
 	{
-		for (i=0 ; i<numportals*2 ; i++)
+		for (i = 0; i < numportals * 2; i++)
 		{
 			portals[i].portalvis = portals[i].portalflood;
 			portals[i].status = stat_done;
 		}
 		return;
 	}
-	
 	RunThreadsOnIndividual (numportals*2, true, PortalFlow);
-
 }
 
 

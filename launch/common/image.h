@@ -19,6 +19,6 @@ extern uint image_ptr;	// common moveable pointer
 
 // image lib utilites
 void Image_RoundDimensions(int *scaled_width, int *scaled_height);
-byte *Image_Resample(uint *in, int inwidth, int inheight, int outwidth, int outheight, int in_type);
+byte *Image_Resample(const void *in, int inwidth, int inheight, int outwidth, int outheight, int in_type);
 
 #endif//IMAGE_H

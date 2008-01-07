@@ -27,7 +27,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "editor"=".\editor\editor.dsp" - Package Owner=<4>
+Project: "viewer"=".\viewer\viewer.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

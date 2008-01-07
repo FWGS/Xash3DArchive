@@ -191,7 +191,7 @@ void env_sprite( void )
 	pev->solid = SOLID_NOT;
 	pev->movetype = MOVETYPE_NONE;
 	setmodel (pev, "sprites/explode01.spr");
-	pev->frame = 5;
+	pev->frame = 0;
 }
 
 void walk_sprite( void )
@@ -199,17 +199,19 @@ void walk_sprite( void )
 	pev->frame++;
 	if(pev->frame > 3) pev->frame = 0;
 	pev->nextthink = time + 0.1;
+	makevectors( pev->angles );
+	pev->velocity = v_forward * 60;
 }
 
 void env_monster( void )
 {
-	precache_model ("sprites/head.spr");
+	precache_model ("sprites/boss.spr");
 	pev->owner = pev;
-	pev->solid = SOLID_NOT;
-	pev->movetype = MOVETYPE_NONE;
-	setmodel (pev, "sprites/head.spr");
+	pev->solid = SOLID_BBOX;
+	pev->movetype = MOVETYPE_STEP;
+	setmodel (pev, "sprites/boss.spr");
 
-	pev->nextthink = time + 0.1;
+	pev->nextthink = time;
 	pev->think = walk_sprite;
 	pev->frame = 0;
 }

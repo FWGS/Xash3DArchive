@@ -78,7 +78,7 @@ mempool_t *poolchain = NULL; // critical stuff
 void _mem_copy(void *dest, const void *src, size_t size, const char *filename, int fileline)
 {
 	if (src == NULL || size <= 0) return; // nothing to copy
-	if (dest == NULL) Sys_Error("Mem_Copy: dest == NULL (called at %s:%i)", filename, fileline);
+	if (dest == NULL) Sys_Error("Mem_Copy: dest == NULL (called at %s:%i)\n", filename, fileline);
 
 	// copy block
 	memcpy( dest, src, size );
@@ -87,7 +87,7 @@ void _mem_copy(void *dest, const void *src, size_t size, const char *filename, i
 void _mem_set(void *dest, int set, size_t size, const char *filename, int fileline)
 {
 	if(size <= 0) return; // nothing to set
-	if(dest == NULL) Sys_Error("Mem_Set: dest == NULL (called at %s:%i)", filename, fileline);
+	if(dest == NULL) Sys_Error("Mem_Set: dest == NULL (called at %s:%i)\n", filename, fileline);
 
 	// fill block
 	memset( dest, set, size );
@@ -101,7 +101,7 @@ void *_mem_alloc(byte *poolptr, size_t size, const char *filename, int fileline)
 	mempool_t *pool = (mempool_t *)((byte *)poolptr);
 	if (size <= 0) return NULL;
 
-	if (poolptr == NULL) Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
+	if (poolptr == NULL) Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)\n", filename, fileline);
 	pool->totalsize += size;
 
 	if (size < 4096)
@@ -113,9 +113,9 @@ void *_mem_alloc(byte *poolptr, size_t size, const char *filename, int fileline)
 		{
 			clump = *clumpchainpointer;
 			if (clump->sentinel1 != MEMCLUMP_SENTINEL)
-				Sys_Error("Mem_Alloc: trashed clump sentinel 1 (alloc at %s:%d)", filename, fileline);
+				Sys_Error("Mem_Alloc: trashed clump sentinel 1 (alloc at %s:%d)\n", filename, fileline);
 			if (clump->sentinel2 != MEMCLUMP_SENTINEL)
-				Sys_Error("Mem_Alloc: trashed clump sentinel 2 (alloc at %s:%d)", filename, fileline);
+				Sys_Error("Mem_Alloc: trashed clump sentinel 2 (alloc at %s:%d)\n", filename, fileline);
 			if (clump->largestavailable >= needed)
 			{
 				largest = 0;
@@ -140,7 +140,7 @@ loopcontinue:;
 		}
 		pool->realsize += sizeof(memclump_t);
 		clump = malloc(sizeof(memclump_t));
-		if (clump == NULL) Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
+		if (clump == NULL) Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)\n", filename, fileline);
 		memset(clump, 0, sizeof(memclump_t));
 		*clumpchainpointer = clump;
 		clump->sentinel1 = MEMCLUMP_SENTINEL;
@@ -160,7 +160,7 @@ choseclump:
 		// big allocations are not clumped
 		pool->realsize += sizeof(memheader_t) + size + sizeof(int);
 		mem = (memheader_t *)malloc(sizeof(memheader_t) + size + sizeof(int));
-		if (mem == NULL) Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
+		if (mem == NULL) Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)\n", filename, fileline);
 		mem->clump = NULL;
 	}
 
@@ -189,13 +189,13 @@ static void _mem_freeblock(memheader_t *mem, const char *filename, int fileline)
 	memclump_t *clump, **clumpchainpointer;
 	mempool_t *pool;
 
-	if (mem->sentinel1 != MEMHEADER_SENTINEL1) Sys_Error("Mem_Free: trashed header sentinel 1 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+	if (mem->sentinel1 != MEMHEADER_SENTINEL1) Sys_Error("Mem_Free: trashed header sentinel 1 (alloc at %s:%i, free at %s:%i)\n", mem->filename, mem->fileline, filename, fileline);
 	if (*((byte *) mem + sizeof(memheader_t) + mem->size) != MEMHEADER_SENTINEL2)
-		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)\n", mem->filename, mem->fileline, filename, fileline);
 	pool = mem->pool;
 	// unlink memheader from doubly linked list
 	if ((mem->prev ? mem->prev->next != mem : pool->chain != mem) || (mem->next && mem->next->prev != mem))
-		Sys_Error("Mem_Free: not allocated or double freed (free at %s:%i)", filename, fileline);
+		Sys_Error("Mem_Free: not allocated or double freed (free at %s:%i)\n", filename, fileline);
 	if (mem->prev) mem->prev->next = mem->next;
 	else pool->chain = mem->next;
 	if (mem->next) mem->next->prev = mem->prev;
@@ -205,12 +205,12 @@ static void _mem_freeblock(memheader_t *mem, const char *filename, int fileline)
 	if((clump = mem->clump))
 	{
 		if (clump->sentinel1 != MEMCLUMP_SENTINEL)
-			Sys_Error("Mem_Free: trashed clump sentinel 1 (free at %s:%i)", filename, fileline);
+			Sys_Error("Mem_Free: trashed clump sentinel 1 (free at %s:%i)\n", filename, fileline);
 		if (clump->sentinel2 != MEMCLUMP_SENTINEL)
-			Sys_Error("Mem_Free: trashed clump sentinel 2 (free at %s:%i)", filename, fileline);
+			Sys_Error("Mem_Free: trashed clump sentinel 2 (free at %s:%i)\n", filename, fileline);
 		firstblock = ((byte *) mem - (byte *) clump->block);
 		if (firstblock & (MEMUNIT - 1))
-			Sys_Error("Mem_Free: address not valid in clump (free at %s:%i)", filename, fileline);
+			Sys_Error("Mem_Free: address not valid in clump (free at %s:%i)\n", filename, fileline);
 		firstblock /= MEMUNIT;
 		endblock = firstblock + ((sizeof(memheader_t) + mem->size + sizeof(int) + (MEMUNIT - 1)) / MEMUNIT);
 		clump->blocksinuse -= endblock - firstblock;
@@ -249,7 +249,7 @@ static void _mem_freeblock(memheader_t *mem, const char *filename, int fileline)
 
 void _mem_free(void *data, const char *filename, int fileline)
 {
-	if (data == NULL) Sys_Error("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
+	if (data == NULL) Sys_Error("Mem_Free: data == NULL (called at %s:%i)\n", filename, fileline);
 	_mem_freeblock((memheader_t *)((byte *) data - sizeof(memheader_t)), filename, fileline);
 }
 
@@ -277,8 +277,8 @@ void _mem_move(byte *poolptr, void **dest, void *src, size_t size, const char *f
 	memheader_t	*mem;
 	void		*memptr = *dest;
 
-	if(!memptr) Sys_Error("Mem_Move: dest == NULL (called at %s:%i)", filename, fileline);
-	if(!src) Sys_Error("Mem_Move: src == NULL (called at %s:%i)", filename, fileline);
+	if(!memptr) Sys_Error("Mem_Move: dest == NULL (called at %s:%i)\n", filename, fileline);
+	if(!src) Sys_Error("Mem_Move: src == NULL (called at %s:%i)\n", filename, fileline);
 
 	if (size <= 0)
 	{
@@ -306,7 +306,7 @@ byte *_mem_allocpool(const char *name, const char *filename, int fileline)
 {
 	mempool_t *pool;
 	pool = (mempool_t *)malloc(sizeof(mempool_t));
-	if (pool == NULL) Sys_Error("Mem_AllocPool: out of memory (allocpool at %s:%i)", filename, fileline);
+	if (pool == NULL) Sys_Error("Mem_AllocPool: out of memory (allocpool at %s:%i)\n", filename, fileline);
 	_mem_set(pool, 0, sizeof(mempool_t), filename, fileline );
 
 	// fill header
@@ -334,9 +334,9 @@ void _mem_freepool(byte **poolptr, const char *filename, int fileline)
 	{
 		// unlink pool from chain
 		for (chainaddress = &poolchain;*chainaddress && *chainaddress != pool;chainaddress = &((*chainaddress)->next));
-		if (*chainaddress != pool) Sys_Error("Mem_FreePool: pool already free (freepool at %s:%i)", filename, fileline);
-		if (pool->sentinel1 != MEMHEADER_SENTINEL1) Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
-		if (pool->sentinel2 != MEMHEADER_SENTINEL1) Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+		if (*chainaddress != pool) Sys_Error("Mem_FreePool: pool already free (freepool at %s:%i)\n", filename, fileline);
+		if (pool->sentinel1 != MEMHEADER_SENTINEL1) Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
+		if (pool->sentinel2 != MEMHEADER_SENTINEL1) Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
 		*chainaddress = pool->next;
 
 		MsgDev(D_MEMORY, "Free pool: \"%s\", at (%s:%i)\n", pool->name, filename, fileline );
@@ -353,10 +353,10 @@ void _mem_freepool(byte **poolptr, const char *filename, int fileline)
 void _mem_emptypool(byte *poolptr, const char *filename, int fileline)
 {
 	mempool_t *pool = (mempool_t *)((byte *)poolptr);
-	if (poolptr == NULL) Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
+	if (poolptr == NULL) Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)\n", filename, fileline);
 
-	if (pool->sentinel1 != MEMHEADER_SENTINEL1) Sys_Error("Mem_EmptyPool: trashed pool sentinel 1 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
-	if (pool->sentinel2 != MEMHEADER_SENTINEL1) Sys_Error("Mem_EmptyPool: trashed pool sentinel 2 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+	if (pool->sentinel1 != MEMHEADER_SENTINEL1) Sys_Error("Mem_EmptyPool: trashed pool sentinel 1 (allocpool at %s:%i, emptypool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
+	if (pool->sentinel2 != MEMHEADER_SENTINEL1) Sys_Error("Mem_EmptyPool: trashed pool sentinel 2 (allocpool at %s:%i, emptypool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
 
 	// free memory owned by the pool
 	while (pool->chain) _mem_freeblock(pool->chain, filename, fileline);
@@ -413,7 +413,7 @@ void _mem_free_array( byte *arrayptr, const char *filename, int fileline )
 	memarray_t *l = (memarray_t *)((byte *)arrayptr);
 	size_t i;
 
-	if(l == NULL) Sys_Error("Mem_RemoveArray: array == NULL (called at %s:%i)", filename, fileline );
+	if(l == NULL) Sys_Error("Mem_RemoveArray: array == NULL (called at %s:%i)\n", filename, fileline );
 
 	if (l->maxarrays)
 	{
@@ -429,7 +429,7 @@ void *_mem_alloc_array_element( byte *arrayptr, const char *filename, int fileli
 	memarray_t	*l = (memarray_t *)((byte *)arrayptr);
 	size_t		i, j;
 
-	if(l == NULL) Sys_Error("Mem_AllocElement: array == NULL (called at %s:%i)", filename, fileline );
+	if(l == NULL) Sys_Error("Mem_AllocElement: array == NULL (called at %s:%i)\n", filename, fileline );
 
 	for(i = 0; ; i++)
 	{
@@ -472,7 +472,7 @@ void _mem_free_array_element( byte *arrayptr, void *element, const char *filenam
 	byte	*p = (byte *)element;
 	memarray_t *l = (memarray_t *)((byte *)arrayptr);
 
-	if(l == NULL) Sys_Error("Mem_FreeElement: array == NULL (called at %s:%i)", filename, fileline );
+	if(l == NULL) Sys_Error("Mem_FreeElement: array == NULL (called at %s:%i)\n", filename, fileline );
 
 	for (i = 0; i != l->numarrays; i++)
 	{
@@ -526,21 +526,21 @@ void _mem_checkheadersentinels(void *data, const char *filename, int fileline)
 {
 	memheader_t *mem;
 
-	if (data == NULL) Sys_Error("Mem_CheckSentinels: data == NULL (sentinel check at %s:%i)", filename, fileline);
+	if (data == NULL) Sys_Error("Mem_CheckSentinels: data == NULL (sentinel check at %s:%i)\n", filename, fileline);
 	mem = (memheader_t *)((byte *) data - sizeof(memheader_t));
 	if (mem->sentinel1 != MEMHEADER_SENTINEL1)
-		Sys_Error("Mem_CheckSentinels: trashed header sentinel 1 (block allocated at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_CheckSentinels: trashed header sentinel 1 (block allocated at %s:%i, sentinel check at %s:%i)\n", mem->filename, mem->fileline, filename, fileline);
 	if (*((byte *) mem + sizeof(memheader_t) + mem->size) != MEMHEADER_SENTINEL2)
-		Sys_Error("Mem_CheckSentinels: trashed header sentinel 2 (block allocated at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_CheckSentinels: trashed header sentinel 2 (block allocated at %s:%i, sentinel check at %s:%i)\n", mem->filename, mem->fileline, filename, fileline);
 }
 
 static void _mem_checkclumpsentinels(memclump_t *clump, const char *filename, int fileline)
 {
 	// this isn't really very useful
 	if (clump->sentinel1 != MEMCLUMP_SENTINEL)
-		Sys_Error("Mem_CheckClumpSentinels: trashed sentinel 1 (sentinel check at %s:%i)", filename, fileline);
+		Sys_Error("Mem_CheckClumpSentinels: trashed sentinel 1 (sentinel check at %s:%i)\n", filename, fileline);
 	if (clump->sentinel2 != MEMCLUMP_SENTINEL)
-		Sys_Error("Mem_CheckClumpSentinels: trashed sentinel 2 (sentinel check at %s:%i)", filename, fileline);
+		Sys_Error("Mem_CheckClumpSentinels: trashed sentinel 2 (sentinel check at %s:%i)\n", filename, fileline);
 }
 
 void _mem_check(const char *filename, int fileline)
@@ -552,9 +552,9 @@ void _mem_check(const char *filename, int fileline)
 	for (pool = poolchain; pool; pool = pool->next)
 	{
 		if (pool->sentinel1 != MEMHEADER_SENTINEL1)
-			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 1 (allocpool at %s:%i, sentinel check at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 1 (allocpool at %s:%i, sentinel check at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
 		if (pool->sentinel2 != MEMHEADER_SENTINEL1)
-			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 2 (allocpool at %s:%i, sentinel check at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 2 (allocpool at %s:%i, sentinel check at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
 	}
 	for (pool = poolchain; pool; pool = pool->next)
 		for (mem = pool->chain; mem; mem = mem->next)

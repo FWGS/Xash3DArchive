@@ -5,10 +5,10 @@
 
 #include "platform.h"
 #include "basefiles.h"
+#include "baseimages.h"
 #include "mathlib.h"
 #include "utils.h"
 
-#define MAX_BUFFER_SIZE	((sizeof(frames) * MAX_FRAMES) + (MAX_FRAME_DIM * 2 * MAX_FRAMES))
 #define MAX_FRAMES		512
 #define MAX_FRAME_DIM	512
 #define MIN_INTERVAL	0.001f
@@ -17,22 +17,19 @@
 dsprite_t	sprite;
 byte	*spritepool;
 rgbdata_t	*byteimage;
-byte	*lumpbuffer = NULL, *plump;
 char	spriteoutname[MAX_SYSPATH];
 float	frameinterval;
 int	framecount;
 int	origin_x;
 int	origin_y;
 
-typedef struct
+struct
 {
 	frametype_t	type;		// single frame or group of frames
 	void		*pdata;		// either a dspriteframe_t or group info
 	float		interval;		// only used for frames in groups
 	int		numgroupframes;	// only used by group headers
-} spritepackage_t;
-
-spritepackage_t frames[MAX_FRAMES];
+} frames[MAX_FRAMES];
 
 /*
 ============
@@ -124,22 +121,42 @@ void WriteSprite( file_t *f )
 WriteSPRFile
 ==============
 */
-void WriteSPRFile( void )
+bool WriteSPRFile( void )
 {
 	file_t	*f;
+	uint	i, groups = 0, grpframes = 0, sngframes = framecount;
 
-	if(sprite.numframes == 0) MsgDev(D_WARN, "WriteSPRFile: create blank sprite %s\n", spriteoutname );
-	if((plump - lumpbuffer) > MAX_BUFFER_SIZE)
-		Sys_Break("Can't write %s, sprite package too big", spriteoutname );
-
+	if(sprite.numframes == 0) 
+	{
+		MsgDev(D_WARN, "WriteSPRFile: ignoring blank sprite %s\n", spriteoutname );
+		return false;
+	}
 	f = FS_Open( spriteoutname, "wb" );
 	Msg("writing %s\n", spriteoutname );
 	WriteSprite( f );
 	FS_Close( f );
 
-	Msg("%d frame%s\n", sprite.numframes, sprite.numframes > 1 ? "s" : "" );
-	Msg("%d ungrouped frame%s, including group headers\n", framecount, framecount > 1 ? "s" : "");	
-	spriteoutname[0] = 0;// clear for a new sprite
+	// release framebuffer
+	for( i = 0; i < framecount; i++)
+	{
+		if(frames[i].pdata) Mem_Free( frames[i].pdata );
+		if(frames[i].numgroupframes ) 
+		{
+			groups++;
+			sngframes -= frames[i].numgroupframes;
+			grpframes += frames[i].numgroupframes;
+		}
+	}
+
+	// display info about current sprite
+	if( groups )
+	{
+		Msg("%d group%s,", groups, groups > 1 ? "s":"" );
+		Msg(" contain %d frame%s\n", grpframes, grpframes > 1 ? "s":"" );
+	}
+	if( sngframes - groups )
+		Msg("%d ungrouped frame%s\n", sngframes - groups, (sngframes - groups) > 1 ? "s" : "");	
+	return true;
 }
 
 /*
@@ -208,8 +225,7 @@ void Cmd_Load (void)
 	if( byteimage ) FS_FreeImage( byteimage ); // release old image
 	framename = Com_GetToken(false);
 	FS_DefaultExtension( framename, ".tga" );
-	byteimage = FS_LoadImage( framename, NULL, 0 );
-	if( !byteimage ) Sys_Break("Error: unable to load \"%s\"\n", framename );
+	byteimage = FS_LoadImage( framename, error_tga, sizeof(error_tga));
 
 	if(Com_TryToken())
 	{
@@ -251,16 +267,10 @@ void Cmd_Frame( void )
 	int		i, x, y, xl, yl, xh, yh, w, h;
 	int		pixels, linedelta;
 	dframe_t		*pframe;
-	byte		*fin;
+	byte		*fin, *plump;
 
-	if (framecount >= MAX_FRAMES) Sys_Error("Too many frames in package\n");
-	if( !byteimage )
-	{
-		// frame not loaded, just skip arguments
-		while(Com_TryToken());
-		return;
-	}
-
+	if(!byteimage || !byteimage->buffer) Sys_Break("frame not loaded\n");
+	if (framecount >= MAX_FRAMES) Sys_Break("Too many frames in package\n");
 	pixels = byteimage->width * byteimage->height;
 	xl = atoi(Com_GetToken(false));
 	yl = atoi(Com_GetToken(false));
@@ -269,6 +279,7 @@ void Cmd_Frame( void )
 
 	if((xl & 0x07)||(yl & 0x07)||(w & 0x07)||(h & 0x07))
 	{
+		// render will be resampled image, just throw warning
 		MsgWarn("frame dimensions not multiples of 8\n" );
 		//return;
 	}
@@ -279,11 +290,19 @@ void Cmd_Frame( void )
 		Image_Processing( "frame", &byteimage, w, h);
 	}
 
+	if((w > byteimage->width) || (h > byteimage->height))
+	{
+		// probably default frame "error.tga" mismatch size
+		// but may be mistake in the script ?
+		Image_Processing( "frame", &byteimage, w, h);
+	}
+
 	xh = xl + w;
 	yh = yl + h;
 
+	plump = (byte *)Mem_Alloc( spritepool, sizeof(dframe_t) + (w * h * 4));
 	pframe = (dframe_t *)plump;
-	frames[framecount].pdata = pframe;
+	frames[framecount].pdata = plump;
 	frames[framecount].type = SPR_SINGLE;
 
 	// get interval
@@ -342,6 +361,19 @@ void Cmd_Frame( void )
 }
 
 /*
+==============
+Cmd_SpriteUnknown
+
+syntax: "blabla"
+==============
+*/
+void Cmd_SpriteUnknown( void )
+{
+	MsgWarn("Cmd_SpriteUnknown: bad command %s\n", com_token);
+	while(Com_TryToken());
+}
+
+/*
 ===============
 Cmd_Group
 
@@ -369,8 +401,11 @@ void Cmd_Group( bool angled )
 
 	while( 1 )
 	{
-		if(!Com_GetToken(true)) Sys_Error("End of file during group\n");
-
+		if(!Com_GetToken(true)) 
+		{
+			if( is_started ) Sys_Break("missing }\n");
+			break;
+                    }
 		if(Com_MatchToken( "{" )) is_started = 1;
 		else if(Com_MatchToken( "}" )) break; // end of group
 		else if(Com_MatchToken( "$framerate" )) Cmd_Framerate();
@@ -381,9 +416,14 @@ void Cmd_Group( bool angled )
 		}
 		else if(Com_MatchToken("$load" )) Cmd_Load();
 		else if(is_started) Sys_Break("missing }\n");
-		else Sys_Break("$frame or $load expected\n");
+		else Cmd_SpriteUnknown(); // skip unknown commands
 	}
-	if( frames[groupframe].numgroupframes == 0 ) MsgDev(D_WARN, "Cmd_Group: create blank group\n");
+	if( frames[groupframe].numgroupframes == 0 ) 
+	{
+		// don't create blank groups, rewind frames
+		framecount--, sprite.numframes--;
+		MsgDev(D_WARN, "Cmd_Group: remove blank group\n");
+	}
 }
 
 /*
@@ -424,33 +464,18 @@ void Cmd_Spritename (void)
 	FS_DefaultExtension( spriteoutname, ".spr" );
 }
 
-/*
-==============
-Cmd_SpriteUnknown
-
-syntax: "blabla"
-==============
-*/
-void Cmd_SpriteUnknown( void )
-{
-	MsgWarn("Cmd_SpriteUnknown: bad command %s\n", com_token);
-	while(Com_TryToken());
-}
-
 void ResetSpriteInfo( void )
 {
-	//set default sprite parms
-	FS_FileBase(gs_filename, spriteoutname );//kill path and ext
-	FS_DefaultExtension( spriteoutname, ".spr" );//set new ext
+	// set default sprite parms
+	spriteoutname[0] = 0;
+	FS_FileBase(gs_filename, spriteoutname );
+	FS_DefaultExtension( spriteoutname, ".spr" );
 
 	memset (&sprite, 0, sizeof(sprite));
 	memset(frames, 0, sizeof(frames));
 	framecount = origin_x = origin_y = 0;
 	frameinterval = 0.0f;
 
-	if (!lumpbuffer ) lumpbuffer = Mem_Alloc( spritepool, (MAX_BUFFER_SIZE) * 2); // *2 for padding
-
-	plump = lumpbuffer;
 	sprite.width = -9999999;
 	sprite.height = -9999999;
 	sprite.ident = IDSPRITEHEADER;
@@ -510,8 +535,7 @@ bool CompileCurrentSprite( const char *name )
 	{
 		if(!ParseSpriteScript())
 			return false;
-		WriteSPRFile();
-		return true;
+		return WriteSPRFile();
 	}
 
 	Msg("%s not found\n", gs_filename );
@@ -523,7 +547,7 @@ bool CompileSpriteModel ( byte *mempool, const char *name, byte parms )
 	if(mempool) spritepool = mempool;
 	else
 	{
-		MsgWarn("Spritegen: can't allocate memory pool.\nAbort compilation\n");
+		MsgDev(D_ERROR, "can't allocate memory pool.\nAbort compilation\n");
 		return false;
 	}
 	return CompileCurrentSprite( name );	

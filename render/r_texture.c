@@ -1434,7 +1434,7 @@ image_t *R_LoadImage( char *name, rgbdata_t *pic, imagetype_t type )
 
 	if (strlen(name) >= sizeof(image->name)) MsgDev( D_WARN, "R_LoadImage: \"%s\" is too long", name);
 
-	strncpy (image->name, name, sizeof(image->name));
+	com.strncpy (image->name, name, sizeof(image->name));
 	image->registration_sequence = registration_sequence;
 
 	if(pic->flags & IMAGE_CUBEMAP) 
@@ -1488,7 +1488,6 @@ image_t *R_LoadImage( char *name, rgbdata_t *pic, imagetype_t type )
 		case PF_UNKNOWN: image = r_notexture; break;
 		}
 	}          
-
 	// check for errors
 	if(!iResult)
 	{
@@ -1524,6 +1523,6 @@ void R_ImageFreeUnused(void)
 		if (image->type == it_sky || image->type == it_cubemap)
 			for(k = 0; k < 6; k++) qglDeleteTextures (1, &image->texnum[k] );
 		else qglDeleteTextures (1, &image->texnum[0] );
-		memset (image, 0, sizeof(*image));
+		memset(image, 0, sizeof(*image));
 	}
 }

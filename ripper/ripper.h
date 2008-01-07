@@ -11,6 +11,7 @@
 extern stdlib_api_t com;
 extern byte *zonepool;
 extern string gs_gamedir;
+#define Sys_Error com.error
 
 //=====================================
 //	convertor modules

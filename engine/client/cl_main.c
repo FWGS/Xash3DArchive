@@ -1212,8 +1212,8 @@ void CL_RequestNextDownload (void)
 			{
 				int n = precache_check++ - ENV_CNT - 1;
 
-				if (n & 1) sprintf(fn, "textures/cubemaps/env/%s%s.dds", cl.configstrings[CS_SKY], env_suf[n/2]);
-				else sprintf(fn, "textures/cubemaps/env/%s%s.tga", cl.configstrings[CS_SKY], env_suf[n/2]);
+				if (n & 1) sprintf(fn, "textures/env_skybox/%s.dds", cl.configstrings[CS_SKY] ); // cubemap pack
+				else sprintf(fn, "textures/env_skybox/%s%s.tga", cl.configstrings[CS_SKY], env_suf[n/2]);
 				if (!CL_CheckOrDownloadFile(fn)) return; // started a download
 			}
 		}

@@ -5,10 +5,6 @@ cd bsplib
 makefile.nmake
 
 cd ..
-cd credits
-makefile.nmake
-
-cd ..
 cd dedicated
 makefile.nmake
 

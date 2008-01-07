@@ -758,9 +758,6 @@ void R_DrawPauseScreen( void )
 	if(r_newrefdef.rdflags & RDF_NOWORLDMODEL)
 		return;
 
-	// temporary disabled
-	return;
-
 	if(r_pause->modified )
 	{
 		// reset saturation value

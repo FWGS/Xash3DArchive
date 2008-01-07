@@ -100,8 +100,7 @@ bool ConvSKN( const char *name, char *buffer, int filesize )
 		FS_FileBase( name, skinpath );
 		FS_SaveImage(va("%s/models/%s.tga", gs_gamedir, skinpath ), pic );
 		Skin_CreateScript( skinpath, pic );
-		Mem_Free( pic->buffer ); // release buffer
-		Mem_Free( pic ); // release buffer
+		FS_FreeImage( pic ); // release buffer
 		Msg("%s.skin\n", skinpath ); // echo to console about current skin
 		return true;
 	}

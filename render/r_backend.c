@@ -534,7 +534,7 @@ void qglPerspective( GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zF
 
 bool VID_ScreenShot( const char *filename, bool levelshot )
 {
-	rgbdata_t 	r_shot;
+	rgbdata_t 	*r_shot;
 
 	// shared framebuffer not init
 	if(!r_framebuffer) return false;
@@ -542,20 +542,19 @@ bool VID_ScreenShot( const char *filename, bool levelshot )
 	// get screen frame
 	qglReadPixels(0, 0, r_width->integer, r_height->integer, GL_RGB, GL_UNSIGNED_BYTE, r_framebuffer );
 
-	if( levelshot )
-	{
-		// FIXME: resample buffer from any size to 320x240
-	}
+	r_shot  = Z_Malloc( sizeof(rgbdata_t));
+	r_shot->width = r_width->integer;
+	r_shot->height = r_height->integer;
+	r_shot->type = PF_RGB_24_FLIP;
+	r_shot->numMips = 1;
+	r_shot->palette = NULL;
+	r_shot->buffer = r_framebuffer;
 
-	memset(&r_shot, 0, sizeof(r_shot));
-	r_shot.width = r_width->integer;
-	r_shot.height = r_height->integer;
-	r_shot.type = PF_RGB_24_FLIP;
-	r_shot.numMips = 1;
-	r_shot.palette = NULL;
-	r_shot.buffer = r_framebuffer;
+	// levelshot always have const size
+	if( levelshot ) Image_Processing( filename, &r_shot, 512, 384 );
 
 	// write image
-	FS_SaveImage( filename, &r_shot );
+	FS_SaveImage( filename, r_shot );
+	FS_FreeImage( r_shot );
 	return true;
 }

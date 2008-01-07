@@ -221,6 +221,9 @@ typedef struct model_s
 	bool		clipbox;
 	vec3_t		clipmins, clipmaxs;
 
+	// simple lighting for sprites and models
+	vec3_t		lightcolor;
+
 //
 // brush model	//move this to brush_t struct
 //

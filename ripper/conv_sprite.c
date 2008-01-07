@@ -228,7 +228,9 @@ bool ConvSPR( const char *name, char *buffer, int filesize )
 
 	if( pin->ident != IDSPRQ1HEADER )
 	{
-		Msg("\"%s.spr\" have invalid header\n", name );
+		// ignore Xash sprites silently
+		if( pin->ident != IDSPRITEHEADER)
+			Msg("\"%s\" have invalid header\n", name );
 		return false;
 	}
 	switch( version )
