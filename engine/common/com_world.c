@@ -78,140 +78,6 @@ void InsertLinkBefore( link_t *l, link_t *before, int entnum )
 	l->entnum = entnum;
 }
 
-int World_ConvertContents( int basecontents )
-{
-#if 0
-	if( basecontents & ( BASECONT_SOLID|BASECONT_BODY ))
-		return CONTENTS_SOLID;
-	if( basecontents & BASECONT_SKY )
-		return CONTENTS_SKY;
-	if( basecontents & BASECONT_LAVA )
-		return CONTENTS_LAVA;
-	if( basecontents & BASECONT_SLIME )
-		return CONTENTS_SLIME;
-	if( basecontents & BASECONT_WATER )
-		return CONTENTS_WATER;
-	return CONTENTS_EMPTY;
-#else
-	if( basecontents & BASECONT_SKY )
-		return CONTENTS_SKY;
-	if( basecontents & BASECONT_LAVA )
-		return CONTENTS_LAVA;
-	if( basecontents & BASECONT_SLIME )
-		return CONTENTS_SLIME;
-	if( basecontents & BASECONT_WATER )
-		return CONTENTS_WATER;
-	if( basecontents & BASECONT_LADDER )
-		return CONTENTS_LADDER;
-	if( basecontents & (BASECONT_SOLID|BASECONT_BODY|BASECONT_CLIP))
-		return CONTENTS_SOLID;
-	return CONTENTS_EMPTY;
-#endif
-}
-
-uint World_MaskForEdict( const edict_t *e )
-{
-	if( e )
-	{
-		if( e->v.flags & FL_MONSTER )
-		{
-			if( e->v.deadflag != DEAD_DEAD )
-				return MASK_MONSTERSOLID;
-			return MASK_DEADSOLID;
-		}
-		else if( e->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
-		{
-			if( e->v.deadflag != DEAD_DEAD )
-				return (MASK_PLAYERSOLID|BASECONT_LADDER);	// FIXME
-			return MASK_DEADSOLID;
-		}
-		else if( e->v.solid == SOLID_TRIGGER )
-		{
-			return (BASECONT_SOLID|BASECONT_BODY);
-		}
-		return MASK_SOLID;
-	}
-	return MASK_SOLID;
-}
-
-uint World_ContentsForEdict( const edict_t *e )
-{
-	if( e )
-	{
-		if( e->v.flags & (FL_MONSTER|FL_CLIENT|FL_FAKECLIENT))
-		{
-			if( e->v.deadflag != DEAD_DEAD )
-				return BASECONT_BODY;
-			return BASECONT_CORPSE;
-		}
-		else if( e->v.solid == SOLID_BSP )
-		{
-			if( CM_GetModelType( e->v.modelindex ) == mod_brush )
-			{
-				switch( e->v.skin )
-				{
-				case CONTENTS_WATER: return BASECONT_WATER;
-				case CONTENTS_SLIME: return BASECONT_SLIME;
-				case CONTENTS_LAVA: return BASECONT_LAVA;
-				case CONTENTS_CLIP: return BASECONT_PLAYERCLIP;
-				case CONTENTS_LADDER: return BASECONT_LADDER;
-				case CONTENTS_GRAVITY_FLYFIELD:
-				case CONTENTS_FLYFIELD:
-				case CONTENTS_FOG: return BASECONT_FOG;
-				default: return BASECONT_SOLID;
-				}
-			}
-			return BASECONT_SOLID; // world
-		}
-		else if( e->v.solid == SOLID_NOT )
-		{
-			if( CM_GetModelType( e->v.modelindex ) == mod_brush )
-			{
-				switch( e->v.skin )
-				{
-				case CONTENTS_WATER: return BASECONT_WATER;
-				case CONTENTS_SLIME: return BASECONT_SLIME;
-				case CONTENTS_LAVA: return BASECONT_LAVA;
-				case CONTENTS_CLIP: return BASECONT_PLAYERCLIP;
-				case CONTENTS_LADDER: return BASECONT_LADDER;
-				case CONTENTS_GRAVITY_FLYFIELD:
-				case CONTENTS_FLYFIELD:
-				case CONTENTS_FOG: return BASECONT_FOG;
-				default: return BASECONT_SOLID;
-				}
-			}
-			return BASECONT_NONE; // not solid
-		}
-		return BASECONT_BODY;		
-	}
-	return BASECONT_NONE;
-}
-
-/*
-================
-World_HullForEntity
-
-Returns a headnode that can be used for testing or clipping to a
-given entity.  If the entity is a bsp model, the headnode will
-be returned, otherwise a custom box tree will be constructed.
-================
-*/
-model_t World_HullForEntity( const edict_t *ent )
-{
-	if( ent->v.solid == SOLID_BSP )
-	{
-		// explicit hulls in the BSP model
-		return ent->v.modelindex;
-	}
-	if( ent->v.solid == SOLID_SLIDEBOX )
-	{
-		// create a temp capsule from bounding box sizes
-		return CM_TempModel( ent->v.mins, ent->v.maxs, true );
-	}
-	// create a temp tree from bounding box sizes
-	return CM_TempModel( ent->v.mins, ent->v.maxs, false );
-}
-
 /*
 ==================
 World_MoveBounds
@@ -234,4 +100,37 @@ void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_
 			boxmaxs[i] = start[i] + maxs[i] + 1;
 		}
 	}
+}
+
+trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch )
+{
+	if( trace->fAllSolid )
+	{
+		cliptrace->fAllSolid = true;
+		trace->pHit = touch;
+	}
+	else if( trace->fStartSolid )
+	{
+		cliptrace->fStartSolid = true;
+		trace->pHit = touch;
+	}
+
+	if( trace->fInOpen )
+		cliptrace->fInOpen = true;
+
+	if( trace->fInWater )
+		cliptrace->fInWater = true;
+
+	if( trace->flFraction < cliptrace->flFraction )
+	{
+		bool	oldStartSolid;
+
+		// make sure we keep a startsolid from a previous trace
+		oldStartSolid = cliptrace->fStartSolid;
+
+		trace->pHit = touch;
+		cliptrace = trace;
+		cliptrace->fStartSolid |= oldStartSolid;
+	}
+	return *cliptrace;
 }

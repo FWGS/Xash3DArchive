@@ -1013,7 +1013,7 @@ void SV_PushMove( edict_t *pusher, float movetime )
 				continue;
 
 			pusher->v.solid = SOLID_NOT;
-			trace = SV_ClipMoveToEntity( pusher, check->v.origin, check->v.mins, check->v.maxs, check->v.origin, MASK_SOLID, FMOVE_SIMPLEBOX );
+			trace = CM_ClipMove( pusher, check->v.origin, check->v.mins, check->v.maxs, check->v.origin, FMOVE_SIMPLEBOX );
 			pusher->v.solid = oldsolid; // was SOLID_BSP
 			if( !trace.fStartSolid ) continue; // not touched
 		}

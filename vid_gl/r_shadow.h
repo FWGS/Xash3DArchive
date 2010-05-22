@@ -22,11 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct shadowGroup_s
 {
-	unsigned int		bit;
+	uint			bit;
 	texture_t			*depthTexture;
 
 	vec3_t			origin;
-//	int			cluster;
 	byte			*vis;
 
 	float			projDist;

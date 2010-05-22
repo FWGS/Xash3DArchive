@@ -38,7 +38,6 @@ void V_SetupRefDef( void )
 	VectorCopy( clent->v.punchangle, cl.refdef.punchangle );
 	cl.refdef.movevars = &clgame.movevars;
 	cl.refdef.onground = clent->v.groundentity;
-	cl.refdef.areabits = cl.frame.areabits;
 	cl.refdef.health = clent->v.health;
 	cl.refdef.movetype = clent->v.movetype;
 	cl.refdef.idealpitch = clent->v.ideal_pitch;

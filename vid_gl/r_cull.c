@@ -46,7 +46,7 @@ bool R_CullBox( const vec3_t mins, const vec3_t maxs, const uint clipflags )
 
 	for( i = sizeof( RI.frustum )/sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
 	{
-		if( !( clipflags & bit ) )
+		if( !( clipflags & bit ))
 			continue;
 
 		switch( p->signbits )
@@ -444,6 +444,7 @@ R_IssueOcclusionQuery
 */
 int R_IssueOcclusionQuery( int query, ref_entity_t *e, vec3_t mins, vec3_t maxs )
 {
+	vec3_t bbox[8];
 	static vec4_t verts[8];
 	static mesh_t mesh;
 	static elem_t indices[] =
@@ -455,28 +456,30 @@ int R_IssueOcclusionQuery( int query, ref_entity_t *e, vec3_t mins, vec3_t maxs 
 		0, 1, 4, 1, 4, 5, // left
 		7, 6, 3, 6, 3, 2, // right
 	};
-	int i;
-	vec3_t bbox[8];
 
-	if( query < 0 )
+	int	i;
+
+	if( query < 0 ) return -1;
+
+	if( r_queriesBits[query>>3] & ( 1<<( query & 7 )))
 		return -1;
-	if( r_queriesBits[query>>3] & ( 1<<( query&7 ) ) )
-		return -1;
-	r_queriesBits[query>>3] |= ( 1<<( query&7 ) );
+
+	r_queriesBits[query>>3] |= ( 1<<( query & 7 ));
 
 	R_RenderOccludingSurfaces();
 
-	mesh.numVertexes = 8;
-	mesh.xyzArray = verts;
+	mesh.numVerts = 8;
+	mesh.vertexArray = verts;
 	mesh.numElems = 36;
 	mesh.elems = indices;
-	r_occlusionShader->flags &= ~( SHADER_CULL_BACK | SHADER_CULL_FRONT );
+	r_occlusionShader->flags &= ~( SHADER_CULL_BACK|SHADER_CULL_FRONT );
 
 	pglBeginQueryARB( GL_SAMPLES_PASSED_ARB, r_occlusionQueries[query] );
 
 	R_TransformEntityBBox( e, mins, maxs, bbox, false );
+
 	for( i = 0; i < 8; i++ )
-		Vector4Set( verts[i], bbox[i][0], bbox[i][1], bbox[i][2], 1 );
+		Vector4Set( verts[i], bbox[i][0], bbox[i][1], bbox[i][2], 1.0f );
 
 	R_RotateForEntity( e );
 	R_BackendSetPassMask( GLSTATE_MASK & ~GLSTATE_DEPTHWRITE );
@@ -496,7 +499,7 @@ R_OcclusionQueryIssued
 bool R_OcclusionQueryIssued( int query )
 {
 	Com_Assert((query >= 0 && query < MAX_OQ_TOTAL) == 0 );
-	return r_queriesBits[query>>3] & ( 1<<( query&7 ) );
+	return r_queriesBits[query>>3] & ( 1<<( query & 7 ));
 }
 
 /*

@@ -67,7 +67,7 @@ static void R_GetShadowImpactAndDir( ref_entity_t *e, trace_t *tr, vec3_t lightd
 	VectorNormalizeFast( lightdir );
 	VectorMA( e->origin, /*(e->model->radius*e->scale*4 + r_shadows_projection_distance->value)*/ 1024.0f, lightdir, point );
 
-	R_TraceLine( tr, e->origin, point, SURF_NONSOLID );
+	R_TraceLine( tr, e->origin, point );
 }
 
 /*
@@ -186,15 +186,13 @@ STANDARD PROJECTIVE SHADOW MAPS (SSM)
 =============================================================
 */
 
-int r_numShadowGroups;
-shadowGroup_t r_shadowGroups[MAX_SHADOWGROUPS];
-int r_entShadowBits[MAX_ENTITIES];
-
-//static bool r_shadowGroups_sorted;
+int		r_numShadowGroups;
+shadowGroup_t	r_shadowGroups[MAX_SHADOWGROUPS];
+int		r_entShadowBits[MAX_ENTITIES];
 
 #define SHADOWGROUPS_HASH_SIZE	8
-static shadowGroup_t *r_shadowGroups_hash[SHADOWGROUPS_HASH_SIZE];
-static byte r_shadowCullBits[MAX_SHADOWGROUPS/8];
+static shadowGroup_t	*r_shadowGroups_hash[SHADOWGROUPS_HASH_SIZE];
+static byte		r_shadowCullBits[MAX_SHADOWGROUPS/8];
 
 /*
 ===============
@@ -205,7 +203,6 @@ static void R_InitShadowmaps( void )
 {
 	// clear all possible values, should be called once per scene
 	r_numShadowGroups = 0;
-//	r_shadowGroups_sorted = false;
 
 	Mem_Set( r_shadowGroups, 0, sizeof( r_shadowGroups ));
 	Mem_Set( r_entShadowBits, 0, sizeof( r_entShadowBits ));
@@ -225,7 +222,6 @@ void R_ClearShadowmaps( void )
 		return;
 
 	// clear all possible values, should be called once per scene
-//	r_shadowGroups_sorted = false;
 	memset( r_shadowGroups, 0, sizeof( r_shadowGroups ) );
 	memset( r_entShadowBits, 0, sizeof( r_entShadowBits ) );
 	memset( r_shadowGroups_hash, 0, sizeof( r_shadowGroups_hash ) );
@@ -273,8 +269,7 @@ bool R_AddShadowCaster( ref_entity_t *ent )
 	// start a new group
 	group = &r_shadowGroups[r_numShadowGroups];
 	group->bit = ( 1<<r_numShadowGroups );
-	//	group->cluster = leaf->cluster;
-	group->vis = Mod_ClusterPVS( leaf->cluster, r_worldmodel );
+	group->vis = Mod_LeafPVS( leaf, r_worldmodel );
 
 	// clear group bounds
 	VectorCopy( origin, group->origin );
@@ -321,33 +316,6 @@ add:
 
 	return true;
 }
-
-/*
-===============
-R_ShadowGroupSort
-
-Make sure current view cluster comes first
-===============
-*/
-/*
-static int R_ShadowGroupSort (void const *a, void const *b)
-{
-	shadowGroup_t *agroup, *bgroup;
-
-	agroup = (shadowGroup_t *)a;
-	bgroup = (shadowGroup_t *)b;
-
-	if( agroup->cluster == r_viewcluster )
-		return -2;
-	if( bgroup->cluster == r_viewcluster )
-		return 2;
-	if( agroup->cluster < bgroup->cluster )
-		return -1;
-	if( agroup->cluster > bgroup->cluster )
-		return 1;
-	return 0;
-}
-*/
 
 /*
 ===============
@@ -413,13 +381,6 @@ void R_DrawShadowmaps( void )
 	Mem_Copy( &oldRI, &prevRI, sizeof( refinst_t ) );
 	Mem_Copy( &prevRI, &RI, sizeof( refinst_t ) );
 	RI.refdef.flags &= ~RDF_SKYPORTALINVIEW;
-/*
-	// sort by clusternum (not really needed anymore, but oh well)
-	if( !r_shadowGroups_sorted ) {		// note: this breaks hash pointers
-		r_shadowGroups_sorted = true;
-		qsort( r_shadowGroups, r_numShadowGroups, sizeof(shadowGroup_t), R_ShadowGroupSort );
-	}
-*/
 
 	// find lighting group containing entities with same lightingOrigin as ours
 	for( i = 0, group = r_shadowGroups; i < r_numShadowGroups; i++, group++ )
@@ -438,7 +399,7 @@ void R_DrawShadowmaps( void )
 		RI.shadowBits = 0;      // no shadowing yet
 		RI.meshlist = &r_shadowlist;
 		RI.shadowGroup = group;
-		RI.params = RP_SHADOWMAPVIEW|RP_FLIPFRONTFACE|RP_OLDVIEWCLUSTER; // make sure RP_WORLDSURFVISIBLE isn't set
+		RI.params = RP_SHADOWMAPVIEW|RP_FLIPFRONTFACE|RP_OLDVIEWLEAF; // make sure RP_WORLDSURFVISIBLE isn't set
 
 		// allocate/resize the texture if needed
 		R_InitShadowmapTexture( &( tr.shadowmapTextures[i] ), i, width, height );

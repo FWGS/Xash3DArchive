@@ -569,7 +569,6 @@ void CBaseDoor::DoorGoUp( void )
 	// It could be going-down, if blocked.
 	ASSERT( m_iState == STATE_OFF || m_iState == STATE_TURN_OFF );
 	EMIT_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise1), 1, ATTN_NORM);
-	SET_AREAPORTAL( edict(), true ); // open areaportal
 
 	m_iState = STATE_TURN_ON;
 	SetMoveDone( DoorHitTop );
@@ -623,8 +622,6 @@ void CBaseDoor::DoorHitBottom( void )
 
 	ASSERT(m_iState == STATE_TURN_OFF);
 	m_iState = STATE_OFF;
-
-	SET_AREAPORTAL( edict(), false );	// close areaportal
 
 	if ( pev->spawnflags & SF_START_ON )
 		UTIL_FireTargets( pev->target, m_hActivator, this, USE_ON );

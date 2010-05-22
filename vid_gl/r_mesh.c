@@ -185,7 +185,7 @@ VERTEX BUFFERS
 R_UpdateVertexBuffer
 =================
 */
-void R_UpdateVertexBuffer( ref_buffer_t *vertexBuffer, const void *data, size_t size )
+void R_UpdateVertexBuffer( vbo_buffer_t *vertexBuffer, const void *data, size_t size )
 {
 	Com_Assert( vertexBuffer == NULL );
 
@@ -212,9 +212,9 @@ void R_UpdateVertexBuffer( ref_buffer_t *vertexBuffer, const void *data, size_t 
 R_AllocVertexBuffer
 =================
 */
-ref_buffer_t *R_AllocVertexBuffer( size_t size, GLuint usage )
+vbo_buffer_t *R_AllocVertexBuffer( size_t size, GLuint usage )
 {
-	ref_buffer_t	*vertexBuffer;
+	vbo_buffer_t	*vertexBuffer;
 
 	if( tr.numVertexBufferObjects == MAX_VERTEX_BUFFER_OBJECTS )
 		Host_Error( "RB_AllocVertexBuffer: MAX_VERTEX_BUFFER_OBJECTS limit exceeds\n" );
@@ -258,7 +258,7 @@ R_ShutdownVertexBuffers
 */
 void R_ShutdownVertexBuffers( void )
 {
-	ref_buffer_t	*vertexBuffer;
+	vbo_buffer_t	*vertexBuffer;
 	int		i;
 
 	if( !GL_Support( R_ARB_VERTEX_BUFFER_OBJECT_EXT ))
@@ -298,7 +298,7 @@ int R_ReAllocMeshList( meshbuffer_t **mb, int minMeshes, int maxMeshes )
 	*mb = newMB;
 
 	// NULL all pointers to old membuffers so we don't crash
-	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ) )
+	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
 		Mem_Set( RI.surfmbuffers, 0, r_worldbrushmodel->numsurfaces * sizeof( meshbuffer_t* ));
 
 	return newSize;
@@ -409,11 +409,11 @@ Draw the mesh or batch it.
 */
 static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextmb )
 {
-	int type, features;
-	bool nonMergable;
-	ref_entity_t *ent;
-	ref_shader_t *shader;
-	msurface_t *surf, *nextSurf;
+	int		type, features;
+	bool		nonMergable;
+	msurface_t	*surf, *nextSurf;
+	ref_shader_t	*shader;
+	ref_entity_t	*ent;
 
 	MB_NUM2ENTITY( mb->sortkey, ent );
 
@@ -558,10 +558,10 @@ void R_DrawPortals( void )
 	meshbuffer_t *mb;
 	ref_shader_t *shader;
 
-	if( r_viewcluster == -1 )
+	if( r_viewleaf == NULL )
 		return;
 
-	if( !( RI.params & ( RP_MIRRORVIEW|RP_PORTALVIEW|RP_SHADOWMAPVIEW ) ) )
+	if( !( RI.params & ( RP_MIRRORVIEW|RP_PORTALVIEW|RP_SHADOWMAPVIEW )))
 	{
 		if( RI.meshlist->num_portal_opaque_meshes || RI.meshlist->num_portal_translucent_meshes )
 		{
@@ -860,14 +860,14 @@ static bool R_AddPortalSurface( const meshbuffer_t *mb )
 	if( !ent->model ) return false;
 
 	surf = mb->infokey > 0 ? &r_worldbrushmodel->surfaces[mb->infokey-1] : NULL;
-	if( !surf || !( mesh = surf->mesh ) || !mesh->xyzArray )
+	if( !surf || !( mesh = surf->mesh ) || !mesh->vertexArray )
 		return false;
 
 	MB_NUM2SHADER( mb->shaderkey, shader );
 
-	VectorCopy( mesh->xyzArray[mesh->elems[0]], v[0] );
-	VectorCopy( mesh->xyzArray[mesh->elems[1]], v[1] );
-	VectorCopy( mesh->xyzArray[mesh->elems[2]], v[2] );
+	VectorCopy( mesh->vertexArray[mesh->elems[0]], v[0] );
+	VectorCopy( mesh->vertexArray[mesh->elems[1]], v[1] );
+	VectorCopy( mesh->vertexArray[mesh->elems[2]], v[2] );
 	PlaneFromPoints( v, &oplane );
 	oplane.dist += DotProduct( ent->origin, oplane.normal );
 	CategorizePlane( &oplane );
@@ -875,11 +875,11 @@ static bool R_AddPortalSurface( const meshbuffer_t *mb )
 	if( !Matrix3x3_Compare( ent->axis, matrix3x3_identity ))
 	{
 		Matrix3x3_Transpose( entity_rotation, ent->axis );
-		Matrix3x3_Transform( entity_rotation, mesh->xyzArray[mesh->elems[0]], v[0] );
+		Matrix3x3_Transform( entity_rotation, mesh->vertexArray[mesh->elems[0]], v[0] );
 		VectorMA( ent->origin, ent->scale, v[0], v[0] );
-		Matrix3x3_Transform( entity_rotation, mesh->xyzArray[mesh->elems[1]], v[1] );
+		Matrix3x3_Transform( entity_rotation, mesh->vertexArray[mesh->elems[1]], v[1] );
 		VectorMA( ent->origin, ent->scale, v[1], v[1] );
-		Matrix3x3_Transform( entity_rotation, mesh->xyzArray[mesh->elems[2]], v[2] );
+		Matrix3x3_Transform( entity_rotation, mesh->vertexArray[mesh->elems[2]], v[2] );
 		VectorMA( ent->origin, ent->scale, v[2], v[2] );
 		PlaneFromPoints( v, &plane );
 		CategorizePlane( &plane );
@@ -906,7 +906,7 @@ static bool R_AddPortalSurface( const meshbuffer_t *mb )
 		}
 	}
 
-	if( OCCLUSION_QUERIES_ENABLED( RI ) )
+	if( OCCLUSION_QUERIES_ENABLED( RI ))
 	{
 		if( !R_GetOcclusionQueryResultBool( OQ_CUSTOM, R_SurfOcclusionQueryKey( ent, surf ), true ) )
 			return true;
@@ -1074,8 +1074,8 @@ setup_and_render:
 		VectorCopy( RI.refdef.viewangles, angles );
 
 		RI.params = RP_PORTALVIEW;
-		if( r_viewcluster != -1 )
-			RI.params |= RP_OLDVIEWCLUSTER;
+		if( r_viewleaf != NULL )
+			RI.params |= RP_OLDVIEWLEAF;
 	}
 	else if( mirror )
 	{
@@ -1095,8 +1095,8 @@ setup_and_render:
 		angles[ROLL] = -angles[ROLL];
 
 		RI.params = RP_MIRRORVIEW|RP_FLIPFRONTFACE;
-		if( r_viewcluster != -1 )
-			RI.params |= RP_OLDVIEWCLUSTER;
+		if( r_viewleaf != NULL )
+			RI.params |= RP_OLDVIEWLEAF;
 	}
 	else
 	{
@@ -1171,8 +1171,8 @@ setup_and_render:
 
 	R_RenderView( &RI.refdef );
 
-	if( !( RI.params & RP_OLDVIEWCLUSTER ) )
-		r_oldviewcluster = r_viewcluster = -1; // force markleafs next frame
+	if( !( RI.params & RP_OLDVIEWLEAF ))
+		r_oldviewleaf = r_viewleaf = NULL; // force markleafs next frame
 
 	r_portalSurfMbuffers = RI.surfmbuffers;
 
@@ -1221,7 +1221,7 @@ void R_DrawSkyPortal( skyportal_t *skyportal, vec3_t mins, vec3_t maxs )
 	Mem_Copy( &oldRI, &prevRI, sizeof( refinst_t ));
 	Mem_Copy( &prevRI, &RI, sizeof( refinst_t ));
 
-	RI.params = ( RI.params|RP_SKYPORTALVIEW ) & ~( RP_OLDVIEWCLUSTER|RP_PORTALCAPTURED|RP_PORTALCAPTURED2 );
+	RI.params = ( RI.params|RP_SKYPORTALVIEW ) & ~( RP_OLDVIEWLEAF|RP_PORTALCAPTURED|RP_PORTALCAPTURED2 );
 	VectorCopy( skyportal->vieworg, RI.pvsOrigin );
 
 	RI.clipFlags = 15;
@@ -1259,7 +1259,7 @@ void R_DrawSkyPortal( skyportal_t *skyportal, vec3_t mins, vec3_t maxs )
 	R_RenderView( &RI.refdef );
 
 	r_skyPortalSurfMbuffers = RI.surfmbuffers;
-	r_oldviewcluster = r_viewcluster = -1;		// force markleafs next frame
+	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
 
 	Mem_Copy( &RI, &prevRI, sizeof( refinst_t ));
 	Mem_Copy( &prevRI, &oldRI, sizeof( refinst_t ));
@@ -1290,7 +1290,7 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 
 	R_RenderScene( fd );
 
-	r_oldviewcluster = r_viewcluster = -1;		// force markleafs next frame
+	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
 }
 
 /*
@@ -1298,7 +1298,7 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 R_BuildTangentVectors
 ===============
 */
-void R_BuildTangentVectors( int numVertexes, vec4_t *xyzArray, vec4_t *normalsArray, vec2_t *stArray, int numTris, elem_t *elems, vec4_t *sVectorsArray )
+void R_BuildTangentVectors( int numVertexes, vec4_t *vertexArray, vec4_t *normalsArray, vec2_t *stArray, int numTris, elem_t *elems, vec4_t *sVectorsArray )
 {
 	int i, j;
 	float d, *v[3], *tc[3];
@@ -1321,7 +1321,7 @@ void R_BuildTangentVectors( int numVertexes, vec4_t *xyzArray, vec4_t *normalsAr
 	{
 		for( j = 0; j < 3; j++ )
 		{
-			v[j] = ( float * )( xyzArray + elems[j] );
+			v[j] = ( float * )( vertexArray + elems[j] );
 			tc[j] = ( float * )( stArray + elems[j] );
 		}
 

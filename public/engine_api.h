@@ -26,43 +26,10 @@
 /*
 ==============================================================================
 
-ENGINE TRACE FORMAT
+ Generic LAUNCH.DLL INTERFACE
 ==============================================================================
 */
-typedef struct cplane_s
-{
-	vec3_t		normal;
-	float		dist;
-	short		type;		// for fast side tests
-	short		signbits;		// signx + (signy<<1) + (signz<<1)
-} cplane_t;
 
-typedef struct trace_s
-{
-	// shared with TraceResult
-	int		fAllSolid;	// if true, plane is not valid
-	int		fStartSolid;	// if true, the initial point was in a solid area
-	int		fInOpen;		// if true trace is open
-	int		fInWater;		// if true trace is in water
-	float		flFraction;	// time completed, 1.0 = didn't hit anything
-	vec3_t		vecEndPos;	// final position
-	float		flPlaneDist;	// planes distance
-	vec3_t		vecPlaneNormal;	// surface normal at impact
-	edict_t		*pHit;		// entity the surface is on
-	int		iHitgroup;	// 0 == generic, non zero is specific body part
-
-	// private to engine
-	int		iContents;	// final pos contents
-	const char	*pTexName;	// texture name that we hitting (brushes and studiomodels)
-	int		fStartStuck;	// stuck on start trace
-} trace_t;
-
-/*
-==============================================================================
-
-Generic LAUNCH.DLL INTERFACE
-==============================================================================
-*/
 typedef struct launch_exp_s
 {
 	// interface validator

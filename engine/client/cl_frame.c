@@ -200,7 +200,7 @@ CL_ParseFrame
 */
 void CL_ParseFrame( sizebuf_t *msg )
 {
-	int	cmd, len, client_idx;
+	int	cmd, client_idx;
 	edict_t	*clent;
           
 	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
@@ -247,10 +247,6 @@ void CL_ParseFrame( sizebuf_t *msg )
 		}
 		else cl.frame.valid = true;	// valid delta parse
 	}
-
-	// read areabits
-	len = MSG_ReadByte( msg );
-	MSG_ReadData( msg, &cl.frame.areabits, len );
 
 	// read packet entities
 	cmd = MSG_ReadByte( msg );
@@ -320,9 +316,6 @@ void CL_AddPacketEntities( frame_t *frame )
 		// NOTE: skyportal entity never added to rendering
 		if( ed_type == ED_SKYPORTAL ) cl.render_flags |= RDF_SKYPORTALINVIEW;
 	}
-
-	if( cl.oldframe && !memcmp( cl.oldframe->areabits, cl.frame.areabits, sizeof( cl.frame.areabits )))
-		cl.render_flags |= RDF_OLDAREABITS;
 }
 
 /*

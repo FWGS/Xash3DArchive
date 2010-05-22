@@ -378,11 +378,10 @@ typedef enum
 
 // renderer flags
 #define RDF_NOWORLDMODEL		(1<<0) 	// used for player configuration screen
-#define RDF_OLDAREABITS		(1<<1) 	// forces R_MarkLeaves if not set
-#define RDF_PORTALINVIEW		(1<<2)	// cull entities using vis too because pvs\areabits are merged serverside
-#define RDF_SKYPORTALINVIEW		(1<<3)	// draw skyportal instead of regular sky
-#define RDF_NOFOVADJUSTMENT		(1<<4)	// do not adjust fov for widescreen
-#define RDF_THIRDPERSON		(1<<5)	// enable chase cam instead firstperson
+#define RDF_PORTALINVIEW		(1<<1)	// cull entities using vis too because pvs\areabits are merged serverside
+#define RDF_SKYPORTALINVIEW		(1<<2)	// draw skyportal instead of regular sky
+#define RDF_NOFOVADJUSTMENT		(1<<3)	// do not adjust fov for widescreen
+#define RDF_THIRDPERSON		(1<<4)	// enable chase cam instead firstperson
 
 // client modelindexes
 #define NULLENT_INDEX		-1	// engine always return NULL, only for internal use

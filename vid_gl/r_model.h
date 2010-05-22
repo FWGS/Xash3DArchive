@@ -41,8 +41,11 @@ BRUSH MODELS
 typedef struct
 {
 	vec3_t		mins, maxs;
+	vec3_t		origin;
 	float		radius;
-	int		firstface, numfaces;
+	int		firstnode;	// used for lighting bmodels
+	int		firstface;
+	int		numfaces;
 } mmodel_t;
 
 typedef struct
@@ -54,13 +57,33 @@ typedef struct
 	cplane_t		*planes;
 } mfog_t;
 
+#define SURF_PLANEBACK	BIT( 1 )
+#define SURF_DRAWSKY	BIT( 0 )		// sky surface
+#define SURF_DRAWTURB	BIT( 2 )		// warp surface
+#define SURF_DRAWTILED	BIT( 4 )		// face without lighmap
+#define SURF_UNDERWATER	BIT( 5 )		// caustics
+
+typedef struct mtexinfo_s
+{
+	float		vecs[2][4];
+	short		texturenum;	// number in cached.textures
+	word		width;
+	word		height;
+} mtexinfo_t;
+
 typedef struct
 {
-	int		visframe;			// should be drawn when node is crossed
-	int		facetype;
-	int		flags;
+	int		visframe;		// should be drawn when node is crossed
+	int		flags;		// see SURF_ for details
 	int		contents;
 
+	int		firstedge;	// look up in model->edges[]. negative
+	int		numedges;		// numbers are backwards edges
+
+	short		textureMins[2];
+	short		extents[2];
+
+	mtexinfo_t	*texinfo;
 	ref_shader_t	*shader;
 	mesh_t		*mesh;
 	mfog_t		*fog;
@@ -77,15 +100,32 @@ typedef struct
 		float	color[3];
 	};
 
+	// lighting info
+	int		dlightFrame;
+	int		dlightBits;
+
+	int		lmWidth;
+	int		lmHeight;
+	int		lmS;
+	int		lmT;
+	int		lmNum;
+	byte		*samples;
+	int		numstyles;
+	byte		styles[MAX_LIGHTSTYLES];
+	float		cached[MAX_LIGHTSTYLES];	// values currently used in lightmap
+
 	int		superLightStyle;
 	int		fragmentframe;		// for multi-check avoidance
 } msurface_t;
+
+#define CONTENTS_NODE	1		// fake contents to determine nodes
 
 typedef struct mnode_s
 {
 	// common with leaf
 	cplane_t		*plane;
 	int		pvsframe;
+	int		contents;		// for fast checking solid leafs
 
 	float		mins[3];
 	float		maxs[3];		// for bounding box culling
@@ -94,6 +134,8 @@ typedef struct mnode_s
 
 	// node specific
 	struct mnode_s	*children[2];
+	msurface_t	*firstface;	// used for grab lighting info, decals etc
+	uint		numfaces;
 } mnode_t;
 
 typedef struct mleaf_s
@@ -101,6 +143,7 @@ typedef struct mleaf_s
 	// common with node
 	cplane_t		*plane;
 	int		pvsframe;
+	int		contents;
 
 	float		mins[3];
 	float		maxs[3];		// for bounding box culling
@@ -108,12 +151,11 @@ typedef struct mleaf_s
 	struct mnode_s	*parent;
 
 	// leaf specific
+	byte		*compressed_vis;
 	int		visframe;
-	int		cluster, area;
-	int		contents;
 
-	msurface_t	**firstVisSurface;
-	msurface_t	**firstFragmentSurface;
+	msurface_t	**firstMarkSurface;
+	int		numMarkSurfaces;
 } mleaf_t;
 
 typedef struct
@@ -132,32 +174,38 @@ typedef struct
 
 typedef struct
 {
-	dvis_t		*vis;
-
 	int		numsubmodels;
 	mmodel_t		*submodels;
 
 	int		nummodelsurfaces;
 	msurface_t	*firstmodelsurface;
 
+	mnode_t		*firstmodelnode;	// used for lighting bmodels
+
 	int		numplanes;
 	cplane_t		*planes;
 
-	int		numleafs;			// number of visible leafs, not counting 0
+	int		numleafs;		// number of visible leafs, not counting 0
 	mleaf_t		*leafs;
-	mleaf_t		**visleafs;
 
 	int		numnodes;
 	mnode_t		*nodes;
 
 	int		numsurfaces;
 	msurface_t	*surfaces;
+	msurface_t	**marksurfaces;
 
 	int		numlightgridelems;
 	mgridlight_t	*lightgrid;
 
 	int		numlightarrayelems;
 	mgridlight_t	**lightarray;
+
+	int		numtexinfo;
+	mtexinfo_t	*texinfo;
+
+	byte		*visdata;		// compressed visdata
+	byte		*lightdata;
 
 	int		numfogs;
 	mfog_t		*fogs;
@@ -259,12 +307,12 @@ void		R_ShutdownModels( void );
 
 void		Mod_ClearAll( void );
 ref_model_t	*Mod_ForName( const char *name, bool crash );
-mleaf_t		*Mod_PointInLeaf( float *p, ref_model_t *model );
-byte		*Mod_ClusterPVS( int cluster, ref_model_t *model );
+mleaf_t		*Mod_PointInLeaf( const vec3_t p, ref_model_t *model );
+byte		*Mod_LeafPVS( mleaf_t *leaf, ref_model_t *model );
 uint		Mod_Handle( ref_model_t *mod );
 ref_model_t	*Mod_ForHandle( unsigned int elem );
 ref_model_t	*R_RegisterModel( const char *name );
-void		R_BeginRegistration( const char *model, const dvis_t *visData );
+void		R_BeginRegistration( const char *model, const byte *visData );
 void		R_EndRegistration( const char *skyname );
 
 #define		Mod_Malloc( mod, size ) Mem_Alloc(( mod )->mempool, size )

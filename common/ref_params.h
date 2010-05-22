@@ -62,8 +62,6 @@ typedef struct ref_params_s
 	int		flags;		// renderer setup flags (was int onlyClientDraw;)
 
 	// Xash Renderer Specifics
-	byte		*areabits;	// come from server, contains visible areas list
-					// set it to NULL for disable area visibility
 	skyportal_t	skyportal;	// sky protal setup is done in HUD_UpdateEntityVars
 	float		blend[4];		// rgba 0-1 full screen blend
 

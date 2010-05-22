@@ -7,6 +7,7 @@
 #include "client.h"
 #include "byteorder.h"
 #include "const.h"
+#include "bmodel_ref.h"
 
 /*
 =======================================================================
@@ -55,26 +56,15 @@ bool Cmd_GetMapList( const char *s, char *completedname, int length )
 
 			Mem_Set( buf, 0, MAX_SYSPATH );
 			FS_Read( f, buf, MAX_SYSPATH );
+			ver = LittleLong(*(uint *)buf);
                               
-			switch( LittleLong(*(uint *)buf) )
+			switch( ver )
 			{
-			case IDBSPMODHEADER:
-			case RBBSPMODHEADER:
-			case QFBSPMODHEADER:
-			case XRBSPMODHEADER:
+			case Q1BSP_VERSION:
+			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				ver = LittleLong(((int *)buf)[1]);
-
-				switch( ver )
-				{
-				case Q3IDBSP_VERSION:	// quake3 arena
-				case RTCWBSP_VERSION:	// return to castle wolfenstein
-				case RFIDBSP_VERSION:	// raven or qfusion bsp
-				case XRIDBSP_VERSION:	// x-real engine
-					lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-					lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
-					break;
-				}
+				lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+				lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
 				break;
 			}
 
@@ -120,17 +110,11 @@ bool Cmd_GetMapList( const char *s, char *completedname, int length )
 
 		switch( ver )
 		{
-		case Q3IDBSP_VERSION:
-			com.strncpy( buf, "Quake3 Arena", sizeof( buf ));
+		case Q1BSP_VERSION:
+			com.strncpy( buf, "Quake", sizeof( buf ));
 			break;
-		case RTCWBSP_VERSION:
-			com.strncpy( buf, "Return To Castle Wolfenstein", sizeof( buf ));
-			break;
-		case RFIDBSP_VERSION:
-			com.strncpy( buf, "Soldier Of Fortune 2", sizeof( buf ));
-			break;
-		case XRIDBSP_VERSION:
-			com.strncpy( buf, "X-Real Engine format", sizeof( buf ));
+		case HLBSP_VERSION:
+			com.strncpy( buf, "Half-Life", sizeof( buf ));
 			break;
 		default:	com.strncpy( buf, "??", sizeof( buf )); break;
 		}
@@ -635,26 +619,15 @@ bool Cmd_CheckMapsList( void )
 
 			Mem_Set( buf, 0, MAX_SYSPATH );
 			FS_Read( f, buf, MAX_SYSPATH );
+			ver = LittleLong(*(uint *)buf);
                               
-			switch( LittleLong(*(uint *)buf) )
+			switch( ver )
 			{
-			case IDBSPMODHEADER:
-			case RBBSPMODHEADER:
-			case QFBSPMODHEADER:
-			case XRBSPMODHEADER:
+			case Q1BSP_VERSION:
+			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				ver = LittleLong(((int *)buf)[1]);
-
-				switch( ver )
-				{
-				case Q3IDBSP_VERSION:	// quake3 arena
-				case RTCWBSP_VERSION:	// return to castle wolfenstein
-				case RFIDBSP_VERSION:	// raven or qfusion bsp
-				case XRIDBSP_VERSION:	// x-real engine
-					lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-					lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
-					break;
-				}
+				lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+				lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
 				break;
 			}
 

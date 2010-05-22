@@ -82,7 +82,8 @@ typedef struct playermove_s
 	void		(*ClientPrintf)( int idx, char *fmt, ... );
 	void		(*AlertMessage)( ALERT_TYPE level, char *fmt, ... );
 	const char	*(*PM_GetString)( string_t iString );	// used for reading string_t edict fields
-	int		(*PM_PointContents)( const float *p );
+	int		(*PM_PointContents)( const float *p, int *truecontents );
+	int		(*PM_HullPointContents)( chull_t *hull, int num, const float *p );
 	TraceResult	(*PM_PlayerTrace)( const float *start, const float *end, int trace_type );
 	const char	*(*PM_TraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 );
 	edict_t		*(*PM_GetEntityByIndex)( int entIndex ); // use VIEWENT_INDEX to get weapon entity
@@ -92,6 +93,7 @@ typedef struct playermove_s
 	int		(*PM_GetModelType)( model_t handle );
 	void		(*PM_GetModelBounds)( model_t handle, float *mins, float *maxs );
 	void		*(*PM_ModExtradata)( model_t handle );
+	chull_t		*(*PM_HullForBsp)( edict_t *e, float *offset );
 	TraceResult	(*PM_TraceModel)( edict_t *pEnt, const float *start, const float *end );
 	byte		*(*COM_LoadFile)( const char *filepath, int *pLength );
 	char		*(*COM_ParseToken)( const char **data_p );

@@ -54,15 +54,15 @@ int r_pvsframecount;	// bumped when going to a new PVS
 int r_framecount;		// used for dlight push checking
 int r_framecount2;		// used bonestransform checking
 
-int c_brush_polys, c_world_leafs;
+int		c_brush_polys, c_world_leafs;
 
-int r_mark_leaves, r_world_node;
-int r_add_polys, r_add_entities;
-int r_sort_meshes, r_draw_meshes;
+int		r_mark_leaves, r_world_node;
+int		r_add_polys, r_add_entities;
+int		r_sort_meshes, r_draw_meshes;
 
-msurface_t *r_debug_surface;
+msurface_t	*r_debug_surface;
 
-char r_speeds_msg[MAX_RSPEEDSMSGSIZE];
+char		r_speeds_msg[MAX_RSPEEDSMSGSIZE];
 
 uint		r_numEntities;
 ref_entity_t	r_entities[MAX_ENTITIES];
@@ -76,9 +76,10 @@ poly_t		r_polys[MAX_POLYS];
 
 lightstyle_t	r_lightStyles[MAX_LIGHTSTYLES];
 
-int r_viewcluster, r_oldviewcluster;
+mleaf_t		*r_viewleaf, *r_oldviewleaf;
+mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 
-float r_farclip_min, r_farclip_bias = 64.0f;
+float		r_farclip_min, r_farclip_bias = 64.0f;
 
 /*
 =================
@@ -485,7 +486,7 @@ SPRITE MODELS AND FLARES
 static vec4_t spr_xyz[4] = { {0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {0,0,0,1} };
 static vec2_t spr_st[4] = { {1, 0}, {1, 1}, {0,1}, {0, 0} };
 static rgba_t spr_color[4];
-static mesh_t spr_mesh = { 4, spr_xyz, spr_xyz, NULL, spr_st, { 0, 0, 0, 0 }, { spr_color, spr_color, spr_color, spr_color }, 6, NULL };
+static mesh_t spr_mesh = { 4, 6, spr_xyz, spr_xyz, NULL, NULL, spr_st, NULL, spr_color, NULL, NULL };
 
 /*
 =================
@@ -1068,8 +1069,6 @@ R_SetupFrame
 */
 static void R_SetupFrame( void )
 {
-	mleaf_t *leaf;
-
 	// build the transformation matrix for the given view angles
 	VectorCopy( RI.refdef.vieworg, RI.viewOrigin );
 	AngleVectors( RI.refdef.viewangles, RI.viewAxis[0], RI.viewAxis[1], RI.viewAxis[2] );
@@ -1082,17 +1081,41 @@ static void R_SetupFrame( void )
 
 	r_framecount++;
 
-	// current viewcluster
-	if( !( RI.refdef.flags & RDF_NOWORLDMODEL ) )
+	// current viewleaf
+	if(!( RI.refdef.flags & RDF_NOWORLDMODEL ))
 	{
+		mleaf_t	*leaf;
+		vec3_t	tmp;
+
 		VectorCopy( r_worldmodel->mins, RI.visMins );
 		VectorCopy( r_worldmodel->maxs, RI.visMaxs );
 
-		if( !( RI.params & RP_OLDVIEWCLUSTER ) )
+		if(!( RI.params & RP_OLDVIEWLEAF ))
 		{
-			r_oldviewcluster = r_viewcluster;
+			r_oldviewleaf = r_viewleaf;
+			r_oldviewleaf2 = r_viewleaf2;
 			leaf = Mod_PointInLeaf( RI.pvsOrigin, r_worldmodel );
-			r_viewcluster = leaf->cluster;
+			r_viewleaf2 = r_viewleaf = leaf;
+
+			// check above and below so crossing solid water doesn't draw wrong
+			if( leaf->contents == CONTENTS_EMPTY )
+			{
+				// look down a bit
+				VectorCopy( RI.pvsOrigin, tmp );
+				tmp[2] -= 16;
+				leaf = Mod_PointInLeaf( tmp, r_worldmodel );
+				if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
+					r_viewleaf2 = leaf;
+			}
+			else
+			{
+				// look up a bit
+				VectorCopy( RI.pvsOrigin, tmp );
+				tmp[2] += 16;
+				leaf = Mod_PointInLeaf( tmp, r_worldmodel );
+				if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
+					r_viewleaf2 = leaf;
+			}
 		}
 	}
 }
@@ -1579,8 +1602,8 @@ R_RenderDebugSurface
 void R_RenderDebugSurface( void )
 {
 	trace_t	tr;
-	vec3_t		forward;
-	vec3_t		start, end;
+	vec3_t	forward;
+	vec3_t	start, end;
 
 	if( RI.params & RP_NONVIEWERREF || RI.refdef.flags & RDF_NOWORLDMODEL )
 		return;
@@ -1593,7 +1616,8 @@ void R_RenderDebugSurface( void )
 	VectorCopy( RI.viewOrigin, start );
 	VectorMA( start, 4096, forward, end );
 
-	r_debug_surface = R_TraceLine( &tr, start, end, 0 );
+	r_debug_surface = R_TraceLine( &tr, start, end );
+
 	if( r_debug_surface && r_debug_surface->mesh && !gl_wireframe->integer )
 	{
 		RI.previousentity = NULL;
@@ -1621,7 +1645,7 @@ void R_RenderView( const ref_params_t *fd )
 
 	R_ClearMeshList( RI.meshlist );
 
-	if( !r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ) )
+	if( !r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
 		Host_Error( "R_RenderView: NULL worldmodel\n" );
 
 	R_SetupFrame();
@@ -1648,7 +1672,9 @@ void R_RenderView( const ref_params_t *fd )
 
 	if( r_speeds->integer )
 		msec = Sys_Milliseconds();
+
 	R_MarkLeaves();
+
 	if( r_speeds->integer )
 		r_mark_leaves += ( Sys_Milliseconds() - msec );
 
@@ -1661,28 +1687,38 @@ void R_RenderView( const ref_params_t *fd )
 
 		R_DrawCoronas();
 
-		if( r_speeds->integer ) msec = Sys_Milliseconds();
+		if( r_speeds->integer )
+			msec = Sys_Milliseconds();
+
 		R_AddPolysToList();
-		if( r_speeds->integer ) r_add_polys += ( Sys_Milliseconds() - msec );
+
+		if( r_speeds->integer )
+			r_add_polys += ( Sys_Milliseconds() - msec );
 	}
 
 	if( r_speeds->integer ) msec = Sys_Milliseconds();
 
 	R_DrawEntities();
 
-	if( r_speeds->integer ) r_add_entities += ( Sys_Milliseconds() - msec );
+	if( r_speeds->integer )
+		r_add_entities += ( Sys_Milliseconds() - msec );
 
 	if( shadowMap )
 	{
 		if(!( RI.params & RP_WORLDSURFVISIBLE ))
 			return; // we didn't cast shadows on anything, so stop
+
 		if( prevRI.shadowBits & RI.shadowGroup->bit )
 			return; // already drawn
 	}
 
-	if( r_speeds->integer ) msec = Sys_Milliseconds();
+	if( r_speeds->integer )
+		msec = Sys_Milliseconds();
+
 	R_SortMeshes();
-	if( r_speeds->integer ) r_sort_meshes += ( Sys_Milliseconds() - msec );
+
+	if( r_speeds->integer )
+		r_sort_meshes += ( Sys_Milliseconds() - msec );
 
 	R_DrawPortals();
 
@@ -1693,11 +1729,13 @@ void R_RenderView( const ref_params_t *fd )
 
 	R_Clear( shadowMap ? ~( GL_STENCIL_BUFFER_BIT|GL_COLOR_BUFFER_BIT ) : ~0 );
 
-	if( r_speeds->integer ) msec = Sys_Milliseconds();
+	if( r_speeds->integer )
+		msec = Sys_Milliseconds();
 
 	R_DrawMeshes();
 
-	if( r_speeds->integer ) r_draw_meshes += ( Sys_Milliseconds() - msec );
+	if( r_speeds->integer )
+		r_draw_meshes += ( Sys_Milliseconds() - msec );
 
 	R_BackendCleanUpTextureUnits();
 
@@ -2228,21 +2266,21 @@ static bool R_WorldToScreen( const float *world, float *screen )
 R_TraceLine
 =============
 */
-msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int surfumask )
+msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end )
 {
 	int		i;
 	msurface_t	*surf;
 
 	// trace against world
-	surf = R_TransformedTraceLine( tr, start, end, r_worldent, surfumask );
+	surf = R_TransformedTraceLine( tr, start, end, r_worldent );
 
 	// trace against bmodels
 	for( i = 0; i < r_numbmodelentities; i++ )
 	{
-		trace_t	t2;
+		trace_t		t2;
 		msurface_t	*s2;
 
-		s2 = R_TransformedTraceLine( &t2, start, end, r_bmodelentities[i], surfumask );
+		s2 = R_TransformedTraceLine( &t2, start, end, r_bmodelentities[i] );
 		if( t2.flFraction < tr->flFraction )
 		{
 			*tr = t2;	// closer impact point
@@ -2292,7 +2330,7 @@ shader_t Mod_RegisterShader( const char *name, int shaderType )
 
 byte *Mod_GetCurrentVis( void )
 {
-	return Mod_ClusterPVS( r_viewcluster, r_worldmodel );
+	return Mod_LeafPVS( r_viewleaf, r_worldmodel );
 }
 
 bool Mod_CullBox( const vec3_t mins, const vec3_t maxs )

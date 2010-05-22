@@ -1752,26 +1752,32 @@ static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int
 
 static void pfnTraceModel( const float *v1, const float *v2, edict_t *pent, TraceResult *ptr )
 {
-	trace_t	result;
-
 	if( !CL_IsValidEdict( pent ))
 	{
-		MsgDev( D_WARN, "CL_TraceModel: invalid entity %s\n", CL_ClassName( pent ));
+		MsgDev( D_WARN, "TraceModel: invalid entity %s\n", CL_ClassName( pent ));
 		return;
 	}
 
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceModel: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	result = CL_ClipMoveToEntity( pent, v1, pent->v.mins, pent->v.maxs, v2, MASK_SOLID, 0 );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
+	if( ptr ) *ptr = CM_ClipMove( pent, v1, pent->v.mins, pent->v.maxs, v2, 0 );
 }
 
 static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, const float *v2 )
 {
+	trace_t	result;
+
+	if( !CL_IsValidEdict( pTextureEntity ))
+	{
+		MsgDev( D_WARN, "TraceTexture: invalid entity %s\n", CL_ClassName( pTextureEntity ));
+		return NULL;
+	}
+
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	if( !pTextureEntity || pTextureEntity->free ) return NULL; 
-	return CL_ClipMoveToEntity( pTextureEntity, v1, vec3_origin, vec3_origin, v2, MASK_SOLID, 0 ).pTexName;
+
+	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
+	return CM_TraceTexture( v1, result );
 }
 
 /*

@@ -735,8 +735,6 @@ void CBaseDoor::DoorGoUp( void )
 //	ALERT(at_debug, "%s go up (was %d)\n", STRING(pev->targetname), m_toggle_state);
 	m_toggle_state = TS_GOING_UP;
 
-	SET_AREAPORTAL( edict(), true ); // open areaportal
-	
 	SetMoveDone(&CBaseDoor:: DoorHitTop );
 
 	// LRC- if synched, we fire as soon as we start to go up
@@ -889,8 +887,6 @@ void CBaseDoor::DoorHitBottom( void )
 //	ALERT(at_debug, "%s hit bottom\n", STRING(pev->targetname));
 	ASSERT(m_toggle_state == TS_GOING_DOWN);
 	m_toggle_state = TS_AT_BOTTOM;
-
-	SET_AREAPORTAL( edict(), false );	// close areaportal
 
 	// Re-instate touch method, cycle is complete
 	if ( FBitSet ( pev->spawnflags, SF_DOOR_USE_ONLY ) &&

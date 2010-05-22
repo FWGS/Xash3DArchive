@@ -1215,7 +1215,7 @@ From the eye position, we set up the PAS and PVS to use for filtering network me
 NOTE:  Do not cache the values of pas and pvs, as they depend on reusable memory in the engine, they are only good for this one frame
 ================
 */
-int SetupVisibility( edict_t *pViewEntity, edict_t *pClient, int portal, float *rgflViewOrg )
+void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int portal )
 {
 	Vector	org = g_vecZero;
 	edict_t	*pView = pClient;
@@ -1223,25 +1223,25 @@ int SetupVisibility( edict_t *pViewEntity, edict_t *pClient, int portal, float *
 	if( portal )
 	{
 		// Entity's added from portal camera PVS
-		if( FNullEnt( pViewEntity )) return 0; // broken portal ?
+		if( FNullEnt( pViewEntity )) return; // broken portal ?
 
 		CBaseEntity *pCamera = (CBaseEntity *)CBaseEntity::Instance( pViewEntity );
 
-		if( !pCamera ) return 0;
+		if( !pCamera ) return;
 
 		// determine visible point
 		if( pCamera->m_iClassType == ED_PORTAL )
 		{
 			// don't build visibility for mirrors
 			if( pCamera->pev->origin == pCamera->pev->oldorigin )
-				return 0;
+				return;
 			else org = pCamera->pev->oldorigin;
 		}
 		else if( pCamera->m_iClassType == ED_SKYPORTAL )
 		{
 			org = pCamera->pev->origin;
 		}
-		else return 0; // other edicts can't merge pvs
+		else return; // other edicts can't merge pvs
 	}
 	else
 	{
@@ -1251,8 +1251,9 @@ int SetupVisibility( edict_t *pViewEntity, edict_t *pClient, int portal, float *
 
 		if( pClient->v.flags & FL_PROXY )
 		{
-			// the spectator proxy sees and hears everything
-			return -1; // force engine to ignore vis
+			*pvs = NULL; // the spectator proxy sees
+			*pas = NULL; // and hears everything
+			return;
 		}
 
 		CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pClient );
@@ -1278,8 +1279,8 @@ int SetupVisibility( edict_t *pViewEntity, edict_t *pClient, int portal, float *
 		org = pView->v.origin + pView->v.view_ofs;
 	}
 
-	org.CopyToArray( rgflViewOrg );
-	return 1;
+	*pvs = ENGINE_SET_PVS( (float *)&org, portal );
+	*pas = ENGINE_SET_PAS( (float *)&org, portal );
 }
 
 /*
@@ -1295,7 +1296,7 @@ player is 1 if the ent/e is a player and 0 otherwise
 pSet is either the PAS or PVS that we previous set up.  We can use it to ask the engine to filter the entity against the PAS or PVS.
 we could also use the pas/ pvs that we set in SetupVisibility, if we wanted to.  Caching the value is valid in that case, but still only for the current frame
 */
-int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, int hostarea, byte *pSet )
+int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet )
 {
 	if( FNullEnt( pEdict )) return 0; // never adding invalid entities
 
@@ -1337,12 +1338,6 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 	case ED_BSPBRUSH:
 	case ED_RIGIDBODY: break;
 	default: return 0; // skipped
-	}
-
-	if( !ENGINE_CHECK_AREA( pEdict, hostarea ))
-	{
-		// blocked by a door
-		return 0;
 	}
 
 	Vector	delta = g_vecZero;	// for ambient sounds

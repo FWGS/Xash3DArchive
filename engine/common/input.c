@@ -102,6 +102,7 @@ void IN_StartupMouse( void )
 {
 	cvar_t	*cv;
 
+	if( host.type == HOST_DEDICATED ) return;
 	cv = Cvar_Get( "in_initmouse", "1", CVAR_SYSTEMINFO, "allow mouse device" );
 	if( !cv->value ) return; 
 

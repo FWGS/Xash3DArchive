@@ -35,6 +35,63 @@ DYNAMIC LIGHTS BLEND RENDERING
 
 /*
 =============
+R_RecursiveLightNode
+=============
+*/
+void R_RecursiveLightNode( dlight_t *light, int bit, mnode_t *node )
+{
+	float		dist;
+	msurface_t	*surf;
+	cplane_t		*splitplane;
+	int		i, sidebit;
+
+	if( node->contents != CONTENTS_NODE )
+		return;
+
+	splitplane = node->plane;
+	if( splitplane->type < 3 ) dist = light->origin[splitplane->type] - splitplane->dist;
+	else dist = DotProduct( light->origin, splitplane->normal ) - splitplane->dist;
+	
+	if( dist > light->intensity )
+	{
+		R_RecursiveLightNode( light, bit, node->children[0] );
+		return;
+	}
+
+	if( dist < -light->intensity )
+	{
+		R_RecursiveLightNode( light, bit, node->children[1] );
+		return;
+	}
+		
+	// mark the polygons
+	surf = node->firstface;
+
+	for( i = 0; i < node->numfaces; i++, surf++ )
+	{
+		if( surf->plane->type < 3 ) dist = light->origin[surf->plane->type] - surf->plane->dist;
+		else dist = DotProduct( light->origin, surf->plane->normal ) - surf->plane->dist;
+
+		if( dist >= 0 ) sidebit = 0;
+		else sidebit = SURF_PLANEBACK;
+
+		if(( surf->flags & SURF_PLANEBACK ) != sidebit )
+			continue;
+
+		if( surf->dlightFrame != r_framecount )
+		{
+			surf->dlightBits = bit; // was 0
+			surf->dlightFrame = r_framecount;
+		}
+		else surf->dlightBits |= bit;
+	}
+
+	R_RecursiveLightNode( light, bit, node->children[0] );
+	R_RecursiveLightNode( light, bit, node->children[1] );
+}
+
+/*
+=============
 R_SurfPotentiallyLit
 =============
 */
@@ -42,14 +99,17 @@ bool R_SurfPotentiallyLit( msurface_t *surf )
 {
 	ref_shader_t *shader;
 
-	if( surf->flags & ( SURF_SKY|SURF_NODLIGHT|SURF_NODRAW ) )
+	if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
+		return false;
+
+	if( !surf->samples )
 		return false;
 
 	shader = surf->shader;
 	if( shader->flags & SHADER_SKYPARMS || shader->type == SHADER_FLARE || !shader->num_stages )
 		return false;
 
-	return ( surf->mesh && ( surf->facetype != MST_FLARE ) /* && (surf->facetype != MST_TRISURF)*/ );
+	return true;
 }
 
 /*
@@ -59,8 +119,30 @@ R_LightBounds
 */
 void R_LightBounds( const vec3_t origin, float intensity, vec3_t mins, vec3_t maxs )
 {
-	VectorSet( mins, origin[0] - intensity, origin[1] - intensity, origin[2] - intensity /* - intensity*/ );
-	VectorSet( maxs, origin[0] + intensity, origin[1] + intensity, origin[2] + intensity /* + intensity*/ );
+	VectorSet( mins, origin[0] - intensity, origin[1] - intensity, origin[2] - intensity );
+	VectorSet( maxs, origin[0] + intensity, origin[1] + intensity, origin[2] + intensity );
+}
+
+/*
+=================
+R_MarkLights
+=================
+*/
+void R_MarkLights( uint clipflags )
+{
+	dlight_t	*dl;
+	int	l;
+
+	if( !r_dynamiclight->integer || !r_numDlights )
+		return;
+
+	for( l = 0, dl = r_dlights; l < r_numDlights; l++, dl++ )
+	{
+		if( R_CullSphere( dl->origin, dl->intensity, clipflags ))
+			continue;
+
+		R_RecursiveLightNode( dl, BIT( l ), r_worldbrushmodel->nodes );
+	}
 }
 
 /*
@@ -78,17 +160,9 @@ uint R_AddSurfDlighbits( msurface_t *surf, uint dlightbits )
 	{
 		if( dlightbits & bit )
 		{
-			if( surf->facetype == MST_PLANAR )
-			{
-				dist = PlaneDiff( lt->origin, surf->plane );
-				if( dist <= -lt->intensity || dist >= lt->intensity )
-					dlightbits &= ~bit; // how lucky...
-			}
-			else if( surf->facetype == MST_PATCH || surf->facetype == MST_TRISURF )
-			{
-				if( !BoundsIntersect( surf->mins, surf->maxs, lt->mins, lt->maxs ))
-					dlightbits &= ~bit;
-			}
+			dist = PlaneDiff( lt->origin, surf->plane );
+			if( dist <= -lt->intensity || dist >= lt->intensity )
+				dlightbits &= ~bit; // how lucky...
 		}
 	}
 	return dlightbits;
@@ -279,7 +353,7 @@ void R_DrawCoronas( void )
 			continue;
 		dist -= light->intensity;
 
-		R_TraceLine( &tr, light->origin, RI.viewOrigin, SURF_NONSOLID );
+		R_TraceLine( &tr, light->origin, RI.viewOrigin );
 		if( tr.flFraction != 1.0f )
 			continue;
 
@@ -649,7 +723,7 @@ static void R_BuildLightmap( int w, int h, bool deluxe, const byte *data, byte *
 	{
 		for( y = 0; y < h; y++ )
 		{
-			for( x = 0, rgba = dest + y * blockWidth; x < w; x++, data += LM_BYTES, rgba += 4 )
+			for( x = 0, rgba = dest + y * blockWidth; x < w; x++, data += 3, rgba += 4 )
 			{
 				scaled[0] = (float)( (int)data[0] << bits );
 				scaled[1] = (float)( (int)data[1] << bits );
@@ -672,7 +746,7 @@ static void R_BuildLightmap( int w, int h, bool deluxe, const byte *data, byte *
 	{
 		for( y = 0; y < h; y++ )
 		{
-			for( x = 0, rgba = dest + y * blockWidth; x < w; x++, data += LM_BYTES, rgba += 4 )
+			for( x = 0, rgba = dest + y * blockWidth; x < w; x++, data += 3, rgba += 4 )
 			{
 				rgba[0] = bound( 0, ( (int)data[0] << bits ), 255 );
 				rgba[1] = bound( 0, ( (int)data[1] << bits ), 255 );
@@ -715,12 +789,12 @@ static int R_PackLightmaps( int num, int w, int h, int size, int stride, bool de
 		r_image.width = w;
 		r_image.height = h;
 		r_image.type = PF_RGB_24;
-		r_image.size = w * h * LM_BYTES;
+		r_image.size = w * h * 3;
 		r_image.flags = 0;
 		r_image.depth = r_image.numMips = 1;
 		r_image.palette = NULL;
 		r_image.buffer = r_lightmapBuffer;
-		image = R_LoadTexture( uploadName, &r_image, LM_BYTES, TF_NOPICMIP|TF_CLAMP|TF_NOMIPMAP );
+		image = R_LoadTexture( uploadName, &r_image, 3, TF_NOPICMIP|TF_CLAMP|TF_NOMIPMAP );
 
 		tr.lightmapTextures[r_numUploadedLightmaps] = image;
 		if( rects )
@@ -809,12 +883,12 @@ static int R_PackLightmaps( int num, int w, int h, int size, int stride, bool de
 	r_image.width = rectX * w;
 	r_image.height = rectY * h;
 	r_image.type = PF_RGB_24;
-	r_image.size = r_image.width * r_image.height * LM_BYTES;
+	r_image.size = r_image.width * r_image.height * 3;
 	r_image.depth = r_image.numMips = 1;
 	r_image.flags = 0;
 	r_image.palette = NULL;
 	r_image.buffer = r_lightmapBuffer;
-	image = R_LoadTexture( uploadName, &r_image, LM_BYTES, TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP|TF_NOMIPMAP );
+	image = R_LoadTexture( uploadName, &r_image, 3, TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP|TF_NOMIPMAP );
 
 	tr.lightmapTextures[r_numUploadedLightmaps] = image;
 	if( rects )
@@ -852,7 +926,7 @@ void R_BuildLightmaps( int numLightmaps, int w, int h, const byte *data, mlightm
 		if( tr.lightmapTextures[i] ) R_FreeImage( tr.lightmapTextures[i] );
 
 	r_maxLightmapBlockSize = size;
-	size = w * h * LM_BYTES;
+	size = w * h * 3;
 	r_lightmapBufferSize = w * h * 4;
 	r_lightmapBuffer = Mem_Alloc( r_temppool, r_lightmapBufferSize );
 	r_numUploadedLightmaps = 0;

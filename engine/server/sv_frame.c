@@ -189,12 +189,11 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_frame_t *frame, sv_ents_t *ents, bool portal )
 {
 	edict_t		*ent;
-	vec3_t		origin;
 	byte		*pset;
-	sv_client_t	*cl;
-	int		leafnum, fullvis = false;
-	int		e, clientcluster, clientarea;
+	bool		fullvis = false;
 	bool		force = false;
+	sv_client_t	*cl;
+	int		e;
 
 	// during an error shutdown message we may need to transmit
 	// the shutdown message after the server has shutdown, so
@@ -214,23 +213,8 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			sv.hostflags |= SVF_SKIPLOCALHOST;
 	}
 
-	e = svgame.dllFuncs.pfnSetupVisibility( pViewEnt, pClient, portal, origin );
-	if( e == 0 ) return; // invalid viewent ?
-	if( e == -1 ) fullvis = true;
-
-	clientpvs = CM_FatPVS( origin, portal );
-	leafnum = CM_PointLeafnum( origin );
-	clientarea = CM_LeafArea( leafnum );
-	clientcluster = CM_LeafCluster( leafnum );
-	clientphs = CM_FatPHS( clientcluster, portal );
-
-	// calculate the visible areas
-	if( fullvis )
-	{
-		if( !portal ) Mem_Set( frame->areabits, 0xFF, sizeof( frame->areabits ));
-		frame->areabits_size = sizeof( frame->areabits );
-	}
-	else frame->areabits_size = CM_WriteAreaBits( frame->areabits, clientarea, portal );
+	svgame.dllFuncs.pfnSetupVisibility( pViewEnt, pClient, &clientpvs, &clientphs, portal );
+	if( !clientpvs ) fullvis = true;
 
 	for( e = 1; e < svgame.globals->numEntities; e++ )
 	{
@@ -262,16 +246,25 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( !force )
 		{
 			// run custom user filter
-			if( !svgame.dllFuncs.pfnAddToFullPack( pViewEnt, pClient, ent, sv.hostflags, clientarea, pset ))
+			if( !svgame.dllFuncs.pfnAddToFullPack( pViewEnt, pClient, ent, sv.hostflags, pset ))
 				continue;
 		}
 
 		SV_AddEntToSnapshot( ent->pvServerData, ent, ents ); // add it
-		if( fullvis ) continue; // portal ents will be added anywhere, ignore recursion
+		if( fullvis ) continue; // portal ents will be added anyway, ignore recursion
 
 		// if its a portal entity, add everything visible from its camera position
-		if( !portal && (ent->pvServerData->s.ed_type == ED_PORTAL || ent->pvServerData->s.ed_type == ED_SKYPORTAL))
-			SV_AddEntitiesToPacket( ent, pClient, frame, ents, true );
+		if( !portal )
+		{
+
+			switch( ent->pvServerData->s.ed_type )
+			{
+			case ED_PORTAL:
+			case ED_SKYPORTAL:		
+				SV_AddEntitiesToPacket( ent, pClient, frame, ents, true );
+				break;
+			}
+		}
 	}
 }
 
@@ -378,10 +371,6 @@ void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 	MSG_WriteByte( msg, frame->index );		// send a client index
 	cl->surpressCount = 0;
 
-	// send over the areabits
-	MSG_WriteByte( msg, frame->areabits_size );	// never more than 255 bytes
-	MSG_WriteData( msg, frame->areabits, frame->areabits_size );
-
 	// delta encode the entities
 	SV_EmitPacketEntities( oldframe, frame, msg );
 }
@@ -398,8 +387,8 @@ Build a client frame structure
 =============
 SV_BuildClientFrame
 
-Decides which entities are going to be visible to the client, and
-copies off the playerstat and areabits.
+Decides which entities are going to be visible to the client,
+and copies off the playerstate.
 =============
 */
 void SV_BuildClientFrame( sv_client_t *cl )
@@ -422,7 +411,6 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
-	Mem_Set( frame->areabits, 0, sizeof( frame->areabits ));
 	if( !clent->pvServerData->client ) return; // not in game yet
 
 	// grab the current player index

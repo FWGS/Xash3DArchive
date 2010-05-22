@@ -43,6 +43,7 @@ dependencies
 /* general */
 #include "xtools.h"
 #include "qfiles_ref.h"
+#include "bspfile.h"
 #include "engine_api.h"
 #include "utils.h"
 #include "mathlib.h"

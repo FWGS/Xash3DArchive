@@ -480,7 +480,7 @@ static float R_GlowSightDistance( vec3_t glowOrigin )
 	VectorSubtract( glowOrigin, RI.viewOrigin, glowDist );
 	dist = VectorLength( glowDist );
 	
-	R_TraceLine( &tr, RI.viewOrigin, glowOrigin, MASK_OPAQUE );
+	R_TraceLine( &tr, RI.viewOrigin, glowOrigin );
 	if(( 1.0 - tr.flFraction ) * dist > 8 )
 		return -1;
 	return dist;

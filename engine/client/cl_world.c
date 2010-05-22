@@ -276,93 +276,6 @@ int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int max
 }
 
 /*
-==================
-CL_ClipMoveToEntity
-
-Handles selection or creation of a clipping hull, and offseting (and
-eventually rotation) of the end points
-==================
-*/
-trace_t CL_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, uint umask, int flags )
-{
-	trace_t	trace;
-	model_t	handle;
-	float	*origin, *angles;
-
-	// fill in a default trace
-	Mem_Set( &trace, 0, sizeof( trace_t ));
-
-	// if it doesn't have any brushes of a type we
-	// are looking for, ignore it
-	if(!( umask & World_ContentsForEdict( ent )))
-	{
-		trace.flFraction = 1.0f;
-		trace.fInOpen = true;
-		return trace;
-	}
-
-	// might intersect, so do an exact clip
-	handle = World_HullForEntity( ent );
-
-	if( ent->v.solid == SOLID_BSP )
-		angles = ent->v.angles;
-	else angles = vec3_origin; // boxes don't rotate
-	origin = ent->v.origin;
-
-	if( ent == clgame.edicts )
-		CM_BoxTrace( &trace, start, end, mins, maxs, handle, umask, TR_AABB );
-	else if( !(flags & FMOVE_SIMPLEBOX) && CM_GetModelType( ent->v.modelindex ) == mod_studio )
-	{
-		if( CM_HitboxTrace( &trace, ent, start, end )); // continue tracing bbox if hitbox missing
-		else CM_TransformedBoxTrace( &trace, start, end, mins, maxs, handle, umask, origin, angles, TR_AABB );
-	}
-	else CM_TransformedBoxTrace( &trace, start, end, mins, maxs, handle, umask, origin, angles, TR_AABB );
-
-	// did we clip the move?
-	if( trace.flFraction < 1.0f || trace.fStartSolid )
-		trace.pHit = ent;
-
-	if( !(flags & FMOVE_SIMPLEBOX) && CM_GetModelType( ent->v.modelindex ) == mod_studio )
-	{
-		if( VectorIsNull( mins ) && VectorIsNull( maxs ) && trace.iHitgroup == -1 )
-		{
-			trace.flFraction = 1.0f;
-			trace.pHit = NULL;	// clear entity when hitbox not intersected
-		}
-	}
-	return trace;
-}
-
-static trace_t CL_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch, bool is_bmodel )
-{
-	if( trace->fAllSolid )
-	{
-		cliptrace->fAllSolid = true;
-		trace->pHit = touch;
-	}
-	else if( trace->fStartSolid )
-	{
-		if( is_bmodel )
-			cliptrace->fStartStuck = true;
-		cliptrace->fStartSolid = true;
-		trace->pHit = touch;
-	}
-
-	if( trace->flFraction < cliptrace->flFraction )
-	{
-		bool	oldStart;
-
-		// make sure we keep a startsolid from a previous trace
-		oldStart = cliptrace->fStartSolid;
-
-		trace->pHit = touch;
-		cliptrace = trace;
-		cliptrace->fStartSolid |= oldStart;
-	}
-	return *cliptrace;
-}
-
-/*
 ====================
 CL_ClipToLinks
 
@@ -429,8 +342,8 @@ static void CL_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				if( VectorIsNull( touch->v.origin ))
 					VectorAverage( touch->v.absmin, touch->v.absmax, point );
 				else VectorCopy( touch->v.origin, point );
-				if( CL_BaseContents( point, NULL ) & BASECONT_TRANSLUCENT )
-					continue; // glass detected
+				if( CL_PointContents( point ) == CONTENTS_TRANSLUCENT )
+					continue; // grate detected
 			default:	break;
 			}
 		}
@@ -447,9 +360,10 @@ static void CL_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		}
 
 		if( touch->v.flags & FL_MONSTER )
-			trace = CL_ClipMoveToEntity( touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->umask, clip->flags );
-		else trace = CL_ClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, clip->umask, clip->flags );
-		clip->trace = CL_CombineTraces( &clip->trace, &trace, touch, touch->v.solid == SOLID_BSP );
+			trace = CM_ClipMove( touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->flags );
+		else trace = CM_ClipMove( touch, clip->start, clip->mins, clip->maxs, clip->end, clip->flags );
+
+		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );
 	}
 	
 	// recurse down both sides
@@ -480,13 +394,9 @@ trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 	clip.type = (type & 0xFF);
 	clip.flags = (type & 0xFF00);
 	clip.passedict = e;
-	clip.umask = World_MaskForEdict( e );
-
-	if( VectorCompare( clip.mins, clip.maxs ))
-		clip.umask &= ~BASECONT_CLIP;	// pointraces ignore clip
 
 	// clip to world
-	clip.trace = CL_ClipMoveToEntity( EDICT_NUM( 0 ), start, mins, maxs, end, clip.umask, 0 );
+	clip.trace = CM_ClipMove( EDICT_NUM( 0 ), start, mins, maxs, end, 0 );
 
 	if( type == MOVE_MISSILE )
 	{
@@ -559,69 +469,57 @@ CL_PointContents
 
 =============
 */
-int CL_BaseContents( const vec3_t p, edict_t *e )
+int CL_TruePointContents( const vec3_t p )
 {
-	model_t		handle;
-	float		*angles;
-	int		i, num, contents, c2;
-	edict_t		*touch[MAX_EDICTS];
-	edict_t		*hit;
+	int	i, num, contents;
+	edict_t	*hit, *touch[MAX_EDICTS];
 
 	// sanity check
-	if( !p ) return 0;
+	if( !p ) return CONTENTS_NONE;
 
 	// get base contents from world
-	contents = CM_PointContents( p, 0 );
+	contents = CM_PointContents( p );
 
-	// or in contents from all the other entities
+	if( contents != CONTENTS_EMPTY )
+		return contents; // have some world contents
+
+	// check contents from all the solid entities
 	num = CL_AreaEdicts( p, p, touch, MAX_EDICTS, AREA_SOLID );
 
 	for( i = 0; i < num; i++ )
 	{
 		hit = touch[i];
 
-		if( hit == e ) continue;
-		if( hit->v.flags & (FL_CLIENT|FL_FAKECLIENT|FL_MONSTER))
-		{
-			// never get contents from alives
-			if( hit->v.health > 0.0f ) continue;
-		}
+		if( hit->v.solid != SOLID_BSP )
+			continue; // monsters, players
 
-		// might intersect, so do an exact clip
-		handle = World_HullForEntity( hit );
-		if( hit->v.solid == SOLID_BSP )
-			angles = hit->v.angles;
-		else angles = vec3_origin;	// boxes don't rotate
-
-		c2 = CM_TransformedPointContents( p, handle, hit->v.origin, angles );
-		c2 |= World_ContentsForEdict( hit ); // user-defined contents
-		contents |= c2;
+		// solid entity found
+		return CONTENTS_SOLID;
 	}
 
-	// or in contents from all the water entities
+	// check contents from all the custom entities
 	num = CL_AreaEdicts( p, p, touch, MAX_EDICTS, AREA_CUSTOM );
 
 	for( i = 0; i < num; i++ )
 	{
 		hit = touch[i];
 
-		if( hit == e ) continue;
 		if( hit->v.solid != SOLID_NOT || hit->v.skin == CONTENTS_NONE )
 			continue; // invalid water ?
 
-		// might intersect, so do an exact clip
-		handle = World_HullForEntity( hit );
-		c2 = CM_TransformedPointContents( p, handle, hit->v.origin, vec3_origin );
-		c2 |= World_ContentsForEdict( hit ); // user-defined contents
-		contents |= c2;
+		// custom contents found
+		return hit->v.skin;
 	}
-
 	return contents;
 }
 
 int CL_PointContents( const vec3_t p )
 {
-	return World_ConvertContents( CL_BaseContents( p, NULL ));
+	int cont = CL_TruePointContents( p );
+
+	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
+		cont = CONTENTS_WATER;
+	return cont;
 }
 
 /*
@@ -654,7 +552,7 @@ edict_t *CL_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult 
 	result = CL_Move( origin, mins, maxs, origin, MOVE_NORMAL, pass );
 	if( tr ) Mem_Copy( tr, &result, sizeof( *tr ));
 
-	if(( result.iContents & World_MaskForEdict( pass )) && result.pHit )
+	if( result.pHit )
 		return result.pHit;
 	return NULL;
 }

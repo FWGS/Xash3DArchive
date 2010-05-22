@@ -15,11 +15,9 @@ extern render_exp_t	*re;
 // physic.dll exports
 //
 #define CM_RegisterModel		if( pe ) pe->RegisterModel
-#define CM_LoadAreaPortals		if( pe ) pe->LoadAreaPortals
-#define CM_SaveAreaPortals		if( pe ) pe->SaveAreaPortals
-#define CM_SetAreaPortalState		if( pe ) pe->SetAreaPortalState
 #define CM_GetAttachment		if( pe ) pe->Mod_GetAttachment
 #define CM_GetBonePosition		if( pe ) pe->Mod_GetBonePos
+#define CM_GetAmbientLevels		if( pe ) pe->AmbientLevels
 #define CM_EndRegistration		if( pe ) pe->EndRegistration
 #define CM_Frame			if( pe ) pe->Frame
 
@@ -45,12 +43,6 @@ _inline void Mod_GetFrames( model_t handle, int *numFrames )
 	else if( numFrames ) *numFrames = 0;
 }
 
-_inline int CM_NumShaders( void )
-{
-	if( !pe ) return 0;
-	return pe->NumShaders();
-}
-
 _inline int CM_NumBmodels( void )
 {
 	if( !pe ) return 1;	// world
@@ -63,34 +55,10 @@ _inline int CM_GetModelType( model_t handle )
 	return pe->Mod_GetType( handle );
 }
 
-_inline const char *CM_GetShaderName( int index )
-{
-	if( !pe ) return "";
-	return pe->GetShaderName( index );
-}
-
 _inline const void *CM_VisData( void )
 {
 	if( !pe ) return NULL;
 	return pe->VisData();
-}
-
-_inline bool CM_AreasConnected( int area, int otherarea )
-{
-	if( !pe ) return true; // enable full visibility
-	return pe->AreasConnected( area, otherarea );
-}
-
-_inline int CM_LeafArea( int leafnum )
-{
-	if( !pe )	return -1;
-	return pe->LeafArea( leafnum );
-}		
-
-_inline int CM_LeafCluster( int leafnum )
-{
-	if( !pe )	return -1;
-	return pe->LeafCluster( leafnum );
 }
 
 _inline int CM_PointLeafnum( const vec3_t origin )
@@ -99,16 +67,16 @@ _inline int CM_PointLeafnum( const vec3_t origin )
 	return pe->PointLeafnum( origin );
 }
 
-_inline byte *CM_ClusterPVS( int cluster )
+_inline byte *CM_LeafPVS( int cluster )
 {
 	if( !pe )	return NULL;
-	return pe->ClusterPVS( cluster );
+	return pe->LeafPVS( cluster );
 }
 
-_inline byte *CM_ClusterPHS( int cluster )
+_inline byte *CM_LeafPHS( int cluster )
 {
 	if( !pe )	return NULL;
-	return pe->ClusterPHS( cluster );
+	return pe->LeafPHS( cluster );
 }
 
 _inline byte *CM_FatPVS( const vec3_t org, bool merge )
@@ -117,69 +85,69 @@ _inline byte *CM_FatPVS( const vec3_t org, bool merge )
 	return pe->FatPVS( org, merge );
 }
 
-_inline byte *CM_FatPHS( int cluster, bool merge )
+_inline byte *CM_FatPHS( const vec3_t org, bool merge )
 {
 	if( !pe )	return NULL;
-	return pe->FatPHS( cluster, merge );
+	return pe->FatPHS( org, merge );
 }
 
-_inline int CM_WriteAreaBits( byte *buffer, int area, bool merge )
-{
-	if( !pe )	return 0;
-	return pe->WriteAreaBits( buffer, area, merge );
-}
-
-_inline int CM_BoxLeafnums( vec3_t mins, vec3_t maxs, int *list, int listsize, int *lastleaf )
+_inline int CM_BoxLeafnums( vec3_t mins, vec3_t maxs, short *list, int listsize, int *topNode )
 {
 	if( !pe )
 	{
-		if( lastleaf ) *lastleaf = 0;
+		if( topNode ) *topNode = -1;
 		return 0;
 	}
-	return pe->BoxLeafnums( mins, maxs, list, listsize, lastleaf );
+	return pe->BoxLeafnums( mins, maxs, list, listsize, topNode );
 }
 
-_inline int CM_PointContents( const vec3_t p, model_t model )
+_inline bool CM_HeadnodeVisible( int nodenum, byte *visbits )
 {
-	if( pe ) return pe->PointContents1( p, model );
-	if( model == 1 ) return BASECONT_SOLID;
-	return BASECONT_NONE;
+	if( !pe )	return true;
+	return pe->HeadnodeVisible( nodenum, visbits );
 }
 
-_inline int CM_TransformedPointContents( const vec3_t p, model_t model, const vec3_t org, const vec3_t ang )
+_inline int CM_PointContents( const vec3_t p )
 {
-	if( pe ) return pe->PointContents2( p, model, org, ang );
-	if( model == 1 ) return BASECONT_SOLID;
-	return BASECONT_NONE;
+	if( pe ) return pe->PointContents( p );
+	return CONTENTS_NONE;
 }
 
-_inline void CM_BoxTrace( trace_t *tr, const vec3_t p1, const vec3_t p2, vec3_t mins, vec3_t maxs, model_t model, int mask, trType_t type )
+_inline int CM_HullPointContents( chull_t *hull, int num, const vec3_t p )
 {
-	if( pe ) pe->BoxTrace1( tr, p1, p2, mins, maxs, model, mask, type );
-	else
+	if( pe ) return pe->HullPointContents( hull, num, p );
+	return CONTENTS_NONE;
+}
+
+_inline trace_t CM_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags )
+{
+	trace_t	trace;
+
+	if( !pe )
 	{
-		Mem_Set( tr, 0, sizeof( *tr ));
-		tr->fAllSolid = tr->fStartSolid = true; 
+		Mem_Set( &trace, 0, sizeof( trace_t ));
+		trace.vecEndPos[0] = end[0];
+		trace.vecEndPos[1] = end[1];
+		trace.vecEndPos[2] = end[2];
+		trace.flFraction = 1.0f;
+		trace.fAllSolid = true;
+		trace.iHitgroup = -1;
 	}
+	else trace = pe->Trace( ent, start, mins, maxs, end, flags );
+
+	return trace;
 }
 
-_inline void CM_TransformedBoxTrace( trace_t *tr, const vec3_t p1, const vec3_t p2, vec3_t mins, vec3_t maxs, model_t model, int mask, const vec3_t org, const vec3_t ang, trType_t type )
+_inline const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 {
-	if( pe ) pe->BoxTrace2( tr, p1, p2, mins, maxs, model, mask, org, ang, type );
-	else CM_BoxTrace( tr, p1, p2, mins, maxs, model, mask, type );
+	if( !pe ) return NULL;
+	return pe->TraceTexture( start, trace );
 }
 
-_inline bool CM_HitboxTrace( trace_t *tr, edict_t *e, const vec3_t p1, const vec3_t p2 )
+_inline chull_t *CM_HullForBsp( edict_t *ent, float *offset )
 {
-	if( pe ) return pe->HitboxTrace( tr, e, p1, p2 );
-	else tr->iHitgroup = -1;
-	return false;
-}
-
-_inline model_t CM_TempModel( const vec3_t mins, const vec3_t maxs, bool capsule )
-{
-	if( !pe ) return 1; // world
-	return pe->TempModel( mins, maxs, capsule );
+	if( !pe ) return NULL;
+	return pe->HullForBsp( ent, offset );
 }
 
 _inline void *Mod_Extradata( model_t modelIndex )

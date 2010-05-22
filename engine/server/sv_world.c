@@ -134,12 +134,8 @@ SV_LinkEntity
 void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 {
 	areanode_t	*node;
-	int		leafs[MAX_TOTAL_ENT_LEAFS];
-	int		clusters[MAX_TOTAL_ENT_LEAFS];
-	int		num_leafs;
-	int		i, j;
-	int		area;
-	int		lastleaf;
+	short		leafs[MAX_TOTAL_ENT_LEAFS];
+	int		num_leafs, topNode;
 	sv_priv_t		*sv_ent;
 
 	sv_ent = ent->pvServerData;
@@ -157,62 +153,25 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	svgame.dllFuncs.pfnSetAbsBox( ent );
 
 	// link to PVS leafs
-	sv_ent->num_clusters = 0;
-	sv_ent->areanum = 0;
-	sv_ent->areanum2 = 0;
+	sv_ent->num_leafs = 0;
 
 	// get all leafs, including solids
-	num_leafs = CM_BoxLeafnums( ent->v.absmin, ent->v.absmax, leafs, MAX_TOTAL_ENT_LEAFS, &lastleaf );
+	num_leafs = CM_BoxLeafnums( ent->v.absmin, ent->v.absmax, leafs, MAX_TOTAL_ENT_LEAFS, &topNode );
 
 	// if none of the leafs were inside the map, the
 	// entity is outside the world and can be considered unlinked
 	if( !num_leafs ) return;
 
-	// set areas, even from clusters that don't fit in the entity array
-	for( i = 0; i < num_leafs; i++ )
-	{
-		clusters[i] = CM_LeafCluster( leafs[i] );
-		area = CM_LeafArea( leafs[i] );
-
-		if( area )
-		{	
-			// doors may legally straggle two areas,
-			// but nothing should evern need more than that
-			if( sv_ent->areanum && sv_ent->areanum != area )
-			{
-				if( sv_ent->areanum2 && sv_ent->areanum2 != area && sv.state == ss_loading )
-				{
-					float *v = ent->v.absmin;
-					MsgDev( D_WARN, "SV_LinkEdict: object touching 3 areas at %f %f %f\n", v[0], v[1], v[2] );
-				}
-				sv_ent->areanum2 = area;
-			}
-			else sv_ent->areanum = area;
-		}
+	if( num_leafs >= MAX_ENT_LEAFS )
+	{	
+		// assume we missed some leafs, and mark by headnode
+		sv_ent->num_leafs = -1;
+		sv_ent->headnode = topNode;
 	}
-
-	sv_ent->lastcluster = -1;
-	sv_ent->num_clusters = 0;
-
-	for( i = 0; i < num_leafs; i++ )
+	else
 	{
-		if( clusters[i] == -1 )
-			continue;		// not a visible leaf
-		for( j = 0; j < i; j++ )
-		{
-			if( clusters[j] == clusters[i] )
-				break;
-		}
-		if( j == i )
-		{
-			if( sv_ent->num_clusters == MAX_ENT_CLUSTERS )
-			{	
-				// we missed some leafs, so store the last visible cluster
-				sv_ent->lastcluster = CM_LeafCluster( lastleaf );
-				break;
-			}
-			sv_ent->clusternums[sv_ent->num_clusters++] = clusters[i];
-		}
+		Mem_Copy( sv_ent->leafnums, leafs, sizeof( short ) * num_leafs );
+		sv_ent->num_leafs = num_leafs;
 	}
 
 	ent->pvServerData->s.ed_flags |= ESF_LINKEDICT;	// change edict state on a client too...
@@ -322,93 +281,6 @@ int SV_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int max
 }
 
 /*
-==================
-SV_ClipMoveToEntity
-
-Handles selection or creation of a clipping hull, and offseting (and
-eventually rotation) of the end points
-==================
-*/
-trace_t SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, uint umask, int flags )
-{
-	trace_t	trace;
-	model_t	handle;
-	float	*origin, *angles;
-
-	// fill in a default trace
-	Mem_Set( &trace, 0, sizeof( trace_t ));
-
-	// if it doesn't have any brushes of a type we
-	// are looking for, ignore it
-	if(!( umask & World_ContentsForEdict( ent )))
-	{
-		trace.flFraction = 1.0f;
-		trace.fInOpen = true;
-		return trace;
-	}
-
-	// might intersect, so do an exact clip
-	handle = World_HullForEntity( ent );
-
-	if( ent->v.solid == SOLID_BSP )
-		angles = ent->v.angles;
-	else angles = vec3_origin; // boxes don't rotate
-	origin = ent->v.origin;
-
-	if( ent == svgame.edicts )
-		CM_BoxTrace( &trace, start, end, mins, maxs, handle, umask, TR_AABB );
-	else if( !(flags & FMOVE_SIMPLEBOX) && CM_GetModelType( ent->v.modelindex ) == mod_studio )
-	{
-		if( CM_HitboxTrace( &trace, ent, start, end )); // continue tracing bbox if hitbox missing
-		else CM_TransformedBoxTrace( &trace, start, end, mins, maxs, handle, umask, origin, angles, TR_AABB );
-	}
-	else CM_TransformedBoxTrace( &trace, start, end, mins, maxs, handle, umask, origin, angles, TR_AABB );
-
-	// did we clip the move?
-	if( trace.flFraction < 1.0f || trace.fStartSolid )
-		trace.pHit = ent;
-
-	if( !(flags & FMOVE_SIMPLEBOX) && CM_GetModelType( ent->v.modelindex ) == mod_studio )
-	{
-		if( VectorIsNull( mins ) && VectorIsNull( maxs ) && trace.iHitgroup == -1 )
-		{
-			trace.flFraction = 1.0f;
-			trace.pHit = NULL;	// clear entity when hitbox not intersected
-		}
-	}
-	return trace;
-}
-
-static trace_t SV_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch, bool is_bmodel )
-{
-	if( trace->fAllSolid )
-	{
-		cliptrace->fAllSolid = true;
-		trace->pHit = touch;
-	}
-	else if( trace->fStartSolid )
-	{
-		if( is_bmodel )
-			cliptrace->fStartStuck = true;
-		cliptrace->fStartSolid = true;
-		trace->pHit = touch;
-	}
-
-	if( trace->flFraction < cliptrace->flFraction )
-	{
-		bool	oldStart;
-
-		// make sure we keep a startsolid from a previous trace
-		oldStart = cliptrace->fStartSolid;
-
-		trace->pHit = touch;
-		cliptrace = trace;
-		cliptrace->fStartSolid |= oldStart;
-	}
-	return *cliptrace;
-}
-
-/*
 ====================
 SV_ClipToLinks
 
@@ -475,8 +347,8 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				if( VectorIsNull( touch->v.origin ))
 					VectorAverage( touch->v.absmin, touch->v.absmax, point );
 				else VectorCopy( touch->v.origin, point );
-				if( SV_BaseContents( point, NULL ) & BASECONT_TRANSLUCENT )
-					continue; // glass detected
+				if( SV_PointContents( point ) == CONTENTS_TRANSLUCENT )
+					continue; // grate detected
 			default:	break;
 			}
 		}
@@ -492,10 +364,11 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				continue;	// don't clip against owner
 		}
 
-		if( touch->v.solid == SOLID_SLIDEBOX || touch->v.solid == SOLID_BBOX )
-			trace = SV_ClipMoveToEntity( touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->umask, clip->flags );
-		else trace = SV_ClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, clip->umask, clip->flags );
-		clip->trace = SV_CombineTraces( &clip->trace, &trace, touch, touch->v.solid == SOLID_BSP );
+		if( touch->v.flags & FL_MONSTER )
+			trace = CM_ClipMove( touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->flags );
+		else trace = CM_ClipMove( touch, clip->start, clip->mins, clip->maxs, clip->end, clip->flags );
+
+		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );
 	}
 	
 	// recurse down both sides
@@ -526,13 +399,9 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 	clip.type = (type & 0xFF);
 	clip.flags = (type & 0xFF00);
 	clip.passedict = e;
-	clip.umask = World_MaskForEdict( e );
-
-	if( VectorCompare( clip.mins, clip.maxs ))
-		clip.umask &= ~BASECONT_CLIP;	// pointraces ignore clip
 
 	// clip to world
-	clip.trace = SV_ClipMoveToEntity( EDICT_NUM( 0 ), start, mins, maxs, end, clip.umask, 0 );
+	clip.trace = CM_ClipMove( EDICT_NUM( 0 ), start, mins, maxs, end, 0 );
 
 	if( type == MOVE_MISSILE )
 	{
@@ -605,69 +474,57 @@ SV_PointContents
 
 =============
 */
-int SV_BaseContents( const vec3_t p, edict_t *e )
+int SV_TruePointContents( const vec3_t p )
 {
-	model_t		handle;
-	float		*angles;
-	int		i, num, contents, c2;
-	edict_t		*touch[MAX_EDICTS];
-	edict_t		*hit;
+	int	i, num, contents;
+	edict_t	*hit, *touch[MAX_EDICTS];
 
 	// sanity check
-	if( !p ) return 0;
+	if( !p ) return CONTENTS_NONE;
 
 	// get base contents from world
-	contents = CM_PointContents( p, 0 );
+	contents = CM_PointContents( p );
 
-	// or in contents from all the other entities
+	if( contents != CONTENTS_EMPTY )
+		return contents; // have some world contents
+
+	// check contents from all the solid entities
 	num = SV_AreaEdicts( p, p, touch, MAX_EDICTS, AREA_SOLID );
 
 	for( i = 0; i < num; i++ )
 	{
 		hit = touch[i];
 
-		if( hit == e ) continue;
-		if( hit->v.flags & (FL_CLIENT|FL_FAKECLIENT|FL_MONSTER))
-		{
-			// never get contents from alives
-			if( hit->v.health > 0.0f ) continue;
-		}
+		if( hit->v.solid != SOLID_BSP )
+			continue; // monsters, players
 
-		// might intersect, so do an exact clip
-		handle = World_HullForEntity( hit );
-		if( hit->v.solid == SOLID_BSP )
-			angles = hit->v.angles;
-		else angles = vec3_origin;	// boxes don't rotate
-
-		c2 = CM_TransformedPointContents( p, handle, hit->v.origin, angles );
-		c2 |= World_ContentsForEdict( hit ); // user-defined contents
-		contents |= c2;
+		// solid entity found
+		return CONTENTS_SOLID;
 	}
 
-	// or in contents from all the water entities
+	// check contents from all the custom entities
 	num = SV_AreaEdicts( p, p, touch, MAX_EDICTS, AREA_CUSTOM );
 
 	for( i = 0; i < num; i++ )
 	{
 		hit = touch[i];
 
-		if( hit == e ) continue;
 		if( hit->v.solid != SOLID_NOT || hit->v.skin == CONTENTS_NONE )
 			continue; // invalid water ?
 
-		// might intersect, so do an exact clip
-		handle = World_HullForEntity( hit );
-		c2 = CM_TransformedPointContents( p, handle, hit->v.origin, vec3_origin );
-		c2 |= World_ContentsForEdict( hit ); // user-defined contents
-		contents |= c2;
+		// custom contents found
+		return hit->v.skin;
 	}
-
 	return contents;
 }
 
 int SV_PointContents( const vec3_t p )
 {
-	return World_ConvertContents( SV_BaseContents( p, NULL ));
+	int cont = SV_TruePointContents( p );
+
+	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
+		cont = CONTENTS_WATER;
+	return cont;
 }
 
 /*
@@ -688,9 +545,9 @@ edict_t *SV_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult 
 	if( pass ) SV_SetMinMaxSize( pass, mins, maxs );
 
 	result = SV_Move( origin, mins, maxs, origin, MOVE_NORMAL, pass );
-	if( tr ) Mem_Copy( tr, &result, sizeof( *tr ));
+	if( tr ) *tr = result;
 
-	if(( result.iContents & World_MaskForEdict( pass )) && result.pHit )
+	if( result.pHit )
 		return result.pHit;
 	return NULL;
 }

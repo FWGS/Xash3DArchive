@@ -21,6 +21,8 @@
 #define MAX_STRING_TABLES	8	// seperately stringsystems
 #define MAX_MODS		128	// environment games that engine can keep visible
 #define MAP_DEFAULT_SHADER	"*black"	// engine built-in default shader
+#define trace_t		TraceResult
+
 #ifndef __cplusplus
 #define bool		BOOL	// sizeof( int )
 #endif
@@ -245,9 +247,9 @@ typedef struct gameinfo_s
 	string		ctf_entity;	// e.g. info_player_ctf
 	string		team_entity;	// e.g. info_player_team
 
-	vec3_t		client_mins[4];	// PM_MAXHULLS
-	vec3_t		client_maxs[4];	// PM_MAXHULLS
-	float		viewheight[4];	// client viewheight (from hull center)
+	vec3_t		client_mins[8];	// PM_MAXHULLS
+	vec3_t		client_maxs[8];	// PM_MAXHULLS
+	float		viewheight[8];	// client viewheight (from hull center)
 
 	int		max_edicts;	// min edicts is 600, max edicts is 32000
 } gameinfo_t;

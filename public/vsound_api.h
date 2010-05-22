@@ -6,6 +6,7 @@
 #define VSOUND_API_H
 
 #include "ref_params.h"
+#include "trace_def.h"
 
 typedef int	sound_t;
 

@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "entity_def.h"
 #include "render_api.h"
 #include "entity_state.h"
+#include "trace_def.h"
 
 #if defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
 # define ALIGN(x)	__declspec(align(16))
@@ -125,6 +126,9 @@ enum
 #define FOG_TEXTURE_WIDTH		256
 #define FOG_TEXTURE_HEIGHT		32
 
+#define LIGHTMAP_TEXTURE_WIDTH	256
+#define LIGHTMAP_TEXTURE_HEIGHT	256
+
 #define VID_DEFAULTMODE		"0"
 
 #define SHADOW_PLANAR		1
@@ -136,6 +140,7 @@ enum
 
 //===================================================================
 
+#include "bmodel_ref.h"
 #include "r_math.h"
 #include "r_mesh.h"
 #include "r_shader.h"
@@ -159,7 +164,7 @@ enum
 #define RP_SKYPORTALVIEW		0x10
 #define RP_PORTALCAPTURED		0x20
 #define RP_PORTALCAPTURED2		0x40
-#define RP_OLDVIEWCLUSTER		0x80
+#define RP_OLDVIEWLEAF		0x80
 #define RP_SHADOWMAPVIEW		0x100
 #define RP_FLIPFRONTFACE		0x200
 #define RP_WORLDSURFVISIBLE		0x400
@@ -297,7 +302,7 @@ typedef struct
 	float		skyMins[2][6];
 	float		skyMaxs[2][6];
 
-	float		fog_dist_to_eye[MAX_MAP_FOGS];
+	float		fog_dist_to_eye[256];	// MAX_MAP_FOGS
 
 	vec3_t		pvsOrigin;
 	cplane_t		clipPlane;
@@ -341,7 +346,8 @@ extern lightstyle_t r_lightStyles[MAX_LIGHTSTYLES];
 
 extern ref_params_t	r_lastRefdef;
 
-extern int r_viewcluster, r_oldviewcluster;
+extern mleaf_t	*r_viewleaf, *r_oldviewleaf;
+extern mleaf_t	*r_viewleaf2, *r_oldviewleaf2;
 
 extern float r_farclip_min, r_farclip_bias;
 
@@ -589,6 +595,13 @@ bool		VID_CubemapShot( const char *base, uint size, const float *vieworg, bool s
 extern int r_numSuperLightStyles;
 extern superLightStyle_t r_superLightStyles[MAX_SUPER_STYLES];
 
+void	R_BeginBuildingLightmaps( void );
+void	R_BuildSurfaceLightmap( msurface_t *surf );
+void	R_EndBuildingLightmaps( void );
+
+void	R_RecursiveLightNode( dlight_t *light, int bit, mnode_t *node );
+void	R_MarkLights( uint clipflags );
+
 void	R_LightBounds( const vec3_t origin, float intensity, vec3_t mins, vec3_t maxs );
 bool	R_SurfPotentiallyLit( msurface_t *surf );
 uint	R_AddSurfDlighbits( msurface_t *surf, unsigned int dlightbits );
@@ -639,26 +652,26 @@ bool	R_PushSpritePoly( const meshbuffer_t *mb );
 bool	R_PushSprite( const meshbuffer_t *mb, int type, float right, float left, float up, float down );
 
 #define NUM_CUSTOMCOLORS	16
-void		R_InitCustomColors( void );
-void		R_SetCustomColor( int num, int r, int g, int b );
-int		R_GetCustomColor( int num );
+void	R_InitCustomColors( void );
+void	R_SetCustomColor( int num, int r, int g, int b );
+int	R_GetCustomColor( int num );
 
-void		R_InitOutlines( void );
-void		R_AddModelMeshOutline( unsigned int modhandle, mfog_t *fog, int meshnum );
+void	R_InitOutlines( void );
+void	R_AddModelMeshOutline( unsigned int modhandle, mfog_t *fog, int meshnum );
 
-msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int surfumask );
+msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end );
 
 //
 // r_mesh.c
 //
 
-extern meshlist_t r_worldlist, r_shadowlist;
+extern meshlist_t	r_worldlist, r_shadowlist;
 
 void		R_InitMeshLists( void );
 void		R_FreeMeshLists( void );
 void		R_ClearMeshList( meshlist_t *meshlist );
-int			R_ReAllocMeshList( meshbuffer_t **mb, int minMeshes, int maxMeshes );
-meshbuffer_t *R_AddMeshToList( int type, mfog_t *fog, ref_shader_t *shader, int infokey );
+int		R_ReAllocMeshList( meshbuffer_t **mb, int minMeshes, int maxMeshes );
+meshbuffer_t	*R_AddMeshToList( int type, mfog_t *fog, ref_shader_t *shader, int infokey );
 void		R_AddModelMeshToList( unsigned int modhandle, mfog_t *fog, ref_shader_t *shader, int meshnum );
 void		R_AllocMeshbufPointers( refinst_t *RI );
 
@@ -670,8 +683,7 @@ void		R_DrawPortals( void );
 void		R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 void		R_DrawSkyPortal( skyportal_t *skyportal, vec3_t mins, vec3_t maxs );
 
-void		R_BuildTangentVectors( int numVertexes, vec4_t *xyzArray, vec4_t *normalsArray, vec2_t *stArray, 
-								  int numTris, elem_t *elems, vec4_t *sVectorsArray );
+void		R_BuildTangentVectors( int numVertexes, vec4_t *xyzArray, vec4_t *normalsArray, vec2_t *stArray, int numTris, elem_t *elems, vec4_t *sVectorsArray );
 
 //
 // r_program.c
@@ -733,9 +745,8 @@ void		R_ProgramDump_f( void );
 //
 void	R_PushPoly( const meshbuffer_t *mb );
 void	R_AddPolysToList( void );
-bool	R_SurfPotentiallyFragmented( msurface_t *surf );
 int	R_GetClippedFragments( const vec3_t origin, float radius, vec3_t axis[3], int maxfverts, vec3_t *fverts, int maxfragments, fragment_t *fragments );
-msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int surfumask );
+msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test );
 
 //
 // r_sprite.c

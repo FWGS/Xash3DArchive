@@ -376,11 +376,15 @@ PM_TraceTexture
 */
 static const char *PM_TraceTexture( edict_t *pTextureEntity, const float *v1, const float *v2 )
 {
+	trace_t	result;
+
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected ('%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	if( !pTextureEntity || pTextureEntity->free ) return NULL; 
-	return SV_ClipMoveToEntity( pTextureEntity, v1, vec3_origin, vec3_origin, v2, MASK_SOLID, 0 ).pTexName;
+	if( !SV_IsValidEdict( pTextureEntity )) return NULL; 
+
+	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
+	return CM_TraceTexture( v1, result );
 }
 
 /*
@@ -391,23 +395,16 @@ PM_TraceModel
 */
 static TraceResult PM_TraceModel( edict_t *pEnt, const vec3_t start, const vec3_t end )
 {
-	float		*mins;
-	float		*maxs;
-	trace_t		result;
-	TraceResult	out;
-	uint		umask;
+	float	*mins, *maxs;
 
 	if( VectorIsNAN( start ) || VectorIsNAN( end ))
 		Host_Error( "TraceModel: NAN errors detected ('%f %f %f', '%f %f %f'\n", start[0], start[1], start[2], end[0], end[1], end[2] );
 
-	umask = World_MaskForEdict( svgame.pmove->player );
 	svgame.pmove->usehull = bound( 0, svgame.pmove->usehull, 3 );
 	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
 	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
-	result = SV_ClipMoveToEntity( pEnt, start, mins, maxs, end, umask, FMOVE_SIMPLEBOX );
-	Mem_Copy( &out, &result, sizeof( TraceResult ));
 
-	return out;
+	return CM_ClipMove( pEnt, start, vec3_origin, vec3_origin, end, FMOVE_SIMPLEBOX );
 }
 
 /*
@@ -443,9 +440,14 @@ static edict_t *PM_TestPlayerPosition( const vec3_t origin, TraceResult *trace )
 	return SV_TestPlayerPosition( origin, svgame.pmove->player, trace );
 }
 
-static int PM_PointContents( const vec3_t p )
+static int PM_PointContents( const vec3_t p, int *truecontents )
 {
-	return World_ConvertContents( SV_BaseContents( p, svgame.pmove->player ));
+	int cont = SV_TruePointContents( p );
+
+	if( truecontents ) *truecontents = cont;
+	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
+		cont = CONTENTS_WATER;
+	return cont;
 }
 
 static void PM_CheckMovingGround( edict_t *ent, float frametime )
@@ -557,6 +559,8 @@ void SV_InitClientMove( void )
 	svgame.pmove->AlertMessage = pfnAlertMessage;
 	svgame.pmove->PM_GetString = SV_GetString;
 	svgame.pmove->PM_PointContents = PM_PointContents;
+	svgame.pmove->PM_HullForBsp = CM_HullForBsp;
+	svgame.pmove->PM_HullPointContents = CM_HullPointContents;
 	svgame.pmove->PM_PlayerTrace = PM_PlayerTrace;
 	svgame.pmove->PM_TraceTexture = PM_TraceTexture;
 	svgame.pmove->PM_GetEntityByIndex = PM_GetEntityByIndex;

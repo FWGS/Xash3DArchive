@@ -10,7 +10,7 @@
 static vec4_t	pic_xyz[4] = { {0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {0,0,0,1} };
 static vec2_t	pic_st[4];
 static rgba_t	pic_colors[4];
-static mesh_t	pic_mesh = { 4, pic_xyz, pic_xyz, NULL, pic_st, { 0, 0, 0, 0 }, { pic_colors, pic_colors, pic_colors, pic_colors }, 6, NULL };
+static mesh_t	pic_mesh = { 4, 6, pic_xyz, pic_xyz, NULL, NULL, pic_st, NULL, pic_colors, NULL, NULL };
 meshbuffer_t	pic_mbuffer;
 
 /*
@@ -227,7 +227,7 @@ static void Tri_DrawPolygon( void )
 		shader = &r_shaders[triState.currentShader];
 	else shader = tr.fillShader;
 
-	tri_mesh.numVertexes = triState.numVertex;
+	tri_mesh.numVerts = triState.numVertex;
 	tri_mesh.numElems = triState.numIndex;
 
 	if( triState.hasNormals )
@@ -244,9 +244,9 @@ static void Tri_DrawPolygon( void )
 	// compute lightingOrigin
 	VectorAverage( triState.mins, triState.maxs, triState.lightingOrigin );	
 
-	tri_mesh.xyzArray = tri_vertex;
-	tri_mesh.stArray = tri_coords;
-	tri_mesh.colorsArray[0] = tri_colors;
+	tri_mesh.vertexArray = tri_vertex;
+	tri_mesh.stCoordArray = tri_coords;
+	tri_mesh.colorsArray = tri_colors;
 	tri_mesh.elems = tri_elems;
 
 	if( tri_mbuffer.shaderkey != (int)shader->sortkey || -tri_mbuffer.infokey-1+32 > MAX_ARRAY_VERTS )

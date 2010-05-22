@@ -49,18 +49,20 @@ static int r_noiseperm[NOISE_SIZE];
 ALIGN( 16 ) vec4_t inVertsArray[MAX_ARRAY_VERTS];
 ALIGN( 16 ) vec4_t inNormalsArray[MAX_ARRAY_VERTS];
 vec4_t inSVectorsArray[MAX_ARRAY_VERTS];
+vec4_t inTVectorsArray[MAX_ARRAY_VERTS];
 elem_t inElemsArray[MAX_ARRAY_ELEMENTS];
 vec2_t inCoordsArray[MAX_ARRAY_VERTS];
-vec2_t inLightmapCoordsArray[LM_STYLES][MAX_ARRAY_VERTS];
-rgba_t inColorsArray[LM_STYLES][MAX_ARRAY_VERTS];
+vec2_t inLightmapCoordsArray[MAX_ARRAY_VERTS];
+rgba_t inColorsArray[MAX_ARRAY_VERTS];
 vec2_t tUnitCoordsArray[MAX_TEXTURE_UNITS][MAX_ARRAY_VERTS];
 
 elem_t *elemsArray;
 vec4_t *vertsArray;
 vec4_t *normalsArray;
 vec4_t *sVectorsArray;
+vec4_t *tVectorsArray;
 vec2_t *coordsArray;
-vec2_t *lightmapCoordsArray[LM_STYLES];
+vec2_t *lightmapCoordsArray;
 rgba_t colorArray[MAX_ARRAY_VERTS];
 
 ref_globals_t	tr;
@@ -515,8 +517,6 @@ R_ClearArrays
 */
 void R_ClearArrays( void )
 {
-	int i;
-
 	r_backacc.numVerts = 0;
 	r_backacc.numElems = 0;
 	r_backacc.numColors = 0;
@@ -525,9 +525,9 @@ void R_ClearArrays( void )
 	elemsArray = inElemsArray;
 	normalsArray = inNormalsArray;
 	sVectorsArray = inSVectorsArray;
+	tVectorsArray = inTVectorsArray;
 	coordsArray = inCoordsArray;
-	for( i = 0; i < LM_STYLES; i++ )
-		lightmapCoordsArray[i] = inLightmapCoordsArray[i];
+	lightmapCoordsArray = inLightmapCoordsArray;
 }
 
 /*
@@ -954,7 +954,7 @@ static bool R_VertexTCBase( const ref_stage_t *pass, int unit, matrix4x4 matrix 
 	case TCGEN_LIGHTMAP:
 		GL_DisableAllTexGens();
 
-		R_UpdateVertexBuffer( tr.tcoordBuffer[unit], lightmapCoordsArray[r_lightmapStyleNum[unit]], r_backacc.numVerts * sizeof( vec2_t ));
+		R_UpdateVertexBuffer( tr.tcoordBuffer[unit], lightmapCoordsArray, r_backacc.numVerts * sizeof( vec2_t ));
 		pglTexCoordPointer( 2, GL_FLOAT, 0, tr.tcoordBuffer[unit]->pointer );
 		return true;
 	case TCGEN_ENVIRONMENT:
@@ -1302,7 +1302,7 @@ static _inline texture_t *R_ShaderpassTex( const ref_stage_t *pass, int unit )
 		return pass->textures[frame];
 	}
 	if( pass->flags & SHADERSTAGE_LIGHTMAP )
-		return tr.lightmapTextures[r_superLightStyle->lightmapNum[r_lightmapStyleNum[unit]]];
+		return tr.whiteTexture;//lightmapTextures[r_superLightStyle->lightmapNum[r_lightmapStyleNum[unit]]];
 	if( pass->flags & SHADERSTAGE_PORTALMAP )
 		return tr.portaltexture1;
 	return ( pass->textures[0] ? pass->textures[0] : tr.defaultTexture );
@@ -1526,7 +1526,7 @@ void R_ModifyColor( const ref_stage_t *pass )
 	bits = ( r_overbrightbits->integer > 0 ) && !( r_ignorehwgamma->integer ) ? r_overbrightbits->integer : 0;
 
 	bArray = colorArray[0];
-	inArray = inColorsArray[0][0];
+	inArray = inColorsArray[0];
 
 	if( pass->rgbGen.type == RGBGEN_IDENTITY_LIGHTING )
 	{
@@ -1614,44 +1614,11 @@ void R_ModifyColor( const ref_stage_t *pass )
 					VectorCopy( r_lightStyles[r_superLightStyle->vertexStyles[0]].rgb, style );
 			}
 
-			if( style[0] == style[1] && style[1] == style[2] && style[2] == 1 )
+			for( i = 0; i < r_backacc.numColors; i++, bArray += 4, inArray += 4 )
 			{
-				for( i = 0; i < r_backacc.numColors; i++, bArray += 4, inArray += 4 )
-				{
-					bArray[0] = inArray[0] >> bits;
-					bArray[1] = inArray[1] >> bits;
-					bArray[2] = inArray[2] >> bits;
-				}
-			}
-			else
-			{
-				int j;
-				float *tc;
-				vec3_t temp[MAX_ARRAY_VERTS];
-
-				Mem_Set( temp, 0, sizeof( vec3_t ) * r_backacc.numColors );
-
-				for( j = 0; j < LM_STYLES && r_superLightStyle->vertexStyles[j] != 255; j++ )
-				{
-					VectorCopy( r_lightStyles[r_superLightStyle->vertexStyles[j]].rgb, style );
-					if( VectorCompare( style, vec3_origin ) )
-						continue;
-
-					inArray = inColorsArray[j][0];
-					for( i = 0, tc = temp[0]; i < r_backacc.numColors; i++, tc += 3, inArray += 4 )
-					{
-						tc[0] += ( inArray[0] >> bits ) * style[0];
-						tc[1] += ( inArray[1] >> bits ) * style[1];
-						tc[2] += ( inArray[2] >> bits ) * style[2];
-					}
-				}
-
-				for( i = 0, tc = temp[0]; i < r_backacc.numColors; i++, tc += 3, bArray += 4 )
-				{
-					bArray[0] = bound( 0, tc[0], 255 );
-					bArray[1] = bound( 0, tc[1], 255 );
-					bArray[2] = bound( 0, tc[2], 255 );
-				}
+				bArray[0] = inArray[0] >> bits;
+				bArray[1] = inArray[1] >> bits;
+				bArray[2] = inArray[2] >> bits;
 			}
 			break;
 		case RGBGEN_ONE_MINUS_VERTEX:
@@ -1732,7 +1699,7 @@ void R_ModifyColor( const ref_stage_t *pass )
 	}
 
 	bArray = colorArray[0];
-	inArray = inColorsArray[0][0];
+	inArray = inColorsArray[0];
 
 	switch( pass->alphaGen.type )
 	{
@@ -2291,7 +2258,7 @@ static void R_RenderMeshGLSL_Material( void )
 			} 
 		}
 
-		if( !pass->textures[6] && !VectorCompare( mapConfig.ambient, vec3_origin ) )
+		if( !pass->textures[6] && !VectorCompare( mapConfig.ambient, vec3_origin ))
 		{
 			VectorCopy( mapConfig.ambient, ambient );
 			programFeatures |= PROGRAM_APPLY_AMBIENT_COMPENSATION;

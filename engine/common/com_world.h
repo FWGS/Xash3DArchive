@@ -10,9 +10,6 @@
 #define MOVE_MISSILE	2	// extra size for monsters
 #define MOVE_WORLDONLY	3	// clip only world
 
-#define FMOVE_IGNORE_GLASS	0x100
-#define FMOVE_SIMPLEBOX	0x200
-
 /*
 ===============================================================================
 
@@ -27,7 +24,7 @@ ENTITY AREA CHECKING
 
 #define AREA_SOLID			1
 #define AREA_TRIGGERS		2
-#define AREA_CUSTOM			3	// user skins - water, lava, fog etc
+#define AREA_CUSTOM			3	// custom contents - water, lava, fog etc
 
 // link_t is only used for entity area links now
 typedef struct link_s
@@ -69,8 +66,7 @@ typedef struct moveclip_s
 	const float	*end;
 	trace_t		trace;
 	edict_t		*passedict;
-	uint		umask;	// contents mask
-	trType_t		type;
+	int		type;	// move type
 	int		flags;	// trace flags
 } moveclip_t;
 
@@ -82,20 +78,16 @@ void RemoveLink( link_t *l );
 void ClearLink( link_t *l );
 
 // trace common
-model_t World_HullForEntity( const edict_t *ent );
 void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, vec3_t boxmins, vec3_t boxmaxs );
+trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch );
 
-// contents
-int World_ConvertContents( int basecontents );
-uint World_MaskForEdict( const edict_t *e );
-uint World_ContentsForEdict( const edict_t *e );
-
+#include "bmodel_ref.h"
 #include "pm_shared.h"
 
 /*
 ===============================================================================
 
-	EVENTS QUEUES (hl1 events code)
+	EVENTS QUEUE (hl1 events code)
 
 ===============================================================================
 */

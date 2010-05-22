@@ -13,7 +13,7 @@
 //=============================================================================
 #define MAX_MASTERS		8 			// max recipients for heartbeat packets
 #define LATENCY_COUNTS	16
-#define MAX_ENT_CLUSTERS	16
+#define MAX_ENT_LEAFS	48
 #define RATE_MESSAGES	10
 
 #define SV_UPDATE_MASK	(SV_UPDATE_BACKUP - 1)
@@ -32,6 +32,9 @@ extern int SV_UPDATE_BACKUP;
 #define EDICT_NUM( num )	SV_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	SV_GetString( offset )
 #define MAKE_STRING(str)	SV_AllocString( str )
+
+#define DVIS_PVS		0
+#define DVIS_PHS		1
 
 typedef enum
 {
@@ -82,8 +85,6 @@ typedef struct server_s
 typedef struct
 {
 	entity_state_t	ps;			// player state
-	byte 		areabits[MAX_MAP_AREA_BYTES];	// portalarea visibility bits
-	int  		areabits_size;
 	int  		num_entities;
 	int  		first_entity;		// into the circular sv_packet_entities[]
 	int		senttime;			// time the message was transmitted
@@ -158,18 +159,16 @@ struct sv_priv_s
 {
 	link_t		area;		// linked to a division node or leaf
 	sv_client_t	*client;		// filled for player ents
-	int		lastcluster;	// unused if num_clusters != -1
-	int		num_clusters;	// if -1, use headnode instead
-	int		clusternums[MAX_ENT_CLUSTERS];
+
+	int		headnode;		// -1 to use normal leaf check
+	int		num_leafs;
+	short		leafnums[MAX_ENT_LEAFS];
 	int		framenum;		// update framenumber
-	int		areanum, areanum2;
 	bool		linked;		// passed through SV_LinkEdict
 
 	vec3_t		moved_origin;
 	vec3_t		moved_angles;
 
-	size_t		pvdata_size;	// member size of alloceed pvPrivateData
-					// (used by SV_CopyEdict)
 	entity_state_t	s;		// baseline (this is a player_state too)
 };
 
@@ -473,16 +472,7 @@ trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );
 void SV_LinkEdict( edict_t *ent, bool touch_triggers );
 void SV_TouchLinks( edict_t *ent, areanode_t *node );
 edict_t *SV_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult *trace );
+int SV_TruePointContents( const vec3_t p );
 int SV_PointContents( const vec3_t p );
-trace_t SV_ClipMoveToEntity( edict_t *e, const vec3_t p0, vec3_t b0, vec3_t b1, const vec3_t p1, uint mask, int flags );
-int SV_BaseContents( const vec3_t p, edict_t *e );
-// mins and maxs are relative
 
-// if the entire move stays in a solid volume, trace.allsolid will be set,
-// trace.startsolid will be set, and trace.fraction will be 0
-
-// if the starting point is in a solid, it will be allowed to move out
-// to an open area
-
-// passedict is explicitly excluded from clipping checks (normally NULL)
 #endif//SERVER_H

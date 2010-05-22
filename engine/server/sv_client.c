@@ -1162,8 +1162,7 @@ MULTICAST_PHS	send to clients potentially hearable from org
 bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, const char *filename, int fileline )
 {
 	byte		*mask = NULL;
-	int		leafnum = 0, cluster = 0;
-	int		numsends = 0, area1 = 0, area2 = 0;
+	int		leafnum = 0, numsends = 0;
 	int		j, numclients = sv_maxclients->integer;
 	sv_client_t	*cl, *current = svs.clients;
 	bool		reliable = false;
@@ -1192,9 +1191,7 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 	case MSG_PAS:
 		if( origin == NULL ) return false;
 		leafnum = CM_PointLeafnum( origin );
-		cluster = CM_LeafCluster( leafnum );
-		mask = CM_ClusterPHS( cluster );
-		area1 = CM_LeafArea( leafnum );
+		mask = CM_LeafPHS( leafnum );
 		break;
 	case MSG_PVS_R:
 		reliable = true;
@@ -1202,9 +1199,7 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 	case MSG_PVS:
 		if( origin == NULL ) return false;
 		leafnum = CM_PointLeafnum( origin );
-		cluster = CM_LeafCluster( leafnum );
-		mask = CM_ClusterPVS( cluster );
-		area1 = CM_LeafArea( leafnum );
+		mask = CM_LeafPVS( leafnum );
 		break;
 	case MSG_ONE:
 		reliable = true;
@@ -1241,10 +1236,7 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 		if( mask )
 		{
 			leafnum = CM_PointLeafnum( cl->edict->v.origin );
-			cluster = CM_LeafCluster( leafnum );
-			area2 = CM_LeafArea( leafnum );
-			if( !CM_AreasConnected( area1, area2 )) continue;
-			if( mask && (!(mask[cluster>>3] & (1<<( cluster & 7 )))))
+			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}
 

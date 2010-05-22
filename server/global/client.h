@@ -41,8 +41,8 @@ extern void SpectatorConnect ( edict_t *pEntity );
 extern void SpectatorDisconnect ( edict_t *pEntity );
 extern void SpectatorThink ( edict_t *pEntity );
 
-extern int SetupVisibility( edict_t *pViewEntity, edict_t *pClient, int portal, float *rgflViewOrg );
-extern int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, int hostarea, byte *pSet );
+extern void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int portal );
+extern int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
 
 extern void CmdStart( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed );
 extern void CmdEnd ( const edict_t *player );

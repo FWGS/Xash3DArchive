@@ -119,34 +119,27 @@ void SV_ConfigString( int index, const char *val )
 
 static bool SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 {
-	int	leafnum, cluster;
-	int	area1, area2;
+	int	leafnum;
 	byte	*mask;
 
 	leafnum = CM_PointLeafnum( v1 );
-	cluster = CM_LeafCluster( leafnum );
-	area1 = CM_LeafArea( leafnum );
 
 	switch( mode )
 	{
 	case DVIS_PVS:
-		mask = CM_ClusterPVS( cluster );
+		mask = CM_LeafPVS( leafnum );
 		break;
 	case DVIS_PHS:
-		mask = CM_ClusterPHS( cluster );
+		mask = CM_LeafPHS( leafnum );
 		break;
 	default:
-		mask = NULL; // force to check areas only
+		mask = NULL; // skip any checks
 		break;
 	}
 
 	leafnum = CM_PointLeafnum( v2 );
-	cluster = CM_LeafCluster( leafnum );
-	area2 = CM_LeafArea( leafnum );
 
-	if( mask && (!( mask[cluster>>3] & (1<<( cluster & 7 )))))
-		return false;
-	else if( !CM_AreasConnected( area1, area2 ))
+	if( mask && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 		return false;
 	return true;
 }
@@ -178,28 +171,15 @@ void SV_WriteEntityPatch( const char *filename )
 
 	Mem_Set( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
+	ver = LittleLong(*(uint *)buf);
                               
-	switch( LittleLong( *(uint *)buf ))
+	switch( ver )
 	{
-	case IDBSPMODHEADER:
-	case RBBSPMODHEADER:
-	case QFBSPMODHEADER:
-	case XRBSPMODHEADER:
+	case Q1BSP_VERSION:
+	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		ver = LittleLong(((int *)buf)[1]);
-		switch( ver )
-		{
-		case Q3IDBSP_VERSION:	// quake3 arena
-		case RTCWBSP_VERSION:	// return to castle wolfenstein
-		case RFIDBSP_VERSION:	// raven or qfusion bsp
-		case XRIDBSP_VERSION:	// x-real engine
-			lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-			lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
-			break;
-		default:
-			FS_Close( f );
-			return;
-		}
+		lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+		lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
 		break;
 	default:
 		FS_Close( f );
@@ -235,28 +215,15 @@ script_t *SV_GetEntityScript( const char *filename )
 
 	Mem_Set( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
+	ver = LittleLong(*(uint *)buf);
                               
-	switch( LittleLong( *(uint *)buf ))
+	switch( ver )
 	{
-	case IDBSPMODHEADER:
-	case RBBSPMODHEADER:
-	case QFBSPMODHEADER:
-	case XRBSPMODHEADER:
+	case Q1BSP_VERSION:
+	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		ver = LittleLong(((int *)buf)[1]);
-		switch( ver )
-		{
-		case Q3IDBSP_VERSION:	// quake3 arena
-		case RTCWBSP_VERSION:	// return to castle wolfenstein
-		case RFIDBSP_VERSION:	// raven or qfusion bsp
-		case XRIDBSP_VERSION:	// x-real engine
-			lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-			lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
-			break;
-		default:
-			FS_Close( f );
-			return NULL;
-		}
+		lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+		lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
 		break;
 	default:
 		FS_Close( f );
@@ -404,46 +371,6 @@ edict_t *SV_AllocEdict( void )
 	SV_InitEdict( pEdict );
 
 	return pEdict;
-}
-
-edict_t *SV_CopyEdict( const edict_t *in )
-{
-	int	entnum;
-	size_t	pvdata_size = 0;
-	edict_t	*out;
-
-	if( in == NULL ) return NULL;	// failed to copy
-	if( in->free ) return NULL;	// we can't proceed freed edicts
-	if( in->v.flags & (FL_CLIENT|FL_FAKECLIENT)) return NULL; // never get copy of clients
-
-	// must passed through dlls for correctly get all pointers
-	out = SV_AllocPrivateData( NULL, in->v.classname );
-	entnum = out->serialnumber; // keep serialnumber an actual
-
-	if( out == NULL ) Host_Error( "ED_CopyEdict: no free edicts\n" );
-
-	if( in->pvServerData )
-	{
-		if( out->pvServerData == NULL )
-			out->pvServerData = (sv_priv_t *)Mem_Alloc( svgame.mempool, sizeof( sv_priv_t ));
-		Mem_Copy( out->pvServerData, in->pvServerData, sizeof( sv_priv_t ));
-		pvdata_size = in->pvServerData->pvdata_size;
-	}
-	if( in->pvPrivateData )
-	{
-		if( pvdata_size > 0 )
-		{
-			out->pvPrivateData = (void *)Mem_Realloc( svgame.private, out->pvPrivateData, pvdata_size );
-			Mem_Copy( out->pvPrivateData, in->pvPrivateData, pvdata_size );
-		}
-		else MsgDev( D_ERROR, "SV_CopyEdict: can't copy pvPrivateData\n" );
-	}
-
-	Mem_Copy( &out->v, &in->v, sizeof( entvars_t ));	// copy entvars
-	out->v.pContainingEntity = out;		// merge contain entity
-	out->serialnumber = entnum;			// restore right serialnumber
-	
-	return out;
 }
 
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
@@ -1670,18 +1597,15 @@ pfnTraceModel
 */
 static void pfnTraceModel( const float *v1, const float *v2, edict_t *pent, TraceResult *ptr )
 {
-	trace_t	result;
-
 	if( !SV_IsValidEdict( pent ))
 	{
-		MsgDev( D_WARN, "SV_TraceModel: invalid entity %s\n", SV_ClassName( pent ));
+		MsgDev( D_WARN, "TraceModel: invalid entity %s\n", SV_ClassName( pent ));
 		return;
 	}
 
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceModel: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	result = SV_ClipMoveToEntity( pent, v1, pent->v.mins, pent->v.maxs, v2, MASK_SOLID, 0 );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
+	if( ptr ) *ptr = CM_ClipMove( pent, v1, pent->v.mins, pent->v.maxs, v2, 0 );
 }
 
 /*
@@ -1693,10 +1617,19 @@ returns texture basename
 */
 static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, const float *v2 )
 {
+	trace_t	result;
+
+	if( !SV_IsValidEdict( pTextureEntity ))
+	{
+		MsgDev( D_WARN, "TraceTexture: invalid entity %s\n", SV_ClassName( pTextureEntity ));
+		return NULL;
+	}
+
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	if( !pTextureEntity || pTextureEntity->free ) return NULL; 
-	return SV_ClipMoveToEntity( pTextureEntity, v1, vec3_origin, vec3_origin, v2, MASK_SOLID, 0 ).pTexName;
+
+	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
+	return CM_TraceTexture( v1, result );
 }
 
 /*
@@ -2149,7 +2082,6 @@ void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 
 	// to avoid multiple alloc
 	pEdict->pvPrivateData = (void *)Mem_Realloc( svgame.private, pEdict->pvPrivateData, cb );
-	pEdict->pvServerData->pvdata_size = cb;	
 
 	return pEdict->pvPrivateData;
 }
@@ -2344,21 +2276,14 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 
 /*
 =============
-pfnAreaPortal
+pfnAnimationAutomove
 
-changes area portal state
+animating studiomodel
 =============
 */
-void pfnAreaPortal( edict_t *pEdict, int enable )
+void pfnAnimationAutomove( const edict_t* pEdict, float flTime )
 {
-	if( pEdict == EDICT_NUM( 0 )) return;
-	if( pEdict->free )
-	{
-		MsgDev( D_ERROR, "SV_AreaPortal: can't modify free entity\n" );
-		return;
-	}
-	if( !pEdict->pvServerData->areanum || !pEdict->pvServerData->areanum2 ) return;
-	CM_SetAreaPortalState( pEdict->serialnumber, pEdict->pvServerData->areanum, pEdict->pvServerData->areanum2, enable );
+	// FIXME: implement
 }
 
 /*
@@ -2944,8 +2869,8 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 	event_state_t	*es;
 	event_info_t	*ei = NULL;
 	event_args_t	dummy; // in case send naked event without args
-	int		j, leafnum, cluster, area1, area2;
-	int		slot, bestslot, invokerIndex = 0;
+	int		j, leafnum, slot, bestslot;
+	int		invokerIndex = 0;
 	byte		*mask = NULL;
 	vec3_t		pvspoint;
 
@@ -3042,9 +2967,7 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 	{
 		// setup pvs cluster for invoker
 		leafnum = CM_PointLeafnum( pvspoint );
-		cluster = CM_LeafCluster( leafnum );
-		mask = CM_ClusterPVS( cluster );
-		area1 = CM_LeafArea( leafnum );
+		mask = CM_LeafPVS( leafnum );
 	}
 
 	// process all the clients
@@ -3062,10 +2985,7 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 		if(!( flags & FEV_GLOBAL ))
 		{
 			leafnum = CM_PointLeafnum( cl->edict->v.origin );
-			cluster = CM_LeafCluster( leafnum );
-			area2 = CM_LeafArea( leafnum );
-			if(!CM_AreasConnected( area1, area2 )) continue;
-			if( mask && (!(mask[cluster>>3] & (1<<(cluster & 7)))))
+			if( mask && (!(mask[leafnum>>3] & (1<<(leafnum & 7)))))
 				continue;
 		}
 
@@ -3119,39 +3039,28 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 
 /*
 =============
-pfnCopyEdict
+pfnSetFatPVS
 
-returns NULL if failed to copy
+set fat PVS
 =============
 */
-edict_t *pfnCopyEdict( const edict_t *pEdict )
+byte *pfnSetFatPVS( const float *org, int portal )
 {
-	return SV_CopyEdict( pEdict );
+	if( !org ) return NULL;
+	return CM_FatPVS( org, portal );
 }
 
 /*
 =============
-pfnCheckArea
+pfnSetFatPHS
 
+set fat PHS
 =============
 */
-int pfnCheckArea( const edict_t *entity, int clientarea )
+byte *pfnSetFatPAS( const float *org, int portal )
 {
-	if( !SV_IsValidEdict( entity ))
-	{
-		MsgDev( D_WARN, "SV_AreasConnected: invalid entity %s\n", SV_ClassName( entity ));
-		return 0;
-	}
-
-	// ignore if not touching a PV leaf check area
-	if( !CM_AreasConnected( clientarea, entity->pvServerData->areanum ))
-	{
-		// doors can legally straddle two areas, so
-		// we may need to check another one
-		if( !CM_AreasConnected( clientarea, entity->pvServerData->areanum2 ))
-			return 0;	// blocked by a door
-	}
-	return 1;	// visible
+	if( !org ) return NULL;
+	return CM_FatPHS( org, portal );
 }
 
 /*
@@ -3176,32 +3085,28 @@ int pfnCheckVisibility( const edict_t *entity, byte *pset )
 	if( !entity->pvServerData->linked ) return 0;
 
 	// check individual leafs
-	if( !entity->pvServerData->num_clusters )
+	if( !entity->pvServerData->num_leafs )
 		return 0; // not a linked in
-	
-	for( i = l = 0; i < entity->pvServerData->num_clusters; i++ )
-	{
-		l = entity->pvServerData->clusternums[i];
 
-		if( pset[l>>3] & (1<<(l & 7)))
-			break;
+	if( entity->pvServerData->num_leafs == -1 )
+	{
+		// too many leafs for individual check, go by headnode
+		if( !CM_HeadnodeVisible( entity->pvServerData->headnode, pset ))
+			return 0;
 	}
-
-	// if we haven't found it to be visible,
-	// check overflow clusters that coudln't be stored
-	if( i == entity->pvServerData->num_clusters )
+	else
 	{
-		if( entity->pvServerData->lastcluster != -1 )
+		// check individual leafs
+		for( i = 0; i < entity->pvServerData->num_leafs; i++ )
 		{
-			for( ; l <= entity->pvServerData->lastcluster; l++ )
-			{
-				if( pset[l>>3] & (1<<(l & 7)))
-					break;
-			}
-			if( l == entity->pvServerData->lastcluster )
-				return 0;	// not visible
+			l = entity->pvServerData->leafnums[i];
+
+			if( pset[l>>3] & (1<<( l & 7 )))
+				break;
 		}
-		else return 0;
+
+		if( i == entity->pvServerData->num_leafs )
+			return 0;	// not visible
 	}
 	return 1;
 }
@@ -3409,7 +3314,7 @@ static enginefuncs_t gEngfuncs =
 	pfnFindEntityByVars,
 	pfnGetModelPtr,
 	pfnRegUserMsg,
-	pfnAreaPortal,
+	pfnAnimationAutomove,
 	pfnGetBonePosition,
 	pfnFunctionFromName,
 	pfnNameForFunction,	
@@ -3457,8 +3362,8 @@ static enginefuncs_t gEngfuncs =
 	pfnGetPhysicsInfoString,
 	pfnPrecacheEvent,
 	pfnPlaybackEvent,
-	pfnCopyEdict,
-	pfnCheckArea,
+	pfnSetFatPVS,
+	pfnSetFatPAS,
 	pfnCheckVisibility,
 	pfnFOpen,
 	pfnFRead,

@@ -28,8 +28,8 @@ typedef unsigned short	CRC16_t;
 typedef unsigned long	CRC32_t;
 typedef float		vec_t;
 
-#define _INTEGRAL_MAX_BITS	64
 #define DLLEXPORT		__declspec( dllexport )
+#define NUMVERTEXNORMALS	162			// quake avertex normals
 
 #ifndef NULL
 #define NULL		((void *)0)

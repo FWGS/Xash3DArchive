@@ -7,6 +7,18 @@
 #include "server.h"
 #include "const.h"
 
+/*
+==============================================================================
+SAVE FILE
+
+half-life implementation of saverestore system
+==============================================================================
+*/
+#define SAVEFILE_HEADER	(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
+#define SAVEGAME_HEADER	(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
+#define SAVEGAME_VERSION	0x0071				// Version 0.71
+
+
 #define SAVE_AGED_COUNT		1
 #define SAVENAME_LENGTH		128	// matches with MAX_OSPATH
 
@@ -343,8 +355,6 @@ void LandmarkOrigin( SAVERESTOREDATA *pSaveData, vec3_t output, const char *pLan
 int EntityInSolid( edict_t *ent )
 {
 	edict_t	*pParent = ent->v.aiment;
-	edict_t	*hit, *touch[MAX_EDICTS];
-	int	i, contents, numtouch;
 	vec3_t	point;
 
 	// if you're attached to a client, always go through
@@ -356,30 +366,7 @@ int EntityInSolid( edict_t *ent )
 
 	VectorAverage( ent->v.absmin, ent->v.absmax, point );
 
-	// run first test - stuck in the world
-	contents = CM_PointContents( point, 0 );
-
-	// solid or deathfog area
-	if( contents & ( BASECONT_SOLID|BASECONT_NODROP )) 
-		return 1;
-
-	// run second test - stuck in the bspbrush
-	numtouch = SV_AreaEdicts( ent->v.absmin, ent->v.absmax, touch, MAX_EDICTS, AREA_SOLID );
-
-	for( i = 0; i < numtouch; i++ )
-	{
-		hit = touch[i];
-		if( hit == ent ) continue;
-		if( hit->v.solid != SOLID_BSP )
-			continue;
-
-		contents = CM_TransformedPointContents( point, World_HullForEntity( hit ), hit->v.origin, hit->v.angles );
-
-		// stuck in bspbrsuh
-		if( contents & ( BASECONT_SOLID|BASECONT_NODROP )) 
-			return 1;
-	}
-	return 0;
+	return (SV_PointContents( point ) == CONTENTS_SOLID);
 }
 
 void SV_ClearSaveDir( void )
@@ -844,22 +831,6 @@ void SV_EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 	FS_Close( pFile );
 }
 
-void SV_AreaPortalsWrite( const char *level )
-{
-	string		name;
-
-	com.snprintf( name, sizeof( name ), "save/%s.HL4", level );
-	CM_SaveAreaPortals( name );
-}
-
-void SV_AreaPortalsRead( const char *level )
-{
-	string		name;
-
-	com.snprintf( name, sizeof( name ), "save/%s.HL4", level );
-	CM_LoadAreaPortals( name );
-}
-
 /*
 =============
 SV_SaveGameState
@@ -952,8 +923,6 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 
 	// FIXME: here a point to save client state e.g. decals
 
-	SV_AreaPortalsWrite( sv.name );
-
 	return pSaveData;
 }
 
@@ -971,8 +940,6 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 	SV_ParseSaveTables( pSaveData, &header, 1 );
 
 	SV_EntityPatchRead( pSaveData, level );
-
-	SV_AreaPortalsRead( level );
 
 	Cvar_SetValue( "skill", header.skillLevel );
 	com.strncpy( sv.name, header.mapName, sizeof( sv.name ));

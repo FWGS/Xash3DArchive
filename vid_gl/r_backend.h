@@ -22,9 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_TEXTURES		4096
 #define MAX_ARRAY_VERTS		4096
-#define MAX_ARRAY_ELEMENTS		MAX_ARRAY_VERTS*6
-#define MAX_ARRAY_TRIANGLES		MAX_ARRAY_ELEMENTS/3
-#define MAX_ARRAY_NEIGHBORS		MAX_ARRAY_TRIANGLES*3
+#define MAX_ARRAY_ELEMENTS		MAX_ARRAY_VERTS * 6
+#define MAX_ARRAY_TRIANGLES		MAX_ARRAY_ELEMENTS / 3
+#define MAX_ARRAY_NEIGHBORS		MAX_ARRAY_TRIANGLES * 3
 
 enum
 {
@@ -41,28 +41,30 @@ enum
 extern ALIGN( 16 ) vec4_t inVertsArray[MAX_ARRAY_VERTS];
 extern ALIGN( 16 ) vec4_t inNormalsArray[MAX_ARRAY_VERTS];
 extern vec4_t inSVectorsArray[MAX_ARRAY_VERTS];
+extern vec4_t inTVectorsArray[MAX_ARRAY_VERTS];
 extern elem_t inElemsArray[MAX_ARRAY_ELEMENTS];
 extern vec2_t inCoordsArray[MAX_ARRAY_VERTS];
-extern vec2_t inLightmapCoordsArray[LM_STYLES][MAX_ARRAY_VERTS];
-extern rgba_t inColorsArray[LM_STYLES][MAX_ARRAY_VERTS];
+extern vec2_t inLightmapCoordsArray[MAX_ARRAY_VERTS];
+extern rgba_t inColorsArray[MAX_ARRAY_VERTS];
 
 extern elem_t *elemsArray;
 extern vec4_t *vertsArray;
 extern vec4_t *normalsArray;
 extern vec4_t *sVectorsArray;
+extern vec4_t *tVectorsArray;
 extern vec2_t *coordsArray;
-extern vec2_t *lightmapCoordsArray[LM_STYLES];
+extern vec2_t *lightmapCoordsArray;
 extern rgba_t colorArray[MAX_ARRAY_VERTS];
 extern int r_features;
 
 //===================================================================
-typedef struct ref_buffer_s
+typedef struct vbo_buffer_s
 {
 	byte		*pointer;
 	int		size;
 	uint		usage;
 	uint		bufNum;
-} ref_buffer_t;
+} vbo_buffer_t;
 
 typedef struct
 {
@@ -84,11 +86,11 @@ typedef struct
 
 	// vbo stuff
 	int		numVertexBufferObjects;
-	ref_buffer_t	vertexBufferObjects[MAX_VERTEX_BUFFER_OBJECTS];
-	ref_buffer_t	*vertexBuffer;
-	ref_buffer_t	*normalBuffer;
-	ref_buffer_t	*colorsBuffer;
-	ref_buffer_t	*tcoordBuffer[MAX_TEXTURE_UNITS];
+	vbo_buffer_t	vertexBufferObjects[MAX_VERTEX_BUFFER_OBJECTS];
+	vbo_buffer_t	*vertexBuffer;
+	vbo_buffer_t	*normalBuffer;
+	vbo_buffer_t	*colorsBuffer;
+	vbo_buffer_t	*tcoordBuffer[MAX_TEXTURE_UNITS];
 
 	// OpenGL matrix states
 	bool		modelviewIdentity;
@@ -141,8 +143,8 @@ void R_DrawPhysDebug( void );
 
 void R_InitVertexBuffers( void );
 void R_ShutdownVertexBuffers( void );
-ref_buffer_t *R_AllocVertexBuffer( size_t size, GLuint usage );
-void R_UpdateVertexBuffer( ref_buffer_t *vertexBuffer, const void *data, size_t size );
+vbo_buffer_t *R_AllocVertexBuffer( size_t size, GLuint usage );
+void R_UpdateVertexBuffer( vbo_buffer_t *vertexBuffer, const void *data, size_t size );
 
 void R_LockArrays( int numverts );
 void R_UnlockArrays( void );
@@ -180,8 +182,8 @@ static _inline void R_PushElems( elem_t *elems, int count, int features )
 
 static _inline void R_PushTrifanElems( int numverts )
 {
-	int count;
-	elem_t *currentElem;
+	elem_t	*currentElem;
+	int	count;
 
 	currentElem = elemsArray + r_backacc.numElems;
 	r_backacc.numElems += numverts + numverts + numverts - 6;
@@ -196,103 +198,71 @@ static _inline void R_PushTrifanElems( int numverts )
 
 static _inline void R_PushMesh( const mesh_t *mesh, int features )
 {
-	int numverts;
+	int	numverts;
 
-	if( !mesh || !( mesh->elems || ( features & MF_TRIFAN ) ) || !mesh->xyzArray )
+	if( !mesh || !( mesh->elems || ( features & MF_TRIFAN )) || !mesh->vertexArray )
 		return;
 
 	r_features = features;
 
-	if( features & MF_TRIFAN )
-		R_PushTrifanElems( mesh->numVertexes );
-	else
-		R_PushElems( mesh->elems, mesh->numElems, features );
+	if( features & MF_TRIFAN ) R_PushTrifanElems( mesh->numVerts );
+	else R_PushElems( mesh->elems, mesh->numElems, features );
 
-	numverts = mesh->numVertexes;
+	numverts = mesh->numVerts;
 
 	if( features & MF_NONBATCHED )
 	{
 		if( features & MF_DEFORMVS )
 		{
-			if( mesh->xyzArray != inVertsArray )
-				Mem_Copy( inVertsArray, mesh->xyzArray, numverts * sizeof( vec4_t ) );
+			if( mesh->vertexArray != inVertsArray )
+				Mem_Copy( inVertsArray, mesh->vertexArray, numverts * sizeof( vec4_t ) );
 
 			if( ( features & MF_NORMALS ) && mesh->normalsArray && ( mesh->normalsArray != inNormalsArray ) )
 				Mem_Copy( inNormalsArray, mesh->normalsArray, numverts * sizeof( vec4_t ) );
 		}
 		else
 		{
-			vertsArray = mesh->xyzArray;
+			vertsArray = mesh->vertexArray;
 
 			if( ( features & MF_NORMALS ) && mesh->normalsArray )
 				normalsArray = mesh->normalsArray;
 		}
 
-		if( ( features & MF_STCOORDS ) && mesh->stArray )
-			coordsArray = mesh->stArray;
+		if(( features & MF_STCOORDS ) && mesh->stCoordArray )
+			coordsArray = mesh->stCoordArray;
 
-		if( ( features & MF_LMCOORDS ) && mesh->lmstArray[0] )
-		{
-			lightmapCoordsArray[0] = mesh->lmstArray[0];
-			if( features & MF_LMCOORDS1 )
-			{
-				lightmapCoordsArray[1] = mesh->lmstArray[1];
-				if( features & MF_LMCOORDS2 )
-				{
-					lightmapCoordsArray[2] = mesh->lmstArray[2];
-					if( features & MF_LMCOORDS3 )
-						lightmapCoordsArray[3] = mesh->lmstArray[3];
-				}
-			}
-		}
+		if(( features & MF_LMCOORDS ) && mesh->lmCoordArray )
+			lightmapCoordsArray = mesh->lmCoordArray;
 
-		if( ( features & MF_SVECTORS ) && mesh->sVectorsArray )
+		if(( features & MF_SVECTORS ) && mesh->sVectorsArray )
 			sVectorsArray = mesh->sVectorsArray;
+
+		if(( features & MF_TVECTORS ) && mesh->tVectorsArray )
+			tVectorsArray = mesh->tVectorsArray;
 	}
 	else
 	{
-		if( mesh->xyzArray != inVertsArray )
-			Mem_Copy( inVertsArray[r_backacc.numVerts], mesh->xyzArray, numverts * sizeof( vec4_t ) );
+		if( mesh->vertexArray != inVertsArray )
+			Mem_Copy( inVertsArray[r_backacc.numVerts], mesh->vertexArray, numverts * sizeof( vec4_t ));
 
-		if( ( features & MF_NORMALS ) && mesh->normalsArray && (mesh->normalsArray != inNormalsArray ) )
-			Mem_Copy( inNormalsArray[r_backacc.numVerts], mesh->normalsArray, numverts * sizeof( vec4_t ) );
+		if(( features & MF_NORMALS ) && mesh->normalsArray && (mesh->normalsArray != inNormalsArray ))
+			Mem_Copy( inNormalsArray[r_backacc.numVerts], mesh->normalsArray, numverts * sizeof( vec4_t ));
 
-		if( ( features & MF_STCOORDS ) && mesh->stArray && (mesh->stArray != inCoordsArray ) )
-			Mem_Copy( inCoordsArray[r_backacc.numVerts], mesh->stArray, numverts * sizeof( vec2_t ) );
+		if(( features & MF_STCOORDS ) && mesh->stCoordArray && ( mesh->stCoordArray != inCoordsArray ))
+			Mem_Copy( inCoordsArray[r_backacc.numVerts], mesh->stCoordArray, numverts * sizeof( vec2_t ));
 
-		if( ( features & MF_LMCOORDS ) && mesh->lmstArray[0] )
-		{
-			Mem_Copy( inLightmapCoordsArray[0][r_backacc.numVerts], mesh->lmstArray[0], numverts * sizeof( vec2_t ) );
-			if( features & MF_LMCOORDS1 )
-			{
-				Mem_Copy( inLightmapCoordsArray[1][r_backacc.numVerts], mesh->lmstArray[1], numverts * sizeof( vec2_t ) );
-				if( features & MF_LMCOORDS2 )
-				{
-					Mem_Copy( inLightmapCoordsArray[2][r_backacc.numVerts], mesh->lmstArray[2], numverts * sizeof( vec2_t ) );
-					if( features & MF_LMCOORDS3 )
-						Mem_Copy( inLightmapCoordsArray[3][r_backacc.numVerts], mesh->lmstArray[3], numverts * sizeof( vec2_t ) );
-				}
-			}
-		}
+		if(( features & MF_LMCOORDS ) && mesh->lmCoordArray && ( mesh->lmCoordArray != inLightmapCoordsArray ))
+			Mem_Copy( inLightmapCoordsArray[r_backacc.numVerts], mesh->lmCoordArray, numverts * sizeof( vec2_t ));
 
-		if( ( features & MF_SVECTORS ) && mesh->sVectorsArray && (mesh->sVectorsArray != inSVectorsArray ) )
-			Mem_Copy( inSVectorsArray[r_backacc.numVerts], mesh->sVectorsArray, numverts * sizeof( vec4_t ) );
+		if(( features & MF_SVECTORS ) && mesh->sVectorsArray && (mesh->sVectorsArray != inSVectorsArray ))
+			Mem_Copy( inSVectorsArray[r_backacc.numVerts], mesh->sVectorsArray, numverts * sizeof( vec4_t ));
+
+		if(( features & MF_TVECTORS ) && mesh->tVectorsArray && (mesh->tVectorsArray != inTVectorsArray ))
+			Mem_Copy( inTVectorsArray[r_backacc.numVerts], mesh->tVectorsArray, numverts * sizeof( vec4_t ));
 	}
 
-	if( ( features & MF_COLORS ) && mesh->colorsArray[0] )
-	{
-		Mem_Copy( inColorsArray[0][r_backacc.numVerts], mesh->colorsArray[0], numverts * sizeof( rgba_t ) );
-		if( features & MF_COLORS1 )
-		{
-			Mem_Copy( inColorsArray[1][r_backacc.numVerts], mesh->colorsArray[1], numverts * sizeof( rgba_t ) );
-			if( features & MF_COLORS2 )
-			{
-				Mem_Copy( inColorsArray[2][r_backacc.numVerts], mesh->colorsArray[2], numverts * sizeof( rgba_t ) );
-				if( features & MF_COLORS3 )
-					Mem_Copy( inColorsArray[3][r_backacc.numVerts], mesh->colorsArray[3], numverts * sizeof( rgba_t ) );
-			}
-		}
-	}
+	if(( features & MF_COLORS ) && mesh->colorsArray )
+		Mem_Copy( inColorsArray[r_backacc.numVerts], mesh->colorsArray, numverts * sizeof( rgba_t ));
 
 	r_backacc.numVerts += numverts;
 	r_backacc.c_totalVerts += numverts;
@@ -301,20 +271,18 @@ static _inline void R_PushMesh( const mesh_t *mesh, int features )
 static _inline bool R_MeshOverflow( const mesh_t *mesh )
 {
 	if( !mesh ) return false;
-	return ( r_backacc.numVerts + mesh->numVertexes > MAX_ARRAY_VERTS ||
-		r_backacc.numElems + mesh->numElems > MAX_ARRAY_ELEMENTS );
+	return ( r_backacc.numVerts + mesh->numVerts > MAX_ARRAY_VERTS || r_backacc.numElems + mesh->numElems > MAX_ARRAY_ELEMENTS );
 }
 
 static _inline bool R_MeshOverflow2( const mesh_t *mesh1, const mesh_t *mesh2 )
 {
-	return ( r_backacc.numVerts + mesh1->numVertexes + mesh2->numVertexes > MAX_ARRAY_VERTS ||
+	return ( r_backacc.numVerts + mesh1->numVerts + mesh2->numVerts > MAX_ARRAY_VERTS ||
 		r_backacc.numElems + mesh1->numElems + mesh2->numElems > MAX_ARRAY_ELEMENTS );
 }
 
 static _inline bool R_InvalidMesh( const mesh_t *mesh )
 {
-	return ( !mesh->numVertexes || !mesh->numElems ||
-		mesh->numVertexes > MAX_ARRAY_VERTS || mesh->numElems > MAX_ARRAY_ELEMENTS );
+	return ( !mesh->numVerts || !mesh->numElems ||mesh->numVerts > MAX_ARRAY_VERTS || mesh->numElems > MAX_ARRAY_ELEMENTS );
 }
 
 void R_RenderMeshBuffer( const meshbuffer_t *mb );

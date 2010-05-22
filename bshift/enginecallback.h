@@ -69,7 +69,6 @@ extern enginefuncs_t g_engfuncs;
 #define RANDOM_LONG		(*g_engfuncs.pfnRandomLong)
 #define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)
 #define CLASSIFY_EDICT	(*g_engfuncs.pfnClassifyEdict)
-#define SET_AREAPORTAL	(*g_engfuncs.pfnAreaPortal)
 #define COM_Parse		(*g_engfuncs.pfnParseToken)
 
 inline void MESSAGE_BEGIN( int msg_dest, int msg_type, const float *pOrigin = NULL, edict_t *ed = NULL ) {
@@ -138,9 +137,12 @@ inline void *GET_PRIVATE( edict_t *pent )
 #define GET_GAME_DIR			(*g_engfuncs.pfnGetGameDir)
 #define IS_MAP_VALID			(*g_engfuncs.pfnIsMapValid)
 #define SET_BONE_POSITION	(*g_engfuncs.pfnSetBonePos)
-#define ENGINE_CHECK_AREA	(*g_engfuncs.pfnCheckArea)
 #define DROP_CLIENT		(*g_engfuncs.pfnDropClient)
 #define ENGINE_CHECK_PVS	(*g_engfuncs.pfnCheckVisibility)
+
+#define ENGINE_SET_PVS			(*g_engfuncs.pfnSetFatPVS)
+#define ENGINE_SET_PAS			(*g_engfuncs.pfnSetFatPAS)
+
 #define IS_DEDICATED_SERVER		(*g_engfuncs.pfnIsDedicatedServer)
 
 #define PRECACHE_EVENT			(*g_engfuncs.pfnPrecacheEvent)

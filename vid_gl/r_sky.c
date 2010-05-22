@@ -76,8 +76,8 @@ skydome_t *R_CreateSkydome( byte *mempool, float skyheight, ref_shader_t **farbo
 
 	for( i = 0, mesh = skydome->meshes; i < 6; i++, mesh++ )
 	{
-		mesh->numVertexes = POINTS_LEN;
-		mesh->xyzArray = ( vec4_t * )buffer; buffer += sizeof( vec4_t ) * POINTS_LEN;
+		mesh->numVerts = POINTS_LEN;
+		mesh->vertexArray = ( vec4_t * )buffer; buffer += sizeof( vec4_t ) * POINTS_LEN;
 		mesh->normalsArray = ( vec4_t * )buffer; buffer += sizeof( vec4_t ) * POINTS_LEN;
 		skydome->sphereStCoords[i] = ( vec2_t * )buffer; buffer += sizeof( vec2_t ) * POINTS_LEN;
 		skydome->linearStCoords[i] = ( vec2_t * )buffer; buffer += sizeof( vec2_t ) * POINTS_LEN;
@@ -146,7 +146,7 @@ static void Gen_BoxSide( skydome_t *skydome, int side, vec3_t orig, vec3_t drow,
 	q[0] = 1.0 / ( 2.0 * SCALE_S );
 	q[1] = 1.0 / ( 2.0 * SCALE_T );
 
-	v = skydome->meshes[side].xyzArray[0];
+	v = skydome->meshes[side].vertexArray[0];
 	n = skydome->meshes[side].normalsArray[0];
 	st = skydome->sphereStCoords[side][0];
 	st2 = skydome->linearStCoords[side][0];
@@ -211,7 +211,7 @@ static void R_DrawSkySide( skydome_t *skydome, int side, ref_shader_t *shader, i
 	mbuffer->dlightbits = 0;
 	mbuffer->sortkey = MB_FOG2NUM( r_skyfog );
 
-	skydome->meshes[side].stArray = skydome->linearStCoords[side];
+	skydome->meshes[side].stCoordArray = skydome->linearStCoords[side];
 	R_PushMesh( &skydome->meshes[side], features );
 	R_RenderMeshBuffer( mbuffer );
 }
@@ -300,8 +300,8 @@ void R_DrawSky( ref_shader_t *shader )
 			}
 		}
 
-		AddPointToBounds( skydome->meshes[i].xyzArray[vmin*SIDE_SIZE+umin], mins, maxs );
-		AddPointToBounds( skydome->meshes[i].xyzArray[vmax*SIDE_SIZE+umax], mins, maxs );
+		AddPointToBounds( skydome->meshes[i].vertexArray[vmin*SIDE_SIZE+umin], mins, maxs );
+		AddPointToBounds( skydome->meshes[i].vertexArray[vmax*SIDE_SIZE+umax], mins, maxs );
 
 		skydome->meshes[i].numElems = ( vmax-vmin )*( umax-umin ) * 6;
 	}
@@ -362,7 +362,7 @@ void R_DrawSky( ref_shader_t *shader )
 			mbuffer->dlightbits = 0;
 			mbuffer->sortkey = MB_FOG2NUM( r_skyfog );
 
-			skydome->meshes[i].stArray = skydome->sphereStCoords[i];
+			skydome->meshes[i].stCoordArray = skydome->sphereStCoords[i];
 			R_PushMesh( &skydome->meshes[i], features );
 		}
 		if( flush ) R_RenderMeshBuffer( mbuffer );
@@ -606,7 +606,8 @@ bool R_AddSkySurface( msurface_t *fa )
 
 	mesh = fa->mesh;
 	elem = mesh->elems;
-	vert = mesh->xyzArray;
+	vert = mesh->vertexArray;
+
 	for( i = 0; i < mesh->numElems; i += 3, elem += 3 )
 	{
 		VectorSubtract( vert[elem[0]], RI.viewOrigin, verts[0] );
@@ -614,6 +615,7 @@ bool R_AddSkySurface( msurface_t *fa )
 		VectorSubtract( vert[elem[2]], RI.viewOrigin, verts[2] );
 		ClipSkyPolygon( 3, verts[0], 0 );
 	}
+
 	return r_warpfacevis;
 }
 

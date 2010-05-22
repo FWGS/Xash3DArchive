@@ -50,7 +50,6 @@ typedef struct frame_s
 	int	serverframe;
 	int	servertime;
 	int	deltaframe;
-	byte	areabits[MAX_MAP_AREA_BYTES];	// portalarea visibility bits
 	int	num_entities;
 	int	parse_entities;	// non-masked index into cl_parse_entities array
 } frame_t;
@@ -668,11 +667,10 @@ void CL_UnlinkEdict( edict_t *ent );
 void CL_ClassifyEdict( edict_t *ent );
 void CL_LinkEdict( edict_t *ent, bool touch_triggers );
 int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype );
-trace_t CL_ClipMoveToEntity( edict_t *e, const vec3_t p0, vec3_t b0, vec3_t b1, const vec3_t p1, uint mask, int flags );
 trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
 edict_t *CL_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult *tr );
 trace_t CL_MoveToss( edict_t *tossent, edict_t *ignore );
-int CL_BaseContents( const vec3_t p, edict_t *e );
+int CL_TruePointContents( const vec3_t p );
 int CL_PointContents( const vec3_t p );
 
 #endif//CLIENT_H

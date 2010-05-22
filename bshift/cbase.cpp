@@ -85,10 +85,10 @@ static DLL_FUNCTIONS gFunctionTable =
 
 	ShouldCollide,		// pfnShouldCollide
 	UpdateEntityState,		// pfnUpdateEntityState
-	OnFreeEntPrivateData,	// pfnOnFreeEntPrivateData
 	CmdStart,			// pfnCmdStart
 	CmdEnd,			// pfnCmdEnd
 
+	OnFreeEntPrivateData,	// pfnOnFreeEntPrivateData
 	GameDLLShutdown,		// pfnGameShutdown
 };
 

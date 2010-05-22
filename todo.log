@@ -20,7 +20,7 @@ fopen завешивает приложение, даже если перепутать местами + и a, при установке р
 1. ѕоддержка loop дл€ ogg vorbis
 2. переписать studiomdl дл€ использовани€ VFS
 
-Xash 0.71 Beta 05.05.10
+Xash 0.72 Stable 13.12.10
 
 1. revision of all resources			OK
 2. fix sky changelevel bug			OK
@@ -42,3 +42,4 @@ Xash 0.71 Beta 05.05.10
 18.fix logic_switcher			OK
 19.implement botman's parabot dll
 20.implement bsp 28,29,30 formats
+21.revision of all resources

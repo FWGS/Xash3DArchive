@@ -7,6 +7,7 @@
 #include "byteorder.h"
 #include "qfiles_ref.h"
 
+#define IDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'I')	// little-endian "IBSP" q2, q3 bsp's
 #define VDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'V')	// little-endian "VBSP" hl2 bsp's
 #define IDIWADHEADER	(('D'<<24)+('A'<<16)+('W'<<8)+'I')	// little-endian "IWAD" doom1 game wad
 #define IDPWADHEADER	(('D'<<24)+('A'<<16)+('W'<<8)+'P')	// little-endian "PWAD" doom1 game wad

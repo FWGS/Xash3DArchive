@@ -1587,7 +1587,7 @@ static bool FS_ParseGameInfo( const char *filename, gameinfo_t *GameInfo )
 		{
 			int	hullNum = com.atoi( token.string + 4 );
 
-			if( hullNum < 0 || hullNum > ( PM_MAXHULLS - 1 ))
+			if( hullNum < 0 || hullNum > 15 )
 			{
 				MsgDev( D_ERROR, "FS_ParseGameInfo: Invalid hull number %i. Ignored.\n", hullNum );
 				PS_SkipRestOfLine( script ); 

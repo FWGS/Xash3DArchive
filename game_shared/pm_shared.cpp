@@ -1409,7 +1409,7 @@ Sets pev->waterlevel and pev->watertype values.
 BOOL PM_CheckWater( void )
 {
 	Vector	point;
-	int	cont;
+	int	cont, truecont;
 	float     height;
 	float	heightover2;
 
@@ -1423,7 +1423,7 @@ BOOL PM_CheckWater( void )
 	pev->watertype = CONTENTS_EMPTY;
 
 	// Grab point contents.
-	cont = POINT_CONTENTS( point );
+	cont = pmove->PM_PointContents( point, &truecont );
 
 	// Are we under water? (not solid and not empty?)
 	if ( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
@@ -1456,7 +1456,7 @@ BOOL PM_CheckWater( void )
 		}
 
 		// Adjust velocity based on water current, if any.
-		if (( cont <= CONTENTS_CURRENT_0 ) && ( cont >= CONTENTS_CURRENT_DOWN ))
+		if (( truecont <= CONTENTS_CURRENT_0 ) && ( truecont >= CONTENTS_CURRENT_DOWN ))
 		{
 			// The deeper we are, the stronger the current.
 			Vector current_table[] =
@@ -1469,7 +1469,7 @@ BOOL PM_CheckWater( void )
 			Vector( 0, 0,-1 )
 			};
                               
-			pmove->basevelocity += current_table[CONTENTS_CURRENT_0 - cont] * (50.0f * pev->waterlevel);
+			pmove->basevelocity += current_table[CONTENTS_CURRENT_0 - truecont] * (50.0f * pev->waterlevel);
 		}
 	}
 	return pev->waterlevel > 1;
@@ -1644,7 +1644,6 @@ int PM_CheckStuck( void )
 		return 0;
 	}
 
-	/*
 	// If player is flailing while stuck in another player ( should never happen ), then see
 	// if we can't "unstick" them forceably.
 	if( pmove->cmd.buttons & (IN_JUMP|IN_DUCK|IN_ATTACK) && ( hitent && hitent->v.flags & FL_CLIENT ))
@@ -1675,7 +1674,6 @@ int PM_CheckStuck( void )
 			}
 		}
 	}
-	*/
 	return 1;
 }
 
@@ -2021,34 +2019,13 @@ void PM_LadderMove( edict_t *pLadder )
 		}
 	}
 }
-
-// moved here from engine
-void PM_HullForBsp( edict_t *pe, Vector &test )
-{
-	if( Mod_GetType( pe->v.modelindex ) == mod_brush )
-	{
-		Vector	hull_mins;
-
-		if( pe->v.size.x < 3 )
-			hull_mins = pmove->player_mins[2];
-		else if( pe->v.size.x <= 32 )
-			hull_mins = pmove->player_mins[1];
-		else hull_mins = pmove->player_mins[3];
-
-		test = hull_mins + pe->v.origin;
-	}
-	else
-	{
-		// studiomodel ladder
-		test = pe->v.origin;
-	}
-}
 			
 edict_t *PM_Ladder( void )
 {
 	edict_t	*pe;
+	chull_t	*hull;
 	Vector	test;
-	int	i;
+	int	i, num;
 
 	for( i = 0; i < pmove->numladders; i++ )
 	{
@@ -2056,13 +2033,14 @@ edict_t *PM_Ladder( void )
 		
 		if( Mod_GetType( pe->v.modelindex ) == mod_brush && pe->v.skin == CONTENTS_LADDER )
 		{
-			PM_HullForBsp( pe, test );
+			hull = HULL_FOR_BSP( pe, test );
+			num = hull->firstclipnode;
 
 			// Offset the test point appropriately for this hull.
 			test = pmove->origin - test;
 
 			// Test the player's hull for intersection with this model
-			if( POINT_CONTENTS( test ) == CONTENTS_EMPTY )
+			if( HULL_POINT_CONTENTS( hull, num, test ) == CONTENTS_EMPTY )
 				continue;
 			
 			return pe;

@@ -1,47 +1,28 @@
-/*
-Copyright (C) 2002-2007 Victor Luchits
+//=======================================================================
+//			Copyright XashXT Group 2009 ©
+//		        r_mesh.h - generic mesh container
+//=======================================================================
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-#ifndef __R_MESH_H__
-#define __R_MESH_H__
+#ifndef R_MESH_H
+#define R_MESH_H
 
 enum
 {
-	MF_NONE				= 0,
-	MF_NORMALS			= 1 << 0,
-	MF_STCOORDS			= 1 << 1,
-	MF_LMCOORDS			= 1 << 2,
-	MF_LMCOORDS1		= 1 << 3,
-	MF_LMCOORDS2		= 1 << 4,
-	MF_LMCOORDS3		= 1 << 5,
-	MF_COLORS			= 1 << 6,
-	MF_COLORS1			= 1 << 7,
-	MF_COLORS2			= 1 << 8,
-	MF_COLORS3			= 1 << 9,
-	MF_ENABLENORMALS    = 1 << 10,
-	MF_DEFORMVS			= 1 << 11,
-	MF_SVECTORS			= 1 << 12,
+	MF_NONE		= 0,
+	MF_NORMALS	= BIT( 0 ),
+	MF_STCOORDS	= BIT( 1 ),
+	MF_LMCOORDS	= BIT( 2 ),
+	MF_COLORS		= BIT( 3 ),
+	MF_ENABLENORMALS    = BIT( 4 ),
+	MF_DEFORMVS	= BIT( 5 ),
+	MF_SVECTORS	= BIT( 6 ),
+	MF_TVECTORS	= BIT( 7 ),
 
 	// global features
-	MF_NOCULL			= 1 << 16,
-	MF_TRIFAN			= 1 << 17,
-	MF_NONBATCHED		= 1 << 18,
-	MF_KEEPLOCK			= 1 << 19
+	MF_NOCULL		= BIT( 16 ),
+	MF_TRIFAN		= BIT( 17 ),
+	MF_NONBATCHED	= BIT( 18 ),
+	MF_KEEPLOCK	= BIT( 19 )
 };
 
 enum
@@ -50,22 +31,24 @@ enum
 	MB_SPRITE,
 	MB_POLY,
 	MB_CORONA,
-
 	MB_MAXTYPES = 4
 };
 
 typedef struct mesh_s
 {
-	int		numVertexes;
-	vec4_t		*xyzArray;
+	int		numVerts;
+	int		numElems;
+
+	vec4_t		*vertexArray;
 	vec4_t		*normalsArray;
 	vec4_t		*sVectorsArray;
-	vec2_t		*stArray;
-	vec2_t		*lmstArray[LM_STYLES];
-	rgba_t		*colorsArray[LM_STYLES];
-
-	int		numElems;
+	vec4_t		*tVectorsArray;
+	vec2_t		*stCoordArray;
+	vec2_t		*lmCoordArray;
+	rgba_t		*colorsArray;
 	elem_t		*elems;
+
+	struct mesh_s	*next;		// temporary chain of subdivided surfaces
 } mesh_t;
 
 #define MB_FOG2NUM( fog )			( (fog) ? ((((int)((fog) - r_worldbrushmodel->fogs))+1) << 2) : 0 )
@@ -84,7 +67,7 @@ typedef struct
 {
 	int		shaderkey;
 	uint		sortkey;
-	int		infokey;			// surface number or mesh number
+	int		infokey;		// surface number or mesh number
 	union
 	{
 		int	lastPoly;

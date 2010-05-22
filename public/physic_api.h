@@ -7,15 +7,8 @@
 
 #include "trace_def.h"
 
-// trace type
-typedef enum
-{
-	TR_NONE,
-	TR_AABB,
-	TR_CAPSULE,
-	TR_BISPHERE,
-	TR_NUMTYPES
-} trType_t;
+#define FMOVE_IGNORE_GLASS	0x100
+#define FMOVE_SIMPLEBOX	0x200
 
 /*
 ==============================================================================
@@ -41,44 +34,36 @@ typedef struct physic_exp_s
 	bool (*RegisterModel)( const char *name, int sv_index ); // also build replacement index table
 	void (*EndRegistration)( void );
 
-	// areaportal management
-	void (*SaveAreaPortals)( const char *filename );
-	void (*LoadAreaPortals)( const char *filename );
-	void (*SetAreaPortalState)( int portalnum, int area, int otherarea, bool open );
-	int (*BoxLeafnums)( vec3_t mins, vec3_t maxs, int *list, int listsize, int *lastleaf );
+	// testing in leaf
+	int (*BoxLeafnums)( vec3_t mins, vec3_t maxs, short *list, int listsize, int *topNode );
 	bool (*BoxVisible)( const vec3_t mins, const vec3_t maxs, byte *visbits );
-	int (*WriteAreaBits)( byte *buffer, int area, bool portal );
-	bool (*AreasConnected)( int area1, int area2 );
-	byte *(*ClusterPVS)( int cluster );
-	byte *(*ClusterPHS)( int cluster );
-	int (*LeafCluster)( int leafnum );
+	bool (*HeadnodeVisible)( int nodenum, byte *visbits );
+	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
 	int (*PointLeafnum)( const vec3_t p );
-	int (*LeafArea)( int leafnum );
-
-	// map data
-	int (*NumShaders)( void );
-	int (*NumBmodels)( void );
-	void (*Mod_GetBounds)( model_t handle, vec3_t mins, vec3_t maxs );
-	void (*Mod_GetFrames)( model_t handle, int *numFrames );
-	void (*Mod_GetAttachment)( edict_t *e, int iAttachment, float *org, float *ang );
-	void (*Mod_GetBonePos)( edict_t* e, int iBone, float *rgflOrigin, float *rgflAngles );
-	modtype_t (*Mod_GetType)( model_t handle );
-	const char *(*GetShaderName)( int index );
-	void *(*Mod_Extradata)( model_t handle );
-	script_t *(*GetEntityScript)( void );
-	const void *(*VisData)( void );
-
-	// trace heleper
-	int (*PointContents1)( const vec3_t p, model_t model );
-	int (*PointContents2)( const vec3_t p, model_t model, const vec3_t org, const vec3_t ang );
-	void (*BoxTrace1)( trace_t *results, const vec3_t p1, const vec3_t p2, vec3_t mins, vec3_t maxs, model_t model, int mask, trType_t type );
-	void (*BoxTrace2)( trace_t *results, const vec3_t p1, const vec3_t p2, vec3_t mins, vec3_t maxs, model_t model, int mask, const vec3_t org, const vec3_t ang, trType_t type );
-	bool (*HitboxTrace)( trace_t *tr, edict_t *e, const vec3_t p1, const vec3_t p2 );
-	model_t (*TempModel)( const vec3_t mins, const vec3_t maxs, bool capsule );
-
-	// needs to be removed
+	byte *(*LeafPVS)( int leafnum );
+	byte *(*LeafPHS)( int leafnum );
 	byte *(*FatPVS)( const vec3_t org, bool portal );
-	byte *(*FatPHS)( int cluster, bool portal );
+	byte *(*FatPHS)( const vec3_t org, bool portal );
+
+	// map info
+	int (*NumBmodels)( void );
+	const void *(*VisData)( void );	// pass into render, save loading time and memory
+	script_t *(*GetEntityScript)( void );
+
+	// models info
+	modtype_t (*Mod_GetType)( model_t handle );
+	void *(*Mod_Extradata)( model_t handle );
+	void (*Mod_GetFrames)( model_t handle, int *numFrames );
+	void (*Mod_GetBounds)( model_t handle, vec3_t mins, vec3_t maxs );
+	void (*Mod_GetAttachment)( edict_t *ent, int iAttachment, float *rgflOrigin, float *rgflAngles );
+	void (*Mod_GetBonePos)( edict_t *ent, int iBone, float *rgflOrigin, float *rgflAngles );
+
+	// tracing
+	int (*PointContents)( const vec3_t p );
+	int (*HullPointContents)( chull_t *hull, int num, const vec3_t p );
+	trace_t (*Trace)( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags );
+	const char *(*TraceTexture)( const vec3_t start, trace_t trace );
+	chull_t *(*HullForBsp)( edict_t *ent, float *offset );
 } physic_exp_t;
 
 typedef struct physic_imp_s

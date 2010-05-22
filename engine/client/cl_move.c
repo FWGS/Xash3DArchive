@@ -230,11 +230,15 @@ PM_TraceTexture
 */
 static const char *PM_TraceTexture( edict_t *pTextureEntity, const float *v1, const float *v2 )
 {
+	trace_t	result;
+
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected ('%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	if( !pTextureEntity || pTextureEntity->free ) return NULL; 
-	return CL_ClipMoveToEntity( pTextureEntity, v1, vec3_origin, vec3_origin, v2, MASK_SOLID, 0 ).pTexName;
+	if( !CL_IsValidEdict( pTextureEntity )) return NULL; 
+
+	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
+	return CM_TraceTexture( v1, result );
 }
 
 /*
@@ -245,23 +249,16 @@ PM_TraceModel
 */
 static TraceResult PM_TraceModel( edict_t *pEnt, const vec3_t start, const vec3_t end )
 {
-	float		*mins;
-	float		*maxs;
-	trace_t		result;
-	TraceResult	out;
-	uint		umask;
+	float	*mins, *maxs;
 
 	if( VectorIsNAN( start ) || VectorIsNAN( end ))
 		Host_Error( "TraceModel: NAN errors detected ('%f %f %f', '%f %f %f'\n", start[0], start[1], start[2], end[0], end[1], end[2] );
 
-	umask = World_MaskForEdict( clgame.pmove->player );
 	clgame.pmove->usehull = bound( 0, clgame.pmove->usehull, 3 );
 	mins = clgame.pmove->player_mins[clgame.pmove->usehull];
 	maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
-	result = CL_ClipMoveToEntity( pEnt, start, mins, maxs, end, umask, FMOVE_SIMPLEBOX );
-	Mem_Copy( &out, &result, sizeof( TraceResult ));
 
-	return out;
+	return CM_ClipMove( pEnt, start, mins, maxs, end, FMOVE_SIMPLEBOX );
 }
 
 /*
@@ -297,9 +294,14 @@ static edict_t *PM_TestPlayerPosition( const vec3_t origin, TraceResult *trace )
 	return CL_TestPlayerPosition( origin, clgame.pmove->player, trace );
 }
 
-static int PM_PointContents( const vec3_t p )
+static int PM_PointContents( const vec3_t p, int *truecontents )
 {
-	return World_ConvertContents( CL_BaseContents( p, clgame.pmove->player ));
+	int cont = CL_TruePointContents( p );
+
+	if( truecontents ) *truecontents = cont;
+	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
+		cont = CONTENTS_WATER;
+	return cont;
 }
 
 static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
@@ -358,6 +360,8 @@ void CL_InitClientMove( void )
 	clgame.pmove->AlertMessage = pfnAlertMessage;
 	clgame.pmove->PM_GetString = CL_GetString;
 	clgame.pmove->PM_PointContents = PM_PointContents;
+	clgame.pmove->PM_HullPointContents = CM_HullPointContents;
+	clgame.pmove->PM_HullForBsp = CM_HullForBsp;
 	clgame.pmove->PM_PlayerTrace = PM_PlayerTrace;
 	clgame.pmove->PM_TraceTexture = PM_TraceTexture;
 	clgame.pmove->PM_GetEntityByIndex = PM_GetEntityByIndex;

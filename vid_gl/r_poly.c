@@ -33,26 +33,28 @@ R_PushPoly
 */
 void R_PushPoly( const meshbuffer_t *mb )
 {
-	int i, j;
-	poly_t *p;
-	ref_shader_t *shader;
-	int features;
+	poly_t		*p;
+	ref_shader_t	*shader;
+	int		i, j, features;
 
 	MB_NUM2SHADER( mb->shaderkey, shader );
 
-	features = shader->features | MF_TRIFAN;
+	features = ( shader->features|MF_TRIFAN );
+
 	for( i = -mb->infokey-1, p = r_polys + i; i < mb->lastPoly; i++, p++ )
 	{
-		poly_mesh.numVertexes = p->numverts;
-		poly_mesh.xyzArray = inVertsArray;
+		poly_mesh.numVerts = p->numverts;
+		poly_mesh.vertexArray = inVertsArray;
 		poly_mesh.normalsArray = inNormalsArray;
-		poly_mesh.stArray = p->stcoords;
-		poly_mesh.colorsArray[0] = p->colors;
+		poly_mesh.stCoordArray = p->stcoords;
+		poly_mesh.colorsArray = p->colors;
+
 		for( j = 0; j < p->numverts; j++ )
 		{
 			Vector4Set( inVertsArray[r_backacc.numVerts+j], p->verts[j][0], p->verts[j][1], p->verts[j][2], 1 );
 			VectorCopy( p->normal, inNormalsArray[r_backacc.numVerts+j] );
 		}
+
 		R_PushMesh( &poly_mesh, features );
 	}
 }
@@ -64,15 +66,16 @@ R_AddPolysToList
 */
 void R_AddPolysToList( void )
 {
-	unsigned int i, nverts = 0;
-	int fognum = -1;
-	poly_t *p;
-	mfog_t *fog, *lastFog = NULL;
-	meshbuffer_t *mb = NULL;
-	ref_shader_t *shader;
-	vec3_t lastNormal = { 0, 0, 0 };
+	uint		i, nverts = 0;
+	int		fognum = -1;
+	mfog_t		*fog, *lastFog = NULL;
+	meshbuffer_t	*mb = NULL;
+	ref_shader_t	*shader;
+	vec3_t		lastNormal = { 0, 0, 0 };
+	poly_t		*p;
 
 	RI.currententity = r_worldent;
+
 	for( i = 0, p = r_polys; i < r_numPolys; nverts += p->numverts, mb->lastPoly++, i++, p++ )
 	{
 		shader = p->shader;
@@ -110,9 +113,7 @@ static int maxClippedFragments;
 static fragment_t *clippedFragments;
 
 static cplane_t fragmentPlanes[6];
-static vec3_t fragmentOrigin;
 static vec3_t fragmentNormal;
-static float fragmentRadius;
 static float fragmentDiameterSquared;
 
 static int r_fragmentframecount;
@@ -266,15 +267,15 @@ q2 polys) or tristrips for ultra-fast clipping, providing there's
 enough stack space (depending on MAX_FRAGMENT_VERTS value).
 =================
 */
-static bool R_PlanarSurfClipFragment( msurface_t *surf, vec3_t normal )
+static bool R_PlanarSurfClipFragment( msurface_t *surf, const vec3_t normal )
 {
-	int i;
-	mesh_t *mesh;
+	int	i;
+	mesh_t	*mesh;
 	elem_t	*elem;
-	vec4_t *verts;
-	vec3_t poly[4];
-	vec3_t dir1, dir2, snorm;
-	bool planar;
+	vec4_t	*verts;
+	vec3_t	poly[4];
+	vec3_t	dir1, dir2, snorm;
+	bool	planar;
 
 	planar = surf->plane && !VectorCompare( surf->plane->normal, vec3_origin );
 	if( planar )
@@ -286,7 +287,7 @@ static bool R_PlanarSurfClipFragment( msurface_t *surf, vec3_t normal )
 
 	mesh = surf->mesh;
 	elem = mesh->elems;
-	verts = mesh->xyzArray;
+	verts = mesh->vertexArray;
 
 	// clip each triangle individually
 	for( i = 0; i < mesh->numElems; i += 3, elem += 3 )
@@ -320,141 +321,80 @@ static bool R_PlanarSurfClipFragment( msurface_t *surf, vec3_t normal )
 
 /*
 =================
-R_PatchSurfClipFragment
-=================
-*/
-static bool R_PatchSurfClipFragment( msurface_t *surf, vec3_t normal )
-{
-	int i, j;
-	mesh_t *mesh;
-	elem_t	*elem;
-	vec4_t *verts;
-	vec3_t poly[3];
-	vec3_t dir1, dir2, snorm;
-
-	mesh = surf->mesh;
-	elem = mesh->elems;
-	verts = mesh->xyzArray;
-
-	// clip each triangle individually
-	for( i = j = 0; i < mesh->numElems; i += 6, elem += 6, j = 0 )
-	{
-		VectorCopy( verts[elem[1]], poly[1] );
-
-		if( !j )
-		{
-			VectorCopy( verts[elem[0]], poly[0] );
-			VectorCopy( verts[elem[2]], poly[2] );
-		}
-		else
-		{
-tri2:
-			j++;
-			VectorCopy( poly[2], poly[0] );
-			VectorCopy( verts[elem[5]], poly[2] );
-		}
-
-		// calculate two mostly perpendicular edge directions
-		VectorSubtract( poly[0], poly[1], dir1 );
-		VectorSubtract( poly[2], poly[1], dir2 );
-
-		// we have two edge directions, we can calculate a third vector from
-		// them, which is the direction of the triangle normal
-		CrossProduct( dir1, dir2, snorm );
-		VectorNormalize( snorm );
-
-		// we multiply 0.5 by length of snorm to avoid normalizing
-		if( DotProduct( normal, snorm ) < 0.5 )
-			continue; // greater than 60 degrees
-
-		if( R_WindingClipFragment( poly, 3, surf, snorm ) )
-			return true;
-
-		if( !j )
-			goto tri2;
-	}
-
-	return false;
-}
-
-/*
-=================
-R_SurfPotentiallyFragmented
-=================
-*/
-bool R_SurfPotentiallyFragmented( msurface_t *surf )
-{
-	if( surf->flags & ( SURF_NOMARKS|SURF_NOIMPACT|SURF_NODRAW ))
-		return false;
-	return ( ( surf->facetype == MST_PLANAR ) || ( surf->facetype == MST_PATCH ) /* || (surf->facetype == MST_TRISURF)*/ );
-}
-
-/*
-=================
 R_RecursiveFragmentNode
 =================
 */
-static void R_RecursiveFragmentNode( void )
+static void R_RecursiveFragmentNode( mnode_t *node, const vec3_t origin, const vec3_t normal, float radius )
 {
-	int stackdepth = 0;
-	float dist;
-	bool inside;
-	mnode_t	*node, *localstack[2048];
-	mleaf_t	*leaf;
-	msurface_t *surf, **mark;
+	float		dist;
+	cplane_t		*plane;
+	msurface_t	*surf;
+	int		i, inside;
 
-	for( node = r_worldbrushmodel->nodes, stackdepth = 0;; )
+	if( !node->plane ) return;	// hit a leaf
+
+	if( numFragmentVerts == maxFragmentVerts || numClippedFragments == maxClippedFragments )
+		return; // already reached the limit somewhere else
+
+	// find which side of the node we are on
+	plane = node->plane;
+	if( plane->type < 3 )
+		dist = origin[plane->type] - plane->dist;
+	else dist = DotProduct( origin, plane->normal ) - plane->dist;
+
+	// go down the appropriate sides
+	if( dist > radius )
 	{
-		if( node->plane == NULL )
-		{
-			leaf = ( mleaf_t * )node;
-			mark = leaf->firstFragmentSurface;
-			if( !mark )
-				goto nextNodeOnStack;
-
-			do
-			{
-				if( numFragmentVerts == maxFragmentVerts || numClippedFragments == maxClippedFragments )
-					return; // already reached the limit
-
-				surf = *mark++;
-				if( surf->fragmentframe == r_fragmentframecount )
-					continue;
-				surf->fragmentframe = r_fragmentframecount;
-
-				if( !BoundsAndSphereIntersect( surf->mins, surf->maxs, fragmentOrigin, fragmentRadius ) )
-					continue;
-
-				if( surf->facetype == MST_PATCH )
-					inside = R_PatchSurfClipFragment( surf, fragmentNormal );
-				else
-					inside = R_PlanarSurfClipFragment( surf, fragmentNormal );
-
-				if( inside )
-					return;
-			} while( *mark );
-
-			if( numFragmentVerts == maxFragmentVerts || numClippedFragments == maxClippedFragments )
-				return; // already reached the limit
-
-nextNodeOnStack:
-			if( !stackdepth )
-				break;
-			node = localstack[--stackdepth];
-			continue;
-		}
-
-		dist = PlaneDiff( fragmentOrigin, node->plane );
-		if( dist > fragmentRadius )
-		{
-			node = node->children[0];
-			continue;
-		}
-
-		if( ( dist >= -fragmentRadius ) && ( stackdepth < sizeof( localstack ) / sizeof( mnode_t * )))
-			localstack[stackdepth++] = node->children[0];
-		node = node->children[1];
+		R_RecursiveFragmentNode( node->children[0], origin, normal, radius );
+		return;
 	}
+
+	if( dist < -radius )
+	{
+		R_RecursiveFragmentNode( node->children[1], origin, normal, radius );
+		return;
+	}
+
+	// clip to each surface
+	surf = node->firstface;
+
+	for( i = 0; i < node->numfaces; i++, surf++ )
+	{
+		if( numFragmentVerts == maxFragmentVerts || numClippedFragments == maxClippedFragments )
+			break;	// already reached the limit
+
+		if( surf->fragmentframe == r_fragmentframecount )
+			continue;	// already checked this surface in another node
+		surf->fragmentframe = r_fragmentframecount;
+
+		if( surf->flags & (SURF_DRAWSKY|SURF_DRAWTURB))
+			continue;	// don't bother clipping
+
+		if( surf->shader->flags & SHADER_NOFRAGMENTS )
+			continue;	// don't bother clipping
+
+		if( !BoundsAndSphereIntersect( surf->mins, surf->maxs, origin, radius ))
+			continue;	// no intersection
+
+		if(!( surf->flags & SURF_PLANEBACK ))
+		{
+			if( DotProduct( normal, surf->plane->normal ) < 0.5f )
+				continue;	// greater than 60 degrees
+		}
+		else
+		{
+			if( DotProduct( normal, surf->plane->normal ) > -0.5f )
+				continue;	// greater than 60 degrees
+		}
+
+		// clip to the surface
+		inside = R_PlanarSurfClipFragment( surf, normal );
+		if( inside ) return;
+	}
+
+	// recurse down the children
+	R_RecursiveFragmentNode( node->children[0], origin, normal, radius );
+	R_RecursiveFragmentNode( node->children[1], origin, normal, radius );
 }
 
 /*
@@ -480,10 +420,6 @@ int R_GetClippedFragments( const vec3_t origin, float radius, vec3_t axis[3], in
 	numClippedFragments = 0;
 	maxClippedFragments = maxfragments;
 	clippedFragments = fragments;
-
-	VectorCopy( origin, fragmentOrigin );
-	VectorCopy( axis[0], fragmentNormal );
-	fragmentRadius = radius;
 	fragmentDiameterSquared = radius * radius * 4;
 
 	// calculate clipping planes
@@ -500,14 +436,14 @@ int R_GetClippedFragments( const vec3_t origin, float radius, vec3_t axis[3], in
 		fragmentPlanes[i*2+1].type = PlaneTypeForNormal( fragmentPlanes[i*2+1].normal );
 	}
 
-	R_RecursiveFragmentNode ();
+	// clip against world geometry
+	R_RecursiveFragmentNode( r_worldbrushmodel->nodes, origin, axis[0], radius );
 
 	return numClippedFragments;
 }
 
 //==================================================================================
 
-static int trace_umask;
 static vec3_t trace_start, trace_end;
 static vec3_t trace_absmins, trace_absmaxs;
 static float trace_fraction;
@@ -601,7 +537,7 @@ static bool R_TraceAgainstSurface( msurface_t *surf )
 	if( !mesh ) return false;
 	elem = mesh->elems;
 	if( !elem ) return false;
-	verts = mesh->xyzArray;		
+	verts = mesh->vertexArray;		
 	if( !verts ) return false;
 
 	// clip each triangle individually
@@ -611,15 +547,11 @@ static bool R_TraceAgainstSurface( msurface_t *surf )
 		if( old_frac > trace_fraction )
 		{
 			// flip normal is we are on the backside (does it really happen?)...
-			if( surf->facetype == MST_PLANAR )
-			{
-				if( DotProduct( trace_plane.normal, surf->plane->normal ) < 0 )
-					VectorNegate( trace_plane.normal, trace_plane.normal );
-			}
+			if( DotProduct( trace_plane.normal, surf->plane->normal ) < 0 )
+				VectorNegate( trace_plane.normal, trace_plane.normal );
 			return true;
 		}
 	}
-
 	return false;
 }
 
@@ -630,30 +562,28 @@ R_TraceAgainstLeaf
 */
 static int R_TraceAgainstLeaf( mleaf_t *leaf )
 {
-	msurface_t *surf, **mark;
+	msurface_t	*surf, **mark;
+	int		i;
 
-	if( leaf->cluster == -1 )
+	if( leaf->contents == CONTENTS_SOLID )
 		return 1;	// solid leaf
 
-	mark = leaf->firstVisSurface;
-	if( mark )
+	mark = leaf->firstMarkSurface;
+
+	for( i = 0, mark = leaf->firstMarkSurface; i < leaf->numMarkSurfaces; i++, mark++ )
 	{
-		do
+		surf = *mark;
+
+		if( surf->fragmentframe == r_fragmentframecount )
+			continue;	// do not test the same surface more than once
+		surf->fragmentframe = r_fragmentframecount;
+
+		if( surf->mesh )
 		{
-			surf = *mark++;
-			if( surf->fragmentframe == r_fragmentframecount )
-				continue;	// do not test the same surface more than once
-			surf->fragmentframe = r_fragmentframecount;
-
-			if( surf->flags & trace_umask )
-				continue;
-
-			if( surf->mesh )
-				if( R_TraceAgainstSurface( surf ) )
-					trace_surface = surf;	// impact surface
-		} while( *mark );
+			if( R_TraceAgainstSurface( surf ) )
+				trace_surface = surf;	// impact surface
+		}
 	}
-
 	return 0;
 }
 
@@ -670,8 +600,6 @@ static int R_TraceAgainstBmodel( mbrushmodel_t *bmodel )
 	for( i = 0; i < bmodel->nummodelsurfaces; i++ )
 	{
 		surf = bmodel->firstmodelsurface + i;
-		if( surf->flags & trace_umask )
-			continue;
 
 		if( R_TraceAgainstSurface( surf ) )
 			trace_surface = surf;	// impact point
@@ -738,7 +666,7 @@ loc0:
 R_TraceLine
 =================
 */
-msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int umask )
+msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test )
 {
 	ref_model_t	*model;
 
@@ -748,8 +676,7 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 	Mem_Set( tr, 0, sizeof( trace_t ));
 
 	trace_surface = NULL;
-	trace_umask = umask;
-	trace_fraction = 1;
+	trace_fraction = 1.0f;
 	VectorCopy( end, trace_impact );
 	Mem_Set( &trace_plane, 0, sizeof( trace_plane ));
 
@@ -806,7 +733,6 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 
 		tr->flPlaneDist = trace_plane.dist;
 		VectorCopy( trace_plane.normal, tr->vecPlaneNormal );
-		tr->iContents = trace_surface->contents;
 		tr->pHit = (edict_t *)test;
 	}
 	
