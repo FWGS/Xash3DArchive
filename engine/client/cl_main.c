@@ -637,7 +637,7 @@ void CL_PrepVideo( void )
 	for( i = 0; i < MAX_DECALS && cl.configstrings[CS_DECALS+1+i][0]; i++ )
 	{
 		com.strncpy( name, cl.configstrings[CS_DECALS+1+i], MAX_STRING );
-		cl.decal_shaders[i+1] = re->RegisterShader( name, SHADER_GENERIC );
+		cl.decal_shaders[i+1] = re->RegisterShader( name, SHADER_DECAL );
 	}
 
 	// setup sky and free unneeded stuff

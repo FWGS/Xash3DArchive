@@ -2315,6 +2315,7 @@ shader_t Mod_RegisterShader( const char *name, int shaderType )
 	case SHADER_NOMIP:
 		src = R_LoadShader( name, shaderType, false, TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP, SHADER_INVALID );
 		break;
+	case SHADER_DECAL:
 	case SHADER_GENERIC:
 		src = R_LoadShader( name, shaderType, false, 0, SHADER_INVALID );
 		break;

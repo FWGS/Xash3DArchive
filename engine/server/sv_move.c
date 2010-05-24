@@ -493,6 +493,12 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	VectorCopy( clent->v.absmin, absmin );
 	VectorCopy( clent->v.absmax, absmax );
 
+	for( i = 0; i < 3; i++ )
+	{
+		absmin[i] = clent->v.origin[i] - 128;
+		absmax[i] = clent->v.origin[i] + 128;
+	}
+
 	count = SV_AreaEdicts( absmin, absmax, touch, MAX_EDICTS, AREA_CUSTOM );
 
 	// build list of ladders around player

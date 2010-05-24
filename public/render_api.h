@@ -12,6 +12,7 @@
 #define SHADER_FONT			2	// special case for displayed fonts
 #define SHADER_NOMIP		3	// 2d images
 #define SHADER_GENERIC		4	// generic shader
+#define SHADER_DECAL		5
 
 // screenshot types
 #define VID_SCREENSHOT		0

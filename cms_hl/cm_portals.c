@@ -15,8 +15,9 @@ CM_DecompressVis
 */
 static byte *CM_DecompressVis( const byte *in )
 {
-	int	c, row;
-	byte	*out;
+	static byte	decompressed[MAX_MAP_LEAFS/8];
+	int		c, row;
+	byte		*out;
 
 	if( !worldmodel )
 	{
@@ -25,7 +26,7 @@ static byte *CM_DecompressVis( const byte *in )
 	}
 
 	row = (worldmodel->numleafs + 7)>>3;	
-	out = cm.nullrow;
+	out = decompressed;
 
 	if( !in )
 	{	
@@ -35,7 +36,7 @@ static byte *CM_DecompressVis( const byte *in )
 			*out++ = 0xff;
 			row--;
 		}
-		return cm.nullrow;		
+		return decompressed;		
 	}
 
 	do
@@ -54,9 +55,9 @@ static byte *CM_DecompressVis( const byte *in )
 			*out++ = 0;
 			c--;
 		}
-	} while( out - cm.nullrow < row );
+	} while( out - decompressed < row );
 
-	return cm.nullrow;
+	return decompressed;
 }
 
 /*
@@ -82,6 +83,12 @@ void CM_CalcPHS( void )
 	uint	timestart;
 
 	if( !worldmodel ) return;
+
+	if( !worldmodel->visdata )
+	{
+		cm.pvs = cm.phs = NULL;
+		return;
+	}
 
 	MsgDev( D_NOTE, "Building PHS...\n" );
 	timestart = Sys_Milliseconds();
@@ -157,7 +164,6 @@ void CM_CalcPHS( void )
 	}
 
 	MsgDev( D_INFO, "Average clusters hearable: %i (build at %g secs)\n", hcount / num, (Sys_Milliseconds() - timestart) * 0.001f );
-	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );	// don't forget clear nullrow
 	MsgDev( D_INFO, "Total clusters: %i\n", num );
 }
 

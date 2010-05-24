@@ -63,7 +63,9 @@ static waveFunc_t	r_currentRGBgenFuncs[MAX_SHADER_STAGES], r_currentAlphagenFunc
 static tcMod_t	r_currentTcmods[MAX_SHADER_STAGES][MAX_SHADER_TCMODS];
 static vec4_t	r_currentTcGen[MAX_SHADER_STAGES][2];
 const char	*r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" }; // FIXME: get rid of this
+
 static texture_t	*r_stageTexture[MAX_STAGE_TEXTURES];		// MAX_FRAMES in spritegen.c
+static uint		r_miptexFeatures;			// bmodel miptex features
 static kRenderMode_t	r_shaderRenderMode;			// sprite or studiomodel rendermode
 static int		r_numStageTextures;			// num textures in group
 static float		r_stageAnimFrequency;		// for auto-animate groups
@@ -648,14 +650,17 @@ static bool Shader_CheckSkybox( const char *name )
 			if( FS_FileExists( sidename )) num_checked_sides++;
 
 		}
+
 		if( num_checked_sides == 6 )
 			return true; // image exists
+
 		for( j = 0; j < 6; j++ )
 		{         
 			// build side name
 			sidename = va( "%s_%s.%s", loadname, r_skyBoxSuffix[j], skybox_ext[i] );
 			if( FS_FileExists( sidename )) num_checked_sides++;
 		}
+
 		if( num_checked_sides == 6 )
 			return true; // images exists
 	}
@@ -673,7 +678,6 @@ static bool Shader_ParseSkySides( script_t *script, ref_shader_t *shader, ref_sh
 
 	switch( shader->type )
 	{
-	case SHADER_VERTEX:
 	case SHADER_TEXTURE:
 	case SHADER_SKY: break;
 	default:
@@ -2486,8 +2490,8 @@ void R_ShaderList_f( void )
 		case SHADER_TEXTURE:
 			Msg( "bsp  " );
 			break;
-		case SHADER_VERTEX:
-			Msg( "vert " );
+		case SHADER_DECAL:
+			Msg( "decal" );
 			break;
 		case SHADER_STUDIO:
 			Msg( "mdl  " );
@@ -2574,6 +2578,17 @@ void R_ShaderDump_f( void )
 
 	Msg( "found in %s:\n\n", cache->source );
 	Msg( "^2%s%s\n", name, cache->buffer );
+
+	Msg( "shader->flags    %d\n", shader->flags );
+	Msg( "shader->features %d\n", shader->features );
+	Msg( "shader->sort     %d\n", shader->sort );
+	Msg( "shader->stages   %d\n", shader->num_stages );
+
+	Msg( "pass[0]->flags   %d\n", shader->stages[0].flags );
+	Msg( "pass[0]->glState %d\n", shader->stages[0].glState );
+	Msg( "pass[0]->rgbgen  %d\n", shader->stages[0].rgbGen.type );
+	Msg( "pass[0]->alphgen %d\n", shader->stages[0].alphaGen.type );
+	Msg( "pass[0]->tcgen   %d\n", shader->stages[0].tcgen );
 }
 
 bool R_ShaderCheckCache( const char *name )
@@ -2621,6 +2636,7 @@ void R_InitShaders( void )
 		r_stageTexture[i] = tr.defaultTexture;
 
 	r_shaderTwoSided = 0;
+	r_miptexFeatures = 0;
 	r_stageAnimFrequency = 0.0f;
 	r_numStageTextures = 0;
 	r_shaderRenderMode = kRenderNormal;
@@ -3373,34 +3389,22 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 	// make a default shader
 	switch( type )
 	{
-	case SHADER_VERTEX:
-		shader->type = SHADER_VERTEX;
-		shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_NO_MODULATIVE_DLIGHTS;
+	case SHADER_DECAL:
+		shader->type = SHADER_DECAL;
+		shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_POLYGONOFFSET;
 		shader->features = MF_STCOORDS|MF_COLORS;
-		shader->sort = SORT_OPAQUE;
-		shader->num_stages = 3;
+		shader->sort = SORT_DECAL;
+		shader->num_stages = 1;
 		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 		strcpy( shader->name, shortname );
-		shader->stages = ( ref_stage_t * )( ( byte * )shader->name + length + 1 );
+		shader->stages = ( ref_stage_t * )(( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
-		pass->textures[0] = tr.whiteTexture;
-		pass->flags = SHADERSTAGE_BLEND_MODULATE;
-		pass->glState = GLSTATE_DEPTHWRITE/*|GLSTATE_SRCBLEND_ONE|GLSTATE_DSTBLEND_ZERO*/;
-		pass->tcgen = TCGEN_BASE;
-		pass->rgbGen.type = RGBGEN_VERTEX;
-		pass->alphaGen.type = ALPHAGEN_IDENTITY;
-		pass->num_textures++;
-		pass = &shader->stages[1];
-		pass->flags = SHADERSTAGE_DLIGHT|SHADERSTAGE_BLEND_ADD;
-		pass->glState = GLSTATE_DEPTHFUNC_EQ|GLSTATE_SRCBLEND_ONE|GLSTATE_DSTBLEND_ONE;
-		pass->tcgen = TCGEN_BASE;
-		pass = &shader->stages[2];
-		pass->flags = SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_MODULATE;
-		pass->glState = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR;
+		pass->flags = SHADERSTAGE_BLEND_DECAL;
+		pass->glState = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_ZERO;
 		pass->tcgen = TCGEN_BASE;
 		pass->textures[0] = Shader_FindImage( shader, shortname, addFlags );
-		pass->rgbGen.type = RGBGEN_IDENTITY;
-		pass->alphaGen.type = ALPHAGEN_IDENTITY;
+		pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;
+		pass->alphaGen.type = ALPHAGEN_VERTEX;
 		pass->num_textures++;
 		break;
 	case SHADER_FLARE:
@@ -3778,31 +3782,28 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		else
 		{
 			shader->type = SHADER_TEXTURE;
-			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_NO_MODULATIVE_DLIGHTS|SHADER_HASLIGHTMAP;
+			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_RENDERMODE|SHADER_HASLIGHTMAP;
 			shader->features = MF_STCOORDS|MF_LMCOORDS;
 			shader->sort = SORT_OPAQUE;
-			shader->num_stages = 3;
+			shader->num_stages = 2;
 			shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 			com.strcpy( shader->name, shortname );
-			shader->stages = ( ref_stage_t * )( ( byte * )shader->name + length + 1 );
+			shader->stages = (ref_stage_t *)((byte *)shader->name + length + 1 );
 			pass = &shader->stages[0];
-			pass->flags = SHADERSTAGE_LIGHTMAP|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
+			pass->flags = SHADERSTAGE_RENDERMODE|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
 			pass->glState = GLSTATE_DEPTHWRITE;
-			pass->tcgen = TCGEN_LIGHTMAP;
-			pass->rgbGen.type = RGBGEN_IDENTITY;
-			pass->alphaGen.type = ALPHAGEN_IDENTITY;
-			pass = &shader->stages[1];
-			pass->flags = SHADERSTAGE_DLIGHT|SHADERSTAGE_BLEND_ADD;
-			pass->glState = GLSTATE_DEPTHFUNC_EQ|GLSTATE_SRCBLEND_ONE|GLSTATE_DSTBLEND_ONE;
 			pass->tcgen = TCGEN_BASE;
-			pass = &shader->stages[2];
-			pass->flags = SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_MODULATE;
-			pass->glState = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR;
-			pass->tcgen = TCGEN_BASE;
-			pass->textures[0] = Shader_FindImage( shader, shortname, addFlags );
+			if( r_numStageTextures > 0 ) pass->textures[0] = r_stageTexture[0];
+			else pass->textures[0] = Shader_FindImage( shader, shortname, addFlags );
 			pass->rgbGen.type = RGBGEN_IDENTITY;
 			pass->alphaGen.type = ALPHAGEN_IDENTITY;
 			pass->num_textures++;
+			pass = &shader->stages[1];
+			pass->flags = SHADERSTAGE_LIGHTMAP|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
+			pass->glState = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_ZERO;
+			pass->tcgen = TCGEN_LIGHTMAP;
+			pass->rgbGen.type = RGBGEN_IDENTITY;
+			pass->alphaGen.type = ALPHAGEN_IDENTITY;
 		}
 		break;
 	case SHADER_GENERIC:
@@ -3827,6 +3828,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 
 	// reset parms
 	r_shaderTwoSided = 0;
+	r_miptexFeatures = 0;
 	r_numStageTextures = 0;
 	r_stageAnimFrequency = 0.0f;
 
@@ -3980,6 +3982,11 @@ void R_ShaderAddStageTexture( texture_t *mipTex )
 	r_stageTexture[r_numStageTextures++] = mipTex;
 }
 
+void R_ShaderSetMiptexFlags( uint addFlags )
+{
+	r_miptexFeatures |= addFlags;
+}
+
 void R_ShaderSetRenderMode( kRenderMode_t mode, bool twoSided )
 {
 	r_shaderRenderMode = mode;
@@ -4019,6 +4026,7 @@ ref_shader_t *R_SetupSky( const char *name )
 			if( !com.stricmp( shader->name, loadname ))
 				break;
 		}
+
 		if( shader )
 		{
 			// already loaded, check parms

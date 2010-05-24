@@ -94,7 +94,8 @@ public:
 		int entityIndex, modelIndex;
 		UTIL_TraceLine( pev->origin - Vector(5,5,5), pev->origin + Vector(5,5,5),  ignore_monsters, ENT(pev), &trace );
 		entityIndex = (short)ENTINDEX(trace.pHit);
-		if ( entityIndex ) modelIndex = (int)VARS(trace.pHit)->modelindex;
+		if ( entityIndex != NULLENT_INDEX )
+			modelIndex = (int)VARS(trace.pHit)->modelindex;
 		else modelIndex = 0;
 		g_engfuncs.pfnStaticDecal( pev->origin, (int)pev->skin, entityIndex, modelIndex );
 		SetThink( Remove );

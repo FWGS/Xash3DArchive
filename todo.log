@@ -42,4 +42,5 @@ Xash 0.72 Stable 13.12.10
 18.fix logic_switcher			OK
 19.implement botman's parabot dll
 20.implement bsp 28,29,30 formats
-21.revision of all resources
+21.revision of all resources			OK
+22.finalize server entity-culling

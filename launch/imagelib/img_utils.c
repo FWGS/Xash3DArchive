@@ -171,7 +171,7 @@ static const loadpixformat_t load_hl1[] =
 {
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// hl vgui menus
 { "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// hl skyboxes
-{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_HL },	// hl textures from wad or buffer
+{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures from wad or buffer
 { "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_HL },	// hl studio model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames
 { "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_HL },	// hl menu images (cached.wad etc)
@@ -224,8 +224,8 @@ static const loadpixformat_t load_xash[] =
 { "%s%s.%s", "png", Image_LoadPNG, IL_HINT_NO },	// levelshot save as .png
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// screenshots, etc
 { "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// 2d textures
-{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_HL },	// hl textures (WorldCraft support)
-{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_HL },	// hl pictures
+{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures (WorldCraft support)
+{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_NO },	// hl pictures
 { "%s%s.%s", "fnt", Image_LoadFNT, IL_HINT_HL },	// qfonts (console, titles etc)
 { "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_NO },	// hl or q1 model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames

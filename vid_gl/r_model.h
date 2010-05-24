@@ -57,11 +57,18 @@ typedef struct
 	cplane_t		*planes;
 } mfog_t;
 
-#define SURF_PLANEBACK	BIT( 1 )
-#define SURF_DRAWSKY	BIT( 0 )		// sky surface
+// miptex features (will be convert to a shader settings)
+#define MIPTEX_CONVEYOR	BIT( 0 )		// create conveyour surface
+#define MIPTEX_LIQUID	BIT( 1 )		// is a liquid
+#define MIPTEX_TRANSPARENT	BIT( 2 )		// transparent texture
+#define MIPTEX_RENDERMODE	BIT( 3 )		// this surface requires a rendermode stuff
+
+
+#define SURF_PLANEBACK	BIT( 0 )
+#define SURF_DRAWSKY	BIT( 1 )		// sky surface
 #define SURF_DRAWTURB	BIT( 2 )		// warp surface
-#define SURF_DRAWTILED	BIT( 4 )		// face without lighmap
-#define SURF_UNDERWATER	BIT( 5 )		// caustics
+#define SURF_DRAWTILED	BIT( 3 )		// face without lighmap
+#define SURF_UNDERWATER	BIT( 4 )		// caustics
 
 typedef struct mtexinfo_s
 {

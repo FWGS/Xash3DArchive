@@ -37,8 +37,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SHADER_FONT			2
 #define SHADER_NOMIP		3
 #define SHADER_GENERIC		4
-#define SHADER_TEXTURE		5
-#define SHADER_VERTEX		6
+#define SHADER_DECAL		5
+#define SHADER_TEXTURE		6
 #define SHADER_FLARE		7
 #define SHADER_STUDIO		8
 #define SHADER_SPRITE		9
@@ -357,6 +357,7 @@ float *R_GetTableByHandle( int tableIndex );
 bool R_ShaderCheckCache( const char *name );
 void Shader_TouchImages( ref_shader_t *shader, bool free_unused );
 void R_ShaderAddStageTexture( texture_t *mipTex );
+void R_ShaderSetMiptexFlags( uint addFlags );
 void R_ShaderSetRenderMode( kRenderMode_t mode, bool twoSided );
 void R_ShaderAddStageIntervals( float interval );
 void R_UploadCinematicShader( const ref_shader_t *shader );

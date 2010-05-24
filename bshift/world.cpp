@@ -170,7 +170,7 @@ void CDecal :: StaticDecal( void )
 	UTIL_TraceLine( pev->origin - Vector(5,5,5), pev->origin + Vector(5,5,5),  ignore_monsters, ENT(pev), &trace );
 
 	entityIndex = (short)ENTINDEX(trace.pHit);
-	if ( entityIndex )
+	if ( entityIndex != NULLENT_INDEX )
 		modelIndex = (int)VARS(trace.pHit)->modelindex;
 	else
 		modelIndex = 0;

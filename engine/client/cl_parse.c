@@ -603,7 +603,7 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	}
 	else if( i >= CS_DECALS && i < CS_DECALS+MAX_DECALS && cl.video_prepped )
 	{
-		cl.decal_shaders[i-CS_DECALS] = re->RegisterShader( cl.configstrings[i], SHADER_GENERIC );
+		cl.decal_shaders[i-CS_DECALS] = re->RegisterShader( cl.configstrings[i], SHADER_DECAL );
 	}
 	else if( i >= CS_USER_MESSAGES && i < CS_USER_MESSAGES+MAX_USER_MESSAGES )
 	{

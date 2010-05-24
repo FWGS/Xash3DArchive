@@ -155,7 +155,7 @@ byte *Mod_LeafPVS( mleaf_t *leaf, ref_model_t *model )
 {
 	mbrushmodel_t	*bmodel = (mbrushmodel_t *)model->extradata;
 
-	if( !model || !bmodel || !leaf )
+	if( !model || !bmodel || !leaf || !bmodel->visdata )
 		return mod_novis;
 	return Mod_DecompressVis( leaf->compressed_vis, bmodel );
 }
@@ -449,7 +449,7 @@ Mod_SetNodeParent
 static void Mod_SetNodeParent( mnode_t *node, mnode_t *parent )
 {
 	node->parent = parent;
-	if( !node->plane ) return; // it's a leaf
+	if( node->contents < 0 ) return; // it's a leaf
 
 	Mod_SetNodeParent( node->children[0], node );
 	Mod_SetNodeParent( node->children[1], node );
@@ -1037,6 +1037,42 @@ static void Mod_BuildSurfacePolygons( msurface_t *surf )
 
 /*
 =================
+Mod_LoadMiptex
+=================
+*/
+static ref_shader_t *Mod_LoadMiptex( char *shadername, mip_t *mt, int version )
+{
+	texture_t	*miptex;
+	int	size; 
+
+	if( R_ShaderCheckCache( shadername ))
+		goto load_shader;	// external shader found
+
+	// determine shader parms by texturename
+
+	if( mt->offsets[0] > 0 )
+	{
+		// NOTE: imagelib detect miptex version by size
+		// 770 additional bytes is indicated custom palette
+		size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
+		if( version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+
+		// build the unique shadername because we don't want keep this for other maps
+		com.snprintf( shadername, 32, "%s/%s", loadmodel->name, mt->name );
+
+		// loading internal texture if present
+		miptex = R_FindTexture( va( "\"#%s.mip\"", mt->name ), (byte *)mt, size, 0 );
+
+		if( !miptex ) miptex = tr.defaultTexture;
+		R_ShaderAddStageTexture( miptex ); // add internal texture
+	}
+
+load_shader:
+	return R_LoadShader( shadername, SHADER_TEXTURE, false, 0, SHADER_INVALID );
+}
+
+/*
+=================
 Mod_LoadLighting
 =================
 */
@@ -1148,7 +1184,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 Mod_LoadTextures
 =================
 */
-static void Mod_LoadTextures( const dlump_t *l )
+static void Mod_LoadTextures( const dlump_t *l, int version )
 {
 	int		i, count;
 	dmiptexlump_t	*in;
@@ -1196,13 +1232,11 @@ static void Mod_LoadTextures( const dlump_t *l )
 		com.snprintf( out->name, sizeof( out->name ), "textures/%s", mt->name );
 
 //		out->contents = Mod_ContentsFromShader( out->name );	// FIXME: implement
-		out->shader = R_LoadShader( out->name, SHADER_TEXTURE, false, 0, SHADER_INVALID );
+		loadmodel->shaders[i] = out->shader = Mod_LoadMiptex( out->name, mt, version );
 
 		// original dimensions for adjust lightmap on a face
 		out->width = LittleLong( mt->width );
 		out->height = LittleLong( mt->height );
-
-		loadmodel->shaders[i] = out->shader;
 
 		Cvar_SetValue( "scr_loading", scr_loading->value + 50.0f / count );
 		if( ri.UpdateScreen ) ri.UpdateScreen();
@@ -1380,13 +1414,6 @@ static void Mod_LoadNodes( const dlump_t *l )
 	{
 		bool	badBounds = false;
 
-		for( j = 0; j < 2; j++ )
-		{
-			p = LittleLong( in->children[j] );
-			if( p >= 0 ) out->children[j] = loadbmodel->nodes + p;
-			else out->children[j] = (mnode_t *)(loadbmodel->leafs + ( -1 - p ));
-		}
-
 		out->plane = loadbmodel->planes + LittleLong( in->planenum );
 		out->firstface = loadbmodel->surfaces + LittleLong( in->firstface );
 		out->numfaces = LittleLong( in->numfaces );
@@ -1408,7 +1435,16 @@ static void Mod_LoadNodes( const dlump_t *l )
 			MsgDev( D_WARN, "mins: %i %i %i\n", Q_rint( out->mins[0] ), Q_rint( out->mins[1] ), Q_rint( out->mins[2] ));
 			MsgDev( D_WARN, "maxs: %i %i %i\n", Q_rint( out->maxs[0] ), Q_rint( out->maxs[1] ), Q_rint( out->maxs[2] ));
 		}
+
+		for( j = 0; j < 2; j++ )
+		{
+			p = LittleShort( in->children[j] );
+			if( p >= 0 ) out->children[j] = loadbmodel->nodes + p;
+			else out->children[j] = (mnode_t *)(loadbmodel->leafs + ( -1 - p ));
+		}
 	}
+
+	Mod_SetNodeParent( loadbmodel->nodes, NULL );
 }
 
 /*
@@ -1458,8 +1494,7 @@ static void Mod_LoadLeafs( const dlump_t *l )
 		out->contents = LittleLong( in->contents );
 		
 		p = LittleLong( in->visofs );
-		if( p == -1 ) out->compressed_vis = NULL;
-		else out->compressed_vis = loadbmodel->visdata + p;
+		out->compressed_vis = (p == -1) ? NULL : loadbmodel->visdata + p;
 
 		out->firstMarkSurface = loadbmodel->marksurfaces + LittleShort( in->firstmarksurface );
 		out->numMarkSurfaces = LittleShort( in->nummarksurfaces );
@@ -1687,8 +1722,6 @@ static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t gridS
 	mapConfig.outlineColor[3] = 255;
 
 	R_SortSuperLightStyles();
-
-	Mod_SetNodeParent( loadbmodel->nodes, NULL );
 	Mem_EmptyPool( cached_mempool );
 }
 
@@ -1730,9 +1763,9 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 	Mod_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
 	Mod_LoadEdges( &header->lumps[LUMP_EDGES] );
 	Mod_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
+	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES], version );
 	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING], version );
 	Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
-	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES] );
 	Mod_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
 	Mod_LoadSurfaces( &header->lumps[LUMP_FACES] );
 	Mod_LoadMarkFaces( &header->lumps[LUMP_MARKSURFACES] );

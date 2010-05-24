@@ -861,9 +861,11 @@ static bool PS_ReadName( script_t *script, scFlags_t flags, token_t *token )
 		}
 		else if( flags & SC_ALLOW_PATHNAMES2 )
 		{
+			// NOTE: quake and half-life texture names may contains many-many unexpected symbols...
 			if((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')
-			&& c != '_' && c != '/' && c != '\\' && c != ':' && c != '.' && c != '+' && c != '@'
-			&& c != '-' && c != '{' && c != '!' && c != '$' && c != '&' && c != '~' && c != '#' )
+			&& c != '_' && c != '/' && c != '\\' && c != ':' && c != '.' && c != '+'
+			&& c != '@' && c != '-' && c != '{' && c != '!' && c != '$' && c != '&'
+			&& c != '~' && c != '#' && c != '[' && c != ']' )
 				break;
 		}
 		else

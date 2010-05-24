@@ -635,7 +635,7 @@ void R_MarkLeaves( void )
 		vis = fatpvs;
 	}
 
-	for( i = 0; i < r_worldbrushmodel->numleafs; i++ )
+	for( i = 0; i < r_worldbrushmodel->numleafs - 1; i++ )
 	{
 		if( vis[i>>3] & ( 1<<( i & 7 )))
 		{

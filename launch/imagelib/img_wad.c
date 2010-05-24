@@ -97,7 +97,7 @@ bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	image.depth = 1;
-	image.type = PF_INDEXED_32;	// 32-bit palete
+	image.type = PF_INDEXED_32;	// 32-bit palette
 
 	if(!Image_LumpValidSize( name )) return false;
 	fin = buffer + sizeof( font ) - 4;
@@ -491,7 +491,8 @@ bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		pal = (byte *)buffer + mip.offsets[0] + (((image.width * image.height) * 85)>>6);
 		numcolors = BuffLittleShort( pal );
 		if( numcolors != 256 ) pal = NULL; // corrupted mip ?
-		else  pal += sizeof(short); // skip colorsize 
+		else pal += sizeof( short ); // skip colorsize 
+
 		// detect rendermode
 		if( com.strchr( name, '{' ))
 		{
