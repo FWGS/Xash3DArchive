@@ -74,6 +74,7 @@ static vec4_t	colorWhite = { 1.0f, 1.0f, 1.0f, 1.0f };
 static vec4_t	colorRed	=  { 1.0f, 0.0f, 0.0f, 1.0f };
 static vec4_t	colorGreen = { 0.0f, 1.0f, 0.0f, 1.0f };
 static vec4_t	colorBlue	=  { 0.0f, 0.0f, 1.0f, 1.0f };
+static vec4_t	colorYellow ={ 1.0f, 1.0f, 0.0f, 1.0f };
 static bool	r_arraysLocked;
 static bool	r_normalsEnabled;
 
@@ -2983,16 +2984,41 @@ R_SetColorForOutlines
 */
 static _inline void R_SetColorForOutlines( void )
 {
-	int	type = r_currentMeshBuffer->sortkey & 3;
+	ref_entity_t	*ent;
+	int		modtype = mod_bad;
+	int		type = r_currentMeshBuffer->sortkey & 3;
+
+	MB_NUM2ENTITY( r_currentMeshBuffer->sortkey, ent );
+
+	if( ent && ent->model )
+		modtype = ent->model->type;
 
 	switch( type )
 	{
 	case MB_MODEL:
 		if( triState.fActive )
+		{
 			pglColor4fv( colorBlue );			
-		else if( r_currentMeshBuffer->infokey < 0 )
-			pglColor4fv( colorRed );
-		else pglColor4fv( colorWhite );
+		}
+		else
+		{
+			switch( modtype )
+			{
+			case mod_bad:
+			case mod_world:
+				pglColor4fv( colorWhite );
+				break;
+			case mod_brush:
+				pglColor4fv( colorYellow );
+				break;
+			case mod_studio:
+				pglColor4fv( colorRed );
+				break;
+			case mod_sprite:
+				pglColor4fv( colorBlue );
+				break;
+			}
+		}
 		break;
 	case MB_SPRITE:
 		pglColor4fv( colorBlue );

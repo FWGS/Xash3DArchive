@@ -4,9 +4,12 @@
 //=======================================================================
 
 #include "cm_local.h"
+#include "mathlib.h"
 
 static byte fatpvs[MAX_MAP_LEAFS/8];
 static byte fatphs[MAX_MAP_LEAFS/8];
+static byte *bitvector;
+static int fatbytes;
 
 /*
 ===================
@@ -192,6 +195,54 @@ byte *CM_LeafPHS( int leafnum )
 }
 
 /*
+=============================================================================
+
+The PVS must include a small area around the client to allow head bobbing
+or other small motion on the client side.  Otherwise, a bob might cause an
+entity that should be visible to not show up, especially when the bob
+crosses a waterline.
+
+=============================================================================
+*/
+static void CM_AddToFatPVS( const vec3_t org, const float radius, cnode_t *node )
+{
+	byte	*pvs;
+	cplane_t	*plane;
+	float	d;
+
+	while( 1 )
+	{
+		// if this is a leaf, accumulate the pvs bits
+		if( node->contents < 0 )
+		{
+			if( node->contents != CONTENTS_SOLID )
+			{
+				cleaf_t	*leaf;
+				int	i;
+
+				leaf = (cleaf_t *)node;			
+				pvs = CM_DecompressVis( leaf->compressed_vis );
+
+				for( i = 0; i < fatbytes; i++ )
+					bitvector[i] |= pvs[i];
+			}
+			return;
+		}
+	
+		plane = node->plane;
+		d = DotProduct( org, plane->normal ) - plane->dist;
+		if( d > radius ) node = node->children[0];
+		else if( d < -radius ) node = node->children[1];
+		else
+		{
+			// go down both
+			CM_AddToFatPVS( org, radius, node->children[0] );
+			node = node->children[1];
+		}
+	}
+}
+
+/*
 ============
 CM_FatPVS
 
@@ -201,41 +252,12 @@ so we can't use a single PVS point
 */
 byte *CM_FatPVS( const vec3_t org, bool portal )
 {
-	short	leafs[128];
-	int	i, j, count;
-	int	longs;
-	byte	*src;
-	vec3_t	mins, maxs;
-	int	snap = portal ? 1 : 8;
+	bitvector = fatpvs;
+	fatbytes = (worldmodel->numleafs+31)>>3;
+	if( !portal ) Mem_Set( bitvector, 0, fatbytes );
+	CM_AddToFatPVS( org, 8, worldmodel->nodes );
 
-	for( i = 0; i < 3; i++ )
-	{
-		mins[i] = org[i] - snap;
-		maxs[i] = org[i] + snap;
-	}
-
-	count = CM_BoxLeafnums( mins, maxs, leafs, 128, NULL );
-	if( count < 1 ) Host_Error( "CM_FatPVS: invalid leafnum count\n" );
-	longs = (worldmodel->numleafs + 31)>>5;
-
-	if( !portal ) Mem_Copy( fatpvs, CM_LeafPVS( leafs[0] ), longs << 2 );
-
-	// or in all the other leaf bits
-	for( i = portal ? 0 : 1; i < count; i++ )
-	{
-		for( j = 0; j < i; j++ )
-		{
-			if( leafs[i] == leafs[j] )
-				break;
-		}
-
-		if( j != i ) continue;	// already have the leaf we want
-		src = CM_LeafPVS( leafs[i] );
-
-		for( j = 0; j < longs; j++ )
-			((long *)fatpvs)[j] |= ((long *)src)[j];
-	}
-	return fatpvs;
+	return bitvector;
 }
 
 /*
@@ -248,6 +270,14 @@ so we can't use a single PHS point
 */
 byte *CM_FatPHS( const vec3_t org, bool portal )
 {
+#if 1	// test
+	bitvector = fatphs;
+	fatbytes = (worldmodel->numleafs+31)>>3;
+	if( !portal ) Mem_Set( bitvector, 0, fatbytes );
+	CM_AddToFatPVS( org, 32, worldmodel->nodes );
+
+	return bitvector;
+#else
 	int	longs, leafnum;
 
 	longs = (worldmodel->numleafs + 31)>>5;
@@ -270,4 +300,5 @@ byte *CM_FatPHS( const vec3_t org, bool portal )
 	}
 
 	return fatphs;
+#endif
 }

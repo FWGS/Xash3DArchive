@@ -22,6 +22,7 @@ extern stdlib_api_t		com;
 
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON	(0.03125)
+#define MAX_BOX_LEAFS	256
 
 typedef struct
 {

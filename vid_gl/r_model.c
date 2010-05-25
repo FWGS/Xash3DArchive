@@ -155,7 +155,7 @@ byte *Mod_LeafPVS( mleaf_t *leaf, ref_model_t *model )
 {
 	mbrushmodel_t	*bmodel = (mbrushmodel_t *)model->extradata;
 
-	if( !model || !bmodel || !leaf || !bmodel->visdata )
+	if( !model || !bmodel || !leaf || leaf == bmodel->leafs || !bmodel->visdata )
 		return mod_novis;
 	return Mod_DecompressVis( leaf->compressed_vis, bmodel );
 }

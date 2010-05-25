@@ -1451,6 +1451,12 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 {
 	ASSERT( pbeam->delta.IsValid() );
 
+	if( pbeam->attachment[0] == g_vecZero || pbeam->attachment[1] == g_vecZero )
+	{
+		pbeam->m_bCulled = true;	// FIXME: hack
+	}
+	
+
 	// Don't draw really short beams
 	if ( pbeam->m_bCulled || pbeam->delta.Length() < 0.1f )
 	{

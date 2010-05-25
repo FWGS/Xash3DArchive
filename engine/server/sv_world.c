@@ -135,7 +135,7 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 {
 	areanode_t	*node;
 	short		leafs[MAX_TOTAL_ENT_LEAFS];
-	int		num_leafs, topNode;
+	int		i, j, num_leafs, topNode;
 	sv_priv_t		*sv_ent;
 
 	sv_ent = ent->pvServerData;
@@ -170,8 +170,31 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	}
 	else
 	{
-		Mem_Copy( sv_ent->leafnums, leafs, sizeof( short ) * num_leafs );
-		sv_ent->num_leafs = num_leafs;
+		sv_ent->num_leafs = 0;
+
+		for( i = 0; i < num_leafs; i++ )
+		{
+			if( leafs[i] == -1 )
+				continue;		// not a visible leaf
+
+			for( j = 0; j < i; j++ )
+			{
+				if( leafs[j] == leafs[i] )
+					break;
+			}
+
+			if( j == i )
+			{
+				if( sv_ent->num_leafs == MAX_ENT_LEAFS )
+				{
+					// assume we missed some leafs, and mark by headNode
+					sv_ent->num_leafs = -1;
+					sv_ent->headnode = topNode;
+					break;
+				}
+				sv_ent->leafnums[sv_ent->num_leafs++] = leafs[i];
+			}
+		}
 	}
 
 	ent->pvServerData->s.ed_flags |= ESF_LINKEDICT;	// change edict state on a client too...

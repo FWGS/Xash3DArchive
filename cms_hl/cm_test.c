@@ -45,7 +45,7 @@ int CM_PointLeafnum_r( const vec3_t p, cnode_t *node )
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p, node->plane->normal)) < node->plane->dist];
 	leaf = (cleaf_t *)node;
 
-	return leaf - worldmodel->leafs;
+	return leaf - worldmodel->leafs - 1;
 }
 
 int CM_PointLeafnum( const vec3_t p )
@@ -70,7 +70,10 @@ void CM_BoxLeafnums_r( leaflist_t *ll, cnode_t *node )
 
 	while( 1 )
 	{
-		if( node->plane == NULL )
+		if( node->contents == CONTENTS_SOLID )
+			return;
+
+		if( node->contents < 0 )
 		{
 			cleaf_t	*leaf = (cleaf_t *)node;
 
@@ -80,12 +83,14 @@ void CM_BoxLeafnums_r( leaflist_t *ll, cnode_t *node )
 				ll->overflowed = true;
 				return;
 			}
-			ll->list[ll->count++] = leaf - worldmodel->leafs;
+
+			ll->list[ll->count++] = leaf - worldmodel->leafs - 1;
 			return;
 		}
 	
 		plane = node->plane;
 		s = CM_BoxOnPlaneSide( ll->mins, ll->maxs, plane );
+
 		if( s == 1 )
 		{
 			node = node->children[0];
@@ -141,14 +146,16 @@ bool CM_HeadnodeVisible_r( cnode_t *node, byte *visbits )
 	cleaf_t	*leaf;
 	int	leafnum;
 
-	if( !node->plane )
+	if( node->contents < 0 )
 	{
-		leaf = (cleaf_t *)node;
+		if( node->contents != CONTENTS_SOLID )
+		{
+			leaf = (cleaf_t *)node;
+			leafnum = (leaf - worldmodel->leafs - 1);
 
-		leafnum = (leaf - worldmodel->leafs);
-
-		if( visbits[leafnum>>3] & (1<<( leafnum & 7 )))
-			return true;
+			if( visbits[leafnum>>3] & (1<<( leafnum & 7 )))
+				return true;
+		}
 		return false;
 	}
 	
@@ -161,7 +168,7 @@ bool CM_HeadnodeVisible_r( cnode_t *node, byte *visbits )
 =============
 CM_HeadnodeVisible
 
-Returns true if any leaf under headnode 
+returns true if any leaf under headnode 
 is potentially visible
 =============
 */
@@ -169,12 +176,10 @@ bool CM_HeadnodeVisible( int nodenum, byte *visbits )
 {
 	cnode_t	*node;
 
-	if( !worldmodel )
-		return false;
+	if( !worldmodel ) return false;
+	if( nodenum == -1 ) return false;
 
-	if( nodenum < 0 )
-		node = (cnode_t *)worldmodel->leafs + (-1 - nodenum);
-	else node = (cnode_t *)worldmodel->nodes + nodenum;
+	node = (cnode_t *)worldmodel->nodes + nodenum;
 
 	return CM_HeadnodeVisible_r( node, visbits );
 }
@@ -189,19 +194,18 @@ is potentially visible
 */
 bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, byte *visbits )
 {
-	short	leafList[128];
+	short	leafList[MAX_BOX_LEAFS];
 	int	i, count;
 
 	if( !visbits || !mins || !maxs )
 		return true;
 
 	// FIXME: Could save a loop here by traversing the tree in this routine like the code above
-	count = CM_BoxLeafnums( mins, maxs, leafList, 128, NULL );
+	count = CM_BoxLeafnums( mins, maxs, leafList, MAX_BOX_LEAFS, NULL );
 
 	for( i = 0; i < count; i++ )
 	{
-		int leafnum = leafList[i];
-
+		int	leafnum = leafList[i];
 		if( visbits[leafnum>>3] & (1<<(leafnum & 7)))
 			return true;
 	}
