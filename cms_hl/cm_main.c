@@ -8,10 +8,15 @@
 physic_imp_t	pi;
 stdlib_api_t	com;
 
+// main DLL entry point
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
+{
+	return TRUE;
+}
+
 bool CM_InitPhysics( void )
 {
 	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
-
 	return true;
 }
 
@@ -22,12 +27,6 @@ void CM_PhysFrame( float frametime )
 void CM_FreePhysics( void )
 {
 	CM_FreeModels();
-}
-
-// main DLL entry point
-BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
-{
-	return TRUE;
 }
 
 physic_exp_t DLLEXPORT *CreateAPI ( stdlib_api_t *input, physic_imp_t *engfuncs )
@@ -66,7 +65,6 @@ physic_exp_t DLLEXPORT *CreateAPI ( stdlib_api_t *input, physic_imp_t *engfuncs 
 	Phys.FatPHS = CM_FatPHS;
 
 	Phys.NumBmodels = CM_NumInlineModels;
-	Phys.VisData = CM_VisData;
 	Phys.GetEntityScript = CM_EntityScript;
 
 	Phys.Mod_GetType = CM_ModelType;

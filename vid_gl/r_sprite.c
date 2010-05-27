@@ -653,3 +653,44 @@ bool R_CullSpriteModel( ref_entity_t *e )
 
 	return frustum;
 }
+
+void R_SpriteDrawDebug( void )
+{
+	vec3_t		bbox[8];
+	ref_model_t	*model;
+	int		i;
+
+	if( r_drawentities->integer != 5 )
+		return;
+
+	model = RI.currententity->model;
+
+	// compute a full bounding box
+	for( i = 0; i < 8; i++ )
+	{
+		bbox[i][0] = (i & 1) ? model->mins[0] : model->maxs[0];
+		bbox[i][1] = (i & 2) ? model->mins[1] : model->maxs[1];
+		bbox[i][2] = (i & 4) ? model->mins[2] : model->maxs[2];
+	}
+
+	R_TranslateForEntity( RI.currententity );
+	pglColor4f( 0.0f, 0.0f, 1.0f, 1.0f );	// blue bboxes for sprites
+
+	pglBegin( GL_LINES );
+	for( i = 0; i < 2; i += 1 )
+	{
+		pglVertex3fv( bbox[i+0] );
+		pglVertex3fv( bbox[i+2] );
+		pglVertex3fv( bbox[i+4] );
+		pglVertex3fv( bbox[i+6] );
+		pglVertex3fv( bbox[i+0] );
+		pglVertex3fv( bbox[i+4] );
+		pglVertex3fv( bbox[i+2] );
+		pglVertex3fv( bbox[i+6] );
+		pglVertex3fv( bbox[i*2+0] );
+		pglVertex3fv( bbox[i*2+1] );
+		pglVertex3fv( bbox[i*2+4] );
+		pglVertex3fv( bbox[i*2+5] );
+	}
+	pglEnd();
+}

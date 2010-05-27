@@ -61,8 +61,13 @@ void SV_SetModel( edict_t *ent, const char *name )
 	ent->v.model = MAKE_STRING( sv.configstrings[CS_MODELS+i] );
 	ent->v.modelindex = i;
 
-	Mod_GetBounds( ent->v.modelindex, mins, maxs );
-	SV_SetMinMaxSize( ent, mins, maxs );
+	// set sizes only for brush models
+	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
+	{
+		Mod_GetBounds( ent->v.modelindex, mins, maxs );
+		SV_SetMinMaxSize( ent, mins, maxs );
+	}
+	else SV_LinkEdict( ent, false );
 }
 
 float SV_AngleMod( float ideal, float current, float speed )
@@ -151,9 +156,10 @@ SV_BoxInPVS
 check brush boxes in fat pvs
 ==============
 */
-static bool SV_BoxInPVS( const vec3_t org1, const vec3_t absmin, const vec3_t absmax )
+static bool SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
-	if( pe && !pe->BoxVisible( absmin, absmax, CM_FatPVS( org1, false )))
+//	if( pe && !pe->BoxVisible( absmin, absmax, CM_FatPVS( org, false )))
+	if( pe && !pe->BoxVisible( absmin, absmax, CM_LeafPVS( CM_PointLeafnum( org ))))
 		return false;
 	return true;
 }

@@ -46,6 +46,7 @@ typedef struct
 	int		firstnode;	// used for lighting bmodels
 	int		firstface;
 	int		numfaces;
+	int		visleafs;
 } mmodel_t;
 
 typedef struct
@@ -319,7 +320,7 @@ byte		*Mod_LeafPVS( mleaf_t *leaf, ref_model_t *model );
 uint		Mod_Handle( ref_model_t *mod );
 ref_model_t	*Mod_ForHandle( unsigned int elem );
 ref_model_t	*R_RegisterModel( const char *name );
-void		R_BeginRegistration( const char *model, const byte *visData );
+void		R_BeginRegistration( const char *model );
 void		R_EndRegistration( const char *skyname );
 
 #define		Mod_Malloc( mod, size ) Mem_Alloc(( mod )->mempool, size )

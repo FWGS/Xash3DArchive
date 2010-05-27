@@ -615,7 +615,7 @@ void CL_PrepVideo( void )
 	clgame.globals->mapname = MAKE_STRING( cl.configstrings[CS_NAME] );
 	com.strncpy( mapname, cl.configstrings[CS_MODELS+1], MAX_STRING ); 
 	CM_BeginRegistration( mapname, true, &map_checksum );
-	re->BeginRegistration( mapname, CM_VisData()); // load map
+	re->BeginRegistration( mapname );
 	SCR_RegisterShaders(); // update with new sequence
 	SCR_UpdateScreen();
 

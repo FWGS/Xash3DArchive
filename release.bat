@@ -23,7 +23,7 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% launch/launch.dsp %CONFIG%"launch - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% cms_qf/cms_hl.dsp %CONFIG%"cms_hl - Win32 Release" %build_target%
+%MSDEV% cms_hl/cms_hl.dsp %CONFIG%"cms_hl - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 %MSDEV% vid_gl/vid_gl.dsp %CONFIG%"vid_gl - Win32 Release" %build_target%
@@ -68,9 +68,7 @@ if exist bshift\bshift.plg del /f /q bshift\bshift.plg
 if exist client\client.plg del /f /q client\client.plg
 if exist engine\engine.plg del /f /q engine\engine.plg
 if exist launch\launch.plg del /f /q launch\launch.plg
-if exist cms_qf\cms_hl.plg del /f /q cms_qf\cms_hl.plg
-if exist cms_qf\cms_qf.plg del /f /q cms_qf\cms_qf.plg
-if exist cms_xr\cms_xr.plg del /f /q cms_xr\cms_xr.plg
+if exist cms_hl\cms_hl.plg del /f /q cms_hl\cms_hl.plg
 if exist vid_gl\vid_gl.plg del /f /q vid_gl\vid_gl.plg
 if exist server\server.plg del /f /q server\server.plg
 if exist spirit\spirit.plg del /f /q spirit\spirit.plg

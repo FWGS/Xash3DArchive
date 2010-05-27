@@ -157,7 +157,13 @@ bool Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 
 		if( flags & STUDIO_NF_TRANSPARENT )
 		{
-			Image_GetPaletteLMP( fin + pixels, LUMP_TRANSPARENT );
+			byte	*pal = fin + pixels;
+
+			// make transparent color is black, blue color looks ugly
+			if( Sys.app_name == HOST_NORMAL )
+				pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
+
+			Image_GetPaletteLMP( pal, LUMP_TRANSPARENT );
 			image.flags |= IMAGE_HAS_ALPHA;
 		}
 		else Image_GetPaletteLMP( fin + pixels, LUMP_NORMAL );
@@ -501,9 +507,9 @@ bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			// qlumpy used this color for transparent textures, otherwise it's decals
  			if( pal[255*3+0] == 0 && pal[255*3+1] == 0 && pal[255*3+2] == 255 )
  			{
-				// kill blue color, so looks ugly in game
+				// make transparent color is black, blue color looks ugly
 				if( Sys.app_name == HOST_NORMAL )
-					pal[255*3+2] = 0;
+					pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
  			}
 			else if(!( image.cmd_flags & IL_KEEP_8BIT ))
 			{

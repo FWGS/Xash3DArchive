@@ -23,6 +23,8 @@ extern stdlib_api_t		com;
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON	(0.03125)
 #define MAX_BOX_LEAFS	256
+#define DVIS_PVS		0
+#define DVIS_PHS		1
 
 typedef struct
 {
@@ -65,7 +67,8 @@ typedef struct cleaf_s
 	cplane_t		*plane;		// always == NULL 
 
 // leaf specific
-	byte		*compressed_vis;
+	byte		*visdata;		// decompressed visdata after loading
+	byte		*pasdata;		// decompressed pasdata after loading
 	byte		ambient_sound_level[NUM_AMBIENTS];
 
 	csurface_t	**firstMarkSurface;
@@ -137,8 +140,6 @@ typedef struct
 
 	script_t		*entityscript;	// only actual for world
 	byte		*lightdata;	// for GetEntityIllum
-	byte		*visdata;		// compressed visdata
-
 	byte		*extradata;	// models extradata
 
 	int		numframes;	// sprite framecount
@@ -199,7 +200,6 @@ byte *CM_FatPHS( const vec3_t org, bool portal );
 //
 // cm_model.c
 //
-const void *CM_VisData( void );
 void CM_FreeModels( void );
 int CM_NumInlineModels( void );
 script_t *CM_EntityScript( void );

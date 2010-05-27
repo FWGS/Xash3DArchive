@@ -1743,7 +1743,7 @@ void R_RenderView( const ref_params_t *fd )
 
 	R_RenderDebugSurface ();
 
-	R_StudioDrawDebug ();
+	R_DrawEntitiesDebug ();
 
 	R_DrawPhysDebug ();
 

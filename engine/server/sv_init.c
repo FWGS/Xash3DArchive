@@ -377,8 +377,6 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	com.sprintf( sv.configstrings[CS_MAPCHECKSUM], "%i", checksum );
 	com.strncpy( sv.configstrings[CS_SKYNAME], "<skybox>", 64 );
 
-	if( CM_VisData() == NULL ) MsgDev( D_WARN, "map ^2%s^7 has no visibility\n", mapname );
-
 	for( i = 1; i < CM_NumBmodels(); i++ )
 	{
 		com.sprintf( sv.configstrings[CS_MODELS+1+i], "*%i", i );

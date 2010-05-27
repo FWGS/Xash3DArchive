@@ -757,6 +757,7 @@ mspriteframe_t *R_GetSpriteFrame( ref_model_t *pModel, int frame, float yawAngle
 void R_DrawSpriteModel( const meshbuffer_t *mb );
 bool R_SpriteOccluded( ref_entity_t *e );
 bool R_CullSpriteModel( ref_entity_t *e );
+void R_SpriteDrawDebug( void );
 
 //
 // r_studio.c
@@ -794,8 +795,9 @@ void R_CheckForErrors_( const char *filename, const int fileline );
 //
 #define MAX_SURF_QUERIES		0x1E0
 
-void		R_MarkLeaves( void );
-void		R_DrawWorld( void );
+void	R_MarkLeaves( void );
+void	R_DrawWorld( void );
+void	R_BmodelDrawDebug( void );
 bool	R_SurfPotentiallyVisible( msurface_t *surf );
 bool	R_CullBrushModel( ref_entity_t *e );
 void		R_AddBrushModelToList( ref_entity_t *e );

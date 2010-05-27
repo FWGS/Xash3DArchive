@@ -139,6 +139,7 @@ void R_BackendCleanUpTextureUnits( void );
 void R_BackendSetPassMask( int mask );
 void R_BackendResetPassMask( void );
 
+void R_DrawEntitiesDebug( void );
 void R_DrawPhysDebug( void );
 
 void R_InitVertexBuffers( void );

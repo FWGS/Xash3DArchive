@@ -3069,6 +3069,73 @@ static void R_DrawNormals( void )
 	pglEnd();
 }
 
+/*
+====================
+R_DrawEntitiesDebug
+
+====================
+*/
+void R_DrawEntitiesDebug( void )
+{
+	int	i;
+
+	if(( RI.refdef.flags & RDF_NOWORLDMODEL ) || ( r_drawentities->integer < 2 ))
+		return;
+
+	pglDisable( GL_TEXTURE_2D );
+	GL_SetState( GLSTATE_NO_DEPTH_TEST|GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+	pglDepthRange( 0, 0 );
+
+	for( i = 1; i < r_numEntities; i++ )
+	{
+		RI.previousentity = RI.currententity;
+		RI.currententity = &r_entities[i];
+
+		if( !RI.currententity->model )
+			continue;
+
+		if( RP_LOCALCLIENT( RI.currententity ))
+		{
+			// ignore localcient in firstperson mode
+			if(!(RI.refdef.flags & RDF_THIRDPERSON) && !( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
+				continue;
+		}
+
+		if( RP_FOLLOWENTITY( RI.currententity ) && RP_LOCALCLIENT( RI.currententity->parent ) && !(RI.refdef.flags & RDF_THIRDPERSON ))
+		{
+			// ignore entities that linked to localcient
+			if(!( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
+				continue;
+		}
+
+		if( RI.currententity->ent_type == ED_VIEWMODEL )
+		{
+			if( RI.params & RP_NONVIEWERREF )
+				continue;
+		}
+#if 0
+		// this stuff doesn't working corretly with mirrors. disabled
+		if( RI.currententity->m_nCachedFrameCount != r_framecount )
+			continue; // culled
+#endif
+		switch( RI.currententity->model->type )
+		{
+		case mod_brush:
+			R_BmodelDrawDebug();
+			break;
+		case mod_studio:
+			R_StudioDrawDebug();
+			break;
+		case mod_sprite:
+			R_SpriteDrawDebug();
+			break;
+		}
+	}
+
+	pglDepthRange( gldepthmin, gldepthmax );
+	pglEnable( GL_TEXTURE_2D );
+}
+
 static void R_DrawLine( int color, int numpoints, const float *points )
 {
 	int	i = numpoints - 1;

@@ -1971,7 +1971,7 @@ void R_StudioDrawHulls( void )
 
 	if(!R_StudioComputeBBox( bbox )) return;
 
-	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+	pglColor4f( 1.0f, 0.0f, 0.0f, 1.0f );	// red bboxes for studiomodels
 	pglBegin( GL_LINES );
 	for( i = 0; i < 2; i += 1 )
 	{
@@ -1999,61 +1999,16 @@ StudioDrawDebug
 */
 void R_StudioDrawDebug( void )
 {
-	int	i;
-
-	if(( RI.refdef.flags & RDF_NOWORLDMODEL ) || ( r_drawentities->integer < 2 ))
-		return;
-
-	pglDisable( GL_TEXTURE_2D );
-	GL_SetState( GLSTATE_NO_DEPTH_TEST|GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
-	pglDepthRange( 0, 0 );
-
-	for( i = 1; i < r_numEntities; i++ )
-	{
-		RI.previousentity = RI.currententity;
-		RI.currententity = &r_entities[i];
-
-		if( !RI.currententity->model || RI.currententity->model->type != mod_studio )
-			continue;
-
-		if( RP_LOCALCLIENT( RI.currententity ))
-		{
-			// ignore localcient in firstperson mode
-			if(!(RI.refdef.flags & RDF_THIRDPERSON) && !( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
-				continue;
-		}
-
-		if( RP_FOLLOWENTITY( RI.currententity ) && RP_LOCALCLIENT( RI.currententity->parent ) && !(RI.refdef.flags & RDF_THIRDPERSON ))
-		{
-			// ignore entities that linked to localcient
-			if(!( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
-				continue;
-		}
-
-		if( RI.currententity->ent_type == ED_VIEWMODEL )
-		{
-			if( RI.params & RP_NONVIEWERREF )
-				continue;
-		}
-#if 0
-		// this stuff doesn't working corretly with mirrors. disabled
-		if( RI.currententity->m_nCachedFrameCount != r_framecount )
-			continue; // culled
-#endif
-		R_StudioSetupRender( RI.currententity, RI.currententity->model );
-		R_StudioSetUpTransform( RI.currententity, true );
+	R_StudioSetupRender( RI.currententity, RI.currententity->model );
+	R_StudioSetUpTransform( RI.currententity, true );
 		
-		switch( r_drawentities->integer )
-		{
-		case 2: R_StudioDrawBones(); break;
-		case 3: R_StudioDrawHitboxes(); break;
-		case 4: R_StudioDrawAttachments(); break;
-		case 5: R_StudioDrawHulls(); break;
-		}
+	switch( r_drawentities->integer )
+	{
+	case 2: R_StudioDrawBones(); break;
+	case 3: R_StudioDrawHitboxes(); break;
+	case 4: R_StudioDrawAttachments(); break;
+	case 5: R_StudioDrawHulls(); break;
 	}
-
-	pglDepthRange( gldepthmin, gldepthmax );
-	pglEnable( GL_TEXTURE_2D );
 }
 
 /*

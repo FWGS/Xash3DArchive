@@ -47,7 +47,6 @@ typedef struct physic_exp_s
 
 	// map info
 	int (*NumBmodels)( void );
-	const void *(*VisData)( void );	// pass into render, save loading time and memory
 	script_t *(*GetEntityScript)( void );
 
 	// models info

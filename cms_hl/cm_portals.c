@@ -79,53 +79,53 @@ void CM_CalcPHS( void )
 {
 	int	i, j, k, l, index, num;
 	int	rowbytes, rowwords;
-	int	bitbyte;
+	byte	*scan, *visdata;
 	uint	*dest, *src;
-	byte	*scan;
 	int	hcount, vcount;
 	uint	timestart;
+	int	bitbyte;
 
-	if( !worldmodel ) return;
-
-	if( !worldmodel->visdata )
-	{
-		cm.pvs = cm.phs = NULL;
+	if( !worldmodel || !cm.pvs )
 		return;
-	}
 
-	MsgDev( D_NOTE, "Building PHS...\n" );
+	MsgDev( D_INFO, "Building PAS...\n" );
 	timestart = Sys_Milliseconds();
 
 	num = worldmodel->numleafs;
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
 
-	cm.pvs = Mem_Alloc( worldmodel->mempool, rowbytes * num );
+	// store off pointer to compressed visdata
+	// for right freeing after building pas
+	visdata = cm.pvs;
+
+	// allocate pvs and phs data single array
+	cm.pvs = Mem_Alloc( worldmodel->mempool, rowbytes * num * 2 );
+	cm.phs = cm.pvs + rowbytes * num;
+
 	scan = cm.pvs;
 	vcount = 0;
 
 	// uncompress pvs first
 	for( i = 0; i < num; i++, scan += rowbytes )
 	{
-		byte	*visblock = worldmodel->leafs[i].compressed_vis;
+		byte	*visblock;
 
-		Mem_Copy( scan, CM_DecompressVis( visblock ), rowbytes );
+		visblock = CM_DecompressVis( worldmodel->leafs[i].visdata );
+		Mem_Copy( scan, visblock, rowbytes );
 
 		if( i == 0 ) continue;
 
 		for( j = 0; j < num; j++ )
 		{
 			if( scan[j>>3] & (1<<( j & 7 )))
-			{
 				vcount++;
-			}
 		}
 	}
 
-	MsgDev( D_INFO, "Average clusters visible: %i (build at %g secs)\n", vcount / num, (Sys_Milliseconds() - timestart) * 0.001f );
-	timestart = Sys_Milliseconds();
+	// free compressed pvsdata
+	Mem_Free( visdata );
 
-	cm.phs = Mem_Alloc( worldmodel->mempool, rowbytes * num );
 	scan = cm.pvs;
 	hcount = 0;
 
@@ -155,19 +155,21 @@ void CM_CalcPHS( void )
 			}
 		}
 
+		// store new leaf pointers for pvs and pas data
+		worldmodel->leafs[i].visdata = scan;
+		worldmodel->leafs[i].pasdata = (byte *)dest; 
+
 		if( i == 0 ) continue;
 
 		for( j = 0; j < num; j++ )
 		{
 			if(((byte *)dest)[j>>3] & (1<<( j & 7 )))
-			{
 				hcount++;
-			}
 		}
 	}
 
-	MsgDev( D_INFO, "Average clusters hearable: %i (build at %g secs)\n", hcount / num, (Sys_Milliseconds() - timestart) * 0.001f );
-	MsgDev( D_INFO, "Total clusters: %i\n", num );
+	MsgDev( D_INFO, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
+	MsgDev( D_INFO, "PAS building time: %g secs\n", (Sys_Milliseconds() - timestart) * 0.001f );
 }
 
 /*
@@ -179,7 +181,9 @@ byte *CM_LeafPVS( int leafnum )
 {
 	if( !worldmodel || leafnum < 0 || leafnum >= worldmodel->numleafs || !cm.pvs )
 		return cm.nullrow;
-	return cm.pvs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
+
+	return worldmodel->leafs[leafnum].visdata;
+//	return cm.pvs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
 }
 
 /*
@@ -191,7 +195,9 @@ byte *CM_LeafPHS( int leafnum )
 {
 	if( !worldmodel || leafnum < 0 || leafnum >= worldmodel->numleafs || !cm.phs )
 		return cm.nullrow;
-	return cm.phs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
+
+	return worldmodel->leafs[leafnum].pasdata;
+//	return cm.phs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
 }
 
 /*
@@ -204,9 +210,9 @@ crosses a waterline.
 
 =============================================================================
 */
-static void CM_AddToFatPVS( const vec3_t org, const float radius, cnode_t *node )
+static void CM_AddToFatPVS( const vec3_t org, int type, cnode_t *node )
 {
-	byte	*pvs;
+	byte	*vis;
 	cplane_t	*plane;
 	float	d;
 
@@ -221,22 +227,27 @@ static void CM_AddToFatPVS( const vec3_t org, const float radius, cnode_t *node 
 				int	i;
 
 				leaf = (cleaf_t *)node;			
-				pvs = CM_DecompressVis( leaf->compressed_vis );
+
+				if( type == DVIS_PVS )
+					vis = leaf->visdata;
+				else if( type == DVIS_PHS )
+					vis = leaf->pasdata;
+				else vis = cm.nullrow;
 
 				for( i = 0; i < fatbytes; i++ )
-					bitvector[i] |= pvs[i];
+					bitvector[i] |= vis[i];
 			}
 			return;
 		}
 	
 		plane = node->plane;
 		d = DotProduct( org, plane->normal ) - plane->dist;
-		if( d > radius ) node = node->children[0];
-		else if( d < -radius ) node = node->children[1];
+		if( d > 8 ) node = node->children[0];
+		else if( d < -8 ) node = node->children[1];
 		else
 		{
 			// go down both
-			CM_AddToFatPVS( org, radius, node->children[0] );
+			CM_AddToFatPVS( org, type, node->children[0] );
 			node = node->children[1];
 		}
 	}
@@ -255,7 +266,7 @@ byte *CM_FatPVS( const vec3_t org, bool portal )
 	bitvector = fatpvs;
 	fatbytes = (worldmodel->numleafs+31)>>3;
 	if( !portal ) Mem_Set( bitvector, 0, fatbytes );
-	CM_AddToFatPVS( org, 8, worldmodel->nodes );
+	CM_AddToFatPVS( org, DVIS_PVS, worldmodel->nodes );
 
 	return bitvector;
 }
@@ -270,11 +281,11 @@ so we can't use a single PHS point
 */
 byte *CM_FatPHS( const vec3_t org, bool portal )
 {
-#if 1	// test
+#if 1
 	bitvector = fatphs;
 	fatbytes = (worldmodel->numleafs+31)>>3;
 	if( !portal ) Mem_Set( bitvector, 0, fatbytes );
-	CM_AddToFatPVS( org, 32, worldmodel->nodes );
+	CM_AddToFatPVS( org, DVIS_PHS, worldmodel->nodes );
 
 	return bitvector;
 #else

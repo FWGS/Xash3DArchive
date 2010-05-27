@@ -42,6 +42,7 @@ typedef struct
 // intermediate cached data
 static struct
 {
+	string		modelname;	// mapname without path, extension etc
 	vec3_t		*vertexes;	// intermediate data comes here
 	int		numvertexes;
 	dedge_t		*edges;
@@ -54,7 +55,6 @@ static struct
 
 static ref_model_t		*loadmodel;
 static byte		*cached_mempool;
-static byte		*cached_visdata;
 
 void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer );
 void Mod_StudioLoadModel( ref_model_t *mod, const void *buffer );
@@ -381,8 +381,9 @@ ref_model_t *Mod_ForName( const char *name, bool crash )
 	Mem_Set( &cached, 0, sizeof( cached ));
 
 	mod->type = mod_bad;
-	mod->mempool = Mem_AllocPool( va( "^1%s^7", name ));
+	mod->mempool = Mem_AllocPool( va( "cl: ^1%s^7", name ));
 	mod->name = Mod_CopyString( mod, name );
+	FS_FileBase( mod->name, cached.modelname );
 
 	// call the apropriate loader
 	switch( LittleLong( *(uint *)buf ))
@@ -1058,7 +1059,7 @@ static ref_shader_t *Mod_LoadMiptex( char *shadername, mip_t *mt, int version )
 		if( version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 		// build the unique shadername because we don't want keep this for other maps
-		com.snprintf( shadername, 32, "%s/%s", loadmodel->name, mt->name );
+		com.snprintf( shadername, 32, "%s/%s", cached.modelname, mt->name );
 
 		// loading internal texture if present
 		miptex = R_FindTexture( va( "\"#%s.mip\"", mt->name ), (byte *)mt, size, 0 );
@@ -1176,6 +1177,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		out->firstnode = LittleLong( in->headnode[0] );	// drawing hull #0
 		out->firstface = LittleLong( in->firstface );
 		out->numfaces = LittleLong( in->numfaces );
+		out->visleafs = LittleLong( in->visleafs );
 	}
 }
 
@@ -1465,7 +1467,6 @@ static void Mod_LoadLeafs( const dlump_t *l )
 	count = l->filelen / sizeof( *in );
 	out = Mod_Malloc( loadmodel, count * sizeof( *out ));
 
-	loadbmodel->visdata = cached_visdata;
 	loadbmodel->numleafs = count;
 	loadbmodel->leafs = out;
 
@@ -1578,6 +1579,23 @@ static void Mod_LoadPlanes( const dlump_t *l )
 		out->dist = LittleFloat( in->dist );
 		out->type = LittleLong( in->type );
 	}
+}
+
+/*
+=================
+Mod_LoadVisibility
+=================
+*/
+void Mod_LoadVisibility( dlump_t *l )
+{
+	if( !l->filelen )
+	{
+		loadbmodel->visdata = NULL;
+		return;
+	}
+
+	loadbmodel->visdata = Mod_Malloc( loadmodel, l->filelen );
+	Mem_Copy( loadbmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
 }
 
 /*
@@ -1765,6 +1783,7 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 	Mod_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
 	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES], version );
 	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING], version );
+	Mod_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
 	Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
 	Mod_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
 	Mod_LoadSurfaces( &header->lumps[LUMP_FACES] );
@@ -1791,6 +1810,7 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 		bmodel->firstmodelsurface = bmodel->surfaces + bm->firstface;
 		bmodel->firstmodelnode = bmodel->nodes + bm->firstnode;
 		bmodel->nummodelsurfaces = bm->numfaces;
+		bmodel->numleafs = bm->visleafs + 1; // include solid leaf
 		starmod->extradata = bmodel;
 
 		VectorCopy( bm->maxs, starmod->maxs );
@@ -1810,7 +1830,7 @@ R_RegisterWorldModel
 Specifies the model that will be used as the world
 =================
 */
-void R_BeginRegistration( const char *mapname, const byte *visData )
+void R_BeginRegistration( const char *mapname )
 {
 	string	fullname;
 
@@ -1865,7 +1885,6 @@ void R_BeginRegistration( const char *mapname, const byte *visData )
 
 	r_farclip_min = Z_NEAR;		// sky shaders will most likely modify this value
 	r_environment_color->modified = true;
-	cached_visdata = (byte *)visData;
 
 	r_worldmodel = Mod_ForName( fullname, true );
 	r_worldbrushmodel = (mbrushmodel_t *)r_worldmodel->extradata;

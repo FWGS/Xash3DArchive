@@ -55,12 +55,6 @@ _inline int CM_GetModelType( model_t handle )
 	return pe->Mod_GetType( handle );
 }
 
-_inline const void *CM_VisData( void )
-{
-	if( !pe ) return NULL;
-	return pe->VisData();
-}
-
 _inline int CM_PointLeafnum( const vec3_t origin )
 {
 	if( !pe )	return -1;

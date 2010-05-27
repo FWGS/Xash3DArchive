@@ -111,13 +111,6 @@ void CM_FreeModel( cmodel_t *mod )
 	Mem_Set( mod, 0, sizeof( *mod ));
 }
 
-const void *CM_VisData( void )
-{
-	if( worldmodel )
-		return worldmodel->visdata;
-	return NULL;
-}
-
 int CM_NumInlineModels( void )
 {
 	if( worldmodel )
@@ -477,8 +470,11 @@ static void BSP_LoadLeafs( dlump_t *l )
 	
 		p = LittleLong( in->visofs );
 
-		if( p == -1 ) out->compressed_vis = NULL;
-		else out->compressed_vis = loadmodel->visdata + p;
+		if( p == -1 ) out->visdata = NULL;
+		else out->visdata = cm.pvs + p;
+
+		// will be initialized later
+		out->pasdata = NULL;
 
 		for( j = 0; j < 4; j++ )
 			out->ambient_sound_level[j] = in->ambient_level[j];
@@ -534,12 +530,13 @@ void BSP_LoadVisibility( dlump_t *l )
 {
 	if( !l->filelen )
 	{
-		loadmodel->visdata = NULL;
+		MsgDev( D_WARN, "map ^2%s^7 has no visibility\n", loadmodel->name );
+		cm.pvs = cm.phs = NULL;
 		return;
 	}
 
-	loadmodel->visdata = Mem_Alloc( loadmodel->mempool, l->filelen );
-	Mem_Copy( loadmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
+	cm.pvs = Mem_Alloc( loadmodel->mempool, l->filelen );
+	Mem_Copy( cm.pvs, (void *)(mod_base + l->fileofs), l->filelen );
 }
 
 /*
@@ -682,7 +679,7 @@ static void CM_BrushModel( cmodel_t *mod, byte *buffer )
 	for( i = 0; i < sizeof( dheader_t ) / 4; i++ )
 		((int *)header)[i] = LittleLong((( int *)header)[i] );
 
-	loadmodel->mempool = Mem_AllocPool( va( "^2%s^7", loadmodel->name ));
+	loadmodel->mempool = Mem_AllocPool( va( "sv: ^2%s^7", loadmodel->name ));
 
 	// load into heap
 	BSP_LoadEntityString( &header->lumps[LUMP_ENTITIES] );
@@ -725,6 +722,7 @@ static void CM_BrushModel( cmodel_t *mod, byte *buffer )
 		
 		starmod->firstmodelsurface = bm->firstface;
 		starmod->nummodelsurfaces = bm->numfaces;
+		starmod->numleafs = bm->visleafs + 1; // include solid leaf
 		
 		VectorCopy( bm->maxs, starmod->maxs );
 		VectorCopy( bm->mins, starmod->mins );

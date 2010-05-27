@@ -152,7 +152,7 @@ typedef struct render_exp_s
 	bool	(*Init)( bool full );	// init all render systems
 	void	(*Shutdown)( bool full );	// shutdown all render systems
 
-	void	(*BeginRegistration)( const char *map, const byte *visData );
+	void	(*BeginRegistration)( const char *map );
 	bool	(*RegisterModel)( const char *name, int cl_index ); // also build replacement index table
 	shader_t	(*RegisterShader)( const char *name, int shaderType );
 	void	(*EndRegistration)( const char *skyname );
