@@ -1453,7 +1453,7 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 
 	if( pbeam->attachment[0] == g_vecZero || pbeam->attachment[1] == g_vecZero )
 	{
-		pbeam->m_bCulled = true;	// FIXME: hack
+//		pbeam->m_bCulled = true;	// FIXME: hack
 	}
 	
 

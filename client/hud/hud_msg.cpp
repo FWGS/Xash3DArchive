@@ -148,6 +148,12 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 	m_flStartDist = 0;
 	m_flEndDist = 0;
 
+	if( CVAR_GET_FLOAT( "v_dark" ))
+	{
+		SetScreenFade( Vector( 0, 0, 0 ), 255, 4, 4, FFADE_IN );
+		CVAR_SET_FLOAT( "v_dark", 0.0f );
+	}
+
 	return 1;
 }
 
@@ -173,7 +179,6 @@ int CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 			pList->p->InitHUDData();
 		pList = pList->pNext;
 	}
-
 	return 1;
 }
 
@@ -444,7 +449,7 @@ int CHud :: MsgFunc_ScreenFade( const char *pszName, int iSize, void *pbuf )
 	int fadeFlags = READ_SHORT();
 
 	Vector m_FadeColor;
-	
+
 	m_FadeColor.x = READ_BYTE();	// fade red
 	m_FadeColor.y = READ_BYTE();	// fade green
 	m_FadeColor.z = READ_BYTE();	// fade blue

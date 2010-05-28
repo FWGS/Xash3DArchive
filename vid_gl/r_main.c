@@ -371,6 +371,7 @@ void R_TranslateForEntity( ref_entity_t *e )
 	if( e->movetype == MOVETYPE_FOLLOW && e->parent && !VectorIsNull( e->origin2 ))
 		Matrix4x4_SetOrigin( RI.objectMatrix, e->origin2[0], e->origin2[1], e->origin2[2] );
 	else Matrix4x4_SetOrigin( RI.objectMatrix, e->origin[0], e->origin[1], e->origin[2] );
+	Matrix4x4_ConcatScale( RI.objectMatrix, e->scale );
 	Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, RI.objectMatrix );
 	GL_LoadMatrix( RI.modelviewMatrix );
 	tr.modelviewIdentity = false;
@@ -426,8 +427,8 @@ bool R_CompletelyFogged( mfog_t *fog, vec3_t origin, float radius )
 	// globalfog is not NULL and we're inside the world boundaries
 	if( fog && fog->shader && RI.fog_dist_to_eye[fog-r_worldbrushmodel->fogs] < 0 )
 	{
-		float vpnDist = ( ( RI.viewOrigin[0] - origin[0] ) * RI.vpn[0] + ( RI.viewOrigin[1] - origin[1] ) * RI.vpn[1] + ( RI.viewOrigin[2] - origin[2] ) * RI.vpn[2] );
-		return ( ( vpnDist + radius ) / fog->shader->fog_dist ) < -1;
+		float vpnDist = (( RI.viewOrigin[0] - origin[0] ) * RI.vpn[0] + ( RI.viewOrigin[1] - origin[1] ) * RI.vpn[1] + ( RI.viewOrigin[2] - origin[2] ) * RI.vpn[2] );
+		return (( vpnDist + radius ) / fog->shader->fog_dist ) < -1;
 	}
 	return false;
 }
@@ -549,12 +550,6 @@ bool R_PushSprite( const meshbuffer_t *mb, int type, float right, float left, fl
 	VectorScale( v_up, up, point );
 	VectorMA( point, -left, v_right, spr_xyz[1] );
 	VectorMA( point, -right, v_right, spr_xyz[2] );
-
-	if( e->scale != 1.0f )
-	{
-		for( i = 0; i < 4; i++ )
-			VectorScale( spr_xyz[i], e->scale, spr_xyz[i] );
-	}
 
 	MB_NUM2SHADER( mb->shaderkey, shader );
 

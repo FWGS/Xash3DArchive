@@ -500,18 +500,26 @@ bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		else pal += sizeof( short ); // skip colorsize 
 
 		// detect rendermode
-		if( com.strchr( name, '{' ))
+		if( com.strrchr( name, '{' ))
 		{
-			rendermode = LUMP_TRANSPARENT;
+			color24	*col = (color24 *)pal;
 
-			// qlumpy used this color for transparent textures, otherwise it's decals
- 			if( pal[255*3+0] == 0 && pal[255*3+1] == 0 && pal[255*3+2] == 255 )
- 			{
+			// check for grayscale palette
+			for( i = 0; i < 255; i++, col++ )
+			{
+				if( col->r != col->g || col->g != col->b )
+					break;
+			}
+
+			if( i != 255 )
+			{
+				rendermode = LUMP_TRANSPARENT;
+
 				// make transparent color is black, blue color looks ugly
 				if( Sys.app_name == HOST_NORMAL )
 					pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
- 			}
-			else if(!( image.cmd_flags & IL_KEEP_8BIT ))
+			}
+			else
 			{
 				// apply decal palette immediately
 				image.flags |= IMAGE_COLORINDEX;

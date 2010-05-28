@@ -32,11 +32,11 @@ int CM_BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const cplane_t *p
 
 /*
 ==================
-CM_PointLeafnum_r
+CM_PointInLeaf
 
 ==================
 */
-int CM_PointLeafnum_r( const vec3_t p, cnode_t *node )
+cleaf_t *CM_PointInLeaf( const vec3_t p, cnode_t *node )
 {
 	cleaf_t	*leaf;
 
@@ -45,14 +45,14 @@ int CM_PointLeafnum_r( const vec3_t p, cnode_t *node )
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p, node->plane->normal)) < node->plane->dist];
 	leaf = (cleaf_t *)node;
 
-	return leaf - worldmodel->leafs - 1;
+	return leaf;
 }
 
 int CM_PointLeafnum( const vec3_t p )
 {
 	// map not loaded
 	if ( !worldmodel ) return 0;
-	return CM_PointLeafnum_r( p, worldmodel->nodes );
+	return CM_PointInLeaf( p, worldmodel->nodes ) - worldmodel->leafs;
 }
 
 
@@ -259,6 +259,6 @@ void CM_AmbientLevels( const vec3_t p, byte *pvolumes )
 	if( !worldmodel || !p || !pvolumes )
 		return;	
 
-	leaf = worldmodel->leafs + CM_PointLeafnum( p );
+	leaf = CM_PointInLeaf( p, worldmodel->nodes );
 	*(int *)pvolumes = *(int *)leaf->ambient_sound_level;
 }

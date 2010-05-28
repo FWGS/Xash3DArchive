@@ -346,9 +346,9 @@ find one charcster in string
 */
 char *com_strchr( const char *s, char c )
 {
-	int	len = com_strlen(s);
+	int	len = com_strlen( s );
 
-	while(len--) if(*++s == c) return(char *)s;
+	while( len-- ) if( *++s == c ) return(char *)s;
 	return 0;
 }
 
@@ -361,13 +361,13 @@ find one charcster in string
 */
 char *com_strrchr( const char *s, char c )
 {
-	int	len = com_strlen(s);
+	int	len = com_strlen( s );
 	s += len;
-	while(len--) if(*--s == c) return (char *)s;
+	while( len-- ) if( *--s == c ) return (char *)s;
 	return 0;
 }
 
-int com_strnicmp(const char *s1, const char *s2, int n)
+int com_strnicmp( const char *s1, const char *s2, int n )
 {
 	int             c1, c2;
 

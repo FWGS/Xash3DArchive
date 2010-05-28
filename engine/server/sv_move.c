@@ -395,15 +395,8 @@ PM_TraceModel
 */
 static TraceResult PM_TraceModel( edict_t *pEnt, const vec3_t start, const vec3_t end )
 {
-	float	*mins, *maxs;
-
 	if( VectorIsNAN( start ) || VectorIsNAN( end ))
 		Host_Error( "TraceModel: NAN errors detected ('%f %f %f', '%f %f %f'\n", start[0], start[1], start[2], end[0], end[1], end[2] );
-
-	svgame.pmove->usehull = bound( 0, svgame.pmove->usehull, 3 );
-	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
-	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
-
 	return CM_ClipMove( pEnt, start, vec3_origin, vec3_origin, end, FMOVE_SIMPLEBOX );
 }
 
@@ -495,8 +488,8 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 
 	for( i = 0; i < 3; i++ )
 	{
-		absmin[i] = clent->v.origin[i] - 128;
-		absmax[i] = clent->v.origin[i] + 128;
+		absmin[i] = clent->v.origin[i] - 256;
+		absmax[i] = clent->v.origin[i] + 256;
 	}
 
 	count = SV_AreaEdicts( absmin, absmax, touch, MAX_EDICTS, AREA_CUSTOM );
@@ -612,6 +605,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 		return;
 	}
 
+
 	clent = cl->edict;
 	if( !SV_IsValidEdict( clent )) return;
 
@@ -649,7 +643,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 			VectorCopy( clent->v.basevelocity, clent->v.clbasevelocity );
 	}
 
-	if(( sv_maxclients->integer <= 1 ) && !CL_IsInGame( ) || ( clent->v.flags & FL_FROZEN ))
+	if(( sv_maxclients->integer <= 1 ) && !CL_IsInGame( ) || ( clent->v.flags & FL_FROZEN ) || ( sv.framenum < 2 ))
 		ucmd->msec = 0; // pause
 
 	svgame.globals->time = (sv.time * 0.001f);

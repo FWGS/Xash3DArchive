@@ -3400,7 +3400,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		shader->stages = ( ref_stage_t * )(( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
 		pass->flags = SHADERSTAGE_BLEND_DECAL;
-		pass->glState = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_ZERO;
+		pass->glState = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 		pass->tcgen = TCGEN_BASE;
 		pass->textures[0] = Shader_FindImage( shader, shortname, addFlags );
 		pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;

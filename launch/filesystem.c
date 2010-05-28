@@ -1152,8 +1152,8 @@ const char *FS_FileExtension( const char *in )
 {
 	const char *separator, *backslash, *colon, *dot;
 
-	separator = com.strrchr(in, '/');
-	backslash = com.strrchr(in, '\\');
+	separator = com.strrchr( in, '/' );
+	backslash = com.strrchr( in, '\\' );
 	if( !separator || separator < backslash ) separator = backslash;
 	colon = com.strrchr( in, ':' );
 	if( !separator || separator < colon ) separator = colon;

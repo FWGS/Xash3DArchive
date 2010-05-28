@@ -182,6 +182,7 @@ void CM_DrawCollision( cmdraw_t callback );
 byte *CM_LeafPVS( int leafnum );
 byte *CM_LeafPHS( int leafnum );
 int CM_PointLeafnum( const vec3_t p );
+cleaf_t *CM_PointInLeaf( const vec3_t p, cnode_t *node );
 bool CM_HeadnodeVisible( int nodenum, byte *visbits );
 int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 model_t CM_TempBoxModel( const vec3_t mins, const vec3_t maxs, bool capsule );

@@ -375,9 +375,16 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 	csurface_t	**mark, *surf, *hitface = NULL;
 	float		d1, d2, min_diff = 9999.9f;
 	vec3_t		vecPos1, vecPos2;
+	cmodel_t		*bmodel;
 	cleaf_t		*endleaf;
 	cplane_t		*plane;
 	int		i;
+
+	if( !trace.pHit ) return NULL; // trace entity must be valid
+
+	bmodel = CM_ClipHandleToModel( trace.pHit->v.modelindex );
+	if( !bmodel || bmodel->type != mod_brush && bmodel->type != mod_world )
+		return NULL;
 
 	VectorSubtract( trace.vecEndPos, start, forward );
 	VectorNormalize( forward );
@@ -386,7 +393,7 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 	VectorMA( trace.vecEndPos, -1.0f, trace.vecPlaneNormal, vecPos1 );
 	VectorCopy( trace.vecEndPos, vecPos2 ); 
 
-	endleaf = worldmodel->leafs + CM_PointLeafnum( trace.vecEndPos );
+	endleaf = CM_PointInLeaf( trace.vecEndPos, bmodel->nodes + bmodel->hulls[0].firstclipnode );
 	mark = endleaf->firstMarkSurface;
 
 	// find a plane with endpos on one side and hitpos on the other side...

@@ -385,7 +385,6 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 
 	// precache and static commands can be issued during map initialization
 	sv.state = ss_loading;
-	sv.paused	= false;
 
 	Host_SetServerState( sv.state );
 

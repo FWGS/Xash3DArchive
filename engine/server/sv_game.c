@@ -875,7 +875,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 	const char	*t;
 
 	if( pStartEdict ) e = NUM_FOR_EDICT( pStartEdict );
-	if( !pszValue || !*pszValue ) return NULL;
+	if( !pszValue || !*pszValue ) return svgame.edicts;
 
 	while(( desc = svgame.dllFuncs.pfnGetEntvarsDescirption( index++ )) != NULL )
 	{
@@ -886,7 +886,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 	if( desc == NULL )
 	{
 		MsgDev( D_ERROR, "SV_FindEntityByString: field %s not found\n", pszField );
-		return NULL;
+		return svgame.edicts;
 	}
 
 	for( e++; e < svgame.globals->numEntities; e++ )
@@ -938,7 +938,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 			break;
 		}
 	}
-	return NULL;
+	return svgame.edicts;
 }
 
 /*
@@ -3114,6 +3114,14 @@ int pfnCheckVisibility( const edict_t *entity, byte *pset )
 		if( i == entity->pvServerData->num_leafs )
 			return 0;	// not visible
 	}
+
+	// run additional check for BoxVisible
+	if( pe && CM_GetModelType( entity->v.modelindex ) == mod_brush )
+	{
+		if( !pe->BoxVisible( entity->v.absmin, entity->v.absmax, pset ))
+			return 0;
+	}
+
 	return 1;
 }
 

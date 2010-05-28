@@ -1093,22 +1093,13 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 //==========================
 void V_CalcScreenBlend( ref_params_t *pparams )
 {
-	if( !v_dark->integer ) return;
-
+#if 0
+	// FIXME: get some code from q1
 	pparams->blend[0] = 0.0f;
 	pparams->blend[1] = 0.0f;
 	pparams->blend[2] = 0.0f;
 	pparams->blend[3] = 1.0f;
-
-	if( !pparams->paused && IN_GAME( ))
-	{
-		// HACKHACK
-		v_dark->integer++;
-	}
-
-	// make first 10 frames black then reset
-	if( v_dark->integer < 100 ) return;
-	CVAR_SET_FLOAT( "v_dark", 0.0f );
+#endif
 }
 
 //==========================

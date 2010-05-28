@@ -179,7 +179,7 @@ CM_LeafPVS
 */
 byte *CM_LeafPVS( int leafnum )
 {
-	if( !worldmodel || leafnum < 0 || leafnum >= worldmodel->numleafs || !cm.pvs )
+	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.pvs )
 		return cm.nullrow;
 
 	return worldmodel->leafs[leafnum].visdata;
@@ -193,7 +193,7 @@ CM_LeafPHS
 */
 byte *CM_LeafPHS( int leafnum )
 {
-	if( !worldmodel || leafnum < 0 || leafnum >= worldmodel->numleafs || !cm.phs )
+	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.phs )
 		return cm.nullrow;
 
 	return worldmodel->leafs[leafnum].pasdata;

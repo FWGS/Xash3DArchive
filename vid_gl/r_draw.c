@@ -249,7 +249,7 @@ static void Tri_DrawPolygon( void )
 	tri_mesh.colorsArray = tri_colors;
 	tri_mesh.elems = tri_elems;
 
-	if( tri_mbuffer.shaderkey != (int)shader->sortkey || -tri_mbuffer.infokey-1+32 > MAX_ARRAY_VERTS )
+	if( tri_mbuffer.shaderkey != (int)shader->sortkey || -tri_mbuffer.infokey-1+256 > MAX_ARRAY_VERTS )
 	{
 		if( tri_mbuffer.shaderkey )
 		{
@@ -381,7 +381,14 @@ void Tri_Vertex3f( const float x, const float y, const float z )
 			// This is a strip that's too big for us to buffer.
 			// (We can't just flush the buffer because we have to keep
 			// track of the last two vertices.
-			Host_Error( "Tri_SetVertex: overflow: %i > MAX_TRIVERTS\n", triState.numVertex + triState.vertexState );
+			Host_Error( "Tri_Vertex3f: overflow: %i > MAX_TRIVERTS\n", triState.numVertex + triState.vertexState );
+		}
+		if( triState.numIndex > MAX_TRIELEMS )
+		{
+			// This is a strip that's too big for us to buffer.
+			// (We can't just flush the buffer because we have to keep
+			// track of the last two vertices.
+			Host_Error( "Tri_Vertex3f: overflow: %i > MAX_TRIELEMS\n", triState.numIndex );
 		}
 		if( triState.vertexState++ < 3 )
 		{

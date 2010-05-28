@@ -249,16 +249,10 @@ PM_TraceModel
 */
 static TraceResult PM_TraceModel( edict_t *pEnt, const vec3_t start, const vec3_t end )
 {
-	float	*mins, *maxs;
-
 	if( VectorIsNAN( start ) || VectorIsNAN( end ))
 		Host_Error( "TraceModel: NAN errors detected ('%f %f %f', '%f %f %f'\n", start[0], start[1], start[2], end[0], end[1], end[2] );
 
-	clgame.pmove->usehull = bound( 0, clgame.pmove->usehull, 3 );
-	mins = clgame.pmove->player_mins[clgame.pmove->usehull];
-	maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
-
-	return CM_ClipMove( pEnt, start, mins, maxs, end, FMOVE_SIMPLEBOX );
+	return CM_ClipMove( pEnt, start, vec3_origin, vec3_origin, end, FMOVE_SIMPLEBOX );
 }
 
 /*
@@ -306,6 +300,10 @@ static int PM_PointContents( const vec3_t p, int *truecontents )
 
 static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
 {
+	edict_t	*hit, *touch[MAX_EDICTS];
+	vec3_t	absmin, absmax;
+	int	i, count;
+
 	// setup playermove globals
 	pmove->multiplayer = (clgame.globals->maxClients > 1) ? true : false;
 	pmove->serverflags = clgame.globals->serverflags;	// shared serverflags
@@ -315,6 +313,37 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	pmove->clientmaxspeed = clent->v.maxspeed;
 	pmove->cmd = *ucmd;				// setup current cmds
 	pmove->player = clent;			// ptr to client state
+
+	pmove->numladders = 0;
+	VectorCopy( clent->v.absmin, absmin );
+	VectorCopy( clent->v.absmax, absmax );
+
+	for( i = 0; i < 3; i++ )
+	{
+		absmin[i] = clent->v.origin[i] - 256;
+		absmax[i] = clent->v.origin[i] + 256;
+	}
+
+	count = CL_AreaEdicts( absmin, absmax, touch, MAX_EDICTS, AREA_CUSTOM );
+
+	// build list of ladders around player
+	for( i = 0; i < count; i++ )
+	{
+		if( pmove->numladders >= MAX_LADDERS )
+		{
+			MsgDev( D_ERROR, "PM_PlayerMove: too many ladders in PVS\n" );
+			break;
+		}
+
+		hit = touch[i];
+
+		if( hit == clent ) continue;
+		if( hit->v.solid != SOLID_NOT || hit->v.skin != CONTENTS_LADDER )
+			continue; // not ladder
+
+		// store ladder
+		pmove->ladders[pmove->numladders++] = hit;
+	}
 }
 
 static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
