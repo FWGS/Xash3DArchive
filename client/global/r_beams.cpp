@@ -1451,12 +1451,6 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 {
 	ASSERT( pbeam->delta.IsValid() );
 
-	if( pbeam->attachment[0] == g_vecZero || pbeam->attachment[1] == g_vecZero )
-	{
-//		pbeam->m_bCulled = true;	// FIXME: hack
-	}
-	
-
 	// Don't draw really short beams
 	if ( pbeam->m_bCulled || pbeam->delta.Length() < 0.1f )
 	{
@@ -1469,7 +1463,7 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 		return;
 	}
 
-	int frame = ( ( int )( pbeam->frame + gpGlobals->time * pbeam->frameRate) % pbeam->frameCount );
+	int frame = (( int )( pbeam->frame + gpGlobals->time * pbeam->frameRate) % pbeam->frameCount );
 	int rendermode = ( pbeam->flags & FBEAM_SOLID ) ? kRenderNormal : kRenderTransAdd;
 
 	// set color
@@ -1631,7 +1625,7 @@ void CViewRenderBeams::AddServerBeam( edict_t *pEnvBeam )
 //-----------------------------------------------------------------------------
 edict_t *CViewRenderBeams::LinkWithViewModel( edict_t *pEnt )
 {
-	if ( !pEnt || pEnt->free )
+	if ( !pEnt )
 		return NULL;
 
 	if ( EV_IsLocal( pEnt->serialnumber ) && ( gpViewParams->flags & RDF_THIRDPERSON ) == 0 )

@@ -58,7 +58,7 @@ usercmd_t CL_CreateCmd( void )
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
 
-	clgame.dllFuncs.pfnCreateMove( &cmd, host.frametime, ( cls.state == ca_active ));
+	clgame.dllFuncs.pfnCreateMove( &cmd, host.frametime, ( cls.state == ca_active && !cl.refdef.paused ));
 
 	// never let client.dll calc frametime for player
 	// because is potential backdoor for cheating
@@ -544,7 +544,7 @@ void CL_PredictMovement( void )
 	player = CL_GetLocalPlayer ();
 	viewent = CL_GetEdictByIndex( cl.refdef.viewentity );
 
-	if( cls.demoplayback )
+	if( cls.demoplayback && CL_IsValidEdict( viewent ))
 	{
 		// use interpolated server values
 		VectorCopy( viewent->v.viewangles, cl.refdef.cl_viewangles );

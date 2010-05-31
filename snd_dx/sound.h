@@ -11,6 +11,7 @@
 #include "qfiles_ref.h"
 #include "engine_api.h"	// trace_t declaration
 #include "vsound_api.h"
+#include "entity_def.h"
 
 extern stdlib_api_t com;
 extern vsound_imp_t	si;

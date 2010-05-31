@@ -33,8 +33,8 @@ edict_t *CL_GetEdictByIndex( int index )
 		return NULL;
 	}
 
-	if( EDICT_NUM( index )->free )
-		return NULL;
+//	if( EDICT_NUM( index )->free )
+//		return NULL;
 	return EDICT_NUM( index );
 }
 
@@ -122,7 +122,7 @@ bool CL_GetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles
 {
 	edict_t	*ed = CL_GetEdictByIndex( entityIndex );
 
-	if( !ed || ed->free || !ed->pvClientData )
+	if( !CL_IsValidEdict( ed ))
 		return false;
 
 	number = bound( 1, number, MAXSTUDIOATTACHMENTS );
@@ -137,7 +137,7 @@ bool CL_SetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles
 {
 	edict_t	*ed = CL_GetEdictByIndex( entityIndex );
 
-	if( !ed || ed->free || !ed->pvClientData )
+	if( !CL_IsValidEdict( ed ))
 		return false;
 
 	number = bound( 0, number, MAXSTUDIOATTACHMENTS );
@@ -157,7 +157,7 @@ byte CL_GetMouthOpen( int entityIndex )
 
 	ed = CL_GetEdictByIndex( entityIndex );
 
-	if( !ed || ed->free || !ed->pvClientData )
+	if( !CL_IsValidEdict( ed ))
 		return 0;
 	return ed->pvClientData->mouth.mouthopen;
 }
@@ -166,7 +166,7 @@ lerpframe_t *CL_GetLerpFrame( int entityIndex )
 {
 	edict_t	*pEnt = CL_GetEdictByIndex( entityIndex );
 
-	if( !pEnt || !pEnt->pvClientData )
+	if( !CL_IsValidEdict( pEnt ))
 		return NULL;
 
 	return &pEnt->pvClientData->frame;
@@ -1706,7 +1706,7 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceLine: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 	result = CL_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
+	if( ptr ) *ptr = result;
 }
 
 /*
@@ -1776,7 +1776,7 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
+	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, FMOVE_SIMPLEBOX );
 	return CM_TraceTexture( v1, result );
 }
 

@@ -342,8 +342,8 @@ trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 		}
 	}
 
-	// fix trace up by the offset
-	if( trace.flFraction != 1.0f )
+	// fix trace up by the offset when we hit bmodel
+	if( trace.flFraction != 1.0f && trace.iHitgroup == -1 )
 		VectorAdd( trace.vecEndPos, offset, trace.vecEndPos );
 
 	// did we clip the move?
@@ -390,8 +390,8 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 	VectorNormalize( forward );
 
 	// nudge endpos back to can be trace face between two points
-	VectorMA( trace.vecEndPos, -1.0f, trace.vecPlaneNormal, vecPos1 );
-	VectorCopy( trace.vecEndPos, vecPos2 ); 
+	VectorMA( trace.vecEndPos,  5.0f, trace.vecPlaneNormal, vecPos1 );
+	VectorMA( trace.vecEndPos, -5.0f, trace.vecPlaneNormal, vecPos2 );
 
 	endleaf = CM_PointInLeaf( trace.vecEndPos, bmodel->nodes + bmodel->hulls[0].firstclipnode );
 	mark = endleaf->firstMarkSurface;

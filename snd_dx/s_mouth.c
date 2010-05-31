@@ -15,7 +15,7 @@ void SND_InitMouth( int entnum, int entchannel )
 		// init mouth movement vars
 		clientEntity = si.GetClientEdict( entnum );
 
-		if( clientEntity )
+		if( clientEntity && !clientEntity->free )
 		{
 			mouth_t	*m = si.GetEntityMouth( clientEntity );
 
@@ -33,7 +33,7 @@ void SND_CloseMouth( channel_t *ch )
 {
 	edict_t	*clientEntity = si.GetClientEdict( ch->entnum );
 
-	if( clientEntity )
+	if( clientEntity && !clientEntity->free )
 	{
 		mouth_t	*m = si.GetEntityMouth( clientEntity );
 

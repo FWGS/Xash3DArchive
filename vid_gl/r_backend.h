@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __R_BACKEND_H__
 #define __R_BACKEND_H__
 
+#define MAX_LIGHTMAPS		128
 #define MAX_TEXTURES		4096
 #define MAX_ARRAY_VERTS		4096
 #define MAX_ARRAY_ELEMENTS		MAX_ARRAY_VERTS * 6
@@ -112,7 +113,7 @@ typedef struct
 	texture_t		*coronaTexture;
 	texture_t		*defaultConchars;
 	texture_t		*shadowmapTextures[MAX_SHADOWGROUPS];
-	texture_t		*lightmapTextures[MAX_TEXTURES];
+	texture_t		*lightmapTextures[MAX_LIGHTMAPS];
 
 	// utility shaders
 	ref_shader_t	*defaultShader;	// generic black texture
@@ -422,6 +423,14 @@ typedef struct
 	bool		checkFlush;
 	bool		hasNormals;
 } tristate_t;
+
+typedef struct
+{
+	int	features;
+	int	lightmapNum;
+	float	stOffset[2];
+	int	lightmapStyles[LM_STYLES];
+} lmstate_t;
 
 extern glconfig_t	glConfig;
 extern glstate_t	glState;

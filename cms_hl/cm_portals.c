@@ -182,7 +182,7 @@ byte *CM_LeafPVS( int leafnum )
 	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.pvs )
 		return cm.nullrow;
 
-	return worldmodel->leafs[leafnum].visdata;
+	return worldmodel->leafs[leafnum+1].visdata;
 //	return cm.pvs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
 }
 
@@ -196,7 +196,7 @@ byte *CM_LeafPHS( int leafnum )
 	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.phs )
 		return cm.nullrow;
 
-	return worldmodel->leafs[leafnum].pasdata;
+	return worldmodel->leafs[leafnum+1].pasdata;
 //	return cm.phs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
 }
 

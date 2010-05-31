@@ -52,7 +52,7 @@ int CM_PointLeafnum( const vec3_t p )
 {
 	// map not loaded
 	if ( !worldmodel ) return 0;
-	return CM_PointInLeaf( p, worldmodel->nodes ) - worldmodel->leafs;
+	return CM_PointInLeaf( p, worldmodel->nodes ) - worldmodel->leafs - 1;
 }
 
 
@@ -206,7 +206,8 @@ bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, byte *visbits )
 	for( i = 0; i < count; i++ )
 	{
 		int	leafnum = leafList[i];
-		if( visbits[leafnum>>3] & (1<<(leafnum & 7)))
+
+		if( visbits[leafnum>>3] & (1<<( leafnum & 7 )))
 			return true;
 	}
 	return false;

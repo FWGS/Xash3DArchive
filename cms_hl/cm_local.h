@@ -75,10 +75,12 @@ typedef struct cleaf_s
 	int		numMarkSurfaces;
 } cleaf_t;
 
+#define CONTENTS_NODE	1		// fake contents to determine nodes
+
 typedef struct cnode_s
 {
 // common with leaf
-	int		contents;		// 0, to differentiate from leafs
+	int		contents;		// CONTENTS_NODE, to differentiate from leafs
 	struct cnode_s	*parent;
 	cplane_t		*plane;		// always != NULL
 

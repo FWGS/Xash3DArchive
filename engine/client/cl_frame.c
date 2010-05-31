@@ -371,7 +371,7 @@ bool CL_GetEntitySpatialization( int entnum, soundinfo_t *info )
 	pSound = CL_GetEdictByIndex( entnum );
 
 	// out of PVS, removed etc
-	if( !pSound ) return false;
+	if( !CL_IsValidEdict( pSound )) return false;
 	
 	if( !pSound->v.modelindex )
 		return true;

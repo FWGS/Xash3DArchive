@@ -1369,7 +1369,7 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 			if( delta.Length() > m_flRadius )
 				return 0;
 		}
-		else if( pEntity->m_iClassType != ED_BEAM )
+		else //if( pEntity->m_iClassType != ED_BEAM )
 		{
 			return 0;
 		}

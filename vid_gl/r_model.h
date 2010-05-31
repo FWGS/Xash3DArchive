@@ -109,6 +109,9 @@ typedef struct
 	};
 
 	// lighting info
+	int		lightmapFrame;
+	int		lightmapTexnum;	// actual texnum
+
 	int		dlightFrame;
 	int		dlightBits;
 
@@ -116,14 +119,13 @@ typedef struct
 	int		lmHeight;
 	int		lmS;
 	int		lmT;
-	int		lmNum;
+	int		lmNum;		// real lightmap texnum
 	byte		*samples;
 	int		numstyles;
-	byte		styles[MAX_LIGHTSTYLES];
-	float		cached[MAX_LIGHTSTYLES];	// values currently used in lightmap
+	byte		styles[LM_STYLES];
+	float		cached[LM_STYLES];	// values currently used in lightmap
 
-	int		superLightStyle;
-	int		fragmentframe;		// for multi-check avoidance
+	int		fragmentframe;	// for multi-check avoidance
 } msurface_t;
 
 #define CONTENTS_NODE	1		// fake contents to determine nodes

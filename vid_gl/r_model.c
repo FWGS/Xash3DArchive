@@ -42,6 +42,7 @@ typedef struct
 // intermediate cached data
 static struct
 {
+	int		version;		// brushmodel version
 	string		modelname;	// mapname without path, extension etc
 	vec3_t		*vertexes;	// intermediate data comes here
 	int		numvertexes;
@@ -1041,7 +1042,7 @@ static void Mod_BuildSurfacePolygons( msurface_t *surf )
 Mod_LoadMiptex
 =================
 */
-static ref_shader_t *Mod_LoadMiptex( char *shadername, mip_t *mt, int version )
+static ref_shader_t *Mod_LoadMiptex( char *shadername, mip_t *mt )
 {
 	texture_t	*miptex;
 	int	size; 
@@ -1050,13 +1051,15 @@ static ref_shader_t *Mod_LoadMiptex( char *shadername, mip_t *mt, int version )
 		goto load_shader;	// external shader found
 
 	// determine shader parms by texturename
+	if( !com.strncmp( mt->name, "scroll", 6 ))
+		R_ShaderSetMiptexFlags( MIPTEX_CONVEYOR );
 
 	if( mt->offsets[0] > 0 )
 	{
 		// NOTE: imagelib detect miptex version by size
 		// 770 additional bytes is indicated custom palette
 		size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-		if( version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+		if( cached.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 		// build the unique shadername because we don't want keep this for other maps
 		com.snprintf( shadername, 32, "%s/%s", cached.modelname, mt->name );
@@ -1077,7 +1080,7 @@ load_shader:
 Mod_LoadLighting
 =================
 */
-static void Mod_LoadLighting( const dlump_t *l, int version )
+static void Mod_LoadLighting( const dlump_t *l )
 {
 	byte	d, *in, *out;
 	int	i;
@@ -1086,7 +1089,7 @@ static void Mod_LoadLighting( const dlump_t *l, int version )
 
 	Mod_CheckDeluxemaps( l, mod_base + l->fileofs );
 
-	switch( version )
+	switch( cached.version )
 	{
 	case Q1BSP_VERSION:
 		// expand the white lighting data
@@ -1186,7 +1189,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 Mod_LoadTextures
 =================
 */
-static void Mod_LoadTextures( const dlump_t *l, int version )
+static void Mod_LoadTextures( const dlump_t *l )
 {
 	int		i, count;
 	dmiptexlump_t	*in;
@@ -1234,7 +1237,7 @@ static void Mod_LoadTextures( const dlump_t *l, int version )
 		com.snprintf( out->name, sizeof( out->name ), "textures/%s", mt->name );
 
 //		out->contents = Mod_ContentsFromShader( out->name );	// FIXME: implement
-		loadmodel->shaders[i] = out->shader = Mod_LoadMiptex( out->name, mt, version );
+		loadmodel->shaders[i] = out->shader = Mod_LoadMiptex( out->name, mt );
 
 		// original dimensions for adjust lightmap on a face
 		out->width = LittleLong( mt->width );
@@ -1306,7 +1309,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	loadbmodel->surfaces = Mod_Malloc( loadmodel, count * sizeof( msurface_t ));
 	out = loadbmodel->surfaces;
 
-//	R_BeginBuildingLightmaps();
+	R_BeginBuildingLightmaps();
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
@@ -1342,7 +1345,11 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		else lightofs = LittleLong( in->lightofs );
 
 		if( loadbmodel->lightdata && lightofs != -1 )
-			out->samples = loadbmodel->lightdata + lightofs;
+		{
+			if( cached.version == HLBSP_VERSION )
+				out->samples = loadbmodel->lightdata + lightofs;
+			else out->samples = loadbmodel->lightdata + (lightofs * 3);
+		}
 
 		while( out->numstyles < MAX_LIGHTSTYLES && in->styles[out->numstyles] != 255 )
 		{
@@ -1357,12 +1364,12 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		}
 
 		// create lightmap
-//		R_BuildSurfaceLightmap( out );
+		R_BuildSurfaceLightmap( out );
 
 		// create polygons
 		Mod_BuildSurfacePolygons( out );
 	}
-//	R_EndBuildingLightmaps();
+	R_EndBuildingLightmaps();
 }
 
 /*
@@ -1739,7 +1746,6 @@ static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t gridS
 		mapConfig.outlineColor[i] = (byte)(bound( 0, outline[i]*255.0f, 255 ));
 	mapConfig.outlineColor[3] = 255;
 
-	R_SortSuperLightStyles();
 	Mem_EmptyPool( cached_mempool );
 }
 
@@ -1750,21 +1756,21 @@ Mod_BrushLoadModel
 */
 void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 {
-	int	i, version;
 	dheader_t	*header;
 	mmodel_t	*bm;
 	vec3_t	gridSize, ambient, outline;
+	int	i;
 
 	header = (dheader_t *)buffer;
-	version = LittleLong( header->version );
+	cached.version = LittleLong( header->version );
 
-	switch( version )
+	switch( cached.version )
 	{
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		break;
 	default:
-		MsgDev( D_ERROR, "Mod_BrushModel: %s has wrong version number (%i should be %i)", loadmodel->name, version, HLBSP_VERSION );
+		MsgDev( D_ERROR, "Mod_BrushModel: %s has wrong version number (%i should be %i)", loadmodel->name, cached.version, HLBSP_VERSION );
 		return;
 	}
 
@@ -1777,14 +1783,26 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 
 	// load into heap
 	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );
-	Mod_LoadEntities( &header->lumps[LUMP_ENTITIES], gridSize, ambient, outline );
+
+	if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
+	{
+		// blue-shift swapped lumps
+		Mod_LoadEntities( &header->lumps[LUMP_PLANES], gridSize, ambient, outline );
+		Mod_LoadPlanes( &header->lumps[LUMP_ENTITIES] );
+	}
+	else
+	{
+		// normal half-life lumps
+		Mod_LoadEntities( &header->lumps[LUMP_ENTITIES], gridSize, ambient, outline );
+		Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
+	}
+
 	Mod_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
 	Mod_LoadEdges( &header->lumps[LUMP_EDGES] );
 	Mod_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
-	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES], version );
-	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING], version );
+	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES] );
+	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING] );
 	Mod_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
-	Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
 	Mod_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
 	Mod_LoadSurfaces( &header->lumps[LUMP_FACES] );
 	Mod_LoadMarkFaces( &header->lumps[LUMP_MARKSURFACES] );
@@ -1861,27 +1879,6 @@ void R_BeginRegistration( const char *mapname )
 	}
 
 	R_NewMap ();
-			
-	if( r_lighting_packlightmaps->integer )
-	{
-		string	lightmapsPath;
-		char	*p;
-
-		mapConfig.lightmapsPacking = true;
-
-		com.strncpy( lightmapsPath, fullname, sizeof( lightmapsPath ));
-		p = com.strrchr( lightmapsPath, '.' );
-		if( p )
-		{
-			*p = 0;
-			com.strncat( lightmapsPath, "/lm_0000.tga", sizeof( lightmapsPath ) );
-			if( FS_FileExists( lightmapsPath ))
-			{
-				MsgDev( D_INFO, "External lightmap stage: lightmaps packing is disabled\n" );
-				mapConfig.lightmapsPacking = false;
-			}
-		}
-	}
 
 	r_farclip_min = Z_NEAR;		// sky shaders will most likely modify this value
 	r_environment_color->modified = true;

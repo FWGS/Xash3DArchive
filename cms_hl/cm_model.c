@@ -267,7 +267,7 @@ static void BSP_LoadTexInfo( const dlump_t *l )
 BSP_LoadSurfaces
 =================
 */
-static void Mod_LoadSurfaces( const dlump_t *l )
+static void BSP_LoadSurfaces( const dlump_t *l )
 {
 	dface_t		*in;
 	csurface_t	*out;
@@ -275,7 +275,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 	in = (void *)(mod_base + l->fileofs);
 	if( l->filelen % sizeof( dface_t ))
-		Host_Error( "R_LoadFaces: funny lump size in '%s'\n", loadmodel->name );
+		Host_Error( "BSP_LoadFaces: funny lump size in '%s'\n", loadmodel->name );
 	count = l->filelen / sizeof( dface_t );
 
 	loadmodel->numsurfaces = count;
@@ -428,6 +428,7 @@ static void BSP_LoadNodes( dlump_t *l )
 	{
 		p = LittleLong( in->planenum );
 		out->plane = loadmodel->planes + p;
+		out->contents = CONTENTS_NODE;
 
 		for( j = 0; j < 2; j++ )
 		{
@@ -682,14 +683,25 @@ static void CM_BrushModel( cmodel_t *mod, byte *buffer )
 	loadmodel->mempool = Mem_AllocPool( va( "sv: ^2%s^7", loadmodel->name ));
 
 	// load into heap
-	BSP_LoadEntityString( &header->lumps[LUMP_ENTITIES] );
+	if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
+	{
+		// blue-shift swapped lumps
+		BSP_LoadEntityString( &header->lumps[LUMP_PLANES] );
+		BSP_LoadPlanes( &header->lumps[LUMP_ENTITIES] );
+	}
+	else
+	{
+		// normal half-life lumps
+		BSP_LoadEntityString( &header->lumps[LUMP_ENTITIES] );
+		BSP_LoadPlanes( &header->lumps[LUMP_PLANES] );
+	}
+
 	BSP_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
 	BSP_LoadTextures( &header->lumps[LUMP_TEXTURES] );
 	BSP_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
 	BSP_LoadEdges( &header->lumps[LUMP_EDGES] );
 	BSP_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
-	BSP_LoadPlanes( &header->lumps[LUMP_PLANES] );
-	Mod_LoadSurfaces( &header->lumps[LUMP_FACES] );
+	BSP_LoadSurfaces( &header->lumps[LUMP_FACES] );
 	BSP_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
 	BSP_LoadMarkFaces( &header->lumps[LUMP_MARKSURFACES] );
 	BSP_LoadLeafs( &header->lumps[LUMP_LEAFS] );

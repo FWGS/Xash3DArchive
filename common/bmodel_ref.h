@@ -47,7 +47,7 @@ BRUSH MODELS
 #define MAX_MAP_LIGHTING		0x800000		// 8 Mb lightmap raw data (can contain bumpdata too)
 #define MAX_MAP_VISIBILITY		0x400000		// 4 Mb visdata
 
-// lump ordering
+// quake lump ordering
 #define LUMP_ENTITIES		0
 #define LUMP_PLANES			1
 #define LUMP_TEXTURES		2		// internal textures

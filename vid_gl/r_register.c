@@ -70,8 +70,7 @@ cvar_t *r_lighting_glossexponent;
 cvar_t *r_lighting_models_followdeluxe;
 cvar_t *r_lighting_ambientscale;
 cvar_t *r_lighting_directedscale;
-cvar_t *r_lighting_packlightmaps;
-cvar_t *r_lighting_maxlmblocksize;
+cvar_t *r_lighting_modulate;
 
 cvar_t *r_offsetmapping;
 cvar_t *r_offsetmapping_scale;
@@ -555,8 +554,7 @@ void GL_InitCommands( void )
 	r_lighting_models_followdeluxe = Cvar_Get( "r_lighting_models_followdeluxe", "1", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "no description" );
 	r_lighting_ambientscale = Cvar_Get( "r_lighting_ambientscale", "0.6", 0, "map ambient lighting scale" );
 	r_lighting_directedscale = Cvar_Get( "r_lighting_directedscale", "1", 0, "map directed lighting scale" );
-	r_lighting_packlightmaps = Cvar_Get( "r_lighting_packlightmaps", "1", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "pack internal lightmaps (save video memory)" );
-	r_lighting_maxlmblocksize = Cvar_Get( "r_lighting_maxlmblocksize", "1024", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "pack lightmap max block" );
+	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "1", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "lightstyles modulate scale" );
 
 	r_offsetmapping = Cvar_Get( "r_offsetmapping", "2", CVAR_ARCHIVE, "offsetmapping factor" );
 	r_offsetmapping_scale = Cvar_Get( "r_offsetmapping_scale", "0.02", CVAR_ARCHIVE, "offsetmapping scale" );
@@ -612,6 +610,8 @@ void GL_InitCommands( void )
 	Cmd_AddCommand( "r_info", R_RenderInfo_f, "display openGL supported extensions" );
 	Cmd_AddCommand( "glslprogramlist", R_ProgramList_f, "display loaded GLSL shaders list" );
 	Cmd_AddCommand( "glslprogramdump", R_ProgramDump_f, "sump GLSL shaders into text file" );
+
+	if( r_lighting_modulate->value < 1.0f ) Cvar_Set( "r_lighting_modulate", "1" );
 }
 
 void GL_RemoveCommands( void )
@@ -1019,8 +1019,6 @@ static void R_InitMedia( void )
 		return;
 
 	R_InitMeshLists();
-
-	R_InitLightStyles();
 	R_InitGLSLPrograms();
 	R_InitImages();
 	R_InitCinematics ();
@@ -1124,7 +1122,6 @@ void R_NewMap( void )
 	R_InitMeshLists();
 	R_InitOcclusionQueries();
 
-	R_InitLightStyles();	// clear lightstyles
 	R_InitCustomColors();	// clear custom colors
 	R_InitCoronas();		// update corona shader (because we can't make it static)
 	R_StudioFreeAllExtradata();	// free boneposes

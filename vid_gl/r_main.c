@@ -535,11 +535,21 @@ bool R_PushSprite( const meshbuffer_t *mb, int type, float right, float left, fl
 		}
 		break;
 	case SPR_FWD_PARALLEL: // normal sprite
-	default:	if( e->customShader )
+	default:
+		if( e->customShader )
 			angle = e->angles[PITCH];
 		else angle = e->angles[ROLL];	// for support rotating muzzleflashes
-		RotatePointAroundVector( v_right, RI.vpn, RI.vright, angle );
-		CrossProduct( RI.vpn, v_right, v_up );
+
+		if( angle != 0.0f )
+		{
+			RotatePointAroundVector( v_right, RI.vpn, RI.vright, angle );
+			CrossProduct( RI.vpn, v_right, v_up );
+		}
+		else
+		{
+			VectorCopy( RI.vright, v_right ); 
+			VectorCopy( RI.vup, v_up );
+		}
 		break;
 	}
 
@@ -766,51 +776,6 @@ bool R_SpriteOverflow( void )
 }
 
 //==================================================================================
-/*
-===============
-R_Set2DMode
-===============
-*/
-void R_Set2DMode( bool enable )
-{
-	if( enable )
-	{
-		if( glState.in2DMode )
-			return;
-
-		// set 2D virtual screen size
-		pglScissor( 0, 0, glState.width, glState.height );
-		pglViewport( 0, 0, glState.width, glState.height );
-		pglMatrixMode( GL_PROJECTION );
-		pglLoadIdentity();
-		pglOrtho( 0, glState.width, glState.height, 0, -99999, 99999 );
-		pglMatrixMode( GL_MODELVIEW );
-		pglLoadIdentity();
-
-		GL_Cull( 0 );
-		GL_SetState( GLSTATE_NO_DEPTH_TEST );
-
-		pglColor4f( 1, 1, 1, 1 );
-
-		glState.in2DMode = true;
-		RI.currententity = RI.previousentity = NULL;
-		RI.currentmodel = NULL;
-
-		pic_mbuffer.infokey = -1;
-		pic_mbuffer.shaderkey = 0;
-	}
-	else
-	{
-		if( pic_mbuffer.infokey != -1 )
-		{
-			R_RenderMeshBuffer( &pic_mbuffer );
-			pic_mbuffer.infokey = -1;
-		}
-
-		glState.in2DMode = false;
-	}
-}
-
 /*
 ============
 R_PolyBlend
@@ -1314,7 +1279,7 @@ static void R_CategorizeEntities( void )
 			if( RI.currententity->ent_type == ED_TEMPENTITY )
 			{
 				// index it's a pointer to parent
-				if( pEdict )
+				if( pEdict && !pEdict->free )
 				{
 					for( j = 1; j < r_numEntities; j++ )
 					{
@@ -1902,13 +1867,14 @@ void R_AddLightStyleToScene( int style, float r, float g, float b )
 	if( !r_worldmodel || !r_worldbrushmodel->lightgrid || !r_worldbrushmodel->numlightgridelems )
 		return;	// don't apply lightstyles when no lighting info
 
-	if( style < 0 || style > MAX_LIGHTSTYLES )
-		Host_Error( "R_AddLightStyleToScene: bad light style %i\n", style );
+	if( style < 0 || style >= MAX_LIGHTSTYLES )
+		Host_Error( "R_SetLightStyle: bad light style %i\n", style );
 
 	ls = &r_lightStyles[style];
 	ls->rgb[0] = max( 0, r );
 	ls->rgb[1] = max( 0, g );
 	ls->rgb[2] = max( 0, b );
+	ls->white = ls->rgb[0] + ls->rgb[1] + ls->rgb[2];
 }
 
 /*
@@ -2039,7 +2005,7 @@ int R_ComputeFxBlend( ref_entity_t *e )
 	{
 		renderAmt = e->renderamt;
 	}
-	else if( m_pEntity )
+	else if( m_pEntity && !m_pEntity->free )
 	{
 		renderAmt = m_pEntity->v.renderamt;
 	}
@@ -2507,14 +2473,8 @@ bool R_AddEntityToScene( edict_t *pRefEntity, int ed_type, shader_t customShader
 	if( pRefEntity->v.effects & EF_NODRAW && ed_type != ED_PORTAL )
 		return true; // done
 
-	switch( pRefEntity->v.rendermode )
-	{
-	case kRenderTransAdd:
-	case kRenderTransTexture:
-		if( pRefEntity->v.renderamt == 0.0f )
-			return true; // done
-	default: break;
-	}
+	if( pRefEntity->v.rendermode != kRenderNormal && pRefEntity->v.renderamt <= 0.0f )
+		return true; // done
 
 	// filter ents
 	switch( ed_type )
@@ -2737,7 +2697,7 @@ bool R_AddDynamicLight( const void *dlight )
 	VectorCopy( src->origin, dl->origin );
 	VectorCopy( src->color, dl->color );
 	Vector2Copy( src->cone, dl->cone );
-	dl->intensity = src->intensity * DLIGHT_SCALE;
+	dl->intensity = src->intensity * 0.5f;
 	dl->shader = shader;
 
 	R_LightBounds( dl->origin, dl->intensity, dl->mins, dl->maxs );

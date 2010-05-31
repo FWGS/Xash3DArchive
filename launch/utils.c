@@ -8,12 +8,7 @@
 #include "mathlib.h"
 #include "const.h"
 
-#pragma warning( disable:4730 )	// "mixing _m64 and floating point expressions may result in incorrect code"
-#define SIN_TABLE_SIZE	256
-
 static long idum = 0;
-static uint iFastSqrtTable[0x10000];
-static float fSinCosTable[SIN_TABLE_SIZE];
 
 #define MAX_RANDOM_RANGE	0x7FFFFFFFUL
 #define IA		16807
@@ -25,8 +20,6 @@ static float fSinCosTable[SIN_TABLE_SIZE];
 #define AM		(1.0/IM)
 #define EPS		1.2e-7
 #define RNMX		(1.0 - EPS)
-#define FP_BITS( fp )	(*(dword *) &(fp))
-#define FTOIBIAS		12582912.f
 
 void SeedRandomNumberGenerator( long lSeed )
 {
@@ -131,40 +124,6 @@ uint Com_HashKey( const char *string, uint hashSize )
 	return (hashKey % hashSize);
 }
 
-// build the square root table
-void Com_BuildSqrtTable( void )
-{
-	union { long l; float f; } dat;
-	uint i;
-
-	// build the fast square root table
-	for( i = 0; i <= 0x7FFF; i++ )
-	{
-		// build a float with the bit pattern i as mantissa
-		// and an exponent of 0, stored as 127
-		dat.l = (i<<8) | (0x7F<<23);
-		dat.f = (float) sqrt(dat.f);
-    
-		// take the square root then strip the first 7 bits of
-		// the mantissa into the table
-		iFastSqrtTable[i + 0x8000] = (dat.l & 0x7FFFFF);
-    
-		// repeat the process, this time with an exponent of 1, 
-		// stored as 128
-		dat.l = (i<<8) | (0x80<<23);
-		dat.f = (float) sqrt(dat.f);
-    
-		iFastSqrtTable[i] = (dat.l & 0x7FFFFF);
-	}
-}
-
-void Com_BuildSinCosTable( void )
-{
-	uint	i;
-	for( i = 0; i < SIN_TABLE_SIZE; i++ )
-		fSinCosTable[i] = sin( i * M_PI2 / SIN_TABLE_SIZE );
-}
-
 void SinCos( float radians, float *sine, float *cosine )
 {
 	_asm
@@ -178,38 +137,6 @@ void SinCos( float radians, float *sine, float *cosine )
 		fstp dword ptr [edx]
 		fstp dword ptr [eax]
 	}
-}
-
-float com_sqrt( float x )
-{
-	// check for square root of 0
-	if( FP_BITS( x ) == 0 ) return 0.0f;
-	FP_BITS(x) = iFastSqrtTable[(FP_BITS(x)>>8)&0xFFFF]|((((FP_BITS(x)-0x3F800000)>>1)+0x3F800000)&0x7F800000);
-	return x;
-}
-
-float amd_sqrt( float x )
-{
-	float	root = 0.f;
-	_asm
-	{
-		_emit	0x0f
-		_emit	0x0e
-		movd	mm0, x
-		_emit	0x0f
-		_emit	0x0f
-		_emit	((0xc1 & 0x3f)<<3)|0xc0
-		_emit	0x97  
-		punpckldq	mm0, mm0
-		_emit	0x0f
-		_emit	0x0f
-		_emit	((0xc0 & 0x3f)<<3)|0xc1
-		_emit	0xb4  
-		movd	root, mm0
-		_emit	0x0f
-		_emit	0x0e
-	}
-	return root;
 }
 
 float sse_sqrt( float x )

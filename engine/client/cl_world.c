@@ -329,7 +329,7 @@ static void CL_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		// monsterclip filter
 		if( touch->v.flags & FL_MONSTERCLIP )
 		{
-			if( clip->passedict && clip->passedict->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
+			if( clip->passedict && !( clip->passedict->v.flags & FL_MONSTERCLIP ))
 				continue;
 		}
 

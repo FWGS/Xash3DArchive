@@ -250,11 +250,6 @@ uint Com_HashKey( const char *string, uint hashSize );
 //
 // math.c
 //
-void Com_BuildSqrtTable( void );
-void Com_BuildSinCosTable( void );
-
-float com_sqrt( float x );
-float amd_sqrt( float x );
 float sse_sqrt( float x );
 
 _inline float sqrtf( float x ) { return ((float)sqrt((double)x)); }

@@ -45,7 +45,8 @@ bool Cmd_GetMapList( const char *s, char *completedname, int length )
 		int		ver = -1, lumpofs = 0, lumplen = 0;
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 		script_t		*ents = NULL;
-
+		bool		gearbox;
+			
 		if( com.stricmp( ext, "bsp" )) continue;
 		com.strncpy( message, "^1error^7", sizeof( message ));
 		f = FS_Open( t->filenames[i], "rb" );
@@ -63,8 +64,18 @@ bool Cmd_GetMapList( const char *s, char *completedname, int length )
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-				lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+				if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+				{
+					lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
+					lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+					gearbox = true;
+				}
+				else
+				{
+					lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+					lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+					gearbox = false;
+				}
 				break;
 			}
 
@@ -114,7 +125,8 @@ bool Cmd_GetMapList( const char *s, char *completedname, int length )
 			com.strncpy( buf, "Quake", sizeof( buf ));
 			break;
 		case HLBSP_VERSION:
-			com.strncpy( buf, "Half-Life", sizeof( buf ));
+			if( gearbox ) com.strncpy( buf, "Blue-Shift", sizeof( buf ));
+			else com.strncpy( buf, "Half-Life", sizeof( buf ));
 			break;
 		default:	com.strncpy( buf, "??", sizeof( buf )); break;
 		}
@@ -626,8 +638,16 @@ bool Cmd_CheckMapsList( void )
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-				lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+				if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+				{
+					lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
+					lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+				}
+				else
+				{
+					lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+					lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+				}
 				break;
 			}
 

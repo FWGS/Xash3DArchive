@@ -199,17 +199,9 @@ typedef struct
 
 typedef struct
 {
-	float		rgb[3];	// 0.0 - 2.0
+	vec3_t		rgb;	// 0.0 - 2.0
+	float		white;	// highest of RGB
 } lightstyle_t;
-
-typedef struct
-{
-	int		features;
-	int		lightmapNum[LM_STYLES];
-	int		lightmapStyles[LM_STYLES];
-	int		vertexStyles[LM_STYLES];
-	float		stOffset[LM_STYLES][2];
-} superLightStyle_t;
 
 typedef struct ref_entity_s
 {
@@ -333,14 +325,14 @@ extern float gldepthmin, gldepthmax;
 //
 // screen size info
 //
-extern unsigned int r_numEntities;
+extern uint	r_numEntities;
 extern ref_entity_t	r_entities[MAX_ENTITIES];
 
-extern unsigned int r_numDlights;
+extern uint	r_numDlights;
 extern dlight_t	r_dlights[MAX_DLIGHTS];
 
-extern unsigned int r_numPolys;
-extern poly_t r_polys[MAX_POLYS];
+extern uint	r_numPolys;
+extern poly_t	r_polys[MAX_POLYS];
 
 extern lightstyle_t r_lightStyles[MAX_LIGHTSTYLES];
 
@@ -349,7 +341,7 @@ extern ref_params_t	r_lastRefdef;
 extern mleaf_t	*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t	*r_viewleaf2, *r_oldviewleaf2;
 
-extern float r_farclip_min, r_farclip_bias;
+extern float	r_farclip_min, r_farclip_bias;
 
 extern ref_entity_t	*r_worldent;
 extern ref_model_t *r_worldmodel;
@@ -408,8 +400,7 @@ extern cvar_t *r_lighting_glossexponent;
 extern cvar_t *r_lighting_models_followdeluxe;
 extern cvar_t *r_lighting_ambientscale;
 extern cvar_t *r_lighting_directedscale;
-extern cvar_t *r_lighting_packlightmaps;
-extern cvar_t *r_lighting_maxlmblocksize;
+extern cvar_t *r_lighting_modulate;
 
 extern cvar_t *r_offsetmapping;
 extern cvar_t *r_offsetmapping_scale;
@@ -537,8 +528,7 @@ void		R_ShutdownOcclusionQueries( void );
 //
 // r_draw.c
 //
-extern meshbuffer_t  pic_mbuffer;
-
+void R_Set2DMode( bool enable );
 void R_DrawSetColor( const void *data );
 void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, shader_t shadernum );
 void R_DrawStretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *data, bool redraw );
@@ -589,30 +579,18 @@ bool		VID_CubemapShot( const char *base, uint size, const float *vieworg, bool s
 //
 // r_light.c
 //
-#define DLIGHT_SCALE	    0.5f
-#define MAX_SUPER_STYLES    1023
-
-extern int r_numSuperLightStyles;
-extern superLightStyle_t r_superLightStyles[MAX_SUPER_STYLES];
-
 void	R_BeginBuildingLightmaps( void );
 void	R_BuildSurfaceLightmap( msurface_t *surf );
 void	R_EndBuildingLightmaps( void );
 
+void	R_UpdateSurfaceLightmap( msurface_t *surf );
 void	R_RecursiveLightNode( dlight_t *light, int bit, mnode_t *node );
 void	R_MarkLights( uint clipflags );
 
 void	R_LightBounds( const vec3_t origin, float intensity, vec3_t mins, vec3_t maxs );
 bool	R_SurfPotentiallyLit( msurface_t *surf );
-uint	R_AddSurfDlighbits( msurface_t *surf, unsigned int dlightbits );
-void	R_AddDynamicLights( unsigned int dlightbits, int state );
 void	R_LightForEntity( ref_entity_t *e, byte *bArray );
 void	R_LightForOrigin( const vec3_t origin, vec3_t dir, vec4_t ambient, vec4_t diffuse, float radius );
-void	R_BuildLightmaps( int numLightmaps, int w, int h, const byte *data, mlightmapRect_t *rects );
-void	R_InitLightStyles( void );
-int	R_AddSuperLightStyle( const int *lightmaps, const byte *lightmapStyles, const byte *vertexStyles, 
-								 mlightmapRect_t **lmRects );
-void	R_SortSuperLightStyles( void );
 
 void	R_InitCoronas( void );
 void	R_DrawCoronas( void );
@@ -623,8 +601,6 @@ void	R_DrawCoronas( void );
 void	GL_Cull( int cull );
 void	GL_SetState( int state );
 void	GL_FrontFace( int front );
-void	R_Set2DMode( bool enable );
-
 void	R_BeginFrame( bool clearScene );
 void	R_EndFrame( void );
 void	R_RenderScene( const ref_params_t *fd );
@@ -728,17 +704,17 @@ enum
 	PROGRAM_APPLY_NO_HALF_TYPES			= 1 << 18
 };
 
-void		R_InitGLSLPrograms( void );
-int			R_FindGLSLProgram( const char *name );
-int			R_RegisterGLSLProgram( const char *name, const char *string, unsigned int features );
-int			R_GetProgramObject( int elem );
-void		R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir,
-									vec4_t ambient, vec4_t diffuse, superLightStyle_t *superLightStyle,
-									bool frontPlane, int TexWidth, int TexHeight,
-									float projDistance, float offsetmappingScale );
-void		R_ShutdownGLSLPrograms( void );
-void		R_ProgramList_f( void );
-void		R_ProgramDump_f( void );
+void	R_InitGLSLPrograms( void );
+int	R_FindGLSLProgram( const char *name );
+int	R_RegisterGLSLProgram( const char *name, const char *string, unsigned int features );
+int	R_GetProgramObject( int elem );
+void	R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir,
+	vec4_t ambient, vec4_t diffuse, bool frontPlane, int TexWidth, int TexHeight,
+	float projDistance, float offsetmappingScale );
+
+void	R_ShutdownGLSLPrograms( void );
+void	R_ProgramList_f( void );
+void	R_ProgramDump_f( void );
 
 //
 // r_poly.c

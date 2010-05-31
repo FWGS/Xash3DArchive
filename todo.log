@@ -43,5 +43,8 @@ Xash 0.72 Stable 13.12.10
 19.implement botman's parabot dll
 20.implement bsp 28,29,30 formats		OK
 21.revision of all resources			OK
-22.finalize server entity-culling
+22.finalize server entity-culling		OK
 23.fix pas-building issues			OK
+24.remove all unused stuff in engine
+25.regrouping resources in baserc
+26.implement lighting in render

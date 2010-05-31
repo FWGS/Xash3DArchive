@@ -333,10 +333,14 @@ float R_GetSpriteFrameInterpolant( ref_entity_t *ent, mspriteframe_t **oldframe,
 		m_fDoInterp = (ent->flags & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
-	if((frame >= psprite->numframes) || (frame < 0))
+	if( frame < 0 )
+	{
+		frame = 0;
+	}          
+	else if( frame >= psprite->numframes )
 	{
 		MsgDev( D_WARN, "R_GetSpriteFrame: no such frame %d (%s)\n", frame, ent->model->name );
-		frame = 0;
+		frame = psprite->numframes - 1;
 	}
 
 	if( psprite->frames[frame].type == FRAME_SINGLE )
@@ -604,7 +608,7 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 		// draw two combined lerped frames
 		renderamt = e->renderamt;
 
-		lerp = bound( 0, lerp, 1 );
+		lerp = bound( 0.0f, lerp, 1.0f );
 		ilerp = 1.0f - lerp;
 	
 		if( ilerp != 0 )
@@ -616,9 +620,11 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 			if( R_PushSprite( rb, psprite->type, oldframe->left, oldframe->right, oldframe->down, oldframe->up ))
 				R_RenderMeshBuffer( rb );
 		}
+
 		if( lerp != 0 )
 		{
 			e->renderamt = renderamt * lerp;	// merge frame alpha
+
 			if( e->customShader ) rb->shaderkey = e->customShader->sortkey;
 			else rb->shaderkey = r_shaders[frame->shader].sortkey;
 			if( R_PushSprite( rb, psprite->type, frame->left, frame->right, frame->down, frame->up ))

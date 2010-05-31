@@ -1124,7 +1124,7 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 		}
 
 		m_pEntity = ri.GetClientEdict( e->index );
-		if( m_pEntity ) m_pGroundEntity = m_pEntity->v.groundentity;
+		if( m_pEntity && !m_pEntity->free ) m_pGroundEntity = m_pEntity->v.groundentity;
 
 		if( m_pGroundEntity && m_pGroundEntity->v.movetype == MOVETYPE_PUSH && !VectorIsNull( m_pGroundEntity->v.velocity ))
 		{
@@ -1487,7 +1487,7 @@ void R_StudioSetupBones( ref_entity_t *e )
 			Matrix4x4_ConcatTransforms( m_pbonestransform[i], m_protationmatrix, bonematrix );
 
 			// apply client-side effects to the transformation matrix
-			if( cl_entity ) ri.StudioFxTransform( cl_entity, m_pbonestransform[i] );
+			if( cl_entity && !cl_entity->free ) ri.StudioFxTransform( cl_entity, m_pbonestransform[i] );
 		} 
 		else Matrix4x4_ConcatTransforms( m_pbonestransform[i], m_pbonestransform[pbones[i].parent], bonematrix );
 	}
@@ -1568,7 +1568,7 @@ void R_StudioMergeBones( ref_entity_t *e, ref_model_t *m_pSubModel )
 				Matrix4x4_ConcatTransforms( localbones[i], m_protationmatrix, bonematrix );
 
 				// apply client-side effects to the transformation matrix
-				if( cl_entity ) ri.StudioFxTransform( cl_entity, m_pbonestransform[i] );
+				if( cl_entity && !cl_entity->free ) ri.StudioFxTransform( cl_entity, m_pbonestransform[i] );
 			} 
 			else Matrix4x4_ConcatTransforms( localbones[i], m_pbonestransform[pbones[i].parent], bonematrix );
 		}
@@ -2183,7 +2183,7 @@ static bool R_StudioSetupModel( ref_entity_t *e, ref_model_t *mod )
 			if( m_pEntity ) m_pEntity->v.gaitsequence = 0;
 		}
 
-		if( !m_pEntity ) return 0;
+		if( !m_pEntity || m_pEntity->free ) return 0;
 		m_nPlayerIndex = m_pEntity->serialnumber - 1;
 
 		if( m_nPlayerIndex < 0 || m_nPlayerIndex >= ri.GetMaxClients( ))

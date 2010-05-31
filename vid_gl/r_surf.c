@@ -315,7 +315,6 @@ void R_AddBrushModelToList( ref_entity_t *e )
 
 		psurf->visframe = r_framecount;
 		mb = R_AddSurfaceToList( psurf, 0 );
-		if( mb ) mb->sortkey |= (( psurf->superLightStyle+1 ) << 10 );
 	}
 }
 
@@ -391,7 +390,6 @@ static void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 		{
 			surf->visframe = r_framecount;
 			mb = R_AddSurfaceToList( surf, clipflags );
-			if( mb ) mb->sortkey |= (( surf->superLightStyle + 1 ) << 10 );
 		}
 		else
 		{

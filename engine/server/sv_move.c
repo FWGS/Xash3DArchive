@@ -643,7 +643,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 			VectorCopy( clent->v.basevelocity, clent->v.clbasevelocity );
 	}
 
-	if(( sv_maxclients->integer <= 1 ) && !CL_IsInGame( ) || ( clent->v.flags & FL_FROZEN ) || ( sv.framenum < 2 ))
+	if(( sv_maxclients->integer <= 1 ) && !CL_IsInGame( ) || ( clent->v.flags & FL_FROZEN ) || ( sv.framenum < 3 ))
 		ucmd->msec = 0; // pause
 
 	svgame.globals->time = (sv.time * 0.001f);

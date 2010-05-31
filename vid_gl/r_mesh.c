@@ -44,7 +44,7 @@ static bool R_DrawPortalSurface( void );
 	( \
 	( out ).sortkey = ( in ).sortkey, \
 	( out ).infokey = ( in ).infokey, \
-	( out ).dlightbits = ( in ).dlightbits, \
+	( out ).modhandle = ( in ).modhandle, \
 	( out ).shaderkey = ( in ).shaderkey, \
 	( out ).shadowbits = ( in ).shadowbits \
 	)
@@ -55,8 +55,8 @@ static bool R_DrawPortalSurface( void );
 	( mb1 ).shaderkey < ( mb2 ).shaderkey ? false : \
 	( mb1 ).sortkey > ( mb2 ).sortkey ? true : \
 	( mb1 ).sortkey < ( mb2 ).sortkey ? false : \
-	( mb1 ).dlightbits > ( mb2 ).dlightbits ? true : \
-	( mb1 ).dlightbits < ( mb2 ).dlightbits ? false : \
+	( mb1 ).modhandle > ( mb2 ).modhandle ? true : \
+	( mb1 ).modhandle < ( mb2 ).modhandle ? false : \
 	( mb1 ).shadowbits > ( mb2 ).shadowbits \
 	)
 
@@ -375,7 +375,7 @@ meshbuffer_t *R_AddMeshToList( int type, mfog_t *fog, ref_shader_t *shader, int 
 	meshbuf->sortkey = MB_ENTITY2NUM( RI.currententity ) | MB_FOG2NUM( fog ) | type;
 	meshbuf->shaderkey = shader->sortkey;
 	meshbuf->infokey = infokey;
-	meshbuf->dlightbits = 0;
+	meshbuf->modhandle = 0;
 	meshbuf->shadowbits = r_entShadowBits[RI.currententity - r_entities];
 
 	return meshbuf;
@@ -445,6 +445,8 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 			}
 
 			surf = &r_worldbrushmodel->surfaces[mb->infokey-1];
+			R_UpdateSurfaceLightmap( surf );
+
 			nextSurf = NULL;
 
 			features = shader->features;
@@ -452,7 +454,6 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 				features |= MF_NORMALS;
 			if( ent->outlineHeight )
 				features |= (MF_NORMALS|MF_ENABLENORMALS);
-			features |= r_superLightStyles[surf->superLightStyle].features;
 
 			if( features & MF_NONBATCHED )
 			{
@@ -463,11 +464,14 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 				if( nextmb
 					&& ( nextmb->shaderkey == mb->shaderkey )
 					&& ( nextmb->sortkey == mb->sortkey )
-					&& ( nextmb->dlightbits == mb->dlightbits )
+					&& ( nextmb->modhandle == mb->modhandle )
 					&& ( nextmb->shadowbits == mb->shadowbits ) )
 				{
 					if( nextmb->infokey > 0 )
+					{
 						nextSurf = &r_worldbrushmodel->surfaces[nextmb->infokey-1];
+						R_UpdateSurfaceLightmap( surf );
+					}
 				}
 
 				nonMergable = nextSurf ? R_MeshOverflow2( surf->mesh, nextSurf->mesh ) : true;
@@ -677,6 +681,28 @@ void R_DrawMeshes( void )
 
 	if( RI.meshlist->num_translucent_meshes )
 	{
+		meshbuf = RI.meshlist->meshbuffer_translucent;
+		for( i = 0; i < RI.meshlist->num_translucent_meshes - 1; i++, meshbuf++ )
+		{
+			ref_entity_t	*ent;
+			msurface_t	*surf;
+			int		type = meshbuf->sortkey & 3;
+
+			MB_NUM2ENTITY( meshbuf->sortkey, ent );
+
+			if( type == MB_MODEL && ent && ent->model )
+			{
+				switch( ent->model->type )
+				{
+				case mod_world:
+				case mod_brush:
+					surf = &r_worldbrushmodel->surfaces[meshbuf->infokey-1];
+					R_UpdateSurfaceLightmap( surf );
+					break;
+				}
+			}
+		}
+
 		meshbuf = RI.meshlist->meshbuffer_translucent;
 		for( i = 0; i < RI.meshlist->num_translucent_meshes - 1; i++, meshbuf++ )
 			R_BatchMeshBuffer( meshbuf, meshbuf + 1 );

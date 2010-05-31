@@ -722,7 +722,7 @@ bool CM_StudioTraceBox( vec3_t start, vec3_t end )
 bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *tr )
 {
 	matrix4x4	m;
-	vec3_t	transformedStart, transformedEnd;
+	vec3_t	start_l, end_l;
 	int	i, outBone;
 
 	if( !CM_StudioSetup( e ) || !studio.hdr->numhitboxes )
@@ -732,6 +732,8 @@ bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *
 	}
 
 	Mem_Set( &studio.trace, 0, sizeof( trace_t ));
+	VectorCopy( end, studio.trace.vecEndPos );
+	studio.trace.fAllSolid = true;
 	studio.trace.flFraction = 1.0f;
 	studio.trace.iHitgroup = -1;
 	outBone = -1;
@@ -741,12 +743,12 @@ bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *
 		dstudiobbox_t	*phitbox = (dstudiobbox_t *)((byte*)studio.hdr + studio.hdr->hitboxindex) + i;
 
 		Matrix4x4_Invert_Simple( m, studio.bones[phitbox->bone] );
-		Matrix4x4_VectorTransform( m, start, transformedStart );
-		Matrix4x4_VectorTransform( m, end, transformedEnd );
+		Matrix4x4_VectorTransform( m, start, start_l );
+		Matrix4x4_VectorTransform( m, end, end_l );
 
 		CM_StudioBoxHullFromBounds( phitbox->bbmin, phitbox->bbmax );
 
-		if( CM_StudioTraceBox( transformedStart, transformedEnd ))
+		if( CM_StudioTraceBox( start_l, end_l ))
 		{
 			outBone = phitbox->bone;
 			studio.trace.iHitgroup = phitbox->group;
@@ -756,28 +758,31 @@ bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *
 			break;
 	}
 
+	if( studio.trace.flFraction > 0.0f )
+		studio.trace.fAllSolid = false;
+
 	// all hitboxes were swept, get trace result
 	if( outBone >= 0 )
 	{
-		if( tr )
+		tr->flFraction = studio.trace.flFraction;
+		tr->iHitgroup = studio.trace.iHitgroup;
+		tr->fAllSolid = studio.trace.fAllSolid;
+		tr->pHit = e;
+
+		Matrix4x4_VectorRotate( studio.bones[outBone], studio.trace.vecEndPos, tr->vecEndPos );
+		if( tr->flFraction == 1.0f )
 		{
-			tr->flFraction = studio.trace.flFraction;
-			tr->iHitgroup = studio.trace.iHitgroup;
-
-			Matrix4x4_VectorRotate( studio.bones[outBone], studio.trace.vecEndPos, tr->vecEndPos );
-			if( tr->flFraction == 1.0f )
-			{
-				VectorCopy( end, tr->vecEndPos );
-			}
-			else
-			{
-				dstudiobone_t *pbone = (dstudiobone_t *)((byte*)studio.hdr + studio.hdr->boneindex) + outBone;
-
-//				MsgDev( D_INFO, "Bone name %s\n", pbone->name ); // debug
-				VectorLerp( start, tr->flFraction, end, tr->vecEndPos );
-			}
-			tr->flPlaneDist = DotProduct( tr->vecEndPos, tr->vecPlaneNormal );
+			VectorCopy( end, tr->vecEndPos );
 		}
+		else
+		{
+			dstudiobone_t *pbone = (dstudiobone_t *)((byte*)studio.hdr + studio.hdr->boneindex) + outBone;
+
+//			MsgDev( D_INFO, "Bone name %s\n", pbone->name ); // debug
+			VectorLerp( start, tr->flFraction, end, tr->vecEndPos );
+		}
+		tr->flPlaneDist = DotProduct( tr->vecEndPos, tr->vecPlaneNormal );
+
 		return true;
 	}
 	return false;

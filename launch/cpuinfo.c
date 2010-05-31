@@ -302,57 +302,27 @@ void Sys_InitMathlib( cpuinfo_t *cpu )
 		result[(int)a] = Sys_Milliseconds() - start;
 		MsgDev( D_NOTE, "crt_sqrt %i ms\n", result[0] );
 
-		start = Sys_Milliseconds();
-		for( i = 1; i < 800000; i++ ) a = com_sqrt( i );
-		a *= 0.00000001;
-		result[(int)a+1] = Sys_Milliseconds() - start;
-		MsgDev( D_NOTE, "com_sqrt %i ms\n", result[1] );
-
-		if( cpu->m_b3DNow )
-		{
-			start = Sys_Milliseconds();
-			for( i = 0; i < 800000; i++ ) a = amd_sqrt( i );
-			a *= 0.00000001;
-			result[(int)a+2] = Sys_Milliseconds() - start;
-			MsgDev( D_NOTE, "amd_sqrt %i ms\n", result[2] );
-		}
-		else
-		{
-			result[2] = 0x7fffffff;
-			MsgDev( D_NOTE, "amd_sqrt not supported\n" );
-		}
-
 		if( cpu->m_bSSE )
 		{
 			start = Sys_Milliseconds();
 			for( i = 0; i < 800000; i++ ) a = sse_sqrt( i );
 			a *= 0.00000001;
-			result[(int)a+3] = Sys_Milliseconds() - start;
-			MsgDev( D_NOTE, "sse_sqrt %i ms\n", result[3] );
+			result[(int)a+1] = Sys_Milliseconds() - start;
+			MsgDev( D_NOTE, "sse_sqrt %i ms\n", result[1] );
 		}
 		else
 		{
-			result[3] = 0x7fffffff;
+			result[1] = 0x7fffffff;
 			MsgDev( D_NOTE, "sse_sqrt not supported\n" );
 		}
 
-		min = min( result[0], min( result[1], min( result[2], result[3] )));
+		min = min( result[0], result[1] );
 		if( min == result[0] )
 		{
 			MsgDev( D_NOTE, "Sys_InitMathlib: using crt_sqrt\n");
 			com.sqrt = sqrtf;
 		}
 		else if( min == result[1] )
-		{
-			MsgDev( D_NOTE, "Sys_InitMathlib: using com_sqrt\n");
-			com.sqrt = com_sqrt;
-		}
-		else if( min == result[2] )
-		{
-			MsgDev( D_NOTE, "Sys_InitMathlib: using amd_sqrt\n");
-			com.sqrt = amd_sqrt;
-		}
-		else if( min == result[3] )
 		{
 			MsgDev( D_NOTE, "Sys_InitMathlib: using sse_sqrt\n");
 			com.sqrt = sse_sqrt;
@@ -526,8 +496,5 @@ void Sys_InitCPU( void )
 	}
 	MsgDev(D_NOTE, "CPU Features: %s\n", szFeatureString );
 
-	Com_BuildSqrtTable();
-	Com_BuildSinCosTable();
 	Sys_InitMathlib( &cpu );
 }
-

@@ -52,8 +52,9 @@ void SV_CopyTraceToGlobal( trace_t *trace )
 
 void SV_SetModel( edict_t *ent, const char *name )
 {
+	vec3_t	mins = { 0.0f, 0.0f, 0.0f };
+	vec3_t	maxs = { 0.0f, 0.0f, 0.0f };
 	int	i;
-	vec3_t	mins, maxs;
 
 	i = SV_ModelIndex( name );
 	if( i == 0 ) return;
@@ -63,11 +64,9 @@ void SV_SetModel( edict_t *ent, const char *name )
 
 	// set sizes only for brush models
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
-	{
 		Mod_GetBounds( ent->v.modelindex, mins, maxs );
-		SV_SetMinMaxSize( ent, mins, maxs );
-	}
-	else SV_LinkEdict( ent, false );
+
+	SV_SetMinMaxSize( ent, mins, maxs );
 }
 
 float SV_AngleMod( float ideal, float current, float speed )
@@ -184,8 +183,16 @@ void SV_WriteEntityPatch( const char *filename )
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-		lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+		if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+		{
+			lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
+			lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+		}
+		else
+		{
+			lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+			lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+		}
 		break;
 	default:
 		FS_Close( f );
@@ -228,8 +235,16 @@ script_t *SV_GetEntityScript( const char *filename )
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-		lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+		if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+		{
+			lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
+			lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+		}
+		else
+		{
+			lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
+			lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+		}
 		break;
 	default:
 		FS_Close( f );
@@ -1515,7 +1530,7 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceLine: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 	result = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
+	if( ptr ) *ptr = result;
 }
 
 /*
@@ -1535,7 +1550,7 @@ static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr
 	}
 
 	result = SV_MoveToss( pent, pentToIgnore );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
+	if( ptr ) *ptr = result;
 }
 
 /*
@@ -1634,7 +1649,7 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
+	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, FMOVE_SIMPLEBOX );
 	return CM_TraceTexture( v1, result );
 }
 

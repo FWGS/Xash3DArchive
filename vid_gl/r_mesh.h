@@ -71,7 +71,6 @@ typedef struct
 	union
 	{
 		int	lastPoly;
-		uint	dlightbits;
 		uint	modhandle;
 	};
 	uint		shadowbits;

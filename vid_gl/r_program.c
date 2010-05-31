@@ -1033,8 +1033,8 @@ void R_ProgramDump_f( void )
 R_UpdateProgramUniforms
 ================
 */
-void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir, vec4_t ambient, vec4_t diffuse,
-	superLightStyle_t *superLightStyle, bool frontPlane, int TexWidth, int TexHeight, float projDistance, float offsetmappingScale )
+void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir, vec4_t ambient,
+	vec4_t diffuse, bool frontPlane, int TexWidth, int TexHeight, float projDistance, float offsetmappingScale )
 {
 	glsl_program_t *program = r_glslprograms + elem - 1;
 
@@ -1075,6 +1075,8 @@ void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, ve
 	if( program->locProjDistance >= 0 )
 		pglUniform1fARB( program->locProjDistance, projDistance );
 
+#if 0
+	// FIXME: rewrite this code for new lightmaps implementation
 	if( superLightStyle )
 	{
 		int	i;
@@ -1095,6 +1097,7 @@ void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, ve
 				pglUniform3fARB( program->loclsColor[i], 0, 0, 0 );
 		}
 	}
+#endif
 }
 
 /*

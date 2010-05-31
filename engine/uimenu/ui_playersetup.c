@@ -397,7 +397,7 @@ static void UI_PlayerSetup_Init( void )
 
 	uiPlayerSetup.ent = CL_GetEdictByIndex( MAX_EDICTS - 1 );
 
-	if( !uiPlayerSetup.ent )
+	if( !CL_IsValidEdict( uiPlayerSetup.ent ))
 	{
 		MsgDev( D_ERROR, "Unable to find player model edict\n" );
 		return;

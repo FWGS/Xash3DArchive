@@ -655,7 +655,7 @@ void CTempEnts::FizzEffect( edict_t *pent, int modelIndex, int density )
 	speed = ((int)pent->v.rendercolor.y<<8|(int)pent->v.rendercolor.x);
 	if( pent->v.rendercolor.z ) speed = -speed;
 
-	ALERT( at_console, "speed %g\n", speed );
+	ALERT( at_console, "FizzEffect: speed %g\n", speed );
 
 	angle = pent->v.angles[YAW] * M_PI / 180;
 	yspeed = sin( angle );

@@ -15,6 +15,51 @@ meshbuffer_t	pic_mbuffer;
 
 /*
 ===============
+R_Set2DMode
+===============
+*/
+void R_Set2DMode( bool enable )
+{
+	if( enable )
+	{
+		if( glState.in2DMode )
+			return;
+
+		// set 2D virtual screen size
+		pglScissor( 0, 0, glState.width, glState.height );
+		pglViewport( 0, 0, glState.width, glState.height );
+		pglMatrixMode( GL_PROJECTION );
+		pglLoadIdentity();
+		pglOrtho( 0, glState.width, glState.height, 0, -99999, 99999 );
+		pglMatrixMode( GL_MODELVIEW );
+		pglLoadIdentity();
+
+		GL_Cull( 0 );
+		GL_SetState( GLSTATE_NO_DEPTH_TEST );
+
+		pglColor4f( 1, 1, 1, 1 );
+
+		glState.in2DMode = true;
+		RI.currententity = RI.previousentity = NULL;
+		RI.currentmodel = NULL;
+
+		pic_mbuffer.infokey = -1;
+		pic_mbuffer.shaderkey = 0;
+	}
+	else
+	{
+		if( pic_mbuffer.infokey != -1 )
+		{
+			R_RenderMeshBuffer( &pic_mbuffer );
+			pic_mbuffer.infokey = -1;
+		}
+
+		glState.in2DMode = false;
+	}
+}
+
+/*
+===============
 R_DrawSetColor
 ===============
 */

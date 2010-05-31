@@ -3312,6 +3312,19 @@ static rgbdata_t *R_InitNoTexture( int *flags, int *samples )
 	*samples = 3;
 
 	// default texture
+#if 1
+	// emo-texture from quake1
+	for( y = 0; y < 16; y++ )
+	{
+		for( x = 0; x < 16; x++ )
+		{
+			if(( y < 8 ) ^ ( x < 8 ))
+				((uint *)&data2D)[y*16+x] = LittleLong( 0xFFFF00FF );
+			else ((uint *)&data2D)[y*16+x] = LittleLong( 0xFF000000 );
+		}
+	}
+#else
+	// notexture from quake3
 	for( y = 0; y < 16; y++ )
 	{
 		for( x = 0; x < 16; x++ )
@@ -3321,6 +3334,7 @@ static rgbdata_t *R_InitNoTexture( int *flags, int *samples )
 			else ((uint *)&data2D)[y*16+x] = LittleLong( 0xFF000000 );
 		}
 	}
+#endif
 	return &r_image;
 }
 
