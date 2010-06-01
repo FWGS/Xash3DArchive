@@ -890,7 +890,9 @@ bool R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 	s = w * h * d;
 
 	// apply texture type (R_ShowTextures uses it)
-	if( image_desc.format == PF_RGBA_GN )
+	if( image_desc.tflags & TF_LIGHTMAP )
+		image_desc.texType = TEX_LIGHTMAP;
+	else if( image_desc.format == PF_RGBA_GN )
 		image_desc.texType = TEX_SYSTEM;
 	else if( image_desc.tflags & (TF_NOPICMIP|TF_NOMIPMAP))
 		image_desc.texType = TEX_NOMIP;
@@ -3345,86 +3347,22 @@ R_InitDynamicLightTexture
 */
 static rgbdata_t *R_InitDynamicLightTexture( int *flags, int *samples )
 {
-	vec3_t	v = { 0, 0, 0 };
-	int	x, y, z, size, size2, halfsize;
-	float	intensity;
-
-	// dynamic light texture
-	if( GL_Support( R_TEXTURE_3D_EXT ))
-	{
-		r_image.depth = size = 32;
-	}
-	else
-	{
-		size = 128;
-		r_image.depth = 1;
-	}
-
-	r_image.width = r_image.height = size;
+	// NOTE: lightmap texture sizes must be smaller or equal data2D array size
+	// to avoid out of range
+	r_image.width = LIGHTMAP_TEXTURE_WIDTH;
+	r_image.height = LIGHTMAP_TEXTURE_HEIGHT;
 	r_image.numMips =  1;
 	r_image.buffer = data2D;
-	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.flags = IMAGE_HAS_COLOR;	// because we want colored dlights, right ?
 	r_image.type = PF_RGBA_GN;
-	r_image.size = r_image.width * r_image.height * r_image.depth * 4;
+	r_image.size = r_image.width * r_image.height * 4;
 
-	halfsize = size / 2;
-	intensity = halfsize * halfsize;
-	size2 = size * size;
+	*flags = TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP|TF_UNCOMPRESSED|TF_LIGHTMAP;
+	*samples = 4;
 
-	*flags = TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP|TF_UNCOMPRESSED;
-	*samples = 3;
+	// make white texture
+	Mem_Set( r_image.buffer, 0xff, r_image.size );
 
-	if( GL_Support( R_TEXTURE_3D_EXT ))
-	{		
-		for( x = 0; x < r_image.width; x++ )
-		{
-			for( y = 0; y < r_image.height; y++ )
-			{
-				for( z = 0; z < r_image.depth; z++ )
-				{
-					float	dist, att;
-
-					v[0] = (float)x - halfsize;
-					v[1] = (float)y - halfsize;
-					v[2] = (float)z - halfsize;
-
-					dist = VectorLength( v );
-					if( dist > halfsize ) dist = halfsize;
-
-					if( x == 0 || y == 0 || z == 0 || x == size - 1 || y == size - 1 || z == size - 1 )
-						att = 0;
-					else att = (((dist * dist) / intensity) -1 ) * -255;
-
-					data2D[(x * size2 + y * size + z) * 4 + 0] = (byte)(att);
-					data2D[(x * size2 + y * size + z) * 4 + 1] = (byte)(att);
-					data2D[(x * size2 + y * size + z) * 4 + 2] = (byte)(att);
-				}
-			}
-		}
-	}
-	else
-	{
-		for( x = 0; x < size; x++ )
-		{
-			for( y = 0; y < size; y++ )
-			{
-				float	result;
-
-				if( x == size - 1 || x == 0 || y == size - 1 || y == 0 )
-					result = 255;
-				else
-				{
-					float	xf = ((float)x - 64 ) / 64.0f;
-					float	yf = ((float)y - 64 ) / 64.0f;
-					result = ((xf * xf) + (yf * yf)) * 255;
-					if( result > 255 ) result = 255;
-				}
-				data2D[(x*size+y)*4+0] = (byte)255 - result;
-				data2D[(x*size+y)*4+1] = (byte)255 - result;
-				data2D[(x*size+y)*4+2] = (byte)255 - result;
-			}
-		}
-	}
 	return &r_image;
 }
 
@@ -3864,8 +3802,17 @@ void R_ShowTextures( void )
 	pglClear( GL_COLOR_BUFFER_BIT );
 	pglFinish();
 
-	base_w = 16;
-	base_h = 12;
+	if( r_showtextures->integer == TEX_LIGHTMAP )
+	{
+		// draw lightmaps as big images
+		base_w = 5;
+		base_h = 4;
+	}
+	else
+	{
+		base_w = 16;
+		base_h = 12;
+	}
 
 	for( i = j = 0, image = r_textures; i < r_numTextures; i++, image++ )
 	{

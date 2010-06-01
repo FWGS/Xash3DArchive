@@ -45,8 +45,7 @@ void R_RecursiveLightNode( dlight_t *light, int bit, mnode_t *node )
 	cplane_t		*splitplane;
 	int		i, sidebit;
 
-	if( node->contents != CONTENTS_NODE )
-		return;
+	if( !node->plane ) return;
 
 	splitplane = node->plane;
 	if( splitplane->type < 3 ) dist = light->origin[splitplane->type] - splitplane->dist;
@@ -506,7 +505,7 @@ void R_LightForEntity( ref_entity_t *e, byte *bArray )
 
 =======================================================================
 */
-static vec3_t	r_blockLights[128*128];
+static vec3_t	r_blockLights[LIGHTMAP_TEXTURE_WIDTH*LIGHTMAP_TEXTURE_HEIGHT];
 
 /*
 =================
@@ -538,6 +537,9 @@ static void R_AddDynamicLights( msurface_t *surf )
 	dlight_t		*dl;
 	float		*bl;
 
+	// invalid entity ?
+	if( !e ) return;
+
 	for (l = 0, dl = r_dlights; l < r_numDlights; l++, dl++ )
 	{
 		if( !( surf->dlightBits & ( 1<<l )))
@@ -567,17 +569,17 @@ static void R_AddDynamicLights( msurface_t *surf )
 		}
 		else VectorMA( origin, -dist, plane->normal, impact );
 
-		sl = DotProduct(impact, tex->vecs[0]) + tex->vecs[0][3] - surf->textureMins[0];
-		tl = DotProduct(impact, tex->vecs[1]) + tex->vecs[1][3] - surf->textureMins[1];
+		sl = DotProduct( impact, tex->vecs[0] ) + tex->vecs[0][3] - surf->textureMins[0];
+		tl = DotProduct( impact, tex->vecs[1] ) + tex->vecs[1][3] - surf->textureMins[1];
 
 		bl = (float *)r_blockLights;
 
-		for( t = 0, tacc = 0; t < surf->lmHeight; t++, tacc += 16 )
+		for( t = 0, tacc = 0; t < surf->lmHeight; t++, tacc += LM_SAMPLE_SIZE )
 		{
 			td = tl - tacc;
 			if( td < 0 ) td = -td;
 
-			for( s = 0, sacc = 0; s < surf->lmWidth; s++, sacc += 16 )
+			for( s = 0, sacc = 0; s < surf->lmWidth; s++, sacc += LM_SAMPLE_SIZE )
 			{
 				sd = sl - sacc;
 				if( sd < 0 ) sd = -sd;
@@ -704,6 +706,94 @@ static void R_BuildLightmap( msurface_t *surf, byte *dest, int stride )
 /*
 =======================================================================
 
+ LIGHTSTYLE HANDLING
+
+=======================================================================
+*/
+/*
+=======================
+R_AddSuperLightStyle
+=======================
+*/
+int R_AddSuperLightStyle( const int lightmapNum, const byte *lightmapStyles )
+{
+	int		i, j;
+	ref_style_t	*sls;
+
+	for( i = 0, sls = tr.superLightStyles; i < tr.numSuperLightStyles; i++, sls++ )
+	{
+		if( sls->lightmapNum != lightmapNum )
+			continue;
+
+		for( j = 0; j < LM_STYLES; j++ )
+		{
+			if( sls->lightmapStyles[j] != lightmapStyles[j] )
+				break;
+		}
+		if( j == LM_STYLES )
+			return i;
+	}
+
+	if( tr.numSuperLightStyles == MAX_SUPER_STYLES )
+		Host_Error( "R_AddSuperLightStyle: MAX_SUPERSTYLES limit exceeded\n" );
+
+	// create new style
+	sls->features = 0;
+	sls->lightmapNum = lightmapNum;
+
+	for( j = 0; j < LM_STYLES; j++ )
+	{
+		sls->lightmapStyles[j] = lightmapStyles[j];
+
+		if( j )
+		{
+			if( lightmapStyles[j] != 255 )
+				sls->features |= ( MF_LMCOORDS << j );
+		}
+	}
+	return tr.numSuperLightStyles++;
+}
+
+/*
+=======================
+R_SuperLightStylesCmp
+
+Compare function for qsort
+=======================
+*/
+static int R_SuperLightStylesCmp( ref_style_t *sls1, ref_style_t *sls2 )
+{
+	int	i;
+
+	if( sls2->lightmapNum > sls1->lightmapNum )
+		return 1;
+	else if( sls1->lightmapNum > sls2->lightmapNum )
+			return -1;
+
+	for( i = 0; i < LM_STYLES; i++ )
+	{	
+		// compare lightmap styles
+		if( sls2->lightmapStyles[i] > sls1->lightmapStyles[i] )
+			return 1;
+		else if( sls1->lightmapStyles[i] > sls2->lightmapStyles[i] )
+			return -1;
+	}
+	return 0; // equal
+}
+
+/*
+=======================
+R_SortSuperLightStyles
+=======================
+*/
+void R_SortSuperLightStyles( void )
+{
+	qsort( tr.superLightStyles, tr.numSuperLightStyles, sizeof( ref_style_t ), ( int ( * )( const void *, const void * ))R_SuperLightStylesCmp );
+}
+
+/*
+=======================================================================
+
  LIGHTMAP ALLOCATION
 
 =======================================================================
@@ -729,7 +819,7 @@ static void R_UploadLightmap( void )
 	rgbdata_t	r_image;
 	texture_t *image;	
 
-	if( r_lmState.currentNum == MAX_LIGHTMAPS )
+	if( r_lmState.currentNum == MAX_LIGHTMAPS - 1 )
 		Host_Error( "R_UploadLightmap: MAX_LIGHTMAPS limit exceeded\n" );
 
 	com.snprintf( lmName, sizeof( lmName ), "*lightmap%i", r_lmState.currentNum );
@@ -738,13 +828,13 @@ static void R_UploadLightmap( void )
 
 	r_image.width = LIGHTMAP_TEXTURE_WIDTH;
 	r_image.height = LIGHTMAP_TEXTURE_HEIGHT;
-	r_image.type = PF_RGBA_32;
+	r_image.type = PF_RGBA_GN;
 	r_image.size = r_image.width * r_image.height * 4;
 	r_image.depth = r_image.numMips = 1;
 	r_image.flags = IMAGE_HAS_COLOR;	// FIXME: detecting grayscale lightmaps for quake1
 	r_image.buffer = r_lmState.buffer;
 
-	image = R_LoadTexture( lmName, &r_image, 0, TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP|TF_NOMIPMAP );
+	image = R_LoadTexture( lmName, &r_image, 4, TF_LIGHTMAP|TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP|TF_NOMIPMAP );
 	tr.lightmapTextures[r_lmState.currentNum++] = image;
 	r_lmState.glFormat = image->format;
 
@@ -816,8 +906,8 @@ void R_BeginBuildingLightmaps( void )
 	// release old lightmaps
 	for( i = 0; i < r_lmState.currentNum; i++ )
 	{
-		if(!tr.lightmapTextures[i] ) continue;
-		R_FreeImage( tr.lightmapTextures[i] );
+		if( tr.lightmapTextures[i] && tr.lightmapTextures[i] != tr.dlightTexture )
+			R_FreeImage( tr.lightmapTextures[i] );
 	}
 
 	r_lmState.currentNum = -1;
@@ -825,6 +915,7 @@ void R_BeginBuildingLightmaps( void )
 	Mem_Set( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	Mem_Set( r_lmState.allocated, 0, sizeof( r_lmState.allocated ));
 	Mem_Set( r_lmState.buffer, 255, sizeof( r_lmState.buffer ));
+	tr.lightmapTextures[DLIGHT_TEXTURE] = tr.dlightTexture;
 }
 
 /*
@@ -927,8 +1018,8 @@ update_lightmap:
 	}
 	else
 	{
-		GL_Bind( 0, tr.lightmapTextures[0] );
-		surf->lightmapTexnum = 0;
+		GL_Bind( 0, tr.dlightTexture );
+		surf->lightmapTexnum = DLIGHT_TEXTURE;
 	}
 
 	pglTexSubImage2D( GL_TEXTURE_2D, 0, surf->lmS, surf->lmT, surf->lmWidth, surf->lmHeight,

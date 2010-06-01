@@ -315,6 +315,12 @@ void R_AddBrushModelToList( ref_entity_t *e )
 
 		psurf->visframe = r_framecount;
 		mb = R_AddSurfaceToList( psurf, 0 );
+		if( mb )
+		{
+			mb->sortkey |= (( psurf->superLightStyle+1 ) << 10 );
+			if( R_SurfPotentiallyLit( psurf ))
+				mb->dlightbits = psurf->dlightBits;
+		}
 	}
 }
 
@@ -390,11 +396,15 @@ static void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 		{
 			surf->visframe = r_framecount;
 			mb = R_AddSurfaceToList( surf, clipflags );
+			if( mb ) mb->sortkey |= (( surf->superLightStyle+1 ) << 10 );
 		}
 		else
 		{
 			mb = RI.surfmbuffers[surf - r_worldbrushmodel->surfaces];
 		}
+
+		if( mb && R_SurfPotentiallyLit( surf ))
+			mb->dlightbits = surf->dlightBits;
 	}
 
 	c_world_leafs++;
@@ -607,8 +617,8 @@ void R_DrawWorld( void )
 	}
 	else
 	{
-		R_MarkLights( clipflags );
 		R_RecursiveWorldNode( r_worldbrushmodel->nodes, clipflags );
+		R_MarkLights( clipflags );
 	}
 
 	if( r_speeds->integer )

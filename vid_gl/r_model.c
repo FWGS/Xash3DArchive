@@ -1054,6 +1054,9 @@ static ref_shader_t *Mod_LoadMiptex( char *shadername, mip_t *mt )
 	if( !com.strncmp( mt->name, "scroll", 6 ))
 		R_ShaderSetMiptexFlags( MIPTEX_CONVEYOR );
 
+	if( !com.strncmp( mt->name, "black", 5 ))
+		R_ShaderSetMiptexFlags( MIPTEX_NOLIGHTMAP );
+
 	if( mt->offsets[0] > 0 )
 	{
 		// NOTE: imagelib detect miptex version by size
@@ -1351,7 +1354,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			else out->samples = loadbmodel->lightdata + (lightofs * 3);
 		}
 
-		while( out->numstyles < MAX_LIGHTSTYLES && in->styles[out->numstyles] != 255 )
+		while( out->numstyles < LM_STYLES && in->styles[out->numstyles] != 255 )
 		{
 			out->styles[out->numstyles] = in->styles[out->numstyles];
 			out->numstyles++;
@@ -1368,6 +1371,9 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		// create polygons
 		Mod_BuildSurfacePolygons( out );
+
+		// create unique lightstyle for right sorting surfaces
+		out->superLightStyle = R_AddSuperLightStyle( out->lmNum, out->styles );
 	}
 	R_EndBuildingLightmaps();
 }
@@ -1745,6 +1751,8 @@ static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t gridS
 	for( i = 0; i < 3; i++ )
 		mapConfig.outlineColor[i] = (byte)(bound( 0, outline[i]*255.0f, 255 ));
 	mapConfig.outlineColor[3] = 255;
+
+	R_SortSuperLightStyles();
 
 	Mem_EmptyPool( cached_mempool );
 }

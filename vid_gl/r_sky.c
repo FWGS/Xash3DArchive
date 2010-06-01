@@ -208,7 +208,7 @@ static void R_DrawSkySide( skydome_t *skydome, int side, ref_shader_t *shader, i
 		return;
 
 	mbuffer->shaderkey = shader->sortkey;
-	mbuffer->modhandle = 0;
+	mbuffer->dlightbits = 0;
 	mbuffer->sortkey = MB_FOG2NUM( r_skyfog );
 
 	skydome->meshes[side].stCoordArray = skydome->linearStCoords[side];
@@ -359,7 +359,7 @@ void R_DrawSky( ref_shader_t *shader )
 
 			flush = true;
 			mbuffer->shaderkey = shader->sortkey;
-			mbuffer->modhandle = 0;
+			mbuffer->dlightbits = 0;
 			mbuffer->sortkey = MB_FOG2NUM( r_skyfog );
 
 			skydome->meshes[i].stCoordArray = skydome->sphereStCoords[i];

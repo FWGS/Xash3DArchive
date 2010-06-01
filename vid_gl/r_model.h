@@ -63,7 +63,7 @@ typedef struct
 #define MIPTEX_LIQUID	BIT( 1 )		// is a liquid
 #define MIPTEX_TRANSPARENT	BIT( 2 )		// transparent texture
 #define MIPTEX_RENDERMODE	BIT( 3 )		// this surface requires a rendermode stuff
-
+#define MIPTEX_NOLIGHTMAP	BIT( 4 )		// this surface if fullbright
 
 #define SURF_PLANEBACK	BIT( 0 )
 #define SURF_DRAWSKY	BIT( 1 )		// sky surface
@@ -124,6 +124,8 @@ typedef struct
 	int		numstyles;
 	byte		styles[LM_STYLES];
 	float		cached[LM_STYLES];	// values currently used in lightmap
+
+	int		superLightStyle;
 
 	int		fragmentframe;	// for multi-check avoidance
 } msurface_t;

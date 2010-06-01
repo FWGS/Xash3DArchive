@@ -375,7 +375,7 @@ meshbuffer_t *R_AddMeshToList( int type, mfog_t *fog, ref_shader_t *shader, int 
 	meshbuf->sortkey = MB_ENTITY2NUM( RI.currententity ) | MB_FOG2NUM( fog ) | type;
 	meshbuf->shaderkey = shader->sortkey;
 	meshbuf->infokey = infokey;
-	meshbuf->modhandle = 0;
+	meshbuf->dlightbits = 0;
 	meshbuf->shadowbits = r_entShadowBits[RI.currententity - r_entities];
 
 	return meshbuf;
@@ -464,8 +464,8 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 				if( nextmb
 					&& ( nextmb->shaderkey == mb->shaderkey )
 					&& ( nextmb->sortkey == mb->sortkey )
-					&& ( nextmb->modhandle == mb->modhandle )
-					&& ( nextmb->shadowbits == mb->shadowbits ) )
+					&& ( nextmb->dlightbits == mb->dlightbits )
+					&& ( nextmb->shadowbits == mb->shadowbits ))
 				{
 					if( nextmb->infokey > 0 )
 					{

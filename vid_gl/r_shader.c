@@ -3759,12 +3759,14 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		else
 		{
 			int	size; 
+			bool	hasLightmap = ( r_miptexFeatures & MIPTEX_NOLIGHTMAP ) ? false : true;
 
 			shader->type = SHADER_TEXTURE;
-			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_RENDERMODE|SHADER_HASLIGHTMAP;
+			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_RENDERMODE;
+			if( hasLightmap ) shader->flags |= SHADER_HASLIGHTMAP;
 			shader->features = MF_STCOORDS|MF_LMCOORDS;
 			shader->sort = SORT_OPAQUE;
-			shader->num_stages = 2;
+			shader->num_stages = ( hasLightmap ) ? 2 : 1;
 			size = length + 1 + sizeof( ref_stage_t ) * shader->num_stages;
 			if( r_miptexFeatures & MIPTEX_CONVEYOR ) size += sizeof( tcMod_t );
 
@@ -3777,7 +3779,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			pass->tcgen = TCGEN_BASE;
 			if( r_numStageTextures > 0 ) pass->textures[0] = r_stageTexture[0];
 			else pass->textures[0] = Shader_FindImage( shader, shortname, addFlags );
-			pass->rgbGen.type = RGBGEN_IDENTITY;
+			pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;
 			pass->alphaGen.type = ALPHAGEN_IDENTITY;
 
 			if( r_miptexFeatures & MIPTEX_CONVEYOR )
@@ -3788,9 +3790,10 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			}
 
 			pass->num_textures++;
+			if( !hasLightmap ) break;
 			pass = &shader->stages[1];
 			pass->flags = SHADERSTAGE_LIGHTMAP|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
-			pass->glState = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_ZERO;
+			pass->glState = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_ZERO|GLSTATE_DEPTHFUNC_EQ;
 			pass->tcgen = TCGEN_LIGHTMAP;
 			pass->rgbGen.type = RGBGEN_IDENTITY;
 			pass->alphaGen.type = ALPHAGEN_IDENTITY;

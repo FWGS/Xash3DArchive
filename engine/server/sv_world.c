@@ -351,10 +351,10 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 			continue;	// points never interact
 
 		// monsterclip filter
-		if( touch->v.flags & FL_MONSTERCLIP )
+		if( CM_GetModelType( touch->v.modelindex ) == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
 		{
-			if( clip->passedict && !( clip->passedict->v.flags & FL_MONSTERCLIP ))
-				continue;
+			if( clip->passedict && clip->passedict->v.flags & FL_MONSTERCLIP );
+			else continue;
 		}
 
 		// custom user filter

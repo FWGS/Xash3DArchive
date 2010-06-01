@@ -1864,7 +1864,7 @@ void R_AddLightStyleToScene( int style, float r, float g, float b )
 {
 	lightstyle_t *ls;
 
-	if( !r_worldmodel || !r_worldbrushmodel->lightgrid || !r_worldbrushmodel->numlightgridelems )
+	if( !r_worldmodel || !r_worldbrushmodel->lightdata )
 		return;	// don't apply lightstyles when no lighting info
 
 	if( style < 0 || style >= MAX_LIGHTSTYLES )

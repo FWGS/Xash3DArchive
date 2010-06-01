@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __R_BACKEND_H__
 
 #define MAX_LIGHTMAPS		128
+#define MAX_SUPER_STYLES		1024	// unique lightstyle combiantions
 #define MAX_TEXTURES		4096
 #define MAX_ARRAY_VERTS		4096
 #define MAX_ARRAY_ELEMENTS		MAX_ARRAY_VERTS * 6
@@ -69,6 +70,14 @@ typedef struct vbo_buffer_s
 
 typedef struct
 {
+	int		features;
+	int		lightmapNum;
+	float		stOffset[2];
+	int		lightmapStyles[LM_STYLES];
+} ref_style_t;
+
+typedef struct
+{
 	uint		numVerts;
 	uint		numElems;
 	uint		numColors;
@@ -95,6 +104,10 @@ typedef struct
 
 	// OpenGL matrix states
 	bool		modelviewIdentity;
+
+	// super lightstyles
+	ref_style_t	superLightStyles[MAX_SUPER_STYLES];
+	int		numSuperLightStyles;
 
 	// builtin textures
 	texture_t		*cinTexture;      	// cinematic texture
@@ -423,14 +436,6 @@ typedef struct
 	bool		checkFlush;
 	bool		hasNormals;
 } tristate_t;
-
-typedef struct
-{
-	int	features;
-	int	lightmapNum;
-	float	stOffset[2];
-	int	lightmapStyles[LM_STYLES];
-} lmstate_t;
 
 extern glconfig_t	glConfig;
 extern glstate_t	glState;

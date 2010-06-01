@@ -47,4 +47,5 @@ Xash 0.72 Stable 13.12.10
 23.fix pas-building issues			OK
 24.remove all unused stuff in engine
 25.regrouping resources in baserc
-26.implement lighting in render
+26.implement lighting in render		OK
+27.implement dlights

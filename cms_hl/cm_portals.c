@@ -183,7 +183,6 @@ byte *CM_LeafPVS( int leafnum )
 		return cm.nullrow;
 
 	return worldmodel->leafs[leafnum+1].visdata;
-//	return cm.pvs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
 }
 
 /*
@@ -197,7 +196,6 @@ byte *CM_LeafPHS( int leafnum )
 		return cm.nullrow;
 
 	return worldmodel->leafs[leafnum+1].pasdata;
-//	return cm.phs + leafnum * sizeof( int ) * ((worldmodel->numleafs + 31)>>5);
 }
 
 /*
@@ -263,6 +261,8 @@ so we can't use a single PVS point
 */
 byte *CM_FatPVS( const vec3_t org, bool portal )
 {
+	if( !cm.pvs ) return cm.nullrow;
+
 	bitvector = fatpvs;
 	fatbytes = (worldmodel->numleafs+31)>>3;
 	if( !portal ) Mem_Set( bitvector, 0, fatbytes );
@@ -281,35 +281,12 @@ so we can't use a single PHS point
 */
 byte *CM_FatPHS( const vec3_t org, bool portal )
 {
-#if 1
+	if( !cm.pvs ) return cm.nullrow;
+
 	bitvector = fatphs;
 	fatbytes = (worldmodel->numleafs+31)>>3;
 	if( !portal ) Mem_Set( bitvector, 0, fatbytes );
 	CM_AddToFatPVS( org, DVIS_PHS, worldmodel->nodes );
 
 	return bitvector;
-#else
-	int	longs, leafnum;
-
-	longs = (worldmodel->numleafs + 31)>>5;
-	leafnum = CM_PointLeafnum( org );
-
-	if( !portal )
-	{
-		Mem_Copy( fatphs, CM_LeafPHS( leafnum ), longs << 2 );
-	}
-	else
-	{
-		byte	*src;
-		int	i;
-
-		// or in all the other leaf bits
-		src = CM_LeafPHS( leafnum );
-
-		for( i = 0; i < longs; i++ )
-			((int *)fatphs)[i] |= ((int *)src)[i];
-	}
-
-	return fatphs;
-#endif
 }

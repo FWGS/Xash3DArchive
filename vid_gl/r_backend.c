@@ -77,7 +77,7 @@ static vec4_t	colorMagenta = { 1.0f, 0.0f, 1.0f, 1.0f };
 static bool	r_arraysLocked;
 static bool	r_normalsEnabled;
 static bool	r_triangleOutlines;
-static lmstate_t	r_currentLightStyle;
+static ref_style_t	r_currentLightStyle;
 
 static const meshbuffer_t *r_currentMeshBuffer;
 static uint r_currentShadowBits;
@@ -1427,7 +1427,7 @@ static void R_ShaderpassRenderMode( ref_stage_t *pass )
 			pass->alphaGen.type = ALPHAGEN_VERTEX;
 			break;
 		case mod_brush:
-			pass->flags = SHADERSTAGE_BLEND_ADD;
+			pass->flags = SHADERSTAGE_BLEND_MODULATE;
 			pass->glState = (GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE);
 			pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;
 			pass->alphaGen.type = ALPHAGEN_ENTITY;
@@ -2067,7 +2067,7 @@ static void R_RenderMeshGLSL_Material( void )
 	vec3_t		lightDir = { 0.0f, 0.0f, 0.0f };
 	vec4_t		ambient = { 0.0f, 0.0f, 0.0f, 0.0f }, diffuse = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float		offsetmappingScale;
-	lmstate_t		*lightStyle;
+	ref_style_t	*lightStyle;
 	ref_stage_t	*pass = r_accumPasses[0];
 
 	// handy pointers
@@ -2610,15 +2610,42 @@ void R_SetupLightmapMode( void )
 
 /*
 ================
+R_NeedLightmapPass
+================
+*/
+bool R_NeedLightmapPass( msurface_t *surf )
+{
+	// no valid lightmaps
+	if( r_currentLightStyle.lightmapNum < 0 || r_currentLightStyle.lightmapStyles[0] == 255 )
+		return false;
+
+	if( !( r_currentShader->flags & SHADER_HASLIGHTMAP ))
+		return false;
+
+	if( r_currentShader->flags & SHADER_RENDERMODE )
+	{
+		switch( tr.iRenderMode )
+		{
+		case kRenderGlow:
+		case kRenderTransAdd:
+		case kRenderTransTexture:
+			return false; // no lightmaps in 'add' mode
+		}
+	}
+	return true;
+}
+
+/*
+================
 R_RenderMeshBuffer
 ================
 */
 void R_RenderMeshBuffer( const meshbuffer_t *mb )
 {
-	int i;
-	msurface_t *surf;
-	ref_stage_t *pass;
-	mfog_t *fog;
+	msurface_t	*surf;
+	ref_stage_t	*pass;
+	mfog_t		*fog;
+	int		i;
 
 	if( !r_backacc.numVerts || !r_backacc.numElems )
 	{
@@ -2699,8 +2726,7 @@ void R_RenderMeshBuffer( const meshbuffer_t *mb )
 				int j, k, l, u;
 
 				// no valid lightmaps, goodbye
-				if( !r_currentLightStyle.lightmapNum < 0 || r_currentLightStyle.lightmapStyles[0] == 255 )
-					continue;
+				if( !R_NeedLightmapPass( surf )) continue;
 
 				// try to apply lightstyles
 				if(( !( pass->glState & (GLSTATE_SRCBLEND_MASK|GLSTATE_DSTBLEND_MASK)) || ( pass->flags & SHADERSTAGE_BLEND_MODULATE )) && ( pass->rgbGen.type == RGBGEN_IDENTITY ) && ( pass->alphaGen.type == ALPHAGEN_IDENTITY ))

@@ -171,11 +171,7 @@ public:
 	void Die( void );
 };
 
-// please don't this in current Xash3D version
-// lightstyles on arealights currently not supported
-// LINK_ENTITY_TO_CLASS( func_lamp, CFuncLamp );
-
-LINK_ENTITY_TO_CLASS( func_lamp, CFuncWall );	// temporary moved here
+LINK_ENTITY_TO_CLASS( func_lamp, CFuncLamp );
 
 void CFuncLamp :: Spawn( void )
 {	
@@ -374,8 +370,10 @@ void CFuncConveyor :: Spawn( void )
 	UTIL_SetModel( ENT(pev), STRING( pev->model ));
 	
 	if( pev->spawnflags & SF_NOTSOLID )
-          	pev->movetype = MOVETYPE_NONE;
-	else pev->movetype = MOVETYPE_CONVEYOR;
+	{
+          	pev->solid = SOLID_NOT;
+		pev->skin = 0;
+	}
 
 	// smart field system ®
 	if( pev->speed == 0 ) pev->speed = 100;
@@ -401,14 +399,14 @@ void CFuncConveyor :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 		pev->speed = pev->frags; // restore speed
 		UTIL_FireTargets( pev->target, this, this, USE_ON, pev->speed );
 		if(!( pev->spawnflags & SF_NOTSOLID )) // don't push
-			pev->movetype = MOVETYPE_CONVEYOR;
+			pev->solid = SOLID_BSP;
 		m_iState = STATE_ON;
 	}
 	else if( useType == USE_OFF )
 	{
 		pev->speed = 0.0f;
 		UTIL_FireTargets( pev->target, this, this, USE_OFF, pev->speed );
-		pev->movetype = MOVETYPE_NONE;
+		pev->solid = SOLID_NOT;
 		m_iState = STATE_OFF;
 	}
 	else if( useType == USE_SET )	// set new speed
