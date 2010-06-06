@@ -72,6 +72,8 @@ typedef struct
 	// quit dialog
 	menuAction_s	msgBox;
 	menuAction_s	quitMessage;
+	menuAction_s	dlgMessage1;
+	menuAction_s	dlgMessage2;
 	menuAction_s	yes;
 	menuAction_s	no;
 } uiMain_t;
@@ -110,6 +112,32 @@ static void UI_QuitDialog( void )
 
 	uiMain.msgBox.generic.flags ^= QMF_HIDDEN;
 	uiMain.quitMessage.generic.flags ^= QMF_HIDDEN;
+	uiMain.no.generic.flags ^= QMF_HIDDEN;
+	uiMain.yes.generic.flags ^= QMF_HIDDEN;
+
+}
+
+static void UI_PromptDialog( void )
+{
+	// toggle main menu between active\inactive
+	// show\hide quit dialog
+	uiMain.console.generic.flags ^= QMF_INACTIVE; 
+	uiMain.resumeGame.generic.flags ^= QMF_INACTIVE;
+	uiMain.newGame.generic.flags ^= QMF_INACTIVE;
+	uiMain.hazardCourse.generic.flags ^= QMF_INACTIVE;
+	uiMain.saveRestore.generic.flags ^= QMF_INACTIVE;
+	uiMain.playRecord.generic.flags ^= QMF_INACTIVE;
+	uiMain.configuration.generic.flags ^= QMF_INACTIVE;
+	uiMain.multiPlayer.generic.flags ^= QMF_INACTIVE;
+	uiMain.customGame.generic.flags ^= QMF_INACTIVE;
+	uiMain.credits.generic.flags ^= QMF_INACTIVE;
+	uiMain.quit.generic.flags ^= QMF_INACTIVE;
+	uiMain.minimizeBtn.generic.flags ^= QMF_INACTIVE;
+	uiMain.quitButton.generic.flags ^= QMF_INACTIVE;
+
+	uiMain.msgBox.generic.flags ^= QMF_HIDDEN;
+	uiMain.dlgMessage1.generic.flags ^= QMF_HIDDEN;
+	uiMain.dlgMessage2.generic.flags ^= QMF_HIDDEN;
 	uiMain.no.generic.flags ^= QMF_HIDDEN;
 	uiMain.yes.generic.flags ^= QMF_HIDDEN;
 
@@ -204,7 +232,9 @@ static void UI_Main_Callback( void *self, int event )
 		UI_NewGame_Menu();
 		break;
 	case ID_HAZARDCOURSE:
-		UI_Main_HazardCourse();
+		if( cls.state == ca_active )
+			UI_PromptDialog();
+		else UI_Main_HazardCourse();
 		break;
 	case ID_MULTIPLAYER:
 		UI_MultiPlayer_Menu();
@@ -236,10 +266,14 @@ static void UI_Main_Callback( void *self, int event )
 		Cbuf_ExecuteText( EXEC_APPEND, "minimize\n" );
 		break;
 	case ID_YES:
-		Cbuf_ExecuteText( EXEC_APPEND, "quit\n" );
+		if( !( uiMain.quitMessage.generic.flags & QMF_HIDDEN ))
+			Cbuf_ExecuteText( EXEC_APPEND, "quit\n" );
+		else UI_Main_HazardCourse();
 		break;
 	case ID_NO:
-		UI_QuitDialog();
+		if( !( uiMain.quitMessage.generic.flags & QMF_HIDDEN ))
+			UI_QuitDialog();
+		else UI_PromptDialog();
 		break;
 	}
 }
@@ -453,6 +487,20 @@ static void UI_Main_Init( void )
 	uiMain.quitMessage.generic.x = 248;
 	uiMain.quitMessage.generic.y = 280;
 
+	uiMain.dlgMessage1.generic.id = ID_MSGTEXT;
+	uiMain.dlgMessage1.generic.type = QMTYPE_ACTION;
+	uiMain.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiMain.dlgMessage1.generic.name = "Starting a Hazard Course will exit";
+	uiMain.dlgMessage1.generic.x = 212;
+	uiMain.dlgMessage1.generic.y = 280;
+
+	uiMain.dlgMessage2.generic.id = ID_MSGTEXT;
+	uiMain.dlgMessage2.generic.type = QMTYPE_ACTION;
+	uiMain.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiMain.dlgMessage2.generic.name = "any current game, OK to exit?";
+	uiMain.dlgMessage2.generic.x = 256;
+	uiMain.dlgMessage2.generic.y = 310;
+
 	uiMain.yes.generic.id = ID_YES;
 	uiMain.yes.generic.type = QMTYPE_ACTION;
 	uiMain.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDDEN;
@@ -485,6 +533,8 @@ static void UI_Main_Init( void )
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.quitButton );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.msgBox );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.quitMessage );
+	UI_AddItem( &uiMain.menu, (void *)&uiMain.dlgMessage1 );
+	UI_AddItem( &uiMain.menu, (void *)&uiMain.dlgMessage2 );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.no );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.yes );
 }

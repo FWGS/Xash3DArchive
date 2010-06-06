@@ -51,8 +51,6 @@ typedef struct
 	int	   	locGlossIntensity;
 	int	   	locGlossExponent;
 	int	   	locOffsetMappingScale;
-	int	   	locOutlineHeight;
-	int	   	locOutlineCutOff;
 	int	   	locFrontPlane;
 	int	   	locTextureWidth;
 	int	   	locTextureHeight;
@@ -69,7 +67,6 @@ static void R_GetProgramUniformLocations( glsl_program_t *program );
 static const char *r_defaultGLSLProgram;
 static const char *r_defaultDistortionGLSLProgram;
 static const char *r_defaultShadowmapGLSLProgram;
-static const char *r_defaultOutlineGLSLProgram;
 
 /*
 ================
@@ -106,8 +103,6 @@ void R_InitGLSLPrograms( void )
 	R_RegisterGLSLProgram( DEFAULT_GLSL_DISTORTION_PROGRAM, r_defaultDistortionGLSLProgram, 0|features );
 
 	R_RegisterGLSLProgram( DEFAULT_GLSL_SHADOWMAP_PROGRAM, r_defaultShadowmapGLSLProgram, 0|features );
-
-	R_RegisterGLSLProgram( DEFAULT_GLSL_OUTLINE_PROGRAM, r_defaultOutlineGLSLProgram, 0|features );
 }
 
 /*
@@ -764,55 +759,6 @@ static const char *r_defaultShadowmapGLSLProgram =
 "#endif // FRAGMENT_SHADER\n"
 "\n";
 
-static const char *r_defaultOutlineGLSLProgram =
-"// " APPLICATION " GLSL shader\n"
-"\n"
-"\n"
-"varying vec4 ProjVector;\n"
-"\n"
-"#ifdef VERTEX_SHADER\n"
-"// Vertex shader\n"
-"\n"
-"uniform float OutlineHeight;\n"
-"\n"
-"void main(void)\n"
-"{\n"
-"gl_FrontColor = gl_Color;\n"
-"\n"
-"vec4 n = vec4(gl_Normal.xyz, 0.0);\n"
-"vec4 v = vec4(gl_Vertex) + n * OutlineHeight;\n"
-"\n"
-"gl_Position = gl_ModelViewProjectionMatrix * v;\n"
-"ProjVector = gl_Position;\n"
-"#ifdef APPLY_CLIPPING\n"
-"#ifdef __GLSL_CG_DATA_TYPES\n"
-"gl_ClipVertex = gl_ModelViewMatrix * gl_Vertex;\n"
-"#endif\n"
-"#endif\n"
-"}\n"
-"\n"
-"#endif // VERTEX_SHADER\n"
-"\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"// Fragment shader\n"
-"\n"
-"uniform float OutlineCutOff;\n"
-"\n"
-"void main(void)\n"
-"{\n"
-"\n"
-"#ifdef APPLY_BRANCHING\n"
-"if (OutlineCutOff > 0.0 && (ProjVector.w > OutlineCutOff))\n"
-"discard;\n"
-"#endif\n"
-"\n"
-"gl_FragColor = vec4 (gl_Color);\n"
-"}\n"
-"\n"
-"#endif // FRAGMENT_SHADER\n"
-"\n";
-
 /*
 ================
 R_ProgramFeatures2Defines
@@ -1024,7 +970,6 @@ void R_ProgramDump_f( void )
 	DUMP_PROGRAM( defaultGLSLProgram );
 	DUMP_PROGRAM( defaultDistortionGLSLProgram );
 	DUMP_PROGRAM( defaultShadowmapGLSLProgram );
-	DUMP_PROGRAM( defaultOutlineGLSLProgram );
 }
 #undef DUMP_PROGRAM
 
@@ -1034,7 +979,8 @@ R_UpdateProgramUniforms
 ================
 */
 void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir, vec4_t ambient,
-	vec4_t diffuse, bool frontPlane, int TexWidth, int TexHeight, float projDistance, float offsetmappingScale )
+	vec4_t diffuse, ref_style_t *lightStyle, bool frontPlane, int TexWidth, int TexHeight,
+	float projDistance, float offsetmappingScale )
 {
 	glsl_program_t *program = r_glslprograms + elem - 1;
 
@@ -1059,11 +1005,6 @@ void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, ve
 	if( program->locOffsetMappingScale >= 0 )
 		pglUniform1fARB( program->locOffsetMappingScale, offsetmappingScale );
 
-	if( program->locOutlineHeight >= 0 )
-		pglUniform1fARB( program->locOutlineHeight, projDistance );
-	if( program->locOutlineCutOff >= 0 )
-		pglUniform1fARB( program->locOutlineCutOff, max( 0, r_outlines_cutoff->value ) );
-
 	if( program->locFrontPlane >= 0 )
 		pglUniform1fARB( program->locFrontPlane, frontPlane ? 1 : -1 );
 
@@ -1075,18 +1016,16 @@ void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, ve
 	if( program->locProjDistance >= 0 )
 		pglUniform1fARB( program->locProjDistance, projDistance );
 
-#if 0
-	// FIXME: rewrite this code for new lightmaps implementation
-	if( superLightStyle )
+	if( lightStyle )
 	{
 		int	i;
 
-		for( i = 0; i < LM_STYLES && superLightStyle->lightmapStyles[i] != 255; i++ )
+		for( i = 0; i < LM_STYLES && lightStyle->lightmapStyles[i] != 255; i++ )
 		{
-			vec_t *rgb = r_lightStyles[superLightStyle->lightmapStyles[i]].rgb;
+			vec_t *rgb = r_lightStyles[lightStyle->lightmapStyles[i]].rgb;
 
 			if( program->locDeluxemapOffset[i] >= 0 )
-				pglUniform1fARB( program->locDeluxemapOffset[i], superLightStyle->stOffset[i][0] );
+				pglUniform1fARB( program->locDeluxemapOffset[i], lightStyle->stOffset[0] );
 			if( program->loclsColor[i] >= 0 )
 				pglUniform3fARB( program->loclsColor[i], rgb[0], rgb[1], rgb[2] );
 		}
@@ -1097,7 +1036,6 @@ void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, ve
 				pglUniform3fARB( program->loclsColor[i], 0, 0, 0 );
 		}
 	}
-#endif
 }
 
 /*
@@ -1147,9 +1085,6 @@ static void R_GetProgramUniformLocations( glsl_program_t *program )
 	program->locGlossExponent = pglGetUniformLocationARB( program->object, "GlossExponent" );
 
 	program->locOffsetMappingScale = pglGetUniformLocationARB( program->object, "OffsetMappingScale" );
-
-	program->locOutlineHeight = pglGetUniformLocationARB( program->object, "OutlineHeight" );
-	program->locOutlineCutOff = pglGetUniformLocationARB( program->object, "OutlineCutOff" );
 
 	program->locFrontPlane = pglGetUniformLocationARB( program->object, "FrontPlane" );
 

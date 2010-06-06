@@ -364,6 +364,7 @@ extern cvar_t	*cl_testentities;
 extern cvar_t	*cl_testlights;
 extern cvar_t	*cl_testflashlight;
 extern cvar_t	*cl_levelshot_name;
+extern cvar_t	*cl_lightstyle_lerping;
 extern cvar_t	*scr_centertime;
 extern cvar_t	*scr_download;
 extern cvar_t	*scr_loading;

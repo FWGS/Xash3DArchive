@@ -449,6 +449,24 @@ bool Image_LumpValidSize( const char *name )
 	return true;
 }
 
+/*
+=============
+Image_ComparePalette
+=============
+*/
+int Image_ComparePalette( const byte *pal )
+{
+	if( pal == NULL )
+		return PAL_INVALID;
+	else if( !memcmp( palette_d1, pal, 768 ))
+		return PAL_DOOM1;
+	else if( !memcmp( palette_q1, pal, 768 ))
+		return PAL_QUAKE1;
+	else if( !memcmp( palette_q2, pal, 768 ))
+		return PAL_QUAKE2;
+	return PAL_CUSTOM;		
+}
+
 void Image_SetPalette( const byte *pal, uint *d_table )
 {
 	int	i;

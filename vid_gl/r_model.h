@@ -109,12 +109,6 @@ typedef struct
 	};
 
 	// lighting info
-	int		lightmapFrame;
-	int		lightmapTexnum;	// actual texnum
-
-	int		dlightFrame;
-	int		dlightBits;
-
 	int		lmWidth;
 	int		lmHeight;
 	int		lmS;
@@ -126,7 +120,6 @@ typedef struct
 	float		cached[LM_STYLES];	// values currently used in lightmap
 
 	int		superLightStyle;
-
 	int		fragmentframe;	// for multi-check avoidance
 } msurface_t;
 
@@ -207,11 +200,8 @@ typedef struct
 	msurface_t	*surfaces;
 	msurface_t	**marksurfaces;
 
-	int		numlightgridelems;
+	int		numgridpoints;
 	mgridlight_t	*lightgrid;
-
-	int		numlightarrayelems;
-	mgridlight_t	**lightarray;
 
 	int		numtexinfo;
 	mtexinfo_t	*texinfo;

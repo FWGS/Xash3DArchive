@@ -304,20 +304,6 @@ void R_TransformEntityBBox( ref_entity_t *e, vec3_t mins, vec3_t maxs, vec3_t bb
 
 /*
 =============
-R_LightForPoint
-=============
-*/
-void R_LightForPoint( const vec3_t point, vec3_t ambientLight )
-{
-	vec4_t	ambient, diffuse;
-	vec3_t	dir;
-
-	R_LightForOrigin( point, dir, ambient, diffuse, 256.0f );
-	VectorCopy( ambient, ambientLight );
-}
-
-/*
-=============
 R_LoadIdentity
 =============
 */
@@ -868,29 +854,6 @@ static void R_ApplySoftwareGamma( void )
 }
 
 //=============================================================================
-static ref_shader_t *r_outlineShader;
-/*
-===============
-R_InitOutlines
-===============
-*/
-void R_InitOutlines( void )
-{
-	r_outlineShader = R_LoadShader( "celloutline/default", SHADER_OUTLINE, false, 0, SHADER_INVALID );
-}
-
-/*
-===============
-R_AddModelMeshOutline
-===============
-*/
-void R_AddModelMeshOutline( unsigned int modhandle, mfog_t *fog, int meshnum )
-{
-	meshbuffer_t *mb = R_AddMeshToList( MB_MODEL, fog, r_outlineShader, -( meshnum+1 ) );
-	if( mb ) mb->modhandle = modhandle;
-}
-//=======================================================================
-
 /*
 ===============
 R_SetupFrustum

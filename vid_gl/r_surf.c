@@ -73,11 +73,7 @@ bool R_CullSurface( msurface_t *surf, uint clipflags )
 	if( shader->flags & SHADER_AUTOSPRITE )
 		return false;
 
-	// never cull turblent or warp surfaces
-	// FIXME: this is probably not actual for sudivided surfaces. comment this ?
-	if( shader->tessSize ) return false;
-
-	if( r_faceplanecull->integer && !RI.currententity->outlineHeight && ( shader->flags & (SHADER_CULL_FRONT|SHADER_CULL_BACK)))
+	if( r_faceplanecull->integer && ( shader->flags & (SHADER_CULL_FRONT|SHADER_CULL_BACK)))
 	{
 		if( !VectorCompare( surf->plane->normal, vec3_origin ))
 		{
@@ -261,15 +257,11 @@ R_AddBrushModelToList
 void R_AddBrushModelToList( ref_entity_t *e )
 {
 	bool		rotated;
+	uint		i, dlightbits;
 	ref_model_t	*model = e->model;
 	mbrushmodel_t	*bmodel = (mbrushmodel_t *)model->extradata;
 	msurface_t	*psurf;
 	meshbuffer_t	*mb;
-	dlight_t		*lt;
-	uint		i;
-
-	e->outlineHeight = r_worldent->outlineHeight;
-	Vector4Copy( r_worldent->outlineColor, e->outlineColor );
 
 	rotated = !Matrix3x3_Compare( e->axis, matrix3x3_identity );
 	VectorSubtract( RI.refdef.vieworg, e->origin, modelorg );
@@ -282,11 +274,14 @@ void R_AddBrushModelToList( ref_entity_t *e )
 		Matrix3x3_Transform( e->axis, temp, modelorg );
 	}
 
-	for( i = 0, lt = r_dlights; i < r_numDlights; i++, lt++ )
+	dlightbits = 0;
+	if(( r_dynamiclight->integer == 1 ) && !r_fullbright->integer && !( RI.params & RP_SHADOWMAPVIEW ))
 	{
-		VectorSubtract( lt->origin, modelorg, lt->origin );
-		R_RecursiveLightNode( lt, BIT( i ), bmodel->firstmodelnode );
-		VectorAdd( lt->origin, modelorg, lt->origin );
+		for( i = 0; i < r_numDlights; i++ )
+		{
+			if( BoundsIntersect( modelmins, modelmaxs, r_dlights[i].mins, r_dlights[i].maxs ))
+				dlightbits |= ( 1<<i );
+		}
 	}
 
 	for( i = 0, psurf = bmodel->firstmodelsurface; i < bmodel->nummodelsurfaces; i++, psurf++ )
@@ -319,7 +314,7 @@ void R_AddBrushModelToList( ref_entity_t *e )
 		{
 			mb->sortkey |= (( psurf->superLightStyle+1 ) << 10 );
 			if( R_SurfPotentiallyLit( psurf ))
-				mb->dlightbits = psurf->dlightBits;
+				mb->dlightbits = dlightbits;
 		}
 	}
 }
@@ -336,10 +331,11 @@ WORLD MODEL
 R_RecursiveWorldNode
 ================
 */
-static void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
+static void R_RecursiveWorldNode( mnode_t *node, uint clipflags, uint dlightbits )
 {
 	const cplane_t	*clipplane;
 	int		i, clipped;
+	uint		newDlightbits;
 	msurface_t	**mark, *surf;
 	mleaf_t		*leaf;
 	meshbuffer_t	*mb;
@@ -366,8 +362,28 @@ static void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	// recurse down the children
 	if( node->contents == CONTENTS_NODE )
 	{
-		R_RecursiveWorldNode( node->children[0], clipflags );
-		R_RecursiveWorldNode( node->children[1], clipflags );
+		newDlightbits = 0;
+		if( dlightbits )
+		{
+			float	dist;
+
+			for( i = 0; i < r_numDlights; i++ )
+			{
+				if(!( dlightbits & ( 1<<i )))
+					continue;
+
+				dist = PlaneDiff( r_dlights[i].origin, node->plane );
+				if( dist < -r_dlights[i].intensity )
+					dlightbits &= ~(1<<i);
+				if( dist < r_dlights[i].intensity )
+					newDlightbits |= (1<<i);
+			}
+		}
+
+		R_RecursiveWorldNode( node->children[0], clipflags, dlightbits );
+
+		dlightbits = newDlightbits;
+		R_RecursiveWorldNode( node->children[1], clipflags, dlightbits );
 		return;
 	}
 
@@ -403,8 +419,9 @@ static void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 			mb = RI.surfmbuffers[surf - r_worldbrushmodel->surfaces];
 		}
 
-		if( mb && R_SurfPotentiallyLit( surf ))
-			mb->dlightbits = surf->dlightBits;
+		newDlightbits = mb ? dlightbits & ~mb->dlightbits : 0;
+		if( newDlightbits && R_SurfPotentiallyLit( surf ))
+			mb->dlightbits |= R_AddSurfDlighbits( surf, newDlightbits );
 	}
 
 	c_world_leafs++;
@@ -569,8 +586,8 @@ R_DrawWorld
 */
 void R_DrawWorld( void )
 {
-	int	clipflags;
-	int	msec = 0;
+	int	clipflags, msec = 0;
+	uint	dlightbits;
 
 	if( !r_drawworld->integer )
 		return;
@@ -586,12 +603,6 @@ void R_DrawWorld( void )
 	RI.previousentity = NULL;
 	RI.currententity = r_worldent;
 	RI.currentmodel = RI.currententity->model;
-
-	if( r_outlines_world->integer && r_viewleaf != NULL )
-		RI.currententity->outlineHeight = max( 0.0f, r_outlines_world->value );
-	else RI.currententity->outlineHeight = 0.0f;
-
-	Vector4Copy( mapConfig.outlineColor, RI.currententity->outlineColor );
 
 	if(!( RI.params & RP_SHADOWMAPVIEW ))
 	{
@@ -611,15 +622,12 @@ void R_DrawWorld( void )
 	if( r_speeds->integer )
 		msec = Sys_Milliseconds();
 
-	if( RI.params & RP_SHADOWMAPVIEW )
-	{
-		R_LinearShadowLeafs ();
-	}
-	else
-	{
-		R_RecursiveWorldNode( r_worldbrushmodel->nodes, clipflags );
-		R_MarkLights( clipflags );
-	}
+	if( r_dynamiclight->integer != 1 || r_fullbright->integer )
+		dlightbits = 0;
+	else dlightbits = r_numDlights < 32 ? ( 1 << r_numDlights ) - 1 : -1;
+
+	if( RI.params & RP_SHADOWMAPVIEW ) R_LinearShadowLeafs ();
+	else R_RecursiveWorldNode( r_worldbrushmodel->nodes, clipflags, dlightbits );
 
 	if( r_speeds->integer )
 		r_world_node += Sys_Milliseconds() - msec;

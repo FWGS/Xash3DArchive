@@ -451,10 +451,10 @@ bool FS_SaveImage( const char *filename, rgbdata_t *pix )
 		const suffix_t	*box;
 		int		i;
 
-		if( pix->flags & IMAGE_CUBEMAP )
-			box = cubemap_v2;
-		else if( pix->flags & IMAGE_SKYBOX )
+		if( pix->flags & IMAGE_SKYBOX )
 			box = skybox_qv1;
+		else if( pix->flags & IMAGE_CUBEMAP )
+			box = cubemap_v2;
 		else return false;	// do not happens
 
 		pix->size /= 6;	// now set as side size 

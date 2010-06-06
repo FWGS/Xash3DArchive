@@ -93,6 +93,7 @@ typedef struct texture_s
 	string		name;		// game path, including extension
 	int		srcWidth;		// source dims, used for mipmap loading
 	int		srcHeight;
+	int		srcFlags;		// rgbdata flags
 
 	int		width;		// upload width\height
 	int		height;
@@ -130,7 +131,6 @@ enum
 
 #define LIGHTMAP_TEXTURE_WIDTH	256
 #define LIGHTMAP_TEXTURE_HEIGHT	256
-#define DLIGHT_TEXTURE		(MAX_LIGHTMAPS-1)
 
 #define VID_DEFAULTMODE		"0"
 
@@ -250,11 +250,6 @@ typedef struct ref_entity_s
 	// RT_SPRITE stuff
 	struct ref_shader_s		*customShader;	// client drawing stuff
 	float			radius;		// used as RT_SPRITE's radius
-
-	// outilne stuff
-	float			outlineHeight;
-	rgba_t			outlineColor;
-
 } ref_entity_t;
 
 typedef struct
@@ -364,7 +359,6 @@ extern cvar_t *r_novis;
 extern cvar_t *r_nocull;
 extern cvar_t *r_ignorehwgamma;
 extern cvar_t *r_overbrightbits;
-extern cvar_t *r_mapoverbrightbits;
 extern cvar_t *r_vertexbuffers;
 extern cvar_t *r_lefthand;
 extern cvar_t *r_physbdebug;
@@ -426,9 +420,6 @@ extern cvar_t *r_bloom_intensity;
 extern cvar_t *r_bloom_darken;
 extern cvar_t *r_bloom_sample_size;
 extern cvar_t *r_bloom_fast_sample;
-extern cvar_t *r_outlines_world;
-extern cvar_t *r_outlines_scale;
-extern cvar_t *r_outlines_cutoff;
 
 extern cvar_t *r_himodels;
 extern cvar_t *r_environment_color;
@@ -477,6 +468,7 @@ static _inline byte R_FloatToByte( float x )
 float		R_FastSin( float t );
 void		R_LatLongToNorm( const byte latlong[2], vec3_t out );
 void		NormToLatLong( const vec3_t normal, byte latlong[2] );
+void		ColorToBytes( const float *color, byte *colorBytes );
 
 //====================================================================
 
@@ -587,18 +579,16 @@ void	R_BuildSurfaceLightmap( msurface_t *surf );
 void	R_EndBuildingLightmaps( void );
 
 void	R_UpdateSurfaceLightmap( msurface_t *surf );
-void	R_RecursiveLightNode( dlight_t *light, int bit, mnode_t *node );
-void	R_MarkLights( uint clipflags );
-
 void	R_LightBounds( const vec3_t origin, float intensity, vec3_t mins, vec3_t maxs );
 bool	R_SurfPotentiallyLit( msurface_t *surf );
+uint	R_AddSurfDlighbits( msurface_t *surf, uint dlightbits );
+void	R_AddDynamicLights( uint dlightbits, int state );
 void	R_LightForEntity( ref_entity_t *e, byte *bArray );
 void	R_LightForOrigin( const vec3_t origin, vec3_t dir, vec4_t ambient, vec4_t diffuse, float radius );
-
+void	R_LightForPoint( const vec3_t point, vec3_t ambientLight );
+void	R_LightDir( const vec3_t origin, vec3_t lightDir, float radius );
 int	R_AddSuperLightStyle( const int lightmapNum, const byte *lightmapStyles );
-void	R_SortSuperLightStyles( void );
-
-
+void	R_BuildLightGrid( mbrushmodel_t *world );
 void	R_InitCoronas( void );
 void	R_DrawCoronas( void );
 
@@ -639,9 +629,6 @@ void	R_InitCustomColors( void );
 void	R_SetCustomColor( int num, int r, int g, int b );
 int	R_GetCustomColor( int num );
 
-void	R_InitOutlines( void );
-void	R_AddModelMeshOutline( unsigned int modhandle, mfog_t *fog, int meshnum );
-
 msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end );
 
 //
@@ -674,7 +661,6 @@ void		R_BuildTangentVectors( int numVertexes, vec4_t *xyzArray, vec4_t *normalsA
 #define DEFAULT_GLSL_PROGRAM		"*r_defaultProgram"
 #define DEFAULT_GLSL_DISTORTION_PROGRAM	"*r_defaultDistortionProgram"
 #define DEFAULT_GLSL_SHADOWMAP_PROGRAM	"*r_defaultShadowmapProgram"
-#define DEFAULT_GLSL_OUTLINE_PROGRAM "*r_defaultOutlineProgram"
 
 enum
 {
@@ -682,7 +668,6 @@ enum
 	PROGRAM_TYPE_MATERIAL,
 	PROGRAM_TYPE_DISTORTION,
 	PROGRAM_TYPE_SHADOWMAP,
-	PROGRAM_TYPE_OUTLINE
 };
 
 enum
@@ -716,7 +701,7 @@ int	R_FindGLSLProgram( const char *name );
 int	R_RegisterGLSLProgram( const char *name, const char *string, unsigned int features );
 int	R_GetProgramObject( int elem );
 void	R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir,
-	vec4_t ambient, vec4_t diffuse, bool frontPlane, int TexWidth, int TexHeight,
+	vec4_t ambient, vec4_t diffuse, ref_style_t *lightStyle, bool frontPlane, int TexWidth, int TexHeight,
 	float projDistance, float offsetmappingScale );
 
 void	R_ShutdownGLSLPrograms( void );
@@ -855,14 +840,9 @@ enum
 
 typedef struct
 {
-	int		pow2MapOvrbr;
-
 	float		ambient[3];
-	rgba_t		outlineColor;
 	rgba_t		environmentColor;
 
-	bool		lightmapsPacking;
-	bool		deluxeMaps;            // true if there are valid deluxemaps in the .bsp
 	bool		deluxeMappingEnabled;  // true if deluxeMaps is true and r_lighting_deluxemaps->integer != 0
 } mapconfig_t;
 

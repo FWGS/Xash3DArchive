@@ -840,6 +840,11 @@ int AutoClassify( edict_t *pentToClassify )
 		return ED_WORLDSPAWN;
 	}
 
+	if ( !strnicmp( "bodyque", classname, 7 ))
+	{
+		return ED_NORMAL;
+	}
+
 	// first pass: determine type by explicit parms
 	if ( pClass->pev->solid == SOLID_TRIGGER )
 	{
@@ -854,7 +859,7 @@ int AutoClassify( edict_t *pentToClassify )
 	}
 	else if ( pClass->pev->movetype == MOVETYPE_PHYSIC )
 		return ED_RIGIDBODY;
-	else if ( pClass->pev->solid == SOLID_BSP || pClass->pev->origin == g_vecZero )
+	else if ( pClass->pev->solid == SOLID_BSP )
 	{
 		if ( pClass->pev->movetype == MOVETYPE_CONVEYOR )
 			return ED_MOVER;

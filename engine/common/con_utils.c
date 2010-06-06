@@ -203,7 +203,7 @@ bool Cmd_GetDemoList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numdems;
 
-	t = FS_Search( va( "$demos/%s*.dem", s ), true );
+	t = FS_Search( va( "†demos/%s*.dem", s ), true );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -337,7 +337,7 @@ bool Cmd_GetSavesList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numsaves;
 
-	t = FS_Search( va( "$save/%s*.sav", s ), true );
+	t = FS_Search( va( "†save/%s*.sav", s ), true );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 

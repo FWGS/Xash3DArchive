@@ -24,7 +24,7 @@ typedef struct
 
 clightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 static int	lastofs;
-	
+		
 /*
 ================
 CL_ClearLightStyles
@@ -39,26 +39,53 @@ void CL_ClearLightStyles( void )
 /*
 ================
 CL_RunLightStyles
+
+light animations
+'m' is normal light, 'a' is no light, 'z' is double bright
 ================
 */
 void CL_RunLightStyles( void )
 {
 	int		i, ofs;
-	clightstyle_t	*ls;
-	
-	ofs = cl.time / 100;
-	if( ofs == lastofs ) return;
-	lastofs = ofs;
+	float		l, oldval, curval;
+	clightstyle_t	*ls;		
+
+	if( cls.state != ca_active ) return;
+
+	if( cl_lightstyle_lerping->integer )
+	{
+		ofs = cl.frame.servertime / 100;
+	}
+	else
+	{
+		ofs = cl.time / 100;
+		if( ofs == lastofs ) return;
+		lastofs = ofs;
+	}
 
 	for( i = 0, ls = cl_lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		if( !ls->length )
+		if( ls->length == 0 ) l = 0.0f;
+		else if( ls->length == 1 ) l = ls->map[0];
+		else if( cl_lightstyle_lerping->integer )
 		{
-			VectorSet( ls->value, 1.0f, 1.0f, 1.0f );
-			continue;
+			int	curnum = (ofs % ls->length);
+			int	oldnum = curnum - 1;
+
+			// sequence is ends ?
+			if( oldnum < 0 )
+				oldnum += ls->length;
+
+			oldval = ls->map[oldnum];
+			curval = ls->map[curnum];
+
+			// don't lerping fast sequences
+			if( fabs( curval - oldval ) >= 1.0f ) l = curval;
+			else l = oldval + cl.lerpFrac * (curval - oldval);
 		}
-		if( ls->length == 1 ) ls->value[0] = ls->value[1] = ls->value[2] = ls->map[0];
-		else ls->value[0] = ls->value[1] = ls->value[2] = ls->map[ofs%ls->length];
+		else l = ls->map[ofs%ls->length];
+
+		VectorSet( ls->value, l, l, l );
 	}
 }
 

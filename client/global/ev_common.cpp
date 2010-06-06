@@ -183,7 +183,7 @@ void EV_UpadteFlashlight( edict_t *pEnt )
 
 	AngleVectors( pEnt->v.viewangles, forward, NULL, NULL );
 	vecSrc = pEnt->v.origin +pEnt->v.view_ofs;
-	vecEnd = vecSrc + forward * 256;
+	vecEnd = vecSrc + forward * 512;
 
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, pEnt, &tr );
 

@@ -2284,8 +2284,6 @@ void R_StudioDrawPoints( const meshbuffer_t *mb, ref_entity_t *e )
 	{
 		if(( features & MF_SVECTORS ) || r_shownormals->integer )
 			features |= MF_NORMALS;
-		if( RI.currententity->outlineHeight )
-			features |= MF_NORMALS|(GL_Support( R_SHADER_GLSL100_EXT ) ? MF_ENABLENORMALS : 0);
 	}
 
 	Com_Assert( studio == NULL );

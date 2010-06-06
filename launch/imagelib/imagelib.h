@@ -479,6 +479,15 @@ enum
 	LUMP_EXTENDED		// bmp images have extened palette with alpha-channel
 };
 
+enum
+{
+	PAL_INVALID = -1,
+	PAL_CUSTOM = 0,
+	PAL_DOOM1,
+	PAL_QUAKE1,
+	PAL_QUAKE2,
+};
+
 extern imglib_t image;
 extern cvar_t *fs_wadsupport;
 extern cvar_t *png_compression;
@@ -501,6 +510,7 @@ void Image_DecompressDDS( const byte *buffer, uint target );
 void Image_GetPaletteLMP( const byte *pal, int rendermode );
 void Image_GetPalettePCX( const byte *pal );
 void Image_GetPaletteBMP( const byte *pal );
+int Image_ComparePalette( const byte *pal );
 void Image_CopyPalette24bit( void );
 void Image_CopyPalette32bit( void );
 bool Image_ForceDecompress( void );

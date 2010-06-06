@@ -2920,6 +2920,7 @@ static void R_UploadTexture( rgbdata_t *pic, texture_t *tex )
 	case PF_DXT5: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
 	default: dxtformat = false; break;
 	}
+
 	pglGenTextures( 1, &tex->texnum );
 	GL_Bind( GL_TEXTURE0, tex );
 
@@ -3002,6 +3003,7 @@ texture_t *R_LoadTexture( const char *name, rgbdata_t *pic, int samples, texFlag
 	com.strncpy( texture->name, name, sizeof( texture->name ));
 	texture->srcWidth = pic->width;
 	texture->srcHeight = pic->height;
+	texture->srcFlags = pic->flags;
 	texture->depth = pic->depth;
 	texture->touchFrame = tr.registration_sequence;
 	if( samples <= 0 )
@@ -3347,22 +3349,86 @@ R_InitDynamicLightTexture
 */
 static rgbdata_t *R_InitDynamicLightTexture( int *flags, int *samples )
 {
-	// NOTE: lightmap texture sizes must be smaller or equal data2D array size
-	// to avoid out of range
-	r_image.width = LIGHTMAP_TEXTURE_WIDTH;
-	r_image.height = LIGHTMAP_TEXTURE_HEIGHT;
+	vec3_t	v = { 0, 0, 0 };
+	int	x, y, z, size, size2, halfsize;
+	float	intensity;
+
+	// dynamic light texture
+	if( GL_Support( R_TEXTURE_3D_EXT ))
+	{
+		r_image.depth = size = 32;
+	}
+	else
+	{
+		size = 128;
+		r_image.depth = 1;
+	}
+
+	r_image.width = r_image.height = size;
 	r_image.numMips =  1;
 	r_image.buffer = data2D;
-	r_image.flags = IMAGE_HAS_COLOR;	// because we want colored dlights, right ?
+	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_GN;
-	r_image.size = r_image.width * r_image.height * 4;
+	r_image.size = r_image.width * r_image.height * r_image.depth * 4;
 
-	*flags = TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP|TF_UNCOMPRESSED|TF_LIGHTMAP;
-	*samples = 4;
+	halfsize = size / 2;
+	intensity = halfsize * halfsize;
+	size2 = size * size;
 
-	// make white texture
-	Mem_Set( r_image.buffer, 0xff, r_image.size );
+	*flags = TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP|TF_UNCOMPRESSED;
+	*samples = 3;
 
+	if( GL_Support( R_TEXTURE_3D_EXT ))
+	{		
+		for( x = 0; x < r_image.width; x++ )
+		{
+			for( y = 0; y < r_image.height; y++ )
+			{
+				for( z = 0; z < r_image.depth; z++ )
+				{
+					float	dist, att;
+
+					v[0] = (float)x - halfsize;
+					v[1] = (float)y - halfsize;
+					v[2] = (float)z - halfsize;
+
+					dist = VectorLength( v );
+					if( dist > halfsize ) dist = halfsize;
+
+					if( x == 0 || y == 0 || z == 0 || x == size - 1 || y == size - 1 || z == size - 1 )
+						att = 0;
+					else att = (((dist * dist) / intensity) -1 ) * -255;
+
+					data2D[(x * size2 + y * size + z) * 4 + 0] = (byte)(att);
+					data2D[(x * size2 + y * size + z) * 4 + 1] = (byte)(att);
+					data2D[(x * size2 + y * size + z) * 4 + 2] = (byte)(att);
+				}
+			}
+		}
+	}
+	else
+	{
+		for( x = 0; x < size; x++ )
+		{
+			for( y = 0; y < size; y++ )
+			{
+				float	result;
+
+				if( x == size - 1 || x == 0 || y == size - 1 || y == 0 )
+					result = 255;
+				else
+				{
+					float	xf = ((float)x - 64 ) / 64.0f;
+					float	yf = ((float)y - 64 ) / 64.0f;
+					result = ((xf * xf) + (yf * yf)) * 255;
+					if( result > 255 ) result = 255;
+				}
+				data2D[(x*size+y)*4+0] = (byte)255 - result;
+				data2D[(x*size+y)*4+1] = (byte)255 - result;
+				data2D[(x*size+y)*4+2] = (byte)255 - result;
+			}
+		}
+	}
 	return &r_image;
 }
 

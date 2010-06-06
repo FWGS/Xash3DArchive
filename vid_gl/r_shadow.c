@@ -61,11 +61,11 @@ static void R_GetShadowImpactAndDir( ref_entity_t *e, trace_t *tr, vec3_t lightd
 {
 	vec3_t	point;
 
-	R_LightForOrigin( e->lightingOrigin, lightdir, NULL, NULL, e->model->radius * e->scale );
+	R_LightDir( e->lightingOrigin, lightdir, e->model->radius * e->scale );
 
 	VectorSet( lightdir, -lightdir[0], -lightdir[1], -1 );
 	VectorNormalizeFast( lightdir );
-	VectorMA( e->origin, /*(e->model->radius*e->scale*4 + r_shadows_projection_distance->value)*/ 1024.0f, lightdir, point );
+	VectorMA( e->origin, 1024.0f, lightdir, point );
 
 	R_TraceLine( tr, e->origin, point );
 }
@@ -417,7 +417,7 @@ void R_DrawShadowmaps( void )
 		Vector4Set( RI.scissor, RI.refdef.viewport[0], RI.refdef.viewport[1], textureWidth, textureHeight );
 
 		// set the view transformation matrix according to lightgrid
-		R_LightForOrigin( group->origin, lightdir, NULL, NULL, group->projDist * 0.5 );
+		R_LightDir( group->origin, lightdir, group->projDist * 0.5f );
 		VectorSet( lightdir, -lightdir[0], -lightdir[1], -lightdir[2] );
 		VectorNormalizeFast( lightdir );
 

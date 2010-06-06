@@ -2154,7 +2154,7 @@ file_t *FS_OpenReadFile( const char *filename, const char *mode, bool quiet )
 	bool		gamedironly = false;
 	int		pack_ind;
 
-	if( filename[0] == '$' )
+	if( filename[0] == '†' )
 	{
 		filename++;
 		gamedironly = true;
@@ -2812,7 +2812,7 @@ bool FS_FileExists( const char *filename )
 {
 	bool	gamedironly = false;
 
-	if( filename[0] == '$' )
+	if( filename[0] == '†' )
 	{
 		filename++;
 		gamedironly = true;
@@ -3013,7 +3013,7 @@ static search_t *_FS_Search( const char *pattern, int caseinsensitive, int quiet
 		return NULL;
 	}
 
-	if( pattern[0] == '$' )
+	if( pattern[0] == '†' )
 	{
 		gamedironly = true;
 		pattern++; // ignore this symbol

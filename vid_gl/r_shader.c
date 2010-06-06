@@ -64,16 +64,18 @@ static tcMod_t	r_currentTcmods[MAX_SHADER_STAGES][MAX_SHADER_TCMODS];
 static vec4_t	r_currentTcGen[MAX_SHADER_STAGES][2];
 const char	*r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" }; // FIXME: get rid of this
 
-static texture_t	*r_stageTexture[MAX_STAGE_TEXTURES];		// MAX_FRAMES in spritegen.c
+static texture_t		*r_stageTexture[MAX_STAGE_TEXTURES];	// MAX_FRAMES in spritegen.c
 static uint		r_miptexFeatures;			// bmodel miptex features
 static kRenderMode_t	r_shaderRenderMode;			// sprite or studiomodel rendermode
 static int		r_numStageTextures;			// num textures in group
-static float		r_stageAnimFrequency;		// for auto-animate groups
+static float		r_stageAnimFrequency[2];		// anim fps / alt anim fps
+static int		r_stageAnimOffset;			// offset for alternative animation
 static bool		r_shaderTwoSided;
 static bool		r_shaderNoMipMaps;
 static bool		r_shaderNoPicMip;
 static bool		r_shaderNoCompress;
 static bool		r_shaderNearest;
+static bool		r_shaderHasDlightPass;
 
 #define Shader_FreePassCinematics( s )	if((s)->cinHandle ) { R_FreeCinematics((s)->cinHandle ); (s)->cinHandle = 0; }
 #define Shader_CopyString( str )	com.stralloc( r_shaderpool, str, __FILE__, __LINE__ )
@@ -964,10 +966,6 @@ static bool Shader_DeformVertexes( ref_shader_t *shader, ref_stage_t *pass, scri
 	{
 		deformv->type = DEFORM_AUTOPARTICLE;
           }
-	else if( !com.stricmp( tok.string, "outline" ))
-	{
-		deformv->type = DEFORM_OUTLINE;
-	}
 	else
 	{
 		MsgDev( D_WARN, "unknown 'deformVertexes' parameter '%s' in shader '%s'\n", tok.string, shader->name );
@@ -1188,6 +1186,12 @@ static bool Shader_Light( ref_shader_t *shader, ref_stage_t *pass, script_t *scr
 	return true;
 }
 
+static bool Shader_NoModulativeDlights( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+{
+	shader->flags |= SHADER_NO_MODULATIVE_DLIGHTS;
+	return true;
+}
+
 static bool Shader_OffsetMappingScale( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	if( !Com_ReadFloat( script, false, &shader->offsetmapping_scale ))
@@ -1223,6 +1227,7 @@ static const ref_parsekey_t shaderkeys[] =
 { "deformvertexes",		Shader_DeformVertexes	},
 { "entitymergable",		Shader_EntityMergable	},
 { "offsetmappingscale",	Shader_OffsetMappingScale	},
+{ "nomodulativedlights",	Shader_NoModulativeDlights	},
 { NULL,			NULL			}
 };
 
@@ -1322,16 +1327,26 @@ static bool Shaderpass_MapExt( ref_shader_t *shader, ref_stage_t *pass, int addF
 	if( !com.stricmp( tok.string, "$lightmap" ))
 	{
 		pass->tcgen = TCGEN_LIGHTMAP;
-		pass->flags = ( pass->flags & ~(SHADERSTAGE_PORTALMAP)) | SHADERSTAGE_LIGHTMAP;
+		pass->flags = ( pass->flags & ~(SHADERSTAGE_PORTALMAP|SHADERSTAGE_DLIGHT)) | SHADERSTAGE_LIGHTMAP;
 		pass->animFrequency[0] = pass->animFrequency[1] = 0.0f;
 		pass->anim_offset = 0;
 		pass->textures[0] = NULL;
 		return true;
 	}
+	else if( !com.stricmp( tok.string, "$dlight" ))
+	{
+		pass->tcgen = TCGEN_BASE;
+		pass->flags = ( pass->flags & ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP)) | SHADERSTAGE_DLIGHT;
+		pass->animFrequency[0] = pass->animFrequency[1] = 0.0f;
+		pass->anim_offset = 0;
+		pass->textures[0] = NULL;
+		r_shaderHasDlightPass = true;
+		return true;
+	}
 	else if( !com.stricmp( tok.string, "$portalmap" ) || !com.stricmp( tok.string, "$mirrormap" ))
 	{
 		pass->tcgen = TCGEN_PROJECTION;
-		pass->flags = ( pass->flags & ~(SHADERSTAGE_LIGHTMAP)) | SHADERSTAGE_PORTALMAP;
+		pass->flags = ( pass->flags & ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT)) | SHADERSTAGE_PORTALMAP;
 		pass->animFrequency[0] = pass->animFrequency[1] = 0.0f;
 		pass->anim_offset = 0;
 		pass->textures[0] = NULL;
@@ -1367,7 +1382,7 @@ static bool Shaderpass_MapExt( ref_shader_t *shader, ref_stage_t *pass, int addF
 
 		pass->textures[pass->num_textures] = Shader_FindImage( shader, name, flags );
 		pass->tcgen = TCGEN_BASE;
-		pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP);
+		pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP);
 	}
 	pass->num_textures++;
 
@@ -1384,7 +1399,7 @@ static bool Shaderpass_AnimMapExt( ref_shader_t *shader, ref_stage_t *pass, int 
 	flags = Shader_SetImageFlags( shader ) | addFlags;
 
 	pass->tcgen = TCGEN_BASE;
-	pass->flags &= ~( SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP );
+	pass->flags &= ~( SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP );
 
 	if( !Com_ReadFloat( script, false, &anim_fps ))
 	{
@@ -1447,7 +1462,7 @@ static bool Shaderpass_CubeMapExt( ref_shader_t *shader, ref_stage_t *pass, int 
 			pass->flags |= SHADERSTAGE_FRAMES;
 	}
 
-	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP);
+	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP);
 
 	if( !GL_Support( R_TEXTURECUBEMAP_EXT ))
 	{
@@ -1477,7 +1492,7 @@ static bool Shaderpass_CubeMapExt( ref_shader_t *shader, ref_stage_t *pass, int 
 
 	pass->tcgen = TCGEN_BASE;
 	pass->textures[pass->num_textures] = Shader_FindImage( shader, name, flags );
-	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP);
+	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP);
 	if( pass->textures[pass->num_textures] != tr.defaultTexture ) pass->tcgen = tcgen;
 	pass->num_textures++;
 
@@ -1528,7 +1543,7 @@ static bool Shaderpass_VideoMap( ref_shader_t *shader, ref_stage_t *pass, script
 
 	pass->tcgen = TCGEN_BASE;
 	pass->cinHandle = R_StartCinematics( tok.string );
-	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP|SHADERSTAGE_ANIMFREQUENCY|SHADERSTAGE_FRAMES);
+	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP|SHADERSTAGE_ANIMFREQUENCY|SHADERSTAGE_FRAMES);
 	pass->animFrequency[0] = pass->animFrequency[1] = 0.0f;
 	pass->anim_offset = 0;
 
@@ -1575,7 +1590,7 @@ static bool Shaderpass_NormalMap( ref_shader_t *shader, ref_stage_t *pass, scrip
 	else name = tok.string;
 
 	pass->tcgen = TCGEN_BASE;
-	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP);
+	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP);
 	pass->textures[1] = Shader_FindImage( shader, name, flags );
 	pass->num_textures++;
 	if( pass->textures[1] != tr.defaultTexture )
@@ -1653,7 +1668,7 @@ static bool Shaderpass_Material( ref_shader_t *shader, ref_stage_t *pass, script
 	pass->textures[1] = pass->textures[2] = pass->textures[3] = NULL;
 
 	pass->tcgen = TCGEN_BASE;
-	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP);
+	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP);
 
 	while( 1 )
 	{
@@ -1749,7 +1764,7 @@ static bool Shaderpass_Distortion( ref_shader_t *shader, ref_stage_t *pass, scri
 	}
 
 	flags = Shader_SetImageFlags( shader );
-	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_PORTALMAP);
+	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP);
 	pass->textures[0] = pass->textures[1] = NULL;
 
 	while( 1 )
@@ -1833,16 +1848,15 @@ static bool Shaderpass_RGBGen( ref_shader_t *shader, ref_stage_t *pass, script_t
 	else if( !com.stricmp( tok.string, "oneMinusEntity" )) pass->rgbGen.type = RGBGEN_ONE_MINUS_ENTITY;
 	else if( !com.stricmp( tok.string, "vertex" )) pass->rgbGen.type = RGBGEN_VERTEX;
 	else if( !com.stricmp( tok.string, "oneMinusVertex" )) pass->rgbGen.type = RGBGEN_ONE_MINUS_VERTEX;
-	else if( !com.stricmp( tok.string, "lightingDiffuseOnly" )) pass->rgbGen.type = RGBGEN_LIGHTING_DIFFUSE_ONLY;
 	else if( !com.stricmp( tok.string, "lightingDiffuse" )) pass->rgbGen.type = RGBGEN_LIGHTING_DIFFUSE;
 	else if( !com.stricmp( tok.string, "exactVertex" )) pass->rgbGen.type = RGBGEN_EXACT_VERTEX;
-	else if( !com.stricmp( tok.string, "lightingAmbientOnly" )) 
+	else if( !com.stricmp( tok.string, "lightingAmbient" )) 
 	{
 		// optional undocs parm 'invLight'
 		if( Com_ReadToken( script, false, &tok ))
 			if( !com.stricmp( tok.string, "invLight" ))
 				pass->rgbGen.args[0] = true;
-		pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT_ONLY;
+		pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT;
 	}
 	else if( !com.stricmp( tok.string, "const" ) || !com.stricmp( tok.string, "constant" ))
 	{
@@ -2493,9 +2507,6 @@ void R_ShaderList_f( void )
 		case SHADER_OPAQUE_OCCLUDER:
 			Msg( "occl " );
 			break;
-		case SHADER_OUTLINE:
-			Msg( "outl " );
-			break;
 		case SHADER_NOMIP:
 			Msg( "pic  " );
 			break;
@@ -2619,8 +2630,10 @@ void R_InitShaders( void )
 
 	r_shaderTwoSided = 0;
 	r_miptexFeatures = 0;
-	r_stageAnimFrequency = 0.0f;
+	r_stageAnimOffset = 0;
 	r_numStageTextures = 0;
+	r_stageAnimFrequency[0] = 0.0f;
+	r_stageAnimFrequency[1] = 0.0f;
 	r_shaderRenderMode = kRenderNormal;
 
 	R_RegisterBuiltinShaders ();
@@ -2802,7 +2815,7 @@ void Shader_SetBlendmode( ref_stage_t *pass )
 
 	if( pass->flags & SHADERSTAGE_BLENDMODE )
 		return;
-	if( !pass->textures[0] && !( pass->flags & SHADERSTAGE_LIGHTMAP ))
+	if( !pass->textures[0] && !( pass->flags & ( SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT )))
 		return;
 
 	if(!( pass->glState & (GLSTATE_SRCBLEND_MASK|GLSTATE_DSTBLEND_MASK)))
@@ -2951,10 +2964,8 @@ static bool Shader_ParseShader( ref_shader_t *shader, script_t *script )
 				case RGBGEN_COLORWAVE:
 				case RGBGEN_ENTITY:
 				case RGBGEN_ONE_MINUS_ENTITY:
-				case RGBGEN_LIGHTING_DIFFUSE_ONLY:
-				case RGBGEN_LIGHTING_AMBIENT_ONLY:
+				case RGBGEN_LIGHTING_AMBIENT:
 				case RGBGEN_CUSTOM:
-				case RGBGEN_OUTLINE:
 				case RGBGEN_UNKNOWN:   // assume RGBGEN_IDENTITY or RGBGEN_IDENTITY_LIGHTING
 					switch( stage->alphaGen.type )
 					{
@@ -2964,7 +2975,6 @@ static bool Shader_ParseShader( ref_shader_t *shader, script_t *script )
 					case ALPHAGEN_WAVE:
 					case ALPHAGEN_ALPHAWAVE:
 					case ALPHAGEN_ENTITY:
-					case ALPHAGEN_OUTLINE:
 						stage->flags |= SHADERSTAGE_NOCOLORARRAY;
 						break;
 					default:	break;
@@ -3217,6 +3227,9 @@ void Shader_Finish( ref_shader_t *s )
 	if( s->flags & SHADER_AUTOSPRITE )
 		s->flags &= ~( SHADER_CULL_FRONT|SHADER_CULL_BACK );
 
+	if( r_shaderHasDlightPass )
+		s->flags |= SHADER_NO_MODULATIVE_DLIGHTS;
+
 	for( i = 0, pass = s->stages; i < s->num_stages; i++, pass++ )
 	{
 		if( pass->flags & SHADERSTAGE_ANIMFREQUENCY && pass->anim_offset == 0 )
@@ -3230,8 +3243,11 @@ void Shader_Finish( ref_shader_t *s )
 			s->flags |= SHADER_HASLIGHTMAP;
 		if( pass->program )
 		{
+			s->flags |= SHADER_NO_MODULATIVE_DLIGHTS;
 			if( pass->program_type == PROGRAM_TYPE_MATERIAL )
 				s->flags |= SHADER_MATERIAL;
+			if( r_shaderHasDlightPass )
+				pass->textures[5] = ( (texture_t *)1); // HACKHACK no dlights
 		}
 		Shader_SetBlendmode( pass );
 	}
@@ -3418,7 +3434,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			// normal transparency
 			pass->flags |= SHADERSTAGE_BLEND_MODULATE;
 			pass->glState = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DEPTHWRITE;
-			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT_ONLY;
+			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT;
 			pass->alphaGen.type = ALPHAGEN_ENTITY;
 	         		shader->sort = SORT_ADDITIVE;
 			break;
@@ -3432,7 +3448,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		case kRenderTransAlpha:
 			pass->flags |= SHADERSTAGE_BLEND_DECAL;
 			pass->glState = GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
-			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT_ONLY;
+			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT;
 			pass->alphaGen.type = ALPHAGEN_ENTITY;
 			shader->sort = SORT_ALPHATEST;
 			break;
@@ -3487,7 +3503,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		shader->stages = (ref_stage_t *)( ( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
 		pass->tcgen = TCGEN_BASE;
-		if( r_stageAnimFrequency == 0.0f && r_numStageTextures == 8 )
+		if( r_stageAnimFrequency[0] == 0.0f && r_numStageTextures == 8 )
 		{
 			// store angled map into one bundle
 			pass->flags |= SHADERSTAGE_ANGLEDMAP;
@@ -3503,10 +3519,10 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		{
 			// store group frames into one stage
 			pass->flags |= SHADERSTAGE_FRAMES;
-			if( r_stageAnimFrequency != 0.0f )
+			if( r_stageAnimFrequency[0] != 0.0f )
 			{
 				pass->flags |= SHADERSTAGE_ANIMFREQUENCY;
-				pass->animFrequency[0] = r_stageAnimFrequency;
+				pass->animFrequency[0] = r_stageAnimFrequency[0];
 			}
 			for( i = 0; i < r_numStageTextures; i++ )
 			{
@@ -3557,13 +3573,13 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		case kRenderTransAlpha:
 			pass->flags |= SHADERSTAGE_BLEND_DECAL;
 			pass->glState = GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
-			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT_ONLY;
+			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT;
 			pass->alphaGen.type = ALPHAGEN_IDENTITY;
 			shader->sort = SORT_ALPHATEST;
 			break;
 		default:
 			pass->glState = GLSTATE_DEPTHWRITE;
-			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT_ONLY;
+			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT;
 			pass->alphaGen.type = ALPHAGEN_IDENTITY;
 			shader->sort = SORT_OPAQUE;
 			break;
@@ -3707,32 +3723,11 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		pass->tcgen = TCGEN_NONE;
 		pass->num_textures++;
 		break;
-	case SHADER_OUTLINE:
-		shader->type = SHADER_OUTLINE;
-		shader->features = MF_NORMALS|MF_DEFORMVS;
-		shader->sort = SORT_OPAQUE;
-		shader->flags = SHADER_CULL_BACK|SHADER_DEPTHWRITE|SHADER_STATIC;
-		shader->numDeforms = 1;
-		shader->num_stages = 1;
-		shader->name = Shader_Malloc( length + 1 + shader->numDeforms * sizeof( deform_t ) + sizeof( ref_stage_t ) * shader->num_stages );
-		strcpy( shader->name, shortname );
-		shader->deforms = ( deform_t * )( ( byte * )shader->name + length + 1 );
-		shader->deforms[0].type = DEFORM_OUTLINE;
-		shader->stages = ( ref_stage_t * )( ( byte * )shader->deforms + shader->numDeforms * sizeof( deform_t ) );
-		pass = &shader->stages[0];
-		pass->textures[0] = tr.whiteTexture;
-		pass->flags = SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_MODULATE;
-		pass->glState = GLSTATE_SRCBLEND_ONE|GLSTATE_DSTBLEND_ZERO|GLSTATE_DEPTHWRITE;
-		pass->rgbGen.type = RGBGEN_OUTLINE;
-		pass->alphaGen.type = ALPHAGEN_OUTLINE;
-		pass->tcgen = TCGEN_NONE;
-		pass->num_textures++;
-		break;
 	case SHADER_TEXTURE:
 		if( mapConfig.deluxeMappingEnabled && Shaderpass_LoadMaterial( &materialImages[0], &materialImages[1], &materialImages[2], shortname, addFlags, 1 ))
 		{
 			shader->type = SHADER_TEXTURE;
-			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_HASLIGHTMAP|SHADER_MATERIAL;
+			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_NO_MODULATIVE_DLIGHTS|SHADER_HASLIGHTMAP|SHADER_MATERIAL;
 			shader->features = MF_STCOORDS|MF_LMCOORDS|MF_NORMALS|MF_SVECTORS|MF_ENABLENORMALS;
 			shader->sort = SORT_OPAQUE;
 			shader->num_stages = 1;
@@ -3777,7 +3772,33 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			pass->flags = SHADERSTAGE_RENDERMODE|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
 			pass->glState = GLSTATE_DEPTHWRITE;
 			pass->tcgen = TCGEN_BASE;
-			if( r_numStageTextures > 0 ) pass->textures[0] = r_stageTexture[0];
+
+			if( r_numStageTextures > 1 )
+			{
+				// extended sequence
+				if( r_stageAnimFrequency[0] != 0.0f )
+				{
+					pass->flags |= SHADERSTAGE_ANIMFREQUENCY;
+					pass->animFrequency[0] = r_stageAnimFrequency[0];
+					pass->animFrequency[1] = r_stageAnimFrequency[1];
+					pass->anim_offset = (r_stageAnimOffset == 0) ? r_numStageTextures : r_stageAnimOffset;
+				}
+				else pass->flags |= SHADERSTAGE_FRAMES;
+
+				for( i = 0; i < r_numStageTextures; i++ )
+				{
+					if( !r_stageTexture[i] )
+						pass->textures[i] = tr.defaultTexture;
+					else pass->textures[i] = r_stageTexture[i];
+					pass->num_textures++;
+				}
+				pass->textures[0] = r_stageTexture[0];
+			}
+			else if( r_numStageTextures == 1 )
+			{
+				pass->textures[0] = r_stageTexture[0];
+				pass->num_textures++;
+			}
 			else pass->textures[0] = Shader_FindImage( shader, shortname, addFlags );
 			pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;
 			pass->alphaGen.type = ALPHAGEN_IDENTITY;
@@ -3789,7 +3810,6 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 				pass->numtcMods++;
 			}
 
-			pass->num_textures++;
 			if( !hasLightmap ) break;
 			pass = &shader->stages[1];
 			pass->flags = SHADERSTAGE_LIGHTMAP|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
@@ -3801,7 +3821,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		break;
 	case SHADER_GENERIC:
 	default:	shader->type = SHADER_GENERIC;
-		shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT;
+		shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_NO_MODULATIVE_DLIGHTS;
 		shader->features = MF_STCOORDS;
 		shader->sort = SORT_OPAQUE;
 		shader->num_stages = 1;
@@ -3822,8 +3842,10 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 	// reset parms
 	r_shaderTwoSided = 0;
 	r_miptexFeatures = 0;
+	r_stageAnimOffset = 0;
 	r_numStageTextures = 0;
-	r_stageAnimFrequency = 0.0f;
+	r_stageAnimFrequency[0] = 0.0f;
+	r_stageAnimFrequency[1] = 0.0f;
 
 	Shader_SetRenderMode( shader );
 
@@ -3904,6 +3926,7 @@ ref_shader_t *R_LoadShader( const char *name, int type, bool forceDefault, int a
 	r_shaderNoMipMaps =	false;
 	r_shaderNoPicMip = false;
 	r_shaderNoCompress = false;
+	r_shaderHasDlightPass = false;
 	r_shaderNearest = false;
 
 	if( !forceDefault )
@@ -3987,7 +4010,24 @@ void R_ShaderSetRenderMode( kRenderMode_t mode, bool twoSided )
 
 void R_ShaderAddStageIntervals( float interval )
 {
-	r_stageAnimFrequency += interval;
+	r_stageAnimFrequency[0] += interval;
+}
+
+void R_SetAnimFrequency( float anim_fps )
+{
+	if( r_numStageTextures )
+	{
+		// tired to specify third anim sequence, ignore
+		if( r_stageAnimOffset ) return;
+
+		r_stageAnimFrequency[1] = anim_fps;
+		r_stageAnimOffset = r_numStageTextures;
+	}
+	else
+	{
+		r_stageAnimFrequency[0] = anim_fps;
+		r_stageAnimOffset = 0;
+	}
 }
 
 /*

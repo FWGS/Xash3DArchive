@@ -8,6 +8,9 @@
 physic_imp_t	pi;
 stdlib_api_t	com;
 
+// cvars
+cvar_t		*cm_novis;
+
 // main DLL entry point
 BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 {
@@ -16,6 +19,8 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 
 bool CM_InitPhysics( void )
 {
+	cm_novis = Cvar_Get( "cm_novis", "0", 0, "force to ignore server visibility" );
+
 	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
 	return true;
 }

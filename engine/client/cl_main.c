@@ -18,7 +18,7 @@ cvar_t	*cl_nodelta;
 cvar_t	*cl_crosshair;
 cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
-cvar_t	*cl_mouselook;
+cvar_t	*cl_lightstyle_lerping;
 cvar_t	*userinfo;
 
 //
@@ -1032,7 +1032,8 @@ void CL_InitLocal( void )
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_lw = Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
-
+	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", CVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
+	
 	// register our commands
 	Cmd_AddCommand ("cmd", CL_ForwardToServer_f, "send a console commandline to the server" );
 	Cmd_AddCommand ("pause", NULL, "pause the game (if the server allows pausing)" );

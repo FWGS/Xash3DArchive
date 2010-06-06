@@ -392,12 +392,6 @@ void R_AddModelMeshToList( uint modhandle, mfog_t *fog, ref_shader_t *shader, in
 	
 	mb = R_AddMeshToList( MB_MODEL, fog, shader, -( meshnum+1 ) );
 	if( mb ) mb->modhandle = modhandle;
-
-	if( !GL_Support( R_SHADER_GLSL100_EXT ) && RI.currententity->outlineHeight/* && !(RI.params & RP_SHADOWMAPVIEW)*/ )
-	{
-		if(( shader->sort == SORT_OPAQUE ) && ( shader->flags & SHADER_CULL_FRONT ))
-			R_AddModelMeshOutline( modhandle, fog, meshnum );
-	}
 }
 
 /*
@@ -452,8 +446,6 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 			features = shader->features;
 			if( r_shownormals->integer )
 				features |= MF_NORMALS;
-			if( ent->outlineHeight )
-				features |= (MF_NORMALS|MF_ENABLENORMALS);
 
 			if( features & MF_NONBATCHED )
 			{

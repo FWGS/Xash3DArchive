@@ -10,6 +10,10 @@
 #define YAW			1
 #define ROLL			2
 
+// worldcraft predefined angles
+#define ANGLE_UP			-1
+#define ANGLE_DOWN			-2
+
 // sound specific
 #define VOL_NORM			1.0f	// volume values
 

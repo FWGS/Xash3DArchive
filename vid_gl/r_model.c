@@ -31,10 +31,67 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Mod_CopyString( m, str )	com.stralloc( (m)->mempool, str, __FILE__, __LINE__ )
 #define MAX_SIDE_VERTS		256	// per one polygon
 
+typedef struct epair_s
+{
+	struct epair_s	*next;
+	char		*key;
+	char		*value;
+} epair_t;
+
+typedef struct
+{
+	vec3_t		origin;
+	epair_t		*epairs;
+} mapent_t;
+
+typedef enum
+{
+	emit_point,
+	emit_spotlight,
+	emit_surface,
+	emit_skylight
+} emittype_t;
+
+typedef struct
+{
+	int	numpoints;
+	int	maxpoints;
+	vec3_t	points[8];	// variable sized
+} winding_t;
+
+typedef struct
+{
+	vec3_t		dir;
+	vec3_t		color;
+	int		style;
+} contribution_t;
+
+typedef struct light_s
+{
+	struct light_s	*next;
+	emittype_t	type;
+	int		style;
+	vec3_t		origin;
+	vec3_t		color;
+	vec3_t		normal;		// for surfaces and spotlights
+	float		photons;
+	float		dist;
+	float		stopdot;		// for spotlights
+	float		stopdot2;		// for spotlights
+	winding_t		*w;
+} light_t;
+
 typedef struct
 {
 	char		name[32];
 	ref_shader_t	*shader;
+
+	mip_t		*base;		// general texture
+
+	bool		animated;
+	mip_t		*anim_frames[2][10];// (indexed as [alternate][frame])
+	int		anim_total[2];	// total frames in sequence and alternate sequence
+
 	int		width;
 	int		height;
 } cachedimage_t;
@@ -52,6 +109,11 @@ static struct
 	int		numsurfedges;
 	cachedimage_t	*textures;
 	int		numtextures;
+	light_t		*lights;		// stored pointlights
+	int		numPointLights;
+	script_t		*entscript;
+	mapent_t		*entities;	// sizeof( mapent_t ) * GI->max_edicts
+	int		numents;
 } cached; 
 
 static ref_model_t		*loadmodel;
@@ -436,9 +498,6 @@ static void Mod_CheckDeluxemaps( const dlump_t *l, byte *lmData )
 
 	// deluxemapping temporare disabled
 	// FIXME: re-enable it again
-
-	mapConfig.pow2MapOvrbr = 0;
-	mapConfig.deluxeMaps = false;
 //	if( GL_Support( R_SHADER_GLSL100_EXT ))
 	mapConfig.deluxeMappingEnabled = false;
 }
@@ -1039,43 +1098,258 @@ static void Mod_BuildSurfacePolygons( msurface_t *surf )
 
 /*
 =================
-Mod_LoadMiptex
+Mod_LoadTexture
 =================
 */
-static ref_shader_t *Mod_LoadMiptex( char *shadername, mip_t *mt )
+static void Mod_LoadTexture( mip_t *mt )
 {
-	texture_t	*miptex;
-	int	size; 
+	texture_t	*tx;
 
-	if( R_ShaderCheckCache( shadername ))
-		goto load_shader;	// external shader found
-
-	// determine shader parms by texturename
-	if( !com.strncmp( mt->name, "scroll", 6 ))
-		R_ShaderSetMiptexFlags( MIPTEX_CONVEYOR );
-
-	if( !com.strncmp( mt->name, "black", 5 ))
-		R_ShaderSetMiptexFlags( MIPTEX_NOLIGHTMAP );
+	Com_Assert( mt == NULL );
 
 	if( mt->offsets[0] > 0 )
 	{
 		// NOTE: imagelib detect miptex version by size
 		// 770 additional bytes is indicated custom palette
-		size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
+		int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 		if( cached.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
-		// build the unique shadername because we don't want keep this for other maps
-		com.snprintf( shadername, 32, "%s/%s", cached.modelname, mt->name );
-
 		// loading internal texture if present
-		miptex = R_FindTexture( va( "\"#%s.mip\"", mt->name ), (byte *)mt, size, 0 );
-
-		if( !miptex ) miptex = tr.defaultTexture;
-		R_ShaderAddStageTexture( miptex ); // add internal texture
+		tx = R_FindTexture( va( "\"#%s.mip\"", mt->name ), (byte *)mt, size, 0 );
+	}
+	else
+	{
+		// okay, loading it from wad
+		tx = R_FindTexture( va( "\"%s.mip\"", mt->name ), NULL, 0, 0 );
 	}
 
+	// apply emo-texture if missing :)
+	if( !tx ) tx = tr.defaultTexture;
+
+	if( tx->srcFlags & IMAGE_HAS_LUMA )
+		Msg( "Texture %s has luma\n", tx->name );
+
+	R_ShaderAddStageTexture( tx );
+}
+
+/*
+=================
+Mod_LoadCachedImage
+=================
+*/
+static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
+{
+	mip_t	*mt = image->base;
+	int	i;
+
+	Com_Assert( mt == NULL );
+
+	com.snprintf( image->name, sizeof( image->name ), "textures/%s", mt->name );
+
+	if( R_ShaderCheckCache( image->name ))
+		goto load_shader;	// external shader found
+
+	// build the unique shadername because we don't want keep this for other maps
+	if( mt->offsets[0] > 0 )
+		com.snprintf( image->name, 32, "%s/%s", cached.modelname, mt->name );
+
+	// determine shader parms by texturename
+	if( !com.strncmp( mt->name, "scroll", 6 ))
+		R_ShaderSetMiptexFlags( MIPTEX_CONVEYOR );
+
+	if( image->animated )
+	{
+		R_SetAnimFrequency( 5.0f );	// set primary animation
+		for( i = 0; i < image->anim_total[0]; i++ )
+			Mod_LoadTexture( image->anim_frames[0][i] );
+
+		R_SetAnimFrequency( 5.0f );	// set alternate animation
+		for( i = 0; i < image->anim_total[1]; i++ )
+			Mod_LoadTexture( image->anim_frames[1][i] );
+	}
+	else Mod_LoadTexture( mt );	// load the base image
+
 load_shader:
-	return R_LoadShader( shadername, SHADER_TEXTURE, false, 0, SHADER_INVALID );
+	return R_LoadShader( image->name, SHADER_TEXTURE, false, 0, SHADER_INVALID );
+}
+
+/*
+=================
+Mod_LoadTextures
+=================
+*/
+static void Mod_LoadTextures( const dlump_t *l )
+{
+	dmiptexlump_t	*in;
+	cachedimage_t	*out, *tx1, *tx2, *anims[10], *altanims[10];
+	cvar_t		*scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
+	int		i, j, k, num, max, altmax, count;
+	bool		incomplete;
+	mip_t		*mt;
+
+	if( !l->filelen )
+	{
+		loadmodel->numshaders = 0;
+		return;
+	}
+	
+	in = (void *)(mod_base + l->fileofs);
+	count = LittleLong( in->nummiptex );
+
+	cached.textures = Mem_Alloc( cached_mempool, count * sizeof( *out ));
+
+	loadmodel->shaders = Mod_Malloc( loadmodel, count * sizeof( ref_shader_t* ));
+	loadmodel->numshaders = count;
+
+	out = cached.textures;
+	cached.numtextures = count;
+
+	for( i = 0; i < count; i++, out++ )
+	{
+		in->dataofs[i] = LittleLong( in->dataofs[i] );
+
+		if( in->dataofs[i] == -1 )
+		{
+			loadmodel->shaders[i] = tr.defaultShader;
+			out->width = out->height = -1;
+			continue; // texture is completely missing
+		}
+
+		mt = (mip_t *)((byte *)in + in->dataofs[i] );
+
+		if( !mt->name[0] )
+		{
+			MsgDev( D_WARN, "unnamed texture in %s\n", loadmodel->name );
+			com.snprintf( mt->name, sizeof( mt->name ), "*MIPTEX%i", i );
+		}
+
+		// convert to lowercase
+		com.strnlwr( mt->name, mt->name, sizeof( mt->name ));
+		com.strncpy( out->name, mt->name, sizeof( out->name ));
+
+		// original dimensions for adjust lightmap on a face
+		out->width = LittleLong( mt->width );
+		out->height = LittleLong( mt->height );
+		out->base = mt;
+	}
+
+	// sequence the animations
+	for( i = 0; i < count; i++ )
+	{
+		tx1 = cached.textures + i;
+
+		if( tx1->name[0] != '+' || tx1->name[1] == 0 || tx1->name[2] == 0 )
+			continue;
+
+		if( tx1->anim_total[0] || tx1->anim_total[1] )
+			continue;	// already sequenced
+
+		// find the number of frames in the animation
+		Mem_Set( anims, 0, sizeof( anims ));
+		Mem_Set( altanims, 0, sizeof( altanims ));
+
+		for( j = i; j < count; j++ )
+		{
+			tx2 = cached.textures + j;
+			if( tx2->name[0] != '+' || com.strcmp( tx2->name + 2, tx1->name + 2 ))
+				continue;
+
+			num = tx2->name[1];
+			if( num >= '0' && num <= '9' )
+				anims[num - '0'] = tx2;
+			else if( num >= 'a' && num <= 'j' )
+				altanims[num - 'a'] = tx2;
+			else MsgDev( D_WARN, "bad animating texture %s\n", tx1->name );
+		}
+
+		max = altmax = 0;
+		for( j = 0; j < 10; j++ )
+		{
+			if( anims[j] ) max = j + 1;
+			if( altanims[j] ) altmax = j + 1;
+		}
+
+		MsgDev( D_LOAD, "linking animation %s ( %i:%i frames )\n", tx1->name, max, altmax );
+
+		incomplete = false;
+		for( j = 0; j < max; j++ )
+		{
+			if( !anims[j] )
+			{
+				MsgDev( D_WARN, "missing frame %i of %s\n", j, tx1->name );
+				incomplete = true;
+			}
+		}
+
+		for( j = 0; j < altmax; j++ )
+		{
+			if( !altanims[j] )
+			{
+				MsgDev( D_WARN, "missing altframe %i of %s\n", j, tx1->name );
+				incomplete = true;
+			}
+		}
+
+		// bad animchain
+		if( incomplete ) continue;
+
+		if( altmax < 1 )
+		{
+			// if there is no alternate animation, duplicate the primary
+			// animation into the alternate
+			altmax = max;
+			for( k = 0; k < 10; k++ )
+				altanims[k] = anims[k];
+		}
+
+		// link together the primary animation
+		for( j = 0; j < max; j++ )
+		{
+			tx2 = anims[j];
+			tx2->animated = true;
+			tx2->anim_total[0] = max;
+			tx2->anim_total[1] = altmax;
+
+			for( k = 0; k < 10; k++ )
+			{
+				tx2->anim_frames[0][k] = (anims[k]) ? anims[k]->base : NULL;
+				tx2->anim_frames[1][k] = (altanims[k]) ? altanims[k]->base : NULL;
+			}
+		}
+
+		// if there really is an alternate anim...
+		if( anims[0] != altanims[0] )
+		{
+			// link together the alternate animation
+			for( j = 0; j < altmax; j++ )
+			{
+				tx2 = altanims[j];
+				tx2->animated = true;
+
+				// the primary/alternate are reversed here
+				tx2->anim_total[0] = altmax;
+				tx2->anim_total[1] = max;
+
+				for( k = 0; k < 10; k++ )
+				{
+					tx2->anim_frames[0][k] = (altanims[k]) ? altanims[k]->base : NULL;
+					tx2->anim_frames[1][k] = (anims[k]) ? anims[k]->base : NULL;
+				}
+			}
+		}
+	}
+
+	// load single frames and sequence groups
+	for( i = 0; i < count; i++ )
+	{
+		out = cached.textures + i;
+
+//		out->contents = Mod_ContentsFromShader( out->name );	// FIXME: implement
+		loadmodel->shaders[i] = out->shader = Mod_LoadCachedImage( out );
+
+		Cvar_SetValue( "scr_loading", scr_loading->value + 50.0f / count );
+		if( ri.UpdateScreen ) ri.UpdateScreen();
+	}
 }
 
 /*
@@ -1089,17 +1363,17 @@ static void Mod_LoadLighting( const dlump_t *l )
 	int	i;
 
 	if( !l->filelen ) return;
+	in = (mod_base + l->fileofs);
 
-	Mod_CheckDeluxemaps( l, mod_base + l->fileofs );
+	Mod_CheckDeluxemaps( l, in );
 
 	switch( cached.version )
 	{
 	case Q1BSP_VERSION:
 		// expand the white lighting data
 		loadbmodel->lightdata = Mod_Malloc( loadmodel, l->filelen * 3 );
-		in = loadbmodel->lightdata + l->filelen * 2;
 		out = loadbmodel->lightdata;
-		Mem_Copy( in, (mod_base + l->fileofs), l->filelen );
+
 		for( i = 0; i < l->filelen; i++ )
 		{
 			d = *in++;
@@ -1111,7 +1385,7 @@ static void Mod_LoadLighting( const dlump_t *l )
 	case HLBSP_VERSION:
 		// load colored lighting
 		loadbmodel->lightdata = Mod_Malloc( loadmodel, l->filelen );
-		Mem_Copy( loadbmodel->lightdata, (mod_base + l->fileofs), l->filelen );
+		Mem_Copy( loadbmodel->lightdata, in, l->filelen );
 		break;
 	}
 }
@@ -1184,70 +1458,6 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		out->firstface = LittleLong( in->firstface );
 		out->numfaces = LittleLong( in->numfaces );
 		out->visleafs = LittleLong( in->visleafs );
-	}
-}
-
-/*
-=================
-Mod_LoadTextures
-=================
-*/
-static void Mod_LoadTextures( const dlump_t *l )
-{
-	int		i, count;
-	dmiptexlump_t	*in;
-	cachedimage_t	*out;
-	cvar_t		*scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
-	mip_t		*mt;
-
-	if( !l->filelen )
-	{
-		loadmodel->numshaders = 0;
-		return;
-	}
-	
-	in = (void *)(mod_base + l->fileofs);
-	count = LittleLong( in->nummiptex );
-
-	out = Mem_Alloc( cached_mempool, count * sizeof( *out ));
-
-	loadmodel->shaders = Mod_Malloc( loadmodel, count * sizeof( ref_shader_t* ));
-	loadmodel->numshaders = count;
-
-	cached.textures = out;
-	cached.numtextures = count;
-
-	for( i = 0; i < count; i++, out++ )
-	{
-		in->dataofs[i] = LittleLong( in->dataofs[i] );
-
-		if( in->dataofs[i] == -1 )
-		{
-			loadmodel->shaders[i] = tr.defaultShader;
-			out->width = out->height = -1;
-			continue; // texture is completely missing
-		}
-
-		mt = (mip_t *)((byte *)in + in->dataofs[i] );
-
-		if( !mt->name[0] )
-		{
-			MsgDev( D_WARN, "unnamed texture in %s\n", loadmodel->name );
-			com.snprintf( mt->name, sizeof( mt->name ), "*MIPTEX%i", i );
-		}
-
-		com.strnlwr( mt->name, mt->name, sizeof( mt->name )); // make normal name with terminator
-		com.snprintf( out->name, sizeof( out->name ), "textures/%s", mt->name );
-
-//		out->contents = Mod_ContentsFromShader( out->name );	// FIXME: implement
-		loadmodel->shaders[i] = out->shader = Mod_LoadMiptex( out->name, mt );
-
-		// original dimensions for adjust lightmap on a face
-		out->width = LittleLong( mt->width );
-		out->height = LittleLong( mt->height );
-
-		Cvar_SetValue( "scr_loading", scr_loading->value + 50.0f / count );
-		if( ri.UpdateScreen ) ri.UpdateScreen();
 	}
 }
 
@@ -1611,113 +1821,693 @@ void Mod_LoadVisibility( dlump_t *l )
 	Mem_Copy( loadbmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
 }
 
+void StripTrailing( char *e )
+{
+	char	*s;
+
+	s = e + com.strlen( e ) - 1;
+	while( s >= e && *s <= 32 )
+	{
+		*s = 0;
+		s--;
+	}
+}
+
+/*
+================
+ValueForKey
+
+gets the value for an entity key
+================
+*/
+const char *ValueForKey( const mapent_t *ent, const char *key )
+{
+	epair_t	*ep;
+
+	if( !ent ) return "";
+	
+	for( ep = ent->epairs; ep != NULL; ep = ep->next )
+	{
+		if( !com.strcmp( ep->key, key ))
+			return ep->value;
+	}
+	return "";
+}
+
+/*
+================
+IntForKey
+
+gets the integer point value for an entity key
+================
+*/
+int IntForKey( const mapent_t *ent, const char *key )
+{
+	return com.atoi( ValueForKey( ent, key ));
+}
+
+/*
+================
+FloatForKey
+
+gets the floating point value for an entity key
+================
+*/
+float FloatForKey( const mapent_t *ent, const char *key )
+{
+	return com.atof( ValueForKey( ent, key ));
+}
+
+/*
+================
+GetVectorForKey
+
+gets a 3-element vector value for an entity key
+================
+*/
+void GetVectorForKey( const mapent_t *ent, const char *key, vec3_t vec )
+{
+	const char	*k;
+	double		v1, v2, v3;
+
+	k = ValueForKey( ent, key );
+	
+	// scanf into doubles, then assign, so it is vec_t size independent
+	v1 = v2 = v3 = 0.0;
+	sscanf( k, "%lf %lf %lf", &v1, &v2, &v3 );
+	VectorSet( vec, v1, v2, v3 );
+}
+
+/*
+================
+FindTargetEntity
+
+finds an entity target
+================
+*/
+mapent_t *FindTargetEntity( const char *target )
+{
+	int		i;
+	const char	*n;
+	
+	for( i = 0; i < cached.numents; i++ )
+	{
+		n = ValueForKey( &cached.entities[i], "targetname" );
+		if( !com.strcmp( n, target )) return &cached.entities[i];
+	}
+	return NULL;
+}
+
+/*
+=================
+Mod_ParseEpair
+
+parses a single quoted "key" "value" pair into an epair struct
+=================
+*/
+static epair_t *Mod_ParseEpair( script_t *script, token_t *token )
+{
+	epair_t	*e;
+
+	e = Mem_Alloc( cached_mempool, sizeof( epair_t ));
+	
+	if( com.strlen( token->string ) >= MAX_KEY - 1 )
+		Host_Error( "Mod_ParseEpair: key %s too long\n", token->string );
+	e->key = com.stralloc( cached_mempool, token->string, __FILE__, __LINE__ );
+
+	Com_ReadToken( script, SC_PARSE_GENERIC, token );
+	if( com.strlen( token->string ) >= MAX_VALUE - 1 )
+		Host_Error( "Mod_ParseEpair: value %s too long\n", token->string );
+	e->value = com.stralloc( cached_mempool, token->string, __FILE__, __LINE__ );
+
+	// strip trailing spaces if needs
+	StripTrailing( e->key );
+	StripTrailing( e->value );
+
+	return e;
+}
+
+/*
+================
+ParseEntity
+
+parses an entity's epairs
+================
+*/
+static bool Mod_ParseEntity( void )
+{
+	epair_t	*pair;
+	token_t	token;
+	mapent_t	*mapEnt;
+
+	if( !Com_ReadToken( cached.entscript, SC_ALLOW_NEWLINES, &token ))
+		return false;
+
+	if( com.stricmp( token.string, "{" )) Host_Error( "Mod_ParseEntity: '{' not found\n" );
+	if( cached.numents == GI->max_edicts ) return false; // probably stupid user set wrong limit
+
+	mapEnt = &cached.entities[cached.numents];
+	cached.numents++;
+
+	while( 1 )
+	{
+		if( !Com_ReadToken( cached.entscript, SC_ALLOW_NEWLINES|SC_PARSE_GENERIC, &token ))
+			Host_Error( "Mod_ParseEntity: EOF without closing brace\n" );
+		if( !com.stricmp( token.string, "}" )) break;
+		pair = Mod_ParseEpair( cached.entscript, &token );
+		pair->next = mapEnt->epairs;
+		mapEnt->epairs = pair;
+	}
+	return true;
+}
+
 /*
 =================
 Mod_LoadEntities
 =================
 */
-static void Mod_LoadEntities( const dlump_t *l, vec3_t gridSize, vec3_t ambient, vec3_t outline )
+static void Mod_LoadEntities( const dlump_t *l, vec3_t ambient )
 {
-	char	key[MAX_KEY], value[MAX_VALUE];
-	float	celcolorf[3] = { 0.0f, 0.0f, 0.0f };
-	float	gridsizef[3] = { 0.0f, 0.0f, 0.0f };
-	float	colorf[3] = { 0.0f, 0.0f, 0.0f };
-	float	ambientf = 0.0f;
-	bool	isworld;
-	token_t	token;
-	script_t	*ents;
-	int	n;
+	float		ambientScale = 0.0f;
+	const char	*name, *target;
+	mapent_t		*e, *e2;
+	float		angle;
+	vec3_t		dest;
+	light_t		*dl;
+	int		i;
 
-	VectorClear( gridSize );
+	cached.entscript = Com_OpenScript( "entities", (char *)mod_base + l->fileofs, l->filelen );
+	if( !cached.entscript ) return;
+
+	cached.entities = Mem_Alloc( cached_mempool, sizeof( mapent_t ) * GI->max_edicts );
+	cached.numents = 0;
+
+	// read all the ents
+	while( Mod_ParseEntity( ));
+	Com_CloseScript( cached.entscript );
+	cached.entscript = NULL;
+
 	VectorClear( ambient );
-	VectorClear( outline );
 
-	ents = Com_OpenScript( LUMP_ENTITIES, (char *)mod_base + l->fileofs, l->filelen );
-	if( !ents ) return;
-
-	while( Com_ReadToken( ents, SC_ALLOW_NEWLINES, &token ))
+	for( i = 0; i < cached.numents; i++ )
 	{
-		isworld = false;
+		const char	*pLight;
+		double		r, g, b, scaler;
+		int		argCnt;
 
-		while( 1 )
+		e = &cached.entities[i];
+
+		name = ValueForKey( e, "classname" );
+		if( !com.strncmp( name, "worldspawn", 10 ))
 		{
-			// parse key
-			if( !Com_ReadToken( ents, SC_ALLOW_NEWLINES, &token ))
-				Host_Error( "R_LoadEntities: EOF without closing brace\n" );
-			if( token.string[0] == '}' ) break; // end of desc
-			com.strncpy( key, token.string, sizeof( key ) - 1 );
+			GetVectorForKey( e, "_color", ambient );
+			ambientScale = FloatForKey( e, "_ambient" );
 
-			// parse value	
-			if( !Com_ReadToken( ents, SC_ALLOW_PATHNAMES2, &token ))
-				Host_Error( "R_LoadEntities: EOF without closing brace\n" );
-			com.strncpy( value, token.string, sizeof( value ) - 1 );
-
-			if( token.string[0] == '}' )
-				Host_Error( "R_LoadEntities: closing brace without data\n" );
-
-			// now that we have the key pair worked out...
-			if( !com.strcmp( key, "classname" ) )
-			{
-				if( !com.strcmp( value, "worldspawn" ) )
-					isworld = true;
-			}
-			else if( !com.strcmp( key, "gridsize" ))
-			{
-				n = sscanf( value, "%f %f %f", &gridsizef[0], &gridsizef[1], &gridsizef[2] );
-				if( n != 3 )
-				{
-					int	gridsizei[3] = { 0, 0, 0 };
-					sscanf( value, "%i %i %i", &gridsizei[0], &gridsizei[1], &gridsizei[2] );
-					VectorCopy( gridsizei, gridsizef );
-				}
-			}
-			else if( !com.strcmp( key, "_ambient" ) || ( !com.strcmp( key, "ambient" ) && ambientf == 0.0f ))
-			{
-				sscanf( value, "%f", &ambientf );
-				if( !ambientf )
-				{
-					int	ia = 0;
-					sscanf( value, "%i", &ia );
-					ambientf = ia;
-				}
-			}
-			else if( !com.strcmp( key, "_color" ))
-			{
-				n = sscanf( value, "%f %f %f", &colorf[0], &colorf[1], &colorf[2] );
-				if( n != 3 )
-				{
-					int	colori[3] = { 0, 0, 0 };
-					sscanf( value, "%i %i %i", &colori[0], &colori[1], &colori[2] );
-					VectorCopy( colori, colorf );
-				}
-			}
-			else if( !com.strcmp( key, "_outlinecolor" ) )
-			{
-				n = sscanf( value, "%f %f %f", &celcolorf[0], &celcolorf[1], &celcolorf[2] );
-				if( n != 3 )
-				{
-					int	celcolori[3] = { 0, 0, 0 };
-					sscanf( value, "%i %i %i", &celcolori[0], &celcolori[1], &celcolori[2] );
-					VectorCopy( celcolori, celcolorf );
-				}
-			}
+			if( VectorIsNull( ambient )) VectorSet( ambient, 1.0f, 1.0f, 1.0f );
+			if( ambientScale > 0.0f ) VectorScale( ambient, ambientScale, ambient );
 		}
 
-		if( isworld )
+		name = ValueForKey( e, "classname" );
+		if( com.strncmp( name, "light", 5 ))
+			continue;
+
+		cached.numPointLights++;
+		dl = Mem_Alloc( cached_mempool, sizeof( light_t ));
+
+		GetVectorForKey( e, "origin", dl->origin );
+
+		dl->next = cached.lights;
+		cached.lights = dl;
+
+		dl->style = IntForKey( e, "style" );
+
+		pLight = ValueForKey( e, "_light" );
+		if( !*pLight )
 		{
-			VectorCopy( gridsizef, gridSize );
-
-			if( VectorCompare( colorf, vec3_origin ))
-				VectorSet( colorf, 1.0, 1.0, 1.0 );
-			VectorScale( colorf, ambientf, ambient );
-
-			if( max( celcolorf[0], max( celcolorf[1], celcolorf[2] )) > 1.0f )
-				VectorScale( celcolorf, 1.0f / 255.0f, celcolorf ); // [0..1] RGB -> [0..255] RGB
-			VectorCopy( celcolorf, outline );
-			break;
+			pLight = ValueForKey( e, "light" );
+			dl->photons = com.atof( pLight );
+			argCnt = 1;
 		}
+		else
+		{
+			// scanf into doubles, then assign, so it is vec_t size independent
+			r = g = b = scaler = 0;
+			argCnt = sscanf( pLight, "%lf %lf %lf %lf", &r, &g, &b, &scaler );
+			dl->color[0] = (float)r;
+		}
+
+		if( argCnt == 1 )
+		{
+			// The R,G,B values are all equal.
+			dl->color[0] = dl->color[1] = dl->color[2] = 1.0f;
+		}
+		else if( argCnt == 3 || argCnt == 4 )
+		{
+			// save the other two G,B values.
+			dl->color[0] = (float)r;
+			dl->color[1] = (float)g;
+			dl->color[2] = (float)b;
+
+			// did we also get an "intensity" scaler value too?
+			if( argCnt == 4 )
+			{
+				// scale the normalized 0-255 R,G,B values by the intensity scaler
+//				dl->color[0] = dl->color[0] / 255 * (float)scaler;
+//				dl->color[1] = dl->color[1] / 255 * (float)scaler;
+//				dl->color[2] = dl->color[2] / 255 * (float)scaler;
+				dl->photons = scaler;
+			}
+		}
+		else
+		{
+			MsgDev( D_WARN, "entity at (%f,%f,%f) has bad '_light' value : '%s'\n", 
+					dl->origin[0], dl->origin[1], dl->origin[2], pLight );
+			continue;
+		}
+
+		if( !dl->photons ) dl->photons = 300; 
+		ColorNormalize( dl->color, dl->color );
+
+		target = ValueForKey (e, "target");
+
+		if( !com.strcmp( name, "light_spot" ) || !com.strcmp( name, "light_environment" ) || target[0] )
+		{
+			if( !VectorAvg( dl->color ))
+				VectorSet( dl->color, 500, 500, 500 );
+
+			dl->type = emit_spotlight;
+			dl->stopdot = FloatForKey( e, "_cone" );
+			if( !dl->stopdot ) dl->stopdot = 10;
+			dl->stopdot2 = FloatForKey( e, "_cone2" );
+			if( !dl->stopdot2 ) dl->stopdot2 = dl->stopdot;
+			if( dl->stopdot2 < dl->stopdot ) dl->stopdot2 = dl->stopdot;
+			dl->stopdot2 = (float)com.cos( dl->stopdot2 / 180 * M_PI );
+			dl->stopdot = (float)com.cos( dl->stopdot / 180 * M_PI );
+
+			if( target[0] )
+			{
+				// point towards target
+				e2 = FindTargetEntity( target );
+				if( !e2 )
+				{
+					MsgDev( D_WARN, "light at (%i %i %i) has missing target\n",
+					(int)dl->origin[0], (int)dl->origin[1], (int)dl->origin[2] );
+				}
+				else
+				{
+					GetVectorForKey( e2, "origin", dest );
+					VectorSubtract( dest, dl->origin, dl->normal );
+					VectorNormalize( dl->normal );
+				}
+			}
+			else
+			{	// point down angle
+				vec3_t	vAngles;
+
+				GetVectorForKey( e, "angles", vAngles );
+
+				angle = IntForKey( e, "angle" );
+
+				if( angle == ANGLE_UP )
+				{
+					VectorSet( dl->normal, 0.0f, 0.0f, 1.0f );
+				}
+				else if( angle == ANGLE_DOWN )
+				{
+					VectorSet( dl->normal, 0.0f, 0.0f, -1.0f );
+				}
+				else
+				{
+					// if we don't have a specific "angle" use the "angles" YAW
+					if( !angle ) angle = vAngles[1];
+
+					dl->normal[2] = 0;
+					dl->normal[0] = (float)com.cos( angle / 180 * M_PI );
+					dl->normal[1] = (float)com.sin( angle / 180 * M_PI );
+				}
+
+				angle = FloatForKey( e, "pitch" );
+
+				// if we don't have a specific "pitch" use the "angles" PITCH
+				if( !angle ) angle = vAngles[0];
+
+				dl->normal[2]  = (float)com.sin( angle / 180 * M_PI );
+				dl->normal[0] *= (float)com.cos( angle / 180 * M_PI );
+				dl->normal[1] *= (float)com.cos( angle / 180 * M_PI );
+			}
+
+			if( IntForKey( e, "_sky" ) || !com.strcmp( name, "light_environment" )) 
+			{
+				dl->type = emit_skylight;
+				dl->stopdot2 = FloatForKey( e, "_sky" ); // hack stopdot2 to a sky key number
+			}
+		}
+		else
+		{
+			if( !VectorAvg( dl->color ))
+				VectorSet( dl->color, 1.0f, 1.0f, 1.0f );
+			dl->type = emit_point;
+		}
+
+		dl->photons *= 7500;
+/*
+		if( dl->type != emit_skylight )
+		{
+			float	l1 = max( dl->intensity[0], max( dl->intensity[1], dl->intensity[2] ));
+			l1 = l1 * l1 / 10;
+
+			dl->intensity[0] *= l1;
+			dl->intensity[1] *= l1;
+			dl->intensity[2] *= l1;
+		}
+*/
 	}
-	Com_CloseScript( ents );
+}
+
+/*
+=============================================================================
+
+ LIGHTGRID CALCULATING
+
+=============================================================================
+*/
+static bool R_PointInSolid( const vec3_t p )
+{
+	return (Mod_PointInLeaf( p, loadmodel )->contents == CONTENTS_SOLID);
+}
+
+/*
+================
+R_PointToPolygonFormFactor
+================
+*/
+float R_PointToPolygonFormFactor( const vec3_t point, const vec3_t normal, const winding_t *w )
+{
+	float	total;
+	vec3_t	dirs[64];
+	vec3_t	triVector, triNormal;
+	float	dot, angle, facing;
+	int	i, j;
+	
+	for( i = 0; i < w->numpoints; i++ )
+	{
+		VectorSubtract( w->points[i], point, dirs[i] );
+		VectorNormalize( dirs[i] );
+	}
+
+	// duplicate first vertex to avoid mod operation
+	VectorCopy( dirs[0], dirs[i] );
+
+	total = 0;
+	for( i = 0 ; i < w->numpoints; i++ )
+	{
+		j = i + 1;
+		dot = DotProduct( dirs[i], dirs[j] );
+
+		// roundoff can cause slight creep, which gives an IND from acos
+		dot = bound( -1.0f, dot, 1.0f );
+		
+		angle = com.acos( dot );
+		CrossProduct( dirs[i], dirs[j], triVector );
+		if( VectorNormalizeLength2( triVector, triNormal ) < 0.0001f )
+			continue;
+
+		facing = DotProduct( normal, triNormal );
+		total += facing * angle;
+
+		if( total > 6.3f || total < -6.3f )
+			return 0;
+	}
+
+	total /= M_PI2;	// now in the range of 0 to 1 over the entire incoming hemisphere
+
+	return total;
+}
+
+/*
+========================
+R_LightContributionToPoint
+========================
+*/
+bool R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3_t color )
+{
+	trace_t	trace;
+	float	add;
+
+	add = 0;
+
+	VectorClear( color );
+
+	// testing exact PTPFF
+	if( light->type == emit_surface )
+	{
+		float	d, factor;
+		vec3_t	normal;
+
+		// see if the point is behind the light
+		d = DotProduct( origin, light->normal ) - light->dist;
+		if( d < 1 ) return false; // point is behind light
+
+		// test occlusion
+		// clip the line, tracing from the surface towards the light
+		R_TraceLine( &trace, origin, light->origin );
+		if( trace.flFraction != 1.0f ) return false;
+
+		// calculate the contribution
+		VectorSubtract( light->origin, origin, normal );
+		if( VectorNormalizeLength( normal ) == 0 )
+			return false;
+
+		factor = R_PointToPolygonFormFactor( origin, normal, light->w );
+		if( factor <= 0 ) return false;
+
+		// FIXME: we needs to rescale color with factor ?
+		VectorScale( light->color, factor, color );
+		return true;
+	}
+
+	// calculate the amount of light at this sample
+	if( light->type == emit_point || light->type == emit_spotlight )
+	{
+		vec3_t	dir;
+		float	dist;
+
+		VectorSubtract( light->origin, origin, dir );
+		dist = VectorLength( dir );
+
+		// clamp the distance to prevent super hot spots
+		if( dist < 16 ) dist = 16;
+
+		add = light->photons * (1.0 / 8000) - dist;
+
+		add = light->photons / ( dist * dist );
+//		add = light->color[0] + light->color[1] + light->color[2];
+	}
+	else
+	{
+		return false;
+	}
+
+	if( add <= 1.0f )
+	{
+		return false;
+	}
+
+	// clip the line, tracing from the surface towards the light
+	if( R_TraceLine( &trace, origin, light->origin ))
+		return false;
+
+	// other light rays must not hit anything
+	if( trace.flFraction != 1.0f )
+		return false;
+
+	// add the result
+	VectorScale( light->color, add, color );
+
+	return true;
+}
+
+static void R_TraceGrid( int num )
+{
+	int		x, y, z;
+	vec3_t		origin;
+	light_t		*light;
+	vec3_t		summedDir;
+	vec3_t		ambientColor[LM_STYLES];
+	vec3_t		directedColor[LM_STYLES];
+	contribution_t	contributions[1024];
+	int		i, j, mod, numCon, numStyles;
+	mgridlight_t	*gp;
+
+	mod = num;
+	z = mod / ( loadbmodel->gridBounds[0] * loadbmodel->gridBounds[1] );
+	mod -= z * ( loadbmodel->gridBounds[0] * loadbmodel->gridBounds[1] );
+
+	y = mod / loadbmodel->gridBounds[0];
+	mod -= y * loadbmodel->gridBounds[0];
+
+	x = mod;
+
+	origin[0] = loadbmodel->gridMins[0] + x * loadbmodel->gridSize[0];
+	origin[1] = loadbmodel->gridMins[1] + y * loadbmodel->gridSize[1];
+	origin[2] = loadbmodel->gridMins[2] + z * loadbmodel->gridSize[2];
+
+	if( R_PointInSolid( origin ))
+	{
+		vec3_t	baseOrigin;
+		int	step;
+
+		VectorCopy( origin, baseOrigin );
+
+		// try to nudge the origin around to find a valid point
+		for( step = 9; step <= 18; step += 9 )
+		{
+			for( i = 0; i < 8; i++ )
+			{
+				VectorCopy( baseOrigin, origin );
+
+				if( i & 1 ) origin[0] += step;
+				else origin[0] -= step;
+
+				if( i & 2 ) origin[1] += step;
+				else origin[1] -= step;
+
+				if( i & 4 ) origin[2] += step;
+				else origin[2] -= step;
+
+				if( !R_PointInSolid( origin ))
+					break;
+			}
+
+			if( i != 8 ) break;
+		}
+
+		// can't find a valid point at all
+		if( step > 18 ) return;
+	}
+
+	VectorClear( summedDir );
+
+	// trace to all the lights
+
+	// find the major light direction, and divide the
+	// total light between that along the direction and
+	// the remaining in the ambient 
+	numCon = 0;
+	for( light = cached.lights; light; light = light->next )
+	{
+		vec3_t	add;
+		vec3_t	dir;
+		float	addSize;
+
+		if( !R_LightContributionToPoint( light, origin, add ))
+			continue;
+
+		VectorSubtract( light->origin, origin, dir );
+		VectorNormalize( dir );
+
+		VectorCopy( add, contributions[numCon].color );
+		VectorCopy( dir, contributions[numCon].dir );
+		contributions[numCon].style = light->style;
+		numCon++;
+
+		addSize = VectorLength( add );
+		VectorMA( summedDir, addSize, dir, summedDir );
+
+		if( numCon == 1023 )
+			break;
+	}
+
+	// now that we have identified the primary light direction,
+	// go back and seperate all the light into directed and ambient
+	VectorNormalize( summedDir );
+
+	for( i = 0; i < LM_STYLES; i++ )
+	{
+		VectorClear( ambientColor[i] );
+		VectorClear( directedColor[i] );
+	}
+
+	gp = loadbmodel->lightgrid + num;
+
+	numStyles = 1;
+	for( i = 0; i < numCon; i++ )
+	{
+		float	d;
+
+		d = DotProduct( contributions[i].dir, summedDir );
+		if( d < 0.0f ) d = 0.0f;
+
+		// find appropriate style
+		for( j = 0; j < numStyles; j++ )
+		{
+			if( gp->styles[j] == contributions[i].style )
+				break;
+		}
+
+		// style not found?
+		if( j >= numStyles )
+		{
+			// add a new style
+			if( numStyles < LM_STYLES )
+			{
+				gp->styles[numStyles] = contributions[i].style;
+				numStyles++;
+			}
+			else j = 0;
+		}
+
+		VectorMA( directedColor[j], d, contributions[i].color, directedColor[j] );
+
+		// the ambient light will be at 1/4 the value of directed light
+		d = 0.25f * ( 1.0f - d );
+		VectorMA( ambientColor[j], d, contributions[i].color, ambientColor[j] );
+	}
+
+	// store off sample
+	for( i = 0; i < LM_STYLES; i++ )
+	{
+		VectorMA( ambientColor[i], 0.125f, directedColor[i], ambientColor[i] );
+
+		// save the resulting value out
+		ColorToBytes( ambientColor[i], gp->ambient[i] );
+		ColorToBytes( directedColor[i], gp->diffuse[i] );
+	}
+
+	// now do some fudging to keep the ambient from being too low
+	VectorNormalize( summedDir );
+	NormToLatLong( summedDir, gp->direction );
+}
+
+void R_BuildLightGrid( mbrushmodel_t *world )
+{
+	int	i;
+	uint	timestart = Sys_Milliseconds();
+
+	MsgDev( D_INFO, "Building LightGrid...\n" );
+
+	// assume lightgrid size as player hull (eg. 64x64x128)
+	VectorSet( world->gridSize, 64, 64, 128 );
+
+	for( i = 0; i < 3; i++ )
+	{
+		vec3_t	maxs;
+
+		world->gridMins[i] = world->gridSize[i] * ceil(( world->submodels[0].mins[i] + 1 ) / world->gridSize[i] );
+		maxs[i] = world->gridSize[i] * floor(( world->submodels[0].maxs[i] - 1 ) / world->gridSize[i] );
+		world->gridBounds[i] = ( maxs[i] - world->gridMins[i] ) / world->gridSize[i] + 1;
+	}
+
+	world->numgridpoints = world->gridBounds[2] * world->gridBounds[1] * world->gridBounds[0];	
+	world->gridBounds[3] = world->gridBounds[1] * world->gridBounds[0];
+	world->lightgrid = Mod_Malloc( loadmodel, world->numgridpoints * sizeof( mgridlight_t ));
+	r_worldent->model = loadmodel; // setup trace world
+
+	for( i = 0; i < world->numgridpoints; i++ )
+		R_TraceGrid( i );
+ 
+	Msg( "numGridPoints %i, mem %s\n", world->numgridpoints, memprint( world->numgridpoints * sizeof( mgridlight_t )));
+	MsgDev( D_INFO, "LightGrid building time: %g secs\n", (Sys_Milliseconds() - timestart) * 0.001f );
 }
 
 /*
@@ -1725,34 +2515,16 @@ static void Mod_LoadEntities( const dlump_t *l, vec3_t gridSize, vec3_t ambient,
 Mod_Finish
 =================
 */
-static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t gridSize, vec3_t ambient, vec3_t outline )
+static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t ambient )
 {
-	int		i, j;
+	int	i;
 
 	// set up lightgrid
-	if( gridSize[0] < 1 || gridSize[1] < 1 || gridSize[2] < 1 )
-		VectorSet( loadbmodel->gridSize, 64, 64, 128 );
-	else VectorCopy( gridSize, loadbmodel->gridSize );
-
-	for( j = 0; j < 3; j++ )
-	{
-		vec3_t	maxs;
-
-		loadbmodel->gridMins[j] = loadbmodel->gridSize[j] *ceil( ( loadbmodel->submodels[0].mins[j] + 1 ) / loadbmodel->gridSize[j] );
-		maxs[j] = loadbmodel->gridSize[j] *floor(( loadbmodel->submodels[0].maxs[j] - 1 ) / loadbmodel->gridSize[j] );
-		loadbmodel->gridBounds[j] = ( maxs[j] - loadbmodel->gridMins[j] )/loadbmodel->gridSize[j] + 1;
-	}
-	loadbmodel->gridBounds[3] = loadbmodel->gridBounds[1] * loadbmodel->gridBounds[0];
+	R_BuildLightGrid( loadbmodel );
 
 	// ambient lighting
 	for( i = 0; i < 3; i++ )
-		mapConfig.ambient[i] = bound( 0, ambient[i] * (( float )( 1<<mapConfig.pow2MapOvrbr )/255.0f ), 1 );
-
-	for( i = 0; i < 3; i++ )
-		mapConfig.outlineColor[i] = (byte)(bound( 0, outline[i]*255.0f, 255 ));
-	mapConfig.outlineColor[3] = 255;
-
-	R_SortSuperLightStyles();
+		mapConfig.ambient[i] = bound( 0, ambient[i] * ( 1.0f /255.0f ), 1 );
 
 	Mem_EmptyPool( cached_mempool );
 }
@@ -1766,7 +2538,7 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 {
 	dheader_t	*header;
 	mmodel_t	*bm;
-	vec3_t	gridSize, ambient, outline;
+	vec3_t	ambient;
 	int	i;
 
 	header = (dheader_t *)buffer;
@@ -1795,13 +2567,13 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 	if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
 	{
 		// blue-shift swapped lumps
-		Mod_LoadEntities( &header->lumps[LUMP_PLANES], gridSize, ambient, outline );
+		Mod_LoadEntities( &header->lumps[LUMP_PLANES], ambient );
 		Mod_LoadPlanes( &header->lumps[LUMP_ENTITIES] );
 	}
 	else
 	{
 		// normal half-life lumps
-		Mod_LoadEntities( &header->lumps[LUMP_ENTITIES], gridSize, ambient, outline );
+		Mod_LoadEntities( &header->lumps[LUMP_ENTITIES], ambient );
 		Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
 	}
 
@@ -1817,7 +2589,7 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 	Mod_LoadLeafs( &header->lumps[LUMP_LEAFS] );
 	Mod_LoadNodes( &header->lumps[LUMP_NODES] );
 
-	Mod_Finish( &header->lumps[LUMP_FACES], &header->lumps[LUMP_LIGHTING], gridSize, ambient, outline );
+	Mod_Finish( &header->lumps[LUMP_FACES], &header->lumps[LUMP_LIGHTING], ambient );
 	mod->touchFrame = tr.registration_sequence; // register model
 
 	// set up the submodels
@@ -1861,13 +2633,8 @@ void R_BeginRegistration( const char *mapname )
 	string	fullname;
 
 	tr.registration_sequence++;
-	mapConfig.pow2MapOvrbr = 0;
-	mapConfig.lightmapsPacking = false;
-	mapConfig.deluxeMaps = false;
 	mapConfig.deluxeMappingEnabled = false;
-
 	VectorClear( mapConfig.ambient );
-	VectorClear( mapConfig.outlineColor );
 
 	com.strncpy( fullname, mapname, MAX_STRING );
 

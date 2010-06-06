@@ -39,7 +39,6 @@ cvar_t *r_nocull;
 cvar_t *r_ignorehwgamma;
 cvar_t *r_check_errors;
 cvar_t *r_overbrightbits;
-cvar_t *r_mapoverbrightbits;
 cvar_t *r_vertexbuffers;
 cvar_t *r_flares;
 cvar_t *r_flaresize;
@@ -93,10 +92,6 @@ cvar_t *r_bloom_intensity;
 cvar_t *r_bloom_darken;
 cvar_t *r_bloom_sample_size;
 cvar_t *r_bloom_fast_sample;
-
-cvar_t *r_outlines_world;
-cvar_t *r_outlines_scale;
-cvar_t *r_outlines_cutoff;
 
 cvar_t *r_allow_software;
 cvar_t *r_3dlabs_broken;
@@ -520,7 +515,6 @@ void GL_InitCommands( void )
 	r_environment_color = Cvar_Get( "r_environment_color", "128 128 128", CVAR_ARCHIVE, "map environment light color" );
 	r_ignorehwgamma = Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "ignore hardware gamma (e.g. not support)" );
 	r_overbrightbits = Cvar_Get( "r_overbrightbits", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "renderer overbright bits" );
-	r_mapoverbrightbits = Cvar_Get( "r_mapoverbrightbits", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "current map overbright bits" );
 	r_vertexbuffers = Cvar_Get( "r_vertexbuffers", "0", CVAR_ARCHIVE, "store vertex data in VBOs" );
 
 	r_detailtextures = Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE, "enable or disable detail textures" );
@@ -570,10 +564,6 @@ void GL_InitCommands( void )
 	r_shadows_maxtexsize = Cvar_Get( "r_shadows_maxtexsize", "0", CVAR_ARCHIVE, "shadowmaps texture size (0 - custom)" );
 	r_shadows_pcf = Cvar_Get( "r_shadows_pcf", "0", CVAR_ARCHIVE, "allow pcf filtration" );
 	r_shadows_self_shadow = Cvar_Get( "r_shadows_self_shadow", "0", CVAR_ARCHIVE, "allow self-shadowing" );
-
-	r_outlines_world = Cvar_Get( "r_outlines_world", "1.8", CVAR_ARCHIVE, "cel-shading world outline thinkness" );
-	r_outlines_scale = Cvar_Get( "r_outlines_scale", "1", CVAR_ARCHIVE, "outilines scale" );
-	r_outlines_cutoff = Cvar_Get( "r_outlines_cutoff", "712", CVAR_ARCHIVE, "cutoff factor" );
 
 	r_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
 
@@ -1028,7 +1018,6 @@ static void R_InitMedia( void )
 	R_InitShadows();
 	R_InitOcclusionQueries();
 	R_InitCustomColors ();
-	R_InitOutlines ();
 
 	GL_SetDefaultTexState ();
 

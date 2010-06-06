@@ -527,7 +527,42 @@ bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			}
 			image.flags |= IMAGE_HAS_ALPHA;
 		}
-		else rendermode = LUMP_NORMAL;
+		else
+		{
+			int	pal_type;
+
+			// NOTE: we can have luma-pixels if quake1/2 texture
+			// converted into the hl texture but palette leave unchanged
+			// this is a good reason for using fullbright pixels
+			pal_type = Image_ComparePalette( pal );
+
+			// check for luma pixels
+			switch( pal_type )
+			{
+			case PAL_QUAKE1:
+				for( i = 0; i < image.width * image.height; i++ )
+				{
+					if( fin[i] > 224 )
+					{
+						image.flags |= IMAGE_HAS_LUMA_Q1;
+						break;
+					}
+				}
+				break;
+			case PAL_QUAKE2:
+				for( i = 0; i < image.width * image.height; i++ )
+				{
+					if( fin[i] > 208 && fin[i] < 240 )
+					{
+						image.flags |= IMAGE_HAS_LUMA_Q2;
+						break;
+					}
+				}
+				break;
+			}
+
+			rendermode = LUMP_NORMAL;
+		}
 	}
 	else if( image.hint != IL_HINT_HL && filesize >= (int)sizeof(mip) + ((pixels * 85)>>6))
 	{

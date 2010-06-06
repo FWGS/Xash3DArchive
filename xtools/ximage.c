@@ -29,7 +29,7 @@ bool ConvertImages( byte *mempool, const char *name, byte parms )
 		else if( !com.stricmp( value, "270" ))
 			flags |= IMAGE_ROT270;
 		else if( !com.stricmp( value, "360" ))
-			Sys_Break( "Stupid User!!! What you doing?\n" );
+			Sys_Break( "Stupid User!!! What are you doing?\n" );
 		else if( !unknown_rotate )
 		{
 			Msg( "Usage: -rotate <90|180|270>\n" );
