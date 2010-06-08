@@ -2603,6 +2603,8 @@ static cl_enginefuncs_t gEngfuncs =
 
 void CL_UnloadProgs( void )
 {
+	if( !clgame.hInstance ) return;
+
 	CL_FreeEdicts();
 	CL_FreeEdict( &clgame.viewent );
 	CL_FreeEdict( &clgame.playermodel );

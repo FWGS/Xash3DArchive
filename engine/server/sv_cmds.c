@@ -517,7 +517,7 @@ void SV_EntPatch_f( void )
 			return;
 		}
 	}
-	else mapname = Cmd_Argv( 2 );
+	else mapname = Cmd_Argv( 1 );
 
 	SV_WriteEntityPatch( mapname );
 }

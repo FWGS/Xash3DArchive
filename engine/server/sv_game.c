@@ -296,12 +296,12 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 
 		flags |= MAP_IS_EXIST; // map is exist
 
-		while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_PARSE_GENERIC, &token ))
+		while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 		{
 			if( !com.strcmp( token.string, "classname" ))
 			{
 				// check classname for spawn entity
-				Com_ReadString( ents, false, check_name );
+				Com_ReadString( ents, SC_ALLOW_PATHNAMES2, check_name );
 				if( !com.strcmp( spawn_entity, check_name ))
 				{
 					flags |= MAP_HAS_SPAWNPOINT;
@@ -314,7 +314,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 			else if( need_landmark && !com.strcmp( token.string, "targetname" ))
 			{
 				// check targetname for landmark entity
-				Com_ReadString( ents, false, check_name );
+				Com_ReadString( ents, SC_ALLOW_PATHNAMES2, check_name );
 
 				if( !com.strcmp( landmark_name, check_name ))
 				{
@@ -3435,7 +3435,7 @@ bool SV_ParseEdict( script_t *script, edict_t *ent )
 		string	keyname;
 
 		// parse key
-		if( !Com_ReadToken( script, SC_ALLOW_NEWLINES, &token ))
+		if( !Com_ReadToken( script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 			Host_Error( "ED_ParseEdict: EOF without closing brace\n" );
 		if( token.string[0] == '}' ) break; // end of desc
 
@@ -3460,7 +3460,7 @@ bool SV_ParseEdict( script_t *script, edict_t *ent )
 		// ignore attempts to set key ""
 		if( !keyname[0] ) continue;
 
-		// "wad" field is comletely ignored
+		// "wad" field is completely ignored
 		if( !com.strcmp( keyname, "wad" ))
 			continue;
 
@@ -3532,7 +3532,7 @@ void SV_LoadFromFile( script_t *entities )
 	died = 0;
 
 	// parse ents
-	while( Com_ReadToken( entities, SC_ALLOW_NEWLINES, &token ))
+	while( Com_ReadToken( entities, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 	{
 		if( token.string[0] != '{' )
 			Host_Error( "ED_LoadFromFile: found %s when expecting {\n", token.string );

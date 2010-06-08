@@ -150,7 +150,7 @@ static void UI_CreateGame_GetMapsList( void )
 	int	numMaps = 0;
 
 	// create new maplist if not exist
-	if( !Cmd_CheckMapsList() || (script = Com_OpenScript( "scripts/maps.lst", NULL, 0 )) == NULL )
+	if( !Cmd_CheckMapsList() || (script = Com_OpenScript( "†scripts/maps.lst", NULL, 0 )) == NULL )
 	{
 		uiCreateGame.done.generic.flags |= QMF_GRAYED;
 		uiCreateGame.mapsList.itemNames = uiCreateGame.mapsDescriptionPtr;

@@ -109,6 +109,11 @@ int CHud :: InitMessages( void )
 void CHud :: UserCmd_ChangeLevel( void )
 {
 	m_iDrawPlaque = 0;	// disable plaque rendering
+
+	// reset shake
+	m_Shake.amplitude = 0;
+	m_Shake.frequency = 0;
+	m_Shake.duration = 0;
 }
 
 int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )

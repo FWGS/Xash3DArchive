@@ -1140,7 +1140,11 @@ Mod_LoadCachedImage
 static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 {
 	mip_t	*mt = image->base;
-	int	i;
+	int	i, shader_type = SHADER_TEXTURE;
+
+	// see if already loaded
+	if( image->shader )
+		return image->shader;
 
 	Com_Assert( mt == NULL );
 
@@ -1151,7 +1155,7 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 
 	// build the unique shadername because we don't want keep this for other maps
 	if( mt->offsets[0] > 0 )
-		com.snprintf( image->name, 32, "%s/%s", cached.modelname, mt->name );
+		com.snprintf( image->name, sizeof( image->name ), "%s/%s", cached.modelname, mt->name );
 
 	// determine shader parms by texturename
 	if( !com.strncmp( mt->name, "scroll", 6 ))
@@ -1159,18 +1163,25 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 
 	if( image->animated )
 	{
-		R_SetAnimFrequency( 5.0f );	// set primary animation
+		float	fps = ( cached.version == HLBSP_VERSION ) ? 10.0f : 5.0f;
+
+		R_SetAnimFrequency( fps );	// set primary animation
 		for( i = 0; i < image->anim_total[0]; i++ )
 			Mod_LoadTexture( image->anim_frames[0][i] );
 
-		R_SetAnimFrequency( 5.0f );	// set alternate animation
+		R_SetAnimFrequency( fps );	// set alternate animation
 		for( i = 0; i < image->anim_total[1]; i++ )
 			Mod_LoadTexture( image->anim_frames[1][i] );
 	}
 	else Mod_LoadTexture( mt );	// load the base image
 
 load_shader:
-	return R_LoadShader( image->name, SHADER_TEXTURE, false, 0, SHADER_INVALID );
+	if( !com.strncmp( mt->name, "sky", 3 ))
+		shader_type = SHADER_SKY;
+
+	image->shader = R_LoadShader( image->name, SHADER_TEXTURE, false, 0, SHADER_INVALID );
+
+	return image->shader;
 }
 
 /*
@@ -1231,6 +1242,10 @@ static void Mod_LoadTextures( const dlump_t *l )
 		out->width = LittleLong( mt->width );
 		out->height = LittleLong( mt->height );
 		out->base = mt;
+
+		// sky must be loading first
+		if( !com.strncmp( mt->name, "sky", 3 ))
+			Mod_LoadCachedImage( out );
 	}
 
 	// sequence the animations
@@ -1345,7 +1360,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		out = cached.textures + i;
 
 //		out->contents = Mod_ContentsFromShader( out->name );	// FIXME: implement
-		loadmodel->shaders[i] = out->shader = Mod_LoadCachedImage( out );
+		loadmodel->shaders[i] = Mod_LoadCachedImage( out );
 
 		Cvar_SetValue( "scr_loading", scr_loading->value + 50.0f / count );
 		if( ri.UpdateScreen ) ri.UpdateScreen();
@@ -1570,7 +1585,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			out->numstyles++;
 		}
 
-		if( !tr.currentSkyShader && (out->flags & SURF_DRAWSKY || out->shader->flags & SHADER_SKYPARMS ))
+		if( !tr.currentSkyShader && ( out->flags & SURF_DRAWSKY || out->shader->flags & SHADER_SKYPARMS ))
 		{
 			// because sky shader may missing skyParms, but always has surfaceparm 'sky'
 			tr.currentSkyShader = out->shader;
@@ -2691,6 +2706,8 @@ void R_EndRegistration( const char *skyname )
 		if( mod->touchFrame != tr.registration_sequence )
 			Mod_FreeModel( mod );
 	}
+
+	// purge all unused shaders
 	R_ShaderFreeUnused();
 }
 

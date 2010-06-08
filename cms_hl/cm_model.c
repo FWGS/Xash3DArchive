@@ -222,7 +222,7 @@ static void BSP_LoadTextures( dlump_t *l )
 		out = Mem_Alloc( loadmodel->mempool, sizeof( *out ));
 		loadmodel->textures[i] = out;
 
-		Mem_Copy( out->name, mt->name, sizeof( out->name ));
+		com.strnlwr( mt->name, out->name, sizeof( out->name ));
 //		out->contents = CM_ContentsFromShader( out->name );	// FIXME: implement
 	}
 }

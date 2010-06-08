@@ -102,14 +102,14 @@ bool Cmd_GetMapList( const char *s, char *completedname, int length )
 				token_t	token;
 
 				message[0] = 0;
-				while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_PARSE_GENERIC, &token ))
+				while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 				{
 					if( !com.strcmp( token.string, "{" )) continue;
 					else if(!com.strcmp( token.string, "}" )) break;
 					else if(!com.strcmp( token.string, "message" ))
 					{
 						// get the message contents
-						Com_ReadString( ents, false, message );
+						Com_ReadString( ents, SC_ALLOW_PATHNAMES2, message );
 					}
 				}
 				Com_CloseScript( ents );
@@ -606,7 +606,7 @@ bool Cmd_CheckMapsList( void )
 	file_t	*f;
 	int	i;
 
-	if( FS_FileExists( "scripts/maps.lst" ))
+	if( FS_FileExists( "†scripts/maps.lst" ))
 		return true; // exist 
 
 	t = FS_Search( "maps/*.bsp", false );
@@ -676,18 +676,18 @@ bool Cmd_CheckMapsList( void )
 				message[0] = 0;
 				com.strncpy( message, "No Title", MAX_STRING );
 
-				while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_PARSE_GENERIC, &token ))
+				while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 				{
 					if( !com.strcmp( token.string, "{" )) continue;
 					else if( !com.strcmp( token.string, "}" )) break;
 					else if( !com.strcmp( token.string, "message" ))
 					{
 						// get the message contents
-						Com_ReadString( ents, 0, message );
+						Com_ReadString( ents, SC_ALLOW_PATHNAMES2, message );
 					}
 					else if( !com.strcmp( token.string, "classname" ))
 					{
-						Com_ReadToken( ents, 0, &token );
+						Com_ReadToken( ents, SC_ALLOW_PATHNAMES2, &token );
 						if( !com.strcmp( token.string, GI->dm_entity ))
 							num_spawnpoints++;
 						else if( !com.strcmp( token.string, GI->sp_entity ))

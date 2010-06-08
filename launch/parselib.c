@@ -281,7 +281,7 @@ static bool PS_ReadWhiteSpace( script_t *script, scFlags_t flags )
 		}
 
 		// if newlines are not allowed, restore text and line
-		if( hasNewLines && !(flags & SC_ALLOW_NEWLINES))
+		if( hasNewLines && !( flags & SC_ALLOW_NEWLINES ))
 		{
 			script->text = text;
 			script->line = line;
@@ -482,6 +482,13 @@ static bool PS_ReadString( script_t *script, scFlags_t flags, token_t *token )
 
 		if( *script->text == '\n' )
 		{
+			if( flags & SC_ALLOW_PATHNAMES2 )
+			{
+				// "wad" pathes can contain very unexpected symbols! Arrgh
+				if( PS_ReadWhiteSpace( script, flags|SC_ALLOW_NEWLINES ))
+					continue;
+			}
+
 			PS_ScriptError( script, flags, "newline inside string" );
 			return false;
 		}
@@ -490,7 +497,7 @@ static bool PS_ReadString( script_t *script, scFlags_t flags, token_t *token )
 		{
 			script->text++;
 
-			if( !(flags & SC_ALLOW_STRINGCONCAT))
+			if(!( flags & SC_ALLOW_STRINGCONCAT ))
 				break;
 
 			text = script->text;
@@ -516,7 +523,7 @@ static bool PS_ReadString( script_t *script, scFlags_t flags, token_t *token )
 			return false;
 		}
 
-		if(( flags & SC_ALLOW_ESCAPECHARS) && *script->text == '\\' )
+		if(( flags & SC_ALLOW_ESCAPECHARS ) && *script->text == '\\' )
 		{
 			if( !PS_ReadEscapeChar( script, flags, &token->string[token->length] ))
 				return false;
@@ -603,7 +610,7 @@ static bool PS_ReadLiteral( script_t *script, scFlags_t flags, token_t *token )
 		{
 			script->text++;
 
-			if(!(flags & SC_ALLOW_STRINGCONCAT))
+			if(!( flags & SC_ALLOW_STRINGCONCAT ))
 				break;
 
 			text = script->text;
@@ -629,7 +636,7 @@ static bool PS_ReadLiteral( script_t *script, scFlags_t flags, token_t *token )
 			return false;
 		}
 
-		if((flags & SC_ALLOW_ESCAPECHARS) && *script->text == '\\' )
+		if(( flags & SC_ALLOW_ESCAPECHARS ) && *script->text == '\\' )
 		{
 			if( !PS_ReadEscapeChar( script, flags, &token->string[token->length] ))
 				return false;

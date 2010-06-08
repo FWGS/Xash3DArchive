@@ -925,7 +925,7 @@ Host_Main
 void Host_Main( void )
 {
 	// main window message loop
-	while( host.type != HOST_OFFLINE )
+	while( host.state != HOST_OFFLINE )
 	{
 		IN_Frame();
 		Host_Frame();

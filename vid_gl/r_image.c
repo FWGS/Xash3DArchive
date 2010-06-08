@@ -3070,7 +3070,7 @@ texture_t *R_FindTexture( const char *name, const byte *buf, size_t size, texFla
 	}
 
 	// NOTE: texname may contains some commands over textures
-	script = Com_OpenScript( name, name, com.strlen( name ));
+	script = Com_OpenScript( "texturedef", name, com.strlen( name ));
 	if( !script ) return NULL;
 
 	if( !Com_ReadToken( script, SC_ALLOW_PATHNAMES2, &token ))

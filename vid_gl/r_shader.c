@@ -2565,23 +2565,24 @@ void R_ShaderDump_f( void )
 	cache = Shader_GetCache( name, shader->type, hashKey );
 	if( !cache )
 	{
+		if( shader->stages[0].num_textures )
+		{
+			int 	i;
+
+			for( i = 0; i < shader->stages[0].num_textures; i++ )
+			{
+				if( shader->stages[0].textures[i] )
+					Msg( "tex[%i] %s\n", i, shader->stages[0].textures[i] ->name );
+				else Msg( "missing texture %i\n" );
+			}
+		}
+
 		Msg( "could not find shader %s in cache\n", name );
 		return;
 	}
 
 	Msg( "found in %s:\n\n", cache->source );
 	Msg( "^2%s%s\n", name, cache->buffer );
-
-	Msg( "shader->flags    %d\n", shader->flags );
-	Msg( "shader->features %d\n", shader->features );
-	Msg( "shader->sort     %d\n", shader->sort );
-	Msg( "shader->stages   %d\n", shader->num_stages );
-
-	Msg( "pass[0]->flags   %d\n", shader->stages[0].flags );
-	Msg( "pass[0]->glState %d\n", shader->stages[0].glState );
-	Msg( "pass[0]->rgbgen  %d\n", shader->stages[0].rgbGen.type );
-	Msg( "pass[0]->alphgen %d\n", shader->stages[0].alphaGen.type );
-	Msg( "pass[0]->tcgen   %d\n", shader->stages[0].tcgen );
 }
 
 bool R_ShaderCheckCache( const char *name )
@@ -2647,7 +2648,16 @@ void Shader_TouchImages( ref_shader_t *shader, e_free free_unused )
 	texture_t		*texture;
 
 	Com_Assert( shader == NULL );
- 	if( free_unused == FREE_IGNORE )
+
+	// reset parms
+	r_shaderTwoSided = 0;
+	r_miptexFeatures = 0;
+	r_stageAnimOffset = 0;
+	r_numStageTextures = 0;
+	r_stageAnimFrequency[0] = 0.0f;
+	r_stageAnimFrequency[1] = 0.0f;
+
+	if( free_unused == FREE_IGNORE )
  		shader->touchFrame = tr.registration_sequence;
 
 	for( i = 0; i < shader->num_stages; i++ )
@@ -2662,7 +2672,8 @@ void Shader_TouchImages( ref_shader_t *shader, e_free free_unused )
 			// prolonge registration for all shader textures
 			texture = stage->textures[j];
 
-			if( !texture || !texture->texnum ) continue;
+			if( !texture || !texture->texnum )
+				continue;
 
 			if( free_unused == FREE_FORCE && texture->texType != TEX_SYSTEM )
 			{
@@ -3838,14 +3849,6 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		pass->num_textures++;
 		break;
 	}
-
-	// reset parms
-	r_shaderTwoSided = 0;
-	r_miptexFeatures = 0;
-	r_stageAnimOffset = 0;
-	r_numStageTextures = 0;
-	r_stageAnimFrequency[0] = 0.0f;
-	r_stageAnimFrequency[1] = 0.0f;
 
 	Shader_SetRenderMode( shader );
 

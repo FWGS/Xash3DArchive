@@ -34,7 +34,6 @@ typedef struct
 	HWND		hwndBuffer;
 	HWND		hwndButtonSubmit;
 	HBRUSH		hbrEditBackground;
-	HBRUSH		hbrErrorBackground;
 	HFONT		hfBufferFont;
 	HFONT		hfButtonFont;
 	HWND		hwndInputLine;
@@ -392,7 +391,6 @@ void Con_DestroyConsole( void )
 	if( s_wcd.hWnd )
 	{
 		DeleteObject( s_wcd.hbrEditBackground );
-		DeleteObject( s_wcd.hbrErrorBackground );
                     DeleteObject( s_wcd.hfBufferFont );
 		
 		ShowWindow( s_wcd.hWnd, SW_HIDE );
