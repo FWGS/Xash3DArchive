@@ -1540,6 +1540,10 @@ static bool FS_ParseGameInfo( const char *filename, gameinfo_t *GameInfo )
 		{
 			PS_GetString( script, false, GameInfo->update_url, sizeof( GameInfo->update_url ));
 		}
+		else if( !com.stricmp( token.string, "textures_path" ))
+		{
+			PS_GetString( script, false, GameInfo->texpath, sizeof( GameInfo->texpath ));
+		}
 		else if( !com.stricmp( token.string, "date" ))
 		{
 			PS_GetString( script, false, GameInfo->date, sizeof( GameInfo->date ));

@@ -2622,6 +2622,9 @@ R_NeedLightmapPass
 */
 bool R_NeedLightmapPass( msurface_t *surf )
 {
+	if( r_fullbright->integer )
+		return false;
+
 	// no valid lightmaps
 	if( !r_currentLightStyle || r_currentLightStyle->lightmapNum < 0 || r_currentLightStyle->lightmapStyles[0] == 255 )
 		return false;

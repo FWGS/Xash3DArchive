@@ -316,6 +316,7 @@ ref_model_t	*Mod_ForHandle( unsigned int elem );
 ref_model_t	*R_RegisterModel( const char *name );
 void		R_BeginRegistration( const char *model );
 void		R_EndRegistration( const char *skyname );
+texture_t		*Mod_LoadTexture( mip_t *mt );
 
 #define		Mod_Malloc( mod, size ) Mem_Alloc(( mod )->mempool, size )
 #define		Mod_Realloc( mod, data, size ) Mem_Realloc(( mod )->mempool, data, size )

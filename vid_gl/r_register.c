@@ -486,7 +486,7 @@ void GL_InitCommands( void )
 	r_height = Cvar_Get( "height", "480", CVAR_READ_ONLY, "screen height" );
 
 	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable rendering (use with caution)" );
-	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT|CVAR_LATCH_VIDEO, "disable lightmaps, get fullbright" );
+	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
 	r_lightmap = Cvar_Get( "r_lightmap", "0", CVAR_CHEAT, "lightmap debugging tool" );
 	r_drawentities = Cvar_Get( "r_drawentities", "1", CVAR_CHEAT|CVAR_ARCHIVE, "render entities" );
 	r_drawworld = Cvar_Get( "r_drawworld", "1", CVAR_CHEAT, "render world" );

@@ -64,6 +64,7 @@ static tcMod_t	r_currentTcmods[MAX_SHADER_STAGES][MAX_SHADER_TCMODS];
 static vec4_t	r_currentTcGen[MAX_SHADER_STAGES][2];
 const char	*r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" }; // FIXME: get rid of this
 
+static mip_t		*r_internalTexture;			// pointer to built-in map texture
 static texture_t		*r_stageTexture[MAX_STAGE_TEXTURES];	// MAX_FRAMES in spritegen.c
 static uint		r_miptexFeatures;			// bmodel miptex features
 static kRenderMode_t	r_shaderRenderMode;			// sprite or studiomodel rendermode
@@ -801,13 +802,30 @@ static texture_t *Shader_FindImage( ref_shader_t *shader, const char *name, int 
 		return tr.particleTexture;
 	if( !com.stricmp( name, "$corona" ) || !com.stricmp( name, "*corona" ))
 		return tr.coronaTexture;
+	if( !com.stricmp( name, "$default" ))
+	{
+		if( !r_internalTexture )
+		{
+			// this never should happens
+			MsgDev( D_ERROR, "$default image is missing, apply 'default' image\n" );
+			image = tr.defaultTexture;
+		}
+		else image = Mod_LoadTexture( r_internalTexture );
+
+		// reset textures counter
+		r_numStageTextures = 0;
+
+		return image;
+	}
 	if( !com.strnicmp( name, "*lm", 3 ))
 	{
 		MsgDev( D_WARN, "shader %s has a stage with explicit lightmap image.\n", shader->name );
 		return tr.whiteTexture;
 	}
 
-	com.strncpy( srcpath, name, sizeof( srcpath ));
+	if( GI->texpath[0] && shader->type == SHADER_TEXTURE )
+		com.snprintf( srcpath, sizeof( srcpath ), "%s/%s", GI->texpath, name );
+	else com.strncpy( srcpath, name, sizeof( srcpath ));
 	if( shader->type != SHADER_STUDIO ) FS_StripExtension( srcpath );
 
 	image = R_FindTexture( srcpath, NULL, 0, flags );
@@ -2863,7 +2881,7 @@ static bool Shader_ParseCommand( ref_shader_t *shader, script_t *script, const c
 	}
 
 	// compiler or mapeditor commands ignored silently
-	if( !com.strnicmp( "q3map_", command, 6 ) || !com.strnicmp( "qer_", command, 4 ))
+	if( !com.strnicmp( "q3map_", command, 6 ) || !com.strnicmp( "qer_", command, 4 ) || !com.strnicmp( "fxrad_", command, 4 ))
 	{
 		Com_SkipRestOfLine( script );
 		return true;
@@ -3992,6 +4010,11 @@ void R_ShaderFreeUnused( void )
 		if( shader->flags & SHADER_STATIC ) continue;
 		Shader_FreeShader( shader, FREE_NORMAL );
 	}
+}
+
+void R_SetInternalTexture( mip_t *mt )
+{
+	r_internalTexture = mt;
 }
 
 void R_ShaderAddStageTexture( texture_t *mipTex )

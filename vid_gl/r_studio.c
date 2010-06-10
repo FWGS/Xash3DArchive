@@ -1743,6 +1743,12 @@ void R_StudioDrawMesh( const meshbuffer_t *mb, short *ptricmds, float s, float t
 			
 		for( ; i > 0; i--, ptricmds += 4 )
 		{
+			if( r_backacc.numVerts + 256 > MAX_ARRAY_VERTS || r_backacc.numElems + 784 > MAX_ARRAY_ELEMENTS )
+			{
+ 				MsgDev( D_ERROR, "StudioDrawMesh: %s has too many vertices per submodel ( %i )\n", RI.currentmodel->name, r_backacc.numVerts );
+ 				goto render_now;				
+			}
+
 			if( vertexState++ < 3 )
 			{
 				inElemsArray[r_backacc.numElems++] = r_backacc.numVerts;
@@ -1789,7 +1795,7 @@ void R_StudioDrawMesh( const meshbuffer_t *mb, short *ptricmds, float s, float t
 			r_backacc.numVerts++;
 		}
 	}
-
+render_now:
 	if( features & MF_SVECTORS )
 		R_BuildTangentVectors( r_backacc.numVerts, inVertsArray, inNormalsArray, inCoordsArray, r_backacc.numElems / 3, inElemsArray, inSVectorsArray );
 	

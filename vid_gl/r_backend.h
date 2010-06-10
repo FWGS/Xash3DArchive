@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_LIGHTMAPS		128
 #define MAX_SUPER_STYLES		1024	// unique lightstyle combiantions
 #define MAX_TEXTURES		4096
-#define MAX_ARRAY_VERTS		4096
+#define MAX_ARRAY_VERTS		6144
 #define MAX_ARRAY_ELEMENTS		MAX_ARRAY_VERTS * 6
 #define MAX_ARRAY_TRIANGLES		MAX_ARRAY_ELEMENTS / 3
 #define MAX_ARRAY_NEIGHBORS		MAX_ARRAY_TRIANGLES * 3

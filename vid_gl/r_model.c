@@ -1101,7 +1101,7 @@ static void Mod_BuildSurfacePolygons( msurface_t *surf )
 Mod_LoadTexture
 =================
 */
-static void Mod_LoadTexture( mip_t *mt )
+texture_t *Mod_LoadTexture( mip_t *mt )
 {
 	texture_t	*tx;
 
@@ -1130,6 +1130,8 @@ static void Mod_LoadTexture( mip_t *mt )
 		Msg( "Texture %s has luma\n", tx->name );
 
 	R_ShaderAddStageTexture( tx );
+
+	return tx;
 }
 
 /*
@@ -1148,10 +1150,14 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 
 	Com_Assert( mt == NULL );
 
-	com.snprintf( image->name, sizeof( image->name ), "textures/%s", mt->name );
+	com.strncpy( image->name, mt->name, sizeof( image->name ));
 
 	if( R_ShaderCheckCache( image->name ))
+	{
+		R_SetInternalTexture( mt );	// support map $default
 		goto load_shader;	// external shader found
+	}
+	else R_SetInternalTexture( NULL );
 
 	// build the unique shadername because we don't want keep this for other maps
 	if( mt->offsets[0] > 0 )
@@ -1221,7 +1227,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 		if( in->dataofs[i] == -1 )
 		{
-			loadmodel->shaders[i] = tr.defaultShader;
+			out->shader = tr.defaultShader;
 			out->width = out->height = -1;
 			continue; // texture is completely missing
 		}
@@ -2535,7 +2541,7 @@ static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t ambie
 	int	i;
 
 	// set up lightgrid
-	R_BuildLightGrid( loadbmodel );
+//	R_BuildLightGrid( loadbmodel );
 
 	// ambient lighting
 	for( i = 0; i < 3; i++ )

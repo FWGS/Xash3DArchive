@@ -230,6 +230,9 @@ typedef struct gameinfo_s
 	string		gameHint;		// hint to configure ImageLib and SoundLib
 	float		version;		// game version (optional)
 
+	// path info
+	string		texpath;		// implicit texpath (apply in shaderpath)
+
 	// about mod info
 	string		game_url;		// link to a developer's site
 	string		update_url;	// link to updates page
