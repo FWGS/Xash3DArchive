@@ -1013,7 +1013,9 @@ int AutoClassify( edict_t *pentToClassify )
 		}
 		else if( pClass->pev->movetype == MOVETYPE_TOSS )
 			return ED_NORMAL; // it's item or weapon
-		return ED_TRIGGER; // never sending to client
+		if ( FBitSet( pClass->pev->effects, EF_NODRAW ))
+			return ED_TRIGGER; // never sending to client
+		return ED_NORMAL; // e.g. friction modifier
 	}
 	else if ( pClass->pev->movetype == MOVETYPE_PHYSIC )
 		return ED_RIGIDBODY;

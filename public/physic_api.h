@@ -62,7 +62,7 @@ typedef struct physic_exp_s
 	int (*HullPointContents)( chull_t *hull, int num, const vec3_t p );
 	trace_t (*Trace)( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags );
 	const char *(*TraceTexture)( const vec3_t start, trace_t trace );
-	chull_t *(*HullForBsp)( edict_t *ent, float *offset );
+	chull_t *(*HullForBsp)( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset );
 } physic_exp_t;
 
 typedef struct physic_imp_s

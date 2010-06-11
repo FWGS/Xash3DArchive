@@ -298,6 +298,11 @@ static int PM_PointContents( const vec3_t p, int *truecontents )
 	return cont;
 }
 
+static chull_t *PM_HullForBsp( edict_t *ent, float *offset )
+{
+	return CM_HullForBsp( ent, clgame.pmove->player->v.mins, clgame.pmove->player->v.maxs, offset );
+}
+
 static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
 {
 	edict_t	*hit, *touch[MAX_EDICTS];
@@ -390,7 +395,7 @@ void CL_InitClientMove( void )
 	clgame.pmove->PM_GetString = CL_GetString;
 	clgame.pmove->PM_PointContents = PM_PointContents;
 	clgame.pmove->PM_HullPointContents = CM_HullPointContents;
-	clgame.pmove->PM_HullForBsp = CM_HullForBsp;
+	clgame.pmove->PM_HullForBsp = PM_HullForBsp;
 	clgame.pmove->PM_PlayerTrace = PM_PlayerTrace;
 	clgame.pmove->PM_TraceTexture = PM_TraceTexture;
 	clgame.pmove->PM_GetEntityByIndex = PM_GetEntityByIndex;

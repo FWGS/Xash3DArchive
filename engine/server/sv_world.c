@@ -82,6 +82,8 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 {
 	link_t	*l, *next;
 	edict_t	*touch;
+	chull_t	*hull;
+	vec3_t	test;
 
 	// touch linked edicts
 	for( l = node->trigger_edicts.next; l != &node->trigger_edicts; l = next )
@@ -89,10 +91,23 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 		next = l->next;
 		touch = EDICT_FROM_AREA( l );
 		if( touch == ent ) continue;
-		if( touch->free || touch->v.solid != SOLID_TRIGGER )
+		if( touch->free || touch->v.solid != SOLID_TRIGGER ) // disabled ?
 			continue;
+
 		if( !BoundsIntersect( ent->v.absmin, ent->v.absmax, touch->v.absmin, touch->v.absmax ))
 			continue;
+
+		if( CM_GetModelType( touch->v.modelindex ) == mod_brush )
+		{
+			hull = CM_HullForBsp( touch, ent->v.mins, ent->v.maxs, test );
+
+			// offset the test point appropriately for this hull.
+			VectorSubtract( ent->v.origin, test, test );
+
+			// test hull for intersection with this model
+			if( CM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
+				continue;
+		}
 
 		svgame.globals->time = sv.time * 0.001f;
 		svgame.dllFuncs.pfnTouch( touch, ent );

@@ -138,10 +138,10 @@ _inline const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 	return pe->TraceTexture( start, trace );
 }
 
-_inline chull_t *CM_HullForBsp( edict_t *ent, float *offset )
+_inline chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset )
 {
 	if( !pe ) return NULL;
-	return pe->HullForBsp( ent, offset );
+	return pe->HullForBsp( ent, mins, maxs, offset );
 }
 
 _inline void *Mod_Extradata( model_t modelIndex )

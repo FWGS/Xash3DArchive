@@ -60,9 +60,9 @@ chull_t *CM_HullForEntity( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset
 			// point hull
 			hull = &model->hulls[0];
 		}
-		else if( size[0] <= 32 )
+		else if( size[0] <= 36 )
 		{
-			if( size[2] < 54 )
+			if( size[2] < 36 )
 			{
 				// head hull (ducked)
 				hull = &model->hulls[3];
@@ -101,7 +101,7 @@ CM_HullForBsp
 assume edict is valid
 ==================
 */
-chull_t *CM_HullForBsp( edict_t *ent, float *offset )
+chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset )
 {
 	chull_t		*hull;
 	cmodel_t		*model;
@@ -110,19 +110,19 @@ chull_t *CM_HullForBsp( edict_t *ent, float *offset )
 	// decide which clipping hull to use, based on the size
 	model = CM_ClipHandleToModel( ent->v.modelindex );
 
-	if( !model || model->type != mod_brush && model->type != mod_world )
-		Host_Error( "Entity %i SOLID_BSP with a non bsp model\n", ent->serialnumber );
+	if( !model || ( model->type != mod_brush && model->type != mod_world ))
+		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", ent->serialnumber, model->type );
 
-	VectorSubtract( ent->v.maxs, ent->v.mins, size );
+	VectorSubtract( maxs, mins, size );
 
 	if( size[0] < 3 )
 	{
 		// point hull
 		hull = &model->hulls[0];
 	}
-	else if( size[0] <= 32 )
+	else if( size[0] < 36 )
 	{
-		if( size[2] < 54 )
+		if( size[2] < 36 )
 		{
 			// head hull (ducked)
 			hull = &model->hulls[3];
@@ -140,11 +140,10 @@ chull_t *CM_HullForBsp( edict_t *ent, float *offset )
 	}
 
 	// calculate an offset value to center the origin
-	VectorSubtract( hull->clip_mins, ent->v.mins, offset );
+	VectorSubtract( hull->clip_mins, mins, offset );
 	VectorAdd( offset, ent->v.origin, offset );
-	VectorClear( offset );
 
-	return &model->hulls[3];
+	return hull;
 }
 
 /*
@@ -371,7 +370,7 @@ find the face where the traceline hit
 */
 const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 {
-	vec3_t		intersect, forward, temp;
+	vec3_t		intersect, forward, temp, vecStartPos;
 	csurface_t	**mark, *surf, *hitface = NULL;
 	float		d1, d2, min_diff = 9999.9f;
 	vec3_t		vecPos1, vecPos2;
@@ -386,7 +385,11 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 	if( !bmodel || bmodel->type != mod_brush && bmodel->type != mod_world )
 		return NULL;
 
-	VectorSubtract( trace.vecEndPos, start, forward );
+	// making trace adjustments 
+	VectorSubtract( start, trace.pHit->v.origin, vecStartPos );
+	VectorSubtract( trace.vecEndPos, trace.pHit->v.origin, trace.vecEndPos );
+
+	VectorSubtract( trace.vecEndPos, vecStartPos, forward );
 	VectorNormalize( forward );
 
 	// nudge endpos back to can be trace face between two points
@@ -413,12 +416,12 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 			int	i, e;
 
 			VectorScale( plane->normal, plane->dist, plane_origin );
-			dist = CM_DistanceToIntersect( start, forward, plane_origin, plane->normal );
+			dist = CM_DistanceToIntersect( vecStartPos, forward, plane_origin, plane->normal );
 
 			if( dist < 0.0f ) return NULL; // can't find intersection
 
 			VectorScale( forward, dist, temp );
-			VectorAdd( start, temp, intersect );
+			VectorAdd( vecStartPos, temp, intersect );
 
 			// loop through all of the vertexes of all the edges of this face and
 			// find the angle between vertex-n, v_intersect and vertex-n+1, then add

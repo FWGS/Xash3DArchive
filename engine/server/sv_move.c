@@ -443,6 +443,11 @@ static int PM_PointContents( const vec3_t p, int *truecontents )
 	return cont;
 }
 
+static chull_t *PM_HullForBsp( edict_t *ent, float *offset )
+{
+	return CM_HullForBsp( ent, svgame.pmove->player->v.mins, svgame.pmove->player->v.maxs, offset );
+}
+
 static void PM_CheckMovingGround( edict_t *ent, float frametime )
 {
 	SV_UpdateBaseVelocity( ent );
@@ -558,7 +563,7 @@ void SV_InitClientMove( void )
 	svgame.pmove->AlertMessage = pfnAlertMessage;
 	svgame.pmove->PM_GetString = SV_GetString;
 	svgame.pmove->PM_PointContents = PM_PointContents;
-	svgame.pmove->PM_HullForBsp = CM_HullForBsp;
+	svgame.pmove->PM_HullForBsp = PM_HullForBsp;
 	svgame.pmove->PM_HullPointContents = CM_HullPointContents;
 	svgame.pmove->PM_PlayerTrace = PM_PlayerTrace;
 	svgame.pmove->PM_TraceTexture = PM_TraceTexture;
@@ -629,6 +634,10 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 			clent->v.angles[YAW] = clent->v.viewangles[YAW];
 		}
 	}
+
+	if( clent->v.flags & FL_DUCKING ) 
+		SV_SetMinMaxSize( clent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
+	else SV_SetMinMaxSize( clent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );
 
 	svgame.globals->time = (sv.time * 0.001f);
 	svgame.globals->frametime = (sv.frametime * 0.001f);
