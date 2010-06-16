@@ -947,6 +947,14 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 
 	SV_ConfigString( CS_SKYNAME, header.skyName );
 
+	// restore sky parms
+	Cvar_SetValue( "sv_skycolor_r", header.skyColor_r );
+	Cvar_SetValue( "sv_skycolor_g", header.skyColor_g );
+	Cvar_SetValue( "sv_skycolor_b", header.skyColor_b );
+	Cvar_SetValue( "sv_skyvec_x", header.skyVec_x );
+	Cvar_SetValue( "sv_skyvec_y", header.skyVec_y );
+	Cvar_SetValue( "sv_skyvec_z", header.skyVec_z );
+
 	// re-base the savedata since we re-ordered the entity/table / restore fields
 	SaveRestore_Rebase( pSaveData );
 
@@ -1467,7 +1475,8 @@ bool SV_LoadGame( const char *pName )
 
 	if( !validload )
 	{
-		CL_Disconnect();
+		com.snprintf( host.finalmsg, MAX_STRING, "Couldn't load %s.sav\n", pName );
+		SV_Shutdown( false );
 		return false;
 	}
 

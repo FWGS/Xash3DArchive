@@ -380,7 +380,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		{
 			vec3_t	point;
 
-			// we can ignore brushes with rendermode != kRenderNormal
+			// we ignore brushes with rendermode != kRenderNormal
 			switch( touch->v.rendermode )
 			{
 			case kRenderTransTexture:
@@ -587,12 +587,8 @@ edict_t *SV_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult 
 	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
 	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
 
-	if( pass ) SV_SetMinMaxSize( pass, mins, maxs );
-
 	result = SV_Move( origin, mins, maxs, origin, MOVE_NORMAL, pass );
 	if( tr ) *tr = result;
 
-	if( result.pHit )
-		return result.pHit;
-	return NULL;
+	return result.pHit;
 }

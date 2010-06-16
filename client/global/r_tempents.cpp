@@ -647,22 +647,26 @@ void CTempEnts::FizzEffect( edict_t *pent, int modelIndex, int density )
 	count = density + 1;
 	density = count * 3 + 6;
 
-	GetModelBounds( modelIndex, mins, maxs );
+	GetModelBounds( pent->v.modelindex, mins, maxs );
 
 	maxHeight = maxs[2] - mins[2];
 	width = maxs[0] - mins[0];
 	depth = maxs[1] - mins[1];
-	speed = ((int)pent->v.rendercolor.y<<8|(int)pent->v.rendercolor.x);
+	speed = ((int)pent->v.rendercolor.x<<8|(int)pent->v.rendercolor.y);
 	if( pent->v.rendercolor.z ) speed = -speed;
+	if( speed == 0.0f ) speed = 100.0f;	// apply default value
 
-	ALERT( at_console, "FizzEffect: speed %g\n", speed );
+	if( pent->v.angles[YAW] != 0.0f )
+	{
+		angle = pent->v.angles[YAW] * M_PI / 180;
+		yspeed = sin( angle );
+		xspeed = cos( angle );
 
-	angle = pent->v.angles[YAW] * M_PI / 180;
-	yspeed = sin( angle );
-	xspeed = cos( angle );
+		xspeed *= speed;
+		yspeed *= speed;
+	}
+	else xspeed = yspeed = 0.0f;	// zonly
 
-	xspeed *= speed;
-	yspeed *= speed;
 	frameCount = GetModelFrames( modelIndex );
 
 	for ( i = 0; i < count; i++ )

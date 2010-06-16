@@ -3782,25 +3782,44 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		}
 		else
 		{
-			int	size; 
+			int	size, offset; 
 			bool	hasLightmap = ( r_miptexFeatures & MIPTEX_NOLIGHTMAP ) ? false : true;
 
 			shader->type = SHADER_TEXTURE;
 			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_RENDERMODE;
 			if( hasLightmap ) shader->flags |= SHADER_HASLIGHTMAP;
-			shader->features = MF_STCOORDS|MF_LMCOORDS;
+			shader->features = MF_STCOORDS;
+			if( hasLightmap ) shader->features |= MF_LMCOORDS; 
 			shader->sort = SORT_OPAQUE;
 			shader->num_stages = ( hasLightmap ) ? 2 : 1;
 			size = length + 1 + sizeof( ref_stage_t ) * shader->num_stages;
 			if( r_miptexFeatures & MIPTEX_CONVEYOR ) size += sizeof( tcMod_t );
-
+			if( r_miptexFeatures & MIPTEX_WARPSURFACE ) size += sizeof( deform_t );
+ 
 			shader->name = Shader_Malloc( size );
 			com.strcpy( shader->name, shortname );
 			shader->stages = (ref_stage_t *)((byte *)shader->name + length + 1 );
 			pass = &shader->stages[0];
 			pass->flags = SHADERSTAGE_RENDERMODE|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
 			pass->glState = GLSTATE_DEPTHWRITE;
-			pass->tcgen = TCGEN_BASE;
+			if( r_miptexFeatures & MIPTEX_WARPSURFACE )
+			{
+				pass->tcgen = TCGEN_WARP;
+				shader->tessSize = 64.0f;
+
+				// apply waves
+				offset = length + 1 + sizeof( ref_stage_t ) * shader->num_stages;
+				if( r_miptexFeatures & MIPTEX_CONVEYOR ) offset += sizeof( tcMod_t );
+				shader->features |= (MF_DEFORMVS|MF_NORMALS);
+				
+				shader->deforms = (deform_t *)((byte *)shader->name + offset );
+				shader->deforms->type = DEFORM_WAVE;
+				shader->deforms->func.type = WAVEFORM_SIN;
+				shader->deforms->args[0] = 0.01f;
+				shader->deforms->func.args[3] = 0.5f;
+				shader->numDeforms++;
+			}
+			else pass->tcgen = TCGEN_BASE;
 
 			if( r_numStageTextures > 1 )
 			{

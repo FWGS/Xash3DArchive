@@ -64,6 +64,7 @@ typedef struct
 #define MIPTEX_TRANSPARENT	BIT( 2 )		// transparent texture
 #define MIPTEX_RENDERMODE	BIT( 3 )		// this surface requires a rendermode stuff
 #define MIPTEX_NOLIGHTMAP	BIT( 4 )		// this surface if fullbright
+#define MIPTEX_WARPSURFACE	BIT( 5 )		// this surface is warped
 
 #define SURF_PLANEBACK	BIT( 0 )
 #define SURF_DRAWSKY	BIT( 1 )		// sky surface
@@ -75,8 +76,8 @@ typedef struct mtexinfo_s
 {
 	float		vecs[2][4];
 	short		texturenum;	// number in cached.textures
-	word		width;
-	word		height;
+	short		width;
+	short		height;
 } mtexinfo_t;
 
 typedef struct

@@ -174,6 +174,9 @@ loc0:
 		return true; // empty
 	}
 
+	if( num < hull->firstclipnode || num > hull->lastclipnode )
+		Host_Error( "CM_RecursiveHullCheck: bad node number\n" );
+		
 	// find the point distances
 	node = hull->clipnodes + num;
 	plane = hull->planes + node->planenum;
@@ -280,7 +283,7 @@ trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 	VectorCopy( end, trace.vecEndPos );
 	trace.flFraction = 1.0f;
 	trace.fAllSolid = true;
-	trace.iHitgroup = -1;	
+	trace.iHitgroup = -1;
 
 	// get the clipping hull
 	hull = CM_HullForEntity( ent, mins, maxs, offset );
@@ -294,7 +297,8 @@ trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 		vec3_t	forward, right, up;
 		vec3_t	temp;
 
-		AngleVectors( ent->v.angles, forward, right, up );
+		VectorCopy( ent->v.angles, temp );
+		AngleVectors( temp, forward, right, up );
 
 		VectorCopy( start_l, temp );
 		start_l[0] = DotProduct( temp, forward );

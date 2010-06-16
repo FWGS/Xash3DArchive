@@ -893,6 +893,7 @@ console variables
 #define Cvar_Set			com.Cvar_SetString
 #define Cvar_FullSet		com.Cvar_FullSet
 #define Cvar_SetLatched		com.Cvar_SetLatched
+#define Cvar_Reset( name )		Cvar_SetLatched( name, NULL )
 #define Cvar_SetValue		com.Cvar_SetValue
 #define Cvar_VariableValue		com.Cvar_GetValue
 #define Cvar_VariableInteger		com.Cvar_GetInteger

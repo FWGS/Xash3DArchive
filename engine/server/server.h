@@ -330,7 +330,7 @@ void SV_CheckVelocity( edict_t *ent );
 bool SV_CheckWater( edict_t *ent );
 bool SV_RunThink( edict_t *ent );
 void SV_FreeOldEntities( void );
-bool SV_TestEntityPosition( edict_t *ent, const vec3_t offset );	// for EntityInSolid checks
+bool SV_TestEntityPosition( edict_t *ent );	// for EntityInSolid checks
 
 //
 // sv_move.c

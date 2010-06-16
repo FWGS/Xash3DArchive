@@ -216,7 +216,7 @@ static TraceResult PM_PlayerTrace( const vec3_t start, const vec3_t end, int tra
 	mins = clgame.pmove->player_mins[clgame.pmove->usehull];
 	maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
 
-	result = CL_Move( start, mins, maxs, end, trace_type, clgame.pmove->player );
+	result = CL_Move( start, mins, maxs, end, trace_type|FMOVE_SIMPLEBOX, clgame.pmove->player );
 	Mem_Copy( &out, &result, sizeof( TraceResult ));
 
 	return out;

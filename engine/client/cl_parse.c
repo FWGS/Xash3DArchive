@@ -581,10 +581,27 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	}
 	else if( i == CS_SERVERFLAGS )
 	{
-		// update shared serverflags
 		clgame.globals->serverflags = com.atoi( cl.configstrings[CS_SERVERFLAGS] );
 	}
-	else if( i > CS_SERVERFLAGS && i < CS_MODELS )
+	else if( i == CS_ZFAR )
+	{
+		cl.refdef.zFar = com.atof( cl.configstrings[CS_ZFAR] );
+	}
+	else if( i == CS_SKYCOLOR )
+	{
+		com.atov( cl.refdef.skyColor, cl.configstrings[CS_SKYCOLOR], 3 );
+	}
+	else if( i == CS_WATERAMP )
+	{
+		edict_t	*world = CL_GetEdictByIndex( 0 );
+		world->v.scale = com.atof( cl.configstrings[CS_WATERAMP] );
+		Msg( "Global WaveHeight is %g\n", world->v.scale * 16 );
+	}
+	else if( i == CS_SKYVEC )
+	{
+		com.atov( cl.refdef.skyVec, cl.configstrings[CS_SKYVEC], 3 );
+	}
+	else if( i > CS_WATERAMP && i < CS_MODELS )
 	{
 		Host_Error( "CL_ParseConfigString: reserved configstring #%i are used\n", i );
 	}

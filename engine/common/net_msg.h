@@ -140,8 +140,12 @@ static const net_desc_t NWDesc[] =
 #define CS_SKYNAME			2	// skybox shader name
 #define CS_BACKGROUND_TRACK		3	// basename of background track
 #define CS_SERVERFLAGS		4	// shared server flags
+#define CS_SKYCOLOR			5	// <float> <float> <float>
+#define CS_SKYVEC			6	// <float> <float> <float>
+#define CS_ZFAR			7	// zfar value came from server
+#define CS_WATERAMP			8	// water amplitude for world water surfaces
 
-// 5 - 32 it's a reserved strings
+// 8 - 32 it's a reserved strings
 
 #define CS_MODELS			32				// configstrings starts here
 #define CS_SOUNDS			(CS_MODELS+MAX_MODELS)		// sound names

@@ -246,6 +246,7 @@ typedef struct ref_entity_s
 	vec3_t			movedir;		// forward vector that computed on a server
 	vec3_t			origin, origin2;
 	vec3_t			lightingOrigin;
+	float			waveHeight;
 
 	// RT_SPRITE stuff
 	struct ref_shader_s		*customShader;	// client drawing stuff

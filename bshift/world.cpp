@@ -640,7 +640,7 @@ void CWorld :: Precache( void )
 	if ( pev->speed > 0 )
 		CVAR_SET_FLOAT( "sv_zmax", pev->speed );
 	else
-		CVAR_SET_FLOAT( "sv_zmax", 4096 );
+		CVAR_SET_FLOAT( "sv_zmax", 0 );	// let the renderer calculate optimal value
 
 	if ( pev->netname )
 	{

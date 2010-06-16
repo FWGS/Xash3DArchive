@@ -643,6 +643,9 @@ void R_DeformVertices( void )
 				args[2] = deformv->func.args[2] + deformv->func.args[3] * r_currentShaderTime;
 				args[3] = deformv->args[0];
 
+				if( args[1] == 0.0f )
+					args[1] = RI.currententity->waveHeight;
+
 				for( j = 0; j < r_backacc.numVerts; j++ )
 				{
 					temp = args[2] + args[3] * ( inVertsArray[j][0] + inVertsArray[j][1] + inVertsArray[j][2] );
@@ -1053,12 +1056,13 @@ static bool R_VertexTCBase( const ref_stage_t *pass, int unit, matrix4x4 matrix 
 			return false;
 		}
 	case TCGEN_WARP:
-		for( i = 0; r_currentShader->tessSize != 0.0f && i < r_backacc.numVerts; i++ )
+		outCoords = tUnitCoordsArray[unit][0];
+		for( i = 0; r_currentShader->tessSize != 0.0f && i < r_backacc.numVerts; i++, outCoords += 2 )
 		{
-			coordsArray[i][0] += r_warpsintable[((int)((inCoordsArray[i][1] * 8.0 + r_currentShaderTime) * (256.0/M_PI2))) & 255] * (1.0 / r_currentShader->tessSize );
-			coordsArray[i][1] += r_warpsintable[((int)((inCoordsArray[i][0] * 8.0 + r_currentShaderTime) * (256.0/M_PI2))) & 255] * (1.0 / r_currentShader->tessSize );
+			outCoords[0] = inCoordsArray[i][0] + r_warpsintable[((int)((inCoordsArray[i][1] * 8.0f + r_currentShaderTime) * (256.0/M_PI2))) & 255] * (1.0f / r_currentShader->tessSize );
+			outCoords[1] = inCoordsArray[i][1] + r_warpsintable[((int)((inCoordsArray[i][0] * 8.0f + r_currentShaderTime) * (256.0/M_PI2))) & 255] * (1.0f / r_currentShader->tessSize );
 		}
-		R_UpdateVertexBuffer( tr.tcoordBuffer[unit], coordsArray, r_backacc.numVerts * sizeof( vec2_t ));
+		R_UpdateVertexBuffer( tr.tcoordBuffer[unit], tUnitCoordsArray[unit], r_backacc.numVerts * sizeof( vec2_t ));
 		pglTexCoordPointer( 2, GL_FLOAT, 0, tr.tcoordBuffer[unit]->pointer );
 		return true;
 	case TCGEN_REFLECTION_CELLSHADE:
@@ -1182,9 +1186,10 @@ R_ApplyTCMods
 static void R_ApplyTCMods( const ref_stage_t *pass, matrix4x4 result )
 {
 	int		i;
-	double		f, t1, t2, sint, cost;
+	double		t1, t2, sint, cost;
 	matrix4x4		m1, m2;
 	const tcMod_t	*tcmod;
+	float		flConveyorSpeed, flRate, flAngle;
 	waveFunc_t	func;
 
 	for( i = 0, tcmod = pass->tcMods; i < pass->numtcMods; i++, tcmod++ )
@@ -1236,17 +1241,26 @@ static void R_ApplyTCMods( const ref_stage_t *pass, matrix4x4 result )
 			Matrix4x4_Concat2D( result, m1, m2 );
 			break;
 		case TCMOD_CONVEYOR:
-			if( RI.currententity->framerate == 0.0f ) return;
-			f = (RI.currententity->framerate * r_currentShaderTime) * 0.0039; // magic number :-)
-			t1 = RI.currententity->movedir[0];
-			t2 = RI.currententity->movedir[1];
+			flConveyorSpeed = (RI.currententity->rendercolor[1]<<8|RI.currententity->rendercolor[2]) / 16.0f;
+			if( RI.currententity->rendercolor[0] ) flConveyorSpeed = -flConveyorSpeed;
+			flRate = abs( flConveyorSpeed ) / (float)pass->textures[0]->srcWidth;
+			flAngle = (flConveyorSpeed >= 0) ? 180 : 0;
 
-			t1 = f * t1;
-			t1 -= floor( t1 );
-			t2 = f * t2;
-			t2 -= floor( t2 );
+			t1 = r_currentShaderTime * com.cos( flAngle * ( M_PI / 180.0f )) * flRate;
+			t2 = r_currentShaderTime * com.sin( flAngle * ( M_PI / 180.0f )) * flRate;
+	
+			// make sure that we are positive
+			if( t1 < 0.0f ) t1 += 1.0f + -floor( t1 );
+			if( t2 < 0.0f ) t2 += 1.0f + -floor( t2 );
 
-			Matrix4x4_Translate2D( result, -t1, t2 );
+			if( pass->program_type != PROGRAM_TYPE_DISTORTION )
+			{	
+				// HACKHACK
+				t1 = t1 - floor( t1 );
+				t2 = t2 - floor( t2 );
+			}
+
+			Matrix4x4_Translate2D( result, t1, t2 );
 			break;
 		default: break;
 		}

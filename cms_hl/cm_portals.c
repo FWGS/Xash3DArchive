@@ -88,7 +88,7 @@ void CM_CalcPHS( void )
 	if( !worldmodel || !cm.pvs )
 		return;
 
-	MsgDev( D_INFO, "Building PAS...\n" );
+	MsgDev( D_NOTE, "Building PAS...\n" );
 	timestart = Sys_Milliseconds();
 
 	num = worldmodel->numleafs;
@@ -168,8 +168,8 @@ void CM_CalcPHS( void )
 		}
 	}
 
-	MsgDev( D_INFO, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
-	MsgDev( D_INFO, "PAS building time: %g secs\n", (Sys_Milliseconds() - timestart) * 0.001f );
+	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
+	MsgDev( D_NOTE, "PAS building time: %g secs\n", (Sys_Milliseconds() - timestart) * 0.001f );
 }
 
 /*

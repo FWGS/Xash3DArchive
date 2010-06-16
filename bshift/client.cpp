@@ -396,7 +396,37 @@ void ClientCommand( edict_t *pEntity )
 			GetClassPtr((CBasePlayer *)pev)->GiveNamedItem( STRING(iszItem) );
 		}
 	}
+	else if ( FStrEq(pcmd, "fire") ) //LRC - trigger entities manually
+	{
+		if (g_flWeaponCheat)
+		{
+			CBaseEntity *pPlayer = CBaseEntity::Instance(pEntity);
+			if (CMD_ARGC() > 1)
+			{
+				FireTargets(CMD_ARGV(1), pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else
+			{
+				TraceResult tr;
+				UTIL_MakeVectors(pev->viewangles);
+				UTIL_TraceLine(
+					pev->origin + pev->view_ofs,
+					pev->origin + pev->view_ofs + gpGlobals->v_forward * 1000,
+					dont_ignore_monsters, pEntity, &tr
+				);
 
+				if (tr.pHit)
+				{
+					CBaseEntity *pHitEnt = CBaseEntity::Instance(tr.pHit);
+					if (pHitEnt)
+					{
+						pHitEnt->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+						ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, UTIL_VarArgs( "Fired %s \"%s\"\n", STRING(pHitEnt->pev->classname), STRING(pHitEnt->pev->targetname) ) );
+					}
+				}
+			}
+		}
+	}
 	else if ( FStrEq(pcmd, "drop" ) )
 	{
 		// player is dropping an item. 
@@ -863,7 +893,7 @@ int AutoClassify( edict_t *pentToClassify )
 		return ED_RIGIDBODY;
 	else if ( pClass->pev->solid == SOLID_BSP )
 	{
-		if ( pClass->pev->movetype == MOVETYPE_CONVEYOR )
+		if ( pClass->pev->flags & FL_CONVEYOR )
 			return ED_MOVER;
 		else if ( pClass->pev->flags & FL_WORLDBRUSH )
 			return ED_BSPBRUSH;
@@ -876,6 +906,8 @@ int AutoClassify( edict_t *pentToClassify )
 		return ED_MONSTER;
 	else if ( pClass->pev->flags & FL_CLIENT )
 		return ED_CLIENT;
+	if ( pClass->pev->flags & FL_CONVEYOR )
+		return ED_MOVER;
 	else if ( !pClass->pev->modelindex && !pClass->pev->aiment )
 	{	
 		if ( pClass->pev->noise || pClass->pev->noise1 || pClass->pev->noise2 || pClass->pev->noise3 )

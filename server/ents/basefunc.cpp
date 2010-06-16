@@ -356,6 +356,7 @@ class CFuncConveyor : public CBaseBrush
 public:
 	void Spawn( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void UpdateSpeed( float speed );
 };
 LINK_ENTITY_TO_CLASS( func_conveyor, CFuncConveyor );
 
@@ -382,6 +383,21 @@ void CFuncConveyor :: Spawn( void )
 		Use( this, this, USE_ON, 0 );
 }
 
+// HACKHACK -- This is ugly, but encode the speed in the rendercolor to avoid adding more data to the network stream
+void CFuncConveyor :: UpdateSpeed( float speed )
+{
+	// Encode it as an integer with 4 fractional bits
+	int speedCode = (int)(fabs(speed) * 16.0);
+
+	if ( speed < 0 )
+		pev->rendercolor.x = 1;
+	else
+		pev->rendercolor.x = 0;
+
+	pev->rendercolor.y = (speedCode >> 8);
+	pev->rendercolor.z = (speedCode & 0xFF);
+}
+
 void CFuncConveyor :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	m_hActivator = pActivator;
@@ -397,6 +413,7 @@ void CFuncConveyor :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 	if( useType == USE_ON ) 
 	{
 		pev->speed = pev->frags; // restore speed
+		UpdateSpeed( pev->speed );
 		UTIL_FireTargets( pev->target, this, this, USE_ON, pev->speed );
 		if(!( pev->spawnflags & SF_NOTSOLID )) // don't push
 			pev->solid = SOLID_BSP;
@@ -405,6 +422,7 @@ void CFuncConveyor :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 	else if( useType == USE_OFF )
 	{
 		pev->speed = 0.0f;
+		UpdateSpeed( pev->speed );
 		UTIL_FireTargets( pev->target, this, this, USE_OFF, pev->speed );
 		pev->solid = SOLID_NOT;
 		m_iState = STATE_OFF;
@@ -413,7 +431,11 @@ void CFuncConveyor :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 	{	
 		if( value != 0.0f ) pev->frags = value;	// set new speed ( can be negative )
 		else pev->frags = -pev->frags;	// just reverse
-		if( m_iState == STATE_ON ) pev->speed = pev->frags;	
+		if( m_iState == STATE_ON )
+		{
+			pev->speed = pev->frags;	
+			UpdateSpeed( pev->speed );
+		}
 	}
 	else if( useType == USE_RESET ) // restore default speed
 	{	

@@ -1660,7 +1660,7 @@ pfnTestEntityPosition
 returns true if the entity is in solid currently
 =============
 */
-static int pfnTestEntityPosition( edict_t *pTestEdict, const float *offset )
+static int pfnTestEntityPosition( edict_t *pTestEdict )
 {
 	if( !SV_IsValidEdict( pTestEdict ))
 	{
@@ -1668,9 +1668,7 @@ static int pfnTestEntityPosition( edict_t *pTestEdict, const float *offset )
 		return false;
 	}	
 
-	if( !offset ) offset = vec3_origin;
-
-	return SV_TestEntityPosition( pTestEdict, offset );
+	return SV_TestEntityPosition( pTestEdict );
 }
 
 /*
@@ -3596,6 +3594,16 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 	edict_t	*ent;
 
 	MsgDev( D_NOTE, "SV_SpawnEntities()\n" );
+
+	// reset sky parms
+	Cvar_Reset( "sv_zmax" );
+	Cvar_Reset( "sv_wateramp" );
+	Cvar_Reset( "sv_skycolor_r" );
+	Cvar_Reset( "sv_skycolor_g" );
+	Cvar_Reset( "sv_skycolor_b" );
+	Cvar_Reset( "sv_skyvec_x" );
+	Cvar_Reset( "sv_skyvec_y" );
+	Cvar_Reset( "sv_skyvec_z" );
 
 	ent = EDICT_NUM( 0 );
 	if( ent->free ) SV_InitEdict( ent );

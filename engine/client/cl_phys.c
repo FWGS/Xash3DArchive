@@ -56,7 +56,7 @@ bool CL_CheckWater( edict_t *ent )
 
 	ent->v.waterlevel = 0;
 	ent->v.watertype = CONTENTS_EMPTY;
-	cont = CL_PointContents( point );
+	cont = CL_TruePointContents( point );
 
 	if( cont <= CONTENTS_WATER )
 	{

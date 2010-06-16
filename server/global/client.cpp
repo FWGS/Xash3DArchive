@@ -1053,7 +1053,7 @@ int AutoClassify( edict_t *pentToClassify )
 		return ED_RIGIDBODY;
 	else if ( pClass->pev->solid == SOLID_BSP )
 	{
-		if ( pClass->pev->movetype == MOVETYPE_CONVEYOR )
+		if ( pClass->pev->flags & FL_CONVEYOR )
 			return ED_MOVER;
 		else if ( pClass->pev->flags & FL_WORLDBRUSH )
 			return ED_BSPBRUSH;
@@ -1066,6 +1066,8 @@ int AutoClassify( edict_t *pentToClassify )
 		return ED_MONSTER;
 	else if ( pClass->pev->flags & FL_CLIENT )
 		return ED_CLIENT;
+	else if ( pClass->pev->flags & FL_CONVEYOR )
+		return ED_MOVER;
 	else if ( !pClass->pev->modelindex && !pClass->pev->aiment )
 	{	
 		if ( pClass->pev->noise || pClass->pev->noise1 || pClass->pev->noise2 || pClass->pev->noise3 )
@@ -1744,5 +1746,5 @@ void InitWorld( void )
 		else ALERT( at_console, "\n*Graph Loaded!\n" );
 	}
 
-	CVAR_SET_FLOAT( "sv_zmax", MAP_SIZE );
+	CVAR_SET_FLOAT( "sv_zmax", 0 );	// let the renderer calculate optimal value
 }

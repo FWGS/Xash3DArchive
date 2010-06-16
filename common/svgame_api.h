@@ -96,7 +96,7 @@ typedef struct enginefuncs_s
 	void	(*pfnTraceHull)( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr );
 	void	(*pfnTraceModel)( const float *v1, const float *v2, edict_t *pent, TraceResult *ptr );
 	const char *(*pfnTraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 );
-	int	(*pfnTestEntityPosition)( edict_t *pTestEdict, const float *offset ); // was pfnTraceSphere
+	int	(*pfnTestEntityPosition)( edict_t *pTestEdict ); // was pfnTraceSphere
 	void	(*pfnGetAimVector)( edict_t* ent, float speed, float *rgflReturn );
 	void	(*pfnServerCommand)( const char* str );
 	void	(*pfnServerExecute)( void );

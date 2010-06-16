@@ -559,7 +559,5 @@ edict_t *CL_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult 
 	result = CL_Move( origin, mins, maxs, origin, MOVE_NORMAL, pass );
 	if( tr ) Mem_Copy( tr, &result, sizeof( *tr ));
 
-	if( result.pHit )
-		return result.pHit;
-	return NULL;
+	return result.pHit;
 }

@@ -104,33 +104,19 @@ void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_
 
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch )
 {
-	if( trace->fAllSolid )
+	if( trace->fAllSolid || trace->fStartSolid || trace->flFraction < cliptrace->flFraction )
 	{
-		cliptrace->fAllSolid = true;
 		trace->pHit = touch;
+		
+		if( cliptrace->fStartSolid )
+		{
+			*cliptrace = *trace;
+			cliptrace->fStartSolid = true;
+		}
+		else *cliptrace = *trace;
 	}
 	else if( trace->fStartSolid )
-	{
 		cliptrace->fStartSolid = true;
-		trace->pHit = touch;
-	}
 
-	if( trace->fInOpen )
-		cliptrace->fInOpen = true;
-
-	if( trace->fInWater )
-		cliptrace->fInWater = true;
-
-	if( trace->flFraction < cliptrace->flFraction )
-	{
-		bool	oldStartSolid;
-
-		// make sure we keep a startsolid from a previous trace
-		oldStartSolid = cliptrace->fStartSolid;
-
-		trace->pHit = touch;
-		cliptrace = trace;
-		cliptrace->fStartSolid |= oldStartSolid;
-	}
 	return *cliptrace;
 }

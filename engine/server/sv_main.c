@@ -10,10 +10,12 @@
 
 netadr_t	master_adr[MAX_MASTERS];	// address of group servers
 
+cvar_t	*sv_zmax;
 cvar_t	*sv_fps;
 cvar_t	*sv_enforcetime;
 cvar_t	*sv_pausable;
 cvar_t	*sv_newunit;
+cvar_t	*sv_wateramp;
 cvar_t	*timeout;				// seconds without any message
 cvar_t	*zombietime;			// seconds to sink messages after disconnect
 cvar_t	*rcon_password;			// password for remote server commands
@@ -44,7 +46,15 @@ cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 cvar_t	*serverinfo;
 cvar_t	*physinfo;
 
-void Master_Shutdown (void);
+// sky variables
+cvar_t	*sv_skycolor_r;
+cvar_t	*sv_skycolor_g;
+cvar_t	*sv_skycolor_b;
+cvar_t	*sv_skyvec_x;
+cvar_t	*sv_skyvec_y;
+cvar_t	*sv_skyvec_z;
+
+void Master_Shutdown( void );
 
 //============================================================================
 
@@ -159,12 +169,39 @@ send updates to client if changed
 void SV_UpdateMovevars( void )
 {
 	static int	oldserverflags = 0;
+	string		tmp;
 
 	if( svgame.globals->serverflags != oldserverflags )
 	{
 		// update serverflags
 		SV_ConfigString( CS_SERVERFLAGS, va( "%i", svgame.globals->serverflags ));
 		oldserverflags = svgame.globals->serverflags;		
+	}
+
+	if( sv_zmax->modified )
+	{
+		SV_ConfigString( CS_ZFAR, sv_zmax->string );
+		sv_zmax->modified = false;
+	}
+
+	if( sv_wateramp->modified )
+	{
+		SV_ConfigString( CS_WATERAMP, sv_wateramp->string );
+		sv_wateramp->modified = false;
+	}
+
+	if( sv_skycolor_r->modified || sv_skycolor_g->modified || sv_skycolor_g->modified )
+	{
+		com.snprintf( tmp, sizeof( tmp ), "%d %d %d", sv_skycolor_r->integer, sv_skycolor_g->integer, sv_skycolor_b->integer );
+		sv_skycolor_r->modified = sv_skycolor_g->modified = sv_skycolor_g->modified = false;
+		SV_ConfigString( CS_SKYCOLOR, tmp );
+	}
+
+	if( sv_skyvec_x->modified || sv_skyvec_y->modified || sv_skyvec_z->modified )
+	{
+		com.snprintf( tmp, sizeof( tmp ), "%f %f %f", sv_skyvec_x->value, sv_skyvec_y->value, sv_skyvec_z->value );
+		sv_skyvec_x->modified = sv_skyvec_y->modified = sv_skyvec_z->modified = false;
+		SV_ConfigString( CS_SKYVEC, tmp );
 	}
 
 	if( !physinfo->modified ) return;
@@ -371,7 +408,7 @@ void SV_PrepWorldFrame( void )
 		ent->v.effects &= ~EF_MUZZLEFLASH;
 
 		// clear NOINTERP flag automatically only for alive creatures			
-		if( ent->v.flags & ( FL_MONSTER|FL_CLIENT|FL_FAKECLIENT ) && ent->v.deadflag != DEAD_DEAD )
+		if( ent->v.flags & ( FL_MONSTER|FL_CLIENT|FL_FAKECLIENT ) && ent->v.deadflag < DEAD_DEAD )
 			ent->v.effects &= ~EF_NOINTERP;
 	}
 }
@@ -590,13 +627,15 @@ void SV_Init( void )
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
 	Cvar_Get ("sv_aim", "1", 0, "enable auto-aiming" );
 
-	// half-life legacy
-	Cvar_Get ("sv_skycolor_r", "0", 0, "skycolor red (hl1 legacy)" );
-	Cvar_Get ("sv_skycolor_g", "0", 0, "skycolor green (hl1 legacy)" );
-	Cvar_Get ("sv_skycolor_b", "0", 0, "skycolor blue (hl1 legacy)" );
-	Cvar_Get ("sv_skyvec_x", "0", 0, "sky direction x (hl1 legacy)" );
-	Cvar_Get ("sv_skyvec_y", "0", 0, "sky direction y (hl1 legacy)" );
-	Cvar_Get ("sv_skyvec_z", "0", 0, "sky direction z (hl1 legacy)" );
+	// half-life shared variables
+	sv_zmax = Cvar_Get ("sv_zmax", "0", 0, "zfar server value" );
+	sv_wateramp = Cvar_Get ("sv_wateramp", "0", 0, "global water wave height" );
+	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "127", 0, "skycolor red (hl1 compatibility)" );
+	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "127", 0, "skycolor green (hl1 compatibility)" );
+	sv_skycolor_b = Cvar_Get ("sv_skycolor_b", "127", 0, "skycolor blue (hl1 compatibility)" );
+	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "1", 0, "sky direction x (hl1 compatibility)" );
+	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", 0, "sky direction y (hl1 compatibility)" );
+	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "-1", 0, "sky direction z (hl1 compatibility)" );
 
 	sv_fps = Cvar_Get( "sv_fps", "72.1", CVAR_ARCHIVE, "running server physics at" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );

@@ -946,11 +946,12 @@ void Host_Free( void )
 	host.state = HOST_SHUTDOWN;	// prepare host to normal shutdown
 	com.strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
 
-	SV_Shutdown( false );
-	CL_Shutdown();
 	Host_FreeRender();
 	Host_FreeSound();
 	Host_FreePhysic();
+
+	SV_Shutdown( false );
+	CL_Shutdown();
 	NET_Shutdown();
 	Host_FreeCommon();
 }

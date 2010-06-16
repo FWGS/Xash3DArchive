@@ -362,7 +362,7 @@ static TraceResult PM_PlayerTrace( const vec3_t start, const vec3_t end, int tra
 	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
 	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
 
-	result = SV_Move( start, mins, maxs, end, trace_type, svgame.pmove->player );
+	result = SV_Move( start, mins, maxs, end, trace_type|FMOVE_SIMPLEBOX, svgame.pmove->player );
 	Mem_Copy( &out, &result, sizeof( TraceResult ));
 
 	return out;
@@ -610,7 +610,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 		return;
 	}
 
-
 	clent = cl->edict;
 	if( !SV_IsValidEdict( clent )) return;
 
@@ -626,7 +625,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 
 	// angles
 	// show 1/3 the pitch angle and all the roll angle	
-	if( clent->v.deadflag != DEAD_DEAD )
+	if( clent->v.deadflag < DEAD_DEAD )
 	{
 		if( !clent->v.fixangle )
 		{

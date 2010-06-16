@@ -903,11 +903,11 @@ static float R_FarClip( void )
 {
 	float farclip_dist;
 
-	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ) )
+	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
 	{
-		int i;
-		float dist;
-		vec3_t tmp;
+		int	i;
+		float	dist;
+		vec3_t	tmp;
 
 		farclip_dist = 0;
 		for( i = 0; i < 8; i++ )
@@ -920,7 +920,8 @@ static float R_FarClip( void )
 			farclip_dist = max( farclip_dist, dist );
 		}
 
-		farclip_dist = sqrt( farclip_dist );
+		farclip_dist = com.sqrt( farclip_dist );
+		farclip_dist = max( RI.refdef.zFar, farclip_dist );
 
 		if( r_worldbrushmodel->globalfog )
 		{
@@ -1212,12 +1213,17 @@ R_CategorizeEntities
 static void R_CategorizeEntities( void )
 {
 	uint	i, j;
+ 	edict_t	*world;
 
 	r_numnullentities = 0;
 	r_numbmodelentities = 0;
 
 	if( !r_drawentities->integer )
 		return;
+
+	// apply global waveheight to world entity
+	world = ri.GetClientEdict( 0 );
+	if( world ) r_worldent->waveHeight = world->v.scale * 16.0f;
 
 	for( i = 1; i < r_numEntities; i++ )
 	{
@@ -2320,6 +2326,7 @@ bool R_AddGenericEntity( edict_t *pRefEntity, ref_entity_t *refent )
 	case mod_brush:
 		if( !refent->model->extradata )
 			return false;
+		refent->waveHeight = refent->scale * 16.0f;
 		refent->scale = 1.0f;		// ignore scale for brush models
 		refent->frame = pRefEntity->v.frame;	// brush properly animating
 		break;

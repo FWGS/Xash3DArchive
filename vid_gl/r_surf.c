@@ -70,6 +70,9 @@ bool R_CullSurface( msurface_t *surf, uint clipflags )
 	if( r_nocull->integer )
 		return false;
 
+	if( shader->tessSize )
+		return false;
+
 	if( shader->flags & SHADER_AUTOSPRITE )
 		return false;
 

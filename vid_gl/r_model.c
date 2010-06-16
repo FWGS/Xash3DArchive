@@ -553,6 +553,13 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 	int	i, j, e;
 	float	*v;
 
+	if( surf->flags & SURF_DRAWTURB )
+	{
+		surf->extents[0] = surf->extents[1] = 16384;
+		surf->textureMins[0] = surf->textureMins[1] = -8192;
+		return;
+	}
+
 	mins[0] = mins[1] = 999999;
 	maxs[0] = maxs[1] = -999999;
 
@@ -1143,6 +1150,7 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 {
 	mip_t	*mt = image->base;
 	int	i, shader_type = SHADER_TEXTURE;
+	texture_t	*tx;
 
 	// see if already loaded
 	if( image->shader )
@@ -1160,12 +1168,17 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 	else R_SetInternalTexture( NULL );
 
 	// build the unique shadername because we don't want keep this for other maps
-	if( mt->offsets[0] > 0 )
+#if 0
+	if( mt->offsets[0] > 0 && com.strncmp( mt->name, "sky", 3 ))
 		com.snprintf( image->name, sizeof( image->name ), "%s/%s", cached.modelname, mt->name );
+#endif
 
 	// determine shader parms by texturename
 	if( !com.strncmp( mt->name, "scroll", 6 ))
 		R_ShaderSetMiptexFlags( MIPTEX_CONVEYOR );
+
+	if( mt->name[0] == '*' || mt->name[0] == '!' )
+		R_ShaderSetMiptexFlags( MIPTEX_WARPSURFACE|MIPTEX_NOLIGHTMAP );
 
 	if( image->animated )
 	{
@@ -1173,19 +1186,23 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 
 		R_SetAnimFrequency( fps );	// set primary animation
 		for( i = 0; i < image->anim_total[0]; i++ )
-			Mod_LoadTexture( image->anim_frames[0][i] );
+			tx = Mod_LoadTexture( image->anim_frames[0][i] );
 
 		R_SetAnimFrequency( fps );	// set alternate animation
 		for( i = 0; i < image->anim_total[1]; i++ )
-			Mod_LoadTexture( image->anim_frames[1][i] );
+			tx = Mod_LoadTexture( image->anim_frames[1][i] );
 	}
-	else Mod_LoadTexture( mt );	// load the base image
+	else tx = Mod_LoadTexture( mt );	// load the base image
+
+	// force to get it from texture
+	if( tx == tr.defaultTexture )
+		image->width = image->height = -1;
 
 load_shader:
-	if( !com.strncmp( mt->name, "sky", 3 ))
+	if( !com.strncmp( mt->name, "sky", 3 ) && cached.version == Q1BSP_VERSION )
 		shader_type = SHADER_SKY;
 
-	image->shader = R_LoadShader( image->name, SHADER_TEXTURE, false, 0, SHADER_INVALID );
+	image->shader = R_LoadShader( image->name, shader_type, false, 0, SHADER_INVALID );
 
 	return image->shader;
 }
@@ -1468,9 +1485,8 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 
 		for( j = 0; j < 3; j++ )
 		{
-			// spread the mins / maxs by a pixel
-			out->mins[j] = LittleFloat( in->mins[j] ) - 1;
-			out->maxs[j] = LittleFloat( in->maxs[j] ) + 1;
+			out->mins[j] = LittleFloat( in->mins[j] );
+			out->maxs[j] = LittleFloat( in->maxs[j] );
 			out->origin[j] = LittleFloat( in->origin[j] );
 		}
 
@@ -1562,18 +1578,18 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		out->shader = texture->shader;
 		out->fog = NULL;	// FIXME: build conception of realtime fogs
 
+		if( !com.strncmp( texture->name, "sky", 3 ))
+			out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
+
+		if( texture->name[0] == '*' || texture->name[0] == '!' )
+			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+
 		Mod_CalcSurfaceBounds( out );
 		Mod_CalcSurfaceExtents( out );
 
 		// lighting info
 		out->lmWidth = (out->extents[0] >> 4) + 1;
 		out->lmHeight = (out->extents[1] >> 4) + 1;
-
-		if( !com.strncmp( texture->name, "sky", 3 ))
-			out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
-
-		if( texture->name[0] == '*' || texture->name[0] == '!' )
-			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
 		if( out->flags & SURF_DRAWTILED ) lightofs = -1;
 		else lightofs = LittleLong( in->lightofs );
@@ -2538,14 +2554,12 @@ Mod_Finish
 */
 static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t ambient )
 {
-	int	i;
-
 	// set up lightgrid
 //	R_BuildLightGrid( loadbmodel );
 
 	// ambient lighting
-	for( i = 0; i < 3; i++ )
-		mapConfig.ambient[i] = bound( 0, ambient[i] * ( 1.0f /255.0f ), 1 );
+	VectorCopy( RI.refdef.skyColor, mapConfig.environmentColor );
+	mapConfig.environmentColor[3] = 255;
 
 	Mem_EmptyPool( cached_mempool );
 }
@@ -2560,7 +2574,7 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 	dheader_t	*header;
 	mmodel_t	*bm;
 	vec3_t	ambient;
-	int	i;
+	int	i, j;
 
 	header = (dheader_t *)buffer;
 	cached.version = LittleLong( header->version );
@@ -2635,6 +2649,15 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 		VectorCopy( bm->maxs, starmod->maxs );
 		VectorCopy( bm->mins, starmod->mins );
 		starmod->radius = bm->radius;
+
+		for( j = 0; i != 0 && j < bmodel->nummodelsurfaces; j++ )
+		{
+			msurface_t *surf = bmodel->firstmodelsurface + j;
+
+			// kill water backplanes for submodels (half-life rules)
+			if( surf->flags & SURF_DRAWTURB && surf->mins[2] == bm->mins[2] )
+				surf->mesh = NULL;
+		}
 
 		if( i == 0 ) *mod = *starmod;
 		else bmodel->numsubmodels = 0;

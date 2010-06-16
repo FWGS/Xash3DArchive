@@ -299,7 +299,8 @@ static void R_ReadLightGrid( const vec3_t origin, vec3_t lightDir )
 
 	if( !r_worldbrushmodel->lightgrid )
 	{
-		VectorSet( lightDir, 1.0f, 0.0f, -1.0f );
+		// pre-defined light vector
+		VectorCopy( RI.refdef.skyVec, lightDir );
 		return;
 	}
 
