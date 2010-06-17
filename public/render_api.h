@@ -132,7 +132,7 @@ typedef struct
 	file_t		*file;
 	int		headerlen;
 
-	uint		time;			// Sys_Milliseconds for first cinematic frame
+	float		time;		// curtime for first cinematic frame
 	uint		frame;
 } cinematics_t;
 

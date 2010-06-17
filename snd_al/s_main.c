@@ -357,7 +357,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
 {
 	int	ch_idx;
 	int	first_to_die;
-	int	life_left;
+	float	life_left;
 
 	// check for replacement sound, or find the best one to replace
 	first_to_die = -1;
@@ -580,7 +580,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 
 	target_chan->entnum = ent;
 	target_chan->entchannel = chan;
-	target_chan->startTime = Sys_Milliseconds();
+	target_chan->startTime = Sys_DoubleTime();
 	VectorCopy( pos, target_chan->position );
 	target_chan->volume = vol;
 	target_chan->entnum = ent;
@@ -661,7 +661,7 @@ void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float f
 
 	ch->entnum = ent;
 	ch->entchannel = chan;
-	ch->startTime = Sys_Milliseconds();
+	ch->startTime = Sys_DoubleTime();
 	VectorCopy( pos, ch->position );
 	ch->volume = vol;
 	ch->entnum = ent;

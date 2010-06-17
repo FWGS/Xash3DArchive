@@ -512,7 +512,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
 
 	// FIXME: Quake3 may be use both 'jpg' and 'tga' levelshot types
-	if( !FS_FileExists( va( "%s.%s", cl_levelshot_name->string, SI->levshot_ext )) && cls.drawplaque ) 
+	if( !FS_FileExists( va( "†%s.%s", cl_levelshot_name->string, SI->levshot_ext )) && cls.drawplaque ) 
 	{
 		Cvar_Set( "cl_levelshot_name", MAP_DEFAULT_SHADER );	// render a black screen
 		cls.scrshot_request = scrshot_plaque;			// make levelshot
@@ -595,7 +595,6 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	{
 		edict_t	*world = CL_GetEdictByIndex( 0 );
 		world->v.scale = com.atof( cl.configstrings[CS_WATERAMP] );
-		Msg( "Global WaveHeight is %g\n", world->v.scale * 16 );
 	}
 	else if( i == CS_SKYVEC )
 	{

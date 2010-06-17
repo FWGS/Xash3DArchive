@@ -306,9 +306,9 @@ extern int r_framecount;
 extern int r_framecount2;
 extern int c_brush_polys, c_world_leafs;
 
-extern int r_mark_leaves, r_world_node;
-extern int r_add_polys, r_add_entities;
-extern int r_sort_meshes, r_draw_meshes;
+extern double r_mark_leaves, r_world_node;
+extern double r_add_polys, r_add_entities;
+extern double r_sort_meshes, r_draw_meshes;
 
 extern msurface_t *r_debug_surface;
 

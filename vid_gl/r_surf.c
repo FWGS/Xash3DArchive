@@ -589,8 +589,9 @@ R_DrawWorld
 */
 void R_DrawWorld( void )
 {
-	int	clipflags, msec = 0;
+	int	clipflags;
 	uint	dlightbits;
+	double	starttime;
 
 	if( !r_drawworld->integer )
 		return;
@@ -623,7 +624,7 @@ void R_DrawWorld( void )
 	else clipflags = RI.clipFlags;
 
 	if( r_speeds->integer )
-		msec = Sys_Milliseconds();
+		starttime = Sys_DoubleTime();
 
 	if( r_dynamiclight->integer != 1 || r_fullbright->integer )
 		dlightbits = 0;
@@ -633,7 +634,7 @@ void R_DrawWorld( void )
 	else R_RecursiveWorldNode( r_worldbrushmodel->nodes, clipflags, dlightbits );
 
 	if( r_speeds->integer )
-		r_world_node += Sys_Milliseconds() - msec;
+		r_world_node += Sys_DoubleTime() - starttime;
 }
 
 /*

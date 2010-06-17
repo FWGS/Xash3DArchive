@@ -92,6 +92,8 @@ typedef struct system_s
 typedef struct timer_s
 {
 	bool	initialized;		// any timer can be setup it
+	bool	hardware_timer;		// QueryPerfomanceCounter is present
+
 	double	oldtime;
 	double	curtime;
 	dword	timebase;
@@ -118,7 +120,7 @@ typedef struct cvar_s
 };
 
 extern system_t Sys;
-extern timer_t Msec;
+extern timer_t Clock;
 extern sysinfo_t SI;
 extern stdlib_api_t	com;
 

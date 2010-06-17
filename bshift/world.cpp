@@ -473,7 +473,6 @@ void CWorld :: Spawn( void )
 {
 	g_fGameOver = FALSE;
 	Precache( );
-	g_flWeaponCheat = CVAR_GET_FLOAT( "sv_cheats" );  // Is the impulse 101 command allowed?
 }
 
 void CWorld :: Precache( void )
@@ -642,6 +641,9 @@ void CWorld :: Precache( void )
 	else
 		CVAR_SET_FLOAT( "sv_zmax", 0 );	// let the renderer calculate optimal value
 
+	// g-cont. moved here to right restore global WaveHeight on save\restore level
+	CVAR_SET_FLOAT( "sv_wateramp", pev->scale );
+
 	if ( pev->netname )
 	{
 		ALERT( at_aiconsole, "Chapter title: %s\n", STRING(pev->netname) );
@@ -678,6 +680,8 @@ void CWorld :: Precache( void )
 	{
 		CVAR_SET_FLOAT( "mp_defaultteam", 0 );
 	}
+
+	g_flWeaponCheat = CVAR_GET_FLOAT( "sv_cheats" );  // Is the impulse 101 command allowed?
 }
 
 

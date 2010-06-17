@@ -217,7 +217,7 @@ pfnTime
 */
 float pfnTime( void )
 {
-	return (Host_Milliseconds() * 0.001f);
+	return Sys_DoubleTime();
 }
 
 /*

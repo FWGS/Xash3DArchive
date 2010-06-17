@@ -284,8 +284,8 @@ cpuinfo_t GetCPUInfo( void )
 
 void Sys_InitMathlib( cpuinfo_t *cpu )
 {
-	size_t	size = 1024 * 1024;
-	int	i, start, min, result[8];
+	size_t	i, size = 1024 * 1024;
+	double	start, min, result[8];
 	void	*buf0 = Malloc( size );
 	void	*buf1 = Malloc( size );
 	int	numchecks = 16; // iterations
@@ -296,19 +296,19 @@ void Sys_InitMathlib( cpuinfo_t *cpu )
 	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
 	{
 		// testing sqrt
-		start = Sys_Milliseconds();
+		start = Sys_DoubleTime();
 		for( i = 1; i < 800000; i++ ) a = sqrtf( i );
 		a *= 0.00000001;
-		result[(int)a] = Sys_Milliseconds() - start;
-		MsgDev( D_NOTE, "crt_sqrt %i ms\n", result[0] );
+		result[(int)a] = Sys_DoubleTime() - start;
+		MsgDev( D_NOTE, "crt_sqrt %i ms\n", (int)( result[0] * 1000 ));
 
 		if( cpu->m_bSSE )
 		{
-			start = Sys_Milliseconds();
+			start = Sys_DoubleTime();
 			for( i = 0; i < 800000; i++ ) a = sse_sqrt( i );
 			a *= 0.00000001;
-			result[(int)a+1] = Sys_Milliseconds() - start;
-			MsgDev( D_NOTE, "sse_sqrt %i ms\n", result[1] );
+			result[(int)a+1] = Sys_DoubleTime() - start;
+			MsgDev( D_NOTE, "sse_sqrt %i ms\n", (int)( result[1] * 1000 ));
 		}
 		else
 		{
@@ -329,27 +329,27 @@ void Sys_InitMathlib( cpuinfo_t *cpu )
 		}
           }
 
-	start = Sys_Milliseconds();
+	start = Sys_DoubleTime();
 	for( i = 0; i < numchecks; i++ ) _crt_mem_copy( buf0, buf1, size, __FILE__, __LINE__ );
-	result[0] = Sys_Milliseconds() - start;
-	MsgDev( D_NOTE, "crt_memcpy %i ms\n", result[0] );
+	result[0] = Sys_DoubleTime() - start;
+	MsgDev( D_NOTE, "crt_memcpy %i ms\n", (int)( result[0] * 1000 ));
 
-	start = Sys_Milliseconds();
+	start = Sys_DoubleTime();
 	for( i = 0; i < numchecks; i++ ) _asm_mem_copy( buf0, buf1, size, __FILE__, __LINE__ );
-	result[1] = Sys_Milliseconds() - start;
-	MsgDev( D_NOTE, "asm_memcpy %i ms\n", result[1] );
+	result[1] = Sys_DoubleTime() - start;
+	MsgDev( D_NOTE, "asm_memcpy %i ms\n", (int)( result[1] * 1000 ));
 
-	start = Sys_Milliseconds();
+	start = Sys_DoubleTime();
 	for( i = 0; i < numchecks; i++ ) _com_mem_copy( buf0, buf1, size, __FILE__, __LINE__ );
-	result[2] = Sys_Milliseconds() - start;
-	MsgDev( D_NOTE, "com_memcpy %i ms\n", result[2] );
+	result[2] = Sys_DoubleTime() - start;
+	MsgDev( D_NOTE, "com_memcpy %i ms\n", (int)( result[2] * 1000 ));
 
 	if( cpu->m_bMMX )
 	{
-		start = Sys_Milliseconds();
+		start = Sys_DoubleTime();
 		for( i = 0; i < numchecks; i++ ) _mmx_mem_copy( buf0, buf1, size, __FILE__, __LINE__ );
-		result[3] = Sys_Milliseconds() - start;
-		MsgDev( D_NOTE, "mmx_memcpy %i ms\n", result[3] );
+		result[3] = Sys_DoubleTime() - start;
+		MsgDev( D_NOTE, "mmx_memcpy %i ms\n", (int)( result[3] * 1000 ));
 	}
 	else
 	{
@@ -359,10 +359,10 @@ void Sys_InitMathlib( cpuinfo_t *cpu )
 
 	if( cpu->m_b3DNow )
 	{
-		start = Sys_Milliseconds();
+		start = Sys_DoubleTime();
 		for( i = 0; i < numchecks; i++ ) _amd_mem_copy( buf0, buf1, size, __FILE__, __LINE__ );
-		result[4] = Sys_Milliseconds() - start;
-		MsgDev( D_NOTE, "amd_memcpy %i ms\n", result[4] );
+		result[4] = Sys_DoubleTime() - start;
+		MsgDev( D_NOTE, "amd_memcpy %i ms\n", (int)( result[4] * 1000 ));
 	}
 	else
 	{
@@ -398,27 +398,27 @@ void Sys_InitMathlib( cpuinfo_t *cpu )
 	}
 
 	// memset
-	start = Sys_Milliseconds();
+	start = Sys_DoubleTime();
 	for( i = 0; i < numchecks; i++ ) _crt_mem_set( buf0, 0, size, __FILE__, __LINE__ );
-	result[0] = Sys_Milliseconds() - start;
-	MsgDev( D_NOTE, "crt_memset %i ms\n", result[0] );
+	result[0] = Sys_DoubleTime() - start;
+	MsgDev( D_NOTE, "crt_memset %i ms\n", (int)( result[0] * 1000 ));
 
-	start = Sys_Milliseconds();
+	start = Sys_DoubleTime();
 	for( i = 0; i < numchecks; i++ ) _asm_mem_set( buf0, 0, size, __FILE__, __LINE__ );
-	result[1] = Sys_Milliseconds() - start;
-	MsgDev( D_NOTE, "asm_memset %i ms\n", result[1] );
+	result[1] = Sys_DoubleTime() - start;
+	MsgDev( D_NOTE, "asm_memset %i ms\n", (int)( result[1] * 1000 ));
 
-	start = Sys_Milliseconds();
+	start = Sys_DoubleTime();
 	for( i = 0; i < numchecks; i++ ) _com_mem_set( buf0, 0, size, __FILE__, __LINE__ );
-	result[2] = Sys_Milliseconds() - start;
-	MsgDev( D_NOTE, "com_memset %i ms\n", result[2] );
+	result[2] = Sys_DoubleTime() - start;
+	MsgDev( D_NOTE, "com_memset %i ms\n", (int)( result[2] * 1000 ));
 
 	if( cpu->m_bMMX )
 	{
-		start = Sys_Milliseconds();
+		start = Sys_DoubleTime();
 		for( i = 0; i < numchecks; i++ ) _mmx_mem_set( buf0, 0, size, __FILE__, __LINE__ );
-		result[3] = Sys_Milliseconds() - start;
-		MsgDev( D_NOTE, "mmx_memset %i ms\n", result[3] );
+		result[3] = Sys_DoubleTime() - start;
+		MsgDev( D_NOTE, "mmx_memset %i ms\n", (int)( result[3] * 1000 ));
 	}
 	else
 	{
@@ -474,16 +474,16 @@ void Sys_InitCPU( void )
 	}
 
 	com_strcpy(szFeatureString, "" ); 
-	if( cpu.m_bMMX ) com_strcat(szFeatureString, "MMX " );
-	if( cpu.m_b3DNow ) com_strcat(szFeatureString, "3DNow " );
-	if( cpu.m_bSSE ) com_strcat(szFeatureString, "SSE " );
-	if( cpu.m_bSSE2 ) com_strcat(szFeatureString, "SSE2 " );
-	if( cpu.m_bRDTSC ) com_strcat(szFeatureString, "RDTSC " );
-	if( cpu.m_bCMOV ) com_strcat(szFeatureString, "CMOV " );
-	if( cpu.m_bFCMOV ) com_strcat(szFeatureString, "FCMOV " );
+	if( cpu.m_bMMX ) com.strcat( szFeatureString, "MMX " );
+	if( cpu.m_b3DNow ) com.strcat( szFeatureString, "3DNow " );
+	if( cpu.m_bSSE ) com.strcat( szFeatureString, "SSE " );
+	if( cpu.m_bSSE2 ) com.strcat( szFeatureString, "SSE2 " );
+	if( cpu.m_bRDTSC ) com.strcat( szFeatureString, "RDTSC " );
+	if( cpu.m_bCMOV ) com.strcat( szFeatureString, "CMOV " );
+	if( cpu.m_bFCMOV ) com.strcat( szFeatureString, "FCMOV " );
 
 	// Remove the trailing space.  There will always be one.
-	szFeatureString[com_strlen(szFeatureString)-1] = '\0';
+	szFeatureString[com.strlen( szFeatureString ) - 1] = '\0';
 
 	// Dump CPU information:
 	if( cpu.m_usNumLogicCore == 1 ) MsgDev( D_INFO, "CPU: %s [1 core]. Frequency: %.01f %s\n", cpu.m_szCPUID, fFrequency, szFrequencyDenomination );

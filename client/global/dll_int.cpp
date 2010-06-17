@@ -408,7 +408,9 @@ int HUD_AddVisibleEntity( edict_t *pEnt, int ed_type )
 		}
 	}	
 
-	if ( pEnt->v.effects & EF_BRIGHTLIGHT )
+	// NOTE: Xash3D sent entities to client even if it has EF_NODRAW flags
+	// run simple check here to prevent lighting invisible entity
+	if ( pEnt->v.effects & EF_BRIGHTLIGHT && !( pEnt->v.effects & EF_NODRAW ))
 	{			
 		Vector pos( pEnt->v.origin.x, pEnt->v.origin.y, pEnt->v.origin.z + 16 );
 		g_pTempEnts->AllocDLight( pos, RANDOM_LONG( 400, 430 ), 0.001f, 0 );

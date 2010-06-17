@@ -87,7 +87,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "cms_hl"=".\cms_hl\cms_hl.dsp" - Package Owner=<4>
+Project: "physic"=".\physic\physic.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

@@ -16,7 +16,7 @@
 system_t		Sys;
 stdlib_api_t	com;
 baserc_exp_t	*rc;	// library of resources
-timer_t		Msec;
+timer_t		Clock;
 launch_exp_t	*Host;	// callback to mainframe 
 sys_event_t	event_que[MAX_QUED_EVENTS];
 int		event_head, event_tail;
@@ -706,30 +706,87 @@ Sys_DoubleTime
 */
 double Sys_DoubleTime( void )
 {
-	double newtime;
+	double	newtime;
 
-	if( !Msec.initialized )
+	// LordHavoc: note to people modifying this code, 
+	// DWORD is specifically defined as an unsigned 32bit number, 
+	// therefore the 65536.0 * 65536.0 is fine.
+	if( SI.cpunum > 1 || !Clock.hardware_timer )
 	{
-		timeBeginPeriod( 1 );
-		Msec.timebase = timeGetTime();
-		Msec.initialized = true;
-		Msec.oldtime = (double)timeGetTime() * 0.001;
-	}
-	newtime = ( double )timeGetTime() * 0.001;
+		// timeGetTime
+		// platform:
+		// Windows 95/98/ME/NT/2000/XP
+		// features:
+		// reasonable accuracy (millisecond)
+		// issues:
+		// wraps around every 47 days or so (but this is non-fatal to us, 
+		// odd times are rejected, only causes a one frame stutter)
 
-	if( newtime < Msec.oldtime )
+		// make sure the timer is high precision, otherwise different versions of
+		// windows have varying accuracy
+		if( !Clock.timebase )
+		{
+			timeBeginPeriod( 1 );
+			Clock.timebase = timeGetTime();
+		}
+
+		newtime = (double)timeGetTime() * 0.001;
+	}
+	else
+	{
+		// QueryPerformanceCounter
+		// platform:
+		// Windows 95/98/ME/NT/2000/XP
+		// features:
+		// very accurate (CPU cycles)
+		// known issues:
+		// does not necessarily match realtime too well
+		// (tends to get faster and faster in win98)
+		// wraps around occasionally on some platforms
+		// (depends on CPU speed and probably other unknown factors)
+
+		LARGE_INTEGER	PerformanceFreq;
+		LARGE_INTEGER	PerformanceCount;
+		double		timescale;
+
+		if( !QueryPerformanceFrequency( &PerformanceFreq ))
+		{
+			MsgDev( D_NOTE, "Sys_Time: no hardware timer available, use timeGetTime()\n" );
+
+			// fall back to timeGetTime
+			Clock.hardware_timer = false;
+			return Sys_DoubleTime();
+		}
+
+		QueryPerformanceCounter( &PerformanceCount );
+
+		timescale = 1.0 / ((double)PerformanceFreq.LowPart + (double)PerformanceFreq.HighPart * 65536.0 * 65536.0);
+		newtime = ((double)PerformanceCount.LowPart + (double)PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
+	}
+
+	if( !Clock.initialized )
+	{
+		Clock.oldtime = newtime;
+		Clock.initialized = true;
+	}
+
+	if( newtime < Clock.oldtime )
 	{
 		// warn if it's significant
-		if( newtime - Msec.oldtime < -0.01 )
+		if( newtime - Clock.oldtime < -0.01 )
 		{
 			MsgDev( D_ERROR, "Sys_DoubleTime: time stepped backwards\n" );
-			MsgDev( D_NOTE, "(went from %f to %f, difference %f)\n", Msec.oldtime, newtime, newtime - Msec.oldtime );
+			MsgDev( D_NOTE, "(went from %f to %f, difference %f)\n", Clock.oldtime, newtime, newtime - Clock.oldtime );
 		}
 	}
-	else Msec.curtime += newtime - Msec.oldtime;
-	Msec.oldtime = newtime;
+	else
+	{
+		Clock.curtime += newtime - Clock.oldtime;
+	}
 
-	return Msec.curtime;
+	Clock.oldtime = newtime;
+
+	return Clock.curtime;
 }
 
 /*
@@ -741,13 +798,12 @@ dword Sys_Milliseconds( void )
 {
 	dword	curtime;
 
-	if( !Msec.initialized )
+	if( !Clock.timebase )
 	{
 		timeBeginPeriod( 1 );
-		Msec.timebase = timeGetTime();
-		Msec.initialized = true;
+		Clock.timebase = timeGetTime();
 	}
-	curtime = timeGetTime() - Msec.timebase;
+	curtime = timeGetTime() - Clock.timebase;
 
 	return curtime;
 }
@@ -957,7 +1013,8 @@ void Sys_Init( void )
 
 	lpBuffer.dwLength = sizeof( MEMORYSTATUS );
 	GlobalMemoryStatus( &lpBuffer );
-	ZeroMemory( &Msec, sizeof( Msec ));		// can't use memset - not init
+	ZeroMemory( &Clock, sizeof( Clock ));	// can't use memset - not init
+	Clock.hardware_timer = true;		// predict state
 	Sys.logfile = NULL;
 
 	// get current hInstance
@@ -1350,7 +1407,7 @@ void Sys_QueEvent( int time, ev_type_t type, int value, int value2, int length, 
 	{
 		MsgDev( D_ERROR, "Sys_QueEvent: overflow\n");
 		// make sure what memory is allocated by engine
-		if(Mem_IsAllocated( ev->data )) Mem_Free( ev->data );
+		if( Mem_IsAllocated( ev->data )) Mem_Free( ev->data );
 		event_tail++;
 	}
 	event_head++;
@@ -1383,7 +1440,7 @@ sys_event_t Sys_GetEvent( void )
 	if( event_head > event_tail )
 	{
 		event_tail++;
-		return event_que[(event_tail-1) & MASK_QUED_EVENTS];
+		return event_que[(event_tail - 1) & MASK_QUED_EVENTS];
 	}
 
 	// pump the message loop
@@ -1408,7 +1465,7 @@ sys_event_t Sys_GetEvent( void )
 
 		len = com_strlen( s ) + 1;
 		b = Malloc( len );
-		com_strncpy( b, s, len - 1 );
+		com.strncpy( b, s, len - 1 );
 		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
 	}
 

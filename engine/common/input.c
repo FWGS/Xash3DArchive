@@ -15,11 +15,11 @@ bool	in_mouseactive;		// false when not focus app
 bool	in_restore_spi;
 bool	in_mouseinitialized;
 int	in_originalmouseparms[3];
+int	in_mouse_oldbuttonstate;
 int	in_newmouseparms[3] = { 0, 0, 1 };
 bool	in_mouse_suspended;
 bool	in_mouseparmsvalid;
 int	in_mouse_buttons;
-int	in_mouse_oldbuttonstate;
 int	window_center_x, window_center_y;
 RECT	window_rect, real_rect;
 uint	in_mouse_wheel;
@@ -65,7 +65,7 @@ static int Host_MapKey( int key )
 
 	if( !is_extended )
 	{
-		switch ( result )
+		switch( result )
 		{
 		case K_HOME: return K_KP_HOME;
 		case K_UPARROW: return K_KP_UPARROW;
@@ -82,7 +82,7 @@ static int Host_MapKey( int key )
 	}
 	else
 	{
-		switch ( result )
+		switch( result )
 		{
 		case K_PAUSE: return K_KP_NUMLOCK;
 		case 0x0D: return K_KP_ENTER;
@@ -103,7 +103,7 @@ void IN_StartupMouse( void )
 	cvar_t	*cv;
 
 	if( host.type == HOST_DEDICATED ) return;
-	cv = Cvar_Get( "in_initmouse", "1", CVAR_SYSTEMINFO, "allow mouse device" );
+	cv = Cvar_Get( "host_mouse", "1", CVAR_SYSTEMINFO, "allow mouse device" );
 	if( !cv->value ) return; 
 
 	in_mouse_buttons = 3;
@@ -154,7 +154,7 @@ void IN_ActivateMouse( void )
 	if( cls.key_dest == key_menu && !scr_fullscreen->integer )
 	{
 		// check for mouse leave-entering
-		if( !in_mouse_suspended && !UI_MouseInRect())
+		if( !in_mouse_suspended && !UI_MouseInRect( ))
 			in_mouse_suspended = true;
 
 		if( oldstate != in_mouse_suspended )
@@ -178,7 +178,7 @@ void IN_ActivateMouse( void )
 
 		oldstate = in_mouse_suspended;
 
-		if( in_mouse_suspended && IN_CursorInRect())
+		if( in_mouse_suspended && IN_CursorInRect( ))
 		{
 			GetCursorPos( &global_pos );
 			in_mouse_suspended = false;
@@ -235,7 +235,7 @@ void IN_DeactivateMouse( void )
 	in_mouseactive = false;
 	ClipCursor( NULL );
 	ReleaseCapture();
-	while( ShowCursor(true) < 0 );
+	while( ShowCursor( true ) < 0 );
 }
 
 /*
@@ -278,11 +278,11 @@ void IN_MouseEvent( int mstate )
 	// perform button actions
 	for( i = 0; i < in_mouse_buttons; i++ )
 	{
-		if((mstate & (1<<i)) && !(in_mouse_oldbuttonstate & (1<<i)) )
+		if(( mstate & (1<<i)) && !( in_mouse_oldbuttonstate & (1<<i)) )
 		{
 			Sys_QueEvent( -1, SE_KEY, K_MOUSE1 + i, true, 0, NULL );
 		}
-		if(!(mstate & (1<<i)) && (in_mouse_oldbuttonstate & (1<<i)) )
+		if(!( mstate & (1<<i)) && ( in_mouse_oldbuttonstate & (1<<i)) )
 		{
 			Sys_QueEvent( -1, SE_KEY, K_MOUSE1 + i, false, 0, NULL );
 		}
@@ -297,7 +297,7 @@ IN_Shutdown
 */
 void IN_Shutdown( void )
 {
-	IN_DeactivateMouse();
+	IN_DeactivateMouse( );
 }
 
 
@@ -308,7 +308,7 @@ IN_Init
 */
 void IN_Init( void )
 {
-	IN_StartupMouse();
+	IN_StartupMouse( );
 }
 
 /*
@@ -388,7 +388,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			ShowWindow( host.hWnd, SW_SHOWMINNOACTIVE );
 		break;
 	case WM_MOUSEWHEEL:
-		if((short)HIWORD(wParam) > 0 )
+		if(( short )HIWORD( wParam ) > 0 )
 		{
 			Sys_QueEvent( -1, SE_KEY, K_MWHEELUP, true, 0, NULL );
 			Sys_QueEvent( -1, SE_KEY, K_MWHEELUP, false, 0, NULL );
@@ -417,7 +417,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		else host.state = HOST_FRAME;
 
 		wnd_caption = GetSystemMetrics( SM_CYCAPTION );
-		S_Activate( (host.state == HOST_FRAME) ? true : false );
+		S_Activate(( host.state == HOST_FRAME ) ? true : false );
 		Key_ClearStates();	// FIXME!!!
 
 		if( host.state == HOST_FRAME )
@@ -433,19 +433,19 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 	case WM_MOVE:
 		if( !scr_fullscreen->integer )
 		{
-			RECT 		r;
-			int		xPos, yPos, style;
+			RECT	rect;
+			int	xPos, yPos, style;
 
 			xPos = (short)LOWORD( lParam );    // horizontal position 
 			yPos = (short)HIWORD( lParam );    // vertical position 
 
-			r.left = r.top = 0;
-			r.right = r.bottom = 1;
+			rect.left = rect.top = 0;
+			rect.right = rect.bottom = 1;
 			style = GetWindowLong( hWnd, GWL_STYLE );
-			AdjustWindowRect( &r, style, FALSE );
+			AdjustWindowRect( &rect, style, FALSE );
 
-			Cvar_SetValue( "r_xpos", xPos + r.left );
-			Cvar_SetValue( "r_ypos", yPos + r.top );
+			Cvar_SetValue( "r_xpos", xPos + rect.left );
+			Cvar_SetValue( "r_ypos", yPos + rect.top );
 			scr_xpos->modified = false;
 			scr_ypos->modified = false;
 			GetWindowRect( host.hWnd, &real_rect );
@@ -464,7 +464,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		IN_MouseEvent( temp );
 		break;
 	case WM_SYSCOMMAND:
-		// never turn screensave when Xash is active
+		// never turn screensaver while Xash is active
 		if( wParam == SC_SCREENSAVE && host.state != HOST_SLEEP )
 			return 0;
 		break;

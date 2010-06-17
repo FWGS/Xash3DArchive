@@ -31,10 +31,8 @@ extern cvar_t	*sys_sharedstrings;
 
 extern string	video_dlls[MAX_RENDERS];
 extern string	audio_dlls[MAX_RENDERS];
-extern string	cphys_dlls[MAX_RENDERS];
 extern int	num_video_dlls;
 extern int	num_audio_dlls;
-extern int	num_cphys_dlls;
 
 /*
 ==============================================================
@@ -116,7 +114,6 @@ void Host_WriteConfig( void );
 void Host_ShutdownServer( void );
 void Host_CheckChanges( void );
 void Host_CheckRestart( void );
-int Host_Milliseconds( void );
 void Host_Print( const char *txt );
 void Host_Error( const char *error, ... );
 void Host_Credits( void );

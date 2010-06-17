@@ -56,9 +56,9 @@ int r_framecount2;		// used bonestransform checking
 
 int		c_brush_polys, c_world_leafs;
 
-int		r_mark_leaves, r_world_node;
-int		r_add_polys, r_add_entities;
-int		r_sort_meshes, r_draw_meshes;
+double		r_mark_leaves, r_world_node;
+double		r_add_polys, r_add_entities;
+double		r_sort_meshes, r_draw_meshes;
 
 msurface_t	*r_debug_surface;
 
@@ -1567,7 +1567,7 @@ RI.refdef must be set before the first call
 */
 void R_RenderView( const ref_params_t *fd )
 {
-	int	msec = 0;
+	double	starttime;
 	bool	shadowMap = RI.params & RP_SHADOWMAPVIEW ? true : false;
 
 	RI.refdef = *fd;
@@ -1600,12 +1600,12 @@ void R_RenderView( const ref_params_t *fd )
 	R_SetupFrustum();
 
 	if( r_speeds->integer )
-		msec = Sys_Milliseconds();
+		starttime = Sys_DoubleTime();
 
 	R_MarkLeaves();
 
 	if( r_speeds->integer )
-		r_mark_leaves += ( Sys_Milliseconds() - msec );
+		r_mark_leaves += ( Sys_DoubleTime() - starttime );
 
 	R_DrawWorld();
 
@@ -1617,20 +1617,21 @@ void R_RenderView( const ref_params_t *fd )
 		R_DrawCoronas();
 
 		if( r_speeds->integer )
-			msec = Sys_Milliseconds();
+			starttime = Sys_DoubleTime();
 
 		R_AddPolysToList();
 
 		if( r_speeds->integer )
-			r_add_polys += ( Sys_Milliseconds() - msec );
+			r_add_polys += ( Sys_DoubleTime() - starttime );
 	}
 
-	if( r_speeds->integer ) msec = Sys_Milliseconds();
+	if( r_speeds->integer )
+		starttime = Sys_DoubleTime();
 
 	R_DrawEntities();
 
 	if( r_speeds->integer )
-		r_add_entities += ( Sys_Milliseconds() - msec );
+		r_add_entities += ( Sys_DoubleTime() - starttime );
 
 	if( shadowMap )
 	{
@@ -1642,12 +1643,12 @@ void R_RenderView( const ref_params_t *fd )
 	}
 
 	if( r_speeds->integer )
-		msec = Sys_Milliseconds();
+		starttime = Sys_DoubleTime();
 
 	R_SortMeshes();
 
 	if( r_speeds->integer )
-		r_sort_meshes += ( Sys_Milliseconds() - msec );
+		r_sort_meshes += ( Sys_DoubleTime() - starttime );
 
 	R_DrawPortals();
 
@@ -1659,12 +1660,12 @@ void R_RenderView( const ref_params_t *fd )
 	R_Clear( shadowMap ? ~( GL_STENCIL_BUFFER_BIT|GL_COLOR_BUFFER_BIT ) : ~0 );
 
 	if( r_speeds->integer )
-		msec = Sys_Milliseconds();
+		starttime = Sys_DoubleTime();
 
 	R_DrawMeshes();
 
 	if( r_speeds->integer )
-		r_draw_meshes += ( Sys_Milliseconds() - msec );
+		r_draw_meshes += ( Sys_DoubleTime() - starttime );
 
 	R_BackendCleanUpTextureUnits();
 

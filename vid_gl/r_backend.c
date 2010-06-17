@@ -431,7 +431,7 @@ void R_BackendEndFrame( void )
 			break;
 		case 2:
 			com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ),
-				"lvs: %5i  node: %5i\nfarclip: %6.f",
+				"lvs: %.8f  node: %.8f\nfarclip: %6.f",
 				r_mark_leaves,
 				r_world_node,
 				RI.farClip
@@ -439,7 +439,7 @@ void R_BackendEndFrame( void )
 			break;
 		case 3:
 			com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ),
-				"polys\\ents: %5i\\%5i\nsort\\draw: %5i\\%i",
+				"polys\\ents: %.8f\\%.8f\nsort\\draw: %.8f\\%.8f",
 				r_add_polys, r_add_entities,
 				r_sort_meshes, r_draw_meshes
 			);

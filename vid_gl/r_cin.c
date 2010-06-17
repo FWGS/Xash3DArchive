@@ -75,7 +75,7 @@ R_StopRoQ
 static void R_StopRoQ( cinematics_t *cin )
 {
 	cin->frame = 0;
-	cin->time = 0;	// done
+	cin->time = 0.0f;	// done
 	cin->pic = NULL;
 	cin->pic_pending = NULL;
 

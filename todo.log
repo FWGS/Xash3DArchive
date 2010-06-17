@@ -48,4 +48,7 @@ Xash 0.72 Stable 13.12.10
 24.remove all unused stuff in engine
 25.regrouping resources in baserc
 26.implement lighting in render		OK
-27.implement dlights
+27.implement dlights			OK
+28.rework SV_PointContents
+29.implement sound library
+30.rewrite engine timer

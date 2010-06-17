@@ -179,10 +179,12 @@ void SV_ActivateServer( void )
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
-	if( sv.loadgame ) SV_CalcFrametime ();
+	svgame.frametime = ( sv.frametime * 0.001f );
+	svgame.time = ( sv.time * 0.001f );
 
 	// run two frames to allow everything to settle
-	SV_Physics();
+	if( !sv.loadgame ) SV_Physics();
+	svgame.time = ( sv.time * 0.001f );
 	SV_Physics();
 
 	// invoke to refresh all movevars
@@ -317,7 +319,7 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 		return false;
 
 	svgame.globals->changelevel = false;	// will be restored later if needed
-	svs.timestart = Sys_Milliseconds();
+	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
 	svs.realtime = 0;
 
@@ -363,6 +365,11 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	Cvar_SetValue( "skill", (float)current_skill );
 
 	sv.time = 1000; // server spawn time it's always 1.0 second
+	sv.frametime = 100;
+
+	// half-life compatibility
+	svgame.globals->time = 1.0f;
+	svgame.globals->frametime = 0;
 
 	// make sure what server name doesn't contain path and extension
 	FS_FileBase( mapname, sv.name );
@@ -518,7 +525,7 @@ void SV_ForceMod( void )
 
 void SV_ForceError( void )
 {
-	// this only for singleplayer testing
+	// this is only for singleplayer testing
 	if( sv_maxclients->integer != 1 ) return;
 	sv.write_bad_message = true;
 }
@@ -540,15 +547,8 @@ bool SV_NewGame( const char *mapName, bool loadGame )
 	if( !SV_SpawnServer( mapName, NULL ))
 		return false;
 
-	// make sure the time is set
-	svgame.globals->time = (sv.time * 0.001f);
 	SV_LevelInit( mapName, NULL, NULL, loadGame );
-
-	if( loadGame )
-	{
-		sv.loadgame = true;
-		svgame.globals->time = (sv.time * 0.001f);
-	}
+	sv.loadgame = loadGame;
 
 	SV_ActivateServer();
 

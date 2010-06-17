@@ -109,9 +109,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 				continue;
 		}
 
-		svgame.globals->time = sv.time * 0.001f;
 		svgame.dllFuncs.pfnTouch( touch, ent );
-
 		if( ent->free ) break; // killtarget issues
 	}
 	

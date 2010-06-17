@@ -2518,8 +2518,8 @@ static void R_TraceGrid( int num )
 
 void R_BuildLightGrid( mbrushmodel_t *world )
 {
+	double	timestart = Sys_DoubleTime();
 	int	i;
-	uint	timestart = Sys_Milliseconds();
 
 	MsgDev( D_INFO, "Building LightGrid...\n" );
 
@@ -2544,7 +2544,7 @@ void R_BuildLightGrid( mbrushmodel_t *world )
 		R_TraceGrid( i );
  
 	Msg( "numGridPoints %i, mem %s\n", world->numgridpoints, memprint( world->numgridpoints * sizeof( mgridlight_t )));
-	MsgDev( D_INFO, "LightGrid building time: %g secs\n", (Sys_Milliseconds() - timestart) * 0.001f );
+	MsgDev( D_INFO, "LightGrid building time: %g secs\n", Sys_DoubleTime() - timestart );
 }
 
 /*

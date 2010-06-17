@@ -294,7 +294,7 @@ void SV_BuildSaveComment( char *text, int maxlength )
 {
 	const char	*pName;
 	edict_t		*pWorld = EDICT_NUM( 0 );
-	float		time = svgame.globals->time;
+	float		time = svgame.time;
 
 	if( pWorld && pWorld->v.message )
 	{
@@ -355,7 +355,6 @@ void LandmarkOrigin( SAVERESTOREDATA *pSaveData, vec3_t output, const char *pLan
 int EntityInSolid( edict_t *ent )
 {
 	edict_t	*pParent = ent->v.aiment;
-	vec3_t	point;
 
 	// if you're attached to a client, always go through
 	if( SV_IsValidEdict( pParent ))
@@ -363,10 +362,7 @@ int EntityInSolid( edict_t *ent )
 		if( pParent->v.flags & FL_CLIENT )
 			return 0;
 	}
-
-	VectorAverage( ent->v.absmin, ent->v.absmax, point );
-
-	return (SV_PointContents( point ) == CONTENTS_SOLID);
+	return SV_TestEntityPosition( ent );
 }
 
 void SV_ClearSaveDir( void )
@@ -1036,6 +1032,7 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 
 	SV_SaveFinish( pSaveData );
 
+	// restore server time
 	sv.time = header.time * 1000;
 	
 	return 1;
@@ -1283,14 +1280,12 @@ void SV_ChangeLevel( bool loadfromsavedgame, const char *mapname, const char *st
 		SV_SaveFinish( pSaveData );
 
 		svgame.globals->changelevel = true;
-		svgame.globals->time = (sv.time * 0.001f);
 		SV_LevelInit( level, oldlevel, startspot, true );
 		sv.paused = true; // pause until all clients connect
 		sv.loadgame = true;
 	}
 	else
 	{
-		svgame.globals->time = (sv.time * 0.001f);
 		SV_LevelInit( level, NULL, NULL, false );
 	}
 

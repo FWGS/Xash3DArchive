@@ -27,7 +27,7 @@ void SCR_StopCinematic( void )
 		return;
 
 	cl.cin = NULL;
-	cin->time = 0;	// done
+	cin->time = 0.0f;	// done
 	cin->pic = NULL;
 	cin->pic_pending = NULL;
 
@@ -67,7 +67,7 @@ SCR_InitCinematic
 uint SCR_GetCinematicTime( void )
 {
 	cinematics_t	*cin = cl.cin;
-	return (cin ? cin->time : 0);
+	return (cin ? cin->time : 0.0f);
 }
 
 /*
@@ -80,19 +80,19 @@ void SCR_RunCinematic( void )
 	uint		frame;
 	cinematics_t	*cin = cl.cin;
 
-	if( !cin || cin->time == 0 )
+	if( !cin || cin->time == 0.0f )
 	{
 		SCR_StopCinematic ();
 		return;
 	}
 
-	frame = (Host_Milliseconds() - cin->time) * (float)(RoQ_FRAMERATE) / 1000;
+	frame = (Sys_DoubleTime() - cin->time) * (float)(RoQ_FRAMERATE);
 	if( frame <= cin->frame ) return;
 
 	if( frame > cin->frame + 1 )
 	{
 		MsgDev( D_WARN, "dropped frame: %i > %i\n", frame, cin->frame + 1 );
-		cin->time = Host_Milliseconds() - cin->frame * 1000 / RoQ_FRAMERATE;
+		cin->time = Sys_DoubleTime() - cin->frame / RoQ_FRAMERATE;
 	}
 
 	cin->pic = cin->pic_pending;
@@ -118,8 +118,9 @@ bool SCR_DrawCinematic( void )
 	cinematics_t	*cin = cl.cin;
 	float		x, y, w, h;
  
-	if( !re || !cin || cin->time <= 0 )
+	if( !re || !cin || cin->time <= 0.0f )
 		return false;
+
 	if( !cin->pic )
 		return true;
 
@@ -189,7 +190,7 @@ bool SCR_PlayCinematic( const char *arg )
 	cin->headerlen = FS_Tell( cin->file );
 	cin->frame = 0;
 	cin->pic = cin->pic_pending = CIN_ReadNextFrame( cin, false );
-	cin->time = Host_Milliseconds ();
+	cin->time = Sys_DoubleTime();
 
 	return true;
 }

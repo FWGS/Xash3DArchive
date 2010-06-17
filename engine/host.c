@@ -17,14 +17,12 @@ stdlib_api_t	com, newcom;
 char		*buildstring = __TIME__ " " __DATE__;
 string		video_dlls[MAX_RENDERS];
 string		audio_dlls[MAX_RENDERS];
-string		cphys_dlls[MAX_RENDERS];
 int		num_video_dlls;
 int		num_audio_dlls;
-int		num_cphys_dlls;
 
 dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
-dll_info_t physic_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(physic_exp_t), sizeof(stdlib_api_t) };
+dll_info_t physic_dll = { "physic.dll", NULL, "CreateAPI", NULL, NULL, 0, sizeof(physic_exp_t), sizeof(stdlib_api_t) };
 
 cvar_t	*timescale;
 cvar_t	*sys_sharedstrings;
@@ -248,38 +246,20 @@ bool Host_InitSound( void )
 
 void Host_CheckRestart( void )
 {
-	int	num_changes;
+	if( !host_cphys->modified )
+		return;
 
-	if( host_cphys->modified )
+	S_StopAllSounds();	// don't let them loop during the restart
+	SV_ForceMod();
+
+	// restart physics library
+	Host_FreePhysic();			// release physic.dll
+	if( !Host_InitPhysic( ))		// load it again
 	{
-		S_StopAllSounds();	// don't let them loop during the restart
-
-		SV_ForceMod();
-		CL_ForceVid();
+		MsgDev( D_ERROR, "couldn't initialize physic system\n" );
 	}
-	else return;
 
-	num_changes = 0;
-
-	// restart or change renderer
-	while( host_cphys->modified )
-	{
-		host_cphys->modified = false;
-
-		Host_FreePhysic();			// release physic.dll
-		if( !Host_InitPhysic( ))		// load it again
-		{
-			if( num_changes > num_cphys_dlls )
-			{
-				MsgDev( D_ERROR, "couldn't initialize physic system\n" );
-				return;
-			}
-			if( !com.strcmp( cphys_dlls[num_changes], host_cphys->string ))
-				num_changes++; // already trying - failed
-			Cvar_FullSet( "host_cphys", cphys_dlls[num_changes], CVAR_SYSTEMINFO );
-			num_changes++;
-		}
-	}
+	host_cphys->modified = false;
 }
 
 void Host_CheckChanges( void )
@@ -774,7 +754,7 @@ void Host_InitCommon( const int argc, const char **argv )
 	num_video_dlls = num_audio_dlls = 0;
 	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_SYSTEMINFO, "name of video rendering library" );
 	host_audio = Cvar_Get( "host_audio", "snd_al.dll", CVAR_SYSTEMINFO, "name of sound rendering library" );
-	host_cphys = Cvar_Get( "host_cphys", "cms_qf.dll", CVAR_SYSTEMINFO, "name of physic colision library" );
+	host_cphys = Cvar_Get( "host_cphys", "physic.dll", CVAR_SYSTEMINFO, "name of physic colision library" );
 
 	// make sure what global copy has no changed with any dll checking
 	Mem_Copy( &check_vid, &render_dll, sizeof( dll_info_t ));
@@ -814,17 +794,6 @@ void Host_InitCommon( const int argc, const char **argv )
 				com.strncpy( audio_dlls[num_audio_dlls], dlls->filenames[i], MAX_STRING );
 				Sys_FreeLibrary( &check_snd );
 				num_audio_dlls++;
-			}
-		}
-		else if(!com.strnicmp( "cms_", dlls->filenames[i], 4 ))
-		{
-			// make sure what found library is valid
-			if( Sys_LoadLibrary( dlls->filenames[i], &check_cms ))
-			{
-				MsgDev( D_NOTE, "PhysicLibrary[%i]: %s\n", num_cphys_dlls, dlls->filenames[i] );
-				com.strncpy( cphys_dlls[num_cphys_dlls], dlls->filenames[i], MAX_STRING );
-				Sys_FreeLibrary( &check_cms );
-				num_cphys_dlls++;
 			}
 		}
 	}
@@ -910,7 +879,7 @@ void Host_Init( const int argc, const char **argv )
 		Cmd_AddCommand( "snd_restart", Host_SndRestart_f, "restarts audio system" );
 	}
 
-	Cmd_AddCommand( "cmap_restart", Host_PhysRestart_f, "restarts physic system" );
+	Cmd_AddCommand( "phys_restart", Host_PhysRestart_f, "restarts physic system" );
 	Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );	// allow to change game from the console
 	host.frametime = Host_Milliseconds();
 	host.errorframe = 0;

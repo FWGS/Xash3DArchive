@@ -82,14 +82,14 @@ void CM_CalcPHS( void )
 	byte	*scan, *visdata;
 	uint	*dest, *src;
 	int	hcount, vcount;
-	uint	timestart;
+	double	timestart;
 	int	bitbyte;
 
 	if( !worldmodel || !cm.pvs )
 		return;
 
 	MsgDev( D_NOTE, "Building PAS...\n" );
-	timestart = Sys_Milliseconds();
+	timestart = Sys_DoubleTime();
 
 	num = worldmodel->numleafs;
 	rowwords = (num + 31)>>5;
@@ -169,7 +169,7 @@ void CM_CalcPHS( void )
 	}
 
 	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
-	MsgDev( D_NOTE, "PAS building time: %g secs\n", (Sys_Milliseconds() - timestart) * 0.001f );
+	MsgDev( D_NOTE, "PAS building time: %g secs\n", Sys_DoubleTime() - timestart );
 }
 
 /*

@@ -294,7 +294,6 @@ bool SV_ClientConnect( edict_t *ent, char *userinfo )
 	if( !sv.loadgame ) ent->v.flags = 0;
 
 	MsgDev( D_NOTE, "SV_ClientConnect()\n" );
-	svgame.globals->time = sv.time * 0.001f;
 	result = svgame.dllFuncs.pfnClientConnect( ent, userinfo );
 
 	return result;
@@ -320,8 +319,6 @@ void SV_DropClient( sv_client_t *drop )
 		MSG_WriteByte( &drop->netchan.message, svc_disconnect );
 
 	// let the game known about client state
-	svgame.globals->time = sv.time * 0.001f;
-
 	if( drop->edict->v.flags & FL_SPECTATOR )
 		svgame.dllFuncs.pfnSpectatorDisconnect( drop->edict );
 	else svgame.dllFuncs.pfnClientDisconnect( drop->edict );
@@ -335,8 +332,8 @@ void SV_DropClient( sv_client_t *drop )
 		drop->edict->pvPrivateData = NULL;
 	}
 
-//	SV_FreeEdict( drop->edict );
-	if( drop->download ) drop->download = NULL;
+	if( drop->download )
+		drop->download = NULL;
 
 	drop->state = cs_zombie; // become free in a few seconds
 	drop->name[0] = 0;
@@ -642,7 +639,6 @@ void SV_PutClientInServer( edict_t *ent )
 	index = NUM_FOR_EDICT( ent ) - 1;
 	client = ent->pvServerData->client;
 
-	svgame.globals->time = sv.time * 0.001f;
 	ent->pvServerData->s.ed_type = ED_CLIENT; // init edict type
 
 	if( !sv.loadgame )
@@ -702,7 +698,7 @@ void SV_PutClientInServer( edict_t *ent )
 	sv.paused = false;
 
 	if( sv_maxclients->integer == 1 ) // singleplayer profiler
-		MsgDev( D_INFO, "level loaded at %g sec\n", (Sys_Milliseconds() - svs.timestart) * 0.001f );
+		MsgDev( D_INFO, "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
 }
 
 /*
@@ -1066,8 +1062,6 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	}
 
 	// call prog code to allow overrides
-	svgame.globals->time = sv.time * 0.001f;
-	svgame.globals->frametime = sv.frametime * 0.001f;
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
 
 	if( SV_IsValidEdict( ent ))
@@ -1127,8 +1121,6 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 	if( !u->name && sv.state == ss_active )
 	{
 		// custom client commands
-		svgame.globals->time = sv.time * 0.001f;
-		svgame.globals->frametime = sv.frametime * 0.001f;
 		svgame.dllFuncs.pfnClientCommand( cl->edict );
 	}
 }

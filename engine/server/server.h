@@ -197,6 +197,9 @@ typedef struct
 
 typedef struct
 {
+	float		time;			// cached sv.time
+	float		frametime;		// cached sv.frametime
+
 	// user messages stuff
 	const char	*msg_name;		// just for debug
 	int		msg_sizes[MAX_USER_MESSAGES];	// user messages bounds checker
@@ -234,7 +237,7 @@ typedef struct
 {
 	bool		initialized;		// sv_init has completed
 	int		realtime;			// always increasing, no clamping, etc
-	int		timestart;		// just for profiling
+	double		timestart;		// just for profiling
 
 	int		groupmask;
 	int		groupop;
@@ -306,7 +309,7 @@ void SV_InitOperatorCommands( void );
 void SV_KillOperatorCommands( void );
 void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo );
 void SV_PrepWorldFrame( void );
-void SV_CalcFrametime( void );
+void SV_CalcFrameTime( void );
 void Master_Heartbeat( void );
 void Master_Packet( void );
 

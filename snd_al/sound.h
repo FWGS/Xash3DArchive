@@ -72,7 +72,7 @@ typedef struct
 
 	int		entnum;		// to allow overriding a specific sound
 	int		entchannel;
-	uint		startTime;	// for overriding oldest sounds
+	float		startTime;	// for overriding oldest sounds
 	bool		staticsound;	// use position instead of fetching entity's origin
 	vec3_t		position;		// only use if fixedPosition is set
 	float		volume;

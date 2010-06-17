@@ -257,10 +257,10 @@ void SV_UpdateServerInfo( void )
 
 /*
 =================
-SV_CalcFrametime
+SV_CalcFrameTime
 =================
 */
-void SV_CalcFrametime( void )
+void SV_CalcFrameTime( void )
 {
 	if( sv_fps->modified )
 	{
@@ -350,8 +350,8 @@ void SV_CheckTimeouts( void )
 	float		zombiepoint;
 	int		i, numclients = 0;
 
-	droppoint = svs.realtime - (timeout->value * 1000);
-	zombiepoint = svs.realtime - (zombietime->value * 1000);
+	droppoint = svs.realtime - ( timeout->value * 1000 );
+	zombiepoint = svs.realtime - ( zombietime->value * 1000 );
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -371,7 +371,7 @@ void SV_CheckTimeouts( void )
 			cl->state = cs_free; // can now be reused
 			continue;
 		}
-		if(( cl->state == cs_connected || cl->state == cs_spawned) && cl->lastmessage < droppoint )
+		if(( cl->state == cs_connected || cl->state == cs_spawned ) && cl->lastmessage < droppoint )
 		{
 			SV_BroadcastPrintf( PRINT_HIGH, "%s timed out\n", cl->name );
 			SV_DropClient( cl ); 
@@ -450,6 +450,10 @@ void SV_RunGameFrame( void )
 	// has the "current" frame
 	sv.framenum++;
 
+	// update progs timings
+	svgame.globals->frametime = svgame.frametime = ( sv.frametime * 0.001f );
+	svgame.globals->time = svgame.time = ( sv.time * 0.001f );
+
 	// don't run if paused or not in game
 	if( !sv.paused && CL_IsInGame( ))
 		SV_Physics();
@@ -476,7 +480,7 @@ void SV_Frame( int time )
 	rand ();
 
 	// calc sv.frametime
-	SV_CalcFrametime ();
+	SV_CalcFrameTime ();
 
 	// check timeouts
 	SV_CheckTimeouts ();

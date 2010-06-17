@@ -638,9 +638,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 		SV_SetMinMaxSize( clent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
 	else SV_SetMinMaxSize( clent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );
 
-	svgame.globals->time = (sv.time * 0.001f);
-	svgame.globals->frametime = (sv.frametime * 0.001f);
-
 	if(!( clent->v.flags & FL_SPECTATOR ))
 	{
 		svgame.dllFuncs.pfnPlayerPreThink( clent );
@@ -653,9 +650,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 
 	if(( sv_maxclients->integer <= 1 ) && !CL_IsInGame( ) || ( clent->v.flags & FL_FROZEN ) || ( sv.framenum < 3 ))
 		ucmd->msec = 0; // pause
-
-	svgame.globals->time = (sv.time * 0.001f);
-	svgame.globals->frametime = (ucmd->msec * 0.001f);
 
 	// setup playermove state
 	PM_SetupMove( svgame.pmove, clent, ucmd, cl->physinfo );
@@ -716,6 +710,6 @@ void SV_PostRunCmd( sv_client_t *cl )
 	else svgame.dllFuncs.pfnPlayerPostThink( clent );
 
 	// restore frametime
-	svgame.globals->frametime = sv.frametime * 0.001f;
+	svgame.globals->frametime = svgame.frametime;
 	svgame.dllFuncs.pfnCmdEnd( cl->edict );
 }

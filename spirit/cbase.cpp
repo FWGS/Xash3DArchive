@@ -559,8 +559,7 @@ void CBaseEntity::Activate( void )
 	m_activated = TRUE;
 	InitMoveWith();
 
-	if( !gpGlobals->changelevel )
-		PostSpawn();
+	PostSpawn();
 }
 
 //LRC- called by activate() to support movewith
