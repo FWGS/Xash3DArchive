@@ -120,9 +120,9 @@ chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, floa
 		// point hull
 		hull = &model->hulls[0];
 	}
-	else if( size[0] < 36 )
+	else if( size[0] <= 32 )
 	{
-		if( size[2] < 36 )
+		if( size[2] < 54 )
 		{
 			// head hull (ducked)
 			hull = &model->hulls[3];

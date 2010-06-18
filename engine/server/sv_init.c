@@ -92,30 +92,6 @@ script_t *CM_GetEntityScript( void )
 
 /*
 ================
-SV_PrepModels
-
-Called after changing physic.dll
-================
-*/
-void SV_PrepModels( void )
-{
-	string	name;
-	int	i;
-
-	CM_BeginRegistration( sv.configstrings[CS_MODELS+1], false, NULL );
-
-	for( i = 0; i < MAX_MODELS && sv.configstrings[CS_MODELS+1+i][0]; i++ )
-	{
-		com.strncpy( name, sv.configstrings[CS_MODELS+1+i], MAX_STRING );
-		CM_RegisterModel( name, i+1 );
-	}
-	CM_EndRegistration (); // free unused models
-
-	sv.cphys_prepped = true;
-}
-
-/*
-================
 SV_CreateBaseline
 
 Entity baselines are used to compress the update messages
@@ -210,7 +186,6 @@ void SV_ActivateServer( void )
 	CM_EndRegistration (); // free unused models
 
 	sv.state = ss_active;
-	sv.cphys_prepped = true;
 	physinfo->modified = true;
 
 	Host_SetServerState( sv.state );
@@ -516,11 +491,6 @@ void SV_InitGame( void )
 bool SV_Active( void )
 {
 	return svs.initialized;
-}
-
-void SV_ForceMod( void )
-{
-	sv.cphys_prepped = false;
 }
 
 void SV_ForceError( void )

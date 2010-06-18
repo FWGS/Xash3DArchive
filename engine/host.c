@@ -35,7 +35,6 @@ cvar_t	*host_framerate;
 cvar_t	*host_registered;
 cvar_t	*host_video;
 cvar_t	*host_audio;
-cvar_t	*host_cphys;
 
 // these cvars will be duplicated on each client across network
 int Host_ServerState( void ) { return Cvar_VariableInteger( "host_serverstate" ); }
@@ -128,7 +127,7 @@ bool Host_InitPhysic( void )
 	// phys callback
 	pi.api_size = sizeof( physic_imp_t );
 
-	Sys_LoadLibrary( host_cphys->string, &physic_dll );
+	Sys_LoadLibrary( NULL, &physic_dll );
 
 	if( physic_dll.link )
 	{
@@ -244,24 +243,6 @@ bool Host_InitSound( void )
 	return result;
 }
 
-void Host_CheckRestart( void )
-{
-	if( !host_cphys->modified )
-		return;
-
-	S_StopAllSounds();	// don't let them loop during the restart
-	SV_ForceMod();
-
-	// restart physics library
-	Host_FreePhysic();			// release physic.dll
-	if( !Host_InitPhysic( ))		// load it again
-	{
-		MsgDev( D_ERROR, "couldn't initialize physic system\n" );
-	}
-
-	host_cphys->modified = false;
-}
-
 void Host_CheckChanges( void )
 {
 	int	num_changes;
@@ -375,18 +356,6 @@ Restart the audio subsystem
 void Host_SndRestart_f( void )
 {
 	host_audio->modified = true;
-}
-
-/*
-=================
-Host_PhyRestart_f
-
-Restart the physic subsystem
-=================
-*/
-void Host_PhysRestart_f( void )
-{
-	host_cphys->modified = true;
 }
 
 /*
@@ -754,7 +723,6 @@ void Host_InitCommon( const int argc, const char **argv )
 	num_video_dlls = num_audio_dlls = 0;
 	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_SYSTEMINFO, "name of video rendering library" );
 	host_audio = Cvar_Get( "host_audio", "snd_al.dll", CVAR_SYSTEMINFO, "name of sound rendering library" );
-	host_cphys = Cvar_Get( "host_cphys", "physic.dll", CVAR_SYSTEMINFO, "name of physic colision library" );
 
 	// make sure what global copy has no changed with any dll checking
 	Mem_Copy( &check_vid, &render_dll, sizeof( dll_info_t ));
@@ -859,11 +827,11 @@ void Host_Init( const int argc, const char **argv )
 
 	NET_Init();
 	Netchan_Init();
+	Host_InitPhysic();
 
 	SV_Init();
 	CL_Init();
 
-	Host_CheckRestart ();	// loading physic library
 	Host_WriteDefaultConfig ();
 
 	if( host.type == HOST_DEDICATED )
@@ -879,9 +847,9 @@ void Host_Init( const int argc, const char **argv )
 		Cmd_AddCommand( "snd_restart", Host_SndRestart_f, "restarts audio system" );
 	}
 
-	Cmd_AddCommand( "phys_restart", Host_PhysRestart_f, "restarts physic system" );
-	Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );	// allow to change game from the console
-	host.frametime = Host_Milliseconds();
+	// allow to change game from the console
+	Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
+
 	host.errorframe = 0;
 	Cbuf_Execute();
 }

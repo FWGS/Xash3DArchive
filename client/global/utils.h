@@ -54,7 +54,7 @@ extern void V_Init( void );
 extern void VGui_ConsolePrint( const char *text );
 extern void IN_Init( void );
 extern void IN_Shutdown( void );
-extern void IN_CreateMove( usercmd_t *cmd, int frametime, int active );
+extern void IN_CreateMove( usercmd_t *cmd, int active );
 extern int  IN_KeyEvent( int down, int keynum, const char *pszBind );
 extern void IN_MouseEvent( int mx, int my );
 

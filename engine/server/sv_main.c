@@ -488,14 +488,6 @@ void SV_Frame( int time )
 	// read packets from clients
 	SV_ReadPackets ();
 
-	Host_CheckRestart ();
-
-	// allow physic DLL change
-	if( sv.state == ss_active )
-	{
-		if( !sv.cphys_prepped ) SV_PrepModels();
-	}
-
 	// move autonomous things around if enough time has passed
 	if( svs.realtime < sv.time )
 	{

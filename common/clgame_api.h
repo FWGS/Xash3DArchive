@@ -261,7 +261,7 @@ typedef struct
 	char	(*pfnPM_FindTextureType)( const char *name );
 	void	(*pfnCmdStart)( const edict_t *player, int runfuncs );
 	void	(*pfnCmdEnd)( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed );
-	void	(*pfnCreateMove)( usercmd_t *cmd, int frametime, int active );
+	void	(*pfnCreateMove)( usercmd_t *cmd, int active );
 	void	(*pfnMouseEvent)( int mx, int my );
 	int	(*pfnKeyEvent)( int down, int keynum, const char *pszBind );
 	void	(*VGui_ConsolePrint)( const char *text );

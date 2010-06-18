@@ -58,7 +58,7 @@ usercmd_t CL_CreateCmd( void )
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
 
-	clgame.dllFuncs.pfnCreateMove( &cmd, host.frametime, ( cls.state == ca_active && !cl.refdef.paused ));
+	clgame.dllFuncs.pfnCreateMove( &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
 
 	// never let client.dll calc frametime for player
 	// because is potential backdoor for cheating

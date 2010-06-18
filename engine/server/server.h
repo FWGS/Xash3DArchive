@@ -78,7 +78,6 @@ typedef struct server_s
 	byte		signon_buf[MAX_MSGLEN];
 
 	bool		write_bad_message;	// just for debug
-	bool		cphys_prepped;
 	bool		paused;
 } server_t;
 
@@ -317,7 +316,6 @@ void Master_Packet( void );
 // sv_init.c
 //
 void SV_InitGame( void );
-void SV_PrepModels( void );
 void SV_ActivateServer( void );
 void SV_DeactivateServer( void );
 void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, bool loadGame );
