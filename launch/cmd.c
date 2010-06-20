@@ -125,10 +125,9 @@ Cbuf_Execute
 */
 void Cbuf_Execute( void )
 {
-	int	i;
 	char	*text;
 	char	line[MAX_CMD_LINE];
-	int	quotes;
+	int	i, quotes;
 
 	while( cmd_text.cursize )
 	{

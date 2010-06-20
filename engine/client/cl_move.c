@@ -16,6 +16,12 @@ bool CL_IsPredicted( void )
 	if( !player )
 		return false;
 
+	if( !cl.validsequence )
+		return false;
+
+	if( cls.netchan.outgoing_sequence - cls.netchan.incoming_sequence >= CL_UPDATE_BACKUP - 1 )
+		return false;
+
 	if( player->pvClientData->current.ed_flags & ESF_NO_PREDICTION )
 		return false;
 	if( !cl_predict->integer )
@@ -31,7 +37,6 @@ CL_CreateCmd
 usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
-	static double	extramsec = 0;
 	int		ms;
 
 	// catch windowState for client.dll
@@ -51,9 +56,7 @@ usercmd_t CL_CreateCmd( void )
 	}
 
 	// send milliseconds of time to apply the move
-	extramsec += cls.frametime * 1000;
-	ms = extramsec;
-	extramsec -= ms;		// fractional part is left for next frame
+	ms = ( cl.time - cl.oldtime ) * 1000;
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
@@ -100,7 +103,7 @@ void CL_WritePacket( void )
 	if( cls.state == ca_connected )
 	{
 		// just update reliable
-		if( cls.netchan.message.cursize || cls.realtime - cls.netchan.last_sent > 1000 )
+		if( cls.netchan.message.cursize )
 			Netchan_Transmit( &cls.netchan, 0, NULL );
 		return;
 	}
@@ -122,12 +125,6 @@ void CL_WritePacket( void )
 	key = buf.cursize;
 	MSG_WriteByte( &buf, 0 );
 
-	// let the server know what the last frame we
-	// got was, so the next message can be delta compressed
-	if( cl_nodelta->integer || !cl.frame.valid || cls.demowaiting )
-		MSG_WriteLong( &buf, -1 ); // no compression
-	else MSG_WriteLong( &buf, cl.frame.serverframe );
-
 	// send this and the previous cmds in the message, so
 	// if the last packet was dropped, it can be recovered
 	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 2) & CMD_MASK];
@@ -145,6 +142,18 @@ void CL_WritePacket( void )
 	// calculate a checksum over the move commands
 	buf.data[key] = CRC_Sequence( buf.data + key + 1, buf.cursize - key - 1, cls.netchan.outgoing_sequence );
 
+	// request delta compression of entities
+	if( cls.netchan.outgoing_sequence - cl.validsequence >= CL_UPDATE_BACKUP - 1 )
+		cl.validsequence = 0;
+
+	if( cl.validsequence && !cl_nodelta->integer && !cls.demowaiting )
+	{
+		cl.frames[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].delta_sequence = cl.validsequence;
+		MSG_WriteByte( &buf, clc_delta );
+		MSG_WriteByte( &buf, cl.validsequence & 255 );
+	}
+	else cl.frames[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].delta_sequence = -1;
+
 	// deliver the message
 	Netchan_Transmit( &cls.netchan, buf.cursize, buf.data );
 }
@@ -158,6 +167,8 @@ Called every frame to builds and sends a command packet to the server.
 */
 void CL_SendCmd( void )
 {
+	if( host.type == HOST_DEDICATED ) return;
+
 	// we create commands even if a demo is playing,
 	cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CMD_MASK];
 	*cl.refdef.cmd = CL_CreateCmd();
@@ -303,6 +314,17 @@ static chull_t *PM_HullForBsp( edict_t *ent, float *offset )
 	return CM_HullForBsp( ent, clgame.pmove->player->v.mins, clgame.pmove->player->v.maxs, offset );
 }
 
+static void PM_CheckMovingGround( edict_t *ent, float frametime )
+{
+	if(!( ent->v.flags & FL_BASEVELOCITY ))
+	{
+		// apply momentum (add in half of the previous frame of velocity first)
+		VectorMA( ent->v.velocity, 1.0f + (frametime * 0.5f), ent->v.basevelocity, ent->v.velocity );
+		VectorClear( ent->v.basevelocity );
+	}
+	ent->v.flags &= ~FL_BASEVELOCITY;
+}
+
 static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
 {
 	edict_t	*hit, *touch[MAX_EDICTS];
@@ -316,6 +338,8 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	pmove->realtime = clgame.globals->time;
 	com.strncpy( pmove->physinfo, physinfo, MAX_INFO_STRING );
 	pmove->clientmaxspeed = clent->v.maxspeed;
+	pmove->bInDuck = (ucmd->buttons & IN_DUCK) ? 1 : 0; // reset hull
+	pmove->usehull = (clent->v.flags & FL_DUCKING) ? 1 : 0; // reset hull
 	pmove->cmd = *ucmd;				// setup current cmds
 	pmove->player = clent;			// ptr to client state
 
@@ -429,23 +453,9 @@ CL_RunCmd
 */
 void CL_RunCmd( edict_t *clent, usercmd_t *ucmd )
 {
-	int		oldmsec;
-	static usercmd_t	cmd;
+	if( !CL_IsValidEdict( clent )) return;
 
-	cmd = *ucmd;
-	if( !clent ) return;
-
-	// chop up very long commands
-	if( cmd.msec > 50 )
-	{
-		oldmsec = ucmd->msec;
-		cmd.msec = oldmsec / 2;
-		CL_RunCmd( clent, &cmd );
-		cmd.msec = oldmsec / 2;
-		cmd.impulse = 0;
-		CL_RunCmd( clent, &cmd );
-		return;
-	}
+	PM_CheckMovingGround( clent, ucmd->msec * 0.001f );
 
 //	VectorCopy( ucmd->viewangles, clgame.pmove->oldangles ); // save oldangles
 //	if( !clent->v.fixangle ) VectorCopy( ucmd->viewangles, clent->v.viewangles );
@@ -518,8 +528,7 @@ void CL_CheckPredictionError( void )
 	}
 	else
 	{
-		if( cl_showmiss->integer && flen > 0.5f )
-			Msg( "prediction miss on %i: %g\n", cl.frame.serverframe, flen );
+		if( cl_showmiss->integer && flen > 0.1f ) Msg( "prediction miss: %g\n", flen );
 		VectorCopy( player->pvClientData->current.origin, cl.predicted_origins[frame] );
 
 		// save for error itnerpolation
@@ -537,10 +546,8 @@ Sets cl.predicted_origin and cl.predicted_angles
 void CL_PredictMovement( void )
 {
 	int		frame;
-	int		oldframe;
 	int		ack, current;
 	edict_t		*player, *viewent;
-	float		step, oldstep, oldz;
 	usercmd_t		*cmd;
 
 	if( cls.state != ca_active ) return;
@@ -605,20 +612,6 @@ void CL_PredictMovement( void )
 
 		// save for debug checking
 		VectorCopy( clgame.pmove->origin, cl.predicted_origins[frame] );
-	}
-
-	oldframe = (ack - 2) & CMD_MASK;
-	oldz = cl.predicted_origins[oldframe][2];
-	step = clgame.pmove->origin[2] - oldz;
-
-	if( player->v.flags & FL_ONGROUND && step > 0 && step < clgame.movevars.stepsize )
-	{
-		if( cls.realtime - cl.predicted_step_time < 150 )
-			oldstep = cl.predicted_step * (150 - (cls.realtime - cl.predicted_step_time)) * (1.0f/150.0f);
-		else oldstep = 0.0f;
-
-		cl.predicted_step = oldstep + step;
-		cl.predicted_step_time = cls.realtime - cls.frametime * 500;
 	}
 
 	// copy results out for rendering

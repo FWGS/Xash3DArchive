@@ -12,9 +12,7 @@
 
 //=============================================================================
 #define MAX_MASTERS		8 			// max recipients for heartbeat packets
-#define LATENCY_COUNTS	16
 #define MAX_ENT_LEAFS	48
-#define RATE_MESSAGES	10
 
 #define SV_UPDATE_MASK	(SV_UPDATE_BACKUP - 1)
 extern int SV_UPDATE_BACKUP;
@@ -57,10 +55,9 @@ typedef struct server_s
 
 	bool		loadgame;		// client begins should reuse existing entity
 
-	int		time;		// sv.time += sv.frametime
-	int		frametime;
-	int		framenum;
-	int		net_framenum;
+	double		time;		// sv.time += sv.frametime
+	float		frametime;
+	int		net_framenum;	// to avoid send edicts twice through portals
 
 	int		hostflags;	// misc server flags: predicting etc
 
@@ -86,8 +83,8 @@ typedef struct
 	entity_state_t	ps;			// player state
 	int  		num_entities;
 	int  		first_entity;		// into the circular sv_packet_entities[]
-	int		senttime;			// time the message was transmitted
-	int		latency;
+	double		senttime;			// time the message was transmitted
+	float		latency;
 
 	int		index;			// client edict index
 } client_frame_t;
@@ -103,25 +100,16 @@ typedef struct sv_client_s
 	bool		sendmovevars;
 	bool		sendinfo;
 
-	int		lastframe;		// for delta compression
+	int		delta_sequence;		// for delta compression ( -1 = no compression )
 	usercmd_t		lastcmd;			// for filling in big drops
 
-	int		usehull;			// current hull that client used
 	int		modelindex;		// custom playermodel index
-
-	int		commandMsec;		// every seconds this is reset, if user
-	   					// commands exhaust it, assume time cheating
-
 	int		packet_loss;
 	int		ping;
 
-	int		message_size[RATE_MESSAGES];	// used to rate drop packets
-	int		rate;
-
 	int		surpressCount;		// number of messages rate supressed
 
-	float		anglechangetotal;		// add angles to client position
-	float		anglechangefinal;		// add angles to client position
+	float		addangle;			// add angles to client position
 
 	edict_t		*edict;			// EDICT_NUM(clientnum+1)
 	edict_t		*pViewEntity;		// svc_setview member
@@ -145,8 +133,8 @@ typedef struct sv_client_s
 	int		downloadsize;		// total bytes (can't use EOF because of paks)
 	int		downloadcount;		// bytes sent
 
-	int		lastmessage;		// sv.framenum when packet was last received
-	int		lastconnect;
+	double		lastmessage;		// time when packet was last received
+	double		lastconnect;
 
 	int		challenge;		// challenge of this user, randomly generated
 
@@ -190,15 +178,12 @@ typedef struct
 {
 	netadr_t		adr;
 	int		challenge;
-	int		time;
+	double		time;
 	bool		connected;
 } challenge_t;
 
 typedef struct
 {
-	float		time;			// cached sv.time
-	float		frametime;		// cached sv.frametime
-
 	// user messages stuff
 	const char	*msg_name;		// just for debug
 	int		msg_sizes[MAX_USER_MESSAGES];	// user messages bounds checker
@@ -235,13 +220,12 @@ typedef struct
 typedef struct
 {
 	bool		initialized;		// sv_init has completed
-	int		realtime;			// always increasing, no clamping, etc
 	double		timestart;		// just for profiling
 
 	int		groupmask;
 	int		groupop;
 
-	float		changelevel_next_time;	// don't execute multiple changelevels at once time
+	double		changelevel_next_time;	// don't execute multiple changelevels at once time
 	int		spawncount;		// incremented each server start
 						// used to check late spawns
 	sv_client_t	*clients;			// [sv_maxclients->integer]
@@ -250,7 +234,7 @@ typedef struct
 	entity_state_t	*client_entities;		// [num_client_entities]
 	entity_state_t	*baselines;		// [GI->max_edicts]
 
-	int		last_heartbeat;
+	double		last_heartbeat;
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 } server_static_t;
 
@@ -272,10 +256,7 @@ extern	cvar_t		*sv_idealpitchscale;
 extern	cvar_t		*sv_maxvelocity;
 extern	cvar_t		*sv_gravity;
 extern	cvar_t		*sv_stopspeed;
-extern	cvar_t		*sv_fps;			// running server at
 extern	cvar_t		*sv_check_errors;
-extern	cvar_t		*sv_synchthink;
-extern	cvar_t		*sv_enforcetime;
 extern	cvar_t		*sv_reconnect_limit;
 extern	cvar_t		*rcon_password;
 extern	cvar_t		*hostname;
@@ -308,7 +289,6 @@ void SV_InitOperatorCommands( void );
 void SV_KillOperatorCommands( void );
 void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo );
 void SV_PrepWorldFrame( void );
-void SV_CalcFrameTime( void );
 void Master_Heartbeat( void );
 void Master_Packet( void );
 

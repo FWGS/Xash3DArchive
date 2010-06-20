@@ -20,6 +20,13 @@
 #include "com_export.h"
 #include "net_msg.h"
 
+// PERFORMANCE INFO
+#define MIN_FPS         	0.1		// host minimum fps value for maxfps.
+#define MAX_FPS         	1000.0		// upper limit for maxfps.
+
+#define MAX_FRAMETIME	0.1
+#define MIN_FRAMETIME	0.001
+
 #define MAX_RENDERS		8		// max libraries to keep tracking
 #define MAX_ENTNUMBER	99999		// for server and client parsing
 #define MAX_HEARTBEAT	-99999		// connection time
@@ -57,8 +64,7 @@ typedef enum
 {
 	RD_NONE = 0,
 	RD_CLIENT,
-	RD_PACKET,
-
+	RD_PACKET
 } rdtype_t;
 
 typedef struct host_redirect_s
@@ -74,13 +80,16 @@ typedef struct host_parm_s
 {
 	host_state	state;		// global host state
 	uint		type;		// running at
-	host_redirect_t	rd;		// remote console
 	jmp_buf		abortframe;	// abort current frame
 	dword		errorframe;	// to avoid each-frame host error
 	byte		*mempool;		// static mempool for misc allocations
 	string		finalmsg;		// server shutdown final message
+	host_redirect_t	rd;		// remote console
 
-	int		frametime;	// time between engine frames
+	double		realtime;		// host.curtime
+	double		frametime;	// time between engine frames
+	double		realframetime;	// for some system events, e.g. console animations
+
 	uint		framecount;	// global framecount
 
 	int		events_head;
@@ -89,7 +98,7 @@ typedef struct host_parm_s
 
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
-	bool		key_overstrike;	// global key overstrike mode
+	bool		key_overstrike;	// key overstrike mode
 } host_parm_t;
 
 extern host_parm_t	host;
@@ -126,12 +135,12 @@ CLIENT / SERVER SYSTEMS
 */
 void CL_Init( void );
 void CL_Shutdown( void );
-void CL_Frame( int time );
+void Host_ClientFrame( void );
 bool CL_Active( void );
 
 void SV_Init( void );
 void SV_Shutdown( bool reconnect );
-void SV_Frame( int time );
+void Host_ServerFrame( void );
 bool SV_Active( void );
 
 /*
@@ -190,7 +199,7 @@ float pfnTime( void );
 //
 bool Key_IsDown( int keynum );
 const char *Key_IsBind( int keynum );
-void Key_Event( int key, bool down, int time );
+void Key_Event( int key, bool down );
 void Key_Init( void );
 void Key_WriteBindings( file_t *f );
 void Key_SetBinding( int keynum, char *binding );
@@ -227,6 +236,7 @@ edict_t *CL_GetEdictByIndex( int index );
 mouth_t *CL_GetEntityMouth( edict_t *ent );
 edict_t *CL_GetLocalPlayer( void );
 int CL_GetMaxClients( void );
+bool CL_IsPlaybackDemo( void );
 byte CL_GetMouthOpen( int entityIndex );
 bool SV_GetComment( const char *savename, char *comment );
 bool SV_NewGame( const char *mapName, bool loadGame );
@@ -234,7 +244,7 @@ bool SV_LoadProgs( const char *name );
 void SV_ForceError( void );
 void CL_WriteMessageHistory( void );
 void CL_MouseEvent( int mx, int my );
-void CL_AddLoopingSounds( void );
+void CL_SendCmd( void );
 void CL_Disconnect( void );
 bool CL_NextDemo( void );
 void CL_Drop( void );

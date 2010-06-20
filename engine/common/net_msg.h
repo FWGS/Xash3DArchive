@@ -63,7 +63,8 @@ enum svc_ops_e
 	svc_changing,		// changelevel server request
 	svc_physinfo,		// [physinfo string]
 	svc_packetentities,		// [...]
-	svc_frame,		// server frame
+	svc_deltapacketentities,	// [...]
+	svc_time,			// [float] server time
 	svc_sound,		// <see code>
 	svc_ambientsound,		// <see code>
 	svc_setangle,		// [short short short] set the view angle to this absolute value
@@ -81,6 +82,7 @@ enum svc_ops_e
 	svc_event_reliable,		// playback event directly from message, not queue
 	svc_updateuserinfo,		// [byte] playernum, [string] userinfo
 	svc_serverinfo,		// [string] key [string] value
+	svc_chokecount,		// [byte] surpress count
 };
 
 // client to server
@@ -91,7 +93,7 @@ enum clc_ops_e
 	// engine messages
 	clc_nop = 201, 		
 	clc_move,			// [[usercmd_t]
-	clc_deltamove,		// [[usercmd_t]
+	clc_delta,		// [byte] sequence number, requests delta compression of message
 	clc_userinfo,		// [[userinfo string]
 	clc_stringcmd,		// [string] message
 };
@@ -243,7 +245,9 @@ NET
 
 ==============================================================
 */
-#define MAX_LATENT			32
+#define MAX_LATENT		32
+#define OLD_AVG		0.99		// total = oldtotal * OLD_AVG + new * ( 1 - OLD_AVG )
+#define MAX_BACKUP		200
 
 typedef struct netchan_s
 {
@@ -253,14 +257,22 @@ typedef struct netchan_s
 	int			dropped;			// between last packet and previous
 	bool			compress;			// enable huffman compression
 
-	long			last_received;		// for timeouts
-	long			last_sent;		// for retransmits
+	float			last_received;		// for timeouts
+
+	// the statistics are cleared at each client begin, because
+	// the server connecting process gives a bogus picture of the data
+	float			frame_latency;		// rolling average
+	float			frame_rate;
 
 	int			drop_count;		// dropped packets, cleared each level
 	int			good_count;		// cleared each level
 
 	netadr_t			remote_address;
 	int			qport;			// qport value to write when transmitting
+
+	// bandwidth estimator
+	double			cleartime;		// if host.realtime > nc->cleartime, free to go
+	double			rate;			// seconds / byte
 
 	// sequencing variables
 	int			incoming_sequence;
@@ -283,7 +295,7 @@ typedef struct netchan_s
 
 	// time and size data to calculate bandwidth
 	int			outgoing_size[MAX_LATENT];
-	long			outgoing_time[MAX_LATENT];
+	double			outgoing_time[MAX_LATENT];
 
 } netchan_t;
 
@@ -307,5 +319,8 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data );
 void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data );
 void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... );
 bool Netchan_Process( netchan_t *chan, sizebuf_t *msg );
+
+bool Netchan_CanPacket( netchan_t *chan );
+bool Netchan_CanReliable( netchan_t *chan );
 
 #endif//NET_MSG_H

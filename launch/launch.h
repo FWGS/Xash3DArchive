@@ -56,7 +56,6 @@ typedef struct system_s
 	bool			hooked_out;
 	bool			stuffcmdsrun;
 	byte			packet_received[MAX_MSGLEN];	// network data
-	int			msg_time;			// GetMessage time
 	char			ModuleName[4096];		// exe.filename
 
 	HANDLE			hMutex;
@@ -145,7 +144,6 @@ void Sys_ParseCommandLine (LPSTR lpCmdLine);
 void Sys_LookupInstance( void );
 void Sys_NewInstance( const char *name, const char *fmsg );
 double Sys_DoubleTime( void );
-dword Sys_Milliseconds( void );
 char *Sys_GetClipboardData( void );
 char *Sys_GetCurrentUser( void );
 bool Sys_GetModuleName( char *buffer, size_t length );
@@ -168,7 +166,7 @@ void Sys_Print(const char *pMsg);
 void Sys_Msg( const char *pMsg, ... );
 void Sys_MsgDev( int level, const char *pMsg, ... );
 sys_event_t Sys_GetEvent( void );
-void Sys_QueEvent( int time, ev_type_t type, int value, int value2, int length, void *ptr );
+void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr );
 int Sys_GetThreadWork( void );
 void Sys_ThreadWorkerFunction( int threadnum );
 void Sys_ThreadSetDefault( void );

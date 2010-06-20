@@ -67,10 +67,9 @@ void SV_UpdateEntityState( const edict_t *ent, bool baseline )
 			break;
 		case 2:
 			MSG_WriteByte( &sv.multicast, svc_addangle );
-			MSG_WriteAngle32( &sv.multicast, client->anglechangetotal );
-			MSG_WriteAngle32( &sv.multicast, client->anglechangefinal );
+			MSG_WriteAngle32( &sv.multicast, client->addangle );
 			MSG_DirectSend( MSG_ONE, vec3_origin, client->edict );
-			client->anglechangetotal = client->anglechangefinal = 0;
+			client->addangle = 0;
 			break;
 		}
 		client->edict->v.fixangle = 0; // reset fixangle
@@ -126,17 +125,24 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message->
 =============
 */
-void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t *msg )
+void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *from, client_frame_t *to, sizebuf_t *msg )
 {
 	entity_state_t	*oldent, *newent;
 	int		oldindex, newindex;
 	int		oldnum, newnum;
 	int		from_num_entities;
 
-	MSG_WriteByte( msg, svc_packetentities );
-
-	if( !from ) from_num_entities = 0;
-	else from_num_entities = from->num_entities;
+	if( !from )
+	{
+		from_num_entities = 0;
+		MSG_WriteByte( msg, svc_packetentities );
+	}
+	else
+	{
+		from_num_entities = from->num_entities;
+		MSG_WriteByte( msg, svc_deltapacketentities );
+		MSG_WriteByte( msg, cl->delta_sequence );
+	}
 
 	newent = NULL;
 	oldent = NULL;
@@ -320,36 +326,22 @@ SV_WriteFrameToClient
 void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 {
 	client_frame_t	*frame, *oldframe;
-	int		lastframe;
 
-	// this is the frame we are creating
-	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
-
-	if( cl->lastframe <= 0 )
-	{	
-		// client is asking for a retransmit
-		oldframe = NULL;
-		lastframe = -1;
-	}
-	else if( sv.framenum - cl->lastframe >= (SV_UPDATE_BACKUP - 3))
+	// this is the frame that we are going to delta update from
+	if( cl->delta_sequence != -1 )
 	{
-		// client hasn't gotten a good message through in a long time
-		oldframe = NULL;
-		lastframe = -1;
-	}
-	else
-	{	// we have a valid message to delta from
-		oldframe = &cl->frames[cl->lastframe & SV_UPDATE_MASK];
-		lastframe = cl->lastframe;
+		oldframe = &cl->frames[cl->delta_sequence & SV_UPDATE_MASK];
 
 		// the snapshot's entities may still have rolled off the buffer, though
 		if( oldframe->first_entity <= svs.next_client_entities - svs.num_client_entities )
 		{
-			MsgDev( D_WARN, "%s: ^7delta request from out of date entities.\n", cl->name );
+			MsgDev( D_ERROR, "%s: ^7delta request from out of date entities.\n", cl->name );
 			oldframe = NULL;
-			lastframe = 0;
 		}
 	}
+	else oldframe = NULL; // no delta update
+
+	frame = &cl->frames[cl->netchan.incoming_sequence & SV_UPDATE_MASK];
 
 	// refresh physinfo if needs
 	if( cl->physinfo_modified )
@@ -359,20 +351,23 @@ void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 		MSG_WriteString( msg, cl->physinfo );
 	}
 
+	// send the chokecount for r_netgraph
+	if( cl->surpressCount )
+	{
+		MSG_WriteByte( msg, svc_chokecount );
+		MSG_WriteByte( msg, cl->surpressCount );
+		cl->surpressCount = 0;
+	}
+
 	// delta encode the events
 	SV_EmitEvents( cl, frame, msg );
 
-	MSG_WriteByte( msg, svc_frame );
-	MSG_WriteLong( msg, sv.framenum );
-	MSG_WriteLong( msg, sv.time );		// send a servertime each frame
-	MSG_WriteLong( msg, sv.frametime );
-	MSG_WriteLong( msg, lastframe );		// what we are delta'ing from
-	MSG_WriteByte( msg, cl->surpressCount );	// rate dropped packets
-	MSG_WriteByte( msg, frame->index );		// send a client index
-	cl->surpressCount = 0;
+	// send a servertime each frame
+	MSG_WriteByte( msg, svc_time );
+	MSG_WriteFloat( msg, sv.time );
 
 	// delta encode the entities
-	SV_EmitPacketEntities( oldframe, frame, msg );
+	SV_EmitPacketEntities( cl, oldframe, frame, msg );
 }
 
 
@@ -406,8 +401,8 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	sv.net_framenum++;
 
 	// this is the frame we are creating
-	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
-	frame->senttime = svs.realtime; // save it for ping calc later
+	frame = &cl->frames[cl->netchan.incoming_sequence & SV_UPDATE_MASK];
+	frame->senttime = host.realtime; // save it for ping calculation
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
@@ -504,38 +499,7 @@ bool SV_SendClientDatagram( sv_client_t *cl )
 	// send the datagram
 	Netchan_Transmit( &cl->netchan, msg.cursize, msg.data );
 
-	// record the size for rate estimation
-	cl->message_size[sv.framenum % RATE_MESSAGES] = msg.cursize;
-
 	return true;
-}
-
-/*
-=======================
-SV_RateDrop
-
-Returns true if the client is over its current
-bandwidth estimation and should not be sent another packet
-=======================
-*/
-bool SV_RateDrop( sv_client_t *cl )
-{
-	int	i, total = 0;
-
-	// never drop over the loopback
-	if( NET_IsLocalAddress( cl->netchan.remote_address ))
-		return false;
-
-	for( i = 0; i < RATE_MESSAGES; i++ )
-		total += cl->message_size[i];
-
-	if( total > cl->rate )
-	{
-		cl->surpressCount++;
-		cl->message_size[sv.framenum % RATE_MESSAGES] = 0;
-		return true;
-	}
-	return false;
 }
 
 /*
@@ -556,7 +520,7 @@ void SV_SendClientMessages( void )
 	{
 		if( !cl->state ) continue;
 			
-		if( !cl->edict || (cl->edict->v.flags & (FL_FAKECLIENT|FL_SPECTATOR)))
+		if( !cl->edict || (cl->edict->v.flags & ( FL_FAKECLIENT|FL_SPECTATOR )))
 			continue;
 
 		// update any userinfo packets that have changed
@@ -581,24 +545,27 @@ void SV_SendClientMessages( void )
 			SV_BroadcastPrintf( PRINT_HIGH, "%s overflowed\n", cl->name );
 			SV_DropClient( cl );
 			cl->send_message = true;
+			cl->netchan.cleartime = 0;	// don't choke this message
 		}
 
 		// only send messages if the client has sent one
 		if( !cl->send_message ) continue;
 
+		if( !sv.paused && !Netchan_CanPacket( &cl->netchan ))
+		{
+			cl->surpressCount++;
+			continue;		// bandwidth choke
+		}
+
 		if( cl->state == cs_spawned )
 		{
-			// don't overrun bandwidth
-			if( SV_RateDrop( cl )) continue;
 			SV_SendClientDatagram( cl );
 		}
 		else
 		{
-			// just update reliable
-			if( cl->netchan.message.cursize || svs.realtime - cl->netchan.last_sent > 1000 )
+			if( cl->netchan.message.cursize )
 				Netchan_Transmit( &cl->netchan, 0, NULL );
 		}
-
 		// yes, message really sended 
 		cl->send_message = false;
 	}

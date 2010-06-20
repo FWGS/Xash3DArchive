@@ -88,7 +88,7 @@ don't clamped time that come from server
 */
 int CL_GetServerTime( void )
 {
-	return cl.frame.servertime;
+	return cl.mtime[0];
 }
 
 /*
@@ -195,7 +195,7 @@ void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
 		return;
 	}
 
-	time = cls.realtime - starttime;
+	time = (host.realtime * 1000) - starttime;	// FIXME; convert it to float properly
 
 	if( time >= endtime )
 	{
@@ -280,7 +280,7 @@ void CL_CenterPrint( const char *text, int y, int charWidth )
 	char	*s;
 
 	com.strncpy( clgame.ds.centerPrint, text, sizeof( clgame.ds.centerPrint ));
-	clgame.ds.centerPrintTime = cls.realtime;
+	clgame.ds.centerPrintTime = host.realtime * 1000;
 	clgame.ds.centerPrintCharWidth = charWidth;
 	clgame.ds.centerPrintY = y;
 
@@ -528,7 +528,7 @@ void CL_DrawHUD( int state )
 	if( state == CL_ACTIVE && cl.refdef.paused )
 		state = CL_PAUSED;
 
-	clgame.dllFuncs.pfnRedraw( cl.time * 0.001f, state );
+	clgame.dllFuncs.pfnRedraw( cl.time, state );
 
 	if( state == CL_ACTIVE || state == CL_PAUSED )
 	{
@@ -745,7 +745,7 @@ void CL_FreeEdict( edict_t *pEdict )
 	Mem_Set( pEdict, 0, sizeof( *pEdict ));
 
 	// mark edict as freed
-	pEdict->freetime = cl.time * 0.001f;
+	pEdict->freetime = cl.time;
 	pEdict->v.nextthink = -1;
 	pEdict->free = true;
 }
@@ -760,7 +760,7 @@ edict_t *CL_AllocEdict( void )
 		pEdict = EDICT_NUM( i );
 		// the first couple seconds of client time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if( pEdict->free && ( pEdict->freetime < 2.0f || ((cl.time * 0.001f) - pEdict->freetime) > 0.5f ))
+		if( pEdict->free && ( pEdict->freetime < 2.0 || ( cl.time - pEdict->freetime ) > 0.5 ))
 		{
 			CL_InitEdict( pEdict );
 			return pEdict;
@@ -1616,7 +1616,7 @@ pfnGetClientTime
 */
 static float pfnGetClientTime( void )
 {
-	return cl.time * 0.001f;
+	return cl.time;
 }
 
 /*

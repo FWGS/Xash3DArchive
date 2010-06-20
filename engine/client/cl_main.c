@@ -10,10 +10,10 @@
 cvar_t	*rcon_client_password;
 cvar_t	*rcon_address;
 
+cvar_t	*cl_smooth;
 cvar_t	*cl_timeout;
 cvar_t	*cl_predict;
 cvar_t	*cl_showfps;
-cvar_t	*cl_maxfps;
 cvar_t	*cl_nodelta;
 cvar_t	*cl_crosshair;
 cvar_t	*cl_shownet;
@@ -51,6 +51,11 @@ bool CL_IsInGame( void )
 	return ( cls.key_dest == key_game );		// active if not menu or console
 }
 
+bool CL_IsPlaybackDemo( void )
+{
+	return cls.demoplayback;
+}
+
 void CL_ForceVid( void )
 {
 	cl.video_prepped = false;
@@ -60,6 +65,57 @@ void CL_ForceVid( void )
 void CL_ForceSnd( void )
 {
 	cl.audio_prepped = false;
+}
+
+/*
+===============
+CL_LerpPoint
+
+Determines the fraction between the last two messages that the objects
+should be put at.
+===============
+*/
+static float CL_LerpPoint( void )
+{
+	float	f, frac;
+
+	f = cl.mtime[0] - cl.mtime[1];
+	
+	if( !f || SV_Active( ))
+	{
+		cl.time = cl.mtime[0];
+		return 1.0f;
+	}
+		
+	if( f > 0.1f )
+	{	
+		// dropped packet, or start of demo
+		cl.mtime[1] = cl.mtime[0] - 0.1f;
+		f = 0.1f;
+	}
+
+	frac = ( cl.time - cl.mtime[1] ) / f;
+
+	if( frac < 0 )
+	{
+		if( frac < -0.01f )
+		{
+			cl.time = cl.mtime[1];
+			Msg( "low frac\n" );
+		}
+		frac = 0.0f;
+	}
+	else if( frac > 1.0f )
+	{
+		if( frac > 1.01f )
+		{
+			cl.time = cl.mtime[0];
+			Msg( "high frac\n" );
+		}
+		frac = 1.0f;
+	}
+		
+	return frac;
 }
 
 /*
@@ -224,7 +280,7 @@ void CL_CheckForResend( void )
 	if( cls.demoplayback || cls.state != ca_connecting )
 		return;
 
-	if(( cls.realtime - cls.connect_time ) < 3000 )
+	if(( host.realtime - cls.connect_time ) < 3.0 )
 		return;
 
 	if( !NET_StringToAdr( cls.servername, &adr ))
@@ -235,7 +291,7 @@ void CL_CheckForResend( void )
 	}
 
 	if( adr.port == 0 ) adr.port = BigShort( PORT_SERVER );
-	cls.connect_time = cls.realtime; // for retransmit requests
+	cls.connect_time = host.realtime; // for retransmit requests
 
 	MsgDev( D_NOTE, "Connecting to %s...\n", cls.servername );
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
@@ -536,7 +592,7 @@ void CL_Reconnect_f( void )
 		if( cls.state >= ca_connected )
 		{
 			CL_Disconnect();
-			cls.connect_time = cls.realtime - 1500;
+			cls.connect_time = host.realtime - 1.5;
 		}
 		else cls.connect_time = MAX_HEARTBEAT; // fire immediately
 
@@ -793,10 +849,7 @@ void CL_ReadPackets( void )
 		CL_ReadDemoMessage();
 	else CL_ReadNetMessage();
 
-	cl.time = bound( cl.frame.servertime - cl.serverframetime, cl.time, cl.frame.servertime );
-
-	if( cl.refdef.paused ) cl.lerpFrac = 1.0f;
-	else cl.lerpFrac = 1.0 - (cl.frame.servertime - cl.time) / (float)cl.serverframetime;
+	cl.lerpFrac = CL_LerpPoint();
 
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
@@ -805,7 +858,7 @@ void CL_ReadPackets( void )
 	// check timeout
 	if( cls.state >= ca_connected && !cls.demoplayback )
 	{
-		if( cls.realtime - cls.netchan.last_received > (cl_timeout->value * 1000))
+		if( host.realtime - cls.netchan.last_received > cl_timeout->value )
 		{
 			if( ++cl.timeoutcount > 5 ) // timeoutcount saves debugger
 			{
@@ -1010,7 +1063,6 @@ void CL_InitLocal( void )
 
 	// register our variables
 	cl_predict = Cvar_Get( "cl_predict", "1", CVAR_ARCHIVE, "disables client movement prediction" );
-	cl_maxfps = Cvar_Get( "cl_maxfps", "1000", 0, "maximum client fps" );
 	cl_crosshair = Cvar_Get( "crosshair", "1", CVAR_ARCHIVE|CVAR_USERINFO, "show weapon chrosshair" );
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0, "disable delta-compression for usercommnds" );
 
@@ -1033,6 +1085,7 @@ void CL_InitLocal( void )
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_lw = Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", CVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
+	cl_smooth = Cvar_Get ("cl_smooth", "1", 0, "smooth up stair climbing and interpolate position in multiplayer" );
 	
 	// register our commands
 	Cmd_AddCommand ("cmd", CL_ForwardToServer_f, "send a console commandline to the server" );
@@ -1076,48 +1129,6 @@ void CL_InitLocal( void )
 }
 
 //============================================================================
-/*
-==================
-CL_ApplyAddAngle
-
-==================
-*/
-void CL_ApplyAddAngle( void )
-{
-	float	frametime = (cl.serverframetime * 0.001f);
-	float	amove = 0.0f;
-	int	i;
-
-	for( i = 0; i < CMD_MASK; i++ )
-	{
-		add_angle_t	*add = &cl.addangle[i];
-		float		f, remainder = fabs( add->yawdelta - add->accum );
-		float		amount_to_add;
-
-		if( remainder <= 0.0001f )
-			continue;	// this angle expired
-
-		// apply some of the delta
-		f = frametime;
-		f = bound( 0.0f, f, 1.0f );
-
-		amount_to_add = f * add->yawdelta;
-
-		if( add->yawdelta > 0.0f )
-		{
-			amount_to_add = min( amount_to_add, remainder );
-		}
-		else
-		{
-			amount_to_add = max( amount_to_add, -remainder );
-		}
-
-		add->accum += amount_to_add;
-		amove += amount_to_add;
-	}
-
-	cl.refdef.cl_viewangles[1] += amove;
-}
 
 /*
 ==================
@@ -1136,23 +1147,18 @@ void CL_SendCommand( void )
 
 /*
 ==================
-CL_Frame
+Host_ClientFrame
 
 ==================
 */
-void CL_Frame( int time )
+void Host_ClientFrame( void )
 {
-	if( host.type == HOST_DEDICATED )
-		return;
+	// if client is not active, do nothing
+	if( !cls.initialized ) return;
 
 	// decide the simulation time
-	cl.time += time;		// can be merged by cl.frame.servertime 
-	cls.realtime += time;
-	cls.frametime = time * 0.001f;
-	if( cls.frametime > 0.2f ) cls.frametime = 0.2f;
-
-	// if in the debugger last frame, don't timeout
-	if( time > 5000 ) cls.netchan.last_received = Sys_Milliseconds();
+	cl.oldtime = cl.time;
+	cl.time += host.frametime;
 
 	// fetch results from server
 	CL_ReadPackets();
@@ -1162,9 +1168,6 @@ void CL_Frame( int time )
 
 	// predict all unacknowledged movements
 	CL_PredictMovement();
-
-	// apply accumulated angles
-	CL_ApplyAddAngle();
 
 	Host_CheckChanges();
 
@@ -1229,7 +1232,6 @@ void CL_Shutdown( void )
 {
 	// already freed
 	if( host.state == HOST_ERROR ) return;
-	if( host.type == HOST_DEDICATED ) return;
 	if( !cls.initialized ) return;
 
 	Host_WriteConfig(); 

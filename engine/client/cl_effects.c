@@ -52,13 +52,10 @@ void CL_RunLightStyles( void )
 
 	if( cls.state != ca_active ) return;
 
-	if( cl_lightstyle_lerping->integer )
+	ofs = (cl.time * 10);
+
+	if( !cl_lightstyle_lerping->integer )
 	{
-		ofs = cl.frame.servertime / 100;
-	}
-	else
-	{
-		ofs = cl.time / 100;
 		if( ofs == lastofs ) return;
 		lastofs = ofs;
 	}
@@ -142,7 +139,7 @@ typedef struct
 
 	// cdlight_t private starts here
 	int		key;		// so entities can reuse same entry
-	int		start;		// stop lighting after this time
+	float		start;		// stop lighting after this time
 	int		end;		// drop this each second
 	float		radius;		// radius (not an intensity)
 	bool		fade;
@@ -242,7 +239,7 @@ void CL_AddDLight( const float *org, const float *rgb, float radius, float time,
 	VectorCopy( rgb, dl->color );
 	dl->radius = radius;
 	dl->start = cl.time;
-	dl->end = dl->start + (time * 1000);
+	dl->end = dl->start + time;
 	dl->fade = (flags & DLIGHT_FADE) ? true : false;
 }
 
@@ -280,7 +277,7 @@ void CL_AddDLights( void )
 		if( dl->fade )
 		{
 			dl->intensity = (float)(cl.time - dl->start) / (dl->end - dl->start);
-			dl->intensity = dl->radius * (1.0 - dl->intensity);
+			dl->intensity = dl->radius * (1.0f - dl->intensity);
 		}
 		else dl->intensity = dl->radius; // const
 
@@ -458,7 +455,7 @@ void CL_AddParticles( void )
 	VectorScale( cl.refdef.right, scale, right );
 	VectorScale( cl.refdef.up, scale, up );
 
-	frametime = cls.frametime;
+	frametime = cl.time - cl.oldtime;
 	time3 = frametime * 15;
 	time2 = frametime * 10; // 15;
 	time1 = frametime * 5;

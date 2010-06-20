@@ -27,7 +27,8 @@ char *svc_strings[256] =
 	"svc_changing",
 	"svc_physinfo",
 	"svc_packetentities",
-	"svc_frame",
+	"svc_deltapacketentities",
+	"svc_time",
 	"svc_sound",
 	"svc_ambientsound",
 	"svc_setangle",
@@ -43,7 +44,8 @@ char *svc_strings[256] =
 	"svc_bspdecal",
 	"svc_event",
 	"svc_event_reliable",
-	"svc_serverinfo"
+	"svc_serverinfo",
+	"svc_chokecount"
 };
 
 typedef struct
@@ -667,32 +669,14 @@ add the view angle yaw
 */
 void CL_ParseAddAngle( sizebuf_t *msg )
 {
-	float		ang_total;
-	float		ang_final;
-	float		apply_now;
-	add_angle_t	*a;
+	float	add_angle;
 	
-	ang_total = MSG_ReadAngle32( msg );
-	ang_final = MSG_ReadAngle32( msg );
+	add_angle = MSG_ReadAngle32( msg );
 
-	if( ang_total > 180.0f )
-	{
-		ang_total -= 360.0f;
-	}
+	if( add_angle > 180.0f )
+		add_angle -= 360.0f;
 
-	if( ang_final > 180.0f )
-	{
-		ang_final -= 360.0f;
-	}
-
-	// apply this angle after prediction
-	a = &cl.addangle[(cl.frame.serverframe) & CMD_MASK];
-	a->yawdelta = ang_final;
-	a->accum = 0.0f;
-
-	apply_now = ang_total - ang_final;
-
-	cl.refdef.cl_viewangles[1] += apply_now;
+	cl.refdef.cl_viewangles[1] += add_angle;
 }
 /*
 ================
@@ -770,7 +754,7 @@ CL_ParseServerMessage
 void CL_ParseServerMessage( sizebuf_t *msg )
 {
 	char	*s;
-	int	i, cmd;
+	int	i, j, cmd;
 	int	bufStart;
 
 	cls_message_debug.parsing = true;	// begin parsing
@@ -856,6 +840,11 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_physinfo:
 			com.strncpy( cl.physinfo, MSG_ReadString( msg ), sizeof( cl.physinfo ));
 			break;
+		case svc_chokecount:
+			i = MSG_ReadByte( msg );
+			for( j = 0; j < i; j++ )
+				cl.frames[(cls.netchan.incoming_acknowledged-1-j) & CL_UPDATE_MASK].recv_time = -2;
+			break;
 		case svc_print:
 			i = MSG_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
@@ -892,11 +881,15 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_serverinfo:
 			CL_ServerInfo( msg );
 			break;
-		case svc_frame:
-			CL_ParseFrame( msg );
+		case svc_time:
+			cl.mtime[1] = cl.mtime[0];
+			cl.mtime[0] = MSG_ReadFloat( msg );
 			break;
 		case svc_packetentities:
-			Host_Error( "CL_ParseServerMessage: out of place frame data\n" );
+			CL_ParsePacketEntities( msg, false );
+			break;
+		case svc_deltapacketentities:
+			CL_ParsePacketEntities( msg, true );
 			break;
 		case svc_bad:
 			Host_Error( "CL_ParseServerMessage: svc_bad\n" );

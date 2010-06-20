@@ -216,7 +216,6 @@ void Sys_GetStdAPI( void )
 	com.Com_GetProcAddress = Sys_GetProcAddress;	// gpa
 	com.Com_ShellExecute = Sys_ShellExecute;	// shell execute
 	com.Com_DoubleTime = Sys_DoubleTime;		// hi-res timer
-	com.Com_Milliseconds = Sys_Milliseconds;
 
 	// built-in imagelib functions
 	com.ImageLoad = FS_LoadImage;			// load image from disk or wad-file
@@ -789,24 +788,6 @@ double Sys_DoubleTime( void )
 	return Clock.curtime;
 }
 
-/*
-================
-Sys_Milliseconds
-================
-*/
-dword Sys_Milliseconds( void )
-{
-	dword	curtime;
-
-	if( !Clock.timebase )
-	{
-		timeBeginPeriod( 1 );
-		Clock.timebase = timeGetTime();
-	}
-	curtime = timeGetTime() - Clock.timebase;
-
-	return curtime;
-}
 /*
 ================
 Sys_GetClipboardData
@@ -1398,7 +1379,7 @@ Ptr should either be null, or point to a block of data that can
 be freed by the game later.
 ================
 */
-void Sys_QueEvent( int time, ev_type_t type, int value, int value2, int length, void *ptr )
+void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr )
 {
 	sys_event_t	*ev;
 
@@ -1412,11 +1393,6 @@ void Sys_QueEvent( int time, ev_type_t type, int value, int value2, int length, 
 	}
 	event_head++;
 
-	// presets
-	if( time == 0 ) time = Sys_Milliseconds();
-	else if( time == -1 ) time = Sys.msg_time;
-
-	ev->time = time;
 	ev->type = type;
 	ev->value[0] = value;
 	ev->value[1] = value2;
@@ -1446,12 +1422,11 @@ sys_event_t Sys_GetEvent( void )
 	// pump the message loop
 	while( PeekMessage( &msg, NULL, 0, 0, PM_NOREMOVE ))
 	{
-		if(!GetMessage( &msg, NULL, 0, 0 ))
+		if( !GetMessage( &msg, NULL, 0, 0 ))
 		{
 			Sys.error = true;
 			Sys_Exit();
 		}
-		Sys.msg_time = msg.time;
 		TranslateMessage(&msg );
       		DispatchMessage( &msg );
 	}
@@ -1463,10 +1438,10 @@ sys_event_t Sys_GetEvent( void )
 		char	*b;
 		int	len;
 
-		len = com_strlen( s ) + 1;
+		len = com.strlen( s ) + 1;
 		b = Malloc( len );
 		com.strncpy( b, s, len - 1 );
-		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
+		Sys_QueEvent( SE_CONSOLE, 0, 0, len, b );
 	}
 
 	// return if we have data
@@ -1478,7 +1453,6 @@ sys_event_t Sys_GetEvent( void )
 
 	// create an empty event to return
 	Mem_Set( &ev, 0, sizeof( ev ));
-	ev.time = timeGetTime(); // should be replace with Sys_Milliseconds ?
 
 	return ev;
 }

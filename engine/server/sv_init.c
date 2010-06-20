@@ -142,6 +142,8 @@ activate server on changed map, run physics
 */
 void SV_ActivateServer( void )
 {
+	int	i;
+
 	if( !svs.initialized )
 	{
 		// probably server.dll doesn't loading
@@ -155,13 +157,12 @@ void SV_ActivateServer( void )
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
-	svgame.frametime = ( sv.frametime * 0.001f );
-	svgame.time = ( sv.time * 0.001f );
-
 	// run two frames to allow everything to settle
-	if( !sv.loadgame ) SV_Physics();
-	svgame.time = ( sv.time * 0.001f );
-	SV_Physics();
+	for( i = 0; i < 2; i++ )
+	{
+		sv.frametime = 0.1f;
+		SV_Physics();
+	}
 
 	// invoke to refresh all movevars
 	Mem_Set( &svgame.oldmovevars, 0, sizeof( movevars_t ));
@@ -187,6 +188,7 @@ void SV_ActivateServer( void )
 
 	sv.state = ss_active;
 	physinfo->modified = true;
+	sv.paused = false;
 
 	Host_SetServerState( sv.state );
 }
@@ -296,7 +298,6 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	svgame.globals->changelevel = false;	// will be restored later if needed
 	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
-	svs.realtime = 0;
 
 	if( startspot )
 	{
@@ -318,7 +319,8 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	// restore state
 	sv.paused = paused;
 	sv.loadgame = loadgame;
-
+	sv.time = 1.0f;			// server spawn time it's always 1.0 second
+	
 	// initialize buffers
 	MSG_Init( &sv.multicast, sv.multicast_buf, sizeof( sv.multicast_buf ));
 	MSG_Init( &sv.signon, sv.signon_buf, sizeof( sv.signon_buf ));
@@ -329,7 +331,6 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 		// needs to reconnect
 		if( svs.clients[i].state > cs_connected )
 			svs.clients[i].state = cs_connected;
-		svs.clients[i].lastframe = -1;
 	}
 
 	// make cvars consistant
@@ -338,13 +339,6 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	current_skill = bound( 0, current_skill, 3 );
 
 	Cvar_SetValue( "skill", (float)current_skill );
-
-	sv.time = 1000; // server spawn time it's always 1.0 second
-	sv.frametime = 100;
-
-	// half-life compatibility
-	svgame.globals->time = 1.0f;
-	svgame.globals->frametime = 0;
 
 	// make sure what server name doesn't contain path and extension
 	FS_FileBase( mapname, sv.name );

@@ -252,7 +252,7 @@ static void UI_PlayerSetup_Ownerdraw( void *self )
 
 	// update renderer timings
 	uiPlayerSetup.refdef.time = realtime;
-	uiPlayerSetup.refdef.frametime = cls.frametime;
+	uiPlayerSetup.refdef.frametime = cl.time - cl.oldtime;
 
 	// draw the player model
 	re->AddRefEntity( uiPlayerSetup.ent, ED_NORMAL, -1 );

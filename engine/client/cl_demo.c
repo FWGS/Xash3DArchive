@@ -7,6 +7,10 @@
 #include "client.h"
 #include "byteorder.h"
 
+#define dem_cmd	0
+#define dem_read	1
+#define dem_set	2
+
 /*
 ====================
 CL_WriteDemoMessage
@@ -153,8 +157,9 @@ void CL_DrawDemoRecording( void )
 	char		string[1024];
 	fs_offset_t	pos;
 
-	if(!(host.developer && cls.demorecording))
+	if(!( host.developer && cls.demorecording ))
 		return;
+
 	pos = FS_Tell( cls.demofile );
 	com.sprintf( string, "RECORDING %s: %ik", cls.demoname, pos / 1024 );
 	SCR_DrawBigStringColor( 320 - com.strlen( string ) * 8, 80, string, g_color_table[7] ); 
@@ -240,7 +245,7 @@ void CL_ReadDemoMessage( void )
 		return;
 
 	// don't need another message yet
-	if( cl.time <= cl.frame.servertime )
+	if( cl.time <= cl.mtime[0] )
 		return;
 
 	// init the message
@@ -275,7 +280,7 @@ void CL_ReadDemoMessage( void )
 		return;
 	}
 
-	cls.connect_time = cls.realtime;
+	cls.connect_time = host.realtime;
 	buf.readcount = 0;
 	CL_ParseServerMessage( &buf );
 }

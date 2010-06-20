@@ -67,10 +67,9 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( ent->free ) CL_InitEdict( ent );
 
 	// some data changes will force no lerping
-	if( state->ed_flags & ESF_NODELTA ) ent->pvClientData->serverframe = -99;
 	if( newent ) state->ed_flags |= ESF_LINKEDICT; // need to relink
 
-	if( ent->pvClientData->serverframe != cl.frame.serverframe - 1 )
+	if( state->ed_flags & ESF_NODELTA )
 	{	
 		// duplicate the current state so lerping doesn't hurt anything
 		ent->pvClientData->prev = *state;
@@ -79,8 +78,6 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	{	// shuffle the last state to previous
 		ent->pvClientData->prev = ent->pvClientData->current;
 	}
-
-	ent->pvClientData->serverframe = cl.frame.serverframe;
 	ent->pvClientData->current = *state;
 }
 
@@ -92,11 +89,65 @@ An svc_packetentities has just been parsed, deal with the
 rest of the data stream.
 ==================
 */
-void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newframe )
+void CL_ParsePacketEntities( sizebuf_t *msg, bool delta )
 {
-	int		newnum;
+	int		newnum, framenum;
 	entity_state_t	*oldstate;
 	int		oldindex, oldnum;
+	frame_t		*oldframe, *newframe;
+	int		old_sequence;
+
+	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
+
+	framenum = cls.netchan.incoming_sequence & CL_UPDATE_MASK;
+	cl.frame = cl.frames[framenum];
+	newframe = &cl.frame;
+
+	if( delta )
+	{
+		int	new_sequence;
+
+		new_sequence = MSG_ReadByte( msg );
+		old_sequence = cl.frames[framenum].delta_sequence;
+
+		if(( new_sequence & CL_UPDATE_MASK ) != ( old_sequence & CL_UPDATE_MASK ))
+			MsgDev( D_WARN, "CL_ParsePacketEntities: mismatch delta sequence\n" );
+	}
+	else old_sequence = -1;
+
+	if( old_sequence != -1 )
+	{
+		cl.validsequence = cls.netchan.incoming_sequence;
+		cl.oldframe = oldframe = &cl.frames[old_sequence & CL_UPDATE_MASK];
+
+		if( !cl.oldframe->valid )
+		{	
+			// should never happen
+			MsgDev( D_WARN, "delta from invalid frame (not supposed to happen!)\n" );
+		}
+
+		if( cls.netchan.outgoing_sequence - old_sequence >= CL_UPDATE_BACKUP - 1 )
+		{	
+			// The frame that the server did the delta from
+			// is too old, so we can't reconstruct it properly.
+			MsgDev( D_WARN, "delta frame too old\n" );
+			cl.validsequence = 0; // can't render a frame
+		}
+		else if( cl.parse_entities - cl.oldframe->parse_entities > MAX_PARSE_ENTITIES - 128 )
+		{
+			MsgDev( D_INFO, "delta parse_entities too old\n" );
+			cl.validsequence = 0; // can't render a frame
+		}
+		else cl.frame.valid = true;	// valid delta parse
+	}
+	else
+	{	
+		// this is a full update that we can start delta compressing from now
+		cl.validsequence = cls.netchan.incoming_sequence;
+		cls.demowaiting = false;	// we can start recording now
+		cl.frame.valid = true;	// uncompressed frame
+		cl.oldframe = oldframe = NULL;
+	}
 
 	newframe->parse_entities = cl.parse_entities;
 	newframe->num_entities = 0;
@@ -104,7 +155,10 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 	// delta from the entities present in oldframe
 	oldindex = 0;
 	oldstate = NULL;
-	if( !oldframe ) oldnum = MAX_ENTNUMBER;
+	if( !oldframe )
+	{
+		oldnum = MAX_ENTNUMBER;
+	}
 	else
 	{
 		if( oldindex >= oldframe->num_entities )
@@ -191,70 +245,9 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 			oldnum = oldstate->number;
 		}
 	}
-}
-
-/*
-================
-CL_ParseFrame
-================
-*/
-void CL_ParseFrame( sizebuf_t *msg )
-{
-	int	cmd, client_idx;
-	edict_t	*clent;
-          
-	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
-
-	cl.frame.serverframe = MSG_ReadLong( msg );
-	cl.frame.servertime = MSG_ReadLong( msg );
-	cl.serverframetime = MSG_ReadLong( msg );
-	cl.frame.deltaframe = MSG_ReadLong( msg );
-	cl.surpressCount = MSG_ReadByte( msg );
-	client_idx = MSG_ReadByte( msg );
-
-	// read clientindex
-	clent = EDICT_NUM( client_idx ); // get client
-	if(( client_idx - 1 ) != cl.playernum )
-		Host_Error( "CL_ParseFrame: invalid playernum (%d should be %d)\n", client_idx - 1, cl.playernum );
-	
-	// If the frame is delta compressed from data that we
-	// no longer have available, we must suck up the rest of
-	// the frame, but not use it, then ask for a non-compressed
-	// message 
-	if( cl.frame.deltaframe <= 0 )
-	{
-		cl.frame.valid = true;	// uncompressed frame
-		cls.demowaiting = false;	// we can start recording now
-		cl.oldframe = NULL;
-	}
-	else
-	{
-		cl.oldframe = &cl.frames[cl.frame.deltaframe & CL_UPDATE_MASK];
-		if( !cl.oldframe->valid )
-		{	
-			// should never happen
-			MsgDev( D_INFO, "delta from invalid frame (not supposed to happen!)\n" );
-		}
-		if( cl.oldframe->serverframe != cl.frame.deltaframe )
-		{	
-			// The frame that the server did the delta from
-			// is too old, so we can't reconstruct it properly.
-			MsgDev( D_INFO, "delta frame too old\n" );
-		}
-		else if( cl.parse_entities - cl.oldframe->parse_entities > MAX_PARSE_ENTITIES - 128 )
-		{
-			MsgDev( D_INFO, "delta parse_entities too old\n" );
-		}
-		else cl.frame.valid = true;	// valid delta parse
-	}
-
-	// read packet entities
-	cmd = MSG_ReadByte( msg );
-	if( cmd != svc_packetentities ) Host_Error("CL_ParseFrame: not packetentities[%d]\n", cmd );
-	CL_ParsePacketEntities( msg, cl.oldframe, &cl.frame );
 
 	// save the frame off in the backup array for later delta comparisons
-	cl.frames[cl.frame.serverframe & CL_UPDATE_MASK] = cl.frame;
+	cl.frames[framenum & CL_UPDATE_MASK] = cl.frame;
 
 	if( !cl.frame.valid ) return;
 

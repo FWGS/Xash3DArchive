@@ -432,7 +432,7 @@ void SCR_UpdateScreen( void )
           }
 
 	if( clgame.hInstance )
-		clgame.dllFuncs.pfnFrame( cl.time * 0.001f );
+		clgame.dllFuncs.pfnFrame( cl.time );
 }
 
 void SCR_RegisterShaders( void )

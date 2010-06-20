@@ -471,7 +471,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	pmove->serverflags = svgame.globals->serverflags;	// shared serverflags
 	pmove->maxspeed = svgame.movevars.maxspeed;
 	pmove->realtime = svgame.globals->time;
-	pmove->frametime = ucmd->msec * 0.001f;
+	pmove->frametime = svgame.globals->frametime = ucmd->msec * 0.001f;
 	com.strncpy( pmove->physinfo, physinfo, MAX_INFO_STRING );
 	pmove->clientmaxspeed = clent->v.maxspeed;
 	pmove->cmd = *ucmd;				// setup current cmds
@@ -481,7 +481,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	pmove->flWaterJumpTime = clent->v.teleport_time;
 	pmove->onground = clent->v.groundentity;
 	pmove->usehull = (clent->v.flags & FL_DUCKING) ? 1 : 0; // reset hull
-	pmove->bInDuck = clent->v.bInDuck;
+	pmove->bInDuck = (ucmd->buttons & IN_DUCK) ? 1 : 0; // reset hull;
 	VectorCopy( clent->v.origin, pmove->origin );
 	VectorCopy( clent->v.movedir, pmove->movedir );
 	VectorCopy( clent->v.velocity, pmove->velocity );
@@ -598,17 +598,9 @@ SV_RunCmd
 */
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 {
-	edict_t		*clent;
-	vec3_t		oldvel;
-	int		i;
-
-	cl->commandMsec -= ucmd->msec;
-
-	if( cl->commandMsec < 0 && sv_enforcetime->integer )
-	{
-		MsgDev( D_INFO, "SV_ClientThink: commandMsec underflow from %s\n", cl->name );
-		return;
-	}
+	edict_t	*clent;
+	vec3_t	oldvel;
+	int	i;
 
 	clent = cl->edict;
 	if( !SV_IsValidEdict( clent )) return;
@@ -616,8 +608,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 	PM_CheckMovingGround( clent, ucmd->msec * 0.001f );
 
 	VectorCopy( clent->v.viewangles, svgame.pmove->oldangles ); // save oldangles
-	if( !clent->v.fixangle )
-		VectorCopy( ucmd->viewangles, clent->v.viewangles );
+	if( !clent->v.fixangle ) VectorCopy( ucmd->viewangles, clent->v.viewangles );
 
 	// copy player buttons
 	clent->v.button = ucmd->buttons;
@@ -648,7 +639,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 			VectorCopy( clent->v.basevelocity, clent->v.clbasevelocity );
 	}
 
-	if(( sv_maxclients->integer <= 1 ) && !CL_IsInGame( ) || ( clent->v.flags & FL_FROZEN ) || ( sv.framenum < 3 ))
+	if(( sv_maxclients->integer <= 1 ) && !CL_IsInGame( ) || ( clent->v.flags & FL_FROZEN ))
 		ucmd->msec = 0; // pause
 
 	// setup playermove state
@@ -710,6 +701,6 @@ void SV_PostRunCmd( sv_client_t *cl )
 	else svgame.dllFuncs.pfnPlayerPostThink( clent );
 
 	// restore frametime
-	svgame.globals->frametime = svgame.frametime;
+	svgame.globals->frametime = sv.frametime;
 	svgame.dllFuncs.pfnCmdEnd( cl->edict );
 }

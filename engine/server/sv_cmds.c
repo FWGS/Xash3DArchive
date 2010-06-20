@@ -471,12 +471,14 @@ void SV_Kick_f( void )
 		Msg( "^3no server running.\n" );
 		return;
 	}
-	if( !SV_SetPlayer()) return;
+	if( !SV_SetPlayer( )) return;
 
 	SV_BroadcastPrintf( PRINT_HIGH, "%s was kicked\n", sv_client->name );
 	SV_ClientPrintf( sv_client, PRINT_HIGH, "You were kicked from the game\n" );
 	SV_DropClient( sv_client );
-	sv_client->lastmessage = svs.realtime; // min case there is a funny zombie
+
+	// min case there is a funny zombie
+	sv_client->lastmessage = host.realtime;
 }
 
 /*
@@ -563,7 +565,7 @@ void SV_Status_f( void )
 		Msg( "%s", cl->name );
 		l = 24 - com.strlen( cl->name );
 		for( j = 0; j < l; j++ ) Msg( " " );
-		Msg( "%g ", (svs.realtime - cl->lastmessage) * 0.001f );
+		Msg( "%g ", host.realtime - cl->lastmessage );
 		s = NET_AdrToString( cl->netchan.remote_address );
 		Msg( "%s", s );
 		l = 22 - com.strlen( s );

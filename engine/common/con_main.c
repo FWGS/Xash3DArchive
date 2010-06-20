@@ -20,7 +20,7 @@ cvar_t	*con_font;
 #define COLOR_MAGENTA	'6'
 #define COLOR_WHITE		'7'
 
-#define NUM_CON_TIMES	5		// need for 4 lines
+#define CON_TIMES		5		// need for 4 lines
 #define CON_TEXTSIZE	(MAX_MSGLEN * 4)	// 128 kb buffer
 
 int g_console_field_width = 78;
@@ -56,7 +56,7 @@ typedef struct
 	float	finalFrac;	// 0.0 to 1.0 lines of console to display
 
 	int	vislines;		// in scanlines
-	int	times[NUM_CON_TIMES]; // cls.realtime the line was generated for transparent notify lines
+	double	times[CON_TIMES]; // host.realtime the line was generated for transparent notify lines
 	rgba_t	color;
 
 } console_t;
@@ -86,8 +86,8 @@ void Con_ClearNotify( void )
 {
 	int	i;
 	
-	for( i = 0; i < NUM_CON_TIMES; i++ )
-		con.times[i] = 0;
+	for( i = 0; i < CON_TIMES; i++ )
+		con.times[i] = 0.0;
 }
 
 void Con_ClearTyping( void )
@@ -229,8 +229,8 @@ void Con_Linefeed( bool skipnotify )
 	// mark time for transparent overlay
 	if( con.current >= 0 )
 	{
-		if( skipnotify ) con.times[con.current % NUM_CON_TIMES] = 0;
-		else con.times[con.current % NUM_CON_TIMES] = cls.realtime;
+		if( skipnotify ) con.times[con.current % CON_TIMES] = 0;
+		else con.times[con.current % CON_TIMES] = host.realtime;
 	}
 
 	con.x = 0;
@@ -313,11 +313,11 @@ void Con_Print( const char *txt )
 	{
 		if( skipnotify )
 		{
-			prev = con.current % NUM_CON_TIMES - 1;
-			if( prev < 0 ) prev = NUM_CON_TIMES - 1;
+			prev = con.current % CON_TIMES - 1;
+			if( prev < 0 ) prev = CON_TIMES - 1;
 			con.times[prev] = 0;
 		}
-		else con.times[con.current % NUM_CON_TIMES] = cls.realtime;
+		else con.times[con.current % CON_TIMES] = host.realtime;
 	}
 }
 
@@ -357,32 +357,32 @@ Draws the last few lines of output transparently over the game top
 */
 void Con_DrawNotify( void )
 {
-	int	x, v = 0;
-	short	*text;
-	int	i, time;
+	int	i, x, v = 0;
 	int	currentColor;
+	short	*text;
+	float	time;
 
 	currentColor = 7;
 	re->SetColor( g_color_table[currentColor] );
 
-	for( i = con.current - NUM_CON_TIMES + 1; i <= con.current; i++ )
+	for( i = con.current - CON_TIMES + 1; i <= con.current; i++ )
 	{
 		if( i < 0 ) continue;
-		time = con.times[i % NUM_CON_TIMES];
-		if( time == 0 ) continue;
-		time = cls.realtime - time;
-		if( time > (con_notifytime->value * 1000)) continue;
+		time = con.times[i % CON_TIMES];
+		if( time == 0.0 ) continue;
+		time = host.realtime - time;
+		if( time > con_notifytime->value ) continue;
 		text = con.text + (i % con.totallines) * con.linewidth;
 
 		for( x = 0; x < con.linewidth; x++ )
 		{
 			if((text[x] & 0xff ) == ' ' ) continue;
-			if(((text[x]>>8) & 7 ) != currentColor )
+			if(( ( text[x] >> 8 ) & 7 ) != currentColor )
 			{
-				currentColor = (text[x]>>8) & 7;
+				currentColor = ( text[x] >> 8 ) & 7;
 				re->SetColor(g_color_table[currentColor]);
 			}
-			SCR_DrawSmallChar( con.xadjust + (x+1)*SMALLCHAR_WIDTH, v, text[x] & 0xff );
+			SCR_DrawSmallChar( con.xadjust + (x+1) * SMALLCHAR_WIDTH, v, text[x] & 0xff );
 		}
 		v += SMALLCHAR_HEIGHT;
 	}
@@ -549,13 +549,13 @@ void Con_RunConsole( void )
 
 	if( con.finalFrac < con.displayFrac )
 	{
-		con.displayFrac -= con_speed->value * cls.frametime;
+		con.displayFrac -= con_speed->value * host.realframetime;
 		if( con.finalFrac > con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
 	else if( con.finalFrac > con.displayFrac )
 	{
-		con.displayFrac += con_speed->value * cls.frametime;
+		con.displayFrac += con_speed->value * host.realframetime;
 		if( con.finalFrac < con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}

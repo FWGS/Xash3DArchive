@@ -24,12 +24,10 @@ dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_ex
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
 dll_info_t physic_dll = { "physic.dll", NULL, "CreateAPI", NULL, NULL, 0, sizeof(physic_exp_t), sizeof(stdlib_api_t) };
 
-cvar_t	*timescale;
 cvar_t	*sys_sharedstrings;
 cvar_t	*host_serverstate;
 cvar_t	*host_cheats;
 cvar_t	*host_maxfps;
-cvar_t	*host_minfps;
 cvar_t	*host_nosound;
 cvar_t	*host_framerate;
 cvar_t	*host_registered;
@@ -393,6 +391,13 @@ void Host_Minimize_f( void )
 	if( host.hWnd ) ShowWindow( host.hWnd, SW_MINIMIZE );
 }
 
+bool Host_IsLocalGame( void )
+{
+	if( CL_Active() && SV_Active() && CL_GetMaxClients() == 1 )
+		return true;
+	return false;
+}
+
 /*
 =================
 Host_InitEvents
@@ -455,7 +460,7 @@ Host_EventLoop
 Returns last event time
 =================
 */
-int Host_EventLoop( void )
+bool Host_EventLoop( void )
 {
 	sys_event_t	ev;
 
@@ -465,9 +470,11 @@ int Host_EventLoop( void )
 		switch( ev.type )
 		{
 		case SE_NONE:
-			return ev.time;
+			// done
+			Cbuf_Execute();
+			return true;
 		case SE_KEY:
-			Key_Event( ev.value[0], ev.value[1], ev.time );
+			Key_Event( ev.value[0], ev.value[1] );
 			break;
 		case SE_CHAR:
 			CL_CharEvent( ev.value[0] );
@@ -479,72 +486,64 @@ int Host_EventLoop( void )
 			Cbuf_AddText( va( "%s\n", ev.data ));
 			break;
 		default:
-			Host_Error( "Host_EventLoop: bad event type %i", ev.type );
-			break;
+			MsgDev( D_ERROR, "Host_EventLoop: bad event type %i", ev.type );
+			return false;
 		}
 		if( ev.data ) Mem_Free( ev.data );
 	}
-	return 0;	// never reached
+
+	// shut up the compiler
+	return false;
 }
 
 /*
-================
-Host_Milliseconds
+===================
+Host_FilterTime
 
-Can be used for profiling, but will be journaled accurately
-================
+Returns false if the time is too short to run a frame
+===================
 */
-int Host_Milliseconds( void )
+bool Host_FilterTime( float time )
 {
-	sys_event_t	ev;
+	static double	oldtime;
+	float		fps;
 
-	// get events and push them until we get a null event with the current time
-	do {
-		ev = Sys_GetEvent();
-		if( ev.type != SE_NONE )
-			Host_PushEvent( &ev );
-	} while( ev.type != SE_NONE );
-	
-	return ev.time;
-}
+	host.realtime += time;
 
-/*
-================
-Host_ModifyTime
-================
-*/
-int Host_ModifyTime( int msec )
-{
-	int	clamp_time;
+	// dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
+	fps = host_maxfps->value;
 
-	// modify time for debugging values
-	if( host_framerate->value ) msec = host_framerate->value * 1000;
-	else if( timescale->value ) msec *= timescale->value;
-	if( msec < 1 && timescale->value ) msec = 1;
-
-	if( host.type == HOST_DEDICATED )
+	if( fps != 0 )
 	{
-		// dedicated servers don't want to clamp for a much longer
-		// period, because it would mess up all the client's views of time.
-		if( msec > 500 ) MsgDev( D_NOTE, "Host_ModifyTime: %i msec frame time\n", msec );
-		clamp_time = 5000;
+		float	minframetime;
+
+		// limit fps to withing tolerable range
+		fps = bound( MIN_FPS, fps, MAX_FPS );
+
+		minframetime = 1.0f / fps;
+
+		if(( host.realtime - oldtime ) < minframetime )
+		{
+			// framerate is too high
+			return false;		
+		}
 	}
-	else if( SV_Active( ))
+
+	host.frametime = host.realframetime = host.realtime - oldtime;
+	oldtime = host.realtime;
+
+	if( host_framerate->value > 0 && ( Host_IsLocalGame() || CL_IsPlaybackDemo() ))
 	{
-		// for local single player gaming
-		// we may want to clamp the time to prevent players from
-		// flying off edges when something hitches.
-		clamp_time = 200;
+		float fps = host_framerate->value;
+		if( fps > 1 ) fps = 1.0f / fps;
+		host.frametime = fps;
 	}
 	else
-	{
-		// clients of remote servers do not want to clamp time, because
-		// it would skew their view of the server's time temporarily
-		clamp_time = 5000;
+	{	// don't allow really long or short frames
+		host.frametime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
 	}
-
-	if( msec > clamp_time ) msec = clamp_time;
-	return msec;
+	
+	return true;
 }
 
 /*
@@ -552,34 +551,21 @@ int Host_ModifyTime( int msec )
 Host_Frame
 =================
 */
-void Host_Frame( void )
+void Host_Frame( float time )
 {
-	int		time, min_time;
-	static int	last_time;
-
 	if( setjmp( host.abortframe ))
 		return;
 
-	rand(); // keep the random time dependent
+	// decide the simulation time
+	if( !Host_FilterTime( time ))
+		return;
 
-	// we may want to spin here if things are going too fast
-	if( host.type != HOST_DEDICATED && host_maxfps->integer > 0 )
-		min_time = 1000 / host_maxfps->integer;
-	else min_time = 1;
+	Host_EventLoop();
 
-	do {
-		host.frametime = Host_EventLoop();
-		if( last_time > host.frametime )
-			last_time = host.frametime;
-		time = host.frametime - last_time;
-	} while( time < min_time );
-	Cbuf_Execute();
+	rand (); // keep the random time dependent
 
-	last_time = host.frametime;
-	time = Host_ModifyTime( time );
-
-	SV_Frame ( time ); // server frame
-	CL_Frame ( time ); // client frame
+	Host_ServerFrame (); // server frame
+	Host_ClientFrame (); // client frame
 
 	host.framecount++;
 }
@@ -808,13 +794,11 @@ void Host_Init( const int argc, const char **argv )
 
 	sys_sharedstrings = Cvar_Get( "sys_sharedstrings", "0", CVAR_INIT|CVAR_ARCHIVE, "hl1 compatible strings" );
 	host_cheats = Cvar_Get( "sv_cheats", "1", CVAR_SYSTEMINFO, "allow cheat variables to enable" );
-	host_minfps = Cvar_Get( "host_minfps", "10", CVAR_ARCHIVE, "host fps lower limit" );
-	host_maxfps = Cvar_Get( "host_maxfps", "100", CVAR_ARCHIVE, "host fps upper limit" );
+	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
 	host_serverstate = Cvar_Get( "host_serverstate", "0", CVAR_SERVERINFO, "displays current server state" );
 	host_registered = Cvar_Get( "registered", "1", CVAR_SYSTEMINFO, "indicate shareware version of game" );
 	host_nosound = Cvar_Get( "host_nosound", "0", CVAR_SYSTEMINFO, "disable sound system" );
-	timescale = Cvar_Get( "timescale", "1.0", 0, "slow-mo timescale" );
 
 	s = va( "^1Xash %g ^3%s", SI->version, buildstring );
 	Cvar_Get( "version", s, CVAR_INIT, "engine current version" );
@@ -861,14 +845,20 @@ Host_Main
 */
 void Host_Main( void )
 {
+	static double	oldtime, newtime;
+
+	oldtime = Sys_DoubleTime();
+
 	// main window message loop
 	while( host.state != HOST_OFFLINE )
 	{
 		IN_Frame();
-		Host_Frame();
+
+		newtime = Sys_DoubleTime ();
+		Host_Frame( newtime - oldtime );
+		oldtime = newtime;
 	}
 }
-
 
 /*
 =================

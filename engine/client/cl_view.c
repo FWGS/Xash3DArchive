@@ -44,10 +44,10 @@ void V_SetupRefDef( void )
 	cl.refdef.num_entities = clgame.globals->numEntities;
 	cl.refdef.max_entities = clgame.globals->maxEntities;
 	cl.refdef.maxclients = clgame.globals->maxClients;
-	cl.refdef.time = cl.time * 0.001f;
-	cl.refdef.frametime = cls.frametime;
+	cl.refdef.time = cl.time;
+	cl.refdef.frametime = cl.time - cl.oldtime;
 	cl.refdef.demoplayback = cls.demoplayback;
-	cl.refdef.smoothing = CL_IsPredicted() ? false : true;
+	cl.refdef.smoothing = cl_smooth->integer;
 	cl.refdef.waterlevel = clent->v.waterlevel;		
 	cl.refdef.flags = cl.render_flags;
 	cl.refdef.viewsize = 120; // FIXME if you can
@@ -57,19 +57,14 @@ void V_SetupRefDef( void )
 	if( CL_IsPredicted( ) && !cl.refdef.demoplayback )
 	{	
 		// use predicted values
-		uint	i, delta;
 		float	backlerp = 1.0f - cl.lerpFrac;
+		int	i;
 
 		for( i = 0; i < 3; i++ )
 		{
 			cl.refdef.simorg[i] = cl.predicted_origin[i] - backlerp * cl.prediction_error[i];
 			cl.refdef.viewheight[i] = cl.predicted_viewofs[i] - backlerp * cl.prediction_error[i];
                     }
-
-		// smooth out stair climbing
-		delta = cls.realtime - cl.predicted_step_time;
-		if( delta < 150 )
-			cl.refdef.simorg[2] -= cl.predicted_step * (150 - delta) / 150;
 		VectorCopy( cl.predicted_velocity, cl.refdef.simvel );
 	}
 	else
@@ -125,8 +120,8 @@ void V_RenderView( void )
 	if( !cl.video_prepped ) return; // still loading
 
 	// update cl_globalvars
-	clgame.globals->time = cl.time * 0.001f; // clamped
-	clgame.globals->frametime = cls.frametime; // used by input code
+	clgame.globals->time = cl.time; // clamped
+	clgame.globals->frametime = cl.time - cl.oldtime; // used by input code
 
 	if( cl.frame.valid && (cl.force_refdef || !cl.refdef.paused ))
 	{
@@ -188,7 +183,7 @@ void V_PostRender( void )
 		SCR_RSpeeds();
 		SCR_DrawNet();
 		SCR_DrawFPS();
-		UI_UpdateMenu( cls.realtime );
+		UI_UpdateMenu( host.realtime * 1000 );	// FIXME: convert time to double properly
 		Con_DrawConsole();
 	}
 	SCR_MakeScreenShot();
