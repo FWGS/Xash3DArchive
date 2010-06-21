@@ -41,6 +41,7 @@ typedef struct frame_s
 {
 	bool		valid;		// cleared if delta parsing was invalid
 	double		recv_time;	// time message was received, or -1
+	double		sent_time;
 	int		delta_sequence;
 	int		num_entities;
 	int		parse_entities;	// non-masked index into cl_parse_entities array
@@ -409,8 +410,9 @@ void CL_SendCmd( void );
 //
 // cl_demo.c
 //
+bool CL_GetMessage( void );
 void CL_DrawDemoRecording( void );
-void CL_WriteDemoMessage( sizebuf_t *msg, int head_size );
+void CL_WriteDemoCmd( usercmd_t *pcmd );
 void CL_ReadDemoMessage( void );
 void CL_StopPlayback( void );
 void CL_StopRecord( void );

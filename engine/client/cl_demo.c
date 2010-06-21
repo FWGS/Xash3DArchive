@@ -13,26 +13,129 @@
 
 /*
 ====================
+CL_WriteDemoCmd
+
+Writes the current user cmd
+====================
+*/
+void CL_WriteDemoCmd( usercmd_t *pcmd )
+{
+	int	i;
+	float	fl;
+	usercmd_t cmd;
+	byte	c;
+
+	fl = LittleFloat(( float )host.realtime );
+	FS_Write( cls.demofile, &fl, sizeof( fl ));
+
+	c = dem_cmd;
+	FS_Write( cls.demofile, &c, sizeof( c ));
+
+	// correct for byte order, bytes don't matter
+	cmd = *pcmd;
+
+	// byte order stuff
+	for( i = 0; i < 3; i++ )
+		cmd.viewangles[i] = LittleFloat( cmd.viewangles[i] );
+
+	cmd.forwardmove = LittleFloat( cmd.forwardmove );
+	cmd.sidemove = LittleFloat( cmd.sidemove );
+	cmd.upmove = LittleFloat( cmd.upmove );
+	cmd.msec = LittleLong( cmd.msec );
+	cmd.lightlevel = LittleLong( cmd.lightlevel );
+	cmd.buttons = LittleLong( cmd.buttons );
+	cmd.impulse = LittleLong( cmd.impulse );
+	cmd.weaponselect = LittleLong( cmd.weaponselect );
+	cmd.random_seed = LittleLong( cmd.random_seed );
+	cmd.target_edict = LittleLong( cmd.target_edict );
+
+	FS_Write( cls.demofile, &cmd, sizeof( cmd ));
+
+	for( i = 0; i < 3; i++ )
+	{
+		fl = LittleFloat( cl.refdef.cl_viewangles[i] );
+		FS_Write( cls.demofile, &fl, sizeof( fl ));
+	}
+}
+
+/*
+====================
 CL_WriteDemoMessage
 
 Dumps the current net message, prefixed by the length
 ====================
 */
-void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
+void CL_WriteDemoMessage( sizebuf_t *msg )
 {
-	int len, swlen;
+	int	len;
+	float	fl;
+	byte	c;
 
-	if( !cls.demofile ) return;
-	if( cl.refdef.paused || cls.key_dest == key_menu )
+	if( !cls.demorecording || !cls.demofile )
 		return;
 
-	// the first eight bytes are just packet sequencing stuff
-	len = msg->cursize - head_size;
-	swlen = LittleLong( len );
+	fl = LittleFloat(( float )host.realtime );
+	FS_Write( cls.demofile, &fl, sizeof( fl ));
 
-	if( !swlen ) return; // ignore null messages
-	FS_Write( cls.demofile, &swlen, 4 );
-	FS_Write( cls.demofile, msg->data + head_size, len );
+	c = dem_read;
+	FS_Write( cls.demofile, &c, sizeof( c ));
+
+	len = LittleLong( msg->cursize );
+	FS_Write( cls.demofile, &len, sizeof( len ));
+	FS_Write( cls.demofile, msg->data, msg->cursize );
+}
+
+/*
+====================
+CL_WriteDemoMessage
+
+Dumps the current net message, prefixed by the length and view angles
+====================
+*/
+void CL_WriteRecordDemoMessage( sizebuf_t *msg, int seq )
+{
+	int	i, len;
+	float	fl;
+	byte	c;
+
+	if( !cls.demorecording || !cls.demofile )
+		return;
+
+	fl = LittleFloat(( float )host.realtime );
+	FS_Write( cls.demofile, &fl, sizeof( fl ));
+
+	c = dem_read;
+	FS_Write( cls.demofile, &c, sizeof( c ));
+
+	len = LittleLong( msg->cursize + 8 );	// FIXME: needs 10 bytes ?
+	FS_Write( cls.demofile, &len, sizeof( len ));
+
+	i = LittleLong( seq );
+	FS_Write( cls.demofile, &i, sizeof( i ));
+	FS_Write( cls.demofile, &i, sizeof( i ));
+
+	FS_Write( cls.demofile, msg->data, msg->cursize );
+}
+
+void CL_WriteSetDemoMessage( void )
+{
+	int	len;
+	float	fl;
+	byte	c;
+
+	if( !cls.demorecording || !cls.demofile )
+		return;
+
+	fl = LittleFloat(( float )host.realtime );
+	FS_Write( cls.demofile, &fl, sizeof( fl ));
+
+	c = dem_set;
+	FS_Write( cls.demofile, &c, sizeof( c ));
+
+	len = LittleLong( cls.netchan.outgoing_sequence );
+	FS_Write( cls.demofile, &len, sizeof( len ));
+	len = LittleLong(cls.netchan.incoming_sequence);
+	FS_Write( cls.demofile, &len, sizeof( len ));
 }
 
 void CL_WriteDemoHeader( const char *name )
@@ -40,8 +143,8 @@ void CL_WriteDemoHeader( const char *name )
 	char		buf_data[MAX_MSGLEN];
 	entity_state_t	*state, nullstate;
 	movevars_t	nullmovevars;
+	int		i, seq = 1;
 	sizebuf_t		buf;
-	int		i, len;
 
 	MsgDev( D_INFO, "recording to %s.\n", name );
 	cls.demofile = FS_Open( name, "wb" );
@@ -69,6 +172,10 @@ void CL_WriteDemoHeader( const char *name )
 	MSG_WriteString( &buf, cl.configstrings[CS_NAME] );
 	MSG_WriteString( &buf, clgame.maptitle );
 
+	// flush packet
+	CL_WriteRecordDemoMessage( &buf, seq++ );
+	MSG_Clear( &buf ); 
+
 	// configstrings
 	for( i = 0; i < MAX_CONFIGSTRINGS; i++ )
 	{
@@ -81,13 +188,18 @@ void CL_WriteDemoHeader( const char *name )
 			if( buf.cursize > ( buf.maxsize / 2 ))
 			{	
 				// write it out
-				len = LittleLong( buf.cursize );
-				FS_Write( cls.demofile, &len, 4 );
-				FS_Write( cls.demofile, buf.data, buf.cursize );
-				buf.cursize = 0;
+				CL_WriteRecordDemoMessage( &buf, seq++ );
+				MSG_Clear( &buf ); 
 			}
 		}
 
+	}
+
+	if( buf.cursize )
+	{	
+		// write it out
+		CL_WriteRecordDemoMessage( &buf, seq++ );
+		MSG_Clear( &buf ); 
 	}
 
 	// baselines
@@ -106,11 +218,16 @@ void CL_WriteDemoHeader( const char *name )
 		if( buf.cursize > ( buf.maxsize / 2 ))
 		{	
 			// write it out
-			len = LittleLong( buf.cursize );
-			FS_Write( cls.demofile, &len, 4 );
-			FS_Write( cls.demofile, buf.data, buf.cursize );
-			buf.cursize = 0;
+			CL_WriteRecordDemoMessage( &buf, seq++ );
+			MSG_Clear( &buf ); 
 		}
+	}
+
+	if( buf.cursize )
+	{	
+		// write it out
+		CL_WriteRecordDemoMessage( &buf, seq++ );
+		MSG_Clear( &buf ); 
 	}
 
 	MSG_WriteByte( &buf, svc_stufftext );
@@ -138,10 +255,10 @@ void CL_WriteDemoHeader( const char *name )
 
 	MSG_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
 
-	// write it to the demo file
-	len = LittleLong( buf.cursize );
-	FS_Write( cls.demofile, &len, 4 );
-	FS_Write( cls.demofile, buf.data, buf.cursize );
+	CL_WriteRecordDemoMessage( &buf, seq++ );
+	CL_WriteSetDemoMessage();
+
+	Msg( "total %i sequences writed\n", seq );
 
 	// force client.dll update
 	Cmd_ExecuteString( "cmd fullupdate\n" );
@@ -224,65 +341,139 @@ void CL_DemoCompleted( void )
 
 /*
 =================
-CL_ReadDemoMessage
+CL_GetDemoMessage
 
 reads demo data and write it to client
 =================
 */
-void CL_ReadDemoMessage( void )
+bool CL_GetDemoMessage( sizebuf_t *msg )
 {
-	sizebuf_t		buf;
-	char		bufData[MAX_MSGLEN];
-	int		r;
+	int	r, i, j;
+	float	f, demotime;
+	usercmd_t	*pcmd;
+	byte	cmd;
 
 	if( !cls.demofile )
 	{
 		CL_DemoCompleted();
-		return;
+		return 0;
 	}
 
-	if( cl.refdef.paused || cls.key_dest == key_menu )
-		return;
+	// read the time from the packet
+	FS_Read( cls.demofile, &demotime, sizeof( demotime ));
+	demotime = LittleFloat( demotime );
 
-	// don't need another message yet
-	if( cl.time <= cl.mtime[0] )
-		return;
+	// decide if it is time to grab the next message		
+	if( !cl.refdef.paused && cls.key_dest == key_game && cls.state >= ca_connected )
+	{	
+		// allways grab until fully connected
+		if( host.realtime + 1.0f < demotime )
+		{
+			// too far back
+			host.realtime = demotime - 1.0f;
+			// rewind back to time
+			FS_Seek( cls.demofile, FS_Tell( cls.demofile ) - sizeof( demotime ), SEEK_SET );
+			return 0;
+		}
+		else if( host.realtime < demotime )
+		{
+			// rewind back to time
+			FS_Seek( cls.demofile, FS_Tell( cls.demofile ) - sizeof( demotime ), SEEK_SET );
+			return 0;	// don't need another message yet
+		}
+	}
+	else host.realtime = demotime; // we're warping
+	
+	// get the msg type
+	FS_Read( cls.demofile, &cmd, sizeof( cmd ));
 
-	// init the message
-	MSG_Init( &buf, bufData, sizeof( bufData ));
-
-	// get the length
-	r = FS_Read( cls.demofile, &buf.cursize, 4 );
-	if( r != 4 )
+	Msg( "read cmd %i\n", cmd );
+	
+	switch( cmd )
 	{
+	case dem_cmd:
+		// user sent input
+		i = cls.netchan.outgoing_sequence & CMD_MASK;
+		pcmd = &cl.cmds[i];
+		r = FS_Read( cls.demofile, pcmd, sizeof( *pcmd ));
+
+		if( r != sizeof( *pcmd ))
+		{
+			CL_DemoCompleted();
+			return 0;
+		}
+
+		// byte order stuff
+		for( j = 0; j < 3; j++ )
+			pcmd->viewangles[j] = LittleFloat( pcmd->viewangles[j] );
+
+		pcmd->forwardmove = LittleFloat( pcmd->forwardmove );
+		pcmd->sidemove = LittleFloat( pcmd->sidemove );
+		pcmd->upmove = LittleFloat( pcmd->upmove );
+		pcmd->msec = LittleLong( pcmd->msec );
+		pcmd->lightlevel = LittleLong( pcmd->lightlevel );
+		pcmd->buttons = LittleLong( pcmd->buttons );
+		pcmd->impulse = LittleLong( pcmd->impulse );
+		pcmd->weaponselect = LittleLong( pcmd->weaponselect );
+		pcmd->random_seed = LittleLong( pcmd->random_seed );
+		pcmd->target_edict = LittleLong( pcmd->target_edict );
+
+		i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;
+		cl.frames[i].sent_time = demotime;
+		cl.frames[i].recv_time = -1;	// we haven't gotten a reply yet
+		cls.netchan.outgoing_sequence++;
+		for( i = 0; i < 3; i++ )
+		{
+			r = FS_Read( cls.demofile, &f, sizeof( f ));
+			cl.refdef.cl_viewangles[i] = LittleFloat( f );
+		}
+		break;
+	case dem_read:
+		// get the next message
+		FS_Read( cls.demofile, &msg->cursize, sizeof( msg->cursize ));
+		msg->cursize = LittleLong( msg->cursize );
+		Msg( "read: %ld bytes\n", msg->cursize );
+		if( msg->cursize > msg->maxsize )
+			Host_Error( "demo message > MAX_MSGLEN\n" );
+		r = FS_Read( cls.demofile, msg->data, msg->cursize );
+		if( r != msg->cursize )
+		{
+			CL_DemoCompleted();
+			return 0;
+		}
+		break;
+	case dem_set :
+		FS_Read( cls.demofile, &i, sizeof( i ));
+		cls.netchan.outgoing_sequence = LittleLong( i );
+		FS_Read( cls.demofile, &i, sizeof( i ));
+		cls.netchan.incoming_sequence = LittleLong( i );
+		break;
+	default:
+		MsgDev( D_ERROR, "demos %s is corrupted.\n", cls.demoname );
 		CL_DemoCompleted();
-		return;
+		return 0;
 	}
+	return 1;
+}
 
-	buf.cursize = LittleLong( buf.cursize );
-	if( buf.cursize == -1 )
-	{
-		CL_DemoCompleted();
-		return;
-	}
+/*
+====================
+CL_GetMessage
 
-	if( buf.cursize > buf.maxsize )
-	{
-		Host_Error( "CL_ReadDemoMessage: demoMsglen > MAX_MSGLEN\n" );
-		return;
-	}
-	r = FS_Read( cls.demofile, buf.data, buf.cursize );
+Handles recording and playback of demos, on top of NET_ code
+====================
+*/
+bool CL_GetMessage( void )
+{
+	if( cls.demoplayback )
+		return CL_GetDemoMessage( &net_message );
 
-	if( r != buf.cursize )
-	{
-		MsgDev( D_ERROR, "CL_ReadDemoMessage: demo file was truncated( %d )\n", cls.state );
-		CL_DemoCompleted();
-		return;
-	}
+	if( !NET_GetPacket( NS_CLIENT, &net_from, &net_message ))
+		return false;
 
-	cls.connect_time = host.realtime;
-	buf.readcount = 0;
-	CL_ParseServerMessage( &buf );
+	CL_WriteDemoMessage( &net_message );
+	
+	return true;
 }
 
 /*
@@ -310,16 +501,21 @@ void CL_StopPlayback( void )
 
 void CL_StopRecord( void )
 {
-	int	len = -1;
-
 	if( !cls.demorecording ) return;
 
-	// finish up
-	FS_Write( cls.demofile, &len, 4 );
+	// write a disconnect message to the demo file
+	MSG_Clear( &net_message );
+	MSG_WriteLong( &net_message, -1 ); // -1 sequence means out of band
+	MSG_WriteByte( &net_message, svc_disconnect );
+	MSG_WriteString( &net_message, "EndOfDemo" );
+	CL_WriteDemoMessage( &net_message );
+
 	FS_Close( cls.demofile );
 	cls.demofile = NULL;
 	cls.demorecording = false;
 	cls.demoname[0] = '\0';
+
+	Msg( "Completed demo\n" );
 }
 
 /* 
@@ -369,7 +565,7 @@ bool CL_GetComment( const char *demoname, char *comment )
 	{
 		FS_Close( demfile );
 		com.strncpy( comment, "<not compatible>", MAX_STRING );
-		return false;
+		return true;
 	}
 
 	r = FS_Read( demfile, buf.data, buf.cursize );
@@ -544,6 +740,9 @@ void CL_PlayDemo_f( void )
 	cls.state = ca_connected;
 	cls.demoplayback = true;
 	com.strncpy( cls.servername, Cmd_Argv( 1 ), sizeof( cls.servername ));
+
+	Netchan_Setup( NS_CLIENT, &cls.netchan, net_from, Cvar_VariableValue( "net_qport" ));
+//	host.realtime = 0;
 
 	// begin a playback demo
 }

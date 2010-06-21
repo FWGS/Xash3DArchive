@@ -146,13 +146,16 @@ void CL_WritePacket( void )
 	if( cls.netchan.outgoing_sequence - cl.validsequence >= CL_UPDATE_BACKUP - 1 )
 		cl.validsequence = 0;
 
-	if( cl.validsequence && !cl_nodelta->integer && !cls.demowaiting )
+	if( cl.validsequence && !cl_nodelta->integer && !cls.demorecording )
 	{
 		cl.frames[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].delta_sequence = cl.validsequence;
 		MSG_WriteByte( &buf, clc_delta );
 		MSG_WriteByte( &buf, cl.validsequence & 255 );
 	}
 	else cl.frames[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].delta_sequence = -1;
+
+	if( cls.demorecording && !cls.demowaiting )
+		CL_WriteDemoCmd( cmd );
 
 	// deliver the message
 	Netchan_Transmit( &cls.netchan, buf.cursize, buf.data );

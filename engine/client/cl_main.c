@@ -801,11 +801,8 @@ CL_ReadNetMessage
 */
 void CL_ReadNetMessage( void )
 {
-	while( NET_GetPacket( NS_CLIENT, &net_from, &net_message ))
+	while( CL_GetMessage( ))
 	{
-		if( host.type == HOST_DEDICATED || cls.demoplayback )
-			return;
-
 		if( net_message.cursize >= 4 && *(int *)net_message.data == -1 )
 		{
 			CL_ConnectionlessPacket( net_from, &net_message );
@@ -822,32 +819,22 @@ void CL_ReadNetMessage( void )
 		}
 
 		// packet from server
-		if( !NET_CompareAdr( net_from, cls.netchan.remote_address ))
+		if( !cls.demoplayback && !NET_CompareAdr( net_from, cls.netchan.remote_address ))
 		{
 			MsgDev( D_WARN, "CL_ReadPackets: %s:sequenced packet without connection\n", NET_AdrToString( net_from ));
 			return;
 		}
 
-		if( Netchan_Process( &cls.netchan, &net_message ))
-		{
-			// the header is different lengths for reliable and unreliable messages
-			int headerBytes = net_message.readcount;
+		if( !Netchan_Process( &cls.netchan, &net_message ))
+			continue;
 
-			CL_ParseServerMessage( &net_message );
-
-			// we don't know if it is ok to save a demo message until
-			// after we have parsed the frame
-			if( cls.demorecording && !cls.demowaiting )
-				CL_WriteDemoMessage( &net_message, headerBytes );
-		}
+		CL_ParseServerMessage( &net_message );
 	}
 }
 
 void CL_ReadPackets( void )
 {
-	if( cls.demoplayback )
-		CL_ReadDemoMessage();
-	else CL_ReadNetMessage();
+	CL_ReadNetMessage();
 
 	cl.lerpFrac = CL_LerpPoint();
 
