@@ -142,9 +142,6 @@ void Sys_GetStdAPI( void )
 	com.Com_ReadDword = PS_GetUnsigned;		// unsigned integer
 	com.Com_ReadLong = PS_GetInteger;		// signed integer
 
-	com.PatchEval = Patch_Evaluate;		// evaluate patch
-	com.PatchFlat = Patch_GetFlatness;		// get flatness for patch
-
 	com.Com_Search = FS_Search;			// returned list of founded files
 	com.Com_HashKey = Com_HashKey;		// returns hash key for a string (generic fucntion)
 	com.Com_LoadRes = Sys_LoadRes;		// get internal resource by name
@@ -710,7 +707,7 @@ double Sys_DoubleTime( void )
 	// LordHavoc: note to people modifying this code, 
 	// DWORD is specifically defined as an unsigned 32bit number, 
 	// therefore the 65536.0 * 65536.0 is fine.
-	if( SI.cpunum > 1 || !Clock.hardware_timer )
+	if( !Clock.hardware_timer )
 	{
 		// timeGetTime
 		// platform:

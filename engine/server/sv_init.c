@@ -59,11 +59,6 @@ int SV_SoundIndex( const char *name )
 	return SV_FindIndex( name, CS_SOUNDS, MAX_SOUNDS, true );
 }
 
-int SV_UserMessageIndex( const char *name )
-{
-	return SV_FindIndex( name, CS_USER_MESSAGES, MAX_USER_MESSAGES, true );
-}
-
 int SV_DecalIndex( const char *name )
 {
 	return SV_FindIndex( name, CS_DECALS, MAX_DECALS, true );
@@ -158,7 +153,7 @@ void SV_ActivateServer( void )
 	SV_CreateBaseline();
 
 	// run two frames to allow everything to settle
-	for( i = 0; i < 2; i++ )
+	for( i = 0; i < 2 && !sv.loadgame; i++ )
 	{
 		sv.frametime = 0.1f;
 		SV_Physics();
@@ -331,6 +326,7 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 		// needs to reconnect
 		if( svs.clients[i].state > cs_connected )
 			svs.clients[i].state = cs_connected;
+		svs.clients[i].lastframe = -1;
 	}
 
 	// make cvars consistant

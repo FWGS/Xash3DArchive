@@ -210,7 +210,6 @@ void FreeCommon( void )
 	}
 	else if( app_name == HOST_BSPLIB )
 	{
-		Bsp_Shutdown();
 		if( bsplog ) FS_Close( bsplog );
 	}
 

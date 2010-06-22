@@ -100,7 +100,7 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	chan->last_received = host.realtime;
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
-	chan->compress = false;
+	chan->compress = true;
 	chan->rate = 1.0f / 2500;
 
 	MSG_Init( &chan->message, chan->message_buf, sizeof( chan->message_buf ));

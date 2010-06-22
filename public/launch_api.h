@@ -78,7 +78,6 @@ typedef void ( *cmsave_t )( void* handle, const void* buffer, size_t size );
 typedef void ( *cmdraw_t )( int color, int numpoints, const float *points );
 typedef void ( *setpair_t )( const char *key, const char *value, void *buffer, void *numpairs );
 typedef enum { NA_LOOPBACK, NA_BROADCAST, NA_IP } netadrtype_t;
-typedef enum { eXYZ, eYZX, eZXY, eXZY, eYXZ, eZYX } euler_t;
 typedef enum { NS_CLIENT, NS_SERVER } netsrc_t;
 typedef void ( *xcommand_t )( void );
 
@@ -586,10 +585,6 @@ typedef struct stdilib_api_s
 	bool (*Com_ReadDword)( script_t *script, int flags, uint *value );		// unsigned integer
 	bool (*Com_ReadLong)( script_t *script, int flags, int *value );		// signed integer
 
-	// patch extension
-	void (*PatchEval)( const float *p, int *numcp, const int *tess, float *dest, int comp );
-	void (*PatchFlat)( float maxflat, const float *points, int comp, const int *patch_cp, int *flat );
-
 	search_t *(*Com_Search)( const char *pattern, int casecmp ); // returned list of found files
 	uint (*Com_HashKey)( const char *string, uint hashSize );	// returns hash key for a string
 	byte *(*Com_LoadRes)( const char *filename, size_t *size );	// find internal resource in baserc.dll 
@@ -944,14 +939,6 @@ wadstorage filesystem manager
 #define WAD_Close			com.wfclose
 #define WAD_Write			com.wfwrite
 #define WAD_Read			com.wfread
-
-/*
-===========================================
-bezier curves patchlib
-===========================================
-*/
-#define Patch_Evaluate		com.PatchEval
-#define Patch_GetFlatness		com.PatchFlat
 
 /*
 ===========================================

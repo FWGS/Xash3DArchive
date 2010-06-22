@@ -16,7 +16,7 @@ bool CL_IsPredicted( void )
 	if( !player )
 		return false;
 
-	if( !cl.validsequence )
+	if( !cl.frame.valid )
 		return false;
 
 	if( cls.netchan.outgoing_sequence - cls.netchan.incoming_sequence >= CL_UPDATE_BACKUP - 1 )
@@ -60,6 +60,12 @@ usercmd_t CL_CreateCmd( void )
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
+
+	// allways dump the first ten messages,
+	// because it may contain leftover inputs
+	// from the last level
+	if( ++cl.movemessages <= 10 )
+		return cmd;
 
 	clgame.dllFuncs.pfnCreateMove( &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
 
@@ -125,6 +131,12 @@ void CL_WritePacket( void )
 	key = buf.cursize;
 	MSG_WriteByte( &buf, 0 );
 
+	// let the server know what the last frame we
+	// got was, so the next message can be delta compressed
+	if( cl_nodelta->integer || !cl.frame.valid || cls.demowaiting )
+		MSG_WriteLong( &buf, -1 ); // no compression
+	else MSG_WriteLong( &buf, cl.frame.serverframe );
+
 	// send this and the previous cmds in the message, so
 	// if the last packet was dropped, it can be recovered
 	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 2) & CMD_MASK];
@@ -141,21 +153,6 @@ void CL_WritePacket( void )
 
 	// calculate a checksum over the move commands
 	buf.data[key] = CRC_Sequence( buf.data + key + 1, buf.cursize - key - 1, cls.netchan.outgoing_sequence );
-
-	// request delta compression of entities
-	if( cls.netchan.outgoing_sequence - cl.validsequence >= CL_UPDATE_BACKUP - 1 )
-		cl.validsequence = 0;
-
-	if( cl.validsequence && !cl_nodelta->integer && !cls.demorecording )
-	{
-		cl.frames[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].delta_sequence = cl.validsequence;
-		MSG_WriteByte( &buf, clc_delta );
-		MSG_WriteByte( &buf, cl.validsequence & 255 );
-	}
-	else cl.frames[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].delta_sequence = -1;
-
-	if( cls.demorecording && !cls.demowaiting )
-		CL_WriteDemoCmd( cmd );
 
 	// deliver the message
 	Netchan_Transmit( &cls.netchan, buf.cursize, buf.data );
@@ -249,7 +246,8 @@ static const char *PM_TraceTexture( edict_t *pTextureEntity, const float *v1, co
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected ('%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	if( !CL_IsValidEdict( pTextureEntity )) return NULL; 
+	if( !CL_IsValidEdict( pTextureEntity ))
+		return NULL; 
 
 	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
 	return CM_TraceTexture( v1, result );

@@ -60,15 +60,15 @@ enum svc_ops_e
 	svc_configstring,		// [short] [string]
 	svc_spawnbaseline,		// valid only at spawn		
 	svc_download,		// [short] size [size bytes]
-	svc_changing,		// changelevel server request
+	svc_changing,		// changelevel by server request
 	svc_physinfo,		// [physinfo string]
+	svc_usermessage,		// [string][byte] REG_USER_MSG stuff
 	svc_packetentities,		// [...]
-	svc_deltapacketentities,	// [...]
-	svc_time,			// [float] server time
+	svc_frame,		// begin a new server frame
 	svc_sound,		// <see code>
 	svc_ambientsound,		// <see code>
-	svc_setangle,		// [short short short] set the view angle to this absolute value
-	svc_addangle,		// [short short] add angles when client turn on mover
+	svc_setangle,		// [float float] set the view angle to this absolute value
+	svc_addangle,		// [float] add angles when client turn on mover
 	svc_setview,		// [short] entity number
 	svc_print,		// [byte] id [string] null terminated string
 	svc_centerprint,		// [string] to put in center of the screen
@@ -82,7 +82,6 @@ enum svc_ops_e
 	svc_event_reliable,		// playback event directly from message, not queue
 	svc_updateuserinfo,		// [byte] playernum, [string] userinfo
 	svc_serverinfo,		// [string] key [string] value
-	svc_chokecount,		// [byte] surpress count
 };
 
 // client to server
@@ -156,8 +155,7 @@ static const net_desc_t NWDesc[] =
 #define CS_GENERICS			(CS_EVENTS+MAX_EVENTS)		// edicts classnames
 #define CS_CLASSNAMES		(CS_GENERICS+MAX_GENERICS)		// generic resources (e.g. color decals)
 #define CS_LIGHTSTYLES		(CS_CLASSNAMES+MAX_CLASSNAMES)	// lightstyle patterns
-#define CS_USER_MESSAGES		(CS_LIGHTSTYLES+MAX_LIGHTSTYLES)	// names of user messages
-#define MAX_CONFIGSTRINGS		(CS_USER_MESSAGES+MAX_USER_MESSAGES)	// total count
+#define MAX_CONFIGSTRINGS		(CS_LIGHTSTYLES+MAX_LIGHTSTYLES)	// total count
 
 /*
 ==============================================================================
@@ -303,7 +301,7 @@ extern netadr_t		net_from;
 extern sizebuf_t		net_message;
 extern byte		net_message_buffer[MAX_MSGLEN];
 
-#define PROTOCOL_VERSION	36
+#define PROTOCOL_VERSION	37
 #define PORT_MASTER		27900
 #define PORT_CLIENT		27901
 #define PORT_SERVER		27910

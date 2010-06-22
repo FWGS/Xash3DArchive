@@ -57,6 +57,7 @@ typedef struct server_s
 
 	double		time;		// sv.time += sv.frametime
 	float		frametime;
+	int		framenum;
 	int		net_framenum;	// to avoid send edicts twice through portals
 
 	int		hostflags;	// misc server flags: predicting etc
@@ -100,8 +101,8 @@ typedef struct sv_client_s
 	bool		sendmovevars;
 	bool		sendinfo;
 
-	int		delta_sequence;		// for delta compression ( -1 = no compression )
 	usercmd_t		lastcmd;			// for filling in big drops
+	int		lastframe;
 
 	int		modelindex;		// custom playermodel index
 	int		packet_loss;
@@ -184,9 +185,16 @@ typedef struct
 
 typedef struct
 {
+	char		name[32];
+	int		number;	// svc_ number
+	int		size;	// if size == -1, size come from first byte after svcnum
+} sv_user_message_t;
+
+typedef struct
+{
 	// user messages stuff
 	const char	*msg_name;		// just for debug
-	int		msg_sizes[MAX_USER_MESSAGES];	// user messages bounds checker
+	sv_user_message_t	msg[MAX_USER_MESSAGES];	// user messages array
 	int		msg_size_index;		// write message size at this pos in sizebuf
 	int		msg_realsize;		// left in bytes
 	int		msg_index;		// for debug messages
@@ -282,7 +290,6 @@ int SV_ClassIndex( const char *name );
 int SV_DecalIndex( const char *name );
 int SV_EventIndex( const char *name );
 int SV_GenericIndex( const char *name );
-int SV_UserMessageIndex( const char *name );
 int SV_CalcPacketLoss( sv_client_t *cl );
 void SV_ExecuteUserCommand (char *s);
 void SV_InitOperatorCommands( void );

@@ -40,9 +40,8 @@ typedef struct player_info_s
 typedef struct frame_s
 {
 	bool		valid;		// cleared if delta parsing was invalid
-	double		recv_time;	// time message was received, or -1
-	double		sent_time;
-	int		delta_sequence;
+	int		serverframe;
+	int		deltaframe;
 	int		num_entities;
 	int		parse_entities;	// non-masked index into cl_parse_entities array
 } frame_t;
@@ -76,10 +75,6 @@ typedef struct
 	int		surpressCount;		// number of messages rate supressed
 	frame_t		*frames;			// alloced on svc_serverdata
 
-	int		validsequence;		// this is the sequence number of the last good
-						// packetentity_t we got.  If this is 0, we can't
-						// render a frame yet
-
 	double		time;			// clients view of time, should be between
 						// servertime and oldservertime to generate
 						// a lerp point for other data
@@ -108,6 +103,7 @@ typedef struct
 	// server state information
 	int		playernum;
 	int		servercount;			// server identification for prespawns
+	int		movemessages;
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 	char		physinfo[MAX_INFO_STRING];		// physics info string
 
@@ -165,6 +161,8 @@ struct cl_priv_s
 	link_t		area;		// linked to a division node or leaf
 	bool		linked;
 
+	int		serverframe;	// if not current, this ent isn't in the frame
+	
 	entity_state_t	current;
 	entity_state_t	prev;		// will always be valid, but might just be a copy of current
 	lerpframe_t	frame;		// holds the studio values for right lerping
@@ -180,11 +178,17 @@ typedef enum { key_console = 0, key_game, key_menu } keydest_t;
 
 typedef struct
 {
-	char		name[CS_SIZE];
+	char		name[32];
+	pfnUserMsgHook	func;	// user-defined function	
+} cl_hook_info_t;
+
+typedef struct
+{
+	char		name[32];
 	int		number;	// svc_ number
 	int		size;	// if size == -1, size come from first byte after svcnum
 	pfnUserMsgHook	func;	// user-defined function	
-} user_message_t;
+} cl_user_message_t;
 
 typedef struct
 {
@@ -240,8 +244,9 @@ typedef struct
 	playermove_t	*pmove;			// pmove state
 
 	cl_globalvars_t	*globals;
-	user_message_t	*msg[MAX_USER_MESSAGES];
-	user_event_t	*events[MAX_EVENTS];	// keep static to avoid fragment memory
+	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
+	cl_hook_info_t	hook[MAX_USER_MESSAGES];
+	user_event_t	*events[MAX_EVENTS];
 	entity_state_t	*baselines;
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
@@ -253,10 +258,8 @@ typedef struct
 	edict_t		viewent;			// viewmodel or playermodel in UI_PlayerSetup
 	edict_t		playermodel;		// uiPlayerSetup latched vars
 	byte		*stringspool;		// for shared strings
-	
-	int		numMessages;		// actual count of user messages
-	int		hStringTable;		// stringtable handle
 
+	int		hStringTable;		// stringtable handle
 } clgame_static_t;
 
 typedef struct
@@ -410,9 +413,8 @@ void CL_SendCmd( void );
 //
 // cl_demo.c
 //
-bool CL_GetMessage( void );
 void CL_DrawDemoRecording( void );
-void CL_WriteDemoCmd( usercmd_t *pcmd );
+void CL_WriteDemoMessage( sizebuf_t *msg, int head_size );
 void CL_ReadDemoMessage( void );
 void CL_StopPlayback( void );
 void CL_StopRecord( void );
@@ -440,8 +442,7 @@ void CL_InitWorld( void );
 void CL_UnloadProgs( void );
 bool CL_LoadProgs( const char *name );
 void CL_ParseUserMessage( sizebuf_t *msg, int svc_num );
-void CL_LinkUserMessage( char *pszName, const int svc_num );
-void CL_SortUserMessages( void );
+void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
 edict_t *CL_AllocEdict( void );
 void CL_InitEdict( edict_t *pEdict );
 void CL_FreeEdict( edict_t *pEdict );
@@ -539,7 +540,7 @@ void CL_UpdateBaseVelocity( edict_t *ent );
 //
 // cl_frame.c
 //
-void CL_ParsePacketEntities( sizebuf_t *msg, bool delta );
+void CL_ParseFrame( sizebuf_t *msg );
 void CL_GetEntitySoundSpatialization( int ent, vec3_t origin, vec3_t velocity );
 
 //

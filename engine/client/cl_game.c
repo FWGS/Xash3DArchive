@@ -445,6 +445,19 @@ static void CL_InitTitles( const char *filename )
 
 /*
 ====================
+CL_BadMessage
+
+Default method to invoke host error
+====================
+*/
+int CL_BadMessage( const char *pszName, int iSize, void *pbuf )
+{
+	Host_Error( "svc_bad\n" );
+	return 0;
+}
+
+/*
+====================
 CL_GetLocalPlayer
 
 Render callback for studio models
@@ -537,142 +550,40 @@ void CL_DrawHUD( int state )
 	}
 }
 
-static void CL_CreateUserMessage( int lastnum, const char *szMsgName, int svc_num, int iSize, pfnUserMsgHook pfn )
+void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 {
-	user_message_t	*msg;
+	int	i, j;
 
-	if( lastnum == clgame.numMessages )
+	if( !pszName || !*pszName )
+		return; // ignore blank names
+
+	// see if already hooked
+	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
-		if( clgame.numMessages == MAX_USER_MESSAGES )
-		{
-			MsgDev( D_ERROR, "CL_CreateUserMessage: user messages limit is out\n" );
+		// hooked
+		if( !com.strcmp( clgame.msg[i].name, pszName ) && clgame.msg[i].func )
 			return;
-		}
-		clgame.numMessages++;
 	}
 
-	msg = clgame.msg[lastnum];
-
-	// clear existing or allocate new one
-	if( msg ) Mem_Set( msg, 0, sizeof( *msg ));
-	else msg = clgame.msg[lastnum] = Mem_Alloc( cls.mempool, sizeof( *msg ));
-
-	com.strncpy( msg->name, szMsgName, CS_SIZE );
-	msg->number = svc_num;
-	msg->size = iSize;
-	msg->func = pfn;
-}
-
-void CL_LinkUserMessage( char *pszName, const int svc_num )
-{
-	user_message_t	*msg;
-	char		*end;
-	char		msgName[CS_SIZE];
-	int		i, msgSize;
-
-	if( !pszName || !*pszName ) return; // ignore blank names
-
-	com.strncpy( msgName, pszName, CS_SIZE );
-	end = com.strchr( msgName, '@' );
-	if( !end )
+	if( i == MAX_USER_MESSAGES ) 
 	{
-		MsgDev( D_ERROR, "CL_LinkUserMessage: can't register message %s\n", msgName );
+		MsgDev( D_ERROR, "LINK_USER_MSG: user messages limit exceeded\n" );
 		return;
 	}
 
-	msgSize = com.atoi( end + 1 );
-	msgName[end-msgName] = '\0'; // remove size description from MsgName
-
-	// search message by name to link with
-	for( i = 0; i < clgame.numMessages; i++ )
+	// search for hook
+	for( j = 0; j < MAX_USER_MESSAGES && clgame.hook[j].name[0]; j++ )
 	{
-		msg = clgame.msg[i];
-		if( !msg ) continue;
-
-		if( !com.strcmp( msg->name, msgName ))
-		{
-			msg->number = svc_num;
-			msg->size = msgSize;
-			return;
-		}
-	}
-
-	// create an empty message
-	CL_CreateUserMessage( i, msgName, svc_num, msgSize, NULL );
-}
-
-/*
-=======================
-CL_MsgNumbers
-=======================
-*/
-static int CL_MsgNumbers( const void *a, const void *b )
-{
-	user_message_t	*msga, *msgb;
-
-	msga = (user_message_t *)a;
-	msgb = (user_message_t *)b;
-
-	if( msga == NULL )
-	{
-		if ( msgb == NULL ) return 0;
-		else return -1;
-	}
-	else if ( msgb == NULL ) return 1;
-
-	if( msga->number < msgb->number )
-		return -1;
-	return 1;
-}
-
-void CL_SortUserMessages( void )
-{
-//	qsort( clgame.msg, clgame.numMessages, sizeof( user_message_t ), CL_MsgNumbers );
-}
-
-void CL_ParseUserMessage( sizebuf_t *net_buffer, int svc_num )
-{
-	user_message_t	*msg;
-	int		i, iSize;
-	byte		*pbuf;
-
-	// NOTE: any user message parse on engine, not in client.dll
-	if( svc_num >= clgame.numMessages )
-	{
-		// unregister message can't be parsed
-		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
-		return;
-	}
-
-	// search for svc_num
-	for( i = 0; i < clgame.numMessages; i++ )
-	{
-		msg = clgame.msg[i];	
-		if( !msg ) continue;
-		if( msg->number == svc_num )
+		// find the hook
+		if( !com.strcmp( clgame.hook[j].name, pszName ))
 			break;
 	}
 
-	if( i == clgame.numMessages || !msg )
-	{
-		// unregistered message ?
-		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
-		return;
-	}
-
-	iSize = msg->size;
-	pbuf = NULL;
-
-	// message with variable sizes receive an actual size as first byte
-	if( iSize == -1 ) iSize = MSG_ReadByte( net_buffer );
-	if( iSize > 0 ) pbuf = Mem_Alloc( clgame.private, iSize );
-
-	// parse user message into buffer
-	MSG_ReadData( net_buffer, pbuf, iSize );
-
-	if( msg->func ) msg->func( msg->name, iSize, pbuf );
-	else MsgDev( D_WARN, "CL_ParseUserMessage: %s not hooked\n", msg->name );
-	if( pbuf ) Mem_Free( pbuf );
+	// register new message
+	com.strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
+	clgame.msg[i].number = svc_num;
+	clgame.msg[i].size = iSize;
+	clgame.msg[i].func = clgame.hook[j].func;
 }
 
 static void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func )
@@ -1218,30 +1129,31 @@ pfnHookUserMsg
 
 =============
 */
-static void pfnHookUserMsg( const char *szMsgName, pfnUserMsgHook pfn )
+static void pfnHookUserMsg( const char *pszName, pfnUserMsgHook pfn )
 {
-	user_message_t	*msg;
-	int		i;
+	int	i;
 
-	// ignore blank names
-	if( !szMsgName || !*szMsgName ) return;	
+	// ignore blank names or null callbacks
+	if( !pszName || !*pszName )
+		return;	
 
-	// second call can change msgFunc	
-	for( i = 0; i < clgame.numMessages; i++ )
+	// message 0 is reserved for svc_bad
+	for( i = 0; i < MAX_USER_MESSAGES && clgame.hook[i].name[0]; i++ )
 	{
-		msg = clgame.msg[i];	
-		if( !msg ) continue;
-
-		if( !com.strcmp( szMsgName, msg->name ))
-		{
-			if( msg->func != pfn )
-				msg->func = pfn;
+		// see if already hooked
+		if( !com.strcmp( clgame.hook[i].name, pszName ))
 			return;
-		}
 	}
 
-	// allocate a new one
-	CL_CreateUserMessage( i, szMsgName, 0, 0, pfn );
+	if( i == MAX_USER_MESSAGES ) 
+	{
+		MsgDev( D_ERROR, "HOOK_USER_MSG: user messages limit exceeded\n" );
+		return;
+	}
+
+	// hook new message
+	com.strncpy( clgame.hook[i].name, pszName, sizeof( clgame.hook[i].name ));
+	clgame.hook[i].func = pfn;
 }
 
 /*
@@ -2679,8 +2591,8 @@ bool CL_LoadProgs( const char *name )
 	clgame.globals->maxEntities = GI->max_edicts; // merge during loading
 
 	// register svc_bad message
-	pfnHookUserMsg( "bad", NULL );
-	CL_LinkUserMessage( "bad@0", svc_bad );
+	pfnHookUserMsg( "svc_bad", CL_BadMessage );
+	CL_LinkUserMessage( "svc_bad", svc_bad, 0 );
 
 	CL_InitEdict( &clgame.viewent );
 	clgame.viewent.serialnumber = VIEWENT_INDEX;

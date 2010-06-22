@@ -635,10 +635,8 @@ a deathmatch.
 */
 void SV_PutClientInServer( edict_t *ent )
 {
-	int		index;
 	sv_client_t	*client;
 
-	index = NUM_FOR_EDICT( ent ) - 1;
 	client = ent->pvServerData->client;
 
 	ent->pvServerData->s.ed_type = ED_CLIENT; // init edict type
@@ -679,7 +677,6 @@ void SV_PutClientInServer( edict_t *ent )
 			MSG_WriteByte( &sv.multicast, svc_setangle );
 			MSG_WriteAngle32( &sv.multicast, ent->v.angles[0] );
 			MSG_WriteAngle32( &sv.multicast, ent->v.angles[1] );
-			MSG_WriteAngle32( &sv.multicast, 0 );
 			MSG_DirectSend( MSG_ONE, vec3_origin, client->edict );
 			ent->v.fixangle = 0;
 		}
@@ -784,7 +781,7 @@ SV_Configstrings_f
 void SV_Configstrings_f( sv_client_t *cl )
 {
 	int	start;
-	string	cs;
+	string	cmd;
 
 	if( cl->state != cs_connected )
 	{
@@ -805,7 +802,7 @@ void SV_Configstrings_f( sv_client_t *cl )
 	// write a packet full of data
 	while( cl->netchan.message.cursize < (MAX_MSGLEN / 2) && start < MAX_CONFIGSTRINGS )
 	{
-		if( sv.configstrings[start][0])
+		if( sv.configstrings[start][0] )
 		{
 			MSG_WriteByte( &cl->netchan.message, svc_configstring );
 			MSG_WriteShort( &cl->netchan.message, start );
@@ -813,12 +810,62 @@ void SV_Configstrings_f( sv_client_t *cl )
 		}
 		start++;
 	}
-	if( start == MAX_CONFIGSTRINGS ) com.snprintf( cs, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
-	else com.snprintf( cs, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, start );
+
+	if( start == MAX_CONFIGSTRINGS ) com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, 0 );
+	else com.snprintf( cmd, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, start );
 
 	// send next command
 	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, cs );
+	MSG_WriteString( &cl->netchan.message, cmd );
+}
+
+/*
+==================
+SV_UserMessages_f
+==================
+*/
+void SV_UserMessages_f( sv_client_t *cl )
+{
+	int		start;
+	sv_user_message_t	*message;
+	string		cmd;
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "usermessages is not valid from the console\n" );
+		return;
+	}
+	
+	// handle the case of a level changing while a client was connecting
+	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	{
+		MsgDev( D_INFO, "usermessages from different level\n" );
+		SV_New_f( cl );
+		return;
+	}
+	
+	start = com.atoi( Cmd_Argv( 2 ));
+
+	// write a packet full of data
+	while( cl->netchan.message.cursize < MAX_MSGLEN / 2 && start < MAX_USER_MESSAGES )
+	{
+		message = &svgame.msg[start];
+		if( message->name[0] )
+		{
+			MSG_WriteByte( &cl->netchan.message, svc_usermessage );
+			MSG_WriteString( &cl->netchan.message, message->name );
+			MSG_WriteByte( &cl->netchan.message, message->number );
+			MSG_WriteByte( &cl->netchan.message, (byte)message->size );
+		}
+		start++;
+	}
+
+	if( start == MAX_USER_MESSAGES ) com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
+	else com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
+
+	// send next command
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -830,7 +877,7 @@ void SV_Baselines_f( sv_client_t *cl )
 {
 	int		start;
 	entity_state_t	*base, nullstate;
-	string		baseline;
+	string		cmd;
 
 	if( cl->state != cs_connected )
 	{
@@ -851,7 +898,7 @@ void SV_Baselines_f( sv_client_t *cl )
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 
 	// write a packet full of data
-	while( cl->netchan.message.cursize < MAX_MSGLEN / 2 && start < GI->max_edicts )
+	while( cl->netchan.message.cursize < MAX_MSGLEN / 2 && start < svgame.globals->numEntities )
 	{
 		base = &svs.baselines[start];
 		if( base->modelindex || base->effects )
@@ -862,12 +909,12 @@ void SV_Baselines_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == GI->max_edicts ) com.snprintf( baseline, MAX_STRING, "precache %i\n", svs.spawncount );
-	else com.snprintf( baseline, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, start );
+	if( start == svgame.globals->numEntities ) com.snprintf( cmd, MAX_STRING, "precache %i\n", svs.spawncount );
+	else com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, start );
 
 	// send next command
 	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, baseline );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1092,6 +1139,7 @@ ucmd_t ucmds[] =
 { "info", SV_ShowServerinfo_f },
 { "nextdl", SV_NextDownload_f },
 { "disconnect", SV_Disconnect_f },
+{ "usermsgs", SV_UserMessages_f },
 { "download", SV_BeginDownload_f },
 { "userinfo", SV_UpdateUserinfo_f },
 { "configstrings", SV_Configstrings_f },
@@ -1369,13 +1417,17 @@ each of the backup packets.
 */
 static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 {
-	int	key, net_drop;
 	int	checksum1, checksum2;
+	int	key, lastframe, net_drop;
 	usercmd_t	oldest, oldcmd, newcmd, nulcmd;
 
 	key = msg->readcount;
 	checksum1 = MSG_ReadByte( msg );
+	lastframe = MSG_ReadLong( msg );
 	cl->packet_loss = SV_CalcPacketLoss( cl );
+
+	if( lastframe != cl->lastframe )
+		cl->lastframe = lastframe;
 
 	Mem_Set( &nulcmd, 0, sizeof( nulcmd ));
 	MSG_ReadDeltaUsercmd( msg, &nulcmd, &oldest );
@@ -1383,7 +1435,10 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 	MSG_ReadDeltaUsercmd( msg, &oldcmd, &newcmd );
 
 	if( cl->state != cs_spawned )
+	{
+		cl->lastframe = -1;
 		return;
+	}
 
 	// if the checksum fails, ignore the rest of the packet
 	checksum2 = CRC_Sequence( msg->data + key + 1, msg->readcount - key - 1, cl->netchan.incoming_sequence );
@@ -1445,8 +1500,6 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	// save time for ping calculations
 	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].senttime = host.realtime;
 	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].latency = -1.0f;
-
-	cl->delta_sequence = -1;	// no delta unless requested
 		
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )
@@ -1464,9 +1517,6 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 		switch( c )
 		{
 		case clc_nop:
-			break;
-		case clc_delta:
-			cl->delta_sequence = MSG_ReadByte( msg );
 			break;
 		case clc_userinfo:
 			SV_UserinfoChanged( cl, MSG_ReadString( msg ));

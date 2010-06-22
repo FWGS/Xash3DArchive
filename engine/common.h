@@ -189,6 +189,7 @@ float pfnTime( void );
 ==============================================================
 */
 #define MAX_INFO_STRING	512
+#define MAX_USER_MESSAGES	200	// 200 user messages + 55 engine messages + svc_bad = 8 bit
 
 #define Z_Malloc(size)		Mem_Alloc( host.mempool, size )
 #define Z_Realloc( ptr, size )	Mem_Realloc( host.mempool, ptr, size )

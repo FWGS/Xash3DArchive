@@ -61,7 +61,6 @@ void SV_UpdateEntityState( const edict_t *ent, bool baseline )
 			MSG_WriteByte( &sv.multicast, svc_setangle );
 			MSG_WriteAngle32( &sv.multicast, ent->v.angles[0] );
 			MSG_WriteAngle32( &sv.multicast, ent->v.angles[1] );
-			MSG_WriteAngle32( &sv.multicast, 0 );
 			MSG_DirectSend( MSG_ONE, vec3_origin, client->edict );
 			ent->pvServerData->s.ed_flags |= ESF_NO_PREDICTION;
 			break;
@@ -125,24 +124,17 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message->
 =============
 */
-void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *from, client_frame_t *to, sizebuf_t *msg )
+void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t *msg )
 {
 	entity_state_t	*oldent, *newent;
 	int		oldindex, newindex;
 	int		oldnum, newnum;
 	int		from_num_entities;
 
-	if( !from )
-	{
-		from_num_entities = 0;
-		MSG_WriteByte( msg, svc_packetentities );
-	}
-	else
-	{
-		from_num_entities = from->num_entities;
-		MSG_WriteByte( msg, svc_deltapacketentities );
-		MSG_WriteByte( msg, cl->delta_sequence );
-	}
+	MSG_WriteByte( msg, svc_packetentities );
+
+	if( !from ) from_num_entities = 0;
+	else from_num_entities = from->num_entities;
 
 	newent = NULL;
 	oldent = NULL;
@@ -326,22 +318,36 @@ SV_WriteFrameToClient
 void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 {
 	client_frame_t	*frame, *oldframe;
+	int		lastframe;
 
-	// this is the frame that we are going to delta update from
-	if( cl->delta_sequence != -1 )
+	// this is the frame we are creating
+	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
+
+	if( cl->lastframe <= 0 )
+	{	
+		// client is asking for a retransmit
+		oldframe = NULL;
+		lastframe = -1;
+	}
+	else if( sv.framenum - cl->lastframe >= (SV_UPDATE_BACKUP - 3))
 	{
-		oldframe = &cl->frames[cl->delta_sequence & SV_UPDATE_MASK];
+		// client hasn't gotten a good message through in a long time
+		oldframe = NULL;
+		lastframe = -1;
+	}
+	else
+	{	// we have a valid message to delta from
+		oldframe = &cl->frames[cl->lastframe & SV_UPDATE_MASK];
+		lastframe = cl->lastframe;
 
 		// the snapshot's entities may still have rolled off the buffer, though
 		if( oldframe->first_entity <= svs.next_client_entities - svs.num_client_entities )
 		{
-			MsgDev( D_ERROR, "%s: ^7delta request from out of date entities.\n", cl->name );
+			MsgDev( D_WARN, "%s: ^7delta request from out of date entities.\n", cl->name );
 			oldframe = NULL;
+			lastframe = 0;
 		}
 	}
-	else oldframe = NULL; // no delta update
-
-	frame = &cl->frames[cl->netchan.incoming_sequence & SV_UPDATE_MASK];
 
 	// refresh physinfo if needs
 	if( cl->physinfo_modified )
@@ -351,23 +357,19 @@ void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 		MSG_WriteString( msg, cl->physinfo );
 	}
 
-	// send the chokecount for r_netgraph
-	if( cl->surpressCount )
-	{
-		MSG_WriteByte( msg, svc_chokecount );
-		MSG_WriteByte( msg, cl->surpressCount );
-		cl->surpressCount = 0;
-	}
-
 	// delta encode the events
 	SV_EmitEvents( cl, frame, msg );
 
-	// send a servertime each frame
-	MSG_WriteByte( msg, svc_time );
-	MSG_WriteFloat( msg, sv.time );
+	MSG_WriteByte( msg, svc_frame );
+	MSG_WriteFloat( msg, (float)sv.time );		// send a servertime each frame
+	MSG_WriteLong( msg, sv.framenum );
+	MSG_WriteLong( msg, lastframe );		// what we are delta'ing from
+	MSG_WriteByte( msg, cl->surpressCount );	// rate dropped packets
+	MSG_WriteByte( msg, frame->index );		// send a client index
+	cl->surpressCount = 0;
 
 	// delta encode the entities
-	SV_EmitPacketEntities( cl, oldframe, frame, msg );
+	SV_EmitPacketEntities( oldframe, frame, msg );
 }
 
 
@@ -401,8 +403,8 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	sv.net_framenum++;
 
 	// this is the frame we are creating
-	frame = &cl->frames[cl->netchan.incoming_sequence & SV_UPDATE_MASK];
-	frame->senttime = host.realtime; // save it for ping calculation
+	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
+	frame->senttime = host.realtime; // save it for ping calc later
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
@@ -515,6 +517,12 @@ void SV_SendClientMessages( void )
 	if( sv.state == ss_dead )
 		return;
 
+	// we always need to bump framenum, even if we
+	// don't run the world, otherwise the delta
+	// compression can get confused when a client
+	// has the "current" frame
+	sv.framenum++;
+
 	// send a message to each connected client
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -554,7 +562,7 @@ void SV_SendClientMessages( void )
 		if( !sv.paused && !Netchan_CanPacket( &cl->netchan ))
 		{
 			cl->surpressCount++;
-			continue;		// bandwidth choke
+			continue;	// bandwidth choke
 		}
 
 		if( cl->state == cs_spawned )
@@ -611,7 +619,7 @@ void SV_InactivateClients( void )
 	{
 		if( !cl->state || !cl->edict ) continue;
 			
-		if( !cl->edict || (cl->edict->v.flags & (FL_FAKECLIENT|FL_SPECTATOR)))
+		if( !cl->edict || (cl->edict->v.flags & ( FL_FAKECLIENT|FL_SPECTATOR )))
 			continue;
 
 		if( svs.clients[i].state > cs_connected )

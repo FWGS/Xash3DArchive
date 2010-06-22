@@ -99,19 +99,13 @@ static float CL_LerpPoint( void )
 	if( frac < 0 )
 	{
 		if( frac < -0.01f )
-		{
 			cl.time = cl.mtime[1];
-			Msg( "low frac\n" );
-		}
 		frac = 0.0f;
 	}
 	else if( frac > 1.0f )
 	{
 		if( frac > 1.01f )
-		{
 			cl.time = cl.mtime[0];
-			Msg( "high frac\n" );
-		}
 		frac = 1.0f;
 	}
 		
@@ -801,8 +795,11 @@ CL_ReadNetMessage
 */
 void CL_ReadNetMessage( void )
 {
-	while( CL_GetMessage( ))
+	while( NET_GetPacket( NS_CLIENT, &net_from, &net_message ))
 	{
+		if( host.type == HOST_DEDICATED || cls.demoplayback )
+			return;
+
 		if( net_message.cursize >= 4 && *(int *)net_message.data == -1 )
 		{
 			CL_ConnectionlessPacket( net_from, &net_message );
@@ -819,22 +816,32 @@ void CL_ReadNetMessage( void )
 		}
 
 		// packet from server
-		if( !cls.demoplayback && !NET_CompareAdr( net_from, cls.netchan.remote_address ))
+		if( !NET_CompareAdr( net_from, cls.netchan.remote_address ))
 		{
 			MsgDev( D_WARN, "CL_ReadPackets: %s:sequenced packet without connection\n", NET_AdrToString( net_from ));
 			return;
 		}
 
-		if( !Netchan_Process( &cls.netchan, &net_message ))
-			continue;
+		if( Netchan_Process( &cls.netchan, &net_message ))
+		{
+			// the header is different lengths for reliable and unreliable messages
+			int headerBytes = net_message.readcount;
 
-		CL_ParseServerMessage( &net_message );
+			CL_ParseServerMessage( &net_message );
+
+			// we don't know if it is ok to save a demo message until
+			// after we have parsed the frame
+			if( cls.demorecording && !cls.demowaiting )
+				CL_WriteDemoMessage( &net_message, headerBytes );
+		}
 	}
 }
 
 void CL_ReadPackets( void )
 {
-	CL_ReadNetMessage();
+	if( cls.demoplayback )
+		CL_ReadDemoMessage();
+	else CL_ReadNetMessage();
 
 	cl.lerpFrac = CL_LerpPoint();
 
@@ -998,7 +1005,6 @@ void CL_RequestNextDownload( void )
 
 	CL_PrepSound();
 	CL_PrepVideo();
-	CL_SortUserMessages();
 
 	if( cls.demoplayback ) return; // not really connected
 	MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
@@ -1018,6 +1024,32 @@ void CL_Precache_f( void )
 	precache_check = CS_MODELS;
 	precache_spawncount = com.atoi( Cmd_Argv( 1 ));
 	CL_RequestNextDownload();
+}
+
+/*
+=================
+CL_DumpCfgStrings_f
+
+Dump all the configstring that used on the client-side
+=================
+*/
+void CL_DumpCfgStrings_f( void )
+{
+	int	i, numStrings = 0;
+
+	if( cls.state != ca_active )
+	{
+		Msg( "No server running\n" );
+		return;
+	}
+
+	for( i = 0; i < MAX_CONFIGSTRINGS; i++ )
+	{
+		if( !cl.configstrings[i][0] ) continue;
+		Msg( "%s [%i]\n", cl.configstrings[i], i );
+		numStrings++;
+	}
+	Msg( "%i total strings used\n", numStrings );
 }
 
 /*
@@ -1092,6 +1124,7 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("stop", CL_Stop_f, "stop playing or recording a demo" );
 	Cmd_AddCommand ("info", NULL, "collect info about local servers with specified protocol" );
 	Cmd_AddCommand ("escape", CL_Escape_f, "escape from game to menu" );
+	Cmd_AddCommand ("cfgstringslist", CL_DumpCfgStrings_f, "dump all configstrings that used on the client" );
 	
 	Cmd_AddCommand ("quit", CL_Quit_f, "quit from game" );
 	Cmd_AddCommand ("exit", CL_Quit_f, "quit from game" );

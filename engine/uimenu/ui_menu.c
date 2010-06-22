@@ -1281,8 +1281,8 @@ void UI_Init( void )
 	Cmd_AddCommand( "menu_loadgame", UI_LoadGame_Menu, "open the loadgame menu" );
 	Cmd_AddCommand( "menu_savegame", UI_SaveGame_Menu, "open the savegame menu" );
 	Cmd_AddCommand( "menu_saveload", UI_SaveLoad_Menu, "open the save\\load menu" );
-	Cmd_AddCommand( "menu_recdemo", UI_RecDemo_Menu, "open the record demo menu" );
-	Cmd_AddCommand( "menu_playdemo", UI_PlayDemo_Menu, "open the playback demo menu" );
+	Cmd_AddCommand( "menu_record", UI_RecDemo_Menu, "open the record demo menu" );
+	Cmd_AddCommand( "menu_playback", UI_PlayDemo_Menu, "open the playback demo menu" );
 	Cmd_AddCommand( "menu_playrec", UI_PlayRec_Menu, "open the play\\record demo menu" );
 	Cmd_AddCommand( "menu_multiplayer", UI_MultiPlayer_Menu, "open the multiplayer menu" );
 	Cmd_AddCommand( "menu_options", UI_Options_Menu, "open the options menu" );

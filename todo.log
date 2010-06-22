@@ -49,7 +49,8 @@ Xash 0.72 Stable 13.12.10
 25.regrouping resources in baserc
 26.implement lighting in render		OK
 27.implement dlights			OK
-28.rework SV_PointContents
+28.rework SV_PointContents			OK
 29.implement sound library
 30.rewrite engine timer			OK
-31.fixup demos
+31.fixup demos				OK
+32.game interface - new revision

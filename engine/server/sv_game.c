@@ -1893,12 +1893,12 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 		Host_Error( "MessageBegin: New message started when msg '%s' has not been sent yet\n", svgame.msg_name );
 	svgame.msg_started = true;
 
-	// some malicious users can send message with engine index
+	// some malicious users trying send message with engine index
 	// reduce number to avoid overflow problems or cheating
 	svgame.msg_index = bound( svc_bad, msg_num, svc_nop );
 
 	if( svgame.msg_index >= 0 && svgame.msg_index < MAX_USER_MESSAGES )
-		svgame.msg_name = sv.configstrings[CS_USER_MESSAGES + svgame.msg_index];
+		svgame.msg_name = svgame.msg[svgame.msg_index].name;
 	else svgame.msg_name = NULL;
 
 	MSG_Begin( svgame.msg_index );
@@ -1907,7 +1907,7 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 	if( pOrigin ) VectorCopy( pOrigin, svgame.msg_org );
 	else VectorClear( svgame.msg_org );
 
-	if( svgame.msg_sizes[msg_num] == -1 )
+	if( svgame.msg[svgame.msg_index].size == -1 )
 	{
 		// variable sized messages sent size as first byte
 		svgame.msg_size_index = sv.multicast.cursize;
@@ -1935,15 +1935,15 @@ void pfnMessageEnd( void )
 	if( !svgame.msg_started ) Host_Error( "MessageEnd: called with no active message\n" );
 	svgame.msg_started = false;
 
-	if( svgame.msg_sizes[svgame.msg_index] != -1 )
+	if( svgame.msg[svgame.msg_index].size != -1 )
 	{
-		int expsize = svgame.msg_sizes[svgame.msg_index];
+		int expsize = svgame.msg[svgame.msg_index].size;
 		int realsize = svgame.msg_realsize;
 	
 		// compare bounds
 		if( expsize != realsize )
 		{
-			MsgDev( D_ERROR, "SV_Message: %s expected %i bytes, it written %i\n", name, expsize, realsize );
+			MsgDev( D_ERROR, "SV_Message: %s expected %i bytes, it written %i. Ignored.\n", name, expsize, realsize );
 			MSG_Clear( &sv.multicast );
 			return;
 		}
@@ -2131,8 +2131,6 @@ void pfnFreeEntPrivateData( edict_t *pEdict )
 	pEdict->pvPrivateData = NULL; // freed
 }
 
-#define HL_STRINGS
-
 /*
 =============
 SV_AllocString
@@ -2273,23 +2271,49 @@ pfnRegUserMsg
 */
 int pfnRegUserMsg( const char *pszName, int iSize )
 {
-	// register message first
-	int	msg_index;
-	string	msg_name;
+	int	i;
+	
+	if( !pszName || !pszName[0] )
+		return svc_bad;
 
-	// scan name for reserved symbol
-	if( com.strchr( pszName, '@' ))
+	if( com.strlen( pszName ) >= sizeof( svgame.msg[0].name ))
 	{
-		MsgDev( D_ERROR, "SV_RegisterUserMessage: invalid name %s\n", pszName );
+		MsgDev( D_ERROR, "REG_USER_MSG: too long name %s\n", pszName );
 		return svc_bad; // force error
 	}
 
-	// build message name, fmt: MsgName@size
-	com.snprintf( msg_name, MAX_STRING, "%s@%i", pszName, iSize );
-	msg_index = SV_UserMessageIndex( msg_name );
-	svgame.msg_sizes[msg_index] = iSize;
+	if( iSize > 255 )
+	{
+		MsgDev( D_ERROR, "REG_USER_MSG: %s has too big size %i\n", pszName, iSize );
+		return svc_bad; // force error
+	}
 
-	return msg_index;
+	// make sure what size inrange
+	iSize = bound( -1, iSize, 255 );
+
+	// message 0 is reserved for svc_bad
+	for( i = 0; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
+	{
+		// see if already registered
+		if( !com.strcmp( svgame.msg[i].name, pszName ))
+			return i;
+	}
+
+	if( i == MAX_USER_MESSAGES ) 
+	{
+		MsgDev( D_ERROR, "REG_USER_MSG: user messages limit exceeded\n" );
+		return svc_bad;
+	}
+
+	if( sv.state == ss_active )
+		Host_Error( "REG_USER_MSG can only be done in spawn functions\n" );
+
+	// register new message
+	com.strncpy( svgame.msg[i].name, pszName, sizeof( svgame.msg[i].name ));
+	svgame.msg[i].size = iSize;
+	svgame.msg[i].number = i;	// paranoid mode :-)
+
+	return i;
 }
 
 /*
@@ -3698,6 +3722,7 @@ bool SV_LoadProgs( const char *name )
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();
+	pfnRegUserMsg( "svc_bad", 0 );	// register svc_bad message
 
 	// initialize pm_shared
 	SV_InitClientMove();

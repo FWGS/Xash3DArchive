@@ -381,7 +381,8 @@ static const char *PM_TraceTexture( edict_t *pTextureEntity, const float *v1, co
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected ('%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	if( !SV_IsValidEdict( pTextureEntity )) return NULL; 
+	if( !SV_IsValidEdict( pTextureEntity ))
+		return NULL; 
 
 	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, 0 );
 	return CM_TraceTexture( v1, result );

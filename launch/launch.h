@@ -521,12 +521,6 @@ script_t	*PS_LoadScript( const char *filename, const char *buf, size_t size );
 void	PS_FreeScript( script_t *script );
 
 //
-// parselib.c
-//
-void Patch_Evaluate( const float *p, int *numcp, const int *tess, float *dest, int comp );
-void Patch_GetFlatness( float maxflat, const float *points, int comp, const int *patch_cp, int *flat );
-
-//
 // imglib.c
 //
 void Image_Init( void );

@@ -26,9 +26,9 @@ char *svc_strings[256] =
 	"svc_download",
 	"svc_changing",
 	"svc_physinfo",
+	"svc_usermessage",
 	"svc_packetentities",
-	"svc_deltapacketentities",
-	"svc_time",
+	"svc_frame",
 	"svc_sound",
 	"svc_ambientsound",
 	"svc_setangle",
@@ -44,8 +44,8 @@ char *svc_strings[256] =
 	"svc_bspdecal",
 	"svc_event",
 	"svc_event_reliable",
+	"svc_updateuserinfo",
 	"svc_serverinfo",
-	"svc_chokecount"
 };
 
 typedef struct
@@ -76,11 +76,11 @@ const char *CL_MsgInfo( int cmd )
 		// get engine message name
 		com.strncpy( sz, svc_strings[cmd - 200], sizeof( sz ));
 	}
-	else if( cmd >= 0 && cmd < clgame.numMessages )
+	else if( cmd >= 0 && cmd < MAX_USER_MESSAGES )
 	{
 		// get user message name
-		if( clgame.msg[cmd] && clgame.msg[cmd]->name )
-			com.strncpy( sz, clgame.msg[cmd]->name, sizeof( sz ));
+		if( clgame.msg[cmd].name[0] )
+			com.strncpy( sz, clgame.msg[cmd].name, sizeof( sz ));
 	}
 	return sz;
 }
@@ -623,10 +623,6 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	{
 		cl.decal_shaders[i-CS_DECALS] = re->RegisterShader( cl.configstrings[i], SHADER_DECAL );
 	}
-	else if( i >= CS_USER_MESSAGES && i < CS_USER_MESSAGES+MAX_USER_MESSAGES )
-	{
-		CL_LinkUserMessage( cl.configstrings[i], i - CS_USER_MESSAGES );
-	}
 	else if( i >= CS_EVENTS && i < CS_EVENTS+MAX_EVENTS )
 	{
 		CL_SetEventIndex( cl.configstrings[i], i - CS_EVENTS );
@@ -653,11 +649,9 @@ void CL_ParseSetAngle( sizebuf_t *msg )
 {
 	cl.refdef.cl_viewangles[0] = MSG_ReadAngle32( msg );
 	cl.refdef.cl_viewangles[1] = MSG_ReadAngle32( msg );
-	cl.refdef.cl_viewangles[2] = MSG_ReadAngle32( msg );
 
 	if( cl.refdef.cl_viewangles[0] > 180 ) cl.refdef.cl_viewangles[0] -= 360;
 	if( cl.refdef.cl_viewangles[1] > 180 ) cl.refdef.cl_viewangles[1] -= 360;
-	if( cl.refdef.cl_viewangles[2] > 180 ) cl.refdef.cl_viewangles[2] -= 360;
 }
 
 /*
@@ -690,6 +684,28 @@ void CL_ParseCrosshairAngle( sizebuf_t *msg )
 	cl.refdef.crosshairangle[0] = MSG_ReadAngle8( msg );
 	cl.refdef.crosshairangle[1] = MSG_ReadAngle8( msg );
 	cl.refdef.crosshairangle[2] = 0.0f; // not used for screen space
+}
+
+/*
+================
+CL_RegisterUserMessage
+
+register new user message or update existing
+================
+*/
+void CL_RegisterUserMessage( sizebuf_t *msg )
+{
+	char	*pszName;
+	int	svc_num, size;
+	
+	pszName = MSG_ReadString( msg );
+	svc_num = MSG_ReadByte( msg );
+	size = MSG_ReadByte( msg );
+
+	// important stuff
+	if( size == 0xFF ) size = -1;
+
+	CL_LinkUserMessage( pszName, svc_num, size );
 }
 
 /*
@@ -740,6 +756,45 @@ void CL_ServerInfo( sizebuf_t *msg )
 }
 
 /*
+==============
+CL_ParseUserMessage
+
+handles all user messages
+==============
+*/
+void CL_ParseUserMessage( sizebuf_t *net_buffer, int svc_num )
+{
+	int	iSize;
+	byte	*pbuf;
+
+	// NOTE: any user message parse on engine, not in client.dll
+	if( svc_num < 0 || svc_num >= MAX_USER_MESSAGES )
+	{
+		// out or range
+		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
+		return;
+	}
+
+	// unregister message can't be parsed
+	if( clgame.msg[svc_num].number != svc_num )
+		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
+
+	iSize = clgame.msg[svc_num].size;
+	pbuf = NULL;
+
+	// message with variable sizes receive an actual size as first byte
+	if( iSize == -1 ) iSize = MSG_ReadByte( net_buffer );
+	if( iSize > 0 ) pbuf = Mem_Alloc( clgame.private, iSize );
+
+	// parse user message into buffer
+	MSG_ReadData( net_buffer, pbuf, iSize );
+
+	if( clgame.msg[svc_num].func ) clgame.msg[svc_num].func( clgame.msg[svc_num].name, iSize, pbuf );
+	else MsgDev( D_WARN, "CL_ParseUserMessage: %s not hooked\n", clgame.msg[svc_num].name );
+	if( pbuf ) Mem_Free( pbuf );
+}
+
+/*
 =====================================================================
 
 ACTION MESSAGES
@@ -754,7 +809,7 @@ CL_ParseServerMessage
 void CL_ParseServerMessage( sizebuf_t *msg )
 {
 	char	*s;
-	int	i, j, cmd;
+	int	i, cmd;
 	int	bufStart;
 
 	cls_message_debug.parsing = true;	// begin parsing
@@ -840,11 +895,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_physinfo:
 			com.strncpy( cl.physinfo, MSG_ReadString( msg ), sizeof( cl.physinfo ));
 			break;
-		case svc_chokecount:
-			i = MSG_ReadByte( msg );
-			for( j = 0; j < i; j++ )
-				cl.frames[(cls.netchan.incoming_acknowledged-1-j) & CL_UPDATE_MASK].recv_time = -2;
-			break;
 		case svc_print:
 			i = MSG_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
@@ -881,24 +931,19 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_serverinfo:
 			CL_ServerInfo( msg );
 			break;
-		case svc_time:
-			cl.mtime[1] = cl.mtime[0];
-			cl.mtime[0] = MSG_ReadFloat( msg );
+		case svc_usermessage:
+			CL_RegisterUserMessage( msg );
+			break;
+		case svc_frame:
+			CL_ParseFrame( msg );
 			break;
 		case svc_packetentities:
-			CL_ParsePacketEntities( msg, false );
-			break;
-		case svc_deltapacketentities:
-			CL_ParsePacketEntities( msg, true );
-			break;
-		case svc_bad:
-			Host_Error( "CL_ParseServerMessage: svc_bad\n" );
+			Host_Error( "CL_ParseServerMessage: out of place frame data\n" );
 			break;
 		default:
 			CL_ParseUserMessage( msg, cmd );
 			break;
 		}
 	}
-
 	cls_message_debug.parsing = false;	// done
 }
