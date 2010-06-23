@@ -36,7 +36,7 @@ typedef enum
 typedef struct entity_state_s
 {
 	// engine specific
-	uint		number;		// edict index
+	int		number;		// edict index
 	edtype_t		ed_type;		// edict type
 	string_t		classname;	// edict classname
 	int		ed_flags;		// engine clearing this at end of server frame

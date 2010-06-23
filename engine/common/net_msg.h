@@ -45,6 +45,17 @@ typedef struct net_field_s
 	bool	force;			// will be send for newentity
 } net_field_t;
 
+typedef struct delta_s
+{
+	char	*name;
+	int	offset;		// in bytes
+	int	deltaType;	// DT_INTEGER, DT_FLOAT etc
+	float	multiplier;
+	int	bits;		// how many bits we send\receive
+} delta_t;
+
+typedef void (*pfnDeltaEncode)( delta_t *pFields, const byte *from, const byte *to );
+
 // server to client
 enum svc_ops_e
 {
@@ -320,5 +331,15 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg );
 
 bool Netchan_CanPacket( netchan_t *chan );
 bool Netchan_CanReliable( netchan_t *chan );
+
+//
+// net_encode.c
+//
+void MSG_DeltaAddEncoder( char *name, pfnDeltaEncode encodeFunc );
+int MSG_DeltaFindField( delta_t *pFields, const char *fieldname );
+void MSG_DeltaSetField( delta_t *pFields, const char *fieldname );
+void MSG_DeltaUnsetField( delta_t *pFields, const char *fieldname );
+void MSG_DeltaSetFieldByIndex( struct delta_s *pFields, int fieldNumber );
+void MSG_DeltaUnsetFieldByIndex( struct delta_s *pFields, int fieldNumber );
 
 #endif//NET_MSG_H

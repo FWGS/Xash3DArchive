@@ -715,7 +715,7 @@ void CFuncTeleport :: Touch( CBaseEntity *pOther )
 			pOther->pev->angles.y -= ydiff;
 			if( pOther->IsPlayer())
 			{
-				pOther->pev->angles.x = pOther->pev->viewangles.x;
+				pOther->pev->angles.x = pOther->pev->v_angle.x;
 				pOther->pev->fixangle = TRUE;
 			}
 
@@ -751,7 +751,7 @@ void CFuncTeleport :: Touch( CBaseEntity *pOther )
 		pOther->pev->velocity = gpGlobals->v_forward * 300;
 		if( pOther->IsPlayer( ))
 		{
-			pOther->pev->viewangles = pTarget->pev->angles;
+			pOther->pev->v_angle = pTarget->pev->angles;
 			pOther->pev->fixangle = TRUE;
 		}
 	}

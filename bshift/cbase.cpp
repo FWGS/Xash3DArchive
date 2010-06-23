@@ -29,7 +29,6 @@ extern DLL_GLOBAL int			g_iSkillLevel;
 
 static DLL_FUNCTIONS gFunctionTable = 
 {
-	sizeof( DLL_FUNCTIONS ),	// Xash3D requires this
 	GameDLLInit,				//pfnGameInit
 	DispatchSpawn,				//pfnSpawn
 	DispatchThink,				//pfnThink
@@ -83,13 +82,15 @@ static DLL_FUNCTIONS gFunctionTable =
 	AddToFullPack,		// pfnAddtoFullPack
 	EndFrame,			// pfnEndFrame
 
-	ShouldCollide,		// pfnShouldCollide
+	RegisterEncoders,		// pfnRegisterEncoders		Callbacks for network encoding
+
 	UpdateEntityState,		// pfnUpdateEntityState
 	CmdStart,			// pfnCmdStart
 	CmdEnd,			// pfnCmdEnd
 
 	OnFreeEntPrivateData,	// pfnOnFreeEntPrivateData
 	GameDLLShutdown,		// pfnGameShutdown
+	ShouldCollide,		// pfnShouldCollide
 };
 
 static void SetObjectCollisionBox( entvars_t *pev );
@@ -97,22 +98,16 @@ static void SetObjectCollisionBox( entvars_t *pev );
 //=======================================================================
 //			General API entering point
 //=======================================================================
-
-int CreateAPI( DLL_FUNCTIONS *pFunctionTable, enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals )
+int GetEntityAPI( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion )
 {
-	if( !pFunctionTable || !pengfuncsFromEngine || !pGlobals )
+	if ( !pFunctionTable || interfaceVersion != SV_INTERFACE_VERSION )
 	{
 		return FALSE;
 	}
-
-	memcpy( pFunctionTable, &gFunctionTable, sizeof( DLL_FUNCTIONS ));
-	memcpy(&g_engfuncs, pengfuncsFromEngine, sizeof( enginefuncs_t ));
-	gpGlobals = pGlobals;
-
+	
+	memcpy( pFunctionTable, &gFunctionTable, sizeof( DLL_FUNCTIONS ) );
 	return TRUE;
 }
-
-
 
 int DispatchSpawn( edict_t *pent )
 {

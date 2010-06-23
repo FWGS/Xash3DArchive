@@ -576,14 +576,9 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 	header.connectionCount = pSaveData->connectionCount;
 	header.time = svgame.globals->time;
 
-	if( sv.configstrings[CS_SKYNAME][0] )
-	{
-		com.strncpy( header.skyName, sv.configstrings[CS_SKYNAME], sizeof( header.skyName ));
-	}
-	else
-	{
-		com.strncpy( header.skyName, "<skybox>", sizeof( header.skyName ));
-	}
+	if( sv_skyname->string[0] )
+		com.strncpy( header.skyName, sv_skyname->string, sizeof( header.skyName ));
+	else com.strncpy( header.skyName, "", sizeof( header.skyName ));
 
 	com.strncpy( header.mapName, sv.name, sizeof( header.mapName ));
 	header.lightStyleCount = 0;
@@ -941,7 +936,7 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 	com.strncpy( sv.name, header.mapName, sizeof( sv.name ));
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 
-	SV_ConfigString( CS_SKYNAME, header.skyName );
+	Cvar_Set( "sv_skyname", header.skyName );
 
 	// restore sky parms
 	Cvar_SetValue( "sv_skycolor_r", header.skyColor_r );

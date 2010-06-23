@@ -15,6 +15,8 @@ typedef struct ucmd_s
 	void		(*func)( sv_client_t *cl );
 } ucmd_t;
 
+static int	g_userid = 1;
+
 /*
 =================
 SV_GetChallenge
@@ -175,6 +177,7 @@ gotnewcl:
 	newcl->edict = ent;
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
+	newcl->userid = g_userid++;	// create unique userid
 		
 	// get the game a chance to reject this connection or modify the userinfo
 	if(!(SV_ClientConnect( ent, userinfo )))
@@ -288,13 +291,20 @@ e.g. ipban
 */
 bool SV_ClientConnect( edict_t *ent, char *userinfo )
 {
-	bool result = true;
+	bool	result = true;
+	char	*pszName, *pszAddress;
+	char	szRejectReason[128];
 
 	// make sure we start with known default
 	if( !sv.loadgame ) ent->v.flags = 0;
+	szRejectReason[0] = '\0';
+
+	pszName = Info_ValueForKey( userinfo, "name" );
+	pszAddress = Info_ValueForKey( userinfo, "ip" );
 
 	MsgDev( D_NOTE, "SV_ClientConnect()\n" );
-	result = svgame.dllFuncs.pfnClientConnect( ent, userinfo );
+	result = svgame.dllFuncs.pfnClientConnect( ent, pszName, pszAddress, szRejectReason );
+	if( szRejectReason[0] ) Info_SetValueForKey( userinfo, "rejmsg", szRejectReason );
 
 	return result;
 }
@@ -1395,12 +1405,12 @@ void SV_SetIdealPitch( sv_client_t *cl )
 	
 	if( !dir )
 	{
-		ent->v.ideal_pitch = 0;
+		ent->v.idealpitch = 0;
 		return;
 	}
 	
 	if( steps < 2 ) return;
-	ent->v.ideal_pitch = -dir * sv_idealpitchscale->value;
+	ent->v.idealpitch = -dir * sv_idealpitchscale->value;
 }
 
 /*

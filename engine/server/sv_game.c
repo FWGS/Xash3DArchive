@@ -868,7 +868,7 @@ void pfnChangePitch( edict_t* ent )
 		return;
 	}
 
-	ent->v.angles[PITCH] = SV_AngleMod( ent->v.ideal_pitch, ent->v.angles[PITCH], ent->v.pitch_speed );	
+	ent->v.angles[PITCH] = SV_AngleMod( ent->v.idealpitch, ent->v.angles[PITCH], ent->v.pitch_speed );	
 }
 
 /*
@@ -2727,32 +2727,41 @@ edict_t *pfnCreateFakeClient( const char *netname )
 
 /*
 =============
-pfnThinkFakeClient
+pfnRunPlayerMove
 
 =============
 */
-void pfnThinkFakeClient( edict_t *pClient, usercmd_t *cmd )
+void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, float smove, float upmove, word buttons, byte impulse, byte msec )
 {
 	sv_client_t	*cl;
+	usercmd_t		cmd;
 
 	if( sv.paused ) return;
 
-	cl = SV_ClientFromEdict( pClient, true );
-	if( cl == NULL || cmd == NULL )
+	if(( cl = SV_ClientFromEdict( pClient, true )) == NULL )
 	{
-		if( !cl ) MsgDev( D_ERROR, "SV_ClientThink: fakeclient is not spawned!\n" );
-		if( !cmd )  MsgDev( D_ERROR, "SV_ClientThink: NULL usercmd_t!\n" );
+		MsgDev( D_ERROR, "SV_ClientThink: fakeclient is not spawned!\n" );
 		return;
 	}
 
 	if(!( pClient->v.flags & FL_FAKECLIENT ))
 		return;	// only fakeclients allows
 
-	SV_PreRunCmd( cl, cmd );
-	SV_RunCmd( cl, cmd );
+	Mem_Set( &cmd, 0, sizeof( cmd ));
+	if( v_angle ) VectorCopy( v_angle, cmd.viewangles );
+	cmd.forwardmove = fmove;
+	cmd.sidemove = smove;
+	cmd.upmove = upmove;
+	cmd.buttons = buttons;
+	cmd.impulse = impulse;
+	cmd.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
+	cmd.msec = msec;
+
+	SV_PreRunCmd( cl, &cmd );
+	SV_RunCmd( cl, &cmd );
 	SV_PostRunCmd( cl );
 
-	cl->lastcmd = *cmd;
+	cl->lastcmd = cmd;
 	cl->lastcmd.buttons = 0; // avoid multiple fires on lag
 }
 
@@ -2905,12 +2914,13 @@ pfnPlaybackEvent
 
 =============
 */
-static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, event_args_t *args )
+static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay,
+	float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
 {
 	sv_client_t	*cl;
 	event_state_t	*es;
+	event_args_t	args;
 	event_info_t	*ei = NULL;
-	event_args_t	dummy; // in case send naked event without args
 	int		j, leafnum, slot, bestslot;
 	int		invokerIndex = 0;
 	byte		*mask = NULL;
@@ -2930,13 +2940,27 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 		return;		
 	}
 
+	args.flags = 0;
+	if( SV_IsValidEdict( pInvoker ))
+		args.entindex = NUM_FOR_EDICT( pInvoker );
+	else args.entindex = 0;
+	VectorCopy( origin, args.origin );
+	VectorCopy( angles, args.angles );
+
+	args.fparam1 = fparam1;
+	args.fparam2 = fparam2;
+	args.iparam1 = iparam1;
+	args.iparam2 = iparam2;
+	args.bparam1 = bparam1;
+	args.bparam2 = bparam2;
+
 	if(!( flags & FEV_GLOBAL ))
           {
 		// PVS message - trying to get a pvspoint
-		// args->origin always have higher priority than invoker->origin
-		if( args && !VectorIsNull( args->origin ))
+		// args.origin always have higher priority than invoker->origin
+		if( !VectorIsNull( args.origin ))
 		{
-			VectorCopy( args->origin, pvspoint );
+			VectorCopy( args.origin, pvspoint );
 		}
 		else if( SV_IsValidEdict( pInvoker ))
 		{
@@ -2973,36 +2997,30 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 	if( SV_IsValidEdict( pInvoker ))
 		invokerIndex = NUM_FOR_EDICT( pInvoker );
 
-	if( args == NULL )
-	{
-		Mem_Set( &dummy, 0, sizeof( dummy ));
-		args = &dummy;
-	}
-
 	if( flags & FEV_RELIABLE )
 	{
-		args->ducking = 0;
-		VectorClear( args->velocity );
+		args.ducking = 0;
+		VectorClear( args.velocity );
 	}
 	else if( invokerIndex )
 	{
 		// get up some info from invoker
-		if( VectorIsNull( args->origin )) 
-			VectorCopy( pInvoker->v.origin, args->origin );
-		if( VectorIsNull( args->angles ))
+		if( VectorIsNull( args.origin )) 
+			VectorCopy( pInvoker->v.origin, args.origin );
+		if( VectorIsNull( args.angles ))
 		{ 
 			if( SV_ClientFromEdict( pInvoker, true ))
-				VectorCopy( pInvoker->v.viewangles, args->angles );
-			else VectorCopy( pInvoker->v.angles, args->angles );
+				VectorCopy( pInvoker->v.v_angle, args.angles );
+			else VectorCopy( pInvoker->v.angles, args.angles );
 		}
-		else if( SV_ClientFromEdict( pInvoker, true ) && VectorCompare( pInvoker->v.angles, args->angles ))
+		else if( SV_ClientFromEdict( pInvoker, true ) && VectorCompare( pInvoker->v.angles, args.angles ))
 		{
 			// NOTE: if user specified pPlayer->pev->angles
 			// silently replace it with viewangles, client expected this
-			VectorCopy( pInvoker->v.viewangles, args->angles );
+			VectorCopy( pInvoker->v.v_angle, args.angles );
 		}
-		VectorCopy( pInvoker->v.velocity, args->velocity );
-		args->ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
+		VectorCopy( pInvoker->v.velocity, args.velocity );
+		args.ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
 	}
 
 	if(!( flags & FEV_GLOBAL ))
@@ -3040,7 +3058,7 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 
 			info.index = eventindex;
 			info.fire_time = delay;
-			info.args = *args;
+			info.args = args;
 			info.entity_index = invokerIndex;
 			info.packet_index = -1;
 			info.flags = 0; // server ignore flags
@@ -3072,7 +3090,7 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 
 		ei->index = eventindex;
 		ei->fire_time = delay;
-		ei->args = *args;
+		ei->args = args;
 		ei->entity_index = invokerIndex;
 		ei->packet_index = -1;
 		ei->flags = 0; // server ignore flags
@@ -3185,6 +3203,19 @@ int pfnCanSkipPlayer( const edict_t *player )
 
 /*
 =============
+pfnGetCurrentPlayer
+
+=============
+*/
+int pfnGetCurrentPlayer( void )
+{
+	if( svs.currentPlayer )
+		return svs.currentPlayer - svs.clients;
+	return -1;
+}
+
+/*
+=============
 pfnSetGroupMask
 
 =============
@@ -3197,27 +3228,58 @@ void pfnSetGroupMask( int mask, int op )
 
 /*
 =============
-pfnEndGame
+pfnEndSection
 
 =============
 */
-void pfnEndGame( const char *engine_command )
+void pfnEndSection( const char *pszSection )
 {
-	if( !com.stricmp( "credits", engine_command ))
+	if( !com.stricmp( "credits", pszSection ))
 		Host_Credits ();
-	else Host_EndGame( engine_command );
+	else Host_EndGame( pszSection );
 }
 
 /*
 =============
-pfnSetSkybox
+pfnGetPlayerUserId
 
 =============
 */
-void pfnSetSkybox( const char *name )
+int pfnGetPlayerUserId( edict_t *e )
 {
-	if( sv.loadgame ) return; // sets by saverstore code
-	SV_ConfigString( CS_SKYNAME, name );
+	sv_client_t	*cl;
+	int		i;
+		
+	if( !svs.initialized )
+		return -1;
+
+	if( !SV_ClientFromEdict( e, false ))
+		return -1;
+
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( cl->edict == e )
+		{
+			return cl->userid;
+		}
+	}
+
+	// couldn't find it
+	return -1;
+}
+
+/*
+=============
+pfnGetPlayerAuthId
+
+These function must returns cd-key hashed value
+but Xash3D currently doesn't have any security checks
+return nullstring for now
+=============
+*/
+const char *pfnGetPlayerAuthId( edict_t *e )
+{
+	return "";
 }
 
 /*
@@ -3287,7 +3349,6 @@ void pfnAddServerCommand( const char *cmd_name, void (*function)(void), const ch
 // engine callbacks
 static enginefuncs_t gEngfuncs = 
 {
-	sizeof( enginefuncs_t ),
 	pfnPrecacheModel,
 	pfnPrecacheSound,	
 	pfnSetModel,
@@ -3350,7 +3411,7 @@ static enginefuncs_t gEngfuncs =
 	pfnCVarSetValue,
 	pfnCVarSetString,
 	pfnAlertMessage,
-	pfnEngineFprintf,
+	pfnGetProcAddress,
 	pfnPvAllocEntPrivateData,
 	pfnPvEntPrivateData,
 	pfnFreeEntPrivateData,
@@ -3385,14 +3446,14 @@ static enginefuncs_t gEngfuncs =
 	pfnCrosshairAngle,
 	pfnLoadFile,
 	pfnFreeFile,
-	pfnEndGame,
+	pfnEndSection,
 	pfnCompareFileTime,
 	pfnGetGameDir,
 	pfnClassifyEdict,
 	pfnFadeClientVolume,
 	pfnSetClientMaxspeed,
 	pfnCreateFakeClient,
-	pfnThinkFakeClient,
+	pfnRunPlayerMove,
 	pfnFileExists,
 	pfnGetInfoKeyBuffer,
 	pfnInfoKeyValue,
@@ -3401,7 +3462,7 @@ static enginefuncs_t gEngfuncs =
 	pfnIsMapValid,
 	pfnStaticDecal,
 	pfnPrecacheGeneric,
-	pfnSetSkybox,
+	pfnGetPlayerUserId,
 	pfnPlayMusic,
 	pfnIsDedicatedServer,
 	pfnMemAlloc,
@@ -3415,14 +3476,14 @@ static enginefuncs_t gEngfuncs =
 	pfnSetFatPVS,
 	pfnSetFatPAS,
 	pfnCheckVisibility,
-	pfnFOpen,
-	pfnFRead,
-	pfnFWrite,
-	pfnFClose,
+	MSG_DeltaSetField,
+	MSG_DeltaUnsetField,
+	MSG_DeltaAddEncoder,
+	pfnGetCurrentPlayer,
 	pfnCanSkipPlayer,
-	pfnFGets,
-	pfnFSeek,
-	pfnFTell,
+	MSG_DeltaFindField,
+	MSG_DeltaSetFieldByIndex,
+	MSG_DeltaUnsetFieldByIndex,
 	pfnSetGroupMask,	
 	pfnDropClient,
 	Host_Error,
@@ -3430,8 +3491,8 @@ static enginefuncs_t gEngfuncs =
 	pfnGetPlayerStats,
 	pfnAddServerCommand,
 	pfnLoadLibrary,
-	pfnGetProcAddress,
 	pfnFreeLibrary,
+	pfnGetPlayerAuthId,
 };
 
 /*
@@ -3618,15 +3679,18 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 
 	MsgDev( D_NOTE, "SV_SpawnEntities()\n" );
 
-	// reset sky parms
+	// reset misc parms
 	Cvar_Reset( "sv_zmax" );
 	Cvar_Reset( "sv_wateramp" );
+
+	// reset sky parms	
 	Cvar_Reset( "sv_skycolor_r" );
 	Cvar_Reset( "sv_skycolor_g" );
 	Cvar_Reset( "sv_skycolor_b" );
 	Cvar_Reset( "sv_skyvec_x" );
 	Cvar_Reset( "sv_skyvec_y" );
 	Cvar_Reset( "sv_skyvec_z" );
+	Cvar_Reset( "sv_skyname" );
 
 	ent = EDICT_NUM( 0 );
 	if( ent->free ) SV_InitEdict( ent );
@@ -3666,7 +3730,8 @@ void SV_UnloadProgs( void )
 
 bool SV_LoadProgs( const char *name )
 {
-	static SERVERAPI		GetEntityAPI;
+	static APIFUNCTION		GetEntityAPI;
+	static GIVEFNPTRSTODLL	GiveFnptrsToDll;
 	static globalvars_t		gpGlobals;
 	static playermove_t		gpMove;
 	edict_t			*e;
@@ -3682,23 +3747,35 @@ bool SV_LoadProgs( const char *name )
 	svgame.hInstance = FS_LoadLibrary( name, true );
 	if( !svgame.hInstance ) return false;
 
-	GetEntityAPI = (SERVERAPI)FS_GetProcAddress( svgame.hInstance, "CreateAPI" );
+	GetEntityAPI = (APIFUNCTION)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
 
 	if( !GetEntityAPI )
 	{
 		FS_FreeLibrary( svgame.hInstance );
-		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of CreateAPI proc\n" );
+         		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of GetEntityAPI proc\n" );
 		svgame.hInstance = NULL;
 		return false;
 	}
 
-	if( !GetEntityAPI( &svgame.dllFuncs, &gEngfuncs, svgame.globals ))
+	GiveFnptrsToDll = (GIVEFNPTRSTODLL)FS_GetProcAddress( svgame.hInstance, "GiveFnptrsToDll" );
+
+	if( !GiveFnptrsToDll )
 	{
 		FS_FreeLibrary( svgame.hInstance );
-		MsgDev( D_NOTE, "SV_LoadProgs: couldn't get entity API\n" );
+		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of GiveFnptrsToDll proc\n" );
 		svgame.hInstance = NULL;
 		return false;
 	}
+
+	if( !GetEntityAPI( &svgame.dllFuncs, SV_INTERFACE_VERSION ))
+	{
+		FS_FreeLibrary( svgame.hInstance );
+		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
+		svgame.hInstance = NULL;
+		return false;
+	}
+
+	GiveFnptrsToDll( &gEngfuncs, svgame.globals );
 
 	svgame.globals->pStringBase = "";	// setup string base
 

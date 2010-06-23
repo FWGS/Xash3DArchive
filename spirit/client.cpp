@@ -79,9 +79,9 @@ ClientConnect
 called when a player connects to a server
 ============
 */
-BOOL ClientConnect( edict_t *pEntity, const char *userinfo  )
+BOOL ClientConnect( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128]  )
 {
-	return g_pGameRules->ClientConnected( pEntity, userinfo );
+	return g_pGameRules->ClientConnected( pEntity, pszName, pszAddress, szRejectReason );
 
 // a client connecting during an intermission can cause problems
 //	if (intermission_running)
@@ -340,6 +340,8 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	{
 		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" %s \"%s\"\n",
 			STRING( pEntity->v.netname ),
+			GETPLAYERUSERID( pEntity ),
+			GETPLAYERAUTHID( pEntity ),
 			g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model" ),
 			temp,
 			p );
@@ -348,6 +350,9 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	{
 		UTIL_LogPrintf( "\"%s<%i><%s><%i>\" %s \"%s\"\n",
 			STRING( pEntity->v.netname ),
+			GETPLAYERUSERID( pEntity ),
+			GETPLAYERAUTHID( pEntity ),
+			GETPLAYERUSERID( pEntity ),
 			temp,
 			p );
 	}
@@ -445,7 +450,7 @@ void ClientCommand( edict_t *pEntity )
 			else
 			{
 				TraceResult tr;
-				UTIL_MakeVectors(pev->viewangles);
+				UTIL_MakeVectors(pev->v_angle);
 				UTIL_TraceLine(
 					pev->origin + pev->view_ofs,
 					pev->origin + pev->view_ofs + gpGlobals->v_forward * 1000,
@@ -474,8 +479,9 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "game_over" ) )
 	{
-		if(IsMultiplayer())  g_pGameRules->EndMultiplayerGame();	//loading next map
-		else HOST_ENDGAME( CMD_ARGV( 1 ) );
+		if( IsMultiplayer( ))
+			g_pGameRules->EndMultiplayerGame();	// loading next map
+		else g_engfuncs.pfnEndSection( CMD_ARGV( 1 ) );
 	}
 	else if( FStrEq( pcmd, "gametitle" ))
 	{
@@ -607,6 +613,8 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%s>\" changed name to \"%s\"\n",
 				STRING( pEntity->v.netname ),
+				GETPLAYERUSERID( pEntity ),
+				GETPLAYERAUTHID( pEntity ),
 				g_engfuncs.pfnInfoKeyValue( infobuffer, "model" ),
 				g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 		}
@@ -614,6 +622,9 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%i>\" changed name to \"%s\"\n",
 				STRING( pEntity->v.netname ),
+				GETPLAYERUSERID( pEntity ),
+				GETPLAYERAUTHID( pEntity ),
+				GETPLAYERUSERID( pEntity ),
 				g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 		}
 	}
@@ -903,7 +914,7 @@ const char *GetGameDescription()
 	// alternative handle come from Xash 0.4
 	char	*token = NULL;
           char	szbuffer[128];
-	char	*afile = (char *)LOAD_FILE( "gameinfo.txt", NULL );
+	char	*afile = (char *)LOAD_FILE_FOR_ME( "gameinfo.txt", NULL );
 	const char *pfile = afile; 
 
 	memset( text, 0, sizeof( text ));
@@ -1117,7 +1128,6 @@ void UpdateEntityState( entity_state_t *to, edict_t *from, int baseline )
 	to->scale = pNet->pev->scale;		// shared client and render flags
 	to->movetype = (movetype_t)pNet->pev->movetype;
 	to->frame = pNet->pev->frame;		// any model current frame
-	to->contents = pNet->pev->contents;	// physic contents
 	to->framerate = pNet->pev->framerate;
 	to->mins = pNet->pev->mins;
 	to->maxs = pNet->pev->maxs;
@@ -1162,8 +1172,8 @@ void UpdateEntityState( entity_state_t *to, edict_t *from, int baseline )
 		else to->aiment = NULLENT_INDEX;
 
 		to->viewoffset = pNet->pev->view_ofs; 
-		to->viewangles = pNet->pev->viewangles;
-		to->idealpitch = pNet->pev->ideal_pitch;
+		to->viewangles = pNet->pev->v_angle;
+		to->idealpitch = pNet->pev->idealpitch;
 		to->punch_angles = pNet->pev->punchangle;
 		to->velocity = pNet->pev->velocity;
 		to->basevelocity = pNet->pev->clbasevelocity;
@@ -1422,6 +1432,249 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 		UTIL_UnsetGroupTrace();
 	}
 	return 1;
+}
+
+typedef struct
+{
+	char name[32];
+	int	 field;
+} entity_field_alias_t;
+
+#define FIELD_ORIGIN0			0
+#define FIELD_ORIGIN1			1
+#define FIELD_ORIGIN2			2
+#define FIELD_ANGLES0			3
+#define FIELD_ANGLES1			4
+#define FIELD_ANGLES2			5
+
+static entity_field_alias_t entity_field_alias[]=
+{
+	{ "origin[0]",			0 },
+	{ "origin[1]",			0 },
+	{ "origin[2]",			0 },
+	{ "angles[0]",			0 },
+	{ "angles[1]",			0 },
+	{ "angles[2]",			0 },
+};
+
+void Entity_FieldInit( struct delta_s *pFields )
+{
+	entity_field_alias[ FIELD_ORIGIN0 ].field		= DELTA_FINDFIELD( pFields, entity_field_alias[ FIELD_ORIGIN0 ].name );
+	entity_field_alias[ FIELD_ORIGIN1 ].field		= DELTA_FINDFIELD( pFields, entity_field_alias[ FIELD_ORIGIN1 ].name );
+	entity_field_alias[ FIELD_ORIGIN2 ].field		= DELTA_FINDFIELD( pFields, entity_field_alias[ FIELD_ORIGIN2 ].name );
+	entity_field_alias[ FIELD_ANGLES0 ].field		= DELTA_FINDFIELD( pFields, entity_field_alias[ FIELD_ANGLES0 ].name );
+	entity_field_alias[ FIELD_ANGLES1 ].field		= DELTA_FINDFIELD( pFields, entity_field_alias[ FIELD_ANGLES1 ].name );
+	entity_field_alias[ FIELD_ANGLES2 ].field		= DELTA_FINDFIELD( pFields, entity_field_alias[ FIELD_ANGLES2 ].name );
+}
+
+/*
+==================
+Entity_Encode
+
+Callback for sending entity_state_t info over network. 
+FIXME:  Move to script
+==================
+*/
+void Entity_Encode( struct delta_s *pFields, const unsigned char *from, const unsigned char *to )
+{
+	entity_state_t *f, *t;
+	int localplayer = 0;
+	static int initialized = 0;
+
+	if ( !initialized )
+	{
+		Entity_FieldInit( pFields );
+		initialized = 1;
+	}
+
+	f = (entity_state_t *)from;
+	t = (entity_state_t *)to;
+
+	// Never send origin to local player, it's sent with more resolution in clientdata_t structure
+	localplayer =  ( t->number - 1 ) == ENGINE_CURRENT_PLAYER();
+	if ( localplayer )
+	{
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+	}
+
+	if ( ( t->movetype == MOVETYPE_FOLLOW ) &&
+		 ( t->aiment != 0 ) )
+	{
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+	}
+	else if ( t->aiment != f->aiment )
+	{
+		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+	}
+}
+
+static entity_field_alias_t player_field_alias[]=
+{
+	{ "origin[0]",			0 },
+	{ "origin[1]",			0 },
+	{ "origin[2]",			0 },
+};
+
+void Player_FieldInit( struct delta_s *pFields )
+{
+	player_field_alias[ FIELD_ORIGIN0 ].field		= DELTA_FINDFIELD( pFields, player_field_alias[ FIELD_ORIGIN0 ].name );
+	player_field_alias[ FIELD_ORIGIN1 ].field		= DELTA_FINDFIELD( pFields, player_field_alias[ FIELD_ORIGIN1 ].name );
+	player_field_alias[ FIELD_ORIGIN2 ].field		= DELTA_FINDFIELD( pFields, player_field_alias[ FIELD_ORIGIN2 ].name );
+}
+
+/*
+==================
+Player_Encode
+
+Callback for sending entity_state_t for players info over network. 
+==================
+*/
+void Player_Encode( struct delta_s *pFields, const unsigned char *from, const unsigned char *to )
+{
+	entity_state_t *f, *t;
+	int localplayer = 0;
+	static int initialized = 0;
+
+	if ( !initialized )
+	{
+		Player_FieldInit( pFields );
+		initialized = 1;
+	}
+
+	f = (entity_state_t *)from;
+	t = (entity_state_t *)to;
+
+	// Never send origin to local player, it's sent with more resolution in clientdata_t structure
+	localplayer =  ( t->number - 1 ) == ENGINE_CURRENT_PLAYER();
+	if ( localplayer )
+	{
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+	}
+
+	if ( ( t->movetype == MOVETYPE_FOLLOW ) &&
+		 ( t->aiment != 0 ) )
+	{
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+	}
+	else if ( t->aiment != f->aiment )
+	{
+		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+	}
+}
+
+#define CUSTOMFIELD_ORIGIN0			0
+#define CUSTOMFIELD_ORIGIN1			1
+#define CUSTOMFIELD_ORIGIN2			2
+#define CUSTOMFIELD_ANGLES0			3
+#define CUSTOMFIELD_ANGLES1			4
+#define CUSTOMFIELD_ANGLES2			5
+#define CUSTOMFIELD_SKIN			6
+#define CUSTOMFIELD_SEQUENCE		7
+#define CUSTOMFIELD_ANIMTIME		8
+
+entity_field_alias_t custom_entity_field_alias[]=
+{
+	{ "origin[0]",			0 },
+	{ "origin[1]",			0 },
+	{ "origin[2]",			0 },
+	{ "angles[0]",			0 },
+	{ "angles[1]",			0 },
+	{ "angles[2]",			0 },
+	{ "skin",				0 },
+	{ "sequence",			0 },
+	{ "animtime",			0 },
+};
+
+void Custom_Entity_FieldInit( struct delta_s *pFields )
+{
+	custom_entity_field_alias[ CUSTOMFIELD_ORIGIN0 ].field	= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_ORIGIN0 ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_ORIGIN1 ].field	= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_ORIGIN1 ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_ORIGIN2 ].field	= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_ORIGIN2 ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_ANGLES0 ].field	= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANGLES0 ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_ANGLES1 ].field	= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANGLES1 ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_ANGLES2 ].field	= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANGLES2 ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_SKIN ].field	= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_SKIN ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_SEQUENCE ].field= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_SEQUENCE ].name );
+	custom_entity_field_alias[ CUSTOMFIELD_ANIMTIME ].field= DELTA_FINDFIELD( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANIMTIME ].name );
+}
+
+/*
+==================
+Custom_Encode
+
+Callback for sending entity_state_t info ( for custom entities ) over network. 
+FIXME:  Move to script
+==================
+*/
+void Custom_Encode( struct delta_s *pFields, const unsigned char *from, const unsigned char *to )
+{
+	entity_state_t *f, *t;
+	int beamType;
+	static int initialized = 0;
+
+	if ( !initialized )
+	{
+		Custom_Entity_FieldInit( pFields );
+		initialized = 1;
+	}
+
+	f = (entity_state_t *)from;
+	t = (entity_state_t *)to;
+
+	beamType = t->rendermode;
+		
+	if ( beamType != BEAM_POINTS && beamType != BEAM_ENTPOINT )
+	{
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ORIGIN0 ].field );
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ORIGIN1 ].field );
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ORIGIN2 ].field );
+	}
+
+	if ( beamType != BEAM_POINTS )
+	{
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANGLES0 ].field );
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANGLES1 ].field );
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANGLES2 ].field );
+	}
+
+	if ( beamType != BEAM_ENTS && beamType != BEAM_ENTPOINT )
+	{
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_SKIN ].field );
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_SEQUENCE ].field );
+	}
+
+	// animtime is compared by rounding first
+	// see if we really shouldn't actually send it
+	if ( (int)f->animtime == (int)t->animtime )
+	{
+		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ANIMTIME ].field );
+	}
+}
+
+/*
+=================
+RegisterEncoders
+
+Allows game .dll to override network encoding of certain types of entities and tweak values, etc.
+=================
+*/
+void RegisterEncoders( void )
+{
+	DELTA_ADDENCODER( "Entity_Encode", Entity_Encode );
+	DELTA_ADDENCODER( "Custom_Encode", Custom_Encode );
+	DELTA_ADDENCODER( "Player_Encode", Player_Encode );
 }
 
 /*

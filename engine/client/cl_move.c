@@ -459,7 +459,7 @@ void CL_RunCmd( edict_t *clent, usercmd_t *ucmd )
 	PM_CheckMovingGround( clent, ucmd->msec * 0.001f );
 
 //	VectorCopy( ucmd->viewangles, clgame.pmove->oldangles ); // save oldangles
-//	if( !clent->v.fixangle ) VectorCopy( ucmd->viewangles, clent->v.viewangles );
+//	if( !clent->v.fixangle ) VectorCopy( ucmd->viewangles, clent->v.v_angle );
 
 	// copy player buttons
 	clent->v.button = ucmd->buttons;
@@ -560,7 +560,7 @@ void CL_PredictMovement( void )
 	if( cls.demoplayback && CL_IsValidEdict( viewent ))
 	{
 		// use interpolated server values
-		VectorCopy( viewent->v.viewangles, cl.refdef.cl_viewangles );
+		VectorCopy( viewent->v.v_angle, cl.refdef.cl_viewangles );
 	}
 
 	// unpredicted pure angled values converted into axis

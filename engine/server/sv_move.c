@@ -524,7 +524,7 @@ static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
 {
 	clent->v.teleport_time = pmove->flWaterJumpTime;
 	clent->v.groundentity = pmove->onground;
-	VectorCopy( pmove->angles, clent->v.viewangles );
+	VectorCopy( pmove->angles, clent->v.v_angle );
 	VectorCopy( pmove->origin, clent->v.origin );
 	VectorCopy( pmove->movedir, clent->v.movedir );
 	VectorCopy( pmove->velocity, clent->v.velocity );
@@ -608,8 +608,8 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 
 	PM_CheckMovingGround( clent, ucmd->msec * 0.001f );
 
-	VectorCopy( clent->v.viewangles, svgame.pmove->oldangles ); // save oldangles
-	if( !clent->v.fixangle ) VectorCopy( ucmd->viewangles, clent->v.viewangles );
+	VectorCopy( clent->v.v_angle, svgame.pmove->oldangles ); // save oldangles
+	if( !clent->v.fixangle ) VectorCopy( ucmd->viewangles, clent->v.v_angle );
 
 	// copy player buttons
 	clent->v.button = ucmd->buttons;
@@ -621,8 +621,8 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 	{
 		if( !clent->v.fixangle )
 		{
-			clent->v.angles[PITCH] = -clent->v.viewangles[PITCH] / 3;
-			clent->v.angles[YAW] = clent->v.viewangles[YAW];
+			clent->v.angles[PITCH] = -clent->v.v_angle[PITCH] / 3;
+			clent->v.angles[YAW] = clent->v.v_angle[YAW];
 		}
 	}
 
@@ -661,8 +661,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 		// NOTE: one of triggers apply new velocity to client
 		// e.g trigger_teleport resets it or add new
 		// so we need to apply new velocity immediately here
-		if( clent->v.fixangle || clent->v.flJumpPadTime )
-			VectorCopy( clent->v.velocity, oldvel );
+		if( clent->v.fixangle ) VectorCopy( clent->v.velocity, oldvel );
 
 		// touch other objects
 		for( i = 0; i < svgame.pmove->numtouch; i++ )

@@ -1366,7 +1366,7 @@ void CBasePlayer::StartDeathCam( void )
 		}
 
 		CopyToBodyQue( pev );
-		StartObserver( pSpot->pev->origin, pSpot->pev->viewangles );
+		StartObserver( pSpot->pev->origin, pSpot->pev->v_angle );
 	}
 	else
 	{
@@ -1384,7 +1384,7 @@ void CBasePlayer::StartObserver( Vector vecPosition, Vector vecViewAngle )
 	m_afPhysicsFlags |= PFLAG_OBSERVER;
 
 	pev->view_ofs = g_vecZero;
-	pev->angles = pev->viewangles = vecViewAngle;
+	pev->angles = pev->v_angle = vecViewAngle;
 	pev->fixangle = TRUE;
 	pev->solid = SOLID_NOT;
 	pev->takedamage = DAMAGE_NO;
@@ -1453,7 +1453,7 @@ void CBasePlayer::PlayerUse ( void )
 	TraceResult tr;
 	int caps;
 
-	UTIL_MakeVectors ( pev->viewangles );// so we know which way we are facing
+	UTIL_MakeVectors ( pev->v_angle );// so we know which way we are facing
 
 	//LRC- try to get an exact entity to use.
 	// (is this causing "use-buttons-through-walls" problems? Surely not!)
@@ -1684,7 +1684,7 @@ void CBasePlayer::UpdateStatusBar()
 
 	// Find an ID Target
 	TraceResult tr;
-	UTIL_MakeVectors( pev->viewangles + pev->punchangle );
+	UTIL_MakeVectors( pev->v_angle + pev->punchangle );
 	Vector vecSrc = EyePosition();
 	Vector vecEnd = vecSrc + (gpGlobals->v_forward * MAX_ID_RANGE);
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, edict(), &tr);
@@ -1789,7 +1789,7 @@ void CBasePlayer::PreThink(void)
 	if ( g_fGameOver )
 		return;         // intermission or finale
 
-	UTIL_MakeVectors(pev->viewangles);             // is this still used?
+	UTIL_MakeVectors(pev->v_angle);             // is this still used?
 
 	ItemPreFrame( );
 	WaterMove();
@@ -2507,14 +2507,6 @@ void CBasePlayer::PostThink()
 	if ( (FBitSet(pev->flags, FL_ONGROUND)) && (pev->health > 0) && m_flFallVelocity >= PLAYER_FALL_PUNCH_THRESHHOLD )
 	{
 		// ALERT ( at_console, "%f\n", m_flFallVelocity );
-
-		if( pev->flJumpPadTime && pev->flJumpPadTime < gpGlobals->time ) 
-		{
-			// scale delta if was pushed by jump pad
-			float delta = (1.0f + gpGlobals->time - pev->flJumpPadTime) * 0.5f;
-			m_flFallVelocity /= delta;
-			pev->flJumpPadTime = 0.0f;
-		}
 	
 		if (pev->watertype == CONTENTS_WATER)
 		{
@@ -2728,8 +2720,7 @@ void CBasePlayer::Spawn( void )
 	pev->gravity	= 1.0;
 	pev->renderfx	= 0;
 	pev->rendercolor	= g_vecZero;
-	pev->mass		= 90;	// lbs
-	pev->viewangles.z	= 0;	// cut off any camera rolling
+	pev->v_angle.z	= 0;	// cut off any camera rolling
 	m_bitsHUDDamage	= -1;
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;
@@ -2901,11 +2892,11 @@ int CBasePlayer::Restore( CRestore &restore )
 		// default to normal spawn
 		edict_t* pentSpawnSpot = EntSelectSpawnPoint( this );
 		pev->origin = VARS( pentSpawnSpot )->origin + Vector( 0, 0, 1 );
-		pev->viewangles = pev->angles = VARS( pentSpawnSpot )->angles;
+		pev->v_angle = pev->angles = VARS( pentSpawnSpot )->angles;
 	}
 
-	pev->viewangles.z = 0;		// clear out roll
-	pev->angles = pev->viewangles;
+	pev->v_angle.z = 0;		// clear out roll
+	pev->angles = pev->v_angle;
 	pev->fixangle = TRUE;		// turn this way immediately
 
 	// Copied from spawn() for now
@@ -3225,7 +3216,7 @@ public:
 void CSprayCan::Spawn ( entvars_t *pevOwner )
 {
 	pev->origin = pevOwner->origin + Vector ( 0 , 0 , 32 );
-	pev->angles = pevOwner->viewangles;
+	pev->angles = pevOwner->v_angle;
 	pev->owner = ENT(pevOwner);
 	pev->frame = 0;
 
@@ -3281,7 +3272,7 @@ public:
 void CBloodSplat::Spawn ( entvars_t *pevOwner )
 {
 	pev->origin = pevOwner->origin + Vector ( 0 , 0 , 32 );
-	pev->angles = pevOwner->viewangles;
+	pev->angles = pevOwner->v_angle;
 	pev->owner = ENT(pevOwner);
 
 	SetThink(&CBloodSplat:: Spray );
@@ -3439,7 +3430,7 @@ void CBasePlayer::ImpulseCommands( void )
 	case 201: // paint decal
 		if( gpGlobals->time < m_flNextDecalTime ) break;
 
-		UTIL_MakeVectors(pev->viewangles);
+		UTIL_MakeVectors(pev->v_angle);
 		UTIL_TraceLine ( pev->origin + pev->view_ofs, pev->origin + pev->view_ofs + gpGlobals->v_forward * 128, ignore_monsters, ENT(pev), & tr);
 
 		if ( tr.flFraction != 1.0 )
@@ -4397,7 +4388,7 @@ Vector CBasePlayer :: GetAutoaimVector( float flDelta )
 
 	// ALERT( at_console, "%f %f\n", angles.x, angles.y );
 
-	UTIL_MakeVectors( pev->viewangles + pev->punchangle + m_vecAutoAim );
+	UTIL_MakeVectors( pev->v_angle + pev->punchangle + m_vecAutoAim );
 	return gpGlobals->v_forward;
 }
 
@@ -4417,7 +4408,7 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 		return g_vecZero;
 	}
 
-	UTIL_MakeVectors( pev->viewangles + pev->punchangle + m_vecAutoAim );
+	UTIL_MakeVectors( pev->v_angle + pev->punchangle + m_vecAutoAim );
 
 	// try all possible entities
 	bestdir = gpGlobals->v_forward;
@@ -4512,7 +4503,7 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 	{
 		bestdir = UTIL_VecToAngles (bestdir);
 		bestdir.x = -bestdir.x;
-		bestdir = bestdir - pev->viewangles - pev->punchangle;
+		bestdir = bestdir - pev->v_angle - pev->punchangle;
 
 		if (bestent->v.takedamage == DAMAGE_AIM)
 			m_fOnTarget = TRUE;

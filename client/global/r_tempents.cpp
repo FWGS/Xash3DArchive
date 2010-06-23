@@ -487,9 +487,9 @@ void CTempEnts::TempEntFree( TEMPENTITY *pTemp, TEMPENTITY *pPrev )
 	// Cleanup its data.
 	if( pTemp->pvEngineData )
 	{
-		// its engine memory block with extradata
-		// if we will be used 'free' or 'delete'
-		// engine will be crashed on next memory checking!!!
+		// it's engine memory block with extradata
+		// if it will be released with 'free' or 'delete'
+		// is engine immediately crashed on next memory checking!!!
 		FREE( pTemp->pvEngineData );
 	}
 

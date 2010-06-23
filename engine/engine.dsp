@@ -214,6 +214,10 @@ SOURCE=.\common\net_chan.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\net_encode.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\net_huff.c
 # End Source File
 # Begin Source File

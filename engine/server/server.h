@@ -138,6 +138,7 @@ typedef struct sv_client_s
 	double		lastconnect;
 
 	int		challenge;		// challenge of this user, randomly generated
+	int		userid;			// identifying number on server
 
 	netchan_t		netchan;
 } sv_client_t;
@@ -237,6 +238,7 @@ typedef struct
 	int		spawncount;		// incremented each server start
 						// used to check late spawns
 	sv_client_t	*clients;			// [sv_maxclients->integer]
+	sv_client_t	*currentPlayer;		// current client who network message sending on
 	int		num_client_entities;	// sv_maxclients->integer*UPDATE_BACKUP*MAX_PACKET_ENTITIES
 	int		next_client_entities;	// next client_entity to use
 	entity_state_t	*client_entities;		// [num_client_entities]
@@ -273,6 +275,7 @@ extern	cvar_t		*sv_rollangle;
 extern	cvar_t		*sv_rollspeed;
 extern	cvar_t		*sv_maxspeed;
 extern	cvar_t		*sv_maxclients;
+extern	cvar_t		*sv_skyname;
 extern	cvar_t		*serverinfo;
 extern	cvar_t		*physinfo;
 extern	sv_client_t	*sv_client;

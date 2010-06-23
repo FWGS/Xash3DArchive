@@ -1,5 +1,5 @@
 LIBRARY server
 EXPORTS
-	CreateAPI			@1
+	GiveFnptrsToDll			@1
 SECTIONS
 	.data READ WRITE

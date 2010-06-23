@@ -532,16 +532,6 @@ void CWorld :: Precache( void )
 	{
 		ALERT ( at_debug, "**COULD NOT CREATE SOUNDENT**\n" );
 	}
-
-	if( pev->target != 0 )
-	{
-		SET_SKYBOX( STRING( pev->target ));
-	}
-	else
-	{
-		SET_SKYBOX( "desert" );	// it's a default Half-Life skybox, right ?
-	}
-
 	InitBodyQue();
 	
 // init sentence group playback stuff from sentences.txt.
@@ -685,7 +675,7 @@ void CWorld :: KeyValue( KeyValueData *pkvd )
 	if( FStrEq( pkvd->szKeyName, "skyname" ))
 	{
 		// Sent over net now.
-		pev->target = ALLOC_STRING( pkvd->szValue );
+		CVAR_SET_STRING( "sv_skyname", pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
 	else if ( FStrEq(pkvd->szKeyName, "sounds") )

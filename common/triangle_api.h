@@ -5,6 +5,8 @@
 #ifndef TRIANGLE_API_H
 #define TRIANGLE_API_H
 
+#define TRI_API_VERSION	1
+
 typedef enum 
 {
 	TRI_FRONT = 0,
@@ -29,7 +31,7 @@ typedef enum
 
 typedef struct triapi_s
 {
-	size_t	api_size;			// must match with sizeof( triapi_t );
+	int	version;
 
 	shader_t	(*LoadShader)( const char *szShaderName, int fShaderNoMip );
 	shader_t	(*GetSpriteTexture)( int spriteIndex, int spriteFrame );

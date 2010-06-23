@@ -20,7 +20,7 @@ extern void PhysicsFrame( void );
 extern void PhysicsPostFrame( void );
 
 extern void respawn( entvars_t* pev, BOOL fCopyCorpse );
-extern BOOL ClientConnect( edict_t *pEntity, const char *userinfo );
+extern BOOL ClientConnect( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128] );
 extern void ClientDisconnect( edict_t *pEntity );
 extern void ClientKill( edict_t *pEntity );
 extern void ClientPutInServer( edict_t *pEntity );
@@ -30,6 +30,7 @@ extern void ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
 extern void ServerDeactivate( void );
 extern void StartFrame( void );
 extern void EndFrame( void );
+extern void RegisterEncoders( void );
 extern void PlayerPostThink( edict_t *pEntity );
 extern void PlayerPreThink( edict_t *pEntity );
 extern void BuildLevelList( void );

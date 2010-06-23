@@ -594,7 +594,7 @@ void Con_Close( void )
 	con.displayFrac = 0;
 }
 
-bool Con_Active( void )
+bool Con_Visible( void )
 {
-	return con.initialized;
+	return (con.finalFrac != 0.0f);
 }

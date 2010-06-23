@@ -30,7 +30,6 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 
 static HUD_FUNCTIONS gFunctionTable = 
 {
-	sizeof( HUD_FUNCTIONS ),
 	HUD_VidInit,
 	HUD_Init,
 	HUD_Redraw,
@@ -222,7 +221,7 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	ent->v.solid = state->solid;
 	ent->v.movetype = state->movetype;
 	ent->v.flags = state->flags;
-	ent->v.ideal_pitch = state->idealpitch;
+	ent->v.idealpitch = state->idealpitch;
 	ent->v.animtime = state->animtime;
 	ent->v.ltime = state->localtime;
 
@@ -271,7 +270,7 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	{
 	case ED_CLIENT:
 		ent->v.punchangle = LerpAngle( prev->punch_angles, state->punch_angles, m_fLerp );
-		ent->v.viewangles = LerpAngle( prev->viewangles, state->viewangles, m_fLerp );
+		ent->v.v_angle = LerpAngle( prev->viewangles, state->viewangles, m_fLerp );
 		ent->v.view_ofs = LerpPoint( prev->viewoffset, state->viewoffset, m_fLerp );
 
 		if( prev->fov != 90.0f && state->fov == 90.0f )

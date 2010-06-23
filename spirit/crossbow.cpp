@@ -350,7 +350,7 @@ void CCrossbow::FireSniperBolt()
 	// player "shoot" animation
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 	
-	Vector anglesAim = m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle;
+	Vector anglesAim = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 	UTIL_MakeVectors( anglesAim );
 	Vector vecSrc = m_pPlayer->GetGunPosition( ) - gpGlobals->v_up * 2;
 	Vector vecDir = gpGlobals->v_forward;
@@ -425,7 +425,7 @@ void CCrossbow::FireBolt()
 	// player "shoot" animation
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-	Vector anglesAim = m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle;
+	Vector anglesAim = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 	UTIL_MakeVectors( anglesAim );
 	
 	anglesAim.x		= -anglesAim.x;

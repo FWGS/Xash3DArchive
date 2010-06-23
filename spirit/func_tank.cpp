@@ -895,7 +895,7 @@ void CFuncTank::TrackTarget( void )
 		{
 			// "Match target" mode:
 			// first, get the player's angles
-			angles = pController->pev->viewangles;
+			angles = pController->pev->v_angle;
 			// Work out what point the player is looking at
 			UTIL_MakeVectorsPrivate(angles, direction,NULL,NULL);
 
@@ -936,7 +936,7 @@ void CFuncTank::TrackTarget( void )
 		{
 			// "Match angles" mode
 			// just get the player's angles
-			angles = pController->pev->viewangles;
+			angles = pController->pev->v_angle;
 			angles[0] = 0 - angles[0];
 
 			UpdateSpot();

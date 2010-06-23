@@ -1033,7 +1033,9 @@ void CBasePlayerWeapon::SendWeaponAnim( int iAnim, float fps )
 		}
 	}
 
-	//calculate additional body for special effects
+	m_pPlayer->pev->weaponanim = iAnim;
+
+	// calculate additional body for special effects
 	pev->body = (pev->body % NUM_HANDS) + NUM_HANDS * m_iBody;
 
 	MESSAGE_BEGIN( MSG_ONE, gmsgWeaponAnim, NULL, m_pPlayer->pev );

@@ -27,3 +27,17 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 {
 	return TRUE;
 }
+
+enginefuncs_t g_engfuncs;
+globalvars_t  *gpGlobals;
+
+
+#ifdef _WIN32
+void DLLEXPORT GiveFnptrsToDll(	enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals )
+#else
+extern "C" void DLLEXPORT GiveFnptrsToDll(	enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals )
+#endif
+{
+	memcpy(&g_engfuncs, pengfuncsFromEngine, sizeof(enginefuncs_t));
+	gpGlobals = pGlobals;
+}

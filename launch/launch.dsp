@@ -196,10 +196,6 @@ SOURCE=.\parselib.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\patch.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\soundlib\snd_main.c
 # End Source File
 # Begin Source File

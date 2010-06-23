@@ -40,7 +40,7 @@ void V_SetupRefDef( void )
 	cl.refdef.onground = clent->v.groundentity;
 	cl.refdef.health = clent->v.health;
 	cl.refdef.movetype = clent->v.movetype;
-	cl.refdef.idealpitch = clent->v.ideal_pitch;
+	cl.refdef.idealpitch = clent->v.idealpitch;
 	cl.refdef.num_entities = clgame.globals->numEntities;
 	cl.refdef.max_entities = clgame.globals->maxEntities;
 	cl.refdef.maxclients = clgame.globals->maxClients;

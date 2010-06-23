@@ -367,7 +367,7 @@ void CBaseTurret::Initialize(void)
 	m_flStartYaw = pev->angles.y;
 	if (m_iOrientation == 1)
 	{
-		pev->ideal_pitch = 180;
+		pev->idealpitch = 180;
 		pev->angles.x = 180;
 		pev->view_ofs.z = -pev->view_ofs.z;
 		pev->effects |= EF_INVLIGHT;

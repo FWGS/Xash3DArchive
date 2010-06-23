@@ -934,6 +934,8 @@ void CBasePlayerWeapon :: SendWeaponAnim( int sequence, float fps )
 		}
 	}
 
+	m_pPlayer->pev->weaponanim = m_iSequence;
+
 	// calculate additional body for special effects
 	pev->body = (pev->body % NUM_HANDS) + NUM_HANDS * m_iBody;
  	
@@ -1412,7 +1414,7 @@ int CBasePlayerWeapon :: Shoot ( const char *ammo, Vector vecSpread, int firemod
 		// eject brass
 		for( int i = 0; cShots > i; i++ )
 		{
-			UTIL_PlaybackEvent( 0, m_pPlayer->edict(), m_usEjectBrass, 0.0, g_vecZero, g_vecZero, 0, 0, GetBulletType( ammo ), 0, firemode, 0 );
+			PLAYBACK_EVENT_FULL( 0, m_pPlayer->edict(), m_usEjectBrass, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, GetBulletType( ammo ), 0, firemode, 0 );
 		}
 		if( !FStriCmp( ammo, "buckshot" ))//HACK 
 		{
@@ -1438,22 +1440,22 @@ int CBasePlayerWeapon :: Launch ( const char *ammo, int type )
 	if ( !FStriCmp( ammo, "m203" )) 
 	{
 		// we don't add in player velocity anymore.
-         		UTIL_MakeVectors( m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle );
+         		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 		CGrenade::ShootContact( m_pPlayer->pev, m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16, gpGlobals->v_forward * 800 );
 	}	
 	else if( !FStriCmp( ammo, "rockets" ))
 	{
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 		Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_forward * 16 + gpGlobals->v_right * 8 + gpGlobals->v_up * -8;
 
-		CRpgRocket *pRocket = CRpgRocket::Create ( vecSrc, m_pPlayer->pev->viewangles, m_pPlayer, this );
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );// RpgRocket::Create stomps on globals, so remake.
+		CRpgRocket *pRocket = CRpgRocket::Create ( vecSrc, m_pPlayer->pev->v_angle, m_pPlayer, this );
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );// RpgRocket::Create stomps on globals, so remake.
 		pRocket->pev->velocity = pRocket->pev->velocity + gpGlobals->v_forward * DotProduct( m_pPlayer->pev->velocity, gpGlobals->v_forward );
 	} 
 	else if( !FStriCmp( ammo, "bolts" ))
 	{
 		// we don't add in player velocity anymore.
-		Vector anglesAim = m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle;
+		Vector anglesAim = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 		UTIL_MakeVectors( anglesAim );
 	
 		anglesAim.x = -anglesAim.x;
@@ -1466,13 +1468,13 @@ int CBasePlayerWeapon :: Launch ( const char *ammo, int type )
 	}
 	else if( !FStriCmp( ammo, "nuke" ))
 	{
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 		Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_forward * 16 + gpGlobals->v_up * 2;
-		CWHRocket *pRocket = CWHRocket::Create ( vecSrc, m_pPlayer->pev->viewangles, m_pPlayer, this, type );
+		CWHRocket *pRocket = CWHRocket::Create ( vecSrc, m_pPlayer->pev->v_angle, m_pPlayer, this, type );
 	}
 	else if( !FStriCmp( ammo, "grenade" ))
 	{
-		Vector angThrow = m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle;
+		Vector angThrow = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 
 		if ( angThrow.x < 0 ) angThrow.x = -10 + angThrow.x * ( ( 90 - 10 ) / 90.0 );
 		else angThrow.x = -10 + angThrow.x * ( ( 90 + 10 ) / 90.0 );
@@ -1522,7 +1524,7 @@ int CBasePlayerWeapon::Swing( int fFirst )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3;
           
-	UTIL_MakeVectors( m_pPlayer->pev->viewangles );
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecEnd = vecSrc + gpGlobals->v_forward * 32;
 

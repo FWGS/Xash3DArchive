@@ -239,7 +239,7 @@ void CMP5::SecondaryAttack( void )
 		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glauncher2.wav", 0.8, ATTN_NORM);
 	}
  
-	UTIL_MakeVectors( m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle );
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	// we don't add in player velocity anymore.
 	CGrenade::ShootContact( m_pPlayer->pev, 

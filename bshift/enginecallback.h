@@ -68,6 +68,7 @@ extern enginefuncs_t g_engfuncs;
 #define CRC32_FINAL		(*g_engfuncs.pfnCRC_Final)
 #define RANDOM_LONG		(*g_engfuncs.pfnRandomLong)
 #define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)
+#define GETPLAYERAUTHID	(*g_engfuncs.pfnGetPlayerAuthId)
 #define CLASSIFY_EDICT	(*g_engfuncs.pfnClassifyEdict)
 #define COM_Parse		(*g_engfuncs.pfnParseToken)
 
@@ -129,7 +130,6 @@ inline void *GET_PRIVATE( edict_t *pent )
 #define GET_ATTACHMENT			(*g_engfuncs.pfnGetAttachment)
 #define SET_VIEW				(*g_engfuncs.pfnSetView)
 #define SET_CROSSHAIRANGLE		(*g_engfuncs.pfnCrosshairAngle)
-#define SET_SKYBOX		(*g_engfuncs.pfnSetSkybox)
 #define LOAD_FILE_FOR_ME		(*g_engfuncs.pfnLoadFile)
 #define FREE_FILE				(*g_engfuncs.pfnFreeFile)
 #define COMPARE_FILE_TIME		(*g_engfuncs.pfnCompareFileTime)
@@ -145,10 +145,20 @@ inline void *GET_PRIVATE( edict_t *pent )
 
 #define IS_DEDICATED_SERVER		(*g_engfuncs.pfnIsDedicatedServer)
 
+#define DELTA_SET				( *g_engfuncs.pfnDeltaSetField )
+#define DELTA_UNSET				( *g_engfuncs.pfnDeltaUnsetField )
+#define DELTA_ADDENCODER		( *g_engfuncs.pfnDeltaAddEncoder )
+#define ENGINE_CURRENT_PLAYER   ( *g_engfuncs.pfnGetCurrentPlayer )
+
 #define PRECACHE_EVENT			(*g_engfuncs.pfnPrecacheEvent)
+#define PLAYBACK_EVENT_FULL		(*g_engfuncs.pfnPlaybackEvent)
+
 #define	ENGINE_CANSKIP			( *g_engfuncs.pfnCanSkipPlayer )
 
-#define HOST_ENDGAME	(*g_engfuncs.pfnEndGame)
+#define DELTA_FINDFIELD			( *g_engfuncs.pfnDeltaFindField )
+#define DELTA_SETBYINDEX		( *g_engfuncs.pfnDeltaSetFieldByIndex )
+#define DELTA_UNSETBYINDEX		( *g_engfuncs.pfnDeltaUnsetFieldByIndex )
+
 #define HOST_ERROR		(*g_engfuncs.pfnHostError)
 
 #define ENGINE_GETPHYSINFO		( *g_engfuncs.pfnGetPhysicsInfoString )

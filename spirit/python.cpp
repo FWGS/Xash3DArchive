@@ -149,7 +149,7 @@ void CPython::PrimaryAttack()
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle );
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 		Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 		Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
@@ -192,8 +192,8 @@ void CPython::UpdateSpot( void )
 			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/spot_on.wav", 1, ATTN_NORM);
 		}
 
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );
-		Vector vecSrc = m_pPlayer->GetGunPosition( );;
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
+		Vector vecSrc = m_pPlayer->GetGunPosition( );
 		Vector vecAiming = gpGlobals->v_forward;
 
 		TraceResult tr;

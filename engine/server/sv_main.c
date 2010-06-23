@@ -51,6 +51,7 @@ cvar_t	*sv_skycolor_b;
 cvar_t	*sv_skyvec_x;
 cvar_t	*sv_skyvec_y;
 cvar_t	*sv_skyvec_z;
+cvar_t	*sv_skyname;
 
 void Master_Shutdown( void );
 
@@ -160,6 +161,12 @@ void SV_UpdateMovevars( void )
 	{
 		SV_ConfigString( CS_WATERAMP, sv_wateramp->string );
 		sv_wateramp->modified = false;
+	}
+
+	if( sv_skyname->modified )
+	{
+		SV_ConfigString( CS_SKYNAME, sv_skyname->string );
+		sv_skyname->modified = false;
 	}
 
 	if( sv_skycolor_r->modified || sv_skycolor_g->modified || sv_skycolor_g->modified )
@@ -553,6 +560,7 @@ void SV_Init( void )
 	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "1", 0, "sky direction x (hl1 compatibility)" );
 	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", 0, "sky direction y (hl1 compatibility)" );
 	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "-1", 0, "sky direction z (hl1 compatibility)" );
+	sv_skyname = Cvar_Get ("sv_skyname", "", 0, "skybox name (can be dynamically changed in-game)" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );

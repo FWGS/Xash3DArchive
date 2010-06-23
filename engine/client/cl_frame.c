@@ -267,7 +267,7 @@ void CL_ParseFrame( sizebuf_t *msg )
 		Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar	
 		// getting a valid frame message ends the connection process
 		VectorCopy( player->pvClientData->current.origin, cl.predicted_origin );
-		VectorCopy( player->v.viewangles, cl.predicted_angles );
+		VectorCopy( player->v.v_angle, cl.predicted_angles );
 	}
 
 	CL_CheckPredictionError();

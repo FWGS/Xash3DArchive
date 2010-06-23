@@ -159,8 +159,8 @@ public:
 	int		m_iLastCoverSearch;
 
 	// functions to create the graph
-	int		LinkVisibleNodes ( CLink *pLinkPool, void *file, int *piBadNode );
-	int		RejectInlineLinks ( CLink *pLinkPool, void *file );
+	int		LinkVisibleNodes ( CLink *pLinkPool, FILE *file, int *piBadNode );
+	int		RejectInlineLinks ( CLink *pLinkPool, FILE *file );
 	int		FindShortestPath ( int *piPath, int iStart, int iDest, int iHull, int afCapMask);
 	int		FindNearestNode ( const Vector &vecOrigin, CBaseEntity *pEntity );
 	int		FindNearestNode ( const Vector &vecOrigin, int afNodeTypes );

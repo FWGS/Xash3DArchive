@@ -454,7 +454,7 @@ void CSqueak::PrimaryAttack()
 {
 	if ( m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] )
 	{
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 		TraceResult tr;
 		Vector trace_origin;
 
@@ -468,14 +468,14 @@ void CSqueak::PrimaryAttack()
 
 		// find place to toss monster
 		UTIL_TraceLine( trace_origin + gpGlobals->v_forward * 20, trace_origin + gpGlobals->v_forward * 64, dont_ignore_monsters, NULL, &tr );
-		PLAYBACK_EVENT_FULL( 0, m_pPlayer->edict(), m_usSnarkFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, pev->body, 0, 0, 0 );
+		PLAYBACK_EVENT_FULL( 0, m_pPlayer->edict(), m_usSnarkFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, pev->body, 0, 0, 0 );
 
 		if ( tr.fAllSolid == 0 && tr.fStartSolid == 0 && tr.flFraction > 0.25 )
 		{
 			// player "shoot" animation
 			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-			CBaseEntity *pSqueak = CBaseEntity::Create( "monster_snark", tr.vecEndPos, m_pPlayer->pev->viewangles, m_pPlayer->edict() );
+			CBaseEntity *pSqueak = CBaseEntity::Create( "monster_snark", tr.vecEndPos, m_pPlayer->pev->v_angle, m_pPlayer->edict() );
 			pSqueak->pev->velocity = gpGlobals->v_forward * 200 + m_pPlayer->pev->velocity;
 
 			// play hunt sound

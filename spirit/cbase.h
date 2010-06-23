@@ -70,6 +70,9 @@ CBaseEntity
 #define EXPORT	/* */
 #endif
 
+extern "C" EXPORT int GetEntityAPI( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion );
+extern "C" EXPORT int GetEntityAPI2( DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion );
+
 extern int DispatchSpawn( edict_t *pent );
 extern int DispatchCreate( edict_t *pent, const char *szName );
 extern void DispatchKeyValue( edict_t *pentKeyvalue, KeyValueData *pkvd );

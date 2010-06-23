@@ -202,7 +202,7 @@ int PRECACHE_PARTICLE( char* s )
 	}
 
 	char	*token = NULL;
-	char	*afile = (char *)LOAD_FILE( s, NULL );
+	char	*afile = (char *)LOAD_FILE_FOR_ME( s, NULL );
 	const char *pfile = afile; 
 
 	if( !afile )
@@ -239,7 +239,7 @@ int PRECACHE_SOUND( char* s )
 	if(!s || !*s) return g_sSoundIndexNullSound; //set null sound
 	
 	//NOTE: Engine function as predicted for sound folder
-	//But LOAD_FILE don't known about this. Set it manualy
+	//But LOAD_FILE_FOR_ME don't known about this. Set it manualy
 
 	char path[256];		//g-cont.
 	char *sound = s;		//sounds from model events can contains a symbol '*'.
@@ -274,27 +274,6 @@ unsigned short PRECACHE_EVENT( int type, const char* psz )
 	// NOTE: Xash3D not used .sc files but names
 	// so no reason to check something
 	return g_engfuncs.pfnPrecacheEvent( type, psz );
-}
-
-void PLAYBACK_EVENT_FULL( int flags, const edict_t *pInvoker, unsigned short eventindex, float delay, Vector origin, Vector angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
-{
-	event_args_t	args;
-
-	args.flags = 0;
-	if( !FNullEnt( pInvoker ))
-		args.entindex = ENTINDEX( (edict_t *)pInvoker );
-	else args.entindex = 0;
-	origin.CopyToArray( args.origin );
-	angles.CopyToArray( args.angles );
-	// don't add velocity - engine will be reset it for some reasons
-	args.fparam1 = fparam1;
-	args.fparam2 = fparam2;
-	args.iparam1 = iparam1;
-	args.iparam2 = iparam2;
-	args.bparam1 = bparam1;
-	args.bparam2 = bparam2;
-
-	g_engfuncs.pfnPlaybackEvent( flags, pInvoker, eventindex, delay, &args );
 }
 
 float UTIL_WeaponTimeBase( void )
@@ -461,9 +440,9 @@ TYPEDESCRIPTION	gEntvarsDescription[] =
 	DEFINE_ENTITY_FIELD( oldangles, FIELD_VECTOR ),
 	DEFINE_ENTITY_FIELD( avelocity, FIELD_VECTOR ),
 	DEFINE_ENTITY_FIELD( punchangle, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( viewangles, FIELD_VECTOR ),
+	DEFINE_ENTITY_FIELD( v_angle, FIELD_VECTOR ),
 	DEFINE_ENTITY_FIELD( fixangle, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( ideal_pitch, FIELD_FLOAT ),
+	DEFINE_ENTITY_FIELD( idealpitch, FIELD_FLOAT ),
 	DEFINE_ENTITY_FIELD( pitch_speed, FIELD_FLOAT ),
 	DEFINE_ENTITY_FIELD( ideal_yaw, FIELD_FLOAT ),
 	DEFINE_ENTITY_FIELD( yaw_speed, FIELD_FLOAT ),
@@ -553,6 +532,9 @@ TYPEDESCRIPTION	gEntvarsDescription[] =
 	DEFINE_ENTITY_FIELD( noise2, FIELD_SOUNDNAME ),
 	DEFINE_ENTITY_FIELD( noise3, FIELD_SOUNDNAME ),
 	DEFINE_ENTITY_FIELD( speed, FIELD_FLOAT ),
+	DEFINE_ENTITY_FIELD( air_finished, FIELD_TIME ),
+	DEFINE_ENTITY_FIELD( pain_finished, FIELD_TIME ),
+	DEFINE_ENTITY_FIELD( radsuit_finished, FIELD_TIME ),
 };
 
 #define ENTVARS_COUNT		(sizeof(gEntvarsDescription)/sizeof(gEntvarsDescription[0]))
@@ -2038,7 +2020,7 @@ BOOL UTIL_IsFacing( entvars_t *pevTest, const Vector &reference )
 	vecDir.z = 0;
 	vecDir = vecDir.Normalize();
 	Vector forward, angle;
-	angle = pevTest->viewangles;
+	angle = pevTest->v_angle;
 	angle.x = 0;
 	UTIL_MakeVectorsPrivate( angle, forward, NULL, NULL );
 	// He's facing me, he meant it

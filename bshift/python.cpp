@@ -201,7 +201,7 @@ void CPython::PrimaryAttack()
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
 
-	UTIL_MakeVectors( m_pPlayer->pev->viewangles + m_pPlayer->pev->punchangle );
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );

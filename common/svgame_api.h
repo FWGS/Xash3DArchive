@@ -8,6 +8,8 @@
 #include "trace_def.h"
 #include "pm_shared.h"
 
+#define SV_INTERFACE_VERSION		140
+
 typedef struct globalvars_s
 {	
 	float		time;
@@ -42,7 +44,7 @@ typedef struct globalvars_s
 	int		trace_hitgroup;
 	int		trace_flags;
 
-	int		changelevel;	// transition in progress when true
+	int		changelevel;	// transition in progress when true (was msg_entity)
 	int		numEntities;	// actual ents count (was cdAudioTrack)
 	int		maxClients;
 	int		maxEntities;
@@ -56,9 +58,6 @@ typedef struct globalvars_s
 // engine hands this to DLLs for functionality callbacks
 typedef struct enginefuncs_s
 {
-	// interface validator
-	int	api_size;			// must matched with sizeof( enginefuncs_t )
-
 	int	(*pfnPrecacheModel)( const char* s );
 	int	(*pfnPrecacheSound)( const char* s );
 	void	(*pfnSetModel)( edict_t *e, const char *m );
@@ -121,7 +120,7 @@ typedef struct enginefuncs_s
 	void	(*pfnCVarSetFloat)( const char *szVarName, float flValue );
 	void	(*pfnCVarSetString)( const char *szVarName, const char *szValue );
 	void	(*pfnAlertMessage)( ALERT_TYPE level, char *szFmt, ... );
-	void	(*pfnEngineFprintf)( void *pfile, char *szFmt, ... );
+	void*	(*pfnGetProcAddress)( void *hInstance, const char *name );	// was pfnEngineFprintf
 	void*	(*pfnPvAllocEntPrivateData)( edict_t *pEdict, long cb );
 	void*	(*pfnPvEntPrivateData)( edict_t *pEdict );
 	void	(*pfnFreeEntPrivateData)( edict_t *pEdict );
@@ -156,14 +155,14 @@ typedef struct enginefuncs_s
 	void	(*pfnCrosshairAngle)( const edict_t *pClient, float pitch, float yaw );
 	byte*	(*pfnLoadFile)( const char *filename, int *pLength );
 	void	(*pfnFreeFile)( void *buffer );
-	void	(*pfnEndGame)( const char *engine_command );		// was pfnEndSection
+	void	(*pfnEndSection)( const char *pszSectionName );
 	int	(*pfnCompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void	(*pfnGetGameDir)( char *szGetGameDir );
 	void	(*pfnClassifyEdict)( edict_t *pEdict, int ed_type );	// was pfnCvar_RegisterVariable
 	void	(*pfnFadeClientVolume)( const edict_t *pEdict, float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
 	void	(*pfnSetClientMaxspeed)( const edict_t *pEdict, float fNewMaxspeed );
 	edict_t	*(*pfnCreateFakeClient)( const char *netname ); // returns NULL if fake client can't be created
-	void	(*pfnThinkFakeClient)( edict_t *client, usercmd_t *cmd );	// was pfnRunPlayerMove, like it
+	void	(*pfnRunPlayerMove)( edict_t *fakeclient, const float *viewangles, float forwardmove, float sidemove, float upmove, word buttons, byte impulse, byte msec );
 	int	(*pfnFileExists)( const char *filename );		// was pfnNumberOfEntities - see gpGlobals->numEntities
 	char*	(*pfnGetInfoKeyBuffer)( edict_t *e );			// passing in NULL gets the serverinfo
 	char*	(*pfnInfoKeyValue)( char *infobuffer, char *key );
@@ -172,7 +171,7 @@ typedef struct enginefuncs_s
 	int	(*pfnIsMapValid)( char *filename );
 	void	(*pfnStaticDecal)( const float *origin, int decalIndex, int entityIndex, int modelIndex );
 	int	(*pfnPrecacheGeneric)( const char* s );
-	void	(*pfnSetSkybox)( const char *name );			// was pfnGetPlayerUserId
+	int	(*pfnGetPlayerUserId)(edict_t *e ); // returns the server assigned userid for this player.  useful for logging frags, etc.
 	void	(*pfnPlayMusic)( const char *trackname, int flags );	// was pfnBuildSoundMsg
 	int	(*pfnIsDedicatedServer)( void );			// is this a dedicated server?
 	void*	(*pfnMemAlloc)(size_t cb, const char *file, const int line);// was pfnCVarGetPointer
@@ -182,18 +181,18 @@ typedef struct enginefuncs_s
 	void	(*pfnSetPhysicsKeyValue)( const edict_t *pClient, const char *key, const char *value );
 	const char *(*pfnGetPhysicsInfoString)( const edict_t *pClient );
 	word	(*pfnPrecacheEvent)( int type, const char *psz );
-	void	(*pfnPlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, struct event_args_s *args );
+	void	(*pfnPlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 	byte	*(*pfnSetFatPVS)( const float *org, int portal );
 	byte	*(*pfnSetFatPAS)( const float *org, int portal );
 	int	(*pfnCheckVisibility)( const edict_t *entity, byte *pset );
-	void*	(*pfnFOpen)( const char* path, const char* mode );	// was pfnDeltaSetField
-	long	(*pfnFRead)( void *file, void* buffer, size_t buffersize );	// was pfnDeltaUnsetField
-	long	(*pfnFWrite)(void *file, const void* data, size_t datasize);// was pfnDeltaAddEncoder
-	int	(*pfnFClose)( void *file );				// was pfnGetCurrentPlayer
+	void	(*pfnDeltaSetField)	( struct delta_s *pFields, const char *fieldname );
+	void	(*pfnDeltaUnsetField)( struct delta_s *pFields, const char *fieldname );
+	void	(*pfnDeltaAddEncoder)( char *name, void (*conditionalencode)( struct delta_s *pFields, const byte *from, const byte *to ));
+	int	(*pfnGetCurrentPlayer)( void );
 	int	(*pfnCanSkipPlayer)( const edict_t *player );
-	int	(*pfnFGets)( void *file, byte *string, size_t bufsize );	// was fnDeltaFindField
-	int	(*pfnFSeek)( void *file, long offset, int whence );	// was pfnDeltaSetFieldByIndex
-	long	(*pfnFTell)( void *file );				// was pfnDeltaUnsetFieldByIndex
+	int	(*pfnDeltaFindField)( struct delta_s *pFields, const char *fieldname );
+	void	(*pfnDeltaSetFieldByIndex)( struct delta_s *pFields, int fieldNumber );
+	void	(*pfnDeltaUnsetFieldByIndex)( struct delta_s *pFields, int fieldNumber );
 	void	(*pfnSetGroupMask)( int mask, int op );
 	void	(*pfnDropClient)( int clientIndex );			// was pfnCreateInstancedBaseline
 	void	(*pfnHostError)( const char *szFmt, ... );		// was pfnCvar_DirectSet
@@ -201,9 +200,9 @@ typedef struct enginefuncs_s
 	void	(*pfnGetPlayerStats)( const edict_t *pClient, int *ping, int *packet_loss );
 	void	(*pfnAddServerCommand)( const char *cmd_name, void (*function)(void), const char *cmd_desc );
 	void*	(*pfnLoadLibrary)( const char *name );			// was pfnVoice_GetClientListening
-	void*	(*pfnGetProcAddress)( void *hInstance, const char *name );	// was pfnVoice_SetClientListening
-	void	(*pfnFreeLibrary)( void *hInstance );			// was pfnGetPlayerAuthId
-	// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 138
+	void	(*pfnFreeLibrary)( void *hInstance );			// was pfnVoice_SetClientListening
+	const char *(*pfnGetPlayerAuthId)( edict_t *e );
+	// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 140
 } enginefuncs_t;
 
 // passed to pfnKeyValue
@@ -313,9 +312,6 @@ typedef struct
 
 typedef struct 
 {
-	// interface validator
-	size_t	api_size;		// must matched with sizeof(DLL_FUNCTIONS)
-
 	// initialize/shutdown the game (one-time call after loading of game .dll )
 	void	(*pfnGameInit)( void );				
 	int	(*pfnSpawn)( edict_t *pent );
@@ -334,7 +330,7 @@ typedef struct
 	void	(*pfnRestoreGlobalState)( SAVERESTOREDATA * );
 	void	(*pfnResetGlobalState)( void );
 
-	int	(*pfnClientConnect)( edict_t *pEntity, const char *userinfo );
+	int	(*pfnClientConnect)( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128] );
 	
 	void	(*pfnClientDisconnect)( edict_t *pEntity );
 	void	(*pfnClientKill)( edict_t *pEntity );
@@ -368,15 +364,19 @@ typedef struct
 	int	(*pfnPhysicsEntity)( edict_t *pEntity );		// was pfnUpdateClientData
 	int	(*pfnAddToFullPack)( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
 	void	(*pfnEndFrame)( void );				// was pfnCreateBaseline
-	int	(*pfnShouldCollide)( edict_t *pTouch, edict_t *pOther );	// was pfnRegisterEncoders
+	void	(*pfnRegisterEncoders)( void );
 	void	(*pfnUpdateEntityState)( struct entity_state_s *to, edict_t *from, int baseline ); // was pfnGetWeaponData
 	void	(*pfnCmdStart)( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed );
 	void	(*pfnCmdEnd)( const edict_t *player );
+
+	// these funcs come from GetEntityAPI2 and replace some funcs from GetEntityAPI
 	void	(*pfnOnFreeEntPrivateData)( edict_t *pEnt );		// was pfnConnectionlessPacket
 	void	(*pfnGameShutdown)( void );				// was pfnGetHullBounds
+	int	(*pfnShouldCollide)( edict_t *pTouch, edict_t *pOther );	// was pfnCreateInstancedBaselines
 } DLL_FUNCTIONS;
 
-typedef int (*SERVERAPI)( DLL_FUNCTIONS *pFunctionTable, enginefuncs_t* engfuncs, globalvars_t *pGlobals );
+typedef void (*GIVEFNPTRSTODLL)( enginefuncs_t* engfuncs, globalvars_t *pGlobals );
+typedef int (*APIFUNCTION)( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion );
 typedef void (*LINK_ENTITY_FUNC)( entvars_t *pev );
 
 #endif//SVGAME_API_H

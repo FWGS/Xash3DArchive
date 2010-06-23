@@ -755,9 +755,9 @@ void CWHRocket :: FollowThink( void  )
 	
 	if( pev->button ) // controllable rocket
 	{
-		UTIL_MakeVectorsPrivate( m_pPlayer->pev->viewangles, forward, NULL, NULL );
+		UTIL_MakeVectorsPrivate( m_pPlayer->pev->v_angle, forward, NULL, NULL );
 
-		angles = m_pPlayer->pev->viewangles;
+		angles = m_pPlayer->pev->v_angle;
 		angles.x = -angles.x;
 		float steer = WARHEAD_MAX_SPEED / pev->speed; // steer factor
 		

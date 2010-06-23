@@ -701,10 +701,6 @@ void CL_InitWorld( void )
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
 	clgame.globals->numEntities = 1;
-
-	clgame.globals->coop = Cvar_VariableInteger( "coop" );
-	clgame.globals->teamplay = Cvar_VariableInteger( "teamplay" );
-	clgame.globals->deathmatch = Cvar_VariableInteger( "deathmatch" );
 	clgame.globals->serverflags = com.atoi( cl.configstrings[CS_SERVERFLAGS] );
 
 	for( i = 0; i < clgame.globals->maxClients; i++ )
@@ -1706,9 +1702,9 @@ pfnPlaybackEvent
 
 =============
 */
-static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, event_args_t *args )
+static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
 {
-	event_args_t	dummy;
+	event_args_t	args;
 	int		invokerIndex = 0;
 
 	// first check event for out of bounds
@@ -1733,29 +1729,37 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 	if( CL_IsValidEdict( pInvoker ))
 		invokerIndex = NUM_FOR_EDICT( pInvoker );
 
-	if( args == NULL )
-	{
-		Mem_Set( &dummy, 0, sizeof( dummy ));
-		args = &dummy;
-	}
+	args.flags = 0;
+	if( CL_IsValidEdict( pInvoker ))
+		args.entindex = NUM_FOR_EDICT( pInvoker );
+	else args.entindex = 0;
+	VectorCopy( origin, args.origin );
+	VectorCopy( angles, args.angles );
+
+	args.fparam1 = fparam1;
+	args.fparam2 = fparam2;
+	args.iparam1 = iparam1;
+	args.iparam2 = iparam2;
+	args.bparam1 = bparam1;
+	args.bparam2 = bparam2;
 
 	if( flags & FEV_RELIABLE )
 	{
-		args->ducking = 0;
-		VectorClear( args->velocity );
+		args.ducking = 0;
+		VectorClear( args.velocity );
 	}
 	else if( invokerIndex )
 	{
 		// get up some info from invoker
-		if( VectorIsNull( args->origin )) 
-			VectorCopy( pInvoker->v.origin, args->origin );
-		if( VectorIsNull( args->angles )) 
-			VectorCopy( pInvoker->v.angles, args->angles );
-		VectorCopy( pInvoker->v.velocity, args->velocity );
-		args->ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
+		if( VectorIsNull( args.origin )) 
+			VectorCopy( pInvoker->v.origin, args.origin );
+		if( VectorIsNull( args.angles )) 
+			VectorCopy( pInvoker->v.angles, args.angles );
+		VectorCopy( pInvoker->v.velocity, args.velocity );
+		args.ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
 	}
 
-	CL_QueueEvent( flags, eventindex, delay, args );
+	CL_QueueEvent( flags, eventindex, delay, &args );
 }
 
 /*
@@ -2348,7 +2352,7 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 
 static triapi_t gTriApi =
 {
-	sizeof( triapi_t ),	
+	TRI_API_VERSION,	
 	TriLoadShader,
 	TriGetSpriteFrame,
 	TriRenderMode,
@@ -2372,7 +2376,6 @@ static triapi_t gTriApi =
 
 static efxapi_t gEfxApi =
 {
-	sizeof( efxapi_t ),	
 	CL_AllocParticle,
 	CL_BlobExplosion,
 	CL_EntityParticles,
@@ -2398,7 +2401,7 @@ static efxapi_t gEfxApi =
 
 static event_api_t gEventApi =
 {
-	sizeof( event_api_t ),
+	EVENT_API_VERSION,
 	pfnPrecacheEvent,
 	pfnPlaybackEvent,
 	pfnWeaponAnim,
@@ -2420,7 +2423,6 @@ static event_api_t gEventApi =
 // engine callbacks
 static cl_enginefuncs_t gEngfuncs = 
 {
-	sizeof( cl_enginefuncs_t ),
 	pfnSPR_Load,
 	pfnSPR_Frames,
 	pfnSPR_Height,
@@ -2486,13 +2488,13 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnTraceHull,
 	pfnTraceModel,
 	pfnTraceTexture,
-	pfnFOpen,
-	pfnFRead,
-	pfnFWrite,
-	pfnFClose,
-	pfnFGets,
-	pfnFSeek,
-	pfnFTell,
+	pfnPrecacheEvent,
+	pfnPlaybackEvent,
+	pfnWeaponAnim,
+	pfnRandomFloat,
+	pfnRandomLong,
+	pfnHookEvent,
+	Con_Visible,
 	pfnLoadLibrary,
 	pfnGetProcAddress,
 	pfnFreeLibrary,

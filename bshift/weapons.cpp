@@ -851,6 +851,8 @@ void CBasePlayerWeapon::SendWeaponAnim( int iAnim, int skiplocal )
 	if ( skiplocal && ENGINE_CANSKIP( m_pPlayer->edict() ) )
 		return;
 
+	m_pPlayer->pev->weaponanim = iAnim;
+
 	float framerate = 1.0f;	// play speed 1.x
 
 	MESSAGE_BEGIN( MSG_ONE, SVC_WEAPONANIM, NULL, m_pPlayer->pev );

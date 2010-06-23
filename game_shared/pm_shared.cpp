@@ -1696,7 +1696,7 @@ void PM_SpectatorMove( void )
 	// doesn't need excate track position, only to generate PVS, so just copy
 	// targets position and real view position is calculated on client (saves server CPU)
 	
-	if ( pev->iSpecMode == OBS_ROAMING )
+	if ( pev->iuser1 == OBS_ROAMING )
 	{
 		// Move around in normal spectator method
 		speed = pmove->velocity.Length();
@@ -2460,13 +2460,6 @@ void PM_CheckFalling( void )
 	{
 		float	fvol = 0.5;
 
-		if( pev->flJumpPadTime && pev->flJumpPadTime < pmove->realtime ) 
-		{
-			// scale delta if was pushed by jump pad
-			float delta = (1.0f + pmove->realtime - pev->flJumpPadTime) * 0.5f;
-			pev->flFallVelocity /= delta;
-		}
-
 		if( pev->waterlevel > 0 )
 		{
 			// does nothing
@@ -2707,7 +2700,7 @@ void PM_PlayerMove( BOOL server )
 	// PM_ShowClipBox();
 
 	// Special handling for spectator and observers. (iuser1 is set if the player's in observer mode)
-	if(( pev->flags & FL_SPECTATOR ) || pev->iSpecMode > 0 )
+	if(( pev->flags & FL_SPECTATOR ) || pev->iuser1 > 0 )
 	{
 		PM_SpectatorMove();
 		PM_CatagorizePosition();

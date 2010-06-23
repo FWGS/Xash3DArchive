@@ -275,7 +275,7 @@ void CLaserSpot::Update( CBasePlayer *m_pPlayer )
 {
 	TraceResult tr; 
 		
-	UTIL_MakeVectors( m_pPlayer->pev->viewangles );
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 	UTIL_TraceLine( m_pPlayer->GetGunPosition(), m_pPlayer->GetGunPosition() + gpGlobals->v_forward * 8192, dont_ignore_monsters, ENT(m_pPlayer->pev), &tr );
 	UTIL_SetOrigin( this, tr.vecEndPos );
 

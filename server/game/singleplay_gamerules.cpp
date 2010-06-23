@@ -87,7 +87,7 @@ BOOL CHalfLifeRules :: GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerWeapo
 
 //=========================================================
 //=========================================================
-BOOL CHalfLifeRules :: ClientConnected( edict_t *pEntity, const char *userinfo )
+BOOL CHalfLifeRules :: ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128] )
 {
 	return TRUE;
 }

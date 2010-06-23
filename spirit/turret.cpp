@@ -269,7 +269,7 @@ void CBaseTurret::Spawn()
 
 	if (m_iOrientation == 1)
 	{
-		pev->ideal_pitch = 180;
+		pev->idealpitch = 180;
 		pev->angles.x = 180;
 	}
 

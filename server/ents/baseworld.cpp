@@ -28,7 +28,7 @@ void CWorld :: KeyValue( KeyValueData *pkvd )
 {
 	if( FStrEq( pkvd->szKeyName, "skyname" ))
 	{
-		pev->target = ALLOC_STRING( pkvd->szValue );
+		CVAR_SET_STRING( "sv_skyname", pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
 	else if ( FStrEq(pkvd->szKeyName, "chaptertitle") )
@@ -62,18 +62,7 @@ void CWorld :: PostActivate( void )
 	if ( pev->spawnflags & SF_WORLD_TITLE )
 	{
 		SERVER_COMMAND( "gametitle\n" );
-		ClearBits( pev->spawnflags, SF_START_ON );
-	}
-
-	if ( pev->target )
-	{
-		// Sent over net now.
-		SET_SKYBOX( STRING( pev->target ));
-	}
-	else
-	{
-		// tell engine there is no skybox set
-		SET_SKYBOX( "" );
+		ClearBits( pev->spawnflags, SF_WORLD_TITLE );
 	}
 }
 LINK_ENTITY_TO_CLASS( worldspawn, CWorld );

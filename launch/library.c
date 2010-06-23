@@ -13,6 +13,7 @@
 
 ---------------------------------------------------------------
 */
+
 typedef struct
 {
 	PIMAGE_NT_HEADERS	headers;
@@ -716,12 +717,12 @@ bool LibraryLoadSymbols( dll_user_t *hInst )
 
 	for( i = 0; i < hInst->num_ordinals; i++ )
 	{
-		if( !com.strcmp( "CreateAPI", hInst->names[i] ))	// main entry point for Xash3D dlls
+		if( !com.strcmp( "GiveFnptrsToDll", hInst->names[i] ))	// main entry point for user dlls
 		{
 			void	*fn_offset;
 
 			index = hInst->ordinals[i];
-			fn_offset = (void *)Com_GetProcAddress( hInst, "CreateAPI" );
+			fn_offset = (void *)Com_GetProcAddress( hInst, "GiveFnptrsToDll" );
 			hInst->funcBase = (dword)(fn_offset) - hInst->funcs[index];
 			break;
 		}

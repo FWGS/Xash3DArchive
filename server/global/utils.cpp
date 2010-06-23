@@ -473,7 +473,7 @@ CBaseEntity *UTIL_FindEntityForward( CBaseEntity *pMe )
 {
 	TraceResult tr;
 
-	UTIL_MakeVectors( pMe->pev->viewangles );
+	UTIL_MakeVectors( pMe->pev->v_angle );
 	UTIL_TraceLine( pMe->pev->origin + pMe->pev->view_ofs, pMe->pev->origin + pMe->pev->view_ofs + gpGlobals->v_forward * 8192, dont_ignore_monsters, pMe->edict(), &tr );
 	if( tr.flFraction != 1.0 && !FNullEnt( tr.pHit ))
 	{
@@ -1621,31 +1621,6 @@ unsigned short UTIL_PrecacheEvent( const char *s )
 	return g_engfuncs.pfnPrecacheEvent( 1, s );
 }
 
-void UTIL_PlaybackEvent( int flags, const edict_t *pInvoker, int ev_index, float delay, event_args_t *args )
-{
-	g_engfuncs.pfnPlaybackEvent( flags, pInvoker, ev_index, delay, args );
-}
-
-void UTIL_PlaybackEvent( int flags, const edict_t *pInvoker, int ev_index, float delay, Vector origin, Vector angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
-{
-	event_args_t	args;
-
-	args.flags = 0;
-	if( !FNullEnt( pInvoker ))
-		args.entindex = ENTINDEX( (edict_t *)pInvoker );
-	else args.entindex = 0;
-	origin.CopyToArray( args.origin );
-	angles.CopyToArray( args.angles );
-	// don't add velocity - engine will be reset it for some reasons
-	args.fparam1 = fparam1;
-	args.fparam2 = fparam2;
-	args.iparam1 = iparam1;
-	args.iparam2 = iparam2;
-	args.bparam1 = bparam1;
-	args.bparam2 = bparam2;
-
-	UTIL_PlaybackEvent( flags, pInvoker, ev_index, delay, &args );
-}
 
 // ripped this out of the engine
 float	UTIL_AngleMod(float a)
@@ -2793,7 +2768,7 @@ BOOL UTIL_IsFacing( entvars_t *pevTest, const Vector &reference )
 	vecDir.z = 0;
 	vecDir = vecDir.Normalize();
 	Vector forward, angle;
-	angle = pevTest->viewangles;
+	angle = pevTest->v_angle;
 	angle.x = 0;
 
 	UTIL_MakeVectorsPrivate( angle, forward, NULL, NULL );

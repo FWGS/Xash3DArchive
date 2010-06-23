@@ -514,6 +514,8 @@ void SV_SendClientMessages( void )
 	sv_client_t	*cl;
 	int		i;
 
+	svs.currentPlayer = NULL;
+
 	if( sv.state == ss_dead )
 		return;
 
@@ -530,6 +532,8 @@ void SV_SendClientMessages( void )
 			
 		if( !cl->edict || (cl->edict->v.flags & ( FL_FAKECLIENT|FL_SPECTATOR )))
 			continue;
+
+		svs.currentPlayer = cl;
 
 		// update any userinfo packets that have changed
 		if( cl->sendinfo )
@@ -577,6 +581,9 @@ void SV_SendClientMessages( void )
 		// yes, message really sended 
 		cl->send_message = false;
 	}
+
+	// reset current client
+	svs.currentPlayer = NULL;
 }
 
 /*

@@ -558,12 +558,12 @@ void CRpg::PrimaryAttack()
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 		Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_forward * 16 + gpGlobals->v_right * 8 + gpGlobals->v_up * -8;
 		
-		CRpgRocket *pRocket = CRpgRocket::CreateRpgRocket( vecSrc, m_pPlayer->pev->viewangles, m_pPlayer, this );
+		CRpgRocket *pRocket = CRpgRocket::CreateRpgRocket( vecSrc, m_pPlayer->pev->v_angle, m_pPlayer, this );
 
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );// RpgRocket::Create stomps on globals, so remake.
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );// RpgRocket::Create stomps on globals, so remake.
 		pRocket->pev->velocity = pRocket->pev->velocity + gpGlobals->v_forward * DotProduct( m_pPlayer->pev->velocity, gpGlobals->v_forward );
 
 		// firing RPG no longer turns on the designator. ALT fire is a toggle switch for the LTD.
@@ -654,8 +654,8 @@ void CRpg::UpdateSpot( void )
 			m_pSpot = CLaserSpot::CreateSpot( m_pPlayer->pev );
 		}
 
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );
-		Vector vecSrc = m_pPlayer->GetGunPosition( );;
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
+		Vector vecSrc = m_pPlayer->GetGunPosition( );
 		Vector vecAiming = gpGlobals->v_forward;
 
 		TraceResult tr;

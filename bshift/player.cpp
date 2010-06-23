@@ -91,8 +91,6 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD( CBasePlayer, m_flDuckTime, FIELD_TIME ),
 	DEFINE_FIELD( CBasePlayer, m_flWallJumpTime, FIELD_TIME ),
 
-	DEFINE_FIELD( CBasePlayer, m_fAirFinished, FIELD_TIME ),
-	DEFINE_FIELD( CBasePlayer, m_fPainFinished, FIELD_TIME ),
 	DEFINE_FIELD( CBasePlayer, m_flSuitUpdate, FIELD_TIME ),
 	DEFINE_ARRAY( CBasePlayer, m_rgSuitPlayList, FIELD_INTEGER, CSUITPLAYLIST ),
 	DEFINE_FIELD( CBasePlayer, m_iSuitPlayNext, FIELD_INTEGER ),
@@ -380,7 +378,7 @@ int CBasePlayer :: TakeHealth( float flHealth, int bitsDamageType )
 
 Vector CBasePlayer :: GetGunPosition( )
 {
-//	UTIL_MakeVectors(pev->viewangles);
+//	UTIL_MakeVectors(pev->v_angle);
 //	m_HackedGunPos = pev->view_ofs;
 	Vector origin;
 	
@@ -1118,12 +1116,12 @@ void CBasePlayer::WaterMove()
 		// not underwater
 		
 		// play 'up for air' sound
-		if (m_fAirFinished < gpGlobals->time)
+		if (pev->air_finished < gpGlobals->time)
 			EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_wade1.wav", 1, ATTN_NORM);
-		else if (m_fAirFinished < gpGlobals->time + 9)
+		else if (pev->air_finished < gpGlobals->time + 9)
 			EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_wade2.wav", 1, ATTN_NORM);
 
-		m_fAirFinished = gpGlobals->time + AIRTIME;
+		pev->air_finished = gpGlobals->time + AIRTIME;
 		pev->dmg = 2;
 
 		// if we took drowning damage, give it back slowly
@@ -1148,16 +1146,16 @@ void CBasePlayer::WaterMove()
 		m_bitsDamageType &= ~DMG_DROWNRECOVER;
 		m_rgbTimeBasedDamage[itbd_DrownRecover] = 0;
 
-		if (m_fAirFinished < gpGlobals->time)		// drown!
+		if (pev->air_finished < gpGlobals->time)		// drown!
 		{
-			if (m_fPainFinished < gpGlobals->time)
+			if (pev->pain_finished < gpGlobals->time)
 			{
 				// take drowning damage
 				pev->dmg += 1;
 				if (pev->dmg > 5)
 					pev->dmg = 5;
 				TakeDamage(VARS(eoNullEntity), VARS(eoNullEntity), pev->dmg, DMG_DROWN);
-				m_fPainFinished = gpGlobals->time + 1;
+				pev->pain_finished = gpGlobals->time + 1;
 				
 				// track drowning damage, give it back when
 				// player finally takes a breath
@@ -1193,7 +1191,7 @@ void CBasePlayer::WaterMove()
 	
 	// make bubbles
 
-	air = (int)(m_fAirFinished - gpGlobals->time);
+	air = (int)(pev->air_finished - gpGlobals->time);
 	if (!RANDOM_LONG(0,0x1f) && RANDOM_LONG(0,AIRTIME-1) >= air)
 	{
 		switch (RANDOM_LONG(0,3))
@@ -1363,7 +1361,7 @@ void CBasePlayer::StartDeathCam( void )
 		}
 
 		CopyToBodyQue( pev );
-		StartObserver( pSpot->v.origin, pSpot->v.viewangles );
+		StartObserver( pSpot->v.origin, pSpot->v.v_angle );
 	}
 	else
 	{
@@ -1381,7 +1379,7 @@ void CBasePlayer::StartObserver( Vector vecPosition, Vector vecViewAngle )
 	m_afPhysicsFlags |= PFLAG_OBSERVER;
 
 	pev->view_ofs = g_vecZero;
-	pev->angles = pev->viewangles = vecViewAngle;
+	pev->angles = pev->v_angle = vecViewAngle;
 	pev->fixangle = TRUE;
 	pev->solid = SOLID_NOT;
 	pev->takedamage = DAMAGE_NO;
@@ -1442,7 +1440,7 @@ void CBasePlayer::PlayerUse ( void )
 	float flMaxDot = VIEW_FIELD_NARROW;
 	float flDot;
 
-	UTIL_MakeVectors ( pev->viewangles );// so we know which way we are facing
+	UTIL_MakeVectors ( pev->v_angle );// so we know which way we are facing
 	
 	while ((pObject = UTIL_FindEntityInSphere( pObject, pev->origin, PLAYER_SEARCH_RADIUS )) != NULL)
 	{
@@ -2001,7 +1999,7 @@ void CBasePlayer::PreThink(void)
 	if ( g_fGameOver )
 		return;         // intermission or finale
 
-	UTIL_MakeVectors(pev->viewangles);             // is this still used?
+	UTIL_MakeVectors(pev->v_angle);             // is this still used?
 	
 	ItemPreFrame( );
 	WaterMove();
@@ -2947,7 +2945,7 @@ void CBasePlayer::Spawn( void )
 	pev->max_health		= pev->health;
 	pev->flags		   &= FL_PROXY;	// keep proxy flag sey by engine
 	pev->flags			= FL_CLIENT;
-	m_fAirFinished	= gpGlobals->time + 12;
+	pev->air_finished	= gpGlobals->time + 12;
 	pev->dmg			= 2;				// initial water damage
 	pev->effects		= 0;
 	pev->deadflag		= DEAD_NO;
@@ -2958,8 +2956,7 @@ void CBasePlayer::Spawn( void )
 	pev->gravity		= 1.0;
 	pev->renderfx		= 0;
 	pev->rendercolor	= g_vecZero;
-	pev->mass		= 90;	// lbs
-	pev->viewangles.z	= 0;	// cut off any camera rolling
+	pev->v_angle.z	= 0;	// cut off any camera rolling
 	m_bitsHUDDamage		= -1;
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;
@@ -3115,8 +3112,8 @@ int CBasePlayer::Restore( CRestore &restore )
 		pev->origin = VARS(pentSpawnSpot)->origin + Vector(0,0,1);
 		pev->angles = VARS(pentSpawnSpot)->angles;
 	}
-	pev->viewangles.z = 0;	// Clear out roll
-	pev->angles = pev->viewangles;
+	pev->v_angle.z = 0;	// Clear out roll
+	pev->angles = pev->v_angle;
 
 	pev->fixangle = TRUE;           // turn this way immediately
 
@@ -3312,7 +3309,7 @@ public:
 void CSprayCan::Spawn ( entvars_t *pevOwner )
 {
 	pev->origin = pevOwner->origin + Vector ( 0 , 0 , 32 );
-	pev->angles = pevOwner->viewangles;
+	pev->angles = pevOwner->v_angle;
 	pev->owner = ENT(pevOwner);
 	pev->frame = 0;
 
@@ -3368,7 +3365,7 @@ public:
 void CBloodSplat::Spawn ( entvars_t *pevOwner )
 {
 	pev->origin = pevOwner->origin + Vector ( 0 , 0 , 32 );
-	pev->angles = pevOwner->viewangles;
+	pev->angles = pevOwner->v_angle;
 	pev->owner = ENT(pevOwner);
 
 	SetThink ( Spray );
@@ -3419,7 +3416,7 @@ CBaseEntity *FindEntityForward( CBaseEntity *pMe )
 {
 	TraceResult tr;
 
-	UTIL_MakeVectors(pMe->pev->viewangles);
+	UTIL_MakeVectors(pMe->pev->v_angle);
 	UTIL_TraceLine(pMe->pev->origin + pMe->pev->view_ofs,pMe->pev->origin + pMe->pev->view_ofs + gpGlobals->v_forward * 8192,dont_ignore_monsters, pMe->edict(), &tr );
 	if ( tr.flFraction != 1.0 && !FNullEnt( tr.pHit) )
 	{
@@ -3555,7 +3552,7 @@ void CBasePlayer::ImpulseCommands( )
 			break;
 		}
 
-		UTIL_MakeVectors(pev->viewangles);
+		UTIL_MakeVectors(pev->v_angle);
 		UTIL_TraceLine ( pev->origin + pev->view_ofs, pev->origin + pev->view_ofs + gpGlobals->v_forward * 128, ignore_monsters, ENT(pev), & tr);
 
 		if ( tr.flFraction != 1.0 )
@@ -3602,7 +3599,7 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			}
 			else
 			{
-				UTIL_MakeVectors( Vector( 0, pev->viewangles.y, 0 ) );
+				UTIL_MakeVectors( Vector( 0, pev->v_angle.y, 0 ) );
 				Create("monster_human_grunt", pev->origin + gpGlobals->v_forward * 128, pev->angles);
 			}
 			break;
@@ -3736,7 +3733,7 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		}
 		break;
 	case	202:// Random blood splatter
-		UTIL_MakeVectors(pev->viewangles);
+		UTIL_MakeVectors(pev->v_angle);
 		UTIL_TraceLine ( pev->origin + pev->view_ofs, pev->origin + pev->view_ofs + gpGlobals->v_forward * 128, ignore_monsters, ENT(pev), & tr);
 
 		if ( tr.flFraction != 1.0 )
@@ -4297,7 +4294,7 @@ Vector CBasePlayer :: GetAutoaimVector( float flDelta )
 {
 	if (g_iSkillLevel == SKILL_HARD)
 	{
-		UTIL_MakeVectors( pev->viewangles + pev->punchangle );
+		UTIL_MakeVectors( pev->v_angle + pev->punchangle );
 		return gpGlobals->v_forward;
 	}
 
@@ -4370,7 +4367,7 @@ Vector CBasePlayer :: GetAutoaimVector( float flDelta )
 
 	// ALERT( at_console, "%f %f\n", angles.x, angles.y );
 
-	UTIL_MakeVectors( pev->viewangles + pev->punchangle + m_vecAutoAim );
+	UTIL_MakeVectors( pev->v_angle + pev->punchangle + m_vecAutoAim );
 	return gpGlobals->v_forward;
 }
 
@@ -4390,7 +4387,7 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 		return g_vecZero;
 	}
 
-	UTIL_MakeVectors( pev->viewangles + pev->punchangle + m_vecAutoAim );
+	UTIL_MakeVectors( pev->v_angle + pev->punchangle + m_vecAutoAim );
 
 	// try all possible entities
 	bestdir = gpGlobals->v_forward;
@@ -4487,7 +4484,7 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 	{
 		bestdir = UTIL_VecToAngles (bestdir);
 		bestdir.x = -bestdir.x;
-		bestdir = bestdir - pev->viewangles - pev->punchangle;
+		bestdir = bestdir - pev->v_angle - pev->punchangle;
 
 		if (bestent->v.takedamage == DAMAGE_AIM)
 			m_fOnTarget = TRUE;
@@ -4899,7 +4896,7 @@ void CInfoIntermission::Spawn( void )
 	UTIL_SetOrigin( pev, pev->origin );
 	pev->solid = SOLID_NOT;
 	pev->effects = EF_NODRAW;
-	pev->viewangles = g_vecZero;
+	pev->v_angle = g_vecZero;
 
 	pev->nextthink = gpGlobals->time + 2;// let targets spawn!
 
@@ -4914,8 +4911,8 @@ void CInfoIntermission::Think ( void )
 
 	if ( !FNullEnt(pTarget) )
 	{
-		pev->viewangles = UTIL_VecToAngles( (pTarget->v.origin - pev->origin).Normalize() );
-		pev->viewangles.x = -pev->viewangles.x;
+		pev->v_angle = UTIL_VecToAngles( (pTarget->v.origin - pev->origin).Normalize() );
+		pev->v_angle.x = -pev->v_angle.x;
 	}
 }
 

@@ -17,8 +17,6 @@ struct particle_s
 
 typedef struct efxapi_s
 {
-	size_t	api_size;	 // must match with sizeof( efxapi_t );
-
 	particle_t *(*R_AllocParticle)( void ); 
 	void	(*R_BlobExplosion)( const float *org );
 	void	(*R_EntityParticles)( edict_t *ent );

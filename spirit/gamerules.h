@@ -78,7 +78,7 @@ public:
 	virtual const char *GetGameDescription( void ) { return GAME_NAME; }  // this is the game name that gets seen in the server browser
 	
 // Client connection/disconnection
-	virtual BOOL ClientConnected( edict_t *pEntity, const char *userinfo ) = 0;// a client just connected to the server (player hasn't spawned yet)
+	virtual BOOL ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128] ) = 0;// a client just connected to the server (player hasn't spawned yet)
 	virtual void InitHUD( CBasePlayer *pl ) = 0;		// the client dll is ready for updating
 	virtual void ClientDisconnected( edict_t *pClient ) = 0;// a client just disconnected from the server
 	virtual void UpdateGameMode( CBasePlayer *pPlayer ) {}  // the client needs to be informed of the current game mode
@@ -188,7 +188,7 @@ public:
 	virtual BOOL IsCoOp( void );
 
 // Client connection/disconnection
-	virtual BOOL ClientConnected( edict_t *pEntity, const char *userinfo );
+	virtual BOOL ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128] );
 	virtual void InitHUD( CBasePlayer *pl );		// the client dll is ready for updating
 	virtual void ClientDisconnected( edict_t *pClient );
 
@@ -278,7 +278,7 @@ public:
 	// If ClientConnected returns FALSE, the connection is rejected and the user is provided the reason specified in
 	//  svRejectReason
 	// Only the client's name and remote address are provided to the dll for verification.
-	virtual BOOL ClientConnected( edict_t *pEntity, const char *userinfo );
+	virtual BOOL ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128] );
 	virtual void InitHUD( CBasePlayer *pl );		// the client dll is ready for updating
 	virtual void ClientDisconnected( edict_t *pClient );
 	virtual void UpdateGameMode( CBasePlayer *pPlayer );  // the client needs to be informed of the current game mode

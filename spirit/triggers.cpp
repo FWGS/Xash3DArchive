@@ -2273,7 +2273,7 @@ void CTriggerHurt :: HurtTouch ( CBaseEntity *pOther )
 	{
 		if ( pev->dmgtime > gpGlobals->time )
 		{
-			if ( gpGlobals->time != pev->dmg_take )
+			if ( gpGlobals->time != pev->pain_finished )
 			{// too early to hurt again, and not same frame with a different entity
 				if ( pOther->IsPlayer() )
 				{
@@ -2309,7 +2309,7 @@ void CTriggerHurt :: HurtTouch ( CBaseEntity *pOther )
 	}
 	else	// Original code -- single player
 	{
-		if ( pev->dmgtime > gpGlobals->time && gpGlobals->time != pev->dmg_take )
+		if ( pev->dmgtime > gpGlobals->time && gpGlobals->time != pev->pain_finished )
 		{// too early to hurt again, and not same frame with a different entity
 			return;
 		}
@@ -2346,7 +2346,7 @@ void CTriggerHurt :: HurtTouch ( CBaseEntity *pOther )
 		pOther->TakeDamage( pev, pev, fldmg, m_bitsDamageInflict );
 
 	// Store pain time so we can get all of the other entities on this frame
-	pev->dmg_take = gpGlobals->time;
+	pev->pain_finished = gpGlobals->time;
 
 	// Apply damage every half second
 	pev->dmgtime = gpGlobals->time + 0.5;// half second delay until this trigger can hurt toucher again
@@ -4152,9 +4152,9 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 			pOther->pev->angles.y += ydiff;
 			if (pOther->IsPlayer())
 			{
-//				ALERT(at_console, "viewangles = %f %f %f\n", pOther->pev->viewangles.x, pOther->pev->viewangles.y, pOther->pev->viewangles.z);
-				pOther->pev->angles.x = pOther->pev->viewangles.x;
-//				pOther->pev->viewangles.y += ydiff;
+//				ALERT(at_console, "v_angle = %f %f %f\n", pOther->pev->v_angle.x, pOther->pev->v_angle.y, pOther->pev->v_angle.z);
+				pOther->pev->angles.x = pOther->pev->v_angle.x;
+//				pOther->pev->v_angles.y += ydiff;
 				pOther->pev->fixangle = TRUE;
 			}
 
@@ -4199,7 +4199,7 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 		pOther->pev->velocity = pOther->pev->basevelocity = g_vecZero;
 		if ( pOther->IsPlayer() )
 		{
-			pOther->pev->viewangles = pTarget->pev->angles; //LRC
+			pOther->pev->v_angle = pTarget->pev->angles; //LRC
 			pOther->pev->fixangle = TRUE;
 		}
 	}
@@ -4272,7 +4272,7 @@ void CTriggerEndSection::EndSectionUse( CBaseEntity *pActivator, CBaseEntity *pC
 
 	if ( pev->message )
 	{
-		HOST_ENDGAME( STRING( pev->message ));
+		g_engfuncs.pfnEndSection(STRING(pev->message));
 	}
 	UTIL_Remove( this );
 }
@@ -4303,7 +4303,7 @@ void CTriggerEndSection::EndSectionTouch( CBaseEntity *pOther )
 
 	if (pev->message)
 	{
-		HOST_ENDGAME( STRING( pev->message ));
+		g_engfuncs.pfnEndSection(STRING(pev->message));
 	}
 	UTIL_Remove( this );
 }

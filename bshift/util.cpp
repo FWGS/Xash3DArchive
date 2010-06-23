@@ -71,27 +71,6 @@ char *COM_ParseToken( const char **data )
 	return com_token;	          
 }
 
-void PLAYBACK_EVENT_FULL( int flags, const edict_t *pInvoker, unsigned short eventindex, float delay, Vector origin, Vector angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
-{
-	event_args_t	args;
-
-	args.flags = 0;
-	if( !FNullEnt( pInvoker ))
-		args.entindex = ENTINDEX( (edict_t *)pInvoker );
-	else args.entindex = 0;
-	origin.CopyToArray( args.origin );
-	angles.CopyToArray( args.angles );
-	// don't add velocity - engine will be reset it for some reasons
-	args.fparam1 = fparam1;
-	args.fparam2 = fparam2;
-	args.iparam1 = iparam1;
-	args.iparam2 = iparam2;
-	args.bparam1 = bparam1;
-	args.bparam2 = bparam2;
-
-	g_engfuncs.pfnPlaybackEvent( flags, pInvoker, eventindex, delay, &args );
-}
-
 /*
 =====================
 UTIL_WeaponTimeBase
@@ -257,9 +236,9 @@ TYPEDESCRIPTION	gEntvarsDescription[] =
 	DEFINE_ENTITY_FIELD( oldangles, FIELD_VECTOR ),
 	DEFINE_ENTITY_FIELD( avelocity, FIELD_VECTOR ),
 	DEFINE_ENTITY_FIELD( punchangle, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( viewangles, FIELD_VECTOR ),
+	DEFINE_ENTITY_FIELD( v_angle, FIELD_VECTOR ),
 	DEFINE_ENTITY_FIELD( fixangle, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( ideal_pitch, FIELD_FLOAT ),
+	DEFINE_ENTITY_FIELD( idealpitch, FIELD_FLOAT ),
 	DEFINE_ENTITY_FIELD( pitch_speed, FIELD_FLOAT ),
 	DEFINE_ENTITY_FIELD( ideal_yaw, FIELD_FLOAT ),
 	DEFINE_ENTITY_FIELD( yaw_speed, FIELD_FLOAT ),
@@ -349,6 +328,9 @@ TYPEDESCRIPTION	gEntvarsDescription[] =
 	DEFINE_ENTITY_FIELD( noise2, FIELD_SOUNDNAME ),
 	DEFINE_ENTITY_FIELD( noise3, FIELD_SOUNDNAME ),
 	DEFINE_ENTITY_FIELD( speed, FIELD_FLOAT ),
+	DEFINE_ENTITY_FIELD( air_finished, FIELD_TIME ),
+	DEFINE_ENTITY_FIELD( pain_finished, FIELD_TIME ),
+	DEFINE_ENTITY_FIELD( radsuit_finished, FIELD_TIME ),
 };
 
 #define ENTVARS_COUNT		(sizeof(gEntvarsDescription)/sizeof(gEntvarsDescription[0]))

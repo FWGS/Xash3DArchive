@@ -84,10 +84,6 @@ typedef struct cl_globalvars_s
 	float		frametime;
 	string_t		mapname;
 
-	BOOL		deathmatch;
-	BOOL		coop;
-	BOOL		teamplay;
-
 	ref_params_t	*pViewParms;	// just for easy acess on client
 
 	float		viewheight[PM_MAXHULLS]; // values from gameinfo.txt
@@ -107,9 +103,6 @@ typedef struct cl_globalvars_s
 
 typedef struct cl_enginefuncs_s
 {
-	// interface validator
-	size_t	api_size;		// must matched with sizeof(cl_enginefuncs_t)
-
 	// sprite handlers
 	HSPRITE	(*pfnSPR_Load)( const char *szPicName );
 	int	(*pfnSPR_Frames)( HSPRITE hPic );
@@ -201,14 +194,13 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnTraceModel)( const float *v1, const float *v2, edict_t *pent, TraceResult *ptr );	// was GetSpritePointer
 	const char *(*pfnTraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 ); // was pfnPlaySoundByNameAtLocation
 
-	// filesystem handlers (event calls is completely moved to pEventAPI. see common\event_api.h for details)
-	void*	(*pfnFOpen)( const char* path, const char* mode );	// was pfnPrecacheEvent
-	long	(*pfnFRead)( void *file, void* buffer, size_t buffersize );	// was pfnPlaybackEvent
-	long	(*pfnFWrite)(void *file, const void* data, size_t datasize);// was pfnWeaponAnim
-	int	(*pfnFClose)( void *file );				// was pfnRandomFloat
-	int	(*pfnFGets)( void *file, byte *string, size_t bufsize );	// was pfnRandomLong
-	int	(*pfnFSeek)( void *file, long offset, int whence );	// was pfnHookEvent
-	long	(*pfnFTell)( void *file );				// was Con_IsVisible
+	word	(*pfnPrecacheEvent)( int type, const char* psz );
+	void	(*pfnPlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
+	void	(*pfnWeaponAnim)( int iAnim, int body, float framerate );
+	float	(*pfnRandomFloat)( float flLow, float flHigh );	
+	long	(*pfnRandomLong)( long lLow, long lHigh );
+	void	(*pfnHookEvent)( const char *name, void ( *pfnEvent )( struct event_args_s *args ));
+	int	(*Con_IsVisible)( void );
 
 	// dlls managemenet
 	void*	(*pfnLoadLibrary)( const char *name );			// was pfnGetGameDirectory
@@ -238,9 +230,6 @@ typedef struct cl_enginefuncs_s
 
 typedef struct
 {
-	// interface validator
-	size_t	api_size;		// must matched with sizeof(HUD_FUNCTIONS)
-
 	int	(*pfnVidInit)( void );
 	void	(*pfnInit)( void );
 	int	(*pfnRedraw)( float flTime, int state );

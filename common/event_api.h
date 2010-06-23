@@ -5,6 +5,8 @@
 #ifndef EVENT_API_H
 #define EVENT_API_H
 
+#define EVENT_API_VERSION	1
+
 #define FEV_NOTHOST		(1<<0)	// skip local host for event send.    
 #define FEV_RELIABLE	(1<<1)	// send the event reliably.	 
 #define FEV_GLOBAL		(1<<2)	// don't restrict to PAS/PVS, send this event to _everybody_ on the server
@@ -36,9 +38,9 @@ typedef void (*pfnEventHook)( event_args_t *args );
 
 typedef struct event_api_s
 {
-	size_t	api_size;			// must match with sizeof( event_api_t );
+	int	version;
 	word	(*EV_PrecacheEvent)( int type, const char* psz );
-	void	(*EV_PlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, event_args_t *args );
+	void	(*EV_PlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 	void	(*EV_WeaponAnim)( int iAnim, int body, float framerate );
 	float	(*EV_RandomFloat)( float flLow, float flHigh );	
 	long	(*EV_RandomLong)( long lLow, long lHigh );

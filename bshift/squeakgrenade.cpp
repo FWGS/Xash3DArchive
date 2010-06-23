@@ -512,7 +512,7 @@ void CSqueak::PrimaryAttack()
 {
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 	{
-		UTIL_MakeVectors( m_pPlayer->pev->viewangles );
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 		TraceResult tr;
 		Vector trace_origin;
 
@@ -533,7 +533,7 @@ void CSqueak::PrimaryAttack()
 			// player "shoot" animation
 			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-			CBaseEntity *pSqueak = CBaseEntity::Create( "monster_snark", tr.vecEndPos, m_pPlayer->pev->viewangles, m_pPlayer->edict() );
+			CBaseEntity *pSqueak = CBaseEntity::Create( "monster_snark", tr.vecEndPos, m_pPlayer->pev->v_angle, m_pPlayer->edict() );
 
 			pSqueak->pev->velocity = gpGlobals->v_forward * 200 + m_pPlayer->pev->velocity;
 

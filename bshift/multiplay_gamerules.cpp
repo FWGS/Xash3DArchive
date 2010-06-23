@@ -342,7 +342,7 @@ BOOL CHalfLifeMultiplay :: GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerI
 
 //=========================================================
 //=========================================================
-BOOL CHalfLifeMultiplay :: ClientConnected( edict_t *pEntity, const char *userinfo )
+BOOL CHalfLifeMultiplay :: ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[128] )
 {
 	return TRUE;
 }
@@ -368,12 +368,17 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 	{
 		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" entered the game\n",  
 			STRING( pl->pev->netname ), 
+			GETPLAYERUSERID( pl->edict() ),
+			GETPLAYERAUTHID( pl->edict() ),
 			g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pl->edict() ), "model" ) );
 	}
 	else
 	{
 		UTIL_LogPrintf( "\"%s<%i><%s><%i>\" entered the game\n",  
-			STRING( pl->pev->netname ));
+			STRING( pl->pev->netname ), 
+			GETPLAYERUSERID( pl->edict() ),
+			GETPLAYERAUTHID( pl->edict() ),
+			GETPLAYERUSERID( pl->edict() ) );
 	}
 
 	UpdateGameMode( pl );
@@ -428,12 +433,17 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 			{
 				UTIL_LogPrintf( "\"%s<%i><%s><%s>\" disconnected\n",  
 					STRING( pPlayer->pev->netname ), 
+					GETPLAYERUSERID( pPlayer->edict() ),
+					GETPLAYERAUTHID( pPlayer->edict() ),
 					g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model" ) );
 			}
 			else
 			{
 				UTIL_LogPrintf( "\"%s<%i><%s><%i>\" disconnected\n",  
-					STRING( pPlayer->pev->netname ));
+					STRING( pPlayer->pev->netname ), 
+					GETPLAYERUSERID( pPlayer->edict() ),
+					GETPLAYERAUTHID( pPlayer->edict() ),
+					GETPLAYERUSERID( pPlayer->edict() ) );
 			}
 
 			pPlayer->RemoveAllItems( TRUE );// destroy all of the players weapons and items
@@ -672,6 +682,8 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%s>\" committed suicide with \"%s\"\n",  
 				STRING( pVictim->pev->netname ), 
+				GETPLAYERUSERID( pVictim->edict() ),
+				GETPLAYERAUTHID( pVictim->edict() ),
 				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pVictim->edict() ), "model" ),
 				killer_weapon_name );		
 		}
@@ -679,6 +691,9 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%i>\" committed suicide with \"%s\"\n",  
 				STRING( pVictim->pev->netname ), 
+				GETPLAYERUSERID( pVictim->edict() ),
+				GETPLAYERAUTHID( pVictim->edict() ),
+				GETPLAYERUSERID( pVictim->edict() ),
 				killer_weapon_name );		
 		}
 	}
@@ -689,8 +704,12 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%s>\" killed \"%s<%i><%s><%s>\" with \"%s\"\n",  
 				STRING( pKiller->netname ),
+				GETPLAYERUSERID( ENT(pKiller) ),
+				GETPLAYERAUTHID( ENT(pKiller) ),
 				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( ENT(pKiller) ), "model" ),
 				STRING( pVictim->pev->netname ),
+				GETPLAYERUSERID( pVictim->edict() ),
+				GETPLAYERAUTHID( pVictim->edict() ),
 				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pVictim->edict() ), "model" ),
 				killer_weapon_name );
 		}
@@ -698,7 +717,13 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%i>\" killed \"%s<%i><%s><%i>\" with \"%s\"\n",  
 				STRING( pKiller->netname ),
+				GETPLAYERUSERID( ENT(pKiller) ),
+				GETPLAYERAUTHID( ENT(pKiller) ),
+				GETPLAYERUSERID( ENT(pKiller) ),
 				STRING( pVictim->pev->netname ),
+				GETPLAYERUSERID( pVictim->edict() ),
+				GETPLAYERAUTHID( pVictim->edict() ),
+				GETPLAYERUSERID( pVictim->edict() ),
 				killer_weapon_name );
 		}
 	}
@@ -711,6 +736,8 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%s>\" committed suicide with \"%s\" (world)\n",
 				STRING( pVictim->pev->netname ), 
+				GETPLAYERUSERID( pVictim->edict() ), 
+				GETPLAYERAUTHID( pVictim->edict() ),
 				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pVictim->edict() ), "model" ),
 				killer_weapon_name );		
 		}
@@ -718,6 +745,9 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		{
 			UTIL_LogPrintf( "\"%s<%i><%s><%i>\" committed suicide with \"%s\" (world)\n",
 				STRING( pVictim->pev->netname ), 
+				GETPLAYERUSERID( pVictim->edict() ), 
+				GETPLAYERAUTHID( pVictim->edict() ),
+				GETPLAYERUSERID( pVictim->edict() ),
 				killer_weapon_name );		
 		}
 	}

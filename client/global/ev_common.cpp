@@ -181,7 +181,7 @@ void EV_UpadteFlashlight( edict_t *pEnt )
 	float rgba[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	TraceResult tr;
 
-	AngleVectors( pEnt->v.viewangles, forward, NULL, NULL );
+	AngleVectors( pEnt->v.v_angle, forward, NULL, NULL );
 	vecSrc = pEnt->v.origin +pEnt->v.view_ofs;
 	vecEnd = vecSrc + forward * 512;
 

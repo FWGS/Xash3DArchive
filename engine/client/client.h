@@ -586,7 +586,7 @@ int CL_AddTempEntity( struct tempent_s *pTemp, shader_t customShader );
 //
 // cl_con.c
 //
-bool Con_Active( void );
+bool Con_Visible( void );
 void Con_CheckResize( void );
 void Con_Init( void );
 void Con_Clear_f( void );

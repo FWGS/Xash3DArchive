@@ -507,7 +507,7 @@ Vector CCalcSubVelocity::CalcVelocity( CBaseEntity *pLocus )
 	case 1: //angles
 		return ConvertAngles( pLocus, pLocus->pev->angles );
 	case 2: //v_angle
-		return ConvertAngles( pLocus, pLocus->pev->viewangles );
+		return ConvertAngles( pLocus, pLocus->pev->v_angle );
 	case 5:
 		// this could cause problems.
 		// is there a good way to check whether it's really a CBaseAnimating?

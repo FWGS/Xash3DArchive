@@ -677,7 +677,6 @@ void EMIT_GROUPNAME_SUIT(edict_t *entity, const char *groupname);
 
 #define PLAYBACK_EVENT( flags, who, index ) PLAYBACK_EVENT_FULL( flags, who, index, 0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
 #define PLAYBACK_EVENT_DELAY( flags, who, index, delay ) PLAYBACK_EVENT_FULL( flags, who, index, delay, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
-#define PLAYBACK_EVENT_FULL UTIL_PlaybackEvent
 
 #define GROUP_OP_AND	0
 #define GROUP_OP_NAND	1
@@ -844,7 +843,5 @@ BOOL UTIL_EntIsVisible( entvars_t* pev, entvars_t* pevTarget);
 
 // events stuff
 unsigned short UTIL_PrecacheEvent( const char *pString );
-void UTIL_PlaybackEvent( int flags, const edict_t *pInvoker, int ev_index, float delay, struct event_args_s *args = NULL );
-void UTIL_PlaybackEvent( int flags, const edict_t *pInvoker, int ev_index, float delay, Vector origin, Vector angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 	
 #endif //UTIL_H

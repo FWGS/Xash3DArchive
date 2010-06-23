@@ -27,9 +27,14 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
+void DLLEXPORT GiveFnptrsToDll( enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals )
+{
+	memcpy(&g_engfuncs, pengfuncsFromEngine, sizeof(enginefuncs_t));
+	gpGlobals = pGlobals;
+}
+
 static DLL_FUNCTIONS gFunctionTable = 
 {
-	sizeof( DLL_FUNCTIONS ),
 	GameDLLInit,		// pfnGameInit
 	DispatchSpawn,		// pfnSpawn
 	DispatchThink,		// pfnThink
@@ -82,31 +87,29 @@ static DLL_FUNCTIONS gFunctionTable =
 	DispatchFrame,		// pfnPhysicsEntity
 	AddToFullPack,		// pfnAddtoFullPack
 	EndFrame,			// pfnEndFrame
-	
-	ShouldCollide,		// pfnShouldCollide
+
+	RegisterEncoders,		// pfnRegisterEncoders		Callbacks for network encoding	
+
 	UpdateEntityState,		// pfnUpdateEntityState
 	CmdStart,			// pfnCmdStart
 	CmdEnd,			// pfnCmdEnd
 
 	OnFreeEntPrivateData,	// pfnOnFreeEntPrivateData
 	GameDLLShutdown,		// pfnGameShutdown
+	ShouldCollide,		// pfnShouldCollide
 };
 
 //=======================================================================
 //			General API entering point
 //=======================================================================
-
-int CreateAPI( DLL_FUNCTIONS *pFunctionTable, enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals )
+int GetEntityAPI( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion )
 {
-	if( !pFunctionTable || !pengfuncsFromEngine || !pGlobals )
+	if ( !pFunctionTable || interfaceVersion != SV_INTERFACE_VERSION )
 	{
 		return FALSE;
 	}
-
-	memcpy( pFunctionTable, &gFunctionTable, sizeof( DLL_FUNCTIONS ));
-	memcpy(&g_engfuncs, pengfuncsFromEngine, sizeof( enginefuncs_t ));
-	gpGlobals = pGlobals;
-
+	
+	memcpy( pFunctionTable, &gFunctionTable, sizeof( DLL_FUNCTIONS ) );
 	return TRUE;
 }
 

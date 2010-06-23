@@ -539,7 +539,7 @@ static BOOL IsFacing( entvars_t *pevTest, const Vector &reference )
 	vecDir.z = 0;
 	vecDir = vecDir.Normalize();
 	Vector forward, angle;
-	angle = pevTest->viewangles;
+	angle = pevTest->v_angle;
 	angle.x = 0;
 	UTIL_MakeVectorsPrivate( angle, forward, NULL, NULL );
 	// He's facing me, he meant it
