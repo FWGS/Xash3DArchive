@@ -46,7 +46,6 @@ vsound_exp_t DLLEXPORT *CreateAPI( stdlib_api_t *input, vsound_imp_t *engfuncs )
 	snd.RenderFrame = S_Update;
 	snd.StopSound = S_StopSound;
 	snd.StopAllSounds = S_StopAllSounds;
-	snd.FreeSounds = S_FreeSounds;
 
 	snd.Activate = S_Activate;
 

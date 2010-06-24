@@ -50,6 +50,18 @@ mouth_t *CL_GetEntityMouth( edict_t *ent )
 }
 
 /*
+====================
+CL_AmbientLevels
+
+get ambient volumes for specified point
+====================
+*/
+void CL_AmbientLevels( const vec3_t p, byte *pvolumes )
+{
+	CM_GetAmbientLevels( p, pvolumes );
+}
+
+/*
 =============
 CL_AllocString
 
@@ -86,9 +98,9 @@ CL_GetServerTime
 don't clamped time that come from server
 ====================
 */
-int CL_GetServerTime( void )
+float CL_GetServerTime( void )
 {
-	return cl.mtime[0];
+	return (float)cl.mtime[0];
 }
 
 /*

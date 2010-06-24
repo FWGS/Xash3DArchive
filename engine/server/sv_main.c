@@ -435,14 +435,14 @@ void Host_ServerFrame( void )
 	// check timeouts
 	SV_CheckTimeouts ();
 
-	// let everything in the world think and move
-	SV_RunGameFrame ();
-
 	// read packets from clients
 	SV_ReadPackets ();
 
 	// update ping based on the last known frame from all clients
 	SV_CalcPings ();
+
+	// let everything in the world think and move
+	SV_RunGameFrame ();
 
 	// refresh serverinfo on the client side
 	SV_UpdateServerInfo ();

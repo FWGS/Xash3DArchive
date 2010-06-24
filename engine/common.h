@@ -212,7 +212,7 @@ byte *CIN_ReadNextFrame( cinematics_t *cin, bool silent );
 
 // shared calls
 bool CL_IsInGame( void );
-int CL_GetServerTime( void );
+float CL_GetServerTime( void );
 float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );
 void Tri_DrawTriangles( int fTrans );
@@ -225,6 +225,7 @@ void CL_StudioEvent( dstudioevent_t *event, edict_t *ent );
 bool CL_GetComment( const char *demoname, char *comment );
 trace_t CL_TraceLine( const vec3_t start, const vec3_t end );
 lerpframe_t *CL_GetLerpFrame( int entityIndex );
+void CL_AmbientLevels( const vec3_t p, byte *pvolumes );
 edict_t *CL_GetEdictByIndex( int index );
 mouth_t *CL_GetEntityMouth( edict_t *ent );
 edict_t *CL_GetLocalPlayer( void );

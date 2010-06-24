@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//			sound.h - sndlib main header
+//		       sound.h - client sound i/o functions
 //=======================================================================
 
 #ifndef SOUND_H
@@ -13,11 +13,16 @@
 #include "vsound_api.h"
 #include "entity_def.h"
 
-extern stdlib_api_t com;
+extern stdlib_api_t	com;
 extern vsound_imp_t	si;
-extern byte *sndpool;
+extern byte	*sndpool;
 
-#include "mathlib.h"
+#define DEFAULT_SOUND_PACKET_VOLUME		255
+#define DEFAULT_SOUND_PACKET_ATTENUATION	1.0
+#define MAX_CHANNELS			128
+#define MAX_DYNAMIC_CHANNELS			8
+#define PAINTBUFFER_SIZE			512
+#define MAX_RAW_SAMPLES			8192
 
 typedef struct
 {
@@ -31,7 +36,6 @@ typedef struct sfx_s
 	wavdata_t		*cache;
 
 	int		touchFrame;
-	bool		default_sound;
 	uint		hashValue;
 	struct sfx_s	*hashNext;
 } sfx_t;
@@ -61,33 +65,16 @@ typedef struct
 typedef struct
 {
 	sfx_t		*sfx;		// sfx number
+	int		leftvol;		// 0-255 volume
+	int		rightvol;		// 0-255 volume
 	int		end;		// end time in global paintsamples
 	int 		pos;		// sample position in sfx
-
-	int		leftvol;		// 0-255 left volume
-	int		rightvol;		// 0-255 right volume
-	int		dleftvol;		// 0-255 left volume - doppler outgoing wav
-	int		drightvol;	// 0-255 right volume - doppler outgoing wav
-
-	int		entnum;		// entity soundsource
-	int		entchannel;	// sound channel (CHAN_STREAM, CHAN_VOICE, etc.)	
-	vec3_t		origin;		// only use if fixed_origin is set
-	vec3_t		direction;	// initially null, then used entity direction
-	bool		staticsound;	// use origin instead of fetching entnum's origin
-	float		dist_mult;	// distance multiplier (attenuation/clipK)
+	int		looping;		// where to loop, -1 = no looping
+	int		entnum;		// to allow overriding a specific sound
+	int		entchannel;	//
+	vec3_t		origin;		// origin of sound effect
+	vec_t		dist_mult;	// distance multiplier (attenuation/clipK)
 	int		master_vol;	// 0-255 master volume
-	bool		isSentence;	// bit who indicated sentence
-	int		basePitch;	// base pitch percent (100% is normal pitch playback)
-	float		pitch;		// real-time pitch after any modulation or shift by dynamic data
-
-	bool		bfirstpass;	// true if this is first time sound is spatialized
-	float		ob_gain;		// gain drop if sound source obscured from listener
-	float		ob_gain_target;	// target gain while crossfading between ob_gain & ob_gain_target
-	float		ob_gain_inc;	// crossfade increment
-	bool		bTraced;		// true if channel was already checked this frame for obscuring
-	float		radius;		// radius of this sound effect
-	bool		doppler_effect;	// this chanel has doppler effect
-	bool		use_loop;		// don't loop default and local sounds
 } channel_t;
 
 typedef struct
@@ -108,16 +95,6 @@ typedef struct
 
 typedef struct
 {
-	int		rate;
-	int		width;
-	int		channels;
-	int		loopstart;
-	int		samples;
-	int		dataofs;		// chunk starts this many bytes from file start
-} wavinfo_t;
-
-typedef struct
-{
 	string		loopName;
 	stream_t		*stream;
 } bg_track_t;
@@ -132,71 +109,64 @@ typedef struct
 #define Host_Error		com.error
 #define Z_Malloc( size )	Mem_Alloc( sndpool, size )
 
-// initializes cycling through a DMA buffer and returns information on it
-bool SNDDMA_Init( void *hInst );
-int SNDDMA_GetSoundtime( void );
-void SNDDMA_Shutdown( void );
-void SNDDMA_BeginPainting( void );
-void SNDDMA_Submit( void );
+void S_Shutdown( void );
+void S_StopSound( int entnum, int channel, const char *soundname );
+void S_StopAllSounds( void );
+void S_ClearBuffer( void );
+void S_ExtraUpdate( void );
 
-//====================================================================
-
-#define MAX_DYNAMIC_CHANNELS	24
-#define MAX_CHANNELS	128
-#define MAX_RAW_SAMPLES	8192
-
-extern portable_samplepair_t paintbuffer[];
-extern channel_t	channels[MAX_CHANNELS];
-extern int	total_channels;
-extern int	paintedtime;
-extern int	s_rawend;
-extern int	soundtime;
-extern dma_t	dma;
-extern listener_t	s_listener;
-
-extern cvar_t	*s_check_errors;
-extern cvar_t	*s_volume;
-extern cvar_t	*s_musicvolume;
-extern cvar_t	*s_khz;
-extern cvar_t	*s_show;
-extern cvar_t	*s_mixahead;
-extern cvar_t	*s_primary;
-
-extern portable_samplepair_t		s_rawsamples[MAX_RAW_SAMPLES];
-
-void S_InitScaletable( void );
-wavdata_t *S_LoadSound( sfx_t *sfx );
 void S_PaintChannels( int endtime );
-float S_GetMasterVolume( void );
+void S_InitPaintChannels( void );
+
+// picks a channel based on priorities, empty slots, number of channels
+channel_t *SND_PickChannel( int entnum, int entchannel );
+
+// spatializes a channel
+void SND_Spatialize( channel_t *ch );
+
+//
+// s_backend.c
+//
 void S_PrintDeviceName( void );
+void S_SetHWND( void *hInst );
+int SNDDMA_Init( void );
+int SNDDMA_GetDMAPos( void );
+void SNDDMA_Shutdown( void );
 
-// s_load.c
-bool S_TestSoundChar( const char *pch, char c );
-char *S_SkipSoundChar( const char *pch );
-
+//
 // s_dsp.c
+//
 void SX_Init( void );
 void SX_Free( void );
 void SX_RoomFX( int endtime, int fFilter, int fTimefx );
 
-bool S_Init( void *hInst );
-void S_Shutdown( void );
-void S_Activate( bool active );
+//
+// s_load.c
+//
 void S_SoundList_f( void );
-void S_SoundInfo_f( void );
+void S_BeginRegistration( void );
+sound_t S_RegisterSound( const char *sample );
+sfx_t *S_GetSfxByHandle( sound_t handle );
+void S_EndRegistration( void );
+void S_FreeSounds( void );
 
-// if origin is NULL, the sound will be dynamically sourced from the entity
-void S_StartSound( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, float attn, int pitch, int flags );
-void S_StartStaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags );
-channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx );
-channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx );
+//
+// s_main.c
+//
+bool S_Init( void *hInst );
+void S_Activate( bool active );
 void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
 int S_StartLocalSound( const char *name, float volume, int pitch, const float *org );
-sfx_t *S_GetSfxByHandle( sound_t handle );
-void S_StopSound( int entnum, int channel, const char *soundname );
-void S_RenderFrame( ref_params_t *fd );
-void S_StopAllSounds( void );
-void S_FreeSounds( void );
+void S_StartSound( const vec3_t pos, int ent, int chan, sound_t sfx, float fvol, float attn, int pitch, int flags );
+void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t sfx, float fvol, float attn, int pitch, int flags );
+void S_SoundFrame( ref_params_t *fd );
+float S_GetMasterVolume( void );
+
+//
+// s_mix.c
+//
+void SND_InitScaletable( void );
+
 
 //
 // s_mouth.c
@@ -214,14 +184,43 @@ void S_StartBackgroundTrack( const char *intro, const char *loop );
 void S_StreamBackgroundTrack( void );
 void S_StopBackgroundTrack( void );
 
-//
-// s_vox.c
-//
-void VOX_SetChanVol( channel_t *ch );
-void VOX_LoadSound( channel_t *pchan, const char *psz );
+// ====================================================================
+// User-setable variables
+// ====================================================================
 
-void S_BeginRegistration( void );
-sound_t S_RegisterSound( const char *sample );
-void S_EndRegistration( void );
+// 0 to MAX_DYNAMIC_CHANNELS-1	= normal entity sounds
+// MAX_DYNAMIC_CHANNELS to MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS -1 = water, etc
+// MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS to total_channels = static sounds
+
+extern listener_t		listener;
+extern portable_samplepair_t	paintbuffer[PAINTBUFFER_SIZE];
+extern portable_samplepair_t	rawsamples[MAX_RAW_SAMPLES];
+extern channel_t		channels[MAX_CHANNELS];
+extern int		total_channels;
+
+// Fake dma is a synchronous faking of the DMA progress used for
+// isolating performance in the renderer.  The fakedma_updates is
+// number of times S_Update() is called per second.
+
+extern bool 	fakedma;
+extern int 	fakedma_updates;
+extern int	paintedtime;
+extern int	soundtime;
+extern int	rawend;
+extern dma_t	dma;
+extern float	sound_nominal_clip_dist;
+
+extern cvar_t	*musicvolume;
+extern cvar_t	*volume;
+
+extern bool	snd_initialized;
+extern int	snd_blocked;
+
+wavdata_t *S_LoadSound( sfx_t *s );
+
+void SNDDMA_Submit( void );
+
+void S_AmbientOff( void );
+void S_AmbientOn( void );
 
 #endif//SOUND_H

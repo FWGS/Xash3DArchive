@@ -6,9 +6,9 @@
 #include "sound.h"
 #include "byteorder.h"
 
-portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
-int			s_rawend;
-static bg_track_t		s_bgTrack;
+portable_samplepair_t	rawsamples[MAX_RAW_SAMPLES];
+static bg_track_t		bgTrack;
+int			rawend;
 
 /*
 =================
@@ -23,44 +23,40 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 		return;
 
 	if( !introTrack )
-	{
 		introTrack = "";
-	}
+
 	if( !mainTrack || !*mainTrack )
-	{
 		mainTrack = introTrack;
-	}
+
 	if( !*introTrack ) return;
 
 	if( mainTrack )
-	{
-		com.snprintf( s_bgTrack.loopName, sizeof( s_bgTrack.loopName ), "media/%s", mainTrack );
-	}
-	else s_bgTrack.loopName[0] = 0;
+		com.snprintf( bgTrack.loopName, sizeof( bgTrack.loopName ), "media/%s", mainTrack );
+	else bgTrack.loopName[0] = 0;
 
 	S_StartStreaming();
 
-	// close the background track, but DON'T reset s_rawend
+	// close the background track, but DON'T reset rawend
 	// if restarting the same back ground track
-	if( s_bgTrack.stream )
+	if( bgTrack.stream )
 	{
-		FS_CloseStream( s_bgTrack.stream );
-		s_bgTrack.stream = NULL;
+		FS_CloseStream( bgTrack.stream );
+		bgTrack.stream = NULL;
 	}
 
 	// open stream
-	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
+	bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
 }
 
 void S_StopBackgroundTrack( void )
 {
 	S_StopStreaming();
 
-	if( !s_bgTrack.stream ) return;
+	if( !bgTrack.stream ) return;
 
-	FS_CloseStream( s_bgTrack.stream );
-	Mem_Set( &s_bgTrack, 0, sizeof( bg_track_t ));
-	s_rawend = 0;
+	FS_CloseStream( bgTrack.stream );
+	Mem_Set( &bgTrack, 0, sizeof( bg_track_t ));
+	rawend = 0;
 }
 
 /*
@@ -73,26 +69,25 @@ void S_StreamBackgroundTrack( void )
 	int	bufferSamples;
 	int	fileSamples;
 	byte	raw[MAX_RAW_SAMPLES];
-	int	r, fileBytes;
 	float	musicVolume = 0.5f;
+	int	r, fileBytes;
 
-	if( !s_bgTrack.stream ) return;
+	if( !bgTrack.stream ) return;
 
 	// graeme see if this is OK
-	musicVolume = ( musicVolume + ( s_musicvolume->value * 2 )) / 4.0f;
+	musicVolume = ( musicVolume + ( musicvolume->value * 2 )) / 4.0f;
 
 	// don't bother playing anything if musicvolume is 0
 	if( musicVolume <= 0 ) return;
 
 	// see how many samples should be copied into the raw buffer
-	if( s_rawend < soundtime )
-		s_rawend = soundtime;
+	if( rawend < soundtime ) rawend = soundtime;
 
-	while( s_rawend < soundtime + MAX_RAW_SAMPLES )
+	while( rawend < soundtime + MAX_RAW_SAMPLES )
 	{
-		wavdata_t	*info = FS_StreamInfo( s_bgTrack.stream );
+		wavdata_t	*info = FS_StreamInfo( bgTrack.stream );
 
-		bufferSamples = MAX_RAW_SAMPLES - (s_rawend - soundtime);
+		bufferSamples = MAX_RAW_SAMPLES - ( rawend - soundtime );
 
 		// decide how much data needs to be read from the file
 		fileSamples = bufferSamples * info->rate / dma.speed;
@@ -107,7 +102,7 @@ void S_StreamBackgroundTrack( void )
 		}
 
 		// read
-		r = FS_ReadStream( s_bgTrack.stream, fileBytes, raw );
+		r = FS_ReadStream( bgTrack.stream, fileBytes, raw );
 
 		if( r < fileBytes )
 		{
@@ -124,12 +119,12 @@ void S_StreamBackgroundTrack( void )
 		else
 		{
 			// loop
-			if( s_bgTrack.loopName[0] )
+			if( bgTrack.loopName[0] )
 			{
-				FS_CloseStream( s_bgTrack.stream );
-				s_bgTrack.stream = NULL;
-				S_StartBackgroundTrack( s_bgTrack.loopName, s_bgTrack.loopName );
-				if( !s_bgTrack.stream ) return;
+				FS_CloseStream( bgTrack.stream );
+				bgTrack.stream = NULL;
+				S_StartBackgroundTrack( bgTrack.loopName, bgTrack.loopName );
+				if( !bgTrack.stream ) return;
 			}
 			else
 			{
@@ -157,7 +152,7 @@ S_StopStreaming
 */
 void S_StopStreaming( void )
 {
-	// clear s_rawend here ?
+	// clear rawend here ?
 }
 
 /*
@@ -172,8 +167,8 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 	int	i, src, dst;
 	float	scale;
 
-	if( s_rawend < paintedtime )
-		s_rawend = paintedtime;
+	if( rawend < paintedtime )
+		rawend = paintedtime;
 	scale = (float)rate / dma.speed;
 
 	if( channels == 2 && width == 2 )
@@ -183,10 +178,10 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 			// optimized case
 			for( i = 0; i < samples; i++ )
 			{
-				dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-				s_rawend++;
-				s_rawsamples[dst].left = LittleShort(((short *)data)[i*2]) << 8;
-				s_rawsamples[dst].right = LittleShort(((short *)data)[i*2+1]) << 8;
+				dst = rawend & (MAX_RAW_SAMPLES - 1);
+				rawend++;
+				rawsamples[dst].left = LittleShort(((short *)data)[i*2]) << 8;
+				rawsamples[dst].right = LittleShort(((short *)data)[i*2+1]) << 8;
 			}
 		}
 		else
@@ -196,10 +191,10 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 				src = i * scale;
 				if( src >= samples ) break;
 
-				dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-				s_rawend++;
-				s_rawsamples[dst].left = LittleShort(((short *)data)[src*2]) << 8;
-				s_rawsamples[dst].right = LittleShort(((short *)data)[src*2+1]) << 8;
+				dst = rawend & (MAX_RAW_SAMPLES - 1);
+				rawend++;
+				rawsamples[dst].left = LittleShort(((short *)data)[src*2]) << 8;
+				rawsamples[dst].right = LittleShort(((short *)data)[src*2+1]) << 8;
 			}
 		}
 	}
@@ -210,10 +205,10 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 			src = i * scale;
 			if( src >= samples ) break;
 
-			dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-			s_rawend++;
-			s_rawsamples[dst].left = LittleShort(((short *)data)[src]) << 8;
-			s_rawsamples[dst].right = LittleShort(((short *)data)[src]) << 8;
+			dst = rawend & (MAX_RAW_SAMPLES - 1);
+			rawend++;
+			rawsamples[dst].left = LittleShort(((short *)data)[src]) << 8;
+			rawsamples[dst].right = LittleShort(((short *)data)[src]) << 8;
 		}
 	}
 	else if( channels == 2 && width == 1 )
@@ -223,10 +218,10 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 			src = i * scale;
 			if( src >= samples ) break;
 
-			dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-			s_rawend++;
-			s_rawsamples[dst].left = ((char *)data)[src*2] << 16;
-			s_rawsamples[dst].right = ((char *)data)[src*2+1] << 16;
+			dst = rawend & (MAX_RAW_SAMPLES - 1);
+			rawend++;
+			rawsamples[dst].left = ((char *)data)[src*2] << 16;
+			rawsamples[dst].right = ((char *)data)[src*2+1] << 16;
 		}
 	}
 	else if( channels == 1 && width == 1 )
@@ -236,10 +231,10 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 			src = i * scale;
 			if( src >= samples ) break;
 
-			dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-			s_rawend++;
-			s_rawsamples[dst].left = (((byte *)data)[src]-128) << 16;
-			s_rawsamples[dst].right = (((byte *)data)[src]-128) << 16;
+			dst = rawend & (MAX_RAW_SAMPLES - 1);
+			rawend++;
+			rawsamples[dst].left = (((byte *)data)[src]-128) << 16;
+			rawsamples[dst].right = (((byte *)data)[src]-128) << 16;
 		}
 	}
 }

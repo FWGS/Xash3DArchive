@@ -549,10 +549,9 @@ Skyportal views are rendered afterwards.
 */
 void R_DrawPortals( void )
 {
-	int i;
-	int trynum, num_meshes, total_meshes;
-	meshbuffer_t *mb;
-	ref_shader_t *shader;
+	int		i, trynum, num_meshes, total_meshes;
+	ref_shader_t	*shader;
+	meshbuffer_t	*mb;
 
 	if( r_viewleaf == NULL )
 		return;
@@ -596,9 +595,9 @@ void R_DrawPortals( void )
 						if( r_fastsky->integer && !( shader->flags & SHADER_PORTAL_CAPTURE ) )
 							continue;
 
-						if( !R_AddPortalSurface( mb ) )
+						if( !R_AddPortalSurface( mb ))
 						{
-							if( R_DrawPortalSurface() )
+							if( R_DrawPortalSurface())
 							{
 								trynum = 2;
 								break;
@@ -612,7 +611,7 @@ void R_DrawPortals( void )
 		}
 	}
 
-	if( ( RI.refdef.flags & RDF_SKYPORTALINVIEW ) && !( RI.params & RP_NOSKY ) && !r_fastsky->integer )
+	if(( RI.refdef.flags & RDF_SKYPORTALINVIEW ) && !( RI.params & RP_NOSKY ) && !r_fastsky->integer )
 	{
 		for( i = 0, mb = RI.meshlist->meshbuffer_opaque; i < RI.meshlist->num_opaque_meshes; i++, mb++ )
 		{
@@ -908,9 +907,9 @@ static bool R_AddPortalSurface( const meshbuffer_t *mb )
 		plane = oplane;
 	}
 
-	if(( dist = PlaneDiff( RI.viewOrigin, &plane ) ) <= BACKFACE_EPSILON )
+	if(( dist = PlaneDiff( RI.viewOrigin, &plane )) <= BACKFACE_EPSILON )
 	{
-		if( !( shader->flags & SHADER_PORTAL_CAPTURE2 ))
+		if(!( shader->flags & SHADER_PORTAL_CAPTURE2 ))
 			return true;
 	}
 
@@ -934,7 +933,7 @@ static bool R_AddPortalSurface( const meshbuffer_t *mb )
 	VectorAdd( ent->origin, surf->mins, mins );
 	VectorAdd( ent->origin, surf->maxs, maxs );
 	VectorAdd( mins, maxs, centre );
-	VectorScale( centre, 0.5, centre );
+	VectorScale( centre, 0.5f, centre );
 
 	if( r_portal_shader && ( shader != r_portal_shader ))
 	{
@@ -989,18 +988,18 @@ Return true upon success so that we can stop rendering portals.
 */
 static bool R_DrawPortalSurface( void )
 {
-	unsigned int i;
-	int x, y, w, h;
-	float dist, d;
-	refinst_t oldRI;
-	vec3_t origin, angles;
-	ref_entity_t *ent;
-	cplane_t *portal_plane = &r_portal_plane, *original_plane = &r_original_portal_plane;
-	ref_shader_t *shader = r_portal_shader;
-	bool mirror, refraction = false;
-	texture_t **captureTexture;
-	int captureTextureID;
-	bool doReflection, doRefraction;
+	float		dist, d;
+	refinst_t		oldRI;
+	vec3_t		origin, angles;
+	ref_entity_t	*ent;
+	cplane_t		*portal_plane = &r_portal_plane;
+	cplane_t		*original_plane = &r_original_portal_plane;
+	ref_shader_t	*shader = r_portal_shader;
+	bool		mirror, refraction = false;
+	texture_t		**captureTexture;
+	int		captureTextureID;
+	bool		doReflection, doRefraction;
+	int		i, x, y, w, h;
 
 	if( !r_portal_shader )
 		return false;
@@ -1017,9 +1016,9 @@ static bool R_DrawPortalSurface( void )
 		{
 			if( pass->program && pass->program_type == PROGRAM_TYPE_DISTORTION )
 			{
-				if( ( pass->alphaGen.type == ALPHAGEN_CONST && pass->alphaGen.args[0] == 1 ) )
+				if(( pass->alphaGen.type == ALPHAGEN_CONST && pass->alphaGen.args[0] == 1 ))
 					doRefraction = false;
-				else if( ( pass->alphaGen.type == ALPHAGEN_CONST && pass->alphaGen.args[0] == 0 ) )
+				else if(( pass->alphaGen.type == ALPHAGEN_CONST && pass->alphaGen.args[0] == 0 ) )
 					doReflection = false;
 				break;
 			}
@@ -1034,7 +1033,7 @@ static bool R_DrawPortalSurface( void )
 	// copy portal plane here because we may be flipped later for refractions
 	RI.portalPlane = *portal_plane;
 
-	if( ( dist = PlaneDiff( RI.viewOrigin, portal_plane ) ) <= BACKFACE_EPSILON || !doReflection )
+	if(( dist = PlaneDiff( RI.viewOrigin, portal_plane ) ) <= BACKFACE_EPSILON || !doReflection )
 	{
 		if( !( shader->flags & SHADER_PORTAL_CAPTURE2 ) || !doRefraction )
 			return false;
@@ -1068,7 +1067,7 @@ static bool R_DrawPortalSurface( void )
 			d = PlaneDiff( ent->origin, original_plane );
 			if( ( d >= -64 ) && ( d <= 64 ) )
 			{
-				if( !VectorCompare( ent->origin, ent->origin2 ) )	// portal
+				if( !VectorCompare( ent->origin, ent->origin2 ))	// portal
 					mirror = false;
 				ent->rtype = -1;
 				break;

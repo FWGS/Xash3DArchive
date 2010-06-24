@@ -830,8 +830,10 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		{
 			// if leaving it where it was, allow it to drop to the floor again
 			// (useful for plats that move downward)
-			check->v.flags &= ~FL_ONGROUND;
-			check->v.groundentity = NULL;
+			if( check->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
+				check->v.groundentity = NULL;
+			else if( check->v.flags & FL_MONSTER )
+				check->v.flags &= ~FL_ONGROUND;
 
 			num_moved--;
 			continue;
@@ -1227,7 +1229,7 @@ void SV_Physics_Pusher( edict_t *ent )
 	// otherwise, just stay in place until the obstacle is gone
 	if( pBlocker )
 	{
-		Msg( "%s is blocked by %s\n", SV_ClassName( ent ), SV_ClassName( pBlocker ));
+//		Msg( "%s is blocked by %s\n", SV_ClassName( ent ), SV_ClassName( pBlocker ));
 		svgame.dllFuncs.pfnBlocked( ent, pBlocker );
 	}
 

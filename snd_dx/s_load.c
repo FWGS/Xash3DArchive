@@ -13,11 +13,11 @@
 #define MAX_SFX		4096
 #define MAX_SFX_HASH	(MAX_SFX/4)
 
-static int	s_numSfx = 0;
-static sfx_t	s_knownSfx[MAX_SFX];
-static sfx_t	*s_sfxHashList[MAX_SFX_HASH];
-bool		s_registering = false;
-int		s_registration_sequence = 0;
+static int	numSfx = 0;
+static sfx_t	knownSfx[MAX_SFX];
+static sfx_t	*sfxHashList[MAX_SFX_HASH];
+bool		registering = false;
+int		registration_sequence = 0;
 
 /*
 =================
@@ -31,7 +31,7 @@ void S_SoundList_f( void )
 	int		i, totalSfx = 0;
 	int		totalSize = 0;
 
-	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
+	for( i = 0, sfx = knownSfx; i < numSfx; i++, sfx++ )
 	{
 		if( !sfx->touchFrame )
 			continue;
@@ -180,18 +180,9 @@ static wavdata_t *S_CreateDefaultSound( void )
 	sc->size = sc->samples * sc->width * sc->channels;
 	sc->buffer = Z_Malloc( sc->size );
 
-	if( s_check_errors->integer )
-	{
-		// create 1 kHz tone as default sound
-		for( i = 0; i < sc->samples; i++ )
-			((short *)sc->buffer)[i] = com.sin( i * 0.1f ) * 20000;
-	}
-	else
-	{
-		// create silent sound
-		for( i = 0; i < sc->samples; i++ )
-			((short *)sc->buffer)[i] =  i;
-	}
+	// create silent sound
+	for( i = 0; i < sc->samples; i++ )
+		((short *)sc->buffer)[i] =  i;
 
 	return sc;
 }
@@ -212,11 +203,7 @@ wavdata_t *S_LoadSound( sfx_t *sfx )
 	// load it from disk
 	sc = FS_LoadSound( sfx->name, NULL, 0 );
 
-	if( sc == NULL )
-	{
-		sc = S_CreateDefaultSound();
-		sfx->default_sound = true;
-	}
+	if( !sc ) sc = S_CreateDefaultSound();
 
 	// upload and resample
 	S_UploadSound( sc, sfx );
@@ -248,40 +235,40 @@ sfx_t *S_FindSound( const char *name )
 
 	// see if already loaded
 	hash = Com_HashKey( name, MAX_SFX_HASH );
-	for( sfx = s_sfxHashList[hash]; sfx; sfx = sfx->hashNext )
+	for( sfx = sfxHashList[hash]; sfx; sfx = sfx->hashNext )
 	{
 		if( !com.strcmp( sfx->name, name ))
 		{
 			// prolonge registration
-			sfx->touchFrame = s_registration_sequence;
+			sfx->touchFrame = registration_sequence;
 			return sfx;
 		}
 	}
 
 	// find a free sfx slot spot
-	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++)
+	for( i = 0, sfx = knownSfx; i < numSfx; i++, sfx++)
 	{
 		if( !sfx->name[0] ) break; // free spot
 	}
-	if( i == s_numSfx )
+	if( i == numSfx )
 	{
-		if( s_numSfx == MAX_SFX )
+		if( numSfx == MAX_SFX )
 		{
 			MsgDev( D_ERROR, "S_FindName: MAX_SFX limit exceeded\n" );
 			return NULL;
 		}
-		s_numSfx++;
+		numSfx++;
 	}
 	
-	sfx = &s_knownSfx[i];
+	sfx = &knownSfx[i];
 	Mem_Set( sfx, 0, sizeof( *sfx ));
 	com.strncpy( sfx->name, name, MAX_STRING );
-	sfx->touchFrame = s_registration_sequence;
+	sfx->touchFrame = registration_sequence;
 	sfx->hashValue = Com_HashKey( sfx->name, MAX_SFX_HASH );
 
 	// link it in
-	sfx->hashNext = s_sfxHashList[sfx->hashValue];
-	s_sfxHashList[sfx->hashValue] = sfx;
+	sfx->hashNext = sfxHashList[sfx->hashValue];
+	sfxHashList[sfx->hashValue] = sfx;
 		
 	return sfx;
 }
@@ -299,7 +286,7 @@ static void S_FreeSound( sfx_t *sfx )
 	if( !sfx || !sfx->name[0] ) return;
 
 	// de-link it from the hash tree
-	prev = &s_sfxHashList[sfx->hashValue];
+	prev = &sfxHashList[sfx->hashValue];
 	while( 1 )
 	{
 		hashSfx = *prev;
@@ -326,8 +313,8 @@ S_BeginRegistration
 */
 void S_BeginRegistration( void )
 {
-	s_registration_sequence++;
-	s_registering = true;
+	registration_sequence++;
+	registering = true;
 }
 
 /*
@@ -342,20 +329,20 @@ void S_EndRegistration( void )
 	int	i;
 
 	// free any sounds not from this registration sequence
-	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
+	for( i = 0, sfx = knownSfx; i < numSfx; i++, sfx++ )
 	{
 		if( !sfx->name[0] ) continue;
-		if( sfx->touchFrame != s_registration_sequence )
+		if( sfx->touchFrame != registration_sequence )
 			S_FreeSound( sfx ); // don't need this sound
 	}
 
 	// load everything in
-	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
+	for( i = 0, sfx = knownSfx; i < numSfx; i++, sfx++ )
 	{
 		if( !sfx->name[0] ) continue;
 		S_LoadSound( sfx );
 	}
-	s_registering = false;
+	registering = false;
 }
 
 /*
@@ -371,20 +358,20 @@ sound_t S_RegisterSound( const char *name )
 	sfx = S_FindSound( name );
 	if( !sfx ) return -1;
 
-	sfx->touchFrame = s_registration_sequence;
-	if( !s_registering ) S_LoadSound( sfx );
+	sfx->touchFrame = registration_sequence;
+	if( !registering ) S_LoadSound( sfx );
 
-	return sfx - s_knownSfx;
+	return sfx - knownSfx;
 }
 
 sfx_t *S_GetSfxByHandle( sound_t handle )
 {
-	if( handle < 0 || handle >= s_numSfx )
+	if( handle < 0 || handle >= numSfx )
 	{
-		MsgDev( D_ERROR, "S_GetSfxByHandle: handle %i out of range (%i)\n", handle, s_numSfx );
+		MsgDev( D_ERROR, "S_GetSfxByHandle: handle %i out of range (%i)\n", handle, numSfx );
 		return NULL;
 	}
-	return &s_knownSfx[handle];
+	return &knownSfx[handle];
 }
 
 /*
@@ -401,11 +388,11 @@ void S_FreeSounds( void )
 	S_StopAllSounds();
 
 	// free all sounds
-	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
+	for( i = 0, sfx = knownSfx; i < numSfx; i++, sfx++ )
 		S_FreeSound( sfx );
 
-	Mem_Set( s_knownSfx, 0, sizeof( s_knownSfx ));
-	Mem_Set( s_sfxHashList, 0, sizeof( s_sfxHashList ));
+	Mem_Set( knownSfx, 0, sizeof( knownSfx ));
+	Mem_Set( sfxHashList, 0, sizeof( sfxHashList ));
 
-	s_numSfx = 0;
+	numSfx = 0;
 }

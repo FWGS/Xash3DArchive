@@ -59,7 +59,6 @@ typedef struct vsound_exp_s
 	void (*RenderFrame)( ref_params_t *fd );
 	void (*StopSound)( int entnum, int channel, const char *soundname );
 	void (*StopAllSounds)( void );
-	void (*FreeSounds)( void );
 
 	void (*Activate)( bool active );
 
@@ -72,10 +71,10 @@ typedef struct vsound_imp_s
 
 	trace_t (*TraceLine)( const vec3_t start, const vec3_t end );
 	bool (*GetEntitySpatialization)( int entnum, soundinfo_t *info );
-	int  (*PointContents)( const vec3_t point );
+	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
 	edict_t *(*GetClientEdict)( int index );
 	mouth_t *(*GetEntityMouth)( edict_t *ent );
-	int  (*GetServerTime)( void );
+	float (*GetServerTime)( void );
 	bool (*IsInGame)( void );	// returns false for menu, console, etc
 	bool (*IsActive)( void );	// returns true when client is completely in-game
 } vsound_imp_t;

@@ -218,7 +218,7 @@ bool Host_InitSound( void )
 	// sound callbacks
 	si.GetEntitySpatialization = CL_GetEntitySpatialization;
 	si.TraceLine = CL_TraceLine;
-	si.PointContents = CL_PointContents;
+	si.AmbientLevels = CL_AmbientLevels;
 	si.GetClientEdict = CL_GetEdictByIndex;
 	si.GetEntityMouth = CL_GetEntityMouth;
 	si.GetServerTime = CL_GetServerTime;
