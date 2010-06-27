@@ -334,6 +334,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
 	int 	chan, sound;
 	float 	volume, attn;  
 	int	flags, pitch, entnum;
+	sound_t	handle;
 
 	flags = MSG_ReadWord( msg );
 	sound = MSG_ReadWord( msg );
@@ -361,13 +362,22 @@ void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
 		MSG_ReadPos( msg, pos );
 	}
 
+	if( flags & SND_SENTENCE )
+	{
+		char	sentenceName[32];
+
+		com.snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
+		handle = S_RegisterSound( sentenceName );
+	}
+	else handle = cl.sound_precache[sound];	// see precached sound
+
 	if( is_ambient )
 	{
-		S_AmbientSound( pos, entnum, chan, cl.sound_precache[sound], volume, attn, pitch, flags );
+		S_AmbientSound( pos, entnum, chan, handle, volume, attn, pitch, flags );
 	}
 	else
 	{
-		S_StartSound( pos, entnum, chan, cl.sound_precache[sound], volume, attn, pitch, flags );
+		S_StartSound( pos, entnum, chan, handle, volume, attn, pitch, flags );
 	}
 }
 

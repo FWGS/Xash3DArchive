@@ -140,7 +140,7 @@ typedef struct
 	// cdlight_t private starts here
 	int		key;		// so entities can reuse same entry
 	float		start;		// stop lighting after this time
-	int		end;		// drop this each second
+	float		end;		// drop this each second
 	float		radius;		// radius (not an intensity)
 	bool		fade;
 	bool		free;		// this light is unused at current time

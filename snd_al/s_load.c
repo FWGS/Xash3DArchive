@@ -9,12 +9,13 @@
 // than could actually be referenced during gameplay,
 // because we don't want to free anything until we are
 // sure we won't need it.
-#define MAX_SFX		4096
+#define MAX_SFX		8192
 #define MAX_SFX_HASH	(MAX_SFX/4)
 
 static int	s_numSfx = 0;
 static sfx_t	s_knownSfx[MAX_SFX];
 static sfx_t	*s_sfxHashList[MAX_SFX_HASH];
+static string	s_sentenceImmediateName;	// keep dummy sentence name
 bool		s_registering = false;
 int		s_registration_sequence = 0;
 
@@ -342,6 +343,12 @@ sound_t S_RegisterSound( const char *name )
 {
 	sfx_t	*sfx;
 
+	if( name[0] == '!' )
+	{
+		com.strncpy( s_sentenceImmediateName, name, sizeof( s_sentenceImmediateName ));
+		return SENTENCE_INDEX;
+	}
+
 	sfx = S_FindSound( name );
 	if( !sfx ) return -1;
 
@@ -353,6 +360,12 @@ sound_t S_RegisterSound( const char *name )
 
 sfx_t *S_GetSfxByHandle( sound_t handle )
 {
+	if( handle == SENTENCE_INDEX )
+	{
+		// create new sfx
+		return S_FindSound( s_sentenceImmediateName );
+	}
+
 	if( handle < 0 || handle >= s_numSfx )
 	{
 		MsgDev( D_ERROR, "S_GetSfxByHandle: handle %i out of range (%i)\n", handle, s_numSfx );

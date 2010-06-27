@@ -1241,7 +1241,7 @@ void SX_RoomFX( int endtime, int fFilter, int fTimefx )
 	if( sampleCount < 0 ) return;
 
 	fReset = false;
-	if( listener.waterlevel > 2 )
+	if( s_listener.waterlevel > 2 )
 		roomType = sxroomwater_type->integer;
 	else roomType = sxroom_type->integer;
 

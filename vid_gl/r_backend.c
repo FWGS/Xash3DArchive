@@ -1644,7 +1644,7 @@ void R_ModifyColor( const ref_stage_t *pass )
 					VectorCopy( triState.lightingOrigin, lightingOrigin );
 				else VectorClear( lightingOrigin );	// FIXME: MB_POLY
 
-				if( RI.currententity->flags & EF_FULLBRIGHT || !r_worldbrushmodel->lightdata )
+				if( RI.currententity->flags & EF_FULLBRIGHT || r_fullbright->integer || !r_worldbrushmodel->lightdata )
 					VectorSet( ambient, 1.0f, 1.0f, 1.0f );
 				else R_LightForPoint( lightingOrigin, ambient );
 

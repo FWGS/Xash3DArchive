@@ -1267,52 +1267,17 @@ int pfnDropToFloor( edict_t* e )
 
 	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
 
-	if( trace.fStartSolid )
+	if( trace.flFraction == 1.0f || trace.fAllSolid )
 	{
-		vec3_t	offset, org;
-
-		VectorSet( offset, 0.5f * (e->v.mins[0] + e->v.maxs[0]), 0.5f * (e->v.mins[1] + e->v.maxs[1]), e->v.mins[2] );
-		VectorAdd( e->v.origin, offset, org );
-		trace = SV_Move( org, vec3_origin, vec3_origin, end, MOVE_NORMAL, e );
-		VectorSubtract( trace.vecEndPos, offset, trace.vecEndPos );
-
-		if( trace.fStartSolid )
-		{
-			MsgDev( D_NOTE, "SV_DropToFloor: startsolid at %g %g %g\n", e->v.origin[0], e->v.origin[1], e->v.origin[2] );
-			SV_LinkEdict( e, true );
-			e->v.flags |= FL_ONGROUND;
-			e->v.groundentity = NULL;
-			return 1;
-		}
-		else if( trace.flFraction < 1.0f )
-		{
-			MsgDev( D_NOTE, "SV_DropToFloor: moved to %g %g %g\n", e->v.origin[0], e->v.origin[1], e->v.origin[2] );
-			VectorCopy( trace.vecEndPos, e->v.origin );
-			SV_LinkEdict( e, true );
-			e->v.flags |= FL_ONGROUND;
-			e->v.groundentity = trace.pHit;
-			return 1;
-		}
-		else
-		{
-			MsgDev( D_ERROR, "SV_DropToFloor: allsolid at %g %g %g\n", e->v.origin[0], e->v.origin[1], e->v.origin[2] );
-		}
-		return 0;
+		return false;
 	}
-	else
-	{
-		if( trace.fAllSolid )
-			return -1;
 
-		if( trace.flFraction == 1.0f )
-			return 0;
+	VectorCopy( trace.vecEndPos, e->v.origin );
+	SV_LinkEdict( e, false );
+	e->v.flags |= FL_ONGROUND;
+	e->v.groundentity = trace.pHit;
 
-		VectorCopy( trace.vecEndPos, e->v.origin );
-		SV_LinkEdict( e, true );
-		e->v.flags |= FL_ONGROUND;
-		e->v.groundentity = trace.pHit;
-		return 1;
-	}
+	return true;
 }
 
 /*
@@ -1399,8 +1364,15 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		VectorAverage( ent->v.absmin, ent->v.absmax, origin );
 
 		if( flags & SND_SPAWNING )
+		{
 			msg_dest = MSG_INIT;
-		else msg_dest = MSG_ALL;
+		}
+		else
+		{
+			if( chan == CHAN_STATIC )
+				msg_dest = MSG_ALL;
+			else msg_dest = MSG_PAS;
+		}
 	}
 	else
 	{
@@ -1408,16 +1380,31 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		VectorAdd( origin, ent->v.origin, origin );
 
 		if( flags & SND_SPAWNING )
+		{
 			msg_dest = MSG_INIT;
-		else msg_dest = MSG_PAS_R;
+		}
+		else
+		{ 
+			if( chan == CHAN_STATIC )
+				msg_dest = MSG_ALL;
+			else msg_dest = MSG_PAS;
+		}
 	}
 
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
 
-	// precache_sound can be used twice: cache sounds when loading
-	// and return sound index when server is active
-	sound_idx = SV_SoundIndex( sample );
+	if( sample[0] == '!' && com.is_digit( sample + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		sound_idx = com.atoi( sample + 1 );
+	}
+	else
+	{
+		// precache_sound can be used twice: cache sounds when loading
+		// and return sound index when server is active
+		sound_idx = SV_SoundIndex( sample );
+	}
 
 	MSG_Begin( svc_sound );
 	MSG_WriteWord( &sv.multicast, flags );

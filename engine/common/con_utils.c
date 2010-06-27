@@ -720,7 +720,6 @@ autocomplete_list_t cmd_list[] =
 {
 { "gl_texturemode", Cmd_GetTexturemodes },
 { "stringlist", Cmd_GetStringTablesList },
-{ "playsound", Cmd_GetSoundList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
 { "menufont", Cmd_GetFontList, },
@@ -732,6 +731,7 @@ autocomplete_list_t cmd_list[] =
 { "game", Cmd_GetGamesList },
 { "save", Cmd_GetSavesList },
 { "load", Cmd_GetSavesList },
+{ "play", Cmd_GetSoundList },
 { "map", Cmd_GetMapList },
 { NULL }, // termiantor
 };

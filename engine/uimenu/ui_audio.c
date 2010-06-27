@@ -103,8 +103,8 @@ static void UI_Audio_GetConfig( void )
 {
 	UI_Audio_GetDeviceList();
 
-	uiAudio.soundVolume.curValue = Cvar_VariableValue( "s_volume" );
-	uiAudio.musicVolume.curValue = Cvar_VariableValue( "s_musicvolume" );
+	uiAudio.soundVolume.curValue = Cvar_VariableValue( "volume" );
+	uiAudio.musicVolume.curValue = Cvar_VariableValue( "musicvolume" );
 
 	if( Cvar_VariableInteger( "s_allowEAX" ))
 		uiAudio.EAX.enabled = 1;
@@ -128,8 +128,8 @@ UI_Audio_SetConfig
 static void UI_Audio_SetConfig( void )
 {
 	Cvar_FullSet( "host_audio", uiAudio.audioList[(int)uiAudio.soundLibrary.curValue], CVAR_SYSTEMINFO );
-	Cvar_SetValue( "s_volume", uiAudio.soundVolume.curValue );
-	Cvar_SetValue( "s_musicvolume", uiAudio.musicVolume.curValue );
+	Cvar_SetValue( "volume", uiAudio.soundVolume.curValue );
+	Cvar_SetValue( "musicvolume", uiAudio.musicVolume.curValue );
 	Cvar_SetValue( "s_allowEAX", uiAudio.EAX.enabled );
 	Cvar_SetValue( "s_allowA3D", uiAudio.A3D.enabled );
 
@@ -146,8 +146,8 @@ static void UI_Audio_UpdateConfig( void )
 {
 	uiAudio.soundLibrary.generic.name = uiAudio.audioList[(int)uiAudio.soundLibrary.curValue];
 
-	Cvar_SetValue( "s_volume", uiAudio.soundVolume.curValue );
-	Cvar_SetValue( "s_musicvolume", uiAudio.musicVolume.curValue );
+	Cvar_SetValue( "volume", uiAudio.soundVolume.curValue );
+	Cvar_SetValue( "musicvolume", uiAudio.musicVolume.curValue );
 
 	// See if the apply button should be enabled or disabled
 	uiAudio.apply.generic.flags |= QMF_GRAYED;

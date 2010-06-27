@@ -42,7 +42,7 @@ vsound_exp_t DLLEXPORT *CreateAPI( stdlib_api_t *input, vsound_imp_t *engfuncs )
 	snd.StartStreaming = S_StartStreaming;
 	snd.StopStreaming = S_StopStreaming;
 
-	snd.RenderFrame = S_SoundFrame;
+	snd.RenderFrame = S_RenderFrame;
 	snd.StopSound = S_StopSound;
 	snd.StopAllSounds = S_StopAllSounds;
 

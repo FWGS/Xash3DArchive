@@ -17,6 +17,8 @@ extern stdlib_api_t com;
 extern vsound_imp_t	si;
 extern byte *sndpool;
 
+#define SENTENCE_INDEX		-99999	// unique sentence index
+
 #include "mathlib.h"
 
 typedef enum

@@ -344,87 +344,23 @@ void CL_AddEntities( void )
 //
 // sound engine implementation
 //
-bool CL_GetEntitySpatialization( int entnum, soundinfo_t *info )
-{
-	edict_t	*pSound;
-
-	// world is always audible
-	if( entnum == 0 )
-		return true;
-
-	if( entnum < 0 || entnum >= GI->max_edicts )
-	{
-		MsgDev( D_ERROR, "CL_GetEntitySoundSpatialization: invalid entnum %d\n", entnum );
-		return false;
-	}
-
-	// while explosion entity can be died before sound played completely
-	if( entnum >= clgame.globals->numEntities )
-		return false;
-
-	pSound = CL_GetEdictByIndex( entnum );
-
-	// out of PVS, removed etc
-	if( !CL_IsValidEdict( pSound )) return false;
-	
-	if( !pSound->v.modelindex )
-		return true;
-
-	if( info->pflRadius )
-	{
-		vec3_t	mins, maxs;
-
-		Mod_GetBounds( pSound->v.modelindex, mins, maxs );
-		*info->pflRadius = RadiusFromBounds( mins, maxs );
-	}
-	
-	if( info->pOrigin )
-	{
-		VectorCopy( pSound->v.origin, info->pOrigin );
-
-		if( CM_GetModelType( pSound->v.modelindex ) == mod_brush )
-		{
-			vec3_t	mins, maxs, center;
-
-			Mod_GetBounds( pSound->v.modelindex, mins, maxs );
-			VectorAverage( mins, maxs, center );
-			VectorAdd( info->pOrigin, center, info->pOrigin );
-		}
-	}
-
-	if( info->pAngles )
-	{
-		VectorCopy( pSound->v.angles, info->pAngles );
-	}
-	return true;
-}
-
-void CL_GetEntitySoundSpatialization( int entnum, vec3_t origin, vec3_t velocity )
+void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
 {
 	edict_t	*ent;
-	vec3_t	mins, maxs, midPoint;
-
-	if( entnum < 0 || entnum >= GI->max_edicts )
-	{
-		MsgDev( D_ERROR, "CL_GetEntitySoundSpatialization: invalid entnum %d\n", entnum );
-		VectorCopy( vec3_origin, origin );
-		VectorCopy( vec3_origin, velocity );
-		return;
-	}
-
-	// while explosion entity can be died before sound played completely
-	if( entnum >= clgame.globals->numEntities ) return;
 
 	ent = CL_GetEdictByIndex( entnum );
-	if( !CL_IsValidEdict( ent )) return; // leave uncahnged
+	if( !CL_IsValidEdict( ent ))
+		return; // leave uncahnged
 
 	// setup origin and velocity
-	VectorCopy( ent->v.origin, origin );
-	VectorCopy( ent->v.velocity, velocity );
+	if( origin ) VectorCopy( ent->v.origin, origin );
+	if( velocity ) VectorCopy( ent->v.velocity, velocity );
 
 	// if a brush model, offset the origin
-	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
+	if( origin && CM_GetModelType( ent->v.modelindex ) == mod_brush )
 	{
+		vec3_t	mins, maxs, midPoint;
+	
 		Mod_GetBounds( ent->v.modelindex, mins, maxs );
 		VectorAverage( mins, maxs, midPoint );
 		VectorAdd( origin, midPoint, origin );

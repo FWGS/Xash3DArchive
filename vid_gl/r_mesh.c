@@ -244,11 +244,11 @@ void R_InitVertexBuffers( void )
 {
 	int	i;
 
-	tr.vertexBuffer = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( vec4_t ), GL_STREAM_DRAW_ARB );
-	tr.colorsBuffer = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( rgba_t ), GL_STREAM_DRAW_ARB );
-	tr.normalBuffer = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( vec4_t ), GL_STREAM_DRAW_ARB );
+	tr.vertexBuffer = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( vec4_t ), GL_DYNAMIC_DRAW_ARB );
+	tr.colorsBuffer = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( rgba_t ), GL_DYNAMIC_DRAW_ARB );
+	tr.normalBuffer = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( vec4_t ), GL_DYNAMIC_DRAW_ARB );
 	for( i = 0; i < MAX_TEXTURE_UNITS; i++ )
-		tr.tcoordBuffer[i] = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( vec4_t ), GL_STREAM_DRAW_ARB );	
+		tr.tcoordBuffer[i] = R_AllocVertexBuffer( MAX_ARRAY_VERTS * sizeof( vec4_t ), GL_DYNAMIC_DRAW_ARB );	
 }
 
 /*

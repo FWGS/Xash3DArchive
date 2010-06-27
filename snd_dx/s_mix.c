@@ -3,11 +3,9 @@
 //		      s_mix.c - portable code to mix sounds
 //=======================================================================
 
-#include <dsound.h>
 #include "sound.h"
 
-extern DWORD		gSndBufSize;
-extern LPDIRECTSOUNDBUFFER	pDSBuf, pDSPBuf;
+#define PAINTBUFFER_SIZE	2048
 portable_samplepair_t	paintbuffer[PAINTBUFFER_SIZE];
 int			snd_scaletable[32][256];
 int 			*snd_p, snd_linear_count, snd_vol;
@@ -33,45 +31,12 @@ void S_WriteLinearBlastStereo16( void )
 	}
 }
 
-void S_TransferStereo16( int endtime )
+void S_TransferStereo16( dword *pbuf, int endtime )
 {
 	int	lpos, lpaintedtime;
-	DWORD	*pbuf, *pbuf2;
-	DWORD	dwSize,dwSize2;
-	HRESULT	hresult;
-	int	reps;
-		
+	
 	snd_p = (int *)paintbuffer;
 	lpaintedtime = paintedtime;
-
-	if( pDSBuf )
-	{
-		reps = 0;
-
-		while(( hresult = pDSBuf->lpVtbl->Lock( pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2, &dwSize2, 0 )) != DS_OK )
-		{
-			if( hresult != DSERR_BUFFERLOST )
-			{
-				MsgDev( D_ERROR, "S_TransferStereo16: DS->Lock failed\n" );
-				SNDDMA_Shutdown();
-				SNDDMA_Init();
-				return;
-			}
-
-			if( ++reps > 10000 )
-			{
-				MsgDev( D_ERROR, "S_TransferStereo16: couldn't restore buffer\n" );
-				SNDDMA_Shutdown();
-				SNDDMA_Init();
-				return;
-			}
-		}
-	}
-	else
-	{
-		pbuf = (DWORD *)dma.buffer;
-	}
-
 
 	while( lpaintedtime < endtime )
 	{
@@ -92,8 +57,6 @@ void S_TransferStereo16( int endtime )
 		snd_p += snd_linear_count;
 		lpaintedtime += (snd_linear_count >> 1);
 	}
-
-	if( pDSBuf ) pDSBuf->lpVtbl->Unlock( pDSBuf, pbuf, dwSize, NULL, 0 );
 }
 
 /*
@@ -105,88 +68,57 @@ S_TransferPaintBuffer
 void S_TransferPaintBuffer( int endtime )
 {
 	int 	out_idx, count;
-	int 	step, val, reps;
+	int 	step, val;
 	int 	*p, out_mask;
-	DWORD	*pbuf, *pbuf2;
-	DWORD	dwSize,dwSize2;
-	HRESULT	hresult;
+	dword	*pbuf;
 
 	pbuf = (dword *)dma.buffer;
 
 	if( dma.samplebits == 16 && dma.channels == 2 )
 	{	
 		// optimized case
-		S_TransferStereo16( endtime );
-		return;
-	}
-
-	// general case
-	p = (int *)paintbuffer;
-	count = (endtime - paintedtime) * dma.channels;
-	out_mask = dma.samples - 1; 
-	out_idx = paintedtime * dma.channels & out_mask;
-	step = 3 - dma.channels;
-
-	if( pDSBuf )
-	{
-		reps = 0;
-
-		while(( hresult = pDSBuf->lpVtbl->Lock( pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2,&dwSize2, 0 )) != DS_OK )
-		{
-			if( hresult != DSERR_BUFFERLOST )
-			{
-				MsgDev( D_ERROR, "S_TransferPaintBuffer: DS->Lock failed\n" );
-				SNDDMA_Shutdown();
-				SNDDMA_Init();
-				return;
-			}
-
-			if( ++reps > 10000 )
-			{
-				MsgDev( D_ERROR, "S_TransferPaintBuffer: couldn't restore buffer\n" );
-				SNDDMA_Shutdown();
-				SNDDMA_Init();
-				return;
-			}
-		}
+		S_TransferStereo16( pbuf, endtime );
 	}
 	else
-	{
-		pbuf = (DWORD *)dma.buffer;
-	}
+	{	
+		// general case
+		p = (int *)paintbuffer;
+		count = (endtime - paintedtime) * dma.channels;
+		out_mask = dma.samples - 1; 
+		out_idx = paintedtime * dma.channels & out_mask;
+		step = 3 - dma.channels;
 
-	if( dma.samplebits == 16 )
-	{
-		short	*out = (short *)pbuf;
-
-		while( count-- )
+		if( dma.samplebits == 16 )
 		{
-			val = (*p * snd_vol) >> 8;
-			p += step;
-			if( val > 0x7fff ) val = 0x7fff;
-			else if( val < (short)0x8000 )
-				val = (short)0x8000;
-			out[out_idx] = val;
-			out_idx = (out_idx + 1) & out_mask;
+			short	*out = (short *)pbuf;
+
+			while( count-- )
+			{
+				val = *p >> 8;
+				p += step;
+				if( val > 0x7fff ) val = 0x7fff;
+				else if( val < (short)0x8000 )
+					val = (short)0x8000;
+				out[out_idx] = val;
+				out_idx = (out_idx + 1) & out_mask;
+			}
+		}
+		else if( dma.samplebits == 8 )
+		{
+			byte	*out = (byte *)pbuf;
+
+			while( count-- )
+			{
+				val = *p >> 8;
+				p += step;
+				if( val > 0x7fff ) val = 0x7fff;
+				else if( val < (short)0x8000 )
+					val = (short)0x8000;
+				out[out_idx] = (val>>8) + 128;
+				out_idx = (out_idx + 1) & out_mask;
+			}
 		}
 	}
-	else if( dma.samplebits == 8 )
-	{
-		byte	*out = (byte *)pbuf;
-
-		while( count-- )
-		{
-			val = (*p * snd_vol) >> 8;
-			p += step;
-			if( val > 0x7fff ) val = 0x7fff;
-			else if( val < (short)0x8000 )
-				val = (short)0x8000;
-			out[out_idx] = (val>>8) + 128;
-			out_idx = (out_idx + 1) & out_mask;
-		}
-	}
-
-	if( pDSBuf ) pDSBuf->lpVtbl->Unlock( pDSBuf, pbuf, dwSize, NULL, 0 );
 }
 
 /*
@@ -196,11 +128,13 @@ CHANNEL MIXING
 
 ===============================================================================
 */
-void S_PaintChannelFrom8( channel_t *ch, wavdata_t *sc, int count )
+void S_PaintChannelFrom8( channel_t *ch, wavdata_t *sc, int count, int offset )
 {
-	int	i, data;
-	int	*lscale, *rscale;
-	byte	*sfx;
+	int 			data;
+	int			*lscale, *rscale;
+	byte			*sfx;
+	portable_samplepair_t	*samp;
+	int			i;
 
 	if( ch->leftvol > 255 ) ch->leftvol = 255;
 	if( ch->rightvol > 255 ) ch->rightvol = 255;
@@ -209,33 +143,39 @@ void S_PaintChannelFrom8( channel_t *ch, wavdata_t *sc, int count )
 	rscale = snd_scaletable[ch->rightvol>>3];
 	sfx = (signed char *)sc->buffer + ch->pos;
 
-	for( i = 0; i < count; i++ )
+	samp = &paintbuffer[offset];
+
+	for( i = 0; i < count; i++, samp++ )
 	{
 		data = sfx[i];
-		paintbuffer[i].left += lscale[data];
-		paintbuffer[i].right += rscale[data];
+		samp->left += lscale[data];
+		samp->right += rscale[data];
 	}
 	ch->pos += count;
 }
 
-void S_PaintChannelFrom16( channel_t *ch, wavdata_t *sc, int count )
+void S_PaintChannelFrom16( channel_t *ch, wavdata_t *sc, int count, int offset )
 {
-	int	i, data;
-	int	left, right;
-	int	leftvol, rightvol;
-	short	*sfx;
+	int			data;
+	int			left, right;
+	int			leftvol, rightvol;
+	signed short		*sfx;
+	portable_samplepair_t	*samp;
+	int			i;
 
 	leftvol = ch->leftvol * snd_vol;
 	rightvol = ch->rightvol * snd_vol;
 	sfx = (signed short *)sc->buffer + ch->pos;
 
-	for( i = 0; i < count; i++ )
+	samp = &paintbuffer[offset];
+
+	for( i = 0; i < count; i++, samp++ )
 	{
 		data = sfx[i];
 		left = ( data * leftvol ) >> 8;
 		right = (data * rightvol) >> 8;
-		paintbuffer[i].left += left;
-		paintbuffer[i].right += right;
+		samp->left += left;
+		samp->right += right;
 	}
 	ch->pos += count;
 }
@@ -252,7 +192,7 @@ void S_MixAllChannels( int endtime, int end )
 	{
 		if( !ch->sfx ) continue;
 		if( !ch->leftvol && !ch->rightvol )
-			continue;	// not audible
+			continue;
 
 		sc = S_LoadSound( ch->sfx );
 		if( !sc ) continue;
@@ -261,24 +201,36 @@ void S_MixAllChannels( int endtime, int end )
 		
 		while( ltime < end )
 		{
-			// paint up to end
-			if( ch->end < end )
-				count = ch->end - ltime;
-			else count = end - ltime;
+			// max painting is to the end of the buffer
+			count = end - ltime;
+
+			// might be stopped by running out of data
+			if( ch->end - ltime < count ) count = ch->end - ltime;
 
 			if( count > 0 )
 			{	
 				if( sc->width == 1 )
-					S_PaintChannelFrom8( ch, sc, count );
-				else S_PaintChannelFrom16( ch, sc, count );
+					S_PaintChannelFrom8( ch, sc, count, ltime - paintedtime );
+				else S_PaintChannelFrom16( ch, sc, count, ltime - paintedtime );
 	
 				ltime += count;
+			}
+
+			if( si.GetClientEdict( ch->entnum ) && ( ch->entchannel == CHAN_VOICE ))
+			{
+				// UNDONE: recode this as a member function of CAudioMixer
+				SND_MoveMouth8( ch, ch->sfx->cache, count );
 			}
 
 			// if at end of loop, restart
 			if( ltime >= ch->end )
 			{
-				if( sc->loopStart >= 0 )
+				if( ch->isSentence )
+				{
+					VOX_LoadNextWord( ch );
+					if( !ch->sfx ) break; // sentence is finished
+				}
+				else if( sc->loopStart >= 0 && ch->use_loop )
 				{
 					ch->pos = sc->loopStart;
 					ch->end = ltime + sc->samples - ch->pos;
@@ -308,7 +260,7 @@ void S_PaintChannels( int endtime )
 			end = paintedtime + PAINTBUFFER_SIZE;
 
 		// clear the paint buffer
-		if( rawend < paintedtime )
+		if( s_rawend < paintedtime )
 		{
 			Mem_Set( paintbuffer, 0, (end - paintedtime) * sizeof( portable_samplepair_t ));
 		}
@@ -317,10 +269,10 @@ void S_PaintChannels( int endtime )
 			int	i, stop;
 
 			// copy from the streaming sound source
-			stop = (end < rawend) ? end : rawend;
+			stop = (end < s_rawend) ? end : s_rawend;
 
 			for( i = paintedtime; i < stop; i++ )
-				paintbuffer[i - paintedtime] = rawsamples[i & (MAX_RAW_SAMPLES - 1)];
+				paintbuffer[i - paintedtime] = s_rawsamples[i & (MAX_RAW_SAMPLES - 1)];
 			
 			for( ; i < end; i++ )
 				paintbuffer[i-paintedtime].left = paintbuffer[i-paintedtime].right = 0;
@@ -328,8 +280,7 @@ void S_PaintChannels( int endtime )
 
 		S_MixAllChannels( endtime, end );
 
-		// add dsp processing effects
-		SX_RoomFX( endtime, true, true );
+//		SX_RoomFX( endtime, true, true );
 
 		// transfer out according to DMA format
 		S_TransferPaintBuffer( end );
@@ -337,7 +288,7 @@ void S_PaintChannels( int endtime )
 	}
 }
 
-void SND_InitScaletable( void )
+void S_InitScaletable( void )
 {
 	int	i, j;
 	int	scale;
@@ -345,9 +296,7 @@ void SND_InitScaletable( void )
 	for( i = 0; i < 32; i++ )
 	{
 		scale = i * 8 * 256 * S_GetMasterVolume();
-
-		for( j = 0; j < 256; j++ )
-			snd_scaletable[i][j] = ((signed char)j) * scale;
+		for( j = 0; j < 256; j++ ) snd_scaletable[i][j] = ((signed char)j) * scale;
 	}
-	volume->modified = false;
+	s_volume->modified = false;
 }

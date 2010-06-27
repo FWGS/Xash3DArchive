@@ -146,6 +146,10 @@ SOURCE=.\s_stream.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\s_utils.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\s_vox.c
 # End Source File
 # End Group

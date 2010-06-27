@@ -17,14 +17,6 @@ typedef struct
 	int	sndavg;		// running average
 } mouth_t;
 
-typedef struct
-{
-	// requested outputs ( NULL == not requested )
-	float	*pOrigin;		// vec3_t
-	float	*pAngles;		// vec3_t
-	float	*pflRadius;	// vec_t
-} soundinfo_t;
-
 /*
 ==============================================================================
 
@@ -70,7 +62,7 @@ typedef struct vsound_imp_s
 	size_t	api_size;		// must matched with sizeof(vsound_imp_t)
 
 	trace_t (*TraceLine)( const vec3_t start, const vec3_t end );
-	bool (*GetEntitySpatialization)( int entnum, soundinfo_t *info );
+	void (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
 	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
 	edict_t *(*GetClientEdict)( int index );
 	mouth_t *(*GetEntityMouth)( edict_t *ent );

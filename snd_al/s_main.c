@@ -302,8 +302,7 @@ S_SpatializeChannel
 */
 static void S_SpatializeChannel( channel_t *ch )
 {
-	vec3_t		position, velocity;
-	soundinfo_t	SndInfo;
+	vec3_t	position, velocity;
 	
 	// update position and velocity
 	if( ch->entnum == al_state.clientnum || !ch->dist_mult )
@@ -320,11 +319,7 @@ static void S_SpatializeChannel( channel_t *ch )
 		}
 		else
 		{
-			SndInfo.pOrigin = position;
-			SndInfo.pAngles = velocity;	// FIXME: this is angles, not velocity
-			SndInfo.pflRadius = NULL;
-
-			si.GetEntitySpatialization( ch->entnum, &SndInfo );
+			si.GetEntitySpatialization( ch->entnum, position, velocity );
 
 			palSource3f( ch->sourceNum, AL_POSITION, position[1], position[2], -position[0] );
 			palSource3f( ch->sourceNum, AL_VELOCITY, velocity[1], velocity[2], -velocity[0] );
@@ -515,7 +510,7 @@ int S_AlterChannel( int entnum, int channel, sfx_t *sfx, float vol, int pitch, i
 	// regular sound or streaming sound
 	for( i = 0, ch = s_channels; i < al_state.total_channels; i++, ch++ )
 	{
-		if( ch->entnum == entnum && ch->entchannel == channel && ch->sfx )
+		if( ch->entnum == entnum && ch->entchannel == channel && ch->sfx == sfx )
 		{
 			if( flags & SND_CHANGE_PITCH )
 				ch->pitch = pitch / (float)PITCH_NORM;
@@ -523,7 +518,7 @@ int S_AlterChannel( int entnum, int channel, sfx_t *sfx, float vol, int pitch, i
 			if( flags & SND_CHANGE_VOL )
 				ch->volume = vol;
 
-			if( flags & SND_STOP && ch->sfx->loopStart >= 0 )
+			if( flags & SND_STOP )
 				S_StopChannel( ch );
 
 			return true;
@@ -952,8 +947,8 @@ bool S_Init( void *hInst )
 	s_allowEAX = Cvar_Get("s_allowEAX", "1", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "allow EAX 2.0 extension" );
 	s_allowA3D = Cvar_Get("s_allowA3D", "1", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "allow A3D 2.0 extension" );
 	s_check_errors = Cvar_Get("s_check_errors", "1", CVAR_ARCHIVE, "ignore audio engine errors" );
-	s_volume = Cvar_Get("s_volume", "1.0", CVAR_ARCHIVE, "sound volume" );
-	s_musicvolume = Cvar_Get("s_musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
+	s_volume = Cvar_Get("volume", "1.0", CVAR_ARCHIVE, "sound volume" );
+	s_musicvolume = Cvar_Get("musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
 	s_minDistance = Cvar_Get("s_mindistance", "240.0", CVAR_ARCHIVE, "3d sound min distance" );
 	s_maxDistance = Cvar_Get("s_maxdistance", "8192.0", CVAR_ARCHIVE, "3d sound max distance" );
 	s_rolloffFactor = Cvar_Get("s_rollofffactor", "1.0", CVAR_ARCHIVE, "3d sound rolloff factor" );

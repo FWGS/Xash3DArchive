@@ -541,7 +541,7 @@ void CL_UpdateBaseVelocity( edict_t *ent );
 // cl_frame.c
 //
 void CL_ParseFrame( sizebuf_t *msg );
-void CL_GetEntitySoundSpatialization( int ent, vec3_t origin, vec3_t velocity );
+void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 
 //
 // cl_effects.c

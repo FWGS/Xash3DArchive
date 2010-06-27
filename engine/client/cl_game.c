@@ -781,7 +781,7 @@ bool CL_IsValidEdict( const edict_t *e )
 	if( e == EDICT_NUM( 0 )) return false;	// world is the read-only entity
 	if( !e->pvServerData ) return false;
 	// edict without pvPrivateData is valid edict
-	// server.dll know how allocate it
+	// client.dll know how allocate it
 	return true;
 }
 

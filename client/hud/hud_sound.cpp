@@ -352,7 +352,7 @@ int CHudSound :: Draw( float flTime )
 	if( !fmod_dll || !fmod_data )
 		return 0;
 
-	float vol = CVAR_GET_FLOAT( "s_musicvolume" );	// sound engine cvar
+	float vol = CVAR_GET_FLOAT( "musicvolume" );	// sound engine cvar
 
 	if( vol != m_flVolume )
 	{

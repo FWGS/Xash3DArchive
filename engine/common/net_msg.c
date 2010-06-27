@@ -35,7 +35,7 @@ static net_field_t ent_fields[] =
 { ES_FIELD(framerate),		NET_FLOAT, false	},	// custom framerate
 { ES_FIELD(sequence),		NET_WORD,	 false	},	// 1024 sequences
 { ES_FIELD(gaitsequence),		NET_WORD,	 false	},	// 1024 gaitsequences
-{ ES_FIELD(skin),			NET_CHAR,	 false	},	// beacuse negative skins are contents
+{ ES_FIELD(skin),			NET_SHORT, false	},	// beacuse negative skins are contents
 { ES_FIELD(body),			NET_BYTE,	 false	},	// 255 bodies
 { ES_FIELD(weaponmodel),		NET_WORD,  false	},	// p_model index, not name 
 { ES_FIELD(contents),		NET_LONG,	 false	},	// full range contents
