@@ -20,37 +20,10 @@ fopen завешивает приложение, даже если перепутать местами + и a, при установке р
 1. ѕоддержка loop дл€ ogg vorbis
 2. переписать studiomdl дл€ использовани€ VFS
 
-Xash 0.72 Stable 13.12.10
+Xash 0.72 Beta 5.07.10
 
-1. revision of all resources			OK
-2. fix sky changelevel bug			OK
-3. complete lights.shader
-4. implement original half-life dll		OK
-5. revision monster moving			OK
-6. fix save\restore global state		OK
-7. rewrite WalkMove				OK
-8. tune UPDATE_BACKUP value for singleplayer	OK
-9. fix monsters interpolation			OK
-10.revision MOVETYPE_PUSH physic                  OK
-11.rewrite EntitiesInPVS check		OK
-12.revision MOVETYPE_BOUNCE physic		OK
-13.revision MOVETYPE_COMPOUND physic		OK
-14.re-design sound library			OK
-15.move loding sounds into launch.dll		OK
-16.implement generic streaming background track	OK
-17.check bugs before snapshot			OK
-18.fix logic_switcher			OK
-19.implement botman's parabot dll
-20.implement bsp 28,29,30 formats		OK
-21.revision of all resources			OK
-22.finalize server entity-culling		OK
-23.fix pas-building issues			OK
-24.remove all unused stuff in engine
-25.regrouping resources in baserc
-26.implement lighting in render		OK
-27.implement dlights			OK
-28.rework SV_PointContents			OK
-29.implement sound library
-30.rewrite engine timer			OK
-31.fixup demos				OK
-32.game interface - new revision
+1.game interface - new revision		OK
+2.clgame interface - new revision		OK
+3.entity_state - new revision			OK
+4.rework dlights				OK
+5.rework decals

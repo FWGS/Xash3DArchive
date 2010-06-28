@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "byteorder.h"
-#include "bmodel_ref.h"
+#include "bspfile.h"
 
 #define Mod_CopyString( m, str )	com.stralloc( (m)->mempool, str, __FILE__, __LINE__ )
 #define MAX_SIDE_VERTS		256	// per one polygon

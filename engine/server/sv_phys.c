@@ -1847,6 +1847,4 @@ void SV_Physics( void )
 
 	if( svgame.globals->force_retouch > 0 )
 		svgame.globals->force_retouch = max( 0, svgame.globals->force_retouch - 1 );
-
-	svgame.dllFuncs.pfnEndFrame();
 }

@@ -1326,8 +1326,6 @@ void CBasePlayer::PlayerDeathThink(void)
 	//ALERT(at_console, "Respawn\n");
 
 	respawn(pev, !(m_afPhysicsFlags & PFLAG_OBSERVER) );	// don't copy a corpse if we're in deathcam.
-	pev->view_ofs.z = m_flViewHeight;			// restore viewheight on respawn
-	
 	DontThink();
 }
 
@@ -2721,6 +2719,8 @@ void CBasePlayer::Spawn( void )
 	pev->renderfx	= 0;
 	pev->rendercolor	= g_vecZero;
 	pev->v_angle.z	= 0;	// cut off any camera rolling
+	pev->view_ofs = VEC_VIEW;
+
 	m_bitsHUDDamage	= -1;
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;

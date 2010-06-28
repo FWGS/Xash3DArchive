@@ -306,7 +306,7 @@ UI_StartSound
 */
 void UI_StartSound( const char *sound )
 {
-	S_StartLocalSound( sound, 1.0f, 100.0f, vec3_origin );
+	S_StartLocalSound( sound );
 }
 
 /*

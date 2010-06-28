@@ -68,7 +68,7 @@ static DLL_FUNCTIONS gFunctionTable =
 	BuildLevelList,		// pfnParmsChangeLevel
 
 	GetGameDescription,		// pfnGetGameDescription    Returns string describing current .dll game.
-	GetEntvarsDescirption,	// pfnGetEntvarsDescirption   engine uses this to lookup entvars table
+	DispatchFrame,		// pfnPhysicsEntity
 
 	SpectatorConnect,		// pfnSpectatorConnect      Called when spectator joins server
 	SpectatorDisconnect,	// pfnSpectatorDisconnect   Called when spectator leaves the server
@@ -81,13 +81,13 @@ static DLL_FUNCTIONS gFunctionTable =
 	PM_FindTextureType,		// pfnPM_FindTextureType
 	
 	SetupVisibility,		// pfnSetupVisibility
-	DispatchFrame,		// pfnPhysicsEntity
+	UpdateClientData,		// pfnUpdateClientData
 	AddToFullPack,		// pfnAddtoFullPack
-	EndFrame,			// pfnEndFrame
+	CreateBaseline,		// fpnCreateBaseline
 
 
 	RegisterEncoders,		// pfnRegisterEncoders		Callbacks for network encoding
-	UpdateEntityState,		// pfnUpdateEntityState
+	GetWeaponData,		// pfnGetWeaponData
 	CmdStart,			// pfnCmdStart
 	CmdEnd,			// pfnCmdEnd
 

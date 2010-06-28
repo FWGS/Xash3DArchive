@@ -662,17 +662,13 @@ void SV_PutClientInServer( edict_t *ent )
 		}
 		else
 		{
-			// copy signon buffer
-			MSG_WriteData( &client->netchan.message, sv.signon.data, sv.signon.cursize );
-
 			// setup maxspeed and refresh physinfo
 			SV_SetClientMaxspeed( client, svgame.movevars.maxspeed );
 
 			if( sv_maxclients->integer > 1 )
 				ent->v.netname = MAKE_STRING(Info_ValueForKey( client->userinfo, "name" ));
-			else ent->v.netname = 0;
-			ent->v.view_ofs[2] = GI->viewheight[0];
-	
+			else ent->v.netname = MAKE_STRING( "player" );
+
 			// fisrt entering
 			svgame.dllFuncs.pfnClientPutInServer( ent );
 
@@ -697,6 +693,9 @@ void SV_PutClientInServer( edict_t *ent )
 
 	if( !( ent->v.flags & FL_FAKECLIENT ))
 	{
+		// copy signon buffer
+		MSG_WriteData( &client->netchan.message, sv.signon.data, sv.signon.cursize );
+	
 		MSG_WriteByte( &client->netchan.message, svc_setview );
 		MSG_WriteWord( &client->netchan.message, NUM_FOR_EDICT( client->edict ));
 		MSG_Send( MSG_ONE, NULL, client->edict );
@@ -1101,21 +1100,15 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 
 	if( SV_IsValidEdict( ent ))
 	{
-		if( sv_maxclients->integer > 1 )
-		{
-			const char *model = Info_ValueForKey( cl->userinfo, "model" );
+		const char *model = Info_ValueForKey( cl->userinfo, "model" );
 
-			// apply custom playermodel
-			if( com.strlen( model ) && com.stricmp( model, "player" ))
-			{
-				const char *path = va( "models/player/%s/%s.mdl", model, model );
-				CM_RegisterModel( path, SV_ModelIndex( path )); // register model
-				SV_SetModel( ent, path );
-				cl->modelindex = ent->v.modelindex;
-			}
-			else cl->modelindex = 0;
+		// apply custom playermodel
+		if( com.strlen( model ) && com.stricmp( model, "player" ))
+		{
+			const char *path = va( "models/player/%s/%s.mdl", model, model );
+			cl->modelindex = SV_ModelIndex( path );
+			CM_RegisterModel( path, cl->modelindex ); // upload model
 		}
-		else cl->modelindex = 0;
 	}
 
 	// call prog code to allow overrides

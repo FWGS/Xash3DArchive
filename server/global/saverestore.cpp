@@ -70,8 +70,8 @@ TYPEDESCRIPTION gEntvarsDescription[] =
 	DEFINE_ENTITY_FIELD( sequence, FIELD_INTEGER ),
 	DEFINE_ENTITY_FIELD( animtime, FIELD_TIME ),
 	DEFINE_ENTITY_FIELD( framerate, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( controller, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( blending, FIELD_INTEGER ),
+	DEFINE_ENTITY_FIELD_ARRAY( controller, FIELD_CHARACTER, 16 ),
+	DEFINE_ENTITY_FIELD_ARRAY( blending, FIELD_CHARACTER, 16 ),
 
 	DEFINE_ENTITY_FIELD( rendermode, FIELD_INTEGER ),
 	DEFINE_ENTITY_FIELD( renderamt, FIELD_FLOAT ),
@@ -128,14 +128,6 @@ TYPEDESCRIPTION gEntvarsDescription[] =
 	DEFINE_ENTITY_FIELD( pain_finished, FIELD_TIME ),
 	DEFINE_ENTITY_FIELD( radsuit_finished, FIELD_TIME ),
 };
-
-// used by engine for FindEntityByString and some other things
-TYPEDESCRIPTION *GetEntvarsDescirption( int number )
-{
-	if( number < 0 && number >= ENTVARS_COUNT )
-		return NULL;
-	return &gEntvarsDescription[number];
-}
 
 // --------------------------------------------------------------
 //

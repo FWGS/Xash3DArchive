@@ -5,7 +5,7 @@
 #ifndef EVENT_API_H
 #define EVENT_API_H
 
-#define EVENT_API_VERSION	1
+#define EVENT_API_VERSION	2
 
 #define FEV_NOTHOST		(1<<0)	// skip local host for event send.    
 #define FEV_RELIABLE	(1<<1)	// send the event reliably.	 
@@ -39,22 +39,20 @@ typedef void (*pfnEventHook)( event_args_t *args );
 typedef struct event_api_s
 {
 	int	version;
-	word	(*EV_PrecacheEvent)( int type, const char* psz );
-	void	(*EV_PlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
-	void	(*EV_WeaponAnim)( int iAnim, int body, float framerate );
-	float	(*EV_RandomFloat)( float flLow, float flHigh );	
-	long	(*EV_RandomLong)( long lLow, long lHigh );
-	void	(*EV_HookEvent)( const char *name, pfnEventHook pfn );
-	void	(*EV_KillEvents)( int entnum, const char *eventname );
 	void	(*EV_PlaySound)( edict_t *ent, float *org, int chan, const char *samp, float vol, float attn, int flags, int pitch );
 	void	(*EV_StopSound)( int ent, int channel, const char *sample );
 	int	(*EV_FindModelIndex)( const char *model );
 	int	(*EV_IsLocal)( int playernum );
-	void	(*EV_LocalPlayerViewheight)( float *view_ofs );
-	void	(*EV_StopAllSounds)( edict_t *ent, int entchannel );
 	modtype_t	(*EV_GetModelType)( int modelIndex );
-	int	(*EV_GetModFrames)( int modelIndex );
+	void	(*EV_LocalPlayerViewheight)( float *view_ofs );
 	void	(*EV_GetModBounds)( int modelIndex, float *mins, float *maxs );
+	int	(*EV_GetModFrames)( int modelIndex );
+	void	(*EV_WeaponAnimation)( int sequence, int body, float framerate );
+	word	(*EV_PrecacheEvent)( int type, const char* psz );
+	void	(*EV_PlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
+	const char *(*EV_TraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 );
+	void	(*EV_StopAllSounds)( edict_t *ent, int entchannel );
+	void	(*EV_KillEvents)( int entnum, const char *eventname );
 } event_api_t;
 
 #endif//EVENT_API_H

@@ -11,6 +11,46 @@
 #include "pm_defs.h"
 #include "const.h"
 
+/*
+=============
+EntvarsDescription
+
+entavrs table for FindEntityByString
+=============
+*/
+#define ENTVARS_COUNT	( sizeof( gEntvarsDescription ) / sizeof( gEntvarsDescription[0] ))
+
+static TYPEDESCRIPTION gEntvarsDescription[] = 
+{
+	DEFINE_ENTITY_FIELD( classname, FIELD_STRING ),
+	DEFINE_ENTITY_FIELD( globalname, FIELD_STRING ),
+	DEFINE_ENTITY_FIELD( model, FIELD_MODELNAME ),
+	DEFINE_ENTITY_FIELD( viewmodel, FIELD_MODELNAME ),
+	DEFINE_ENTITY_FIELD( weaponmodel, FIELD_MODELNAME ),
+	DEFINE_ENTITY_FIELD( target, FIELD_STRING ),
+	DEFINE_ENTITY_FIELD( targetname, FIELD_STRING ),
+	DEFINE_ENTITY_FIELD( netname, FIELD_STRING ),
+	DEFINE_ENTITY_FIELD( message, FIELD_STRING ),
+	DEFINE_ENTITY_FIELD( noise, FIELD_SOUNDNAME ),
+	DEFINE_ENTITY_FIELD( noise1, FIELD_SOUNDNAME ),
+	DEFINE_ENTITY_FIELD( noise2, FIELD_SOUNDNAME ),
+	DEFINE_ENTITY_FIELD( noise3, FIELD_SOUNDNAME ),
+};
+
+/*
+=============
+SV_GetEntvarsDescription
+
+entavrs table for FindEntityByString
+=============
+*/
+TYPEDESCRIPTION *SV_GetEntvarsDescirption( int number )
+{
+	if( number < 0 && number >= ENTVARS_COUNT )
+		return NULL;
+	return &gEntvarsDescription[number];
+}
+
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 {
 	int	i;
@@ -529,7 +569,7 @@ SV_BaselineForEntity
 assume pEdict is valid
 =========
 */
-void SV_BaselineForEntity( const edict_t *pEdict )
+void SV_BaselineForEntity( edict_t *pEdict )
 {
 	sv_priv_t	*sv_ent;
 
@@ -539,24 +579,30 @@ void SV_BaselineForEntity( const edict_t *pEdict )
 	// update baseline for new entity
 	if( !sv_ent->s.number )
 	{
-		entity_state_t	*base;
+		int		modelindex;
+		sv_client_t	*cl;
 
-		base = &sv_ent->s;
+		sv_ent->s.classname = SV_ClassIndex( STRING( pEdict->v.classname ));
+		sv_ent->s.number = pEdict->serialnumber;
+			
+		if( pEdict->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( pEdict, false )))
+			modelindex = cl->modelindex ? cl->modelindex : pEdict->v.modelindex;
+		else modelindex = pEdict->v.modelindex;
 
 		if( pEdict->v.modelindex || pEdict->v.effects )
 		{
 			// take current state as baseline
-			SV_UpdateEntityState( pEdict, true );
-			svs.baselines[pEdict->serialnumber] = *base;
+			svgame.dllFuncs.pfnCreateBaseline( &sv_ent->s, pEdict, modelindex );
+			svs.baselines[pEdict->serialnumber] = sv_ent->s;
                     }
 
-		if( sv.state == ss_active && ( base->modelindex || base->effects ))
+		if( sv.state == ss_active && ( sv_ent->s.modelindex || sv_ent->s.effects ))
 		{
 			entity_state_t	nullstate;
 
 			Mem_Set( &nullstate, 0, sizeof( nullstate ));
 			MSG_WriteByte( &sv.multicast, svc_spawnbaseline );
-			MSG_WriteDeltaEntity( &nullstate, base, &sv.multicast, true, true );
+			MSG_WriteDeltaEntity( &nullstate, &sv_ent->s, &sv.multicast, true, true );
 			MSG_DirectSend( MSG_ALL, vec3_origin, NULL );
 		}
 	}
@@ -880,18 +926,14 @@ pfnFindEntityByString
 edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, const char *pszValue )
 {
 	int		index = 0, e = 0;
-	int		m_iValue;
-	float		m_flValue;
-	const float	*m_vecValue;
-	vec3_t		m_vecValue2;
-	edict_t		*ed, *ed2;
 	TYPEDESCRIPTION	*desc = NULL;
+	edict_t		*ed;
 	const char	*t;
 
 	if( pStartEdict ) e = NUM_FOR_EDICT( pStartEdict );
 	if( !pszValue || !*pszValue ) return svgame.edicts;
 
-	while(( desc = svgame.dllFuncs.pfnGetEntvarsDescirption( index++ )) != NULL )
+	while(( desc = SV_GetEntvarsDescirption( index++ )) != NULL )
 	{
 		if( !com.strcmp( pszField, desc->fieldName ))
 			break;
@@ -899,7 +941,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 
 	if( desc == NULL )
 	{
-		MsgDev( D_ERROR, "SV_FindEntityByString: field %s not found\n", pszField );
+		MsgDev( D_ERROR, "SV_FindEntityByString: field %s not a string\n", pszField );
 		return svgame.edicts;
 	}
 
@@ -916,38 +958,6 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 			t = STRING( *(string_t *)&((byte *)&ed->v)[desc->fieldOffset] );
 			if( !t ) t = "";
 			if( !com.strcmp( t, pszValue ))
-				return ed;
-			break;
-		case FIELD_SHORT:
-			m_iValue = *(short *)&((byte *)&ed->v)[desc->fieldOffset];
-			if( m_iValue == com.atoi( pszValue ))
-				return ed;
-			break;
-		case FIELD_INTEGER:
-		case FIELD_BOOLEAN:
-			m_iValue = *(int *)&((byte *)&ed->v)[desc->fieldOffset];
-			if( m_iValue == com.atoi( pszValue ))
-				return ed;
-			break;						
-		case FIELD_TIME:
-		case FIELD_FLOAT:
-			m_flValue = *(int *)&((byte *)&ed->v)[desc->fieldOffset];
-			if( m_flValue == com.atof( pszValue ))
-				return ed;
-			break;
-		case FIELD_VECTOR:
-		case FIELD_POSITION_VECTOR:
-			m_vecValue = (float *)&((byte *)&ed->v)[desc->fieldOffset];
-			if( !m_vecValue ) m_vecValue = vec3_origin;
-			com.atov( m_vecValue2, pszValue, 3 );
-			if( VectorCompare( m_vecValue, m_vecValue2 ))
-				return ed;
-			break;
-		case FIELD_EDICT:
-			// NOTE: string must be contain an edict number
-			ed2 = (edict_t *)&((byte *)&ed->v)[desc->fieldOffset];
-			if( !ed2 ) ed2 = svgame.edicts;
-			if( NUM_FOR_EDICT( ed2 ) == com.atoi( pszValue ))
 				return ed;
 			break;
 		}
@@ -1353,7 +1363,6 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		return;
 	}
 
-	if( sv.state == ss_loading ) flags |= SND_SPAWNING;
 	if( vol != VOL_NORM ) flags |= SND_VOLUME;
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
@@ -1371,7 +1380,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		{
 			if( chan == CHAN_STATIC )
 				msg_dest = MSG_ALL;
-			else msg_dest = MSG_PAS;
+			else msg_dest = MSG_PAS_R;
 		}
 	}
 	else
@@ -1380,15 +1389,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		VectorAdd( origin, ent->v.origin, origin );
 
 		if( flags & SND_SPAWNING )
-		{
 			msg_dest = MSG_INIT;
-		}
-		else
-		{ 
-			if( chan == CHAN_STATIC )
-				msg_dest = MSG_ALL;
-			else msg_dest = MSG_PAS;
-		}
+		else msg_dest = MSG_PAS_R;
 	}
 
 	// always sending stop sound command
@@ -1429,7 +1431,7 @@ pfnEmitAmbientSound
 
 =================
 */
-void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *samp, float vol, float attn, int flags, int pitch )
+void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vol, float attn, int flags, int pitch )
 {
 	int 	number = 0, sound_idx;
 	int	msg_dest = MSG_PAS_R;
@@ -1454,7 +1456,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *samp, float vol,
 
 	if( flags & SND_SPAWNING )
 		msg_dest = MSG_INIT;
-	else msg_dest = MSG_PAS;
+	else msg_dest = MSG_ALL;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( SV_IsValidEdict( ent ))
@@ -1479,9 +1481,17 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *samp, float vol,
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
 	flags |= SND_FIXED_ORIGIN;
 
-	// precache_sound can be used twice: cache sounds when loading
-	// and return sound index when server is active
-	sound_idx = SV_SoundIndex( samp );
+	if( sample[0] == '!' && com.is_digit( sample + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		sound_idx = com.atoi( sample + 1 );
+	}
+	else
+	{
+		// precache_sound can be used twice: cache sounds when loading
+		// and return sound index when server is active
+		sound_idx = SV_SoundIndex( sample );
+	}
 
 	MSG_Begin( svc_ambientsound );
 	MSG_WriteWord( &sv.multicast, flags );

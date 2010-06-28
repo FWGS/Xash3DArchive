@@ -1202,7 +1202,7 @@ void Host_ClientFrame( void )
 	SCR_UpdateScreen ();
 
 	// update audio
-	S_Update( &cl.refdef );
+	S_RenderFrame( &cl.refdef );
 
 	// advance local effects for next frame
 	CL_RunLightStyles ();

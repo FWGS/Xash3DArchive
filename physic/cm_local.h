@@ -12,7 +12,7 @@
 #include "entity_def.h"
 #include "physic_api.h"
 #include "qfiles_ref.h"
-#include "bmodel_ref.h"
+#include "bspfile.h"
 #include "trace_def.h"
 
 extern physic_imp_t		pi;

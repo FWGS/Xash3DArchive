@@ -442,7 +442,7 @@ void SCR_RegisterShaders( void )
 		// register console images
 		cls.consoleFont = re->RegisterShader( va( "gfx/fonts/%s", con_font->string ), SHADER_FONT );
 		cls.clientFont = re->RegisterShader( va( "gfx/fonts/%s", cl_font->string ), SHADER_FONT );
-		cls.netIcon = re->RegisterShader( "#net.png", SHADER_NOMIP ); // internal recource
+		cls.netIcon = re->RegisterShader( "#net.png", SHADER_NOMIP ); // FIXME: INTRESOURCE
 		cls.fillShader = re->RegisterShader( "*white", SHADER_FONT ); // used for FillRGBA
 		cls.particle = re->RegisterShader( "*particle", SHADER_FONT ); // Q1 particlefont
 

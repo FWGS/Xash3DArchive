@@ -34,6 +34,7 @@
 #include "gamerules.h"
 #include "game.h"
 #include "weapons.h"
+#include "weaponinfo.h"
 #include "usercmd.h"
 #include "effects.h"
 
@@ -707,10 +708,6 @@ void StartFrame( void )
 	}
 }
 
-void EndFrame( void )
-{
-}
-
 void ClientPrecache( void )
 {
 	// setup precaches always needed
@@ -987,131 +984,6 @@ int ServerClassifyEdict( edict_t *pentToClassify )
 	return m_iNewClass;
 }
 
-void UpdateEntityState( entity_state_t *to, edict_t *from, int baseline )
-{
-	int	i;
-
-	if( !to || !from ) return;
-
-	CBaseEntity	*pNet;
-
-	pNet = CBaseEntity::Instance( from );
-	if( !pNet ) return;
-
-	// setup some special edict flags (engine will clearing them after the current frame)
-	if( to->modelindex != pNet->pev->modelindex )
-		to->ed_flags |= ESF_NODELTA;
-
-	// always set nodelta's for baseline
-	if( baseline ) to->ed_flags |= ESF_NODELTA;
-
-	// copy progs values to state
-	to->solid = (solid_t)pNet->pev->solid;
-
-	to->origin = pNet->pev->origin;
-	to->angles = pNet->pev->angles;
-	to->modelindex = pNet->pev->modelindex;
-	to->health = pNet->pev->health;
-	to->skin = pNet->pev->skin;		// studio model skin
-	to->body = pNet->pev->body;		// studio model submodel 
-	to->effects = pNet->pev->effects;	// shared client and render flags
-	to->renderfx = pNet->pev->renderfx;	// renderer flags
-	to->rendermode = pNet->pev->rendermode;	// rendering mode
-	to->renderamt = pNet->pev->renderamt;	// alpha value
-	to->animtime = (int)(1000.0 * pNet->pev->animtime) * 0.001; // sequence time
-	to->localtime = (int)(1000.0 * pNet->pev->ltime) * 0.001; // movement time
-	to->scale = pNet->pev->scale;		// shared client and render flags
-	to->movetype = (movetype_t)pNet->pev->movetype;
-	to->frame = pNet->pev->frame;		// any model current frame
-	to->framerate = pNet->pev->framerate;
-	to->mins = pNet->pev->mins;
-	to->maxs = pNet->pev->maxs;
-	to->flags = pNet->pev->flags;
-	to->rendercolor = pNet->pev->rendercolor;
-	to->oldorigin = pNet->pev->oldorigin;
-	to->colormap = pNet->pev->colormap;	// attachments
-		
-	if( pNet->pev->groundentity )
-		to->groundent = ENTINDEX( pNet->pev->groundentity );
-	else to->groundent = NULLENT_INDEX;
-
-	// translate attached entity
-	if( pNet->pev->aiment ) 
-		to->aiment = ENTINDEX( pNet->pev->aiment );
-	else to->aiment = NULLENT_INDEX;
-
-	// studio model sequence
-	if( pNet->pev->sequence != -1 ) to->sequence = pNet->pev->sequence;
-
-	for( i = 0; i < 16; i++ )
-	{
-		// copy blendings and bone ctrlrs
-		to->blending[i] = pNet->pev->blending[i];
-		to->controller[i] = pNet->pev->controller[i];
-	}
-	if( to->ed_type == ED_CLIENT )
-	{
-		if( pNet->pev->teleport_time )
-		{
-			to->ed_flags |= ESF_NO_PREDICTION;
-			to->ed_flags |= ESF_NODELTA;
-			pNet->pev->teleport_time = 0.0f;
-		}
-
-		if( pNet->pev->viewmodel )
-			to->viewmodel = MODEL_INDEX( STRING( pNet->pev->viewmodel ));
-		else to->viewmodel = 0;
-
-		if( pNet->pev->aiment ) 
-			to->aiment = ENTINDEX( pNet->pev->aiment );
-		else to->aiment = NULLENT_INDEX;
-
-		to->viewoffset = pNet->pev->view_ofs; 
-		to->viewangles = pNet->pev->v_angle;
-		to->idealpitch = pNet->pev->idealpitch;
-		to->punch_angles = pNet->pev->punchangle;
-		to->velocity = pNet->pev->velocity;
-		to->basevelocity = pNet->pev->clbasevelocity;
-		to->iStepLeft = pNet->pev->iStepLeft;
-		to->flFallVelocity = pNet->pev->flFallVelocity;
-		
-		// playermodel sequence, that will be playing on a client
-		if( pNet->pev->gaitsequence != -1 )
-			to->gaitsequence = pNet->pev->gaitsequence;
-		if( pNet->pev->weaponmodel != iStringNull )
-			to->weaponmodel = MODEL_INDEX( STRING( pNet->pev->weaponmodel ));
-		else to->weaponmodel = 0;
-		to->weapons = pNet->pev->weapons;
-		to->maxspeed = pNet->pev->maxspeed;
-
-		// clamp fov
-		if( pNet->pev->fov < 0.0 ) pNet->pev->fov = 0.0;
-		if( pNet->pev->fov > 160 ) pNet->pev->fov = 160;
-		to->fov = pNet->pev->fov;
-	}
-	else if( to->ed_type == ED_AMBIENT )
-	{
-		// add here specified fiels e.g for trigger_teleport wind sound etc
-	}
-	else if( to->ed_type == ED_MOVER || to->ed_type == ED_BSPBRUSH || to->ed_type == ED_PORTAL )
-	{
-		to->body = DirToBits( pNet->pev->movedir );
-		to->velocity = pNet->pev->velocity;
-
-		// this is conveyor - send speed to render for right texture scrolling
-		to->framerate = pNet->pev->speed;
-	}
-	else if( to->ed_type == ED_BEAM )
-	{
-		to->gaitsequence = pNet->pev->frags;	// beam type
-
-		// translate StartBeamEntity
-		if( pNet->pev->owner ) 
-			to->owner = ENTINDEX( pNet->pev->owner );
-		else to->owner = NULLENT_INDEX;
-	}
-}
-
 ////////////////////////////////////////////////////////
 // PAS and PVS routines for client messaging
 //
@@ -1194,13 +1066,13 @@ player is 1 if the ent/e is a player and 0 otherwise
 pSet is either the PAS or PVS that we previous set up.  We can use it to ask the engine to filter the entity against the PAS or PVS.
 we could also use the pas/ pvs that we set in SetupVisibility, if we wanted to.  Caching the value is valid in that case, but still only for the current frame
 */
-int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet )
+int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet )
 {
-	if( FNullEnt( pEdict )) return 0; // never adding invalid entities
+	CBaseEntity *pEntity;
+	Vector delta; // for ambient sounds	
 
-	// completely ignore dormant entity
-	if( pEdict->v.flags & FL_DORMANT )
-		return 0;
+	if( FNullEnt( pEdict ))
+		return 0; // never adding invalid entities
 
 	if( FNullEnt( pView )) pView = pHost; // pfnCustomView not set
 
@@ -1210,6 +1082,18 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 
 	if( pViewEntity && pViewEntity->m_iClassType == ED_PORTAL )
 		bIsPortalPass = TRUE; // view from portal camera
+
+	pEntity = (CBaseEntity *)CBaseEntity::Instance( pEdict );
+
+	if( !pEntity ) return 0;
+
+	// NOTE: always add himslef to list
+	if( !bIsPortalPass && ( pHost == pEdict ))
+		goto addEntity;
+
+	// completely ignore dormant entity
+	if( pEdict->v.flags & FL_DORMANT )
+		return 0;
          
 	// don't send spectators to other players
 	if(( pEdict->v.flags & FL_SPECTATOR ) && ( pEdict != pHost ))
@@ -1217,15 +1101,11 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 		return 0;
 	}
 
-	CBaseEntity *pEntity = (CBaseEntity *)CBaseEntity::Instance( pEdict );
-
-	if( !pEntity ) return 0;
-
 	// quick reject by type
 	switch( pEntity->m_iClassType )
 	{
 	case ED_SKYPORTAL:
-		return 1;	// no additional check requires
+		goto addEntity;	// no additional check requires
 	case ED_BEAM:
 	case ED_MOVER:
 	case ED_NORMAL:
@@ -1237,8 +1117,6 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 	case ED_RIGIDBODY: break;
 	default: return 0; // skipped
 	}
-
-	Vector	delta = g_vecZero;	// for ambient sounds
 
 	// check for ambients distance
 	if( pEntity->m_iClassType == ED_AMBIENT )
@@ -1253,6 +1131,7 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 		// precalc delta distance for sounds
 		delta = pView->v.origin - entorigin;
 	}
+	else delta = g_vecZero;
 
 	// check visibility
 	if ( !ENGINE_CHECK_PVS( pEdict, pSet ))
@@ -1310,7 +1189,179 @@ int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflag
 		}
 		UTIL_UnsetGroupTrace();
 	}
+
+addEntity:
+
+	// setup some special edict flags (engine will clearing them after the current frame)
+	if( state->modelindex != pEntity->pev->modelindex || ( pEntity->pev->effects & EF_NOINTERP ))
+		state->ed_flags |= ESF_NODELTA;
+
+	// always keep an actual
+	state->number = pEdict->serialnumber;
+
+	// copy progs values to state
+	state->solid = (solid_t)pEntity->pev->solid;
+
+	state->origin = pEntity->pev->origin;
+	state->angles = pEntity->pev->angles;
+	state->modelindex = pEntity->pev->modelindex;
+	state->health = pEntity->pev->health;
+	state->skin = pEntity->pev->skin;		// studio model skin
+	state->body = pEntity->pev->body;		// studio model submodel 
+	state->effects = pEntity->pev->effects;	// shared client and render flags
+	state->renderfx = pEntity->pev->renderfx;	// renderer flags
+	state->rendermode = pEntity->pev->rendermode;	// rendering mode
+	state->renderamt = pEntity->pev->renderamt;	// alpha value
+	state->animtime = (int)(1000.0 * pEntity->pev->animtime) * 0.001; // sequence time
+	state->localtime = (int)(1000.0 * pEntity->pev->ltime) * 0.001; // movement time
+	state->scale = pEntity->pev->scale;		// shared client and render flags
+	state->movetype = (movetype_t)pEntity->pev->movetype;
+	state->frame = pEntity->pev->frame;		// any model current frame
+	state->framerate = pEntity->pev->framerate;
+	state->mins = pEntity->pev->mins;
+	state->maxs = pEntity->pev->maxs;
+	state->flags = pEntity->pev->flags;
+	state->rendercolor = pEntity->pev->rendercolor;
+	state->oldorigin = pEntity->pev->oldorigin;
+	state->colormap = pEntity->pev->colormap;	// attachments
+		
+	if( pEntity->pev->groundentity )
+		state->groundent = ENTINDEX( pEntity->pev->groundentity );
+	else state->groundent = NULLENT_INDEX;
+
+	// translate attached entity
+	if( pEntity->pev->aiment ) 
+		state->aiment = ENTINDEX( pEntity->pev->aiment );
+	else state->aiment = NULLENT_INDEX;
+
+	// studio model sequence
+	if( pEntity->pev->sequence != -1 )
+		state->sequence = pEntity->pev->sequence;
+
+	for( int i = 0; i < 16; i++ )
+	{
+		// copy blendings and bone ctrlrs
+		state->blending[i] = pEntity->pev->blending[i];
+		state->controller[i] = pEntity->pev->controller[i];
+	}
+
+	if( state->ed_type == ED_CLIENT )
+	{
+		if( pEntity->pev->teleport_time )
+		{
+			state->ed_flags |= ESF_NO_PREDICTION;
+			state->ed_flags |= ESF_NODELTA;
+			pEntity->pev->teleport_time = 0.0f;
+		}
+
+		if( pEntity->pev->viewmodel )
+			state->viewmodel = MODEL_INDEX( STRING( pEntity->pev->viewmodel ));
+		else state->viewmodel = 0;
+
+		if( pEntity->pev->aiment ) 
+			state->aiment = ENTINDEX( pEntity->pev->aiment );
+		else state->aiment = NULLENT_INDEX;
+
+		state->viewoffset = pEntity->pev->view_ofs; 
+		state->viewangles = pEntity->pev->v_angle;
+		state->idealpitch = pEntity->pev->idealpitch;
+		state->punch_angles = pEntity->pev->punchangle;
+		state->velocity = pEntity->pev->velocity;
+		state->basevelocity = pEntity->pev->clbasevelocity;
+		state->iStepLeft = pEntity->pev->iStepLeft;
+		state->flFallVelocity = pEntity->pev->flFallVelocity;
+		
+		// playermodel sequence, that will be playing on a client
+		if( pEntity->pev->gaitsequence != -1 )
+			state->gaitsequence = pEntity->pev->gaitsequence;
+		if( pEntity->pev->weaponmodel != iStringNull )
+			state->weaponmodel = MODEL_INDEX( STRING( pEntity->pev->weaponmodel ));
+		else state->weaponmodel = 0;
+		state->weapons = pEntity->pev->weapons;
+		state->maxspeed = pEntity->pev->maxspeed;
+
+		// clamp fov
+		if( pEntity->pev->fov < 0.0 ) pEntity->pev->fov = 0.0;
+		if( pEntity->pev->fov > 160 ) pEntity->pev->fov = 160;
+		state->fov = pEntity->pev->fov;
+	}
+	else if( state->ed_type == ED_AMBIENT )
+	{
+		// add here specified fields e.g for trigger_teleport wind sound etc
+	}
+	else if( state->ed_type == ED_MOVER || state->ed_type == ED_BSPBRUSH || state->ed_type == ED_PORTAL )
+	{
+		state->body = DirToBits( pEntity->pev->movedir );
+		state->velocity = pEntity->pev->velocity;
+
+		// this is conveyor - send speed to render for right texture scrolling
+		state->framerate = pEntity->pev->speed;
+	}
+	else if( state->ed_type == ED_BEAM )
+	{
+		state->gaitsequence = pEntity->pev->frags;	// beam type
+
+		// translate StartBeamEntity
+		if( pEntity->pev->owner ) 
+			state->owner = ENTINDEX( pEntity->pev->owner );
+		else state->owner = NULLENT_INDEX;
+	}
+
 	return 1;
+}
+
+/*
+===================
+CreateBaseline
+
+Creates baselines used for network encoding, especially for player data since players are not spawned until connect time.
+===================
+*/
+void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playermodelindex )
+{
+	// always set nodelta's for baseline
+	baseline->ed_flags |= ESF_NODELTA;
+
+	baseline->origin = entity->v.origin;
+	baseline->angles = entity->v.angles;
+	baseline->frame = entity->v.frame;
+	baseline->skin = (short)entity->v.skin;
+
+	// render information
+	baseline->rendermode = (byte)entity->v.rendermode;
+	baseline->renderamt	= (byte)entity->v.renderamt;
+	baseline->rendercolor.x = (byte)entity->v.rendercolor.x;
+	baseline->rendercolor.y = (byte)entity->v.rendercolor.y;
+	baseline->rendercolor.z = (byte)entity->v.rendercolor.z;
+	baseline->renderfx = (byte)entity->v.renderfx;
+
+	baseline->mins = entity->v.mins;
+	baseline->maxs = entity->v.maxs;
+
+	if( baseline->ed_type == ED_CLIENT )
+	{
+		baseline->colormap		= entity->serialnumber;
+		baseline->modelindex	= playermodelindex;		// "model" field from userinfo
+		baseline->friction		= 1.0;
+		baseline->movetype		= MOVETYPE_WALK;
+
+		baseline->scale		= entity->v.scale;
+		baseline->solid		= SOLID_SLIDEBOX;
+		baseline->framerate		= 1.0;
+		baseline->gravity		= 1.0;
+
+	}
+	else
+	{
+		baseline->colormap		= 0;
+		baseline->modelindex	= entity->v.modelindex;
+		baseline->movetype		= (movetype_t)entity->v.movetype;
+
+		baseline->scale		= entity->v.scale;
+		baseline->solid		= (solid_t)entity->v.solid;
+		baseline->framerate		= entity->v.framerate;
+		baseline->gravity		= entity->v.gravity;
+	}
 }
 
 typedef struct
@@ -1547,6 +1598,8 @@ void Custom_Encode( struct delta_s *pFields, const unsigned char *from, const un
 RegisterEncoders
 
 Allows game .dll to override network encoding of certain types of entities and tweak values, etc.
+
+disabled for now, wait for Xash 0.8
 =================
 */
 void RegisterEncoders( void )
@@ -1554,6 +1607,61 @@ void RegisterEncoders( void )
 	DELTA_ADDENCODER( "Entity_Encode", Entity_Encode );
 	DELTA_ADDENCODER( "Custom_Encode", Custom_Encode );
 	DELTA_ADDENCODER( "Player_Encode", Player_Encode );
+}
+
+/*
+=================
+GetWeaponData
+
+Part of weapon predict system
+
+disabled for now, wait for Xash 0.8
+=================
+*/
+int GetWeaponData( struct edict_s *player, weapon_data_t *info )
+{
+	memset( info, 0, 32 * sizeof( weapon_data_t ));
+	return 1;
+}
+
+/*
+=================
+UpdateClientData
+
+Data sent to current client only
+engine sets cd to 0 before calling.
+=================
+*/
+void UpdateClientData( const edict_t *ent, int sendweapons, clientdata_t *cd )
+{
+	cd->flags			= ent->v.flags;
+	cd->health			= ent->v.health;
+
+	cd->viewmodel		= MODEL_INDEX( STRING( ent->v.viewmodel ) );
+
+	cd->waterlevel		= ent->v.waterlevel;
+	cd->watertype		= ent->v.watertype;
+	cd->weapons			= ent->v.weapons;
+
+	// Vectors
+	cd->origin			= ent->v.origin;
+	cd->velocity		= ent->v.velocity;
+	cd->view_ofs		= ent->v.view_ofs;
+	cd->punchangle		= ent->v.punchangle;
+
+	cd->bInDuck			= ent->v.bInDuck;
+	cd->flTimeStepSound = ent->v.flTimeStepSound;
+	cd->flDuckTime		= ent->v.flDuckTime;
+	cd->flSwimTime		= ent->v.flSwimTime;
+	cd->waterjumptime	= ent->v.teleport_time;
+
+	strcpy( cd->physinfo, ENGINE_GETPHYSINFO( ent ) );
+
+	cd->maxspeed		= ent->v.maxspeed;
+	cd->fov				= ent->v.fov;
+	cd->weaponanim		= ent->v.weaponanim;
+
+	cd->pushmsec		= ent->v.pushmsec;
 }
 
 /*

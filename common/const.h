@@ -10,6 +10,8 @@
 #define YAW			1
 #define ROLL			2
 
+#define LM_STYLES			4	// MAXLIGHTMAPS
+
 // worldcraft predefined angles
 #define ANGLE_UP			-1
 #define ANGLE_DOWN			-2
@@ -36,7 +38,7 @@
 #define SND_CHANGE_PITCH		(1<<1)	// change sound pitch
 #define SND_STOP			(1<<2)	// stop the sound
 #define SND_SPAWNING		(1<<3)	// we're spawing, used in some cases for ambients
-#define SND_DELAY			(1<<4)	// sound has an initial delay
+#define SND_LOCALSOUND		(1<<4)	// not paused, not looped, for internal use
 #define SND_STOP_LOOPING		(1<<5)	// stop all looping sounds on the entity.
 #define SND_SPEAKER			(1<<6)	// being played again by a microphone through a speaker 
 
@@ -82,31 +84,6 @@
 #define CONTENTS_FLYFIELD		-17
 #define CONTENTS_GRAVITY_FLYFIELD	-18
 #define CONTENTS_FOG		-19
-
-// global deatchmatch dmflags
-#define DF_NO_HEALTH		(1<<0)
-#define DF_NO_ITEMS			(1<<1)
-#define DF_WEAPONS_STAY		(1<<2)
-#define DF_NO_FALLING		(1<<3)
-#define DF_INSTANT_ITEMS		(1<<4)
-#define DF_SAME_LEVEL		(1<<5)
-#define DF_SKINTEAMS		(1<<6)
-#define DF_MODELTEAMS		(1<<7)
-#define DF_NO_FRIENDLY_FIRE		(1<<8)
-#define DF_SPAWN_FARTHEST		(1<<9)
-#define DF_FORCE_RESPAWN		(1<<10)
-#define DF_NO_ARMOR			(1<<11)
-#define DF_ALLOW_EXIT		(1<<12)
-#define DF_INFINITE_AMMO		(1<<13)
-#define DF_QUAD_DROP		(1<<14)
-#define DF_FIXED_FOV		(1<<15)
-#define DF_QUADFIRE_DROP		(1<<16)
-#define DF_NO_MINES			(1<<17)
-#define DF_NO_STACK_DOUBLE		(1<<18)
-#define DF_NO_NUKES			(1<<19)
-#define DF_NO_SPHERES		(1<<20)
-
-// common EDICT flags
 
 // pev->flags
 #define FL_FLY			(1<<0)	// changes the SV_Movestep() behavior to not need to be on ground
@@ -375,10 +352,6 @@ typedef enum
 #define CL_ACTIVE			2	// draw normal hud
 #define CL_PAUSED			3	// pause when active
 #define CL_CHANGELEVEL		4	// draw 'loading' during changelevel
-
-// built-in dlight flags
-#define DLIGHT_FADE			(1<<0)	// fade dlight at end of lifetime
-#define DLIGHT_ELIGHT		(1<<1)	// no world effect, studiomodel only
 
 // renderer flags
 #define RDF_NOWORLDMODEL		(1<<0) 	// used for player configuration screen

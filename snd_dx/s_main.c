@@ -6,6 +6,8 @@
 #include "sound.h"
 #include "const.h"
 
+#define SND_CLIP_DISTANCE		1000.0f
+
 dma_t		dma;
 byte		*sndpool;
 static soundfade_t	soundfade;
@@ -460,7 +462,8 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	VectorCopy( pos, target_chan->origin );
 	target_chan->staticsound = ( ent == 0 ) ? true : false;
 	target_chan->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
-	target_chan->dist_mult = (attn / 1000.0f);
+	target_chan->localsound = (flags & SND_LOCALSOUND) ? true : false;
+	target_chan->dist_mult = (attn / SND_CLIP_DISTANCE);
 	target_chan->master_vol = vol;
 	target_chan->entnum = ent;
 	target_chan->entchannel = chan;
@@ -618,8 +621,9 @@ void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float f
 	// never update positions if source entity is 0
 	ch->staticsound = ( ent == 0 ) ? true : false;
 	ch->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
+	ch->localsound = (flags & SND_LOCALSOUND) ? true : false;
 	ch->master_vol = vol;
-	ch->dist_mult = (attn / 1000.0f);
+	ch->dist_mult = (attn / SND_CLIP_DISTANCE);
 	ch->basePitch = pitch;
 	ch->entnum = ent;
 	ch->entchannel = chan;
@@ -635,14 +639,13 @@ void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float f
 S_StartLocalSound
 ==================
 */
-bool S_StartLocalSound(  const char *name, float volume, int pitch, const float *org )
+void S_StartLocalSound(  const char *name )
 {
 	sound_t	sfxHandle;
+	int	flags = (SND_LOCALSOUND|SND_STOP_LOOPING);
 	
 	sfxHandle = S_RegisterSound( name );
-	S_StartSound( org, s_listener.entnum, CHAN_AUTO, sfxHandle, volume, ATTN_NONE, pitch, SND_STOP_LOOPING );
-
-	return true;
+	S_StartSound( NULL, s_listener.entnum, CHAN_AUTO, sfxHandle, VOL_NORM, ATTN_NONE, PITCH_NORM, flags );
 }
 
 /*
@@ -674,20 +677,10 @@ stop all sounds for entity on a channel.
 */
 void S_StopSound( int entnum, int channel, const char *soundname )
 {
-	int	i;
+	sfx_t	*sfx;
 
-	for( i = 0; i < total_channels; i++ )
-	{
-		channel_t	*ch = &channels[i];
-
-		if( !ch->sfx ) continue; // already freed
-		if( ch->entnum == entnum && ch->entchannel == channel )
-		{
-			if( soundname && com.strcmp( ch->sfx->name, soundname ))
-				continue;
-			S_FreeChannel( ch );
-		}
-	}
+	sfx = S_FindName( soundname, NULL );
+	S_AlterChannel( entnum, channel, sfx, 0, 0, SND_STOP );
 }
 
 /*
@@ -745,6 +738,18 @@ void S_UpdateChannels( void )
 }
 
 /*
+=================
+S_BeginFrame
+
+Starts a new rendering frame
+=================
+*/
+void S_BeginFrame( void )
+{
+	S_UpdateChannels ();
+}
+
+/*
 ============
 S_RenderFrame
 
@@ -756,32 +761,19 @@ void S_RenderFrame( ref_params_t *fd )
 	int	i, total;
 	channel_t	*ch;
 
-	if( !fd ) return;
+	if( !fd ) return;	// too early
 
 	// if the loading plaque is up, clear everything
 	// out to make sure we aren't looping a dirty
 	// dma buffer while loading
-	if( fd->paused && !s_listener.paused )
-	{
-		S_ClearBuffer();
-	}
-
 	// update any client side sound fade
 	S_UpdateSoundFade();
-
-	if( s_listener.ingame ^ si.IsInGame())
-	{
-		// state changed, rebuild scaletable
-		s_volume->modified = true;
-	}
 
 	s_listener.entnum = fd->viewentity;	// can be camera entity too
 	s_listener.frametime = fd->frametime;
 	s_listener.waterlevel = fd->waterlevel;
 	s_listener.ingame = si.IsInGame();
 	s_listener.paused = fd->paused;
-
-	if( s_listener.paused ) return;
 
 	VectorCopy( fd->simorg, s_listener.origin );
 	VectorCopy( fd->vieworg, s_listener.vieworg );
@@ -835,7 +827,7 @@ void S_Play_f( void )
 		Msg( "Usage: playsound <soundfile>\n" );
 		return;
 	}
-	S_StartLocalSound( Cmd_Argv( 1 ), 1.0f, PITCH_NORM, NULL );
+	S_StartLocalSound( Cmd_Argv( 1 ));
 }
 
 /*
@@ -892,9 +884,9 @@ bool S_Init( void *hInst )
 
 	s_volume = Cvar_Get( "volume", "0.7", CVAR_ARCHIVE, "sound volume" );
 	s_suitvolume = Cvar_Get( "suitvolume", "0.5", CVAR_ARCHIVE, "HEV suit volume" );
-	s_musicvolume = Cvar_Get("musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
+	s_musicvolume = Cvar_Get( "musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
 	s_khz = Cvar_Get( "s_khz", "22", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "output sound frequency" );
-	s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE, "how much sound to mix ahead of time" );
+	s_mixahead = Cvar_Get( "s_mixahead", "0.1", 0, "how much sound to mix ahead of time" );
 	s_show = Cvar_Get( "s_show", "0", 0, "show playing sounds" );
 	s_primary = Cvar_Get( "s_primary", "0", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "use direct primary buffer" ); 
 	s_check_errors = Cvar_Get( "s_check_errors", "1", CVAR_ARCHIVE, "ignore audio engine errors" );
@@ -930,7 +922,7 @@ bool S_Init( void *hInst )
 // =======================================================================
 void S_Shutdown( void )
 {
-	Cmd_RemoveCommand( "playsound" );
+	Cmd_RemoveCommand( "play" );
 	Cmd_RemoveCommand( "stopsound" );
 	Cmd_RemoveCommand( "music" );
 	Cmd_RemoveCommand( "soundlist" );

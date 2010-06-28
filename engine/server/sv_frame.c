@@ -40,79 +40,6 @@ static int SV_EntityNumbers( const void *a, const void *b )
 /*
 =============================================================================
 
-Copy entvars into entity state
-
-=============================================================================
-*/
-void SV_UpdateEntityState( const edict_t *ent, bool baseline )
-{
-	sv_client_t	*client = SV_ClientFromEdict( ent, true );
-
-	if( !ent->pvServerData->s.classname )
-		ent->pvServerData->s.classname = SV_ClassIndex( STRING( ent->v.classname ));
-
-	if( client && !sv.paused )
-	{
-		SV_SetIdealPitch( client );
-
-		switch( ent->v.fixangle )
-		{
-		case 1:
-			MSG_WriteByte( &sv.multicast, svc_setangle );
-			MSG_WriteAngle32( &sv.multicast, ent->v.angles[0] );
-			MSG_WriteAngle32( &sv.multicast, ent->v.angles[1] );
-			MSG_DirectSend( MSG_ONE, vec3_origin, client->edict );
-			ent->pvServerData->s.ed_flags |= ESF_NO_PREDICTION;
-			break;
-		case 2:
-			MSG_WriteByte( &sv.multicast, svc_addangle );
-			MSG_WriteAngle32( &sv.multicast, client->addangle );
-			MSG_DirectSend( MSG_ONE, vec3_origin, client->edict );
-			client->addangle = 0;
-			break;
-		}
-		client->edict->v.fixangle = 0; // reset fixangle
-
-		if( client->modelindex )
-		{
-			 // apply custom model if set
-			((edict_t *)ent)->v.modelindex = client->modelindex;
-		}
-	}
-
-	svgame.dllFuncs.pfnUpdateEntityState( &ent->pvServerData->s, (edict_t *)ent, baseline );
-
-	// always keep an actual
-	ent->pvServerData->s.number = ent->serialnumber;
-}
-
-/*
-===============
-SV_AddEntToSnapshot
-===============
-*/
-static void SV_AddEntToSnapshot( sv_priv_t *svent, edict_t *ent, sv_ents_t *ents )
-{
-	// if we have already added this entity to this snapshot, don't add again
-	if( svent->framenum == sv.net_framenum ) return;
-	svent->framenum = sv.net_framenum;
-
-	// if we are full, silently discard entities
-	if( ents->num_entities == MAX_VISIBLE_PACKET )
-	{
-		MsgDev( D_ERROR, "too many entities in visible packet list\n" );
-		return;
-	}
-
-	SV_UpdateEntityState( ent, false ); // copy entity state from progs
-	ents->entities[ents->num_entities] = ent->serialnumber;
-	ents->num_entities++;
-	c_fullsend++; // debug counter
-}
-
-/*
-=============================================================================
-
 Encode a client frame onto the network channel
 
 =============================================================================
@@ -140,16 +67,23 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 	oldent = NULL;
 	newindex = 0;
 	oldindex = 0;
+
 	while( newindex < to->num_entities || oldindex < from_num_entities )
 	{
-		if( newindex >= to->num_entities ) newnum = MAX_ENTNUMBER;
+		if( newindex >= to->num_entities )
+		{
+			newnum = MAX_ENTNUMBER;
+		}
 		else
 		{
 			newent = &svs.client_entities[(to->first_entity+newindex)%svs.num_client_entities];
 			newnum = newent->number;
 		}
 
-		if( oldindex >= from_num_entities ) oldnum = MAX_ENTNUMBER;
+		if( oldindex >= from_num_entities )
+		{
+			oldnum = MAX_ENTNUMBER;
+		}
 		else
 		{
 			oldent = &svs.client_entities[(from->first_entity+oldindex)%svs.num_client_entities];
@@ -166,6 +100,7 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 			newindex++;
 			continue;
 		}
+
 		if( newnum < oldnum )
 		{	
 			// this is a new entity, send it from the baseline
@@ -173,6 +108,7 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 			newindex++;
 			continue;
 		}
+
 		if( newnum > oldnum )
 		{	
 			// remove from message
@@ -189,7 +125,6 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 	edict_t		*ent;
 	byte		*pset;
 	bool		fullvis = false;
-	bool		force = false;
 	sv_client_t	*cl;
 	int		e;
 
@@ -230,27 +165,28 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( ent->pvServerData->framenum == sv.net_framenum )
 			continue;
 
-		if( fullvis ) force = true;
-		else force = false; // clear forceflag
-
-		// NOTE: always add himslef to list
-		if( !portal && ( ent == pClient ))
-			force = true;
-
 		if( ent->v.flags & FL_PHS_FILTER )
 			pset = clientphs;
 		else pset = clientpvs;
 
-		if( !force )
+		// add entity to the net packet
+		if( svgame.dllFuncs.pfnAddToFullPack( &ent->pvServerData->s, pViewEnt, pClient, ent, sv.hostflags, pset ))
 		{
-			// run custom user filter
-			if( !svgame.dllFuncs.pfnAddToFullPack( pViewEnt, pClient, ent, sv.hostflags, pset ))
-				continue;
+			// to prevent adds it twice through portals
+			ent->pvServerData->framenum = sv.net_framenum;
+
+			// if we are full, silently discard entities
+			if( ents->num_entities < MAX_VISIBLE_PACKET )
+			{
+				ents->entities[ents->num_entities] = ent->serialnumber;
+				ents->num_entities++;
+				c_fullsend++; // debug counter
+				
+			}
+			else MsgDev( D_ERROR, "too many entities in visible packet list\n" );
 		}
 
-		SV_AddEntToSnapshot( ent->pvServerData, ent, ents ); // add it
 		if( fullvis ) continue; // portal ents will be added anyway, ignore recursion
-
 		// if its a portal entity, add everything visible from its camera position
 		if( !portal )
 		{
@@ -401,6 +337,27 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	clent = cl->edict;
 	viewent = cl->pViewEntity;
 	sv.net_framenum++;
+
+	SV_SetIdealPitch( cl );
+
+	// update client fixangle
+	switch( clent->v.fixangle )
+	{
+	case 1:
+		MSG_WriteByte( &sv.multicast, svc_setangle );
+		MSG_WriteAngle32( &sv.multicast, clent->v.angles[0] );
+		MSG_WriteAngle32( &sv.multicast, clent->v.angles[1] );
+		MSG_DirectSend( MSG_ONE, vec3_origin, clent );
+		clent->pvServerData->s.ed_flags |= ESF_NO_PREDICTION;
+		break;
+	case 2:
+		MSG_WriteByte( &sv.multicast, svc_addangle );
+		MSG_WriteAngle32( &sv.multicast, cl->addangle );
+		MSG_DirectSend( MSG_ONE, vec3_origin, clent );
+		cl->addangle = 0;
+		break;
+	}
+	clent->v.fixangle = 0; // reset fixangle
 
 	// this is the frame we are creating
 	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];

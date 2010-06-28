@@ -124,29 +124,20 @@ DLIGHT MANAGEMENT
 
 ==============================================================
 */
-typedef struct
+struct dlight_s
 {
-	// these values common with dlight_t so don't move them
 	vec3_t		origin;
-	union
-	{
-		vec3_t	color;		// dlight color
-		vec3_t	angles;		// spotlight angles
-	};
-	float		intensity;
-	shader_t		texture;		// light image e.g. for flashlight
-	vec2_t		cone;		// spotlight cone
+	float		radius;
+	byte		color[3];
+	float		die;	// stop lighting after this time
+	float		decay;	// drop this each second
+	float		minlight;	// don't add when contributing less
+	int		key;
+	bool		dark;	// subtracts light instead of adding
+	bool		elight;	// true when calls with CL_AllocElight
+};
 
-	// cdlight_t private starts here
-	int		key;		// so entities can reuse same entry
-	float		start;		// stop lighting after this time
-	float		end;		// drop this each second
-	float		radius;		// radius (not an intensity)
-	bool		fade;
-	bool		free;		// this light is unused at current time
-} cdlight_t;
-
-cdlight_t		cl_dlights[MAX_DLIGHTS];
+dlight_t		cl_dlights[MAX_DLIGHTS];
 
 /*
 ================
@@ -164,10 +155,10 @@ CL_AllocDlight
 
 ===============
 */
-cdlight_t *CL_AllocDlight( int key )
+dlight_t *CL_AllocDlight( int key )
 {
-	int		i, time, index;
-	cdlight_t		*dl;
+	dlight_t	*dl;
+	int	i;
 
 	// first look for an exact key match
 	if( key )
@@ -183,32 +174,20 @@ cdlight_t *CL_AllocDlight( int key )
 			}
 		}
 	}
-	else
-	{
-		for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
-		{
-			if( dl->free )
-			{
-				Mem_Set( dl, 0, sizeof( *dl ));
-				return dl;
-			}
-		}
-	}
 
-	// find the oldest light
-	time = cl.time;
-	index = 0;
-
+	// then look for anything else
 	for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
 	{
-		if( dl->start < time )
+		if( dl->die < cl.time )
 		{
-			time = dl->start;
-			index = i;
+			Mem_Set( dl, 0, sizeof( *dl ));
+			dl->key = key;
+			return dl;
 		}
 	}
 
-	dl = &cl_dlights[index];
+	// otherwise grab first dlight
+	dl = &cl_dlights[0];
 	Mem_Set( dl, 0, sizeof( *dl ));
 	dl->key = key;
 
@@ -217,41 +196,38 @@ cdlight_t *CL_AllocDlight( int key )
 
 /*
 ===============
-CL_AddDLight
+CL_AllocElight
 
 ===============
 */
-void CL_AddDLight( const float *org, const float *rgb, float radius, float time, int flags, int key )
+dlight_t *CL_AllocElight( int key )
 {
-	cdlight_t		*dl;
-
-	if( radius <= 0 )
-	{
-		MsgDev( D_WARN, "CL_AddDLight: ignore light with radius <= 0\n" );
-		return;
-	}
+	dlight_t	*dl;
 
 	dl = CL_AllocDlight( key );
-	dl->free = false;
-	dl->texture = -1;	// dlight
+	dl->elight = true;
 
-	VectorCopy( org, dl->origin );
-	VectorCopy( rgb, dl->color );
-	dl->radius = radius;
-	dl->start = cl.time;
-	dl->end = dl->start + time;
-	dl->fade = (flags & DLIGHT_FADE) ? true : false;
+	return dl;
 }
 
 /*
 ===============
-CL_AddSLight
+CL_AddDlight
 
+copy dlight to renderer
 ===============
 */
-void CL_AddSLight( const float *org, float *dir, float rad, float *cone, HSPRITE hLight, int key )
+bool CL_AddDlight( dlight_t *dl )
 {
-	// FIXME: implement
+	int	flags = 0;
+	bool	add;
+
+	if( dl->dark ) flags |= DLIGHT_DARK;
+	if( dl->elight ) flags |= DLIGHT_ONLYENTS;
+
+	add = re->AddDLight( dl->origin, dl->color, dl->radius, flags );
+
+	return add;
 }
 
 /*
@@ -262,26 +238,21 @@ CL_AddDLights
 */
 void CL_AddDLights( void )
 {
-	cdlight_t	*dl;
+	dlight_t	*dl;
+	float	time;
 	int	i;
 	
+	time = cl.time - cl.oldtime;
+
 	for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
 	{
-		if( dl->free ) continue;
-		if( cl.time >= dl->end )
-		{
-			dl->free = true;
+		if( dl->die < cl.time || !dl->radius )
 			continue;
-		}
+		
+		dl->radius -= time * dl->decay;
+		if( dl->radius < 0 ) dl->radius = 0;
 
-		if( dl->fade )
-		{
-			dl->intensity = (float)(cl.time - dl->start) / (dl->end - dl->start);
-			dl->intensity = dl->radius * (1.0f - dl->intensity);
-		}
-		else dl->intensity = dl->radius; // const
-
-		re->AddDynLight( dl );
+		CL_AddDlight( dl );
 	}
 }
 
@@ -294,14 +265,13 @@ if cl_testlights is set, create 32 lights models
 */
 void CL_TestLights( void )
 {
-	int		i, j;
-	float		f, r;
-	cdlight_t		dl;
-	edict_t		*ed = CL_GetLocalPlayer();
+	int	i, j;
+	float	f, r;
+	dlight_t	dl;
 
 	if( !cl_testlights->integer ) return;
 
-	Mem_Set( &dl, 0, sizeof( cdlight_t ));
+	Mem_Set( &dl, 0, sizeof( dlight_t ));
 	
 	for( i = 0; i < bound( 1, cl_testlights->integer, MAX_DLIGHTS ); i++ )
 	{
@@ -311,13 +281,12 @@ void CL_TestLights( void )
 		for( j = 0; j < 3; j++ )
 			dl.origin[j] = cl.refdef.vieworg[j] + cl.refdef.forward[j] * f + cl.refdef.right[j] * r;
 
-		dl.color[0] = ((i%6)+1) & 1;
-		dl.color[1] = (((i%6)+1) & 2)>>1;
-		dl.color[2] = (((i%6)+1) & 4)>>2;
-		dl.intensity = 200;
-		dl.texture = -1;
+		dl.color[0] = ((((i%6)+1) & 1)>>0) * 255;
+		dl.color[1] = ((((i%6)+1) & 2)>>1) * 255;
+		dl.color[2] = ((((i%6)+1) & 4)>>2) * 255;
+		dl.radius = 200;
 
-		if( !re->AddDynLight( &dl ))
+		if( !CL_AddDlight( &dl ))
 			break; 
 	}
 }
@@ -1192,6 +1161,11 @@ void CL_AddDecals( void )
 		}
 		re->AddPolygon( dl->poly );
 	}
+}
+
+void CL_DecalShoot( HSPRITE hDecal, edict_t *pEnt, int modelIndex, float *pos, int flags )
+{
+	CL_SpawnDecal( hDecal, pEnt, pos, 0, 90.0f, 5.0f );
 }
 
 /*

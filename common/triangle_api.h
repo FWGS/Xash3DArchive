@@ -5,7 +5,7 @@
 #ifndef TRIANGLE_API_H
 #define TRIANGLE_API_H
 
-#define TRI_API_VERSION	1
+#define TRI_API_VERSION	2
 
 typedef enum 
 {

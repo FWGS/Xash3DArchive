@@ -373,7 +373,6 @@ void SV_Newgame_f( void );
 //
 void SV_WriteFrameToClient( sv_client_t *client, sizebuf_t *msg );
 void SV_BuildClientFrame( sv_client_t *client );
-void SV_UpdateEntityState( const edict_t *ent, bool baseline );
 void SV_InactivateClients( void );
 void SV_SendMessagesToAll( void );
 
@@ -392,7 +391,7 @@ void SV_SetModel( edict_t *ent, const char *name );
 void SV_CopyTraceToGlobal( trace_t *trace );
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max );
 void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info );
-void SV_BaselineForEntity( const edict_t *pEdict );
+void SV_BaselineForEntity( edict_t *pEdict );
 void SV_WriteEntityPatch( const char *filename );
 script_t *SV_GetEntityScript( const char *filename );
 float SV_AngleMod( float ideal, float current, float speed );

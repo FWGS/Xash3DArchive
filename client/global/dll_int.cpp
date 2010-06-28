@@ -34,6 +34,7 @@ static HUD_FUNCTIONS gFunctionTable =
 	HUD_Init,
 	HUD_Redraw,
 	HUD_UpdateEntityVars,
+	HUD_UpdateClientVars,
 	HUD_UpdateOnRemove,
 	HUD_Reset,
 	HUD_StartFrame,
@@ -344,6 +345,31 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	ent->v.pContainingEntity = ent;
 }
 
+/*
+=========================
+HUD_UpdateClientVars
+
+The server sends us our origin with extra precision as part of the clientdata structure, not during the normal
+playerstate update in entity_state_t.  In order for these overrides to eventually get to the appropriate playerstate
+structure, we need to copy them into the state structure at this point.
+=========================
+*/
+void HUD_UpdateClientVars( entity_state_t *state, const clientdata_t *client )
+{
+	// Copy origin
+	state->origin = client->origin;
+
+	// Spectator
+	state->iuser1 = client->iuser1;
+	state->iuser2 = client->iuser2;
+
+	// Duck prevention
+	state->iuser3 = client->iuser3;
+
+	// Fire prevention
+	state->iuser4 = client->iuser4;
+}
+
 int HUD_AddVisibleEntity( edict_t *pEnt, int ed_type )
 {
 	float	oldScale, oldRenderAmt;
@@ -390,7 +416,7 @@ int HUD_AddVisibleEntity( edict_t *pEnt, int ed_type )
 	// add light effect
 	if ( pEnt->v.effects & EF_LIGHT )
 	{
-		g_pTempEnts->AllocDLight( pEnt->v.origin, 100, 100, 100, 200, 0.001f, 0 );
+		g_pTempEnts->AllocDLight( pEnt->v.origin, 100, 100, 100, 200, 0.001f );
 		g_pTempEnts->RocketFlare( pEnt->v.origin );
 	}
 
@@ -403,7 +429,7 @@ int HUD_AddVisibleEntity( edict_t *pEnt, int ed_type )
 		}
 		else
 		{
-			g_pTempEnts->AllocDLight( pEnt->v.origin, RANDOM_LONG( 200, 230 ), 0.001f, 0 );
+			g_pTempEnts->AllocDLight( pEnt->v.origin, RANDOM_LONG( 200, 230 ), 0.001f );
 		}
 	}	
 
@@ -412,7 +438,7 @@ int HUD_AddVisibleEntity( edict_t *pEnt, int ed_type )
 	if ( pEnt->v.effects & EF_BRIGHTLIGHT && !( pEnt->v.effects & EF_NODRAW ))
 	{			
 		Vector pos( pEnt->v.origin.x, pEnt->v.origin.y, pEnt->v.origin.z + 16 );
-		g_pTempEnts->AllocDLight( pos, RANDOM_LONG( 400, 430 ), 0.001f, 0 );
+		g_pTempEnts->AllocDLight( pos, RANDOM_LONG( 400, 430 ), 0.001f );
 	}
 
 	return result;

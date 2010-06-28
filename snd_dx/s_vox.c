@@ -369,7 +369,7 @@ void VOX_LoadFirstWord( channel_t *pchan, voxword_t *pwords )
 	VOX_LoadWord( pchan );
 }
 
-void VOX_LoadNextWord( channel_t *pchan )
+wavdata_t *VOX_LoadNextWord( channel_t *pchan )
 {
 	pchan->wordIndex++;
 	VOX_LoadWord( pchan );
@@ -380,8 +380,11 @@ void VOX_LoadNextWord( channel_t *pchan )
 		pchan->sfx = pchan->words[pchan->wordIndex].sfx;
 		pchan->pos = pchan->currentWord.sample;
 		pchan->end = paintedtime + pchan->currentWord.forcedEndSample;
+		return pchan->currentWord.pData;
 	}
-	else S_FreeChannel( pchan ); // channel stopped
+
+	S_FreeChannel( pchan ); // channel stopped
+	return NULL;
 }
 
 // link all sounds in sentence, start playing first word.

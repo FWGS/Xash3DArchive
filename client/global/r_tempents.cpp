@@ -327,8 +327,14 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 
 	if(( pTemp->flags & FTENT_FLICKER ) && m_iTempEntFrame == pTemp->m_nFlickerFrame )
 	{
-		float	rgb[3] = { 1.0f, 0.47f, 0.0f };
-		g_engfuncs.pEfxAPI->CL_AllocDLight( pTemp->origin, rgb, 60, gpGlobals->time + 0.01f, 0, 0 );
+		dlight_t *dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+
+		dl->origin = pTemp->origin;
+		dl->radius = 60;
+		dl->color[0] = 255;
+		dl->color[1]= 120;
+		dl->color[2] = 0;
+		dl->die = gpGlobals->time + 0.01f;
 	}
 
 	if( pTemp->flags & FTENT_SMOKETRAIL )
@@ -1488,41 +1494,53 @@ void CTempEnts::WeaponFlash( edict_t *pEnt, int iAttachment )
 	GET_ATTACHMENT( pEnt, iAttachment, pos, NULL );
 	if( pos == pEnt->v.origin ) return; // missing attachment
 
-	AllocDLight( pos, 255, 180, 64, 100, 0.05f, 0 );
+	AllocDLight( pos, 255, 180, 64, 100, 0.05f );
 }
 
-void CTempEnts::PlaceDecal( Vector pos, float scale, int decalIndex )
+void CTempEnts::PlaceDecal( Vector pos, int entityIndex, int decalIndex )
 {
 	HSPRITE	hDecal;
+	edict_t	*pEnt;
+	int	modelIndex = 0;
 
+	pEnt = GetEntityByIndex( entityIndex );
+	if( pEnt && !pEnt->free ) modelIndex = pEnt->v.modelindex;
 	hDecal = g_engfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
-	g_engfuncs.pEfxAPI->R_ShootDecal( hDecal, NULL, pos, 0, RANDOM_LONG( 0, 359 ), scale );
+	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, pEnt, modelIndex, pos, 0 );
 }
 
-void CTempEnts::PlaceDecal( Vector pos, float scale, const char *decalname )
+void CTempEnts::PlaceDecal( Vector pos, int entityIndex, const char *decalname )
 {
 	HSPRITE	hDecal;
+	edict_t	*pEnt;
+	int	modelIndex = 0;
 
+	pEnt = GetEntityByIndex( entityIndex );
+	if( pEnt && !pEnt->free ) modelIndex = pEnt->v.modelindex;
 	hDecal = g_engfuncs.pEfxAPI->CL_DecalIndexFromName( decalname );
-	g_engfuncs.pEfxAPI->R_ShootDecal( hDecal, NULL, pos, 0, RANDOM_LONG( 0, 359 ), scale );
+	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, pEnt, modelIndex, pos, 0 );
 }
 
-void CTempEnts::AllocDLight( Vector pos, float r, float g, float b, float radius, float time, int flags )
+void CTempEnts::AllocDLight( Vector pos, byte r, byte g, byte b, float radius, float time, float decay )
 {
 	if( radius <= 0 ) return;
 
-	float	rgb[3];
-	
-	rgb[0] = r / 255.0f;
-	rgb[1] = r / 255.0f;
-	rgb[2] = r / 255.0f;
+	dlight_t	*dl;
 
-	g_engfuncs.pEfxAPI->CL_AllocDLight( pos, rgb, radius, time, flags, 0 );
+	dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+
+	dl->origin = pos;	
+	dl->die = gpGlobals->time + time;
+	dl->color[0] = r;
+	dl->color[1] = g;
+	dl->color[2] = b;
+	dl->radius = radius;
+	dl->decay = decay;
 }
 
-void CTempEnts::AllocDLight( Vector pos, float radius, float time, int flags )
+void CTempEnts::AllocDLight( Vector pos, float radius, float time, float decay )
 {
-	AllocDLight( pos, 255, 255, 255, radius, time, flags );
+	AllocDLight( pos, 255, 255, 255, radius, time, decay );
 }
 
 void CTempEnts::RocketTrail( Vector start, Vector end, int type )

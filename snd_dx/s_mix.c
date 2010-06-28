@@ -5,7 +5,7 @@
 
 #include "sound.h"
 
-#define PAINTBUFFER_SIZE	2048
+#define PAINTBUFFER_SIZE	512
 portable_samplepair_t	paintbuffer[PAINTBUFFER_SIZE];
 int			snd_scaletable[32][256];
 int 			*snd_p, snd_linear_count, snd_vol;
@@ -194,6 +194,10 @@ void S_MixAllChannels( int endtime, int end )
 		if( !ch->leftvol && !ch->rightvol )
 			continue;
 
+		// only local sounds can be playing in menus or on pause
+		if(( s_listener.paused || !s_listener.ingame ) && !ch->localsound )
+			continue;
+
 		sc = S_LoadSound( ch->sfx );
 		if( !sc ) continue;
 
@@ -219,7 +223,7 @@ void S_MixAllChannels( int endtime, int end )
 			if( si.GetClientEdict( ch->entnum ) && ( ch->entchannel == CHAN_VOICE ))
 			{
 				// UNDONE: recode this as a member function of CAudioMixer
-				SND_MoveMouth8( ch, ch->sfx->cache, count );
+				SND_MoveMouth8( ch, sc, count );
 			}
 
 			// if at end of loop, restart
@@ -227,8 +231,8 @@ void S_MixAllChannels( int endtime, int end )
 			{
 				if( ch->isSentence )
 				{
-					VOX_LoadNextWord( ch );
-					if( !ch->sfx ) break; // sentence is finished
+					sc = VOX_LoadNextWord( ch );
+					if( !sc ) break; // sentence is finished
 				}
 				else if( sc->loopStart >= 0 && ch->use_loop )
 				{
@@ -238,7 +242,7 @@ void S_MixAllChannels( int endtime, int end )
 				else
 				{
 					// channel just stopped
-					ch->sfx = NULL;
+					S_FreeChannel( ch );
 					break;
 				}
 			}

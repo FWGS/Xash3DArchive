@@ -53,6 +53,11 @@ typedef struct globalvars_s
 
 	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
 	vec3_t		vecLandmarkOffset;
+
+	// Xash3D specific
+	float		viewheight[PM_MAXHULLS]; // values from gameinfo.txt
+	vec3_t		hullmins[PM_MAXHULLS];
+	vec3_t		hullmaxs[PM_MAXHULLS];
 } globalvars_t;
 
 // engine hands this to DLLs for functionality callbacks
@@ -343,29 +348,29 @@ typedef struct
 	void	(*pfnPlayerPostThink)( edict_t *pEntity );
 
 	void	(*pfnStartFrame)( void );
-	int	(*pfnCreate)( edict_t *pent, const char *szName ); // custom entity (was pfnParmsNewLevel)
+	int	(*pfnCreate)( edict_t *pent, const char *szName );	// was pfnParmsNewLevel
 	void	(*pfnParmsChangeLevel)( void );
 
 	 // returns string describing current .dll.  E.g., TeamFotrress 2, Half-Life
 	const char *(*pfnGetGameDescription)( void );     
-	TYPEDESCRIPTION *(*pfnGetEntvarsDescirption)( int fieldnum );	// (was pfnPlayerCustomization)
+	int	(*pfnPhysicsEntity)( edict_t *pEntity );		// was pfnPlayerCustomization
 
 	// Spectator funcs
 	void	(*pfnSpectatorConnect)( edict_t *pEntity );
 	void	(*pfnSpectatorDisconnect)( edict_t *pEntity );
 	void	(*pfnSpectatorThink)( edict_t *pEntity );
 
-	int	(*pfnClassifyEdict)( edict_t *pentToClassify );		// (was pfnSys_Error)
+	int	(*pfnClassifyEdict)( edict_t *pentToClassify );		// was pfnSys_Error
 
 	void	(*pfnPM_Move)( playermove_t *ppmove, int server );
 	void	(*pfnPM_Init)( playermove_t *ppmove );
 	char	(*pfnPM_FindTextureType)( const char *name );
 	void	(*pfnSetupVisibility)( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int portal );
-	int	(*pfnPhysicsEntity)( edict_t *pEntity );		// was pfnUpdateClientData
-	int	(*pfnAddToFullPack)( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
-	void	(*pfnEndFrame)( void );				// was pfnCreateBaseline
+	void	(*pfnUpdateClientData)( const edict_t *ent, int sendweapons, struct clientdata_s *cd );
+	int	(*pfnAddToFullPack)( struct entity_state_s *state, edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
+	void	(*pfnCreateBaseline)( struct entity_state_s *baseline, edict_t *entity, int playermodelindex );
 	void	(*pfnRegisterEncoders)( void );
-	void	(*pfnUpdateEntityState)( struct entity_state_s *to, edict_t *from, int baseline ); // was pfnGetWeaponData
+	int	(*pfnGetWeaponData)( edict_t *player, struct weapon_data_s *info );
 	void	(*pfnCmdStart)( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed );
 	void	(*pfnCmdEnd)( const edict_t *player );
 

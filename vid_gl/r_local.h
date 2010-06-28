@@ -143,7 +143,6 @@ enum
 
 //===================================================================
 
-#include "bmodel_ref.h"
 #include "r_math.h"
 #include "r_mesh.h"
 #include "r_shader.h"
@@ -184,21 +183,13 @@ enum
 
 typedef struct
 {
-	// these values common with dlight_t so don't move them
-	vec3_t		origin;
-	union
-	{
-		vec3_t	color;		// dlight color
-		vec3_t	angles;		// spotlight angles
-	};
-	float		intensity;	// cdlight->radius
-	shader_t		texture;		// light image e.g. for flashlight
-	vec2_t		cone;		// spotlight cone
-
-	// dlight_t private starts here
-	vec3_t		mins, maxs;
-	const ref_shader_t	*shader;
-} dlight_t;
+	vec3_t			origin;
+	vec3_t			color;		// dlight color
+	float			intensity;	// cdlight->radius
+	vec3_t			mins, maxs;
+	const ref_shader_t		*shader;
+	int			flags;		// misc flags
+} ref_dlight_t;
 
 typedef struct
 {
@@ -328,7 +319,7 @@ extern uint	r_numEntities;
 extern ref_entity_t	r_entities[MAX_ENTITIES];
 
 extern uint	r_numDlights;
-extern dlight_t	r_dlights[MAX_DLIGHTS];
+extern ref_dlight_t	r_dlights[MAX_DLIGHTS];
 
 extern uint	r_numPolys;
 extern poly_t	r_polys[MAX_POLYS];

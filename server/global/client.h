@@ -29,7 +29,6 @@ extern void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer );
 extern void ServerActivate( edict_t *pEdictList, int edictCount, int clientMax );
 extern void ServerDeactivate( void );
 extern void StartFrame( void );
-extern void EndFrame( void );
 extern void RegisterEncoders( void );
 extern void PlayerPostThink( edict_t *pEntity );
 extern void PlayerPreThink( edict_t *pEntity );
@@ -43,7 +42,10 @@ extern void SpectatorDisconnect ( edict_t *pEntity );
 extern void SpectatorThink ( edict_t *pEntity );
 
 extern void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int portal );
-extern int AddToFullPack( edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
+extern void UpdateClientData( const struct edict_s *ent, int sendweapons, struct clientdata_s *cd );
+extern int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
+extern void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playermodelindex );
+extern int GetWeaponData( edict_t *player, struct weapon_data_s *info );
 
 extern void CmdStart( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed );
 extern void CmdEnd ( const edict_t *player );

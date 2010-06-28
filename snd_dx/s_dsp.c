@@ -1233,6 +1233,8 @@ void SX_RoomFX( int endtime, int fFilter, int fTimefx )
 	int	sampleCount;
 	int	roomType;
 
+	if( !si.IsInGame()) return;
+
 	// return right away if fx processing is turned off
 	if( sxroom_off->value != 0.0f )
 		return;

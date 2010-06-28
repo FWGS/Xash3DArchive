@@ -856,6 +856,8 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_changing:
 			cls.drawplaque = false;
 			Cmd_ExecuteString( "hud_changelevel\n" );
+			S_StopAllSounds();
+			// intentional fallthrough
 		case svc_reconnect:
 			if( cls.drawplaque )
 				Msg( "Server disconnected, reconnecting\n" );
@@ -908,7 +910,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_print:
 			i = MSG_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
-				S_StartLocalSound( "misc/talk.wav", 1.0f, 100, NULL );
+				S_StartLocalSound( "misc/talk.wav" );	// FIXME: INTRESOURCE
 			Con_Print( va( "^6%s\n", MSG_ReadString( msg )));
 			break;
 		case svc_centerprint:

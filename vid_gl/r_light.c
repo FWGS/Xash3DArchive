@@ -72,9 +72,9 @@ R_AddSurfDlighbits
 */
 uint R_AddSurfDlighbits( msurface_t *surf, uint dlightbits )
 {
-	uint	k, bit;
-	dlight_t	*lt;
-	float	dist;
+	uint		k, bit;
+	ref_dlight_t	*lt;
+	float		dist;
 
 	for( k = 0, bit = 1, lt = r_dlights; k < r_numDlights; k++, bit <<= 1, lt++ )
 	{
@@ -100,7 +100,7 @@ void R_AddDynamicLights( uint dlightbits, int state )
 {
 	uint		i, j, numTempElems;
 	bool		cullAway;
-	const dlight_t	*light;
+	const ref_dlight_t	*light;
 	const ref_shader_t	*shader;
 	vec3_t		tvec, dlorigin, normal;
 	elem_t		tempElemsArray[MAX_ARRAY_ELEMENTS];
@@ -140,6 +140,9 @@ void R_AddDynamicLights( uint dlightbits, int state )
 
 	for( i = 0, light = r_dlights; i < r_numDlights; i++, light++ )
 	{
+		if( light->flags & DLIGHT_ONLYENTS )
+			continue;
+
 		if(!( dlightbits & ( 1<<i )))
 			continue; // not lit by this light
 
@@ -259,7 +262,7 @@ void R_DrawCoronas( void )
 {
 	uint		i;
 	float		dist;
-	dlight_t		*light;
+	ref_dlight_t	*light;
 	meshbuffer_t	*mb;
 	trace_t		tr;
 
@@ -471,10 +474,10 @@ R_LightForPoint
 */
 void R_LightForPoint( const vec3_t point, vec3_t ambientLight )
 {
-	dlight_t	*dl;
-	vec3_t	end, dir;
-	float	dist, add;
-	int	lnum;
+	ref_dlight_t	*dl;
+	vec3_t		end, dir;
+	float		dist, add;
+	int		lnum;
 
 	// set to full bright if no light data
 	if( !r_worldbrushmodel || !r_worldbrushmodel->lightdata )
@@ -515,10 +518,10 @@ R_LightDir
 */
 void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 {
-	dlight_t	*dl;
-	vec3_t	dir;
-	float	dist;
-	int	lnum;
+	ref_dlight_t	*dl;
+	vec3_t		dir;
+	float		dist;
+	int		lnum;
 
 	// get light direction from light grid
 	R_ReadLightGrid( origin, lightDir );
@@ -665,11 +668,11 @@ dynamic:
 	// add dynamic lights
 	if( radius && r_dynamiclight->integer && r_numDlights )
 	{
-		uint	lnum;
-		dlight_t	*dl;
-		float	dist, dist2, add;
-		vec3_t	direction;
-		bool	anyDlights = false;
+		uint		lnum;
+		ref_dlight_t	*dl;
+		float		dist, dist2, add;
+		vec3_t		direction;
+		bool		anyDlights = false;
 
 		for( lnum = 0, dl = r_dlights; lnum < r_numDlights; lnum++, dl++ )
 		{
@@ -731,12 +734,12 @@ R_LightForEntity
 */
 void R_LightForEntity( ref_entity_t *e, byte *bArray )
 {
-	dlight_t	*dl;
-	vec3_t	end, dir;
-	float	add, dot, dist, intensity, radius;
-	vec3_t	ambientLight, directedLight, lightDir;
-	float	*cArray;
-	int	i, l;
+	ref_dlight_t	*dl;
+	vec3_t		end, dir;
+	float		add, dot, dist, intensity, radius;
+	vec3_t		ambientLight, directedLight, lightDir;
+	float		*cArray;
+	int		i, l;
 
 	if(( e->flags & EF_FULLBRIGHT ) || r_fullbright->integer )
 		return;

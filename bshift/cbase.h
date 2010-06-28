@@ -79,9 +79,7 @@ extern void SaveReadFields( SAVERESTOREDATA *pSaveData, const char *pname, void 
 extern void SaveGlobalState( SAVERESTOREDATA *pSaveData );
 extern void RestoreGlobalState( SAVERESTOREDATA *pSaveData );
 extern void ResetGlobalState( void );
-extern TYPEDESCRIPTION *GetEntvarsDescirption( int number );
 extern int ServerClassifyEdict( edict_t *pentToClassify );
-extern void UpdateEntityState( struct entity_state_s *to, edict_t *from, int baseline );
 extern void OnFreeEntPrivateData( edict_s *pEdict );
 extern int ShouldCollide( edict_t *pentTouched, edict_t *pentOther );
 

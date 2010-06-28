@@ -158,6 +158,7 @@ bool V_PreRender( void )
 		clearScene = false;
 
 	re->BeginFrame( clearScene );
+	S_BeginFrame ();
 
 	if( oldState && !cls.drawplaque )
 	{

@@ -63,6 +63,7 @@ static net_field_t ent_fields[] =
 { ES_FIELD(flags),			NET_LONG,  false	},	// misc edict flags
 { ES_FIELD(movetype),		NET_BYTE,	 false	},
 { ES_FIELD(gravity),		NET_SHORT, false	},	// gravity multiplier
+{ ES_FIELD(friction),		NET_FLOAT, false	},	// friction for prediction
 { ES_FIELD(aiment),			NET_SHORT, false	},	// entity index
 { ES_FIELD(owner),			NET_SHORT, false	},	// entity owner index
 { ES_FIELD(groundent),		NET_SHORT, false	},	// ground entity index, if FL_ONGROUND is set

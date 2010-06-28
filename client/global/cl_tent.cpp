@@ -154,8 +154,26 @@ void TE_ParseExplosion( void )
 
 		if( !( flags & TE_EXPLFLAG_NODLIGHTS ))
 		{
-			g_pTempEnts->AllocDLight( pos2, 250, 250, 150, 200, 0.01f, 0 ); // big flash
-			g_pTempEnts->AllocDLight( pos2, 255, 190, 40, 150, 1.0f, DLIGHT_FADE );// red glow
+			dlight_t	*dl;
+
+			// big flash
+			dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+			dl->origin = pos2;
+			dl->radius = 200;
+			dl->color[0] = dl->color[1] = 250;
+			dl->color[2] = 150;
+			dl->die = gpGlobals->time + 0.01f;
+			dl->decay = 800;
+
+			// red glow
+			dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+			dl->origin = pos2;
+			dl->radius = 150;
+			dl->color[0] = 255;
+			dl->color[1]= 190;
+			dl->color[2] = 40;
+			dl->die = gpGlobals->time + 1.0f;
+			dl->decay = 200;
 		}
 	}
 
@@ -165,7 +183,7 @@ void TE_ParseExplosion( void )
 	char	szDecal[32];
 
 	sprintf( szDecal, "{scorch%i", RANDOM_LONG( 1, 3 ));
-	g_pTempEnts->PlaceDecal( pos, 48.0f, szDecal );
+	g_pTempEnts->PlaceDecal( pos, NULLENT_INDEX, szDecal );
 
 	if( !( flags & TE_EXPLFLAG_NOSOUND ))
 	{
@@ -367,6 +385,7 @@ void TE_ParseExplosion2( void )
 {
 	Vector pos;
 	int colorIndex, numColors;
+	dlight_t *dl;
 	
 	pos.x = READ_COORD();
 	pos.y = READ_COORD();
@@ -376,7 +395,13 @@ void TE_ParseExplosion2( void )
 	numColors = READ_BYTE();
 
 	g_engfuncs.pEfxAPI->R_ParticleExplosion2( pos, colorIndex, numColors );
-	g_pTempEnts->AllocDLight( pos, 350, 0.5, DLIGHT_FADE );
+	
+	dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+	dl->origin = pos;
+	dl->radius = 350;
+	dl->die = gpGlobals->time + 0.5f;
+	dl->decay = 300;
+
 	CL_PlaySound( "weapons/explode3.wav", 1.0f, pos );
 }
 
@@ -391,7 +416,6 @@ void TE_ParseBSPDecal( void )
 {
 	Vector pos;
 	int decalIndex, entityIndex, modelIndex;
-	edict_t *pEntity;
 	
 	pos.x = READ_COORD();
 	pos.y = READ_COORD();
@@ -402,8 +426,7 @@ void TE_ParseBSPDecal( void )
 	if( entityIndex != NULLENT_INDEX )
 		modelIndex = READ_SHORT();
 
-	pEntity = GetEntityByIndex( entityIndex );
-	g_pTempEnts->PlaceDecal( pos, 5.0f, decalIndex );
+	g_pTempEnts->PlaceDecal( pos, entityIndex, decalIndex );
 }
 
 /*
@@ -598,10 +621,12 @@ Creates a single source light
 */
 void TE_ParseDynamicLight( int type )
 {
-	Vector	pos, color;
-	int	flags, iAttachment = 0;
+	Vector	pos;
+	int	iAttachment = 0;
 	edict_t	*pEnt = NULL;
 	float	life, radius, decay;
+	byte	r, g, b;
+	dlight_t	*dl;
 
 	if( type == TE_ELIGHT )
 	{
@@ -618,9 +643,9 @@ void TE_ParseDynamicLight( int type )
 		radius = (float)READ_COORD();
 	else radius = (float)(READ_BYTE() * 0.1f);
 
-	color.x = (float)READ_BYTE();
-	color.y = (float)READ_BYTE();
-	color.z = (float)READ_BYTE();
+	r = READ_BYTE();
+	g = READ_BYTE();
+	b = READ_BYTE();
 
 	life = (float)(READ_BYTE() * 0.1f);
 
@@ -629,10 +654,21 @@ void TE_ParseDynamicLight( int type )
 	else decay = (float)(READ_BYTE() * 0.1f);
 
 	if( type == TE_ELIGHT )
-		flags = DLIGHT_ELIGHT;
-	else flags = 0;
+	{
+		dl = g_engfuncs.pEfxAPI->CL_AllocELight( 0 );
+	}
+	else
+	{
+		dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+	}
 
-	g_engfuncs.pEfxAPI->CL_AllocDLight( pos, color, radius, life, flags, 0 );
+	dl->origin = pos;
+	dl->radius = radius;
+	dl->decay = decay;
+	dl->color[0] = r;
+	dl->color[1] = g;
+	dl->color[2] = b;
+	dl->die = gpGlobals->time + life;
 }
 
 /*
@@ -749,7 +785,6 @@ generic message for place static decal
 void TE_ParseDecal( int type )
 {
 	Vector pos;
-	edict_t *pEnt;
 	int decalIndex, entityIndex;
 
 	pos.x = READ_COORD();
@@ -760,12 +795,12 @@ void TE_ParseDecal( int type )
 	if( type == TE_DECAL || type == TE_DECALHIGH )
 	{
 		entityIndex = READ_SHORT();
-		pEnt = GetEntityByIndex( entityIndex );
 	}
+
 	if( type == TE_DECALHIGH || type == TE_WORLDDECALHIGH )
 		decalIndex += 256;
 
-	g_pTempEnts->PlaceDecal( pos, 2.0f, decalIndex );
+	g_pTempEnts->PlaceDecal( pos, entityIndex, decalIndex );
 }
 
 /*
@@ -858,20 +893,18 @@ void TE_ParseGunShotDecal( void )
 	Vector pos, dir;
 	int entityIndex, decalIndex;
 	char soundpath[32];
-	edict_t *pEnt;
 	float dummy;
 
 	pos.x = READ_COORD();
 	pos.y = READ_COORD();
 	pos.z = READ_COORD();
 	entityIndex = READ_SHORT();
-	pEnt = GetEntityByIndex( entityIndex );
 	decalIndex = READ_BYTE();
 
 	UTIL_GetForceDirection( pos, 2.0f, &dir, &dummy );
 
 	g_pParticles->BulletParticles( pos, dir );
-	g_pTempEnts->PlaceDecal( pos, 2.0f, decalIndex );
+	g_pTempEnts->PlaceDecal( pos, entityIndex, decalIndex );
 
 	if( RANDOM_LONG( 0, 32 ) <= 8 ) // 25% chanse
 	{
@@ -960,11 +993,9 @@ void TE_ParsePlayerDecal( void )
 	entityIndex = READ_SHORT();
 	decalIndex = READ_BYTE();
 
-	// FIXME: get decal settings from the client
-	int iColor = 134;
-
 	HSPRITE hDecal = g_engfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
-	g_engfuncs.pEfxAPI->R_ShootDecal( hDecal, NULL, pos, iColor, 90.0f, 5.0f );
+	edict_t *pEnt = GetEntityByIndex( entityIndex );
+	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, pEnt, pEnt->v.modelindex, pos, 0 );
 }
 
 /*

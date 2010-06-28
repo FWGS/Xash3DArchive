@@ -2,8 +2,8 @@
 //			Copyright XashXT Group 2010 ©
 //		  bmodel_ref.h - BSP format included q1, hl1 support
 //=======================================================================
-#ifndef BMODEL_REF_H
-#define BMODEL_REF_H
+#ifndef BSPFILE_H
+#define BSPFILE_H
 
 /*
 ==============================================================================
@@ -186,4 +186,4 @@ typedef struct
 	int	lightofs;			// start of [numstyles*surfsize] samples
 } dface_t;
 
-#endif//BMODEL_REF_H
+#endif//BSPFILE_H

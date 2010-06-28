@@ -1227,7 +1227,7 @@ pfnPlaySoundByName
 */
 static void pfnPlaySoundByName( const char *szSound, float volume, int pitch, const float *org )
 {
-	S_StartLocalSound( szSound, volume, pitch, org );
+	S_StartSound( org, cl.refdef.viewentity, CHAN_AUTO, S_RegisterSound( szSound ), volume, ATTN_NORM, pitch, 0 );
 }
 
 /*
@@ -1417,8 +1417,7 @@ return interpolated angles from previous frame
 */
 static void pfnGetViewAngles( float *angles )
 {
-	if( angles == NULL ) return;
-	VectorCopy( cl.refdef.cl_viewangles, angles );
+	if( angles ) VectorCopy( cl.refdef.cl_viewangles, angles );
 }
 
 /*
@@ -1430,8 +1429,7 @@ return interpolated angles from previous frame
 */
 static void pfnSetViewAngles( float *angles )
 {
-	if( angles == NULL ) return;
-	VectorCopy( angles, cl.refdef.cl_viewangles );
+	if( angles ) VectorCopy( angles, cl.refdef.cl_viewangles );
 }
 
 /*
@@ -1573,7 +1571,7 @@ pfnPointContents
 
 =============
 */
-static int pfnPointContents( const float *rgflVector )
+static int pfnPointContents( const float *rgflVector, int *truecont )
 {
 	return CL_PointContents( rgflVector );
 }
@@ -2400,9 +2398,9 @@ static efxapi_t gEfxApi =
 	CL_GetPaletteColor,
 	pfnDecalIndex,
 	pfnDecalIndexFromName,
-	CL_SpawnDecal,
-	CL_AddDLight,
-	CL_AddSLight,
+	CL_DecalShoot,
+	CL_AllocDlight,
+	CL_AllocElight,
 	CL_LightForPoint,
 	CM_BoxVisible,
 	pfnCullBox,
@@ -2414,22 +2412,20 @@ static efxapi_t gEfxApi =
 static event_api_t gEventApi =
 {
 	EVENT_API_VERSION,
-	pfnPrecacheEvent,
-	pfnPlaybackEvent,
-	pfnWeaponAnim,
-	pfnRandomFloat,
-	pfnRandomLong,
-	pfnHookEvent,
-	pfnKillEvents,
 	pfnPlaySound,
 	pfnStopSound,
 	pfnFindModelIndex,
 	pfnIsLocal,
-	pfnLocalPlayerViewheight,
-	pfnStopAllSounds,
 	pfnGetModelType,
-	pfnGetModFrames,
+	pfnLocalPlayerViewheight,
 	pfnGetModBounds,
+	pfnGetModFrames,
+	pfnWeaponAnim,
+	pfnPrecacheEvent,
+	pfnPlaybackEvent,
+	pfnTraceTexture,
+	pfnStopAllSounds,
+	pfnKillEvents,
 };
 
 // engine callbacks
@@ -2487,11 +2483,11 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnGetBonePosition,
 	CL_AllocString,
 	CL_GetString,
-	CL_GetLocalPlayer,	
+	CL_GetLocalPlayer,
 	pfnGetViewModel,
 	CL_GetEdictByIndex,
 	pfnGetClientTime,
-	pfnIsSpectateOnly,
+	S_FadeClientVolume,
 	pfnGetAttachment,
 	pfnPointContents,
 	pfnWaterEntity,
@@ -2521,6 +2517,7 @@ static cl_enginefuncs_t gEngfuncs =
 	&gTriApi,
 	&gEfxApi,
 	&gEventApi,
+	pfnIsSpectateOnly,
 	pfnIsInGame
 };
 

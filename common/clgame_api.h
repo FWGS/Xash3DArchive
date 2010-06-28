@@ -10,6 +10,7 @@
 
 typedef int		HSPRITE;					// handle to a graphic
 typedef struct tempent_s	TEMPENTITY;
+typedef struct dlight_s	dlight_t;
 typedef struct usercmd_s	usercmd_t;
 typedef struct particle_s	particle_t;
 typedef struct skyportal_s	skyportal_t;
@@ -86,10 +87,6 @@ typedef struct cl_globalvars_s
 
 	ref_params_t	*pViewParms;	// just for easy acess on client
 
-	float		viewheight[PM_MAXHULLS]; // values from gameinfo.txt
-	vec3_t		hullmins[PM_MAXHULLS];
-	vec3_t		hullmaxs[PM_MAXHULLS];
-
 	int		serverflags;	// shared serverflags
 	int		maxClients;
 	int		windowState;	// 0 - inactive (minimize, notfocus), 1 - active
@@ -99,6 +96,11 @@ typedef struct cl_globalvars_s
 	const char	*pStringBase;	// actual only when sys_sharedstrings is 1
 
 	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
+
+	// Xash3D specific
+	float		viewheight[PM_MAXHULLS]; // values from gameinfo.txt
+	vec3_t		hullmins[PM_MAXHULLS];
+	vec3_t		hullmaxs[PM_MAXHULLS];
 } cl_globalvars_t;
 
 typedef struct cl_enginefuncs_s
@@ -111,7 +113,7 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnSPR_Set)( HSPRITE hPic, int r, int g, int b, int a );
 	void	(*pfnSPR_Draw)( int frame, int x, int y, int width, int height, const wrect_t *prc );
 	void	(*pfnSPR_DrawHoles)( int frame, int x, int y, int width, int height, const wrect_t *prc );
-	void	(*pfnSPR_DrawTrans)( int frame, int x, int y, int width, int height, const wrect_t *prc );	// Xash3D ext
+	void	(*pfnSPR_DrawTrans)( int frame, int x, int y, int width, int height, const wrect_t *prc );	// kRenderTransColor
 	void	(*pfnSPR_DrawAdditive)( int frame, int x, int y, int width, int height, const wrect_t *prc );
 	void	(*pfnSPR_EnableScissor)( int x, int y, int width, int height );
 	void	(*pfnSPR_DisableScissor)( void );
@@ -183,10 +185,10 @@ typedef struct cl_enginefuncs_s
 	edict_t*	(*pfnGetEntityByIndex)( int idx );	// matched with entity serialnumber
 
 	float	(*pfnGetClientTime)( void );		// can use gpGlobals->time instead
-	int	(*pfnIsSpectateOnly)( void );		// was V_CalcShake
-	int	(*pfnGetAttachment)( const edict_t *pEdict, int iAttachment, float *rgflOrg, float *rgflAng );	// was V_ApplyShake
+	void	(*pfnFadeClientVolume)( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );	// was V_CalcShake
+	int	(*pfnGetAttachment)( const edict_t *pEdict, int iAttachment, float *rgflOrg, float *rgflAng );		// was V_ApplyShake
 
-	int	(*pfnPointContents)( const float *rgflPos );
+	int	(*pfnPointContents)( const float *rgflPos, int *truecontents );
 	edict_t*	(*pfnWaterEntity)( const float *rgflPos );
 	void	(*pfnTraceLine)( const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr );
 	void	(*pfnTraceToss)( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr );	// was CL_LoadModel
@@ -206,7 +208,7 @@ typedef struct cl_enginefuncs_s
 	void*	(*pfnLoadLibrary)( const char *name );			// was pfnGetGameDirectory
 	void*	(*pfnGetProcAddress)( void *hInstance, const char *name );	// was pfnGetCvarPointer
 	void	(*pfnFreeLibrary)( void *hInstance );			// was Key_LookupBinding
-	void	(*pfnHostError)( const char *szFmt, ... );		// was pfnGetLevelName
+	void	(*pfnHostError)( const char *szFmt, ... );		// was pfnGetLevelName (see gpGlobals->mapname)
 	int	(*pfnFileExists)( const char *filename );		// was pfnGetScreenFade
 	void	(*pfnGetGameDir)( char *szGetGameDir );			// was pfnSetScreenFade
 
@@ -223,8 +225,8 @@ typedef struct cl_enginefuncs_s
 	struct efxapi_s	*pEfxAPI;
 	struct event_api_s	*pEventAPI;	
 
-	// new interface starts here
-	int	(*pfnIsInGame)( void );	// return false for menu, console, etc
+	int	(*pfnIsSpectateOnly)( void );
+	int	(*pfnIsInGame)( void );	// was LoadMapSprite, return false for menu, console, etc
 
 } cl_enginefuncs_t;
 
@@ -234,6 +236,7 @@ typedef struct
 	void	(*pfnInit)( void );
 	int	(*pfnRedraw)( float flTime, int state );
 	void	(*pfnUpdateEntityVars)( edict_t *out, const struct entity_state_s *in1, const struct entity_state_s *in2 );
+	void	(*pfnUpdateClientVars)( struct entity_state_s *state, const struct clientdata_s *client );
 	void	(*pfnOnFreeEntPrivateData)( edict_t *pEnt ); // this is called on entity removed
 	void	(*pfnReset)( void );
 	void	(*pfnStartFrame)( void );

@@ -33,22 +33,22 @@ extern "C"
 //======================
 void EV_HookEvents( void )
 {
-	g_engfuncs.pEventAPI->EV_HookEvent( "evEjectBrass", EV_EjectBrass );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evNull", EV_FireNull );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evCrowbar", EV_FireCrowbar );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evEmptySound", EV_PlayEmptySound );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evGlock1", EV_FireGlock1 );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evShotgun1", EV_FireShotGunSingle );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evShotgun2", EV_FireShotGunDouble );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evMP5", EV_FireMP5 );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evPython", EV_FirePython );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evGauss", EV_FireGauss );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evGaussSpin", EV_SpinGauss );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evEgonFire", EV_EgonFire );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evEgonStop", EV_EgonStop );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evTrain", EV_TrainPitchAdjust );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evSnarkFire", EV_SnarkFire );
-	g_engfuncs.pEventAPI->EV_HookEvent( "evDecals", EV_Decals );
+	g_engfuncs.pfnHookEvent( "evEjectBrass", EV_EjectBrass );
+	g_engfuncs.pfnHookEvent( "evNull", EV_FireNull );
+	g_engfuncs.pfnHookEvent( "evCrowbar", EV_FireCrowbar );
+	g_engfuncs.pfnHookEvent( "evEmptySound", EV_PlayEmptySound );
+	g_engfuncs.pfnHookEvent( "evGlock1", EV_FireGlock1 );
+	g_engfuncs.pfnHookEvent( "evShotgun1", EV_FireShotGunSingle );
+	g_engfuncs.pfnHookEvent( "evShotgun2", EV_FireShotGunDouble );
+	g_engfuncs.pfnHookEvent( "evMP5", EV_FireMP5 );
+	g_engfuncs.pfnHookEvent( "evPython", EV_FirePython );
+	g_engfuncs.pfnHookEvent( "evGauss", EV_FireGauss );
+	g_engfuncs.pfnHookEvent( "evGaussSpin", EV_SpinGauss );
+	g_engfuncs.pfnHookEvent( "evEgonFire", EV_EgonFire );
+	g_engfuncs.pfnHookEvent( "evEgonStop", EV_EgonStop );
+	g_engfuncs.pfnHookEvent( "evTrain", EV_TrainPitchAdjust );
+	g_engfuncs.pfnHookEvent( "evSnarkFire", EV_SnarkFire );
+	g_engfuncs.pfnHookEvent( "evDecals", EV_Decals );
 }
 
 //=================
@@ -192,7 +192,14 @@ void EV_UpadteFlashlight( edict_t *pEnt )
 	else vecPos = tr.vecEndPos;
 
 	// update flashlight endpos
-	g_engfuncs.pEfxAPI->CL_AllocDLight( vecPos, rgba, 96, 0.001f, 0, pEnt->serialnumber );
+	dlight_t	*dl = g_engfuncs.pEfxAPI->CL_AllocDLight( pEnt->serialnumber );
+	
+	dl->origin = vecPos;
+	dl->die = gpGlobals->time + 0.001f;	// die on next frame
+	dl->color[0] = 255;
+	dl->color[1] = 255;
+	dl->color[2] = 255;
+	dl->radius = 96;
 }
 
 void HUD_CmdStart( const edict_t *player, int runfuncs )

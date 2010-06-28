@@ -7,7 +7,7 @@
 #include "client.h"
 #include "byteorder.h"
 #include "const.h"
-#include "bmodel_ref.h"
+#include "bspfile.h"
 
 /*
 =======================================================================

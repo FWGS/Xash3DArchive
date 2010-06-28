@@ -683,13 +683,12 @@ S_StartLocalSound
 menu sound
 =================
 */
-bool S_StartLocalSound( const char *name, float volume, int pitch, const float *origin )
+void S_StartLocalSound( const char *name )
 {
 	sound_t	sfxHandle;
 
 	sfxHandle = S_RegisterSound( name );
-	S_StartSound( origin, al_state.clientnum, CHAN_AUTO, sfxHandle, volume, ATTN_NONE, pitch, SND_STOP_LOOPING );
-	return true;
+	S_StartSound( vec3_origin, al_state.clientnum, CHAN_AUTO, sfxHandle, VOL_NORM, ATTN_NONE, PITCH_NORM, SND_STOP_LOOPING );
 }
 
 /*
@@ -860,6 +859,17 @@ void S_Update( ref_params_t *fd )
 
 /*
 =================
+S_BeginFrame
+
+Starts a new rendering frame
+=================
+*/
+void S_BeginFrame( void )
+{
+}
+
+/*
+=================
 S_Activate
 
 Called when the main window gains or loses focus.
@@ -883,10 +893,10 @@ void S_PlaySound_f( void )
 {
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Usage: playsound <soundfile>\n" );
+		Msg( "Usage: play <soundfile>\n" );
 		return;
 	}
-	S_StartLocalSound( Cmd_Argv( 1 ), 1.0f, PITCH_NORM, NULL );
+	S_StartLocalSound( Cmd_Argv( 1 ));
 }
 
 /*
@@ -956,7 +966,7 @@ bool S_Init( void *hInst )
 	s_dopplerVelocity = Cvar_Get("s_dopplervelocity", "10976.0", CVAR_ARCHIVE, "doppler effect maxvelocity" );
 	s_room_type = Cvar_Get( "room_type", "0", 0, "dsp room type" );
 
-	Cmd_AddCommand( "playsound", S_PlaySound_f, "playing a specified sound file" );
+	Cmd_AddCommand( "play", S_PlaySound_f, "playing a specified sound file" );
 	Cmd_AddCommand( "stopsound", S_StopSound_f, "stop all sounds" );
 	Cmd_AddCommand( "music", S_Music_f, "starting a background track" );
 	Cmd_AddCommand( "s_info", S_SoundInfo_f, "print sound system information" );
@@ -994,7 +1004,7 @@ S_Shutdown
 void S_Shutdown( void )
 {
 
-	Cmd_RemoveCommand( "playsound" );
+	Cmd_RemoveCommand( "play" );
 	Cmd_RemoveCommand( "stopsound" );
 	Cmd_RemoveCommand( "music" );
 	Cmd_RemoveCommand( "s_info" );

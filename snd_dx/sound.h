@@ -88,6 +88,7 @@ typedef struct
 	float		pitch;		// real-time pitch after any modulation or shift by dynamic data
 	bool		use_loop;		// don't loop default and local sounds
 	bool		staticsound;	// use origin instead of fetching entnum's origin
+	bool		localsound;	// it's a local menu sound (not looped, not paused)
 
 	// sentence mixer
 	int		wordIndex;
@@ -179,6 +180,8 @@ void S_PrintDeviceName( void );
 // s_main.c
 //
 void S_FreeChannel( channel_t *ch );
+void S_BeginFrame( void );
+
 
 // s_load.c
 bool S_TestSoundChar( const char *pch, char c );
@@ -202,7 +205,7 @@ void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float f
 channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx );
 channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx );
 void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
-int S_StartLocalSound( const char *name, float volume, int pitch, const float *org );
+void S_StartLocalSound( const char *name );
 sfx_t *S_GetSfxByHandle( sound_t handle );
 void S_StopSound( int entnum, int channel, const char *soundname );
 void S_RenderFrame( ref_params_t *fd );
@@ -240,7 +243,7 @@ void VOX_Init( void );
 void VOX_Shutdown( void );
 void VOX_SetChanVol( channel_t *ch );
 void VOX_LoadSound( channel_t *pchan, const char *psz );
-void VOX_LoadNextWord( channel_t *pchan );
+wavdata_t *VOX_LoadNextWord( channel_t *pchan );
 
 
 void S_BeginRegistration( void );

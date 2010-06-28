@@ -555,7 +555,11 @@ void SV_InitClientMove( void )
 	VectorCopy( GI->client_maxs[3], svgame.pmove->player_maxs[1] );
 
 	for( i = 0; i < PM_MAXHULLS; i++ )
-		svgame.pmove->player_view[i] = GI->viewheight[i];
+	{
+		svgame.pmove->player_view[i] = svgame.globals->viewheight[i] = GI->viewheight[i];
+		VectorCopy( svgame.pmove->player_mins[i], svgame.globals->hullmins[i] );
+		VectorCopy( svgame.pmove->player_maxs[i], svgame.globals->hullmaxs[i] );
+	}
 
 	// common utilities
 	svgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;

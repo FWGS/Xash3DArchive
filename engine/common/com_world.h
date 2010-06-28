@@ -81,7 +81,7 @@ void ClearLink( link_t *l );
 void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, vec3_t boxmins, vec3_t boxmaxs );
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch );
 
-#include "bmodel_ref.h"
+#include "bspfile.h"
 #include "pm_shared.h"
 
 /*

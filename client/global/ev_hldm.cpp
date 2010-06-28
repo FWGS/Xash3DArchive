@@ -269,7 +269,7 @@ void EV_HLDM_CrowbarDecalTrace( TraceResult *pTrace, char *decalName )
 	// only decal brush models such as the world etc.
 	if( decalName && decalName[0] && pEnt && ( pEnt->v.solid == SOLID_BSP || pEnt->v.movetype == MOVETYPE_PUSHSTEP ) )
 	{
-		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, 2.0f, decalName );
+		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->serialnumber, decalName );
 	}
 }
 
@@ -306,7 +306,7 @@ void EV_HLDM_GunshotDecalTrace( TraceResult *pTrace, char *decalName )
 	// Only decal brush models such as the world etc.
 	if( decalName && decalName[0] && pEnt && ( pEnt->v.solid == SOLID_BSP || pEnt->v.movetype == MOVETYPE_PUSHSTEP ))
 	{
-		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, 5.0f, decalName );
+		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->serialnumber, decalName );
 		g_pParticles->BulletParticles( pTrace->vecEndPos, Vector( 0, 0, -1 ));
 	}
 }
@@ -576,13 +576,13 @@ void EV_FireCrowbar( event_args_t *args )
 				switch(( g_iSwing++ ) % 3 )
 				{
 				case 0:
-					g_engfuncs.pEventAPI->EV_WeaponAnim( CROWBAR_ATTACK1MISS, args->iparam1, 1.0f );
+					g_engfuncs.pEventAPI->EV_WeaponAnimation( CROWBAR_ATTACK1MISS, args->iparam1, 1.0f );
 					break;
 				case 1:
-					g_engfuncs.pEventAPI->EV_WeaponAnim( CROWBAR_ATTACK2MISS, args->iparam1, 1.0f );
+					g_engfuncs.pEventAPI->EV_WeaponAnimation( CROWBAR_ATTACK2MISS, args->iparam1, 1.0f );
 					break;
 				case 2:
-					g_engfuncs.pEventAPI->EV_WeaponAnim( CROWBAR_ATTACK3MISS, args->iparam1, 1.0f );
+					g_engfuncs.pEventAPI->EV_WeaponAnimation( CROWBAR_ATTACK3MISS, args->iparam1, 1.0f );
 					break;
 				}
 			}
@@ -598,13 +598,13 @@ void EV_FireCrowbar( event_args_t *args )
 			switch ((( g_iSwing++ ) % 2) + 1 )
 			{
 			case 0:
-				g_engfuncs.pEventAPI->EV_WeaponAnim ( CROWBAR_ATTACK1HIT, args->iparam1, 1.0f );
+				g_engfuncs.pEventAPI->EV_WeaponAnimation ( CROWBAR_ATTACK1HIT, args->iparam1, 1.0f );
 				break;
 			case 1:
-				g_engfuncs.pEventAPI->EV_WeaponAnim ( CROWBAR_ATTACK2HIT, args->iparam1, 1.0f );
+				g_engfuncs.pEventAPI->EV_WeaponAnimation ( CROWBAR_ATTACK2HIT, args->iparam1, 1.0f );
 				break;
 			case 2:
-				g_engfuncs.pEventAPI->EV_WeaponAnim ( CROWBAR_ATTACK3HIT, args->iparam1, 1.0f );
+				g_engfuncs.pEventAPI->EV_WeaponAnimation ( CROWBAR_ATTACK3HIT, args->iparam1, 1.0f );
 				break;
 			}
 		}
@@ -688,7 +688,7 @@ void EV_FireGlock1( event_args_t *args )
 	if ( EV_IsLocal( idx ) )
 	{
 		edict_t *view = GetViewModel();
-		g_engfuncs.pEventAPI->EV_WeaponAnim( args->iparam2, args->iparam1, 1.0f );
+		g_engfuncs.pEventAPI->EV_WeaponAnimation( args->iparam2, args->iparam1, 1.0f );
 
 		EV_MuzzleFlash();							
 
@@ -765,7 +765,7 @@ void EV_FireMP5( event_args_t *args )
 	{
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
-		g_engfuncs.pEventAPI->EV_WeaponAnim( animbase + RANDOM_LONG( 0, 2 ), body, 1.0f );
+		g_engfuncs.pEventAPI->EV_WeaponAnimation( animbase + RANDOM_LONG( 0, 2 ), body, 1.0f );
 
 		V_PunchAxis( 0, RANDOM_FLOAT( -2, 2 ) );
 	}
@@ -824,7 +824,7 @@ void EV_FireShotGunDouble( event_args_t *args )
 	{
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
-		g_engfuncs.pEventAPI->EV_WeaponAnim( args->iparam2, args->iparam1, 1.0f );
+		g_engfuncs.pEventAPI->EV_WeaponAnimation( args->iparam2, args->iparam1, 1.0f );
 		V_PunchAxis( 0, -10.0 );
 	}
 
@@ -875,7 +875,7 @@ void EV_FireShotGunSingle( event_args_t *args )
 	{
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
-		g_engfuncs.pEventAPI->EV_WeaponAnim( args->iparam2, args->iparam1, 1.0f );
+		g_engfuncs.pEventAPI->EV_WeaponAnimation( args->iparam2, args->iparam1, 1.0f );
 
 		V_PunchAxis( 0, -5.0 );
 	}
@@ -928,7 +928,7 @@ void EV_FirePython( event_args_t *args )
 
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
-		g_engfuncs.pEventAPI->EV_WeaponAnim( args->iparam2, args->iparam1, 1.0f );
+		g_engfuncs.pEventAPI->EV_WeaponAnimation( args->iparam2, args->iparam1, 1.0f );
 
 		V_PunchAxis( 0, -10.0 );
 	}
@@ -1034,7 +1034,7 @@ void EV_FireGauss( event_args_t *args )
 	if ( EV_IsLocal( idx ) )
 	{
 		V_PunchAxis( 0, -2.0 );
-		g_engfuncs.pEventAPI->EV_WeaponAnim( GAUSS_FIRE2, args->iparam1, 1.0f );
+		g_engfuncs.pEventAPI->EV_WeaponAnimation( GAUSS_FIRE2, args->iparam1, 1.0f );
 	}
 
 	g_engfuncs.pEventAPI->EV_PlaySound( GetEntityByIndex( idx ), origin, CHAN_WEAPON, "weapons/gauss2.wav", 0.5 + flDamage * (1.0 / 400.0), ATTN_NORM, 0, 85 + RANDOM_LONG( 0, 0x1f ) );
@@ -1252,7 +1252,7 @@ void EV_EgonFire( event_args_t *args )
 	}
 
 	// Only play the weapon anims if I shot it.
-	// if ( EV_IsLocal( idx ) ) g_engfuncs.pEventAPI->EV_WeaponAnim ( EGON_FIRECYCLE, args->iparam1, 1.0f );
+	// if ( EV_IsLocal( idx ) ) g_engfuncs.pEventAPI->EV_WeaponAnimation ( EGON_FIRECYCLE, args->iparam1, 1.0f );
 
 	if ( iStartup == 1 && EV_IsLocal( idx ) && !m_pBeam && !m_pNoise && cl_lw->integer )
 	{
@@ -1387,7 +1387,7 @@ void EV_EgonStop( event_args_t *args )
 			m_pEndFlare = NULL;
 		}
 
-		g_engfuncs.pEventAPI->EV_WeaponAnim( EGON_FIRESTOP, args->iparam1, 1.0f );
+		g_engfuncs.pEventAPI->EV_WeaponAnimation( EGON_FIRESTOP, args->iparam1, 1.0f );
 	}
 }
 
@@ -1643,7 +1643,7 @@ void EV_SnarkFire( event_args_t *args )
 
 	// find space to drop the thing.
 	if ( tr.fAllSolid == 0 && tr.fStartSolid == 0 && tr.flFraction > 0.25f )
-		 g_engfuncs.pEventAPI->EV_WeaponAnim ( SQUEAK_THROW, args->iparam1, 1.0f );
+		 g_engfuncs.pEventAPI->EV_WeaponAnimation ( SQUEAK_THROW, args->iparam1, 1.0f );
 }
 //======================
 //	   SQUEAK END

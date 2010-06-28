@@ -37,10 +37,10 @@ typedef struct vsound_exp_s
 	sound_t (*RegisterSound)( const char *name );
 	void (*EndRegistration)( void );
 
+	void (*StartLocalSound)( const char *name ); // menus
 	void (*StartSound)( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, float attn, int pitch, int flags );
 	void (*StaticSound)( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, float attn, int pitch, int flags );
 	void (*StreamRawSamples)( int samples, int rate, int width, int channels, const byte *data );
-	bool (*StartLocalSound)( const char *name, float volume, int pitch, const float *origin );
 	void (*FadeClientVolume)( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
 	void (*StartBackgroundTrack)( const char *introTrack, const char *loopTrack );
 	void (*StopBackgroundTrack)( void );
@@ -48,6 +48,7 @@ typedef struct vsound_exp_s
 	void (*StartStreaming)( void );
 	void (*StopStreaming)( void );
 
+	void (*BeginFrame)( void );
 	void (*RenderFrame)( ref_params_t *fd );
 	void (*StopSound)( int entnum, int channel, const char *soundname );
 	void (*StopAllSounds)( void );

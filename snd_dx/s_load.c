@@ -198,11 +198,12 @@ wavdata_t *S_LoadSound( sfx_t *sfx )
 	wavdata_t	*sc;
 
 	if( !sfx ) return NULL;
-	if( sfx->name[0] == '*' ) return NULL;
 	if( sfx->cache ) return sfx->cache; // see if still in memory
 
 	// load it from disk
-	sc = FS_LoadSound( sfx->name, NULL, 0 );
+	if( sfx->name[0] == '*' )
+		sc = FS_LoadSound( sfx->name + 1, NULL, 0 );
+	else sc = FS_LoadSound( sfx->name, NULL, 0 );
 
 	if( !sc ) sc = S_CreateDefaultSound();
 

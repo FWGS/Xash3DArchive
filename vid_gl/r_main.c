@@ -69,7 +69,7 @@ ref_entity_t	r_entities[MAX_ENTITIES];
 ref_entity_t	*r_worldent = &r_entities[0];
 
 uint		r_numDlights;
-dlight_t		r_dlights[MAX_DLIGHTS];
+ref_dlight_t	r_dlights[MAX_DLIGHTS];
 
 uint		r_numPolys;
 poly_t		r_polys[MAX_POLYS];
@@ -637,13 +637,13 @@ R_PushCorona
 */
 static void R_PushCorona( const meshbuffer_t *mb )
 {
-	int i;
-	vec4_t color;
-	vec3_t origin, point;
-	dlight_t *light = r_dlights + ( -mb->infokey - 1 );
-	float radius = light->intensity, colorscale;
-	float up = radius, down = -radius, left = -radius, right = radius;
-	ref_shader_t *shader;
+	vec4_t		color;
+	vec3_t		origin, point;
+	ref_dlight_t	*light = r_dlights + ( -mb->infokey - 1 );
+	float		radius = light->intensity, colorscale;
+	float		up = radius, down = -radius, left = -radius, right = radius;
+	ref_shader_t	*shader;
+	int		i;
 
 	VectorCopy( light->origin, origin );
 
@@ -2654,22 +2654,20 @@ bool R_AddTeEntToScene( TEMPENTITY *pTempEntity, int ed_type, shader_t customSha
 	return true;
 }
 
-bool R_AddDynamicLight( const void *dlight )
+bool R_AddDynamicLight( vec3_t pos, rgb_t color, float radius, int flags )
 {
-	dlight_t		*dl, *src = (dlight_t *)dlight;
-	ref_shader_t	*shader;
+	ref_dlight_t	*dl;
 
-	if(( r_numDlights >= MAX_DLIGHTS ) || (!src) || (src->intensity == 0) || ( VectorIsNull( src->color )))
+	if(( r_numDlights >= MAX_DLIGHTS ) || ( radius == 0.0f ))
 		return false;
-	if( src->texture < 0 || src->texture > MAX_SHADERS || !(shader = &r_shaders[src->texture])->name)
-		shader = NULL;
+
 	dl = &r_dlights[r_numDlights++];
 
-	VectorCopy( src->origin, dl->origin );
-	VectorCopy( src->color, dl->color );
-	Vector2Copy( src->cone, dl->cone );
-	dl->intensity = src->intensity * 0.5f;
-	dl->shader = shader;
+	VectorCopy( pos, dl->origin );
+	VectorScale( color, ( 1.0f / 255.0f ), dl->color );
+	dl->intensity = radius * 0.5f;
+	dl->flags = flags;
+	dl->shader = NULL;
 
 	R_LightBounds( dl->origin, dl->intensity, dl->mins, dl->maxs );
 
@@ -2708,7 +2706,7 @@ render_exp_t DLLEXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.AddLightStyle = R_AddLightStyle;
 	re.AddRefEntity = R_AddEntityToScene;
 	re.AddTmpEntity = R_AddTeEntToScene;
-	re.AddDynLight = R_AddDynamicLight;
+	re.AddDLight = R_AddDynamicLight;
 	re.AddPolygon = R_AddPolyToScene;
 	re.ClearScene = R_ClearScene;
 
