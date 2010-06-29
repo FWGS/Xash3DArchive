@@ -113,7 +113,7 @@ typedef struct
 	model_t		models[MAX_MODELS];
 	string_t		edict_classnames[MAX_CLASSNAMES];
 	sound_t		sound_precache[MAX_SOUNDS];
-	shader_t		decal_shaders[MAX_DECALS];
+	shader_t		decal_shaders[MAX_DECALNAMES];
 } client_t;
 
 extern client_t	cl;

@@ -684,7 +684,7 @@ void CL_PrepVideo( void )
 		SCR_UpdateScreen();
 	}
 
-	for( i = 0; i < MAX_DECALS && cl.configstrings[CS_DECALS+1+i][0]; i++ )
+	for( i = 0; i < MAX_DECALNAMES && cl.configstrings[CS_DECALS+1+i][0]; i++ )
 	{
 		com.strncpy( name, cl.configstrings[CS_DECALS+1+i], MAX_STRING );
 		cl.decal_shaders[i+1] = re->RegisterShader( name, SHADER_DECAL );

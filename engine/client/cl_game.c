@@ -2023,7 +2023,7 @@ static int pfnDecalIndexFromName( const char *szDecalName )
 	int	i;
 
 	// look through the loaded sprite name list for SpriteName
-	for( i = 0; i < MAX_DECALS && cl.configstrings[CS_DECALS+i+1][0]; i++ )
+	for( i = 0; i < MAX_DECALNAMES && cl.configstrings[CS_DECALS+i+1][0]; i++ )
 	{
 		if( !com.stricmp( szDecalName, cl.configstrings[CS_DECALS+i+1] ))
 			return cl.decal_shaders[i+1];
@@ -2039,7 +2039,7 @@ pfnDecalIndex
 */
 static int pfnDecalIndex( int id )
 {
-	id = bound( 0, id, MAX_DECALS - 1 );
+	id = bound( 0, id, MAX_DECALNAMES - 1 );
 	return cl.decal_shaders[id];
 }
 

@@ -96,6 +96,7 @@ cvar_t *r_bloom_fast_sample;
 cvar_t *r_allow_software;
 cvar_t *r_3dlabs_broken;
 
+cvar_t *r_decals;
 cvar_t *r_himodels;
 cvar_t *r_lefthand;
 cvar_t *r_physbdebug;
@@ -566,6 +567,7 @@ void GL_InitCommands( void )
 	r_shadows_self_shadow = Cvar_Get( "r_shadows_self_shadow", "0", CVAR_ARCHIVE, "allow self-shadowing" );
 
 	r_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
+	r_decals = Cvar_Get( "r_decals", "4096", CVAR_ARCHIVE, "sets the maximum number of decals" );
 
 	r_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
 	r_colorbits = Cvar_Get( "r_colorbits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "pixelformat color bits (0 - auto)" );

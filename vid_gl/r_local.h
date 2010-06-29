@@ -183,12 +183,12 @@ enum
 
 typedef struct
 {
-	vec3_t			origin;
-	vec3_t			color;		// dlight color
-	float			intensity;	// cdlight->radius
-	vec3_t			mins, maxs;
-	const ref_shader_t		*shader;
-	int			flags;		// misc flags
+	vec3_t	  	origin;
+	vec3_t	  	color;		// dlight color
+	float	  	intensity;	// cdlight->radius
+	vec3_t	  	mins, maxs;
+	ref_shader_t	*shader;
+	int	  	flags;		// misc flags
 } ref_dlight_t;
 
 typedef struct
@@ -321,6 +321,9 @@ extern ref_entity_t	r_entities[MAX_ENTITIES];
 extern uint	r_numDlights;
 extern ref_dlight_t	r_dlights[MAX_DLIGHTS];
 
+extern uint	r_numDecals;
+extern decal_t	*r_drawdecals[MAX_DECALS];
+
 extern uint	r_numPolys;
 extern poly_t	r_polys[MAX_POLYS];
 
@@ -422,6 +425,7 @@ extern cvar_t *gl_texture_anisotropy;
 extern cvar_t *gl_texture_lodbias;
 extern cvar_t *gl_round_down;
 extern cvar_t *gl_compress_textures;
+extern cvar_t *r_decals;
 extern cvar_t *r_mode;
 extern cvar_t *r_nobind;
 extern cvar_t *r_picmip;
@@ -699,6 +703,15 @@ void	R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, ve
 void	R_ShutdownGLSLPrograms( void );
 void	R_ProgramList_f( void );
 void	R_ProgramDump_f( void );
+
+//
+// r_decals.c
+//
+
+bool R_DecalShoot( shader_t texture, int entity, model_t modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
+void R_AddSurfaceDecals( msurface_t *surf );
+void R_DrawSingleDecal( const meshbuffer_t *mb );
+void R_AddDecalsToList( void );
 
 //
 // r_poly.c

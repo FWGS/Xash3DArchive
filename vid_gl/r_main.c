@@ -1621,6 +1621,8 @@ void R_RenderView( const ref_params_t *fd )
 
 		R_AddPolysToList();
 
+		R_AddDecalsToList();
+
 		if( r_speeds->integer )
 			r_add_polys += ( Sys_DoubleTime() - starttime );
 	}
@@ -1789,6 +1791,7 @@ void R_ClearScene( void )
 {
 	r_numEntities = 1;	// worldmodel
 	r_numDlights = 0;
+	r_numDecals = 0;
 	r_numPolys = 0;
 	RI.previousentity = NULL;
 	RI.currententity = r_worldent;
@@ -2708,6 +2711,7 @@ render_exp_t DLLEXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.AddTmpEntity = R_AddTeEntToScene;
 	re.AddDLight = R_AddDynamicLight;
 	re.AddPolygon = R_AddPolyToScene;
+	re.DecalShoot = R_DecalShoot;
 	re.ClearScene = R_ClearScene;
 
 	re.BeginFrame = R_BeginFrame;

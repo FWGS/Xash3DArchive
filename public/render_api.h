@@ -165,6 +165,7 @@ typedef struct render_exp_s
 	// prepare frame to rendering
 	bool	(*AddRefEntity)( edict_t *pRefEntity, int ed_type, shader_t customShader );
 	bool	(*AddTmpEntity)( struct tempent_s *TempEnt, int ed_type, shader_t customShader );
+	bool	(*DecalShoot)( shader_t decal, int ent, model_t mod, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
 	bool	(*AddDLight)( vec3_t pos, rgb_t color, float radius, int flags );
 	bool	(*AddPolygon)( const poly_t *poly );
 	bool	(*AddLightStyle)( int stylenum, vec3_t color );

@@ -319,7 +319,7 @@ meshbuffer_t *R_AddMeshToList( int type, mfog_t *fog, ref_shader_t *shader, int 
 
 	if( !shader ) return NULL;
 
-	if( RI.currententity && (shader->flags & SHADER_RENDERMODE))
+	if( RI.currententity && ( shader->flags & SHADER_RENDERMODE ))
 	{
 		switch( RI.currententity->rendermode )
 		{
@@ -516,6 +516,9 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 		if( RI.previousentity != RI.currententity )
 			R_LoadIdentity();
 		R_RenderMeshBuffer( mb );
+		break;
+	case MB_DECAL:
+		R_DrawSingleDecal( mb );
 		break;
 	}
 }

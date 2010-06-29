@@ -2964,6 +2964,7 @@ static _inline void R_SetColorForOutlines( void )
 		pglColor4fv( colorBlue );
 		break;
 	case MB_POLY:
+	case MB_DECAL:
 		pglColor4fv( colorGreen );
 		break;
 	}

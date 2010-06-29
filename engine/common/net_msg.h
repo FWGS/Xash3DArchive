@@ -162,7 +162,7 @@ static const net_desc_t NWDesc[] =
 #define CS_MODELS			32				// configstrings starts here
 #define CS_SOUNDS			(CS_MODELS+MAX_MODELS)		// sound names
 #define CS_DECALS			(CS_SOUNDS+MAX_SOUNDS)		// server decal indexes
-#define CS_EVENTS			(CS_DECALS+MAX_DECALS)		// queue events
+#define CS_EVENTS			(CS_DECALS+MAX_DECALNAMES)		// queue events
 #define CS_GENERICS			(CS_EVENTS+MAX_EVENTS)		// edicts classnames
 #define CS_CLASSNAMES		(CS_GENERICS+MAX_GENERICS)		// generic resources (e.g. color decals)
 #define CS_LIGHTSTYLES		(CS_CLASSNAMES+MAX_CLASSNAMES)	// lightstyle patterns

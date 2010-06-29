@@ -61,7 +61,7 @@ int SV_SoundIndex( const char *name )
 
 int SV_DecalIndex( const char *name )
 {
-	return SV_FindIndex( name, CS_DECALS, MAX_DECALS, true );
+	return SV_FindIndex( name, CS_DECALS, MAX_DECALNAMES, true );
 }
 
 int SV_EventIndex( const char *name )

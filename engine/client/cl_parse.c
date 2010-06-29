@@ -629,7 +629,7 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	{
 		cl.sound_precache[i-CS_SOUNDS] = S_RegisterSound( cl.configstrings[i] );
 	}
-	else if( i >= CS_DECALS && i < CS_DECALS+MAX_DECALS && cl.video_prepped )
+	else if( i >= CS_DECALS && i < CS_DECALS+MAX_DECALNAMES && cl.video_prepped )
 	{
 		cl.decal_shaders[i-CS_DECALS] = re->RegisterShader( cl.configstrings[i], SHADER_DECAL );
 	}

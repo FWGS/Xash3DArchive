@@ -503,7 +503,6 @@ void CL_AddParticles( void )
 		// send the particle to the renderer
 		re->AddPolygon( &p->poly );
 
-
 		// evaluate particle
 		p->org[0] += p->vel[0] * frametime;
 		p->org[1] += p->vel[1] * frametime;
@@ -1165,7 +1164,14 @@ void CL_AddDecals( void )
 
 void CL_DecalShoot( HSPRITE hDecal, edict_t *pEnt, int modelIndex, float *pos, int flags )
 {
-	CL_SpawnDecal( hDecal, pEnt, pos, 0, 90.0f, 5.0f );
+	int	entityIndex = 0;
+	rgba_t	color;
+
+	if( CL_IsValidEdict( pEnt ))
+		entityIndex = pEnt->serialnumber;
+	Vector4Set( color, 255, 255, 255, 255 );
+
+	if( re ) re->DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, 0, color );
 }
 
 /*
@@ -1176,12 +1182,12 @@ CL_SpawnStaticDecal
 */
 void CL_SpawnStaticDecal( vec3_t origin, int decalIndex, int entityIndex, int modelIndex )
 {
-	edict_t	*pEnt;
+	rgba_t	color;
 
-	pEnt = CL_GetEdictByIndex( entityIndex );
-	decalIndex = bound( 0, decalIndex, MAX_DECALS - 1 );
+	decalIndex = bound( 0, decalIndex, MAX_DECALNAMES - 1 );
+	Vector4Set( color, 255, 255, 255, 255 );
 
-	CL_SpawnDecal( cl.decal_shaders[decalIndex], pEnt, origin, 0, 90.0f, 32.0f );
+	if( re ) re->DecalShoot( cl.decal_shaders[decalIndex], entityIndex, modelIndex, origin, NULL, 0, color );
 }
 
 void CL_FindExplosionPlane( const vec3_t origin, float radius, vec3_t result )

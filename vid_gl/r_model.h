@@ -58,6 +58,37 @@ typedef struct
 	cplane_t		*planes;
 } mfog_t;
 
+typedef struct
+{
+	vec4_t		m_vPos;
+	vec2_t		m_tCoords;	// these are the texcoords for the decal itself
+	vec2_t		m_LMCoords;	// lightmap texcoords for the decal.
+					// FIXME: adds the lightmapnum here ?
+} decalvert_t;
+
+typedef struct decal_s
+{
+	struct decal_s	*pnext;		// linked list for each surface
+	struct msurface_s	*psurf;		// surface id for persistence / unlinking
+	ref_shader_t	*shader;		// decal image
+
+	vec3_t		position;		// location of the decal center in world space.
+	vec3_t		saxis;		// direction of the s axis in world space
+	float		dx;		// Offsets into surface texture
+	float		dy;
+	float		scale;		// pixel scale
+	short		flags;		// decal flags  FDECAL_*
+	short		entityIndex;	// entity this is attached to
+	int		m_Size;		// size of decal, used for rejecting on dispinfo planes
+
+	// NOTE: The following variables are dynamic variables.
+	// We could put these into a separate array and reference them
+	// by index to reduce memory costs of this...
+	float		fadeDuration;	// Negative value means to fade in
+	float		fadeStartTime;
+	rgba_t		color;
+} decal_t;
+
 // miptex features (will be convert to a shader settings)
 #define MIPTEX_CONVEYOR	BIT( 0 )		// create conveyour surface
 #define MIPTEX_LIQUID	BIT( 1 )		// is a liquid
@@ -80,7 +111,7 @@ typedef struct mtexinfo_s
 	short		height;
 } mtexinfo_t;
 
-typedef struct
+typedef struct msurface_s
 {
 	int		visframe;		// should be drawn when node is crossed
 	int		flags;		// see SURF_ for details
@@ -96,6 +127,7 @@ typedef struct
 	ref_shader_t	*shader;
 	mesh_t		*mesh;
 	mfog_t		*fog;
+	decal_t		*pdecals;		// linked surface decals
 	cplane_t		*plane;
 
 	union

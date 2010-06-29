@@ -155,6 +155,9 @@ static meshbuffer_t *R_AddSurfaceToList( msurface_t *surf, unsigned int clipflag
 	mb = R_AddMeshToList( MB_MODEL, surf->fog, shader, surf - r_worldbrushmodel->surfaces + 1 );
 	RI.surfmbuffers[surf - r_worldbrushmodel->surfaces] = mb;
 
+	// also add all surface decals
+	R_AddSurfaceDecals( surf );
+
 	return mb;
 }
 
