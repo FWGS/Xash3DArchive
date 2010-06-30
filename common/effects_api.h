@@ -27,20 +27,6 @@ struct dlight_s
 	bool		dark;	// subtracts light instead of adding
 };
 
-// decal flags
-#define FDECAL_PERMANENT	0x01	// This decal should not be removed in favor of any new decals
-#define FDECAL_REFERENCE	0x02	// This is a decal that's been moved from another level
-#define FDECAL_CUSTOM	0x04	// This is a custom clan logo and should not be saved/restored
-#define FDECAL_HFLIP	0x08	// Flip horizontal (U/S) axis
-#define FDECAL_VFLIP	0x10	// Flip vertical (V/T) axis
-#define FDECAL_CLIPTEST	0x20	// Decal needs to be clip-tested
-#define FDECAL_NOCLIP	0x40	// Decal is not clipped by containing polygon
-#define FDECAL_USESAXIS	0x80	// Uses the s axis field to determine orientation
-#define FDECAL_DYNAMIC	0x100	// Indicates the decal is dynamic
-#define FDECAL_SECONDPASS	0x200	// Decals that have to be drawn after everything else
-#define FDECAL_WATER	0x400	// Decal should only be applied to water
-#define FDECAL_DONTSAVE	0x800	// Decal was loaded from adjacent level, don't save it for this level
-
 typedef struct efxapi_s
 {
 	particle_t*	(*R_AllocParticle)( void ); 
@@ -55,7 +41,8 @@ typedef struct efxapi_s
 	void		(*R_GetPaletteColor)( int colorIndex, float *outColor );
 	int		(*CL_DecalIndex)( int id );
 	int		(*CL_DecalIndexFromName)( const char *szDecalName );
-	void		(*R_DecalShoot)( HSPRITE hDecal, edict_t *pEnt, int modelIndex, float *pos, int flags );
+	void		(*R_DecalShoot)( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
+	void		(*R_PlayerDecal)( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
 	dlight_t*		(*CL_AllocDLight)( int key );
 	dlight_t*		(*CL_AllocELight)( int key );
 	void		(*R_LightForPoint)( const float *rgflOrigin, float *lightValue );

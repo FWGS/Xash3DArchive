@@ -2593,7 +2593,7 @@ void pfnStaticDecal( const float *origin, int decalIndex, int entityIndex, int m
 	MSG_WritePos( &sv.multicast, origin );
 	MSG_WriteWord( &sv.multicast, decalIndex );
 	MSG_WriteShort( &sv.multicast, entityIndex );
-	if( entityIndex > 0 )
+	if( entityIndex != NULLENT_INDEX )
 		MSG_WriteWord( &sv.multicast, modelIndex );
 	MSG_Send( MSG_INIT, NULL, NULL );
 }

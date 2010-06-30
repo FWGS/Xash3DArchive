@@ -850,7 +850,7 @@ void Host_Main( void )
 	oldtime = Sys_DoubleTime();
 
 	// main window message loop
-	while( host.state != HOST_OFFLINE )
+	while( host.type != HOST_OFFLINE )
 	{
 		IN_Frame();
 

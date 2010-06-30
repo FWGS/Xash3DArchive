@@ -730,29 +730,6 @@ static void R_AddSpriteModelToList( ref_entity_t *e )
 
 /*
 =================
-R_AddSpritePolyToList
-=================
-*/
-static void R_AddSpritePolyToList( ref_entity_t *e )
-{
-	float 		dist;
-	meshbuffer_t	*mb;
-
-	dist = (e->origin[0] - RI.refdef.vieworg[0]) * RI.vpn[0] + (e->origin[1] - RI.refdef.vieworg[1]) * RI.vpn[1] + (e->origin[2] - RI.refdef.vieworg[2]) * RI.vpn[2];
-	if( dist < 0 ) return; // cull it because we don't want to sort unneeded things
-
-	if( RI.refdef.flags & ( RDF_PORTALINVIEW|RDF_SKYPORTALINVIEW ) || ( RI.params & RP_SKYPORTALVIEW ) )
-	{
-		if( R_VisCullSphere( e->origin, e->radius ) )
-			return;
-	}
-
-	mb = R_AddMeshToList( MB_SPRITE, R_FogForSphere( e->origin, e->radius ), e->customShader, -1 );
-	if( mb ) mb->shaderkey |= ( bound( 1, 0x4000 - (unsigned int)dist, 0x4000 - 1 ) << 12 );
-}
-
-/*
-=================
 R_SpriteOverflow
 =================
 */
@@ -1337,9 +1314,6 @@ static void R_CullEntities( void )
 			default:	break;
 			}
 			break;
-		case RT_SPRITE:
-			culled = ( e->radius <= 0 ) || ( e->customShader == NULL );
-			break;
 		case RT_NONE:
 		default:	break;
 		}
@@ -1437,10 +1411,6 @@ add:
 				break;
 			default:	break;
 			}
-			break;
-		case RT_SPRITE:
-			if( !shadowmap )
-				R_AddSpritePolyToList( e );
 			break;
 		case RT_NONE:
 		default:	break;
@@ -1621,8 +1591,6 @@ void R_RenderView( const ref_params_t *fd )
 
 		R_AddPolysToList();
 
-		R_AddDecalsToList();
-
 		if( r_speeds->integer )
 			r_add_polys += ( Sys_DoubleTime() - starttime );
 	}
@@ -1791,7 +1759,6 @@ void R_ClearScene( void )
 {
 	r_numEntities = 1;	// worldmodel
 	r_numDlights = 0;
-	r_numDecals = 0;
 	r_numPolys = 0;
 	RI.previousentity = NULL;
 	RI.currententity = r_worldent;
@@ -2740,10 +2707,10 @@ render_exp_t DLLEXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.DrawStretchRaw = R_DrawStretchRaw;
 	re.DrawStretchPic = R_DrawStretchPic;
 	re.GetSpriteTexture = R_GetSpriteTexture;
-	re.GetFragments = R_GetClippedFragments;
 	re.ScreenToWorld = R_ScreenToWorld;
 	re.WorldToScreen = R_WorldToScreen;
 	re.RSpeedsMessage = R_SpeedsMessage;
+	re.CreateDecalList = R_CreateDecalList;
 	re.CullBox = Mod_CullBox;
 	re.Support = GL_Support;
 	re.GetCurrentVis = Mod_GetCurrentVis;

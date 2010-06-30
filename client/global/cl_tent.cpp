@@ -180,11 +180,6 @@ void TE_ParseExplosion( void )
 	if(!( flags & TE_EXPLFLAG_NOPARTICLES ))
 		g_engfuncs.pEfxAPI->R_RunParticleEffect( pos, g_vecZero, 224, 200 );
 
-	char	szDecal[32];
-
-	sprintf( szDecal, "{scorch%i", RANDOM_LONG( 1, 3 ));
-	g_pTempEnts->PlaceDecal( pos2, 0, szDecal );
-
 	if( !( flags & TE_EXPLFLAG_NOSOUND ))
 	{
 		CL_PlaySound( "weapons/explode3.wav", 1.0f, pos2 );
@@ -425,6 +420,7 @@ void TE_ParseBSPDecal( void )
 	entityIndex = READ_SHORT();
 	if( entityIndex != NULLENT_INDEX )
 		modelIndex = READ_SHORT();
+	else modelIndex = 0;
 
 	g_pTempEnts->PlaceDecal( pos, entityIndex, decalIndex );
 }
@@ -793,9 +789,8 @@ void TE_ParseDecal( int type )
 	decalIndex = READ_BYTE();
 
 	if( type == TE_DECAL || type == TE_DECALHIGH )
-	{
 		entityIndex = READ_SHORT();
-	}
+	else entityIndex = 0;
 
 	if( type == TE_DECALHIGH || type == TE_WORLDDECALHIGH )
 		decalIndex += 256;
@@ -984,6 +979,7 @@ Create a colored decal, get settings from client
 void TE_ParsePlayerDecal( void )
 {
 	int clientIndex, decalIndex, entityIndex;
+	byte color[4];
 	Vector pos;
 
 	clientIndex = READ_BYTE();
@@ -993,9 +989,14 @@ void TE_ParsePlayerDecal( void )
 	entityIndex = READ_SHORT();
 	decalIndex = READ_BYTE();
 
+	// FIXME: get logo color from user variable
+	color[0] = 255;
+	color[1] = 255;
+	color[2] = 255;
+	color[3] = 255;	// alpha
+
 	HSPRITE hDecal = g_engfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
-	edict_t *pEnt = GetEntityByIndex( entityIndex );
-	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, pEnt, pEnt->v.modelindex, pos, 0 );
+	g_engfuncs.pEfxAPI->R_PlayerDecal( hDecal, entityIndex, pos, 0 );
 }
 
 /*

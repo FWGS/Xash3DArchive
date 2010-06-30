@@ -1281,6 +1281,7 @@ static _inline texture_t *R_ShaderpassTex( const ref_stage_t *pass, int unit )
 		if( !RI.currententity ) return pass->textures[0];	// assume error
 		return pass->textures[angleframe];
 	}
+
 	if( pass->flags & SHADERSTAGE_FRAMES && !(pass->flags & SHADERSTAGE_ANIMFREQUENCY))
 	{
 		if( glState.in2DMode || triState.fActive )
@@ -2666,7 +2667,7 @@ void R_RenderMeshBuffer( const meshbuffer_t *mb )
 	msurface_t	*surf;
 	ref_stage_t	*pass;
 	mfog_t		*fog;
-	int		i;
+	int		i, j, type;
 
 	if( !r_backacc.numVerts || !r_backacc.numElems )
 	{
@@ -2676,10 +2677,33 @@ void R_RenderMeshBuffer( const meshbuffer_t *mb )
 
 	Com_Assert( mb == NULL );
 
-	surf = mb->infokey > 0 ? &r_worldbrushmodel->surfaces[mb->infokey-1] : NULL;
-	if( surf ) r_currentLightStyle = &tr.superLightStyles[surf->superLightStyle];
-	else r_currentLightStyle = NULL;
+	type = mb->sortkey & 3;
+	r_currentLightStyle = NULL;
 	r_currentMeshBuffer = mb;
+	surf = NULL;
+
+	// trying to extract lightstyle for mesh
+	switch( type )
+	{
+	case MB_MODEL:
+		if( RI.currentmodel )
+		{
+			switch( RI.currentmodel->type )
+			{
+			case mod_world:
+			case mod_brush:
+				surf = mb->infokey > 0 ? &r_worldbrushmodel->surfaces[mb->infokey-1] : NULL;
+				if( surf ) r_currentLightStyle = &tr.superLightStyles[surf->superLightStyle];
+				break;
+			}
+		}
+		break;
+	case MB_DECAL:
+		j = ((mb->sortkey>>10) & (MAX_SUPER_STYLES - 1));
+		r_currentLightStyle = &tr.superLightStyles[j - 1];
+		surf = R_DecalFromMeshbuf( mb )->psurf;
+		break;
+	}
 
 	MB_NUM2SHADER( mb->shaderkey, r_currentShader );
 
@@ -2959,9 +2983,6 @@ static _inline void R_SetColorForOutlines( void )
 				break;
 			}
 		}
-		break;
-	case MB_SPRITE:
-		pglColor4fv( colorBlue );
 		break;
 	case MB_POLY:
 	case MB_DECAL:

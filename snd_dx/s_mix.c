@@ -191,7 +191,7 @@ void S_MixAllChannels( int endtime, int end )
 	for( i = 0, ch = channels; i < total_channels; i++, ch++ )
 	{
 		if( !ch->sfx ) continue;
-		if( !ch->leftvol && !ch->rightvol )
+		if( !ch->leftvol && !ch->rightvol && !ch->isSentence )
 			continue;
 
 		// only local sounds can be playing in menus or on pause

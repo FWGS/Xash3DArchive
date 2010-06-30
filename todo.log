@@ -26,4 +26,8 @@ Xash 0.72 Beta 5.07.10
 2.clgame interface - new revision		OK
 3.entity_state - new revision			OK
 4.rework dlights				OK
-5.rework decals
+5.rework decals				OK
+6.batch drawing decals			OK
+7.draw lightmapped decals			OK
+8.draw decals on bmodels			OK
+9.implement save\restore for decals

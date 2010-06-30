@@ -58,14 +58,6 @@ typedef struct
 	cplane_t		*planes;
 } mfog_t;
 
-typedef struct
-{
-	vec4_t		m_vPos;
-	vec2_t		m_tCoords;	// these are the texcoords for the decal itself
-	vec2_t		m_LMCoords;	// lightmap texcoords for the decal.
-					// FIXME: adds the lightmapnum here ?
-} decalvert_t;
-
 typedef struct decal_s
 {
 	struct decal_s	*pnext;		// linked list for each surface
@@ -74,16 +66,13 @@ typedef struct decal_s
 
 	vec3_t		position;		// location of the decal center in world space.
 	vec3_t		saxis;		// direction of the s axis in world space
-	float		dx;		// Offsets into surface texture
-	float		dy;
+	float		dx, dy;		// Offsets into surface texture
 	float		scale;		// pixel scale
 	short		flags;		// decal flags  FDECAL_*
 	short		entityIndex;	// entity this is attached to
-	int		m_Size;		// size of decal, used for rejecting on dispinfo planes
+	mesh_t		*mesh;		// cached mesh, created on first decal rendering
 
-	// NOTE: The following variables are dynamic variables.
-	// We could put these into a separate array and reference them
-	// by index to reduce memory costs of this...
+	// dynamic decals stuff
 	float		fadeDuration;	// Negative value means to fade in
 	float		fadeStartTime;
 	rgba_t		color;

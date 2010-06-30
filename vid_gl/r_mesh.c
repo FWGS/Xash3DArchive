@@ -406,6 +406,7 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 	int		type, features;
 	bool		nonMergable;
 	msurface_t	*surf, *nextSurf;
+	decal_t		*decal, *nextDecal;
 	ref_shader_t	*shader;
 	ref_entity_t	*ent;
 
@@ -491,7 +492,6 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 			break;
 		}
 		break;
-	case MB_SPRITE:
 	case MB_CORONA:
 		nonMergable = R_PushSpritePoly( mb );
 		if( nonMergable || !nextmb || (( nextmb->shaderkey & 0xFC000FFF ) != ( mb->shaderkey & 0xFC000FFF ))
@@ -518,7 +518,44 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 		R_RenderMeshBuffer( mb );
 		break;
 	case MB_DECAL:
-		R_DrawSingleDecal( mb );
+		MB_NUM2SHADER( mb->shaderkey, shader );
+			
+		features = shader->features;
+		if( r_shownormals->integer )
+			features |= MF_NORMALS;
+
+		nextDecal = NULL;
+		decal = R_DecalFromMeshbuf( mb );
+
+		if( features & MF_NONBATCHED )
+		{
+			nonMergable = true;
+		}
+		else
+		{	// check if we need to render batched geometry this frame
+			if( nextmb
+				&& ( nextmb->shaderkey == mb->shaderkey )
+				&& ( nextmb->sortkey == mb->sortkey )
+				&& ( nextmb->dlightbits == mb->dlightbits )
+				&& ( nextmb->shadowbits == mb->shadowbits ))
+			{
+				if(( nextmb->sortkey & 3 ) == MB_DECAL )
+					nextDecal = R_DecalFromMeshbuf( nextmb );
+			}
+
+			nonMergable = nextDecal ? R_MeshOverflow2( decal->mesh, nextDecal->mesh ) : true;
+			if( nonMergable && !r_backacc.numVerts )
+				features |= MF_NONBATCHED;
+		}
+
+		R_PushDecal( mb );
+
+		if( nonMergable )
+		{
+			if( RI.previousentity != RI.currententity )
+				R_RotateForEntity( RI.currententity );
+			R_RenderMeshBuffer( mb );
+		}
 		break;
 	}
 }

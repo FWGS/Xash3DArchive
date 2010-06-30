@@ -334,7 +334,6 @@ void CL_AddEntities( void )
 	CL_AddParticles();
 	CL_AddDLights();
 	CL_AddLightStyles();
-	CL_AddDecals();
 
 	// perfomance test
 	CL_TestEntities();

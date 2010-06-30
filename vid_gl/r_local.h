@@ -44,7 +44,7 @@ extern byte		*r_temppool;
 #define Host_Error		com.error
 
 typedef unsigned int elem_t;
-typedef enum { RT_NONE, RT_MODEL, RT_SPRITE, RT_PORTALSURFACE, NUM_RTYPES } refEntityType_t;
+typedef enum { RT_NONE, RT_MODEL, RT_PORTALSURFACE, NUM_RTYPES } refEntityType_t;
 
 /*
 skins will be outline flood filled and mip mapped
@@ -320,9 +320,6 @@ extern ref_entity_t	r_entities[MAX_ENTITIES];
 
 extern uint	r_numDlights;
 extern ref_dlight_t	r_dlights[MAX_DLIGHTS];
-
-extern uint	r_numDecals;
-extern decal_t	*r_drawdecals[MAX_DECALS];
 
 extern uint	r_numPolys;
 extern poly_t	r_polys[MAX_POLYS];
@@ -708,17 +705,20 @@ void	R_ProgramDump_f( void );
 // r_decals.c
 //
 
-bool R_DecalShoot( shader_t texture, int entity, model_t modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
+void R_InitDecals( void );
+void R_ClearDecals( void );
+void R_ShutdownDecals( void );
+bool R_DecalShoot( shader_t texture, int entity, model_t modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
+decal_t *R_DecalFromMeshbuf( const meshbuffer_t *mb );
+int R_CreateDecalList( decallist_t *pList );
 void R_AddSurfaceDecals( msurface_t *surf );
-void R_DrawSingleDecal( const meshbuffer_t *mb );
-void R_AddDecalsToList( void );
+void R_PushDecal( const meshbuffer_t *mb );
 
 //
 // r_poly.c
 //
 void	R_PushPoly( const meshbuffer_t *mb );
 void	R_AddPolysToList( void );
-int	R_GetClippedFragments( const vec3_t origin, float radius, vec3_t axis[3], int maxfverts, vec3_t *fverts, int maxfragments, fragment_t *fragments );
 msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test );
 
 //

@@ -362,6 +362,11 @@ int EntityInSolid( edict_t *ent )
 		if( pParent->v.flags & FL_CLIENT )
 			return 0;
 	}
+
+	// never suppressing logical entities
+	if( !ent->v.modelindex )
+		return 0;
+
 	return SV_TestEntityPosition( ent );
 }
 

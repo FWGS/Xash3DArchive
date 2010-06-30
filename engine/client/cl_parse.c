@@ -431,10 +431,11 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	decalIndex = MSG_ReadWord( msg );
 	entityIndex = MSG_ReadShort( msg );
 
-	if( entityIndex > 0 )
+	if( entityIndex != NULLENT_INDEX )
 		modelIndex = MSG_ReadWord( msg );
+	else modelIndex = 0;
 
-	CL_SpawnStaticDecal( origin, decalIndex, entityIndex, modelIndex );
+	CL_DecalShoot( cl.decal_shaders[decalIndex], entityIndex, modelIndex, origin, FDECAL_PERMANENT );
 }
 
 void CL_ParseSoundFade( sizebuf_t *msg )

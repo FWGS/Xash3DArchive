@@ -57,13 +57,17 @@ typedef struct
 
 typedef struct
 {
-	int		firstvert;
-	int		numverts;	// can't exceed MAX_POLY_VERTS
-	int		fognum;	// -1 - do not bother adding fog later at rendering stage
-	   			//  0 - determine fog later
-	   			// >0 - valid fog volume number returned by R_GetClippedFragments
-	vec3_t		normal;
-} fragment_t;
+	vec3_t		position;
+	char		name[64];		// same as CS_SIZE
+	short		entityIndex;
+	byte		depth;
+	byte		flags;
+
+	// this is the surface plane that we hit so that
+	// we can move certain decals across
+	// transitions if they hit similar geometry
+	vec3_t		impactPlaneNormal;
+} decallist_t;
 
 typedef struct
 {
@@ -165,7 +169,7 @@ typedef struct render_exp_s
 	// prepare frame to rendering
 	bool	(*AddRefEntity)( edict_t *pRefEntity, int ed_type, shader_t customShader );
 	bool	(*AddTmpEntity)( struct tempent_s *TempEnt, int ed_type, shader_t customShader );
-	bool	(*DecalShoot)( shader_t decal, int ent, model_t mod, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
+	bool	(*DecalShoot)( shader_t decal, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
 	bool	(*AddDLight)( vec3_t pos, rgb_t color, float radius, int flags );
 	bool	(*AddPolygon)( const poly_t *poly );
 	bool	(*AddLightStyle)( int stylenum, vec3_t color );
@@ -195,15 +199,15 @@ typedef struct render_exp_s
 	void	(*SetParms)( shader_t handle, kRenderMode_t rendermode, int frame );
 	void	(*GetParms)( int *w, int *h, int *frames, int frame, shader_t shader );
 	bool	(*ScrShot)( const char *filename, int shot_type ); // write screenshot with same name 
-	bool	(*EnvShot)( const char *filename, uint size, const float *vieworg, bool skyshot ); // write envshot with same name 
+	bool	(*EnvShot)( const char *filename, uint size, const float *vieworg, bool skyshot );
 	void	(*LightForPoint)( const vec3_t point, vec3_t ambientLight );
 	void	(*DrawStretchRaw)( int x, int y, int w, int h, int cols, int rows, byte *data, bool redraw );
 	void	(*DrawStretchPic)( float x, float y, float w, float h, float s1, float t1, float s2, float t2, shader_t shader );
-	int	(*GetFragments)( const vec3_t org, float rad, vec3_t axis[3], int maxverts, vec3_t *verts, int maxfrags, fragment_t *frags );
 	int	(*WorldToScreen)( const float *world, float *screen );
 	void	(*ScreenToWorld)( const float *screen, float *world );
 	bool	(*CullBox)( const vec3_t mins, const vec3_t maxs );
 	bool 	(*RSpeedsMessage)( char *out, size_t size );
+	int	(*CreateDecalList)( decallist_t *pList );	// helper to serialize decals
 	bool	(*Support)( int extension );
 	byte	*(*GetCurrentVis)( void );
 	void	(*RestoreGamma)( void );

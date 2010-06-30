@@ -560,7 +560,6 @@ bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 				}
 				break;
 			}
-
 			rendermode = LUMP_NORMAL;
 		}
 	}

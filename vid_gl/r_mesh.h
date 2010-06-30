@@ -28,11 +28,10 @@ enum
 enum
 {
 	MB_MODEL,
-	MB_SPRITE,
 	MB_POLY,
 	MB_DECAL,
 	MB_CORONA,
-	MB_MAXTYPES = 5
+	MB_MAXTYPES = 4
 };
 
 typedef struct mesh_s

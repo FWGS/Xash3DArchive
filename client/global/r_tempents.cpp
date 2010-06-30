@@ -1506,7 +1506,7 @@ void CTempEnts::PlaceDecal( Vector pos, int entityIndex, int decalIndex )
 	pEnt = GetEntityByIndex( entityIndex );
 	if( pEnt && !pEnt->free ) modelIndex = pEnt->v.modelindex;
 	hDecal = g_engfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
-	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, pEnt, modelIndex, pos, 0 );
+	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
 }
 
 void CTempEnts::PlaceDecal( Vector pos, int entityIndex, const char *decalname )
@@ -1518,7 +1518,7 @@ void CTempEnts::PlaceDecal( Vector pos, int entityIndex, const char *decalname )
 	pEnt = GetEntityByIndex( entityIndex );
 	if( pEnt && !pEnt->free ) modelIndex = pEnt->v.modelindex;
 	hDecal = g_engfuncs.pEfxAPI->CL_DecalIndexFromName( decalname );
-	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, pEnt, modelIndex, pos, 0 );
+	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
 }
 
 void CTempEnts::AllocDLight( Vector pos, byte r, byte g, byte b, float radius, float time, float decay )

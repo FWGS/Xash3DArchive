@@ -2028,7 +2028,7 @@ static int pfnDecalIndexFromName( const char *szDecalName )
 		if( !com.stricmp( szDecalName, cl.configstrings[CS_DECALS+i+1] ))
 			return cl.decal_shaders[i+1];
 	}
-	return 0; // invalid sprite
+	return 0; // invalid decal
 }
 
 /*
@@ -2399,6 +2399,7 @@ static efxapi_t gEfxApi =
 	pfnDecalIndex,
 	pfnDecalIndexFromName,
 	CL_DecalShoot,
+	CL_PlayerDecal,
 	CL_AllocDlight,
 	CL_AllocElight,
 	CL_LightForPoint,

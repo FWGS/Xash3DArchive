@@ -377,6 +377,16 @@ static void Mod_UpdateShaders( ref_model_t *mod )
 	if( !mod || !mod->name )
 		return;
 
+	if( mod->type == mod_world || mod->type == mod_brush )
+	{
+		mbrushmodel_t	*bmodel;
+	
+		// clearing all linked decals here
+		bmodel = (mbrushmodel_t *)mod->extradata;
+		for( i = 0; i < bmodel->numsurfaces; i++ )
+			bmodel->surfaces[i].pdecals = NULL;
+	}
+  
 	for( i = 0; i < mod->numshaders; i++ )
 	{
 		shader = mod->shaders[i];

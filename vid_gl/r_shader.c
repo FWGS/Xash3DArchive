@@ -3413,21 +3413,27 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 	{
 	case SHADER_DECAL:
 		shader->type = SHADER_DECAL;
-		shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_POLYGONOFFSET;
-		shader->features = MF_STCOORDS|MF_COLORS;
+		shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_POLYGONOFFSET|SHADER_HASLIGHTMAP;
+		shader->features = MF_STCOORDS|MF_LMCOORDS;
 		shader->sort = SORT_DECAL;
-		shader->num_stages = 1;
+		shader->num_stages = 2;
 		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 		strcpy( shader->name, shortname );
-		shader->stages = ( ref_stage_t * )(( byte * )shader->name + length + 1 );
+		shader->stages = (ref_stage_t *)((byte *)shader->name + length + 1 );
 		pass = &shader->stages[0];
-		pass->flags = SHADERSTAGE_BLEND_DECAL;
+		pass->flags = SHADERSTAGE_BLEND_REPLACE;
 		pass->glState = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 		pass->tcgen = TCGEN_BASE;
-		pass->textures[0] = Shader_FindImage( shader, shortname, addFlags );
+		pass->textures[0] = Shader_FindImage( shader, shortname, TF_CLAMP|addFlags );
 		pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;
-		pass->alphaGen.type = ALPHAGEN_VERTEX;
+		pass->alphaGen.type = ALPHAGEN_VERTEX;	// for fading decals
 		pass->num_textures++;
+     		pass = &shader->stages[1];
+		pass->flags = SHADERSTAGE_LIGHTMAP|SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_REPLACE;
+		pass->glState = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_ZERO;
+		pass->tcgen = TCGEN_LIGHTMAP;
+		pass->rgbGen.type = RGBGEN_IDENTITY;
+		pass->alphaGen.type = ALPHAGEN_IDENTITY;
 		break;
 	case SHADER_FLARE:
 		shader->type = SHADER_FLARE;

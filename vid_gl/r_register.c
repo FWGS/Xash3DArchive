@@ -1016,6 +1016,7 @@ static void R_InitMedia( void )
 	R_InitCinematics ();
 	R_InitShaders();
 	R_InitModels();
+	R_InitDecals();
 	R_InitCoronas();
 	R_InitShadows();
 	R_InitOcclusionQueries();
@@ -1039,6 +1040,7 @@ static void R_FreeMedia( void )
 		return;
 
 	R_ShutdownOcclusionQueries();
+	R_ShutdownDecals();
 	R_ShutdownShadows();
 	R_ShutdownModels();
 	R_ShutdownShaders();
@@ -1115,7 +1117,9 @@ void R_NewMap( void )
 
 	R_InitCustomColors();	// clear custom colors
 	R_InitCoronas();		// update corona shader (because we can't make it static)
+
 	R_StudioFreeAllExtradata();	// free boneposes
+	R_ClearDecals();		// purge all decals
 
 	GL_SetDefaultTexState ();
 	Mem_Set( &RI, 0, sizeof( refinst_t ));	

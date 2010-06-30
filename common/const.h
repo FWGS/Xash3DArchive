@@ -264,11 +264,6 @@ typedef enum
 #define IN_ALT1			(1<<14)
 #define IN_SCORE			(1<<15)   // Used by client.dll for when scoreboard is held down
 
-// temp entity bounce sound types
-#define TE_BOUNCE_NULL		0
-#define TE_BOUNCE_SHELL		1
-#define TE_BOUNCE_SHOTSHELL		2
-
 // rendering constants
 typedef enum 
 {	
@@ -359,6 +354,16 @@ typedef enum
 #define RDF_SKYPORTALINVIEW		(1<<2)	// draw skyportal instead of regular sky
 #define RDF_NOFOVADJUSTMENT		(1<<3)	// do not adjust fov for widescreen
 #define RDF_THIRDPERSON		(1<<4)	// enable chase cam instead firstperson
+
+// decal flags
+#define FDECAL_PERMANENT		0x01	// This decal should not be removed in favor of any new decals
+#define FDECAL_REFERENCE		0x02	// This is a decal that's been moved from another level
+#define FDECAL_CUSTOM		0x04	// This is a custom clan logo and should not be saved/restored
+#define FDECAL_DYNAMIC		0x08	// Indicates the decal is dynamic
+#define FDECAL_DONTSAVE		0x10	// Decal was loaded from adjacent level, don't save it for this level
+#define FDECAL_CLIPTEST		0x20	// Decal needs to be clip-tested
+#define FDECAL_NOCLIP		0x40	// Decal is not clipped by containing polygon
+#define FDECAL_USESAXIS		0x80	// Uses the s axis field to determine orientation (footprints)
 
 // client modelindexes
 #define NULLENT_INDEX		-1	// engine always return NULL, only for internal use
