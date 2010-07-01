@@ -53,7 +53,7 @@ typedef enum
 	SHADER_STATIC		= BIT(0),	// never freed by R_ShaderFreeUnused
 	SHADER_DEPTHWRITE		= BIT(1),
 	SHADER_SKYPARMS		= BIT(2),
-	SHADER_SURFACEPARM		= BIT(3),	// shader has surface and contents parms
+	SHADER_DECALPARMS		= BIT(3),	// it's a lightmapped decal
 	SHADER_POLYGONOFFSET	= BIT(4),
 	SHADER_CULL_FRONT		= BIT(5),
 	SHADER_CULL_BACK		= BIT(6),
@@ -71,7 +71,7 @@ typedef enum
 	SHADER_DEFAULTED		= BIT(18),
 	SHADER_PORTAL_CAPTURE	= (SHADER_PORTAL_CAPTURE1|SHADER_PORTAL_CAPTURE1),
 	SHADER_CULL		= (SHADER_CULL_FRONT|SHADER_CULL_BACK),
-	SHADER_NOFRAGMENTS		= BIT(19),
+
 } shaderFlags_t;
 
 // shaderstage flags

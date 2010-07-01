@@ -1202,9 +1202,9 @@ addEntity:
 	// copy progs values to state
 	state->solid = (solid_t)pEntity->pev->solid;
 
+	state->modelindex = pEntity->pev->modelindex;
 	state->origin = pEntity->pev->origin;
 	state->angles = pEntity->pev->angles;
-	state->modelindex = pEntity->pev->modelindex;
 	state->health = pEntity->pev->health;
 	state->skin = pEntity->pev->skin;		// studio model skin
 	state->body = pEntity->pev->body;		// studio model submodel 

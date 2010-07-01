@@ -1115,6 +1115,12 @@ static bool Shader_SkyRotate( ref_shader_t *shader, ref_stage_t *pass, script_t 
 	return true;
 }
 
+static bool Shader_CustomDecal( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+{
+	shader->flags |= SHADER_DECALPARMS;
+	return true;
+}
+
 static bool Shader_Sort( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
@@ -1231,6 +1237,7 @@ static const ref_parsekey_t shaderkeys[] =
 { "endif",		Shader_Endif		},
 { "portal",		Shader_Portal		},
 { "fogvars",		Shader_FogParms		}, // RTCW fog params
+{ "decal",		Shader_CustomDecal		},
 { "skyParms",		Shader_SkyParms		},
 { "skyRotate",		Shader_SkyRotate		},
 { "fogparms",		Shader_FogParms		},
@@ -3155,6 +3162,9 @@ void Shader_Finish( ref_shader_t *s )
 		else s->sort = SORT_ADDITIVE;
 	}
 
+	if( s->flags & SHADER_DECALPARMS )
+		s->flags |= SHADER_POLYGONOFFSET;
+
 	if( ( s->flags & SHADER_POLYGONOFFSET ) && !s->sort )
 		s->sort = SORT_DECAL;
 
@@ -3278,7 +3288,11 @@ void Shader_Finish( ref_shader_t *s )
 			if( r_shaderHasDlightPass )
 				pass->textures[5] = ( (texture_t *)1); // HACKHACK no dlights
 		}
-		Shader_SetBlendmode( pass );
+
+		// custom lightmapped decals are handled seperately
+		if( s->flags & SHADER_DECALPARMS )
+			pass->flags |= SHADERSTAGE_BLEND_REPLACE;
+		else Shader_SetBlendmode( pass );
 	}
 
 	for( i = 0, pass = s->stages; i < s->num_stages; i++, pass++ )
@@ -3413,7 +3427,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 	{
 	case SHADER_DECAL:
 		shader->type = SHADER_DECAL;
-		shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_POLYGONOFFSET|SHADER_HASLIGHTMAP;
+		shader->flags = SHADER_CULL_FRONT|SHADER_POLYGONOFFSET|SHADER_HASLIGHTMAP;
 		shader->features = MF_STCOORDS|MF_LMCOORDS;
 		shader->sort = SORT_DECAL;
 		shader->num_stages = 2;
@@ -4099,7 +4113,7 @@ ref_shader_t *R_SetupSky( const char *name )
 		ref_shader_t	*shader;
 		uint		hashKey;
 
-		com.strncpy( loadname, name, sizeof( loadname ));
+		com.snprintf( loadname, sizeof( loadname ), "%s/%s", SI->envpath, name );
 	
 		// make sure what new shader it's a skyShader and existing
 		hashKey = Com_HashKey( loadname, SHADERS_HASH_SIZE );
@@ -4167,7 +4181,6 @@ ref_shader_t *R_SetupSky( const char *name )
 			{
 				if( !Shader_CheckSkybox( loadname ))
 				{
-					com.strncpy( loadname, va( "%s/%s", SI->envpath, name ), sizeof( loadname ));
 					if( Shader_CheckSkybox( loadname ))
 							shader_valid = true;
 					else shader_valid = true;

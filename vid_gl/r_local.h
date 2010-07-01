@@ -710,7 +710,7 @@ void R_ClearDecals( void );
 void R_ShutdownDecals( void );
 bool R_DecalShoot( shader_t texture, int entity, model_t modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
 decal_t *R_DecalFromMeshbuf( const meshbuffer_t *mb );
-int R_CreateDecalList( decallist_t *pList );
+int R_CreateDecalList( decallist_t *pList, bool changelevel );
 void R_AddSurfaceDecals( msurface_t *surf );
 void R_PushDecal( const meshbuffer_t *mb );
 

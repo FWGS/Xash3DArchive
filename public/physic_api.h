@@ -57,6 +57,10 @@ typedef struct physic_exp_s
 	void (*Mod_GetAttachment)( edict_t *ent, int iAttachment, float *rgflOrigin, float *rgflAngles );
 	void (*Mod_GetBonePos)( edict_t *ent, int iBone, float *rgflOrigin, float *rgflAngles );
 
+	// lighting info
+	void (*AddLightstyle)( int style, const char* val );
+	int (*LightPoint)( edict_t *pEdict );	// for GETENTITYILLUM
+
 	// tracing
 	int (*PointContents)( const vec3_t p );
 	int (*HullPointContents)( chull_t *hull, int num, const vec3_t p );

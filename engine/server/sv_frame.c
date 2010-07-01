@@ -357,6 +357,7 @@ void SV_BuildClientFrame( sv_client_t *cl )
 		cl->addangle = 0;
 		break;
 	}
+
 	clent->v.fixangle = 0; // reset fixangle
 
 	// this is the frame we are creating
@@ -379,6 +380,9 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	// to work correctly.  This also catches the error condition
 	// of an entity being included twice.
 	qsort( frame_ents.entities, frame_ents.num_entities, sizeof( frame_ents.entities[0] ), SV_EntityNumbers );
+
+	if( cl->modelindex ) // apply custom model if present
+		clent->pvServerData->s.modelindex = cl->modelindex;
 
 	// copy the entity states out
 	frame->num_entities = 0;
@@ -520,12 +524,13 @@ void SV_SendClientMessages( void )
 		// only send messages if the client has sent one
 		if( !cl->send_message ) continue;
 
+/*
 		if( !sv.paused && !Netchan_CanPacket( &cl->netchan ))
 		{
 			cl->surpressCount++;
 			continue;	// bandwidth choke
 		}
-
+*/
 		if( cl->state == cs_spawned )
 		{
 			SV_SendClientDatagram( cl );

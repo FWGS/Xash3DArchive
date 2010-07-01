@@ -264,6 +264,90 @@ static void BSP_LoadTexInfo( const dlump_t *l )
 
 /*
 =================
+BSP_LoadLighting
+=================
+*/
+static void BSP_LoadLighting( const dlump_t *l )
+{
+	byte	d, *in, *out;
+	int	i;
+
+	if( !l->filelen ) return;
+	in = (void *)(mod_base + l->fileofs);
+
+	switch( cm.version )
+	{
+	case Q1BSP_VERSION:
+		// expand the white lighting data
+		loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, l->filelen * 3 );
+		out = loadmodel->lightdata;
+
+		for( i = 0; i < l->filelen; i++ )
+		{
+			d = *in++;
+			*out++ = d;
+			*out++ = d;
+			*out++ = d;
+		}
+		break;
+	case HLBSP_VERSION:
+		// load colored lighting
+		loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, l->filelen );
+		Mem_Copy( loadmodel->lightdata, in, l->filelen );
+		break;
+	}
+}
+
+/*
+=================
+BSP_CalcSurfaceExtents
+
+Fills in surf->textureMins and surf->extents
+=================
+*/
+static void BSP_CalcSurfaceExtents( csurface_t *surf )
+{
+	float	mins[2], maxs[2], val;
+	int	bmins[2], bmaxs[2];
+	int	i, j, e;
+	float	*v;
+
+	if( surf->flags & SURF_DRAWTURB )
+	{
+		surf->extents[0] = surf->extents[1] = 16384;
+		surf->textureMins[0] = surf->textureMins[1] = -8192;
+		return;
+	}
+
+	mins[0] = mins[1] = 999999;
+	maxs[0] = maxs[1] = -999999;
+
+	for( i = 0; i < surf->numedges; i++ )
+	{
+		e = loadmodel->surfedges[surf->firstedge + i];
+		if( e >= 0 ) v = (float *)&loadmodel->vertexes[loadmodel->edges[e].v[0]];
+		else v = (float *)&loadmodel->vertexes[loadmodel->edges[-e].v[1]];
+
+		for( j = 0; j < 2; j++ )
+		{
+			val = DotProduct( v, surf->texinfo->vecs[j] ) + surf->texinfo->vecs[j][3];
+			if( val < mins[j] ) mins[j] = val;
+			if( val > maxs[j] ) maxs[j] = val;
+		}
+	}
+
+	for( i = 0; i < 2; i++ )
+	{
+		bmins[i] = floor( mins[i] / LM_SAMPLE_SIZE );
+		bmaxs[i] = ceil( maxs[i] / LM_SAMPLE_SIZE );
+
+		surf->textureMins[i] = bmins[i] * LM_SAMPLE_SIZE;
+		surf->extents[i] = (bmaxs[i] - bmins[i]) * LM_SAMPLE_SIZE;
+	}
+}
+
+/*
+=================
 BSP_LoadSurfaces
 =================
 */
@@ -272,6 +356,7 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 	dface_t		*in;
 	csurface_t	*out;
 	int		i, count;
+	int		lightofs;
 
 	in = (void *)(mod_base + l->fileofs);
 	if( l->filelen % sizeof( dface_t ))
@@ -290,6 +375,30 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 		if( LittleShort( in->side )) out->flags |= SURF_PLANEBACK;
 		out->plane = loadmodel->planes + LittleLong( in->planenum );
 		out->texinfo = loadmodel->texinfo + LittleLong( in->texinfo );
+
+		if( !com.strncmp( out->texinfo->texture->name, "sky", 3 ))
+			out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
+
+		if( out->texinfo->texture->name[0] == '*' || out->texinfo->texture->name[0] == '!' )
+			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+
+		BSP_CalcSurfaceExtents( out );
+
+		if( out->flags & SURF_DRAWTILED ) lightofs = -1;
+		else lightofs = LittleLong( in->lightofs );
+
+		if( loadmodel->lightdata && lightofs != -1 )
+		{
+			if( cm.version == HLBSP_VERSION )
+				out->samples = loadmodel->lightdata + lightofs;
+			else out->samples = loadmodel->lightdata + (lightofs * 3);
+		}
+
+		while( out->numstyles < LM_STYLES && in->styles[out->numstyles] != 255 )
+		{
+			out->styles[out->numstyles] = in->styles[out->numstyles];
+			out->numstyles++;
+		}
 	}
 }
 
@@ -429,6 +538,8 @@ static void BSP_LoadNodes( dlump_t *l )
 		p = LittleLong( in->planenum );
 		out->plane = loadmodel->planes + p;
 		out->contents = CONTENTS_NODE;
+		out->firstface = loadmodel->surfaces + LittleLong( in->firstface );
+		out->numfaces = LittleLong( in->numfaces );
 
 		for( j = 0; j < 2; j++ )
 		{
@@ -673,6 +784,7 @@ static void CM_BrushModel( cmodel_t *mod, byte *buffer )
 
 	// will be merged later
 	loadmodel->type = mod_brush;
+	cm.version = i;
 
 	// swap all the lumps
 	mod_base = (byte *)header;
@@ -697,12 +809,13 @@ static void CM_BrushModel( cmodel_t *mod, byte *buffer )
 	}
 
 	BSP_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
-	BSP_LoadTextures( &header->lumps[LUMP_TEXTURES] );
-	BSP_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
 	BSP_LoadEdges( &header->lumps[LUMP_EDGES] );
 	BSP_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
-	BSP_LoadSurfaces( &header->lumps[LUMP_FACES] );
+	BSP_LoadTextures( &header->lumps[LUMP_TEXTURES] );
+	BSP_LoadLighting( &header->lumps[LUMP_LIGHTING] );
 	BSP_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
+	BSP_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
+	BSP_LoadSurfaces( &header->lumps[LUMP_FACES] );
 	BSP_LoadMarkFaces( &header->lumps[LUMP_MARKSURFACES] );
 	BSP_LoadLeafs( &header->lumps[LUMP_LEAFS] );
 	BSP_LoadNodes( &header->lumps[LUMP_NODES] );
@@ -712,6 +825,7 @@ static void CM_BrushModel( cmodel_t *mod, byte *buffer )
 	CM_MakeHull0 ();
 	
 	loadmodel->numframes = 2;	// regular and alternate animation
+	cm.version = 0;
 	
 	// set up the submodels (FIXME: this is confusing)
 	for( i = 0; i < mod->numsubmodels; i++ )
@@ -788,8 +902,11 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 		if( checksum ) *checksum = cm.checksum;
 		if( !clientload )
 		{
-			// reset entity script
+			// reset entity script...
 			Com_ResetScript( worldmodel->entityscript );
+
+			// ..and lightstyles
+			CM_ClearLightStyles();
 		}
 		sv_models[1] = cm_models; // make link to world
 
@@ -811,6 +928,7 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 	CM_BmodelInitBoxHull ();
 	CM_StudioInitBoxHull (); // hitbox tracing
 
+	CM_ClearLightStyles();
 	CM_CalcPHS ();
 }
 

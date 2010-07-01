@@ -417,7 +417,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		else host.state = HOST_FRAME;
 
 		wnd_caption = GetSystemMetrics( SM_CYCAPTION );
-		S_Activate(( host.state == HOST_FRAME ) ? true : false );
+		S_Activate(( host.state == HOST_FRAME ) ? true : false, host.hWnd );
 		Key_ClearStates();	// FIXME!!!
 
 		if( host.state == HOST_FRAME )

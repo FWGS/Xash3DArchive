@@ -1,3 +1,4 @@
+
 //=======================================================================
 //			Copyright XashXT Group 2008 ©
 //		        sv_client.c - client interactions
@@ -1105,21 +1106,19 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 		// apply custom playermodel
 		if( com.strlen( model ) && com.stricmp( model, "player" ))
 		{
-			const char *path = va( "models/player/%s/%s.mdl", model, model );
+			string	path;
+
+			com.snprintf( path, sizeof( path ), "models/player/%s/%s.mdl", model, model );
 			cl->modelindex = SV_ModelIndex( path );
 			CM_RegisterModel( path, cl->modelindex ); // upload model
 		}
+		else cl->modelindex = 0; // reset to default
+
+		ent->v.netname = MAKE_STRING( Info_ValueForKey( cl->userinfo, "name" ));
 	}
 
 	// call prog code to allow overrides
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
-
-	if( SV_IsValidEdict( ent ))
-	{
-		if( sv_maxclients->integer > 1 )
-			ent->v.netname = MAKE_STRING(Info_ValueForKey( cl->userinfo, "name" ));
-		else ent->v.netname = 0;
-	}
 	if( cl->state >= cs_connected ) cl->sendinfo = true; // needs for update client info 
 }
 
@@ -1469,6 +1468,7 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 			if( net_drop > 0 ) SV_RunCmd( cl, &oldcmd );
 
 		}
+		cl->netchan.dropped = 0;
 		SV_RunCmd( cl, &newcmd );
 		SV_PostRunCmd( cl );
 	}

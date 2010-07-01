@@ -1303,6 +1303,31 @@ static _inline texture_t *R_ShaderpassTex( const ref_stage_t *pass, int unit )
 	{
 		int	frame, numframes;
 
+		if(( r_currentMeshBuffer->sortkey & 3 ) == MB_DECAL )
+		{
+			decal_t	*pDecal = R_DecalFromMeshbuf( r_currentMeshBuffer );
+
+			// play animation once and freeze at last frame
+			if( pDecal->flags & FDECAL_ANIMATED )
+			{
+				numframes = pass->num_textures - 1;
+
+				pDecal->currentFrame += pass->animFrequency[0] * ( r_currentShaderTime - pDecal->fadeStartTime );
+
+				// animation is finished ?
+				if( pDecal->currentFrame > numframes )
+				{
+					// in case we compare current frame for right batching
+					pDecal->currentFrame = numframes;
+					pDecal->flags &= ~FDECAL_ANIMATED;
+				}
+				return pass->textures[bound( 0, (int)pDecal->currentFrame, pass->num_textures - 1 )];
+			}
+			else if( pDecal->currentFrame != 0.0f )
+				return pass->textures[bound( 0, (int)pDecal->currentFrame, pass->num_textures - 1 )];
+			// fallback to default methods
+		}
+
 		if( RI.currententity )
 		{
 			if( RI.currententity->frame && pass->animFrequency[1] != 0.0f )

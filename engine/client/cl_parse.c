@@ -426,6 +426,7 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 {
 	vec3_t	origin;
 	int	decalIndex, entityIndex, modelIndex;
+	int	flags;
 
 	MSG_ReadPos( msg, origin );
 	decalIndex = MSG_ReadWord( msg );
@@ -434,8 +435,9 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	if( entityIndex != NULLENT_INDEX )
 		modelIndex = MSG_ReadWord( msg );
 	else modelIndex = 0;
+	flags = MSG_ReadByte( msg );
 
-	CL_DecalShoot( cl.decal_shaders[decalIndex], entityIndex, modelIndex, origin, FDECAL_PERMANENT );
+	CL_DecalShoot( cl.decal_shaders[decalIndex], entityIndex, modelIndex, origin, flags );
 }
 
 void CL_ParseSoundFade( sizebuf_t *msg )

@@ -125,7 +125,7 @@ float S_GetMasterVolume( void )
 {
 	float	scale = 1.0f;
 
-	if( si.IsInGame() && soundfade.percent != 0 )
+	if( !si.IsInMenu() && soundfade.percent != 0 )
 	{
 		scale = bound( 0.0f, soundfade.percent / 100.0f, 1.0f );
 		scale = 1.0f - scale;
@@ -790,7 +790,7 @@ void S_Update( ref_params_t *fd )
 	al_state.refdef = fd; // for using everthing else
 
 	// update any client side sound fade
-	if( !fd->paused && si.IsInGame( ))
+	if( !fd->paused && !si.IsInMenu( ))
 		S_UpdateSoundFade();
 
 	// set up listener
@@ -877,7 +877,7 @@ The window may have been destroyed and recreated between a deactivate
 and an activate.
 =================
 */
-void S_Activate( bool active )
+void S_Activate( bool active, void *hInst )
 {
 	al_state.active = active;
 	if( active ) palListenerf( AL_GAIN, S_GetMasterVolume( ));

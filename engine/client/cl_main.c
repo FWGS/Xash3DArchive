@@ -51,6 +51,11 @@ bool CL_IsInGame( void )
 	return ( cls.key_dest == key_game );		// active if not menu or console
 }
 
+bool CL_IsInMenu( void )
+{
+	return ( cls.key_dest == key_menu );
+}
+
 bool CL_IsPlaybackDemo( void )
 {
 	return cls.demoplayback;
@@ -694,6 +699,25 @@ void CL_PrepVideo( void )
 	re->EndRegistration( cl.configstrings[CS_SKYNAME] );
 	CM_EndRegistration (); // free unused models
 	Cvar_SetValue( "scr_loading", 100.0f );	// all done
+
+	if( host.decalList )
+	{
+		// need to reapply all decals after restarting
+		for( i = 0; i < host.numdecals; i++ )
+		{
+			decallist_t *entry = &host.decalList[i];
+			edict_t *pEdict = CL_GetEdictByIndex( entry->entityIndex );
+			shader_t decalIndex = pfnDecalIndexFromName( entry->name );
+			int modelIndex = 0;
+
+			if( CL_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
+			CL_DecalShoot( decalIndex, entry->entityIndex, modelIndex, entry->position, entry->flags );
+		}
+		Z_Free( host.decalList );
+	}
+
+	host.decalList = NULL; 
+	host.numdecals = 0;
 	
 	if( host.developer <= 2 ) Con_ClearNotify(); // clear any lines of console text
 	SCR_UpdateScreen();

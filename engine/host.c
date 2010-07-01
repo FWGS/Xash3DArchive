@@ -222,7 +222,7 @@ bool Host_InitSound( void )
 	si.GetClientEdict = CL_GetEdictByIndex;
 	si.GetEntityMouth = CL_GetEntityMouth;
 	si.GetServerTime = CL_GetServerTime;
-	si.IsInGame = pfnIsInGame;
+	si.IsInMenu = CL_IsInMenu;
 	si.IsActive = CL_Active;
 
 	Sys_LoadLibrary( host_audio->string, &vsound_dll );
@@ -263,6 +263,13 @@ void Host_CheckChanges( void )
 	else return;
 
 	num_changes = 0;
+
+	if( host_video->modified && CL_Active( ))
+	{
+		// we're in game and want keep decals when renderer is changed
+		host.decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_DECALS );
+		host.numdecals = CL_CreateDecalList( host.decalList, false );
+	}
 
 	// restart or change renderer
 	while( host_video->modified )

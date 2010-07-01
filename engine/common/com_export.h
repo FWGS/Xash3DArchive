@@ -6,9 +6,9 @@
 #define COM_EXPORT_H
 
 // linked interfaces
-extern stdlib_api_t		com;
-extern physic_exp_t		*pe;
-extern vsound_exp_t		*se;
+extern stdlib_api_t	com;
+extern physic_exp_t	*pe;
+extern vsound_exp_t	*se;
 extern render_exp_t	*re;
 
 //
@@ -18,6 +18,7 @@ extern render_exp_t	*re;
 #define CM_GetAttachment		if( pe ) pe->Mod_GetAttachment
 #define CM_GetBonePosition		if( pe ) pe->Mod_GetBonePos
 #define CM_GetAmbientLevels		if( pe ) pe->AmbientLevels
+#define CM_SetLightStyle		if( pe ) pe->AddLightstyle
 #define CM_EndRegistration		if( pe ) pe->EndRegistration
 #define CM_Frame			if( pe ) pe->Frame
 
@@ -59,6 +60,12 @@ _inline int CM_PointLeafnum( const vec3_t origin )
 {
 	if( !pe )	return -1;
 	return pe->PointLeafnum( origin );
+}
+
+_inline int CM_LightEntity( edict_t *pEnt )
+{
+	if( !pe ) return 255;
+	return pe->LightPoint( pEnt );
 }
 
 _inline byte *CM_LeafPVS( int cluster )
@@ -154,6 +161,13 @@ _inline bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs )
 {
 	if( !pe || !re ) return true;
 	return pe->BoxVisible( mins, maxs, re->GetCurrentVis());
+}
+
+_inline int CL_CreateDecalList( decallist_t *pList, bool changelevel )
+{
+	if( !re ) return 0;
+
+	return re->CreateDecalList( pList, changelevel );
 }
 
 //

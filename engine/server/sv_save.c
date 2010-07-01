@@ -118,6 +118,15 @@ static TYPEDESCRIPTION gEntityTable[] =
 	DEFINE_FIELD( ENTITYTABLE, classname, FIELD_STRING ),
 };
 
+static TYPEDESCRIPTION gDecalList[] =
+{
+	DEFINE_FIELD( decallist_t, position, FIELD_POSITION_VECTOR ),
+	DEFINE_ARRAY( decallist_t, name, FIELD_CHARACTER, 64 ),
+	DEFINE_FIELD( decallist_t, entityIndex, FIELD_SHORT ),
+	DEFINE_FIELD( decallist_t, flags, FIELD_CHARACTER ),
+	DEFINE_FIELD( decallist_t, impactPlaneNormal, FIELD_VECTOR ),
+};
+
 int SumBytes( SaveFileSectionsInfo_t *section )
 {
 	return ( section->nBytesSymbols + section->nBytesDataHeaders + section->nBytesData );
@@ -368,6 +377,58 @@ int EntityInSolid( edict_t *ent )
 		return 0;
 
 	return SV_TestEntityPosition( ent );
+}
+
+void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, bool adjacent )
+{
+	int	flags = entry->flags;
+	int	decalIndex, entityIndex;
+	int	modelIndex = 0;
+
+	if( adjacent ) flags |= FDECAL_DONTSAVE;
+
+	// NOTE: at this point all decal indexes is valid
+	decalIndex = SV_DecalIndex( entry->name );
+	
+	if( adjacent )
+	{
+		// these entities might not exist over transitions,
+		// so we'll use the saved plane and do a traceline instead
+		vec3_t	testspot, testend;
+		trace_t	tr;
+	
+		VectorCopy( entry->position, testspot );
+		VectorMA( testspot, 5.0f, entry->impactPlaneNormal, testspot );
+
+		VectorCopy( entry->position, testend );
+		VectorMA( testend, -5.0f, entry->impactPlaneNormal, testend );
+
+		tr = SV_Move( testspot, vec3_origin, vec3_origin, testend, MOVE_NOMONSTERS, NULL );
+
+		if( tr.flFraction != 1.0f && !tr.fAllSolid )
+		{
+			// check impact plane normal
+			float	dot = DotProduct( entry->impactPlaneNormal, tr.vecPlaneNormal );
+
+			if( dot >= 0.95f )
+			{
+				entityIndex = pfnIndexOfEdict( tr.pHit );
+				if( entityIndex != NULLENT_INDEX )
+					modelIndex = tr.pHit->v.modelindex;
+
+				// FIXME: probably some rotating or moving objects can't receive decal properly
+				SV_CreateDecal( tr.vecEndPos, decalIndex, entityIndex, modelIndex, flags );
+			}
+		}
+	}
+	else
+	{
+		edict_t	*pEdict = pfnPEntityOfEntIndex( entry->entityIndex );
+		if( pEdict != NULL )
+			modelIndex = pEdict->v.modelindex;
+
+		SV_CreateDecal( entry->position, decalIndex, entry->entityIndex, modelIndex, flags );
+	}
 }
 
 void SV_ClearSaveDir( void )
@@ -829,6 +890,133 @@ void SV_EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 
 /*
 =============
+SV_SaveClientState
+
+write out the list of premanent decals for this level
+=============
+*/
+void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
+{
+	string		name;
+	file_t		*pFile;
+	decallist_t	*decalList;
+	int		i, decalCount;
+	int		id, version;
+
+	com.snprintf( name, sizeof( name ), "save/%s.HL2", level );
+
+	pFile = FS_Open( name, "wb" );
+	if( !pFile ) return;
+
+	id = SAVEFILE_HEADER;
+	version = SAVEGAME_VERSION;
+
+	// write the header
+	FS_Write( pFile, &id, sizeof( int ));
+	FS_Write( pFile, &version, sizeof( int ));
+
+	decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_DECALS );
+	decalCount = CL_CreateDecalList( decalList, svgame.globals->changelevel );
+
+	FS_Write( pFile, &decalCount, sizeof( int ));
+
+	// we can't use SaveRestore system here...
+	for( i = 0; i < decalCount; i++ )
+	{
+		vec3_t		localPos;
+		decallist_t	*entry;
+		byte		nameSize;
+
+		entry = &decalList[i];
+
+		if( pSaveData->fUseLandmark )
+			VectorSubtract( entry->position, pSaveData->vecLandmarkOffset, localPos );
+		else VectorCopy( entry->position, localPos );
+
+		nameSize = com.strlen( entry->name ) + 1;
+
+		FS_Write( pFile, localPos, sizeof( localPos ));
+		FS_Write( pFile, &nameSize, sizeof( nameSize ));
+		FS_Write( pFile, entry->name, nameSize ); 
+		FS_Write( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
+		FS_Write( pFile, &entry->flags, sizeof( entry->flags ));
+		FS_Write( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
+	}
+
+	Z_Free( decalList );
+	FS_Close( pFile );
+}
+
+/*
+=============
+SV_LoadClientState
+
+read the list of decals and reapply them again
+=============
+*/
+void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, bool adjacent )
+{
+	string		name;
+	file_t		*pFile;
+	int		i, tag;
+	decallist_t	*decalList;
+	int		decalCount;
+	
+	com.snprintf( name, sizeof( name ), "†save/%s.HL2", level );
+
+	pFile = FS_Open( name, "rb" );
+	if( !pFile ) return;
+
+	FS_Read( pFile, &tag, sizeof( int ));
+	if( tag != SAVEFILE_HEADER )
+	{
+		FS_Close( pFile );
+		return;
+	}
+		
+	FS_Read( pFile, &tag, sizeof( int ));
+	if( tag != SAVEGAME_VERSION )
+	{
+		FS_Close( pFile );
+		return;
+	}
+
+	if( adjacent ) MsgDev( D_INFO, "Loading decals from %s\n", level );
+
+	// read the decalCount
+	FS_Read( pFile, &decalCount, sizeof( int ));
+	decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * decalCount );
+
+	// we can't use SaveRestore system here...
+	for( i = 0; i < decalCount; i++ )
+	{
+		vec3_t		localPos;
+		decallist_t	*entry;
+		byte		nameSize;
+
+		entry = &decalList[i];
+
+		FS_Read( pFile, localPos, sizeof( localPos ));
+
+		if( pSaveData->fUseLandmark )
+			VectorAdd( localPos, pSaveData->vecLandmarkOffset, entry->position );
+		else VectorCopy( localPos, entry->position );
+
+		FS_Read( pFile, &nameSize, sizeof( nameSize ));
+		FS_Read( pFile, entry->name, nameSize ); 
+		FS_Read( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
+		FS_Read( pFile, &entry->flags, sizeof( entry->flags ));
+		FS_Read( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
+
+		ReapplyDecal( pSaveData, entry, adjacent );
+	}
+
+	Z_Free( decalList );
+	FS_Close( pFile );
+}
+
+/*
+=============
 SV_SaveGameState
 
 save current game state
@@ -917,7 +1105,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 
 	SV_EntityPatchWrite( pSaveData, sv.name );
 
-	// FIXME: here a point to save client state e.g. decals
+	SV_SaveClientState( pSaveData, sv.name );
 
 	return pSaveData;
 }
@@ -1029,6 +1217,8 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 			}
 		}
 	}
+
+	SV_LoadClientState( pSaveData, level, false );
 
 	SV_SaveFinish( pSaveData );
 
@@ -1213,6 +1403,9 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 
 			// if ents were moved, rewrite entity table to save file
 			if( movedCount ) SV_EntityPatchWrite( pSaveData, currentLevelData.levelList[i].mapName );
+
+			// move the decals from another level
+			SV_LoadClientState( pSaveData, currentLevelData.levelList[i].mapName, true );
 
 			SV_SaveFinish( pSaveData );
 		}

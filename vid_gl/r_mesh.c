@@ -541,6 +541,9 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 			{
 				if(( nextmb->sortkey & 3 ) == MB_DECAL )
 					nextDecal = R_DecalFromMeshbuf( nextmb );
+
+				if( decal->currentFrame != nextDecal->currentFrame ) 
+					nextDecal = NULL; // force to flush
 			}
 
 			nonMergable = nextDecal ? R_MeshOverflow2( decal->mesh, nextDecal->mesh ) : true;

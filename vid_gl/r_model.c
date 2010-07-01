@@ -2733,11 +2733,8 @@ void R_EndRegistration( const char *skyname )
 	int		i;
 	ref_model_t	*mod;
 
-	if( skyname && com.strncmp( skyname, "<skybox>", 8 ))
-	{
-		// half-life or quake2 skybox-style
-		R_SetupSky( skyname );
-	}
+	// half-life or quake2 skybox-style
+	R_SetupSky( skyname );
 
 	for( i = 0, mod = r_models; i < r_nummodels; i++, mod++ )
 	{

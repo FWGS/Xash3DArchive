@@ -56,7 +56,7 @@ usercmd_t CL_CreateCmd( void )
 	}
 
 	// send milliseconds of time to apply the move
-	ms = ( cl.time - cl.oldtime ) * 1000;
+	ms = host.frametime * 1000;
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));

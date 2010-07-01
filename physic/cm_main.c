@@ -25,8 +25,9 @@ bool CM_InitPhysics( void )
 	return true;
 }
 
-void CM_PhysFrame( float frametime )
+void CM_PhysFrame( float time )
 {
+	CM_RunLightStyles( time );
 }
 
 void CM_FreePhysics( void )
@@ -78,6 +79,9 @@ physic_exp_t DLLEXPORT *CreateAPI ( stdlib_api_t *input, physic_imp_t *engfuncs 
 	Phys.Mod_GetBounds = CM_ModelBounds;
 	Phys.Mod_GetAttachment = CM_StudioGetAttachment;
 	Phys.Mod_GetBonePos = CM_GetBonePosition;
+
+	Phys.AddLightstyle = CM_AddLightstyle;
+	Phys.LightPoint = CM_LightPoint;
 
 	Phys.PointContents = CM_PointContents;
 	Phys.HullPointContents = CM_HullPointContents;

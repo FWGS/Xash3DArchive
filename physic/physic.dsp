@@ -117,6 +117,10 @@ SOURCE=.\cm_debug.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cm_light.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cm_main.c
 # End Source File
 # Begin Source File

@@ -357,13 +357,13 @@ typedef enum
 
 // decal flags
 #define FDECAL_PERMANENT		0x01	// This decal should not be removed in favor of any new decals
-#define FDECAL_REFERENCE		0x02	// This is a decal that's been moved from another level
-#define FDECAL_CUSTOM		0x04	// This is a custom clan logo and should not be saved/restored
-#define FDECAL_DYNAMIC		0x08	// Indicates the decal is dynamic
-#define FDECAL_DONTSAVE		0x10	// Decal was loaded from adjacent level, don't save it for this level
-#define FDECAL_CLIPTEST		0x20	// Decal needs to be clip-tested
-#define FDECAL_NOCLIP		0x40	// Decal is not clipped by containing polygon
-#define FDECAL_USESAXIS		0x80	// Uses the s axis field to determine orientation (footprints)
+#define FDECAL_CUSTOM		0x02	// This is a custom clan logo and should not be saved/restored
+#define FDECAL_DYNAMIC		0x04	// Indicates the decal is dynamic
+#define FDECAL_DONTSAVE		0x08	// Decal was loaded from adjacent level, don't save it for this level
+#define FDECAL_CLIPTEST		0x10	// Decal needs to be clip-tested
+#define FDECAL_NOCLIP		0x20	// Decal is not clipped by containing polygon
+#define FDECAL_USESAXIS		0x40	// Uses the s axis field to determine orientation (footprints)
+#define FDECAL_ANIMATED		0x80	// this is decal has multiple frames
 
 // client modelindexes
 #define NULLENT_INDEX		-1	// engine always return NULL, only for internal use

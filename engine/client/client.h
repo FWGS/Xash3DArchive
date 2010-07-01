@@ -454,6 +454,7 @@ const char *CL_ClassName( const edict_t *e );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
 mouth_t *CL_GetEntityMouth( edict_t *ent );
+int pfnDecalIndexFromName( const char *szDecalName );
 
 // TriAPI implementation
 void TriRenderMode( kRenderMode_t mode );

@@ -195,7 +195,7 @@ void SX_RoomFX( int endtime, int fFilter, int fTimefx );
 
 bool S_Init( void *hInst );
 void S_Shutdown( void );
-void S_Activate( bool active );
+void S_Activate( bool active, void *hInst );
 void S_SoundList_f( void );
 void S_SoundInfo_f( void );
 

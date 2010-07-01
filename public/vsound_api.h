@@ -53,7 +53,7 @@ typedef struct vsound_exp_s
 	void (*StopSound)( int entnum, int channel, const char *soundname );
 	void (*StopAllSounds)( void );
 
-	void (*Activate)( bool active );
+	void (*Activate)( bool active, void *hInst );
 
 } vsound_exp_t;
 
@@ -68,7 +68,7 @@ typedef struct vsound_imp_s
 	edict_t *(*GetClientEdict)( int index );
 	mouth_t *(*GetEntityMouth)( edict_t *ent );
 	float (*GetServerTime)( void );
-	bool (*IsInGame)( void );	// returns false for menu, console, etc
+	bool (*IsInMenu)( void );	// returns true when client is in-menu
 	bool (*IsActive)( void );	// returns true when client is completely in-game
 } vsound_imp_t;
 

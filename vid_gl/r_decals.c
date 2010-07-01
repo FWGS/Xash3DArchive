@@ -61,6 +61,7 @@ static void Intersect( decal_clip_t clipFunc, decalvert_t *one, decalvert_t *two
 typedef struct
 {
 	vec3_t		m_Position;	// world coordinates of the decal center
+	vec3_t		m_BasePosition;	// untransformed world pos for right serialize
 	vec3_t		m_SAxis;		// the s axis for the decal in world coordinates
 	ref_model_t*	m_pModel;		// the model the decal is going to be applied in
 	ref_shader_t	*m_pShader;	// The decal material
@@ -172,6 +173,34 @@ static decal_t *R_DecalAlloc( decal_t *pdecal )
 }
 
 //-----------------------------------------------------------------------------
+// find decal image and grab size from it
+//-----------------------------------------------------------------------------
+static void R_GetDecalDimensions( ref_shader_t *shader, int *width, int *height )
+{
+	ref_stage_t	*pass;
+	int		i;
+
+	if( !shader ) return;
+
+	for( i = 0; i < shader->num_stages; i++ )
+	{
+		pass = &shader->stages[i];		
+		if( pass->flags & SHADERSTAGE_LIGHTMAP )
+			continue;	// skip lightmap
+		if( pass->num_textures )
+		{
+			if( width ) *width = pass->textures[0]->srcWidth;
+			if( height ) *height = pass->textures[0]->srcHeight;
+			return;
+		}		
+	}
+
+	// nothing found ?
+	if( width ) *width = 1;	// to avoid divide by zero
+	if( height ) *height = 1;
+}
+
+//-----------------------------------------------------------------------------
 // compute the decal basis based on surface normal, and preferred saxis
 //-----------------------------------------------------------------------------
 void R_DecalComputeBasis( msurface_t *surf, vec3_t pSAxis, vec3_t textureSpaceBasis[3] )
@@ -214,19 +243,21 @@ void R_DecalComputeBasis( msurface_t *surf, vec3_t pSAxis, vec3_t textureSpaceBa
 void R_SetupDecalTextureSpaceBasis( decal_t *pDecal, msurface_t *surf, ref_shader_t *pShader, vec3_t textureSpaceBasis[3], float decalWorldScale[2] )
 {
 	float	*sAxis = NULL;
+	int	width, height;
 
 	if( pDecal->flags & FDECAL_USESAXIS )
 		sAxis = pDecal->saxis;
 
 	// Compute the non-scaled decal basis
 	R_DecalComputeBasis( surf, sAxis, textureSpaceBasis );
+	R_GetDecalDimensions( pShader, &width, &height );
 
 	// world width of decal = ptexture->width / pDecal->scale
 	// world height of decal = ptexture->height / pDecal->scale
 	// scale is inverse, scales world space to decal u/v space [0,1]
 	// OPTIMIZE: Get rid of these divides
-	decalWorldScale[0] = pDecal->scale / pShader->stages[0].textures[0]->srcWidth;
-	decalWorldScale[1] = pDecal->scale / pShader->stages[0].textures[0]->srcHeight;
+	decalWorldScale[0] = pDecal->scale / width;
+	decalWorldScale[1] = pDecal->scale / height;
 	
 	VectorScale( textureSpaceBasis[0], decalWorldScale[0], textureSpaceBasis[0] );
 	VectorScale( textureSpaceBasis[1], decalWorldScale[1], textureSpaceBasis[1] );
@@ -440,8 +471,7 @@ static decal_t *R_DecalIntersect( decalinfo_t *decalinfo, msurface_t *surf, int 
 	pShader = decalinfo->m_pShader;
 	
 	// precalculate the extents of decalinfo's decal in world space.
-	mapSize[0] = pShader->stages[0].textures[0]->srcWidth;
-	mapSize[1] = pShader->stages[0].textures[0]->srcHeight;
+	R_GetDecalDimensions( pShader, &mapSize[0], &mapSize[1] );
 	VectorScale( decalinfo->m_Basis[0], ((mapSize[0] / decalinfo->m_scale) * 0.5f), decalExtents[0] );
 	VectorScale( decalinfo->m_Basis[1], ((mapSize[1] / decalinfo->m_scale) * 0.5f), decalExtents[1] );
 
@@ -552,6 +582,7 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 
 	Vector4Copy( decalinfo->m_Color, pdecal->color );
 	VectorCopy( decalinfo->m_Position, pdecal->position );
+	VectorCopy( decalinfo->m_BasePosition, pdecal->worldPos );
 
 	if( pdecal->flags & FDECAL_USESAXIS )
 		VectorCopy( decalinfo->m_SAxis, pdecal->saxis );
@@ -564,14 +595,18 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 	// set scaling
 	pdecal->scale = decalinfo->m_scale;
 	pdecal->entityIndex = decalinfo->m_Entity;
-
+	pdecal->fadeStartTime = RI.refdef.time;
+		
 	// Get dynamic information from the material (fade start, fade time)
 	if( decalinfo->m_flFadeDuration != 0.0f )
 	{
 		pdecal->flags |= FDECAL_DYNAMIC;
 		pdecal->fadeDuration = decalinfo->m_flFadeDuration;
-		pdecal->fadeStartTime = decalinfo->m_flFadeTime;
-		pdecal->fadeStartTime += RI.refdef.time;
+		pdecal->fadeStartTime += decalinfo->m_flFadeTime;
+	}
+	else if( decalinfo->m_Flags & FDECAL_ANIMATED )
+	{
+		pdecal->currentFrame = 0.0f;
 	}
 
 	// check to see if the decal actually intersects the surface
@@ -717,6 +752,7 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 	decalinfo_t	decalInfo;
 	mbrushmodel_t	*bmodel;
 	mnode_t		*pnodes;
+	int		i, width, height;
 
 	if( !shader || shader->type != SHADER_DECAL )
 	{
@@ -731,6 +767,8 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 	}
 
 	decalInfo.m_pModel = model;
+
+	VectorCopy( pos, decalInfo.m_BasePosition );
 
 	if( model->type == mod_brush )
 	{
@@ -775,6 +813,16 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 		VectorCopy( saxis, decalInfo.m_SAxis );
 	}
 
+	// check for animated decal
+	for( i = 0; i < shader->num_stages; i++ )
+	{
+		if( shader->stages[i].flags & ( SHADERSTAGE_ANIMFREQUENCY|SHADERSTAGE_FRAMES ))
+		{
+			flags |= FDECAL_ANIMATED;
+			break;
+		}
+	}
+
 	// more state used by R_DecalNode()
 	decalInfo.m_pShader = shader;
 
@@ -787,16 +835,18 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 	
 	decalInfo.m_Flags = flags;
 	decalInfo.m_Entity = entity;
-	decalInfo.m_Size = shader->stages[0].textures[0]->srcWidth >> 1;
-	if((shader->stages[0].textures[0]->srcHeight >> 1) > decalInfo.m_Size )
-		decalInfo.m_Size = shader->stages[0].textures[0]->srcHeight >> 1;
+
+	R_GetDecalDimensions( shader, &width, &height );
+	decalInfo.m_Size = width >> 1;
+	if(( height >> 1 ) > decalInfo.m_Size )
+		decalInfo.m_Size = height >> 1;
 
 	// FIXME: grab scale from shader ?
 	decalInfo.m_scale = 1.0f;
 
 	// compute the decal dimensions in world space
-	decalInfo.m_decalWidth = shader->stages[0].textures[0]->srcWidth / decalInfo.m_scale;
-	decalInfo.m_decalHeight = shader->stages[0].textures[0]->srcHeight / decalInfo.m_scale;
+	decalInfo.m_decalWidth = width / decalInfo.m_scale;
+	decalInfo.m_decalHeight = height / decalInfo.m_scale;
 	if( color ) Vector4Copy( color, decalInfo.m_Color );
 
 	bmodel = (mbrushmodel_t *)decalInfo.m_pModel->extradata;
@@ -841,7 +891,11 @@ void R_AddSurfaceDecals( msurface_t *surf )
 
 		// add decals into list
 		mb = R_AddMeshToList( MB_DECAL, surf->fog, plist->shader, decalNum );
-		if( mb ) mb->sortkey |= (( surf->superLightStyle+1 ) << 10 );
+		if( mb )
+		{
+			mb->sortkey |= (( surf->superLightStyle+1 ) << 10 );
+			mb->placeTime = plist->fadeStartTime;	// FIXME: doesn't work
+		}
 		plist = pnext;
 	}
 }
@@ -1060,11 +1114,14 @@ static bool R_DecalUnProject( decal_t *pdecal, decallist_t *entry )
 	if( !pdecal || !( pdecal->psurf ))
 		return false;
 
-	VectorCopy( pdecal->position, entry->position );
+	// NOTE: return original decal position for world or bmodel
+	VectorCopy( pdecal->worldPos, entry->position );
 	entry->entityIndex = pdecal->entityIndex;
 
 	// Grab surface plane equation
-	VectorCopy( pdecal->psurf->plane->normal, entry->impactPlaneNormal );
+	if( pdecal->psurf->flags & SURF_PLANEBACK )
+		VectorNegate( pdecal->psurf->plane->normal, entry->impactPlaneNormal );
+	else VectorCopy( pdecal->psurf->plane->normal, entry->impactPlaneNormal );
 
 	return true;
 }
@@ -1120,7 +1177,7 @@ static int DecalDepthCompare( const void *a, const void *b )
 // Input  : *pList - 
 // Output : int
 //-----------------------------------------------------------------------------
-int R_CreateDecalList( decallist_t *pList )
+int R_CreateDecalList( decallist_t *pList, bool changelevel )
 {
 	int	total = 0;
 	int	i, depth;
@@ -1133,8 +1190,12 @@ int R_CreateDecalList( decallist_t *pList )
 			decal_t	*pdecals;
 			
 			// decal is in use and is not a custom decal
-			if( decal->psurf == NULL || (decal->flags & ( FDECAL_CUSTOM|FDECAL_DONTSAVE )))	
+			if( decal->psurf == NULL || ( decal->flags & FDECAL_CUSTOM ))	
 				 continue;
+
+			// another transition - ignore moved decals
+			if( changelevel && decal->flags & FDECAL_DONTSAVE )
+				continue;
 
 			// compute depth
 			depth = 0;

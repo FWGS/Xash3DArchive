@@ -1840,7 +1840,7 @@ void SV_Physics( void )
 	}
 
 	// let everything in the world think and move
-	CM_Frame( sv.frametime );
+	CM_Frame( sv.time );
 
 	// at end of frame kill all entities which supposed to it 
 	SV_FreeOldEntities();

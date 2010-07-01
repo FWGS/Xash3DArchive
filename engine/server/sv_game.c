@@ -161,6 +161,21 @@ void SV_ConfigString( int index, const char *val )
 	}
 }
 
+void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags )
+{
+	Com_Assert( origin == NULL );
+
+	// static decals are posters, it's always reliable
+	MSG_WriteByte( &sv.multicast, svc_bspdecal );
+	MSG_WritePos( &sv.multicast, origin );
+	MSG_WriteWord( &sv.multicast, decalIndex );
+	MSG_WriteShort( &sv.multicast, entityIndex );
+	if( entityIndex != NULLENT_INDEX )
+		MSG_WriteWord( &sv.multicast, modelIndex );
+	MSG_WriteByte( &sv.multicast, flags );
+	MSG_Send( MSG_INIT, NULL, NULL );
+}
+
 static bool SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 {
 	int	leafnum;
@@ -969,7 +984,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 ==============
 pfnGetEntityIllum
 
-FIXME: implement
+returns weighted lightvalue for entity position
 ==============
 */
 int pfnGetEntityIllum( edict_t* pEnt )
@@ -977,9 +992,9 @@ int pfnGetEntityIllum( edict_t* pEnt )
 	if( !SV_IsValidEdict( pEnt ))
 	{
 		MsgDev( D_WARN, "SV_GetEntityIllum: invalid entity %s\n", SV_ClassName( pEnt ));
-		return 255;
+		return 0;
 	}
-	return 255;
+	return CM_LightEntity( pEnt );
 }
 
 /*
@@ -1342,6 +1357,7 @@ SV_StartSound
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch )
 {
 	int 	sound_idx;
+	int	entityIndex;
 	int	msg_dest;
 	vec3_t	origin;
 
@@ -1366,6 +1382,10 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( vol != VOL_NORM ) flags |= SND_VOLUME;
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
+
+	// can't track this entity on the client.
+	// write static sound
+	if( !ent->pvServerData->linked ) flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
@@ -1408,6 +1428,12 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
+	if( !ent->pvServerData->linked )
+		entityIndex = 0;
+	else if( SV_IsValidEdict( ent->v.aiment ))
+		entityIndex = ent->v.aiment->serialnumber;
+	else entityIndex = ent->serialnumber;
+
 	MSG_Begin( svc_sound );
 	MSG_WriteWord( &sv.multicast, flags );
 	MSG_WriteWord( &sv.multicast, sound_idx );
@@ -1417,10 +1443,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( flags & SND_ATTENUATION ) MSG_WriteByte( &sv.multicast, attn * 64 );
 	if( flags & SND_PITCH ) MSG_WriteByte( &sv.multicast, pitch );
 
-	// plays from aiment
-	if( ent->v.aiment && !ent->v.aiment->free )
-		MSG_WriteWord( &sv.multicast, ent->v.aiment->serialnumber );
-	else MSG_WriteWord( &sv.multicast, ent->serialnumber );
+	MSG_WriteWord( &sv.multicast, entityIndex );
+	if( flags & SND_FIXED_ORIGIN ) MSG_WritePos( &sv.multicast, origin );
 
 	MSG_Send( msg_dest, origin, NULL );
 }
@@ -1852,6 +1876,8 @@ void pfnLightStyle( int style, const char* val )
 	if( style < 0 ) style = 0;
 	if( style >= MAX_LIGHTSTYLES )
 		Host_Error( "SV_LightStyle: style: %i >= %d", style, MAX_LIGHTSTYLES );
+
+	CM_SetLightStyle( style, val ); // update info for SV_LightPoint
 	SV_ConfigString( CS_LIGHTSTYLES + style, val );
 }
 
@@ -2588,14 +2614,7 @@ void pfnStaticDecal( const float *origin, int decalIndex, int entityIndex, int m
 		return;
 	}
 
-	// static decals are posters, it's always reliable
-	MSG_WriteByte( &sv.multicast, svc_bspdecal );
-	MSG_WritePos( &sv.multicast, origin );
-	MSG_WriteWord( &sv.multicast, decalIndex );
-	MSG_WriteShort( &sv.multicast, entityIndex );
-	if( entityIndex != NULLENT_INDEX )
-		MSG_WriteWord( &sv.multicast, modelIndex );
-	MSG_Send( MSG_INIT, NULL, NULL );
+	SV_CreateDecal( origin, decalIndex, entityIndex, modelIndex, FDECAL_PERMANENT );
 }
 
 /*

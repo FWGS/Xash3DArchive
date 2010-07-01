@@ -322,30 +322,6 @@ int S_AlterChannel( int entnum, int channel, sfx_t *sfx, int vol, int pitch, int
 	return false;
 }
 
-void S_SpatializeChannel( int *left_vol, int *right_vol, int master_vol, float gain, float dotRight )
-{
-	float	lscale, rscale, scale;
-
-	rscale = 1.0f + dotRight;
-	lscale = 1.0f - dotRight;
-
-	// add in distance effect
-	scale = gain * rscale / 2;
-	*right_vol = (int)( master_vol * scale );
-
-	scale = gain * lscale / 2;
-	*left_vol = (int)( master_vol * scale );
-
-	*right_vol = bound( 0, *right_vol, 255 );
-	*left_vol = bound( 0, *left_vol, 255 );
-
-}
-
-/*
-=================
-SND_Spatialize
-=================
-*/
 /*
 =================
 SND_Spatialize
@@ -772,7 +748,7 @@ void S_RenderFrame( ref_params_t *fd )
 	s_listener.entnum = fd->viewentity;	// can be camera entity too
 	s_listener.frametime = fd->frametime;
 	s_listener.waterlevel = fd->waterlevel;
-	s_listener.ingame = si.IsInGame();
+	s_listener.ingame = !si.IsInMenu();
 	s_listener.paused = fd->paused;
 
 	VectorCopy( fd->simorg, s_listener.origin );

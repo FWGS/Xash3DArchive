@@ -99,6 +99,9 @@ typedef struct host_parm_s
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
 	bool		key_overstrike;	// key overstrike mode
+
+	decallist_t	*decalList;	// used for keep decals, when renderer is restarted or changed
+	int		numdecals;
 } host_parm_t;
 
 extern host_parm_t	host;
@@ -212,6 +215,7 @@ byte *CIN_ReadNextFrame( cinematics_t *cin, bool silent );
 
 // shared calls
 bool CL_IsInGame( void );
+bool CL_IsInMenu( void );
 float CL_GetServerTime( void );
 float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );

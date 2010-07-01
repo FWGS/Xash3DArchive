@@ -207,7 +207,7 @@ typedef struct render_exp_s
 	void	(*ScreenToWorld)( const float *screen, float *world );
 	bool	(*CullBox)( const vec3_t mins, const vec3_t maxs );
 	bool 	(*RSpeedsMessage)( char *out, size_t size );
-	int	(*CreateDecalList)( decallist_t *pList );	// helper to serialize decals
+	int	(*CreateDecalList)( decallist_t *pList, bool changelevel );	// helper to serialize decals
 	bool	(*Support)( int extension );
 	byte	*(*GetCurrentVis)( void );
 	void	(*RestoreGamma)( void );

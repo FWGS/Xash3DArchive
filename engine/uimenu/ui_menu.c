@@ -1340,7 +1340,7 @@ void UI_Shutdown( void )
 	Cmd_RemoveCommand( "menu_savegame" );
 	Cmd_RemoveCommand( "menu_saveload" );
 	Cmd_RemoveCommand( "menu_record" );
-	Cmd_RemoveCommand( "menu_playpack" );
+	Cmd_RemoveCommand( "menu_playback" );
 	Cmd_RemoveCommand( "menu_playrec" );
 	Cmd_RemoveCommand( "menu_multiplayer" );
 	Cmd_RemoveCommand( "menu_options" );

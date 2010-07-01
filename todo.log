@@ -30,4 +30,8 @@ Xash 0.72 Beta 5.07.10
 6.batch drawing decals			OK
 7.draw lightmapped decals			OK
 8.draw decals on bmodels			OK
-9.implement save\restore for decals
+9.implement save\restore for decals		OK
+10.create animated decals			OK
+11.fix external shader lighting bug		OK
+12.revision resources
+13.implement the sv_lightpoint

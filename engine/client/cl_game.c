@@ -2018,7 +2018,7 @@ pfnDecalIndexFromName
 
 =================
 */
-static int pfnDecalIndexFromName( const char *szDecalName )
+int pfnDecalIndexFromName( const char *szDecalName )
 {
 	int	i;
 

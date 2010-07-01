@@ -65,6 +65,7 @@ typedef struct decal_s
 	ref_shader_t	*shader;		// decal image
 
 	vec3_t		position;		// location of the decal center in world space.
+	vec3_t		worldPos;		// untransformed position, keep for serialization
 	vec3_t		saxis;		// direction of the s axis in world space
 	float		dx, dy;		// Offsets into surface texture
 	float		scale;		// pixel scale
@@ -75,6 +76,7 @@ typedef struct decal_s
 	// dynamic decals stuff
 	float		fadeDuration;	// Negative value means to fade in
 	float		fadeStartTime;
+	float		currentFrame;	// for animated decals
 	rgba_t		color;
 } decal_t;
 
@@ -85,12 +87,6 @@ typedef struct decal_s
 #define MIPTEX_RENDERMODE	BIT( 3 )		// this surface requires a rendermode stuff
 #define MIPTEX_NOLIGHTMAP	BIT( 4 )		// this surface if fullbright
 #define MIPTEX_WARPSURFACE	BIT( 5 )		// this surface is warped
-
-#define SURF_PLANEBACK	BIT( 0 )
-#define SURF_DRAWSKY	BIT( 1 )		// sky surface
-#define SURF_DRAWTURB	BIT( 2 )		// warp surface
-#define SURF_DRAWTILED	BIT( 3 )		// face without lighmap
-#define SURF_UNDERWATER	BIT( 4 )		// caustics
 
 typedef struct mtexinfo_s
 {

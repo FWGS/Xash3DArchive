@@ -150,7 +150,7 @@ uint S_GetFormat( int width, int channels );
 
 bool S_Init( void *hInst );
 void S_Shutdown( void );
-void S_Activate( bool active );
+void S_Activate( bool active, void *hInst );
 void S_SoundList_f( void );
 bool S_CheckForErrors( void );
 void S_BeginFrame( void );

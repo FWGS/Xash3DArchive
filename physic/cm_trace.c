@@ -374,9 +374,10 @@ find the face where the traceline hit
 */
 const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 {
-	vec3_t		intersect, forward, temp, vecStartPos;
+	vec3_t		intersect, temp, vecStartPos;
 	csurface_t	**mark, *surf, *hitface = NULL;
 	float		d1, d2, min_diff = 9999.9f;
+	vec3_t		forward, right, up;
 	vec3_t		vecPos1, vecPos2;
 	cmodel_t		*bmodel;
 	cleaf_t		*endleaf;
@@ -392,6 +393,23 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 	// making trace adjustments 
 	VectorSubtract( start, trace.pHit->v.origin, vecStartPos );
 	VectorSubtract( trace.vecEndPos, trace.pHit->v.origin, trace.vecEndPos );
+
+	// rotate start and end into the models frame of reference
+	if( trace.pHit->v.solid == SOLID_BSP && !VectorIsNull( trace.pHit->v.angles ))
+	{
+		VectorCopy( trace.pHit->v.angles, temp );
+		AngleVectors( temp, forward, right, up );
+
+		VectorCopy( vecStartPos, temp );
+		vecStartPos[0] = DotProduct( temp, forward );
+		vecStartPos[1] = -DotProduct( temp, right );
+		vecStartPos[2] = DotProduct( temp, up );
+
+		VectorCopy( trace.vecEndPos, temp );
+		trace.vecEndPos[0] = DotProduct( temp, forward );
+		trace.vecEndPos[1] = -DotProduct( temp, right );
+		trace.vecEndPos[2] = DotProduct( temp, up );
+	}
 
 	VectorSubtract( trace.vecEndPos, vecStartPos, forward );
 	VectorNormalize( forward );

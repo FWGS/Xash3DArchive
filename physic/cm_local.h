@@ -53,12 +53,16 @@ typedef struct csurface_s
 	int		numedges;		// are backwards edges
 
 	ctexinfo_t	*texinfo;		
+
+	short		textureMins[2];
+	short		extents[2];
 	
 	// lighting info
+	byte		*samples;		// [numstyles*surfsize]
+	int		numstyles;
 	byte		styles[LM_STYLES];	// index into d_lightstylevalue[] for animated lights 
 					// no one surface can be effected by more than 4 
 					// animated lights.
-	byte		*samples;		// [numstyles*surfsize]
 } csurface_t;
 
 typedef struct cleaf_s
@@ -88,7 +92,17 @@ typedef struct cnode_s
 
 // node specific
 	struct cnode_s	*children[2];	
+
+	csurface_t	*firstface;	// used for grab lighting info, decals etc
+	uint		numfaces;
 } cnode_t;
+
+typedef struct
+{
+	int		length;
+	float		map[MAX_STRING];
+	float		value;		// current lightvalue
+} clightstyle_t;
 
 typedef struct
 {
@@ -164,10 +178,15 @@ typedef struct clipmap_s
 	uint		checksum;		// map checksum
 	int		registration_sequence;
 	int		checkcount;
+	int		version;		// current map version
 
 	byte		*pvs;		// fully uncompressed visdata alloced in cm.mempool;
 	byte		*phs;
 	byte		nullrow[MAX_MAP_LEAFS/8];
+
+	// run local lightstyles to get SV_LightPoint grab the actual information
+	clightstyle_t	lightstyle[MAX_LIGHTSTYLES];
+	int		lastofs;
 } clipmap_t;
 
 extern clipmap_t		cm;
@@ -179,6 +198,14 @@ extern cmodel_t		*worldmodel;
 // cm_debug.c
 //
 void CM_DrawCollision( cmdraw_t callback );
+
+//
+// cm_light.c
+//
+void CM_RunLightStyles( float time );
+void CM_AddLightstyle( int style, const char* val );
+int CM_LightPoint( edict_t *pEdict );
+void CM_ClearLightStyles( void );
 
 //
 // cm_test.c
@@ -194,7 +221,7 @@ bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, byte *visbits );
 int CM_HullPointContents( chull_t *hull, int num, const vec3_t p );
 int CM_PointContents( const vec3_t p );
 void CM_AmbientLevels( const vec3_t p, byte *pvolumes );
-
+	
 //
 // cm_portals.c
 //
