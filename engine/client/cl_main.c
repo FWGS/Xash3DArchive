@@ -1204,6 +1204,9 @@ void Host_ClientFrame( void )
 	cl.oldtime = cl.time;
 	cl.time += host.frametime;
 
+	// if in the debugger last frame, don't timeout
+	if( host.frametime > 5.0 ) cls.netchan.last_received = Sys_DoubleTime();
+
 	// fetch results from server
 	CL_ReadPackets();
 

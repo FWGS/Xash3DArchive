@@ -1217,11 +1217,11 @@ void UI_ApplyCustomColors( void )
 	script_t	*script = NULL;
 	token_t	token;
 
-	script = Com_OpenScript( "scripts/colors.lst", NULL, 0 );
+	script = Com_OpenScript( "gfx/shell/colors.lst", NULL, 0 );
 	if( !script )
 	{
 		// not error, not warning, just notify
-		MsgDev( D_NOTE, "UI_SetColors: scripts/colors.lst not found\n" );
+		MsgDev( D_NOTE, "UI_SetColors: colors.lst not found\n" );
 		return;
 	}
 

@@ -34,4 +34,4 @@ Xash 0.72 Beta 5.07.10
 10.create animated decals			OK
 11.fix external shader lighting bug		OK
 12.revision resources
-13.implement the sv_lightpoint
+13.implement the sv_lightpoint		OK

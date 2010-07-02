@@ -63,7 +63,7 @@ void CTempEnts::TE_Prepare( TEMPENTITY *pTemp, model_t modelIndex )
 	pTemp->skin = 0;
 	pTemp->fadeSpeed = 0.5f;
 	pTemp->hitSound = 0;
-	pTemp->clientIndex = NULLENT_INDEX;
+	pTemp->clientIndex = 0;
 	pTemp->bounceFactor = 1;
 	pTemp->m_flSpriteScale = 1.0f;
 }

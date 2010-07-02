@@ -66,8 +66,6 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	if( ent->free ) CL_InitEdict( ent );
 
-	if( ent->free ) CL_InitEdict( ent );
-
 	// some data changes will force no lerping
 	if( state->ed_flags & ESF_NODELTA ) ent->pvClientData->serverframe = -99;
 	if( newent ) state->ed_flags |= ESF_LINKEDICT; // need to relink
@@ -86,6 +84,14 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	ent->pvClientData->current = *state;
 }
 
+/*
+==================
+CL_ParsePacketEntities
+
+An svc_packetentities has just been parsed, deal with the
+rest of the data stream.
+==================
+*/
 void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newframe )
 {
 	int		newnum;

@@ -153,7 +153,7 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 		WRITE_SHORT( (int)pev->skin );
 		entityIndex = (short)ENTINDEX(trace.pHit);
 		WRITE_SHORT( entityIndex );
-		if ( entityIndex != NULLENT_INDEX )
+		if ( entityIndex > 0 )
 			WRITE_SHORT( (int)VARS(trace.pHit)->modelindex );
 	MESSAGE_END();
 
@@ -170,7 +170,7 @@ void CDecal :: StaticDecal( void )
 	UTIL_TraceLine( pev->origin - Vector(5,5,5), pev->origin + Vector(5,5,5),  ignore_monsters, ENT(pev), &trace );
 
 	entityIndex = (short)ENTINDEX(trace.pHit);
-	if ( entityIndex != NULLENT_INDEX )
+	if ( entityIndex > 0 )
 		modelIndex = (int)VARS(trace.pHit)->modelindex;
 	else
 		modelIndex = 0;

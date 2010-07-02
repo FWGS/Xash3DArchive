@@ -1034,7 +1034,7 @@ Dumps the serverinfo info string
 */
 void SV_ShowServerinfo_f( sv_client_t *cl )
 {
-	Info_Print( Cvar_Serverinfo());
+	Info_Print( Cvar_Serverinfo( ));
 }
 
 /*
@@ -1077,7 +1077,6 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 {
 	edict_t	*ent = cl->edict;
 	char	*val;
-	int	i;
 
 	if( !userinfo || !userinfo[0] ) return; // ignored
 
@@ -1089,11 +1088,9 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	// rate command
 	val = Info_ValueForKey( cl->userinfo, "rate" );
 	if( com.strlen( val ))
-	{
-		i = com.atoi( val );
-		cl->netchan.rate = 1.0f / (bound( 500, i, 10000 ));
-	}
-
+		cl->rate = bound ( 100, com.atoi( val ), 15000 );
+	else cl->rate = 5000;
+	
 	// msg command
 	val = Info_ValueForKey( cl->userinfo, "msg" );
 	if( com.strlen( val ))
@@ -1101,24 +1098,32 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 
 	if( SV_IsValidEdict( ent ))
 	{
-		const char *model = Info_ValueForKey( cl->userinfo, "model" );
-
-		// apply custom playermodel
-		if( com.strlen( model ) && com.stricmp( model, "player" ))
+		if( sv_maxclients->integer > 1 )
 		{
-			string	path;
+			const char *model = Info_ValueForKey( cl->userinfo, "model" );
 
-			com.snprintf( path, sizeof( path ), "models/player/%s/%s.mdl", model, model );
-			cl->modelindex = SV_ModelIndex( path );
-			CM_RegisterModel( path, cl->modelindex ); // upload model
+			// apply custom playermodel
+			if( com.strlen( model ) && com.stricmp( model, "player" ))
+			{
+				const char *path = va( "models/player/%s/%s.mdl", model, model );
+				CM_RegisterModel( path, SV_ModelIndex( path )); // register model
+				SV_SetModel( ent, path );
+				cl->modelindex = ent->v.modelindex;
+			}
+			else cl->modelindex = 0;
 		}
-		else cl->modelindex = 0; // reset to default
-
-		ent->v.netname = MAKE_STRING( Info_ValueForKey( cl->userinfo, "name" ));
+		else cl->modelindex = 0;
 	}
 
 	// call prog code to allow overrides
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
+
+	if( SV_IsValidEdict( ent ))
+	{
+		if( sv_maxclients->integer > 1 )
+			ent->v.netname = MAKE_STRING(Info_ValueForKey( cl->userinfo, "name" ));
+		else ent->v.netname = 0;
+	}
 	if( cl->state >= cs_connected ) cl->sendinfo = true; // needs for update client info 
 }
 
@@ -1426,10 +1431,18 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 	key = msg->readcount;
 	checksum1 = MSG_ReadByte( msg );
 	lastframe = MSG_ReadLong( msg );
-	cl->packet_loss = SV_CalcPacketLoss( cl );
 
 	if( lastframe != cl->lastframe )
+	{
 		cl->lastframe = lastframe;
+		if( cl->lastframe > 0 )
+		{
+			client_frame_t *frame = &cl->frames[cl->lastframe & SV_UPDATE_MASK];
+			frame->latency = host.realtime - frame->senttime;
+		}
+	}
+
+	cl->packet_loss = SV_CalcPacketLoss( cl );
 
 	Mem_Set( &nulcmd, 0, sizeof( nulcmd ));
 	MSG_ReadDeltaUsercmd( msg, &nulcmd, &oldest );
@@ -1455,6 +1468,7 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 		SV_PreRunCmd( cl, &newcmd );	// get random_seed from newcmd
 
 		net_drop = cl->netchan.dropped;
+		cl->netchan.dropped = 0;	// reset counter
 
 		if( net_drop < 20 )
 		{
@@ -1468,7 +1482,6 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 			if( net_drop > 0 ) SV_RunCmd( cl, &oldcmd );
 
 		}
-		cl->netchan.dropped = 0;
 		SV_RunCmd( cl, &newcmd );
 		SV_PostRunCmd( cl );
 	}
@@ -1486,14 +1499,9 @@ Parse a client packet
 */
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 {
-	int		c, stringCmdCount = 0;
-	bool		move_issued = false;
-	client_frame_t	*frame;
-	char		*s;
-
-	// calc ping time
-	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];
-	frame->latency = host.realtime - frame->senttime;
+	int	c, stringCmdCount = 0;
+	bool	move_issued = false;
+	char	*s;
 
 	// make sure the reply sequence number matches the incoming sequence number 
 	if( cl->netchan.incoming_sequence >= cl->netchan.outgoing_sequence )

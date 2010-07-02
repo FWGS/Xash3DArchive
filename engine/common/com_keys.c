@@ -565,8 +565,8 @@ void Key_Console( int key )
 		// backslash text are commands, else chat
 		if( g_consoleField.buffer[0] == '\\' || g_consoleField.buffer[0] == '/' )
 			Cbuf_AddText( g_consoleField.buffer + 1 ); // skip backslash
-		else Cbuf_AddText (g_consoleField.buffer); // valid command
-		Cbuf_AddText ("\n");
+		else Cbuf_AddText( g_consoleField.buffer ); // valid command
+		Cbuf_AddText( "\n" );
 		Msg( ">%s\n", g_consoleField.buffer ); // echo to console
 
 		// copy line to history buffer
@@ -602,7 +602,7 @@ void Key_Console( int key )
 		g_consoleField = historyEditLines[ historyLine % COMMAND_HISTORY ];
 		return;
 	}
-	if ( (key == K_MWHEELDOWN && keys[K_SHIFT].down) || ( key == K_DOWNARROW ) || ( key == K_KP_DOWNARROW ) || (( com.tolower(key) == 'n' ) && keys[K_CTRL].down ))
+	if( (key == K_MWHEELDOWN && keys[K_SHIFT].down) || ( key == K_DOWNARROW ) || ( key == K_KP_DOWNARROW ) || (( com.tolower(key) == 'n' ) && keys[K_CTRL].down ))
 	{
 		if (historyLine == nextHistoryLine) return;
 		historyLine++;
@@ -611,7 +611,7 @@ void Key_Console( int key )
 	}
 
 	// console scrolling
-	if ( key == K_PGUP )
+	if( key == K_PGUP )
 	{
 		Con_PageUp();
 		return;

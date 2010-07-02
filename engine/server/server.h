@@ -13,6 +13,7 @@
 //=============================================================================
 #define MAX_MASTERS		8 			// max recipients for heartbeat packets
 #define MAX_ENT_LEAFS	48
+#define RATE_MESSAGES	10
 
 #define SV_UPDATE_MASK	(SV_UPDATE_BACKUP - 1)
 extern int SV_UPDATE_BACKUP;
@@ -101,12 +102,15 @@ typedef struct sv_client_s
 	bool		sendmovevars;
 	bool		sendinfo;
 
+	int		lastframe;		// for delta compression
 	usercmd_t		lastcmd;			// for filling in big drops
-	int		lastframe;
 
 	int		modelindex;		// custom playermodel index
 	int		packet_loss;
 	int		ping;
+
+	int		message_size[RATE_MESSAGES];	// used to rate drop packets
+	int		rate;
 
 	int		surpressCount;		// number of messages rate supressed
 

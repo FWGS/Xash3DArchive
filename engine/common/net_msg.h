@@ -254,9 +254,6 @@ NET
 
 ==============================================================
 */
-#define MAX_LATENT		32
-#define OLD_AVG		0.99		// total = oldtotal * OLD_AVG + new * ( 1 - OLD_AVG )
-#define MAX_BACKUP		200
 
 typedef struct netchan_s
 {
@@ -267,21 +264,13 @@ typedef struct netchan_s
 	bool			compress;			// enable huffman compression
 
 	float			last_received;		// for timeouts
-
-	// the statistics are cleared at each client begin, because
-	// the server connecting process gives a bogus picture of the data
-	float			frame_latency;		// rolling average
-	float			frame_rate;
+	float			last_sent;		// for retransmits
 
 	int			drop_count;		// dropped packets, cleared each level
 	int			good_count;		// cleared each level
 
 	netadr_t			remote_address;
 	int			qport;			// qport value to write when transmitting
-
-	// bandwidth estimator
-	double			cleartime;		// if host.realtime > nc->cleartime, free to go
-	double			rate;			// seconds / byte
 
 	// sequencing variables
 	int			incoming_sequence;
@@ -301,11 +290,6 @@ typedef struct netchan_s
 	// message is copied to this buffer when it is first transfered
 	int			reliable_length;
 	byte			reliable_buf[MAX_MSGLEN-16];		// unacked reliable message
-
-	// time and size data to calculate bandwidth
-	int			outgoing_size[MAX_LATENT];
-	double			outgoing_time[MAX_LATENT];
-
 } netchan_t;
 
 extern netadr_t		net_from;
@@ -328,9 +312,6 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data );
 void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data );
 void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... );
 bool Netchan_Process( netchan_t *chan, sizebuf_t *msg );
-
-bool Netchan_CanPacket( netchan_t *chan );
-bool Netchan_CanReliable( netchan_t *chan );
 
 //
 // net_encode.c

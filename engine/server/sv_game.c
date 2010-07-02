@@ -170,7 +170,7 @@ void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int m
 	MSG_WritePos( &sv.multicast, origin );
 	MSG_WriteWord( &sv.multicast, decalIndex );
 	MSG_WriteShort( &sv.multicast, entityIndex );
-	if( entityIndex != NULLENT_INDEX )
+	if( entityIndex > 0 )
 		MSG_WriteWord( &sv.multicast, modelIndex );
 	MSG_WriteByte( &sv.multicast, flags );
 	MSG_Send( MSG_INIT, NULL, NULL );
@@ -2103,7 +2103,7 @@ pfnWriteEntity
 */
 void pfnWriteEntity( int iValue )
 {
-	if( iValue <= NULLENT_INDEX || iValue >= svgame.globals->numEntities )
+	if( iValue < 0 || iValue >= svgame.globals->numEntities )
 		Host_Error( "MSG_WriteEntity: invalid entnumber %i\n", iValue );
 	MSG_WriteShort( &sv.multicast, iValue );
 	svgame.msg_realsize += 2;
@@ -2228,7 +2228,7 @@ pfnIndexOfEdict
 int pfnIndexOfEdict( const edict_t *pEdict )
 {
 	if( !SV_IsValidEdict( pEdict ))
-		return NULLENT_INDEX;
+		return 0;
 	return NUM_FOR_EDICT( pEdict );
 }
 

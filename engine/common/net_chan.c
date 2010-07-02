@@ -97,11 +97,10 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	chan->sock = sock;
 	chan->remote_address = adr;
 	chan->qport = qport;
-	chan->last_received = host.realtime;
+	chan->last_received = Sys_DoubleTime();
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
 	chan->compress = true;
-	chan->rate = 1.0f / 2500;
 
 	MSG_Init( &chan->message, chan->message_buf, sizeof( chan->message_buf ));
 }
@@ -147,38 +146,6 @@ void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... )
 	Netchan_OutOfBand( net_socket, adr, com.strlen( string ), string );
 }
 
-/*
-===============
-Netchan_CanPacket
-
-Returns true if the bandwidth choke isn't active
-================
-*/
-bool Netchan_CanPacket( netchan_t *chan )
-{
-	// never drop over the loopback
-	if( NET_IsLocalAddress( chan->remote_address ))
-		return true;
-	if( chan->cleartime < host.realtime + MAX_BACKUP * chan->rate )
-		return true;
-	return false;
-}
-
-/*
-===============
-Netchan_CanReliable
-
-Returns true if the bandwidth choke isn't 
-================
-*/
-bool Netchan_CanReliable( netchan_t *chan )
-{
-	if( chan->reliable_length )
-		return false;	// waiting for ack
-
-	return Netchan_CanPacket( chan );
-}
-
 bool Netchan_NeedReliable( netchan_t *chan )
 {
 	bool	send_reliable = false;
@@ -221,7 +188,7 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 	byte		send_buf[MAX_MSGLEN];
 	bool		send_reliable;
 	size_t		size1, size2;
-	uint		i, w1, w2;
+	uint		w1, w2;
 
 	// check for message overflow
 	if( chan->message.overflowed )
@@ -240,6 +207,7 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 	w2 = (chan->incoming_sequence & ~(1<<31)) | (chan->incoming_reliable_sequence<<31);
 
 	chan->outgoing_sequence++;
+	chan->last_sent = Sys_DoubleTime();
 
 	MSG_WriteLong( &send, w1 );
 	MSG_WriteLong( &send, w2 );
@@ -271,17 +239,8 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 	if( chan->compress ) Huff_CompressPacket( &send, (chan->sock == NS_CLIENT) ? 10 : 8 );
 	size2 = send.cursize;
 
-	// record the size for rate estimation
-	i = chan->outgoing_sequence & (MAX_LATENT - 1);
-	chan->outgoing_size[i] = send.cursize;
-	chan->outgoing_time[i] = host.realtime;
-
 	// send the datagram
 	NET_SendPacket( chan->sock, send.cursize, send.data, chan->remote_address );
-
-	if( chan->cleartime < host.realtime )
-		chan->cleartime = host.realtime + send.cursize * chan->rate;
-	else chan->cleartime += send.cursize * chan->rate;
 
 	if( net_showpackets->integer )
 	{
@@ -327,41 +286,6 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	sequence &= ~(1<<31);
 	sequence_ack &= ~(1<<31);	
 
-#if 0
-	// get a rate estimation
-	if( chan->outgoing_sequence - sequence_ack < MAX_LATENT )
-	{
-		int	i;
-		double	time, rate;
-	
-		i = sequence_ack & (MAX_LATENT - 1);
-		time = host.realtime - chan->outgoing_time[i];
-		time -= 0.1f;	// subtract 100 ms
-
-		if( time <= 0 )
-		{	
-			// gotta be a digital link for <100 ms ping
-			if( chan->rate > 1.0f / 5000 )
-				chan->rate = 1.0f / 5000;
-		}
-		else
-		{
-			if( chan->outgoing_size[i] < 512 )
-			{	
-				// only deal with small messages
-				rate = chan->outgoing_size[i] / time;
-				if( rate > 5000 ) rate = 5000;
-				rate = 1.0f / rate;
-
-				if( chan->rate > rate )
-					chan->rate = rate;
-			}
-		}
-		if( chan->sock == NS_SERVER )
-			Msg( "Adjust rate: %g\n", chan->rate );
-	}
-#endif
-
 	// discard stale or duplicated packets
 	if( sequence <= chan->incoming_sequence )
 	{
@@ -405,15 +329,10 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 
 		MsgDev( D_INFO, "Netchan_Process: %s[%s] : %sreliable\n", s1, s2, recv_reliable ? "" : "un" );
 	}
-
-	// the message can now be read from the current message pointer
-	// update statistics counters
-	chan->frame_latency = chan->frame_latency * OLD_AVG + (chan->outgoing_sequence-sequence_ack) * (1.0f - OLD_AVG);
-	chan->frame_rate = chan->frame_rate * OLD_AVG + (host.realtime - chan->last_received) * (1.0f - OLD_AVG);
 	chan->good_count += 1;
 
 	// the message can now be read from the current message pointer
-	chan->last_received = host.realtime;
+	chan->last_received = Sys_DoubleTime();
 
 	return true;
 }

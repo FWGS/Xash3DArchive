@@ -37,6 +37,7 @@ CL_CreateCmd
 usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
+	static double	extramsec = 0;
 	int		ms;
 
 	// catch windowState for client.dll
@@ -56,7 +57,9 @@ usercmd_t CL_CreateCmd( void )
 	}
 
 	// send milliseconds of time to apply the move
-	ms = host.frametime * 1000;
+	extramsec += ( cl.time - cl.oldtime ) * 1000;
+	ms = extramsec;
+	extramsec -= ms;		// fractional part is left for next frame
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
@@ -109,7 +112,7 @@ void CL_WritePacket( void )
 	if( cls.state == ca_connected )
 	{
 		// just update reliable
-		if( cls.netchan.message.cursize )
+		if( cls.netchan.message.cursize || host.realtime - cls.netchan.last_sent > 1.0 )
 			Netchan_Transmit( &cls.netchan, 0, NULL );
 		return;
 	}
@@ -167,8 +170,6 @@ Called every frame to builds and sends a command packet to the server.
 */
 void CL_SendCmd( void )
 {
-	if( host.type == HOST_DEDICATED ) return;
-
 	// we create commands even if a demo is playing,
 	cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CMD_MASK];
 	*cl.refdef.cmd = CL_CreateCmd();
@@ -279,7 +280,6 @@ static edict_t *PM_GetEntityByIndex( int index )
 	if( index < 0 || index > clgame.globals->numEntities )
 	{
 		if( index == VIEWENT_INDEX ) return clgame.pmove->player->v.aiment; // current weapon
-		if( index == NULLENT_INDEX ) return NULL;
 		MsgDev( D_ERROR, "PM_GetEntityByIndex: invalid entindex %i\n", index );
 		return NULL;
 	}

@@ -462,7 +462,38 @@ bool SV_SendClientDatagram( sv_client_t *cl )
 	// send the datagram
 	Netchan_Transmit( &cl->netchan, msg.cursize, msg.data );
 
+	// record the size for rate estimation
+	cl->message_size[sv.framenum % RATE_MESSAGES] = msg.cursize;
+
 	return true;
+}
+
+/*
+=======================
+SV_RateDrop
+
+Returns true if the client is over its current
+bandwidth estimation and should not be sent another packet
+=======================
+*/
+bool SV_RateDrop( sv_client_t *cl )
+{
+	int	i, total = 0;
+
+	// never drop over the loopback
+	if( NET_IsLocalAddress( cl->netchan.remote_address ))
+		return false;
+
+	for( i = 0; i < RATE_MESSAGES; i++ )
+		total += cl->message_size[i];
+
+	if( total > cl->rate )
+	{
+		cl->surpressCount++;
+		cl->message_size[sv.framenum % RATE_MESSAGES] = 0;
+		return true;
+	}
+	return false;
 }
 
 /*
@@ -518,26 +549,20 @@ void SV_SendClientMessages( void )
 			SV_BroadcastPrintf( PRINT_HIGH, "%s overflowed\n", cl->name );
 			SV_DropClient( cl );
 			cl->send_message = true;
-			cl->netchan.cleartime = 0;	// don't choke this message
 		}
 
 		// only send messages if the client has sent one
 		if( !cl->send_message ) continue;
 
-/*
-		if( !sv.paused && !Netchan_CanPacket( &cl->netchan ))
-		{
-			cl->surpressCount++;
-			continue;	// bandwidth choke
-		}
-*/
 		if( cl->state == cs_spawned )
 		{
+			// don't overrun bandwidth
+			if( SV_RateDrop( cl )) continue;
 			SV_SendClientDatagram( cl );
 		}
 		else
 		{
-			if( cl->netchan.message.cursize )
+			if( cl->netchan.message.cursize || host.realtime - cl->netchan.last_sent > 1.0 )
 				Netchan_Transmit( &cl->netchan, 0, NULL );
 		}
 		// yes, message really sended 

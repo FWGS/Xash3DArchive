@@ -432,7 +432,7 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	decalIndex = MSG_ReadWord( msg );
 	entityIndex = MSG_ReadShort( msg );
 
-	if( entityIndex != NULLENT_INDEX )
+	if( entityIndex > 0 )
 		modelIndex = MSG_ReadWord( msg );
 	else modelIndex = 0;
 	flags = MSG_ReadByte( msg );

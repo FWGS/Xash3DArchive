@@ -16,7 +16,7 @@ half-life implementation of saverestore system
 */
 #define SAVEFILE_HEADER	(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
 #define SAVEGAME_HEADER	(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
-#define SAVEGAME_VERSION	0x0071				// Version 0.71
+#define SAVEGAME_VERSION	0x0065				// Version 0.65
 
 
 #define SAVE_AGED_COUNT		1
@@ -413,7 +413,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, bool adjacent
 			if( dot >= 0.95f )
 			{
 				entityIndex = pfnIndexOfEdict( tr.pHit );
-				if( entityIndex != NULLENT_INDEX )
+				if( entityIndex > 0 )
 					modelIndex = tr.pHit->v.modelindex;
 
 				// FIXME: probably some rotating or moving objects can't receive decal properly
@@ -1810,6 +1810,12 @@ bool SV_GetComment( const char *savename, char *comment )
 		
 	FS_Read( f, &tag, sizeof( int ));
 
+	if( tag == 0x0071 )
+	{
+		com.strncpy( comment, "Gold Source <unsupported>", MAX_STRING );
+		FS_Close( f );
+		return 0;
+	}
 	if( tag < SAVEGAME_VERSION )
 	{
 		com.strncpy( comment, "<old version>", MAX_STRING );

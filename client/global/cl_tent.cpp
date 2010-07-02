@@ -418,7 +418,7 @@ void TE_ParseBSPDecal( void )
 
 	decalIndex = READ_SHORT();
 	entityIndex = READ_SHORT();
-	if( entityIndex != NULLENT_INDEX )
+	if( entityIndex > 0 )
 		modelIndex = READ_SHORT();
 	else modelIndex = 0;
 

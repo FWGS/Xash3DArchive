@@ -122,7 +122,7 @@ chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, floa
 	}
 	else if( size[0] <= 36 )
 	{
-		if( size[2] < 36 )
+		if( size[2] <= 36 )
 		{
 			// head hull (ducked)
 			hull = &model->hulls[3];

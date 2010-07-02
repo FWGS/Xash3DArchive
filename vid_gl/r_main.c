@@ -2540,6 +2540,7 @@ bool R_AddTeEntToScene( TEMPENTITY *pTempEntity, int ed_type, shader_t customSha
 	if( pTempEntity->clientIndex != 0 )
 		refent->index = pTempEntity->clientIndex;
 	else refent->index = NULLENT_INDEX;
+
 	refent->ent_type = ed_type;
 	refent->rendermode = pTempEntity->renderMode;
 	refent->body = pTempEntity->body;

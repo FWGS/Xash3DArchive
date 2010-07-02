@@ -2612,7 +2612,7 @@ bool CL_LoadProgs( const char *name )
 	CL_InitEdict( &clgame.playermodel );
 	clgame.playermodel.serialnumber = MAX_EDICTS - 1;
 
-	CL_InitTitles( "scripts/titles.txt" );
+	CL_InitTitles( "titles.txt" );
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

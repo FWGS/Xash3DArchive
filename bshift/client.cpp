@@ -1227,12 +1227,12 @@ addEntity:
 		
 	if( pEntity->pev->groundentity )
 		state->groundent = ENTINDEX( pEntity->pev->groundentity );
-	else state->groundent = NULLENT_INDEX;
+	else state->groundent = -1;
 
 	// translate attached entity
 	if( pEntity->pev->aiment ) 
 		state->aiment = ENTINDEX( pEntity->pev->aiment );
-	else state->aiment = NULLENT_INDEX;
+	else state->aiment = -1;
 
 	// studio model sequence
 	if( pEntity->pev->sequence != -1 )
@@ -1260,7 +1260,7 @@ addEntity:
 
 		if( pEntity->pev->aiment ) 
 			state->aiment = ENTINDEX( pEntity->pev->aiment );
-		else state->aiment = NULLENT_INDEX;
+		else state->aiment = -1;
 
 		state->viewoffset = pEntity->pev->view_ofs; 
 		state->viewangles = pEntity->pev->v_angle;
@@ -1304,7 +1304,7 @@ addEntity:
 		// translate StartBeamEntity
 		if( pEntity->pev->owner ) 
 			state->owner = ENTINDEX( pEntity->pev->owner );
-		else state->owner = NULLENT_INDEX;
+		else state->owner = -1;
 	}
 
 	return 1;

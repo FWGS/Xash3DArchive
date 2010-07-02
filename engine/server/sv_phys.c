@@ -792,6 +792,10 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 				continue;
 		}
 
+		// remove the onground flag for non-players
+		if( check->v.movetype != MOVETYPE_WALK )
+			check->v.flags &= ~FL_ONGROUND;
+
 		VectorCopy( check->v.origin, entorg );
 		VectorCopy( check->v.origin, check->pvServerData->moved_origin );
 		moved_edict[num_moved] = check;
@@ -828,13 +832,8 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		}	
 		else
 		{
-			// if leaving it where it was, allow it to drop to the floor again
-			// (useful for plats that move downward)
-			if( check->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
+			if( check->v.movetype == MOVETYPE_WALK && lmove[2] < 0.0f )
 				check->v.groundentity = NULL;
-			else if( check->v.flags & FL_MONSTER )
-				check->v.flags &= ~FL_ONGROUND;
-
 			num_moved--;
 			continue;
 		}
@@ -929,7 +928,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 #endif
 		// if it is still inside the pusher, block
-		if( block || SV_TestEntityPosition( check ))
+		if( block )//|| SV_TestEntityPosition( check ))
 		{	
 			if( !SV_CanBlock( check ))
 				continue;
@@ -1561,13 +1560,13 @@ void SV_Physics_Step( edict_t *ent )
 				if( ent->v.waterlevel > 1 )
 				{
 					VectorScale( ent->v.velocity, 0.9f, ent->v.velocity );
-					ent->v.velocity[2] += ( ent->v.skin * sv.frametime );
+					ent->v.velocity[2] += (ent->v.skin * svgame.globals->frametime);
 				}
 				else if( ent->v.waterlevel == 1 )
 				{
 					if( ent->v.velocity[2] > 0.0f )
-						ent->v.velocity[2] = sv.frametime;
-					ent->v.velocity[2] -= ( ent->v.skin * sv.frametime );
+						ent->v.velocity[2] = svgame.globals->frametime;
+					ent->v.velocity[2] -= (ent->v.skin * svgame.globals->frametime);
 				}
 			}
 		}

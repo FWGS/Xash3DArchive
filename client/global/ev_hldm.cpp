@@ -66,12 +66,13 @@ float EV_HLDM_PlayTextureSound( int idx, TraceResult *ptr, float *vecSrc, float 
 	char *rgsz[4];
 	int cnt;
 	float fattn = ATTN_NORM;
-	int entity = NULLENT_INDEX;
+	int entity = 0;
 	char *pTextureName;
 	char texname[64];
 	char szbuffer[64];
 
-	if( ptr->pHit ) entity = ptr->pHit->serialnumber;
+	if( ptr->pHit )
+		entity = ptr->pHit->serialnumber;
 
 	// check if playtexture sounds movevar is set
 	if( gpGlobals->maxClients != 1 && gpMovevars->footsteps == 0 )
