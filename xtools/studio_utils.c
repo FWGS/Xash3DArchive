@@ -1059,14 +1059,14 @@ void ResizeTexture( s_texture_t *ptexture )
 	// dword alignment for each scan
 	ptexture->skintop = ptexture->min_t;
 	ptexture->skinleft = ptexture->min_s;
-	ptexture->skinwidth = (int)((ptexture->max_s - ptexture->min_s) + 1 + 3) & ~3;
+	ptexture->skinwidth = (int)(ptexture->max_s - ptexture->min_s) + 1;
 	ptexture->skinheight = (int)(ptexture->max_t - ptexture->min_t) + 1;
 	ptexture->size = ptexture->skinwidth * ptexture->skinheight + 256 * 3;
 	percent = ((ptexture->skinwidth * ptexture->skinheight) / (float)(ptexture->srcwidth * ptexture->srcheight)) * 100.0f;
 
 	Msg("BMP %s [%d %d] (%.0f%%)  %6s\n", ptexture->name,  ptexture->skinwidth, ptexture->skinheight, percent, memprint( ptexture->size ));
 	
-	if( ptexture->size > 1536 * 1536)
+	if( ptexture->size > 1536 * 1536 )
 	{
 		Msg("%g %g %g %g\n", ptexture->min_s, ptexture->max_s, ptexture->min_t, ptexture->max_t );
 		Sys_Break("texture too large\n");
@@ -1076,18 +1076,18 @@ void ResizeTexture( s_texture_t *ptexture )
 	ptexture->pdata = pdest;
 
 	// data is saved as a multiple of 4
-	srcadjwidth = (ptexture->srcwidth + 3) & ~3;
+	srcadjwidth = ptexture->srcwidth;
 
 	// move the picture data to the model area, replicating missing data, deleting unused data.
-	for (i = 0, t = ptexture->srcheight - ptexture->skinheight - ptexture->skintop + 10 * ptexture->srcheight; i < ptexture->skinheight; i++, t++)
+	for( i = 0, t = ptexture->srcheight - ptexture->skinheight - ptexture->skintop + 10 * ptexture->srcheight; i < ptexture->skinheight; i++, t++ )
 	{
-		while (t >= ptexture->srcheight) t -= ptexture->srcheight;
-		while (t < 0) t += ptexture->srcheight;
+		while( t >= ptexture->srcheight ) t -= ptexture->srcheight;
+		while( t < 0 ) t += ptexture->srcheight;
 
-		for (j = 0, s = ptexture->skinleft + 10 * ptexture->srcwidth; j < ptexture->skinwidth; j++, s++)
+		for( j = 0, s = ptexture->skinleft + 10 * ptexture->srcwidth; j < ptexture->skinwidth; j++, s++ )
 		{
-			while (s >= ptexture->srcwidth) s -= ptexture->srcwidth;
-			*(pdest++) = *(ptexture->ppicture + s + t * srcadjwidth);
+			while( s >= ptexture->srcwidth ) s -= ptexture->srcwidth;
+			*(pdest++) = *( ptexture->ppicture + s + t * srcadjwidth );
 		}
 	}
 

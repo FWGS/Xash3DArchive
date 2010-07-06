@@ -15,7 +15,7 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	byte	*buf_p, *pixbuf;
 	byte	palette[256][4];
 	int	i, columns, column, rows, row, bpp = 1;
-	int	cbPalBytes = 0;
+	int	cbPalBytes = 0, padSize = 0;
 	bmp_t	bhdr;
 
 	if( filesize < sizeof( bhdr )) return false; 
@@ -40,12 +40,19 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	// bogus file header check
 	if( bhdr.reserved0 != 0 ) return false;
+	if( bhdr.planes != 1 ) return false;
 
 	if( memcmp( bhdr.id, "BM", 2 ))
 	{
 		MsgDev( D_ERROR, "Image_LoadBMP: only Windows-style BMP files supported (%s)\n", name );
 		return false;
 	} 
+
+	if( bhdr.bitmapHeaderSize != 0x28 )
+	{
+		MsgDev( D_ERROR, "Image_LoadBMP: invalid header size %i\n", bhdr.bitmapHeaderSize );
+		return false;
+	}
 
 	// bogus info header check
 	if( bhdr.fileSize != filesize )
@@ -54,13 +61,6 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		return false;
           }
           
-	// bogus bit depth?
-	if( bhdr.bitsPerPixel < 8 )
-	{
-		MsgDev( D_ERROR, "Image_LoadBMP: monochrome and 4-bit BMP files not supported (%s)\n", name );
-		return false;
-	}
-	
 	// bogus compression?  Only non-compressed supported.
 	if( bhdr.compression != BI_RGB ) 
 	{
@@ -68,15 +68,13 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	if( bhdr.bitsPerPixel == 8 )	
-		image.width = columns = (bhdr.width + 3) & ~3;
-	else image.width = columns = bhdr.width;
-	image.height = rows = (bhdr.height < 0 ) ? -bhdr.height : bhdr.height;
+	image.width = columns = bhdr.width;
+	image.height = rows = abs( bhdr.height );
 
 	if(!Image_ValidSize( name ))
 		return false;          
 
-	if( bhdr.bitsPerPixel == 8 )
+	if( bhdr.bitsPerPixel <= 8 )
 	{
 		// figure out how many entires are actually in the table
 		if( bhdr.colors == 0 )
@@ -113,8 +111,25 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	buf_p += cbPalBytes;
 	image.size = image.width * image.height * bpp;
-//	image.size = ((buffer + filesize) - buf_p) * bpp;
 	image.rgba = Mem_Alloc( Sys.imagepool, image.size );
+	image.bps = image.width * (bhdr.bitsPerPixel >> 3);
+
+	switch( bhdr.bitsPerPixel )
+	{
+	case 1:
+		padSize = (( 32 - ( bhdr.width % 32 )) / 8 ) % 4;
+		break;
+	case 4:
+		padSize = (( 8 - ( bhdr.width % 8 )) / 2 ) % 4;
+		break;
+	case 16:
+		padSize = ( 4 - ( image.width * 2 % 4 )) % 4;
+		break;
+	case 8:
+	case 24:
+		padSize = ( 4 - ( image.bps % 4 )) % 4;
+		break;
+	}
 
 	for( row = rows - 1; row >= 0; row-- )
 	{
@@ -123,18 +138,46 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		for( column = 0; column < columns; column++ )
 		{
 			byte	red, green, blue, alpha;
-			int	palIndex;
 			word	shortPixel;
+			int	c, k, palIndex;
 
 			switch( bhdr.bitsPerPixel )
 			{
+			case 1:
+				alpha = *buf_p++;
+				column--;	// ingnore main iterations
+				for( c = 0, k = 128; c < 8; c++, k >>= 1 )
+				{
+					red = (!!(alpha & k) == 1 ? 0xFF : 0x00);
+					*pixbuf++ = red;
+					*pixbuf++ = red;
+					*pixbuf++ = red;
+					*pixbuf++ = 0x00;
+					if( ++column == columns )
+						break;
+				}
+				break;
+			case 4:
+				alpha = *buf_p++;
+				palIndex = alpha >> 4;
+				*pixbuf++ = palette[palIndex][2];
+				*pixbuf++ = palette[palIndex][1];
+				*pixbuf++ = palette[palIndex][0];
+				*pixbuf++ = palette[palIndex][3];
+				if( ++column == columns ) break;
+				palIndex = alpha & 0x0F;
+				*pixbuf++ = palette[palIndex][2];
+				*pixbuf++ = palette[palIndex][1];
+				*pixbuf++ = palette[palIndex][0];
+				*pixbuf++ = palette[palIndex][3];
+				break;
 			case 8:
 				palIndex = *buf_p++;
 				red = palette[palIndex][2];
 				green = palette[palIndex][1];
 				blue = palette[palIndex][0];
 				alpha = palette[palIndex][3];
-										
+
 				if( image.cmd_flags & IL_KEEP_8BIT )
 				{
 					*pixbuf++ = palIndex;
@@ -183,6 +226,7 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 			if(!( image.cmd_flags & IL_KEEP_8BIT ) && ( red != green || green != blue ))
 				image.flags |= IMAGE_HAS_COLOR;
 		}
+		buf_p += padSize;	// actual only for 4-bit bmps
 	}
 
 	image.depth = image.num_mips = 1;

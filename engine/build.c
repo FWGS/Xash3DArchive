@@ -23,7 +23,6 @@ int com_buildnum( void )
 			break;
 		d += mond[m];
 	}
-
 	d += com.atoi( &date[4] ) - 1;
 	y = com.atoi( &date[7] ) - 1900;
 	b = d + (int)((y - 1) * 365.25f );
