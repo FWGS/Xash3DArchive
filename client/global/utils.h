@@ -44,7 +44,7 @@ extern void HUD_Shutdown( void );
 extern void HUD_RenderCallback( int fTrans );
 extern void HUD_CreateEntities( void );
 extern int  HUD_AddVisibleEntity( edict_t *pEnt, int ed_type );
-extern void HUD_StudioEvent( const dstudioevent_t *event, edict_t *entity );
+extern void HUD_StudioEvent( const mstudioevent_t *event, edict_t *entity );
 extern void HUD_StudioFxTransform( edict_t *ent, float transform[4][4] );
 extern int HUD_StudioDoInterp( edict_t *e );
 extern void HUD_ParseTempEntity( void );
@@ -198,19 +198,18 @@ extern float UTIL_Probe( const Vector &origin, Vector *vecDirection, float stren
 extern void UTIL_GetForceDirection( const Vector &origin, float magnitude, Vector *resultDirection, float *resultForce );
 extern void RotatePointAroundVector( Vector &dst, const Vector &dir, const Vector &point, float degrees );
 
-// drawing stuff
-extern client_sprite_t *SPR_GetList( const char *name, int *count );
-extern void ParseHudSprite( const char **pfile, char *psz, client_sprite_t *result );
-extern void DrawPause( void );
+// client fade
 extern void SetScreenFade( Vector fadeColor, float alpha, float duration, float holdTime, int fadeFlags );
 extern void ClearAllFades( void );
 extern void ClearPermanentFades( void );
 extern void DrawScreenFade( void );
+
+// drawing progress bar (image must be grayscale)
 extern void DrawImageBar( float percent, const char *szSpriteName );
 extern void DrawImageBar( float percent, const char *szSpriteName, int x, int y );
-extern void DrawGenericBar( float percent, int w, int h );
-extern void DrawGenericBar( float percent, int x, int y, int w, int h );
-extern void Draw_VidInit( void );
+
+// sprite loading
+extern HSPRITE LoadSprite( const char *pszName );
 
 // mathlib
 extern void AngleMatrix( const vec3_t angles, float (*matrix)[4] );

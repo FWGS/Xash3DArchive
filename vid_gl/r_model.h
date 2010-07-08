@@ -243,16 +243,15 @@ STUDIO MODELS
 
 ==============================================================================
 */
-typedef struct mstudiomodel_s
+typedef struct
 {
-	dstudiohdr_t	*phdr;
-          dstudiohdr_t	*thdr;
+	studiohdr_t	*phdr;
+          studiohdr_t	*thdr;
 
 	void		*submodels;
 	int		numsubmodels;
 	vec3_t		*m_pSVectors;	// UNDONE: calc SVectors on loading, simple transform on rendering
-
-} mstudiomodel_t;
+} mstudiodata_t;
 
 /*
 ==============================================================================

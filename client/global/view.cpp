@@ -8,7 +8,7 @@
 #include "ref_params.h"
 #include "triangle_api.h"
 #include "pm_movevars.h"
-#include "studio_ref.h"
+#include "studio.h"
 #include "usercmd.h"
 #include "hud.h"
 
@@ -64,27 +64,6 @@ cvar_t	*v_iyaw_level;
 cvar_t	*v_iroll_level;
 cvar_t	*v_ipitch_level;
 cvar_t	*v_dark;
-
-//==============================================================================
-//			      PASS MANAGER GLOBALS
-//==============================================================================
-// render manager global variables
-bool g_FirstFrame		= false;
-bool g_bFinalPass		= false;
-bool g_bEndCalc		= false;
-int m_RenderRefCount = 0;	// refcounter (use for debug)
-
-// passes info
-bool g_bSkyShouldpass 	= false;
-bool g_bSkyPass		= false;
-
-// base origin and angles
-Vector g_vecBaseOrigin;       // base origin - transformed always
-Vector g_vecBaseAngles;       // base angles - transformed always
-Vector g_vecCurrentOrigin;	// current origin
-Vector g_vecCurrentAngles;    // current angles
-
-
 
 //============================================================================== 
 //				VIEW RENDERING 
@@ -240,18 +219,16 @@ void V_DriftPitch( ref_params_t *pparams )
 //==========================
 float V_CalcFov( float fov_x, float width, float height )
 {
-	float	fov_y, x, rad = 360.0f * M_PI;
-
 	// check to avoid division by zero
-	if( fov_x == 0 ) HOST_ERROR( "V_CalcFov: null fov!\n" );
+	if( fov_x < 1 || fov_x > 179 )
+	{
+		ALERT( at_error, "V_CalcFov: invalid fov %g!\n", fov_x );
+		fov_x = 90;
+	}
 
-	// make sure that fov in-range
-	fov_x = bound( 1, fov_x, 179 );
-	x = width / tan( fov_x / rad );
-	fov_y = atan2( height, x );
-	fov_y = (fov_y * rad);
-
-	return fov_y;
+	float x = width / tan( DEG2RAD( fov_x ) * 0.5f );
+	float half_fov_y = atan( height / x );
+	return RAD2DEG( half_fov_y ) * 2;
 }
 
 //==========================
@@ -369,6 +346,8 @@ void V_PreRender( ref_params_t *pparams )
 
 	pparams->fov_x = gHUD.m_flFOV; // this is a final fov value
 	pparams->fov_y = V_CalcFov( pparams->fov_x, pparams->viewport[2], pparams->viewport[3] );
+
+	memset( pparams->blend, 0, sizeof( pparams->blend ));
 }
 
 //==========================
@@ -456,9 +435,9 @@ void V_CalcViewRoll( ref_params_t *pparams )
 }
 
 //==========================
-// V_SetViewportRefdef
+// V_SetViewport
 //==========================
-void V_SetViewportRefdef( ref_params_t *pparams )
+void V_SetViewport( ref_params_t *pparams )
 {
 	pparams->viewport[0] = 0;
 	pparams->viewport[1] = 0;
@@ -467,20 +446,9 @@ void V_SetViewportRefdef( ref_params_t *pparams )
 }
 
 //==========================
-// V_KillViewportRefdef
+// V_ResetViewport
 //==========================
-void V_KillViewportRefdef( ref_params_t *pparams )
-{
-	pparams->viewport[0] = 0;
-	pparams->viewport[1] = 0;
-	pparams->viewport[2] = 1;
-	pparams->viewport[3] = 1;
-}
-
-//==========================
-// V_ResetViewportRefdef
-//==========================
-void V_ResetViewportRefdef( ref_params_t *pparams )
+void V_ResetViewport( ref_params_t *pparams )
 {
 	pparams->viewport[0] = 0;
 	pparams->viewport[1] = 0;
@@ -563,25 +531,6 @@ void V_GetChasePos( ref_params_t *pparams, edict_t *ent, float *cl_angles, Vecto
 }
 
 //==========================
-// V_CalcNextView
-//==========================
-void V_CalcNextView( ref_params_t *pparams )
-{
-	if( g_FirstFrame )	// first time not actually
-	{
-		g_FirstFrame = false;
-		
-		// first time in this function
-		V_PreRender( pparams );
-
-		g_bSkyShouldpass	= (gHUD.m_iSkyMode ? true : false);
-		m_RenderRefCount	= 0;	// reset debug counter
-		g_bSkyPass	= false;
-		g_bFinalPass	= false;
-	}
-}
-
-//==========================
 // V_CalcCameraRefdef
 //==========================
 void V_CalcCameraRefdef( ref_params_t *pparams )
@@ -594,7 +543,7 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 		edict_t	*viewentity = GetEntityByIndex( gHUD.viewEntityIndex );
 	 	if( viewentity )
 		{		 
-			dstudiohdr_t *viewmonster = (dstudiohdr_t *)GetModelPtr( viewentity );
+			studiohdr_t *viewmonster = (studiohdr_t *)GetModelPtr( viewentity );
 			float m_fLerp = GetLerpFrac();
 
 			if( viewentity->v.movetype == MOVETYPE_STEP )
@@ -624,7 +573,7 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 		edict_t	*viewentity = GetEntityByIndex( pparams->viewentity );
 	 	if( viewentity )
 		{		 
-			dstudiohdr_t *viewmonster = (dstudiohdr_t *)GetModelPtr( viewentity );
+			studiohdr_t *viewmonster = (studiohdr_t *)GetModelPtr( viewentity );
 			float m_fLerp = GetLerpFrac();
 
 			if( viewentity->v.movetype == MOVETYPE_STEP )
@@ -779,16 +728,6 @@ void V_ApplyShake( Vector& origin, Vector& angles, float factor )
 {
 	origin.MA( factor, origin, gHUD.m_Shake.appliedOffset );
 	angles.z += gHUD.m_Shake.appliedAngle * factor;
-}
-
-//==========================
-// V_CalcFinalPass
-//==========================
-void V_CalcFinalPass( ref_params_t *pparams )
-{
-	g_FirstFrame = true; // enable calc next passes
-	V_ResetViewportRefdef( pparams ); // reset view port as default
-	m_RenderRefCount++; // increase counter
 }
 
 //==========================
@@ -982,7 +921,7 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 	edict_t *view = GetViewModel();
 	int i;
 
-	if( g_bFinalPass ) V_DriftPitch( pparams );
+	V_DriftPitch( pparams );
 	bob = V_CalcBob( pparams );
 
 	// refresh the position
@@ -1102,57 +1041,15 @@ void V_CalcScreenBlend( ref_params_t *pparams )
 #endif
 }
 
-//==========================
-// V_CalcMainRefdef
-//==========================
-void V_CalcMainRefdef( ref_params_t *pparams )
+void V_CalcRefdef( ref_params_t *pparams )
 {
-	memset( pparams->blend, 0, sizeof( pparams->blend ));
-
-	if( g_FirstFrame ) g_bFinalPass = true;
+	V_PreRender( pparams );
+	V_CalcGlobalFog( pparams );
+	V_ResetViewport( pparams );
 	V_CalcFirstPersonRefdef( pparams );
 	V_CalcThirdPersonRefdef( pparams );
 	V_CalcIntermisionRefdef( pparams );
 	V_CalcCameraRefdef( pparams );
 	V_CalcScreenBlend( pparams );
-
-	g_vecBaseOrigin = pparams->vieworg;
-	g_vecBaseAngles = pparams->viewangles;
-}
-
-//==========================
-// V_CalcSkyRefdef
-//==========================
-bool V_CalcSkyRefdef( ref_params_t *pparams )
-{
-	if( g_bSkyShouldpass )
-	{
-		g_bSkyShouldpass = false;
-		V_CalcMainRefdef( pparams );	// refresh position
-		pparams->vieworg = gHUD.m_vecSkyPos;
-		V_ResetViewportRefdef( pparams );
-		pparams->nextView = 1;
-		g_bSkyPass = true;
-		m_RenderRefCount++;
-		return true;
-	}
-	if( g_bSkyPass )
-	{
-		pparams->nextView = 0;
-		g_bSkyPass = false;	
-		return false;
-	}
-	return false;
-}
-
-void V_CalcRefdef( ref_params_t *pparams )
-{
-	V_CalcNextView( pparams );
-	
-	if( V_CalcSkyRefdef( pparams ))
-		return;
-	
-	V_CalcGlobalFog( pparams );
-          V_CalcFinalPass ( pparams );
-	V_CalcMainRefdef( pparams );
+        
 }

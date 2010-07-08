@@ -13,6 +13,7 @@
 #define SHADER_NOMIP		3	// 2d images
 #define SHADER_GENERIC		4	// generic shader
 #define SHADER_DECAL		5
+#define SHADER_SPRITE		6
 
 // dlight flags
 #define DLIGHT_ONLYENTS		BIT( 0 )
@@ -220,7 +221,7 @@ typedef struct render_imp_s
 
 	// client fundamental callbacks
 	void	(*UpdateScreen)( void );	// update screen while loading
-	void	(*StudioEvent)( dstudioevent_t *event, edict_t *ent );
+	void	(*StudioEvent)( mstudioevent_t *event, edict_t *ent );
 	void	(*StudioFxTransform)( edict_t *ent, float matrix[4][4] );
 	void	(*ShowCollision)( cmdraw_t callback );	// debug
 	long	(*WndProc)( void *hWnd, uint uMsg, uint wParam, long lParam );

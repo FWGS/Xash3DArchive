@@ -2220,6 +2220,9 @@ shader_t Mod_RegisterShader( const char *name, int shaderType )
 	case SHADER_GENERIC:
 		src = R_LoadShader( name, shaderType, false, 0, SHADER_INVALID );
 		break;
+	case SHADER_SPRITE:
+		src = CL_LoadSprite( name );	// hud sprites
+		break;
 	case SHADER_SKY:
 		src = R_SetupSky( name );
 		break;

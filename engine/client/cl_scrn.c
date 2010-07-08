@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "client.h"
+#include "byteorder.h"
 
 cvar_t *scr_viewsize;
 cvar_t *scr_centertime;
@@ -77,7 +78,9 @@ void SCR_DrawPic( float x, float y, float width, float height, string_t shader )
 		re->GetParms( &w, &h, NULL, 0, shader );
 		width = w, height = h;
 	}
+
 	SCR_AdjustSize( &x, &y, &width, &height );
+	re->SetParms( shader, kRenderNormal, 0 );
 	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, shader );
 }
 
@@ -108,6 +111,7 @@ void SCR_DrawChar( int x, int y, float w, float h, int ch )
 	fcol = (ch & 15)*0.0625f + (0.5f / 256.0f);
 	size = 0.0625f - (1.0f / 256.0f);
 
+	re->SetParms( cls.clientFont, kRenderNormal, 0 );
 	re->DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + size, frow + size, cls.clientFont );
 }
 
@@ -133,6 +137,7 @@ void SCR_DrawSmallChar( int x, int y, int ch )
 	fcol = (ch & 15)*0.0625f + (0.5f / 256.0f);
 	size = 0.0625f - (1.0f / 256.0f);
 
+	re->SetParms( cls.consoleFont, kRenderNormal, 0 );
 	re->DrawStretchPic( x, y, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, fcol, frow, fcol + size, frow + size, cls.consoleFont );
 }
 
@@ -435,6 +440,66 @@ void SCR_UpdateScreen( void )
 		clgame.dllFuncs.pfnFrame( cl.time );
 }
 
+void SCR_LoadCreditsFont( void )
+{
+	int	fontWidth, fontHeight;
+
+	if( !re ) return;
+
+	re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.hHudFont );
+		
+	// setup creditsfont
+	if( fontWidth != fontHeight )
+	{
+		byte	*buffer;
+		size_t	length;
+		qfont_t	*src;
+	
+		// half-life font with variable chars witdh
+		buffer = FS_LoadFile( "gfx/creditsfont.fnt", &length );
+
+		if( buffer && length >= sizeof( qfont_t ))
+		{
+			int	i;
+	
+			src = (qfont_t *)buffer;
+			clgame.scrInfo.iCharHeight = LittleLong( src->rowheight );
+			clgame.use_qfont = true;
+
+			// build rectangles
+			for( i = 0; i < 256; i++ )
+			{
+				clgame.fontRc[i].left = LittleShort( src->fontinfo[i].startoffset ) % fontWidth;
+				clgame.fontRc[i].right = clgame.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
+				clgame.fontRc[i].top = LittleShort( src->fontinfo[i].startoffset ) / fontWidth;
+				clgame.fontRc[i].bottom = clgame.fontRc[i].top + LittleLong( src->rowheight );
+				clgame.scrInfo.charWidths[i] = LittleLong( src->fontinfo[i].charwidth );
+			}
+		}
+		if( buffer ) Mem_Free( buffer );
+	}
+	else
+	{
+		// quake font
+		int	i, w;
+
+		// all quake fonts like quad 16x16 fields
+		clgame.scrInfo.iCharHeight = fontHeight / 16;
+		clgame.use_qfont = false;
+		w = fontWidth / 16;
+
+		for( i = 0; i < 256; i++ )
+		{
+			// ugly hack to adjust fat and thin letters
+			if( i == 'm' || i == 'M' || i == 'w' || i == 'W' )
+				clgame.scrInfo.charWidths[i] = w;
+			else if( i == '!' || i == '.' || i == 'i' || i == 'I' || i == 'l' || i == '|' || i == ',' )
+				clgame.scrInfo.charWidths[i] = w * 0.5f;
+			else clgame.scrInfo.charWidths[i] = w * 0.75f;
+		}
+	}
+}
+
 void SCR_RegisterShaders( void )
 {
 	if( re )
@@ -443,16 +508,17 @@ void SCR_RegisterShaders( void )
 		cls.consoleFont = re->RegisterShader( va( "gfx/fonts/%s", con_font->string ), SHADER_FONT );
 		cls.clientFont = re->RegisterShader( va( "gfx/fonts/%s", cl_font->string ), SHADER_FONT );
 		cls.netIcon = re->RegisterShader( "#net.png", SHADER_NOMIP ); // FIXME: INTRESOURCE
+		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: INTRESOURCE
 		cls.fillShader = re->RegisterShader( "*white", SHADER_FONT ); // used for FillRGBA
 		cls.particle = re->RegisterShader( "*particle", SHADER_FONT ); // Q1 particlefont
-
+		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP ); // FIXME: INTRESOURCE
+		clgame.hHudFont = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
+	
 		if( host.developer )
-			cls.consoleBack = re->RegisterShader( "gfx/conback", SHADER_NOMIP );
-		else cls.consoleBack = re->RegisterShader( "gfx/loading", SHADER_NOMIP );
+			cls.consoleBack = re->RegisterShader( "cached/conback", SHADER_NOMIP );
+		else cls.consoleBack = re->RegisterShader( "cached/loading", SHADER_NOMIP );
 
-		// TODO: load a font with a variable charwidths
 		Mem_Set( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
-		clgame.ds.hHudFont = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
 	}
 
 	// vid_state has changed
@@ -494,7 +560,10 @@ void SCR_Init( void )
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
 	SCR_RegisterShaders();
+	SCR_LoadCreditsFont();
+
 	UI_Init();
+
 	if( host.developer && FS_CheckParm( "-toconsole" ))
 		Cbuf_AddText( "toggleconsole\n" );
 	else UI_SetActiveMenu( UI_MAINMENU );

@@ -68,11 +68,11 @@ bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	Mem_Copy( &font, buffer, sizeof( font ));
 
-	// swap lumps
-	font.width = LittleShort( font.width );
-	font.height = LittleShort( font.height );
-	font.rowcount = LittleShort( font.rowcount );
-	font.rowheight = LittleShort( font.rowheight );
+	// swap header
+	font.width = LittleLong( font.width );
+	font.height = LittleLong( font.height );
+	font.rowcount = LittleLong( font.rowcount );
+	font.rowheight = LittleLong( font.rowheight );
 
 	for( i = 0; i < 256; i++ )
 	{
@@ -81,7 +81,7 @@ bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	}
 	
 	// last sixty four bytes - what the hell ????
-	size = sizeof(qfont_t) - 4 + (128 * font.width * QCHAR_WIDTH) + sizeof( short ) + 768 + 64;
+	size = sizeof( qfont_t ) - 4 + ( 128 * font.width * QCHAR_WIDTH ) + sizeof( short ) + 768 + 64;
 
 	if( size != filesize )
 	{
@@ -96,14 +96,10 @@ bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 		image.height = font.height;
 	}
 
-	image.depth = 1;
-	image.type = PF_INDEXED_32;	// 32-bit palette
-
 	if(!Image_LumpValidSize( name )) return false;
 	fin = buffer + sizeof( font ) - 4;
 
-	image.size = image.width * image.height;
-	pal = fin + image.size;
+	pal = fin + (image.width * image.height);
 	numcolors = BuffLittleShort( pal ), pal += sizeof( short );
 	image.flags |= IMAGE_HAS_ALPHA; // fonts always have transparency
 
@@ -124,6 +120,9 @@ bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
+	image.depth = 1;
+	image.type = PF_INDEXED_32;	// 32-bit palette
+
 	return FS_AddMipmapToPack( fin, image.width, image.height );
 }
 
@@ -136,10 +135,10 @@ bool Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 {
 	byte		*fin;
 	size_t		pixels;
-	dstudiotexture_t	*pin;
+	mstudiotexture_t	*pin;
 	int		i, flags;
 
-	pin = (dstudiotexture_t *)buffer;
+	pin = (mstudiotexture_t *)buffer;
 	flags = LittleLong( pin->flags );
 
 	// Valve never used endian functions for studiomodels...

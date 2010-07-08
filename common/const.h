@@ -12,6 +12,9 @@
 
 #define LM_STYLES			4	// MAXLIGHTMAPS
 
+#define RAD2DEG( x )		((float)(x) * (float)(180.f / M_PI))
+#define DEG2RAD( x )		((float)(x) * (float)(M_PI / 180.f))
+
 // worldcraft predefined angles
 #define ANGLE_UP			-1
 #define ANGLE_DOWN			-2

@@ -29,13 +29,7 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% vid_gl/vid_gl.dsp %CONFIG%"vid_gl - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% server/server.dsp %CONFIG%"server - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 %MSDEV% spirit/spirit.dsp %CONFIG%"spirit - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
-%MSDEV% snd_al/snd_al.dsp %CONFIG%"snd_al - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 %MSDEV% snd_dx/snd_dx.dsp %CONFIG%"snd_dx - Win32 Release" %build_target%
@@ -70,9 +64,7 @@ if exist engine\engine.plg del /f /q engine\engine.plg
 if exist launch\launch.plg del /f /q launch\launch.plg
 if exist physic\physic.plg del /f /q physic\physic.plg
 if exist vid_gl\vid_gl.plg del /f /q vid_gl\vid_gl.plg
-if exist server\server.plg del /f /q server\server.plg
 if exist spirit\spirit.plg del /f /q spirit\spirit.plg
-if exist snd_al\snd_al.plg del /f /q snd_al\snd_al.plg
 if exist snd_dx\snd_dx.plg del /f /q snd_dx\snd_dx.plg
 if exist xtools\xtools.plg del /f /q xtools\xtools.plg
 

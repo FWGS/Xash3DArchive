@@ -12,6 +12,7 @@
 #define FREE( x )		(*g_engfuncs.pfnMemFree)( x, __FILE__, __LINE__ )
 
 // screen handlers
+#define SPR_GetList		(*g_engfuncs.pfnSPR_GetList)
 #define SPR_Frames		(*g_engfuncs.pfnSPR_Frames)
 #define SPR_Width		(*g_engfuncs.pfnSPR_Width)
 #define SPR_Height		(*g_engfuncs.pfnSPR_Height)

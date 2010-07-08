@@ -2328,14 +2328,19 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 		return svc_bad;
 	}
 
-	if( sv.state == ss_active )
-		Host_Error( "REG_USER_MSG can only be done in spawn functions\n" );
-
 	// register new message
 	com.strncpy( svgame.msg[i].name, pszName, sizeof( svgame.msg[i].name ));
 	svgame.msg[i].size = iSize;
 	svgame.msg[i].number = i;	// paranoid mode :-)
 
+	if( sv.state == ss_active )
+	{
+		MSG_WriteByte( &sv.multicast, svc_usermessage );
+		MSG_WriteString( &sv.multicast, pszName );
+		MSG_WriteByte( &sv.multicast, i );
+		MSG_WriteByte( &sv.multicast, (byte)iSize );
+		MSG_Send( MSG_ALL, vec3_origin, NULL );
+	}
 	return i;
 }
 

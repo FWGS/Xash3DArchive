@@ -31,14 +31,17 @@ CalcFov
 */
 float CalcFov( float fov_x, float width, float height )
 {
-	float	x;
+	float	x, half_fov_y;
 
 	if( fov_x < 1 || fov_x > 179 )
-		Host_Error( "bad fov: %f\n", fov_x );
+	{
+		MsgDev( D_ERROR, "CalcFov: bad fov %g!\n", fov_x );
+		fov_x = 90;
+	}
 
-	x = width / tan( fov_x / 360 * M_PI );
-
-	return atan( height / x ) * 360 / M_PI;
+	x = width / tan( DEG2RAD( fov_x ) * 0.5f );
+	half_fov_y = atan( height / x );
+	return RAD2DEG( half_fov_y ) * 2;
 }
 
 /*
@@ -132,6 +135,42 @@ int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const cplane_t *p )
 	case 7: return (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
 	}
 }
+
+/*
+====================
+RotatePointAroundVector
+====================
+*/
+void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees )
+{
+	float	t0, t1;
+	float	angle, c, s;
+	vec3_t	vr, vu, vf;
+
+	angle = DEG2RAD( degrees );
+	com.sincos( angle, &s, &c );
+	VectorCopy( dir, vf );
+	VectorVectors( vf, vr, vu );
+
+	t0 = vr[0] *  c + vu[0] * -s;
+	t1 = vr[0] *  s + vu[0] *  c;
+	dst[0] = (t0 * vr[0] + t1 * vu[0] + vf[0] * vf[0]) * point[0]
+	       + (t0 * vr[1] + t1 * vu[1] + vf[0] * vf[1]) * point[1]
+	       + (t0 * vr[2] + t1 * vu[2] + vf[0] * vf[2]) * point[2];
+
+	t0 = vr[1] *  c + vu[1] * -s;
+	t1 = vr[1] *  s + vu[1] *  c;
+	dst[1] = (t0 * vr[0] + t1 * vu[0] + vf[1] * vf[0]) * point[0]
+	       + (t0 * vr[1] + t1 * vu[1] + vf[1] * vf[1]) * point[1]
+	       + (t0 * vr[2] + t1 * vu[2] + vf[1] * vf[2]) * point[2];
+
+	t0 = vr[2] *  c + vu[2] * -s;
+	t1 = vr[2] *  s + vu[2] *  c;
+	dst[2] = (t0 * vr[0] + t1 * vu[0] + vf[2] * vf[0]) * point[0]
+	       + (t0 * vr[1] + t1 * vu[1] + vf[2] * vf[1]) * point[1]
+	       + (t0 * vr[2] + t1 * vu[2] + vf[2] * vf[2]) * point[2];
+}
+
 
 /*
 =================

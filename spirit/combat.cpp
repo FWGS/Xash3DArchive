@@ -29,7 +29,7 @@
 #include "animation.h"
 #include "weapons.h"
 #include "func_break.h"
-#include "studio_ref.h" //LRC
+#include "studio.h" //LRC
 
 extern DLL_GLOBAL Vector		g_vecAttackDir;
 extern DLL_GLOBAL int			g_iSkillLevel;
@@ -200,11 +200,11 @@ void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int notfirst, con
 	pGib->Spawn( szGibModel );
 
 	//LRC - check the model itself to find out how many gibs are available
-	dstudiohdr_t *pstudiohdr = (dstudiohdr_t *)(GET_MODEL_PTR( ENT(pGib->pev) ));
+	studiohdr_t *pstudiohdr = (studiohdr_t *)(GET_MODEL_PTR( ENT(pGib->pev) ));
 	if (! pstudiohdr)
 		return;
 
-	dstudiobodyparts_t *pbodypart = (dstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
+	mstudiobodyparts_t *pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
 	//ALERT(at_console, "read %d bodyparts, canonical is %d\n", pbodypart->nummodels, HUMAN_GIB_COUNT);
 
 	for (int cSplat = 0 ; cSplat < cGibs ; cSplat++ )

@@ -110,7 +110,7 @@ StudioEvent
 Event callback for studio models
 ====================
 */
-void CL_StudioEvent( dstudioevent_t *event, edict_t *pEdict )
+void CL_StudioEvent( mstudioevent_t *event, edict_t *pEdict )
 {
 	clgame.dllFuncs.pfnStudioEvent( event, pEdict );
 }
@@ -545,6 +545,61 @@ void CL_DrawCrosshair( void )
 	SPR_DrawGeneric( 0, x - 0.5f * width, y - 0.5f * height, -1, -1, &clgame.ds.rcCrosshair );
 }
 
+/*
+=============
+CL_DrawLoading
+
+draw loading progress bar
+=============
+*/
+void CL_DrawLoading( float percent )
+{
+	int	x, y, width, height, right;
+	float	xscale, yscale, step, s2;
+	rgba_t	color;
+
+	re->GetParms( &width, &height, NULL, 0, cls.loadingBar );
+	x = ( SCREEN_WIDTH - width )>>1;
+	y = ( SCREEN_HEIGHT - height )>>1;
+
+	xscale = scr_width->integer / 640.0f;
+	yscale = scr_height->integer / 480.0f;
+
+	x *= xscale;
+	y *= yscale;
+	width *= xscale;
+	height *= yscale;
+
+	MakeRGBA( color, 128, 128, 128, 255 );
+	re->SetColor( color );
+	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
+
+	step = (float)width / 100.0f;
+	right = (int)ceil( percent * step );
+	s2 = (float)right / width;
+	width = right;
+	
+	MakeRGBA( color, 208, 152, 0, 255 );
+	re->SetColor( color );
+	re->DrawStretchPic( x, y, width, height, 0, 0, s2, 1, cls.loadingBar );
+	re->SetColor( NULL );
+}
+
+/*
+=============
+CL_DrawPause
+
+draw pause sign
+=============
+*/
+void CL_DrawPause( void )
+{
+	int	w, h;
+
+	re->GetParms( &w, &h, NULL, 0, cls.pauseIcon );
+	SCR_DrawPic((SCREEN_WIDTH - w)>>1, ( SCREEN_HEIGHT - h )>>1, w, h, cls.pauseIcon );
+}
+
 void CL_DrawHUD( int state )
 {
 	if( state == CL_ACTIVE && !cl.video_prepped )
@@ -555,10 +610,21 @@ void CL_DrawHUD( int state )
 
 	clgame.dllFuncs.pfnRedraw( cl.time, state );
 
-	if( state == CL_ACTIVE || state == CL_PAUSED )
+	switch( state )
 	{
+	case CL_PAUSED:
+		CL_DrawPause();
+		// intentionally fallthrough
+	case CL_ACTIVE:
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
+		break;
+	case CL_LOADING:
+		CL_DrawLoading( scr_loading->value );
+		break;
+	case CL_CHANGELEVEL:
+		CL_DrawLoading( 100.0f );
+		break;
 	}
 }
 
@@ -809,11 +875,10 @@ static HSPRITE pfnSPR_Load( const char *szPicName )
 	if( !re ) return 0; // render not initialized
 	if( !szPicName || !*szPicName )
 	{
-		MsgDev( D_ERROR, "CL_SpriteLoad: invalid spritename\n" );
-		return -1;
+		MsgDev( D_ERROR, "CL_LoadSprite: bad name!\n" );
+		return 0;
 	}
-
-	return re->RegisterShader( szPicName, SHADER_NOMIP );	// replace with SHADER_GENERIC ?
+	return re->RegisterShader( szPicName, SHADER_SPRITE );
 }
 
 /*
@@ -983,24 +1048,27 @@ for parsing half-life scripts - hud.txt etc
 static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 {
 	client_sprite_t	*pList;
+	int		numSprites = 0;
 	int		index, iTemp;
-	int		numSprites;
 	script_t		*script;
 	token_t		token;
 
 	if( piCount ) *piCount = 0;
 
+	if( !clgame.itemspath[0] )
+		FS_ExtractFilePath( psz, clgame.itemspath );
+
 	script = Com_OpenScript( psz, NULL, 0 );
 	if( !script ) return NULL;
           
-	Com_ReadUlong( script, false, &numSprites );
+	Com_ReadUlong( script, SC_ALLOW_NEWLINES, &numSprites );
 
 	// name, res, pic, x, y, w, h
 	pList = Mem_Alloc( clgame.mempool, sizeof( *pList ) * numSprites );
 
 	for( index = 0; index < numSprites; index++ )
 	{
-		if( !Com_ReadToken( script, SC_ALLOW_NEWLINES, &token ))
+		if( !Com_ReadToken( script, SC_ALLOW_NEWLINES|SC_PARSE_GENERIC, &token ))
 			break;
 
 		com.strncpy( pList[index].szName, token.string, sizeof( pList[index].szName ));
@@ -1010,7 +1078,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 		pList[index].iRes = iTemp;
 
 		// read spritename
-		Com_ReadToken( script, false, &token );
+		Com_ReadToken( script, SC_PARSE_GENERIC, &token );
 		com.strncpy( pList[index].szSprite, token.string, sizeof( pList[index].szSprite ));
 
 		// parse rectangle
@@ -1066,8 +1134,6 @@ get actual screen info
 */
 static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 {
-	int	i;
-
 	// setup screen info
 	clgame.scrInfo.iRealWidth = scr_width->integer;
 	clgame.scrInfo.iRealHeight = scr_height->integer;
@@ -1086,12 +1152,6 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 		clgame.scrInfo.iHeight = scr_height->integer;
 		clgame.scrInfo.iFlags &= ~SCRINFO_VIRTUALSPACE;
 	}
-
-	// TODO: build real table of fonts widthInChars
-	// TODO: load half-life credits font from wad
-	for( i = 0; i < 256; i++ )
-		clgame.scrInfo.charWidths[i] = SMALLCHAR_WIDTH;
-	clgame.scrInfo.iCharHeight = SMALLCHAR_HEIGHT;
 
 	if( !pscrinfo ) return 0;
 	*pscrinfo = clgame.scrInfo;	// copy screeninfo out
@@ -1278,35 +1338,45 @@ returns drawed chachter width (in real screen pixels)
 */
 static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 {
-	float	size, frow, fcol;
-	float	ax, ay, aw, ah;
-	int	fontWidth, fontHeight;
-	rgba_t	color;
-
 	number &= 255;
 
 	if( !re ) return 0;
-	if( number <= ' ' ) return 0;
+	if( number < 32 ) return 0;
 	if( y < -clgame.scrInfo.iCharHeight )
 		return 0;
 
-	ax = x;
-	ay = y;
-	aw = clgame.scrInfo.charWidths[number];
-	ah = clgame.scrInfo.iCharHeight;
-	SPR_AdjustSize( &ax, &ay, &aw, &ah );
-	re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.ds.hHudFont );
+	if( clgame.use_qfont )
+	{
+		pfnSPR_Set( clgame.hHudFont, r, g, b, 255 );
+		pfnSPR_DrawAdditive( 0, x, y, -1, -1, &clgame.fontRc[number] );
+	}
+	else
+	{
+		float	size, frow, fcol;
+		float	ax, ay, aw, ah;
+		int	fontWidth, fontHeight;
+		rgba_t	color;
 
-	MakeRGBA( color, r, g, b, 255 );
-	re->SetColor( color );
+		ax = x;
+		ay = y;
+		aw = clgame.scrInfo.charWidths[number];
+		ah = clgame.scrInfo.iCharHeight;
+
+		re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.hHudFont );
+		SPR_AdjustSize( &ax, &ay, &aw, &ah );
+
+		MakeRGBA( color, r, g, b, 255 );
+		re->SetColor( color );
 	
-	frow = (number >> 4)*0.0625f + (0.5f / (float)fontWidth);
-	fcol = (number & 15)*0.0625f + (0.5f / (float)fontHeight);
-	size = 0.0625f - (1.0f / (float)fontWidth);
+		frow = (number >> 4) * 0.0625f + (0.5f / (float)fontWidth);
+		fcol = (number & 15) * 0.0625f + (0.5f / (float)fontHeight);
+		size = 0.0625f - (1.0f / (float)fontWidth);
 
-	re->DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + size, frow + size, clgame.ds.hHudFont );
+		re->SetParms( clgame.hHudFont, kRenderTransAdd, 0 );
+		re->DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + size, frow + size, clgame.hHudFont );
+	}
+
 	re->SetColor( NULL ); // don't forget reset color
-
 	return clgame.scrInfo.charWidths[number];
 }
 

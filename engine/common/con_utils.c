@@ -468,7 +468,8 @@ bool Cmd_GetItemsList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numitems;
 
-	t = FS_Search( va( "scripts/items/%s*.txt", s ), true );
+	if( !clgame.itemspath[0] ) return false; // not in game yet
+	t = FS_Search( va( "%s/%s*.txt", clgame.itemspath, s ), true );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 

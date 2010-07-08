@@ -33,7 +33,7 @@ void EV_DrawBeam ( void )
 //======================
 //	Eject Shell
 //======================
-void EV_EjectShell( const dstudioevent_t *event, edict_t *entity )
+void EV_EjectShell( const mstudioevent_t *event, edict_t *entity )
 {
 	vec3_t view_ofs, ShellOrigin, ShellVelocity, forward, right, up;
 	vec3_t origin = entity->v.origin;
@@ -67,7 +67,7 @@ void EV_EjectShell( const dstudioevent_t *event, edict_t *entity )
 	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL );
 }
 
-void HUD_StudioEvent( const dstudioevent_t *event, edict_t *entity )
+void HUD_StudioEvent( const mstudioevent_t *event, edict_t *entity )
 {
 	float	pitch;
 	Vector	pos;

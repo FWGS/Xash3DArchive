@@ -11,9 +11,9 @@
 
 struct
 {
-	dstudiohdr_t	*hdr;
-	dstudiomodel_t	*submodel;
-	dstudiobodyparts_t	*bodypart;
+	studiohdr_t	*hdr;
+	mstudiomodel_t	*submodel;
+	mstudiobodyparts_t	*bodypart;
 	matrix4x4		rotmatrix;
 	matrix4x4		bones[MAXSTUDIOBONES];
 	cplane_t		planes[12];
@@ -27,10 +27,10 @@ struct
 
 ===============================================================================
 */
-int CM_StudioExtractBbox( dstudiohdr_t *phdr, int sequence, float *mins, float *maxs )
+int CM_StudioExtractBbox( studiohdr_t *phdr, int sequence, float *mins, float *maxs )
 {
-	dstudioseqdesc_t	*pseqdesc;
-	pseqdesc = (dstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
+	mstudioseqdesc_t	*pseqdesc;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 
 	if( sequence == -1 ) return 0;
 	VectorCopy( pseqdesc[sequence].bbmin, mins );
@@ -41,15 +41,15 @@ int CM_StudioExtractBbox( dstudiohdr_t *phdr, int sequence, float *mins, float *
 
 int CM_StudioBodyVariations( model_t handle )
 {
-	dstudiohdr_t	*pstudiohdr;
-	dstudiobodyparts_t	*pbodypart;
+	studiohdr_t	*pstudiohdr;
+	mstudiobodyparts_t	*pbodypart;
 	int		i, count;
 
-	pstudiohdr = (dstudiohdr_t *)CM_Extradata( handle );
+	pstudiohdr = (studiohdr_t *)CM_Extradata( handle );
 	if( !pstudiohdr ) return 0;
 
 	count = 1;
-	pbodypart = (dstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
+	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
 
 	// each body part has nummodels variations so there are as many total variations as there
 	// are in a matrix of each part by each other part
@@ -87,9 +87,9 @@ void CM_StudioCalcBoneAdj( float dadt, float *adj, const byte *pcontroller1, con
 {
 	int			i, j;
 	float			value;
-	dstudiobonecontroller_t	*pbonecontroller;
+	mstudiobonecontroller_t	*pbonecontroller;
 	
-	pbonecontroller = (dstudiobonecontroller_t *)((byte *)studio.hdr + studio.hdr->bonecontrollerindex);
+	pbonecontroller = (mstudiobonecontroller_t *)((byte *)studio.hdr + studio.hdr->bonecontrollerindex);
 
 	for( j = 0; j < studio.hdr->numbonecontrollers; j++ )
 	{
@@ -145,12 +145,12 @@ CM_StudioCalcBoneQuaterion
 
 ====================
 */
-void CM_StudioCalcBoneQuaterion( int frame, float s, dstudiobone_t *pbone, dstudioanim_t *panim, float *adj, float *q )
+void CM_StudioCalcBoneQuaterion( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *q )
 {
 	int		j, k;
 	vec4_t		q1, q2;
 	vec3_t		angle1, angle2;
-	dstudioanimvalue_t	*panimvalue;
+	mstudioanimvalue_t	*panimvalue;
 
 	for( j = 0; j < 3; j++ )
 	{
@@ -160,7 +160,7 @@ void CM_StudioCalcBoneQuaterion( int frame, float s, dstudiobone_t *pbone, dstud
 		}
 		else
 		{
-			panimvalue = (dstudioanimvalue_t *)((byte *)panim + panim->offset[j+3]);
+			panimvalue = (mstudioanimvalue_t *)((byte *)panim + panim->offset[j+3]);
 			k = frame;
 			
 			// debug
@@ -232,17 +232,17 @@ CM_StudioCalcBonePosition
 
 ====================
 */
-void CM_StudioCalcBonePosition( int frame, float s, dstudiobone_t *pbone, dstudioanim_t *panim, float *adj, float *pos )
+void CM_StudioCalcBonePosition( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *pos )
 {
 	int		j, k;
-	dstudioanimvalue_t	*panimvalue;
+	mstudioanimvalue_t	*panimvalue;
 
 	for( j = 0; j < 3; j++ )
 	{
 		pos[j] = pbone->value[j]; // default;
 		if( panim->offset[j] != 0.0f )
 		{
-			panimvalue = (dstudioanimvalue_t *)((byte *)panim + panim->offset[j]);
+			panimvalue = (mstudioanimvalue_t *)((byte *)panim + panim->offset[j]);
 			
 			k = frame;
 
@@ -298,11 +298,11 @@ CM_StudioCalcRotations
 
 ====================
 */
-void CM_StudioCalcRotations( edict_t *e, float pos[][3], vec4_t *q, dstudioseqdesc_t *pseqdesc, dstudioanim_t *panim, float f )
+void CM_StudioCalcRotations( edict_t *e, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f )
 {
 	int		i;
 	int		frame;
-	dstudiobone_t	*pbone;
+	mstudiobone_t	*pbone;
 	float		adj[MAXSTUDIOCONTROLLERS];
 	float		s, dadt = 1.0f; // noInterp
 
@@ -315,7 +315,7 @@ void CM_StudioCalcRotations( edict_t *e, float pos[][3], vec4_t *q, dstudioseqde
 	s = (f - frame);
 
 	// add in programtic controllers
-	pbone = (dstudiobone_t *)((byte *)studio.hdr + studio.hdr->boneindex);
+	pbone = (mstudiobone_t *)((byte *)studio.hdr + studio.hdr->boneindex);
 
 	CM_StudioCalcBoneAdj( dadt, adj, e->v.controller, e->v.controller );
 
@@ -342,7 +342,7 @@ StudioEstimateFrame
 
 ====================
 */
-float CM_StudioEstimateFrame( edict_t *e, dstudioseqdesc_t *pseqdesc )
+float CM_StudioEstimateFrame( edict_t *e, mstudioseqdesc_t *pseqdesc )
 {
 	double	f;
 	
@@ -417,16 +417,16 @@ CM_StudioGetAnim
 
 ====================
 */
-dstudioanim_t *CM_StudioGetAnim( cmodel_t *m_pSubModel, dstudioseqdesc_t *pseqdesc )
+mstudioanim_t *CM_StudioGetAnim( cmodel_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
 {
-	dstudioseqgroup_t	*pseqgroup;
+	mstudioseqgroup_t	*pseqgroup;
 	cache_user_t	*paSequences;
 	size_t		filesize;
           byte		*buf;
 
-	pseqgroup = (dstudioseqgroup_t *)((byte *)studio.hdr + studio.hdr->seqgroupindex) + pseqdesc->seqgroup;
+	pseqgroup = (mstudioseqgroup_t *)((byte *)studio.hdr + studio.hdr->seqgroupindex) + pseqdesc->seqgroup;
 	if( pseqdesc->seqgroup == 0 )
-		return (dstudioanim_t *)((byte *)studio.hdr + pseqgroup->data + pseqdesc->animindex);
+		return (mstudioanim_t *)((byte *)studio.hdr + pseqgroup->data + pseqdesc->animindex);
 
 	paSequences = (cache_user_t *)m_pSubModel->submodels;
 
@@ -455,7 +455,7 @@ dstudioanim_t *CM_StudioGetAnim( cmodel_t *m_pSubModel, dstudioseqdesc_t *pseqde
 		Mem_Copy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
 		Mem_Free( buf );
 	}
-	return (dstudioanim_t *)((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);
+	return (mstudioanim_t *)((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);
 }
 
 /*
@@ -468,9 +468,9 @@ void CM_StudioSetupBones( edict_t *e )
 	int		i, oldseq;
 	double		f;
 
-	dstudiobone_t	*pbones;
-	dstudioseqdesc_t	*pseqdesc;
-	dstudioanim_t	*panim;
+	mstudiobone_t	*pbones;
+	mstudioseqdesc_t	*pseqdesc;
+	mstudioanim_t	*panim;
 
 	static float	pos[MAXSTUDIOBONES][3];
 	static vec4_t	q[MAXSTUDIOBONES];
@@ -486,7 +486,7 @@ void CM_StudioSetupBones( edict_t *e )
 	oldseq = e->v.sequence; // TraceCode can't change sequence
 
 	if( e->v.sequence >= studio.hdr->numseq ) e->v.sequence = 0;
-	pseqdesc = (dstudioseqdesc_t *)((byte *)studio.hdr + studio.hdr->seqindex) + e->v.sequence;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)studio.hdr + studio.hdr->seqindex) + e->v.sequence;
 
 	f = CM_StudioEstimateFrame( e, pseqdesc );
 
@@ -521,7 +521,7 @@ void CM_StudioSetupBones( edict_t *e )
 		}
 	}
 
-	pbones = (dstudiobone_t *)((byte *)studio.hdr + studio.hdr->boneindex);
+	pbones = (mstudiobone_t *)((byte *)studio.hdr + studio.hdr->boneindex);
 
 	for( i = 0; i < studio.hdr->numbones; i++ ) 
 	{
@@ -543,7 +543,7 @@ StudioCalcAttachments
 static void CM_StudioCalcAttachments( edict_t *e, int iAttachment, float *org, float *ang )
 {
 	int			i;
-	dstudioattachment_t		*pAtt;
+	mstudioattachment_t		*pAtt;
 	vec3_t			axis[3];
 	vec3_t			localOrg, localAng;
 
@@ -556,7 +556,7 @@ static void CM_StudioCalcAttachments( edict_t *e, int iAttachment, float *org, f
 	iAttachment = bound( 0, iAttachment, studio.hdr->numattachments );
 
 	// calculate attachment points
-	pAtt = (dstudioattachment_t *)((byte *)studio.hdr + studio.hdr->attachmentindex);
+	pAtt = (mstudioattachment_t *)((byte *)studio.hdr + studio.hdr->attachmentindex);
 
 	for( i = 0; i < studio.hdr->numattachments; i++ )
 	{
@@ -623,7 +623,7 @@ bool CM_StudioSetup( edict_t *e )
 
 	if( mod && mod->type == mod_studio && mod->extradata )
 	{
-		studio.hdr = (dstudiohdr_t *)mod->extradata;
+		studio.hdr = (studiohdr_t *)mod->extradata;
 		CM_StudioSetUpTransform( e );
 		CM_StudioSetupBones( e );
 		return true;
@@ -740,7 +740,7 @@ bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *
 
 	for( i = 0; i < studio.hdr->numhitboxes; i++ )
 	{
-		dstudiobbox_t	*phitbox = (dstudiobbox_t *)((byte*)studio.hdr + studio.hdr->hitboxindex) + i;
+		mstudiobbox_t	*phitbox = (mstudiobbox_t *)((byte*)studio.hdr + studio.hdr->hitboxindex) + i;
 
 		Matrix4x4_Invert_Simple( m, studio.bones[phitbox->bone] );
 		Matrix4x4_VectorTransform( m, start, start_l );
@@ -776,7 +776,7 @@ bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *
 		}
 		else
 		{
-			dstudiobone_t *pbone = (dstudiobone_t *)((byte*)studio.hdr + studio.hdr->boneindex) + outBone;
+			mstudiobone_t *pbone = (mstudiobone_t *)((byte*)studio.hdr + studio.hdr->boneindex) + outBone;
 
 //			MsgDev( D_INFO, "Bone name %s\n", pbone->name ); // debug
 			VectorLerp( start, tr->flFraction, end, tr->vecEndPos );
@@ -821,10 +821,10 @@ void CM_GetBonePosition( edict_t* e, int iBone, float *org, float *ang )
 
 void CM_StudioModel( cmodel_t *mod, byte *buffer )
 {
-	dstudiohdr_t	*phdr;
-	dstudioseqdesc_t	*pseqdesc;
+	studiohdr_t	*phdr;
+	mstudioseqdesc_t	*pseqdesc;
 
-	phdr = (dstudiohdr_t *)buffer;
+	phdr = (studiohdr_t *)buffer;
 	if( phdr->version != STUDIO_VERSION )
 	{
 		MsgDev( D_ERROR, "CM_StudioModel: %s has wrong version number (%i should be %i)\n", loadmodel->name, phdr->version, STUDIO_VERSION );
@@ -832,7 +832,7 @@ void CM_StudioModel( cmodel_t *mod, byte *buffer )
 	}
 
 	loadmodel->type = mod_studio;
-	pseqdesc = (dstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	loadmodel->numframes = pseqdesc[0].numframes;
 	loadmodel->registration_sequence = cm.registration_sequence;
 

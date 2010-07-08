@@ -1411,7 +1411,9 @@ void _mem_printlist( size_t minallocationsize )
 	for( pool = poolchain; pool; pool = pool->next )
 	{
 		// poolnames can contain color symbols, make sure what color is reset
-		Msg( "%5luk (%5luk actual) %s (^7%+3li byte change)\n", (dword) ((pool->totalsize + 1023) / 1024), (dword)((pool->realsize + 1023) / 1024), pool->name, (long)pool->totalsize - pool->lastchecksize );
+		if( ((long)pool->totalsize - pool->lastchecksize ) != 0 )
+			Msg( "%5luk (%5luk actual) %s (^7%+3li byte change)\n", (dword)((pool->totalsize + 1023) / 1024), (dword)((pool->realsize + 1023) / 1024), pool->name, (long)pool->totalsize - pool->lastchecksize );
+		else Msg( "%5luk (%5luk actual) %s\n", (dword)((pool->totalsize + 1023) / 1024), (dword)((pool->realsize + 1023) / 1024), pool->name );
 		pool->lastchecksize = pool->totalsize;
 		for( mem = pool->chain; mem; mem = mem->next )
 			if( mem->size >= minallocationsize )

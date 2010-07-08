@@ -1194,7 +1194,8 @@ int R_CreateDecalList( decallist_t *pList, bool changelevel )
 				 continue;
 
 			// another transition - ignore moved decals
-			if( changelevel && decal->flags & FDECAL_DONTSAVE )
+			// also permanent decals can't moving across transition
+			if( changelevel && decal->flags & ( FDECAL_DONTSAVE|FDECAL_PERMANENT ))
 				continue;
 
 			// compute depth

@@ -46,7 +46,7 @@ CBaseEntity
 
 #include "saverestore.h"
 #include "schedule.h"
-#include "studio_ref.h"
+#include "studio.h"
 
 #ifndef MONSTEREVENT_H
 #include "monsterevent.h"

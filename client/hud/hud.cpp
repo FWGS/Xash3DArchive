@@ -7,10 +7,18 @@
 #include "hud.h"
 #include "triangle_api.h"
 
+#define MAX_LOGO_FRAMES 56
+
+int grgLogoFrame[MAX_LOGO_FRAMES] = 
+{
+	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 13, 13, 13, 13, 12, 11, 10, 9, 8, 14, 15,
+	16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 
+	29, 29, 29, 29, 29, 28, 27, 26, 25, 24, 30, 31 
+};
+
 void CHud :: Init( void )
 {
 	InitMessages();
-	m_Zoom.Init();	// must be first
 	m_Ammo.Init();
 	m_Health.Init();
 	m_SayText.Init();
@@ -18,7 +26,6 @@ void CHud :: Init( void )
 	m_Train.Init();
 	m_Battery.Init();
 	m_Flash.Init();
-	m_Redeemer.Init();
 	m_Message.Init();
 	m_Scoreboard.Init();
 	m_StatusBar.Init();
@@ -71,11 +78,11 @@ void CHud :: VidInit( void )
 	// Load Sprites
 	// ---------
 
+	m_hsprLogo = 0;
 	m_hsprCursor = 0;
 	m_hHudError = 0;
 	spot = NULL; // clear intermission spot
 
-	Draw_VidInit ();
 	ClearAllFades ();
 
 	if( CVAR_GET_FLOAT( "hud_scale" ))
@@ -85,25 +92,47 @@ void CHud :: VidInit( void )
 	// setup screen info
 	GetScreenInfo( &m_scrinfo );
 
+	if( ActualWidth < 640 )
+		m_iRes = 320;
+	else m_iRes = 640;
+
 	// Only load this once
 	if ( !m_pSpriteList )
 	{
 		// we need to load the hud.txt, and all sprites within
-		m_pSpriteList = SPR_GetList( "scripts/hud.txt", &m_iSpriteCount );
+		m_pSpriteList = SPR_GetList( "sprites/hud.txt", &m_iSpriteCountAllRes );
 
 		if( m_pSpriteList )
 		{
+			// count the number of sprites of the appropriate res
+			m_iSpriteCount = 0;
+			client_sprite_t *p = m_pSpriteList;
+			for ( int j = 0; j < m_iSpriteCountAllRes; j++ )
+			{
+				if ( p->iRes == m_iRes )
+					m_iSpriteCount++;
+				p++;
+			}
+
 			// allocated memory for sprite handle arrays
  			m_rghSprites = new HSPRITE[m_iSpriteCount];
 			m_rgrcRects = new wrect_t[m_iSpriteCount];
 			m_rgszSpriteNames = new char[m_iSpriteCount * MAX_SPRITE_NAME_LENGTH];
 
-			client_sprite_t *p = m_pSpriteList;
-			for ( int j = 0; j < m_iSpriteCount; j++ )
+			p = m_pSpriteList;
+			int index = 0;
+			for ( j = 0; j < m_iSpriteCountAllRes; j++ )
 			{
-				m_rghSprites[j] = SPR_Load( p->szSprite );
-				m_rgrcRects[j] = p->rc;
-				strncpy( &m_rgszSpriteNames[j * MAX_SPRITE_NAME_LENGTH], p->szName, MAX_SPRITE_NAME_LENGTH );
+				if ( p->iRes == m_iRes )
+				{
+					char sz[256];
+					sprintf(sz, "sprites/%s.spr", p->szSprite);
+					m_rghSprites[index] = SPR_Load(sz);
+					m_rgrcRects[index] = p->rc;
+					strncpy( &m_rgszSpriteNames[index * MAX_SPRITE_NAME_LENGTH], p->szName, MAX_SPRITE_NAME_LENGTH );
+
+					index++;
+				}
 				p++;
 			}
 		}
@@ -116,12 +145,20 @@ void CHud :: VidInit( void )
 	}
 	else
 	{
-		// engine may be release unused shaders after reloading map or change level
-		// loading them again here
+		// we have already have loaded the sprite reference from hud.txt, but
+		// we need to make sure all the sprites have been loaded (we've gone through a transition, or loaded a save game)
 		client_sprite_t *p = m_pSpriteList;
-		for( int j = 0; j < m_iSpriteCount; j++ )
+		int index = 0;
+		for ( int j = 0; j < m_iSpriteCountAllRes; j++ )
 		{
-			m_rghSprites[j] = SPR_Load( p->szSprite );
+			if ( p->iRes == m_iRes )
+			{
+				char sz[256];
+				sprintf( sz, "sprites/%s.spr", p->szSprite );
+				m_rghSprites[index] = SPR_Load(sz);
+				index++;
+			}
+
 			p++;
 		}
 	}
@@ -141,8 +178,6 @@ void CHud :: VidInit( void )
 	m_Train.VidInit();
 	m_Battery.VidInit();
 	m_Flash.VidInit();
-	m_Redeemer.VidInit();
-	m_Zoom.VidInit();
 	m_MOTD.VidInit();
 	m_Message.VidInit();
 	m_Scoreboard.VidInit();
@@ -224,20 +259,10 @@ int CHud :: Redraw( float flTime )
 	DrawScreenFade();
 
 	// take a screenshot if the client's got the cvar set
-	if( CVAR_GET_FLOAT( "hud_takesshots" ))
+	if( m_flShotTime && m_flShotTime < flTime )
 	{
-		if( m_flTime > m_flShotTime )
-		{
-			CLIENT_COMMAND( "screenshot\n" );
-			m_flShotTime = m_flTime + 0.04f;
-		}
-	}
-
-	// redeemer hud stuff
-	if( m_Redeemer.m_iHudMode > 0 )
-	{
-		m_Redeemer.Draw( flTime );
-		return 1;
+		CLIENT_COMMAND( "screenshot\n" );
+		m_flShotTime = 0;
 	}
 
 	// custom view active, and flag "draw hud" isn't set
@@ -265,6 +290,28 @@ int CHud :: Redraw( float flTime )
 			pList = pList->pNext;
 		}
 	}
+
+	// are we in demo mode? do we need to draw the logo in the top corner?
+	if (m_iLogo)
+	{
+		int x, y, i;
+
+		if (m_hsprLogo == 0)
+			m_hsprLogo = LoadSprite("sprites/%d_logo.spr");
+
+		SPR_Set(m_hsprLogo, 250, 250, 250 );
+		
+		x = SPR_Width(m_hsprLogo, 0);
+		x = ScreenWidth - x;
+		y = SPR_Height(m_hsprLogo, 0)/2;
+
+		// Draw the logo at 20 fps
+		int iFrame = (int)(flTime * 20) % MAX_LOGO_FRAMES;
+		i = grgLogoFrame[iFrame] - 1;
+
+		SPR_DrawAdditive(i, x, y, NULL);
+	}
+
 	return 1;
 }
 

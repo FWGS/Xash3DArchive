@@ -317,6 +317,8 @@ struct particle_s
 	rgba_t		pColor[4];
 };
 
+#define NUMVERTEXNORMALS	162	// quake avertex normals
+
 float cl_avertexnormals[NUMVERTEXNORMALS][3] =
 {
 #include "anorms.h"

@@ -24,10 +24,10 @@
 extern ref_params_t		*gpViewParams;
 
 // CHud message handlers
+DECLARE_HUDMESSAGE( Logo );
 DECLARE_HUDMESSAGE( HUDColor );
 DECLARE_HUDMESSAGE( SetFog );
 DECLARE_HUDMESSAGE( RoomType );
-DECLARE_HUDMESSAGE( SetSky );
 DECLARE_HUDMESSAGE( RainData );
 DECLARE_HUDMESSAGE( SetBody );
 DECLARE_HUDMESSAGE( SetSkin );
@@ -40,9 +40,6 @@ DECLARE_HUDMESSAGE( Particle );
 DECLARE_HUDMESSAGE( Concuss );
 DECLARE_HUDMESSAGE( GameMode );
 DECLARE_HUDMESSAGE( CamData );
-DECLARE_HUDMESSAGE( AddMirror );
-DECLARE_HUDMESSAGE( AddScreen );
-DECLARE_HUDMESSAGE( AddPortal );
 DECLARE_HUDMESSAGE( TempEntity );
 DECLARE_HUDMESSAGE( ServerName );
 DECLARE_HUDMESSAGE( ScreenShake );
@@ -51,6 +48,7 @@ DECLARE_HUDCOMMAND( ChangeLevel );
 
 int CHud :: InitMessages( void )
 {
+	HOOK_MESSAGE( Logo );
 	HOOK_MESSAGE( ResetHUD );
 	HOOK_MESSAGE( GameMode );
 	HOOK_MESSAGE( ServerName );
@@ -63,15 +61,11 @@ int CHud :: InitMessages( void )
 	HOOK_MESSAGE( Particle );
 	HOOK_MESSAGE( TempEntity );
 	HOOK_MESSAGE( SetFog );
-	HOOK_MESSAGE( SetSky );
 	HOOK_MESSAGE( CamData );
 	HOOK_MESSAGE( RainData ); 
 	HOOK_MESSAGE( WeaponAnim );
 	HOOK_MESSAGE( SetBody );
 	HOOK_MESSAGE( SetSkin );
-	HOOK_MESSAGE( AddMirror);
-	HOOK_MESSAGE( AddScreen );
-	HOOK_MESSAGE( AddPortal );
 	HOOK_MESSAGE( ScreenFade );
 	HOOK_MESSAGE( ScreenShake );
 
@@ -114,6 +108,18 @@ void CHud :: UserCmd_ChangeLevel( void )
 	m_Shake.amplitude = 0;
 	m_Shake.frequency = 0;
 	m_Shake.duration = 0;
+}
+
+int CHud :: MsgFunc_Logo( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pszName, iSize, pbuf );
+
+	// update Train data
+	m_iLogo = READ_BYTE();
+
+	END_READ();
+
+	return 1;
 }
 
 int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
@@ -172,7 +178,6 @@ int CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 {
 	m_flStartDist = 0;
 	m_flEndDist = 0;
-	m_iSkyMode = SKY_OFF;
 	m_iIntermission = 0;
 
 	// prepare all hud data
@@ -217,20 +222,6 @@ int CHud :: MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf )
 
 	m_flStartDist = READ_SHORT();
           m_flEndDist = READ_SHORT();
-
-	END_READ();
-	
-	return 1;
-}
-
-int CHud :: MsgFunc_SetSky( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	m_iSkyMode = READ_BYTE();
-	m_vecSkyPos[0] = READ_COORD();
-	m_vecSkyPos[1] = READ_COORD();
-	m_vecSkyPos[2] = READ_COORD();
 
 	END_READ();
 	
@@ -359,39 +350,6 @@ int CHud :: MsgFunc_SetSkin( const char *pszName, int iSize, void *pbuf )
 
 	edict_t *viewmodel = GetViewModel();
 	viewmodel->v.skin = READ_BYTE();
-
-	END_READ();
-	
-	return 1;
-}
-
-int CHud :: MsgFunc_AddScreen( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	// AddScreenBrushEntity( READ_BYTE() );
-
-	END_READ();
-	
-	return 1;
-}
-
-int CHud :: MsgFunc_AddMirror( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	// AddMirrorBrushEntity( READ_BYTE() );
-
-	END_READ();
-	
-	return 1;
-}
-
-int CHud :: MsgFunc_AddPortal( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	// AddPortalBrushEntity( READ_BYTE() );
 
 	END_READ();
 	

@@ -1,0 +1,14 @@
+build ????
+SoundLib: ogg loop points (LOOP_START comment)
+Client: recalc fov y for more matched with original HL
+
+
+build 1249
+
+ImageLib: added support for 4-bits and monochrome uncompressed BMPs.
+ImageLib: fix data align for NPOT textures in menu (e.g. slider.bmp).
+StdLib: skip empty symbols in numerical string for atoi and atof.
+Render: implement LoadSprite for custom client sprites (e.g. hud)
+Sound: fixed bug with background music looping
+Fonts: implement Half-Life creditfonts
+Client: move client.dll to valve folder

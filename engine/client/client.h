@@ -216,8 +216,6 @@ typedef struct
 	char		centerPrint[2048];
 	int		centerPrintLines;
 
-	HSPRITE		hHudFont;
-
 	// crosshair members
 	HSPRITE		hCrosshair;
 	wrect_t		rcCrosshair;
@@ -231,6 +229,7 @@ typedef struct
 	byte		*mempool;			// client edicts pool
 	byte		*private;			// client.dll private pool
 	string		maptitle;			// display map title
+	string		itemspath;		// path to items description for auto-complete func
 
 	union
 	{
@@ -251,6 +250,10 @@ typedef struct
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	SCREENINFO	scrInfo;			// actual screen info
+
+	HSPRITE		hHudFont;			// handle to creditsfont
+	wrect_t		fontRc[256];		// rectangles
+	bool		use_qfont;		// use half-life creditsfont with variable charWidth
 
 	client_textmessage_t *titles;			// title messages, not network messages
 	int		numTitles;
@@ -280,14 +283,17 @@ typedef struct
 
 	netchan_t		netchan;
 	int		serverProtocol;		// in case we are doing some kind of version hack
-
 	int		challenge;		// from the server to use for connecting
+
+	// internal shaders
 	shader_t		consoleFont;		// current console font
 	shader_t		clientFont;		// current client font
 	shader_t		consoleBack;		// console background
 	shader_t		fillShader;		// used for emulate FillRGBA to avoid wrong draw-sort
 	shader_t		particle;			// used for drawing quake1 particles (SV_ParticleEffect)
 	shader_t		netIcon;			// netIcon displayed bad network connection
+	shader_t		pauseIcon;		// draw 'paused' when game in-pause
+	shader_t		loadingBar;		// 'loading' progress bar
 	
 	file_t		*download;		// file transfer from server
 	string		downloadname;

@@ -15,7 +15,7 @@ typedef struct usercmd_s	usercmd_t;
 typedef struct particle_s	particle_t;
 typedef struct skyportal_s	skyportal_t;
 typedef struct ref_params_s	ref_params_t;
-typedef struct dstudioevent_s	dstudioevent_t;
+typedef struct mstudioevent_s	mstudioevent_t;
 typedef void (*ENTCALLBACK)( TEMPENTITY *ent );
 typedef void (*HITCALLBACK)( TEMPENTITY *ent, TraceResult *ptr );
 typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );	// user message handle
@@ -245,7 +245,7 @@ typedef struct
 	void	(*pfnDrawTriangles)( int fTrans );
 	void	(*pfnCreateEntities)( void );
 	int	(*pfnAddVisibleEntity)( edict_t *pEnt, int ed_type );
-	void	(*pfnStudioEvent)( const dstudioevent_t *event, edict_t *entity );
+	void	(*pfnStudioEvent)( const mstudioevent_t *event, edict_t *entity );
 	void	(*pfnStudioFxTransform)( edict_t *pEdict, float transform[4][4] );
 	void	(*pfnCalcRefdef)( ref_params_t *parms );
 	void	(*pfnPM_Move)( playermove_t *ppmove, int server );

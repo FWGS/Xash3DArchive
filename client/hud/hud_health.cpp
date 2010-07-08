@@ -25,7 +25,8 @@
 DECLARE_MESSAGE( m_Health, Health )
 DECLARE_MESSAGE( m_Health, Damage )
 
-#define PAIN_NAME	"sprites/pain.spr"
+#define PAIN_NAME "sprites/%d_pain.spr"
+#define DAMAGE_NAME "sprites/%d_dmg.spr"
 
 int giDmgHeight, giDmgWidth;
 
@@ -39,7 +40,10 @@ int giDmgFlags[NUM_DMG_TYPES] =
 	DMG_NERVEGAS, 
 	DMG_RADIATION,
 	DMG_SHOCK,
-	DMG_NUCLEAR
+	DMG_CALTROP,
+	DMG_TRANQ,
+	DMG_CONCUSS,
+	DMG_HALLUC
 };
 
 int CHudHealth :: Init( void )
@@ -160,7 +164,7 @@ int CHudHealth :: Draw( float flTime )
 		return 1;
 
 	if( !m_hSprite )
-		m_hSprite = SPR_Load( PAIN_NAME );
+		m_hSprite = LoadSprite( PAIN_NAME );
 	
 	// has health changed? Flash the health #
 	if( m_fFade )

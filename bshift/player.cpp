@@ -3133,6 +3133,17 @@ int CBasePlayer::Restore( CRestore &restore )
 		UTIL_SetSize(pev, VEC_HULL_MIN, VEC_HULL_MAX);
 	}
 
+	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "hl", "1" );
+
+	if ( m_fLongJump )
+	{
+		g_engfuncs.pfnSetPhysicsKeyValue( edict(), "slj", "1" );
+	}
+	else
+	{
+		g_engfuncs.pfnSetPhysicsKeyValue( edict(), "slj", "0" );
+	}
+
 	RenewItems();
 
 	return status;

@@ -1246,7 +1246,7 @@ static rgbdata_t *R_MakeLuminance( rgbdata_t *in )
 			out->buffer[4*(y*width+x)+0] = luminance;
 			out->buffer[4*(y*width+x)+1] = luminance;
 			out->buffer[4*(y*width+x)+2] = luminance;
-			out->buffer[4*(y*width+x)+3] = 255;
+			out->buffer[4*(y*width+x)+3] = in->buffer[4*(y*width+x)+3];	// copy alpha as is
 		}
 	}
 	return out;
@@ -2036,12 +2036,12 @@ static rgbdata_t *R_ParseMakeLuminance( script_t *script, int *samples, texFlags
 		return NULL;
 	}
 
-	*samples = 1;
+	*samples = (pic->flags & IMAGE_HAS_ALPHA) ? 2 : 1;
 	*flags &= ~TF_INTENSITY;
 	*flags &= ~TF_ALPHA;
 	*flags &= ~TF_NORMALMAP;
 
-	return R_MakeIntensity( pic );
+	return R_MakeLuminance( pic );
 }
 
 /*
@@ -2132,7 +2132,7 @@ static rgbdata_t *R_ParseStudioSkin( script_t *script, const byte *buf, size_t s
 	string		model_path;
 	string		modelT_path;
 	string		skinname;
-	dstudiohdr_t	hdr;
+	studiohdr_t	hdr;
 	file_t		*f;
 
 	Com_ReadToken( script, 0, &token );
@@ -2199,7 +2199,7 @@ static rgbdata_t *R_ParseStudioSkin( script_t *script, const byte *buf, size_t s
 	if( hdr.textureindex > 0 && hdr.numtextures <= MAXSTUDIOSKINS )
 	{
 		// all ok, can load model into memory
-		dstudiotexture_t	*ptexture, *tex;
+		mstudiotexture_t	*ptexture, *tex;
 		size_t		mdl_size, tex_size;
 		byte		*pin;
 		int		i;
@@ -2216,7 +2216,7 @@ static rgbdata_t *R_ParseStudioSkin( script_t *script, const byte *buf, size_t s
 			FS_Close( f );
 			return NULL;
 		}
-		ptexture = (dstudiotexture_t *)(pin + hdr.textureindex);
+		ptexture = (mstudiotexture_t *)(pin + hdr.textureindex);
 
 		// find specified texture
 		for( i = 0; i < hdr.numtextures; i++ )
@@ -2235,7 +2235,7 @@ static rgbdata_t *R_ParseStudioSkin( script_t *script, const byte *buf, size_t s
 
 		// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
 		tex->index = (int)pin + tex->index;
-		tex_size = sizeof( dstudiotexture_t ) + tex->width * tex->height + 768;
+		tex_size = sizeof( mstudiotexture_t ) + tex->width * tex->height + 768;
 
 		// load studio texture and bind it
 		FS_FileBase( skinname, skinname );
@@ -3290,6 +3290,8 @@ bool VID_CubemapShot( const char *base, uint size, const float *vieworg, bool sk
 	result = FS_SaveImage( basename, r_shot );
 	FS_FreeImage( r_shot );
 	FS_FreeImage( r_side );
+	Mem_Free( buffer );
+	Mem_Free( temp );
 
 	return result;
 }

@@ -29,7 +29,6 @@ typedef unsigned long	CRC32_t;
 typedef float		vec_t;
 
 #define DLLEXPORT		__declspec( dllexport )
-#define NUMVERTEXNORMALS	162			// quake avertex normals
 
 #ifndef NULL
 #define NULL		((void *)0)

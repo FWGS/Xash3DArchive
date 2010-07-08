@@ -3414,13 +3414,16 @@ void R_DeformvBBoxForShader( const ref_shader_t *shader, vec3_t ebbox )
 	}
 }
 
-static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int addFlags, const char *shortname, int length )
+static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int addFlags, const char *shortname )
 {
 	ref_stage_t	*pass;
 	texture_t		*materialImages[MAX_STAGE_TEXTURES];
 	script_t		*script;
 	char		*skyParms;
 	uint		i, hashKey;
+	size_t		length;
+
+	length = com.strlen( shortname );
 
 	// make a default shader
 	switch( type )
@@ -3552,7 +3555,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		shader->stages = (ref_stage_t *)( ( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
 		pass->tcgen = TCGEN_BASE;
-		if( r_stageAnimFrequency[0] == 0.0f && r_numStageTextures == 8 )
+		if( r_stageAnimFrequency[0] == -8.0f && r_numStageTextures == 8 )
 		{
 			// store angled map into one bundle
 			pass->flags |= SHADERSTAGE_ANGLEDMAP;
@@ -3661,14 +3664,14 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 	case SHADER_NOMIP:
 		shader->type = SHADER_NOMIP;
 		shader->features = MF_STCOORDS|MF_COLORS;
-		shader->flags = SHADER_STATIC;
+		shader->flags = SHADER_STATIC|SHADER_RENDERMODE;
 		shader->sort = SORT_ADDITIVE;
 		shader->num_stages = 1;
 		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 		strcpy( shader->name, shortname );
 		shader->stages = ( ref_stage_t * )( ( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
-		pass->flags = SHADERSTAGE_BLEND_MODULATE/*|SHADERSTAGE_NOCOLORARRAY*/;
+		pass->flags = SHADERSTAGE_BLEND_MODULATE|SHADERSTAGE_RENDERMODE;
 		pass->glState = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA; 
 		if( shader->name[0] == '#' )
 		{
@@ -3924,23 +3927,76 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 	return shader;
 }
 
+/*
+================
+R_CleanupShaderName
+
+kill backward slashes and turn all leters
+into lower register
+================
+*/
+static bool R_CleanupShaderName( const char *name, char *outname, size_t outsize )
+{
+	int	i, length = 0;
+
+	if( !name || !name[0] || !outname )
+		return false;
+
+	for( i = ( name[0] == '/' || name[0] == '\\' ); name[i] && ( length < outsize - 1 ); i++ )
+	{
+		if( name[i] == '\\' ) outname[length++] = '/';
+		else outname[length++] = com.tolower( name[i] );
+	}
+
+	if( !length )
+		return false;
+
+	outname[length] = 0;
+
+	return true;
+}
+
+ref_shader_t *R_FindShader( const char *name, int type, int ignoreType )
+{
+	ref_shader_t	*shader;
+	string		shortname;
+	uint		hashKey;
+
+	if( !R_CleanupShaderName( name, shortname, sizeof( shortname )))
+		return NULL;
+
+	// see if already loaded
+	hashKey = Com_HashKey( shortname, SHADERS_HASH_SIZE );
+
+	for( shader = r_shadersHash[hashKey]; shader; shader = shader->nextHash )
+	{
+		if( shader->type == ignoreType ) continue;
+
+		if( !com.stricmp( shader->name, shortname ))
+		{
+			if( shader->type != type )
+			{
+				if( shader->flags & SHADER_SKYPARMS )
+					MsgDev( D_WARN, "reused shader '%s' with mixed types (%i should be %i)\n", shortname, shader->type, type );
+				else continue;
+                              }
+			// prolonge registration
+			Shader_TouchImages( shader, FREE_IGNORE );
+			return shader;
+		}
+	}
+	return NULL;
+}
+
 ref_shader_t *R_LoadShader( const char *name, int type, bool forceDefault, int addFlags, int ignoreType )
 {
 	ref_shader_t	*shader;
 	string		shortname;
 	ref_script_t	*cache = NULL;
-	uint		i, hashKey, length;
+	uint		i, hashKey;
 
-	if( !name || !name[0] ) return NULL;
-
-	for( i = ( name[0] == '/' || name[0] == '\\' ), length = 0; name[i] && ( length < sizeof( shortname )-1 ); i++ )
-	{
-		if( name[i] == '\\' ) shortname[length++] = '/';
-		else shortname[length++] = com.tolower( name[i] );
-	}
-
-	if( !length ) return NULL;
-	shortname[length] = 0;
+	if( !R_CleanupShaderName( name, shortname, sizeof( shortname )))
+		return NULL;
 
 	// see if already loaded
 	hashKey = Com_HashKey( shortname, SHADERS_HASH_SIZE );
@@ -4008,7 +4064,7 @@ ref_shader_t *R_LoadShader( const char *name, int type, bool forceDefault, int a
 
 		// load the script text
 		script = Com_OpenScript( cache->name, cache->buffer, cache->size );
-		if( !script ) return Shader_CreateDefault( shader, type, addFlags, shortname, length );
+		if( !script ) return Shader_CreateDefault( shader, type, addFlags, shortname );
 
 		if( !Shader_ParseShader( shader, script ))
 		{
@@ -4018,12 +4074,12 @@ ref_shader_t *R_LoadShader( const char *name, int type, bool forceDefault, int a
 			shader->shadernum = i;
 
 			Com_CloseScript( script );
-			return Shader_CreateDefault( shader, type, addFlags, shortname, length );
+			return Shader_CreateDefault( shader, type, addFlags, shortname );
 		}
 		Com_CloseScript( script );
 		Shader_Finish( shader );
 	}
-	else return Shader_CreateDefault( shader, type, addFlags, shortname, length );
+	else return Shader_CreateDefault( shader, type, addFlags, shortname );
 
 	// calculate sortkey
 	shader->sortkey = Shader_Sortkey( shader, shader->sort );

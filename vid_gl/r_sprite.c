@@ -41,7 +41,7 @@ void R_SpriteInit( void )
 Sprite model loader
 ====================
 */
-dframetype_t *R_SpriteLoadFrame( ref_model_t *mod, void *pin, mspriteframe_t **ppframe, int framenum )
+static dframetype_t *R_SpriteLoadFrame( ref_model_t *mod, void *pin, mspriteframe_t **ppframe, int framenum )
 {
 	texture_t		*tex;
 	dspriteframe_t	*pinframe;
@@ -80,7 +80,58 @@ dframetype_t *R_SpriteLoadFrame( ref_model_t *mod, void *pin, mspriteframe_t **p
 	return (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height );
 }
 
-dframetype_t *R_SpriteLoadGroup( ref_model_t *mod, void * pin, mspriteframe_t **ppframe, int framenum )
+static dframetype_t *CL_LoadSpriteFrame( const char *szSpriteName, void *pin, int framenum )
+{
+	texture_t		*tex;
+	string		name;
+	dspriteframe_t	*pinframe;
+
+	// build uinque frame name
+	if( !sp_name[0] ) FS_FileBase( szSpriteName, sp_name );
+	com.snprintf( name, MAX_STRING, "Sprite( \"%s_%s_%i%i\" )", sp_name, frame_prefix, framenum/10, framenum%10 );
+
+	pinframe = (dspriteframe_t *)pin;	
+	SwapBlock((int *)pinframe, sizeof( dspriteframe_t ));
+
+	// NOTE: just loading all single frame into one shader
+	// we spported only single frames in this case
+	// bacause we can't properly merge multiple groups into single shader
+	tex = R_FindTexture( name, (byte *)pin, pinframe->width * pinframe->height, tex_flags );
+	R_ShaderAddStageTexture( tex );
+
+	return (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height );
+}
+
+static dframetype_t *CL_SpriteSkipGroup( const char *szSpriteName, void *pin, int framenum )
+{
+	dspritegroup_t	*pingroup;
+	dspriteinterval_t	*pin_intervals;
+	dspriteframe_t	*pinframe;
+	void		*ptemp;
+	int		i;
+
+	// throw warning
+	MsgDev( D_WARN, "CL_LoadSprite: %s ignore group frame %i\n", szSpriteName, framenum );
+
+	pingroup = (dspritegroup_t *)pin;
+	pin_intervals = (dspriteinterval_t *)(pingroup + 1);
+
+	// skip intervals
+	for( i = 0; i < LittleLong( pingroup->numframes ); i++ )
+		pin_intervals++;
+
+	// skip group frames
+	ptemp = (void *)pin_intervals;
+	for( i = 0; i < LittleLong( pingroup->numframes ); i++ )
+	{
+		pinframe = (dspriteframe_t *)ptemp;
+		SwapBlock((int *)pinframe, sizeof( dspriteframe_t ));
+		ptemp = (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height );
+	}
+	return (dframetype_t *)ptemp;
+}
+
+static dframetype_t *R_SpriteLoadGroup( ref_model_t *mod, void * pin, mspriteframe_t **ppframe, int framenum )
 {
 	dspritegroup_t	*pingroup;
 	mspritegroup_t	*pspritegroup;
@@ -108,6 +159,7 @@ dframetype_t *R_SpriteLoadGroup( ref_model_t *mod, void * pin, mspriteframe_t **
 		*poutintervals = LittleFloat( pin_intervals->interval );
 		if( *poutintervals <= 0.0 ) *poutintervals = 1.0f; // set error value
 		if( frame_type == FRAME_GROUP ) R_ShaderAddStageIntervals( *poutintervals );
+		else if( frame_type == FRAME_ANGLED ) R_ShaderAddStageIntervals( -1.0f );
 		poutintervals++;
 		pin_intervals++;
 	}
@@ -228,23 +280,146 @@ void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer )
 		case FRAME_SINGLE:
 			tex_flags = 0;
 			com.strncpy( frame_prefix, "one", MAX_STRING );
-			pframetype = R_SpriteLoadFrame(mod, pframetype + 1, &psprite->frames[i].frameptr, i );
+			pframetype = R_SpriteLoadFrame( mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		case FRAME_GROUP:
 			tex_flags = 0;
 			com.strncpy( frame_prefix, "grp", MAX_STRING );
-			pframetype = R_SpriteLoadGroup(mod, pframetype + 1, &psprite->frames[i].frameptr, i );
+			pframetype = R_SpriteLoadGroup( mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		case FRAME_ANGLED:
 			tex_flags = 0;
 			com.strncpy( frame_prefix, "ang", MAX_STRING );
-			pframetype = R_SpriteLoadGroup(mod, pframetype + 1, &psprite->frames[i].frameptr, i );
+			pframetype = R_SpriteLoadGroup( mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		}
 		if( pframetype == NULL ) break; // technically an error
 	}
 	mod->shaders = frames; // setup texture links
 	mod->type = mod_sprite;
+}
+
+/*
+================
+CL_LoadSprite
+
+client version for loading sprites
+and convert them to shaders with multiple frames
+================
+*/
+ref_shader_t *CL_LoadSprite( const char *szSpriteName )
+{
+	dsprite_t		*pin;
+	ref_shader_t	*shader;
+	byte		*buffer;
+	dframetype_t	*pframetype;
+	bool		twoSided;
+	int		i, numframes;
+	short		*numi;
+
+	if( !szSpriteName || !szSpriteName[0] )
+		return NULL;
+
+	shader = R_FindShader( szSpriteName, SHADER_SPRITE, SHADER_INVALID );
+	if( shader ) return shader;	// already loaded
+
+	buffer = FS_LoadFile( szSpriteName, NULL );
+	if( !buffer ) return NULL;	// sprite is missed
+
+	pin = (dsprite_t *)buffer;
+
+	// make sure what is really sprite
+	if( LittleLong( pin->ident ) != IDSPRITEHEADER )
+	{
+		MsgDev( D_ERROR, "CL_LoadSprite: %s not a sprite\n", szSpriteName );
+		Mem_Free( buffer );
+		return NULL;
+	} 
+
+	if( LittleLong( pin->version ) != SPRITE_VERSION )
+	{
+		MsgDev( D_ERROR, "CL_LoadSprite: %s invalid sprite version\n", szSpriteName );
+		Mem_Free( buffer );
+		return NULL;
+	}
+
+	numframes = LittleLong( pin->numframes );
+	twoSided = (LittleLong( pin->facetype == SPR_CULL_NONE )) ? true : false;
+	numi = (short *)( pin + 1 );
+
+	if( LittleShort( *numi ) == 256 )
+	{	
+		byte	*src = (byte *)(numi+1);
+		rgbdata_t	*pal;
+	
+		// install palette
+		switch( LittleLong( pin->texFormat ))
+		{
+		case SPR_ADDGLOW:
+			pal = FS_LoadImage( "#normal.pal", src, 768 );
+			R_ShaderSetRenderMode( kRenderGlow, twoSided );
+			break;
+		case SPR_ADDITIVE:
+			pal = FS_LoadImage( "#normal.pal", src, 768 );
+			R_ShaderSetRenderMode( kRenderTransAdd, twoSided );
+			break;
+                    case SPR_INDEXALPHA:
+			pal = FS_LoadImage( "#decal.pal", src, 768 );
+			R_ShaderSetRenderMode( kRenderTransTexture, twoSided );
+			break;
+		case SPR_ALPHTEST:		
+			pal = FS_LoadImage( "#transparent.pal", src, 768 );
+			R_ShaderSetRenderMode( kRenderTransAlpha, twoSided );
+                              break;
+		case SPR_NORMAL:
+		default:
+			pal = FS_LoadImage( "#normal.pal", src, 768 );
+			R_ShaderSetRenderMode( kRenderNormal, twoSided );
+			break;
+		}
+		pframetype = (dframetype_t *)(src + 768);
+		FS_FreeImage( pal ); // palette installed, no reason to keep this data
+	}
+	else 
+	{
+		MsgDev( D_ERROR, "CL_LoadSprite: %s has invalid palette\n", szSpriteName );
+		Mem_Free( buffer );
+		return NULL;
+	}
+
+	if( numframes < 1 )
+	{
+		MsgDev( D_ERROR, "CL_LoadSprite: %s has invalid # of frames: %d\n", szSpriteName, numframes );
+		Mem_Free( buffer );
+		return NULL;
+	}
+
+	MsgDev( D_LOAD, "%s, rendermode %d\n", szSpriteName, LittleLong( pin->texFormat ));
+	com.strncpy( frame_prefix, "one", MAX_STRING );
+	tex_flags = TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP;
+	frames = NULL; // invalidate pointer
+	sp_name[0] = 0;
+	group_num = 0;
+
+	for( i = 0; i < numframes; i++ )
+	{
+		switch( LittleLong( pframetype->type ))
+		{
+		case FRAME_SINGLE:
+			pframetype = CL_LoadSpriteFrame( szSpriteName, pframetype + 1, i );
+			break;
+		case FRAME_GROUP:
+		case FRAME_ANGLED:
+			pframetype = CL_SpriteSkipGroup( szSpriteName, pframetype + 1, i );
+			break;
+		}
+		if( pframetype == NULL ) break; // technically an error
+	}
+
+	// all frames uploaded, release buffer
+	Mem_Free( buffer );
+
+	return R_LoadShader( szSpriteName, SHADER_SPRITE, true, tex_flags, SHADER_INVALID );
 }
 
 /*

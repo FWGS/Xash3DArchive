@@ -1023,12 +1023,12 @@ void CBasePlayerWeapon::SendWeaponAnim( int iAnim, float fps )
 
 	if( fps )
 	{
-		dstudiohdr_t *pstudiohdr = (dstudiohdr_t *)GET_MODEL_PTR( ENT( pev ));
+		studiohdr_t *pstudiohdr = (studiohdr_t *)GET_MODEL_PTR( ENT( pev ));
 		if( pstudiohdr )
 		{
- 			dstudioseqdesc_t *pseqdesc;
+ 			mstudioseqdesc_t *pseqdesc;
 			
-			pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + iAnim;
+			pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + iAnim;
 			framerate = fps / pseqdesc->fps;
 		}
 	}

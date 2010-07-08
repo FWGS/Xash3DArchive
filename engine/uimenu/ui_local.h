@@ -50,10 +50,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define UI_CHECKBOX_PRESSED		"gfx/shell/cb_down"
 #define UI_CHECKBOX_ENABLED		"gfx/shell/cb_checked"
 
+#define UI_CURSOR_SIZE		40
+
 #define UI_MAX_MENUDEPTH		8
 #define UI_MAX_MENUITEMS		64
-
-#define UI_CURSOR_SIZE		40
 
 #define UI_PULSE_DIVISOR		75
 #define UI_BLINK_TIME		250

@@ -225,7 +225,7 @@ void CL_StudioFxTransform( edict_t *ent, float transform[4][4] );
 void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
 bool CL_GetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles );
 bool CL_SetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles );
-void CL_StudioEvent( dstudioevent_t *event, edict_t *ent );
+void CL_StudioEvent( mstudioevent_t *event, edict_t *ent );
 bool CL_GetComment( const char *demoname, char *comment );
 trace_t CL_TraceLine( const vec3_t start, const vec3_t end );
 lerpframe_t *CL_GetLerpFrame( int entityIndex );

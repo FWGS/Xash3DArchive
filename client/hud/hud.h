@@ -426,36 +426,6 @@ private:
 	int m_iWidth;	// width of the battery innards
 };
 
-class CHudRedeemer: public CHudBase
-{
-public:
-	int Init( void );
-	int VidInit( void );
-	int Draw( float flTime );
-	int MsgFunc_WarHUD( const char *pszName,  int iSize, void *pbuf );
-	int m_iHudMode;
-	int m_iOldHudMode;
-
-private:
-	HSPRITE m_hSprite;
-	HSPRITE m_hCrosshair;
-	HSPRITE m_hStatic;
-	HSPRITE m_hCamera;
-	HSPRITE m_hCamRec;
-};
-
-class CHudZoom: public CHudBase
-{
-public:
-	int Init( void );
-	int VidInit( void );
-	int Draw( float flTime );
-	int MsgFunc_ZoomHUD( const char *pszName,  int iSize, void *pbuf );
-	int m_iHudMode;
-private:
-	HSPRITE m_hCrosshair;
-	HSPRITE m_hLines;
-};
 //
 //-----------------------------------------------------
 //
@@ -519,7 +489,8 @@ private:
 	message_parms_t m_parms;
 	float m_gameTitleTime;
 	client_textmessage_t *m_pGameTitle;
-	int HUD_Logo; // display logo
+	int m_HUD_title_life;
+	int m_HUD_title_half;
 };
 
 //
@@ -561,16 +532,15 @@ private:
 //
 //-----------------------------------------------------
 //
-
-#define SKY_OFF	0
-#define SKY_ON	1
-
 class CHud
 {
 private:
 	HUDLIST		*m_pHudList;
+	HSPRITE		m_hsprLogo;
+	int		m_iLogo;
 	client_sprite_t	*m_pSpriteList;
 	int		m_iSpriteCount;
+	int		m_iSpriteCountAllRes;
 	float		m_flMouseSensitivity;
 	int		m_iConcussionEffect;
 	int		m_iNoClip;
@@ -586,8 +556,6 @@ public:
 	float m_flFOV;
 	int m_Teamplay;
 	int m_iRes;
-	Vector m_vecSkyPos;
-	int m_iSkyMode;
 	int m_iCameraMode;
 	int m_iLastCameraMode;
 	int m_iFontHeight;
@@ -618,8 +586,6 @@ public:
 	CHudBattery	m_Battery;
 	CHudTrain		m_Train;
 	CHudFlashlight	m_Flash;
-	CHudRedeemer	m_Redeemer;
-	CHudZoom		m_Zoom;
 	CHudMessage	m_Message;
 	CHudScoreboard	m_Scoreboard;
 	CHudStatusBar	m_StatusBar;
@@ -644,6 +610,7 @@ public:
 	// user messages
 	int _cdecl MsgFunc_Damage( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_GameMode( const char *pszName, int iSize, void *pbuf );
+	int _cdecl MsgFunc_Logo( const char *pszName,  int iSize, void *pbuf );
 	int _cdecl MsgFunc_RoomType( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ScreenFade( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ServerName( const char *pszName, int iSize, void *pbuf );
@@ -656,18 +623,14 @@ public:
 	int _cdecl MsgFunc_RainData( const char *pszName, int iSize, void *pbuf ); 
 	int _cdecl MsgFunc_HUDColor( const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_SetSky( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_CamData( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetBody( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetSkin( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_WeaponAnim( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_AddScreen( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_AddMirror( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_AddPortal( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_Particle( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_TempEntity( const char *pszName, int iSize, void *pbuf );
 
-	// user commansds
+	// user commands
 	void _cdecl UserCmd_ChangeLevel( void );
 
 	// Screen information

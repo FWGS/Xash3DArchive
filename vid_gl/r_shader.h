@@ -38,10 +38,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SHADER_NOMIP		3
 #define SHADER_GENERIC		4
 #define SHADER_DECAL		5
-#define SHADER_TEXTURE		6
-#define SHADER_FLARE		7
-#define SHADER_STUDIO		8
-#define SHADER_SPRITE		9
+#define SHADER_SPRITE		6
+#define SHADER_TEXTURE		7
+#define SHADER_FLARE		8
+#define SHADER_STUDIO		9
 #define SHADER_FARBOX		10
 #define SHADER_NEARBOX		11
 #define SHADER_PLANAR_SHADOW		12
@@ -342,6 +342,7 @@ void R_InitShaders( void );
 void R_ShutdownShaders( void );
 void R_ShaderList_f( void );
 void R_ShaderDump_f( void );
+ref_shader_t *R_FindShader( const char *name, int type, int ignoreType );
 ref_shader_t *R_LoadShader( const char *name, int type, bool forceDefault, int addFlags, int ignoreType );
 void Mod_FreeShader( const char *name ); // used for delete save menu previews only
 

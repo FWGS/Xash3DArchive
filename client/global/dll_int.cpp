@@ -6,7 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "ref_params.h"
-#include "studio_ref.h"
+#include "studio.h"
 #include "hud.h"
 #include "aurora.h"
 #include "r_particle.h"
@@ -165,18 +165,15 @@ int HUD_Redraw( float flTime, int state )
 {
 	switch( state )
 	{
-	case CL_LOADING:
-		DrawProgressBar();
-		break;
 	case CL_ACTIVE:
-		gHUD.Redraw( flTime );
-		break;
 	case CL_PAUSED:
 		gHUD.Redraw( flTime );
-		DrawPause();
+		break;
+	case CL_LOADING:
+		// called while map is loading
 		break;
 	case CL_CHANGELEVEL:
-		DrawImageBar( 100, "m_loading" );
+		// called once when changelevel in-action
 		break;
 	}
 	return 1;
@@ -342,6 +339,7 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 
 	// g-cont. moved here because we may needs apply null scale to skyportal
 	if( ent->v.scale == 0.0f && ent->v.skin >= 0 ) ent->v.scale = 1.0f;	
+	if( ent->v.scale >= 100.0f ) ent->v.scale = 1.0f;	// original HL issues
 	ent->v.pContainingEntity = ent;
 }
 

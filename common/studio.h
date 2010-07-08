@@ -1,9 +1,9 @@
 //=======================================================================
 //			Copyright XashXT Group 2008 ©
-//		       studio_ref.h - studio model reference
+//		       studio.h - studio model reference
 //=======================================================================
-#ifndef STUDIO_REF_H
-#define STUDIO_REF_H
+#ifndef STUDIO_H
+#define STUDIO_H
 
 /*
 ==============================================================================
@@ -140,7 +140,7 @@ typedef struct
 
 	int		numtransitions;	// animation node to animation node transition graph
 	int		transitionindex;
-} dstudiohdr_t;
+} studiohdr_t;
 
 // header for demand loaded sequence group data
 typedef struct 
@@ -150,7 +150,7 @@ typedef struct
 
 	char		name[64];
 	int		length;
-} dstudioseqhdr_t;
+} mstudioseqhdr_t;
 
 // bones
 typedef struct 
@@ -161,7 +161,7 @@ typedef struct
 	int		bonecontroller[6];	// bone controller index, -1 == none
 	float		value[6];		// default DoF values
 	float		scale[6];		// scale for delta DoF values
-} dstudiobone_t;
+} mstudiobone_t;
 
 // bone controllers
 typedef struct 
@@ -172,7 +172,7 @@ typedef struct
 	float		end;
 	int		rest;		// byte index value at rest
 	int		index;		// 0-3 user set controller, 4 mouth
-} dstudiobonecontroller_t;
+} mstudiobonecontroller_t;
 
 // intersection boxes
 typedef struct
@@ -181,7 +181,7 @@ typedef struct
 	int		group;		// intersection group
 	vec3_t		bbmin;		// bounding box
 	vec3_t		bbmax;		
-} dstudiobbox_t;
+} mstudiobbox_t;
 
 // demand loaded sequence groups
 typedef struct
@@ -190,7 +190,7 @@ typedef struct
 	char		name[64];		// file name
 	void		*cache;		// cache index pointer (only in memory)
 	int		data;		// hack for group 0
-} dstudioseqgroup_t;
+} mstudioseqgroup_t;
 
 // sequence descriptions
 typedef struct
@@ -236,7 +236,7 @@ typedef struct
 	int		nodeflags;	// transition rules
 	
 	int		nextseq;		// auto advancing sequences
-} dstudioseqdesc_t;
+} mstudioseqdesc_t;
 
 // events
 #include "studio_event.h"
@@ -247,7 +247,7 @@ typedef struct
 	vec3_t		org;		// pivot point
 	int		start;
 	int		end;
-} dstudiopivot_t;
+} mstudiopivot_t;
 
 // attachment
 typedef struct 
@@ -257,12 +257,12 @@ typedef struct
 	int		bone;
 	vec3_t		org;		// attachment point
 	vec3_t		vectors[3];
-} dstudioattachment_t;
+} mstudioattachment_t;
 
 typedef struct
 {
 	unsigned short	offset[6];
-} dstudioanim_t;
+} mstudioanim_t;
 
 // animation frames
 typedef union 
@@ -273,7 +273,7 @@ typedef union
 		byte	total;
 	} num;
 	short		value;
-} dstudioanimvalue_t;
+} mstudioanimvalue_t;
 
 
 // body part index
@@ -283,7 +283,7 @@ typedef struct
 	int		nummodels;
 	int		base;
 	int		modelindex;	// index into models array
-} dstudiobodyparts_t;
+} mstudiobodyparts_t;
 
 // skin info
 typedef struct
@@ -298,7 +298,7 @@ typedef struct
 		int	index;		// disk: offset at start of buffer
 		shader_t	shader;		// ref: shader number
 	};
-} dstudiotexture_t;
+} mstudiotexture_t;
 
 // skin families
 // short	index[skinfamilies][skinref]		// skingroup info
@@ -323,7 +323,7 @@ typedef struct
 
 	int		numgroups;	// deformation groups
 	int		groupindex;
-} dstudiomodel_t;
+} mstudiomodel_t;
 
 // meshes
 typedef struct 
@@ -333,11 +333,11 @@ typedef struct
 	int		skinref;
 	int		numnorms;		// per mesh normals
 	int		normindex;	// normal vec3_t
-} dstudiomesh_t;
+} mstudiomesh_t;
 
 typedef struct
 {
 	void		*data;
 } cache_user_t;
 
-#endif//STUDIO_REF_H
+#endif//STUDIO_H

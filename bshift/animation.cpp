@@ -18,7 +18,7 @@
 
 #include "extdll.h"
 #include "const.h"
-#include "studio_ref.h"
+#include "studio.h"
 #include "util.h"
 
 #include "activitymap.h"
@@ -33,15 +33,15 @@
 
 int ExtractBbox( void *pmodel, int sequence, Vector &mins, Vector &maxs )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return 0;
 
-	dstudioseqdesc_t	*pseqdesc;
+	mstudioseqdesc_t	*pseqdesc;
 
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 	
 	mins[0] = pseqdesc[ sequence ].bbmin[0];
 	mins[1] = pseqdesc[ sequence ].bbmin[1];
@@ -57,15 +57,15 @@ int ExtractBbox( void *pmodel, int sequence, Vector &mins, Vector &maxs )
 
 int LookupActivity( void *pmodel, entvars_t *pev, int activity )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return 0;
 
-	dstudioseqdesc_t	*pseqdesc;
+	mstudioseqdesc_t	*pseqdesc;
 
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 
 	int weighttotal = 0;
 	int seq = ACTIVITY_NOT_AVAILABLE;
@@ -85,15 +85,15 @@ int LookupActivity( void *pmodel, entvars_t *pev, int activity )
 
 int LookupActivityHeaviest( void *pmodel, entvars_t *pev, int activity )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if ( !pstudiohdr )
 		return 0;
 
-	dstudioseqdesc_t	*pseqdesc;
+	mstudioseqdesc_t	*pseqdesc;
 
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 
 	int weight = 0;
 	int seq = ACTIVITY_NOT_AVAILABLE;
@@ -114,9 +114,9 @@ int LookupActivityHeaviest( void *pmodel, entvars_t *pev, int activity )
 
 void GetEyePosition ( void *pmodel, Vector &vecEyePosition )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 
 	if ( !pstudiohdr )
 	{
@@ -129,15 +129,15 @@ void GetEyePosition ( void *pmodel, Vector &vecEyePosition )
 
 int LookupSequence( void *pmodel, const char *label )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return 0;
 
-	dstudioseqdesc_t	*pseqdesc;
+	mstudioseqdesc_t	*pseqdesc;
 
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 
 	for (int i = 0; i < pstudiohdr->numseq; i++)
 	{
@@ -162,17 +162,17 @@ void SequencePrecache( void *pmodel, const char *pSequenceName )
 	int index = LookupSequence( pmodel, pSequenceName );
 	if ( index >= 0 )
 	{
-		dstudiohdr_t *pstudiohdr;
+		studiohdr_t *pstudiohdr;
 	
-		pstudiohdr = (dstudiohdr_t *)pmodel;
+		pstudiohdr = (studiohdr_t *)pmodel;
 		if ( !pstudiohdr || index >= pstudiohdr->numseq )
 			return;
 
-		dstudioseqdesc_t	*pseqdesc;
-		dstudioevent_t		*pevent;
+		mstudioseqdesc_t	*pseqdesc;
+		mstudioevent_t		*pevent;
 
-		pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + index;
-		pevent = (dstudioevent_t *)((byte *)pstudiohdr + pseqdesc->eventindex);
+		pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + index;
+		pevent = (mstudioevent_t *)((byte *)pstudiohdr + pseqdesc->eventindex);
 
 		for (int i = 0; i < pseqdesc->numevents; i++)
 		{
@@ -199,13 +199,13 @@ void SequencePrecache( void *pmodel, const char *pSequenceName )
 
 void GetSequenceInfo( void *pmodel, entvars_t *pev, float *pflFrameRate, float *pflGroundSpeed )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return;
 
-	dstudioseqdesc_t	*pseqdesc;
+	mstudioseqdesc_t	*pseqdesc;
 
 	if (pev->sequence >= pstudiohdr->numseq)
 	{
@@ -214,7 +214,7 @@ void GetSequenceInfo( void *pmodel, entvars_t *pev, float *pflFrameRate, float *
 		return;
 	}
 
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
 
 	if (pseqdesc->numframes > 1)
 	{
@@ -232,14 +232,14 @@ void GetSequenceInfo( void *pmodel, entvars_t *pev, float *pflFrameRate, float *
 
 int GetSequenceFlags( void *pmodel, entvars_t *pev )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if ( !pstudiohdr || pev->sequence >= pstudiohdr->numseq )
 		return 0;
 
-	dstudioseqdesc_t	*pseqdesc;
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
+	mstudioseqdesc_t	*pseqdesc;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
 
 	return pseqdesc->flags;
 }
@@ -247,19 +247,19 @@ int GetSequenceFlags( void *pmodel, entvars_t *pev )
 
 int GetAnimationEvent( void *pmodel, entvars_t *pev, MonsterEvent_t *pMonsterEvent, float flStart, float flEnd, int index )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if ( !pstudiohdr || pev->sequence >= pstudiohdr->numseq || !pMonsterEvent )
 		return 0;
 
 	int events = 0;
 
-	dstudioseqdesc_t	*pseqdesc;
-	dstudioevent_t		*pevent;
+	mstudioseqdesc_t	*pseqdesc;
+	mstudioevent_t		*pevent;
 
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
-	pevent = (dstudioevent_t *)((byte *)pstudiohdr + pseqdesc->eventindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
+	pevent = (mstudioevent_t *)((byte *)pstudiohdr + pseqdesc->eventindex);
 
 	if (pseqdesc->numevents == 0 || index > pseqdesc->numevents )
 		return 0;
@@ -294,13 +294,13 @@ int GetAnimationEvent( void *pmodel, entvars_t *pev, MonsterEvent_t *pMonsterEve
 
 float SetController( void *pmodel, entvars_t *pev, int iController, float flValue )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return flValue;
 
-	dstudiobonecontroller_t	*pbonecontroller = (dstudiobonecontroller_t *)((byte *)pstudiohdr + pstudiohdr->bonecontrollerindex);
+	mstudiobonecontroller_t	*pbonecontroller = (mstudiobonecontroller_t *)((byte *)pstudiohdr + pstudiohdr->bonecontrollerindex);
 
 	// find first controller that matches the index
 	for (int i = 0; i < pstudiohdr->numbonecontrollers; i++, pbonecontroller++)
@@ -348,15 +348,15 @@ float SetController( void *pmodel, entvars_t *pev, int iController, float flValu
 
 float SetBlending( void *pmodel, entvars_t *pev, int iBlender, float flValue )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return flValue;
 
-	dstudioseqdesc_t	*pseqdesc;
+	mstudioseqdesc_t	*pseqdesc;
 
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
 
 	if (pseqdesc->blendtype[iBlender] == 0)
 		return flValue;
@@ -392,14 +392,14 @@ float SetBlending( void *pmodel, entvars_t *pev, int iBlender, float flValue )
 
 int FindTransition( void *pmodel, int iEndingAnim, int iGoalAnim, int *piDir )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return iGoalAnim;
 
-	dstudioseqdesc_t	*pseqdesc;
-	pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+	mstudioseqdesc_t	*pseqdesc;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 
 	// bail if we're going to or from a node 0
 	if (pseqdesc[iEndingAnim].entrynode == 0 || pseqdesc[iGoalAnim].entrynode == 0)
@@ -459,16 +459,16 @@ int FindTransition( void *pmodel, int iEndingAnim, int iGoalAnim, int *piDir )
 
 void SetBodygroup( void *pmodel, entvars_t *pev, int iGroup, int iValue )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return;
 
 	if (iGroup > pstudiohdr->numbodyparts)
 		return;
 
-	dstudiobodyparts_t *pbodypart = (dstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex) + iGroup;
+	mstudiobodyparts_t *pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex) + iGroup;
 
 	if (iValue >= pbodypart->nummodels)
 		return;
@@ -481,16 +481,16 @@ void SetBodygroup( void *pmodel, entvars_t *pev, int iGroup, int iValue )
 
 int GetBodygroup( void *pmodel, entvars_t *pev, int iGroup )
 {
-	dstudiohdr_t *pstudiohdr;
+	studiohdr_t *pstudiohdr;
 	
-	pstudiohdr = (dstudiohdr_t *)pmodel;
+	pstudiohdr = (studiohdr_t *)pmodel;
 	if (! pstudiohdr)
 		return 0;
 
 	if (iGroup > pstudiohdr->numbodyparts)
 		return 0;
 
-	dstudiobodyparts_t *pbodypart = (dstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex) + iGroup;
+	mstudiobodyparts_t *pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex) + iGroup;
 
 	if (pbodypart->nummodels <= 1)
 		return 0;

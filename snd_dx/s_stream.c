@@ -34,7 +34,7 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 
 	if( mainTrack )
 	{
-		com.snprintf( s_bgTrack.loopName, sizeof( s_bgTrack.loopName ), "media/%s", mainTrack );
+		com.strncpy( s_bgTrack.loopName, mainTrack, sizeof( s_bgTrack.loopName ));
 	}
 	else s_bgTrack.loopName[0] = 0;
 
@@ -128,7 +128,7 @@ void S_StreamBackgroundTrack( void )
 			{
 				FS_CloseStream( s_bgTrack.stream );
 				s_bgTrack.stream = NULL;
-				S_StartBackgroundTrack( s_bgTrack.loopName, s_bgTrack.loopName );
+				S_StartBackgroundTrack( s_bgTrack.loopName, NULL );
 				if( !s_bgTrack.stream ) return;
 			}
 			else

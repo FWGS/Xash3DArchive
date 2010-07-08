@@ -308,7 +308,6 @@ bool Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize )
 	ov_decode_t	ov_decode;
 	ov_callbacks_t	ov_callbacks = { ovcm_read, ovcm_seek, ovc_close, ovcm_tell };
 	long		done = 0, ret;
-	const char	*comm;
 	int		dummy;
 
 	// load the file
@@ -361,14 +360,41 @@ bool Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize )
 
 	if( vc )
 	{
-		comm = vorbis_comment_query( vc, "LOOP_START", 0 );
-		if( comm ) 
+		const char	*start, *end, *looplength;
+
+		start = vorbis_comment_query( vc, "LOOP_START", 0 ); // DarkPlaces, and some Japanese app
+		if( start )
 		{
-			// FXIME: implement
-			Msg( "ogg 'cue' %d\n", com.atoi(comm) );
-			//sound.loopstart = bound( 0, com.atoi( comm ), sound.samples );
- 		}
- 	}
+			end = vorbis_comment_query( vc, "LOOP_END", 0 );
+			if( !end ) looplength = vorbis_comment_query( vc, "LOOP_LENGTH", 0 );
+		}
+		else
+		{
+			// RPG Maker VX
+			start = vorbis_comment_query( vc, "LOOPSTART", 0 );
+			if( start )
+			{
+				looplength = vorbis_comment_query( vc, "LOOPLENGTH", 0 );
+				if( !looplength ) end = vorbis_comment_query( vc, "LOOPEND", 0 );
+			}
+			else
+			{
+				// Sonic Robo Blast 2
+				start = vorbis_comment_query( vc, "LOOPPOINT", 0 );
+			}
+		}
+
+		if( start )
+		{
+			sound.loopstart = (uint)bound( 0, com.atof( start ), sound.samples );
+			if( end ) sound.samples = (uint)bound( 0, com.atof( end ), sound.samples );
+			else if( looplength )
+			{
+				size_t	length = com.atof( looplength );
+				sound.samples = (uint)bound( 0, sound.loopstart + length, sound.samples );
+			}
+		}
+	}
 
 	// close file
 	ov_clear( &vf );

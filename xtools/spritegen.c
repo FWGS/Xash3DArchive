@@ -110,12 +110,12 @@ void WriteSprite( file_t *f )
 				dspriteinterval_t	temp;
 
 				totinterval += frames[groupframe+1+j].interval;
-				temp.interval = LittleFloat(totinterval);
-				FS_Write(f, &temp, sizeof(temp));
+				temp.interval = LittleFloat( totinterval );
+				FS_Write( f, &temp, sizeof( temp ));
 			}
 			for( j = 0; j < numframes; j++ )
 			{
-				WriteFrame(f, curframe);
+				WriteFrame( f, curframe );
 				curframe++;
 			}
 		}

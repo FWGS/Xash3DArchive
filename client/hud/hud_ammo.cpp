@@ -25,7 +25,7 @@
 
 WEAPON *gpActiveSel;	// NULL means off, 1 means just the menu bar, otherwise
 WEAPON *gpLastSel;		// Last weapon menu selection 
-client_sprite_t *GetSpriteList( client_sprite_t *pList, const char *psz, int iCount );
+client_sprite_t *GetSpriteList( client_sprite_t *pList, const char *psz, int iRes, int iCount );
 WeaponsResource gWR;
 int g_weaponselect = 0;
 
@@ -60,10 +60,17 @@ int WeaponsResource :: HasAmmo( WEAPON *p )
 
 void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 {
-	if( !pWeapon ) return;
+	int i, iRes;
 
-	int i;
-	char sz[256];
+	if (ActualWidth < 640)
+		iRes = 320;
+	else
+		iRes = 640;
+
+	char sz[128];
+
+	if ( !pWeapon )
+		return;
 
 	memset( &pWeapon->rcActive, 0, sizeof( wrect_t ));
 	memset( &pWeapon->rcInactive, 0, sizeof( wrect_t ));
@@ -74,33 +81,36 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 	pWeapon->hAmmo = 0;
 	pWeapon->hAmmo2 = 0;
 	
-	sprintf( sz, "scripts/items/%s.txt", pWeapon->szName );
+	sprintf( sz, "sprites/%s.txt", pWeapon->szName );
 	client_sprite_t *pList = SPR_GetList( sz, &i );
 
 	if( !pList ) return;
 
 	client_sprite_t *p;
 	
-	p = GetSpriteList( pList, "crosshair", i );
+	p = GetSpriteList( pList, "crosshair", iRes, i );
 	if( p )
 	{
-		pWeapon->hCrosshair = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hCrosshair = SPR_Load(sz);
 		pWeapon->rcCrosshair = p->rc;
 	}
 	else pWeapon->hCrosshair = 0;
 
-	p = GetSpriteList( pList, "autoaim", i );
+	p = GetSpriteList( pList, "autoaim", iRes, i );
 	if( p )
 	{
-		pWeapon->hAutoaim = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hAutoaim = SPR_Load(sz);
 		pWeapon->rcAutoaim = p->rc;
 	}
 	else pWeapon->hAutoaim = 0;
 
-	p = GetSpriteList( pList, "zoom", i );
+	p = GetSpriteList( pList, "zoom", iRes, i );
 	if( p )
 	{
-		pWeapon->hZoomedCrosshair = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hZoomedCrosshair = SPR_Load(sz);
 		pWeapon->rcZoomedCrosshair = p->rc;
 	}
 	else
@@ -109,10 +119,11 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 		pWeapon->rcZoomedCrosshair = pWeapon->rcCrosshair;
 	}
 
-	p = GetSpriteList( pList, "zoom_autoaim", i );
+	p = GetSpriteList( pList, "zoom_autoaim", iRes, i );
 	if( p )
 	{
-		pWeapon->hZoomedAutoaim = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hZoomedAutoaim = SPR_Load(sz);
 		pWeapon->rcZoomedAutoaim = p->rc;
 	}
 	else
@@ -121,10 +132,11 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 		pWeapon->rcZoomedAutoaim = pWeapon->rcZoomedCrosshair;
 	}
 
-	p = GetSpriteList( pList, "weapon", i );
+	p = GetSpriteList( pList, "weapon", iRes, i );
 	if( p )
 	{
-		pWeapon->hInactive = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hInactive = SPR_Load(sz);
 		pWeapon->rcInactive = p->rc;
 		gHR.iHistoryGap = max( gHR.iHistoryGap, pWeapon->rcActive.bottom - pWeapon->rcActive.top );
 	}
@@ -135,10 +147,11 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 		gHR.iHistoryGap = max( gHR.iHistoryGap, pWeapon->rcActive.bottom - pWeapon->rcActive.top );
 	}
 
-	p = GetSpriteList( pList, "weapon_s", i );
+	p = GetSpriteList( pList, "weapon_s", iRes, i );
 	if( p )
 	{
-		pWeapon->hActive = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hActive = SPR_Load(sz);
 		pWeapon->rcActive = p->rc;
 	}
 	else
@@ -147,24 +160,28 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 		pWeapon->rcActive = gHUD.GetSpriteRect( gHUD.m_HUD_error );
 	}
 
-	p = GetSpriteList( pList, "ammo", i );
+	p = GetSpriteList( pList, "ammo", iRes, i );
 	if( p )
 	{
-		pWeapon->hAmmo = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hAmmo = SPR_Load(sz);
 		pWeapon->rcAmmo = p->rc;
 		gHR.iHistoryGap = max( gHR.iHistoryGap, pWeapon->rcActive.bottom - pWeapon->rcActive.top );
 	}
 	else pWeapon->hAmmo = 0;
 
-	p = GetSpriteList( pList, "ammo2", i );
+	p = GetSpriteList( pList, "ammo2", iRes, i );
 	if( p )
 	{
-		pWeapon->hAmmo2 = SPR_Load( p->szSprite );
+		sprintf(sz, "sprites/%s.spr", p->szSprite);
+		pWeapon->hAmmo2 = SPR_Load(sz);
 		pWeapon->rcAmmo2 = p->rc;
 		gHR.iHistoryGap = max( gHR.iHistoryGap, pWeapon->rcActive.bottom - pWeapon->rcActive.top );
 	}
 	else pWeapon->hAmmo2 = 0;
 
+	// in original Half-Life this was a leak
+	FREE( pList );
 }
 
 // Returns the first weapon for a given slot.
@@ -1264,7 +1281,7 @@ sprite name 'psz' in the given sprite list 'pList'
 iCount is the number of items in the pList
 =================================
 */
-client_sprite_t *GetSpriteList( client_sprite_t *pList, const char *psz, int iCount )
+client_sprite_t *GetSpriteList( client_sprite_t *pList, const char *psz, int iRes, int iCount )
 {
 	if( !pList ) return NULL;
 
@@ -1273,7 +1290,7 @@ client_sprite_t *GetSpriteList( client_sprite_t *pList, const char *psz, int iCo
 
 	while( i-- )
 	{
-		if( !strcmp( psz, p->szName ))
+		if ((!strcmp(psz, p->szName)) && (p->iRes == iRes))
 			return p;
 		p++;
 	}

@@ -216,145 +216,10 @@ void UTIL_TraceModel( const Vector &vecStart, const Vector &vecEnd, int hullNumb
 /*
 ==============================================================================
 
-		HUD-SPRITES PARSING
-
-==============================================================================
-*/
-/*
-====================
-ParseHudSprite
-
-====================
-*/
-void ParseHudSprite( const char **pfile, char *psz, client_sprite_t *result )
-{
-	int x = 0, y = 0, width = 0, height = 0;
-	client_sprite_t p;
-	int section = 0;
-	char *token;
-		
-	memset( &p, 0, sizeof( client_sprite_t ));
-          
-	while(( token = COM_ParseToken( pfile )) != NULL )
-	{
-		if( !stricmp( token, psz ))
-		{
-			token = COM_ParseToken( pfile );
-			if( !stricmp( token, "{" )) section = 1;
-		}
-		if( section ) // parse section
-		{
-			if( !stricmp( token, "}" )) break; // end section
-			
-			if( !stricmp( token, "file" )) 
-			{                                          
-				token = COM_ParseToken( pfile );
-				strncpy( p.szSprite, token, 64 );
-
-				// fill structure at default
-				p.hSprite = SPR_Load( p.szSprite );
-				width = SPR_Width( p.hSprite, 0 );
-				height = SPR_Height( p.hSprite, 0 );
-				x = y = 0;
-			}
-			else if ( !stricmp( token, "name" )) 
-			{                                          
-				token = COM_ParseToken( pfile );
-				strncpy( p.szName, token, 64 );
-			}
-			else if ( !stricmp( token, "x" )) 
-			{                                          
-				token = COM_ParseToken( pfile );
-				x = atoi( token );
-			}
-			else if ( !stricmp( token, "y" )) 
-			{                                          
-				token = COM_ParseToken( pfile );
-				y = atoi( token );
-			}
-			else if ( !stricmp( token, "width" )) 
-			{                                          
-				token = COM_ParseToken( pfile );
-				width = atoi( token );
-			}
-			else if ( !stricmp( token, "height" )) 
-			{                                          
-				token = COM_ParseToken( pfile );
-				height = atoi( token );
-			}
-		}
-	}
-
-	if( !section ) return; // data not found
-
-	// calculate sprite position
-	p.rc.left = x;
-	p.rc.right = x + width; 
-	p.rc.top = y;
-	p.rc.bottom = y + height;
-
-	memcpy( result, &p, sizeof( client_sprite_t ));
-}
-
-client_sprite_t *SPR_GetList( const char *psz, int *piCount )
-{
-	char *pfile = (char *)LOAD_FILE( psz, NULL );
-	int iSprCount = 0;
-
-	if( !pfile )
-	{
-		*piCount = iSprCount;
-		return NULL;
-	}
-
-	char *token;
-	const char *plist = pfile;
-	int depth = 0;
-
-	while(( token = COM_ParseToken( &plist )) != NULL ) // calculate count of sprites
-	{
-		if( !stricmp( token, "{" )) depth++;
-		else if( !stricmp( token, "}" )) depth--;
-		else if( depth == 0 && !strcmp( token, "hudsprite" ))
-			iSprCount++;
-	}
-
-	client_sprite_t *phud;
-	plist = pfile;
-
-	phud = new client_sprite_t[iSprCount];
-
-	if( depth != 0 ) ALERT( at_console, "%s EOF without closing brace\n", psz );
-
-	for( int i = 0; i < iSprCount; i++ ) //parse structures
-	{
-		ParseHudSprite( &plist, "hudsprite", &phud[i] );
-	}
-
-	if( !iSprCount ) ALERT( at_console, "SPR_GetList: %s doesn't have sprites\n", psz );
-	FREE_FILE( pfile );
-          
-          *piCount = iSprCount;
-	return phud;
-}
-
-/*
-==============================================================================
-
 		DRAW HELPERS
 
 ==============================================================================
 */
-void Draw_VidInit( void )
-{
-}
-
-void DrawPause( void )
-{
-	// pause image
-	DrawImageBar( 100, "m_pause" ); // HACKHACK
-}
-
 void DrawImageBar( float percent, const char *szSpriteName )
 {
 	int m_loading = gHUD.GetSpriteIndex( szSpriteName );
@@ -381,18 +246,6 @@ void DrawImageBar( float percent, const char *szSpriteName, int x, int y )
 
 	SPR_Set( hLoading, 255, 160, 0 );
 	SPR_DrawAdditive( 0, x, y, &rcBar );	// progress bar
-}
-
-//
-// 27/12/08 moved here from cl_view.c
-//
-void DrawProgressBar( void )
-{
-	if( !gHUD.m_iDrawPlaque ) return;
-	DrawImageBar( CVAR_GET_FLOAT( "scr_loading" ), "m_loading" );
-
-	if( !CVAR_GET_FLOAT( "scr_download" )) return;
-	DrawImageBar( CVAR_GET_FLOAT( "scr_download" ), "m_download", (ScreenWidth - 128)>>1, ScreenHeight - 60 );
 }
 
 void AngleMatrix( const vec3_t angles, float (*matrix)[4] )
@@ -592,7 +445,7 @@ void RotatePointAroundVector( Vector &dst, const Vector &dir, const Vector &poin
 	float	angle, c, s, d;
 	Vector	vr, vu, vf;
 
-	angle = degrees * (M_PI / 180.f);
+	angle = DEG2RAD( degrees );
 	s = sin( angle );
 	c = cos( angle );
 
@@ -753,6 +606,21 @@ const char *UTIL_FileExtension( const char *in )
 	if( dot == NULL || (separator && ( dot < separator )))
 		return "";
 	return dot + 1;
+}
+
+HSPRITE LoadSprite( const char *pszName )
+{
+	int i;
+	char sz[256]; 
+
+	if ( ActualWidth < 640 )
+		i = 320;
+	else
+		i = 640;
+
+	sprintf( sz, pszName, i );
+
+	return SPR_Load( sz );
 }
 
 /*

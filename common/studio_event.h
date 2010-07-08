@@ -5,12 +5,12 @@
 #ifndef STUDIO_EVENT_H
 #define STUDIO_EVENT_H
 
-typedef struct dstudioevent_s
+typedef struct mstudioevent_s
 {
 	int 		frame;
 	int		event;
 	int		type;
 	char		options[64];
-} dstudioevent_t;
+} mstudioevent_t;
 
 #endif//STUDIO_EVENT_H

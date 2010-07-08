@@ -56,7 +56,7 @@ CBaseEntity
 
 #include "saverestore.h"
 #include "schedule.h"
-#include "studio_ref.h"
+#include "studio.h"
 
 #ifndef MONSTEREVENT_H
 #include "monsterevent.h"
@@ -251,16 +251,16 @@ public:
 
 	void UTIL_AutoSetSize( void )//automatically set collision box
 	{
-		dstudiohdr_t *pstudiohdr;
-		pstudiohdr = (dstudiohdr_t*)GET_MODEL_PTR( ENT(pev) );
+		studiohdr_t *pstudiohdr;
+		pstudiohdr = (studiohdr_t*)GET_MODEL_PTR( ENT(pev) );
 
 		if (pstudiohdr == NULL)
 		{
 			ALERT(at_console,"Unable to fetch model pointer!\n");
 			return;
 		}
-		dstudioseqdesc_t    *pseqdesc;
-		pseqdesc = (dstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+		mstudioseqdesc_t    *pseqdesc;
+		pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 		UTIL_SetSize(pev,pseqdesc[ pev->sequence ].bbmin,pseqdesc[ pev->sequence ].bbmax);
 	}
 

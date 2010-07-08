@@ -10,7 +10,7 @@ backup.lst
 backup.bat
 release.bat
 launchers.bat
-todo.log
+change.log
 
 baserc\
 bshift\
@@ -42,7 +42,6 @@ server\game\
 server\global\
 server\monsters\
 spirit\
-snd_al\
 snd_dx\
 vid_gl\
 xtools\

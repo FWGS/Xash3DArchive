@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 glconfig_t	glConfig;
 glstate_t		glState;
 byte		*r_temppool;
-byte		*r_framebuffer;
 
 cvar_t *r_norefresh;
 cvar_t *r_drawentities;
@@ -638,7 +637,6 @@ void GL_InitBackend( void )
 
 void GL_ShutdownBackend( void )
 {
-	if( r_framebuffer ) Mem_Free( r_framebuffer );
 	GL_RemoveCommands();
 
 	Mem_FreePool( &r_temppool );
@@ -860,7 +858,6 @@ void GL_InitExtensions( void )
 
 	// initialize gl extensions
 	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, NULL, R_OPENGL_110 );
-	if( !r_framebuffer ) r_framebuffer = Mem_Alloc( r_temppool, r_width->integer * r_height->integer * 4 );
 
 	// get our various GL strings
 	glConfig.vendor_string = pglGetString( GL_VENDOR );
@@ -1121,6 +1118,7 @@ void R_NewMap( void )
 	R_StudioFreeAllExtradata();	// free boneposes
 	R_ClearDecals();		// purge all decals
 
+	Mem_EmptyPool( r_temppool );	// release all temp data
 	GL_SetDefaultTexState ();
 	Mem_Set( &RI, 0, sizeof( refinst_t ));	
 	r_worldbrushmodel = NULL;	// during loading process
