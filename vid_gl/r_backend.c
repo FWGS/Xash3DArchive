@@ -457,6 +457,10 @@ void R_BackendEndFrame( void )
 					com.strncat( r_speeds_msg, r_debug_surface->fog->shader->name, sizeof( r_speeds_msg ) );
 				}
 			}
+			else if( r_debug_hitbox )
+			{
+				com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%s", r_debug_hitbox );
+			}
 			break;
 		case 5:
 			com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ),
@@ -709,7 +713,7 @@ void R_DeformVertices( void )
 					VectorCopy( RI.vup, v_up );
 				}
 
-				radius = RI.currententity->scale;
+				radius = RI.currententity ? RI.currententity->scale : 0.0f;
 				if( radius && radius != 1.0f )
 				{
 					radius = 1.0f / radius;
@@ -1274,6 +1278,11 @@ R_ShaderpassTex
 */
 static _inline texture_t *R_ShaderpassTex( const ref_stage_t *pass, int unit )
 {
+	if( pass->flags & SHADERSTAGE_RENDERMODE && tr.iRenderMode == kRenderTransColor )
+	{
+		return tr.whiteTexture;
+	}
+
 	if( pass->flags & SHADERSTAGE_ANGLEDMAP )
 	{
 		float	yaw = RI.currententity->angles[1] - 45;	// angled bias
@@ -1391,8 +1400,12 @@ static void R_ShaderpassRenderMode( ref_stage_t *pass )
 			pass->rgbGen.type = RGBGEN_VERTEX;
 			pass->alphaGen.type = ALPHAGEN_VERTEX;
 			break;
-		case mod_world:
 		case mod_brush:
+			pass->glState = (GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_SRC_COLOR);
+			pass->flags = SHADERSTAGE_BLEND_MODULATE;
+			pass->rgbGen.type = RGBGEN_ENTITY;
+			pass->alphaGen.type = ALPHAGEN_ENTITY;
+			break;
 		case mod_studio:
 		case mod_sprite:
 			break;
@@ -1408,7 +1421,7 @@ static void R_ShaderpassRenderMode( ref_stage_t *pass )
 			pass->alphaGen.type = ALPHAGEN_VERTEX;
 			break;
 		case mod_brush:
-			pass->glState = (GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DEPTHWRITE);
+			pass->glState = (GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA);
 			pass->flags = SHADERSTAGE_BLEND_MODULATE;
 			pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;
 			pass->alphaGen.type = ALPHAGEN_ENTITY;
@@ -1440,7 +1453,7 @@ static void R_ShaderpassRenderMode( ref_stage_t *pass )
 		case mod_studio:
 			break;
 		case mod_sprite:
-			pass->glState = (GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE|GLSTATE_NO_DEPTH_TEST);
+			pass->glState = (GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE);
 			pass->rgbGen.type = RGBGEN_VERTEX;
 			pass->alphaGen.type = ALPHAGEN_VERTEX;
 			break;
@@ -2675,6 +2688,7 @@ bool R_NeedLightmapPass( msurface_t *surf )
 		{
 		case kRenderGlow:
 		case kRenderTransAdd:
+		case kRenderTransColor:
 		case kRenderTransTexture:
 			return false; // no lightmaps in 'add' mode
 		}

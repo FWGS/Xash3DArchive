@@ -12,6 +12,8 @@
 #include "effects_api.h"
 #include "const.h"
 
+#define DIST_EPSILON	(0.03125)
+
 /*
 =============================================================
 
@@ -43,6 +45,8 @@ mstudiomodel_t	*m_pSubModel;
 mstudiobodyparts_t	*m_pBodyPart;
 studiohdr_t	*m_pStudioHeader;
 studiohdr_t	*m_pTextureHeader;
+cplane_t		studio_planes[12];
+trace_t		studio_trace;
 vec3_t		studio_mins, studio_maxs;
 float		studio_radius;
 
@@ -75,6 +79,8 @@ typedef struct studiovars_s
 	int		numbones;
 } studiovars_t;
 
+void R_StudioInitBoxHull( void );
+
 /*
 ====================
 R_StudioInit
@@ -96,6 +102,8 @@ void R_StudioInit( void )
 		r_entities[i].mempool = NULL;
 		r_entities[i].extradata = NULL;
 	}
+
+	R_StudioInitBoxHull();
 }
 
 /*
@@ -388,6 +396,210 @@ static void R_StudioSetupRender( ref_entity_t *e, ref_model_t *mod )
 	{
 		m_fDoInterp = false;
 	}
+}
+
+void R_StudioInitBoxHull( void )
+{
+	int	i, side;
+	cplane_t	*p;
+
+	for( i = 0; i < 6; i++ )
+	{
+		side = i & 1;
+
+		// planes
+		p = &studio_planes[i*2];
+		p->type = i>>1;
+		p->signbits = 0;
+		VectorClear( p->normal );
+		p->normal[i>>1] = 1.0f;
+
+		p = &studio_planes[i*2+1];
+		p->type = 3 + (i>>1);
+		p->signbits = 0;
+		VectorClear( p->normal );
+		p->normal[i>>1] = -1;
+
+		p->signbits = SignbitsForPlane( p->normal );
+	}    
+}
+
+void R_StudioBoxHullFromBounds( const vec3_t mins, const vec3_t maxs ) 
+{
+	studio_planes[0].dist = maxs[0];
+	studio_planes[1].dist = -maxs[0];
+	studio_planes[2].dist = mins[0];
+	studio_planes[3].dist = -mins[0];
+	studio_planes[4].dist = maxs[1];
+	studio_planes[5].dist = -maxs[1];
+	studio_planes[6].dist = mins[1];
+	studio_planes[7].dist = -mins[1];
+	studio_planes[8].dist = maxs[2];
+	studio_planes[9].dist = -maxs[2];
+	studio_planes[10].dist = mins[2];
+	studio_planes[11].dist = -mins[2];
+}
+
+bool R_StudioTraceBox( vec3_t start, vec3_t end ) 
+{
+	int	i;
+	cplane_t	*plane, *clipplane;
+	float	enterFrac, leaveFrac;
+	bool	getout, startout;
+	float	d1, d2;
+	float	f;
+
+	enterFrac = -1.0;
+	leaveFrac = 1.0;
+	clipplane = NULL;
+
+	getout = false;
+	startout = false;
+
+	// compare the trace against all planes of the brush
+	// find the latest time the trace crosses a plane towards the interior
+	// and the earliest time the trace crosses a plane towards the exterior
+	for( i = 0; i < 6; i++ ) 
+	{
+		plane = studio_planes + i * 2 + (i & 1);
+
+		d1 = DotProduct( start, plane->normal ) - plane->dist;
+		d2 = DotProduct( end, plane->normal ) - plane->dist;
+
+		if( d2 > 0.0f ) getout = true; // endpoint is not in solid
+		if( d1 > 0.0f ) startout = true;
+
+		// if completely in front of face, no intersection with the entire brush
+		if( d1 > 0 && ( d2 >= DIST_EPSILON || d2 >= d1 ))
+			return false;
+
+		// if it doesn't cross the plane, the plane isn't relevent
+		if( d1 <= 0 && d2 <= 0 )
+			continue;
+
+		// crosses face
+		if( d1 > d2 ) 
+		{
+			// enter
+			f = ( d1 - DIST_EPSILON ) / ( d1 - d2 );
+			if( f < 0.0f ) f = 0.0f;
+
+			if( f > enterFrac ) 
+			{
+				enterFrac = f;
+				clipplane = plane;
+			}
+		} 
+		else 
+		{
+			// leave
+			f = ( d1 + DIST_EPSILON ) / ( d1 - d2 );
+			if( f > 1.0f ) f = 1.0f;
+
+			if( f < leaveFrac )
+			{
+				leaveFrac = f;
+			}
+		}
+	}
+
+	// all planes have been checked, and the trace was not
+	// completely outside the brush
+	if( !startout ) 
+	{
+		// original point was inside brush
+		if( !getout ) studio_trace.flFraction = 0.0f;
+		return true;
+	}
+    
+	if( enterFrac < leaveFrac ) 
+	{
+		if( enterFrac > -1 && enterFrac < studio_trace.flFraction ) 
+		{
+			if( enterFrac < 0.0f )
+				enterFrac = 0.0f;
+
+			studio_trace.flFraction = enterFrac;
+            		VectorCopy( clipplane->normal, studio_trace.vecPlaneNormal );
+            		studio_trace.flPlaneDist = clipplane->dist;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, trace_t *tr )
+{
+	matrix4x4	m;
+	vec3_t	start_l, end_l;
+	int	i, outBone;
+
+	R_StudioSetupRender( e, e->model );
+
+	if( !m_pStudioHeader->numhitboxes )
+	{
+		tr->iHitgroup = -1;
+		return false;
+	}
+
+	// NOTE: we don't need to setup bones because
+	// it's already setup by rendering code
+	Mem_Set( &studio_trace, 0, sizeof( trace_t ));
+	VectorCopy( end, studio_trace.vecEndPos );
+	studio_trace.fAllSolid = true;
+	studio_trace.flFraction = 1.0f;
+	studio_trace.iHitgroup = -1;
+	outBone = -1;
+
+	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
+	{
+		mstudiobbox_t	*phitbox = (mstudiobbox_t *)((byte*)m_pStudioHeader + m_pStudioHeader->hitboxindex) + i;
+
+		Matrix4x4_Invert_Simple( m, m_pbonestransform[phitbox->bone] );
+		Matrix4x4_VectorTransform( m, start, start_l );
+		Matrix4x4_VectorTransform( m, end, end_l );
+
+		R_StudioBoxHullFromBounds( phitbox->bbmin, phitbox->bbmax );
+
+		if( R_StudioTraceBox( start_l, end_l ))
+		{
+			outBone = phitbox->bone;
+			studio_trace.iHitgroup = i;	// not a hitgroup!
+		}
+
+		if( studio_trace.flFraction == 0.0f )
+			break;
+	}
+
+	if( studio_trace.flFraction > 0.0f )
+		studio_trace.fAllSolid = false;
+
+	// all hitboxes were swept, get trace result
+	if( outBone >= 0 )
+	{
+		tr->flFraction = studio_trace.flFraction;
+		tr->iHitgroup = studio_trace.iHitgroup;
+		tr->fAllSolid = studio_trace.fAllSolid;
+		tr->pHit = (edict_t *)e;
+
+		Matrix4x4_VectorRotate( m_pbonestransform[outBone], studio_trace.vecEndPos, tr->vecEndPos );
+		if( tr->flFraction == 1.0f )
+		{
+			VectorCopy( end, tr->vecEndPos );
+		}
+		else
+		{
+			mstudiobone_t *pbone = (mstudiobone_t *)((byte*)m_pStudioHeader + m_pStudioHeader->boneindex) + outBone;
+
+//			MsgDev( D_INFO, "Bone name %s\n", pbone->name ); // debug
+			VectorLerp( start, tr->flFraction, end, tr->vecEndPos );
+			r_debug_hitbox = pbone->name;
+		}
+		tr->flPlaneDist = DotProduct( tr->vecEndPos, tr->vecPlaneNormal );
+
+		return true;
+	}
+	return false;
 }
 
 // extract texture filename from modelname
@@ -1186,7 +1398,7 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 		m_protationmatrix[2][1] = -m_protationmatrix[2][1];
 	}
 
-	// save matrix for gl_transaform, use identity matrix for bones
+	// save matrix for gl_transform, use identity matrix for bones
 	m_protationmatrix = matrix4x4_identity;
 }
 
@@ -1852,17 +2064,23 @@ void R_StudioDrawBones( void )
 	pglPointSize( 1.0f );
 }
 
-void R_StudioDrawHitboxes( void )
+void R_StudioDrawHitboxes( int iHitbox )
 {
 	int	i, j;
 
-	pglColor4f( 1, 0, 0, 0.5f );
+	if( iHitbox >= 0 )
+		pglColor4f( 1, 1, 1, 1 );
+	else pglColor4f( 1, 0, 0, 1 );
+
 	pglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
 	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
 	{
 		mstudiobbox_t	*pbboxes = (mstudiobbox_t *)((byte *)m_pStudioHeader + m_pStudioHeader->hitboxindex);
 		vec3_t		v[8], v2[8], bbmin, bbmax;
+
+		if( iHitbox >= 0 && iHitbox != i )
+			continue;
 
 		VectorCopy( pbboxes[i].bbmin, bbmin );
 		VectorCopy( pbboxes[i].bbmax, bbmax );
@@ -2013,11 +2231,26 @@ void R_StudioDrawDebug( void )
 	switch( r_drawentities->integer )
 	{
 	case 2: R_StudioDrawBones(); break;
-	case 3: R_StudioDrawHitboxes(); break;
+	case 3: R_StudioDrawHitboxes(-1 ); break;
 	case 4: R_StudioDrawAttachments(); break;
 	case 5: R_StudioDrawHulls(); break;
 	}
 }
+
+/*
+====================
+StudioDrawHitbox
+
+render a selected hitbox
+====================
+*/
+void R_StudioDrawHitbox( ref_entity_t *e, int iHitbox )
+{
+	R_StudioSetupRender( e, e->model );
+	R_StudioSetUpTransform( e, true );
+	R_StudioDrawHitboxes( iHitbox );
+}
+
 
 /*
 ====================

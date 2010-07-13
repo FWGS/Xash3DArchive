@@ -894,7 +894,7 @@ void R_AddSurfaceDecals( msurface_t *surf )
 		if( mb )
 		{
 			mb->sortkey |= (( surf->superLightStyle+1 ) << 10 );
-			mb->placeTime = plist->fadeStartTime;	// FIXME: doesn't work
+			mb->placeTime = (uint)plist->fadeStartTime * 1000;	// FIXME: doesn't work
 		}
 		plist = pnext;
 	}

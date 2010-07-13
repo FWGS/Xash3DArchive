@@ -9,6 +9,7 @@
 #include "studio.h"
 #include "hud.h"
 #include "aurora.h"
+#include "effects_api.h"
 #include "r_particle.h"
 #include "r_tempents.h"
 #include "r_beams.h"
@@ -55,6 +56,7 @@ static HUD_FUNCTIONS gFunctionTable =
 	IN_MouseEvent,
 	IN_KeyEvent,
 	VGui_ConsolePrint,
+	HUD_ParticleEffect
 };
 
 //=======================================================================
@@ -339,7 +341,16 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 
 	// g-cont. moved here because we may needs apply null scale to skyportal
 	if( ent->v.scale == 0.0f && ent->v.skin >= 0 ) ent->v.scale = 1.0f;	
-	if( ent->v.scale >= 100.0f ) ent->v.scale = 1.0f;	// original HL issues
+
+	switch( state->ed_type )
+	{
+	case ED_MOVER:
+	case ED_NORMAL:
+	case ED_BSPBRUSH:
+		if( ent->v.scale >= 100.0f )
+			ent->v.scale = 1.0f;	// original HL issues
+		break;
+	}
 	ent->v.pContainingEntity = ent;
 }
 
@@ -400,7 +411,7 @@ int HUD_AddVisibleEntity( edict_t *pEnt, int ed_type )
 
 	if ( pEnt->v.effects & EF_BRIGHTFIELD )
 	{
-		g_engfuncs.pEfxAPI->R_EntityParticles( pEnt );
+		g_pParticles->EntityParticles( pEnt );
 	}
 
 	// add in muzzleflash effect
@@ -468,6 +479,11 @@ void HUD_StartFrame( void )
 {
 	// clear list of server beams after each frame
 	g_pViewRenderBeams->ClearServerBeams( );
+}
+
+void HUD_ParticleEffect( const float *org, const float *dir, int color, int count )
+{
+	g_pParticles->ParticleEffect( org, dir, color, count );
 }
 
 void HUD_Frame( double time )

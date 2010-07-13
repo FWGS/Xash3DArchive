@@ -119,11 +119,14 @@ void V_RenderView( void )
 {
 	if( !cl.video_prepped ) return; // still loading
 
-	// update cl_globalvars
-	clgame.globals->time = cl.time; // clamped
-	clgame.globals->frametime = cl.time - cl.oldtime; // used by input code
+	if( !cl.refdef.paused )
+	{
+		clgame.globals->time = cl.time; // clamped
+		clgame.globals->frametime = cl.time - cl.oldtime; // used by input code
+	}
+	else clgame.globals->frametime = 0.0f;	// pause
 
-	if( cl.frame.valid && (cl.force_refdef || !cl.refdef.paused ))
+	if( cl.frame.valid && ( cl.force_refdef || !cl.refdef.paused ))
 	{
 		cl.force_refdef = false;
 

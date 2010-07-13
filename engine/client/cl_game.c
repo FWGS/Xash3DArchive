@@ -581,6 +581,7 @@ void CL_DrawLoading( float percent )
 	
 	MakeRGBA( color, 208, 152, 0, 255 );
 	re->SetColor( color );
+	re->SetParms( cls.loadingBar, kRenderTransTexture, 0 );
 	re->DrawStretchPic( x, y, width, height, 0, 0, s2, 1, cls.loadingBar );
 	re->SetColor( NULL );
 }
@@ -1098,7 +1099,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	}
 
 	if( index < numSprites )
-		MsgDev( D_WARN, "SPR_GetList: unexpected end of %s\n", psz );
+		MsgDev( D_WARN, "SPR_GetList: unexpected end of %s (%i should be %i)\n", psz, index, numSprites );
 
 	Com_CloseScript( script );
 
@@ -1750,8 +1751,6 @@ static void pfnTraceModel( const float *v1, const float *v2, edict_t *pent, Trac
 
 static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, const float *v2 )
 {
-	trace_t	result;
-
 	if( !CL_IsValidEdict( pTextureEntity ))
 	{
 		MsgDev( D_WARN, "TraceTexture: invalid entity %s\n", CL_ClassName( pTextureEntity ));
@@ -1761,8 +1760,7 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	result = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, FMOVE_SIMPLEBOX );
-	return CM_TraceTexture( v1, result );
+	return CM_TraceTexture( pTextureEntity, v1, v2 );
 }
 
 /*
@@ -2165,6 +2163,19 @@ static void pfnEnvShot( const float *vieworg, const char *name, int skyshot )
 
 /*
 =================
+pfnGetPaletteColor
+
+=================
+*/
+static void pfnGetPaletteColor( int colorIndex, vec3_t outColor )
+{
+	if( !outColor ) return;
+	colorIndex = bound( 0, colorIndex, 255 );
+	VectorCopy( clgame.palette[colorIndex], outColor );
+}
+
+/*
+=================
 TriApi implementation
 
 =================
@@ -2217,7 +2228,7 @@ shader_t TriGetSpriteFrame( int spriteIndex, int spriteFrame )
 	if( !re ) return 0;
 	return re->GetSpriteTexture( spriteIndex, spriteFrame );
 }
-
+	
 /*
 =============
 TriBind
@@ -2456,16 +2467,7 @@ static triapi_t gTriApi =
 
 static efxapi_t gEfxApi =
 {
-	CL_AllocParticle,
-	CL_BlobExplosion,
-	CL_EntityParticles,
-	CL_LavaSplash,
-	CL_ParticleExplosion,
-	CL_ParticleExplosion2,
-	CL_RocketTrail,
-	CL_ParticleEffect,
-	CL_TeleportSplash,
-	CL_GetPaletteColor,
+	pfnGetPaletteColor,
 	pfnDecalIndex,
 	pfnDecalIndexFromName,
 	CL_DecalShoot,

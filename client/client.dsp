@@ -233,6 +233,10 @@ SOURCE=.\global\r_tempents.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\global\r_tracer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\global\r_weather.cpp
 # End Source File
 # Begin Source File
@@ -250,6 +254,10 @@ SOURCE=.\global\utils.cpp
 # Begin Source File
 
 SOURCE=.\global\view.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\vmatrix.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -402,6 +410,10 @@ SOURCE=.\global\utils.h
 # Begin Source File
 
 SOURCE=.\game_shared\vector.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\vmatrix.h
 # End Source File
 # End Group
 # End Target

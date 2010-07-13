@@ -112,6 +112,7 @@ static float trace_fraction;
 static vec3_t trace_impact;
 static cplane_t trace_plane;
 static msurface_t *trace_surface;
+static int trace_hitbox;
 
 /*
 =================
@@ -327,7 +328,7 @@ loc0:
 R_TraceLine
 =================
 */
-msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test )
+msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int flags )
 {
 	ref_model_t	*model;
 
@@ -336,10 +337,20 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 	// fill in a default trace
 	Mem_Set( tr, 0, sizeof( trace_t ));
 
+	trace_hitbox = -1;
 	trace_surface = NULL;
 	trace_fraction = 1.0f;
 	VectorCopy( end, trace_impact );
 	Mem_Set( &trace_plane, 0, sizeof( trace_plane ));
+
+	// skip glass ents
+	if(( flags & FTRACE_IGNORE_GLASS ) && test->rendermode != kRenderNormal && test->renderamt < 255 )
+	{
+		tr->flFraction = trace_fraction;
+		VectorCopy( trace_impact, tr->vecEndPos );
+
+		return trace_surface;
+	}
 
 	ClearBounds( trace_absmins, trace_absmaxs );
 	AddPointToBounds( start, trace_absmins, trace_absmaxs );
@@ -348,18 +359,19 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 	model = test->model;
 	if( model )
 	{
-		if( model->type == mod_world || model->type == mod_brush )
+		if( model->type == mod_world || model->type == mod_brush || model->type == mod_studio )
 		{
-			mbrushmodel_t *bmodel = (mbrushmodel_t *)model->extradata;
-			vec3_t temp, start_l, end_l, axis[3];
-			bool rotated = !Matrix3x3_Compare( test->axis, matrix3x3_identity );
-			vec3_t model_mins, model_maxs;
-			float v, max = 0.0f;
-			int i;
+			mbrushmodel_t	*bmodel = (mbrushmodel_t *)model->extradata;
+			bool		rotated = !Matrix3x3_Compare( test->axis, matrix3x3_identity );
+			vec3_t		temp, start_l, end_l, axis[3];
+			vec3_t		model_mins, model_maxs;
+			float		v, max = 0.0f;
+			int		i;
 
 			// transform
 			VectorSubtract( start, test->origin, start_l );
 			VectorSubtract( end, test->origin, end_l );
+
 			if( rotated )
 			{
 				VectorCopy( start_l, temp );
@@ -394,10 +406,25 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 
 			// world uses a recursive approach using BSP tree, submodels
 			// just walk the list of surfaces linearly
-			if( test->model->type == mod_world )
+			if( model->type == mod_world )
 				R_RecursiveHullCheck( bmodel->nodes, start_l, end_l );
-			else if( BoundsIntersect( model_mins, model_maxs, trace_absmins, trace_absmaxs ) )
-				R_TraceAgainstBmodel( bmodel );
+			else if( BoundsIntersect( model_mins, model_maxs, trace_absmins, trace_absmaxs ))
+			{
+				if( model->type == mod_brush )
+					R_TraceAgainstBmodel( bmodel );
+				else if( model->type == mod_studio )
+				{
+					trace_t	tr;
+
+					if( R_StudioTrace( test, trace_start, trace_end, &tr ))
+					{
+						VectorCopy( tr.vecEndPos, trace_impact );
+						VectorCopy( tr.vecPlaneNormal, trace_plane.normal );
+						trace_fraction = tr.flFraction;
+						trace_hitbox = tr.iHitgroup;
+					}
+				}
+			}
 
 			// transform back
 			if( rotated && trace_fraction != 1 )
@@ -420,7 +447,8 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 		VectorCopy( trace_plane.normal, tr->vecPlaneNormal );
 		tr->pHit = (edict_t *)test;
 	}
-	
+
+	tr->iHitgroup = trace_hitbox;	
 	tr->flFraction = trace_fraction;
 	VectorCopy( trace_impact, tr->vecEndPos );
 

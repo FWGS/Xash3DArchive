@@ -262,7 +262,7 @@ void CM_GetBonePosition( edict_t* e, int iBone, float *rgflOrigin, float *rgflAn
 // cm_trace.c
 //
 trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags );
-const char *CM_TraceTexture( const vec3_t start, trace_t trace );
+const char *CM_TraceTexture( edict_t *pTextureEntity, const vec3_t v1, const vec3_t v2 );
 chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset );
 
 #endif//CM_LOCAL_H

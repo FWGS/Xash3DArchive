@@ -12,14 +12,12 @@ typedef int		HSPRITE;					// handle to a graphic
 typedef struct tempent_s	TEMPENTITY;
 typedef struct dlight_s	dlight_t;
 typedef struct usercmd_s	usercmd_t;
-typedef struct particle_s	particle_t;
 typedef struct skyportal_s	skyportal_t;
 typedef struct ref_params_s	ref_params_t;
 typedef struct mstudioevent_s	mstudioevent_t;
 typedef void (*ENTCALLBACK)( TEMPENTITY *ent );
 typedef void (*HITCALLBACK)( TEMPENTITY *ent, TraceResult *ptr );
 typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );	// user message handle
-typedef enum { pt_static, pt_grav, pt_slowgrav, pt_fire, pt_explode, pt_explode2, pt_blob, pt_blob2 } ptype_t;
 
 #define SCRINFO_VIRTUALSPACE	1
 
@@ -257,6 +255,7 @@ typedef struct
 	void	(*pfnMouseEvent)( int mx, int my );
 	int	(*pfnKeyEvent)( int down, int keynum, const char *pszBind );
 	void	(*VGui_ConsolePrint)( const char *text );
+	void	(*pfnParticleEffect)( const float *org, const float *dir, int color, int count ); // SV_ParticleEffect
 } HUD_FUNCTIONS;
 
 typedef int (*CLIENTAPI)( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* engfuncs, cl_globalvars_t *pGlobals );

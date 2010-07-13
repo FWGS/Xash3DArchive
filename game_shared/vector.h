@@ -49,6 +49,20 @@ inline float rsqrt( float number )
 	return y;
 }
 
+inline void SinCos (float angle, float *sine, float *cosine) 
+{
+	__asm {
+	push	ecx
+	fld	dword ptr angle
+	fsincos
+	mov	ecx, dword ptr[cosine]
+	fstp      dword ptr [ecx]
+	mov 	ecx, dword ptr[sine]
+	fstp	dword ptr [ecx]
+	pop	ecx
+    	}
+}
+
 //=========================================================
 // 2DVector - used for many pathfinding and many other 
 // operations that are treated as planar rather than 3d.
@@ -99,6 +113,7 @@ public:
 	inline Vector(float X, float Y, float Z)	{ x = X; y = Y; z = Z; }
 	inline Vector(const Vector& v)		{ x = v.x; y = v.y; z = v.z; } 
 	inline Vector(float *rgfl)			{ x = rgfl[0]; y = rgfl[1]; z = rgfl[2]; }
+	inline Vector(const float *rgfl)		{ x = rgfl[0]; y = rgfl[1]; z = rgfl[2]; }
 
 	// Initialization
 	void Init(vec_t ix=0.0f, vec_t iy=0.0f, vec_t iz=0.0f){ x = ix; y = iy; z = iz; }

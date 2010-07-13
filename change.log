@@ -1,7 +1,16 @@
 build ????
+
 SoundLib: ogg loop points (LOOP_START comment)
 Client: recalc fov y for more matched with original HL
-
+Bshift: fix env_laser entity
+Client: fix fadeout for break model pieces
+Gfx: replace default.bmp font with fixed alpha-channel (thx LokiMb)
+Render: fix invisible beams behind glass
+Render: fix glow-sprites drawing through walls
+FS: implement filter wadlumps by wadname (e.g. gfx.wad/backtile)
+Render: implement kRenderTransColor
+Render: fixing flickering decals, optimize drawing
+Engine: completely moving particle code into the client.dll 
 
 build 1249
 

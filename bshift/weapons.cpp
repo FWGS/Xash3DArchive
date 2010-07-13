@@ -414,6 +414,7 @@ void W_Precache(void)
 	// used by explosions
 	PRECACHE_MODEL ("models/grenade.mdl");
 	PRECACHE_MODEL ("sprites/explode1.spr");
+	PRECACHE_MODEL ("sprites/animglow01.spr");
 
 	PRECACHE_SOUND ("weapons/debris1.wav");// explosion aftermaths
 	PRECACHE_SOUND ("weapons/debris2.wav");// explosion aftermaths

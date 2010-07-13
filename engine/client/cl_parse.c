@@ -413,7 +413,7 @@ void CL_ParseParticles( sizebuf_t *msg )
 	color = MSG_ReadByte( msg );
 	if( count == 255 ) count = 1024;
 
-	CL_ParticleEffect( org, dir, color, count );
+	clgame.dllFuncs.pfnParticleEffect( org, dir, color, count );
 }
 
 /*

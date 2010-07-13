@@ -302,6 +302,7 @@ extern double r_add_polys, r_add_entities;
 extern double r_sort_meshes, r_draw_meshes;
 
 extern msurface_t *r_debug_surface;
+extern const char *r_debug_hitbox;
 
 extern int gl_filter_min, gl_filter_max;
 
@@ -364,6 +365,7 @@ extern cvar_t *r_flares;
 extern cvar_t *r_flaresize;
 extern cvar_t *r_flarefade;
 extern cvar_t *r_spriteflares;
+extern cvar_t *r_cullflares;
 
 extern cvar_t *r_dynamiclight;
 extern cvar_t *r_coronascale;
@@ -622,7 +624,7 @@ void	R_InitCustomColors( void );
 void	R_SetCustomColor( int num, int r, int g, int b );
 int	R_GetCustomColor( int num );
 
-msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end );
+msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int flags );
 
 //
 // r_mesh.c
@@ -719,7 +721,7 @@ void R_PushDecal( const meshbuffer_t *mb );
 //
 void	R_PushPoly( const meshbuffer_t *mb );
 void	R_AddPolysToList( void );
-msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test );
+msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int flags );
 
 //
 // r_sprite.c
@@ -742,8 +744,10 @@ void R_DrawStudioModel( const meshbuffer_t *mb );
 void R_StudioModelBBox( ref_entity_t *e, vec3_t mins, vec3_t maxs );
 bool R_CullStudioModel( ref_entity_t *e );
 void R_StudioRunEvents( ref_entity_t *e );
+void R_StudioDrawHitbox( ref_entity_t *e, int iHitbox );
 void R_StudioDrawDebug( void );
 void R_StudioInit( void );
+bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, trace_t *tr );
 void R_StudioAllocExtradata( edict_t *in, ref_entity_t *e );
 void R_StudioAllocTentExtradata( struct tempent_s *in, ref_entity_t *e );
 void R_StudioFreeAllExtradata( void );

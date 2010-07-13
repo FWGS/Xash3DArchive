@@ -61,6 +61,7 @@ double		r_add_polys, r_add_entities;
 double		r_sort_meshes, r_draw_meshes;
 
 msurface_t	*r_debug_surface;
+const char	*r_debug_hitbox;
 
 char		r_speeds_msg[MAX_RSPEEDSMSGSIZE];
 
@@ -1069,8 +1070,8 @@ static void R_SetupViewMatrices( void )
 		diffy = sizey - min( iy1, sizey - iy2 ) * 2;
 
 		// adjust fov
-		RI.refdef.fov_x = 2 * RAD2DEG( atan( (float)diffx / (float)sizex ) );
-		RI.refdef.fov_y = 2 * RAD2DEG( atan( (float)diffy / (float)sizey ) );
+		RI.refdef.fov_x = 2 * RAD2DEG( atan( (float)diffx / (float)sizex ));
+		RI.refdef.fov_y = 2 * RAD2DEG( atan( (float)diffy / (float)sizey ));
 	}
 	R_SetupProjectionMatrix( &RI.refdef, RI.projectionMatrix );
 	if( RI.params & RP_MIRRORVIEW ) RI.projectionMatrix[0][0] = -RI.projectionMatrix[0][0];
@@ -1508,6 +1509,8 @@ void R_RenderDebugSurface( void )
 		return;
 
 	r_debug_surface = NULL;
+	r_debug_hitbox = NULL;
+
 	if( r_speeds->integer != 4 )
 		return;
 
@@ -1515,9 +1518,23 @@ void R_RenderDebugSurface( void )
 	VectorCopy( RI.viewOrigin, start );
 	VectorMA( start, 4096, forward, end );
 
-	r_debug_surface = R_TraceLine( &tr, start, end );
+	r_debug_surface = R_TraceLine( &tr, start, end, 0 );
 
-	if( r_debug_surface && r_debug_surface->mesh && !gl_wireframe->integer )
+	if( tr.iHitgroup >= 0 && tr.pHit && r_drawentities->integer != 3 )
+	{
+		pglDisable( GL_TEXTURE_2D );
+		GL_SetState( GLSTATE_NO_DEPTH_TEST|GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+		pglDepthRange( 0, 0 );
+
+		RI.previousentity = NULL;
+		RI.currententity = (ref_entity_t *)tr.pHit;
+
+		R_StudioDrawHitbox( RI.currententity, tr.iHitgroup );
+
+		pglDepthRange( gldepthmin, gldepthmax );
+		pglEnable( GL_TEXTURE_2D );
+	}
+	else if( r_debug_surface && r_debug_surface->mesh && !gl_wireframe->integer )
 	{
 		RI.previousentity = NULL;
 		RI.currententity = (ref_entity_t *)tr.pHit;
@@ -2167,28 +2184,40 @@ static bool R_WorldToScreen( const float *world, float *screen )
 R_TraceLine
 =============
 */
-msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end )
+msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int flags )
 {
 	int		i;
 	msurface_t	*surf;
+	ref_entity_t	*e;
 
 	// trace against world
-	surf = R_TransformedTraceLine( tr, start, end, r_worldent );
+	surf = R_TransformedTraceLine( tr, start, end, r_worldent, flags );
 
 	// trace against bmodels
-	for( i = 0; i < r_numbmodelentities; i++ )
+	for( i = 1; i < r_numEntities; i++ )
 	{
 		trace_t		t2;
 		msurface_t	*s2;
 
-		s2 = R_TransformedTraceLine( &t2, start, end, r_bmodelentities[i] );
+		e = &r_entities[i];
+
+		// don't trace localclient
+		if( RP_LOCALCLIENT( e ) && !( RI.refdef.flags & RDF_THIRDPERSON ))
+			continue;
+
+		if( !e->model || ( e->model->type != mod_brush && e->model->type != mod_studio ))
+			continue;
+
+		if( flags & FTRACE_SIMPLEBOX && e->model->type == mod_studio )
+			continue;
+
+		s2 = R_TransformedTraceLine( &t2, start, end, e, flags );
 		if( t2.flFraction < tr->flFraction )
 		{
 			*tr = t2;	// closer impact point
 			surf = s2;
 		}
 	}
-
 	return surf;
 }
 
@@ -2513,7 +2542,6 @@ bool R_AddTeEntToScene( TEMPENTITY *pTempEntity, int ed_type, shader_t customSha
 {
 	ref_entity_t	*refent;
 	ref_shader_t	*shader;
-	vec3_t		center;
 	
 	if( !pTempEntity || pTempEntity->modelindex <= 0 || pTempEntity->modelindex >= MAX_MODELS )
 		return false; // if set to invisible, skip
@@ -2603,9 +2631,8 @@ bool R_AddTeEntToScene( TEMPENTITY *pTempEntity, int ed_type, shader_t customSha
 	refent->lerp->curstate.frame = pTempEntity->m_flFrame;
 
 	// setup light origin
-	if( refent->model ) VectorAverage( refent->model->mins, refent->model->maxs, center );
-	else VectorClear( center );
-	VectorAdd( pTempEntity->origin, center, refent->lightingOrigin );
+	VectorCopy( pTempEntity->origin, refent->lightingOrigin );
+	refent->lightingOrigin[2] += 1; // make sure on floor
 
 	VectorClear( refent->movedir );
 	VectorCopy( pTempEntity->angles, refent->angles );

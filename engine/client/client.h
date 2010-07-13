@@ -255,6 +255,8 @@ typedef struct
 	wrect_t		fontRc[256];		// rectangles
 	bool		use_qfont;		// use half-life creditsfont with variable charWidth
 
+	rgb_t		palette[256];		// Quake1 palette used for particle colors
+
 	client_textmessage_t *titles;			// title messages, not network messages
 	int		numTitles;
 
@@ -553,25 +555,14 @@ void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 //
 // cl_effects.c
 //
-void CL_AddParticles( void );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
 void CL_TestEntities( void );
 dlight_t *CL_AllocDlight( int key );
 dlight_t *CL_AllocElight( int key );
-particle_t *CL_AllocParticle( void );
-void CL_EntityParticles( edict_t *ent );
-void CL_LavaSplash( const vec3_t org );
-void CL_BlobExplosion( const vec3_t org );
-void CL_TeleportSplash( const vec3_t org );
-void CL_ParticleExplosion( const vec3_t org );
-void CL_RocketTrail( const vec3_t start, const vec3_t end, int type );
-void CL_ParticleExplosion2( const vec3_t org, int colorStart, int colorLength );
-void CL_GetPaletteColor( int colorIndex, vec3_t outColor );
 void CL_LightForPoint( const vec3_t point, vec3_t ambientLight );
 void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
-void CL_ParticleEffect( const vec3_t org, const vec3_t dir, int color, int count ); // q1 legacy
 void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
 word CL_PrecacheEvent( const char *name );
 void CL_ResetEvent( event_info_t *ei );

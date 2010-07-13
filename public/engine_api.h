@@ -21,7 +21,6 @@
 #define MAX_CLASSNAMES		512	// maxcount of various edicts classnames
 #define MAX_SOUNDS			2048	// max unique loaded sounds (not counting sequences)
 #define MAX_MODELS			2048	// total count of brush & studio various models per one map
-#define MAX_PARTICLES		4096	// total particle count per one frame
 #define MAX_EDICTS			32768	// absolute limit that never be reached, (do not edit!)
 
 /*

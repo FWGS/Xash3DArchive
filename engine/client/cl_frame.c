@@ -337,7 +337,6 @@ void CL_AddEntities( void )
 	clgame.dllFuncs.pfnCreateEntities();
 
 	CL_FireEvents();	// so tempents can be created immediately
-	CL_AddParticles();
 	CL_AddDLights();
 	CL_AddLightStyles();
 

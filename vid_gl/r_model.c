@@ -2317,7 +2317,7 @@ bool R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3
 
 		// test occlusion
 		// clip the line, tracing from the surface towards the light
-		R_TraceLine( &trace, origin, light->origin );
+		R_TraceLine( &trace, origin, light->origin, FTRACE_IGNORE_GLASS );
 		if( trace.flFraction != 1.0f ) return false;
 
 		// calculate the contribution
@@ -2361,7 +2361,7 @@ bool R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3
 	}
 
 	// clip the line, tracing from the surface towards the light
-	if( R_TraceLine( &trace, origin, light->origin ))
+	if( R_TraceLine( &trace, origin, light->origin, FTRACE_IGNORE_GLASS ))
 		return false;
 
 	// other light rays must not hit anything

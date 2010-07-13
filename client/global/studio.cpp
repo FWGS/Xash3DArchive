@@ -155,6 +155,7 @@ void HUD_StudioFxTransform( edict_t *ent, float transform[4][4] )
 	}
 }
 
+// an example how to renderer determines interpolation methods
 int HUD_StudioDoInterp( edict_t *e )
 {
 	if( r_studio_lerping->integer )

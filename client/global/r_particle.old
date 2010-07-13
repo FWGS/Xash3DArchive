@@ -1,0 +1,114 @@
+//=======================================================================
+//			Copyright XashXT Group 2010 ©
+//	       r_particle.cpp - particle manager (come from q2e 0.40)
+//=======================================================================
+
+#include "extdll.h"
+#include "utils.h"
+#include "triangle_api.h"
+#include "effects_api.h"
+#include "ref_params.h"
+#include "pm_movevars.h"
+#include "ev_hldm.h"
+#include "hud.h"
+#include "r_particle.h"
+#include "r_tempents.h"
+
+	Vector	axis[3], verts[4];
+
+	// prepare to draw
+	if( curLength != 1.0f )
+	{
+		// find orientation vectors
+		axis[0] = gpViewParams->vieworg - origin;
+		axis[1] = oldorigin - origin;
+		axis[2] = CrossProduct( axis[0], axis[1] );
+
+		VectorNormalizeFast( axis[1] );
+		VectorNormalizeFast( axis[2] );
+
+		// find normal
+		axis[0] = CrossProduct( axis[1], axis[2] );
+		VectorNormalizeFast( axis[0] );
+
+		oldorigin = origin + ( axis[1] * -curLength );
+		axis[2] *= radius;
+
+		// setup vertexes
+		verts[0].x = lastOrigin.x + axis[2].x;
+		verts[0].y = lastOrigin.y + axis[2].y;
+		verts[0].z = lastOrigin.z + axis[2].z;
+		verts[1].x = curOrigin.x + axis[2].x;
+		verts[1].y = curOrigin.y + axis[2].y;
+		verts[1].z = curOrigin.z + axis[2].z;
+		verts[2].x = curOrigin.x - axis[2].x;
+		verts[2].y = curOrigin.y - axis[2].y;
+		verts[2].z = curOrigin.z - axis[2].z;
+		verts[3].x = lastOrigin.x - axis[2].x;
+		verts[3].y = lastOrigin.y - axis[2].y;
+		verts[3].z = lastOrigin.z - axis[2].z;
+	}
+	else
+	{
+		if( rotation )
+		{
+			// Rotate it around its normal
+			RotatePointAroundVector( axis[1], gpViewParams->forward, gpViewParams->right, rotation );
+			axis[2] = CrossProduct( gpViewParams->forward, axis[1] );
+
+			// the normal should point at the viewer
+			axis[0] = -gpViewParams->forward;
+
+			// Scale the axes by radius
+			axis[1] *= curRadius;
+			axis[2] *= curRadius;
+		}
+		else
+		{
+			// the normal should point at the viewer
+			axis[0] = -gpViewParams->forward;
+
+			// scale the axes by radius
+			axis[1] = gpViewParams->right * curRadius;
+			axis[2] = gpViewParams->up * curRadius;
+		}
+
+		verts[0].x = curOrigin.x + axis[1].x + axis[2].x;
+		verts[0].y = curOrigin.y + axis[1].y + axis[2].y;
+		verts[0].z = curOrigin.z + axis[1].z + axis[2].z;
+		verts[1].x = curOrigin.x - axis[1].x + axis[2].x;
+		verts[1].y = curOrigin.y - axis[1].y + axis[2].y;
+		verts[1].z = curOrigin.z - axis[1].z + axis[2].z;
+		verts[2].x = curOrigin.x - axis[1].x - axis[2].x;
+		verts[2].y = curOrigin.y - axis[1].y - axis[2].y;
+		verts[2].z = curOrigin.z - axis[1].z - axis[2].z;
+		verts[3].x = curOrigin.x + axis[1].x - axis[2].x;
+		verts[3].y = curOrigin.y + axis[1].y - axis[2].y;
+		verts[3].z = curOrigin.z + axis[1].z - axis[2].z;
+	}
+
+	// draw the particle
+	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
+
+	g_engfuncs.pTriAPI->RenderMode( kRenderNormal );	// use shader settings
+	g_engfuncs.pTriAPI->Color4f( curColor.x, curColor.y, curColor.z, curAlpha );
+			
+	g_engfuncs.pTriAPI->Bind( m_hSprite, 0 );
+	g_engfuncs.pTriAPI->Begin( TRI_QUADS );
+	g_engfuncs.pTriAPI->TexCoord2f ( 0, 0 );
+	g_engfuncs.pTriAPI->Vertex3fv( verts[0] );
+
+	g_engfuncs.pTriAPI->TexCoord2f ( 1, 0 );
+	g_engfuncs.pTriAPI->Vertex3fv ( verts[1] );
+
+	g_engfuncs.pTriAPI->TexCoord2f ( 1, 1 );
+	g_engfuncs.pTriAPI->Vertex3fv ( verts[2] );
+
+	g_engfuncs.pTriAPI->TexCoord2f ( 0, 1 );
+	g_engfuncs.pTriAPI->Vertex3fv ( verts[3] );
+	g_engfuncs.pTriAPI->End();
+		
+	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+		
+	return true;
+}

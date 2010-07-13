@@ -2083,15 +2083,35 @@ static searchpath_t *FS_FindFile( const char *name, int* index, bool quiet, bool
 		}
 		else if( search->wad )
 		{
-			dlumpinfo_t *lump;	
-			string  shortname;
+			dlumpinfo_t	*lump;	
+			char		type = W_TypeFromExt( name );
+			bool		anywadname = true;
+			string		wadname, wadfolder;
+			string		shortname;
+
+			// quick reject by filetype
+			if( type == TYPE_NONE ) continue;
+			FS_ExtractFilePath( name, wadname );
+			wadfolder[0] = '\0';
+
+			if( com.strlen( wadname ))
+			{
+				FS_FileBase( wadname, wadname );
+				com.strncpy( wadfolder, wadname, sizeof( wadfolder ));
+				FS_DefaultExtension( wadname, ".wad" );
+				anywadname = false;
+			}
+
+			// quick reject by wadname
+			if( !anywadname && com.stricmp( wadname, search->wad->filename ))
+				continue;
 
 			// NOTE: we can't using long names for wad,
 			// because we using original wad names[16];
 			W_FileBase( name, shortname );
 
 			// can't using binary search: wad lumps never sorting by alphabetical
-			lump = W_FindLump( search->wad, shortname, W_TypeFromExt( name ));
+			lump = W_FindLump( search->wad, shortname, type );
 			if( lump )
 			{
 				if( !quiet ) MsgDev( D_INFO, "FS_FindFile: %s in %s\n", lump->name, search->wad->filename );
@@ -3648,31 +3668,30 @@ WADSYSTEM PRIVATE COMMON FUNCTIONS
 
 =============================================================================
 */
-wadtype_t wad_types[] =
+// associate extension with wad type
+static const wadtype_t wad_types[] =
 {
-	// associate extension with wad type
-	{"flp", TYPE_FLMP	}, // doom1 menu picture
-	{"snd", TYPE_SND	}, // doom1 sound
-	{"mus", TYPE_MUS	}, // doom1 .mus format
-	{"skn", TYPE_SKIN	}, // doom1 sprite model
-	{"flt", TYPE_FLAT	}, // doom1 wall texture
-	{"pal", TYPE_QPAL	}, // palette
-	{"lmp", TYPE_QPIC	}, // quake1, hl pic
-	{"fnt", TYPE_QFONT	}, // hl qfonts
-	{"mip", TYPE_MIPTEX }, // hl/q1 mip
-	{"bin", TYPE_BINDATA}, // xash binary data
-	{"str", TYPE_STRDATA}, // xash string data
-	{"raw", TYPE_RAW	}, // signed raw data
-	{"txt", TYPE_SCRIPT	}, // any script file
-	{ NULL, TYPE_NONE	}
+{ "flp", TYPE_FLMP	}, // doom1 menu picture
+{ "snd", TYPE_SND	}, // doom1 sound
+{ "mus", TYPE_MUS	}, // doom1 .mus format
+{ "skn", TYPE_SKIN	}, // doom1 sprite model
+{ "flt", TYPE_FLAT	}, // doom1 wall texture
+{ "pal", TYPE_QPAL	}, // palette
+{ "lmp", TYPE_QPIC	}, // quake1, hl pic
+{ "fnt", TYPE_QFONT	}, // hl qfonts
+{ "mip", TYPE_MIPTEX}, // hl/q1 mip
+{ "raw", TYPE_RAW	}, // signed raw data
+{ "wav", TYPE_SOUND	}, // wav sounds (hl2)
+{ "txt", TYPE_SCRIPT}, // any script file
+{ NULL, TYPE_NONE	}
 };
 
 static char W_TypeFromExt( const char *lumpname )
 {
 	const char	*ext = FS_FileExtension( lumpname );
-	wadtype_t		*type;
+	const wadtype_t	*type;
 
-	// we not known aboyt filetype, so match only by filename
+	// we not known about filetype, so match only by filename
 	if( !com.strcmp( ext, "*" ) || !com.strcmp( ext, "" ))
 		return TYPE_ANY;
 	
@@ -3686,7 +3705,7 @@ static char W_TypeFromExt( const char *lumpname )
 
 static const char *W_ExtFromType( char lumptype )
 {
-	wadtype_t		*type;
+	const wadtype_t	*type;
 
 	// we not known aboyt filetype, so match only by filename
 	if( lumptype == TYPE_NONE || lumptype == TYPE_ANY )

@@ -372,7 +372,7 @@ CM_TraceTexture
 find the face where the traceline hit
 ==================
 */
-const char *CM_TraceTexture( const vec3_t start, trace_t trace )
+const char *CM_TraceTexture( edict_t *pTextureEntity, const vec3_t v1, const vec3_t v2 )
 {
 	vec3_t		intersect, temp, vecStartPos;
 	csurface_t	**mark, *surf, *hitface = NULL;
@@ -382,7 +382,10 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 	cmodel_t		*bmodel;
 	cleaf_t		*endleaf;
 	cplane_t		*plane;
+	trace_t		trace;
 	int		i;
+
+	trace = CM_ClipMoveToEntity( pTextureEntity, v1, vec3_origin, vec3_origin, v2, FMOVE_SIMPLEBOX );
 
 	if( !trace.pHit ) return NULL; // trace entity must be valid
 
@@ -391,7 +394,7 @@ const char *CM_TraceTexture( const vec3_t start, trace_t trace )
 		return NULL;
 
 	// making trace adjustments 
-	VectorSubtract( start, trace.pHit->v.origin, vecStartPos );
+	VectorSubtract( v1, trace.pHit->v.origin, vecStartPos );
 	VectorSubtract( trace.vecEndPos, trace.pHit->v.origin, trace.vecEndPos );
 
 	// rotate start and end into the models frame of reference

@@ -326,10 +326,8 @@ meshbuffer_t *R_AddMeshToList( int type, mfog_t *fog, ref_shader_t *shader, int 
 		case kRenderTransTexture:
 		case kRenderGlow:
 		case kRenderTransAdd:
-			shader->sort = SORT_ADDITIVE;
-			break;
 		case kRenderTransColor:
-			shader->sort = SORT_DECAL;
+			shader->sort = SORT_ADDITIVE;
 			break;
 		case kRenderTransAlpha:
 			shader->sort = SORT_ALPHATEST;
@@ -463,7 +461,7 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 					if( nextmb->infokey > 0 )
 					{
 						nextSurf = &r_worldbrushmodel->surfaces[nextmb->infokey-1];
-						R_UpdateSurfaceLightmap( surf );
+						R_UpdateSurfaceLightmap( nextSurf );
 					}
 				}
 
@@ -526,7 +524,7 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 
 		nextDecal = NULL;
 		decal = R_DecalFromMeshbuf( mb );
-
+			
 		if( features & MF_NONBATCHED )
 		{
 			nonMergable = true;
@@ -536,13 +534,13 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 			if( nextmb
 				&& ( nextmb->shaderkey == mb->shaderkey )
 				&& ( nextmb->sortkey == mb->sortkey )
-				&& ( nextmb->dlightbits == mb->dlightbits )
+//				&& ( nextmb->dlightbits == mb->dlightbits )
 				&& ( nextmb->shadowbits == mb->shadowbits ))
 			{
 				if(( nextmb->sortkey & 3 ) == MB_DECAL )
 					nextDecal = R_DecalFromMeshbuf( nextmb );
 
-				if( decal->currentFrame != nextDecal->currentFrame ) 
+				if( nextDecal && decal->currentFrame != nextDecal->currentFrame ) 
 					nextDecal = NULL; // force to flush
 			}
 

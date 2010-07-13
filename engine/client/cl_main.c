@@ -720,7 +720,10 @@ void CL_PrepVideo( void )
 	host.numdecals = 0;
 	
 	if( host.developer <= 2 ) Con_ClearNotify(); // clear any lines of console text
-	SCR_UpdateScreen();
+
+	SCR_UpdateScreen ();
+	CL_RunLightStyles ();
+
 	cl.video_prepped = true;
 	cl.force_refdef = true;
 }

@@ -279,7 +279,7 @@ void R_DrawCoronas( void )
 		if( dist < 24.0f ) continue;
 		dist -= light->intensity;
 
-		R_TraceLine( &tr, light->origin, RI.viewOrigin );
+		R_TraceLine( &tr, light->origin, RI.viewOrigin, FTRACE_IGNORE_GLASS );
 		if( tr.flFraction != 1.0f )
 			continue;
 

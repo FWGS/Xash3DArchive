@@ -419,7 +419,7 @@ void CL_AdjustAngles( void )
 
 	if( up || down ) V_StopPitchDrift();
 
-	cl_viewangles[PITCH] = bound( -70, cl_viewangles[PITCH], 80 );
+	cl_viewangles[PITCH] = bound( -70, cl_viewangles[PITCH], 89 );
 	cl_viewangles[ROLL] = bound( -50, cl_viewangles[ROLL], 50 );	
 }
 

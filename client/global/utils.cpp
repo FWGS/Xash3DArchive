@@ -9,7 +9,7 @@
 
 DLL_GLOBAL const Vector g_vecZero = Vector( 0.0f, 0.0f, 0.0f );
 
-static const float bytedirs[NUMVERTEXNORMALS][3] =
+const float bytedirs[NUMVERTEXNORMALS][3] =
 {
 #include "anorms.h"
 };

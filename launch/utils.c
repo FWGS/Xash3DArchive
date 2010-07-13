@@ -309,10 +309,10 @@ bool StringTable_SaveSystem( int h, wfile_t *wad )
 
 	if(!StringTable_CheckHandle( h, false ))
 		return false;
-	if(!W_SaveLump( wad, "stringdata", dstring[h]->data, dstring[h]->datasize, TYPE_STRDATA, CMP_ZLIB ))
+	if(!W_SaveLump( wad, "stringdata", dstring[h]->data, dstring[h]->datasize, TYPE_RAW, CMP_ZLIB ))
 		return false;
 	table_size = dstring[h]->numstrings * sizeof( string_t );
-	if( !W_SaveLump( wad, "stringtable", dstring[h]->table, table_size, TYPE_STRDATA, CMP_ZLIB ))
+	if( !W_SaveLump( wad, "stringtable", dstring[h]->table, table_size, TYPE_RAW, CMP_ZLIB ))
 		return false;
 	return true;
 }
@@ -321,8 +321,8 @@ int StringTable_LoadSystem( wfile_t *wad, const char *name )
 {
 	int datasize, table_size;
 	int h = StringTable_CreateNewSystem( name, 0x10000 ); // 65535 unique strings
-	char *data = (char *)W_LoadLump( wad, "stringdata", &datasize, TYPE_STRDATA );
-	int *table = (int *)W_LoadLump( wad, "stringtable", &table_size, TYPE_STRDATA );
+	char *data = (char *)W_LoadLump( wad, "stringdata", &datasize, TYPE_RAW );
+	int *table = (int *)W_LoadLump( wad, "stringtable", &table_size, TYPE_RAW );
 
 	if(( datasize > dstring[h]->maxdatasize ) || ((table_size / sizeof( int )) > dstring[h]->maxstrings ))
 		Sys_Error( "Too small StringTable for loading\n" );

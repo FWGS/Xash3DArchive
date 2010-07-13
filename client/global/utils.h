@@ -27,6 +27,8 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 #define ASSERTSZ( f, sz )
 #endif
 
+#define MakeRGBA( r, g, b, a )	((a)<<24)|((b)<<16)|((g)<<8)|(r)
+
 extern DLL_GLOBAL const Vector	g_vecZero;
 extern cl_globalvars_t		*gpGlobals;
 extern movevars_t			*gpMovevars;
@@ -44,6 +46,7 @@ extern void HUD_Shutdown( void );
 extern void HUD_RenderCallback( int fTrans );
 extern void HUD_CreateEntities( void );
 extern int  HUD_AddVisibleEntity( edict_t *pEnt, int ed_type );
+extern void HUD_ParticleEffect( const float *org, const float *dir, int color, int count );
 extern void HUD_StudioEvent( const mstudioevent_t *event, edict_t *entity );
 extern void HUD_StudioFxTransform( edict_t *ent, float transform[4][4] );
 extern int HUD_StudioDoInterp( edict_t *e );
@@ -211,8 +214,12 @@ extern void DrawImageBar( float percent, const char *szSpriteName, int x, int y 
 // sprite loading
 extern HSPRITE LoadSprite( const char *pszName );
 
+// tracer draw code
+extern void Tracer_Draw( HSPRITE hSpr, Vector& start, Vector& delta, float width, byte *color, float startV = 0.0f, float endV = 1.0f );
+
 // mathlib
 extern void AngleMatrix( const vec3_t angles, float (*matrix)[4] );
+extern const float bytedirs[NUMVERTEXNORMALS][3];
 
 // from cl_view.c
 extern void DrawProgressBar( void );

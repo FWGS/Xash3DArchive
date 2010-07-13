@@ -56,6 +56,8 @@ public:
 	void	AllocDLight( Vector pos, byte r, byte g, byte b, float radius, float time, float decay = 0.0f );
 	void	AllocDLight( Vector pos, float radius, float time, float decay = 0.0f );
 	void	RocketTrail( Vector start, Vector end, int type );
+	void	Large_Funnel( Vector pos, int spriteIndex, int flags );
+	void	DoSparks( const Vector& pos );
 // Data
 private:
 	int		m_iTempEntFrame;	// used for keyed dlights only

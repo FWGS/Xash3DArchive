@@ -58,6 +58,7 @@ static const char *uiCreditsDefault[] =
 	"^3THANKS TO",
 	"ID Software at all",
 	"Georg Destroy for icon graphics",
+	"LokiMb for fixed console font",
 	"",
 	"",
 	"",

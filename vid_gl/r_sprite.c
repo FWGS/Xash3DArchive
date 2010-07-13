@@ -659,7 +659,8 @@ static float R_GlowSightDistance( vec3_t glowOrigin )
 	VectorSubtract( glowOrigin, RI.viewOrigin, glowDist );
 	dist = VectorLength( glowDist );
 	
-	R_TraceLine( &tr, RI.viewOrigin, glowOrigin );
+	R_TraceLine( &tr, RI.viewOrigin, glowOrigin, FTRACE_IGNORE_GLASS|FTRACE_SIMPLEBOX );
+
 	if(( 1.0 - tr.flFraction ) * dist > 8 )
 		return -1;
 	return dist;
@@ -670,15 +671,13 @@ static float R_SpriteGlowBlend( ref_entity_t *e )
 	float	dist = R_GlowSightDistance( e->origin );
 	float	brightness;
 
-	if( e->renderfx == kRenderFxNoDissipation )
-	{
-		return (float)e->renderamt * (1.0f/255.0f);
-	}
-
 	if( dist <= 0 ) return 0.0f; // occluded
 
+	if( e->renderfx == kRenderFxNoDissipation )
+		return (float)e->renderamt * (1.0f/255.0f);
+
 	// UNDONE: Tweak these magic numbers (19000 - falloff & 200 - sprite size)
-	brightness = 19000.0 / (dist * dist);
+	brightness = 19000.0 / ( dist * dist );
 	brightness = bound( 0.05f, brightness, 1.0f );
 
 	// Make the glow fixed size in screen space, taking into consideration the scale setting.
@@ -693,6 +692,7 @@ bool R_SpriteOccluded( ref_entity_t *e )
 	if( e->rendermode == kRenderGlow )
 	{
 		float	blend = 1.0f;
+		float	depth;
 		vec3_t	v;
 
 		R_TransformToScreen_Vec3( e->origin, v );
@@ -701,6 +701,12 @@ bool R_SpriteOccluded( ref_entity_t *e )
 			return true; // do scissor
 		if( v[1] < RI.refdef.viewport[1] || v[1] > RI.refdef.viewport[1] + RI.refdef.viewport[3] )
 			return true; // do scissor
+
+		if( r_cullflares->integer )
+		{
+			pglReadPixels((int)( v[0] ), (int)( v[1] ), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth );
+			if( depth + 1e-4 < v[2] ) return true; // occluded
+		}
 
 		blend *= R_SpriteGlowBlend( e );
 		e->renderamt *= blend;
@@ -772,6 +778,9 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 	// no rotation for sprites
 	R_TranslateForEntity( e );
 
+	if( e->rendermode == kRenderGlow )
+		pglDepthRange( gldepthmin, gldepthmin + 0.3 * ( gldepthmax - gldepthmin ));
+		
 	if( oldframe == frame )
 	{
 		// draw the single non-lerped frame
@@ -809,6 +818,9 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 		// restore current values (e.g. for right mirror passes)
 		e->renderamt = renderamt;
 	}
+
+	if( e->rendermode == kRenderGlow )
+		pglDepthRange( gldepthmin, gldepthmax );
 }
 
 bool R_CullSpriteModel( ref_entity_t *e )

@@ -79,7 +79,7 @@ static void ComputeBeamPerpendicular( const Vector &vecBeamDelta, Vector *pPerp 
 // ------------------------------------------------------------------------------------------ //
 // CBeamSegDraw implementation.
 // ------------------------------------------------------------------------------------------ //
-void CBeamSegDraw::Start( int nSegs, HSPRITE m_hSprite, kRenderMode_t nRenderMode )
+void CBeamSegDraw::Start( int nSegs, HSPRITE m_hSprite, kRenderMode_t nRenderMode, int frame )
 {
 	m_nSegsDrawn = 0;
 	m_nTotalSegs = nSegs;
@@ -88,7 +88,7 @@ void CBeamSegDraw::Start( int nSegs, HSPRITE m_hSprite, kRenderMode_t nRenderMod
 
 	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
 	g_engfuncs.pTriAPI->RenderMode( nRenderMode );
-	g_engfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	g_engfuncs.pTriAPI->Bind( m_hSprite, frame );	// GetSpriteTexture already set frame
 
 	g_engfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );				
 }
@@ -1857,7 +1857,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 
 	// Specify all the segments.
 	CBeamSegDraw segDraw;
-	segDraw.Start( segments, m_hSprite, (kRenderMode_t)rendermode );
+	segDraw.Start( segments, m_hSprite, (kRenderMode_t)rendermode, frame );
 
 	for ( i = 0; i < segments; i++ )
 	{

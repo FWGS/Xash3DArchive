@@ -139,10 +139,10 @@ _inline trace_t CM_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 	return trace;
 }
 
-_inline const char *CM_TraceTexture( const vec3_t start, trace_t trace )
+_inline const char *CM_TraceTexture( edict_t *pTextureEntity, const vec3_t v1, const vec3_t v2 )
 {
 	if( !pe ) return NULL;
-	return pe->TraceTexture( start, trace );
+	return pe->TraceTexture( pTextureEntity, v1, v2 );
 }
 
 _inline chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset )

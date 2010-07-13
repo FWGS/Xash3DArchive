@@ -6,72 +6,133 @@
 #ifndef R_PARTICLE_H
 #define R_PARTICLE_H
 
-#define MAX_PARTICLES		2048
+#define MAX_PARTICLES		4096
 
-// built-in particle-system flags
-#define FPART_BOUNCE		(1<<0)	// makes a bouncy particle
-#define FPART_FRICTION		(1<<1)
-#define FPART_VERTEXLIGHT		(1<<2)	// give some ambient light for it
-#define FPART_STRETCH		(1<<3)
-#define FPART_UNDERWATER		(1<<4)
-#define FPART_INSTANT		(1<<5)
+#define SIMSHIFT			10
+#define SPARK_COLORCOUNT		9
 
-class CParticle
+typedef enum
+{
+	pt_static, 
+	pt_grav,
+	pt_slowgrav,
+	pt_fire,
+	pt_explode,
+	pt_explode2,
+	pt_blob,
+	pt_blob2,
+	pt_vox_slowgrav,
+	pt_vox_grav,
+	pt_clientcustom		// Must have callback function specified
+} ptype_t;
+
+class CBaseParticle
 {
 public:
-	Vector		origin;
-	Vector		oldorigin;
+	CBaseParticle	*m_pNext;		// linked list
+	HSPRITE		m_hSprite;	// custom texture
 
-	Vector		velocity;		// linear velocity
-	Vector		accel;
-	Vector		color;
-	Vector		colorVelocity;
-	float		alpha;
-	float		alphaVelocity;
-	float		radius;
-	float		radiusVelocity;
-	float		length;
-	float		lengthVelocity;
-	float		rotation;		// texture ROLL angle
-	float		bounceFactor;
-	float		scale;
+	float		m_flLifetime;
+	byte		m_Color[4];	// RGBA - not all effects need to use this.
+	ptype_t		m_Type;
+	Vector		m_Pos;
+	Vector		m_Velocity;
 
-	CParticle		*next;
-	HSPRITE		m_hSprite;
+	word		m_Ramp;
+	byte		context;		// for deathfunc etc
 
-	float		flTime;
-	int		flags;
+	// tracer stuff
+	float		m_flWidth;
+	float		m_flLength;
 
-	bool		Evaluate( float gravity );
+	// Color and alpha values are 0 - 1
+	void		SetColor( int pcolor );
+	void		SetColor( float r, float g, float b );	//  0 - 1
+	void		SetColor( int color[3] );	//  0 - 255
+	void		SetAlpha( float a );
+
+	void		SetType( ptype_t ptype ) { m_Type = ptype; }
+	ptype_t		GetType( void ) { return m_Type; };
+
+	void		SetLifetime( float life ) { m_flLifetime = gpGlobals->time + life; }
+	float		GetLifetime( void ) { return m_flLifetime; }
+
+	void		SetTexture( HSPRITE hSpr ) { m_hSprite = hSpr; }
+
+	void		(*pfnCallback)( CBaseParticle *pPart, float frametime );	// for pt_clientcustom
+	void		(*pfnDeathFunc)( CBaseParticle *pPart );
 };
+
+inline void CBaseParticle :: SetColor( int pcolor )
+{
+	float	entry[3];
+
+	CL_GetPaletteColor( pcolor, entry );
+
+	m_Color[0] = (byte)entry[0];
+	m_Color[1] = (byte)entry[1];
+	m_Color[2] = (byte)entry[2];
+	m_Color[3] = 0xFF;	// no alpha
+}
+
+inline void CBaseParticle :: SetColor( int color[3] )
+{
+	m_Color[0] = color[0];
+	m_Color[1] = color[1];
+	m_Color[2] = color[2];
+	m_Color[3] = 0xFF;	// no alpha
+}
+
+inline void CBaseParticle :: SetColor( float r, float g, float b )
+{
+	m_Color[0] = (byte)(r * 255.9f);
+	m_Color[1] = (byte)(g * 255.9f);
+	m_Color[2] = (byte)(b * 255.9f);
+}
+
+inline void CBaseParticle :: SetAlpha( float a )
+{
+	m_Color[3] = (byte)(a * 255.9f);
+}
 
 class CParticleSystem
 {
-	CParticle		*m_pActiveParticles;
-	CParticle		*m_pFreeParticles;
-	CParticle		m_pParticles[MAX_PARTICLES];
+	CBaseParticle	*m_pActiveParticles;
+	CBaseParticle	*m_pFreeParticles;
+	CBaseParticle	m_pParticles[MAX_PARTICLES];	// particle pool
+
+	Vector		m_vecAvertexNormals[NUMVERTEXNORMALS];
+	Vector		m_vecAvelocities[NUMVERTEXNORMALS];
+
+	// this is a cached local copy of Q1 palette (comed from engine)
+	byte		m_uchPalette[256][3];
 
 	// private partsystem shaders
 	HSPRITE		m_hDefaultParticle;
-	HSPRITE		m_hSparks;
-	HSPRITE		m_hSmoke;
 public:
 			CParticleSystem( void );
 	virtual		~CParticleSystem( void );
 
 	void		Clear( void );
 	void		Update( void );
-	void		FreeParticle( CParticle *pCur );
-	CParticle		*AllocParticle( void );
-	bool		AddParticle( CParticle *src, HSPRITE shader, int flags );
+	void		SimulateAndRender( CBaseParticle *pCur );
+	void		FreeParticle( CBaseParticle *pCur );
+	CBaseParticle	*AllocParticle( HSPRITE m_hSpr = 0 );
+	float		GetTimeDelta( void ) { return gpGlobals->frametime; }
 
-	// example presets
-	void		ExplosionParticles( const Vector pos );
-	void		BulletParticles( const Vector org, const Vector dir );
-	void		BubbleParticles( const Vector org, int count, float magnitude );
-	void		SparkParticles( const Vector org, const Vector dir );
-	void		RicochetSparks( const Vector org, float scale );
-	void		SmokeParticles( const Vector pos, int count );
+	// draw methods
+	void		DrawParticle( HSPRITE hSpr, const Vector &pos, const byte color[4], float size );
+
+	// begin user effects here
+	void		EntityParticles( edict_t *ent );
+	void		ParticleEffect( const Vector org, const Vector dir, int color, int count );
+	void		ParticleExplosion( const Vector org );
+	void		ParticleExplosion2( const Vector org, int colorStart, int colorLength );
+	void		BlobExplosion( const Vector org );
+	void		LavaSplash( const Vector org );
+	void		TeleportSplash( const Vector org );
+	void		RocketTrail( const Vector org, const Vector end, int type );
+	void		SparkleTracer( const Vector& pos, const Vector& dir );
 };
 
 extern CParticleSystem	*g_pParticles;

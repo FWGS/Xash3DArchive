@@ -6,9 +6,9 @@
 #include "extdll.h"
 #include "utils.h"
 #include "r_beams.h"
+#include "effects_api.h"
 #include "r_particle.h"
 #include "r_tempents.h"
-#include "effects_api.h"
 #include "pm_materials.h"
 #include "pm_movevars.h"
 #include "ev_hldm.h"
@@ -268,7 +268,7 @@ void EV_HLDM_CrowbarDecalTrace( TraceResult *pTrace, char *decalName )
 	pEnt = pTrace->pHit;
 
 	// only decal brush models such as the world etc.
-	if( decalName && decalName[0] && pEnt && ( pEnt->v.solid == SOLID_BSP || pEnt->v.movetype == MOVETYPE_PUSHSTEP ) )
+	if( decalName && decalName[0] && pEnt && ( pEnt->v.solid == SOLID_BSP || pEnt->v.movetype == MOVETYPE_PUSHSTEP ))
 	{
 		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->serialnumber, decalName );
 	}
@@ -308,7 +308,6 @@ void EV_HLDM_GunshotDecalTrace( TraceResult *pTrace, char *decalName )
 	if( decalName && decalName[0] && pEnt && ( pEnt->v.solid == SOLID_BSP || pEnt->v.movetype == MOVETYPE_PUSHSTEP ))
 	{
 		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->serialnumber, decalName );
-		g_pParticles->BulletParticles( pTrace->vecEndPos, Vector( 0, 0, -1 ));
 	}
 }
 
@@ -323,7 +322,7 @@ void EV_HLDM_DecalGunshot( TraceResult *pTrace, int iBulletType )
 		switch( iBulletType )
 		{
 		case BULLET_CROWBAR:
-			EV_HLDM_CrowbarDecalTrace( pTrace, EV_HLDM_DamageDecal( pe ) );
+			EV_HLDM_CrowbarDecalTrace( pTrace, EV_HLDM_DamageDecal( pe ));
 			break;
 		case BULLET_9MM:
 		case BULLET_MP5:

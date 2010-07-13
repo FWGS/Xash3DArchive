@@ -67,7 +67,7 @@ static void R_GetShadowImpactAndDir( ref_entity_t *e, trace_t *tr, vec3_t lightd
 	VectorNormalizeFast( lightdir );
 	VectorMA( e->origin, 1024.0f, lightdir, point );
 
-	R_TraceLine( tr, e->origin, point );
+	R_TraceLine( tr, e->origin, point, 0 );
 }
 
 /*

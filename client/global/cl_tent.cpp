@@ -111,7 +111,7 @@ void TE_ParseGunShot( void )
 	pos.y = READ_COORD();
 	pos.z = READ_COORD();
 
-	g_engfuncs.pEfxAPI->R_RunParticleEffect( pos, g_vecZero, 0, 20 );
+	g_pParticles->ParticleEffect( pos, g_vecZero, 0, 20 );
 
 	if( RANDOM_LONG( 0, 32 ) <= 8 ) // 25% chanse
 	{
@@ -178,7 +178,7 @@ void TE_ParseExplosion( void )
 	}
 
 	if(!( flags & TE_EXPLFLAG_NOPARTICLES ))
-		g_engfuncs.pEfxAPI->R_RunParticleEffect( pos, g_vecZero, 224, 200 );
+		g_pParticles->ParticleEffect( pos, g_vecZero, 224, 200 );
 
 	if( !( flags & TE_EXPLFLAG_NOSOUND ))
 	{
@@ -201,7 +201,7 @@ void TE_ParseTarExplosion( void )
 	pos.y = READ_COORD();
 	pos.z = READ_COORD();
 
-	g_engfuncs.pEfxAPI->R_BlobExplosion( pos );
+	g_pParticles->BlobExplosion( pos );
 }
 
 /*
@@ -330,7 +330,7 @@ void TE_ParseSparks( void )
 	pos.y = READ_COORD();
 	pos.z = READ_COORD();
 
-	g_pParticles->SparkParticles( pos, g_vecZero );
+	g_pTempEnts->DoSparks( pos );
 }
 
 /*
@@ -348,7 +348,7 @@ void TE_ParseLavaSplash( void )
 	pos.y = READ_COORD();
 	pos.z = READ_COORD();
 
-	g_engfuncs.pEfxAPI->R_LavaSplash( pos );
+	g_pParticles->LavaSplash( pos );
 }
 
 /*
@@ -366,7 +366,7 @@ void TE_ParseTeleport( void )
 	pos.y = READ_COORD();
 	pos.z = READ_COORD();
 
-	g_engfuncs.pEfxAPI->R_TeleportSplash( pos );
+	g_pParticles->TeleportSplash( pos );
 }
 
 /*
@@ -389,7 +389,7 @@ void TE_ParseExplosion2( void )
 	colorIndex = READ_BYTE();
 	numColors = READ_BYTE();
 
-	g_engfuncs.pEfxAPI->R_ParticleExplosion2( pos, colorIndex, numColors );
+	g_pParticles->ParticleExplosion2( pos, colorIndex, numColors );
 	
 	dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
 	dl->origin = pos;
@@ -442,6 +442,33 @@ void TE_ParseImplosion( void )
 
 	// FIXME: create tracers moving toward a point
 	CL_PlaySound( "shambler/sattck1.wav", 1.0f, pos );
+}
+
+/*
+---------------
+TE_ParseStreakSplash
+
+Creates a oriented shower of tracers
+---------------
+*/
+void TE_ParseStreakSplash( void )
+{
+	Vector pos, dir;
+	
+	pos.x = READ_COORD();
+	pos.y = READ_COORD();
+	pos.z = READ_COORD();
+
+	dir.x = READ_COORD();
+	dir.y = READ_COORD();
+	dir.z = READ_COORD();
+
+	int color = READ_BYTE();
+	int count = READ_SHORT();
+	int speed = READ_SHORT();
+	int velocityRange = READ_SHORT();	
+
+	// FIXME: create a oriented shower of tracers
 }
 
 /*
@@ -744,7 +771,16 @@ see env_funnel description for details
 */
 void TE_ParseFunnel( void )
 {
-	// FIXME: implement
+	Vector vecPos;
+
+	vecPos.x = READ_COORD();
+	vecPos.y = READ_COORD();
+	vecPos.z = READ_COORD();
+
+	int spriteIndex = READ_SHORT();
+	int flags = READ_SHORT();
+
+	g_pTempEnts->Large_Funnel( vecPos, spriteIndex, flags );
 }
 
 /*
@@ -768,7 +804,7 @@ void TE_ParseBlood( void )
 	color = READ_BYTE();
 	speed = READ_BYTE();
 
-	g_engfuncs.pEfxAPI->R_RunParticleEffect( pos, dir, color, speed );
+	g_pParticles->ParticleEffect( pos, dir, color, speed );
 }
 
 /*
@@ -885,10 +921,9 @@ decal and ricochet sound
 */
 void TE_ParseGunShotDecal( void )
 {
-	Vector pos, dir;
+	Vector pos;
 	int entityIndex, decalIndex;
 	char soundpath[32];
-	float dummy;
 
 	pos.x = READ_COORD();
 	pos.y = READ_COORD();
@@ -896,9 +931,6 @@ void TE_ParseGunShotDecal( void )
 	entityIndex = READ_SHORT();
 	decalIndex = READ_BYTE();
 
-	UTIL_GetForceDirection( pos, 2.0f, &dir, &dummy );
-
-	g_pParticles->BulletParticles( pos, dir );
 	g_pTempEnts->PlaceDecal( pos, entityIndex, decalIndex );
 
 	if( RANDOM_LONG( 0, 32 ) <= 8 ) // 25% chanse
@@ -963,7 +995,6 @@ void TE_ParseArmorRicochet( void )
 
 	int modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
 	g_pTempEnts->RicochetSprite( pos, modelIndex, radius );
-	g_pParticles->RicochetSparks( pos, radius );
 
 	sprintf( soundpath, "weapons/ric%i.wav", RANDOM_LONG( 1, 5 ));
 	CL_PlaySound( soundpath, RANDOM_FLOAT( 0.7f, 0.9f ), pos, RANDOM_FLOAT( 95.0f, 105.0f ));
@@ -1197,7 +1228,7 @@ void HUD_ParseTempEntity( void )
 		TE_ParseBeamRing();
 		break;
 	case TE_STREAK_SPLASH:
-		// FIXME: implement
+		TE_ParseStreakSplash();
 		break;
 	case TE_ELIGHT:
 		TE_ParseDynamicLight( TE_ELIGHT );

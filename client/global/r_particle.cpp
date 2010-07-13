@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2010 ©
-//	       r_particle.cpp - particle manager (come from q2e 0.40)
+//	       	        r_partsystem.cpp - particle manager
 //=======================================================================
 
 #include "extdll.h"
@@ -12,289 +12,46 @@
 #include "ev_hldm.h"
 #include "hud.h"
 #include "r_particle.h"
+#include "r_tempents.h"
+
+// particle ramps
+static int ramp1[8] = { 0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61 };
+static int ramp2[8] = { 0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66 };
+static int ramp3[6] = { 0x6d, 0x6b, 6, 5, 4, 3 };
+
+static int gTracerColors[][3] =
+{
+{ 255, 255, 255 },		// White
+{ 255, 0, 0 },		// Red
+{ 0, 255, 0 },		// Green
+{ 0, 0, 255 },		// Blue
+{ 255, 167, 17 },		// Yellow-orange sparks
+{ 255, 130, 90 },		// Yellowish streaks (garg)
+{ 55, 60, 144 },		// Blue egon streak
+{ 255, 130, 90 },		// More Yellowish streaks (garg)
+{ 255, 140, 90 },		// More Yellowish streaks (garg)
+{ 200, 130, 90 },		// More red streaks (garg)
+{ 255, 120, 70 },		// Darker red streaks (garg)
+};
+
+static int gSparkRamp[SPARK_COLORCOUNT][3] =
+{
+{ 255, 255, 255 },
+{ 255, 247, 199 },
+{ 255, 243, 147 },
+{ 255, 243, 27 },
+{ 239, 203, 31 },
+{ 223, 171, 39 },
+{ 207, 143, 43 },
+{ 127, 59, 43 },
+{ 35, 19, 7 }
+};
 
 CParticleSystem	*g_pParticles = NULL;
 
-bool CParticle :: Evaluate( float gravity )
-{
-	float	curAlpha, curRadius, curLength;
-	Vector	curColor, curOrigin, lastOrigin, curVelocity;
-	float	time, time2;
-
-	time = gpGlobals->time - flTime;
-	time2 = time * time;
-
-	curAlpha = alpha + alphaVelocity * time;
-	curRadius = radius + radiusVelocity * time;
-	curLength = length + lengthVelocity * time;
-
-	if( curAlpha <= 0.0f || curRadius <= 0.0f || curLength <= 0.0f )
-	{
-		// faded out
-		return false;
-	}
-
-	curColor = color + colorVelocity * time;
-	curOrigin.x = origin.x + velocity.x * time + accel.x * time2;
-	curOrigin.y = origin.y + velocity.y * time + accel.y * time2;
-	curOrigin.z = origin.z + velocity.z * time + accel.z * time2 * gravity;
-
-	if( flags & FPART_UNDERWATER )
-	{
-		// underwater particle
-		lastOrigin.Init( curOrigin.x, curOrigin.y, curOrigin.z + curRadius );
-
-		int contents = POINT_CONTENTS( lastOrigin );
-
-		if( contents != CONTENTS_WATER && contents != CONTENTS_SLIME && contents != CONTENTS_LAVA )
-		{
-			// not underwater
-			return false;
-		}
-	}
-
-	if( flags & FPART_FRICTION )
-	{
-		// water friction affected particle
-		int contents = POINT_CONTENTS( curOrigin );
-
-		if( contents <= CONTENTS_WATER && contents >= CONTENTS_LAVA )
-		{
-			// add friction		
-			switch( contents )
-			{
-			case CONTENTS_WATER:
-				velocity *= 0.25f;
-				accel *= 0.25f;
-				break;
-			case CONTENTS_SLIME:
-				velocity *= 0.20f;
-				accel *= 0.20f;
-				break;
-			case CONTENTS_LAVA:
-				velocity *= 0.10f;
-				accel *= 0.10f;
-				break;
-			}
-			
-			// don't add friction again
-			flags &= ~FPART_FRICTION;
-			curLength = 1.0f;
-				
-			// reset
-			flTime = gpGlobals->time;
-			origin = curOrigin;
-			color = curColor;
-			alpha = curAlpha;
-			radius = curRadius;
-
-			// don't stretch
-			flags &= ~FPART_STRETCH;
-			length = curLength;
-			lengthVelocity = 0.0f;
-		}
-	}
-
-	if( flags & FPART_BOUNCE )
-	{
-		edict_t	*clent = GetLocalPlayer();
-
-		Vector	mins( -radius, -radius, -radius );
-		Vector	maxs(  radius,  radius,  radius );
-
-		// bouncy particle
-		TraceResult tr;
-
-		// FIXME: Xash3D support trace with custom hulls only for internal purposes
-		UTIL_TraceLine( oldorigin, origin, ignore_monsters, clent, &tr );
-
-		if( tr.flFraction > 0.0f && tr.flFraction < 1.0f )
-		{
-			// reflect velocity
-			time = gpGlobals->time - (gpGlobals->frametime + gpGlobals->frametime * tr.flFraction);
-			time = (time - flTime);
-
-			curVelocity.x = velocity.x;
-			curVelocity.y = velocity.y;
-			curVelocity.z = velocity.z + accel.z * gravity * time;
-
-			float d = DotProduct( curVelocity, tr.vecPlaneNormal ) * -1.0f;
-			velocity = curVelocity + tr.vecPlaneNormal * d;
-			velocity *= bounceFactor;
-
-			// check for stop or slide along the plane
-			if( tr.vecPlaneNormal.z > 0 && velocity.z < 1.0f )
-			{
-				if( tr.vecPlaneNormal.z == 1.0f )
-				{
-					velocity = g_vecZero;
-					accel = g_vecZero;
-					flags &= ~FPART_BOUNCE;
-				}
-				else
-				{
-					// FIXME: check for new plane or free fall
-					float dot = DotProduct( velocity, tr.vecPlaneNormal );
-					velocity = velocity + (tr.vecPlaneNormal * -dot);
-
-					dot = DotProduct( accel, tr.vecPlaneNormal );
-					accel = accel + (tr.vecPlaneNormal * -dot);
-				}
-			}
-
-			curOrigin = tr.vecEndPos;
-			curLength = 1;
-
-			// reset
-			flTime = gpGlobals->time;
-			origin = curOrigin;
-			color = curColor;
-			alpha = curAlpha;
-			radius = curRadius;
-
-			// don't stretch
-			flags &= ~FPART_STRETCH;
-			length = curLength;
-			lengthVelocity = 0.0f;
-		}
-	}
-	
-	// save current origin if needed
-	if( flags & ( FPART_BOUNCE|FPART_STRETCH ))
-	{
-		lastOrigin = oldorigin;
-		oldorigin = curOrigin;
-	}
-
-	if( flags & FPART_VERTEXLIGHT )
-	{
-		Vector	ambientLight;
-
-		// vertex lit particle
-		g_engfuncs.pEfxAPI->R_LightForPoint( curOrigin, ambientLight );
-		curColor *= ambientLight;
-	}
-
-	if( flags & FPART_INSTANT )
-	{
-		// instant particle
-		alpha = 0.0f;
-		alphaVelocity = 0.0f;
-	}
-
-	if( curRadius == 1.0f )
-	{
-		float	scale = 0.0f;
-
-		// hack a scale up to keep quake particles from disapearing
-		scale += (curOrigin[0] - gpViewParams->vieworg[0]) * gpViewParams->forward[0];
-		scale += (curOrigin[1] - gpViewParams->vieworg[1]) * gpViewParams->forward[1];
-		scale += (curOrigin[2] - gpViewParams->vieworg[2]) * gpViewParams->forward[2];
-		if( scale >= 20 ) curRadius = 1.0f + scale * 0.004f;
-	}
-
-	Vector	axis[3], verts[4];
-
-	// prepare to draw
-	if( curLength != 1.0f )
-	{
-		// find orientation vectors
-		axis[0] = gpViewParams->vieworg - origin;
-		axis[1] = oldorigin - origin;
-		axis[2] = CrossProduct( axis[0], axis[1] );
-
-		VectorNormalizeFast( axis[1] );
-		VectorNormalizeFast( axis[2] );
-
-		// find normal
-		axis[0] = CrossProduct( axis[1], axis[2] );
-		VectorNormalizeFast( axis[0] );
-
-		oldorigin = origin + ( axis[1] * -curLength );
-		axis[2] *= radius;
-
-		// setup vertexes
-		verts[0].x = lastOrigin.x + axis[2].x;
-		verts[0].y = lastOrigin.y + axis[2].y;
-		verts[0].z = lastOrigin.z + axis[2].z;
-		verts[1].x = curOrigin.x + axis[2].x;
-		verts[1].y = curOrigin.y + axis[2].y;
-		verts[1].z = curOrigin.z + axis[2].z;
-		verts[2].x = curOrigin.x - axis[2].x;
-		verts[2].y = curOrigin.y - axis[2].y;
-		verts[2].z = curOrigin.z - axis[2].z;
-		verts[3].x = lastOrigin.x - axis[2].x;
-		verts[3].y = lastOrigin.y - axis[2].y;
-		verts[3].z = lastOrigin.z - axis[2].z;
-	}
-	else
-	{
-		if( rotation )
-		{
-			// Rotate it around its normal
-			RotatePointAroundVector( axis[1], gpViewParams->forward, gpViewParams->right, rotation );
-			axis[2] = CrossProduct( gpViewParams->forward, axis[1] );
-
-			// the normal should point at the viewer
-			axis[0] = -gpViewParams->forward;
-
-			// Scale the axes by radius
-			axis[1] *= curRadius;
-			axis[2] *= curRadius;
-		}
-		else
-		{
-			// the normal should point at the viewer
-			axis[0] = -gpViewParams->forward;
-
-			// scale the axes by radius
-			axis[1] = gpViewParams->right * curRadius;
-			axis[2] = gpViewParams->up * curRadius;
-		}
-
-		verts[0].x = curOrigin.x + axis[1].x + axis[2].x;
-		verts[0].y = curOrigin.y + axis[1].y + axis[2].y;
-		verts[0].z = curOrigin.z + axis[1].z + axis[2].z;
-		verts[1].x = curOrigin.x - axis[1].x + axis[2].x;
-		verts[1].y = curOrigin.y - axis[1].y + axis[2].y;
-		verts[1].z = curOrigin.z - axis[1].z + axis[2].z;
-		verts[2].x = curOrigin.x - axis[1].x - axis[2].x;
-		verts[2].y = curOrigin.y - axis[1].y - axis[2].y;
-		verts[2].z = curOrigin.z - axis[1].z - axis[2].z;
-		verts[3].x = curOrigin.x + axis[1].x - axis[2].x;
-		verts[3].y = curOrigin.y + axis[1].y - axis[2].y;
-		verts[3].z = curOrigin.z + axis[1].z - axis[2].z;
-	}
-
-	// draw the particle
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-
-	g_engfuncs.pTriAPI->RenderMode( kRenderNormal );	// use shader settings
-	g_engfuncs.pTriAPI->Color4f( curColor.x, curColor.y, curColor.z, curAlpha );
-			
-	g_engfuncs.pTriAPI->Bind( m_hSprite, 0 );
-	g_engfuncs.pTriAPI->Begin( TRI_QUADS );
-	g_engfuncs.pTriAPI->TexCoord2f ( 0, 0 );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[0] );
-
-	g_engfuncs.pTriAPI->TexCoord2f ( 1, 0 );
-	g_engfuncs.pTriAPI->Vertex3fv ( verts[1] );
-
-	g_engfuncs.pTriAPI->TexCoord2f ( 1, 1 );
-	g_engfuncs.pTriAPI->Vertex3fv ( verts[2] );
-
-	g_engfuncs.pTriAPI->TexCoord2f ( 0, 1 );
-	g_engfuncs.pTriAPI->Vertex3fv ( verts[3] );
-	g_engfuncs.pTriAPI->End();
-		
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
-		
-	return true;
-}
-
 CParticleSystem :: CParticleSystem( void )
 {
-	memset( m_pParticles, 0, sizeof( CParticle ) * MAX_PARTICLES );
+	memset( m_pParticles, 0, sizeof( CBaseParticle ) * MAX_PARTICLES );
 
 	m_pFreeParticles = m_pParticles;
 	m_pActiveParticles = NULL;
@@ -302,7 +59,6 @@ CParticleSystem :: CParticleSystem( void )
 
 CParticleSystem :: ~CParticleSystem( void )
 {
-	Clear ();
 }
 
 void CParticleSystem :: Clear( void )
@@ -311,25 +67,56 @@ void CParticleSystem :: Clear( void )
 	m_pActiveParticles = NULL;
 
 	for( int i = 0; i < MAX_PARTICLES; i++ )
-		m_pParticles[i].next = &m_pParticles[i+1];
+		m_pParticles[i].m_pNext = &m_pParticles[i+1];
 
-	m_pParticles[MAX_PARTICLES-1].next = NULL;
+	m_pParticles[MAX_PARTICLES-1].m_pNext = NULL;
+
+	//  this is used for EF_BRIGHTFIELD
+	for( i = 0; i < NUMVERTEXNORMALS; i++ )
+	{
+		m_vecAvelocities[i][0] = RANDOM_LONG( 0, 255 ) * 0.01f;
+		m_vecAvelocities[i][1] = RANDOM_LONG( 0, 255 ) * 0.01f;
+		m_vecAvelocities[i][2] = RANDOM_LONG( 0, 255 ) * 0.01f;
+
+		// also build avertexnormals
+		m_vecAvertexNormals[i] = Vector( bytedirs[i] );
+	}
+
+	// build the local copy of particle palette
+	for( i = 0; i < 256; i++ )
+	{
+		float entry[3];
+
+		CL_GetPaletteColor( i, entry );
+
+		m_uchPalette[i][0] = (byte)entry[0];
+		m_uchPalette[i][1] = (byte)entry[1];
+		m_uchPalette[i][2] = (byte)entry[2];
+	}
 
 	// loading TE shaders
 	m_hDefaultParticle = TEX_Load( "$defaultParticle" );
-	m_hSparks = TEX_Load( "gfx/hud/spark" );
-	m_hSmoke = TEX_Load( "gfx/hud/smoke" );
 }
 
-void CParticleSystem :: FreeParticle( CParticle *pCur )
+void CParticleSystem :: FreeParticle( CBaseParticle *pCur )
 {
-	pCur->next = m_pFreeParticles;
+	if( pCur->GetType( ) == pt_clientcustom && pCur->pfnDeathFunc )
+	{
+		// call the deathfunc func before die
+		pCur->pfnDeathFunc( pCur );
+	}
+
+	pCur->m_pNext = m_pFreeParticles;
 	m_pFreeParticles = pCur;
 }
 
-CParticle	*CParticleSystem :: AllocParticle( void )
+CBaseParticle *CParticleSystem :: AllocParticle( HSPRITE m_hSpr )
 {
-	CParticle	*p;
+	CBaseParticle	*pAlloc;
+
+	// never alloc particles when we not in game
+	if ( IN_GAME() == 0 )
+		return NULL;
 
 	if( !m_pFreeParticles )
 	{
@@ -337,340 +124,636 @@ CParticle	*CParticleSystem :: AllocParticle( void )
 		return NULL;
 	}
 
-	if( cl_particlelod->integer > 1 )
+	pAlloc = m_pFreeParticles;
+	m_pFreeParticles = pAlloc->m_pNext;
+	pAlloc->m_pNext = m_pActiveParticles;
+	m_pActiveParticles = pAlloc;
+
+	// clear old particle
+	pAlloc->SetType( pt_static );
+	pAlloc->m_hSprite = m_hSpr;
+	pAlloc->m_Velocity = g_vecZero;
+	pAlloc->m_Pos = g_vecZero;
+	pAlloc->m_Ramp = 0;
+
+	return pAlloc;
+}
+
+void CParticleSystem :: DrawParticle( HSPRITE hSprite, const Vector &pos, const byte color[4], float size )
+{
+	// draw the particle
+	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
+
+	g_engfuncs.pTriAPI->RenderMode( kRenderTransTexture );
+	g_engfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], color[3] );
+
+	g_engfuncs.pTriAPI->Bind( hSprite, 0 );
+
+	if ( hSprite == m_hDefaultParticle )
 	{
-		if(!( RANDOM_LONG( 0, 1 ) % cl_particlelod->integer ))
-			return NULL;
+		// HACKHACK a scale up to keep particles from disappearing
+		size += (pos.x - gpViewParams->vieworg.x) * gpViewParams->forward.x;
+		size += (pos.y - gpViewParams->vieworg.y) * gpViewParams->forward.y;
+		size += (pos.z - gpViewParams->vieworg.z) * gpViewParams->forward.z;
+
+		if( size < 20.0f ) size = 1.0f;
+		else size = 1.0f + size * 0.004f;
 	}
 
-	p = m_pFreeParticles;
-	m_pFreeParticles = p->next;
-	p->next = m_pActiveParticles;
-	m_pActiveParticles = p;
+	Vector	right, up;
 
-	return p;
+	// scale the axes by radius
+	right = gpViewParams->right * size;
+	up = gpViewParams->up * size;
+
+	// Add the 4 corner vertices.
+	g_engfuncs.pTriAPI->Begin( TRI_QUADS );
+	g_engfuncs.pTriAPI->TexCoord2f ( 0.0f, 1.0f );
+	g_engfuncs.pTriAPI->Vertex3fv ( pos - right + up );
+
+	g_engfuncs.pTriAPI->TexCoord2f ( 0.0f, 0.0f );
+	g_engfuncs.pTriAPI->Vertex3fv ( pos + right + up );
+
+	g_engfuncs.pTriAPI->TexCoord2f ( 1.0f, 0.0f );
+	g_engfuncs.pTriAPI->Vertex3fv ( pos + right - up );
+
+	g_engfuncs.pTriAPI->TexCoord2f ( 1.0f, 1.0f );
+	g_engfuncs.pTriAPI->Vertex3fv ( pos - right - up );
+
+	g_engfuncs.pTriAPI->End();
+		
+	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+}
+
+void CParticleSystem :: SimulateAndRender( CBaseParticle *pParticle )
+{
+	float	ft = GetTimeDelta();
+	float	time3 = 15.0 * ft;
+	float	time2 = 10.0 * ft;
+	float	time1 = 5.0 * ft;
+	float	dvel = 4 * ft;
+
+	float grav = ft * gpMovevars->gravity * 0.05f;
+
+	int	iRamp;
+
+	switch( pParticle->GetType( ))
+	{
+	case pt_static:
+		break;
+
+	case pt_clientcustom:
+		if( pParticle->pfnCallback )
+			pParticle->pfnCallback( pParticle, ft );
+		return;
+
+	case pt_fire:
+		pParticle->m_Ramp += (word)( time1 * ( 1 << SIMSHIFT ));
+		iRamp = pParticle->m_Ramp >> SIMSHIFT;
+
+		if( iRamp >= 6 )
+		{
+			pParticle->m_flLifetime = -1;
+		}
+		else
+		{
+			pParticle->SetColor( ramp3[iRamp] );
+		}
+		pParticle->m_Velocity[2] += grav;
+		break;
+
+	case pt_explode:
+		pParticle->m_Ramp += (word)(time2 * ( 1 << SIMSHIFT));
+		iRamp = pParticle->m_Ramp >> SIMSHIFT;
+		if( iRamp >= 8 )
+		{
+			pParticle->m_flLifetime = -1;
+		}
+		else
+		{
+			pParticle->SetColor( ramp1[iRamp] );
+		}
+		pParticle->m_Velocity = pParticle->m_Velocity + pParticle->m_Velocity * dvel;
+		pParticle->m_Velocity.z -= grav;
+		break;
+
+	case pt_explode2:
+		pParticle->m_Ramp += (word)(time3 * ( 1 << SIMSHIFT ));
+		iRamp = pParticle->m_Ramp >> SIMSHIFT;
+		if( iRamp >= 8 )
+		{
+			pParticle->m_flLifetime = -1;
+		}
+		else
+		{
+			pParticle->SetColor( ramp2[iRamp] );
+		}
+		pParticle->m_Velocity = pParticle->m_Velocity - pParticle->m_Velocity * ft;
+		pParticle->m_Velocity.z -= grav;
+		break;
+
+	case pt_grav:
+		pParticle->m_Velocity.z -= grav * 20;
+		break;
+
+	case pt_slowgrav:
+		pParticle->m_Velocity.z = grav;
+		break;
+
+	case pt_vox_grav:
+		pParticle->m_Velocity.z -= grav * 8;
+		break;
+		
+	case pt_vox_slowgrav:
+		pParticle->m_Velocity.z -= grav * 4;
+		break;
+		
+	case pt_blob:
+	case pt_blob2:
+		pParticle->m_Ramp += (word)( time2 * ( 1 << SIMSHIFT ));
+		iRamp = pParticle->m_Ramp >> SIMSHIFT;
+
+		if( iRamp >= SPARK_COLORCOUNT )
+		{
+			pParticle->m_Ramp = 0;
+			iRamp = 0;
+		}
+		
+		pParticle->SetColor( gSparkRamp[iRamp] );
+		
+		pParticle->m_Velocity[0] -= pParticle->m_Velocity[0] * 0.5f * ft;
+		pParticle->m_Velocity[1] -= pParticle->m_Velocity[1] * 0.5f * ft;
+		pParticle->m_Velocity[2] -= grav * 5;
+
+		if ( RANDOM_LONG( 0, 3 ))
+		{
+			pParticle->SetType( pt_blob );
+			pParticle->SetAlpha(0);
+		}
+		else
+		{
+			pParticle->SetType( pt_blob2 );
+			pParticle->SetAlpha( 255.9f );
+		}
+		break;
+	}
+
+	HSPRITE hTexture = pParticle->m_hSprite;
+
+	if( hTexture <= 0 )
+		hTexture = m_hDefaultParticle;
+
+	// render particle now
+	DrawParticle( hTexture, pParticle->m_Pos, pParticle->m_Color, 1.5f );
+
+	// update position.
+	pParticle->m_Pos = pParticle->m_Pos + pParticle->m_Velocity * ft;
 }
 	
 void CParticleSystem :: Update( void )
 {
-	CParticle	*p, *next;
-	CParticle	*active = NULL, *tail = NULL;
+	CBaseParticle	*pCur, *pKill;
 
 	if( !cl_particles->integer ) return;
 
-	float gravity = -gpGlobals->frametime * gpMovevars->gravity;
-
-	for( p = m_pActiveParticles; p; p = next )
+	while( 1 ) 
 	{
-		// grab next now, so if the particle is freed we still have it
-		next = p->next;
-
-		if( !p->Evaluate( gravity ))
+		// free time-expired particles
+		pKill = m_pActiveParticles;
+		if ( pKill && pKill->GetLifetime() < gpGlobals->time )
 		{
-			FreeParticle( p );
+			m_pActiveParticles = pKill->m_pNext;
+			FreeParticle( pKill );
 			continue;
 		}
+		break;
+	}
 
-		p->next = NULL;
-
-		if( !tail )
+	for( pCur = m_pActiveParticles; pCur; pCur = pCur->m_pNext )
+	{
+		while( 1 )
 		{
-			active = tail = p;
+			pKill = pCur->m_pNext;
+			if ( pKill && pKill->GetLifetime() < gpGlobals->time )
+			{
+				pCur->m_pNext = pKill->m_pNext;
+				FreeParticle( pKill );
+				continue;
+			}
+			break;
+		}
+
+		SimulateAndRender( pCur );
+	}
+}
+
+/*
+===============
+CL_EntityParticles
+
+EF_BRIGHTFIELD effect
+===============
+*/
+void CParticleSystem :: EntityParticles( edict_t *ent )
+{
+	float		angle;
+	float		sr, sp, sy, cr, cp, cy;
+	float		dist = 64, beamlength = 16;
+	Vector		m_vecForward, m_vecPos;	
+	CBaseParticle	*p;
+
+	for( int i = 0; i < NUMVERTEXNORMALS; i++ )
+	{
+		p = AllocParticle ();
+		if( !p ) return;
+
+		angle = gpGlobals->time * m_vecAvelocities[i].x;
+		SinCos( angle, &sy, &cy );
+		angle = gpGlobals->time * m_vecAvelocities[i].y;
+		SinCos( angle, &sp, &cp );
+		angle = gpGlobals->time * m_vecAvelocities[i].z;
+		SinCos( angle, &sr, &cr );
+	
+		m_vecForward.Init( cp * cy, cp * sy, -sp ); 
+
+		p->SetLifetime( 0.01f );
+		p->SetColor( 111 );		// yellow
+		p->SetType( pt_explode );
+
+		p->m_Pos = ent->v.origin + m_vecAvertexNormals[i] * dist + m_vecForward * beamlength;
+	}
+}
+
+/*
+===============
+ParticleEffect
+
+PARTICLE_EFFECT on server
+===============
+*/
+void CParticleSystem :: ParticleEffect( const Vector org, const Vector dir, int color, int count )
+{
+	CBaseParticle	*p;
+
+	if( count == 1024 )
+	{
+		// Quake hack: count == 255 it's a RocketExplode
+		ParticleExplosion( org );
+		return;
+	}
+	
+	for( int i = 0; i < count; i++ )
+	{
+		p = AllocParticle();
+		if( !p ) return;
+
+		p->SetLifetime( RANDOM_FLOAT( 0.1, 0.5 ));
+		p->SetColor(( color & ~7 ) + RANDOM_LONG( 0, 8 ));
+		p->SetType( pt_slowgrav );
+
+		for( int j = 0; j < 3; j++ )
+		{
+			p->m_Pos[j] = org[j] + RANDOM_FLOAT( -16, 16 );
+			p->m_Velocity[j] = dir[j] * 15;
+		}
+	}
+}
+
+/*
+===============
+CL_ParticleExplosion
+
+===============
+*/
+void CParticleSystem :: ParticleExplosion( const Vector org )
+{
+	CBaseParticle	*p;
+	
+	for( int i = 0; i < 1024; i++ )
+	{
+		p = AllocParticle();
+		if( !p ) return;
+
+		p->SetLifetime( 5.0 );
+		p->SetColor( ramp1[0] );
+		p->m_Ramp = RANDOM_LONG( 0, 4 );
+
+		if( i & 1 )
+		{
+			p->SetType( pt_explode );
+			for( int j = 0; j < 3; j++ )
+			{
+				p->m_Pos[j] = org[j] + RANDOM_FLOAT( -16, 16 );
+				p->m_Velocity[j] = RANDOM_FLOAT( -256, 256 );
+			}
 		}
 		else
 		{
-			tail->next = p;
-			tail = p;
+			p->SetType( pt_explode2 );
+			for( int j = 0; j < 3; j++ )
+			{
+				p->m_Pos[j] = org[j] + RANDOM_FLOAT( -16, 16 );
+				p->m_Velocity[j] = RANDOM_FLOAT( -256, 256 );
+			}
 		}
 	}
-
-	m_pActiveParticles = active;
-}
-
-bool CParticleSystem :: AddParticle( CParticle *src, HSPRITE shader, int flags )
-{
-	if( !src ) return false;
-
-	CParticle	*dst = AllocParticle();
-
-	if( !dst ) return false;
-
-	if( shader ) dst->m_hSprite = shader;
-	else dst->m_hSprite = m_hDefaultParticle;
-	dst->flTime = gpGlobals->time;
-	dst->flags = flags;
-
-	dst->origin = src->origin;
-	dst->velocity = src->velocity;
-	dst->accel = src->accel; 
-	dst->color = src->color;
-	dst->colorVelocity = src->colorVelocity;
-	dst->alpha = src->alpha;
-	dst->scale = 1.0f;
-
-	dst->radius = src->radius;
-	dst->length = src->length;
-	dst->rotation = src->rotation;
-	dst->alphaVelocity = src->alphaVelocity;
-	dst->radiusVelocity = src->radiusVelocity;
-	dst->lengthVelocity = src->lengthVelocity;
-	dst->bounceFactor = src->bounceFactor;
-
-	// needs to save old origin
-	if( flags & ( FPART_BOUNCE|FPART_FRICTION ))
-		dst->oldorigin = dst->origin;
-
-	return true;
 }
 
 /*
-=================
-CL_ExplosionParticles
-=================
+===============
+CL_ParticleExplosion2
+
+===============
 */
-void CParticleSystem :: ExplosionParticles( const Vector pos )
+void CParticleSystem :: ParticleExplosion2( const Vector org, int colorStart, int colorLength )
 {
-	CParticle	src;
-	int	flags;
+	int colorMod = 0;
+	CBaseParticle *p;
 
-	if( !cl_particles->integer ) return;
-
-	flags = (FPART_STRETCH|FPART_BOUNCE|FPART_FRICTION);
-
-	for( int i = 0; i < 384; i++ )
+	for( int i = 0; i < 512; i++ )
 	{
-		src.origin.x = pos.x + RANDOM_LONG( -16, 16 );
-		src.origin.y = pos.y + RANDOM_LONG( -16, 16 );
-		src.origin.z = pos.z + RANDOM_LONG( -16, 16 );
-		src.velocity.x = RANDOM_LONG( -256, 256 );
-		src.velocity.y = RANDOM_LONG( -256, 256 );
-		src.velocity.z = RANDOM_LONG( -256, 256 );
-		src.accel.x = src.accel.y = 0;
-		src.accel.z = -60 + RANDOM_FLOAT( -30, 30 );
-		src.color = Vector( 1, 1, 1 );
-		src.colorVelocity = Vector( 0, 0, 0 );
-		src.alpha = 1.0;
-		src.alphaVelocity = -3.0;
-		src.radius = 0.5 + RANDOM_FLOAT( -0.2, 0.2 );
-		src.radiusVelocity = 0;
-		src.length = 8 + RANDOM_FLOAT( -4, 4 );
-		src.lengthVelocity = 8 + RANDOM_FLOAT( -4, 4 );
-		src.rotation = 0;
-		src.bounceFactor = 0.2;
+		p = AllocParticle();
+		if( !p ) return;
 
-		if( !AddParticle( &src, m_hSparks, flags ))
-			return;
-	}
+		p->SetLifetime ( 0.3f );
+		p->SetColor( colorStart + ( colorMod % colorLength ));
+		colorMod++;
 
-	// smoke
-	flags = FPART_VERTEXLIGHT;
-
-	for( i = 0; i < 5; i++ )
-	{
-		src.origin.x = pos.x + RANDOM_FLOAT( -10, 10 );
-		src.origin.y = pos.y + RANDOM_FLOAT( -10, 10 );
-		src.origin.z = pos.z + RANDOM_FLOAT( -10, 10 );
-		src.velocity.x = RANDOM_FLOAT( -10, 10 );
-		src.velocity.y = RANDOM_FLOAT( -10, 10 );
-		src.velocity.z = RANDOM_FLOAT( -10, 10 ) + RANDOM_FLOAT( -5, 5 ) + 25;
-		src.accel = Vector( 0, 0, 0 );
-		src.color = Vector( 0, 0, 0 );
-		src.colorVelocity = Vector( 0.75, 0.75, 0.75 );
-		src.alpha = 0.5;
-		src.alphaVelocity = RANDOM_FLOAT( -0.1, -0.2 );
-		src.radius = 30 + RANDOM_FLOAT( -15, 15 );
-		src.radiusVelocity = 15 + RANDOM_FLOAT( -7.5, 7.5 );
-		src.length = 1;
-		src.lengthVelocity = 0;
-		src.rotation = RANDOM_LONG( 0, 360 );
-
-		if( !AddParticle( &src, m_hSmoke, flags ))
-			return;
+		p->SetType( pt_blob );
+		for ( int j = 0; j < 3; j++ )
+		{
+			p->m_Pos[j] = org[j] + RANDOM_FLOAT( -16, 16 );
+			p->m_Velocity[j] = RANDOM_FLOAT( -256, 256 );
+		}
 	}
 }
 
 /*
-=================
-CL_BulletParticles
-=================
+===============
+CL_BlobExplosion
+
+===============
 */
-void CParticleSystem :: SparkParticles( const Vector org, const Vector dir )
+void CParticleSystem :: BlobExplosion( const Vector org )
 {
-	CParticle	src;
-
-	if( !cl_particles->integer ) return;
-
-	// sparks
-	int flags = (FPART_STRETCH|FPART_BOUNCE|FPART_FRICTION);
-
-	for( int i = 0; i < 16; i++ )
+	CBaseParticle	*p;
+	
+	for( int i = 0; i < 1024; i++ )
 	{
-		src.origin.x = org[0] + dir[0] * 2 + RANDOM_FLOAT( -1, 1 );
-		src.origin.y = org[1] + dir[1] * 2 + RANDOM_FLOAT( -1, 1 );
-		src.origin.z = org[2] + dir[2] * 2 + RANDOM_FLOAT( -1, 1 );
-		src.velocity.x = dir[0] * 180 + RANDOM_FLOAT( -60, 60 );
-		src.velocity.y = dir[1] * 180 + RANDOM_FLOAT( -60, 60 );
-		src.velocity.z = dir[2] * 180 + RANDOM_FLOAT( -60, 60 );
-		src.accel.x = src.accel.y = 0;
-		src.accel.z = -120 + RANDOM_FLOAT( -60, 60 );
-		src.color = Vector( 1.0, 1.0f, 1.0f );
-		src.colorVelocity = Vector( 0, 0, 0 );
-		src.alpha = 1.0;
-		src.alphaVelocity = -8.0;
-		src.radius = 0.4 + RANDOM_FLOAT( -0.2, 0.2 );
-		src.radiusVelocity = 0;
-		src.length = 8 + RANDOM_FLOAT( -4, 4 );
-		src.lengthVelocity = 8 + RANDOM_FLOAT( -4, 4 );
-		src.rotation = 0;
-		src.bounceFactor = 0.2;
+		p = AllocParticle();
+		if( !p ) return;
 
-		if( !AddParticle( &src, m_hSparks, flags ))
-			return;
+		p->SetLifetime( 1.0f + RANDOM_FLOAT( 0, 0.4f ));
+
+		if( i & 1 )
+		{
+			p->SetType( pt_blob );
+			p->SetColor( 66 + rand() % 6 );
+
+			for( int j = 0; j < 3; j++ )
+			{
+				p->m_Pos[j] = org[j] + RANDOM_FLOAT( -16, 16 );
+				p->m_Velocity[j] = RANDOM_FLOAT( -256, 256 );
+			}
+		}
+		else
+		{
+			p->SetType( pt_blob2 );
+			p->SetColor( 150 + rand() % 6 );
+
+			for( int j = 0; j < 3; j++ )
+			{
+				p->m_Pos[j] = org[j] + RANDOM_FLOAT( -16, 16 );
+				p->m_Velocity[j] = RANDOM_FLOAT( -256, 256 );
+			}
+		}
 	}
 }
 
 /*
-=================
-CL_RicochetSparks
-=================
+===============
+CL_LavaSplash
+
+===============
 */
-void CParticleSystem :: RicochetSparks( const Vector org, float scale )
+void CParticleSystem :: LavaSplash( const Vector org )
 {
-	CParticle	src;
+	CBaseParticle	*p;
+	float		vel;
+	Vector		dir;
 
-	if( !cl_particles->integer ) return;
-
-	// sparks
-	int flags = (FPART_STRETCH|FPART_BOUNCE|FPART_FRICTION);
-
-	for( int i = 0; i < 16; i++ )
+	for ( int i = -16; i < 16; i++ )
 	{
-		src.origin.x = org[0] + RANDOM_FLOAT( -1, 1 );
-		src.origin.y = org[1] + RANDOM_FLOAT( -1, 1 );
-		src.origin.z = org[2] + RANDOM_FLOAT( -1, 1 );
-		src.velocity.x = RANDOM_FLOAT( -60, 60 );
-		src.velocity.y = RANDOM_FLOAT( -60, 60 );
-		src.velocity.z = RANDOM_FLOAT( -60, 60 );
-		src.accel.x = src.accel.y = 0;
-		src.accel.z = -120 + RANDOM_FLOAT( -60, 60 );
-		src.color = Vector( 1.0, 1.0f, 1.0f );
-		src.colorVelocity = Vector( 0, 0, 0 );
-		src.alpha = 1.0;
-		src.alphaVelocity = -8.0;
-		src.radius = scale + RANDOM_FLOAT( -0.2, 0.2 );
-		src.radiusVelocity = 0;
-		src.length = scale + RANDOM_FLOAT( -0.2, 0.2 );
-		src.lengthVelocity = scale + RANDOM_FLOAT( -0.2, 0.2 );
-		src.rotation = 0;
-		src.bounceFactor = 0.2;
-
-		if( !AddParticle( &src, m_hSparks, flags ))
-			return;
-	}
-}
-
-void CParticleSystem :: SmokeParticles( const Vector pos, int count )
-{
-	CParticle	src;
-
-	if( !cl_particles->integer ) return;
-
-	// smoke
-	int flags = FPART_VERTEXLIGHT;
-
-	for( int i = 0; i < count; i++ )
-	{
-		src.origin.x = pos.x + RANDOM_FLOAT( -10, 10 );
-		src.origin.y = pos.y + RANDOM_FLOAT( -10, 10 );
-		src.origin.z = pos.z + RANDOM_FLOAT( -10, 10 );
-		src.velocity.x = RANDOM_FLOAT( -10, 10 );
-		src.velocity.y = RANDOM_FLOAT( -10, 10 );
-		src.velocity.z = RANDOM_FLOAT( -10, 10 ) + RANDOM_FLOAT( -5, 5 ) + 25;
-		src.accel = Vector( 0, 0, 0 );
-		src.color = Vector( 0, 0, 0 );
-		src.colorVelocity = Vector( 0.75, 0.75, 0.75 );
-		src.alpha = 0.5;
-		src.alphaVelocity = RANDOM_FLOAT( -0.1, -0.2 );
-		src.radius = 30 + RANDOM_FLOAT( -15, 15 );
-		src.radiusVelocity = 15 + RANDOM_FLOAT( -7.5, 7.5 );
-		src.length = 1;
-		src.lengthVelocity = 0;
-		src.rotation = RANDOM_LONG( 0, 360 );
-
-		if( !AddParticle( &src, m_hSmoke, flags ))
-			return;
+		for ( int j = -16; j <16; j++ )
+		{
+			for ( int k = 0; k < 1; k++ )
+			{
+				p = AllocParticle();
+				if( !p ) return;
+		
+				p->SetLifetime( 2.0f + RANDOM_FLOAT( 0.0f, 0.65f ));
+				p->SetColor( 224 + RANDOM_LONG( 0, 8 ));
+				p->SetType( pt_slowgrav );
+				
+				dir[0] = j * 8 + RANDOM_LONG( 0, 8 );
+				dir[1] = i * 8 + RANDOM_LONG( 0, 8 );
+				dir[2] = 256;
+	
+				p->m_Pos[0] = org[0] + dir[0];
+				p->m_Pos[1] = org[1] + dir[1];
+				p->m_Pos[2] = org[2] + RANDOM_LONG( 0, 64 );
+	
+				dir = dir.Normalize();
+				vel = 50 + RANDOM_LONG( 0, 64 );
+				p->m_Velocity = dir * vel;
+			}
+		}
 	}
 }
 
 /*
-=================
-CL_BulletParticles
-=================
+===============
+CL_TeleportSplash
+
+===============
 */
-void CParticleSystem :: BulletParticles( const Vector org, const Vector dir )
+void CParticleSystem :: TeleportSplash( const Vector org )
 {
-	CParticle	src;
-	int cnt, count;
+	CBaseParticle	*p;
+	Vector		dir;
 
-	if( !cl_particles->integer ) return;
-
-	count = RANDOM_LONG( 3, 8 );
-	cnt = POINT_CONTENTS( org );
-
-	if( cnt == CONTENTS_WATER )
-		return;
-
-	// sparks
-	int flags = (FPART_STRETCH|FPART_BOUNCE|FPART_FRICTION);
-
-	for( int i = 0; i < count; i++ )
+	for( int i = -16; i < 16; i+=4 )
 	{
-		src.origin.x = org[0] + dir[0] * 2 + RANDOM_FLOAT( -1, 1 );
-		src.origin.y = org[1] + dir[1] * 2 + RANDOM_FLOAT( -1, 1 );
-		src.origin.z = org[2] + dir[2] * 2 + RANDOM_FLOAT( -1, 1 );
-		src.velocity.x = dir[0] * 180 + RANDOM_FLOAT( -60, 60 );
-		src.velocity.y = dir[1] * 180 + RANDOM_FLOAT( -60, 60 );
-		src.velocity.z = dir[2] * 180 + RANDOM_FLOAT( -60, 60 );
-		src.accel.x = src.accel.y = 0;
-		src.accel.z = -120 + RANDOM_FLOAT( -60, 60 );
-		src.color = Vector( 1.0, 1.0f, 1.0f );
-		src.colorVelocity = Vector( 0, 0, 0 );
-		src.alpha = 1.0;
-		src.alphaVelocity = -8.0;
-		src.radius = 0.4 + RANDOM_FLOAT( -0.2, 0.2 );
-		src.radiusVelocity = 0;
-		src.length = 8 + RANDOM_FLOAT( -4, 4 );
-		src.lengthVelocity = 8 + RANDOM_FLOAT( -4, 4 );
-		src.rotation = 0;
-		src.bounceFactor = 0.2;
+		for( int j = -16; j < 16; j += 4 )
+		{
+			for( int k = -24; k < 32; k += 4 )
+			{
+				p = AllocParticle();
+				if( !p ) return;
+		
+				p->SetLifetime( RANDOM_FLOAT( 0.2f, 0.36f ));
+				p->SetColor( RANDOM_LONG( 7, 14 ));
+				p->SetType( pt_slowgrav );
+				
+				dir[0] = j * 8;
+				dir[1] = i * 8;
+				dir[2] = k * 8;
+	
+				p->m_Pos[0] = org[0] + i + RANDOM_FLOAT( -4, 4 );
+				p->m_Pos[1] = org[1] + j + RANDOM_FLOAT( -4, 4 );
+				p->m_Pos[2] = org[2] + k + RANDOM_FLOAT( -4, 4 );
+	
+				dir = dir.Normalize();
+				p->m_Velocity = dir * RANDOM_LONG( 50, 114 );
+			}
+		}
+	}
+}
 
-		if( !AddParticle( &src, m_hSparks, flags ))
-			return;
+/*
+===============
+CL_RocketTrail
+
+===============
+*/
+void CParticleSystem :: RocketTrail( const Vector org, const Vector end, int type )
+{
+	vec3_t		vec, start;
+	float		len;
+	CBaseParticle	*p;
+	int		j, dec;
+	static int	tracercount;
+
+	start = org;
+	vec = end - start;
+	len = vec.Length();
+	vec = vec.Normalize();
+
+	if( type < 128 )
+	{
+		dec = 3;
+	}
+	else
+	{
+		dec = 1;
+		type -= 128;
 	}
 
-	// smoke
-	flags = FPART_VERTEXLIGHT;
-
-	for( i = 0; i < 3; i++ )
+	while( len > 0 )
 	{
-		src.origin.x = org[0] + dir[0] * 5 + RANDOM_FLOAT( -1, 1 );
-		src.origin.y = org[1] + dir[1] * 5 + RANDOM_FLOAT( -1, 1 );
-		src.origin.z = org[2] + dir[2] * 5 + RANDOM_FLOAT( -1, 1 );
-		src.velocity.x = RANDOM_FLOAT( -2.5, 2.5 );
-		src.velocity.y = RANDOM_FLOAT( -2.5, 2.5 );
-		src.velocity.z = RANDOM_FLOAT( -2.5, 2.5 ) + (25 + RANDOM_FLOAT( -5, 5 ));
-		src.accel = Vector( 0, 0, 0 );
-		src.color = Vector( 0.4, 0.4, 0.4 );
-		src.colorVelocity = Vector( 0.2, 0.2, 0.2 );
-		src.alpha = 0.5;
-		src.alphaVelocity = -(0.4 + RANDOM_FLOAT( 0, 0.2 ));
-		src.radius = 3 + RANDOM_FLOAT( -1.5, 1.5 );
-		src.radiusVelocity = 5 + RANDOM_FLOAT( -2.5, 2.5 );
-		src.length = 1;
-		src.lengthVelocity = 0;
-		src.rotation = RANDOM_LONG( 0, 360 );
+		len -= dec;
 
-		if( !AddParticle( &src, m_hSmoke, flags ))
-			return;
+		p = AllocParticle();
+		if( !p ) return;
+		
+		p->SetLifetime( 2.0f );
+
+		switch( type )
+		{
+		case 0:	// rocket trail
+			p->m_Ramp = RANDOM_LONG( 0, 4 );
+			p->SetColor( ramp3[p->m_Ramp] );
+			p->SetType( pt_fire );
+			for( j = 0; j < 3; j++ )
+				p->m_Pos[j] = start[j] + ((rand()%6)-3);
+			break;
+		case 1:	// smoke smoke
+			p->m_Ramp = RANDOM_LONG( 2, 6 );
+			p->SetColor( ramp3[p->m_Ramp] );
+			p->SetType( pt_fire );
+			for( j = 0; j < 3; j++ )
+				p->m_Pos[j] = start[j] + ((rand() % 6) - 3);
+			break;
+		case 2:	// blood
+			p->SetType( pt_grav );
+			p->SetColor( RANDOM_LONG( 67, 71 ));
+			for( j = 0; j < 3; j++ )
+				p->m_Pos[j] = start[j] + ((rand() % 6) - 3);
+			break;
+		case 3:
+		case 5:	// tracer
+			p->SetLifetime( 0.5f );
+			p->SetType( pt_static );
+
+			if( type == 3 )
+				p->SetColor( 52 + (( tracercount & 4 )<<1 ));
+			else p->SetColor( 230 + (( tracercount & 4 )<<1 ));
+
+			tracercount++;
+			p->m_Pos = start;
+
+			if( tracercount & 1 )
+			{
+				p->m_Velocity[0] = 30 *  vec[1];
+				p->m_Velocity[1] = 30 * -vec[0];
+			}
+			else
+			{
+				p->m_Velocity[0] = 30 * -vec[1];
+				p->m_Velocity[1] = 30 *  vec[0];
+			}
+			break;
+		case 4:	// slight blood
+			p->SetType( pt_grav );
+			p->SetColor( RANDOM_LONG( 67, 71 ));
+			for( j = 0; j < 3; j++ )
+				p->m_Pos[j] = start[j] + RANDOM_FLOAT( -3, 3 );
+			len -= 3;
+			break;
+		case 6:	// voor trail
+			p->SetColor( RANDOM_LONG( 152, 156 ));
+			p->SetType( pt_static );
+			p->SetLifetime( 0.3f );
+			for( j = 0; j < 3; j++ )
+				p->m_Pos[j] = start[j] + RANDOM_FLOAT( -16, 16 );
+			break;
+		}
+		start += vec;
 	}
+}
+
+static void pfnSparkTracerDraw( CBaseParticle *pPart, float frametime )
+{
+	float	lifePerc = ( pPart->m_flLifetime - gpGlobals->time );
+	float	scale = (pPart->m_flLength);
+	Vector	delta = pPart->m_Velocity;
+
+	float	flLength = ( pPart->m_Velocity * scale ).Length();//( delta - pos ).Length();
+	float	flWidth = ( flLength < pPart->m_flWidth ) ? flLength : pPart->m_flWidth;
+
+	Tracer_Draw( pPart->m_hSprite, pPart->m_Pos, (delta * scale), flWidth, pPart->m_Color, 0.0f, 0.8f );
+
+	if(( lifePerc < 0.9f ) && POINT_CONTENTS( pPart->m_Pos ) == CONTENTS_SOLID ) 
+		pPart->SetLifetime( 0.0f );	// die
+
+	float grav = frametime * gpMovevars->gravity * 0.05f;
+	pPart->m_Velocity.z -= grav * 20; // use normal gravity
+	pPart->m_Pos = pPart->m_Pos + pPart->m_Velocity * frametime;
+}
+
+#define SPARK_ELECTRIC_MINSPEED	64.0f
+#define SPARK_ELECTRIC_MAXSPEED	300.0f
+
+/*
+===============
+CL_SparkleTracer
+
+===============
+*/
+void CParticleSystem :: SparkleTracer( const Vector& pos, const Vector& dir )
+{
+	CBaseParticle *p;
+	
+	p = AllocParticle( m_hDefaultParticle );
+	if( !p ) return;
+
+	p->SetType( pt_clientcustom );
+	p->SetLifetime( RANDOM_FLOAT( 0.5f, 1.0f ));
+	p->SetColor( gTracerColors[4] );
+	p->m_Pos = pos;
+
+	p->m_flWidth = RANDOM_FLOAT( 2.0f, 5.0f );
+	p->m_flLength = RANDOM_FLOAT( 0.05f, 0.08f );
+	p->m_Velocity = dir * RANDOM_FLOAT( SPARK_ELECTRIC_MINSPEED, SPARK_ELECTRIC_MAXSPEED );
+	p->pfnCallback = pfnSparkTracerDraw;
 }

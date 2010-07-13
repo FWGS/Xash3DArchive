@@ -134,7 +134,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 		if( gpGlobals->time > pTemp->m_flSpriteScale )
 		{
 			// show Sparks
-			g_pParticles->SparkParticles( pTemp->origin, g_vecZero );
+			DoSparks( pTemp->origin );
 
 			// reduce life
 			pTemp->m_flFrameRate -= 0.1f;
@@ -339,7 +339,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 
 	if( pTemp->flags & FTENT_SMOKETRAIL )
 	{
-		g_engfuncs.pEfxAPI->R_RocketTrail( pTemp->oldorigin, pTemp->origin, 1 );
+		g_pParticles->RocketTrail( pTemp->oldorigin, pTemp->origin, 1 );
 	}
 
 	if( pTemp->flags & FTENT_GRAVITY )
@@ -1039,7 +1039,7 @@ void CTempEnts::RocketFlare( const Vector& pos )
 	pTemp->renderAmt = 200;
 	pTemp->m_flFrameRate = 1.0;
 	pTemp->m_flFrame = RANDOM_LONG( 0, nframeCount - 1 );
-	pTemp->m_flSpriteScale = 0.5;
+	pTemp->m_flSpriteScale = 1.0;
 	pTemp->die = gpGlobals->time + 0.01f;	// when 100 fps die at next frame
 	pTemp->flags |= FTENT_SPRANIMATE;
 }
@@ -1125,29 +1125,29 @@ void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, 
 
 void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector &dir, float random, float life, int count, int modelIndex, char flags )
 {
-	int		i, frameCount;
-	TEMPENTITY	*pTemp;
-	char		type;
+	int i, frameCount;
+	TEMPENTITY *pTemp;
+	char type;
 
-	if( !modelIndex ) return;
+	if ( !modelIndex ) return;
 
 	type = flags & BREAK_TYPEMASK;
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if ( GetModelType( modelIndex ) == mod_bad )
 		return;
 
 	frameCount = GetModelFrames( modelIndex );
 		
-	if( count == 0 )
+	if ( count == 0 )
 	{
 		// assume surface (not volume)
 		count = (size[0] * size[1] + size[1] * size[2] + size[2] * size[0]) / (3 * SHARD_VOLUME * SHARD_VOLUME);
 	}
 
 	// limit to 100 pieces
-	if( count > 100 ) count = 100;
+	if ( count > 100 ) count = 100;
 
-	for( i = 0; i < count; i++ ) 
+	for ( i = 0; i < count; i++ ) 
 	{
 		vec3_t	vecSpot;
 
@@ -1169,7 +1169,7 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 
 		pTemp->flags |= FTENT_COLLIDEWORLD | FTENT_FADEOUT | FTENT_SLOWGRAVITY;
 
-		if( RANDOM_LONG( 0, 255 ) < 200 ) 
+		if ( RANDOM_LONG( 0, 255 ) < 200 ) 
 		{
 			pTemp->flags |= FTENT_ROTATE;
 			pTemp->m_vecAvelocity[0] = RANDOM_FLOAT( -256, 255 );
@@ -1177,10 +1177,10 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 			pTemp->m_vecAvelocity[2] = RANDOM_FLOAT( -256, 255 );
 		}
 
-		if(( RANDOM_LONG( 0, 255 ) < 100 ) && ( flags & BREAK_SMOKE ))
+		if (( RANDOM_LONG( 0, 255 ) < 100 ) && ( flags & BREAK_SMOKE ))
 			pTemp->flags |= FTENT_SMOKETRAIL;
 
-		if(( type == BREAK_GLASS ) || ( flags & BREAK_TRANS ))
+		if (( type == BREAK_GLASS ) || ( flags & BREAK_TRANS ))
 		{
 			pTemp->renderMode = kRenderTransTexture;
 			pTemp->renderAmt = pTemp->startAlpha = 128;
@@ -1188,7 +1188,7 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 		else
 		{
 			pTemp->renderMode = kRenderNormal;
-			pTemp->renderAmt = 255; // set this for fadeout
+			pTemp->renderAmt = pTemp->startAlpha = 255; // set this for fadeout
 		}
 
 		pTemp->m_vecVelocity[0] = dir[0] + RANDOM_FLOAT( -random, random );
@@ -1454,37 +1454,122 @@ void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &ve
 	}
 }
 
+void CTempEnts::Large_Funnel( Vector pos, int spriteIndex, int flags )
+{
+	TEMPENTITY	*pTemp = NULL;
+	CBaseParticle	*pPart = NULL;
+	float		vel;
+	Vector		dir;
+	Vector		dest;
+	Vector		m_vecPos;
+	float		flDist;
+
+	for ( int i = -256 ; i <= 256 ; i += 32 )
+	{
+		for ( int j = -256 ; j <= 256 ; j += 32 )
+		{
+			if( pTemp )
+			{
+				pPart = g_pParticles->AllocParticle ();
+				pTemp = NULL;
+			}
+			else
+			{
+				pTemp = TempEntAlloc( pos, spriteIndex );
+				pPart = NULL;
+			}
+
+			if( pTemp || pPart )
+			{
+				if ( flags & 1 )
+				{
+					m_vecPos = pos;
+
+					dest[0] = pos[0] + i;
+					dest[1] = pos[1] + j;
+					dest[2] = pos[2] + RANDOM_FLOAT( 100, 800 );
+
+					// send particle heading to dest at a random speed
+					dir = dest - m_vecPos;
+
+					vel = dest[2] / 8;// velocity based on how far particle has to travel away from org
+				}
+				else
+				{
+					m_vecPos[0] = pos[0] + i;
+					m_vecPos[1] = pos[1] + j;
+					m_vecPos[2] = pos[2] + RANDOM_FLOAT( 100, 800 );
+
+					// send particle heading to org at a random speed
+					dir = pos - m_vecPos;
+
+					vel = m_vecPos[2] / 8;// velocity based on how far particle starts from org
+				}
+
+				flDist = dir.Length();	// save the distance
+				dir = dir.Normalize();
+
+				if ( vel < 64 )
+				{
+					vel = 64;
+				}
+				
+				vel += RANDOM_FLOAT( 64, 128  );
+				float life = (flDist / vel);
+
+				if( pTemp )
+				{
+					pTemp->origin = m_vecPos;
+					pTemp->m_vecVelocity = dir * vel;
+					pTemp->renderMode = kRenderTransAdd;
+					pTemp->flags |= FTENT_FADEOUT;
+					pTemp->fadeSpeed = 2.0f;
+					pTemp->die = gpGlobals->time + RANDOM_FLOAT( life * 0.5, life );
+					pTemp->renderAmt = pTemp->startAlpha = 255;
+				}
+				
+				if( pPart )
+				{
+					pPart->m_Pos = m_vecPos;
+					pPart->SetColor( 0.0f, 1.0f, 0.0f );
+					pPart->SetType( pt_static );
+					pPart->SetAlpha( 1.0f );
+
+					pPart->m_Velocity = dir * vel;
+					// die right when you get there
+					pPart->SetLifetime( RANDOM_FLOAT( life * 0.5, life ));
+				}
+			}
+		}
+	}
+}
+
+void CTempEnts::DoSparks( const Vector& pos )
+{
+	Vector m_vecPos, m_vecDir;
+
+	// randomize position
+	m_vecPos.x = pos.x + RANDOM_FLOAT( -2, 2 );
+	m_vecPos.y = pos.y + RANDOM_FLOAT( -2, 2 );
+	m_vecPos.z = pos.z + RANDOM_FLOAT( -2, 2 );
+
+	int modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
+	RicochetSprite( m_vecPos, modelIndex, RANDOM_FLOAT( 0.4, 0.6f ));
+
+	// create a 8 random spakle tracers
+	for ( int i = 0; i < 8; i++ )
+	{
+		m_vecDir.x = RANDOM_FLOAT( -1.0f, 1.0f );
+		m_vecDir.y = RANDOM_FLOAT( -1.0f, 1.0f );
+		m_vecDir.z = RANDOM_FLOAT( 0.5f, 1.0f );
+
+		g_pParticles->SparkleTracer( m_vecPos, m_vecDir );
+	}
+}
+
 void CTempEnts::TracerEffect( const Vector &start, const Vector &end )
 {
-	vec3_t vec;
-	CParticle	src;
-	int pal = 238; // nice color for tracers
-
-	if( !start || !end ) return;
-
-	vec = ( end - start ).Normalize();
-
-	CL_GetPaletteColor( pal, src.color );
-
-	src.colorVelocity.Init();
-	src.velocity.Init();
-	src.accel.Init();
-
-	src.alpha = 1.0f;
-	src.alphaVelocity = -12.0;	// lifetime
-	src.radius = 1.2f;
-	src.radiusVelocity = 0;
-	src.length = 12;
-	src.lengthVelocity = 0;
-	src.rotation = 0;
-
-	src.origin = start;
-	src.velocity[0] = 6000.0f * vec[0];
-	src.velocity[1] = 6000.0f * vec[1];
-	src.velocity[2] = 6000.0f * vec[2];
-
-	// 0 is a quake particle
-	g_pParticles->AddParticle( &src, 0, FPART_STRETCH );
+	// FIXME: create bullet tracer
 }
 
 void CTempEnts::WeaponFlash( edict_t *pEnt, int iAttachment )

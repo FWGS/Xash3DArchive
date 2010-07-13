@@ -5,6 +5,7 @@
 
 #include "r_local.h"
 #include "mathlib.h"
+#include "matrix_lib.h"
 #include "triangle_api.h"
 
 static vec4_t	pic_xyz[4] = { {0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {0,0,0,1} };
@@ -381,7 +382,7 @@ void Tri_RenderMode( const kRenderMode_t mode )
 {
 	triState.currentRenderMode = mode;
 }
-
+	
 void Tri_Vertex3f( const float x, const float y, const float z )
 {
 	uint	oldIndex = triState.numIndex;

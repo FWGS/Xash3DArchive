@@ -353,7 +353,7 @@ void SCR_MakeLevelShot( void )
 		return;
 
 	// make levelshot at nextframe()
-	Cbuf_AddText( "wait 1\nlevelshot\n" );
+	Cbuf_AddText( "wait 2\nlevelshot\n" );
 }
 
 void SCR_MakeScreenShot( void )
@@ -440,7 +440,7 @@ void SCR_UpdateScreen( void )
 		clgame.dllFuncs.pfnFrame( cl.time );
 }
 
-void SCR_LoadCreditsFont( void )
+static void SCR_LoadCreditsFont( void )
 {
 	int	fontWidth, fontHeight;
 
@@ -497,6 +497,36 @@ void SCR_LoadCreditsFont( void )
 				clgame.scrInfo.charWidths[i] = w * 0.5f;
 			else clgame.scrInfo.charWidths[i] = w * 0.75f;
 		}
+	}
+}
+
+static void SCR_InstallParticlePalette( void )
+{
+	rgbdata_t	*pic;
+	int	i;
+
+	// NOTE: imagelib required this fakebuffer for loading internal palette
+	pic = FS_LoadImage( "#quake.pal", ((byte *)&i), 768 );
+
+	if( pic )
+	{
+		for( i = 0; i < 256; i++ )
+		{
+			clgame.palette[i][0] = pic->palette[i*4+0];
+			clgame.palette[i][1] = pic->palette[i*4+1];
+			clgame.palette[i][2] = pic->palette[i*4+2];
+		}
+		FS_FreeImage( pic );
+	}
+	else
+	{
+		for( i = 0; i < 256; i++ )
+		{
+			clgame.palette[i][0] = i;
+			clgame.palette[i][1] = i;
+			clgame.palette[i][2] = i;
+		}
+		MsgDev( D_WARN, "CL_InstallParticlePalette: failed. Force to grayscale\n" );
 	}
 }
 
@@ -559,8 +589,10 @@ void SCR_Init( void )
 	Cmd_AddCommand( "setfont", CL_SetFont_f, "set console/messsages font" );
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
-	SCR_RegisterShaders();
-	SCR_LoadCreditsFont();
+	SCR_RegisterShaders ();
+	SCR_LoadCreditsFont ();
+
+	SCR_InstallParticlePalette ();
 
 	UI_Init();
 

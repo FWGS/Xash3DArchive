@@ -345,16 +345,10 @@ si_state_t SNDDMA_InitDirect( void *hInst )
 	default: dma.speed = 11025; break;
 	}
 
-	MsgDev( D_NOTE, "SNDDMA_InitDirect: initializing DirectSound ");
-
 	if( !dsound_dll.link )
 	{
 		if( !Sys_LoadLibrary( NULL, &dsound_dll ))
-		{
-			MsgDev( D_NOTE, "- failed\n" );
 			return SIS_FAILURE;
-		}
-		MsgDev( D_NOTE, "- ok\n" );
 	}
 
 	MsgDev( D_NOTE, "SNDDMA_InitDirect: creating DS object " );

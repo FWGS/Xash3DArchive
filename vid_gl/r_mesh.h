@@ -73,7 +73,7 @@ typedef struct
 		int	lastPoly;
 		uint	dlightbits;
 		uint	modhandle;
-		float	placeTime;	// decal createtime
+		uint	placeTime;	// decal createtime
 	};
 	uint		shadowbits;
 } meshbuffer_t;
