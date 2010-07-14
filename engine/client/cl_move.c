@@ -57,7 +57,8 @@ usercmd_t CL_CreateCmd( void )
 	}
 
 	// send milliseconds of time to apply the move
-	extramsec += ( cl.time - cl.oldtime ) * 1000;
+//	extramsec += ( cl.time - cl.oldtime ) * 1000;
+	extramsec += ( host.frametime ) * 1000;
 	ms = extramsec;
 	extramsec -= ms;		// fractional part is left for next frame
 	if( ms > 250 ) ms = 100;	// time was unreasonable

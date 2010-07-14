@@ -255,10 +255,6 @@ SOURCE=.\global\utils.cpp
 
 SOURCE=.\global\view.cpp
 # End Source File
-# Begin Source File
-
-SOURCE=..\game_shared\vmatrix.cpp
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -410,10 +406,6 @@ SOURCE=.\global\utils.h
 # Begin Source File
 
 SOURCE=.\game_shared\vector.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\game_shared\vmatrix.h
 # End Source File
 # End Group
 # End Target

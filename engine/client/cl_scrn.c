@@ -540,7 +540,6 @@ void SCR_RegisterShaders( void )
 		cls.netIcon = re->RegisterShader( "#net.png", SHADER_NOMIP ); // FIXME: INTRESOURCE
 		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: INTRESOURCE
 		cls.fillShader = re->RegisterShader( "*white", SHADER_FONT ); // used for FillRGBA
-		cls.particle = re->RegisterShader( "*particle", SHADER_FONT ); // Q1 particlefont
 		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP ); // FIXME: INTRESOURCE
 		clgame.hHudFont = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
 	

@@ -58,6 +58,7 @@ public:
 	void	RocketTrail( Vector start, Vector end, int type );
 	void	Large_Funnel( Vector pos, int spriteIndex, int flags );
 	void	DoSparks( const Vector& pos );
+	void	StreakSplash( const Vector &pos, const Vector &dir, int color, int count, int speed, int velMin, int velMax );
 // Data
 private:
 	int		m_iTempEntFrame;	// used for keyed dlights only

@@ -292,7 +292,6 @@ typedef struct
 	shader_t		clientFont;		// current client font
 	shader_t		consoleBack;		// console background
 	shader_t		fillShader;		// used for emulate FillRGBA to avoid wrong draw-sort
-	shader_t		particle;			// used for drawing quake1 particles (SV_ParticleEffect)
 	shader_t		netIcon;			// netIcon displayed bad network connection
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
 	shader_t		loadingBar;		// 'loading' progress bar

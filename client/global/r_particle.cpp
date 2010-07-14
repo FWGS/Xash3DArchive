@@ -25,6 +25,7 @@ static int gTracerColors[][3] =
 { 255, 0, 0 },		// Red
 { 0, 255, 0 },		// Green
 { 0, 0, 255 },		// Blue
+{ 0, 0, 0 },		// Tracer default, filled in from cvars, etc.
 { 255, 167, 17 },		// Yellow-orange sparks
 { 255, 130, 90 },		// Yellowish streaks (garg)
 { 55, 60, 144 },		// Blue egon streak
@@ -94,8 +95,9 @@ void CParticleSystem :: Clear( void )
 		m_uchPalette[i][2] = (byte)entry[2];
 	}
 
-	// loading TE shaders
-	m_hDefaultParticle = TEX_Load( "$defaultParticle" );
+	// NOTE: shader nomip automatically create default shader
+	// with allow change rendermodes
+	m_hDefaultParticle = TEX_LoadNoMip( "*particle" );
 }
 
 void CParticleSystem :: FreeParticle( CBaseParticle *pCur )
@@ -712,27 +714,32 @@ void CParticleSystem :: RocketTrail( const Vector org, const Vector end, int typ
 	}
 }
 
+/*
+==============================================================================
+
+	CUSTOM USER PARTICLES
+
+==============================================================================
+*/
 static void pfnSparkTracerDraw( CBaseParticle *pPart, float frametime )
 {
 	float	lifePerc = ( pPart->m_flLifetime - gpGlobals->time );
-	float	scale = (pPart->m_flLength);
+	float	scale = pPart->m_flLength;
 	Vector	delta = pPart->m_Velocity;
 
-	float	flLength = ( pPart->m_Velocity * scale ).Length();//( delta - pos ).Length();
+	float	flLength = ( pPart->m_Velocity * scale ).Length();
 	float	flWidth = ( flLength < pPart->m_flWidth ) ? flLength : pPart->m_flWidth;
 
 	Tracer_Draw( pPart->m_hSprite, pPart->m_Pos, (delta * scale), flWidth, pPart->m_Color, 0.0f, 0.8f );
 
-	if(( lifePerc < 0.9f ) && POINT_CONTENTS( pPart->m_Pos ) == CONTENTS_SOLID ) 
-		pPart->SetLifetime( 0.0f );	// die
-
 	float grav = frametime * gpMovevars->gravity * 0.05f;
-	pPart->m_Velocity.z -= grav * 20; // use normal gravity
+	pPart->m_Velocity.z -= grav * 8; // use vox gravity
 	pPart->m_Pos = pPart->m_Pos + pPart->m_Velocity * frametime;
+	if( lifePerc < 0.5 ) pPart->SetAlpha( lifePerc * 2 );	// fade alpha
 }
 
 #define SPARK_ELECTRIC_MINSPEED	64.0f
-#define SPARK_ELECTRIC_MAXSPEED	300.0f
+#define SPARK_ELECTRIC_MAXSPEED	100.0f
 
 /*
 ===============
@@ -743,17 +750,77 @@ CL_SparkleTracer
 void CParticleSystem :: SparkleTracer( const Vector& pos, const Vector& dir )
 {
 	CBaseParticle *p;
-	
+
 	p = AllocParticle( m_hDefaultParticle );
 	if( !p ) return;
 
 	p->SetType( pt_clientcustom );
 	p->SetLifetime( RANDOM_FLOAT( 0.5f, 1.0f ));
-	p->SetColor( gTracerColors[4] );
+	p->SetColor( gTracerColors[5] );	// Yellow-Orange
 	p->m_Pos = pos;
 
-	p->m_flWidth = RANDOM_FLOAT( 2.0f, 5.0f );
+	p->m_flWidth = RANDOM_FLOAT( 0.35f, 0.5f );
 	p->m_flLength = RANDOM_FLOAT( 0.05f, 0.08f );
 	p->m_Velocity = dir * RANDOM_FLOAT( SPARK_ELECTRIC_MINSPEED, SPARK_ELECTRIC_MAXSPEED );
 	p->pfnCallback = pfnSparkTracerDraw;
+}
+
+/*
+===============
+CL_StreakTracer
+
+===============
+*/
+void CParticleSystem :: StreakTracer( const Vector& pos, const Vector& velocity, int color )
+{
+	CBaseParticle *p;
+
+	p = AllocParticle( m_hDefaultParticle );
+	if( !p ) return;
+
+	p->SetType( pt_clientcustom );
+	p->SetLifetime( RANDOM_FLOAT( 0.5f, 1.0f ));
+	p->SetColor( gTracerColors[color] );	// Yellow-Orange
+	p->m_Pos = pos;
+
+	p->m_flWidth = RANDOM_FLOAT( 0.45f, 0.65f );
+	p->m_flLength = RANDOM_FLOAT( 0.05f, 0.08f );
+	p->m_Velocity = velocity;
+	p->pfnCallback = pfnSparkTracerDraw;
+}
+
+static void pfnBulletTracerDraw( CBaseParticle *pPart, float frametime )
+{
+	Vector	delta = pPart->m_Velocity * pPart->m_flLength;
+
+	Tracer_Draw( pPart->m_hSprite, pPart->m_Pos, delta, pPart->m_flWidth, pPart->m_Color, 0.0f, 0.8f );
+
+	pPart->m_Pos = pPart->m_Pos + pPart->m_Velocity * frametime;
+}
+
+/*
+===============
+CL_BulletTracer
+
+===============
+*/
+void CParticleSystem :: BulletTracer( const Vector& start, const Vector& end )
+{
+	CBaseParticle *p;
+
+	p = AllocParticle( m_hDefaultParticle );
+	if( !p ) return;
+
+	float vel = ((end - start).Length()) * 2;
+	Vector dir = ( end - start ).Normalize();
+
+	p->SetType( pt_clientcustom );
+	p->SetLifetime( 0.5f );		// const
+	p->SetColor( gTracerColors[0] );	// White tracer
+	p->m_Pos = start;
+
+	p->m_flWidth = RANDOM_FLOAT( 1.0f, 1.2f );
+	p->m_flLength = RANDOM_FLOAT( 0.05f, 0.06f );
+	p->m_Velocity = dir * vel;
+	p->pfnCallback = pfnBulletTracerDraw;
 }

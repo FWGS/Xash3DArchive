@@ -17,41 +17,34 @@
 //-----------------------------------------------------------------------------
 // Sees if the tracer is behind the camera or should be culled
 //-----------------------------------------------------------------------------
-static bool ClipTracer( const Vector &start, const Vector &delta, Vector &clippedStart, Vector &clippedDelta )
+static bool CullTracer( const Vector &start, const Vector &end )
 {
-	// dist1 = start dot forward - origin dot forward
-	// dist2 = (start + delta ) dot forward - origin dot forward
-	// in camera space this is -start[2] since origin = 0 and vecForward = (0, 0, -1)
-	float dist1 = -start[2];
-	float dist2 = dist1 - delta[2];
-	
-	// clipped, skip this tracer
-	if( dist1 <= 0 && dist2 <= 0 )
-		return true;
+	Vector mins, maxs;
 
-	clippedStart = start;
-	clippedDelta = delta;
-	
-	// needs to be clipped
-	if ( dist1 <= 0 || dist2 <= 0 )
+	// compute the bounding box
+	for ( int i = 0; i < 3; i++ )
 	{
-		float fraction = dist2 - dist1;
-
-		// Too close to clipping plane
-		if ( fraction < 1e-3 )
-			return true;
-
-		fraction = -dist1 / fraction;
-
-		if ( dist1 <= 0 )
+		if ( start[i] < end[i] )
 		{
-			clippedStart = start + delta * fraction;
+			mins[i] = start[i];
+			maxs[i] = end[i];
 		}
 		else
 		{
-			clippedDelta = delta * fraction;
+			mins[i] = end[i];
+			maxs[i] = start[i];
+		}
+		
+		// Don't let it be zero sized
+		if ( mins[i] == maxs[i] )
+		{
+			maxs[i] += 1;
 		}
 	}
+
+	// check bbox
+	if( g_engfuncs.pEfxAPI->R_CullBox( mins, maxs ) )
+		return true; // culled
 
 	return false;
 }
@@ -59,32 +52,38 @@ static bool ClipTracer( const Vector &start, const Vector &delta, Vector &clippe
 //-----------------------------------------------------------------------------
 // Computes the four verts to draw the tracer with
 //-----------------------------------------------------------------------------
-static bool Tracer_ComputeVerts( const Vector &start, const Vector &delta, float width, Vector *pVerts )
+static bool Tracer_ComputeVerts( const Vector &pos, const Vector &delta, float width, Vector *pVerts )
 {
-	Vector clippedStart, clippedDelta;
+	Vector start, end;
+
+	start = pos;
+	end = start + delta;
 
 	// Clip the tracer
-	if ( ClipTracer( start, delta, clippedStart, clippedDelta ))
+	if ( CullTracer( start, end ))
 		return false;
 
-	// Figure out direction in camera space of the normal
-	Vector normal;
+	Vector screenStart, screenEnd;
 
-	normal = CrossProduct( clippedDelta, clippedStart );
-					  
-	// don't draw if they are parallel
-	float sqLength = DotProduct( normal, normal );
-	if ( sqLength < 1e-3 )
-		return false;
+	// transform point into the screen space
+	g_engfuncs.pTriAPI->WorldToScreen( (float *)start, screenStart );
+	g_engfuncs.pTriAPI->WorldToScreen( (float *)end, screenEnd );
+	
+	Vector tmp, normal;
+	
+	tmp = screenStart - screenEnd;
+	// We don't need Z, we're in screen space
+	tmp.z = 0;
+	tmp = tmp.Normalize();
 
-	// Resize the normal to be appropriate based on the width
-	normal *= ( 0.5f * width / sqrt( sqLength ));
+	normal = gpViewParams->up * tmp.x;	// Build point along noraml line (normal is -y, x)
+	normal = normal - ( gpViewParams->right * -tmp.y );
 
 	// compute four vertexes
-	pVerts[0] = clippedStart - normal;
-	pVerts[1] = clippedStart + normal;
-	pVerts[2] = pVerts[0] + clippedDelta;
-	pVerts[3] = pVerts[1] + clippedDelta;
+	pVerts[0] = start - normal * width;
+	pVerts[1] = start + normal * width;
+	pVerts[2] = pVerts[0] + delta;
+	pVerts[3] = pVerts[1] + delta;
 
 	return true;
 }
@@ -112,17 +111,17 @@ void Tracer_Draw( HSPRITE hSprite, Vector& start, Vector& delta, float width, by
 	g_engfuncs.pTriAPI->Bind( hSprite, 0 );
 	g_engfuncs.pTriAPI->Begin( TRI_QUADS );
 
-	g_engfuncs.pTriAPI->TexCoord2f( 0.0f, startV );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[0] );
-
-	g_engfuncs.pTriAPI->TexCoord2f( 1.0f, startV );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[1] );
+	g_engfuncs.pTriAPI->TexCoord2f( 0.0f, endV );
+	g_engfuncs.pTriAPI->Vertex3fv( verts[2] );
 
 	g_engfuncs.pTriAPI->TexCoord2f( 1.0f, endV );
 	g_engfuncs.pTriAPI->Vertex3fv( verts[3] );
 
-	g_engfuncs.pTriAPI->TexCoord2f( 0.0f, endV );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[2] );
+	g_engfuncs.pTriAPI->TexCoord2f( 1.0f, startV );
+	g_engfuncs.pTriAPI->Vertex3fv( verts[1] );
+
+	g_engfuncs.pTriAPI->TexCoord2f( 0.0f, startV );
+	g_engfuncs.pTriAPI->Vertex3fv( verts[0] );
 
 	g_engfuncs.pTriAPI->End();
 	g_engfuncs.pTriAPI->Disable( TRI_SHADER );

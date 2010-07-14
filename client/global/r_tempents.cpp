@@ -1561,7 +1561,7 @@ void CTempEnts::DoSparks( const Vector& pos )
 	{
 		m_vecDir.x = RANDOM_FLOAT( -1.0f, 1.0f );
 		m_vecDir.y = RANDOM_FLOAT( -1.0f, 1.0f );
-		m_vecDir.z = RANDOM_FLOAT( 0.5f, 1.0f );
+		m_vecDir.z = RANDOM_FLOAT( -1.0f, 1.0f );
 
 		g_pParticles->SparkleTracer( m_vecPos, m_vecDir );
 	}
@@ -1569,7 +1569,21 @@ void CTempEnts::DoSparks( const Vector& pos )
 
 void CTempEnts::TracerEffect( const Vector &start, const Vector &end )
 {
-	// FIXME: create bullet tracer
+	g_pParticles->BulletTracer( start, end );
+}
+
+void CTempEnts::StreakSplash( const Vector &pos, const Vector &dir, int color, int count, int speed, int velMin, int velMax )
+{
+	for ( int i = 0; i < count; i++ )
+	{
+		Vector	vel;
+
+		vel.x = (dir.x * speed) + RANDOM_FLOAT( velMin, velMax );
+		vel.y = (dir.y * speed) + RANDOM_FLOAT( velMin, velMax );
+		vel.z = (dir.z * speed) + RANDOM_FLOAT( velMin, velMax );
+
+		g_pParticles->StreakTracer( pos, vel, color );
+	}
 }
 
 void CTempEnts::WeaponFlash( edict_t *pEnt, int iAttachment )

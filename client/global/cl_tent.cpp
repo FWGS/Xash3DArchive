@@ -468,7 +468,7 @@ void TE_ParseStreakSplash( void )
 	int speed = READ_SHORT();
 	int velocityRange = READ_SHORT();	
 
-	// FIXME: create a oriented shower of tracers
+	g_pTempEnts->StreakSplash( pos, dir, color, count, speed, -velocityRange, velocityRange );
 }
 
 /*

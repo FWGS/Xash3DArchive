@@ -133,6 +133,8 @@ public:
 	void		TeleportSplash( const Vector org );
 	void		RocketTrail( const Vector org, const Vector end, int type );
 	void		SparkleTracer( const Vector& pos, const Vector& dir );
+	void		BulletTracer( const Vector& pos, const Vector& end );
+	void		StreakTracer( const Vector& pos, const Vector& velocity, int color );
 };
 
 extern CParticleSystem	*g_pParticles;

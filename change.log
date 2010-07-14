@@ -9,8 +9,8 @@ Render: fix invisible beams behind glass
 Render: fix glow-sprites drawing through walls
 FS: implement filter wadlumps by wadname (e.g. gfx.wad/backtile)
 Render: implement kRenderTransColor
-Render: fixing flickering decals, optimize drawing
-Engine: completely moving particle code into the client.dll 
+Engine: completely moving particle code into the client.dll
+Client: implement tracers for sparks, garg streaks and bullets 
 
 build 1249
 
