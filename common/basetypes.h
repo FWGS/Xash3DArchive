@@ -24,11 +24,15 @@ typedef struct movevars_s	movevars_t;
 typedef struct usercmd_s	usercmd_t;
 typedef struct cl_priv_s	cl_priv_t;
 typedef struct sv_priv_s	sv_priv_t;
+typedef struct netadr_s	netadr_t;
 typedef unsigned short	CRC16_t;
 typedef unsigned long	CRC32_t;
 typedef float		vec_t;
 
 #define DLLEXPORT		__declspec( dllexport )
+
+#define FALSE		0
+#define TRUE		1
 
 #ifndef NULL
 #define NULL		((void *)0)
@@ -37,5 +41,9 @@ typedef float		vec_t;
 #ifndef BIT
 #define BIT( n )		(1<<( n ))
 #endif
+
+// color strings
+#define ColorIndex( c )	((( c ) - '0' ) & 7 )
+#define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 
 #endif//BASETYPES_H

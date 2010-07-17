@@ -536,7 +536,8 @@ bool Host_FilterTime( float time )
 		}
 	}
 
-	host.frametime = host.realframetime = host.realtime - oldtime;
+	host.frametime = host.realtime - oldtime;
+	host.realframetime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
 	oldtime = host.realtime;
 
 	if( host_framerate->value > 0 && ( Host_IsLocalGame() || CL_IsPlaybackDemo() ))

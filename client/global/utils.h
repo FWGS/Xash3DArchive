@@ -27,8 +27,6 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 #define ASSERTSZ( f, sz )
 #endif
 
-#define MakeRGBA( r, g, b, a )	((a)<<24)|((b)<<16)|((g)<<8)|(r)
-
 extern DLL_GLOBAL const Vector	g_vecZero;
 extern cl_globalvars_t		*gpGlobals;
 extern movevars_t			*gpMovevars;

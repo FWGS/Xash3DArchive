@@ -12,11 +12,9 @@
 
 #define false		0
 #define true		1
-#define STRING_COLOR_TAG	'^'
 #define MAX_STRING		256	// generic string
 #define MAX_SYSPATH		1024	// system filepath
 #define MAX_MSGLEN		32768	// max length of network message
-#define IsColorString( p )	( p && *(p) == STRING_COLOR_TAG && *((p)+1) && *((p)+1) >= '0' && *((p)+1) <= '9' )
 #define bound(min, num, max)	((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 #define MAX_STRING_TABLES	8	// seperately stringsystems
 #define MAX_MODS		128	// environment games that engine can keep visible
@@ -119,12 +117,12 @@ typedef enum
 	CVAR_LATCH_AUDIO	= BIT(13),// save changes until vsound restart
 } cvar_flags_t;
 
-typedef struct
+typedef struct netadr_s
 {
 	netadrtype_t	type;
 	byte		ip[4];
 	word		port;
-} netadr_t;
+};
 
 typedef struct sizebuf_s
 {

@@ -1,12 +1,16 @@
 build ????
 
+Engine: add 'allow_levelshots' cvar (disabled by default) to switch between custom levelshots and normal 'loading' screen
+
+build 1254
+
 SoundLib: ogg loop points (LOOP_START comment)
 Client: recalc fov y for more matched with original HL
 Bshift: fix env_laser entity
 Client: fix fadeout for break model pieces
 Gfx: replace default.bmp font with fixed alpha-channel (thx LokiMb)
 Render: fix invisible beams behind glass
-Render: fix glow-sprites drawing through walls
+Render: fix glow-sprites drawing through walls (see also r_cullflares cvar)
 FS: implement filter wadlumps by wadname (e.g. gfx.wad/backtile)
 Render: implement kRenderTransColor
 Engine: completely moving particle code into the client.dll

@@ -920,7 +920,7 @@ void GL_InitExtensions( void )
 
 	glConfig.max_texture_anisotropy = 0.0f;
 	GL_CheckExtension( "GL_EXT_texture_filter_anisotropic", NULL, "gl_ext_anisotropic_filter", R_ANISOTROPY_EXT );
-	if(GL_Support( R_ANISOTROPY_EXT )) pglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.max_texture_anisotropy );
+	if(GL_Support( R_ANISOTROPY_EXT )) pglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.max_texture_anisotropy );
 
 	GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, "gl_ext_texture_lodbias", R_TEXTURE_LODBIAS );
 	if(GL_Support( R_TEXTURE_LODBIAS )) pglGetFloatv( GL_MAX_TEXTURE_LOD_BIAS_EXT, &glConfig.max_texture_lodbias );

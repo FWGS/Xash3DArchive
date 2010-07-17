@@ -1124,6 +1124,12 @@ void FS_AddGameDirectory( const char *dir, int flags )
 
 	stringlistfreecontents( &list );
 
+	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED || Sys.app_name == HOST_BSPLIB )
+	{
+		// because we want first add gamedir wads
+		if(!( flags & FS_GAMEDIR_PATH )) return;
+	}
+
 	// use normal method because we want take access to wad files through pak or pk3 archives
 	wads = FS_Search( "*.wad", true );
 	for( i = 0; wads && i < wads->numfilenames; i++ )

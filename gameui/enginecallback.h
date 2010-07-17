@@ -1,0 +1,138 @@
+//=======================================================================
+//			Copyright XashXT Group 2010 ©
+//		     enginecallback.h - actual engine callbacks
+//=======================================================================
+
+#ifndef ENGINECALLBACKS_H
+#define ENGINECALLBACKS_H
+
+// built-in memory manager
+#define MALLOC( x )		(*g_engfuncs.pfnMemAlloc)( x, __FILE__, __LINE__ )
+#define CALLOC( x, y )	(*g_engfuncs.pfnMemAlloc)((x) * (y), __FILE__, __LINE__ )
+#define FREE( x )		(*g_engfuncs.pfnMemFree)( x, __FILE__, __LINE__ )
+
+// screen handlers
+#define PIC_Frames		(*g_engfuncs.pfnPIC_Frames)
+#define PIC_Width		(*g_engfuncs.pfnPIC_Width)
+#define PIC_Height		(*g_engfuncs.pfnPIC_Height)
+#define PIC_EnableScissor	(*g_engfuncs.pfnPIC_EnableScissor)
+#define PIC_DisableScissor	(*g_engfuncs.pfnPIC_DisableScissor)
+#define FillRGBA		(*g_engfuncs.pfnFillRGBA)
+#define GetScreenInfo	(*g_engfuncs.pfnGetScreenInfo)
+
+#define PIC_Load		(*g_engfuncs.pfnPIC_Load)
+#define PIC_Free		(*g_engfuncs.pfnPIC_Free)
+#define PLAY_SOUND		(*g_engfuncs.pfnPlayLocalSound)
+#define CVAR_REGISTER	(*g_engfuncs.pfnRegisterVariable)
+#define CVAR_SET_FLOAT	(*g_engfuncs.pfnCvarSetValue)
+#define CVAR_GET_FLOAT	(*g_engfuncs.pfnGetCvarFloat)
+#define CVAR_GET_STRING	(*g_engfuncs.pfnGetCvarString)
+#define CVAR_SET_STRING	(*g_engfuncs.pfnCvarSetString)
+#define CLIENT_COMMAND	(*g_engfuncs.pfnClientCmd)
+#define CLIENT_JOIN		(*g_engfuncs.pfnClientJoin)
+
+#define GET_MENU_EDICT	(*g_engfuncs.pfnGetPlayerModel)
+#define ENGINE_SET_MODEL	(*g_engfuncs.pfnSetModel)
+#define R_ClearScene	(*g_engfuncs.pfnClearScene)
+#define R_AddEntity		(*g_engfuncs.R_AddEntity)
+#define R_RenderFrame	(*g_engfuncs.pfnRenderScene)
+
+#define LOAD_FILE		(*g_engfuncs.pfnLoadFile)
+#define FILE_EXISTS		(*g_engfuncs.pfnFileExists)
+#define FREE_FILE		(*g_engfuncs.pfnFreeFile)
+#define GET_GAME_DIR	(*g_engfuncs.pfnGetGameDir)
+#define LOAD_LIBRARY	(*g_engfuncs.pfnLoadLibrary)
+#define GET_PROC_ADDRESS	(*g_engfuncs.pfnGetProcAddress)
+#define FREE_LIBRARY	(*g_engfuncs.pfnFreeLibrary)
+#define HOST_ERROR		(*g_engfuncs.pfnHostError)
+#define COM_ParseToken	(*g_engfuncs.pfnParseToken)
+#define KEY_SetDest		(*g_engfuncs.pfnSetKeyDest)
+#define KEY_ClearStates	(*g_engfuncs.pfnKeyClearStates)
+#define KEY_KeynumToString	(*g_engfuncs.pfnKeynumToString)
+#define KEY_GetBinding	(*g_engfuncs.pfnKeyGetBinding)
+#define KEY_SetBinding	(*g_engfuncs.pfnKeySetBinding)
+#define KEY_IsDown		(*g_engfuncs.pfnKeyIsDown)
+#define KEY_GetOverstrike	(*g_engfuncs.pfnKeyGetOverstrikeMode)
+#define KEY_SetOverstrike	(*g_engfuncs.pfnKeySetOverstrikeMode)
+	
+#define Cmd_AddCommand	(*g_engfuncs.pfnAddCommand)
+#define Cmd_RemoveCommand	(*g_engfuncs.pfnDelCommand)
+#define CMD_ARGC		(*g_engfuncs.pfnCmdArgc)
+#define CMD_ARGV		(*g_engfuncs.pfnCmdArgv)
+#define ALERT		(*g_engfuncs.pfnAlertMessage)
+
+#define GET_AUDIO_LIST	(*g_engfuncs.pfnGetAudioList)
+#define GET_VIDEO_LIST	(*g_engfuncs.pfnGetVideoList)
+#define GET_GAMES_LIST	(*g_engfuncs.pfnGetGamesList)
+#define CHANGE_AUDIO	(*g_engfuncs.pfnChangeAudio)
+#define CHANGE_VIDEO	(*g_engfuncs.pfnChangeVideo)
+#define SHELL_EXECUTE	(*g_engfuncs.pfnShellExecute)
+#define HOST_WRITECONFIG	(*g_engfuncs.pfnWriteServerConfig)
+#define HOST_CHANGEGAME	(*g_engfuncs.pfnChangeInstance)
+#define CHECK_MAP_LIST	(*g_engfuncs.pfnCreateMapsList)
+#define HOST_NEWGAME	(*g_engfuncs.pfnHostNewGame)
+#define HOST_ENDGAME	(*g_engfuncs.pfnHostEndGame)
+#define GET_CLIPBOARD	(*g_engfuncs.pfnGetClipboardData)
+#define FS_SEARCH		(*g_engfuncs.pfnGetFilesList)
+
+#define GET_SAVE_COMMENT	(*g_engfuncs.pfnGetSaveComment)
+#define GET_DEMO_COMMENT	(*g_engfuncs.pfnGetDemoComment)
+
+#define CL_IsActive		(*g_engfuncs.pfnClientInGame)
+
+inline void PIC_Set( HIMAGE hPic, int r, int g, int b )
+{
+	g_engfuncs.pfnPIC_Set( hPic, r, g, b, 255 );
+}
+
+inline void PIC_Set( HIMAGE hPic, int r, int g, int b, int a )
+{
+	g_engfuncs.pfnPIC_Set( hPic, r, g, b, a );
+}
+
+inline void PIC_Draw( int frame, int x, int y, const wrect_t *prc )
+{
+	g_engfuncs.pfnPIC_Draw( frame, x, y, -1, -1, prc );
+}
+
+inline void PIC_Draw( int frame, int x, int y, int width, int height, const wrect_t *prc )
+{
+	g_engfuncs.pfnPIC_Draw( frame, x, y, width, height, prc );
+}
+
+inline void PIC_Draw( int frame, int x, int y, int width, int height )
+{
+	g_engfuncs.pfnPIC_Draw( frame, x, y, width, height, NULL );
+}
+
+inline void SPR_DrawTransColor( int frame, int x, int y, const wrect_t *prc )
+{
+	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, -1, -1, prc );
+}
+
+inline void PIC_DrawTransColor( int frame, int x, int y, int width, int height )
+{
+	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, width, height, NULL );
+}
+
+inline void PIC_DrawHoles( int frame, int x, int y, const wrect_t *prc )
+{
+	g_engfuncs.pfnPIC_DrawHoles( frame, x, y, -1, -1, prc );
+}
+
+inline void SPR_DrawHoles( int frame, int x, int y, int width, int height )
+{
+	g_engfuncs.pfnPIC_DrawHoles( frame, x, y, width, height, NULL );
+}
+
+inline void PIC_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
+{
+	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, -1, -1, prc );
+}
+
+inline void PIC_DrawAdditive( int frame, int x, int y, int width, int height )
+{
+	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, width, height, NULL );
+}
+
+#endif//ENGINECALLBACKS_H

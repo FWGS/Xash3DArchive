@@ -78,7 +78,7 @@ int CHud :: InitMessages( void )
 	
 	CVAR_REGISTER( "zoom_sensitivity_ratio", "1.2", 0, "mouse sensitivity when zooming" );
 	CVAR_REGISTER( "default_fov", "90", 0, "default client fov" );
-	CVAR_REGISTER( "hud_draw", "1", FCVAR_ARCHIVE, "hud drawing modes" );
+	CVAR_REGISTER( "hud_draw", "1", 0, "disable hud rendering" );
 	CVAR_REGISTER( "hud_takesshots", "0", 0, "take screenshots at 30 fps" );
 	CVAR_REGISTER( "hud_scale", "0", FCVAR_ARCHIVE|FCVAR_LATCH, "scale hud at current resolution" );
 
@@ -102,9 +102,7 @@ int CHud :: InitMessages( void )
 
 void CHud :: UserCmd_ChangeLevel( void )
 {
-	m_iDrawPlaque = 0;	// disable plaque rendering
-
-	// reset shake
+	// reset shake during changelevel
 	m_Shake.amplitude = 0;
 	m_Shake.frequency = 0;
 	m_Shake.duration = 0;
@@ -143,9 +141,6 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 	m_iConcussionEffect = 0;
 
 	m_iIntermission = 0;
-
-	// enable plaque drawing
-	m_iDrawPlaque = 1;
 
 	// reset windspeed
 	m_vecWindVelocity = Vector( 0, 0, 0 );

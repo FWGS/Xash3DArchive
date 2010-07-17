@@ -222,9 +222,9 @@ void R_ClearShadowmaps( void )
 		return;
 
 	// clear all possible values, should be called once per scene
-	memset( r_shadowGroups, 0, sizeof( r_shadowGroups ) );
-	memset( r_entShadowBits, 0, sizeof( r_entShadowBits ) );
-	memset( r_shadowGroups_hash, 0, sizeof( r_shadowGroups_hash ) );
+	Mem_Set( r_shadowGroups, 0, sizeof( r_shadowGroups ));
+	Mem_Set( r_entShadowBits, 0, sizeof( r_entShadowBits ));
+	Mem_Set( r_shadowGroups_hash, 0, sizeof( r_shadowGroups_hash ));
 }
 
 /*
@@ -435,8 +435,9 @@ void R_DrawShadowmaps( void )
 		if( !( RI.params & RP_WORLDSURFVISIBLE ) )
 			continue; // we didn't cast any shadows on opaque meshes so discard this group
 
-		if( !( prevRI.shadowBits & group->bit ) )
-		{	// capture results from framebuffer into depth texture
+		if( !( prevRI.shadowBits & group->bit ))
+		{	
+			// capture results from framebuffer into depth texture
 			prevRI.shadowBits |= group->bit;
 			GL_Bind( 0, group->depthTexture );
 			pglCopyTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, RI.refdef.viewport[0], RI.refdef.viewport[1], textureWidth, textureHeight );

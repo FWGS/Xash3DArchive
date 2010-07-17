@@ -253,8 +253,6 @@ int CHud :: Redraw( float flTime )
 	// clock was reset, reset delta
 	if( m_flTimeDelta < 0 ) m_flTimeDelta = 0;
 
-	m_iDrawPlaque = 1;	// clear plaque stuff
-
 	// draw screen fade before hud
 	DrawScreenFade();
 

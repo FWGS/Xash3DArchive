@@ -22,9 +22,7 @@ typedef struct loadres_s
 loadres_t load_resources[] =
 {
 	// add new resource description here
-	{"error.tga", error_tga, sizeof(error_tga)},
 	{"blank.bmp", blank_bmp, sizeof(blank_bmp)},
-	{"checkerboard.dds", q1mip_dds, sizeof(q1mip_dds)},
 	{"default.dds", deffont_dds, sizeof(deffont_dds)},
 	{"net.png", net_png, sizeof(net_png)},
 	{NULL, NULL, 0 }

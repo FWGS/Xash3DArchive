@@ -56,7 +56,7 @@ typedef struct
 	float	finalFrac;	// 0.0 to 1.0 lines of console to display
 
 	int	vislines;		// in scanlines
-	double	times[CON_TIMES]; // host.realtime the line was generated for transparent notify lines
+	double	times[CON_TIMES];	// host.realtime the line was generated for transparent notify lines
 	rgba_t	color;
 
 } console_t;
@@ -198,7 +198,7 @@ void Con_Init( void )
 
 	// register our commands
 	con_notifytime = Cvar_Get( "con_notifytime", "3", 0, "notify time to live" );
-	con_speed = Cvar_Get( "con_speed", "3", 0, "console moving speed" );
+	con_speed = Cvar_Get( "scr_conspeed", "600", 0, "console moving speed" );
 	con_font = Cvar_Get( "con_font", "default", CVAR_ARCHIVE, "path to console charset" );
 
 	Field_Clear( &g_consoleField );
@@ -362,6 +362,8 @@ void Con_DrawNotify( void )
 	short	*text;
 	float	time;
 
+	if( !host.developer ) return;
+
 	currentColor = 7;
 	re->SetColor( g_color_table[currentColor] );
 
@@ -404,8 +406,7 @@ void Con_DrawSolidConsole( float frac )
 	int	row;
 	int	lines;
 	int	currentColor;
-	rgba_t	color;
-	string	curtime;
+	string	curbuild;
 
 	lines = scr_height->integer * frac;
 	if( lines <= 0 ) return;
@@ -419,28 +420,28 @@ void Con_DrawSolidConsole( float frac )
 	if( y < 1 ) y = 0;
 	else SCR_DrawPic( 0, y - SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, cls.consoleBack );
 
-	MakeRGBA( color, 255, 0, 0, 255 );
-	SCR_FillRect( 0, y - 2, SCREEN_WIDTH, 2, color );
-
-	// draw current time
-	re->SetColor( g_color_table[ColorIndex(COLOR_YELLOW)] );
-	com.snprintf( curtime, MAX_STRING, "Xash3D %g (build %i)", SI->version, com_buildnum( ));
-	i = com.strlen( curtime );
-	for( x = 0; x < i; x++ )
-		SCR_DrawSmallChar( scr_width->integer - ( i - x ) * SMALLCHAR_WIDTH, (lines - (SMALLCHAR_HEIGHT+SMALLCHAR_HEIGHT/2)), curtime[x] );
-	re->SetColor(NULL);
+	if( host.developer )
+	{
+		// draw current version
+		re->SetColor( g_color_table[ColorIndex(COLOR_YELLOW)] );
+		com.snprintf( curbuild, MAX_STRING, "Xash3D %g (build %i)", SI->version, com_buildnum( ));
+		i = com.strlen( curbuild );
+		for( x = 0; x < i; x++ )
+			SCR_DrawSmallChar( scr_width->integer - ( i - x ) * SMALLCHAR_WIDTH, (lines - (SMALLCHAR_HEIGHT+SMALLCHAR_HEIGHT/2)), curbuild[x] );
+		re->SetColor( NULL );
+	}
 
 	// draw the text
 	con.vislines = lines;
-	rows = (lines - SMALLCHAR_WIDTH)/SMALLCHAR_WIDTH; // rows of text to draw
-	y = lines - (SMALLCHAR_HEIGHT * 3);
+	rows = ( lines - SMALLCHAR_WIDTH ) / SMALLCHAR_WIDTH; // rows of text to draw
+	y = lines - ( SMALLCHAR_HEIGHT * 3 );
 
 	// draw from the bottom up
-	if (con.display != con.current)
+	if( con.display != con.current )
 	{
 		// draw arrows to show the buffer is backscrolled
 		re->SetColor( g_color_table[ColorIndex(COLOR_RED)] );
-		for (x = 0; x < con.linewidth; x += 4)
+		for( x = 0; x < con.linewidth; x += 4 )
 			SCR_DrawSmallChar( con.xadjust + (x+1) * SMALLCHAR_WIDTH, y, '^' );
 		y -= SMALLCHAR_HEIGHT;
 		rows--;
@@ -452,7 +453,7 @@ void Con_DrawSolidConsole( float frac )
 	currentColor = 7;
 	re->SetColor( g_color_table[currentColor] );
 
-	for (i = 0; i < rows; i++, y -= SMALLCHAR_HEIGHT, row--)
+	for( i = 0; i < rows; i++, y -= SMALLCHAR_HEIGHT, row-- )
 	{
 		if( row < 0 ) break;
 		if( con.current - row >= con.totallines )
@@ -465,8 +466,8 @@ void Con_DrawSolidConsole( float frac )
 
 		for( x = 0; x < con.linewidth; x++ )
 		{
-			if((text[x] & 0xff ) == ' ' ) continue;
-			if(((text[x]>>8) & 7 ) != currentColor )
+			if(( text[x] & 0xff ) == ' ' ) continue;
+			if((( text[x]>>8) & 7 ) != currentColor )
 			{
 				currentColor = (text[x]>>8) & 7;
 				re->SetColor(g_color_table[currentColor]);
@@ -487,15 +488,33 @@ Con_DrawConsole
 */
 void Con_DrawConsole( void )
 {
-	if( !host.developer ) return;
+	// never draw console whel changelevel in-progress
+	if( cls.changelevel ) return;
 
 	// check for console width changes from a vid mode change
 	Con_CheckResize ();
 
 	if( cls.state == ca_connecting || cls.state == ca_connected )
 	{
-		if( host.developer >= 4 ) con.displayFrac = 0.5f;	// keep console open
-		else if( host.developer >= 2 ) Con_DrawNotify();	// draw notify lines
+		if( !cl_allow_levelshots->integer )
+		{
+			con.displayFrac = con.finalFrac = 1.0f;
+		}
+		else
+		{
+			if( host.developer >= 4 )
+			{
+				con.displayFrac = 0.5f;	// keep console open
+			}
+			else
+			{
+				con.finalFrac = 0.0f;
+				Con_RunConsole();
+
+				if( host.developer >= 2 )
+					Con_DrawNotify(); // draw notify lines
+			}
+		}
 	}
 
 	// if disconnected, render console full screen
@@ -504,7 +523,7 @@ void Con_DrawConsole( void )
 	case ca_uninitialized:
 		break;
 	case ca_disconnected:
-		if( cls.key_dest != key_menu )
+		if( cls.key_dest != key_menu && host.developer )
 		{
 			Con_DrawSolidConsole( 1.0f );
 			cls.key_dest = key_console;
@@ -512,11 +531,8 @@ void Con_DrawConsole( void )
 		break;
 	case ca_connected:
 	case ca_connecting:
-		if( host.developer )
-		{
-			// force to show console always for -dev 3 and higher 
-			if( con.displayFrac ) Con_DrawSolidConsole( con.displayFrac );
-		}
+		// force to show console always for -dev 3 and higher 
+		if( con.displayFrac ) Con_DrawSolidConsole( con.displayFrac );
 		break;
 	case ca_active:
 	case ca_cinematic: 
@@ -536,10 +552,8 @@ Scroll it up or down
 */
 void Con_RunConsole( void )
 {
-	if( !host.developer ) return;
-
 	// decide on the destination height of the console
-	if( cls.key_dest == key_console )
+	if( host.developer && cls.key_dest == key_console )
 	{
 		if( cls.state == ca_disconnected )
 			con.finalFrac = 1.0f;// full screen
@@ -547,15 +561,19 @@ void Con_RunConsole( void )
 	}
 	else con.finalFrac = 0; // none visible
 
+	// whel level is loading frametime may be is wrong
+	if( cls.state == ca_connecting || cls.state == ca_connected )
+		host.realframetime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
+
 	if( con.finalFrac < con.displayFrac )
 	{
-		con.displayFrac -= con_speed->value * host.realframetime;
+		con.displayFrac -= con_speed->value * 0.002 * host.realframetime;
 		if( con.finalFrac > con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
 	else if( con.finalFrac > con.displayFrac )
 	{
-		con.displayFrac += con_speed->value * host.realframetime;
+		con.displayFrac += con_speed->value * 0.002 * host.realframetime;
 		if( con.finalFrac < con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}

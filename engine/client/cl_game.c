@@ -389,6 +389,7 @@ draw hudsprite routine
 static void SPR_DrawGeneric( int frame, float x, float y, float width, float height, const wrect_t *prc )
 {
 	float	s1, s2, t1, t2;
+	bool	hasCustomSize;
 
 	if( !re ) return;
 
@@ -396,22 +397,35 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 	{
 		int	w, h;
 
-		// undoc feature: get drawsizes from image
+		// assume we get sizes from image
 		re->GetParms( &w, &h, NULL, frame, clgame.ds.hSprite );
 
 		width = w;
 		height = h;
+		hasCustomSize = false;
 	}
+	else hasCustomSize = true;
 
 	if( prc )
 	{
-		// calc user-defined rectangle
-		s1 = (float)prc->left / width;
-		t1 = (float)prc->top / height;
-		s2 = (float)prc->right / width;
-		t2 = (float)prc->bottom / height;
-		width = prc->right - prc->left;
-		height = prc->bottom - prc->top;
+		if( hasCustomSize )
+		{
+			// e.g. quake fonts 
+			s1 = (float)prc->left;
+			t1 = (float)prc->top;
+			s2 = (float)prc->right;
+			t2 = (float)prc->bottom;
+		}
+		else
+		{
+			// calc user-defined rectangle
+			s1 = (float)prc->left / width;
+			t1 = (float)prc->top / height;
+			s2 = (float)prc->right / width;
+			t2 = (float)prc->bottom / height;
+			width = prc->right - prc->left;
+			height = prc->bottom - prc->top;
+		}
 	}
 	else
 	{
@@ -1346,10 +1360,10 @@ static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 	if( y < -clgame.scrInfo.iCharHeight )
 		return 0;
 
-	if( clgame.use_qfont )
+	if( clgame.creditsFont.use_qfont )
 	{
-		pfnSPR_Set( clgame.hHudFont, r, g, b, 255 );
-		pfnSPR_DrawAdditive( 0, x, y, -1, -1, &clgame.fontRc[number] );
+		pfnSPR_Set( clgame.creditsFont.hFontTexture, r, g, b, 255 );
+		pfnSPR_DrawAdditive( 0, x, y, -1, -1, &clgame.creditsFont.fontRc[number] );
 	}
 	else
 	{
@@ -1363,7 +1377,7 @@ static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 		aw = clgame.scrInfo.charWidths[number];
 		ah = clgame.scrInfo.iCharHeight;
 
-		re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.hHudFont );
+		re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.creditsFont.hFontTexture );
 		SPR_AdjustSize( &ax, &ay, &aw, &ah );
 
 		MakeRGBA( color, r, g, b, 255 );
@@ -1373,8 +1387,8 @@ static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 		fcol = (number & 15) * 0.0625f + (0.5f / (float)fontHeight);
 		size = 0.0625f - (1.0f / (float)fontWidth);
 
-		re->SetParms( clgame.hHudFont, kRenderTransAdd, 0 );
-		re->DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + size, frow + size, clgame.hHudFont );
+		re->SetParms( clgame.creditsFont.hFontTexture, kRenderTransAdd, 0 );
+		re->DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + size, frow + size, clgame.creditsFont.hFontTexture );
 	}
 
 	re->SetColor( NULL ); // don't forget reset color

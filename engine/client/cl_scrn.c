@@ -16,7 +16,7 @@ cvar_t *scr_width;
 cvar_t *scr_height;
 cvar_t *cl_testentities;
 cvar_t *cl_testlights;
-cvar_t *cl_testflashlight;
+cvar_t *cl_allow_levelshots;
 cvar_t *cl_levelshot_name;
 cvar_t *cl_envshot_size;
 cvar_t *cl_font;
@@ -361,7 +361,7 @@ void SCR_MakeScreenShot( void )
 	bool	iRet = false;
 
 	if( !re && host.type == HOST_NORMAL )
-		return;	// don't reset action - it will be wait for render initalization is done
+		return;	// don't reset action - it will be wait until render initalization is done
 
 	switch( cls.scrshot_action )
 	{
@@ -392,12 +392,15 @@ void SCR_MakeScreenShot( void )
 
 void SCR_DrawPlaque( void )
 {
-	shader_t		levelshot;
+	shader_t	levelshot;
 
-	if( !re || !cls.drawplaque ) return;
+	if( re && cl_allow_levelshots->integer && !cls.changelevel )
+	{
+		levelshot = re->RegisterShader( cl_levelshot_name->string, SHADER_NOMIP );
+		SCR_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, levelshot );
 
-	levelshot = re->RegisterShader( cl_levelshot_name->string, SHADER_NOMIP );
-	SCR_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, levelshot );
+		CL_DrawHUD( CL_LOADING ); // update progress bar
+	}
 }
 
 /*
@@ -419,7 +422,6 @@ void SCR_UpdateScreen( void )
 		case ca_connecting:
 		case ca_connected:
 			SCR_DrawPlaque();
-			CL_DrawHUD( CL_LOADING );
 			break;
 		case ca_active:
 			V_RenderView();
@@ -446,10 +448,10 @@ static void SCR_LoadCreditsFont( void )
 
 	if( !re ) return;
 
-	re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.hHudFont );
+	re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.creditsFont.hFontTexture );
 		
 	// setup creditsfont
-	if( fontWidth != fontHeight )
+	if( FS_FileExists( "gfx/creditsfont.fnt" ))
 	{
 		byte	*buffer;
 		size_t	length;
@@ -464,15 +466,15 @@ static void SCR_LoadCreditsFont( void )
 	
 			src = (qfont_t *)buffer;
 			clgame.scrInfo.iCharHeight = LittleLong( src->rowheight );
-			clgame.use_qfont = true;
+			clgame.creditsFont.use_qfont = true;
 
 			// build rectangles
 			for( i = 0; i < 256; i++ )
 			{
-				clgame.fontRc[i].left = LittleShort( src->fontinfo[i].startoffset ) % fontWidth;
-				clgame.fontRc[i].right = clgame.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
-				clgame.fontRc[i].top = LittleShort( src->fontinfo[i].startoffset ) / fontWidth;
-				clgame.fontRc[i].bottom = clgame.fontRc[i].top + LittleLong( src->rowheight );
+				clgame.creditsFont.fontRc[i].left = LittleShort( src->fontinfo[i].startoffset ) % fontWidth;
+				clgame.creditsFont.fontRc[i].right = clgame.creditsFont.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
+				clgame.creditsFont.fontRc[i].top = LittleShort( src->fontinfo[i].startoffset ) / fontWidth;
+				clgame.creditsFont.fontRc[i].bottom = clgame.creditsFont.fontRc[i].top + LittleLong( src->rowheight );
 				clgame.scrInfo.charWidths[i] = LittleLong( src->fontinfo[i].charwidth );
 			}
 		}
@@ -485,7 +487,7 @@ static void SCR_LoadCreditsFont( void )
 
 		// all quake fonts like quad 16x16 fields
 		clgame.scrInfo.iCharHeight = fontHeight / 16;
-		clgame.use_qfont = false;
+		clgame.creditsFont.use_qfont = false;
 		w = fontWidth / 16;
 
 		for( i = 0; i < 256; i++ )
@@ -541,7 +543,7 @@ void SCR_RegisterShaders( void )
 		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: INTRESOURCE
 		cls.fillShader = re->RegisterShader( "*white", SHADER_FONT ); // used for FillRGBA
 		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP ); // FIXME: INTRESOURCE
-		clgame.hHudFont = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
+		clgame.creditsFont.hFontTexture = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
 	
 		if( host.developer )
 			cls.consoleBack = re->RegisterShader( "cached/conback", SHADER_NOMIP );
@@ -573,11 +575,11 @@ void SCR_Init( void )
 	scr_centertime = Cvar_Get( "scr_centertime", "2.5", 0, "centerprint hold time" );
 	scr_printspeed = Cvar_Get( "scr_printspeed", "8", 0, "centerprint speed of print" );
 	cl_levelshot_name = Cvar_Get( "cl_levelshot_name", MAP_DEFAULT_SHADER, 0, "contains path to current levelshot" );
+	cl_allow_levelshots = Cvar_Get( "allow_levelshots", "0", CVAR_ARCHIVE, "allow engine to use indivdual levelshots instead of 'loading' image" );
 	scr_loading = Cvar_Get("scr_loading", "0", 0, "loading bar progress" );
 	scr_download = Cvar_Get("scr_download", "0", 0, "downloading bar progress" );
 	cl_testentities = Cvar_Get ("cl_testentities", "0", 0, "test client entities" );
 	cl_testlights = Cvar_Get ("cl_testlights", "0", 0, "test dynamic lights" );
-	cl_testflashlight = Cvar_Get ("cl_testflashlight", "0", 0, "test generic flashlight" );
 	cl_envshot_size = Cvar_Get( "cl_envshot_size", "256", CVAR_ARCHIVE, "envshot size of cube side" );
 	cl_font = Cvar_Get( "cl_font", "default", CVAR_ARCHIVE, "in-game messages font" );
 	

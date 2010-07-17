@@ -526,16 +526,15 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", str ));
 	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
 
-	// FIXME: Quake3 may be use both 'jpg' and 'tga' levelshot types
-	if( !FS_FileExists( va( "†%s.%s", cl_levelshot_name->string, SI->levshot_ext )) && cls.drawplaque ) 
+	if( cl_allow_levelshots->integer && !cls.changelevel )
 	{
-		Cvar_Set( "cl_levelshot_name", MAP_DEFAULT_SHADER );	// render a black screen
-		cls.scrshot_request = scrshot_plaque;			// make levelshot
+		// FIXME: Quake3 may be use both 'jpg' and 'tga' levelshot types
+		if( !FS_FileExists( va( "†%s.%s", cl_levelshot_name->string, SI->levshot_ext ))) 
+		{
+			Cvar_Set( "cl_levelshot_name", MAP_DEFAULT_SHADER );	// render a black screen
+			cls.scrshot_request = scrshot_plaque;			// make levelshot
+		}
 	}
-
-	// seperate the printfs so the server message can have a color
-	Msg("\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
-	Msg( "^2%s\n", clgame.maptitle );
 
 	// need to prep refresh at next oportunity
 	cl.video_prepped = false;
@@ -857,13 +856,13 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			Host_AbortCurrentFrame();
 			break;
 		case svc_changing:
-			cls.drawplaque = false;
+			cls.changelevel = true;
 			Cmd_ExecuteString( "hud_changelevel\n" );
 			S_StopAllSounds();
 			// intentional fallthrough
 		case svc_reconnect:
-			if( cls.drawplaque )
-				Msg( "Server disconnected, reconnecting\n" );
+			if( !cls.changelevel )
+				MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 			if( cls.download )
 			{
 				FS_Close( cls.download );
@@ -914,7 +913,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			i = MSG_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
 				S_StartLocalSound( "misc/talk.wav" );	// FIXME: INTRESOURCE
-			Con_Print( va( "^6%s\n", MSG_ReadString( msg )));
+			MsgDev( D_INFO, "^6%s\n", MSG_ReadString( msg ));
 			break;
 		case svc_centerprint:
 			CL_CenterPrint( MSG_ReadString( msg ), 160, SMALLCHAR_WIDTH );

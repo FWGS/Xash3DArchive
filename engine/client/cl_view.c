@@ -157,21 +157,23 @@ bool V_PreRender( void )
 	if( host.state == HOST_SLEEP )
 		return false;
 
-	if( cl.refdef.paused || !cls.drawplaque )
+	if( cl.refdef.paused || cls.changelevel )
 		clearScene = false;
 
 	re->BeginFrame( clearScene );
 	S_BeginFrame ();
 
-	if( oldState && !cls.drawplaque )
+	if( !oldState && cls.changelevel )
 	{
 		// fire once
 		CL_DrawHUD( CL_CHANGELEVEL );
 		re->EndFrame();
 	}
-	oldState = cls.drawplaque;
+	oldState = cls.changelevel;
 
-	return cls.drawplaque;
+	if( cls.changelevel )
+		return false;
+	return true;
 }
 
 /*

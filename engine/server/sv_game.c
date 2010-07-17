@@ -2447,7 +2447,7 @@ pfnServerPrint
 void pfnServerPrint( const char *szMsg )
 {
 	// while loading in-progress we can sending message only for local client
-	if( sv.state == ss_loading ) com.print( szMsg );	
+	if( sv.state == ss_loading ) MsgDev( D_INFO, szMsg );	
 	else SV_BroadcastPrintf( PRINT_HIGH, "%s", szMsg );
 }
 

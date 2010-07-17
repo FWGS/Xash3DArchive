@@ -51,7 +51,6 @@ keyname_t keynames[] =
 {"ALT",		K_ALT,		"+strafe"		},
 {"CTRL",		K_CTRL,		"+attack"		},
 {"SHIFT",		K_SHIFT,		"+speed"		}, // replace with +attack2 ?
-{"COMMAND",	K_COMMAND,	""		},
 {"CAPSLOCK",	K_CAPSLOCK,	""		},
 {"F1",		K_F1,		"cmd help"	},
 {"F2",		K_F2,		"menu_savegame"	},
@@ -97,9 +96,6 @@ keyname_t keynames[] =
 {"KP_SLASH",	K_KP_SLASH,	""		},
 {"KP_MINUS",	K_KP_MINUS,	""		},
 {"KP_PLUS",	K_KP_PLUS,	""		},
-{"KP_NUMLOCK",	K_KP_NUMLOCK,	""		},
-{"KP_STAR",	K_KP_STAR,	""		},
-{"KP_EQUALS",	K_KP_EQUALS,	""		},
 {"PAUSE",		K_PAUSE,		"pause"		},
 
 // raw semicolon seperates commands

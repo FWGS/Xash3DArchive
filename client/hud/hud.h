@@ -639,7 +639,6 @@ public:
 	int	m_iWeaponBits;
 	int	m_fPlayerDead;
 	int	m_iIntermission;
-	int	m_iDrawPlaque;
 
 	RainData	Rain;	// buz rain
 

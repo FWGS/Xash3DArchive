@@ -233,7 +233,7 @@ static void UI_Credits_Init( void )
 	uiCredits.active = true;
 }
 
-bool UI_CreditsActive( void )
+int UI_CreditsActive( void )
 {
 	return uiCredits.active;
 }

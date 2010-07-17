@@ -1,0 +1,146 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: client - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\Ã»ÿ¿\LOCALS~1\Temp\RSP2D6D.tmp" with contents
+[
+/nologo /MD /W3 /GX /O2 /I "./" /I "../common" /I "global" /I "hud" /I "../game_shared" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"..\temp\client\!release/" /Fd"..\temp\client\!release/" /FD /c 
+"D:\Xash3D\src_main\client\global\aurora.cpp"
+"D:\Xash3D\src_main\client\global\cl_tent.cpp"
+"D:\Xash3D\src_main\client\global\dll_int.cpp"
+"D:\Xash3D\src_main\client\global\ev_common.cpp"
+"D:\Xash3D\src_main\client\global\ev_hldm.cpp"
+"D:\Xash3D\src_main\client\hud\hud.cpp"
+"D:\Xash3D\src_main\client\hud\hud_ammo.cpp"
+"D:\Xash3D\src_main\client\hud\hud_ammohistory.cpp"
+"D:\Xash3D\src_main\client\hud\hud_battery.cpp"
+"D:\Xash3D\src_main\client\hud\hud_death.cpp"
+"D:\Xash3D\src_main\client\hud\hud_flashlight.cpp"
+"D:\Xash3D\src_main\client\hud\hud_geiger.cpp"
+"D:\Xash3D\src_main\client\hud\hud_health.cpp"
+"D:\Xash3D\src_main\client\hud\hud_icons.cpp"
+"D:\Xash3D\src_main\client\hud\hud_menu.cpp"
+"D:\Xash3D\src_main\client\hud\hud_message.cpp"
+"D:\Xash3D\src_main\client\hud\hud_motd.cpp"
+"D:\Xash3D\src_main\client\hud\hud_msg.cpp"
+"D:\Xash3D\src_main\client\hud\hud_saytext.cpp"
+"D:\Xash3D\src_main\client\hud\hud_scoreboard.cpp"
+"D:\Xash3D\src_main\client\hud\hud_sound.cpp"
+"D:\Xash3D\src_main\client\hud\hud_statusbar.cpp"
+"D:\Xash3D\src_main\client\hud\hud_text.cpp"
+"D:\Xash3D\src_main\client\hud\hud_train.cpp"
+"D:\Xash3D\src_main\client\global\input.cpp"
+"D:\Xash3D\src_main\game_shared\pm_shared.cpp"
+"D:\Xash3D\src_main\client\global\r_beams.cpp"
+"D:\Xash3D\src_main\client\global\r_particle.cpp"
+"D:\Xash3D\src_main\client\global\r_tempents.cpp"
+"D:\Xash3D\src_main\client\global\r_tracer.cpp"
+"D:\Xash3D\src_main\client\global\r_weather.cpp"
+"D:\Xash3D\src_main\client\global\studio.cpp"
+"D:\Xash3D\src_main\client\global\triapi.cpp"
+"D:\Xash3D\src_main\client\global\utils.cpp"
+"D:\Xash3D\src_main\client\global\view.cpp"
+]
+Creating command line "cl.exe @"C:\DOCUME~1\Ã»ÿ¿\LOCALS~1\Temp\RSP2D6D.tmp"" 
+Creating temporary file "C:\DOCUME~1\Ã»ÿ¿\LOCALS~1\Temp\RSP2D6E.tmp" with contents
+[
+msvcrt.lib /nologo /subsystem:windows /dll /incremental:no /pdb:"..\temp\client\!release/client.pdb" /machine:I386 /nodefaultlib:"libc" /def:".\client.def" /out:"..\temp\client\!release/client.dll" /implib:"..\temp\client\!release/client.lib" /libpath:"..\common\libs" 
+"\Xash3D\src_main\temp\client\!release\aurora.obj"
+"\Xash3D\src_main\temp\client\!release\cl_tent.obj"
+"\Xash3D\src_main\temp\client\!release\dll_int.obj"
+"\Xash3D\src_main\temp\client\!release\ev_common.obj"
+"\Xash3D\src_main\temp\client\!release\ev_hldm.obj"
+"\Xash3D\src_main\temp\client\!release\hud.obj"
+"\Xash3D\src_main\temp\client\!release\hud_ammo.obj"
+"\Xash3D\src_main\temp\client\!release\hud_ammohistory.obj"
+"\Xash3D\src_main\temp\client\!release\hud_battery.obj"
+"\Xash3D\src_main\temp\client\!release\hud_death.obj"
+"\Xash3D\src_main\temp\client\!release\hud_flashlight.obj"
+"\Xash3D\src_main\temp\client\!release\hud_geiger.obj"
+"\Xash3D\src_main\temp\client\!release\hud_health.obj"
+"\Xash3D\src_main\temp\client\!release\hud_icons.obj"
+"\Xash3D\src_main\temp\client\!release\hud_menu.obj"
+"\Xash3D\src_main\temp\client\!release\hud_message.obj"
+"\Xash3D\src_main\temp\client\!release\hud_motd.obj"
+"\Xash3D\src_main\temp\client\!release\hud_msg.obj"
+"\Xash3D\src_main\temp\client\!release\hud_saytext.obj"
+"\Xash3D\src_main\temp\client\!release\hud_scoreboard.obj"
+"\Xash3D\src_main\temp\client\!release\hud_sound.obj"
+"\Xash3D\src_main\temp\client\!release\hud_statusbar.obj"
+"\Xash3D\src_main\temp\client\!release\hud_text.obj"
+"\Xash3D\src_main\temp\client\!release\hud_train.obj"
+"\Xash3D\src_main\temp\client\!release\input.obj"
+"\Xash3D\src_main\temp\client\!release\pm_shared.obj"
+"\Xash3D\src_main\temp\client\!release\r_beams.obj"
+"\Xash3D\src_main\temp\client\!release\r_particle.obj"
+"\Xash3D\src_main\temp\client\!release\r_tempents.obj"
+"\Xash3D\src_main\temp\client\!release\r_tracer.obj"
+"\Xash3D\src_main\temp\client\!release\r_weather.obj"
+"\Xash3D\src_main\temp\client\!release\studio.obj"
+"\Xash3D\src_main\temp\client\!release\triapi.obj"
+"\Xash3D\src_main\temp\client\!release\utils.obj"
+"\Xash3D\src_main\temp\client\!release\view.obj"
+]
+Creating command line "link.exe @"C:\DOCUME~1\Ã»ÿ¿\LOCALS~1\Temp\RSP2D6E.tmp""
+Creating temporary file "C:\DOCUME~1\Ã»ÿ¿\LOCALS~1\Temp\RSP2D6F.bat" with contents
+[
+@echo off
+copy \Xash3D\src_main\temp\client\!release\client.dll "D:\Xash3D\valve\bin\client.dll"
+]
+Creating command line ""C:\DOCUME~1\Ã»ÿ¿\LOCALS~1\Temp\RSP2D6F.bat""
+Compiling...
+aurora.cpp
+cl_tent.cpp
+dll_int.cpp
+ev_common.cpp
+ev_hldm.cpp
+hud.cpp
+hud_ammo.cpp
+hud_ammohistory.cpp
+hud_battery.cpp
+hud_death.cpp
+hud_flashlight.cpp
+hud_geiger.cpp
+hud_health.cpp
+hud_icons.cpp
+hud_menu.cpp
+hud_message.cpp
+hud_motd.cpp
+hud_msg.cpp
+hud_saytext.cpp
+hud_scoreboard.cpp
+Generating Code...
+Compiling...
+hud_sound.cpp
+hud_statusbar.cpp
+hud_text.cpp
+hud_train.cpp
+input.cpp
+pm_shared.cpp
+r_beams.cpp
+r_particle.cpp
+r_tempents.cpp
+r_tracer.cpp
+r_weather.cpp
+studio.cpp
+triapi.cpp
+utils.cpp
+view.cpp
+Generating Code...
+Linking...
+   Creating library ..\temp\client\!release/client.lib and object ..\temp\client\!release/client.exp
+<h3>Output Window</h3>
+Performing Custom Build Step on \Xash3D\src_main\temp\client\!release\client.dll
+ë™ÆØ®‡Æ¢†≠Æ ‰†©´Æ¢:         1.
+
+
+
+<h3>Results</h3>
+client.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

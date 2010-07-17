@@ -571,8 +571,7 @@ void CL_Reconnect_f( void )
 
 	S_StopAllSounds ();
 
-	// disable plaque draw on change map
-	cls.drawplaque = false;
+	cls.changelevel = true;
 	Cmd_ExecuteString( "hud_changelevel\n" );
 
 	if( cls.demoplayback ) return;
@@ -1105,7 +1104,6 @@ CL_InitLocal
 void CL_InitLocal( void )
 {
 	cls.state = ca_disconnected;
-	cls.drawplaque = true;
 
 	// register our variables
 	cl_predict = Cvar_Get( "cl_predict", "1", CVAR_ARCHIVE, "disables client movement prediction" );

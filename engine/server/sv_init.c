@@ -296,11 +296,11 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 
 	if( startspot )
 	{
-		Msg( "Spawn Server: %s [%s]\n", mapname, startspot );
+		MsgDev( D_INFO, "Spawn Server: %s [%s]\n", mapname, startspot );
 	}
 	else
 	{
-		Msg( "Spawn Server: %s\n", mapname );
+		MsgDev( D_INFO, "Spawn Server: %s\n", mapname );
 	}
 
 	// save state

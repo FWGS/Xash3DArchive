@@ -13,7 +13,6 @@
 #define MAX_DEMOS		32
 #define COMMAND_HISTORY	32
 #define MAX_MESSAGES	1024
-#define ColorIndex(c)	(((c) - '0') & 7)
 
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - clgame.edicts))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
@@ -199,6 +198,13 @@ typedef struct
 
 typedef struct
 {
+	HSPRITE		hFontTexture;		// handle to texture shader
+	wrect_t		fontRc[256];		// rectangles
+	bool		use_qfont;		// quake style font
+} cl_font_t;
+
+typedef struct
+{
 	// temp handle
 	HSPRITE		hSprite;
 
@@ -251,10 +257,7 @@ typedef struct
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	SCREENINFO	scrInfo;			// actual screen info
 
-	HSPRITE		hHudFont;			// handle to creditsfont
-	wrect_t		fontRc[256];		// rectangles
-	bool		use_qfont;		// use half-life creditsfont with variable charWidth
-
+	cl_font_t		creditsFont;
 	rgb_t		palette[256];		// Quake1 palette used for particle colors
 
 	client_textmessage_t *titles;			// title messages, not network messages
@@ -270,6 +273,7 @@ typedef struct
 typedef struct
 {
 	connstate_t	state;
+	bool		changelevel;		// during changelevel
 	bool		initialized;
 
 	keydest_t		key_dest;
@@ -315,7 +319,6 @@ typedef struct
 	bool		demorecording;
 	bool		demoplayback;
 	bool		demowaiting;		// don't record until a non-delta message is received
-	int		drawplaque;		// draw plaque when level is loading
 	string		demoname;			// for demo looping
 
 	file_t		*demofile;
@@ -360,7 +363,7 @@ extern cvar_t	*cl_crosshair;
 extern cvar_t	*cl_showmiss;
 extern cvar_t	*cl_testentities;
 extern cvar_t	*cl_testlights;
-extern cvar_t	*cl_testflashlight;
+extern cvar_t	*cl_allow_levelshots;
 extern cvar_t	*cl_levelshot_name;
 extern cvar_t	*cl_lightstyle_lerping;
 extern cvar_t	*scr_centertime;

@@ -19,6 +19,7 @@ client\hud\
 client\global\
 common\
 game_shared\
+gameui\
 engine\
 engine\client\
 engine\server\

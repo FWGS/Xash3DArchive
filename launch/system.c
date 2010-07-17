@@ -1020,6 +1020,7 @@ void Sys_Init( void )
 	if( FS_CheckParm( "-console" )) Sys.developer = 1;
 	if( FS_GetParmFromCmdLine( "-dev", dev_level, sizeof( dev_level )))
 		Sys.developer = com_atoi( dev_level );
+	if( Sys.log_active && !Sys.developer ) Sys.log_active = false;	// nothing to logging :)
           
 	FS_UpdateEnvironmentVariables();	// set working directory
 	SetErrorMode( SEM_FAILCRITICALERRORS );	// no abort/retry/fail errors

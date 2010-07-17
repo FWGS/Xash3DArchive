@@ -1321,6 +1321,8 @@ void UI_Init( void )
 		uiStatic.menuFont = re->RegisterShader( va( "gfx/fonts/%s", ui_mainfont->string ), SHADER_FONT );
 	}
 	uiStatic.initialized = true;
+
+	UI_Precache ();
 }
 
 /*

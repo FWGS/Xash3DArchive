@@ -265,7 +265,7 @@ void CL_ParseFrame( sizebuf_t *msg )
 		// client entered the game
 		cls.state = ca_active;
 		cl.force_refdef = true;
-		cls.drawplaque = true;
+		cls.changelevel = false;	// changelevel is done
 
 		player = CL_GetLocalPlayer();
 		SCR_MakeLevelShot();	// make levelshot if needs
