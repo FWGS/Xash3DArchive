@@ -451,7 +451,7 @@ void CL_Disconnect( void )
 
 	// back to menu if developer mode set to "player" or "mapper"
 	if( host.developer > 2 ) return;
-	UI_SetActiveMenu( UI_MAINMENU );
+	UI_SetActiveMenu( true );
 }
 
 void CL_Disconnect_f( void )
@@ -760,7 +760,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
 		MSG_Print( &cls.netchan.message, "new" );
 		cls.state = ca_connected;
-		UI_SetActiveMenu( UI_CLOSEMENU );
+		UI_SetActiveMenu( false );
 	}
 	else if( !com.strcmp( c, "info" ))
 	{
@@ -1092,7 +1092,7 @@ void CL_Escape_f( void )
 
 	if( cls.state == ca_cinematic )
 		SCR_StopCinematic();
-	else UI_SetActiveMenu( UI_MAINMENU );
+	else UI_SetActiveMenu( true );
 	cls.key_dest = key_menu;
 }
 
@@ -1205,6 +1205,12 @@ void Host_ClientFrame( void )
 	cl.oldtime = cl.time;
 	cl.time += host.frametime;
 
+	// menu time (not paused, not clamped)
+	gameui.globals->time = host.realtime;
+	gameui.globals->frametime = host.realframetime;
+	gameui.globals->demoplayback = cls.demoplayback;
+	gameui.globals->demorecording = cls.demorecording;
+	
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0 ) cls.netchan.last_received = Sys_DoubleTime();
 
@@ -1255,15 +1261,14 @@ void CL_Init( void )
 		return; // nothing running on the client
 
 	Con_Init();	
-
+	CL_InitLocal();
 	MSG_Init( &net_message, net_message_buffer, sizeof( net_message_buffer ));
-
-	Host_CheckChanges ();
 
 	if( !CL_LoadProgs( "client.dll" ))
 		Host_Error( "CL_InitGame: can't initialize client.dll\n" );
 
-	CL_InitLocal();
+	Host_CheckChanges ();
+
 	cls.initialized = true;
 }
 

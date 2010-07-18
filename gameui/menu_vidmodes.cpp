@@ -136,6 +136,7 @@ UI_VidModes_UpdateConfig
 static void UI_VidOptions_UpdateConfig( void )
 {
 	CVAR_SET_FLOAT( "r_allow_software", uiVidModes.software.enabled );
+	uiVidModes.videoLibrary.generic.name = uiVidModes.videoList[(int)uiVidModes.videoLibrary.curValue];
 }
 
 /*

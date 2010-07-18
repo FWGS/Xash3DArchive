@@ -44,7 +44,7 @@ void SCR_StopCinematic( void )
 	}
 
 	cls.state = ca_disconnected;
-	UI_SetActiveMenu( UI_MAINMENU );
+	UI_SetActiveMenu( true );
 }
 
 //==========================================================================
@@ -181,7 +181,7 @@ bool SCR_PlayCinematic( const char *arg )
 		return false;
 	}
 
-	UI_SetActiveMenu( UI_CLOSEMENU );
+	UI_SetActiveMenu( false );
 	S_StopAllSounds();
 	S_StartStreaming();
 

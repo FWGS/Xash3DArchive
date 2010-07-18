@@ -792,7 +792,7 @@ const char *Key_KeynumToString( int keynum )
 Key_SetBinding
 ===================
 */
-void Key_SetBinding( int keynum, char *binding )
+void Key_SetBinding( int keynum, const char *binding )
 {
 	if( keynum == -1 ) return;
 
@@ -815,7 +815,7 @@ Key_GetBinding
 */
 const char *Key_GetBinding( int keynum )
 {
-	if( keynum == -1 ) return "";
+	if( keynum == -1 ) return NULL;
 	return keys[keynum].binding;
 }
 
@@ -1108,7 +1108,7 @@ void Key_Event( int key, bool down )
 			}
 			else
 			{
-				UI_SetActiveMenu( UI_MAINMENU );
+				UI_SetActiveMenu( true );
 				return; // don't pass Esc into menu
 			}
 			return;

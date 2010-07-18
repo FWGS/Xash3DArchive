@@ -598,7 +598,7 @@ bool Cmd_GetGamesList( const char *s, char *completedname, int length )
 	return true;
 }
 
-bool Cmd_CheckMapsList( void )
+bool Cmd_CheckMapsList( bool fRefresh )
 {
 	byte	buf[MAX_SYSPATH]; // 1 kb
 	char	*buffer;
@@ -607,7 +607,7 @@ bool Cmd_CheckMapsList( void )
 	file_t	*f;
 	int	i;
 
-	if( FS_FileExists( "†scripts/maps.lst" ))
+	if( FS_FileExists( "†scripts/maps.lst" ) && !fRefresh )
 		return true; // exist 
 
 	t = FS_Search( "maps/*.bsp", false );

@@ -146,6 +146,10 @@ SOURCE=.\client\cl_main.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\cl_menu.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\cl_move.c
 # End Source File
 # Begin Source File
@@ -268,102 +272,6 @@ SOURCE=.\server\sv_world.c
 
 SOURCE=.\common\titles.c
 # End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_advcontrols.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_audio.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_configuration.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_controls.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_creategame.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_credits.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_customgame.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_gameoptions.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_langame.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_loadgame.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_menu.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_multiplayer.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_newgame.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_playdemo.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_playersetup.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_playrec.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_qmenu.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_recdemo.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_savegame.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_saveload.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_video.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_vidmodes.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_vidoptions.c
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -382,15 +290,7 @@ SOURCE=.\common\net_msg.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\safeproc.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\server\server.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\uimenu\ui_local.h
 # End Source File
 # End Group
 # End Target

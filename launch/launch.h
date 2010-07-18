@@ -400,7 +400,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *value, int flags, const char
 void Cvar_Set( const char *var_name, const char *value );
 cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force );
 void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback );
-void Cvar_FullSet (char *var_name, char *value, int flags );
+void Cvar_FullSet( const char *var_name, const char *value, int flags );
 void Cvar_SetLatched( const char *var_name, const char *value );
 void Cvar_SetValue( const char *var_name, float value );
 float Cvar_VariableValue( const char *var_name );

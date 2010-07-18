@@ -17,8 +17,6 @@ typedef struct
 {
 	// filesystem info
 	char		gamefolder[64];	// used for change game '-game x'
-	char		basedir[64];	// main game directory (like 'id1' for Quake or 'valve' for Half-Life)
-	char		gamedir[64];	// game directory (used as primary dir and as write path)
 	char		startmap[64];	// map to start singleplayer game
 	char		trainmap[64];	// map to start hazard course (if specified)
 	char		title[64];	// Game Main Title
@@ -31,7 +29,6 @@ typedef struct
 	char		date[64];
 	char		size[64];		// displayed mod size
 
-	int		viewmode;
 	int		gamemode;
 } GAMEINFO;
 

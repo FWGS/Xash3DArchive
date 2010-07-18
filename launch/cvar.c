@@ -410,7 +410,7 @@ void Cvar_SetLatched( const char *var_name, const char *value )
 Cvar_FullSet
 ============
 */
-void Cvar_FullSet( char *var_name, char *value, int flags )
+void Cvar_FullSet( const char *var_name, const char *value, int flags )
 {
 	cvar_t	*var;
 	

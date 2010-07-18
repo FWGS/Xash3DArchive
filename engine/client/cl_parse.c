@@ -499,7 +499,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	// wipe the client_t struct
 	CL_ClearState();
-	UI_SetActiveMenu( UI_CLOSEMENU );
+	UI_SetActiveMenu( false );
 	cls.state = ca_connected;
 
 	// parse protocol version number
@@ -515,6 +515,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.globals->maxEntities = MSG_ReadWord( msg );
 	com.strncpy( str, MSG_ReadString( msg ), MAX_STRING );
 	com.strncpy( clgame.maptitle, MSG_ReadString( msg ), MAX_STRING );
+
+	gameui.globals->maxClients = clgame.globals->maxClients;
+	com.strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
 
 	// no effect for local client
 	// merge entcount only for remote clients 

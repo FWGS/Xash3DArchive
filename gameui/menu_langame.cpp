@@ -77,21 +77,21 @@ static void UI_LanGame_GetGamesList( void )
 		if( i >= UI_MAX_SERVERS ) break;
 		info = uiStatic.serverNames[i];
  
-		strncat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "host" ), GAME_LENGTH );
-		strncat( uiLanGame.gameDescription[i], uiEmptyString, GAME_LENGTH );
-		strncat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "map" ), MAPNAME_LENGTH );
-		strncat( uiLanGame.gameDescription[i], uiEmptyString, MAPNAME_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "host" ), GAME_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], uiEmptyString, GAME_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "map" ), MAPNAME_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], uiEmptyString, MAPNAME_LENGTH );
 		if( !strcmp( Info_ValueForKey( info, "dm" ), "1" ))
-			strncat( uiLanGame.gameDescription[i], "deathmatch", TYPE_LENGTH );
+			StringConcat( uiLanGame.gameDescription[i], "deathmatch", TYPE_LENGTH );
 		else if( !strcmp( Info_ValueForKey( info, "coop" ), "1" ))
-			strncat( uiLanGame.gameDescription[i], "coop", TYPE_LENGTH );
+			StringConcat( uiLanGame.gameDescription[i], "coop", TYPE_LENGTH );
 		else if( !strcmp( Info_ValueForKey( info, "team" ), "1" ))
-			strncat( uiLanGame.gameDescription[i], "teamplay", TYPE_LENGTH );
-		strncat( uiLanGame.gameDescription[i], uiEmptyString, TYPE_LENGTH );
-		strncat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "numcl" ), MAXCL_LENGTH );
-		strncat( uiLanGame.gameDescription[i], "\\", MAXCL_LENGTH );
-		strncat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "maxcl" ), MAXCL_LENGTH );
-		strncat( uiLanGame.gameDescription[i], uiEmptyString, MAXCL_LENGTH );
+			StringConcat( uiLanGame.gameDescription[i], "teamplay", TYPE_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], uiEmptyString, TYPE_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "numcl" ), MAXCL_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], "\\", MAXCL_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "maxcl" ), MAXCL_LENGTH );
+		StringConcat( uiLanGame.gameDescription[i], uiEmptyString, MAXCL_LENGTH );
 		uiLanGame.gameDescriptionPtr[i] = uiLanGame.gameDescription[i];
 	}
 
@@ -183,14 +183,14 @@ static void UI_LanGame_Init( void )
 {
 	memset( &uiLanGame, 0, sizeof( uiLanGame_t ));
 
-	strncat( uiLanGame.hintText, "Game", GAME_LENGTH );
-	strncat( uiLanGame.hintText, uiEmptyString, GAME_LENGTH );
-	strncat( uiLanGame.hintText, "Map", MAPNAME_LENGTH );
-	strncat( uiLanGame.hintText, uiEmptyString, MAPNAME_LENGTH );
-	strncat( uiLanGame.hintText, "Type", TYPE_LENGTH );
-	strncat( uiLanGame.hintText, uiEmptyString, TYPE_LENGTH );
-	strncat( uiLanGame.hintText, "Num/Max Clients", MAXCL_LENGTH );
-	strncat( uiLanGame.hintText, uiEmptyString, MAXCL_LENGTH );
+	StringConcat( uiLanGame.hintText, "Game", GAME_LENGTH );
+	StringConcat( uiLanGame.hintText, uiEmptyString, GAME_LENGTH );
+	StringConcat( uiLanGame.hintText, "Map", MAPNAME_LENGTH );
+	StringConcat( uiLanGame.hintText, uiEmptyString, MAPNAME_LENGTH );
+	StringConcat( uiLanGame.hintText, "Type", TYPE_LENGTH );
+	StringConcat( uiLanGame.hintText, uiEmptyString, TYPE_LENGTH );
+	StringConcat( uiLanGame.hintText, "Num/Max Clients", MAXCL_LENGTH );
+	StringConcat( uiLanGame.hintText, uiEmptyString, MAXCL_LENGTH );
 
 	uiLanGame.background.generic.id = ID_BACKGROUND;
 	uiLanGame.background.generic.type = QMTYPE_BITMAP;

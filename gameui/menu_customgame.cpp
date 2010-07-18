@@ -133,16 +133,16 @@ static void UI_CustomGame_GetModList( void )
 		strncpy( uiCustomGame.modsWebSites[i], games[i]->game_url, sizeof( uiCustomGame.modsWebSites[i] ));
 
 		if( strlen( games[i]->type ))
-			strncat( uiCustomGame.modsDescription[i], games[i]->type, TYPE_LENGTH );
-		strncat( uiCustomGame.modsDescription[i], uiEmptyString, TYPE_LENGTH );
-		strncat( uiCustomGame.modsDescription[i], games[i]->title, NAME_LENGTH );
-		strncat( uiCustomGame.modsDescription[i], uiEmptyString, NAME_LENGTH );
-		strncat( uiCustomGame.modsDescription[i], games[i]->version, VER_LENGTH );
-		strncat( uiCustomGame.modsDescription[i], uiEmptyString, VER_LENGTH );
+			StringConcat( uiCustomGame.modsDescription[i], games[i]->type, TYPE_LENGTH );
+		StringConcat( uiCustomGame.modsDescription[i], uiEmptyString, TYPE_LENGTH );
+		StringConcat( uiCustomGame.modsDescription[i], games[i]->title, NAME_LENGTH );
+		StringConcat( uiCustomGame.modsDescription[i], uiEmptyString, NAME_LENGTH );
+		StringConcat( uiCustomGame.modsDescription[i], games[i]->version, VER_LENGTH );
+		StringConcat( uiCustomGame.modsDescription[i], uiEmptyString, VER_LENGTH );
 		if( strlen( games[i]->size ))
-			strncat( uiCustomGame.modsDescription[i], games[i]->size, SIZE_LENGTH );
-		else strncat( uiCustomGame.modsDescription[i], "0.0 Mb", SIZE_LENGTH );     
-		strncat( uiCustomGame.modsDescription[i], uiEmptyString, SIZE_LENGTH );
+			StringConcat( uiCustomGame.modsDescription[i], games[i]->size, SIZE_LENGTH );
+		else StringConcat( uiCustomGame.modsDescription[i], "0.0 Mb", SIZE_LENGTH );     
+		StringConcat( uiCustomGame.modsDescription[i], uiEmptyString, SIZE_LENGTH );
 		uiCustomGame.modsDescriptionPtr[i] = uiCustomGame.modsDescription[i];
 
 		if( !strcmp( gMenu.m_gameinfo.gamefolder, games[i]->gamefolder ))
@@ -223,14 +223,14 @@ static void UI_CustomGame_Init( void )
 
 	uiCustomGame.menu.keyFunc = UI_CustomGame_KeyFunc;
 
-	strncat( uiCustomGame.hintText, "Type", TYPE_LENGTH );
-	strncat( uiCustomGame.hintText, uiEmptyString, TYPE_LENGTH );
-	strncat( uiCustomGame.hintText, "Name", NAME_LENGTH );
-	strncat( uiCustomGame.hintText, uiEmptyString, NAME_LENGTH );
-	strncat( uiCustomGame.hintText, "Version", VER_LENGTH );
-	strncat( uiCustomGame.hintText, uiEmptyString, VER_LENGTH );
-	strncat( uiCustomGame.hintText, "Size", SIZE_LENGTH );
-	strncat( uiCustomGame.hintText, uiEmptyString, SIZE_LENGTH );
+	StringConcat( uiCustomGame.hintText, "Type", TYPE_LENGTH );
+	StringConcat( uiCustomGame.hintText, uiEmptyString, TYPE_LENGTH );
+	StringConcat( uiCustomGame.hintText, "Name", NAME_LENGTH );
+	StringConcat( uiCustomGame.hintText, uiEmptyString, NAME_LENGTH );
+	StringConcat( uiCustomGame.hintText, "Version", VER_LENGTH );
+	StringConcat( uiCustomGame.hintText, uiEmptyString, VER_LENGTH );
+	StringConcat( uiCustomGame.hintText, "Size", SIZE_LENGTH );
+	StringConcat( uiCustomGame.hintText, uiEmptyString, SIZE_LENGTH );
 
 	uiCustomGame.background.generic.id = ID_BACKGROUND;
 	uiCustomGame.background.generic.type = QMTYPE_BITMAP;

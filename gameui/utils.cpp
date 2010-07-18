@@ -77,6 +77,36 @@ int ColorStrlen( const char *str )
 	return len;
 }
 
+void StringConcat( char *dst, const char *src, size_t size )
+{
+	register char *d = dst;
+	register const char *s = src;
+	register size_t n = size;
+	size_t dlen;
+
+	if( !dst || !src || !size )
+		return;
+
+	// find the end of dst and adjust bytes left but don't go past end
+	while(n-- != 0 && *d != '\0') d++;
+	dlen = d - dst;
+	n = size - dlen;
+
+	if ( n == 0 ) return;
+	while ( *s != '\0' )
+	{
+		if ( n != 1 )
+		{
+			*d++ = *s;
+			n--;
+		}
+		s++;
+	}
+
+	*d = '\0';
+	return;
+}
+
 /*
 ============
 COM_FileBase

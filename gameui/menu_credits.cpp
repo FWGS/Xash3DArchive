@@ -149,13 +149,12 @@ static void UI_Credits_DrawFunc( void )
 	if( y < 0 && UnpackAlpha( color ) == 0 )
 	{
 		uiCredits.active = false; // end of credits
-		UI_PopMenu();
-
 		if( uiCredits.finalCredits )
-		{
 			HOST_ENDGAME( gMenu.m_gameinfo.title );
-		}
 	}
+
+	if( !uiCredits.active )
+		UI_PopMenu();
 }
 
 /*
@@ -172,7 +171,6 @@ static const char *UI_Credits_KeyFunc( int key, int down )
 		return uiSoundNull;
 
 	uiCredits.active = false;
-	UI_PopMenu();
 	return uiSoundNull;
 }
 

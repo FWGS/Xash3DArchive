@@ -15,10 +15,6 @@ host_parm_t	host;	// host parms
 stdlib_api_t	com, newcom;
 
 char		*buildstring = __TIME__ " " __DATE__;
-string		video_dlls[MAX_RENDERS];
-string		audio_dlls[MAX_RENDERS];
-int		num_video_dlls;
-int		num_audio_dlls;
 
 dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
@@ -279,14 +275,14 @@ void Host_CheckChanges( void )
 		Host_FreeRender();			// release render.dll
 		if( !Host_InitRender( ))		// load it again
 		{
-			if( num_changes > num_video_dlls )
+			if( num_changes > host.num_video_dlls )
 			{
 				Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
 				return;
 			}
-			if( !com.strcmp( video_dlls[num_changes], host_video->string ))
+			if( !com.strcmp( host.video_dlls[num_changes], host_video->string ))
 				num_changes++; // already trying - failed
-			Cvar_FullSet( "host_video", video_dlls[num_changes], CVAR_SYSTEMINFO );
+			Cvar_FullSet( "host_video", host.video_dlls[num_changes], CVAR_SYSTEMINFO );
 			num_changes++;
 		}
 		else SCR_Init ();
@@ -304,14 +300,14 @@ void Host_CheckChanges( void )
 		Host_FreeSound();			// release sound.dll
 		if( !Host_InitSound( ))		// load it again
 		{
-			if( num_changes > num_audio_dlls )
+			if( num_changes > host.num_audio_dlls )
 			{
 				MsgDev( D_ERROR, "couldn't initialize sound system\n" );
 				return;
 			}
-			if( !com.strcmp( audio_dlls[num_changes], host_audio->string ))
+			if( !com.strcmp( host.audio_dlls[num_changes], host_audio->string ))
 				num_changes++; // already trying - failed
-			Cvar_FullSet( "host_audio", audio_dlls[num_changes], CVAR_SYSTEMINFO );
+			Cvar_FullSet( "host_audio", host.audio_dlls[num_changes], CVAR_SYSTEMINFO );
 			num_changes++;
 		}
 	}
@@ -689,7 +685,7 @@ static void Host_Crash_f( void )
 void Host_InitCommon( const int argc, const char **argv )
 {
 	char		dev_level[4];
-	dll_info_t	check_vid, check_snd, check_cms;
+	dll_info_t	check_vid, check_snd;
 	search_t		*dlls;
 	int		i;
 
@@ -714,19 +710,17 @@ void Host_InitCommon( const int argc, const char **argv )
 	IN_Init();
 
 	// initialize audio\video multi-dlls system
-	num_video_dlls = num_audio_dlls = 0;
+	host.num_video_dlls = host.num_audio_dlls = 0;
 	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_SYSTEMINFO, "name of video rendering library" );
 	host_audio = Cvar_Get( "host_audio", "snd_al.dll", CVAR_SYSTEMINFO, "name of sound rendering library" );
 
 	// make sure what global copy has no changed with any dll checking
 	Mem_Copy( &check_vid, &render_dll, sizeof( dll_info_t ));
 	Mem_Copy( &check_snd, &vsound_dll, sizeof( dll_info_t ));
-	Mem_Copy( &check_cms, &physic_dll, sizeof( dll_info_t ));
 
 	// checking dlls don't invoke crash!
 	check_vid.crash = false;
 	check_snd.crash = false;
-	check_cms.crash = false;
 
 	dlls = FS_Search( "*.dll", true );
 
@@ -741,10 +735,10 @@ void Host_InitCommon( const int argc, const char **argv )
 			// make sure what found library is valid
 			if( Sys_LoadLibrary( dlls->filenames[i], &check_vid ))
 			{
-				MsgDev( D_NOTE, "VideoLibrary[%i]: %s\n", num_video_dlls, dlls->filenames[i] );
-				com.strncpy( video_dlls[num_video_dlls], dlls->filenames[i], MAX_STRING );
+				MsgDev( D_NOTE, "VideoLibrary[%i]: %s\n", host.num_video_dlls, dlls->filenames[i] );
+				host.video_dlls[host.num_video_dlls] = copystring( dlls->filenames[i] );
 				Sys_FreeLibrary( &check_vid );
-				num_video_dlls++;
+				host.num_video_dlls++;
 			}
 		}
 		else if(!com.strnicmp( "snd_", dlls->filenames[i], 4 ))
@@ -752,10 +746,10 @@ void Host_InitCommon( const int argc, const char **argv )
 			// make sure what found library is valid
 			if( Sys_LoadLibrary( dlls->filenames[i], &check_snd ))
 			{
-				MsgDev( D_NOTE, "AudioLibrary[%i]: %s\n", num_audio_dlls, dlls->filenames[i] );
-				com.strncpy( audio_dlls[num_audio_dlls], dlls->filenames[i], MAX_STRING );
+				MsgDev( D_NOTE, "AudioLibrary[%i]: %s\n", host.num_audio_dlls, dlls->filenames[i] );
+				host.audio_dlls[host.num_audio_dlls] = copystring( dlls->filenames[i] );
 				Sys_FreeLibrary( &check_snd );
-				num_audio_dlls++;
+				host.num_audio_dlls++;
 			}
 		}
 	}

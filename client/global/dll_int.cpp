@@ -490,13 +490,10 @@ void HUD_Frame( double time )
 {
 	// place to call vgui_frame
 	// VGUI not implemented, wait for version 0.75
-	gHUD.m_Sound.Update();
 }
 
 void HUD_Shutdown( void )
 {
-	gHUD.m_Sound.Close();
-
 	HUD_ShutdownEffects ();
 
 	IN_Shutdown ();

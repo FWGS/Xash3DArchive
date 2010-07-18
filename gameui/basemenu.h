@@ -18,6 +18,12 @@
 #define CS_SIZE			64	// size of one config string
 #define CS_TIME			16	// size of time string
 
+struct netadr_s
+{
+	int	type;	// NA_LOOPBACK = 0, NA_BROADCAST = 1, NA_IP = 2
+	byte	ip[4];
+	word	port;
+};
 
 #define UI_WHITE_SHADER		"*white"
 #define ART_MAIN_SPLASH		"gfx/shell/splash"

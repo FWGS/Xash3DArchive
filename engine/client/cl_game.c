@@ -898,7 +898,7 @@ static HSPRITE pfnSPR_Load( const char *szPicName )
 
 /*
 =========
-pfnSPR_Load
+pfnSPR_Frames
 
 =========
 */
@@ -914,7 +914,7 @@ static int pfnSPR_Frames( HSPRITE hPic )
 
 /*
 =========
-pfnSPR_Load
+pfnSPR_Height
 
 =========
 */
@@ -930,7 +930,7 @@ static int pfnSPR_Height( HSPRITE hPic, int frame )
 
 /*
 =========
-pfnSPR_Load
+pfnSPR_Width
 
 =========
 */
@@ -946,7 +946,7 @@ static int pfnSPR_Width( HSPRITE hPic, int frame )
 
 /*
 =========
-pfnSPR_Load
+pfnSPR_Set
 
 =========
 */
@@ -1189,21 +1189,6 @@ static void pfnSetCrosshair( HSPRITE hspr, wrect_t rc, int r, int g, int b )
 	clgame.ds.rgbaCrosshair[3] = (byte)0xFF;
 	clgame.ds.hCrosshair = hspr;
 	clgame.ds.rcCrosshair = rc;
-}
-
-/*
-=============
-pfnAddCommand
-
-=============
-*/
-static void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc )
-{
-	if( !cmd_name || !*cmd_name ) return;
-	if( !cmd_desc ) cmd_desc = ""; // hidden for makehelep system
-
-	// NOTE: if( func == NULL ) cmd will be forwarded to a server
-	Cmd_AddCommand( cmd_name, func, cmd_desc );
 }
 
 /*
@@ -1515,19 +1500,6 @@ return interpolated angles from previous frame
 static void pfnSetViewAngles( float *angles )
 {
 	if( angles ) VectorCopy( angles, cl.refdef.cl_viewangles );
-}
-
-/*
-=============
-pfnDelCommand
-
-=============
-*/
-static void pfnDelCommand( const char *cmd_name )
-{
-	if( !cmd_name || !*cmd_name ) return;
-
-	Cmd_RemoveCommand( cmd_name );
 }
 
 /*

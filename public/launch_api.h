@@ -588,12 +588,12 @@ typedef struct stdilib_api_s
 	byte *(*Com_LoadRes)( const char *filename, size_t *size );	// find internal resource in baserc.dll 
 
 	// console variables
-	cvar_t *(*Cvar_Get)(const char *name, const char *value, int flags, const char *desc);
+	cvar_t *(*Cvar_Get)( const char *name, const char *value, int flags, const char *desc );
 	void (*Cvar_LookupVars)( int checkbit, void *buffer, void *ptr, setpair_t callback );
 	void (*Cvar_SetString)( const char *name, const char *value );
-	void (*Cvar_SetLatched)( const char *name, const char *value);
-	void (*Cvar_FullSet)( char *name, char *value, int flags );
-	void (*Cvar_SetValue )( const char *name, float value);
+	void (*Cvar_SetLatched)( const char *name, const char *value );
+	void (*Cvar_FullSet)( const char *name, const char *value, int flags );
+	void (*Cvar_SetValue )( const char *name, float value );
 	long (*Cvar_GetInteger)(const char *name);
 	float (*Cvar_GetValue )(const char *name);
 	char *(*Cvar_GetString)(const char *name);

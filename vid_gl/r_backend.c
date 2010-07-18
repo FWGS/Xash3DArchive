@@ -1278,9 +1278,10 @@ R_ShaderpassTex
 */
 static _inline texture_t *R_ShaderpassTex( const ref_stage_t *pass, int unit )
 {
-	if( pass->flags & SHADERSTAGE_RENDERMODE && tr.iRenderMode == kRenderTransColor )
+	if( !glState.in2DMode && !triState.fActive )
 	{
-		return tr.whiteTexture;
+		if( pass->flags & SHADERSTAGE_RENDERMODE && tr.iRenderMode == kRenderTransColor )
+			return tr.whiteTexture;
 	}
 
 	if( pass->flags & SHADERSTAGE_ANGLEDMAP )

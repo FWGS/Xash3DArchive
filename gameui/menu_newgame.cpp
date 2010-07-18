@@ -81,7 +81,7 @@ static void UI_NewGame_StartGame( float skill )
 
 static void UI_PromptDialog( float skill )
 {
-	if ( CL_IsActive( ))
+	if ( CL_IsActive( ) == FALSE )
 	{
 		UI_NewGame_StartGame( skill );
 		return;

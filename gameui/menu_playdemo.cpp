@@ -143,9 +143,9 @@ static void UI_PlayDemo_GetDemoList( void )
 			{
 				// get name string even if not found - CL_GetComment can be mark demos
 				// as <CORRUPTED> <OLD VERSION> etc
-				strncat( uiPlayDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
-				strncat( uiPlayDemo.demoDescription[i], comment, MAPNAME_LENGTH );
-				strncat( uiPlayDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
+				StringConcat( uiPlayDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
+				StringConcat( uiPlayDemo.demoDescription[i], comment, MAPNAME_LENGTH );
+				StringConcat( uiPlayDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
 				uiPlayDemo.demoDescriptionPtr[i] = uiPlayDemo.demoDescription[i];
 				COM_FileBase( filenames[i], uiPlayDemo.delName[i] );
 			}
@@ -158,12 +158,12 @@ static void UI_PlayDemo_GetDemoList( void )
 		COM_FileBase( filenames[i], uiPlayDemo.delName[i] );
 
 		// fill demo desc
-		strncat( uiPlayDemo.demoDescription[i], comment + CS_SIZE, TITLE_LENGTH );
-		strncat( uiPlayDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
-		strncat( uiPlayDemo.demoDescription[i], comment, MAPNAME_LENGTH );
-		strncat( uiPlayDemo.demoDescription[i], uiEmptyString, MAPNAME_LENGTH ); // fill remaining entries
-		strncat( uiPlayDemo.demoDescription[i], comment + CS_SIZE * 2, MAXCLIENTS_LENGTH );
-		strncat( uiPlayDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
+		StringConcat( uiPlayDemo.demoDescription[i], comment + CS_SIZE, TITLE_LENGTH );
+		StringConcat( uiPlayDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
+		StringConcat( uiPlayDemo.demoDescription[i], comment, MAPNAME_LENGTH );
+		StringConcat( uiPlayDemo.demoDescription[i], uiEmptyString, MAPNAME_LENGTH ); // fill remaining entries
+		StringConcat( uiPlayDemo.demoDescription[i], comment + CS_SIZE * 2, MAXCLIENTS_LENGTH );
+		StringConcat( uiPlayDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
 		uiPlayDemo.demoDescriptionPtr[i] = uiPlayDemo.demoDescription[i];
 	}
 
@@ -297,12 +297,12 @@ static void UI_PlayDemo_Init( void )
 
 	uiPlayDemo.menu.keyFunc = UI_PlayDemo_KeyFunc;
 
-	strncat( uiPlayDemo.hintText, "Title", TITLE_LENGTH );
-	strncat( uiPlayDemo.hintText, uiEmptyString, TITLE_LENGTH );
-	strncat( uiPlayDemo.hintText, "Map", MAPNAME_LENGTH );
-	strncat( uiPlayDemo.hintText, uiEmptyString, MAPNAME_LENGTH );
-	strncat( uiPlayDemo.hintText, "Max Clients", MAXCLIENTS_LENGTH );
-	strncat( uiPlayDemo.hintText, uiEmptyString, MAXCLIENTS_LENGTH );
+	StringConcat( uiPlayDemo.hintText, "Title", TITLE_LENGTH );
+	StringConcat( uiPlayDemo.hintText, uiEmptyString, TITLE_LENGTH );
+	StringConcat( uiPlayDemo.hintText, "Map", MAPNAME_LENGTH );
+	StringConcat( uiPlayDemo.hintText, uiEmptyString, MAPNAME_LENGTH );
+	StringConcat( uiPlayDemo.hintText, "Max Clients", MAXCLIENTS_LENGTH );
+	StringConcat( uiPlayDemo.hintText, uiEmptyString, MAXCLIENTS_LENGTH );
 
 	uiPlayDemo.background.generic.id = ID_BACKGROUND;
 	uiPlayDemo.background.generic.type = QMTYPE_BITMAP;

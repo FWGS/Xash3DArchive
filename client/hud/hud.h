@@ -214,25 +214,6 @@ protected:
 //
 //-----------------------------------------------------
 //
-class CHudSound: public CHudBase
-{
-public:
-	int Init( void );
-	int VidInit( void );
-	int MsgFunc_Fsound( const char *pszName, int iSize, void *pbuf );
-	int PlayStream( const char* name );
-	int Draw( float flTime ); // used for get pause
-	int Update( void );
-	int Close( void );
-private:
-	int m_iStatus;
-	int m_iTime;
-	float m_flVolume;
-};
-
-//
-//-----------------------------------------------------
-//
 class CHudScoreboard: public CHudBase
 {
 public:
@@ -595,7 +576,6 @@ public:
 	CHudAmmoSecondary	m_AmmoSecondary;
 	CHudTextMessage	m_TextMessage;
 	CHudStatusIcons	m_StatusIcons;
-          CHudSound		m_Sound;
 	CHudMOTD		m_MOTD;
 	
 	void Init( void );

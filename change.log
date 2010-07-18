@@ -1,6 +1,7 @@
 build ????
 
 Engine: add 'allow_levelshots' cvar (disabled by default) to switch between custom levelshots and normal 'loading' screen
+Client: remove fmod.dll implementation
 
 build 1254
 

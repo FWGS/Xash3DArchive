@@ -7,35 +7,9 @@
 
 #include "gameinfo.h"
 
-struct netadr_s
-{
-	int	type;	// NA_LOOPBACK = 0, NA_BROADCAST = 1, NA_IP = 2
-	byte	ip[4];
-	word	port;
-};
-
 typedef int		HIMAGE;	// handle to a graphic
 
-#define SCRINFO_VIRTUALSPACE	1
-
-typedef struct
-{
-	int		iFlags;
-	int		iRealWidth;
-	int		iRealHeight;
-	int		iWidth;
-	int		iHeight;
-	int		iCharHeight;
-	byte		charWidths[256];
-} SCREENINFO;
-
-typedef struct wrect_s
-{
-	int		left;
-	int		right;
-	int		top;
-	int		bottom;
-} wrect_t;
+#include "screeninfo.h"
 
 typedef struct ui_globalvars_s
 {	
@@ -48,6 +22,7 @@ typedef struct ui_globalvars_s
 	int		demorecording;
 	char		demoname[64];	// name of currently playing demo
 	char		maptitle[64];	// title of active map
+	char		shot_ext[8];	// thumbnail image type
 } ui_globalvars_t;
 
 typedef struct ui_enginefuncs_s
@@ -99,7 +74,7 @@ typedef struct ui_enginefuncs_s
 
 	// custom rendering (for playermodel preview)
 	edict_t*	(*pfnGetPlayerModel)( void );	// for drawing playermodel previews
-	int	(*pfnSetModel)( struct edict_s *ed, const char *path );
+	void	(*pfnSetModel)( struct edict_s *ed, const char *path );
 	void	(*pfnClearScene)( void );
 	void	(*pfnRenderScene)( const struct ref_params_s *fd );
 	int	(*R_AddEntity)( edict_t *pEnt, int ed_type, HIMAGE customShader );

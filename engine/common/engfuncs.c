@@ -284,6 +284,34 @@ float pfnCVarGetValue( const char *szName )
 
 /*
 =============
+pfnAddCommand
+
+=============
+*/
+void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc )
+{
+	if( !cmd_name || !*cmd_name ) return;
+	if( !cmd_desc ) cmd_desc = ""; // hidden for makehelep system
+
+	// NOTE: if( func == NULL ) cmd will be forwarded to a server
+	Cmd_AddCommand( cmd_name, func, cmd_desc );
+}
+
+/*
+=============
+pfnDelCommand
+
+=============
+*/
+void pfnDelCommand( const char *cmd_name )
+{
+	if( !cmd_name || !*cmd_name ) return;
+
+	Cmd_RemoveCommand( cmd_name );
+}
+
+/*
+=============
 pfnAlertMessage
 
 =============

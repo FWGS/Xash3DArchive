@@ -16,7 +16,7 @@ Specifies the model that will be used as the world
 */
 void V_ClearScene( void )
 {
-	re->ClearScene();
+	if( re ) re->ClearScene();
 }
 
 /*
@@ -189,7 +189,7 @@ void V_PostRender( void )
 		SCR_RSpeeds();
 		SCR_DrawNet();
 		SCR_DrawFPS();
-		UI_UpdateMenu( host.realtime * 1000 );	// FIXME: convert time to double properly
+		UI_UpdateMenu( host.realtime );
 		Con_DrawConsole();
 	}
 	SCR_MakeScreenShot();

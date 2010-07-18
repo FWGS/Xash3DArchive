@@ -161,7 +161,7 @@ void IN_ActivateMouse( void )
 		{
 			if( in_mouse_suspended )
 			{
-				UI_GetCursorPos( &global_pos );
+				UI_GetCursorPos( &global_pos.x, &global_pos.y );
 			
 				ClipCursor( NULL );
 				ReleaseCapture();

@@ -140,12 +140,12 @@ static void UI_RecDemo_GetDemoList( void )
 
 		// create new entry for current save game
 		strncpy( uiRecDemo.demoName[i], "new", CS_SIZE );
-		strncat( uiRecDemo.demoDescription[i], gpGlobals->maptitle, TITLE_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH ); // fill remaining entries
-		strncat( uiRecDemo.demoDescription[i], "New Demo", MAPNAME_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], uiEmptyString, MAPNAME_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], maxClients, MAXCLIENTS_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], gpGlobals->maptitle, TITLE_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH ); // fill remaining entries
+		StringConcat( uiRecDemo.demoDescription[i], "New Demo", MAPNAME_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, MAPNAME_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], maxClients, MAXCLIENTS_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
 		uiRecDemo.demoDescriptionPtr[i] = uiRecDemo.demoDescription[i];
 		i++;
 	}
@@ -162,9 +162,9 @@ static void UI_RecDemo_GetDemoList( void )
 				// as <CORRUPTED> <OLD VERSION> etc
 				// get name string even if not found - SV_GetComment can be mark saves
 				// as <CORRUPTED> <OLD VERSION> etc
-				strncat( uiRecDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
-				strncat( uiRecDemo.demoDescription[i], comment, MAPNAME_LENGTH );
-				strncat( uiRecDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
+				StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
+				StringConcat( uiRecDemo.demoDescription[i], comment, MAPNAME_LENGTH );
+				StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
 				uiRecDemo.demoDescriptionPtr[i] = uiRecDemo.demoDescription[i];
 				COM_FileBase( filenames[j], uiRecDemo.demoName[i] );
 				COM_FileBase( filenames[j], uiRecDemo.delName[i] );
@@ -178,12 +178,12 @@ static void UI_RecDemo_GetDemoList( void )
 		COM_FileBase( filenames[j], uiRecDemo.delName[i] );
 
 		// fill demo desc
-		strncat( uiRecDemo.demoDescription[i], comment + CS_SIZE, TITLE_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], comment, MAPNAME_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], uiEmptyString, MAPNAME_LENGTH ); // fill remaining entries
-		strncat( uiRecDemo.demoDescription[i], comment + CS_SIZE * 2, MAXCLIENTS_LENGTH );
-		strncat( uiRecDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], comment + CS_SIZE, TITLE_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, TITLE_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], comment, MAPNAME_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, MAPNAME_LENGTH ); // fill remaining entries
+		StringConcat( uiRecDemo.demoDescription[i], comment + CS_SIZE * 2, MAXCLIENTS_LENGTH );
+		StringConcat( uiRecDemo.demoDescription[i], uiEmptyString, MAXCLIENTS_LENGTH );
 		uiRecDemo.demoDescriptionPtr[i] = uiRecDemo.demoDescription[i];
 	}
 
@@ -324,12 +324,12 @@ static void UI_RecDemo_Init( void )
 
 	uiRecDemo.menu.keyFunc = UI_RecDemo_KeyFunc;
 
-	strncat( uiRecDemo.hintText, "Title", TITLE_LENGTH );
-	strncat( uiRecDemo.hintText, uiEmptyString, TITLE_LENGTH );
-	strncat( uiRecDemo.hintText, "Map", MAPNAME_LENGTH );
-	strncat( uiRecDemo.hintText, uiEmptyString, MAPNAME_LENGTH );
-	strncat( uiRecDemo.hintText, "Max Clients", MAXCLIENTS_LENGTH );
-	strncat( uiRecDemo.hintText, uiEmptyString, MAXCLIENTS_LENGTH );
+	StringConcat( uiRecDemo.hintText, "Title", TITLE_LENGTH );
+	StringConcat( uiRecDemo.hintText, uiEmptyString, TITLE_LENGTH );
+	StringConcat( uiRecDemo.hintText, "Map", MAPNAME_LENGTH );
+	StringConcat( uiRecDemo.hintText, uiEmptyString, MAPNAME_LENGTH );
+	StringConcat( uiRecDemo.hintText, "Max Clients", MAXCLIENTS_LENGTH );
+	StringConcat( uiRecDemo.hintText, uiEmptyString, MAXCLIENTS_LENGTH );
 
 	uiRecDemo.background.generic.id = ID_BACKGROUND;
 	uiRecDemo.background.generic.type = QMTYPE_BITMAP;

@@ -124,42 +124,42 @@ static int R_ChoosePFD( int colorBits, int depthBits, int stencilBits )
 		// check acceleration
 		if(( current->dwFlags & PFD_GENERIC_FORMAT ) && !r_allow_software->integer )
 		{
-			MsgDev( D_NOTE, "PFD %i rejected, software acceleration\n", i );
+			MsgDev( D_MEMORY, "PFD %i rejected, software acceleration\n", i );
 			continue;
 		}
 
 		// check flags
 		if(( current->dwFlags & flags ) != flags )
 		{
-			MsgDev( D_NOTE, "PFD %i rejected, improper flags (0x%x instead of 0x%x)\n", i, current->dwFlags, flags );
+			MsgDev( D_MEMORY, "PFD %i rejected, improper flags (0x%x instead of 0x%x)\n", i, current->dwFlags, flags );
 			continue;
 		}
 
 		// Check pixel type
 		if( current->iPixelType != PFD_TYPE_RGBA )
 		{
-			MsgDev( D_NOTE, "PFD %i rejected, not RGBA\n", i );
+			MsgDev( D_MEMORY, "PFD %i rejected, not RGBA\n", i );
 			continue;
 		}
 
 		// check color bits
 		if( current->cColorBits < colorBits )
 		{
-			MsgDev( D_NOTE, "PFD %i rejected, insufficient color bits (%i < %i)\n", i, current->cColorBits, colorBits );
+			MsgDev( D_MEMORY, "PFD %i rejected, insufficient color bits (%i < %i)\n", i, current->cColorBits, colorBits );
 			continue;
 		}
 
 		// check depth bits
 		if( current->cDepthBits < depthBits )
 		{
-			MsgDev( D_NOTE, "PFD %i rejected, insufficient depth bits (%i < %i)\n", i, current->cDepthBits, depthBits );
+			MsgDev( D_MEMORY, "PFD %i rejected, insufficient depth bits (%i < %i)\n", i, current->cDepthBits, depthBits );
 			continue;
 		}
 
 		// check stencil bits
 		if( current->cStencilBits < stencilBits )
 		{
-			MsgDev( D_NOTE, "PFD %i rejected, insufficient stencil bits (%i < %i)\n", i, current->cStencilBits, stencilBits );
+			MsgDev( D_MEMORY, "PFD %i rejected, insufficient stencil bits (%i < %i)\n", i, current->cStencilBits, stencilBits );
 			continue;
 		}
 

@@ -46,7 +46,7 @@ const char	*uiSoundNull	= "";
 int		uiColorHelp	= 0xFFFFFFFF;	// 255, 255, 255, 255	// hint letters color
 int		uiPromptBgColor	= 0xFF404040;	// 64,  64,  64,  255	// dialog background color
 int		uiPromptTextColor	= 0xFFFFA000;	// 255, 160,  0,  255	// dialog or button letters color
-int		uiPromptFocusColor	= 0xFFFF00FF;	// 255, 255,  0,  255	// dialog or button focus letters color
+int		uiPromptFocusColor	= 0xFFFFFF00;	// 255, 255,  0,  255	// dialog or button focus letters color
 int		uiInputTextColor	= 0xFFC0C0C0;	// 192, 192, 192, 255
 int		uiInputBgColor	= 0xFF404040;	// 64,  64,  64,  255	// field, scrollist, checkbox background color
 int		uiInputFgColor	= 0xFF555555;	// 85,  85,  85,  255	// field, scrollist, checkbox foreground color
@@ -241,23 +241,23 @@ void UI_DrawStringExt( int x, int y, int w, int h, const char *string, const int
 				wrect_t	rc;
 				int r, g, b, a;
 
-				rc.left = col;
-				rc.right = rc.left + size;
-				rc.top = row;
-				rc.right = rc.top + size;
+				rc.left = (int)(col * 1000);
+				rc.right = (int)((col + size) * 1000);
+				rc.top = (int)(row * 1000);
+				rc.bottom = (int)((row + size) * 1000);
 
 				if( shadow )
 				{
 					UnpackRGBA( r, g, b, a, shadowModulate );
 					PIC_Set( font, r, g, b, a );
 
-					PIC_Draw( 0, xx + ofsX, yy + ofsY, charW, charH, &rc );
+					PIC_DrawTrans( 0, xx + ofsX, yy + ofsY, charW, charH, &rc );
                                         }
 
 				UnpackRGBA( r, g, b, a, modulate );
 				PIC_Set( font, r, g, b, a );
 
-				PIC_Draw( 0, xx, yy, charW, charH, &rc );
+				PIC_DrawTrans( 0, xx, yy, charW, charH, &rc );
 			}
           		xx += charW;
 		}
@@ -306,7 +306,7 @@ void UI_DrawMouseCursor( void )
 	if( hCursor == -1 ) hCursor = PIC_Load( UI_CURSOR_NORMAL );
 
 	PIC_Set( hCursor, 255, 255, 255 );
-	PIC_Draw( 0, uiStatic.cursorX, uiStatic.cursorY, w, h );
+	PIC_DrawTrans( 0, uiStatic.cursorX, uiStatic.cursorY, w, h );
 }
 
 /*
@@ -849,7 +849,7 @@ void UI_UpdateMenu( float flTime )
 	if( !uiStatic.menuActive )
 		return;
 
-	uiStatic.realTime = flTime;
+	uiStatic.realTime = flTime * 1000;
 
 	if( uiStatic.firstDraw )
 	{
@@ -1265,6 +1265,7 @@ int UI_VidInit( void )
 
 	// setup screen info
 	GetScreenInfo( &gMenu.m_scrinfo );
+	GetGameInfo( &gMenu.m_gameinfo );
 		
 	uiStatic.scaleX = ActualWidth / 1024.0f;
 	uiStatic.scaleY = ActualHeight / 768.0f;
@@ -1289,6 +1290,9 @@ int UI_VidInit( void )
 
 	sprintf( str, "gfx/fonts/%s", ui_mainfont->string );
 	uiStatic.menuFont = PIC_Load( str );
+
+	sprintf( str, "gfx/fonts/%s", CVAR_GET_STRING( "con_font" ));
+	m_hConcsoleFont = PIC_Load( str );
 
 	return 1;
 }

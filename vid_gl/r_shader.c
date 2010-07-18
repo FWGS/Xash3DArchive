@@ -3546,7 +3546,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		break;
 	case SHADER_SPRITE:
 		shader->type = SHADER_SPRITE;
-		shader->flags = SHADER_DEPTHWRITE|SHADER_RENDERMODE;
+		shader->flags = SHADER_RENDERMODE;
 		shader->flags |= (r_shaderTwoSided) ? 0 : SHADER_CULL_FRONT;
 		shader->features = MF_STCOORDS|MF_COLORS;
 		shader->num_stages = 1;
@@ -3623,6 +3623,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			shader->sort = SORT_ADDITIVE;
 			break;
 		case kRenderTransAlpha:
+			shader->flags |= SHADER_DEPTHWRITE;
 			pass->flags |= SHADERSTAGE_BLEND_DECAL;
 			pass->glState = GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
 			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT;
@@ -3630,6 +3631,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			shader->sort = SORT_ALPHATEST;
 			break;
 		default:
+			shader->flags |= SHADER_DEPTHWRITE;
 			pass->glState = GLSTATE_DEPTHWRITE;
 			pass->rgbGen.type = RGBGEN_LIGHTING_AMBIENT;
 			pass->alphaGen.type = ALPHAGEN_IDENTITY;
@@ -3645,7 +3647,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		shader->num_stages = 1;
 		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 		strcpy( shader->name, shortname );
-		shader->stages = ( ref_stage_t * )(( byte * )shader->name + length + 1 );
+		shader->stages = (ref_stage_t *)(( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
 		pass->flags = SHADERSTAGE_BLEND_MODULATE;
 		pass->glState = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
@@ -3665,14 +3667,14 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		shader->type = SHADER_NOMIP;
 		shader->features = MF_STCOORDS|MF_COLORS;
 		shader->flags = SHADER_STATIC|SHADER_RENDERMODE;
-		shader->sort = SORT_ADDITIVE;
+		shader->sort = SORT_NEAREST;
 		shader->num_stages = 1;
 		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 		strcpy( shader->name, shortname );
 		shader->stages = ( ref_stage_t * )( ( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
-		pass->flags = SHADERSTAGE_BLEND_MODULATE|SHADERSTAGE_RENDERMODE;
-		pass->glState = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA; 
+		pass->flags = SHADERSTAGE_BLEND_REPLACE|SHADERSTAGE_RENDERMODE;
+		pass->glState = GLSTATE_NONE; 
 		if( shader->name[0] == '#' )
 		{
 			// search for internal resource
@@ -3686,6 +3688,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			MsgDev( D_WARN, "couldn't find texture for shader '%s', using default...\n", shader->name );
 			pass->textures[0] = tr.defaultTexture;
 		}
+
 		pass->rgbGen.type = RGBGEN_IDENTITY;
 		pass->alphaGen.type = ALPHAGEN_IDENTITY;
 		pass->tcgen = TCGEN_BASE;

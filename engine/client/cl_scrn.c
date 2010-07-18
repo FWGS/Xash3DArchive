@@ -550,11 +550,13 @@ void SCR_RegisterShaders( void )
 		else cls.consoleBack = re->RegisterShader( "cached/loading", SHADER_NOMIP );
 
 		Mem_Set( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
+		Mem_Set( &gameui.ds, 0, sizeof( gameui.ds )); // reset a draw state
 	}
 
 	// vid_state has changed
 	if( clgame.hInstance ) clgame.dllFuncs.pfnVidInit();
-
+	if( gameui.hInstance ) gameui.dllFuncs.pfnVidInit();
+		
 	g_console_field_width = scr_width->integer / SMALLCHAR_WIDTH - 2;
 	g_consoleField.widthInChars = g_console_field_width;
 }
@@ -590,16 +592,17 @@ void SCR_Init( void )
 	Cmd_AddCommand( "setfont", CL_SetFont_f, "set console/messsages font" );
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
+	if( !UI_LoadProgs( "GameUI.dll" ))
+		MsgDev( D_ERROR, "SCR_Init: can't initialize gameui.dll\n" ); // there is non fatal for us
+
 	SCR_RegisterShaders ();
 	SCR_LoadCreditsFont ();
 
 	SCR_InstallParticlePalette ();
 
-	UI_Init();
-
 	if( host.developer && FS_CheckParm( "-toconsole" ))
 		Cbuf_AddText( "toggleconsole\n" );
-	else UI_SetActiveMenu( UI_MAINMENU );
+	else UI_SetActiveMenu( true );
 	SCR_InitCinematic();
 
 	scr_init = true;
@@ -615,7 +618,7 @@ void SCR_Shutdown( void )
 	Cmd_RemoveCommand( "setfont" );
 	Cmd_RemoveCommand( "viewpos" );
 
-	UI_SetActiveMenu( UI_CLOSEMENU );
-	UI_Shutdown();
+	UI_SetActiveMenu( false );
+	UI_UnloadProgs();
 	scr_init = false;
 }

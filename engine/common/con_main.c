@@ -114,12 +114,12 @@ void Con_ToggleConsole_f( void )
 
 	if( cls.key_dest == key_console )
 	{
-		UI_SetActiveMenu( UI_CLOSEMENU );
+		UI_SetActiveMenu( false );
 		cls.key_dest = key_game;
 	}
 	else
 	{
-		UI_SetActiveMenu( UI_CLOSEMENU );
+		UI_SetActiveMenu( false );
 		cls.key_dest = key_console;	
 	}
 }

@@ -23,7 +23,6 @@ gameui\
 engine\
 engine\client\
 engine\server\
-engine\uimenu\
 engine\common\
 launch\
 launch\xwad\

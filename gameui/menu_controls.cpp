@@ -43,7 +43,7 @@ typedef struct
 	char		keysBind[MAX_KEYS][32];
 	char		firstKey[MAX_KEYS][32];
 	char		secondKey[MAX_KEYS][32];
-	char		keysDescription[MAX_KEYS][80];
+	char		keysDescription[MAX_KEYS][256];
 	char		*keysDescriptionPtr[MAX_KEYS];
 
 	menuFramework_s	menu;
@@ -96,22 +96,24 @@ UI_Controls_GetKeysList
 */
 static void UI_Controls_GetKeysList( void )
 {
-	int	i, j;
+	int i, j;
+	const char *b;
 
 	for( i = j = 0; i < MAX_KEYS; i++ )
 	{
-		if( strlen( KEY_GetBinding( i )) == 0 ) continue;
+		b = KEY_GetBinding( i );
+		if( !b ) continue;
 
-		strncpy( uiControls.keysBind[j], KEY_GetBinding( i ), sizeof( uiControls.keysBind[j] ));
+		strncpy( uiControls.keysBind[j], b, sizeof( uiControls.keysBind[j] ));
 		strncpy( uiControls.firstKey[j], KEY_KeynumToString( i ), sizeof( uiControls.firstKey[j] ));
 		strncpy( uiControls.secondKey[j], KEY_KeynumToString( i ), sizeof( uiControls.secondKey[j] ));
 
-		strncat( uiControls.keysDescription[j], uiControls.keysBind[j], CMD_LENGTH );
-		strncat( uiControls.keysDescription[j], uiEmptyString, CMD_LENGTH );
-		strncat( uiControls.keysDescription[j], uiControls.firstKey[j], KEY1_LENGTH );
-		strncat( uiControls.keysDescription[j], uiEmptyString, KEY1_LENGTH );
-		strncat( uiControls.keysDescription[j], uiControls.secondKey[j], KEY2_LENGTH );
-		strncat( uiControls.keysDescription[j], uiEmptyString, KEY2_LENGTH );
+		StringConcat( uiControls.keysDescription[j], uiControls.keysBind[j], CMD_LENGTH );
+		StringConcat( uiControls.keysDescription[j], uiEmptyString, CMD_LENGTH );
+		StringConcat( uiControls.keysDescription[j], uiControls.firstKey[j], KEY1_LENGTH );
+		StringConcat( uiControls.keysDescription[j], uiEmptyString, KEY1_LENGTH );
+		StringConcat( uiControls.keysDescription[j], uiControls.secondKey[j], KEY2_LENGTH );
+		StringConcat( uiControls.keysDescription[j], uiEmptyString, KEY2_LENGTH );
 		uiControls.keysDescriptionPtr[j] = uiControls.keysDescription[j];
 		j++;
 	}
@@ -157,12 +159,12 @@ static void UI_Controls_Init( void )
 {
 	memset( &uiControls, 0, sizeof( uiControls_t ));
 
-	strncat( uiControls.hintText, "Action", CMD_LENGTH );
-	strncat( uiControls.hintText, uiEmptyString, CMD_LENGTH );
-	strncat( uiControls.hintText, "Key/Button", KEY1_LENGTH );
-	strncat( uiControls.hintText, uiEmptyString, KEY1_LENGTH );
-	strncat( uiControls.hintText, "Alternate", KEY2_LENGTH );
-	strncat( uiControls.hintText, uiEmptyString, KEY2_LENGTH );
+	StringConcat( uiControls.hintText, "Action", CMD_LENGTH );
+	StringConcat( uiControls.hintText, uiEmptyString, CMD_LENGTH );
+	StringConcat( uiControls.hintText, "Key/Button", KEY1_LENGTH );
+	StringConcat( uiControls.hintText, uiEmptyString, KEY1_LENGTH );
+	StringConcat( uiControls.hintText, "Alternate", KEY2_LENGTH );
+	StringConcat( uiControls.hintText, uiEmptyString, KEY2_LENGTH );
 
 	uiControls.background.generic.id = ID_BACKGROUND;
 	uiControls.background.generic.type = QMTYPE_BITMAP;

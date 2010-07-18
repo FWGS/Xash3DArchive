@@ -19,6 +19,7 @@
 #define PIC_DisableScissor	(*g_engfuncs.pfnPIC_DisableScissor)
 #define FillRGBA		(*g_engfuncs.pfnFillRGBA)
 #define GetScreenInfo	(*g_engfuncs.pfnGetScreenInfo)
+#define GetGameInfo		(*g_engfuncs.pfnGetGameInfo)
 
 #define PIC_Load		(*g_engfuncs.pfnPIC_Load)
 #define PIC_Free		(*g_engfuncs.pfnPIC_Free)
@@ -105,12 +106,17 @@ inline void PIC_Draw( int frame, int x, int y, int width, int height )
 	g_engfuncs.pfnPIC_Draw( frame, x, y, width, height, NULL );
 }
 
-inline void SPR_DrawTransColor( int frame, int x, int y, const wrect_t *prc )
+inline void SPR_DrawTrans( int frame, int x, int y, const wrect_t *prc )
 {
 	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, -1, -1, prc );
 }
 
-inline void PIC_DrawTransColor( int frame, int x, int y, int width, int height )
+inline void PIC_DrawTrans( int frame, int x, int y, int width, int height, const wrect_t *prc )
+{
+	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, width, height, prc );
+}
+
+inline void PIC_DrawTrans( int frame, int x, int y, int width, int height )
 {
 	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, width, height, NULL );
 }
@@ -130,9 +136,9 @@ inline void PIC_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
 	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, -1, -1, prc );
 }
 
-inline void PIC_DrawAdditive( int frame, int x, int y, int width, int height )
+inline void PIC_DrawAdditive( int frame, int x, int y, int width, int height, const wrect_t *prc )
 {
-	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, width, height, NULL );
+	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, width, height, prc );
 }
 
 #endif//ENGINECALLBACKS_H

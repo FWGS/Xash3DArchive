@@ -34,7 +34,6 @@ void CHud :: Init( void )
 	m_TextMessage.Init();
 	m_StatusIcons.Init();
 	m_Menu.Init();
-	m_Sound.Init();
 	m_MOTD.Init();
 		
 	MsgFunc_ResetHUD( 0, 0, NULL );
@@ -45,8 +44,6 @@ CHud :: ~CHud( void )
 	delete [] m_rghSprites;
 	delete [] m_rgrcRects;
 	delete [] m_rgszSpriteNames;
-
-	m_Sound.Close();
 
 	if( m_pHudList )
 	{
@@ -171,7 +168,6 @@ void CHud :: VidInit( void )
 	m_HUD_error = GetSpriteIndex( "error" );
 	m_hHudError = GetSprite( m_HUD_error );
 	
-	m_Sound.VidInit();
 	m_Ammo.VidInit();
 	m_Health.VidInit();
 	m_Geiger.VidInit();

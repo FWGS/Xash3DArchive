@@ -37,11 +37,6 @@ extern cvar_t	*allow_download;
 extern cvar_t	*sys_sharedstrings;
 extern cvar_t	*host_maxfps;
 
-extern string	video_dlls[MAX_RENDERS];
-extern string	audio_dlls[MAX_RENDERS];
-extern int	num_video_dlls;
-extern int	num_audio_dlls;
-
 /*
 ==============================================================
 
@@ -100,6 +95,12 @@ typedef struct host_parm_s
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
 	bool		key_overstrike;	// key overstrike mode
+
+	// renderers info
+	char		*video_dlls[MAX_RENDERS];
+	char		*audio_dlls[MAX_RENDERS];
+	int		num_video_dlls;
+	int		num_audio_dlls;
 
 	decallist_t	*decalList;	// used for keep decals, when renderer is restarted or changed
 	int		numdecals;
@@ -169,6 +170,8 @@ void *pfnGetProcAddress( void *hInstance, const char *name );
 void pfnFreeLibrary( void *hInstance );
 long pfnRandomLong( long lLow, long lHigh );
 float pfnRandomFloat( float flLow, float flHigh );
+void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc );
+void pfnDelCommand( const char *cmd_name );
 void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... );
 void pfnGetGameDir( char *szGetGameDir );
 const char *pfnCmd_Args( void );
@@ -199,7 +202,8 @@ const char *Key_IsBind( int keynum );
 void Key_Event( int key, bool down );
 void Key_Init( void );
 void Key_WriteBindings( file_t *f );
-void Key_SetBinding( int keynum, char *binding );
+const char *Key_GetBinding( int keynum );
+void Key_SetBinding( int keynum, const char *binding );
 void Key_ClearStates( void );
 const char *Key_KeynumToString( int keynum );
 int Key_StringToKeynum( const char *str );
@@ -262,7 +266,7 @@ void Info_Print( const char *s );
 char *Cvar_Userinfo( void );
 char *Cvar_Serverinfo( void );
 void Cmd_WriteVariables( file_t *f );
-bool Cmd_CheckMapsList( void );
+bool Cmd_CheckMapsList( bool fRefresh );
 void Cmd_ForwardToServer( void );
 void Cmd_AutoComplete( char *complete_string );
 

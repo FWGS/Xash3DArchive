@@ -8,6 +8,7 @@
 
 #include "mathlib.h"
 #include "clgame_api.h"
+#include "gameui_api.h"
 #include "com_world.h"
 
 #define MAX_DEMOS		32
@@ -272,6 +273,22 @@ typedef struct
 
 typedef struct
 {
+	void		*hInstance;		// pointer to client.dll
+	UI_FUNCTIONS	dllFuncs;			// dll exported funcs
+	byte		*mempool;			// client edicts pool
+
+	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
+	SCREENINFO	scrInfo;			// actual screen info
+	GAMEINFO		gameInfo;			// current gameInfo
+	GAMEINFO		*modsInfo[MAX_MODS];	// simplified gameInfo for GameUI
+
+	cl_font_t		creditsFont;
+
+	ui_globalvars_t	*globals;
+} gameui_static_t;
+
+typedef struct
+{
 	connstate_t	state;
 	bool		changelevel;		// during changelevel
 	bool		initialized;
@@ -326,6 +343,7 @@ typedef struct
 
 extern client_static_t	cls;
 extern clgame_static_t	clgame;
+extern gameui_static_t	gameui;
 
 /*
 ==============================================================
@@ -465,26 +483,8 @@ void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
 mouth_t *CL_GetEntityMouth( edict_t *ent );
 int pfnDecalIndexFromName( const char *szDecalName );
-
-// TriAPI implementation
-void TriRenderMode( kRenderMode_t mode );
-shader_t TriGetSpriteFrame( int spriteIndex, int spriteFrame );
-void TriBind( shader_t shader, int frame );
-void TriBegin( int mode );
-void TriEnd( void );
-void TriEnable( int cap );
-void TriDisable( int cap );
-void TriVertex3f( float x, float y, float z );
-void TriVertex3fv( const float *v );
-void TriNormal3f( float x, float y, float z );
-void TriNormal3fv( const float *v );
-void TriColor4f( float r, float g, float b, float a );
-void TriColor4ub( byte r, byte g, byte b, byte a );
-void TriTexCoord2f( float u, float v );
-void TriCullFace( int mode );
-void TriScreenToWorld( float *screen, float *world );
-int TriWorldToScreen( float *world, float *screen );
-void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn );
+void *VGui_GetPanel( void );
+void VGui_ViewportPaintBackground( int extents[4] );
 
 _inline edict_t *CL_EDICT_NUM( int n, const char *file, const int line )
 {
@@ -609,23 +609,20 @@ extern field_t chatField;
 //
 // cl_menu.c
 //
-typedef enum { UI_CLOSEMENU, UI_MAINMENU } uiActiveMenu_t;
-
-void UI_UpdateMenu( int realtime );
+void UI_UnloadProgs( void );
+bool UI_LoadProgs( const char *name );
+void UI_UpdateMenu( float realtime );
 void UI_KeyEvent( int key, bool down );
 void UI_MouseMove( int x, int y );
-void UI_SetActiveMenu( uiActiveMenu_t activeMenu );
+void UI_SetActiveMenu( bool fActive );
 void UI_AddServerToList( netadr_t adr, const char *info );
-void UI_GetCursorPos( POINT *pos );
+void UI_GetCursorPos( int *pos_x, int *pos_y );
 void UI_SetCursorPos( int pos_x, int pos_y );
 void UI_ShowCursor( bool show );
 bool UI_CreditsActive( void );
 void UI_CharEvent( int key );
 bool UI_MouseInRect( void );
 bool UI_IsVisible( void );
-void UI_Precache( void );
-void UI_Init( void );
-void UI_Shutdown( void );
 
 //
 // cl_keys.c

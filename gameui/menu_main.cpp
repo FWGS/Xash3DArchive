@@ -153,7 +153,11 @@ static const char *UI_Main_KeyFunc( int key, int down )
 	if( down && key == K_ESCAPE )
 	{
 		if ( CL_IsActive( ))
-			UI_CloseMenu();
+		{
+			if(!( uiMain.dlgMessage1.generic.flags & QMF_HIDDEN ))
+				UI_PromptDialog();
+			else UI_CloseMenu();
+		}
 		else UI_QuitDialog();
 		return uiSoundNull;
 	}

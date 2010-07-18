@@ -106,6 +106,7 @@ extern int ColorStrlen( const char *str );	// returns string length without colo
 extern const int g_iColorTable[8];
 extern void COM_FileBase( const char *in, char *out );		// ripped out from hlsdk 2.3
 extern void UI_FadeAlpha( int starttime, int endtime, int &color );
+extern void StringConcat( char *dst, const char *src, size_t size );	// strncat safe prototype
 extern char *Info_ValueForKey( const char *s, const char *key );
 extern int KEY_GetKey( const char *binding );			// ripped out from engine
 

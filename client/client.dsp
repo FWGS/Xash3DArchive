@@ -197,10 +197,6 @@ SOURCE=.\hud\hud_scoreboard.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\hud\hud_sound.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\hud\hud_statusbar.cpp
 # End Source File
 # Begin Source File
