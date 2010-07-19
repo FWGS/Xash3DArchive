@@ -919,7 +919,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			MsgDev( D_INFO, "^6%s\n", MSG_ReadString( msg ));
 			break;
 		case svc_centerprint:
-			CL_CenterPrint( MSG_ReadString( msg ), 160, SMALLCHAR_WIDTH );
+			CL_CenterPrint( MSG_ReadString( msg ), 0.35f );
 			break;
 		case svc_setpause:
 			cl.refdef.paused = (MSG_ReadByte( msg ) != 0 );

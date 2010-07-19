@@ -226,29 +226,26 @@ int KEY_GetKey( const char *binding )
 UI_FadeAlpha
 ================
 */
-void UI_FadeAlpha( int starttime, int endtime, int &color )
+int UI_FadeAlpha( int starttime, int endtime )
 {
 	int	time, fade_time;
 
 	if( starttime == 0 )
 	{
-		color = 0xFFFFFFFF;
-		return;
+		return 0xFFFFFFFF;
 	}
 
 	time = ( gpGlobals->time * 1000 ) - starttime;	// FIXME; convert it to float properly
 
 	if( time >= endtime )
 	{
-		color = 0x00FFFFFF;
-		return;
+		return 0x00FFFFFF;
 	}
 
 	// fade time is 1/4 of endtime
 	fade_time = endtime / 4;
 	fade_time = bound( 300, fade_time, 10000 );
 
-	color = PackRGB( 255, 255, 255 );
 	int alpha;
 
 	// fade out
@@ -256,7 +253,7 @@ void UI_FadeAlpha( int starttime, int endtime, int &color )
 		alpha = bound( 0, (( endtime - time ) * 1.0f / fade_time ) * 255, 255 );
 	else alpha = 255;
 
-	color = PackAlpha( color, alpha );
+	return PackRGBA( 255, 255, 255, alpha );
 }
 
 /*

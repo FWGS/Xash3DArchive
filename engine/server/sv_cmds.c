@@ -638,15 +638,15 @@ Examine all a users info strings
 */
 void SV_ClientInfo_f( void )
 {
-	if(Cmd_Argc() != 2)
+	if( Cmd_Argc() != 2 )
 	{
-		Msg("Usage: clientinfo <userid>\n" );
+		Msg( "Usage: clientinfo <userid>\n" );
 		return;
 	}
 
-	if(!SV_SetPlayer()) return;
-	Msg("userinfo\n");
-	Msg("--------\n");
+	if( !SV_SetPlayer( )) return;
+	Msg( "userinfo\n" );
+	Msg( "--------\n" );
 	Info_Print( sv_client->userinfo );
 
 }

@@ -4,7 +4,7 @@
 //=======================================================================
 
 #include "common.h"
-#include "com_world.h"
+#include "world.h"
 #include "pm_defs.h"
 #include "mathlib.h"
 

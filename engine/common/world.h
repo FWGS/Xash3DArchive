@@ -1,9 +1,9 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//		         com_world.h - shared world trace
+//		         world.h - shared world trace
 //=======================================================================
-#ifndef COM_WORLD_H
-#define COM_WORLD_H
+#ifndef WORLD_H
+#define WORLD_H
 
 #define MOVE_NORMAL		0	// normal trace
 #define MOVE_NOMONSTERS	1	// ignore monsters (edicts with flags (FL_MONSTER|FL_FAKECLIENT|FL_CLIENT) set)
@@ -113,4 +113,4 @@ typedef struct event_state_s
 	event_info_t	ei[MAX_EVENT_QUEUE];
 } event_state_t;
 	
-#endif//COM_WORLD_H
+#endif//WORLD_H

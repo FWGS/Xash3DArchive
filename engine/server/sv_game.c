@@ -2330,6 +2330,10 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	svgame.msg[i].size = iSize;
 	svgame.msg[i].number = i;	// paranoid mode :-)
 
+	// catch some user messages
+	if( !com.strcmp( pszName, "HudText" ))
+		svgame.gmsgHudText = i;
+
 	if( sv.state == ss_active )
 	{
 		MSG_WriteByte( &sv.multicast, svc_usermessage );
@@ -3814,6 +3818,9 @@ bool SV_LoadProgs( const char *name )
 	svgame.globals->numEntities = svgame.globals->maxClients + 1; // clients + world
 	for( i = 0, e = svgame.edicts; i < svgame.globals->maxEntities; i++, e++ )
 		e->free = true; // mark all edicts as freed
+
+	// clear user messages
+	svgame.gmsgHudText = -1;
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();

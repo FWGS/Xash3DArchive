@@ -348,7 +348,7 @@ bool Cmd_GetSavesList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( com.stricmp( ext, "bin" )) continue;
+		if( com.stricmp( ext, "sav" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		numsaves++;
@@ -564,7 +564,7 @@ Prints or complete gamedir name
 bool Cmd_GetGamesList( const char *s, char *completedname, int length )
 {
 	int	i, numgamedirs;
-	string	gamedirs[128];
+	string	gamedirs[MAX_MODS];
 	string	matchbuf;
 
 	// compare gamelist with current keyword

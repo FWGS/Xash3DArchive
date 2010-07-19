@@ -14,7 +14,6 @@ cvar_t *scr_loading;
 cvar_t *scr_download;
 cvar_t *scr_width;
 cvar_t *scr_height;
-cvar_t *cl_testentities;
 cvar_t *cl_testlights;
 cvar_t *cl_allow_levelshots;
 cvar_t *cl_levelshot_name;
@@ -44,21 +43,6 @@ void SCR_AdjustSize( float *x, float *y, float *w, float *h )
 	if( y ) *y *= yscale;
 	if( w ) *w *= xscale;
 	if( h ) *h *= yscale;
-}
-
-/*
-================
-SCR_FillRect
-
-Coordinates are 640*480 virtual values
-=================
-*/
-void SCR_FillRect( float x, float y, float width, float height, const rgba_t color )
-{
-	re->SetColor( color );
-	SCR_AdjustSize( &x, &y, &width, &height );
-	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillShader );
-	re->SetColor( NULL );
 }
 
 /*
@@ -255,19 +239,6 @@ void SCR_DrawSmallStringExt( int x, int y, const char *string, rgba_t setColor, 
 
 /*
 ==============
-SCR_DrawNet
-==============
-*/
-void SCR_DrawNet( void )
-{
-	if( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged < CMD_BACKUP-1 )
-		return;
-
-	SCR_DrawPic( cl.refdef.viewport[0] + 64, cl.refdef.viewport[1], 48, 48, cls.netIcon );
-}
-
-/*
-==============
 SCR_DrawFPS
 ==============
 */
@@ -397,7 +368,8 @@ void SCR_DrawPlaque( void )
 	if( re && cl_allow_levelshots->integer && !cls.changelevel )
 	{
 		levelshot = re->RegisterShader( cl_levelshot_name->string, SHADER_NOMIP );
-		SCR_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, levelshot );
+		re->SetParms( levelshot, kRenderNormal, 0 );
+		re->DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
 
 		CL_DrawHUD( CL_LOADING ); // update progress bar
 	}
@@ -536,13 +508,13 @@ void SCR_RegisterShaders( void )
 {
 	if( re )
 	{
+		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE
+		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE
+
 		// register console images
 		cls.consoleFont = re->RegisterShader( va( "gfx/fonts/%s", con_font->string ), SHADER_FONT );
 		cls.clientFont = re->RegisterShader( va( "gfx/fonts/%s", cl_font->string ), SHADER_FONT );
-		cls.netIcon = re->RegisterShader( "#net.png", SHADER_NOMIP ); // FIXME: INTRESOURCE
-		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: INTRESOURCE
-		cls.fillShader = re->RegisterShader( "*white", SHADER_FONT ); // used for FillRGBA
-		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP ); // FIXME: INTRESOURCE
+		cls.fillShader = re->RegisterShader( "*white", SHADER_NOMIP ); // used for FillRGBA
 		clgame.creditsFont.hFontTexture = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
 	
 		if( host.developer )
@@ -551,14 +523,15 @@ void SCR_RegisterShaders( void )
 
 		Mem_Set( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
 		Mem_Set( &gameui.ds, 0, sizeof( gameui.ds )); // reset a draw state
+		Mem_Set( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
 	}
 
 	// vid_state has changed
 	if( clgame.hInstance ) clgame.dllFuncs.pfnVidInit();
 	if( gameui.hInstance ) gameui.dllFuncs.pfnVidInit();
-		
-	g_console_field_width = scr_width->integer / SMALLCHAR_WIDTH - 2;
-	g_consoleField.widthInChars = g_console_field_width;
+
+	// restart console size
+	Con_VidInit ();
 }
 
 /*
@@ -580,7 +553,6 @@ void SCR_Init( void )
 	cl_allow_levelshots = Cvar_Get( "allow_levelshots", "0", CVAR_ARCHIVE, "allow engine to use indivdual levelshots instead of 'loading' image" );
 	scr_loading = Cvar_Get("scr_loading", "0", 0, "loading bar progress" );
 	scr_download = Cvar_Get("scr_download", "0", 0, "downloading bar progress" );
-	cl_testentities = Cvar_Get ("cl_testentities", "0", 0, "test client entities" );
 	cl_testlights = Cvar_Get ("cl_testlights", "0", 0, "test dynamic lights" );
 	cl_envshot_size = Cvar_Get( "cl_envshot_size", "256", CVAR_ARCHIVE, "envshot size of cube side" );
 	cl_font = Cvar_Get( "cl_font", "default", CVAR_ARCHIVE, "in-game messages font" );

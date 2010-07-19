@@ -229,55 +229,65 @@ void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
 
 /*
 =============
-CL_DrawCenterPrint
+CL_AdjustXPos
 
-called each frame
+adjust text by x pos
 =============
 */
-void CL_DrawCenterPrint( void )
+static int CL_AdjustXPos( float x, int width, int totalWidth )
 {
-	char	*start;
-	int	l, x, y, w;
-	rgba_t	color;
+	int xPos;
 
-	if( !re || !clgame.ds.centerPrintTime ) return;
-
-	CL_FadeAlpha( clgame.ds.centerPrintTime, scr_centertime->value * 1000, color );
-
-	if( *(int *)color == 0x00FFFFFF ) 
+	if( x == -1 )
 	{
-		// faded out
-		clgame.ds.centerPrintTime = 0;
-		return;
+		xPos = ( clgame.scrInfo.iWidth - width ) * 0.5f;
+	}
+	else
+	{
+		if ( x < 0 )
+			xPos = (1.0 + x) * clgame.scrInfo.iWidth - totalWidth;	// Alight right
+		else // align left
+			xPos = x * clgame.scrInfo.iWidth;
 	}
 
-	re->SetColor( color );
-	start = clgame.ds.centerPrint;
-	y = clgame.ds.centerPrintY - clgame.ds.centerPrintLines * BIGCHAR_HEIGHT / 2;
+	if( xPos + width > clgame.scrInfo.iWidth )
+		xPos = clgame.scrInfo.iWidth - width;
+	else if( xPos < 0 )
+		xPos = 0;
 
-	while( 1 )
+	return xPos;
+}
+
+/*
+=============
+CL_AdjustYPos
+
+adjust text by y pos
+=============
+*/
+static int CL_AdjustYPos( float y, int height )
+{
+	int yPos;
+
+	if( y == -1 ) // centered?
 	{
-		char	linebuffer[1024];
-
-		for( l = 0; l < 50; l++ )
-		{
-			if( !start[l] || start[l] == '\n' )
-				break;
-			linebuffer[l] = start[l];
-		}
-		linebuffer[l] = 0;
-
-		w = clgame.ds.centerPrintCharWidth * com.cstrlen( linebuffer );
-		x = (SCREEN_WIDTH - w)>>1;
-
-		SCR_DrawStringExt( x, y, clgame.ds.centerPrintCharWidth, SMALLCHAR_HEIGHT, linebuffer, color, false );
-
-		y += clgame.ds.centerPrintCharWidth * 1.5;
-		while( *start && ( *start != '\n' )) start++;
-		if( !*start ) break;
-		start++;
+		yPos = ( clgame.scrInfo.iHeight - height ) * 0.5f;
 	}
-	re->SetColor( NULL );
+	else
+	{
+		// Alight bottom?
+		if( y < 0 )
+			yPos = (1.0 + y) * clgame.scrInfo.iHeight - height; // Alight bottom
+		else // align top
+			yPos = y * clgame.scrInfo.iHeight;
+	}
+
+	if( yPos + height > clgame.scrInfo.iHeight )
+		yPos = clgame.scrInfo.iHeight - height;
+	else if( yPos < 0 )
+		yPos = 0;
+
+	return yPos;
 }
 
 /*
@@ -287,25 +297,35 @@ CL_CenterPrint
 print centerscreen message
 =============
 */
-void CL_CenterPrint( const char *text, int y, int charWidth )
+void CL_CenterPrint( const char *text, float y )
 {
 	char	*s;
+	int	width = 0;
+	int	length = 0;
 
-	com.strncpy( clgame.ds.centerPrint, text, sizeof( clgame.ds.centerPrint ));
-	clgame.ds.centerPrintTime = host.realtime * 1000;
-	clgame.ds.centerPrintCharWidth = charWidth;
-	clgame.ds.centerPrintY = y;
+	clgame.centerPrint.lines = 1;
+	clgame.centerPrint.totalWidth = 0;
+	clgame.centerPrint.time = host.realtime * 1000;
+	com.strncpy( clgame.centerPrint.message, text, sizeof( clgame.centerPrint.message ));
+	s = clgame.centerPrint.message;
 
 	// count the number of lines for centering
-	clgame.ds.centerPrintLines = 1;
-	s = clgame.ds.centerPrint;
-
 	while( *s )
 	{
 		if( *s == '\n' )
-			clgame.ds.centerPrintLines++;
+		{
+			clgame.centerPrint.lines++;
+			if( width > clgame.centerPrint.totalWidth )
+				clgame.centerPrint.totalWidth = width;
+			width = 0;
+		}
+		else width += clgame.scrInfo.charWidths[*s];
 		s++;
+		length++;
 	}
+
+	clgame.centerPrint.totalHeight = ( clgame.centerPrint.lines * clgame.scrInfo.iCharHeight ); 
+	clgame.centerPrint.y = CL_AdjustYPos( y, clgame.centerPrint.totalHeight );
 }
 
 /*
@@ -444,6 +464,72 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 }
 
 /*
+=============
+CL_DrawCenterPrint
+
+called each frame
+=============
+*/
+static void CL_DrawCenterPrint( void )
+{
+	char	*pText;
+	int	i, j, x, y;
+	int	width, lineLength;
+	byte	line[80];
+	rgba_t	color;
+
+	if( !clgame.centerPrint.time )
+		return;
+
+	CL_FadeAlpha( clgame.centerPrint.time, scr_centertime->value * 1000, color );
+
+	if( *(int *)color == 0x00FFFFFF ) 
+	{
+		// faded out
+		clgame.centerPrint.time = 0;
+		return;
+	}
+
+	pText = clgame.centerPrint.message;
+	y = clgame.centerPrint.y; // start y
+	
+	for( i = 0; i < clgame.centerPrint.lines; i++ )
+	{
+		lineLength = 0;
+		width = 0;
+
+		while( *pText && *pText != '\n' )
+		{
+			byte c = *pText;
+			line[lineLength] = c;
+			width += clgame.scrInfo.charWidths[c];
+			lineLength++;
+			pText++;
+		}
+		pText++; // Skip LineFeed
+		line[lineLength] = 0;
+
+		x = CL_AdjustXPos( -1, width, clgame.centerPrint.totalWidth );
+
+		for( j = 0; j < lineLength; j++ )
+		{
+			int ch = line[j];
+			int next = x + clgame.scrInfo.charWidths[ch];
+
+			if( x >= 0 && y >= 0 && next <= clgame.scrInfo.iWidth )
+			{
+				re->SetColor( color );
+				clgame.ds.hSprite = clgame.creditsFont.hFontTexture;
+				re->SetParms( clgame.ds.hSprite, kRenderTransAdd, 0 );
+				SPR_DrawGeneric( 0, x, y, -1, -1, &clgame.creditsFont.fontRc[ch] );
+			}
+			x = next;
+		}
+		y += clgame.scrInfo.iCharHeight;
+	}
+}
+
+/*
 ====================
 CL_InitTitles
 
@@ -566,7 +652,7 @@ CL_DrawLoading
 draw loading progress bar
 =============
 */
-void CL_DrawLoading( float percent )
+static void CL_DrawLoading( float percent )
 {
 	int	x, y, width, height, right;
 	float	xscale, yscale, step, s2;
@@ -607,12 +693,28 @@ CL_DrawPause
 draw pause sign
 =============
 */
-void CL_DrawPause( void )
+static void CL_DrawPause( void )
 {
-	int	w, h;
+	int	x, y, width, height;
+	float	xscale, yscale;
 
-	re->GetParms( &w, &h, NULL, 0, cls.pauseIcon );
-	SCR_DrawPic((SCREEN_WIDTH - w)>>1, ( SCREEN_HEIGHT - h )>>1, w, h, cls.pauseIcon );
+	if( !re ) return;
+
+	re->GetParms( &width, &height, NULL, 0, cls.pauseIcon );
+	x = ( SCREEN_WIDTH - width ) >> 1;
+	y = ( SCREEN_HEIGHT - height ) >> 1;
+
+	xscale = scr_width->integer / 640.0f;
+	yscale = scr_height->integer / 480.0f;
+
+	x *= xscale;
+	y *= yscale;
+	width *= xscale;
+	height *= yscale;
+
+	re->SetColor( NULL );
+	re->SetParms( cls.pauseIcon, kRenderTransTexture, 0 );
+	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.pauseIcon );
 }
 
 void CL_DrawHUD( int state )
@@ -1136,6 +1238,8 @@ static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int 
 	re->SetColor( color );
 
 	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
+
+	re->SetParms( cls.fillShader, kRenderTransTexture, 0 );
 	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillShader );
 	re->SetColor( NULL );
 }
@@ -1453,7 +1557,7 @@ like trigger_multiple message in q1
 static void pfnCenterPrint( const char *string )
 {
 	if( !string || !*string ) return; // someone stupid joke
-	CL_CenterPrint( string, 160, SMALLCHAR_WIDTH );
+	CL_CenterPrint( string, -1 );
 }
 
 /*

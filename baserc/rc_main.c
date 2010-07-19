@@ -24,7 +24,6 @@ loadres_t load_resources[] =
 	// add new resource description here
 	{"blank.bmp", blank_bmp, sizeof(blank_bmp)},
 	{"default.dds", deffont_dds, sizeof(deffont_dds)},
-	{"net.png", net_png, sizeof(net_png)},
 	{NULL, NULL, 0 }
 };
 

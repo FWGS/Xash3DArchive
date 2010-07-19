@@ -9,25 +9,15 @@
 #include "mathlib.h"
 #include "clgame_api.h"
 #include "gameui_api.h"
-#include "com_world.h"
+#include "world.h"
 
 #define MAX_DEMOS		32
-#define COMMAND_HISTORY	32
 #define MAX_MESSAGES	1024
 
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - clgame.edicts))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	CL_GetString( offset )
 #define MAKE_STRING(str)	CL_AllocString( str )
-
-// console stuff
-typedef struct
-{
-	string	buffer;
-	int	cursor;
-	int	scroll;
-	int	widthInChars;
-} field_t;
 
 typedef struct player_info_s
 {
@@ -216,18 +206,21 @@ typedef struct
 	int		scissor_height;
 	bool		scissor_test;
 
-	// centerprint stuff
-	int		centerPrintY;
-	int		centerPrintTime;
-	int		centerPrintCharWidth;
-	char		centerPrint[2048];
-	int		centerPrintLines;
-
 	// crosshair members
 	HSPRITE		hCrosshair;
 	wrect_t		rcCrosshair;
 	rgba_t		rgbaCrosshair;
 } draw_stuff_t;
+
+typedef struct
+{
+	// centerprint stuff
+	int		lines;
+	int		y, time;
+	char		message[2048];
+	int		totalWidth;
+	int		totalHeight;
+} center_print_t;
 
 typedef struct
 {
@@ -256,6 +249,7 @@ typedef struct
 	entity_state_t	*baselines;
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
+	center_print_t	centerPrint;		// centerprint variables
 	SCREENINFO	scrInfo;			// actual screen info
 
 	cl_font_t		creditsFont;
@@ -313,7 +307,6 @@ typedef struct
 	shader_t		clientFont;		// current client font
 	shader_t		consoleBack;		// console background
 	shader_t		fillShader;		// used for emulate FillRGBA to avoid wrong draw-sort
-	shader_t		netIcon;			// netIcon displayed bad network connection
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
 	shader_t		loadingBar;		// 'loading' progress bar
 	
@@ -379,7 +372,6 @@ extern cvar_t	*cl_font;
 extern cvar_t	*cl_nodelta;
 extern cvar_t	*cl_crosshair;
 extern cvar_t	*cl_showmiss;
-extern cvar_t	*cl_testentities;
 extern cvar_t	*cl_testlights;
 extern cvar_t	*cl_allow_levelshots;
 extern cvar_t	*cl_levelshot_name;
@@ -476,7 +468,7 @@ void CL_InitEdict( edict_t *pEdict );
 void CL_FreeEdict( edict_t *pEdict );
 string_t CL_AllocString( const char *szValue );
 const char *CL_GetString( string_t iString );
-void CL_CenterPrint( const char *text, int y, int charWidth );
+void CL_CenterPrint( const char *text, float y );
 bool CL_IsValidEdict( const edict_t *e );
 const char *CL_ClassName( const edict_t *e );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
@@ -508,7 +500,6 @@ void CL_Download_f( void );
 void SCR_RegisterShaders( void );
 void SCR_AdjustSize( float *x, float *y, float *w, float *h );
 void SCR_DrawPic( float x, float y, float width, float height, shader_t shader );
-void SCR_FillRect( float x, float y, float width, float height, const rgba_t color );
 void SCR_DrawSmallChar( int x, int y, int ch );
 void SCR_DrawChar( int x, int y, float w, float h, int ch );
 void SCR_DrawSmallStringExt( int x, int y, const char *string, rgba_t setColor, bool forceColor );
@@ -519,7 +510,6 @@ void SCR_MakeScreenShot( void );
 void SCR_MakeLevelShot( void );
 void SCR_RSpeeds( void );
 void SCR_DrawFPS( void );
-void SCR_DrawNet( void );
 
 //
 // cl_view.c
@@ -559,7 +549,6 @@ void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 //
 void CL_ClearEffects( void );
 void CL_TestLights( void );
-void CL_TestEntities( void );
 dlight_t *CL_AllocDlight( int key );
 dlight_t *CL_AllocElight( int key );
 void CL_LightForPoint( const vec3_t point, vec3_t ambientLight );
@@ -582,11 +571,12 @@ int CL_AddEntity( edict_t *pEnt, int ed_type, shader_t customShader );
 int CL_AddTempEntity( struct tempent_s *pTemp, shader_t customShader );
 
 //
-// cl_con.c
+// console.c
 //
 bool Con_Visible( void );
 void Con_CheckResize( void );
 void Con_Init( void );
+void Con_VidInit( void );
 void Con_Clear_f( void );
 void Con_ToggleConsole_f( void );
 void Con_DrawNotify( void );
@@ -598,13 +588,8 @@ void Con_PageDown( void );
 void Con_Top( void );
 void Con_Bottom( void );
 void Con_Close( void );
-
-extern bool chat_team;
-extern bool anykeydown;
-extern int g_console_field_width;
-extern field_t historyEditLines[COMMAND_HISTORY];
-extern field_t g_consoleField;
-extern field_t chatField;
+void Con_CharEvent( int key );
+void Key_Console( int key );
 
 //
 // cl_menu.c
@@ -623,15 +608,6 @@ bool UI_CreditsActive( void );
 void UI_CharEvent( int key );
 bool UI_MouseInRect( void );
 bool UI_IsVisible( void );
-
-//
-// cl_keys.c
-//
-void Field_Clear( field_t *edit );
-void Field_CharEvent( field_t *edit, int ch );
-void Field_KeyDownEvent( field_t *edit, int key );
-void Field_Draw( field_t *edit, int x, int y, int width, bool showCursor );
-void Field_BigDraw( field_t *edit, int x, int y, int width, bool showCursor );
 
 //
 // cl_video.c

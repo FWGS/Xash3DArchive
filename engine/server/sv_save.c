@@ -1739,10 +1739,16 @@ void SV_SaveGame( const char *pName )
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );
 
-	// UNDONE: get the user controls, use HudMessage instead
-	MSG_Begin( svc_centerprint );
-	MSG_WriteString( &sv.multicast, "Game Saved" );
-	MSG_Send( MSG_ONE, NULL, EDICT_NUM( 1 ));
+	// HACKHACK: send usermessage from engine
+	if( com.stricmp( pName, "autosave" ) && svgame.gmsgHudText != -1 )
+	{
+		const char *pMsg = "GAMESAVED"; // defined in titles.txt
+
+		MSG_Begin( svgame.gmsgHudText );
+		MSG_WriteByte( &sv.multicast, com.strlen( pMsg ) + 1 );
+		MSG_WriteString( &sv.multicast, pMsg );
+		MSG_Send( MSG_ONE, NULL, EDICT_NUM( 1 ));
+	}
 }
 
 /* 

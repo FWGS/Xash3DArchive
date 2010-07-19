@@ -130,10 +130,6 @@ SOURCE=.\client\cl_demo.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_effects.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\cl_frame.c
 # End Source File
 # Begin Source File
@@ -182,19 +178,11 @@ SOURCE=.\client\cl_world.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\com_keys.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\com_world.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\con_main.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\common\con_utils.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\console.c
 # End Source File
 # Begin Source File
 
@@ -211,6 +199,10 @@ SOURCE=.\common\infostring.c
 # Begin Source File
 
 SOURCE=.\common\input.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\keys.c
 # End Source File
 # Begin Source File
 
@@ -272,6 +264,10 @@ SOURCE=.\server\sv_world.c
 
 SOURCE=.\common\titles.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\common\world.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -291,6 +287,10 @@ SOURCE=.\common\net_msg.h
 # Begin Source File
 
 SOURCE=.\server\server.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\world.h
 # End Source File
 # End Group
 # End Target

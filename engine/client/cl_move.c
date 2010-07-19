@@ -9,6 +9,8 @@
 #include "const.h"
 #include "pm_defs.h"
 
+#define CONNECTION_PROBLEM_TIME	15.0
+
 bool CL_IsPredicted( void )
 {
 	edict_t	*player = CL_GetLocalPlayer();
@@ -98,6 +100,7 @@ During normal gameplay, a client packet will contain something like:
 void CL_WritePacket( void )
 {
 	sizebuf_t		buf;
+	bool		noDelta = false;
 	byte		data[MAX_MSGLEN];
 	usercmd_t		*cmd, *oldcmd;
 	usercmd_t		nullcmd;
@@ -116,6 +119,18 @@ void CL_WritePacket( void )
 		if( cls.netchan.message.cursize || host.realtime - cls.netchan.last_sent > 1.0 )
 			Netchan_Transmit( &cls.netchan, 0, NULL );
 		return;
+	}
+
+	if( cl_nodelta->integer || !cl.frame.valid || cls.demowaiting )
+		noDelta = true;
+
+	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CMD_BACKUP )
+	{
+		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
+		{
+			MsgDev( D_WARN, "^1 Connection Problem^7\n" );
+			noDelta = true;	// request a fullupdate
+		}
 	}
 
 	// send a userinfo update if needed
@@ -137,8 +152,7 @@ void CL_WritePacket( void )
 
 	// let the server know what the last frame we
 	// got was, so the next message can be delta compressed
-	if( cl_nodelta->integer || !cl.frame.valid || cls.demowaiting )
-		MSG_WriteLong( &buf, -1 ); // no compression
+	if( noDelta ) MSG_WriteLong( &buf, -1 ); // no compression
 	else MSG_WriteLong( &buf, cl.frame.serverframe );
 
 	// send this and the previous cmds in the message, so

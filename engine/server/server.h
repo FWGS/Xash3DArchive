@@ -8,7 +8,7 @@
 
 #include "mathlib.h"
 #include "svgame_api.h"
-#include "com_world.h"
+#include "world.h"
 
 //=============================================================================
 #define MAX_MASTERS		8 			// max recipients for heartbeat packets
@@ -207,6 +207,9 @@ typedef struct
 	bool		msg_started;		// to avoid include messages
 	edict_t		*msg_ent;			// user message member entity
 	vec3_t		msg_org;			// user message member origin
+
+	// catched user messages (nasty hack)
+	int		gmsgHudText;		// -1 if not catched
 
 	void		*hInstance;		// pointer to server.dll
 

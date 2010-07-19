@@ -341,7 +341,6 @@ void CL_AddEntities( void )
 	CL_AddLightStyles();
 
 	// perfomance test
-	CL_TestEntities();
 	CL_TestLights();
 }
 

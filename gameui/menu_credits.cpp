@@ -139,7 +139,7 @@ static void UI_Credits_DrawFunc( void )
 		if(( y < ( ActualHeight - h ) / 2 ) && i == uiCredits.numLines - 1 )
 		{
 			if( !uiCredits.fadeTime ) uiCredits.fadeTime = uiStatic.realTime;
-			UI_FadeAlpha( uiCredits.fadeTime, uiCredits.showTime, color );
+			color = UI_FadeAlpha( uiCredits.fadeTime, uiCredits.showTime );
 			if( UnpackAlpha( color ))
 				UI_DrawString( 0, ( ActualHeight - h ) / 2, 1024 * uiStatic.scaleX, h, uiCredits.credits[i], color, true, w, h, 1, true );
 		}
