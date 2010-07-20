@@ -3798,9 +3798,7 @@ static void R_InitBuiltinTextures( void )
 {
 	rgbdata_t		*pic;
 	int		flags, samples;
-	size_t		datasize;
 	texture_t		*image;
-	byte		*data;
 
 	const struct
 	{
@@ -3840,9 +3838,6 @@ static void R_InitBuiltinTextures( void )
 	}
 	tr.portaltexture1 = NULL;
 	tr.portaltexture2 = NULL;
-
-	data = FS_LoadInternal( "default.dds", &datasize );
-	tr.defaultConchars = R_FindTexture( "#default.dds", data, datasize, TF_NOPICMIP|TF_STATIC|TF_NOMIPMAP );
 }
 
 /*

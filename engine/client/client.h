@@ -12,7 +12,6 @@
 #include "world.h"
 
 #define MAX_DEMOS		32
-#define MAX_MESSAGES	1024
 
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - clgame.edicts))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
@@ -21,9 +20,9 @@
 
 typedef struct player_info_s
 {
-	char	name[CS_SIZE];
-	char	userinfo[MAX_INFO_STRING];
-	char	model[CS_SIZE];
+	char		name[CS_SIZE];
+	char		userinfo[MAX_INFO_STRING];
+	char		model[CS_SIZE];
 } player_info_t;
 
 //=============================================================================
@@ -45,7 +44,7 @@ extern int CL_UPDATE_BACKUP;
 // the cl_parse_entities must be large enough to hold CL_UPDATE_BACKUP frames of
 // entities, so that when a delta compressed message arives from the server
 // it can be un-deltad from the original 
-#define MAX_PARSE_ENTITIES		2048
+#define MAX_PARSE_ENTITIES	2048
 
 // the client_t structure is wiped completely at every
 // server map change
@@ -106,8 +105,6 @@ typedef struct
 	shader_t		decal_shaders[MAX_DECALNAMES];
 } client_t;
 
-extern client_t	cl;
-extern render_exp_t	*re;
 /*
 ==================================================================
 
@@ -116,7 +113,6 @@ of server connections
 
 ==================================================================
 */
-
 typedef enum
 {
 	ca_uninitialized = 0,
@@ -126,6 +122,13 @@ typedef enum
 	ca_active,	// game views should be displayed
 	ca_cinematic,	// playing a cinematic, not connected to a server
 } connstate_t;
+
+typedef enum
+{
+	key_console = 0,
+	key_game,
+	key_menu
+} keydest_t;
 
 typedef enum
 {
@@ -143,7 +146,7 @@ typedef enum
 	scrshot_demoshot,	// for demos preview
 	scrshot_envshot,	// cubemap view
 	scrshot_skyshot	// skybox view
-} e_scrshot;
+} scrshot_t;
 
 // cl_private_edict_t
 struct cl_priv_s
@@ -163,8 +166,6 @@ struct cl_priv_s
 
 	mouth_t		mouth;		// shared mouth info
 };
-
-typedef enum { key_console = 0, key_game, key_menu } keydest_t;
 
 typedef struct
 {
@@ -191,7 +192,7 @@ typedef struct
 {
 	HSPRITE		hFontTexture;		// handle to texture shader
 	wrect_t		fontRc[256];		// rectangles
-	bool		use_qfont;		// quake style font
+	bool		valid;			// rectangles are valid
 } cl_font_t;
 
 typedef struct
@@ -205,6 +206,9 @@ typedef struct
 	int		scissor_width;
 	int		scissor_height;
 	bool		scissor_test;
+
+	// holds text color
+	rgba_t		textColor;
 
 	// crosshair members
 	HSPRITE		hCrosshair;
@@ -251,8 +255,6 @@ typedef struct
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	center_print_t	centerPrint;		// centerprint variables
 	SCREENINFO	scrInfo;			// actual screen info
-
-	cl_font_t		creditsFont;
 	rgb_t		palette[256];		// Quake1 palette used for particle colors
 
 	client_textmessage_t *titles;			// title messages, not network messages
@@ -272,11 +274,8 @@ typedef struct
 	byte		*mempool;			// client edicts pool
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
-	SCREENINFO	scrInfo;			// actual screen info
 	GAMEINFO		gameInfo;			// current gameInfo
 	GAMEINFO		*modsInfo[MAX_MODS];	// simplified gameInfo for GameUI
-
-	cl_font_t		creditsFont;
 
 	ui_globalvars_t	*globals;
 } gameui_static_t;
@@ -303,12 +302,10 @@ typedef struct
 	int		challenge;		// from the server to use for connecting
 
 	// internal shaders
-	shader_t		consoleFont;		// current console font
-	shader_t		clientFont;		// current client font
-	shader_t		consoleBack;		// console background
 	shader_t		fillShader;		// used for emulate FillRGBA to avoid wrong draw-sort
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
 	shader_t		loadingBar;		// 'loading' progress bar
+	cl_font_t		creditsFont;		// shared creditsfont
 	
 	file_t		*download;		// file transfer from server
 	string		downloadname;
@@ -316,8 +313,8 @@ typedef struct
 	int		downloadnumber;
 	dltype_t		downloadtype;
 
-	e_scrshot		scrshot_request;		// request for screen shot
-	e_scrshot		scrshot_action;		// in-action
+	scrshot_t		scrshot_request;		// request for screen shot
+	scrshot_t		scrshot_action;		// in-action
 	const float	*envshot_vieworg;		// envshot position
 	string		shotname;
 
@@ -334,31 +331,11 @@ typedef struct
 	file_t		*demofile;
 } client_static_t;
 
+extern client_t		cl;
 extern client_static_t	cls;
 extern clgame_static_t	clgame;
 extern gameui_static_t	gameui;
-
-/*
-==============================================================
-
-SCREEN CONSTS
-
-==============================================================
-*/
-extern rgba_t g_color_table[8];
-
-// basic console charwidths
-#define TINYCHAR_WIDTH	(SMALLCHAR_WIDTH)
-#define TINYCHAR_HEIGHT	(SMALLCHAR_HEIGHT/2)
-#define SMALLCHAR_WIDTH	8
-#define SMALLCHAR_HEIGHT	16
-#define BIGCHAR_WIDTH	16
-#define BIGCHAR_HEIGHT	24
-#define GIANTCHAR_WIDTH	32
-#define GIANTCHAR_HEIGHT	48
-
-#define SCREEN_WIDTH	640
-#define SCREEN_HEIGHT	480
+extern render_exp_t		*re;
 
 //
 // cvars
@@ -368,7 +345,6 @@ extern cvar_t	*cl_smooth;
 extern cvar_t	*cl_showfps;
 extern cvar_t	*cl_shownet;
 extern cvar_t	*cl_envshot_size;
-extern cvar_t	*cl_font;
 extern cvar_t	*cl_nodelta;
 extern cvar_t	*cl_crosshair;
 extern cvar_t	*cl_showmiss;
@@ -380,7 +356,6 @@ extern cvar_t	*scr_centertime;
 extern cvar_t	*scr_download;
 extern cvar_t	*scr_loading;
 extern cvar_t	*userinfo;
-extern cvar_t	*con_font;
 
 //=============================================================================
 
@@ -409,8 +384,8 @@ void CL_SaveShot_f( void );
 void CL_DemoShot_f( void );
 void CL_LevelShot_f( void );
 void CL_SetSky_f( void );
-void CL_SetFont_f( void );
 void SCR_Viewpos_f( void );
+void SCR_TimeRefresh_f( void );
 
 //
 // cl_main
@@ -420,7 +395,6 @@ void CL_SendCommand( void );
 void CL_Disconnect_f( void );
 void CL_GetChallengePacket( void );
 void CL_PingServers_f( void );
-void CL_Snd_Restart_f( void );
 void CL_RequestNextDownload( void );
 void CL_ClearState( void );
 
@@ -446,23 +420,16 @@ void CL_Record_f( void );
 void CL_Stop_f( void );
 
 //
-// cl_progs.c
-//
-void CL_InitClientProgs( void );
-void CL_FreeClientProgs( void );
-void CL_DrawHUD( int state );
-void CL_FadeAlpha( int starttime, int endtime, rgba_t color );
-void CL_InitEdicts( void );
-void CL_FreeEdicts( void );
-void CL_InitWorld( void );
-
-//
 // cl_game.c
 //
 void CL_UnloadProgs( void );
 bool CL_LoadProgs( const char *name );
 void CL_ParseUserMessage( sizebuf_t *msg, int svc_num );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
+void CL_DrawHUD( int state );
+void CL_InitEdicts( void );
+void CL_FreeEdicts( void );
+void CL_InitWorld( void );
 edict_t *CL_AllocEdict( void );
 void CL_InitEdict( edict_t *pEdict );
 void CL_FreeEdict( edict_t *pEdict );
@@ -480,7 +447,7 @@ void VGui_ViewportPaintBackground( int extents[4] );
 
 _inline edict_t *CL_EDICT_NUM( int n, const char *file, const int line )
 {
-	if((n >= 0) && (n < clgame.globals->maxEntities))
+	if(( n >= 0 ) && ( n < clgame.globals->maxEntities ))
 		return clgame.edicts + n;
 	Host_Error( "CL_EDICT_NUM: bad number %i (called at %s:%i)\n", n, file, line );
 	return NULL;	
@@ -489,7 +456,6 @@ _inline edict_t *CL_EDICT_NUM( int n, const char *file, const int line )
 //
 // cl_parse.c
 //
-int CL_CalcNet( void );
 void CL_ParseServerMessage( sizebuf_t *msg );
 void CL_RunBackgroundTrack( void );
 void CL_Download_f( void );
@@ -498,14 +464,6 @@ void CL_Download_f( void );
 // cl_scrn.c
 //
 void SCR_RegisterShaders( void );
-void SCR_AdjustSize( float *x, float *y, float *w, float *h );
-void SCR_DrawPic( float x, float y, float width, float height, shader_t shader );
-void SCR_DrawSmallChar( int x, int y, int ch );
-void SCR_DrawChar( int x, int y, float w, float h, int ch );
-void SCR_DrawSmallStringExt( int x, int y, const char *string, rgba_t setColor, bool forceColor );
-void SCR_DrawStringExt( int x, int y, float w, float h, const char *string, rgba_t setColor, bool forceColor );
-void SCR_DrawBigString( int x, int y, const char *s, byte alpha );
-void SCR_DrawBigStringColor( int x, int y, const char *s, rgba_t color );
 void SCR_MakeScreenShot( void );
 void SCR_MakeLevelShot( void );
 void SCR_RSpeeds( void );
@@ -527,7 +485,7 @@ float V_CalcFov( float fov_x, float width, float height );
 // cl_move.c
 //
 void CL_InitClientMove( void );
-void CL_PredictMove( void );
+void CL_PredictMovement( void );
 void CL_CheckPredictionError( void );
 bool CL_IsPredicted( void );
 
@@ -545,8 +503,10 @@ void CL_ParseFrame( sizebuf_t *msg );
 void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 
 //
-// cl_effects.c
+// cl_tent.c
 //
+int CL_AddEntity( edict_t *pEnt, int ed_type, shader_t customShader );
+int CL_AddTempEntity( struct tempent_s *pTemp, shader_t customShader );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
 dlight_t *CL_AllocDlight( int key );
@@ -558,38 +518,23 @@ void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
 word CL_PrecacheEvent( const char *name );
 void CL_ResetEvent( event_info_t *ei );
 void CL_FireEvents( void );
-	
-//
-// cl_pred.c
-//
-void CL_PredictMovement (void);
-
-//
-// cl_tent.c
-//
-int CL_AddEntity( edict_t *pEnt, int ed_type, shader_t customShader );
-int CL_AddTempEntity( struct tempent_s *pTemp, shader_t customShader );
 
 //
 // console.c
 //
 bool Con_Visible( void );
-void Con_CheckResize( void );
 void Con_Init( void );
 void Con_VidInit( void );
-void Con_Clear_f( void );
 void Con_ToggleConsole_f( void );
-void Con_DrawNotify( void );
 void Con_ClearNotify( void );
 void Con_RunConsole( void );
 void Con_DrawConsole( void );
-void Con_PageUp( void );
-void Con_PageDown( void );
-void Con_Top( void );
-void Con_Bottom( void );
-void Con_Close( void );
+void Con_DrawStringLen( const char *pText, int *length, int *height );
+int Con_DrawString( int x, int y, const char *string, rgba_t setColor );
+void Con_DefaultColor( int r, int g, int b );
 void Con_CharEvent( int key );
 void Key_Console( int key );
+void Con_Close( void );
 
 //
 // cl_menu.c

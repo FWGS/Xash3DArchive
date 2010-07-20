@@ -124,7 +124,6 @@ typedef struct
 	texture_t		*fogTexture;
 	texture_t		*skyTexture;
 	texture_t		*coronaTexture;
-	texture_t		*defaultConchars;
 	texture_t		*shadowmapTextures[MAX_SHADOWGROUPS];
 	texture_t		*lightmapTextures[MAX_LIGHTMAPS];
 

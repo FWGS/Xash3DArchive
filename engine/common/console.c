@@ -6,84 +6,82 @@
 #include "common.h"
 #include "client.h"
 #include "keydefs.h"
+#include "byteorder.h"
 
 cvar_t	*con_notifytime;
-cvar_t	*con_speed;
-cvar_t	*con_font;
-
-#define DEFAULT_CONSOLE_WIDTH	78
-#define COLOR_BLACK		'0'
-#define COLOR_RED		'1'
-#define COLOR_GREEN		'2'
-#define COLOR_YELLOW	'3'
-#define COLOR_BLUE		'4'
-#define COLOR_CYAN		'5'
-#define COLOR_MAGENTA	'6'
-#define COLOR_WHITE		'7'
+cvar_t	*scr_conspeed;
+cvar_t	*con_fontsize;
 
 #define CON_TIMES		5		// need for 4 lines
+#define COLOR_DEFAULT	'7'
 #define CON_HISTORY		32
-#define CON_TEXTSIZE	(MAX_MSGLEN * 4)	// 128 kb buffer
 
-int g_console_field_width = 78;
+#define CON_TEXTSIZE	(MAX_MSGLEN * 4)	// 128 kb buffer
 
 // console color typeing
 rgba_t g_color_table[8] =
 {
-{  0,   0,   0, 255},
-{255,   0,   0, 255},
-{  0, 255,   0, 255},
-{255, 255,   0, 255},
-{  0,   0, 255, 255},
-{  0, 255, 255, 255},
-{255,   0, 255, 255},
-{255, 255, 255, 255},
+{  0,   0,   0, 255},	// black
+{255,   0,   0, 255},	// red
+{  0, 255,   0, 255},	// green
+{255, 255,   0, 255},	// yellow
+{  0,   0, 255, 255},	// blue
+{  0, 255, 255, 255},	// cyan
+{255,   0, 255, 255},	// magenta
+{240, 180,  24, 255},	// default color (can be changed by user)
 };
 
 typedef struct
 {
-	string	buffer;
-	int	cursor;
-	int	scroll;
-	int	widthInChars;
+	string		buffer;
+	int		cursor;
+	int		scroll;
+	int		widthInChars;
 } field_t;
 
 typedef struct
 {
-	bool	initialized;
+	bool		initialized;
 
-	short	text[CON_TEXTSIZE];
-	int	current;		// line where next message will be printed
-	int	x;		// offset in current line for next print
-	int	display;		// bottom of console displays this line
+	short		text[CON_TEXTSIZE];
+	int		current;		// line where next message will be printed
+	int		display;		// bottom of console displays this line
+	int		x;		// offset in current line for next print
 
-	int 	linewidth;	// characters across screen
-	int	totallines;	// total lines in console scrollback
+	int 		linewidth;	// characters across screen
+	int		totallines;	// total lines in console scrollback
 
-	float	xadjust;		// for wide aspect screens
+	float		displayFrac;	// aproaches finalFrac at scr_conspeed
+	float		finalFrac;	// 0.0 to 1.0 lines of console to display
 
-	float	displayFrac;	// aproaches finalFrac at con_speed
-	float	finalFrac;	// 0.0 to 1.0 lines of console to display
+	int		vislines;		// in scanlines
+	double		times[CON_TIMES];	// host.realtime the line was generated for transparent notify lines
+	rgba_t		color;
 
-	int	vislines;		// in scanlines
-	double	times[CON_TIMES];	// host.realtime the line was generated for transparent notify lines
-	rgba_t	color;
+	// console images
+	shader_t		background;	// console background
 
+	// conchars
+	cl_font_t		chars;		// fonts.wad/font1.fnt
+	int		charHeight;
+	byte		charWidths[256];
+	
 	// console input
-	field_t	input;
+	field_t		input;
 
 	// console history
-	field_t	historyLines[CON_HISTORY];
-	int	historyLine;	// the line being displayed from history buffer will be <= nextHistoryLine
-	int	nextHistoryLine;	// the last line in the history buffer, not masked
+	field_t		historyLines[CON_HISTORY];
+	int		historyLine;	// the line being displayed from history buffer will be <= nextHistoryLine
+	int		nextHistoryLine;	// the last line in the history buffer, not masked
 
 	// console auto-complete
-	field_t	*completionField;
-	char	*completionString;
-	string	shortestMatch;
-	int	matchCount;
+	field_t		*completionField;
+	char		*completionString;
+	string		shortestMatch;
+	int		matchCount;
 } console_t;
 
+int g_console_field_width = 78;
 static console_t con;
 
 void Field_CharEvent( field_t *edit, int ch );
@@ -98,8 +96,8 @@ void Con_Clear_f( void )
 	int	i;
 
 	for( i = 0; i < CON_TEXTSIZE; i++ )
-		con.text[i] = ( ColorIndex( COLOR_WHITE ) << 8 ) | ' ';
-	Con_Bottom(); // go to end
+		con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
+	con.display = con.current; // go to end
 }
 						
 /*
@@ -178,18 +176,19 @@ void Con_CheckResize( void )
 	int	i, j, width, oldwidth, oldtotallines, numlines, numchars;
 	short	tbuf[CON_TEXTSIZE];
 
-	width = SCREEN_WIDTH / SMALLCHAR_WIDTH - 2;
+	width = ( scr_width->integer / 8 ) - 2;
 
 	if( width == con.linewidth )
 		return;
 
-	if( re == NULL ) // video hasn't been initialized yet
+	if( re == NULL )
 	{
-		width = DEFAULT_CONSOLE_WIDTH;
+		// video hasn't been initialized yet
+		width = g_console_field_width;
 		con.linewidth = width;
 		con.totallines = CON_TEXTSIZE / con.linewidth;
-		for(i = 0; i < CON_TEXTSIZE; i++)
-			con.text[i] = (ColorIndex(COLOR_WHITE)<<8) | ' ';
+		for( i = 0; i < CON_TEXTSIZE; i++ )
+			con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 	}
 	else
 	{
@@ -209,14 +208,13 @@ void Con_CheckResize( void )
 
 		Mem_Copy( tbuf, con.text, CON_TEXTSIZE * sizeof( short ));
 		for( i = 0; i < CON_TEXTSIZE; i++ )
-			con.text[i] = (ColorIndex(COLOR_WHITE)<<8) | ' ';
+			con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 
-		for (i = 0; i < numlines; i++)
+		for( i = 0; i < numlines; i++ )
 		{
-			for (j = 0; j < numchars; j++)
+			for( j = 0; j < numchars; j++ )
 			{
-				con.text[(con.totallines - 1 - i) * con.linewidth + j] =
-						tbuf[((con.current - i + oldtotallines) % oldtotallines) * oldwidth + j];
+				con.text[(con.totallines - 1 - i) * con.linewidth + j] = tbuf[((con.current - i + oldtotallines) % oldtotallines) * oldwidth + j];
 			}
 		}
 		Con_ClearNotify ();
@@ -226,6 +224,233 @@ void Con_CheckResize( void )
 	con.display = con.current;
 }
 
+/*
+================
+Con_PageUp
+================
+*/
+void Con_PageUp( void )
+{
+	con.display -= 2;
+
+	if( con.current - con.display >= con.totallines )
+		con.display = con.current - con.totallines + 1;
+}
+
+/*
+================
+Con_PageDown
+================
+*/
+void Con_PageDown( void )
+{
+	con.display += 2;
+
+	if( con.display > con.current)
+		con.display = con.current;
+}
+
+/*
+================
+Con_Top
+================
+*/
+void Con_Top( void )
+{
+	con.display = con.totallines;
+
+	if( con.current - con.display >= con.totallines )
+		con.display = con.current - con.totallines + 1;
+}
+
+/*
+================
+Con_Bottom
+================
+*/
+void Con_Bottom( void )
+{
+	con.display = con.current;
+}
+
+/*
+================
+Con_Visible
+================
+*/
+bool Con_Visible( void )
+{
+	return (con.finalFrac != 0.0f);
+}
+
+/*
+================
+Con_LoadConchars
+================
+*/
+static void Con_LoadConchars( void )
+{
+	int	fontWidth, fontHeight;
+
+	// make sure fontnum in-range
+	if( con_fontsize->integer < 0 ) Cvar_SetValue( "con_fontsize", 0 );
+	if( con_fontsize->integer > 2 ) Cvar_SetValue( "con_fontsize", 2 );
+
+	if( !re ) return;
+
+	// loading conchars
+	con.chars.hFontTexture = re->RegisterShader( va( "fonts/font%i", con_fontsize->integer ), SHADER_NOMIP );
+
+	if( !con_fontsize->modified ) return; // font not changed
+
+	re->GetParms( &fontWidth, &fontHeight, NULL, 0, con.chars.hFontTexture );
+		
+	// setup creditsfont
+	if( FS_FileExists( va( "fonts/font%i.fnt", con_fontsize->integer ) ))
+	{
+		byte	*buffer;
+		size_t	length;
+		qfont_t	*src;
+	
+		// half-life font with variable chars witdh
+		buffer = FS_LoadFile( va( "fonts/font%i", con_fontsize->integer ), &length );
+
+		if( buffer && length >= sizeof( qfont_t ))
+		{
+			int	i;
+	
+			src = (qfont_t *)buffer;
+			con.charHeight = LittleLong( src->rowheight );
+
+			// build rectangles
+			for( i = 0; i < 256; i++ )
+			{
+				con.chars.fontRc[i].left = LittleShort( src->fontinfo[i].startoffset ) % fontWidth;
+				con.chars.fontRc[i].right = con.chars.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
+				con.chars.fontRc[i].top = LittleShort( src->fontinfo[i].startoffset ) / fontWidth;
+				con.chars.fontRc[i].bottom = con.chars.fontRc[i].top + LittleLong( src->rowheight );
+				con.charWidths[i] = LittleLong( src->fontinfo[i].charwidth );
+			}
+			con.chars.valid = true;
+		}
+		if( buffer ) Mem_Free( buffer );
+	}
+}
+
+static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
+{
+	int	width, height;
+	float	s1, t1, s2, t2;
+	wrect_t	*rc;
+
+	number &= 255;
+
+	if( !con.chars.valid )
+		return 0;
+
+	if( number < 32 ) return 0;
+	if( y < -con.charHeight )
+		return 0;
+
+	rc = &con.chars.fontRc[number];
+
+	re->SetColor( color );
+	re->GetParms( &width, &height, NULL, 0, con.chars.hFontTexture );
+
+	// calc rectangle
+	s1 = (float)rc->left / width;
+	t1 = (float)rc->top / height;
+	s2 = (float)rc->right / width;
+	t2 = (float)rc->bottom / height;
+	width = rc->right - rc->left;
+	height = rc->bottom - rc->top;
+
+	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, con.chars.hFontTexture );		
+	re->SetColor( NULL ); // don't forget reset color
+
+	return con.charWidths[number];
+}
+
+static int Con_DrawCharacter( int x, int y, int number, rgba_t color )
+{
+	re->SetParms( con.chars.hFontTexture, kRenderTransTexture, 0 );
+	return Con_DrawGenericChar( x, y, number, color );
+}
+
+void Con_DrawStringLen( const char *pText, int *length, int *height )
+{
+	if( height ) *height = con.charHeight;
+	if( !length ) return;
+
+	*length = 0;
+
+	while( *pText && *pText != '\n' )
+	{
+		byte	c = *pText;
+
+		// skip color strings they are not drawing
+		if( IsColorString( pText ))
+		{
+			pText += 2;
+			continue;
+		}
+
+		*length += con.charWidths[c];
+		pText++;
+	}
+}
+
+/*
+==================
+Con_DrawString
+
+Draws a multi-colored string, optionally forcing
+to a fixed color.
+==================
+*/
+int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, bool forceColor, int hideChar )
+{
+	rgba_t		color;
+	int		drawLen = 0;
+	int		numDraws = 0;
+	const char	*s;
+
+	// draw the colored text
+	s = string;
+	*(uint *)color = *(uint *)setColor;
+
+	while ( *s )
+	{
+		if( IsColorString( s ))
+		{
+			if( !forceColor )
+			{
+				Mem_Copy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ));
+				color[3] = setColor[3];
+			}
+
+			s += 2;
+			numDraws++;
+			continue;
+		}
+
+		// hide char for overstrike mode
+		if( hideChar == numDraws )
+			drawLen += con.charWidths[*s];
+		else drawLen += Con_DrawCharacter( x + drawLen, y, *s, color );
+
+		numDraws++;
+		s++;
+	}
+
+	re->SetColor( NULL );
+	return drawLen;
+}
+
+int Con_DrawString( int x, int y, const char *string, rgba_t setColor )
+{
+	return Con_DrawGenericString( x, y, string, setColor, false, -1 );
+}
 
 /*
 ================
@@ -236,12 +461,14 @@ void Con_Init( void )
 {
 	int	i;
 
-	Con_CheckResize();
-
-	// register our commands
+	// must be init before startup video subsystem
+	scr_width = Cvar_Get( "width", "640", 0, "screen width" );
+	scr_height = Cvar_Get( "height", "480", 0, "screen height" );
+	scr_conspeed = Cvar_Get( "scr_conspeed", "600", 0, "console moving speed" );
 	con_notifytime = Cvar_Get( "con_notifytime", "3", 0, "notify time to live" );
-	con_speed = Cvar_Get( "scr_conspeed", "600", 0, "console moving speed" );
-	con_font = Cvar_Get( "con_font", "default", CVAR_ARCHIVE, "path to console charset" );
+	con_fontsize = Cvar_Get( "con_fontsize", "0", CVAR_ARCHIVE|CVAR_LATCH, "console font number (0, 1 or 2)" );
+
+	Con_CheckResize();
 
 	Con_ClearField( &con.input );
 	con.input.widthInChars = g_console_field_width;
@@ -280,7 +507,7 @@ void Con_Linefeed( bool skipnotify )
 	if( con.display == con.current ) con.display++;
 	con.current++;
 	for( i = 0; i < con.linewidth; i++ )
-		con.text[(con.current % con.totallines) * con.linewidth+i] = (ColorIndex(COLOR_WHITE)<<8)|' ';
+		con.text[(con.current % con.totallines) * con.linewidth+i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 }
 
 /*
@@ -308,7 +535,7 @@ void Con_Print( const char *txt )
 		txt += 12;
 	}
 	
-	color = ColorIndex( COLOR_WHITE );
+	color = ColorIndex( COLOR_DEFAULT );
 
 	while((c = *txt) != 0 )
 	{
@@ -330,7 +557,7 @@ void Con_Print( const char *txt )
 			Con_Linefeed( skipnotify);
 		txt++;
 
-		switch(c)
+		switch( c )
 		{
 		case '\n':
 			Con_Linefeed( skipnotify );
@@ -543,84 +770,6 @@ void Con_CompleteCommand( field_t *field )
 }
 
 /*
-===================
-Field_Draw
-
-Handles horizontal scrolling and cursor blinking
-x, y, amd width are in pixels
-===================
-*/
-void Field_VariableSizeDraw( field_t *edit, int x, int y, int width, int size, bool showCursor )
-{
-	int	len;
-	int	drawLen;
-	int	prestep;
-	int	i, cursorChar;
-	char	str[MAX_SYSPATH];
-
-	drawLen = edit->widthInChars;
-	len = com.strlen( edit->buffer ) + 1;
-
-	// guarantee that cursor will be visible
-	if ( len <= drawLen ) prestep = 0;
-	else
-	{
-		if ( edit->scroll + drawLen > len )
-		{
-			edit->scroll = len - drawLen;
-			if ( edit->scroll < 0 ) edit->scroll = 0;
-		}
-		prestep = edit->scroll;
-	}
-
-	if ( prestep + drawLen > len ) drawLen = len - prestep;
-
-	// extract <drawLen> characters from the field at <prestep>
-	if ( drawLen >= MAX_SYSPATH ) Host_Error("drawLen >= MAX_SYSPATH\n" );
-
-	Mem_Copy( str, edit->buffer + prestep, drawLen );
-	str[drawLen] = 0;
-
-	// draw it
-	if ( size == SMALLCHAR_WIDTH )
-	{
-		rgba_t	color = { 255, 255, 255, 255 };
-
-		SCR_DrawSmallStringExt( x, y, str, color, false );
-	}
-	else SCR_DrawBigString( x, y, str, 255 ); // draw big string with drop shadow
-
-	// draw the cursor
-	if( !showCursor ) return;
-	if((int)( host.realtime * 4 ) & 1 )
-		return; // off blink
-
-	if( host.key_overstrike ) cursorChar = 11;
-	else cursorChar = 95;
-
-	i = drawLen - (com.cstrlen(str) + 1);
-
-	if( size == SMALLCHAR_WIDTH )
-		SCR_DrawSmallChar( x + (edit->cursor - prestep - i) * size, y, cursorChar );
-	else
-	{
-		str[0] = cursorChar;
-		str[1] = 0;
-		SCR_DrawBigString( x + ( edit->cursor - prestep - i ) * size, y, str, 255 );
-	}
-}
-
-void Field_Draw( field_t *edit, int x, int y, int width, bool showCursor ) 
-{
-	Field_VariableSizeDraw( edit, x, y, width, SMALLCHAR_WIDTH, showCursor );
-}
-
-void Field_BigDraw( field_t *edit, int x, int y, int width, bool showCursor ) 
-{
-	Field_VariableSizeDraw( edit, x, y, width, BIGCHAR_WIDTH, showCursor );
-}
-
-/*
 ================
 Field_Paste
 ================
@@ -628,15 +777,15 @@ Field_Paste
 void Field_Paste( field_t *edit )
 {
 	char	*cbd;
-	int	pasteLen, i;
+	int	i, pasteLen;
 
 	cbd = Sys_GetClipboardData();
-
-	if ( !cbd ) return;
+	if( !cbd ) return;
 
 	// send as if typed, so insert / overstrike works properly
 	pasteLen = com.strlen( cbd );
-	for ( i = 0 ; i < pasteLen ; i++ ) Field_CharEvent( edit, cbd[i] );
+	for( i = 0; i < pasteLen; i++ )
+		Field_CharEvent( edit, cbd[i] );
 	Mem_Free( cbd );
 }
 
@@ -929,15 +1078,71 @@ The input line scrolls horizontally if typing goes beyond the right edge
 */
 void Con_DrawInput( void )
 {
-	int	y;
+	int	len;
+	int	drawLen, hideChar = -1;
+	int	prestep, curPos;
+	int	x, y, cursorChar;
+	char	str[MAX_SYSPATH];
+	byte	*colorDefault;
 
-	if( cls.key_dest != key_console )
-		return; // don't draw anything (always draw if not active)
+	// don't draw anything (always draw if not active)
+	if( cls.key_dest != key_console ) return;
 
-	y = con.vislines - ( SMALLCHAR_HEIGHT * 2 );
-	re->SetColor( con.color );
-	Field_Draw( &con.input, con.xadjust + 2 * SMALLCHAR_WIDTH, y, SCREEN_WIDTH - 3 * SMALLCHAR_WIDTH, true );
-	SCR_DrawSmallChar( con.xadjust + 1 * SMALLCHAR_WIDTH, y, '>' );
+	x = QCHAR_WIDTH; // room for ']'
+	y = con.vislines - ( con.charHeight * 2 );
+	drawLen = con.input.widthInChars;
+	len = com.strlen( con.input.buffer ) + 1;
+	colorDefault = g_color_table[ColorIndex( COLOR_DEFAULT )];
+
+	// guarantee that cursor will be visible
+	if( len <= drawLen )
+	{
+		prestep = 0;
+	}
+	else
+	{
+		if( con.input.scroll + drawLen > len )
+		{
+			con.input.scroll = len - drawLen;
+			if( con.input.scroll < 0 )
+				con.input.scroll = 0;
+		}
+		prestep = con.input.scroll;
+	}
+
+	if( prestep + drawLen > len )
+		drawLen = len - prestep;
+
+	// extract <drawLen> characters from the field at <prestep>
+	if( drawLen >= MAX_SYSPATH ) Host_Error("drawLen >= MAX_SYSPATH\n" );
+
+	Mem_Copy( str, con.input.buffer + prestep, drawLen );
+	str[drawLen] = 0;
+
+	// save char for overstrike
+	cursorChar = str[con.input.cursor - prestep];
+
+	if( host.key_overstrike && cursorChar && !((int)( host.realtime * 4 ) & 1 ))
+		hideChar = con.input.cursor - prestep;	// skip this char
+	
+	// draw it
+	Con_DrawGenericString( x, y, str, colorDefault, false, hideChar );
+	Con_DrawCharacter( QCHAR_WIDTH >> 1, y, ']', colorDefault );
+
+	// draw the cursor
+	if((int)( host.realtime * 4 ) & 1 ) return; // off blink
+
+	// calc cursor position
+	str[con.input.cursor - prestep] = 0;
+	Con_DrawStringLen( str, &curPos, NULL );
+
+	if( host.key_overstrike && cursorChar )
+	{
+		// overstrike cursor
+		re->SetParms( con.chars.hFontTexture, kRenderTransInverse, 0 );
+		Con_DrawGenericChar( x + curPos, y, cursorChar, colorDefault );
+	}
+	else Con_DrawCharacter( x + curPos, y, '_', colorDefault );
 }
 
 /*
@@ -951,6 +1156,7 @@ void Con_DrawNotify( void )
 {
 	int	i, x, v = 0;
 	int	currentColor;
+	int	start;
 	short	*text;
 	float	time;
 
@@ -967,18 +1173,15 @@ void Con_DrawNotify( void )
 		time = host.realtime - time;
 		if( time > con_notifytime->value ) continue;
 		text = con.text + (i % con.totallines) * con.linewidth;
+		start = con.charWidths[' ']; // offset one space at left screen side
 
 		for( x = 0; x < con.linewidth; x++ )
 		{
-			if((text[x] & 0xff ) == ' ' ) continue;
-			if(( ( text[x] >> 8 ) & 7 ) != currentColor )
-			{
+			if((( text[x] >> 8 ) & 7 ) != currentColor )
 				currentColor = ( text[x] >> 8 ) & 7;
-				re->SetColor(g_color_table[currentColor]);
-			}
-			SCR_DrawSmallChar( con.xadjust + (x+1) * SMALLCHAR_WIDTH, v, text[x] & 0xff );
+			start += Con_DrawCharacter( start, v, text[x] & 0xFF, g_color_table[currentColor] );
 		}
-		v += SMALLCHAR_HEIGHT;
+		v += con.charHeight;
 	}
 	re->SetColor( NULL );
 }
@@ -996,46 +1199,54 @@ void Con_DrawSolidConsole( float frac )
 	int	rows;
 	short	*text;
 	int	row;
-	int	lines;
+	int	lines, start;
 	int	currentColor;
 	string	curbuild;
 
 	lines = scr_height->integer * frac;
 	if( lines <= 0 ) return;
-	if( lines > scr_height->integer ) lines = scr_height->integer;
-
-	con.xadjust = 0; // on wide screens, we will center the text
-	SCR_AdjustSize( &con.xadjust, NULL, NULL, NULL );
+	if( lines > scr_height->integer )
+		lines = scr_height->integer;
 
 	// draw the background
-	y = frac * SCREEN_HEIGHT;
-	if( y < 1 ) y = 0;
-	else SCR_DrawPic( 0, y - SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, cls.consoleBack );
+	y = frac * scr_height->integer;
+
+	if( y >= 1 )
+	{
+		re->SetParms( con.background, kRenderNormal, 0 );
+		re->DrawStretchPic( 0, y - scr_height->integer, scr_width->integer, scr_height->integer, 0, 0, 1, 1, con.background );
+	}
+	else y = 0;
 
 	if( host.developer )
 	{
 		// draw current version
-		re->SetColor( g_color_table[ColorIndex(COLOR_YELLOW)] );
+		rgba_t	color = { 255, 255, 255, 255 };
+		int	stringLen, width = 0, charH;
+
 		com.snprintf( curbuild, MAX_STRING, "Xash3D %g (build %i)", SI->version, com_buildnum( ));
-		i = com.strlen( curbuild );
-		for( x = 0; x < i; x++ )
-			SCR_DrawSmallChar( scr_width->integer - ( i - x ) * SMALLCHAR_WIDTH, (lines - (SMALLCHAR_HEIGHT+SMALLCHAR_HEIGHT/2)), curbuild[x] );
-		re->SetColor( NULL );
+		Con_DrawStringLen( curbuild, &stringLen, &charH );
+		start = scr_width->integer - stringLen;
+		stringLen = com.cstrlen( curbuild );
+
+		for( i = 0; i < stringLen; i++ )
+			width += Con_DrawCharacter( start + width, lines - charH, curbuild[i], color );
 	}
 
 	// draw the text
 	con.vislines = lines;
-	rows = ( lines - SMALLCHAR_WIDTH ) / SMALLCHAR_WIDTH; // rows of text to draw
-	y = lines - ( SMALLCHAR_HEIGHT * 3 );
+	rows = ( lines - QCHAR_WIDTH ) / QCHAR_WIDTH; // rows of text to draw
+	y = lines - ( con.charHeight * 3 );
 
 	// draw from the bottom up
 	if( con.display != con.current )
 	{
-		// draw arrows to show the buffer is backscrolled
-		re->SetColor( g_color_table[ColorIndex(COLOR_RED)] );
+		start = con.charWidths[' ']; // offset one space at left screen side
+
+		// draw red arrows to show the buffer is backscrolled
 		for( x = 0; x < con.linewidth; x += 4 )
-			SCR_DrawSmallChar( con.xadjust + (x+1) * SMALLCHAR_WIDTH, y, '^' );
-		y -= SMALLCHAR_HEIGHT;
+			Con_DrawCharacter(( x + 1 ) * start, y, '^', g_color_table[1] );
+		y -= con.charHeight;
 		rows--;
 	}
 	
@@ -1045,7 +1256,7 @@ void Con_DrawSolidConsole( float frac )
 	currentColor = 7;
 	re->SetColor( g_color_table[currentColor] );
 
-	for( i = 0; i < rows; i++, y -= SMALLCHAR_HEIGHT, row-- )
+	for( i = 0; i < rows; i++, y -= con.charHeight, row-- )
 	{
 		if( row < 0 ) break;
 		if( con.current - row >= con.totallines )
@@ -1054,17 +1265,14 @@ void Con_DrawSolidConsole( float frac )
 			continue;	
 		}
 
-		text = con.text + (row % con.totallines) * con.linewidth;
+		text = con.text + ( row % con.totallines ) * con.linewidth;
+		start = con.charWidths[' ']; // offset one space at left screen side
 
 		for( x = 0; x < con.linewidth; x++ )
 		{
-			if(( text[x] & 0xff ) == ' ' ) continue;
-			if((( text[x]>>8) & 7 ) != currentColor )
-			{
-				currentColor = (text[x]>>8) & 7;
-				re->SetColor(g_color_table[currentColor]);
-			}
-			SCR_DrawSmallChar( con.xadjust + (x+1) * SMALLCHAR_WIDTH, y, text[x] & 0xff );
+			if((( text[x] >> 8 ) & 7 ) != currentColor )
+				currentColor = ( text[x] >> 8 ) & 7;
+			start += Con_DrawCharacter( start, y, text[x] & 0xFF, g_color_table[currentColor] );
 		}
 	}
 
@@ -1159,13 +1367,13 @@ void Con_RunConsole( void )
 
 	if( con.finalFrac < con.displayFrac )
 	{
-		con.displayFrac -= con_speed->value * 0.002 * host.realframetime;
+		con.displayFrac -= scr_conspeed->value * 0.002 * host.realframetime;
 		if( con.finalFrac > con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
 	else if( con.finalFrac > con.displayFrac )
 	{
-		con.displayFrac += con_speed->value * 0.002 * host.realframetime;
+		con.displayFrac += scr_conspeed->value * 0.002 * host.realframetime;
 		if( con.finalFrac < con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
@@ -1185,8 +1393,17 @@ void Con_CharEvent( int key )
 
 void Con_VidInit( void )
 {
-	g_console_field_width = scr_width->integer / SMALLCHAR_WIDTH - 2;
+	g_console_field_width = ( scr_width->integer / 8 ) - 2;
 	con.input.widthInChars = g_console_field_width;
+
+	if( !re ) return;
+
+	// loading console image
+	if( host.developer )
+		con.background = re->RegisterShader( "cached/conback", SHADER_NOMIP );
+	else con.background = re->RegisterShader( "cached/loading", SHADER_NOMIP );
+
+	Con_LoadConchars();
 }
 
 /*
@@ -1215,31 +1432,6 @@ void Cmd_AutoComplete( char *complete_string )
 	else com.strncpy( complete_string, input.buffer, sizeof( input.buffer ));
 }
 
-void Con_PageUp( void )
-{
-	con.display -= 2;
-	if( con.current - con.display >= con.totallines )
-		con.display = con.current - con.totallines + 1;
-}
-
-void Con_PageDown( void )
-{
-	con.display += 2;
-	if( con.display > con.current) con.display = con.current;
-}
-
-void Con_Top( void )
-{
-	con.display = con.totallines;
-	if( con.current - con.display >= con.totallines )
-		con.display = con.current - con.totallines + 1;
-}
-
-void Con_Bottom( void )
-{
-	con.display = con.current;
-}
-
 void Con_Close( void )
 {
 	Con_ClearField( &con.input );
@@ -1248,7 +1440,17 @@ void Con_Close( void )
 	con.displayFrac = 0;
 }
 
-bool Con_Visible( void )
+/*
+=========
+Con_DefaultColor
+
+called from GameUI
+=========
+*/
+void Con_DefaultColor( int r, int g, int b )
 {
-	return (con.finalFrac != 0.0f);
+	r = bound( 0, r, 255 );
+	g = bound( 0, g, 255 );
+	b = bound( 0, b, 255 );
+	MakeRGBA( g_color_table[7], r, g, b, 255 );
 }

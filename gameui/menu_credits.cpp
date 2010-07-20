@@ -128,7 +128,7 @@ static void UI_Credits_DrawFunc( void )
 	// now draw the credits
 	UI_ScaleCoords( NULL, NULL, &w, &h );
 
-	y = ActualHeight - (( uiStatic.realTime - uiCredits.startTime ) / 40.0f );
+	y = ScreenHeight - (( uiStatic.realTime - uiCredits.startTime ) / 40.0f );
 
 	// draw the credits
 	for ( i = 0; i < uiCredits.numLines && uiCredits.credits[i]; i++, y += 20 )
@@ -136,12 +136,12 @@ static void UI_Credits_DrawFunc( void )
 		// skip not visible lines, but always draw end line
 		if( y <= -16 && i != uiCredits.numLines - 1 ) continue;
 
-		if(( y < ( ActualHeight - h ) / 2 ) && i == uiCredits.numLines - 1 )
+		if(( y < ( ScreenHeight - h ) / 2 ) && i == uiCredits.numLines - 1 )
 		{
 			if( !uiCredits.fadeTime ) uiCredits.fadeTime = uiStatic.realTime;
 			color = UI_FadeAlpha( uiCredits.fadeTime, uiCredits.showTime );
 			if( UnpackAlpha( color ))
-				UI_DrawString( 0, ( ActualHeight - h ) / 2, 1024 * uiStatic.scaleX, h, uiCredits.credits[i], color, true, w, h, 1, true );
+				UI_DrawString( 0, ( ScreenHeight - h ) / 2, 1024 * uiStatic.scaleX, h, uiCredits.credits[i], color, true, w, h, 1, true );
 		}
 		else UI_DrawString( 0, y, 1024 * uiStatic.scaleX, h, uiCredits.credits[i], uiColorWhite, false, w, h, 1, true );
 	}

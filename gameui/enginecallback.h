@@ -141,4 +141,14 @@ inline void PIC_DrawAdditive( int frame, int x, int y, int width, int height, co
 	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, width, height, prc );
 }
 
+inline void TextMessageSetColor( int r, int g, int b, int alpha = 255 )
+{
+	g_engfuncs.pfnDrawSetTextColor( r, g, b, alpha );
+}
+
+#define TextMessageDrawChar	(*g_engfuncs.pfnDrawCharacter)
+#define DrawConsoleString	(*g_engfuncs.pfnDrawConsoleString)
+#define GetConsoleStringSize	(*g_engfuncs.pfnDrawConsoleStringLen)
+#define ConsoleSetColor	(*g_engfuncs.pfnSetConsoleDefaultColor)
+
 #endif//ENGINECALLBACKS_H

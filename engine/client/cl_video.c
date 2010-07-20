@@ -116,7 +116,6 @@ should be skipped
 bool SCR_DrawCinematic( void )
 {
 	cinematics_t	*cin = cl.cin;
-	float		x, y, w, h;
  
 	if( !re || !cin || cin->time <= 0.0f )
 		return false;
@@ -124,11 +123,7 @@ bool SCR_DrawCinematic( void )
 	if( !cin->pic )
 		return true;
 
-	x = y = 0;
-	w = SCREEN_WIDTH;
-	h = SCREEN_HEIGHT;
-	SCR_AdjustSize( &x, &y, &w, &h );
-	re->DrawStretchRaw( x, y, w, h, cin->width, cin->height, cin->pic, true );
+	re->DrawStretchRaw( 0, 0, scr_width->integer, scr_height->integer, cin->width, cin->height, cin->pic, true );
 
 	return true;
 }

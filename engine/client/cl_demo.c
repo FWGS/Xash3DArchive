@@ -176,15 +176,19 @@ CL_DrawDemoRecording
 */
 void CL_DrawDemoRecording( void )
 {
-	char		string[1024];
+	char		string[64];
+	rgba_t		color = { 255, 255, 255, 255 };
 	fs_offset_t	pos;
+	int		len;
 
 	if(!( host.developer && cls.demorecording ))
 		return;
 
 	pos = FS_Tell( cls.demofile );
-	com.sprintf( string, "RECORDING %s: %ik", cls.demoname, pos / 1024 );
-	SCR_DrawBigStringColor( 320 - com.strlen( string ) * 8, 80, string, g_color_table[7] ); 
+	com.snprintf( string, sizeof( string ), "RECORDING %s: %ik", cls.demoname, pos / 1024 );
+
+	Con_DrawStringLen( string, &len, NULL );
+	Con_DrawString(( scr_width->integer - len) >> 1, scr_height->integer >> 2, string, color );
 }
 
 /*

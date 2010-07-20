@@ -2517,9 +2517,6 @@ void R_ShaderList_f( void )
 		case SHADER_STUDIO:
 			Msg( "mdl  " );
 			break;
-		case SHADER_FONT:
-			Msg( "font " );
-			break;
 		case SHADER_SPRITE:
 			Msg( "spr  " );
 			break;
@@ -2618,7 +2615,7 @@ bool R_ShaderCheckCache( const char *name )
 void R_RegisterBuiltinShaders( void )
 {
 	tr.defaultShader = R_LoadShader( MAP_DEFAULT_SHADER, SHADER_NOMIP, true, (TF_NOMIPMAP|TF_NOPICMIP), SHADER_UNKNOWN );
-	tr.fillShader = R_LoadShader( "*white", SHADER_FONT, true, (TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP), SHADER_UNKNOWN );
+	tr.fillShader = R_LoadShader( "*white", SHADER_GENERIC, true, (TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP), SHADER_UNKNOWN );
 }
 
 void R_InitShaders( void )
@@ -3639,30 +3636,6 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 			break;
 		}
 		break;
-	case SHADER_FONT:
-		shader->type = SHADER_FONT;
-		shader->features = MF_STCOORDS|MF_COLORS;
-		shader->flags = SHADER_STATIC;
-		shader->sort = SORT_ADDITIVE;
-		shader->num_stages = 1;
-		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
-		strcpy( shader->name, shortname );
-		shader->stages = (ref_stage_t *)(( byte * )shader->name + length + 1 );
-		pass = &shader->stages[0];
-		pass->flags = SHADERSTAGE_BLEND_MODULATE;
-		pass->glState = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-		pass->textures[0] = R_FindTexture( shortname, NULL, 0, addFlags|TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP );
-		if( !pass->textures[0] )
-		{
-			// don't let user set invalid font
-			MsgDev( D_WARN, "couldn't find texture for shader '%s', using default...\n", shader->name );
-			pass->textures[0] = tr.defaultConchars;
-		}
-		pass->rgbGen.type = RGBGEN_VERTEX;
-		pass->alphaGen.type = ALPHAGEN_VERTEX;
-		pass->tcgen = TCGEN_BASE;
-		pass->num_textures++;
-		break;
 	case SHADER_NOMIP:
 		shader->type = SHADER_NOMIP;
 		shader->features = MF_STCOORDS|MF_COLORS;
@@ -3901,7 +3874,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		shader->num_stages = 1;
 		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 		strcpy( shader->name, shortname );
-		shader->stages = ( ref_stage_t * )(( byte * )shader->name + length + 1 );
+		shader->stages = (ref_stage_t *)(( byte * )shader->name + length + 1 );
 		pass = &shader->stages[0];
 		pass->flags = SHADERSTAGE_NOCOLORARRAY|SHADERSTAGE_BLEND_MODULATE;
 		pass->glState = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR;

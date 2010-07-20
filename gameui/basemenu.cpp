@@ -26,14 +26,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "keydefs.h"
 #include "utils.h"
 
-cvar_t	*ui_mainfont;
-cvar_t	*ui_namefont;
 cvar_t	*ui_precache;
 cvar_t	*ui_sensitivity;
 
 uiStatic_t	uiStatic;
-
-HIMAGE		m_hConcsoleFont;
 
 char		uiEmptyString[256];
 const char	*uiSoundIn	= "common/menu1.wav";
@@ -45,7 +41,7 @@ const char	*uiSoundNull	= "";
 
 int		uiColorHelp	= 0xFFFFFFFF;	// 255, 255, 255, 255	// hint letters color
 int		uiPromptBgColor	= 0xFF404040;	// 64,  64,  64,  255	// dialog background color
-int		uiPromptTextColor	= 0xFFFFA000;	// 255, 160,  0,  255	// dialog or button letters color
+int		uiPromptTextColor	= 0xFFF0B418;	// 255, 160,  0,  255	// dialog or button letters color
 int		uiPromptFocusColor	= 0xFFFFFF00;	// 255, 255,  0,  255	// dialog or button focus letters color
 int		uiInputTextColor	= 0xFFC0C0C0;	// 192, 192, 192, 255
 int		uiInputBgColor	= 0xFF404040;	// 64,  64,  64,  255	// field, scrollist, checkbox background color
@@ -164,12 +160,11 @@ void UI_DrawRectangleExt( int in_x, int in_y, int in_w, int in_h, const int colo
 UI_DrawString
 =================
 */
-void UI_DrawStringExt( int x, int y, int w, int h, const char *string, const int color, int forceColor, int charW, int charH, int justify, int shadow, HIMAGE font )
+void UI_DrawString( int x, int y, int w, int h, const char *string, const int color, int forceColor, int charW, int charH, int justify, int shadow )
 {
 	int	modulate, shadowModulate;
 	char	line[1024], *l;
 	int	xx, yy, ofsX, ofsY, len, ch;
-	float	col, row, size;
 
 	if( !string || !string[0] )
 		return;
@@ -221,7 +216,6 @@ void UI_DrawStringExt( int x, int y, int w, int h, const char *string, const int
 				if( !forceColor )
 				{
 					int colorNum = ColorIndex( *(l+1) );
-
 					modulate = PackAlpha( g_iColorTable[colorNum], UnpackAlpha( color ));
 				}
 
@@ -230,36 +224,14 @@ void UI_DrawStringExt( int x, int y, int w, int h, const char *string, const int
 			}
 
 			ch = *l++;
-
 			ch &= 255;
+
 			if( ch != ' ' )
 			{
-				col = (ch & 15) * 0.0625 + (0.5f / 256.0f);
-				row = (ch >> 4) * 0.0625 + (0.5f / 256.0f);
-				size = 0.0625f - (1.0f / 256.0f);
-
-				wrect_t	rc;
-				int r, g, b, a;
-
-				rc.left = (int)(col * 1000);
-				rc.right = (int)((col + size) * 1000);
-				rc.top = (int)(row * 1000);
-				rc.bottom = (int)((row + size) * 1000);
-
-				if( shadow )
-				{
-					UnpackRGBA( r, g, b, a, shadowModulate );
-					PIC_Set( font, r, g, b, a );
-
-					PIC_DrawTrans( 0, xx + ofsX, yy + ofsY, charW, charH, &rc );
-                                        }
-
-				UnpackRGBA( r, g, b, a, modulate );
-				PIC_Set( font, r, g, b, a );
-
-				PIC_DrawTrans( 0, xx, yy, charW, charH, &rc );
+				if( shadow ) TextMessageDrawChar( xx + ofsX, y + ofsY, charW, charH, ch, shadowModulate, uiStatic.hFont );
+				TextMessageDrawChar( xx, y, charW, charH, ch, modulate, uiStatic.hFont );
 			}
-          		xx += charW;
+			xx += charW;
 		}
           	yy += charH;
 	}
@@ -590,11 +562,16 @@ void UI_DrawMenu( menuFramework_s *menu )
 	if( item && ( item->flags & QMF_HASMOUSEFOCUS && !( item->flags & QMF_NOTIFY )) && ( item->statusText != NULL ))
 	{
 		// fade it in, but wait a second
-		int alpha = (((uiStatic.realTime - statusFadeTime) - 1000) * 0.001f) * 255;
-		int color = PackAlpha( uiColorHelp, alpha );
+		int alpha = bound( 0, ((( uiStatic.realTime - statusFadeTime ) - 1000 ) * 0.001f ) * 255, 255 );
+		int r, g, b, x, len;
 
-		UI_DrawStringExt( 0, 720 * uiStatic.scaleY, 1024 * uiStatic.scaleX, 28 * uiStatic.scaleY, item->statusText, color, true,
-		UI_SMALL_CHAR_WIDTH * uiStatic.scaleX, UI_SMALL_CHAR_HEIGHT * uiStatic.scaleY, 1, true, m_hConcsoleFont );
+		GetConsoleStringSize( item->statusText, &len, NULL );
+
+		UnpackRGB( r, g, b, uiColorHelp );
+		TextMessageSetColor( r, g, b, alpha );
+		x = ( ScreenWidth - len ) * 0.5; // centering
+
+		DrawConsoleString( x, 720 * uiStatic.scaleY, item->statusText );
 	}
 	else statusFadeTime = uiStatic.realTime;
 }
@@ -969,12 +946,12 @@ void UI_MouseMove( int x, int y )
 	uiStatic.cursorX += x;
 	uiStatic.cursorY += y;
 
-	if( UI_CursorInRect( 1, 1, ActualWidth - 1, ActualHeight - 1 ))
+	if( UI_CursorInRect( 1, 1, ScreenWidth - 1, ScreenHeight - 1 ))
 		uiStatic.mouseInRect = true;
 	else uiStatic.mouseInRect = false;
 
-	uiStatic.cursorX = bound( 0, uiStatic.cursorX, ActualWidth );
-	uiStatic.cursorY = bound( 0, uiStatic.cursorY, ActualHeight );
+	uiStatic.cursorX = bound( 0, uiStatic.cursorX, ScreenWidth );
+	uiStatic.cursorY = bound( 0, uiStatic.cursorY, ScreenHeight );
 
 	// region test the active menu items
 	for( i = 0; i < uiStatic.menuActive->numItems; i++ )
@@ -1090,8 +1067,8 @@ void UI_GetCursorPos( int *pos_x, int *pos_y )
 
 void UI_SetCursorPos( int pos_x, int pos_y )
 {
-	uiStatic.cursorX = bound( 0, pos_x, ActualWidth );
-	uiStatic.cursorY = bound( 0, pos_y, ActualHeight );
+	uiStatic.cursorX = bound( 0, pos_x, ScreenWidth );
+	uiStatic.cursorY = bound( 0, pos_y, ScreenHeight );
 	uiStatic.mouseInRect = true;
 }
 
@@ -1157,41 +1134,6 @@ void UI_Precache( void )
 	UI_Credits_Precache();
 }
 
-/*
-====================
-UI_SetFont_f
-
-menufont <fontname> <con>
-====================
-*/
-void UI_SetFont_f( void )
-{
-	if( CMD_ARGC() < 2 )
-	{
-		ALERT( at_console, "Usage: menufont <fontname> <console>\n" );
-		return;
-	}
-
-	char	str[128];
-
-	switch ( CMD_ARGC( ))
-	{
-	case 2:
-		CVAR_SET_STRING( "ui_mainfont", CMD_ARGV( 1 ));
-		sprintf( str, "gfx/fonts/%s", ui_mainfont->string );
-		uiStatic.menuFont = PIC_Load( str );
-		break;
-	case 3:
-		CVAR_SET_STRING( "ui_namefont", CMD_ARGV( 1 ));
-		sprintf( str, "gfx/fonts/%s", ui_namefont->string );
-		uiStatic.nameFont = PIC_Load( str );
-		break;
-	default:
-		ALERT( at_console, "Usage: menufont <fontname> <console>\n" );
-		break;
-	}
-}
-
 void UI_ParseColor( const char **pfile, int *outColor )
 {
 	int	i, color[3];
@@ -1251,6 +1193,11 @@ void UI_ApplyCustomColors( void )
 		}
 	}
 
+	int	r, g, b;
+
+	UnpackRGB( r, g, b, uiPromptTextColor );
+	ConsoleSetColor( r, g, b );
+
 	FREE_FILE( afile );
 }
 
@@ -1263,16 +1210,15 @@ int UI_VidInit( void )
 {
 	UI_Precache ();
 
-	// setup screen info
-	GetScreenInfo( &gMenu.m_scrinfo );
+	// setup game info
 	GetGameInfo( &gMenu.m_gameinfo );
 		
-	uiStatic.scaleX = ActualWidth / 1024.0f;
-	uiStatic.scaleY = ActualHeight / 768.0f;
+	uiStatic.scaleX = ScreenWidth / 1024.0f;
+	uiStatic.scaleY = ScreenHeight / 768.0f;
 
 	// move cursor to screen center
-	uiStatic.cursorX = ActualWidth >> 1;
-	uiStatic.cursorY = ActualHeight >> 1;
+	uiStatic.cursorX = ScreenWidth >> 1;
+	uiStatic.cursorY = ScreenHeight >> 1;
 	uiStatic.outlineWidth = 4;
 	uiStatic.sliderWidth = 6;
 
@@ -1282,17 +1228,8 @@ int UI_VidInit( void )
 	// trying to load colors.lst
 	UI_ApplyCustomColors ();
 
-	char	str[128];
-
-	// register ui fonts
-	sprintf( str, "gfx/fonts/%s", ui_namefont->string );
-	uiStatic.nameFont = PIC_Load( str );
-
-	sprintf( str, "gfx/fonts/%s", ui_mainfont->string );
-	uiStatic.menuFont = PIC_Load( str );
-
-	sprintf( str, "gfx/fonts/%s", CVAR_GET_STRING( "con_font" ));
-	m_hConcsoleFont = PIC_Load( str );
+	// register ui font
+	uiStatic.hFont = PIC_Load( "gfx/shell/font" );
 
 	return 1;
 }
@@ -1307,10 +1244,7 @@ void UI_Init( void )
 	// register our cvars and commands
 	ui_precache = CVAR_REGISTER( "ui_precache", "0", FCVAR_ARCHIVE, "enable precache all resources for menu" );
 	ui_sensitivity = CVAR_REGISTER( "ui_sensitivity", "1", FCVAR_ARCHIVE, "mouse sensitivity while in-menu" );
-	ui_mainfont = CVAR_REGISTER( "ui_mainfont", "default", FCVAR_ARCHIVE, "ui primary font (buttons, title, etc)" );
-	ui_namefont = CVAR_REGISTER( "ui_namefont", "default", FCVAR_ARCHIVE, "ui console font (hints, notify)" );
 
-	Cmd_AddCommand( "menufont", UI_SetFont_f, "set menu master/notify font" );
 	Cmd_AddCommand( "menu_main", UI_Main_Menu, "open the main menu" );
 	Cmd_AddCommand( "menu_newgame", UI_NewGame_Menu, "open the newgame menu" );
 	Cmd_AddCommand( "menu_loadgame", UI_LoadGame_Menu, "open the loadgame menu" );
@@ -1347,7 +1281,6 @@ void UI_Shutdown( void )
 	if( !uiStatic.initialized )
 		return;
 
-	Cmd_RemoveCommand( "menufont" );
 	Cmd_RemoveCommand( "menu_main" );
 	Cmd_RemoveCommand( "menu_newgame" );
 	Cmd_RemoveCommand( "menu_loadgame" );

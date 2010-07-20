@@ -104,29 +104,6 @@ static void UI_ConvertGameInfo( GAMEINFO *out, gameinfo_t *in )
 	out->gamemode = in->gamemode;
 }
 
-/*
-====================
-PIC_AdjustSize
-
-draw menupic routine
-====================
-*/
-static void PIC_AdjustSize( float *x, float *y, float *w, float *h )
-{
-	float	xscale, yscale;
-
-	if( !x && !y && !w && !h ) return;
-
-	// scale for screen sizes
-	xscale = gameui.scrInfo.iRealWidth / (float)gameui.scrInfo.iWidth;
-	yscale = gameui.scrInfo.iRealHeight / (float)gameui.scrInfo.iHeight;
-
-	if( x ) *x *= xscale;
-	if( y ) *y *= yscale;
-	if( w ) *w *= xscale;
-	if( h ) *h *= yscale;
-}
-
 static bool PIC_Scissor( float *x, float *y, float *width, float *height, float *u0, float *v0, float *u1, float *v1 )
 {
 	float	dudx, dvdy;
@@ -185,7 +162,6 @@ draw hudsprite routine
 static void PIC_DrawGeneric( int frame, float x, float y, float width, float height, const wrect_t *prc )
 {
 	float	s1, s2, t1, t2;
-	bool	hasCustomSize;
 
 	if( !re ) return;
 
@@ -198,30 +174,17 @@ static void PIC_DrawGeneric( int frame, float x, float y, float width, float hei
 
 		width = w;
 		height = h;
-		hasCustomSize = false;
 	}
-	else hasCustomSize = true;
 
 	if( prc )
 	{
-		if( hasCustomSize )
-		{
-			// e.g. quake fonts 
-			s1 = (float)(prc->left * 0.001f);
-			t1 = (float)(prc->top * 0.001f);
-			s2 = (float)(prc->right * 0.001f);
-			t2 = (float)(prc->bottom * 0.001f);
-		}
-		else
-		{
-			// calc user-defined rectangle
-			s1 = (float)prc->left / width;
-			t1 = (float)prc->top / height;
-			s2 = (float)prc->right / width;
-			t2 = (float)prc->bottom / height;
-			width = prc->right - prc->left;
-			height = prc->bottom - prc->top;
-		}
+		// calc user-defined rectangle
+		s1 = (float)prc->left / width;
+		t1 = (float)prc->top / height;
+		s2 = (float)prc->right / width;
+		t2 = (float)prc->bottom / height;
+		width = prc->right - prc->left;
+		height = prc->bottom - prc->top;
 	}
 	else
 	{
@@ -233,8 +196,6 @@ static void PIC_DrawGeneric( int frame, float x, float y, float width, float hei
 	if( gameui.ds.scissor_test && !PIC_Scissor( &x, &y, &width, &height, &s1, &t1, &s2, &t2 ))
 		return;
 
-	// scale for screen sizes
-	PIC_AdjustSize( &x, &y, &width, &height );
 	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, gameui.ds.hSprite );
 	re->SetColor( NULL );
 }
@@ -403,10 +364,10 @@ pfnPIC_EnableScissor
 static void pfnPIC_EnableScissor( int x, int y, int width, int height )
 {
 	// check bounds
-	x = bound( 0, x, gameui.scrInfo.iWidth );
-	y = bound( 0, y, gameui.scrInfo.iHeight );
-	width = bound( 0, width, gameui.scrInfo.iWidth - x );
-	height = bound( 0, height, gameui.scrInfo.iHeight - y );
+	x = bound( 0, x, gameui.globals->scrWidth );
+	y = bound( 0, y, gameui.globals->scrHeight );
+	width = bound( 0, width, gameui.globals->scrWidth - x );
+	height = bound( 0, height, gameui.globals->scrHeight - y );
 
 	gameui.ds.scissor_x = x;
 	gameui.ds.scissor_width = width;
@@ -444,45 +405,9 @@ static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int 
 
 	MakeRGBA( color, r, g, b, a );
 	re->SetColor( color );
-
-	PIC_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
-
 	re->SetParms( cls.fillShader, kRenderTransTexture, 0 );
 	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillShader );
 	re->SetColor( NULL );
-}
-
-/*
-=============
-pfnGetScreenInfo
-
-get actual screen info
-=============
-*/
-static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
-{
-	// setup screen info
-	gameui.scrInfo.iRealWidth = scr_width->integer;
-	gameui.scrInfo.iRealHeight = scr_height->integer;
-
-	if( pscrinfo && pscrinfo->iFlags & SCRINFO_VIRTUALSPACE )
-	{
-		// virtual screen space 1024x768
-		gameui.scrInfo.iWidth = 1024;
-		gameui.scrInfo.iHeight = 768;
-		gameui.scrInfo.iFlags |= SCRINFO_VIRTUALSPACE;
-	}
-	else
-	{
-		gameui.scrInfo.iWidth = scr_width->integer;
-		gameui.scrInfo.iHeight = scr_height->integer;
-		gameui.scrInfo.iFlags &= ~SCRINFO_VIRTUALSPACE;
-	}
-
-	if( !pscrinfo ) return 0;
-	*pscrinfo = gameui.scrInfo;	// copy screeninfo out
-
-	return 1;
 }
 
 /*
@@ -518,51 +443,32 @@ static void pfnPlaySound( const char *szSound )
 =============
 pfnDrawCharacter
 
-returns drawed chachter width (in real screen pixels)
+quakefont draw character
 =============
 */
-static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
+static void pfnDrawCharacter( int x, int y, int width, int height, int ch, int ulRGBA, HIMAGE hFont )
 {
-	number &= 255;
+	rgba_t	color;
+	float	row, col, size;
 
-	if( !re ) return 0;
-	if( number < 32 ) return 0;
-	if( y < -gameui.scrInfo.iCharHeight )
-		return 0;
+	ch &= 255;
 
-	if( gameui.creditsFont.use_qfont )
-	{
-		pfnPIC_Set( gameui.creditsFont.hFontTexture, r, g, b, 255 );
-		pfnPIC_DrawAdditive( 0, x, y, -1, -1, &gameui.creditsFont.fontRc[number] );
-	}
-	else
-	{
-		float	size, frow, fcol;
-		float	ax, ay, aw, ah;
-		int	fontWidth, fontHeight;
-		rgba_t	color;
+	if( ch == ' ') return;
+	if( y < -height ) return;
 
-		ax = x;
-		ay = y;
-		aw = gameui.scrInfo.charWidths[number];
-		ah = gameui.scrInfo.iCharHeight;
+	color[3] = (ulRGBA & 0xFF000000) >> 24;
+	color[0] = (ulRGBA & 0xFF0000) >> 16;
+	color[1] = (ulRGBA & 0xFF00) >> 8;
+	color[2] = (ulRGBA & 0xFF) >> 0;
+	re->SetColor( color );
 
-		re->GetParms( &fontWidth, &fontHeight, NULL, 0, gameui.creditsFont.hFontTexture );
-		PIC_AdjustSize( &ax, &ay, &aw, &ah );
+	col = (ch & 15) * 0.0625 + (0.5f / 256.0f);
+	row = (ch >> 4) * 0.0625 + (0.5f / 256.0f);
+	size = 0.0625f - (1.0f / 256.0f);
 
-		MakeRGBA( color, r, g, b, 255 );
-		re->SetColor( color );
-	
-		frow = (number >> 4) * 0.0625f + (0.5f / (float)fontWidth);
-		fcol = (number & 15) * 0.0625f + (0.5f / (float)fontHeight);
-		size = 0.0625f - (1.0f / (float)fontWidth);
-
-		re->SetParms( gameui.creditsFont.hFontTexture, kRenderTransAdd, 0 );
-		re->DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + size, frow + size, gameui.creditsFont.hFontTexture );
-	}
-
-	re->SetColor( NULL ); // don't forget reset color
-	return gameui.scrInfo.charWidths[number];
+	re->SetParms( cls.creditsFont.hFontTexture, kRenderTransTexture, 0 );
+	re->DrawStretchPic( x, y, width, height, col, row, col + size, row + size, hFont );
+	re->SetColor( NULL );
 }
 
 /*
@@ -572,11 +478,15 @@ pfnDrawConsoleString
 drawing string like a console string 
 =============
 */
-static int pfnDrawConsoleString( int x, int y, char *string )
+static int pfnDrawConsoleString( int x, int y, const char *string )
 {
+	int	drawLen;
+
 	if( !string || !*string ) return 0; // silent ignore
-	SCR_DrawSmallStringExt( x, y, string, NULL, false );
-	return com.cstrlen( string ) * SMALLCHAR_WIDTH; // not includes color prexfixes
+	drawLen = Con_DrawString( x, y, string, gameui.ds.textColor );
+	MakeRGBA( gameui.ds.textColor, 255, 255, 255, 255 );
+
+	return drawLen; // exclude color prexfixes
 }
 
 /*
@@ -586,31 +496,13 @@ pfnDrawSetTextColor
 set color for anything
 =============
 */
-static void pfnDrawSetTextColor( float r, float g, float b )
+static void pfnDrawSetTextColor( int r, int g, int b, int alpha )
 {
-	rgba_t	color;
-
 	// bound color and convert to byte
-	color[0] = (byte)bound( 0, r * 255, 255 );
-	color[1] = (byte)bound( 0, g * 255, 255 );
-	color[2] = (byte)bound( 0, b * 255, 255 );
-	color[3] = (byte)0xFF;
-	if( re ) re->SetColor( color );
-}
-
-/*
-=============
-pfnDrawConsoleStringLen
-
-returns width and height (in real pixels)
-for specified string
-=============
-*/
-static void pfnDrawConsoleStringLen(  const char *string, int *length, int *height )
-{
-	// console used fixed font size
-	if( length ) *length = com.cstrlen( string ) * SMALLCHAR_WIDTH;
-	if( height ) *height = SMALLCHAR_HEIGHT;
+	gameui.ds.textColor[0] = r;
+	gameui.ds.textColor[1] = g;
+	gameui.ds.textColor[2] = b;
+	gameui.ds.textColor[3] = alpha;
 }
 
 /*
@@ -906,7 +798,6 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnPIC_EnableScissor,
 	pfnPIC_DisableScissor,
 	pfnFillRGBA,
-	pfnGetScreenInfo,
 	pfnCVarRegister,
 	pfnCVarGetValue,
 	pfnCVarGetString,
@@ -923,7 +814,8 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnDrawCharacter,
 	pfnDrawConsoleString,
 	pfnDrawSetTextColor,
-	pfnDrawConsoleStringLen,
+	Con_DrawStringLen,
+	Con_DefaultColor,
 	pfnGetPlayerModel,
 	pfnSetPlayerModel,
 	V_ClearScene,	

@@ -156,6 +156,8 @@ static const char *UI_Main_KeyFunc( int key, int down )
 		{
 			if(!( uiMain.dlgMessage1.generic.flags & QMF_HIDDEN ))
 				UI_PromptDialog();
+			else if(!( uiMain.quitMessage.generic.flags & QMF_HIDDEN ))
+				UI_QuitDialog();
 			else UI_CloseMenu();
 		}
 		else UI_QuitDialog();

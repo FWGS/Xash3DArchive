@@ -19,7 +19,20 @@ typedef void (*ENTCALLBACK)( TEMPENTITY *ent );
 typedef void (*HITCALLBACK)( TEMPENTITY *ent, TraceResult *ptr );
 typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );	// user message handle
 
-#include "screeninfo.h"
+#include "wrect.h"
+
+#define SCRINFO_VIRTUALSPACE	1
+
+typedef struct
+{
+	int		iFlags;
+	int		iRealWidth;
+	int		iRealHeight;
+	int		iWidth;
+	int		iHeight;
+	int		iCharHeight;
+	byte		charWidths[256];
+} SCREENINFO;
 
 typedef struct
 {

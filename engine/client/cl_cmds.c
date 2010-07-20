@@ -12,50 +12,6 @@
 #define DEMOSHOT_TYPE	SI->savshot_ext
 
 /*
-================
-SCR_Loading_f
-
-loading
-================
-*/
-void SCR_Loading_f( void )
-{
-	S_StopAllSounds();
-}
-
-
-/*
-====================
-CL_SetFont_f
-
-setfont <fontname>
-====================
-*/
-void CL_SetFont_f( void )
-{
-	if( Cmd_Argc() < 2 )
-	{
-		Msg( "Usage: setfont <fontname> <console>\n" );
-		return;
-	}
-
-	switch(Cmd_Argc( ))
-	{
-	case 2:
-		Cvar_Set( "cl_font", Cmd_Argv( 1 ));
-		cls.clientFont = re->RegisterShader( va( "gfx/fonts/%s", cl_font->string ), SHADER_FONT );
-		break;
-	case 3:
-		Cvar_Set( "con_font", Cmd_Argv( 1 ));
-		cls.consoleFont = re->RegisterShader( va( "gfx/fonts/%s", con_font->string ), SHADER_FONT );
-		break;
-	default:
-		Msg( "setfont: invalid aruments\n" );
-		break;
-	}
-}
-
-/*
 ====================
 CL_PlayVideo_f
 

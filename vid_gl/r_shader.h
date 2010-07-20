@@ -34,18 +34,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SHADER_INVALID		-1
 #define SHADER_UNKNOWN		0
 #define SHADER_SKY			1
-#define SHADER_FONT			2
-#define SHADER_NOMIP		3
-#define SHADER_GENERIC		4
-#define SHADER_DECAL		5
-#define SHADER_SPRITE		6
-#define SHADER_TEXTURE		7
-#define SHADER_FLARE		8
-#define SHADER_STUDIO		9
-#define SHADER_FARBOX		10
-#define SHADER_NEARBOX		11
-#define SHADER_PLANAR_SHADOW		12
-#define SHADER_OPAQUE_OCCLUDER	13
+#define SHADER_NOMIP		2
+#define SHADER_DECAL		3
+#define SHADER_SPRITE		4
+#define SHADER_GENERIC		5
+#define SHADER_TEXTURE		6
+#define SHADER_FLARE		7
+#define SHADER_STUDIO		8
+#define SHADER_FARBOX		9
+#define SHADER_NEARBOX		10
+#define SHADER_PLANAR_SHADOW		11
+#define SHADER_OPAQUE_OCCLUDER	12
 
 // shader flags
 typedef enum

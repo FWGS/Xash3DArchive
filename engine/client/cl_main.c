@@ -1093,7 +1093,6 @@ void CL_Escape_f( void )
 	if( cls.state == ca_cinematic )
 		SCR_StopCinematic();
 	else UI_SetActiveMenu( true );
-	cls.key_dest = key_menu;
 }
 
 /*

@@ -291,6 +291,8 @@ typedef struct
 	int		numServers;
 	int		updateServers;	// true is receive new info about servers
 
+	HIMAGE		hFont;		// mainfont
+
 	float		scaleX;
 	float		scaleY;
 	int		outlineWidth;
@@ -305,9 +307,6 @@ typedef struct
 	int		hideCursor;
 	int		visible;
 	int		initialized;
-
-	HIMAGE		menuFont;
-	HIMAGE		nameFont;
 } uiStatic_t;
 
 extern uiStatic_t		uiStatic;
@@ -332,16 +331,13 @@ extern int	uiColorWhite;
 extern int	uiColorDkGrey;
 extern int	uiColorBlack;
 
-extern HIMAGE	m_hConcsoleFont;
-
 void UI_ScaleCoords( int *x, int *y, int *w, int *h );
 int UI_CursorInRect( int x, int y, int w, int h );
 void UI_DrawPic( int x, int y, int w, int h, const int color, const char *pic );
 void UI_FillRect( int x, int y, int w, int h, const int color );
 #define UI_DrawRectangle( x, y, w, h, color ) UI_DrawRectangleExt( x, y, w, h, color, uiStatic.outlineWidth )
 void UI_DrawRectangleExt( int in_x, int in_y, int in_w, int in_h, const int color, int outlineWidth );
-#define UI_DrawString( x, y, w, h, str, col, fcol, cw, ch, j, s ) UI_DrawStringExt( x, y, w, h, str, col, fcol, cw, ch, j, s, uiStatic.menuFont )
-void UI_DrawStringExt( int x, int y, int w, int h, const char *str, const int col, int forceCol, int charW, int charH, int justify, int shadow, HIMAGE font );
+void UI_DrawString( int x, int y, int w, int h, const char *str, const int col, int forceCol, int charW, int charH, int justify, int shadow );
 void UI_BuildPath( const char *dllname, char *fullpath );
 void UI_StartSound( const char *sound );
 
@@ -416,9 +412,6 @@ void UI_Credits_Menu( void );
 class CMenu
 {
 public:
-	// Screen information
-	SCREENINFO	m_scrinfo;
-
 	// Game information
 	GAMEINFO		m_gameinfo;
 };

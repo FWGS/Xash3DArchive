@@ -61,8 +61,8 @@ TargetDir=\Xash3D\src_main\temp\gameui\!release
 InputPath=\Xash3D\src_main\temp\gameui\!release\gameui.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\gameui.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\gameui.dll "D:\Xash3D\bin\gameui.dll"
+"D:\Xash3D\valve\bin\GameUI.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\gameui.dll "D:\Xash3D\valve\bin\GameUI.dll"
 
 # End Custom Build
 
@@ -98,8 +98,8 @@ TargetDir=\Xash3D\src_main\temp\gameui\!debug
 InputPath=\Xash3D\src_main\temp\gameui\!debug\gameui.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\gameui.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\gameui.dll "D:\Xash3D\bin\gameui.dll"
+"D:\Xash3D\valve\bin\GameUI.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\gameui.dll "D:\Xash3D\valve\bin\GameUI.dll"
 
 # End Custom Build
 

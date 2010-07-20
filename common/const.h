@@ -276,6 +276,7 @@ typedef enum
 	kRenderGlow,		// src*a+dest -- no Z buffer checks
 	kRenderTransAlpha,		// src*srca+dest*(1-srca)
 	kRenderTransAdd,		// src*a+dest
+	kRenderTransInverse		// src*(1-a)+dest*a
 } kRenderMode_t;
 
 typedef enum 

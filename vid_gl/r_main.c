@@ -2241,7 +2241,6 @@ shader_t Mod_RegisterShader( const char *name, int shaderType )
 
 	switch( shaderType )
 	{
-	case SHADER_FONT:
 	case SHADER_NOMIP:
 		src = R_LoadShader( name, shaderType, false, TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP, SHADER_INVALID );
 		break;
@@ -2743,7 +2742,6 @@ render_exp_t DLLEXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.RSpeedsMessage = R_SpeedsMessage;
 	re.CreateDecalList = R_CreateDecalList;
 	re.CullBox = Mod_CullBox;
-	re.Support = GL_Support;
 	re.GetCurrentVis = Mod_GetCurrentVis;
 	re.RestoreGamma = R_RestoreGamma;
 

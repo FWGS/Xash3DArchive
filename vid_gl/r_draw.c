@@ -223,6 +223,14 @@ void R_DrawSetParms( shader_t handle, kRenderMode_t rendermode, int frame )
 	if( handle < 0 || handle > MAX_SHADERS || !(shader = &r_shaders[handle]) || !shader->num_stages )
 		return;
 
+	if( glState.draw_rendermode != rendermode )
+	{
+		if( pic_mbuffer.shaderkey )
+		{
+			pic_mbuffer.infokey = -1;
+			R_RenderMeshBuffer( &pic_mbuffer );
+		}
+	}
 	glState.draw_rendermode = rendermode;
 
 	if( !shader->stages[0].num_textures )

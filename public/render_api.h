@@ -9,11 +9,10 @@
 
 // shader types used for shader loading
 #define SHADER_SKY			1	// sky box shader
-#define SHADER_FONT			2	// special case for displayed fonts
-#define SHADER_NOMIP		3	// 2d images
-#define SHADER_GENERIC		4	// generic shader
-#define SHADER_DECAL		5
-#define SHADER_SPRITE		6
+#define SHADER_NOMIP		2	// 2d images
+#define SHADER_DECAL		3	// used for decals only
+#define SHADER_SPRITE		4	// hud sprites
+#define SHADER_GENERIC		5	// generic shader
 
 // dlight flags
 #define DLIGHT_ONLYENTS		BIT( 0 )
@@ -23,20 +22,6 @@
 #define VID_SCREENSHOT		0
 #define VID_LEVELSHOT		1
 #define VID_MINISHOT		2
-
-// render supported extensions
-#define R_WGL_SWAPCONTROL		1		
-#define R_HARDWARE_GAMMA_CONTROL	2	
-#define R_ARB_VERTEX_BUFFER_OBJECT_EXT	3
-#define R_ENV_COMBINE_EXT		4
-#define R_ARB_MULTITEXTURE		5
-#define R_TEXTURECUBEMAP_EXT		6
-#define R_DOT3_ARB_EXT		7
-#define R_ANISOTROPY_EXT		8
-#define R_TEXTURE_LODBIAS		9
-#define R_OCCLUSION_QUERIES_EXT	10
-#define R_TEXTURE_COMPRESSION_EXT	11
-#define R_SHADER_GLSL100_EXT		12
 
 typedef struct
 {
@@ -209,7 +194,6 @@ typedef struct render_exp_s
 	bool	(*CullBox)( const vec3_t mins, const vec3_t maxs );
 	bool 	(*RSpeedsMessage)( char *out, size_t size );
 	int	(*CreateDecalList)( decallist_t *pList, bool changelevel );	// helper to serialize decals
-	bool	(*Support)( int extension );
 	byte	*(*GetCurrentVis)( void );
 	void	(*RestoreGamma)( void );
 } render_exp_t;

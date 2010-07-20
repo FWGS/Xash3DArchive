@@ -1441,6 +1441,35 @@ static void R_ShaderpassRenderMode( ref_stage_t *pass )
 			break;
 		}
 		break;
+	case kRenderTransInverse:
+		switch( mod_type )
+		{
+		case mod_bad:
+			pass->glState = (GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DSTBLEND_SRC_ALPHA);
+			pass->flags = SHADERSTAGE_BLEND_MODULATE;
+			pass->rgbGen.type = RGBGEN_VERTEX;
+			pass->alphaGen.type = ALPHAGEN_VERTEX;
+			break;
+		case mod_brush:
+			pass->glState = (GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DSTBLEND_SRC_ALPHA);
+			pass->flags = SHADERSTAGE_BLEND_MODULATE;
+			pass->rgbGen.type = RGBGEN_IDENTITY_LIGHTING;
+			pass->alphaGen.type = ALPHAGEN_ENTITY;
+			break;
+		case mod_studio:
+			pass->glState = (GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DSTBLEND_SRC_ALPHA|GLSTATE_DEPTHWRITE);
+			pass->flags = SHADERSTAGE_BLEND_MODULATE;
+			pass->rgbGen.type = RGBGEN_LIGHTING_DIFFUSE;
+			pass->alphaGen.type = ALPHAGEN_ENTITY;
+			break;
+		case mod_sprite:
+			pass->glState = (GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DSTBLEND_SRC_ALPHA|GLSTATE_DEPTHWRITE);
+			pass->flags = SHADERSTAGE_BLEND_MODULATE;
+			pass->rgbGen.type = RGBGEN_VERTEX;
+			pass->alphaGen.type = ALPHAGEN_VERTEX;
+			break;
+		}
+		break;
 	case kRenderGlow:
 		switch( mod_type )
 		{

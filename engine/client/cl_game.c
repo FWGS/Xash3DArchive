@@ -409,7 +409,6 @@ draw hudsprite routine
 static void SPR_DrawGeneric( int frame, float x, float y, float width, float height, const wrect_t *prc )
 {
 	float	s1, s2, t1, t2;
-	bool	hasCustomSize;
 
 	if( !re ) return;
 
@@ -422,30 +421,17 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 
 		width = w;
 		height = h;
-		hasCustomSize = false;
 	}
-	else hasCustomSize = true;
 
 	if( prc )
 	{
-		if( hasCustomSize )
-		{
-			// e.g. quake fonts 
-			s1 = (float)prc->left;
-			t1 = (float)prc->top;
-			s2 = (float)prc->right;
-			t2 = (float)prc->bottom;
-		}
-		else
-		{
-			// calc user-defined rectangle
-			s1 = (float)prc->left / width;
-			t1 = (float)prc->top / height;
-			s2 = (float)prc->right / width;
-			t2 = (float)prc->bottom / height;
-			width = prc->right - prc->left;
-			height = prc->bottom - prc->top;
-		}
+		// calc user-defined rectangle
+		s1 = (float)prc->left / width;
+		t1 = (float)prc->top / height;
+		s2 = (float)prc->right / width;
+		t2 = (float)prc->bottom / height;
+		width = prc->right - prc->left;
+		height = prc->bottom - prc->top;
 	}
 	else
 	{
@@ -519,9 +505,9 @@ static void CL_DrawCenterPrint( void )
 			if( x >= 0 && y >= 0 && next <= clgame.scrInfo.iWidth )
 			{
 				re->SetColor( color );
-				clgame.ds.hSprite = clgame.creditsFont.hFontTexture;
+				clgame.ds.hSprite = cls.creditsFont.hFontTexture;
 				re->SetParms( clgame.ds.hSprite, kRenderTransAdd, 0 );
-				SPR_DrawGeneric( 0, x, y, -1, -1, &clgame.creditsFont.fontRc[ch] );
+				SPR_DrawGeneric( 0, x, y, -1, -1, &cls.creditsFont.fontRc[ch] );
 			}
 			x = next;
 		}
@@ -659,8 +645,8 @@ static void CL_DrawLoading( float percent )
 	rgba_t	color;
 
 	re->GetParms( &width, &height, NULL, 0, cls.loadingBar );
-	x = ( SCREEN_WIDTH - width )>>1;
-	y = ( SCREEN_HEIGHT - height )>>1;
+	x = ( 640 - width ) >> 1;
+	y = ( 480 - height) >> 1;
 
 	xscale = scr_width->integer / 640.0f;
 	yscale = scr_height->integer / 480.0f;
@@ -701,8 +687,8 @@ static void CL_DrawPause( void )
 	if( !re ) return;
 
 	re->GetParms( &width, &height, NULL, 0, cls.pauseIcon );
-	x = ( SCREEN_WIDTH - width ) >> 1;
-	y = ( SCREEN_HEIGHT - height ) >> 1;
+	x = ( 640 - width ) >> 1;
+	y = ( 480 - height) >> 1;
 
 	xscale = scr_width->integer / 640.0f;
 	yscale = scr_height->integer / 480.0f;
@@ -1260,9 +1246,8 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 	if( pscrinfo && pscrinfo->iFlags & SCRINFO_VIRTUALSPACE )
 	{
 		// virtual screen space 640x480
-		// see cl_screen.c from Quake3 code for more details
-		clgame.scrInfo.iWidth = SCREEN_WIDTH;
-		clgame.scrInfo.iHeight = SCREEN_HEIGHT;
+		clgame.scrInfo.iWidth = 640;
+		clgame.scrInfo.iHeight = 480;
 		clgame.scrInfo.iFlags |= SCRINFO_VIRTUALSPACE;
 	}
 	else
@@ -1444,43 +1429,15 @@ static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 {
 	number &= 255;
 
-	if( !re ) return 0;
+	if( !cls.creditsFont.valid )
+		return 0;
+
 	if( number < 32 ) return 0;
 	if( y < -clgame.scrInfo.iCharHeight )
 		return 0;
 
-	if( clgame.creditsFont.use_qfont )
-	{
-		pfnSPR_Set( clgame.creditsFont.hFontTexture, r, g, b, 255 );
-		pfnSPR_DrawAdditive( 0, x, y, -1, -1, &clgame.creditsFont.fontRc[number] );
-	}
-	else
-	{
-		float	size, frow, fcol;
-		float	ax, ay, aw, ah;
-		int	fontWidth, fontHeight;
-		rgba_t	color;
-
-		ax = x;
-		ay = y;
-		aw = clgame.scrInfo.charWidths[number];
-		ah = clgame.scrInfo.iCharHeight;
-
-		re->GetParms( &fontWidth, &fontHeight, NULL, 0, clgame.creditsFont.hFontTexture );
-		SPR_AdjustSize( &ax, &ay, &aw, &ah );
-
-		MakeRGBA( color, r, g, b, 255 );
-		re->SetColor( color );
-	
-		frow = (number >> 4) * 0.0625f + (0.5f / (float)fontWidth);
-		fcol = (number & 15) * 0.0625f + (0.5f / (float)fontHeight);
-		size = 0.0625f - (1.0f / (float)fontWidth);
-
-		re->SetParms( clgame.creditsFont.hFontTexture, kRenderTransAdd, 0 );
-		re->DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + size, frow + size, clgame.creditsFont.hFontTexture );
-	}
-
-	re->SetColor( NULL ); // don't forget reset color
+	pfnSPR_Set( cls.creditsFont.hFontTexture, r, g, b, 255 );
+	pfnSPR_DrawAdditive( 0, x, y, -1, -1, &cls.creditsFont.fontRc[number] );
 	return clgame.scrInfo.charWidths[number];
 }
 
@@ -1493,9 +1450,13 @@ drawing string like a console string
 */
 static int pfnDrawConsoleString( int x, int y, char *string )
 {
+	int	drawLen;
+
 	if( !string || !*string ) return 0; // silent ignore
-	SCR_DrawSmallStringExt( x, y, string, NULL, false );
-	return com.cstrlen( string ) * SMALLCHAR_WIDTH; // not includes color prexfixes
+	drawLen = Con_DrawString( x, y, string, clgame.ds.textColor );
+	MakeRGBA( clgame.ds.textColor, 255, 255, 255, 255 );
+
+	return drawLen; // exclude color prexfixes
 }
 
 /*
@@ -1507,29 +1468,11 @@ set color for anything
 */
 static void pfnDrawSetTextColor( float r, float g, float b )
 {
-	rgba_t	color;
-
 	// bound color and convert to byte
-	color[0] = (byte)bound( 0, r * 255, 255 );
-	color[1] = (byte)bound( 0, g * 255, 255 );
-	color[2] = (byte)bound( 0, b * 255, 255 );
-	color[3] = (byte)0xFF;
-	if( re ) re->SetColor( color );
-}
-
-/*
-=============
-pfnDrawConsoleStringLen
-
-returns width and height (in real pixels)
-for specified string
-=============
-*/
-static void pfnDrawConsoleStringLen(  const char *string, int *length, int *height )
-{
-	// console used fixed font size
-	if( length ) *length = com.cstrlen( string ) * SMALLCHAR_WIDTH;
-	if( height ) *height = SMALLCHAR_HEIGHT;
+	clgame.ds.textColor[0] = (byte)bound( 0, r * 255, 255 );
+	clgame.ds.textColor[1] = (byte)bound( 0, g * 255, 255 );
+	clgame.ds.textColor[2] = (byte)bound( 0, b * 255, 255 );
+	clgame.ds.textColor[3] = (byte)0xFF;
 }
 
 /*
@@ -2624,7 +2567,7 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnDrawCharacter,
 	pfnDrawConsoleString,
 	pfnDrawSetTextColor,
-	pfnDrawConsoleStringLen,
+	Con_DrawStringLen,
 	pfnConsolePrint,
 	pfnCenterPrint,
 	pfnMemAlloc,

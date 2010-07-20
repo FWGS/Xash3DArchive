@@ -57,15 +57,10 @@ typedef struct dllfunction_s
 
 #include "cvardef.h"
 
-// ScreenHeight returns the virtual height of the screen, in pixels
-#define ScreenHeight	(gMenu.m_scrinfo.iHeight)
-// ScreenWidth returns the virtual width of the screen, in pixels
-#define ScreenWidth		(gMenu.m_scrinfo.iWidth)
-
 // ScreenHeight returns the height of the screen, in pixels
-#define ActualHeight	(gMenu.m_scrinfo.iRealHeight)
+#define ScreenHeight	(gpGlobals->scrHeight)
 // ScreenWidth returns the width of the screen, in pixels
-#define ActualWidth		(gMenu.m_scrinfo.iRealWidth)
+#define ScreenWidth		(gpGlobals->scrWidth)
 
 inline dword PackRGB( int r, int g, int b )
 {

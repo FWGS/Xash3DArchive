@@ -6,15 +6,17 @@
 #define GAMEUI_API_H
 
 #include "gameinfo.h"
+#include "wrect.h"
 
 typedef int		HIMAGE;	// handle to a graphic
-
-#include "screeninfo.h"
 
 typedef struct ui_globalvars_s
 {	
 	float		time;		// unclamped host.realtime
 	float		frametime;
+
+	int		scrWidth;		// actual values
+	int		scrHeight;
 
 	int		maxClients;
 	int		developer;
@@ -43,7 +45,6 @@ typedef struct ui_enginefuncs_s
 
 	// screen handlers
 	void	(*pfnFillRGBA)( int x, int y, int width, int height, int r, int g, int b, int a );
-	int	(*pfnGetScreenInfo)( SCREENINFO *pscrinfo );
 
 	// cvar handlers
 	cvar_t*	(*pfnRegisterVariable)( const char *szName, const char *szValue, int flags, const char *szDesc );
@@ -67,10 +68,11 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnPlayLocalSound)( const char *szSound );
 
 	// text message system
-	int	(*pfnDrawCharacter)( int x, int y, int number, int r, int g, int b );
-	int	(*pfnDrawConsoleString)( int x, int y, char *string );
-	void	(*pfnDrawSetTextColor)( float r, float g, float b );
+	void	(*pfnDrawCharacter)( int x, int y, int width, int height, int ch, int ulRGBA, HIMAGE hFont );
+	int	(*pfnDrawConsoleString)( int x, int y, const char *string );
+	void	(*pfnDrawSetTextColor)( int r, int g, int b, int alpha );
 	void	(*pfnDrawConsoleStringLen)(  const char *string, int *length, int *height );
+	void	(*pfnSetConsoleDefaultColor)( int r, int g, int b ); // color must came from colors.lst
 
 	// custom rendering (for playermodel preview)
 	edict_t*	(*pfnGetPlayerModel)( void );	// for drawing playermodel previews

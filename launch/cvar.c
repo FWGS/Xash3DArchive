@@ -255,7 +255,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const 
 Cvar_Set2
 ============
 */
-cvar_t *Cvar_Set2 (const char *var_name, const char *value, bool force)
+cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
 {
 	cvar_t	*var;
 
@@ -294,16 +294,19 @@ cvar_t *Cvar_Set2 (const char *var_name, const char *value, bool force)
 			MsgDev( D_INFO, "%s is read only.\n", var_name );
 			return var;
 		}
+
 		if( var->flags & CVAR_INIT )
 		{
 			MsgDev( D_INFO, "%s is write protected.\n", var_name );
 			return var;
 		}
+
 		if( var->flags & CVAR_SYSTEMINFO )
 		{
 			MsgDev( D_INFO, "%s is system variable.\n", var_name );
 			return var;
 		}
+
 		if( var->flags & ( CVAR_LATCH|CVAR_LATCH_VIDEO|CVAR_LATCH_AUDIO ))
 		{
 			if( var->latched_string )
