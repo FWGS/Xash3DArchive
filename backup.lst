@@ -12,7 +12,6 @@ release.bat
 launchers.bat
 change.log
 
-baserc\
 bshift\
 client\
 client\hud\

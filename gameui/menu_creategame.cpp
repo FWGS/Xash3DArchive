@@ -250,7 +250,7 @@ static void UI_CreateGame_Init( void )
 
 	uiCreateGame.banner.generic.id = ID_BANNER;
 	uiCreateGame.banner.generic.type = QMTYPE_BITMAP;
-	uiCreateGame.banner.generic.flags = QMF_INACTIVE;
+	uiCreateGame.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiCreateGame.banner.generic.x = UI_BANNER_POSX;
 	uiCreateGame.banner.generic.y = UI_BANNER_POSY;
 	uiCreateGame.banner.generic.width = UI_BANNER_WIDTH;

@@ -96,24 +96,14 @@ inline void PIC_Draw( int frame, int x, int y, const wrect_t *prc )
 	g_engfuncs.pfnPIC_Draw( frame, x, y, -1, -1, prc );
 }
 
-inline void PIC_Draw( int frame, int x, int y, int width, int height, const wrect_t *prc )
-{
-	g_engfuncs.pfnPIC_Draw( frame, x, y, width, height, prc );
-}
-
 inline void PIC_Draw( int frame, int x, int y, int width, int height )
 {
 	g_engfuncs.pfnPIC_Draw( frame, x, y, width, height, NULL );
 }
 
-inline void SPR_DrawTrans( int frame, int x, int y, const wrect_t *prc )
+inline void PIC_DrawTrans( int frame, int x, int y, const wrect_t *prc )
 {
 	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, -1, -1, prc );
-}
-
-inline void PIC_DrawTrans( int frame, int x, int y, int width, int height, const wrect_t *prc )
-{
-	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, width, height, prc );
 }
 
 inline void PIC_DrawTrans( int frame, int x, int y, int width, int height )
@@ -131,14 +121,14 @@ inline void SPR_DrawHoles( int frame, int x, int y, int width, int height )
 	g_engfuncs.pfnPIC_DrawHoles( frame, x, y, width, height, NULL );
 }
 
+inline void PIC_DrawAdditive( int frame, int x, int y, int width, int height )
+{
+	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, width, height, NULL );
+}
+
 inline void PIC_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
 {
 	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, -1, -1, prc );
-}
-
-inline void PIC_DrawAdditive( int frame, int x, int y, int width, int height, const wrect_t *prc )
-{
-	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, width, height, prc );
 }
 
 inline void TextMessageSetColor( int r, int g, int b, int alpha = 255 )

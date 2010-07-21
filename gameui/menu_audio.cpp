@@ -230,7 +230,7 @@ static void UI_Audio_Init( void )
 
 	uiAudio.banner.generic.id = ID_BANNER;
 	uiAudio.banner.generic.type = QMTYPE_BITMAP;
-	uiAudio.banner.generic.flags = QMF_INACTIVE;
+	uiAudio.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiAudio.banner.generic.x = UI_BANNER_POSX;
 	uiAudio.banner.generic.y = UI_BANNER_POSY;
 	uiAudio.banner.generic.width = UI_BANNER_WIDTH;

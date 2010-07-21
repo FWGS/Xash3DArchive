@@ -101,7 +101,7 @@ static void UI_PlayRec_Init( void )
 
 	uiPlayRec.banner.generic.id = ID_BANNER;
 	uiPlayRec.banner.generic.type = QMTYPE_BITMAP;
-	uiPlayRec.banner.generic.flags = QMF_INACTIVE;
+	uiPlayRec.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiPlayRec.banner.generic.x = UI_BANNER_POSX;
 	uiPlayRec.banner.generic.y = UI_BANNER_POSY;
 	uiPlayRec.banner.generic.width = UI_BANNER_WIDTH;

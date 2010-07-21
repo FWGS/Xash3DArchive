@@ -193,7 +193,7 @@ static void UI_AdvControls_Init( void )
 
 	uiAdvControls.banner.generic.id = ID_BANNER;
 	uiAdvControls.banner.generic.type = QMTYPE_BITMAP;
-	uiAdvControls.banner.generic.flags = QMF_INACTIVE;
+	uiAdvControls.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiAdvControls.banner.generic.x = UI_BANNER_POSX;
 	uiAdvControls.banner.generic.y = UI_BANNER_POSY;
 	uiAdvControls.banner.generic.width = UI_BANNER_WIDTH;

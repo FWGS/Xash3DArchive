@@ -102,7 +102,7 @@ static void UI_SaveLoad_Init( void )
 
 	uiSaveLoad.banner.generic.id = ID_BANNER;
 	uiSaveLoad.banner.generic.type = QMTYPE_BITMAP;
-	uiSaveLoad.banner.generic.flags = QMF_INACTIVE;
+	uiSaveLoad.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiSaveLoad.banner.generic.x = UI_BANNER_POSX;
 	uiSaveLoad.banner.generic.y = UI_BANNER_POSY;
 	uiSaveLoad.banner.generic.width = UI_BANNER_WIDTH;

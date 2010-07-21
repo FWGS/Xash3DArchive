@@ -271,8 +271,8 @@ void Con_CreateConsole( void )
 	wc.hIcon         = LoadIcon( Sys.hInstance, MAKEINTRESOURCE( IDI_ICON1 ));
 	wc.hCursor       = LoadCursor( NULL, IDC_ARROW );
 	wc.hbrBackground = (void *)COLOR_3DSHADOW;
-	wc.lpszMenuName  = 0;
 	wc.lpszClassName = SYSCONSOLE;
+	wc.lpszMenuName  = 0;
 
 	if(!RegisterClass( &wc ))
 	{

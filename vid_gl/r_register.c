@@ -621,18 +621,14 @@ void GL_RemoveCommands( void )
 
 void GL_InitBackend( void )
 {
-	char	dev_level[4];
-
 	GL_InitCommands();
 
 	glw_state.wndproc = ri.WndProc;
 	glw_state.hInst = GetModuleHandle( NULL );
 	r_temppool = Mem_AllocPool( "Render Memory" );
 
-	// check developer mode
-	if(FS_CheckParm( "-console" )) glw_state.developer = 1;
-	if(FS_GetParmFromCmdLine( "-dev", dev_level ))
-		glw_state.developer = com.atoi( dev_level );
+	// get developer mode
+	glw_state.developer = SI->developer;
 
 	GL_SetDefaultState();
 }

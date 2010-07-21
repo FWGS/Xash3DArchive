@@ -177,7 +177,7 @@ static void UI_Controls_Init( void )
 
 	uiControls.banner.generic.id = ID_BANNER;
 	uiControls.banner.generic.type = QMTYPE_BITMAP;
-	uiControls.banner.generic.flags = QMF_INACTIVE;
+	uiControls.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiControls.banner.generic.x = UI_BANNER_POSX;
 	uiControls.banner.generic.y = UI_BANNER_POSY;
 	uiControls.banner.generic.width = UI_BANNER_WIDTH;

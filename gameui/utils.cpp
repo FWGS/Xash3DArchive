@@ -611,14 +611,6 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 				UI_DrawPic( upX, upY, arrowWidth, arrowHeight, (upFocus) ? color : sl->generic.color, (upFocus) ? sl->upArrowFocus : sl->upArrow );
 				UI_DrawPic( downX, downY, arrowWidth, arrowHeight, (downFocus) ? color : sl->generic.color, (downFocus) ? sl->downArrowFocus : sl->downArrow );
 			}
-			else if( sl->generic.flags & QMF_BLINKIFFOCUS )
-			{
-				if(( uiStatic.realTime & UI_BLINK_MASK ) < UI_BLINK_TIME )
-				{
-					UI_DrawPic( upX, upY, arrowWidth, arrowHeight, (upFocus) ? sl->generic.focusColor : sl->generic.color, (upFocus) ? sl->upArrowFocus : sl->upArrow );
-					UI_DrawPic( downX, downY, arrowWidth, arrowHeight, (downFocus) ? sl->generic.focusColor : sl->generic.color, (downFocus) ? sl->downArrowFocus : sl->downArrow );
-				}
-			}
 
 			if( sl->generic.flags & QMF_FOCUSBEHIND )
 			{
@@ -662,11 +654,6 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 			color = PackAlpha( sl->generic.color, 255 * (0.5 + 0.5 * sin( uiStatic.realTime / UI_PULSE_DIVISOR )));
 
 			UI_DrawString( x, y, w, h, sl->itemNames[i], color, false, sl->generic.charWidth, sl->generic.charHeight, justify, shadow );
-		}
-		else if( sl->generic.flags & QMF_BLINKIFFOCUS )
-		{
-			if(( uiStatic.realTime & UI_BLINK_MASK ) < UI_BLINK_TIME )
-				UI_DrawString( x, y, w, h, sl->itemNames[i], sl->generic.focusColor, false, sl->generic.charWidth, sl->generic.charHeight, justify, shadow );
 		}
 
 		if( sl->generic.flags & QMF_FOCUSBEHIND )
@@ -912,15 +899,6 @@ void UI_SpinControl_Draw( menuSpinControl_s *sc )
 		UI_DrawPic( leftX, leftY, arrowWidth, arrowHeight, (leftFocus) ? color : sc->generic.color, (leftFocus) ? sc->leftArrowFocus : sc->leftArrow );
 		UI_DrawPic( rightX, rightY, arrowWidth, arrowHeight, (rightFocus) ? color : sc->generic.color, (rightFocus) ? sc->rightArrowFocus : sc->rightArrow );
 	}
-	else if( sc->generic.flags & QMF_BLINKIFFOCUS )
-	{
-		if(( uiStatic.realTime & UI_BLINK_MASK ) < UI_BLINK_TIME )
-		{
-			UI_DrawString( x, y, w, h, sc->generic.name, sc->generic.focusColor, false, sc->generic.charWidth, sc->generic.charHeight, justify, shadow );
-			UI_DrawPic( leftX, leftY, arrowWidth, arrowHeight, (leftFocus) ? sc->generic.focusColor : sc->generic.color, (leftFocus) ? sc->leftArrowFocus : sc->leftArrow );
-			UI_DrawPic( rightX, rightY, arrowWidth, arrowHeight, (rightFocus) ? sc->generic.focusColor : sc->generic.color, (rightFocus) ? sc->rightArrowFocus : sc->rightArrow );
-		}
-	}
 
 	if( sc->generic.flags & QMF_FOCUSBEHIND )
 	{
@@ -1059,7 +1037,7 @@ void UI_Slider_Draw( menuSlider_s *sl )
 	{
 		int	dist, numSteps;
 
-		// move slider with holded mouse button
+		// move slider follow the holded mouse button
 		dist = uiStatic.cursorX - sl->generic.x2 - (sl->generic.width2>>2);
 		numSteps = dist / (int)sl->drawStep;
 		sl->curValue = bound( sl->minValue, numSteps * sl->range, sl->maxValue );
@@ -1610,16 +1588,6 @@ void UI_Field_Draw( menuField_s *f )
 		if(( uiStatic.realTime & 499 ) < 250 )
 			UI_DrawString( x + (cursor * f->generic.charWidth), f->generic.y, f->generic.charWidth, f->generic.height, cursor_char, color, true, f->generic.charWidth, f->generic.charHeight, 0, shadow );
 	}
-	else if( f->generic.flags & QMF_BLINKIFFOCUS )
-	{
-		if(( uiStatic.realTime & UI_BLINK_MASK ) < UI_BLINK_TIME )
-		{
-			UI_DrawString( f->generic.x, f->generic.y, f->generic.width, f->generic.height, text, f->generic.focusColor, false, f->generic.charWidth, f->generic.charHeight, justify, shadow );
-
-			if(( uiStatic.realTime & 499 ) < 250 )
-				UI_DrawString( x + (cursor * f->generic.charWidth), f->generic.y, f->generic.charWidth, f->generic.height, cursor_char, f->generic.focusColor, true, f->generic.charWidth, f->generic.charHeight, 0, shadow );
-		}
-	}
 
 	if( f->generic.flags & QMF_FOCUSBEHIND )
 	{
@@ -1697,13 +1665,13 @@ const char *UI_Action_Key( menuAction_s *a, int key, int down )
 	case K_MOUSE1:
 		if(!( a->generic.flags & QMF_HASMOUSEFOCUS ))
 			break;
-		sound = uiSoundMove;
+		sound = uiSoundLaunch;
 		break;
 	case K_ENTER:
 	case K_KP_ENTER:
 		if( a->generic.flags & QMF_MOUSEONLY )
 			break;
-		sound = uiSoundMove;
+		sound = uiSoundLaunch;
 		break;
 	}
 
@@ -1799,11 +1767,6 @@ void UI_Action_Draw( menuAction_s *a )
 
 		UI_DrawString( a->generic.x, a->generic.y, a->generic.width, a->generic.height, a->generic.name, color, false, a->generic.charWidth, a->generic.charHeight, justify, shadow );
 	}
-	else if( a->generic.flags & QMF_BLINKIFFOCUS )
-	{
-		if(( uiStatic.realTime & UI_BLINK_MASK ) < UI_BLINK_TIME )
-			UI_DrawString( a->generic.x, a->generic.y, a->generic.width, a->generic.height, a->generic.name, a->generic.focusColor, false, a->generic.charWidth, a->generic.charHeight, justify, shadow );
-	}
 
 	if( a->generic.flags & QMF_FOCUSBEHIND )
 		UI_DrawString( a->generic.x, a->generic.y, a->generic.width, a->generic.height, a->generic.name, a->generic.color, false, a->generic.charWidth, a->generic.charHeight, justify, shadow );
@@ -1838,13 +1801,13 @@ const char *UI_Bitmap_Key( menuBitmap_s *b, int key, int down )
 	case K_MOUSE1:
 		if(!( b->generic.flags & QMF_HASMOUSEFOCUS ))
 			break;
-		sound = uiSoundMove;
+		sound = uiSoundLaunch;
 		break;
 	case K_ENTER:
 	case K_KP_ENTER:
 		if( b->generic.flags & QMF_MOUSEONLY )
 			break;
-		sound = uiSoundMove;
+		sound = uiSoundLaunch;
 		break;
 	}
 	if( sound && ( b->generic.flags & QMF_SILENT ))
@@ -1891,13 +1854,15 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 	
 	if((menuCommon_s *)b != (menuCommon_s *)UI_ItemAtCursor( b->generic.parent ))
 	{
-		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.color, b->pic );
+		// UNDONE: only inactive bitmaps supported
+		if( b->generic.flags & QMF_DRAW_ADDITIVE )
+			UI_DrawPicAdditive( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.color, b->pic );
+		else UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.color, b->pic );
 		return; // no focus
 	}
 
 	if(!( b->generic.flags & QMF_FOCUSBEHIND ))
 		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.color, b->pic );
-
 	if( b->generic.flags & QMF_HIGHLIGHTIFFOCUS )
 		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.focusColor, b->focusPic );
 	else if( b->generic.flags & QMF_PULSEIFFOCUS )
@@ -1906,11 +1871,6 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 
 		color = PackAlpha( b->generic.color, 255 * (0.5 + 0.5 * sin( uiStatic.realTime / UI_PULSE_DIVISOR )));
 		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, color, b->focusPic );
-	}
-	else if( b->generic.flags & QMF_BLINKIFFOCUS )
-	{
-		if(( uiStatic.realTime & UI_BLINK_MASK ) < UI_BLINK_TIME )
-			UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.focusColor, b->focusPic );
 	}
 
 	if( b->generic.flags & QMF_FOCUSBEHIND )

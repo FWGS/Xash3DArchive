@@ -6,7 +6,6 @@
 #include "xtools.h"
 #include "utils.h"
 
-extern string gs_gamedir;
 bool unknown_rotate = false;
 bool unknown_flip = false;
 
@@ -86,7 +85,7 @@ bool ConvertImages( byte *mempool, const char *name, byte parms )
 
 	com.strncpy( outputname, name, sizeof( outputname ));
 	FS_StripExtension( outputname );
-	result = FS_SaveImage( va( "%s/%s.%s", gs_gamedir, outputname, ext ), pic );
+	result = FS_SaveImage( va( "~tmpXImage/%s.%s", outputname, ext ), pic );
 	if( result ) Msg( "%s.%s\n", outputname, ext ); // echo to console
 	else Msg( "can't save %s\n", outputname, ext );
 	FS_FreeImage( pic );

@@ -9,6 +9,7 @@
 #include "xtools.h"
 #include "engine_api.h"
 #include "mathlib.h"
+#include "badimage.h"
 
 stdlib_api_t com;
 char  **com_argv;
@@ -98,7 +99,8 @@ void InitCommon( const int argc, const char **argv )
 		Image_Init( NULL, imageflags );
 	case HOST_RIPPER:
 		// blamk image for missed resources
-		error_bmp = FS_LoadInternal( "blank.bmp", &error_bmp_size );
+		error_bmp = (byte *)blank_bmp;
+		error_bmp_size = sizeof( blank_bmp );
 		FS_InitRootDir(".");
 
 		start = Sys_DoubleTime();
@@ -113,13 +115,10 @@ void CommonMain( void )
 {
 	search_t	*search;
 	bool	(*CompileMod)( byte *mempool, const char *name, byte parms ) = NULL;
-	cvar_t	*fs_defaultdir = Cvar_Get( "fs_defaultdir", "tmpQuArK", CVAR_SYSTEMINFO, NULL );
 	byte	parms = 0; // future expansion
 	int	i, j, numCompiledMods = 0;
 	string	errorstring;
 
-	// directory to extract
-	com.strncpy( gs_gamedir, fs_defaultdir->string, sizeof( gs_gamedir ));
 	Mem_Set( errorstring, 0, MAX_STRING ); 
 	ClrMask();
 

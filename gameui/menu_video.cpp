@@ -91,7 +91,7 @@ static void UI_Video_Init( void )
 
 	uiVideo.banner.generic.id = ID_BANNER;
 	uiVideo.banner.generic.type = QMTYPE_BITMAP;
-	uiVideo.banner.generic.flags = QMF_INACTIVE;
+	uiVideo.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiVideo.banner.generic.x = UI_BANNER_POSX;
 	uiVideo.banner.generic.y = UI_BANNER_POSY;
 	uiVideo.banner.generic.width = UI_BANNER_WIDTH;

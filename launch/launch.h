@@ -154,7 +154,6 @@ void Sys_Abort( void );
 bool Sys_LoadLibrary( const char *dll_name, dll_info_t *dll );
 void* Sys_GetProcAddress ( dll_info_t *dll, const char* name );
 void Sys_ShellExecute( const char *path, const char *parms, bool exit );
-byte *Sys_LoadRes( const char *filename, size_t *size );
 bool Sys_FreeLibrary ( dll_info_t *dll );
 void Sys_WaitForQuit( void );
 void Sys_InitLog( void );

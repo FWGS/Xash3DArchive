@@ -658,6 +658,7 @@ static void CL_DrawLoading( float percent )
 
 	MakeRGBA( color, 128, 128, 128, 255 );
 	re->SetColor( color );
+	re->SetParms( cls.loadingBar, kRenderTransTexture, 0 );
 	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
 
 	step = (float)width / 100.0f;

@@ -243,7 +243,7 @@ static void UI_CustomGame_Init( void )
 
 	uiCustomGame.banner.generic.id = ID_BANNER;
 	uiCustomGame.banner.generic.type = QMTYPE_BITMAP;
-	uiCustomGame.banner.generic.flags = QMF_INACTIVE;
+	uiCustomGame.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiCustomGame.banner.generic.x = UI_BANNER_POSX;
 	uiCustomGame.banner.generic.y = UI_BANNER_POSY;
 	uiCustomGame.banner.generic.width = UI_BANNER_WIDTH;

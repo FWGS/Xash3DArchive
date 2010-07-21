@@ -1368,6 +1368,7 @@ void FS_ApplyBaseDir( void )
 void FS_UpdateSysInfo( void )
 {
 	com.strcpy( SI.username, Sys_GetCurrentUser());
+	SI.developer = Sys.developer;
 	SI.version = XASH_VERSION;
 }
 

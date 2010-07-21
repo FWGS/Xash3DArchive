@@ -276,10 +276,10 @@ static void UI_PlayDemo_Ownerdraw( void *self )
 			sprintf( demoshot, "demos/%s.tga", uiPlayDemo.demoName[uiPlayDemo.demosList.curItem] );
 
 			if( !FILE_EXISTS( demoshot ))
-				UI_DrawPic( x, y, w, h, uiColorWhite, "gfx/hud/static" );
+				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );
 			else UI_DrawPic( x, y, w, h, uiColorWhite, demoshot );
 		}
-		else UI_DrawPic( x, y, w, h, uiColorWhite, "gfx/hud/static" );
+		else UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );
 
 		// draw the rectangle
 		UI_DrawRectangle( item->x, item->y, item->width, item->height, uiInputFgColor );
@@ -315,7 +315,7 @@ static void UI_PlayDemo_Init( void )
 
 	uiPlayDemo.banner.generic.id = ID_BANNER;
 	uiPlayDemo.banner.generic.type = QMTYPE_BITMAP;
-	uiPlayDemo.banner.generic.flags = QMF_INACTIVE;
+	uiPlayDemo.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiPlayDemo.banner.generic.x = UI_BANNER_POSX;
 	uiPlayDemo.banner.generic.y = UI_BANNER_POSY;
 	uiPlayDemo.banner.generic.width = UI_BANNER_WIDTH;

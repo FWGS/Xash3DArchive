@@ -304,7 +304,7 @@ static void UI_Main_Init( void )
 	uiMain.background.generic.y = 0;
 	uiMain.background.generic.width = 1024;
 	uiMain.background.generic.height = 768;
-	uiMain.background.pic = ART_MAIN_SPLASH;
+	uiMain.background.pic = ART_BACKGROUND;
 
 	uiMain.console.generic.id = ID_CONSOLE;
 	uiMain.console.generic.type = QMTYPE_ACTION;
@@ -565,7 +565,7 @@ UI_Main_Precache
 */
 void UI_Main_Precache( void )
 {
-	PIC_Load( ART_MAIN_SPLASH );
+	PIC_Load( ART_BACKGROUND );
 	PIC_Load( ART_MINIMIZE_N );
 	PIC_Load( ART_MINIMIZE_F );
 	PIC_Load( ART_MINIMIZE_D );

@@ -204,7 +204,7 @@ static void UI_VidModes_Init( void )
 
 	uiVidModes.banner.generic.id = ID_BANNER;
 	uiVidModes.banner.generic.type = QMTYPE_BITMAP;
-	uiVidModes.banner.generic.flags = QMF_INACTIVE;
+	uiVidModes.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiVidModes.banner.generic.x = UI_BANNER_POSX;
 	uiVidModes.banner.generic.y = UI_BANNER_POSY;
 	uiVidModes.banner.generic.width = UI_BANNER_WIDTH;

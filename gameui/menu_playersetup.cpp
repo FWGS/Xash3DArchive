@@ -275,7 +275,7 @@ static void UI_PlayerSetup_Init( void )
 
 	uiPlayerSetup.banner.generic.id = ID_BANNER;
 	uiPlayerSetup.banner.generic.type = QMTYPE_BITMAP;
-	uiPlayerSetup.banner.generic.flags = QMF_INACTIVE;
+	uiPlayerSetup.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiPlayerSetup.banner.generic.x = UI_BANNER_POSX;
 	uiPlayerSetup.banner.generic.y = UI_BANNER_POSY;
 	uiPlayerSetup.banner.generic.width = UI_BANNER_WIDTH;

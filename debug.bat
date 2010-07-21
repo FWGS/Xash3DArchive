@@ -8,9 +8,6 @@ set build_type=debug
 set BUILD_ERROR=
 call vcvars32
 
-%MSDEV% baserc/baserc.dsp %CONFIG%"baserc - Win32 Debug" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 %MSDEV% bshift/bshift.dsp %CONFIG%"bshift - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
@@ -60,7 +57,6 @@ goto done
 :build_ok
 
 rem //delete log files
-if exist baserc\baserc.plg del /f /q baserc\baserc.plg
 if exist bshift\bshift.plg del /f /q bshift\bshift.plg
 if exist client\client.plg del /f /q client\client.plg
 if exist engine\engine.plg del /f /q engine\engine.plg

@@ -436,6 +436,7 @@ pfnPlaySound
 */
 static void pfnPlaySound( const char *szSound )
 {
+	if( !szSound || !*szSound ) return;
 	S_StartLocalSound( szSound );
 }
 

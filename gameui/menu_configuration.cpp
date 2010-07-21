@@ -164,7 +164,7 @@ static void UI_Options_Init( void )
 
 	uiOptions.banner.generic.id = ID_BANNER;
 	uiOptions.banner.generic.type = QMTYPE_BITMAP;
-	uiOptions.banner.generic.flags = QMF_INACTIVE;
+	uiOptions.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiOptions.banner.generic.x = UI_BANNER_POSX;
 	uiOptions.banner.generic.y = UI_BANNER_POSY;
 	uiOptions.banner.generic.width = UI_BANNER_WIDTH;

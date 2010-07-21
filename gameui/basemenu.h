@@ -25,9 +25,7 @@ struct netadr_s
 	word	port;
 };
 
-#define UI_WHITE_SHADER		"*white"
-#define ART_MAIN_SPLASH		"gfx/shell/splash"
-#define ART_BACKGROUND		"gfx/shell/background"
+#define ART_BACKGROUND		"gfx/shell/splash"
 #define UI_CURSOR_NORMAL		"gfx/shell/cursor"
 #define UI_CURSOR_DISABLED		"gfx/shell/denied"
 #define UI_CURSOR_TYPING		"gfx/shell/typing"
@@ -102,7 +100,7 @@ typedef enum
 #define QMF_NUMBERSONLY		BIT(6)	// Edit field is only numbers
 #define QMF_LOWERCASE		BIT(7)	// Edit field is all lower case
 #define QMF_UPPERCASE		BIT(8)	// Edit field is all upper case
-#define QMF_BLINKIFFOCUS		BIT(9)
+#define QMF_DRAW_ADDITIVE		BIT(9)	// enable additive for this bitmap
 #define QMF_PULSEIFFOCUS		BIT(10)
 #define QMF_HIGHLIGHTIFFOCUS		BIT(11)
 #define QMF_SMALLFONT		BIT(12)
@@ -302,7 +300,7 @@ typedef struct
 	int		cursorY;
 	int		realTime;
 	int		firstDraw;
-	int		enterSound;
+	float		enterSound;
 	int		mouseInRect;
 	int		hideCursor;
 	int		visible;
@@ -313,10 +311,11 @@ extern uiStatic_t		uiStatic;
 
 extern char		uiEmptyString[256];	// HACKHACK
 extern const char		*uiSoundIn;
-extern const char		*uiSoundMove;
 extern const char		*uiSoundOut;
+extern const char		*uiSoundLaunch;
 extern const char		*uiSoundBuzz;
 extern const char		*uiSoundGlow;
+extern const char		*uiSoundMove;
 extern const char		*uiSoundNull;
 
 extern int	uiColorHelp;
@@ -334,6 +333,7 @@ extern int	uiColorBlack;
 void UI_ScaleCoords( int *x, int *y, int *w, int *h );
 int UI_CursorInRect( int x, int y, int w, int h );
 void UI_DrawPic( int x, int y, int w, int h, const int color, const char *pic );
+void UI_DrawPicAdditive( int x, int y, int w, int h, const int color, const char *pic );
 void UI_FillRect( int x, int y, int w, int h, const int color );
 #define UI_DrawRectangle( x, y, w, h, color ) UI_DrawRectangleExt( x, y, w, h, color, uiStatic.outlineWidth )
 void UI_DrawRectangleExt( int in_x, int in_y, int in_w, int in_h, const int color, int outlineWidth );

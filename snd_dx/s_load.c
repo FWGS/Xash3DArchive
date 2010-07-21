@@ -64,7 +64,7 @@ void S_ResampleSfx( sfx_t *sfx, int inrate, int inwidth, byte *data )
 {
 	float	stepscale;
 	int	outcount, srcsample;
-	int	i, sample, samplefrac, fracstep;
+	int	i, sample, sample2, samplefrac, fracstep;
 	wavdata_t	*sc;
 
 	if( !sfx ) return;	
@@ -80,14 +80,26 @@ void S_ResampleSfx( sfx_t *sfx, int inrate, int inwidth, byte *data )
 
 	sc->rate = dma.speed;
 	sc->width = inwidth;
-	sc->channels = 1;	// default to Mono
+	sc->channels = sc->channels;
 
 	// resample / decimate to the current source rate
 	if( stepscale == 1 && inwidth == 1 && sc->width == 1 )
 	{
-		// fast special case
-		for( i = 0; i < outcount; i++ )
-			((signed char *)sc->buffer)[i] = (int)((unsigned char)(data[i]) - 128);
+		if( sc->channels == 2 )
+		{
+			// fast special case
+			for( i = 0; i < outcount; i++ )
+			{
+				((signed char *)sc->buffer)[i*2+0] = (int)((unsigned char)(data[i*2+0]) - 128);
+				((signed char *)sc->buffer)[i*2+1] = (int)((unsigned char)(data[i*2+1]) - 128);
+			}
+		}
+		else
+		{
+			// fast special case
+			for( i = 0; i < outcount; i++ )
+				((signed char *)sc->buffer)[i] = (int)((unsigned char)(data[i]) - 128);
+		}
 	}
 	else
 	{
@@ -95,16 +107,49 @@ void S_ResampleSfx( sfx_t *sfx, int inrate, int inwidth, byte *data )
 		samplefrac = 0;
 		fracstep = stepscale * 256;
 
-		for( i = 0; i < outcount; i++ )
+		if( sc->channels == 2 )
 		{
-			srcsample = samplefrac >> 8;
-			samplefrac += fracstep;
+			for( i = 0; i < outcount; i++ )
+			{
+				srcsample = samplefrac >> 8;
+				samplefrac += fracstep;
 
-			if( inwidth == 2 ) sample = LittleShort(((short *)data)[srcsample] );
-			else sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
+				if( inwidth == 2 )
+				{
+					sample = LittleShort(((short *)data)[srcsample*2+0] );
+					sample2 = LittleShort(((short *)data)[srcsample*2+1] );
+				}
+				else
+				{
+					sample = (int)( (unsigned char)(data[srcsample*2+0]) - 128) << 8;
+					sample2 = (int)( (unsigned char)(data[srcsample*2+1]) - 128) << 8;
+				}
 
-			if( sc->width == 2 ) ((short *)sc->buffer)[i] = sample;
-			else ((signed char *)sc->buffer)[i] = sample >> 8;
+				if( sc->width == 2 )
+				{
+					((short *)sc->buffer)[i*2+0] = sample;
+					((short *)sc->buffer)[i*2+1] = sample2;
+				}
+				else
+				{
+					((signed char *)sc->buffer)[i*2+0] = sample >> 8;
+					((signed char *)sc->buffer)[i*2+1] = sample2 >> 8;
+				}
+			}
+		}
+		else
+		{
+			for( i = 0; i < outcount; i++ )
+			{
+				srcsample = samplefrac >> 8;
+				samplefrac += fracstep;
+
+				if( inwidth == 2 ) sample = LittleShort(((short *)data)[srcsample] );
+				else sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
+
+				if( sc->width == 2 ) ((short *)sc->buffer)[i] = sample;
+				else ((signed char *)sc->buffer)[i] = sample >> 8;
+			}
 		}
 	}
 }

@@ -192,7 +192,7 @@ static void UI_GameOptions_Init( void )
 
 	uiGameOptions.banner.generic.id = ID_BANNER;
 	uiGameOptions.banner.generic.type = QMTYPE_BITMAP;
-	uiGameOptions.banner.generic.flags = QMF_INACTIVE;
+	uiGameOptions.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiGameOptions.banner.generic.x = UI_BANNER_POSX;
 	uiGameOptions.banner.generic.y = UI_BANNER_POSY;
 	uiGameOptions.banner.generic.width = UI_BANNER_WIDTH;

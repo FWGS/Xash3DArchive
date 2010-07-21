@@ -32,11 +32,12 @@ cvar_t	*ui_sensitivity;
 uiStatic_t	uiStatic;
 
 char		uiEmptyString[256];
-const char	*uiSoundIn	= "common/menu1.wav";
-const char	*uiSoundMove	= "common/menu2.wav";
-const char	*uiSoundOut	= "common/menu3.wav";
-const char	*uiSoundBuzz	= "common/menu4.wav";
-const char	*uiSoundGlow	= "common/menu5.wav";
+const char	*uiSoundIn	= "common/launch_upmenu1.wav";
+const char	*uiSoundOut	= "common/launch_dnmenu1.wav";
+const char	*uiSoundLaunch	= "common/launch_select2.wav";
+const char	*uiSoundGlow	= "common/launch_glow1.wav";
+const char	*uiSoundBuzz	= "common/menu1.wav";
+const char	*uiSoundMove	= "";		// Xash3D not use movesound
 const char	*uiSoundNull	= "";
 
 int		uiColorHelp	= 0xFFFFFFFF;	// 255, 255, 255, 255	// hint letters color
@@ -98,6 +99,22 @@ void UI_DrawPic( int x, int y, int width, int height, const int color, const cha
 
 	PIC_Set( hPic, r, g, b, a );
 	PIC_Draw( 0, x, y, width, height );
+}
+
+/*
+=================
+UI_DrawPicAdditive
+=================
+*/
+void UI_DrawPicAdditive( int x, int y, int width, int height, const int color, const char *pic )
+{
+	HIMAGE hPic = PIC_Load( pic );
+
+	int r, g, b, a;
+	UnpackRGBA( r, g, b, a, color );
+
+	PIC_Set( hPic, r, g, b, a );
+	PIC_DrawAdditive( 0, x, y, width, height );
 }
 
 /*
@@ -228,8 +245,8 @@ void UI_DrawString( int x, int y, int w, int h, const char *string, const int co
 
 			if( ch != ' ' )
 			{
-				if( shadow ) TextMessageDrawChar( xx + ofsX, y + ofsY, charW, charH, ch, shadowModulate, uiStatic.hFont );
-				TextMessageDrawChar( xx, y, charW, charH, ch, modulate, uiStatic.hFont );
+				if( shadow ) TextMessageDrawChar( xx + ofsX, yy + ofsY, charW, charH, ch, shadowModulate, uiStatic.hFont );
+				TextMessageDrawChar( xx, yy, charW, charH, ch, modulate, uiStatic.hFont );
 			}
 			xx += charW;
 		}
@@ -764,7 +781,7 @@ void UI_PushMenu( menuFramework_s *menu )
 
 	uiStatic.menuActive = menu;
 	uiStatic.firstDraw = true;
-	uiStatic.enterSound = true;
+	uiStatic.enterSound = gpGlobals->time + 0.2;	// make some delay
 	uiStatic.visible = true;
 
 	KEY_SetDest ( KEY_MENU );
@@ -850,10 +867,10 @@ void UI_UpdateMenu( float flTime )
 
 	// delay playing the enter sound until after the menu has been
 	// drawn, to avoid delay while caching images
-	if( uiStatic.enterSound )
+	if( uiStatic.enterSound > 0.0f && uiStatic.enterSound <= gpGlobals->time )
 	{
 		UI_StartSound( uiSoundIn );
-		uiStatic.enterSound = false;
+		uiStatic.enterSound = -1;
 	}
 }
 

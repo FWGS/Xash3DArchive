@@ -303,10 +303,10 @@ static void UI_RecDemo_Ownerdraw( void *self )
 			sprintf( demoshot, "demos/%s.tga", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
 
 			if( !FILE_EXISTS( demoshot ))
-				UI_DrawPic( x, y, w, h, uiColorWhite, "gfx/hud/static" );
+				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );
 			else UI_DrawPic( x, y, w, h, uiColorWhite, demoshot );
 		}
-		else UI_DrawPic( x, y, w, h, uiColorWhite, "gfx/hud/static" );
+		else UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );
 
 		// draw the rectangle
 		UI_DrawRectangle( item->x, item->y, item->width, item->height, uiInputFgColor );
@@ -342,7 +342,7 @@ static void UI_RecDemo_Init( void )
 
 	uiRecDemo.banner.generic.id = ID_BANNER;
 	uiRecDemo.banner.generic.type = QMTYPE_BITMAP;
-	uiRecDemo.banner.generic.flags = QMF_INACTIVE;
+	uiRecDemo.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiRecDemo.banner.generic.x = UI_BANNER_POSX;
 	uiRecDemo.banner.generic.y = UI_BANNER_POSY;
 	uiRecDemo.banner.generic.width = UI_BANNER_WIDTH;

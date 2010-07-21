@@ -318,7 +318,10 @@ void SCR_Init( void )
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
 	if( !UI_LoadProgs( "GameUI.dll" ))
-		MsgDev( D_ERROR, "can't initialize gameui.dll\n" ); // there is non fatal for us
+	{
+		Msg( "^1Error: ^7can't initialize gameui.dll\n" ); // there is non fatal for us
+		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
+	}
 
 	SCR_RegisterShaders ();
 	SCR_LoadCreditsFont ();

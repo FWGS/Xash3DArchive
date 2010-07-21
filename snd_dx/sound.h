@@ -114,16 +114,6 @@ typedef struct
 
 typedef struct
 {
-	int		rate;
-	int		width;
-	int		channels;
-	int		loopstart;
-	int		samples;
-	int		dataofs;		// chunk starts this many bytes from file start
-} wavinfo_t;
-
-typedef struct
-{
 	string		loopName;
 	stream_t		*stream;
 } bg_track_t;

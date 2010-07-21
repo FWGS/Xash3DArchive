@@ -171,7 +171,7 @@ static void UI_NewGame_Init( void )
 
 	uiNewGame.banner.generic.id = ID_BANNER;
 	uiNewGame.banner.generic.type = QMTYPE_BITMAP;
-	uiNewGame.banner.generic.flags = QMF_INACTIVE;
+	uiNewGame.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiNewGame.banner.generic.x = UI_BANNER_POSX;
 	uiNewGame.banner.generic.y = UI_BANNER_POSY;
 	uiNewGame.banner.generic.width = UI_BANNER_WIDTH;

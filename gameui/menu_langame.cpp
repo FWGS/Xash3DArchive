@@ -204,7 +204,7 @@ static void UI_LanGame_Init( void )
 
 	uiLanGame.banner.generic.id = ID_BANNER;
 	uiLanGame.banner.generic.type = QMTYPE_BITMAP;
-	uiLanGame.banner.generic.flags = QMF_INACTIVE;
+	uiLanGame.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiLanGame.banner.generic.x = UI_BANNER_POSX;
 	uiLanGame.banner.generic.y = UI_BANNER_POSY;
 	uiLanGame.banner.generic.width = UI_BANNER_WIDTH;

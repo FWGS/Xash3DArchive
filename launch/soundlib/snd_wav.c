@@ -162,9 +162,9 @@ bool Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	sound.channels = GetLittleShort();
-	if( sound.channels != 1 )
+	if( sound.channels != 1 && sound.channels != 2 )
 	{
-		MsgDev( D_ERROR, "Sound_LoadWAV: only mono WAV files supported (%s)\n", name );
+		MsgDev( D_ERROR, "Sound_LoadWAV: only mono and stereo WAV files supported (%s)\n", name );
 		return false;
 	}
 
@@ -231,9 +231,10 @@ bool Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	sound.type = WF_PCMDATA;
+	sound.samples /= sound.channels;
 
 	// Load the data
-	sound.size = sound.samples * sound.width;
+	sound.size = sound.samples * sound.width * sound.channels;
 	sound.wav = Mem_Alloc( Sys.soundpool, sound.size );
 
 	Mem_Copy( sound.wav, buffer + (iff_dataPtr - buffer), sound.size );

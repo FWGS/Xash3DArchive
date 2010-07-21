@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "sound.h"
+#include "byteorder.h"
 
 #define PAINTBUFFER_SIZE	512
 portable_samplepair_t	paintbuffer[PAINTBUFFER_SIZE];
@@ -154,6 +155,33 @@ void S_PaintChannelFrom8( channel_t *ch, wavdata_t *sc, int count, int offset )
 	ch->pos += count;
 }
 
+void S_PaintStereoFrom8( channel_t *ch, wavdata_t *sc, int count, int offset )
+{
+	int			*lscale, *rscale;
+	uint			left, right;
+	unsigned short		*data;
+	portable_samplepair_t	*samp;
+	int			i;
+	
+	if( ch->leftvol > 255 ) ch->leftvol = 255;
+	if( ch->rightvol > 255 ) ch->rightvol = 255;
+		
+	lscale = snd_scaletable[ch->leftvol>>3];
+	rscale = snd_scaletable[ch->rightvol>>3];
+	data = (unsigned short *)sc->buffer + ch->pos;
+
+	samp = &paintbuffer[offset];
+
+	for( i = 0; i < count; i++, samp++, data++ )
+	{
+		left = (byte)((*data & 0x00FF));
+		right = (byte)((*data & 0xFF00) >> 8);
+		samp->left += lscale[left];
+		samp->right += rscale[right];
+	}
+	ch->pos += count;
+}
+
 void S_PaintChannelFrom16( channel_t *ch, wavdata_t *sc, int count, int offset )
 {
 	int			data;
@@ -174,6 +202,34 @@ void S_PaintChannelFrom16( channel_t *ch, wavdata_t *sc, int count, int offset )
 		data = sfx[i];
 		left = ( data * leftvol ) >> 8;
 		right = (data * rightvol) >> 8;
+		samp->left += left;
+		samp->right += right;
+	}
+	ch->pos += count;
+}
+
+void S_PaintStereoFrom16( channel_t *ch, wavdata_t *sc, int count, int offset )
+{
+	uint			*data;
+	int			leftvol, rightvol;
+	int			left, right;
+	portable_samplepair_t	*samp;
+	int			i;
+
+	data = (uint *)sc->buffer + ch->pos;
+	samp = &paintbuffer[offset];
+
+	leftvol = ch->leftvol * snd_vol;
+	rightvol = ch->rightvol * snd_vol;
+
+	for( i = 0; i < count; i++, samp++, data++ )
+	{
+		left = (signed short)((*data & 0x0000FFFF));
+		right = (signed short)((*data & 0xFFFF0000) >> 16);
+
+		left =  (left * leftvol ) >> 8;
+		right = (right * rightvol) >> 8;
+
 		samp->left += left;
 		samp->right += right;
 	}
@@ -213,10 +269,18 @@ void S_MixAllChannels( int endtime, int end )
 
 			if( count > 0 )
 			{	
-				if( sc->width == 1 )
-					S_PaintChannelFrom8( ch, sc, count, ltime - paintedtime );
-				else S_PaintChannelFrom16( ch, sc, count, ltime - paintedtime );
-	
+				if( sc->channels == 1 )
+				{
+					if( sc->width == 1 )
+						S_PaintChannelFrom8( ch, sc, count, ltime - paintedtime );
+					else S_PaintChannelFrom16( ch, sc, count, ltime - paintedtime );
+	                              }
+	                              else
+	                              {
+					if( sc->width == 1 )
+						S_PaintStereoFrom8( ch, sc, count, ltime - paintedtime );
+					else S_PaintStereoFrom16( ch, sc, count, ltime - paintedtime );
+	                              }
 				ltime += count;
 			}
 

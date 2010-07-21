@@ -104,7 +104,7 @@ static void UI_MultiPlayer_Init( void )
 
 	uiMultiPlayer.banner.generic.id = ID_BANNER;
 	uiMultiPlayer.banner.generic.type = QMTYPE_BITMAP;
-	uiMultiPlayer.banner.generic.flags = QMF_INACTIVE;
+	uiMultiPlayer.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiMultiPlayer.banner.generic.x = UI_BANNER_POSX;
 	uiMultiPlayer.banner.generic.y = UI_BANNER_POSY;
 	uiMultiPlayer.banner.generic.width = UI_BANNER_WIDTH;

@@ -153,7 +153,7 @@ static void UI_VidOptions_Init( void )
 
 	uiVidOptions.banner.generic.id = ID_BANNER;
 	uiVidOptions.banner.generic.type = QMTYPE_BITMAP;
-	uiVidOptions.banner.generic.flags = QMF_INACTIVE;
+	uiVidOptions.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiVidOptions.banner.generic.x = UI_BANNER_POSX;
 	uiVidOptions.banner.generic.y = UI_BANNER_POSY;
 	uiVidOptions.banner.generic.width = UI_BANNER_WIDTH;

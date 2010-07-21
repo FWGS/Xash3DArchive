@@ -6,7 +6,6 @@
 
 #include "launch.h"
 #include "library.h"
-#include "baserc_api.h"
 #include "engine_api.h"
 #include "mathlib.h"
 
@@ -16,7 +15,6 @@
 
 system_t		Sys;
 stdlib_api_t	com;
-baserc_exp_t	*rc;	// library of resources
 timer_t		Clock;
 launch_exp_t	*Host;	// callback to mainframe 
 sys_event_t	event_que[MAX_QUED_EVENTS];
@@ -24,7 +22,6 @@ int		event_head, event_tail;
 
 dll_info_t xtools_dll = { "xtools.dll", NULL, "CreateAPI", NULL, NULL, 1, sizeof( launch_exp_t ), sizeof( stdlib_api_t ) };
 dll_info_t engine_dll = { "engine.dll", NULL, "CreateAPI", NULL, NULL, 1, sizeof( launch_exp_t ), sizeof( stdlib_api_t ) };
-dll_info_t baserc_dll = { "baserc.dll", NULL, "CreateAPI", NULL, NULL, 0, sizeof( baserc_exp_t ), sizeof( stdlib_api_t ) };
 
 static const char *show_credits = "\n\n\n\n\tCopyright XashXT Group %s ©\n\t\
           All Rights Reserved\n\n\t           Visit www.xash.ru\n";
@@ -145,7 +142,6 @@ void Sys_GetStdAPI( void )
 
 	com.Com_Search = FS_Search;			// returned list of founded files
 	com.Com_HashKey = Com_HashKey;		// returns hash key for a string (generic fucntion)
-	com.Com_LoadRes = Sys_LoadRes;		// get internal resource by name
 
 	// console variables
 	com.Cvar_Get = Cvar_Get;
@@ -432,7 +428,7 @@ Find needed library, setup and run it
 void Sys_CreateInstance( void )
 {
 	// export
-	launch_t	CreateHost, CreateBaserc;
+	launch_t	CreateHost;
 
 	srand( time( NULL ));			// init random generator
 	Sys_LoadLibrary( NULL, Sys.linked_dll );	// loading library if need
@@ -448,7 +444,6 @@ void Sys_CreateInstance( void )
 	case HOST_STUDIO:
 	case HOST_WADLIB:
 	case HOST_RIPPER:
-		Sys_LoadLibrary( NULL, &baserc_dll ); // load baserc
 		CreateHost = (void *)Sys.linked_dll->main;
 		Host = CreateHost( &com, NULL ); // second interface not allowed
 		Sys.Init = Host->Init;
@@ -457,11 +452,6 @@ void Sys_CreateInstance( void )
 		Sys.CPrint = Host->CPrint;
 		Sys.CmdFwd = Host->CmdForward;
 		Sys.CmdAuto = Host->CmdComplete;
-		if( baserc_dll.link )
-		{
-			CreateBaserc = (void *)baserc_dll.main;
-			rc = CreateBaserc( &com, NULL ); 
-		}
 		break;
 	case HOST_CREDITS:
 		Sys_Break( show_credits, com_timestamp( TIME_YEAR_ONLY ));
@@ -998,6 +988,7 @@ void Sys_Init( void )
 
 	// get current hInstance
 	Sys.hInstance = (HINSTANCE)GetModuleHandle( NULL );
+	Sys.developer = 0;
 
 	Sys_GetStdAPI();
 	Sys.Init = NullInit;
@@ -1018,8 +1009,16 @@ void Sys_Init( void )
 	// parse and copy args into local array
 	if( FS_CheckParm( "-log" )) Sys.log_active = true;
 	if( FS_CheckParm( "-console" )) Sys.developer = 1;
-	if( FS_GetParmFromCmdLine( "-dev", dev_level, sizeof( dev_level )))
-		Sys.developer = com_atoi( dev_level );
+	if( FS_CheckParm( "-dev" ))
+	{
+		if( FS_GetParmFromCmdLine( "-dev", dev_level, sizeof( dev_level )))
+		{
+			if( com.is_digit( dev_level ))
+				Sys.developer = abs( com_atoi( dev_level ));
+			else Sys.developer++; // -dev == 1, -dev -console == 2
+		}
+		else Sys.developer++; // -dev == 1, -dev -console == 2
+	}
 	if( Sys.log_active && !Sys.developer ) Sys.log_active = false;	// nothing to logging :)
           
 	FS_UpdateEnvironmentVariables();	// set working directory
@@ -1063,7 +1062,6 @@ void Sys_Shutdown( void )
 	Sys.Free();
 	Sys_FreeLibrary( Sys.linked_dll );
 	Sys.CPrint = NullPrint;
-	Sys_FreeLibrary( &baserc_dll );
 
 	FS_Shutdown();
 	Image_Shutdown();
@@ -1226,15 +1224,6 @@ void Sys_ShellExecute( const char *path, const char *parms, bool exit )
 	ShellExecute( NULL, "open", path, parms, NULL, SW_SHOW );
 
 	if( exit ) Sys_Exit();
-}
-
-byte *Sys_LoadRes( const char *filename, size_t *size )
-{
-	if( baserc_dll.link )
-		return rc->LoadFile( filename, size );
-
-	if( size ) *size = 0;
-	return NULL;
 }
 
 //=======================================================================

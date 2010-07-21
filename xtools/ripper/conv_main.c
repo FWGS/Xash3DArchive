@@ -159,6 +159,10 @@ void Conv_RunSearch( void )
 	search_t	*search;
 	int	i, j, k, imageflags;
 
+
+	// set directory to extract
+	com.strncpy( gs_gamedir, "~tmpExtract", sizeof( gs_gamedir ));
+
 	Conv_DetectGameType();
           
 	if( game_family ) Msg( "Game: %s family\n", game_names[game_family] );

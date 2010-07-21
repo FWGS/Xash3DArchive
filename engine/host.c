@@ -684,7 +684,6 @@ static void Host_Crash_f( void )
 
 void Host_InitCommon( const int argc, const char **argv )
 {
-	char		dev_level[4];
 	dll_info_t	check_vid, check_snd;
 	search_t		*dlls;
 	int		i;
@@ -694,10 +693,8 @@ void Host_InitCommon( const int argc, const char **argv )
 	// overload some funcs
 	newcom.error = Host_Error;
 
-	// check developer mode
-	if(FS_CheckParm( "-console" )) host.developer = 1;
-	if( FS_GetParmFromCmdLine( "-dev", dev_level ))
-		host.developer = com.atoi( dev_level );
+	// get developer mode
+	host.developer = SI->developer;
 
 	Host_InitEvents();
 

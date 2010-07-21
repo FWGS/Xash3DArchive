@@ -3648,20 +3648,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		pass = &shader->stages[0];
 		pass->flags = SHADERSTAGE_BLEND_REPLACE|SHADERSTAGE_RENDERMODE;
 		pass->glState = GLSTATE_NONE; 
-		if( shader->name[0] == '#' )
-		{
-			// search for internal resource
-			size_t	bufsize = 0;
-			byte	*buffer = FS_LoadInternal( shader->name + 1, &bufsize );
-			pass->textures[0] = R_FindTexture( shader->name, buffer, bufsize, addFlags|TF_NOPICMIP|TF_CLAMP|TF_NOMIPMAP );
-		}
-		else pass->textures[0] = Shader_FindImage( shader, shortname, addFlags|TF_NOPICMIP|TF_CLAMP|TF_NOMIPMAP );
-		if( !pass->textures[0] )
-		{
-			MsgDev( D_WARN, "couldn't find texture for shader '%s', using default...\n", shader->name );
-			pass->textures[0] = tr.defaultTexture;
-		}
-
+		pass->textures[0] = Shader_FindImage( shader, shortname, addFlags|TF_NOPICMIP|TF_CLAMP|TF_NOMIPMAP );
 		pass->rgbGen.type = RGBGEN_IDENTITY;
 		pass->alphaGen.type = ALPHAGEN_IDENTITY;
 		pass->tcgen = TCGEN_BASE;

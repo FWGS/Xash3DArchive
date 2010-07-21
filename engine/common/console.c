@@ -466,7 +466,7 @@ void Con_Init( void )
 	scr_height = Cvar_Get( "height", "480", 0, "screen height" );
 	scr_conspeed = Cvar_Get( "scr_conspeed", "600", 0, "console moving speed" );
 	con_notifytime = Cvar_Get( "con_notifytime", "3", 0, "notify time to live" );
-	con_fontsize = Cvar_Get( "con_fontsize", "0", CVAR_ARCHIVE|CVAR_LATCH, "console font number (0, 1 or 2)" );
+	con_fontsize = Cvar_Get( "con_fontsize", "1", CVAR_ARCHIVE|CVAR_LATCH, "console font number (0, 1 or 2)" );
 
 	Con_CheckResize();
 
@@ -537,9 +537,9 @@ void Con_Print( const char *txt )
 	
 	color = ColorIndex( COLOR_DEFAULT );
 
-	while((c = *txt) != 0 )
+	while(( c = *txt ) != 0 )
 	{
-		if(IsColorString( txt ))
+		if( IsColorString( txt ))
 		{
 			color = ColorIndex(*(txt+1));
 			txt += 2;
@@ -553,7 +553,7 @@ void Con_Print( const char *txt )
 		}
 
 		// word wrap
-		if( l != con.linewidth && (con.x + l >= con.linewidth ))
+		if( l != con.linewidth && ( con.x + l >= con.linewidth ))
 			Con_Linefeed( skipnotify);
 		txt++;
 

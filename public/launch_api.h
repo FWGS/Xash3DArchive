@@ -266,6 +266,8 @@ typedef struct sysinfo_s
 	char		savshot_ext[8];	// save shot write type.
 	char		envshot_ext[8];	// sky or envshot write type
 
+	int		developer;	// developer level ( 1 - 7 )
+
 	gameinfo_t	*GameInfo;	// current GameInfo
 	gameinfo_t	*games[MAX_MODS];	// environment games (founded at each engine start)
 	int		numgames;
@@ -585,7 +587,6 @@ typedef struct stdilib_api_s
 
 	search_t *(*Com_Search)( const char *pattern, int casecmp ); // returned list of found files
 	uint (*Com_HashKey)( const char *string, uint hashSize );	// returns hash key for a string
-	byte *(*Com_LoadRes)( const char *filename, size_t *size );	// find internal resource in baserc.dll 
 
 	// console variables
 	cvar_t *(*Cvar_Get)( const char *name, const char *value, int flags, const char *desc );
@@ -836,7 +837,6 @@ filesystem manager
 #define FS_FileTime( file )		com.Com_FileTime( file )
 #define FS_Close( file )		com.fclose( file )
 #define FS_FileBase( x, y )		com.Com_FileBase( x, y )
-#define FS_LoadInternal( x, y )	com.Com_LoadRes( x, y )
 #define FS_RemovePath( x )		com.Com_RemovePath( x )
 #define FS_Printf			(*com.fprintf)
 #define FS_Print			(*com.fprint)

@@ -171,7 +171,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
 			continue;
 		}
 
-		if( channel != 0 && ch->entnum == entnum && ( ch->entchannel == channel || channel == -1 ))
+		if( channel != CHAN_AUTO && ch->entnum == entnum && ( ch->entchannel == channel || channel == -1 ))
 		{
 			// always override sound from same entity
 			first_to_die = ch_idx;

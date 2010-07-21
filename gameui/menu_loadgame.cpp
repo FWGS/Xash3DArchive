@@ -272,10 +272,10 @@ static void UI_LoadGame_Ownerdraw( void *self )
 			sprintf( saveshot, "save/%s.tga", uiLoadGame.saveName[uiLoadGame.savesList.curItem] );
 
 			if( !FILE_EXISTS( saveshot ))
-				UI_DrawPic( x, y, w, h, uiColorWhite, "gfx/hud/static" );
+				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );
 			else UI_DrawPic( x, y, w, h, uiColorWhite, saveshot );
 		}
-		else UI_DrawPic( x, y, w, h, uiColorWhite, "gfx/hud/static" );
+		else UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );
 
 		// draw the rectangle
 		UI_DrawRectangle( item->x, item->y, item->width, item->height, uiInputFgColor );
@@ -311,7 +311,7 @@ static void UI_LoadGame_Init( void )
 
 	uiLoadGame.banner.generic.id = ID_BANNER;
 	uiLoadGame.banner.generic.type = QMTYPE_BITMAP;
-	uiLoadGame.banner.generic.flags = QMF_INACTIVE;
+	uiLoadGame.banner.generic.flags = QMF_INACTIVE|QMF_DRAW_ADDITIVE;
 	uiLoadGame.banner.generic.x = UI_BANNER_POSX;
 	uiLoadGame.banner.generic.y = UI_BANNER_POSY;
 	uiLoadGame.banner.generic.width = UI_BANNER_WIDTH;

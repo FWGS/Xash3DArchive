@@ -9,7 +9,8 @@ glwstate_t	glw_state;
 
 #define MAX_PFDS		256
 #define num_vidmodes	((int)(sizeof(vidmode) / sizeof(vidmode[0])) - 1)
-#define WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_CAPTION|WS_VISIBLE)
+#define WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
+#define WINDOW_EX_STYLE	(0)
 #define GL_DRIVER_OPENGL	"OpenGL32"
 
 typedef enum
@@ -452,24 +453,38 @@ bool R_CreateWindow( int width, int height, bool fullscreen )
 	WNDCLASS		wc;
 	RECT		rect;
 	cvar_t		*r_xpos, *r_ypos;
-	int		stylebits = WINDOW_STYLE;
 	int		x = 0, y = 0, w, h;
-	int		exstyle = 0;
+	int		stylebits = WINDOW_STYLE;
+	int		exstyle = WINDOW_EX_STYLE;
 	static string	wndname;
 	
 	com.snprintf( wndname, sizeof( wndname ), "%s", GI->title );
 
 	// register the frame class
-	wc.style         = 0;
+	wc.style         = CS_OWNDC|CS_NOCLOSE;
 	wc.lpfnWndProc   = (WNDPROC)glw_state.wndproc;
 	wc.cbClsExtra    = 0;
 	wc.cbWndExtra    = 0;
 	wc.hInstance     = glw_state.hInst;
-	wc.hIcon         = LoadIcon( glw_state.hInst, MAKEINTRESOURCE( 101 ));
 	wc.hCursor       = LoadCursor( NULL, IDC_ARROW );
 	wc.hbrBackground = (void *)COLOR_3DSHADOW;
 	wc.lpszClassName = "Xash Window";
 	wc.lpszMenuName  = 0;
+
+	// find the icon file in the filesystem
+	if( FS_FileExists( "†game.ico" ))
+	{
+		char	localPath[MAX_PATH];
+
+		com.snprintf( localPath, sizeof( localPath ), "%s/game.ico", GI->gamedir );
+		wc.hIcon = LoadImage( NULL, localPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE );
+		if( !wc.hIcon )
+		{
+			MsgDev( D_INFO, "Extract game.ico from pak if you want to see it.\n" );
+			wc.hIcon = LoadIcon( glw_state.hInst, MAKEINTRESOURCE( 101 ));
+		}
+	}
+	else wc.hIcon = LoadIcon( glw_state.hInst, MAKEINTRESOURCE( 101 ));
 
 	if( !RegisterClass( &wc ))
 	{ 
@@ -479,8 +494,8 @@ bool R_CreateWindow( int width, int height, bool fullscreen )
 
 	if( fullscreen )
 	{
-		exstyle = WS_EX_TOPMOST;
 		stylebits = WS_POPUP|WS_VISIBLE;
+		exstyle = WS_EX_TOPMOST;
 	}
 
 	rect.left = 0;
