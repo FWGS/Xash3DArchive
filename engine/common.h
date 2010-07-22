@@ -244,6 +244,7 @@ byte CL_GetMouthOpen( int entityIndex );
 bool SV_GetComment( const char *savename, char *comment );
 bool SV_NewGame( const char *mapName, bool loadGame );
 bool SV_LoadProgs( const char *name );
+void SV_InitGameProgs( void );
 void SV_ForceError( void );
 void CL_WriteMessageHistory( void );
 void CL_MouseEvent( int mx, int my );

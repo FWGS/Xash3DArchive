@@ -1187,7 +1187,7 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 	if( !com.strncmp( mt->name, "scroll", 6 ))
 		R_ShaderSetMiptexFlags( MIPTEX_CONVEYOR );
 
-	if( mt->name[0] == '*' || mt->name[0] == '!' )
+	if( mt->name[0] == '*' || mt->name[0] == '!' || !com.strnicmp( mt->name, "water", 5 ))
 		R_ShaderSetMiptexFlags( MIPTEX_WARPSURFACE|MIPTEX_NOLIGHTMAP );
 
 	if( image->animated )
@@ -1396,7 +1396,9 @@ static void Mod_LoadTextures( const dlump_t *l )
 		loadmodel->shaders[i] = Mod_LoadCachedImage( out );
 
 		Cvar_SetValue( "scr_loading", scr_loading->value + 50.0f / count );
-		if( ri.UpdateScreen ) ri.UpdateScreen();
+
+		if( ri.UpdateScreen && ( Cvar_VariableInteger( "allow_levelshots" ) || glw_state.developer > 3 ))
+			ri.UpdateScreen();
 	}
 }
 
@@ -1591,7 +1593,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		if( !com.strncmp( texture->name, "sky", 3 ))
 			out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
 
-		if( texture->name[0] == '*' || texture->name[0] == '!' )
+		if( texture->name[0] == '*' || texture->name[0] == '!' || !com.strnicmp( texture->name, "water", 5 ))
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
 		Mod_CalcSurfaceBounds( out );
@@ -2662,11 +2664,22 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 
 		for( j = 0; i != 0 && j < bmodel->nummodelsurfaces; j++ )
 		{
-			msurface_t *surf = bmodel->firstmodelsurface + j;
+			msurface_t	*surf = bmodel->firstmodelsurface + j;
+			vec3_t		normal, vup = { 0, 0, 1 };
 
 			// kill water backplanes for submodels (half-life rules)
-			if( surf->flags & SURF_DRAWTURB && surf->mins[2] == bm->mins[2] )
-				surf->mesh = NULL;
+			if( surf->flags & SURF_DRAWTURB )
+			{
+				if( surf->flags & SURF_PLANEBACK )
+					VectorNegate( surf->plane->normal, normal );
+				else VectorCopy( surf->plane->normal, normal );
+				if( surf->mins[2] == bm->mins[2] || !VectorCompare( normal, vup ))
+				{
+					if( surf->flags & SURF_PLANEBACK )
+						surf->mesh = NULL;	// legacy for software renderer
+					else surf->flags |= SURF_WATERCSG;
+				}
+			}
 		}
 
 		if( i == 0 ) *mod = *starmod;

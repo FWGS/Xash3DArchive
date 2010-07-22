@@ -68,6 +68,9 @@ bool R_CullSurface( msurface_t *surf, uint clipflags )
 	if(( shader->flags & SHADER_SKYPARMS ) && r_fastsky->integer )
 		return true;
 
+	if( surf->flags & SURF_WATERCSG && !( RI.currententity->flags & EF_NOWATERCSG ))
+		return true; 
+
 	if( r_nocull->integer )
 		return false;
 

@@ -489,6 +489,14 @@ void SV_ForceError( void )
 	sv.write_bad_message = true;
 }
 
+void SV_InitGameProgs( void )
+{
+	if( svgame.hInstance ) return; // not needs
+
+	// just try to initialize
+	SV_LoadProgs( "server.dll" );
+}
+
 bool SV_NewGame( const char *mapName, bool loadGame )
 {
 	if( !loadGame )

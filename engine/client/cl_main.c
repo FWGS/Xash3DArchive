@@ -637,7 +637,7 @@ void CL_PrepSound( void )
 	{
 		cl.sound_precache[i+1] = S_RegisterSound( cl.configstrings[CS_SOUNDS+1+i] );
 		Cvar_SetValue( "scr_loading", scr_loading->value + 5.0f / sndcount );
-		SCR_UpdateScreen();
+		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
 
 	S_EndRegistration();
@@ -685,7 +685,7 @@ void CL_PrepVideo( void )
 		re->RegisterModel( name, i+1 );
 		CM_RegisterModel( name, i+1 );
 		Cvar_SetValue( "scr_loading", scr_loading->value + 45.0f / mdlcount );
-		SCR_UpdateScreen();
+		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
 
 	for( i = 0; i < MAX_DECALNAMES && cl.configstrings[CS_DECALS+1+i][0]; i++ )

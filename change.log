@@ -1,11 +1,17 @@
 build ????
 
+Render: cut invisible water polygons
+Render: implement EF_NOWATERCSG for control func_water backface culling
+
+build 1262
+
 Engine: add 'allow_levelshots' cvar (disabled by default) to switch between custom levelshots and normal 'loading' screen
 Client: remove fmod.dll implementation
-Engine: implement variable-sized fonts
+Engine: implement variable-sized fonts (console, menu hints)
 Sound: added support for stereo wavs plays (menu sounds)
 Render: enable custom game icons (game.ico in mod folder)
 Engine: move menu code into new user dll called GameUI.dll (based on original q2e 0.40 menu code)
+FS: implement simple converter liblist.gam to gameinfo.txt
 
 build 1254
 

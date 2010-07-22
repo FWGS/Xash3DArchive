@@ -781,7 +781,7 @@ void UI_PushMenu( menuFramework_s *menu )
 
 	uiStatic.menuActive = menu;
 	uiStatic.firstDraw = true;
-	uiStatic.enterSound = gpGlobals->time + 0.2;	// make some delay
+	uiStatic.enterSound = gpGlobals->time + 0.15;	// make some delay
 	uiStatic.visible = true;
 
 	KEY_SetDest ( KEY_MENU );

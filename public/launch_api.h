@@ -50,7 +50,7 @@ typedef enum
 	HOST_WADLIB,	// "wadlib"	"xwad"
 	HOST_RIPPER,	// "ripper"	"extragen"
 	HOST_XIMAGE,	// "ximage"	"ximage"
-	HOST_COUNTS,	// terminator
+	HOST_MAXCOUNT,	// terminator
 } instance_t;
 
 enum dev_level
@@ -193,12 +193,14 @@ typedef enum
 	SE_KEY,		// ev.value[0] is a key code, ev.value[1] is the down flag
 	SE_CHAR,		// ev.value[0] is an ascii char
 	SE_MOUSE,		// ev.value[0] and ev.value[1] are reletive signed x / y moves
+	SE_JOYSTICK,	// evValue is an axis number and evValue2 is the current state (-127 to 127)
 	SE_CONSOLE,	// ev.data is a char*
 } ev_type_t;
 
 typedef struct
 {
 	ev_type_t		type;
+	int		time;	// actual timestamp
 	int		value[2];
 	void		*data;
 	size_t		length;

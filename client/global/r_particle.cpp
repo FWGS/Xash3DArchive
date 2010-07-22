@@ -811,7 +811,7 @@ void CParticleSystem :: BulletTracer( const Vector& start, const Vector& end )
 	p = AllocParticle( m_hDefaultParticle );
 	if( !p ) return;
 
-	float vel = ((end - start).Length()) * 2;
+	float vel = ((end - start).Length()) * 16;
 	Vector dir = ( end - start ).Normalize();
 
 	p->SetType( pt_clientcustom );
@@ -819,7 +819,7 @@ void CParticleSystem :: BulletTracer( const Vector& start, const Vector& end )
 	p->SetColor( gTracerColors[0] );	// White tracer
 	p->m_Pos = start;
 
-	p->m_flWidth = RANDOM_FLOAT( 1.0f, 1.2f );
+	p->m_flWidth = RANDOM_FLOAT( 0.8f, 1.0f );
 	p->m_flLength = RANDOM_FLOAT( 0.05f, 0.06f );
 	p->m_Velocity = dir * vel;
 	p->pfnCallback = pfnBulletTracerDraw;

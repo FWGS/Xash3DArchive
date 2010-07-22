@@ -27,6 +27,7 @@ BRUSH MODELS
 #define SURF_DRAWTURB		BIT( 2 )		// warp surface
 #define SURF_DRAWTILED		BIT( 3 )		// face without lighmap
 #define SURF_UNDERWATER		BIT( 4 )		// caustics
+#define SURF_WATERCSG		BIT( 5 )		// culled by csg
 
 // lightstyle management
 #define LM_STYLES			4		// MAXLIGHTMAPS

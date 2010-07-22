@@ -1164,9 +1164,9 @@ static int DecalDepthCompare( const void *a, const void *b )
 	elem1 = (const decallist_t *)a;
 	elem2 = (const decallist_t *)b;
 
-	if ( elem1->depth > elem2->depth )
+	if( elem1->depth > elem2->depth )
 		return -1;
-	if ( elem1->depth < elem2->depth )
+	if( elem1->depth < elem2->depth )
 		return 1;
 
 	return 0;

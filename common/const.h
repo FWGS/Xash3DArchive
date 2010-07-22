@@ -144,7 +144,7 @@
 #define EF_ROTATE			(1<<8)	// rotate bonus item
 #define EF_MINLIGHT			(1<<9)	// allways have some light (viewmodel)
 #define EF_FULLBRIGHT		(1<<10)	// completely ignore light values
-#define EF_STUDIOLAMBERT		(1<<11)	// use alternative studiomodels lighting
+#define EF_NOWATERCSG		(1<<11)	// do not remove sides for func_water entity
 #define EF_NOSHADOW			(1<<12)	// ignore shadow for this entity
 #define EF_PLANARSHADOW		(1<<13)	// use fast planarshadow method instead of shadow casters
 #define EF_OCCLUSIONTEST		(1<<14)	// use occlusion test for this entity (e.g. glares)

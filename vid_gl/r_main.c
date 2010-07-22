@@ -1367,7 +1367,9 @@ static void R_DrawBmodelEntities( void )
 		RI.previousentity = RI.currententity;
 		RI.currententity = r_bmodelentities[i];
 		j = RI.currententity - r_entities;
-		if( r_entVisBits[j>>3] & ( 1<<( j & 7 ))) R_AddBrushModelToList( RI.currententity );
+
+		if( r_entVisBits[j>>3] & ( 1<<( j & 7 )))
+			R_AddBrushModelToList( RI.currententity );
 	}
 }
 

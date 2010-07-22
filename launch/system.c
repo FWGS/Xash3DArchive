@@ -358,6 +358,7 @@ void Sys_LookupInstance( void )
 
 			CloseHandle( Sys.hMutex );
 			Sys.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
+			if( !Sys.developer ) Sys.developer = 3;	// otherwise we see empty console
 		}
 		else
 		{
@@ -378,28 +379,28 @@ void Sys_LookupInstance( void )
 		com_strcpy( Sys.log_path, "bsplib.log" ); // xash3d root directory
 		com_strcpy( Sys.caption, "Xash3D BSP Compiler");
 	}
-	else if(!com_strcmp(Sys.progname, "sprite"))
+	else if( !com_strcmp( Sys.progname, "sprite" ))
 	{
 		Sys.app_name = HOST_SPRITE;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
 		com_sprintf( Sys.log_path, "%s/spritegen.log", sys_rootdir ); // same as .exe file
 		com_strcpy( Sys.caption, "Xash3D Sprite Compiler");
 	}
-	else if(!com_strcmp(Sys.progname, "studio"))
+	else if( !com_strcmp( Sys.progname, "studio" ))
 	{
 		Sys.app_name = HOST_STUDIO;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
 		com_sprintf( Sys.log_path, "%s/studiomdl.log", sys_rootdir ); // same as .exe file
 		com_strcpy( Sys.caption, "Xash3D Studio Models Compiler" );
 	}
-	else if(!com_strcmp(Sys.progname, "wadlib"))
+	else if( !com_strcmp( Sys.progname, "wadlib" ))
 	{
 		Sys.app_name = HOST_WADLIB;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
 		com_sprintf( Sys.log_path, "%s/wadlib.log", sys_rootdir ); // same as .exe file
 		com_strcpy( Sys.caption, "Xash3D Wad2\\Wad3 maker" );
 	}
-	else if(!com_strcmp(Sys.progname, "ripper"))
+	else if( !com_strcmp( Sys.progname, "ripper" ))
 	{
 		Sys.app_name = HOST_RIPPER;
 		Sys.con_readonly = true;
@@ -408,7 +409,7 @@ void Sys_LookupInstance( void )
 		com_sprintf( Sys.log_path, "%s/decompile.log", sys_rootdir ); // default
 		com_strcpy( Sys.caption, va("Quake Recource Extractor ver.%g", XASH_VERSION ));
 	}
-	else if(!com_strcmp(Sys.progname, "ximage"))
+	else if( !com_strcmp( Sys.progname, "ximage" ))
 	{
 		Sys.app_name = HOST_XIMAGE;
 		Sys.con_readonly = true;
@@ -686,12 +687,28 @@ void Sys_MsgDev( int level, const char *pMsg, ... )
 	}
 }
 
+double Sys_DoubleTime( void )
+{
+	static LARGE_INTEGER	g_PerformanceFrequency;
+	static LARGE_INTEGER	g_ClockStart;
+	LARGE_INTEGER		CurrentTime;
+
+	if( !g_PerformanceFrequency.QuadPart )
+	{
+		QueryPerformanceFrequency( &g_PerformanceFrequency );
+		QueryPerformanceCounter( &g_ClockStart );
+	}
+	QueryPerformanceCounter( &CurrentTime );
+
+	return (double)( CurrentTime.QuadPart - g_ClockStart.QuadPart ) / (double)( g_PerformanceFrequency.QuadPart );
+}
+
 /*
 ================
 Sys_DoubleTime
 ================
 */
-double Sys_DoubleTime( void )
+double Sys_DoubleTime2( void )
 {
 	double	newtime;
 
@@ -896,17 +913,22 @@ void Sys_Error( const char *error, ... )
 	va_start( argptr, error );
 	com_vsprintf( text, error, argptr );
 	va_end( argptr );
-         
-	Con_ShowConsole( true );
-	Con_DisableInput();	// disable input line for dedicated server
 
-	if( Sys.developer >= D_ERROR )
-		Sys_Print( text );	// print error message
-	else Sys_Print( "Internal engine error\n" );	// don't confuse non-developers with technique stuff
 	if( Sys.app_name == HOST_NORMAL )
 		Sys.Free(); // kill video
 
-	Sys_WaitForQuit();
+	if( Sys.developer > 0 )
+	{
+		Con_ShowConsole( true );
+		Con_DisableInput();	// disable input line for dedicated server
+		Sys_Print( text );	// print error message
+		Sys_WaitForQuit();
+	}
+	else
+	{
+		Con_ShowConsole( false );
+		MSGBOX( text );
+	}
 	Sys_Exit();
 }
 
@@ -1021,7 +1043,6 @@ void Sys_Init( void )
 	}
 	if( Sys.log_active && !Sys.developer ) Sys.log_active = false;	// nothing to logging :)
           
-	FS_UpdateEnvironmentVariables();	// set working directory
 	SetErrorMode( SEM_FAILCRITICALERRORS );	// no abort/retry/fail errors
 	if( Sys.hooked_out ) atexit( Sys_Abort );
 
@@ -1030,6 +1051,7 @@ void Sys_Init( void )
 	Sys.con_showcredits = Sys.con_silentmode = Sys.stuffcmdsrun = false;
 
 	Sys_LookupInstance();		// init launcher
+	FS_UpdateEnvironmentVariables();	// set working directory
 	Con_CreateConsole();
 
 	// second pass (known state)

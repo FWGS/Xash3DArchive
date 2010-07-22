@@ -872,8 +872,11 @@ save serverinfo variables into server.rc (using for dedicated server too)
 */
 void Host_WriteServerConfig( void )
 {
-	file_t	*f = FS_Open( "config/server.rc", "w" );
-	if( f )
+	file_t	*f;
+
+	SV_InitGameProgs();	// collect user variables
+	
+	if(( f = FS_Open( "config/server.rc", "w" )) != NULL )
 	{
 		FS_Printf( f, "//=======================================================================\n" );
 		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));

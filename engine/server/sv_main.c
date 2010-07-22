@@ -549,7 +549,7 @@ void SV_Init( void )
 	Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_INIT, "displays server protocol version" );
 	Cvar_Get ("defaultmap", "", 0, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
-	Cvar_Get ("sv_aim", "1", 0, "enable auto-aiming" );
+	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE, "enable auto-aiming" );
 
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "0", 0, "zfar server value" );

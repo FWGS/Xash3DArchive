@@ -3804,6 +3804,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 				shader->deforms->args[0] = 0.01f;
 				shader->deforms->func.args[3] = 0.5f;
 				shader->numDeforms++;
+				shader->flags &= ~SHADER_CULL_FRONT;	// water is drawing backface
 			}
 			else pass->tcgen = TCGEN_BASE;
 

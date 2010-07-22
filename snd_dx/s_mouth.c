@@ -49,12 +49,12 @@ void SND_CloseMouth( channel_t *ch )
 
 void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count )
 {
-	int 	i, data;
 	edict_t	*clientEntity;
 	char	*pdata = NULL;
 	mouth_t	*pMouth = NULL;
-	int	savg;
+	int	savg, data;
 	int	scount;
+	uint 	i;
 
 	clientEntity = si.GetClientEdict( ch->entnum );
 
@@ -67,8 +67,7 @@ void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count )
 
 	S_GetOutputData( pSource, &pdata, ch->pos, count );
 
-	if( pdata == NULL )
-		return;
+	if( pdata == NULL ) return;
 	
 	i = 0;
 	scount = pMouth->sndcount;
