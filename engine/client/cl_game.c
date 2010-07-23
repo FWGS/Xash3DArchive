@@ -100,7 +100,7 @@ don't clamped time that come from server
 */
 float CL_GetServerTime( void )
 {
-	return (float)cl.mtime[0];
+	return sv_time();
 }
 
 /*
@@ -207,7 +207,7 @@ void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
 		return;
 	}
 
-	time = (host.realtime * 1000) - starttime;	// FIXME; convert it to float properly
+	time = cls.realtime - starttime;
 
 	if( time >= endtime )
 	{
@@ -223,7 +223,7 @@ void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
 
 	// fade out
 	if(( endtime - time ) < fade_time )
-		color[3] = bound( 0, ((endtime - time) * 1.0f / fade_time) * 255, 255 );
+		color[3] = bound( 0, (( endtime - time ) * ( 1.0f / fade_time )) * 255, 255 );
 	else color[3] = 255;
 }
 
@@ -305,7 +305,7 @@ void CL_CenterPrint( const char *text, float y )
 
 	clgame.centerPrint.lines = 1;
 	clgame.centerPrint.totalWidth = 0;
-	clgame.centerPrint.time = host.realtime * 1000;
+	clgame.centerPrint.time = cl.frame.servertime; // allow pause for centerprint
 	com.strncpy( clgame.centerPrint.message, text, sizeof( clgame.centerPrint.message ));
 	s = clgame.centerPrint.message;
 
@@ -712,7 +712,7 @@ void CL_DrawHUD( int state )
 	if( state == CL_ACTIVE && cl.refdef.paused )
 		state = CL_PAUSED;
 
-	clgame.dllFuncs.pfnRedraw( cl.time, state );
+	clgame.dllFuncs.pfnRedraw( cl_time(), state );
 
 	switch( state )
 	{
@@ -838,7 +838,7 @@ void CL_FreeEdict( edict_t *pEdict )
 	Mem_Set( pEdict, 0, sizeof( *pEdict ));
 
 	// mark edict as freed
-	pEdict->freetime = cl.time;
+	pEdict->freetime = cl_time();
 	pEdict->v.nextthink = -1;
 	pEdict->free = true;
 }
@@ -853,7 +853,7 @@ edict_t *CL_AllocEdict( void )
 		pEdict = EDICT_NUM( i );
 		// the first couple seconds of client time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if( pEdict->free && ( pEdict->freetime < 2.0 || ( cl.time - pEdict->freetime ) > 0.5 ))
+		if( pEdict->free && ( pEdict->freetime < 2.0f || ( cl_time() - pEdict->freetime ) > 0.5f ))
 		{
 			CL_InitEdict( pEdict );
 			return pEdict;
@@ -1639,7 +1639,7 @@ pfnGetClientTime
 */
 static float pfnGetClientTime( void )
 {
-	return cl.time;
+	return cl_time();
 }
 
 /*

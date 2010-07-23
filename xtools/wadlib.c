@@ -182,7 +182,7 @@ void Cmd_GrabMip( void )
           
 	flags |= IMAGE_PALTO24;
 
-	if(Com_ReadUlong( wadqc, false, &xl ))
+	if( Com_ReadUlong( wadqc, false, &xl ))
 	{
 		Com_ReadUlong( wadqc, false, &yl);
 		Com_ReadUlong( wadqc, false, &w );
@@ -196,7 +196,7 @@ void Cmd_GrabMip( void )
 	}
 
 	// reflood image with new size
-	if(( w & 15) || (h & 15)) flags |= IMAGE_ROUNDFILLER;
+	if(( w & 15 ) || ( h & 15 )) flags |= IMAGE_ROUNDFILLER;
 	Image_Process( &image, 0, 0, flags );
 
 	if( flags & IMAGE_ROUNDFILLER )

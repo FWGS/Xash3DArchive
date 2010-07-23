@@ -55,7 +55,7 @@ typedef struct
 	float		finalFrac;	// 0.0 to 1.0 lines of console to display
 
 	int		vislines;		// in scanlines
-	double		times[CON_TIMES];	// host.realtime the line was generated for transparent notify lines
+	int		times[CON_TIMES];	// host.realtime the line was generated for transparent notify lines
 	rgba_t		color;
 
 	// console images
@@ -110,7 +110,7 @@ void Con_ClearNotify( void )
 	int	i;
 	
 	for( i = 0; i < CON_TIMES; i++ )
-		con.times[i] = 0.0;
+		con.times[i] = 0;
 }
 
 /*
@@ -500,7 +500,7 @@ void Con_Linefeed( bool skipnotify )
 	if( con.current >= 0 )
 	{
 		if( skipnotify ) con.times[con.current % CON_TIMES] = 0;
-		else con.times[con.current % CON_TIMES] = host.realtime;
+		else con.times[con.current % CON_TIMES] = cls.realtime;
 	}
 
 	con.x = 0;
@@ -587,7 +587,7 @@ void Con_Print( const char *txt )
 			if( prev < 0 ) prev = CON_TIMES - 1;
 			con.times[prev] = 0;
 		}
-		else con.times[con.current % CON_TIMES] = host.realtime;
+		else con.times[con.current % CON_TIMES] = cls.realtime;
 	}
 }
 
@@ -986,6 +986,7 @@ void Key_Console( int key )
 	// command completion
 	if( key == K_TAB )
 	{
+		Msg( "Complete cmd\n" );
 		Con_CompleteCommand( &con.input );
 		return;
 	}
@@ -1122,7 +1123,7 @@ void Con_DrawInput( void )
 	// save char for overstrike
 	cursorChar = str[con.input.cursor - prestep];
 
-	if( host.key_overstrike && cursorChar && !((int)( host.realtime * 4 ) & 1 ))
+	if( host.key_overstrike && cursorChar && !((int)(cls.realtime >> 8) & 1 ))
 		hideChar = con.input.cursor - prestep;	// skip this char
 	
 	// draw it
@@ -1130,7 +1131,7 @@ void Con_DrawInput( void )
 	Con_DrawCharacter( QCHAR_WIDTH >> 1, y, ']', colorDefault );
 
 	// draw the cursor
-	if((int)( host.realtime * 4 ) & 1 ) return; // off blink
+	if((int)(cls.realtime >> 8) & 1 ) return; // off blink
 
 	// calc cursor position
 	str[con.input.cursor - prestep] = 0;
@@ -1156,9 +1157,8 @@ void Con_DrawNotify( void )
 {
 	int	i, x, v = 0;
 	int	currentColor;
-	int	start;
+	int	start, time;
 	short	*text;
-	float	time;
 
 	if( !host.developer ) return;
 
@@ -1169,9 +1169,12 @@ void Con_DrawNotify( void )
 	{
 		if( i < 0 ) continue;
 		time = con.times[i % CON_TIMES];
-		if( time == 0.0 ) continue;
-		time = host.realtime - time;
-		if( time > con_notifytime->value ) continue;
+		if( time == 0 ) continue;
+		time = cls.realtime - time;
+
+		if( time > ( con_notifytime->value * 1000 ))
+			continue;	// expired
+
 		text = con.text + (i % con.totallines) * con.linewidth;
 		start = con.charWidths[' ']; // offset one space at left screen side
 
@@ -1221,16 +1224,16 @@ void Con_DrawSolidConsole( float frac )
 	if( host.developer )
 	{
 		// draw current version
-		rgba_t	color = { 255, 255, 255, 255 };
+		byte	*color = g_color_table[7];
 		int	stringLen, width = 0, charH;
 
-		com.snprintf( curbuild, MAX_STRING, "Xash3D %g (build %i)", SI->version, com_buildnum( ));
+		com.snprintf( curbuild, MAX_STRING, "Xash3D %i/%g (hw build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
 		Con_DrawStringLen( curbuild, &stringLen, &charH );
 		start = scr_width->integer - stringLen;
 		stringLen = com.cstrlen( curbuild );
 
 		for( i = 0; i < stringLen; i++ )
-			width += Con_DrawCharacter( start + width, lines - charH, curbuild[i], color );
+			width += Con_DrawCharacter( start + width, 0, curbuild[i], color );
 	}
 
 	// draw the text
@@ -1352,6 +1355,8 @@ Scroll it up or down
 */
 void Con_RunConsole( void )
 {
+	float	frametime;
+
 	// decide on the destination height of the console
 	if( host.developer && cls.key_dest == key_console )
 	{
@@ -1363,17 +1368,18 @@ void Con_RunConsole( void )
 
 	// whel level is loading frametime may be is wrong
 	if( cls.state == ca_connecting || cls.state == ca_connected )
-		host.realframetime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
+		frametime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
+	else frametime = cls.frametime;
 
 	if( con.finalFrac < con.displayFrac )
 	{
-		con.displayFrac -= scr_conspeed->value * 0.002 * host.realframetime;
+		con.displayFrac -= scr_conspeed->value * 0.002 * cls.frametime;
 		if( con.finalFrac > con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
 	else if( con.finalFrac > con.displayFrac )
 	{
-		con.displayFrac += scr_conspeed->value * 0.002 * host.realframetime;
+		con.displayFrac += scr_conspeed->value * 0.002 * cls.frametime;
 		if( con.finalFrac < con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}

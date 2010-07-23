@@ -82,10 +82,7 @@ typedef struct host_parm_s
 	string		finalmsg;		// server shutdown final message
 	host_redirect_t	rd;		// remote console
 
-	double		realtime;		// host.curtime
-	double		frametime;	// time between engine frames
-	double		realframetime;	// for some system events, e.g. console animations
-
+	int		frametime;	// time between engine frames
 	uint		framecount;	// global framecount
 
 	int		events_head;
@@ -116,6 +113,9 @@ int com_buildnum( void );
 //
 // host.c
 //
+void Host_Init( const int argc, const char **argv );
+void Host_Main( void );
+void Host_Free( void );
 void Host_SetServerState( int state );
 int Host_ServerState( void );
 int Host_CompareFileTime( long ft1, long ft2 );
@@ -140,12 +140,12 @@ CLIENT / SERVER SYSTEMS
 */
 void CL_Init( void );
 void CL_Shutdown( void );
-void Host_ClientFrame( void );
+void CL_Frame( int time );
 bool CL_Active( void );
 
 void SV_Init( void );
 void SV_Shutdown( bool reconnect );
-void Host_ServerFrame( void );
+void SV_Frame( int time );
 bool SV_Active( void );
 
 /*

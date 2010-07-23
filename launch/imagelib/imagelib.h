@@ -469,7 +469,7 @@ extern byte *fs_mempool;
 extern const bpc_desc_t PFDesc[];
 
 void Image_RoundDimensions( int *scaled_width, int *scaled_height );
-byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int outwidth, int outheight, int intype );
+byte *Image_ResampleInternal( const void *indata, int in_w, int in_h, int out_w, int out_h, int intype, bool *done );
 byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int type, int flags );
 void Image_FreeImage( rgbdata_t *pack );
 void Image_Save( const char *filename, rgbdata_t *pix );

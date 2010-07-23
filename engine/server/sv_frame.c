@@ -297,8 +297,9 @@ void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 	SV_EmitEvents( cl, frame, msg );
 
 	MSG_WriteByte( msg, svc_frame );
-	MSG_WriteFloat( msg, (float)sv.time );		// send a servertime each frame
 	MSG_WriteLong( msg, sv.framenum );
+	MSG_WriteLong( msg, sv.time );		// send a servertime each frame
+	MSG_WriteLong( msg, sv.frametime );
 	MSG_WriteLong( msg, lastframe );		// what we are delta'ing from
 	MSG_WriteByte( msg, cl->surpressCount );	// rate dropped packets
 	MSG_WriteByte( msg, frame->index );		// send a client index
@@ -338,31 +339,33 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	viewent = cl->pViewEntity;
 	sv.net_framenum++;
 
-	SV_SetIdealPitch( cl );
-
-	// update client fixangle
-	switch( clent->v.fixangle )
+	if( !sv.paused )
 	{
-	case 1:
-		MSG_WriteByte( &sv.multicast, svc_setangle );
-		MSG_WriteAngle32( &sv.multicast, clent->v.angles[0] );
-		MSG_WriteAngle32( &sv.multicast, clent->v.angles[1] );
-		MSG_DirectSend( MSG_ONE, vec3_origin, clent );
-		clent->pvServerData->s.ed_flags |= ESF_NO_PREDICTION;
-		break;
-	case 2:
-		MSG_WriteByte( &sv.multicast, svc_addangle );
-		MSG_WriteAngle32( &sv.multicast, cl->addangle );
-		MSG_DirectSend( MSG_ONE, vec3_origin, clent );
-		cl->addangle = 0;
-		break;
-	}
+		SV_SetIdealPitch( cl );
 
-	clent->v.fixangle = 0; // reset fixangle
+		// update client fixangle
+		switch( clent->v.fixangle )
+		{
+		case 1:
+			MSG_WriteByte( &sv.multicast, svc_setangle );
+			MSG_WriteAngle32( &sv.multicast, clent->v.angles[0] );
+			MSG_WriteAngle32( &sv.multicast, clent->v.angles[1] );
+			MSG_DirectSend( MSG_ONE, vec3_origin, clent );
+			clent->pvServerData->s.ed_flags |= ESF_NO_PREDICTION;
+			break;
+		case 2:
+			MSG_WriteByte( &sv.multicast, svc_addangle );
+			MSG_WriteAngle32( &sv.multicast, cl->addangle );
+			MSG_DirectSend( MSG_ONE, vec3_origin, clent );
+			cl->addangle = 0;
+			break;
+		}
+		clent->v.fixangle = 0; // reset fixangle
+	}
 
 	// this is the frame we are creating
 	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
-	frame->senttime = host.realtime; // save it for ping calc later
+	frame->senttime = svs.realtime; // save it for ping calc later
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
@@ -511,12 +514,6 @@ void SV_SendClientMessages( void )
 	if( sv.state == ss_dead )
 		return;
 
-	// we always need to bump framenum, even if we
-	// don't run the world, otherwise the delta
-	// compression can get confused when a client
-	// has the "current" frame
-	sv.framenum++;
-
 	// send a message to each connected client
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -562,7 +559,7 @@ void SV_SendClientMessages( void )
 		}
 		else
 		{
-			if( cl->netchan.message.cursize || host.realtime - cl->netchan.last_sent > 1.0 )
+			if( cl->netchan.message.cursize || svs.realtime - cl->netchan.last_sent > 1000 )
 				Netchan_Transmit( &cl->netchan, 0, NULL );
 		}
 		// yes, message really sended 

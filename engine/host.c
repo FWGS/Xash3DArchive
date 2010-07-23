@@ -14,8 +14,6 @@ vsound_exp_t	*se;
 host_parm_t	host;	// host parms
 stdlib_api_t	com, newcom;
 
-char		*buildstring = __TIME__ " " __DATE__;
-
 dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
 dll_info_t physic_dll = { "physic.dll", NULL, "CreateAPI", NULL, NULL, 0, sizeof(physic_exp_t), sizeof(stdlib_api_t) };
@@ -463,7 +461,7 @@ Host_EventLoop
 Returns last event time
 =================
 */
-bool Host_EventLoop( void )
+int Host_EventLoop( void )
 {
 	sys_event_t	ev;
 
@@ -473,9 +471,7 @@ bool Host_EventLoop( void )
 		switch( ev.type )
 		{
 		case SE_NONE:
-			// done
-			Cbuf_Execute();
-			return true;
+			return ev.time;
 		case SE_KEY:
 			Key_Event( ev.value[0], ev.value[1] );
 			break;
@@ -494,60 +490,69 @@ bool Host_EventLoop( void )
 		}
 		if( ev.data ) Mem_Free( ev.data );
 	}
-
-	// shut up the compiler
-	return false;
+	return 0;	// never reached
 }
 
 /*
-===================
-Host_FilterTime
+================
+Host_Milliseconds
 
-Returns false if the time is too short to run a frame
-===================
+Can be used for profiling, but will be journaled accurately
+================
 */
-bool Host_FilterTime( float time )
+int Host_Milliseconds( void )
 {
-	static double	oldtime;
-	float		fps;
+	sys_event_t	ev;
 
-	host.realtime += time;
+	// get events and push them until we get a null event with the current time
+	do {
+		ev = Sys_GetEvent();
+		if( ev.type != SE_NONE )
+			Host_PushEvent( &ev );
+	} while( ev.type != SE_NONE );
+	
+	return ev.time;
+}
 
-	// dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
-	fps = host_maxfps->value;
+/*
+================
+Host_ModifyTime
+================
+*/
+int Host_ModifyTime( int msec )
+{
+	int	clamp_time;
 
-	if( fps != 0 )
+	// modify time for debugging values
+	if( host_framerate->value )
+		msec = host_framerate->value * 1000;
+	if( msec < 1 && host_framerate->value ) msec = 1;
+
+	if( host.type == HOST_DEDICATED )
 	{
-		float	minframetime;
-
-		// limit fps to withing tolerable range
-		fps = bound( MIN_FPS, fps, MAX_FPS );
-
-		minframetime = 1.0f / fps;
-
-		if(( host.realtime - oldtime ) < minframetime )
-		{
-			// framerate is too high
-			return false;		
-		}
+		// dedicated servers don't want to clamp for a much longer
+		// period, because it would mess up all the client's views of time.
+		if( msec > 500 ) MsgDev( D_NOTE, "Host_ModifyTime: %i msec frame time\n", msec );
+		clamp_time = 5000;
 	}
-
-	host.frametime = host.realtime - oldtime;
-	host.realframetime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
-	oldtime = host.realtime;
-
-	if( host_framerate->value > 0 && ( Host_IsLocalGame() || CL_IsPlaybackDemo() ))
+	else if( SV_Active( ))
 	{
-		float fps = host_framerate->value;
-		if( fps > 1 ) fps = 1.0f / fps;
-		host.frametime = fps;
+		// for local single player gaming
+		// we may want to clamp the time to prevent players from
+		// flying off edges when something hitches.
+		clamp_time = 200;
 	}
 	else
-	{	// don't allow really long or short frames
-		host.frametime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
+	{
+		// clients of remote servers do not want to clamp time, because
+		// it would skew their view of the server's time temporarily
+		clamp_time = 5000;
 	}
-	
-	return true;
+
+	if( msec > clamp_time )
+		msec = clamp_time;
+
+	return msec;
 }
 
 /*
@@ -555,22 +560,47 @@ bool Host_FilterTime( float time )
 Host_Frame
 =================
 */
-void Host_Frame( float time )
+void Host_Frame( void )
 {
+	int		time, min_time;
+	static int	last_time;
+
 	if( setjmp( host.abortframe ))
 		return;
 
-	// decide the simulation time
-	if( !Host_FilterTime( time ))
+	rand(); // keep the random time dependent
+
+	// we may want to spin here if things are going too fast
+	if( host.type != HOST_DEDICATED && host_maxfps->integer > 0 )
+		min_time = 1000 / host_maxfps->integer;
+	else min_time = 1;
+
+	do {
+		host.frametime = Host_EventLoop();
+		if( last_time > host.frametime )
+			last_time = host.frametime;
+		time = host.frametime - last_time;
+	} while( time < min_time );
+	Cbuf_Execute();
+
+	last_time = host.frametime;
+	time = Host_ModifyTime( time );
+
+	SV_Frame ( time ); // server frame
+
+	if( host.type == HOST_DEDICATED )
+	{
+		// end frame of dedicated server
+		host.framecount++;
 		return;
+	}
 
+	// run event loop a second time to get server to client packets
+	// without a frame of latency
 	Host_EventLoop();
+	Cbuf_Execute();
 
-	rand (); // keep the random time dependent
-
-	Host_ServerFrame (); // server frame
-	Host_ClientFrame (); // client frame
-
+	CL_Frame ( time ); // client frame
 	host.framecount++;
 }
 /*
@@ -732,7 +762,7 @@ void Host_InitCommon( const int argc, const char **argv )
 			// make sure what found library is valid
 			if( Sys_LoadLibrary( dlls->filenames[i], &check_vid ))
 			{
-				MsgDev( D_NOTE, "VideoLibrary[%i]: %s\n", host.num_video_dlls, dlls->filenames[i] );
+				MsgDev( D_NOTE, "Video[%i]: %s\n", host.num_video_dlls, dlls->filenames[i] );
 				host.video_dlls[host.num_video_dlls] = copystring( dlls->filenames[i] );
 				Sys_FreeLibrary( &check_vid );
 				host.num_video_dlls++;
@@ -743,7 +773,7 @@ void Host_InitCommon( const int argc, const char **argv )
 			// make sure what found library is valid
 			if( Sys_LoadLibrary( dlls->filenames[i], &check_snd ))
 			{
-				MsgDev( D_NOTE, "AudioLibrary[%i]: %s\n", host.num_audio_dlls, dlls->filenames[i] );
+				MsgDev( D_NOTE, "Audio[%i]: %s\n", host.num_audio_dlls, dlls->filenames[i] );
 				host.audio_dlls[host.num_audio_dlls] = copystring( dlls->filenames[i] );
 				Sys_FreeLibrary( &check_snd );
 				host.num_audio_dlls++;
@@ -799,7 +829,7 @@ void Host_Init( const int argc, const char **argv )
 	host_registered = Cvar_Get( "registered", "1", CVAR_SYSTEMINFO, "indicate shareware version of game" );
 	host_nosound = Cvar_Get( "host_nosound", "0", CVAR_SYSTEMINFO, "disable sound system" );
 
-	s = va( "^1Xash %g ^3%s", SI->version, buildstring );
+	s = va( "Xash3D %i/%g (hw build ^3%i^7)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
 	Cvar_Get( "version", s, CVAR_INIT, "engine current version" );
 
 	// content control
@@ -844,18 +874,11 @@ Host_Main
 */
 void Host_Main( void )
 {
-	static double	oldtime, newtime;
-
-	oldtime = Sys_DoubleTime();
-
 	// main window message loop
 	while( host.type != HOST_OFFLINE )
 	{
 		IN_Frame();
-
-		newtime = Sys_DoubleTime ();
-		Host_Frame( newtime - oldtime );
-		oldtime = newtime;
+		Host_Frame();
 	}
 }
 
@@ -880,27 +903,4 @@ void Host_Free( void )
 	CL_Shutdown();
 	NET_Shutdown();
 	Host_FreeCommon();
-}
-
-/*
-=================
-Engine entry point
-=================
-*/
-launch_exp_t DLLEXPORT *CreateAPI( stdlib_api_t *input, void *unused )
-{
-         	static launch_exp_t Host;
-
-	com = *input;
-	Host.api_size = sizeof( launch_exp_t );
-	Host.com_size = sizeof( stdlib_api_t );
-
-	Host.Init = Host_Init;
-	Host.Main = Host_Main;
-	Host.Free = Host_Free;
-	Host.CPrint = Host_Print;
-	Host.CmdForward = Cmd_ForwardToServer;
-	Host.CmdComplete = Cmd_AutoComplete;
-
-	return &Host;
 }

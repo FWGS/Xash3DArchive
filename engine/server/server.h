@@ -35,6 +35,10 @@ extern int SV_UPDATE_BACKUP;
 #define DVIS_PVS		0
 #define DVIS_PHS		1
 
+// convert msecs to float time properly
+#define sv_time()		( sv.time * 0.001f )
+#define sv_frametime()	( sv.frametime * 0.001f )
+
 typedef enum
 {
 	ss_dead,		// no map loaded
@@ -56,8 +60,8 @@ typedef struct server_s
 
 	bool		loadgame;		// client begins should reuse existing entity
 
-	double		time;		// sv.time += sv.frametime
-	float		frametime;
+	int		time;		// sv.time += sv.frametime
+	int		frametime;
 	int		framenum;
 	int		net_framenum;	// to avoid send edicts twice through portals
 
@@ -85,8 +89,8 @@ typedef struct
 	entity_state_t	ps;			// player state
 	int  		num_entities;
 	int  		first_entity;		// into the circular sv_packet_entities[]
-	double		senttime;			// time the message was transmitted
-	float		latency;
+	int		senttime;			// time the message was transmitted
+	int		latency;
 
 	int		index;			// client edict index
 } client_frame_t;
@@ -111,6 +115,9 @@ typedef struct sv_client_s
 
 	int		message_size[RATE_MESSAGES];	// used to rate drop packets
 	int		rate;
+
+	int		commandMsec;		// every seconds this is reset, if user
+	   					// commands exhaust it, assume time cheating
 
 	int		surpressCount;		// number of messages rate supressed
 
@@ -138,8 +145,8 @@ typedef struct sv_client_s
 	int		downloadsize;		// total bytes (can't use EOF because of paks)
 	int		downloadcount;		// bytes sent
 
-	double		lastmessage;		// time when packet was last received
-	double		lastconnect;
+	int		lastmessage;		// time when packet was last received
+	int		lastconnect;
 
 	int		challenge;		// challenge of this user, randomly generated
 	int		userid;			// identifying number on server
@@ -184,7 +191,7 @@ typedef struct
 {
 	netadr_t		adr;
 	int		challenge;
-	double		time;
+	int		time;
 	bool		connected;
 } challenge_t;
 
@@ -236,12 +243,13 @@ typedef struct
 typedef struct
 {
 	bool		initialized;		// sv_init has completed
+	int		realtime;			// always increasing, no clamping, etc
 	double		timestart;		// just for profiling
 
 	int		groupmask;
 	int		groupop;
 
-	double		changelevel_next_time;	// don't execute multiple changelevels at once time
+	int		changelevel_next_time;	// don't execute multiple changelevels at once time
 	int		spawncount;		// incremented each server start
 						// used to check late spawns
 	sv_client_t	*clients;			// [sv_maxclients->integer]
@@ -251,7 +259,7 @@ typedef struct
 	entity_state_t	*client_entities;		// [num_client_entities]
 	entity_state_t	*baselines;		// [GI->max_edicts]
 
-	double		last_heartbeat;
+	int		last_heartbeat;
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 } server_static_t;
 
@@ -274,6 +282,7 @@ extern	cvar_t		*sv_maxvelocity;
 extern	cvar_t		*sv_gravity;
 extern	cvar_t		*sv_stopspeed;
 extern	cvar_t		*sv_check_errors;
+extern	cvar_t		*sv_enforcetime;
 extern	cvar_t		*sv_reconnect_limit;
 extern	cvar_t		*rcon_password;
 extern	cvar_t		*hostname;

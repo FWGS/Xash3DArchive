@@ -46,7 +46,7 @@ void SCR_DrawFPS( void )
 	{
 		framerate = framecount / (newtime - lasttime);
 		lasttime = newtime;
-		nexttime = max(nexttime + 1, lasttime - 1);
+		nexttime = max( nexttime + 1, lasttime - 1 );
 		framecount = 0;
 	}
 
@@ -195,7 +195,7 @@ void SCR_UpdateScreen( void )
           }
 
 	if( clgame.hInstance )
-		clgame.dllFuncs.pfnFrame( cl.time );
+		clgame.dllFuncs.pfnFrame( cl_time( ));
 }
 
 static void SCR_LoadCreditsFont( void )

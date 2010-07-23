@@ -15,7 +15,6 @@
 
 system_t		Sys;
 stdlib_api_t	com;
-timer_t		Clock;
 launch_exp_t	*Host;	// callback to mainframe 
 sys_event_t	event_que[MAX_QUED_EVENTS];
 int		event_head, event_tail;
@@ -210,6 +209,7 @@ void Sys_GetStdAPI( void )
 	com.Com_GetProcAddress = Sys_GetProcAddress;	// gpa
 	com.Com_ShellExecute = Sys_ShellExecute;	// shell execute
 	com.Com_DoubleTime = Sys_DoubleTime;		// hi-res timer
+	com.Com_Milliseconds = Sys_Milliseconds;
 
 	// built-in imagelib functions
 	com.ImageLoad = FS_LoadImage;			// load image from disk or wad-file
@@ -315,6 +315,11 @@ void Sys_LookupInstance( void )
 {
 	char	szTemp[4096];
 	bool	dedicated = false;
+
+	// NOTE: we want set "real" work directory
+	// defined in environment variables, but in some reasons
+	// we need make some additional checks before set current dir
+	GetCurrentDirectory( MAX_SYSPATH, sys_rootdir );
 
 	Sys.app_name = HOST_OFFLINE;
 	// we can specified custom name, from Sys_NewInstance
@@ -687,6 +692,11 @@ void Sys_MsgDev( int level, const char *pMsg, ... )
 	}
 }
 
+/*
+================
+Sys_DoubleTime
+================
+*/
 double Sys_DoubleTime( void )
 {
 	static LARGE_INTEGER	g_PerformanceFrequency;
@@ -705,92 +715,23 @@ double Sys_DoubleTime( void )
 
 /*
 ================
-Sys_DoubleTime
+Sys_Milliseconds
 ================
 */
-double Sys_DoubleTime2( void )
+dword Sys_Milliseconds( void )
 {
-	double	newtime;
+	dword		curtime;
+	static dword	timebase;
 
-	// LordHavoc: note to people modifying this code, 
-	// DWORD is specifically defined as an unsigned 32bit number, 
-	// therefore the 65536.0 * 65536.0 is fine.
-	if( !Clock.hardware_timer )
+	if( !timebase )
 	{
-		// timeGetTime
-		// platform:
-		// Windows 95/98/ME/NT/2000/XP
-		// features:
-		// reasonable accuracy (millisecond)
-		// issues:
-		// wraps around every 47 days or so (but this is non-fatal to us, 
-		// odd times are rejected, only causes a one frame stutter)
-
-		// make sure the timer is high precision, otherwise different versions of
-		// windows have varying accuracy
-		if( !Clock.timebase )
-		{
-			timeBeginPeriod( 1 );
-			Clock.timebase = timeGetTime();
-		}
-
-		newtime = (double)timeGetTime() * 0.001;
-	}
-	else
-	{
-		// QueryPerformanceCounter
-		// platform:
-		// Windows 95/98/ME/NT/2000/XP
-		// features:
-		// very accurate (CPU cycles)
-		// known issues:
-		// does not necessarily match realtime too well
-		// (tends to get faster and faster in win98)
-		// wraps around occasionally on some platforms
-		// (depends on CPU speed and probably other unknown factors)
-
-		LARGE_INTEGER	PerformanceFreq;
-		LARGE_INTEGER	PerformanceCount;
-		double		timescale;
-
-		if( !QueryPerformanceFrequency( &PerformanceFreq ))
-		{
-			MsgDev( D_NOTE, "Sys_Time: no hardware timer available, use timeGetTime()\n" );
-
-			// fall back to timeGetTime
-			Clock.hardware_timer = false;
-			return Sys_DoubleTime();
-		}
-
-		QueryPerformanceCounter( &PerformanceCount );
-
-		timescale = 1.0 / ((double)PerformanceFreq.LowPart + (double)PerformanceFreq.HighPart * 65536.0 * 65536.0);
-		newtime = ((double)PerformanceCount.LowPart + (double)PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
+		timeBeginPeriod( 1 );
+		timebase = timeGetTime();
 	}
 
-	if( !Clock.initialized )
-	{
-		Clock.oldtime = newtime;
-		Clock.initialized = true;
-	}
+	curtime = timeGetTime() - timebase;
 
-	if( newtime < Clock.oldtime )
-	{
-		// warn if it's significant
-		if( newtime - Clock.oldtime < -0.01 )
-		{
-			MsgDev( D_ERROR, "Sys_DoubleTime: time stepped backwards\n" );
-			MsgDev( D_NOTE, "(went from %f to %f, difference %f)\n", Clock.oldtime, newtime, newtime - Clock.oldtime );
-		}
-	}
-	else
-	{
-		Clock.curtime += newtime - Clock.oldtime;
-	}
-
-	Clock.oldtime = newtime;
-
-	return Clock.curtime;
+	return curtime;
 }
 
 /*
@@ -1004,8 +945,6 @@ void Sys_Init( void )
 
 	lpBuffer.dwLength = sizeof( MEMORYSTATUS );
 	GlobalMemoryStatus( &lpBuffer );
-	ZeroMemory( &Clock, sizeof( Clock ));	// can't use memset - not init
-	Clock.hardware_timer = true;		// predict state
 	Sys.logfile = NULL;
 
 	// get current hInstance
@@ -1389,7 +1328,7 @@ Ptr should either be null, or point to a block of data that can
 be freed by the game later.
 ================
 */
-void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr )
+void Sys_QueEvent( int time, ev_type_t type, int value, int value2, int length, void *ptr )
 {
 	sys_event_t	*ev;
 
@@ -1403,6 +1342,11 @@ void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr 
 	}
 	event_head++;
 
+	// presets
+	if( time == 0 ) time = Sys_Milliseconds();
+	else if( time == -1 ) time = Sys.msg_time;
+
+	ev->time = time;
 	ev->type = type;
 	ev->value[0] = value;
 	ev->value[1] = value2;
@@ -1437,6 +1381,7 @@ sys_event_t Sys_GetEvent( void )
 			Sys.error = true;
 			Sys_Exit();
 		}
+		Sys.msg_time = msg.time;
 		TranslateMessage(&msg );
       		DispatchMessage( &msg );
 	}
@@ -1451,7 +1396,7 @@ sys_event_t Sys_GetEvent( void )
 		len = com.strlen( s ) + 1;
 		b = Malloc( len );
 		com.strncpy( b, s, len - 1 );
-		Sys_QueEvent( SE_CONSOLE, 0, 0, len, b );
+		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
 	}
 
 	// return if we have data
@@ -1463,6 +1408,7 @@ sys_event_t Sys_GetEvent( void )
 
 	// create an empty event to return
 	Mem_Set( &ev, 0, sizeof( ev ));
+	ev.time = timeGetTime(); // should be replace with Sys_Milliseconds ?
 
 	return ev;
 }

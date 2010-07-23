@@ -263,8 +263,8 @@ typedef struct netchan_s
 	int			dropped;			// between last packet and previous
 	bool			compress;			// enable huffman compression
 
-	float			last_received;		// for timeouts
-	float			last_sent;		// for retransmits
+	long			last_received;		// for timeouts
+	long			last_sent;		// for retransmits
 
 	int			drop_count;		// dropped packets, cleared each level
 	int			good_count;		// cleared each level
@@ -296,7 +296,7 @@ extern netadr_t		net_from;
 extern sizebuf_t		net_message;
 extern byte		net_message_buffer[MAX_MSGLEN];
 
-#define PROTOCOL_VERSION	37
+#define PROTOCOL_VERSION	38
 #define PORT_MASTER		27900
 #define PORT_CLIENT		27901
 #define PORT_SERVER		27910

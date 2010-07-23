@@ -548,7 +548,7 @@ FS_AddFileToPack
 Add a file to the list of files contained into a package
 ====================
 */
-static packfile_t* FS_AddFileToPack(const char* name, pack_t* pack, fs_offset_t offset, fs_offset_t packsize, fs_offset_t realsize, int flags)
+static packfile_t* FS_AddFileToPack( const char* name, pack_t* pack, fs_offset_t offset, fs_offset_t packsize, fs_offset_t realsize, int flags)
 {
 	int		left, right, middle;
 	packfile_t	*pfile;
@@ -3568,11 +3568,6 @@ void FS_UpdateEnvironmentVariables( void )
 {
 	char	szTemp[4096];
 	char	szPath[MAX_SYSPATH]; // test path
-	
-	// NOTE: we want set "real" work directory
-	// defined in environment variables, but in some reasons
-	// we need make some additional checks before set current dir
-	GetCurrentDirectory( MAX_SYSPATH, sys_rootdir );
 
 	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
 	{
@@ -3983,20 +3978,34 @@ static const char *W_ExtFromType( char lumptype )
 
 static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char matchtype )
 {
-	int	i;
+	int	left, right, middle;
 
 	if( !wad || !wad->lumps || matchtype == TYPE_NONE )
 		return NULL;
 
-	// serach trough current wad
-	for( i = 0; i < wad->numlumps; i++)
+	// look for the file (binary search)
+	left = 0;
+	right = wad->numlumps - 1;
+	
+	while( left <= right )
 	{
-		// filtering lumps by type first
-		if( matchtype == TYPE_ANY || matchtype == wad->lumps[i].type )
+		int	diff;
+
+		middle = (left + right) / 2;
+		diff = com.stricmp( wad->lumps[middle].name, name );
+
+		// Found it
+		if( !diff )
 		{
-			if( !com.stricmp( name, wad->lumps[i].name ))
-				return &wad->lumps[i]; // found
+			if( matchtype == TYPE_ANY || matchtype == wad->lumps[middle].type )
+				return &wad->lumps[middle]; // found
+			else break;
 		}
+
+		// if we're too far in the list
+		if( diff > 0 )
+			right = middle - 1;
+		else left = middle + 1;
 	}
 	return NULL;
 }
@@ -4023,6 +4032,60 @@ static void W_CleanupName( const char *dirtyname, char *cleanname )
 	com.strupr( cleanname, cleanname );
 }
 
+/*
+====================
+FS_AddFileToWad
+
+Add a file to the list of files contained into a package
+====================
+*/
+static dlumpinfo_t *W_AddFileToWad( const char *name, wfile_t *wad, int filepos, int packsize, int realsize, char type, char compression )
+{
+	int		left, right, middle;
+	dlumpinfo_t	*plump;
+
+	// look for the slot we should put that file into (binary search)
+	left = 0;
+	right = wad->numlumps - 1;
+
+	while( left <= right )
+	{
+		int	diff;
+
+		middle = ( left + right ) / 2;
+		diff = com.stricmp( wad->lumps[middle].name, name );
+
+		// If we found the file, there's a problem
+		if( !diff ) MsgDev( D_NOTE, "Wad %s contains the file %s several times\n", wad->filename, name );
+
+		// If we're too far in the list
+		if( diff > 0 ) right = middle - 1;
+		else left = middle + 1;
+	}
+
+	// We have to move the right of the list by one slot to free the one we need
+	plump = &wad->lumps[left];
+	memmove( plump + 1, plump, ( wad->numlumps - left ) * sizeof( *plump ));
+	wad->numlumps++;
+
+	Mem_Copy( plump->name, name, sizeof( plump->name ));
+	plump->filepos = filepos;
+	plump->disksize = realsize;
+	plump->size = packsize;
+	plump->compression = compression;
+
+	// convert all qmip types to miptex
+	if( type == TYPE_QMIP )
+		plump->type = TYPE_MIPTEX;
+	else plump->type = type;
+
+	// check for Quake 'conchars' issues (only lmp loader supposed to read this lame pic)
+	if( !com.stricmp( plump->name, "conchars" ) && plump->type == TYPE_QMIP )
+		plump->type = TYPE_QPIC; 
+
+	return plump;
+}
+
 static bool W_ConvertIWADLumps( wfile_t *wad )
 {
 	dlumpfile_t	*doomlumps;
@@ -4030,13 +4093,15 @@ static bool W_ConvertIWADLumps( wfile_t *wad )
 	bool		skin_images = false;	// doom1 skin image ( sprite model ) marker
 	bool		flmp_images = false;	// doom1 menu image marker
 	size_t		lat_size;			// LAT - LumpAllocationTable		
-	int		i, k;
+	int		i, k, numlumps;
 
 	// nothing to convert ?
 	if( !wad ) return false;
 
 	lat_size = wad->numlumps * sizeof( dlumpfile_t );
 	doomlumps = (dlumpfile_t *)Mem_Alloc( wad->mempool, lat_size );
+	numlumps = wad->numlumps;
+	wad->numlumps = 0;	// reset it
 
 	if( FS_Read( wad->file, doomlumps, lat_size ) != lat_size )
 	{
@@ -4047,73 +4112,79 @@ static bool W_ConvertIWADLumps( wfile_t *wad )
 	}
 
 	// convert doom1 format into WAD3 lump format
-	for( i = 0; i < wad->numlumps; i++ )
+	for( i = 0; i < numlumps; i++ )
 	{
 		// W_Open will be swap lump later
-		wad->lumps[i].filepos = doomlumps[i].filepos;
-		wad->lumps[i].size = wad->lumps[i].disksize = doomlumps[i].size;
-		com.strnlwr( doomlumps[i].name, wad->lumps[i].name, 9 );
-		wad->lumps[i].compression = CMP_NONE;
-		wad->lumps[i].type = TYPE_NONE;
+		int	filepos = doomlumps[i].filepos;
+		int	size = doomlumps[i].size;
+		char	type = TYPE_NONE;
+		char	name[16];
+
+		com.strnlwr( doomlumps[i].name, name, 9 );
 
 		// check for backslash issues
-		k = com.strlen( com_strchr( wad->lumps[i].name, '\\' ));
-		if( k ) wad->lumps[i].name[com.strlen( wad->lumps[i].name )-k] = '#'; // vile1.spr issues
+		k = com.strlen( com_strchr( name, '\\' ));
+		if( k ) name[com.strlen( name )-k] = '#'; // vile1.spr issues
 	
 		// textures begin
-		if( !com.stricmp( "S_START", wad->lumps[i].name ))
+		if( !com.stricmp( "S_START", name ))
 		{
 			skin_images = true;
 			continue; // skip identifier
 		}
-		else if( !com.stricmp( "P_START", wad->lumps[i].name ))
+		else if( !com.stricmp( "P_START", name ))
 		{
 			flat_images = true;
 			continue; // skip identifier
 		}
-		else if( !com.stricmp( "P1_START", wad->lumps[i].name ))
+		else if( !com.stricmp( "P1_START", name ))
 		{
 			flat_images = true;
 			continue; // skip identifier
 		}
-		else if( !com.stricmp( "P2_START", wad->lumps[i].name ))
+		else if( !com.stricmp( "P2_START", name ))
 		{
 			flat_images = true;
 			continue; // skip identifier
 		}
-		else if( !com.stricmp( "P3_START", wad->lumps[i].name ))
+		else if( !com.stricmp( "P3_START", name ))
 		{
 			// only doom2 uses this name
 			flat_images = true;
 			continue; // skip identifier
 		}
-		else if( !com.strnicmp( "WI", wad->lumps[i].name, 2 )) flmp_images = true;
-		else if( !com.strnicmp( "ST", wad->lumps[i].name, 2 )) flmp_images = true;
-		else if( !com.strnicmp( "M_", wad->lumps[i].name, 2 )) flmp_images = true;
-		else if( !com.strnicmp( "END", wad->lumps[i].name, 3 )) flmp_images = true;
-		else if( !com.strnicmp( "HELP", wad->lumps[i].name, 4 )) flmp_images = true;
-		else if( !com.strnicmp( "CREDIT", wad->lumps[i].name, 6 )) flmp_images = true;
-		else if( !com.strnicmp( "TITLEPIC", wad->lumps[i].name, 8 )) flmp_images = true;
-		else if( !com.strnicmp( "VICTORY", wad->lumps[i].name, 7 )) flmp_images = true;
-		else if( !com.strnicmp( "PFUB", wad->lumps[i].name, 4 )) flmp_images = true;
-		else if( !com.stricmp( "P_END", wad->lumps[i].name )) flat_images = false;
-		else if( !com.stricmp( "P1_END", wad->lumps[i].name )) flat_images = false;
-		else if( !com.stricmp( "P2_END", wad->lumps[i].name )) flat_images = false;
-		else if( !com.stricmp("P3_END", wad->lumps[i].name )) flat_images = false;
-		else if( !com.stricmp( "S_END", wad->lumps[i].name )) skin_images = false;
+		else if( !com.strnicmp( "WI", name, 2 )) flmp_images = true;
+		else if( !com.strnicmp( "ST", name, 2 )) flmp_images = true;
+		else if( !com.strnicmp( "M_", name, 2 )) flmp_images = true;
+		else if( !com.strnicmp( "END", name, 3 )) flmp_images = true;
+		else if( !com.strnicmp( "HELP", name, 4 )) flmp_images = true;
+		else if( !com.strnicmp( "CREDIT", name, 6 )) flmp_images = true;
+		else if( !com.strnicmp( "TITLEPIC", name, 8 )) flmp_images = true;
+		else if( !com.strnicmp( "VICTORY", name, 7 )) flmp_images = true;
+		else if( !com.strnicmp( "PFUB", name, 4 )) flmp_images = true;
+		else if( !com.stricmp( "P_END", name )) flat_images = false;
+		else if( !com.stricmp( "P1_END", name )) flat_images = false;
+		else if( !com.stricmp( "P2_END", name )) flat_images = false;
+		else if( !com.stricmp("P3_END", name )) flat_images = false;
+		else if( !com.stricmp( "S_END", name )) skin_images = false;
 		else flmp_images = false;
 
 		// setup lumptypes for doomwads
-		if( flmp_images ) wad->lumps[i].type = TYPE_FLMP; // mark as menu pic
-		if( flat_images ) wad->lumps[i].type = TYPE_FLAT; // mark as texture
-		if( skin_images ) wad->lumps[i].type = TYPE_SKIN; // mark as skin (sprite model)
-		if(!com.strnicmp( wad->lumps[i].name, "D_", 2 )) wad->lumps[i].type = TYPE_MUS;
-		if(!com.strnicmp( wad->lumps[i].name, "DS", 2 )) wad->lumps[i].type = TYPE_SND;
+		if( flmp_images ) type = TYPE_FLMP; // mark as menu pic
+		if( flat_images ) type = TYPE_FLAT; // mark as texture
+		if( skin_images ) type = TYPE_SKIN; // mark as skin (sprite model)
+		if(!com.strnicmp( name, "D_", 2 )) wad->lumps[i].type = TYPE_MUS;
+		if(!com.strnicmp( name, "DS", 2 )) wad->lumps[i].type = TYPE_SND;
 
 		// remove invalid resources
-		if(!com.strnicmp( wad->lumps[i].name, "ENDOOM", 6 )) wad->lumps[i].type = TYPE_NONE;
-		if(!com.strnicmp( wad->lumps[i].name, "STEP1", 5 )) wad->lumps[i].type = TYPE_NONE;
-		if(!com.strnicmp( wad->lumps[i].name, "STEP2", 5 )) wad->lumps[i].type = TYPE_NONE;
+		if( !com.strnicmp( name, "ENDOOM", 6 )) type = TYPE_NONE;
+		if( !com.strnicmp( name, "STEP1", 5 )) type = TYPE_NONE;
+		if( !com.strnicmp( name, "STEP2", 5 )) type = TYPE_NONE;
+
+		if( type == TYPE_NONE ) continue;	// invalid resource
+
+		// add wad file
+		W_AddFileToWad( name, wad, filepos, size, size, type, CMP_NONE );
 	}
 
 	Mem_Free( doomlumps ); // no need anymore
@@ -4122,14 +4193,19 @@ static bool W_ConvertIWADLumps( wfile_t *wad )
 
 static bool W_ReadLumpTable( wfile_t *wad )
 {
-	size_t	lat_size;
-	int	i, k;
+	size_t		lat_size;
+	dlumpinfo_t	*srclumps;
+	int		i, k, numlumps;
 
 	// nothing to convert ?
 	if( !wad ) return false;
 
 	lat_size = wad->numlumps * sizeof( dlumpinfo_t );
-	if( FS_Read( wad->file, wad->lumps, lat_size ) != lat_size )
+	srclumps = (dlumpinfo_t *)Mem_Alloc( wad->mempool, lat_size );
+	numlumps = wad->numlumps;
+	wad->numlumps = 0;	// reset it
+
+	if( FS_Read( wad->file, srclumps, lat_size ) != lat_size )
 	{
 		MsgDev( D_ERROR, "W_ReadLumpTable: %s has corrupted lump allocation table\n", wad->filename );
 		W_Close( wad );
@@ -4137,26 +4213,26 @@ static bool W_ReadLumpTable( wfile_t *wad )
 	}
 
 	// swap everything 
-	for( i = 0; i < wad->numlumps; i++ )
+	for( i = 0; i < numlumps; i++ )
 	{
-		wad->lumps[i].filepos = LittleLong( wad->lumps[i].filepos );
-		wad->lumps[i].disksize = LittleLong( wad->lumps[i].disksize );
-		wad->lumps[i].size = LittleLong( wad->lumps[i].size );
+		int	filepos = LittleLong( srclumps[i].filepos );
+		int	realsize = LittleLong( srclumps[i].disksize );
+		int	size = LittleLong( srclumps[i].size );
+		char	name[16];
 
 		// cleanup lumpname
-		com.strnlwr( wad->lumps[i].name, wad->lumps[i].name, sizeof(wad->lumps[i].name));
+		com.strnlwr( srclumps[i].name, name, sizeof( srclumps[i].name ));
 
 		// check for '*' symbol issues
-		k = com.strlen( com.strrchr( wad->lumps[i].name, '*' ));
-		if( k ) wad->lumps[i].name[com.strlen(wad->lumps[i].name)-k] = '!'; // quake1 issues
+		k = com.strlen( com.strrchr( name, '*' ));
+		if( k ) name[com.strlen( name ) - k] = '!'; // quake1 issues (can't save images that contain '*' symbol)
 
-		// convert all qmip types to miptex
-		if( wad->lumps[i].type == TYPE_QMIP ) wad->lumps[i].type = TYPE_MIPTEX;
-
-		// check for Quake 'conchars' issues (only lmp loader supposed to read this lame pic)
-		if( !com.stricmp( wad->lumps[i].name, "conchars" ) && wad->lumps[i].type == TYPE_QMIP )
-			wad->lumps[i].type = TYPE_QPIC; 
+		W_AddFileToWad( name, wad, filepos, size, realsize, srclumps[i].type, srclumps[i].compression );
 	}
+
+	// release source lumps
+	Mem_Free( srclumps );
+
 	return true;
 }
 

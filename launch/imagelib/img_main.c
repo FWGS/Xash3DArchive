@@ -182,7 +182,8 @@ FIXME: rewrite with VirtualFS using ?
 */
 bool FS_AddSideToPack( const char *name, int adjust_flags )
 {
-	byte	*resampled, *flipped;
+	byte	*out, *flipped;
+	bool	resampled = false;
 	
 	// first side set average size for all cubemap sides!
 	if( !image.cubemap )
@@ -203,9 +204,9 @@ bool FS_AddSideToPack( const char *name, int adjust_flags )
 	if( flipped != image.rgba ) image.rgba = Image_Copy( image.size );
 
 	// resampling image if needed
-	resampled = Image_ResampleInternal((uint *)image.rgba, image.width, image.height, image.source_width, image.source_height, image.source_type );
-	if( !resampled ) return false; // try to reasmple dxt?
-	if( resampled != image.rgba ) image.rgba = Image_Copy( image.size );
+	out = Image_ResampleInternal((uint *)image.rgba, image.width, image.height, image.source_width, image.source_height, image.source_type, &resampled );
+	if( !out ) return false; // try to reasmple dxt?
+	if( resampled ) image.rgba = Image_Copy( image.size );
 
 	image.cubemap = Mem_Realloc( Sys.imagepool, image.cubemap, image.ptr + image.size );
 	Mem_Copy( image.cubemap + image.ptr, image.rgba, image.size ); // add new side

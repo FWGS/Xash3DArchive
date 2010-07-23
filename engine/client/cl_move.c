@@ -9,7 +9,7 @@
 #include "const.h"
 #include "pm_defs.h"
 
-#define CONNECTION_PROBLEM_TIME	15.0
+#define CONNECTION_PROBLEM_TIME	15.0 * 1000	// 15 seconds
 
 bool CL_IsPredicted( void )
 {
@@ -59,8 +59,7 @@ usercmd_t CL_CreateCmd( void )
 	}
 
 	// send milliseconds of time to apply the move
-//	extramsec += ( cl.time - cl.oldtime ) * 1000;
-	extramsec += ( host.frametime ) * 1000;
+	extramsec += cls.frametime * 1000;
 	ms = extramsec;
 	extramsec -= ms;		// fractional part is left for next frame
 	if( ms > 250 ) ms = 100;	// time was unreasonable
@@ -116,7 +115,7 @@ void CL_WritePacket( void )
 	if( cls.state == ca_connected )
 	{
 		// just update reliable
-		if( cls.netchan.message.cursize || host.realtime - cls.netchan.last_sent > 1.0 )
+		if( cls.netchan.message.cursize || cls.realtime - cls.netchan.last_sent > 1000 )
 			Netchan_Transmit( &cls.netchan, 0, NULL );
 		return;
 	}
@@ -126,7 +125,7 @@ void CL_WritePacket( void )
 
 	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CMD_BACKUP )
 	{
-		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
+		if(( cls.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
 		{
 			MsgDev( D_WARN, "^1 Connection Problem^7\n" );
 			noDelta = true;	// request a fullupdate

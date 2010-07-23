@@ -603,6 +603,14 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 	vec3_t	oldvel;
 	int	i;
 
+	cl->commandMsec -= ucmd->msec;
+
+	if( cl->commandMsec < 0 && sv_enforcetime->integer )
+	{
+		MsgDev( D_INFO, "SV_ClientThink: commandMsec underflow from %s\n", cl->name );
+		return;
+	}
+
 	clent = cl->edict;
 	if( !SV_IsValidEdict( clent )) return;
 
@@ -701,6 +709,6 @@ void SV_PostRunCmd( sv_client_t *cl )
 	else svgame.dllFuncs.pfnPlayerPostThink( clent );
 
 	// restore frametime
-	svgame.globals->frametime = sv.frametime;
+	svgame.globals->frametime = sv_frametime();
 	svgame.dllFuncs.pfnCmdEnd( cl->edict );
 }

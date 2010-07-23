@@ -490,7 +490,7 @@ typedef struct stdilib_api_s
 	void (*exit)( void );				// normal silent termination
 	void (*sleep)( int msec );				// sleep for some msec
 	char *(*clipboard)( void );				// get clipboard data
-	void (*queevent)( ev_type_t type, int value, int value2, int length, void *ptr );
+	void (*queevent)( int time, ev_type_t type, int value, int value2, int length, void *ptr );
 	sys_event_t (*getevent)( void );			// get system events
 
 	// crclib.c funcs
@@ -656,6 +656,7 @@ typedef struct stdilib_api_s
 	bool (*Com_FreeLibrary)( dll_info_t *dll );			// free library
 	void*(*Com_GetProcAddress)( dll_info_t *dll, const char* name );	// gpa
 	double (*Com_DoubleTime)( void );				// hi-res timer
+	dword (*Com_Milliseconds)( void );				// low-res timer
 	void (*Com_ShellExecute)( const char *p1, const char *p2, bool exit );// execute shell programs
 
 	// built-in imagelib functions
@@ -1007,6 +1008,7 @@ misc utils
 #define Sys_Quit			com.exit
 #define Sys_Break			com.abort
 #define Sys_DoubleTime		com.Com_DoubleTime
+#define Sys_Milliseconds		com.Com_Milliseconds
 #define GetNumThreads		com.Com_NumThreads
 #define ThreadLock			com.Com_ThreadLock
 #define ThreadUnlock		com.Com_ThreadUnlock

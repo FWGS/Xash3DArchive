@@ -7,10 +7,6 @@
 #include "client.h"
 #include "byteorder.h"
 
-#define dem_cmd	0
-#define dem_read	1
-#define dem_set	2
-
 /*
 ====================
 CL_WriteDemoMessage
@@ -271,7 +267,7 @@ void CL_ReadDemoMessage( void )
 		return;
 
 	// don't need another message yet
-	if(( cl.time + host.frametime ) <= cl.mtime[0] )
+	if( cl.time <= cl.frame.servertime )
 		return;
 
 	// init the message
@@ -306,7 +302,7 @@ void CL_ReadDemoMessage( void )
 		return;
 	}
 
-	cls.connect_time = host.realtime;
+	cls.connect_time = cls.realtime;
 	buf.readcount = 0;
 	CL_ParseServerMessage( &buf );
 }

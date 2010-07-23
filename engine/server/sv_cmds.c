@@ -478,7 +478,7 @@ void SV_Kick_f( void )
 	SV_DropClient( sv_client );
 
 	// min case there is a funny zombie
-	sv_client->lastmessage = host.realtime;
+	sv_client->lastmessage = svs.realtime;
 }
 
 /*
@@ -565,7 +565,7 @@ void SV_Status_f( void )
 		Msg( "%s", cl->name );
 		l = 24 - com.strlen( cl->name );
 		for( j = 0; j < l; j++ ) Msg( " " );
-		Msg( "%g ", host.realtime - cl->lastmessage );
+		Msg( "%g ", ( svs.realtime - cl->lastmessage ) * 0.001f );
 		s = NET_AdrToString( cl->netchan.remote_address );
 		Msg( "%s", s );
 		l = 22 - com.strlen( s );

@@ -155,7 +155,6 @@ void SV_ActivateServer( void )
 	// run two frames to allow everything to settle
 	for( i = 0; i < 2 && !sv.loadgame; i++ )
 	{
-		sv.frametime = 0.1f;
 		SV_Physics();
 	}
 
@@ -293,6 +292,7 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	svgame.globals->changelevel = false;	// will be restored later if needed
 	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
+	svs.realtime = 0;
 
 	if( startspot )
 	{
@@ -314,7 +314,7 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	// restore state
 	sv.paused = paused;
 	sv.loadgame = loadgame;
-	sv.time = 1.0f;			// server spawn time it's always 1.0 second
+	sv.time = 1000;			// server spawn time it's always 1.0 second
 	
 	// initialize buffers
 	MSG_Init( &sv.multicast, sv.multicast_buf, sizeof( sv.multicast_buf ));

@@ -341,12 +341,13 @@ void Cmd_Frame( void )
 	if( w <= 0 || w > frame->width ) w = frame->width;
 	if( h <= 0 || h > frame->height ) h = frame->height;
 
-	if((xl & 0x07)||(yl & 0x07)||(w & 0x07)||(h & 0x07) || need_resample )
+	if(( xl & 0x07 ) || ( yl & 0x07 ) || ( w & 0x07 ) || ( h & 0x07 ))
 	{
-		resampled = Image_Process( &frame, resample_w, resample_h, IMAGE_RESAMPLE ); 
+		if( need_resample )
+			resampled = Image_Process( &frame, resample_w, resample_h, IMAGE_RESAMPLE ); 
 		if( !resampled ) MsgDev( D_NOTE, "frame dimensions not multiples of 8\n" );
 	}
-	if((w > MAX_FRAME_DIM) || (h > MAX_FRAME_DIM))
+	if(( w > MAX_FRAME_DIM ) || ( h > MAX_FRAME_DIM ))
 		Sys_Break( "sprite has a dimension longer than %d\n", MAX_FRAME_DIM );
 
 	// get interval

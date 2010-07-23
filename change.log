@@ -2,6 +2,8 @@ build ????
 
 Render: cut invisible water polygons
 Render: implement EF_NOWATERCSG for control func_water backface culling
+Tools: fix wadlib and spritegen round bugs
+FS: implement binary search for wadlumps
 
 build 1262
 

@@ -55,8 +55,8 @@ typedef struct system_s
 	
 	bool			hooked_out;
 	bool			stuffcmdsrun;
-	byte			packet_received[MAX_MSGLEN];	// network data
 	char			ModuleName[4096];		// exe.filename
+	int			msg_time;
 
 	HANDLE			hMutex;
 	HINSTANCE			hInstance;
@@ -88,16 +88,6 @@ typedef struct system_s
 	void (*CmdAuto)( char *complete_string );
 } system_t;
 
-typedef struct timer_s
-{
-	bool	initialized;		// any timer can be setup it
-	bool	hardware_timer;		// QueryPerfomanceCounter is present
-
-	double	oldtime;
-	double	curtime;
-	dword	timebase;
-} timer_t;
-
 typedef struct cvar_s
 {
 	// shared part
@@ -119,7 +109,6 @@ typedef struct cvar_s
 };
 
 extern system_t Sys;
-extern timer_t Clock;
 extern sysinfo_t SI;
 extern stdlib_api_t	com;
 
@@ -144,6 +133,7 @@ void Sys_ParseCommandLine (LPSTR lpCmdLine);
 void Sys_LookupInstance( void );
 void Sys_NewInstance( const char *name, const char *fmsg );
 double Sys_DoubleTime( void );
+dword Sys_Milliseconds( void );
 char *Sys_GetClipboardData( void );
 char *Sys_GetCurrentUser( void );
 bool Sys_GetModuleName( char *buffer, size_t length );
@@ -165,7 +155,7 @@ void Sys_Print(const char *pMsg);
 void Sys_Msg( const char *pMsg, ... );
 void Sys_MsgDev( int level, const char *pMsg, ... );
 sys_event_t Sys_GetEvent( void );
-void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr );
+void Sys_QueEvent( int time, ev_type_t type, int value, int value2, int length, void *ptr );
 int Sys_GetThreadWork( void );
 void Sys_ThreadWorkerFunction( int threadnum );
 void Sys_ThreadSetDefault( void );

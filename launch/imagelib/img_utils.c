@@ -1169,13 +1169,16 @@ void Image_Resample8Nolerp( const void *indata, int inwidth, int inheight, void 
 Image_Resample
 ================
 */
-byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int outwidth, int outheight, int type )
+byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int outwidth, int outheight, int type, bool *resampled )
 {
 	bool	quality = (image.cmd_flags & IL_USE_LERPING);
 
 	// nothing to resample ?
 	if( inwidth == outwidth && inheight == outheight )
+	{
+		*resampled = false;
 		return (byte *)indata;
+	}
 
 	// alloc new buffer
 	switch( type )
@@ -1197,8 +1200,11 @@ byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int
 		break;
 	default:
 		MsgDev( D_WARN, "Image_Resample: unsupported format %s\n", PFDesc[type].name );
+		*resampled = false;
 		return (byte *)indata;	
 	}
+
+	*resampled = true;
 	return image.tempbuffer;
 }
 
@@ -1207,7 +1213,7 @@ byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int
 Image_Flood
 ================
 */
-byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int outwidth, int outheight, int type )
+byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int outwidth, int outheight, int type, bool *resampled )
 {
 	bool	quality = (image.cmd_flags & IL_USE_LERPING);
 	int	samples = PFDesc[type].bpp;
@@ -1216,7 +1222,10 @@ byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int ou
 
 	// nothing to reflood ?
 	if( inwidth == outwidth && inheight == outheight )
+	{
+		*resampled = false;
 		return (byte *)indata;
+	}
 
 	// alloc new buffer
 	switch( type )
@@ -1233,6 +1242,7 @@ byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int ou
 		break;
 	default:
 		MsgDev( D_WARN, "Image_Flood: unsupported format %s\n", PFDesc[type].name );
+		*resampled = false;
 		return (byte *)indata;	
 	}
 
@@ -1244,6 +1254,7 @@ byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int ou
 			for( i = 0; i < samples; i++ )
 				if( x < inwidth ) *out++ = *in++;
 				else *out++;
+	*resampled = true;
 	return image.tempbuffer;
 }
 
@@ -1423,6 +1434,7 @@ bool Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 	if(( flags & IMAGE_RESAMPLE && width > 0 && height > 0 ) || flags & IMAGE_ROUND || flags & IMAGE_ROUNDFILLER )
 	{
 		int	w, h;
+		bool	resampled = false;
 
 		if( flags & IMAGE_ROUND || flags & IMAGE_ROUNDFILLER )
 		{
@@ -1431,7 +1443,14 @@ bool Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 
 			// round to nearest pow
 			// NOTE: images with dims less than 8x8 may causing problems
-			Image_RoundDimensions( &w, &h );
+			if( flags & IMAGE_ROUNDFILLER )
+			{
+				// roundfiller always must roundup
+				w = NearestPOW( w, false );
+				h = NearestPOW( h, false );
+			}
+			else Image_RoundDimensions( &w, &h );
+
 			w = bound( 8, w, IMAGE_MAXWIDTH );	// 8 - 4096
 			h = bound( 8, h, IMAGE_MAXHEIGHT);	// 8 - 4096
 		}
@@ -1441,13 +1460,14 @@ bool Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 			w = bound( 1, width, IMAGE_MAXWIDTH );	// 1 - 4096
 			h = bound( 1, height, IMAGE_MAXHEIGHT);	// 1 - 4096
 		}
-		if( flags & IMAGE_ROUNDFILLER )
-	         		out = Image_FloodInternal( pic->buffer, pic->width, pic->height, w, h, pic->type );
-		else out = Image_ResampleInternal((uint *)pic->buffer, pic->width, pic->height, w, h, pic->type );
 
-		if( out != pic->buffer ) // resampled or filled
+		if( flags & IMAGE_ROUNDFILLER )
+	         		out = Image_FloodInternal( pic->buffer, pic->width, pic->height, w, h, pic->type, &resampled );
+		else out = Image_ResampleInternal((uint *)pic->buffer, pic->width, pic->height, w, h, pic->type, &resampled );
+
+		if( resampled ) // resampled or filled
 		{
-			MsgDev( D_NOTE, "Image_Resample: from[%d x %d] to [%d x %d]\n", pic->width, pic->height, w, h );
+			Msg( "Image_Resample: from[%d x %d] to [%d x %d]\n", pic->width, pic->height, w, h );
 			pic->width = w, pic->height = h;
 			pic->size = w * h * PFDesc[pic->type].bpp;
 			Mem_Free( pic->buffer );		// free original image buffer

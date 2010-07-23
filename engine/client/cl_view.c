@@ -44,8 +44,8 @@ void V_SetupRefDef( void )
 	cl.refdef.num_entities = clgame.globals->numEntities;
 	cl.refdef.max_entities = clgame.globals->maxEntities;
 	cl.refdef.maxclients = clgame.globals->maxClients;
-	cl.refdef.time = cl.time;
-	cl.refdef.frametime = cl.time - cl.oldtime;
+	cl.refdef.time = cl_time();
+	cl.refdef.frametime = cls.frametime;
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
 	cl.refdef.waterlevel = clent->v.waterlevel;		
@@ -121,8 +121,8 @@ void V_RenderView( void )
 
 	if( !cl.refdef.paused )
 	{
-		clgame.globals->time = cl.time; // clamped
-		clgame.globals->frametime = cl.time - cl.oldtime; // used by input code
+		clgame.globals->time = cl_time(); // clamped
+		clgame.globals->frametime = cls.frametime; // used by input code
 	}
 	else clgame.globals->frametime = 0.0f;	// pause
 
@@ -188,9 +188,10 @@ void V_PostRender( void )
 	{
 		SCR_RSpeeds();
 		SCR_DrawFPS();
-		UI_UpdateMenu( host.realtime );
+		UI_UpdateMenu( cls.realtime * 0.001f );
 		Con_DrawConsole();
 	}
+
 	SCR_MakeScreenShot();
 	re->EndFrame();
 }

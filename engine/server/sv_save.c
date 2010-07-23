@@ -303,7 +303,7 @@ void SV_BuildSaveComment( char *text, int maxlength )
 {
 	const char	*pName;
 	edict_t		*pWorld = EDICT_NUM( 0 );
-	float		time = sv.time;
+	float		time = sv_time();
 
 	if( pWorld && pWorld->v.message )
 	{
@@ -1223,7 +1223,7 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 	SV_SaveFinish( pSaveData );
 
 	// restore server time
-	sv.time = header.time;
+	sv.time = header.time * 1000;
 	
 	return 1;
 }
@@ -1378,7 +1378,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 
 			SV_EntityPatchRead( pSaveData, currentLevelData.levelList[i].mapName );
 
-			pSaveData->time = sv.time; // - header.time;
+			pSaveData->time = sv_time(); // - header.time;
 			pSaveData->fUseLandmark = true;
 
 			// calculate landmark offset
@@ -1637,6 +1637,9 @@ bool SV_LoadGame( const char *pName )
 	bool		validload = false;
 	GAME_HEADER	gameHeader;
 	string		name;
+
+	if( host.type == HOST_DEDICATED )
+		return false;
 
 	if( !pName || !pName[0] )
 		return false;

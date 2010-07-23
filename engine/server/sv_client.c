@@ -1,4 +1,3 @@
-
 //=======================================================================
 //			Copyright XashXT Group 2008 ©
 //		        sv_client.c - client interactions
@@ -32,7 +31,7 @@ challenge, they must give a valid IP address.
 void SV_GetChallenge( netadr_t from )
 {
 	int	i, oldest = 0;
-	double	oldestTime;
+	int	oldestTime;
 
 	oldestTime = 0x7fffffff;
 	// see if we already have a challenge for this ip
@@ -50,9 +49,9 @@ void SV_GetChallenge( netadr_t from )
 	if( i == MAX_CHALLENGES )
 	{
 		// this is the first time this client has asked for a challenge
-		svs.challenges[oldest].challenge = (rand()<<16) ^ rand();
+		svs.challenges[oldest].challenge = ((rand()<<16) ^ rand()) ^ svs.realtime;
 		svs.challenges[oldest].adr = from;
-		svs.challenges[oldest].time = host.realtime;
+		svs.challenges[oldest].time = svs.realtime;
 		svs.challenges[oldest].connected = false;
 		i = oldest;
 	}
@@ -98,7 +97,7 @@ void SV_DirectConnect( netadr_t from )
 		if( cl->state == cs_free ) continue;
 		if( NET_CompareBaseAdr(from, cl->netchan.remote_address) && (cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
 		{
-			if( !NET_IsLocalAddress( from ) && ( host.realtime - cl->lastconnect ) < sv_reconnect_limit->value )
+			if( !NET_IsLocalAddress( from ) && ( svs.realtime - cl->lastconnect ) < sv_reconnect_limit->value * 1000 )
 			{
 				MsgDev( D_INFO, "%s:reconnect rejected : too soon\n", NET_AdrToString( from ));
 				return;
@@ -201,8 +200,8 @@ gotnewcl:
 	MSG_Init( &newcl->datagram, newcl->datagram_buf, sizeof( newcl->datagram_buf ));	// datagram buf
 
 	newcl->state = cs_connected;
-	newcl->lastmessage = host.realtime;
-	newcl->lastconnect = host.realtime;
+	newcl->lastmessage = svs.realtime;
+	newcl->lastconnect = svs.realtime;
 
 	// if this was the first client on the server, or the last client
 	// the server can hold, send a heartbeat to the master.
@@ -276,8 +275,8 @@ edict_t *SV_FakeConnect( const char *netname )
 	SV_UserinfoChanged( newcl, userinfo );
 
 	newcl->state = cs_spawned;
-	newcl->lastmessage = host.realtime;	// don't timeout
-	newcl->lastconnect = host.realtime;
+	newcl->lastmessage = svs.realtime;	// don't timeout
+	newcl->lastconnect = svs.realtime;
 	
 	return ent;
 }
@@ -1438,7 +1437,7 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 		if( cl->lastframe > 0 )
 		{
 			client_frame_t *frame = &cl->frames[cl->lastframe & SV_UPDATE_MASK];
-			frame->latency = host.realtime - frame->senttime;
+			frame->latency = svs.realtime - frame->senttime;
 		}
 	}
 
@@ -1509,8 +1508,8 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	else cl->send_message = false; // don't reply, sequences have slipped	
 
 	// save time for ping calculations
-	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].senttime = host.realtime;
-	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].latency = -1.0f;
+	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].senttime = svs.realtime;
+	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].latency = -1;
 		
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )

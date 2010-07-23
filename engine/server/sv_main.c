@@ -6,10 +6,11 @@
 #include "common.h"
 #include "server.h"
 
-#define HEARTBEAT_SECONDS		300.0 	// 300 seconds
+#define HEARTBEAT_SECONDS	(300 * 1000) 	// 300 seconds
 
-netadr_t	master_adr[MAX_MASTERS];	// address of group servers
+netadr_t	master_adr[MAX_MASTERS];		// address of group servers
 
+cvar_t	*sv_fps;
 cvar_t	*sv_zmax;
 cvar_t	*sv_pausable;
 cvar_t	*sv_newunit;
@@ -18,6 +19,7 @@ cvar_t	*timeout;				// seconds without any message
 cvar_t	*zombietime;			// seconds to sink messages after disconnect
 cvar_t	*rcon_password;			// password for remote server commands
 cvar_t	*allow_download;
+cvar_t	*sv_enforcetime;
 cvar_t	*sv_airaccelerate;
 cvar_t	*sv_wateraccelerate;
 cvar_t	*sv_idealpitchscale;
@@ -133,6 +135,32 @@ int SV_CalcPacketLoss( sv_client_t *cl )
 
 /*
 ===================
+SV_GiveMsec
+
+Every few frames, gives all clients an allotment of milliseconds
+for their command moves.  If they exceed it, assume cheating.
+===================
+*/
+void SV_GiveMsec( void )
+{
+	int		i;
+	sv_client_t	*cl;
+
+	if( sv.framenum & 15 )
+		return;
+
+	for( i = 0; i < sv_maxclients->integer; i++ )
+	{
+		cl = &svs.clients[i];
+		if( cl->state == cs_free )
+			continue;
+		
+		cl->commandMsec = 1800; // 1600 + some slop
+	}
+}
+
+/*
+===================
 SV_UpdateMovevars
 
 check movevars for changes every frame
@@ -236,6 +264,24 @@ void SV_UpdateServerInfo( void )
 
 /*
 =================
+SV_CalcFrameTime
+=================
+*/
+void SV_CalcFrameTime( void )
+{
+	if( sv_fps->modified )
+	{
+		if( sv_fps->value < 10 ) Cvar_Set( "sv_fps", "10" ); // too slow, also, netcode uses a byte
+		else if( sv_fps->value > 90 ) Cvar_Set( "sv_fps", "90" ); // abusive
+		sv_fps->modified = false;
+	}
+
+	// calc sv.frametime
+	sv.frametime = ( 1000 / sv_fps->integer );
+}
+
+/*
+=================
 SV_ReadPackets
 =================
 */
@@ -281,7 +327,7 @@ void SV_ReadPackets( void )
 				// this is a valid, sequenced packet, so process it
 				if( cl->state != cs_zombie )
 				{
-					cl->lastmessage = host.realtime; // don't timeout
+					cl->lastmessage = svs.realtime; // don't timeout
 					SV_ExecuteClientMessage( cl, &net_message );
 				}
 			}
@@ -309,12 +355,12 @@ if necessary
 void SV_CheckTimeouts( void )
 {
 	sv_client_t	*cl;
-	float		droppoint;
-	float		zombiepoint;
+	int		droppoint;
+	int		zombiepoint;
 	int		i, numclients = 0;
 
-	droppoint = host.realtime - timeout->value;
-	zombiepoint = host.realtime - zombietime->value;
+	droppoint = svs.realtime - ( timeout->value * 1000 );
+	zombiepoint = svs.realtime - ( zombietime->value * 1000 );
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -326,11 +372,11 @@ void SV_CheckTimeouts( void )
 
 		// fake clients do not timeout
 		if( cl->edict && (cl->edict->v.flags & FL_FAKECLIENT ))
-			cl->lastmessage = host.realtime;
+			cl->lastmessage = svs.realtime;
 
 		// message times may be wrong across a changelevel
-		if( cl->lastmessage > host.realtime )
-			cl->lastmessage = host.realtime;
+		if( cl->lastmessage > svs.realtime )
+			cl->lastmessage = svs.realtime;
 
 		if( cl->state == cs_zombie && cl->lastmessage < zombiepoint )
 		{
@@ -409,28 +455,40 @@ SV_RunGameFrame
 void SV_RunGameFrame( void )
 {
 	if( !SV_HasActivePlayers()) return;
-	if( sv.frametime ) SV_Physics();
+
+	// we always need to bump framenum, even if we
+	// don't run the world, otherwise the delta
+	// compression can get confused when a client
+	// has the "current" frame
+	sv.framenum++;
+
+	// don't run if paused or not in game
+	if( !sv.paused && CL_IsInGame( ))
+		SV_Physics();
+
+	// never get more than one tic behind
+	if( sv.time < svs.realtime )
+		svs.realtime = sv.time;
 }
 
 /*
 ==================
-Host_ServerFrame
+SV_Frame
 
 ==================
 */
-void Host_ServerFrame( void )
+void SV_Frame( int time )
 {
 	// if server is not active, do nothing
 	if( !svs.initialized ) return;
 
-	// advances servertime
-	if( !sv.paused && CL_IsInGame( ) && !sv.loadgame )
-	{
-		if(!( sv.hostflags & SVF_PLAYERSONLY ))
-			sv.time += host.frametime;
-		sv.frametime = host.frametime;
-	}
-	else sv.frametime = 0;
+	svs.realtime += time;
+
+	// keep the random time dependent
+	rand ();
+
+	// calc sv.frametime
+	SV_CalcFrameTime ();
 
 	// check timeouts
 	SV_CheckTimeouts ();
@@ -438,8 +496,21 @@ void Host_ServerFrame( void )
 	// read packets from clients
 	SV_ReadPackets ();
 
+	// move autonomous things around if enough time has passed
+	if( svs.realtime < sv.time )
+	{
+		// never let the time get too far off
+		if( sv.time - svs.realtime > sv.frametime )
+			svs.realtime = sv.time - sv.frametime;
+		NET_Sleep( sv.time - svs.realtime );
+		return;
+	}
+
 	// update ping based on the last known frame from all clients
 	SV_CalcPings ();
+
+	// give the clients some timeslices
+	SV_GiveMsec ();
 
 	// let everything in the world think and move
 	SV_RunGameFrame ();
@@ -479,13 +550,13 @@ void Master_Heartbeat( void )
 		return;	// only dedicated servers send heartbeats
 
 	// check for time wraparound
-	if( svs.last_heartbeat > host.realtime )
-		svs.last_heartbeat = host.realtime;
+	if( svs.last_heartbeat > svs.realtime )
+		svs.last_heartbeat = svs.realtime;
 
-	if(( host.realtime - svs.last_heartbeat ) < HEARTBEAT_SECONDS )
+	if(( svs.realtime - svs.last_heartbeat ) < HEARTBEAT_SECONDS )
 		return; // not time to send yet
 
-	svs.last_heartbeat = host.realtime;
+	svs.last_heartbeat = svs.realtime;
 
 	// send the same string that we would give for a status OOB command
 	string = SV_StatusString( );
@@ -563,12 +634,14 @@ void SV_Init( void )
 	sv_skyname = Cvar_Get ("sv_skyname", "", 0, "skybox name (can be dynamically changed in-game)" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
+	sv_fps = Cvar_Get( "sv_fps", "72.1", CVAR_ARCHIVE, "running server physics at" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
 	sv_newunit = Cvar_Get( "sv_newunit", "0", 0, "sets to 1 while new unit is loading" );
 	hostname = Cvar_Get( "sv_hostname", "unnamed", CVAR_SERVERINFO | CVAR_ARCHIVE, "host name" );
 	timeout = Cvar_Get( "timeout", "125", 0, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", 0, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", 0, "allow players to pause or not" );
+	sv_enforcetime = Cvar_Get( "sv_enforcetime", "0", 0, "enable client enforce time (anti-cheating)" );
 	allow_download = Cvar_Get( "allow_download", "0", CVAR_ARCHIVE, "allow download resources" );
 	sv_noreload = Cvar_Get( "sv_noreload", "0", 0, "ignore savepoints for singleplayer" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );

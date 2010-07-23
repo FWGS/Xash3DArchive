@@ -73,51 +73,6 @@ void CL_ForceSnd( void )
 }
 
 /*
-===============
-CL_LerpPoint
-
-Determines the fraction between the last two messages that the objects
-should be put at.
-===============
-*/
-static float CL_LerpPoint( void )
-{
-	float	f, frac;
-
-	f = cl.mtime[0] - cl.mtime[1];
-	
-	if( !f || SV_Active( ))
-	{
-		cl.time = cl.mtime[0];
-		return 1.0f;
-	}
-		
-	if( f > 0.1f )
-	{	
-		// dropped packet, or start of demo
-		cl.mtime[1] = cl.mtime[0] - 0.1f;
-		f = 0.1f;
-	}
-
-	frac = ( cl.time - cl.mtime[1] ) / f;
-
-	if( frac < 0 )
-	{
-		if( frac < -0.01f )
-			cl.time = cl.mtime[1];
-		frac = 0.0f;
-	}
-	else if( frac > 1.0f )
-	{
-		if( frac > 1.01f )
-			cl.time = cl.mtime[0];
-		frac = 1.0f;
-	}
-		
-	return frac;
-}
-
-/*
 =======================================================================
 
 CLIENT RELIABLE COMMAND COMMUNICATION
@@ -208,7 +163,7 @@ void Cmd_ForwardToServer( void )
 CL_Quit_f
 ==================
 */
-void CL_Quit_f (void)
+void CL_Quit_f( void )
 {
 	CL_Disconnect();
 	Sys_Quit();
@@ -236,10 +191,10 @@ We have gotten a challenge from the server, so try and
 connect.
 ======================
 */
-void CL_SendConnectPacket (void)
+void CL_SendConnectPacket( void )
 {
 	netadr_t	adr;
-	int		port;
+	int	port;
 
 	if( !NET_StringToAdr( cls.servername, &adr ))
 	{
@@ -247,6 +202,7 @@ void CL_SendConnectPacket (void)
 		cls.connect_time = 0;
 		return;
 	}
+
 	if( adr.port == 0 ) adr.port = BigShort( PORT_SERVER );
 	port = Cvar_VariableValue( "net_qport" );
 
@@ -279,7 +235,7 @@ void CL_CheckForResend( void )
 	if( cls.demoplayback || cls.state != ca_connecting )
 		return;
 
-	if(( host.realtime - cls.connect_time ) < 3.0 )
+	if(( cls.realtime - cls.connect_time ) < 3000 )
 		return;
 
 	if( !NET_StringToAdr( cls.servername, &adr ))
@@ -290,7 +246,7 @@ void CL_CheckForResend( void )
 	}
 
 	if( adr.port == 0 ) adr.port = BigShort( PORT_SERVER );
-	cls.connect_time = host.realtime; // for retransmit requests
+	cls.connect_time = cls.realtime; // for retransmit requests
 
 	MsgDev( D_NOTE, "Connecting to %s...\n", cls.servername );
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
@@ -517,8 +473,8 @@ Contents allows \n escape character
 void CL_Packet_f( void )
 {
 	char	send[2048];
-	int		i, l;
 	char	*in, *out;
+	int	i, l;
 	netadr_t	adr;
 
 	if (Cmd_Argc() != 3)
@@ -554,7 +510,7 @@ void CL_Packet_f( void )
 	}
 	*out = 0;
 
-	NET_SendPacket (NS_CLIENT, out-send, send, adr);
+	NET_SendPacket( NS_CLIENT, out - send, send, adr );
 }
 
 /*
@@ -590,7 +546,7 @@ void CL_Reconnect_f( void )
 		if( cls.state >= ca_connected )
 		{
 			CL_Disconnect();
-			cls.connect_time = host.realtime - 1.5;
+			cls.connect_time = cls.realtime - 1500;
 		}
 		else cls.connect_time = MAX_HEARTBEAT; // fire immediately
 
@@ -718,7 +674,8 @@ void CL_PrepVideo( void )
 	host.decalList = NULL; 
 	host.numdecals = 0;
 	
-	if( host.developer <= 2 ) Con_ClearNotify(); // clear any lines of console text
+	if( host.developer <= 2 )
+		Con_ClearNotify(); // clear any lines of console text
 
 	SCR_UpdateScreen ();
 	CL_RunLightStyles ();
@@ -869,7 +826,10 @@ void CL_ReadPackets( void )
 		CL_ReadDemoMessage();
 	else CL_ReadNetMessage();
 
-	cl.lerpFrac = CL_LerpPoint();
+	cl.time = bound( cl.frame.servertime - cl.serverframetime, cl.time, cl.frame.servertime );
+
+	if( cl.refdef.paused ) cl.lerpFrac = 1.0f;
+	else cl.lerpFrac = 1.0 - (cl.frame.servertime - cl.time) / (float)cl.serverframetime;
 
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
@@ -878,7 +838,7 @@ void CL_ReadPackets( void )
 	// check timeout
 	if( cls.state >= ca_connected && !cls.demoplayback )
 	{
-		if( host.realtime - cls.netchan.last_received > cl_timeout->value )
+		if( cls.realtime - cls.netchan.last_received > ( cl_timeout->value * 1000 ))
 		{
 			if( ++cl.timeoutcount > 5 ) // timeoutcount saves debugger
 			{
@@ -1104,6 +1064,8 @@ void CL_InitLocal( void )
 {
 	cls.state = ca_disconnected;
 
+	MSG_Init( &net_message, net_message_buffer, sizeof( net_message_buffer ));
+
 	// register our variables
 	cl_predict = Cvar_Get( "cl_predict", "1", CVAR_ARCHIVE, "disables client movement prediction" );
 	cl_crosshair = Cvar_Get( "crosshair", "1", CVAR_ARCHIVE|CVAR_USERINFO, "show weapon chrosshair" );
@@ -1195,23 +1157,26 @@ Host_ClientFrame
 
 ==================
 */
-void Host_ClientFrame( void )
+void CL_Frame( int time )
 {
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
 
 	// decide the simulation time
-	cl.oldtime = cl.time;
-	cl.time += host.frametime;
+	cl.time += time;		// can be merged by cl.frame.servertime 
+	cls.realtime += time;
+	cls.frametime = time * 0.001f;
+	if( cls.frametime > 0.2f ) cls.frametime = 0.2f;
 
 	// menu time (not paused, not clamped)
-	gameui.globals->time = host.realtime;
-	gameui.globals->frametime = host.realframetime;
+	gameui.globals->time = cls.realtime * 0.001f;
+	gameui.globals->frametime = cls.frametime;
 	gameui.globals->demoplayback = cls.demoplayback;
 	gameui.globals->demorecording = cls.demorecording;
 	
 	// if in the debugger last frame, don't timeout
-	if( host.frametime > 5.0 ) cls.netchan.last_received = Sys_DoubleTime();
+	if( host.frametime > 5.0 )
+		cls.netchan.last_received = Sys_Milliseconds();
 
 	// fetch results from server
 	CL_ReadPackets();
@@ -1261,7 +1226,6 @@ void CL_Init( void )
 
 	Con_Init();	
 	CL_InitLocal();
-	MSG_Init( &net_message, net_message_buffer, sizeof( net_message_buffer ));
 
 	if( !CL_LoadProgs( "client.dll" ))
 		Host_Error( "CL_InitGame: can't initialize client.dll\n" );
