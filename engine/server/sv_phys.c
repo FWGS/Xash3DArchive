@@ -1232,7 +1232,13 @@ void SV_Physics_Pusher( edict_t *ent )
 		svgame.dllFuncs.pfnBlocked( ent, pBlocker );
 	}
 
-	if(( thinktime > oldtime && thinktime <= ent->v.ltime ) || ( ent->v.flags & FL_ALWAYSTHINK ))
+	if( thinktime > oldtime && thinktime <= ent->v.ltime )
+	{
+		ent->v.nextthink = 0.0f;
+		svgame.dllFuncs.pfnThink( ent );
+		if( ent->free ) return;
+	}
+	else if( ent->v.flags & FL_ALWAYSTHINK || ( sv.state == ss_loading && !sv.loadgame ))
 	{
 		ent->v.nextthink = 0.0f;
 		svgame.dllFuncs.pfnThink( ent );

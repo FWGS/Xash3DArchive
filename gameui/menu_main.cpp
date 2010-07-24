@@ -501,14 +501,14 @@ static void UI_Main_Init( void )
 
 	uiMain.dlgMessage1.generic.id = ID_MSGTEXT;
 	uiMain.dlgMessage1.generic.type = QMTYPE_ACTION;
-	uiMain.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiMain.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiMain.dlgMessage1.generic.name = "Starting a Hazard Course will exit";
 	uiMain.dlgMessage1.generic.x = 212;
 	uiMain.dlgMessage1.generic.y = 280;
 
 	uiMain.dlgMessage2.generic.id = ID_MSGTEXT;
 	uiMain.dlgMessage2.generic.type = QMTYPE_ACTION;
-	uiMain.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiMain.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiMain.dlgMessage2.generic.name = "any current game, OK to exit?";
 	uiMain.dlgMessage2.generic.x = 256;
 	uiMain.dlgMessage2.generic.y = 310;

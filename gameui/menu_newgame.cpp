@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "keydefs.h"
 
 #define ART_BANNER		"gfx/shell/head_newgame"
 
@@ -106,6 +107,21 @@ static void UI_PromptDialog( float skill )
 
 /*
 =================
+UI_NewGame_KeyFunc
+=================
+*/
+static const char *UI_NewGame_KeyFunc( int key, int down )
+{
+	if( down && key == K_ESCAPE && !( uiNewGame.dlgMessage1.generic.flags & QMF_HIDDEN ))
+	{
+		UI_PromptDialog( 0.0f );	// clear skill
+		return uiSoundNull;
+	}
+	return UI_DefaultKey( &uiNewGame.menu, key, down );
+}
+
+/*
+=================
 UI_NewGame_Callback
 =================
 */
@@ -160,6 +176,8 @@ static void UI_NewGame_Init( void )
 {
 	memset( &uiNewGame, 0, sizeof( uiNewGame_t ));
 
+	uiNewGame.menu.keyFunc = UI_NewGame_KeyFunc;
+	
 	uiNewGame.background.generic.id = ID_BACKGROUND;
 	uiNewGame.background.generic.type = QMTYPE_BITMAP;
 	uiNewGame.background.generic.flags = QMF_INACTIVE;
@@ -225,21 +243,21 @@ static void UI_NewGame_Init( void )
 
 	uiNewGame.dlgMessage1.generic.id = ID_MSGTEXT;
 	uiNewGame.dlgMessage1.generic.type = QMTYPE_ACTION;
-	uiNewGame.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiNewGame.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiNewGame.dlgMessage1.generic.name = "Starting a new game will exit";
 	uiNewGame.dlgMessage1.generic.x = 248;
 	uiNewGame.dlgMessage1.generic.y = 280;
 
 	uiNewGame.dlgMessage2.generic.id = ID_MSGTEXT;
 	uiNewGame.dlgMessage2.generic.type = QMTYPE_ACTION;
-	uiNewGame.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiNewGame.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiNewGame.dlgMessage2.generic.name = "any current game, OK to exit?";
 	uiNewGame.dlgMessage2.generic.x = 248;
 	uiNewGame.dlgMessage2.generic.y = 310;
 
 	uiNewGame.yes.generic.id = ID_YES;
 	uiNewGame.yes.generic.type = QMTYPE_ACTION;
-	uiNewGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN;
+	uiNewGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiNewGame.yes.generic.name = "Ok";
 	uiNewGame.yes.generic.x = 380;
 	uiNewGame.yes.generic.y = 460;
@@ -247,7 +265,7 @@ static void UI_NewGame_Init( void )
 
 	uiNewGame.no.generic.id = ID_NO;
 	uiNewGame.no.generic.type = QMTYPE_ACTION;
-	uiNewGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN;
+	uiNewGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiNewGame.no.generic.name = "Cancel";
 	uiNewGame.no.generic.x = 530;
 	uiNewGame.no.generic.y = 460;

@@ -44,7 +44,7 @@ float S_GetMasterVolume( void )
 {
 	float	scale = 1.0f;
 
-	if( s_listener.ingame && soundfade.percent != 0 )
+	if( !s_listener.inmenu && soundfade.percent != 0 )
 	{
 		scale = bound( 0.0f, soundfade.percent / 100.0f, 1.0f );
 		scale = 1.0f - scale;
@@ -748,7 +748,8 @@ void S_RenderFrame( ref_params_t *fd )
 	s_listener.entnum = fd->viewentity;	// can be camera entity too
 	s_listener.frametime = fd->frametime;
 	s_listener.waterlevel = fd->waterlevel;
-	s_listener.ingame = !si.IsInMenu();
+	s_listener.active = si.IsActive();
+	s_listener.inmenu = si.IsInMenu();
 	s_listener.paused = fd->paused;
 
 	VectorCopy( fd->simorg, s_listener.origin );

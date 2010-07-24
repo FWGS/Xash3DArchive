@@ -494,7 +494,7 @@ Key_Event
 Called by the system for both key up and key down events
 ===================
 */
-void Key_Event( int key, bool down )
+void Key_Event( int key, bool down, int time )
 {
 	const char	*kb;
 	char		cmd[1024];
@@ -589,7 +589,7 @@ void Key_Event( int key, bool down )
 					{
 						// button commands add keynum and time as parms so that multiple
 						// sources can be discriminated and subframe corrected
-						com.sprintf( cmd, "%s %i\n", button, key );
+						com.sprintf( cmd, "%s %i %i\n", button, key, time );
 						Cbuf_AddText( cmd );
 					}
 					else
@@ -655,7 +655,7 @@ void Key_ClearStates( void )
 
 	for ( i = 0; i < 256; i++ )
 	{
-		if( keys[i].down ) Key_Event( i, false );
+		if( keys[i].down ) Key_Event( i, false, 0 );
 		keys[i].down = 0;
 		keys[i].repeats = 0;
 	}
@@ -696,7 +696,7 @@ void CL_MouseEvent( int mx, int my )
 		// if the menu is visible, move the menu cursor
 		UI_MouseMove( mx, my );
 	}
-	else if( cls.key_dest != key_console )
+	else if( cls.key_dest != key_console && CL_Active( ))
 	{
 		// otherwise passed into client.dll
 		clgame.dllFuncs.pfnMouseEvent( mx, my );

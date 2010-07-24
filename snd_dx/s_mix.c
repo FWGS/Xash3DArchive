@@ -248,14 +248,32 @@ void S_MixAllChannels( int endtime, int end )
 	{
 		if( !ch->sfx ) continue;
 		if( !ch->leftvol && !ch->rightvol && !ch->isSentence )
+		{
+			// sentences must be playing even if not hearing
 			continue;
-
-		// only local sounds can be playing in menus or on pause
-		if(( s_listener.paused || !s_listener.ingame ) && !ch->localsound )
-			continue;
+		}
 
 		sc = S_LoadSound( ch->sfx );
 		if( !sc ) continue;
+
+		if( s_listener.inmenu && !ch->localsound )
+		{
+			// play only local sounds, keep pause for other
+			ch->end = paintedtime + sc->samples - ch->pos; 
+			continue;
+		}
+		else if( !s_listener.inmenu && !s_listener.active && !ch->staticsound )
+		{
+			// play only ambient sounds, keep pause for other
+			ch->end = paintedtime + sc->samples - ch->pos; 
+			continue;
+		}
+		else if( s_listener.paused )
+		{
+			// play only ambient sounds, keep pause for other
+			ch->end = paintedtime + sc->samples - ch->pos; 
+			continue;
+		}
 
 		ltime = paintedtime;
 		

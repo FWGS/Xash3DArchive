@@ -54,7 +54,7 @@ void GameDLLInit( void )
 	g_psv_maxspeed = CVAR_REGISTER( "sv_maxspeed", "320", 0, "maximum speed a player can accelerate to when on ground" );
 	g_psv_gravity = CVAR_REGISTER( "sv_gravity", "800", 0, "world gravity" );
 	g_psv_aim = CVAR_REGISTER( "sv_aim", "1", 0, "enable auto-aiming" );
-	g_footsteps = CVAR_REGISTER( "mp_footsteps", "0", FCVAR_SERVERINFO, "can hear footsteps from other players" );
+	g_footsteps = CVAR_REGISTER( "mp_footsteps", "0", FCVAR_SERVERINFO|FCVAR_PHYSICINFO, "can hear footsteps from other players" );
 
 	displaysoundlist = CVAR_REGISTER( "displaysoundlist", "0", 0, "show monster sounds that actually playing" );
 

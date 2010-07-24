@@ -364,6 +364,7 @@ void Sys_LookupInstance( void )
 			CloseHandle( Sys.hMutex );
 			Sys.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
 			if( !Sys.developer ) Sys.developer = 3;	// otherwise we see empty console
+			com_sprintf( Sys.log_path, "dedicated.log", com_timestamp( TIME_FILENAME )); // logs folder
 		}
 		else
 		{
@@ -372,9 +373,11 @@ void Sys_LookupInstance( void )
 			// don't show console as default
 			if( Sys.developer < D_WARN )
 				Sys.con_showalways = false;
+
+			com_sprintf( Sys.log_path, "engine.log", com_timestamp( TIME_FILENAME )); // logs folder
 		}
+
 		Sys.linked_dll = &engine_dll;	// pointer to engine.dll info
-		com_sprintf( Sys.log_path, "engine.log", com_timestamp( TIME_FILENAME )); // logs folder
 		com_strcpy( Sys.caption, va( "Xash3D ver.%g", XASH_VERSION ));
 	}
 	else if( !com_strcmp( Sys.progname, "bsplib" ))
@@ -1408,7 +1411,7 @@ sys_event_t Sys_GetEvent( void )
 
 	// create an empty event to return
 	Mem_Set( &ev, 0, sizeof( ev ));
-	ev.time = timeGetTime(); // should be replace with Sys_Milliseconds ?
+	ev.time = Sys_Milliseconds(); // should be replace with Sys_Milliseconds ?
 
 	return ev;
 }

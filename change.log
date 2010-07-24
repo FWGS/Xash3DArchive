@@ -4,6 +4,11 @@ Render: cut invisible water polygons
 Render: implement EF_NOWATERCSG for control func_water backface culling
 Tools: fix wadlib and spritegen round bugs
 FS: implement binary search for wadlumps
+Engine: revert low-res timer
+Network: fixup userinfo fields 'model' and 'name'
+Sound: implement custom pause for various sources
+Input: disable mouse events when level is loading
+GameUI: adding some missed dialogs
 
 build 1262
 

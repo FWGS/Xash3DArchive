@@ -108,7 +108,8 @@ typedef struct
 	int		entnum;
 	int		waterlevel;
 	float		frametime;	// used for sound fade
-	bool		ingame;		// listener in-game ?
+	bool		active;
+	bool		inmenu;		// listener in-menu ?
 	bool		paused;
 } listener_t;
 

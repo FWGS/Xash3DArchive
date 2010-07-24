@@ -272,12 +272,20 @@ void SV_CalcFrameTime( void )
 	if( sv_fps->modified )
 	{
 		if( sv_fps->value < 10 ) Cvar_Set( "sv_fps", "10" ); // too slow, also, netcode uses a byte
-		else if( sv_fps->value > 90 ) Cvar_Set( "sv_fps", "90" ); // abusive
+		else if( sv_fps->value > 72.1f ) Cvar_Set( "sv_fps", "72.1" ); // abusive
 		sv_fps->modified = false;
 	}
 
-	// calc sv.frametime
-	sv.frametime = ( 1000 / sv_fps->integer );
+	if( Host_IsLocalGame( ))
+	{
+		// don't allow really short or long frames
+		sv.frametime = bound( 10, host.frametime, 100 );
+	}
+	else
+	{
+		// calc sv.frametime
+		sv.frametime = ( 1000 / sv_fps->integer );
+	}
 }
 
 /*
@@ -634,7 +642,7 @@ void SV_Init( void )
 	sv_skyname = Cvar_Get ("sv_skyname", "", 0, "skybox name (can be dynamically changed in-game)" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
-	sv_fps = Cvar_Get( "sv_fps", "72.1", CVAR_ARCHIVE, "running server physics at" );
+	sv_fps = Cvar_Get( "sv_fps", "60", CVAR_SERVERINFO|CVAR_ARCHIVE, "network game server fps" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
 	sv_newunit = Cvar_Get( "sv_newunit", "0", 0, "sets to 1 while new unit is loading" );
 	hostname = Cvar_Get( "sv_hostname", "unnamed", CVAR_SERVERINFO | CVAR_ARCHIVE, "host name" );

@@ -18,9 +18,6 @@ WIN32 CONSOLE
 // console defines
 #define SUBMIT_ID		1	// "submit" button
 #define QUIT_ON_ESCAPE_ID	2	// escape event
-#define AUTO_COMPLETE_ID	3	// autocomplete event
-#define HISTORY_NEXT_ID	4
-#define HISTORY_PREV_ID	5
 #define EDIT_ID		110
 #define INPUT_ID		109
 #define IDI_ICON1		101
@@ -70,9 +67,6 @@ void Con_DisableInput( void )
 	if( Sys.con_readonly ) return;
 	SendMessage( s_wcd.hwndButtonSubmit, WM_ENABLE, 0, 0 );
 	SendMessage( s_wcd.hwndInputLine, WM_ENABLE, 0, 0 );
-	UnregisterHotKey( s_wcd.hwndInputLine, AUTO_COMPLETE_ID );
-	UnregisterHotKey( s_wcd.hwndInputLine, HISTORY_NEXT_ID );
-	UnregisterHotKey( s_wcd.hwndInputLine, HISTORY_PREV_ID );
 }
 
 void Con_SetInputText( const char *inputText )
@@ -81,6 +75,35 @@ void Con_SetInputText( const char *inputText )
 
 	SetWindowText( s_wcd.hwndInputLine, inputText );
 	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, com_strlen( inputText ), -1 );
+}
+
+static int Con_KeyEvent( int key, bool down )
+{
+	char	inputBuffer[1024];
+
+	if( !down )
+		return 0;
+
+	switch( key )
+	{
+	case VK_TAB:
+		GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ));
+		if( Sys.CmdAuto ) Sys.CmdAuto( inputBuffer );
+		Con_SetInputText( inputBuffer );
+		return 1;
+	case VK_DOWN:
+		if( s_wcd.historyLine == s_wcd.nextHistoryLine )
+			return 0;
+		s_wcd.historyLine++;
+		Con_SetInputText( s_wcd.historyLines[s_wcd.historyLine % COMMAND_HISTORY] );
+		return 1;
+	case VK_UP:
+		if( s_wcd.nextHistoryLine - s_wcd.historyLine < COMMAND_HISTORY && s_wcd.historyLine > 0 )
+			s_wcd.historyLine--;
+		Con_SetInputText( s_wcd.historyLines[s_wcd.historyLine % COMMAND_HISTORY] );
+		return 1;
+	}
+	return 0;
 }
 
 static long _stdcall Con_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -142,28 +165,19 @@ long _stdcall Con_InputLineProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 			return 0;
 		}
 		break;
-	case WM_HOTKEY:
-		switch( LOWORD( wParam ))
-		{
-		case AUTO_COMPLETE_ID:
-			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ));
-			if( Sys.CmdAuto ) Sys.CmdAuto( inputBuffer );
-			Con_SetInputText( inputBuffer );
+	case WM_SYSKEYDOWN:
+	case WM_KEYDOWN:
+		if( Con_KeyEvent( LOWORD( wParam ), true ))
 			return 0;
-		case HISTORY_PREV_ID:
-			if( s_wcd.nextHistoryLine - s_wcd.historyLine < COMMAND_HISTORY && s_wcd.historyLine > 0 )
-				s_wcd.historyLine--;
-			Con_SetInputText( s_wcd.historyLines[s_wcd.historyLine % COMMAND_HISTORY] );
+		break;
+	case WM_SYSKEYUP:
+	case WM_KEYUP:
+		if( Con_KeyEvent( LOWORD( wParam ), false ))
 			return 0;
-		case HISTORY_NEXT_ID:
-			if( s_wcd.historyLine == s_wcd.nextHistoryLine )
-				return 0;
-			s_wcd.historyLine++;
-			Con_SetInputText( s_wcd.historyLines[s_wcd.historyLine % COMMAND_HISTORY] );
-			return 0;
-		}
 		break;
 	case WM_CHAR:
+		if( Con_KeyEvent( wParam, true ))
+			return 0;
 		if( wParam == 13 && Sys.app_state != SYS_ERROR )
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ));
@@ -178,6 +192,7 @@ long _stdcall Con_InputLineProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 			s_wcd.historyLine = s_wcd.nextHistoryLine;
 			return 0;
 		}
+		break;
 	}
 	return CallWindowProc( s_wcd.SysInputLineWndProc, hWnd, uMsg, wParam, lParam );
 }
@@ -330,7 +345,7 @@ void Con_CreateConsole( void )
 
 	// create fonts
 	hDC = GetDC( s_wcd.hWnd );
-	nHeight = -MulDiv( fontsize, GetDeviceCaps( hDC, LOGPIXELSY), 72);
+	nHeight = -MulDiv( fontsize, GetDeviceCaps( hDC, LOGPIXELSY ), 72 );
 	s_wcd.hfBufferFont = CreateFont( nHeight, 0, 0, 0, FW_LIGHT, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN | FIXED_PITCH, FontName );
 	ReleaseDC( s_wcd.hWnd, hDC );
 
@@ -341,9 +356,6 @@ void Con_CreateConsole( void )
 
 		s_wcd.hwndButtonSubmit = CreateWindow( "button", NULL, BS_PUSHBUTTON|WS_VISIBLE|WS_CHILD|BS_DEFPUSHBUTTON, 552, 367, 87, 25, s_wcd.hWnd, ( HMENU )SUBMIT_ID, base_hInstance, NULL );
 		SendMessage( s_wcd.hwndButtonSubmit, WM_SETTEXT, 0, ( LPARAM ) "submit" );
-		RegisterHotKey( s_wcd.hwndInputLine, AUTO_COMPLETE_ID, 0, VK_TAB );
-		RegisterHotKey( s_wcd.hwndInputLine, HISTORY_NEXT_ID, 0, VK_DOWN );
-		RegisterHotKey( s_wcd.hwndInputLine, HISTORY_PREV_ID, 0, VK_UP );
           }
           
 	// create the scrollbuffer

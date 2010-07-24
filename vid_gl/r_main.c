@@ -2330,7 +2330,8 @@ bool R_AddGenericEntity( edict_t *pRefEntity, ref_entity_t *refent )
 	case mod_brush:
 		if( !refent->model->extradata )
 			return false;
-		refent->waveHeight = refent->scale * 16.0f;
+		if( pRefEntity->v.skin != CONTENTS_NONE )
+			refent->waveHeight = refent->scale * 16.0f;
 		refent->scale = 1.0f;		// ignore scale for brush models
 		refent->frame = pRefEntity->v.frame;	// brush properly animating
 		break;

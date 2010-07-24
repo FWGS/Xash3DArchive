@@ -82,6 +82,7 @@ typedef struct host_parm_s
 	string		finalmsg;		// server shutdown final message
 	host_redirect_t	rd;		// remote console
 
+	int		inputmsec;	// time for buttons
 	int		frametime;	// time between engine frames
 	uint		framecount;	// global framecount
 
@@ -125,6 +126,7 @@ void Host_AbortCurrentFrame( void );
 void Host_WriteDefaultConfig( void );
 void Host_WriteServerConfig( void );
 void Host_WriteConfig( void );
+bool Host_IsLocalGame( void );
 void Host_ShutdownServer( void );
 void Host_CheckChanges( void );
 void Host_Print( const char *txt );
@@ -199,7 +201,7 @@ float pfnTime( void );
 //
 bool Key_IsDown( int keynum );
 const char *Key_IsBind( int keynum );
-void Key_Event( int key, bool down );
+void Key_Event( int key, bool down, int time );
 void Key_Init( void );
 void Key_WriteBindings( file_t *f );
 const char *Key_GetBinding( int keynum );

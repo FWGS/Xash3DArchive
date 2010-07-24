@@ -676,6 +676,8 @@ void ParmsChangeLevel( void )
 //
 void StartFrame( void )
 {
+//	ALERT( at_console, "SV_Physics( %g, frametime %g )\n", gpGlobals->time, gpGlobals->frametime );
+
 	if ( g_pGameRules )
 		g_pGameRules->Think();
 

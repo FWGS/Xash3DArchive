@@ -1159,13 +1159,22 @@ Host_ClientFrame
 */
 void CL_Frame( int time )
 {
+	static int	extratime;
+
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
 
-	// decide the simulation time
-	cl.time += time;		// can be merged by cl.frame.servertime 
+	extratime += time;
 	cls.realtime += time;
-	cls.frametime = time * 0.001f;
+
+	if( extratime < ( 1000 / host_maxfps->value ))
+		return;				// framerate is too high
+
+	// decide the simulation time
+	cl.time += extratime;			// can be merged by cl.frame.servertime 
+	cls.frametime = extratime * 0.001f;
+	extratime = 0;
+
 	if( cls.frametime > 0.2f ) cls.frametime = 0.2f;
 
 	// menu time (not paused, not clamped)
@@ -1175,8 +1184,7 @@ void CL_Frame( int time )
 	gameui.globals->demorecording = cls.demorecording;
 	
 	// if in the debugger last frame, don't timeout
-	if( host.frametime > 5.0 )
-		cls.netchan.last_received = Sys_Milliseconds();
+	if( time > 5000 ) cls.netchan.last_received = Sys_Milliseconds();
 
 	// fetch results from server
 	CL_ReadPackets();

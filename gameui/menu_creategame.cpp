@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "keydefs.h"
 
 #define ART_BANNER		"gfx/shell/head_creategame"
 
@@ -134,6 +135,21 @@ static void UI_PromptDialog( void )
 
 /*
 =================
+UI_CreateGame_KeyFunc
+=================
+*/
+static const char *UI_CreateGame_KeyFunc( int key, int down )
+{
+	if( down && key == K_ESCAPE && !( uiCreateGame.dlgMessage1.generic.flags & QMF_HIDDEN ))
+	{
+		UI_PromptDialog();
+		return uiSoundNull;
+	}
+	return UI_DefaultKey( &uiCreateGame.menu, key, down );
+}
+
+/*
+=================
 UI_MsgBox_Ownerdraw
 =================
 */
@@ -233,6 +249,8 @@ UI_CreateGame_Init
 static void UI_CreateGame_Init( void )
 {
 	memset( &uiCreateGame, 0, sizeof( uiCreateGame_t ));
+
+	uiCreateGame.menu.keyFunc = UI_CreateGame_KeyFunc;
 
 	StringConcat( uiCreateGame.hintText, "Map", MAPNAME_LENGTH );
 	StringConcat( uiCreateGame.hintText, uiEmptyString, MAPNAME_LENGTH );
@@ -358,21 +376,21 @@ static void UI_CreateGame_Init( void )
 
 	uiCreateGame.dlgMessage1.generic.id = ID_MSGTEXT;
 	uiCreateGame.dlgMessage1.generic.type = QMTYPE_ACTION;
-	uiCreateGame.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiCreateGame.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiCreateGame.dlgMessage1.generic.name = "Starting a new game will exit";
 	uiCreateGame.dlgMessage1.generic.x = 248;
 	uiCreateGame.dlgMessage1.generic.y = 280;
 
 	uiCreateGame.dlgMessage2.generic.id = ID_MSGTEXT;
 	uiCreateGame.dlgMessage2.generic.type = QMTYPE_ACTION;
-	uiCreateGame.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiCreateGame.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiCreateGame.dlgMessage2.generic.name = "any current game, OK to exit?";
 	uiCreateGame.dlgMessage2.generic.x = 248;
 	uiCreateGame.dlgMessage2.generic.y = 310;
 
 	uiCreateGame.yes.generic.id = ID_YES;
 	uiCreateGame.yes.generic.type = QMTYPE_ACTION;
-	uiCreateGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN;
+	uiCreateGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiCreateGame.yes.generic.name = "Ok";
 	uiCreateGame.yes.generic.x = 380;
 	uiCreateGame.yes.generic.y = 460;
@@ -380,7 +398,7 @@ static void UI_CreateGame_Init( void )
 
 	uiCreateGame.no.generic.id = ID_NO;
 	uiCreateGame.no.generic.type = QMTYPE_ACTION;
-	uiCreateGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN;
+	uiCreateGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiCreateGame.no.generic.name = "Cancel";
 	uiCreateGame.no.generic.x = 530;
 	uiCreateGame.no.generic.y = 460;

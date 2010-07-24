@@ -1233,7 +1233,8 @@ void SX_RoomFX( int endtime, int fFilter, int fTimefx )
 	int	sampleCount;
 	int	roomType;
 
-	if( !s_listener.ingame ) return;
+	// don't apply dsp in menu
+	if( s_listener.inmenu ) return;
 
 	// return right away if fx processing is turned off
 	if( sxroom_off->value != 0.0f )

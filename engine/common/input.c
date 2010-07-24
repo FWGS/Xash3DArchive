@@ -478,7 +478,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		}
 		// intentional fallthrough
 	case WM_KEYDOWN:
-		Msg( "key down\n" );
 		Sys_QueEvent( -1, SE_KEY, Host_MapKey( lParam ), true, 0, NULL );
 		break;
 	case WM_SYSKEYUP:

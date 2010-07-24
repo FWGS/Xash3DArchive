@@ -986,7 +986,6 @@ void Key_Console( int key )
 	// command completion
 	if( key == K_TAB )
 	{
-		Msg( "Complete cmd\n" );
 		Con_CompleteCommand( &con.input );
 		return;
 	}
@@ -1373,13 +1372,13 @@ void Con_RunConsole( void )
 
 	if( con.finalFrac < con.displayFrac )
 	{
-		con.displayFrac -= scr_conspeed->value * 0.002 * cls.frametime;
+		con.displayFrac -= scr_conspeed->value * 0.002 * frametime;
 		if( con.finalFrac > con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
 	else if( con.finalFrac > con.displayFrac )
 	{
-		con.displayFrac += scr_conspeed->value * 0.002 * cls.frametime;
+		con.displayFrac += scr_conspeed->value * 0.002 * frametime;
 		if( con.finalFrac < con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}

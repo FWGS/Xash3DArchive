@@ -56,7 +56,7 @@ extern void V_Init( void );
 extern void VGui_ConsolePrint( const char *text );
 extern void IN_Init( void );
 extern void IN_Shutdown( void );
-extern void IN_CreateMove( usercmd_t *cmd, int active );
+extern void IN_CreateMove( usercmd_t *cmd, int msec, int active );
 extern int  IN_KeyEvent( int down, int keynum, const char *pszBind );
 extern void IN_MouseEvent( int mx, int my );
 
@@ -231,7 +231,6 @@ extern cvar_t	*v_centerspeed;
 extern cvar_t	*v_centermove;
 extern cvar_t	*r_studio_lerping;
 extern cvar_t	*cl_forwardspeed;
-extern cvar_t	*cl_particlelod;
 extern cvar_t	*cl_particles;
 extern cvar_t	*cl_draw_beams;
 extern cvar_t	*cl_lw;

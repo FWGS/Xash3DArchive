@@ -217,7 +217,7 @@ bool Host_InitSound( void )
 	si.GetEntityMouth = CL_GetEntityMouth;
 	si.GetServerTime = CL_GetServerTime;
 	si.IsInMenu = CL_IsInMenu;
-	si.IsActive = CL_Active;
+	si.IsActive = CL_IsInGame;
 
 	Sys_LoadLibrary( host_audio->string, &vsound_dll );
 
@@ -473,7 +473,7 @@ int Host_EventLoop( void )
 		case SE_NONE:
 			return ev.time;
 		case SE_KEY:
-			Key_Event( ev.value[0], ev.value[1] );
+			Key_Event( ev.value[0], ev.value[1], ev.time );
 			break;
 		case SE_CHAR:
 			CL_CharEvent( ev.value[0] );
@@ -491,27 +491,6 @@ int Host_EventLoop( void )
 		if( ev.data ) Mem_Free( ev.data );
 	}
 	return 0;	// never reached
-}
-
-/*
-================
-Host_Milliseconds
-
-Can be used for profiling, but will be journaled accurately
-================
-*/
-int Host_Milliseconds( void )
-{
-	sys_event_t	ev;
-
-	// get events and push them until we get a null event with the current time
-	do {
-		ev = Sys_GetEvent();
-		if( ev.type != SE_NONE )
-			Host_PushEvent( &ev );
-	} while( ev.type != SE_NONE );
-	
-	return ev.time;
 }
 
 /*
@@ -562,7 +541,6 @@ Host_Frame
 */
 void Host_Frame( void )
 {
-	int		time, min_time;
 	static int	last_time;
 
 	if( setjmp( host.abortframe ))
@@ -570,23 +548,18 @@ void Host_Frame( void )
 
 	rand(); // keep the random time dependent
 
-	// we may want to spin here if things are going too fast
-	if( host.type != HOST_DEDICATED && host_maxfps->integer > 0 )
-		min_time = 1000 / host_maxfps->integer;
-	else min_time = 1;
-
 	do {
-		host.frametime = Host_EventLoop();
-		if( last_time > host.frametime )
-			last_time = host.frametime;
-		time = host.frametime - last_time;
-	} while( time < min_time );
+		host.inputmsec = Host_EventLoop();
+		if( last_time > host.inputmsec )
+			last_time = host.inputmsec;
+		host.frametime = host.inputmsec - last_time;
+	} while( host.frametime < 1 );
 	Cbuf_Execute();
 
-	last_time = host.frametime;
-	time = Host_ModifyTime( time );
+	last_time = host.inputmsec;
+	host.frametime = Host_ModifyTime( host.frametime );
 
-	SV_Frame ( time ); // server frame
+	SV_Frame ( host.frametime ); // server frame
 
 	if( host.type == HOST_DEDICATED )
 	{
@@ -600,7 +573,7 @@ void Host_Frame( void )
 	Host_EventLoop();
 	Cbuf_Execute();
 
-	CL_Frame ( time ); // client frame
+	CL_Frame ( host.frametime ); // client frame
 	host.framecount++;
 }
 /*

@@ -172,8 +172,13 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		// add entity to the net packet
 		if( svgame.dllFuncs.pfnAddToFullPack( &ent->pvServerData->s, pViewEnt, pClient, ent, sv.hostflags, pset ))
 		{
+			sv_client_t	*netclient = SV_ClientFromEdict( ent, true );
+
 			// to prevent adds it twice through portals
 			ent->pvServerData->framenum = sv.net_framenum;
+
+			if( netclient && netclient->modelindex ) // apply custom model if present
+				ent->pvServerData->s.modelindex = netclient->modelindex;
 
 			// if we are full, silently discard entities
 			if( ents->num_entities < MAX_VISIBLE_PACKET )
@@ -383,9 +388,6 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	// to work correctly.  This also catches the error condition
 	// of an entity being included twice.
 	qsort( frame_ents.entities, frame_ents.num_entities, sizeof( frame_ents.entities[0] ), SV_EntityNumbers );
-
-	if( cl->modelindex ) // apply custom model if present
-		clent->pvServerData->s.modelindex = cl->modelindex;
 
 	// copy the entity states out
 	frame->num_entities = 0;

@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 
-#define UI_CREDITS_PATH		"scripts/credits.txt"
+#define UI_CREDITS_PATH		"credits.txt"
 #define UI_CREDITS_MAXLINES		2048
 
 static const char *uiCreditsDefault[] = 
@@ -192,6 +192,15 @@ static void UI_Credits_Init( void )
 		uiCredits.buffer = (char *)LOAD_FILE( UI_CREDITS_PATH, &count );
 		if( count )
 		{
+			if( uiCredits.buffer[count - 1] != '\n' && uiCredits.buffer[count - 1] != '\r' )
+			{
+				char *tmp = (char *)MALLOC( count + 2 );
+				memcpy( tmp, uiCredits.buffer, count ); 
+				FREE( uiCredits.buffer );
+				uiCredits.buffer = tmp; 
+				strncpy( uiCredits.buffer + count, "\r", 1 ); // add terminator
+				count += 2; // added "\r\0"
+                    	}
 			p = uiCredits.buffer;
 
 			// convert customs credits to 'ideal' strings array

@@ -1467,7 +1467,7 @@ bool Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 
 		if( resampled ) // resampled or filled
 		{
-			Msg( "Image_Resample: from[%d x %d] to [%d x %d]\n", pic->width, pic->height, w, h );
+			MsgDev( D_NOTE, "Image_Resample: from[%d x %d] to [%d x %d]\n", pic->width, pic->height, w, h );
 			pic->width = w, pic->height = h;
 			pic->size = w * h * PFDesc[pic->type].bpp;
 			Mem_Free( pic->buffer );		// free original image buffer

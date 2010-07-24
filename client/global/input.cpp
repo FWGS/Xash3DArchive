@@ -12,6 +12,8 @@
 
 typedef struct
 {
+	uint	msec;		// msec down this frame if both a down and up happened
+	uint	downtime;		// msec timestamp
 	int	down[2];		// key nums holding it down
 	int	state;
 } kbutton_t;
@@ -30,7 +32,7 @@ cvar_t	*cl_pitchup;
 cvar_t	*cl_pitchdown;
 cvar_t	*v_centermove;
 cvar_t	*v_centerspeed;
-cvar_t	*cl_particlelod;
+cvar_t	*cl_mouseaccel;
 cvar_t	*cl_particles;
 cvar_t	*cl_draw_beams;
 
@@ -55,6 +57,8 @@ int		g_iAlive;		// indicates alive local client or not
 static int	mouse_x[2];	// use two values for filtering
 static int	mouse_y[2];
 static int	mouse_step;
+static int	frame_msec;	// input frame msecs
+static int	frametime;	// used by CL_KeyState
 static float	cl_viewangles[3];	// process viewangles
 static float	cl_oldviewangles[3];
 	
@@ -142,12 +146,17 @@ void IN_KeyDown( kbutton_t *b )
 	
 	if( b->state & 1 ) return; // still down
 
+	// save timestamp
+	c = CMD_ARGV( 2 );
+	b->downtime = atoi( c );
+
 	b->state |= 1 + 2;	// down + impulse down
 }
 
 void IN_KeyUp( kbutton_t *b )
 {
 	const char *c;
+	uint		uptime;
 	int k;
 
 	c = CMD_ARGV( 1 );
@@ -179,6 +188,19 @@ void IN_KeyUp( kbutton_t *b )
 
 	if( !( b->state & 1 )) return; // still up (this should not happen)
 
+	// save timestamp for partial frame summing
+	c = CMD_ARGV( 2 );
+	uptime = atoi( c );
+
+	if( uptime )
+	{
+		b->msec += uptime - b->downtime;
+	}
+	else
+	{
+		b->msec += frame_msec / 2;
+	}
+
 	b->state &= ~1; // now up
 	b->state |= 4; // impulse up
 }
@@ -195,46 +217,29 @@ Returns 0.25 if a key was pressed and released during the frame,
 */
 static float CL_KeyState( kbutton_t *key )
 {
-	float	val = 0.0f;
-	int	impulsedown, impulseup, down;
-
-	impulsedown = key->state & 2;
-	impulseup	= key->state & 4;
-	down = key->state & 1;
-	
-	if ( impulsedown && !impulseup )
-	{
-		// pressed and held this frame?
-		val = down ? 0.5f : 0.0f;
-	}
-
-	if ( impulseup && !impulsedown )
-	{
-		// released this frame?
-		val = down ? 0.0f : 0.0f;
-	}
-
-	if ( !impulsedown && !impulseup )
-	{
-		// held the entire frame?
-		val = down ? 1.0f : 0.0f;
-	}
-
-	if ( impulsedown && impulseup )
-	{
-		if ( down )
-		{
-			// released and re-pressed this frame
-			val = 0.75f;	
-		}
-		else
-		{
-			// pressed and released this frame
-			val = 0.25f;	
-		}
-	}
+	float	val;
+	int	msec;
 
 	key->state &= 1;	// clear impulses
+
+	msec = key->msec;
+	key->msec = 0;
+
+	if( key->state )
+	{
+		// still down
+		if( !key->downtime ) msec = frametime;
+		else msec += frametime - key->downtime;
+		key->downtime = frametime;
+	}
+
+#if 0
+	if( msec )
+	{
+		ALERT( at_console, "%i ", msec );
+	}
+#endif
+	val = bound( 0, (float)msec / frame_msec, 1 );
 
 	return val;
 }
@@ -321,7 +326,8 @@ CL_MouseMove
 */
 void CL_MouseMove( usercmd_t *cmd )
 {
-	float	mx, my;
+	float	mx, my, rate;
+	float	accel_sensitivity;
 
 	// allow mouse smoothing
 	if( m_filter->integer )
@@ -339,19 +345,16 @@ void CL_MouseMove( usercmd_t *cmd )
 	mouse_x[mouse_step] = 0;
 	mouse_y[mouse_step] = 0;
 
+	rate = sqrt( mx * mx + my * my ) / (float)frame_msec;
+
 	// check for dead
 	if( !g_iAlive ) return;
 
-	if ( gHUD.GetSensitivity( ))
-	{
-		mx *= gHUD.GetSensitivity(); // scale by fov
-		my *= gHUD.GetSensitivity();
-	}
-	else
-	{
-		mx *= m_sensitivity->value;
-		my *= m_sensitivity->value;
-	}
+	accel_sensitivity = m_sensitivity->value + rate * cl_mouseaccel->value;
+	if ( gHUD.GetSensitivity( )) accel_sensitivity *= gHUD.GetSensitivity(); // scale by fov
+
+	mx *= accel_sensitivity;
+	my *= accel_sensitivity;
 
 	// add mouse X/Y movement to cmd
 	if(( in_strafe.state & 1 ) || (lookstrafe->integer && mlook_active))
@@ -482,8 +485,13 @@ void CL_BaseMove( usercmd_t *cmd )
 	}
 }
 
-void IN_CreateMove( usercmd_t *cmd, int active )
+void IN_CreateMove( usercmd_t *cmd, int msec, int active )
 {
+	static int	last_msec = 0;	// from previous frame
+
+	frametime = msec;
+	frame_msec = bound( 1, msec - last_msec, 200 );
+
 	g_iAlive = gHUD.UpdateClientData();
 
 	if ( active )
@@ -511,6 +519,8 @@ void IN_CreateMove( usercmd_t *cmd, int active )
 
 	// random seed for predictable random values
 	cmd->random_seed = RANDOM_LONG( 0, 0x7fffffff ); // full range
+
+	last_msec = msec;
 
 	GetViewAngles( cl_viewangles );
 
@@ -652,6 +662,7 @@ void IN_Init( void )
 	// mouse variables
 	m_filter = CVAR_REGISTER("m_filter", "0", FCVAR_ARCHIVE, "enable mouse filter" );
 	m_sensitivity = CVAR_REGISTER( "m_sensitivity", "3", FCVAR_ARCHIVE, "mouse in-game sensitivity" );
+	cl_mouseaccel = CVAR_REGISTER( "cl_mouseaccelerate", "0", FCVAR_ARCHIVE, "mouse accelerate factor" ); 
 
 	// centering
 	v_centermove = CVAR_REGISTER ("v_centermove", "0.15", 0, "client center moving" );
@@ -681,7 +692,6 @@ void IN_Init( void )
 	m_side = CVAR_REGISTER ("m_side", "1", 0, "mouse side speed" );
 
 	cl_particles = CVAR_REGISTER ( "cl_particles", "1", FCVAR_ARCHIVE, "disables particle effects" );
-	cl_particlelod = CVAR_REGISTER ( "cl_lod_particle", "0", FCVAR_ARCHIVE, "enables particle LOD (1, 2, 3)" );
 	cl_draw_beams = CVAR_REGISTER ( "cl_draw_beams", "1", FCVAR_ARCHIVE, "disables beam rendering" );
 	
 	Cmd_AddCommand ("centerview", IN_CenterView, "gradually recenter view (stop looking up/down)" );

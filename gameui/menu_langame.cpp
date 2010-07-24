@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "keydefs.h"
 
 #define ART_BANNER		"gfx/shell/head_lan"
 
@@ -33,6 +34,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_DONE		6
 #define ID_SERVERSLIST	7
 #define ID_TABLEHINT	8
+
+#define ID_MSGBOX	 	9
+#define ID_MSGTEXT	 	10
+#define ID_YES	 	11
+#define ID_NO	 	12
 
 #define GAME_LENGTH		18
 #define MAPNAME_LENGTH	20+GAME_LENGTH
@@ -54,6 +60,13 @@ typedef struct
 	menuAction_s	refresh;
 	menuAction_s	done;
 
+	// joingame prompt dialog
+	menuAction_s	msgBox;
+	menuAction_s	dlgMessage1;
+	menuAction_s	dlgMessage2;
+	menuAction_s	yes;
+	menuAction_s	no;
+
 	menuScrollList_s	gameList;
 	menuAction_s	hintMessage;
 	char		hintText[MAX_HINT_TEXT];
@@ -61,6 +74,40 @@ typedef struct
 } uiLanGame_t;
 
 static uiLanGame_t	uiLanGame;
+
+static void UI_PromptDialog( void )
+{
+	// toggle main menu between active\inactive
+	// show\hide quit dialog
+	uiLanGame.joinGame.generic.flags ^= QMF_INACTIVE; 
+	uiLanGame.createGame.generic.flags ^= QMF_INACTIVE;
+	uiLanGame.gameInfo.generic.flags ^= QMF_INACTIVE;
+	uiLanGame.refresh.generic.flags ^= QMF_INACTIVE;
+	uiLanGame.done.generic.flags ^= QMF_INACTIVE;
+	uiLanGame.gameList.generic.flags ^= QMF_INACTIVE;
+
+	uiLanGame.msgBox.generic.flags ^= QMF_HIDDEN;
+	uiLanGame.dlgMessage1.generic.flags ^= QMF_HIDDEN;
+	uiLanGame.dlgMessage2.generic.flags ^= QMF_HIDDEN;
+	uiLanGame.no.generic.flags ^= QMF_HIDDEN;
+	uiLanGame.yes.generic.flags ^= QMF_HIDDEN;
+
+}
+
+/*
+=================
+UI_LanGame_KeyFunc
+=================
+*/
+static const char *UI_LanGame_KeyFunc( int key, int down )
+{
+	if( down && key == K_ESCAPE && !( uiLanGame.dlgMessage1.generic.flags & QMF_HIDDEN ))
+	{
+		UI_PromptDialog();
+		return uiSoundNull;
+	}
+	return UI_DefaultKey( &uiLanGame.menu, key, down );
+}
 
 /*
 =================
@@ -115,6 +162,19 @@ static void UI_LanGame_GetGamesList( void )
 
 /*
 =================
+UI_LanGame_JoinGame
+=================
+*/
+static void UI_LanGame_JoinGame( void )
+{
+	if( !strlen( uiLanGame.gameDescription[uiLanGame.gameList.curItem] ))
+		return;
+
+	CLIENT_JOIN( uiStatic.serverAddresses[uiLanGame.gameList.curItem] );
+}
+
+/*
+=================
 UI_Background_Ownerdraw
 =================
 */
@@ -138,6 +198,17 @@ static void UI_Background_Ownerdraw( void *self )
 	}
 }
 
+/*
+=================
+UI_MsgBox_Ownerdraw
+=================
+*/
+static void UI_MsgBox_Ownerdraw( void *self )
+{
+	menuCommon_s	*item = (menuCommon_s *)self;
+
+	UI_FillRect( item->x, item->y, item->width, item->height, uiPromptBgColor );
+}
 
 /*
 =================
@@ -154,10 +225,9 @@ static void UI_LanGame_Callback( void *self, int event )
 	switch( item->id )
 	{
 	case ID_JOINGAME:
-		if( strlen( uiLanGame.gameDescription[uiLanGame.gameList.curItem] ))
-		{
-			CLIENT_JOIN( uiStatic.serverAddresses[uiLanGame.gameList.curItem] );
-		}
+		if( CL_IsActive( ))
+			UI_PromptDialog();
+		else UI_LanGame_JoinGame();
 		break;
 	case ID_CREATEGAME:
 		UI_CreateGame_Menu();
@@ -171,6 +241,12 @@ static void UI_LanGame_Callback( void *self, int event )
 	case ID_DONE:
 		UI_PopMenu();
 		break;
+	case ID_YES:
+		UI_LanGame_JoinGame();
+		break;
+	case ID_NO:
+		UI_PromptDialog();
+		break;
 	}
 }
 
@@ -182,6 +258,8 @@ UI_LanGame_Init
 static void UI_LanGame_Init( void )
 {
 	memset( &uiLanGame, 0, sizeof( uiLanGame_t ));
+
+	uiLanGame.menu.keyFunc = UI_LanGame_KeyFunc;
 
 	StringConcat( uiLanGame.hintText, "Game", GAME_LENGTH );
 	StringConcat( uiLanGame.hintText, uiEmptyString, GAME_LENGTH );
@@ -256,6 +334,45 @@ static void UI_LanGame_Init( void )
 	uiLanGame.done.generic.statusText = "Return to main menu";
 	uiLanGame.done.generic.callback = UI_LanGame_Callback;
 
+	uiLanGame.msgBox.generic.id = ID_MSGBOX;
+	uiLanGame.msgBox.generic.type = QMTYPE_ACTION;
+	uiLanGame.msgBox.generic.flags = QMF_INACTIVE|QMF_HIDDEN;
+	uiLanGame.msgBox.generic.ownerdraw = UI_MsgBox_Ownerdraw; // just a fill rectangle
+	uiLanGame.msgBox.generic.x = 192;
+	uiLanGame.msgBox.generic.y = 256;
+	uiLanGame.msgBox.generic.width = 640;
+	uiLanGame.msgBox.generic.height = 256;
+
+	uiLanGame.dlgMessage1.generic.id = ID_MSGTEXT;
+	uiLanGame.dlgMessage1.generic.type = QMTYPE_ACTION;
+	uiLanGame.dlgMessage1.generic.flags = QMF_INACTIVE|QMF_HIDDEN|QMF_DROPSHADOW;
+	uiLanGame.dlgMessage1.generic.name = "Join a network game will exit";
+	uiLanGame.dlgMessage1.generic.x = 248;
+	uiLanGame.dlgMessage1.generic.y = 280;
+
+	uiLanGame.dlgMessage2.generic.id = ID_MSGTEXT;
+	uiLanGame.dlgMessage2.generic.type = QMTYPE_ACTION;
+	uiLanGame.dlgMessage2.generic.flags = QMF_INACTIVE|QMF_HIDDEN|QMF_DROPSHADOW;
+	uiLanGame.dlgMessage2.generic.name = "any current game, OK to exit?";
+	uiLanGame.dlgMessage2.generic.x = 248;
+	uiLanGame.dlgMessage2.generic.y = 310;
+
+	uiLanGame.yes.generic.id = ID_YES;
+	uiLanGame.yes.generic.type = QMTYPE_ACTION;
+	uiLanGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
+	uiLanGame.yes.generic.name = "Ok";
+	uiLanGame.yes.generic.x = 380;
+	uiLanGame.yes.generic.y = 460;
+	uiLanGame.yes.generic.callback = UI_LanGame_Callback;
+
+	uiLanGame.no.generic.id = ID_NO;
+	uiLanGame.no.generic.type = QMTYPE_ACTION;
+	uiLanGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
+	uiLanGame.no.generic.name = "Cancel";
+	uiLanGame.no.generic.x = 530;
+	uiLanGame.no.generic.y = 460;
+	uiLanGame.no.generic.callback = UI_LanGame_Callback;
+
 	uiLanGame.hintMessage.generic.id = ID_TABLEHINT;
 	uiLanGame.hintMessage.generic.type = QMTYPE_ACTION;
 	uiLanGame.hintMessage.generic.flags = QMF_INACTIVE|QMF_SMALLFONT;
@@ -290,6 +407,11 @@ static void UI_LanGame_Init( void )
 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.done );
 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.hintMessage );
 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.gameList );
+	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.msgBox );
+	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.dlgMessage1 );
+	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.dlgMessage2 );
+	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.no );
+	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.yes );
 
 	uiLanGame.refreshTime = uiStatic.realTime + 500; // delay before update 0.5 sec
 }

@@ -488,10 +488,10 @@ void _MSG_WriteString( sizebuf_t *sb, const char *src, const char *filename, int
 	}
 	else
 	{
-		int	l;
-		char	*dst, string[MAX_SYSPATH];
-                    
-		l = com.strlen( src ) + 1;		
+
+		char	string[MAX_SYSPATH];
+		int	l = com.strlen( src ) + 1;		
+
 		if( l >= MAX_SYSPATH )
 		{
 			MsgDev( D_ERROR, "MSG_WriteString: exceeds %i symbols (called at %s:%i\n", MAX_SYSPATH, filename, fileline );
@@ -499,34 +499,7 @@ void _MSG_WriteString( sizebuf_t *sb, const char *src, const char *filename, int
 			return;
 		}
 
-		dst = string;
-
-		while( 1 )
-		{
-			// some escaped chars parsed as two symbols - merge it here
-			if( src[0] == '\\' && src[1] == 'n' )
-			{
-				*dst++ = '\n';
-				src += 2;
-				l -= 1;
-			}
-			if( src[0] == '\\' && src[1] == 'r' )
-			{
-				*dst++ = '\r';
-				src += 2;
-				l -= 1;
-			}
-			if( src[0] == '\\' && src[1] == 't' )
-			{
-				*dst++ = '\t';
-				src += 2;
-				l -= 1;
-			}
-			else if(( *dst++ = *src++ ) == 0 )
-				break;
-		}
-		*dst = '\0'; // string end
-
+		com.strncpy( string, src, sizeof( string ));
 		_MSG_WriteData( sb, string, l, filename, fileline );
 	}
 }
