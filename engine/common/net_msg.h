@@ -28,6 +28,17 @@ typedef union
 	long	l;
 } ftol_t;
 
+typedef struct
+{
+	bool	overflowed;	// set to true if the buffer size failed
+	bool	error;
+
+	byte	*data;
+	int	maxsize;
+	int	cursize;		// size in bytes
+	int	readcount;
+} sizebuf_t;
+
 typedef struct net_desc_s
 {
 	int	type;	// pixelformat
@@ -290,11 +301,19 @@ typedef struct netchan_s
 	// message is copied to this buffer when it is first transfered
 	int			reliable_length;
 	byte			reliable_buf[MAX_MSGLEN-16];		// unacked reliable message
+
+	// added for net_speeds
+	size_t			total_sended;
+	size_t			total_sended_uncompressed;
+
+	size_t			total_received;
+	size_t			total_received_uncompressed;
 } netchan_t;
 
 extern netadr_t		net_from;
 extern sizebuf_t		net_message;
 extern byte		net_message_buffer[MAX_MSGLEN];
+extern cvar_t		*net_speeds;
 
 #define PROTOCOL_VERSION	38
 #define PORT_MASTER		27900

@@ -72,7 +72,7 @@ Host_EndGame
 void Host_EndGame( const char *message, ... )
 {
 	va_list		argptr;
-	static char	string[MAX_MSGLEN];
+	static char	string[MAX_SYSPATH];
 	
 	va_start( argptr, message );
 	vsprintf( string, message, argptr );
@@ -610,8 +610,8 @@ Host_Error
 */
 void Host_Error( const char *error, ... )
 {
-	static char	hosterror1[MAX_MSGLEN];
-	static char	hosterror2[MAX_MSGLEN];
+	static char	hosterror1[MAX_SYSPATH];
+	static char	hosterror2[MAX_SYSPATH];
 	static bool	recursive = false;
 	va_list		argptr;
 
@@ -641,7 +641,7 @@ void Host_Error( const char *error, ... )
 	}
 
 	recursive = true;
-	com.strncpy( hosterror2, hosterror1, MAX_MSGLEN );
+	com.strncpy( hosterror2, hosterror1, MAX_SYSPATH );
 	host.errorframe = host.framecount; // to avoid multply calls per frame
 	com.sprintf( host.finalmsg, "Server crashed: %s\n", hosterror1 );
 

@@ -187,6 +187,7 @@ void V_PostRender( void )
 	if( cls.scrshot_action == scrshot_inactive )
 	{
 		SCR_RSpeeds();
+		SCR_NetSpeeds();
 		SCR_DrawFPS();
 		UI_UpdateMenu( cls.realtime * 0.001f );
 		Con_DrawConsole();

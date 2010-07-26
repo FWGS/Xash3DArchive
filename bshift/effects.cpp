@@ -194,9 +194,9 @@ const Vector &CBeam::GetEndPos( void )
 		edict_t *pent =  GetEndEntity();
 
 		if ( pent )
-			return pent->v.oldorigin;
+			return pent->v.angles;
           }
-	return pev->oldorigin;
+	return pev->angles;
 }
 
 

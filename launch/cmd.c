@@ -195,7 +195,7 @@ xash -nosound +cmd amlev1
 void Cmd_StuffCmds_f( void )
 {
 	int	i, j, l = 0;
-	char	build[MAX_MSGLEN]; // this is for all commandline options combined (and is bounds checked)
+	char	build[MAX_SYSPATH]; // this is for all commandline options combined (and is bounds checked)
 
 	if(Cmd_Argc() != 1)
 	{

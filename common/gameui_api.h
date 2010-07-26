@@ -24,7 +24,7 @@ typedef struct ui_globalvars_s
 	int		demorecording;
 	char		demoname[64];	// name of currently playing demo
 	char		maptitle[64];	// title of active map
-	char		shot_ext[8];	// thumbnail image type
+	char		shotExt[8];	// thumbnail image type
 } ui_globalvars_t;
 
 typedef struct ui_enginefuncs_s

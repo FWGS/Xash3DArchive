@@ -9,6 +9,9 @@ Network: fixup userinfo fields 'model' and 'name'
 Sound: implement custom pause for various sources
 Input: disable mouse events when level is loading
 GameUI: adding some missed dialogs
+Render: fix interpolation on flying monsters
+Render: fix wrong sprite attachments
+Render: fix invalid frustum culling for studiomodels ( e.g. barnacle.mdl ) 
 
 build 1262
 

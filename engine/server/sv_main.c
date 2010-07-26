@@ -299,7 +299,7 @@ void SV_ReadPackets( void )
 	sv_client_t	*cl;
 	int		qport;
 
-	while( NET_GetPacket( NS_SERVER, &net_from, &net_message ))
+	while( NET_GetPacket( NS_SERVER, &net_from, net_message.data, &net_message.cursize ))
 	{
 		// check for connectionless packet (0xffffffff) first
 		if( net_message.cursize >= 4 && *(int *)net_message.data == -1 )
@@ -520,14 +520,14 @@ void SV_Frame( int time )
 	// give the clients some timeslices
 	SV_GiveMsec ();
 
-	// let everything in the world think and move
-	SV_RunGameFrame ();
-
 	// refresh serverinfo on the client side
 	SV_UpdateServerInfo ();
 
 	// refresh physic movevars on the client side
 	SV_UpdateMovevars ();
+
+	// let everything in the world think and move
+	SV_RunGameFrame ();
 
 	// send messages back to the clients that had packets read this frame
 	SV_SendClientMessages ();
@@ -639,7 +639,7 @@ void SV_Init( void )
 	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "1", 0, "sky direction x (hl1 compatibility)" );
 	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", 0, "sky direction y (hl1 compatibility)" );
 	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "-1", 0, "sky direction z (hl1 compatibility)" );
-	sv_skyname = Cvar_Get ("sv_skyname", "", 0, "skybox name (can be dynamically changed in-game)" );
+	sv_skyname = Cvar_Get ("sv_skyname", "2desert", 0, "skybox name (can be dynamically changed in-game)" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
 	sv_fps = Cvar_Get( "sv_fps", "60", CVAR_SERVERINFO|CVAR_ARCHIVE, "network game server fps" );

@@ -233,21 +233,31 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 		ent->v.aiment = GetEntityByIndex( state->aiment );
 	else ent->v.aiment = NULL;
 
-	switch( ent->v.movetype )
+	if( ent->v.flags & FL_MONSTER )
 	{
-	case MOVETYPE_NONE:
-	case MOVETYPE_STEP:
-		// monster's steps will be interpolated on render-side
-		ent->v.origin = state->origin;
-		ent->v.angles = state->angles;
-		ent->v.oldorigin = prev->origin;	// used for lerp 'monster view'
-		ent->v.oldangles = prev->angles;	// used for lerp 'monster view'
-		break;
-	default:
+		switch( ent->v.movetype )
+		{
+		case MOVETYPE_NONE:
+		case MOVETYPE_STEP:
+		case MOVETYPE_FLY:
+			// monster's steps will be interpolated on render-side
+			ent->v.origin = state->origin;
+			ent->v.angles = state->angles;
+			ent->v.oldorigin = prev->origin;	// used for lerp 'monster view'
+			ent->v.oldangles = prev->angles;	// used for lerp 'monster view'
+			break;
+		default:
+			ent->v.angles = LerpAngle( prev->angles, state->angles, m_fLerp );
+			ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
+			ent->v.basevelocity = LerpPoint( prev->basevelocity, state->basevelocity, m_fLerp );
+			break;
+		}
+	}
+	else
+	{
 		ent->v.angles = LerpAngle( prev->angles, state->angles, m_fLerp );
 		ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
 		ent->v.basevelocity = LerpPoint( prev->basevelocity, state->basevelocity, m_fLerp );
-		break;
 	}
 
 	// interpolate scale, renderamount etc

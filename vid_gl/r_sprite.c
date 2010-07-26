@@ -768,9 +768,15 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 	{
 		if(( e->colormap & 0xFF ) > 0 && e->parent->model && e->parent->model->type == mod_studio )
 		{
+			vec3_t	tmp;
+
 			// pev->colormap is hardcoded to attachment number
-			if( !ri.GetAttachment( e->parent->index, (e->colormap & 0xFF), e->origin2, NULL ))
-				VectorCopy( e->parent->origin, e->origin2 );
+			if( ri.GetAttachment( e->parent->index, (e->colormap & 0xFF), tmp, NULL ))
+			{
+				// NOTE: use interpolated origin to avoid flickering attachments
+				VectorAdd( e->parent->origin, tmp, e->origin2 );
+			}
+			else VectorCopy( e->parent->origin, e->origin2 );
 		}
 		else VectorCopy( e->parent->origin, e->origin2 );
 	}

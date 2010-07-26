@@ -16,7 +16,7 @@ cvar_t	*con_fontsize;
 #define COLOR_DEFAULT	'7'
 #define CON_HISTORY		32
 
-#define CON_TEXTSIZE	(MAX_MSGLEN * 4)	// 128 kb buffer
+#define CON_TEXTSIZE	131072	// 128 kb buffer
 
 // console color typeing
 rgba_t g_color_table[8] =

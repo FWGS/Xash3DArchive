@@ -748,6 +748,11 @@ void UI_CloseMenu( void )
 	uiStatic.menuDepth = 0;
 	uiStatic.visible = false;
 
+	// clearing serverlist
+	uiStatic.numServers = 0;
+	memset( uiStatic.serverAddresses, 0, sizeof( uiStatic.serverAddresses ));
+	memset( uiStatic.serverNames, 0, sizeof( uiStatic.serverNames ));
+
 	KEY_ClearStates ();
 	KEY_SetDest ( KEY_GAME );
 }

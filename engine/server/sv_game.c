@@ -963,6 +963,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 	for( e++; e < svgame.globals->numEntities; e++ )
 	{
 		ed = EDICT_NUM( e );
+
 		if( !SV_IsValidEdict( ed )) continue;
 
 		switch( desc->fieldType )
@@ -1020,6 +1021,7 @@ edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 	{
 		ent = EDICT_NUM( e );
 		if( !SV_IsValidEdict( ent )) continue;
+		if( !ent->pvPrivateData ) continue;
 
 		distSquared = 0;
 		for( j = 0; j < 3 && distSquared <= flRadius; j++ )
@@ -1036,7 +1038,7 @@ edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 			continue;
 		return ent;
 	}
-	return NULL;
+	return svgame.edicts;
 }
 
 /*

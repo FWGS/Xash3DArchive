@@ -136,7 +136,7 @@ bool CL_GetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles
 
 	number = bound( 1, number, MAXSTUDIOATTACHMENTS );
 
-	if( origin ) VectorAdd( ed->v.origin, ed->pvClientData->origin[number-1], origin );	
+	if( origin ) VectorCopy( ed->pvClientData->origin[number-1], origin );	
 	if( angles ) VectorCopy( ed->pvClientData->angles[number-1], angles );
 
 	return true;
@@ -1661,13 +1661,19 @@ pfnGetAttachment
 */
 static bool pfnGetAttachment( const edict_t *pEdict, int iAttachment, float *rgflOrigin, float *rgflAngles )
 {
-	if( !pEdict )
+	if( !pEdict || pEdict->free )
 	{
 		if( rgflOrigin ) VectorClear( rgflOrigin );
 		if( rgflAngles ) VectorClear( rgflAngles );
 		return false;
 	}
-	return CL_GetAttachment( pEdict->serialnumber, iAttachment, rgflOrigin, rgflAngles );
+
+	if( CL_GetAttachment( pEdict->serialnumber, iAttachment, rgflOrigin, rgflAngles ))
+	{
+		if( rgflOrigin ) VectorAdd( rgflOrigin, pEdict->v.origin, rgflOrigin );
+		return true;
+	}
+	return false;
 }
 
 /*

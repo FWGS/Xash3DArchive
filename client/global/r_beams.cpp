@@ -59,7 +59,8 @@ static bool ComputeBeamEntPosition( edict_t *pEnt, int nAttachment, Vector& pt )
 		return false;
 	}
 
-	GET_ATTACHMENT( pEnt, nAttachment, pt, NULL );
+	if( !GET_ATTACHMENT( pEnt, nAttachment, pt, NULL ))
+		return false;
 
 	return true;
 }

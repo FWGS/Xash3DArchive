@@ -60,6 +60,7 @@ unacknowledged reliable
 */
 cvar_t	*net_showpackets;
 cvar_t	*net_showdrop;
+cvar_t	*net_speeds;
 cvar_t	*net_qport;
 
 netadr_t	net_from;
@@ -73,14 +74,15 @@ Netchan_Init
 */
 void Netchan_Init( void )
 {
-	int		port;
+	int	port;
 	
 	// pick a port value that should be nice and random
 	port = Com_RandomLong( 1, 65535 );
 
-	net_showpackets = Cvar_Get ("net_showpackets", "0", CVAR_TEMP, "show network packets" );
-	net_showdrop = Cvar_Get ("net_showdrop", "0", CVAR_TEMP, "show packets that are dropped" );
-	net_qport = Cvar_Get ("net_qport", va("%i", port), CVAR_INIT, "current quake netport" );
+	net_showpackets = Cvar_Get ("net_showpackets", "0", 0, "show network packets" );
+	net_showdrop = Cvar_Get ("net_showdrop", "0", 0, "show packets that are dropped" );
+	net_speeds = Cvar_Get ("net_speeds", "0", CVAR_ARCHIVE, "show network packets" );
+	net_qport = Cvar_Get ("net_qport", va( "%i", port ), CVAR_INIT, "current quake netport" );
 }
 
 /*
@@ -239,10 +241,13 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 	if( chan->compress ) Huff_CompressPacket( &send, (chan->sock == NS_CLIENT) ? 10 : 8 );
 	size2 = send.cursize;
 
+	chan->total_sended += size2;
+	chan->total_sended_uncompressed += size1;
+
 	// send the datagram
 	NET_SendPacket( chan->sock, send.cursize, send.data, chan->remote_address );
 
-	if( net_showpackets->integer )
+	if( net_showpackets->integer == 1 )
 	{
 		const char *s1, *s2;
 
@@ -317,7 +322,10 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	if( chan->compress ) Huff_DecompressPacket( msg, ( chan->sock == NS_SERVER) ? 10 : 8 );
 	size2 = msg->cursize;
 
-	if( net_showpackets->integer )
+	chan->total_received += size1;
+	chan->total_received_uncompressed += size2;
+
+	if( net_showpackets->integer == 2 )
 	{
 		const char *s1, *s2;
 

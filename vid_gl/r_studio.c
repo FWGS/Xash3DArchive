@@ -1292,6 +1292,7 @@ StudioSetUpTransform
 void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 {
 	vec3_t	angles, origin;
+	edict_t	*m_pEntity;
 	int	i;
 
 	if( trivial_accept )
@@ -1313,10 +1314,13 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 	VectorCopy( e->origin, origin );
 	VectorCopy( e->angles, angles );
 
-	if( e->movetype == MOVETYPE_STEP ) 
+	m_pEntity = ri.GetClientEdict( e->index );
+
+	// interoplate monsters position
+	if( m_pEntity && !m_pEntity->free && m_pEntity->v.flags & FL_MONSTER && ( e->movetype == MOVETYPE_STEP || e->movetype == MOVETYPE_FLY )) 
 	{
 		float	d, f = 0.0f;
-		edict_t	*m_pEntity, *m_pGroundEntity;
+		edict_t	*m_pGroundEntity;
 
 		// don't do it if the goalstarttime hasn't updated in a while.
 		// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
@@ -1335,7 +1339,7 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 			f = f - 1.0f;
 		}
 
-		m_pEntity = ri.GetClientEdict( e->index );
+
 		if( m_pEntity && !m_pEntity->free ) m_pGroundEntity = m_pEntity->v.groundentity;
 
 		if( m_pGroundEntity && m_pGroundEntity->v.movetype == MOVETYPE_PUSH && !VectorIsNull( m_pGroundEntity->v.velocity ))
@@ -1380,6 +1384,9 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 
 			angles[i] += d * f;
 		}
+
+		// update it so attachments always have right pos
+		VectorCopy( origin, e->origin );
 	}
 
 	// don't rotate clients, only aim
@@ -1844,26 +1851,17 @@ static void R_StudioCalcAttachments( ref_entity_t *e )
 
 bool R_StudioComputeBBox( vec3_t bbox[8] )
 {
-	vec3_t		vectors[3], angles, tmp;
+	vec3_t		tmp_mins, tmp_maxs;
 	ref_entity_t	*e = RI.currententity;
-	int		i, seq = RI.currententity->lerp->curstate.sequence;
+	vec3_t		vectors[3], angles, p1, p2;
+	int		i, seq = e->lerp->curstate.sequence;
 
-	if( !R_StudioExtractBbox( m_pStudioHeader, seq, studio_mins, studio_maxs ))
+	if( !R_StudioExtractBbox( m_pStudioHeader, seq, tmp_mins, tmp_maxs ))
 		return false;
-	
-	studio_radius = RadiusFromBounds( studio_mins, studio_maxs );
-		
-	// compute a full bounding box
-	for( i = 0; i < 8; i++ )
-	{
-		if( i & 1 ) tmp[0] = studio_mins[0];
-		else tmp[0] = studio_maxs[0];
-		if( i & 2 ) tmp[1] = studio_mins[1];
-		else tmp[1] = studio_maxs[1];
-		if( i & 4 ) tmp[2] = studio_mins[2];
-		else tmp[2] = studio_maxs[2];
-		VectorCopy( tmp, bbox[i] );
-	}
+
+	// copy original bbox
+	VectorCopy( m_pStudioHeader->bbmin, studio_mins );
+	VectorCopy( m_pStudioHeader->bbmin, studio_mins );
 
 	// rotate the bounding box
 	VectorScale( e->angles, -1, angles );
@@ -1872,13 +1870,29 @@ bool R_StudioComputeBBox( vec3_t bbox[8] )
 		angles[PITCH] = 0; // don't rotate player model, only aim
 	AngleVectorsFLU( angles, vectors[0], vectors[1], vectors[2] );
 
+	// compute a full bounding box
 	for( i = 0; i < 8; i++ )
 	{
-		VectorCopy( bbox[i], tmp );
-		bbox[i][0] = DotProduct( vectors[0], tmp );
-		bbox[i][1] = DotProduct( vectors[1], tmp );
-		bbox[i][2] = DotProduct( vectors[2], tmp );
+  		p1[0] = ( i & 1 ) ? tmp_mins[0] : tmp_maxs[0];
+  		p1[1] = ( i & 2 ) ? tmp_mins[1] : tmp_maxs[1];
+  		p1[2] = ( i & 4 ) ? tmp_mins[2] : tmp_maxs[2];
+
+		p2[0] = DotProduct( p1, vectors[0] );
+		p2[1] = DotProduct( p1, vectors[1] );
+		p2[2] = DotProduct( p1, vectors[2] );
+
+		if( bbox ) VectorCopy( p2, bbox[i] );
+
+  		if( p2[0] < studio_mins[0] ) studio_mins[0] = p2[0];
+  		if( p2[0] > studio_maxs[0] ) studio_maxs[0] = p2[0];
+  		if( p2[1] < studio_mins[1] ) studio_mins[1] = p2[1];
+  		if( p2[1] > studio_maxs[1] ) studio_maxs[1] = p2[1];
+  		if( p2[2] < studio_mins[2] ) studio_mins[2] = p2[2];
+  		if( p2[2] > studio_maxs[2] ) studio_maxs[2] = p2[2];
 	}
+
+	studio_radius = RadiusFromBounds( studio_mins, studio_maxs );
+
 	return true;
 }
 
@@ -2650,10 +2664,9 @@ bool R_CullStudioModel( ref_entity_t *e )
 		sequence = e->lerp->curstate.sequence;
 	}
 
-	if( !R_StudioExtractBbox( m_pStudioHeader, sequence, studio_mins, studio_maxs ))
+	if( !R_StudioComputeBBox( NULL ))
 		return true; // invalid sequence
 
-	studio_radius = RadiusFromBounds( studio_mins, studio_maxs );
 	clipped = R_CullModel( e, studio_mins, studio_maxs, studio_radius );
 	frustum = clipped & 1;
 	if( clipped & 2 ) return true;
@@ -2708,7 +2721,8 @@ void R_AddStudioModelToList( ref_entity_t *e )
 	int		sequence;
 	int		i, j;
 
-	if( !e->model->extradata ) return;
+	if( !e->model->extradata )
+		return;
 
 	if( RP_FOLLOWENTITY( e ))
 	{
@@ -2722,10 +2736,9 @@ void R_AddStudioModelToList( ref_entity_t *e )
 		sequence = e->lerp->curstate.sequence;
 	}
 
-	if( !R_StudioExtractBbox( m_pStudioHeader, sequence, studio_mins, studio_maxs ))
+	if( !R_StudioComputeBBox( NULL ))
 		return; // invalid sequence
 
-	studio_radius = RadiusFromBounds( studio_mins, studio_maxs );
 	modhandle = Mod_Handle( mod );
 
 	R_StudioSetupRender( e, e->model );

@@ -14,11 +14,10 @@
 #define true		1
 #define MAX_STRING		256	// generic string
 #define MAX_SYSPATH		1024	// system filepath
-#define MAX_MSGLEN		32768	// max length of network message
 #define bound(min, num, max)	((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
-#define MAX_STRING_TABLES	8	// seperately stringsystems
 #define MAX_MODS		128	// environment games that engine can keep visible
 #define MAP_DEFAULT_SHADER	"*black"	// engine built-in default shader
+#define MAX_STRING_TABLES	8	// seperately stringsystems
 #define trace_t		TraceResult
 
 #ifndef __cplusplus
@@ -110,11 +109,9 @@ typedef enum
 	CVAR_LATCH	= BIT(6),	// save changes until server restart
 	CVAR_READ_ONLY	= BIT(7),	// display only, cannot be set by user at all
 	CVAR_USER_CREATED	= BIT(8),	// created by a set command (dll's used)
-	CVAR_TEMP		= BIT(9),	// can be set even when cheats are disabled, but is not archived
-	CVAR_CHEAT	= BIT(10),// can not be changed if cheats are disabled
-	CVAR_NORESTART	= BIT(11),// do not clear when a cvar_restart is issued
-	CVAR_LATCH_VIDEO	= BIT(12),// save changes until render restart
-	CVAR_LATCH_AUDIO	= BIT(13),// save changes until vsound restart
+	CVAR_CHEAT	= BIT(9),	// can not be changed if cheats are disabled
+	CVAR_LATCH_VIDEO	= BIT(10),// save changes until render restart
+	CVAR_LATCH_AUDIO	= BIT(11),// save changes until vsound restart
 } cvar_flags_t;
 
 typedef struct netadr_s
@@ -123,17 +120,6 @@ typedef struct netadr_s
 	byte		ip[4];
 	word		port;
 };
-
-typedef struct sizebuf_s
-{
-	bool	overflowed;	// set to true if the buffer size failed
-
-	byte	*data;
-	int	maxsize;
-	int	cursize;
-	int	readcount;
-	bool	error;
-} sizebuf_t;
 
 /*
 ========================================================================
@@ -539,7 +525,7 @@ typedef struct stdilib_api_s
 	bool (*NET_StringToAdr)( const char *s, netadr_t *a );
 	bool (*NET_CompareAdr)( const netadr_t a, const netadr_t b );
 	bool (*NET_CompareBaseAdr)( const netadr_t a, const netadr_t b );
-	bool (*NET_GetPacket)( netsrc_t sock, netadr_t *from, sizebuf_t *msg );
+	bool (*NET_GetPacket)( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
 	void (*NET_SendPacket)( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 	// common functions
@@ -746,7 +732,9 @@ typedef void *(*launch_t)( stdlib_api_t*, void* );
 typedef struct { size_t api_size; size_t com_size; } generic_api_t;
 
 // moved here to enable assertation feature in launch.dll
-#define Com_Assert( x )		if( x ) com.abort( "assert failed at %s:%i\n", __FILE__, __LINE__ );
+// FIXME: replace all Com_Assert with ASSERT
+#define Com_Assert( x )	if( x ) com.abort( "assert failed at %s:%i\n", __FILE__, __LINE__ );
+#define ASSERT( exp )	if(!( exp )) com.abort( "assert failed at %s:%i\n", __FILE__, __LINE__ );
 
 #ifndef LAUNCH_DLL
 /*

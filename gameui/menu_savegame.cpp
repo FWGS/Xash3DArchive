@@ -234,8 +234,7 @@ static void UI_SaveGame_Callback( void *self, int event )
 		{
 			char	cmd[128];
 
-			// FIXME: get saveshot extension from engine
-			sprintf( cmd, "save/%s.tga", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
+			sprintf( cmd, "save/%s.%s", uiSaveGame.saveName[uiSaveGame.savesList.curItem], gpGlobals->shotExt );
 			PIC_Free( cmd );
 
 			sprintf( cmd, "save \"%s\"\n", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
@@ -255,10 +254,13 @@ static void UI_SaveGame_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			// FIXME: get saveshot extension from engine
-			sprintf( cmd, "save/%s.tga", uiSaveGame.delName[uiSaveGame.savesList.curItem] );
+			sprintf( cmd, "save/%s.%s", uiSaveGame.delName[uiSaveGame.savesList.curItem], gpGlobals->shotExt );
 			PIC_Free( cmd );
-			UI_SaveGame_GetGameList();
+
+			// restarts the menu
+			UI_PopMenu();
+			UI_SaveGame_Menu();
+			return;
 		}
 		UI_DeleteDialog();
 		break;
@@ -290,8 +292,7 @@ static void UI_SaveGame_Ownerdraw( void *self )
 		{
 			char	saveshot[128];
 
-			// FIXME: get saveshot extension from engine
-			sprintf( saveshot, "save/%s.tga", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
+			sprintf( saveshot, "save/%s.%s", uiSaveGame.saveName[uiSaveGame.savesList.curItem], gpGlobals->shotExt );
 
 			if( !FILE_EXISTS( saveshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

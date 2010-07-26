@@ -63,9 +63,8 @@ public:
 	{
 		if ( pEntity )
 		{
-			pev->skin = ENTINDEX(pEntity);
-			pev->body = attachment;
-			pev->aiment = pEntity;
+			pev->colormap = (pev->colormap & 0xFF00)>>8 | attachment;
+			pev->aiment = pEntity;	// send across network
 			pev->movetype = MOVETYPE_FOLLOW;
 		}
 	}

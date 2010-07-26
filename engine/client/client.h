@@ -470,6 +470,7 @@ void CL_Download_f( void );
 void SCR_RegisterShaders( void );
 void SCR_MakeScreenShot( void );
 void SCR_MakeLevelShot( void );
+void SCR_NetSpeeds( void );
 void SCR_RSpeeds( void );
 void SCR_DrawFPS( void );
 

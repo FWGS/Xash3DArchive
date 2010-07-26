@@ -2764,7 +2764,7 @@ Print a string into a file
 int FS_VPrintf( file_t* file, const char* format, va_list ap )
 {
 	int		len;
-	fs_offset_t	buff_size = MAX_MSGLEN;
+	fs_offset_t	buff_size = MAX_SYSPATH;
 	char		*tempbuff;
 
 	if( !file ) return 0;
@@ -3754,7 +3754,7 @@ Print a string into a buffer
 int VFS_VPrintf(vfile_t* file, const char* format, va_list ap)
 {
 	int		len;
-	fs_offset_t	buff_size = MAX_MSGLEN;
+	fs_offset_t	buff_size = MAX_SYSPATH;
 	char		*tempbuff;
 
 	while( 1 )

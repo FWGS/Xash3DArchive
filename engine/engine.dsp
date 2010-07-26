@@ -210,6 +210,10 @@ SOURCE=.\common\keys.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\net_buffer.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\net_chan.c
 # End Source File
 # Begin Source File
@@ -283,6 +287,10 @@ SOURCE=.\client\client.h
 # Begin Source File
 
 SOURCE=.\common.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\net_buffer.h
 # End Source File
 # Begin Source File
 

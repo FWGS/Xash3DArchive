@@ -438,6 +438,12 @@ void Cvar_FullSet( const char *var_name, const char *value, int flags )
 		physinfo->modified = true;
 	}
 
+	if( var->flags & CVAR_SERVERINFO )
+	{
+		// transmit at next oportunity
+		serverinfo->modified = true;
+	}
+
 	Mem_Free( var->string ); // free the old value string
 	var->string = copystring( value );
 	var->value = com.atof( var->string );

@@ -232,11 +232,13 @@ static void UI_LoadGame_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			// FIXME: get saveshot extension from engine
-			sprintf( cmd, "save/%s.tga", uiLoadGame.delName[uiLoadGame.savesList.curItem] );
+			sprintf( cmd, "save/%s.%s", uiLoadGame.delName[uiLoadGame.savesList.curItem], gpGlobals->shotExt );
 			PIC_Free( cmd );
 
-			UI_LoadGame_GetGameList();
+			// restarts the menu
+			UI_PopMenu();
+			UI_LoadGame_Menu();
+			return;
 		}
 		UI_DeleteDialog();
 		break;
@@ -268,8 +270,7 @@ static void UI_LoadGame_Ownerdraw( void *self )
 		{
 			char	saveshot[128];
 
-			// FIXME: get saveshot extension from engine
-			sprintf( saveshot, "save/%s.tga", uiLoadGame.saveName[uiLoadGame.savesList.curItem] );
+			sprintf( saveshot, "save/%s.%s", uiLoadGame.saveName[uiLoadGame.savesList.curItem], gpGlobals->shotExt );
 
 			if( !FILE_EXISTS( saveshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

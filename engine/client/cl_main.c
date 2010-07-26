@@ -778,7 +778,7 @@ CL_ReadNetMessage
 */
 void CL_ReadNetMessage( void )
 {
-	while( NET_GetPacket( NS_CLIENT, &net_from, &net_message ))
+	while( NET_GetPacket( NS_CLIENT, &net_from, net_message.data, &net_message.cursize ))
 	{
 		if( host.type == HOST_DEDICATED || cls.demoplayback )
 			return;

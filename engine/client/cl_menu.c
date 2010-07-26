@@ -919,7 +919,7 @@ bool UI_LoadProgs( const char *name )
 
 	// setup globals
 	gameui.globals->developer = host.developer;
-	com.strncpy( gameui.globals->shot_ext, SI->savshot_ext, sizeof( gameui.globals->shot_ext ));
+	com.strncpy( gameui.globals->shotExt, SI->savshot_ext, sizeof( gameui.globals->shotExt ));
 
 	// initialize game
 	gameui.dllFuncs.pfnInit();

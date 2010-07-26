@@ -17,11 +17,33 @@
 #define MAX_DECALNAMES		1024	// server decal indexes (different decalnames, not a render limit)
 #define MAX_USER_MESSAGES		200	// another 56 messages reserved for engine routines
 #define MAX_EVENTS			1024	// playback events that can be queued (a byte range, don't touch)
+#define MAX_MSGLEN			8000	// max length of network message
 #define MAX_GENERICS		1024	// generic files that can download from server
 #define MAX_CLASSNAMES		512	// maxcount of various edicts classnames
 #define MAX_SOUNDS			2048	// max unique loaded sounds (not counting sequences)
 #define MAX_MODELS			2048	// total count of brush & studio various models per one map
 #define MAX_EDICTS			32768	// absolute limit that never be reached, (do not edit!)
+
+// world size
+#define MAX_COORD_INTEGER		(16384)	// world half-size, modify with precaution
+#define MIN_COORD_INTEGER		(-MAX_COORD_INTEGER)
+#define MAX_COORD_FRACTION		( 1.0 - ( 1.0 / 16.0 ))
+#define MIN_COORD_FRACTION		(-1.0 + ( 1.0 / 16.0 ))
+
+// network precision
+#define COORD_INTEGER_BITS		14
+#define COORD_FRACTIONAL_BITS		5
+#define COORD_DENOMINATOR		( 1 << ( COORD_FRACTIONAL_BITS ))
+#define COORD_RESOLUTION		(1.0 / ( COORD_DENOMINATOR ))
+
+#define NORMAL_FRACTIONAL_BITS	11
+#define NORMAL_DENOMINATOR		(( 1 << ( NORMAL_FRACTIONAL_BITS )) - 1 )
+#define NORMAL_RESOLUTION		( 1.0 / ( NORMAL_DENOMINATOR ))
+
+// verify that coordsize.h and worldsize.h are consistently defined
+#if( MAX_COORD_INTEGER != ( 1 << COORD_INTEGER_BITS ))
+#error MAX_COORD_INTEGER does not match COORD_INTEGER_BITS
+#endif
 
 /*
 ==============================================================================
@@ -29,7 +51,6 @@
  Generic LAUNCH.DLL INTERFACE
 ==============================================================================
 */
-
 typedef struct launch_exp_s
 {
 	// interface validator

@@ -207,8 +207,8 @@ void CL_ParseFrame( sizebuf_t *msg )
 
 	cl.frame.serverframe = MSG_ReadLong( msg );
 	cl.frame.servertime = MSG_ReadLong( msg );
-	cl.serverframetime = MSG_ReadLong( msg );
 	cl.frame.deltaframe = MSG_ReadLong( msg );
+	cl.serverframetime = MSG_ReadByte( msg );
 	cl.surpressCount = MSG_ReadByte( msg );
 	client_idx = MSG_ReadByte( msg );
 

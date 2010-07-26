@@ -236,11 +236,13 @@ static void UI_PlayDemo_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			// FIXME: get demoshot extension from engine
-			sprintf( cmd, "demos/%s.tga", uiPlayDemo.delName[uiPlayDemo.demosList.curItem] );
+			sprintf( cmd, "demos/%s.%s", uiPlayDemo.delName[uiPlayDemo.demosList.curItem], gpGlobals->shotExt );
 			PIC_Free( cmd );
 
-			UI_PlayDemo_GetDemoList();
+			// restarts the menu
+			UI_PopMenu();
+			UI_PlayDemo_Menu();
+			return;
 		}
 		UI_DeleteDialog();
 		break;
@@ -272,8 +274,7 @@ static void UI_PlayDemo_Ownerdraw( void *self )
 		{
 			char	demoshot[128];
 
-			// FIXME: get demoshot extension from engine
-			sprintf( demoshot, "demos/%s.tga", uiPlayDemo.demoName[uiPlayDemo.demosList.curItem] );
+			sprintf( demoshot, "demos/%s.%s", uiPlayDemo.demoName[uiPlayDemo.demosList.curItem], gpGlobals->shotExt );
 
 			if( !FILE_EXISTS( demoshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

@@ -11,7 +11,7 @@
 
 #define MAX_QUED_EVENTS		256
 #define MASK_QUED_EVENTS		(MAX_QUED_EVENTS - 1)
-#define LOG_BUFSIZE			MAX_MSGLEN * 4
+#define LOG_BUFSIZE			131072	// 128 kb
 
 system_t		Sys;
 stdlib_api_t	com;
@@ -573,8 +573,8 @@ print into window console
 void Sys_Print( const char *pMsg )
 {
 	const char	*msg;
-	char		buffer[MAX_MSGLEN];
-	char		logbuf[MAX_MSGLEN];
+	char		buffer[32768];
+	char		logbuf[32768];
 	char		*b = buffer;
 	char		*c = logbuf;	
 	int		i = 0;
@@ -584,8 +584,8 @@ void Sys_Print( const char *pMsg )
 		Sys.CPrint( pMsg );
 
 	// if the message is REALLY long, use just the last portion of it
-	if ( com_strlen( pMsg ) > MAX_MSGLEN - 1 )
-		msg = pMsg + com_strlen( pMsg ) - MAX_MSGLEN + 1;
+	if ( com_strlen( pMsg ) > sizeof( buffer ) - 1 )
+		msg = pMsg + com_strlen( pMsg ) - sizeof( buffer ) + 1;
 	else msg = pMsg;
 
 	// copy into an intermediate buffer
@@ -647,7 +647,7 @@ formatted message
 void Sys_Msg( const char *pMsg, ... )
 {
 	va_list	argptr;
-	char text[MAX_MSGLEN];
+	char text[MAX_SYSPATH];
 	
 	va_start( argptr, pMsg );
 	com_vsprintf( text, pMsg, argptr );
@@ -660,7 +660,7 @@ void Sys_Msg( const char *pMsg, ... )
 void Sys_MsgDev( int level, const char *pMsg, ... )
 {
 	va_list	argptr;
-	char	text[MAX_MSGLEN];
+	char	text[MAX_SYSPATH];
 
 	if( Sys.developer < level ) return;
 	Sys.printlevel = level;
@@ -842,7 +842,7 @@ before call this
 void Sys_Error( const char *error, ... )
 {
 	va_list	argptr;
-	char	text[MAX_MSGLEN];
+	char	text[MAX_SYSPATH];
          
 	if( Sys.app_state == SYS_ERROR )
 		return; // don't multiple executes
@@ -879,7 +879,7 @@ void Sys_Error( const char *error, ... )
 void Sys_Break( const char *error, ... )
 {
 	va_list		argptr;
-	char		text[MAX_MSGLEN];
+	char		text[MAX_SYSPATH];
          
 	va_start( argptr, error );
 	com_vsprintf( text, error, argptr );

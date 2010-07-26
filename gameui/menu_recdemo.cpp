@@ -242,8 +242,7 @@ static void UI_RecDemo_Callback( void *self, int event )
 		{
 			char	cmd[128];
 
-			// FIXME: get demoshot extension from engine
-			sprintf( cmd, "demos/%s.tga", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
+			sprintf( cmd, "demos/%s.%s", uiRecDemo.demoName[uiRecDemo.demosList.curItem], gpGlobals->shotExt );
 			PIC_Free( cmd );
 
 			sprintf( cmd, "record \"%s\"\n", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
@@ -263,11 +262,13 @@ static void UI_RecDemo_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			// FIXME: get demoshot extension from engine
-			sprintf( cmd, "demos/%s.tga", uiRecDemo.delName[uiRecDemo.demosList.curItem] );
+			sprintf( cmd, "demos/%s.%s", uiRecDemo.delName[uiRecDemo.demosList.curItem], gpGlobals->shotExt );
 			PIC_Free( cmd );
 
-			UI_RecDemo_GetDemoList();
+			// restarts the menu
+			UI_PopMenu();
+			UI_RecDemo_Menu();
+			return;
 		}
 		UI_DeleteDialog();
 		break;
@@ -299,8 +300,7 @@ static void UI_RecDemo_Ownerdraw( void *self )
 		{
 			char	demoshot[128];
 
-			// FIXME: get demoshot extension from engine
-			sprintf( demoshot, "demos/%s.tga", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
+			sprintf( demoshot, "demos/%s.%s", uiRecDemo.demoName[uiRecDemo.demosList.curItem], gpGlobals->shotExt );
 
 			if( !FILE_EXISTS( demoshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

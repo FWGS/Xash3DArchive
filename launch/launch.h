@@ -19,11 +19,11 @@
 #define LAUNCH_DLL			// ignore alias names
 #include "launch_api.h"
 
-#define XASH_VERSION		0.71f // current version will be shared across gameinfo struct
+#define XASH_VERSION		0.71f	// current version will be shared across gameinfo struct
 
 #define MAX_NUM_ARGVS		128
 #define MAX_STRING_TOKENS		80
-#define LOG_QUEUE_SIZE		MAX_MSGLEN * 4	// 128 kb intermediate buffer
+#define LOG_QUEUE_SIZE		131072	// 128 kb intermediate buffer
 
 // just for last chanse to view message (debug only)
 #define MSGBOX(x)			MessageBox(NULL, x, "Xash Error", MB_OK|MB_SETFOREGROUND|MB_ICONSTOP );
@@ -185,7 +185,7 @@ char *NET_BaseAdrToString( const netadr_t a );
 bool NET_StringToAdr( const char *string, netadr_t *adr );
 bool NET_CompareAdr( const netadr_t a, const netadr_t b );
 bool NET_CompareBaseAdr( const netadr_t a, const netadr_t b );
-bool NET_GetPacket( netsrc_t sock, netadr_t *from, sizebuf_t *msg );
+bool NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
 void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 //

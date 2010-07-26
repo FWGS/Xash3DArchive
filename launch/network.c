@@ -5,6 +5,7 @@
 
 #include <winsock.h>
 #include "launch.h"
+#include "engine_api.h"	// network message length
 #include "byteorder.h"
 
 #define PORT_ANY		-1
@@ -333,10 +334,13 @@ LOOPBACK BUFFERS FOR LOCAL PLAYER
 
 =============================================================================
 */
-static bool NET_GetLoopPacket( netsrc_t sock, netadr_t *from, sizebuf_t *msg )
+static bool NET_GetLoopPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
 {
-	int		i;
 	loopback_t	*loop;
+	int		i;
+
+	if( !data || !length )
+		return false;
 
 	loop = &loopbacks[sock];
 
@@ -348,10 +352,12 @@ static bool NET_GetLoopPacket( netsrc_t sock, netadr_t *from, sizebuf_t *msg )
 	i = loop->get & MASK_LOOPBACK;
 	loop->get++;
 
-	Mem_Copy( msg->data, loop->msgs[i].data, loop->msgs[i].datalen );
-	msg->cursize = loop->msgs[i].datalen;
+	Mem_Copy( data, loop->msgs[i].data, loop->msgs[i].datalen );
+	*length = loop->msgs[i].datalen;
+
 	Mem_Set( from, 0, sizeof( *from ));
 	from->type = NA_LOOPBACK;
+
 	return true;
 
 }
@@ -388,21 +394,24 @@ NET_GetPacket
 Never called by the game logic, just the system event queing
 ==================
 */
-bool NET_GetPacket( netsrc_t sock, netadr_t *from, sizebuf_t *msg )
+bool NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
 {
 	uint 		ret;
 	struct sockaddr	addr;
 	int		err, addr_len;
 	int		net_socket;
 
-	if( NET_GetLoopPacket( sock, from, msg ))
+	if( !data || !length )
+		return false;
+
+	if( NET_GetLoopPacket( sock, from, data, length ))
 		return true;
 
 	net_socket = ip_sockets[sock];
 	if( !net_socket ) return false;
 
 	addr_len = sizeof( addr );
-	ret = pRecvFrom( net_socket, msg->data, msg->maxsize, 0, (struct sockaddr *)&addr, &addr_len );
+	ret = pRecvFrom( net_socket, data, MAX_MSGLEN, 0, (struct sockaddr *)&addr, &addr_len );
 
 	NET_SockadrToNetadr( &addr, from );
 
@@ -418,13 +427,14 @@ bool NET_GetPacket( netsrc_t sock, netadr_t *from, sizebuf_t *msg )
 		return false;
 	}
 
-	if( ret == msg->maxsize )
+	if( ret == MAX_MSGLEN )
 	{
 		MsgDev( D_ERROR, "NET_GetPacket: oversize packet from %s\n", NET_AdrToString( *from ));
 		return false;
 	}
 
-	msg->cursize = ret;
+	*length = ret;
+
 	return true;
 }
 
@@ -673,7 +683,7 @@ void NET_Init( void )
 		return;
 	}
 
-	net_showpackets = Cvar_Get( "net_showpackets", "0", CVAR_TEMP, "show network packets" );
+	net_showpackets = Cvar_Get( "net_showpackets", "0", 0, "show network packets" );
 	Cmd_AddCommand( "net_showip", NET_ShowIP_f,  "show hostname and ip's" );
 	Cmd_AddCommand( "net_restart", NET_Restart_f, "restart the network subsystem" );
 

@@ -70,6 +70,9 @@ UI_NewGame_StartGame
 */
 static void UI_NewGame_StartGame( float skill )
 {
+	if( CVAR_GET_FLOAT( "host_serverstate" ))
+		CLIENT_COMMAND( TRUE, "killserver\n" );
+
 	CVAR_SET_FLOAT( "skill", skill );
 	CVAR_SET_FLOAT( "deathmatch", 0 );
 	CVAR_SET_FLOAT( "gamerules", 0 );

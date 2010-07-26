@@ -58,7 +58,7 @@ static struct
 {
 	const byte	*tmpBuf;
 	file_t		*file;
-	byte		ioBuffer[MAX_MSGLEN];
+	byte		ioBuffer[8192];
 	int		tmpBuflength;
 	int		tmpi;
 	uint		FRowBytes;

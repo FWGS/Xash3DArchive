@@ -56,8 +56,7 @@ public:
 	{
 		if ( pEntity )
 		{
-			pev->skin = ENTINDEX(pEntity);
-			pev->body = attachment;
+			pev->colormap = (pev->colormap & 0xFF00)>>8 | attachment;
 			pev->aiment = pEntity;
 			pev->movetype = MOVETYPE_FOLLOW;
 		}

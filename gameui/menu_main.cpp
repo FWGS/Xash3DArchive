@@ -190,6 +190,9 @@ UI_Main_HazardCourse
 */
 static void UI_Main_HazardCourse( void )
 {
+	if( CVAR_GET_FLOAT( "host_serverstate" ))
+		CLIENT_COMMAND( TRUE, "killserver\n" );
+
 	CVAR_SET_FLOAT( "skill", 0.0f );
 	CVAR_SET_FLOAT( "deathmatch", 0.0f );
 	CVAR_SET_FLOAT( "gamerules", 0.0f );
