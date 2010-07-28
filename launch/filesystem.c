@@ -2475,6 +2475,12 @@ Open a file. The syntax is the same as fopen
 */
 file_t* _FS_Open( const char* filepath, const char* mode, bool quiet )
 {
+	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED || Sys.app_name == HOST_BSPLIB )
+          {
+		// some stupid mappers used leading '/' in path to models or sounds
+		if( filepath[0] == '/' ) filepath++;
+          }
+
 	if( FS_CheckNastyPath( filepath, false ))
 	{
 		MsgDev( D_NOTE, "FS_Open: (\"%s\", \"%s\"): nasty filename rejected\n", filepath, mode );

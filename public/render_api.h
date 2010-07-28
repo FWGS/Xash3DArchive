@@ -6,6 +6,7 @@
 #define RENDER_API_H
 
 #include "ref_params.h"
+#include "trace_def.h"
 
 // shader types used for shader loading
 #define SHADER_SKY			1	// sky box shader

@@ -207,8 +207,11 @@ loc0:
 	// put the crosspoint DIST_EPSILON pixels on the near side
 	side = (t1 < 0);
 
-	if( side ) frac = bound( 0, ( t1 + DIST_EPSILON ) / ( t1 - t2 ), 1 );
-	else frac = bound( 0, ( t1 - DIST_EPSILON ) / ( t1 - t2 ), 1 );
+	if( side ) frac = ( t1 + DIST_EPSILON ) / ( t1 - t2 );
+	else frac = ( t1 - DIST_EPSILON ) / ( t1 - t2 );
+
+	if( frac < 0 ) frac = 0;
+	if( frac > 1 ) frac = 1;
 		
 	midf = p1f + ( p2f - p1f ) * frac;
 	VectorLerp( p1, frac, p2, mid );
@@ -273,9 +276,10 @@ eventually rotation) of the end points
 */
 trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags )
 {
-	vec3_t	offset;
+	vec3_t	offset, temp;
 	vec3_t	start_l, end_l;
 	trace_t	trace;
+	matrix4x4	matrix;
 	chull_t	*hull;
 
 	// fill in a default trace
@@ -294,21 +298,21 @@ trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 	// rotate start and end into the models frame of reference
 	if( ent->v.solid == SOLID_BSP && !VectorIsNull( ent->v.angles ))
 	{
-		vec3_t	forward, right, up;
-		vec3_t	temp;
+		matrix4x4	imatrix;
+	
+		Matrix4x4_CreateFromEntity( matrix, ent->v.origin[0], ent->v.origin[1], ent->v.origin[2], ent->v.angles[PITCH], ent->v.angles[YAW], ent->v.angles[ROLL], 1.0f );
+		Matrix4x4_Invert_Simple( imatrix, matrix );
 
-		VectorCopy( ent->v.angles, temp );
-		AngleVectors( temp, forward, right, up );
-
+		Matrix4x4_VectorTransform( imatrix, start, start_l );
+		Matrix4x4_VectorTransform( imatrix, end, end_l );
+#if 1
+		// calc hull offsets (monsters use this)
 		VectorCopy( start_l, temp );
-		start_l[0] = DotProduct( temp, forward );
-		start_l[1] = -DotProduct( temp, right );
-		start_l[2] = DotProduct( temp, up );
+		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, start_l );
 
 		VectorCopy( end_l, temp );
-		end_l[0] = DotProduct( temp, forward );
-		end_l[1] = -DotProduct( temp, right );
-		end_l[2] = DotProduct( temp, up );
+		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, end_l );
+#endif
 	}
 
 	if(!( flags & FMOVE_SIMPLEBOX ) && CM_ModelType( ent->v.modelindex ) == mod_studio )
@@ -325,30 +329,29 @@ trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 	// rotate endpos back to world frame of reference
 	if( ent->v.solid == SOLID_BSP && !VectorIsNull( ent->v.angles ))
 	{
-		vec3_t	forward, right, up;
-		vec3_t	temp;
-
 		if( trace.flFraction != 1.0f )
 		{
-			VectorNegate( ent->v.angles, temp );
-			AngleVectors( temp, forward, right, up );
+			vec3_t	temp;
 
-			VectorCopy( trace.vecEndPos, temp );
-			trace.vecEndPos[0] = DotProduct( temp, forward );
-			trace.vecEndPos[1] = -DotProduct( temp, right );
-			trace.vecEndPos[2] = DotProduct( temp, up );
+			// compute endpos
+			trace.vecEndPos[0] = start[0] + trace.flFraction * ( end[0] - start[0] );
+			trace.vecEndPos[1] = start[1] + trace.flFraction * ( end[1] - start[1] );
+			trace.vecEndPos[2] = start[2] + trace.flFraction * ( end[2] - start[2] );
 
 			VectorCopy( trace.vecPlaneNormal, temp );
-			trace.vecPlaneNormal[0] = DotProduct( temp, forward );
-			trace.vecPlaneNormal[1] = -DotProduct( temp, right );
-			trace.vecPlaneNormal[2] = DotProduct( temp, up );
+			Matrix4x4_TransformPositivePlane( matrix, temp, trace.flPlaneDist, trace.vecPlaneNormal, &trace.flPlaneDist );
 		}
 	}
+	else
+	{
+		// special case for non-rotated bmodels
+		// fix trace up by the offset when we hit bmodel
+		if( trace.flFraction != 1.0f && trace.iHitgroup == -1 )
+			VectorAdd( trace.vecEndPos, offset, trace.vecEndPos );
 
-	// fix trace up by the offset when we hit bmodel
-	if( trace.flFraction != 1.0f && trace.iHitgroup == -1 )
-		VectorAdd( trace.vecEndPos, offset, trace.vecEndPos );
-
+		trace.flPlaneDist = DotProduct( trace.vecEndPos, trace.vecPlaneNormal );
+	}
+		
 	// did we clip the move?
 	if( trace.flFraction < 1.0f || trace.fStartSolid )
 		trace.pHit = ent;

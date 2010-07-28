@@ -1190,13 +1190,10 @@ void CSprite::Precache( void )
 	PRECACHE_MODEL( (char *)STRING(pev->model) );
 
 	// Reset attachment after save/restore
-	if ( pev->aiment )
-		SetAttachment( pev->aiment, pev->body );
-	else
+	if( !pev->aiment )
 	{
 		// Clear attachment
-		pev->skin = 0;
-		pev->body = 0;
+		pev->colormap = 0;
 	}
 }
 

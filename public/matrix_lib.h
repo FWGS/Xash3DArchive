@@ -997,6 +997,24 @@ _inline void Matrix4x4_CreateModelview( matrix4x4 out )
 #endif
 }
 
+_inline void Matrix4x4_TransformPositivePlane( const matrix4x4 in, const vec3_t normal, float d, vec3_t out, float *dist )
+{
+	float	scale = com.sqrt( in[0][0] * in[0][0] + in[0][1] * in[0][1] + in[0][2] * in[0][2] );
+	float	iscale = 1.0f / scale;
+
+#ifdef OPENGL_STYLE
+	out[0] = (normal[0] * in[0][0] + normal[1] * in[1][0] + normal[2] * in[2][0]) * iscale;
+	out[1] = (normal[0] * in[0][1] + normal[1] * in[1][1] + normal[2] * in[2][1]) * iscale;
+	out[2] = (normal[0] * in[0][2] + normal[1] * in[1][2] + normal[2] * in[2][2]) * iscale;
+	*dist = d * scale + ( out[0] * in[3][0] + out[1] * in[3][1] + out[2] * in[3][2] );
+#else
+	out[0] = (normal[0] * in[0][0] + normal[1] * in[0][1] + normal[2] * in[0][2]) * iscale;
+	out[1] = (normal[0] * in[1][0] + normal[1] * in[1][1] + normal[2] * in[1][2]) * iscale;
+	out[2] = (normal[0] * in[2][0] + normal[1] * in[2][1] + normal[2] * in[2][2]) * iscale;
+	*dist = d * scale + ( out[0] * in[0][3] + out[1] * in[1][3] + out[2] * in[2][3] );
+#endif
+}
+
 _inline void Matrix4x4_ToArrayFloatGL( const matrix4x4 in, float out[16] )
 {
 #ifdef OPENGL_STYLE

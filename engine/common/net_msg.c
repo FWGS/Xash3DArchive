@@ -504,6 +504,57 @@ void _MSG_WriteString( sizebuf_t *sb, const char *src, const char *filename, int
 	}
 }
 
+void _MSG_WriteStringLine( sizebuf_t *sb, const char *src, const char *filename, int fileline )
+{
+	if( !src )
+	{
+		_MSG_WriteData( sb, "", 1, filename, fileline );
+	}
+	else
+	{
+		int	l;
+		char	*dst, string[MAX_SYSPATH];
+                    
+		l = com.strlen( src ) + 1;		
+		if( l >= MAX_SYSPATH )
+		{
+			MsgDev( D_ERROR, "MSG_WriteString: exceeds %i symbols (called at %s:%i\n", MAX_SYSPATH, filename, fileline );
+			_MSG_WriteData( sb, "", 1, filename, fileline );
+			return;
+		}
+
+		dst = string;
+
+		while( 1 )
+		{
+			// some escaped chars parsed as two symbols - merge it here
+			if( src[0] == '\\' && src[1] == 'n' )
+			{
+				*dst++ = '\n';
+				src += 2;
+				l -= 1;
+			}
+			if( src[0] == '\\' && src[1] == 'r' )
+			{
+				*dst++ = '\r';
+				src += 2;
+				l -= 1;
+			}
+			if( src[0] == '\\' && src[1] == 't' )
+			{
+				*dst++ = '\t';
+				src += 2;
+				l -= 1;
+			}
+			else if(( *dst++ = *src++ ) == 0 )
+				break;
+		}
+		*dst = '\0'; // string end
+
+		_MSG_WriteData( sb, string, l, filename, fileline );
+	}
+}
+
 void _MSG_WritePos( sizebuf_t *sb, const vec3_t pos, const char *filename, int fileline )
 {
 	_MSG_WriteFloat( sb, pos[0], filename, fileline );

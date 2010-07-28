@@ -141,6 +141,39 @@ void SV_UnlinkEdict( edict_t *ent )
 
 /*
 ===============
+SV_CheckForOutside
+
+Remove entity out of level
+===============
+*/
+void SV_CheckForOutside( edict_t *ent )
+{
+	// not solid edicts can be fly through walls
+	if( ent->v.solid == SOLID_NOT ) return;
+
+	// other ents probably may travels across the void
+	if( ent->v.movetype != MOVETYPE_NONE ) return;
+
+	// clients can flying outside
+	if( ent->v.flags & FL_CLIENT ) return;
+	
+	// sprites and brushes can be stucks in the walls normally
+	if( CM_GetModelType( ent->v.modelindex ) != mod_studio )
+		return;
+
+	if( SV_PointContents( ent->v.origin ) == CONTENTS_SOLID )
+	{
+		const float *org = ent->v.origin;
+
+		MsgDev( D_ERROR, "%s outside of the world at %g %g %g\n", SV_ClassName( ent ), org[0], org[1], org[2] );
+		ent->v.flags |= FL_KILLME;
+	}
+}
+
+
+int EntityInSolid( edict_t *ent );
+/*
+===============
 SV_LinkEntity
 ===============
 */
@@ -173,7 +206,11 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 
 	// if none of the leafs were inside the map, the
 	// entity is outside the world and can be considered unlinked
-	if( !num_leafs ) return;
+	if( !num_leafs )
+	{
+		SV_CheckForOutside( ent );
+		return;
+	}
 
 	if( num_leafs >= MAX_ENT_LEAFS )
 	{	
@@ -585,8 +622,12 @@ edict_t *SV_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult 
 	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
 	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
 
+	if( pass ) SV_SetMinMaxSize( pass, mins, maxs );
+	
 	result = SV_Move( origin, mins, maxs, origin, MOVE_NORMAL, pass );
 	if( tr ) *tr = result;
 
-	return result.pHit;
+	if( result.pHit )
+		return result.pHit;
+	return NULL;
 }

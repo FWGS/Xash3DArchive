@@ -469,6 +469,7 @@ void SV_InitGame( void )
 		ent->pvServerData->client = svs.clients + i;
 		ent->pvServerData->client->edict = ent;
 		Mem_Set( &svs.clients[i].lastcmd, 0, sizeof( svs.clients[i].lastcmd ));
+		Mem_Set( &svs.clients[i].physinfo, 0, sizeof( svs.clients[i].physinfo ));
 	}
 
 	svgame.globals->numEntities = svgame.globals->maxClients + 1; // clients + world

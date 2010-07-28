@@ -17,7 +17,7 @@
 #define MAX_DECALNAMES		1024	// server decal indexes (different decalnames, not a render limit)
 #define MAX_USER_MESSAGES		200	// another 56 messages reserved for engine routines
 #define MAX_EVENTS			1024	// playback events that can be queued (a byte range, don't touch)
-#define MAX_MSGLEN			8000	// max length of network message
+#define MAX_MSGLEN			16384	// max length of network message
 #define MAX_GENERICS		1024	// generic files that can download from server
 #define MAX_CLASSNAMES		512	// maxcount of various edicts classnames
 #define MAX_SOUNDS			2048	// max unique loaded sounds (not counting sequences)

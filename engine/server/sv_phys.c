@@ -807,7 +807,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( block || SV_TestEntityPosition( check ))
+		if( block )// || SV_TestEntityPosition( check ))
 		{	
 			if( !SV_CanBlock( check ))
 				continue;

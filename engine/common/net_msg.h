@@ -193,6 +193,7 @@ void _MSG_WriteBits( sizebuf_t *msg, long value, const char *name, int bits, con
 long _MSG_ReadBits( sizebuf_t *msg, const char *name, int bits, const char *filename, const int fileline );
 void _MSG_Begin( int dest, const char *filename, int fileline );
 void _MSG_WriteString( sizebuf_t *sb, const char *s, const char *filename, int fileline );
+void _MSG_WriteStringLine( sizebuf_t *sb, const char *src, const char *filename, int fileline );
 void _MSG_WriteFloat( sizebuf_t *sb, float f, const char *filename, int fileline );
 void _MSG_WriteDouble( sizebuf_t *sb, double f, const char *filename, int fileline );
 void _MSG_WriteAngle8( sizebuf_t *sb, float f, const char *filename, int fileline );
@@ -215,6 +216,7 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 #define MSG_WriteFloat(x,y) _MSG_WriteFloat(x, y, __FILE__, __LINE__)
 #define MSG_WriteDouble(x,y) _MSG_WriteDouble(x, y, __FILE__, __LINE__)
 #define MSG_WriteString(x,y) _MSG_WriteString (x, y, __FILE__, __LINE__)
+#define MSG_WriteStringLine(x,y) _MSG_WriteStringLine (x, y, __FILE__, __LINE__)
 #define MSG_WriteCoord16(x, y) _MSG_WriteCoord16(x, y, __FILE__, __LINE__)
 #define MSG_WriteCoord32(x, y) _MSG_WriteFloat(x, y, __FILE__, __LINE__)
 #define MSG_WriteAngle8(x, y) _MSG_WriteAngle8(x, y, __FILE__, __LINE__)

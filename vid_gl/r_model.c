@@ -1657,7 +1657,7 @@ static void Mod_LoadMarkFaces( const dlump_t *l )
 	for( i = 0; i < count; i++ )
 	{
 		j = LittleLong( in[i] );
-		if( j < 0 ||  j >= count )
+		if( j < 0 ||  j >= loadbmodel->numsurfaces )
 			Host_Error( "Mod_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
 		loadbmodel->marksurfaces[i] = loadbmodel->surfaces + j;
 	}

@@ -69,10 +69,10 @@ A connection request that did not come from the master
 */
 void SV_DirectConnect( netadr_t from )
 {
+	char		physinfo[512];
 	char		userinfo[MAX_INFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
 	edict_t		*ent;
-	client_frame_t	*frames;
 	int		i, edictnum;
 	int		version;
 	int		qport, count = 0;
@@ -117,11 +117,13 @@ void SV_DirectConnect( netadr_t from )
 					break; // valid challenge
 			}
 		}
+
 		if( i == MAX_CHALLENGES )
 		{
 			Netchan_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for address.\n" );
 			return;
 		}
+
 		// force the IP key/value pair so the game can filter based on ip
 		Info_SetValueForKey( userinfo, "ip", NET_AdrToString( from ));
 		svs.challenges[i].connected = true;
@@ -130,10 +132,7 @@ void SV_DirectConnect( netadr_t from )
 	else Info_SetValueForKey( userinfo, "ip", "127.0.0.1" ); // force the "ip" info key to "localhost"
 
 	newcl = &temp;
-
-	frames = newcl->frames;	// keep frames pointer
 	Mem_Set( newcl, 0, sizeof( sv_client_t ));
-	newcl->frames = frames;	// restore it
 
 	// if there is already a slot for this ip, reuse it
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
@@ -157,6 +156,7 @@ void SV_DirectConnect( netadr_t from )
 			break;
 		}
 	}
+
 	if( !newcl )
 	{
 		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer is full.\n" );
@@ -168,7 +168,14 @@ gotnewcl:
 	// build a new connection
 	// accept the new client
 	// this is the only place a sv_client_t is ever initialized
+	if( sv_maxclients->integer == 1 )	// save physinfo for singleplayer
+		com.strncpy( physinfo, newcl->physinfo, sizeof( physinfo ));
+
 	*newcl = temp;
+
+	if( sv_maxclients->integer == 1 )	// restore physinfo for singleplayer
+		com.strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
+
 	sv_client = newcl;
 	edictnum = (newcl - svs.clients) + 1;
 

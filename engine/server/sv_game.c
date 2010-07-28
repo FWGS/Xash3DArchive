@@ -2087,7 +2087,7 @@ void pfnWriteString( const char *sz )
 	int	cur_size = sv.multicast.cursize;
 	int	total_size;
 
-	MSG_WriteString( &sv.multicast, sz );
+	MSG_WriteStringLine( &sv.multicast, sz );	// allow \n, \r, \t
 	total_size = sv.multicast.cursize - cur_size;
 
 	// NOTE: some messages with constant string length can be marked as known sized

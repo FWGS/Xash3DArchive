@@ -495,7 +495,7 @@ static void BSP_LoadMarkFaces( const dlump_t *l )
 	for( i = 0; i < count; i++ )
 	{
 		j = LittleLong( in[i] );
-		if( j < 0 ||  j >= count )
+		if( j < 0 ||  j >= loadmodel->numsurfaces )
 			Host_Error( "BSP_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
 		loadmodel->marksurfaces[i] = loadmodel->surfaces + j;
 	}
