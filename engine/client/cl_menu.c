@@ -740,7 +740,7 @@ static void pfnChangeVideo( const char *dllName )
 	if( !dllName || !*dllName ) return;
 
 	// video subsystem will be automatically restarted on nextframe
-	Cvar_FullSet( "host_video", dllName, CVAR_SYSTEMINFO );
+	Cvar_FullSet( "host_video", dllName, CVAR_INIT|CVAR_ARCHIVE );
 	Cbuf_ExecuteText( EXEC_APPEND, "vid_restart\n" );
 }
 
@@ -755,7 +755,7 @@ static void pfnChangeAudio( const char *dllName )
 	if( !dllName || !*dllName ) return;
 
 	// sound subsystem will be automatically restarted on nextframe
-	Cvar_FullSet( "host_audio", dllName, CVAR_SYSTEMINFO );
+	Cvar_FullSet( "host_audio", dllName, CVAR_INIT|CVAR_ARCHIVE );
 	Cbuf_ExecuteText( EXEC_APPEND, "snd_restart\n" );
 }
 
@@ -859,7 +859,6 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnChangeInstance,
 	pfnChangeVideo,
 	pfnChangeAudio,
-	pfnHostNewGame,
 	pfnHostEndGame,
 };
 

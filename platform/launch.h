@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2007 ©
-//			launch.h - launch.dll main header
+//		        launch.h - platform.dll main header
 //=======================================================================
 #ifndef LAUNCHER_H
 #define LAUNCHER_H

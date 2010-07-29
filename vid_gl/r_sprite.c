@@ -437,7 +437,7 @@ mspriteframe_t *R_GetSpriteFrame( ref_model_t *pModel, int frame, float yawAngle
 	mspriteframe_t	*pspriteframe;
 	float		*pintervals, fullinterval, targettime, time;
 
-	Com_Assert( pModel == NULL );
+	ASSERT( pModel );
 	psprite = pModel->extradata;
 
 	if( frame < 0 )

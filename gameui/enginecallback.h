@@ -71,7 +71,6 @@
 #define HOST_WRITECONFIG	(*g_engfuncs.pfnWriteServerConfig)
 #define HOST_CHANGEGAME	(*g_engfuncs.pfnChangeInstance)
 #define CHECK_MAP_LIST	(*g_engfuncs.pfnCreateMapsList)
-#define HOST_NEWGAME	(*g_engfuncs.pfnHostNewGame)
 #define HOST_ENDGAME	(*g_engfuncs.pfnHostEndGame)
 #define GET_CLIPBOARD	(*g_engfuncs.pfnGetClipboardData)
 #define FS_SEARCH		(*g_engfuncs.pfnGetFilesList)

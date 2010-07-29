@@ -3105,7 +3105,7 @@ void R_FreeImage( texture_t *image )
 	texture_t		*cur;
 	texture_t		**prev;
 	
-	Com_Assert( image == NULL );
+	ASSERT( image );
 
 	// remove from hash table
 	hash = Com_HashKey( image->name, TEXTURES_HASH_SIZE );
@@ -3195,7 +3195,7 @@ bool VID_ScreenShot( const char *filename, int shot_type )
 	case VID_MINISHOT:
 		flags |= IMAGE_RESAMPLE;
 		height = 200;
-		width = 230;
+		width = 320;
 		break;
 	}
 

@@ -812,9 +812,9 @@ void CL_SetEventIndex( const char *szEvName, int ev_index )
 
 void CL_InitEdict( edict_t *pEdict )
 {
-	Com_Assert( pEdict == NULL );
-	Com_Assert( pEdict->pvPrivateData != NULL );
-	Com_Assert( pEdict->pvClientData != NULL );
+	ASSERT( pEdict );
+	ASSERT( pEdict->pvPrivateData == NULL );
+	ASSERT( pEdict->pvClientData == NULL );
 
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
 	pEdict->pvClientData = (cl_priv_t *)Mem_Alloc( cls.mempool, sizeof( cl_priv_t ));
@@ -825,8 +825,8 @@ void CL_InitEdict( edict_t *pEdict )
 
 void CL_FreeEdict( edict_t *pEdict )
 {
-	Com_Assert( pEdict == NULL );
-	Com_Assert( pEdict->free );
+	ASSERT( pEdict );
+	ASSERT( pEdict->free == false );
 
 	clgame.dllFuncs.pfnOnFreeEntPrivateData( pEdict );
 
@@ -901,8 +901,8 @@ void CL_InitEdicts( void )
 	edict_t	*e;
 	int	i;
 
-	Com_Assert( clgame.edicts != NULL );
-	Com_Assert( clgame.baselines != NULL );
+	ASSERT( clgame.edicts == NULL );
+	ASSERT( clgame.baselines == NULL );
 
 	CL_UPDATE_BACKUP = ( clgame.globals->maxClients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 	cl.frames = Mem_Alloc( clgame.mempool, sizeof( frame_t ) * CL_UPDATE_BACKUP );

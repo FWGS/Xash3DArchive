@@ -590,7 +590,7 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 	pdecal->dx = x;
 	pdecal->dy = y;
 	pdecal->shader = decalinfo->m_pShader;
-	Com_Assert( pdecal->shader == NULL );
+	ASSERT( pdecal->shader );
 
 	// set scaling
 	pdecal->scale = decalinfo->m_scale;
@@ -709,7 +709,7 @@ static void R_DecalNode( mnode_t *node, decalinfo_t *decalinfo )
 	cplane_t	*splitplane;
 	float	dist;
 	
-	Com_Assert( node == NULL );
+	ASSERT( node );
 
 	if( !node->plane )
 	{
@@ -879,7 +879,7 @@ void R_AddSurfaceDecals( msurface_t *surf )
 	decal_t		*plist;
 	meshbuffer_t	*mb;
 	
-	Com_Assert( surf == NULL );
+	ASSERT( surf );
 
 	plist = surf->pdecals;
 

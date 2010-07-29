@@ -577,7 +577,7 @@ void GL_InitCommands( void )
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
 	gl_texture_anisotropy = Cvar_Get( "r_anisotropy", "2.0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "textures anisotropic filter" );
 	gl_texture_lodbias = Cvar_Get( "r_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
-	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_SYSTEMINFO, "down size non-power of two textures" );
+	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_ARCHIVE|CVAR_LATCH, "compress textures in video memory" ); 
 	r_stencilbits = Cvar_Get( "r_stencilbits", "8", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "pixelformat stencil bits (0 - auto)" );
 	r_check_errors = Cvar_Get("r_check_errors", "1", CVAR_ARCHIVE, "ignore video engine errors" );
@@ -591,7 +591,7 @@ void GL_InitCommands( void )
 	gl_cull = Cvar_Get( "gl_cull", "1", 0, "allow GL_CULL_FACE" );
 	gl_driver = Cvar_Get( "gl_driver", "opengl32.dll", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "OpenGl default driver name" );
 	r_frontbuffer = Cvar_Get( "r_frontbuffer", "0", 0, "use back or front buffer" );
-	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_SYSTEMINFO, "allow gl_extensions" );
+	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_RENDERINFO, "allow gl_extensions" );
 
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "fullscreen refresh rate" );
 	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "set in 1 to enable fullscreen mode" );
@@ -605,6 +605,42 @@ void GL_InitCommands( void )
 	Cmd_AddCommand( "glslprogramdump", R_ProgramDump_f, "sump GLSL shaders into text file" );
 
 	if( r_lighting_modulate->value < 1.0f ) Cvar_Set( "r_lighting_modulate", "1" );
+}
+
+/*
+============
+GL_WriteVariables
+
+Appends lines containing "setr variable value" for all variables
+with the renderinfo flag set to true.
+============
+*/
+static void GL_WriteCvar( const char *name, const char *string, const char *desc, void *f )
+{
+	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
+	FS_Printf( f, "setr %s \"%s\"\n", name, string );
+}
+
+void GL_WriteVariables( file_t *f )
+{
+	Cvar_LookupVars( CVAR_RENDERINFO, NULL, f, GL_WriteCvar ); 
+}
+
+void GL_UpdateConfig( void )
+{
+	file_t	*f;
+
+	f = FS_Open( "config/opengl.rc", "w" );
+	if( f )
+	{
+		FS_Printf( f, "//=======================================================================\n" );
+		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
+		FS_Printf( f, "//\t\t    opengl.rc - archive of opengl extension cvars\n");
+		FS_Printf( f, "//=======================================================================\n" );
+		GL_WriteVariables( f );
+		FS_Close( f );	
+	}                                                
+	else MsgDev( D_ERROR, "can't update opengl.rc.\n" );
 }
 
 void GL_RemoveCommands( void )
@@ -636,6 +672,7 @@ void GL_InitBackend( void )
 void GL_ShutdownBackend( void )
 {
 	GL_RemoveCommands();
+	GL_UpdateConfig();
 
 	Mem_FreePool( &r_temppool );
 }
@@ -682,7 +719,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	if( cvarname )
 	{
 		// system config disable extensions
-		parm = Cvar_Get( cvarname, "1", CVAR_SYSTEMINFO, va( "enable or disable %s", name ));
+		parm = Cvar_Get( cvarname, "1", CVAR_RENDERINFO, va( "enable or disable %s", name ));
 		GL_SetExtension( r_ext, parm->integer );	// update render info
 		if( parm->integer == 0 )
 		{
@@ -853,6 +890,9 @@ static void GL_SetDefaults( void )
 void GL_InitExtensions( void )
 {
 	int	flags = 0;
+
+	Cbuf_AddText( "exec opengl.rc\n" );
+	Cbuf_Execute();
 
 	// initialize gl extensions
 	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, NULL, R_OPENGL_110 );

@@ -7,10 +7,8 @@
 #include "mathlib.h"
 
 cvar_t *gl_round_down;
-cvar_t *png_compression;
-cvar_t *jpg_quality;
 
-#define LERPBYTE(i)		r = resamplerow1[i];out[i] = (byte)((((resamplerow2[i] - r) * lerp)>>16) + r)
+#define LERPBYTE( i )	r = resamplerow1[i]; out[i] = (byte)(((( resamplerow2[i] - r ) * lerp)>>16 ) + r )
 
 uint d_8toD1table[256];
 uint d_8toQ1table[256];
@@ -294,12 +292,7 @@ void Image_Init( void )
 {
 	// init pools
 	Sys.imagepool = Mem_AllocPool( "ImageLib Pool" );
-	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_SYSTEMINFO, "down size non-power of two textures" );
-	png_compression = Cvar_Get( "png_compression", "9", CVAR_SYSTEMINFO, "pnglib compression level" );
-	jpg_quality = Cvar_Get( "jpg_quality", "7", CVAR_SYSTEMINFO, "jpglib quality level" );
-	Cvar_SetValue( "png_compression", bound( 0, png_compression->integer, 9 ));
-	Cvar_SetValue( "jpg_quality", bound( 0, jpg_quality->integer, 10 ));
-
+	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
 	image.baseformats = load_xash;
 
 	// install image formats (can be re-install later by Image_Setup)

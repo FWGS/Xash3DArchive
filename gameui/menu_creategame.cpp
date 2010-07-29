@@ -85,7 +85,7 @@ UI_CreateGame_Begin
 */
 static void UI_CreateGame_Begin( void )
 {
-	if( CVAR_GET_FLOAT( "host_serverstate" ))
+	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "sv_maxclients" ) <= 1 )
 		CLIENT_COMMAND( TRUE, "killserver\n" );
 
 	CVAR_SET_FLOAT( "deathmatch", 1.0f );	// FIXME

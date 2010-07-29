@@ -1354,7 +1354,7 @@ static _inline texture_t *R_ShaderpassTex( const ref_stage_t *pass, int unit )
 		}
 		else frame = (int)( pass->animFrequency[0] * r_currentShaderTime ) % pass->num_textures;
 
-		Com_Assert( pass->textures[frame] == NULL );
+		ASSERT( pass->textures[frame] );
 
 		return pass->textures[frame];
 	}
@@ -2137,7 +2137,7 @@ static void R_RenderMeshGLSL_Material( void )
 	glossmap = pass->textures[2];
 	decalmap = pass->textures[3];
 
-	Com_Assert( normalmap == NULL );
+	ASSERT( normalmap );
 
 	if( normalmap->samples == 4 )
 		offsetmappingScale = r_offsetmapping_scale->value * r_currentShader->offsetmapping_scale;
@@ -2744,7 +2744,7 @@ void R_RenderMeshBuffer( const meshbuffer_t *mb )
 		return;
 	}
 
-	Com_Assert( mb == NULL );
+	ASSERT( mb );
 
 	type = mb->sortkey & 3;
 	r_currentLightStyle = NULL;

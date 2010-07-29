@@ -190,17 +190,16 @@ UI_Main_HazardCourse
 */
 static void UI_Main_HazardCourse( void )
 {
-	if( CVAR_GET_FLOAT( "host_serverstate" ))
+	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "sv_maxclients" ) > 1 )
 		CLIENT_COMMAND( TRUE, "killserver\n" );
 
 	CVAR_SET_FLOAT( "skill", 0.0f );
 	CVAR_SET_FLOAT( "deathmatch", 0.0f );
-	CVAR_SET_FLOAT( "gamerules", 0.0f );
 	CVAR_SET_FLOAT( "teamplay", 0.0f );
 	CVAR_SET_FLOAT( "pausable", 1.0f ); // singleplayer is always allowing pause
 	CVAR_SET_FLOAT( "coop", 0.0f );
 
-	HOST_NEWGAME( gMenu.m_gameinfo.trainmap );
+	CLIENT_COMMAND( FALSE, "hazardcourse\n" );
 }
 
 /*

@@ -383,45 +383,41 @@ void ClientCommand( edict_t *pEntity )
 
 	if ( FStrEq( pcmd, "noclip" ))
 	{
-		if( pEntity->v.movetype == MOVETYPE_WALK )
+		if (g_flWeaponCheat)
 		{
-			pEntity->v.movetype = MOVETYPE_NOCLIP;
-			ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "noclip on\n" );
-		}
-		else
-		{
-			pEntity->v.movetype =  MOVETYPE_WALK;
-			ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "noclip off\n" );
+			if( pEntity->v.movetype == MOVETYPE_WALK )
+			{
+				pEntity->v.movetype = MOVETYPE_NOCLIP;
+				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "noclip on\n" );
+			}
+			else
+			{
+				pEntity->v.movetype =  MOVETYPE_WALK;
+				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "noclip off\n" );
+			}
 		}
 	}
 	else if ( FStrEq( pcmd, "god" ))
 	{
-		pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
+		if (g_flWeaponCheat)
+		{
+			pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
 
-		if ( !( pEntity->v.flags & FL_GODMODE ))
-			ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "godmode OFF\n" );
-		else ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "godmode ON\n" );
-	}
-	else if ( FStrEq( pcmd, "fly" ))
-	{
-		if ( pEntity->v.movetype == MOVETYPE_FLY )
-		{
-			pEntity->v.movetype = MOVETYPE_WALK;
-			ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "flymode OFF\n" );
-		}
-		else
-		{
-			pEntity->v.movetype = MOVETYPE_FLY;
-			ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "flymode ON\n" );
+			if ( !( pEntity->v.flags & FL_GODMODE ))
+				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "godmode OFF\n" );
+			else ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "godmode ON\n" );
 		}
 	}
 	else if( FStrEq( pcmd, "notarget" ))
 	{
-		pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
+		if (g_flWeaponCheat)
+		{
+			pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
 
-		if ( !( pEntity->v.flags & FL_NOTARGET ))
-			ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "notarget OFF\n" );
-		else ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "notarget ON\n" );
+			if ( !( pEntity->v.flags & FL_NOTARGET ))
+				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "notarget OFF\n" );
+			else ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "notarget ON\n" );
+		}
 	}
 	else if ( FStrEq(pcmd, "hud_color") ) //LRC
 	{
@@ -497,12 +493,6 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "fullupdate" ) )
 	{
 		GetClassPtr((CBasePlayer *)pev)->ForceClientDllUpdate();
-	}
-	else if ( FStrEq(pcmd, "playaudio" ) )  //AJH - MP3/OGG player (based on killars MP3)
-	{
-		MESSAGE_BEGIN( MSG_ONE, gmsgPlayMP3, NULL, ENT(pev) );
-			WRITE_STRING( (char *)CMD_ARGV(1) );
-		MESSAGE_END();
 	}
 	else if ( FStrEq(pcmd, "give" ) )
 	{

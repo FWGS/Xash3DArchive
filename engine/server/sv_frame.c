@@ -139,7 +139,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		sv.hostflags &= ~SVF_SKIPLOCALHOST;
 
 		cl = SV_ClientFromEdict( pClient, true );
-		Com_Assert( cl == NULL );
+		ASSERT( cl );
 
 		// setup hostflags
 		if( com.atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) == 1 )

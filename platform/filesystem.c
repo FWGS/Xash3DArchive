@@ -130,7 +130,6 @@ char fs_rootdir[MAX_SYSPATH]; // engine root directory
 char fs_basedir[MAX_SYSPATH]; // base directory of game
 char fs_gamedir[MAX_SYSPATH]; // game current directory
 char gs_basedir[MAX_SYSPATH]; // initial dir before loading gameinfo.txt (used for compilers too)
-char gs_mapname[64]; // used for compilers only
 
 // command ilne parms
 int fs_argc;
@@ -138,7 +137,6 @@ char *fs_argv[MAX_NUM_ARGVS];
 bool fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
 bool fs_use_wads = false; // some utilities needs this
 cvar_t *fs_defaultdir;
-cvar_t *fs_wadsupport;
 sysinfo_t SI;
 
 /*
@@ -1316,55 +1314,6 @@ void FS_Rescan_f( void )
 	FS_Rescan();
 }
 
-void FS_CreatePathesList( void )
-{
-	file_t	*f;
-
-	// make simple pathes.rc
-	f = FS_Open( "pathes.rc", "w" );
-	if( !f ) return; // not fatal for us
-
-	FS_Printf (f, "//=======================================================================\n");
-	FS_Printf (f, "//\t\t\tCopyright XashXT Group %s ©\n", com.timestamp( TIME_YEAR_ONLY ));
-	FS_Printf (f, "//\t\t      pathes.rc - executable associations\n");
-	FS_Printf (f, "//=======================================================================\n");
-	FS_Printf (f, "\n");
-	FS_Printf (f, "// executable name\t\tlinked basedir\n");
-	FS_Printf (f, "quake.exe\t\t\tid1\n" );
-	FS_Printf (f, "quake2.exe\t\tbaseq2\n" );
-	FS_Printf (f, "quake3.exe\t\tbaseq3\n" );
-	FS_Printf (f, "hl.exe\t\t\tvalve\n" );
-	FS_Close (f);	
-}
-
-void FS_ApplyBaseDir( void )
-{
-	script_t	*script;
-	token_t	tok;
-
-	if( Sys.app_state == SYS_RESTART ) return; // don't associate folder names - may be collisions
-	if( !FS_FileExists( "pathes.rc" )) FS_CreatePathesList();
-	script = PS_LoadScript( "pathes.rc", NULL, 0 );
-	if( !script ) return; // use standard methods
-
-	while( PS_ReadToken( script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES, &tok ))
-	{
-		FS_StripExtension( tok.string ); // cutoff .exe if present
-		if( !com.stricmp( tok.string, gs_basedir ))
-		{
-			if( PS_ReadToken( script, SC_ALLOW_PATHNAMES, &tok ))
-			{
-				// install new basedir
-				com.strncpy( gs_basedir, tok.string, sizeof( gs_basedir ));
-				break;
-			}
-			else MsgDev( D_ERROR, "missing associated directory with %s.exe\n", gs_basedir );
-		}
-		else PS_SkipRestOfLine( script );
-	}
-	PS_FreeScript( script );
-}
-
 void FS_UpdateSysInfo( void )
 {
 	com.strcpy( SI.username, Sys_GetCurrentUser());
@@ -1576,7 +1525,7 @@ static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gamei
 	com.strncpy( GameInfo->gameHint, "Half-Life", MAX_STRING );
 	com.strncpy( GameInfo->title, "New Game", MAX_STRING );
 	com.strncpy( GameInfo->gamedir, gamedir, MAX_STRING );
-	com.strncpy( GameInfo->basedir, fs_defaultdir->string, MAX_STRING );
+	com.strncpy( GameInfo->basedir, "valve", MAX_STRING ); // all liblist.gam have 'valve' as basedir
 	com.strncpy( GameInfo->sp_entity, "info_player_start", MAX_STRING );
 	com.strncpy( GameInfo->dm_entity, "info_player_deathmatch", MAX_STRING );
 	com.strncpy( GameInfo->ctf_entity, "info_player_ctf", MAX_STRING );
@@ -1931,11 +1880,7 @@ void FS_Init( void )
 	Cmd_AddCommand( "fs_rescan", FS_Rescan_f, "rescan filesystem search pathes" );
 	Cmd_AddCommand( "fs_path", FS_Path_f, "show filesystem search pathes" );
 	Cmd_AddCommand( "fs_clearpaths", FS_ClearPaths_f, "clear filesystem search pathes" );
-	fs_wadsupport = Cvar_Get( "fs_wadsupport", "0", CVAR_SYSTEMINFO, "enable wad-archive support" );
-	fs_defaultdir = Cvar_Get( "fs_defaultdir", "valve", CVAR_SYSTEMINFO, "game default directory" );
-
-	Cbuf_ExecuteText( EXEC_NOW, "systemcfg\n" );
-	Cbuf_Execute(); // apply system cvars immediately
+	fs_defaultdir = Cvar_Get( "fs_defaultdir", "valve", CVAR_INIT, "game default directory" );
 
 	// ignore commandlineoption "-game" for other stuff
 	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED || Sys.app_name == HOST_BSPLIB )
@@ -1951,8 +1896,6 @@ void FS_Init( void )
 				com.strcpy( gs_basedir, fs_defaultdir->string );
 			else if( Sys_GetModuleName( gs_basedir, MAX_SYSPATH ));
 			else com.strcpy( gs_basedir, fs_defaultdir->string ); // default dir
-
-			FS_ApplyBaseDir();	// check for associated folders
 		}
 
 		// checked nasty path: "bin" it's a reserved word
@@ -1967,6 +1910,7 @@ void FS_Init( void )
 		{
 			if( !com.stricmp( fs_defaultdir->string, dirs.strings[i] ))
 				hasDefaultDir = true;
+
 			if( !com.stricmp( gs_basedir, dirs.strings[i] ))
 				break;
 		}
@@ -2008,7 +1952,8 @@ void FS_Init( void )
 	}
 
 	FS_UpdateSysInfo();
-	MsgDev( D_INFO, "FS_Root: %s\n", sys_rootdir );
+
+	MsgDev( D_NOTE, "FS_Root: %s\n", sys_rootdir );
 	MsgDev( D_NOTE, "FS_Init: done\n" );
 }
 
@@ -2048,46 +1993,6 @@ void FS_AllowDirectPaths( bool enable )
 }
 
 /*
-============
-FS_WriteVariables
-
-Appends lines containing "set variable value" for all variables
-with the archive flag set to true.
-============
-*/
-static void FS_WriteCvar( const char *name, const char *string, const char *desc, void *f )
-{
-	if( !desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf( f, "setc %s \"%s\"\n", name, string );
-}
-
-void FS_WriteVariables( file_t *f )
-{
-	Cvar_LookupVars( CVAR_SYSTEMINFO, NULL, f, FS_WriteCvar ); 
-}
-
-void FS_UpdateConfig( void )
-{
-	file_t	*f;
-
-	if( Sys.app_state == SYS_ERROR ) return;
-	// only normal and bsplib instance can change config.rc
-	if( Sys.app_name != HOST_NORMAL && Sys.app_name != HOST_BSPLIB ) return;
-	com.strncpy( fs_gamedir, "bin", sizeof( fs_gamedir ));	// set write directory for system config
-	f = FS_Open( "config.rc", "w" );
-	if( f )
-	{
-		FS_Printf (f, "//=======================================================================\n");
-		FS_Printf (f, "//\t\t\tCopyright XashXT Group %s ©\n", com.timestamp( TIME_YEAR_ONLY ));
-		FS_Printf (f, "//\t\t      config.rc - archive of system cvars\n");
-		FS_Printf (f, "//=======================================================================\n");
-		FS_WriteVariables( f );
-		FS_Close (f);	
-	}                                                
-	else MsgDev( D_ERROR, "can't update config.rc.\n" );
-}
-
-/*
 ================
 FS_Shutdown
 ================
@@ -2104,7 +2009,6 @@ void FS_Shutdown( void )
 
 	FS_ClearSearchPath();		// release all wad files too
 	FS_UpdateEnvironmentVariables(); 	// merge working directory
-	FS_UpdateConfig();
 	Mem_FreePool( &fs_mempool );
 }
 
@@ -3567,7 +3471,7 @@ static void FS_BuildPath( char *pPath, char *pOut )
 {
 	// set working directory
 	SetCurrentDirectory ( pPath );
-	com.sprintf( pOut, "%s\\bin\\launch.dll", pPath );
+	com.sprintf( pOut, "%s\\bin\\platform.dll", pPath );
 }
 
 void FS_UpdateEnvironmentVariables( void )

@@ -268,7 +268,7 @@ bool Image_SavePNG( const char *name, rgbdata_t *pix )
 
 	png_init_io( fin, png.file );
 	png_set_write_fn( fin, png.ioBuffer, (void *)png_fwrite, NULL );
-	png_set_compression_level( fin, png_compression->integer ); // Z_BEST_COMPRESSION
+	png_set_compression_level( fin, 9 ); // Z_BEST_COMPRESSION
 
 	switch( pix->type )
 	{

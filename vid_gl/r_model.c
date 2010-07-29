@@ -439,7 +439,7 @@ ref_model_t *Mod_ForName( const char *name, bool crash )
 
 	mod = Mod_FindSlot( name );
 
-	Com_Assert( mod == NULL );
+	ASSERT( mod );
 
 	// load the file
 	buf = (uint *)FS_LoadFile( name, NULL );
@@ -1122,7 +1122,7 @@ texture_t *Mod_LoadTexture( mip_t *mt )
 {
 	texture_t	*tx;
 
-	Com_Assert( mt == NULL );
+	ASSERT( mt );
 
 	if( mt->offsets[0] > 0 )
 	{
@@ -1166,7 +1166,7 @@ static ref_shader_t *Mod_LoadCachedImage( cachedimage_t *image )
 	if( image->shader )
 		return image->shader;
 
-	Com_Assert( mt == NULL );
+	ASSERT( mt );
 
 	com.strncpy( image->name, mt->name, sizeof( image->name ));
 

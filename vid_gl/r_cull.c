@@ -324,7 +324,7 @@ R_BeginOcclusionPass
 */
 void R_BeginOcclusionPass( void )
 {
-	Com_Assert( OCCLUSION_QUERIES_ENABLED( RI ) == 0 );
+	ASSERT( OCCLUSION_QUERIES_ENABLED( RI ));
 
 	r_occludersQueued = false;
 	r_occlusionEntity = r_worldent;
@@ -348,7 +348,7 @@ R_EndOcclusionPass
 */
 void R_EndOcclusionPass( void )
 {
-	Com_Assert( OCCLUSION_QUERIES_ENABLED( RI ) == 0 );
+	ASSERT( OCCLUSION_QUERIES_ENABLED( RI ));
 
 	R_RenderOccludingSurfaces();
 
@@ -498,7 +498,8 @@ R_OcclusionQueryIssued
 */
 bool R_OcclusionQueryIssued( int query )
 {
-	Com_Assert((query >= 0 && query < MAX_OQ_TOTAL) == 0 );
+	ASSERT( query >= 0 && query < MAX_OQ_TOTAL );
+
 	return r_queriesBits[query>>3] & ( 1<<( query & 7 ));
 }
 

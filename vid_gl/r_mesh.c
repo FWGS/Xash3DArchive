@@ -187,7 +187,7 @@ R_UpdateVertexBuffer
 */
 void R_UpdateVertexBuffer( vbo_buffer_t *vertexBuffer, const void *data, size_t size )
 {
-	Com_Assert( vertexBuffer == NULL );
+	ASSERT( vertexBuffer );
 
 	if( !GL_Support( R_ARB_VERTEX_BUFFER_OBJECT_EXT ))
 	{
@@ -767,7 +767,7 @@ R_AllocMeshbufPointers
 */
 void R_AllocMeshbufPointers( refinst_t *RI )
 {
-	Com_Assert( r_worldmodel == NULL );
+	ASSERT( r_worldmodel );
 
 	if( !RI->surfmbuffers )
 		RI->surfmbuffers = Mem_Alloc( r_meshlistmempool, r_worldbrushmodel->numsurfaces * sizeof( meshbuffer_t* ));

@@ -97,6 +97,7 @@ int Cvar_VariableInteger( const char *var_name )
 
 	var = Cvar_FindVar( var_name );
 	if( !var ) return 0;
+
 	return var->integer;
 }
 
@@ -110,7 +111,8 @@ char *Cvar_VariableString( const char *var_name )
 	cvar_t	*var;
 
 	var = Cvar_FindVar( var_name );
-	if (!var) return "";
+	if( !var ) return "";
+
 	return var->string;
 }
 
@@ -159,6 +161,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const 
 		MsgDev( D_WARN, "invalid info cvar name string %s\n", var_name );
 		var_value = "noname";
 	}
+
 	if( !Cvar_ValidateString( var_value, true ))
 	{
 		MsgDev( D_WARN, "invalid cvar value string: %s\n", var_value );
@@ -177,7 +180,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const 
 	{
 		// if the C code is now specifying a variable that the user already
 		// set a value for, take the new value as the reset value
-
 		if(( var->flags & CVAR_USER_CREATED ) && !( flags & CVAR_USER_CREATED ) && var_value[0] )
 		{
 			var->flags &= ~CVAR_USER_CREATED;
@@ -210,6 +212,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const 
 			Cvar_Set2( var_name, s, true );
 			Mem_Free( s );
 		}
+
 		if( var_desc )
 		{
 			// update description if needs
@@ -284,7 +287,7 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
 	if( !value ) value = var->reset_string;
 	if( !com.strcmp( value, var->string )) return var;
 
-	// note what types of cvars have been modified (userinfo, archive, serverinfo, systeminfo)
+	// note what types of cvars have been modified (userinfo, archive, serverinfo, renderinfo)
 	cvar_modifiedFlags |= var->flags;
 
 	if( !force )
@@ -301,9 +304,9 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
 			return var;
 		}
 
-		if( var->flags & CVAR_SYSTEMINFO )
+		if( var->flags & CVAR_RENDERINFO )
 		{
-			MsgDev( D_INFO, "%s is system variable.\n", var_name );
+			MsgDev( D_INFO, "%s is a renderer config variable.\n", var_name );
 			return var;
 		}
 
@@ -689,21 +692,22 @@ void Cvar_SetA_f( void )
 
 /*
 ============
-Cvar_SetC_f
+Cvar_SetR_f
 
-As Cvar_Set, but also flags it as systeminfo
+As Cvar_Set, but also flags it as renderinfo
 ============
 */
-void Cvar_SetC_f( void )
+void Cvar_SetR_f( void )
 {
 	if( Cmd_Argc() != 3 )
 	{
-		Msg( "Usage: setc <variable> <value>\n" );
+		Msg( "Usage: setr <variable> <value>\n" );
 		return;
 	}
 
-	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_SYSTEMINFO );
+	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_RENDERINFO );
 }
+
 
 /*
 ============
@@ -797,7 +801,7 @@ void Cvar_Restart_f( void )
 
 		// don't mess with rom values, or some inter-module
 		// communication will get broken (com_cl_running, etc)
-		if( var->flags & ( CVAR_READ_ONLY|CVAR_INIT|CVAR_SYSTEMINFO ))
+		if( var->flags & ( CVAR_READ_ONLY|CVAR_INIT|CVAR_RENDERINFO ))
 		{
 			prev = &var->next;
 			continue;
@@ -932,7 +936,7 @@ void Cvar_Init( void )
 	Cmd_AddCommand ("sets", Cvar_SetS_f, "create or change the value of a serverinfo variable" );
 	Cmd_AddCommand ("setu", Cvar_SetU_f, "create or change the value of a userinfo variable" );
 	Cmd_AddCommand ("setp", Cvar_SetP_f, "create or change the value of a physicinfo variable" );
-	Cmd_AddCommand ("setc", Cvar_SetC_f, "create or change the value of a systeminfo variable" );
+	Cmd_AddCommand ("setr", Cvar_SetR_f, "create or change the value of a renderinfo variable" );
 	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to vars.rc" );
 	Cmd_AddCommand ("reset", Cvar_Reset_f, "reset any type variable to initial value" );
 	Cmd_AddCommand ("latch", Cvar_Latched_f, "apply latched values" );

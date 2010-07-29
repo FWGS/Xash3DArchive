@@ -313,11 +313,7 @@ bool Image_LoadFLT( const char *name, const byte *buffer, size_t filesize )
 	int	i, column_offset, pointer_position, first_pos;
 	byte	*Data, post, topdelta, length;
 
-	// wadsupport disabled, so nothing to load
-	if( Sys.app_name == HOST_NORMAL && !fs_wadsupport->integer )
-		return false;
-
-	if(filesize < (int)sizeof( flat ))
+	if( filesize < (int)sizeof( flat ))
 	{
 		MsgDev( D_ERROR, "Image_LoadFLAT: file (%s) have invalid size\n", name );
 		return false;
@@ -402,10 +398,6 @@ bool Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	int	rendermode;
 	int	pixels;
 
-	// wadsupport disabled, so nothing to load
-	if( Sys.app_name == HOST_NORMAL && !fs_wadsupport->integer )
-		return false;
-
 	if( filesize < sizeof( lmp ))
 	{
 		MsgDev( D_ERROR, "Image_LoadLMP: file (%s) have invalid size\n", name );
@@ -471,11 +463,7 @@ bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 	int	ofs[4], rendermode;
 	int	i, pixels, numcolors;
 
-	// wadsupport disabled, so nothing to load
-	if( Sys.app_name == HOST_NORMAL && !fs_wadsupport->integer )
-		return false;
-
-	if( filesize < (int)sizeof(mip))
+	if( filesize < sizeof( mip ))
 	{
 		MsgDev( D_ERROR, "Image_LoadMIP: file (%s) have invalid size\n", name );
 		return false;

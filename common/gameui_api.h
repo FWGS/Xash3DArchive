@@ -133,7 +133,6 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnChangeInstance)( const char *newInstance, const char *szFinalMessage );
 	void	(*pfnChangeVideo)( const char *dllName );
 	void	(*pfnChangeAudio)( const char *dllName );
-	void	(*pfnHostNewGame)( const char *mapName );
 	void	(*pfnHostEndGame)( const char *szFinalMessage );
 } ui_enginefuncs_t;
 

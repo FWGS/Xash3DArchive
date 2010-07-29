@@ -104,12 +104,12 @@ typedef enum
 	CVAR_USERINFO	= BIT(1),	// added to userinfo  when changed
 	CVAR_SERVERINFO	= BIT(2),	// added to serverinfo when changed
 	CVAR_PHYSICINFO	= BIT(3),	// added to physinfo when changed
-	CVAR_SYSTEMINFO	= BIT(4),	// don't changed from console, saved into config.rc
-	CVAR_INIT		= BIT(5), // don't allow change from console at all, but can be set from the command line
-	CVAR_LATCH	= BIT(6),	// save changes until server restart
-	CVAR_READ_ONLY	= BIT(7),	// display only, cannot be set by user at all
-	CVAR_USER_CREATED	= BIT(8),	// created by a set command (dll's used)
-	CVAR_CHEAT	= BIT(9),	// can not be changed if cheats are disabled
+	CVAR_RENDERINFO	= BIT(4),	// save to a seperate config called opengl.rc
+	CVAR_CHEAT	= BIT(5),	// can not be changed if cheats are disabled
+	CVAR_INIT		= BIT(6), // don't allow change from console at all, but can be set from the command line
+	CVAR_LATCH	= BIT(7),	// save changes until server restart
+	CVAR_READ_ONLY	= BIT(8),	// display only, cannot be set by user at all
+	CVAR_USER_CREATED	= BIT(9),	// created by a set command (dll's used)
 	CVAR_LATCH_VIDEO	= BIT(10),// save changes until render restart
 	CVAR_LATCH_AUDIO	= BIT(11),// save changes until vsound restart
 } cvar_flags_t;
@@ -732,8 +732,6 @@ typedef void *(*launch_t)( stdlib_api_t*, void* );
 typedef struct { size_t api_size; size_t com_size; } generic_api_t;
 
 // moved here to enable assertation feature in launch.dll
-// FIXME: replace all Com_Assert with ASSERT
-#define Com_Assert( x )	if( x ) com.abort( "assert failed at %s:%i\n", __FILE__, __LINE__ );
 #define ASSERT( exp )	if(!( exp )) com.abort( "assert failed at %s:%i\n", __FILE__, __LINE__ );
 
 #ifndef LAUNCH_DLL

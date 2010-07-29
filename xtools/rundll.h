@@ -52,20 +52,15 @@ BOOL GetBin( void )
 
 BOOL GetEnv( void )
 {
-#ifndef HOST_NORMAL
 	char *pEnvPath = getenv( "Xash3D" );
 	if( !pEnvPath ) return FALSE;
 
 	strcpy( szFsPath, pEnvPath );
 	return TRUE;
-#else
-	return FALSE;
-#endif
 }
 
 BOOL GetReg( void )
 {
-#ifndef HOST_NORMAL
 	HINSTANCE advapi32_dll = LoadLibrary( "advapi32.dll" );
 	static long( _stdcall *pRegOpenKeyEx )( HKEY, LPCSTR, DWORD, REGSAM, PHKEY );
 	static long( _stdcall *pRegQueryValueEx )( HKEY, LPCSTR, LPDWORD, LPDWORD, LPBYTE, LPDWORD );
@@ -97,9 +92,6 @@ BOOL GetReg( void )
 failure:
 	if( advapi32_dll ) FreeLibrary( advapi32_dll ); // don't forget freeing
 	return result;
-#else
-	return FALSE;
-#endif
 }
 
 void GetLibrary( void )
@@ -109,28 +101,28 @@ void GetLibrary( void )
 	if( GetBin( ))
 	{
 		// assume run directory as XashDirectory
-		strcpy( szSearch[count], "bin\\launch.dll" );
+		strcpy( szSearch[count], "bin\\platform.dll" );
 		count++;
 	}
 
 	if( GetBin( ))
 	{
 		// assume run directory as XashDirectory (S.T.A.L.K.E.R. style)
-		strcpy( szSearch[count], "launch.dll" );
+		strcpy( szSearch[count], "platform.dll" );
 		count++;
 	}	
 
 	if( GetEnv( ))
 	{
 		// get environment variable (e.g. compilers)
-		sprintf( szSearch[count], "%s\\bin\\launch.dll", szFsPath );
+		sprintf( szSearch[count], "%s\\bin\\platform.dll", szFsPath );
 		count++;
 	}
 
 	if( GetReg( ))
 	{
 		// get environment variable direct from registry (paranoid)
-		sprintf( szSearch[count], "%s\\bin\\launch.dll", szFsPath );
+		sprintf( szSearch[count], "%s\\bin\\platform.dll", szFsPath );
 		count++;
 	}
 
@@ -150,11 +142,11 @@ winmain_t CreateMain32( void )
 	if( hmain ) 
 	{
 		main = (winmain_t)GetProcAddress( hmain, "CreateAPI" );
-		if( !main ) GetError( "launch.dll is corrupt" );
+		if( !main ) GetError( "Unable to find entry point in platform.dll" );
 		return main;
 	}
 
-	GetError( "Unable to load the launch.dll" );
+	GetError( "Unable to load the platform.dll" );
 
 	// make compiller happy
 	return 0;

@@ -323,7 +323,7 @@ void Sys_LookupInstance( void )
 
 	Sys.app_name = HOST_OFFLINE;
 	// we can specified custom name, from Sys_NewInstance
-	if(GetModuleFileName( NULL, szTemp, MAX_SYSPATH ) && Sys.app_state != SYS_RESTART )
+	if( GetModuleFileName( NULL, szTemp, MAX_SYSPATH ) && Sys.app_state != SYS_RESTART )
 		FS_FileBase( szTemp, Sys.ModuleName );
 
 	// determine host type
@@ -331,13 +331,21 @@ void Sys_LookupInstance( void )
 	{
 		if( Sys.ModuleName[0] == '#' ) dedicated = true;
 		if( Sys.ModuleName[0] == '©' ) com_strcpy( Sys.progname, "credits" );
+
 		// cutoff hidden symbols
-		com_strncpy( szTemp, Sys.ModuleName + 1, MAX_SYSPATH );
-		com_strncpy( Sys.ModuleName, szTemp, MAX_SYSPATH );			
+		com.strncpy( szTemp, Sys.ModuleName + 1, MAX_SYSPATH );
+		com.strncpy( Sys.ModuleName, szTemp, MAX_SYSPATH );			
+	}
+
+	if( Sys.progname[0] == '$' )
+	{
+		// custom path came from executable, otherwise can't be modified 
+		com.strncpy( Sys.ModuleName, Sys.progname + 1, MAX_SYSPATH );
+		com.strncpy( Sys.progname, "normal", MAX_SYSPATH ); // set as "normal"		
 	}
 
 	// lookup all instances
-	if(!com_strcmp( Sys.progname, "credits" ))
+	if( !com.strcmp( Sys.progname, "credits" ))
 	{
 		Sys.app_name = HOST_CREDITS;		// easter egg
 		Sys.linked_dll = NULL;		// no need to loading library
@@ -345,7 +353,7 @@ void Sys_LookupInstance( void )
 		com_strcpy( Sys.caption, "About" );
 		Sys.con_showcredits = true;
 	}
-	else if( !com_strcmp( Sys.progname, "normal" ))
+	else if( !com.strcmp( Sys.progname, "normal" ))
 	{
 		if( dedicated )
 		{
@@ -380,35 +388,35 @@ void Sys_LookupInstance( void )
 		Sys.linked_dll = &engine_dll;	// pointer to engine.dll info
 		com_strcpy( Sys.caption, va( "Xash3D ver.%g", XASH_VERSION ));
 	}
-	else if( !com_strcmp( Sys.progname, "bsplib" ))
+	else if( !com.strcmp( Sys.progname, "bsplib" ))
 	{
 		Sys.app_name = HOST_BSPLIB;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
 		com_strcpy( Sys.log_path, "bsplib.log" ); // xash3d root directory
 		com_strcpy( Sys.caption, "Xash3D BSP Compiler");
 	}
-	else if( !com_strcmp( Sys.progname, "sprite" ))
+	else if( !com.strcmp( Sys.progname, "sprite" ))
 	{
 		Sys.app_name = HOST_SPRITE;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
 		com_sprintf( Sys.log_path, "%s/spritegen.log", sys_rootdir ); // same as .exe file
 		com_strcpy( Sys.caption, "Xash3D Sprite Compiler");
 	}
-	else if( !com_strcmp( Sys.progname, "studio" ))
+	else if( !com.strcmp( Sys.progname, "studio" ))
 	{
 		Sys.app_name = HOST_STUDIO;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
 		com_sprintf( Sys.log_path, "%s/studiomdl.log", sys_rootdir ); // same as .exe file
 		com_strcpy( Sys.caption, "Xash3D Studio Models Compiler" );
 	}
-	else if( !com_strcmp( Sys.progname, "wadlib" ))
+	else if( !com.strcmp( Sys.progname, "wadlib" ))
 	{
 		Sys.app_name = HOST_WADLIB;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
 		com_sprintf( Sys.log_path, "%s/wadlib.log", sys_rootdir ); // same as .exe file
 		com_strcpy( Sys.caption, "Xash3D Wad2\\Wad3 maker" );
 	}
-	else if( !com_strcmp( Sys.progname, "ripper" ))
+	else if( !com.strcmp( Sys.progname, "ripper" ))
 	{
 		Sys.app_name = HOST_RIPPER;
 		Sys.con_readonly = true;
@@ -417,7 +425,7 @@ void Sys_LookupInstance( void )
 		com_sprintf( Sys.log_path, "%s/decompile.log", sys_rootdir ); // default
 		com_strcpy( Sys.caption, va("Quake Recource Extractor ver.%g", XASH_VERSION ));
 	}
-	else if( !com_strcmp( Sys.progname, "ximage" ))
+	else if( !com.strcmp( Sys.progname, "ximage" ))
 	{
 		Sys.app_name = HOST_XIMAGE;
 		Sys.con_readonly = true;
@@ -425,6 +433,7 @@ void Sys_LookupInstance( void )
 		com_sprintf( Sys.log_path, "%s/image.log", sys_rootdir ); // logs folder
 		com_strcpy( Sys.caption, "Image Processing Tool" );
 	}
+
 	// share instance over all system
 	SI.instance = Sys.app_name;
 }
@@ -495,7 +504,7 @@ void Sys_CreateInstance( void )
 		break;
 	}
 
-	Cmd_RemoveCommand( "setc" );	// remove potentially backdoor for change system settings
+	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
 	Sys.app_state = SYS_FRAME;	// system is now active
 }
 
@@ -1001,7 +1010,7 @@ void Sys_Init( void )
 		Sys_MergeCommandLine( GetCommandLine());
 
 	// first text message into console or log 
-	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading launch.dll - ok\n" );
+	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading platform.dll - ok\n" );
 
 	if( com.strlen( Sys.fmessage ) && !Sys.con_showcredits )
 	{
@@ -1436,8 +1445,8 @@ e.g. for change game or fallback to dedicated mode
 void Sys_NewInstance( const char *name, const char *fmsg )
 {
 	// save parms
-	com_strncpy( Sys.ModuleName, name, sizeof( Sys.ModuleName ));
-	com_strncpy( Sys.fmessage, fmsg, sizeof( Sys.fmessage ));
+	com.strncpy( Sys.ModuleName, name, sizeof( Sys.ModuleName ));
+	com.strncpy( Sys.fmessage, fmsg, sizeof( Sys.fmessage ));
 	Sys.app_state = SYS_RESTART;	// set right state
 	Sys_Shutdown();		// shutdown current instance
 

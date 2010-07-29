@@ -257,6 +257,17 @@ void SV_Newgame_f( void )
 	Host_NewGame( GI->startmap, false );
 }
 
+void SV_HazardCourse_f( void )
+{
+	if( Cmd_Argc() != 1 )
+	{
+		Msg( "Usage: hazardcourse\n" );
+		return;
+	}
+
+	Host_NewGame( GI->trainmap, false );
+}
+
 void SV_Endgame_f( void )
 {
 	Host_EndGame( "The End" );
@@ -675,7 +686,12 @@ disable plhysics but players
 */
 void SV_PlayersOnly_f( void )
 {
+	if( !Cvar_VariableInteger( "sv_cheats" )) return;
 	sv.hostflags = sv.hostflags ^ SVF_PLAYERSONLY;
+
+	if ( !( sv.hostflags & SVF_PLAYERSONLY ))
+		SV_BroadcastPrintf( D_INFO, "Resume server physic" );
+	else SV_BroadcastPrintf( D_INFO, "Freeze server physic" );
 }
 
 /*
@@ -696,6 +712,7 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "devmap", SV_Map_f, "start new level" );
 	Cmd_AddCommand( "newgame", SV_Newgame_f, "begin new game" );
 	Cmd_AddCommand( "endgame", SV_Endgame_f, "end current game" );
+	Cmd_AddCommand( "hazardcourse", SV_HazardCourse_f, "starting a Hazard Course" );
 	Cmd_AddCommand( "changelevel", SV_ChangeLevel_f, "changing level" );
 	Cmd_AddCommand( "restart", SV_Restart_f, "restarting current level" );
 	Cmd_AddCommand( "reload", SV_Reload_f, "continue from latest save or restart level" );
@@ -731,6 +748,7 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "movie" );
 	Cmd_RemoveCommand( "newgame" );
 	Cmd_RemoveCommand( "endgame" );
+	Cmd_RemoveCommand( "hazardcourse" );
 	Cmd_RemoveCommand( "changelevel" );
 	Cmd_RemoveCommand( "restart" );
 	Cmd_RemoveCommand( "reload" );

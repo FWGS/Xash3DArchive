@@ -20,7 +20,7 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% gameui/gameui.dsp %CONFIG%"gameui - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% launch/launch.dsp %CONFIG%"launch - Win32 Release" %build_target%
+%MSDEV% platform/platform.dsp %CONFIG%"platform - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 %MSDEV% physic/physic.dsp %CONFIG%"physic - Win32 Release" %build_target%
@@ -61,7 +61,7 @@ if exist bshift\bshift.plg del /f /q bshift\bshift.plg
 if exist client\client.plg del /f /q client\client.plg
 if exist engine\engine.plg del /f /q engine\engine.plg
 if exist gameui\gameui.plg del /f /q gameui\gameui.plg
-if exist launch\launch.plg del /f /q launch\launch.plg
+if exist platform\platform.plg del /f /q platform\platform.plg
 if exist physic\physic.plg del /f /q physic\physic.plg
 if exist vid_gl\vid_gl.plg del /f /q vid_gl\vid_gl.plg
 if exist spirit\spirit.plg del /f /q spirit\spirit.plg

@@ -197,37 +197,44 @@ void Cmd_StuffCmds_f( void )
 	int	i, j, l = 0;
 	char	build[MAX_SYSPATH]; // this is for all commandline options combined (and is bounds checked)
 
-	if(Cmd_Argc() != 1)
+	if( Cmd_Argc() != 1 )
 	{
-		Msg( "stuffcmds : execute command line parameters\n");
+		Msg( "Usage: stuffcmds : execute command line parameters\n" );
 		return;
 	}
 
 	// no reason to run the commandline arguments twice
-	if(Sys.stuffcmdsrun) return;
+	if( Sys.stuffcmdsrun ) return;
 
 	Sys.stuffcmdsrun = true;
 	build[0] = 0;
 
-	for (i = 0; i < fs_argc; i++)
+	for( i = 0; i < fs_argc; i++ )
 	{
-		if (fs_argv[i] && fs_argv[i][0] == '+' && (fs_argv[i][1] < '0' || fs_argv[i][1] > '9') && l + strlen(fs_argv[i]) - 1 <= sizeof(build) - 1)
+		if( fs_argv[i] && fs_argv[i][0] == '+' && ( fs_argv[i][1] < '0' || fs_argv[i][1] > '9' ) && l + com.strlen( fs_argv[i] ) - 1 <= sizeof( build ) - 1 )
 		{
 			j = 1;
-			while (fs_argv[i][j]) build[l++] = fs_argv[i][j++];
 
-			i++;
-			for ( ; i < fs_argc; i++)
+			while( fs_argv[i][j] )
+				build[l++] = fs_argv[i][j++];
+
+			for( i++; i < fs_argc; i++ )
 			{
-				if (!fs_argv[i]) continue;
-				if ((fs_argv[i][0] == '+' || fs_argv[i][0] == '-') && (fs_argv[i][1] < '0' || fs_argv[i][1] > '9'))
+				if( !fs_argv[i] ) continue;
+				if(( fs_argv[i][0] == '+' || fs_argv[i][0] == '-' ) && ( fs_argv[i][1] < '0' || fs_argv[i][1] > '9' ))
 					break;
-				if (l + strlen(fs_argv[i]) + 4 > sizeof(build) - 1)
+				if( l + com.strlen( fs_argv[i]) + 4 > sizeof( build ) - 1 )
 					break;
 				build[l++] = ' ';
-				if (strchr(fs_argv[i], ' ')) build[l++] = '\"';
-				for (j = 0; fs_argv[i][j]; j++) build[l++] = fs_argv[i][j];
-				if (strchr(fs_argv[i], ' ')) build[l++] = '\"';
+	
+				if( com.strchr( fs_argv[i], ' ' ))
+					build[l++] = '\"';
+	
+				for( j = 0; fs_argv[i][j]; j++ )
+					build[l++] = fs_argv[i][j];
+	
+				if( com.strchr( fs_argv[i], ' ' ))
+					build[l++] = '\"';
 			}
 			build[l++] = '\n';
 			i--;
@@ -276,7 +283,7 @@ void Cmd_Exec_f( void )
 	com.snprintf( rcpath, MAX_STRING, "config/%s", Cmd_Argv( 1 )); 
 	FS_DefaultExtension( rcpath, ".rc" ); // append as default
 
-	f = FS_LoadFile(rcpath, &len );
+	f = FS_LoadFile( rcpath, &len );
 	if( !f )
 	{
 		MsgDev( D_WARN, "couldn't exec %s\n", Cmd_Argv( 1 ));
@@ -284,22 +291,6 @@ void Cmd_Exec_f( void )
 	}
 
 	MsgDev( D_LOAD, "execing %s\n", Cmd_Argv( 1 ));
-	Cbuf_InsertText( f );
-	Mem_Free( f );
-}
-
-/*
-===============
-Cmd_SystemCfg_f
-===============
-*/
-void Cmd_SystemCfg_f( void )
-{
-	char	*f;
-	size_t	len;
-
-	f = FS_LoadFile( "config.rc", &len );
-	if( !f ) return;
 	Cbuf_InsertText( f );
 	Mem_Free( f );
 }
@@ -540,13 +531,13 @@ void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback )
 Cmd_Exists
 ============
 */
-bool Cmd_Exists (const char *cmd_name)
+bool Cmd_Exists( const char *cmd_name )
 {
 	cmd_function_t	*cmd;
 
 	for( cmd = cmd_functions; cmd; cmd = cmd->next )
 	{
-		if (!com.strcmp( cmd_name, cmd->name ))
+		if( !com.strcmp( cmd_name, cmd->name ))
 			return true;
 	}
 	return false;
@@ -571,7 +562,7 @@ void Cmd_ExecuteString( const char *text )
 	for( prev = &cmd_functions; *prev; prev = &cmd->next )
 	{
 		cmd = *prev;
-		if(!com.stricmp( cmd_argv[0], cmd->name ))
+		if( !com.stricmp( cmd_argv[0], cmd->name ))
 		{
 			// rearrange the links so that the command will be
 			// near the head of the list next time it is used
@@ -634,7 +625,6 @@ void Cmd_Init( void )
 
 	// register our commands
 	Cmd_AddCommand ("exec", Cmd_Exec_f, "execute a script file" );
-	Cmd_AddCommand ("systemcfg", Cmd_SystemCfg_f, "execute a system config script" );
 	Cmd_AddCommand ("echo", Cmd_Echo_f, "print a message to the console (useful in scripts)" );
 	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for some rendered frames" );
 	Cmd_AddCommand ("cmdlist", Cmd_List_f, "display all console commands beginning with the specified prefix" );

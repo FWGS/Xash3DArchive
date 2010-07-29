@@ -246,7 +246,7 @@ void R_StudioAllocExtradata( edict_t *in, ref_entity_t *e )
 	studio->lerp = e->lerp;
 
 	// any stuidio model MUST have previous data for lerping
-	Com_Assert( studio->lerp == NULL );
+	ASSERT( studio->lerp );
 
 	if( m_fDoInterp )
 	{
@@ -299,7 +299,7 @@ void R_StudioAllocTentExtradata( TEMPENTITY *in, ref_entity_t *e )
 	studio->lerp = e->lerp;
 
 	// any stuidio model MUST have lerpframe data for lerping
-	Com_Assert( studio->lerp == NULL );
+	ASSERT( studio->lerp );
 
 	e->lerp->latched.sequencetime = 0.0f;					// no lerping between sequences
 	e->lerp->latched.gaitsequencetime = 0.0f;				// no lerping between gaitsequences
@@ -371,7 +371,7 @@ static void R_StudioSetupRender( ref_entity_t *e, ref_model_t *mod )
 	m_pStudioHeader = m_pRefModel->phdr;
           m_pTextureHeader = m_pRefModel->thdr;
 
-	Com_Assert( e->extradata == NULL );
+	ASSERT( e->extradata );
 
 	// set cached bones
 	m_protationmatrix = ((studiovars_t *)e->extradata)->rotationmatrix;
@@ -1217,7 +1217,7 @@ mstudioanim_t *R_StudioGetAnim( ref_model_t *m_pRefModel, mstudioseqdesc_t *pseq
           size_t		filesize;
           byte		*buf;
 
-	Com_Assert( m_pSubModel == NULL );	
+	ASSERT( m_pSubModel );	
 
 	pseqgroup = (mstudioseqgroup_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqgroupindex) + pseqdesc->seqgroup;
 	if( pseqdesc->seqgroup == 0 )
@@ -1460,7 +1460,7 @@ void R_StudioCalcRotations( float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdes
 
 	frame = (int)f;
 	pstudio = RI.currententity->extradata;
-	Com_Assert( pstudio == NULL );
+	ASSERT( pstudio );
 
 	//Msg( "%d %.4f %.4f %.4f %.4f %d\n", RI.currententity->lerp->curstate.sequence, RI.refdef.time, RI.currententity->lerp->curstate.animtime, RI.currententity->lerp->curstate.frame, f, frame );
 	//Msg( "%f %f %f\n", RI.currententity->angles[ROLL], RI.currententity->angles[PITCH], RI.currententity->angles[YAW] );
@@ -1557,7 +1557,7 @@ void R_StudioSetupBones( ref_entity_t *e )
 	static float	pos4[MAXSTUDIOBONES][3];
 	static vec4_t	q4[MAXSTUDIOBONES];
 
-	Com_Assert( e->model == NULL || e->model->extradata == NULL );
+	ASSERT( e->model && e->model->extradata );
 
 	// bones already cached for this frame
 	if( e->m_nCachedFrameCount == r_framecount2 )
@@ -1573,7 +1573,7 @@ void R_StudioSetupBones( ref_entity_t *e )
 //	if( e->lerp->curstate.frame > f ) Msg( "%f %f\n", e->lerp->curstate.frame, f );
 
 	pstudio = e->extradata;
-	Com_Assert( pstudio == NULL );
+	ASSERT( pstudio );
 
 	panim = R_StudioGetAnim( e->model, pseqdesc );
 	R_StudioCalcRotations( pos, q, pseqdesc, panim, f );
@@ -1750,11 +1750,11 @@ void R_StudioMergeBones( ref_entity_t *e, ref_model_t *m_pSubModel )
 	static matrix4x4	localbones[MAXSTUDIOBONES];
 	edict_t		*cl_entity;
 
-	Com_Assert( e->parent == NULL );
+	ASSERT( e->parent );
 	cl_entity = ri.GetClientEdict( e->parent->index );
 	pstudio = ((studiovars_t *)e->extradata);
 
-	Com_Assert( pstudio == NULL );
+	ASSERT( pstudio );
 	Mem_Copy( localbones, pstudio->bonestransform, sizeof( matrix4x4 ) * pstudio->numbones );
 		
 	pstudio = ((studiovars_t *)e->parent->extradata);
@@ -1796,7 +1796,7 @@ void R_StudioMergeBones( ref_entity_t *e, ref_model_t *m_pSubModel )
 	}
 
 	pstudio = ((studiovars_t *)e->extradata);
-	Com_Assert( pstudio == NULL );
+	ASSERT( pstudio );
 
 	// copy bones back to the merged entity
 	Mem_Copy( pstudio->bonestransform, localbones, sizeof( matrix4x4 ) * m_pStudioHeader->numbones );
@@ -2278,7 +2278,7 @@ void R_StudioEstimateGait( ref_entity_t *e, edict_t *pplayer )
 	vec3_t		est_velocity;
 	studiovars_t	*pstudio = (studiovars_t *)e->extradata;
 
-	Com_Assert( pstudio == NULL );	
+	ASSERT( pstudio );	
 	dt = bound( 0.0f, RI.refdef.frametime, 1.0f );
 
 	if( dt == 0 || e->m_nCachedFrameCount == r_framecount2 )
@@ -2422,7 +2422,7 @@ static bool R_StudioSetupModel( ref_entity_t *e, ref_model_t *mod )
 	if( e->m_nCachedFrameCount == r_framecount2 )
 		return 1;
 
-	Com_Assert( pstudio == NULL );
+	ASSERT( pstudio );
 
 	// special handle for player model
 	if( e->ent_type == ED_CLIENT || e->renderfx == kRenderFxDeadPlayer )
@@ -2541,7 +2541,7 @@ void R_StudioDrawPoints( const meshbuffer_t *mb, ref_entity_t *e )
 			features |= MF_NORMALS;
 	}
 
-	Com_Assert( studio == NULL );
+	ASSERT( studio );
 	
 	// initialize vertex cache
 	if( !studio->mesh[modelnum] )

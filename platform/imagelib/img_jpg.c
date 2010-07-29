@@ -627,7 +627,7 @@ bool Image_SaveJPG( const char *name, rgbdata_t *pix )
 	else cinfo.in_color_space = JCS_GRAYSCALE;
 
 	jpeg_set_defaults( &cinfo );
-	jpeg_set_quality( &cinfo, (jpg_quality->value * 10), true );
+	jpeg_set_quality( &cinfo, 75, true );	// quality percent
 
 	// turn off subsampling (to make text look better)
 	cinfo.optimize_coding = 1;

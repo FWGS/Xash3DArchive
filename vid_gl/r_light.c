@@ -1179,7 +1179,7 @@ void R_UpdateSurfaceLightmap( msurface_t *surf )
 {
 	int	map;
 
-	Com_Assert( surf == NULL );
+	ASSERT( surf );
 
 	// is this surface allowed to have a lightmap?
 	if( !R_SurfPotentiallyLit( surf ))

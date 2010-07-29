@@ -163,7 +163,7 @@ void SV_ConfigString( int index, const char *val )
 
 void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags )
 {
-	Com_Assert( origin == NULL );
+	ASSERT( origin );
 
 	// static decals are posters, it's always reliable
 	MSG_WriteByte( &sv.multicast, svc_bspdecal );
@@ -388,9 +388,9 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 
 void SV_InitEdict( edict_t *pEdict )
 {
-	Com_Assert( pEdict == NULL );
-	Com_Assert( pEdict->pvPrivateData != NULL );
-	Com_Assert( pEdict->pvServerData != NULL );
+	ASSERT( pEdict );
+	ASSERT( pEdict->pvPrivateData == NULL );
+	ASSERT( pEdict->pvServerData == NULL );
 
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
 	pEdict->pvServerData = (sv_priv_t *)Mem_Alloc( svgame.mempool, sizeof( sv_priv_t ));
@@ -401,8 +401,8 @@ void SV_InitEdict( edict_t *pEdict )
 
 void SV_FreeEdict( edict_t *pEdict )
 {
-	Com_Assert( pEdict == NULL );
-	Com_Assert( pEdict->free );
+	ASSERT( pEdict );
+	ASSERT( pEdict->free == false );
 
 	// unlink from world
 	SV_UnlinkEdict( pEdict );
@@ -484,7 +484,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	}
 	else SpawnEdict( &ent->v );
 
-	Com_Assert( ent->pvServerData == NULL )
+	ASSERT( ent->pvServerData )
 
 	// also register classname to send for client
 	ent->pvServerData->s.classname = SV_ClassIndex( pszClassName );
@@ -509,8 +509,8 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 {
 	event_args_t	nullargs;
 
-	Com_Assert( msg == NULL );
-	Com_Assert( info == NULL );
+	ASSERT( msg );
+	ASSERT( info );
 
 	Mem_Set( &nullargs, 0, sizeof( nullargs ));
 
@@ -2116,9 +2116,9 @@ pfnPvAllocEntPrivateData
 */
 void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 {
-	Com_Assert( pEdict == NULL );
-	Com_Assert( pEdict->free );
-	Com_Assert( pEdict->pvServerData == NULL );
+	ASSERT( pEdict );
+	ASSERT( pEdict->free == false );
+	ASSERT( pEdict->pvServerData );
 
 	// to avoid multiple alloc
 	pEdict->pvPrivateData = (void *)Mem_Realloc( svgame.private, pEdict->pvPrivateData, cb );

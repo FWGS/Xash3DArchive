@@ -22,9 +22,7 @@ cvar_t	*sys_sharedstrings;
 cvar_t	*host_serverstate;
 cvar_t	*host_cheats;
 cvar_t	*host_maxfps;
-cvar_t	*host_nosound;
 cvar_t	*host_framerate;
-cvar_t	*host_registered;
 cvar_t	*host_video;
 cvar_t	*host_audio;
 
@@ -204,7 +202,7 @@ bool Host_InitSound( void )
 	launch_t		CreateSound;  
 	bool		result = false;
 
-	if( host_nosound->integer )
+	if( FS_CheckParm( "-nosound" ))
 		return result;
 
 	si.api_size = sizeof( vsound_imp_t );
@@ -240,7 +238,7 @@ void Host_CheckChanges( void )
 	int	num_changes;
 	bool	audio_disabled = false;
 
-	if( host_nosound->integer )
+	if( FS_CheckParm( "-nosound" ))
 	{
 		if( host.state == HOST_INIT )
 			audio_disabled = true;
@@ -280,7 +278,7 @@ void Host_CheckChanges( void )
 			}
 			if( !com.strcmp( host.video_dlls[num_changes], host_video->string ))
 				num_changes++; // already trying - failed
-			Cvar_FullSet( "host_video", host.video_dlls[num_changes], CVAR_SYSTEMINFO );
+			Cvar_FullSet( "host_video", host.video_dlls[num_changes], CVAR_INIT|CVAR_ARCHIVE );
 			num_changes++;
 		}
 		else SCR_Init ();
@@ -305,7 +303,7 @@ void Host_CheckChanges( void )
 			}
 			if( !com.strcmp( host.audio_dlls[num_changes], host_audio->string ))
 				num_changes++; // already trying - failed
-			Cvar_FullSet( "host_audio", host.audio_dlls[num_changes], CVAR_SYSTEMINFO );
+			Cvar_FullSet( "host_audio", host.audio_dlls[num_changes], CVAR_INIT|CVAR_ARCHIVE );
 			num_changes++;
 		}
 	}
@@ -711,8 +709,6 @@ void Host_InitCommon( const int argc, const char **argv )
 
 	// initialize audio\video multi-dlls system
 	host.num_video_dlls = host.num_audio_dlls = 0;
-	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_SYSTEMINFO, "name of video rendering library" );
-	host_audio = Cvar_Get( "host_audio", "snd_al.dll", CVAR_SYSTEMINFO, "name of sound rendering library" );
 
 	// make sure what global copy has no changed with any dll checking
 	Mem_Copy( &check_vid, &render_dll, sizeof( dll_info_t ));
@@ -795,21 +791,27 @@ void Host_Init( const int argc, const char **argv )
           }
 
 	sys_sharedstrings = Cvar_Get( "sys_sharedstrings", "0", CVAR_INIT|CVAR_ARCHIVE, "hl1 compatible strings" );
-	host_cheats = Cvar_Get( "sv_cheats", "1", CVAR_SYSTEMINFO, "allow cheat variables to enable" );
+	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_INIT|CVAR_ARCHIVE, "name of video rendering library");
+	host_audio = Cvar_Get( "host_audio", "snd_dx.dll", CVAR_INIT|CVAR_ARCHIVE, "name of sound rendering library");
+	host_cheats = Cvar_Get( "sv_cheats", "0", CVAR_LATCH, "allow cheat variables to enable" );
 	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
 	host_serverstate = Cvar_Get( "host_serverstate", "0", CVAR_SERVERINFO, "displays current server state" );
-	host_registered = Cvar_Get( "registered", "1", CVAR_SYSTEMINFO, "indicate shareware version of game" );
-	host_nosound = Cvar_Get( "host_nosound", "0", CVAR_SYSTEMINFO, "disable sound system" );
 
 	s = va( "Xash3D %i/%g (hw build ^3%i^7)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
 	Cvar_Get( "version", s, CVAR_INIT, "engine current version" );
 
 	// content control
-	Cvar_Get( "violence_hgibs", "1", CVAR_SYSTEMINFO, "content control disables human gibs" );
-	Cvar_Get( "violence_agibs", "1", CVAR_SYSTEMINFO, "content control disables alien gibs" );
-	Cvar_Get( "violence_hblood", "1", CVAR_SYSTEMINFO, "content control disables human blood" );
-	Cvar_Get( "violence_ablood", "1", CVAR_SYSTEMINFO, "content control disables alien blood" );
+	Cvar_Get( "violence_hgibs", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human gibs" );
+	Cvar_Get( "violence_agibs", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables alien gibs" );
+	Cvar_Get( "violence_hblood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human blood" );
+	Cvar_Get( "violence_ablood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables alien blood" );
+
+	if( host.type != HOST_DEDICATED )
+	{
+		// when we in developer-mode automatically turn cheats on
+		if( host.developer > 1 ) Cvar_SetValue( "sv_cheats", 1.0f );
+	}
 
 	NET_Init();
 	Netchan_Init();

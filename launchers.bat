@@ -1,6 +1,6 @@
 @echo off
 
-cd launch
+cd xtools
 cd bsplib
 makefile.nmake
 
@@ -18,10 +18,6 @@ makefile.nmake
 
 cd ..
 cd ximage
-makefile.nmake
-
-cd ..
-cd xash
 makefile.nmake
 
 cd ..

@@ -505,7 +505,6 @@ bool SV_NewGame( const char *mapName, bool loadGame )
 	}
 
 	S_StopAllSounds ();
-	SV_InactivateClients ();
 	SV_DeactivateServer ();
 
 	sv.loadgame = loadGame;

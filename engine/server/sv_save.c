@@ -239,7 +239,7 @@ void SaveRestore_InitEntityTable( SAVERESTOREDATA *pSaveData, ENTITYTABLE *pNewT
 	ENTITYTABLE	*pTable;
 	int		i;
 
-	Com_Assert( pSaveData->pTable != NULL );
+	ASSERT( pSaveData->pTable == NULL );
 
 	pSaveData->tableCount = entityCount;
 	pSaveData->pTable = pNewTable;
@@ -264,7 +264,7 @@ ENTITYTABLE *SaveRestore_DetachEntityTable( SAVERESTOREDATA *pSaveData )
 	
 void SaveRestore_InitSymbolTable( SAVERESTOREDATA *pSaveData, char **pNewTokens, int sizeTable )
 {
-	Com_Assert( pSaveData->pTokens != NULL );
+	ASSERT( pSaveData->pTokens == NULL );
 
 	pSaveData->tokenCount = sizeTable;
 	pSaveData->pTokens = pNewTokens;
@@ -288,7 +288,7 @@ bool SaveRestore_DefineSymbol( SAVERESTOREDATA *pSaveData, const char *pszToken,
 		return true;
 	}
 
-	Com_Assert( 1 );
+	ASSERT( 0 );
 	return false;
 }
 
@@ -741,7 +741,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 		{
 			if( *pszTokenList )
 			{
-				Com_Assert( SaveRestore_DefineSymbol( pSaveData, pszTokenList, i ) == 0 );
+				ASSERT( SaveRestore_DefineSymbol( pSaveData, pszTokenList, i ));
 			}
 			while( *pszTokenList++ ); // find next token (after next null)
 		}
@@ -751,7 +751,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 		SaveRestore_InitSymbolTable( pSaveData, NULL, 0 );
 	}
 
-	Com_Assert( pszTokenList - (char *)(pSaveData + 1) != sectionsInfo.nBytesSymbols );
+	ASSERT( pszTokenList - (char *)(pSaveData + 1) == sectionsInfo.nBytesSymbols );
 
 	// set up the restore basis
 	size = SumBytes( &sectionsInfo ) - sectionsInfo.nBytesSymbols;
@@ -1151,7 +1151,7 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 		{
 			if( pEntInfo->id == 0 ) // worldspawn
 			{
-				Com_Assert( i != 0 );
+				ASSERT( i == 0 );
 
 				pent = EDICT_NUM( 0 );
 
@@ -1172,14 +1172,14 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 				if(!( pEntInfo->flags & FENTTABLE_PLAYER ))
 				{
 					MsgDev( D_WARN, "ENTITY IS NOT A PLAYER: %d\n", i );
-					Com_Assert( 1 );
+					ASSERT( 0 );
 				}
 
 				ed = EDICT_NUM( pEntInfo->id );
 
 				if( ed && createPlayers )
 				{
-					Com_Assert( ed->free );
+					ASSERT( ed->free == false );
 					// create the player
 					pent = SV_AllocPrivateData( ed, pEntInfo->classname );
 				}
@@ -1259,7 +1259,7 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 						if(!( pEntInfo->flags & FENTTABLE_PLAYER ))
 						{
 							MsgDev( D_WARN, "ENTITY IS NOT A PLAYER: %d\n", i );
-							Com_Assert( 1 );
+							ASSERT( 0 );
 						}
 						pent = SV_AllocPrivateData( ed, pEntInfo->classname );
 					}
@@ -1601,7 +1601,7 @@ int SV_SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader, int readGlobalState 
 		{
 			if( *pszTokenList )
 			{
-				Com_Assert( SaveRestore_DefineSymbol( pSaveData, pszTokenList, i ) == 0 );
+				ASSERT( SaveRestore_DefineSymbol( pSaveData, pszTokenList, i ));
 			}
 			while( *pszTokenList++ ); // find next token (after next null)
 		}

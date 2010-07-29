@@ -2669,7 +2669,7 @@ void Shader_TouchImages( ref_shader_t *shader, e_free free_unused )
 	ref_stage_t	*stage;
 	texture_t		*texture;
 
-	Com_Assert( shader == NULL );
+	ASSERT( shader );
 
 	// reset parms
 	r_shaderTwoSided = 0;
@@ -2732,7 +2732,7 @@ void Shader_FreeShader( ref_shader_t *shader, e_free free_unused )
 	shader_t		handle;
 	ref_stage_t	*pass;
 
-	Com_Assert( shader == NULL );
+	ASSERT( shader );
 
 	if( !shader->shadernum )
 		return;	// already freed

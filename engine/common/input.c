@@ -100,11 +100,8 @@ IN_StartupMouse
 */
 void IN_StartupMouse( void )
 {
-	cvar_t	*cv;
-
 	if( host.type == HOST_DEDICATED ) return;
-	cv = Cvar_Get( "host_mouse", "1", CVAR_SYSTEMINFO, "allow mouse device" );
-	if( !cv->value ) return; 
+	if( FS_CheckParm( "-nomouse" )) return; 
 
 	in_mouse_buttons = 3;
 	in_mouseparmsvalid = SystemParametersInfo( SPI_GETMOUSE, 0, in_originalmouseparms, 0 );

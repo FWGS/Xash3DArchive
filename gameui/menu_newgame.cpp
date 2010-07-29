@@ -70,17 +70,16 @@ UI_NewGame_StartGame
 */
 static void UI_NewGame_StartGame( float skill )
 {
-	if( CVAR_GET_FLOAT( "host_serverstate" ))
+	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "sv_maxclients" ) > 1 )
 		CLIENT_COMMAND( TRUE, "killserver\n" );
 
 	CVAR_SET_FLOAT( "skill", skill );
-	CVAR_SET_FLOAT( "deathmatch", 0 );
-	CVAR_SET_FLOAT( "gamerules", 0 );
-	CVAR_SET_FLOAT( "teamplay", 0 );
-	CVAR_SET_FLOAT( "pausable", 1 ); // singleplayer is always allowing pause
-	CVAR_SET_FLOAT( "coop", 0 );
+	CVAR_SET_FLOAT( "deathmatch", 0.0f );
+	CVAR_SET_FLOAT( "teamplay", 0.0f );
+	CVAR_SET_FLOAT( "pausable", 1.0f ); // singleplayer is always allowing pause
+	CVAR_SET_FLOAT( "coop", 0.0f );
 
-	HOST_NEWGAME( gMenu.m_gameinfo.startmap );
+	CLIENT_COMMAND( FALSE, "newgame\n" );
 }
 
 static void UI_PromptDialog( float skill )
