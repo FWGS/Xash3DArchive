@@ -327,12 +327,12 @@ bool R_SetPixelformat( void )
 	// share this extension so engine can grab them
 	GL_SetExtension( R_HARDWARE_GAMMA_CONTROL, glConfig.deviceSupportsGamma );
 
-	savedGamma = FS_LoadFile( "config/gamma.rc", &gamma_size );
+	savedGamma = FS_LoadFile( "gamma.dat", &gamma_size );
 	if( !savedGamma || gamma_size != sizeof( glState.stateRamp ))
 	{
 		// saved gamma not found or corrupted file
-		FS_WriteFile( "config/gamma.rc", glState.stateRamp, sizeof(glState.stateRamp));
-		MsgDev( D_NOTE, "gamma.rc initialized\n" );
+		FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof(glState.stateRamp));
+		MsgDev( D_NOTE, "gamma.dat initialized\n" );
 		if( savedGamma ) Mem_Free( savedGamma );
 	}
 	else
@@ -351,7 +351,7 @@ bool R_SetPixelformat( void )
 			// run additional check to make sure it
 			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
 			{
-				// yes, current gamma it's totally wrong, restore it from gamma.rc
+				// yes, current gamma it's totally wrong, restore it from gamma.dat
 				MsgDev( D_NOTE, "R_SetPixelformat: restore original gamma after crash\n" );
 				Mem_Copy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));
 			}
@@ -364,13 +364,13 @@ bool R_SetPixelformat( void )
 		}
 		else if( !memcmp( glState.gammaRamp, savedGamma, sizeof( glState.stateRamp )))
 		{
-			// saved gamma is equal render gamma, probably gamma.rc writed after crash
+			// saved gamma is equal render gamma, probably gamma.dat writed after crash
 			// run additional check to make sure it
 			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
 			{
 				// yes, saved gamma it's totally wrong, get origianl gamma from screen
-				MsgDev( D_NOTE, "R_SetPixelformat: merge gamma.rc after crash\n" );
-				FS_WriteFile( "config/gamma.rc", glState.stateRamp, sizeof( glState.stateRamp ));
+				MsgDev( D_NOTE, "R_SetPixelformat: merge gamma.dat after crash\n" );
+				FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof( glState.stateRamp ));
 			}
 			else
 			{

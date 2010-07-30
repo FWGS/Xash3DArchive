@@ -607,7 +607,7 @@ bool Cmd_CheckMapsList( bool fRefresh )
 	file_t	*f;
 	int	i;
 
-	if( FS_FileExists( "†scripts/maps.lst" ) && !fRefresh )
+	if( FS_FileExists( "†maps.lst" ) && !fRefresh )
 		return true; // exist 
 
 	t = FS_Search( "maps/*.bsp", false );
@@ -709,7 +709,7 @@ bool Cmd_CheckMapsList( bool fRefresh )
 	if( t ) Mem_Free( t ); // free search result
 
 	// write generated maps.lst
-	if( FS_WriteFile( "scripts/maps.lst", buffer, com.strlen( buffer )))
+	if( FS_WriteFile( "maps.lst", buffer, com.strlen( buffer )))
 	{
           	if( buffer ) Mem_Free( buffer );
 		return true;
@@ -748,14 +748,20 @@ with the archive flag set to true.
 
 static void Cmd_WriteCvar(const char *name, const char *string, const char *desc, void *f )
 {
-	if( !desc ) return; // ignore cvars without description (fantom variables)
+	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
 	FS_Printf(f, "seta %s \"%s\"\n", name, string );
 }
 
 static void Cmd_WriteServerCvar(const char *name, const char *string, const char *desc, void *f )
 {
-	if( !desc ) return; // ignore cvars without description (fantom variables)
+	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
 	FS_Printf(f, "sets %s \"%s\"\n", name, string );
+}
+
+static void Cmd_WriteOpenGLCvar( const char *name, const char *string, const char *desc, void *f )
+{
+	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
+	FS_Printf( f, "setr %s \"%s\"\n", name, string );
 }
 
 static void Cmd_WriteHelp(const char *name, const char *unused, const char *desc, void *f )
@@ -777,11 +783,16 @@ void Cmd_WriteServerVariables( file_t *f )
 	Cvar_LookupVars( CVAR_SERVERINFO, NULL, f, Cmd_WriteServerCvar ); 
 }
 
+void Cmd_WriteOpenGLVariables( file_t *f )
+{
+	Cvar_LookupVars( CVAR_RENDERINFO, NULL, f, Cmd_WriteOpenGLCvar ); 
+}
+
 /*
 ===============
 Host_WriteConfig
 
-Writes key bindings and archived cvars to vars.rc
+Writes key bindings and archived cvars to config.cfg
 ===============
 */
 void Host_WriteConfig( void )
@@ -790,106 +801,68 @@ void Host_WriteConfig( void )
 
 	if( !cls.initialized ) return;
 
-	f = FS_Open( "config/keys.rc", "w" );
-	if( f )
-	{
-		FS_Printf( f, "//=======================================================================\n" );
-		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
-		FS_Printf( f, "//\t\t\tkeys.rc - current key bindings\n" );
-		FS_Printf( f, "//=======================================================================\n" );
-		Key_WriteBindings( f );
-		FS_Close( f );
-	}
-	else MsgDev( D_ERROR, "Couldn't write keys.rc.\n" );
-
-	f = FS_Open( "config/vars.rc", "w" );
+	f = FS_Open( "config.cfg", "w" );
 	if( f )
 	{
 		FS_Printf( f, "//=======================================================================\n");
 		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
-		FS_Printf( f, "//\t\t\tvars.rc - archive of cvars\n" );
-		FS_Printf( f, "//=======================================================================\n" );
-		Cmd_WriteVariables(f);
-		FS_Close (f);	
-	}
-	else MsgDev( D_ERROR, "Couldn't write vars.rc.\n" );
-}
-
-/*
-===============
-Host_WriteConfig
-
-Writes key bindings and archived cvars to vars.def and keys.def
-===============
-*/
-void Host_WriteDefaultConfig( void )
-{
-	file_t	*f;
-	bool	hasChanged = false;
-
-	if( !cls.initialized ) return;
-
-	if( !FS_FileExists( "config/keys.def" )) Cmd_ExecuteString( "resetkeys\n" );
-	if( !FS_FileExists( "config/vars.def" )) Cmd_ExecuteString( "unsetall\n" );
-
-	if( !FS_FileExists( "config/keys.def" ) && (f = FS_Open( "config/keys.def", "w" )) != NULL )
-	{
-		FS_Printf( f, "//=======================================================================\n" );
-		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
-		FS_Printf( f, "//\t\t\tkeys.def - default key bindings\n" );
+		FS_Printf( f, "//\t\t\tconfig.cfg - archive of cvars\n" );
 		FS_Printf( f, "//=======================================================================\n" );
 		Key_WriteBindings( f );
-		FS_Close( f );
-		hasChanged = true;
-	}
-
-	if( !FS_FileExists( "config/vars.def" ) && (f = FS_Open( "config/vars.def", "w" )) != NULL )
-	{
-		FS_Printf( f, "//=======================================================================\n" );
-		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
-		FS_Printf( f, "//\t\t\tvars.def - archive of default cvar states\n" );
-		FS_Printf( f, "//=======================================================================\n" );
 		Cmd_WriteVariables( f );
-		FS_Close( f );	
-		hasChanged = true;
+		FS_Close( f );
 	}
-
-	if( hasChanged )
-	{
-		// restart user config
-		Cbuf_AddText( "exec keys.rc\n" );
-		Cbuf_AddText( "exec vars.rc\n" );
-		Cbuf_Execute();
-	}
+	else MsgDev( D_ERROR, "Couldn't write config.cfg.\n" );
 }
 
 /*
 ===============
 Host_WriteServerConfig
 
-save serverinfo variables into server.rc (using for dedicated server too)
+save serverinfo variables into server.cfg (using for dedicated server too)
 ===============
 */
-void Host_WriteServerConfig( void )
+void Host_WriteServerConfig( const char *name )
 {
 	file_t	*f;
 
 	SV_InitGameProgs();	// collect user variables
 	
-	if(( f = FS_Open( "config/server.rc", "w" )) != NULL )
+	if(( f = FS_Open( name, "w" )) != NULL )
 	{
 		FS_Printf( f, "//=======================================================================\n" );
 		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
-		FS_Printf( f, "//\t\t\tserver.rc - server temporare config\n" );
+		FS_Printf( f, "//\t\t\tserver.cfg - server temporare config\n" );
 		FS_Printf( f, "//=======================================================================\n" );
 		Cmd_WriteServerVariables( f );
-
-		// add default map if exist
-		if( com.strlen( Cvar_VariableString( "defaultmap" )) != 0 )
-			FS_Printf( f, "map %s\n", Cvar_VariableString( "defaultmap" ));
 		FS_Close( f );
 	}
-	else MsgDev( D_ERROR, "Couldn't write server.rc.\n" );
+	else MsgDev( D_ERROR, "Couldn't write %s.\n", name );
+}
+
+
+/*
+===============
+Host_WriteOpenGLConfig
+
+save renderinfo variables into opengl.cfg
+===============
+*/
+void Host_WriteOpenGLConfig( void )
+{
+	file_t	*f;
+
+	f = FS_Open( "opengl.cfg", "w" );
+	if( f )
+	{
+		FS_Printf( f, "//=======================================================================\n" );
+		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
+		FS_Printf( f, "//\t\t    opengl.cfg - archive of opengl extension cvars\n");
+		FS_Printf( f, "//=======================================================================\n" );
+		Cmd_WriteOpenGLVariables( f );
+		FS_Close( f );	
+	}                                                
+	else MsgDev( D_ERROR, "can't update opengl.cfg.\n" );
 }
 
 void Key_EnumCmds_f( void )

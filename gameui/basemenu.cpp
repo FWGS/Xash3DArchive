@@ -274,20 +274,15 @@ void UI_DrawMouseCursor( void )
 	{
 		item = (menuCommon_s *)uiStatic.menuActive->items[i];
 
-		if( item->flags & (QMF_INACTIVE|QMF_HIDDEN))
+		if ( item->flags & (QMF_INACTIVE|QMF_HIDDEN))
 			continue;
 
-		if( !UI_CursorInRect( item->x, item->y, item->width, item->height ))
+		if ( !UI_CursorInRect( item->x, item->y, item->width, item->height ))
 			continue;
 
-		if( item->flags & QMF_GRAYED )
+		if ( !(item->flags & QMF_GRAYED) && item->type == QMTYPE_FIELD )
 		{
-			hCursor = PIC_Load( UI_CURSOR_DISABLED );
-		}
-		else
-		{
-			if( item->type == QMTYPE_FIELD )
-				hCursor = PIC_Load( UI_CURSOR_TYPING );
+			hCursor = PIC_Load( UI_CURSOR_TYPING );
 		}
 		break;
 	}
@@ -1118,7 +1113,6 @@ void UI_Precache( void )
 		return;
 
 	PIC_Load( UI_CURSOR_NORMAL );
-	PIC_Load( UI_CURSOR_DISABLED );
 	PIC_Load( UI_CURSOR_TYPING );
 	PIC_Load( UI_LEFTARROW );
 	PIC_Load( UI_LEFTARROWFOCUS );

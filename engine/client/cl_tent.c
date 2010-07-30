@@ -92,42 +92,19 @@ light animations
 void CL_RunLightStyles( void )
 {
 	int		i, ofs;
-	float		l, oldval, curval;
 	clightstyle_t	*ls;		
+	float		l;
 
 	if( cls.state != ca_active ) return;
 
-	if( cl_lightstyle_lerping->integer )
-	{
-		ofs = cl.frame.servertime / 100;
-	}
-	else
-	{
-		ofs = cl.time / 100;
-		if( ofs == lastofs ) return;
-		lastofs = ofs;
-	}
+	ofs = cl.time / 100;
+	if( ofs == lastofs ) return;
+	lastofs = ofs;
 
 	for( i = 0, ls = cl_lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
 		if( ls->length == 0 ) l = 0.0f;
 		else if( ls->length == 1 ) l = ls->map[0];
-		else if( cl_lightstyle_lerping->integer )
-		{
-			int	curnum = (ofs % ls->length);
-			int	oldnum = curnum - 1;
-
-			// sequence is ends ?
-			if( oldnum < 0 )
-				oldnum += ls->length;
-
-			oldval = ls->map[oldnum];
-			curval = ls->map[curnum];
-
-			// don't lerping fast sequences
-			if( fabs( curval - oldval ) >= 1.0f ) l = curval;
-			else l = oldval + cl.lerpFrac * (curval - oldval);
-		}
 		else l = ls->map[ofs%ls->length];
 
 		VectorSet( ls->value, l, l, l );

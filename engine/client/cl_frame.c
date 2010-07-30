@@ -248,6 +248,12 @@ void CL_ParseFrame( sizebuf_t *msg )
 		else cl.frame.valid = true;	// valid delta parse
 	}
 
+	// clamp time 
+	if( cl.time > cl.frame.servertime )
+		cl.time = cl.frame.servertime;
+	else if( cl.time < cl.frame.servertime - cl.serverframetime )
+		cl.time = cl.frame.servertime - cl.serverframetime;
+
 	// read packet entities
 	cmd = MSG_ReadByte( msg );
 	if( cmd != svc_packetentities ) Host_Error("CL_ParseFrame: not packetentities[%d]\n", cmd );
@@ -329,6 +335,21 @@ void CL_AddEntities( void )
 {
 	if( cls.state != ca_active )
 		return;
+
+	if( cl.time > cl.frame.servertime )
+	{
+		cl.time = cl.frame.servertime;
+		cl.lerpFrac = 1.0f;
+	}
+	else if( cl.time < cl.frame.servertime - cl.serverframetime )
+	{
+		cl.time = cl.frame.servertime - cl.serverframetime;
+		cl.lerpFrac = 0;
+	}
+	else cl.lerpFrac = 1.0f - ( cl.frame.servertime - cl.time ) * (float)( cl.serverframetime * 0.0001f );
+
+	if( cl.refdef.paused )
+		cl.lerpFrac = 1.0f;
 
 	cl.render_flags = 0;
 

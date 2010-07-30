@@ -395,7 +395,7 @@ destroy win32 console
 void Con_DestroyConsole( void )
 {
 	// last text message into console or log 
-	MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading platform.dll\n" );
+	MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading launch.dll\n" );
 
 	Sys_CloseLog();
 	if( Sys.hooked_out ) return;

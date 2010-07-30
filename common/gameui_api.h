@@ -129,7 +129,7 @@ typedef struct ui_enginefuncs_s
 
 	// engine launcher
 	void	(*pfnShellExecute)( const char *name, const char *args, bool closeEngine );
-	void	(*pfnWriteServerConfig)( void );
+	void	(*pfnWriteServerConfig)( const char *name );
 	void	(*pfnChangeInstance)( const char *newInstance, const char *szFinalMessage );
 	void	(*pfnChangeVideo)( const char *dllName );
 	void	(*pfnChangeAudio)( const char *dllName );

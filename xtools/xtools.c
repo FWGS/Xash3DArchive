@@ -50,7 +50,7 @@ void AddMask( const char *mask )
 ==================
 CommonInit
 
-platform.dll needs for some setup operations
+launch.dll needs for some setup operations
 so do it manually
 ==================
 */

@@ -100,11 +100,11 @@ enum
 // cvar flags
 typedef enum
 {
-	CVAR_ARCHIVE	= BIT(0),	// set to cause it to be saved to vars.rc
+	CVAR_ARCHIVE	= BIT(0),	// set to cause it to be saved to config.cfg
 	CVAR_USERINFO	= BIT(1),	// added to userinfo  when changed
 	CVAR_SERVERINFO	= BIT(2),	// added to serverinfo when changed
 	CVAR_PHYSICINFO	= BIT(3),	// added to physinfo when changed
-	CVAR_RENDERINFO	= BIT(4),	// save to a seperate config called opengl.rc
+	CVAR_RENDERINFO	= BIT(4),	// save to a seperate config called opengl.cfg
 	CVAR_CHEAT	= BIT(5),	// can not be changed if cheats are disabled
 	CVAR_INIT		= BIT(6), // don't allow change from console at all, but can be set from the command line
 	CVAR_LATCH	= BIT(7),	// save changes until server restart

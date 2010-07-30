@@ -35,16 +35,16 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 {
 	HINSTANCE	hmain;
 
-	if(( hmain = LoadLibrary( "bin\\platform.dll" )) == NULL )
+	if(( hmain = LoadLibrary( "bin\\launch.dll" )) == NULL )
 	{
-		Sys_Error( "Unable to load the platform.dll" );
+		Sys_Error( "Unable to load the launch.dll" );
 	}
 
 	pfnExecute mainFunc;
 
 	if(( mainFunc = (pfnExecute)GetProcAddress( hmain, "CreateAPI" )) == NULL )
 	{
-		Sys_Error( "Unable to find entry point in platform.dll" );
+		Sys_Error( "Unable to find entry point in launch.dll" );
 	}	
 
 	return mainFunc( GAME_PATH, false );

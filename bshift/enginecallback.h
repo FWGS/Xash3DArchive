@@ -105,7 +105,7 @@ inline void *GET_PRIVATE( edict_t *pent )
 // NOTE: Xash3D using custom StringTable System that using safety methods for access to strings
 // and never make duplicated strings, so it make no differences between ALLOC_STRING and MAKE_STRING
 // leave macros as legacy
-// if you want using classical half-life strings for some reasons, please set sys_sharedstrings into "1" in vars.rc
+// if you want using classical half-life strings for some reasons, please set sys_sharedstrings into "1" in config.cfg
 // and get back original strings code from gold source SDK.  
 #define ALLOC_STRING	(*g_engfuncs.pfnAllocString)
 #define MAKE_STRING		(*g_engfuncs.pfnAllocString)

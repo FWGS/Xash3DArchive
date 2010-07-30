@@ -607,42 +607,6 @@ void GL_InitCommands( void )
 	if( r_lighting_modulate->value < 1.0f ) Cvar_Set( "r_lighting_modulate", "1" );
 }
 
-/*
-============
-GL_WriteVariables
-
-Appends lines containing "setr variable value" for all variables
-with the renderinfo flag set to true.
-============
-*/
-static void GL_WriteCvar( const char *name, const char *string, const char *desc, void *f )
-{
-	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf( f, "setr %s \"%s\"\n", name, string );
-}
-
-void GL_WriteVariables( file_t *f )
-{
-	Cvar_LookupVars( CVAR_RENDERINFO, NULL, f, GL_WriteCvar ); 
-}
-
-void GL_UpdateConfig( void )
-{
-	file_t	*f;
-
-	f = FS_Open( "config/opengl.rc", "w" );
-	if( f )
-	{
-		FS_Printf( f, "//=======================================================================\n" );
-		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
-		FS_Printf( f, "//\t\t    opengl.rc - archive of opengl extension cvars\n");
-		FS_Printf( f, "//=======================================================================\n" );
-		GL_WriteVariables( f );
-		FS_Close( f );	
-	}                                                
-	else MsgDev( D_ERROR, "can't update opengl.rc.\n" );
-}
-
 void GL_RemoveCommands( void )
 {
 	Cmd_RemoveCommand( "modellist" );
@@ -672,7 +636,6 @@ void GL_InitBackend( void )
 void GL_ShutdownBackend( void )
 {
 	GL_RemoveCommands();
-	GL_UpdateConfig();
 
 	Mem_FreePool( &r_temppool );
 }
@@ -890,9 +853,6 @@ static void GL_SetDefaults( void )
 void GL_InitExtensions( void )
 {
 	int	flags = 0;
-
-	Cbuf_AddText( "exec opengl.rc\n" );
-	Cbuf_Execute();
 
 	// initialize gl extensions
 	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, NULL, R_OPENGL_110 );

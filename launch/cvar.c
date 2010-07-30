@@ -937,7 +937,7 @@ void Cvar_Init( void )
 	Cmd_AddCommand ("setu", Cvar_SetU_f, "create or change the value of a userinfo variable" );
 	Cmd_AddCommand ("setp", Cvar_SetP_f, "create or change the value of a physicinfo variable" );
 	Cmd_AddCommand ("setr", Cvar_SetR_f, "create or change the value of a renderinfo variable" );
-	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to vars.rc" );
+	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg" );
 	Cmd_AddCommand ("reset", Cvar_Reset_f, "reset any type variable to initial value" );
 	Cmd_AddCommand ("latch", Cvar_Latched_f, "apply latched values" );
 	Cmd_AddCommand ("vidlatch", Cvar_LatchedVideo_f, "apply latched values for video subsystem" );

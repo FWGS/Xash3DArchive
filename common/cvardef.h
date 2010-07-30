@@ -6,7 +6,7 @@
 #define CVARDEF_H
 
 // cvar flags
-#define FCVAR_ARCHIVE	BIT(0)	// set to cause it to be saved to vars.rc
+#define FCVAR_ARCHIVE	BIT(0)	// set to cause it to be saved to config.cfg
 #define FCVAR_USERINFO	BIT(1)	// added to userinfo  when changed
 #define FCVAR_SERVERINFO	BIT(2)	// added to serverinfo when changed
 #define FCVAR_LATCH		BIT(3)	// create latched cvar

@@ -18,7 +18,6 @@ cvar_t	*cl_nodelta;
 cvar_t	*cl_crosshair;
 cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
-cvar_t	*cl_lightstyle_lerping;
 cvar_t	*userinfo;
 
 //
@@ -438,7 +437,9 @@ void CL_Crashed_f( void )
 	// stop any downloads
 	if( cls.download ) FS_Close( cls.download );
 
+	Host_WriteOpenGLConfig();
 	Host_WriteConfig();	// write config
+
 	if( re ) re->RestoreGamma();
 }
 
@@ -826,11 +827,6 @@ void CL_ReadPackets( void )
 		CL_ReadDemoMessage();
 	else CL_ReadNetMessage();
 
-	cl.time = bound( cl.frame.servertime - cl.serverframetime, cl.time, cl.frame.servertime );
-
-	if( cl.refdef.paused ) cl.lerpFrac = 1.0f;
-	else cl.lerpFrac = 1.0 - (cl.frame.servertime - cl.time) / (float)cl.serverframetime;
-
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
 		return;
@@ -1089,7 +1085,6 @@ void CL_InitLocal( void )
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_lw = Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
-	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", CVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
 	cl_smooth = Cvar_Get ("cl_smooth", "1", 0, "smooth up stair climbing and interpolate position in multiplayer" );
 	
 	// register our commands
@@ -1248,7 +1243,7 @@ void CL_Init( void )
 ===============
 CL_Shutdown
 
-FIXME: this is a callback from Sys_Quit and Host_Error.  It would be better
+FIXME: this is a callback from Sys_Quit and Host_Error. It would be better
 to run quit through here before the final handoff to the sys code.
 ===============
 */
@@ -1258,8 +1253,9 @@ void CL_Shutdown( void )
 	if( host.state == HOST_ERROR ) return;
 	if( !cls.initialized ) return;
 
-	Host_WriteConfig(); 
-	CL_UnloadProgs();
-	SCR_Shutdown();
+	Host_WriteOpenGLConfig ();
+	Host_WriteConfig (); 
+	CL_UnloadProgs ();
+	SCR_Shutdown ();
 	cls.initialized = false;
 }

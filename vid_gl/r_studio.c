@@ -1339,7 +1339,6 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 			f = f - 1.0f;
 		}
 
-
 		if( m_pEntity && !m_pEntity->free ) m_pGroundEntity = m_pEntity->v.groundentity;
 
 		if( m_pGroundEntity && m_pGroundEntity->v.movetype == MOVETYPE_PUSH && !VectorIsNull( m_pGroundEntity->v.velocity ))

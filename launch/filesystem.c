@@ -3471,7 +3471,7 @@ static void FS_BuildPath( char *pPath, char *pOut )
 {
 	// set working directory
 	SetCurrentDirectory ( pPath );
-	com.sprintf( pOut, "%s\\bin\\platform.dll", pPath );
+	com.sprintf( pOut, "%s\\bin\\launch.dll", pPath );
 }
 
 void FS_UpdateEnvironmentVariables( void )

@@ -141,7 +141,8 @@ static void UI_Controls_Callback( void *self, int event )
 		UI_PopMenu();
 		break;
 	case ID_DEFAULTS:
-		CLIENT_COMMAND( TRUE, "exec keys.def\n" );
+//FIXME
+//		CLIENT_COMMAND( TRUE, "exec keys.def\n" );
 		UI_Controls_GetKeysList (); // reload all buttons
 		break;
 	case ID_ADVANCED:

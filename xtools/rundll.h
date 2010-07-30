@@ -101,28 +101,21 @@ void GetLibrary( void )
 	if( GetBin( ))
 	{
 		// assume run directory as XashDirectory
-		strcpy( szSearch[count], "bin\\platform.dll" );
+		strcpy( szSearch[count], "bin\\launch.dll" );
 		count++;
 	}
-
-	if( GetBin( ))
-	{
-		// assume run directory as XashDirectory (S.T.A.L.K.E.R. style)
-		strcpy( szSearch[count], "platform.dll" );
-		count++;
-	}	
 
 	if( GetEnv( ))
 	{
 		// get environment variable (e.g. compilers)
-		sprintf( szSearch[count], "%s\\bin\\platform.dll", szFsPath );
+		sprintf( szSearch[count], "%s\\bin\\launch.dll", szFsPath );
 		count++;
 	}
 
 	if( GetReg( ))
 	{
 		// get environment variable direct from registry (paranoid)
-		sprintf( szSearch[count], "%s\\bin\\platform.dll", szFsPath );
+		sprintf( szSearch[count], "%s\\bin\\launch.dll", szFsPath );
 		count++;
 	}
 
@@ -142,11 +135,11 @@ winmain_t CreateMain32( void )
 	if( hmain ) 
 	{
 		main = (winmain_t)GetProcAddress( hmain, "CreateAPI" );
-		if( !main ) GetError( "Unable to find entry point in platform.dll" );
+		if( !main ) GetError( "Unable to find entry point in launch.dll" );
 		return main;
 	}
 
-	GetError( "Unable to load the platform.dll" );
+	GetError( "Unable to load the launch.dll" );
 
 	// make compiller happy
 	return 0;

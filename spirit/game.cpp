@@ -487,7 +487,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER_SKILL ( sk_player_leg3 );
 // END REGISTER CVARS FOR SKILL LEVEL STUFF
 
-	SERVER_COMMAND( "exec skill.rc\n" );
+	SERVER_COMMAND( "exec skill.cfg\n" );
 }
 
 // perform any shutdown operations

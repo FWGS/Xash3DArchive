@@ -93,17 +93,27 @@ static void UI_CreateGame_Begin( void )
 	CVAR_SET_STRING( "sv_hostname", uiCreateGame.hostName.buffer );
 	CVAR_SET_STRING( "defaultmap", uiCreateGame.mapName[uiCreateGame.mapsList.curItem] );
 
-	HOST_WRITECONFIG ();
-
 	// all done, start server
 	if( uiCreateGame.dedicatedServer.enabled )
 	{
+		HOST_WRITECONFIG ( CVAR_GET_STRING( "servercfgfile" ));
+
 		char cmd[128];
 		sprintf( cmd, "#%s", gMenu.m_gameinfo.gamefolder );
 
+		// NOTE: dedicated server will be executed "defaultmap"
+		// from engine after restarting
 		HOST_CHANGEGAME( cmd, "Starting dedicated server...\n" );
 	}
-	else CLIENT_COMMAND( FALSE, "exec server.rc\n" );
+	else
+	{
+		HOST_WRITECONFIG ( CVAR_GET_STRING( "lservercfgfile" ));
+
+		char cmd[128];
+		sprintf( cmd, "exec %s\nmap %s\n", CVAR_GET_STRING( "lservercfgfile" ), CVAR_GET_STRING( "defaultmap" ));
+	
+		CLIENT_COMMAND( FALSE, cmd );
+	}
 }
 
 static void UI_PromptDialog( void )
@@ -170,7 +180,7 @@ static void UI_CreateGame_GetMapsList( void )
 	char *afile;
 
 	// HACKHACK: symbol '†' allow lookup only gamedir not basedir
-	if( !CHECK_MAP_LIST( FALSE ) || (afile = (char *)LOAD_FILE( "†scripts/maps.lst", NULL )) == NULL )
+	if( !CHECK_MAP_LIST( FALSE ) || (afile = (char *)LOAD_FILE( "†maps.lst", NULL )) == NULL )
 	{
 		uiCreateGame.done.generic.flags |= QMF_GRAYED;
 		uiCreateGame.mapsList.itemNames = (const char **)uiCreateGame.mapsDescriptionPtr;

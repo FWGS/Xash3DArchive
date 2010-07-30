@@ -436,7 +436,7 @@ void Key_Init( void )
 	Cmd_AddCommand( "bindlist", Key_Bindlist_f, "display current key bindings" );
 	Cmd_AddCommand( "makehelp", Key_EnumCmds_f, "write help.txt that contains all console cvars and cmds" ); 
 
-	// setup hardcode binding. "unbindall" from keys.rc will be reset it
+	// setup hardcode binding. "unbindall" from config.cfg will be reset it
 	for( kn = keynames; kn->name; kn++ ) Key_SetBinding( kn->keynum, kn->binding ); 
 }
 

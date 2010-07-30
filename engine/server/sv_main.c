@@ -279,7 +279,7 @@ void SV_CalcFrameTime( void )
 	if( Host_IsLocalGame( ))
 	{
 		// don't allow really short or long frames
-		sv.frametime = bound( 10, host.frametime, 100 );
+		sv.frametime = bound( 16, host.frametime, 100 );
 	}
 	else
 	{
@@ -626,9 +626,12 @@ void SV_Init( void )
 	Cvar_Get ("fraglimit", "0", CVAR_SERVERINFO, "multiplayer fraglimit" );
 	Cvar_Get ("timelimit", "0", CVAR_SERVERINFO, "multiplayer timelimit" );
 	Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_INIT, "displays server protocol version" );
-	Cvar_Get ("defaultmap", "", 0, "holds the multiplayer mapname" );
+	Cvar_Get ("defaultmap", "", CVAR_SERVERINFO, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
 	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE, "enable auto-aiming" );
+	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
+	Cvar_Get ( "servercfgfile","server.cfg", 0, "name of dedicated server configuration file" );
+	Cvar_Get ( "lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );
 
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "0", 0, "zfar server value" );

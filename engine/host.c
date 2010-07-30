@@ -776,8 +776,7 @@ void Host_Init( const int argc, const char **argv )
 	if( host.type != HOST_DEDICATED )
 	{
 		// get user configuration 
-		Cbuf_AddText( "exec keys.rc\n" );
-		Cbuf_AddText( "exec vars.rc\n" );
+		Cbuf_AddText( "exec config.cfg\n" );
 		Cbuf_Execute();
 	}
 
@@ -796,7 +795,7 @@ void Host_Init( const int argc, const char **argv )
 	host_cheats = Cvar_Get( "sv_cheats", "0", CVAR_LATCH, "allow cheat variables to enable" );
 	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
-	host_serverstate = Cvar_Get( "host_serverstate", "0", CVAR_SERVERINFO, "displays current server state" );
+	host_serverstate = Cvar_Get( "host_serverstate", "0", 0, "displays current server state" );
 
 	s = va( "Xash3D %i/%g (hw build ^3%i^7)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
 	Cvar_Get( "version", s, CVAR_INIT, "engine current version" );
@@ -820,13 +819,16 @@ void Host_Init( const int argc, const char **argv )
 	SV_Init();
 	CL_Init();
 
-	Host_WriteDefaultConfig ();
-
 	if( host.type == HOST_DEDICATED )
 	{
 		Cmd_AddCommand( "quit", Sys_Quit, "quit the game" );
 		Cmd_AddCommand( "exit", Sys_Quit, "quit the game" );
-		Cbuf_AddText( "exec server.rc\n" ); // dedicated servers using settings from server.rc file
+
+		// dedicated servers using settings from server.cfg file
+		Cbuf_AddText( va( "exec %s\n", Cvar_VariableString( "servercfgfile" )));
+		Cbuf_Execute();
+
+		Cbuf_AddText( va( "map %s\n", Cvar_VariableString( "defaultmap" )));
 	}
 	else
 	{

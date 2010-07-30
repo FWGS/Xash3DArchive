@@ -316,7 +316,7 @@ void CGameRules::RefreshSkillData ( void )
 
 CGameRules *InstallGameRules( void )
 {
-	SERVER_COMMAND( "exec game.rc\n" );
+	SERVER_COMMAND( "exec game.cfg\n" );
 	g_engfuncs.pfnServerExecute();	// stupid fucking winspool.h AGRHHH!!!!
 
 	if ( !gpGlobals->deathmatch )

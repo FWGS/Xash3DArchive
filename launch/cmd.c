@@ -270,7 +270,7 @@ Cmd_Exec_f
 */
 void Cmd_Exec_f( void )
 {
-	string	rcpath;
+	string	cfgpath;
 	size_t	len;
 	char	*f; 
 
@@ -280,17 +280,17 @@ void Cmd_Exec_f( void )
 		return;
 	}
 
-	com.snprintf( rcpath, MAX_STRING, "config/%s", Cmd_Argv( 1 )); 
-	FS_DefaultExtension( rcpath, ".rc" ); // append as default
+	com.strncpy( cfgpath, Cmd_Argv( 1 ), MAX_STRING ); 
+	FS_DefaultExtension( cfgpath, ".cfg" ); // append as default
 
-	f = FS_LoadFile( rcpath, &len );
+	f = FS_LoadFile( cfgpath, &len );
 	if( !f )
 	{
-		MsgDev( D_WARN, "couldn't exec %s\n", Cmd_Argv( 1 ));
+		MsgDev( D_NOTE, "couldn't exec %s\n", Cmd_Argv( 1 ));
 		return;
 	}
 
-	MsgDev( D_LOAD, "execing %s\n", Cmd_Argv( 1 ));
+	MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
 	Cbuf_InsertText( f );
 	Mem_Free( f );
 }
@@ -628,7 +628,7 @@ void Cmd_Init( void )
 	Cmd_AddCommand ("echo", Cmd_Echo_f, "print a message to the console (useful in scripts)" );
 	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for some rendered frames" );
 	Cmd_AddCommand ("cmdlist", Cmd_List_f, "display all console commands beginning with the specified prefix" );
-	Cmd_AddCommand ("stuffcmds", Cmd_StuffCmds_f, "execute commandline parameters (must be present in init.rc script)" );
+	Cmd_AddCommand ("stuffcmds", Cmd_StuffCmds_f, "execute commandline parameters (must be present in valve.rc script)" );
 
 	Memory_Init_Commands(); // memlib stats
 }

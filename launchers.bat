@@ -23,4 +23,3 @@ makefile.nmake
 cd ..
 cd xwad
 makefile.nmake
-pause
