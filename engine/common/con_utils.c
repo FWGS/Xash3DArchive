@@ -328,7 +328,7 @@ bool Cmd_GetMusicList( const char *s, char *completedname, int length )
 =====================================
 Cmd_GetSavesList
 
-Prints or complete movie filename
+Prints or complete savegame filename
 =====================================
 */
 bool Cmd_GetSavesList( const char *s, char *completedname, int length )
@@ -354,6 +354,51 @@ bool Cmd_GetSavesList( const char *s, char *completedname, int length )
 		numsaves++;
 	}
 	Msg( "\n^3 %i saves found.\n", numsaves );
+	Mem_Free( t );
+
+	// cut shortestMatch to the amount common with s
+	if( completedname && length )
+	{
+		for( i = 0; matchbuf[i]; i++ )
+		{
+			if( com.tolower( completedname[i] ) != com.tolower( matchbuf[i] ))
+				completedname[i] = 0;
+		}
+	}
+
+	return true;
+}
+
+/*
+=====================================
+Cmd_GetConfigList
+
+Prints or complete .cfg filename
+=====================================
+*/
+bool Cmd_GetConfigList( const char *s, char *completedname, int length )
+{
+	search_t		*t;
+	string		matchbuf;
+	int		i, numconfigs;
+
+	t = FS_Search( va( "%s*.cfg", s ), true );
+	if( !t ) return false;
+
+	FS_FileBase( t->filenames[0], matchbuf ); 
+	if( completedname && length ) com.strncpy( completedname, matchbuf, length );
+	if( t->numfilenames == 1 ) return true;
+
+	for( i = 0, numconfigs = 0; i < t->numfilenames; i++ )
+	{
+		const char *ext = FS_FileExtension( t->filenames[i] );
+
+		if( com.stricmp( ext, "cfg" )) continue;
+		FS_FileBase( t->filenames[i], matchbuf );
+		Msg( "%16s\n", matchbuf );
+		numconfigs++;
+	}
+	Msg( "\n^3 %i configs found.\n", numconfigs );
 	Mem_Free( t );
 
 	// cut shortestMatch to the amount common with s
@@ -600,7 +645,7 @@ bool Cmd_GetGamesList( const char *s, char *completedname, int length )
 
 bool Cmd_CheckMapsList( bool fRefresh )
 {
-	byte	buf[MAX_SYSPATH]; // 1 kb
+	byte	buf[MAX_MSGLEN];
 	char	*buffer;
 	string	result;
 	search_t	*t;
@@ -673,15 +718,16 @@ bool Cmd_CheckMapsList( bool fRefresh )
 				// if there are entities to parse, a missing message key just
 				// means there is no title, so clear the message string now
 				token_t	token;
+				bool	worldspawn = true;
 
 				message[0] = 0;
 				com.strncpy( message, "No Title", MAX_STRING );
 
 				while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 				{
-					if( !com.strcmp( token.string, "{" )) continue;
-					else if( !com.strcmp( token.string, "}" )) break;
-					else if( !com.strcmp( token.string, "message" ))
+					if( token.string[0] == '}' && worldspawn )
+						worldspawn = false;
+					else if( !com.strcmp( token.string, "message" ) && worldspawn )
 					{
 						// get the message contents
 						Com_ReadString( ents, SC_ALLOW_PATHNAMES2, message );
@@ -691,19 +737,22 @@ bool Cmd_CheckMapsList( bool fRefresh )
 						Com_ReadToken( ents, SC_ALLOW_PATHNAMES2, &token );
 						if( !com.strcmp( token.string, GI->dm_entity ))
 							num_spawnpoints++;
-						else if( !com.strcmp( token.string, GI->sp_entity ))
-							num_spawnpoints++;
 					}
 					if( num_spawnpoints > 1 ) break; // valid map
 				}
 				Com_CloseScript( ents );
 			}
 
-			if( f ) FS_Close(f);
+			if( f ) FS_Close( f );
 
-			// format: mapname "maptitle"\n
-			com.sprintf( result, "%s \"%s\"\n", mapname, message );
-			com.strcat( buffer, result ); // add new string
+
+			Msg( "spawnpoints %i\n", num_spawnpoints );
+			if( num_spawnpoints > 1 )
+			{
+				// format: mapname "maptitle"\n
+				com.sprintf( result, "%s \"%s\"\n", mapname, message );
+				com.strcat( buffer, result ); // add new string
+			}
 		}
 	}
 	if( t ) Mem_Free( t ); // free search result
@@ -727,6 +776,7 @@ autocomplete_list_t cmd_list[] =
 { "setfont", Cmd_GetFontList, },
 { "music", Cmd_GetSoundList, },
 { "movie", Cmd_GetMovieList },
+{ "exec", Cmd_GetConfigList },
 { "give", Cmd_GetItemsList },
 { "drop", Cmd_GetItemsList },
 { "game", Cmd_GetGamesList },

@@ -348,7 +348,7 @@ void CL_MouseMove( usercmd_t *cmd )
 	rate = sqrt( mx * mx + my * my ) / (float)frame_msec;
 
 	// check for dead
-	if( !g_iAlive ) return;
+	if( !g_iAlive || gHUD.m_iIntermission ) return;
 
 	accel_sensitivity = m_sensitivity->value + rate * cl_mouseaccel->value;
 	if ( gHUD.GetSensitivity( )) accel_sensitivity *= gHUD.GetSensitivity(); // scale by fov
@@ -388,7 +388,8 @@ void CL_AdjustAngles( void )
 	float	speed;
 	float	up, down;
 
-	if( !g_iAlive ) return;
+	if( !g_iAlive || gHUD.m_iIntermission )
+		return;
 
 	if ( in_speed.state & 1 )
 	{
@@ -494,7 +495,7 @@ void IN_CreateMove( usercmd_t *cmd, int msec, int active )
 
 	g_iAlive = gHUD.UpdateClientData();
 
-	if ( active )
+	if ( active && !gHUD.m_iIntermission )
 	{
 		GetViewAngles( cl_viewangles );
 

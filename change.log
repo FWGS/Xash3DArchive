@@ -1,6 +1,10 @@
-build ????
+build 1271
 
 Engine: enable server.cfg, listenserver.cfg, mapcycle.txt etc
+Engine: got to work mapcycle.txt
+GameUI: implement redefine keys menu
+Engine: added autocomplete for cmd 'exec'
+Engine: added version info in menu
 
 build 1270
 

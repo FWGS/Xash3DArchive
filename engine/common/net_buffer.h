@@ -28,6 +28,9 @@ typedef struct
 
 #define BF_WriteUBitLong( bf, data, bits )	BF_WriteUBitLongExt( bf, data, bits, true );
 #define BF_StartReading			BF_StartWriting
+#define BF_GetNumBytesRead			BF_GetNumBytesWritten
+#define BF_ReadBitAngles			BF_ReadBitVec3Coord
+#define BF_ReadStringLine( bf )		BF_ReadString( bf, true );
 
 // common functions
 void BF_Init( bitbuf_t *bf, const char *pDebugName, void *pData, int nBytes, int nMaxBits );
@@ -69,5 +72,28 @@ _inline int BF_GetMaxNumBits( bitbuf_t *bf ) { return bf->nDataBits; }
 _inline int BF_GetNumBitsLeft( bitbuf_t *bf ) { return bf->nDataBits - bf->iCurBit; }
 _inline int BF_GetNumBytesLeft( bitbuf_t *bf ) { return BF_GetNumBitsLeft( bf ) >> 3; }
 _inline byte *BF_GetData( bitbuf_t *bf ) { return bf->pData; }
+
+// Bit-read functions
+int BF_ReadOneBit( bitbuf_t *bf );
+float BF_ReadBitFloat( bitbuf_t *bf );
+bool BF_ReadBits( bitbuf_t *bf, void *pOutData, int nBits );
+float BF_ReadBitAngle( bitbuf_t *bf, int numbits );
+int BF_ReadSBitLong( bitbuf_t *bf, int numbits );
+uint BF_ReadBitLong( bitbuf_t *bf, int numbits, bool bSigned );
+float BF_ReadBitCoord( bitbuf_t *bf );
+void BF_ReadBitVec3Coord( bitbuf_t *bf, vec3_t fa );
+float BF_ReadBitNormal( bitbuf_t *bf );
+void BF_ReadBitVec3Normal( bitbuf_t *bf, vec3_t fa );
+
+// Byte-read functions
+int BF_ReadChar( bitbuf_t *bf );
+int BF_ReadByte( bitbuf_t *bf );
+int BF_ReadShort( bitbuf_t *bf );
+int BF_ReadWord( bitbuf_t *bf );
+long BF_ReadLong( bitbuf_t *bf );
+float BF_ReadFloat( bitbuf_t *bf );
+bool BF_ReadBytes( bitbuf_t *bf, void *pOut, int nBytes );
+const char *BF_ReadString( bitbuf_t *bf, bool bLine );
+
 					
 #endif//NET_BUFFER_H

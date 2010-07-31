@@ -372,7 +372,7 @@ void Sys_LookupInstance( void )
 			CloseHandle( Sys.hMutex );
 			Sys.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
 			if( !Sys.developer ) Sys.developer = 3;	// otherwise we see empty console
-			com_sprintf( Sys.log_path, "bin/%s.log", com_timestamp( TIME_FILENAME )); // logs folder
+			com_sprintf( Sys.log_path, "engine.log", com_timestamp( TIME_FILENAME )); // logs folder
 		}
 		else
 		{
@@ -382,7 +382,7 @@ void Sys_LookupInstance( void )
 			if( Sys.developer < D_WARN )
 				Sys.con_showalways = false;
 
-			com_sprintf( Sys.log_path, "bin/%s.log", com_timestamp( TIME_FILENAME )); // logs folder
+			com_sprintf( Sys.log_path, "engine.log", com_timestamp( TIME_FILENAME )); // logs folder
 		}
 
 		Sys.linked_dll = &engine_dll;	// pointer to engine.dll info

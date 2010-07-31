@@ -26,19 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "utils.h"
 #include "keydefs.h"
 
-// color presets
-const int g_iColorTable[8] =
-{
-0xFF000000, // black
-0xFFFF0000, // red
-0xFF00FF00, // green
-0xFFFFFF00, // yellow
-0xFF0000FF, // blue
-0xFF00FFFF, // cyan
-0xFFFF00FF, // magenta
-0xFFFFFFFF, // white
-};
-
 #ifdef _DEBUG
 void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
 {

@@ -1173,6 +1173,8 @@ int ReloadMapCycleFile( char *filename, mapcycle_t *cycle )
 			memset( szBuffer, 0, MAX_RULE_BUFFER );
 
 			pToken = COM_Parse( &pFileList );
+			if ( !pToken ) break;
+ 
 			if ( strlen( pToken ) <= 0 )
 				break;
 

@@ -630,9 +630,10 @@ void SV_Init( void )
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
 	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE, "enable auto-aiming" );
 	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
-	Cvar_Get ( "servercfgfile","server.cfg", 0, "name of dedicated server configuration file" );
-	Cvar_Get ( "lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );
-
+	Cvar_Get ("servercfgfile","server.cfg", 0, "name of dedicated server configuration file" );
+	Cvar_Get ("lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );
+	Cvar_Get ("sv_language", "0", 0, "game language (currently unused)" );
+	
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "0", 0, "zfar server value" );
 	sv_wateramp = Cvar_Get ("sv_wateramp", "0", 0, "global water wave height" );
@@ -706,7 +707,7 @@ void SV_FinalMessage( char *message, bool reconnect )
 
 	if( reconnect )
 	{
-		if( sv.loadgame )
+		if( sv.loadgame || sv_maxclients->integer > 1 )
 			MSG_WriteByte( &msg, svc_changing );
 		else MSG_WriteByte( &msg, svc_reconnect );
 	}

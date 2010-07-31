@@ -37,6 +37,8 @@ const char	*uiSoundOut	= "common/launch_dnmenu1.wav";
 const char	*uiSoundLaunch	= "common/launch_select2.wav";
 const char	*uiSoundGlow	= "common/launch_glow1.wav";
 const char	*uiSoundBuzz	= "common/menu1.wav";
+const char	*uiSoundKey	= "common/launch_select1.wav";
+const char	*uiSoundRemoveKey	= "commons/launch_deny1.wav";
 const char	*uiSoundMove	= "";		// Xash3D not use movesound
 const char	*uiSoundNull	= "";
 
@@ -51,6 +53,18 @@ int		uiColorWhite	= 0xFFFFFFFF;	// 255, 255, 255, 255	// useful for bitmaps
 int		uiColorDkGrey	= 0xFF404040;	// 64,  64,  64,  255	// shadow and grayed items
 int		uiColorBlack	= 0xFF000000;	//  0,   0,   0,  255	// some controls background
 
+// color presets (this is nasty hack to allow color presets to part of text)
+const int g_iColorTable[8] =
+{
+0xFF000000, // black
+0xFFFF0000, // red
+0xFF00FF00, // green
+0xFFFFFF00, // yellow
+0xFF0000FF, // blue
+0xFF00FFFF, // cyan
+0xFFF0B418, // dialog or button letters color
+0xFFFFFFFF, // white
+};
 
 /*
 =================
@@ -1282,6 +1296,8 @@ void UI_Init( void )
 	Cmd_AddCommand( "menu_vidoptions", UI_VidOptions_Menu, "open the video options menu" );
 	Cmd_AddCommand( "menu_vidmodes", UI_VidModes_Menu, "open the video modes menu" );
 	Cmd_AddCommand( "menu_customgame", UI_CustomGame_Menu, "open the change game menu" );
+
+//	CHECK_MAP_LIST( TRUE );
 
 	memset( uiEmptyString, ' ', sizeof( uiEmptyString ));	// HACKHACK
 	uiStatic.initialized = true;

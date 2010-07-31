@@ -103,7 +103,6 @@ static net_field_t ent_fields[] =
 { ES_FIELD(health),			NET_FLOAT, false	},	// client health
 { ES_FIELD(iStepLeft),		NET_LONG,  false	},	// client footsteps
 { ES_FIELD(flFallVelocity),		NET_FLOAT, false	},	// client fallvelocity
-{ ES_FIELD(localtime),		NET_FLOAT, false	},	// push localtime
 // revision 6. reserve for 5 fields without enlarge null_msg_size
 { NULL }
 };

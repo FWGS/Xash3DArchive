@@ -311,6 +311,8 @@ extern uiStatic_t		uiStatic;
 extern char		uiEmptyString[256];	// HACKHACK
 extern const char		*uiSoundIn;
 extern const char		*uiSoundOut;
+extern const char		*uiSoundKey;
+extern const char		*uiSoundRemoveKey;
 extern const char		*uiSoundLaunch;
 extern const char		*uiSoundBuzz;
 extern const char		*uiSoundGlow;

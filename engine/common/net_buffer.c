@@ -397,3 +397,327 @@ bool BF_WriteString( bitbuf_t *bf, const char *pStr )
 
 	return !bf->bOverflow;
 }
+
+int BF_ReadOneBit( bitbuf_t *bf )
+{
+	if( !BF_Overflow( bf, 1 ))
+	{
+		int value = bf->pData[bf->iCurBit >> 3] & (1 << ( bf->iCurBit & 7 ));
+		bf->iCurBit++;
+		return !!value;
+	}
+	return 0;
+}
+
+uint BF_ReadUBitLong( bitbuf_t *bf, int numbits )
+{
+	int	idword1;
+	uint	dword1, ret;
+
+	if(( bf->iCurBit + numbits ) > bf->nDataBits )
+	{
+		bf->bOverflow = true;
+		bf->iCurBit = bf->nDataBits;
+		MsgDev( D_ERROR, "Msg %s: overflow!\n", bf->pDebugName );
+		return 0;
+	}
+
+	ASSERT( numbits > 0 && numbits <= 32 );
+
+	// Read the current dword.
+	idword1 = bf->iCurBit >> 5;
+	dword1 = ((uint *)bf->pData)[idword1];
+	dword1 >>= ( bf->iCurBit & 31 );	// get the bits we're interested in.
+
+	bf->iCurBit += numbits;
+	ret = dword1;
+
+	// Does it span this dword?
+	if(( bf->iCurBit - 1 ) >> 5 == idword1 )
+	{
+		if( numbits != 32 )
+			ret &= ExtraMasks[numbits];
+	}
+	else
+	{
+		int	nExtraBits = bf->iCurBit & 31;
+		uint	dword2 = ((uint *)bf->pData)[idword1+1] & ExtraMasks[nExtraBits];
+		
+		// no need to mask since we hit the end of the dword.
+		// shift the second dword's part into the high bits.
+		ret |= (dword2 << ( numbits - nExtraBits ));
+	}
+
+	return ret;
+}
+
+float BF_ReadBitFloat( bitbuf_t *bf )
+{
+	long	val;
+	int	bit, byte;
+
+	ASSERT( sizeof( float ) == sizeof( long ));
+	ASSERT( sizeof( float ) == 4 );
+
+	if( BF_Overflow( bf, 32 ))
+		return 0.0f;
+
+	bit = bf->iCurBit & 0x7;
+	byte = bf->iCurBit >> 3;
+
+	val = bf->pData[byte] >> bit;
+	val |= ((int)bf->pData[byte + 1]) << ( 8 - bit );
+	val |= ((int)bf->pData[byte + 2]) << ( 16 - bit );
+	val |= ((int)bf->pData[byte + 3]) << ( 24 - bit );
+
+	if( bit != 0 )
+		val |= ((int)bf->pData[byte + 4]) << ( 32 - bit );
+	bf->iCurBit += 32;
+
+	return *((float *)&val);
+}
+
+bool BF_ReadBits( bitbuf_t *bf, void *pOutData, int nBits )
+{
+	byte	*pOut = (byte *)pOutData;
+	int	nBitsLeft = nBits;
+
+	
+	// get output dword-aligned.
+	while((( dword )pOut & 3) != 0 && nBitsLeft >= 8 )
+	{
+		*pOut = (byte)BF_ReadUBitLong( bf, 8 );
+		++pOut;
+		nBitsLeft -= 8;
+	}
+
+	// read dwords.
+	while( nBitsLeft >= 32 )
+	{
+		*((dword *)pOut) = BF_ReadUBitLong( bf, 32 );
+		pOut += sizeof( dword );
+		nBitsLeft -= 32;
+	}
+
+	// read the remaining bytes.
+	while( nBitsLeft >= 8 )
+	{
+		*pOut = BF_ReadUBitLong( bf, 8 );
+		++pOut;
+		nBitsLeft -= 8;
+	}
+	
+	// read the remaining bits.
+	if( nBitsLeft )
+	{
+		*pOut = BF_ReadUBitLong( bf, nBitsLeft );
+	}
+
+	return !bf->bOverflow;
+}
+
+float BF_ReadBitAngle( bitbuf_t *bf, int numbits )
+{
+	float	fReturn, shift;
+	int	i;
+
+	shift = (float)( 1 << numbits );
+
+	i = BF_ReadUBitLong( bf, numbits );
+	fReturn = (float)i * ( 360.0 / shift );
+
+	return fReturn;
+}
+
+// Append numbits least significant bits from data to the current bit stream
+int BF_ReadSBitLong( bitbuf_t *bf, int numbits )
+{
+	int	r, sign;
+
+	r = BF_ReadUBitLong( bf, numbits - 1 );
+
+	// NOTE: it does this wierdness here so it's bit-compatible with regular integer data in the buffer.
+	// (Some old code writes direct integers right into the buffer).
+	sign = BF_ReadOneBit( bf );
+	if( sign ) r = -(( 1 << ( numbits - 1 )) - r);
+
+	return r;
+}
+
+uint BF_ReadBitLong( bitbuf_t *bf, int numbits, bool bSigned )
+{
+	if( bSigned )
+		return (uint)BF_ReadSBitLong( bf, numbits );
+	return BF_ReadUBitLong( bf, numbits );
+}
+
+
+// Basic Coordinate Routines (these contain bit-field size AND fixed point scaling constants)
+float BF_ReadBitCoord( bitbuf_t *bf )
+{
+	int	intval = 0, fractval = 0, signbit = 0;
+	float	value = 0.0;
+
+	// read the required integer and fraction flags
+	intval = BF_ReadOneBit( bf );
+	fractval = BF_ReadOneBit( bf );
+
+	// if we got either parse them, otherwise it's a zero.
+	if( intval || fractval )
+	{
+		// read the sign bit
+		signbit = BF_ReadOneBit( bf );
+
+		// if there's an integer, read it in
+		if( intval )
+		{
+			// adjust the integers from [0..MAX_COORD_VALUE-1] to [1..MAX_COORD_VALUE]
+			intval = BF_ReadUBitLong( bf, COORD_INTEGER_BITS ) + 1;
+		}
+
+		// if there's a fraction, read it in
+		if( fractval )
+		{
+			fractval = BF_ReadUBitLong( bf, COORD_FRACTIONAL_BITS );
+		}
+
+		// calculate the correct floating point value
+		value = intval + ((float)fractval * COORD_RESOLUTION );
+
+		// fixup the sign if negative.
+		if( signbit ) value = -value;
+	}
+	return value;
+}
+
+void BF_ReadBitVec3Coord( bitbuf_t *bf, vec3_t fa )
+{
+	int	xflag, yflag, zflag;
+
+	// This vector must be initialized! Otherwise, If any of the flags aren't set, 
+	// the corresponding component will not be read and will be stack garbage.
+	fa[0] = fa[1] = fa[2] = 0.0f;
+
+	xflag = BF_ReadOneBit( bf );
+	yflag = BF_ReadOneBit( bf ); 
+	zflag = BF_ReadOneBit( bf );
+
+	if( xflag ) fa[0] = BF_ReadBitCoord( bf );
+	if( yflag ) fa[1] = BF_ReadBitCoord( bf );
+	if( zflag ) fa[2] = BF_ReadBitCoord( bf );
+}
+
+float BF_ReadBitNormal( bitbuf_t *bf )
+{
+	// read the sign bit
+	int	signbit = BF_ReadOneBit( bf );
+
+	// read the fractional part
+	uint fractval = BF_ReadUBitLong( bf, NORMAL_FRACTIONAL_BITS );
+
+	// calculate the correct floating point value
+	float value = (float)fractval * NORMAL_RESOLUTION;
+
+	// fixup the sign if negative.
+	if( signbit ) value = -value;
+
+	return value;
+}
+
+void BF_ReadBitVec3Normal( bitbuf_t *bf, vec3_t fa )
+{
+	int	xflag = BF_ReadOneBit( bf );
+	int	yflag = BF_ReadOneBit( bf ); 
+	int	znegative;
+	float	fafafbfb;
+
+	if( xflag ) fa[0] = BF_ReadBitNormal( bf );
+	else fa[0] = 0.0f;
+
+	if( yflag ) fa[1] = BF_ReadBitNormal( bf );
+	else fa[1] = 0.0f;
+
+	// the first two imply the third (but not its sign)
+	znegative = BF_ReadOneBit( bf );
+	fafafbfb = fa[0] * fa[0] + fa[1] * fa[1];
+
+	if( fafafbfb < 1.0f )
+		fa[2] = com.sqrt( 1.0f - fafafbfb );
+	else fa[2] = 0.0f;
+
+	if( znegative ) fa[2] = -fa[2];
+}
+
+int BF_ReadChar( bitbuf_t *bf )
+{
+	return BF_ReadSBitLong( bf, sizeof( char ) << 3 );
+}
+
+int BF_ReadByte( bitbuf_t *bf )
+{
+	return BF_ReadUBitLong( bf, sizeof( byte ) << 3 );
+}
+
+int BF_ReadShort( bitbuf_t *bf )
+{
+	return BF_ReadSBitLong( bf, sizeof( short ) << 3 );
+}
+
+int BF_ReadWord( bitbuf_t *bf )
+{
+	return BF_ReadUBitLong( bf, sizeof( word ) << 3 );
+}
+
+long BF_ReadLong( bitbuf_t *bf )
+{
+	return BF_ReadSBitLong( bf, sizeof( long ) << 3 );
+}
+
+float BF_ReadFloat( bitbuf_t *bf )
+{
+	float	ret;
+	ASSERT( sizeof( ret ) == 4 );
+
+	BF_ReadBits( bf, &ret, 32 );
+
+	return ret;
+}
+
+bool BF_ReadBytes( bitbuf_t *bf, void *pOut, int nBytes )
+{
+	return BF_ReadBits( bf, pOut, nBytes << 3 );
+}
+
+const char *BF_ReadString( bitbuf_t *bf, bool bLine )
+{
+	static char	string[2048];
+	int		maxLen = sizeof( string ) - 1;
+	char		*pStr = string;
+	bool		bTooSmall = false;
+	int		iChar = 0;
+
+	while( 1 )
+	{
+		char	val = BF_ReadChar( bf );
+
+		if( val == 0 ) break;
+		else if( bLine && val == '\n' )
+			break;
+
+		// translate all fmt spec to avoid crash bugs
+		if( val == '%' ) val = '.';
+
+		if( iChar < ( maxLen - 1 ))
+		{
+			pStr[iChar] = val;
+			iChar++;
+		}
+		else bTooSmall = true;
+	}
+
+	// make sure it's null-terminated.
+	ASSERT( iChar < maxLen );
+	pStr[iChar] = 0;
+
+	return string;
+}
