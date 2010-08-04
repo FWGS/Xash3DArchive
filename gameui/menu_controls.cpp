@@ -132,6 +132,9 @@ static void UI_Controls_ParseKeysList( void )
 
 	if( !afile )
 	{
+		for( ; i < MAX_KEYS; i++ ) uiControls.keysDescriptionPtr[i] = NULL;
+		uiControls.keysList.itemNames = (const char **)uiControls.keysDescriptionPtr;
+	
 		ALERT( at_error, "UI_Parse_KeysList: kb_act.lst not found\n" );
 		return;
 	}

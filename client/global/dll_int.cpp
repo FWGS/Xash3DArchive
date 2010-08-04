@@ -188,13 +188,6 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 		m_fLerp = 1.0f;
 	else m_fLerp = GetLerpFrac();
 
-	if( state->flags & FL_PROJECTILE && state->ed_flags & ( ESF_NO_PREDICTION|ESF_NODELTA ))
-	{
-		// cut rocket trail, dont pass it from teleport
-		// FIXME: don't work
-		g_pViewRenderBeams->KillDeadBeams( ent );		
-	}
-
 	// copy state to progs
 	ent->v.modelindex = state->modelindex;
 	ent->v.weaponmodel = state->weaponmodel;
@@ -212,23 +205,25 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	ent->v.colormap = state->colormap; 
 	ent->v.rendermode = state->rendermode; 
 	ent->v.renderfx = state->renderfx; 
-	ent->v.fov = state->fov; 
+//	ent->v.fov = state->fov; 
 	ent->v.scale = state->scale; 
-	ent->v.weapons = state->weapons;
 	ent->v.gravity = state->gravity;
-	ent->v.health = state->health;
 	ent->v.solid = state->solid;
 	ent->v.movetype = state->movetype;
 	ent->v.flags = state->flags;
 	ent->v.idealpitch = state->idealpitch;
 	ent->v.animtime = state->animtime;
-	ent->v.ltime = state->localtime;
 
-	if( state->groundent != -1 )
-		ent->v.groundentity = GetEntityByIndex( state->groundent );
+	if( ent != GetLocalPlayer())
+	{
+		ent->v.health = state->health;
+	}
+
+	if( state->onground )
+		ent->v.groundentity = GetEntityByIndex( state->onground );
 	else ent->v.groundentity = NULL;
 
-	if( state->aiment != -1 )
+	if( state->aiment )
 		ent->v.aiment = GetEntityByIndex( state->aiment );
 	else ent->v.aiment = NULL;
 
@@ -255,14 +250,16 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	else
 	{
 		ent->v.angles = LerpAngle( prev->angles, state->angles, m_fLerp );
-		ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
 		ent->v.basevelocity = LerpPoint( prev->basevelocity, state->basevelocity, m_fLerp );
 	}
 
 	// interpolate scale, renderamount etc
 	ent->v.scale = LerpPoint( prev->scale, state->scale, m_fLerp );
-	ent->v.rendercolor = LerpPoint( prev->rendercolor, state->rendercolor, m_fLerp );
 	ent->v.renderamt = LerpPoint( prev->renderamt, state->renderamt, m_fLerp );
+
+	ent->v.rendercolor.x = state->rendercolor.r;
+	ent->v.rendercolor.y = state->rendercolor.g;
+	ent->v.rendercolor.z = state->rendercolor.b;
 
 	if( ent->v.animtime )
 	{
@@ -278,32 +275,21 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	switch( state->ed_type )
 	{
 	case ED_CLIENT:
-		ent->v.punchangle = LerpAngle( prev->punch_angles, state->punch_angles, m_fLerp );
 		ent->v.v_angle = LerpAngle( prev->viewangles, state->viewangles, m_fLerp );
-		ent->v.view_ofs = LerpPoint( prev->viewoffset, state->viewoffset, m_fLerp );
 
-		if( prev->fov != 90.0f && state->fov == 90.0f )
-			ent->v.fov = state->fov; // fov is reset, so don't lerping
-		else ent->v.fov = LerpPoint( prev->fov, state->fov, m_fLerp ); 
+		if( ent != GetLocalPlayer( ))
+		{
+			ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
+
+			if( prev->fov != 90.0f && state->fov == 90.0f )
+				ent->v.fov = state->fov; // fov is reset, so don't lerping
+			else ent->v.fov = LerpPoint( prev->fov, state->fov, m_fLerp ); 
+		}
+
 		ent->v.maxspeed = state->maxspeed;
 
 		ent->v.iStepLeft = state->iStepLeft;
 		ent->v.flFallVelocity = state->flFallVelocity;
-		
-		if( ent == GetLocalPlayer())
-		{
-			edict_t	*viewent = GetViewModel();
-
-			// if viewmodel has changed update sequence here
-			if( viewent->v.modelindex != state->viewmodel )
-			{
-//				ALERT( at_console, "Viewmodel changed\n" );
-				SendWeaponAnim( viewent->v.sequence, viewent->v.body, viewent->v.framerate );
-                              }
-			// setup player viewmodel (only for local player!)
-			viewent->v.modelindex = state->viewmodel;
-			gHUD.m_flFOV = ent->v.fov; // keep client fov an actual
-		}
 		break;
 	case ED_PORTAL:
 	case ED_MOVER:
@@ -326,7 +312,7 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	case ED_BEAM:
 		ent->v.oldorigin = state->oldorigin;	// beam endpoint
 		ent->v.frags = state->gaitsequence;
-		if( state->owner != -1 )
+		if( state->owner )
 			ent->v.owner = GetEntityByIndex( state->owner );
 		else ent->v.owner = NULL;
 
@@ -341,11 +327,11 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	int	i;
 
 	// copy blendings
-	for( i = 0; i < MAXSTUDIOBLENDS; i++ )
+	for( i = 0; i < 4; i++ )
 		ent->v.blending[i] = state->blending[i];
 
 	// copy controllers
-	for( i = 0; i < MAXSTUDIOCONTROLLERS; i++ )
+	for( i = 0; i < 4; i++ )
 		ent->v.controller[i] = state->controller[i];
 
 	// g-cont. moved here because we may needs apply null scale to skyportal
@@ -372,20 +358,66 @@ playerstate update in entity_state_t.  In order for these overrides to eventuall
 structure, we need to copy them into the state structure at this point.
 =========================
 */
-void HUD_UpdateClientVars( entity_state_t *state, const clientdata_t *client )
+void HUD_UpdateClientVars( edict_t *ent, const clientdata_t *state, const clientdata_t *prev )
 {
-	// Copy origin
-	state->origin = client->origin;
+	float	m_fLerp;
 
+	m_fLerp = GetLerpFrac();
+
+	// copy origin
+	ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
+	ent->v.velocity = state->velocity;
+	ent->v.flags = state->flags;
+	ent->v.health = state->health;
+	ent->v.flags = state->flags;
+
+	ent->v.punchangle = LerpAngle( prev->punchangle, state->punchangle, m_fLerp );
+	ent->v.view_ofs = LerpPoint( prev->view_ofs, state->view_ofs, m_fLerp );
+
+	if( prev->fov != 90.0f && state->fov == 90.0f )
+		ent->v.fov = state->fov; // fov is reset, so don't lerping
+	else ent->v.fov = LerpPoint( prev->fov, state->fov, m_fLerp ); 
+
+	// Water state
+	ent->v.watertype = state->watertype;
+	ent->v.waterlevel = state->waterlevel;
+
+	// suit and weapon bits
+	ent->v.weapons = state->weapons;
+
+	ent->v.bInDuck = state->bInDuck;
+	ent->v.flTimeStepSound = state->flTimeStepSound;
+	ent->v.flDuckTime = state->flDuckTime;
+	ent->v.flSwimTime = state->flSwimTime;
+	ent->v.teleport_time = state->waterjumptime;
+
+	// Viewmodel code
+	edict_t	*viewent = GetViewModel();
+
+	// if viewmodel has changed update sequence here
+	if( viewent->v.modelindex != state->viewmodel )
+	{
+//		ALERT( at_console, "Viewmodel changed\n" );
+		SendWeaponAnim( viewent->v.sequence, viewent->v.body, viewent->v.framerate );
+	}
+
+	// setup player viewmodel (only for local player!)
+	viewent->v.modelindex = state->viewmodel;
+	gHUD.m_flFOV = ent->v.fov; // keep client fov an actual
+
+	ent->v.maxspeed = state->maxspeed;
+	ent->v.weaponanim = state->weaponanim;	// g-cont. hmm. we can grab weaponanim from here ?
+	ent->v.pushmsec = state->pushmsec;
+	
 	// Spectator
-	state->iuser1 = client->iuser1;
-	state->iuser2 = client->iuser2;
+	ent->v.iuser1 = state->iuser1;
+	ent->v.iuser2 = state->iuser2;
 
 	// Duck prevention
-	state->iuser3 = client->iuser3;
+	ent->v.iuser3 = state->iuser3;
 
 	// Fire prevention
-	state->iuser4 = client->iuser4;
+	ent->v.iuser4 = state->iuser4;
 }
 
 int HUD_AddVisibleEntity( edict_t *pEnt, int ed_type )

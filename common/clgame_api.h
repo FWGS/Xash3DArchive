@@ -228,7 +228,7 @@ typedef struct
 	void	(*pfnInit)( void );
 	int	(*pfnRedraw)( float flTime, int state );
 	void	(*pfnUpdateEntityVars)( edict_t *out, const struct entity_state_s *in1, const struct entity_state_s *in2 );
-	void	(*pfnUpdateClientVars)( struct entity_state_s *state, const struct clientdata_s *client );
+	void	(*pfnUpdateClientVars)( edict_t *ent, const struct clientdata_s *in1, const struct clientdata_s *in2 );
 	void	(*pfnOnFreeEntPrivateData)( edict_t *pEnt ); // this is called on entity removed
 	void	(*pfnReset)( void );
 	void	(*pfnStartFrame)( void );

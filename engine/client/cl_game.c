@@ -8,6 +8,7 @@
 #include "byteorder.h"
 #include "matrix_lib.h"
 #include "const.h"
+#include "protocol.h"
 #include "triangle_api.h"
 #include "effects_api.h"
 #include "pm_defs.h"

@@ -33,7 +33,7 @@ void BF_InitMasks( void )
 		ExtraMasks[maskBit] = BIT( maskBit ) - 1;
 }
  
-void BF_Init( bitbuf_t *bf, const char *pDebugName, void *pData, int nBytes, int nMaxBits )
+void BF_InitExt( bitbuf_t *bf, const char *pDebugName, void *pData, int nBytes, int nMaxBits )
 {
 	bf->pDebugName = pDebugName;
 
@@ -42,8 +42,8 @@ void BF_Init( bitbuf_t *bf, const char *pDebugName, void *pData, int nBytes, int
 
 void BF_StartWriting( bitbuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits )
 {
-	// Make sure it's dword aligned and padded.
-	ASSERT(( nBytes % 4 ) == 0 );
+	// make sure it's dword aligned and padded.
+//	ASSERT(( nBytes % 4 ) == 0 );
 	ASSERT(((dword)pData & 3 ) == 0 );
 
 	bf->pData = (byte *)pData;
@@ -63,6 +63,13 @@ void BF_StartWriting( bitbuf_t *bf, void *pData, int nBytes, int iStartBit, int 
 	bf->bOverflow = false;
 }
 
+/*
+=======================
+MSG_Clear
+
+for clearing overflowed buffer
+=======================
+*/
 void BF_Clear( bitbuf_t *bf )
 {
 	bf->iCurBit = 0;
@@ -74,14 +81,26 @@ static bool BF_Overflow( bitbuf_t *bf, int nBits )
 	if( bf->iCurBit + nBits > bf->nDataBits )
 	{
 		bf->bOverflow = true;
-		MsgDev( D_ERROR, "Msg %s: overflow!\n", bf->pDebugName );
+		Host_Error( "Msg %s: overflow! %i + %i > %i\n", bf->pDebugName, bf->iCurBit, nBits, bf->nDataBits );
 	}
 	return bf->bOverflow;
+}
+
+bool BF_CheckOverflow( bitbuf_t *bf )
+{
+	ASSERT( bf );
+	
+	return BF_Overflow( bf, 0 );
 }
 
 void BF_SeekToBit( bitbuf_t *bf, int bitPos )
 {
 	bf->iCurBit = bitPos;
+}
+
+void BF_SeekToByte( bitbuf_t *bf, int bytePos )
+{
+	bf->iCurBit = bytePos << 3;
 }
 
 void BF_WriteOneBit( bitbuf_t *bf, int nValue )
@@ -112,7 +131,7 @@ void BF_WriteUBitLongExt( bitbuf_t *bf, uint curData, int numbits, bool bCheckRa
 	{
 		bf->bOverflow = true;
 		bf->iCurBit = bf->nDataBits;
-		MsgDev( D_ERROR, "Msg %s: overflow!\n", bf->pDebugName );
+		MsgDev( D_ERROR, "WriteError: %s: overflow!\n", bf->pDebugName );
 	}
 	else
 	{
@@ -239,6 +258,10 @@ void BF_WriteBitAngle( bitbuf_t *bf, float fAngle, int numbits )
 {
 	uint	mask, shift;
 	int	d;
+
+	// clamp the angle before receiving
+	if( fAngle > 360 ) fAngle -= 360; 
+	else if( fAngle < 0 ) fAngle += 360;
 
 	shift = ( 1 << numbits );
 	mask = shift - 1;
@@ -390,11 +413,11 @@ bool BF_WriteString( bitbuf_t *bf, const char *pStr )
 		do
 		{
 			BF_WriteChar( bf, *pStr );
-			++pStr;
-		} while(*( pStr - 1 ) != 0 );
+			pStr++;
+		} while( *( pStr - 1 ));
 	}
 	else BF_WriteChar( bf, 0 );
-
+	
 	return !bf->bOverflow;
 }
 
@@ -414,11 +437,19 @@ uint BF_ReadUBitLong( bitbuf_t *bf, int numbits )
 	int	idword1;
 	uint	dword1, ret;
 
+	if( numbits == 8 )
+	{
+		int leftBits = BF_GetNumBitsLeft( bf );
+
+		if( leftBits >= 0 && leftBits < 8 )
+			return 0;	// end of message
+	}
+
 	if(( bf->iCurBit + numbits ) > bf->nDataBits )
 	{
 		bf->bOverflow = true;
+		MsgDev( D_ERROR, "ReadError: %s: overflow! cur %i num %i, total %i\n", bf->pDebugName, bf->iCurBit, numbits, bf->nDataBits );
 		bf->iCurBit = bf->nDataBits;
-		MsgDev( D_ERROR, "Msg %s: overflow!\n", bf->pDebugName );
 		return 0;
 	}
 
@@ -447,7 +478,6 @@ uint BF_ReadUBitLong( bitbuf_t *bf, int numbits )
 		// shift the second dword's part into the high bits.
 		ret |= (dword2 << ( numbits - nExtraBits ));
 	}
-
 	return ret;
 }
 
@@ -525,6 +555,10 @@ float BF_ReadBitAngle( bitbuf_t *bf, int numbits )
 
 	i = BF_ReadUBitLong( bf, numbits );
 	fReturn = (float)i * ( 360.0 / shift );
+
+	// clamp the finale angle
+	if( fReturn < -180 ) fReturn += 360; 
+	else if( fReturn > 180 ) fReturn -= 360;
 
 	return fReturn;
 }
@@ -688,36 +722,27 @@ bool BF_ReadBytes( bitbuf_t *bf, void *pOut, int nBytes )
 	return BF_ReadBits( bf, pOut, nBytes << 3 );
 }
 
-const char *BF_ReadString( bitbuf_t *bf, bool bLine )
+char *BF_ReadStringExt( bitbuf_t *bf, bool bLine )
 {
-	static char	string[2048];
-	int		maxLen = sizeof( string ) - 1;
-	char		*pStr = string;
-	bool		bTooSmall = false;
-	int		iChar = 0;
-
-	while( 1 )
+	static char	string[MAX_SYSPATH];
+	int		l = 0, c;
+	
+	do
 	{
-		char	val = BF_ReadChar( bf );
+		// use BF_ReadByte so -1 is out of bounds
+		c = BF_ReadByte( bf );
 
-		if( val == 0 ) break;
-		else if( bLine && val == '\n' )
+		if( c == 0 ) break;
+		else if( bLine && c == '\n' )
 			break;
 
 		// translate all fmt spec to avoid crash bugs
-		if( val == '%' ) val = '.';
+		if( c == '%' ) c = '.';
 
-		if( iChar < ( maxLen - 1 ))
-		{
-			pStr[iChar] = val;
-			iChar++;
-		}
-		else bTooSmall = true;
-	}
-
-	// make sure it's null-terminated.
-	ASSERT( iChar < maxLen );
-	pStr[iChar] = 0;
+		string[l] = c;
+		l++;
+	} while( l < sizeof( string ) - 1 );
+	string[l] = 0; // terminator
 
 	return string;
 }

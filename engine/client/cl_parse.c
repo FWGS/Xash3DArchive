@@ -5,7 +5,9 @@
 
 #include "common.h"
 #include "client.h"
+#include "protocol.h"
 #include "net_sound.h"
+#include "net_encode.h"
 
 #define MSG_COUNT		32		// last 32 messages parsed
 #define MSG_MASK		(MSG_COUNT - 1)
@@ -111,7 +113,7 @@ CL_WriteErrorMessage
 write net_message into buffer.dat for debugging
 =====================
 */
-void CL_WriteErrorMessage( int current_count, sizebuf_t *msg )
+void CL_WriteErrorMessage( int current_count, bitbuf_t *msg )
 {
 	file_t		*fp;
 	const char	*buffer_file = "buffer.dat";
@@ -121,7 +123,7 @@ void CL_WriteErrorMessage( int current_count, sizebuf_t *msg )
 
 	FS_Write( fp, &starting_count, sizeof( int ));
 	FS_Write( fp, &current_count, sizeof( int ));
-	FS_Write( fp, msg->data, msg->cursize );
+	FS_Write( fp, BF_GetData( msg ), BF_GetMaxBytes( msg ));
 	FS_Close( fp );
 
 	MsgDev( D_INFO, "Wrote erroneous message to %s\n", buffer_file );
@@ -138,7 +140,7 @@ void CL_WriteMessageHistory( void )
 {
 	int	i, thecmd;
 	oldcmd_t	*old, *failcommand;
-	sizebuf_t	*msg = &net_message;
+	bitbuf_t	*msg = &net_message;
 
 	if( !cls.initialized || cls.state == ca_disconnected )
 		return;
@@ -164,11 +166,11 @@ void CL_WriteMessageHistory( void )
 
 	failcommand = &cls_message_debug.oldcmd[thecmd];
 
-	MsgDev( D_INFO, "BAD:  %3i:%s\n", msg->readcount - 1, CL_MsgInfo( failcommand->command ));
+	MsgDev( D_INFO, "BAD:  %3i:%s\n", BF_GetNumBytesRead( msg ) - 1, CL_MsgInfo( failcommand->command ));
 
 	if( host.developer >= 3 )
 	{
-		CL_WriteErrorMessage( msg->readcount - 1, msg );
+		CL_WriteErrorMessage( BF_GetNumBytesRead( msg ) - 1, msg );
 	}
 	cls_message_debug.parsing = false;
 }
@@ -210,14 +212,14 @@ bool CL_CheckOrDownloadFile( const char *filename )
 		cls.download = f;
 		// give the server an offset to start the download
 		MsgDev( D_INFO, "Resume download %s at %i\n", cls.downloadname, len );
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-		MSG_Print( &cls.netchan.message, va("download %s %i", cls.downloadname, len ));
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, va("download %s %i", cls.downloadname, len ));
 	}
 	else
 	{
 		MsgDev( D_INFO, "Start download %s\n", cls.downloadname );
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-		MSG_Print( &cls.netchan.message, va("download %s", cls.downloadname ));
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, va("download %s", cls.downloadname ));
 	}
 
 	cls.downloadnumber++;
@@ -231,15 +233,16 @@ CL_ParseDownload
 A download message has been received from the server
 =====================
 */
-void CL_ParseDownload( sizebuf_t *msg )
+void CL_ParseDownload( bitbuf_t *msg )
 {
-	int		size, percent;
-	string		name;
-	int		r;
+	int	size, percent;
+	char	buffer[MAX_MSGLEN];
+	string	name;
+	int	r;
 
 	// read the data
-	size = MSG_ReadShort( msg );
-	percent = MSG_ReadByte( msg );
+	size = BF_ReadShort( msg );
+	percent = BF_ReadByte( msg );
 
 	if( size == -1 )
 	{
@@ -262,22 +265,24 @@ void CL_ParseDownload( sizebuf_t *msg )
 
 		if( !cls.download )
 		{
-			msg->readcount += size;
-			Msg( "Failed to open %s\n", cls.downloadtempname );
+			msg->iCurBit += size << 3;	// FIXME!!!
+			MsgDev( D_ERROR, "failed to open %s\n", cls.downloadtempname );
 			CL_RequestNextDownload();
 			return;
 		}
 	}
 
-	FS_Write( cls.download, msg->data + msg->readcount, size );
-	msg->readcount += size;
+	ASSERT( size <= sizeof( buffer ));
+
+	BF_ReadBytes( msg, buffer, size );
+	FS_Write( cls.download, buffer, size );
 
 	if( percent != 100 )
 	{
 		// request next block
 		Cvar_SetValue("scr_download", percent );
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-		MSG_Print( &cls.netchan.message, "nextdl" );
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, "nextdl" );
 	}
 	else
 	{
@@ -327,7 +332,7 @@ CL_ParseSoundPacket
 
 ==================
 */
-void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
+void CL_ParseSoundPacket( bitbuf_t *msg, bool is_ambient )
 {
 	vec3_t	pos_;
 	float	*pos = NULL;
@@ -336,30 +341,30 @@ void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
 	int	flags, pitch, entnum;
 	sound_t	handle;
 
-	flags = MSG_ReadWord( msg );
-	sound = MSG_ReadWord( msg );
-	chan = MSG_ReadByte( msg );
+	flags = BF_ReadWord( msg );
+	sound = BF_ReadWord( msg );
+	chan = BF_ReadByte( msg );
 
 	if( flags & SND_VOLUME )
-		volume = MSG_ReadByte( msg ) / 255.0f;
+		volume = BF_ReadByte( msg ) / 255.0f;
 	else volume = VOL_NORM;
 
 	if( flags & SND_ATTENUATION )
-		attn = MSG_ReadByte( msg ) / 64.0f;
+		attn = BF_ReadByte( msg ) / 64.0f;
 	else attn = ATTN_NONE;	
 
 	if( flags & SND_PITCH )
-		pitch = MSG_ReadByte( msg );
+		pitch = BF_ReadByte( msg );
 	else pitch = PITCH_NORM;
 
 	// entity reletive
-	entnum = MSG_ReadWord( msg ); 
+	entnum = BF_ReadWord( msg ); 
 
 	// positioned in space
 	if( flags & SND_FIXED_ORIGIN )
 	{
 		pos = pos_;
-		MSG_ReadPos( msg, pos );
+		BF_ReadBitVec3Coord( msg, pos );
 	}
 
 	if( flags & SND_SENTENCE )
@@ -387,9 +392,9 @@ CL_ParseMovevars
 
 ==================
 */
-void CL_ParseMovevars( sizebuf_t *msg )
+void CL_ParseMovevars( bitbuf_t *msg )
 {
-	MSG_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
+	BF_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
 	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
 }
 
@@ -399,18 +404,18 @@ CL_ParseParticles
 
 ==================
 */
-void CL_ParseParticles( sizebuf_t *msg )
+void CL_ParseParticles( bitbuf_t *msg )
 {
 	vec3_t		org, dir;
 	int		i, count, color;
 	
-	MSG_ReadPos( msg, org );	
+	BF_ReadBitVec3Coord( msg, org );	
 
 	for( i = 0; i < 3; i++ )
-		dir[i] = MSG_ReadChar( msg ) * (1.0f / 16);
+		dir[i] = BF_ReadChar( msg ) * (1.0f / 16);
 
-	count = MSG_ReadByte( msg );
-	color = MSG_ReadByte( msg );
+	count = BF_ReadByte( msg );
+	color = BF_ReadByte( msg );
 	if( count == 255 ) count = 1024;
 
 	clgame.dllFuncs.pfnParticleEffect( org, dir, color, count );
@@ -422,56 +427,56 @@ CL_ParseStaticDecal
 
 ==================
 */
-void CL_ParseStaticDecal( sizebuf_t *msg )
+void CL_ParseStaticDecal( bitbuf_t *msg )
 {
 	vec3_t	origin;
 	int	decalIndex, entityIndex, modelIndex;
 	int	flags;
 
-	MSG_ReadPos( msg, origin );
-	decalIndex = MSG_ReadWord( msg );
-	entityIndex = MSG_ReadShort( msg );
+	BF_ReadBitVec3Coord( msg, origin );
+	decalIndex = BF_ReadWord( msg );
+	entityIndex = BF_ReadShort( msg );
 
 	if( entityIndex > 0 )
-		modelIndex = MSG_ReadWord( msg );
+		modelIndex = BF_ReadWord( msg );
 	else modelIndex = 0;
-	flags = MSG_ReadByte( msg );
+	flags = BF_ReadByte( msg );
 
 	CL_DecalShoot( cl.decal_shaders[decalIndex], entityIndex, modelIndex, origin, flags );
 }
 
-void CL_ParseSoundFade( sizebuf_t *msg )
+void CL_ParseSoundFade( bitbuf_t *msg )
 {
 	float	fadePercent, fadeOutSeconds;
 	float	holdTime, fadeInSeconds;
 
-	fadePercent = MSG_ReadFloat( msg );
-	fadeOutSeconds = MSG_ReadFloat( msg );
-	holdTime = MSG_ReadFloat( msg );
-	fadeInSeconds = MSG_ReadFloat( msg );
+	fadePercent = BF_ReadFloat( msg );
+	fadeOutSeconds = BF_ReadFloat( msg );
+	holdTime = BF_ReadFloat( msg );
+	fadeInSeconds = BF_ReadFloat( msg );
 
 	S_FadeClientVolume( fadePercent, fadeOutSeconds, holdTime, fadeInSeconds );
 }
 
-void CL_ParseReliableEvent( sizebuf_t *msg, int flags )
+void CL_ParseReliableEvent( bitbuf_t *msg, int flags )
 {
 	int		event_index;
 	event_args_t	nullargs, args;
 	float		delay;
 
 	Mem_Set( &nullargs, 0, sizeof( nullargs ));
-	event_index = MSG_ReadWord( msg );		// read event index
-	delay = MSG_ReadWord( msg ) / 100.0f;		// read event delay
+	event_index = BF_ReadWord( msg );		// read event index
+	delay = BF_ReadWord( msg ) / 100.0f;		// read event delay
 	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// FIXME: zero-compressing
 
 	CL_QueueEvent( flags, event_index, delay, &args );
 }
 
-void CL_ParseEvent( sizebuf_t *msg )
+void CL_ParseEvent( bitbuf_t *msg )
 {
 	int	i, num_events;
 
-	num_events = MSG_ReadByte( msg );
+	num_events = BF_ReadByte( msg );
 
 	// parse events queue
 	for( i = 0 ; i < num_events; i++ )
@@ -490,7 +495,7 @@ void CL_ParseEvent( sizebuf_t *msg )
 CL_ParseServerData
 ==================
 */
-void CL_ParseServerData( sizebuf_t *msg )
+void CL_ParseServerData( bitbuf_t *msg )
 {
 	string	str;
 	int	i;
@@ -503,18 +508,18 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cls.state = ca_connected;
 
 	// parse protocol version number
-	i = MSG_ReadLong( msg );
+	i = BF_ReadLong( msg );
 	cls.serverProtocol = i;
 
 	if( i != PROTOCOL_VERSION )
 		Host_Error( "Server use invalid protocol (%i should be %i)\n", i, PROTOCOL_VERSION );
 
-	cl.servercount = MSG_ReadLong( msg );
-	cl.playernum = MSG_ReadByte( msg );
-	clgame.globals->maxClients = MSG_ReadByte( msg );
-	clgame.globals->maxEntities = MSG_ReadWord( msg );
-	com.strncpy( str, MSG_ReadString( msg ), MAX_STRING );
-	com.strncpy( clgame.maptitle, MSG_ReadString( msg ), MAX_STRING );
+	cl.servercount = BF_ReadLong( msg );
+	cl.playernum = BF_ReadByte( msg );
+	clgame.globals->maxClients = BF_ReadByte( msg );
+	clgame.globals->maxEntities = BF_ReadWord( msg );
+	com.strncpy( str, BF_ReadString( msg ), MAX_STRING );
+	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 
 	gameui.globals->maxClients = clgame.globals->maxClients;
 	com.strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
@@ -552,15 +557,15 @@ void CL_ParseServerData( sizebuf_t *msg )
 CL_ParseBaseline
 ==================
 */
-void CL_ParseBaseline( sizebuf_t *msg )
+void CL_ParseBaseline( bitbuf_t *msg )
 {
-	int		newnum;
+	int		newnum, timebase;
 	entity_state_t	nullstate;
 	entity_state_t	*baseline;
 	edict_t		*ent;
 
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
-	newnum = MSG_ReadWord( msg );
+	newnum = BF_ReadWord( msg );
 
 	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
 	if( newnum > clgame.globals->maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
@@ -572,8 +577,12 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	ent = EDICT_NUM( newnum );
 	if( ent->free ) CL_InitEdict( ent ); // initialize edict
 
+	if( cls.state == ca_active )
+		timebase = cl.frame.servertime;
+	else timebase = 1000; // sv.state == ss_loading
+
 	baseline = &clgame.baselines[newnum];
-	MSG_ReadDeltaEntity( msg, &nullstate, baseline, newnum );
+	MSG_ReadDeltaEntity( msg, &nullstate, baseline, newnum, cl.time );
 	CL_LinkEdict( ent, false ); // first entering, link always
 }
 
@@ -582,14 +591,14 @@ void CL_ParseBaseline( sizebuf_t *msg )
 CL_ParseConfigString
 ================
 */
-void CL_ParseConfigString( sizebuf_t *msg )
+void CL_ParseConfigString( bitbuf_t *msg )
 {
 	int	i;
 
-	i = MSG_ReadShort( msg );
+	i = BF_ReadShort( msg );
 	if( i < 0 || i >= MAX_CONFIGSTRINGS )
 		Host_Error( "configstring > MAX_CONFIGSTRINGS\n" );
-	com.strcpy( cl.configstrings[i], MSG_ReadString( msg ));
+	com.strcpy( cl.configstrings[i], BF_ReadString( msg ));
 		
 	// do something apropriate 
 	if( i == CS_SKYNAME && cl.video_prepped )
@@ -660,13 +669,10 @@ CL_ParseSetAngle
 set the view angle to this absolute value
 ================
 */
-void CL_ParseSetAngle( sizebuf_t *msg )
+void CL_ParseSetAngle( bitbuf_t *msg )
 {
-	cl.refdef.cl_viewangles[0] = MSG_ReadAngle32( msg );
-	cl.refdef.cl_viewangles[1] = MSG_ReadAngle32( msg );
-
-	if( cl.refdef.cl_viewangles[0] > 180 ) cl.refdef.cl_viewangles[0] -= 360;
-	if( cl.refdef.cl_viewangles[1] > 180 ) cl.refdef.cl_viewangles[1] -= 360;
+	cl.refdef.cl_viewangles[0] = BF_ReadBitAngle( msg, 16 );
+	cl.refdef.cl_viewangles[1] = BF_ReadBitAngle( msg, 16 );
 }
 
 /*
@@ -676,15 +682,11 @@ CL_ParseAddAngle
 add the view angle yaw
 ================
 */
-void CL_ParseAddAngle( sizebuf_t *msg )
+void CL_ParseAddAngle( bitbuf_t *msg )
 {
 	float	add_angle;
 	
-	add_angle = MSG_ReadAngle32( msg );
-
-	if( add_angle > 180.0f )
-		add_angle -= 360.0f;
-
+	add_angle = BF_ReadBitAngle( msg, 16 );
 	cl.refdef.cl_viewangles[1] += add_angle;
 }
 /*
@@ -694,10 +696,10 @@ CL_ParseCrosshairAngle
 offset crosshair angles
 ================
 */
-void CL_ParseCrosshairAngle( sizebuf_t *msg )
+void CL_ParseCrosshairAngle( bitbuf_t *msg )
 {
-	cl.refdef.crosshairangle[0] = MSG_ReadAngle8( msg );
-	cl.refdef.crosshairangle[1] = MSG_ReadAngle8( msg );
+	cl.refdef.crosshairangle[0] = BF_ReadBitAngle( msg, 8 );
+	cl.refdef.crosshairangle[1] = BF_ReadBitAngle( msg, 8 );
 	cl.refdef.crosshairangle[2] = 0.0f; // not used for screen space
 }
 
@@ -708,14 +710,14 @@ CL_RegisterUserMessage
 register new user message or update existing
 ================
 */
-void CL_RegisterUserMessage( sizebuf_t *msg )
+void CL_RegisterUserMessage( bitbuf_t *msg )
 {
 	char	*pszName;
 	int	svc_num, size;
 	
-	pszName = MSG_ReadString( msg );
-	svc_num = MSG_ReadByte( msg );
-	size = MSG_ReadByte( msg );
+	pszName = BF_ReadString( msg );
+	svc_num = BF_ReadByte( msg );
+	size = BF_ReadByte( msg );
 
 	// important stuff
 	if( size == 0xFF ) size = -1;
@@ -730,23 +732,23 @@ CL_UpdateUserinfo
 collect userinfo from all players
 ================
 */
-void CL_UpdateUserinfo( sizebuf_t *msg )
+void CL_UpdateUserinfo( bitbuf_t *msg )
 {
 	int		slot;
 	bool		active;
 	player_info_t	*player;
 
-	slot = MSG_ReadByte( msg );
+	slot = BF_ReadByte( msg );
 
 	if( slot >= MAX_CLIENTS )
 		Host_Error( "CL_ParseServerMessage: svc_updateuserinfo > MAX_CLIENTS\n" );
 
 	player = &cl.players[slot];
-	active = MSG_ReadByte( msg ) ? true : false;
+	active = BF_ReadByte( msg ) ? true : false;
 
 	if( active )
 	{
-		com.strncpy( player->userinfo, MSG_ReadString( msg ), sizeof( player->userinfo ));
+		com.strncpy( player->userinfo, BF_ReadString( msg ), sizeof( player->userinfo ));
 		com.strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
 		com.strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
 	}
@@ -760,13 +762,13 @@ CL_ServerInfo
 change serverinfo
 ==============
 */
-void CL_ServerInfo( sizebuf_t *msg )
+void CL_ServerInfo( bitbuf_t *msg )
 {
 	char	key[MAX_MSGLEN];
 	char	value[MAX_MSGLEN];
 
-	com.strncpy( key, MSG_ReadString( msg ), sizeof( key ));
-	com.strncpy( value, MSG_ReadString( msg ), sizeof( value ));
+	com.strncpy( key, BF_ReadString( msg ), sizeof( key ));
+	com.strncpy( value, BF_ReadString( msg ), sizeof( value ));
 	Info_SetValueForKey( cl.serverinfo, key, value );
 }
 
@@ -777,9 +779,9 @@ CL_ParseUserMessage
 handles all user messages
 ==============
 */
-void CL_ParseUserMessage( sizebuf_t *net_buffer, int svc_num )
+void CL_ParseUserMessage( bitbuf_t *msg, int svc_num )
 {
-	int	iSize;
+	int	i, iSize;
 	byte	*pbuf;
 
 	// NOTE: any user message parse on engine, not in client.dll
@@ -792,17 +794,31 @@ void CL_ParseUserMessage( sizebuf_t *net_buffer, int svc_num )
 
 	// unregister message can't be parsed
 	if( clgame.msg[svc_num].number != svc_num )
-		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
+	{
+		for( i = 0; i < MAX_USER_MESSAGES; i++ )
+		{
+			// across-transition problems... this is temporary solution
+			if( clgame.msg[i].number == svc_num )
+			{
+				MsgDev( D_WARN, "CL_RemapUserMsg: from %i to %i\n", svc_num, i );
+				svc_num = i;
+				break;
+			}
+		}
+
+		if( i == MAX_USER_MESSAGES )
+			Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
+	}
 
 	iSize = clgame.msg[svc_num].size;
 	pbuf = NULL;
 
 	// message with variable sizes receive an actual size as first byte
-	if( iSize == -1 ) iSize = MSG_ReadByte( net_buffer );
+	if( iSize == -1 ) iSize = BF_ReadByte( msg );
 	if( iSize > 0 ) pbuf = Mem_Alloc( clgame.private, iSize );
 
 	// parse user message into buffer
-	MSG_ReadData( net_buffer, pbuf, iSize );
+	BF_ReadBytes( msg, pbuf, iSize );
 
 	if( clgame.msg[svc_num].func ) clgame.msg[svc_num].func( clgame.msg[svc_num].name, iSize, pbuf );
 	else MsgDev( D_WARN, "CL_ParseUserMessage: %s not hooked\n", clgame.msg[svc_num].name );
@@ -821,29 +837,32 @@ ACTION MESSAGES
 CL_ParseServerMessage
 =====================
 */
-void CL_ParseServerMessage( sizebuf_t *msg )
+void CL_ParseServerMessage( bitbuf_t *msg )
 {
 	char	*s;
 	int	i, cmd;
 	int	bufStart;
 
-	cls_message_debug.parsing = true;	// begin parsing
-	starting_count = msg->readcount;	// updates each frame
+	cls_message_debug.parsing = true;		// begin parsing
+	starting_count = BF_GetNumBytesRead( msg );	// updates each frame
 	
 	// parse the message
 	while( 1 )
 	{
-		if( msg->error )
+		if( BF_CheckOverflow( msg ))
 		{
 			Host_Error( "CL_ParseServerMessage: bad server message\n" );
 			return;
 		}
 
 		// mark start position
-		bufStart = msg->readcount;
+		bufStart = BF_GetNumBytesRead( msg );
 
-		cmd = MSG_ReadByte( msg );
-		if( cmd == -1 ) break;
+		// end of message
+		if( BF_GetNumBitsLeft( msg ) < 8 )
+			break;		
+
+		cmd = BF_ReadByte( msg );
 
 		// record command for debugging spew on parse problem
 		CL_Parse_RecordCommand( cmd, bufStart );
@@ -875,7 +894,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;
 		case svc_stufftext:
-			s = MSG_ReadString( msg );
+			s = BF_ReadString( msg );
 			Cbuf_AddText( s );
 			break;
 		case svc_serverdata:
@@ -904,25 +923,25 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseAddAngle( msg );
 			break;
 		case svc_setview:
-			cl.refdef.viewentity = MSG_ReadWord( msg );
+			cl.refdef.viewentity = BF_ReadWord( msg );
 			break;
 		case svc_crosshairangle:
 			CL_ParseCrosshairAngle( msg );
 			break;
 		case svc_physinfo:
-			com.strncpy( cl.physinfo, MSG_ReadString( msg ), sizeof( cl.physinfo ));
+			com.strncpy( cl.physinfo, BF_ReadString( msg ), sizeof( cl.physinfo ));
 			break;
 		case svc_print:
-			i = MSG_ReadByte( msg );
+			i = BF_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
 				S_StartLocalSound( "misc/talk.wav" );	// FIXME: INTRESOURCE
-			MsgDev( D_INFO, "^6%s\n", MSG_ReadString( msg ));
+			MsgDev( D_INFO, "^6%s\n", BF_ReadString( msg ));
 			break;
 		case svc_centerprint:
-			CL_CenterPrint( MSG_ReadString( msg ), 0.35f );
+			CL_CenterPrint( BF_ReadString( msg ), 0.35f );
 			break;
 		case svc_setpause:
-			cl.refdef.paused = (MSG_ReadByte( msg ) != 0 );
+			cl.refdef.paused = (BF_ReadByte( msg ) != 0 );
 			break;
 		case svc_movevars:
 			CL_ParseMovevars( msg );

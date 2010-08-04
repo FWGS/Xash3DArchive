@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "server.h"
+#include "protocol.h"
 
 int SV_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 
@@ -40,10 +41,10 @@ int SV_FindIndex( const char *name, int start, int end, bool create )
 	if( sv.state != ss_loading )
 	{	
 		// send the update to everyone
-		MSG_Clear( &sv.multicast );
-		MSG_Begin( svc_configstring );
-		MSG_WriteShort( &sv.multicast, start + i );
-		MSG_WriteString( &sv.multicast, name );
+		BF_Clear( &sv.multicast );
+		BF_WriteByte( &sv.multicast, svc_configstring );
+		BF_WriteShort( &sv.multicast, start + i );
+		BF_WriteString( &sv.multicast, name );
 		MSG_Send( MSG_ALL, vec3_origin, NULL );
 	}
 	return i;
@@ -315,8 +316,8 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	sv.time = 1000;			// server spawn time it's always 1.0 second
 	
 	// initialize buffers
-	MSG_Init( &sv.multicast, sv.multicast_buf, sizeof( sv.multicast_buf ));
-	MSG_Init( &sv.signon, sv.signon_buf, sizeof( sv.signon_buf ));
+	BF_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
+	BF_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
 
 	// leave slots at start for clients only
 	for( i = 0; i < sv_maxclients->integer; i++ )

@@ -46,4 +46,6 @@ typedef float		vec_t;
 #define ColorIndex( c )	((( c ) - '0' ) & 7 )
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 
+typedef struct { byte r; byte g; byte b; } color24;
+
 #endif//BASETYPES_H

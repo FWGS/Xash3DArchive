@@ -765,8 +765,6 @@ Host_Init
 */
 void Host_Init( const int argc, const char **argv )
 {
-	char	*s;
-
 	host.state = HOST_INIT;	// initialzation started
 	host.type = g_Instance();
 
@@ -796,9 +794,6 @@ void Host_Init( const int argc, const char **argv )
 	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
 	host_serverstate = Cvar_Get( "host_serverstate", "0", 0, "displays current server state" );
-
-	s = va( "Xash3D %i/%g (hw build ^3%i^7)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
-	Cvar_Get( "version", s, CVAR_INIT, "engine current version" );
 
 	// content control
 	Cvar_Get( "violence_hgibs", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human gibs" );

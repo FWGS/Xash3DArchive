@@ -5,7 +5,9 @@
 
 #include "common.h"
 #include "server.h"
+#include "protocol.h"
 #include "net_sound.h"
+#include "net_encode.h"
 #include "byteorder.h"
 #include "matrix_lib.h"
 #include "pm_defs.h"
@@ -153,10 +155,10 @@ void SV_ConfigString( int index, const char *val )
 	if( sv.state != ss_loading )
 	{
 		// send the update to everyone
-		MSG_Clear( &sv.multicast );
-		MSG_Begin( svc_configstring );
-		MSG_WriteShort( &sv.multicast, index );
-		MSG_WriteString( &sv.multicast, val );
+		BF_Clear( &sv.multicast );
+		BF_WriteByte( &sv.multicast, svc_configstring );
+		BF_WriteShort( &sv.multicast, index );
+		BF_WriteString( &sv.multicast, val );
 		MSG_Send( MSG_ALL, vec3_origin, NULL );
 	}
 }
@@ -166,13 +168,13 @@ void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int m
 	ASSERT( origin );
 
 	// static decals are posters, it's always reliable
-	MSG_WriteByte( &sv.multicast, svc_bspdecal );
-	MSG_WritePos( &sv.multicast, origin );
-	MSG_WriteWord( &sv.multicast, decalIndex );
-	MSG_WriteShort( &sv.multicast, entityIndex );
+	BF_WriteByte( &sv.multicast, svc_bspdecal );
+	BF_WriteBitVec3Coord( &sv.multicast, origin );
+	BF_WriteWord( &sv.multicast, decalIndex );
+	BF_WriteShort( &sv.multicast, entityIndex );
 	if( entityIndex > 0 )
-		MSG_WriteWord( &sv.multicast, modelIndex );
-	MSG_WriteByte( &sv.multicast, flags );
+		BF_WriteWord( &sv.multicast, modelIndex );
+	BF_WriteByte( &sv.multicast, flags );
 	MSG_Send( MSG_INIT, NULL, NULL );
 }
 
@@ -505,7 +507,7 @@ void SV_FreeEdicts( void )
 	}
 }
 
-void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
+void SV_PlaybackEvent( bitbuf_t *msg, event_info_t *info )
 {
 	event_args_t	nullargs;
 
@@ -514,8 +516,8 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 
 	Mem_Set( &nullargs, 0, sizeof( nullargs ));
 
-	MSG_WriteWord( msg, info->index );			// send event index
-	MSG_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
+	BF_WriteWord( msg, info->index );			// send event index
+	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
 	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// FIXME: zero-compressing
 }
 
@@ -616,8 +618,8 @@ void SV_BaselineForEntity( edict_t *pEdict )
 			entity_state_t	nullstate;
 
 			Mem_Set( &nullstate, 0, sizeof( nullstate ));
-			MSG_WriteByte( &sv.multicast, svc_spawnbaseline );
-			MSG_WriteDeltaEntity( &nullstate, &sv_ent->s, &sv.multicast, true, true );
+			BF_WriteByte( &sv.multicast, svc_spawnbaseline );
+			MSG_WriteDeltaEntity( &nullstate, &sv_ent->s, &sv.multicast, true, sv.time );
 			MSG_DirectSend( MSG_ALL, vec3_origin, NULL );
 		}
 	}
@@ -757,6 +759,7 @@ int pfnModelIndex( const char *m )
 {
 	int	index;
 
+	if( !m || !m[0] ) return 0;
 	index = SV_FindIndex( m, CS_MODELS, MAX_MODELS, false );	
 	if( !index ) MsgDev( D_WARN, "SV_ModelIndex: %s not precached\n", m );
 
@@ -1436,17 +1439,17 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		entityIndex = ent->v.aiment->serialnumber;
 	else entityIndex = ent->serialnumber;
 
-	MSG_Begin( svc_sound );
-	MSG_WriteWord( &sv.multicast, flags );
-	MSG_WriteWord( &sv.multicast, sound_idx );
-	MSG_WriteByte( &sv.multicast, chan );
+	BF_WriteByte( &sv.multicast, svc_sound );
+	BF_WriteWord( &sv.multicast, flags );
+	BF_WriteWord( &sv.multicast, sound_idx );
+	BF_WriteByte( &sv.multicast, chan );
 
-	if( flags & SND_VOLUME ) MSG_WriteByte( &sv.multicast, vol * 255 );
-	if( flags & SND_ATTENUATION ) MSG_WriteByte( &sv.multicast, attn * 64 );
-	if( flags & SND_PITCH ) MSG_WriteByte( &sv.multicast, pitch );
+	if( flags & SND_VOLUME ) BF_WriteByte( &sv.multicast, vol * 255 );
+	if( flags & SND_ATTENUATION ) BF_WriteByte( &sv.multicast, attn * 64 );
+	if( flags & SND_PITCH ) BF_WriteByte( &sv.multicast, pitch );
 
-	MSG_WriteWord( &sv.multicast, entityIndex );
-	if( flags & SND_FIXED_ORIGIN ) MSG_WritePos( &sv.multicast, origin );
+	BF_WriteWord( &sv.multicast, entityIndex );
+	if( flags & SND_FIXED_ORIGIN ) BF_WriteBitVec3Coord( &sv.multicast, origin );
 
 	MSG_Send( msg_dest, origin, NULL );
 }
@@ -1519,18 +1522,18 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	MSG_Begin( svc_ambientsound );
-	MSG_WriteWord( &sv.multicast, flags );
-	MSG_WriteWord( &sv.multicast, sound_idx );
-	MSG_WriteByte( &sv.multicast, CHAN_AUTO );
+	BF_WriteByte( &sv.multicast, svc_ambientsound );
+	BF_WriteWord( &sv.multicast, flags );
+	BF_WriteWord( &sv.multicast, sound_idx );
+	BF_WriteByte( &sv.multicast, CHAN_AUTO );
 
-	if( flags & SND_VOLUME ) MSG_WriteByte( &sv.multicast, vol * 255 );
-	if( flags & SND_ATTENUATION ) MSG_WriteByte( &sv.multicast, attn * 64 );
-	if( flags & SND_PITCH ) MSG_WriteByte( &sv.multicast, pitch );
+	if( flags & SND_VOLUME ) BF_WriteByte( &sv.multicast, vol * 255 );
+	if( flags & SND_ATTENUATION ) BF_WriteByte( &sv.multicast, attn * 64 );
+	if( flags & SND_PITCH ) BF_WriteByte( &sv.multicast, pitch );
 
 	// plays from fixed position
-	MSG_WriteWord( &sv.multicast, number );
-	MSG_WritePos( &sv.multicast, pos );
+	BF_WriteWord( &sv.multicast, number );
+	BF_WriteBitVec3Coord( &sv.multicast, pos );
 
 	MSG_Send( msg_dest, origin, NULL );
 }
@@ -1826,8 +1829,8 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 
 	if( SV_IsValidCmd( buffer ))
 	{
-		MSG_WriteByte( &sv.multicast, svc_stufftext );
-		MSG_WriteString( &sv.multicast, buffer );
+		BF_WriteByte( &sv.multicast, svc_stufftext );
+		BF_WriteString( &sv.multicast, buffer );
 		MSG_Send( MSG_ONE, NULL, client->edict );
 	}
 	else MsgDev( D_ERROR, "Tried to stuff bad command %s\n", buffer );
@@ -1851,16 +1854,16 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 		return;
 	}
 
-	MSG_WriteByte( &sv.multicast, svc_particle );
-	MSG_WritePos( &sv.multicast, org );
+	BF_WriteByte( &sv.multicast, svc_particle );
+	BF_WriteBitVec3Coord( &sv.multicast, org );
 
 	for( i = 0; i < 3; i++ )
 	{
 		v = bound( -128, dir[i] * 16, 127 );
-		MSG_WriteChar( &sv.multicast, v );
+		BF_WriteChar( &sv.multicast, v );
 	}
-	MSG_WriteByte( &sv.multicast, count );
-	MSG_WriteByte( &sv.multicast, color );
+	BF_WriteByte( &sv.multicast, count );
+	BF_WriteByte( &sv.multicast, color );
 	MSG_Send( MSG_ALL, org, NULL );
 }
 
@@ -1923,7 +1926,7 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 		svgame.msg_name = svgame.msg[svgame.msg_index].name;
 	else svgame.msg_name = NULL;
 
-	MSG_Begin( svgame.msg_index );
+	BF_WriteByte( &sv.multicast, svgame.msg_index );
 
 	// save message destination
 	if( pOrigin ) VectorCopy( pOrigin, svgame.msg_org );
@@ -1932,8 +1935,8 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 	if( svgame.msg[svgame.msg_index].size == -1 )
 	{
 		// variable sized messages sent size as first byte
-		svgame.msg_size_index = sv.multicast.cursize;
-		MSG_WriteByte( &sv.multicast, 0 ); // reserve space for now
+		svgame.msg_size_index = BF_GetNumBytesWritten( &sv.multicast );
+		BF_WriteByte( &sv.multicast, 0 ); // reserve space for now
 	}
 	else svgame.msg_size_index = -1;
 
@@ -1966,7 +1969,7 @@ void pfnMessageEnd( void )
 		if( expsize != realsize )
 		{
 			MsgDev( D_ERROR, "SV_Message: %s expected %i bytes, it written %i. Ignored.\n", name, expsize, realsize );
-			MSG_Clear( &sv.multicast );
+			BF_Clear( &sv.multicast );
 			return;
 		}
 	}
@@ -1976,22 +1979,22 @@ void pfnMessageEnd( void )
 		if( svgame.msg_realsize > 255 )
 		{
 			MsgDev( D_ERROR, "SV_Message: %s too long (more than 255 bytes)\n", name );
-			MSG_Clear( &sv.multicast );
+			BF_Clear( &sv.multicast );
 			return;
 		}
 		else if( svgame.msg_realsize <= 0 )
 		{
 			MsgDev( D_ERROR, "SV_Message: %s writes NULL message\n", name );
-			MSG_Clear( &sv.multicast );
+			BF_Clear( &sv.multicast );
 			return;
 		}
-		sv.multicast.data[svgame.msg_size_index] = svgame.msg_realsize;
+		sv.multicast.pData[svgame.msg_size_index] = svgame.msg_realsize;
 	}
 	else
 	{
 		// this should never happen
 		MsgDev( D_ERROR, "SV_Message: %s have encountered error\n", name );
-		MSG_Clear( &sv.multicast );
+		BF_Clear( &sv.multicast );
 		return;
 	}
 
@@ -2009,7 +2012,7 @@ pfnWriteByte
 void pfnWriteByte( int iValue )
 {
 	if( iValue == -1 ) iValue = 0xFF; // convert char to byte 
-	_MSG_WriteBits( &sv.multicast, (int)iValue, svgame.msg_name, NET_BYTE, __FILE__, __LINE__ );
+	BF_WriteByte( &sv.multicast, iValue );
 	svgame.msg_realsize++;
 }
 
@@ -2021,7 +2024,7 @@ pfnWriteChar
 */
 void pfnWriteChar( int iValue )
 {
-	_MSG_WriteBits( &sv.multicast, (int)iValue, svgame.msg_name, NET_CHAR, __FILE__, __LINE__ );
+	BF_WriteChar( &sv.multicast, iValue );
 	svgame.msg_realsize++;
 }
 
@@ -2033,7 +2036,7 @@ pfnWriteShort
 */
 void pfnWriteShort( int iValue )
 {
-	_MSG_WriteBits( &sv.multicast, (int)iValue, svgame.msg_name, NET_SHORT, __FILE__, __LINE__ );
+	BF_WriteShort( &sv.multicast, iValue );
 	svgame.msg_realsize += 2;
 }
 
@@ -2045,7 +2048,7 @@ pfnWriteLong
 */
 void pfnWriteLong( int iValue )
 {
-	_MSG_WriteBits( &sv.multicast, (int)iValue, svgame.msg_name, NET_LONG, __FILE__, __LINE__ );
+	BF_WriteLong( &sv.multicast, iValue );
 	svgame.msg_realsize += 4;
 }
 
@@ -2057,7 +2060,7 @@ pfnWriteAngle
 */
 void pfnWriteAngle( float flValue )
 {
-	MSG_WriteAngle16( &sv.multicast, flValue );
+	BF_WriteBitAngle( &sv.multicast, flValue, 16 );
 	svgame.msg_realsize += 2;
 }
 
@@ -2069,10 +2072,7 @@ pfnWriteCoord
 */
 void pfnWriteCoord( float flValue )
 {
-	ftol_t	dat;
-
-	dat.f = flValue;
-	_MSG_WriteBits( &sv.multicast, dat.l, svgame.msg_name, NET_FLOAT, __FILE__, __LINE__ );
+	BF_WriteFloat( &sv.multicast, flValue );
 	svgame.msg_realsize += 4;
 }
 
@@ -2084,11 +2084,12 @@ pfnWriteString
 */
 void pfnWriteString( const char *sz )
 {
-	int	cur_size = sv.multicast.cursize;
+	int	cur_size = BF_GetNumBytesWritten( &sv.multicast );
 	int	total_size;
 
-	MSG_WriteStringLine( &sv.multicast, sz );	// allow \n, \r, \t
-	total_size = sv.multicast.cursize - cur_size;
+	// FIXME: replace with BF_WriteStringLine
+	BF_WriteString( &sv.multicast, sz );	// allow \n, \r, \t
+	total_size = BF_GetNumBytesWritten( &sv.multicast ) - cur_size;
 
 	// NOTE: some messages with constant string length can be marked as known sized
 	svgame.msg_realsize += total_size;
@@ -2103,8 +2104,8 @@ pfnWriteEntity
 void pfnWriteEntity( int iValue )
 {
 	if( iValue < 0 || iValue >= svgame.globals->numEntities )
-		Host_Error( "MSG_WriteEntity: invalid entnumber %i\n", iValue );
-	MSG_WriteShort( &sv.multicast, iValue );
+		Host_Error( "BF_WriteEntity: invalid entnumber %i\n", iValue );
+	BF_WriteShort( &sv.multicast, iValue );
 	svgame.msg_realsize += 2;
 }
 
@@ -2338,10 +2339,10 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 
 	if( sv.state == ss_active )
 	{
-		MSG_WriteByte( &sv.multicast, svc_usermessage );
-		MSG_WriteString( &sv.multicast, pszName );
-		MSG_WriteByte( &sv.multicast, i );
-		MSG_WriteByte( &sv.multicast, (byte)iSize );
+		BF_WriteByte( &sv.multicast, svc_usermessage );
+		BF_WriteString( &sv.multicast, pszName );
+		BF_WriteByte( &sv.multicast, i );
+		BF_WriteByte( &sv.multicast, (byte)iSize );
 		MSG_Send( MSG_ALL, vec3_origin, NULL );
 	}
 	return i;
@@ -2437,8 +2438,8 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 		break;
 	case print_center:
 		if( fake ) return;
-		MSG_Begin( svc_centerprint );
-		MSG_WriteString( &sv.multicast, szMsg );
+		BF_WriteByte( &sv.multicast, svc_centerprint );
+		BF_WriteString( &sv.multicast, szMsg );
 		MSG_Send( MSG_ONE, NULL, client->edict );
 		break;
 	}
@@ -2539,9 +2540,9 @@ void pfnCrosshairAngle( const edict_t *pClient, float pitch, float yaw )
 	// fakeclients ignore it silently
 	if( pClient->v.flags & FL_FAKECLIENT ) return;
 
-	MSG_Begin( svc_crosshairangle );
-	MSG_WriteAngle8( &sv.multicast, pitch );
-	MSG_WriteAngle8( &sv.multicast, yaw );
+	BF_WriteByte( &sv.multicast, svc_crosshairangle );
+	BF_WriteBitAngle( &sv.multicast, pitch, 8 );
+	BF_WriteBitAngle( &sv.multicast, yaw, 8 );
 	MSG_Send( MSG_ONE, vec3_origin, pClient );
 }
 
@@ -2580,8 +2581,8 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 	// fakeclients ignore to send client message
 	if( pClient->v.flags & FL_FAKECLIENT ) return;
 
-	MSG_WriteByte( &client->netchan.message, svc_setview );
-	MSG_WriteWord( &client->netchan.message, NUM_FOR_EDICT( pViewent ));
+	BF_WriteByte( &client->netchan.message, svc_setview );
+	BF_WriteWord( &client->netchan.message, NUM_FOR_EDICT( pViewent ));
 	MSG_Send( MSG_ONE, NULL, client->edict );
 }
 
@@ -2710,11 +2711,11 @@ void pfnFadeClientVolume( const edict_t *pEdict, float fadePercent, float fadeOu
 		return;
 	}
 
-	MSG_WriteByte( &sv.multicast, svc_soundfade );
-	MSG_WriteFloat( &sv.multicast, fadePercent );
-	MSG_WriteFloat( &sv.multicast, fadeOutSeconds );
-	MSG_WriteFloat( &sv.multicast, holdTime );
-	MSG_WriteFloat( &sv.multicast, fadeInSeconds );
+	BF_WriteByte( &sv.multicast, svc_soundfade );
+	BF_WriteFloat( &sv.multicast, fadePercent );
+	BF_WriteFloat( &sv.multicast, fadeOutSeconds );
+	BF_WriteFloat( &sv.multicast, holdTime );
+	BF_WriteFloat( &sv.multicast, fadeInSeconds );
 	MSG_Send( MSG_ONE, NULL, cl->edict );
 }
 
@@ -2778,8 +2779,9 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 	cmd.upmove = upmove;
 	cmd.buttons = buttons;
 	cmd.impulse = impulse;
-	cmd.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
 	cmd.msec = msec;
+
+	cl->random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
 
 	SV_PreRunCmd( cl, &cmd );
 	SV_RunCmd( cl, &cmd );
@@ -3088,7 +3090,7 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 			info.flags = 0; // server ignore flags
 
 			// skipping queue, write in reliable datagram
-			MSG_WriteByte( &cl->reliable, svc_event_reliable );
+			BF_WriteByte( &cl->reliable, svc_event_reliable );
 			SV_PlaybackEvent( &cl->reliable, &info );
 			continue;
 		}
@@ -3740,6 +3742,8 @@ void SV_UnloadProgs( void )
 {
 	SV_DeactivateServer ();
 
+	Delta_Shutdown ();
+
 	svgame.dllFuncs.pfnGameShutdown ();
 
 	if( sys_sharedstrings->integer )
@@ -3830,6 +3834,8 @@ bool SV_LoadProgs( const char *name )
 
 	// initialize pm_shared
 	SV_InitClientMove();
+
+	Delta_Init ();
 
 	// fire once
 	MsgDev( D_INFO, "Dll loaded for mod %s\n", svgame.dllFuncs.pfnGetGameDescription() );

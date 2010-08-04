@@ -8,6 +8,8 @@
 #include "matrix_lib.h"
 #include "const.h"
 #include "pm_defs.h"
+#include "protocol.h"
+#include "net_encode.h"
 
 #define CONNECTION_PROBLEM_TIME	15.0 * 1000	// 15 seconds
 
@@ -74,6 +76,9 @@ usercmd_t CL_CreateCmd( void )
 
 	clgame.dllFuncs.pfnCreateMove( &cmd, host.inputmsec, ( cls.state == ca_active && !cl.refdef.paused ));
 
+	// random seed for predictable random values
+	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
+
 	// never let client.dll calc frametime for player
 	// because is potential backdoor for cheating
 	cmd.msec = ms;
@@ -98,12 +103,12 @@ During normal gameplay, a client packet will contain something like:
 */
 void CL_WritePacket( void )
 {
-	sizebuf_t		buf;
-	bool		noDelta = false;
-	byte		data[MAX_MSGLEN];
-	usercmd_t		*cmd, *oldcmd;
-	usercmd_t		nullcmd;
-	int		key;
+	bitbuf_t	buf;
+	bool	noDelta = false;
+	byte	data[MAX_MSGLEN];
+	usercmd_t	*cmd, *oldcmd;
+	usercmd_t	nullcmd;
+	int	key, size;
 
 	// don't send anything if playing back a demo
 	if( cls.demoplayback || cls.state == ca_cinematic )
@@ -115,7 +120,7 @@ void CL_WritePacket( void )
 	if( cls.state == ca_connected )
 	{
 		// just update reliable
-		if( cls.netchan.message.cursize || cls.realtime - cls.netchan.last_sent > 1000 )
+		if( BF_GetNumBytesWritten( &cls.netchan.message ) || cls.realtime - cls.netchan.last_sent > 1000 )
 			Netchan_Transmit( &cls.netchan, 0, NULL );
 		return;
 	}
@@ -136,23 +141,27 @@ void CL_WritePacket( void )
 	if( userinfo->modified )
 	{
 		userinfo->modified = false;
-		MSG_WriteByte( &cls.netchan.message, clc_userinfo );
-		MSG_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
+		BF_WriteByte( &cls.netchan.message, clc_userinfo );
+		BF_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
 	}
 
-	MSG_Init( &buf, data, sizeof( data ));
+	BF_Init( &buf, "ClientData", data, sizeof( data ));
+
+	// write new random_seed
+	BF_WriteByte( &buf, clc_random_seed );
+	BF_WriteUBitLong( &buf, cl.random_seed, 32 );	// full range
 
 	// begin a client move command
-	MSG_WriteByte( &buf, clc_move );
+	BF_WriteByte( &buf, clc_move );
 
 	// save the position for a checksum byte
-	key = buf.cursize;
-	MSG_WriteByte( &buf, 0 );
+	key = BF_GetNumBytesWritten( &buf );
+	BF_WriteByte( &buf, 0 );
 
 	// let the server know what the last frame we
 	// got was, so the next message can be delta compressed
-	if( noDelta ) MSG_WriteLong( &buf, -1 ); // no compression
-	else MSG_WriteLong( &buf, cl.frame.serverframe );
+	if( noDelta ) BF_WriteLong( &buf, -1 ); // no compression
+	else BF_WriteLong( &buf, cl.frame.serverframe );
 
 	// send this and the previous cmds in the message, so
 	// if the last packet was dropped, it can be recovered
@@ -169,10 +178,11 @@ void CL_WritePacket( void )
 	MSG_WriteDeltaUsercmd( &buf, oldcmd, cmd );
 
 	// calculate a checksum over the move commands
-	buf.data[key] = CRC_Sequence( buf.data + key + 1, buf.cursize - key - 1, cls.netchan.outgoing_sequence );
+	size = BF_GetNumBytesWritten( &buf ) - key - 1;
+	buf.pData[key] = CRC_Sequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
 
 	// deliver the message
-	Netchan_Transmit( &cls.netchan, buf.cursize, buf.data );
+	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
 }
 
 /*
@@ -503,7 +513,7 @@ void CL_PostRunCmd( edict_t *clent, usercmd_t *ucmd )
 {
 	if( !clent ) return;
 	clgame.pmove->runfuncs = false; // all next calls ignore footstep sounds
-	clgame.dllFuncs.pfnCmdEnd( clent, ucmd, ucmd->random_seed );
+	clgame.dllFuncs.pfnCmdEnd( clent, ucmd, cl.random_seed );
 }
 
 /*
@@ -560,6 +570,7 @@ void CL_PredictMovement( void )
 	int		frame;
 	int		ack, current;
 	edict_t		*player, *viewent;
+	clientdata_t	*cd;
 	usercmd_t		*cmd;
 
 	if( cls.state != ca_active ) return;
@@ -567,6 +578,7 @@ void CL_PredictMovement( void )
 
 	player = CL_GetLocalPlayer ();
 	viewent = CL_GetEdictByIndex( cl.refdef.viewentity );
+	cd = &cl.frame.cd;
 
 	if( cls.demoplayback && CL_IsValidEdict( viewent ))
 	{
@@ -604,10 +616,10 @@ void CL_PredictMovement( void )
 
 	// setup initial pmove state
 	VectorCopy( player->v.movedir, clgame.pmove->movedir );
-	VectorCopy( player->pvClientData->current.origin, clgame.pmove->origin );
-	VectorCopy( player->pvClientData->current.velocity, clgame.pmove->velocity );
+	VectorCopy( cd->origin, clgame.pmove->origin );
+	VectorCopy( cd->velocity, clgame.pmove->velocity );
 	VectorCopy( player->pvClientData->current.basevelocity, clgame.pmove->basevelocity );
-	VectorCopy( player->pvClientData->current.viewoffset, player->v.view_ofs );
+	VectorCopy( cd->view_ofs, player->v.view_ofs );
 	clgame.pmove->flWaterJumpTime = player->v.teleport_time;
 	clgame.pmove->onground = player->v.groundentity;
 	clgame.pmove->usehull = (player->pvClientData->current.flags & FL_DUCKING) ? 1 : 0; // reset hull

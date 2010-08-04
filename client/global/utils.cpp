@@ -23,7 +23,7 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 	if( szMessage != NULL )
 		sprintf( szOut, "ASSERT FAILED:\n %s \n(%s@%d)\n%s", szExpr, szFile, szLine, szMessage );
 	else sprintf( szOut, "ASSERT FAILED:\n %s \n(%s@%d)", szExpr, szFile, szLine );
-	HOST_ERROR( szOut );
+	ALERT( at_error, szOut );
 }
 #endif	// DEBUG
 

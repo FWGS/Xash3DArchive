@@ -41,58 +41,63 @@ typedef struct entity_state_s
 	string_t		classname;	// edict classname
 	int		ed_flags;		// engine clearing this at end of server frame
 
-	// physics information
+	// Fields which can be transitted and reconstructed over the network stream
 	vec3_t		origin;
 	vec3_t		angles;		// entity angles, not viewangles
-	solid_t		solid;		// entity solid
-	movetype_t	movetype;		// entity movetype
-	float		friction;		// friction, for prediction.
-	int		gravity;		// gravity multiplier
-	int		aiment;		// attached entity
-	int		owner;		// projectiles owner
-	int		groundent;	// onground edict num, valid only if FL_ONGROUND is set, else -1
-	vec3_t		mins;		// entity bbox mins
-	vec3_t		maxs;		// entity bbox maxs
-	vec3_t		velocity;		// for predicting & tracing
-	vec3_t		basevelocity;	// for predicting & tracing
-	vec3_t		oldorigin;	// portal pvs, lerping state, etc
-	int		contents;		// for predicting & tracing on client
+	int		modelindex;
+	int		sequence;
+	float		frame;
+	int		colormap;
+	short		skin;
+	short		solid;
+	int		effects;
+	float		scale;
+	byte		eflags;
 
-	// model state
-	int		modelindex;	// general modelindex
-	int		colormap;		// change base color for some textures or sprite frames
-	float		scale;		// model or sprite scale, affects to physics too
-	float		frame;		// % playback position in animation sequences (0..255)
-	int		skin;		// skin for studiomodels
-	int		body;		// sub-model selection for studiomodels
-	float		localtime;	// pev->ltime for monsters for right lerping on platforms, trains etc
-	float		animtime;		// auto-animating time
-	float		framerate;	// custom framerate, specified by QC
-	int		sequence;		// animation sequence (0 - 255)
-	int		blending[16];	// studio animation blending
-	int		controller[16];	// studio bone controllers
-	int		flags;		// v.flags
-	int		effects;		// effect flags like q1 and hl1
-	int		renderfx;		// render effects same as hl1
-	float		renderamt;	// alpha value or like somewhat
-	vec3_t		rendercolor;	// hl1 legacy stuff, working, but not needed
-	int		rendermode;	// hl1 legacy stuff, working, but not needed
+	// Render information
+	int		rendermode;
+	int		renderamt;
+	color24		rendercolor;
+	int		renderfx;
+
+	int		movetype;
+	float		animtime;
+	float		framerate;
+	int		body;
+	byte		controller[4];
+	byte		blending[4];
+	vec3_t		velocity;
+
+	// Send bbox down to client for use during prediction.
+	vec3_t		mins;    
+	vec3_t		maxs;
+
+	int		aiment;
+	int		owner;		// If owned by a player, the index of that player ( for projectiles )
+	float		friction;		// Friction, for prediction.       
+	float		gravity;		// Gravity multiplier		
 
 	// client specific
-	vec3_t		punch_angles;	// add to view direction to get render angles 
-	vec3_t		viewangles;	// already calculated view angles on server-side
-	vec3_t		viewoffset;	// viewoffset over ground
-	int		gaitsequence;	// client\nps\bot gaitsequence
-	int		viewmodel;	// contains viewmodel index
-	int		weaponmodel;	// contains weaponmodel index
-	float		idealpitch;	// client idealpitch
-	float		maxspeed;		// min( pev->maxspeed, sv_maxspeed->value )
-	float		health;		// client health (other parms can be send by custom messages)
-	int		weapons;		// weapon flags
-	float		fov;		// horizontal field of view
-	int		iStepLeft;	// synched footsteps
-	float		flFallVelocity;	// how fast we are falling 
-	int		weaponanim;	// to see weapon animation of other players
+	int		team;
+	int		playerclass;
+	int		health;
+	int		spectator;  
+	int		weaponmodel;
+	int		gaitsequence;
+	vec3_t		basevelocity;	// If standing on conveyor, e.g.   
+	int		usehull;		// Use the crouched hull, or the regular player hull.		
+	int		oldbuttons;	// Latched buttons last time state updated.     
+	int		onground;		// -1 = in air, else pmove entity number		
+	int		iStepLeft;
+	float		flFallVelocity;	// How fast we are falling  
+	float		fov;
+	int		weaponanim;
+
+	// parametric movement overrides
+	vec3_t		startpos;
+	vec3_t		endpos;
+	float		impacttime;
+	float		starttime;
 
 	// for mods
 	int		iuser1;
@@ -108,6 +113,12 @@ typedef struct entity_state_s
 	vec3_t		vuser3;
 	vec3_t		vuser4;
 
+	// FIXME: old xash variables needs to be removed
+	int		flags;
+	float		maxspeed;
+	float		idealpitch;
+	vec3_t		oldorigin;	// FIXME: needs to be removed
+	vec3_t		viewangles;	// already calculated view angles on server-side
 } entity_state_t;
 
 typedef struct clientdata_s

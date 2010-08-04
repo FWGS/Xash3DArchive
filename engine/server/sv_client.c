@@ -6,6 +6,8 @@
 #include "common.h"
 #include "const.h"
 #include "server.h"
+#include "protocol.h"
+#include "net_encode.h"
 
 #define MAX_FORWARD		6
 
@@ -203,8 +205,8 @@ gotnewcl:
 	Netchan_OutOfBandPrint( NS_SERVER, from, "client_connect" );
 
 	Netchan_Setup( NS_SERVER, &newcl->netchan, from, qport );
-	MSG_Init( &newcl->reliable, newcl->reliable_buf, sizeof( newcl->reliable_buf ));	// reliable buf
-	MSG_Init( &newcl->datagram, newcl->datagram_buf, sizeof( newcl->datagram_buf ));	// datagram buf
+	BF_Init( &newcl->reliable, "Reliable", newcl->reliable_buf, sizeof( newcl->reliable_buf )); // reliable buf
+	BF_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
 
 	newcl->state = cs_connected;
 	newcl->lastmessage = svs.realtime;
@@ -333,7 +335,7 @@ void SV_DropClient( sv_client_t *drop )
 
 	// add the disconnect
 	if(!( drop->edict && (drop->edict->v.flags & FL_FAKECLIENT )))
-		MSG_WriteByte( &drop->netchan.message, svc_disconnect );
+		BF_WriteByte( &drop->netchan.message, svc_disconnect );
 
 	// let the game known about client state
 	if( drop->edict->v.flags & FL_SPECTATOR )
@@ -403,9 +405,9 @@ void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 		break;
 	case RD_CLIENT:
 		if( !sv_client ) return; // client not set
-		MSG_WriteByte( &sv_client->netchan.message, svc_print );
-		MSG_WriteByte( &sv_client->netchan.message, PRINT_HIGH );
-		MSG_WriteString( &sv_client->netchan.message, buf );
+		BF_WriteByte( &sv_client->netchan.message, svc_print );
+		BF_WriteByte( &sv_client->netchan.message, PRINT_HIGH );
+		BF_WriteString( &sv_client->netchan.message, buf );
 		break;
 	case RD_NONE:
 		MsgDev( D_ERROR, "SV_FlushRedirect: %s: invalid destination\n", NET_AdrToString( adr ));
@@ -554,14 +556,14 @@ Shift down the remaining args
 Redirect all printfs
 ===============
 */
-void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
+void SV_RemoteCommand( netadr_t from, bitbuf_t *msg )
 {
 	char		remaining[1024];
 	static char	outputbuf[MAX_MSGLEN - 16];
 	int		i;
 
-	if(!Rcon_Validate()) MsgDev(D_INFO, "Bad rcon from %s:\n%s\n", NET_AdrToString( from ), msg->data + 4 );
-	else MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), msg->data + 4 );
+	if(!Rcon_Validate()) MsgDev(D_INFO, "Bad rcon from %s:\n%s\n", NET_AdrToString( from ), BF_GetData( msg ) + 4 );
+	else MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), BF_GetData( msg ) + 4 );
 	SV_BeginRedirect( from, RD_PACKET, outputbuf, MAX_MSGLEN - 16, SV_FlushRedirect );
 
 	if( !Rcon_Validate( ))
@@ -585,33 +587,33 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 ===================
 SV_FullClientUpdate
 
-Writes all update values to a sizebuf
+Writes all update values to a bitbuf
 ===================
 */
-void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
+void SV_FullClientUpdate( sv_client_t *cl, bitbuf_t *msg )
 {
 	int	i;
 	char	info[MAX_INFO_STRING];
 	
 	i = cl - svs.clients;
 
-	MSG_WriteByte( msg, svc_updateuserinfo );
-	MSG_WriteByte( msg, i );
+	BF_WriteByte( msg, svc_updateuserinfo );
+	BF_WriteByte( msg, i );
 
 	if( cl->name[0] )
 	{
-		MSG_WriteByte( msg, true );
+		BF_WriteByte( msg, true );
 
 		com.strncpy( info, cl->userinfo, sizeof( info ));
 
 		// remove server passwords, etc.
 		Info_RemovePrefixedKeys( info, '_' );
-		MSG_WriteString( msg, info );
+		BF_WriteString( msg, info );
 	}
-	else MSG_WriteByte( msg, false );
+	else BF_WriteByte( msg, false );
 	
 	MSG_DirectSend( MSG_ALL, vec3_origin, NULL );
-	MSG_Clear( msg );
+	BF_Clear( msg );
 }
 
 void SV_RefreshUserinfo( void )
@@ -632,14 +634,14 @@ this is send all movevars values when client connected
 otherwise see code SV_UpdateMovevars()
 ===================
 */
-void SV_UpdatePhysinfo( sv_client_t *cl, sizebuf_t *msg )
+void SV_UpdatePhysinfo( sv_client_t *cl, bitbuf_t *msg )
 {
 	movevars_t	nullmovevars;
 
 	Mem_Set( &nullmovevars, 0, sizeof( nullmovevars ));
-	MSG_WriteDeltaMovevars( msg, &nullmovevars, &svgame.movevars );
+	BF_WriteDeltaMovevars( msg, &nullmovevars, &svgame.movevars );
 	MSG_DirectSend( MSG_ONE, NULL, cl->edict );
-	MSG_Clear( msg );
+	BF_Clear( msg );
 }
 
 /*
@@ -687,9 +689,9 @@ void SV_PutClientInServer( edict_t *ent )
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
 		{
-			MSG_WriteByte( &sv.multicast, svc_setangle );
-			MSG_WriteAngle32( &sv.multicast, ent->v.angles[0] );
-			MSG_WriteAngle32( &sv.multicast, ent->v.angles[1] );
+			BF_WriteByte( &sv.multicast, svc_setangle );
+			BF_WriteBitAngle( &sv.multicast, ent->v.angles[0], 16 );
+			BF_WriteBitAngle( &sv.multicast, ent->v.angles[1], 16 );
 			MSG_DirectSend( MSG_ONE, vec3_origin, client->edict );
 			ent->v.fixangle = 0;
 		}
@@ -701,10 +703,10 @@ void SV_PutClientInServer( edict_t *ent )
 	if( !( ent->v.flags & FL_FAKECLIENT ))
 	{
 		// copy signon buffer
-		MSG_WriteData( &client->netchan.message, sv.signon.data, sv.signon.cursize );
+		BF_WriteBits( &client->netchan.message, BF_GetData( &sv.signon ), BF_GetNumBitsWritten( &sv.signon ));
 	
-		MSG_WriteByte( &client->netchan.message, svc_setview );
-		MSG_WriteWord( &client->netchan.message, NUM_FOR_EDICT( client->edict ));
+		BF_WriteByte( &client->netchan.message, svc_setview );
+		BF_WriteWord( &client->netchan.message, NUM_FOR_EDICT( client->edict ));
 		MSG_Send( MSG_ONE, NULL, client->edict );
 	}
 
@@ -728,8 +730,8 @@ void SV_TogglePause( const char *msg )
 	if( msg ) SV_BroadcastPrintf( PRINT_HIGH, "%s", msg );
 
 	// send notification to all clients
-	MSG_Begin( svc_setpause );
-	MSG_WriteByte( &sv.multicast, sv.paused );
+	BF_WriteByte( &sv.multicast, svc_setpause );
+	BF_WriteByte( &sv.multicast, sv.paused );
 	MSG_Send( MSG_ALL, vec3_origin, NULL );
 }
 
@@ -762,14 +764,14 @@ void SV_New_f( sv_client_t *cl )
 	playernum = cl - svs.clients;
 
 	// send the serverdata
-	MSG_WriteByte( &cl->netchan.message, svc_serverdata );
-	MSG_WriteLong( &cl->netchan.message, PROTOCOL_VERSION );
-	MSG_WriteLong( &cl->netchan.message, svs.spawncount );
-	MSG_WriteByte( &cl->netchan.message, playernum );
-	MSG_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
-	MSG_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
-	MSG_WriteString( &cl->netchan.message, sv.configstrings[CS_NAME] );
-	MSG_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message ));	// Map Message
+	BF_WriteByte( &cl->netchan.message, svc_serverdata );
+	BF_WriteLong( &cl->netchan.message, PROTOCOL_VERSION );
+	BF_WriteLong( &cl->netchan.message, svs.spawncount );
+	BF_WriteByte( &cl->netchan.message, playernum );
+	BF_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
+	BF_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
+	BF_WriteString( &cl->netchan.message, sv.configstrings[CS_NAME] );
+	BF_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message ));	// Map Message
 
 	// refresh userinfo on spawn
 	SV_RefreshUserinfo();
@@ -784,8 +786,8 @@ void SV_New_f( sv_client_t *cl )
 		Mem_Set( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
 		// begin fetching configstrings
-		MSG_WriteByte( &cl->netchan.message, svc_stufftext );
-		MSG_WriteString( &cl->netchan.message, va( "cmd configstrings %i %i\n", svs.spawncount, 0 ));
+		BF_WriteByte( &cl->netchan.message, svc_stufftext );
+		BF_WriteString( &cl->netchan.message, va( "cmd configstrings %i %i\n", svs.spawncount, 0 ));
 	}
 }
 
@@ -816,13 +818,13 @@ void SV_Configstrings_f( sv_client_t *cl )
 	start = com.atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( cl->netchan.message.cursize < (MAX_MSGLEN / 2) && start < MAX_CONFIGSTRINGS )
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_CONFIGSTRINGS )
 	{
 		if( sv.configstrings[start][0] )
 		{
-			MSG_WriteByte( &cl->netchan.message, svc_configstring );
-			MSG_WriteShort( &cl->netchan.message, start );
-			MSG_WriteString( &cl->netchan.message, sv.configstrings[start] );
+			BF_WriteByte( &cl->netchan.message, svc_configstring );
+			BF_WriteShort( &cl->netchan.message, start );
+			BF_WriteString( &cl->netchan.message, sv.configstrings[start] );
 		}
 		start++;
 	}
@@ -831,8 +833,8 @@ void SV_Configstrings_f( sv_client_t *cl )
 	else com.snprintf( cmd, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, start );
 
 	// send next command
-	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, cmd );
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -863,15 +865,15 @@ void SV_UserMessages_f( sv_client_t *cl )
 	start = com.atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( cl->netchan.message.cursize < MAX_MSGLEN / 2 && start < MAX_USER_MESSAGES )
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_USER_MESSAGES )
 	{
 		message = &svgame.msg[start];
 		if( message->name[0] )
 		{
-			MSG_WriteByte( &cl->netchan.message, svc_usermessage );
-			MSG_WriteString( &cl->netchan.message, message->name );
-			MSG_WriteByte( &cl->netchan.message, message->number );
-			MSG_WriteByte( &cl->netchan.message, (byte)message->size );
+			BF_WriteByte( &cl->netchan.message, svc_usermessage );
+			BF_WriteString( &cl->netchan.message, message->name );
+			BF_WriteByte( &cl->netchan.message, message->number );
+			BF_WriteByte( &cl->netchan.message, (byte)message->size );
 		}
 		start++;
 	}
@@ -880,8 +882,8 @@ void SV_UserMessages_f( sv_client_t *cl )
 	else com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
 
 	// send next command
-	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, cmd );
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -914,13 +916,13 @@ void SV_Baselines_f( sv_client_t *cl )
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 
 	// write a packet full of data
-	while( cl->netchan.message.cursize < MAX_MSGLEN / 2 && start < svgame.globals->numEntities )
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < svgame.globals->numEntities )
 	{
 		base = &svs.baselines[start];
 		if( base->modelindex || base->effects )
 		{
-			MSG_WriteByte( &cl->netchan.message, svc_spawnbaseline );
-			MSG_WriteDeltaEntity( &nullstate, base, &cl->netchan.message, true, true );
+			BF_WriteByte( &cl->netchan.message, svc_spawnbaseline );
+			MSG_WriteDeltaEntity( &nullstate, base, &cl->netchan.message, true, sv.time );
 		}
 		start++;
 	}
@@ -929,8 +931,8 @@ void SV_Baselines_f( sv_client_t *cl )
 	else com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, start );
 
 	// send next command
-	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, cmd );
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -954,8 +956,8 @@ void SV_Begin_f( sv_client_t *cl )
 	// if we are paused, tell the client
 	if( sv.paused )
 	{
-		MSG_Begin( svc_setpause );
-		MSG_WriteByte( &sv.multicast, sv.paused );
+		BF_WriteByte( &sv.multicast, svc_setpause );
+		BF_WriteByte( &sv.multicast, sv.paused );
 		MSG_Send( MSG_ONE, vec3_origin, cl->edict );
 		SV_ClientPrintf( cl, PRINT_HIGH, "Server is paused.\n" );
 	}
@@ -976,15 +978,15 @@ void SV_NextDownload_f( sv_client_t *cl )
 	r = cl->downloadsize - cl->downloadcount;
 	if( r > 1024 ) r = 1024;
 
-	MSG_WriteByte( &cl->netchan.message, svc_download );
-	MSG_WriteShort( &cl->netchan.message, r );
+	BF_WriteByte( &cl->netchan.message, svc_download );
+	BF_WriteShort( &cl->netchan.message, r );
 
 	cl->downloadcount += r;
 	size = cl->downloadsize;
 	if( !size ) size = 1;
 	percent = cl->downloadcount * 100 / size;
-	MSG_WriteByte( &cl->netchan.message, percent );
-	MSG_WriteData( &cl->netchan.message, cl->download + cl->downloadcount - r, r );
+	BF_WriteByte( &cl->netchan.message, percent );
+	BF_WriteBytes( &cl->netchan.message, cl->download + cl->downloadcount - r, r );
 	if( cl->downloadcount == cl->downloadsize ) cl->download = NULL;
 }
 
@@ -1008,9 +1010,9 @@ void SV_BeginDownload_f( sv_client_t *cl )
 	{
 		MsgDev( D_ERROR, "SV_BeginDownload_f: couldn't download %s to %s\n", name, cl->name );
 		if( cl->download ) Mem_Free( cl->download );
-		MSG_WriteByte( &cl->netchan.message, svc_download );
-		MSG_WriteShort( &cl->netchan.message, -1 );
-		MSG_WriteByte( &cl->netchan.message, 0 );
+		BF_WriteByte( &cl->netchan.message, svc_download );
+		BF_WriteShort( &cl->netchan.message, -1 );
+		BF_WriteByte( &cl->netchan.message, 0 );
 		cl->download = NULL;
 		return;
 	}
@@ -1188,19 +1190,6 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 
 /*
 =================
-MSG_Begin
-
-Misc helper function
-=================
-*/
-
-void _MSG_Begin( int dest, const char *filename, int fileline )
-{
-	_MSG_WriteBits( &sv.multicast, dest, "MSG_Begin", NET_BYTE, filename, fileline );
-}
-
-/*
-=================
 SV_Send
 
 Sends the contents of sv.multicast to a subset of the clients,
@@ -1227,11 +1216,11 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 		if( sv.state == ss_loading )
 		{
 			// copy signon buffer
-			MSG_WriteData( &sv.signon, sv.multicast.data, sv.multicast.cursize );
-			MSG_Clear( &sv.multicast );
+			BF_WriteBits( &sv.signon, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
+			BF_Clear( &sv.multicast );
 			return true;
 		}
-		// intentional fallthrough (in-game MSG_INIT it's a MSG_ALL reliable)
+		// intentional fallthrough (in-game BF_INIT it's a BF_ALL reliable)
 	case MSG_ALL:
 		reliable = true;
 		// intentional fallthrough
@@ -1295,21 +1284,21 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 
 		if( reliable )
 		{
-			if( direct ) MSG_WriteData( &cl->netchan.message, sv.multicast.data, sv.multicast.cursize );
-			else MSG_WriteData( &cl->reliable, sv.multicast.data, sv.multicast.cursize );
+			if( direct ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
+			else BF_WriteBits( &cl->reliable, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		}
-		else MSG_WriteData( &cl->datagram, sv.multicast.data, sv.multicast.cursize );
+		else BF_WriteBits( &cl->datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		numsends++;
 	}
-	MSG_Clear( &sv.multicast );
+	BF_Clear( &sv.multicast );
 
 	// 25% chanse for simulate random network bugs
 	if( sv.write_bad_message && Com_RandomLong( 0, 32 ) <= 8 )
 	{
 		// just for network debugging (send only for local client)
-		MSG_WriteByte( &sv.multicast, svc_bad );
-		MSG_WriteLong( &sv.multicast, rand( ));		// send some random data
-		MSG_WriteString( &sv.multicast, host.finalmsg );	// send final message
+		BF_WriteByte( &sv.multicast, svc_bad );
+		BF_WriteLong( &sv.multicast, rand( ));		// send some random data
+		BF_WriteString( &sv.multicast, host.finalmsg );	// send final message
 		MSG_Send( MSG_ALL, vec3_origin, NULL );
 		sv.write_bad_message = false;
 	}
@@ -1326,15 +1315,15 @@ Clients that are in the game can still send
 connectionless packets.
 =================
 */
-void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
+void SV_ConnectionlessPacket( netadr_t from, bitbuf_t *msg )
 {
 	char	*s;
 	char	*c;
 
-	MSG_BeginReading( msg );
-	MSG_ReadLong( msg );// skip the -1 marker
+	BF_Clear( msg );
+	BF_ReadLong( msg );// skip the -1 marker
 
-	s = MSG_ReadStringLine( msg );
+	s = BF_ReadStringLine( msg );
 	Cmd_TokenizeString( s );
 
 	c = Cmd_Argv( 0 );
@@ -1357,13 +1346,13 @@ SV_SetIdealPitch
 */
 void SV_SetIdealPitch( sv_client_t *cl )
 {
-	float		angleval, sinval, cosval;
-	trace_t		tr;
-	vec3_t		top, bottom;
-	float		z[MAX_FORWARD];
-	int		i, j;
-	int		step, dir, steps;
-	edict_t		*ent = cl->edict;
+	float	angleval, sinval, cosval;
+	trace_t	tr;
+	vec3_t	top, bottom;
+	float	z[MAX_FORWARD];
+	int	i, j;
+	int	step, dir, steps;
+	edict_t	*ent = cl->edict;
 
 	if( !( ent->v.flags & FL_ONGROUND ))
 		return;
@@ -1428,15 +1417,15 @@ On very fast clients, there may be multiple usercmd packed into
 each of the backup packets.
 ==================
 */
-static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
+static void SV_ReadClientMove( sv_client_t *cl, bitbuf_t *msg )
 {
 	int	checksum1, checksum2;
-	int	key, lastframe, net_drop;
+	int	key, lastframe, net_drop, size;
 	usercmd_t	oldest, oldcmd, newcmd, nulcmd;
 
-	key = msg->readcount;
-	checksum1 = MSG_ReadByte( msg );
-	lastframe = MSG_ReadLong( msg );
+	key = BF_GetNumBytesRead( msg );
+	checksum1 = BF_ReadByte( msg );
+	lastframe = BF_ReadLong( msg );
 
 	if( lastframe != cl->lastframe )
 	{
@@ -1462,7 +1451,8 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 	}
 
 	// if the checksum fails, ignore the rest of the packet
-	checksum2 = CRC_Sequence( msg->data + key + 1, msg->readcount - key - 1, cl->netchan.incoming_sequence );
+	size = BF_GetNumBytesRead( msg ) - key - 1;
+	checksum2 = CRC_Sequence( BF_GetData( msg ) + key + 1, size, cl->netchan.incoming_sequence );
 	if( checksum2 != checksum1 )
 	{
 		MsgDev( D_ERROR, "SV_UserMove: failed command checksum for %s (%d != %d)\n", cl->name, checksum2, checksum1 );
@@ -1503,7 +1493,7 @@ SV_ExecuteClientMessage
 Parse a client packet
 ===================
 */
-void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
+void SV_ExecuteClientMessage( sv_client_t *cl, bitbuf_t *msg )
 {
 	int	c, stringCmdCount = 0;
 	bool	move_issued = false;
@@ -1521,22 +1511,25 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )
 	{
-		c = MSG_ReadByte( msg );
-		if( c == -1 ) break;
-
-		if( msg->error )
+		if( BF_CheckOverflow( msg ))
 		{
 			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );
 			SV_DropClient( cl );
 			return;
-		}	
+		}
+
+		// end of message
+		if( BF_GetNumBitsLeft( msg ) < 8 )
+			break;
+
+		c = BF_ReadByte( msg );
 
 		switch( c )
 		{
 		case clc_nop:
 			break;
 		case clc_userinfo:
-			SV_UserinfoChanged( cl, MSG_ReadString( msg ));
+			SV_UserinfoChanged( cl, BF_ReadString( msg ));
 			break;
 		case clc_move:
 			if( move_issued ) return; // someone is trying to cheat...
@@ -1544,10 +1537,13 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			SV_ReadClientMove( cl, msg );
 			break;
 		case clc_stringcmd:	
-			s = MSG_ReadString( msg );
+			s = BF_ReadString( msg );
 			// malicious users may try using too many string commands
 			if( ++stringCmdCount < 8 ) SV_ExecuteClientCommand( cl, s );
 			if( cl->state == cs_zombie ) return; // disconnect command
+			break;
+		case clc_random_seed:
+			cl->random_seed = BF_ReadUBitLong( msg, 32 );
 			break;
 		default:
 			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );

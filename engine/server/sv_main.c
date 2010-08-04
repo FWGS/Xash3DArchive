@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "server.h"
+#include "protocol.h"
 
 #define HEARTBEAT_SECONDS	(300 * 1000) 	// 300 seconds
 
@@ -230,9 +231,9 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.rollangle = sv_rollangle->value;
 	svgame.movevars.rollspeed = sv_rollspeed->value;
 
-	MSG_Clear( &sv.multicast );
+	BF_Clear( &sv.multicast );
 
-	if( MSG_WriteDeltaMovevars( &sv.multicast, &svgame.oldmovevars, &svgame.movevars ))
+	if( BF_WriteDeltaMovevars( &sv.multicast, &svgame.oldmovevars, &svgame.movevars ))
 	{
 		MSG_Send( MSG_ALL, vec3_origin, NULL );
 		Mem_Copy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
@@ -246,9 +247,9 @@ void pfnUpdateServerInfo( const char *szKey, const char *szValue, const char *un
 
 	if( !cv || !cv->modified ) return; // this cvar not changed
 
-	MSG_WriteByte( &sv.multicast, svc_serverinfo );
-	MSG_WriteString( &sv.multicast, szKey );
-	MSG_WriteString( &sv.multicast, szValue );
+	BF_WriteByte( &sv.multicast, svc_serverinfo );
+	BF_WriteString( &sv.multicast, szKey );
+	BF_WriteString( &sv.multicast, szValue );
 	MSG_Send( MSG_ALL, vec3_origin, NULL );
 	cv->modified = false; // reset state
 }
@@ -295,14 +296,15 @@ SV_ReadPackets
 */
 void SV_ReadPackets( void )
 {
-	int		i;
 	sv_client_t	*cl;
-	int		qport;
+	int		i, qport, curSize;
 
-	while( NET_GetPacket( NS_SERVER, &net_from, net_message.data, &net_message.cursize ))
+	while( NET_GetPacket( NS_SERVER, &net_from, net_message_buffer, &curSize ))
 	{
+		BF_Init( &net_message, "ClientPacket", net_message_buffer, curSize );
+
 		// check for connectionless packet (0xffffffff) first
-		if( net_message.cursize >= 4 && *(int *)net_message.data == -1 )
+		if( BF_GetMaxBytes( &net_message ) >= 4 && *(int *)net_message.pData == -1 )
 		{
 			SV_ConnectionlessPacket( net_from, &net_message );
 			continue;
@@ -310,10 +312,10 @@ void SV_ReadPackets( void )
 
 		// read the qport out of the message so we can fix up
 		// stupid address translating routers
-		MSG_BeginReading( &net_message );
-		MSG_ReadLong( &net_message );	// sequence number
-		MSG_ReadLong( &net_message );	// sequence number
-		qport = (int)MSG_ReadShort( &net_message ) & 0xffff;
+		BF_Clear( &net_message );
+		BF_ReadLong( &net_message );	// sequence number
+		BF_ReadLong( &net_message );	// sequence number
+		qport = (int)BF_ReadShort( &net_message ) & 0xffff;
 
 		// check for packets from connected clients
 		for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
@@ -680,7 +682,7 @@ void SV_Init( void )
 	sv_reconnect_limit = Cvar_Get ("sv_reconnect_limit", "3", CVAR_ARCHIVE, "max reconnect attempts" );
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
-	MSG_Init( &net_message, net_message_buffer, sizeof( net_message_buffer ));
+	BF_Init( &net_message, "NetMessage", net_message_buffer, sizeof( net_message_buffer ));
 }
 
 /*
@@ -697,34 +699,34 @@ void SV_FinalMessage( char *message, bool reconnect )
 {
 	sv_client_t	*cl;
 	byte		msg_buf[MAX_MSGLEN];
-	sizebuf_t		msg;
+	bitbuf_t		msg;
 	int		i;
 	
-	MSG_Init( &msg, msg_buf, sizeof( msg_buf ));
-	MSG_WriteByte( &msg, svc_print );
-	MSG_WriteByte( &msg, PRINT_HIGH );
-	MSG_WriteString( &msg, message );
+	BF_Init( &msg, "FinalMessage", msg_buf, sizeof( msg_buf ));
+	BF_WriteByte( &msg, svc_print );
+	BF_WriteByte( &msg, PRINT_HIGH );
+	BF_WriteString( &msg, message );
 
 	if( reconnect )
 	{
 		if( sv.loadgame || sv_maxclients->integer > 1 )
-			MSG_WriteByte( &msg, svc_changing );
-		else MSG_WriteByte( &msg, svc_reconnect );
+			BF_WriteByte( &msg, svc_changing );
+		else BF_WriteByte( &msg, svc_reconnect );
 	}
 	else
 	{
-		MSG_WriteByte( &msg, svc_disconnect );
+		BF_WriteByte( &msg, svc_disconnect );
 	}
 
 	// send it twice
 	// stagger the packets to crutch operating system limited buffers
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 		if( cl->state >= cs_connected && !(cl->edict && cl->edict->v.flags & FL_FAKECLIENT ))
-			Netchan_Transmit( &cl->netchan, msg.cursize, msg.data );
+			Netchan_Transmit( &cl->netchan, BF_GetNumBytesWritten( &msg ), BF_GetData( &msg ));
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 		if( cl->state >= cs_connected && !(cl->edict && cl->edict->v.flags & FL_FAKECLIENT ))
-			Netchan_Transmit( &cl->netchan, msg.cursize, msg.data );
+			Netchan_Transmit( &cl->netchan, BF_GetNumBytesWritten( &msg ), BF_GetData( &msg ));
 }
 
 /*

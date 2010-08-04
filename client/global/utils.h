@@ -27,6 +27,12 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 #define ASSERTSZ( f, sz )
 #endif
 
+#ifdef _DEBUG
+#define GetEntityByIndex(e)	DBG_GetEntityByIndex( e, __FILE__, __LINE__ )
+#else
+#define GetEntityByIndex	(*g_engfuncs.pfnGetEntityByIndex)
+#endif
+
 extern DLL_GLOBAL const Vector	g_vecZero;
 extern cl_globalvars_t		*gpGlobals;
 extern movevars_t			*gpMovevars;
@@ -35,7 +41,7 @@ extern int HUD_VidInit( void );
 extern void HUD_Init( void );
 extern int HUD_Redraw( float flTime, int state );
 extern void HUD_UpdateEntityVars( edict_t *out, const entity_state_t *s, const entity_state_t *p );
-extern void HUD_UpdateClientVars( entity_state_t *state, const clientdata_t *client );
+extern void HUD_UpdateClientVars( edict_t *out, const clientdata_t *s, const clientdata_t *p );
 extern void HUD_UpdateOnRemove( edict_t *pEdict );
 extern void HUD_Reset( void );
 extern void HUD_StartFrame( void );
@@ -172,6 +178,14 @@ inline int ConsoleStringLen( const char *string )
 	GetConsoleStringSize( string, &_width, &_height );
 	return _width;
 }
+
+#ifdef _DEBUG
+inline edict_t *DBG_GetEntityByIndex( int entnum, const char *file, const int line )
+{
+	DBG_AssertFunction(( entnum >= 0 && entnum < gpGlobals->numEntities ), "Invalid entnum", file, line, NULL );
+	return (*g_engfuncs.pfnGetEntityByIndex)( entnum );
+}
+#endif
 
 extern Vector BitsToDir( int bits );
 

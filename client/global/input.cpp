@@ -518,9 +518,6 @@ void IN_CreateMove( usercmd_t *cmd, int msec, int active )
 	// set button and flag bits
 	cmd->buttons = CL_ButtonBits( 1 );
 
-	// random seed for predictable random values
-	cmd->random_seed = RANDOM_LONG( 0, 0x7fffffff ); // full range
-
 	last_msec = msec;
 
 	GetViewAngles( cl_viewangles );

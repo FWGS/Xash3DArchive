@@ -1747,9 +1747,9 @@ void SV_SaveGame( const char *pName )
 	{
 		const char *pMsg = "GAMESAVED"; // defined in titles.txt
 
-		MSG_Begin( svgame.gmsgHudText );
-		MSG_WriteByte( &sv.multicast, com.strlen( pMsg ) + 1 );
-		MSG_WriteString( &sv.multicast, pMsg );
+		BF_WriteByte( &sv.multicast, svgame.gmsgHudText );
+		BF_WriteByte( &sv.multicast, com.strlen( pMsg ) + 1 );
+		BF_WriteString( &sv.multicast, pMsg );
 		MSG_Send( MSG_ONE, NULL, EDICT_NUM( 1 ));
 	}
 }

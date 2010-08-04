@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "server.h"
+#include "protocol.h"
 #include "byteorder.h"
 
 sv_client_t *sv_client; // current client
@@ -31,9 +32,9 @@ void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
 	com.vsprintf( string, fmt, argptr );
 	va_end( argptr );
 	
-	MSG_WriteByte( &cl->netchan.message, svc_print );
-	MSG_WriteByte( &cl->netchan.message, level );
-	MSG_WriteString( &cl->netchan.message, string );
+	BF_WriteByte( &cl->netchan.message, svc_print );
+	BF_WriteByte( &cl->netchan.message, level );
+	BF_WriteString( &cl->netchan.message, string );
 }
 
 /*
@@ -62,9 +63,9 @@ void SV_BroadcastPrintf( int level, char *fmt, ... )
 		if( cl->state != cs_spawned ) continue;
 		if( cl->edict && (cl->edict->v.flags & FL_FAKECLIENT ))
 			continue;
-		MSG_WriteByte( &cl->netchan.message, svc_print );
-		MSG_WriteByte( &cl->netchan.message, level );
-		MSG_WriteString( &cl->netchan.message, string );
+		BF_WriteByte( &cl->netchan.message, svc_print );
+		BF_WriteByte( &cl->netchan.message, level );
+		BF_WriteString( &cl->netchan.message, string );
 	}
 }
 
@@ -85,8 +86,8 @@ void SV_BroadcastCommand( char *fmt, ... )
 	com.vsprintf( string, fmt, argptr );
 	va_end( argptr );
 
-	MSG_Begin( svc_stufftext );
-	MSG_WriteString( &sv.multicast, string );
+	BF_WriteByte( &sv.multicast, svc_stufftext );
+	BF_WriteString( &sv.multicast, string );
 	MSG_Send( MSG_ALL, NULL, NULL );
 }
 

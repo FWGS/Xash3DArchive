@@ -6,13 +6,14 @@
 #include "common.h"
 #include "client.h"
 #include "keydefs.h"
+#include "protocol.h"		// get the protocol version
 #include "byteorder.h"
 
 cvar_t	*con_notifytime;
 cvar_t	*scr_conspeed;
 cvar_t	*con_fontsize;
 
-#define CON_TIMES		5		// need for 4 lines
+#define CON_TIMES		5	// need for 4 lines
 #define COLOR_DEFAULT	'7'
 #define CON_HISTORY		32
 
@@ -379,14 +380,22 @@ static int Con_DrawCharacter( int x, int y, int number, rgba_t color )
 
 void Con_DrawStringLen( const char *pText, int *length, int *height )
 {
+	int	curLength = 0;
+
 	if( height ) *height = con.charHeight;
 	if( !length ) return;
 
 	*length = 0;
 
-	while( *pText && *pText != '\n' )
+	while( *pText )
 	{
 		byte	c = *pText;
+
+		if( *pText == '\n' )
+		{
+			pText++;
+			curLength = 0;
+		}
 
 		// skip color strings they are not drawing
 		if( IsColorString( pText ))
@@ -395,8 +404,11 @@ void Con_DrawStringLen( const char *pText, int *length, int *height )
 			continue;
 		}
 
-		*length += con.charWidths[c];
+		curLength += con.charWidths[c];
 		pText++;
+
+		if( curLength > *length )
+			*length = curLength;
 	}
 }
 
@@ -421,6 +433,13 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, bo
 
 	while ( *s )
 	{
+		if( *s == '\n' )
+		{
+			s++;
+			drawLen = 0; // begin new row
+			y += con.charHeight;
+		}
+
 		if( IsColorString( s ))
 		{
 			if( !forceColor )

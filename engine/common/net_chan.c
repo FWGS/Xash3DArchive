@@ -6,6 +6,8 @@
 #include "common.h"
 #include "mathlib.h"
 #include "byteorder.h"
+#include "protocol.h"
+#include "net_encode.h"
 
 /*
 packet header ( size in bits )
@@ -28,7 +30,7 @@ the retransmit has been acknowledged and the reliable still failed to get there.
 if the sequence number is -1, the packet should be handled without a netcon
 
 The reliable message can be added to at any time by doing
-MSG_Write* (&netchan->message, <data>).
+BF_Write* (&netchan->message, <data>).
 
 If the message buffer is overflowed, either by a single message, or by
 multiple frames worth piling up while the last reliable transmit goes
@@ -64,7 +66,7 @@ cvar_t	*net_speeds;
 cvar_t	*net_qport;
 
 netadr_t	net_from;
-sizebuf_t	net_message;
+bitbuf_t	net_message;
 byte	net_message_buffer[MAX_MSGLEN];
 
 /*
@@ -83,6 +85,9 @@ void Netchan_Init( void )
 	net_showdrop = Cvar_Get ("net_showdrop", "0", 0, "show packets that are dropped" );
 	net_speeds = Cvar_Get ("net_speeds", "0", CVAR_ARCHIVE, "show network packets" );
 	net_qport = Cvar_Get ("net_qport", va( "%i", port ), CVAR_INIT, "current quake netport" );
+
+	Huff_Init ();	// initialize huffman compression
+	BF_InitMasks ();	// initialize bit-masks
 }
 
 /*
@@ -102,9 +107,9 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	chan->last_received = Sys_Milliseconds ();
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
-	chan->compress = true;
+	chan->compress = false;
 
-	MSG_Init( &chan->message, chan->message_buf, sizeof( chan->message_buf ));
+	BF_Init( &chan->message, "NetData", chan->message_buf, sizeof( chan->message_buf ));
 }
 
 /*
@@ -116,17 +121,17 @@ Sends an out-of-band datagram
 */
 void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data )
 {
-	sizebuf_t	send;
+	bitbuf_t	send;
 	byte	send_buf[MAX_MSGLEN];
 
 	// write the packet header
-	MSG_Init( &send, send_buf, sizeof( send_buf ));
+	BF_Init( &send, "SequencePacket", send_buf, sizeof( send_buf ));
 	
-	MSG_WriteLong( &send, -1 );	// -1 sequence means out of band
-	MSG_WriteData( &send, data, length );
+	BF_WriteLong( &send, -1 );	// -1 sequence means out of band
+	BF_WriteBytes( &send, data, length );
 
 	// send the datagram
-	NET_SendPacket( net_socket, send.cursize, send.data, adr );
+	NET_SendPacket( net_socket, BF_GetNumBytesWritten( &send ), BF_GetData( &send ), adr );
 }
 
 /*
@@ -139,7 +144,7 @@ Sends a text message in an out-of-band datagram
 void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... )
 {
 	va_list	argptr;
-	char	string[MAX_MSGLEN];
+	char	string[MAX_SYSPATH];
 
 	va_start( argptr, format );
 	com.vsprintf( string, format, argptr );
@@ -159,14 +164,14 @@ bool Netchan_NeedReliable( netchan_t *chan )
 		send_reliable = true;
 
 	// if the reliable transmit buffer is empty, copy the current message out
-	if( !chan->reliable_length && chan->message.cursize )
+	if( !chan->reliable_length && BF_GetNumBitsWritten( &chan->message ))
 		send_reliable = true;
 
-	if( !chan->reliable_length && chan->message.cursize )
+	if( !chan->reliable_length && BF_GetNumBitsWritten( &chan->message ))
 	{
-		Mem_Copy( chan->reliable_buf, chan->message_buf, chan->message.cursize );
-		chan->reliable_length = chan->message.cursize;
-		chan->message.cursize = 0;
+		Mem_Copy( chan->reliable_buf, chan->message_buf, BF_GetNumBytesWritten( &chan->message ));
+		chan->reliable_length = BF_GetNumBitsWritten( &chan->message );
+		BF_Clear( &chan->message );
 		chan->reliable_sequence ^= 1;
 	}
 
@@ -183,9 +188,14 @@ transmition / retransmition of the reliable messages.
 A 0 length will still generate a packet and deal with the reliable messages.
 ================
 */
-void Netchan_Transmit( netchan_t *chan, int length, byte *data )
+void Netchan_Transmit( netchan_t *chan, int lengthInBytes, byte *data )
 {
-	sizebuf_t		send;
+	Netchan_TransmitBits( chan, lengthInBytes << 3, data );
+}
+
+void Netchan_TransmitBits( netchan_t *chan, int lengthInBits, byte *data )
+{
+	bitbuf_t		send;
 	static bool	overflow = false;
 	byte		send_buf[MAX_MSGLEN];
 	bool		send_reliable;
@@ -193,7 +203,7 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 	uint		w1, w2;
 
 	// check for message overflow
-	if( chan->message.overflowed )
+	if( BF_CheckOverflow( &chan->message ))
 	{
 		chan->fatal_error = true;
 		MsgDev( D_ERROR, "%s:outgoing message overflow\n", NET_AdrToString( chan->remote_address ));
@@ -203,7 +213,7 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 	send_reliable = Netchan_NeedReliable( chan );
 
 	// write the packet header
-	MSG_Init( &send, send_buf, sizeof(send_buf));
+	BF_Init( &send, "NetSend", send_buf, sizeof( send_buf ));
 
 	w1 = (chan->outgoing_sequence & ~(1<<31)) | (send_reliable<<31);
 	w2 = (chan->incoming_sequence & ~(1<<31)) | (chan->incoming_reliable_sequence<<31);
@@ -211,23 +221,23 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 	chan->outgoing_sequence++;
 	chan->last_sent = Sys_Milliseconds ();
 
-	MSG_WriteLong( &send, w1 );
-	MSG_WriteLong( &send, w2 );
+	BF_WriteLong( &send, w1 );
+	BF_WriteLong( &send, w2 );
 
 	// send the qport if we are a client
-	if( chan->sock == NS_CLIENT ) MSG_WriteWord( &send, Cvar_VariableValue( "net_qport" ));
+	if( chan->sock == NS_CLIENT ) BF_WriteWord( &send, Cvar_VariableValue( "net_qport" ));
 
 	// copy the reliable message to the packet first
 	if( send_reliable )
 	{
-		MSG_WriteData( &send, chan->reliable_buf, chan->reliable_length );
+		BF_WriteBits( &send, chan->reliable_buf, chan->reliable_length );
 		chan->last_reliable_sequence = chan->outgoing_sequence;
 	}
 
 	// add the unreliable part if space is available
-	if( send.maxsize - send.cursize >= length )
+	if( BF_GetNumBitsLeft( &send ) >= lengthInBits )
 	{
-		MSG_WriteData( &send, data, length );
+		BF_WriteBits( &send, data, lengthInBits );
 		overflow = false;
 	}
 	else
@@ -237,15 +247,15 @@ void Netchan_Transmit( netchan_t *chan, int length, byte *data )
 		overflow = true;
 	}
 
-	size1 = send.cursize;
+	size1 = BF_GetNumBytesWritten( &send );
 	if( chan->compress ) Huff_CompressPacket( &send, (chan->sock == NS_CLIENT) ? 10 : 8 );
-	size2 = send.cursize;
+	size2 = BF_GetNumBytesWritten( &send );
 
 	chan->total_sended += size2;
 	chan->total_sended_uncompressed += size1;
 
 	// send the datagram
-	NET_SendPacket( chan->sock, send.cursize, send.data, chan->remote_address );
+	NET_SendPacket( chan->sock, BF_GetNumBytesWritten( &send ), BF_GetData( &send ), chan->remote_address );
 
 	if( net_showpackets->integer == 1 )
 	{
@@ -269,7 +279,7 @@ called when the current net message is from remote_address
 modifies net message so that it points to the packet payload
 =================
 */
-bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
+bool Netchan_Process( netchan_t *chan, bitbuf_t *msg )
 {
 	uint	sequence, sequence_ack;
 	uint	reliable_ack, recv_reliable;
@@ -277,13 +287,13 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	int	qport;
 
 	// get sequence numbers		
-	MSG_BeginReading( msg );
-	sequence = MSG_ReadLong( msg );
-	sequence_ack = MSG_ReadLong( msg );
+	BF_Clear( msg );
+	sequence = BF_ReadLong( msg );
+	sequence_ack = BF_ReadLong( msg );
 
 	// read the qport if we are a server
 	if( chan->sock == NS_SERVER )
-		qport = MSG_ReadShort( msg );
+		qport = BF_ReadShort( msg );
 
 	recv_reliable = sequence>>31;
 	reliable_ack = sequence_ack>>31;
@@ -318,9 +328,10 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	chan->incoming_acknowledged = sequence_ack;
 	chan->incoming_reliable_acknowledged = reliable_ack;
 	if( recv_reliable ) chan->incoming_reliable_sequence ^= 1;
-	size1 = msg->cursize;
+
+	size1 = BF_GetMaxBytes( msg );
 	if( chan->compress ) Huff_DecompressPacket( msg, ( chan->sock == NS_SERVER) ? 10 : 8 );
-	size2 = msg->cursize;
+	size2 = BF_GetMaxBytes( msg );
 
 	chan->total_received += size1;
 	chan->total_received_uncompressed += size2;

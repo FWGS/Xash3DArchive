@@ -14,7 +14,7 @@ _inline int BitByte( int bits )
 	return PAD_NUMBER( bits, 8 ) >> 3;
 }
 
-typedef struct
+typedef struct bitbuf_s
 {
 	bool		bOverflow;	// overflow reading or writing
 	const char	*pDebugName;	// buffer name (pointer to const name)
@@ -30,18 +30,22 @@ typedef struct
 #define BF_StartReading			BF_StartWriting
 #define BF_GetNumBytesRead			BF_GetNumBytesWritten
 #define BF_ReadBitAngles			BF_ReadBitVec3Coord
-#define BF_ReadStringLine( bf )		BF_ReadString( bf, true );
+#define BF_ReadString( bf )			BF_ReadStringExt( bf, false )
+#define BF_ReadStringLine( bf )		BF_ReadStringExt( bf, true )
+#define BF_Init( bf, name, data, bytes )	BF_InitExt( bf, name, data, bytes, -1 )
 
 // common functions
-void BF_Init( bitbuf_t *bf, const char *pDebugName, void *pData, int nBytes, int nMaxBits );
+void BF_InitExt( bitbuf_t *bf, const char *pDebugName, void *pData, int nBytes, int nMaxBits );
 void BF_InitMasks( void );	// called once at startup engine
+void BF_SeekToBit( bitbuf_t *bf, int bitPos );
+void BF_SeekToByte( bitbuf_t *bf, int bytePos );
+bool BF_CheckOverflow( bitbuf_t *bf );
 
 // init writing
 void BF_StartWriting( bitbuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits );
 void BF_Clear( bitbuf_t *bf );
 
 // Bit-write functions
-void BF_SeekToBit( bitbuf_t *bf, int bitPos );
 void BF_WriteOneBit( bitbuf_t *bf, int nValue );
 void BF_WriteUBitLongExt( bitbuf_t *bf, uint curData, int numbits, bool bCheckRange );
 void BF_WriteSBitLong( bitbuf_t *bf, int data, int numbits );
@@ -65,10 +69,14 @@ void BF_WriteFloat( bitbuf_t *bf, float val );
 bool BF_WriteBytes( bitbuf_t *bf, const void *pBuf, int nBytes );	// same as MSG_WriteData
 bool BF_WriteString(  bitbuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.
 
+// delta-write functions
+bool BF_WriteDeltaMovevars( bitbuf_t *sb, movevars_t *from, movevars_t *cmd );
+
 // helper functions
 _inline int BF_GetNumBytesWritten( bitbuf_t *bf )	{ return BitByte( bf->iCurBit ); }
 _inline int BF_GetNumBitsWritten( bitbuf_t *bf ) { return bf->iCurBit; }
-_inline int BF_GetMaxNumBits( bitbuf_t *bf ) { return bf->nDataBits; }
+_inline int BF_GetMaxBits( bitbuf_t *bf ) { return bf->nDataBits; }
+_inline int BF_GetMaxBytes( bitbuf_t *bf ) { return bf->nDataBytes; }
 _inline int BF_GetNumBitsLeft( bitbuf_t *bf ) { return bf->nDataBits - bf->iCurBit; }
 _inline int BF_GetNumBytesLeft( bitbuf_t *bf ) { return BF_GetNumBitsLeft( bf ) >> 3; }
 _inline byte *BF_GetData( bitbuf_t *bf ) { return bf->pData; }
@@ -79,6 +87,7 @@ float BF_ReadBitFloat( bitbuf_t *bf );
 bool BF_ReadBits( bitbuf_t *bf, void *pOutData, int nBits );
 float BF_ReadBitAngle( bitbuf_t *bf, int numbits );
 int BF_ReadSBitLong( bitbuf_t *bf, int numbits );
+uint BF_ReadUBitLong( bitbuf_t *bf, int numbits );
 uint BF_ReadBitLong( bitbuf_t *bf, int numbits, bool bSigned );
 float BF_ReadBitCoord( bitbuf_t *bf );
 void BF_ReadBitVec3Coord( bitbuf_t *bf, vec3_t fa );
@@ -93,7 +102,9 @@ int BF_ReadWord( bitbuf_t *bf );
 long BF_ReadLong( bitbuf_t *bf );
 float BF_ReadFloat( bitbuf_t *bf );
 bool BF_ReadBytes( bitbuf_t *bf, void *pOut, int nBytes );
-const char *BF_ReadString( bitbuf_t *bf, bool bLine );
+char *BF_ReadStringExt( bitbuf_t *bf, bool bLine );
 
+// delta-read functions
+void BF_ReadDeltaMovevars( bitbuf_t *sb, movevars_t *from, movevars_t *cmd );
 					
 #endif//NET_BUFFER_H

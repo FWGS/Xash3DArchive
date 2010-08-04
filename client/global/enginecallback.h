@@ -124,7 +124,6 @@ inline void CL_PlaySound( int iSound, float flVolume, Vector &pos, float pitch =
 #define ConsolePrint	(*g_engfuncs.pfnConsolePrint)
 #define GetViewAngles	(*g_engfuncs.pfnGetViewAngles)
 #define SetViewAngles	(*g_engfuncs.pfnSetViewAngles)
-#define GetEntityByIndex	(*g_engfuncs.pfnGetEntityByIndex)
 #define GetLocalPlayer	(*g_engfuncs.pfnGetLocalPlayer)
 #define GetClientMaxspeed	(*g_engfuncs.pfnGetClientMaxspeed)
 #define IsSpectateOnly	(*g_engfuncs.pfnIsSpectateOnly)

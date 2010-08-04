@@ -163,39 +163,41 @@ size_t com_strncat(char *dst, const char *src, size_t size)
 	return(dlen + (s - src)); // count does not include NULL
 }
 
-size_t com_strcat(char *dst, const char *src )
+size_t com_strcat( char *dst, const char *src )
 {
 	return com_strncat( dst, src, 99999 );
 }
 
-size_t com_strncpy(char *dst, const char *src, size_t size)
+size_t com_strncpy( char *dst, const char *src, size_t size )
 {
 	register char *d = dst;
 	register const char *s = src;
 	register size_t n = size;
 
-	if(!dst || !src || !size) return 0;
+	if( !dst || !src || !size )
+		return 0;
 
 	// copy as many bytes as will fit
-	if (n != 0 && --n != 0)
+	if( n != 0 && --n != 0 )
 	{
 		do
 		{
-			if ((*d++ = *s++) == 0)
+			if(( *d++ = *s++ ) == 0 )
 				break;
-		} while (--n != 0);
+		} while( --n != 0 );
 	}
 
 	// not enough room in dst, add NULL and traverse rest of src
-	if (n == 0)
+	if( n == 0 )
 	{
-		if (size != 0) *d = '\0'; // NULL-terminate dst
-		while (*s++);
+		if( size != 0 )
+			*d = '\0'; // NULL-terminate dst
+		while( *s++ );
 	}
-	return(s - src - 1); // count does not include NULL
+	return( s - src - 1 ); // count does not include NULL
 }
 
-size_t com_strcpy(char *dst, const char *src )
+size_t com_strcpy( char *dst, const char *src )
 {
 	return com_strncpy( dst, src, 99999 );
 }

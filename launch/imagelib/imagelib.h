@@ -13,7 +13,6 @@
 
 // color packs
 typedef struct { uint b:5; uint g:6; uint r:5; } color16;
-typedef struct { byte r:8; byte g:8; byte b:8; } color24;
 typedef struct { byte r; byte g; byte b; byte a; } color32;
 
 // cubemap hints

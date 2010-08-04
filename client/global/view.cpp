@@ -139,7 +139,7 @@ void V_Init( void )
 //==========================
 void V_StartPitchDrift( void )
 {
-	if( pd.laststop == GetClientTime())
+	if( pd.laststop == GetClientTime( ))
 		return;
 
 	if( pd.nodrift || !pd.pitchvel )

@@ -8,17 +8,17 @@
 enum net_types_e
 {
 	NET_BAD = 0,
-	NET_CHAR,
-	NET_BYTE,
-	NET_SHORT,
-	NET_WORD,
-	NET_LONG,
-	NET_FLOAT,
-	NET_ANGLE8,	// angle 2 char
-	NET_ANGLE,	// angle 2 short
-	NET_SCALE,
-	NET_COORD,
-	NET_COLOR,
+	NET_CHAR = 8,
+	NET_BYTE = 8,
+	NET_SHORT = 16,
+	NET_WORD = 16,
+	NET_LONG = 32,
+	NET_FLOAT = 32,
+	NET_ANGLE8 = 8,	// angle 2 char
+	NET_ANGLE = 16,	// angle 2 short
+	NET_SCALE = 8,
+	NET_COORD = 32,
+	NET_COLOR = 8,
 	NET_TYPES,
 };
 
@@ -56,69 +56,6 @@ typedef struct net_field_s
 	bool	force;			// will be send for newentity
 } net_field_t;
 
-typedef struct delta_s
-{
-	char	*name;
-	int	offset;		// in bytes
-	int	deltaType;	// DT_INTEGER, DT_FLOAT etc
-	float	multiplier;
-	int	bits;		// how many bits we send\receive
-} delta_t;
-
-typedef void (*pfnDeltaEncode)( delta_t *pFields, const byte *from, const byte *to );
-
-// server to client
-enum svc_ops_e
-{
-	// user messages
-	svc_bad = 0,		// don't send!
-
-	// engine messages
-	svc_nop = 201,		// end of user messages
-	svc_disconnect,		// kick client from server
-	svc_reconnect,		// reconnecting server request
-	svc_stufftext,		// [string] stuffed into client's console buffer, should be \n terminated
-	svc_serverdata,		// [long] protocol ...
-	svc_configstring,		// [short] [string]
-	svc_spawnbaseline,		// valid only at spawn		
-	svc_download,		// [short] size [size bytes]
-	svc_changing,		// changelevel by server request
-	svc_physinfo,		// [physinfo string]
-	svc_usermessage,		// [string][byte] REG_USER_MSG stuff
-	svc_packetentities,		// [...]
-	svc_frame,		// begin a new server frame
-	svc_sound,		// <see code>
-	svc_ambientsound,		// <see code>
-	svc_setangle,		// [float float] set the view angle to this absolute value
-	svc_addangle,		// [float] add angles when client turn on mover
-	svc_setview,		// [short] entity number
-	svc_print,		// [byte] id [string] null terminated string
-	svc_centerprint,		// [string] to put in center of the screen
-	svc_crosshairangle,		// [short][short][short]
-	svc_setpause,		// [byte] 0 = unpaused, 1 = paused
-	svc_movevars,		// [movevars_t]
-	svc_particle,		// [float*3][char*3][byte][byte]
-	svc_soundfade,		// [float*4] sound fade parms
-	svc_bspdecal,		// [float*3][short][short][short]
-	svc_event,		// playback event queue
-	svc_event_reliable,		// playback event directly from message, not queue
-	svc_updateuserinfo,		// [byte] playernum, [string] userinfo
-	svc_serverinfo,		// [string] key [string] value
-};
-
-// client to server
-enum clc_ops_e
-{
-	clc_bad = 0,
-
-	// engine messages
-	clc_nop = 201, 		
-	clc_move,			// [[usercmd_t]
-	clc_delta,		// [byte] sequence number, requests delta compression of message
-	clc_userinfo,		// [[userinfo string]
-	clc_stringcmd,		// [string] message
-};
-
 static const net_desc_t NWDesc[] =
 {
 { NET_BAD,	"none",	0,		0	}, // full range
@@ -147,6 +84,7 @@ static const net_desc_t NWDesc[] =
 #include "event_api.h"
 #include "pm_movevars.h"
 #include "entity_state.h"
+#include "net_buffer.h"
 
 #define ES_FIELD( x )		#x,(int)&((entity_state_t*)0)->x
 #define EV_FIELD( x )		#x,(int)&((event_args_t*)0)->x
@@ -194,17 +132,8 @@ long _MSG_ReadBits( sizebuf_t *msg, const char *name, int bits, const char *file
 void _MSG_Begin( int dest, const char *filename, int fileline );
 void _MSG_WriteString( sizebuf_t *sb, const char *s, const char *filename, int fileline );
 void _MSG_WriteStringLine( sizebuf_t *sb, const char *src, const char *filename, int fileline );
-void _MSG_WriteFloat( sizebuf_t *sb, float f, const char *filename, int fileline );
-void _MSG_WriteDouble( sizebuf_t *sb, double f, const char *filename, int fileline );
-void _MSG_WriteAngle8( sizebuf_t *sb, float f, const char *filename, int fileline );
-void _MSG_WriteAngle16( sizebuf_t *sb, float f, const char *filename, int fileline );
-void _MSG_WriteCoord16( sizebuf_t *sb, float f, const char *filename, int fileline );
-void _MSG_WritePos( sizebuf_t *sb, const vec3_t pos, const char *filename, int fileline );
 void _MSG_WriteData( sizebuf_t *sb, const void *data, size_t length, const char *filename, int fileline );
-void _MSG_WriteDeltaUsercmd( sizebuf_t *sb, usercmd_t *from, usercmd_t *cmd, const char *filename, const int fileline );
 bool _MSG_WriteDeltaMovevars( sizebuf_t *sb, movevars_t *from, movevars_t *cmd, const char *filename, const int fileline );
-void _MSG_WriteDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to, const char *filename, const int fileline );
-void _MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, bool newentity, const char *file, int line );
 bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, const char *filename, int fileline );
 
 #define MSG_Begin( x ) _MSG_Begin( x, __FILE__, __LINE__)
@@ -217,17 +146,8 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 #define MSG_WriteDouble(x,y) _MSG_WriteDouble(x, y, __FILE__, __LINE__)
 #define MSG_WriteString(x,y) _MSG_WriteString (x, y, __FILE__, __LINE__)
 #define MSG_WriteStringLine(x,y) _MSG_WriteStringLine (x, y, __FILE__, __LINE__)
-#define MSG_WriteCoord16(x, y) _MSG_WriteCoord16(x, y, __FILE__, __LINE__)
-#define MSG_WriteCoord32(x, y) _MSG_WriteFloat(x, y, __FILE__, __LINE__)
-#define MSG_WriteAngle8(x, y) _MSG_WriteAngle8(x, y, __FILE__, __LINE__)
-#define MSG_WriteAngle16(x, y) _MSG_WriteAngle16(x, y, __FILE__, __LINE__)
-#define MSG_WriteAngle32(x, y) _MSG_WriteFloat(x, y, __FILE__, __LINE__)
-#define MSG_WritePos(x, y) _MSG_WritePos( x, y, __FILE__, __LINE__ )
 #define MSG_WriteData(x,y,z) _MSG_WriteData( x, y, z, __FILE__, __LINE__)
-#define MSG_WriteDeltaEvent(x, y, z) _MSG_WriteDeltaEvent(x, y, z, __FILE__, __LINE__)
-#define MSG_WriteDeltaUsercmd(x, y, z) _MSG_WriteDeltaUsercmd(x, y, z, __FILE__, __LINE__)
 #define MSG_WriteDeltaMovevars(x, y, z) _MSG_WriteDeltaMovevars(x, y, z, __FILE__, __LINE__)
-#define MSG_WriteDeltaEntity(from, to, msg, force, new ) _MSG_WriteDeltaEntity (from, to, msg, force, new, __FILE__, __LINE__)
 #define MSG_WriteBits( buf, value, name, bits ) _MSG_WriteBits( buf, value, name, bits, __FILE__, __LINE__ )
 #define MSG_ReadBits( buf, name, bits ) _MSG_ReadBits( buf, name, bits, __FILE__, __LINE__ )
 #define MSG_Send(x, y, z) _MSG_Send(x, y, z, false, __FILE__, __LINE__)
@@ -239,26 +159,15 @@ void MSG_BeginReading (sizebuf_t *sb);
 #define MSG_ReadShort( x) _MSG_ReadBits( x, NWDesc[NET_SHORT].name, NET_SHORT, __FILE__, __LINE__ )
 #define MSG_ReadWord( x ) _MSG_ReadBits( x, NWDesc[NET_WORD].name, NET_WORD, __FILE__, __LINE__ )
 #define MSG_ReadLong( x ) _MSG_ReadBits( x, NWDesc[NET_LONG].name, NET_LONG, __FILE__, __LINE__ )
-#define MSG_ReadCoord32( x ) MSG_ReadFloat( x )
-#define MSG_ReadAngle32( x ) MSG_ReadFloat( x )
-float MSG_ReadFloat( sizebuf_t *msg );
 char *MSG_ReadString( sizebuf_t *sb );
-float MSG_ReadAngle8( sizebuf_t *msg );
-float MSG_ReadAngle16( sizebuf_t *msg );
-float MSG_ReadCoord16( sizebuf_t *msg );
-double MSG_ReadDouble( sizebuf_t *msg );
 char *MSG_ReadStringLine( sizebuf_t *sb );
-void MSG_ReadPos( sizebuf_t *sb, vec3_t pos );
 void MSG_ReadData( sizebuf_t *sb, void *buffer, size_t size );
-void MSG_ReadDeltaUsercmd( sizebuf_t *sb, usercmd_t *from, usercmd_t *cmd );
 void MSG_ReadDeltaMovevars( sizebuf_t *sb, movevars_t *from, movevars_t *cmd );
-void MSG_ReadDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to );
-void MSG_ReadDeltaEntity( sizebuf_t *sb, entity_state_t *from, entity_state_t *to, int number );
 
 // huffman compression
 void Huff_Init( void );
-void Huff_CompressPacket( sizebuf_t *msg, int offset );
-void Huff_DecompressPacket( sizebuf_t *msg, int offset );
+void Huff_CompressPacket( bitbuf_t *msg, int offset );
+void Huff_DecompressPacket( bitbuf_t *msg, int offset );
 
 /*
 ==============================================================
@@ -297,7 +206,7 @@ typedef struct netchan_s
 	int			last_reliable_sequence;		// sequence number of last send
 
 	// reliable staging and holding areas
-	sizebuf_t			message;				// writing buffer to send to server
+	bitbuf_t			message;				// writing buffer to send to server
 	byte			message_buf[MAX_MSGLEN-16];		// leave space for header
 
 	// message is copied to this buffer when it is first transfered
@@ -313,11 +222,10 @@ typedef struct netchan_s
 } netchan_t;
 
 extern netadr_t		net_from;
-extern sizebuf_t		net_message;
+extern bitbuf_t		net_message;
 extern byte		net_message_buffer[MAX_MSGLEN];
 extern cvar_t		*net_speeds;
 
-#define PROTOCOL_VERSION	38
 #define PORT_MASTER		27900
 #define PORT_CLIENT		27901
 #define PORT_SERVER		27910
@@ -329,19 +237,10 @@ extern cvar_t		*net_speeds;
 void Netchan_Init( void );
 void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport );
 bool Netchan_NeedReliable( netchan_t *chan );
-void Netchan_Transmit( netchan_t *chan, int length, byte *data );
+void Netchan_Transmit( netchan_t *chan, int lengthInBytes, byte *data );
+void Netchan_TransmitBits( netchan_t *chan, int lengthInBits, byte *data );
 void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data );
 void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... );
-bool Netchan_Process( netchan_t *chan, sizebuf_t *msg );
-
-//
-// net_encode.c
-//
-void MSG_DeltaAddEncoder( char *name, pfnDeltaEncode encodeFunc );
-int MSG_DeltaFindField( delta_t *pFields, const char *fieldname );
-void MSG_DeltaSetField( delta_t *pFields, const char *fieldname );
-void MSG_DeltaUnsetField( delta_t *pFields, const char *fieldname );
-void MSG_DeltaSetFieldByIndex( struct delta_s *pFields, int fieldNumber );
-void MSG_DeltaUnsetFieldByIndex( struct delta_s *pFields, int fieldNumber );
+bool Netchan_Process( netchan_t *chan, bitbuf_t *msg );
 
 #endif//NET_MSG_H

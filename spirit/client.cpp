@@ -1329,7 +1329,6 @@ addEntity:
 	state->rendermode = pEntity->pev->rendermode;	// rendering mode
 	state->renderamt = pEntity->pev->renderamt;	// alpha value
 	state->animtime = (int)(1000.0 * pEntity->pev->animtime) * 0.001; // sequence time
-	state->localtime = (int)(1000.0 * pEntity->pev->ltime) * 0.001; // movement time
 	state->scale = pEntity->pev->scale;		// shared client and render flags
 	state->movetype = (movetype_t)pEntity->pev->movetype;
 	state->frame = pEntity->pev->frame;		// any model current frame
@@ -1337,18 +1336,21 @@ addEntity:
 	state->mins = pEntity->pev->mins;
 	state->maxs = pEntity->pev->maxs;
 	state->flags = pEntity->pev->flags;
-	state->rendercolor = pEntity->pev->rendercolor;
 	state->oldorigin = pEntity->pev->oldorigin;
 	state->colormap = pEntity->pev->colormap;	// attachments
+
+	state->rendercolor.r = (byte)pEntity->pev->rendercolor.x;
+	state->rendercolor.g = (byte)pEntity->pev->rendercolor.y;
+	state->rendercolor.b = (byte)pEntity->pev->rendercolor.z;
 		
 	if( pEntity->pev->groundentity )
-		state->groundent = ENTINDEX( pEntity->pev->groundentity );
-	else state->groundent = -1;
+		state->onground = ENTINDEX( pEntity->pev->groundentity );
+	else state->onground = 0;
 
 	// translate attached entity
 	if( pEntity->pev->aiment ) 
 		state->aiment = ENTINDEX( pEntity->pev->aiment );
-	else state->aiment = -1;
+	else state->aiment = 0;
 
 	// studio model sequence
 	if( pEntity->pev->sequence != -1 )
@@ -1370,18 +1372,12 @@ addEntity:
 			pEntity->pev->teleport_time = 0.0f;
 		}
 
-		if( pEntity->pev->viewmodel )
-			state->viewmodel = MODEL_INDEX( STRING( pEntity->pev->viewmodel ));
-		else state->viewmodel = 0;
-
 		if( pEntity->pev->aiment ) 
 			state->aiment = ENTINDEX( pEntity->pev->aiment );
-		else state->aiment = -1;
+		else state->aiment = 0;
 
-		state->viewoffset = pEntity->pev->view_ofs; 
 		state->viewangles = pEntity->pev->v_angle;
 		state->idealpitch = pEntity->pev->idealpitch;
-		state->punch_angles = pEntity->pev->punchangle;
 		state->velocity = pEntity->pev->velocity;
 		state->basevelocity = pEntity->pev->clbasevelocity;
 		state->iStepLeft = pEntity->pev->iStepLeft;
@@ -1393,7 +1389,6 @@ addEntity:
 		if( pEntity->pev->weaponmodel != iStringNull )
 			state->weaponmodel = MODEL_INDEX( STRING( pEntity->pev->weaponmodel ));
 		else state->weaponmodel = 0;
-		state->weapons = pEntity->pev->weapons;
 		state->maxspeed = pEntity->pev->maxspeed;
 
 		// clamp fov
@@ -1420,7 +1415,7 @@ addEntity:
 		// translate StartBeamEntity
 		if( pEntity->pev->owner ) 
 			state->owner = ENTINDEX( pEntity->pev->owner );
-		else state->owner = -1;
+		else state->owner = 0;
 	}
 
 	return 1;
@@ -1446,9 +1441,9 @@ void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playermodeli
 	// render information
 	baseline->rendermode = (byte)entity->v.rendermode;
 	baseline->renderamt	= (byte)entity->v.renderamt;
-	baseline->rendercolor.x = (byte)entity->v.rendercolor.x;
-	baseline->rendercolor.y = (byte)entity->v.rendercolor.y;
-	baseline->rendercolor.z = (byte)entity->v.rendercolor.z;
+	baseline->rendercolor.r = (byte)entity->v.rendercolor.x;
+	baseline->rendercolor.g = (byte)entity->v.rendercolor.y;
+	baseline->rendercolor.b = (byte)entity->v.rendercolor.z;
 	baseline->renderfx = (byte)entity->v.renderfx;
 
 	baseline->mins = entity->v.mins;

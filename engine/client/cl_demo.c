@@ -6,6 +6,8 @@
 #include "common.h"
 #include "client.h"
 #include "byteorder.h"
+#include "protocol.h"
+#include "net_encode.h"
 
 /*
 ====================
@@ -14,7 +16,7 @@ CL_WriteDemoMessage
 Dumps the current net message, prefixed by the length
 ====================
 */
-void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
+void CL_WriteDemoMessage( bitbuf_t *msg, int head_size )
 {
 	int len, swlen;
 
@@ -23,12 +25,12 @@ void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
 		return;
 
 	// the first eight bytes are just packet sequencing stuff
-	len = msg->cursize - head_size;
+	len = BF_GetNumBytesWritten( msg ) - head_size;
 	swlen = LittleLong( len );
 
 	if( !swlen ) return; // ignore null messages
 	FS_Write( cls.demofile, &swlen, 4 );
-	FS_Write( cls.demofile, msg->data + head_size, len );
+	FS_Write( cls.demofile, BF_GetData( msg ) + head_size, len );
 }
 
 void CL_WriteDemoHeader( const char *name )
@@ -36,7 +38,7 @@ void CL_WriteDemoHeader( const char *name )
 	char		buf_data[MAX_MSGLEN];
 	entity_state_t	*state, nullstate;
 	movevars_t	nullmovevars;
-	sizebuf_t		buf;
+	bitbuf_t		buf;
 	int		i, len;
 
 	MsgDev( D_INFO, "recording to %s.\n", name );
@@ -53,34 +55,34 @@ void CL_WriteDemoHeader( const char *name )
 	cls.demowaiting = true;
 
 	// write out messages to hold the startup information
-	MSG_Init( &buf, buf_data, sizeof( buf_data ));
+	BF_Init( &buf, "DemoWrite", buf_data, sizeof( buf_data ));
 
 	// send the serverdata
-	MSG_WriteByte( &buf, svc_serverdata );
-	MSG_WriteLong( &buf, PROTOCOL_VERSION );
-	MSG_WriteLong( &buf, cl.servercount );
-	MSG_WriteByte( &buf, cl.playernum );
-	MSG_WriteByte( &buf, clgame.globals->maxClients );
-	MSG_WriteWord( &buf, clgame.globals->maxEntities );
-	MSG_WriteString( &buf, cl.configstrings[CS_NAME] );
-	MSG_WriteString( &buf, clgame.maptitle );
+	BF_WriteByte( &buf, svc_serverdata );
+	BF_WriteLong( &buf, PROTOCOL_VERSION );
+	BF_WriteLong( &buf, cl.servercount );
+	BF_WriteByte( &buf, cl.playernum );
+	BF_WriteByte( &buf, clgame.globals->maxClients );
+	BF_WriteWord( &buf, clgame.globals->maxEntities );
+	BF_WriteString( &buf, cl.configstrings[CS_NAME] );
+	BF_WriteString( &buf, clgame.maptitle );
 
 	// configstrings
 	for( i = 0; i < MAX_CONFIGSTRINGS; i++ )
 	{
 		if( cl.configstrings[i][0] )
 		{
-			MSG_WriteByte( &buf, svc_configstring );
-			MSG_WriteShort( &buf, i );
-			MSG_WriteString( &buf, cl.configstrings[i] );
+			BF_WriteByte( &buf, svc_configstring );
+			BF_WriteShort( &buf, i );
+			BF_WriteString( &buf, cl.configstrings[i] );
 
-			if( buf.cursize > ( buf.maxsize / 2 ))
+			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 			{	
 				// write it out
-				len = LittleLong( buf.cursize );
+				len = LittleLong( BF_GetNumBytesWritten( &buf ));
 				FS_Write( cls.demofile, &len, 4 );
-				FS_Write( cls.demofile, buf.data, buf.cursize );
-				buf.cursize = 0;
+				FS_Write( cls.demofile, BF_GetData( &buf ), len );
+				BF_Clear( &buf );
 			}
 		}
 
@@ -91,18 +93,18 @@ void CL_WriteDemoHeader( const char *name )
 	{
 		if( clgame.msg[i].name[0] )
 		{
-			MSG_WriteByte( &buf, svc_usermessage );
-			MSG_WriteString( &buf, clgame.msg[i].name );
-			MSG_WriteByte( &buf, clgame.msg[i].number );
-			MSG_WriteByte( &buf, (byte)clgame.msg[i].size );
+			BF_WriteByte( &buf, svc_usermessage );
+			BF_WriteString( &buf, clgame.msg[i].name );
+			BF_WriteByte( &buf, clgame.msg[i].number );
+			BF_WriteByte( &buf, (byte)clgame.msg[i].size );
 
-			if( buf.cursize > ( buf.maxsize / 2 ))
+			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 			{	
 				// write it out
-				len = LittleLong( buf.cursize );
+				len = LittleLong( BF_GetNumBytesWritten( &buf ));
 				FS_Write( cls.demofile, &len, 4 );
-				FS_Write( cls.demofile, buf.data, buf.cursize );
-				buf.cursize = 0;
+				FS_Write( cls.demofile, BF_GetData( &buf ), len );
+				BF_Clear( &buf );
 			}
 		}
 
@@ -118,48 +120,48 @@ void CL_WriteDemoHeader( const char *name )
 		if( !state->modelindex && !state->effects )
 			continue;
 
-		MSG_WriteByte( &buf, svc_spawnbaseline );		
+		BF_WriteByte( &buf, svc_spawnbaseline );		
 		MSG_WriteDeltaEntity( &nullstate, state, &buf, true, true );
 
-		if( buf.cursize > ( buf.maxsize / 2 ))
+		if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 		{	
 			// write it out
-			len = LittleLong( buf.cursize );
+			len = LittleLong( BF_GetNumBytesWritten( &buf ));
 			FS_Write( cls.demofile, &len, 4 );
-			FS_Write( cls.demofile, buf.data, buf.cursize );
-			buf.cursize = 0;
+			FS_Write( cls.demofile, BF_GetData( &buf ), len );
+			BF_Clear( &buf );
 		}
 	}
 
-	MSG_WriteByte( &buf, svc_stufftext );
-	MSG_WriteString( &buf, "precache\n" );
+	BF_WriteByte( &buf, svc_stufftext );
+	BF_WriteString( &buf, "precache\n" );
 
-	MSG_WriteByte( &buf, svc_setview );
-	MSG_WriteWord( &buf, cl.refdef.viewentity );
+	BF_WriteByte( &buf, svc_setview );
+	BF_WriteWord( &buf, cl.refdef.viewentity );
 
 	// write all clients userinfo
 	for( i = 0; i < clgame.globals->maxClients; i++ )
 	{
 		player_info_t	*pi;
 
-		MSG_WriteByte( &buf, svc_updateuserinfo );
-		MSG_WriteByte( &buf, i );
+		BF_WriteByte( &buf, svc_updateuserinfo );
+		BF_WriteByte( &buf, i );
 		pi = &cl.players[i];
 
 		if( pi->name[0] )
 		{
-			MSG_WriteByte( &buf, true );
-			MSG_WriteString( &buf, pi->userinfo );
+			BF_WriteByte( &buf, true );
+			BF_WriteString( &buf, pi->userinfo );
 		}
-		else MSG_WriteByte( &buf, false );
+		else BF_WriteByte( &buf, false );
 	}
 
-	MSG_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
+	BF_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
 
 	// write it to the demo file
-	len = LittleLong( buf.cursize );
+	len = LittleLong( BF_GetNumBytesWritten( &buf ));
 	FS_Write( cls.demofile, &len, 4 );
-	FS_Write( cls.demofile, buf.data, buf.cursize );
+	FS_Write( cls.demofile, BF_GetData( &buf ), len );
 
 	// force client.dll update
 	Cmd_ExecuteString( "cmd fullupdate\n" );
@@ -194,7 +196,6 @@ CLIENT SIDE DEMO PLAYBACK
 
 =======================================================================
 */
-
 /*
 ==================
 CL_NextDemo
@@ -253,9 +254,9 @@ reads demo data and write it to client
 */
 void CL_ReadDemoMessage( void )
 {
-	sizebuf_t		buf;
-	char		bufData[MAX_MSGLEN];
-	int		r;
+	bitbuf_t	buf;
+	char	buf_data[MAX_MSGLEN];
+	int	r, curSize;
 
 	if( !cls.demofile )
 	{
@@ -270,32 +271,32 @@ void CL_ReadDemoMessage( void )
 	if( cl.time <= cl.frame.servertime )
 		return;
 
-	// init the message
-	MSG_Init( &buf, bufData, sizeof( bufData ));
-
 	// get the length
-	r = FS_Read( cls.demofile, &buf.cursize, 4 );
+	r = FS_Read( cls.demofile, &curSize, 4 );
 	if( r != 4 )
 	{
 		CL_DemoCompleted();
 		return;
 	}
 
-	buf.cursize = LittleLong( buf.cursize );
-	if( buf.cursize == -1 )
+	curSize = LittleLong( curSize );
+	if( curSize == -1 )
 	{
 		CL_DemoCompleted();
 		return;
 	}
 
-	if( buf.cursize > buf.maxsize )
+	if( curSize > sizeof( buf_data ))
 	{
 		Host_Error( "CL_ReadDemoMessage: demoMsglen > MAX_MSGLEN\n" );
 		return;
 	}
-	r = FS_Read( cls.demofile, buf.data, buf.cursize );
 
-	if( r != buf.cursize )
+	// init the message (set maxsize to cursize so overflow check will be working properly)
+	BF_Init( &buf, "DemoRead", buf_data, curSize );
+	r = FS_Read( cls.demofile, buf.pData, curSize );
+
+	if( r != curSize )
 	{
 		MsgDev( D_ERROR, "CL_ReadDemoMessage: demo file was truncated( %d )\n", cls.state );
 		CL_DemoCompleted();
@@ -303,7 +304,8 @@ void CL_ReadDemoMessage( void )
 	}
 
 	cls.connect_time = cls.realtime;
-	buf.readcount = 0;
+	BF_Clear( &buf );	// reset curpos
+
 	CL_ParseServerMessage( &buf );
 }
 
@@ -355,9 +357,9 @@ bool CL_GetComment( const char *demoname, char *comment )
 {
 	file_t	*demfile;
 	char     	buf_data[MAX_MSGLEN];
+	int	r, maxClients, curSize;
 	string	maptitle;
-	int	r, maxClients;
-	sizebuf_t	buf;
+	bitbuf_t	buf;
 	
 	if( !comment ) return false;
 
@@ -368,12 +370,9 @@ bool CL_GetComment( const char *demoname, char *comment )
 		return false;
           }
 
-	// write out messages to hold the startup information
-	MSG_Init( &buf, buf_data, sizeof( buf_data ));
-
 	// read the first demo packet. extract info from it
 	// get the length
-	r = FS_Read( demfile, &buf.cursize, 4 );
+	r = FS_Read( demfile, &curSize, 4 );
 	if( r != 4 )
 	{
 		FS_Close( demfile );
@@ -381,45 +380,47 @@ bool CL_GetComment( const char *demoname, char *comment )
 		return false;
 	}
 
-	buf.cursize = LittleLong( buf.cursize );
-	if( buf.cursize == -1 )
+	curSize = LittleLong( curSize );
+
+	if( curSize == -1 )
 	{
 		FS_Close( demfile );
 		com.strncpy( comment, "<corrupted>", MAX_STRING );
 		return false;
 	}
 
-	if( buf.cursize > buf.maxsize )
+	if( curSize > sizeof( buf_data ))
 	{
 		FS_Close( demfile );
 		com.strncpy( comment, "<not compatible>", MAX_STRING );
 		return false;
 	}
 
-	r = FS_Read( demfile, buf.data, buf.cursize );
+	// init the message (set maxsize to cursize so overflow check will be working properly)
+	BF_Init( &buf, "DemoRead", buf_data, curSize );
+	r = FS_Read( demfile, buf.pData, curSize );
 
-	if( r != buf.cursize )
+	if( r != curSize )
 	{
 		FS_Close( demfile );
 		com.strncpy( comment, "<truncated file>", MAX_STRING );
 		return false;
 	}
 
-	MSG_BeginReading( &buf );
+	// skip server data ident
+	BF_ReadByte( &buf );
 
-	// send the serverdata
-	MSG_ReadByte( &buf ); // skip server data
-	if( PROTOCOL_VERSION != MSG_ReadLong( &buf ))
+	if( PROTOCOL_VERSION != BF_ReadLong( &buf ))
 	{
 		FS_Close( demfile );
 		com.strncpy( comment, "<invalid protocol>", MAX_STRING );
 		return false;
 	}
 
-	MSG_ReadLong( &buf ); // server count
-	MSG_ReadByte( &buf );// playernum
-	maxClients = MSG_ReadByte( &buf );
-	if( MSG_ReadWord( &buf ) > GI->max_edicts )
+	BF_ReadLong( &buf ); // server count
+	BF_ReadByte( &buf );// playernum
+	maxClients = BF_ReadByte( &buf );
+	if( BF_ReadWord( &buf ) > GI->max_edicts )
 	{
 		FS_Close( demfile );
 		com.strncpy( comment, "<too many edicts>", MAX_STRING );
@@ -427,8 +428,8 @@ bool CL_GetComment( const char *demoname, char *comment )
 	}
 
 	// split comment to sections
-	com.strncpy( comment, MSG_ReadString( &buf ), CS_SIZE );		// mapname
-	com.strncpy( maptitle, MSG_ReadString( &buf ), MAX_STRING );	// maptitle
+	com.strncpy( comment, BF_ReadString( &buf ), CS_SIZE );	// mapname
+	com.strncpy( maptitle, BF_ReadString( &buf ), MAX_STRING );	// maptitle
 	if( !com.strlen( maptitle )) com.strncpy( maptitle, "<no title>", MAX_STRING );
 	com.strncpy( comment + CS_SIZE, maptitle, CS_SIZE );
 	com.strncpy( comment + CS_SIZE * 2, va( "%i", maxClients ), CS_TIME );

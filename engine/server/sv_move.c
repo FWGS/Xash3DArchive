@@ -6,6 +6,7 @@
 #include "common.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "protocol.h"
 #include "server.h"
 #include "const.h"
 #include "pm_defs.h"
@@ -337,9 +338,9 @@ static void PM_ClientPrintf( int index, char *fmt, ... )
 	com.vsprintf( string, fmt, argptr );
 	va_end( argptr );
 	
-	MSG_WriteByte( &cl->netchan.message, svc_print );
-	MSG_WriteByte( &cl->netchan.message, PRINT_HIGH );
-	MSG_WriteString( &cl->netchan.message, string );
+	BF_WriteByte( &cl->netchan.message, svc_print );
+	BF_WriteByte( &cl->netchan.message, PRINT_HIGH );
+	BF_WriteString( &cl->netchan.message, string );
 }
 
 /*
@@ -589,7 +590,7 @@ void SV_InitClientMove( void )
 void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd )
 {
 	svgame.pmove->runfuncs = true;
-	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, ucmd->random_seed );
+	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, cl->random_seed );
 }
 
 /*

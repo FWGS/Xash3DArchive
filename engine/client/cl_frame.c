@@ -5,6 +5,8 @@
 
 #include "common.h"
 #include "client.h"
+#include "protocol.h"
+#include "net_encode.h"
 
 /*
 =========================================================================
@@ -40,7 +42,7 @@ Parses deltas from the given base and adds the resulting entity
 to the current frame
 ==================
 */
-void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, bool unchanged )
+void CL_DeltaEntity( bitbuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, bool unchanged )
 {
 	edict_t		*ent;
 	entity_state_t	*state;
@@ -52,7 +54,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( newent ) old = &clgame.baselines[newnum];
 
 	if( unchanged ) *state = *old;
-	else MSG_ReadDeltaEntity( msg, old, state, newnum );
+	else MSG_ReadDeltaEntity( msg, old, state, newnum, cl.frame.servertime );
 
 	if( state->number == MAX_EDICTS )
 	{
@@ -92,7 +94,7 @@ An svc_packetentities has just been parsed, deal with the
 rest of the data stream.
 ==================
 */
-void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newframe )
+void CL_ParsePacketEntities( bitbuf_t *msg, frame_t *oldframe, frame_t *newframe )
 {
 	int		newnum;
 	entity_state_t	*oldstate;
@@ -121,11 +123,11 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 	while( 1 )
 	{
 		// read the entity index number
-		newnum = MSG_ReadShort( msg );
+		newnum = BF_ReadShort( msg );
 		if( !newnum ) break; // end of packet entities
 
-		if( msg->error )
-			Host_Error("CL_ParsePacketEntities: end of message[%d > %d]\n", msg->readcount, msg->cursize );
+		if( BF_CheckOverflow( msg ))
+			Host_Error( "CL_ParsePacketEntities: read overflow\n" );
 
 		while( newnum >= clgame.globals->numEntities )
 			clgame.globals->numEntities++;
@@ -194,29 +196,46 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 }
 
 /*
+===================
+CL_ParseClientData
+===================
+*/
+void CL_ParseClientData( frame_t *from, frame_t *to, bitbuf_t *msg )
+{
+	clientdata_t	*cd, *ocd;
+	clientdata_t	dummy;
+	
+	cd = &to->cd;
+
+	// clear to old value before delta parsing
+	if( !from )
+	{
+		ocd = &dummy;
+		Mem_Set( &dummy, 0, sizeof( dummy ));
+	}
+	else ocd = &from->cd;
+
+	MSG_ReadClientData( msg, ocd, cd, to->servertime );
+}
+		
+/*
 ================
 CL_ParseFrame
 ================
 */
-void CL_ParseFrame( sizebuf_t *msg )
+void CL_ParseFrame( bitbuf_t *msg )
 {
-	int	cmd, client_idx;
+	int	cmd;
 	edict_t	*clent;
           
 	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
 
-	cl.frame.serverframe = MSG_ReadLong( msg );
-	cl.frame.servertime = MSG_ReadLong( msg );
-	cl.frame.deltaframe = MSG_ReadLong( msg );
-	cl.serverframetime = MSG_ReadByte( msg );
-	cl.surpressCount = MSG_ReadByte( msg );
-	client_idx = MSG_ReadByte( msg );
+	cl.frame.serverframe = BF_ReadLong( msg );
+	cl.frame.servertime = BF_ReadLong( msg );
+	cl.frame.deltaframe = BF_ReadLong( msg );
+	cl.serverframetime = BF_ReadByte( msg );
+	cl.surpressCount = BF_ReadByte( msg );
 
-	// read clientindex
-	clent = EDICT_NUM( client_idx ); // get client
-	if(( client_idx - 1 ) != cl.playernum )
-		Host_Error( "CL_ParseFrame: invalid playernum (%d should be %d)\n", client_idx - 1, cl.playernum );
-	
 	// If the frame is delta compressed from data that we
 	// no longer have available, we must suck up the rest of
 	// the frame, but not use it, then ask for a non-compressed
@@ -254,9 +273,16 @@ void CL_ParseFrame( sizebuf_t *msg )
 	else if( cl.time < cl.frame.servertime - cl.serverframetime )
 		cl.time = cl.frame.servertime - cl.serverframetime;
 
+	// read clientdata
+	cmd = BF_ReadByte( msg );
+	if( cmd != svc_clientdata ) Host_Error( "CL_ParseFrame: not cliendata[%d]\n", cmd );
+	CL_ParseClientData( cl.oldframe, &cl.frame, msg );
+
+	clent = CL_GetLocalPlayer(); // get client
+
 	// read packet entities
-	cmd = MSG_ReadByte( msg );
-	if( cmd != svc_packetentities ) Host_Error("CL_ParseFrame: not packetentities[%d]\n", cmd );
+	cmd = BF_ReadByte( msg );
+	if( cmd != svc_packetentities ) Host_Error( "CL_ParseFrame: not packetentities[%d]\n", cmd );
 	CL_ParsePacketEntities( msg, cl.oldframe, &cl.frame );
 
 	// save the frame off in the backup array for later delta comparisons
@@ -300,11 +326,30 @@ CL_AddPacketEntities
 */
 void CL_AddPacketEntities( frame_t *frame )
 {
-	edict_t	*ent;
-	int	e, ed_type;
+	edict_t		*ent, *clent;
+	clientdata_t	*cd, *ocd, dummy;
+	int		e, ed_type;
 
 	// now recalc actual entcount
 	for( ; EDICT_NUM( clgame.globals->numEntities - 1 )->free; clgame.globals->numEntities-- );
+
+	clent = CL_GetLocalPlayer();
+	if( !clent ) return;
+
+	cd = &cl.frame.cd;
+
+	if( cl.oldframe )
+	{
+		ocd = &cl.oldframe->cd;
+	}
+	else
+	{
+		Mem_Set( &dummy, 0, sizeof( dummy ));
+		ocd = &dummy;
+	}
+
+	// update client vars
+	clgame.dllFuncs.pfnUpdateClientVars( clent, cd, ocd );
 
 	for( e = 1; e < clgame.globals->numEntities; e++ )
 	{

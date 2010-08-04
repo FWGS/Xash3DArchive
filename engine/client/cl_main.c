@@ -6,6 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "byteorder.h"
+#include "protocol.h"
 
 cvar_t	*rcon_client_password;
 cvar_t	*rcon_address;
@@ -116,10 +117,11 @@ void CL_ForwardToServer_f( void )
 	// don't forward the first argument
 	if( Cmd_Argc() > 1 )
 	{
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-		MSG_Print( &cls.netchan.message, Cmd_Args());
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, Cmd_Args( ));
 	}
 }
+
 /*
 ===================
 Cmd_ForwardToServer
@@ -147,13 +149,13 @@ void Cmd_ForwardToServer( void )
 		return;
 	}
 
-	MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-	MSG_Print( &cls.netchan.message, cmd );
+	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+	BF_WriteString( &cls.netchan.message, cmd );
 
 	if( Cmd_Argc() > 1 )
 	{
-		MSG_Print( &cls.netchan.message, " " );
-		MSG_Print( &cls.netchan.message, Cmd_Args( ));
+		BF_WriteString( &cls.netchan.message, " " );
+		BF_WriteString( &cls.netchan.message, Cmd_Args( ));
 	}
 }
 
@@ -361,10 +363,32 @@ void CL_ClearState( void )
 
 	// wipe the entire cl structure
 	Mem_Set( &cl, 0, sizeof( cl ));
-	MSG_Clear( &cls.netchan.message );
+	BF_Clear( &cls.netchan.message );
 
 	Cvar_SetValue( "scr_download", 0.0f );
 	Cvar_SetValue( "scr_loading", 0.0f );
+}
+
+/*
+=====================
+CL_SendDisconnectMessage
+
+Sends a disconnect message to the server
+=====================
+*/
+void CL_SendDisconnectMessage( void )
+{
+	bitbuf_t	buf;
+	byte	data[32];
+
+	BF_Init( &buf, "LastMessage", data, sizeof( data ));
+	BF_WriteByte( &buf, clc_stringcmd );
+	BF_WriteString( &buf, "disconnect" );
+
+	// make sure message will be delivered
+	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
+	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
+	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
 }
 
 /*
@@ -378,8 +402,6 @@ This is also called on Host_Error, so it shouldn't cause any errors
 */
 void CL_Disconnect( void )
 {
-	byte	final[32];
-
 	if( cls.state == ca_disconnected )
 		return;
 
@@ -387,11 +409,7 @@ void CL_Disconnect( void )
 	CL_Stop_f();
 
 	// send a disconnect message to the server
-	final[0] = clc_stringcmd;
-	com.strcpy((char *)final+1, "disconnect" );
-	Netchan_Transmit( &cls.netchan, com.strlen( final ), final );
-	Netchan_Transmit( &cls.netchan, com.strlen( final ), final );
-	Netchan_Transmit( &cls.netchan, com.strlen( final ), final );
+	CL_SendDisconnectMessage();
 
 	CL_ClearState ();
 
@@ -416,8 +434,6 @@ void CL_Disconnect_f( void )
 
 void CL_Crashed_f( void )
 {
-	byte	final[32];
-
 	// already freed
 	if( host.state == HOST_CRASHED ) return;
 	if( host.type != HOST_NORMAL ) return;
@@ -428,11 +444,7 @@ void CL_Crashed_f( void )
 	CL_Stop_f(); // stop any demos
 
 	// send a disconnect message to the server
-	final[0] = clc_stringcmd;
-	com.strcpy((char *)final+1, "disconnect" );
-	Netchan_Transmit( &cls.netchan, com.strlen( final ), final );
-	Netchan_Transmit( &cls.netchan, com.strlen( final ), final );
-	Netchan_Transmit( &cls.netchan, com.strlen( final ), final );
+	CL_SendDisconnectMessage();
 
 	// stop any downloads
 	if( cls.download ) FS_Close( cls.download );
@@ -537,8 +549,8 @@ void CL_Reconnect_f( void )
 	{
 		cls.demonum = -1;	// not in the demo loop now
 		cls.state = ca_connected;
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-		MSG_Print( &cls.netchan.message, "new" );
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, "new" );
 		return;
 	}
 
@@ -564,11 +576,11 @@ CL_ParseStatusMessage
 Handle a reply from a info
 =================
 */
-void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
+void CL_ParseStatusMessage( netadr_t from, bitbuf_t *msg )
 {
 	char	*s;
 
-	s = MSG_ReadString( msg );
+	s = BF_ReadString( msg );
 	UI_AddServerToList( from, s );
 }
 
@@ -692,14 +704,14 @@ CL_ConnectionlessPacket
 Responses to broadcasts, etc
 =================
 */
-void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
+void CL_ConnectionlessPacket( netadr_t from, bitbuf_t *msg )
 {
 	char	*s, *c;
 	
-	MSG_BeginReading( msg );
-	MSG_ReadLong( msg ); // skip the -1
+	BF_Clear( msg );
+	BF_ReadLong( msg ); // skip the -1
 
-	s = MSG_ReadStringLine( msg );
+	s = BF_ReadStringLine( msg );
 
 	Cmd_TokenizeString( s );
 	c = Cmd_Argv( 0 );
@@ -714,11 +726,15 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 			MsgDev( D_INFO, "dup connect received. ignored\n");
 			return;
 		}
+
 		Netchan_Setup( NS_CLIENT, &cls.netchan, from, Cvar_VariableValue( "net_qport" ));
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-		MSG_Print( &cls.netchan.message, "new" );
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, "new" );
 		cls.state = ca_connected;
 		UI_SetActiveMenu( false );
+
+		// FIXME!!! properly send tables to client
+		Delta_Init ();
 	}
 	else if( !com.strcmp( c, "info" ))
 	{
@@ -728,7 +744,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !com.strcmp( c, "cmd" ))
 	{
 		// remote command from gui front end
-		if(!NET_IsLocalAddress( from ))
+		if( !NET_IsLocalAddress( from ))
 		{
 			Msg( "Command packet from remote host.  Ignored.\n" );
 			return;
@@ -736,14 +752,14 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 
 		ShowWindow( host.hWnd, SW_RESTORE );
 		SetForegroundWindow ( host.hWnd );
-		s = MSG_ReadString( msg );
+		s = BF_ReadString( msg );
 		Cbuf_AddText( s );
 		Cbuf_AddText( "\n" );
 	}
 	else if( !com.strcmp( c, "print" ))
 	{
 		// print command from somewhere
-		s = MSG_ReadString( msg );
+		s = BF_ReadString( msg );
 		Msg( s );
 	}
 	else if( !com.strcmp( c, "ping" ))
@@ -779,12 +795,17 @@ CL_ReadNetMessage
 */
 void CL_ReadNetMessage( void )
 {
-	while( NET_GetPacket( NS_CLIENT, &net_from, net_message.data, &net_message.cursize ))
+	int	curSize;
+
+	while( NET_GetPacket( NS_CLIENT, &net_from, net_message_buffer, &curSize ))
 	{
 		if( host.type == HOST_DEDICATED || cls.demoplayback )
 			return;
 
-		if( net_message.cursize >= 4 && *(int *)net_message.data == -1 )
+		BF_Init( &net_message, "ServerData", net_message_buffer, curSize );
+
+		// check for connectionless packet (0xffffffff) first
+		if( BF_GetMaxBytes( &net_message ) >= 4 && *(int *)net_message.pData == -1 )
 		{
 			CL_ConnectionlessPacket( net_from, &net_message );
 			return;
@@ -793,7 +814,7 @@ void CL_ReadNetMessage( void )
 		// can't be a valid sequenced packet	
 		if( cls.state < ca_connected ) return;
 
-		if( net_message.cursize < 8 )
+		if( BF_GetMaxBytes( &net_message ) < 8 )
 		{
 			MsgDev( D_WARN, "%s: runt packet\n", NET_AdrToString( net_from ));
 			return;
@@ -809,7 +830,7 @@ void CL_ReadNetMessage( void )
 		if( Netchan_Process( &cls.netchan, &net_message ))
 		{
 			// the header is different lengths for reliable and unreliable messages
-			int headerBytes = net_message.readcount;
+			int headerBytes = BF_GetNumBytesRead( &net_message );
 
 			CL_ParseServerMessage( &net_message );
 
@@ -881,8 +902,8 @@ int precache_spawncount;
 
 void CL_RequestNextDownload( void )
 {
-	string		fn;
-	uint		map_checksum;	// for detecting cheater maps
+	string	fn;
+	uint	map_checksum;	// for detecting cheater maps
 
 	if( cls.state != ca_connected )
 		return;
@@ -989,8 +1010,8 @@ void CL_RequestNextDownload( void )
 	CL_PrepVideo();
 
 	if( cls.demoplayback ) return; // not really connected
-	MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
-	MSG_Print( &cls.netchan.message, va( "begin %i\n", precache_spawncount ));
+	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+	BF_WriteString( &cls.netchan.message, va( "begin %i\n", precache_spawncount ));
 }
 
 /*
@@ -1031,6 +1052,7 @@ void CL_DumpCfgStrings_f( void )
 		Msg( "%s [%i]\n", cl.configstrings[i], i );
 		numStrings++;
 	}
+
 	Msg( "%i total strings used\n", numStrings );
 }
 
@@ -1059,8 +1081,6 @@ CL_InitLocal
 void CL_InitLocal( void )
 {
 	cls.state = ca_disconnected;
-
-	MSG_Init( &net_message, net_message_buffer, sizeof( net_message_buffer ));
 
 	// register our variables
 	cl_predict = Cvar_Get( "cl_predict", "1", CVAR_ARCHIVE, "disables client movement prediction" );

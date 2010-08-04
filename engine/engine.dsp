@@ -294,7 +294,15 @@ SOURCE=.\common\net_buffer.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\net_encode.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\net_msg.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\protocol.h
 # End Source File
 # Begin Source File
 
