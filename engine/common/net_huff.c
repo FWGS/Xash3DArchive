@@ -525,9 +525,8 @@ void Huff_CompressPacket( bitbuf_t *msg, int offset )
 	}
 	
 	outLen = (huffBitPos >> 3) + 1;
-	msg->iCurBit = ( offset + outLen ) << 3;
+	msg->iCurBit = (offset + outLen) << 3;
 	Mem_Copy( data, buffer, outLen );
-
 }
 
 /*
@@ -553,15 +552,15 @@ void Huff_DecompressPacket( bitbuf_t *msg, int offset )
 
 	Huff_PrepareTree( tree );
 
-	outLen = (data[0] << 8) + data[1];
+	outLen = ( data[0] << 8 ) + data[1];
 	huffBitPos = 16;
 	
-	if( outLen > BF_GetMaxBytes( msg ) - offset )
-		outLen = BF_GetMaxBytes( msg ) - offset;
+	if( outLen > MAX_MSGLEN - offset )
+		outLen = MAX_MSGLEN - offset;
 
 	for( i = 0; i < outLen; i++ )
 	{
-		if((huffBitPos >> 3) > inLen )
+		if(( huffBitPos >> 3 ) > inLen )
 		{
 			buffer[i] = 0;
 			break;

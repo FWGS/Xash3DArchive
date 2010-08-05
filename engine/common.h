@@ -31,6 +31,13 @@
 #define MAX_ENTNUMBER	99999		// for server and client parsing
 #define MAX_HEARTBEAT	-99999		// connection time
 
+#ifdef _DEBUG
+void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
+#define Assert( f )		DBG_AssertFunction( f, #f, __FILE__, __LINE__, NULL )
+#else
+#define Assert( f )
+#endif
+
 extern cvar_t	*scr_width;
 extern cvar_t	*scr_height;
 extern cvar_t	*allow_download;

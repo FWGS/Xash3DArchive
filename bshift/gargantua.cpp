@@ -511,7 +511,7 @@ void CGargantua :: FlameCreate( void )
 			Vector vecEnd = (gpGlobals->v_forward * GARG_FLAME_LENGTH) + posGun;
 			UTIL_TraceLine( posGun, vecEnd, dont_ignore_monsters, edict(), &trace );
 
-			m_pFlame[i]->PointEntInit( trace.vecEndPos, edict() );
+			m_pFlame[i]->PointEntInit( trace.vecEndPos, entindex() );
 			if ( i < 2 )
 				m_pFlame[i]->SetColor( 255, 130, 90 );
 			else

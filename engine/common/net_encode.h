@@ -45,10 +45,12 @@ typedef struct delta_s
 {
 	const char	*name;
 	int		offset;		// in bytes
+	int		size;		// used for bounds checking in DT_STRING
 	int		flags;		// DT_INTEGER, DT_FLOAT etc
 	float		multiplier;
 	float		post_multiplier;	// for DEFINE_DELTA_POST
 	int		bits;		// how many bits we send\receive
+	bool		bInactive;	// unsetted by user request
 } delta_t;
 
 typedef void (*pfnDeltaEncode)( delta_t *pFields, const byte *from, const byte *to );
@@ -74,12 +76,19 @@ typedef struct
 void Delta_Init( void );
 void Delta_Shutdown( void );
 void Delta_InitFields( void );
+int Delta_NumTables( void );
+delta_info_t *Delta_FindStructByIndex( int index );
 void MSG_DeltaAddEncoder( char *name, pfnDeltaEncode encodeFunc );
 int MSG_DeltaFindField( delta_t *pFields, const char *fieldname );
 void MSG_DeltaSetField( delta_t *pFields, const char *fieldname );
 void MSG_DeltaUnsetField( delta_t *pFields, const char *fieldname );
 void MSG_DeltaSetFieldByIndex( struct delta_s *pFields, int fieldNumber );
 void MSG_DeltaUnsetFieldByIndex( struct delta_s *pFields, int fieldNumber );
+
+// send table over network
+void Delta_WriteTableField( bitbuf_t *msg, int tableIndex, const delta_t *pField );
+void Delta_ParseTableField( bitbuf_t *msg );
+
 
 // encode routines
 void MSG_WriteDeltaUsercmd( bitbuf_t *msg, usercmd_t *from, usercmd_t *to );

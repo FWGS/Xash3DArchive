@@ -27,7 +27,7 @@ char *svc_strings[256] =
 	"svc_spawnbaseline",
 	"svc_download",
 	"svc_changing",
-	"svc_physinfo",
+	"svc_deltatable",
 	"svc_usermessage",
 	"svc_packetentities",
 	"svc_frame",
@@ -907,6 +907,9 @@ void CL_ParseServerMessage( bitbuf_t *msg )
 		case svc_spawnbaseline:
 			CL_ParseBaseline( msg );
 			break;
+		case svc_deltatable:
+			Delta_ParseTableField( msg );
+			break;
 		case svc_download:
 			CL_ParseDownload( msg );
 			break;
@@ -927,9 +930,6 @@ void CL_ParseServerMessage( bitbuf_t *msg )
 			break;
 		case svc_crosshairangle:
 			CL_ParseCrosshairAngle( msg );
-			break;
-		case svc_physinfo:
-			com.strncpy( cl.physinfo, BF_ReadString( msg ), sizeof( cl.physinfo ));
 			break;
 		case svc_print:
 			i = BF_ReadByte( msg );

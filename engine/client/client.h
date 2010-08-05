@@ -97,8 +97,6 @@ typedef struct
 	int		movemessages;
 	int		serverframetime;			// server frametime
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
-	char		physinfo[MAX_INFO_STRING];		// physics info string
-
 	entity_state_t	entity_curstates[MAX_PARSE_ENTITIES];	// FIXME: this is must match with max_edicts ?
 
 	// locally derived information from server state

@@ -229,9 +229,9 @@ const Vector &CBeam::GetEndPos( void )
 		edict_t *pent =  GetEndEntity();
 
 		if ( pent )
-			return pent->v.oldorigin;
+			return pent->v.angles;
           }
-	return pev->oldorigin;
+	return pev->angles;
 }
 
 
@@ -1722,7 +1722,7 @@ void CEnvModel :: Spawn( void )
 	SET_MODEL( ENT(pev), STRING(pev->model) );
 	UTIL_SetOrigin(this, pev->origin);
 
-//	UTIL_AssignOrigin(this, pev->oldorigin); //AJH - WTF is this here for?
+//	UTIL_AssignOrigin(this, pev->angles); //AJH - WTF is this here for?
 
 	if (pev->spawnflags & SF_ENVMODEL_SOLID)
 	{

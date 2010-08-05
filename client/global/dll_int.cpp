@@ -251,6 +251,11 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	{
 		ent->v.angles = LerpAngle( prev->angles, state->angles, m_fLerp );
 		ent->v.basevelocity = LerpPoint( prev->basevelocity, state->basevelocity, m_fLerp );
+
+		if( ent != GetLocalPlayer( ))
+		{
+			ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
+		}
 	}
 
 	// interpolate scale, renderamount etc
@@ -310,11 +315,8 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 		}
 		break;
 	case ED_BEAM:
-		ent->v.oldorigin = state->oldorigin;	// beam endpoint
-		ent->v.frags = state->gaitsequence;
-		if( state->owner )
-			ent->v.owner = GetEntityByIndex( state->owner );
-		else ent->v.owner = NULL;
+		ent->v.origin = state->origin;
+		ent->v.angles = state->angles;	// beam endpoint
 
 		// add server beam now
 		g_pViewRenderBeams->AddServerBeam( ent );

@@ -43,8 +43,8 @@ void BF_InitExt( bitbuf_t *bf, const char *pDebugName, void *pData, int nBytes, 
 void BF_StartWriting( bitbuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits )
 {
 	// make sure it's dword aligned and padded.
-//	ASSERT(( nBytes % 4 ) == 0 );
-	ASSERT(((dword)pData & 3 ) == 0 );
+//	Assert(( nBytes % 4 ) == 0 );
+	Assert(((dword)pData & 3 ) == 0 );
 
 	bf->pData = (byte *)pData;
 	bf->nDataBytes = nBytes;
@@ -55,7 +55,7 @@ void BF_StartWriting( bitbuf_t *bf, void *pData, int nBytes, int iStartBit, int 
 	}
 	else
 	{
-		ASSERT( nBits <= nBytes * 8 );
+		Assert( nBits <= nBytes * 8 );
 		bf->nDataBits = nBits;
 	}
 
@@ -123,7 +123,7 @@ void BF_WriteUBitLongExt( bitbuf_t *bf, uint curData, int numbits, bool bCheckRa
 		if( curData >= (unsigned long)BIT( numbits ))
 			MsgDev( D_ERROR, "Msg %s: out of range value!\n", bf->pDebugName );
 	}
-	ASSERT( numbits >= 0 && numbits <= 32 );
+	Assert( numbits >= 0 && numbits <= 32 );
 #endif
 
 	// bounds checking..
@@ -141,7 +141,7 @@ void BF_WriteUBitLongExt( bitbuf_t *bf, uint curData, int numbits, bool bCheckRa
 		dword	iCurBitMasked;
 		int	nBitsWritten;
 
-		ASSERT(( iDWord * 4 + sizeof( long )) <= (uint)bf->nDataBytes );
+		Assert(( iDWord * 4 + sizeof( long )) <= (uint)bf->nDataBytes );
 
 		iCurBitMasked = iCurBit & 31;
 		((dword *)bf->pData)[iDWord] &= BitWriteMasks[iCurBitMasked][nBitsLeft];
@@ -174,7 +174,7 @@ sign bit comes first
 void BF_WriteSBitLong( bitbuf_t *bf, int data, int numbits )
 {
 	// do we have a valid # of bits to encode with?
-	ASSERT( numbits >= 1 );
+	Assert( numbits >= 1 );
 
 	// NOTE: it does this wierdness here so it's bit-compatible with regular integer data in the buffer.
 	// (Some old code writes direct integers right into the buffer).
@@ -186,11 +186,11 @@ void BF_WriteSBitLong( bitbuf_t *bf, int data, int numbits )
 		// Make sure it doesn't overflow.
 		if( data < 0 )
 		{
-			ASSERT( data >= -BIT( numbits - 1 ));
+			Assert( data >= -BIT( numbits - 1 ));
 		}
 		else
 		{
-			ASSERT( data < BIT( numbits - 1 ));
+			Assert( data < BIT( numbits - 1 ));
 		}
 	}
 #endif

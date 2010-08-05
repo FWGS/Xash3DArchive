@@ -150,13 +150,10 @@ void Cmd_ForwardToServer( void )
 	}
 
 	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-	BF_WriteString( &cls.netchan.message, cmd );
 
 	if( Cmd_Argc() > 1 )
-	{
-		BF_WriteString( &cls.netchan.message, " " );
-		BF_WriteString( &cls.netchan.message, Cmd_Args( ));
-	}
+		BF_WriteString( &cls.netchan.message, va( "%s %s", cmd, Cmd_Args( )));
+	else BF_WriteString( &cls.netchan.message, cmd );
 }
 
 /*
@@ -732,9 +729,6 @@ void CL_ConnectionlessPacket( netadr_t from, bitbuf_t *msg )
 		BF_WriteString( &cls.netchan.message, "new" );
 		cls.state = ca_connected;
 		UI_SetActiveMenu( false );
-
-		// FIXME!!! properly send tables to client
-		Delta_Init ();
 	}
 	else if( !com.strcmp( c, "info" ))
 	{
@@ -890,7 +884,7 @@ CL_Physinfo_f
 void CL_Physinfo_f( void )
 {
 	Msg( "Phys info settings:\n" );
-	Info_Print( cl.physinfo );
+	Info_Print( cl.frame.cd.physinfo );
 }
 
 int precache_check; // for autodownload of precache items

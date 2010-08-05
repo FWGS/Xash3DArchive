@@ -19,7 +19,7 @@
 #define svc_spawnbaseline	207	// valid only at spawn		
 #define svc_download	208	// [short] size [size bytes]
 #define svc_changing	209	// changelevel by server request
-#define svc_physinfo	210	// [physinfo string]
+#define svc_deltatable	210	// [table header][...]
 #define svc_usermessage	211	// [string][byte] REG_USER_MSG stuff
 #define svc_packetentities	212	// [...]
 #define svc_frame		213	// begin a new server frame

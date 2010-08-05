@@ -2419,7 +2419,7 @@ void CHGruntRepel::RepelUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 	pGrunt->m_vecLastPosition = tr.vecEndPos;
 
 	CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
-	pBeam->PointEntInit( pev->origin + Vector(0,0,112), pGrunt->edict() );
+	pBeam->PointEntInit( pev->origin + Vector(0,0,112), pGrunt->entindex() );
 	pBeam->SetFlags( FBEAM_SOLID );
 	pBeam->SetColor( 255, 255, 255 );
 	pBeam->SetThink( SUB_Remove );

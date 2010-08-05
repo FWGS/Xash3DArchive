@@ -493,13 +493,13 @@ void CEgon::CreateEffect( void )
 	DestroyEffect();
 
 	m_pBeam = CBeam::BeamCreate( EGON_BEAM_SPRITE, 40 );
-	m_pBeam->PointEntInit( pev->origin, m_pPlayer->edict() );
+	m_pBeam->PointEntInit( pev->origin, m_pPlayer->entindex() );
 	m_pBeam->SetFlags( FBEAM_SINENOISE );
 	m_pBeam->SetEndAttachment( 1 );
 	m_pBeam->pev->spawnflags |= SF_BEAM_TEMPORARY;	// Flag these to be destroyed on save/restore or level transition
 
 	m_pNoise = CBeam::BeamCreate( EGON_BEAM_SPRITE, 55 );
-	m_pNoise->PointEntInit( pev->origin, m_pPlayer->edict() );
+	m_pNoise->PointEntInit( pev->origin, m_pPlayer->entindex() );
 	m_pNoise->SetScrollRate( 25 );
 	m_pNoise->SetBrightness( 100 );
 	m_pNoise->SetEndAttachment( 1 );

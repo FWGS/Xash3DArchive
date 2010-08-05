@@ -668,8 +668,7 @@ void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed )
 	fNewMaxspeed = bound( -svgame.movevars.maxspeed, fNewMaxspeed, svgame.movevars.maxspeed );
 
 	cl->edict->v.maxspeed = fNewMaxspeed;
-	if( Info_SetValueForKey( cl->physinfo, "maxspd", va( "%.f", fNewMaxspeed )))
-		cl->physinfo_modified = true;
+	Info_SetValueForKey( cl->physinfo, "maxspd", va( "%.f", fNewMaxspeed ));
 }
 
 /*
@@ -2898,9 +2897,7 @@ void pfnSetPhysicsKeyValue( const edict_t *pClient, const char *key, const char 
 		MsgDev( D_ERROR, "SV_SetClientPhysinfo: client is not connected!\n" );
 		return;
 	}
-
-	if( Info_SetValueForKey( cl->physinfo, key, value ))
-		cl->physinfo_modified = true;
+	Info_SetValueForKey( cl->physinfo, key, value );
 }
 
 /*
@@ -3836,6 +3833,9 @@ bool SV_LoadProgs( const char *name )
 	SV_InitClientMove();
 
 	Delta_Init ();
+
+	// register custom encoders
+	svgame.dllFuncs.pfnRegisterEncoders();
 
 	// fire once
 	MsgDev( D_INFO, "Dll loaded for mod %s\n", svgame.dllFuncs.pfnGetGameDescription() );

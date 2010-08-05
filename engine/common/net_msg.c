@@ -55,7 +55,6 @@ void MSG_Init( sizebuf_t *buf, byte *data, size_t length )
 	Mem_Set( buf, 0, sizeof(*buf));
 	buf->data = data;
 	buf->maxsize = length;
-	Huff_Init();
 }
 
 /*

@@ -316,14 +316,6 @@ void SV_WriteFrameToClient( sv_client_t *cl, bitbuf_t *msg )
 		}
 	}
 
-	// refresh physinfo if needs
-	if( cl->physinfo_modified )
-	{
-		cl->physinfo_modified = false;
-		BF_WriteByte( msg, svc_physinfo );
-		BF_WriteString( msg, cl->physinfo );
-	}
-
 	// delta encode the events
 	SV_EmitEvents( cl, frame, msg );
 

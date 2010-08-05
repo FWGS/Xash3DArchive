@@ -126,7 +126,7 @@ public:
 	inline void SetType( int type ) { pev->rendermode = type; }
 	inline void SetFlags( int flags ) { pev->renderfx |= flags; }
 	inline void SetStartPos( const Vector& pos ) { pev->origin = pos; }
-	inline void SetEndPos( const Vector& pos ) { pev->oldorigin = pos; }
+	inline void SetEndPos( const Vector& pos ) { pev->angles = pos; }
 	inline void SetStartEntity( edict_t *pEnt ) { pev->aiment = pEnt; }
 	inline void SetEndEntity( edict_t *pEnt ) { pev->owner = pEnt; }
 

@@ -1103,6 +1103,13 @@ int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_
 		return 0;
 	}
 
+	// FIXME: temporary hack
+	if( pEdict->v.flags & FL_CUSTOMENTITY )
+	{
+		pEntity->m_iClassType = ED_BEAM;
+		state->ed_type = ED_BEAM;
+	}
+
 	// quick reject by type
 	switch( pEntity->m_iClassType )
 	{
@@ -1289,16 +1296,6 @@ addEntity:
 		// this is conveyor - send speed to render for right texture scrolling
 		state->framerate = pEntity->pev->speed;
 	}
-	else if( state->ed_type == ED_BEAM )
-	{
-		state->gaitsequence = pEntity->pev->frags;	// beam type
-
-		// translate StartBeamEntity
-		if( pEntity->pev->owner ) 
-			state->owner = ENTINDEX( pEntity->pev->owner );
-		else state->owner = 0;
-	}
-
 	return 1;
 }
 
@@ -1311,6 +1308,12 @@ Creates baselines used for network encoding, especially for player data since pl
 */
 void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playermodelindex )
 {
+	// FIXME: temporary hack
+	if( entity->v.flags & FL_CUSTOMENTITY )
+	{
+		baseline->ed_type = ED_BEAM;
+	}
+
 	// always set nodelta's for baseline
 	baseline->ed_flags |= ESF_NODELTA;
 
@@ -1476,23 +1479,23 @@ void Player_Encode( struct delta_s *pFields, const unsigned char *from, const un
 	localplayer =  ( t->number - 1 ) == ENGINE_CURRENT_PLAYER();
 	if ( localplayer )
 	{
-		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
-		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
-		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+		DELTA_UNSETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_UNSETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_UNSETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN2 ].field );
 	}
 
 	if ( ( t->movetype == MOVETYPE_FOLLOW ) &&
 		 ( t->aiment != 0 ) )
 	{
-		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
-		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
-		DELTA_UNSETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+		DELTA_UNSETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_UNSETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_UNSETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN2 ].field );
 	}
 	else if ( t->aiment != f->aiment )
 	{
-		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN0 ].field );
-		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN1 ].field );
-		DELTA_SETBYINDEX( pFields, entity_field_alias[ FIELD_ORIGIN2 ].field );
+		DELTA_SETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN0 ].field );
+		DELTA_SETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN1 ].field );
+		DELTA_SETBYINDEX( pFields, player_field_alias[ FIELD_ORIGIN2 ].field );
 	}
 }
 

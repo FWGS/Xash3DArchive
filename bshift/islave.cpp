@@ -753,7 +753,7 @@ void CISlave :: ArmBeam( int side )
 	if (!m_pBeam[m_iBeams])
 		return;
 
-	m_pBeam[m_iBeams]->PointEntInit( tr.vecEndPos, edict( ) );
+	m_pBeam[m_iBeams]->PointEntInit( tr.vecEndPos, entindex( ) );
 	m_pBeam[m_iBeams]->SetEndAttachment( side < 0 ? 2 : 1 );
 	// m_pBeam[m_iBeams]->SetColor( 180, 255, 96 );
 	m_pBeam[m_iBeams]->SetColor( 96, 128, 16 );
@@ -800,7 +800,7 @@ void CISlave :: WackBeam( int side, CBaseEntity *pEntity )
 	if (!m_pBeam[m_iBeams])
 		return;
 
-	m_pBeam[m_iBeams]->PointEntInit( pEntity->Center(), edict( ) );
+	m_pBeam[m_iBeams]->PointEntInit( pEntity->Center(), entindex( ) );
 	m_pBeam[m_iBeams]->SetEndAttachment( side < 0 ? 2 : 1 );
 	m_pBeam[m_iBeams]->SetColor( 180, 255, 96 );
 	m_pBeam[m_iBeams]->SetBrightness( 255 );
@@ -830,7 +830,7 @@ void CISlave :: ZapBeam( int side )
 	if (!m_pBeam[m_iBeams])
 		return;
 
-	m_pBeam[m_iBeams]->PointEntInit( tr.vecEndPos, edict( ) );
+	m_pBeam[m_iBeams]->PointEntInit( tr.vecEndPos, entindex( ) );
 	m_pBeam[m_iBeams]->SetEndAttachment( side < 0 ? 2 : 1 );
 	m_pBeam[m_iBeams]->SetColor( 180, 255, 96 );
 	m_pBeam[m_iBeams]->SetBrightness( 255 );

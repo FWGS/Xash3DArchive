@@ -487,7 +487,7 @@ void CL_RunCmd( edict_t *clent, usercmd_t *ucmd )
 	if( ucmd->impulse ) clent->v.impulse = ucmd->impulse;
 
 	// setup playermove state
-	PM_SetupMove( clgame.pmove, clent, ucmd, cl.physinfo );
+	PM_SetupMove( clgame.pmove, clent, ucmd, cl.frame.cd.physinfo );
 
 	// motor!
 	clgame.dllFuncs.pfnPM_Move( clgame.pmove, false );

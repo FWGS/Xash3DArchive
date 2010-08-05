@@ -1559,7 +1559,7 @@ pfnPhysInfo_ValueForKey
 */
 static const char* pfnPhysInfo_ValueForKey( const char *key )
 {
-	return Info_ValueForKey( cl.physinfo, key );
+	return Info_ValueForKey( cl.frame.cd.physinfo, key );
 }
 
 /*

@@ -104,6 +104,7 @@ class CBeam : public CBaseEntity
 {
 public:
 	void	Spawn( void );
+	void	Precache( void );
 	int		ObjectCaps( void )
 	{ 
 		int flags = 0;
@@ -116,15 +117,15 @@ public:
 
 	// These functions are here to show the way beams are encoded as entities.
 	// Encoding beams as entities simplifies their management in the client/server architecture
-	inline void SetType( int type ) { pev->rendermode = type; }
-	inline void SetFlags( int flags ) { pev->renderfx |= flags; }
+	inline void SetType( int type ) { pev->rendermode = (pev->rendermode & 0xF0) | (type&0x0F); }
+	inline void SetFlags( int flags ) { pev->rendermode = (pev->rendermode & 0x0F) | (flags&0xF0); }
 	inline void SetStartPos( const Vector& pos ) { pev->origin = pos; }
-	inline void SetEndPos( const Vector& pos ) { pev->oldorigin = pos; }
-	inline void SetStartEntity( edict_t *pEnt ) { pev->aiment = pEnt; }
-	inline void SetEndEntity( edict_t *pEnt ) { pev->owner = pEnt; }
+	inline void SetEndPos( const Vector& pos ) { pev->angles = pos; }
+	void SetStartEntity( int entityIndex );
+	void SetEndEntity( int entityIndex );
 
-	inline void SetStartAttachment( int attachment ) { pev->colormap = (pev->colormap & 0xFF00)>>8 | attachment; }
-	inline void SetEndAttachment( int attachment ) { pev->colormap = (pev->colormap & 0xFF) | (attachment<<8); }
+	inline void SetStartAttachment( int attachment ) { pev->sequence = (pev->sequence & 0x0FFF) | ((attachment&0xF)<<12); }
+	inline void SetEndAttachment( int attachment ) { pev->skin = (pev->skin & 0x0FFF) | ((attachment&0xF)<<12); }
 
 	inline void SetTexture( int spriteIndex ) { pev->modelindex = spriteIndex; }
 	inline void SetWidth( int width ) { pev->scale = width; }
@@ -134,10 +135,10 @@ public:
 	inline void SetFrame( float frame ) { pev->frame = frame; }
 	inline void SetScrollRate( int speed ) { pev->animtime = speed; }
 
-	inline int  GetType( void ) { return pev->rendermode; }
-	inline int  GetFlags( void ) { return pev->renderfx; }
-	inline edict_t *GetStartEntity( void ) { return pev->owner; }
-	inline edict_t *GetEndEntity( void ) { return pev->aiment; }
+	inline int	GetType( void ) { return pev->rendermode & 0x0F; }
+	inline int	GetFlags( void ) { return pev->rendermode & 0xF0; }
+	inline int	GetStartEntity( void ) { return pev->sequence & 0xFFF; }
+	inline int	GetEndEntity( void ) { return pev->skin & 0xFFF; }
 
 	const Vector &GetStartPos( void );
 	const Vector &GetEndPos( void );
@@ -162,8 +163,8 @@ public:
 	// Init after BeamCreate()
 	void		BeamInit( const char *pSpriteName, int width );
 	void		PointsInit( const Vector &start, const Vector &end );
-	void		PointEntInit( const Vector &start, edict_t *pEnt );
-	void		EntsInit( edict_t *pStart, edict_t *pEnd );
+	void		PointEntInit( const Vector &start, int endIndex );
+	void		EntsInit( int startIndex, int endIndex );
 	void		HoseInit( const Vector &start, const Vector &direction );
 
 	static CBeam *BeamCreate( const char *pSpriteName, int width );

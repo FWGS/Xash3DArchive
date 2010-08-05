@@ -107,7 +107,7 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	chan->last_received = Sys_Milliseconds ();
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
-	chan->compress = false;
+	chan->compress = true;
 
 	BF_Init( &chan->message, "NetData", chan->message_buf, sizeof( chan->message_buf ));
 }
@@ -248,7 +248,7 @@ void Netchan_TransmitBits( netchan_t *chan, int lengthInBits, byte *data )
 	}
 
 	size1 = BF_GetNumBytesWritten( &send );
-	if( chan->compress ) Huff_CompressPacket( &send, (chan->sock == NS_CLIENT) ? 10 : 8 );
+	if( chan->compress ) Huff_CompressPacket( &send, ( chan->sock == NS_CLIENT ) ? 10 : 8 );
 	size2 = BF_GetNumBytesWritten( &send );
 
 	chan->total_sended += size2;

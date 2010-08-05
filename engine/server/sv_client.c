@@ -839,6 +839,65 @@ void SV_Configstrings_f( sv_client_t *cl )
 
 /*
 ==================
+SV_DeltaInfo_f
+==================
+*/
+void SV_DeltaInfo_f( sv_client_t *cl )
+{
+	delta_info_t	*dt;
+	string		cmd;
+	int		tableIndex;
+	int		fieldIndex;
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "deltainfo is not valid from the console\n" );
+		return;
+	}
+	
+	// handle the case of a level changing while a client was connecting
+	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	{
+		MsgDev( D_INFO, "deltainfo from different level\n" );
+		SV_New_f( cl );
+		return;
+	}
+	
+	tableIndex = com.atoi( Cmd_Argv( 2 ));
+	fieldIndex = com.atoi( Cmd_Argv( 2 ));
+
+	// write a packet full of data
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && tableIndex < Delta_NumTables( ))
+	{
+		dt = Delta_FindStructByIndex( tableIndex );
+
+		for( ; fieldIndex < dt->numFields; fieldIndex++ )
+		{
+			Delta_WriteTableField( &cl->netchan.message, tableIndex, &dt->pFields[fieldIndex] );
+
+			// it's time to send another portion
+			if( BF_GetNumBytesWritten( &cl->netchan.message ) >= ( MAX_MSGLEN / 2 ))
+				break;
+		}
+
+		if( fieldIndex == dt->numFields )
+		{
+			// go to the next table
+			fieldIndex = 0;
+			tableIndex++;
+		}
+	}
+
+	if( tableIndex == Delta_NumTables() ) com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
+	else com.snprintf( cmd, MAX_STRING, "cmd deltainfo %i %i %i\n", svs.spawncount, tableIndex, fieldIndex );
+
+	// send next command
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
+}
+
+/*
+==================
 SV_UserMessages_f
 ==================
 */
@@ -878,7 +937,7 @@ void SV_UserMessages_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_USER_MESSAGES ) com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
+	if( start == MAX_USER_MESSAGES ) com.snprintf( cmd, MAX_STRING, "cmd deltainfo %i 0 0\n", svs.spawncount );
 	else com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
 
 	// send next command
@@ -1151,6 +1210,7 @@ ucmd_t ucmds[] =
 { "begin", SV_Begin_f },
 { "pause", SV_Pause_f },
 { "baselines", SV_Baselines_f },
+{ "deltainfo", SV_DeltaInfo_f },
 { "info", SV_ShowServerinfo_f },
 { "nextdl", SV_NextDownload_f },
 { "disconnect", SV_Disconnect_f },

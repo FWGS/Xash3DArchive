@@ -169,17 +169,33 @@ void CBeam::Spawn( void )
 	Precache( );
 }
 
+void CBeam::Precache( void )
+{
+	if ( pev->owner )
+		SetStartEntity( ENTINDEX( pev->owner ) );
+	if ( pev->aiment )
+		SetEndEntity( ENTINDEX( pev->aiment ) );
+}
+
+void CBeam::SetStartEntity( int entityIndex ) 
+{ 
+	pev->sequence = (entityIndex & 0x0FFF) | ((pev->sequence&0xF000)<<12); 
+	pev->owner = g_engfuncs.pfnPEntityOfEntIndex( entityIndex );
+}
+
+void CBeam::SetEndEntity( int entityIndex ) 
+{ 
+	pev->skin = (entityIndex & 0x0FFF) | ((pev->skin&0xF000)<<12); 
+	pev->aiment = g_engfuncs.pfnPEntityOfEntIndex( entityIndex );
+}
+
 // These don't take attachments into account
 const Vector &CBeam::GetStartPos( void )
 {
-	int	type = GetType();
-
-	if( type == BEAM_ENTS )
+	if ( GetType() == BEAM_ENTS )
 	{
-		edict_t	*pent = GetStartEntity();
-
-		if ( pent )
-			return pent->v.origin;
+		edict_t *pent =  g_engfuncs.pfnPEntityOfEntIndex( GetStartEntity() );
+		return pent->v.origin;
 	}
 	return pev->origin;
 }
@@ -187,16 +203,16 @@ const Vector &CBeam::GetStartPos( void )
 
 const Vector &CBeam::GetEndPos( void )
 {
-	int	type = GetType();
-
-	if( type == BEAM_ENTS || type == BEAM_ENTPOINT )
+	int type = GetType();
+	if ( type == BEAM_POINTS || type == BEAM_HOSE )
 	{
-		edict_t *pent =  GetEndEntity();
+		return pev->oldorigin;
+	}
 
-		if ( pent )
-			return pent->v.angles;
-          }
-	return pev->angles;
+	edict_t *pent =  g_engfuncs.pfnPEntityOfEntIndex( GetEndEntity() );
+	if ( pent )
+		return pent->v.origin;
+	return pev->oldorigin;
 }
 
 
@@ -216,6 +232,7 @@ void CBeam::BeamInit( const char *pSpriteName, int width )
 {
 	SetObjectClass( ED_BEAM );
 
+	pev->flags |= FL_CUSTOMENTITY;
 	SetColor( 255, 255, 255 );
 	SetBrightness( 255 );
 	SetNoise( 0 );
@@ -252,26 +269,25 @@ void CBeam::HoseInit( const Vector &start, const Vector &direction )
 }
 
 
-void CBeam::PointEntInit( const Vector &start, edict_t *pEnt )
+void CBeam::PointEntInit( const Vector &start, int endIndex )
 {
 	SetType( BEAM_ENTPOINT );
 	SetStartPos( start );
-	SetEndEntity( pEnt );
+	SetEndEntity( endIndex );
 	SetStartAttachment( 0 );
 	SetEndAttachment( 0 );
 	RelinkBeam();
 }
 
-void CBeam::EntsInit( edict_t *pStart, edict_t *pEnd )
+void CBeam::EntsInit( int startIndex, int endIndex )
 {
 	SetType( BEAM_ENTS );
-	SetStartEntity( pStart );
-	SetEndEntity( pEnd );
+	SetStartEntity( startIndex );
+	SetEndEntity( endIndex );
 	SetStartAttachment( 0 );
 	SetEndAttachment( 0 );
 	RelinkBeam();
 }
-
 
 void CBeam::RelinkBeam( void )
 {
@@ -875,6 +891,7 @@ void CLightning::BeamUpdateVars( void )
 	pev->skin = 0;
 	pev->sequence = 0;
 	pev->rendermode = 0;
+	pev->flags |= FL_CUSTOMENTITY;
 	pev->model = m_iszSpriteName;
 	SetTexture( m_spriteTexture );
 
@@ -905,12 +922,12 @@ void CLightning::BeamUpdateVars( void )
 		if ( beamType == BEAM_POINTS || beamType == BEAM_HOSE )
 			SetEndPos( pEnd->v.origin );
 		else
-			SetEndEntity( pEnd );
+			SetEndEntity( ENTINDEX(pEnd) );
 	}
 	else
 	{
-		SetStartEntity( pStart );
-		SetEndEntity( pEnd );
+		SetStartEntity( ENTINDEX(pStart) );
+		SetEndEntity( ENTINDEX(pEnd) );
 	}
 
 	RelinkBeam();
@@ -950,6 +967,7 @@ void CLaser::Spawn( void )
 	Precache( );
 
 	SetThink( StrikeThink );
+	pev->flags |= FL_CUSTOMENTITY;
 
 	PointsInit( pev->origin, pev->origin );
 
