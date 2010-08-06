@@ -27,6 +27,8 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_HAS_SPAWNPOINT	BIT( 1 )
 #define MAP_HAS_LANDMARK	BIT( 2 )
 
+#define SV_Send(x,y,z)	SV_Multicast(x, y, z, false )
+#define SV_DirectSend(x,y,z)	SV_Multicast( x, y, z, true )
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - svgame.edicts))
 #define EDICT_NUM( num )	SV_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	SV_GetString( offset )
@@ -74,10 +76,10 @@ typedef struct server_s
 
 	// the multicast buffer is used to send a message to a set of clients
 	// it is only used to marshall data until SV_Message is called
-	bitbuf_t		multicast;
+	sizebuf_t		multicast;
 	byte		multicast_buf[MAX_MSGLEN];
 
-	bitbuf_t		signon;
+	sizebuf_t		signon;
 	byte		signon_buf[MAX_MSGLEN];
 
 	bool		write_bad_message;	// just for debug
@@ -128,12 +130,12 @@ typedef struct sv_client_s
 
 	// The reliable buf contain reliable user messages that must be followed
 	// after pvs frame
-	bitbuf_t		reliable;
+	sizebuf_t		reliable;
 	byte		reliable_buf[MAX_MSGLEN];
 
 	// the datagram is written to by sound calls, prints, temp ents, etc.
 	// it can be harmlessly overflowed.
-	bitbuf_t		datagram;
+	sizebuf_t		datagram;
 	byte		datagram_buf[MAX_MSGLEN];
 
 	client_frame_t	*frames;			// updates can be delta'd from here
@@ -275,7 +277,6 @@ extern	cvar_t		*sv_airaccelerate;
 extern	cvar_t		*sv_accelerate;
 extern	cvar_t		*sv_friction;
 extern	cvar_t		*sv_edgefriction;
-extern	cvar_t		*sv_idealpitchscale;
 extern	cvar_t		*sv_maxvelocity;
 extern	cvar_t		*sv_gravity;
 extern	cvar_t		*sv_stopspeed;
@@ -362,17 +363,17 @@ void SV_GetChallenge( netadr_t from );
 void SV_DirectConnect( netadr_t from );
 void SV_TogglePause( const char *msg );
 void SV_PutClientInServer( edict_t *ent );
-void SV_FullClientUpdate( sv_client_t *cl, bitbuf_t *msg );
-void SV_UpdatePhysinfo( sv_client_t *cl, bitbuf_t *msg );
+void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg );
+void SV_UpdatePhysinfo( sv_client_t *cl, sizebuf_t *msg );
 bool SV_ClientConnect( edict_t *ent, char *userinfo );
 void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
-void SV_ExecuteClientMessage( sv_client_t *cl, bitbuf_t *msg );
-void SV_ConnectionlessPacket( netadr_t from, bitbuf_t *msg );
+void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
+void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
+int SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, bool direct );
 edict_t *SV_FakeConnect( const char *netname );
 void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd );
 void SV_PostRunCmd( sv_client_t *cl );
-void SV_SetIdealPitch( sv_client_t *cl );
 void SV_InitClientMove( void );
 void SV_UpdateServerInfo( void );
 
@@ -385,7 +386,7 @@ void SV_Newgame_f( void );
 //
 // sv_frame.c
 //
-void SV_WriteFrameToClient( sv_client_t *client, bitbuf_t *msg );
+void SV_WriteFrameToClient( sv_client_t *client, sizebuf_t *msg );
 void SV_BuildClientFrame( sv_client_t *client );
 void SV_InactivateClients( void );
 void SV_SendMessagesToAll( void );
@@ -405,7 +406,7 @@ void SV_SetModel( edict_t *ent, const char *name );
 void SV_CopyTraceToGlobal( trace_t *trace );
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max );
 void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags );
-void SV_PlaybackEvent( bitbuf_t *msg, event_info_t *info );
+void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info );
 void SV_BaselineForEntity( edict_t *pEdict );
 void SV_WriteEntityPatch( const char *filename );
 script_t *SV_GetEntityScript( const char *filename );

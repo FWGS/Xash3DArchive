@@ -16,7 +16,7 @@ CL_WriteDemoMessage
 Dumps the current net message, prefixed by the length
 ====================
 */
-void CL_WriteDemoMessage( bitbuf_t *msg, int head_size )
+void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
 {
 	int len, swlen;
 
@@ -38,7 +38,7 @@ void CL_WriteDemoHeader( const char *name )
 	char		buf_data[MAX_MSGLEN];
 	entity_state_t	*state, nullstate;
 	movevars_t	nullmovevars;
-	bitbuf_t		buf;
+	sizebuf_t		buf;
 	int		i, len;
 
 	MsgDev( D_INFO, "recording to %s.\n", name );
@@ -156,7 +156,7 @@ void CL_WriteDemoHeader( const char *name )
 		else BF_WriteByte( &buf, false );
 	}
 
-	BF_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
+	MSG_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
 
 	// write it to the demo file
 	len = LittleLong( BF_GetNumBytesWritten( &buf ));
@@ -254,7 +254,7 @@ reads demo data and write it to client
 */
 void CL_ReadDemoMessage( void )
 {
-	bitbuf_t	buf;
+	sizebuf_t	buf;
 	char	buf_data[MAX_MSGLEN];
 	int	r, curSize;
 
@@ -359,7 +359,7 @@ bool CL_GetComment( const char *demoname, char *comment )
 	char     	buf_data[MAX_MSGLEN];
 	int	r, maxClients, curSize;
 	string	maptitle;
-	bitbuf_t	buf;
+	sizebuf_t	buf;
 	
 	if( !comment ) return false;
 

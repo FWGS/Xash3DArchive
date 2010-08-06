@@ -555,7 +555,7 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 				v_origin += viewmonster->eyeposition;
 
 			if( viewentity->v.movetype == MOVETYPE_STEP )
-				v_angles = LerpAngle( viewentity->v.oldangles, viewentity->v.angles, m_fLerp );
+				v_angles = LerpAngle( viewentity->v.vuser1, viewentity->v.angles, m_fLerp );
 			else v_angles = viewentity->v.angles;	// already interpolated
 
 			if( gHUD.viewFlags & INVERSE_X )	// inverse X coordinate
@@ -580,16 +580,13 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 				v_origin = LerpPoint( viewentity->v.oldorigin, viewentity->v.origin, m_fLerp );
 			else v_origin = viewentity->v.origin;	// already interpolated
 
-			// calc monster view if supposed
-			if( viewentity->v.flags & FL_MONSTER && viewmonster )
-				v_origin += viewmonster->eyeposition;
+			// add view offset
+			if( viewmonster ) v_origin += viewmonster->eyeposition;
 
 			if( viewentity->v.movetype == MOVETYPE_STEP )
-				v_angles = LerpAngle( viewentity->v.oldangles, viewentity->v.angles, m_fLerp );
+				v_angles = LerpAngle( viewentity->v.vuser1, viewentity->v.angles, m_fLerp );
 			else v_angles = viewentity->v.angles;	// already interpolated
 
-			if( viewentity->v.flags & FL_PROJECTILE ) // inverse X coordinate
-				v_angles[0] = -v_angles[0];
 			pparams->crosshairangle[ROLL] = 1;	// crosshair is hided
 
 			// refresh position

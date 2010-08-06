@@ -88,7 +88,7 @@ void SV_BroadcastCommand( char *fmt, ... )
 
 	BF_WriteByte( &sv.multicast, svc_stufftext );
 	BF_WriteString( &sv.multicast, string );
-	MSG_Send( MSG_ALL, NULL, NULL );
+	SV_Send( MSG_ALL, NULL, NULL );
 }
 
 /*

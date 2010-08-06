@@ -1314,10 +1314,8 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 	VectorCopy( e->origin, origin );
 	VectorCopy( e->angles, angles );
 
-	m_pEntity = ri.GetClientEdict( e->index );
-
 	// interoplate monsters position
-	if( m_pEntity && !m_pEntity->free && m_pEntity->v.flags & FL_MONSTER && ( e->movetype == MOVETYPE_STEP || e->movetype == MOVETYPE_FLY )) 
+	if( e->movetype == MOVETYPE_STEP || e->movetype == MOVETYPE_FLY ) 
 	{
 		float	d, f = 0.0f;
 		edict_t	*m_pGroundEntity;
@@ -1339,7 +1337,10 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 			f = f - 1.0f;
 		}
 
-		if( m_pEntity && !m_pEntity->free ) m_pGroundEntity = m_pEntity->v.groundentity;
+		m_pEntity = ri.GetClientEdict( e->index );
+
+		if( m_pEntity && !m_pEntity->free )
+			m_pGroundEntity = m_pEntity->v.groundentity;
 
 		if( m_pGroundEntity && m_pGroundEntity->v.movetype == MOVETYPE_PUSH && !VectorIsNull( m_pGroundEntity->v.velocity ))
 		{

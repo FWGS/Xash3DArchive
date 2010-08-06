@@ -113,7 +113,7 @@ CL_WriteErrorMessage
 write net_message into buffer.dat for debugging
 =====================
 */
-void CL_WriteErrorMessage( int current_count, bitbuf_t *msg )
+void CL_WriteErrorMessage( int current_count, sizebuf_t *msg )
 {
 	file_t		*fp;
 	const char	*buffer_file = "buffer.dat";
@@ -140,7 +140,7 @@ void CL_WriteMessageHistory( void )
 {
 	int	i, thecmd;
 	oldcmd_t	*old, *failcommand;
-	bitbuf_t	*msg = &net_message;
+	sizebuf_t	*msg = &net_message;
 
 	if( !cls.initialized || cls.state == ca_disconnected )
 		return;
@@ -233,7 +233,7 @@ CL_ParseDownload
 A download message has been received from the server
 =====================
 */
-void CL_ParseDownload( bitbuf_t *msg )
+void CL_ParseDownload( sizebuf_t *msg )
 {
 	int	size, percent;
 	char	buffer[MAX_MSGLEN];
@@ -332,7 +332,7 @@ CL_ParseSoundPacket
 
 ==================
 */
-void CL_ParseSoundPacket( bitbuf_t *msg, bool is_ambient )
+void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
 {
 	vec3_t	pos_;
 	float	*pos = NULL;
@@ -392,9 +392,9 @@ CL_ParseMovevars
 
 ==================
 */
-void CL_ParseMovevars( bitbuf_t *msg )
+void CL_ParseMovevars( sizebuf_t *msg )
 {
-	BF_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
+	MSG_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
 	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
 }
 
@@ -404,7 +404,7 @@ CL_ParseParticles
 
 ==================
 */
-void CL_ParseParticles( bitbuf_t *msg )
+void CL_ParseParticles( sizebuf_t *msg )
 {
 	vec3_t		org, dir;
 	int		i, count, color;
@@ -427,7 +427,7 @@ CL_ParseStaticDecal
 
 ==================
 */
-void CL_ParseStaticDecal( bitbuf_t *msg )
+void CL_ParseStaticDecal( sizebuf_t *msg )
 {
 	vec3_t	origin;
 	int	decalIndex, entityIndex, modelIndex;
@@ -445,7 +445,7 @@ void CL_ParseStaticDecal( bitbuf_t *msg )
 	CL_DecalShoot( cl.decal_shaders[decalIndex], entityIndex, modelIndex, origin, flags );
 }
 
-void CL_ParseSoundFade( bitbuf_t *msg )
+void CL_ParseSoundFade( sizebuf_t *msg )
 {
 	float	fadePercent, fadeOutSeconds;
 	float	holdTime, fadeInSeconds;
@@ -458,7 +458,7 @@ void CL_ParseSoundFade( bitbuf_t *msg )
 	S_FadeClientVolume( fadePercent, fadeOutSeconds, holdTime, fadeInSeconds );
 }
 
-void CL_ParseReliableEvent( bitbuf_t *msg, int flags )
+void CL_ParseReliableEvent( sizebuf_t *msg, int flags )
 {
 	int		event_index;
 	event_args_t	nullargs, args;
@@ -472,7 +472,7 @@ void CL_ParseReliableEvent( bitbuf_t *msg, int flags )
 	CL_QueueEvent( flags, event_index, delay, &args );
 }
 
-void CL_ParseEvent( bitbuf_t *msg )
+void CL_ParseEvent( sizebuf_t *msg )
 {
 	int	i, num_events;
 
@@ -495,7 +495,7 @@ void CL_ParseEvent( bitbuf_t *msg )
 CL_ParseServerData
 ==================
 */
-void CL_ParseServerData( bitbuf_t *msg )
+void CL_ParseServerData( sizebuf_t *msg )
 {
 	string	str;
 	int	i;
@@ -557,7 +557,7 @@ void CL_ParseServerData( bitbuf_t *msg )
 CL_ParseBaseline
 ==================
 */
-void CL_ParseBaseline( bitbuf_t *msg )
+void CL_ParseBaseline( sizebuf_t *msg )
 {
 	int		newnum, timebase;
 	entity_state_t	nullstate;
@@ -591,7 +591,7 @@ void CL_ParseBaseline( bitbuf_t *msg )
 CL_ParseConfigString
 ================
 */
-void CL_ParseConfigString( bitbuf_t *msg )
+void CL_ParseConfigString( sizebuf_t *msg )
 {
 	int	i;
 
@@ -669,7 +669,7 @@ CL_ParseSetAngle
 set the view angle to this absolute value
 ================
 */
-void CL_ParseSetAngle( bitbuf_t *msg )
+void CL_ParseSetAngle( sizebuf_t *msg )
 {
 	cl.refdef.cl_viewangles[0] = BF_ReadBitAngle( msg, 16 );
 	cl.refdef.cl_viewangles[1] = BF_ReadBitAngle( msg, 16 );
@@ -682,7 +682,7 @@ CL_ParseAddAngle
 add the view angle yaw
 ================
 */
-void CL_ParseAddAngle( bitbuf_t *msg )
+void CL_ParseAddAngle( sizebuf_t *msg )
 {
 	float	add_angle;
 	
@@ -696,7 +696,7 @@ CL_ParseCrosshairAngle
 offset crosshair angles
 ================
 */
-void CL_ParseCrosshairAngle( bitbuf_t *msg )
+void CL_ParseCrosshairAngle( sizebuf_t *msg )
 {
 	cl.refdef.crosshairangle[0] = BF_ReadBitAngle( msg, 8 );
 	cl.refdef.crosshairangle[1] = BF_ReadBitAngle( msg, 8 );
@@ -710,7 +710,7 @@ CL_RegisterUserMessage
 register new user message or update existing
 ================
 */
-void CL_RegisterUserMessage( bitbuf_t *msg )
+void CL_RegisterUserMessage( sizebuf_t *msg )
 {
 	char	*pszName;
 	int	svc_num, size;
@@ -732,7 +732,7 @@ CL_UpdateUserinfo
 collect userinfo from all players
 ================
 */
-void CL_UpdateUserinfo( bitbuf_t *msg )
+void CL_UpdateUserinfo( sizebuf_t *msg )
 {
 	int		slot;
 	bool		active;
@@ -762,7 +762,7 @@ CL_ServerInfo
 change serverinfo
 ==============
 */
-void CL_ServerInfo( bitbuf_t *msg )
+void CL_ServerInfo( sizebuf_t *msg )
 {
 	char	key[MAX_MSGLEN];
 	char	value[MAX_MSGLEN];
@@ -779,7 +779,7 @@ CL_ParseUserMessage
 handles all user messages
 ==============
 */
-void CL_ParseUserMessage( bitbuf_t *msg, int svc_num )
+void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 {
 	int	i, iSize;
 	byte	*pbuf;
@@ -837,7 +837,7 @@ ACTION MESSAGES
 CL_ParseServerMessage
 =====================
 */
-void CL_ParseServerMessage( bitbuf_t *msg )
+void CL_ParseServerMessage( sizebuf_t *msg )
 {
 	char	*s;
 	int	i, cmd;

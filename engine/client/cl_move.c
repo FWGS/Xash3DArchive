@@ -12,6 +12,7 @@
 #include "net_encode.h"
 
 #define CONNECTION_PROBLEM_TIME	15.0 * 1000	// 15 seconds
+#define MAX_FORWARD			6
 
 bool CL_IsPredicted( void )
 {
@@ -103,7 +104,7 @@ During normal gameplay, a client packet will contain something like:
 */
 void CL_WritePacket( void )
 {
-	bitbuf_t	buf;
+	sizebuf_t	buf;
 	bool	noDelta = false;
 	byte	data[MAX_MSGLEN];
 	usercmd_t	*cmd, *oldcmd;
@@ -559,6 +560,71 @@ void CL_CheckPredictionError( void )
 }
 
 /*
+===============
+CL_SetIdealPitch
+===============
+*/
+void CL_SetIdealPitch( edict_t *ent )
+{
+	float	angleval, sinval, cosval;
+	trace_t	tr;
+	vec3_t	top, bottom;
+	float	z[MAX_FORWARD];
+	int	i, j;
+	int	step, dir, steps;
+
+	if( !( ent->v.groundentity ))
+		return;
+		
+	angleval = ent->v.angles[YAW] * M_PI * 2 / 360;
+	com.sincos( angleval, &sinval, &cosval );
+
+	for( i = 0; i < MAX_FORWARD; i++ )
+	{
+		top[0] = ent->v.origin[0] + cosval * (i + 3) * 12;
+		top[1] = ent->v.origin[1] + sinval * (i + 3) * 12;
+		top[2] = ent->v.origin[2] + ent->v.view_ofs[2];
+		
+		bottom[0] = top[0];
+		bottom[1] = top[1];
+		bottom[2] = top[2] - 160;
+		
+		tr = CL_Move( top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, ent );
+		if( tr.fAllSolid )
+			return;	// looking at a wall, leave ideal the way is was
+
+		if( tr.flFraction == 1.0f )
+			return;	// near a dropoff
+		
+		z[i] = top[2] + tr.flFraction * (bottom[2] - top[2]);
+	}
+	
+	dir = 0;
+	steps = 0;
+	for( j = 1; j < i; j++ )
+	{
+		step = z[j] - z[j-1];
+		if( step > -ON_EPSILON && step < ON_EPSILON )
+			continue;
+
+		if( dir && ( step-dir > ON_EPSILON || step-dir < -ON_EPSILON ))
+			return; // mixed changes
+
+		steps++;	
+		dir = step;
+	}
+	
+	if( !dir )
+	{
+		cl.refdef.idealpitch = 0;
+		return;
+	}
+	
+	if( steps < 2 ) return;
+	cl.refdef.idealpitch = -dir * cl_idealpitchscale->value;
+}
+
+/*
 =================
 CL_PredictMovement
 
@@ -579,6 +645,8 @@ void CL_PredictMovement( void )
 	player = CL_GetLocalPlayer ();
 	viewent = CL_GetEdictByIndex( cl.refdef.viewentity );
 	cd = &cl.frame.cd;
+
+	CL_SetIdealPitch( player );
 
 	if( cls.demoplayback && CL_IsValidEdict( viewent ))
 	{

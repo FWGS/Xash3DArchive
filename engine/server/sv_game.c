@@ -159,7 +159,7 @@ void SV_ConfigString( int index, const char *val )
 		BF_WriteByte( &sv.multicast, svc_configstring );
 		BF_WriteShort( &sv.multicast, index );
 		BF_WriteString( &sv.multicast, val );
-		MSG_Send( MSG_ALL, vec3_origin, NULL );
+		SV_Send( MSG_ALL, vec3_origin, NULL );
 	}
 }
 
@@ -175,7 +175,7 @@ void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int m
 	if( entityIndex > 0 )
 		BF_WriteWord( &sv.multicast, modelIndex );
 	BF_WriteByte( &sv.multicast, flags );
-	MSG_Send( MSG_INIT, NULL, NULL );
+	SV_Send( MSG_INIT, NULL, NULL );
 }
 
 static bool SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
@@ -507,7 +507,7 @@ void SV_FreeEdicts( void )
 	}
 }
 
-void SV_PlaybackEvent( bitbuf_t *msg, event_info_t *info )
+void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 {
 	event_args_t	nullargs;
 
@@ -620,7 +620,7 @@ void SV_BaselineForEntity( edict_t *pEdict )
 			Mem_Set( &nullstate, 0, sizeof( nullstate ));
 			BF_WriteByte( &sv.multicast, svc_spawnbaseline );
 			MSG_WriteDeltaEntity( &nullstate, &sv_ent->s, &sv.multicast, true, sv.time );
-			MSG_DirectSend( MSG_ALL, vec3_origin, NULL );
+			SV_DirectSend( MSG_ALL, vec3_origin, NULL );
 		}
 	}
 }
@@ -1450,7 +1450,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	BF_WriteWord( &sv.multicast, entityIndex );
 	if( flags & SND_FIXED_ORIGIN ) BF_WriteBitVec3Coord( &sv.multicast, origin );
 
-	MSG_Send( msg_dest, origin, NULL );
+	SV_Send( msg_dest, origin, NULL );
 }
 
 /*
@@ -1534,7 +1534,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	BF_WriteWord( &sv.multicast, number );
 	BF_WriteBitVec3Coord( &sv.multicast, pos );
 
-	MSG_Send( msg_dest, origin, NULL );
+	SV_Send( msg_dest, origin, NULL );
 }
 
 /*
@@ -1830,7 +1830,7 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 	{
 		BF_WriteByte( &sv.multicast, svc_stufftext );
 		BF_WriteString( &sv.multicast, buffer );
-		MSG_Send( MSG_ONE, NULL, client->edict );
+		SV_Send( MSG_ONE, NULL, client->edict );
 	}
 	else MsgDev( D_ERROR, "Tried to stuff bad command %s\n", buffer );
 }
@@ -1863,7 +1863,7 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 	}
 	BF_WriteByte( &sv.multicast, count );
 	BF_WriteByte( &sv.multicast, color );
-	MSG_Send( MSG_ALL, org, NULL );
+	SV_Send( MSG_ALL, org, NULL );
 }
 
 /*
@@ -1999,7 +1999,7 @@ void pfnMessageEnd( void )
 
 	if( !VectorIsNull( svgame.msg_org )) org = svgame.msg_org;
 	svgame.msg_dest = bound( MSG_BROADCAST, svgame.msg_dest, MSG_SPEC );
-	MSG_Send( svgame.msg_dest, org, svgame.msg_ent );
+	SV_Send( svgame.msg_dest, org, svgame.msg_ent );
 }
 
 /*
@@ -2081,17 +2081,52 @@ pfnWriteString
 
 =============
 */
-void pfnWriteString( const char *sz )
+void pfnWriteString( const char *src )
 {
-	int	cur_size = BF_GetNumBytesWritten( &sv.multicast );
-	int	total_size;
+	char	*dst, string[MAX_SYSPATH];
+	int	len = com.strlen( src ) + 1;
 
-	// FIXME: replace with BF_WriteStringLine
-	BF_WriteString( &sv.multicast, sz );	// allow \n, \r, \t
-	total_size = BF_GetNumBytesWritten( &sv.multicast ) - cur_size;
+	if( len >= MAX_SYSPATH )
+	{
+		MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", MAX_SYSPATH );
+		BF_WriteChar( &sv.multicast, 0 );
+		svgame.msg_realsize += 1; 
+		return;
+	}
+
+	// prepare string to sending
+	dst = string;
+
+	while( 1 )
+	{
+		// some escaped chars parsed as two symbols - merge it here
+		if( src[0] == '\\' && src[1] == 'n' )
+		{
+			*dst++ = '\n';
+			src += 2;
+			len -= 1;
+		}
+		else if( src[0] == '\\' && src[1] == 'r' )
+		{
+			*dst++ = '\r';
+			src += 2;
+			len -= 1;
+		}
+		else if( src[0] == '\\' && src[1] == 't' )
+		{
+			*dst++ = '\t';
+			src += 2;
+			len -= 1;
+		}
+		else if(( *dst++ = *src++ ) == 0 )
+			break;
+	}
+
+	*dst = '\0'; // string end (not included in count)
+	BF_WriteString( &sv.multicast, string );
 
 	// NOTE: some messages with constant string length can be marked as known sized
-	svgame.msg_realsize += total_size;
+	svgame.msg_realsize += len;
 }
 
 /*
@@ -2342,7 +2377,7 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 		BF_WriteString( &sv.multicast, pszName );
 		BF_WriteByte( &sv.multicast, i );
 		BF_WriteByte( &sv.multicast, (byte)iSize );
-		MSG_Send( MSG_ALL, vec3_origin, NULL );
+		SV_Send( MSG_ALL, vec3_origin, NULL );
 	}
 	return i;
 }
@@ -2439,7 +2474,7 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 		if( fake ) return;
 		BF_WriteByte( &sv.multicast, svc_centerprint );
 		BF_WriteString( &sv.multicast, szMsg );
-		MSG_Send( MSG_ONE, NULL, client->edict );
+		SV_Send( MSG_ONE, NULL, client->edict );
 		break;
 	}
 }
@@ -2542,7 +2577,7 @@ void pfnCrosshairAngle( const edict_t *pClient, float pitch, float yaw )
 	BF_WriteByte( &sv.multicast, svc_crosshairangle );
 	BF_WriteBitAngle( &sv.multicast, pitch, 8 );
 	BF_WriteBitAngle( &sv.multicast, yaw, 8 );
-	MSG_Send( MSG_ONE, vec3_origin, pClient );
+	SV_Send( MSG_ONE, vec3_origin, pClient );
 }
 
 /*
@@ -2582,7 +2617,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 
 	BF_WriteByte( &client->netchan.message, svc_setview );
 	BF_WriteWord( &client->netchan.message, NUM_FOR_EDICT( pViewent ));
-	MSG_Send( MSG_ONE, NULL, client->edict );
+	SV_Send( MSG_ONE, NULL, client->edict );
 }
 
 /*
@@ -2715,7 +2750,7 @@ void pfnFadeClientVolume( const edict_t *pEdict, float fadePercent, float fadeOu
 	BF_WriteFloat( &sv.multicast, fadeOutSeconds );
 	BF_WriteFloat( &sv.multicast, holdTime );
 	BF_WriteFloat( &sv.multicast, fadeInSeconds );
-	MSG_Send( MSG_ONE, NULL, cl->edict );
+	SV_Send( MSG_ONE, NULL, cl->edict );
 }
 
 /*
@@ -3499,14 +3534,14 @@ static enginefuncs_t gEngfuncs =
 	pfnSetFatPVS,
 	pfnSetFatPAS,
 	pfnCheckVisibility,
-	MSG_DeltaSetField,
-	MSG_DeltaUnsetField,
-	MSG_DeltaAddEncoder,
+	Delta_SetField,
+	Delta_UnsetField,
+	Delta_AddEncoder,
 	pfnGetCurrentPlayer,
 	pfnCanSkipPlayer,
-	MSG_DeltaFindField,
-	MSG_DeltaSetFieldByIndex,
-	MSG_DeltaUnsetFieldByIndex,
+	Delta_FindField,
+	Delta_SetFieldByIndex,
+	Delta_UnsetFieldByIndex,
 	pfnSetGroupMask,	
 	pfnDropClient,
 	Host_Error,

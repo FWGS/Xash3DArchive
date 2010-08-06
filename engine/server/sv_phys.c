@@ -1247,59 +1247,6 @@ void SV_Physics_Pusher( edict_t *ent )
 }
 
 //============================================================================
-
-/*
-=============
-SV_Physics_Compound
-
-Entities that are "stuck" to another entity
-assume oldorigin as originoffset and oldangles as angle difference
-=============
-*/
-void SV_Physics_Compound( edict_t *ent )
-{
-	vec3_t		vf, vr, vu, angles;
-	edict_t		*parent;
-
-	// regular thinking
-	if( !SV_RunThink( ent )) return;
-
-	parent = ent->v.aiment;
-	if( !SV_IsValidEdict( parent )) return;
-
-	// force to hold current values as offsets
-	if( ent->v.effects & EF_NOINTERP )
-	{
-		VectorSubtract( ent->v.origin, parent->v.origin, ent->v.oldorigin );
-		VectorSubtract( ent->v.angles, parent->v.angles, ent->v.oldangles );
-		ent->v.effects &= ~EF_NOINTERP;	// done
-	}
-
-	if( VectorCompare( parent->v.angles, ent->v.oldangles ))
-	{
-		// quick case for no rotation
-		VectorAdd( parent->v.origin, ent->v.oldorigin, ent->v.origin );
-	}
-	else
-	{
-		vec3_t	org, org2, move;
-
-		VectorAdd( parent->v.origin, ent->v.oldorigin, ent->v.origin );
-
-		VectorSubtract( ent->v.origin, parent->v.origin, org );
-		VectorNegate( parent->v.angles, angles );
-		AngleVectors( angles, vf, vr, vu );
-		org2[0] = DotProduct( ent->v.oldorigin, vf );
-		org2[1] = -DotProduct( ent->v.oldorigin, vr );
-		org2[2] = DotProduct( ent->v.oldorigin, vu );		
-		VectorSubtract( org2, ent->v.oldorigin, move );
-		VectorAdd( ent->v.origin, move, ent->v.origin );
-	}
-
-	VectorAdd( parent->v.angles, ent->v.oldangles, ent->v.angles );
-	SV_LinkEdict( ent, false );
-}
-
 /*
 =============
 SV_Physics_Follow
@@ -1757,9 +1704,6 @@ static void SV_Physics_Entity( edict_t *ent )
 		break;
 	case MOVETYPE_FOLLOW:
 		SV_Physics_Follow( ent );
-		break;
-	case MOVETYPE_COMPOUND:
-		SV_Physics_Compound( ent );
 		break;
 	case MOVETYPE_STEP:
 	case MOVETYPE_PUSHSTEP:

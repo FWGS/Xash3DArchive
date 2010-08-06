@@ -53,7 +53,7 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message->
 =============
 */
-void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, bitbuf_t *msg )
+void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t *msg )
 {
 	entity_state_t	*oldent, *newent;
 	int		oldindex, newindex;
@@ -209,7 +209,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 	}
 }
 
-static void SV_EmitEvents( sv_client_t *cl, client_frame_t *frame, bitbuf_t *msg )
+static void SV_EmitEvents( sv_client_t *cl, client_frame_t *frame, sizebuf_t *msg )
 {
 	int		i, ev;
 	event_state_t	*es;
@@ -259,7 +259,7 @@ SV_WriteClientData
 
 =============
 */
-void SV_WriteClientData( client_frame_t *from, client_frame_t *to, bitbuf_t *msg )
+void SV_WriteClientData( client_frame_t *from, client_frame_t *to, sizebuf_t *msg )
 {
 	clientdata_t	*cd, *ocd;
 	clientdata_t	dummy;
@@ -282,7 +282,7 @@ void SV_WriteClientData( client_frame_t *from, client_frame_t *to, bitbuf_t *msg
 SV_WriteFrameToClient
 ==================
 */
-void SV_WriteFrameToClient( sv_client_t *cl, bitbuf_t *msg )
+void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 {
 	client_frame_t	*frame, *oldframe;
 	int		lastframe;
@@ -366,8 +366,6 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 	if( !sv.paused )
 	{
-		SV_SetIdealPitch( cl );
-
 		// update client fixangle
 		switch( clent->v.fixangle )
 		{
@@ -375,13 +373,13 @@ void SV_BuildClientFrame( sv_client_t *cl )
 			BF_WriteByte( &sv.multicast, svc_setangle );
 			BF_WriteBitAngle( &sv.multicast, clent->v.angles[0], 16 );
 			BF_WriteBitAngle( &sv.multicast, clent->v.angles[1], 16 );
-			MSG_DirectSend( MSG_ONE, vec3_origin, clent );
+			SV_DirectSend( MSG_ONE, vec3_origin, clent );
 			clent->pvServerData->s.ed_flags |= ESF_NO_PREDICTION;
 			break;
 		case 2:
 			BF_WriteByte( &sv.multicast, svc_addangle );
 			BF_WriteBitAngle( &sv.multicast, cl->addangle, 16 );
-			MSG_DirectSend( MSG_ONE, vec3_origin, clent );
+			SV_DirectSend( MSG_ONE, vec3_origin, clent );
 			cl->addangle = 0;
 			break;
 		}
@@ -444,7 +442,7 @@ SV_SendClientDatagram
 bool SV_SendClientDatagram( sv_client_t *cl )
 {
 	byte    	msg_buf[MAX_MSGLEN];
-	bitbuf_t	msg;
+	sizebuf_t	msg;
 
 	SV_BuildClientFrame( cl );
 

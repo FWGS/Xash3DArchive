@@ -499,7 +499,7 @@ Compress message using dynamic Huffman tree,
 beginning from specified offset
 ============
 */
-void Huff_CompressPacket( bitbuf_t *msg, int offset )
+void Huff_CompressPacket( sizebuf_t *msg, int offset )
 {
 	tree_t	tree;
 	byte	buffer[MAX_MSGLEN];
@@ -537,7 +537,7 @@ Decompress message using dynamic Huffman tree,
 beginning from specified offset
 ============
 */
-void Huff_DecompressPacket( bitbuf_t *msg, int offset )
+void Huff_DecompressPacket( sizebuf_t *msg, int offset )
 {
 	tree_t	tree;
 	byte	buffer[MAX_MSGLEN];
@@ -581,8 +581,7 @@ void Huff_DecompressPacket( bitbuf_t *msg, int offset )
 		Huff_AddReference( tree, ch );
 	}
 
-	msg->nDataBytes = offset + outLen;
-	msg->nDataBits = ( msg->nDataBytes ) << 3;
+	msg->nDataBits = ( offset + outLen ) << 3;
 	Mem_Copy( data, buffer, outLen );
 }
 

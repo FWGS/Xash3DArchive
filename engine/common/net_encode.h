@@ -78,26 +78,28 @@ void Delta_Shutdown( void );
 void Delta_InitFields( void );
 int Delta_NumTables( void );
 delta_info_t *Delta_FindStructByIndex( int index );
-void MSG_DeltaAddEncoder( char *name, pfnDeltaEncode encodeFunc );
-int MSG_DeltaFindField( delta_t *pFields, const char *fieldname );
-void MSG_DeltaSetField( delta_t *pFields, const char *fieldname );
-void MSG_DeltaUnsetField( delta_t *pFields, const char *fieldname );
-void MSG_DeltaSetFieldByIndex( struct delta_s *pFields, int fieldNumber );
-void MSG_DeltaUnsetFieldByIndex( struct delta_s *pFields, int fieldNumber );
+void Delta_AddEncoder( char *name, pfnDeltaEncode encodeFunc );
+int Delta_FindField( delta_t *pFields, const char *fieldname );
+void Delta_SetField( delta_t *pFields, const char *fieldname );
+void Delta_UnsetField( delta_t *pFields, const char *fieldname );
+void Delta_SetFieldByIndex( struct delta_s *pFields, int fieldNumber );
+void Delta_UnsetFieldByIndex( struct delta_s *pFields, int fieldNumber );
 
 // send table over network
-void Delta_WriteTableField( bitbuf_t *msg, int tableIndex, const delta_t *pField );
-void Delta_ParseTableField( bitbuf_t *msg );
+void Delta_WriteTableField( sizebuf_t *msg, int tableIndex, const delta_t *pField );
+void Delta_ParseTableField( sizebuf_t *msg );
 
 
 // encode routines
-void MSG_WriteDeltaUsercmd( bitbuf_t *msg, usercmd_t *from, usercmd_t *to );
-void MSG_ReadDeltaUsercmd( bitbuf_t *msg, usercmd_t *from, usercmd_t *to );
-void MSG_WriteDeltaEvent( bitbuf_t *msg, event_args_t *from, event_args_t *to );
-void MSG_ReadDeltaEvent( bitbuf_t *msg, event_args_t *from, event_args_t *to );
-void MSG_WriteClientData( bitbuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase );
-void MSG_ReadClientData( bitbuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase );
-void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, bitbuf_t *msg, bool force, int timebase );
-void MSG_ReadDeltaEntity( bitbuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase );
+void MSG_WriteDeltaUsercmd( sizebuf_t *msg, usercmd_t *from, usercmd_t *to );
+void MSG_ReadDeltaUsercmd( sizebuf_t *msg, usercmd_t *from, usercmd_t *to );
+void MSG_WriteDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to );
+void MSG_ReadDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to );
+bool MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to );
+void MSG_ReadDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to );
+void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase );
+void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase );
+void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, int timebase );
+void MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase );
 
 #endif//NET_ENCODE_H

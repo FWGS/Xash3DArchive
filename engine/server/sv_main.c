@@ -6,6 +6,7 @@
 #include "common.h"
 #include "server.h"
 #include "protocol.h"
+#include "net_encode.h"
 
 #define HEARTBEAT_SECONDS	(300 * 1000) 	// 300 seconds
 
@@ -23,7 +24,6 @@ cvar_t	*allow_download;
 cvar_t	*sv_enforcetime;
 cvar_t	*sv_airaccelerate;
 cvar_t	*sv_wateraccelerate;
-cvar_t	*sv_idealpitchscale;
 cvar_t	*sv_maxvelocity;
 cvar_t	*sv_gravity;
 cvar_t	*sv_stepheight;
@@ -161,6 +161,28 @@ void SV_GiveMsec( void )
 }
 
 /*
+================
+SV_HasActivePlayers
+
+returns true if server have spawned players
+================
+*/
+bool SV_HasActivePlayers( void )
+{
+	int	i;
+
+	// server inactive
+	if( !svs.clients ) return false;
+
+	for( i = 0; i < sv_maxclients->integer; i++ )
+	{
+		if( svs.clients[i].state == cs_spawned )
+			return true;
+	}
+	return false;
+}
+
+/*
 ===================
 SV_UpdateMovevars
 
@@ -233,9 +255,9 @@ void SV_UpdateMovevars( void )
 
 	BF_Clear( &sv.multicast );
 
-	if( BF_WriteDeltaMovevars( &sv.multicast, &svgame.oldmovevars, &svgame.movevars ))
+	if( MSG_WriteDeltaMovevars( &sv.multicast, &svgame.oldmovevars, &svgame.movevars ))
 	{
-		MSG_Send( MSG_ALL, vec3_origin, NULL );
+		SV_Send( MSG_ALL, vec3_origin, NULL );
 		Mem_Copy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
 	}
 	physinfo->modified = false;
@@ -250,7 +272,7 @@ void pfnUpdateServerInfo( const char *szKey, const char *szValue, const char *un
 	BF_WriteByte( &sv.multicast, svc_serverinfo );
 	BF_WriteString( &sv.multicast, szKey );
 	BF_WriteString( &sv.multicast, szValue );
-	MSG_Send( MSG_ALL, vec3_origin, NULL );
+	SV_Send( MSG_ALL, vec3_origin, NULL );
 	cv->modified = false; // reset state
 }
 
@@ -433,28 +455,6 @@ void SV_PrepWorldFrame( void )
 		if( ent->v.flags & ( FL_MONSTER|FL_CLIENT|FL_FAKECLIENT ) && ent->v.deadflag < DEAD_DEAD )
 			ent->v.effects &= ~EF_NOINTERP;
 	}
-}
-
-/*
-================
-SV_HasActivePlayers
-
-returns true if server have spawned players
-================
-*/
-bool SV_HasActivePlayers( void )
-{
-	int	i;
-
-	// server inactive
-	if( !svs.clients ) return false;
-
-	for( i = 0; i < sv_maxclients->integer; i++ )
-	{
-		if( svs.clients[i].state == cs_spawned )
-			return true;
-	}
-	return false;
 }
 
 /*
@@ -665,7 +665,6 @@ void SV_Init( void )
 	sv_rollangle = Cvar_Get( "sv_rollangle", "2", CVAR_PHYSICINFO, "how much to tilt the view when strafing" );
 	sv_rollspeed = Cvar_Get( "sv_rollspeed", "200", CVAR_PHYSICINFO, "how much strafing is necessary to tilt the view" );
 	sv_airaccelerate = Cvar_Get("sv_airaccelerate", "1", CVAR_PHYSICINFO, "player accellerate in air" );
-	sv_idealpitchscale = Cvar_Get( "sv_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
 	sv_maxvelocity = Cvar_Get( "sv_maxvelocity", "2000", CVAR_PHYSICINFO, "max world velocity" );
           sv_gravity = Cvar_Get( "sv_gravity", "800", CVAR_PHYSICINFO, "world gravity" );
 	sv_maxspeed = Cvar_Get( "sv_maxspeed", "320", CVAR_PHYSICINFO, "maximum speed a player can accelerate to when on ground");
@@ -699,7 +698,7 @@ void SV_FinalMessage( char *message, bool reconnect )
 {
 	sv_client_t	*cl;
 	byte		msg_buf[MAX_MSGLEN];
-	bitbuf_t		msg;
+	sizebuf_t		msg;
 	int		i;
 	
 	BF_Init( &msg, "FinalMessage", msg_buf, sizeof( msg_buf ));

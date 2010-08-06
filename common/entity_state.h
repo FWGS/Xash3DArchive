@@ -115,10 +115,6 @@ typedef struct entity_state_s
 
 	// FIXME: old xash variables needs to be removed
 	int		flags;
-	float		maxspeed;
-	float		idealpitch;
-	vec3_t		oldorigin;	// FIXME: needs to be removed
-	vec3_t		viewangles;	// already calculated view angles on server-side
 } entity_state_t;
 
 typedef struct clientdata_s

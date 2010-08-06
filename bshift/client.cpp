@@ -1229,7 +1229,7 @@ addEntity:
 	state->mins = pEntity->pev->mins;
 	state->maxs = pEntity->pev->maxs;
 	state->flags = pEntity->pev->flags;
-	state->oldorigin = pEntity->pev->oldorigin;
+	state->vuser1 = pEntity->pev->oldorigin;	// used for portals and skyportals
 	state->colormap = pEntity->pev->colormap;	// attachments
 
 	state->rendercolor.r = (byte)pEntity->pev->rendercolor.x;
@@ -1238,7 +1238,7 @@ addEntity:
 		
 	if( pEntity->pev->groundentity )
 		state->onground = ENTINDEX( pEntity->pev->groundentity );
-	else state->onground = 0;
+	else state->onground = -1;
 
 	// translate attached entity
 	if( pEntity->pev->aiment ) 
@@ -1269,8 +1269,6 @@ addEntity:
 			state->aiment = ENTINDEX( pEntity->pev->aiment );
 		else state->aiment = 0;
 
-		state->viewangles = pEntity->pev->v_angle;
-		state->idealpitch = pEntity->pev->idealpitch;
 		state->velocity = pEntity->pev->velocity;
 		state->basevelocity = pEntity->pev->clbasevelocity;
 		state->iStepLeft = pEntity->pev->iStepLeft;
@@ -1282,7 +1280,6 @@ addEntity:
 		if( pEntity->pev->weaponmodel != iStringNull )
 			state->weaponmodel = MODEL_INDEX( STRING( pEntity->pev->weaponmodel ));
 		else state->weaponmodel = 0;
-		state->maxspeed = pEntity->pev->maxspeed;
 	}
 	else if( state->ed_type == ED_AMBIENT )
 	{

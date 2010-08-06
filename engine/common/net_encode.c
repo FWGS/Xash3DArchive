@@ -264,15 +264,7 @@ static const delta_field_t ent_fields[] =
 { ENTS_DEF( vuser4[2] )	},
 
 // Xash3D legacy (needs to be removed)
-{ ENTS_DEF( oldorigin[0] )	},
-{ ENTS_DEF( oldorigin[1] )	},
-{ ENTS_DEF( oldorigin[2] )	},
 { ENTS_DEF( flags )		},
-{ ENTS_DEF( viewangles[0] )	},
-{ ENTS_DEF( viewangles[1] )	},
-{ ENTS_DEF( viewangles[2] )	},
-{ ENTS_DEF( idealpitch )	},
-{ ENTS_DEF( maxspeed )	},
 { NULL },
 };
 
@@ -448,7 +440,7 @@ bool Delta_AddField( const char *pStructName, const char *pName, int flags, int 
 	return true;
 }
 
-void Delta_WriteTableField( bitbuf_t *msg, int tableIndex, const delta_t *pField )
+void Delta_WriteTableField( sizebuf_t *msg, int tableIndex, const delta_t *pField )
 {
 	int		nameIndex;
 	delta_info_t	*dt;
@@ -486,7 +478,7 @@ void Delta_WriteTableField( bitbuf_t *msg, int tableIndex, const delta_t *pField
 	else BF_WriteOneBit( msg, 0 );
 }
 
-void Delta_ParseTableField( bitbuf_t *msg )
+void Delta_ParseTableField( sizebuf_t *msg )
 {
 	int		tableIndex, nameIndex;
 	float		mul = 1.0f, post_mul = 1.0f;
@@ -713,9 +705,6 @@ void Delta_InitFields( void )
 	delta_info_t	*dt;
 	string		encodeDll, encodeFunc;	
 	token_t		token;
-
-	// already initialized
-	if( delta_init ) return;
 		
 	delta_script = Com_OpenScript( DELTA_PATH, NULL, 0 );
 	if( !delta_script ) com.error( "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
@@ -741,27 +730,68 @@ void Delta_InitFields( void )
 
 	// adding some requrid fields fields that use may forget or don't know how to specified
 	Delta_AddField( "event_t", "flags", DT_INTEGER, 8, 1.0f, 1.0f );
-
-	delta_init = true;
 }
 
 void Delta_Init( void )
 {
+	delta_info_t	*dt;
+
+	// already initialized
+	if( delta_init ) return;
+
 	Delta_InitFields ();	// initialize fields
+	delta_init = true;
+
+	dt = Delta_FindStruct( "movevars_t" );
+
+	ASSERT( dt != NULL );
+	if( dt->bInitialized ) return;	// specified by user
+
+	// create movevars_t delta
+	Delta_AddField( "movevars_t", "gravity", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "stopspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "maxspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "spectatormaxspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "accelerate", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "airaccelerate", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "wateraccelerate", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "friction", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "edgefriction", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "waterfriction", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "bounce", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "stepsize", DT_FLOAT|DT_SIGNED, 16, 16.0f, 1.0f );
+	Delta_AddField( "movevars_t", "maxvelocity", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "footsteps", DT_INTEGER, 1, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "rollangle", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
+	Delta_AddField( "movevars_t", "rollspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+
+	// now done
+	dt->bInitialized = true;
 }
 
 void Delta_Shutdown( void )
 {
 	int	i;
 
+	if( !delta_init ) return;
+
 	for( i = 0; i < NUM_FIELDS( dt_info ); i++ )
 	{
+		dt_info[i].numFields = 0;
+		dt_info[i].customEncode = CUSTOM_NONE;
+		dt_info[i].userCallback = NULL;
+		dt_info[i].funcName[0] = '\0';
+
 		if( dt_info[i].pFields )
 		{
 			Z_Free( dt_info[i].pFields );
 			dt_info[i].pFields = NULL;
 		}
+
+		dt_info[i].bInitialized = false;
 	}
+
+	delta_init = false;
 }
 
 /*
@@ -851,7 +881,7 @@ write fields by offsets
 assume from and to is valid
 =====================
 */
-bool Delta_WriteField( bitbuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
+bool Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
 {
 	bool		bSigned = ( pField->flags & DT_SIGNED ) ? true : false;
 	float		flValue, flAngle, flTime;
@@ -922,7 +952,7 @@ read fields by offsets
 assume from and to is valid
 =====================
 */
-bool Delta_ReadField( bitbuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
+bool Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
 {
 	bool		bSigned = ( pField->flags & DT_SIGNED ) ? true : false;
 	float		flValue, flAngle, flTime;
@@ -1043,7 +1073,7 @@ usercmd_t communication
 MSG_WriteDeltaUsercmd
 =====================
 */
-void MSG_WriteDeltaUsercmd( bitbuf_t *msg, usercmd_t *from, usercmd_t *to )
+void MSG_WriteDeltaUsercmd( sizebuf_t *msg, usercmd_t *from, usercmd_t *to )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
@@ -1070,7 +1100,7 @@ void MSG_WriteDeltaUsercmd( bitbuf_t *msg, usercmd_t *from, usercmd_t *to )
 MSG_ReadDeltaUsercmd
 =====================
 */
-void MSG_ReadDeltaUsercmd( bitbuf_t *msg, usercmd_t *from, usercmd_t *to )
+void MSG_ReadDeltaUsercmd( sizebuf_t *msg, usercmd_t *from, usercmd_t *to )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
@@ -1103,7 +1133,7 @@ event_args_t communication
 MSG_WriteDeltaEvent
 =====================
 */
-void MSG_WriteDeltaEvent( bitbuf_t *msg, event_args_t *from, event_args_t *to )
+void MSG_WriteDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
@@ -1130,13 +1160,77 @@ void MSG_WriteDeltaEvent( bitbuf_t *msg, event_args_t *from, event_args_t *to )
 MSG_ReadDeltaEvent
 =====================
 */
-void MSG_ReadDeltaEvent( bitbuf_t *msg, event_args_t *from, event_args_t *to )
+void MSG_ReadDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
 	int		i;
 
 	dt = Delta_FindStruct( "event_t" );
+	ASSERT( dt && dt->bInitialized );
+
+	pField = dt->pFields;
+	ASSERT( pField );
+
+	*to = *from;
+
+	// process fields
+	for( i = 0; i < dt->numFields; i++, pField++ )
+	{
+		Delta_ReadField( msg, pField, from, to, 0.0f );
+	}
+}
+
+/*
+=============================================================================
+
+movevars_t communication
+  
+=============================================================================
+*/
+bool MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to )
+{
+	delta_t		*pField;
+	delta_info_t	*dt;
+	int		i, startBit;
+	int		numChanges = 0;
+
+	dt = Delta_FindStruct( "movevars_t" );
+	ASSERT( dt && dt->bInitialized );
+
+	pField = dt->pFields;
+	ASSERT( pField );
+
+	startBit = msg->iCurBit;
+
+	// activate fields and call custom encode func
+	Delta_CustomEncode( dt, from, to );
+
+	BF_WriteByte( msg, svc_movevars );
+
+	// process fields
+	for( i = 0; i < dt->numFields; i++, pField++ )
+	{
+		if( Delta_WriteField( msg, pField, from, to, 0.0f ))
+			numChanges++;
+	}
+
+	// if we have no changes - kill the message
+	if( !numChanges )
+	{
+		BF_SeekToBit( msg, startBit );
+		return false;
+	}
+	return true;
+}
+
+void MSG_ReadDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to )
+{
+	delta_t		*pField;
+	delta_info_t	*dt;
+	int		i;
+
+	dt = Delta_FindStruct( "movevars_t" );
 	ASSERT( dt && dt->bInitialized );
 
 	pField = dt->pFields;
@@ -1166,7 +1260,7 @@ Writes current client data only for local client
 Other clients can grab the client state from entity_state_t
 ==================
 */
-void MSG_WriteClientData( bitbuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase )
+void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
@@ -1196,7 +1290,7 @@ MSG_ReadClientData
 Read the clientdata
 ==================
 */
-void MSG_ReadClientData( bitbuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase )
+void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
@@ -1236,7 +1330,7 @@ If force is not set, then nothing at all will be generated if the entity is
 identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
-void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, bitbuf_t *msg, bool force, int timebase ) 
+void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, int timebase ) 
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
@@ -1312,7 +1406,7 @@ If the delta removes the entity, entity_state_t->number will be set to MAX_EDICT
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-void MSG_ReadDeltaEntity( bitbuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase )
+void MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase )
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
@@ -1361,7 +1455,7 @@ void MSG_ReadDeltaEntity( bitbuf_t *msg, entity_state_t *from, entity_state_t *t
 	}
 }
 
-void MSG_DeltaAddEncoder( char *name, pfnDeltaEncode encodeFunc )
+void Delta_AddEncoder( char *name, pfnDeltaEncode encodeFunc )
 {
 	delta_info_t	*dt;
 
@@ -1383,7 +1477,7 @@ void MSG_DeltaAddEncoder( char *name, pfnDeltaEncode encodeFunc )
 	dt->userCallback = encodeFunc;	
 }
 
-int MSG_DeltaFindField( delta_t *pFields, const char *fieldname )
+int Delta_FindField( delta_t *pFields, const char *fieldname )
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
@@ -1401,7 +1495,7 @@ int MSG_DeltaFindField( delta_t *pFields, const char *fieldname )
 	return -1;
 }
 
-void MSG_DeltaSetField( delta_t *pFields, const char *fieldname )
+void Delta_SetField( delta_t *pFields, const char *fieldname )
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
@@ -1421,7 +1515,7 @@ void MSG_DeltaSetField( delta_t *pFields, const char *fieldname )
 	}
 }
 
-void MSG_DeltaUnsetField( delta_t *pFields, const char *fieldname )
+void Delta_UnsetField( delta_t *pFields, const char *fieldname )
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
@@ -1441,7 +1535,7 @@ void MSG_DeltaUnsetField( delta_t *pFields, const char *fieldname )
 	}
 }
 
-void MSG_DeltaSetFieldByIndex( delta_t *pFields, int fieldNumber )
+void Delta_SetFieldByIndex( delta_t *pFields, int fieldNumber )
 {
 	delta_info_t	*dt;
 
@@ -1452,7 +1546,7 @@ void MSG_DeltaSetFieldByIndex( delta_t *pFields, int fieldNumber )
 	dt->pFields[fieldNumber].bInactive = false;
 }
 
-void MSG_DeltaUnsetFieldByIndex( delta_t *pFields, int fieldNumber )
+void Delta_UnsetFieldByIndex( delta_t *pFields, int fieldNumber )
 {
 	delta_info_t	*dt;
 

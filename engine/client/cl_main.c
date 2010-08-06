@@ -17,6 +17,7 @@ cvar_t	*cl_predict;
 cvar_t	*cl_showfps;
 cvar_t	*cl_nodelta;
 cvar_t	*cl_crosshair;
+cvar_t	*cl_idealpitchscale;
 cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
 cvar_t	*userinfo;
@@ -375,7 +376,7 @@ Sends a disconnect message to the server
 */
 void CL_SendDisconnectMessage( void )
 {
-	bitbuf_t	buf;
+	sizebuf_t	buf;
 	byte	data[32];
 
 	BF_Init( &buf, "LastMessage", data, sizeof( data ));
@@ -573,7 +574,7 @@ CL_ParseStatusMessage
 Handle a reply from a info
 =================
 */
-void CL_ParseStatusMessage( netadr_t from, bitbuf_t *msg )
+void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
 {
 	char	*s;
 
@@ -701,7 +702,7 @@ CL_ConnectionlessPacket
 Responses to broadcasts, etc
 =================
 */
-void CL_ConnectionlessPacket( netadr_t from, bitbuf_t *msg )
+void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 {
 	char	*s, *c;
 	
@@ -1080,7 +1081,8 @@ void CL_InitLocal( void )
 	cl_predict = Cvar_Get( "cl_predict", "1", CVAR_ARCHIVE, "disables client movement prediction" );
 	cl_crosshair = Cvar_Get( "crosshair", "1", CVAR_ARCHIVE|CVAR_USERINFO, "show weapon chrosshair" );
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0, "disable delta-compression for usercommnds" );
-
+	cl_idealpitchscale = Cvar_Get( "cl_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
+	
 	cl_shownet = Cvar_Get( "cl_shownet", "0", 0, "client show network packets" );
 	cl_showmiss = Cvar_Get( "cl_showmiss", "0", CVAR_ARCHIVE, "client show prediction errors" );
 	cl_timeout = Cvar_Get( "cl_timeout", "120", 0, "connect timeout (in-seconds)" );

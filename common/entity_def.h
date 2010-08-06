@@ -20,10 +20,15 @@ typedef struct entvars_s
 	vec3_t		movedir;
 
 	vec3_t		angles;
-	vec3_t		oldangles;
 	vec3_t		avelocity;	// angular velocity (degrees per second)
 	vec3_t		punchangle;	// auto-decaying view angle adjustment
 	vec3_t		v_angle;		// Viewing angle (player only)
+
+	// For parametric entities
+	vec3_t		endpos;
+	vec3_t		startpos;
+	float		impacttime;
+	float		starttime;
 
 	int		fixangle;		// 0 - nothing, 1 - force view angles, 2 - add avelocity	
 	float		idealpitch;
@@ -62,8 +67,8 @@ typedef struct entvars_s
 	float		frame;		// % playback position in animation sequences (0..255)
 	float		animtime;		// world time when frame was set
 	float		framerate;	// animation playback rate (-8x to 8x)
-	byte		controller[16];	// bone controller setting (0..255)
-	byte		blending[16];	// blending amount between sub-sequences (0..255)
+	byte		controller[4];	// bone controller setting (0..255)
+	byte		blending[2];	// blending amount between sub-sequences (0..255)
 
 	float		scale;		// sprites and models rendering scale (0..255)
 	int		rendermode;

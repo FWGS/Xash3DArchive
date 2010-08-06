@@ -1750,7 +1750,7 @@ void SV_SaveGame( const char *pName )
 		BF_WriteByte( &sv.multicast, svgame.gmsgHudText );
 		BF_WriteByte( &sv.multicast, com.strlen( pMsg ) + 1 );
 		BF_WriteString( &sv.multicast, pMsg );
-		MSG_Send( MSG_ONE, NULL, EDICT_NUM( 1 ));
+		SV_Send( MSG_ONE, NULL, EDICT_NUM( 1 ));
 	}
 }
 

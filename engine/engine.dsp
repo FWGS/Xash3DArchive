@@ -226,10 +226,6 @@ SOURCE=.\common\net_huff.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\net_msg.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\server\sv_client.c
 # End Source File
 # Begin Source File

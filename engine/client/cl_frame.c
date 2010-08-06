@@ -42,7 +42,7 @@ Parses deltas from the given base and adds the resulting entity
 to the current frame
 ==================
 */
-void CL_DeltaEntity( bitbuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, bool unchanged )
+void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, bool unchanged )
 {
 	edict_t		*ent;
 	entity_state_t	*state;
@@ -94,7 +94,7 @@ An svc_packetentities has just been parsed, deal with the
 rest of the data stream.
 ==================
 */
-void CL_ParsePacketEntities( bitbuf_t *msg, frame_t *oldframe, frame_t *newframe )
+void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newframe )
 {
 	int		newnum;
 	entity_state_t	*oldstate;
@@ -200,7 +200,7 @@ void CL_ParsePacketEntities( bitbuf_t *msg, frame_t *oldframe, frame_t *newframe
 CL_ParseClientData
 ===================
 */
-void CL_ParseClientData( frame_t *from, frame_t *to, bitbuf_t *msg )
+void CL_ParseClientData( frame_t *from, frame_t *to, sizebuf_t *msg )
 {
 	clientdata_t	*cd, *ocd;
 	clientdata_t	dummy;
@@ -223,7 +223,7 @@ void CL_ParseClientData( frame_t *from, frame_t *to, bitbuf_t *msg )
 CL_ParseFrame
 ================
 */
-void CL_ParseFrame( bitbuf_t *msg )
+void CL_ParseFrame( sizebuf_t *msg )
 {
 	int	cmd;
 	edict_t	*clent;

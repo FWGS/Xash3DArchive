@@ -7,6 +7,9 @@
 #include "utils.h"
 #include "ev_hldm.h"
 #include "r_tempents.h"
+#include "ref_params.h"
+
+extern ref_params_t		*gpViewParams;
 
 extern "C"
 {
@@ -181,8 +184,17 @@ void EV_UpadteFlashlight( edict_t *pEnt )
 	float rgba[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	TraceResult tr;
 
-	AngleVectors( pEnt->v.v_angle, forward, NULL, NULL );
-	vecSrc = pEnt->v.origin +pEnt->v.view_ofs;
+	if ( EV_IsLocal( pEnt->serialnumber ) )
+	{
+		// get the predicted angles
+		AngleVectors( gpViewParams->cl_viewangles, forward, NULL, NULL );
+	}
+	else
+	{
+		AngleVectors( pEnt->v.v_angle, forward, NULL, NULL );
+	}
+
+	vecSrc = pEnt->v.origin + pEnt->v.view_ofs;
 	vecEnd = vecSrc + forward * 512;
 
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, pEnt, &tr );

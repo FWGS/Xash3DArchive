@@ -353,6 +353,7 @@ extern cvar_t	*cl_nodelta;
 extern cvar_t	*cl_crosshair;
 extern cvar_t	*cl_showmiss;
 extern cvar_t	*cl_testlights;
+extern cvar_t	*cl_idealpitchscale;
 extern cvar_t	*cl_allow_levelshots;
 extern cvar_t	*cl_levelshot_name;
 extern cvar_t	*scr_centertime;
@@ -363,7 +364,7 @@ extern cvar_t	*userinfo;
 //=============================================================================
 
 bool CL_CheckOrDownloadFile( const char *filename );
-void CL_ParseConfigString( bitbuf_t *msg );
+void CL_ParseConfigString( sizebuf_t *msg );
 void CL_SetLightstyle( int i );
 void CL_RunLightStyles( void );
 
@@ -411,7 +412,7 @@ void CL_SendCmd( void );
 // cl_demo.c
 //
 void CL_DrawDemoRecording( void );
-void CL_WriteDemoMessage( bitbuf_t *msg, int head_size );
+void CL_WriteDemoMessage( sizebuf_t *msg, int head_size );
 void CL_ReadDemoMessage( void );
 void CL_StopPlayback( void );
 void CL_StopRecord( void );
@@ -427,7 +428,7 @@ void CL_Stop_f( void );
 //
 void CL_UnloadProgs( void );
 bool CL_LoadProgs( const char *name );
-void CL_ParseUserMessage( bitbuf_t *msg, int svc_num );
+void CL_ParseUserMessage( sizebuf_t *msg, int svc_num );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
 void CL_DrawHUD( int state );
 void CL_InitEdicts( void );
@@ -459,7 +460,7 @@ _inline edict_t *CL_EDICT_NUM( int n, const char *file, const int line )
 //
 // cl_parse.c
 //
-void CL_ParseServerMessage( bitbuf_t *msg );
+void CL_ParseServerMessage( sizebuf_t *msg );
 void CL_RunBackgroundTrack( void );
 void CL_Download_f( void );
 
@@ -502,7 +503,7 @@ void CL_UpdateBaseVelocity( edict_t *ent );
 //
 // cl_frame.c
 //
-void CL_ParseFrame( bitbuf_t *msg );
+void CL_ParseFrame( sizebuf_t *msg );
 void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 
 //

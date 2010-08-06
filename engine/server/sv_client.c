@@ -9,8 +9,6 @@
 #include "protocol.h"
 #include "net_encode.h"
 
-#define MAX_FORWARD		6
-
 typedef struct ucmd_s
 {
 	const char	*name;
@@ -556,7 +554,7 @@ Shift down the remaining args
 Redirect all printfs
 ===============
 */
-void SV_RemoteCommand( netadr_t from, bitbuf_t *msg )
+void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 {
 	char		remaining[1024];
 	static char	outputbuf[MAX_MSGLEN - 16];
@@ -590,7 +588,7 @@ SV_FullClientUpdate
 Writes all update values to a bitbuf
 ===================
 */
-void SV_FullClientUpdate( sv_client_t *cl, bitbuf_t *msg )
+void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 {
 	int	i;
 	char	info[MAX_INFO_STRING];
@@ -612,7 +610,7 @@ void SV_FullClientUpdate( sv_client_t *cl, bitbuf_t *msg )
 	}
 	else BF_WriteByte( msg, false );
 	
-	MSG_DirectSend( MSG_ALL, vec3_origin, NULL );
+	SV_DirectSend( MSG_ALL, vec3_origin, NULL );
 	BF_Clear( msg );
 }
 
@@ -623,7 +621,7 @@ void SV_RefreshUserinfo( void )
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 		if( cl->state >= cs_connected && !(cl->edict && cl->edict->v.flags & FL_FAKECLIENT ))
-			cl->sendinfo = cl->sendmovevars = true;
+			cl->sendinfo = true;
 }
 
 /*
@@ -634,13 +632,13 @@ this is send all movevars values when client connected
 otherwise see code SV_UpdateMovevars()
 ===================
 */
-void SV_UpdatePhysinfo( sv_client_t *cl, bitbuf_t *msg )
+void SV_UpdatePhysinfo( sv_client_t *cl, sizebuf_t *msg )
 {
 	movevars_t	nullmovevars;
 
 	Mem_Set( &nullmovevars, 0, sizeof( nullmovevars ));
-	BF_WriteDeltaMovevars( msg, &nullmovevars, &svgame.movevars );
-	MSG_DirectSend( MSG_ONE, NULL, cl->edict );
+	MSG_WriteDeltaMovevars( msg, &nullmovevars, &svgame.movevars );
+	SV_DirectSend( MSG_ONE, NULL, cl->edict );
 	BF_Clear( msg );
 }
 
@@ -692,7 +690,7 @@ void SV_PutClientInServer( edict_t *ent )
 			BF_WriteByte( &sv.multicast, svc_setangle );
 			BF_WriteBitAngle( &sv.multicast, ent->v.angles[0], 16 );
 			BF_WriteBitAngle( &sv.multicast, ent->v.angles[1], 16 );
-			MSG_DirectSend( MSG_ONE, vec3_origin, client->edict );
+			SV_DirectSend( MSG_ONE, vec3_origin, client->edict );
 			ent->v.fixangle = 0;
 		}
 		ent->pvServerData->s.ed_flags |= (ESF_NODELTA|ESF_NO_PREDICTION);
@@ -707,7 +705,7 @@ void SV_PutClientInServer( edict_t *ent )
 	
 		BF_WriteByte( &client->netchan.message, svc_setview );
 		BF_WriteWord( &client->netchan.message, NUM_FOR_EDICT( client->edict ));
-		MSG_Send( MSG_ONE, NULL, client->edict );
+		SV_Send( MSG_ONE, NULL, client->edict );
 	}
 
 	// clear any temp states
@@ -732,7 +730,7 @@ void SV_TogglePause( const char *msg )
 	// send notification to all clients
 	BF_WriteByte( &sv.multicast, svc_setpause );
 	BF_WriteByte( &sv.multicast, sv.paused );
-	MSG_Send( MSG_ALL, vec3_origin, NULL );
+	SV_Send( MSG_ALL, vec3_origin, NULL );
 }
 
 /*
@@ -1009,6 +1007,8 @@ void SV_Begin_f( sv_client_t *cl )
 		return;
 	}
 
+	// don't send movevars before svc_deltatable
+	cl->sendmovevars = true;
 	cl->state = cs_spawned;
 	SV_PutClientInServer( cl->edict );
 
@@ -1017,7 +1017,7 @@ void SV_Begin_f( sv_client_t *cl )
 	{
 		BF_WriteByte( &sv.multicast, svc_setpause );
 		BF_WriteByte( &sv.multicast, sv.paused );
-		MSG_Send( MSG_ONE, vec3_origin, cl->edict );
+		SV_Send( MSG_ONE, vec3_origin, cl->edict );
 		SV_ClientPrintf( cl, PRINT_HIGH, "Server is paused.\n" );
 	}
 }
@@ -1255,13 +1255,13 @@ SV_Send
 Sends the contents of sv.multicast to a subset of the clients,
 then clears sv.multicast.
 
-MULTICAST_ONE	send to one client (ent can't be NULL)
-MULTICAST_ALL	same as broadcast (origin can be NULL)
-MULTICAST_PVS	send to clients potentially visible from org
-MULTICAST_PHS	send to clients potentially hearable from org
+MSG_ONE	send to one client (ent can't be NULL)
+MSG_ALL	same as broadcast (origin can be NULL)
+MSG_PVS	send to clients potentially visible from org
+MSG_PHS	send to clients potentially hearable from org
 =================
 */
-bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, const char *filename, int fileline )
+bool SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, bool direct )
 {
 	byte		*mask = NULL;
 	int		leafnum = 0, numsends = 0;
@@ -1317,7 +1317,7 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 		specproxy = reliable = true;
 		break;
 	default:
-		Host_Error( "MSG_Send: bad dest: %i (called at %s:%i)\n", dest, filename, fileline );
+		Host_Error( "SV_Send: bad dest: %i\n", dest );
 		return false;
 	}
 
@@ -1359,7 +1359,7 @@ bool _MSG_Send( int dest, const vec3_t origin, const edict_t *ent, bool direct, 
 		BF_WriteByte( &sv.multicast, svc_bad );
 		BF_WriteLong( &sv.multicast, rand( ));		// send some random data
 		BF_WriteString( &sv.multicast, host.finalmsg );	// send final message
-		MSG_Send( MSG_ALL, vec3_origin, NULL );
+		SV_Send( MSG_ALL, vec3_origin, NULL );
 		sv.write_bad_message = false;
 	}
 	return numsends;	// debug
@@ -1375,7 +1375,7 @@ Clients that are in the game can still send
 connectionless packets.
 =================
 */
-void SV_ConnectionlessPacket( netadr_t from, bitbuf_t *msg )
+void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 {
 	char	*s;
 	char	*c;
@@ -1400,72 +1400,6 @@ void SV_ConnectionlessPacket( netadr_t from, bitbuf_t *msg )
 }
 
 /*
-===============
-SV_SetIdealPitch
-===============
-*/
-void SV_SetIdealPitch( sv_client_t *cl )
-{
-	float	angleval, sinval, cosval;
-	trace_t	tr;
-	vec3_t	top, bottom;
-	float	z[MAX_FORWARD];
-	int	i, j;
-	int	step, dir, steps;
-	edict_t	*ent = cl->edict;
-
-	if( !( ent->v.flags & FL_ONGROUND ))
-		return;
-		
-	angleval = ent->v.angles[YAW] * M_PI * 2 / 360;
-	com.sincos( angleval, &sinval, &cosval );
-
-	for( i = 0; i < MAX_FORWARD; i++ )
-	{
-		top[0] = ent->v.origin[0] + cosval * (i + 3) * 12;
-		top[1] = ent->v.origin[1] + sinval * (i + 3) * 12;
-		top[2] = ent->v.origin[2] + ent->v.view_ofs[2];
-		
-		bottom[0] = top[0];
-		bottom[1] = top[1];
-		bottom[2] = top[2] - 160;
-		
-		tr = SV_Move( top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, ent );
-		if( tr.fAllSolid )
-			return;	// looking at a wall, leave ideal the way is was
-
-		if( tr.flFraction == 1.0f )
-			return;	// near a dropoff
-		
-		z[i] = top[2] + tr.flFraction * (bottom[2] - top[2]);
-	}
-	
-	dir = 0;
-	steps = 0;
-	for( j = 1; j < i; j++ )
-	{
-		step = z[j] - z[j-1];
-		if( step > -ON_EPSILON && step < ON_EPSILON )
-			continue;
-
-		if( dir && ( step-dir > ON_EPSILON || step-dir < -ON_EPSILON ))
-			return; // mixed changes
-
-		steps++;	
-		dir = step;
-	}
-	
-	if( !dir )
-	{
-		ent->v.idealpitch = 0;
-		return;
-	}
-	
-	if( steps < 2 ) return;
-	ent->v.idealpitch = -dir * sv_idealpitchscale->value;
-}
-
-/*
 ==================
 SV_ReadClientMove
 
@@ -1477,7 +1411,7 @@ On very fast clients, there may be multiple usercmd packed into
 each of the backup packets.
 ==================
 */
-static void SV_ReadClientMove( sv_client_t *cl, bitbuf_t *msg )
+static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 {
 	int	checksum1, checksum2;
 	int	key, lastframe, net_drop, size;
@@ -1553,7 +1487,7 @@ SV_ExecuteClientMessage
 Parse a client packet
 ===================
 */
-void SV_ExecuteClientMessage( sv_client_t *cl, bitbuf_t *msg )
+void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 {
 	int	c, stringCmdCount = 0;
 	bool	move_issued = false;

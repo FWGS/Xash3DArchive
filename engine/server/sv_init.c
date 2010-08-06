@@ -45,7 +45,7 @@ int SV_FindIndex( const char *name, int start, int end, bool create )
 		BF_WriteByte( &sv.multicast, svc_configstring );
 		BF_WriteShort( &sv.multicast, start + i );
 		BF_WriteString( &sv.multicast, name );
-		MSG_Send( MSG_ALL, vec3_origin, NULL );
+		SV_Send( MSG_ALL, vec3_origin, NULL );
 	}
 	return i;
 }

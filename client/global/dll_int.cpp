@@ -210,8 +210,6 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	ent->v.gravity = state->gravity;
 	ent->v.solid = state->solid;
 	ent->v.movetype = state->movetype;
-	ent->v.flags = state->flags;
-	ent->v.idealpitch = state->idealpitch;
 	ent->v.animtime = state->animtime;
 
 	if( ent != GetLocalPlayer())
@@ -219,43 +217,29 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 		ent->v.health = state->health;
 	}
 
-	if( state->onground )
-		ent->v.groundentity = GetEntityByIndex( state->onground );
-	else ent->v.groundentity = NULL;
-
 	if( state->aiment )
 		ent->v.aiment = GetEntityByIndex( state->aiment );
 	else ent->v.aiment = NULL;
 
-	if( ent->v.flags & FL_MONSTER )
+	switch( ent->v.movetype )
 	{
-		switch( ent->v.movetype )
-		{
-		case MOVETYPE_NONE:
-		case MOVETYPE_STEP:
-		case MOVETYPE_FLY:
-			// monster's steps will be interpolated on render-side
-			ent->v.origin = state->origin;
-			ent->v.angles = state->angles;
-			ent->v.oldorigin = prev->origin;	// used for lerp 'monster view'
-			ent->v.oldangles = prev->angles;	// used for lerp 'monster view'
-			break;
-		default:
-			ent->v.angles = LerpAngle( prev->angles, state->angles, m_fLerp );
-			ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
-			ent->v.basevelocity = LerpPoint( prev->basevelocity, state->basevelocity, m_fLerp );
-			break;
-		}
-	}
-	else
-	{
+	case MOVETYPE_NONE:
+	case MOVETYPE_STEP:
+	case MOVETYPE_FLY:
+		// monster's steps will be interpolated on render-side
+		ent->v.origin = state->origin;
+		ent->v.angles = state->angles;
+		ent->v.oldorigin = prev->origin;	// used for lerp 'monster view'
+		ent->v.vuser1 = prev->angles;		// used for lerp 'monster view'
+		break;
+	default:
 		ent->v.angles = LerpAngle( prev->angles, state->angles, m_fLerp );
 		ent->v.basevelocity = LerpPoint( prev->basevelocity, state->basevelocity, m_fLerp );
-
 		if( ent != GetLocalPlayer( ))
 		{
 			ent->v.origin = LerpPoint( prev->origin, state->origin, m_fLerp );
 		}
+		break;
 	}
 
 	// interpolate scale, renderamount etc
@@ -280,7 +264,9 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	switch( state->ed_type )
 	{
 	case ED_CLIENT:
-		ent->v.v_angle = LerpAngle( prev->viewangles, state->viewangles, m_fLerp );
+		// restore viewangles from angles
+		ent->v.v_angle[PITCH] = -ent->v.angles[PITCH] * 3;
+		ent->v.v_angle[YAW] = ent->v.angles[YAW];
 
 		if( ent != GetLocalPlayer( ))
 		{
@@ -291,7 +277,9 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 			else ent->v.fov = LerpPoint( prev->fov, state->fov, m_fLerp ); 
 		}
 
-		ent->v.maxspeed = state->maxspeed;
+		if( state->onground != -1 )
+			ent->v.groundentity = GetEntityByIndex( state->onground );
+		else ent->v.groundentity = NULL;
 
 		ent->v.iStepLeft = state->iStepLeft;
 		ent->v.flFallVelocity = state->flFallVelocity;
@@ -300,7 +288,7 @@ void HUD_UpdateEntityVars( edict_t *ent, const entity_state_t *state, const enti
 	case ED_MOVER:
 	case ED_BSPBRUSH:
 		ent->v.movedir = BitsToDir( state->body );
-		ent->v.oldorigin = state->oldorigin;
+		ent->v.oldorigin = state->vuser1;	// used for portals and skyportals
 		break;
 	case ED_SKYPORTAL:
 		{
@@ -371,7 +359,6 @@ void HUD_UpdateClientVars( edict_t *ent, const clientdata_t *state, const client
 	ent->v.velocity = state->velocity;
 	ent->v.flags = state->flags;
 	ent->v.health = state->health;
-	ent->v.flags = state->flags;
 
 	ent->v.punchangle = LerpAngle( prev->punchangle, state->punchangle, m_fLerp );
 	ent->v.view_ofs = LerpPoint( prev->view_ofs, state->view_ofs, m_fLerp );
@@ -383,7 +370,7 @@ void HUD_UpdateClientVars( edict_t *ent, const clientdata_t *state, const client
 	// Water state
 	ent->v.watertype = state->watertype;
 	ent->v.waterlevel = state->waterlevel;
-
+	
 	// suit and weapon bits
 	ent->v.weapons = state->weapons;
 
