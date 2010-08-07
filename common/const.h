@@ -309,6 +309,14 @@ typedef enum
 	kRenderFxNoReflect,			// don't reflecting in mirrors 
 } kRenderFx_t;
 
+// link_t is only used for entity area links now
+typedef struct link_s
+{
+	struct link_s	*prev;
+	struct link_s	*next;
+	int		entnum;		// svs.edicts \ cls.entities actual number
+} link_t;
+
 // breakmodel defines
 #define BREAK_TYPEMASK	0x4F
 #define BREAK_GLASS		0x01
@@ -371,8 +379,5 @@ typedef enum
 #define FDECAL_USESAXIS		0x40	// Uses the s axis field to determine orientation (footprints)
 #define FDECAL_ANIMATED		0x80	// this is decal has multiple frames
 
-// client modelindexes
-#define NULLENT_INDEX		-1	// engine always return NULL, only for internal use
-#define VIEWENT_INDEX		-2	// can get viewmodel for local client
 
 #endif//CONST_H

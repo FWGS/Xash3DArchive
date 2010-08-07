@@ -157,11 +157,8 @@ bool Host_InitRender( void )
 	ri.StudioEvent = CL_StudioEvent;
 	ri.StudioFxTransform = CL_StudioFxTransform;
 	ri.ShowCollision = Host_DrawDebug;
-	ri.GetAttachment = CL_GetAttachment;
-	ri.SetAttachment = CL_SetAttachment;
-	ri.GetClientEdict = CL_GetEdictByIndex;
-	ri.GetLerpFrame = CL_GetLerpFrame;
-	ri.GetMouthOpen = CL_GetMouthOpen;
+	ri.GetClientEdict = CL_GetEntityByIndex;
+	ri.GetPlayerInfo = CL_GetPlayerInfo;
 	ri.GetLocalPlayer = CL_GetLocalPlayer;
 	ri.GetMaxClients = CL_GetMaxClients;
 	ri.GetLerpFrac = CL_GetLerpFrac;
@@ -211,8 +208,7 @@ bool Host_InitSound( void )
 	si.GetEntitySpatialization = CL_GetEntitySpatialization;
 	si.TraceLine = CL_TraceLine;
 	si.AmbientLevels = CL_AmbientLevels;
-	si.GetClientEdict = CL_GetEdictByIndex;
-	si.GetEntityMouth = CL_GetEntityMouth;
+	si.GetClientEdict = CL_GetEntityByIndex;
 	si.GetServerTime = CL_GetServerTime;
 	si.IsInMenu = CL_IsInMenu;
 	si.IsActive = CL_IsInGame;

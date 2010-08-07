@@ -25,7 +25,7 @@
 #include "game_shared.h"
 #include "activity.h"
 #include "enginecallback.h"
-#include "event_api.h"
+#include "event_flags.h"
 
 extern globalvars_t				*gpGlobals;
 

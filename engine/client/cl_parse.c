@@ -8,6 +8,7 @@
 #include "protocol.h"
 #include "net_sound.h"
 #include "net_encode.h"
+#include "event_flags.h"
 
 #define MSG_COUNT		32		// last 32 messages parsed
 #define MSG_MASK		(MSG_COUNT - 1)
@@ -561,8 +562,9 @@ void CL_ParseBaseline( sizebuf_t *msg )
 {
 	int		newnum, timebase;
 	entity_state_t	nullstate;
-	entity_state_t	*baseline;
-	edict_t		*ent;
+	cl_entity_t	*ent;
+
+	Delta_InitClient ();	// finalize client delta's
 
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 	newnum = BF_ReadWord( msg );
@@ -575,14 +577,13 @@ void CL_ParseBaseline( sizebuf_t *msg )
 		clgame.globals->numEntities++;
 
 	ent = EDICT_NUM( newnum );
-	if( ent->free ) CL_InitEdict( ent ); // initialize edict
+	if( ent->index <= 0 ) CL_InitEntity( ent ); // initialize edict
 
 	if( cls.state == ca_active )
 		timebase = cl.frame.servertime;
 	else timebase = 1000; // sv.state == ss_loading
 
-	baseline = &clgame.baselines[newnum];
-	MSG_ReadDeltaEntity( msg, &nullstate, baseline, newnum, cl.time );
+	MSG_ReadDeltaEntity( msg, &nullstate, &ent->baseline, newnum, cl.time );
 	CL_LinkEdict( ent, false ); // first entering, link always
 }
 
@@ -619,8 +620,8 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	}
 	else if( i == CS_WATERAMP )
 	{
-		edict_t	*world = CL_GetEdictByIndex( 0 );
-		world->v.scale = com.atof( cl.configstrings[CS_WATERAMP] );
+		cl_entity_t *world = CL_GetEntityByIndex( 0 );
+		world->curstate.scale = com.atof( cl.configstrings[CS_WATERAMP] );
 	}
 	else if( i == CS_SKYVEC )
 	{
@@ -815,7 +816,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 
 	// message with variable sizes receive an actual size as first byte
 	if( iSize == -1 ) iSize = BF_ReadByte( msg );
-	if( iSize > 0 ) pbuf = Mem_Alloc( clgame.private, iSize );
+	if( iSize > 0 ) pbuf = Mem_Alloc( clgame.mempool, iSize );
 
 	// parse user message into buffer
 	BF_ReadBytes( msg, pbuf, iSize );

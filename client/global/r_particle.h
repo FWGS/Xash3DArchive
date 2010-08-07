@@ -124,7 +124,7 @@ public:
 	void		DrawParticle( HSPRITE hSpr, const Vector &pos, const byte color[4], float size );
 
 	// begin user effects here
-	void		EntityParticles( edict_t *ent );
+	void		EntityParticles( cl_entity_t *ent );
 	void		ParticleEffect( const Vector org, const Vector dir, int color, int count );
 	void		ParticleExplosion( const Vector org );
 	void		ParticleExplosion2( const Vector org, int colorStart, int colorLength );

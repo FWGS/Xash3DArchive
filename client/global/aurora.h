@@ -155,7 +155,7 @@ public:
 	ParticleType *AddPlaceholderType( const char *szName );
 	ParticleType *ParseType( const char **szFile );
 
-	edict_t *GetEntity() { return GetEntityByIndex( m_iEntIndex ); }
+	cl_entity_t *GetEntity() { return GetEntityByIndex( m_iEntIndex ); }
 
 	static float c_fCosTable[360 + 90];
 	static bool c_bCosTableInit;
@@ -201,7 +201,7 @@ public:
 	ParticleSystemManager( void );
 	~ParticleSystemManager( void );
 
-	ParticleSystem	*FindSystem( edict_t* pEntity );
+	ParticleSystem	*FindSystem( cl_entity_t* pEntity );
 	void		SortSystems( void );
 	void		AddSystem( ParticleSystem* );
 	void		UpdateSystems( void );

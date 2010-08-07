@@ -71,8 +71,8 @@ float EV_HLDM_PlayTextureSound( int idx, TraceResult *ptr, float *vecSrc, float 
 	char texname[64];
 	char szbuffer[64];
 
-	if( ptr->pHit )
-		entity = ptr->pHit->serialnumber;
+	if( ptr->pEnt )
+		entity = ptr->pEnt->index;
 
 	// check if playtexture sounds movevar is set
 	if( gpGlobals->maxClients != 1 && gpMovevars->footsteps == 0 )
@@ -89,7 +89,7 @@ float EV_HLDM_PlayTextureSound( int idx, TraceResult *ptr, float *vecSrc, float 
 	else if ( entity == 0 )
 	{
 		// get texture from entity or world (world is ent(0))
-		pTextureName = (char *)g_engfuncs.pfnTraceTexture( ptr->pHit, vecSrc, vecEnd );
+		pTextureName = (char *)g_engfuncs.pfnTraceTexture( ptr->pEnt, vecSrc, vecEnd );
 		
 		if( pTextureName )
 		{
@@ -239,17 +239,17 @@ void EV_HLDM_FindHullIntersection( int idx, Vector vecSrc, TraceResult pTrace, f
 	}
 }
 
-char *EV_HLDM_DamageDecal( edict_t *pEnt )
+char *EV_HLDM_DamageDecal( cl_entity_t *pEnt )
 {
 	static char decalname[32];
 	int idx;
 
-	if ( pEnt->v.rendermode == kRenderTransTexture )
+	if ( pEnt->curstate.rendermode == kRenderTransTexture )
 	{
 		idx = RANDOM_LONG( 0, 2 );
 		sprintf( decalname, "{break%i", idx + 1 );
 	}
-	else if ( pEnt->v.rendermode != kRenderNormal )
+	else if ( pEnt->curstate.rendermode != kRenderNormal )
 	{
 		sprintf( decalname, "{bproof1" );
 	}
@@ -263,21 +263,21 @@ char *EV_HLDM_DamageDecal( edict_t *pEnt )
 
 void EV_HLDM_CrowbarDecalTrace( TraceResult *pTrace, char *decalName )
 {
-	edict_t	*pEnt;
+	cl_entity_t	*pEnt;
 
-	pEnt = pTrace->pHit;
+	pEnt = pTrace->pEnt;
 
 	// only decal brush models such as the world etc.
-	if( decalName && decalName[0] && pEnt && ( pEnt->v.solid == SOLID_BSP || pEnt->v.movetype == MOVETYPE_PUSHSTEP ))
+	if( decalName && decalName[0] && pEnt && ( pEnt->curstate.solid == SOLID_BSP || pEnt->curstate.movetype == MOVETYPE_PUSHSTEP ))
 	{
-		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->serialnumber, decalName );
+		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->index, decalName );
 	}
 }
 
 void EV_HLDM_GunshotDecalTrace( TraceResult *pTrace, char *decalName )
 {
 	int	iRand;
-	edict_t	*pEnt;
+	cl_entity_t	*pEnt;
 
 	iRand = RANDOM_LONG( 0, 0x7FFF );
 	if ( iRand < ( 0x7fff / 2 )) // not every bullet makes a sound.
@@ -302,22 +302,22 @@ void EV_HLDM_GunshotDecalTrace( TraceResult *pTrace, char *decalName )
 		}
 	}
 
-	pEnt = pTrace->pHit;
+	pEnt = pTrace->pEnt;
 
 	// Only decal brush models such as the world etc.
-	if( decalName && decalName[0] && pEnt && ( pEnt->v.solid == SOLID_BSP || pEnt->v.movetype == MOVETYPE_PUSHSTEP ))
+	if( decalName && decalName[0] && pEnt && ( pEnt->curstate.solid == SOLID_BSP || pEnt->curstate.movetype == MOVETYPE_PUSHSTEP ))
 	{
-		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->serialnumber, decalName );
+		g_pTempEnts->PlaceDecal( pTrace->vecEndPos, pEnt->index, decalName );
 	}
 }
 
 void EV_HLDM_DecalGunshot( TraceResult *pTrace, int iBulletType )
 {
-	edict_t	*pe;
+	cl_entity_t	*pe;
 
-	pe = pTrace->pHit;
+	pe = pTrace->pEnt;
 
-	if ( pe && pe->v.solid == SOLID_BSP )
+	if ( pe && pe->curstate.solid == SOLID_BSP )
 	{
 		switch( iBulletType )
 		{
@@ -385,7 +385,7 @@ void EV_PlayEmptySound( event_args_s *args )
 	// play custom empty sound
 	// added pitch tuning for final spirit release
 	if( args->iparam2 == 0 ) args->iparam2 = PITCH_NORM;
-	edict_t	*pEnt = GetEntityByIndex( args->entindex );
+	cl_entity_t	*pEnt = GetEntityByIndex( args->entindex );
 
 	switch ( args->iparam1 )
 	{
@@ -538,7 +538,7 @@ void EV_FireCrowbar( event_args_t *args )
 	Vector	angles = args->angles;
 	Vector	velocity;
           Vector	up, right, forward;
-	edict_t	*pHit;
+	cl_entity_t	*pEnt;
 	TraceResult tr;
 	
 	Vector vecSrc, vecEnd;
@@ -559,9 +559,9 @@ void EV_FireCrowbar( event_args_t *args )
 		{
 			// Calculate the point of intersection of the line (or hull) and the object we hit
 			// This is and approximation of the "best" intersection
-			pHit = tr.pHit;
+			pEnt = tr.pEnt;
 
-			if ( !pHit || pHit->v.solid == SOLID_BSP )
+			if ( !pEnt || pEnt->curstate.solid == SOLID_BSP )
 				EV_HLDM_FindHullIntersection( idx, vecSrc, tr, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 			vecEnd = tr.vecEndPos; // This is the point on the actual surface (the hull could have hit space)
 		}
@@ -612,13 +612,13 @@ void EV_FireCrowbar( event_args_t *args )
 		// play thwack, smack, or dong sound
 		float flVol = 1.0;
 		int fHitWorld = TRUE;
-  		pHit = tr.pHit;
+  		pEnt = tr.pEnt;
   		
-		if ( pHit )
+		if ( pEnt )
 		{
 			if ( args->bparam1 )
 			{
-				edict_t	*pSoundEnt = GetEntityByIndex( idx );
+				cl_entity_t	*pSoundEnt = GetEntityByIndex( idx );
 
 				// play thwack or smack sound
 				switch( RANDOM_LONG(0,2) )
@@ -642,7 +642,7 @@ void EV_FireCrowbar( event_args_t *args )
 		if ( fHitWorld )
 		{
 			float fvolbar = EV_HLDM_PlayTextureSound( idx, &tr, vecSrc, vecSrc + (vecEnd - vecSrc) * 2, BULLET_CROWBAR );
-			edict_t	*pSoundEnt = GetEntityByIndex( idx );
+			cl_entity_t	*pSoundEnt = GetEntityByIndex( idx );
 		
 			// also play crowbar strike
 			switch( RANDOM_LONG(0,1) )
@@ -687,7 +687,7 @@ void EV_FireGlock1( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		edict_t *view = GetViewModel();
+		cl_entity_t *view = GetViewModel();
 		g_engfuncs.pEventAPI->EV_WeaponAnimation( args->iparam2, args->iparam1, 1.0f );
 
 		EV_MuzzleFlash();							
@@ -708,7 +708,7 @@ void EV_FireGlock1( event_args_t *args )
 
 	EV_EjectBrass( ShellOrigin, ShellVelocity, angles[YAW], shell, TE_BOUNCE_SHELL ); 
 
-	edict_t	*pSoundEnt = GetEntityByIndex( idx );
+	cl_entity_t	*pSoundEnt = GetEntityByIndex( idx );
 
 	if ( args->bparam2 )
 	{
@@ -774,7 +774,7 @@ void EV_FireMP5( event_args_t *args )
 
 	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[YAW], shell, TE_BOUNCE_SHELL ); 
 
-	edict_t	*pSoundEnt = GetEntityByIndex( idx );
+	cl_entity_t	*pSoundEnt = GetEntityByIndex( idx );
 
 	switch( RANDOM_LONG( 0, 1 ) )
 	{
@@ -933,7 +933,7 @@ void EV_FirePython( event_args_t *args )
 		V_PunchAxis( 0, -10.0 );
 	}
 
-	edict_t	*pSoundEnt = GetEntityByIndex( idx );
+	cl_entity_t	*pSoundEnt = GetEntityByIndex( idx );
 
 	switch( RANDOM_LONG( 0, 1 ))
 	{
@@ -970,10 +970,10 @@ void EV_SpinGauss( event_args_t *args )
 
 	if( EV_IsLocal( args->entindex ))
 	{
-		edict_t *view = GetViewModel();
+		cl_entity_t *view = GetViewModel();
 
 		// change framerate from 1.0 to 2.5
-		view->v.framerate = (float)pitch / PITCH_NORM;
+		view->curstate.framerate = (float)pitch / PITCH_NORM;
 	}
 }
 
@@ -1002,14 +1002,14 @@ void EV_FireGauss( event_args_t *args )
 	int m_iWeaponVolume = GAUSS_PRIMARY_FIRE_VOLUME;
 	Vector vecSrc, vecDest;
   
-	edict_t *pentIgnore;
+	cl_entity_t *pentIgnore;
 	TraceResult tr, beam_tr;
 	float flMaxFrac = 1.0;
 	int nTotal = 0;                             
 	int fHasPunched = 0;
 	int fFirstBeam = 1;
 	int nMaxHits = 10;
-	edict_t *pEntity;
+	cl_entity_t *pEntity;
 	int m_iBeam, m_iGlow, m_iBalls;
 	Vector forward;
 
@@ -1068,12 +1068,12 @@ void EV_FireGauss( event_args_t *args )
 			m_fPrimaryFire ? 255 : 255, m_fPrimaryFire ? 128 : 255, m_fPrimaryFire ? 0 : 255 );
 		}
 
-		pEntity = tr.pHit;
+		pEntity = tr.pEnt;
 
 		if ( pEntity == NULL )
 			break;
                     
-		if ( pEntity->v.solid == SOLID_BSP )
+		if ( pEntity->curstate.solid == SOLID_BSP )
 		{
 			float n;
 
@@ -1236,7 +1236,7 @@ void EV_EgonFire( event_args_t *args )
 	iFireState = args->bparam2;
 	int m_iFlare = g_engfuncs.pEventAPI->EV_FindModelIndex( EGON_FLARE_SPRITE );
 
-	edict_t *pSoundEnt = GetEntityByIndex( idx );
+	cl_entity_t *pSoundEnt = GetEntityByIndex( idx );
 
 	if ( iStartup )
 	{
@@ -1259,13 +1259,13 @@ void EV_EgonFire( event_args_t *args )
 		Vector vecSrc, vecEnd, origin, angles, forward;
 		TraceResult tr;
 
-		edict_t *pl = GetEntityByIndex( idx );
+		cl_entity_t *pl = GetEntityByIndex( idx );
 
 		if ( pl )
 		{
 			angles = gHUD.m_vecAngles;
 			AngleVectors( angles, forward, NULL, NULL );
-			EV_GetGunPosition( args, vecSrc, pl->v.origin );
+			EV_GetGunPosition( args, vecSrc, pl->origin );
 		
 			vecEnd = vecSrc + forward * 2048;
 				
@@ -1399,8 +1399,8 @@ void EV_UpdateBeams ( void )
 	TraceResult tr;
 	float timedist;
 
-	edict_t *pthisplayer = GetLocalPlayer();
-	int idx = pthisplayer->serialnumber;
+	cl_entity_t *pthisplayer = GetLocalPlayer();
+	int idx = pthisplayer->index;
 	
 	// Get our exact viewangles from engine
 	GetViewAngles( angles );
@@ -1455,7 +1455,7 @@ void EV_UpdateBeams ( void )
 
 	if( m_pEndFlare )
 	{
-		m_pEndFlare->origin = tr.vecEndPos;
+		m_pEndFlare->entity.origin = tr.vecEndPos;
 		m_pEndFlare->die = gpGlobals->time + 0.1f;
 	}
 }
@@ -1474,7 +1474,7 @@ void EV_Decals( event_args_t *args )
 	// simulate trace result          
 	memset( &tr, 0, sizeof( tr ));
 	pTrace->vecEndPos = args->origin;
-	pTrace->pHit = GetEntityByIndex( args->iparam1 ); 
+	pTrace->pEnt = GetEntityByIndex( args->iparam1 ); 
 	
 	if( args->iparam2 == 0 )
 	{
@@ -1541,8 +1541,8 @@ void EV_Decals( event_args_t *args )
 	if( args->iparam2 == 6 )
 	{
 		// monsters shoot
-           	if ( pTrace->pHit && pTrace->pHit->v.solid == SOLID_BSP )
-			EV_HLDM_GunshotDecalTrace( pTrace, EV_HLDM_DamageDecal( pTrace->pHit ));
+           	if ( pTrace->pEnt && pTrace->pEnt->curstate.solid == SOLID_BSP )
+			EV_HLDM_GunshotDecalTrace( pTrace, EV_HLDM_DamageDecal( pTrace->pEnt ));
 	}
 }
 //======================
@@ -1556,12 +1556,12 @@ TEMPENTITY *m_pLaserSpot = NULL;
 
 void EV_UpdateLaserSpot( void )
 {
-	edict_t	*m_pPlayer = GetLocalPlayer();
-	edict_t	*m_pWeapon = GetViewModel();
+	cl_entity_t	*m_pPlayer = GetLocalPlayer();
+	cl_entity_t	*m_pWeapon = GetViewModel();
 
 	if( !m_pPlayer ) return;
 
-	if( m_pPlayer->v.effects & EF_LASERSPOT && !m_pLaserSpot && cl_lw->integer )
+	if( m_pPlayer->curstate.effects & EF_LASERSPOT && !m_pLaserSpot && cl_lw->integer )
 	{
 		// create laserspot
 		int m_iSpotModel = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/laserdot.spr" );
@@ -1569,10 +1569,12 @@ void EV_UpdateLaserSpot( void )
 		m_pLaserSpot = g_pTempEnts->TempSprite( g_vecZero, g_vecZero, 1.0, m_iSpotModel, kRenderGlow, kRenderFxNoDissipation, 1.0, 9999, FTENT_SPRCYCLE );
 		if( !m_pLaserSpot ) return;
 
-		m_pLaserSpot->renderColor = Vector( 200, 12, 12 );
+		m_pLaserSpot->entity.baseline.rendercolor.r = 200;
+		m_pLaserSpot->entity.baseline.rendercolor.g = 12;
+		m_pLaserSpot->entity.baseline.rendercolor.b = 12;
 //		ALERT( at_console, "CLaserSpot::Create()\n" );
 	}
-	else if( !( m_pPlayer->v.effects & EF_LASERSPOT ) && m_pLaserSpot )
+	else if( !( m_pPlayer->curstate.effects & EF_LASERSPOT ) && m_pLaserSpot )
 	{
 		// destroy laserspot
 //		ALERT( at_console, "CLaserSpot::Killed()\n" );
@@ -1593,10 +1595,11 @@ void EV_UpdateLaserSpot( void )
 
 #if 1
 	GetViewAngles( angles );	// viewmodel doesn't have attachment
-	origin = m_pWeapon->v.origin;
+	origin = m_pWeapon->origin;
 #else
 	// TEST: give viewmodel first attachment
-	GET_ATTACHMENT( m_pWeapon, 1, origin, angles );
+	origin = m_pWeapon->origin + pEnt->attachment_origin[0];
+	angles = pEnt->attachment_angles[0];	// already include viewmodel angles
 #endif
 	AngleVectors( angles, forward, NULL, NULL );
 
@@ -1606,7 +1609,7 @@ void EV_UpdateLaserSpot( void )
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, m_pPlayer, &tr );
 
 	// update laserspot endpos
-	m_pLaserSpot->origin = tr.vecEndPos;
+	m_pLaserSpot->entity.origin = tr.vecEndPos;
 	m_pLaserSpot->die = gpGlobals->time + 0.1f;
 }
 

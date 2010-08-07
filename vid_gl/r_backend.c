@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_local.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "cl_entity.h"
 
 #define FTABLE_SIZE_POW		10
 #define FTABLE_SIZE			( 1<<FTABLE_SIZE_POW )

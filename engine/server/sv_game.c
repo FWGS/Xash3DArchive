@@ -10,6 +10,7 @@
 #include "net_encode.h"
 #include "byteorder.h"
 #include "matrix_lib.h"
+#include "event_flags.h"
 #include "pm_defs.h"
 #include "const.h"
 
@@ -470,7 +471,9 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 
 	ent->v.classname = className;
 	ent->v.pContainingEntity = ent; // re-link
+
 	VectorSet( ent->v.rendercolor, 255, 255, 255 ); // assume default color
+	ent->v.scale = 1.0f; // set default scale
 	
 	// allocate edict private memory (passed by dlls)
 	SpawnEdict = (LINK_ENTITY_FUNC)FS_GetProcAddress( svgame.hInstance, pszClassName );

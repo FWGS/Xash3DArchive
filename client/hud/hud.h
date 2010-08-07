@@ -582,7 +582,7 @@ public:
 	void VidInit( void );
 	void Think( void );
 	int Redraw( float flTime );
-	int UpdateClientData( void );
+	int UpdateClientData( client_data_t *cdata, float time );
 
 	CHud() : m_pHudList(NULL) { }
 	~CHud();	// destructor, frees allocated memory

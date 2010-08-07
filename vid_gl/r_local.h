@@ -25,9 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "launch_api.h"
 #include "qfiles_ref.h"
 #include "engine_api.h"
-#include "entity_def.h"
 #include "render_api.h"
-#include "entity_state.h"
 #include "trace_def.h"
 
 #if defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
@@ -175,7 +173,7 @@ enum
 #define RP_SHOWNORMALS		0x2000
 
 #define RP_NONVIEWERREF		( RP_PORTALVIEW|RP_MIRRORVIEW|RP_ENVVIEW|RP_SKYPORTALVIEW|RP_SHADOWMAPVIEW )
-#define RP_LOCALCLIENT(e)		(ri.GetLocalPlayer() && ((e)->index == ri.GetLocalPlayer()->serialnumber))
+#define RP_LOCALCLIENT(e)		(ri.GetLocalPlayer() && ((e)->index == ri.GetLocalPlayer()->index ))
 #define RP_FOLLOWENTITY(e)		(((e)->movetype == MOVETYPE_FOLLOW && (e)->parent))
 #define MOD_ALLOWBUMP()		(r_lighting_models_followdeluxe->integer ? mapConfig.deluxeMappingEnabled : GL_Support( R_SHADER_GLSL100_EXT ))
 
@@ -199,14 +197,14 @@ typedef struct
 
 typedef struct ref_entity_s
 {
-	edtype_t			ent_type;		// entity type
+	uint			ent_type;		// entity type
 	uint			m_nCachedFrameCount;// keep current render frame
 	int			index;		// viewmodel has entindex -1
 	refEntityType_t		rtype;
 
 	struct ref_model_s		*model;		// opaque type outside refresh
 	struct ref_entity_s		*parent;		// link to parent entity (FOLLOW or weaponmodel)
-	lerpframe_t		*lerp;		// pointer to client entity lerpingdata (holds two frames)
+	struct cl_entity_s		*lerp;		// pointer to client entity
 
 	float			framerate;	// custom framerate
 	float			frame;
@@ -748,8 +746,7 @@ void R_StudioDrawHitbox( ref_entity_t *e, int iHitbox );
 void R_StudioDrawDebug( void );
 void R_StudioInit( void );
 bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, trace_t *tr );
-void R_StudioAllocExtradata( edict_t *in, ref_entity_t *e );
-void R_StudioAllocTentExtradata( struct tempent_s *in, ref_entity_t *e );
+void R_StudioAllocExtradata( struct cl_entity_s *in, ref_entity_t *e );
 void R_StudioFreeAllExtradata( void );
 void R_StudioShutdown( void );
 

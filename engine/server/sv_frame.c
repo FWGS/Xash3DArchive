@@ -163,6 +163,13 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			ent->serialnumber = e;
 		}
 
+		if( ent->v.scale == 0.0f )
+		{
+			// this should never happens
+			MsgDev( D_INFO, "fixing ent->v.scale %s\n", SV_ClassName( ent ));
+			ent->v.scale = 1.0f;
+		}
+
 		// don't double add an entity through portals (already added)
 		if( ent->pvServerData->framenum == sv.net_framenum )
 			continue;

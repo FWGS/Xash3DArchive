@@ -7,6 +7,7 @@
 #define SERVER_H
 
 #include "mathlib.h"
+#include "entity_def.h"
 #include "svgame_api.h"
 #include "world.h"
 

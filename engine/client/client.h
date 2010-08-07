@@ -9,24 +9,19 @@
 #include "mathlib.h"
 #include "clgame_api.h"
 #include "gameui_api.h"
+#include "cl_entity.h"
+#include "com_model.h"
 #include "world.h"
 
 #define MAX_DEMOS		32
 
-#define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - clgame.edicts))
+#define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	CL_GetString( offset )
 #define MAKE_STRING(str)	CL_AllocString( str )
 #define cl_time()		( cl.time * 0.001f )
 #define sv_time()		( cl.frame.servertime * 0.001f )
 #define sv_frametime()	( cl.serverframetime * 0.001f )
-
-typedef struct player_info_s
-{
-	char	name[CS_SIZE];
-	char	userinfo[MAX_INFO_STRING];
-	char	model[CS_SIZE];
-} player_info_t;
 
 //=============================================================================
 typedef struct frame_s
@@ -149,25 +144,6 @@ typedef enum
 	scrshot_skyshot	// skybox view
 } scrshot_t;
 
-// cl_private_edict_t
-struct cl_priv_s
-{
-	link_t		area;		// linked to a division node or leaf
-	bool		linked;
-
-	int		serverframe;	// if not current, this ent isn't in the frame
-	
-	entity_state_t	current;
-	entity_state_t	prev;		// will always be valid, but might just be a copy of current
-	lerpframe_t	frame;		// holds the studio values for right lerping
-
-	// studiomodels attachments
-	vec3_t		origin[MAXSTUDIOATTACHMENTS];
-	vec3_t		angles[MAXSTUDIOATTACHMENTS];
-
-	mouth_t		mouth;		// shared mouth info
-};
-
 typedef struct
 {
 	char		name[32];
@@ -236,11 +212,7 @@ typedef struct
 	string		maptitle;			// display map title
 	string		itemspath;		// path to items description for auto-complete func
 
-	union
-	{
-		edict_t	*edicts;			// acess by edict number
-		void	*vp;			// acess by offset in bytes
-	};
+	cl_entity_t	*entities;		// dynamically allocated entity array
 
 	// movement values from server
 	movevars_t	movevars;
@@ -251,7 +223,6 @@ typedef struct
 	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
 	cl_hook_info_t	hook[MAX_USER_MESSAGES];
 	user_event_t	*events[MAX_EVENTS];
-	entity_state_t	*baselines;
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	center_print_t	centerPrint;		// centerprint variables
@@ -261,8 +232,7 @@ typedef struct
 	client_textmessage_t *titles;			// title messages, not network messages
 	int		numTitles;
 
-	edict_t		viewent;			// viewmodel or playermodel in UI_PlayerSetup
-	edict_t		playermodel;		// uiPlayerSetup latched vars
+	cl_entity_t	viewent;			// viewmodel
 	byte		*stringspool;		// for shared strings
 
 	int		hStringTable;		// stringtable handle
@@ -273,6 +243,8 @@ typedef struct
 	void		*hInstance;		// pointer to client.dll
 	UI_FUNCTIONS	dllFuncs;			// dll exported funcs
 	byte		*mempool;			// client edicts pool
+
+	cl_entity_t	playermodel;		// uiPlayerSetup drawing model
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	GAMEINFO		gameInfo;			// current gameInfo
@@ -434,25 +406,22 @@ void CL_DrawHUD( int state );
 void CL_InitEdicts( void );
 void CL_FreeEdicts( void );
 void CL_InitWorld( void );
-edict_t *CL_AllocEdict( void );
-void CL_InitEdict( edict_t *pEdict );
-void CL_FreeEdict( edict_t *pEdict );
+const char *CL_ClassName( const cl_entity_t *e );
+void CL_InitEntity( cl_entity_t *pEdict );
+void CL_FreeEntity( cl_entity_t *pEdict );
 string_t CL_AllocString( const char *szValue );
 const char *CL_GetString( string_t iString );
 void CL_CenterPrint( const char *text, float y );
-bool CL_IsValidEdict( const edict_t *e );
-const char *CL_ClassName( const edict_t *e );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
-mouth_t *CL_GetEntityMouth( edict_t *ent );
 int pfnDecalIndexFromName( const char *szDecalName );
 void *VGui_GetPanel( void );
 void VGui_ViewportPaintBackground( int extents[4] );
 
-_inline edict_t *CL_EDICT_NUM( int n, const char *file, const int line )
+_inline cl_entity_t *CL_EDICT_NUM( int n, const char *file, const int line )
 {
 	if(( n >= 0 ) && ( n < clgame.globals->maxEntities ))
-		return clgame.edicts + n;
+		return clgame.entities + n;
 	Host_Error( "CL_EDICT_NUM: bad number %i (called at %s:%i)\n", n, file, line );
 	return NULL;	
 }
@@ -496,9 +465,8 @@ bool CL_IsPredicted( void );
 //
 // cl_phys.c
 //
-void CL_CheckVelocity( edict_t *ent );
-bool CL_CheckWater( edict_t *ent );
-void CL_UpdateBaseVelocity( edict_t *ent );
+void CL_CheckVelocity( cl_entity_t *ent );
+void CL_UpdateBaseVelocity( cl_entity_t *ent );
 
 //
 // cl_frame.c
@@ -509,8 +477,8 @@ void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 //
 // cl_tent.c
 //
-int CL_AddEntity( edict_t *pEnt, int ed_type, shader_t customShader );
-int CL_AddTempEntity( struct tempent_s *pTemp, shader_t customShader );
+int CL_AddEntity( cl_entity_t *pEnt, int ed_type, shader_t customShader );
+void CL_WeaponAnim( int iAnim, int body, float framerate );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
 dlight_t *CL_AllocDlight( int key );
@@ -572,13 +540,13 @@ void CL_PlayVideo_f( void );
 // cl_world.c
 //
 void CL_ClearWorld( void );
-void CL_UnlinkEdict( edict_t *ent );
-void CL_ClassifyEdict( edict_t *ent );
-void CL_LinkEdict( edict_t *ent, bool touch_triggers );
-int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype );
-trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
-edict_t *CL_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult *tr );
-trace_t CL_MoveToss( edict_t *tossent, edict_t *ignore );
+void CL_UnlinkEdict( cl_entity_t *ent );
+void CL_ClassifyEdict( cl_entity_t *ent );
+void CL_LinkEdict( cl_entity_t *ent, bool touch_triggers );
+int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, cl_entity_t **list, int maxcount, int areatype );
+trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, cl_entity_t *e );
+cl_entity_t *CL_TestPlayerPosition( const vec3_t origin, cl_entity_t *pass, TraceResult *tr );
+trace_t CL_MoveToss( cl_entity_t *tossent, cl_entity_t *ignore );
 int CL_TruePointContents( const vec3_t p );
 int CL_PointContents( const vec3_t p );
 

@@ -493,8 +493,6 @@ void IN_CreateMove( usercmd_t *cmd, int msec, int active )
 	frametime = msec;
 	frame_msec = bound( 1, msec - last_msec, 200 );
 
-	g_iAlive = gHUD.UpdateClientData();
-
 	if ( active && !gHUD.m_iIntermission )
 	{
 		GetViewAngles( cl_viewangles );

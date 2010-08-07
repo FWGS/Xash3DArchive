@@ -19,7 +19,7 @@
 Vector	v_origin, v_angles, v_cl_angles;	// base client vectors
 float	v_idlescale, v_lastDistance;		// misc variables
 Vector	ev_punchangle;			// client punchangles
-edict_t	*spot;
+cl_entity_t *spot;
 
 typedef struct 
 {
@@ -317,21 +317,21 @@ void V_CalcGunAngle( ref_params_t *pparams )
 {	
 	if( pparams->fov_x > 135 ) return;
 
-	edict_t	*viewent = GetViewModel();
+	cl_entity_t *viewent = GetViewModel();
 
-	if( !viewent->v.modelindex ) return;
+	if( !viewent->curstate.modelindex )
+		return;
 
-	viewent->serialnumber = VIEWENT_INDEX;	// viewentity are handled with special number. don't change this
-	viewent->v.effects |= EF_MINLIGHT;
+	viewent->curstate.effects |= EF_MINLIGHT;
 
-	viewent->v.angles[YAW] = pparams->viewangles[YAW] + pparams->crosshairangle[YAW];
-	viewent->v.angles[PITCH] = pparams->viewangles[PITCH] - pparams->crosshairangle[PITCH] * 0.25;
-	viewent->v.angles[ROLL] = pparams->viewangles[ROLL];
-	viewent->v.angles[ROLL] -= v_idlescale * sin(pparams->time * v_iroll_cycle->value) * v_iroll_level->value;
+	viewent->angles[YAW] = pparams->viewangles[YAW] + pparams->crosshairangle[YAW];
+	viewent->angles[PITCH] = pparams->viewangles[PITCH] - pparams->crosshairangle[PITCH] * 0.25;
+	viewent->angles[ROLL] = pparams->viewangles[ROLL];
+	viewent->angles[ROLL] -= v_idlescale * sin(pparams->time * v_iroll_cycle->value) * v_iroll_level->value;
 	
 	// don't apply all of the v_ipitch to prevent normally unseen parts of viewmodel from coming into view.
-	viewent->v.angles[PITCH] -= v_idlescale * sin(pparams->time * v_ipitch_cycle->value) * (v_ipitch_level->value * 0.5);
-	viewent->v.angles[YAW]   -= v_idlescale * sin(pparams->time * v_iyaw_cycle->value) * v_iyaw_level->value;
+	viewent->angles[PITCH] -= v_idlescale * sin(pparams->time * v_ipitch_cycle->value) * (v_ipitch_level->value * 0.5);
+	viewent->angles[YAW]   -= v_idlescale * sin(pparams->time * v_iyaw_cycle->value) * v_iyaw_level->value;
 }
 
 //==========================
@@ -407,7 +407,7 @@ void V_AddIdle( ref_params_t *pparams )
 void V_CalcViewRoll( ref_params_t *pparams )
 {
 	float   sign, side, value;
-	edict_t *viewentity;
+	cl_entity_t *viewentity;
 	Vector  right;
 
 	viewentity = GetEntityByIndex( pparams->viewentity );
@@ -415,14 +415,14 @@ void V_CalcViewRoll( ref_params_t *pparams )
 
 	if( pparams->health <= 0 && ( pparams->viewheight[2] != 0 ))
 	{
-		GetViewModel()->v.modelindex = 0;	// clear the viewmodel
-		pparams->viewangles[ROLL] = 80;	// dead view angle
+		GetViewModel()->curstate.modelindex = 0;	// clear the viewmodel
+		pparams->viewangles[ROLL] = 80;		// dead view angle
 		return;
 	}
 
 	if( pparams->demoplayback ) return;
 
-	AngleVectors( viewentity->v.angles, NULL, right, NULL );
+	AngleVectors( viewentity->angles, NULL, right, NULL );
 	side = right.Dot( pparams->simvel );
 	sign = side < 0 ? -1 : 1;
 	side = fabs( side );
@@ -469,8 +469,8 @@ void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &res
 	TraceResult tr;
 	int maxLoops = 8;
 
-	edict_t *ent = NULL;
-	edict_t *ignoreent = NULL;
+	cl_entity_t *ent = NULL;
+	cl_entity_t *ignoreent = NULL;
 	
 	// trace back from the target using the player's view angles
 	AngleVectors( angles, forward, NULL, NULL );
@@ -481,12 +481,12 @@ void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &res
 	while( maxLoops > 0 )
 	{
 		g_engfuncs.pfnTraceLine( vecStart, vecEnd, true, ignoreent, &tr );
-		if( tr.pHit == NULL ) break; // we hit the world or nothing, stop trace
+		if( tr.pEnt == NULL ) break; // we hit the world or nothing, stop trace
 
-		ent = tr.pHit;
+		ent = tr.pEnt;
 
 		// hit non-player solid BSP, stop here
-		if( ent->v.solid == SOLID_BSP && !( ent->v.flags & FL_CLIENT ))
+		if( ent->curstate.solid == SOLID_BSP && !( ent->curstate.flags & FL_CLIENT ))
 			break;
 
 		// if close enought to end pos, stop, otherwise continue trace
@@ -494,7 +494,7 @@ void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &res
 			break;
 		else
 		{
-			ignoreent = tr.pHit; // ignore last hit entity
+			ignoreent = tr.pEnt; // ignore last hit entity
 			vecStart = tr.vecEndPos;
 		}
 		maxLoops--;
@@ -507,25 +507,29 @@ void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &res
 //==========================
 // V_GetChasePos
 //==========================
-void V_GetChasePos( ref_params_t *pparams, edict_t *ent, float *cl_angles, Vector &origin, Vector &angles )
+void V_GetChasePos( ref_params_t *pparams, cl_entity_t *ent, float *cl_angles, Vector &origin, Vector &angles )
 {
-	if( !ent )
+	if ( !ent )
 	{
 		// just copy a save in-map position
 		angles = Vector( 0, 0, 0 );
 		origin = Vector( 0, 0, 0 );
 		return;
 	}
-	if( cl_angles == NULL )
+
+	if ( cl_angles == NULL )
 	{
 		// no mouse angles given, use entity angles ( locked mode )
-		angles = ent->v.angles;
+		angles = ent->angles;
 		angles.x *= -1;
 	}
-	else angles = cl_angles;
+	else
+	{
+		angles = cl_angles;
+	}
 
 	// refresh the position
-	origin = ent->v.origin;
+	origin = ent->origin;
 	origin[2] += 28; // DEFAULT_VIEWHEIGHT - some offset
           V_GetChaseOrigin( angles, origin, cl_chasedist->value, origin );
 }
@@ -540,23 +544,23 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 	if( gHUD.viewFlags & CAMERA_ON )
 	{         
 		// this is a viewentity sets with BUzer's custom camera code
-		edict_t	*viewentity = GetEntityByIndex( gHUD.viewEntityIndex );
+		cl_entity_t *viewentity = GetEntityByIndex( gHUD.viewEntityIndex );
 	 	if( viewentity )
 		{		 
 			studiohdr_t *viewmonster = (studiohdr_t *)GetModelPtr( viewentity );
 			float m_fLerp = GetLerpFrac();
 
-			if( viewentity->v.movetype == MOVETYPE_STEP )
-				v_origin = LerpPoint( viewentity->v.oldorigin, viewentity->v.origin, m_fLerp );
-			else v_origin = viewentity->v.origin;	// already interpolated
+			if( viewentity->curstate.movetype == MOVETYPE_STEP )
+				v_origin = LerpPoint( viewentity->prevstate.origin, viewentity->curstate.origin, m_fLerp );
+			else v_origin = viewentity->origin;	// already interpolated
 
 			// calc monster view if supposed
 			if( gHUD.viewFlags & MONSTER_VIEW && viewmonster )
 				v_origin += viewmonster->eyeposition;
 
-			if( viewentity->v.movetype == MOVETYPE_STEP )
-				v_angles = LerpAngle( viewentity->v.vuser1, viewentity->v.angles, m_fLerp );
-			else v_angles = viewentity->v.angles;	// already interpolated
+			if( viewentity->curstate.movetype == MOVETYPE_STEP )
+				v_angles = LerpAngle( viewentity->prevstate.angles, viewentity->curstate.angles, m_fLerp );
+			else v_angles = viewentity->angles;	// already interpolated
 
 			if( gHUD.viewFlags & INVERSE_X )	// inverse X coordinate
 				v_angles[0] = -v_angles[0];
@@ -570,22 +574,22 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 	else if( GetEntityByIndex( pparams->viewentity ) != GetLocalPlayer( ))
 	{
 		// this is a viewentity which sets by SET_VIEW builtin
-		edict_t	*viewentity = GetEntityByIndex( pparams->viewentity );
+		cl_entity_t *viewentity = GetEntityByIndex( pparams->viewentity );
 	 	if( viewentity )
 		{		 
 			studiohdr_t *viewmonster = (studiohdr_t *)GetModelPtr( viewentity );
 			float m_fLerp = GetLerpFrac();
 
-			if( viewentity->v.movetype == MOVETYPE_STEP )
-				v_origin = LerpPoint( viewentity->v.oldorigin, viewentity->v.origin, m_fLerp );
-			else v_origin = viewentity->v.origin;	// already interpolated
+			if( viewentity->curstate.movetype == MOVETYPE_STEP )
+				v_origin = LerpPoint( viewentity->prevstate.origin, viewentity->curstate.origin, m_fLerp );
+			else v_origin = viewentity->origin;	// already interpolated
 
 			// add view offset
 			if( viewmonster ) v_origin += viewmonster->eyeposition;
 
-			if( viewentity->v.movetype == MOVETYPE_STEP )
-				v_angles = LerpAngle( viewentity->v.vuser1, viewentity->v.angles, m_fLerp );
-			else v_angles = viewentity->v.angles;	// already interpolated
+			if( viewentity->curstate.movetype == MOVETYPE_STEP )
+				v_angles = LerpAngle( viewentity->prevstate.angles, viewentity->curstate.angles, m_fLerp );
+			else v_angles = viewentity->angles;	// already interpolated
 
 			pparams->crosshairangle[ROLL] = 1;	// crosshair is hided
 
@@ -597,9 +601,9 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 	else pparams->crosshairangle[ROLL] = 0; // show crosshair again
 }
 
-edict_t *V_FindIntermisionSpot( ref_params_t *pparams )
+cl_entity_t *V_FindIntermisionSpot( ref_params_t *pparams )
 {
-	edict_t *ent;
+	cl_entity_t *ent;
 	int spotindex[16];	// max number of intermission spot
 	int k = 0, j = 0;
 
@@ -607,10 +611,10 @@ edict_t *V_FindIntermisionSpot( ref_params_t *pparams )
 	for( int i = 0; i < pparams->num_entities; i++ )
 	{
 		ent = GetEntityByIndex( i );
-		if( ent && !stricmp( STRING( ent->v.classname ), "info_intermission" ))
+		if( ent && !stricmp( STRING( ent->classname ), "info_intermission" ))
 		{
 			if( j > 15 ) break; // spotlist is full
-			spotindex[j] = ent->serialnumber; // save entindex
+			spotindex[j] = ent->index; // save entindex
 			j++;
 		}
 	}	
@@ -633,16 +637,16 @@ void V_CalcIntermisionRefdef( ref_params_t *pparams )
 {
 	if( !pparams->intermission ) return;
 
-	edict_t	*view;
+	cl_entity_t *view;
 	float	  old;
 
           if( !spot ) spot = V_FindIntermisionSpot( pparams );
 	view = GetViewModel();
 
 	// need to lerping position ?
-	pparams->vieworg = spot->v.origin;
-	pparams->viewangles = spot->v.angles;
-	view->v.modelindex = 0;
+	pparams->vieworg = spot->origin;
+	pparams->viewangles = spot->angles;
+	view->curstate.modelindex = 0;
 
 	// allways idle in intermission
 	old = v_idlescale;
@@ -737,8 +741,8 @@ void V_CalcThirdPersonRefdef( ref_params_t *pparams )
 		return;
 
 	// clear viewmodel for thirdperson
-	edict_t	*viewent = GetViewModel();
-	viewent->v.modelindex = 0;
+	cl_entity_t *viewent = GetViewModel();
+	viewent->curstate.modelindex = 0;
 
 	// get current values
 	v_cl_angles = pparams->cl_viewangles;
@@ -782,8 +786,8 @@ float V_CalcWaterLevel( ref_params_t *pparams )
 		float	waterDist = cl_waterdist->value;
 		Vector	point;
 
-		edict_t	*pwater = g_engfuncs.pfnWaterEntity( pparams->simorg );
-		if( pwater ) waterDist += ( pwater->v.scale * 16 );
+		cl_entity_t *pwater = g_engfuncs.pfnWaterEntity( pparams->simorg );
+		if( pwater ) waterDist += ( pwater->curstate.scale * 16 );
 
 		point = pparams->vieworg;
 
@@ -846,7 +850,7 @@ void V_CalcScrOffset( ref_params_t *pparams )
 //==========================
 void V_InterpolatePos( ref_params_t *pparams )
 {
-	edict_t	*view;
+	cl_entity_t *view;
 
 	// view is the weapon model (only visible from inside body )
 	view = GetViewModel();
@@ -886,7 +890,7 @@ void V_InterpolatePos( ref_params_t *pparams )
 					delta = neworg - pparams->simorg;
 					pparams->simorg += delta;
 					pparams->vieworg += delta;
-					view->v.origin += delta;
+					view->origin += delta;
 
 				}
 			}
@@ -915,7 +919,7 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 	Vector angles;
 	float bob, waterOffset;
 	static float lasttime;
-	edict_t *view = GetViewModel();
+	cl_entity_t *view = GetViewModel();
 	int i;
 
 	V_DriftPitch( pparams );
@@ -943,35 +947,35 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 
 	Vector	lastAngles;
 
-	lastAngles = view->v.angles = pparams->cl_viewangles;
+	lastAngles = view->angles = pparams->cl_viewangles;
 	V_CalcGunAngle( pparams );
 
 	// use predicted origin as view origin.
-	view->v.origin = pparams->simorg;      
-	view->v.origin[2] += ( waterOffset );
-	view->v.origin += pparams->viewheight;
+	view->origin = pparams->simorg;      
+	view->origin[2] += ( waterOffset );
+	view->origin += pparams->viewheight;
 
 	// Let the viewmodel shake at about 10% of the amplitude
-	V_ApplyShake( view->v.origin, view->v.angles, 0.9 );
+	V_ApplyShake( view->origin, view->angles, 0.9 );
 
 	for( i = 0; i < 3; i++ )
-		view->v.origin[i] += bob * 0.4 * pparams->forward[i];
-	view->v.origin[2] += bob;
+		view->origin[i] += bob * 0.4 * pparams->forward[i];
+	view->origin[2] += bob;
 
-	view->v.angles[YAW] -= bob * 0.5;
-	view->v.angles[ROLL] -= bob * 1;
-	view->v.angles[PITCH] -= bob * 0.3;
-	view->v.origin[2] -= 1;
+	view->angles[YAW] -= bob * 0.5;
+	view->angles[ROLL] -= bob * 1;
+	view->angles[PITCH] -= bob * 0.3;
+	view->origin[2] -= 1;
 
 	// add lag
-	V_CalcViewModelLag( view->v.origin, view->v.angles, lastAngles );
+	V_CalcViewModelLag( view->origin, view->angles, lastAngles );
 
 	// fudge position around to keep amount of weapon visible
 	// roughly equal with different FOV
-	if( pparams->viewsize == 110 ) view->v.origin[2] += 1;
-	else if( pparams->viewsize == 100 ) view->v.origin[2] += 2;
-	else if( pparams->viewsize == 90 ) view->v.origin[2] += 1;
-	else if( pparams->viewsize == 80 ) view->v.origin[2] += 0.5;
+	if( pparams->viewsize == 110 ) view->origin[2] += 1;
+	else if( pparams->viewsize == 100 ) view->origin[2] += 2;
+	else if( pparams->viewsize == 90 ) view->origin[2] += 1;
+	else if( pparams->viewsize == 80 ) view->origin[2] += 0.5;
 
 	pparams->viewangles += pparams->punchangle;
 	pparams->viewangles += ev_punchangle;
@@ -990,7 +994,7 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 	if( !pparams->smoothing || !pparams->onground || cl_stairsmooth->value <= 0 )
 	{
 		old_client_z = pparams->vieworg[2];
-		old_weapon_z = view->v.origin[2];
+		old_weapon_z = view->origin[2];
 	}
 	else
 	{
@@ -999,8 +1003,8 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 
 		result = V_CalcStairSmoothValue( old_client_z, pparams->vieworg[2], smoothtime, stepheight );
 		if( result ) pparams->vieworg[2] = old_client_z = result;
-		result = V_CalcStairSmoothValue( old_weapon_z, view->v.origin[2], smoothtime, stepheight );
-		if( result ) view->v.origin[2] = old_weapon_z = result;
+		result = V_CalcStairSmoothValue( old_weapon_z, view->origin[2], smoothtime, stepheight );
+		if( result ) view->origin[2] = old_weapon_z = result;
 	}
 
 	static Vector lastorg;

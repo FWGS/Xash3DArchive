@@ -8,6 +8,7 @@
 #include "mathlib.h"
 #include "protocol.h"
 #include "net_encode.h"
+#include "event_api.h"
 #include "weaponinfo.h"
 
 #define DELTA_PATH		"delta.lst"
@@ -507,9 +508,6 @@ void Delta_ParseTableField( sizebuf_t *msg )
 	// delta encoders it's already initialized on this machine
 	if( delta_init ) return;
 
-	// initalize client table
-	if( !dt->bInitialized ) dt->bInitialized = true;
-
 	// add field to table
 	Delta_AddField( dt->pName, pName, flags, bits, mul, post_mul );
 }
@@ -736,8 +734,8 @@ void Delta_Init( void )
 {
 	delta_info_t	*dt;
 
-	// already initialized
-	if( delta_init ) return;
+	// shutdown it first
+	if( delta_init ) Delta_Shutdown ();
 
 	Delta_InitFields ();	// initialize fields
 	delta_init = true;
@@ -767,6 +765,25 @@ void Delta_Init( void )
 
 	// now done
 	dt->bInitialized = true;
+}
+
+void Delta_InitClient( void )
+{
+	int	i, numActive = 0;
+
+	// already initalized
+	if( delta_init ) return;
+
+	for( i = 0; i < NUM_FIELDS( dt_info ); i++ )
+	{
+		if( dt_info[i].numFields > 0 )
+		{
+			dt_info[i].bInitialized = true;
+			numActive++;
+		}
+	}
+
+	if( numActive ) delta_init = true;
 }
 
 void Delta_Shutdown( void )
@@ -1423,7 +1440,7 @@ void MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *
 	{
 		// check for a remove
 		Mem_Set( to, 0, sizeof( *to ));	
-		to->number = MAX_EDICTS;	// entity was removed
+		to->number = -1; // entity was removed
 		return;
 	}
 

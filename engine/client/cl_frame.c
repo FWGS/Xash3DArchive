@@ -15,23 +15,94 @@ FRAME PARSING
 
 =========================================================================
 */
-void CL_UpdateEntityFields( edict_t *ent )
+void CL_UpdateEntityFields( cl_entity_t *ent )
 {
-	// these fields user can overwrite if need
-	ent->v.model = MAKE_STRING( cl.configstrings[CS_MODELS+ent->pvClientData->current.modelindex] );
+	// FIXME: this very-very temporary stuffffffff
+	VectorCopy( ent->curstate.origin, ent->origin );
+	VectorCopy( ent->curstate.angles, ent->angles );
 
-	clgame.dllFuncs.pfnUpdateEntityVars( ent, &ent->pvClientData->current, &ent->pvClientData->prev );
-
-	if( ent->pvClientData->current.ed_flags & ESF_LINKEDICT )
+	if( ent->curstate.ed_flags & ESF_LINKEDICT )
 	{
 		CL_LinkEdict( ent, false );
 		// to avoids multiple relinks when wait for next packet
-		ent->pvClientData->current.ed_flags &= ~ESF_LINKEDICT;
+		ent->curstate.ed_flags &= ~ESF_LINKEDICT;
 	}
 
-	// always keep an actual (users can't replace this)
-	ent->serialnumber = ent->pvClientData->current.number;
-	ent->v.classname = cl.edict_classnames[ent->pvClientData->current.classname];
+	// FIXME: replace with char[32] ?
+	ent->classname = cl.edict_classnames[ent->curstate.classname];
+}
+
+/*
+==================
+CL_UpdateStudioVars
+
+Update studio latched vars so interpolation work properly
+==================
+*/
+void CL_UpdateStudioVars( cl_entity_t *ent, const entity_state_t *newstate )
+{
+	int	i;
+
+	if( newstate->effects & EF_NOINTERP )
+	{
+		ent->latched.sequencetime = 0.0f; // no lerping between sequences
+		ent->latched.prevsequence = newstate->sequence; // keep an actual
+		ent->latched.prevanimtime = newstate->animtime;
+
+		VectorCopy( newstate->origin, ent->latched.prevorigin );
+		VectorCopy( newstate->angles, ent->latched.prevangles );
+
+		// copy controllers
+		for( i = 0; i < 4; i++ )
+			ent->latched.prevcontroller[i] = newstate->controller[i];
+
+		// copy blends
+		for( i = 0; i < 4; i++ )
+			ent->latched.prevblending[i] = newstate->blending[i];
+
+		return;
+	}
+
+	// sequence has changed, hold the previous sequence info
+	if( newstate->sequence != ent->curstate.sequence )
+	{
+		if( ent->curstate.ed_type == ED_CLIENT )
+			ent->latched.sequencetime = ent->curstate.animtime + 0.01f;
+		else ent->latched.sequencetime = ent->curstate.animtime + 0.1f;
+			
+		// save current blends to right lerping from last sequence
+		for( i = 0; i < 4; i++ )
+			ent->latched.prevseqblending[i] = ent->curstate.blending[i];
+		ent->latched.prevsequence = ent->curstate.sequence;	// save old sequence
+	}
+
+	if( newstate->animtime != ent->curstate.animtime )
+	{
+		// client got new packet, shuffle animtimes
+		ent->latched.prevanimtime = ent->curstate.animtime;
+		VectorCopy( newstate->origin, ent->latched.prevorigin );
+		VectorCopy( newstate->angles, ent->latched.prevangles );
+
+		for( i = 0; i < 4; i++ )
+			ent->latched.prevcontroller[i] = newstate->controller[i];
+	}
+
+	// copy controllers
+	for( i = 0; i < 4; i++ )
+	{
+		if( ent->curstate.controller[i] != newstate->controller[i] )
+			ent->latched.prevcontroller[i] = ent->curstate.controller[i];
+	}
+
+	// copy blends
+	for( i = 0; i < 4; i++ )
+		ent->latched.prevblending[i] = ent->curstate.blending[i];
+
+	if( !VectorCompare( newstate->origin, ent->curstate.origin ))
+		VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
+
+	if( !VectorCompare( newstate->angles, ent->curstate.angles ))
+		VectorCopy( ent->curstate.angles, ent->latched.prevangles );
 }
 
 /*
@@ -44,46 +115,53 @@ to the current frame
 */
 void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, bool unchanged )
 {
-	edict_t		*ent;
+	cl_entity_t	*ent;
 	entity_state_t	*state;
 	bool		newent = (old) ? false : true;
 
 	ent = EDICT_NUM( newnum );
 	state = &cl.entity_curstates[cl.parse_entities & (MAX_PARSE_ENTITIES-1)];
 
-	if( newent ) old = &clgame.baselines[newnum];
+	if( newent ) old = &ent->baseline;
 
 	if( unchanged ) *state = *old;
 	else MSG_ReadDeltaEntity( msg, old, state, newnum, cl.frame.servertime );
 
-	if( state->number == MAX_EDICTS )
+	if( state->number == -1 )
 	{
 		if( newent ) Host_Error( "Cl_DeltaEntity: tried to release new entity\n" );
-		if( !ent->free ) CL_FreeEdict( ent );
+		CL_FreeEntity( ent );
 		return; // entity was delta removed
 	}
 
 	cl.parse_entities++;
 	frame->num_entities++;
 
-	if( ent->free ) CL_InitEdict( ent );
+	if( ent->index <= 0 ) CL_InitEntity( ent );
 
 	// some data changes will force no lerping
-	if( state->ed_flags & ESF_NODELTA ) ent->pvClientData->serverframe = -99;
+	if( state->ed_flags & ESF_NODELTA ) ent->serverframe = -99;
 	if( newent ) state->ed_flags |= ESF_LINKEDICT; // need to relink
 
-	if( ent->pvClientData->serverframe != cl.frame.serverframe - 1 )
+	if( ent->serverframe != cl.frame.serverframe - 1 )
 	{	
 		// duplicate the current state so lerping doesn't hurt anything
-		ent->pvClientData->prev = *state;
+		ent->prevstate = *state;
 	}
 	else
-	{	// shuffle the last state to previous
-		ent->pvClientData->prev = ent->pvClientData->current;
+	{	
+		// shuffle the last state to previous
+		ent->prevstate = ent->curstate;
 	}
 
-	ent->pvClientData->serverframe = cl.frame.serverframe;
-	ent->pvClientData->current = *state;
+	ent->serverframe = cl.frame.serverframe;
+
+	// NOTE: always check modelindex for new state not current
+	if( CM_GetModelType( state->modelindex ) == mod_studio )
+		CL_UpdateStudioVars( ent, state );
+
+	// set right current state
+	ent->curstate = *state;
 }
 
 /*
@@ -149,6 +227,7 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 				oldnum = oldstate->number;
 			}
 		}
+
 		if( oldnum == newnum )
 		{	
 			// delta from previous state
@@ -226,7 +305,7 @@ CL_ParseFrame
 void CL_ParseFrame( sizebuf_t *msg )
 {
 	int	cmd;
-	edict_t	*clent;
+	cl_entity_t	*clent;
           
 	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
 
@@ -292,7 +371,7 @@ void CL_ParseFrame( sizebuf_t *msg )
 
 	if( cls.state != ca_active )
 	{
-		edict_t	*player;
+		cl_entity_t	*player;
 
 		// client entered the game
 		cls.state = ca_active;
@@ -304,8 +383,8 @@ void CL_ParseFrame( sizebuf_t *msg )
 
 		Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar	
 		// getting a valid frame message ends the connection process
-		VectorCopy( player->pvClientData->current.origin, cl.predicted_origin );
-		VectorCopy( player->v.v_angle, cl.predicted_angles );
+		VectorCopy( player->origin, cl.predicted_origin );
+		VectorCopy( player->angles, cl.predicted_angles );
 	}
 
 	CL_CheckPredictionError();
@@ -326,42 +405,39 @@ CL_AddPacketEntities
 */
 void CL_AddPacketEntities( frame_t *frame )
 {
-	edict_t		*ent, *clent;
-	clientdata_t	*cd, *ocd, dummy;
+	cl_entity_t	*ent, *clent;
 	int		e, ed_type;
 
 	// now recalc actual entcount
-	for( ; EDICT_NUM( clgame.globals->numEntities - 1 )->free; clgame.globals->numEntities-- );
+	for( ; EDICT_NUM( clgame.globals->numEntities - 1 )->index == -1; clgame.globals->numEntities-- );
 
 	clent = CL_GetLocalPlayer();
 	if( !clent ) return;
 
-	cd = &cl.frame.cd;
-
-	if( cl.oldframe )
-	{
-		ocd = &cl.oldframe->cd;
-	}
-	else
-	{
-		Mem_Set( &dummy, 0, sizeof( dummy ));
-		ocd = &dummy;
-	}
-
 	// update client vars
-	clgame.dllFuncs.pfnUpdateClientVars( clent, cd, ocd );
+	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.cd );
+
+	// if viewmodel has changed update sequence here
+	if( clgame.viewent.curstate.modelindex != cl.frame.cd.viewmodel )
+	{
+		cl_entity_t *view = &clgame.viewent;
+		CL_WeaponAnim( view->curstate.sequence, view->curstate.body, view->curstate.framerate );
+	}
+
+	// setup player viewmodel (only for local player!)
+	clgame.viewent.curstate.modelindex = cl.frame.cd.viewmodel;
 
 	for( e = 1; e < clgame.globals->numEntities; e++ )
 	{
-		ent = CL_GetEdictByIndex( e );
-		if( !CL_IsValidEdict( ent )) continue;
+		ent = CL_GetEntityByIndex( e );
+		if( !ent ) continue;
 
-		ed_type = ent->pvClientData->current.ed_type;
+		ed_type = ent->curstate.ed_type;
 		CL_UpdateEntityFields( ent );
 
 		if( clgame.dllFuncs.pfnAddVisibleEntity( ent, ed_type ))
 		{
-			if( ed_type == ED_PORTAL && !VectorCompare( ent->v.origin, ent->v.oldorigin ))
+			if( ed_type == ED_PORTAL && !VectorCompare( ent->curstate.origin, ent->curstate.vuser1 ))
 				cl.render_flags |= RDF_PORTALINVIEW;
 		}
 		// NOTE: skyportal entity never added to rendering
@@ -415,22 +491,21 @@ void CL_AddEntities( void )
 //
 void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
 {
-	edict_t	*ent;
+	cl_entity_t	*ent;
 
-	ent = CL_GetEdictByIndex( entnum );
-	if( !CL_IsValidEdict( ent ))
-		return; // leave uncahnged
+	ent = CL_GetEntityByIndex( entnum );
+	if( !ent ) return; // leave uncahnged
 
 	// setup origin and velocity
-	if( origin ) VectorCopy( ent->v.origin, origin );
-	if( velocity ) VectorCopy( ent->v.velocity, velocity );
+	if( origin ) VectorCopy( ent->origin, origin );
+	if( velocity ) VectorCopy( ent->curstate.velocity, velocity );
 
 	// if a brush model, offset the origin
-	if( origin && CM_GetModelType( ent->v.modelindex ) == mod_brush )
+	if( origin && CM_GetModelType( ent->curstate.modelindex ) == mod_brush )
 	{
 		vec3_t	mins, maxs, midPoint;
 	
-		Mod_GetBounds( ent->v.modelindex, mins, maxs );
+		Mod_GetBounds( ent->curstate.modelindex, mins, maxs );
 		VectorAverage( mins, maxs, midPoint );
 		VectorAdd( origin, midPoint, origin );
 	}

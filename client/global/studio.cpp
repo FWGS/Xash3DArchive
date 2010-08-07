@@ -19,11 +19,11 @@
 void EV_DrawBeam ( void )
 {
 	// special effect for displacer
-	edict_t *view = GetViewModel();
+	cl_entity_t *view = GetViewModel();
 
 	float life = 1.05;	// animtime
 	int m_iBeam = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/plasma.spr" );
-	int idx = GetLocalPlayer()->serialnumber; // link with client
+	int idx = GetLocalPlayer()->index; // link with client
 
 	g_pViewRenderBeams->CreateBeamEnts( idx | 0x1000, idx | 0x2000, m_iBeam, life, 0.8, 0.5, 127, 0.6, 0, 10, 20, 100, 0 );
 	g_pViewRenderBeams->CreateBeamEnts( idx | 0x1000, idx | 0x3000, m_iBeam, life, 0.8, 0.5, 127, 0.6, 0, 10, 20, 100, 0 );
@@ -33,17 +33,17 @@ void EV_DrawBeam ( void )
 //======================
 //	Eject Shell
 //======================
-void EV_EjectShell( const mstudioevent_t *event, edict_t *entity )
+void EV_EjectShell( const mstudioevent_t *event, cl_entity_t *entity )
 {
 	vec3_t view_ofs, ShellOrigin, ShellVelocity, forward, right, up;
-	vec3_t origin = entity->v.origin;
-	vec3_t angles = entity->v.angles;
-	vec3_t velocity = entity->v.velocity;
+	vec3_t origin = entity->origin;
+	vec3_t angles = entity->angles;
+	vec3_t velocity = entity->curstate.velocity;	// needs to change delta.lst to get it work
 	
 	float fR, fU;
 
           int shell = g_engfuncs.pEventAPI->EV_FindModelIndex( event->options );
-	origin.z = origin.z - entity->v.view_ofs[2];
+	origin.z = origin.z - entity->curstate.usehull ? 12 : 28;
 
 	for( int j = 0; j < 3; j++ )
 	{
@@ -67,7 +67,7 @@ void EV_EjectShell( const mstudioevent_t *event, edict_t *entity )
 	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL );
 }
 
-void HUD_StudioEvent( const mstudioevent_t *event, edict_t *entity )
+void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity )
 {
 	float	pitch;
 	Vector	pos;
@@ -95,13 +95,13 @@ void HUD_StudioEvent( const mstudioevent_t *event, edict_t *entity )
 		break;
 	case 5004:		
 		// Client side sound
-		GET_ATTACHMENT( entity, 1, pos, NULL ); 
+		pos = entity->origin + entity->attachment_origin[0];
 		CL_PlaySound( event->options, 1.0f, pos );
 		break;
 	case 5005:		
 		// Client side sound with random pitch
 		pitch = 85 + RANDOM_LONG( 0, 0x1F );
-		GET_ATTACHMENT( entity, 1, pos, NULL ); 
+		pos = entity->origin + entity->attachment_origin[0];
 		CL_PlaySound( event->options, RANDOM_FLOAT( 0.7f, 0.9f ), pos, pitch );
 		break;
 	case 5050:
@@ -117,9 +117,9 @@ void HUD_StudioEvent( const mstudioevent_t *event, edict_t *entity )
 	}
 }
 
-void HUD_StudioFxTransform( edict_t *ent, float transform[4][4] )
+void HUD_StudioFxTransform( cl_entity_t *ent, float transform[4][4] )
 {
-	switch( ent->v.renderfx )
+	switch( ent->curstate.renderfx )
 	{
 	case kRenderFxDistort:
 	case kRenderFxHologram:
@@ -145,7 +145,7 @@ void HUD_StudioFxTransform( edict_t *ent, float transform[4][4] )
 	case kRenderFxExplode:
 		float	scale;
 
-		scale = 1.0f + (gHUD.m_flTime - ent->v.animtime) * 10.0;
+		scale = 1.0f + (gHUD.m_flTime - ent->curstate.animtime) * 10.0;
 		if( scale > 2 ) scale = 2; // don't blow up more than 200%
 		
 		transform[0][1] *= scale;
@@ -156,11 +156,11 @@ void HUD_StudioFxTransform( edict_t *ent, float transform[4][4] )
 }
 
 // an example how to renderer determines interpolation methods
-int HUD_StudioDoInterp( edict_t *e )
+int HUD_StudioDoInterp( cl_entity_t *e )
 {
 	if( r_studio_lerping->integer )
 	{
-		return (e->v.flags & EF_NOINTERP) ? false : true;
+		return (e->curstate.flags & EF_NOINTERP) ? false : true;
 	}
 	return false;
 }

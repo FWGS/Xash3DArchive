@@ -42,42 +42,23 @@ struct tempent_s
 {
 	int		flags;
 	float		die;
-	float		m_flFrameMax;	// this is also animtime for studiomodels
-	float		x, y;
-	vec3_t		m_vecVelocity;	// tent velocity
-	vec3_t		m_vecAvelocity;	// tent avelocity
-	vec3_t		oldorigin;	// attachment offset, beam endpoint etc
-	vec3_t		tentOffset;	// if attached, client origin + tentOffset = tent origin.
+	float		frameMax;		// this is also animtime for studiomodels
+	float		x, y, z;		// probably z isn't used
 	float		fadeSpeed;
 	float		bounceFactor;
-	int		startAlpha;	// starting fadeout intensity
-	sound_t		hitSound;
-	byte		priority;		// 0 - low, 1 - high
+	int		hitSound;
+	HITCALLBACK	hitcallback;
+	ENTCALLBACK	callback;
+	TEMPENTITY	*next;
+	int		priority;		// 0 - low, 1 - high
 	short		clientIndex;	// if attached, this is the index of the client to stick to
 					// if COLLIDEALL, this is the index of the client to ignore
 					// TENTS with FTENT_PLYRATTACHMENT MUST set the clientindex! 
-	void		*pvEngineData;	// private data that alloced and used by engine, freed in client.dll
-	HITCALLBACK	hitcallback;
-	ENTCALLBACK	callback;
+	vec3_t		tentOffset;	// if attached, client origin + tentOffset = tent origin.
+	cl_entity_t	entity;
 
-	TEMPENTITY	*next;
-
-	// render-dependent fields
-	model_t		modelindex;	// index of precached model
-	vec3_t		origin;		// tent position
-	vec3_t		angles;		// tent angles
-	float		m_flFrameRate;	// studio, sprite framerate
-	float		m_flFrame;	// studio, sprite current frame
-	float		m_flSpriteScale;	// and model scale too
-	int		m_nFlickerFrame;	// for keyed dlights
-	int		m_iAttachment;	// sprite attachment
-	int		m_iSequence;	// studiomodel sequence
-	vec3_t		renderColor;	// tempentity rendercolor
-	byte		renderAmt;	// actual lpha value
-	byte		renderMode;	// fast method to set various effects
-	byte		renderFX;		// matched with entity renderfx
-	byte		skin;		// studiomodel skin
-	byte		body;		// studiomodel body
+	// baseline.origin		- velocity
+	// baseline.renderamt	- starting fadeout intensity
+	// baseline.angles		- angle velocity
 };
-
 #endif//TMPENT_DEF_H

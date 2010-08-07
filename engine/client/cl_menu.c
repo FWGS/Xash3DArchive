@@ -513,9 +513,9 @@ pfnGetPlayerModel
 for drawing playermodel previews
 ====================
 */
-static edict_t* pfnGetPlayerModel( void )
+static cl_entity_t* pfnGetPlayerModel( void )
 {
-	return CL_GetEdictByIndex( MAX_EDICTS - 1 );
+	return &gameui.playermodel;
 }
 
 /*
@@ -523,24 +523,24 @@ static edict_t* pfnGetPlayerModel( void )
 pfnSetPlayerModel
 
 for drawing playermodel previews
+
+FIXME: move all this shit on the gameui.dll
 ====================
 */
-static void pfnSetPlayerModel( edict_t *ent, const char *path )
+static void pfnSetPlayerModel( cl_entity_t *ent, const char *path )
 {
-	if( !CL_IsValidEdict( ent )) Host_Error( "UI_SetPlayerModel: bad edict\n" );
-
-	ent->v.model = re->RegisterModel( path, MAX_MODELS - 1 );
-	ent->v.modelindex = MAX_MODELS - 1;
+	re->RegisterModel( path, MAX_MODELS - 1 );
+	ent->curstate.modelindex = MAX_MODELS - 1;
 
 	// setup latched controllers state to avoid unexpected poses :)
-	ent->pvClientData->frame.curstate.controller[0] = 127;
-	ent->pvClientData->frame.curstate.controller[1] = 127;
-	ent->pvClientData->frame.curstate.controller[2] = 127;
-	ent->pvClientData->frame.curstate.controller[3] = 127;
-	ent->pvClientData->frame.latched.controller[0] = 127;
-	ent->pvClientData->frame.latched.controller[1] = 127;
-	ent->pvClientData->frame.latched.controller[2] = 127;
-	ent->pvClientData->frame.latched.controller[3] = 127;
+	ent->curstate.controller[0] = 127;
+	ent->curstate.controller[1] = 127;
+	ent->curstate.controller[2] = 127;
+	ent->curstate.controller[3] = 127;
+	ent->latched.prevcontroller[0] = 127;
+	ent->latched.prevcontroller[1] = 127;
+	ent->latched.prevcontroller[2] = 127;
+	ent->latched.prevcontroller[3] = 127;
 }
 
 /*

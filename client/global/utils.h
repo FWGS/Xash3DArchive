@@ -40,20 +40,20 @@ extern movevars_t			*gpMovevars;
 extern int HUD_VidInit( void );
 extern void HUD_Init( void );
 extern int HUD_Redraw( float flTime, int state );
-extern void HUD_UpdateEntityVars( edict_t *out, const entity_state_t *s, const entity_state_t *p );
-extern void HUD_UpdateClientVars( edict_t *out, const clientdata_t *s, const clientdata_t *p );
-extern void HUD_UpdateOnRemove( edict_t *pEdict );
+extern void HUD_TxferLocalOverrides( entity_state_t *state, const clientdata_t *client );
+extern int HUD_UpdateClientData( client_data_t *pcldata, float flTime );
+extern void HUD_UpdateOnRemove( cl_entity_t *pEdict );
 extern void HUD_Reset( void );
 extern void HUD_StartFrame( void );
 extern void HUD_Frame( double time );
 extern void HUD_Shutdown( void );
 extern void HUD_RenderCallback( int fTrans );
 extern void HUD_CreateEntities( void );
-extern int  HUD_AddVisibleEntity( edict_t *pEnt, int ed_type );
+extern int  HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type );
 extern void HUD_ParticleEffect( const float *org, const float *dir, int color, int count );
-extern void HUD_StudioEvent( const mstudioevent_t *event, edict_t *entity );
-extern void HUD_StudioFxTransform( edict_t *ent, float transform[4][4] );
-extern int HUD_StudioDoInterp( edict_t *e );
+extern void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity );
+extern void HUD_StudioFxTransform( cl_entity_t *ent, float transform[4][4] );
+extern int HUD_StudioDoInterp( cl_entity_t *e );
 extern void HUD_ParseTempEntity( void );
 extern void V_CalcRefdef( ref_params_t *parms );
 extern void V_StartPitchDrift( void );
@@ -180,7 +180,7 @@ inline int ConsoleStringLen( const char *string )
 }
 
 #ifdef _DEBUG
-inline edict_t *DBG_GetEntityByIndex( int entnum, const char *file, const int line )
+inline cl_entity_t *DBG_GetEntityByIndex( int entnum, const char *file, const int line )
 {
 	DBG_AssertFunction(( entnum >= 0 && entnum < gpGlobals->numEntities ), "Invalid entnum", file, line, NULL );
 	return (*g_engfuncs.pfnGetEntityByIndex)( entnum );
@@ -204,9 +204,9 @@ extern Vector READ_DIR( void );
 extern void END_READ( void );
 
 // engine traces
-extern void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, edict_t *pentIgnore, TraceResult *ptr);
-extern void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, IGNORE_GLASS ignoreGlass, edict_t *pentIgnore, TraceResult *ptr);
-extern void UTIL_TraceHull( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, edict_t *pentIgnore, TraceResult *ptr);
+extern void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, cl_entity_t *pentIgnore, TraceResult *ptr);
+extern void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, IGNORE_GLASS ignoreGlass, cl_entity_t *pentIgnore, TraceResult *ptr);
+extern void UTIL_TraceHull( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, cl_entity_t *pentIgnore, TraceResult *ptr);
 
 // misc utilities
 extern float UTIL_Probe( const Vector &origin, Vector *vecDirection, float strength );
@@ -235,7 +235,7 @@ extern const float bytedirs[NUMVERTEXNORMALS][3];
 
 // from cl_view.c
 extern void DrawProgressBar( void );
-extern edict_t *spot;
+extern cl_entity_t *spot;
 extern float v_idlescale;
 extern int g_weaponselect;
 extern int g_iAlive;		// indicates alive local client or not

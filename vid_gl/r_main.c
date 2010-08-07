@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdio.h>		// sscanf
 #include "r_local.h"
 #include "clgame_api.h"
-#include "tmpent_def.h"
+#include "cl_entity.h"
 #include "effects_api.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
@@ -1190,8 +1190,8 @@ R_CategorizeEntities
 */
 static void R_CategorizeEntities( void )
 {
-	uint	i, j;
- 	edict_t	*world;
+	uint		i, j;
+ 	cl_entity_t	*world;
 
 	r_numnullentities = 0;
 	r_numbmodelentities = 0;
@@ -1201,7 +1201,7 @@ static void R_CategorizeEntities( void )
 
 	// apply global waveheight to world entity
 	world = ri.GetClientEdict( 0 );
-	if( world ) r_worldent->waveHeight = world->v.scale * 16.0f;
+	if( world ) r_worldent->waveHeight = world->curstate.scale * 16.0f;
 
 	for( i = 1; i < r_numEntities; i++ )
 	{
@@ -1221,36 +1221,16 @@ static void R_CategorizeEntities( void )
 		// setup entity parents
 		if( RI.currententity->movetype == MOVETYPE_FOLLOW && !RI.currententity->parent )
 		{
-			edict_t	*pEdict = ri.GetClientEdict( RI.currententity->index );
+			cl_entity_t *pEntity = RI.currententity->lerp;
 
-			if( RI.currententity->ent_type == ED_TEMPENTITY )
+			if( pEntity && pEntity->curstate.aiment > 0 )
 			{
-				// index it's a pointer to parent
-				if( pEdict && !pEdict->free )
+				for( j = 1; j < r_numEntities; j++ )
 				{
-					for( j = 1; j < r_numEntities; j++ )
+					if( r_entities[j].index == pEntity->curstate.aiment )
 					{
-						// we can hit himself before than find real parent
-						if( RI.currententity == r_entities + j ) continue;
-						if( r_entities[j].index == pEdict->serialnumber )
-						{
-							RI.currententity->parent = r_entities + j;
-							break;
-						}
-					}
-				}
-			}
-			else
-			{
-				if( pEdict && pEdict->v.aiment )
-				{
-					for( j = 1; j < r_numEntities; j++ )
-					{
-						if( r_entities[j].index == pEdict->v.aiment->serialnumber )
-						{
-							RI.currententity->parent = r_entities + j;
-							break;
-						}
+						RI.currententity->parent = r_entities + j;
+						break;
 					}
 				}
 			}
@@ -1953,10 +1933,10 @@ static bool R_SpeedsMessage( char *out, size_t size )
 //==================================================================================
 int R_ComputeFxBlend( ref_entity_t *e )
 {
-	int	blend = 0, renderAmt;
-	float	offset, dist;
-	edict_t	*m_pEntity = ri.GetClientEdict( e->index );
-	vec3_t	tmp;
+	int		blend = 0, renderAmt;
+	cl_entity_t	*m_pEntity = e->lerp;
+	float		offset, dist;
+	vec3_t		tmp;
 
 	offset = ((int)e->index ) * 363.0f; // Use ent index to de-sync these fx
 
@@ -1964,9 +1944,9 @@ int R_ComputeFxBlend( ref_entity_t *e )
 	{
 		renderAmt = e->renderamt;
 	}
-	else if( m_pEntity && !m_pEntity->free )
+	else if( m_pEntity )
 	{
-		renderAmt = m_pEntity->v.renderamt;
+		renderAmt = m_pEntity->curstate.renderamt;
 	}
 	else renderAmt = 255;
 
@@ -2068,7 +2048,9 @@ int R_ComputeFxBlend( ref_entity_t *e )
 	// store value back into client entity, some effects requires this
 	if( m_pEntity )
 	{
-		m_pEntity->v.renderamt = renderAmt;
+		// FIXME: this value can be owerwritten on a next client frame
+		// find another safety place
+		m_pEntity->curstate.renderamt = renderAmt;
 
 		// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
 		if(( !e->rendercolor[0] && !e->rendercolor[1] && !e->rendercolor[2] ))
@@ -2304,24 +2286,18 @@ bool R_AddLightStyle( int stylenum, vec3_t color )
 	return true;
 }
 
-bool R_AddGenericEntity( edict_t *pRefEntity, ref_entity_t *refent )
+bool R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 {
 	// check model
 	if( !refent->model ) return false;
 
-	// get pointer to lerping frame data
-	refent->lerp = ri.GetLerpFrame( refent->index );
-
-	if( refent->lerp == NULL )
-	{
-		MsgDev( D_ERROR, "Rejected entity %i (model %s) -- no lerpframe data\n", refent->index, refent->model->name );
-		return false;
-	}
-
 	refent->rtype = RT_MODEL;
 
+	// get pointer to lerping frame data
+	refent->lerp = pRefEntity;
+
 	// setup light origin
-	VectorCopy( pRefEntity->v.origin, refent->lightingOrigin );
+	VectorCopy( pRefEntity->origin, refent->lightingOrigin );
 	refent->lightingOrigin[2] += 1;
 
 	switch( refent->model->type )
@@ -2330,17 +2306,16 @@ bool R_AddGenericEntity( edict_t *pRefEntity, ref_entity_t *refent )
 	case mod_brush:
 		if( !refent->model->extradata )
 			return false;
-		if( pRefEntity->v.skin != CONTENTS_NONE )
+		if( pRefEntity->curstate.skin != CONTENTS_NONE )
 			refent->waveHeight = refent->scale * 16.0f;
-		refent->scale = 1.0f;		// ignore scale for brush models
-		refent->frame = pRefEntity->v.frame;	// brush properly animating
+		refent->scale = 1.0f;			// ignore scale for brush models
+		refent->frame = pRefEntity->curstate.frame;	// brush properly animating
 		break;
 	case mod_studio:
 	case mod_sprite:
 		if( !refent->model->extradata )
 			return false;
 		refent->frame = 0.0f;		// keep clear to prevent randomly change skins :-)
-		refent->lerp->curstate.frame = pRefEntity->v.frame;
 		break;
 	case mod_bad: // let the render drawing null model
 		break;
@@ -2352,16 +2327,16 @@ bool R_AddGenericEntity( edict_t *pRefEntity, ref_entity_t *refent )
 		// some bonus items auto-rotate
 		VectorSet( refent->angles, 0, anglemod( RI.refdef.time / 10), 0 );
 	}
-	else VectorCopy( pRefEntity->v.angles, refent->angles );
+	else VectorCopy( pRefEntity->angles, refent->angles );
 
-	VectorCopy( pRefEntity->v.origin, refent->origin );
+	VectorCopy( pRefEntity->origin, refent->origin );
 
 	Matrix3x3_FromAngles( refent->angles, refent->axis );
 	VectorClear( refent->origin2 );
 
 	if( refent->ent_type == ED_CLIENT )
 	{
-		refent->gaitsequence = pRefEntity->v.gaitsequence;
+		refent->gaitsequence = pRefEntity->curstate.gaitsequence;
 		refent->flags |= EF_OCCLUSIONTEST;
 		refent->lightingOrigin[2] += refent->model->maxs[2] - 2; // drop shadow to floor
 	}
@@ -2369,7 +2344,8 @@ bool R_AddGenericEntity( edict_t *pRefEntity, ref_entity_t *refent )
 
 	if( refent->ent_type == ED_MOVER || refent->ent_type == ED_BSPBRUSH )
 	{
-		VectorNormalize2( pRefEntity->v.movedir, refent->movedir );
+		// FIXME: this is very-very temporary!!!!
+		VectorNormalize2( pRefEntity->curstate.vuser2, refent->movedir );
 	}
 	else VectorClear( refent->movedir );
 
@@ -2409,19 +2385,19 @@ bool R_AddGenericEntity( edict_t *pRefEntity, ref_entity_t *refent )
 	return true;
 }
 
-bool R_AddPortalEntity( edict_t *pRefEntity, ref_entity_t *refent )
+bool R_AddPortalEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 {
 	refent->rtype = RT_PORTALSURFACE;
 
 	VectorClear( refent->angles );
-	VectorCopy( pRefEntity->v.movedir, refent->movedir );
-	VectorCopy( pRefEntity->v.origin, refent->origin );
-	VectorCopy( pRefEntity->v.oldorigin, refent->origin2 );
+	VectorCopy( pRefEntity->curstate.vuser2, refent->movedir );	// FIXME: movedir
+	VectorCopy( pRefEntity->origin, refent->origin );
+	VectorCopy( pRefEntity->curstate.vuser1, refent->origin2 );	// FIXME: oldorigin
 
 	if( refent->flags & EF_ROTATE )
 	{
-		float phase = pRefEntity->v.frame;
-		float speed = (pRefEntity->v.framerate ? pRefEntity->v.framerate : 50.0f);
+		float phase = pRefEntity->curstate.frame;
+		float speed = (pRefEntity->curstate.framerate ? pRefEntity->curstate.framerate : 50.0f);
 		refent->angles[ROLL] = 5 * com.sin(( phase + RI.refdef.time * speed * 0.01f ) * M_PI2);
 	}
 
@@ -2430,13 +2406,13 @@ bool R_AddPortalEntity( edict_t *pRefEntity, ref_entity_t *refent )
 	return true;
 }
 
-bool R_AddEntityToScene( edict_t *pRefEntity, int ed_type, shader_t customShader )
+bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customShader )
 {
 	ref_entity_t	*refent;
 	ref_shader_t	*shader;
 	bool		result = false;
 
-	if( !pRefEntity || pRefEntity->v.modelindex <= 0 || pRefEntity->v.modelindex >= MAX_MODELS )
+	if( !pRefEntity || pRefEntity->curstate.modelindex <= 0 || pRefEntity->curstate.modelindex >= MAX_MODELS )
 		return false; // if set to invisible, skip
 	if( r_numEntities >= MAX_ENTITIES )
 	{
@@ -2445,10 +2421,10 @@ bool R_AddEntityToScene( edict_t *pRefEntity, int ed_type, shader_t customShader
 	}
 	refent = &r_entities[r_numEntities];
 
-	if( pRefEntity->v.effects & EF_NODRAW && ed_type != ED_PORTAL )
+	if( pRefEntity->curstate.effects & EF_NODRAW && ed_type != ED_PORTAL )
 		return true; // done
 
-	if( pRefEntity->v.rendermode != kRenderNormal && pRefEntity->v.renderamt <= 0.0f )
+	if( pRefEntity->curstate.rendermode != kRenderNormal && pRefEntity->curstate.renderamt <= 0.0f )
 		return true; // done
 
 	// filter ents
@@ -2466,32 +2442,34 @@ bool R_AddEntityToScene( edict_t *pRefEntity, int ed_type, shader_t customShader
 	}
 
 	// ignore env_sprite flares if supposed
-	if( !r_spriteflares->integer && pRefEntity->v.rendermode == kRenderGlow )
+	if( !r_spriteflares->integer && pRefEntity->curstate.rendermode == kRenderGlow )
 	{
-		if( cl_models[pRefEntity->v.modelindex]->type == mod_sprite && !pRefEntity->v.renderfx )
+		if( cl_models[pRefEntity->curstate.modelindex]->type == mod_sprite && !pRefEntity->curstate.renderfx )
 			return true; // only sprite flares with variable size supposed to be ignored
 		// because we don't want ignore laserspot and other like things
 	}
 
 	// copy state to render
-	refent->index = pRefEntity->serialnumber;
+	refent->index = pRefEntity->index;
 	refent->ent_type = ed_type;
-	refent->rendermode = pRefEntity->v.rendermode;
-	VectorCopy( pRefEntity->v.rendercolor, refent->rendercolor );
-	refent->body = pRefEntity->v.body;
-	refent->skin = pRefEntity->v.skin;
-	refent->scale = pRefEntity->v.scale;
-	refent->colormap = pRefEntity->v.colormap;
-	refent->flags = pRefEntity->v.effects;
-	refent->renderfx = pRefEntity->v.renderfx;
-	refent->renderamt = pRefEntity->v.renderamt;
-	refent->model = cl_models[pRefEntity->v.modelindex];
-	refent->movetype = pRefEntity->v.movetype;
-	refent->framerate = pRefEntity->v.framerate;
+	refent->rendermode = pRefEntity->curstate.rendermode;
+	refent->rendercolor[0] = pRefEntity->curstate.rendercolor.r;
+	refent->rendercolor[1] = pRefEntity->curstate.rendercolor.g;
+	refent->rendercolor[2] = pRefEntity->curstate.rendercolor.b;
+	refent->body = pRefEntity->curstate.body;
+	refent->skin = pRefEntity->curstate.skin;
+	refent->scale = pRefEntity->curstate.scale;
+	refent->colormap = pRefEntity->curstate.colormap;
+	refent->flags = pRefEntity->curstate.effects;
+	refent->renderfx = pRefEntity->curstate.renderfx;
+	refent->renderamt = pRefEntity->curstate.renderamt;
+	refent->model = cl_models[pRefEntity->curstate.modelindex];
+	refent->movetype = pRefEntity->curstate.movetype;
+	refent->framerate = pRefEntity->curstate.framerate;
 	refent->parent = NULL;
 	refent->lerp = NULL;
 
-	if( pRefEntity->v.rendermode == kRenderGlow && !pRefEntity->v.renderfx )
+	if( pRefEntity->curstate.rendermode == kRenderGlow && !pRefEntity->curstate.renderfx )
 		refent->flags |= EF_OCCLUSIONTEST;
 
 	// setup custom shader
@@ -2516,7 +2494,7 @@ bool R_AddEntityToScene( edict_t *pRefEntity, int ed_type, shader_t customShader
 
 	refent->renderamt = R_ComputeFxBlend( refent );
 
-	if( refent->index == VIEWENT_INDEX )
+	if( refent->flags & EF_MINLIGHT )	// FIXME: HACK
 	{
 		// run events here to prevent
 		// de-synchronize muzzleflashes movement
@@ -2525,136 +2503,19 @@ bool R_AddEntityToScene( edict_t *pRefEntity, int ed_type, shader_t customShader
 
 	// never adding child entity without parent
 	// only studio models can have attached childrens
-	if( result && refent->model->type == mod_studio && pRefEntity->v.weaponmodel && (refent->renderfx != kRenderFxDeadPlayer))
+	if( result && refent->model->type == mod_studio && pRefEntity->curstate.weaponmodel && (refent->renderfx != kRenderFxDeadPlayer))
 	{
-		edict_t	FollowEntity = *pRefEntity;
+		cl_entity_t FollowEntity = *pRefEntity;
 
 		// create attached entity
-		FollowEntity.v.modelindex = pRefEntity->v.weaponmodel;
-		FollowEntity.v.movetype = MOVETYPE_FOLLOW;
-		FollowEntity.v.weaponmodel = 0;
+		FollowEntity.curstate.modelindex = pRefEntity->curstate.weaponmodel;
+		FollowEntity.curstate.movetype = MOVETYPE_FOLLOW;
+		FollowEntity.curstate.weaponmodel = 0;
 
 		if( R_AddEntityToScene( &FollowEntity, ED_NORMAL, customShader ))
 			r_entities[r_numEntities-1].parent = refent; // set parent			
 	}
 	return result;
-}
-
-bool R_AddTeEntToScene( TEMPENTITY *pTempEntity, int ed_type, shader_t customShader )
-{
-	ref_entity_t	*refent;
-	ref_shader_t	*shader;
-	
-	if( !pTempEntity || pTempEntity->modelindex <= 0 || pTempEntity->modelindex >= MAX_MODELS )
-		return false; // if set to invisible, skip
-	if( r_numEntities >= MAX_ENTITIES ) return false;
-
-	refent = &r_entities[r_numEntities];
-
-	if( pTempEntity->flags & FTENT_NOMODEL )
-		return true; // done
-
-	// filter ents
-	switch( ed_type )
-	{
-	case ED_TEMPENTITY: break;
-	default: return false;
-	}
-
-	// ignore env_sprite flares if supposed
-	if( !r_spriteflares->integer && pTempEntity->renderMode == kRenderGlow )
-	{
-		if( cl_models[pTempEntity->modelindex]->type == mod_sprite && !pTempEntity->renderFX )
-			return true; // only sprite flares with variable size supposed to be ignored
-		// because we don't want ignore laserspot and other like things
-	}
-
-	// copy state to render
-	if( pTempEntity->clientIndex != 0 )
-		refent->index = pTempEntity->clientIndex;
-	else refent->index = NULLENT_INDEX;
-
-	refent->ent_type = ed_type;
-	refent->rendermode = pTempEntity->renderMode;
-	refent->body = pTempEntity->body;
-	refent->skin = pTempEntity->skin;
-	refent->scale = pTempEntity->m_flSpriteScale;
-	refent->renderfx = pTempEntity->renderFX;
-	refent->renderamt = pTempEntity->renderAmt;
-	VectorCopy( pTempEntity->renderColor, refent->rendercolor );
-	refent->model = cl_models[pTempEntity->modelindex];
-	refent->framerate = pTempEntity->m_flFrameRate;
-	refent->movetype = MOVETYPE_NOCLIP;
-	refent->flags = EF_NOSHADOW;
-	refent->gaitsequence = 0;
-	refent->parent = NULL;
-	refent->lerp = NULL;
-
-	refent->renderamt = R_ComputeFxBlend( refent );
-
-	// attached entity (can attach sprites to models)
-	if( pTempEntity->m_iAttachment && cl_models[pTempEntity->modelindex]->type == mod_sprite )
-	{
-		// set attachment right
-		refent->colormap = ((refent->colormap & 0xFF00)>>8) | pTempEntity->m_iAttachment;
-		refent->movetype = MOVETYPE_FOLLOW;
-	}
-
-	// check model
-	if( !refent->model ) return false;
-
-	switch( refent->model->type )
-	{
-	case mod_bad:
-	case mod_world:
-	case mod_brush:
-		return false;
-	case mod_studio:
-	case mod_sprite:
-		if( !refent->model->extradata )
-			return false;
-		break;
-	}
-
-	refent->lerp = pTempEntity->pvEngineData; // setup lerpframe data
-
-	if( refent->lerp == NULL )
-	{
-		MsgDev( D_ERROR, "Rejected temp entity (model %s) -- no lerpframe data\n", refent->model->name );
-		return false;
-	}
-
-	// setup custom shader
-	if( customShader >= 0 && customShader < MAX_SHADERS && (shader = &r_shaders[customShader]))
-		refent->customShader = shader;
-	else refent->customShader = NULL;
-
-	refent->rtype = RT_MODEL;
-	refent->lerp->curstate.frame = pTempEntity->m_flFrame;
-
-	// setup light origin
-	VectorCopy( pTempEntity->origin, refent->lightingOrigin );
-	refent->lightingOrigin[2] += 1; // make sure on floor
-
-	VectorClear( refent->movedir );
-	VectorCopy( pTempEntity->angles, refent->angles );
-	VectorCopy( pTempEntity->origin, refent->origin );
-	Matrix3x3_FromAngles( refent->angles, refent->axis );
-	VectorClear( refent->origin2 );
-
-	if( refent->model->type == mod_studio )
-	{
-		R_StudioAllocTentExtradata( pTempEntity, refent );
-	}
-	else
-	{
-		// entity has changed model, so no reason to keep this data
-		if( refent->extradata ) Mem_EmptyPool( refent->mempool );
-		refent->extradata = NULL;
-	}
-	r_numEntities++;	// added
-
-	return true;
 }
 
 bool R_AddDynamicLight( vec3_t pos, rgb_t color, float radius, int flags )
@@ -2708,7 +2569,6 @@ render_exp_t DLLEXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 
 	re.AddLightStyle = R_AddLightStyle;
 	re.AddRefEntity = R_AddEntityToScene;
-	re.AddTmpEntity = R_AddTeEntToScene;
 	re.AddDLight = R_AddDynamicLight;
 	re.AddPolygon = R_AddPolyToScene;
 	re.DecalShoot = R_DecalShoot;

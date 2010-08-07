@@ -14,7 +14,6 @@
 #define PM_WORLD_ONLY		2	// Only trace against the world
 #define PM_GLASS_IGNORE		3	// Ignore entities with non-normal rendermode
 
-#include "event_api.h"
 #include "entity_def.h"
 #include "trace_def.h"
 #include "usercmd.h"

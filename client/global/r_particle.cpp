@@ -356,7 +356,7 @@ CL_EntityParticles
 EF_BRIGHTFIELD effect
 ===============
 */
-void CParticleSystem :: EntityParticles( edict_t *ent )
+void CParticleSystem :: EntityParticles( cl_entity_t *ent )
 {
 	float		angle;
 	float		sr, sp, sy, cr, cp, cy;
@@ -382,7 +382,7 @@ void CParticleSystem :: EntityParticles( edict_t *ent )
 		p->SetColor( 111 );		// yellow
 		p->SetType( pt_explode );
 
-		p->m_Pos = ent->v.origin + m_vecAvertexNormals[i] * dist + m_vecForward * beamlength;
+		p->m_Pos = ent->origin + m_vecAvertexNormals[i] * dist + m_vecForward * beamlength;
 	}
 }
 

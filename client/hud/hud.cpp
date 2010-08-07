@@ -214,23 +214,27 @@ void CHud :: Think( void )
 	}
 }
 
-int CHud :: UpdateClientData( void )
+int CHud :: UpdateClientData( client_data_t *cdata, float time )
 {
-	edict_t	*pClient = GetLocalPlayer ();
+	cl_entity_t *pClient = GetLocalPlayer ();
 
-	if( !pClient || pClient->v.health <= 0.0f )
-		return 0;	// client is dead
+	memcpy( m_vecOrigin, cdata->origin, sizeof( vec3_t ));
+	memcpy( m_vecAngles, cdata->viewangles, sizeof( vec3_t ));
 
-	memcpy( m_vecOrigin, pClient->v.origin, sizeof( vec3_t ));
-	memcpy( m_vecAngles, pClient->v.angles, sizeof( vec3_t ));
-
-	// detect movetype
-	m_iNoClip = (pClient->v.movetype == MOVETYPE_NOCLIP) ? 1 : 0;
+	if( pClient )
+	{
+		// TEMPORARY HACK
+		m_iNoClip = (pClient->curstate.movetype == MOVETYPE_NOCLIP) ? 1 : 0;
+	}
 
 	m_iKeyBits = CL_ButtonBits( 0 );
-	m_iWeaponBits = pClient->v.weapons;
+	m_iWeaponBits = cdata->iWeaponBits;
+
+//	in_fov = cdata->fov;
 
 	Think();
+
+//	cdata->fov = m_iFOV;
 
 	v_idlescale = m_iConcussionEffect;
 

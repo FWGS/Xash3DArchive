@@ -168,33 +168,55 @@ void EV_GetDefaultShellInfo( event_args_t *args, float *origin, float *velocity,
 void EV_MuzzleFlash( void )
 {
 	// Add muzzle flash to current weapon model
-	edict_t *ent = GetViewModel();
+	cl_entity_t *ent = GetViewModel();
 	if ( !ent ) return;
 
 	// Or in the muzzle flash
-	ent->v.effects |= EF_MUZZLEFLASH;
+	ent->curstate.effects |= EF_MUZZLEFLASH;
 }
 
 //=================
 //  EV_FlashLight
 //=================
-void EV_UpadteFlashlight( edict_t *pEnt )
+void EV_UpadteFlashlight( cl_entity_t *pEnt )
 {
 	Vector vecSrc, vecEnd, vecPos, forward;
 	float rgba[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	TraceResult tr;
 
-	if ( EV_IsLocal( pEnt->serialnumber ) )
+	if ( EV_IsLocal( pEnt->index ) )
 	{
 		// get the predicted angles
 		AngleVectors( gpViewParams->cl_viewangles, forward, NULL, NULL );
 	}
 	else
 	{
-		AngleVectors( pEnt->v.v_angle, forward, NULL, NULL );
+		Vector v_angle;
+
+		// restore viewangles from angles
+		v_angle[PITCH] = -pEnt->angles[PITCH] * 3;
+		v_angle[YAW] = pEnt->angles[YAW];
+		v_angle[ROLL] = 0; 	// no roll
+
+		AngleVectors( v_angle, forward, NULL, NULL );
 	}
 
-	vecSrc = pEnt->v.origin + pEnt->v.view_ofs;
+	Vector view_ofs = Vector( 0, 0, 0 );
+	view_ofs.z = DEFAULT_VIEWHEIGHT;
+
+	if ( EV_IsPlayer( pEnt->index ) )
+	{
+		if ( EV_IsLocal( pEnt->index ) )
+		{
+			g_engfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
+		}
+		else if ( pEnt->curstate.usehull == 1 )	// NOTE: needs changes in delta.lst
+		{
+			view_ofs[2] = VEC_DUCK_VIEW;
+		}
+	}
+
+	vecSrc = pEnt->origin + view_ofs;
 	vecEnd = vecSrc + forward * 512;
 
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, pEnt, &tr );
@@ -204,7 +226,7 @@ void EV_UpadteFlashlight( edict_t *pEnt )
 	else vecPos = tr.vecEndPos;
 
 	// update flashlight endpos
-	dlight_t	*dl = g_engfuncs.pEfxAPI->CL_AllocDLight( pEnt->serialnumber );
+	dlight_t	*dl = g_engfuncs.pEfxAPI->CL_AllocDLight( pEnt->index );
 	
 	dl->origin = vecPos;
 	dl->die = gpGlobals->time + 0.001f;	// die on next frame
@@ -214,15 +236,15 @@ void EV_UpadteFlashlight( edict_t *pEnt )
 	dl->radius = 96;
 }
 
-void HUD_CmdStart( const edict_t *player, int runfuncs )
+void HUD_CmdStart( const cl_entity_t *player, int runfuncs )
 {
 }
 
-void HUD_CmdEnd( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed )
+void HUD_CmdEnd( const cl_entity_t *player, const usercmd_t *cmd, unsigned int random_seed )
 {
 	// Offset final origin by view_offset
 	if( cl_lw->integer )
 	{
-		previousorigin = player->v.origin + player->v.view_ofs;
+		previousorigin = gpViewParams->vieworg;	// FIXME: probably this is not correct
 	}
 }

@@ -11,43 +11,33 @@
 #include "protocol.h"
 #include "triangle_api.h"
 #include "effects_api.h"
+#include "event_flags.h"
 #include "pm_defs.h"
 
 /*
 ====================
-CL_GetClientEntity
+CL_GetEntityByIndex
 
 Render callback for studio models
 ====================
 */
-edict_t *CL_GetEdictByIndex( int index )
+cl_entity_t *CL_GetEntityByIndex( int index )
 {
-	if( index == MAX_EDICTS - 1 )
-		return &clgame.playermodel;
+	if( !clgame.entities )
+		return NULL;
 
 	if( index < 0 || index > clgame.globals->numEntities )
 	{
-		if( index == VIEWENT_INDEX ) return &clgame.viewent;
-		if( index == NULLENT_INDEX ) return NULL;
-		if( index < 0 || index > GI->max_edicts )
-			MsgDev( D_ERROR, "CL_GetEntityByIndex: invalid entindex %i\n", index );
+		if( index == -1 )
+			return NULL;
+
+		MsgDev( D_ERROR, "CL_GetEntityByIndex: invalid entindex %i\n", index );
 		return NULL;
 	}
-	return EDICT_NUM( index );
-}
 
-/*
-====================
-CL_GetEntityMouth
-
-get pointer to mouth state
-====================
-*/
-mouth_t *CL_GetEntityMouth( edict_t *ent )
-{
-	if( !CL_IsValidEdict( ent ))
+	if( EDICT_NUM( index )->index == -1 )
 		return NULL;
-	return &ent->pvClientData->mouth;
+	return EDICT_NUM( index );
 }
 
 /*
@@ -106,12 +96,27 @@ float CL_GetServerTime( void )
 
 /*
 ====================
+CL_GetPlayerInfo
+
+get player info by render request
+====================
+*/
+player_info_t *CL_GetPlayerInfo( int playerIndex )
+{
+	if( playerIndex < 0 || playerIndex >= clgame.globals->maxClients )
+		return NULL;
+
+	return &cl.players[playerIndex];
+}
+
+/*
+====================
 StudioEvent
 
 Event callback for studio models
 ====================
 */
-void CL_StudioEvent( mstudioevent_t *event, edict_t *pEdict )
+void CL_StudioEvent( mstudioevent_t *event, cl_entity_t *pEdict )
 {
 	clgame.dllFuncs.pfnStudioEvent( event, pEdict );
 }
@@ -123,63 +128,9 @@ Studio_FxTransform
 apply fxtransforms for each studio bone
 ====================
 */
-void CL_StudioFxTransform( edict_t *ent, float transform[4][4] )
+void CL_StudioFxTransform( cl_entity_t *ent, float transform[4][4] )
 {
 	clgame.dllFuncs.pfnStudioFxTransform( ent, transform );
-}
-
-bool CL_GetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles )
-{
-	edict_t	*ed = CL_GetEdictByIndex( entityIndex );
-
-	if( !CL_IsValidEdict( ed ))
-		return false;
-
-	number = bound( 1, number, MAXSTUDIOATTACHMENTS );
-
-	if( origin ) VectorCopy( ed->pvClientData->origin[number-1], origin );	
-	if( angles ) VectorCopy( ed->pvClientData->angles[number-1], angles );
-
-	return true;
-}
-
-bool CL_SetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles )
-{
-	edict_t	*ed = CL_GetEdictByIndex( entityIndex );
-
-	if( !CL_IsValidEdict( ed ))
-		return false;
-
-	number = bound( 0, number, MAXSTUDIOATTACHMENTS );
-
-	if( origin ) VectorCopy( origin, ed->pvClientData->origin[number] );	
-	if( angles ) VectorCopy( angles, ed->pvClientData->angles[number] );
-
-	return true;
-}
-
-byte CL_GetMouthOpen( int entityIndex )
-{
-	edict_t	*ed;
-
-	if( entityIndex <= 0 || entityIndex >= clgame.globals->numEntities )
-		return 0;
-
-	ed = CL_GetEdictByIndex( entityIndex );
-
-	if( !CL_IsValidEdict( ed ))
-		return 0;
-	return ed->pvClientData->mouth.mouthopen;
-}
-
-lerpframe_t *CL_GetLerpFrame( int entityIndex )
-{
-	edict_t	*pEnt = CL_GetEdictByIndex( entityIndex );
-
-	if( !CL_IsValidEdict( pEnt ))
-		return NULL;
-
-	return &pEnt->pvClientData->frame;
 }
 
 /*
@@ -562,12 +513,13 @@ CL_GetLocalPlayer
 Render callback for studio models
 ====================
 */
-edict_t *CL_GetLocalPlayer( void )
+cl_entity_t *CL_GetLocalPlayer( void )
 {
 	if( cls.state == ca_active )
 	{
-		edict_t	*player = EDICT_NUM( cl.playernum + 1 );
-		if( CL_IsValidEdict( player )) return player;
+		cl_entity_t	*player = EDICT_NUM( cl.playernum + 1 );
+
+		if( player ) return player;
 		Host_Error( "CL_GetLocalPlayer: invalid edict\n" );
 	}
 	return NULL;
@@ -587,19 +539,19 @@ int CL_GetMaxClients( void )
 
 void CL_DrawCrosshair( void )
 {
-	int	x, y, width, height;
-	edict_t	*pPlayer;
+	int		x, y, width, height;
+	cl_entity_t	*pPlayer;
 
 	if( !re || clgame.ds.hCrosshair <= 0 || cl.refdef.crosshairangle[2] || !cl_crosshair->integer )
 		return;
 
 	pPlayer = CL_GetLocalPlayer();
 
-	if( pPlayer->v.health <= 0.0f || pPlayer->v.flags & FL_FROZEN )
+	if( cl.frame.cd.deadflag != DEAD_NO || pPlayer->curstate.flags & FL_FROZEN )
 		return;
 
 	// any camera on
-	if( cl.refdef.viewentity != pPlayer->serialnumber )
+	if( cl.refdef.viewentity != pPlayer->index )
 		return;
 
 	// get crosshair dimension
@@ -811,78 +763,42 @@ void CL_SetEventIndex( const char *szEvName, int ev_index )
 	}
 }
 
-void CL_InitEdict( edict_t *pEdict )
+void CL_InitEntity( cl_entity_t *pEdict )
 {
 	ASSERT( pEdict );
-	ASSERT( pEdict->pvPrivateData == NULL );
-	ASSERT( pEdict->pvClientData == NULL );
 
-	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
-	pEdict->pvClientData = (cl_priv_t *)Mem_Alloc( cls.mempool, sizeof( cl_priv_t ));
-	pEdict->pvPrivateData = NULL;
-	pEdict->serialnumber = NUM_FOR_EDICT( pEdict );	// merged on first update
-	pEdict->free = false;
+	pEdict->index = NUM_FOR_EDICT( pEdict );
 }
 
-void CL_FreeEdict( edict_t *pEdict )
+void CL_FreeEntity( cl_entity_t *pEdict )
 {
 	ASSERT( pEdict );
-	ASSERT( pEdict->free == false );
 
-	clgame.dllFuncs.pfnOnFreeEntPrivateData( pEdict );
+	// already freed ?
+	if( pEdict->index == -1 )
+		return;
+
+	clgame.dllFuncs.pfnUpdateOnRemove( pEdict );
 
 	// unlink from world
 	CL_UnlinkEdict( pEdict );
 
-	if( pEdict->pvClientData ) Mem_Free( pEdict->pvClientData );
-	if( pEdict->pvPrivateData ) Mem_Free( pEdict->pvPrivateData );
-	Mem_Set( pEdict, 0, sizeof( *pEdict ));
-
-	// mark edict as freed
-	pEdict->freetime = cl_time();
-	pEdict->v.nextthink = -1;
-	pEdict->free = true;
-}
-
-edict_t *CL_AllocEdict( void )
-{
-	edict_t	*pEdict;
-	int	i;
-
-	for( i = clgame.globals->maxClients + 1; i < clgame.globals->numEntities; i++ )
-	{
-		pEdict = EDICT_NUM( i );
-		// the first couple seconds of client time can involve a lot of
-		// freeing and allocating, so relax the replacement policy
-		if( pEdict->free && ( pEdict->freetime < 2.0f || ( cl_time() - pEdict->freetime ) > 0.5f ))
-		{
-			CL_InitEdict( pEdict );
-			return pEdict;
-		}
-	}
-
-	if( i == clgame.globals->maxEntities )
-		Host_Error( "CL_AllocEdict: no free edicts\n" );
-
-	clgame.globals->numEntities++;
-	pEdict = EDICT_NUM( i );
-	CL_InitEdict( pEdict );
-
-	return pEdict;
+	// clear curstate
+	Mem_Set( &pEdict->curstate, 0, sizeof( pEdict->curstate ));
+	pEdict->index = -1;	// freed
 }
 
 void CL_InitWorld( void )
 {
-	edict_t	*ent;
+	cl_entity_t	*ent;
 	int	i;
 
 	ent = EDICT_NUM( 0 );
-	if( ent->free ) CL_InitEdict( ent );
-	ent->v.classname = MAKE_STRING( "worldspawn" );
-	ent->v.model = MAKE_STRING( cl.configstrings[CS_MODELS+1] );
-	ent->v.modelindex = 1;	// world model
-	ent->v.solid = SOLID_BSP;
-	ent->v.movetype = MOVETYPE_PUSH;
+	ent->index = NUM_FOR_EDICT( ent );
+	ent->curstate.classname = MAKE_STRING( "worldspawn" );
+	ent->curstate.modelindex = 1;	// world model
+	ent->curstate.solid = SOLID_BSP;
+	ent->curstate.movetype = MOVETYPE_PUSH;
 	clgame.globals->numEntities = 1;
 	clgame.globals->serverflags = com.atoi( cl.configstrings[CS_SERVERFLAGS] );
 
@@ -890,77 +806,59 @@ void CL_InitWorld( void )
 	{
 		// setup all clients
 		ent = EDICT_NUM( i + 1 );
-		CL_InitEdict( ent );
+		CL_InitEntity( ent );
 	}
-
-	// clear viewmodel prevstate
-	Mem_Set( &clgame.viewent.pvClientData->frame, 0, sizeof( lerpframe_t ));
 }
 
 void CL_InitEdicts( void )
 {
-	edict_t	*e;
+	cl_entity_t	*e;
 	int	i;
 
-	ASSERT( clgame.edicts == NULL );
-	ASSERT( clgame.baselines == NULL );
+	ASSERT( clgame.entities == NULL );
 
 	CL_UPDATE_BACKUP = ( clgame.globals->maxClients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 	cl.frames = Mem_Alloc( clgame.mempool, sizeof( frame_t ) * CL_UPDATE_BACKUP );
 
-	clgame.edicts = Mem_Alloc( clgame.mempool, sizeof( edict_t ) * clgame.globals->maxEntities );
-	clgame.baselines = Mem_Alloc( clgame.mempool, sizeof( entity_state_t ) * clgame.globals->maxEntities );
-	for( i = 0, e = clgame.edicts; i < clgame.globals->maxEntities; i++, e++ )
-		e->free = true; // mark all edicts as freed
+	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.globals->maxEntities );
+
+	for( i = 0, e = clgame.entities; i < clgame.globals->maxEntities; i++, e++ )
+		e->index = -1; // mark all entities as freed
 }
 
 void CL_FreeEdicts( void )
 {
 	int	i;
-	edict_t	*ent;
+	cl_entity_t	*ent;
 
-	if( clgame.edicts )
+	if( clgame.entities )
 	{
 		for( i = 0; i < clgame.globals->maxEntities; i++ )
 		{
 			ent = EDICT_NUM( i );
-			if( ent->free ) continue;
-			CL_FreeEdict( ent );
+			if( ent->index <= 0 ) continue;
+			CL_FreeEntity( ent );
 		}
-		Mem_Free( clgame.edicts );
+		Mem_Free( clgame.entities );
 	}
 
 	if( cl.frames ) Mem_Free( cl.frames );
-	if( clgame.baselines ) Mem_Free( clgame.baselines );
 
 	// clear globals
-
 	if( sys_sharedstrings->integer )
 		Mem_EmptyPool( clgame.stringspool );
 	else StringTable_Clear( clgame.hStringTable );
 
 	clgame.globals->numEntities = 0;
-	clgame.baselines = NULL;
-	clgame.edicts = NULL;
+	clgame.entities = NULL;
 	cl.frames = NULL;
 }
 
-bool CL_IsValidEdict( const edict_t *e )
-{
-	if( !e ) return false;
-	if( e->free ) return false;
-	if( e == EDICT_NUM( 0 )) return false;	// world is the read-only entity
-	if( !e->pvServerData ) return false;
-	// edict without pvPrivateData is valid edict
-	// client.dll know how allocate it
-	return true;
-}
-
-const char *CL_ClassName( const edict_t *e )
+const char *CL_ClassName( const cl_entity_t *e )
 {
 	if( !e ) return "(null)";
-	if( e->free ) return "freed";
-	return STRING( e->v.classname );
+	if( e->index == -1 ) return "freed";
+	return STRING( e->curstate.classname );
 }
 
 /*
@@ -1582,10 +1480,7 @@ value that come from server
 */
 static float pfnGetClientMaxspeed( void )
 {
-	edict_t	*player = CL_GetLocalPlayer ();
-
-	if( !player ) return 0;
-	return player->v.maxspeed;
+	return cl.frame.cd.maxspeed;
 }
 
 /*
@@ -1595,29 +1490,12 @@ pfnGetModelPtr
 returns pointer to a studiomodel
 =============
 */
-static void *pfnGetModelPtr( edict_t *pEdict )
+static void *pfnGetModelPtr( cl_entity_t *pEdict )
 {
-	if( !pEdict || pEdict->free )
+	if( !pEdict || pEdict->index == -1 )
 		return NULL;
 
-	return Mod_Extradata( pEdict->v.modelindex );
-}
-
-/*
-=============
-pfnGetBonePosition
-
-=============
-*/
-static void pfnGetBonePosition( const edict_t* pEdict, int iBone, float *rgflOrigin, float *rgflAngles )
-{
-	if( !CL_IsValidEdict( pEdict ))
-	{
-		MsgDev( D_WARN, "CL_GetBonePos: invalid entity %s\n", CL_ClassName( pEdict ));
-		return;
-	}
-
-	CM_GetBonePosition( (edict_t *)pEdict, iBone, rgflOrigin, rgflAngles );
+	return Mod_Extradata( pEdict->curstate.modelindex );
 }
 
 /*
@@ -1627,7 +1505,7 @@ pfnGetViewModel
 can return NULL
 =============
 */
-static edict_t* pfnGetViewModel( void )
+static cl_entity_t* pfnGetViewModel( void )
 {
 	return &clgame.viewent;
 }
@@ -1656,29 +1534,6 @@ static int pfnIsSpectateOnly( void )
 
 /*
 =============
-pfnGetAttachment
-
-=============
-*/
-static bool pfnGetAttachment( const edict_t *pEdict, int iAttachment, float *rgflOrigin, float *rgflAngles )
-{
-	if( !pEdict || pEdict->free )
-	{
-		if( rgflOrigin ) VectorClear( rgflOrigin );
-		if( rgflAngles ) VectorClear( rgflAngles );
-		return false;
-	}
-
-	if( CL_GetAttachment( pEdict->serialnumber, iAttachment, rgflOrigin, rgflAngles ))
-	{
-		if( rgflOrigin ) VectorAdd( rgflOrigin, pEdict->v.origin, rgflOrigin );
-		return true;
-	}
-	return false;
-}
-
-/*
-=============
 pfnPointContents
 
 =============
@@ -1694,9 +1549,9 @@ pfnWaterEntity
 
 =============
 */
-static edict_t *pfnWaterEntity( const float *rgflPos )
+static cl_entity_t *pfnWaterEntity( const float *rgflPos )
 {
-	edict_t	*pWater, *touch[MAX_EDICTS];
+	cl_entity_t	*pWater, *touch[MAX_EDICTS];
 	int	i, num;
 
 	if( !rgflPos ) return NULL;
@@ -1708,10 +1563,10 @@ static edict_t *pfnWaterEntity( const float *rgflPos )
 	{
 		pWater = touch[i];
 
-		if( !CL_IsValidEdict( pWater ))
+		if( !pWater || pWater->index == -1 )
 			continue;
 
-		if( pWater->v.solid != SOLID_NOT || pWater->v.skin == CONTENTS_NONE )
+		if( pWater->curstate.solid != SOLID_NOT || pWater->curstate.skin == CONTENTS_NONE )
 			continue; // invalid water ?
 
 		// return first valid water entity
@@ -1726,7 +1581,7 @@ pfnTraceLine
 
 =============
 */
-static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr )
+static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, cl_entity_t *pentToSkip, TraceResult *ptr )
 {
 	trace_t	result;
 
@@ -1738,31 +1593,11 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 
 /*
 =================
-pfnTraceToss
-
-=================
-*/
-static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr )
-{
-	trace_t	result;
-
-	if( !CL_IsValidEdict( pent ))
-	{
-		MsgDev( D_WARN, "CL_MoveToss: invalid entity %s\n", CL_ClassName( pent ));
-		return;
-	}
-
-	result = CL_MoveToss( pent, pentToIgnore );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
-}
-
-/*
-=================
 pfnTraceHull
 
 =================
 */
-static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr )
+static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int hullNumber, cl_entity_t *pentToSkip, TraceResult *ptr )
 {
 	trace_t	result;
 	float	*mins, *maxs;
@@ -1777,22 +1612,23 @@ static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int
 	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
 }
 
-static void pfnTraceModel( const float *v1, const float *v2, edict_t *pent, TraceResult *ptr )
+static void pfnTraceModel( const float *v1, const float *v2, cl_entity_t *pent, TraceResult *ptr )
 {
-	if( !CL_IsValidEdict( pent ))
+	if( !pent || pent->index == -1 )
 	{
 		MsgDev( D_WARN, "TraceModel: invalid entity %s\n", CL_ClassName( pent ));
 		return;
 	}
-
+#if 0	// FXIME: FIX CLIENT TRACE
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceModel: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	if( ptr ) *ptr = CM_ClipMove( pent, v1, pent->v.mins, pent->v.maxs, v2, 0 );
+	if( ptr ) *ptr = CM_ClipMove( pent, v1, pent->curstate.mins, pent->curstate.maxs, v2, 0 );
+#endif
 }
 
-static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, const float *v2 )
+static const char *pfnTraceTexture( cl_entity_t *pTextureEntity, const float *v1, const float *v2 )
 {
-	if( !CL_IsValidEdict( pTextureEntity ))
+	if( !pTextureEntity || pTextureEntity->index == -1 )
 	{
 		MsgDev( D_WARN, "TraceTexture: invalid entity %s\n", CL_ClassName( pTextureEntity ));
 		return NULL;
@@ -1801,7 +1637,7 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	return CM_TraceTexture( pTextureEntity, v1, v2 );
+	return NULL;//return CM_TraceTexture( pTextureEntity, v1, v2 );
 }
 
 /*
@@ -1821,7 +1657,7 @@ pfnPlaybackEvent
 
 =============
 */
-static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
+static void pfnPlaybackEvent( int flags, const cl_entity_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
 {
 	event_args_t	args;
 	int		invokerIndex = 0;
@@ -1845,13 +1681,10 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 	if( delay < 0.0f )
 		delay = 0.0f; // fixup negative delays
 
-	if( CL_IsValidEdict( pInvoker ))
-		invokerIndex = NUM_FOR_EDICT( pInvoker );
+	if( pInvoker ) invokerIndex = NUM_FOR_EDICT( pInvoker );
 
 	args.flags = 0;
-	if( CL_IsValidEdict( pInvoker ))
-		args.entindex = NUM_FOR_EDICT( pInvoker );
-	else args.entindex = 0;
+	args.entindex = invokerIndex;
 	VectorCopy( origin, args.origin );
 	VectorCopy( angles, args.angles );
 
@@ -1871,33 +1704,14 @@ static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventinde
 	{
 		// get up some info from invoker
 		if( VectorIsNull( args.origin )) 
-			VectorCopy( pInvoker->v.origin, args.origin );
+			VectorCopy( pInvoker->curstate.origin, args.origin );
 		if( VectorIsNull( args.angles )) 
-			VectorCopy( pInvoker->v.angles, args.angles );
-		VectorCopy( pInvoker->v.velocity, args.velocity );
-		args.ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
+			VectorCopy( pInvoker->curstate.angles, args.angles );
+		VectorCopy( pInvoker->curstate.velocity, args.velocity );
+		args.ducking = (pInvoker->curstate.flags & FL_DUCKING) ? true : false;
 	}
 
 	CL_QueueEvent( flags, eventindex, delay, &args );
-}
-
-/*
-=============
-pfnWeaponAnim
-
-just set viewmodel anim
-=============
-*/
-static void pfnWeaponAnim( int iAnim, int body, float framerate )
-{
-	edict_t	*viewmodel = &clgame.viewent;
-
-	viewmodel->v.animtime = clgame.globals->time;	// start immediately
-	viewmodel->v.framerate = framerate;
-	viewmodel->v.sequence = iAnim;
-	viewmodel->v.frame = 0.0f;
-	viewmodel->v.scale = 1.0f;
-	viewmodel->v.body = body;
 }
 
 /*
@@ -1969,11 +1783,11 @@ pfnPlaySound
 
 =============
 */
-void pfnPlaySound( edict_t *ent, float *org, int chan, const char *samp, float vol, float attn, int flags, int pitch )
+void pfnPlaySound( cl_entity_t *ent, float *org, int chan, const char *samp, float vol, float attn, int flags, int pitch )
 {
 	int	entindex = 0;
 
-	if( CL_IsValidEdict( ent )) entindex = ent->serialnumber;
+	if( ent ) entindex = ent->index;
 	S_StartSound( org, entindex, chan, S_RegisterSound( samp ), vol, attn, pitch, flags );
 }
 
@@ -2038,10 +1852,10 @@ pfnStopAllSounds
 
 =============
 */
-void pfnStopAllSounds( edict_t *ent, int entchannel )
+void pfnStopAllSounds( cl_entity_t *ent, int entchannel )
 {
-	if( !CL_IsValidEdict( ent )) return;
-	S_StopSound( ent->serialnumber, entchannel, NULL );
+	if( !ent || ent->index == -1 ) return;
+	S_StopSound( ent->index, entchannel, NULL );
 }
 
 /*
@@ -2519,7 +2333,6 @@ static efxapi_t gEfxApi =
 	CM_BoxVisible,
 	pfnCullBox,
 	CL_AddEntity,
-	CL_AddTempEntity,
 	pfnEnvShot,
 };
 
@@ -2534,7 +2347,7 @@ static event_api_t gEventApi =
 	pfnLocalPlayerViewheight,
 	pfnGetModBounds,
 	pfnGetModFrames,
-	pfnWeaponAnim,
+	CL_WeaponAnim,
 	pfnPrecacheEvent,
 	pfnPlaybackEvent,
 	pfnTraceTexture,
@@ -2594,25 +2407,22 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnServerInfo_ValueForKey,
 	pfnGetClientMaxspeed,
 	pfnGetModelPtr,
-	pfnGetBonePosition,
 	CL_AllocString,
 	CL_GetString,
 	CL_GetLocalPlayer,
 	pfnGetViewModel,
-	CL_GetEdictByIndex,
+	CL_GetEntityByIndex,
 	pfnGetClientTime,
 	S_FadeClientVolume,
-	pfnGetAttachment,
 	pfnPointContents,
 	pfnWaterEntity,
 	pfnTraceLine,
-	pfnTraceToss,
 	pfnTraceHull,
 	pfnTraceModel,
 	pfnTraceTexture,
 	pfnPrecacheEvent,
 	pfnPlaybackEvent,
-	pfnWeaponAnim,
+	CL_WeaponAnim,
 	pfnRandomFloat,
 	pfnRandomLong,
 	pfnHookEvent,
@@ -2640,8 +2450,6 @@ void CL_UnloadProgs( void )
 	if( !clgame.hInstance ) return;
 
 	CL_FreeEdicts();
-	CL_FreeEdict( &clgame.viewent );
-	CL_FreeEdict( &clgame.playermodel );
 
 	// deinitialize game
 	clgame.dllFuncs.pfnShutdown();
@@ -2676,8 +2484,7 @@ bool CL_LoadProgs( const char *name )
 	cls.mempool = Mem_AllocPool( "Client Static Pool" );
 	clgame.mempool = Mem_AllocPool( "Client Edicts Zone" );
 	clgame.private = Mem_AllocPool( "Client Private Zone" );
-	clgame.baselines = NULL;
-	clgame.edicts = NULL;
+	clgame.entities = NULL;
 
 	clgame.hInstance = FS_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
@@ -2718,12 +2525,6 @@ bool CL_LoadProgs( const char *name )
 	// register svc_bad message
 	pfnHookUserMsg( "svc_bad", CL_BadMessage );
 	CL_LinkUserMessage( "svc_bad", svc_bad, 0 );
-
-	CL_InitEdict( &clgame.viewent );
-	clgame.viewent.serialnumber = VIEWENT_INDEX;
-
-	CL_InitEdict( &clgame.playermodel );
-	clgame.playermodel.serialnumber = MAX_EDICTS - 1;
 
 	CL_InitTitles( "titles.txt" );
 

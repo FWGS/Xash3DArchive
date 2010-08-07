@@ -23,8 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "utils.h"
 #include "keydefs.h"
 #include "ref_params.h"
-#include "entity_def.h"
-#include "entity_state.h"
+#include "cl_entity.h"
 
 #define ART_BANNER		"gfx/shell/head_customize"
 
@@ -48,7 +47,7 @@ typedef struct
 	char		currentModel[CS_SIZE];
 
 	ref_params_t	refdef;
-	edict_t		*ent;
+	cl_entity_t	*ent;
 	
 	menuFramework_s	menu;
 
@@ -400,19 +399,19 @@ static void UI_PlayerSetup_Init( void )
 	}
 
 	// adjust entity params
-	uiPlayerSetup.ent->v.animtime = gpGlobals->time;	// start animation
-	uiPlayerSetup.ent->v.sequence = 1;
-	uiPlayerSetup.ent->v.scale = 1.0f;
-	uiPlayerSetup.ent->v.frame = 0.0f;
-	uiPlayerSetup.ent->v.framerate = 1.0f;
-	uiPlayerSetup.ent->v.effects |= EF_FULLBRIGHT;
-	uiPlayerSetup.ent->v.controller[0] = 127;
-	uiPlayerSetup.ent->v.controller[1] = 127;
-	uiPlayerSetup.ent->v.controller[2] = 127;
-	uiPlayerSetup.ent->v.controller[3] = 127;
-	uiPlayerSetup.ent->v.origin[0] = 92;
-	uiPlayerSetup.ent->v.origin[2] = 2;
-	uiPlayerSetup.ent->v.angles[1] = 180;
+	uiPlayerSetup.ent->curstate.animtime = gpGlobals->time;	// start animation
+	uiPlayerSetup.ent->curstate.sequence = 1;
+	uiPlayerSetup.ent->curstate.scale = 1.0f;
+	uiPlayerSetup.ent->curstate.frame = 0.0f;
+	uiPlayerSetup.ent->curstate.framerate = 1.0f;
+	uiPlayerSetup.ent->curstate.effects |= EF_FULLBRIGHT;
+	uiPlayerSetup.ent->curstate.controller[0] = 127;
+	uiPlayerSetup.ent->curstate.controller[1] = 127;
+	uiPlayerSetup.ent->curstate.controller[2] = 127;
+	uiPlayerSetup.ent->curstate.controller[3] = 127;
+	uiPlayerSetup.ent->origin[0] = 92;
+	uiPlayerSetup.ent->origin[2] = 2;
+	uiPlayerSetup.ent->angles[1] = 180;
 }
 
 /*

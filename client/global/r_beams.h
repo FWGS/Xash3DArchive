@@ -29,9 +29,9 @@ struct BeamInfo_t
 	int		m_nType;
 
 	// entities
-	edict_t		*m_pStartEnt;
+	cl_entity_t	*m_pStartEnt;
 	int		m_nStartAttachment;
-	edict_t		*m_pEndEnt;
+	cl_entity_t	*m_pEndEnt;
 	int		m_nEndAttachment;
 
 	// points
@@ -145,7 +145,7 @@ public:
 	int		segments;
 
 	// attachment entities for the beam
-	edict_t		*entity[MAX_BEAM_ENTS];
+	cl_entity_t	*entity[MAX_BEAM_ENTS];
 	int		attachmentIndex[MAX_BEAM_ENTS];
 
 	// model info
@@ -218,10 +218,10 @@ public:
 	// Updates the state of the temp ent beams
 	void		UpdateTempEntBeams();
 
-	void		DrawBeam( edict_t *pbeam );
+	void		DrawBeam( cl_entity_t *pbeam );
 	void		DrawBeam( Beam_t *pbeam );
 
-	void		KillDeadBeams( edict_t *pDeadEntity );
+	void		KillDeadBeams( cl_entity_t *pDeadEntity );
 
 	Beam_t		*CreateBeamEnts( BeamInfo_t &beamInfo );
 	Beam_t		*CreateBeamEntPoint( BeamInfo_t &beamInfo );
@@ -260,12 +260,12 @@ public:
 
 	void		FreeBeam( Beam_t *pBeam ) { BeamFree( pBeam ); }
 	void		UpdateBeamInfo( Beam_t *pBeam, BeamInfo_t &beamInfo );
-	void		AddServerBeam( edict_t *pEnvBeam );
+	void		AddServerBeam( cl_entity_t *pEnvBeam );
 	void		ClearServerBeams( void );
 
 	void		UpdateBeams( int fTrans );	// main drawing func
 private:
-	edict_t		*LinkWithViewModel( edict_t *pEnt );
+	cl_entity_t	*LinkWithViewModel( cl_entity_t *pEnt );
 	bool		AttemptToDie( Beam_t *pBeam );
 	void		FreeDeadTrails( BeamTrail_t **trail );
 	void		UpdateBeam( Beam_t *pbeam, float frametime );
@@ -296,7 +296,7 @@ private:
 	BeamTrail_t	*m_pActiveTrails;
 	BeamTrail_t	*m_pFreeTrails;
 
-	edict_t		*m_pServerBeams[MAX_BEAMS];	// to avoid check all of the ents
+	cl_entity_t	*m_pServerBeams[MAX_BEAMS];	// to avoid check of all the ents
 	int		m_nNumServerBeams;
 };
 

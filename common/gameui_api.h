@@ -75,11 +75,11 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnSetConsoleDefaultColor)( int r, int g, int b ); // color must came from colors.lst
 
 	// custom rendering (for playermodel preview)
-	edict_t*	(*pfnGetPlayerModel)( void );	// for drawing playermodel previews
-	void	(*pfnSetModel)( struct edict_s *ed, const char *path );
+	struct cl_entity_s* (*pfnGetPlayerModel)( void );	// for drawing playermodel previews
+	void	(*pfnSetModel)( struct cl_entity_s *ed, const char *path );
 	void	(*pfnClearScene)( void );
 	void	(*pfnRenderScene)( const struct ref_params_s *fd );
-	int	(*R_AddEntity)( edict_t *pEnt, int ed_type, HIMAGE customShader );
+	int	(*R_AddEntity)( struct cl_entity_s *pEnt, int ed_type, HIMAGE customShader );
 
 	// dlls managemenet
 	void*	(*pfnLoadLibrary)( const char *name );

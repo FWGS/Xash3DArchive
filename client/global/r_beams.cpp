@@ -51,15 +51,18 @@ static void SineNoise( float *noise, int divs )
 	}
 }
 
-static bool ComputeBeamEntPosition( edict_t *pEnt, int nAttachment, Vector& pt )
+static bool ComputeBeamEntPosition( cl_entity_t *pEnt, int nAttachment, Vector& pt )
 {
-	if( !pEnt || pEnt->free )
+	if( !pEnt )
 	{
 		pt = g_vecZero;
 		return false;
 	}
 
-	GET_ATTACHMENT( pEnt, nAttachment, pt, NULL );
+	// get attachment
+	if( nAttachment > 0 )
+		pt = pEnt->origin + pEnt->attachment_origin[nAttachment - 1];
+	else pt = pEnt->origin;
 
 	return true;
 }
@@ -393,7 +396,7 @@ void CViewRenderBeams::BeamFree( Beam_t* pBeam )
 // Purpose: Iterates through active list and kills beams associated with deadEntity
 // Input  : deadEntity - 
 //-----------------------------------------------------------------------------
-void CViewRenderBeams::KillDeadBeams( edict_t *pDeadEntity )
+void CViewRenderBeams::KillDeadBeams( cl_entity_t *pDeadEntity )
 {
 	Beam_t *pbeam;
 	Beam_t *pnewlist;
@@ -633,8 +636,8 @@ Beam_t *CViewRenderBeams::CreateBeamEnts( int startEnt, int endEnt, int modelInd
 Beam_t *CViewRenderBeams::CreateBeamEnts( BeamInfo_t &beamInfo )
 {
 	// Don't start temporary beams out of the PVS
-	if ( beamInfo.m_flLife != 0 && ( !beamInfo.m_pStartEnt || beamInfo.m_pStartEnt->v.modelindex == 0 || 
-		   !beamInfo.m_pEndEnt || beamInfo.m_pEndEnt->v.modelindex == 0 ))
+	if ( beamInfo.m_flLife != 0 && ( !beamInfo.m_pStartEnt || beamInfo.m_pStartEnt->curstate.modelindex == 0 || 
+		   !beamInfo.m_pEndEnt || beamInfo.m_pEndEnt->curstate.modelindex == 0 ))
 	{
 		return NULL;
 	}
@@ -765,10 +768,10 @@ Beam_t *CViewRenderBeams::CreateBeamEntPoint( BeamInfo_t &beamInfo )
 {
 	if ( beamInfo.m_flLife != 0 )
 	{
-		if ( beamInfo.m_pStartEnt && beamInfo.m_pStartEnt->v.modelindex == NULL )
+		if ( beamInfo.m_pStartEnt && !beamInfo.m_pStartEnt->curstate.modelindex )
 			return NULL;
 
-		if ( beamInfo.m_pEndEnt && beamInfo.m_pEndEnt->v.modelindex == NULL )
+		if ( beamInfo.m_pEndEnt && !beamInfo.m_pEndEnt->curstate.modelindex )
 			return NULL;
 	}
 
@@ -1051,8 +1054,8 @@ Beam_t *CViewRenderBeams::CreateBeamRing( BeamInfo_t &beamInfo )
 {
 	// Don't start temporary beams out of the PVS
 	if ( beamInfo.m_flLife != 0 && 
-		 ( !beamInfo.m_pStartEnt || beamInfo.m_pStartEnt->v.modelindex == NULL || 
-		   !beamInfo.m_pEndEnt || beamInfo.m_pEndEnt->v.modelindex == NULL ))
+		 ( !beamInfo.m_pStartEnt || beamInfo.m_pStartEnt->curstate.modelindex == NULL || 
+		   !beamInfo.m_pEndEnt || beamInfo.m_pEndEnt->curstate.modelindex == NULL ))
 	{
 		return NULL;
 	}
@@ -1605,7 +1608,7 @@ void CViewRenderBeams::ClearServerBeams( void )
 	m_nNumServerBeams = 0;
 }
 	
-void CViewRenderBeams::AddServerBeam( edict_t *pEnvBeam )
+void CViewRenderBeams::AddServerBeam( cl_entity_t *pEnvBeam )
 {
 	if( m_nNumServerBeams >= MAX_BEAMS )
 	{
@@ -1613,7 +1616,7 @@ void CViewRenderBeams::AddServerBeam( edict_t *pEnvBeam )
 		return;
 	}
 
-	if( pEnvBeam && !( pEnvBeam->v.effects & EF_NODRAW ))
+	if( pEnvBeam && !( pEnvBeam->curstate.effects & EF_NODRAW ))
 	{
 		m_pServerBeams[m_nNumServerBeams] = pEnvBeam;
 		m_nNumServerBeams++;
@@ -1623,12 +1626,12 @@ void CViewRenderBeams::AddServerBeam( edict_t *pEnvBeam )
 //-----------------------------------------------------------------------------
 // change client edict to viewmodel for local client in firstperson
 //-----------------------------------------------------------------------------
-edict_t *CViewRenderBeams::LinkWithViewModel( edict_t *pEnt )
+cl_entity_t *CViewRenderBeams::LinkWithViewModel( cl_entity_t *pEnt )
 {
 	if ( !pEnt )
 		return NULL;
 
-	if ( EV_IsLocal( pEnt->serialnumber ) && ( gpViewParams->flags & RDF_THIRDPERSON ) == 0 )
+	if ( EV_IsLocal( pEnt->index ) && ( gpViewParams->flags & RDF_THIRDPERSON ) == 0 )
 	{
 		return GetViewModel(); // change client edict to viewmodel edict
 	}
@@ -1640,9 +1643,9 @@ void CViewRenderBeams::UpdateBeams( int fTrans )
 {
 	for( int i = 0; i < m_nNumServerBeams; i++ )
 	{
-		edict_t	*pBeam = m_pServerBeams[i];
+		cl_entity_t	*pBeam = m_pServerBeams[i];
 
-		if( (fTrans && pBeam->v.renderfx & FBEAM_SOLID) || (!fTrans && !(pBeam->v.renderfx & FBEAM_SOLID)))
+		if( (fTrans && pBeam->curstate.renderfx & FBEAM_SOLID) || (!fTrans && !(pBeam->curstate.renderfx & FBEAM_SOLID)))
 			continue;
 
 		DrawBeam( pBeam );
@@ -1670,7 +1673,7 @@ void CViewRenderBeams::UpdateBeams( int fTrans )
 //-----------------------------------------------------------------------------
 // Draws a single beam
 //-----------------------------------------------------------------------------
-void CViewRenderBeams::DrawBeam( edict_t *pbeam )
+void CViewRenderBeams::DrawBeam( cl_entity_t *pbeam )
 {
 	Beam_t beam;
 
@@ -1678,28 +1681,28 @@ void CViewRenderBeams::DrawBeam( edict_t *pbeam )
 	// see effects.h for details
 
 	// Set up the beam.
-	int beamType = ( pbeam->v.rendermode & 0x0F );
+	int beamType = ( pbeam->curstate.rendermode & 0x0F );
 
 	BeamInfo_t beamInfo;
-	beamInfo.m_vecStart = pbeam->v.origin;
-	beamInfo.m_vecEnd = pbeam->v.angles;
+	beamInfo.m_vecStart = pbeam->origin;
+	beamInfo.m_vecEnd = pbeam->angles;
 	beamInfo.m_pStartEnt = beamInfo.m_pEndEnt = NULL;
-	beamInfo.m_nModelIndex = pbeam->v.modelindex;
+	beamInfo.m_nModelIndex = pbeam->curstate.modelindex;
 	beamInfo.m_flLife = 0;
-	beamInfo.m_flWidth = pbeam->v.scale;
+	beamInfo.m_flWidth = pbeam->curstate.scale;
 	beamInfo.m_flEndWidth = beamInfo.m_flWidth;
 	beamInfo.m_flFadeLength = 0.0f; // will be set on first call UpdateBeam
-	beamInfo.m_flAmplitude = (float)(pbeam->v.body * 0.1f);
-	beamInfo.m_flBrightness = pbeam->v.renderamt;
-	beamInfo.m_flSpeed = pbeam->v.animtime;
+	beamInfo.m_flAmplitude = (float)(pbeam->curstate.body * 0.1f);
+	beamInfo.m_flBrightness = pbeam->curstate.renderamt;
+	beamInfo.m_flSpeed = pbeam->curstate.animtime;
 
 	SetupBeam( &beam, beamInfo );
 
-	beamInfo.m_nStartFrame = pbeam->v.frame;
-	beamInfo.m_flFrameRate = pbeam->v.framerate;
-	beamInfo.m_flRed = pbeam->v.rendercolor[0];
-	beamInfo.m_flGreen = pbeam->v.rendercolor[1];
-	beamInfo.m_flBlue = pbeam->v.rendercolor[2];
+	beamInfo.m_nStartFrame = pbeam->curstate.frame;
+	beamInfo.m_flFrameRate = pbeam->curstate.framerate;
+	beamInfo.m_flRed = pbeam->curstate.rendercolor.r;
+	beamInfo.m_flGreen = pbeam->curstate.rendercolor.g;
+	beamInfo.m_flBlue = pbeam->curstate.rendercolor.b;
 
 	SetBeamAttributes( &beam, beamInfo );
 
@@ -1709,28 +1712,28 @@ void CViewRenderBeams::DrawBeam( edict_t *pbeam )
 	case BEAM_ENTS:
 		beam.type			= TE_BEAMPOINTS;
 		beam.flags		= FBEAM_STARTENTITY|FBEAM_ENDENTITY;
-		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->v.sequence & 0xFFF ));
-		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->v.sequence );
-		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->v.skin & 0xFFF ) );
-		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->v.skin );
+		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.sequence & 0xFFF ));
+		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->curstate.sequence );
+		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.skin & 0xFFF ));
+		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->curstate.skin );
 		beam.numAttachments		= (beam.entity[0]) ? ((beam.entity[1]) ? 2 : 1) : 0;
 		break;
 	case BEAM_HOSE:
 		beam.type			= TE_BEAMHOSE;
 		beam.flags		= FBEAM_STARTENTITY|FBEAM_ENDENTITY;
-		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->v.sequence & 0xFFF ) );
-		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->v.sequence );
-		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->v.skin & 0xFFF ) );
-		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->v.skin );
+		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.sequence & 0xFFF ) );
+		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->curstate.sequence );
+		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.skin & 0xFFF ));
+		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->curstate.skin );
 		beam.numAttachments		= (beam.entity[0]) ? ((beam.entity[1]) ? 2 : 1) : 0;
 		break;
 	case BEAM_ENTPOINT:
 		beam.type			= TE_BEAMPOINTS;
 		beam.flags 		= 0;
-		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->v.sequence & 0xFFF ) );
-		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->v.sequence );
-		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->v.skin & 0xFFF ) );
-		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->v.skin );
+		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.sequence & 0xFFF ));
+		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->curstate.sequence );
+		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.skin & 0xFFF ));
+		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->curstate.skin );
 		beam.numAttachments		= 0;
 		beam.flags 		= 0;
 		if ( beam.entity[0] )
@@ -1749,7 +1752,7 @@ void CViewRenderBeams::DrawBeam( edict_t *pbeam )
 		break;
 	}
 
-	beam.flags |= ( pbeam->v.rendermode & 0xF0 ) & (FBEAM_SINENOISE|FBEAM_SOLID|FBEAM_SHADEIN|FBEAM_SHADEOUT);
+	beam.flags |= ( pbeam->curstate.rendermode & 0xF0 ) & (FBEAM_SINENOISE|FBEAM_SOLID|FBEAM_SHADEIN|FBEAM_SHADEOUT);
 
 	// draw it
 	UpdateBeam( &beam, gpGlobals->frametime );

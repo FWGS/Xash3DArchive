@@ -74,6 +74,7 @@ typedef struct
 // net_encode.c
 //
 void Delta_Init( void );
+void Delta_InitClient( void );
 void Delta_Shutdown( void );
 void Delta_InitFields( void );
 int Delta_NumTables( void );
@@ -93,8 +94,8 @@ void Delta_ParseTableField( sizebuf_t *msg );
 // encode routines
 void MSG_WriteDeltaUsercmd( sizebuf_t *msg, usercmd_t *from, usercmd_t *to );
 void MSG_ReadDeltaUsercmd( sizebuf_t *msg, usercmd_t *from, usercmd_t *to );
-void MSG_WriteDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to );
-void MSG_ReadDeltaEvent( sizebuf_t *msg, event_args_t *from, event_args_t *to );
+void MSG_WriteDeltaEvent( sizebuf_t *msg, struct event_args_s *from, struct event_args_s *to );
+void MSG_ReadDeltaEvent( sizebuf_t *msg, struct event_args_s *from, struct event_args_s *to );
 bool MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to );
 void MSG_ReadDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to );
 void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase );

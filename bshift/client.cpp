@@ -1249,12 +1249,14 @@ addEntity:
 	if( pEntity->pev->sequence != -1 )
 		state->sequence = pEntity->pev->sequence;
 
-	for( int i = 0; i < 4; i++ )
-	{
-		// copy blendings and bone ctrlrs
+	int	i;
+
+	// copy blendings and bone ctrlrs
+	for( i = 0; i < 2; i++ )
 		state->blending[i] = pEntity->pev->blending[i];
+
+	for( i = 0; i < 4; i++ )
 		state->controller[i] = pEntity->pev->controller[i];
-	}
 
 	if( state->ed_type == ED_CLIENT )
 	{

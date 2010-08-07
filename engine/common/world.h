@@ -26,14 +26,6 @@ ENTITY AREA CHECKING
 #define AREA_TRIGGERS		2
 #define AREA_CUSTOM			3	// custom contents - water, lava, fog etc
 
-// link_t is only used for entity area links now
-typedef struct link_s
-{
-	struct link_s	*prev;
-	struct link_s	*next;
-	int		entnum;	// NUM_FOR_EDICT
-} link_t;
-
 typedef struct areanode_s
 {
 	int		axis;		// -1 = leaf node
@@ -48,7 +40,7 @@ typedef struct area_s
 {
 	const float	*mins;
 	const float	*maxs;
-	edict_t		**list;
+	void		**list;
 	int		count;
 	int		maxcount;
 	int		type;
@@ -65,7 +57,7 @@ typedef struct moveclip_s
 	const float	*start;
 	const float	*end;
 	trace_t		trace;
-	edict_t		*passedict;
+	void		*passedict;
 	int		type;	// move type
 	int		flags;	// trace flags
 } moveclip_t;

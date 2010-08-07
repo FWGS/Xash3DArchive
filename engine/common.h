@@ -13,11 +13,11 @@
 #include "launch_api.h"
 #include "qfiles_ref.h"
 #include "engine_api.h"
-#include "entity_def.h"
 #include "render_api.h"
 #include "physic_api.h"
 #include "vsound_api.h"
 #include "com_export.h"
+#include "com_model.h"
 #include "net_msg.h"
 
 // PERFORMANCE INFO
@@ -235,21 +235,17 @@ float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );
 void Tri_DrawTriangles( int fTrans );
 int CL_PointContents( const vec3_t point );
-void CL_StudioFxTransform( edict_t *ent, float transform[4][4] );
+void CL_StudioFxTransform( struct cl_entity_s *ent, float transform[4][4] );
 void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
-bool CL_GetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles );
-bool CL_SetAttachment( int entityIndex, int number, vec3_t origin, vec3_t angles );
-void CL_StudioEvent( mstudioevent_t *event, edict_t *ent );
+void CL_StudioEvent( mstudioevent_t *event, struct cl_entity_s *ent );
 bool CL_GetComment( const char *demoname, char *comment );
 trace_t CL_TraceLine( const vec3_t start, const vec3_t end );
-lerpframe_t *CL_GetLerpFrame( int entityIndex );
 void CL_AmbientLevels( const vec3_t p, byte *pvolumes );
-edict_t *CL_GetEdictByIndex( int index );
-mouth_t *CL_GetEntityMouth( edict_t *ent );
-edict_t *CL_GetLocalPlayer( void );
+struct cl_entity_s *CL_GetEntityByIndex( int index );
+struct cl_entity_s *CL_GetLocalPlayer( void );
+struct player_info_s *CL_GetPlayerInfo( int playerIndex );
 int CL_GetMaxClients( void );
 bool CL_IsPlaybackDemo( void );
-byte CL_GetMouthOpen( int entityIndex );
 bool SV_GetComment( const char *savename, char *comment );
 bool SV_NewGame( const char *mapName, bool loadGame );
 bool SV_LoadProgs( const char *name );

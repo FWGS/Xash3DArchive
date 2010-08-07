@@ -410,7 +410,6 @@ static edict_t *PM_GetEntityByIndex( int index )
 {
 	if( index < 0 || index > svgame.globals->numEntities )
 	{
-		if( index == VIEWENT_INDEX ) return svgame.pmove->player->v.aiment; // current weapon
 		MsgDev( D_ERROR, "PM_GetEntityByIndex: invalid entindex %i\n", index );
 		return NULL;
 	}

@@ -12,58 +12,49 @@ void SND_InitMouth( int entnum, int entchannel )
 {
 	if(( entchannel == CHAN_VOICE || entchannel == CHAN_STREAM ) && entnum > 0 )
 	{
-		edict_t	*clientEntity;
+		cl_entity_t	*clientEntity;
 
 		// init mouth movement vars
 		clientEntity = si.GetClientEdict( entnum );
 
-		if( clientEntity && !clientEntity->free )
+		if( clientEntity )
 		{
-			mouth_t	*m = si.GetEntityMouth( clientEntity );
-
-			if( m )
-			{
-				m->mouthopen = 0;
-				m->sndavg = 0;
-				m->sndcount = 0;
-			}
+			clientEntity->mouth.mouthopen = 0;
+			clientEntity->mouth.sndavg = 0;
+			clientEntity->mouth.sndcount = 0;
 		}
 	}
 }
 
 void SND_CloseMouth( channel_t *ch )
 {
-	edict_t	*clientEntity = si.GetClientEdict( ch->entnum );
-
-	if( clientEntity && !clientEntity->free )
+	if( ch->entchannel == CHAN_VOICE || ch->entchannel == CHAN_STREAM )
 	{
-		mouth_t	*m = si.GetEntityMouth( clientEntity );
+		cl_entity_t	*clientEntity;
 
-		if( m && ( ch->entchannel == CHAN_VOICE || ch->entchannel == CHAN_STREAM ))
+		clientEntity = si.GetClientEdict( ch->entnum );
+
+		if( clientEntity )
 		{
 			// shut mouth
-			m->mouthopen = 0;
+			clientEntity->mouth.mouthopen = 0;
 		}
 	}
 }
 
 void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count )
 {
-	edict_t	*clientEntity;
-	char	*pdata = NULL;
-	mouth_t	*pMouth = NULL;
-	int	savg, data;
-	int	scount;
-	uint 	i;
+	cl_entity_t	*clientEntity;
+	char		*pdata = NULL;
+	mouth_t		*pMouth = NULL;
+	int		savg, data;
+	int		scount;
+	uint 		i;
 
 	clientEntity = si.GetClientEdict( ch->entnum );
+	if( !clientEntity ) return;
 
-	if( clientEntity && !clientEntity->free )
-	{
-		pMouth = si.GetEntityMouth( clientEntity );
-          }
-
-	if( !pMouth ) return;
+	pMouth = &clientEntity->mouth;
 
 	S_GetOutputData( pSource, &pdata, ch->pos, count );
 

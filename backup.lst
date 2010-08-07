@@ -28,6 +28,7 @@ launch\
 launch\imagelib\
 launch\soundlib\
 physic\
+pm_shared\
 public\
 server\
 server\ents\

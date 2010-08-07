@@ -287,7 +287,7 @@ int CHud :: MsgFunc_CamData( const char *pszName, int iSize, void *pbuf )
 	// update pparams->viewentity too for right hearing
 	if( gHUD.viewEntityIndex )
 		gpViewParams->viewentity = gHUD.viewEntityIndex;
-	else gpViewParams->viewentity = GetLocalPlayer()->serialnumber;
+	else gpViewParams->viewentity = GetLocalPlayer()->index;
 
 	END_READ();
 	
@@ -331,8 +331,8 @@ int CHud :: MsgFunc_SetBody( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pszName, iSize, pbuf );
 
-	edict_t *viewmodel = GetViewModel();
-	viewmodel->v.body = READ_BYTE();
+	cl_entity_t *viewmodel = GetViewModel();
+	viewmodel->curstate.body = READ_BYTE();
 
 	END_READ();
 	
@@ -343,8 +343,8 @@ int CHud :: MsgFunc_SetSkin( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pszName, iSize, pbuf );
 
-	edict_t *viewmodel = GetViewModel();
-	viewmodel->v.skin = READ_BYTE();
+	cl_entity_t *viewmodel = GetViewModel();
+	viewmodel->curstate.skin = READ_BYTE();
 
 	END_READ();
 	

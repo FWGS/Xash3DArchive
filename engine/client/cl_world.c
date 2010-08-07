@@ -80,18 +80,15 @@ CL_ClassifyEdict
 sorting edict by type
 =================
 */
-void CL_ClassifyEdict( edict_t *ent )
+void CL_ClassifyEdict( cl_entity_t *cl_ent )
 {
-	cl_priv_t		*cl_ent;
-
-	cl_ent = ent->pvClientData;
-	if( !cl_ent || cl_ent->current.ed_type != ED_SPAWNED )
+	if( !cl_ent || cl_ent->curstate.ed_type != ED_SPAWNED )
 		return;
 
-	cl_ent->current.ed_type = ED_TEMPENTITY; // it's client entity
+	cl_ent->curstate.ed_type = ED_TEMPENTITY; // it's client entity
 
 	// display type
-	// Msg( "%s: <%s>\n", STRING( ent->v.classname ), ed_name[cl_ent->s.ed_type] );
+	// Msg( "%s: <%s>\n", STRING( ent->v.classname ), ed_name[cl_ent->curstate.ed_type] );
 }
 
 /*
@@ -99,21 +96,20 @@ void CL_ClassifyEdict( edict_t *ent )
 CL_UnlinkEdict
 ===============
 */
-void CL_UnlinkEdict( edict_t *ent )
+void CL_UnlinkEdict( cl_entity_t *ent )
 {
 	// not linked in anywhere
-	if( !ent->pvClientData->area.prev )
+	if( !ent->area.prev )
 		return;
 
-	RemoveLink( &ent->pvClientData->area );
-	ent->pvClientData->area.prev = NULL;
-	ent->pvClientData->area.next = NULL;
-	ent->pvClientData->linked = false;
+	RemoveLink( &ent->area );
+	ent->area.prev = NULL;
+	ent->area.next = NULL;
 }
 
-void CL_SetAbsBbox( edict_t *ent )
+void CL_SetAbsBbox( cl_entity_t *ent )
 {
-	if (( ent->v.solid == SOLID_BSP ) && !VectorIsNull( ent->v.angles ))
+	if (( ent->curstate.solid == SOLID_BSP ) && !VectorIsNull( ent->angles ))
 	{	
 		// expand for rotation
 		float	max = 0, v;
@@ -121,30 +117,30 @@ void CL_SetAbsBbox( edict_t *ent )
 
 		for ( i = 0; i < 3; i++ )
 		{
-			v = fabs( ent->v.mins[i] );
+			v = fabs( ent->curstate.mins[i] );
 			if ( v > max ) max = v;
-			v = fabs( ent->v.maxs[i] );
+			v = fabs( ent->curstate.maxs[i] );
 			if ( v > max ) max = v;
 		}
 
 		for ( i = 0; i < 3; i++ )
 		{
-			ent->v.absmin[i] = ent->v.origin[i] - max;
-			ent->v.absmax[i] = ent->v.origin[i] + max;
+			ent->absmin[i] = ent->origin[i] - max;
+			ent->absmax[i] = ent->origin[i] + max;
 		}
 	}
 	else
 	{
-		VectorAdd( ent->v.origin, ent->v.mins, ent->v.absmin );
-		VectorAdd( ent->v.origin, ent->v.maxs, ent->v.absmax );
+		VectorAdd( ent->origin, ent->curstate.mins, ent->absmin );
+		VectorAdd( ent->origin, ent->curstate.maxs, ent->absmax );
 	}
 
-	ent->v.absmin[0] -= 1;
-	ent->v.absmin[1] -= 1;
-	ent->v.absmin[2] -= 1;
-	ent->v.absmax[0] += 1;
-	ent->v.absmax[1] += 1;
-	ent->v.absmax[2] += 1;
+	ent->absmin[0] -= 1;
+	ent->absmin[1] -= 1;
+	ent->absmin[2] -= 1;
+	ent->absmax[0] += 1;
+	ent->absmax[1] += 1;
+	ent->absmax[2] += 1;
 }
 
 /*
@@ -152,29 +148,23 @@ void CL_SetAbsBbox( edict_t *ent )
 CL_LinkEntity
 ===============
 */
-void CL_LinkEdict( edict_t *ent, bool touch_triggers )
+void CL_LinkEdict( cl_entity_t *ent, bool touch_triggers )
 {
 	areanode_t	*node;
-	cl_priv_t		*cl_ent;
 
-	cl_ent = ent->pvClientData;
-
-	if( !cl_ent ) return;
-	if( cl_ent->area.prev ) CL_UnlinkEdict( ent ); // unlink from old position
-	if( ent == EDICT_NUM( 0 )) return; // don't add the world
-	if( ent->free ) return;
+	if( !ent ) return;
+	if( ent->area.prev ) CL_UnlinkEdict( ent ); // unlink from old position
+	if( ent->index <= 0 ) return;
 
 	// trying to classify unclassified edicts
-	if( cls.state == ca_active && cl_ent->current.ed_type == ED_SPAWNED )
+	if( cls.state == ca_active && ent->curstate.ed_type == ED_SPAWNED )
 		CL_ClassifyEdict( ent );
 
 	// set the abs box
 	CL_SetAbsBbox( ent );
 
-	cl_ent->linked = true;
-
 	// ignore not solid bodies
-	if( ent->v.solid == SOLID_NOT && ent->v.skin == CONTENTS_NONE )
+	if( ent->curstate.solid == SOLID_NOT && ent->curstate.skin == CONTENTS_NONE )
 		return;
 
 	// find the first node that the ent's box crosses
@@ -183,19 +173,19 @@ void CL_LinkEdict( edict_t *ent, bool touch_triggers )
 	while( 1 )
 	{
 		if( node->axis == -1 ) break;
-		if( ent->v.absmin[node->axis] > node->dist )
+		if( ent->absmin[node->axis] > node->dist )
 			node = node->children[0];
-		else if( ent->v.absmax[node->axis] < node->dist )
+		else if( ent->absmax[node->axis] < node->dist )
 			node = node->children[1];
 		else break; // crosses the node
 	}
 	
 	// link it in	
-	if( ent->v.solid == SOLID_TRIGGER )
-		InsertLinkBefore( &cl_ent->area, &node->trigger_edicts, NUM_FOR_EDICT( ent ));
-	else if( ent->v.solid == SOLID_NOT && ent->v.skin != CONTENTS_NONE )
-		InsertLinkBefore (&cl_ent->area, &node->water_edicts, NUM_FOR_EDICT( ent ));
-	else InsertLinkBefore (&cl_ent->area, &node->solid_edicts, NUM_FOR_EDICT( ent ));
+	if( ent->curstate.solid == SOLID_TRIGGER )
+		InsertLinkBefore( &ent->area, &node->trigger_edicts, ent->index );
+	else if( ent->curstate.solid == SOLID_NOT && ent->curstate.skin != CONTENTS_NONE )
+		InsertLinkBefore (&ent->area, &node->water_edicts, ent->index );
+	else InsertLinkBefore (&ent->area, &node->solid_edicts, ent->index );
 
 	if( touch_triggers ) Host_Error( "CL_LinkEdict: touch_tiggers\n" );
 }
@@ -216,9 +206,9 @@ CL_AreaEdicts_r
 */
 void CL_AreaEdicts_r( areanode_t *node, area_t *ap )
 {
-	link_t	*l, *next, *start;
-	edict_t	*check;
-	int	count = 0;
+	link_t		*l, *next, *start;
+	cl_entity_t	*check;
+	int		count = 0;
 
 	// touch linked edicts
 	if( ap->type == AREA_SOLID )
@@ -232,9 +222,9 @@ void CL_AreaEdicts_r( areanode_t *node, area_t *ap )
 		next = l->next;
 		check = EDICT_FROM_AREA( l );
 
-		if( check->v.solid == SOLID_NOT && check->v.skin == CONTENTS_NONE )
+		if( check->curstate.solid == SOLID_NOT && check->curstate.skin == CONTENTS_NONE )
 			continue; // deactivated
-		if( !BoundsIntersect( check->v.absmin, check->v.absmax, ap->mins, ap->maxs ))
+		if( !BoundsIntersect( check->absmin, check->absmax, ap->mins, ap->maxs ))
 			continue;	// not touching
 
 		if( ap->count == ap->maxcount )
@@ -259,7 +249,7 @@ void CL_AreaEdicts_r( areanode_t *node, area_t *ap )
 CL_AreaEdicts
 ================
 */
-int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype )
+int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, cl_entity_t **list, int maxcount, int areatype )
 {
 	area_t	ap;
 
@@ -284,9 +274,9 @@ Mins and maxs enclose the entire area swept by the move
 */
 static void CL_ClipToLinks( areanode_t *node, moveclip_t *clip )
 {
-	link_t	*l, *next;
-	edict_t	*touch;
-	trace_t	trace;
+	link_t		*l, *next;
+	cl_entity_t	*touch;
+	trace_t		trace;
 
 	// touch linked edicts
 	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
@@ -295,60 +285,57 @@ static void CL_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		touch = EDICT_FROM_AREA( l );
 
-		if( touch->v.solid == SOLID_NOT )
+		if( touch->curstate.solid == SOLID_NOT )
 			continue;
-		if( touch == clip->passedict )
+		if( touch == (cl_entity_t *)clip->passedict )
 			continue;
-		if( touch->v.solid == SOLID_TRIGGER )
+		if( touch->curstate.solid == SOLID_TRIGGER )
 		{
 			// throw warn and ignore
-			MsgDev( D_WARN, "entity %s (%i) with SOLID_TRIGGER in clipping list\n", CL_ClassName( touch ), touch->serialnumber );
-			touch->v.solid = SOLID_NOT;
+			MsgDev( D_WARN, "entity %s (%i) with SOLID_TRIGGER in clipping list\n", CL_ClassName( touch ), touch->index );
+			touch->curstate.solid = SOLID_NOT;
 			continue;
 		}
-		if( clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP )
+		if( clip->type == MOVE_NOMONSTERS && touch->curstate.solid != SOLID_BSP )
 			continue;
 
 		// don't clip points against points (they can't collide)
-		if( VectorCompare( touch->v.mins, touch->v.maxs ) && (clip->type != MOVE_MISSILE || !(touch->v.flags & FL_MONSTER)))
+		if( VectorCompare( touch->curstate.mins, touch->curstate.maxs ) && (clip->type != MOVE_MISSILE || !(touch->curstate.flags & FL_MONSTER)))
 			continue;
 
 		if( clip->type == MOVE_WORLDONLY )
 		{
 			// accept only real bsp models with FL_WORLDBRUSH set
-			if( CM_GetModelType( touch->v.modelindex ) == mod_brush && touch->v.flags & FL_WORLDBRUSH );
+			if( CM_GetModelType( touch->curstate.modelindex ) == mod_brush && touch->curstate.flags & FL_WORLDBRUSH );
 			else continue;
 		}
 
-		if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->v.absmin, touch->v.absmax ))
+		if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->absmin, touch->absmax ))
 			continue;
 
-		if( clip->passedict && !VectorIsNull( clip->passedict->v.size ) && VectorIsNull( touch->v.size ))
-			continue;	// points never interact
-
 		// monsterclip filter
-		if( CM_GetModelType( touch->v.modelindex ) == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
+		if( CM_GetModelType( touch->curstate.modelindex ) == mod_brush && ( touch->curstate.flags & FL_MONSTERCLIP ))
 		{
-			if( clip->passedict && clip->passedict->v.flags & FL_MONSTERCLIP );
+			if( clip->passedict && ((cl_entity_t *)&clip->passedict)->curstate.flags & FL_MONSTERCLIP );
 			else continue;
 		}
 
-		if( clip->flags & FMOVE_IGNORE_GLASS && CM_GetModelType( touch->v.modelindex ) == mod_brush )
+		if( clip->flags & FMOVE_IGNORE_GLASS && CM_GetModelType( touch->curstate.modelindex ) == mod_brush )
 		{
 			vec3_t	point;
 
 			// we can ignore brushes with rendermode != kRenderNormal
-			switch( touch->v.rendermode )
+			switch( touch->curstate.rendermode )
 			{
 			case kRenderTransTexture:
 			case kRenderTransAlpha:
 			case kRenderTransAdd:
-				if( touch->v.renderamt < 200 )
+				if( touch->curstate.renderamt < 200 )
 					continue;
 				// check for translucent contents
-				if( VectorIsNull( touch->v.origin ))
-					VectorAverage( touch->v.absmin, touch->v.absmax, point );
-				else VectorCopy( touch->v.origin, point );
+				if( VectorIsNull( touch->origin ))
+					VectorAverage( touch->absmin, touch->absmax, point );
+				else VectorCopy( touch->origin, point );
 				if( CL_PointContents( point ) == CONTENTS_TRANSLUCENT )
 					continue; // grate detected
 			default:	break;
@@ -360,17 +347,19 @@ static void CL_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( clip->passedict )
 		{
-		 	if( touch->v.owner == clip->passedict )
+		 	if( CL_GetEntityByIndex( touch->curstate.owner ) == (cl_entity_t *)clip->passedict )
 				continue;	// don't clip against own missiles
-			if( clip->passedict->v.owner == touch )
+			if(CL_GetEntityByIndex( ((cl_entity_t *)&clip->passedict)->curstate.owner ) == touch )
 				continue;	// don't clip against owner
 		}
-
-		if( touch->v.flags & FL_MONSTER )
+#if 0
+		// temporary disabled: wait for moving physic.dll into engine
+		if( touch->curstate.flags & FL_MONSTER )
 			trace = CM_ClipMove( touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->flags );
 		else trace = CM_ClipMove( touch, clip->start, clip->mins, clip->maxs, clip->end, clip->flags );
 
 		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );
+#endif
 	}
 	
 	// recurse down both sides
@@ -387,8 +376,10 @@ static void CL_ClipToLinks( areanode_t *node, moveclip_t *clip )
 CL_Move
 ==================
 */
-trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e )
+trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, cl_entity_t *e )
 {
+	trace_t		trace;
+#if 0
 	moveclip_t	clip;
 	int		i;
 
@@ -426,46 +417,15 @@ trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 	CL_ClipToLinks( cl_areanodes, &clip );
 
 	return clip.trace;
-}
+#endif
+	// FIXME: write client trace
 
-/*
-==================
-CL_MoveToss
-==================
-*/
-trace_t CL_MoveToss( edict_t *tossent, edict_t *ignore )
-{
-	float	gravity;
-	vec3_t	move, end;
-	vec3_t	original_origin;
-	vec3_t	original_velocity;
-	vec3_t	original_angles;
-	vec3_t	original_avelocity;
-	trace_t	trace;
-	int	i;
-
-	VectorCopy( tossent->v.origin, original_origin );
-	VectorCopy( tossent->v.velocity, original_velocity );
-	VectorCopy( tossent->v.angles, original_angles );
-	VectorCopy( tossent->v.avelocity, original_avelocity );
-	gravity = tossent->v.gravity * clgame.movevars.gravity * 0.05f;
-
-	for( i = 0; i < 200; i++ )
-	{
-		CL_CheckVelocity( tossent );
-		tossent->v.velocity[2] -= gravity;
-		VectorMA( tossent->v.angles, 0.05f, tossent->v.avelocity, tossent->v.angles );
-		VectorScale( tossent->v.velocity, 0.05f, move );
-		VectorAdd( tossent->v.origin, move, end );
-		trace = CL_Move( tossent->v.origin, tossent->v.mins, tossent->v.maxs, end, MOVE_NORMAL, tossent );
-		VectorCopy( trace.vecEndPos, tossent->v.origin );
-		if( trace.flFraction < 1.0f ) break;
-	}
-
-	VectorCopy( original_origin, tossent->v.origin );
-	VectorCopy( original_velocity, tossent->v.velocity );
-	VectorCopy( original_angles, tossent->v.angles );
-	VectorCopy( original_avelocity, tossent->v.avelocity );
+	// fill in a default trace
+	Mem_Set( &trace, 0, sizeof( trace_t ));
+	VectorCopy( end, trace.vecEndPos );
+	trace.flFraction = 1.0f;
+	trace.fAllSolid = true;
+	trace.iHitgroup = -1;
 
 	return trace;
 }
@@ -479,7 +439,7 @@ CL_PointContents
 int CL_TruePointContents( const vec3_t p )
 {
 	int	i, num, contents;
-	edict_t	*hit, *touch[MAX_EDICTS];
+	cl_entity_t	*hit, *touch[MAX_EDICTS];
 
 	// sanity check
 	if( !p ) return CONTENTS_NONE;
@@ -497,7 +457,7 @@ int CL_TruePointContents( const vec3_t p )
 	{
 		hit = touch[i];
 
-		if( hit->v.solid != SOLID_BSP )
+		if( hit->curstate.solid != SOLID_BSP )
 			continue; // monsters, players
 
 		// solid entity found
@@ -511,11 +471,11 @@ int CL_TruePointContents( const vec3_t p )
 	{
 		hit = touch[i];
 
-		if( hit->v.solid != SOLID_NOT || hit->v.skin == CONTENTS_NONE )
+		if( hit->curstate.solid != SOLID_NOT || hit->curstate.skin == CONTENTS_NONE )
 			continue; // invalid water ?
 
 		// custom contents found
-		return hit->v.skin;
+		return hit->curstate.skin;
 	}
 	return contents;
 }
@@ -547,7 +507,7 @@ CL_TestPlayerPosition
 
 ============
 */
-edict_t *CL_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult *tr )
+cl_entity_t *CL_TestPlayerPosition( const vec3_t origin, cl_entity_t *pass, TraceResult *tr )
 {
 	float	*mins, *maxs;
 	trace_t	result;
@@ -559,5 +519,5 @@ edict_t *CL_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult 
 	result = CL_Move( origin, mins, maxs, origin, MOVE_NORMAL, pass );
 	if( tr ) Mem_Copy( tr, &result, sizeof( *tr ));
 
-	return result.pHit;
+	return result.pEnt;
 }

@@ -116,7 +116,7 @@ void CL_WriteDemoHeader( const char *name )
 
 	for( i = 0; i < clgame.globals->maxEntities; i++ )
 	{
-		state = &clgame.baselines[i];
+		state = &clgame.entities[i].baseline;
 		if( !state->modelindex && !state->effects )
 			continue;
 

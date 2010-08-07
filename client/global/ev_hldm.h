@@ -119,8 +119,8 @@ enum squeak_e
 extern Vector previousorigin;
 
 void EV_HookEvents( void );
-extern void HUD_CmdStart( const edict_t *player, int runfuncs );
-extern void HUD_CmdEnd( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed );
+extern void HUD_CmdStart( const cl_entity_t *player, int runfuncs );
+extern void HUD_CmdEnd( const cl_entity_t *player, const usercmd_t *cmd, unsigned int random_seed );
 
 void EV_HLDM_GunshotDecalTrace( TraceResult *pTrace, char *decalName );
 void EV_HLDM_DecalGunshot( TraceResult *pTrace, int iBulletType );
@@ -136,6 +136,6 @@ void EV_GetGunPosition( event_args_t *args, float *pos, float *origin );
 void EV_CreateTracer( float *start, float *end );
 void EV_EjectBrass( float *origin, float *velocity, float rotation, int model, int soundtype );
 void EV_GetDefaultShellInfo( event_args_t *args, float *origin, float *velocity, float *ShellVelocity, float *ShellOrigin, float *forward, float *right, float *up, float forwardScale, float upScale, float rightScale );
-void EV_UpadteFlashlight( edict_t *pEnt );
+void EV_UpadteFlashlight( cl_entity_t *pEnt );
 
 #endif // EV_HLDMH

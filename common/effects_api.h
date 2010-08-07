@@ -29,8 +29,7 @@ typedef struct efxapi_s
 	void		(*R_LightForPoint)( const float *rgflOrigin, float *lightValue );
 	int		(*CL_IsBoxVisible)( const float *mins, const float *maxs );
 	int		(*R_CullBox)( const float *mins, const float *maxs );
-	int		(*R_AddEntity)( edict_t *pEnt, int ed_type, HSPRITE customShader );
-	int		(*R_AddTempEntity)( TEMPENTITY *pTemp, HSPRITE customShader );
+	int		(*R_AddEntity)( struct cl_entity_s *pEnt, int ed_type, HSPRITE customShader );
 	void		(*R_EnvShot)( const float *vieworg, const char *name, int skyshot );
 } efxapi_t;
 

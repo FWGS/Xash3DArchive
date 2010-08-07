@@ -5,14 +5,18 @@
 #ifndef CL_ENTITY_H
 #define CL_ENTITY_H
 
+#include "entity_state.h"
+
 #define HISTORY_MAX		64		// Must be power of 2
 #define HISTORY_MASK	( HISTORY_MAX - 1 )
+
+typedef struct cl_entity_s	cl_entity_t;
 
 typedef struct efrag_s
 {
 	struct mleaf_s	*leaf;
 	struct efrag_s	*leafnext;
-	struct cl_entity_s	*entity;
+	cl_entity_t	*entity;
 	struct efrag_s	*entnext;
 } efrag_t;
 
@@ -27,15 +31,12 @@ typedef struct
 {
 	float		prevanimtime;  
 	float		sequencetime;
-	float		gaitsequencetime;
 	byte		prevseqblending[16];//MAXSTUDIOBLENDINGS
 	vec3_t		prevorigin;
 	vec3_t		prevangles;
 
 	int		prevsequence;
-	int		prevgaitsequence;
 	float		prevframe;
-	float		prevgaitframe;
 
 	byte		prevcontroller[16];
 	byte		prevblending[16];
@@ -48,10 +49,17 @@ typedef struct
 	vec3_t		angles;
 } position_history_t;
 
-typedef struct cl_entity_s
+struct cl_entity_s
 {
 	int		index;      	// Index into cl_entities ( always match actual slot )
 	int		player;     	// True if this entity is a "player"
+	string_t		classname;	// classname come from server
+					// Add also targetname, target, message and netname ? 
+
+	int		serverframe;	// TEMPORARY PLACED HERE
+	link_t		area;		// used by physics code
+	vec3_t		absmin;
+	vec3_t		absmax;
 	
 	entity_state_t	baseline;   	// The original state from which to delta during an uncompressed message
 	entity_state_t	prevstate;  	// The state information from the penultimate message received from the server
@@ -77,13 +85,16 @@ typedef struct cl_entity_s
 
 	// Other entity local information
 	int		trivial_accept;
+	float		m_flPrevEventFrame;	// previous event frame
+	int		m_iEventSequence;	// current event sequence
+
+	cl_entity_t	*onground;	// Entity standing on
 
 	struct model_s	*model;		// all visible entities have a model
 	struct efrag_s	*efrag;		// linked list of efrags
 	struct mnode_s	*topnode;		// for bmodels, first world node that splits bmodel,
 					// or NULL if not split
 	int		visframe;		// last frame this entity was found in an active leaf
-} cl_entity_t;
-
+};
 
 #endif//CL_ENTITY_H

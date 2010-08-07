@@ -22,7 +22,13 @@ typedef struct
 	vec3_t		vecEndPos;	// final position
 	float		flPlaneDist;	// planes distance
 	vec3_t		vecPlaneNormal;	// surface normal at impact
-	edict_t		*pHit;		// entity the surface is on
+
+	union
+	{
+		struct edict_s	*pHit;	// entity the surface is on
+		struct cl_entity_s	*pEnt;	// client hit entity
+	};
+
 	int		iHitgroup;	// 0 == generic, non zero is specific body part
 } TraceResult;
 

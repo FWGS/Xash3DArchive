@@ -6,6 +6,7 @@
 #define RENDER_API_H
 
 #include "ref_params.h"
+#include "com_model.h"
 #include "trace_def.h"
 
 // shader types used for shader loading
@@ -55,51 +56,6 @@ typedef struct
 	// transitions if they hit similar geometry
 	vec3_t		impactPlaneNormal;
 } decallist_t;
-
-typedef struct
-{
-	float		animtime;		// curstate.animtime	
-	int		sequence;		// curstate.sequence
-	int		gaitsequence;	// curstate.gaitsequence
-	float		frame;		// curstate.frame
-	float		gaitframe;	// client->frame + yaw
-	vec3_t		origin;		// curstate.origin
-	vec3_t		angles;		// curstate.angles
-	byte		blending[16];	// curstate.blending
-	byte		controller[16];	// curstate.controller
-} currentvars_t;
-
-typedef struct
-{
-	float		animtime;		// latched.prevanimtime 
-	float		sequencetime;	// latechd.prevsequencetime
-	float		gaitsequencetime;	// latehed.prevgaitsequencetime
-	byte		seqblending[16];	// blending between sequence when it's changed
-	vec3_t		origin;		// latched.prevorigin
-	vec3_t		angles;		// latched.prevangles
-	int		sequence;		// latched.prevsequence
-	int		gaitsequence;	// latched.gaitsequence
-	float		frame;		// latched.prevframe
-	float		gaitframe;	// latched.gaitprevframe
-	byte		controller[16];	// latched.prevcontroller
-	byte		blending[16];	// latched.prevblending
-} latchedvars_t;
-
-// hold values that needs for right studio and sprite lerping
-typedef struct
-{
-	currentvars_t	curstate;
-	latchedvars_t	latched;
-
-	// CLIENT SPECIFIC
-	vec3_t		gaitorigin;	// client oldorigin used to calc velocity
-	float		gaityaw;		// local value
-
-	// EVENT SPECIFIC
-	float		m_flPrevEventFrame;	// previous event frame
-	int		m_iEventSequence;	// current event sequence
-
-} lerpframe_t;
 
 typedef struct
 {
@@ -154,8 +110,7 @@ typedef struct render_exp_s
 	void	(*FreeShader)( const char *shadername );
 
 	// prepare frame to rendering
-	bool	(*AddRefEntity)( edict_t *pRefEntity, int ed_type, shader_t customShader );
-	bool	(*AddTmpEntity)( struct tempent_s *TempEnt, int ed_type, shader_t customShader );
+	bool	(*AddRefEntity)( struct cl_entity_s *pRefEntity, int ed_type, shader_t customShader );
 	bool	(*DecalShoot)( shader_t decal, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
 	bool	(*AddDLight)( vec3_t pos, rgb_t color, float radius, int flags );
 	bool	(*AddPolygon)( const poly_t *poly );
@@ -206,16 +161,13 @@ typedef struct render_imp_s
 
 	// client fundamental callbacks
 	void	(*UpdateScreen)( void );	// update screen while loading
-	void	(*StudioEvent)( mstudioevent_t *event, edict_t *ent );
-	void	(*StudioFxTransform)( edict_t *ent, float matrix[4][4] );
+	void	(*StudioEvent)( mstudioevent_t *event, struct cl_entity_s *ent );
+	void	(*StudioFxTransform)( struct cl_entity_s *ent, float matrix[4][4] );
 	void	(*ShowCollision)( cmdraw_t callback );	// debug
 	long	(*WndProc)( void *hWnd, uint uMsg, uint wParam, long lParam );
-	bool	(*GetAttachment)( int entityIndex, int number, vec3_t origin, vec3_t angles );
-	bool	(*SetAttachment)( int entityIndex, int number, vec3_t origin, vec3_t angles );
-	edict_t	*(*GetClientEdict)( int index );
-	lerpframe_t *(*GetLerpFrame)( int entityIndex );
-	byte	(*GetMouthOpen)( int entityIndex );
-	edict_t	*(*GetLocalPlayer)( void );
+	struct cl_entity_s *(*GetClientEdict)( int index );		// get rid of this
+	struct player_info_s *(*GetPlayerInfo)( int playerIndex );		// not an entityIndex!!!
+	struct cl_entity_s *(*GetLocalPlayer)( void );
 	int	(*GetMaxClients)( void );
 	float	(*GetLerpFrac)( void );
 	void	(*DrawTriangles)( int fTrans );

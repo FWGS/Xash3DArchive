@@ -66,7 +66,7 @@ void ProcessRain( void )
 	cl_drip* curDrip = FirstChainDrip.p_Next;
 	cl_drip* nextDrip = NULL;
 
-	edict_t *player = GetLocalPlayer();
+	cl_entity_t *player = GetLocalPlayer();
 
 	if( !player ) return; // not in game
 
@@ -133,8 +133,8 @@ void ProcessRain( void )
 			float deathHeight;
 			Vector vecStart, vecEnd;
 
-			vecStart[0] = RANDOM_FLOAT( player->v.origin.x - gHUD.Rain.distFromPlayer, player->v.origin.x + gHUD.Rain.distFromPlayer );
-			vecStart[1] = RANDOM_FLOAT( player->v.origin.y - gHUD.Rain.distFromPlayer, player->v.origin.y + gHUD.Rain.distFromPlayer );
+			vecStart[0] = RANDOM_FLOAT( player->origin.x - gHUD.Rain.distFromPlayer, player->origin.x + gHUD.Rain.distFromPlayer );
+			vecStart[1] = RANDOM_FLOAT( player->origin.y - gHUD.Rain.distFromPlayer, player->origin.y + gHUD.Rain.distFromPlayer );
 			vecStart[2] = gHUD.Rain.globalHeight;
 
 			float xDelta = gHUD.Rain.windX + RANDOM_FLOAT( gHUD.Rain.randX * -1, gHUD.Rain.randX );
@@ -162,10 +162,10 @@ void ProcessRain( void )
 			{
 				// NOTE: in Xash3D PM_WaterEntity always return a valid water volume or NULL
 				// so not needs to run additional checks here
-				edict_t *pWater = g_engfuncs.pfnWaterEntity( tr.vecEndPos );
+				cl_entity_t *pWater = g_engfuncs.pfnWaterEntity( tr.vecEndPos );
 				if ( pWater )
 				{
-					deathHeight = pWater->v.maxs[2];
+					deathHeight = pWater->curstate.maxs[2];
 				}
 				else
 				{
@@ -547,7 +547,7 @@ void DrawRain( void )
 	
 	// go through drips list
 	cl_drip *Drip = FirstChainDrip.p_Next;
-	edict_t *player = GetLocalPlayer();
+	cl_entity_t *player = GetLocalPlayer();
 	if( !player ) return; // not in game yet
 
 	if ( gHUD.Rain.weatherMode == 0 ) // draw rain
@@ -557,8 +557,8 @@ void DrawRain( void )
 			cl_drip* nextdDrip = Drip->p_Next;
 					
 			Vector2D toPlayer; 
-			toPlayer.x = player->v.origin[0] - Drip->origin[0];
-			toPlayer.y = player->v.origin[1] - Drip->origin[1];
+			toPlayer.x = player->origin[0] - Drip->origin[0];
+			toPlayer.y = player->origin[1] - Drip->origin[1];
 			toPlayer = toPlayer.Normalize();
 	
 			toPlayer.x *= DRIP_SPRITE_HALFWIDTH;

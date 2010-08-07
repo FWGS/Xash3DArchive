@@ -8,6 +8,7 @@
 #include "matrix_lib.h"
 #include "clgame_api.h"
 #include "effects_api.h"
+#include "cl_entity.h"
 #include "bspfile.h"
 #include "const.h"
 
@@ -772,19 +773,20 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 
 	if( model->type == mod_brush )
 	{
-		edict_t	*ent = ri.GetClientEdict( entity );
-		vec3_t	pos_l;
+		cl_entity_t	*ent = ri.GetClientEdict( entity );
+		vec3_t		pos_l;
 
-		if( ent && !ent->free )
+		if( ent )
 		{
 			// transform decal position in local bmodel space
-			VectorSubtract( pos, ent->v.origin, pos_l );
+			// FIXME: this is code is wrong!!!
+			VectorSubtract( pos, ent->origin, pos_l );
 
-			if( !VectorIsNull( ent->v.angles ))
+			if( !VectorIsNull( ent->angles ))
 			{
 				vec3_t	temp, forward, right, up;
 
-				VectorCopy( ent->v.angles, temp );
+				VectorCopy( ent->angles, temp );
 				AngleVectors( temp, forward, right, up );
 
 				VectorCopy( pos_l, temp );

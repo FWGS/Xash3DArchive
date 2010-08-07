@@ -6,6 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "tmpent_def.h"
+#include "event_flags.h"
 
 /*
 ==============================================================
@@ -14,42 +15,43 @@ TEMPENTS MANAGEMENT
 
 ==============================================================
 */
-int CL_AddEntity( edict_t *pEnt, int ed_type, shader_t customShader )
+void CL_WeaponAnim( int iAnim, int body, float framerate )
+{
+	cl_entity_t	*view = &clgame.viewent;
+
+	// anim is changed. update latchedvars
+	if( iAnim != view->curstate.sequence )
+	{
+		int	i;
+			
+		// save current blends to right lerping from last sequence
+		for( i = 0; i < MAXSTUDIOBLENDS; i++ )
+			view->latched.prevseqblending[i] = view->curstate.blending[i];
+		view->latched.prevsequence = view->curstate.sequence; // save old sequence
+
+		// save animtime
+		view->latched.prevanimtime = view->curstate.animtime;
+	}
+
+	view->curstate.animtime = clgame.globals->time;	// start immediately
+	view->curstate.framerate = framerate;
+	view->curstate.sequence = iAnim;
+	view->latched.prevframe = 0.0f;
+	view->curstate.scale = 1.0f;
+	view->curstate.frame = 0.0f;
+	view->curstate.body = body;
+}
+
+int CL_AddEntity( cl_entity_t *pEnt, int ed_type, shader_t customShader )
 {
 	if( !re || !pEnt )
 		return false;
 
+	if( pEnt->curstate.scale == 0.0f )
+		return 0;
+
 	// let the render reject entity without model
 	return re->AddRefEntity( pEnt, ed_type, customShader );
-}
-
-int CL_AddTempEntity( TEMPENTITY *pTemp, shader_t customShader )
-{
-	if( !re || !pTemp )
-		return false;
-
-	if( !pTemp->pvEngineData )
-	{
-		if( pTemp->modelindex && !( pTemp->flags & FTENT_NOMODEL ))
-		{
-			// check model			
-			modtype_t	type = CM_GetModelType( pTemp->modelindex );
-
-			if( type == mod_studio || type == mod_sprite )
-			{
-				// alloc engine data to holds lerping values for studiomdls and sprites
-				pTemp->pvEngineData = Mem_Alloc( cls.mempool, sizeof( lerpframe_t ));
-			}
-			else
-			{
-				pTemp->flags |= FTENT_NOMODEL;
-				pTemp->modelindex = 0;
-			}
-		}
-	}		
-
-	// let the render reject entity without model
-	return re->AddTmpEntity( pTemp, ED_TEMPENTITY, customShader );
 }
 
 /*
@@ -347,11 +349,11 @@ spray custom colored decal (clan logo etc)
 */
 void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color )
 {
-	edict_t	*pEnt;
-	int	modelIndex = 0;
+	cl_entity_t	*pEnt;
+	int		modelIndex = 0;
 
-	pEnt = CL_GetEdictByIndex( entityIndex );
-	if( CL_IsValidEdict( pEnt )) modelIndex = pEnt->v.modelindex;
+	pEnt = CL_GetEntityByIndex( entityIndex );
+	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
 
 	if( re ) re->DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, FDECAL_CUSTOM, color, 0.0f, 0.0f );
 }

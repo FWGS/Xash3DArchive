@@ -375,7 +375,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( touch->v.solid == SOLID_NOT )
 			continue;
-		if( touch == clip->passedict )
+		if( touch == (edict_t *)clip->passedict )
 			continue;
 		if( touch->v.solid == SOLID_TRIGGER )
 			Host_Error( "trigger in clipping list\n" );
@@ -397,13 +397,13 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->v.absmin, touch->v.absmax ))
 			continue;
 
-		if( clip->passedict && !VectorIsNull( clip->passedict->v.size ) && VectorIsNull( touch->v.size ))
+		if( clip->passedict && !VectorIsNull(((edict_t *)clip->passedict)->v.size ) && VectorIsNull( touch->v.size ))
 			continue;	// points never interact
 
 		// monsterclip filter
 		if( CM_GetModelType( touch->v.modelindex ) == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
 		{
-			if( clip->passedict && clip->passedict->v.flags & FL_MONSTERCLIP );
+			if( clip->passedict && ((edict_t *)clip->passedict)->v.flags & FL_MONSTERCLIP );
 			else continue;
 		}
 
@@ -438,9 +438,9 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( clip->passedict )
 		{
-		 	if( touch->v.owner == clip->passedict )
+		 	if( touch->v.owner == (edict_t *)clip->passedict )
 				continue;	// don't clip against own missiles
-			if( clip->passedict->v.owner == touch )
+			if( ((edict_t *)clip->passedict)->v.owner == touch )
 				continue;	// don't clip against owner
 		}
 

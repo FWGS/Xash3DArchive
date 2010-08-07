@@ -528,9 +528,9 @@ void TE_ParseSprite( void )
 
 	if( pTemp )
 	{
-		pTemp->m_flSpriteScale = scale;
-		pTemp->startAlpha = brightness;
-		pTemp->renderAmt = brightness;
+		pTemp->entity.baseline.scale = scale;
+		pTemp->entity.baseline.renderamt = brightness;
+		pTemp->entity.curstate.renderamt = brightness;
 	}
 }
 
@@ -644,11 +644,11 @@ Creates a single source light
 */
 void TE_ParseDynamicLight( int type )
 {
-	Vector	pos;
-	int	iAttachment = 0;
-	edict_t	*pEnt = NULL;
-	float	life, radius, decay;
-	byte	r, g, b;
+	Vector pos;
+	int iAttachment = 0;
+	cl_entity_t *pEnt = NULL;
+	float life, radius, decay;
+	byte r, g, b;
 	dlight_t	*dl;
 
 	if( type == TE_ELIGHT )
@@ -757,7 +757,7 @@ Kill all beams attached to entity
 */
 void TE_ParseKillBeam( void )
 {
-	edict_t *pEntity = GetEntityByIndex( READ_SHORT() );
+	cl_entity_t *pEntity = GetEntityByIndex( READ_SHORT() );
 
 	g_pViewRenderBeams->KillDeadBeams( pEntity );
 }
@@ -844,7 +844,7 @@ Create alpha sprites inside of entity, float upwards
 void TE_ParseFizzEffect( void )
 {
 	int modelIndex, density;
-	edict_t *pEnt;
+	cl_entity_t *pEnt;
 
 	pEnt = GetEntityByIndex( READ_SHORT());
 	modelIndex = READ_SHORT();

@@ -33,13 +33,13 @@ public:
 
 	void	BloodSprite( const Vector &org, int colorIndex, int modelIndex, int modelIndex2, float size );
 	void	RicochetSprite( const Vector &pos, int modelIndex, float scale );
-	void	MuzzleFlash( edict_t *pEnt, int iAttachment, int type );
+	void	MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type );
 	void	TempModel( const Vector &pos, const Vector &dir, const Vector &ang, float life, int modelIndex, int soundtype );
 	void	BreakModel( const Vector &pos, const Vector &size, const Vector &dir, float random, float life, int count, int modelIndex, char flags );
 	void	Bubbles( const Vector &mins, const Vector &maxs, float height, int modelIndex, int count, float speed );
 	void	BubbleTrail( const Vector &start, const Vector &end, float height, int modelIndex, int count, float speed );
 	void	Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags );
-	void	FizzEffect( edict_t *pent, int modelIndex, int density );
+	void	FizzEffect( cl_entity_t *pent, int modelIndex, int density );
 	TEMPENTITY *DefaultSprite( const Vector &pos, int spriteIndex, float framerate );
 	void	Sprite_Smoke( TEMPENTITY *pTemp, float scale );
 	TEMPENTITY *TempSprite( const Vector &pos, const Vector &dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags );
@@ -50,7 +50,7 @@ public:
 	void	RocketFlare( const Vector& pos );
 	void	PlaySound( TEMPENTITY *pTemp, float damp );
 	void	TracerEffect( const Vector &start, const Vector &end );
-	void	WeaponFlash( edict_t *pEnt, int iAttachment );
+	void	WeaponFlash( cl_entity_t *pEnt, int iAttachment );
 	void	PlaceDecal( Vector pos, int entityIndex, int decalIndex );
 	void	PlaceDecal( Vector pos, int entityIndex, const char *decalname );
 	void	AllocDLight( Vector pos, byte r, byte g, byte b, float radius, float time, float decay = 0.0f );

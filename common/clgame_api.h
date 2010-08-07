@@ -62,6 +62,17 @@ typedef struct client_textmessage_s
 	const char	*pMessage;
 } client_textmessage_t;
 
+typedef struct client_data_s
+{
+	// fields that cannot be modified  (ie. have no effect if changed)
+	vec3_t		origin;
+
+	// fields that can be changed by the cldll
+	vec3_t		viewangles;
+	int		iWeaponBits;
+	float		fov;		// field of view
+} client_data_t;
+
 typedef struct client_sprite_s
 {
 	char		szName[64];
@@ -166,30 +177,27 @@ typedef struct cl_enginefuncs_s
 	const char* (*pfnPhysInfo_ValueForKey)( const char *key );
 	const char* (*pfnServerInfo_ValueForKey)( const char *key );
 	float	(*pfnGetClientMaxspeed)( void );
-	void*	(*pfnGetModelPtr)( edict_t* pEdict );				// was CheckParm
-	void	(*pfnGetBonePosition)( const edict_t* pEdict, int iBone, float *rgflOrigin, float *rgflAngles );	// was Key_Event
+	void*	(*pfnGetModelPtr)( struct cl_entity_s *pEdict );				// was CheckParm
 	string_t	(*pfnAllocString)( const char *szValue );			// was GetMousePosition
 	const char *(*pfnGetString)( string_t iString );				// was IsNoClipping
 
-	// edict handlers
-	edict_t*	(*pfnGetLocalPlayer)( void );
-	edict_t*	(*pfnGetViewModel)( void );
-	edict_t*	(*pfnGetEntityByIndex)( int idx );	// matched with entity serialnumber
+	// entity handlers
+	struct cl_entity_s *(*pfnGetLocalPlayer)( void );
+	struct cl_entity_s *(*pfnGetViewModel)( void );
+	struct cl_entity_s *(*pfnGetEntityByIndex)( int idx );	// matched with entity serialnumber
 
 	float	(*pfnGetClientTime)( void );		// can use gpGlobals->time instead
 	void	(*pfnFadeClientVolume)( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );	// was V_CalcShake
-	int	(*pfnGetAttachment)( const edict_t *pEdict, int iAttachment, float *rgflOrg, float *rgflAng );		// was V_ApplyShake
 
 	int	(*pfnPointContents)( const float *rgflPos, int *truecontents );
-	edict_t*	(*pfnWaterEntity)( const float *rgflPos );
-	void	(*pfnTraceLine)( const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr );
-	void	(*pfnTraceToss)( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr );	// was CL_LoadModel
-	void	(*pfnTraceHull)( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr );
-	void	(*pfnTraceModel)( const float *v1, const float *v2, edict_t *pent, TraceResult *ptr );	// was GetSpritePointer
-	const char *(*pfnTraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 ); // was pfnPlaySoundByNameAtLocation
+	struct cl_entity_s *(*pfnWaterEntity)( const float *rgflPos );
+	void	(*pfnTraceLine)( const float *v1, const float *v2, int fNoMonsters, struct cl_entity_s *pentToSkip, TraceResult *ptr );
+	void	(*pfnTraceHull)( const float *v1, const float *v2, int fNoMonsters, int hullNumber, struct cl_entity_s *pentToSkip, TraceResult *ptr );
+	void	(*pfnTraceModel)( const float *v1, const float *v2, struct cl_entity_s *pent, TraceResult *ptr );	// was GetSpritePointer
+	const char *(*pfnTraceTexture)( struct cl_entity_s *pTextureEntity, const float *v1, const float *v2 ); // was pfnPlaySoundByNameAtLocation
 
 	word	(*pfnPrecacheEvent)( int type, const char* psz );
-	void	(*pfnPlaybackEvent)( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
+	void	(*pfnPlaybackEvent)( int flags, const struct cl_entity_s *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 	void	(*pfnWeaponAnim)( int iAnim, int body, float framerate );
 	float	(*pfnRandomFloat)( float flLow, float flHigh );	
 	long	(*pfnRandomLong)( long lLow, long lHigh );
@@ -227,24 +235,24 @@ typedef struct
 	int	(*pfnVidInit)( void );
 	void	(*pfnInit)( void );
 	int	(*pfnRedraw)( float flTime, int state );
-	void	(*pfnUpdateEntityVars)( edict_t *out, const struct entity_state_s *in1, const struct entity_state_s *in2 );
-	void	(*pfnUpdateClientVars)( edict_t *ent, const struct clientdata_s *in1, const struct clientdata_s *in2 );
-	void	(*pfnOnFreeEntPrivateData)( edict_t *pEnt ); // this is called on entity removed
+	int	(*pfnUpdateClientData)( struct client_data_s *pcldata, float flTime );
+	void	(*pfnTxferLocalOverrides)( struct entity_state_s *state, const struct clientdata_s *client );
+	void	(*pfnUpdateOnRemove)( struct cl_entity_s *pEdict );
 	void	(*pfnReset)( void );
 	void	(*pfnStartFrame)( void );
 	void	(*pfnFrame)( double time );
 	void 	(*pfnShutdown)( void );
 	void	(*pfnDrawTriangles)( int fTrans );
 	void	(*pfnCreateEntities)( void );
-	int	(*pfnAddVisibleEntity)( edict_t *pEnt, int ed_type );
-	void	(*pfnStudioEvent)( const mstudioevent_t *event, edict_t *entity );
-	void	(*pfnStudioFxTransform)( edict_t *pEdict, float transform[4][4] );
+	int	(*pfnAddVisibleEntity)( struct cl_entity_s *pEnt, int ed_type );
+	void	(*pfnStudioEvent)( const mstudioevent_t *event, struct cl_entity_s *entity );
+	void	(*pfnStudioFxTransform)( struct cl_entity_s *pEdict, float transform[4][4] );
 	void	(*pfnCalcRefdef)( ref_params_t *parms );
 	void	(*pfnPM_Move)( playermove_t *ppmove, int server );
 	void	(*pfnPM_Init)( playermove_t *ppmove );
 	char	(*pfnPM_FindTextureType)( const char *name );
-	void	(*pfnCmdStart)( const edict_t *player, int runfuncs );
-	void	(*pfnCmdEnd)( const edict_t *player, const usercmd_t *cmd, unsigned int random_seed );
+	void	(*pfnCmdStart)( const struct cl_entity_s *player, int runfuncs );
+	void	(*pfnCmdEnd)( const struct cl_entity_s *player, const usercmd_t *cmd, unsigned int random_seed );
 	void	(*pfnCreateMove)( usercmd_t *cmd, int msec, int active );
 	void	(*pfnMouseEvent)( int mx, int my );
 	int	(*pfnKeyEvent)( int down, int keynum, const char *pszBind );

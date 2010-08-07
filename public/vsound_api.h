@@ -10,13 +10,6 @@
 
 typedef int	sound_t;
 
-typedef struct
-{
-	byte	mouthopen;	// 0 = mouth closed, 255 = mouth agape
-	byte	sndcount;		// counter for running average
-	int	sndavg;		// running average
-} mouth_t;
-
 /*
 ==============================================================================
 
@@ -65,8 +58,7 @@ typedef struct vsound_imp_s
 	trace_t (*TraceLine)( const vec3_t start, const vec3_t end );
 	void (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
 	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
-	edict_t *(*GetClientEdict)( int index );
-	mouth_t *(*GetEntityMouth)( edict_t *ent );
+	struct cl_entity_s *(*GetClientEdict)( int index );
 	float (*GetServerTime)( void );
 	bool (*IsInMenu)( void );	// returns true when client is in-menu
 	bool (*IsActive)( void );	// returns true when client is completely in-game

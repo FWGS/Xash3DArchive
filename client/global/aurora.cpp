@@ -36,11 +36,11 @@ void ParticleSystemManager::AddSystem( ParticleSystem* pNewSystem )
 	m_pFirstSystem = pNewSystem;
 }
 
-ParticleSystem *ParticleSystemManager::FindSystem( edict_t* pEntity )
+ParticleSystem *ParticleSystemManager::FindSystem( cl_entity_t* pEntity )
 {
 	for( ParticleSystem *pSys = m_pFirstSystem; pSys; pSys = pSys->m_pNextSystem )
 	{
-		if( pEntity->serialnumber == pSys->m_iEntIndex )
+		if( pEntity->index == pSys->m_iEntIndex )
 			return pSys;
 	}
 	return NULL;
@@ -728,20 +728,20 @@ void ParticleSystem::CalculateDistance()
 bool ParticleSystem::UpdateSystem( float frametime )
 {
 	// the entity emitting this system
-	edict_t *source = GetEntityByIndex( m_iEntIndex );
+	cl_entity_t *source = GetEntityByIndex( m_iEntIndex );
 
 	if( !source ) return false;
 
 	// Don't update if the system is outside the player's PVS.
-	enable = (source->v.renderfx == kRenderFxAurora);
+	enable = (source->curstate.renderfx == kRenderFxAurora);
 
 	// check for contents to remove
-	if( POINT_CONTENTS( source->v.origin ) == m_iKillCondition )
+	if( POINT_CONTENTS( source->origin ) == m_iKillCondition )
           {
           	enable = 0;
           }
 
-	if( m_pMainParticle == NULL )
+	if ( m_pMainParticle == NULL )
 	{
 		if ( enable )
 		{
@@ -829,7 +829,7 @@ bool ParticleSystem::UpdateParticle( particle *part, float frametime )
 	if( frametime == 0 ) return true;
 	part->age += frametime;
 
-	edict_t *source = GetEntityByIndex( m_iEntIndex );
+	cl_entity_t *source = GetEntityByIndex( m_iEntIndex );
 	if( !source ) return false;	// total paranoia :)
 
 	// is this particle bound to an entity?
@@ -839,17 +839,15 @@ bool ParticleSystem::UpdateParticle( particle *part, float frametime )
 		{
 			if( m_iEntAttachment )
 			{
-				Vector	pos = Vector( 0, 0, 0 );
+				Vector pos = source->origin + source->attachment_origin[m_iEntAttachment - 1];
 
-				GET_ATTACHMENT( source, m_iEntAttachment, pos, NULL );
-				if( pos == Vector( 0, 0, 0 )) pos = source->v.origin; // missed attachment
-				part->velocity = (pos - part->origin ) / frametime;
+				part->velocity = (pos - part->origin) / frametime;
 				part->origin = pos;
 			}
 			else
 			{
-				part->velocity = ( source->v.origin - part->origin ) / frametime;
-				part->origin = source->v.origin;
+				part->velocity = ( source->origin - part->origin ) / frametime;
+				part->origin = source->origin;
 			}
 		}
 		else
@@ -906,9 +904,9 @@ bool ParticleSystem::UpdateParticle( particle *part, float frametime )
 				pChild->velocity = part->velocity;
 				if (fSprayForce)
 				{
-					float fSprayPitch = part->pType->m_SprayPitch.GetInstance() - source->v.angles.x;
-					float fSprayYaw = part->pType->m_SprayYaw.GetInstance() - source->v.angles.y;
-					float fSprayRoll = source->v.angles.z;
+					float fSprayPitch = part->pType->m_SprayPitch.GetInstance() - source->angles.x;
+					float fSprayYaw = part->pType->m_SprayYaw.GetInstance() - source->angles.y;
+					float fSprayRoll = source->angles.z;
 					float fForceCosPitch = fSprayForce*CosLookup(fSprayPitch);
 					pChild->velocity.x += CosLookup(fSprayYaw) * fForceCosPitch;
 					pChild->velocity.y += SinLookup(fSprayYaw) * fForceCosPitch + SinLookup(fSprayYaw) * fSprayForce * SinLookup(fSprayRoll);

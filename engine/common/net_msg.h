@@ -14,7 +14,6 @@
 */
 
 #include "usercmd.h"
-#include "event_api.h"
 #include "pm_movevars.h"
 #include "entity_state.h"
 #include "net_buffer.h"

@@ -16,7 +16,7 @@
 
 bool CL_IsPredicted( void )
 {
-	edict_t	*player = CL_GetLocalPlayer();
+	cl_entity_t	*player = CL_GetLocalPlayer();
 
 	if( !player )
 		return false;
@@ -27,7 +27,7 @@ bool CL_IsPredicted( void )
 	if( cls.netchan.outgoing_sequence - cls.netchan.incoming_sequence >= CL_UPDATE_BACKUP - 1 )
 		return false;
 
-	if( player->pvClientData->current.ed_flags & ESF_NO_PREDICTION )
+	if( player->curstate.ed_flags & ESF_NO_PREDICTION )
 		return false;
 	if( !cl_predict->integer )
 		return false;
@@ -43,6 +43,7 @@ usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
 	static double	extramsec = 0;
+	client_data_t	cdata;
 	int		ms;
 
 	// catch windowState for client.dll
@@ -74,6 +75,13 @@ usercmd_t CL_CreateCmd( void )
 	// from the last level
 	if( ++cl.movemessages <= 10 )
 		return cmd;
+
+	VectorCopy( cl.frame.cd.origin, cdata.origin );
+	VectorCopy( cl.refdef.cl_viewangles, cdata.viewangles );
+	cdata.iWeaponBits = cl.frame.cd.weapons;
+	cdata.fov = cl.frame.cd.fov;
+
+	clgame.dllFuncs.pfnUpdateClientData( &cdata, cl_time( ));
 
 	clgame.dllFuncs.pfnCreateMove( &cmd, host.inputmsec, ( cls.state == ca_active && !cl.refdef.paused ));
 
@@ -253,7 +261,7 @@ static TraceResult PM_PlayerTrace( const vec3_t start, const vec3_t end, int tra
 	mins = clgame.pmove->player_mins[clgame.pmove->usehull];
 	maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
 
-	result = CL_Move( start, mins, maxs, end, trace_type|FMOVE_SIMPLEBOX, clgame.pmove->player );
+	result = CL_Move( start, mins, maxs, end, trace_type|FMOVE_SIMPLEBOX, NULL );//clgame.pmove->player );
 	Mem_Copy( &out, &result, sizeof( TraceResult ));
 
 	return out;
@@ -270,10 +278,7 @@ static const char *PM_TraceTexture( edict_t *pTextureEntity, const float *v1, co
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceTexture: NAN errors detected ('%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
 
-	if( !CL_IsValidEdict( pTextureEntity ))
-		return NULL; 
-
-	return CM_TraceTexture( pTextureEntity, v1, v2 );
+	return NULL;//CM_TraceTexture( pTextureEntity, v1, v2 );
 }
 
 /*
@@ -299,16 +304,18 @@ safe version of CL_EDICT_NUM
 */
 static edict_t *PM_GetEntityByIndex( int index )
 {
+	return NULL;
+#if 0
 	if( index < 0 || index > clgame.globals->numEntities )
 	{
-		if( index == VIEWENT_INDEX ) return clgame.pmove->player->v.aiment; // current weapon
 		MsgDev( D_ERROR, "PM_GetEntityByIndex: invalid entindex %i\n", index );
 		return NULL;
 	}
 
-	if( EDICT_NUM( index )->free )
+	if( EDICT_NUM( index )->index < 0 )
 		return NULL;
 	return EDICT_NUM( index );
+#endif
 }
 
 static void PM_PlaySound( int chan, const char *sample, float vol, float attn, int pitch )
@@ -319,7 +326,7 @@ static void PM_PlaySound( int chan, const char *sample, float vol, float attn, i
 
 static edict_t *PM_TestPlayerPosition( const vec3_t origin, TraceResult *trace )
 {
-	return CL_TestPlayerPosition( origin, clgame.pmove->player, trace );
+	return NULL;//CL_TestPlayerPosition( origin, clgame.pmove->player, trace );
 }
 
 static int PM_PointContents( const vec3_t p, int *truecontents )
@@ -350,9 +357,9 @@ static void PM_CheckMovingGround( edict_t *ent, float frametime )
 
 static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
 {
-	edict_t	*hit, *touch[MAX_EDICTS];
-	vec3_t	absmin, absmax;
-	int	i, count;
+	cl_entity_t	*hit, *touch[MAX_EDICTS];
+	vec3_t		absmin, absmax;
+	int		i, count;
 
 	// setup playermove globals
 	pmove->multiplayer = (clgame.globals->maxClients > 1) ? true : false;
@@ -389,12 +396,12 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 
 		hit = touch[i];
 
-		if( hit == clent ) continue;
-		if( hit->v.solid != SOLID_NOT || hit->v.skin != CONTENTS_LADDER )
+		if( hit == (cl_entity_t *)clent ) continue;
+		if( hit->curstate.solid != SOLID_NOT || hit->curstate.skin != CONTENTS_LADDER )
 			continue; // not ladder
 
 		// store ladder
-		pmove->ladders[pmove->numladders++] = hit;
+		pmove->ladders[pmove->numladders++] = (edict_t *)hit;
 	}
 }
 
@@ -463,7 +470,7 @@ void CL_InitClientMove( void )
 	clgame.dllFuncs.pfnPM_Init( clgame.pmove );
 }
 
-void CL_PreRunCmd( edict_t *clent, usercmd_t *ucmd )
+void CL_PreRunCmd( cl_entity_t *clent, usercmd_t *ucmd )
 {
 	clgame.pmove->runfuncs = false;
 	clgame.dllFuncs.pfnCmdStart( clent, clgame.pmove->runfuncs );
@@ -476,7 +483,7 @@ CL_RunCmd
 */
 void CL_RunCmd( edict_t *clent, usercmd_t *ucmd )
 {
-	if( !CL_IsValidEdict( clent )) return;
+	if( clent ) return;
 
 	PM_CheckMovingGround( clent, ucmd->msec * 0.001f );
 
@@ -499,7 +506,7 @@ void CL_RunCmd( edict_t *clent, usercmd_t *ucmd )
 	if(!( clent->v.flags & FL_SPECTATOR ))
 	{
 		// link into place
-		CL_LinkEdict( clent, false );
+//		CL_LinkEdict( clent, false );
 	}
 }
 
@@ -510,7 +517,7 @@ CL_PostRunCmd
 Done after running a player command.
 ===========
 */
-void CL_PostRunCmd( edict_t *clent, usercmd_t *ucmd )
+void CL_PostRunCmd( cl_entity_t *clent, usercmd_t *ucmd )
 {
 	if( !clent ) return;
 	clgame.pmove->runfuncs = false; // all next calls ignore footstep sounds
@@ -526,7 +533,7 @@ void CL_CheckPredictionError( void )
 {
 	int		frame;
 	vec3_t		delta;
-	edict_t		*player;
+	cl_entity_t	*player;
 	float		flen;
 
 	if( !CL_IsPredicted( )) return;
@@ -539,7 +546,7 @@ void CL_CheckPredictionError( void )
 	frame &= CMD_MASK;
 
 	// compare what the server returned with what we had predicted it to be
-	VectorSubtract( player->pvClientData->current.origin, cl.predicted_origins[frame], delta );
+	VectorSubtract( player->curstate.origin, cl.predicted_origins[frame], delta );
 
 	// save the prediction error for interpolation
 	flen = fabs( delta[0] ) + fabs( delta[1] ) + fabs( delta[2] );
@@ -552,7 +559,7 @@ void CL_CheckPredictionError( void )
 	else
 	{
 		if( cl_showmiss->integer && flen > 0.1f ) Msg( "prediction miss: %g\n", flen );
-		VectorCopy( player->pvClientData->current.origin, cl.predicted_origins[frame] );
+		VectorCopy( player->curstate.origin, cl.predicted_origins[frame] );
 
 		// save for error itnerpolation
 		VectorCopy( delta, cl.prediction_error );
@@ -564,7 +571,7 @@ void CL_CheckPredictionError( void )
 CL_SetIdealPitch
 ===============
 */
-void CL_SetIdealPitch( edict_t *ent )
+void CL_SetIdealPitch( cl_entity_t *ent )
 {
 	float	angleval, sinval, cosval;
 	trace_t	tr;
@@ -573,17 +580,17 @@ void CL_SetIdealPitch( edict_t *ent )
 	int	i, j;
 	int	step, dir, steps;
 
-	if( !( ent->v.groundentity ))
+	if( ent->curstate.onground == -1 )
 		return;
 		
-	angleval = ent->v.angles[YAW] * M_PI * 2 / 360;
+	angleval = ent->angles[YAW] * M_PI * 2 / 360;
 	com.sincos( angleval, &sinval, &cosval );
 
 	for( i = 0; i < MAX_FORWARD; i++ )
 	{
-		top[0] = ent->v.origin[0] + cosval * (i + 3) * 12;
-		top[1] = ent->v.origin[1] + sinval * (i + 3) * 12;
-		top[2] = ent->v.origin[2] + ent->v.view_ofs[2];
+		top[0] = ent->origin[0] + cosval * (i + 3) * 12;
+		top[1] = ent->origin[1] + sinval * (i + 3) * 12;
+		top[2] = ent->origin[2] + cl.frame.cd.view_ofs[2];
 		
 		bottom[0] = top[0];
 		bottom[1] = top[1];
@@ -635,7 +642,7 @@ void CL_PredictMovement( void )
 {
 	int		frame;
 	int		ack, current;
-	edict_t		*player, *viewent;
+	cl_entity_t	*player, *viewent;
 	clientdata_t	*cd;
 	usercmd_t		*cmd;
 
@@ -643,21 +650,23 @@ void CL_PredictMovement( void )
 	if( cl.refdef.paused || cls.key_dest == key_menu ) return;
 
 	player = CL_GetLocalPlayer ();
-	viewent = CL_GetEdictByIndex( cl.refdef.viewentity );
+	viewent = CL_GetEntityByIndex( cl.refdef.viewentity );
 	cd = &cl.frame.cd;
 
 	CL_SetIdealPitch( player );
 
-	if( cls.demoplayback && CL_IsValidEdict( viewent ))
+	if( cls.demoplayback && viewent )
 	{
-		// use interpolated server values
-		VectorCopy( viewent->v.v_angle, cl.refdef.cl_viewangles );
+		// restore viewangles from angles
+		cl.refdef.cl_viewangles[PITCH] = -viewent->angles[PITCH] * 3;
+		cl.refdef.cl_viewangles[YAW] = viewent->angles[YAW];
+		cl.refdef.cl_viewangles[ROLL] = 0; // roll will be computed in view.cpp
 	}
 
 	// unpredicted pure angled values converted into axis
 	AngleVectors( cl.refdef.cl_viewangles, cl.refdef.forward, cl.refdef.right, cl.refdef.up );
 
-	if( !CL_IsPredicted( ))
+	if( 1 )//// disabled for now!!!!!!!!!!!!!!!!!!!!!!!!! ///////!CL_IsPredicted( ))
 	{	
 		cmd = cl.refdef.cmd; // use current command
 
@@ -665,12 +674,12 @@ void CL_PredictMovement( void )
 		CL_PreRunCmd( player, cmd );
 
 		VectorCopy( cl.refdef.cl_viewangles, cl.predicted_angles );
-		VectorCopy( player->v.view_ofs, cl.predicted_viewofs );
+		VectorCopy( cd->view_ofs, cl.predicted_viewofs );
 
 		CL_PostRunCmd( player, cmd );
 		return;
 	}
-
+#if 0
 	ack = cls.netchan.incoming_acknowledged;
 	current = cls.netchan.outgoing_sequence;
 
@@ -683,14 +692,14 @@ void CL_PredictMovement( void )
 	}
 
 	// setup initial pmove state
-	VectorCopy( player->v.movedir, clgame.pmove->movedir );
+// FIXME!!!!...
+//	VectorCopy( player->v.movedir, clgame.pmove->movedir );
 	VectorCopy( cd->origin, clgame.pmove->origin );
 	VectorCopy( cd->velocity, clgame.pmove->velocity );
-	VectorCopy( player->pvClientData->current.basevelocity, clgame.pmove->basevelocity );
-	VectorCopy( cd->view_ofs, player->v.view_ofs );
-	clgame.pmove->flWaterJumpTime = player->v.teleport_time;
-	clgame.pmove->onground = player->v.groundentity;
-	clgame.pmove->usehull = (player->pvClientData->current.flags & FL_DUCKING) ? 1 : 0; // reset hull
+	VectorCopy( player->curstate.basevelocity, clgame.pmove->basevelocity );
+	clgame.pmove->flWaterJumpTime = cd->waterjumptime;
+	clgame.pmove->onground = (edict_t *)CL_GetEntityByIndex( player->curstate.onground );
+	clgame.pmove->usehull = (player->curstate.flags & FL_DUCKING) ? 1 : 0; // reset hull
 	
 	// run frames
 	while( ++ack < current )
@@ -711,4 +720,5 @@ void CL_PredictMovement( void )
 	VectorCopy( clgame.pmove->origin, cl.predicted_origin );
 	VectorCopy( clgame.pmove->angles, cl.predicted_angles );
 	VectorCopy( clgame.pmove->velocity, cl.predicted_velocity );
+#endif
 }

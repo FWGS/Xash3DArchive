@@ -29,7 +29,7 @@ typedef struct ref_params_s
 	int		intermission;
 	int		paused;
 	int		spectator;
-	edict_t		*onground;	// pointer to onground entity
+	int		onground;		// true if client is onground
 	int		waterlevel;
 
 	vec3_t		simvel;		// client velocity (came from server)

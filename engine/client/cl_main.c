@@ -7,6 +7,7 @@
 #include "client.h"
 #include "byteorder.h"
 #include "protocol.h"
+#include "net_encode.h"
 
 cvar_t	*rcon_client_password;
 cvar_t	*rcon_address;
@@ -408,6 +409,7 @@ void CL_Disconnect( void )
 
 	// send a disconnect message to the server
 	CL_SendDisconnectMessage();
+	Delta_Shutdown();
 
 	CL_ClearState ();
 
@@ -534,7 +536,8 @@ The server is changing levels
 void CL_Reconnect_f( void )
 {
 	// if we are downloading, we don't change!  This so we don't suddenly stop downloading a map
-	if( cls.download ) return;
+	if( cls.download || cls.state == ca_disconnected )
+		return;
 
 	S_StopAllSounds ();
 
@@ -552,7 +555,7 @@ void CL_Reconnect_f( void )
 		return;
 	}
 
-	if( *cls.servername )
+	if( cls.servername[0] )
 	{
 		if( cls.state >= ca_connected )
 		{
@@ -672,11 +675,11 @@ void CL_PrepVideo( void )
 		for( i = 0; i < host.numdecals; i++ )
 		{
 			decallist_t *entry = &host.decalList[i];
-			edict_t *pEdict = CL_GetEdictByIndex( entry->entityIndex );
+			cl_entity_t *pEdict = CL_GetEntityByIndex( entry->entityIndex );
 			shader_t decalIndex = pfnDecalIndexFromName( entry->name );
 			int modelIndex = 0;
 
-			if( CL_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
+			if( pEdict ) modelIndex = pEdict->curstate.modelindex;
 			CL_DecalShoot( decalIndex, entry->entityIndex, modelIndex, entry->position, entry->flags );
 		}
 		Z_Free( host.decalList );

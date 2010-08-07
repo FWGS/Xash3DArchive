@@ -28,18 +28,15 @@ update refdef values each frame
 */
 void V_SetupRefDef( void )
 {
-	edict_t	*clent;
+	cl_entity_t	*clent;
 
 	clent = CL_GetLocalPlayer ();
 
-	// UNDONE: temporary place for detect waterlevel
-	CL_CheckWater( clent );
-
-	VectorCopy( clent->v.punchangle, cl.refdef.punchangle );
+	VectorCopy( cl.frame.cd.punchangle, cl.refdef.punchangle );
 	cl.refdef.movevars = &clgame.movevars;
-	cl.refdef.onground = clent->v.groundentity;
-	cl.refdef.health = clent->v.health;
-	cl.refdef.movetype = clent->v.movetype;
+	cl.refdef.onground = ( clent->curstate.onground == -1 ) ? false : true;
+	cl.refdef.health = cl.frame.cd.health;
+	cl.refdef.movetype = clent->curstate.movetype;
 	cl.refdef.num_entities = clgame.globals->numEntities;
 	cl.refdef.max_entities = clgame.globals->maxEntities;
 	cl.refdef.maxclients = clgame.globals->maxClients;
@@ -47,7 +44,7 @@ void V_SetupRefDef( void )
 	cl.refdef.frametime = cls.frametime;
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
-	cl.refdef.waterlevel = clent->v.waterlevel;		
+	cl.refdef.waterlevel = cl.frame.cd.waterlevel;		
 	cl.refdef.flags = cl.render_flags;
 	cl.refdef.viewsize = 120; // FIXME if you can
 	cl.refdef.nextView = 0;
@@ -68,9 +65,9 @@ void V_SetupRefDef( void )
 	}
 	else
 	{
-		VectorCopy( clent->v.origin, cl.refdef.simorg );
-		VectorCopy( clent->v.view_ofs, cl.refdef.viewheight );
-		VectorCopy( clent->v.velocity, cl.refdef.simvel );
+		VectorCopy( clent->origin, cl.refdef.simorg );
+		VectorCopy( cl.frame.cd.view_ofs, cl.refdef.viewheight );
+		VectorCopy( cl.frame.cd.velocity, cl.refdef.simvel );
 	}
 }
 
