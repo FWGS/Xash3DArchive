@@ -31,19 +31,26 @@ typedef void (*pfnEventHook)( event_args_t *args );
 typedef struct event_api_s
 {
 	int	version;
-	void	(*EV_PlaySound)( struct cl_entity_s *ent, float *org, int chan, const char *samp, float vol, float attn, int flags, int pitch );
+	void	(*EV_PlaySound)( int ent, float *org, int chan, const char *samp, float vol, float attn, int flags, int pitch );
 	void	(*EV_StopSound)( int ent, int channel, const char *sample );
 	int	(*EV_FindModelIndex)( const char *model );
 	int	(*EV_IsLocal)( int playernum );
-	modtype_t	(*EV_GetModelType)( int modelIndex );
+	int	(*EV_LocalPlayerDucking)( void );
 	void	(*EV_LocalPlayerViewheight)( float *view_ofs );
-	void	(*EV_GetModBounds)( int modelIndex, float *mins, float *maxs );
-	int	(*EV_GetModFrames)( int modelIndex );
-	void	(*EV_WeaponAnimation)( int sequence, int body, float framerate );
+	void	(*EV_LocalPlayerBounds)( int hull, float *mins, float *maxs );
+	int	(*EV_IndexFromTrace)( struct pmtrace_s *pTrace );
+	struct physent_s *(*EV_GetPhysent)( int idx );
+	void	(*EV_SetUpPlayerPrediction )( int dopred, int bIncludeLocalClient );
+	void	(*EV_PushPMStates)( void );
+	void	(*EV_PopPMStates)( void );
+	void	(*EV_SetSolidPlayers)( int playernum );
+	void	(*EV_SetTraceHull)( int hull );
+	void	(*EV_PlayerTrace)( float *start, float *end, int traceFlags, int ignore_pe, struct pmtrace_s *tr );
+	void	(*EV_WeaponAnimation)( int sequence, int body );
 	word	(*EV_PrecacheEvent)( int type, const char* psz );
 	void	(*EV_PlaybackEvent)( int flags, const struct cl_entity_s *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
-	const char *(*EV_TraceTexture)( struct cl_entity_s *pTextureEntity, const float *v1, const float *v2 );
-	void	(*EV_StopAllSounds)( struct cl_entity_s *ent, int entchannel );
+	const char *(*EV_TraceTexture)( int ground, const float *v1, const float *v2 );
+	void	(*EV_StopAllSounds)( int ent, int entchannel );
 	void	(*EV_KillEvents)( int entnum, const char *eventname );
 } event_api_t;
 

@@ -14,13 +14,18 @@
 #include "r_tempents.h"
 #include "r_beams.h"
 #include "ev_hldm.h"
-#include "pm_shared.h"
 #include "r_weather.h"
+#include "pm_shared.h"
 
 cl_enginefuncs_t	g_engfuncs;
 cl_globalvars_t	*gpGlobals;
 movevars_t	*gpMovevars = NULL;
 ref_params_t	*gpViewParams = NULL;
+int		g_iPlayerClass;
+int		g_iTeamNumber;
+int		g_iUser1;
+int		g_iUser2;
+int		g_iUser3;
 CHud gHUD;
 
 // main DLL entry point
@@ -35,7 +40,9 @@ static HUD_FUNCTIONS gFunctionTable =
 	HUD_Init,
 	HUD_Redraw,
 	HUD_UpdateClientData,
+	HUD_GetHullBounds,
 	HUD_TxferLocalOverrides,
+	HUD_ProcessPlayerState,
 	HUD_UpdateOnRemove,
 	HUD_Reset,
 	HUD_StartFrame,
@@ -163,6 +170,39 @@ void HUD_Init( void )
 }
 
 /*
+================================
+HUD_GetHullBounds
+
+Engine calls this to enumerate player collision hulls, for prediction.
+Return 0 if the hullnumber doesn't exist.
+================================
+*/
+int HUD_GetHullBounds( int hullnumber, float *mins, float *maxs )
+{
+	int iret = 0;
+
+	switch( hullnumber )
+	{
+	case 0:	// Normal player
+		mins = VEC_HULL_MIN;
+		maxs = VEC_HULL_MAX;
+		iret = 1;
+		break;
+	case 1:	// Crouched player
+		mins = VEC_DUCK_HULL_MIN;
+		maxs = VEC_DUCK_HULL_MAX;
+		iret = 1;
+		break;
+	case 2:	// Point based hull
+		mins = Vector( 0, 0, 0 );
+		maxs = Vector( 0, 0, 0 );
+		iret = 1;
+		break;
+	}
+	return iret;
+}
+
+/*
 ==========================
 	HUD_UpdateClientData
 
@@ -225,6 +265,70 @@ void HUD_TxferLocalOverrides( entity_state_t *state, const clientdata_t *client 
 
 	// Spectating or not dead == get control over view angles.
 	g_iAlive = ( client->iuser1 || ( client->deadflag == DEAD_NO ) ) ? 1 : 0;
+}
+
+/*
+=========================
+HUD_ProcessPlayerState
+
+We have received entity_state_t for this player over the network.  We need to copy appropriate fields to the
+playerstate structure
+=========================
+*/
+void HUD_ProcessPlayerState( struct entity_state_s *dst, const struct entity_state_s *src )
+{
+	// Copy in network data
+	dst->origin = src->origin;
+	dst->angles = src->angles;
+
+	dst->velocity = src->velocity;
+
+	dst->frame	= src->frame;
+	dst->modelindex	= src->modelindex;
+	dst->skin	     	= src->skin;
+	dst->effects   	= src->effects;
+	dst->weaponmodel	= src->weaponmodel;
+	dst->movetype   	= src->movetype;
+	dst->sequence   	= src->sequence;
+	dst->animtime   	= src->animtime;
+	
+	dst->solid      	= src->solid;
+	
+	dst->rendermode	= src->rendermode;
+	dst->renderamt	= src->renderamt;	
+	dst->rendercolor.r	= src->rendercolor.r;
+	dst->rendercolor.g	= src->rendercolor.g;
+	dst->rendercolor.b	= src->rendercolor.b;
+	dst->renderfx	= src->renderfx;
+
+	dst->framerate	= src->framerate;
+	dst->body		= src->body;
+
+	memcpy( &dst->controller[0], &src->controller[0], 4 * sizeof( byte ) );
+	memcpy( &dst->blending[0], &src->blending[0], 2 * sizeof( byte ) );
+
+	dst->basevelocity = src->basevelocity;
+
+	dst->friction	= src->friction;
+	dst->gravity	= src->gravity;
+	dst->gaitsequence	= src->gaitsequence;
+	dst->spectator	= src->spectator;
+	dst->usehull	= src->usehull;
+	dst->playerclass	= src->playerclass;
+	dst->team		= src->team;
+	dst->colormap	= src->colormap;
+
+	// Save off some data so other areas of the Client DLL can get to it
+	cl_entity_t *player = GetLocalPlayer();	// Get the local player's index
+	if ( dst->number == player->index )
+	{
+		g_iPlayerClass = dst->playerclass;
+		g_iTeamNumber = dst->team;
+
+		g_iUser1 = src->iuser1;
+		g_iUser2 = src->iuser2;
+		g_iUser3 = src->iuser3;
+	}
 }
 
 int HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type )

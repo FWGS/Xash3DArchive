@@ -343,7 +343,7 @@ R_RecursiveWorldNode
 */
 static void R_RecursiveWorldNode( mnode_t *node, uint clipflags, uint dlightbits )
 {
-	const cplane_t	*clipplane;
+	const mplane_t	*clipplane;
 	int		i, clipped;
 	uint		newDlightbits;
 	msurface_t	**mark, *surf;
@@ -479,7 +479,7 @@ R_LinearShadowLeafs
 static void R_LinearShadowLeafs( void )
 {
 	uint		i, j, cpf;
-	const cplane_t	*clipplane;
+	const mplane_t	*clipplane;
 	int		clipped;
 	mleaf_t		*pleaf;
 

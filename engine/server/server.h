@@ -9,6 +9,8 @@
 #include "mathlib.h"
 #include "entity_def.h"
 #include "svgame_api.h"
+#include "cm_local.h"
+#include "pm_defs.h"
 #include "world.h"
 
 //=============================================================================
@@ -407,6 +409,8 @@ void SV_SetModel( edict_t *ent, const char *name );
 void SV_CopyTraceToGlobal( trace_t *trace );
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max );
 void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags );
+void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
+	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info );
 void SV_BaselineForEntity( edict_t *pEdict );
 void SV_WriteEntityPatch( const char *filename );

@@ -53,11 +53,6 @@ typedef struct globalvars_s
 
 	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
 	vec3_t		vecLandmarkOffset;
-
-	// Xash3D specific
-	float		viewheight[PM_MAXHULLS]; // values from gameinfo.txt
-	vec3_t		hullmins[PM_MAXHULLS];
-	vec3_t		hullmaxs[PM_MAXHULLS];
 } globalvars_t;
 
 // engine hands this to DLLs for functionality callbacks
@@ -362,8 +357,8 @@ typedef struct
 
 	int	(*pfnClassifyEdict)( edict_t *pentToClassify );		// was pfnSys_Error
 
-	void	(*pfnPM_Move)( playermove_t *ppmove, int server );
-	void	(*pfnPM_Init)( playermove_t *ppmove );
+	void	(*pfnPM_Move)( struct playermove_s *ppmove, int server );
+	void	(*pfnPM_Init)( struct playermove_s *ppmove );
 	char	(*pfnPM_FindTextureType)( const char *name );
 	void	(*pfnSetupVisibility)( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int portal );
 	void	(*pfnUpdateClientData)( const edict_t *ent, int sendweapons, struct clientdata_s *cd );
@@ -376,7 +371,7 @@ typedef struct
 
 	// these funcs come from GetEntityAPI2 and replace some funcs from GetEntityAPI
 	void	(*pfnOnFreeEntPrivateData)( edict_t *pEnt );		// was pfnConnectionlessPacket
-	void	(*pfnGameShutdown)( void );				// was pfnGetHullBounds
+	int	(*pfnGetHullBounds)( int hullnumber, float *mins, float *maxs );
 	int	(*pfnShouldCollide)( edict_t *pTouch, edict_t *pOther );	// was pfnCreateInstancedBaselines
 } DLL_FUNCTIONS;
 

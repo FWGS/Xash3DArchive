@@ -27,7 +27,7 @@ public:
 	void	Update( void );
 	void	Clear( void );
 
-	void	TE_Prepare( TEMPENTITY *pTemp, model_t modelIndex );
+	void	TE_Prepare( TEMPENTITY *pTemp, int modelIndex );
 	int	TE_Active( TEMPENTITY *pTemp );
 	int	TE_Update( TEMPENTITY *pTemp );	// return false for instantly die
 
@@ -71,14 +71,14 @@ private:
 	TEMPENTITY	*m_pActiveTempEnts;
 
 	// muzzle flash sprites
-	model_t		m_iMuzzleFlash[MAX_MUZZLEFLASH];
+	int		m_iMuzzleFlash[MAX_MUZZLEFLASH];
 
 	void		TempEntFree( TEMPENTITY *pTemp, TEMPENTITY *pPrev );
 	bool		FreeLowPriorityTempEnt( void );
 public:
 	TEMPENTITY	*TempEntAllocNoModel( const Vector& org );
-	TEMPENTITY	*TempEntAlloc( const Vector& org, model_t model );
-	TEMPENTITY	*TempEntAllocHigh( const Vector& org, model_t model );
+	TEMPENTITY	*TempEntAlloc( const Vector& org, int modelindex );
+	TEMPENTITY	*TempEntAllocHigh( const Vector& org, int modelIndex );
 	TEMPENTITY	*TempEntAllocCustom( const Vector& org, int modelIndex, int high, ENTCALLBACK pfnCallback );
 
 	// misc utility shaders

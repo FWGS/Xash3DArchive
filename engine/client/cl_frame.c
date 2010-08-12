@@ -421,7 +421,7 @@ void CL_AddPacketEntities( frame_t *frame )
 	if( clgame.viewent.curstate.modelindex != cl.frame.cd.viewmodel )
 	{
 		cl_entity_t *view = &clgame.viewent;
-		CL_WeaponAnim( view->curstate.sequence, view->curstate.body, view->curstate.framerate );
+		CL_WeaponAnim( view->curstate.sequence, view->curstate.body );
 	}
 
 	// setup player viewmodel (only for local player!)

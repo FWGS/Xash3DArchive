@@ -230,7 +230,7 @@ void LinkUserMessages( void )
 
 	// four new messages for Xash3D
 	gmsgTempEntity = REG_USER_MSG( "TempEntity", -1 );
-	gmsgWeaponAnim = REG_USER_MSG( "WeaponAnim", 3 );
+	gmsgWeaponAnim = REG_USER_MSG( "WeaponAnim", 2 );
 	gmsgIntermission = REG_USER_MSG( "Intermission", 0 );
 	gmsgRoomType = REG_USER_MSG( "RoomType", 1 );
 }
@@ -1173,17 +1173,6 @@ void CBasePlayer::WaterMove()
 	{
 		if (FBitSet(pev->flags, FL_INWATER))
 		{       
-#if 0
-			// play leave water sound
-			switch (RANDOM_LONG(0,3))
-			{
-			case 0: EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade1.wav", 1, ATTN_NORM); break;
-			case 1: EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade2.wav", 1, ATTN_NORM); break;
-			case 2: EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade3.wav", 1, ATTN_NORM); break;
-			case 3: EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade4.wav", 1, ATTN_NORM); break;
-			}
-#endif
-
 			ClearBits(pev->flags, FL_INWATER);
 		}
 		return;
@@ -1216,26 +1205,9 @@ void CBasePlayer::WaterMove()
 	
 	if (!FBitSet(pev->flags, FL_INWATER))
 	{
-#if 0
-		// player enter water sound
-		if (pev->watertype == CONTENT_WATER)
-		{
-			switch (RANDOM_LONG(0,3))
-			{
-			case 0:	EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade1.wav", 1, ATTN_NORM); break;
-			case 1:	EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade2.wav", 1, ATTN_NORM); break;
-			case 2:	EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade3.wav", 1, ATTN_NORM); break;
-			case 3:	EMIT_SOUND(ENT(pev), CHAN_BODY, "player/pl_wade4.wav", 1, ATTN_NORM); break;
-			}
-		}
-#endif
-	
 		SetBits(pev->flags, FL_INWATER);
 		pev->dmgtime = 0;
 	}
-	
-	if (!FBitSet(pev->flags, FL_WATERJUMP))
-		pev->velocity = pev->velocity - 0.8 * pev->waterlevel * gpGlobals->frametime * pev->velocity;
 }
 
 

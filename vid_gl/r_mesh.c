@@ -890,7 +890,7 @@ R_AddPortalSurface
 ===============
 */
 static ref_entity_t *r_portal_ent;
-static cplane_t r_portal_plane, r_original_portal_plane;
+static mplane_t r_portal_plane, r_original_portal_plane;
 static ref_shader_t *r_portal_shader;
 static vec3_t r_portal_mins, r_portal_maxs, r_portal_centre;
 
@@ -901,7 +901,7 @@ static bool R_AddPortalSurface( const meshbuffer_t *mb )
 	ref_entity_t	*ent;
 	ref_shader_t	*shader;
 	msurface_t	*surf;
-	cplane_t		plane, oplane;
+	mplane_t		plane, oplane;
 	mesh_t		*mesh;
 	vec3_t		mins, maxs, centre;
 	vec3_t		v[3], entity_rotation[3];
@@ -1033,8 +1033,8 @@ static bool R_DrawPortalSurface( void )
 	refinst_t		oldRI;
 	vec3_t		origin, angles;
 	ref_entity_t	*ent;
-	cplane_t		*portal_plane = &r_portal_plane;
-	cplane_t		*original_plane = &r_original_portal_plane;
+	mplane_t		*portal_plane = &r_portal_plane;
+	mplane_t		*original_plane = &r_original_portal_plane;
 	ref_shader_t	*shader = r_portal_shader;
 	bool		mirror, refraction = false;
 	texture_t		**captureTexture;

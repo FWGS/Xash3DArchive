@@ -384,7 +384,7 @@ R_RecursiveLightPoint
 static bool R_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
 {
 	int		side;
-	cplane_t		*plane;
+	mplane_t		*plane;
 	msurface_t	*surf;
 	mtexinfo_t	*tex;
 	vec3_t		mid, scale;

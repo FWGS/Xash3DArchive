@@ -11,6 +11,8 @@
 #include "gameui_api.h"
 #include "cl_entity.h"
 #include "com_model.h"
+#include "cm_local.h"
+#include "pm_defs.h"
 #include "world.h"
 
 #define MAX_DEMOS		32
@@ -463,12 +465,6 @@ void CL_CheckPredictionError( void );
 bool CL_IsPredicted( void );
 
 //
-// cl_phys.c
-//
-void CL_CheckVelocity( cl_entity_t *ent );
-void CL_UpdateBaseVelocity( cl_entity_t *ent );
-
-//
 // cl_frame.c
 //
 void CL_ParseFrame( sizebuf_t *msg );
@@ -478,7 +474,7 @@ void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 // cl_tent.c
 //
 int CL_AddEntity( cl_entity_t *pEnt, int ed_type, shader_t customShader );
-void CL_WeaponAnim( int iAnim, int body, float framerate );
+void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
 dlight_t *CL_AllocDlight( int key );

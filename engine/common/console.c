@@ -247,7 +247,7 @@ void Con_PageDown( void )
 {
 	con.display += 2;
 
-	if( con.display > con.current)
+	if( con.display > con.current )
 		con.display = con.current;
 }
 
@@ -1010,7 +1010,7 @@ void Key_Console( int key )
 	}
 
 	// command history (ctrl-p ctrl-n for unix style)
-	if(( key == K_MWHEELUP && Key_IsDown( K_SHIFT )) || ( key == K_UPARROW ) || ( key == K_KP_UPARROW ) || (( com.tolower(key) == 'p' ) && Key_IsDown( K_CTRL )))
+	if(( key == K_MWHEELUP && Key_IsDown( K_SHIFT )) || ( key == K_UPARROW ) || (( com.tolower(key) == 'p' ) && Key_IsDown( K_CTRL )))
 	{
 		if( con.nextHistoryLine - con.historyLine < CON_HISTORY && con.historyLine > 0 )
 		{
@@ -1020,7 +1020,7 @@ void Key_Console( int key )
 		return;
 	}
 
-	if(( key == K_MWHEELDOWN && Key_IsDown( K_SHIFT )) || ( key == K_DOWNARROW ) || ( key == K_KP_DOWNARROW ) || (( com.tolower(key) == 'n' ) && Key_IsDown( K_CTRL )))
+	if(( key == K_MWHEELDOWN && Key_IsDown( K_SHIFT )) || ( key == K_DOWNARROW ) || (( com.tolower(key) == 'n' ) && Key_IsDown( K_CTRL )))
 	{
 		if( con.historyLine == con.nextHistoryLine ) return;
 		con.historyLine++;

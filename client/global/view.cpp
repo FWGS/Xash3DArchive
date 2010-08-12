@@ -9,8 +9,19 @@
 #include "triangle_api.h"
 #include "pm_movevars.h"
 #include "studio.h"
-#include "usercmd.h"
+#include "pm_defs.h"
 #include "hud.h"
+
+extern void PM_ParticleLine( float *start, float *end, int pcolor, float life, float vert);
+extern int PM_GetVisEntInfo( int ent );
+extern int	PM_GetPhysEntInfo( int ent );
+extern void InterpolateAngles(  float * start, float * end, float * output, float frac );
+extern void NormalizeAngles( float * angles );
+extern float Distance(const float * v1, const float * v2);
+extern float AngleBetweenVectors(  const float * v1,  const float * v2 );
+
+extern float	vJumpOrigin[3];
+extern float	vJumpAngles[3];
 
 #define ORIGIN_BACKUP	64
 #define ORIGIN_MASK		( ORIGIN_BACKUP - 1 )
@@ -466,11 +477,11 @@ void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &res
 	Vector	vecEnd;
 	Vector	forward;
 	Vector	vecStart;
-	TraceResult tr;
+	pmtrace_t * trace;
 	int maxLoops = 8;
 
 	cl_entity_t *ent = NULL;
-	cl_entity_t *ignoreent = NULL;
+	int ignoreent = -1;	// first, ignore no entity
 	
 	// trace back from the target using the player's view angles
 	AngleVectors( angles, forward, NULL, NULL );
@@ -480,28 +491,31 @@ void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &res
 
 	while( maxLoops > 0 )
 	{
-		g_engfuncs.pfnTraceLine( vecStart, vecEnd, true, ignoreent, &tr );
-		if( tr.pEnt == NULL ) break; // we hit the world or nothing, stop trace
+		trace = g_engfuncs.PM_TraceLine( vecStart, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, ignoreent );
+		if( trace->ent <= 0 ) break; // we hit the world or nothing, stop trace
 
-		ent = tr.pEnt;
+		ent = GetEntityByIndex( PM_GetPhysEntInfo( trace->ent ));
+
+		if ( ent == NULL )
+			break;
 
 		// hit non-player solid BSP, stop here
-		if( ent->curstate.solid == SOLID_BSP && !( ent->curstate.flags & FL_CLIENT ))
+		if( ent->curstate.solid == SOLID_BSP && !ent->player )
 			break;
 
 		// if close enought to end pos, stop, otherwise continue trace
-		if( tr.vecEndPos.Distance( vecEnd ) < 1.0f )
+		if( trace->endpos.Distance( vecEnd ) < 1.0f )
 			break;
 		else
 		{
-			ignoreent = tr.pEnt; // ignore last hit entity
-			vecStart = tr.vecEndPos;
+			ignoreent = trace->ent; // ignore last hit entity
+			vecStart = trace->endpos;
 		}
 		maxLoops--;
 	}  
 
-	result.MA( 4, tr.vecEndPos, tr.vecPlaneNormal );
-	v_lastDistance = tr.vecEndPos.Distance( origin );	// real distance without offset
+	result.MA( 4, trace->endpos, trace->plane.normal );
+	v_lastDistance = trace->endpos.Distance( origin );	// real distance without offset
 }
 
 //==========================

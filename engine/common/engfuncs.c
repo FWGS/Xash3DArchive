@@ -11,6 +11,24 @@
 #include "cvardef.h"
 
 /*
+====================
+Cache_Check
+
+consistency check
+====================
+*/
+void *Cache_Check( byte *mempool, cache_user_t *c )
+{
+	if( !c->data )
+		return NULL;
+
+	if( !Mem_IsAllocated( mempool, c->data ))
+		return NULL;
+
+	return c->data;
+}
+
+/*
 ==============
 pfnParseToken
 

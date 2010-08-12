@@ -8,12 +8,13 @@
 #if !defined ( EV_HLDMH )
 #define EV_HLDMH
 
-#define DEFAULT_VIEWHEIGHT	gpGlobals->viewheight[0]
-#define VEC_DUCK_VIEW	gpGlobals->viewheight[1]
-#define VEC_HULL_MIN	gpGlobals->hullmins[0]
-#define VEC_HULL_MAX	gpGlobals->hullmaxs[0]
-#define VEC_DUCK_HULL_MIN	gpGlobals->hullmins[1]
-#define VEC_DUCK_HULL_MAX	gpGlobals->hullmaxs[1]
+// defaults for clientinfo messages
+#define DEFAULT_VIEWHEIGHT	28
+#define VEC_DUCK_VIEW	12
+#define VEC_HULL_MIN	Vector(-16, -16, -36 )
+#define VEC_HULL_MAX	Vector( 16,  16,  36 )
+#define VEC_DUCK_HULL_MIN	Vector(-16, -16, -18 )
+#define VEC_DUCK_HULL_MAX	Vector( 16,  16,  18 )
 
 
 enum crowbar_e
@@ -122,8 +123,10 @@ void EV_HookEvents( void );
 extern void HUD_CmdStart( const cl_entity_t *player, int runfuncs );
 extern void HUD_CmdEnd( const cl_entity_t *player, const usercmd_t *cmd, unsigned int random_seed );
 
-void EV_HLDM_GunshotDecalTrace( TraceResult *pTrace, char *decalName );
-void EV_HLDM_DecalGunshot( TraceResult *pTrace, int iBulletType );
+cl_entity_t *GetEntity( int idx );
+cl_entity_t *GetViewEntity( void );
+void EV_HLDM_GunshotDecalTrace( struct pmtrace_s *pTrace, char *decalName );
+void EV_HLDM_DecalGunshot( struct pmtrace_s *pTrace, int iBulletType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );
 void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int cShots, float *vecSrc, float *vecDirShooting, float flDistance, int iBulletType, int iTracerFreq, int *tracerCount, float flSpreadX, float flSpreadY );
 void EV_UpdateLaserSpot( void );
@@ -137,5 +140,8 @@ void EV_CreateTracer( float *start, float *end );
 void EV_EjectBrass( float *origin, float *velocity, float rotation, int model, int soundtype );
 void EV_GetDefaultShellInfo( event_args_t *args, float *origin, float *velocity, float *ShellVelocity, float *ShellOrigin, float *forward, float *right, float *up, float forwardScale, float upScale, float rightScale );
 void EV_UpadteFlashlight( cl_entity_t *pEnt );
+
+// misc pm stuff
+extern int PM_FindPhysEntByIndex( int index );
 
 #endif // EV_HLDMH

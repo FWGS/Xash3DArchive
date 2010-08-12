@@ -139,6 +139,14 @@ enum
 #define MAX_POLY_VERTS		3000
 #define MAX_POLYS			2048
 
+typedef struct mplane_s
+{
+	vec3_t		normal;
+	float		dist;
+	short		type;		// for fast side tests
+	short		signbits;		// signx + (signy<<1) + (signz<<1)
+} mplane_t;
+
 //===================================================================
 
 #include "r_math.h"
@@ -178,7 +186,6 @@ enum
 #define MOD_ALLOWBUMP()		(r_lighting_models_followdeluxe->integer ? mapConfig.deluxeMappingEnabled : GL_Support( R_SHADER_GLSL100_EXT ))
 
 //====================================================
-
 typedef struct
 {
 	vec3_t	  	origin;
@@ -267,7 +274,7 @@ typedef struct
 	vec3_t		viewOrigin;
 	vec3_t		viewAxis[3];
 	vec_t		*vup, *vpn, *vright;
-	cplane_t		frustum[6];
+	mplane_t		frustum[6];
 	float		farClip;
 	uint		clipFlags;
 	vec3_t		visMins, visMaxs;
@@ -285,8 +292,8 @@ typedef struct
 	float		fog_dist_to_eye[256];	// MAX_MAP_FOGS
 
 	vec3_t		pvsOrigin;
-	cplane_t		clipPlane;
-	cplane_t		portalPlane;
+	mplane_t		clipPlane;
+	mplane_t		portalPlane;
 } refinst_t;
 
 //====================================================
@@ -708,7 +715,7 @@ void	R_ProgramDump_f( void );
 void R_InitDecals( void );
 void R_ClearDecals( void );
 void R_ShutdownDecals( void );
-bool R_DecalShoot( shader_t texture, int entity, model_t modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
+bool R_DecalShoot( shader_t texture, int entity, int modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
 decal_t *R_DecalFromMeshbuf( const meshbuffer_t *mb );
 int R_CreateDecalList( decallist_t *pList, bool changelevel );
 void R_AddSurfaceDecals( msurface_t *surf );

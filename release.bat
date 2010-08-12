@@ -23,9 +23,6 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% launch/launch.dsp %CONFIG%"launch - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% physic/physic.dsp %CONFIG%"physic - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 %MSDEV% vid_gl/vid_gl.dsp %CONFIG%"vid_gl - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
@@ -59,7 +56,6 @@ if exist client\client.plg del /f /q client\client.plg
 if exist engine\engine.plg del /f /q engine\engine.plg
 if exist gameui\gameui.plg del /f /q gameui\gameui.plg
 if exist launch\launch.plg del /f /q launch\launch.plg
-if exist physic\physic.plg del /f /q physic\physic.plg
 if exist vid_gl\vid_gl.plg del /f /q vid_gl\vid_gl.plg
 if exist snd_dx\snd_dx.plg del /f /q snd_dx\snd_dx.plg
 if exist xtools\xtools.plg del /f /q xtools\xtools.plg

@@ -4,9 +4,10 @@
 //=======================================================================
 
 #include "cm_local.h"
+#include "entity_def.h"
 #include "mathlib.h"
 
-int CM_RecursiveLightPoint( vec3_t color, cnode_t *node, const vec3_t start, const vec3_t end )
+int CM_RecursiveLightPoint( vec3_t color, mnode_t *node, const vec3_t start, const vec3_t end )
 {
 	float	front, back, frac;
 	vec3_t	mid;
@@ -46,7 +47,7 @@ loc0:
 	else
 	{
 		int		i, ds, dt;
-		csurface_t	*surf;
+		msurface_t	*surf;
 
 		// check for impact on this node
 		for( i = 0, surf = node->firstface; i < node->numfaces; i++, surf++ )
@@ -57,11 +58,11 @@ loc0:
 			ds = (int)((float)DotProduct( mid, surf->texinfo->vecs[0] ) + surf->texinfo->vecs[0][3] );
 			dt = (int)((float)DotProduct( mid, surf->texinfo->vecs[1] ) + surf->texinfo->vecs[1][3] );
 
-			if( ds < surf->textureMins[0] || dt < surf->textureMins[1] )
+			if( ds < surf->texturemins[0] || dt < surf->texturemins[1] )
 				continue;
 
-			ds -= surf->textureMins[0];
-			dt -= surf->textureMins[1];
+			ds -= surf->texturemins[0];
+			dt -= surf->texturemins[1];
 
 			if( ds > surf->extents[0] || dt > surf->extents[1] )
 				continue;
@@ -141,12 +142,12 @@ void CM_RunLightStyles( float time )
 
 /*
 ==================
-CM_AddLightstyle
+CM_AddLightStyle
 
 needs to get correct working SV_LightPoint
 ==================
 */
-void CM_AddLightstyle( int style, const char* s )
+void CM_SetLightStyle( int style, const char* s )
 {
 	int	j, k;
 
@@ -171,12 +172,12 @@ void CM_ClearLightStyles( void )
 
 /*
 ==================
-CM_LightPoint
+CM_LightEntity
 
 grab the ambient lighting color for current point
 ==================
 */
-int CM_LightPoint( edict_t *pEdict )
+int CM_LightEntity( edict_t *pEdict )
 {
 	vec3_t	start, end, color;
 

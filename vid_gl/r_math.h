@@ -22,10 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_math.h
 float	CalcFov( float fov_x, float width, float height );
 void	AdjustFov( float *fov_x, float *fov_y, float width, float height, bool lock_x );
-int	BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const cplane_t *p );
+int	BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p );
 void	RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
-void	PlaneFromPoints( vec3_t verts[3], cplane_t *plane );
-void	CategorizePlane( cplane_t *plane );
+void	PlaneFromPoints( vec3_t verts[3], mplane_t *plane );
+void	CategorizePlane( mplane_t *plane );
 
 /*
 ===============

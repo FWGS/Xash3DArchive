@@ -8,6 +8,7 @@
 #include "ev_hldm.h"
 #include "r_tempents.h"
 #include "ref_params.h"
+#include "pm_defs.h"
 
 extern ref_params_t		*gpViewParams;
 
@@ -52,6 +53,30 @@ void EV_HookEvents( void )
 	g_engfuncs.pfnHookEvent( "evTrain", EV_TrainPitchAdjust );
 	g_engfuncs.pfnHookEvent( "evSnarkFire", EV_SnarkFire );
 	g_engfuncs.pfnHookEvent( "evDecals", EV_Decals );
+}
+
+/*
+=================
+GetEntity
+
+Return's the requested cl_entity_t
+=================
+*/
+cl_entity_t *GetEntity( int idx )
+{
+	return GetEntityByIndex( idx );
+}
+
+/*
+=================
+GetViewEntity
+
+Return's the current weapon/view model
+=================
+*/
+cl_entity_t *GetViewEntity( void )
+{
+	return GetViewModel();
 }
 
 //=================
@@ -168,7 +193,7 @@ void EV_GetDefaultShellInfo( event_args_t *args, float *origin, float *velocity,
 void EV_MuzzleFlash( void )
 {
 	// Add muzzle flash to current weapon model
-	cl_entity_t *ent = GetViewModel();
+	cl_entity_t *ent = GetViewEntity();
 	if ( !ent ) return;
 
 	// Or in the muzzle flash
@@ -182,7 +207,7 @@ void EV_UpadteFlashlight( cl_entity_t *pEnt )
 {
 	Vector vecSrc, vecEnd, vecPos, forward;
 	float rgba[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	TraceResult tr;
+	pmtrace_t *trace;
 
 	if ( EV_IsLocal( pEnt->index ) )
 	{
@@ -218,12 +243,13 @@ void EV_UpadteFlashlight( cl_entity_t *pEnt )
 
 	vecSrc = pEnt->origin + view_ofs;
 	vecEnd = vecSrc + forward * 512;
+	int ignore = PM_FindPhysEntByIndex( pEnt->index );
 
-	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, pEnt, &tr );
+	trace = g_engfuncs.PM_TraceLine( vecSrc, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, ignore );
 
-	if( tr.flFraction != 1.0f )
-		vecPos = tr.vecEndPos + (tr.vecPlaneNormal * -16.0f);
-	else vecPos = tr.vecEndPos;
+	if( trace->fraction != 1.0f )
+		vecPos = trace->endpos + (trace->plane.normal * -16.0f);
+	else vecPos = trace->endpos;
 
 	// update flashlight endpos
 	dlight_t	*dl = g_engfuncs.pEfxAPI->CL_AllocDLight( pEnt->index );

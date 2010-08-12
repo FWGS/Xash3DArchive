@@ -52,10 +52,10 @@ typedef struct
 typedef struct
 {
 	ref_shader_t	*shader;
-	cplane_t		*visibleplane;
+	mplane_t		*visibleplane;
 
 	int		numplanes;
-	cplane_t		*planes;
+	mplane_t		*planes;
 } mfog_t;
 
 typedef struct decal_s
@@ -113,7 +113,7 @@ typedef struct msurface_s
 	mesh_t		*mesh;
 	mfog_t		*fog;
 	decal_t		*pdecals;		// linked surface decals
-	cplane_t		*plane;
+	mplane_t		*plane;
 
 	union
 	{
@@ -146,7 +146,7 @@ typedef struct msurface_s
 typedef struct mnode_s
 {
 	// common with leaf
-	cplane_t		*plane;
+	mplane_t		*plane;
 	int		pvsframe;
 	int		contents;		// for fast checking solid leafs
 
@@ -164,7 +164,7 @@ typedef struct mnode_s
 typedef struct mleaf_s
 {
 	// common with node
-	cplane_t		*plane;
+	mplane_t		*plane;
 	int		pvsframe;
 	int		contents;
 
@@ -206,7 +206,7 @@ typedef struct
 	mnode_t		*firstmodelnode;	// used for lighting bmodels
 
 	int		numplanes;
-	cplane_t		*planes;
+	mplane_t		*planes;
 
 	int		numleafs;		// number of visible leafs, not counting 0
 	mleaf_t		*leafs;

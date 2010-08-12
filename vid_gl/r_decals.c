@@ -707,7 +707,7 @@ static void R_DecalNodeSurfaces( mnode_t* node, decalinfo_t *decalinfo )
 //-----------------------------------------------------------------------------
 static void R_DecalNode( mnode_t *node, decalinfo_t *decalinfo )
 {
-	cplane_t	*splitplane;
+	mplane_t	*splitplane;
 	float	dist;
 	
 	ASSERT( node );
@@ -779,20 +779,20 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 		if( ent )
 		{
 			// transform decal position in local bmodel space
-			// FIXME: this is code is wrong!!!
-			VectorSubtract( pos, ent->origin, pos_l );
-
 			if( !VectorIsNull( ent->angles ))
 			{
-				vec3_t	temp, forward, right, up;
+				matrix4x4	matrix, imatrix;
+				float	*org = ent->origin;
+				float	*ang = ent->angles;
 
-				VectorCopy( ent->angles, temp );
-				AngleVectors( temp, forward, right, up );
+				Matrix4x4_CreateFromEntity( matrix, org[0], org[1], org[2], ang[PITCH], ang[YAW], ang[ROLL], 1.0f );
+				Matrix4x4_Invert_Simple( imatrix, matrix );
 
-				VectorCopy( pos_l, temp );
-				pos_l[0] = DotProduct( temp, forward );
-				pos_l[1] = -DotProduct( temp, right );
-				pos_l[2] = DotProduct( temp, up );
+				Matrix4x4_VectorTransform( imatrix, pos, pos_l );
+			}
+			else
+			{
+				VectorSubtract( pos, ent->origin, pos_l );
 			}
 			VectorCopy( pos_l, decalInfo.m_Position );
 		}
@@ -857,7 +857,7 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 	R_DecalNode( pnodes, &decalInfo );
 }
 
-bool R_DecalShoot( shader_t texture, int entityIndex, model_t modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration )
+bool R_DecalShoot( shader_t texture, int entityIndex, int modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration )
 {
 	ref_shader_t	*shader;
 	ref_model_t	*model;
@@ -1113,11 +1113,39 @@ void R_PushDecal( const meshbuffer_t *mb )
 */
 static bool R_DecalUnProject( decal_t *pdecal, decallist_t *entry )
 {
+	cl_entity_t	*ent;
+		
 	if( !pdecal || !( pdecal->psurf ))
 		return false;
 
+	ent = ri.GetClientEdict( pdecal->entityIndex );
+
+	if( ent )
+	{
+		// transform decal position back into world space
+		if( !VectorIsNull( ent->angles ))
+		{
+			matrix4x4	matrix;
+			float	*org = ent->origin;
+			float	*ang = ent->angles;
+
+			Matrix4x4_CreateFromEntity( matrix, org[0], org[1], org[2], ang[PITCH], ang[YAW], ang[ROLL], 1.0f );
+			Matrix4x4_VectorTransform( matrix, pdecal->position, entry->position );
+		}
+		else
+		{
+			VectorAdd( pdecal->position, ent->origin, entry->position );
+		}
+	}
+	else
+	{
+		// give untransformed pos
+		VectorCopy( pdecal->position, entry->position );
+	}
+
+
 	// NOTE: return original decal position for world or bmodel
-	VectorCopy( pdecal->worldPos, entry->position );
+//	VectorCopy( pdecal->worldPos, entry->position );
 	entry->entityIndex = pdecal->entityIndex;
 
 	// Grab surface plane equation

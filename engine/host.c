@@ -4,11 +4,11 @@
 //=======================================================================
 
 #include "common.h"
+#include "cm_local.h"
 #include "input.h"
 
 #define MAX_SYSEVENTS	1024	// system events
 
-physic_exp_t	*pe;
 render_exp_t	*re;
 vsound_exp_t	*se;
 host_parm_t	host;	// host parms
@@ -16,7 +16,6 @@ stdlib_api_t	com, newcom;
 
 dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
-dll_info_t physic_dll = { "physic.dll", NULL, "CreateAPI", NULL, NULL, 0, sizeof(physic_exp_t), sizeof(stdlib_api_t) };
 
 cvar_t	*sys_sharedstrings;
 cvar_t	*host_serverstate;
@@ -93,46 +92,6 @@ void Host_EndGame( const char *message, ... )
 	Host_AbortCurrentFrame ();
 }
 
-static void Host_DrawDebug( cmdraw_t callback )
-{
-	if( pe ) pe->DrawCollision( callback );
-}
-
-void Host_FreePhysic( void )
-{
-	if( physic_dll.link )
-	{
-		pe->Shutdown();
-		Mem_Set( &pe, 0, sizeof( pe ));
-	}
-	Sys_FreeLibrary( &physic_dll );
-}
-
-bool Host_InitPhysic( void )
-{
-	static physic_imp_t	pi;
-	launch_t		CreatePhysic;  
-	bool		result = false;
-	
-	// phys callback
-	pi.api_size = sizeof( physic_imp_t );
-
-	Sys_LoadLibrary( NULL, &physic_dll );
-
-	if( physic_dll.link )
-	{
-		CreatePhysic = (void *)physic_dll.main;
-		pe = CreatePhysic( &newcom, &pi );
-
-		if( pe->Init( )) result = true;
-	} 
-
-	// video system not started, shutdown refresh subsystem
-	if( !result ) Host_FreePhysic();
-
-	return result;
-}
-
 void Host_FreeRender( void )
 {
 	if( render_dll.link )
@@ -156,7 +115,7 @@ bool Host_InitRender( void )
 	ri.UpdateScreen = SCR_UpdateScreen;
 	ri.StudioEvent = CL_StudioEvent;
 	ri.StudioFxTransform = CL_StudioFxTransform;
-	ri.ShowCollision = Host_DrawDebug;
+	ri.ShowCollision = CM_DrawCollision;
 	ri.GetClientEdict = CL_GetEntityByIndex;
 	ri.GetPlayerInfo = CL_GetPlayerInfo;
 	ri.GetLocalPlayer = CL_GetLocalPlayer;
@@ -206,8 +165,7 @@ bool Host_InitSound( void )
 
 	// sound callbacks
 	si.GetEntitySpatialization = CL_GetEntitySpatialization;
-	si.TraceLine = CL_TraceLine;
-	si.AmbientLevels = CL_AmbientLevels;
+	si.AmbientLevels = CM_AmbientLevels;
 	si.GetClientEdict = CL_GetEntityByIndex;
 	si.GetServerTime = CL_GetServerTime;
 	si.IsInMenu = CL_IsInMenu;
@@ -805,7 +763,7 @@ void Host_Init( const int argc, const char **argv )
 
 	NET_Init();
 	Netchan_Init();
-	Host_InitPhysic();
+	CM_InitPhysics();
 
 	SV_Init();
 	CL_Init();
@@ -863,9 +821,9 @@ void Host_Free( void )
 	host.state = HOST_SHUTDOWN;	// prepare host to normal shutdown
 	com.strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
 
+	CM_FreePhysics();
 	Host_FreeRender();
 	Host_FreeSound();
-	Host_FreePhysic();
 
 	SV_Shutdown( false );
 	CL_Shutdown();

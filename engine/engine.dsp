@@ -146,15 +146,15 @@ SOURCE=.\client\cl_menu.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_move.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\cl_parse.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_phys.c
+SOURCE=.\client\cl_pmove.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\cl_pred.c
 # End Source File
 # Begin Source File
 
@@ -175,6 +175,38 @@ SOURCE=.\client\cl_view.c
 # Begin Source File
 
 SOURCE=.\client\cl_world.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_debug.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_light.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_main.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_model.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_portals.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_studio.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_test.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_trace.c
 # End Source File
 # Begin Source File
 
@@ -226,6 +258,22 @@ SOURCE=.\common\net_huff.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\pm_studio.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\pm_surface.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\pm_trace.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\pm_utils.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\server\sv_client.c
 # End Source File
 # Begin Source File
@@ -258,6 +306,10 @@ SOURCE=.\server\sv_phys.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\server\sv_pmove.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\server\sv_save.c
 # End Source File
 # Begin Source File
@@ -279,6 +331,10 @@ SOURCE=.\common\world.c
 # Begin Source File
 
 SOURCE=.\client\client.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\cm_local.h
 # End Source File
 # Begin Source File
 

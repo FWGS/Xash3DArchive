@@ -1,3 +1,9 @@
+build ????
+
+Engine: implement bit-stream network buffer
+Engine: implement custom delta-encoding with user defined script (delta.lst)
+Engine: reworking client entity for get more compatibility with original HL client
+
 build 1271
 
 Engine: enable server.cfg, listenserver.cfg, mapcycle.txt etc

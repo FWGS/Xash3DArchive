@@ -6,7 +6,6 @@
 #define RENDER_API_H
 
 #include "ref_params.h"
-#include "com_model.h"
 #include "trace_def.h"
 
 // shader types used for shader loading

@@ -373,7 +373,7 @@ mfog_t *R_FogForSphere( const vec3_t centre, const float radius )
 {
 	int i, j;
 	mfog_t *fog;
-	cplane_t *plane;
+	mplane_t *plane;
 
 	if( !r_worldmodel || ( RI.refdef.flags & RDF_NOWORLDMODEL ) || !r_worldbrushmodel->numfogs )
 		return NULL;
@@ -1132,7 +1132,7 @@ static void R_SetupGL( void )
 	if( RI.params & RP_CLIPPLANE )
 	{
 		GLdouble clip[4];
-		cplane_t *p = &RI.clipPlane;
+		mplane_t *p = &RI.clipPlane;
 
 		clip[0] = p->normal[0];
 		clip[1] = p->normal[1];
@@ -2315,6 +2315,8 @@ bool R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 	case mod_sprite:
 		if( !refent->model->extradata )
 			return false;
+		if( refent->scale == 0.0f )		// fixup null scale
+			refent->scale = 1.0f;
 		refent->frame = 0.0f;		// keep clear to prevent randomly change skins :-)
 		break;
 	case mod_bad: // let the render drawing null model

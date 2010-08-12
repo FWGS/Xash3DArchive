@@ -208,10 +208,10 @@ crosses a waterline.
 
 =============================================================================
 */
-static void CM_AddToFatPVS( const vec3_t org, int type, cnode_t *node )
+static void CM_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
 {
 	byte	*vis;
-	cplane_t	*plane;
+	mplane_t	*plane;
 	float	d;
 
 	while( 1 )
@@ -221,10 +221,10 @@ static void CM_AddToFatPVS( const vec3_t org, int type, cnode_t *node )
 		{
 			if( node->contents != CONTENTS_SOLID )
 			{
-				cleaf_t	*leaf;
+				mleaf_t	*leaf;
 				int	i;
 
-				leaf = (cleaf_t *)node;			
+				leaf = (mleaf_t *)node;			
 
 				if( type == DVIS_PVS )
 					vis = leaf->visdata;

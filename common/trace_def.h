@@ -32,34 +32,4 @@ typedef struct
 	int		iHitgroup;	// 0 == generic, non zero is specific body part
 } TraceResult;
 
-/*
-==============================================================================
-
-ENGINE TRACE FORMAT
-==============================================================================
-*/
-typedef struct clipnode_s
-{
-	int		planenum;
-	short		children[2];	// negative numbers are contents
-} clipnode_t;
-
-typedef struct cplane_s
-{
-	vec3_t		normal;
-	float		dist;
-	short		type;		// for fast side tests
-	short		signbits;		// signx + (signy<<1) + (signz<<1)
-} cplane_t;
-
-typedef struct
-{
-	clipnode_t	*clipnodes;
-	cplane_t		*planes;
-	int		firstclipnode;
-	int		lastclipnode;
-	vec3_t		clip_mins;
-	vec3_t		clip_maxs;
-} chull_t;
-
 #endif//TRACE_DEF_H

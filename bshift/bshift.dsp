@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\bshift" /I "..\common" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\bshift" /I "..\common" /I "..\game_shared" /I "../pm_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /Fr /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -82,7 +82,7 @@ SOURCE="$(InputPath)"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /G5 /MT /W3 /O1 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /YX /FD /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "..\bshift" /I "..\common" /I "..\game_shared" /D "DEBUG" /D "WIN32" /D "_WINDOWS" /FR /FD /c
+# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "..\bshift" /I "..\common" /I "..\game_shared" /I "../pm_shared" /D "DEBUG" /D "WIN32" /D "_WINDOWS" /FR /FD /c
 # SUBTRACT CPP /WX /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -393,6 +393,14 @@ SOURCE=.\player.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\game_shared\pm_debug.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\pm_math.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\game_shared\pm_shared.cpp
 # End Source File
 # Begin Source File
@@ -613,7 +621,7 @@ SOURCE=.\player.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\pm_shared\pm_debug.h
+SOURCE=..\game_shared\pm_defs.h
 # End Source File
 # Begin Source File
 
@@ -621,7 +629,15 @@ SOURCE=..\pm_shared\pm_defs.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\game_shared\pm_info.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\pm_shared\pm_info.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\pm_materials.h
 # End Source File
 # Begin Source File
 
@@ -629,7 +645,15 @@ SOURCE=..\pm_shared\pm_materials.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\game_shared\pm_movevars.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\pm_shared\pm_movevars.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\pm_shared.h
 # End Source File
 # Begin Source File
 
@@ -653,6 +677,10 @@ SOURCE=.\scriptevent.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\game_shared\shake.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\skill.h
 # End Source File
 # Begin Source File
@@ -673,6 +701,10 @@ SOURCE=.\talkmonster.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\game_shared\te_shared.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\teamplay_gamerules.h
 # End Source File
 # Begin Source File
@@ -682,6 +714,10 @@ SOURCE=.\trains.h
 # Begin Source File
 
 SOURCE=.\vector.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\vector.h
 # End Source File
 # Begin Source File
 

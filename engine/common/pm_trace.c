@@ -1,0 +1,559 @@
+//=======================================================================
+//			Copyright XashXT Group 2010 ©
+//		        pm_trace.c - pm player trace code
+//=======================================================================
+
+#include "common.h"
+#include "mathlib.h"
+#include "matrix_lib.h"
+#include "pm_local.h"
+
+static mplane_t	pm_boxplanes[6];
+static dclipnode_t	pm_boxclipnodes[6];
+static hull_t	pm_boxhull;
+
+void Pmove_Init( void )
+{
+	PM_InitBoxHull ();
+	PM_InitStudioHull ();
+}
+
+/*
+===================
+PM_InitBoxHull
+
+Set up the planes and clipnodes so that the six floats of a bounding box
+can just be stored out and get a proper hull_t structure.
+===================
+*/
+void PM_InitBoxHull( void )
+{
+	int	i, side;
+
+	pm_boxhull.clipnodes = pm_boxclipnodes;
+	pm_boxhull.planes = pm_boxplanes;
+	pm_boxhull.firstclipnode = 0;
+	pm_boxhull.lastclipnode = 5;
+
+	for( i = 0; i < 6; i++ )
+	{
+		pm_boxclipnodes[i].planenum = i;
+		
+		side = i & 1;
+		
+		pm_boxclipnodes[i].children[side] = CONTENTS_EMPTY;
+		if( i != 5 ) pm_boxclipnodes[i].children[side^1] = i + 1;
+		else pm_boxclipnodes[i].children[side^1] = CONTENTS_SOLID;
+		
+		pm_boxplanes[i].type = i>>1;
+		pm_boxplanes[i].normal[i>>1] = 1.0f;
+		pm_boxplanes[i].signbits = 0;
+	}
+	
+}
+
+/*
+===================
+PM_HullForBox
+
+To keep everything totally uniform, bounding boxes are turned into small
+BSP trees instead of being compared directly.
+===================
+*/
+hull_t *PM_HullForBox( const vec3_t mins, const vec3_t maxs )
+{
+	pm_boxplanes[0].dist = maxs[0];
+	pm_boxplanes[1].dist = mins[0];
+	pm_boxplanes[2].dist = maxs[1];
+	pm_boxplanes[3].dist = mins[1];
+	pm_boxplanes[4].dist = maxs[2];
+	pm_boxplanes[5].dist = mins[2];
+
+	return &pm_boxhull;
+}
+
+/*
+==================
+PM_HullPointContents
+
+==================
+*/
+int PM_HullPointContents( hull_t *hull, int num, const vec3_t p )
+{
+	float		d;
+	dclipnode_t	*node;
+	mplane_t		*plane;
+
+	while( num >= 0 )
+	{
+		if( num < hull->firstclipnode || num > hull->lastclipnode )
+			Host_Error( "PM_HullPointContents: bad node number\n" );
+	
+		node = hull->clipnodes + num;
+		plane = hull->planes + node->planenum;
+		
+		if( plane->type < 3 )
+			d = p[plane->type] - plane->dist;
+		else d = DotProduct( plane->normal, p ) - plane->dist;
+
+		if( d < 0 ) num = node->children[1];
+		else num = node->children[0];
+	}
+	return num;
+}
+
+/*
+================
+PM_HullForEntity
+
+Returns a hull that can be used for testing or clipping an object of mins/maxs size.
+Offset is filled in to contain the adjustment that must be added to the
+testing object's origin to get a point to use with the returned hull.
+================
+*/
+hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset )
+{
+	hull_t	*hull;
+	vec3_t	hullmins, hullmaxs;
+
+	// decide which clipping hull to use, based on the size
+	if( pe->movetype == MOVETYPE_PUSH )
+	{
+		vec3_t	size;
+
+		if( !pe->model || pe->model->type != mod_brush && pe->model->type != mod_world )
+			Host_Error( "Entity %i has MOVETYPE_PUSH with a non bsp model\n", pe->info );
+
+		VectorSubtract( maxs, mins, size );
+
+		if( size[0] < 3 )
+		{
+			// point hull
+			hull = &pe->model->hulls[0];
+		}
+		else if( size[0] <= 36 )
+		{
+			if( size[2] <= 36 )
+			{
+				// head hull (ducked)
+				hull = &pe->model->hulls[3];
+			}
+			else
+			{
+				// human hull
+				hull = &pe->model->hulls[1];
+			}
+		}
+		else
+		{
+			// large hull
+			hull = &pe->model->hulls[2];
+		}
+
+		// calculate an offset value to center the origin
+		VectorSubtract( hull->clip_mins, mins, offset );
+		VectorAdd( offset, pe->origin, offset );
+	}
+	else
+	{
+		// studiomodel or pushable
+		// create a temp hull from bounding box sizes
+		VectorSubtract( pe->mins, maxs, hullmins );
+		VectorSubtract( pe->maxs, mins, hullmaxs );
+		hull = PM_HullForBox( hullmins, hullmaxs );
+		VectorCopy( pe->origin, offset );
+	}
+	return hull;
+}
+
+/*
+==================
+PM_HullForBsp
+
+assume physent is valid
+==================
+*/
+hull_t *PM_HullForBsp( physent_t *pe, const vec3_t mins, const vec3_t maxs, float *offset )
+{
+	hull_t		*hull;
+	model_t		*model;
+	vec3_t		size;
+
+	// decide which clipping hull to use, based on the size
+	model = pe->model;
+
+	if( !model || ( model->type != mod_brush && model->type != mod_world ))
+		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", pe->info, model->type );
+
+	VectorSubtract( maxs, mins, size );
+
+	if( size[0] < 3 )
+	{
+		// point hull
+		hull = &model->hulls[0];
+	}
+	else if( size[0] <= 36 )
+	{
+		if( size[2] <= 36 )
+		{
+			// head hull (ducked)
+			hull = &model->hulls[3];
+		}
+		else
+		{
+			// human hull
+			hull = &model->hulls[1];
+		}
+	}
+	else
+	{
+		// large hull
+		hull = &model->hulls[2];
+	}
+
+	// calculate an offset value to center the origin
+	VectorSubtract( hull->clip_mins, mins, offset );
+	VectorAdd( offset, pe->origin, offset );
+
+	return hull;
+}
+
+/*
+==================
+PM_RecursiveHullCheck
+==================
+*/
+bool PM_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace )
+{
+	dclipnode_t	*node;
+	mplane_t		*plane;
+	float		t1, t2;
+	float		frac, midf;
+	int		side;
+	vec3_t		mid;
+loc0:
+	// check for empty
+	if( num < 0 )
+	{
+		if( num != CONTENTS_SOLID )
+		{
+			trace->allsolid = false;
+			if( num == CONTENTS_EMPTY )
+				trace->inopen = true;
+			else trace->inwater = true;
+		}
+		else trace->startsolid = true;
+		return true; // empty
+	}
+
+	if( num < hull->firstclipnode || num > hull->lastclipnode )
+		Host_Error( "PM_RecursiveHullCheck: bad node number\n" );
+		
+	// find the point distances
+	node = hull->clipnodes + num;
+	plane = hull->planes + node->planenum;
+
+	if( plane->type < 3 )
+	{
+		t1 = p1[plane->type] - plane->dist;
+		t2 = p2[plane->type] - plane->dist;
+	}
+	else
+	{
+		t1 = DotProduct( plane->normal, p1 ) - plane->dist;
+		t2 = DotProduct( plane->normal, p2 ) - plane->dist;
+	}
+
+	if( t1 >= 0 && t2 >= 0 )
+	{
+		num = node->children[0];
+		goto loc0;
+	}
+
+	if( t1 < 0 && t2 < 0 )
+	{
+		num = node->children[1];
+		goto loc0;
+	}
+
+	// put the crosspoint DIST_EPSILON pixels on the near side
+	side = (t1 < 0);
+
+	if( side ) frac = ( t1 + DIST_EPSILON ) / ( t1 - t2 );
+	else frac = ( t1 - DIST_EPSILON ) / ( t1 - t2 );
+
+	if( frac < 0 ) frac = 0;
+	if( frac > 1 ) frac = 1;
+		
+	midf = p1f + ( p2f - p1f ) * frac;
+	VectorLerp( p1, frac, p2, mid );
+
+	// move up to the node
+	if( !PM_RecursiveHullCheck( hull, node->children[side], p1f, midf, p1, mid, trace ))
+		return false;
+
+	// this recursion can not be optimized because mid would need to be duplicated on a stack
+	if( PM_HullPointContents( hull, node->children[side^1], mid ) != CONTENTS_SOLID )
+	{
+		// go past the node
+		return PM_RecursiveHullCheck( hull, node->children[side^1], midf, p2f, mid, p2, trace );
+	}	
+
+	// never got out of the solid area
+	if( trace->allsolid )
+		return false;
+		
+	// the other side of the node is solid, this is the impact point
+	if( !side )
+	{
+		VectorCopy( plane->normal, trace->plane.normal );
+		trace->plane.dist = plane->dist;
+	}
+	else
+	{
+		VectorNegate( plane->normal, trace->plane.normal );
+		trace->plane.dist = -plane->dist;
+	}
+
+	while( PM_HullPointContents( hull, hull->firstclipnode, mid ) == CONTENTS_SOLID )
+	{
+		// shouldn't really happen, but does occasionally
+		frac -= 0.1f;
+
+		if( frac < 0 )
+		{
+			trace->fraction = midf;
+			VectorCopy( mid, trace->endpos );
+			MsgDev( D_WARN, "trace backed up 0.0\n" );
+			return false;
+		}
+
+		midf = p1f + ( p2f - p1f ) * frac;
+		VectorLerp( p1, frac, p2, mid );
+	}
+
+	trace->fraction = midf;
+	VectorCopy( mid, trace->endpos );
+
+	return false;
+}
+
+/*
+==================
+PM_TraceModel
+
+Handles selection or creation of a clipping hull, and offseting
+(and eventually rotation) of the end points
+==================
+*/
+static bool PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr ) 
+{
+	vec3_t	offset, temp;
+	vec3_t	start_l, end_l;
+	matrix4x4	matrix;
+	hull_t	*hull;
+
+	// assume we didn't hit anything
+	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
+	VectorCopy( end, ptr->endpos );
+	ptr->fraction = 1.0f;
+	ptr->allsolid = true;
+	ptr->hitgroup = -1;
+	ptr->ent = -1;
+
+	// get the clipping hull
+	hull = PM_HullForEntity( pe, mins, maxs, offset );
+
+	ASSERT( hull != NULL );
+
+	VectorSubtract( start, offset, start_l );
+	VectorSubtract( end, offset, end_l );
+
+	// rotate start and end into the models frame of reference
+	if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
+	{
+		matrix4x4	imatrix;
+
+		Matrix4x4_CreateFromEntity( matrix, pe->origin[0], pe->origin[1], pe->origin[2], pe->angles[PITCH], pe->angles[YAW], pe->angles[ROLL], 1.0f );
+		Matrix4x4_Invert_Simple( imatrix, matrix );
+
+		Matrix4x4_VectorTransform( imatrix, start, start_l );
+		Matrix4x4_VectorTransform( imatrix, end, end_l );
+
+		// calc hull offsets (collide monster with rotating bmodel)
+		VectorCopy( start_l, temp );
+		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, start_l );
+
+		VectorCopy( end_l, temp );
+		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, end_l );
+	}
+
+	// do trace
+	PM_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, ptr );
+
+	// rotate endpos back to world frame of reference
+	if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
+	{
+		if( ptr->fraction != 1.0f )
+		{
+			vec3_t	temp;
+
+			// compute endpos
+			VectorCopy( ptr->plane.normal, temp );
+			VectorLerp( start, ptr->fraction, end, ptr->endpos );
+			Matrix4x4_TransformPositivePlane( matrix, temp, ptr->plane.dist, ptr->plane.normal, &ptr->plane.dist );
+		}
+	}
+	else
+	{
+		// special case for non-rotated bmodels
+		if( ptr->fraction != 1.0f )
+		{
+			// fix trace up by the offset when we hit bmodel
+			VectorAdd( ptr->endpos, offset, ptr->endpos );
+		}
+		ptr->plane.dist = DotProduct( ptr->endpos, ptr->plane.normal );
+	}
+
+	// did we clip the move?
+	if( ptr->fraction < 1.0f || ptr->startsolid )
+		return true;
+	return false;
+}
+
+bool PM_TraceModel( physent_t *pe, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, pmtrace_t *ptr, int flags )
+{
+	bool	hitEnt = false;
+
+	// assume we didn't hit anything
+	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
+	VectorCopy( end, ptr->endpos );
+	ptr->fraction = 1.0f;
+	ptr->allsolid = true;
+	ptr->hitgroup = -1;
+	ptr->ent = -1;
+
+	if( flags & PM_GLASS_IGNORE )
+	{
+		// we ignore brushes with rendermode != kRenderNormal
+		switch( pe->rendermode )
+		{
+		case kRenderTransAdd:
+		case kRenderTransAlpha:
+		case kRenderTransTexture:
+			// passed through glass
+			return hitEnt;
+		default: break;
+		}
+	}
+
+	if( pe->studiomodel )
+	{
+		if( flags & PM_STUDIO_IGNORE )
+			return hitEnt;
+		if( flags & PM_STUDIO_BOX )
+			hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+		else
+		{
+			// NOTE: only traceline can check hitboxes
+			if( !VectorIsNull( mins ) || !VectorIsNull( maxs ))
+				hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+			else hitEnt = PM_StudioTrace( pe, start, end, ptr );
+		}
+	}
+	else if( pe->model )
+	{
+		hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+	}
+	return hitEnt;
+}
+
+/*
+================
+PM_PlayerTrace
+================
+*/
+pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int flags, int usehull, int ignore_pe, pfnIgnore pmFilter )
+{
+	physent_t	*pe;
+	pmtrace_t	trace, total;
+	float	*mins = pmove->player_mins[usehull];
+	float	*maxs = pmove->player_maxs[usehull];
+	int	i;
+
+	// assume we didn't hit anything
+	Mem_Set( &total, 0, sizeof( pmtrace_t ));
+	VectorCopy( end, total.endpos );
+	total.fraction = 1.0f;
+	total.hitgroup = -1;
+	total.ent = -1;
+
+	for( i = 0; i < pmove->numphysent; i++ )
+	{
+		// run simple trace filter
+		if( i == ignore_pe ) continue;
+
+		pe = &pmove->physents[i];
+
+		// run custom user filter
+		if( pmFilter && pmFilter( pe ))
+			continue;
+
+		if( PM_TraceModel( pe, start, mins, maxs, end, &trace, flags ))
+		{
+			// set entity
+			trace.ent = i;
+		}
+
+		if( trace.allsolid || trace.startsolid || trace.fraction < total.fraction )
+		{
+			trace.ent = i;
+		
+			if( total.startsolid )
+			{
+				total = trace;
+				total.startsolid = true;
+			}
+			else total = trace;
+		}
+		else if( trace.startsolid )
+			trace.startsolid = true;
+
+		if( i == 0 && ( flags & PM_WORLD_ONLY ))
+			break; // done
+
+	}
+	return total;
+}
+
+/*
+================
+PM_TestPlayerPosition
+
+Returns false if the given player position is not valid (in solid)
+================
+*/
+int PM_TestPlayerPosition( playermove_t *pmove, const vec3_t pos )
+{
+	physent_t	*pe;
+	float	*mins = pmove->player_mins[pmove->usehull];
+	float	*maxs = pmove->player_maxs[pmove->usehull];
+	hull_t	*hull;
+	vec3_t	test;
+	int	i;
+
+	for( i = 0; i < pmove->numphysent; i++ )
+	{
+		pe = &pmove->physents[i];
+
+		// get the clipping hull
+		hull = PM_HullForEntity( pe, mins, maxs, test );
+		VectorSubtract( pos, test, test );
+
+		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_SOLID )
+			return i;	// stuck
+	}
+
+	// we are okay
+	return -1;
+}

@@ -42,6 +42,8 @@ extern void HUD_Init( void );
 extern int HUD_Redraw( float flTime, int state );
 extern void HUD_TxferLocalOverrides( entity_state_t *state, const clientdata_t *client );
 extern int HUD_UpdateClientData( client_data_t *pcldata, float flTime );
+extern void HUD_ProcessPlayerState( entity_state_t *dst, const entity_state_t *src );
+extern int HUD_GetHullBounds( int hullnumber, float *mins, float *maxs );
 extern void HUD_UpdateOnRemove( cl_entity_t *pEdict );
 extern void HUD_Reset( void );
 extern void HUD_StartFrame( void );
@@ -202,11 +204,6 @@ extern float READ_COORD( void );
 extern float READ_ANGLE( void );
 extern Vector READ_DIR( void );
 extern void END_READ( void );
-
-// engine traces
-extern void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, cl_entity_t *pentIgnore, TraceResult *ptr);
-extern void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, IGNORE_GLASS ignoreGlass, cl_entity_t *pentIgnore, TraceResult *ptr);
-extern void UTIL_TraceHull( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, cl_entity_t *pentIgnore, TraceResult *ptr);
 
 // misc utilities
 extern float UTIL_Probe( const Vector &origin, Vector *vecDirection, float strength );

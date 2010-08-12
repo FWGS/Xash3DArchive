@@ -854,12 +854,9 @@ void CBasePlayerWeapon::SendWeaponAnim( int iAnim, int skiplocal )
 
 	m_pPlayer->pev->weaponanim = iAnim;
 
-	float framerate = 1.0f;	// play speed 1.x
-
 	MESSAGE_BEGIN( MSG_ONE, SVC_WEAPONANIM, NULL, m_pPlayer->pev );
 		WRITE_BYTE( iAnim );			// sequence number
 		WRITE_BYTE( pev->body );			// weaponmodel bodygroup.
-		WRITE_BYTE( framerate * 16 );
 	MESSAGE_END();
 }
 

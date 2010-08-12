@@ -110,7 +110,7 @@ static vec3_t trace_absmins, trace_absmaxs;
 static float trace_fraction;
 
 static vec3_t trace_impact;
-static cplane_t trace_plane;
+static mplane_t trace_plane;
 static msurface_t *trace_surface;
 static int trace_hitbox;
 
@@ -282,7 +282,7 @@ static int R_RecursiveHullCheck( mnode_t *node, const vec3_t start, const vec3_t
 	float frac;
 	vec3_t mid;
 	const vec_t *p1 = start, *p2 = end;
-	cplane_t *plane;
+	mplane_t *plane;
 
 loc0:
 	plane = node->plane;

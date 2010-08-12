@@ -5,6 +5,7 @@
 
 #include "sound.h"
 #include "const.h"
+#include "ref_params.h"
 
 #define SND_CLIP_DISTANCE		1000.0f
 

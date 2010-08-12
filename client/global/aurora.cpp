@@ -8,6 +8,7 @@
 #include "triangle_api.h"
 #include "hud.h"
 #include "aurora.h"
+#include "pm_defs.h"
 
 extern ref_params_t		*gpViewParams;
 
@@ -873,16 +874,15 @@ bool ParticleSystem::UpdateParticle( particle *part, float frametime )
 		if( part->pType->m_bBouncing )
 		{
 			Vector vecTarget = part->origin + frametime * part->velocity;
-			TraceResult tr;
-			TRACE_LINE( part->origin, vecTarget, true, source, &tr );
+			pmtrace_t *tr = g_engfuncs.PM_TraceLine( part->origin, vecTarget, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
 
-			if( tr.flFraction < 1.0f )
+			if( tr->fraction < 1.0f )
 			{
-				part->origin = tr.vecEndPos;
-				float bounceforce = DotProduct( tr.vecPlaneNormal, part->velocity );
+				part->origin = tr->endpos;
+				float bounceforce = DotProduct( tr->plane.normal, part->velocity );
 				float newspeed = (1.0f - part->pType->m_BounceFriction.GetInstance());
 				part->velocity = part->velocity * newspeed;
-				part->velocity = part->velocity + (-bounceforce * ( newspeed + part->pType->m_Bounce.GetInstance())) * tr.vecPlaneNormal;
+				part->velocity = part->velocity + (-bounceforce * ( newspeed + part->pType->m_Bounce.GetInstance())) * tr->plane.normal;
 			}
 		}
 	}

@@ -9,6 +9,8 @@
 #include "protocol.h"
 #include "net_encode.h"
 
+#define CONNECTION_PROBLEM_TIME	15.0 * 1000	// 15 seconds
+
 cvar_t	*rcon_client_password;
 cvar_t	*rcon_address;
 
@@ -156,6 +158,190 @@ void Cmd_ForwardToServer( void )
 	if( Cmd_Argc() > 1 )
 		BF_WriteString( &cls.netchan.message, va( "%s %s", cmd, Cmd_Args( )));
 	else BF_WriteString( &cls.netchan.message, cmd );
+}
+
+/*
+=======================================================================
+
+CLIENT MOVEMENT COMMUNICATION
+
+=======================================================================
+*/
+/*
+=================
+CL_CreateCmd
+=================
+*/
+usercmd_t CL_CreateCmd( void )
+{
+	usercmd_t		cmd;
+	static double	extramsec = 0;
+	client_data_t	cdata;
+	int		ms;
+
+	// catch windowState for client.dll
+	switch( host.state )
+	{
+	case HOST_INIT:
+	case HOST_FRAME:
+	case HOST_SHUTDOWN:
+	case HOST_ERROR:
+		clgame.globals->windowState = true;	// active
+		break;
+	case HOST_SLEEP:
+	case HOST_NOFOCUS:
+	case HOST_RESTART:
+		clgame.globals->windowState = false;	// inactive
+		break;
+	}
+
+	// send milliseconds of time to apply the move
+	extramsec += cls.frametime * 1000;
+	ms = extramsec;
+	extramsec -= ms;		// fractional part is left for next frame
+	if( ms > 250 ) ms = 100;	// time was unreasonable
+
+	Mem_Set( &cmd, 0, sizeof( cmd ));
+
+	// allways dump the first ten messages,
+	// because it may contain leftover inputs
+	// from the last level
+	if( ++cl.movemessages <= 10 )
+		return cmd;
+
+	VectorCopy( cl.frame.cd.origin, cdata.origin );
+	VectorCopy( cl.refdef.cl_viewangles, cdata.viewangles );
+	cdata.iWeaponBits = cl.frame.cd.weapons;
+	cdata.fov = cl.frame.cd.fov;
+
+	clgame.dllFuncs.pfnUpdateClientData( &cdata, cl_time( ));
+
+	clgame.dllFuncs.pfnCreateMove( &cmd, host.inputmsec, ( cls.state == ca_active && !cl.refdef.paused ));
+
+	// random seed for predictable random values
+	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
+
+	// never let client.dll calc frametime for player
+	// because is potential backdoor for cheating
+	cmd.msec = ms;
+
+	return cmd;
+}
+
+/*
+===================
+CL_WritePacket
+
+Create and send the command packet to the server
+Including both the reliable commands and the usercmds
+
+During normal gameplay, a client packet will contain something like:
+
+1 clc_move
+<usercmd[-2]>
+<usercmd[-1]>
+<usercmd[-0]>
+===================
+*/
+void CL_WritePacket( void )
+{
+	sizebuf_t	buf;
+	bool	noDelta = false;
+	byte	data[MAX_MSGLEN];
+	usercmd_t	*cmd, *oldcmd;
+	usercmd_t	nullcmd;
+	int	key, size;
+
+	// don't send anything if playing back a demo
+	if( cls.demoplayback || cls.state == ca_cinematic )
+		return;
+
+	if( cls.state == ca_disconnected || cls.state == ca_connecting )
+		return;
+
+	if( cls.state == ca_connected )
+	{
+		// just update reliable
+		if( BF_GetNumBytesWritten( &cls.netchan.message ) || cls.realtime - cls.netchan.last_sent > 1000 )
+			Netchan_Transmit( &cls.netchan, 0, NULL );
+		return;
+	}
+
+	if( cl_nodelta->integer || !cl.frame.valid || cls.demowaiting )
+		noDelta = true;
+
+	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CMD_BACKUP )
+	{
+		if(( cls.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
+		{
+			MsgDev( D_WARN, "^1 Connection Problem^7\n" );
+			noDelta = true;	// request a fullupdate
+		}
+	}
+
+	// send a userinfo update if needed
+	if( userinfo->modified )
+	{
+		userinfo->modified = false;
+		BF_WriteByte( &cls.netchan.message, clc_userinfo );
+		BF_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
+	}
+
+	BF_Init( &buf, "ClientData", data, sizeof( data ));
+
+	// write new random_seed
+	BF_WriteByte( &buf, clc_random_seed );
+	BF_WriteUBitLong( &buf, cl.random_seed, 32 );	// full range
+
+	// begin a client move command
+	BF_WriteByte( &buf, clc_move );
+
+	// save the position for a checksum byte
+	key = BF_GetNumBytesWritten( &buf );
+	BF_WriteByte( &buf, 0 );
+
+	// let the server know what the last frame we
+	// got was, so the next message can be delta compressed
+	if( noDelta ) BF_WriteLong( &buf, -1 ); // no compression
+	else BF_WriteLong( &buf, cl.frame.serverframe );
+
+	// send this and the previous cmds in the message, so
+	// if the last packet was dropped, it can be recovered
+	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 2) & CMD_MASK];
+	Mem_Set( &nullcmd, 0, sizeof( nullcmd ));
+	MSG_WriteDeltaUsercmd( &buf, &nullcmd, cmd );
+	oldcmd = cmd;
+
+	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 1) & CMD_MASK];
+	MSG_WriteDeltaUsercmd( &buf, oldcmd, cmd );
+	oldcmd = cmd;
+
+	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 0) & CMD_MASK];
+	MSG_WriteDeltaUsercmd( &buf, oldcmd, cmd );
+
+	// calculate a checksum over the move commands
+	size = BF_GetNumBytesWritten( &buf ) - key - 1;
+	buf.pData[key] = CRC_Sequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
+
+	// deliver the message
+	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
+}
+
+/*
+=================
+CL_SendCmd
+
+Called every frame to builds and sends a command packet to the server.
+=================
+*/
+void CL_SendCmd( void )
+{
+	// we create commands even if a demo is playing,
+	cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CMD_MASK];
+	*cl.refdef.cmd = CL_CreateCmd();
+
+	// clc_move, userinfo etc
+	CL_WritePacket();
 }
 
 /*
@@ -972,18 +1158,7 @@ void CL_RequestNextDownload( void )
 
 		CM_BeginRegistration( cl.configstrings[CS_MODELS+1], true, &map_checksum );
 
-		if( com.atoi( cl.configstrings[CS_MAPCHECKSUM] ) == 0xBAD )
-		{
-			if( cl.refdef.demoplayback )
-				MsgDev( D_INFO, "Playing demo without physics collision\n" );
-			else MsgDev( D_WARN, "Server %s doesn't have physics\n", cls.servername );
-		}
-		else if( map_checksum == 0xBAD && !pe )
-		{
-			if( !cls.demoplayback )
-				MsgDev( D_WARN, "Local client doesn't have physics\n" );
-		}
-		else if( map_checksum != com.atoi( cl.configstrings[CS_MAPCHECKSUM] ))
+		if( map_checksum != com.atoi( cl.configstrings[CS_MAPCHECKSUM] ))
 		{
 			Host_Error( "Local map version differs from server: %i != '%s'\n", map_checksum, cl.configstrings[CS_MAPCHECKSUM] );
 			return;

@@ -191,7 +191,7 @@ Mod_PointInLeaf
 mleaf_t *Mod_PointInLeaf( const vec3_t p, ref_model_t *model )
 {
 	mnode_t		*node;
-	cplane_t		*plane;
+	mplane_t		*plane;
 	mbrushmodel_t	*bmodel;
 
 	if( !model || !( bmodel = ( mbrushmodel_t *)model->extradata ) || !bmodel->nodes )
@@ -1829,7 +1829,7 @@ Mod_LoadPlanes
 */
 static void Mod_LoadPlanes( const dlump_t *l )
 {
-	cplane_t	*out;
+	mplane_t	*out;
 	dplane_t	*in;
 	int	i, count;
 

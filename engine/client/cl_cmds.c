@@ -25,12 +25,14 @@ void CL_PlayVideo_f( void )
 		Msg( "movie <moviename>\n" );
 		return;
 	}
+
 	if( cls.state == ca_active )
 	{
 		// FIXME: get rid of this stupid alias
 		Cbuf_AddText( va( "killserver\n; wait\n; movie %s\n;", Cmd_Argv( 1 )));
 		return;
 	}
+
 	SCR_PlayCinematic( Cmd_Argv( 1 ));
 }
 

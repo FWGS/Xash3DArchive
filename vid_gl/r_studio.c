@@ -46,7 +46,7 @@ mstudiobodyparts_t	*m_pBodyPart;
 player_info_t	*m_pPlayerInfo;
 studiohdr_t	*m_pStudioHeader;
 studiohdr_t	*m_pTextureHeader;
-cplane_t		studio_planes[12];
+mplane_t		studio_planes[12];
 trace_t		studio_trace;
 vec3_t		studio_mins, studio_maxs;
 float		studio_radius;
@@ -235,7 +235,7 @@ static void R_StudioSetupRender( ref_entity_t *e, ref_model_t *mod )
 void R_StudioInitBoxHull( void )
 {
 	int	i, side;
-	cplane_t	*p;
+	mplane_t	*p;
 
 	for( i = 0; i < 6; i++ )
 	{
@@ -277,7 +277,7 @@ void R_StudioBoxHullFromBounds( const vec3_t mins, const vec3_t maxs )
 bool R_StudioTraceBox( vec3_t start, vec3_t end ) 
 {
 	int	i;
-	cplane_t	*plane, *clipplane;
+	mplane_t	*plane, *clipplane;
 	float	enterFrac, leaveFrac;
 	bool	getout, startout;
 	float	d1, d2;

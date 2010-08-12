@@ -1101,7 +1101,7 @@ static bool R_VertexTCBase( const ref_stage_t *pass, int unit, matrix4x4 matrix 
 	case TCGEN_FOG:
 		{
 			int		fogPtype;
-			cplane_t		*fogPlane;
+			mplane_t		*fogPlane;
 			ref_shader_t	*fogShader;
 			vec3_t		viewtofog;
 			float		fogNormal[3], vpnNormal[3];
@@ -1872,7 +1872,7 @@ void R_ModifyColor( const ref_stage_t *pass )
 	if( r_colorFog )
 	{
 		float dist, vdist;
-		cplane_t *fogPlane;
+		mplane_t *fogPlane;
 		vec3_t viewtofog;
 		float fogNormal[3], vpnNormal[3];
 		float fogDist, vpnDist, fogShaderDistScale;

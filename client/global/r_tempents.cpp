@@ -11,6 +11,7 @@
 #include "pm_movevars.h"
 #include "r_particle.h"
 #include "r_tempents.h"
+#include "pm_defs.h"
 #include "ev_hldm.h"
 #include "r_beams.h"
 #include "hud.h"
@@ -40,7 +41,7 @@ CTempEnts::~CTempEnts( void )
 	Clear();
 }
 
-void CTempEnts::TE_Prepare( TEMPENTITY *pTemp, model_t modelIndex )
+void CTempEnts::TE_Prepare( TEMPENTITY *pTemp, int modelIndex )
 {
 	int	frameCount;
 
@@ -123,6 +124,18 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	gravity = -frametime * gpMovevars->gravity;
 	gravitySlow = gravity * 0.5;
 
+	// in order to have tents collide with players, we have to run the player prediction code so
+	// that the client has the player list. We run this code once when we detect any COLLIDEALL 
+	// tent, then set this BOOL to true so the code doesn't get run again if there's more than
+	// one COLLIDEALL ent for this update. (often are).
+	g_engfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+
+	// Store off the old count
+	g_engfuncs.pEventAPI->EV_PushPMStates();
+
+	// Now add in all of the players.
+	g_engfuncs.pEventAPI->EV_SetSolidPlayers ( -1 );	
+
 	// save oldorigin
 	pTemp->entity.prevstate.origin = pTemp->entity.origin;
 
@@ -197,6 +210,9 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 			{
 				// this animating sprite isn't set to loop, so destroy it.
 				pTemp->die = 0.0f;
+
+				// restore state info
+				g_engfuncs.pEventAPI->EV_PopPMStates();
 				return false;
 			}
 		}
@@ -231,28 +247,37 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 
 		if( pTemp->flags & FTENT_COLLIDEALL )
 		{
-			TraceResult	tr;		
-			TRACE_LINE( pTemp->entity.prevstate.origin, pTemp->entity.origin, false, NULL, &tr );
+			pmtrace_t pmtrace;
+			physent_t *pe;
 
-			// Make sure it didn't bump into itself... (?!?)
-			if(( tr.flFraction != 1.0f ) && ( tr.pEnt == GetEntityByIndex( 0 ) || tr.pEnt != GetEntityByIndex( pTemp->clientIndex ))) 
+			g_engfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			g_engfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX, -1, &pmtrace );
+
+			if ( pmtrace.fraction != 1 )
 			{
-				traceFraction = tr.flFraction;
-				traceNormal = tr.vecPlaneNormal;
+				pe = g_engfuncs.pEventAPI->EV_GetPhysent( pmtrace.ent );
 
-				if( pTemp->hitcallback )
-					(*pTemp->hitcallback)( pTemp, &tr );
+				if( !pmtrace.ent || ( pe->info != pTemp->clientIndex ))
+				{
+					traceFraction = pmtrace.fraction;
+					traceNormal = pmtrace.plane.normal;
+
+					if ( pTemp->hitcallback )
+						(*pTemp->hitcallback)( pTemp, &pmtrace );
+				}
 			}
 		}
 		else if( pTemp->flags & FTENT_COLLIDEWORLD )
 		{
-			TraceResult	tr;
-			TRACE_LINE( pTemp->entity.prevstate.origin, pTemp->entity.origin, true, NULL, &tr );
+			pmtrace_t pmtrace;
+					
+			g_engfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			g_engfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX|PM_WORLD_ONLY, -1, &pmtrace );
 
-			if( tr.flFraction != 1.0f )
+			if( pmtrace.fraction != 1.0f )
 			{
-				traceFraction = tr.flFraction;
-				traceNormal = tr.vecPlaneNormal;
+				traceFraction = pmtrace.fraction;
+				traceNormal = pmtrace.plane.normal;
 
 				if ( pTemp->flags & FTENT_SPARKSHOWER )
 				{
@@ -264,7 +289,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 				}
 
 				if( pTemp->hitcallback )
-					(*pTemp->hitcallback)( pTemp, &tr );
+					(*pTemp->hitcallback)( pTemp, &pmtrace );
 			}
 		}
 		
@@ -377,6 +402,10 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 			}
 		}
 	}
+
+	// restore state info
+	g_engfuncs.pEventAPI->EV_PopPMStates();
+
 	return true;
 }
 
@@ -519,9 +548,9 @@ bool CTempEnts::FreeLowPriorityTempEnt( void )
 //			*model - 
 // Output : C_LocalTempEntity
 //-----------------------------------------------------------------------------
-TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, model_t model )
+TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, int modelIndex )
 {
-	TEMPENTITY	*pTemp;
+	TEMPENTITY *pTemp;
 
 	if ( !m_pFreeTempEnts )
 	{
@@ -532,7 +561,7 @@ TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, model_t model )
 	pTemp = m_pFreeTempEnts;
 	m_pFreeTempEnts = pTemp->next;
 
-	TE_Prepare( pTemp, model );
+	TE_Prepare( pTemp, modelIndex );
 
 	pTemp->priority = TENTPRIORITY_LOW;
 	if( org ) pTemp->entity.origin = org;
@@ -550,7 +579,7 @@ TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, model_t model )
 //			*model - 
 // Output : C_LocalTempEntity
 //-----------------------------------------------------------------------------
-TEMPENTITY *CTempEnts::TempEntAllocHigh( const Vector& org, model_t model )
+TEMPENTITY *CTempEnts::TempEntAllocHigh( const Vector& org, int modelIndex )
 {
 	TEMPENTITY	*pTemp;
 
@@ -576,7 +605,7 @@ TEMPENTITY *CTempEnts::TempEntAllocHigh( const Vector& org, model_t model )
 	pTemp->next = m_pActiveTempEnts;
 	m_pActiveTempEnts = pTemp;
 
-	TE_Prepare( pTemp, model );
+	TE_Prepare( pTemp, modelIndex );
 
 	pTemp->priority = TENTPRIORITY_HIGH;
 	if( org ) pTemp->entity.origin = org;
@@ -887,7 +916,7 @@ void CTempEnts::KillAttachedTents( int client )
 //			duration - 
 //			scale - 
 //-----------------------------------------------------------------------------
-void CTempEnts::RicochetSprite( const Vector &pos, model_t modelIndex, float scale )
+void CTempEnts::RicochetSprite( const Vector &pos, int modelIndex, float scale )
 {
 	TEMPENTITY	*pTemp;
 
@@ -1008,7 +1037,7 @@ void CTempEnts::PlaySound( TEMPENTITY *pTemp, float damp )
 void CTempEnts::RocketFlare( const Vector& pos )
 {
 	TEMPENTITY	*pTemp;
-	model_t		modelIndex;
+	int		modelIndex;
 	int		nframeCount;
 
 	modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/animglow01.spr" );

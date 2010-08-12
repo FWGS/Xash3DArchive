@@ -5,9 +5,6 @@
 #ifndef VSOUND_API_H
 #define VSOUND_API_H
 
-#include "ref_params.h"
-#include "trace_def.h"
-
 typedef int	sound_t;
 
 /*
@@ -42,7 +39,7 @@ typedef struct vsound_exp_s
 	void (*StopStreaming)( void );
 
 	void (*BeginFrame)( void );
-	void (*RenderFrame)( ref_params_t *fd );
+	void (*RenderFrame)( struct ref_params_s *fd );
 	void (*StopSound)( int entnum, int channel, const char *soundname );
 	void (*StopAllSounds)( void );
 
@@ -55,7 +52,6 @@ typedef struct vsound_imp_s
 	// interface validator
 	size_t	api_size;		// must matched with sizeof(vsound_imp_t)
 
-	trace_t (*TraceLine)( const vec3_t start, const vec3_t end );
 	void (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
 	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
 	struct cl_entity_s *(*GetClientEdict)( int index );

@@ -5,9 +5,6 @@
 #ifndef CLGAME_API_H
 #define CLGAME_API_H
 
-#include "trace_def.h"
-#include "pm_shared.h"
-
 typedef int		HSPRITE;					// handle to a graphic
 typedef struct tempent_s	TEMPENTITY;
 typedef struct dlight_s	dlight_t;
@@ -16,7 +13,7 @@ typedef struct skyportal_s	skyportal_t;
 typedef struct ref_params_s	ref_params_t;
 typedef struct mstudioevent_s	mstudioevent_t;
 typedef void (*ENTCALLBACK)( TEMPENTITY *ent );
-typedef void (*HITCALLBACK)( TEMPENTITY *ent, TraceResult *ptr );
+typedef void (*HITCALLBACK)( TEMPENTITY *ent, struct pmtrace_s *ptr );
 typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );	// user message handle
 
 #include "wrect.h"
@@ -34,6 +31,7 @@ typedef struct
 	byte		charWidths[256];
 } SCREENINFO;
 
+// hud_player_info_t formed from player_info_t
 typedef struct
 {
 	char		*name;
@@ -46,6 +44,34 @@ typedef struct
 	short		topcolor;
 	short		bottomcolor;
 } hud_player_info_t;
+
+#define MAX_INFO_STRING		512
+#define MAX_SCOREBOARDNAME		32
+
+typedef struct player_info_s
+{
+	int		userid;			// User id on server
+	char		userinfo[MAX_INFO_STRING];	// User info string
+	char		name[MAX_SCOREBOARDNAME];	// Name (extracted from userinfo)
+	int		spectator;		// Spectator or not, unused
+
+	int		ping;
+	int		packet_loss;
+
+	// skin information
+	char		model[64];
+	int		topcolor;
+	int		bottomcolor;
+
+	// last frame rendered
+	int		renderframe;	
+
+	// Gait frame estimation
+	int		gaitsequence;
+	float		gaitframe;
+	float		gaityaw;
+	vec3_t		prevgaitorigin;
+} player_info_t;
 
 typedef struct client_textmessage_s
 {
@@ -99,11 +125,6 @@ typedef struct cl_globalvars_s
 	const char	*pStringBase;	// actual only when sys_sharedstrings is 1
 
 	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
-
-	// Xash3D specific
-	float		viewheight[PM_MAXHULLS]; // values from gameinfo.txt
-	vec3_t		hullmins[PM_MAXHULLS];
-	vec3_t		hullmaxs[PM_MAXHULLS];
 } cl_globalvars_t;
 
 typedef struct cl_enginefuncs_s
@@ -191,14 +212,15 @@ typedef struct cl_enginefuncs_s
 
 	int	(*pfnPointContents)( const float *rgflPos, int *truecontents );
 	struct cl_entity_s *(*pfnWaterEntity)( const float *rgflPos );
-	void	(*pfnTraceLine)( const float *v1, const float *v2, int fNoMonsters, struct cl_entity_s *pentToSkip, TraceResult *ptr );
-	void	(*pfnTraceHull)( const float *v1, const float *v2, int fNoMonsters, int hullNumber, struct cl_entity_s *pentToSkip, TraceResult *ptr );
-	void	(*pfnTraceModel)( const float *v1, const float *v2, struct cl_entity_s *pent, TraceResult *ptr );	// was GetSpritePointer
-	const char *(*pfnTraceTexture)( struct cl_entity_s *pTextureEntity, const float *v1, const float *v2 ); // was pfnPlaySoundByNameAtLocation
+	struct pmtrace_s *(*PM_TraceLine)( const float *start, const float *end, int flags, int usehull, int ignore_pe );
 
+	modtype_t	(*pfnGetModelType)( int modelIndex );
+	void	(*pfnGetModBounds)( int modelIndex, float *mins, float *maxs );
+	int	(*pfnGetModFrames)( int modelIndex );
+	
 	word	(*pfnPrecacheEvent)( int type, const char* psz );
 	void	(*pfnPlaybackEvent)( int flags, const struct cl_entity_s *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
-	void	(*pfnWeaponAnim)( int iAnim, int body, float framerate );
+	void	(*pfnWeaponAnim)( int iAnim, int body );
 	float	(*pfnRandomFloat)( float flLow, float flHigh );	
 	long	(*pfnRandomLong)( long lLow, long lHigh );
 	void	(*pfnHookEvent)( const char *name, void ( *pfnEvent )( struct event_args_s *args ));
@@ -236,7 +258,9 @@ typedef struct
 	void	(*pfnInit)( void );
 	int	(*pfnRedraw)( float flTime, int state );
 	int	(*pfnUpdateClientData)( struct client_data_s *pcldata, float flTime );
+	int	(*pfnGetHullBounds)( int hullnumber, float *mins, float *maxs );
 	void	(*pfnTxferLocalOverrides)( struct entity_state_s *state, const struct clientdata_s *client );
+	void	(*pfnProcessPlayerState)( struct entity_state_s *dst, const struct entity_state_s *src );
 	void	(*pfnUpdateOnRemove)( struct cl_entity_s *pEdict );
 	void	(*pfnReset)( void );
 	void	(*pfnStartFrame)( void );
@@ -248,8 +272,8 @@ typedef struct
 	void	(*pfnStudioEvent)( const mstudioevent_t *event, struct cl_entity_s *entity );
 	void	(*pfnStudioFxTransform)( struct cl_entity_s *pEdict, float transform[4][4] );
 	void	(*pfnCalcRefdef)( ref_params_t *parms );
-	void	(*pfnPM_Move)( playermove_t *ppmove, int server );
-	void	(*pfnPM_Init)( playermove_t *ppmove );
+	void	(*pfnPM_Move)( struct playermove_s *ppmove, int server );
+	void	(*pfnPM_Init)( struct playermove_s *ppmove );
 	char	(*pfnPM_FindTextureType)( const char *name );
 	void	(*pfnCmdStart)( const struct cl_entity_s *player, int runfuncs );
 	void	(*pfnCmdEnd)( const struct cl_entity_s *player, const usercmd_t *cmd, unsigned int random_seed );

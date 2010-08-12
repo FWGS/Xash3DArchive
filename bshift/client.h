@@ -49,4 +49,6 @@ extern void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playe
 extern void	CmdStart( const edict_t *player, const struct usercmd_s *cmd, unsigned int random_seed );
 extern void	CmdEnd ( const edict_t *player );
 
+extern int GetHullBounds( int hullnumber, float *mins, float *maxs );
+
 #endif		// CLIENT_H

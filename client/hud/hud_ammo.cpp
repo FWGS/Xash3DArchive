@@ -22,6 +22,7 @@
 #include "utils.h"
 #include "hud.h"
 #include "hud_ammohistory.h"
+#include "pm_shared.h"
 
 WEAPON *gpActiveSel;	// NULL means off, 1 means just the menu bar, otherwise
 WEAPON *gpLastSel;		// Last weapon menu selection 

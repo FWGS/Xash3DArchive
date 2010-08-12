@@ -215,8 +215,8 @@ check brush boxes in fat pvs
 */
 static bool SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
-//	if( pe && !pe->BoxVisible( absmin, absmax, CM_FatPVS( org, false )))
-	if( pe && !pe->BoxVisible( absmin, absmax, CM_LeafPVS( CM_PointLeafnum( org ))))
+//	if( !CM_BoxVisible( absmin, absmax, CM_FatPVS( org, false )))
+	if( !CM_BoxVisible( absmin, absmax, CM_LeafPVS( CM_PointLeafnum( org ))))
 		return false;
 	return true;
 }
@@ -473,7 +473,6 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	ent->v.pContainingEntity = ent; // re-link
 
 	VectorSet( ent->v.rendercolor, 255, 255, 255 ); // assume default color
-	ent->v.scale = 1.0f; // set default scale
 	
 	// allocate edict private memory (passed by dlls)
 	SpawnEdict = (LINK_ENTITY_FUNC)FS_GetProcAddress( svgame.hInstance, pszClassName );
@@ -2508,7 +2507,7 @@ static void pfnGetAttachment( const edict_t *pEdict, int iAttachment, float *rgf
 		MsgDev( D_WARN, "SV_GetAttachment: invalid entity %s\n", SV_ClassName( pEdict ));
 		return;
 	}
-	CM_GetAttachment(( edict_t *)pEdict, iAttachment, rgflOrigin, rgflAngles );
+	CM_StudioGetAttachment(( edict_t *)pEdict, iAttachment, rgflOrigin, rgflAngles );
 }
 
 /*
@@ -2975,8 +2974,8 @@ pfnPlaybackEvent
 
 =============
 */
-static void pfnPlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay,
-	float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
+void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
+	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
 {
 	sv_client_t	*cl;
 	event_state_t	*es;
@@ -3231,9 +3230,9 @@ int pfnCheckVisibility( const edict_t *entity, byte *pset )
 	}
 
 	// run additional check for BoxVisible
-	if( pe && CM_GetModelType( entity->v.modelindex ) == mod_brush )
+	if( CM_GetModelType( entity->v.modelindex ) == mod_brush )
 	{
-		if( !pe->BoxVisible( entity->v.absmin, entity->v.absmax, pset ))
+		if( !CM_BoxVisible( entity->v.absmin, entity->v.absmax, pset ))
 			return 0;
 	}
 
@@ -3533,7 +3532,7 @@ static enginefuncs_t gEngfuncs =
 	pfnSetPhysicsKeyValue,
 	pfnGetPhysicsInfoString,
 	pfnPrecacheEvent,
-	pfnPlaybackEvent,
+	SV_PlaybackEventFull,
 	pfnSetFatPVS,
 	pfnSetFatPAS,
 	pfnCheckVisibility,
@@ -3768,7 +3767,6 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 
 	// spawn the rest of the entities on the map
 	SV_LoadFromFile( entities );
-	if( !pe ) Com_CloseScript( entities );
 
 	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.globals->numEntities );
 }
@@ -3778,8 +3776,6 @@ void SV_UnloadProgs( void )
 	SV_DeactivateServer ();
 
 	Delta_Shutdown ();
-
-	svgame.dllFuncs.pfnGameShutdown ();
 
 	if( sys_sharedstrings->integer )
 		Mem_FreePool( &svgame.stringspool );

@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "cm_local.h"
+#include "entity_def.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 
@@ -35,10 +36,10 @@ Offset is filled in to contain the adjustment that must be added to the
 testing object's origin to get a point to use with the returned hull.
 ================
 */
-chull_t *CM_HullForEntity( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset )
+hull_t *CM_HullForEntity( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset )
 {
-	chull_t		*hull;
-	cmodel_t		*model;
+	hull_t		*hull;
+	model_t		*model;
 	vec3_t		size, hullmins, hullmaxs;
 
 	// decide which clipping hull to use, based on the size
@@ -101,10 +102,10 @@ CM_HullForBsp
 assume edict is valid
 ==================
 */
-chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset )
+hull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset )
 {
-	chull_t		*hull;
-	cmodel_t		*model;
+	hull_t		*hull;
+	model_t		*model;
 	vec3_t		size;
 
 	// decide which clipping hull to use, based on the size
@@ -151,10 +152,10 @@ chull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, floa
 CM_RecursiveHullCheck
 ==================
 */
-bool CM_RecursiveHullCheck( chull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace )
+bool CM_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace )
 {
-	clipnode_t	*node;
-	cplane_t		*plane;
+	dclipnode_t	*node;
+	mplane_t		*plane;
 	float		t1, t2;
 	float		frac, midf;
 	int		side;
@@ -268,19 +269,19 @@ loc0:
 
 /*
 ==================
-CM_ClipMoveToEntity
+CM_ClipMove
 
 Handles selection or creation of a clipping hull, and offseting (and
 eventually rotation) of the end points
 ==================
 */
-trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags )
+trace_t CM_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags )
 {
 	vec3_t	offset, temp;
 	vec3_t	start_l, end_l;
 	trace_t	trace;
 	matrix4x4	matrix;
-	chull_t	*hull;
+	hull_t	*hull;
 
 	// fill in a default trace
 	Mem_Set( &trace, 0, sizeof( trace_t ));
@@ -315,7 +316,7 @@ trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 #endif
 	}
 
-	if(!( flags & FMOVE_SIMPLEBOX ) && CM_ModelType( ent->v.modelindex ) == mod_studio )
+	if(!( flags & FMOVE_SIMPLEBOX ) && CM_GetModelType( ent->v.modelindex ) == mod_studio )
 	{
 		if( CM_StudioTrace( ent, start, end, &trace )); // continue tracing bbox if hitbox missing
 		else CM_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, &trace );
@@ -356,7 +357,7 @@ trace_t CM_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3
 	if( trace.flFraction < 1.0f || trace.fStartSolid )
 		trace.pHit = ent;
 
-	if(!( flags & FMOVE_SIMPLEBOX ) && CM_ModelType( ent->v.modelindex ) == mod_studio )
+	if(!( flags & FMOVE_SIMPLEBOX ) && CM_GetModelType( ent->v.modelindex ) == mod_studio )
 	{
 		if( VectorIsNull( mins ) && VectorIsNull( maxs ) && trace.iHitgroup == -1 )
 		{
@@ -378,17 +379,17 @@ find the face where the traceline hit
 const char *CM_TraceTexture( edict_t *pTextureEntity, const vec3_t v1, const vec3_t v2 )
 {
 	vec3_t		intersect, temp, vecStartPos;
-	csurface_t	**mark, *surf, *hitface = NULL;
+	msurface_t	**mark, *surf, *hitface = NULL;
 	float		d1, d2, min_diff = 9999.9f;
 	vec3_t		forward, right, up;
 	vec3_t		vecPos1, vecPos2;
-	cmodel_t		*bmodel;
-	cleaf_t		*endleaf;
-	cplane_t		*plane;
+	model_t		*bmodel;
+	mleaf_t		*endleaf;
+	mplane_t		*plane;
 	trace_t		trace;
 	int		i;
 
-	trace = CM_ClipMoveToEntity( pTextureEntity, v1, vec3_origin, vec3_origin, v2, FMOVE_SIMPLEBOX );
+	trace = CM_ClipMove( pTextureEntity, v1, vec3_origin, vec3_origin, v2, FMOVE_SIMPLEBOX );
 
 	if( !trace.pHit ) return NULL; // trace entity must be valid
 
@@ -425,10 +426,10 @@ const char *CM_TraceTexture( edict_t *pTextureEntity, const vec3_t v1, const vec
 	VectorMA( trace.vecEndPos, -5.0f, trace.vecPlaneNormal, vecPos2 );
 
 	endleaf = CM_PointInLeaf( trace.vecEndPos, bmodel->nodes + bmodel->hulls[0].firstclipnode );
-	mark = endleaf->firstMarkSurface;
+	mark = endleaf->firstmarksurface;
 
 	// find a plane with endpos on one side and hitpos on the other side...
-	for( i = 0; i < endleaf->numMarkSurfaces; i++ )
+	for( i = 0; i < endleaf->nummarksurfaces; i++ )
 	{
 		surf = *mark++;
 		plane = surf->plane;

@@ -13,7 +13,7 @@ BoxOnPlaneSide (engine fast version)
 Returns SIDE_FRONT, SIDE_BACK, or SIDE_ON
 ==============
 */
-int CM_BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const cplane_t *p )
+int CM_BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p )
 {
 	if( p->type < 3 ) return ((emaxs[p->type] >= p->dist) | ((emins[p->type] < p->dist) << 1));
 	switch( p->signbits )
@@ -36,14 +36,14 @@ CM_PointInLeaf
 
 ==================
 */
-cleaf_t *CM_PointInLeaf( const vec3_t p, cnode_t *node )
+mleaf_t *CM_PointInLeaf( const vec3_t p, mnode_t *node )
 {
-	cleaf_t	*leaf;
+	mleaf_t	*leaf;
 
 	// find which leaf the point is in
 	while( node->plane )
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p, node->plane->normal)) < node->plane->dist];
-	leaf = (cleaf_t *)node;
+	leaf = (mleaf_t *)node;
 
 	return leaf;
 }
@@ -63,9 +63,9 @@ LEAF LISTING
 
 ======================================================================
 */
-void CM_BoxLeafnums_r( leaflist_t *ll, cnode_t *node )
+void CM_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
 {
-	cplane_t	*plane;
+	mplane_t	*plane;
 	int	s;
 
 	while( 1 )
@@ -75,7 +75,7 @@ void CM_BoxLeafnums_r( leaflist_t *ll, cnode_t *node )
 
 		if( node->contents < 0 )
 		{
-			cleaf_t	*leaf = (cleaf_t *)node;
+			mleaf_t	*leaf = (mleaf_t *)node;
 
 			// it's a leaf!
 			if( ll->count >= ll->maxcount )
@@ -141,16 +141,16 @@ int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int lists
 CM_HeadnodeVisible_r
 =============
 */
-bool CM_HeadnodeVisible_r( cnode_t *node, byte *visbits )
+bool CM_HeadnodeVisible_r( mnode_t *node, byte *visbits )
 {
-	cleaf_t	*leaf;
+	mleaf_t	*leaf;
 	int	leafnum;
 
 	if( node->contents < 0 )
 	{
 		if( node->contents != CONTENTS_SOLID )
 		{
-			leaf = (cleaf_t *)node;
+			leaf = (mleaf_t *)node;
 			leafnum = (leaf - worldmodel->leafs - 1);
 
 			if( visbits[leafnum>>3] & (1<<( leafnum & 7 )))
@@ -174,12 +174,12 @@ is potentially visible
 */
 bool CM_HeadnodeVisible( int nodenum, byte *visbits )
 {
-	cnode_t	*node;
+	mnode_t	*node;
 
 	if( !worldmodel ) return false;
 	if( nodenum == -1 ) return false;
 
-	node = (cnode_t *)worldmodel->nodes + nodenum;
+	node = (mnode_t *)worldmodel->nodes + nodenum;
 
 	return CM_HeadnodeVisible_r( node, visbits );
 }
@@ -227,7 +227,7 @@ CM_HullPointContents
 
 ==================
 */
-int CM_HullPointContents( chull_t *hull, int num, const vec3_t p )
+int CM_HullPointContents( hull_t *hull, int num, const vec3_t p )
 {
 	while( num >= 0 )
 		num = hull->clipnodes[num].children[(hull->planes[hull->clipnodes[num].planenum].type < 3 ? p[hull->planes[hull->clipnodes[num].planenum].type] : DotProduct (hull->planes[hull->clipnodes[num].planenum].normal, p)) < hull->planes[hull->clipnodes[num].planenum].dist];
@@ -255,7 +255,7 @@ grab the ambient sound levels for current point
 */
 void CM_AmbientLevels( const vec3_t p, byte *pvolumes )
 {
-	cleaf_t	*leaf;
+	mleaf_t	*leaf;
 
 	if( !worldmodel || !p || !pvolumes )
 		return;	

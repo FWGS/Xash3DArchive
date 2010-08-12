@@ -82,7 +82,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 {
 	link_t	*l, *next;
 	edict_t	*touch;
-	chull_t	*hull;
+	hull_t	*hull;
 	vec3_t	test;
 
 	// touch linked edicts

@@ -318,9 +318,8 @@ int CHud :: MsgFunc_WeaponAnim( const char *pszName, int iSize, void *pbuf )
 
 	int iAnim = READ_BYTE();
 	int iBody = READ_BYTE();
-	float framerate = READ_BYTE() * 0.0625;
 
-	SendWeaponAnim( iAnim, iBody, framerate ); 
+	SendWeaponAnim( iAnim, iBody ); 
 
 	END_READ();
 	

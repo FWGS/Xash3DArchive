@@ -89,7 +89,7 @@ static DLL_FUNCTIONS gFunctionTable =
 	CmdEnd,			// pfnCmdEnd
 
 	OnFreeEntPrivateData,	// pfnOnFreeEntPrivateData
-	GameDLLShutdown,		// pfnGameShutdown
+	GetHullBounds,		// pfnGetHullBounds
 	ShouldCollide,		// pfnShouldCollide
 };
 

@@ -11,6 +11,7 @@
 #include "ref_params.h"
 #include "hud.h"
 #include "r_weather.h"
+#include "pm_defs.h"
 
 extern ref_params_t		*gpViewParams;
 
@@ -145,24 +146,24 @@ void ProcessRain( void )
 			vecEnd[1] = falltime * yDelta;
 			vecEnd[2] = -4096;
 
-			TraceResult tr;
-			UTIL_TraceLine( vecStart, vecStart + vecEnd, ignore_monsters, player, &tr );
+			pmtrace_t pmtrace;
+			g_engfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			g_engfuncs.pEventAPI->EV_PlayerTrace( vecStart, vecStart + vecEnd, PM_STUDIO_IGNORE, -1, &pmtrace );
 
-			if ( tr.fStartSolid || tr.fAllSolid )
+			if ( pmtrace.startsolid || pmtrace.allsolid )
 			{
-				if ( cl_debugrain->value > 1 )
-					debug_dropped++;
+				if ( cl_debugrain->value > 1 ) debug_dropped++;
 				continue; // drip cannot be placed
 			}
 			
 			// falling to water?
-			int contents = POINT_CONTENTS( tr.vecEndPos );
+			int contents = POINT_CONTENTS( pmtrace.endpos );
 
 			if ( contents == CONTENTS_WATER )
 			{
 				// NOTE: in Xash3D PM_WaterEntity always return a valid water volume or NULL
 				// so not needs to run additional checks here
-				cl_entity_t *pWater = g_engfuncs.pfnWaterEntity( tr.vecEndPos );
+				cl_entity_t *pWater = g_engfuncs.pfnWaterEntity( pmtrace.endpos );
 				if ( pWater )
 				{
 					deathHeight = pWater->curstate.maxs[2];
@@ -170,12 +171,12 @@ void ProcessRain( void )
 				else
 				{
 					// hit the world
-					deathHeight = tr.vecEndPos[2];
+					deathHeight = pmtrace.endpos[2];
 				}
 			}
 			else
 			{
-				deathHeight = tr.vecEndPos[2];
+				deathHeight = pmtrace.endpos[2];
 			}
 
 			// just in case..

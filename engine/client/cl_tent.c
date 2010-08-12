@@ -15,7 +15,7 @@ TEMPENTS MANAGEMENT
 
 ==============================================================
 */
-void CL_WeaponAnim( int iAnim, int body, float framerate )
+void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
 
@@ -34,7 +34,7 @@ void CL_WeaponAnim( int iAnim, int body, float framerate )
 	}
 
 	view->curstate.animtime = clgame.globals->time;	// start immediately
-	view->curstate.framerate = framerate;
+	view->curstate.framerate = 1.0f;
 	view->curstate.sequence = iAnim;
 	view->latched.prevframe = 0.0f;
 	view->curstate.scale = 1.0f;
@@ -46,9 +46,6 @@ int CL_AddEntity( cl_entity_t *pEnt, int ed_type, shader_t customShader )
 {
 	if( !re || !pEnt )
 		return false;
-
-	if( pEnt->curstate.scale == 0.0f )
-		return 0;
 
 	// let the render reject entity without model
 	return re->AddRefEntity( pEnt, ed_type, customShader );
@@ -67,9 +64,9 @@ typedef struct
 	int	length;
 	float	value[3];
 	float	map[MAX_STRING];
-} clightstyle_t;
+} cl_lightstyle_t;
 
-clightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
+cl_lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 static int	lastofs;
 		
 /*
@@ -94,7 +91,7 @@ light animations
 void CL_RunLightStyles( void )
 {
 	int		i, ofs;
-	clightstyle_t	*ls;		
+	cl_lightstyle_t	*ls;		
 	float		l;
 
 	if( cls.state != ca_active ) return;
@@ -138,7 +135,7 @@ CL_AddLightStyles
 void CL_AddLightStyles( void )
 {
 	int		i;
-	clightstyle_t	*ls;
+	cl_lightstyle_t	*ls;
 
 	for( i = 0, ls = cl_lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
 		re->AddLightStyle( i, ls->value );

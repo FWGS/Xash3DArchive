@@ -14,7 +14,6 @@
 #include "qfiles_ref.h"
 #include "engine_api.h"
 #include "render_api.h"
-#include "physic_api.h"
 #include "vsound_api.h"
 #include "com_export.h"
 #include "com_model.h"
@@ -182,6 +181,7 @@ float pfnRandomFloat( float flLow, float flHigh );
 void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc );
 void pfnDelCommand( const char *cmd_name );
 void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... );
+void *Cache_Check( byte *mempool, cache_user_t *c );
 void pfnGetGameDir( char *szGetGameDir );
 const char *pfnCmd_Args( void );
 const char *pfnCmd_Argv( int argc );
@@ -239,8 +239,7 @@ void CL_StudioFxTransform( struct cl_entity_s *ent, float transform[4][4] );
 void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
 void CL_StudioEvent( mstudioevent_t *event, struct cl_entity_s *ent );
 bool CL_GetComment( const char *demoname, char *comment );
-trace_t CL_TraceLine( const vec3_t start, const vec3_t end );
-void CL_AmbientLevels( const vec3_t p, byte *pvolumes );
+struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );

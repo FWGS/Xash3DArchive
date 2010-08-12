@@ -5,6 +5,7 @@
 
 #include "extdll.h"
 #include "utils.h"
+#include "pm_defs.h"
 #include "hud.h"
 
 DLL_GLOBAL const Vector g_vecZero = Vector( 0.0f, 0.0f, 0.0f );
@@ -188,29 +189,6 @@ float READ_ANGLE( void )
 Vector READ_DIR( void )
 {
 	return BitsToDir( READ_BYTE() );
-}
-
-// Overloaded to add IGNORE_GLASS
-void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, IGNORE_GLASS ignoreGlass, cl_entity_t *pentIgnore, TraceResult *ptr )
-{
-	TRACE_LINE( vecStart, vecEnd, (igmon == ignore_monsters ? TRUE : FALSE) | (ignoreGlass?0x100:0), pentIgnore, ptr );
-}
-
-
-void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, cl_entity_t *pentIgnore, TraceResult *ptr )
-{
-	TRACE_LINE( vecStart, vecEnd, (igmon == ignore_monsters ? TRUE : FALSE), pentIgnore, ptr );
-}
-
-
-void UTIL_TraceHull( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, cl_entity_t *pentIgnore, TraceResult *ptr )
-{
-	TRACE_HULL( vecStart, vecEnd, (igmon == ignore_monsters ? TRUE : FALSE), hullNumber, pentIgnore, ptr );
-}
-
-void UTIL_TraceModel( const Vector &vecStart, const Vector &vecEnd, int hullNumber, cl_entity_t *pentModel, TraceResult *ptr )
-{
-	g_engfuncs.pfnTraceModel( vecStart, vecEnd, pentModel, ptr );
 }
 
 /*
@@ -488,17 +466,16 @@ float UTIL_Probe( const Vector &origin, Vector *vecDirection, float strength )
 	// press out
 	Vector endpos = origin + (( *vecDirection ) * strength );
 
-	//Trace into the world
-	TraceResult	tr;
-	UTIL_TraceLine( origin, endpos, dont_ignore_monsters, NULL, &tr );
+	// Trace into the world
+	pmtrace_t *trace = g_engfuncs.PM_TraceLine( origin, endpos, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
 
 	// push back a proportional amount to the probe
-	(*vecDirection) = -(*vecDirection) * (1.0f - tr.flFraction);
+	(*vecDirection) = -(*vecDirection) * (1.0f - trace->fraction);
 
-	ASSERT(( 1.0f - tr.flFraction ) >= 0.0f );
+	ASSERT(( 1.0f - trace->fraction ) >= 0.0f );
 
 	// return the impacted proportion of the probe
-	return (1.0f - tr.flFraction);
+	return (1.0f - trace->fraction);
 }
 
 void UTIL_GetForceDirection( const Vector &origin, float magnitude, Vector *resultDirection, float *resultForce )

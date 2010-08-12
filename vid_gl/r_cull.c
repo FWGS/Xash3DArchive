@@ -40,7 +40,7 @@ Returns true if the box is completely outside the frustum
 bool R_CullBox( const vec3_t mins, const vec3_t maxs, const uint clipflags )
 {
 	uint		i, bit;
-	const cplane_t	*p;
+	const mplane_t	*p;
 
 	if( r_nocull->integer )
 		return false;
@@ -102,7 +102,7 @@ Returns true if the sphere is completely outside the frustum
 bool R_CullSphere( const vec3_t centre, const float radius, const uint clipflags )
 {
 	uint	i, bit;
-	const cplane_t *p;
+	const mplane_t *p;
 
 	if( r_nocull->integer )
 		return false;

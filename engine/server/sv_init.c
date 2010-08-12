@@ -80,12 +80,6 @@ int SV_ClassIndex( const char *name )
 	return SV_FindIndex( name, CS_CLASSNAMES, MAX_CLASSNAMES, true );
 }
 
-script_t *CM_GetEntityScript( void )
-{
-	if( !pe ) return SV_GetEntityScript( sv.name );
-	return pe->GetEntityScript();
-}
-
 /*
 ================
 SV_CreateBaseline

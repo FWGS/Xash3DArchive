@@ -199,7 +199,7 @@ void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime
 void S_StartLocalSound( const char *name );
 sfx_t *S_GetSfxByHandle( sound_t handle );
 void S_StopSound( int entnum, int channel, const char *soundname );
-void S_RenderFrame( ref_params_t *fd );
+void S_RenderFrame( struct ref_params_s *fd );
 void S_StopAllSounds( void );
 void S_FreeSounds( void );
 

@@ -6,6 +6,7 @@
 #include "cm_local.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "entity_def.h"
 #include "byteorder.h"
 #include "const.h"
 
@@ -16,7 +17,7 @@ struct
 	mstudiobodyparts_t	*bodypart;
 	matrix4x4		rotmatrix;
 	matrix4x4		bones[MAXSTUDIOBONES];
-	cplane_t		planes[12];
+	mplane_t		planes[12];
 	trace_t		trace;
 } studio;
 
@@ -39,13 +40,13 @@ int CM_StudioExtractBbox( studiohdr_t *phdr, int sequence, float *mins, float *m
 	return 1;
 }
 
-int CM_StudioBodyVariations( model_t handle )
+int CM_StudioBodyVariations( int handle )
 {
 	studiohdr_t	*pstudiohdr;
 	mstudiobodyparts_t	*pbodypart;
 	int		i, count;
 
-	pstudiohdr = (studiohdr_t *)CM_Extradata( handle );
+	pstudiohdr = (studiohdr_t *)Mod_Extradata( handle );
 	if( !pstudiohdr ) return 0;
 
 	count = 1;
@@ -395,29 +396,11 @@ void CM_StudioSlerpBones( vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[
 
 /*
 ====================
-Cache_Check
-
-consistency check
-====================
-*/
-void *Cache_Check( byte *mempool, cache_user_t *c )
-{
-	if( !c->data )
-		return NULL;
-
-	if( !Mem_IsAllocated( mempool, c->data ))
-		return NULL;
-
-	return c->data;
-}
-
-/*
-====================
 CM_StudioGetAnim
 
 ====================
 */
-mstudioanim_t *CM_StudioGetAnim( cmodel_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
+mstudioanim_t *CM_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
 {
 	mstudioseqgroup_t	*pseqgroup;
 	cache_user_t	*paSequences;
@@ -578,7 +561,7 @@ static void CM_StudioCalcAttachments( edict_t *e, int iAttachment, float *org, f
 void CM_StudioInitBoxHull( void )
 {
 	int	i, side;
-	cplane_t	*p;
+	mplane_t	*p;
 
 	for( i = 0; i < 6; i++ )
 	{
@@ -619,7 +602,7 @@ void CM_StudioBoxHullFromBounds( const vec3_t mins, const vec3_t maxs )
 
 bool CM_StudioSetup( edict_t *e )
 {
-	cmodel_t	*mod = CM_ClipHandleToModel( e->v.modelindex );
+	model_t	*mod = CM_ClipHandleToModel( e->v.modelindex );
 
 	if( mod && mod->type == mod_studio && mod->extradata )
 	{
@@ -634,7 +617,7 @@ bool CM_StudioSetup( edict_t *e )
 bool CM_StudioTraceBox( vec3_t start, vec3_t end ) 
 {
 	int	i;
-	cplane_t	*plane, *clipplane;
+	mplane_t	*plane, *clipplane;
 	float	enterFrac, leaveFrac;
 	bool	getout, startout;
 	float	d1, d2;
@@ -819,7 +802,7 @@ void CM_GetBonePosition( edict_t* e, int iBone, float *org, float *ang )
 	
 }
 
-void CM_StudioModel( cmodel_t *mod, byte *buffer )
+void CM_StudioModel( model_t *mod, byte *buffer )
 {
 	studiohdr_t	*phdr;
 	mstudioseqdesc_t	*pseqdesc;
@@ -844,7 +827,7 @@ void CM_StudioModel( cmodel_t *mod, byte *buffer )
 	CM_StudioExtractBbox( phdr, 0, loadmodel->mins, loadmodel->maxs );
 }
 
-void CM_SpriteModel( cmodel_t *mod, byte *buffer )
+void CM_SpriteModel( model_t *mod, byte *buffer )
 {
 	dsprite_t		*phdr;
 

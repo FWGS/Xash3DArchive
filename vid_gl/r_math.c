@@ -81,7 +81,7 @@ A slightly more complex version of SignbitsForPlane and PlaneTypeForNormal,
 which also tries to fix possible floating point glitches (like -0.00000 cases)
 =================
 */
-void CategorizePlane( cplane_t *plane )
+void CategorizePlane( mplane_t *plane )
 {
 	int	i;
 
@@ -119,7 +119,7 @@ BoxOnPlaneSide (engine fast version)
 Returns SIDE_FRONT, SIDE_BACK, or SIDE_ON
 ==============
 */
-int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const cplane_t *p )
+int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p )
 {
 	if( p->type < 3 ) return ((emaxs[p->type] >= p->dist) | ((emins[p->type] < p->dist) << 1));
 	switch( p->signbits )
@@ -177,7 +177,7 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 PlaneFromPoints
 =================
 */
-void PlaneFromPoints( vec3_t verts[3], cplane_t *plane )
+void PlaneFromPoints( vec3_t verts[3], mplane_t *plane )
 {
 	vec3_t	v1, v2;
 

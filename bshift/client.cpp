@@ -1260,13 +1260,6 @@ addEntity:
 
 	if( state->ed_type == ED_CLIENT )
 	{
-		if( pEntity->pev->teleport_time )
-		{
-			state->ed_flags |= ESF_NO_PREDICTION;
-			state->ed_flags |= ESF_NODELTA;
-			pEntity->pev->teleport_time = 0.0f;
-		}
-
 		if( pEntity->pev->aiment ) 
 			state->aiment = ENTINDEX( pEntity->pev->aiment );
 		else state->aiment = 0;
@@ -1700,6 +1693,40 @@ void CmdEnd ( const edict_t *player )
 	{
 		UTIL_UnsetGroupTrace();
 	}
+}
+
+/*
+================================
+GetHullBounds
+
+Engine calls this to enumerate player collision hulls, for prediction.
+Return 0 if the hullnumber doesn't exist.
+================================
+*/
+int GetHullBounds( int hullnumber, float *mins, float *maxs )
+{
+	int iret = 0;
+
+	switch ( hullnumber )
+	{
+	case 0:	// Normal player
+		VEC_HULL_MIN.CopyToArray( mins );
+		VEC_HULL_MAX.CopyToArray( maxs );
+		iret = 1;
+		break;
+	case 1:	// Crouched player
+		VEC_DUCK_HULL_MIN.CopyToArray( mins );
+		VEC_DUCK_HULL_MAX.CopyToArray( maxs );
+		iret = 1;
+		break;
+	case 2:	// Point based hull
+		g_vecZero.CopyToArray( mins );
+		g_vecZero.CopyToArray( maxs );
+		iret = 1;
+		break;
+	}
+
+	return iret;
 }
 
 /*

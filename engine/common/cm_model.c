@@ -12,16 +12,16 @@
 clipmap_t		cm;
 
 byte		*mod_base;
-cmodel_t		*sv_models[MAX_MODELS];	// server replacement modeltable
-static cmodel_t	cm_inline[MAX_MAP_MODELS];	// inline bsp models
-static cmodel_t	cm_models[MAX_MODELS];
+model_t		*sv_models[MAX_MODELS];	// server replacement modeltable
+static model_t	cm_inline[MAX_MAP_MODELS];	// inline bsp models
+static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels;
 
-cplane_t		box_planes[6];
-clipnode_t	box_clipnodes[6];
-chull_t		box_hull[1];
-cmodel_t		*loadmodel;
-cmodel_t		*worldmodel;
+mplane_t		box_planes[6];
+dclipnode_t	box_clipnodes[6];
+hull_t		box_hull[1];
+model_t		*loadmodel;
+model_t		*worldmodel;
 
 /*
 ===============================================================================
@@ -40,8 +40,8 @@ can just be stored out and get a proper clipping hull structure.
 */
 void CM_BmodelInitBoxHull( void )
 {
-	cplane_t		*p;
-	clipnode_t	*c;
+	mplane_t		*p;
+	dclipnode_t	*c;
 	int		i, side;
 
 	box_hull->clipnodes = box_clipnodes;
@@ -79,7 +79,7 @@ To keep everything totally uniform, bounding boxes are turned into small
 BSP trees instead of being compared directly.
 ===================
 */
-chull_t *CM_HullForBox( const vec3_t mins, const vec3_t maxs )
+hull_t *CM_HullForBox( const vec3_t mins, const vec3_t maxs )
 {
 	box_planes[0].dist = maxs[0];
 	box_planes[1].dist = mins[0];
@@ -96,29 +96,23 @@ chull_t *CM_HullForBox( const vec3_t mins, const vec3_t maxs )
 CM_FreeModel
 ================
 */
-void CM_FreeModel( cmodel_t *mod )
+void CM_FreeModel( model_t *mod )
 {
 	if( !mod || !mod->mempool )
 		return;
-
-	if( mod->entityscript )
-	{
-		Com_CloseScript( mod->entityscript );
-		mod->entityscript = NULL;
-	}
 
 	Mem_FreePool( &mod->mempool );
 	Mem_Set( mod, 0, sizeof( *mod ));
 }
 
-int CM_NumInlineModels( void )
+int CM_NumBmodels( void )
 {
 	if( worldmodel )
 		return worldmodel->numsubmodels;
 	return 0;
 }
 
-script_t *CM_EntityScript( void )
+script_t *CM_GetEntityScript( void )
 {
 	string	entfilename;
 	script_t	*ents;
@@ -136,7 +130,7 @@ script_t *CM_EntityScript( void )
 		MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
 		return ents;
 	}
-	return worldmodel->entityscript;
+	return cm.entityscript;
 }
 
 /*
@@ -196,7 +190,7 @@ BSP_LoadTextures
 static void BSP_LoadTextures( dlump_t *l )
 {
 	dmiptexlump_t	*in;
-	ctexture_t	*out;
+	mtexture_t	*out;
 	mip_t		*mt;
 	int 		i;
 
@@ -211,7 +205,7 @@ static void BSP_LoadTextures( dlump_t *l )
 	in->nummiptex = LittleLong( in->nummiptex );
 
 	loadmodel->numtextures = in->nummiptex;
-	loadmodel->textures = (ctexture_t **)Mem_Alloc( loadmodel->mempool, loadmodel->numtextures * sizeof( ctexture_t* ));
+	loadmodel->textures = (mtexture_t **)Mem_Alloc( loadmodel->mempool, loadmodel->numtextures * sizeof( mtexture_t* ));
 
 	for( i = 0; i < loadmodel->numtextures; i++ )
 	{
@@ -235,7 +229,7 @@ BSP_LoadTexInfo
 static void BSP_LoadTexInfo( const dlump_t *l )
 {
 	dtexinfo_t	*in;
-	ctexinfo_t	*out;
+	mtexinfo_t	*out;
 	int		miptex;
 	int		i, j, count;
 	uint		surfaceParm = 0;
@@ -305,7 +299,7 @@ BSP_CalcSurfaceExtents
 Fills in surf->textureMins and surf->extents
 =================
 */
-static void BSP_CalcSurfaceExtents( csurface_t *surf )
+static void BSP_CalcSurfaceExtents( msurface_t *surf )
 {
 	float	mins[2], maxs[2], val;
 	int	bmins[2], bmaxs[2];
@@ -315,7 +309,7 @@ static void BSP_CalcSurfaceExtents( csurface_t *surf )
 	if( surf->flags & SURF_DRAWTURB )
 	{
 		surf->extents[0] = surf->extents[1] = 16384;
-		surf->textureMins[0] = surf->textureMins[1] = -8192;
+		surf->texturemins[0] = surf->texturemins[1] = -8192;
 		return;
 	}
 
@@ -341,7 +335,7 @@ static void BSP_CalcSurfaceExtents( csurface_t *surf )
 		bmins[i] = floor( mins[i] / LM_SAMPLE_SIZE );
 		bmaxs[i] = ceil( maxs[i] / LM_SAMPLE_SIZE );
 
-		surf->textureMins[i] = bmins[i] * LM_SAMPLE_SIZE;
+		surf->texturemins[i] = bmins[i] * LM_SAMPLE_SIZE;
 		surf->extents[i] = (bmaxs[i] - bmins[i]) * LM_SAMPLE_SIZE;
 	}
 }
@@ -354,7 +348,7 @@ BSP_LoadSurfaces
 static void BSP_LoadSurfaces( const dlump_t *l )
 {
 	dface_t		*in;
-	csurface_t	*out;
+	msurface_t	*out;
 	int		i, count;
 	int		lightofs;
 
@@ -364,7 +358,7 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 	count = l->filelen / sizeof( dface_t );
 
 	loadmodel->numsurfaces = count;
-	loadmodel->surfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( csurface_t ));
+	loadmodel->surfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
 	out = loadmodel->surfaces;
 
 	for( i = 0; i < count; i++, in++, out++ )
@@ -490,7 +484,7 @@ static void BSP_LoadMarkFaces( const dlump_t *l )
 		Host_Error( "BSP_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
 
 	count = l->filelen / sizeof( *in );
-	loadmodel->marksurfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( csurface_t* ));
+	loadmodel->marksurfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t* ));
 
 	for( i = 0; i < count; i++ )
 	{
@@ -506,7 +500,7 @@ static void BSP_LoadMarkFaces( const dlump_t *l )
 CM_SetParent
 =================
 */
-static void CM_SetParent( cnode_t *node, cnode_t *parent )
+static void CM_SetParent( mnode_t *node, mnode_t *parent )
 {
 	node->parent = parent;
 
@@ -523,7 +517,7 @@ BSP_LoadNodes
 static void BSP_LoadNodes( dlump_t *l )
 {
 	dnode_t	*in;
-	cnode_t	*out;
+	mnode_t	*out;
 	int	i, j, p;
 	
 	in = (void *)(mod_base + l->fileofs);
@@ -531,7 +525,7 @@ static void BSP_LoadNodes( dlump_t *l )
 	loadmodel->numnodes = l->filelen / sizeof( *in );
 
 	if( loadmodel->numnodes < 1 ) Host_Error( "Map %s has no nodes\n", loadmodel->name );
-	out = loadmodel->nodes = (cnode_t *)Mem_Alloc( loadmodel->mempool, loadmodel->numnodes * sizeof( *out ));
+	out = loadmodel->nodes = (mnode_t *)Mem_Alloc( loadmodel->mempool, loadmodel->numnodes * sizeof( *out ));
 
 	for( i = 0; i < loadmodel->numnodes; i++, out++, in++ )
 	{
@@ -545,7 +539,7 @@ static void BSP_LoadNodes( dlump_t *l )
 		{
 			p = LittleShort( in->children[j] );
 			if( p >= 0 ) out->children[j] = loadmodel->nodes + p;
-			else out->children[j] = (cnode_t *)(loadmodel->leafs + ( -1 - p ));
+			else out->children[j] = (mnode_t *)(loadmodel->leafs + ( -1 - p ));
 		}
 	}
 
@@ -561,7 +555,7 @@ BSP_LoadLeafs
 static void BSP_LoadLeafs( dlump_t *l )
 {
 	dleaf_t 	*in;
-	cleaf_t	*out;
+	mleaf_t	*out;
 	int	i, j, p, count;
 		
 	in = (void *)(mod_base + l->fileofs);
@@ -569,7 +563,7 @@ static void BSP_LoadLeafs( dlump_t *l )
 
 	count = l->filelen / sizeof( *in );
 	if( count < 1 ) Host_Error( "Map %s with no leafs\n", loadmodel->name );
-	out = (cleaf_t *)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
+	out = (mleaf_t *)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 
 	loadmodel->leafs = out;
 	loadmodel->numleafs = count;
@@ -591,8 +585,8 @@ static void BSP_LoadLeafs( dlump_t *l )
 		for( j = 0; j < 4; j++ )
 			out->ambient_sound_level[j] = in->ambient_level[j];
 
-		out->firstMarkSurface = loadmodel->marksurfaces + LittleShort( in->firstmarksurface );
-		out->numMarkSurfaces = LittleShort( in->nummarksurfaces );
+		out->firstmarksurface = loadmodel->marksurfaces + LittleShort( in->firstmarksurface );
+		out->nummarksurfaces = LittleShort( in->nummarksurfaces );
 	}
 
 	if( loadmodel->leafs[0].contents != CONTENTS_SOLID )
@@ -607,7 +601,7 @@ BSP_LoadPlanes
 static void BSP_LoadPlanes( dlump_t *l )
 {
 	dplane_t	*in;
-	cplane_t	*out;
+	mplane_t	*out;
 	int	i, j, count;
 	
 	in = (void *)(mod_base + l->fileofs);
@@ -615,7 +609,7 @@ static void BSP_LoadPlanes( dlump_t *l )
 	count = l->filelen / sizeof( *in );
 
 	if( count < 1 ) Host_Error( "Map %s with no planes\n", loadmodel->name );
-	out = (cplane_t *)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
+	out = (mplane_t *)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 
 	loadmodel->planes = out;
 	loadmodel->numplanes = count;
@@ -661,7 +655,7 @@ void BSP_LoadEntityString( dlump_t *l )
 	byte	*in;
 
 	in = (void *)(mod_base + l->fileofs);
-	loadmodel->entityscript = Com_OpenScript( LUMP_ENTITIES, in, l->filelen );
+	cm.entityscript = Com_OpenScript( LUMP_ENTITIES, in, l->filelen );
 }
 
 /*
@@ -671,10 +665,9 @@ BSP_LoadClipnodes
 */
 static void BSP_LoadClipnodes( dlump_t *l )
 {
-	dclipnode_t	*in;
-	clipnode_t	*out;
+	dclipnode_t	*in, *out;
 	int		i, count;
-	chull_t		*hull;
+	hull_t		*hull;
 
 	in = (void *)(mod_base + l->fileofs);
 	if( l->filelen % sizeof( *in )) Host_Error( "BSP_LoadClipnodes: funny lump size\n" );
@@ -727,9 +720,9 @@ Duplicate the drawing hull structure as a clipping hull
 */
 void CM_MakeHull0( void )
 {
-	cnode_t		*in, *child;
-	clipnode_t	*out;
-	chull_t		*hull;
+	mnode_t		*in, *child;
+	dclipnode_t	*out;
+	hull_t		*hull;
 	int		i, j, count;
 	
 	hull = &loadmodel->hulls[0];	
@@ -751,7 +744,8 @@ void CM_MakeHull0( void )
 		{
 			child = in->children[j];
 
-			if( child->contents < 0 ) out->children[j] = child->contents;
+			if( child->contents < 0 )
+				out->children[j] = child->contents;
 			else out->children[j] = child - loadmodel->nodes;
 		}
 	}
@@ -763,7 +757,7 @@ void CM_MakeHull0( void )
 CM_BrushModel
 =================
 */
-static void CM_BrushModel( cmodel_t *mod, byte *buffer )
+static void CM_BrushModel( model_t *mod, byte *buffer )
 {
 	dheader_t	*header;
 	dmodel_t 	*bm;
@@ -830,7 +824,7 @@ static void CM_BrushModel( cmodel_t *mod, byte *buffer )
 	// set up the submodels (FIXME: this is confusing)
 	for( i = 0; i < mod->numsubmodels; i++ )
 	{
-		cmodel_t	*starmod;
+		model_t	*starmod;
 
 		bm = &mod->submodels[i];
 		starmod = &cm_inline[i];
@@ -865,6 +859,12 @@ void CM_FreeWorld( void )
 {
 	if( worldmodel )
 		CM_FreeModel( &cm_models[0] );
+
+	if( cm.entityscript )
+	{
+		Com_CloseScript( cm.entityscript );
+		cm.entityscript = NULL;
+	}
 	worldmodel = NULL;
 }
 
@@ -890,7 +890,7 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 
 	if( !com.strlen( name ))
 	{
-		CM_FreeModel( &cm_models[0] );
+		CM_FreeWorld ();
 		sv_models[1] = NULL; // no worldmodel
 		if( checksum ) *checksum = 0;
 		return;
@@ -903,7 +903,7 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 		if( !clientload )
 		{
 			// reset entity script...
-			Com_ResetScript( worldmodel->entityscript );
+			Com_ResetScript( cm.entityscript );
 
 			// ..and lightstyles
 			CM_ClearLightStyles();
@@ -914,7 +914,7 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 		return;
 	}
 
-	CM_FreeModel( &cm_models[0] );// release old map
+	CM_FreeWorld ();
 	cm.registration_sequence++;	// all models are invalid
 
 	// load the newmap
@@ -934,7 +934,7 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 
 void CM_EndRegistration( void )
 {
-	cmodel_t	*mod;
+	model_t	*mod;
 	int	i;
 
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
@@ -950,7 +950,7 @@ void CM_EndRegistration( void )
 CM_ClipHandleToModel
 ==================
 */
-cmodel_t *CM_ClipHandleToModel( model_t handle )
+model_t *CM_ClipHandleToModel( int handle )
 {
 	if( handle < 0 || handle > MAX_MODELS )
 	{
@@ -961,12 +961,12 @@ cmodel_t *CM_ClipHandleToModel( model_t handle )
 }
 /*
 ===================
-CM_Extradata
+Mod_Extradata
 ===================
 */
-void *CM_Extradata( model_t handle )
+void *Mod_Extradata( int handle )
 {
-	cmodel_t	*mod = CM_ClipHandleToModel( handle );
+	model_t	*mod = CM_ClipHandleToModel( handle );
 
 	if( mod && mod->type == mod_studio )
 		return mod->extradata;
@@ -975,12 +975,12 @@ void *CM_Extradata( model_t handle )
 
 /*
 ===================
-CM_ModelFrames
+Mod_GetFrames
 ===================
 */
-void CM_ModelFrames( model_t handle, int *numFrames )
+void Mod_GetFrames( int handle, int *numFrames )
 {
-	cmodel_t	*mod = CM_ClipHandleToModel( handle );
+	model_t	*mod = CM_ClipHandleToModel( handle );
 
 	if( !numFrames ) return;
 	if( !mod )
@@ -998,12 +998,12 @@ void CM_ModelFrames( model_t handle, int *numFrames )
 
 /*
 ===================
-CM_ModelType
+CM_GetModelType
 ===================
 */
-modtype_t CM_ModelType( model_t handle )
+modtype_t CM_GetModelType( int handle )
 {
-	cmodel_t	*mod = CM_ClipHandleToModel( handle );
+	model_t	*mod = CM_ClipHandleToModel( handle );
 
 	if( !mod ) return mod_bad;
 	return mod->type;
@@ -1011,12 +1011,12 @@ modtype_t CM_ModelType( model_t handle )
 
 /*
 ===================
-CM_ModelBounds
+Mod_GetBounds
 ===================
 */
-void CM_ModelBounds( model_t handle, vec3_t mins, vec3_t maxs )
+void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs )
 {
-	cmodel_t	*cmod = CM_ClipHandleToModel( handle );
+	model_t	*cmod = CM_ClipHandleToModel( handle );
 
 	if( cmod )
 	{
@@ -1031,10 +1031,10 @@ void CM_ModelBounds( model_t handle, vec3_t mins, vec3_t maxs )
 	}
 }
 
-cmodel_t *CM_ModForName( const char *name, bool world )
+model_t *CM_ModForName( const char *name, bool world )
 {
 	byte	*buf;
-	cmodel_t	*mod;
+	model_t	*mod;
 	int	i, size;
 
 	if( !name || !name[0] )
@@ -1125,7 +1125,7 @@ cmodel_t *CM_ModForName( const char *name, bool world )
 
 bool CM_RegisterModel( const char *name, int index )
 {
-	cmodel_t	*mod;
+	model_t	*mod;
 
 	if( index < 0 || index > MAX_MODELS )
 		return false;

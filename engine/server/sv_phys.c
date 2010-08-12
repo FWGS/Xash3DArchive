@@ -983,7 +983,7 @@ void SV_PushComplex( edict_t *pusher, float movetime )
 	vec3_t	mins, maxs;
 	float	pushltime;
 	trace_t	trace;
-	chull_t	*hull;
+	hull_t	*hull;
 
 	switch( pusher->v.solid )
 	{

@@ -213,6 +213,14 @@ SOURCE=.\global\input.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\game_shared\pm_debug.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\pm_math.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\game_shared\pm_shared.cpp
 # End Source File
 # Begin Source File
@@ -337,7 +345,7 @@ SOURCE=..\game_shared\pm_defs.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_local.h
+SOURCE=..\game_shared\pm_info.h
 # End Source File
 # Begin Source File
 
@@ -366,6 +374,10 @@ SOURCE=.\global\r_weather.h
 # Begin Source File
 
 SOURCE=..\common\ref_params.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\shake.h
 # End Source File
 # Begin Source File
 
@@ -402,6 +414,10 @@ SOURCE=.\global\utils.h
 # Begin Source File
 
 SOURCE=.\game_shared\vector.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\vector.h
 # End Source File
 # End Group
 # End Target

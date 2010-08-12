@@ -41,18 +41,6 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 }
 
 /*
-====================
-CL_AmbientLevels
-
-get ambient volumes for specified point
-====================
-*/
-void CL_AmbientLevels( const vec3_t p, byte *pvolumes )
-{
-	CM_GetAmbientLevels( p, pvolumes );
-}
-
-/*
 =============
 CL_AllocString
 
@@ -1581,63 +1569,18 @@ pfnTraceLine
 
 =============
 */
-static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, cl_entity_t *pentToSkip, TraceResult *ptr )
+static pmtrace_t *pfnTraceLine( const float *start, const float *end, int flags, int usehull, int ignore_pe )
 {
-	trace_t	result;
+	static pmtrace_t	trace;
 
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceLine: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	result = CL_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
-	if( ptr ) *ptr = result;
-}
+	// FIXME: implement traceline
+	Mem_Set( &trace, 0, sizeof( pmtrace_t ));
+	VectorCopy( end, trace.endpos );
+	trace.fraction = 1.0f;
+	trace.allsolid = true;
+	trace.hitgroup = -1;
 
-/*
-=================
-pfnTraceHull
-
-=================
-*/
-static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int hullNumber, cl_entity_t *pentToSkip, TraceResult *ptr )
-{
-	trace_t	result;
-	float	*mins, *maxs;
-
-	hullNumber = bound( 0, hullNumber, 3 );
-	mins = GI->client_mins[hullNumber];
-	maxs = GI->client_maxs[hullNumber];
-
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceHull: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	result = CL_Move( v1, mins, maxs, v2, fNoMonsters, pentToSkip );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
-}
-
-static void pfnTraceModel( const float *v1, const float *v2, cl_entity_t *pent, TraceResult *ptr )
-{
-	if( !pent || pent->index == -1 )
-	{
-		MsgDev( D_WARN, "TraceModel: invalid entity %s\n", CL_ClassName( pent ));
-		return;
-	}
-#if 0	// FXIME: FIX CLIENT TRACE
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceModel: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	if( ptr ) *ptr = CM_ClipMove( pent, v1, pent->curstate.mins, pent->curstate.maxs, v2, 0 );
-#endif
-}
-
-static const char *pfnTraceTexture( cl_entity_t *pTextureEntity, const float *v1, const float *v2 )
-{
-	if( !pTextureEntity || pTextureEntity->index == -1 )
-	{
-		MsgDev( D_WARN, "TraceTexture: invalid entity %s\n", CL_ClassName( pTextureEntity ));
-		return NULL;
-	}
-
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-
-	return NULL;//return CM_TraceTexture( pTextureEntity, v1, v2 );
+	return &trace;
 }
 
 /*
@@ -1783,12 +1726,9 @@ pfnPlaySound
 
 =============
 */
-void pfnPlaySound( cl_entity_t *ent, float *org, int chan, const char *samp, float vol, float attn, int flags, int pitch )
+void pfnPlaySound( int ent, float *org, int chan, const char *samp, float vol, float attn, int flags, int pitch )
 {
-	int	entindex = 0;
-
-	if( ent ) entindex = ent->index;
-	S_StartSound( org, entindex, chan, S_RegisterSound( samp ), vol, attn, pitch, flags );
+	S_StartSound( org, ent, chan, S_RegisterSound( samp ), vol, attn, pitch, flags );
 }
 
 /*
@@ -1836,6 +1776,17 @@ int pfnIsLocal( int playernum )
 
 /*
 =============
+pfnLocalPlayerDucking
+
+=============
+*/
+int pfnLocalPlayerDucking( void )
+{
+	return cl.frame.cd.bInDuck;
+}
+
+/*
+=============
 pfnLocalPlayerViewheight
 
 =============
@@ -1848,26 +1799,142 @@ void pfnLocalPlayerViewheight( float *view_ofs )
 
 /*
 =============
-pfnStopAllSounds
+pfnLocalPlayerBounds
 
 =============
 */
-void pfnStopAllSounds( cl_entity_t *ent, int entchannel )
+void pfnLocalPlayerBounds( int hull, float *mins, float *maxs )
 {
-	if( !ent || ent->index == -1 ) return;
-	S_StopSound( ent->index, entchannel, NULL );
+	if( hull >= 0 && hull < 4 )
+	{
+		if( mins ) VectorCopy( clgame.pmove->player_mins[hull], mins );
+		if( maxs ) VectorCopy( clgame.pmove->player_maxs[hull], maxs );
+	}
 }
 
 /*
 =============
-pfnGetModelType
+pfnIndexFromTrace
 
 =============
 */
-modtype_t pfnGetModelType( model_t modelIndex )
+int pfnIndexFromTrace( struct pmtrace_s *pTrace )
 {
-	if( !pe ) return mod_bad;
-	return pe->Mod_GetType( modelIndex );
+	// FIXME: implement
+	return -1;
+}
+
+/*
+=============
+pfnGetPhysent
+
+=============
+*/
+physent_t *pfnGetPhysent( int idx )
+{
+	// FIXME: implement
+	return NULL;
+}
+
+/*
+=============
+pfnSetUpPlayerPrediction
+
+=============
+*/
+void pfnSetUpPlayerPrediction( int dopred, int bIncludeLocalClient )
+{
+	// FIXME: implement
+}
+
+/*
+=============
+pfnPushPMStates
+
+=============
+*/
+void pfnPushPMStates( void )
+{
+	// FIXME: implement
+}
+
+/*
+=============
+pfnPopPMStates
+
+=============
+*/
+void pfnPopPMStates( void )
+{
+	// FIXME: implement
+}
+
+/*
+=============
+pfnSetSolidPlayers
+
+=============
+*/
+void pfnSetSolidPlayers( int playernum )
+{
+	// FIXME: implement
+}
+
+/*
+=============
+pfnSetTraceHull
+
+=============
+*/
+void pfnSetTraceHull( int hull )
+{
+	// FIXME: implement
+}
+
+/*
+=============
+pfnPlayerTrace
+
+=============
+*/
+static void pfnPlayerTrace( float *start, float *end, int traceFlags, int ignore_pe, pmtrace_t *tr )
+{
+	// FIXME: implement
+}
+
+/*
+=============
+pfnTraceTexture
+
+=============
+*/
+static const char *pfnTraceTexture( int ground, const float *v1, const float *v2 )
+{
+	// FIXME: implement
+	return NULL;
+}
+	
+/*
+=============
+pfnStopAllSounds
+
+=============
+*/
+void pfnStopAllSounds( int ent, int entchannel )
+{
+	S_StopSound( ent, entchannel, NULL );
+}
+
+/*
+=============
+pfnBoxVisible
+
+=============
+*/
+static bool pfnBoxVisible( const vec3_t mins, const vec3_t maxs )
+{
+	if( !re ) return false;
+	return CM_BoxVisible( mins, maxs, re->GetCurrentVis());
 }
 
 /*
@@ -1876,23 +1943,13 @@ pfnGetModFrames
 
 =============
 */
-int pfnGetModFrames( model_t modelIndex )
+int pfnGetModFrames( int modelIndex )
 {
 	int	numFrames = 1;
 
-	if( pe ) pe->Mod_GetFrames( modelIndex, &numFrames );
+	Mod_GetFrames( modelIndex, &numFrames );
+
 	return numFrames;
-}
-
-/*
-=============
-pfnGetModBounds
-
-=============
-*/
-void pfnGetModBounds( model_t modelIndex, float *mins, float *maxs )
-{
-	Mod_GetBounds( modelIndex, mins, maxs );
 }
 	
 /*
@@ -2330,7 +2387,7 @@ static efxapi_t gEfxApi =
 	CL_AllocDlight,
 	CL_AllocElight,
 	CL_LightForPoint,
-	CM_BoxVisible,
+	pfnBoxVisible,
 	pfnCullBox,
 	CL_AddEntity,
 	pfnEnvShot,
@@ -2343,10 +2400,17 @@ static event_api_t gEventApi =
 	pfnStopSound,
 	pfnFindModelIndex,
 	pfnIsLocal,
-	pfnGetModelType,
+	pfnLocalPlayerDucking,
 	pfnLocalPlayerViewheight,
-	pfnGetModBounds,
-	pfnGetModFrames,
+	pfnLocalPlayerBounds,
+	pfnIndexFromTrace,
+	pfnGetPhysent,
+	pfnSetUpPlayerPrediction,
+	pfnPushPMStates,
+	pfnPopPMStates,
+	pfnSetSolidPlayers,
+	pfnSetTraceHull,
+	pfnPlayerTrace,
 	CL_WeaponAnim,
 	pfnPrecacheEvent,
 	pfnPlaybackEvent,
@@ -2417,9 +2481,9 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnPointContents,
 	pfnWaterEntity,
 	pfnTraceLine,
-	pfnTraceHull,
-	pfnTraceModel,
-	pfnTraceTexture,
+	CM_GetModelType,
+	Mod_GetBounds,
+	pfnGetModFrames,
 	pfnPrecacheEvent,
 	pfnPlaybackEvent,
 	CL_WeaponAnim,
@@ -2478,7 +2542,7 @@ bool CL_LoadProgs( const char *name )
 	cl.refdef.movevars = &clgame.movevars;
 	clgame.globals->pViewParms = &cl.refdef;
 
-	// initialize TriAPI
+	// initialize PlayerMove
 	clgame.pmove = &gpMove;
 
 	cls.mempool = Mem_AllocPool( "Client Static Pool" );
