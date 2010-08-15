@@ -1002,6 +1002,7 @@ void EV_FirePython( event_args_t *args )
 //======================
 #define GAUSS_PRIMARY_CHARGE_VOLUME	256	// how loud gauss is while charging
 #define GAUSS_PRIMARY_FIRE_VOLUME	450	// how loud gauss is when discharged
+#define SND_CHANGE_PITCH		(1<<7)	// duplicated in protocol.h change sound pitch
 
 void EV_SpinGauss( event_args_t *args )
 {
@@ -1063,7 +1064,7 @@ void EV_FireGauss( event_args_t *args )
 		return;
 	}
 
-//	ALERT( at_console, "firing gauss with %f\n", flDamage );
+//	Con_Printf( "firing gauss with %f\n", flDamage );
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	m_iBeam = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/smoke.spr" );
@@ -1136,7 +1137,7 @@ void EV_FireGauss( event_args_t *args )
 
 			if ( n < 0.5f ) // 60 degrees	
 			{
-				// ALERT( at_console, "reflect %f\n", n );
+				// Con_Printf( "reflect %f\n", n );
 				// reflect
 				Vector r;
 			
@@ -1648,12 +1649,12 @@ void EV_UpdateLaserSpot( void )
 		m_pLaserSpot->entity.baseline.rendercolor.r = 200;
 		m_pLaserSpot->entity.baseline.rendercolor.g = 12;
 		m_pLaserSpot->entity.baseline.rendercolor.b = 12;
-//		ALERT( at_console, "CLaserSpot::Create()\n" );
+//		Con_Printf( "CLaserSpot::Create()\n" );
 	}
 	else if( !( m_pPlayer->curstate.effects & EF_LASERSPOT ) && m_pLaserSpot )
 	{
 		// destroy laserspot
-//		ALERT( at_console, "CLaserSpot::Killed()\n" );
+//		Con_Printf( "CLaserSpot::Killed()\n" );
 		m_pLaserSpot->die = 0.0f;
 		m_pLaserSpot = NULL;
 		return;
@@ -1746,7 +1747,7 @@ void EV_SnarkFire( event_args_t *args )
 //======================
 void EV_FireNull( event_args_t *args )
 {
-	ALERT( at_console, "Called null event!\n" );
+	Con_Printf( "Called null event!\n" );
 }
 //======================
 //	   NULL END

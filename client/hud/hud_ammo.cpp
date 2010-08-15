@@ -432,10 +432,10 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 	if( gHUD.m_fPlayerDead || gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS|HIDEHUD_ALL ))
 		return;
 
-	if(!(gHUD.m_iWeaponBits & ITEM_SUIT))
+	if(!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT))))
 		return;
 
-	if(!(gHUD.m_iWeaponBits & ~ITEM_SUIT))
+	if(!(gHUD.m_iWeaponBits & ~(1<<(WEAPON_SUIT))))
 		return;
 
 	WEAPON *p = NULL;
@@ -828,7 +828,7 @@ int CHudAmmo::Draw( float flTime )
 	int a, x, y, r, g, b;
 	int AmmoWidth;
 
-	if(!(gHUD.m_iWeaponBits & ITEM_SUIT))
+	if(!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT))))
 		return 1;
 
 	if((gHUD.m_iHideHUDDisplay & (HIDEHUD_WEAPONS|HIDEHUD_ALL)))

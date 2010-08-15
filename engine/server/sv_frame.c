@@ -8,6 +8,7 @@
 #include "const.h"
 #include "protocol.h"
 #include "net_encode.h"
+#include "entity_types.h"
 
 #define MAX_VISIBLE_PACKET		1024
 typedef struct
@@ -122,12 +123,13 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 	BF_WriteWord( msg, 0 ); // end of packetentities
 }
 
-static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_frame_t *frame, sv_ents_t *ents, bool portal )
+static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_frame_t *frame, sv_ents_t *ents )
 {
 	edict_t		*ent;
 	byte		*pset;
 	bool		fullvis = false;
-	sv_client_t	*cl;
+	sv_client_t	*cl, *netclient;
+	entity_state_t	*state;
 	int		e;
 
 	// during an error shutdown message we may need to transmit
@@ -135,7 +137,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 	// specfically check for it
 	if( !sv.state ) return;
 
-	if( pClient && !portal )
+	if( pClient && !( sv.hostflags & SVF_PORTALPASS ))
 	{
 		// portals can't change hostflags
 		sv.hostflags &= ~SVF_SKIPLOCALHOST;
@@ -148,10 +150,10 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			sv.hostflags |= SVF_SKIPLOCALHOST;
 	}
 
-	svgame.dllFuncs.pfnSetupVisibility( pViewEnt, pClient, &clientpvs, &clientphs, portal );
+	svgame.dllFuncs.pfnSetupVisibility( pViewEnt, pClient, &clientpvs, &clientphs );
 	if( !clientpvs ) fullvis = true;
 
-	for( e = 1; e < svgame.globals->numEntities; e++ )
+	for( e = 1; e < svgame.numEntities; e++ )
 	{
 		ent = EDICT_NUM( e );
 		if( ent->free ) continue;
@@ -164,23 +166,24 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		}
 
 		// don't double add an entity through portals (already added)
-		if( ent->pvServerData->framenum == sv.net_framenum )
+		if( ent->pvEngineData->framenum == sv.net_framenum )
 			continue;
 
-		if( ent->v.flags & FL_PHS_FILTER )
+		if( ent->v.flags & FL_CHECK_PHS )
 			pset = clientphs;
 		else pset = clientpvs;
 
-		// add entity to the net packet
-		if( svgame.dllFuncs.pfnAddToFullPack( &ent->pvServerData->s, pViewEnt, pClient, ent, sv.hostflags, pset ))
-		{
-			sv_client_t	*netclient = SV_ClientFromEdict( ent, true );
+		state = &ent->pvEngineData->s;
+		netclient = SV_ClientFromEdict( ent, true );
 
+		// add entity to the net packet
+		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, ( netclient != NULL ), pset ))
+		{
 			// to prevent adds it twice through portals
-			ent->pvServerData->framenum = sv.net_framenum;
+			ent->pvEngineData->framenum = sv.net_framenum;
 
 			if( netclient && netclient->modelindex ) // apply custom model if present
-				ent->pvServerData->s.modelindex = netclient->modelindex;
+				state->modelindex = netclient->modelindex;
 
 			// if we are full, silently discard entities
 			if( ents->num_entities < MAX_VISIBLE_PACKET )
@@ -194,17 +197,13 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		}
 
 		if( fullvis ) continue; // portal ents will be added anyway, ignore recursion
-		// if its a portal entity, add everything visible from its camera position
-		if( !portal )
-		{
 
-			switch( ent->pvServerData->s.ed_type )
-			{
-			case ED_PORTAL:
-			case ED_SKYPORTAL:		
-				SV_AddEntitiesToPacket( ent, pClient, frame, ents, true );
-				break;
-			}
+		// if its a portal entity, add everything visible from its camera position
+		if( !( sv.hostflags & SVF_PORTALPASS ) && ent->v.effects & EF_MERGE_VISIBILITY )
+		{
+			sv.hostflags |= SVF_PORTALPASS;
+			SV_AddEntitiesToPacket( ent, pClient, frame, ents );
+			sv.hostflags &= ~SVF_PORTALPASS;
 		}
 	}
 }
@@ -374,7 +373,7 @@ void SV_BuildClientFrame( sv_client_t *cl )
 			BF_WriteBitAngle( &sv.multicast, clent->v.angles[0], 16 );
 			BF_WriteBitAngle( &sv.multicast, clent->v.angles[1], 16 );
 			SV_DirectSend( MSG_ONE, vec3_origin, clent );
-			clent->pvServerData->s.ed_flags |= ESF_NO_PREDICTION;
+			clent->v.effects |= EF_NOINTERP;
 			break;
 		case 2:
 			BF_WriteByte( &sv.multicast, svc_addangle );
@@ -392,14 +391,15 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
-	if( !clent->pvServerData->client ) return; // not in game yet
+	if( !clent->pvEngineData->client ) return; // not in game yet
 
 	// update clientdata_t
 	svgame.dllFuncs.pfnUpdateClientData( clent, false, &frame->cd );
 
 	// add all the entities directly visible to the eye, which
 	// may include portal entities that merge other viewpoints
-	SV_AddEntitiesToPacket( viewent, clent, frame, &frame_ents, false );
+	sv.hostflags &= ~SVF_PORTALPASS;
+	SV_AddEntitiesToPacket( viewent, clent, frame, &frame_ents );
 
 	// if there were portals visible, there may be out of order entities
 	// in the list which will need to be resorted for the delta compression
@@ -417,7 +417,7 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 		// add it to the circular client_entities array
 		state = &svs.client_entities[svs.next_client_entities % svs.num_client_entities];
-		*state = ent->pvServerData->s;
+		*state = ent->pvEngineData->s;
 		svs.next_client_entities++;
 
 		// this should never hit, map should always be restarted first in SV_Frame

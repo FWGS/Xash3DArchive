@@ -6,14 +6,32 @@
 #ifndef R_BEAMS_H
 #define R_BEAMS_H
 
-#include "beam_def.h"
-#include "te_shared.h"
+#include "customentity.h"
 
 #define NOISE_DIVISIONS		64	// don't touch - many tripmines cause the crash when it equal 128
 #define NOISE_MASK			(NOISE_DIVISIONS-1)
 #define MAX_BEAM_ENTS		2	// start & end entity
 #define MAX_BEAMS			128	// Max simultaneous beams
 #define MAX_BEAMTRAILS		2048	// default max # of particles at one time
+
+// beam flags
+#define FBEAM_STARTENTITY		0x00000001
+#define FBEAM_ENDENTITY		0x00000002
+#define FBEAM_FADEIN		0x00000004
+#define FBEAM_FADEOUT		0x00000008
+
+// BEGIN SHARED FLAGS
+#define FBEAM_SINENOISE		0x00000010
+#define FBEAM_SOLID			0x00000020
+#define FBEAM_SHADEIN		0x00000040
+#define FBEAM_SHADEOUT		0x00000080
+// END SHARED FLAGS
+
+#define FBEAM_ONLYNOISEONCE		0x00000100 // Only calculate our noise once
+#define FBEAM_STARTVISIBLE		0x10000000 // Has this client actually seen this beam's start entity yet?
+#define FBEAM_ENDVISIBLE		0x20000000 // Has this client actually seen this beam's end entity yet?
+#define FBEAM_ISACTIVE		0x40000000
+#define FBEAM_FOREVER		0x80000000
 	
 struct BeamTrail_t
 {

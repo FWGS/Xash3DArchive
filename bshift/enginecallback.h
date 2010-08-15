@@ -70,7 +70,6 @@ extern enginefuncs_t g_engfuncs;
 #define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)
 #define GETPLAYERAUTHID	(*g_engfuncs.pfnGetPlayerAuthId)
 #define CLASSIFY_EDICT	(*g_engfuncs.pfnClassifyEdict)
-#define COM_Parse		(*g_engfuncs.pfnParseToken)
 
 inline void MESSAGE_BEGIN( int msg_dest, int msg_type, const float *pOrigin = NULL, edict_t *ed = NULL ) {
 	(*g_engfuncs.pfnMessageBegin)(msg_dest, msg_type, pOrigin, ed);
@@ -92,6 +91,7 @@ inline void WRITE_FLOAT( float flValue )
 #define CVAR_GET_STRING	(*g_engfuncs.pfnCVarGetString)
 #define CVAR_SET_FLOAT	(*g_engfuncs.pfnCVarSetFloat)
 #define CVAR_SET_STRING	(*g_engfuncs.pfnCVarSetString)
+#define CVAR_GET_POINTER (*g_engfuncs.pfnCVarGetPointer)
 #define ALERT			(*g_engfuncs.pfnAlertMessage)
 #define ENGINE_FPRINTF	(*g_engfuncs.pfnEngineFprintf)
 #define ALLOC_PRIVATE	(*g_engfuncs.pfnPvAllocEntPrivateData)
@@ -136,9 +136,9 @@ inline void *GET_PRIVATE( edict_t *pent )
 #define FILE_EXISTS		(*g_engfuncs.pfnFileExists)
 #define GET_GAME_DIR			(*g_engfuncs.pfnGetGameDir)
 #define IS_MAP_VALID			(*g_engfuncs.pfnIsMapValid)
-#define SET_BONE_POSITION	(*g_engfuncs.pfnSetBonePos)
+#define NUMBER_OF_ENTITIES		(*g_engfuncs.pfnNumberOfEntities)
 #define DROP_CLIENT		(*g_engfuncs.pfnDropClient)
-#define ENGINE_CHECK_PVS	(*g_engfuncs.pfnCheckVisibility)
+#define ENGINE_CHECK_VISIBILITY	(*g_engfuncs.pfnCheckVisibility)
 
 #define ENGINE_SET_PVS			(*g_engfuncs.pfnSetFatPVS)
 #define ENGINE_SET_PAS			(*g_engfuncs.pfnSetFatPAS)

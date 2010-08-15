@@ -42,6 +42,7 @@ cvar_t	*sv_stopspeed;
 cvar_t	*hostname;
 cvar_t	*sv_maxclients;
 cvar_t	*sv_check_errors;
+cvar_t	*sv_footsteps;
 cvar_t	*public_server;		// should heartbeats be sent
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 cvar_t	*serverinfo;
@@ -202,6 +203,26 @@ void SV_UpdateMovevars( void )
 		oldserverflags = svgame.globals->serverflags;		
 	}
 
+	if( sv_maxspeed->modified )
+	{
+		sv_client_t	*cl;
+		int		i;
+
+		// maxspeed is modified, refresh maxspeed for each client
+		for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+		{
+			if( !SV_IsValidEdict( cl->edict ))
+				continue;
+
+			// can update even if client it's not active
+			SV_SetClientMaxspeed( cl, sv_maxspeed->value );
+		}
+                    
+		if( sv.state == ss_active )
+			SV_BroadcastPrintf( PRINT_HIGH, "sv_maxspeed is changed to %g\n", sv_maxspeed->value );
+		sv_maxspeed->modified = false;
+	}
+
 	if( sv_zmax->modified )
 	{
 		SV_ConfigString( CS_ZFAR, sv_zmax->string );
@@ -249,9 +270,18 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.bounce = sv_wallbounce->value;
 	svgame.movevars.stepsize = sv_stepheight->value;
 	svgame.movevars.maxvelocity = sv_maxvelocity->value;
-	svgame.movevars.footsteps = Cvar_VariableInteger( "mp_footsteps" );
+	svgame.movevars.zmax = sv_zmax->value;
+	svgame.movevars.waveHeight = sv_wateramp->value;
+	com.strncpy( svgame.movevars.skyName, sv_skyname->string, sizeof( svgame.movevars.skyName ));
+	svgame.movevars.footsteps = sv_footsteps->integer;
 	svgame.movevars.rollangle = sv_rollangle->value;
 	svgame.movevars.rollspeed = sv_rollspeed->value;
+	svgame.movevars.skycolor_r = sv_skycolor_r->value;
+	svgame.movevars.skycolor_g = sv_skycolor_g->value;
+	svgame.movevars.skycolor_b = sv_skycolor_b->value;
+	svgame.movevars.skyvec_x = sv_skyvec_x->value;
+	svgame.movevars.skyvec_y = sv_skyvec_y->value;
+	svgame.movevars.skyvec_z = sv_skyvec_z->value;
 
 	BF_Clear( &sv.multicast );
 
@@ -443,12 +473,11 @@ void SV_PrepWorldFrame( void )
 	edict_t	*ent;
 	int	i;
 
-	for( i = 1; i < svgame.globals->numEntities; i++ )
+	for( i = 1; i < svgame.numEntities; i++ )
 	{
 		ent = EDICT_NUM( i );
 		if( ent->free ) continue;
 
-		ent->pvServerData->s.ed_flags = 0;
 		ent->v.effects &= ~EF_MUZZLEFLASH;
 
 		// clear NOINTERP flag automatically only for alive creatures			
@@ -637,15 +666,16 @@ void SV_Init( void )
 	Cvar_Get ("sv_language", "0", 0, "game language (currently unused)" );
 	
 	// half-life shared variables
-	sv_zmax = Cvar_Get ("sv_zmax", "0", 0, "zfar server value" );
-	sv_wateramp = Cvar_Get ("sv_wateramp", "0", 0, "global water wave height" );
-	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "127", 0, "skycolor red (hl1 compatibility)" );
-	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "127", 0, "skycolor green (hl1 compatibility)" );
-	sv_skycolor_b = Cvar_Get ("sv_skycolor_b", "127", 0, "skycolor blue (hl1 compatibility)" );
-	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "1", 0, "sky direction x (hl1 compatibility)" );
-	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", 0, "sky direction y (hl1 compatibility)" );
-	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "-1", 0, "sky direction z (hl1 compatibility)" );
-	sv_skyname = Cvar_Get ("sv_skyname", "2desert", 0, "skybox name (can be dynamically changed in-game)" );
+	sv_zmax = Cvar_Get ("sv_zmax", "0", CVAR_PHYSICINFO, "zfar server value" );
+	sv_wateramp = Cvar_Get ("sv_wateramp", "0", CVAR_PHYSICINFO, "global water wave height" );
+	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "127", CVAR_PHYSICINFO, "skycolor red (hl1 compatibility)" );
+	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "127", CVAR_PHYSICINFO, "skycolor green (hl1 compatibility)" );
+	sv_skycolor_b = Cvar_Get ("sv_skycolor_b", "127", CVAR_PHYSICINFO, "skycolor blue (hl1 compatibility)" );
+	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "1", CVAR_PHYSICINFO, "sky direction x (hl1 compatibility)" );
+	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", CVAR_PHYSICINFO, "sky direction y (hl1 compatibility)" );
+	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "-1", CVAR_PHYSICINFO, "sky direction z (hl1 compatibility)" );
+	sv_skyname = Cvar_Get ("sv_skyname", "2desert", CVAR_PHYSICINFO, "skybox name (can be dynamically changed in-game)" );
+	sv_footsteps = Cvar_Get ("mp_footsteps", "0", CVAR_PHYSICINFO, "can hear footsteps from other players" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
 	sv_fps = Cvar_Get( "sv_fps", "60", CVAR_SERVERINFO|CVAR_ARCHIVE, "network game server fps" );

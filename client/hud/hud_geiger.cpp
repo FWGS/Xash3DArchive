@@ -68,12 +68,12 @@ int CHudGeiger::Draw( float flTime )
 		// peicewise linear is better than continuous formula for this
 		if( m_iGeigerRange > 800 )
 		{
-			pct = 0;			//ALERT( at_console, "range > 800\n" );
+			pct = 0;			//Con_Printf( "range > 800\n" );
 		}
 		else if( m_iGeigerRange > 600 )
 		{
 			pct = 2;
-			flvol = 0.4;		//ALERT( at_console, "range > 600\n" );
+			flvol = 0.4;		//Con_Printf( "range > 600\n" );
 			rg[0] = 1;
 			rg[1] = 1;
 			i = 2;
@@ -81,7 +81,7 @@ int CHudGeiger::Draw( float flTime )
 		else if( m_iGeigerRange > 500 )
 		{
 			pct = 4;
-			flvol = 0.5;		//ALERT( at_console, "range > 500\n" );
+			flvol = 0.5;		//Con_Printf( "range > 500\n" );
 			rg[0] = 1;
 			rg[1] = 2;
 			i = 2;
@@ -89,7 +89,7 @@ int CHudGeiger::Draw( float flTime )
 		else if( m_iGeigerRange > 400 )
 		{
 			pct = 8;
-			flvol = 0.6;		//ALERT( at_console, "range > 400\n" );
+			flvol = 0.6;		//Con_Printf( "range > 400\n" );
 			rg[0] = 1;
 			rg[1] = 2;
 			rg[2] = 3;
@@ -98,7 +98,7 @@ int CHudGeiger::Draw( float flTime )
 		else if( m_iGeigerRange > 300 )
 		{
 			pct = 8;
-			flvol = 0.7;		//ALERT( at_console, "range > 300\n" );
+			flvol = 0.7;		//Con_Printf( "range > 300\n" );
 			rg[0] = 2;
 			rg[1] = 3;
 			rg[2] = 4;
@@ -107,7 +107,7 @@ int CHudGeiger::Draw( float flTime )
 		else if( m_iGeigerRange > 200 )
 		{
 			pct = 28;
-			flvol = 0.78;		//ALERT( at_console, "range > 200\n" );
+			flvol = 0.78;		//Con_Printf( "range > 200\n" );
 			rg[0] = 2;
 			rg[1] = 3;
 			rg[2] = 4;
@@ -116,7 +116,7 @@ int CHudGeiger::Draw( float flTime )
 		else if( m_iGeigerRange > 150 )
 		{
 			pct = 40;
-			flvol = 0.80;		//ALERT( at_console, "range > 150\n" );
+			flvol = 0.80;		//Con_Printf( "range > 150\n" );
 			rg[0] = 3;
 			rg[1] = 4;
 			rg[2] = 5;
@@ -125,7 +125,7 @@ int CHudGeiger::Draw( float flTime )
 		else if( m_iGeigerRange > 100 )
 		{
 			pct = 60;
-			flvol = 0.85;		//ALERT( at_console, "range > 100\n" );
+			flvol = 0.85;		//Con_Printf( "range > 100\n" );
 			rg[0] = 3;
 			rg[1] = 4;
 			rg[2] = 5;

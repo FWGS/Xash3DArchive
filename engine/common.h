@@ -40,7 +40,6 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 extern cvar_t	*scr_width;
 extern cvar_t	*scr_height;
 extern cvar_t	*allow_download;
-extern cvar_t	*sys_sharedstrings;
 extern cvar_t	*host_maxfps;
 
 /*
@@ -68,6 +67,15 @@ typedef enum
 	RD_CLIENT,
 	RD_PACKET
 } rdtype_t;
+
+// game print level
+typedef enum
+{
+	PRINT_LOW,	// pickup messages
+	PRINT_MEDIUM,	// death messages
+	PRINT_HIGH,	// critical messages
+	PRINT_CHAT,	// chat messages
+} messagelevel_t;
 
 typedef struct host_redirect_s
 {
@@ -171,6 +179,7 @@ void pfnCVarSetString( const char *szName, const char *szValue );
 void pfnCVarSetValue( const char *szName, float flValue );
 float pfnCVarGetValue( const char *szName );
 char* pfnCVarGetString( const char *szName );
+cvar_t *pfnCVarGetPointer( const char *szVarName );
 void pfnFreeFile( void *buffer );
 int pfnFileExists( const char *filename );
 void *pfnLoadLibrary( const char *name );
@@ -180,11 +189,12 @@ long pfnRandomLong( long lLow, long lHigh );
 float pfnRandomFloat( float flLow, float flHigh );
 void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc );
 void pfnDelCommand( const char *cmd_name );
-void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... );
 void *Cache_Check( byte *mempool, cache_user_t *c );
 void pfnGetGameDir( char *szGetGameDir );
 const char *pfnCmd_Args( void );
 const char *pfnCmd_Argv( int argc );
+void pfnCon_DPrintf( char *fmt, ... );
+void pfnCon_Printf( char *szFmt, ... );
 int pfnCmd_Argc( void );
 int pfnIsInGame( void );
 float pfnTime( void );
@@ -247,6 +257,7 @@ int CL_GetMaxClients( void );
 bool CL_IsPlaybackDemo( void );
 bool SV_GetComment( const char *savename, char *comment );
 bool SV_NewGame( const char *mapName, bool loadGame );
+void SV_SysError( const char *error_string );
 bool SV_LoadProgs( const char *name );
 void SV_InitGameProgs( void );
 void SV_ForceError( void );

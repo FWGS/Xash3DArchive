@@ -1167,6 +1167,7 @@ setup_and_render:
 		NormalVectorToAxis( A[0], A );
 
 		// build portal_dest-to-world rotation matrix
+		// FIXME: movedir isn't used, portals are broken
 		VectorCopy( ent->movedir, portal_plane->normal );
 		NormalVectorToAxis( portal_plane->normal, B );
 		Matrix3x3_Transpose( C, B );

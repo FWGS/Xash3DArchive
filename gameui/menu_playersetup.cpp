@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "keydefs.h"
 #include "ref_params.h"
 #include "cl_entity.h"
+#include "entity_types.h"
 
 #define ART_BANNER		"gfx/shell/head_customize"
 
@@ -250,7 +251,7 @@ static void UI_PlayerSetup_Ownerdraw( void *self )
 	uiPlayerSetup.refdef.frametime = gpGlobals->frametime;
 
 	// draw the player model
-	R_AddEntity( uiPlayerSetup.ent, ED_NORMAL, -1 );
+	R_AddEntity( uiPlayerSetup.ent, ET_NORMAL, -1 );
 	R_RenderFrame( &uiPlayerSetup.refdef );
 }
 
@@ -393,10 +394,7 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.ent = GET_MENU_EDICT ();
 
 	if( !uiPlayerSetup.ent )
-	{
-		ALERT( at_error, "Unable to find player model edict\n" );
 		return;
-	}
 
 	// adjust entity params
 	uiPlayerSetup.ent->curstate.animtime = gpGlobals->time;	// start animation

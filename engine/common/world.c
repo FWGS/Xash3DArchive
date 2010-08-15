@@ -8,25 +8,16 @@
 #include "pm_defs.h"
 #include "mathlib.h"
 
-const char *ed_name[] =
+const char *et_name[] =
 {
-	"unknown",
-	"world",
-	"static",
-	"ambient",
 	"normal",
-	"brush",
 	"player",
-	"monster",
-	"tempent",
+	"tempentity",
 	"beam",
-	"mover",
-	"viewmodel",
-	"physbody",
-	"trigger",
+	"fragmented",
+	"viewentity",
 	"portal",
 	"skyportal",
-	"error",
 };
 
 /*

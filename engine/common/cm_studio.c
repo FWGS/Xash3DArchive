@@ -6,7 +6,7 @@
 #include "cm_local.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
-#include "entity_def.h"
+#include "edict.h"
 #include "byteorder.h"
 #include "const.h"
 

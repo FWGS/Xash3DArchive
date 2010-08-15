@@ -14,6 +14,12 @@
 #include "r_particle.h"
 #include "r_tempents.h"
 
+// particle velocities
+static const float r_avertexnormals[NUMVERTEXNORMALS][3] =
+{
+#include "anorms.h"
+};
+
 // particle ramps
 static int ramp1[8] = { 0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61 };
 static int ramp2[8] = { 0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66 };
@@ -80,7 +86,7 @@ void CParticleSystem :: Clear( void )
 		m_vecAvelocities[i][2] = RANDOM_LONG( 0, 255 ) * 0.01f;
 
 		// also build avertexnormals
-		m_vecAvertexNormals[i] = Vector( bytedirs[i] );
+		m_vecAvertexNormals[i] = Vector( r_avertexnormals[i] );
 	}
 
 	// build the local copy of particle palette
@@ -122,7 +128,7 @@ CBaseParticle *CParticleSystem :: AllocParticle( HSPRITE m_hSpr )
 
 	if( !m_pFreeParticles )
 	{
-		ALERT( at_console, "Overflow %d particles\n", MAX_PARTICLES );
+		Con_Printf( "Overflow %d particles\n", MAX_PARTICLES );
 		return NULL;
 	}
 

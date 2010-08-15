@@ -10,6 +10,7 @@
 #include "net_encode.h"
 #include "event_api.h"
 #include "weaponinfo.h"
+#include "entity_types.h"
 
 #define DELTA_PATH		"delta.lst"
 static bool		delta_init = false;
@@ -51,9 +52,18 @@ static const delta_field_t pm_fields[] =
 { PHYS_DEF( bounce )		},
 { PHYS_DEF( stepsize )		},
 { PHYS_DEF( maxvelocity )		},
+{ PHYS_DEF( zmax )			},
+{ PHYS_DEF( waveHeight )		},
 { PHYS_DEF( footsteps )		},
+{ PHYS_DEF( skyName )		},
 { PHYS_DEF( rollangle )		},
 { PHYS_DEF( rollspeed )		},
+{ PHYS_DEF( skycolor_r )		},
+{ PHYS_DEF( skycolor_g )		},
+{ PHYS_DEF( skycolor_b )		},
+{ PHYS_DEF( skyvec_x )		},
+{ PHYS_DEF( skyvec_y )		},
+{ PHYS_DEF( skyvec_z )		},
 { NULL },
 };
 
@@ -170,9 +180,7 @@ static const delta_field_t cd_fields[] =
 
 static const delta_field_t ent_fields[] =
 {
-{ ENTS_DEF( classname )	},
-{ ENTS_DEF( ed_type )	},
-{ ENTS_DEF( ed_flags )	},
+{ ENTS_DEF( entityType )	},
 { ENTS_DEF( origin[0] )	},
 { ENTS_DEF( origin[1] )	},
 { ENTS_DEF( origin[2] )	},
@@ -263,9 +271,6 @@ static const delta_field_t ent_fields[] =
 { ENTS_DEF( vuser4[0] )	},
 { ENTS_DEF( vuser4[1] )	},
 { ENTS_DEF( vuser4[2] )	},
-
-// Xash3D legacy (needs to be removed)
-{ ENTS_DEF( flags )		},
 { NULL },
 };
 
@@ -705,7 +710,14 @@ void Delta_InitFields( void )
 	token_t		token;
 		
 	delta_script = Com_OpenScript( DELTA_PATH, NULL, 0 );
-	if( !delta_script ) com.error( "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
+	if( !delta_script )
+	{
+		static string	errormsg;
+
+		com.snprintf( errormsg, sizeof( errormsg ), "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
+		SV_SysError( errormsg );
+		com.error( errormsg );
+	}
 
 	while( Com_ReadToken( delta_script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 	{
@@ -759,9 +771,18 @@ void Delta_Init( void )
 	Delta_AddField( "movevars_t", "bounce", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
 	Delta_AddField( "movevars_t", "stepsize", DT_FLOAT|DT_SIGNED, 16, 16.0f, 1.0f );
 	Delta_AddField( "movevars_t", "maxvelocity", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "zmax", DT_FLOAT|DT_SIGNED, 16, 1.0f, 1.0f );	// no fractional part
+	Delta_AddField( "movevars_t", "waveHeight", DT_FLOAT|DT_SIGNED, 16, 1.0f, 16.0f );
+	Delta_AddField( "movevars_t", "skyName", DT_STRING, 1, 1.0f, 1.0f ); 
 	Delta_AddField( "movevars_t", "footsteps", DT_INTEGER, 1, 1.0f, 1.0f );
 	Delta_AddField( "movevars_t", "rollangle", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "rollspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skycolor_r", DT_FLOAT|DT_SIGNED, 9, 1.0f, 1.0f ); // 0 - 264
+	Delta_AddField( "movevars_t", "skycolor_g", DT_FLOAT|DT_SIGNED, 9, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skycolor_b", DT_FLOAT|DT_SIGNED, 9, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skyvec_x", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f ); // 0 - 1
+	Delta_AddField( "movevars_t", "skyvec_y", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skyvec_z", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 
 	// now done
 	dt->bInitialized = true;
@@ -1361,7 +1382,7 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 
 		// a NULL to is a delta remove message
 		BF_WriteWord( msg, from->number );
-		BF_WriteOneBit( msg, 1 );	// remove message
+		BF_WriteOneBit( msg, 1 );	// entity killed
 		return;
 	}
 
@@ -1371,21 +1392,21 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 		Host_Error( "MSG_WriteDeltaEntity: Bad entity number: %i\n", to->number );
 
 	BF_WriteWord( msg, to->number );
-	BF_WriteOneBit( msg, 0 );	// alive
+	BF_WriteOneBit( msg, 0 );		// alive
 
-	if( to->ed_type != from->ed_type )
+	if( to->entityType != from->entityType )
 	{
 		BF_WriteOneBit( msg, 1 );
-		BF_WriteUBitLong( msg, to->ed_type, 5 );
+		BF_WriteUBitLong( msg, to->entityType, 4 );
 	}
 	else BF_WriteOneBit( msg, 0 ); 
 
-	switch( to->ed_type )
+	switch( to->entityType )
 	{
-	case ED_CLIENT:
+	case ET_PLAYER:
 		dt = Delta_FindStruct( "entity_state_player_t" );
 		break;
-	case ED_BEAM:
+	case ET_BEAM:
 		dt = Delta_FindStruct( "custom_entity_state_t" );
 		break;
 	default:
@@ -1445,14 +1466,14 @@ void MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *
 	}
 
 	if( BF_ReadOneBit( msg ))
-		to->ed_type = BF_ReadUBitLong( msg, 5 );
+		to->entityType = BF_ReadUBitLong( msg, 4 );
 
-	switch( to->ed_type )
+	switch( to->entityType )
 	{
-	case ED_CLIENT:
+	case ET_PLAYER:
 		dt = Delta_FindStruct( "entity_state_player_t" );
 		break;
-	case ED_BEAM:
+	case ET_BEAM:
 		dt = Delta_FindStruct( "custom_entity_state_t" );
 		break;
 	default:

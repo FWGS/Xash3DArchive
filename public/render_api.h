@@ -6,7 +6,6 @@
 #define RENDER_API_H
 
 #include "ref_params.h"
-#include "trace_def.h"
 
 // shader types used for shader loading
 #define SHADER_SKY			1	// sky box shader
@@ -109,7 +108,7 @@ typedef struct render_exp_s
 	void	(*FreeShader)( const char *shadername );
 
 	// prepare frame to rendering
-	bool	(*AddRefEntity)( struct cl_entity_s *pRefEntity, int ed_type, shader_t customShader );
+	bool	(*AddRefEntity)( struct cl_entity_s *pRefEntity, int entityType, shader_t customShader );
 	bool	(*DecalShoot)( shader_t decal, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
 	bool	(*AddDLight)( vec3_t pos, rgb_t color, float radius, int flags );
 	bool	(*AddPolygon)( const poly_t *poly );

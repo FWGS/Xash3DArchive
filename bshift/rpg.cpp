@@ -201,7 +201,6 @@ CRpgRocket *CRpgRocket::CreateRpgRocket( Vector vecOrigin, Vector vecAngles, CBa
 {
 	CRpgRocket *pRocket = GetClassPtr( (CRpgRocket *)NULL );
 
-	pRocket->SetObjectClass( ED_NORMAL );
 	UTIL_SetOrigin( pRocket->pev, vecOrigin );
 	pRocket->pev->angles = vecAngles;
 	pRocket->Spawn();

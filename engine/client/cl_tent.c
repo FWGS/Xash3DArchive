@@ -42,13 +42,13 @@ void CL_WeaponAnim( int iAnim, int body )
 	view->curstate.body = body;
 }
 
-int CL_AddEntity( cl_entity_t *pEnt, int ed_type, shader_t customShader )
+int CL_AddEntity( cl_entity_t *pEnt, int entityType, shader_t customShader )
 {
-	if( !re || !pEnt )
+	if( !re || !pEnt || pEnt->index == -1 )
 		return false;
 
 	// let the render reject entity without model
-	return re->AddRefEntity( pEnt, ed_type, customShader );
+	return re->AddRefEntity( pEnt, entityType, customShader );
 }
 
 /*

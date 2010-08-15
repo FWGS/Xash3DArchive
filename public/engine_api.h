@@ -19,10 +19,19 @@
 #define MAX_EVENTS			1024	// playback events that can be queued (a byte range, don't touch)
 #define MAX_MSGLEN			16384	// max length of network message
 #define MAX_GENERICS		1024	// generic files that can download from server
-#define MAX_CLASSNAMES		512	// maxcount of various edicts classnames
 #define MAX_SOUNDS			2048	// max unique loaded sounds (not counting sequences)
 #define MAX_MODELS			2048	// total count of brush & studio various models per one map
 #define MAX_EDICTS			32768	// absolute limit that never be reached, (do not edit!)
+
+// decal flags
+#define FDECAL_PERMANENT		0x01	// This decal should not be removed in favor of any new decals
+#define FDECAL_CUSTOM		0x02	// This is a custom clan logo and should not be saved/restored
+#define FDECAL_DYNAMIC		0x04	// Indicates the decal is dynamic
+#define FDECAL_DONTSAVE		0x08	// Decal was loaded from adjacent level, don't save it for this level
+#define FDECAL_CLIPTEST		0x10	// Decal needs to be clip-tested
+#define FDECAL_NOCLIP		0x20	// Decal is not clipped by containing polygon
+#define FDECAL_USESAXIS		0x40	// Uses the s axis field to determine orientation (footprints)
+#define FDECAL_ANIMATED		0x80	// this is decal has multiple frames
 
 // world size
 #define MAX_COORD_INTEGER		(16384)	// world half-size, modify with precaution

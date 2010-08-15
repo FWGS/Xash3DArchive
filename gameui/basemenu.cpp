@@ -1187,7 +1187,7 @@ void UI_ApplyCustomColors( void )
 	if( !afile )
 	{
 		// not error, not warning, just notify
-		ALERT( at_aiconsole, "UI_SetColors: colors.lst not found\n" );
+		Con_Printf( "UI_SetColors: colors.lst not found\n" );
 		return;
 	}
 

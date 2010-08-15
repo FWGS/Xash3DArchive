@@ -14,7 +14,6 @@
 #pragma warning(disable : 4244)	// conversion from 'float' to 'int', possible loss of data
 
 #include "windows.h"
-#include "basetypes.h"
 
 // Misc C-runtime library headers
 #include <assert.h>
@@ -30,6 +29,5 @@
 #include "vector.h"
 
 #include "gameui_api.h"
-#include "game_shared.h"
 
 #endif//EXTDLL_H

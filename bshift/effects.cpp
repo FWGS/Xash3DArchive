@@ -230,8 +230,6 @@ CBeam *CBeam::BeamCreate( const char *pSpriteName, int width )
 
 void CBeam::BeamInit( const char *pSpriteName, int width )
 {
-	SetObjectClass( ED_BEAM );
-
 	pev->flags |= FL_CUSTOMENTITY;
 	SetColor( 255, 255, 255 );
 	SetBrightness( 255 );
@@ -468,7 +466,6 @@ void CLightning::Spawn( void )
 
 	if ( ServerSide() )
 	{
-		SetObjectClass( ED_BEAM );
 		SetThink( NULL );
 		if ( pev->dmg > 0 )
 		{
@@ -962,7 +959,6 @@ void CLaser::Spawn( void )
 		return;
 	}
 
-	SetObjectClass( ED_BEAM );
 	pev->solid = SOLID_NOT;							// Remove model & collisions
 	Precache( );
 

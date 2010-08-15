@@ -10,6 +10,8 @@
 #define MOVE_MISSILE	2	// extra size for monsters
 #define MOVE_WORLDONLY	3	// clip only world
 
+#define CONTENTS_NONE	0	// no custom contents specified
+
 /*
 ===============================================================================
 
@@ -22,9 +24,13 @@ ENTITY AREA CHECKING
 #define AREA_NODES			64
 #define AREA_DEPTH			5
 
-#define AREA_SOLID			1
-#define AREA_TRIGGERS		2
-#define AREA_CUSTOM			3	// custom contents - water, lava, fog etc
+// link_t is only used for entity area links now
+typedef struct link_s
+{
+	struct link_s	*prev;
+	struct link_s	*next;
+	int		entnum;		// svs.edicts \ cls.entities actual number
+} link_t;
 
 typedef struct areanode_s
 {
@@ -62,7 +68,7 @@ typedef struct moveclip_s
 	int		flags;	// trace flags
 } moveclip_t;
 
-extern const char		*ed_name[];
+extern const char		*et_name[];
 
 // linked list
 void InsertLinkBefore( link_t *l, link_t *before, int entnum );

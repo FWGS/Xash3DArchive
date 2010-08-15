@@ -135,7 +135,7 @@ void CHud :: VidInit( void )
 		}
 		else
 		{
-			ALERT( at_warning, "hud.txt couldn't load\n" );
+			Con_Printf( "Warning: hud.txt couldn't load\n" );
 			CVAR_SET_FLOAT( "hud_draw", 0 );
 			return;
 		}
@@ -262,10 +262,6 @@ int CHud :: Redraw( float flTime )
 		CLIENT_COMMAND( "screenshot\n" );
 		m_flShotTime = 0;
 	}
-
-	// custom view active, and flag "draw hud" isn't set
-	if(( viewFlags & CAMERA_ON ) && !( viewFlags & DRAW_HUD ))
-		return 1;
 	
 	if( CVAR_GET_FLOAT( "hud_draw" ))
 	{

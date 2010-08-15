@@ -265,7 +265,7 @@ void R_DrawCoronas( void )
 	float		dist;
 	ref_dlight_t	*light;
 	meshbuffer_t	*mb;
-	trace_t		tr;
+	pmtrace_t		tr;
 
 	if( r_dynamiclight->integer != 2 )
 		return;
@@ -280,7 +280,7 @@ void R_DrawCoronas( void )
 		dist -= light->intensity;
 
 		R_TraceLine( &tr, light->origin, RI.viewOrigin, FTRACE_IGNORE_GLASS );
-		if( tr.flFraction != 1.0f )
+		if( tr.fraction != 1.0f )
 			continue;
 
 		mb = R_AddMeshToList( MB_CORONA, NULL, r_coronaShader, -((signed int)i + 1 ));

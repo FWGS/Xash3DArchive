@@ -67,7 +67,7 @@ typedef struct msurface_s
 	// lighting info
 	byte		*samples;		// [numstyles*surfsize]
 	int		numstyles;
-	byte		styles[LM_STYLES];	// index into d_lightstylevalue[] for animated lights 
+	byte		styles[4];	// index into d_lightstylevalue[] for animated lights 
 					// no one surface can be effected by more than 4 
 					// animated lights.
 } msurface_t;

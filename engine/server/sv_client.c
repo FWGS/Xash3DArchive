@@ -8,6 +8,7 @@
 #include "server.h"
 #include "protocol.h"
 #include "net_encode.h"
+#include "entity_types.h"
 
 typedef struct ucmd_s
 {
@@ -180,7 +181,7 @@ gotnewcl:
 	edictnum = (newcl - svs.clients) + 1;
 
 	ent = EDICT_NUM( edictnum );
-	ent->pvServerData->client = newcl;
+	ent->pvEngineData->client = newcl;
 	newcl->edict = ent;
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
@@ -266,7 +267,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	edictnum = (newcl - svs.clients) + 1;
 
 	ent = EDICT_NUM( edictnum );
-	ent->pvServerData->client = newcl;
+	ent->pvEngineData->client = newcl;
 	newcl->edict = ent;
 	newcl->challenge = -1;		// fake challenge
 	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
@@ -340,11 +341,17 @@ void SV_DropClient( sv_client_t *drop )
 		svgame.dllFuncs.pfnSpectatorDisconnect( drop->edict );
 	else svgame.dllFuncs.pfnClientDisconnect( drop->edict );
 
-	drop->edict->pvServerData->s.ed_type = ED_STATIC;	// remove from server
+	// don't send to other clients
+	drop->edict->v.modelindex = 0;
 	if( drop->edict->pvPrivateData )
 	{
+		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
+		{
+			// NOTE: new interface can be missing
+			svgame.dllFuncs2.pfnOnFreeEntPrivateData( drop->edict );
+		}
+
 		// clear any dlls data but keep engine data
-		svgame.dllFuncs.pfnOnFreeEntPrivateData( drop->edict );
 		Mem_Free( drop->edict->pvPrivateData );
 		drop->edict->pvPrivateData = NULL;
 	}
@@ -654,9 +661,7 @@ void SV_PutClientInServer( edict_t *ent )
 {
 	sv_client_t	*client;
 
-	client = ent->pvServerData->client;
-
-	ent->pvServerData->s.ed_type = ED_CLIENT; // init edict type
+	client = ent->pvEngineData->client;
 
 	if( !sv.loadgame )
 	{	
@@ -684,6 +689,9 @@ void SV_PutClientInServer( edict_t *ent )
 	}
 	else
 	{
+		// setup maxspeed and refresh physinfo
+		SV_SetClientMaxspeed( client, svgame.movevars.maxspeed );
+
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
 		{
@@ -693,7 +701,7 @@ void SV_PutClientInServer( edict_t *ent )
 			SV_DirectSend( MSG_ONE, vec3_origin, client->edict );
 			ent->v.fixangle = 0;
 		}
-		ent->pvServerData->s.ed_flags |= (ESF_NODELTA|ESF_NO_PREDICTION);
+		ent->v.effects |= EF_NOINTERP;
 	}
 
 	client->pViewEntity = NULL; // reset pViewEntity
@@ -973,7 +981,7 @@ void SV_Baselines_f( sv_client_t *cl )
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < svgame.globals->numEntities )
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < svgame.numEntities )
 	{
 		base = &svs.baselines[start];
 		if( base->modelindex || base->effects )
@@ -984,7 +992,7 @@ void SV_Baselines_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == svgame.globals->numEntities ) com.snprintf( cmd, MAX_STRING, "precache %i\n", svs.spawncount );
+	if( start == svgame.numEntities ) com.snprintf( cmd, MAX_STRING, "precache %i\n", svs.spawncount );
 	else com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, start );
 
 	// send next command
@@ -1377,14 +1385,15 @@ connectionless packets.
 */
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 {
-	char	*s;
-	char	*c;
+	char	*args;
+	char	*c, buf[MAX_SYSPATH];
+	int	len = sizeof( buf );
 
 	BF_Clear( msg );
 	BF_ReadLong( msg );// skip the -1 marker
 
-	s = BF_ReadStringLine( msg );
-	Cmd_TokenizeString( s );
+	args = BF_ReadStringLine( msg );
+	Cmd_TokenizeString( args );
 
 	c = Cmd_Argv( 0 );
 	MsgDev( D_NOTE, "SV_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), c );
@@ -1396,7 +1405,12 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !com.strcmp( c, "getchallenge" )) SV_GetChallenge( from );
 	else if( !com.strcmp( c, "connect" )) SV_DirectConnect( from );
 	else if( !com.strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
-	else MsgDev( D_ERROR, "bad connectionless packet from %s:\n%s\n", NET_AdrToString( from ), s );
+	else if( svgame.dllFuncs.pfnConnectionlessPacket( &net_from, args, buf, &len ))
+	{
+		// user out of band message (must be handled in CL_ConnectionlessPacket)
+		if( len > 0 ) Netchan_OutOfBand( NS_SERVER, net_from, len, buf );
+	}
+	else MsgDev( D_ERROR, "bad connectionless packet from %s:\n%s\n", NET_AdrToString( from ), args );
 }
 
 /*

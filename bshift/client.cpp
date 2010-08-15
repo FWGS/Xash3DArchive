@@ -661,6 +661,15 @@ void PlayerPostThink( edict_t *pEntity )
 		pPlayer->PostThink( );
 }
 
+void PlayerCustomization( edict_t *pEntity, void *pUnused )
+{
+	// completely ignored in Xash3D
+}
+
+void ParmsNewLevel( void )
+{
+}
+
 void ParmsChangeLevel( void )
 {
 	// retrieve the pointer to the save data
@@ -842,6 +851,19 @@ const char *GetGameDescription()
 
 /*
 ================
+Sys_Error
+
+Engine is going to shut down, allows setting a breakpoint in game .dll to catch that occasion
+================
+*/
+void Sys_Error( const char *error_string )
+{
+	// Default case, do nothing.  MOD AUTHORS:  Add code ( e.g., _asm { int 3 }; here to cause a breakpoint for debugging your game .dlls
+}
+
+
+/*
+================
 SpectatorConnect
 
 A spectator has joined the game
@@ -888,104 +910,6 @@ void SpectatorThink( edict_t *pEntity )
 		pPlayer->SpectatorThink( );
 }
 
-// FIXME: implement VirtualClass GetClass instead
-int AutoClassify( edict_t *pentToClassify )
-{
-	CBaseEntity *pClass;
-
-	pClass = CBaseEntity::Instance( pentToClassify );
-	if( !pClass ) return ED_SPAWNED;
-
-	const char *classname = STRING( pClass->pev->classname );
-
-	if ( !strnicmp( "worldspawn", classname, 10 ))
-	{
-		return ED_WORLDSPAWN;
-	}
-
-	if ( !strnicmp( "bodyque", classname, 7 ))
-	{
-		return ED_NORMAL;
-	}
-
-	// first pass: determine type by explicit parms
-	if ( pClass->pev->solid == SOLID_TRIGGER )
-	{
-		if ( FClassnameIs( pClass->pev, "ambient_generic" ) || FClassnameIs( pClass->pev, "target_speaker" ))	// FIXME
-		{
-			pClass->pev->flags |= FL_PHS_FILTER;
-			return ED_AMBIENT;
-		}
-		else if( pClass->pev->movetype == MOVETYPE_TOSS )
-			return ED_NORMAL; // it's item or weapon
-		if ( FBitSet( pClass->pev->effects, EF_NODRAW ))
-			return ED_TRIGGER; // never sending to client
-		return ED_NORMAL; // e.g. friction modifier
-	}
-	else if ( pClass->pev->movetype == MOVETYPE_PHYSIC )
-		return ED_RIGIDBODY;
-	else if ( pClass->pev->solid == SOLID_BSP )
-	{
-		if ( pClass->pev->flags & FL_CONVEYOR )
-			return ED_MOVER;
-		else if ( pClass->pev->flags & FL_WORLDBRUSH )
-			return ED_BSPBRUSH;
-		else if ( pClass->pev->movetype == MOVETYPE_PUSH ) 
-			return ED_MOVER;
-		else if ( pClass->pev->movetype == MOVETYPE_NONE )
-			return ED_BSPBRUSH;
-	}
-	else if ( pClass->pev->flags & FL_MONSTER )
-		return ED_MONSTER;
-	else if ( pClass->pev->flags & FL_CLIENT )
-		return ED_CLIENT;
-	if ( pClass->pev->flags & FL_CONVEYOR )
-		return ED_MOVER;
-	else if ( !pClass->pev->modelindex && !pClass->pev->aiment )
-	{	
-		if ( pClass->pev->noise || pClass->pev->noise1 || pClass->pev->noise2 || pClass->pev->noise3 )
-		{
-			pClass->pev->flags |= FL_PHS_FILTER;
-			return ED_AMBIENT;
-		}
-		return ED_STATIC; // never sending to client
-	}
-
-	// mark as normal
-	if ( pClass->pev->modelindex || pClass->pev->noise )
-		return ED_NORMAL;
-
-	// fail to classify :-(
-	return ED_SPAWNED;
-}
-
-int ServerClassifyEdict( edict_t *pentToClassify )
-{
-	// NOTE: we can't use FNullEnt here to handle 'worldspawn' properly
-	// but must skip clients because they not spawned at this point
-	if( !pentToClassify || pentToClassify->free || !pentToClassify->pvPrivateData )
-		return ED_SPAWNED;
-
-	CBaseEntity *pClass;
-
-	pClass = CBaseEntity::Instance( pentToClassify );
-	if( !pClass ) return ED_SPAWNED;
-
-	// user-defined
-	if( pClass->m_iClassType != ED_SPAWNED )
-		return pClass->m_iClassType;
-
-	int m_iNewClass = AutoClassify( pentToClassify );
-
-	if( m_iNewClass != ED_SPAWNED )
-	{
-		// tell server.dll about new class
-		pClass->SetObjectClass( m_iNewClass );
-	}
-
-	return m_iNewClass;
-}
-
 ////////////////////////////////////////////////////////
 // PAS and PVS routines for client messaging
 //
@@ -1004,12 +928,12 @@ From the eye position, we set up the PAS and PVS to use for filtering network me
 NOTE:  Do not cache the values of pas and pvs, as they depend on reusable memory in the engine, they are only good for this one frame
 ================
 */
-void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int portal )
+void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int mergepvs )
 {
 	Vector	org = g_vecZero;
 	edict_t	*pView = pClient;
 
-	if( portal )
+	if( mergepvs )
 	{
 		// Entity's added from portal camera PVS
 		if( FNullEnt( pViewEntity )) return; // broken portal ?
@@ -1019,14 +943,14 @@ void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte *
 		if( !pCamera ) return;
 
 		// determine visible point
-		if( pCamera->m_iClassType == ED_PORTAL )
+		if( FClassnameIs( pCamera->pev, "info_portal" ))
 		{
 			// don't build visibility for mirrors
 			if( pCamera->pev->origin == pCamera->pev->oldorigin )
 				return;
 			else org = pCamera->pev->oldorigin;
 		}
-		else if( pCamera->m_iClassType == ED_SKYPORTAL )
+		else if( FClassnameIs( pCamera->pev, "env_sky" ))
 		{
 			org = pCamera->pev->origin;
 		}
@@ -1051,9 +975,12 @@ void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte *
 		org = pView->v.origin + pView->v.view_ofs;
 	}
 
-	*pvs = ENGINE_SET_PVS( (float *)&org, portal );
-	*pas = ENGINE_SET_PAS( (float *)&org, portal );
+	*pvs = ENGINE_SET_PVS( (float *)&org, mergepvs );
+	*pas = ENGINE_SET_PAS( (float *)&org, mergepvs );
 }
+
+#include "entity_state.h"
+#include "entity_types.h"
 
 /*
 AddToFullPack
@@ -1082,19 +1009,27 @@ int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_
 
 	BOOL	bIsPortalPass = FALSE;
 
-	if( pViewEntity && pViewEntity->m_iClassType == ED_PORTAL )
+	if( pViewEntity && FClassnameIs( pViewEntity->pev, "info_portal" ))
 		bIsPortalPass = TRUE; // view from portal camera
 
 	pEntity = (CBaseEntity *)CBaseEntity::Instance( pEdict );
 
-	if( !pEntity ) return 0;
+	if ( !pEntity ) return 0;
 
 	// NOTE: always add himslef to list
-	if( !bIsPortalPass && ( pHost == pEdict ))
+	if ( !bIsPortalPass && ( pHost == pEdict ))
 		goto addEntity;
 
+	// don't send if flagged for NODRAW and it's not the host getting the message
+	if (( pEdict->v.effects == EF_NODRAW ) && ( pEdict != pHost ))
+		return 0;
+
+	// Ignore ents without valid / visible models
+	if ( !pEdict->v.modelindex || !STRING( pEdict->v.model ))
+		return 0;
+
 	// completely ignore dormant entity
-	if( pEdict->v.flags & FL_DORMANT )
+	if ( pEdict->v.flags & FL_DORMANT )
 		return 0;
          
 	// don't send spectators to other players
@@ -1103,32 +1038,8 @@ int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_
 		return 0;
 	}
 
-	// FIXME: temporary hack
-	if( pEdict->v.flags & FL_CUSTOMENTITY )
-	{
-		pEntity->m_iClassType = ED_BEAM;
-		state->ed_type = ED_BEAM;
-	}
-
-	// quick reject by type
-	switch( pEntity->m_iClassType )
-	{
-	case ED_SKYPORTAL:
-		goto addEntity;	// no additional check requires
-	case ED_BEAM:
-	case ED_MOVER:
-	case ED_NORMAL:
-	case ED_PORTAL:
-	case ED_CLIENT:
-	case ED_MONSTER:
-	case ED_AMBIENT:
-	case ED_BSPBRUSH:
-	case ED_RIGIDBODY: break;
-	default: return 0; // skipped
-	}
-
 	// check for ambients distance
-	if( pEntity->m_iClassType == ED_AMBIENT )
+	if(FClassnameIs( pViewEntity->pev, "ambient_generic" ))
 	{	
 		Vector	entorigin;
 
@@ -1142,22 +1053,26 @@ int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_
 	}
 	else delta = g_vecZero;
 
-	// check visibility
-	if ( !ENGINE_CHECK_PVS( pEdict, pSet ))
+	// Ignore if not the host and not touching a PVS/PAS leaf
+	// If pSet is NULL, then the test will always succeed and the entity will be added to the update
+	if ( pEdict != pHost )
 	{
-		float	m_flRadius = 1024;	// g-cont: tune distance by taste :)
-
-		if ( pEntity->pev->flags & FL_PHS_FILTER )
+		if ( !ENGINE_CHECK_VISIBILITY( pEdict, pSet ))
 		{
-			if( pEntity->pev->armorvalue > 0 )
-				m_flRadius = pEntity->pev->armorvalue;
+			float	m_flRadius = 1024;	// g-cont: tune distance by taste :)
 
-			if( delta.Length() > m_flRadius )
+			if ( pEntity->pev->flags & FL_PHS_FILTER )
+			{
+				if( pEntity->pev->armorvalue > 0 )
+					m_flRadius = pEntity->pev->armorvalue;
+
+				if( delta.Length() > m_flRadius )
+					return 0;
+			}
+			else
+			{
 				return 0;
-		}
-		else //if( pEntity->m_iClassType != ED_BEAM )
-		{
-			return 0;
+			}
 		}
 	}
 
@@ -1169,13 +1084,6 @@ int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_
 		if( bIsPortalPass ) return 0;
 		if(( hostflags & 1 ) && ( pEntity->pev->owner == pHost ))
 			return 0;
-	}
-
-	if( !pEntity->pev->modelindex || FStringNull( pEntity->pev->model ))
-	{
-		// can't ignore ents withouts models, because portals and mirrors can't working otherwise
-		// and null.mdl it's no more needs to be set: ED_CLASS rejection is working fine
-		// so we wan't reject this entities here. 
 	}
 
 	if( pHost->v.groupinfo )
@@ -1200,10 +1108,11 @@ int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_
 	}
 
 addEntity:
-
-	// setup some special edict flags (engine will clearing them after the current frame)
-	if( state->modelindex != pEntity->pev->modelindex || ( pEntity->pev->effects & EF_NOINTERP ))
-		state->ed_flags |= ESF_NODELTA;
+	if( pEdict->v.flags & FL_CLIENT )
+		state->entityType = ET_PLAYER;
+	else if( pEdict->v.flags & FL_CUSTOMENTITY )
+		state->entityType = ET_BEAM;
+	else state->entityType = ET_NORMAL;
 
 	// always keep an actual
 	state->number = pEdict->serialnumber;
@@ -1258,7 +1167,7 @@ addEntity:
 	for( i = 0; i < 4; i++ )
 		state->controller[i] = pEntity->pev->controller[i];
 
-	if( state->ed_type == ED_CLIENT )
+	if( pEdict->v.flags & FL_CLIENT )
 	{
 		if( pEntity->pev->aiment ) 
 			state->aiment = ENTINDEX( pEntity->pev->aiment );
@@ -1276,17 +1185,13 @@ addEntity:
 			state->weaponmodel = MODEL_INDEX( STRING( pEntity->pev->weaponmodel ));
 		else state->weaponmodel = 0;
 	}
-	else if( state->ed_type == ED_AMBIENT )
+	else if( pEdict->v.movetype == MOVETYPE_PUSH )
 	{
-		// add here specified fields e.g for trigger_teleport wind sound etc
-	}
-	else if( state->ed_type == ED_MOVER || state->ed_type == ED_BSPBRUSH || state->ed_type == ED_PORTAL )
-	{
-		state->body = DirToBits( pEntity->pev->movedir );
+		state->body = DirToBits( pEntity->pev->movedir );	// legacy
 		state->velocity = pEntity->pev->velocity;
 
 		// this is conveyor - send speed to render for right texture scrolling
-		state->framerate = pEntity->pev->speed;
+		state->framerate = pEntity->pev->speed;	// legacy
 	}
 	return 1;
 }
@@ -1300,14 +1205,11 @@ Creates baselines used for network encoding, especially for player data since pl
 */
 void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playermodelindex )
 {
-	// FIXME: temporary hack
-	if( entity->v.flags & FL_CUSTOMENTITY )
-	{
-		baseline->ed_type = ED_BEAM;
-	}
-
-	// always set nodelta's for baseline
-	baseline->ed_flags |= ESF_NODELTA;
+	if( entity->v.flags & FL_CLIENT )
+		baseline->entityType = ET_PLAYER;
+	else if( entity->v.flags & FL_CUSTOMENTITY )
+		baseline->entityType = ET_BEAM;
+	else baseline->entityType = ET_NORMAL;
 
 	baseline->origin = entity->v.origin;
 	baseline->angles = entity->v.angles;
@@ -1325,7 +1227,7 @@ void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playermodeli
 	baseline->mins = entity->v.mins;
 	baseline->maxs = entity->v.maxs;
 
-	if( baseline->ed_type == ED_CLIENT )
+	if( baseline->entityType == ET_PLAYER )
 	{
 		baseline->colormap		= entity->serialnumber;
 		baseline->modelindex	= playermodelindex;		// "model" field from userinfo
@@ -1697,6 +1599,29 @@ void CmdEnd ( const edict_t *player )
 
 /*
 ================================
+ConnectionlessPacket
+
+ Return 1 if the packet is valid.  Set response_buffer_size if you want to send a response packet.  Incoming, it holds the max
+  size of the response_buffer, so you must zero it out if you choose not to respond.
+================================
+*/
+int	ConnectionlessPacket( const struct netadr_s *net_from, const char *args, char *response_buffer, int *response_buffer_size )
+{
+	// Parse stuff from args
+	int max_buffer_size = *response_buffer_size;
+
+	// Zero it out since we aren't going to respond.
+	// If we wanted to response, we'd write data into response_buffer
+	*response_buffer_size = 0;
+
+	// Since we don't listen for anything here, just respond that it's a bogus message
+	// If we didn't reject the message, we'd return 1 for success instead.
+	return 0;
+}
+
+
+/*
+================================
 GetHullBounds
 
 Engine calls this to enumerate player collision hulls, for prediction.
@@ -1727,6 +1652,65 @@ int GetHullBounds( int hullnumber, float *mins, float *maxs )
 	}
 
 	return iret;
+}
+
+/*
+================================
+CreateInstancedBaselines
+
+Create pseudo-baselines for items that aren't placed in the map at spawn time, but which are likely
+to be created during play ( e.g., grenades, ammo packs, projectiles, corpses, etc. )
+================================
+*/
+void CreateInstancedBaselines ( void )
+{
+	int iret = 0;
+	entity_state_t state;
+
+	memset( &state, 0, sizeof( state ) );
+
+	// Create any additional baselines here for things like grendates, etc.
+	// iret = ENGINE_INSTANCE_BASELINE( pc->pev->classname, &state );
+
+	// Destroy objects.
+	//UTIL_Remove( pc );
+}
+
+/*
+================================
+InconsistentFile
+
+One of the ENGINE_FORCE_UNMODIFIED files failed the consistency check for the specified player
+ Return 0 to allow the client to continue, 1 to force immediate disconnection ( with an optional disconnect message of up to 256 characters )
+================================
+*/
+int	InconsistentFile( const edict_t *player, const char *filename, char *disconnect_message )
+{
+	// Server doesn't care?
+	if ( CVAR_GET_FLOAT( "mp_consistency" ) != 1 )
+		return 0;
+
+	// Default behavior is to kick the player
+	sprintf( disconnect_message, "Server is enforcing file consistency for %s\n", filename );
+
+	// Kick now with specified disconnect message.
+	return 1;
+}
+
+/*
+================================
+AllowLagCompensation
+
+ The game .dll should return 1 if lag compensation should be allowed ( could also just set
+  the sv_unlag cvar.
+ Most games right now should return 0, until client-side weapon prediction code is written
+  and tested for them ( note you can predict weapons, but not do lag compensation, too, 
+  if you want.
+================================
+*/
+int AllowLagCompensation( void )
+{
+	return 1;
 }
 
 /*

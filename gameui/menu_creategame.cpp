@@ -184,7 +184,7 @@ static void UI_CreateGame_GetMapsList( void )
 	{
 		uiCreateGame.done.generic.flags |= QMF_GRAYED;
 		uiCreateGame.mapsList.itemNames = (const char **)uiCreateGame.mapsDescriptionPtr;
-		ALERT( at_error, "Cmd_GetMapsList: can't open maps.lst\n" );
+		Con_Printf( "Cmd_GetMapsList: can't open maps.lst\n" );
 		return;
 	}
 

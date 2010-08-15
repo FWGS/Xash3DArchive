@@ -87,9 +87,8 @@ void V_ThirdPerson( void )
 {
 	// no thirdperson in multiplayer
 	if( gpGlobals->maxClients > 1 ) return;
-	if( !gHUD.viewFlags )
-		gHUD.m_iLastCameraMode = gHUD.m_iCameraMode = 1;
-	else gHUD.m_iLastCameraMode = 1; // set new view after release camera
+
+	gHUD.m_iCameraMode = 1;
 }
 
 //==========================
@@ -97,9 +96,7 @@ void V_ThirdPerson( void )
 //==========================
 void V_FirstPerson( void )
 {
-	if( !gHUD.viewFlags )
-		gHUD.m_iLastCameraMode = gHUD.m_iCameraMode = 0;
-	else gHUD.m_iLastCameraMode = 0; // set new view after release camera
+	gHUD.m_iCameraMode = 0;
 }
 
 /*
@@ -233,7 +230,7 @@ float V_CalcFov( float fov_x, float width, float height )
 	// check to avoid division by zero
 	if( fov_x < 1 || fov_x > 179 )
 	{
-		ALERT( at_error, "V_CalcFov: invalid fov %g!\n", fov_x );
+		Con_Printf( "V_CalcFov: invalid fov %g!\n", fov_x );
 		fov_x = 90;
 	}
 
@@ -555,37 +552,7 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 {
 	if( pparams->intermission ) return;	// disable in intermission mode
 
-	if( gHUD.viewFlags & CAMERA_ON )
-	{         
-		// this is a viewentity sets with BUzer's custom camera code
-		cl_entity_t *viewentity = GetEntityByIndex( gHUD.viewEntityIndex );
-	 	if( viewentity )
-		{		 
-			studiohdr_t *viewmonster = (studiohdr_t *)GetModelPtr( viewentity );
-			float m_fLerp = GetLerpFrac();
-
-			if( viewentity->curstate.movetype == MOVETYPE_STEP )
-				v_origin = LerpPoint( viewentity->prevstate.origin, viewentity->curstate.origin, m_fLerp );
-			else v_origin = viewentity->origin;	// already interpolated
-
-			// calc monster view if supposed
-			if( gHUD.viewFlags & MONSTER_VIEW && viewmonster )
-				v_origin += viewmonster->eyeposition;
-
-			if( viewentity->curstate.movetype == MOVETYPE_STEP )
-				v_angles = LerpAngle( viewentity->prevstate.angles, viewentity->curstate.angles, m_fLerp );
-			else v_angles = viewentity->angles;	// already interpolated
-
-			if( gHUD.viewFlags & INVERSE_X )	// inverse X coordinate
-				v_angles[0] = -v_angles[0];
-			pparams->crosshairangle[ROLL] = 1;	// crosshair is hided
-
-			// refresh position
-			pparams->viewangles = v_angles;
-			pparams->vieworg = v_origin;
-		}
-	}
-	else if( GetEntityByIndex( pparams->viewentity ) != GetLocalPlayer( ))
+	if( GetEntityByIndex( pparams->viewentity ) != GetLocalPlayer( ))
 	{
 		// this is a viewentity which sets by SET_VIEW builtin
 		cl_entity_t *viewentity = GetEntityByIndex( pparams->viewentity );
@@ -625,7 +592,7 @@ cl_entity_t *V_FindIntermisionSpot( ref_params_t *pparams )
 	for( int i = 0; i < pparams->num_entities; i++ )
 	{
 		ent = GetEntityByIndex( i );
-		if( ent && !stricmp( STRING( ent->classname ), "info_intermission" ))
+		if( ent && !stricmp( ent->curstate.classname, "info_intermission" ))
 		{
 			if( j > 15 ) break; // spotlist is full
 			spotindex[j] = ent->index; // save entindex

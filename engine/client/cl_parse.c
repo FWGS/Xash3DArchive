@@ -6,7 +6,6 @@
 #include "common.h"
 #include "client.h"
 #include "protocol.h"
-#include "net_sound.h"
 #include "net_encode.h"
 #include "event_flags.h"
 
@@ -584,7 +583,6 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	else timebase = 1000; // sv.state == ss_loading
 
 	MSG_ReadDeltaEntity( msg, &nullstate, &ent->baseline, newnum, cl.time );
-	CL_LinkEdict( ent, false ); // first entering, link always
 }
 
 /*
@@ -651,11 +649,6 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	else if( i >= CS_EVENTS && i < CS_EVENTS+MAX_EVENTS )
 	{
 		CL_SetEventIndex( cl.configstrings[i], i - CS_EVENTS );
-	}
-	else if( i >= CS_CLASSNAMES && i < CS_CLASSNAMES+MAX_CLASSNAMES )
-	{
-		// edicts classnames for search by classname on client
-		cl.edict_classnames[i-CS_CLASSNAMES] = MAKE_STRING( cl.configstrings[i] );
 	}
 	else if( i >= CS_LIGHTSTYLES && i < CS_LIGHTSTYLES+MAX_LIGHTSTYLES )
 	{

@@ -2301,7 +2301,7 @@ R_LightContributionToPoint
 */
 bool R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3_t color )
 {
-	trace_t	trace;
+	pmtrace_t	trace;
 	float	add;
 
 	add = 0;
@@ -2321,7 +2321,7 @@ bool R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3
 		// test occlusion
 		// clip the line, tracing from the surface towards the light
 		R_TraceLine( &trace, origin, light->origin, FTRACE_IGNORE_GLASS );
-		if( trace.flFraction != 1.0f ) return false;
+		if( trace.fraction != 1.0f ) return false;
 
 		// calculate the contribution
 		VectorSubtract( light->origin, origin, normal );
@@ -2368,7 +2368,7 @@ bool R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3
 		return false;
 
 	// other light rays must not hit anything
-	if( trace.flFraction != 1.0f )
+	if( trace.fraction != 1.0f )
 		return false;
 
 	// add the result
@@ -2733,7 +2733,7 @@ void R_BeginRegistration( const char *mapname )
 	r_worldent->scale = 1.0f;
 	r_worldent->model = r_worldmodel;
 	r_worldent->rtype = RT_MODEL;
-	r_worldent->ent_type = ED_NORMAL;
+	r_worldent->ent_type = ET_NORMAL;
 	r_worldent->renderamt = 255;		// i'm hope we don't want to see semisolid world :) 
 	Matrix3x3_LoadIdentity( r_worldent->axis );
 	Mod_UpdateShaders( r_worldmodel );

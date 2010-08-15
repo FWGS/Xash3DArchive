@@ -18,12 +18,11 @@
 #define CS_SIZE			64	// size of one config string
 #define CS_TIME			16	// size of time string
 
-struct netadr_s
-{
-	int	type;	// NA_LOOPBACK = 0, NA_BROADCAST = 1, NA_IP = 2
-	byte	ip[4];
-	word	port;
-};
+// color strings
+#define ColorIndex( c )		((( c ) - '0' ) & 7 )
+#define IsColorString( p )		( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
+
+#include "netadr.h"
 
 #define ART_BACKGROUND		"gfx/shell/splash"
 #define UI_CURSOR_NORMAL		"gfx/shell/cursor"
@@ -90,28 +89,28 @@ typedef enum
 } menuType_t;
 
 // Generic flags
-#define QMF_LEFT_JUSTIFY		BIT(0)
-#define QMF_CENTER_JUSTIFY		BIT(1)
-#define QMF_RIGHT_JUSTIFY		BIT(2)
-#define QMF_GRAYED			BIT(3)	// Grays and disables
-#define QMF_INACTIVE		BIT(4)	// Disables any input
-#define QMF_HIDDEN			BIT(5)	// Doesn't draw
-#define QMF_NUMBERSONLY		BIT(6)	// Edit field is only numbers
-#define QMF_LOWERCASE		BIT(7)	// Edit field is all lower case
-#define QMF_UPPERCASE		BIT(8)	// Edit field is all upper case
-#define QMF_DRAW_ADDITIVE		BIT(9)	// enable additive for this bitmap
-#define QMF_PULSEIFFOCUS		BIT(10)
-#define QMF_HIGHLIGHTIFFOCUS		BIT(11)
-#define QMF_SMALLFONT		BIT(12)
-#define QMF_BIGFONT			BIT(13)
-#define QMF_DROPSHADOW		BIT(14)
-#define QMF_SILENT			BIT(15)	// Don't play sounds
-#define QMF_HASMOUSEFOCUS		BIT(16)
-#define QMF_MOUSEONLY		BIT(17)	// Only mouse input allowed
-#define QMF_FOCUSBEHIND		BIT(18)	// Focus draws behind normal item
-#define QMF_NOTIFY			BIT(19)	// draw notify at right screen side
-#define QMF_ACT_ONRELEASE		BIT(20)	// call Key_Event when button is released
-#define QMF_ALLOW_COLORSTRINGS	BIT(21)	// allow colorstring in MENU_FIELD
+#define QMF_LEFT_JUSTIFY		(1<<0)
+#define QMF_CENTER_JUSTIFY		(1<<1)
+#define QMF_RIGHT_JUSTIFY		(1<<2)
+#define QMF_GRAYED			(1<<3)	// Grays and disables
+#define QMF_INACTIVE		(1<<4)	// Disables any input
+#define QMF_HIDDEN			(1<<5)	// Doesn't draw
+#define QMF_NUMBERSONLY		(1<<6)	// Edit field is only numbers
+#define QMF_LOWERCASE		(1<<7)	// Edit field is all lower case
+#define QMF_UPPERCASE		(1<<8)	// Edit field is all upper case
+#define QMF_DRAW_ADDITIVE		(1<<9)	// enable additive for this bitmap
+#define QMF_PULSEIFFOCUS		(1<<10)
+#define QMF_HIGHLIGHTIFFOCUS		(1<<11)
+#define QMF_SMALLFONT		(1<<12)
+#define QMF_BIGFONT			(1<<13)
+#define QMF_DROPSHADOW		(1<<14)
+#define QMF_SILENT			(1<<15)	// Don't play sounds
+#define QMF_HASMOUSEFOCUS		(1<<16)
+#define QMF_MOUSEONLY		(1<<17)	// Only mouse input allowed
+#define QMF_FOCUSBEHIND		(1<<18)	// Focus draws behind normal item
+#define QMF_NOTIFY			(1<<19)	// draw notify at right screen side
+#define QMF_ACT_ONRELEASE		(1<<20)	// call Key_Event when button is released
+#define QMF_ALLOW_COLORSTRINGS	(1<<21)	// allow colorstring in MENU_FIELD
 
 // Callback notifications
 #define QM_GOTFOCUS			1

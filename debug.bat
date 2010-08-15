@@ -8,7 +8,7 @@ set build_type=debug
 set BUILD_ERROR=
 call vcvars32
 
-%MSDEV% bshift/bshift.dsp %CONFIG%"bshift - Win32 Debug" %build_target%
+%MSDEV% dlls/hl.dsp %CONFIG%"hl - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 %MSDEV% client/client.dsp %CONFIG%"client - Win32 Debug" %build_target%

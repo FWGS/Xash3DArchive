@@ -33,7 +33,6 @@
 #pragma warning(disable : 4100)		// unreferenced formal parameter
 
 #include "windows.h"
-#include "basetypes.h"
 
 #define FALSE	0
 #define TRUE	1
@@ -64,9 +63,9 @@ typedef unsigned long ULONG;
 // Vector class
 #include "vector.h"
 
- // Shared header describing protocol between engine and DLLs
-#include "entity_def.h"
-#include "svgame_api.h"
+// Shared header describing protocol between engine and DLLs
+#include "edict.h"
+#include "eiface.h"
 
 // Shared header between the client DLL and the game DLLs
 #include "cdll_dll.h"

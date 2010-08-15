@@ -6,13 +6,17 @@
 #include "common.h"
 #include "server.h"
 #include "protocol.h"
-#include "net_sound.h"
 #include "net_encode.h"
 #include "byteorder.h"
 #include "matrix_lib.h"
 #include "event_flags.h"
+#include "entity_types.h"
 #include "pm_defs.h"
 #include "const.h"
+
+// exports
+typedef void (*LINK_ENTITY_FUNC)( entvars_t *pev );
+typedef void (*GIVEFNPTRSTODLL)( enginefuncs_t* engfuncs, globalvars_t *pGlobals );
 
 /*
 =============
@@ -52,6 +56,11 @@ TYPEDESCRIPTION *SV_GetEntvarsDescirption( int number )
 	if( number < 0 && number >= ENTVARS_COUNT )
 		return NULL;
 	return &gEntvarsDescription[number];
+}
+
+void SV_SysError( const char *error_string )
+{
+	if( svgame.hInstance ) svgame.dllFuncs.pfnSys_Error( error_string );
 }
 
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
@@ -393,10 +402,10 @@ void SV_InitEdict( edict_t *pEdict )
 {
 	ASSERT( pEdict );
 	ASSERT( pEdict->pvPrivateData == NULL );
-	ASSERT( pEdict->pvServerData == NULL );
+	ASSERT( pEdict->pvEngineData == NULL );
 
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
-	pEdict->pvServerData = (sv_priv_t *)Mem_Alloc( svgame.mempool, sizeof( sv_priv_t ));
+	pEdict->pvEngineData = (sv_priv_t *)Mem_Alloc( svgame.mempool, sizeof( sv_priv_t ));
 	pEdict->pvPrivateData = NULL;	// will be alloced later by pfnAllocPrivateData
 	pEdict->serialnumber = NUM_FOR_EDICT( pEdict );
 	pEdict->free = false;
@@ -410,10 +419,14 @@ void SV_FreeEdict( edict_t *pEdict )
 	// unlink from world
 	SV_UnlinkEdict( pEdict );
 
-	if( pEdict->pvServerData ) Mem_Free( pEdict->pvServerData );
+	if( pEdict->pvEngineData ) Mem_Free( pEdict->pvEngineData );
 	if( pEdict->pvPrivateData )
 	{
-		svgame.dllFuncs.pfnOnFreeEntPrivateData( pEdict );
+		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
+		{
+			// NOTE: new interface can be missing
+			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
+		}
 		Mem_Free( pEdict->pvPrivateData );
 	}
 	Mem_Set( pEdict, 0, sizeof( *pEdict ));
@@ -429,7 +442,7 @@ edict_t *SV_AllocEdict( void )
 	edict_t	*pEdict;
 	int	i;
 
-	for( i = svgame.globals->maxClients + 1; i < svgame.globals->numEntities; i++ )
+	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
 		pEdict = EDICT_NUM( i );
 		// the first couple seconds of server time can involve a lot of
@@ -444,7 +457,7 @@ edict_t *SV_AllocEdict( void )
 	if( i >= svgame.globals->maxEntities )
 		Host_Error( "ED_AllocEdict: no free edicts\n" );
 
-	svgame.globals->numEntities++;
+	svgame.numEntities++;
 	pEdict = EDICT_NUM( i );
 	SV_InitEdict( pEdict );
 
@@ -479,7 +492,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	if( !SpawnEdict )
 	{
 		// attempt to create custom entity
-		if( svgame.dllFuncs.pfnCreate( ent, pszClassName ) == -1 )
+		if( svgame.dllFuncs2.pfnCreate && svgame.dllFuncs2.pfnCreate( ent, pszClassName ) == -1 )
 		{
 			ent->v.flags |= FL_KILLME;
 			MsgDev( D_ERROR, "No spawn function for %s\n", STRING( className ));
@@ -488,10 +501,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	}
 	else SpawnEdict( &ent->v );
 
-	ASSERT( ent->pvServerData )
-
-	// also register classname to send for client
-	ent->pvServerData->s.classname = SV_ClassIndex( pszClassName );
+	ASSERT( ent->pvEngineData )
 
 	return ent;
 }
@@ -501,7 +511,7 @@ void SV_FreeEdicts( void )
 	int	i = 0;
 	edict_t	*ent;
 
-	for( i = 0; i < svgame.globals->numEntities; i++ )
+	for( i = 0; i < svgame.numEntities; i++ )
 	{
 		ent = EDICT_NUM( i );
 		if( ent->free ) continue;
@@ -527,7 +537,7 @@ bool SV_IsValidEdict( const edict_t *e )
 {
 	if( !e ) return false;
 	if( e->free ) return false;
-	if( !e->pvServerData ) return false;
+	if( !e->pvEngineData ) return false;
 	// edict without pvPrivateData is valid edict
 	// server.dll know how allocate it
 	return true;
@@ -592,76 +602,62 @@ void SV_BaselineForEntity( edict_t *pEdict )
 {
 	sv_priv_t	*sv_ent;
 
-	sv_ent = pEdict->pvServerData;
+	sv_ent = pEdict->pvEngineData;
 	if( !sv_ent ) return;
 
 	// update baseline for new entity
-	if( !sv_ent->s.number )
+	if( !sv_ent->send_baseline )
 	{
+		int		usehull, player;
 		int		modelindex;
+		entity_state_t	baseline;
+		float	*mins, *maxs;
 		sv_client_t	*cl;
 
-		sv_ent->s.classname = SV_ClassIndex( STRING( pEdict->v.classname ));
-		sv_ent->s.number = pEdict->serialnumber;
-			
 		if( pEdict->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( pEdict, false )))
+		{
+			usehull = ( pEdict->v.flags & FL_DUCKING ) ? true : false;
 			modelindex = cl->modelindex ? cl->modelindex : pEdict->v.modelindex;
-		else modelindex = pEdict->v.modelindex;
+			mins = svgame.player_mins[usehull]; 
+			maxs = svgame.player_maxs[usehull]; 
+			player = true;
+		}
+		else
+		{
+			modelindex = pEdict->v.modelindex;
+			mins = pEdict->v.mins; 
+			maxs = pEdict->v.maxs; 
+			player = false;
+		}
 
-		if( pEdict->v.modelindex || pEdict->v.effects )
+		if( modelindex && !( pEdict->v.effects & EF_NODRAW ))
 		{
 			// take current state as baseline
-			svgame.dllFuncs.pfnCreateBaseline( &sv_ent->s, pEdict, modelindex );
-			svs.baselines[pEdict->serialnumber] = sv_ent->s;
+			Mem_Set( &baseline, 0, sizeof( baseline )); 
+			baseline.number = pEdict->serialnumber;
+			svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
+
+			// set entity type
+			if( pEdict->v.flags & FL_CLIENT )
+				baseline.entityType = ET_PLAYER;
+			else if( pEdict->v.flags & FL_CUSTOMENTITY )
+				baseline.entityType = ET_BEAM;
+			else baseline.entityType = ET_NORMAL;
+
+			svs.baselines[pEdict->serialnumber] = baseline;
+			sv_ent->send_baseline = true;
                     }
 
-		if( sv.state == ss_active && ( sv_ent->s.modelindex || sv_ent->s.effects ))
+		if( sv.state == ss_active && ( modelindex && !( pEdict->v.effects & EF_NODRAW )))
 		{
 			entity_state_t	nullstate;
 
 			Mem_Set( &nullstate, 0, sizeof( nullstate ));
 			BF_WriteByte( &sv.multicast, svc_spawnbaseline );
-			MSG_WriteDeltaEntity( &nullstate, &sv_ent->s, &sv.multicast, true, sv.time );
+			MSG_WriteDeltaEntity( &nullstate, &baseline, &sv.multicast, true, sv.time );
 			SV_DirectSend( MSG_ALL, vec3_origin, NULL );
 		}
 	}
-}
-
-
-/*
-=================
-SV_ClassifyEdict
-
-sorting edict by type
-=================
-*/
-void SV_ClassifyEdict( edict_t *ent, int m_iNewClass )
-{
-	sv_priv_t	*sv_ent;
-
-	sv_ent = ent->pvServerData;
-	if( !sv_ent ) return;
-
-	// take baseline
-	SV_BaselineForEntity( ent );
-
-	if( m_iNewClass != ED_SPAWNED )
-	{
-		sv_ent->s.ed_type = m_iNewClass;
-		return;
-	}
-
-	if( sv_ent->s.ed_type != ED_SPAWNED )
-		return;
-
-	// auto-classify
-	sv_ent->s.ed_type = svgame.dllFuncs.pfnClassifyEdict( ent );
-
-	if( sv_ent->s.ed_type != ED_SPAWNED )
-	{
-		MsgDev( D_NOTE, "AutoClass: %s: <%s>\n", STRING( ent->v.classname ), ed_name[sv_ent->s.ed_type] );
-	}
-	// else leave unclassified, wait for next SV_LinkEdict...
 }
 
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed )
@@ -680,28 +676,6 @@ void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed )
 
 ===============================================================================
 */
-/*
-=========
-pfnMemAlloc
-
-=========
-*/
-static void *pfnMemAlloc( size_t cb, const char *filename, const int fileline )
-{
-	return com.malloc( svgame.private, cb, filename, fileline );
-}
-
-/*
-=========
-pfnMemFree
-
-=========
-*/
-static void pfnMemFree( void *mem, const char *filename, const int fileline )
-{
-	com.free( mem, filename, fileline );
-}
-
 /*
 =========
 pfnPrecacheModel
@@ -964,7 +938,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 		return svgame.edicts;
 	}
 
-	for( e++; e < svgame.globals->numEntities; e++ )
+	for( e++; e < svgame.numEntities; e++ )
 	{
 		ed = EDICT_NUM( e );
 
@@ -1021,7 +995,7 @@ edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 	if( SV_IsValidEdict( pStartEdict ))
 		e = NUM_FOR_EDICT( pStartEdict );
 
-	for( e++; e < svgame.globals->numEntities; e++ )
+	for( e++; e < svgame.numEntities; e++ )
 	{
 		ent = EDICT_NUM( e );
 		if( !SV_IsValidEdict( ent )) continue;
@@ -1127,7 +1101,7 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 	if( !SV_IsValidEdict( pplayer ))
 		return NULL;
 
-	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.globals->numEntities; i++ )
+	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
 		pEdict = EDICT_NUM( i );
 
@@ -1161,7 +1135,7 @@ edict_t *pfnEntitiesInPHS( edict_t *pplayer )
 	if( !SV_IsValidEdict( pplayer ))
 		return NULL;
 
-	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.globals->numEntities; i++ )
+	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
 		pEdict = EDICT_NUM( i );
 
@@ -1253,7 +1227,10 @@ static void pfnMakeStatic( edict_t *ent )
 		MsgDev( D_WARN, "SV_MakeStatic: invalid entity %s\n", SV_ClassName( ent ));
 		return;
 	}
-	ent->pvServerData->s.ed_type = ED_STATIC;
+
+	// FIXME: write svc_spawnstatic to the client
+	ent->v.flags |= FL_KILLME;
+
 }
 
 /*
@@ -1391,7 +1368,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	// can't track this entity on the client.
 	// write static sound
-	if( !ent->pvServerData->linked ) flags |= SND_FIXED_ORIGIN;
+	if( !ent->pvEngineData->num_leafs )
+		flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
@@ -1434,7 +1412,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( !ent->pvServerData->linked )
+	if( !ent->pvEngineData->num_leafs )
 		entityIndex = 0;
 	else if( SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = ent->v.aiment->serialnumber;
@@ -1642,17 +1620,23 @@ pfnTraceModel
 
 =============
 */
-static void pfnTraceModel( const float *v1, const float *v2, edict_t *pent, TraceResult *ptr )
+static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edict_t *pent, TraceResult *ptr )
 {
+	float	*mins, *maxs;
+
 	if( !SV_IsValidEdict( pent ))
 	{
 		MsgDev( D_WARN, "TraceModel: invalid entity %s\n", SV_ClassName( pent ));
 		return;
 	}
 
+	hullNumber = bound( 0, hullNumber, 3 );
+	mins = svgame.player_mins[hullNumber];
+	maxs = svgame.player_maxs[hullNumber];
+
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceModel: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	if( ptr ) *ptr = CM_ClipMove( pent, v1, pent->v.mins, pent->v.maxs, v2, 0 );
+	if( ptr ) *ptr = CM_ClipMove( pent, v1, mins, maxs, v2, 0 );
 }
 
 /*
@@ -1678,20 +1662,32 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 
 /*
 =============
-pfnTestEntityPosition
+pfnAreaEdicts
 
 returns true if the entity is in solid currently
 =============
 */
-static int pfnTestEntityPosition( edict_t *pTestEdict )
+static int pfnAreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype )
 {
-	if( !SV_IsValidEdict( pTestEdict ))
+	if( !mins || !maxs )
 	{
-		MsgDev( D_ERROR, "SV_TestEntity: invalid entity %s\n", SV_ClassName( pTestEdict ));
-		return false;
-	}	
+		MsgDev( D_ERROR, "SV_AreaEdicts: invalid area bounds\n" );
+		return 0;
+	}
 
-	return SV_TestEntityPosition( pTestEdict );
+	if( VectorIsNAN( mins ) || VectorIsNAN( maxs ))
+		Host_Error( "SV_AreaEdicts: NAN errors detected '%f %f %f', '%f %f %f'\n", mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2] );
+
+	if( !list || maxcount <= 0 )
+		return 0;
+
+	if( areatype < AREA_SOLID || areatype > AREA_CUSTOM )
+	{
+		MsgDev( D_WARN, "SV_AreaEdicts: bad area type %i. Defaulting to AREA_SOLID\n", areatype );
+		areatype = AREA_SOLID;
+	}
+	
+	return SV_AreaEdicts( mins, maxs, list, maxcount, areatype );
 }
 
 /*
@@ -1740,7 +1736,7 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 	bestent = NULL;
 
 	check = EDICT_NUM( 1 ); // start at first client
-	for( i = 1; i < svgame.globals->numEntities; i++, check++ )
+	for( i = 1; i < svgame.numEntities; i++, check++ )
 	{
 		if( check->v.takedamage != DAMAGE_AIM ) continue;
 		if( check == ent ) continue;
@@ -2139,10 +2135,44 @@ pfnWriteEntity
 */
 void pfnWriteEntity( int iValue )
 {
-	if( iValue < 0 || iValue >= svgame.globals->numEntities )
+	if( iValue < 0 || iValue >= svgame.numEntities )
 		Host_Error( "BF_WriteEntity: invalid entnumber %i\n", iValue );
 	BF_WriteShort( &sv.multicast, iValue );
 	svgame.msg_realsize += 2;
+}
+
+/*
+=============
+pfnAlertMessage
+
+=============
+*/
+static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
+{
+	char	buffer[2048];	// must support > 1k messages
+	va_list	args;
+
+	va_start( args, szFmt );
+	com.vsnprintf( buffer, 2048, szFmt, args );
+	va_end( args );
+
+	if( host.developer < level )
+		return;
+
+	switch( level )
+	{
+	case at_notice:
+	case at_console:	
+	case at_aiconsole:
+		com.print( buffer );
+		break;
+	case at_warning:
+		com.print( va("^3Warning:^7 %s", buffer ));
+		break;
+	case at_error:
+		com.print( va("^1Error:^7 %s", buffer ));
+		break;
+	}
 }
 
 /*
@@ -2155,7 +2185,7 @@ void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 {
 	ASSERT( pEdict );
 	ASSERT( pEdict->free == false );
-	ASSERT( pEdict->pvServerData );
+	ASSERT( pEdict->pvEngineData );
 
 	// to avoid multiple alloc
 	pEdict->pvPrivateData = (void *)Mem_Realloc( svgame.private, pEdict->pvPrivateData, cb );
@@ -2198,7 +2228,7 @@ SV_AllocString
 */
 string_t SV_AllocString( const char *szValue )
 {
-	if( sys_sharedstrings->integer )
+	if( svgame.globals->pStringBase )
 	{
 		const char *newString;
 		newString = com.stralloc( svgame.stringspool, szValue, __FILE__, __LINE__ );
@@ -2215,7 +2245,7 @@ SV_GetString
 */
 const char *SV_GetString( string_t iString )
 {
-	if( sys_sharedstrings->integer )
+	if( svgame.globals->pStringBase )
 		return (svgame.globals->pStringBase + iString);
 	return StringTable_GetString( svgame.hStringTable, iString );
 }
@@ -2276,7 +2306,7 @@ pfnPEntityOfEntIndex
 */
 edict_t* pfnPEntityOfEntIndex( int iEntIndex )
 {
-	if( iEntIndex < 0 || iEntIndex >= svgame.globals->numEntities )
+	if( iEntIndex < 0 || iEntIndex >= svgame.numEntities )
 		return NULL; // out of range
 	return EDICT_NUM( iEntIndex );
 }
@@ -2296,12 +2326,12 @@ edict_t* pfnFindEntityByVars( entvars_t *pvars )
 	// don't pass invalid arguments
 	if( !pvars ) return NULL;
 
-	for( i = 0; i < svgame.globals->numEntities; i++ )
+	for( i = 0; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
 		if( !memcmp( &e->v, pvars, sizeof( entvars_t )))
 		{
-			Msg( "FindEntityByVars: %s\n", SV_ClassName( e ));
+			MsgDev( D_INFO, "FindEntityByVars: %s\n", SV_ClassName( e ));
 			return e;	// found it
 		}
 	}
@@ -2516,7 +2546,7 @@ pfnCRC32_Init
 
 =============
 */
-void pfnCRC32_Init( CRC32_t *pulCRC )
+void pfnCRC32_Init( dword *pulCRC )
 {
 	CRC32_Init( pulCRC );
 }
@@ -2527,7 +2557,7 @@ pfnCRC32_ProcessBuffer
 
 =============
 */
-void pfnCRC32_ProcessBuffer( CRC32_t *pulCRC, void *p, int len )
+void pfnCRC32_ProcessBuffer( dword *pulCRC, void *p, int len )
 {
 	CRC32_ProcessBuffer( pulCRC, p, len );
 }
@@ -2538,7 +2568,7 @@ pfnCRC32_ProcessByte
 
 =============
 */
-void pfnCRC32_ProcessByte( CRC32_t *pulCRC, byte ch )
+void pfnCRC32_ProcessByte( dword *pulCRC, byte ch )
 {
 	CRC32_ProcessByte( pulCRC, ch );
 }
@@ -2549,7 +2579,7 @@ pfnCRC32_Final
 
 =============
 */
-CRC32_t pfnCRC32_Final( CRC32_t pulCRC )
+dword pfnCRC32_Final( dword pulCRC )
 {
 	CRC32_Final( &pulCRC );
 
@@ -2598,7 +2628,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 		return;
 	}
 
-	client = pClient->pvServerData->client;
+	client = pClient->pvEngineData->client;
 	if( !client )
 	{
 		MsgDev( D_ERROR, "PF_SetView: not a client!\n" );
@@ -2687,6 +2717,18 @@ int pfnIsDedicatedServer( void )
 
 /*
 =============
+pfnGetPlayerWONId
+
+=============
+*/
+uint pfnGetPlayerWONId( edict_t *e )
+{
+	// FIXME: implement
+	return -1;
+}
+
+/*
+=============
 pfnIsMapValid
 
 vaild map must contain one info_player_deatchmatch
@@ -2711,23 +2753,6 @@ int pfnIsMapValid( char *filename )
 	if(( flags & MAP_IS_EXIST ) && ( flags & MAP_HAS_SPAWNPOINT ))
 		return true;
 	return false;
-}
-
-/*
-=============
-pfnClassifyEdict
-
-classify edict for render and network usage
-=============
-*/
-void pfnClassifyEdict( edict_t *pEdict, int class )
-{
-	if( !SV_IsValidEdict( pEdict ))
-	{
-		MsgDev( D_WARN, "SV_ClassifyEdict: invalid entity %s\n", SV_ClassName( pEdict ));
-		return;
-	}
-	SV_ClassifyEdict( pEdict, class );
 }
 
 /*
@@ -2827,6 +2852,18 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 	cl->lastcmd.buttons = 0; // avoid multiple fires on lag
 }
 
+/*
+=============
+pfnNumberOfEntities
+
+returns actual entity count
+=============
+*/
+int pfnNumberOfEntities( void )
+{
+	return svgame.numEntities;
+}
+	
 /*
 =============
 pfnInfo_RemoveKey
@@ -3164,10 +3201,10 @@ pfnSetFatPVS
 set fat PVS
 =============
 */
-byte *pfnSetFatPVS( const float *org, int portal )
+byte *pfnSetFatPVS( const float *org )
 {
 	if( !org ) return NULL;
-	return CM_FatPVS( org, portal );
+	return CM_FatPVS( org, ( sv.hostflags & SVF_PORTALPASS ) ? true : false );
 }
 
 /*
@@ -3177,10 +3214,10 @@ pfnSetFatPHS
 set fat PHS
 =============
 */
-byte *pfnSetFatPAS( const float *org, int portal )
+byte *pfnSetFatPAS( const float *org )
 {
 	if( !org ) return NULL;
-	return CM_FatPHS( org, portal );
+	return CM_FatPHS( org, ( sv.hostflags & SVF_PORTALPASS ) ? true : false );
 }
 
 /*
@@ -3201,31 +3238,28 @@ int pfnCheckVisibility( const edict_t *entity, byte *pset )
 
 	if( !pset ) return 1; // vis not set - fullvis enabled
 
-	// never send entities that aren't linked in
-	if( !entity->pvServerData->linked ) return 0;
-
 	// check individual leafs
-	if( !entity->pvServerData->num_leafs )
+	if( !entity->pvEngineData->num_leafs )
 		return 0; // not a linked in
 
-	if( entity->pvServerData->num_leafs == -1 )
+	if( entity->pvEngineData->num_leafs == -1 )
 	{
 		// too many leafs for individual check, go by headnode
-		if( !CM_HeadnodeVisible( entity->pvServerData->headnode, pset ))
+		if( !CM_HeadnodeVisible( entity->pvEngineData->headnode, pset ))
 			return 0;
 	}
 	else
 	{
 		// check individual leafs
-		for( i = 0; i < entity->pvServerData->num_leafs; i++ )
+		for( i = 0; i < entity->pvEngineData->num_leafs; i++ )
 		{
-			l = entity->pvServerData->leafnums[i];
+			l = entity->pvEngineData->leafnums[i];
 
 			if( pset[l>>3] & (1<<( l & 7 )))
 				break;
 		}
 
-		if( i == entity->pvServerData->num_leafs )
+		if( i == entity->pvEngineData->num_leafs )
 			return 0;	// not visible
 	}
 
@@ -3288,6 +3322,18 @@ void pfnSetGroupMask( int mask, int op )
 
 /*
 =============
+pfnCreateInstancedBaseline
+
+=============
+*/
+int pfnCreateInstancedBaseline( int classname, struct entity_state_s *baseline )
+{
+	// FIXME: implement
+	return 0;
+}
+
+/*
+=============
 pfnEndSection
 
 =============
@@ -3330,25 +3376,11 @@ int pfnGetPlayerUserId( edict_t *e )
 
 /*
 =============
-pfnGetPlayerAuthId
-
-These function must returns cd-key hashed value
-but Xash3D currently doesn't have any security checks
-return nullstring for now
-=============
-*/
-const char *pfnGetPlayerAuthId( edict_t *e )
-{
-	return "";
-}
-
-/*
-=============
-pfnPlayMusic
+pfnSoundTrack
 
 =============
 */
-void pfnPlayMusic( const char *trackname, int flags )
+void pfnSoundTrack( const char *trackname, int flags )
 {
 	SV_ConfigString( CS_BACKGROUND_TRACK, trackname );
 }
@@ -3397,6 +3429,28 @@ void pfnGetPlayerStats( const edict_t *pClient, int *ping, int *packet_loss )
 
 /*
 =============
+pfnCvar_DirectSet
+
+=============
+*/
+void pfnCvar_DirectSet( cvar_t *var, char *value )
+{
+	Cvar_DirectSet( var, value );
+}
+	
+/*
+=============
+pfnForceUnmodified
+
+=============
+*/
+void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *filename )
+{
+	// FIXME: implement
+}
+
+/*
+=============
 pfnAddServerCommand
 
 =============
@@ -3404,6 +3458,20 @@ pfnAddServerCommand
 void pfnAddServerCommand( const char *cmd_name, void (*function)(void), const char *cmd_desc )
 {
 	Cmd_AddCommand( cmd_name, function, cmd_desc );
+}
+
+/*
+=============
+pfnGetPlayerAuthId
+
+These function must returns cd-key hashed value
+but Xash3D currently doesn't have any security checks
+return nullstring for now
+=============
+*/
+const char *pfnGetPlayerAuthId( edict_t *e )
+{
+	return "";
 }
 					
 // engine callbacks
@@ -3446,7 +3514,7 @@ static enginefuncs_t gEngfuncs =
 	pfnTraceHull,
 	pfnTraceModel,
 	pfnTraceTexture,
-	pfnTestEntityPosition,
+	pfnAreaEdicts,
 	pfnGetAimVector,
 	pfnServerCommand,
 	pfnServerExecute,
@@ -3471,7 +3539,7 @@ static enginefuncs_t gEngfuncs =
 	pfnCVarSetValue,
 	pfnCVarSetString,
 	pfnAlertMessage,
-	pfnGetProcAddress,
+	pfnDropClient,
 	pfnPvAllocEntPrivateData,
 	pfnPvEntPrivateData,
 	pfnFreeEntPrivateData,
@@ -3509,12 +3577,12 @@ static enginefuncs_t gEngfuncs =
 	pfnEndSection,
 	pfnCompareFileTime,
 	pfnGetGameDir,
-	pfnClassifyEdict,
+	Host_Error,
 	pfnFadeClientVolume,
 	pfnSetClientMaxspeed,
 	pfnCreateFakeClient,
 	pfnRunPlayerMove,
-	pfnFileExists,
+	pfnNumberOfEntities,
 	pfnGetInfoKeyBuffer,
 	pfnInfoKeyValue,
 	pfnSetKeyValue,
@@ -3523,10 +3591,10 @@ static enginefuncs_t gEngfuncs =
 	pfnStaticDecal,
 	pfnPrecacheGeneric,
 	pfnGetPlayerUserId,
-	pfnPlayMusic,
+	pfnSoundTrack,
 	pfnIsDedicatedServer,
-	pfnMemAlloc,
-	pfnMemFree,
+	pfnCVarGetPointer,
+	pfnGetPlayerWONId,
 	pfnInfo_RemoveKey,
 	pfnGetPhysicsKeyValue,
 	pfnSetPhysicsKeyValue,
@@ -3545,13 +3613,11 @@ static enginefuncs_t gEngfuncs =
 	Delta_SetFieldByIndex,
 	Delta_UnsetFieldByIndex,
 	pfnSetGroupMask,	
-	pfnDropClient,
-	Host_Error,
-	pfnParseToken,
+	pfnCreateInstancedBaseline,
+	pfnCvar_DirectSet,
+	pfnForceUnmodified,
 	pfnGetPlayerStats,
 	pfnAddServerCommand,
-	pfnLoadLibrary,
-	pfnFreeLibrary,
 	pfnGetPlayerAuthId,
 };
 
@@ -3768,7 +3834,7 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 	// spawn the rest of the entities on the map
 	SV_LoadFromFile( entities );
 
-	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.globals->numEntities );
+	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.numEntities );
 }
 
 void SV_UnloadProgs( void )
@@ -3777,7 +3843,7 @@ void SV_UnloadProgs( void )
 
 	Delta_Shutdown ();
 
-	if( sys_sharedstrings->integer )
+	if( svgame.globals->pStringBase )
 		Mem_FreePool( &svgame.stringspool );
 	else StringTable_Delete( svgame.hStringTable );
 
@@ -3790,6 +3856,7 @@ void SV_UnloadProgs( void )
 bool SV_LoadProgs( const char *name )
 {
 	static APIFUNCTION		GetEntityAPI;
+	static APIFUNCTION2		GetEntityAPI2;
 	static GIVEFNPTRSTODLL	GiveFnptrsToDll;
 	static globalvars_t		gpGlobals;
 	static playermove_t		gpMove;
@@ -3805,6 +3872,9 @@ bool SV_LoadProgs( const char *name )
 	svgame.private = Mem_AllocPool( "Server Private Zone" );
 	svgame.hInstance = FS_LoadLibrary( name, true );
 	if( !svgame.hInstance ) return false;
+
+	// make sure what new dll functions is cleared
+	Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 
 	GetEntityAPI = (APIFUNCTION)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
 
@@ -3826,7 +3896,7 @@ bool SV_LoadProgs( const char *name )
 		return false;
 	}
 
-	if( !GetEntityAPI( &svgame.dllFuncs, SV_INTERFACE_VERSION ))
+	if( !GetEntityAPI( &svgame.dllFuncs, INTERFACE_VERSION ))
 	{
 		FS_FreeLibrary( svgame.hInstance );
 		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
@@ -3836,23 +3906,12 @@ bool SV_LoadProgs( const char *name )
 
 	GiveFnptrsToDll( &gEngfuncs, svgame.globals );
 
-	svgame.globals->pStringBase = "";	// setup string base
-
-	if( sys_sharedstrings->integer )
-	{
-		// just use Half-Life system - base pointer and malloc
-		svgame.stringspool = Mem_AllocPool( "Server Strings" );
-	}
-	else
-	{
-		// 65535 unique strings should be enough ...
-		svgame.hStringTable = StringTable_Create( "Server", 0x10000 );
-	}
+	svgame.globals->pStringBase = ""; // setup string base
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = sv_maxclients->integer;
 	svgame.edicts = Mem_Alloc( svgame.mempool, sizeof( edict_t ) * svgame.globals->maxEntities );
-	svgame.globals->numEntities = svgame.globals->maxClients + 1; // clients + world
+	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
 	for( i = 0, e = svgame.edicts; i < svgame.globals->maxEntities; i++, e++ )
 		e->free = true; // mark all edicts as freed
 
@@ -3862,6 +3921,19 @@ bool SV_LoadProgs( const char *name )
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();
 	pfnRegUserMsg( "svc_bad", 0 );	// register svc_bad message
+
+	// NOTE: game can resest pStringBase in case we want use StringTable system
+	if( svgame.globals->pStringBase )
+	{
+		// just use Half-Life system - base pointer and malloc
+		svgame.stringspool = Mem_AllocPool( "Server Strings" );
+	}
+	else
+	{
+		// 65535 unique strings should be enough ...
+		MsgDev( D_INFO, "Create stringtable ^2Server^7\n" ); 
+		svgame.hStringTable = StringTable_Create( "Server", 0x10000 );
+	}
 
 	// initialize pm_shared
 	SV_InitClientMove();

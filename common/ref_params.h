@@ -5,6 +5,13 @@
 #ifndef REF_PARAMS_H
 #define REF_PARAMS_H
 
+// renderer flags
+#define RDF_NOWORLDMODEL		(1<<0) 	// used for player configuration screen
+#define RDF_PORTALINVIEW		(1<<1)	// draw portal pass
+#define RDF_SKYPORTALINVIEW		(1<<2)	// draw skyportal instead of regular sky
+#define RDF_NOFOVADJUSTMENT		(1<<3)	// do not adjust fov for widescreen
+#define RDF_THIRDPERSON		(1<<4)	// enable chase cam instead firstperson
+
 typedef struct skyportal_s
 {
 	float		fov;
@@ -53,8 +60,8 @@ typedef struct ref_params_s
 	int		movetype;		// client movetype (was int hardware;)
 	int		smoothing;	// client movement predicting is running
 
-	usercmd_t		*cmd;		// last issued usercmd
-	movevars_t	*movevars;	// sv.movevars
+	struct usercmd_s	*cmd;		// last issued usercmd
+	struct movevars_s	*movevars;	// sv.movevars
 
 	int		viewport[4];	// x, y, width, height
 	int		nextView;		// the renderer calls ClientDLL_CalcRefdef() and Renderview

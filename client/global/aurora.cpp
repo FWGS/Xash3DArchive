@@ -332,7 +332,7 @@ ParticleSystem::ParticleSystem( int iEntIndex, char *szFilename )
 
 	if( !szFile )
 	{
-		ALERT( at_error, "particle %s not found.\n", szFilename );
+		Con_Printf( "Error: particle %s not found.\n", szFilename );
 		return;
 	}
 	else
@@ -467,7 +467,7 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 			{
 				// there's already a type with this name
 				if (pTemp->m_bIsDefined)
-					ALERT( at_warning, "Particle type %s is defined more than once!\n", szToken);
+					Con_Printf( "Warning: particle type %s is defined more than once!\n", szToken);
 
 				// copy all our data into the existing type, throw away the type we were making
 				*pTemp = *pType;
@@ -979,7 +979,7 @@ void ParticleSystem::DrawParticle( particle *part, Vector &right, Vector &up )
                     
 		int numFrames = GetModelFrames( pDraw->pType->m_SpriteIndex );
 
-		// ALERT( at_console, "UpdParticle %d: age %f, life %f, R:%f G:%f, B, %f \n", pDraw->pType->m_hSprite, part->age, part->age_death, pDraw->m_fRed, pDraw->m_fGreen, pDraw->m_fBlue);
+		// Con_Printf( "UpdParticle %d: age %f, life %f, R:%f G:%f, B, %f \n", pDraw->pType->m_hSprite, part->age, part->age_death, pDraw->m_fRed, pDraw->m_fGreen, pDraw->m_fBlue);
 
 		// if we've reached the end of the sprite's frames, loop back
 		while ( pDraw->frame > numFrames )

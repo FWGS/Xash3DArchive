@@ -214,8 +214,6 @@ void SCR_DrawPlaque( void )
 		levelshot = re->RegisterShader( cl_levelshot_name->string, SHADER_NOMIP );
 		re->SetParms( levelshot, kRenderNormal, 0 );
 		re->DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
-
-		CL_DrawHUD( CL_LOADING ); // update progress bar
 	}
 }
 

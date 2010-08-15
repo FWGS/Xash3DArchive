@@ -18,6 +18,10 @@ BRUSH MODELS
 #define Q1BSP_VERSION	29	// quake1 regular version (beta is 28)
 #define HLBSP_VERSION	30	// half-life regular version
 
+// worldcraft predefined angles
+#define ANGLE_UP			-1
+#define ANGLE_DOWN			-2
+
 // bmodel limits
 #define MAX_MAP_HULLS		4		// MAX_HULLS
 

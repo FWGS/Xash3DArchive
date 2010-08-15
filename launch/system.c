@@ -153,6 +153,7 @@ void Sys_GetStdAPI( void )
 	com.Cvar_GetString = Cvar_VariableString;
 	com.Cvar_LookupVars = Cvar_LookupVars;
 	com.Cvar_FindVar = Cvar_FindVar;
+	com.Cvar_DirectSet = Cvar_DirectSet;
 
 	// console commands
 	com.Cmd_Exec = Cbuf_ExecuteText;		// process cmd buffer

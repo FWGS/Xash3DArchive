@@ -16,6 +16,8 @@
 #include "ev_hldm.h"
 #include "r_weather.h"
 #include "pm_shared.h"
+#include "pm_movevars.h"
+#include "entity_types.h"
 
 cl_enginefuncs_t	g_engfuncs;
 cl_globalvars_t	*gpGlobals;
@@ -220,21 +222,10 @@ int HUD_UpdateClientData( client_data_t *pcldata, float flTime )
 	return gHUD.UpdateClientData( pcldata, flTime );
 }
 
-int HUD_Redraw( float flTime, int state )
+int HUD_Redraw( float flTime, int intermission )
 {
-	switch( state )
-	{
-	case CL_ACTIVE:
-	case CL_PAUSED:
-		gHUD.Redraw( flTime );
-		break;
-	case CL_LOADING:
-		// called while map is loading
-		break;
-	case CL_CHANGELEVEL:
-		// called once when changelevel in-action
-		break;
-	}
+	gHUD.Redraw( flTime );
+
 	return 1;
 }
 
@@ -265,6 +256,9 @@ void HUD_TxferLocalOverrides( entity_state_t *state, const clientdata_t *client 
 
 	// Spectating or not dead == get control over view angles.
 	g_iAlive = ( client->iuser1 || ( client->deadflag == DEAD_NO ) ) ? 1 : 0;
+
+	// FIXME: temporary hack so gaitsequence it's works properly
+	state->velocity = client->velocity;
 }
 
 /*
@@ -331,7 +325,7 @@ void HUD_ProcessPlayerState( struct entity_state_s *dst, const struct entity_sta
 	}
 }
 
-int HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type )
+int HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType )
 {
 	float	oldScale, oldRenderAmt;
 	float	shellScale = 1.0f;
@@ -345,7 +339,7 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type )
 		pEnt->curstate.renderamt = 255; // clear amount
 	}
 
-	result = CL_AddEntity( pEnt, ed_type, -1 );
+	result = CL_AddEntity( pEnt, entityType, -1 );
 
 	if ( pEnt->curstate.renderfx == kRenderFxGlowShell )
 	{
@@ -354,7 +348,7 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type )
 		pEnt->curstate.renderamt = 128;
 
 		// render glowshell
-		result |= CL_AddEntity( pEnt, ed_type, g_pTempEnts->hSprGlowShell );
+		result |= CL_AddEntity( pEnt, entityType, g_pTempEnts->hSprGlowShell );
 
 		// restore parms
 		pEnt->curstate.scale = oldScale;
@@ -369,7 +363,7 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type )
 	// add in muzzleflash effect
 	if ( pEnt->curstate.effects & EF_MUZZLEFLASH )
 	{
-		if( ed_type == ED_VIEWMODEL )
+		if( entityType == ET_VIEWENTITY )
 			pEnt->curstate.effects &= ~EF_MUZZLEFLASH;
 		g_pTempEnts->WeaponFlash( pEnt, 1 );
 	}
@@ -384,7 +378,7 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type )
 	// add dimlight
 	if ( pEnt->curstate.effects & EF_DIMLIGHT )
 	{
-		if ( ed_type == ED_CLIENT )
+		if ( entityType == ET_PLAYER )
 		{
 			EV_UpadteFlashlight( pEnt );
 		}

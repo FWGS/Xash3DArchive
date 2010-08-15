@@ -614,7 +614,7 @@ SAVERESTOREDATA *SV_SaveInit( int size )
 	int		numents;
 
 	if( size <= 0 ) size = 0x80000;	// Reserve 512K for now, UNDONE: Shrink this after compressing strings
-	numents = svgame.globals->numEntities;
+	numents = svgame.numEntities;
 
 	pSaveData = Mem_Alloc( host.mempool, sizeof(SAVERESTOREDATA) + ( sizeof(ENTITYTABLE) * numents ) + size );
 	SaveRestore_Init( pSaveData, (char *)(pSaveData + 1), size ); // skip the save structure
@@ -648,7 +648,7 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 
 	com.strncpy( header.mapName, sv.name, sizeof( header.mapName ));
 	header.lightStyleCount = 0;
-	header.entityCount = svgame.globals->numEntities;
+	header.entityCount = svgame.numEntities;
 
 	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
 	{
@@ -1037,7 +1037,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 	// Save the data
 	sections.pData = SaveRestore_AccessCurPos( pSaveData );
 
-	numents = svgame.globals->numEntities;
+	numents = svgame.numEntities;
 
 	SaveRestore_InitEntityTable( pSaveData, Mem_Alloc( host.mempool, sizeof(ENTITYTABLE) * numents ), numents );
 
@@ -1045,7 +1045,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 	svgame.dllFuncs.pfnParmsChangeLevel();
 
 	// write entity descriptions
-	for( i = 0; i < svgame.globals->numEntities; i++ )
+	for( i = 0; i < svgame.numEntities; i++ )
 	{
 		edict_t	*pent = EDICT_NUM( i );
 		pTable = &pSaveData->pTable[pSaveData->currentIndex];

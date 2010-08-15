@@ -20,6 +20,9 @@
 #define M_PI2		(float)6.28318530717958647692
 #endif
 
+#define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
+#define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))
+
 #define SIDE_FRONT		0
 #define SIDE_BACK		1
 #define SIDE_ON		2

@@ -135,7 +135,7 @@ static void UI_Controls_ParseKeysList( void )
 		for( ; i < MAX_KEYS; i++ ) uiControls.keysDescriptionPtr[i] = NULL;
 		uiControls.keysList.itemNames = (const char **)uiControls.keysDescriptionPtr;
 	
-		ALERT( at_error, "UI_Parse_KeysList: kb_act.lst not found\n" );
+		Con_Printf( "UI_Parse_KeysList: kb_act.lst not found\n" );
 		return;
 	}
 
@@ -242,7 +242,7 @@ static void UI_Controls_ResetKeysList( void )
 
 	if( !afile )
 	{
-		ALERT( at_error, "UI_Parse_KeysList: kb_act.lst not found\n" );
+		Con_Printf( "UI_Parse_KeysList: kb_act.lst not found\n" );
 		return;
 	}
 

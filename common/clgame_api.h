@@ -122,7 +122,7 @@ typedef struct cl_globalvars_s
 	int		maxEntities;
 	int		numEntities;	// actual ents count
 
-	const char	*pStringBase;	// actual only when sys_sharedstrings is 1
+	const char	*pStringBase;
 
 	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
 } cl_globalvars_t;
@@ -193,7 +193,8 @@ typedef struct cl_enginefuncs_s
 	const char *(*pfnCmd_Args)( void );					// was Con_Printf
 	float	(*pfnGetLerpFrac)( void );					// was Con_DPrintf
 	void	(*pfnDelCommand)( const char *cmd_name );			// was Con_NPrintf
-	void	(*pfnAlertMessage)( ALERT_TYPE, char *szFmt, ... );		// was Con_NXPrintf
+	void	(*Con_Printf)( char *fmt, ... );				// was Con_NXPrintf
+	void	(*Con_DPrintf)( char *fmt, ... );				// !!!
 
 	const char* (*pfnPhysInfo_ValueForKey)( const char *key );
 	const char* (*pfnServerInfo_ValueForKey)( const char *key );
@@ -268,13 +269,13 @@ typedef struct
 	void 	(*pfnShutdown)( void );
 	void	(*pfnDrawTriangles)( int fTrans );
 	void	(*pfnCreateEntities)( void );
-	int	(*pfnAddVisibleEntity)( struct cl_entity_s *pEnt, int ed_type );
+	int	(*pfnAddVisibleEntity)( struct cl_entity_s *pEnt, int entityType );
 	void	(*pfnStudioEvent)( const mstudioevent_t *event, struct cl_entity_s *entity );
 	void	(*pfnStudioFxTransform)( struct cl_entity_s *pEdict, float transform[4][4] );
 	void	(*pfnCalcRefdef)( ref_params_t *parms );
 	void	(*pfnPM_Move)( struct playermove_s *ppmove, int server );
 	void	(*pfnPM_Init)( struct playermove_s *ppmove );
-	char	(*pfnPM_FindTextureType)( const char *name );
+	char	(*pfnPM_FindTextureType)( char *name );
 	void	(*pfnCmdStart)( const struct cl_entity_s *player, int runfuncs );
 	void	(*pfnCmdEnd)( const struct cl_entity_s *player, const usercmd_t *cmd, unsigned int random_seed );
 	void	(*pfnCreateMove)( usercmd_t *cmd, int msec, int active );

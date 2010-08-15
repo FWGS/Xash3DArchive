@@ -31,7 +31,7 @@ void CL_InitClientMove( void )
 	clgame.pmove->runfuncs = false;
 
 	// enumerate client hulls
-	for( i = 0; i < PM_MAXHULLS; i++ )
+	for( i = 0; i < 4; i++ )
 		clgame.dllFuncs.pfnGetHullBounds( i, clgame.pmove->player_mins[i], clgame.pmove->player_maxs[i] );
 
 	// common utilities

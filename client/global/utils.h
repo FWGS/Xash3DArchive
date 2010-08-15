@@ -15,6 +15,14 @@ extern cl_enginefuncs_t g_engfuncs;
 #define FILE_GLOBAL	static
 #define DLL_GLOBAL
 
+// euler angle order
+#define PITCH		0
+#define YAW		1
+#define ROLL		2
+
+#define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
+#define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))
+
 //
 // How did I ever live without ASSERT?
 //
@@ -35,7 +43,7 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 
 extern DLL_GLOBAL const Vector	g_vecZero;
 extern cl_globalvars_t		*gpGlobals;
-extern movevars_t			*gpMovevars;
+extern struct movevars_s	*gpMovevars;
 
 extern int HUD_VidInit( void );
 extern void HUD_Init( void );
@@ -51,7 +59,7 @@ extern void HUD_Frame( double time );
 extern void HUD_Shutdown( void );
 extern void HUD_RenderCallback( int fTrans );
 extern void HUD_CreateEntities( void );
-extern int  HUD_AddVisibleEntity( cl_entity_t *pEnt, int ed_type );
+extern int  HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType );
 extern void HUD_ParticleEffect( const float *org, const float *dir, int color, int count );
 extern void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity );
 extern void HUD_StudioFxTransform( cl_entity_t *ent, float transform[4][4] );
@@ -189,8 +197,6 @@ inline cl_entity_t *DBG_GetEntityByIndex( int entnum, const char *file, const in
 }
 #endif
 
-extern Vector BitsToDir( int bits );
-
 // message reading
 extern void BEGIN_READ( const char *pszName, int iSize, void *pBuf );
 extern int READ_CHAR( void );
@@ -202,7 +208,6 @@ extern float READ_FLOAT( void );
 extern char* READ_STRING( void );
 extern float READ_COORD( void );
 extern float READ_ANGLE( void );
-extern Vector READ_DIR( void );
 extern void END_READ( void );
 
 // misc utilities
@@ -228,7 +233,6 @@ extern void Tracer_Draw( HSPRITE hSpr, Vector& start, Vector& delta, float width
 
 // mathlib
 extern void AngleMatrix( const vec3_t angles, float (*matrix)[4] );
-extern const float bytedirs[NUMVERTEXNORMALS][3];
 
 // from cl_view.c
 extern void DrawProgressBar( void );

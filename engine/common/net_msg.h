@@ -39,9 +39,8 @@
 #define CS_SOUNDS			(CS_MODELS+MAX_MODELS)		// sound names
 #define CS_DECALS			(CS_SOUNDS+MAX_SOUNDS)		// server decal indexes
 #define CS_EVENTS			(CS_DECALS+MAX_DECALNAMES)		// queue events
-#define CS_GENERICS			(CS_EVENTS+MAX_EVENTS)		// edicts classnames
-#define CS_CLASSNAMES		(CS_GENERICS+MAX_GENERICS)		// generic resources (e.g. color decals)
-#define CS_LIGHTSTYLES		(CS_CLASSNAMES+MAX_CLASSNAMES)	// lightstyle patterns
+#define CS_GENERICS			(CS_EVENTS+MAX_EVENTS)		// generic resources (e.g. color decals)
+#define CS_LIGHTSTYLES		(CS_GENERICS+MAX_GENERICS)		// lightstyle patterns 
 #define MAX_CONFIGSTRINGS		(CS_LIGHTSTYLES+MAX_LIGHTSTYLES)	// total count
 
 // huffman compression

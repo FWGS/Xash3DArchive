@@ -26,7 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qfiles_ref.h"
 #include "engine_api.h"
 #include "render_api.h"
-#include "trace_def.h"
+#include "pmtrace.h"
+#include "entity_types.h"
 
 #if defined( _MSC_VER ) && ( _MSC_VER >= 1400 )
 # define ALIGN(x)	__declspec(align(16))
@@ -134,6 +135,7 @@ enum
 
 #define SHADOW_PLANAR		1
 #define SHADOW_MAPPING		2
+#define LM_STYLES			4	// MAXLIGHTMAPS
 
 #define MAX_ENTITIES		2048	// per one frame
 #define MAX_POLY_VERTS		3000
@@ -202,12 +204,14 @@ typedef struct
 	float		white;	// highest of RGB
 } lightstyle_t;
 
+// FIXME: compress this as much as possible
 typedef struct ref_entity_s
 {
 	uint			ent_type;		// entity type
 	uint			m_nCachedFrameCount;// keep current render frame
 	int			index;		// viewmodel has entindex -1
 	refEntityType_t		rtype;
+	bool			doOcclusionTest;	// check this entity for occlusion
 
 	struct ref_model_s		*model;		// opaque type outside refresh
 	struct ref_entity_s		*parent;		// link to parent entity (FOLLOW or weaponmodel)
@@ -231,7 +235,7 @@ typedef struct ref_entity_s
 	int			rendermode;	// hl1 rendermode
 	int			renderfx;		// server will be translate hl1 values into flags
 	int			colormap;		// q1 and hl1 model colormap (can applied for sprites)
-	int			flags;		// q1 effect flags, EF_ROTATE, EF_DIMLIGHT etc
+	int			flags;		// q1 effect flags, EF_LIGHT, EF_DIMLIGHT etc
 
 	// client gait sequence (local stuff)
 	int			gaitsequence;	// client->sequence + yaw
@@ -506,7 +510,7 @@ enum
 											&& !((RI).params & RP_NONVIEWERREF) && !((RI).refdef.flags & RDF_NOWORLDMODEL) \
 											&& OCCLUSION_QUERIES_CVAR_HACK( RI ) )
 #define OCCLUSION_OPAQUE_SHADER( s )	(((s)->sort == SORT_OPAQUE ) && ((s)->flags & SHADER_DEPTHWRITE ) && !(s)->numDeforms )
-#define OCCLUSION_TEST_ENTITY( e )	(((e)->flags & EF_OCCLUSIONTEST) || ((e)->ent_type == ED_VIEWMODEL))
+#define OCCLUSION_TEST_ENTITY( e )	(((e)->doOcclusionTest ) || ((e)->ent_type == ET_VIEWENTITY ))
 
 void		R_InitOcclusionQueries( void );
 void		R_BeginOcclusionPass( void );
@@ -629,7 +633,7 @@ void	R_InitCustomColors( void );
 void	R_SetCustomColor( int num, int r, int g, int b );
 int	R_GetCustomColor( int num );
 
-msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int flags );
+msurface_t *R_TraceLine( pmtrace_t *tr, const vec3_t start, const vec3_t end, int flags );
 
 //
 // r_mesh.c
@@ -726,7 +730,7 @@ void R_PushDecal( const meshbuffer_t *mb );
 //
 void	R_PushPoly( const meshbuffer_t *mb );
 void	R_AddPolysToList( void );
-msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int flags );
+msurface_t *R_TransformedTraceLine( pmtrace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int flags );
 
 //
 // r_sprite.c
@@ -752,7 +756,7 @@ void R_StudioRunEvents( ref_entity_t *e );
 void R_StudioDrawHitbox( ref_entity_t *e, int iHitbox );
 void R_StudioDrawDebug( void );
 void R_StudioInit( void );
-bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, trace_t *tr );
+bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, pmtrace_t *tr );
 void R_StudioAllocExtradata( struct cl_entity_s *in, ref_entity_t *e );
 void R_StudioFreeAllExtradata( void );
 void R_StudioShutdown( void );

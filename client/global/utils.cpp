@@ -10,11 +10,6 @@
 
 DLL_GLOBAL const Vector g_vecZero = Vector( 0.0f, 0.0f, 0.0f );
 
-const float bytedirs[NUMVERTEXNORMALS][3] =
-{
-#include "anorms.h"
-};
-
 #ifdef _DEBUG
 void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
 {
@@ -24,27 +19,11 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 	if( szMessage != NULL )
 		sprintf( szOut, "ASSERT FAILED:\n %s \n(%s@%d)\n%s", szExpr, szFile, szLine, szMessage );
 	else sprintf( szOut, "ASSERT FAILED:\n %s \n(%s@%d)", szExpr, szFile, szLine );
-	ALERT( at_error, szOut );
+	Con_Printf( szOut );
 }
 #endif	// DEBUG
 
-
-Vector BitsToDir( int bits )
-{
-	Vector	dir;
-
-	if( bits < 0 || bits >= NUMVERTEXNORMALS )
-		return Vector( 0, 0, 0 );
-	
-	dir.x = bytedirs[bits][0];
-	dir.y = bytedirs[bits][1];
-	dir.z = bytedirs[bits][2];
-
-	return dir;
-}
-
 // NOTE: modify these functions with caution
-
 typedef struct
 {
 	char	*name;
@@ -69,7 +48,7 @@ void END_READ( void )
 {
 	if( gMsg.badRead )
 	{
-		ALERT( at_console, "%s was received with errors\n", gMsg.name );
+		Con_Printf( "%s was received with errors\n", gMsg.name );
 	}
 }
 
@@ -184,11 +163,6 @@ float READ_COORD( void )
 float READ_ANGLE( void )
 {
 	return (float)(READ_SHORT() * (360.0 / 65536));
-}
-
-Vector READ_DIR( void )
-{
-	return BitsToDir( READ_BYTE() );
 }
 
 /*
@@ -306,11 +280,6 @@ void SetScreenFade( Vector fadeColor, float alpha, float duration, float holdTim
 			sf->fadeReset += gHUD.m_flTime;
 			sf->fadeEnd += sf->fadeReset;
 		}
-	}
-
-	if( fadeFlags & FFADE_PURGE )
-	{
-		ClearAllFades();
 	}
 }
 
@@ -545,7 +514,7 @@ BOOL Sys_LoadLibrary( const char* dllname, dllhandle_t* handle, const dllfunctio
 		}
 	}          
 
-	ALERT( at_loading, "%s loaded succesfully!\n", dllname );
+	Con_Printf( "%s loaded succesfully!\n", dllname );
 	*handle = dllhandle;
 	return true;
 }

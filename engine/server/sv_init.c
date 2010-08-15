@@ -75,11 +75,6 @@ int SV_GenericIndex( const char *name )
 	return SV_FindIndex( name, CS_GENERICS, MAX_GENERICS, true );
 }
 
-int SV_ClassIndex( const char *name )
-{
-	return SV_FindIndex( name, CS_CLASSNAMES, MAX_CLASSNAMES, true );
-}
-
 /*
 ================
 SV_CreateBaseline
@@ -94,11 +89,11 @@ void SV_CreateBaseline( void )
 	edict_t	*pEdict;
 	int	entnum;	
 
-	for( entnum = 0; entnum < svgame.globals->numEntities; entnum++ )
+	for( entnum = 0; entnum < svgame.numEntities; entnum++ )
 	{
 		pEdict = EDICT_NUM( entnum );
 		if( !SV_IsValidEdict( pEdict )) continue;
-		SV_ClassifyEdict( pEdict, ED_SPAWNED );
+		SV_BaselineForEntity( pEdict );
 	}
 }
 
@@ -142,7 +137,7 @@ void SV_ActivateServer( void )
 	}
 
 	// Activate the DLL server code
-	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.globals->numEntities, svgame.globals->maxClients );
+	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 	
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
@@ -198,7 +193,7 @@ void SV_DeactivateServer( void )
 	if( sv.state == ss_dead ) return;
 	sv.state = ss_dead;
 
-	if( sys_sharedstrings->integer )
+	if( svgame.globals->pStringBase )
 		Mem_EmptyPool( svgame.stringspool );
 	else StringTable_Clear( svgame.hStringTable );
 
@@ -215,7 +210,7 @@ void SV_DeactivateServer( void )
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = sv_maxclients->integer;
-	svgame.globals->numEntities = svgame.globals->maxClients + 1; // clients + world
+	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
 	svgame.globals->mapname = 0;
 }
 
@@ -255,6 +250,9 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 
 		SV_SpawnEntities( pMapName, CM_GetEntityScript( ));
 	}
+
+	// call before sending baselines into the client
+	svgame.dllFuncs.pfnCreateInstancedBaselines();
 
 	SV_FreeOldEntities ();
 }
@@ -354,6 +352,9 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 
 	// clear physics interaction links
 	SV_ClearWorld();
+
+	// tell dlls about new level started
+	svgame.dllFuncs.pfnParmsNewLevel();
 
 	return true;
 }
@@ -461,13 +462,13 @@ void SV_InitGame( void )
 
 		// make crosslinks
 		svs.clients[i].edict = ent;
-		ent->pvServerData->client = svs.clients + i;
-		ent->pvServerData->client->edict = ent;
+		ent->pvEngineData->client = svs.clients + i;
+		ent->pvEngineData->client->edict = ent;
 		Mem_Set( &svs.clients[i].lastcmd, 0, sizeof( svs.clients[i].lastcmd ));
 		Mem_Set( &svs.clients[i].physinfo, 0, sizeof( svs.clients[i].physinfo ));
 	}
 
-	svgame.globals->numEntities = svgame.globals->maxClients + 1; // clients + world
+	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
 	svs.initialized = true;
 }
 

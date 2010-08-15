@@ -39,7 +39,6 @@ DECLARE_HUDMESSAGE( ViewMode );
 DECLARE_HUDMESSAGE( Particle );
 DECLARE_HUDMESSAGE( Concuss );
 DECLARE_HUDMESSAGE( GameMode );
-DECLARE_HUDMESSAGE( CamData );
 DECLARE_HUDMESSAGE( TempEntity );
 DECLARE_HUDMESSAGE( ServerName );
 DECLARE_HUDMESSAGE( ScreenShake );
@@ -61,7 +60,6 @@ int CHud :: InitMessages( void )
 	HOOK_MESSAGE( Particle );
 	HOOK_MESSAGE( TempEntity );
 	HOOK_MESSAGE( SetFog );
-	HOOK_MESSAGE( CamData );
 	HOOK_MESSAGE( RainData ); 
 	HOOK_MESSAGE( WeaponAnim );
 	HOOK_MESSAGE( SetBody );
@@ -71,8 +69,6 @@ int CHud :: InitMessages( void )
 
 	HOOK_COMMAND( "hud_changelevel", ChangeLevel );	// send by engine
 
-	viewEntityIndex = 0; // trigger_viewset stuff
-	viewFlags = 0;
 	m_flFOV = 0;
 	m_iHUDColor = RGB_YELLOWISH; // 255, 160, 0
 	
@@ -80,7 +76,6 @@ int CHud :: InitMessages( void )
 	CVAR_REGISTER( "default_fov", "90", 0, "default client fov" );
 	CVAR_REGISTER( "hud_draw", "1", 0, "disable hud rendering" );
 	CVAR_REGISTER( "hud_takesshots", "0", 0, "take screenshots at 30 fps" );
-	CVAR_REGISTER( "hud_scale", "0", FCVAR_ARCHIVE|FCVAR_LATCH, "scale hud at current resolution" );
 
 	// clear any old HUD list
 	if( m_pHudList )
@@ -273,27 +268,6 @@ int CHud :: MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf )
 	return 1;
 }
 
-int CHud :: MsgFunc_CamData( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	gHUD.viewEntityIndex = READ_SHORT();
-	gHUD.viewFlags = READ_SHORT();
-
-	if( gHUD.viewFlags )
-		m_iCameraMode = 1;
-	else m_iCameraMode = m_iLastCameraMode;
-
-	// update pparams->viewentity too for right hearing
-	if( gHUD.viewEntityIndex )
-		gpViewParams->viewentity = gHUD.viewEntityIndex;
-	else gpViewParams->viewentity = GetLocalPlayer()->index;
-
-	END_READ();
-	
-	return 1;
-}
-
 int CHud :: MsgFunc_RainData( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pszName, iSize, pbuf );
@@ -424,41 +398,15 @@ int CHud::MsgFunc_ScreenShake( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pszName, iSize, pbuf );
 
-	ShakeCommand_t eCommand = (ShakeCommand_t)READ_SHORT();
 	float amplitude = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<12));
 	float duration = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<12));
 	float frequency = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<8));
 
-	if( eCommand == SHAKE_STOP )
-	{
-		m_Shake.amplitude = 0;
-		m_Shake.frequency = 0;
-		m_Shake.duration = 0;
-	}
-	else
-	{
-		if(( eCommand == SHAKE_START) || ( eCommand == SHAKE_FREQUENCY )) 
-		{
-			m_Shake.frequency = frequency;
-		}
-
-		if(( eCommand == SHAKE_START) || ( eCommand == SHAKE_AMPLITUDE ))
-		{
-			// don't overwrite larger existing shake unless we are told to.
-			if(( amplitude > m_Shake.amplitude ) || ( eCommand == SHAKE_AMPLITUDE ))
-			{
-				m_Shake.amplitude = amplitude;
-			}
-		}
-
-		// only reset the timer for a new shake.
-		if( eCommand == SHAKE_START )
-		{
-			m_Shake.duration = duration;
-			m_Shake.nextShake = 0;
-			m_Shake.time = m_flTime + duration;
-		}
-	}
+	m_Shake.frequency = frequency;
+	m_Shake.amplitude = amplitude;
+	m_Shake.duration = duration;
+	m_Shake.time = m_flTime + duration;
+	m_Shake.nextShake = 0;
 
 	END_READ();
 

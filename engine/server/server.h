@@ -7,8 +7,8 @@
 #define SERVER_H
 
 #include "mathlib.h"
-#include "entity_def.h"
-#include "svgame_api.h"
+#include "edict.h"
+#include "eiface.h"
 #include "cm_local.h"
 #include "pm_defs.h"
 #include "world.h"
@@ -24,6 +24,7 @@ extern int SV_UPDATE_BACKUP;
 // hostflags
 #define SVF_SKIPLOCALHOST	BIT( 0 )
 #define SVF_PLAYERSONLY	BIT( 1 )
+#define SVF_PORTALPASS	BIT( 2 )			// we are do portal pass
 
 // mapvalid flags
 #define MAP_IS_EXIST	BIT( 0 )
@@ -158,7 +159,7 @@ typedef struct sv_client_s
 } sv_client_t;
 
 // sv_private_edict_t
-struct sv_priv_s
+typedef struct sv_priv_s
 {
 	link_t		area;		// linked to a division node or leaf
 	sv_client_t	*client;		// filled for player ents
@@ -167,13 +168,13 @@ struct sv_priv_s
 	int		num_leafs;
 	short		leafnums[MAX_ENT_LEAFS];
 	int		framenum;		// update framenumber
-	bool		linked;		// passed through SV_LinkEdict
+	bool		send_baseline;	// this entity already send baseline ?
 
 	vec3_t		moved_origin;
 	vec3_t		moved_angles;
 
 	entity_state_t	s;		// baseline (this is a player_state too)
-};
+} sv_priv_t;
 
 /*
 =============================================================================
@@ -228,13 +229,18 @@ typedef struct
 		edict_t	*edicts;			// acess by edict number
 		void	*vp;			// acess by offset in bytes
 	};
+	int		numEntities;		// actual entities count
 
 	movevars_t	movevars;			// curstate
 	movevars_t	oldmovevars;		// oldstate
 	playermove_t	*pmove;			// pmove state
 
+	vec3_t		player_mins[4];		// 4 hulls allowed
+	vec3_t		player_maxs[4];		// 4 hulls allowed
+
 	globalvars_t	*globals;			// server globals
 	DLL_FUNCTIONS	dllFuncs;			// dll exported funcs
+	NEW_DLL_FUNCTIONS	dllFuncs2;		// new dll exported funcs (can be NULL)
 	byte		*private;			// server.dll private pool
 	byte		*mempool;			// server premamnent pool: edicts etc
 	byte		*stringspool;		// for shared strings
@@ -307,7 +313,6 @@ void SV_DropClient( sv_client_t *drop );
 
 int SV_ModelIndex( const char *name );
 int SV_SoundIndex( const char *name );
-int SV_ClassIndex( const char *name );
 int SV_DecalIndex( const char *name );
 int SV_EventIndex( const char *name );
 int SV_GenericIndex( const char *name );
@@ -329,7 +334,6 @@ void SV_DeactivateServer( void );
 void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, bool loadGame );
 bool SV_SpawnServer( const char *server, const char *startspot );
 int SV_FindIndex( const char *name, int start, int end, bool create );
-void SV_ClassifyEdict( edict_t *ent, int m_iNewClass );
 
 //
 // sv_phys.c

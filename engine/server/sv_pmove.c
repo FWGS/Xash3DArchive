@@ -201,30 +201,6 @@ static void pfnCon_NPrintf( int idx, char *fmt, ... )
 	BF_WriteString( &cl->netchan.message, string );
 }
 
-static void pfnCon_DPrintf( char *fmt, ... )
-{
-	va_list		argptr;
-	char		string[MAX_SYSPATH];
-	
-	va_start( argptr, fmt );
-	com.vsprintf( string, fmt, argptr );
-	va_end( argptr );
-
-	MsgDev( D_INFO, string );	
-}
-
-static void pfnCon_Printf( char *fmt, ... )
-{
-	va_list		argptr;
-	char		string[MAX_SYSPATH];
-
-	va_start( argptr, fmt );
-	com.vsprintf( string, fmt, argptr );
-	va_end( argptr );
-
-	Msg( string );
-}
-
 static double Sys_FloatTime( void )
 {
 	return Sys_DoubleTime();
@@ -436,16 +412,19 @@ void SV_InitClientMove( void )
 	svgame.pmove->runfuncs = false;
 
 	// enumerate client hulls
-	for( i = 0; i < PM_MAXHULLS; i++ )
-		svgame.dllFuncs.pfnGetHullBounds( i, svgame.pmove->player_mins[i], svgame.pmove->player_maxs[i] );
+	for( i = 0; i < 4; i++ )
+		svgame.dllFuncs.pfnGetHullBounds( i, svgame.player_mins[i], svgame.player_maxs[i] );
+
+	Mem_Copy( svgame.pmove->player_mins, svgame.player_mins, sizeof( svgame.player_mins ));
+	Mem_Copy( svgame.pmove->player_maxs, svgame.player_maxs, sizeof( svgame.player_maxs ));
 
 	// common utilities
 	svgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
 	svgame.pmove->PM_Particle = pfnParticle;
 	svgame.pmove->PM_TestPlayerPosition = pfnTestPlayerPosition;
-	svgame.pmove->Con_NPrintf = pfnCon_NPrintf;
-	svgame.pmove->Con_DPrintf = pfnCon_DPrintf;
-	svgame.pmove->Con_Printf = pfnCon_Printf;
+	svgame.pmove->ConNPrintf = pfnCon_NPrintf;
+	svgame.pmove->ConDPrintf = pfnCon_DPrintf;
+	svgame.pmove->ConPrintf = pfnCon_Printf;
 	svgame.pmove->Sys_FloatTime = Sys_FloatTime;
 	svgame.pmove->PM_StuckTouch = pfnStuckTouch;
 	svgame.pmove->PM_PointContents = pfnPointContents;

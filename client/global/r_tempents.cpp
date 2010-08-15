@@ -8,6 +8,7 @@
 #include "studio_event.h"
 #include "triangle_api.h"
 #include "effects_api.h"
+#include "entity_types.h"
 #include "pm_movevars.h"
 #include "r_particle.h"
 #include "r_tempents.h"
@@ -113,7 +114,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	// before first frame when movevars not initialized
 	if( !gpMovevars )
 	{
-		ALERT( at_error, "TempEntUpdate: no movevars!!!\n" );
+		Con_Printf( "ERROR: TempEntUpdate: no movevars!!!\n" );
 		return true;
 	}
 
@@ -429,7 +430,7 @@ void CTempEnts :: Update( void )
 	{
 		while( current )
 		{
-			CL_AddEntity( &current->entity, ED_TEMPENTITY, -1 );
+			CL_AddEntity( &current->entity, ET_TEMPENTITY, -1 );
 			current = current->next;
 		}
 	}
@@ -452,7 +453,7 @@ void CTempEnts :: Update( void )
 			else
 			{
 				// renderer rejected entity for some reasons...
-				if( !CL_AddEntity( &current->entity, ED_TEMPENTITY, -1 ))
+				if( !CL_AddEntity( &current->entity, ET_TEMPENTITY, -1 ))
 				{
 					if(!( current->flags & FTENT_PERSIST )) 
 					{
@@ -554,7 +555,7 @@ TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, int modelIndex )
 
 	if ( !m_pFreeTempEnts )
 	{
-		ALERT( at_console, "Overflow %d temporary ents!\n", MAX_TEMP_ENTITIES );
+		Con_Printf( "Overflow %d temporary ents!\n", MAX_TEMP_ENTITIES );
 		return NULL;
 	}
 
@@ -594,7 +595,7 @@ TEMPENTITY *CTempEnts::TempEntAllocHigh( const Vector& org, int modelIndex )
 	{
 		// didn't find anything? The tent list is either full of high-priority tents
 		// or all tents in the list are still due to live for > 10 seconds. 
-		ALERT( at_console, "Couldn't alloc a high priority TENT!\n" );
+		Con_Printf( "Couldn't alloc a high priority TENT!\n" );
 		return NULL;
 	}
 
@@ -825,20 +826,20 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 
 	if ( client <= 0 || client > gpGlobals->maxClients )
 	{
-		ALERT( at_warning, "Bad client in AttachTentToPlayer()!\n" );
+		Con_Printf( "Bad client in AttachTentToPlayer()!\n" );
 		return;
 	}
 
 	cl_entity_t *pClient = GetEntityByIndex( client );
 	if ( !pClient )
 	{
-		ALERT( at_warning, "Couldn't get ClientEntity for %i\n", client );
+		Con_Printf( "Couldn't get ClientEntity for %i\n", client );
 		return;
 	}
 
 	if( GetModelType( modelIndex ) == mod_bad )
 	{
-		ALERT( at_console, "No model %d!\n", modelIndex );
+		Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}
 
@@ -848,7 +849,7 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 	pTemp = TempEntAllocHigh( position, modelIndex );
 	if ( !pTemp )
 	{
-		ALERT( at_warning, "No temp ent.\n" );
+		Con_Printf( "No temp ent.\n" );
 		return;
 	}
 
@@ -889,7 +890,7 @@ void CTempEnts::KillAttachedTents( int client )
 {
 	if ( client <= 0 || client > gpGlobals->maxClients )
 	{
-		ALERT( at_warning, "Bad client in KillAttachedTents()!\n" );
+		Con_Printf( "Bad client in KillAttachedTents()!\n" );
 		return;
 	}
 
@@ -1081,7 +1082,7 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 
 	if( pos == pEnt->origin )
 	{
-		ALERT( at_error, "Invalid muzzleflash entity!\n" );
+		Con_Printf( "Invalid muzzleflash entity!\n" );
 		return;
 	}
 
@@ -1110,7 +1111,7 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 	}
 
 	// render now (guranteed that muzzleflash will be draw)
-	CL_AddEntity( &pTemp->entity, ED_TEMPENTITY, -1 );
+	CL_AddEntity( &pTemp->entity, ET_TEMPENTITY, -1 );
 }
 
 void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, int modelIndex2, float size )
@@ -1255,7 +1256,7 @@ TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float 
 
 	if( !spriteIndex || GetModelType( spriteIndex ) != mod_sprite )
 	{
-		ALERT( at_console, "No Sprite %d!\n", spriteIndex );
+		Con_Printf( "No Sprite %d!\n", spriteIndex );
 		return NULL;
 	}
 
@@ -1291,7 +1292,7 @@ TEMPENTITY *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float s
 
 	if( GetModelType( modelIndex ) == mod_bad )
 	{
-		ALERT( at_console, "No model %d!\n", modelIndex );
+		Con_Printf( "No model %d!\n", modelIndex );
 		return NULL;
 	}
 
@@ -1391,7 +1392,7 @@ void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelInd
 
 	if( GetModelType( modelIndex ) == mod_bad )
 	{
-		ALERT( at_console, "No model %d!\n", modelIndex );
+		Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}
 
@@ -1430,7 +1431,7 @@ void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &ve
 
 	if( GetModelType( modelIndex ) == mod_bad )
 	{
-		ALERT( at_console, "No model %d!\n", modelIndex );
+		Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}	
 

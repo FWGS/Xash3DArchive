@@ -13,7 +13,6 @@
 #pragma warning(disable : 4100)	// unreferenced formal parameter
 
 #include "windows.h"
-#include "basetypes.h"
 
 // Misc C-runtime library headers
 #include <assert.h>
@@ -31,6 +30,6 @@
 // Shared header describing protocol between engine and DLLs
 #include "cl_entity.h"
 #include "clgame_api.h"
-#include "game_shared.h"
+#include "cdll_dll.h"
 
 #endif//EXTDLL_H

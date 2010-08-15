@@ -6,6 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "const.h"
+#include "entity_types.h"
 
 /*
 ====================
@@ -83,7 +84,7 @@ void V_AddViewModel( void )
 	if( cl.refdef.nextView ) return; // add viewmodel only at firstperson pass
 	if( !cl.frame.valid || cl.refdef.paused ) return;
 
-	clgame.dllFuncs.pfnAddVisibleEntity( &clgame.viewent, ED_VIEWMODEL );
+	clgame.dllFuncs.pfnAddVisibleEntity( &clgame.viewent, ET_VIEWENTITY );
 }
 
 /*

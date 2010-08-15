@@ -13,6 +13,7 @@
 #include "const.h"
 
 #define DIST_EPSILON	(0.03125)
+#define EVENT_CLIENT	5000		// less than this value it's a server-side studio events
 
 /*
 =============================================================
@@ -47,7 +48,7 @@ player_info_t	*m_pPlayerInfo;
 studiohdr_t	*m_pStudioHeader;
 studiohdr_t	*m_pTextureHeader;
 mplane_t		studio_planes[12];
-trace_t		studio_trace;
+pmtrace_t		studio_trace;
 vec3_t		studio_mins, studio_maxs;
 float		studio_radius;
 
@@ -217,7 +218,7 @@ static void R_StudioSetupRender( ref_entity_t *e, ref_model_t *mod )
 	m_pchromeright = ((studiovars_t *)e->extradata)->chromeright;
 
 	// misc info
-	if( e->ent_type == ED_VIEWMODEL )
+	if( e->ent_type == ET_VIEWENTITY )
 	{
 		// viewmodel can't properly animate without lerping
 		m_fDoInterp = true;
@@ -342,27 +343,27 @@ bool R_StudioTraceBox( vec3_t start, vec3_t end )
 	if( !startout ) 
 	{
 		// original point was inside brush
-		if( !getout ) studio_trace.flFraction = 0.0f;
+		if( !getout ) studio_trace.fraction = 0.0f;
 		return true;
 	}
     
 	if( enterFrac < leaveFrac ) 
 	{
-		if( enterFrac > -1 && enterFrac < studio_trace.flFraction ) 
+		if( enterFrac > -1 && enterFrac < studio_trace.fraction ) 
 		{
 			if( enterFrac < 0.0f )
 				enterFrac = 0.0f;
 
-			studio_trace.flFraction = enterFrac;
-            		VectorCopy( clipplane->normal, studio_trace.vecPlaneNormal );
-            		studio_trace.flPlaneDist = clipplane->dist;
+			studio_trace.fraction = enterFrac;
+            		VectorCopy( clipplane->normal, studio_trace.plane.normal );
+            		studio_trace.plane.dist = clipplane->dist;
 			return true;
 		}
 	}
 	return false;
 }
 
-bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, trace_t *tr )
+bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, pmtrace_t *tr )
 {
 	matrix4x4	m;
 	vec3_t	start_l, end_l;
@@ -372,17 +373,17 @@ bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, trace
 
 	if( !m_pStudioHeader->numhitboxes )
 	{
-		tr->iHitgroup = -1;
+		tr->hitgroup = -1;
 		return false;
 	}
 
 	// NOTE: we don't need to setup bones because
 	// it's already setup by rendering code
-	Mem_Set( &studio_trace, 0, sizeof( trace_t ));
-	VectorCopy( end, studio_trace.vecEndPos );
-	studio_trace.fAllSolid = true;
-	studio_trace.flFraction = 1.0f;
-	studio_trace.iHitgroup = -1;
+	Mem_Set( &studio_trace, 0, sizeof( pmtrace_t ));
+	VectorCopy( end, studio_trace.endpos );
+	studio_trace.allsolid = true;
+	studio_trace.fraction = 1.0f;
+	studio_trace.hitgroup = -1;
 	outBone = -1;
 
 	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
@@ -398,38 +399,38 @@ bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, trace
 		if( R_StudioTraceBox( start_l, end_l ))
 		{
 			outBone = phitbox->bone;
-			studio_trace.iHitgroup = i;	// not a hitgroup!
+			studio_trace.hitgroup = i;	// it's a hitbox, not a hitgroup!
 		}
 
-		if( studio_trace.flFraction == 0.0f )
+		if( studio_trace.fraction == 0.0f )
 			break;
 	}
 
-	if( studio_trace.flFraction > 0.0f )
-		studio_trace.fAllSolid = false;
+	if( studio_trace.fraction > 0.0f )
+		studio_trace.allsolid = false;
 
 	// all hitboxes were swept, get trace result
 	if( outBone >= 0 )
 	{
-		tr->flFraction = studio_trace.flFraction;
-		tr->iHitgroup = studio_trace.iHitgroup;
-		tr->fAllSolid = studio_trace.fAllSolid;
-		tr->pHit = (edict_t *)e;
+		tr->fraction = studio_trace.fraction;
+		tr->hitgroup = studio_trace.hitgroup;
+		tr->allsolid = studio_trace.allsolid;
+		tr->ent = e - r_entities;
 
-		Matrix4x4_VectorRotate( m_pbonestransform[outBone], studio_trace.vecEndPos, tr->vecEndPos );
-		if( tr->flFraction == 1.0f )
+		Matrix4x4_VectorRotate( m_pbonestransform[outBone], studio_trace.endpos, tr->endpos );
+		if( tr->fraction == 1.0f )
 		{
-			VectorCopy( end, tr->vecEndPos );
+			VectorCopy( end, tr->endpos );
 		}
 		else
 		{
 			mstudiobone_t *pbone = (mstudiobone_t *)((byte*)m_pStudioHeader + m_pStudioHeader->boneindex) + outBone;
 
 //			MsgDev( D_INFO, "Bone name %s\n", pbone->name ); // debug
-			VectorLerp( start, tr->flFraction, end, tr->vecEndPos );
+			VectorLerp( start, tr->fraction, end, tr->endpos );
 			r_debug_hitbox = pbone->name;
 		}
-		tr->flPlaneDist = DotProduct( tr->vecEndPos, tr->vecPlaneNormal );
+		tr->plane.dist = DotProduct( tr->endpos, tr->plane.normal );
 
 		return true;
 	}
@@ -606,7 +607,7 @@ static int R_StudioLoadTextures( ref_model_t *mod, studiohdr_t *phdr )
 		R_ShaderAddStageTexture( texs[3] );
 load_shader:
 		mod->shaders[numshaders] = R_LoadShader( shadername, SHADER_STUDIO, 0, 0, SHADER_INVALID );
-		ptexture[numshaders].shader = mod->shaders[numshaders]->shadernum;
+		ptexture[numshaders].index = mod->shaders[numshaders]->shadernum;
 		numshaders++;
 	}
 	return numshaders;
@@ -689,8 +690,8 @@ void R_StudioProcessEvents( ref_entity_t *e, cl_entity_t *ent )
 
 	switch( e->ent_type )
 	{
-	case ED_VIEWMODEL:
-	case ED_TEMPENTITY:
+	case ET_VIEWENTITY:
+	case ET_TEMPENTITY:
 		break;
 	default:	return;
 	}
@@ -1220,15 +1221,15 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 	}
 
 	// don't rotate clients, only aim
-	if( e->ent_type == ED_CLIENT )
+	if( e->ent_type == ET_PLAYER )
 		angles[PITCH] = 0;
 
-	if( e->ent_type == ED_VIEWMODEL )
+	if( e->ent_type == ET_VIEWENTITY )
 		angles[PITCH] = -angles[PITCH]; // stupid Half-Life bug
 
 	Matrix4x4_CreateFromEntity( m_protationmatrix, origin[0], origin[1], origin[2], -angles[PITCH], angles[YAW], angles[ROLL], e->scale );
 
-	if( e->ent_type == ED_VIEWMODEL && r_lefthand->integer == 1 )
+	if( e->ent_type == ET_VIEWENTITY && r_lefthand->integer == 1 )
 	{
 		m_protationmatrix[0][1] = -m_protationmatrix[0][1];
 		m_protationmatrix[1][1] = -m_protationmatrix[1][1];
@@ -1675,7 +1676,7 @@ bool R_StudioComputeBBox( vec3_t bbox[8] )
 	// rotate the bounding box
 	VectorScale( e->angles, -1, angles );
 
-	if( e->ent_type == ED_CLIENT || e->ent_type == ED_MONSTER )
+	if( e->ent_type == ET_PLAYER )
 		angles[PITCH] = 0; // don't rotate player model, only aim
 	AngleVectorsFLU( angles, vectors[0], vectors[1], vectors[2] );
 
@@ -2015,7 +2016,7 @@ void R_StudioDrawHulls( void )
 	vec3_t	bbox[8];
 
 	// looks ugly, skip
-	if( RI.currententity->ent_type == ED_VIEWMODEL )
+	if( RI.currententity->ent_type == ET_VIEWENTITY )
 		return;
 
 	if(!R_StudioComputeBBox( bbox )) return;
@@ -2090,7 +2091,7 @@ void R_StudioEstimateGait( ref_entity_t *e, entity_state_t *pplayer )
 	ASSERT( pstudio );	
 	dt = bound( 0.0f, RI.refdef.frametime, 1.0f );
 
-	if( dt == 0 || e->m_nCachedFrameCount == r_framecount2 )
+	if( dt == 0 || m_pPlayerInfo->renderframe == r_framecount2 )
 	{
 		m_flGaitMovement = 0;
 		return;
@@ -2156,8 +2157,9 @@ void R_StudioProcessGait( ref_entity_t *e, entity_state_t *pplayer, studiovars_t
 		e->lerp->curstate.sequence = 0;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->lerp->curstate.sequence;
-	R_StudioPlayerBlend( pseqdesc, &iBlend, &e->angles[PITCH] );
+	R_StudioPlayerBlend( pseqdesc, &iBlend, &e->lerp->angles[PITCH] );
 
+	pstudio->lerp->latched.prevangles[PITCH] = e->lerp->angles[PITCH];
 	pstudio->lerp->curstate.blending[0] = iBlend;
 	pstudio->lerp->latched.prevblending[0] = pstudio->lerp->curstate.blending[0];
 	pstudio->lerp->latched.prevseqblending[0] = pstudio->lerp->curstate.blending[0];
@@ -2171,7 +2173,7 @@ void R_StudioProcessGait( ref_entity_t *e, entity_state_t *pplayer, studiovars_t
 	//Msg( "%f %f\n", e->angles[YAW], pstudio->lerp->gaityaw );
 
 	// calc side to side turning
-	flYaw = e->lerp->angles[YAW] - m_pPlayerInfo->gaityaw;
+	flYaw = e->angles[YAW] - m_pPlayerInfo->gaityaw;
 	flYaw = flYaw - (int)(flYaw / 360) * 360;
 	if( flYaw < -180 ) flYaw = flYaw + 360;
 	if( flYaw > 180 ) flYaw = flYaw - 360;
@@ -2234,7 +2236,7 @@ static bool R_StudioSetupModel( ref_entity_t *e, ref_model_t *mod )
 	ASSERT( pstudio );
 
 	// special handle for player model
-	if( e->ent_type == ED_CLIENT || e->renderfx == kRenderFxDeadPlayer )
+	if( e->ent_type == ET_PLAYER || e->renderfx == kRenderFxDeadPlayer )
 	{
 		//Msg( "DrawPlayer %d\n", pstudio->lerp->blending[0] );
 		//Msg( "DrawPlayer %d %d (%d)\n", r_framecount2, m_pEntity->serialnumber, e->lerp->curstate.sequence );
@@ -2252,23 +2254,28 @@ static bool R_StudioSetupModel( ref_entity_t *e, ref_model_t *mod )
 		if( m_nPlayerIndex < 0 || m_nPlayerIndex >= ri.GetMaxClients( ))
 			return 0;	// weird client ?
 
-		if( m_pPlayerInfo->gaitsequence <= 0 )
+		if( e->gaitsequence )
 		{
-			for( i = 0; i < 4; i++ )	// clear torso controllers
+			vec3_t	orig_angles;
+
+			VectorCopy( e->angles, orig_angles );
+
+			R_StudioProcessGait( e, &e->lerp->curstate, pstudio );
+			m_pPlayerInfo->gaitsequence = e->gaitsequence;
+//			m_pPlayerInfo = NULL;
+		
+			R_StudioSetUpTransform ( e, false );
+			VectorCopy( orig_angles, e->angles );
+		}
+		else
+		{
+			for( i = 0; i < 4; i++ )		// clear torso controllers
 				pstudio->lerp->latched.prevcontroller[i] = pstudio->lerp->curstate.controller[i] = 0x7F;
 			m_pPlayerInfo->gaitsequence = 0;	// StudioSetupBones() issuses
 
 			R_StudioSetUpTransform ( e, false );
 		}
-		else
-		{
-			vec3_t	save_angles;
 
-			VectorCopy( e->angles, save_angles );
-			R_StudioProcessGait( e, &e->lerp->curstate, pstudio );
-			R_StudioSetUpTransform ( e, false );
-			VectorCopy( save_angles, e->angles );
-		}
 
 		if( r_himodels->integer ) e->body = 255; // show highest resolution multiplayer model
 		if( !( glw_state.developer == 0 && ri.GetMaxClients() == 1 )) e->body = 1; // force helmet
@@ -2291,7 +2298,9 @@ static bool R_StudioSetupModel( ref_entity_t *e, ref_model_t *mod )
 		R_StudioCalcAttachments( e );
 		R_StudioProcessEvents( e, e->lerp );
 	}
+
 	e->m_nCachedFrameCount = r_framecount2;	// cached frame
+	if( m_pPlayerInfo ) m_pPlayerInfo->renderframe = r_framecount2;
 
 	return 1;
 }
@@ -2423,7 +2432,7 @@ void R_DrawStudioModel( const meshbuffer_t *mb )
 	}
 
 	// hack the depth range to prevent view model from poking into walls
-	if( e->ent_type == ED_VIEWMODEL )
+	if( e->ent_type == ET_VIEWENTITY )
 	{
 		pglDepthRange( gldepthmin, gldepthmin + 0.3 * ( gldepthmax - gldepthmin ) );
 
@@ -2433,7 +2442,7 @@ void R_DrawStudioModel( const meshbuffer_t *mb )
 
 	R_StudioDrawPoints( mb, e );
 
-	if( e->ent_type == ED_VIEWMODEL )
+	if( e->ent_type == ET_VIEWENTITY )
 	{
 		pglDepthRange( gldepthmin, gldepthmax );
 
@@ -2455,7 +2464,7 @@ bool R_CullStudioModel( ref_entity_t *e )
 	if( !e->model->extradata )
 		return true;
 
-	if( e->ent_type == ED_VIEWMODEL && r_lefthand->integer >= 2 )
+	if( e->ent_type == ET_VIEWENTITY && r_lefthand->integer >= 2 )
 		return true; // hidden
 
 	modhandle = Mod_Handle( e->model );
@@ -2482,7 +2491,7 @@ bool R_CullStudioModel( ref_entity_t *e )
 	query = OCCLUSION_QUERIES_ENABLED( RI ) && OCCLUSION_TEST_ENTITY( e ) ? true : false;
 	if( !frustum && query ) R_IssueOcclusionQuery( R_GetOcclusionQueryNum( OQ_ENTITY, e - r_entities ), e, studio_mins, studio_maxs );
 
-	if(( RI.refdef.flags & RDF_NOWORLDMODEL) || (r_shadows->integer != 1 && !(r_shadows->integer == 2 && (e->flags & EF_PLANARSHADOW))) || R_CullPlanarShadow( e, studio_mins, studio_maxs, query ))
+	if(( RI.refdef.flags & RDF_NOWORLDMODEL ) || ( r_shadows->integer != 1 ) || R_CullPlanarShadow( e, studio_mins, studio_maxs, query ))
 		return frustum; // entity is not in PVS or shadow is culled away by frustum culling
 
 	R_StudioSetupRender( e, e->model );
@@ -2506,7 +2515,7 @@ bool R_CullStudioModel( ref_entity_t *e )
 	
 			pmesh = (mstudiomesh_t *)((byte *)m_pStudioHeader + m_pSubModel->meshindex) + j;
 			if( e->customShader ) shader = e->customShader;
-			else shader = &r_shaders[ptexture[pskinref[pmesh->skinref]].shader];
+			else shader = &r_shaders[ptexture[pskinref[pmesh->skinref]].index];
 
 			if( shader && ( shader->sort <= SORT_ALPHATEST ))
 			{
@@ -2558,7 +2567,7 @@ void R_AddStudioModelToList( ref_entity_t *e )
 		{
 			if( !r_shadows_self_shadow->integer )
 				r_entShadowBits[entnum] &= ~RI.shadowGroup->bit;
-			if( e->ent_type == ED_VIEWMODEL )
+			if( e->ent_type == ET_VIEWENTITY )
 				return;
 		}
 		else
@@ -2573,7 +2582,7 @@ void R_AddStudioModelToList( ref_entity_t *e )
 	{
 		fog = R_FogForSphere( e->origin, studio_radius );
 #if 0
-		if( !( e->ent_type == ED_VIEWMODEL ) && fog )
+		if( !( e->ent_type == ET_VIEWENTITY ) && fog )
 		{
 			R_StudioModelLerpBBox( e, mod );
 			if( R_CompletelyFogged( fog, e->origin, studio_radius ))
@@ -2602,7 +2611,7 @@ void R_AddStudioModelToList( ref_entity_t *e )
 			pmesh = (mstudiomesh_t *)((byte *)m_pStudioHeader + m_pSubModel->meshindex) + j;
 
 			if( e->customShader ) shader = e->customShader;
-			else shader = &r_shaders[ptexture[pskinref[pmesh->skinref]].shader];
+			else shader = &r_shaders[ptexture[pskinref[pmesh->skinref]].index];
 
 			if( shader ) R_AddModelMeshToList( modhandle, fog, shader, ((j<<8)|i));
 		}

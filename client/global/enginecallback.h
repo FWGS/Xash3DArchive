@@ -42,7 +42,8 @@
 #define Cmd_RemoveCommand	(*g_engfuncs.pfnDelCommand)
 #define CMD_ARGC		(*g_engfuncs.pfnCmdArgc)
 #define CMD_ARGV		(*g_engfuncs.pfnCmdArgv)
-#define ALERT		(*g_engfuncs.pfnAlertMessage)
+#define Con_Printf		(*g_engfuncs.Con_Printf)
+#define Con_DPrintf		(*g_engfuncs.Con_DPrintf)
 #define IN_GAME		(*g_engfuncs.pfnIsInGame)
 
 inline void SPR_Set( HSPRITE hPic, int r, int g, int b )

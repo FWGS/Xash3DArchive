@@ -840,7 +840,7 @@ BOOL CApache :: FireGun( )
 		if (!m_pBeam)
 		{
 			m_pBeam = CBeam::BeamCreate( "sprites/lgtning.spr", 80 );
-			m_pBeam->PointEntInit( pev->origin, edict( ) );
+			m_pBeam->PointEntInit( pev->origin, entindex( ) );
 			m_pBeam->SetEndAttachment( 1 );
 			m_pBeam->SetColor( 255, 180, 96 );
 			m_pBeam->SetBrightness( 192 );

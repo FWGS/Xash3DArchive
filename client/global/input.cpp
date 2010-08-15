@@ -140,7 +140,7 @@ void IN_KeyDown( kbutton_t *b )
 	}
 	else
 	{
-		ALERT( at_error, "three keys down for a button '%c' '%c' '%c'!\n", b->down[0], b->down[1], c );
+		Con_Printf( "Error: three keys down for a button '%c' '%c' '%c'!\n", b->down[0], b->down[1], c );
 		return;
 	}
 	
@@ -236,7 +236,7 @@ static float CL_KeyState( kbutton_t *key )
 #if 0
 	if( msec )
 	{
-		ALERT( at_console, "%i ", msec );
+		Con_Printf( "%i ", msec );
 	}
 #endif
 	val = bound( 0, (float)msec / frame_msec, 1 );

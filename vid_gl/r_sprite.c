@@ -655,14 +655,14 @@ static float R_GlowSightDistance( vec3_t glowOrigin )
 {
 	float	dist;
 	vec3_t	glowDist;
-	trace_t	tr;
+	pmtrace_t	tr;
 
 	VectorSubtract( glowOrigin, RI.viewOrigin, glowDist );
 	dist = VectorLength( glowDist );
 	
 	R_TraceLine( &tr, RI.viewOrigin, glowOrigin, FTRACE_IGNORE_GLASS|FTRACE_SIMPLEBOX );
 
-	if(( 1.0 - tr.flFraction ) * dist > 8 )
+	if(( 1.0f - tr.fraction ) * dist > 8 )
 		return -1;
 	return dist;
 }
@@ -767,9 +767,9 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 	// do movewith
 	if( e->parent && e->movetype == MOVETYPE_FOLLOW )
 	{
-		if(( e->colormap & 0xFF ) > 0 && e->parent->model && e->parent->model->type == mod_studio )
+		if( e->body > 0 && e->parent->model && e->parent->model->type == mod_studio )
 		{
-			int	num = bound( 1, (e->colormap & 0xFF), MAXSTUDIOATTACHMENTS );
+			int	num = bound( 1, e->body, MAXSTUDIOATTACHMENTS );
 
 			// pev->colormap is hardcoded to attachment number
 			// NOTE: use interpolated origin to avoid flickering attachments
@@ -833,7 +833,7 @@ bool R_CullSpriteModel( ref_entity_t *e )
 	if( !e->model->extradata )
 		return true;
 
-	if( e->ent_type == ED_VIEWMODEL && r_lefthand->integer >= 2 )
+	if( e->ent_type == ET_VIEWENTITY && r_lefthand->integer >= 2 )
 		return true;
 
 	VectorCopy( e->model->mins, sprite_mins );

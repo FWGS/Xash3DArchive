@@ -112,7 +112,7 @@ void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity )
 		EV_EjectShell( event, entity );
 		break;
 	default:
-		ALERT( at_console, "Unhandled client-side attachment %i ( %s )\n", event->event, event->options );
+		Con_Printf( "Unhandled client-side attachment %i ( %s )\n", event->event, event->options );
 		break;
 	}
 }
@@ -160,7 +160,7 @@ int HUD_StudioDoInterp( cl_entity_t *e )
 {
 	if( r_studio_lerping->integer )
 	{
-		return (e->curstate.flags & EF_NOINTERP) ? false : true;
+		return (e->curstate.effects & EF_NOINTERP) ? false : true;
 	}
 	return false;
 }

@@ -1243,7 +1243,7 @@ static void R_CategorizeEntities( void )
 			r_bmodelentities[r_numbmodelentities++] = RI.currententity;
 			break;
 		case mod_studio:
-			if(!( RI.currententity->flags & (EF_NOSHADOW|EF_PLANARSHADOW)))
+			if(!( RI.currententity->flags & EF_NOSHADOW ))
 				R_AddShadowCaster( RI.currententity ); // build groups and mark shadow casters
 			break;
 		case mod_sprite:
@@ -1424,7 +1424,7 @@ static void R_DrawNullEntities( void )
 
 		if( RI.params & RP_MIRRORVIEW )
 		{
-			if( RI.currententity->ent_type == ED_VIEWMODEL )
+			if( RI.currententity->ent_type == ET_VIEWENTITY )
 				continue;
 		}
 		else
@@ -1483,7 +1483,7 @@ R_RenderDebugSurface
 */
 void R_RenderDebugSurface( void )
 {
-	trace_t	tr;
+	pmtrace_t	tr;
 	vec3_t	forward;
 	vec3_t	start, end;
 
@@ -1502,16 +1502,16 @@ void R_RenderDebugSurface( void )
 
 	r_debug_surface = R_TraceLine( &tr, start, end, 0 );
 
-	if( tr.iHitgroup >= 0 && tr.pHit && r_drawentities->integer != 3 )
+	if( tr.hitgroup >= 0 && tr.ent != -1 && r_drawentities->integer != 3 )
 	{
 		pglDisable( GL_TEXTURE_2D );
 		GL_SetState( GLSTATE_NO_DEPTH_TEST|GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
 		pglDepthRange( 0, 0 );
 
 		RI.previousentity = NULL;
-		RI.currententity = (ref_entity_t *)tr.pHit;
+		RI.currententity = &r_entities[tr.ent];
 
-		R_StudioDrawHitbox( RI.currententity, tr.iHitgroup );
+		R_StudioDrawHitbox( RI.currententity, tr.hitgroup );
 
 		pglDepthRange( gldepthmin, gldepthmax );
 		pglEnable( GL_TEXTURE_2D );
@@ -1519,7 +1519,7 @@ void R_RenderDebugSurface( void )
 	else if( r_debug_surface && r_debug_surface->mesh && !gl_wireframe->integer )
 	{
 		RI.previousentity = NULL;
-		RI.currententity = (ref_entity_t *)tr.pHit;
+		RI.currententity = &r_entities[tr.ent];
 
 		R_ClearMeshList( RI.meshlist );
 		R_AddMeshToList( MB_MODEL, NULL, r_debug_surface->shader, r_debug_surface - r_worldbrushmodel->surfaces + 1 );
@@ -1940,7 +1940,7 @@ int R_ComputeFxBlend( ref_entity_t *e )
 
 	offset = ((int)e->index ) * 363.0f; // Use ent index to de-sync these fx
 
-	if( e->ent_type == ED_TEMPENTITY )
+	if( e->ent_type == ET_TEMPENTITY )
 	{
 		renderAmt = e->renderamt;
 	}
@@ -2168,7 +2168,7 @@ static bool R_WorldToScreen( const float *world, float *screen )
 R_TraceLine
 =============
 */
-msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int flags )
+msurface_t *R_TraceLine( pmtrace_t *tr, const vec3_t start, const vec3_t end, int flags )
 {
 	int		i;
 	msurface_t	*surf;
@@ -2180,7 +2180,7 @@ msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int 
 	// trace against bmodels
 	for( i = 1; i < r_numEntities; i++ )
 	{
-		trace_t		t2;
+		pmtrace_t	t2;
 		msurface_t	*s2;
 
 		e = &r_entities[i];
@@ -2196,7 +2196,7 @@ msurface_t *R_TraceLine( trace_t *tr, const vec3_t start, const vec3_t end, int 
 			continue;
 
 		s2 = R_TransformedTraceLine( &t2, start, end, e, flags );
-		if( t2.flFraction < tr->flFraction )
+		if( t2.fraction < tr->fraction )
 		{
 			*tr = t2;	// closer impact point
 			surf = s2;
@@ -2306,7 +2306,7 @@ bool R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 	case mod_brush:
 		if( !refent->model->extradata )
 			return false;
-		if( pRefEntity->curstate.skin != CONTENTS_NONE )
+		if( pRefEntity->curstate.skin )
 			refent->waveHeight = refent->scale * 16.0f;
 		refent->scale = 1.0f;			// ignore scale for brush models
 		refent->frame = pRefEntity->curstate.frame;	// brush properly animating
@@ -2323,35 +2323,22 @@ bool R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 		break;
 	}
 
-	// calculate angles
-	if( refent->flags & EF_ROTATE )
-	{	
-		// some bonus items auto-rotate
-		VectorSet( refent->angles, 0, anglemod( RI.refdef.time / 10), 0 );
-	}
-	else VectorCopy( pRefEntity->angles, refent->angles );
-
+	VectorCopy( pRefEntity->angles, refent->angles );
 	VectorCopy( pRefEntity->origin, refent->origin );
 
 	Matrix3x3_FromAngles( refent->angles, refent->axis );
 	VectorClear( refent->origin2 );
 
-	if( refent->ent_type == ED_CLIENT )
+	if( refent->ent_type == ET_PLAYER )
 	{
 		refent->gaitsequence = pRefEntity->curstate.gaitsequence;
-		refent->flags |= EF_OCCLUSIONTEST;
+		refent->doOcclusionTest = true;
 		refent->lightingOrigin[2] += refent->model->maxs[2] - 2; // drop shadow to floor
 	}
 	else refent->gaitsequence = 0;
+	VectorClear( refent->movedir );
 
-	if( refent->ent_type == ED_MOVER || refent->ent_type == ED_BSPBRUSH )
-	{
-		// FIXME: this is very-very temporary!!!!
-		VectorNormalize2( pRefEntity->curstate.vuser2, refent->movedir );
-	}
-	else VectorClear( refent->movedir );
-
-	if( refent->ent_type == ED_VIEWMODEL )
+	if( refent->ent_type == ET_VIEWENTITY )
 	{
 		if( r_lefthand->integer == 1 )
 			VectorNegate( refent->axis[1], refent->axis[1] ); 
@@ -2367,23 +2354,6 @@ bool R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 		if( refent->extradata ) Mem_EmptyPool( refent->mempool );
 		refent->extradata = NULL;
 	}
-
-	// because entity without models never added to scene
-	if( !refent->ent_type )
-	{
-		switch( refent->model->type )
-		{
-		case mod_brush:
-		case mod_world:
-			refent->ent_type = ED_BSPBRUSH;
-			break;
-		case mod_studio:
-		case mod_sprite:		
-			refent->ent_type = ED_NORMAL;
-          		break;
-		// and ignore all other unset ents
-		}
-	}
 	return true;
 }
 
@@ -2396,19 +2366,12 @@ bool R_AddPortalEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 	VectorCopy( pRefEntity->origin, refent->origin );
 	VectorCopy( pRefEntity->curstate.vuser1, refent->origin2 );	// FIXME: oldorigin
 
-	if( refent->flags & EF_ROTATE )
-	{
-		float phase = pRefEntity->curstate.frame;
-		float speed = (pRefEntity->curstate.framerate ? pRefEntity->curstate.framerate : 50.0f);
-		refent->angles[ROLL] = 5 * com.sin(( phase + RI.refdef.time * speed * 0.01f ) * M_PI2);
-	}
-
 	// calculate angles
 	Matrix3x3_FromAngles( refent->angles, refent->axis );
 	return true;
 }
 
-bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customShader )
+bool R_AddEntityToScene( cl_entity_t *pRefEntity, int entityType, shader_t customShader )
 {
 	ref_entity_t	*refent;
 	ref_shader_t	*shader;
@@ -2423,25 +2386,8 @@ bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customSh
 	}
 	refent = &r_entities[r_numEntities];
 
-	if( pRefEntity->curstate.effects & EF_NODRAW && ed_type != ED_PORTAL )
-		return true; // done
-
 	if( pRefEntity->curstate.rendermode != kRenderNormal && pRefEntity->curstate.renderamt <= 0.0f )
 		return true; // done
-
-	// filter ents
-	switch( ed_type )
-	{
-	case ED_MOVER:
-	case ED_PORTAL:
-	case ED_CLIENT:
-	case ED_NORMAL:
-	case ED_MONSTER:
-	case ED_BSPBRUSH:
-	case ED_RIGIDBODY:
-	case ED_VIEWMODEL: break;
-	default: return false;
-	}
 
 	// ignore env_sprite flares if supposed
 	if( !r_spriteflares->integer && pRefEntity->curstate.rendermode == kRenderGlow )
@@ -2453,7 +2399,7 @@ bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customSh
 
 	// copy state to render
 	refent->index = pRefEntity->index;
-	refent->ent_type = ed_type;
+	refent->ent_type = entityType;
 	refent->rendermode = pRefEntity->curstate.rendermode;
 	refent->rendercolor[0] = pRefEntity->curstate.rendercolor.r;
 	refent->rendercolor[1] = pRefEntity->curstate.rendercolor.g;
@@ -2468,11 +2414,12 @@ bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customSh
 	refent->model = cl_models[pRefEntity->curstate.modelindex];
 	refent->movetype = pRefEntity->curstate.movetype;
 	refent->framerate = pRefEntity->curstate.framerate;
+	refent->doOcclusionTest = false;
 	refent->parent = NULL;
 	refent->lerp = NULL;
 
 	if( pRefEntity->curstate.rendermode == kRenderGlow && !pRefEntity->curstate.renderfx )
-		refent->flags |= EF_OCCLUSIONTEST;
+		refent->doOcclusionTest = true;
 
 	// setup custom shader
 	if( customShader >= 0 && customShader < MAX_SHADERS && (shader = &r_shaders[customShader]))
@@ -2482,9 +2429,9 @@ bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customSh
 	refent->rtype = RT_MODEL;
 
 	// setup rtype
-	switch( ed_type )
+	switch( entityType )
 	{
-	case ED_PORTAL:
+	case ET_PORTAL:
 		result = R_AddPortalEntity( pRefEntity, refent );
 		break;
 	default:
@@ -2496,7 +2443,7 @@ bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customSh
 
 	refent->renderamt = R_ComputeFxBlend( refent );
 
-	if( refent->flags & EF_MINLIGHT )	// FIXME: HACK
+	if( entityType == ET_VIEWENTITY )
 	{
 		// run events here to prevent
 		// de-synchronize muzzleflashes movement
@@ -2514,7 +2461,7 @@ bool R_AddEntityToScene( cl_entity_t *pRefEntity, int ed_type, shader_t customSh
 		FollowEntity.curstate.movetype = MOVETYPE_FOLLOW;
 		FollowEntity.curstate.weaponmodel = 0;
 
-		if( R_AddEntityToScene( &FollowEntity, ED_NORMAL, customShader ))
+		if( R_AddEntityToScene( &FollowEntity, ET_NORMAL, customShader ))
 			r_entities[r_numEntities-1].parent = refent; // set parent			
 	}
 	return result;

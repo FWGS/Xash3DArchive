@@ -8,36 +8,36 @@
 #include "utils.h"
 
 // q2 wal contents
-#define CONTENTS_SOLID	0x00000001	// an eye is never valid in a solid
-#define CONTENTS_WINDOW	0x00000002	// translucent, but not watery
-#define CONTENTS_AUX	0x00000004
-#define CONTENTS_LAVA	0x00000008
-#define CONTENTS_SLIME	0x00000010
-#define CONTENTS_WATER	0x00000020
-#define CONTENTS_MIST	0x00000040
+#define Q2_CONTENTS_SOLID		0x00000001	// an eye is never valid in a solid
+#define Q2_CONTENTS_WINDOW		0x00000002	// translucent, but not watery
+#define Q2_CONTENTS_AUX		0x00000004
+#define Q2_CONTENTS_LAVA		0x00000008
+#define Q2_CONTENTS_SLIME		0x00000010
+#define Q2_CONTENTS_WATER		0x00000020
+#define Q2_CONTENTS_MIST		0x00000040
 
 // remaining contents are non-visible, and don't eat brushes
-#define CONTENTS_AREAPORTAL	0x00008000
-#define CONTENTS_PLAYERCLIP	0x00010000
-#define CONTENTS_MONSTERCLIP	0x00020000
-#define CONTENTS_CLIP	(CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP)
+#define Q2_CONTENTS_AREAPORTAL	0x00008000
+#define Q2_CONTENTS_PLAYERCLIP	0x00010000
+#define Q2_CONTENTS_MONSTERCLIP	0x00020000
+#define Q2_CONTENTS_CLIP		(Q2_CONTENTS_PLAYERCLIP|Q2_CONTENTS_MONSTERCLIP)
 
 // currents can be added to any other contents, and may be mixed
-#define CONTENTS_CURRENT_0	0x00040000
-#define CONTENTS_CURRENT_90	0x00080000
-#define CONTENTS_CURRENT_180	0x00100000
-#define CONTENTS_CURRENT_270	0x00200000
-#define CONTENTS_CURRENT_UP	0x00400000
-#define CONTENTS_CURRENT_DOWN	0x00800000
+#define Q2_CONTENTS_CURRENT_0		0x00040000
+#define Q2_CONTENTS_CURRENT_90	0x00080000
+#define Q2_CONTENTS_CURRENT_180	0x00100000
+#define Q2_CONTENTS_CURRENT_270	0x00200000
+#define Q2_CONTENTS_CURRENT_UP	0x00400000
+#define Q2_CONTENTS_CURRENT_DOWN	0x00800000
 
-#define CONTENTS_ORIGIN	0x01000000	// removed before BSP'ing an entity
+#define Q2_CONTENTS_ORIGIN		0x01000000	// removed before BSP'ing an entity
 
-#define CONTENTS_MONSTER	0x02000000	// should never be on a brush, only in game
-#define CONTENTS_DEADMONSTER	0x04000000
-#define CONTENTS_DETAIL	0x08000000	// brushes to be added after vis leafs
-#define CONTENTS_TRANSLUCENT	0x10000000	// auto set if any surface has trans
-#define CONTENTS_LADDER	0x20000000
-#define CONTENTS_TRIGGER	0x40000000	// trigger
+#define Q2_CONTENTS_MONSTER		0x02000000	// should never be on a brush, only in game
+#define Q2_CONTENTS_DEADMONSTER	0x04000000
+#define Q2_CONTENTS_DETAIL		0x08000000	// brushes to be added after vis leafs
+#define Q2_CONTENTS_TRANSLUCENT	0x10000000	// auto set if any surface has trans
+#define Q2_CONTENTS_LADDER		0x20000000
+#define Q2_CONTENTS_TRIGGER		0x40000000	// trigger
 
 #define SURF_LIGHT		0x00000001	// value will hold the light strength
 #define SURF_SLICK		0x00000002	// effects game physics
@@ -163,16 +163,16 @@ check_shader:
 
 	FS_Printf( f, "\n%s\n{\n", shadername ); // write shadername
 
-	if( contents & CONTENTS_CLIP && contents && CONTENTS_PLAYERCLIP )
+	if( contents & Q2_CONTENTS_CLIP && contents && Q2_CONTENTS_PLAYERCLIP )
 		FS_Print( f, "\tsurfaceparm\tclip\n" );
-	else if( contents & CONTENTS_MONSTERCLIP ) FS_Print( f, "\tsurfaceparm\tmonsterclip\n" );
-	else if( contents & CONTENTS_PLAYERCLIP ) FS_Print( f, "\tsurfaceparm\tplayerclip\n" );
-	else if( contents & CONTENTS_WINDOW ) FS_Print( f, "\tsurfaceparm\twindow\n" );
-	else if( contents & CONTENTS_ORIGIN ) FS_Print( f, "\tsurfaceparm\torigin\n" );
-	else if( contents & CONTENTS_TRANSLUCENT ) FS_Print( f, "\tsurfaceparm\ttrans\n" );
-	else if( contents & CONTENTS_AREAPORTAL ) FS_Print( f, "\tsurfaceparm\tareaportal\n" );
-	else if( contents & CONTENTS_TRIGGER )  FS_Print( f, "\tsurfaceparm\ttrigger\n" );
-	else if( contents & CONTENTS_DETAIL ) FS_Print( f, "\tsurfaceparm\tdetail\n" );
+	else if( contents & Q2_CONTENTS_MONSTERCLIP ) FS_Print( f, "\tsurfaceparm\tmonsterclip\n" );
+	else if( contents & Q2_CONTENTS_PLAYERCLIP ) FS_Print( f, "\tsurfaceparm\tplayerclip\n" );
+	else if( contents & Q2_CONTENTS_WINDOW ) FS_Print( f, "\tsurfaceparm\twindow\n" );
+	else if( contents & Q2_CONTENTS_ORIGIN ) FS_Print( f, "\tsurfaceparm\torigin\n" );
+	else if( contents & Q2_CONTENTS_TRANSLUCENT ) FS_Print( f, "\tsurfaceparm\ttrans\n" );
+	else if( contents & Q2_CONTENTS_AREAPORTAL ) FS_Print( f, "\tsurfaceparm\tareaportal\n" );
+	else if( contents & Q2_CONTENTS_TRIGGER )  FS_Print( f, "\tsurfaceparm\ttrigger\n" );
+	else if( contents & Q2_CONTENTS_DETAIL ) FS_Print( f, "\tsurfaceparm\tdetail\n" );
 
 	if( flags & SURF_LIGHT )
 	{
@@ -192,11 +192,11 @@ check_shader:
 		FS_Print( f, "\ttessSize\t\t64\n\n" );
 
 		// server relevant contents
-		if(contents & CONTENTS_WATER)
+		if(contents & Q2_CONTENTS_WATER)
 			FS_Print( f, "\tsurfaceparm\twater\n" );
-		else if(contents & CONTENTS_SLIME)		
+		else if(contents & Q2_CONTENTS_SLIME)		
 			FS_Print( f, "\tsurfaceparm\tslime\n" );
-		else if(contents & CONTENTS_LAVA)
+		else if(contents & Q2_CONTENTS_LAVA)
 			FS_Print( f, "\tsurfaceparm\tlava\n" );
 		else FS_Print( f, "\tsurfaceparm\twater\n" );
 
@@ -322,32 +322,32 @@ void Conv_ShaderGetFlags( const char *imagename, const char *shadername, const c
 
 		if( com.stristr( imagename, "water" )) 
 		{
-			*contents |= CONTENTS_WATER;
+			*contents |= Q2_CONTENTS_WATER;
 			*flags |= SURF_WARP; // liquids
 		}
 		else if( com.stristr( imagename, "slime" ))
 		{
-			*contents |= CONTENTS_SLIME;
+			*contents |= Q2_CONTENTS_SLIME;
 			*flags |= SURF_WARP; // liquids
 		}
 		else if( com.stristr( imagename, "lava" ))
 		{
-			*contents |= CONTENTS_LAVA;
+			*contents |= Q2_CONTENTS_LAVA;
 			*flags |= SURF_WARP; // liquids
 		}
 
 		// search for keywords
 		if( !com.strnicmp( imagename, "sky", 3 )) *flags |= SURF_SKY;
-		else if( !com.strnicmp( imagename, "origin",6)) *contents |= CONTENTS_ORIGIN;
-		else if( !com.strnicmp( imagename, "clip", 4 )) *contents |= CONTENTS_CLIP;
+		else if( !com.strnicmp( imagename, "origin",6)) *contents |= Q2_CONTENTS_ORIGIN;
+		else if( !com.strnicmp( imagename, "clip", 4 )) *contents |= Q2_CONTENTS_CLIP;
 		else if( !com.strnicmp( imagename, "hint", 4 )) *flags |= SURF_HINT;
 		else if( !com.strnicmp( imagename, "skip", 4 )) *flags |= SURF_SKIP;
 		else if( !com.strnicmp( imagename, "null", 4 )) *flags |= SURF_NODRAW;
-		else if( !com.strnicmp( imagename, "translucent", 11 )) *contents |= CONTENTS_TRANSLUCENT;
+		else if( !com.strnicmp( imagename, "translucent", 11 )) *contents |= Q2_CONTENTS_TRANSLUCENT;
 		else if( !com.strnicmp( imagename, "glass", 5 )) *flags |= SURF_TRANS66;
 		else if( !com.strnicmp( imagename, "mirror", 6 )) *flags |= SURF_MIRROR;
 		else if( !com.strnicmp( imagename, "portal", 6 )) *flags |= SURF_PORTAL;
-		else if( com.stristr( imagename, "trigger" )) *contents |= CONTENTS_TRIGGER;
+		else if( com.stristr( imagename, "trigger" )) *contents |= Q2_CONTENTS_TRIGGER;
 		else if( com.stristr( imagename, "lite" )) *flags |= SURF_LIGHT;
 
 		// try to exctract contents and flags directly form mip-name
@@ -355,7 +355,7 @@ void Conv_ShaderGetFlags( const char *imagename, const char *shadername, const c
 		else if( imagename[0] == '{' )
 		{
 			*flags |= SURF_ALPHATEST; // grates
-			*contents |= CONTENTS_TRANSLUCENT;
+			*contents |= Q2_CONTENTS_TRANSLUCENT;
 		}
 		else if( imagename[0] == '~' ) *flags |= SURF_LIGHT; // light definition
 		else if( imagename[0] == '+' )

@@ -27,6 +27,10 @@ extern Vector VecBModelOrigin( entvars_t* pevBModel );
 extern DLL_GLOBAL Vector		g_vecAttackDir;
 extern DLL_GLOBAL int			g_iSkillLevel;
 
+extern void PM_Move ( struct playermove_s *ppmove, int server );
+extern void PM_Init ( struct playermove_s *ppmove  );
+extern char PM_FindTextureType( const char *name );
+
 static DLL_FUNCTIONS gFunctionTable = 
 {
 	GameDLLInit,				//pfnGameInit
@@ -61,17 +65,17 @@ static DLL_FUNCTIONS gFunctionTable =
 	PlayerPostThink,			//pfnPlayerPostThink
 
 	StartFrame,					//pfnStartFrame
-	DispatchCreate,				//pfnCreate
+	ParmsNewLevel,				//pfnParmsNewLevel
 	ParmsChangeLevel,			//pfnParmsChangeLevel
 
 	GetGameDescription,         //pfnGetGameDescription    Returns string describing current .dll game.
-	DispatchFrame,		// pfnPhysicsEntity
+	PlayerCustomization,		// pfnPlayerCustomization
 
 	SpectatorConnect,			//pfnSpectatorConnect      Called when spectator joins server
 	SpectatorDisconnect,        //pfnSpectatorDisconnect   Called when spectator leaves the server
 	SpectatorThink,				//pfnSpectatorThink        Called when spectator sends a command packet (usercmd_t)
 	
-	ServerClassifyEdict,	// pfnClassifyEdict
+	Sys_Error,		// pfnSys_Error
 
 	PM_Move,			// pfnPM_Move
 	PM_Init,			// pfnPM_Init		Server version of player movement initialization
@@ -88,9 +92,11 @@ static DLL_FUNCTIONS gFunctionTable =
 	CmdStart,			// pfnCmdStart
 	CmdEnd,			// pfnCmdEnd
 
-	OnFreeEntPrivateData,	// pfnOnFreeEntPrivateData
+	ConnectionlessPacket,	// pfnConnectionlessPacket
 	GetHullBounds,		// pfnGetHullBounds
-	ShouldCollide,		// pfnShouldCollide
+	CreateInstancedBaselines,	// pfnCreateInstancedBaselines
+	InconsistentFile,		// pfnInconsistentFile
+	AllowLagCompensation,	// pfnAllowLagCompensation
 };
 
 static void SetObjectCollisionBox( entvars_t *pev );
@@ -100,7 +106,7 @@ static void SetObjectCollisionBox( entvars_t *pev );
 //=======================================================================
 int GetEntityAPI( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion )
 {
-	if ( !pFunctionTable || interfaceVersion != SV_INTERFACE_VERSION )
+	if ( !pFunctionTable || interfaceVersion != INTERFACE_VERSION )
 	{
 		return FALSE;
 	}
@@ -595,7 +601,6 @@ CBaseEntity *CBaseEntity::GetNextTarget( void )
 TYPEDESCRIPTION	CBaseEntity::m_SaveData[] = 
 {
 	DEFINE_FIELD( CBaseEntity, m_pGoalEnt, FIELD_CLASSPTR ),
-	DEFINE_FIELD( CBaseEntity, m_iClassType, FIELD_INTEGER ),
 	DEFINE_FIELD( CBaseEntity, m_pfnThink, FIELD_FUNCTION ),		// UNDONE: Build table of these!!!
 	DEFINE_FIELD( CBaseEntity, m_pfnTouch, FIELD_FUNCTION ),
 	DEFINE_FIELD( CBaseEntity, m_pfnUse, FIELD_FUNCTION ),
@@ -618,9 +623,6 @@ int CBaseEntity::Restore( CRestore &restore )
 	status = restore.ReadEntVars( "ENTVARS", pev );
 	if ( status )
 		status = restore.ReadFields( "BASE", this, m_SaveData, ARRAYSIZE(m_SaveData) );
-
-	// restore edict class here
-	SetObjectClass( m_iClassType );
 
     if ( pev->modelindex != 0 && !FStringNull(pev->model) )
 	{

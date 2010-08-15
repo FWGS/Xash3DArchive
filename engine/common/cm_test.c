@@ -242,7 +242,7 @@ CM_PointContents
 */
 int CM_PointContents( const vec3_t p )
 {
-	if( !worldmodel ) return CONTENTS_NONE;
+	if( !worldmodel ) return 0;
 	return CM_HullPointContents( &worldmodel->hulls[0], 0, p );
 }
 

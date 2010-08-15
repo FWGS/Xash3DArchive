@@ -18,7 +18,7 @@ CCITT standard CRC used by XMODEM
 #define CRC32_INIT_VALUE	0xFFFFFFFFUL
 #define CRC32_XOR_VALUE	0xFFFFFFFFUL
 
-static const CRC16_t crctable[NUM_BYTES] =
+static const word crctable[NUM_BYTES] =
 {
 0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
 0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
@@ -54,7 +54,7 @@ static const CRC16_t crctable[NUM_BYTES] =
 0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
-static const CRC32_t crc32table[NUM_BYTES] =
+static const dword crc32table[NUM_BYTES] =
 {
 0x00000000, 0x77073096, 0xee0e612c, 0x990951ba,
 0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3,
@@ -190,19 +190,19 @@ static byte chktbl[1024] =
 0x39, 0x4f, 0xdd, 0xe4, 0xb6, 0x19, 0x27, 0xfb, 0xb8, 0xf5, 0x32, 0x73, 0xe5, 0xcb, 0x32
 };
 
-void CRC_Init( CRC16_t *crcvalue )
+void CRC_Init( word *crcvalue )
 {
 	*crcvalue = CRC_INIT_VALUE;
 }
 
-void CRC_ProcessByte( CRC16_t *crcvalue, byte data )
+void CRC_ProcessByte( word *crcvalue, byte data )
 {
 	*crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }
 
-CRC16_t CRC_Block( byte *start, int count )
+word CRC_Block( byte *start, int count )
 {
-	CRC16_t	crc;
+	word	crc;
 
 	CRC_Init (&crc);
 	while(count--) CRC_ProcessByte( &crc, *start++ );
@@ -220,7 +220,7 @@ For proxy protecting
 byte CRC_BlockSequence(byte *base, int length, int sequence)
 {
 	int	n, x;
-	CRC16_t	crc;
+	word	crc;
 	byte	*p, chkb[60 + 4];
 
 	if (sequence < 0) sequence = abs(sequence);
@@ -242,28 +242,28 @@ byte CRC_BlockSequence(byte *base, int length, int sequence)
 	return crc;
 }
 
-void CRC32_Init( CRC32_t *pulCRC )
+void CRC32_Init( dword *pulCRC )
 {
 	*pulCRC = CRC32_INIT_VALUE;
 }
 
-void CRC32_Final( CRC32_t *pulCRC )
+void CRC32_Final( dword *pulCRC )
 {
 	*pulCRC ^= CRC32_XOR_VALUE;
 }
 
-void CRC32_ProcessByte( CRC32_t *pulCRC, byte ch )
+void CRC32_ProcessByte( dword *pulCRC, byte ch )
 {
-	CRC32_t	ulCrc = *pulCRC;
+	dword	ulCrc = *pulCRC;
 
 	ulCrc ^= ch;
 	ulCrc = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 	*pulCRC = ulCrc;
 }
 
-void CRC32_ProcessBuffer( CRC32_t *pulCRC, const void *pBuffer, int nBuffer )
+void CRC32_ProcessBuffer( dword *pulCRC, const void *pBuffer, int nBuffer )
 {
-	CRC32_t	ulCrc = *pulCRC;
+	dword	ulCrc = *pulCRC;
 	byte	*pb = (byte *)pBuffer;
 	uint	nFront;
 	int	nMain;
@@ -275,7 +275,7 @@ JustAfew:
 	case 5: ulCrc  = crc32table[*pb++ ^ (byte)ulCrc] ^ (ulCrc >> 8);
 	case 4:
 		
-		ulCrc ^= *(CRC32_t *)pb;	// warning, this only works on little-endian.
+		ulCrc ^= *(dword *)pb;	// warning, this only works on little-endian.
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
@@ -307,12 +307,12 @@ JustAfew:
 	nMain = nBuffer >> 3;
 	while( nMain-- )
 	{
-		ulCrc ^= *(CRC32_t *)pb;	// warning, this only works on little-endian.
+		ulCrc ^= *(dword *)pb;	// warning, this only works on little-endian.
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
-		ulCrc ^= *(CRC32_t *)(pb + 4);// warning, this only works on little-endian.
+		ulCrc ^= *(dword *)(pb + 4);// warning, this only works on little-endian.
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);

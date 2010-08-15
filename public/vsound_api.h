@@ -7,6 +7,17 @@
 
 typedef int	sound_t;
 
+// sound flags
+#define SND_VOLUME			(1<<0)	// a scaled byte
+#define SND_ATTENUATION		(1<<1)	// a byte
+#define SND_PITCH			(1<<2)	// a byte
+#define SND_FIXED_ORIGIN		(1<<3)	// a vector
+#define SND_SENTENCE		(1<<4)	// set if sound num is actually a sentence num
+#define SND_STOP			(1<<5)	// stop the sound
+#define SND_CHANGE_VOL		(1<<6)	// change sound vol
+#define SND_CHANGE_PITCH		(1<<7)	// change sound pitch
+#define SND_SPAWNING		(1<<8)	// we're spawning, used in some cases for ambients
+
 /*
 ==============================================================================
 

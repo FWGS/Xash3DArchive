@@ -16,6 +16,9 @@ extern ui_enginefuncs_t g_engfuncs;
 
 #define MAX_INFO_STRING	512	// engine limit
 
+#define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
+#define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))
+
 //
 // How did I ever live without ASSERT?
 //

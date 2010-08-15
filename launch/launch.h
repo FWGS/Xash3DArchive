@@ -88,11 +88,13 @@ typedef struct system_s
 	void (*CmdAuto)( char *complete_string );
 } system_t;
 
+// NOTE: if this is changed, it must be changed in cvardef.h too
 typedef struct cvar_s
 {
 	// shared part
 	char	*name;
 	char	*string;		// normal string
+	uint	flags;		// state flags
 	float	value;		// atof( string )
 	int	integer;		// atoi( string )
 	bool	modified;		// set each time the cvar is changed
@@ -101,7 +103,6 @@ typedef struct cvar_s
 	char	*reset_string;	// cvar_restart will reset to this value
 	char	*latched_string;	// for CVAR_LATCH vars
 	char	*description;	// variable descrition info
-	uint	flags;		// state flags
 	uint	modificationCount;	// incremented each time the cvar is changed
 
 	struct cvar_s *next;
@@ -395,6 +396,7 @@ void Cvar_SetValue( const char *var_name, float value );
 float Cvar_VariableValue( const char *var_name );
 int Cvar_VariableInteger( const char *var_name );
 char *Cvar_VariableString( const char *var_name );
+void Cvar_DirectSet( cvar_t *var, const char *value );
 bool Cvar_Command( void );
 void Cvar_WriteVariables( file_t *f );
 void Cvar_Init( void );
@@ -449,16 +451,16 @@ bool VFS_Eof( vfile_t *file );
 //
 // crclib.c
 //
-void CRC_Init( CRC16_t *crcvalue );
-CRC16_t CRC_Block( byte *start, int count );
-void CRC_ProcessByte( CRC16_t *crcvalue, byte data );
+void CRC_Init( word *crcvalue );
+word CRC_Block( byte *start, int count );
+void CRC_ProcessByte( word *crcvalue, byte data );
 byte CRC_BlockSequence( byte *base, int length, int sequence );
 uint Com_BlockChecksum( void *buffer, int length );
 uint Com_BlockChecksumKey( void *buffer, int length, int key );
-void CRC32_ProcessBuffer( CRC32_t *pulCRC, const void *pBuffer, int nBuffer );
-void CRC32_ProcessByte( CRC32_t *pulCRC, byte ch );
-void CRC32_Init( CRC32_t *pulCRC );
-void CRC32_Final( CRC32_t *pulCRC );
+void CRC32_ProcessBuffer( dword *pulCRC, const void *pBuffer, int nBuffer );
+void CRC32_ProcessByte( dword *pulCRC, byte ch );
+void CRC32_Init( dword *pulCRC );
+void CRC32_Final( dword *pulCRC );
 
 //
 // parselib.c

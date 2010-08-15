@@ -225,14 +225,22 @@ R_CullModel
 */
 int R_CullModel( ref_entity_t *e, vec3_t mins, vec3_t maxs, float radius )
 {
-	if( e->ent_type == ED_VIEWMODEL )
+	if( e->ent_type == ET_VIEWENTITY )
 	{
 		if( RI.params & RP_NONVIEWERREF )
 			return 1;
 		return 0;
 	}
 
-	if( RP_LOCALCLIENT( e ) && !(RI.refdef.flags & RDF_THIRDPERSON))
+	// don't reflect this entity in mirrors
+	if( e->flags & EF_NOREFLECT && RI.params & RP_MIRRORVIEW )
+		return 1;
+
+	// draw only in mirrors
+	if( e->flags & EF_REFLECTONLY && !( RI.params & RP_MIRRORVIEW ))
+		return 1;
+
+	if( RP_LOCALCLIENT( e ) && !( RI.refdef.flags & RDF_THIRDPERSON ))
 	{
 		if(!( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
 			return 1;

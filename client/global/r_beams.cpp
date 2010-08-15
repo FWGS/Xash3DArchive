@@ -1435,8 +1435,8 @@ void CViewRenderBeams::DrawLaser( Beam_t *pbeam, int frame, int rendermode, floa
 		color2[1] *= flFade;
 		color2[2] *= flFade;
 
-		//ALERT( at_console, "Fade: %f", flFade );
-		//ALERT( at_console, "Dist: %f", flDistance );
+		//Con_Printf( "Fade: %f", flFade );
+		//Con_Printf( "Dist: %f", flDistance );
 	}
 
 	DrawSegs( NOISE_DIVISIONS, pbeam->rgNoise, spriteIndex, frame, rendermode, pbeam->attachment[0],
@@ -1533,7 +1533,7 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 		DrawLaser( pbeam, frame, rendermode, color, pbeam->modelIndex );
 		break;
 	default:
-		ALERT( at_warning, "CViewRenderBeams::DrawBeam:  Unknown beam type %i\n", pbeam->type );
+		Con_Printf( "CViewRenderBeams::DrawBeam:  Unknown beam type %i\n", pbeam->type );
 		break;
 	}
 }
@@ -1570,7 +1570,7 @@ bool CViewRenderBeams::RecomputeBeamEndpoints( Beam_t *pbeam )
 		}
 		else
 		{
-			// ALERT( at_warning, "can't find start entity\n" );
+			// Con_Printf( "Warning: can't find start entity\n" );
 			// return false;
 		}
 
@@ -1612,7 +1612,7 @@ void CViewRenderBeams::AddServerBeam( cl_entity_t *pEnvBeam )
 {
 	if( m_nNumServerBeams >= MAX_BEAMS )
 	{
-		ALERT( at_error, "Too many static beams %d!\n", m_nNumServerBeams );
+		Con_Printf( "ERROR: Too many static beams %d!\n", m_nNumServerBeams );
 		return;
 	}
 
@@ -2338,7 +2338,7 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 
 	while ( pHead )
 	{
-		// ALERT( at_console, "%.2f ", fraction );
+		// Con_Printf( "%.2f ", fraction );
 		g_engfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
 		g_engfuncs.pTriAPI->TexCoord2f( 1.0f, 1.0f );
 		g_engfuncs.pTriAPI->Vertex3fv( last2 );

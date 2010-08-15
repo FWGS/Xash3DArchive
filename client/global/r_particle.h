@@ -6,6 +6,7 @@
 #ifndef R_PARTICLE_H
 #define R_PARTICLE_H
 
+#define NUMVERTEXNORMALS		162
 #define MAX_PARTICLES		4096
 
 #define SIMSHIFT			10

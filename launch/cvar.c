@@ -9,7 +9,6 @@
 #define FILE_HASH_SIZE	256
 
 int		cvar_numIndexes;
-int		cvar_modifiedFlags;
 cvar_t		cvar_indexes[MAX_CVARS];
 static cvar_t	*hashTable[FILE_HASH_SIZE];
 cvar_t		*cvar_vars;
@@ -185,7 +184,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const 
 			var->flags &= ~CVAR_USER_CREATED;
 			Mem_Free( var->reset_string );
 			var->reset_string = copystring( var_value );
-			cvar_modifiedFlags |= flags;
 		}
 
 		var->flags |= flags;
@@ -255,20 +253,122 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const 
 
 /*
 ============
+Cvar_DirectSet
+============
+*/
+void Cvar_DirectSet( cvar_t *var, const char *value )
+{
+	cvar_t		*test;
+	const char	*pszValue;
+	char		szNew[MAX_SYSPATH];
+	
+	if( !var ) return;	// GET_CVAR_POINTER is failed ?
+
+	// make sure what is really pointer to the cvar
+	test = Cvar_FindVar( var->name );
+	ASSERT( var == test ); 
+
+	if( value && !Cvar_ValidateString( value, true ))
+	{
+		MsgDev( D_WARN, "invalid cvar value string: %s\n", value );
+		value = "default";
+	}
+
+	if( !value ) value = var->reset_string;
+
+	if( var->flags & ( CVAR_READ_ONLY|CVAR_INIT|CVAR_RENDERINFO|CVAR_LATCH|CVAR_LATCH_VIDEO|CVAR_LATCH_AUDIO ))
+	{
+		// Cvar_DirectSet cannot change these cvars at all
+		return;
+	}
+	
+	if(( var->flags & CVAR_CHEAT ) && !Cvar_VariableInteger( "sv_cheats" ))
+	{
+		// cheats are disabled
+		return;
+	}
+
+	pszValue = value;
+
+	// This cvar's string must only contain printable characters.
+	// Strip out any other crap.
+	// We'll fill in "empty" if nothing is left
+	if( var->flags & CVAR_PRINTABLEONLY )
+	{
+		const char	*pS;
+		char		*pD;
+
+		// clear out new string
+		szNew[0] = '\0';
+
+		pS = pszValue;
+		pD = szNew;
+
+		// step through the string, only copying back in characters that are printable
+		while( *pS )
+		{
+			if( *pS < 32 || *pS > 255 )
+			{
+				pS++;
+				continue;
+			}
+			*pD++ = *pS++;
+		}
+
+		// terminate the new string
+		*pD = '\0';
+
+		// if it's empty, then insert a marker string
+		if( !com.strlen( szNew ))
+		{
+			com.strcpy( szNew, "default" );
+		}
+
+		// point the value here.
+		pszValue = szNew;
+	}
+
+	if( !com.strcmp( pszValue, var->string ))
+		return;
+
+	// pass all tests
+	var->modified = true;
+	var->modificationCount++;
+
+	if( var->flags & CVAR_USERINFO )
+		userinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_PHYSICINFO )
+		physinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_SERVERINFO )
+		serverinfo->modified = true;	// transmit at next oportunity
+
+	// free the old value string
+	Mem_Free( var->string );
+	var->string = copystring( pszValue );
+	var->value = com.atof( var->string );
+	var->integer = com.atoi( var->string );
+}
+	
+/*
+============
 Cvar_Set2
 ============
 */
 cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
 {
-	cvar_t	*var;
-
+	cvar_t		*var;
+	const char	*pszValue;
+	char		szNew[MAX_SYSPATH];
+	
 	if( !Cvar_ValidateString( var_name, false ))
 	{
 		MsgDev( D_WARN, "invalid cvar name string: %s\n", var_name );
 		var_name = "unknown";
 	}
 
-	if ( value && !Cvar_ValidateString( value, true ))
+	if( value && !Cvar_ValidateString( value, true ))
 	{
 		MsgDev( D_WARN, "invalid cvar value string: %s\n", value );
 		value = "default";
@@ -286,9 +386,6 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
 
 	if( !value ) value = var->reset_string;
 	if( !com.strcmp( value, var->string )) return var;
-
-	// note what types of cvars have been modified (userinfo, archive, serverinfo, renderinfo)
-	cvar_modifiedFlags |= var->flags;
 
 	if( !force )
 	{
@@ -366,8 +463,48 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
 		}
 	}
 
+	pszValue = value;
+
+	// This cvar's string must only contain printable characters.
+	// Strip out any other crap.
+	// We'll fill in "empty" if nothing is left
+	if( var->flags & CVAR_PRINTABLEONLY )
+	{
+		const char *pS;
+		char *pD;
+
+		// clear out new string
+		szNew[0] = '\0';
+
+		pS = pszValue;
+		pD = szNew;
+
+		// step through the string, only copying back in characters that are printable
+		while( *pS )
+		{
+			if( *pS < 32 || *pS > 255 )
+			{
+				pS++;
+				continue;
+			}
+			*pD++ = *pS++;
+		}
+
+		// terminate the new string
+		*pD = '\0';
+
+		// if it's empty, then insert a marker string
+		if( !com.strlen( szNew ))
+		{
+			com.strcpy( szNew, "default" );
+		}
+
+		// point the value here.
+		pszValue = szNew;
+	}
+
  	// nothing to change
-	if( !com.strcmp( value, var->string ))
+	if( !com.strcmp( pszValue, var->string ))
 		return var;
 
 	var->modified = true;
@@ -381,10 +518,11 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
 
 	if( var->flags & CVAR_SERVERINFO )
 		serverinfo->modified = true;	// transmit at next oportunity
+
 	
 	// free the old value string
 	Mem_Free( var->string );
-	var->string = copystring( value );
+	var->string = copystring( pszValue );
 	var->value = com.atof( var->string );
 	var->integer = com.atoi( var->string );
 
@@ -924,7 +1062,7 @@ Reads in all archived cvars
 void Cvar_Init( void )
 {
 	cvar_vars = NULL;
-	cvar_numIndexes = cvar_modifiedFlags = 0;
+	cvar_numIndexes = 0;
 	ZeroMemory( cvar_indexes, sizeof( cvar_t ) * MAX_CVARS );
 	ZeroMemory( hashTable, sizeof( *hashTable ) * FILE_HASH_SIZE );
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only

@@ -20,7 +20,6 @@
 
 #include <string.h>
 
-#include "te_shared.h"
 #include "shake.h"
 #include "game_shared.h"
 #include "activity.h"
@@ -46,8 +45,6 @@ inline edict_t *FIND_ENTITY_BY_TARGET(edict_t *entStart, const char *pszName)
 }	
 
 extern int DirToBits( const Vector dir );
-
-char *COM_ParseToken( const char **data );
 
 // Keeps clutter down a bit, when writing key-value pairs
 #define WRITEKEY_INT(pf, szKeyName, iKeyValue)									\
@@ -228,6 +225,10 @@ inline void UTIL_MakeVectorsPrivate( const Vector &vecAngles, float *p_vForward,
 {
 	g_engfuncs.pfnAngleVectors( vecAngles, p_vForward, p_vRight, p_vUp );
 }
+
+typedef enum { point_hull = 0, human_hull = 1, large_hull = 2, head_hull = 3 };
+typedef enum { ignore_monsters = 1, dont_ignore_monsters = 0, missile = 2 } IGNORE_MONSTERS;
+typedef enum { ignore_glass = 1, dont_ignore_glass = 0 } IGNORE_GLASS;
 
 extern void			UTIL_MakeAimVectors		( const Vector &vecAngles ); // like MakeVectors, but assumes pitch isn't inverted
 extern void			UTIL_MakeInvVectors		( const Vector &vec, globalvars_t *pgv );

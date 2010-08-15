@@ -250,9 +250,9 @@ cvar_t *pfnCVarRegister( const char *szName, const char *szValue, int flags, con
 
 	if( flags & FCVAR_ARCHIVE ) real_flags |= CVAR_ARCHIVE;
 	if( flags & FCVAR_USERINFO ) real_flags |= CVAR_USERINFO;
-	if( flags & FCVAR_SERVERINFO ) real_flags |= CVAR_SERVERINFO;
-	if( flags & FCVAR_PHYSICINFO ) real_flags |= CVAR_PHYSICINFO;
-	if( flags & FCVAR_LATCH ) real_flags |= CVAR_LATCH;
+	if( flags & FCVAR_SERVER ) real_flags |= CVAR_SERVERINFO;
+	if( flags & FCVAR_SPONLY ) real_flags |= CVAR_CHEAT;
+	if( flags & FCVAR_PRINTABLEONLY ) real_flags |= CVAR_PRINTABLEONLY;
 
 	return Cvar_Get( szName, szValue, real_flags, szDesc );
 }
@@ -302,6 +302,18 @@ float pfnCVarGetValue( const char *szName )
 
 /*
 =============
+pfnCVarGetPointer
+
+can return NULL
+=============
+*/
+cvar_t *pfnCVarGetPointer( const char *szVarName )
+{
+	return Cvar_FindVar( szVarName );
+}
+	
+/*
+=============
 pfnAddCommand
 
 =============
@@ -326,45 +338,6 @@ void pfnDelCommand( const char *cmd_name )
 	if( !cmd_name || !*cmd_name ) return;
 
 	Cmd_RemoveCommand( cmd_name );
-}
-
-/*
-=============
-pfnAlertMessage
-
-=============
-*/
-void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
-{
-	char		buffer[2048];	// must support > 1k messages
-	va_list		args;
-
-	va_start( args, szFmt );
-	com.vsnprintf( buffer, 2048, szFmt, args );
-	va_end( args );
-
-	if( host.developer < level )
-		return;
-
-	switch( level )
-	{
-	case at_console:	
-		com.print( buffer );
-		break;
-	case at_warning:
-		com.print( va("^3Warning:^7 %s", buffer ));
-		break;
-	case at_error:
-		com.print( va("^1Error:^7 %s", buffer ));
-		break;
-	case at_loading:
-		com.print( va("^2Loading:^7 %s", buffer ));
-		break;
-	case at_aiconsole:
-	case at_logged:
-		com.print( buffer );
-		break;
-	}
 }
 
 /*
@@ -400,6 +373,44 @@ pfnCmd_Argc
 int pfnCmd_Argc( void )
 {
 	return Cmd_Argc();
+}
+
+/*
+=============
+pfnCon_Printf
+
+=============
+*/
+void pfnCon_Printf( char *szFmt, ... )
+{
+	char	buffer[2048];	// must support > 1k messages
+	va_list	args;
+
+	va_start( args, szFmt );
+	com.vsnprintf( buffer, 2048, szFmt, args );
+	va_end( args );
+
+	com.print( buffer );
+}
+
+/*
+=============
+pfnCon_DPrintf
+
+=============
+*/
+void pfnCon_DPrintf( char *szFmt, ... )
+{
+	char	buffer[2048];	// must support > 1k messages
+	va_list	args;
+
+	if( !host.developer ) return;
+
+	va_start( args, szFmt );
+	com.vsnprintf( buffer, 2048, szFmt, args );
+	va_end( args );
+
+	com.print( buffer );
 }
 
 /*

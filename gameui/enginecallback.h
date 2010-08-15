@@ -60,7 +60,7 @@
 #define Cmd_RemoveCommand	(*g_engfuncs.pfnDelCommand)
 #define CMD_ARGC		(*g_engfuncs.pfnCmdArgc)
 #define CMD_ARGV		(*g_engfuncs.pfnCmdArgv)
-#define ALERT		(*g_engfuncs.pfnAlertMessage)
+#define Con_Printf		(*g_engfuncs.Con_Printf)
 
 #define GET_AUDIO_LIST	(*g_engfuncs.pfnGetAudioList)
 #define GET_VIDEO_LIST	(*g_engfuncs.pfnGetVideoList)

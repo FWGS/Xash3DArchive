@@ -2203,9 +2203,6 @@ IMPLEMENT_SAVERESTORE(CTriggerCamera,CBaseDelay);
 
 void CTriggerCamera::Spawn( void )
 {
-	// force camera to send on client
-	SetObjectClass( ED_NORMAL );
-
 	pev->movetype = MOVETYPE_NOCLIP;
 	pev->solid = SOLID_NOT;							// Remove model & collisions
 	pev->renderamt = 0;								// The engine won't draw this model if this is set to 0 and blending is on

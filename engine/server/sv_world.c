@@ -130,13 +130,12 @@ SV_UnlinkEdict
 void SV_UnlinkEdict( edict_t *ent )
 {
 	// not linked in anywhere
-	if( !ent->pvServerData->area.prev )
+	if( !ent->pvEngineData->area.prev )
 		return;
 
-	RemoveLink( &ent->pvServerData->area );
-	ent->pvServerData->area.prev = NULL;
-	ent->pvServerData->area.next = NULL;
-	ent->pvServerData->linked = false;
+	RemoveLink( &ent->pvEngineData->area );
+	ent->pvEngineData->area.prev = NULL;
+	ent->pvEngineData->area.next = NULL;
 }
 
 /*
@@ -170,8 +169,6 @@ void SV_CheckForOutside( edict_t *ent )
 	}
 }
 
-
-int EntityInSolid( edict_t *ent );
 /*
 ===============
 SV_LinkEntity
@@ -184,16 +181,16 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	int		i, j, num_leafs, topNode;
 	sv_priv_t		*sv_ent;
 
-	sv_ent = ent->pvServerData;
+	sv_ent = ent->pvEngineData;
 
 	if( !sv_ent ) return;
 	if( sv_ent->area.prev ) SV_UnlinkEdict( ent ); // unlink from old position
 	if( ent == EDICT_NUM( 0 )) return; // don't add the world
 	if( ent->free ) return;
 
-	// trying to classify unclassified edicts
-	if( sv.state == ss_active && sv_ent->s.ed_type == ED_SPAWNED )
-		SV_ClassifyEdict( ent, ED_SPAWNED );
+	// create baseline for new edicts in-game
+	if( sv.state == ss_active && !sv_ent->send_baseline )
+		SV_BaselineForEntity( ent );
 
 	// set the abs box
 	svgame.dllFuncs.pfnSetAbsBox( ent );
@@ -247,9 +244,6 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 		}
 	}
 
-	ent->pvServerData->s.ed_flags |= ESF_LINKEDICT;	// change edict state on a client too...
-	sv_ent->linked = true;
-		
 	// ignore not solid bodies
 	if( ent->v.solid == SOLID_NOT && ent->v.skin == CONTENTS_NONE )
 		return;
@@ -408,8 +402,11 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		}
 
 		// custom user filter
-		if( !svgame.dllFuncs.pfnShouldCollide( touch, clip->passedict ))
-			continue;
+		if( svgame.dllFuncs2.pfnShouldCollide )
+		{
+			if( !svgame.dllFuncs2.pfnShouldCollide( touch, clip->passedict ))
+				continue;
+		}
 
 		if( clip->flags & FMOVE_IGNORE_GLASS && CM_GetModelType( touch->v.modelindex ) == mod_brush )
 		{

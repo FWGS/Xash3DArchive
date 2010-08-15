@@ -4,7 +4,7 @@
 //=======================================================================
 
 #include "cm_local.h"
-#include "entity_def.h"
+#include "edict.h"
 #include "mathlib.h"
 
 int CM_RecursiveLightPoint( vec3_t color, mnode_t *node, const vec3_t start, const vec3_t end )

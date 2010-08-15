@@ -11,8 +11,6 @@
 #include <stdio.h>
 
 #pragma warning( disable : 4244 )		// int or float down-conversion
-
-#define NUMVERTEXNORMALS		162
 #define bound( min, num, max )	((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 
 #ifndef M_PI

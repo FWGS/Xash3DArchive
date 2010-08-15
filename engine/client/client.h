@@ -98,7 +98,6 @@ typedef struct
 
 	// locally derived information from server state
 	model_t		models[MAX_MODELS];
-	string_t		edict_classnames[MAX_CLASSNAMES];
 	sound_t		sound_precache[MAX_SOUNDS];
 	shader_t		decal_shaders[MAX_DECALNAMES];
 } client_t;
@@ -145,6 +144,15 @@ typedef enum
 	scrshot_envshot,	// cubemap view
 	scrshot_skyshot	// skybox view
 } scrshot_t;
+
+// client screen state
+typedef enum
+{
+	CL_LOADING = 1,	// draw loading progress-bar
+	CL_ACTIVE,	// draw normal hud
+	CL_PAUSED,	// pause when active
+	CL_CHANGELEVEL,	// draw 'loading' during changelevel
+} scrstate_t;
 
 typedef struct
 {
@@ -408,7 +416,6 @@ void CL_DrawHUD( int state );
 void CL_InitEdicts( void );
 void CL_FreeEdicts( void );
 void CL_InitWorld( void );
-const char *CL_ClassName( const cl_entity_t *e );
 void CL_InitEntity( cl_entity_t *pEdict );
 void CL_FreeEntity( cl_entity_t *pEdict );
 string_t CL_AllocString( const char *szValue );
@@ -473,7 +480,7 @@ void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 //
 // cl_tent.c
 //
-int CL_AddEntity( cl_entity_t *pEnt, int ed_type, shader_t customShader );
+int CL_AddEntity( cl_entity_t *pEnt, int entityType, shader_t customShader );
 void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
@@ -531,19 +538,5 @@ bool SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
 void CL_PlayVideo_f( void );
-
-//
-// cl_world.c
-//
-void CL_ClearWorld( void );
-void CL_UnlinkEdict( cl_entity_t *ent );
-void CL_ClassifyEdict( cl_entity_t *ent );
-void CL_LinkEdict( cl_entity_t *ent, bool touch_triggers );
-int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, cl_entity_t **list, int maxcount, int areatype );
-trace_t CL_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, cl_entity_t *e );
-cl_entity_t *CL_TestPlayerPosition( const vec3_t origin, cl_entity_t *pass, TraceResult *tr );
-trace_t CL_MoveToss( cl_entity_t *tossent, cl_entity_t *ignore );
-int CL_TruePointContents( const vec3_t p );
-int CL_PointContents( const vec3_t p );
 
 #endif//CLIENT_H

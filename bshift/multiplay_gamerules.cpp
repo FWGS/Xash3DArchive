@@ -841,7 +841,7 @@ float CHalfLifeMultiplay :: FlWeaponTryRespawn( CBasePlayerItem *pWeapon )
 {
 	if ( pWeapon && pWeapon->m_iId && (pWeapon->iFlags() & ITEM_FLAG_LIMITINWORLD) )
 	{
-		if ( gpGlobals->numEntities < (gpGlobals->maxEntities - ENTITY_INTOLERANCE) )
+		if ( NUMBER_OF_ENTITIES() < (gpGlobals->maxEntities - ENTITY_INTOLERANCE) )
 			return 0;
 
 		// we're past the entity tolerance level,  so delay the respawn
@@ -1122,6 +1122,85 @@ void DestroyMapCycle( mapcycle_t *cycle )
 	cycle->next_item = NULL;
 }
 
+static char com_token[ 1500 ];
+
+/*
+==============
+COM_Parse
+
+Parse a token out of a string
+==============
+*/
+char *COM_Parse (char *data)
+{
+	int             c;
+	int             len;
+	
+	len = 0;
+	com_token[0] = 0;
+	
+	if (!data)
+		return NULL;
+		
+// skip whitespace
+skipwhite:
+	while ( (c = *data) <= ' ')
+	{
+		if (c == 0)
+			return NULL;                    // end of file;
+		data++;
+	}
+	
+// skip // comments
+	if (c=='/' && data[1] == '/')
+	{
+		while (*data && *data != '\n')
+			data++;
+		goto skipwhite;
+	}
+	
+
+// handle quoted strings specially
+	if (c == '\"')
+	{
+		data++;
+		while (1)
+		{
+			c = *data++;
+			if (c=='\"' || !c)
+			{
+				com_token[len] = 0;
+				return data;
+			}
+			com_token[len] = c;
+			len++;
+		}
+	}
+
+// parse single characters
+	if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c == ',' )
+	{
+		com_token[len] = c;
+		len++;
+		com_token[len] = 0;
+		return data+1;
+	}
+
+// parse a regular word
+	do
+	{
+		com_token[len] = c;
+		data++;
+		len++;
+		c = *data;
+	if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c == ',' )
+			break;
+	} while (c>32);
+	
+	com_token[len] = 0;
+	return data;
+}
+
 /*
 ==============
 COM_TokenWaiting
@@ -1158,9 +1237,8 @@ int ReloadMapCycleFile( char *filename, mapcycle_t *cycle )
 	char szBuffer[ MAX_RULE_BUFFER ];
 	char szMap[ 32 ];
 	int length;
-	char *pToken;
 	char *aFileList = (char *)LOAD_FILE_FOR_ME( filename, &length );
-	const char *pFileList = aFileList;
+	char *pFileList = aFileList;
 	int hasbuffer;
 	mapcycle_item_s *item, *newlist = NULL, *next;
 
@@ -1172,22 +1250,20 @@ int ReloadMapCycleFile( char *filename, mapcycle_t *cycle )
 			hasbuffer = 0;
 			memset( szBuffer, 0, MAX_RULE_BUFFER );
 
-			pToken = COM_Parse( &pFileList );
-			if ( !pToken ) break;
- 
-			if ( strlen( pToken ) <= 0 )
+			pFileList = COM_Parse( pFileList );
+			if ( strlen( com_token ) <= 0 )
 				break;
 
-			strcpy( szMap, pToken );
+			strcpy( szMap, com_token );
 
 			// Any more tokens on this line?
 			if ( COM_TokenWaiting( pFileList ) )
 			{
-				pToken = COM_Parse( &pFileList );
-				if ( strlen( pToken ) > 0 )
+				pFileList = COM_Parse( pFileList );
+				if ( strlen( com_token ) > 0 )
 				{
 					hasbuffer = 1;
-					strcpy( szBuffer, pToken );
+					strcpy( szBuffer, com_token );
 				}
 			}
 

@@ -17,7 +17,6 @@ stdlib_api_t	com, newcom;
 dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
 
-cvar_t	*sys_sharedstrings;
 cvar_t	*host_serverstate;
 cvar_t	*host_cheats;
 cvar_t	*host_maxfps;
@@ -575,11 +574,12 @@ void Host_Error( const char *error, ... )
 
 	if( host.framecount < 3 || host.state == HOST_SHUTDOWN )
 	{
-		Msg( "Host_InitError: " );
-		com.error( hosterror1 );
+		SV_SysError( hosterror1 );
+		com.error( "Host_InitError: %s", hosterror1 );
 	}
 	else if( host.framecount == host.errorframe )
 	{
+		SV_SysError( hosterror2 );
 		com.error( "Host_MultiError: %s", hosterror2 );
 		return;
 	}
@@ -588,7 +588,8 @@ void Host_Error( const char *error, ... )
 	if( recursive )
 	{ 
 		Msg( "Host_RecursiveError: %s", hosterror2 );
-		com.error( va( "%s", hosterror1 ));
+		SV_SysError( hosterror1 );
+		com.error( hosterror1 );
 		return; // don't multiple executes
 	}
 
@@ -618,6 +619,7 @@ void Sys_Error_f( void )
 	const char *error = Cmd_Argv( 1 );
 
 	if( !*error ) error = "Invoked sys error";
+	SV_SysError( error );
 	com.error( "%s\n", error );
 }
 
@@ -741,7 +743,6 @@ void Host_Init( const int argc, const char **argv )
 		Cmd_AddCommand ( "net_error", Net_Error_f, "send network bad message from random place");
           }
 
-	sys_sharedstrings = Cvar_Get( "sys_sharedstrings", "0", CVAR_INIT|CVAR_ARCHIVE, "hl1 compatible strings" );
 	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_INIT|CVAR_ARCHIVE, "name of video rendering library");
 	host_audio = Cvar_Get( "host_audio", "snd_dx.dll", CVAR_INIT|CVAR_ARCHIVE, "name of sound rendering library");
 	host_cheats = Cvar_Get( "sv_cheats", "0", CVAR_LATCH, "allow cheat variables to enable" );

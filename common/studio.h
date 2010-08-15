@@ -275,7 +275,6 @@ typedef union
 	short		value;
 } mstudioanimvalue_t;
 
-
 // body part index
 typedef struct
 {
@@ -292,12 +291,7 @@ typedef struct
 	int		flags;
 	int		width;
 	int		height;
-
-	union
-	{
-		int	index;		// disk: offset at start of buffer
-		shader_t	shader;		// ref: shader number
-	};
+	int		index;
 } mstudiotexture_t;
 
 // skin families

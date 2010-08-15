@@ -18,14 +18,25 @@
 #define MAX_MODS		128	// environment games that engine can keep visible
 #define MAP_DEFAULT_SHADER	"*black"	// engine built-in default shader
 #define MAX_STRING_TABLES	8	// seperately stringsystems
+#define DLLEXPORT		__declspec( dllexport )
+#define BIT( n )		(1<<( n ))
 #define trace_t		TraceResult
+#define NULL		((void *)0)
+
+// color strings
+#define ColorIndex( c )	((( c ) - '0' ) & 7 )
+#define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 
 #ifndef __cplusplus
 #define bool		BOOL	// sizeof( int )
 #endif
 
-#include "basetypes.h"
+#include "const.h"
 
+typedef int		BOOL;
+typedef int		func_t;
+typedef int		sound_t;
+typedef int		shader_t;
 typedef vec_t		vec2_t[2];
 typedef vec_t		vec3_t[3];
 typedef vec_t		vec4_t[4];
@@ -74,7 +85,6 @@ typedef struct { int numfilenames; char **filenames; char *filenamesbuffer; } se
 typedef void ( *cmsave_t )( void* handle, const void* buffer, size_t size );
 typedef void ( *cmdraw_t )( int color, int numpoints, const float *points );
 typedef void ( *setpair_t )( const char *key, const char *value, void *buffer, void *numpairs );
-typedef enum { NA_LOOPBACK, NA_BROADCAST, NA_IP } netadrtype_t;
 typedef enum { NS_CLIENT, NS_SERVER } netsrc_t;
 typedef void ( *xcommand_t )( void );
 
@@ -112,14 +122,10 @@ typedef enum
 	CVAR_USER_CREATED	= BIT(9),	// created by a set command (dll's used)
 	CVAR_LATCH_VIDEO	= BIT(10),// save changes until render restart
 	CVAR_LATCH_AUDIO	= BIT(11),// save changes until vsound restart
+	CVAR_PRINTABLEONLY	= BIT(12),// this cvar's string cannot contain unprintable characters ( player name )
 } cvar_flags_t;
 
-typedef struct netadr_s
-{
-	netadrtype_t	type;
-	byte		ip[4];
-	word		port;
-};
+#include "netadr.h"
 
 /*
 ========================================================================
@@ -232,9 +238,9 @@ typedef struct gameinfo_s
 	string		ctf_entity;	// e.g. info_player_ctf
 	string		team_entity;	// e.g. info_player_team
 
-	vec3_t		client_mins[8];	// PM_MAXHULLS
-	vec3_t		client_maxs[8];	// PM_MAXHULLS
-	float		viewheight[8];	// client viewheight (from hull center)
+	vec3_t		client_mins[4];	// 4 hulls allowed
+	vec3_t		client_maxs[4];	// 4 hulls allowed
+	float		viewheight[4];	// client viewheight (from hull center)
 
 	int		max_edicts;	// min edicts is 600, max edicts is 32000
 } gameinfo_t;
@@ -480,16 +486,16 @@ typedef struct stdilib_api_s
 	sys_event_t (*getevent)( void );			// get system events
 
 	// crclib.c funcs
-	void (*crc_init)( CRC16_t *pusCRC );			// set initial crc value
-	CRC16_t (*crc_block)( byte *start, int count );		// calculate crc block
-	void (*crc_process)( CRC16_t *crcvalue, byte data );	// process crc byte
+	void (*crc_init)( word *pusCRC );			// set initial crc value
+	word (*crc_block)( byte *start, int count );		// calculate crc block
+	void (*crc_process)( word *crcvalue, byte data );	// process crc byte
 	byte (*crc_sequence)( byte *base, int len, int sequence );	// calculate crc for sequence
 	uint (*crc_blockchecksum)( void *buffer, int length );	// map checksum
 	uint (*crc_blockchecksumkey)( void *buf, int len, int key );// process key checksum
-	void (*crc32_init)( CRC32_t *pulCRC );
-	void (*crc32_process)( CRC32_t *crcvalue, byte data );	// process crc32 byte
-	void (*crc32_block)( CRC32_t *pulCRC, const void *pBuffer, int nBuffer );
-	void (*crc32_final)( CRC32_t *pulCRC );
+	void (*crc32_init)( dword *pulCRC );
+	void (*crc32_process)( dword *crcvalue, byte data );	// process crc32 byte
+	void (*crc32_block)( dword *pulCRC, const void *pBuffer, int nBuffer );
+	void (*crc32_final)( dword *pulCRC );
 
 	// memlib.c funcs
 	void (*memcpy)(void *dest, const void *src, size_t size, const char *file, int line);
@@ -587,6 +593,7 @@ typedef struct stdilib_api_s
 	float (*Cvar_GetValue )(const char *name);
 	char *(*Cvar_GetString)(const char *name);
 	cvar_t *(*Cvar_FindVar)(const char *name);
+	void (*Cvar_DirectSet)( cvar_t *var, const char *value );
 
 	// console commands
 	void (*Cmd_Exec)(int exec_when, const char *text);	// process cmd buffer
@@ -877,6 +884,7 @@ console variables
 #define Cvar_VariableInteger		com.Cvar_GetInteger
 #define Cvar_VariableString		com.Cvar_GetString
 #define Cvar_FindVar		com.Cvar_FindVar
+#define Cvar_DirectSet		com.Cvar_DirectSet
 
 /*
 ===========================================

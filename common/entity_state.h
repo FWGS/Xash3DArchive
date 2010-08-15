@@ -5,41 +5,15 @@
 #ifndef ENTITY_STATE_H
 #define ENTITY_STATE_H
 
-// engine edict types that shared across network
-typedef enum
-{
-	ED_SPAWNED = 0,	// this entity requris to set own type with SV_ClassifyEdict
-	ED_WORLDSPAWN,	// this is a worldspawn
-	ED_STATIC,	// this is a logic without model or entity with static model
-	ED_AMBIENT,	// this is entity emitted ambient sounds only
-	ED_NORMAL,	// normal entity with model (and\or) sound
-	ED_BSPBRUSH,	// brush entity (a part of level)
-	ED_CLIENT,	// this is a client entity
-	ED_MONSTER,	// monster or bot (generic npc with AI)
-	ED_TEMPENTITY,	// this edict will be removed on server when "lifetime" exceeds 
-	ED_BEAM,		// laser beam (needs to recalculate pvs and frustum)
-	ED_MOVER,		// func_train, func_door and another bsp or mdl movers
-	ED_VIEWMODEL,	// client or bot viewmodel (for spectating)
-	ED_RIGIDBODY,	// simulated physic
-	ED_TRIGGER,	// just for sorting on a server
-	ED_PORTAL,	// realtime portal or mirror brush or model
-	ED_SKYPORTAL,	// realtime 3D-sky camera
-	ED_SCREEN,	// realtime monitor (like portal but without perspective)
-	ED_MAXTYPES,
-} edtype_t;
-
-// entity_state_t->ed_flags
-#define ESF_LINKEDICT	BIT( 0 )		// needs to relink edict on client
-#define ESF_NODELTA		BIT( 1 )		// force no delta frame
-#define ESF_NO_PREDICTION	BIT( 2 )		// e.g. teleport time
-
 typedef struct entity_state_s
 {
-	// engine specific
+	// Fields which are filled in by routines outside of delta compression
+	int		entityType;	// hint for engine
 	int		number;		// edict index
-	edtype_t		ed_type;		// edict type
-	string_t		classname;	// edict classname
-	int		ed_flags;		// engine clearing this at end of server frame
+	float		msg_time;
+
+	// Message number last time the player/entity state was updated.
+	int		messagenum;
 
 	// Fields which can be transitted and reconstructed over the network stream
 	vec3_t		origin;
@@ -113,9 +87,14 @@ typedef struct entity_state_s
 	vec3_t		vuser3;
 	vec3_t		vuser4;
 
-	// FIXME: old xash variables needs to be removed
-	int		flags;
+	// xash shared strings
+	char		classname[32];
+	char		targetname[32];
+	char		target[32];
+	char		netname[32];
 } entity_state_t;
+
+#include "pm_info.h"
 
 typedef struct clientdata_s
 {
@@ -153,7 +132,7 @@ typedef struct clientdata_s
 	int		tfstate;
 	int		pushmsec;
 	int		deadflag;
-	char		physinfo[512];	// MAX_PHYSINFO_STRING
+	char		physinfo[MAX_PHYSINFO_STRING];
 
 	// for mods
 	int		iuser1;
@@ -170,5 +149,14 @@ typedef struct clientdata_s
 	vec3_t		vuser4;
 
 } clientdata_t;
+
+#include "weaponinfo.h"
+
+typedef struct local_state_s
+{
+	entity_state_t	playerstate;
+	clientdata_t	client;
+	weapon_data_t	weapondata[32];	// WEAPON_BACKUP
+} local_state_t;
 
 #endif//ENTITY_STATE_H

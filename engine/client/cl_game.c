@@ -48,12 +48,6 @@ CL_AllocString
 */
 string_t CL_AllocString( const char *szValue )
 {
-	if( sys_sharedstrings->integer )
-	{
-		const char *newString;
-		newString = com.stralloc( clgame.stringspool, szValue, __FILE__, __LINE__ );
-		return newString - clgame.globals->pStringBase;
-	}
 	return StringTable_SetString( clgame.hStringTable, szValue );
 }		
 
@@ -65,8 +59,6 @@ CL_GetString
 */
 const char *CL_GetString( string_t iString )
 {
-	if( sys_sharedstrings->integer )
-		return (clgame.globals->pStringBase + iString);
 	return StringTable_GetString( clgame.hStringTable, iString );
 }
 
@@ -535,7 +527,7 @@ void CL_DrawCrosshair( void )
 
 	pPlayer = CL_GetLocalPlayer();
 
-	if( cl.frame.cd.deadflag != DEAD_NO || pPlayer->curstate.flags & FL_FROZEN )
+	if( cl.frame.cd.deadflag != DEAD_NO || cl.frame.cd.flags & FL_FROZEN )
 		return;
 
 	// any camera on
@@ -653,7 +645,10 @@ void CL_DrawHUD( int state )
 	if( state == CL_ACTIVE && cl.refdef.paused )
 		state = CL_PAUSED;
 
-	clgame.dllFuncs.pfnRedraw( cl_time(), state );
+	if( state == CL_ACTIVE )
+	{
+		clgame.dllFuncs.pfnRedraw( cl_time(), false );
+	}
 
 	switch( state )
 	{
@@ -768,9 +763,6 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 
 	clgame.dllFuncs.pfnUpdateOnRemove( pEdict );
 
-	// unlink from world
-	CL_UnlinkEdict( pEdict );
-
 	// clear curstate
 	Mem_Set( &pEdict->curstate, 0, sizeof( pEdict->curstate ));
 	pEdict->index = -1;	// freed
@@ -783,7 +775,6 @@ void CL_InitWorld( void )
 
 	ent = EDICT_NUM( 0 );
 	ent->index = NUM_FOR_EDICT( ent );
-	ent->curstate.classname = MAKE_STRING( "worldspawn" );
 	ent->curstate.modelindex = 1;	// world model
 	ent->curstate.solid = SOLID_BSP;
 	ent->curstate.movetype = MOVETYPE_PUSH;
@@ -833,20 +824,11 @@ void CL_FreeEdicts( void )
 	if( cl.frames ) Mem_Free( cl.frames );
 
 	// clear globals
-	if( sys_sharedstrings->integer )
-		Mem_EmptyPool( clgame.stringspool );
-	else StringTable_Clear( clgame.hStringTable );
+	StringTable_Clear( clgame.hStringTable );
 
 	clgame.globals->numEntities = 0;
 	clgame.entities = NULL;
 	cl.frames = NULL;
-}
-
-const char *CL_ClassName( const cl_entity_t *e )
-{
-	if( !e ) return "(null)";
-	if( e->index == -1 ) return "freed";
-	return STRING( e->curstate.classname );
 }
 
 /*
@@ -1528,7 +1510,7 @@ pfnPointContents
 */
 static int pfnPointContents( const float *rgflVector, int *truecont )
 {
-	return CL_PointContents( rgflVector );
+	return CM_PointContents( rgflVector );	// FIXME
 }
 
 /*
@@ -1545,7 +1527,7 @@ static cl_entity_t *pfnWaterEntity( const float *rgflPos )
 	if( !rgflPos ) return NULL;
 
 	// grab contents from all the water entities
-	num = CL_AreaEdicts( rgflPos, rgflPos, touch, MAX_EDICTS, AREA_CUSTOM );
+	num = 0;// FIXME: CL_AreaEdicts( rgflPos, rgflPos, touch, MAX_EDICTS, AREA_CUSTOM );
 
 	for( i = 0; i < num; i++ )
 	{
@@ -1651,7 +1633,7 @@ static void pfnPlaybackEvent( int flags, const cl_entity_t *pInvoker, word event
 		if( VectorIsNull( args.angles )) 
 			VectorCopy( pInvoker->curstate.angles, args.angles );
 		VectorCopy( pInvoker->curstate.velocity, args.velocity );
-		args.ducking = (pInvoker->curstate.flags & FL_DUCKING) ? true : false;
+		args.ducking = pInvoker->curstate.usehull;
 	}
 
 	CL_QueueEvent( flags, eventindex, delay, &args );
@@ -2466,7 +2448,8 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnCmd_Args,
 	CL_GetLerpFrac,
 	pfnDelCommand,
-	pfnAlertMessage,
+	pfnCon_Printf,
+	pfnCon_DPrintf,
 	pfnPhysInfo_ValueForKey,
 	pfnServerInfo_ValueForKey,
 	pfnGetClientMaxspeed,
@@ -2517,10 +2500,7 @@ void CL_UnloadProgs( void )
 
 	// deinitialize game
 	clgame.dllFuncs.pfnShutdown();
-
-	if( sys_sharedstrings->integer )
-		Mem_FreePool( &clgame.stringspool );
-	else StringTable_Delete( clgame.hStringTable );
+	StringTable_Delete( clgame.hStringTable );
 
 	FS_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
@@ -2573,16 +2553,8 @@ bool CL_LoadProgs( const char *name )
 
 	clgame.globals->pStringBase = "";	// setup string base
 
-	if( sys_sharedstrings->integer )
-	{
-		// just use Half-Life system - base pointer and malloc
-		clgame.stringspool = Mem_AllocPool( "Client Strings" );
-	}
-	else
-	{
-		// 65535 unique strings should be enough ...
-		clgame.hStringTable = StringTable_Create( "Client", 0x10000 );
-	}
+	// 65535 unique strings should be enough ...
+	clgame.hStringTable = StringTable_Create( "Client", 0x10000 );
 
 	clgame.globals->maxEntities = GI->max_edicts; // merge during loading
 

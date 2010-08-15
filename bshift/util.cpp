@@ -61,16 +61,6 @@ DLL_GLOBAL int DirToBits( const Vector dir )
 	return best;
 }
 
-char *COM_ParseToken( const char **data )
-{
-	char *com_token = COM_Parse( data );
-
-	// debug
-//	ALERT( at_console, "ParseToken: %s\n", com_token );
-
-	return com_token;	          
-}
-
 /*
 =====================
 UTIL_WeaponTimeBase

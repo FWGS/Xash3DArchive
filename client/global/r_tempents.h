@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 // Purpose: implementation for temp entities
 //-----------------------------------------------------------------------------
-#include "te_shared.h"
 #include "tmpent_def.h"
 #include "effects_api.h"
 

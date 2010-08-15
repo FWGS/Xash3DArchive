@@ -595,8 +595,6 @@ void CL_Disconnect( void )
 
 	// send a disconnect message to the server
 	CL_SendDisconnectMessage();
-	Delta_Shutdown();
-
 	CL_ClearState ();
 
 	// stop download
@@ -828,9 +826,6 @@ void CL_PrepVideo( void )
 	re->BeginRegistration( mapname );
 	SCR_RegisterShaders(); // update with new sequence
 	SCR_UpdateScreen();
-
-	// clear physics interaction links
-	CL_ClearWorld ();
 
 	for( i = 0, mdlcount = 0; i < MAX_MODELS && cl.configstrings[CS_MODELS+1+i][0]; i++ )
 		mdlcount++; // total num models
@@ -1271,16 +1266,17 @@ void CL_InitLocal( void )
 	// userinfo
 	info_password = Cvar_Get( "password", "", CVAR_USERINFO, "player password" );
 	info_spectator = Cvar_Get( "spectator", "0", CVAR_USERINFO, "spectator mode" );
-	name = Cvar_Get( "name", SI->username, CVAR_USERINFO | CVAR_ARCHIVE, "player name" );
-	model = Cvar_Get( "model", "player", CVAR_USERINFO | CVAR_ARCHIVE, "player model ('player' it's a single player model)" );
-	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO | CVAR_ARCHIVE, "player top color" );
+	name = Cvar_Get( "name", SI->username, CVAR_USERINFO|CVAR_ARCHIVE|CVAR_PRINTABLEONLY, "player name" );
+	model = Cvar_Get( "model", "player", CVAR_USERINFO|CVAR_ARCHIVE, "player model ('player' it's a single player model)" );
+	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player top color" );
 	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO | CVAR_ARCHIVE, "player bottom color" );
 	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE, "player network rate" );	// FIXME
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_lw = Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 	cl_smooth = Cvar_Get ("cl_smooth", "1", 0, "smooth up stair climbing and interpolate position in multiplayer" );
-	
+	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
+		
 	// register our commands
 	Cmd_AddCommand ("cmd", CL_ForwardToServer_f, "send a console commandline to the server" );
 	Cmd_AddCommand ("pause", NULL, "pause the game (if the server allows pausing)" );

@@ -538,16 +538,13 @@ public:
 	int m_Teamplay;
 	int m_iRes;
 	int m_iCameraMode;
-	int m_iLastCameraMode;
 	int m_iFontHeight;
 	int DrawHudNumber( int x, int y, int iFlags, int iNumber, int r, int g, int b );
 	int DrawHudString( int x, int y, int iMaxX, char *szString, int r, int g, int b );
 	int DrawHudStringReverse( int xpos, int ypos, int iMinX, char *szString, int r, int g, int b );
 	int DrawHudNumberString( int xpos, int ypos, int iMinX, int iNumber, int r, int g, int b );
 	int GetNumWidth( int iNumber, int iFlags );
-	int viewEntityIndex;
 	int m_iHUDColor;
-	int viewFlags;
 private:
 	// the memory for these arrays are allocated in the first call to CHud::VidInit()
 	// when the hud.txt and associated sprites are loaded. freed in ~CHud()
@@ -603,7 +600,6 @@ public:
 	int _cdecl MsgFunc_RainData( const char *pszName, int iSize, void *pbuf ); 
 	int _cdecl MsgFunc_HUDColor( const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_CamData( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetBody( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetSkin( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_WeaponAnim( const char *pszName, int iSize, void *pbuf );

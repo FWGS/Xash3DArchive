@@ -3140,7 +3140,7 @@ void R_DrawEntitiesDebug( void )
 				continue;
 		}
 
-		if( RI.currententity->ent_type == ED_VIEWMODEL )
+		if( RI.currententity->ent_type == ET_VIEWENTITY )
 		{
 			if( RI.params & RP_NONVIEWERREF )
 				continue;

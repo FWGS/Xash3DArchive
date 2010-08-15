@@ -33,6 +33,7 @@ extern void RegisterEncoders( void );
 extern void ClientPrecache( void );
 
 extern const char *GetGameDescription( void );
+extern void PlayerCustomization( edict_t *pEntity, void *pUnused );
 extern int GetWeaponData( edict_t *player, struct weapon_data_s *info );
 
 extern void SpectatorConnect ( edict_t *pEntity );
@@ -43,12 +44,17 @@ extern void Sys_Error( const char *error_string );
 
 extern void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, byte **pvs, byte **pas, int portal );
 extern void UpdateClientData( const struct edict_s *ent, int sendweapons, struct clientdata_s *cd );
-extern int AddToFullPack( entity_state_t *state, edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
-extern void CreateBaseline( entity_state_t *baseline, edict_t *entity, int playermodelindex );
+extern int AddToFullPack( struct entity_state_s *state, edict_t *pView, edict_t *pHost, edict_t *pEdict, int hostflags, byte *pSet );
+extern void CreateBaseline( struct entity_state_s *baseline, edict_t *entity, int playermodelindex );
 
 extern void	CmdStart( const edict_t *player, const struct usercmd_s *cmd, unsigned int random_seed );
 extern void	CmdEnd ( const edict_t *player );
+extern int	ConnectionlessPacket( const struct netadr_s *net_from, const char *args, char *response_buffer, int *response_buffer_size );
 
-extern int GetHullBounds( int hullnumber, float *mins, float *maxs );
+extern int	GetHullBounds( int hullnumber, float *mins, float *maxs );
+extern void	CreateInstancedBaselines ( void );
+extern int	InconsistentFile( const edict_t *player, const char *filename, char *disconnect_message );
+extern int	AllowLagCompensation( void );
+
 
 #endif		// CLIENT_H

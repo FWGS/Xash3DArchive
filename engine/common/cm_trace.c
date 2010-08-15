@@ -4,7 +4,7 @@
 //=======================================================================
 
 #include "cm_local.h"
-#include "entity_def.h"
+#include "edict.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 

@@ -62,7 +62,8 @@ typedef struct ui_enginefuncs_s
 	const char *(*pfnCmd_Args)( void );
 
 	// debug messages (im-menu shows only notify)	
-	void	(*pfnAlertMessage)( ALERT_TYPE, char *szFmt, ... );
+	void	(*Con_Printf)( char *fmt, ... );
+	void	(*Con_DPrintf)( char *fmt, ... );
 
 	// sound handlers
 	void	(*pfnPlayLocalSound)( const char *szSound );
@@ -79,7 +80,7 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnSetModel)( struct cl_entity_s *ed, const char *path );
 	void	(*pfnClearScene)( void );
 	void	(*pfnRenderScene)( const struct ref_params_s *fd );
-	int	(*R_AddEntity)( struct cl_entity_s *pEnt, int ed_type, HIMAGE customShader );
+	int	(*R_AddEntity)( struct cl_entity_s *pEnt, int entityType, HIMAGE customShader );
 
 	// dlls managemenet
 	void*	(*pfnLoadLibrary)( const char *name );
@@ -96,7 +97,7 @@ typedef struct ui_enginefuncs_s
 	// gameinfo handlers
 	int	(*pfnCreateMapsList)( int fRefresh );
 	int	(*pfnClientInGame)( void );
-	void	(*pfnClientJoin)( const netadr_t adr );
+	void	(*pfnClientJoin)( const struct netadr_s adr );
 	
 	// parse txt files
 	byte*	(*pfnLoadFile)( const char *filename, int *pLength );
@@ -145,7 +146,7 @@ typedef struct
 	void	(*pfnKeyEvent)( int key, int down );
 	void	(*pfnMouseMove)( int x, int y );
 	void	(*pfnSetActiveMenu)( int active );
-	void	(*pfnAddServerToList)( netadr_t adr, const char *info );
+	void	(*pfnAddServerToList)( struct netadr_s adr, const char *info );
 	void	(*pfnGetCursorPos)( int *pos_x, int *pos_y );
 	void	(*pfnSetCursorPos)( int pos_x, int pos_y );
 	void	(*pfnShowCursor)( int show );

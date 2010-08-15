@@ -64,7 +64,7 @@ void SV_CheckAllEnts( void )
 	if( !sv_check_errors->integer ) return;
 
 	// see if any solid entities are inside the final position
-	for( i = svgame.globals->maxClients + 1; i < svgame.globals->numEntities; i++ )
+	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
 
@@ -188,8 +188,11 @@ bool SV_Impact( edict_t *e1, trace_t *trace )
 	vec3_t	org;
 
 	// custom user filter
-	if( !svgame.dllFuncs.pfnShouldCollide( e1, e2 ))
-		return false;
+	if( svgame.dllFuncs2.pfnShouldCollide )
+	{
+		if( !svgame.dllFuncs2.pfnShouldCollide( e1, e2 ))
+			return false;
+	}
 
 	SV_CopyTraceToGlobal( trace );
 	VectorCopy( e1->v.origin, org );
@@ -703,7 +706,6 @@ static bool SV_CanPushed( edict_t *ent )
 	case MOVETYPE_PUSH:
 	case MOVETYPE_FOLLOW:
 	case MOVETYPE_NOCLIP:
-	case MOVETYPE_COMPOUND:
 		return false;
 	}
 	return true;
@@ -762,7 +764,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 
 	// see if any solid entities are inside the final position
 	num_moved = 0;
-	for( e = 1; e < svgame.globals->numEntities; e++ )
+	for( e = 1; e < svgame.numEntities; e++ )
 	{
 		check = EDICT_NUM( e );
 		if( !SV_IsValidEdict( check )) continue;
@@ -797,7 +799,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 			check->v.flags &= ~FL_ONGROUND;
 
 		VectorCopy( check->v.origin, entorg );
-		VectorCopy( check->v.origin, check->pvServerData->moved_origin );
+		VectorCopy( check->v.origin, check->pvEngineData->moved_origin );
 		moved_edict[num_moved] = check;
 		num_moved++;
 
@@ -825,7 +827,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 			{
 				edict_t *ed = moved_edict[i];
 
-				VectorCopy( ed->pvServerData->moved_origin, ed->v.origin );
+				VectorCopy( ed->pvEngineData->moved_origin, ed->v.origin );
 				SV_LinkEdict( ed, false );
 			}
 			return check;
@@ -878,7 +880,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 
 	// see if any solid entities are inside the final position
 	num_moved = 0;
-	for( e = 1; e < svgame.globals->numEntities; e++ )
+	for( e = 1; e < svgame.numEntities; e++ )
 	{
 		check = EDICT_NUM( e );
 		if( !SV_IsValidEdict( check )) continue;
@@ -905,8 +907,8 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		}
 		
 		VectorCopy( check->v.origin, entorg );
-		VectorCopy( check->v.origin, check->pvServerData->moved_origin );
-		VectorCopy( check->v.angles, check->pvServerData->moved_angles );
+		VectorCopy( check->v.origin, check->pvEngineData->moved_origin );
+		VectorCopy( check->v.angles, check->pvEngineData->moved_angles );
 		moved_edict[num_moved] = check;
 		num_moved++;
 
@@ -953,8 +955,8 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 					ed->v.fixangle = 0;	
 				}
 
-				VectorCopy( ed->pvServerData->moved_origin, ed->v.origin );
-				VectorCopy( ed->pvServerData->moved_angles, ed->v.angles );
+				VectorCopy( ed->pvEngineData->moved_origin, ed->v.origin );
+				VectorCopy( ed->pvEngineData->moved_angles, ed->v.angles );
 				SV_LinkEdict( ed, false );
 			}
 			return check;
@@ -1041,7 +1043,7 @@ void SV_PushComplex( edict_t *pusher, float movetime )
 	oldsolid = pusher->v.solid;
 
 	// see if any solid entities are inside the final position
-	for( e = 1; e < svgame.globals->numEntities; e++ )
+	for( e = 1; e < svgame.numEntities; e++ )
 	{
 		check = EDICT_NUM( e );
 		if( !SV_IsValidEdict( check )) continue;
@@ -1053,7 +1055,6 @@ void SV_PushComplex( edict_t *pusher, float movetime )
 		case MOVETYPE_PUSH:
 		case MOVETYPE_FOLLOW:
 		case MOVETYPE_NOCLIP:
-		case MOVETYPE_COMPOUND:
 			continue;
 		default: break;
 		}
@@ -1092,8 +1093,8 @@ void SV_PushComplex( edict_t *pusher, float movetime )
 //				continue;
 		}
 
-		VectorCopy( check->v.origin, check->pvServerData->moved_origin );
-		VectorCopy( check->v.angles, check->pvServerData->moved_angles );
+		VectorCopy( check->v.origin, check->pvEngineData->moved_origin );
+		VectorCopy( check->v.angles, check->pvEngineData->moved_angles );
 		moved_edict[num_moved++] = check;
 
 		// try moving the contacted entity
@@ -1158,8 +1159,8 @@ void SV_PushComplex( edict_t *pusher, float movetime )
 					ed->v.fixangle = 0;	
 				}
 
-				VectorCopy( ed->pvServerData->moved_origin, ed->v.origin );
-				VectorCopy( ed->pvServerData->moved_angles, ed->v.angles );
+				VectorCopy( ed->pvEngineData->moved_origin, ed->v.origin );
+				VectorCopy( ed->pvEngineData->moved_angles, ed->v.angles );
 				SV_LinkEdict( ed, false );
 			}
 
@@ -1610,60 +1611,6 @@ void SV_Physics_Step( edict_t *ent )
 }
 
 /*
-====================
-SV_Physics_Conveyor
-
-REAL simple - all we do is check for player riders and adjust their position.
-Only gotcha here is we have to make sure we don't end up embedding player in
-*another* object that's being moved by the conveyor.
-
-====================
-*/
-void SV_Physics_Conveyor( edict_t *ent )
-{
-	edict_t		*player;
-	int		i;
-	trace_t		tr;
-	vec3_t		v, move;
-	vec3_t		point, end;
-
-	VectorScale( ent->v.movedir, ent->v.speed, v );
-	VectorScale( v, sv_frametime(), move );
-
-	for( i = 0; i < svgame.globals->maxClients; i++ )
-	{
-		player = EDICT_NUM( i + 1 );
-		if( player->free ) continue;
-		if( !player->v.groundentity ) continue;
-		if( player->v.groundentity != ent )
-			continue;
-
-		// Look below player; make sure he's on a conveyor
-		VectorCopy( player->v.origin, point );
-		point[2] += 1;
-		VectorCopy( point, end );
-		end[2] -= 256;
-
-		tr = SV_Move( point, player->v.mins, player->v.maxs, end, MOVE_NORMAL, player );
-		// tr.pHit HAS to be conveyor, but just in case we screwed something up:
-		if( tr.pHit == ent )
-		{
-			if( tr.vecPlaneNormal[2] > 0 )
-			{
-				v[2] = ent->v.speed * com.sqrt( 1.0f - tr.vecPlaneNormal[2] * tr.vecPlaneNormal[2] ) / tr.vecPlaneNormal[2];
-				if(DotProduct( ent->v.movedir, tr.vecPlaneNormal) > 0.0f )
-					v[2] = -v[2]; // then we're moving down
-				move[2] = v[2] * sv_frametime();
-			}
-			VectorAdd( player->v.origin, move, end );
-			tr = SV_Move( player->v.origin, player->v.mins, player->v.maxs, end, MOVE_NORMAL, player );
-			VectorCopy( tr.vecEndPos, player->v.origin );
-			SV_LinkEdict( player, false );
-		}
-	}
-}
-
-/*
 =============
 SV_PhysicsNone
 
@@ -1691,8 +1638,11 @@ static void SV_Physics_Entity( edict_t *ent )
 	ent->v.flags &= ~FL_BASEVELOCITY;
 
 	// user dll can override movement type
-	if( svgame.dllFuncs.pfnPhysicsEntity( ent ))
-		return;
+	if( svgame.dllFuncs2.pfnPhysicsEntity )
+	{
+		if( svgame.dllFuncs2.pfnPhysicsEntity( ent ))
+			return;	// overrided
+	}
 
 	switch( ent->v.movetype )
 	{
@@ -1719,9 +1669,6 @@ static void SV_Physics_Entity( edict_t *ent )
 	case MOVETYPE_PUSH:
 		SV_Physics_Pusher( ent );
 		break;
-	case MOVETYPE_CONVEYOR:
-		SV_Physics_Conveyor( ent );
-		break;
 	case MOVETYPE_WALK:
 		Host_Error( "SV_Physics: bad movetype %i\n", ent->v.movetype );
 		break;
@@ -1734,7 +1681,7 @@ void SV_FreeOldEntities( void )
 	int	i;
 
 	// at end of frame kill all entities which supposed to it 
-	for( i = svgame.globals->maxClients + 1; i < svgame.globals->numEntities; i++ )
+	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
 		ent = EDICT_NUM( i );
 		if( ent->free ) continue;
@@ -1743,8 +1690,8 @@ void SV_FreeOldEntities( void )
 			SV_FreeEdict( ent );
 	}
 
-	// decrement svgame.globals->numEntities if the highest number entities died
-	for( ; EDICT_NUM( svgame.globals->numEntities - 1)->free; svgame.globals->numEntities-- );
+	// decrement svgame.numEntities if the highest number entities died
+	for( ; EDICT_NUM( svgame.numEntities - 1)->free; svgame.numEntities-- );
 }
 
 /*
@@ -1767,7 +1714,7 @@ void SV_Physics( void )
 	SV_CheckAllEnts ();
 
 	// treat each object in turn
-	for( i = 1; ( svgame.globals->force_retouch > 0 ) && i < svgame.globals->numEntities; i++ )
+	for( i = 1; ( svgame.globals->force_retouch > 0 ) && i < svgame.numEntities; i++ )
 	{
 		ent = EDICT_NUM( i );
 		if( !SV_IsValidEdict( ent )) continue;
@@ -1779,7 +1726,7 @@ void SV_Physics( void )
 	// treat each object in turn
 	if( !( sv.hostflags & SVF_PLAYERSONLY ))
 	{
-		for( i = svgame.globals->maxClients + 1; i < svgame.globals->numEntities; i++ )
+		for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 		{
 			ent = EDICT_NUM( i );
 			if( !SV_IsValidEdict( ent )) continue;

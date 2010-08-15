@@ -58,7 +58,7 @@ ref_shader_t *R_PlanarShadowShader( void )
 R_GetShadowImpactAndDir
 ===============
 */
-static void R_GetShadowImpactAndDir( ref_entity_t *e, trace_t *tr, vec3_t lightdir )
+static void R_GetShadowImpactAndDir( ref_entity_t *e, pmtrace_t *tr, vec3_t lightdir )
 {
 	vec3_t	point;
 
@@ -81,30 +81,30 @@ bool R_CullPlanarShadow( ref_entity_t *e, vec3_t mins, vec3_t maxs, bool occlusi
 	float	planedist, dist;
 	vec3_t	lightdir, point;
 	vec3_t	bbox[8], newmins, newmaxs;
-	trace_t	tr;
+	pmtrace_t	tr;
 	int	i;
 
-	if((e->flags & EF_NOSHADOW) || (e->ent_type == ED_VIEWMODEL))
+	if(( e->flags & EF_NOSHADOW ) || ( e->ent_type == ET_VIEWENTITY ))
 		return true;
 	if( RP_LOCALCLIENT( e ))
 		return false;
 
 	R_GetShadowImpactAndDir( e, &tr, lightdir );
-	if( tr.flFraction == 1.0f )
+	if( tr.fraction == 1.0f )
 		return true;
 
 	R_TransformEntityBBox( e, mins, maxs, bbox, true );
 
-	VectorSubtract( tr.vecEndPos, e->origin, point );
-	planedist = DotProduct( point, tr.vecPlaneNormal ) + 1;
-	dist = -1.0f / DotProduct( lightdir, tr.vecPlaneNormal );
+	VectorSubtract( tr.endpos, e->origin, point );
+	planedist = DotProduct( point, tr.plane.normal ) + 1;
+	dist = -1.0f / DotProduct( lightdir, tr.plane.normal );
 	VectorScale( lightdir, dist, lightdir );
 
 	ClearBounds( newmins, newmaxs );
 	for( i = 0; i < 8; i++ )
 	{
 		VectorSubtract( bbox[i], e->origin, bbox[i] );
-		dist = DotProduct( bbox[i], tr.vecPlaneNormal ) - planedist;
+		dist = DotProduct( bbox[i], tr.plane.normal ) - planedist;
 		if( dist > 0 ) VectorMA( bbox[i], dist, lightdir, bbox[i] );
 		AddPointToBounds( bbox[i], newmins, newmaxs );
 	}
@@ -132,16 +132,16 @@ void R_DeformVPlanarShadow( int numV, float *v )
 	float		planedist, dist;
 	ref_entity_t	*e = RI.currententity;
 	vec3_t		planenormal, lightdir, lightdir2, point;
-	trace_t		tr;
+	pmtrace_t		tr;
 
 	R_GetShadowImpactAndDir( e, &tr, lightdir );
 
 	Matrix3x3_Transform( e->axis, lightdir, lightdir2 );
-	Matrix3x3_Transform( e->axis, tr.vecPlaneNormal, planenormal );
+	Matrix3x3_Transform( e->axis, tr.plane.normal, planenormal );
 	VectorScale( planenormal, e->scale, planenormal );
 
-	VectorSubtract( tr.vecEndPos, e->origin, point );
-	planedist = DotProduct( point, tr.vecPlaneNormal ) + 1;
+	VectorSubtract( tr.endpos, e->origin, point );
+	planedist = DotProduct( point, tr.plane.normal ) + 1;
 	dist = -1.0f / DotProduct( lightdir2, planenormal );
 	VectorScale( lightdir2, dist, lightdir2 );
 
@@ -301,7 +301,7 @@ add:
 	}
 
 	r_entShadowBits[ent - r_entities] |= group->bit;
-	if( ent->ent_type == ED_VIEWMODEL )
+	if( ent->ent_type == ET_VIEWENTITY )
 		return true;
 
 	// rotate local bounding box and compute the full bounding box for this group

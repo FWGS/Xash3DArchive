@@ -6,11 +6,15 @@
 #define CVARDEF_H
 
 // cvar flags
-#define FCVAR_ARCHIVE	BIT(0)	// set to cause it to be saved to config.cfg
-#define FCVAR_USERINFO	BIT(1)	// added to userinfo  when changed
-#define FCVAR_SERVERINFO	BIT(2)	// added to serverinfo when changed
-#define FCVAR_LATCH		BIT(3)	// create latched cvar
-#define FCVAR_PHYSICINFO	BIT(4)	// added to physicinfo (movevars) when changed
+#define FCVAR_ARCHIVE	(1<<0)	// set to cause it to be saved to config.cfg
+#define FCVAR_USERINFO	(1<<1)	// changes the client's info string
+#define FCVAR_SERVER	(1<<2)	// changes the serevrinfo string, notifies players when changed
+#define FCVAR_EXTDLL	(1<<3)	// defined by external DLL
+#define FCVAR_CLIENTDLL	(1<<4)	// defined by the client dll
+#define FCVAR_PROTECTED	(1<<5)	// It's a server cvar, but we don't send the data since it's a password, etc.
+#define FCVAR_SPONLY	(1<<6)	// This cvar cannot be changed by clients connected to a multiplayer server.
+#define FCVAR_PRINTABLEONLY	(1<<7)	// This cvar's string cannot contain unprintable characters ( player name )
+#define FCVAR_UNLOGGED	(1<<8)	// If this is a FCVAR_SERVER, don't log changes to the log file / console
 
 /*
 ========================================================================
@@ -22,6 +26,7 @@ struct cvar_s
 {
 	char	*name;
 	char	*string;		// normal string
+	uint	flags;		// state flags
 	float	value;		// com.atof( string )
 	int	integer;		// com.atoi( string )
 	bool	modified;		// set each time the cvar is changed

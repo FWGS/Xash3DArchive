@@ -1437,7 +1437,7 @@ static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( GameInfo->sp_inhibite_ents )
 		FS_Print( f, "allow_inhibited_entities\n" );
 
-	for( i = 0; i < 8; i++ )
+	for( i = 0; i < 4; i++ )
 	{
 		float	*min, *max;
 
@@ -1449,7 +1449,7 @@ static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 		FS_Printf( f, "hull%i\t\t( %g %g %g ) ( %g %g %g )\n", i, min[0], min[1], min[2], max[0], max[1], max[2] );
 	}
 
-	for( i = 0; i < 8; i++ )
+	for( i = 0; i < 4; i++ )
 	{
 		if( GameInfo->viewheight[i] == 0.0f ) continue;
 		FS_Printf( f, "viewheight%i\t%g\n", i, GameInfo->viewheight[i] ); 
@@ -1795,7 +1795,7 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		{
 			int	hullNum = com.atoi( token.string + 4 );
 
-			if( hullNum < 0 || hullNum > 15 )
+			if( hullNum < 0 || hullNum > 3 )
 			{
 				MsgDev( D_ERROR, "FS_ParseGameInfo: Invalid hull number %i. Ignored.\n", hullNum );
 				PS_SkipRestOfLine( script ); 
@@ -1811,7 +1811,7 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 			int	hullNum = com.atoi( token.string + 10 );
 			float	value;
 
-			if( hullNum < 0 || hullNum > ( PM_MAXHULLS - 1 ))
+			if( hullNum < 0 || hullNum > 3 )
 			{
 				MsgDev( D_ERROR, "FS_ParseGameInfo: Invalid hull number %i. Ignored.\n", hullNum );
 				PS_SkipRestOfLine( script ); 

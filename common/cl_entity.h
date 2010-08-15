@@ -53,14 +53,8 @@ struct cl_entity_s
 {
 	int		index;      	// Index into cl_entities ( always match actual slot )
 	int		player;     	// True if this entity is a "player"
-	string_t		classname;	// classname come from server
-					// Add also targetname, target, message and netname ? 
 
 	int		serverframe;	// TEMPORARY PLACED HERE
-	link_t		area;		// used by physics code
-	vec3_t		absmin;
-	vec3_t		absmax;
-	
 	entity_state_t	baseline;   	// The original state from which to delta during an uncompressed message
 	entity_state_t	prevstate;  	// The state information from the penultimate message received from the server
 	entity_state_t	curstate;   	// The state information from the last message received from server

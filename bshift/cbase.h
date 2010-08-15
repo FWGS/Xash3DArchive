@@ -26,8 +26,6 @@ CBaseEntity
 				CBaseGroup
 */
 
-#include "entity_state.h"
-
 #define		MAX_PATH_SIZE	10 // max number of nodes available for a path.
 
 // These are caps bits to indicate what an object's capabilities (currently used for save/restore and level transitions)
@@ -79,7 +77,6 @@ extern void SaveReadFields( SAVERESTOREDATA *pSaveData, const char *pname, void 
 extern void SaveGlobalState( SAVERESTOREDATA *pSaveData );
 extern void RestoreGlobalState( SAVERESTOREDATA *pSaveData );
 extern void ResetGlobalState( void );
-extern int ServerClassifyEdict( edict_t *pentToClassify );
 extern void OnFreeEntPrivateData( edict_s *pEdict );
 extern int ShouldCollide( edict_t *pentTouched, edict_t *pentOther );
 
@@ -150,13 +147,6 @@ public:
 	// path corners
 	CBaseEntity			*m_pGoalEnt;// path corner we are heading towards
 	CBaseEntity			*m_pLink;// used for temporary link-list operations. 
-
-	int		m_iClassType; // edict classtype
-
-	virtual void SetObjectClass( int iClassType = ED_SPAWNED )
-	{
-		m_iClassType = iClassType;
-	}
 	
 	// initialization functions
 	virtual void	Spawn( void ) { return; }

@@ -9,7 +9,7 @@
 #include <windows.h>
 #include "launch_api.h"
 #include "qfiles_ref.h"
-#include "engine_api.h"	// trace_t declaration
+#include "engine_api.h"
 #include "vsound_api.h"
 #include "cl_entity.h"
 
@@ -18,6 +18,10 @@ extern vsound_imp_t	si;
 extern byte *sndpool;
 
 #include "mathlib.h"
+
+// local flags (never sending acorss the net)
+#define SND_LOCALSOUND	(1<<9)	// not paused, not looped, for internal use
+#define SND_STOP_LOOPING	(1<<10)	// stop all looping sounds on the entity.
 
 typedef struct
 {

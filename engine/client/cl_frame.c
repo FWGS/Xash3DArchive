@@ -7,6 +7,7 @@
 #include "client.h"
 #include "protocol.h"
 #include "net_encode.h"
+#include "entity_types.h"
 
 /*
 =========================================================================
@@ -18,18 +19,9 @@ FRAME PARSING
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
 	// FIXME: this very-very temporary stuffffffff
+	// make the lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
-
-	if( ent->curstate.ed_flags & ESF_LINKEDICT )
-	{
-		CL_LinkEdict( ent, false );
-		// to avoids multiple relinks when wait for next packet
-		ent->curstate.ed_flags &= ~ESF_LINKEDICT;
-	}
-
-	// FIXME: replace with char[32] ?
-	ent->classname = cl.edict_classnames[ent->curstate.classname];
 }
 
 /*
@@ -66,7 +58,7 @@ void CL_UpdateStudioVars( cl_entity_t *ent, const entity_state_t *newstate )
 	// sequence has changed, hold the previous sequence info
 	if( newstate->sequence != ent->curstate.sequence )
 	{
-		if( ent->curstate.ed_type == ED_CLIENT )
+		if( ent->curstate.entityType == ET_PLAYER )
 			ent->latched.sequencetime = ent->curstate.animtime + 0.01f;
 		else ent->latched.sequencetime = ent->curstate.animtime + 0.1f;
 			
@@ -140,8 +132,8 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( ent->index <= 0 ) CL_InitEntity( ent );
 
 	// some data changes will force no lerping
-	if( state->ed_flags & ESF_NODELTA ) ent->serverframe = -99;
-	if( newent ) state->ed_flags |= ESF_LINKEDICT; // need to relink
+	if( state->effects & EF_NOINTERP )
+		ent->serverframe = -99;
 
 	if( ent->serverframe != cl.frame.serverframe - 1 )
 	{	
@@ -406,7 +398,7 @@ CL_AddPacketEntities
 void CL_AddPacketEntities( frame_t *frame )
 {
 	cl_entity_t	*ent, *clent;
-	int		e, ed_type;
+	int		e, entityType;
 
 	// now recalc actual entcount
 	for( ; EDICT_NUM( clgame.globals->numEntities - 1 )->index == -1; clgame.globals->numEntities-- );
@@ -432,16 +424,16 @@ void CL_AddPacketEntities( frame_t *frame )
 		ent = CL_GetEntityByIndex( e );
 		if( !ent ) continue;
 
-		ed_type = ent->curstate.ed_type;
+		entityType = ent->curstate.entityType;
 		CL_UpdateEntityFields( ent );
 
-		if( clgame.dllFuncs.pfnAddVisibleEntity( ent, ed_type ))
+		if( clgame.dllFuncs.pfnAddVisibleEntity( ent, entityType ))
 		{
-			if( ed_type == ED_PORTAL && !VectorCompare( ent->curstate.origin, ent->curstate.vuser1 ))
+			if( entityType == ET_PORTAL && !VectorCompare( ent->curstate.origin, ent->curstate.vuser1 ))
 				cl.render_flags |= RDF_PORTALINVIEW;
 		}
 		// NOTE: skyportal entity never added to rendering
-		if( ed_type == ED_SKYPORTAL ) cl.render_flags |= RDF_SKYPORTALINVIEW;
+		if( entityType == ET_SKYPORTAL ) cl.render_flags |= RDF_SKYPORTALINVIEW;
 	}
 }
 

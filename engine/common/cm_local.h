@@ -7,7 +7,8 @@
 
 #include "common.h"
 #include "bspfile.h"
-#include "trace_def.h"
+#include "edict.h"
+#include "eiface.h"
 #include "com_model.h"
 
 #define FMOVE_IGNORE_GLASS	0x100

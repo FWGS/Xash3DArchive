@@ -328,14 +328,14 @@ loc0:
 R_TraceLine
 =================
 */
-msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int flags )
+msurface_t *R_TransformedTraceLine( pmtrace_t *tr, const vec3_t start, const vec3_t end, ref_entity_t *test, int flags )
 {
 	ref_model_t	*model;
 
 	r_fragmentframecount++;	// for multi-check avoidance
 
 	// fill in a default trace
-	Mem_Set( tr, 0, sizeof( trace_t ));
+	Mem_Set( tr, 0, sizeof( pmtrace_t ));
 
 	trace_hitbox = -1;
 	trace_surface = NULL;
@@ -344,10 +344,10 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 	Mem_Set( &trace_plane, 0, sizeof( trace_plane ));
 
 	// skip glass ents
-	if(( flags & FTRACE_IGNORE_GLASS ) && test->rendermode != kRenderNormal && test->renderamt < 255 )
+	if(( flags & FTRACE_IGNORE_GLASS ) && test->rendermode != kRenderNormal && test->renderamt < 200 )
 	{
-		tr->flFraction = trace_fraction;
-		VectorCopy( trace_impact, tr->vecEndPos );
+		tr->fraction = trace_fraction;
+		VectorCopy( trace_impact, tr->endpos );
 
 		return trace_surface;
 	}
@@ -414,14 +414,14 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 					R_TraceAgainstBmodel( bmodel );
 				else if( model->type == mod_studio )
 				{
-					trace_t	tr;
+					pmtrace_t	tr;
 
 					if( R_StudioTrace( test, trace_start, trace_end, &tr ))
 					{
-						VectorCopy( tr.vecEndPos, trace_impact );
-						VectorCopy( tr.vecPlaneNormal, trace_plane.normal );
-						trace_fraction = tr.flFraction;
-						trace_hitbox = tr.iHitgroup;
+						VectorCopy( tr.endpos, trace_impact );
+						VectorCopy( tr.plane.normal, trace_plane.normal );
+						trace_fraction = tr.fraction;
+						trace_hitbox = tr.hitgroup;
 					}
 				}
 			}
@@ -430,7 +430,7 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 			if( rotated && trace_fraction != 1 )
 			{
 				Matrix3x3_Transpose( axis, test->axis );
-				VectorCopy( tr->vecPlaneNormal, temp );
+				VectorCopy( tr->plane.normal, temp );
 				Matrix3x3_Transform( axis, temp, trace_plane.normal );
 			}
 		}
@@ -443,14 +443,14 @@ msurface_t *R_TransformedTraceLine( trace_t *tr, const vec3_t start, const vec3_
 		trace_plane.dist = DotProduct( trace_plane.normal, trace_impact );
 		CategorizePlane( &trace_plane );
 
-		tr->flPlaneDist = trace_plane.dist;
-		VectorCopy( trace_plane.normal, tr->vecPlaneNormal );
-		tr->pHit = (edict_t *)test;
+		tr->plane.dist = trace_plane.dist;
+		VectorCopy( trace_plane.normal, tr->plane.normal );
+		tr->ent = test - r_entities;
 	}
 
-	tr->iHitgroup = trace_hitbox;	
-	tr->flFraction = trace_fraction;
-	VectorCopy( trace_impact, tr->vecEndPos );
+	tr->hitgroup = trace_hitbox;	
+	tr->fraction = trace_fraction;
+	VectorCopy( trace_impact, tr->endpos );
 
 	return trace_surface;
 }

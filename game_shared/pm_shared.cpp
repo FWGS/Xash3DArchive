@@ -14,14 +14,15 @@
 ****/
 
 #include <assert.h>
+#include <windows.h>
 #include "mathlib.h"
-#include "basetypes.h"
 #include "const.h"
 #include "usercmd.h"
 #include "pm_defs.h"
 #include "pm_shared.h"
 #include "pm_movevars.h"
 #include "com_model.h"
+#include "pm_debug.h"
 #include <stdio.h>  // NULL
 #include <math.h>   // sqrt
 #include <string.h> // strcpy
@@ -39,7 +40,7 @@ static int pm_shared_initialized = 0;
 
 #pragma warning( disable : 4305 )
 
-playermove_t *pmove = (playermove_t *)NULL;
+playermove_t *pmove = NULL;
 
 // Ducking time
 #define TIME_TO_DUCK	0.4
@@ -224,7 +225,7 @@ void PM_InitTextureTypes()
 	bTextureTypeInit = TRUE;
 }
 
-char PM_FindTextureType( const char *name )
+char PM_FindTextureType( char *name )
 {
 	int left, right, pivot;
 	int val;
@@ -527,13 +528,13 @@ void PM_UpdateStepSound( void )
 			fvol = 0.35;
 			pmove->flTimeStepSound = 350;
 		}
-		else if ( pmove->PM_PointContents ( knee, (int *)NULL ) == CONTENTS_WATER )
+		else if ( pmove->PM_PointContents ( knee, NULL ) == CONTENTS_WATER )
 		{
 			step = STEP_WADE;
 			fvol = 0.65;
 			pmove->flTimeStepSound = 600;
 		}
-		else if ( pmove->PM_PointContents ( feet, (int *)NULL ) == CONTENTS_WATER )
+		else if ( pmove->PM_PointContents ( feet, NULL ) == CONTENTS_WATER )
 		{
 			step = STEP_SLOSH;
 			fvol = fWalking ? 0.2 : 0.5;
@@ -620,7 +621,7 @@ int PM_AddToTouched(pmtrace_t tr, vec3_t impactvelocity)
 	VectorCopy( impactvelocity, tr.deltavelocity );
 
 	if (pmove->numtouch >= MAX_PHYSENTS)
-		pmove->Con_DPrintf("Too many entities were touched!\n");
+		pmove->ConDPrintf("Too many entities were touched!\n");
 
 	pmove->touchindex[pmove->numtouch++] = tr;
 	return TRUE;
@@ -645,24 +646,24 @@ void PM_CheckVelocity ()
 		// See if it's bogus.
 		if (IS_NAN(pmove->velocity[i]))
 		{
-			pmove->Con_Printf ("PM  Got a NaN velocity %i\n", i);
+			pmove->ConPrintf ("PM  Got a NaN velocity %i\n", i);
 			pmove->velocity[i] = 0;
 		}
 		if (IS_NAN(pmove->origin[i]))
 		{
-			pmove->Con_Printf ("PM  Got a NaN origin on %i\n", i);
+			pmove->ConPrintf ("PM  Got a NaN origin on %i\n", i);
 			pmove->origin[i] = 0;
 		}
 
 		// Bound it.
 		if (pmove->velocity[i] > pmove->movevars->maxvelocity) 
 		{
-			pmove->Con_DPrintf ("PM  Got a velocity too high on %i\n", i);
+			pmove->ConDPrintf ("PM  Got a velocity too high on %i\n", i);
 			pmove->velocity[i] = pmove->movevars->maxvelocity;
 		}
 		else if (pmove->velocity[i] < -pmove->movevars->maxvelocity)
 		{
-			pmove->Con_DPrintf ("PM  Got a velocity too low on %i\n", i);
+			pmove->ConDPrintf ("PM  Got a velocity too low on %i\n", i);
 			pmove->velocity[i] = -pmove->movevars->maxvelocity;
 		}
 	}
@@ -802,7 +803,7 @@ int PM_FlyMove (void)
 		if (trace.allsolid)
 		{	// entity is trapped in another solid
 			VectorCopy (vec3_origin, pmove->velocity);
-			//Con_DPrintf("Trapped 4\n");
+			//ConDPrintf("Trapped 4\n");
 			return 4;
 		}
 
@@ -840,7 +841,7 @@ int PM_FlyMove (void)
 		if (!trace.plane.normal[2])
 		{
 			blocked |= 2;		// step / wall
-			//Con_DPrintf("Blocked by %i\n", trace.ent);
+			//ConDPrintf("Blocked by %i\n", trace.ent);
 		}
 
 		// Reduce amount of pmove->frametime left by total time left * fraction
@@ -852,7 +853,7 @@ int PM_FlyMove (void)
 		{	// this shouldn't really happen
 			//  Stop our movement if so.
 			VectorCopy (vec3_origin, pmove->velocity);
-			//Con_DPrintf("Too many planes 4\n");
+			//ConDPrintf("Too many planes 4\n");
 
 			break;
 		}
@@ -911,9 +912,9 @@ int PM_FlyMove (void)
 			{	// go along the crease
 				if (numplanes != 2)
 				{
-					//Con_Printf ("clip velocity, numplanes == %i\n",numplanes);
+					//ConPrintf ("clip velocity, numplanes == %i\n",numplanes);
 					VectorCopy (vec3_origin, pmove->velocity);
-					//Con_DPrintf("Trapped 4\n");
+					//ConDPrintf("Trapped 4\n");
 
 					break;
 				}
@@ -928,7 +929,7 @@ int PM_FlyMove (void)
 	//
 			if (DotProduct (pmove->velocity, primal_velocity) <= 0)
 			{
-				//Con_DPrintf("Back\n");
+				//ConDPrintf("Back\n");
 				VectorCopy (vec3_origin, pmove->velocity);
 				break;
 			}
@@ -938,7 +939,7 @@ int PM_FlyMove (void)
 	if ( allFraction == 0 )
 	{
 		VectorCopy (vec3_origin, pmove->velocity);
-		//Con_DPrintf( "Don't stick\n" );
+		//ConDPrintf( "Don't stick\n" );
 	}
 
 	return blocked;
@@ -1467,7 +1468,7 @@ int PM_CheckWater ()
 
 		// Now check a point that is at the player hull midpoint.
 		point[2] = pmove->origin[2] + heightover2;
-		cont = pmove->PM_PointContents (point, (int *)NULL );
+		cont = pmove->PM_PointContents (point, NULL );
 		// If that point is also under water...
 		if (cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
 		{
@@ -1477,7 +1478,7 @@ int PM_CheckWater ()
 			// Now check the eye position.  (view_ofs is relative to the origin)
 			point[2] = pmove->origin[2] + pmove->view_ofs[2];
 
-			cont = pmove->PM_PointContents (point, (int *)NULL );
+			cont = pmove->PM_PointContents (point, NULL );
 			if (cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT ) 
 				pmove->waterlevel = 3;  // In over our eyes
 		}
@@ -1665,9 +1666,9 @@ int PM_CheckStuck (void)
 	i = PM_GetRandomStuckOffsets(pmove->player_index, pmove->server, offset);
 
 	VectorAdd(base, offset, test);
-	if ( ( hitent = pmove->PM_TestPlayerPosition ( test, (pmtrace_t *)NULL ) ) == -1 )
+	if ( ( hitent = pmove->PM_TestPlayerPosition ( test, NULL ) ) == -1 )
 	{
-		//Con_DPrintf("Nudged\n");
+		//ConDPrintf("Nudged\n");
 
 		PM_ResetStuckOffsets( pmove->player_index, pmove->server );
 
@@ -1698,7 +1699,7 @@ int PM_CheckStuck (void)
 					test[1] += y;
 					test[2] += z;
 
-					if ( pmove->PM_TestPlayerPosition ( test, (pmtrace_t *)NULL ) == -1 )
+					if ( pmove->PM_TestPlayerPosition ( test, NULL ) == -1 )
 					{
 						VectorCopy( test, pmove->origin );
 						return 0;
@@ -1865,7 +1866,7 @@ void PM_FixPlayerCrouchStuck( int direction )
 	int i;
 	vec3_t test;
 
-	hitent = pmove->PM_TestPlayerPosition ( pmove->origin, (pmtrace_t *)NULL );
+	hitent = pmove->PM_TestPlayerPosition ( pmove->origin, NULL );
 	if (hitent == -1 )
 		return;
 	
@@ -1873,7 +1874,7 @@ void PM_FixPlayerCrouchStuck( int direction )
 	for ( i = 0; i < 36; i++ )
 	{
 		pmove->origin[2] += direction;
-		hitent = pmove->PM_TestPlayerPosition ( pmove->origin, (pmtrace_t *)NULL );
+		hitent = pmove->PM_TestPlayerPosition ( pmove->origin, NULL );
 		if (hitent == -1 )
 			return;
 	}
@@ -1908,7 +1909,7 @@ void PM_UnDuck( void )
 		if ( trace.startsolid )
 		{
 			// See if we are stuck?  If so, stay ducked with the duck hull until we have a clear spot
-			//Con_Printf( "unstick got stuck\n" );
+			//ConPrintf( "unstick got stuck\n" );
 			pmove->usehull = 1;
 			return;
 		}
@@ -2044,7 +2045,7 @@ void PM_LadderMove( physent_t *pLadder )
 	VectorCopy( pmove->origin, floor );
 	floor[2] += pmove->player_mins[pmove->usehull][2] - 1;
 
-	if ( pmove->PM_PointContents( floor, (int *)NULL ) == CONTENTS_SOLID )
+	if ( pmove->PM_PointContents( floor, NULL ) == CONTENTS_SOLID )
 		onFloor = TRUE;
 	else
 		onFloor = FALSE;
@@ -2057,7 +2058,7 @@ void PM_LadderMove( physent_t *pLadder )
 		float forward = 0, right = 0;
 		vec3_t vpn, v_right;
 
-		AngleVectors( pmove->angles, vpn, v_right, (float *)NULL );
+		AngleVectors( pmove->angles, vpn, v_right, NULL );
 		if ( pmove->cmd.buttons & IN_BACK )
 			forward -= MAX_CLIMB_SPEED;
 		if ( pmove->cmd.buttons & IN_FORWARD )
@@ -2155,7 +2156,7 @@ physent_t *PM_Ladder( void )
 		}
 	}
 
-	return (physent_t *)NULL;
+	return NULL;
 }
 
 
@@ -2318,7 +2319,7 @@ void PM_Physics_Toss()
 
 		vel = DotProduct( pmove->velocity, pmove->velocity );
 
-		// Con_DPrintf("%f %f: %.0f %.0f %.0f\n", vel, trace.fraction, ent->velocity[0], ent->velocity[1], ent->velocity[2] );
+		// ConDPrintf("%f %f: %.0f %.0f %.0f\n", vel, trace.fraction, ent->velocity[0], ent->velocity[1], ent->velocity[2] );
 
 		if (vel < (30 * 30) || (pmove->movetype != MOVETYPE_BOUNCE && pmove->movetype != MOVETYPE_BOUNCEMISSILE))
 		{
@@ -2881,7 +2882,7 @@ were contacted during the move.
 */
 void PM_PlayerMove ( int server )
 {
-	physent_t *pLadder = (physent_t *)NULL;
+	physent_t *pLadder = NULL;
 
 	// Are we running server code?
 	pmove->server = server;                
@@ -2972,7 +2973,7 @@ void PM_PlayerMove ( int server )
 	switch ( pmove->movetype )
 	{
 	default:
-		pmove->Con_DPrintf("Bogus pmove player movetype %i on (%i) 0=cl 1=sv\n", pmove->movetype, pmove->server);
+		pmove->ConDPrintf("Bogus pmove player movetype %i on (%i) 0=cl 1=sv\n", pmove->movetype, pmove->server);
 		break;
 
 	case MOVETYPE_NONE:
@@ -3295,9 +3296,11 @@ int PM_GetPhysEntInfo( int ent )
 
 int PM_FindPhysEntByIndex( int index )
 {
+	int i;
+
 	if ( index >= 0 && index <= pmove->numphysent)
 	{
-		for( int i = 0; i < pmove->numphysent; i++ )
+		for( i = 0; i < pmove->numphysent; i++ )
 		{
 			if( pmove->physents[i].info == index )
 				return i;

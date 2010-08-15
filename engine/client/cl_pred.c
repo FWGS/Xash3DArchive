@@ -26,8 +26,6 @@ bool CL_IsPredicted( void )
 	if( cls.netchan.outgoing_sequence - cls.netchan.incoming_sequence >= CL_UPDATE_BACKUP - 1 )
 		return false;
 
-	if( player->curstate.ed_flags & ESF_NO_PREDICTION )
-		return false;
 	if( !cl_predict->integer )
 		return false;
 	return true;
@@ -124,8 +122,9 @@ void CL_SetIdealPitch( cl_entity_t *ent )
 		bottom[0] = top[0];
 		bottom[1] = top[1];
 		bottom[2] = top[2] - 160;
-		
-		tr = CL_Move( top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, ent );
+
+// FIXME: write client trace
+//		tr = CL_Move( top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, ent );
 		if( tr.fAllSolid )
 			return;	// looking at a wall, leave ideal the way is was
 
