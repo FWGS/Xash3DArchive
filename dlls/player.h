@@ -223,15 +223,17 @@ public:
 	static	TYPEDESCRIPTION m_playerSaveData[];
 
 	// Player is moved across the transition by other means
-	virtual int		ObjectCaps( void ) { return CBaseMonster :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int	ObjectCaps( void ) { return CBaseMonster :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 	virtual void	Precache( void );
-	BOOL			IsOnLadder( void );
-	BOOL			FlashlightIsOn( void );
-	void			FlashlightTurnOn( void );
-	void			FlashlightTurnOff( void );
+	BOOL		IsOnLadder( void );
+	BOOL		FlashlightIsOn( void );
+	void		FlashlightTurnOn( void );
+	void		FlashlightTurnOff( void );
+
+	float		WeaponTimeBase( void );
 	
-	void UpdatePlayerSound ( void );
-	void DeathSound ( void );
+	void		UpdatePlayerSound ( void );
+	void		DeathSound ( void );
 
 	int Classify ( void );
 	void SetAnimation( PLAYER_ANIM playerAnim );

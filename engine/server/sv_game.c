@@ -1911,31 +1911,57 @@ pfnMessageBegin
 */
 void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *ed )
 {
+	int	i, iSize;
+
 	if( svgame.msg_started )
 		Host_Error( "MessageBegin: New message started when msg '%s' has not been sent yet\n", svgame.msg_name );
 	svgame.msg_started = true;
 
-	// some malicious users trying send message with engine index
-	// reduce number to avoid overflow problems or cheating
-	svgame.msg_index = bound( svc_bad, msg_num, svc_nop );
+	// check range
+	msg_num = bound( svc_bad, msg_num, 255 );
 
-	if( svgame.msg_index >= 0 && svgame.msg_index < MAX_USER_MESSAGES )
-		svgame.msg_name = svgame.msg[svgame.msg_index].name;
-	else svgame.msg_name = NULL;
+	if( msg_num < svc_lastmsg )
+	{
+		svgame.msg_name = NULL;
+		svgame.msg_index = -1; // this is a system message
 
-	BF_WriteByte( &sv.multicast, svgame.msg_index );
+		if( msg_num == svc_temp_entity )
+			iSize = -1; // temp entity have variable size
+		else iSize = 0;
+	}
+	else
+	{
+		// check for existing
+		for( i = 0; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
+		{
+			if( svgame.msg[i].number == msg_num )
+				break; // found
+		}
+
+		if( i == MAX_USER_MESSAGES )
+		{
+			Host_Error( "MessageBegin: tired to send unregistered message %i\n", msg_num );
+			return;
+		}
+
+		svgame.msg_name = svgame.msg[i].name;
+		iSize = svgame.msg[i].size;
+		svgame.msg_index = i;
+	}
+
+	BF_WriteByte( &sv.multicast, msg_num );
 
 	// save message destination
 	if( pOrigin ) VectorCopy( pOrigin, svgame.msg_org );
 	else VectorClear( svgame.msg_org );
 
-	if( svgame.msg[svgame.msg_index].size == -1 )
+	if( iSize == -1 )
 	{
 		// variable sized messages sent size as first byte
 		svgame.msg_size_index = BF_GetNumBytesWritten( &sv.multicast );
 		BF_WriteByte( &sv.multicast, 0 ); // reserve space for now
 	}
-	else svgame.msg_size_index = -1;
+	else svgame.msg_size_index = -1; // message has constant size
 
 	svgame.msg_realsize = 0;
 	svgame.msg_dest = msg_dest;
@@ -1957,7 +1983,28 @@ void pfnMessageEnd( void )
 	if( !svgame.msg_started ) Host_Error( "MessageEnd: called with no active message\n" );
 	svgame.msg_started = false;
 
-	if( svgame.msg[svgame.msg_index].size != -1 )
+	// check for system message
+	if( svgame.msg_index == -1 )
+	{
+		if( svgame.msg_size_index != -1 )
+		{
+			// variable sized message
+			if( svgame.msg_realsize > 255 )
+			{
+				MsgDev( D_ERROR, "SV_Message: %s too long (more than 255 bytes)\n", name );
+				BF_Clear( &sv.multicast );
+				return;
+			}
+			else if( svgame.msg_realsize <= 0 )
+			{
+				MsgDev( D_ERROR, "SV_Message: %s writes NULL message\n", name );
+				BF_Clear( &sv.multicast );
+				return;
+			}
+		}
+		sv.multicast.pData[svgame.msg_size_index] = svgame.msg_realsize;
+	}
+	else if( svgame.msg[svgame.msg_index].size != -1 )
 	{
 		int expsize = svgame.msg[svgame.msg_index].size;
 		int realsize = svgame.msg_realsize;
@@ -2053,12 +2100,15 @@ void pfnWriteLong( int iValue )
 =============
 pfnWriteAngle
 
+this is low-res angle
 =============
 */
 void pfnWriteAngle( float flValue )
 {
-	BF_WriteBitAngle( &sv.multicast, flValue, 16 );
-	svgame.msg_realsize += 2;
+	int	iAngle = ((int)(( flValue ) * 256 / 360) & 255);
+
+	BF_WriteChar( &sv.multicast, iAngle );
+	svgame.msg_realsize += 1;
 }
 
 /*
@@ -2069,8 +2119,8 @@ pfnWriteCoord
 */
 void pfnWriteCoord( float flValue )
 {
-	BF_WriteFloat( &sv.multicast, flValue );
-	svgame.msg_realsize += 4;
+	BF_WriteShort( &sv.multicast, (int)( flValue * 8.0f ));
+	svgame.msg_realsize += 2;
 }
 
 /*
@@ -2385,7 +2435,7 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	{
 		// see if already registered
 		if( !com.strcmp( svgame.msg[i].name, pszName ))
-			return i;
+			return svc_lastmsg + i; // offset
 	}
 
 	if( i == MAX_USER_MESSAGES ) 
@@ -2396,22 +2446,23 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 
 	// register new message
 	com.strncpy( svgame.msg[i].name, pszName, sizeof( svgame.msg[i].name ));
+	svgame.msg[i].number = svc_lastmsg + i;
 	svgame.msg[i].size = iSize;
-	svgame.msg[i].number = i;	// paranoid mode :-)
 
 	// catch some user messages
 	if( !com.strcmp( pszName, "HudText" ))
-		svgame.gmsgHudText = i;
+		svgame.gmsgHudText = svc_lastmsg + i;
 
 	if( sv.state == ss_active )
 	{
+		// tell the client about new user message
 		BF_WriteByte( &sv.multicast, svc_usermessage );
-		BF_WriteString( &sv.multicast, pszName );
-		BF_WriteByte( &sv.multicast, i );
+		BF_WriteString( &sv.multicast, svgame.msg[i].name );
+		BF_WriteByte( &sv.multicast, svgame.msg[i].number );
 		BF_WriteByte( &sv.multicast, (byte)iSize );
 		SV_Send( MSG_ALL, vec3_origin, NULL );
 	}
-	return i;
+	return svgame.msg[i].number;
 }
 
 /*
@@ -3283,7 +3334,7 @@ int pfnCanSkipPlayer( const edict_t *player )
 {
 	sv_client_t	*cl;
 
-	cl = SV_ClientFromEdict( player, true );
+	cl = SV_ClientFromEdict( player, false );
 	if( cl == NULL )
 	{
 		MsgDev( D_ERROR, "SV_CanSkip: client is not connected!\n" );
@@ -3920,7 +3971,6 @@ bool SV_LoadProgs( const char *name )
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();
-	pfnRegUserMsg( "svc_bad", 0 );	// register svc_bad message
 
 	// NOTE: game can resest pStringBase in case we want use StringTable system
 	if( svgame.globals->pStringBase )

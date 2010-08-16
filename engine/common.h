@@ -207,7 +207,6 @@ float pfnTime( void );
 ==============================================================
 */
 #define MAX_INFO_STRING	512
-#define MAX_USER_MESSAGES	200	// 200 user messages + 55 engine messages + svc_bad = 8 bit
 
 #define Z_Malloc(size)		Mem_Alloc( host.mempool, size )
 #define Z_Realloc( ptr, size )	Mem_Realloc( host.mempool, ptr, size )
@@ -258,7 +257,6 @@ bool CL_IsPlaybackDemo( void );
 bool SV_GetComment( const char *savename, char *comment );
 bool SV_NewGame( const char *mapName, bool loadGame );
 void SV_SysError( const char *error_string );
-bool SV_LoadProgs( const char *name );
 void SV_InitGameProgs( void );
 void SV_ForceError( void );
 void CL_WriteMessageHistory( void );

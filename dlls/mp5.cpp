@@ -131,14 +131,14 @@ void CMP5::PrimaryAttack()
 	if (m_pPlayer->pev->waterlevel == 3)
 	{
 		PlayEmptySound( );
-		m_flNextPrimaryAttack = 0.15;
+		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.15;
 		return;
 	}
 
 	if (m_iClip <= 0)
 	{
 		PlayEmptySound();
-		m_flNextPrimaryAttack = 0.15;
+		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.15;
 		return;
 	}
 
@@ -157,11 +157,7 @@ void CMP5::PrimaryAttack()
 	Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_5DEGREES );
 	Vector vecDir;
 
-#ifdef CLIENT_DLL
 	if ( !bIsMultiplayer() )
-#else
-	if ( !g_pGameRules->IsMultiplayer() )
-#endif
 	{
 		// optimized multiplayer. Widened to make it easier to hit a moving player
 		vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, VECTOR_CONE_6DEGREES, 8192, BULLET_PLAYER_MP5, 2, 0, m_pPlayer->pev, m_pPlayer->random_seed );
@@ -172,12 +168,16 @@ void CMP5::PrimaryAttack()
 		vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, VECTOR_CONE_3DEGREES, 8192, BULLET_PLAYER_MP5, 2, 0, m_pPlayer->pev, m_pPlayer->random_seed );
 	}
 
-  int flags;
-#if defined( CLIENT_WEAPONS )
-	flags = FEV_NOTHOST;
-#else
-	flags = 0;
-#endif
+	int flags;
+
+	if( IsLocalWeapon( ))
+	{
+		flags = FEV_NOTHOST;
+	}
+	else
+	{
+		flags = 0;
+	}
 
 	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usMP5, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, 0, 0, 0, 0 );
 
@@ -185,12 +185,12 @@ void CMP5::PrimaryAttack()
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
 
-	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.1;
+	m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.1;
 
-	if ( m_flNextPrimaryAttack < UTIL_WeaponTimeBase() )
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.1;
+	if ( m_flNextPrimaryAttack < m_pPlayer->WeaponTimeBase() )
+		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.1;
 
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+	m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 }
 
 
@@ -201,7 +201,7 @@ void CMP5::SecondaryAttack( void )
 	if (m_pPlayer->pev->waterlevel == 3)
 	{
 		PlayEmptySound( );
-		m_flNextPrimaryAttack = 0.15;
+		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.15;
 		return;
 	}
 
@@ -215,7 +215,7 @@ void CMP5::SecondaryAttack( void )
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
 	m_pPlayer->m_iExtraSoundTypes = bits_SOUND_DANGER;
-	m_pPlayer->m_flStopExtraSoundTime = UTIL_WeaponTimeBase() + 0.2;
+	m_pPlayer->m_flStopExtraSoundTime = m_pPlayer->WeaponTimeBase() + 0.2;
 			
 	m_pPlayer->m_rgAmmo[m_iSecondaryAmmoType]--;
 
@@ -225,22 +225,24 @@ void CMP5::SecondaryAttack( void )
  	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	// we don't add in player velocity anymore.
-	CGrenade::ShootContact( m_pPlayer->pev, 
-							m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16, 
-							gpGlobals->v_forward * 800 );
+	CGrenade::ShootContact( m_pPlayer->pev, m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16, gpGlobals->v_forward * 800 );
 
 	int flags;
-#if defined( CLIENT_WEAPONS )
-	flags = FEV_NOTHOST;
-#else
-	flags = 0;
-#endif
+
+	if( IsLocalWeapon( ))
+	{
+		flags = FEV_NOTHOST;
+	}
+	else
+	{
+		flags = 0;
+	}
 
 	PLAYBACK_EVENT( flags, m_pPlayer->edict(), m_usMP52 );
 	
-	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1;
-	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1;
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 5;// idle pretty soon after shooting.
+	m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 1;
+	m_flNextSecondaryAttack = m_pPlayer->WeaponTimeBase() + 1;
+	m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 5;// idle pretty soon after shooting.
 
 	if (!m_pPlayer->m_rgAmmo[m_iSecondaryAmmoType])
 		// HEV suit - indicate out of ammo condition
@@ -262,7 +264,7 @@ void CMP5::WeaponIdle( void )
 
 	m_pPlayer->GetAutoaimVector( AUTOAIM_5DEGREES );
 
-	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
+	if ( m_flTimeWeaponIdle > m_pPlayer->WeaponTimeBase() )
 		return;
 
 	int iAnim;
@@ -280,7 +282,7 @@ void CMP5::WeaponIdle( void )
 
 	SendWeaponAnim( iAnim );
 
-	m_flTimeWeaponIdle = UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 ); // how long till we do this again.
+	m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 ); // how long till we do this again.
 }
 
 

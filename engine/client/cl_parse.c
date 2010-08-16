@@ -14,40 +14,60 @@
 
 int CL_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 
-char *svc_strings[256] =
+const char *svc_strings[256] =
 {
 	"svc_bad",
-// user messages space
 	"svc_nop",
 	"svc_disconnect",
-	"svc_reconnect",
-	"svc_stufftext",
-	"svc_serverdata",
-	"svc_configstring",
-	"svc_spawnbaseline",
-	"svc_download",
 	"svc_changing",
-	"svc_deltatable",
-	"svc_usermessage",
-	"svc_packetentities",
-	"svc_frame",
-	"svc_sound",
-	"svc_ambientsound",
-	"svc_setangle",
-	"svc_addangle",
+	"svc_configstring",
 	"svc_setview",
+	"svc_sound",
+	"svc_time",
 	"svc_print",
-	"svc_centerprint",
-	"svc_crosshairangle",
-	"svc_setpause",
-	"svc_movevars",
+	"svc_stufftext",
+	"svc_setangle",
+	"svc_serverdata",
+	"svc_addangle",
+	"svc_frame",
+	"svc_clientdata",
+	"svc_packetentities",
+	"svc_download",
+	"svc_usermessage",
 	"svc_particle",
-	"svc_soundfade",
-	"svc_bspdecal",
+	"svc_ambientsound",
+	"svc_spawnstatic",
+	"svc_crosshairangle",
+	"svc_spawnbaseline",
+	"svc_temp_entity",
+	"svc_setpause",
+	"svc_deltamovevars",
+	"svc_centerprint",
 	"svc_event",
 	"svc_event_reliable",
 	"svc_updateuserinfo",
+	"svc_intermission",
+	"svc_soundfade",
+	"svc_cdtrack",
 	"svc_serverinfo",
+	"svc_deltatable",
+	"svc_weaponanim",
+	"svc_bspdecal",
+	"svc_roomtype",
+	"svc_unused38",
+	"svc_unused39",
+	"svc_unused40",
+	"svc_unused41",
+	"svc_unused42",
+	"svc_unused43",
+	"svc_unused44",
+	"svc_unused45",
+	"svc_unused46",
+	"svc_unused47",
+	"svc_unused48",
+	"svc_unused49",
+	"svc_unused50",
+	"svc_director",
 };
 
 typedef struct
@@ -73,16 +93,23 @@ const char *CL_MsgInfo( int cmd )
 
 	com.strcpy( sz, "???" );
 
-	if( cmd > 200 && cmd < 256 )
+	if( cmd >= 0 && cmd < svc_lastmsg )
 	{
 		// get engine message name
-		com.strncpy( sz, svc_strings[cmd - 200], sizeof( sz ));
+		com.strncpy( sz, svc_strings[cmd], sizeof( sz ));
 	}
-	else if( cmd >= 0 && cmd < MAX_USER_MESSAGES )
+	else if( cmd >= svc_lastmsg && cmd < ( svc_lastmsg + MAX_USER_MESSAGES ))
 	{
-		// get user message name
-		if( clgame.msg[cmd].name[0] )
-			com.strncpy( sz, clgame.msg[cmd].name, sizeof( sz ));
+		int	i;
+
+		for( i = 0; i < MAX_USER_MESSAGES; i++ )
+		{
+			if( clgame.msg[i].number == cmd )
+			{
+				com.strncpy( sz, clgame.msg[i].name, sizeof( sz ));
+				break;
+			}
+		}
 	}
 	return sz;
 }
@@ -715,6 +742,7 @@ void CL_RegisterUserMessage( sizebuf_t *msg )
 
 	// important stuff
 	if( size == 0xFF ) size = -1;
+	svc_num = bound( 0, svc_num, 255 );
 
 	CL_LinkUserMessage( pszName, svc_num, size );
 }
@@ -768,6 +796,40 @@ void CL_ServerInfo( sizebuf_t *msg )
 
 /*
 ==============
+CL_ParseTempEntity
+
+temp entity is handled in the client.dll
+==============
+*/
+void CL_ParseTempEntity( sizebuf_t *msg )
+{
+	byte	pbuf[256];
+	int	iSize = BF_ReadByte( msg );
+
+	// parse user message into buffer
+	BF_ReadBytes( msg, pbuf, iSize );
+	clgame.dllFuncs.pfnTempEntityMessage( iSize, pbuf );
+}
+
+/*
+==============
+CL_ParseDirector
+
+hltv is handled in the client.dll
+==============
+*/
+void CL_ParseDirector( sizebuf_t *msg )
+{
+	byte	pbuf[256];
+	int	iSize = BF_ReadByte( msg );
+
+	// parse user message into buffer
+	BF_ReadBytes( msg, pbuf, iSize );
+	clgame.dllFuncs.pfnDirectorMessage( iSize, pbuf );
+}
+
+/*
+==============
 CL_ParseUserMessage
 
 handles all user messages
@@ -776,47 +838,36 @@ handles all user messages
 void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 {
 	int	i, iSize;
-	byte	*pbuf;
+	byte	pbuf[256]; // message can't be larger than 255 bytes
 
 	// NOTE: any user message parse on engine, not in client.dll
-	if( svc_num < 0 || svc_num >= MAX_USER_MESSAGES )
+	if( svc_num < svc_lastmsg || svc_num >= ( MAX_USER_MESSAGES + svc_lastmsg ))
 	{
 		// out or range
 		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
 		return;
 	}
 
-	// unregister message can't be parsed
-	if( clgame.msg[svc_num].number != svc_num )
+	for( i = 0; i < MAX_USER_MESSAGES; i++ )
 	{
-		for( i = 0; i < MAX_USER_MESSAGES; i++ )
-		{
-			// across-transition problems... this is temporary solution
-			if( clgame.msg[i].number == svc_num )
-			{
-				MsgDev( D_WARN, "CL_RemapUserMsg: from %i to %i\n", svc_num, i );
-				svc_num = i;
-				break;
-			}
-		}
-
-		if( i == MAX_USER_MESSAGES )
-			Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
+		// search for user message
+		if( clgame.msg[i].number == svc_num )
+			break;
 	}
 
-	iSize = clgame.msg[svc_num].size;
-	pbuf = NULL;
+	if( i == MAX_USER_MESSAGES )
+		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
+
+	iSize = clgame.msg[i].size;
 
 	// message with variable sizes receive an actual size as first byte
 	if( iSize == -1 ) iSize = BF_ReadByte( msg );
-	if( iSize > 0 ) pbuf = Mem_Alloc( clgame.mempool, iSize );
 
 	// parse user message into buffer
 	BF_ReadBytes( msg, pbuf, iSize );
 
-	if( clgame.msg[svc_num].func ) clgame.msg[svc_num].func( clgame.msg[svc_num].name, iSize, pbuf );
-	else MsgDev( D_WARN, "CL_ParseUserMessage: %s not hooked\n", clgame.msg[svc_num].name );
-	if( pbuf ) Mem_Free( pbuf );
+	if( clgame.msg[i].func ) clgame.msg[i].func( clgame.msg[i].name, iSize, pbuf );
+	else MsgDev( D_ERROR, "CL_ParseUserMessage: %s not hooked\n", clgame.msg[i].name );
 }
 
 /*
@@ -835,6 +886,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 {
 	char	*s;
 	int	i, cmd;
+	int	param1, param2;
 	int	bufStart;
 
 	cls_message_debug.parsing = true;		// begin parsing
@@ -864,6 +916,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		// other commands
 		switch( cmd )
 		{
+		case svc_bad:
+			Host_Error( "svc_bad\n" );
+			break;
 		case svc_nop:
 			MsgDev( D_ERROR, "CL_ParseServerMessage: user message out of bounds\n" );
 			break;
@@ -872,13 +927,14 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			Host_AbortCurrentFrame();
 			break;
 		case svc_changing:
-			cls.changelevel = true;
-			Cmd_ExecuteString( "hud_changelevel\n" );
-			S_StopAllSounds();
-			// intentional fallthrough
-		case svc_reconnect:
-			if( !cls.changelevel )
-				MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
+			if( BF_ReadOneBit( msg ))
+			{
+				cls.changelevel = true;
+				Cmd_ExecuteString( "hud_changelevel\n" );
+				S_StopAllSounds();
+			}
+			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
+
 			if( cls.download )
 			{
 				FS_Close( cls.download );
@@ -887,43 +943,17 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cls.state = ca_connecting;
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;
-		case svc_stufftext:
-			s = BF_ReadString( msg );
-			Cbuf_AddText( s );
-			break;
-		case svc_serverdata:
-			Cbuf_Execute(); // make sure any stuffed commands are done
-			CL_ParseServerData( msg );
-			break;
 		case svc_configstring:
 			CL_ParseConfigString( msg );
-			break;
-		case svc_spawnbaseline:
-			CL_ParseBaseline( msg );
-			break;
-		case svc_deltatable:
-			Delta_ParseTableField( msg );
-			break;
-		case svc_download:
-			CL_ParseDownload( msg );
-			break;
-		case svc_sound:
-			CL_ParseSoundPacket( msg, false );
-			break;
-		case svc_ambientsound:
-			CL_ParseSoundPacket( msg, true );
-			break;
-		case svc_setangle:
-			CL_ParseSetAngle( msg );
-			break;
-		case svc_addangle:
-			CL_ParseAddAngle( msg );
 			break;
 		case svc_setview:
 			cl.refdef.viewentity = BF_ReadWord( msg );
 			break;
-		case svc_crosshairangle:
-			CL_ParseCrosshairAngle( msg );
+		case svc_sound:
+			CL_ParseSoundPacket( msg, false );
+			break;
+		case svc_time:
+			BF_ReadFloat( msg ); // time
 			break;
 		case svc_print:
 			i = BF_ReadByte( msg );
@@ -931,23 +961,61 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 				S_StartLocalSound( "misc/talk.wav" );	// FIXME: INTRESOURCE
 			MsgDev( D_INFO, "^6%s\n", BF_ReadString( msg ));
 			break;
-		case svc_centerprint:
-			CL_CenterPrint( BF_ReadString( msg ), 0.35f );
+		case svc_stufftext:
+			s = BF_ReadString( msg );
+			Cbuf_AddText( s );
 			break;
-		case svc_setpause:
-			cl.refdef.paused = (BF_ReadByte( msg ) != 0 );
+		case svc_setangle:
+			CL_ParseSetAngle( msg );
 			break;
-		case svc_movevars:
-			CL_ParseMovevars( msg );
+		case svc_serverdata:
+			Cbuf_Execute(); // make sure any stuffed commands are done
+			CL_ParseServerData( msg );
+			break;
+		case svc_addangle:
+			CL_ParseAddAngle( msg );
+			break;
+		case svc_frame:
+			CL_ParseFrame( msg );
+			break;
+		case svc_clientdata:
+			Host_Error( "svc_clientdata: out of place frame data\n" );
+			break;
+		case svc_packetentities:
+			Host_Error( "svc_packetentities: out of place frame data\n" );
+			break;
+		case svc_download:
+			CL_ParseDownload( msg );
+			break;
+		case svc_usermessage:
+			CL_RegisterUserMessage( msg );
 			break;
 		case svc_particle:
 			CL_ParseParticles( msg );
 			break;
-		case svc_bspdecal:
-			CL_ParseStaticDecal( msg );
+		case svc_ambientsound:
+			CL_ParseSoundPacket( msg, true );
 			break;
-		case svc_soundfade:
-			CL_ParseSoundFade( msg );
+		case svc_spawnstatic:
+			Host_Error( "svc_spawnstatic: not implemented\n" );
+			break;
+		case svc_crosshairangle:
+			CL_ParseCrosshairAngle( msg );
+			break;
+		case svc_spawnbaseline:
+			CL_ParseBaseline( msg );
+			break;
+		case svc_temp_entity:
+			CL_ParseTempEntity( msg );
+			break;
+		case svc_setpause:
+			cl.refdef.paused = (BF_ReadOneBit( msg ) != 0 );
+			break;
+		case svc_deltamovevars:
+			CL_ParseMovevars( msg );
+			break;
+		case svc_centerprint:
+			CL_CenterPrint( BF_ReadString( msg ), 0.35f );
 			break;
 		case svc_event:
 			CL_ParseEvent( msg );
@@ -958,17 +1026,36 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_updateuserinfo:
 			CL_UpdateUserinfo( msg );
 			break;
+		case svc_intermission:
+			cl.refdef.intermission = true;
+			break;
+		case svc_soundfade:
+			CL_ParseSoundFade( msg );
+			break;
+		case svc_cdtrack:
+			param1 = BF_ReadByte( msg );	// tracknum
+			param2 = BF_ReadByte( msg );	// loopnum
+			break;
 		case svc_serverinfo:
 			CL_ServerInfo( msg );
 			break;
-		case svc_usermessage:
-			CL_RegisterUserMessage( msg );
+		case svc_deltatable:
+			Delta_ParseTableField( msg );
 			break;
-		case svc_frame:
-			CL_ParseFrame( msg );
+		case svc_weaponanim:
+			param1 = BF_ReadByte( msg );	// iAnim
+			param2 = BF_ReadByte( msg );	// body
+			CL_WeaponAnim( param1, param2 );
 			break;
-		case svc_packetentities:
-			Host_Error( "CL_ParseServerMessage: out of place frame data\n" );
+		case svc_bspdecal:
+			CL_ParseStaticDecal( msg );
+			break;
+		case svc_roomtype:
+			param1 = BF_ReadShort( msg );
+			Cvar_SetValue( "room_type", param1 );
+			break;
+		case svc_director:
+			CL_ParseDirector( msg );
 			break;
 		default:
 			CL_ParseUserMessage( msg, cmd );

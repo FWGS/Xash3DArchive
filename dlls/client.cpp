@@ -1464,9 +1464,15 @@ void RegisterEncoders( void )
 	DELTA_ADDENCODER( "Player_Encode", Player_Encode );
 }
 
+/*
+=================
+GetWeaponData
+
+Engine call this function only for clients with cl_lw == 1
+=================
+*/
 int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 {
-#if defined( CLIENT_WEAPONS )
 	int i;
 	weapon_data_t *item;
 	entvars_t *pev = &player->v;
@@ -1475,7 +1481,7 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 	
 	ItemInfo II;
 
-	memset( info, 0, 32 * sizeof( weapon_data_t ) );
+	memset( info, 0, 32 * sizeof( weapon_data_t ));
 
 	if ( !pl )
 		return 1;
@@ -1504,29 +1510,27 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 						item->m_iId						= II.iId;
 						item->m_iClip					= gun->m_iClip;
 
-						item->m_flTimeWeaponIdle		= max( gun->m_flTimeWeaponIdle, -0.001 );
-						item->m_flNextPrimaryAttack		= max( gun->m_flNextPrimaryAttack, -0.001 );
+						item->m_flTimeWeaponIdle	= max( gun->m_flTimeWeaponIdle, -0.001 );
+						item->m_flNextPrimaryAttack	= max( gun->m_flNextPrimaryAttack, -0.001 );
 						item->m_flNextSecondaryAttack	= max( gun->m_flNextSecondaryAttack, -0.001 );
-						item->m_fInReload				= gun->m_fInReload;
-						item->m_fInSpecialReload		= gun->m_fInSpecialReload;
-						item->fuser1					= max( gun->pev->fuser1, -0.001 );
-						item->fuser2					= gun->m_flStartThrow;
-						item->fuser3					= gun->m_flReleaseThrow;
-						item->iuser1					= gun->m_chargeReady;
-						item->iuser2					= gun->m_fInAttack;
-						item->iuser3					= gun->m_fireState;
+						item->m_fInReload		= gun->m_fInReload;
+						item->m_fInSpecialReload	= gun->m_fInSpecialReload;
+						item->fuser1		= max( gun->pev->fuser1, -0.001 );
+						item->fuser2		= gun->m_flStartThrow;
+						item->fuser3		= gun->m_flReleaseThrow;
+						item->iuser1		= gun->m_chargeReady;
+						item->iuser2		= gun->m_fInAttack;
+						item->iuser3		= gun->m_fireState;
 						
 											
-//						item->m_flPumpTime				= max( gun->m_flPumpTime, -0.001 );
+//						item->m_flPumpTime		= max( gun->m_flPumpTime, -0.001 );
 					}
 				}
 				pPlayerItem = pPlayerItem->m_pNext;
 			}
 		}
 	}
-#else
-	memset( info, 0, 32 * sizeof( weapon_data_t ) );
-#endif
+
 	return 1;
 }
 
@@ -1569,7 +1573,7 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 
 	cd->pushmsec		= ent->v.pushmsec;
 
-#if defined( CLIENT_WEAPONS )
+	// engine determine which client is using predicting
 	if ( sendweapons )
 	{
 		entvars_t *pev = (entvars_t *)&ent->v;
@@ -1609,14 +1613,13 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 					
 					if ( pl->m_pActiveItem->m_iId == WEAPON_RPG )
 					{
-						cd->vuser2.y = ( ( CRpg * )pl->m_pActiveItem)->m_fSpotActive;
-						cd->vuser2.z = ( ( CRpg * )pl->m_pActiveItem)->m_cActiveRockets;
+						cd->vuser2.y = (( CRpg * )pl->m_pActiveItem)->m_fSpotActive;
+						cd->vuser2.z = (( CRpg * )pl->m_pActiveItem)->m_cActiveRockets;
 					}
 				}
 			}
 		}
 	}
-#endif
 }
 
 /*

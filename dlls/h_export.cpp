@@ -44,7 +44,8 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 	return TRUE;
 }
 
-void __stdcall GiveFnptrsToDll( enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals )
+// g-cont. Don't use __stdcall, _cdecl and other modifiactors here!
+void GiveFnptrsToDll( enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals )
 {
 	memcpy( &g_engfuncs, pengfuncsFromEngine, sizeof( enginefuncs_t ));
 	gpGlobals = pGlobals;

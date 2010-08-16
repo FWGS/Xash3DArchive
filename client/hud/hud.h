@@ -44,6 +44,7 @@ typedef struct
 	Vector	fadeColor;
 	float	fadeAlpha;
 	int	fadeFlags;	// Fading flags
+	int	bActive;
 } CL_ScreenFade;
 
 typedef struct
@@ -588,12 +589,10 @@ public:
 	int _cdecl MsgFunc_Damage( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_GameMode( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_Logo( const char *pszName,  int iSize, void *pbuf );
-	int _cdecl MsgFunc_RoomType( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ScreenFade( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ServerName( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ResetHUD( const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_Intermission( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ViewMode( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ScreenShake( const char *pszName, int iSize, void *pbuf );
@@ -602,9 +601,7 @@ public:
 	int _cdecl MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetBody( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetSkin( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_WeaponAnim( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_Particle( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_TempEntity( const char *pszName, int iSize, void *pbuf );
 
 	// user commands
 	void _cdecl UserCmd_ChangeLevel( void );

@@ -152,17 +152,19 @@ char* READ_STRING( void )
 	return gMsg.string;
 }
 
-//
-// Xash3D network specs. Don't modify!
-//
 float READ_COORD( void )
 {
-	return READ_FLOAT();
+	return (float)(READ_SHORT() * (1.0/8));
 }
 
 float READ_ANGLE( void )
 {
-	return (float)(READ_SHORT() * (360.0 / 65536));
+	return (float)(READ_CHAR() * (360.0/256));
+}
+
+float READ_HIRESANGLE( void )
+{
+	return (float)(READ_SHORT() * (360.0/65536));
 }
 
 /*
@@ -250,6 +252,7 @@ void SetScreenFade( Vector fadeColor, float alpha, float duration, float holdTim
 
 	if( !sf ) return; // no free fades found 
 
+	sf->bActive = true;
 	sf->fadeEnd = duration;
 	sf->fadeReset = holdTime;	
 	sf->fadeColor = fadeColor;
@@ -292,7 +295,7 @@ void DrawScreenFade( void )
 	{
 		CL_ScreenFade *pFade = &gHUD.m_FadeList[i];
 
-		if( pFade->fadeFlags == 0 ) continue;	// free slot
+		if( pFade->bActive == 0 ) continue;	// free slot
 
 		// Keep pushing reset time out indefinitely
 		if( pFade->fadeFlags & FFADE_STAYOUT )
@@ -317,20 +320,23 @@ void DrawScreenFade( void )
 	{
 		CL_ScreenFade *pFade = &gHUD.m_FadeList[i];
 
-		if( pFade->fadeFlags == 0 ) continue;	// free slot
+		if( pFade->bActive == 0 ) continue;	// free slot
 
 		// Color
 		gHUD.m_vecFadeColor += pFade->fadeColor;
 
 		// Fading...
 		int iFadeAlpha;
-		if( pFade->fadeFlags & ( FFADE_OUT|FFADE_IN ))
+		if( pFade->fadeFlags & FFADE_OUT )
 		{
 			iFadeAlpha = pFade->fadeSpeed * ( pFade->fadeEnd - gHUD.m_flTime );
-			if( pFade->fadeFlags & FFADE_OUT )
-			{
-				iFadeAlpha += pFade->fadeAlpha;
-			}
+			iFadeAlpha += pFade->fadeAlpha;
+			iFadeAlpha = min( iFadeAlpha, pFade->fadeAlpha );
+			iFadeAlpha = max( 0, iFadeAlpha );
+		}
+		else if( !( pFade->fadeFlags & FFADE_STAYOUT ))
+		{
+			iFadeAlpha = pFade->fadeSpeed * ( pFade->fadeEnd - gHUD.m_flTime );
 			iFadeAlpha = min( iFadeAlpha, pFade->fadeAlpha );
 			iFadeAlpha = max( 0, iFadeAlpha );
 		}

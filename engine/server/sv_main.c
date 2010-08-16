@@ -738,9 +738,11 @@ void SV_FinalMessage( char *message, bool reconnect )
 
 	if( reconnect )
 	{
+		BF_WriteByte( &msg, svc_changing );
+
 		if( sv.loadgame || sv_maxclients->integer > 1 )
-			BF_WriteByte( &msg, svc_changing );
-		else BF_WriteByte( &msg, svc_reconnect );
+			BF_WriteOneBit( &msg, 1 ); // changelevel
+		else BF_WriteOneBit( &msg, 0 );
 	}
 	else
 	{

@@ -65,6 +65,8 @@ extern void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity );
 extern void HUD_StudioFxTransform( cl_entity_t *ent, float transform[4][4] );
 extern int HUD_StudioDoInterp( cl_entity_t *e );
 extern void HUD_ParseTempEntity( void );
+extern void HUD_TempEntityMessage( int iSize, void *pbuf );
+extern void HUD_DirectorMessage( int iSize, void *pbuf );
 extern void V_CalcRefdef( ref_params_t *parms );
 extern void V_StartPitchDrift( void );
 extern void V_StopPitchDrift( void );
@@ -208,6 +210,7 @@ extern float READ_FLOAT( void );
 extern char* READ_STRING( void );
 extern float READ_COORD( void );
 extern float READ_ANGLE( void );
+extern float READ_HIRESANGLE( void );
 extern void END_READ( void );
 
 // misc utilities

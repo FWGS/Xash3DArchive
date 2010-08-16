@@ -2567,8 +2567,9 @@ void CBasePlayer::PostThink()
 	m_afButtonLast = pev->button;
 
 pt_end:
-#if defined( CLIENT_WEAPONS )
-		// Decay timers on weapons
+	if( WeaponTimeBase( ) != 0.0f ) return;	// predicting is dsiabled 
+
+	// Decay timers on weapons
 	// go through all of the weapons and make a list of the ones to pack
 	for ( int i = 0 ; i < MAX_ITEM_TYPES ; i++ )
 	{
@@ -2584,12 +2585,12 @@ pt_end:
 				
 				if ( gun && gun->UseDecrement() )
 				{
-					gun->m_flNextPrimaryAttack		= max( gun->m_flNextPrimaryAttack - gpGlobals->frametime, -1.0 );
+					gun->m_flNextPrimaryAttack = max( gun->m_flNextPrimaryAttack - gpGlobals->frametime, -1.0 );
 					gun->m_flNextSecondaryAttack	= max( gun->m_flNextSecondaryAttack - gpGlobals->frametime, -0.001 );
 
 					if ( gun->m_flTimeWeaponIdle != 1000 )
 					{
-						gun->m_flTimeWeaponIdle		= max( gun->m_flTimeWeaponIdle - gpGlobals->frametime, -0.001 );
+						gun->m_flTimeWeaponIdle = max( gun->m_flTimeWeaponIdle - gpGlobals->frametime, -0.001 );
 					}
 
 					if ( gun->pev->fuser1 != 1000 )
@@ -2629,11 +2630,6 @@ pt_end:
 		if ( m_flAmmoStartCharge < -0.001 )
 			m_flAmmoStartCharge = -0.001;
 	}
-	
-
-#else
-	return;
-#endif
 }
 
 
@@ -2798,7 +2794,7 @@ void CBasePlayer::Spawn( void )
 	m_flFieldOfView		= 0.5;// some monsters use this to determine whether or not the player is looking at them.
 
 	m_bloodColor	= BLOOD_COLOR_RED;
-	m_flNextAttack	= UTIL_WeaponTimeBase();
+	m_flNextAttack	= WeaponTimeBase();
 	StartSneaking();
 
 	m_iFlashBattery = 99;
@@ -2932,15 +2928,16 @@ int CBasePlayer::Restore( CRestore &restore )
 		pev->origin = VARS(pentSpawnSpot)->origin + Vector(0,0,1);
 		pev->angles = VARS(pentSpawnSpot)->angles;
 	}
+
 	pev->v_angle.z = 0;	// Clear out roll
 	pev->angles = pev->v_angle;
 
 	pev->fixangle = TRUE;           // turn this way immediately
 
-// Copied from spawn() for now
+	// Copied from spawn() for now
 	m_bloodColor	= BLOOD_COLOR_RED;
 
-    g_ulModelIndexPlayer = pev->modelindex;
+	g_ulModelIndexPlayer = pev->modelindex;
 
 	if ( FBitSet(pev->flags, FL_DUCKING) ) 
 	{
@@ -2967,12 +2964,13 @@ int CBasePlayer::Restore( CRestore &restore )
 
 	RenewItems();
 
-#if defined( CLIENT_WEAPONS )
 	// HACK:	This variable is saved/restored in CBaseMonster as a time variable, but we're using it
-	//			as just a counter.  Ideally, this needs its own variable that's saved as a plain float.
-	//			Barring that, we clear it out here instead of using the incorrect restored time value.
-	m_flNextAttack = UTIL_WeaponTimeBase();
-#endif
+	//	as just a counter.  Ideally, this needs its own variable that's saved as a plain float.
+	//	Barring that, we clear it out here instead of using the incorrect restored time value.
+	if( WeaponTimeBase() == 0.0f ) 
+	{
+		m_flNextAttack = WeaponTimeBase();
+	}
 
 	return status;
 }
@@ -3265,6 +3263,12 @@ CBaseEntity *FindEntityForward( CBaseEntity *pMe )
 	return NULL;
 }
 
+float CBasePlayer :: WeaponTimeBase( void )
+{
+	if( ENGINE_CANSKIP( edict() ))
+		return 0.0f;	// local weapons enabled
+	return gpGlobals->time;	// non-predicted weapons
+}
 
 BOOL CBasePlayer :: FlashlightIsOn( void )
 {
@@ -3747,16 +3751,12 @@ Called every frame by the player PreThink
 */
 void CBasePlayer::ItemPreFrame()
 {
-#if defined( CLIENT_WEAPONS )
-    if ( m_flNextAttack > 0 )
-#else
-    if ( gpGlobals->time < m_flNextAttack )
-#endif
+	if ( m_flNextAttack > WeaponTimeBase( ))
 	{
 		return;
 	}
 
-	if (!m_pActiveItem)
+	if ( !m_pActiveItem )
 		return;
 
 	m_pActiveItem->ItemPreFrame( );
@@ -3778,11 +3778,7 @@ void CBasePlayer::ItemPostFrame()
 	if ( m_pTank != NULL )
 		return;
 
-#if defined( CLIENT_WEAPONS )
-    if ( m_flNextAttack > 0 )
-#else
-    if ( gpGlobals->time < m_flNextAttack )
-#endif
+	if( m_flNextAttack > WeaponTimeBase( ))
 	{
 		return;
 	}

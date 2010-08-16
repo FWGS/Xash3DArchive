@@ -476,9 +476,9 @@ BOOL CSqueak::Deploy( )
 }
 
 
-void CSqueak::Holster( int skiplocal /* = 0 */ )
+void CSqueak::Holster( void )
 {
-	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 0.5;
 	
 	if ( !m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] )
 	{
@@ -512,14 +512,18 @@ void CSqueak::PrimaryAttack()
 		// find place to toss monster
 		UTIL_TraceLine( trace_origin + gpGlobals->v_forward * 20, trace_origin + gpGlobals->v_forward * 64, dont_ignore_monsters, NULL, &tr );
 
-	int flags;
-#ifdef CLIENT_WEAPONS
-	flags = FEV_NOTHOST;
-#else
-	flags = 0;
-#endif
+		int flags;
 
-	    PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usSnarkFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
+		if( IsLocalWeapon( ))
+		{
+			flags = FEV_NOTHOST;
+		}
+		else
+		{
+			flags = 0;
+		}
+
+		PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usSnarkFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
 
 		if ( tr.fAllSolid == 0 && tr.fStartSolid == 0 && tr.flFraction > 0.25 )
 		{
@@ -545,8 +549,8 @@ void CSqueak::PrimaryAttack()
 
 			m_fJustThrown = 1;
 
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.3;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
+			m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.3;
+			m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 1.0;
 		}
 	}
 }
@@ -560,7 +564,7 @@ void CSqueak::SecondaryAttack( void )
 
 void CSqueak::WeaponIdle( void )
 {
-	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
+	if ( m_flTimeWeaponIdle > m_pPlayer->WeaponTimeBase() )
 		return;
 
 	if (m_fJustThrown)
@@ -574,7 +578,7 @@ void CSqueak::WeaponIdle( void )
 		}
 
 		SendWeaponAnim( SQUEAK_UP );
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 		return;
 	}
 
@@ -583,17 +587,17 @@ void CSqueak::WeaponIdle( void )
 	if (flRand <= 0.75)
 	{
 		iAnim = SQUEAK_IDLE1;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 30.0 / 16 * (2);
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 30.0 / 16 * (2);
 	}
 	else if (flRand <= 0.875)
 	{
 		iAnim = SQUEAK_FIDGETFIT;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 70.0 / 16.0;
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 70.0 / 16.0;
 	}
 	else
 	{
 		iAnim = SQUEAK_FIDGETNIP;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 80.0 / 16.0;
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 80.0 / 16.0;
 	}
 	SendWeaponAnim( iAnim );
 }

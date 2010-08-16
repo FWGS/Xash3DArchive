@@ -10,11 +10,12 @@
 #include "net_encode.h"
 #include "entity_types.h"
 
-#define MAX_VISIBLE_PACKET		1024
+#define MAX_VISIBLE_PACKET	512
+
 typedef struct
 {
-	int	num_entities;
-	int	entities[MAX_VISIBLE_PACKET];	
+	int		num_entities;
+	entity_state_t	entities[MAX_VISIBLE_PACKET];	
 } sv_ents_t;
 
 static byte *clientpvs;	// FatPVS
@@ -29,14 +30,16 @@ SV_EntityNumbers
 */
 static int SV_EntityNumbers( const void *a, const void *b )
 {
-	int	*ea, *eb;
+	int	ent1, ent2;
 
-	ea = (int *)a;
-	eb = (int *)b;
+	ent1 = ((entity_state_t *)a)->number;
+	ent2 = ((entity_state_t *)b)->number;
 
-	if( *ea == *eb )
-		Host_Error( "SV_EntityNumbers: duplicated entity\n" );
-	if( *ea < *eb ) return -1;
+	if( ent1 == ent2 )
+		Host_Error( "SV_SortEntities: duplicated entity\n" );
+
+	if( ent1 < ent2 )
+		return -1;
 	return 1;
 }
 
@@ -173,7 +176,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			pset = clientphs;
 		else pset = clientpvs;
 
-		state = &ent->pvEngineData->s;
+		state = &ents->entities[ents->num_entities];
 		netclient = SV_ClientFromEdict( ent, true );
 
 		// add entity to the net packet
@@ -188,9 +191,8 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			// if we are full, silently discard entities
 			if( ents->num_entities < MAX_VISIBLE_PACKET )
 			{
-				ents->entities[ents->num_entities] = ent->serialnumber;
-				ents->num_entities++;
-				c_fullsend++; // debug counter
+				ents->num_entities++;	// entity accepted
+				c_fullsend++;		// debug counter
 				
 			}
 			else MsgDev( D_ERROR, "too many entities in visible packet list\n" );
@@ -351,12 +353,11 @@ and copies off the playerstate.
 */
 void SV_BuildClientFrame( sv_client_t *cl )
 {
-	edict_t		*ent;
 	edict_t		*clent;
 	edict_t		*viewent;	// may be NULL
 	client_frame_t	*frame;
 	entity_state_t	*state;
-	sv_ents_t		frame_ents;
+	static sv_ents_t	frame_ents;
 	int		i;
 
 	clent = cl->edict;
@@ -413,11 +414,9 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 	for( i = 0; i < frame_ents.num_entities; i++ )
 	{
-		ent = EDICT_NUM( frame_ents.entities[i] );
-
 		// add it to the circular client_entities array
 		state = &svs.client_entities[svs.next_client_entities % svs.num_client_entities];
-		*state = ent->pvEngineData->s;
+		*state = frame_ents.entities[i];
 		svs.next_client_entities++;
 
 		// this should never hit, map should always be restarted first in SV_Frame

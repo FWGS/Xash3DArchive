@@ -65,7 +65,9 @@ static HUD_FUNCTIONS gFunctionTable =
 	IN_MouseEvent,
 	IN_KeyEvent,
 	VGui_ConsolePrint,
-	HUD_ParticleEffect
+	HUD_ParticleEffect,
+	HUD_TempEntityMessage,
+	HUD_DirectorMessage,
 };
 
 //=======================================================================
@@ -186,18 +188,18 @@ int HUD_GetHullBounds( int hullnumber, float *mins, float *maxs )
 	switch( hullnumber )
 	{
 	case 0:	// Normal player
-		mins = VEC_HULL_MIN;
-		maxs = VEC_HULL_MAX;
+		VEC_HULL_MIN.CopyToArray( mins );
+		VEC_HULL_MAX.CopyToArray( maxs );
 		iret = 1;
 		break;
 	case 1:	// Crouched player
-		mins = VEC_DUCK_HULL_MIN;
-		maxs = VEC_DUCK_HULL_MAX;
+		VEC_DUCK_HULL_MIN.CopyToArray( mins );
+		VEC_DUCK_HULL_MAX.CopyToArray( maxs );
 		iret = 1;
 		break;
 	case 2:	// Point based hull
-		mins = Vector( 0, 0, 0 );
-		maxs = Vector( 0, 0, 0 );
+		g_vecZero.CopyToArray( mins );
+		g_vecZero.CopyToArray( maxs );
 		iret = 1;
 		break;
 	}
@@ -331,6 +333,14 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType )
 	float	shellScale = 1.0f;
 	int	result;
 
+	// if entity is beam add it here
+	// because render doesn't know how to draw beams
+	if ( entityType == ET_BEAM )
+	{
+		g_pViewRenderBeams->AddServerBeam( pEnt );
+		return 1;
+	}
+
 	if ( pEnt->curstate.renderfx == kRenderFxGlowShell )
 	{
 		oldRenderAmt = pEnt->curstate.renderamt;
@@ -430,6 +440,18 @@ void HUD_StartFrame( void )
 void HUD_ParticleEffect( const float *org, const float *dir, int color, int count )
 {
 	g_pParticles->ParticleEffect( org, dir, color, count );
+}
+
+void HUD_TempEntityMessage( int iSize, void *pbuf )
+{
+	BEGIN_READ( "TempEntity", iSize, pbuf );
+	HUD_ParseTempEntity();
+	END_READ();
+}
+
+void HUD_DirectorMessage( int iSize, void *pbuf )
+{
+	// FIXME: implement
 }
 
 void HUD_Frame( double time )

@@ -172,8 +172,6 @@ typedef struct sv_priv_s
 
 	vec3_t		moved_origin;
 	vec3_t		moved_angles;
-
-	entity_state_t	s;		// baseline (this is a player_state too)
 } sv_priv_t;
 
 /*
@@ -216,6 +214,7 @@ typedef struct
 	int		msg_index;		// for debug messages
 	int		msg_dest;			// msg destination ( MSG_ONE, MSG_ALL etc )
 	bool		msg_started;		// to avoid include messages
+	bool		msg_system;		// this is message with engine index
 	edict_t		*msg_ent;			// user message member entity
 	vec3_t		msg_org;			// user message member origin
 

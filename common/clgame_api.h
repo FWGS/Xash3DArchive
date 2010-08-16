@@ -283,6 +283,8 @@ typedef struct
 	int	(*pfnKeyEvent)( int down, int keynum, const char *pszBind );
 	void	(*VGui_ConsolePrint)( const char *text );
 	void	(*pfnParticleEffect)( const float *org, const float *dir, int color, int count ); // SV_ParticleEffect
+	void	(*pfnTempEntityMessage)( int iSize, void *pbuf );
+	void	(*pfnDirectorMessage)( int iSize, void *pbuf );
 } HUD_FUNCTIONS;
 
 typedef int (*CLIENTAPI)( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* engfuncs, cl_globalvars_t *pGlobals );

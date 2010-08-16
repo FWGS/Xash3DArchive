@@ -51,7 +51,7 @@ goto done
 :build_ok
 
 rem //delete log files
-if exist bshift\bshift.plg del /f /q bshift\bshift.plg
+if exist dlls\hl.plg del /f /q dlls\hl.plg
 if exist client\client.plg del /f /q client\client.plg
 if exist engine\engine.plg del /f /q engine\engine.plg
 if exist gameui\gameui.plg del /f /q gameui\gameui.plg

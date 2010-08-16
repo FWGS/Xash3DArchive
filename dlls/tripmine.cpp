@@ -369,11 +369,7 @@ void CTripmine::Spawn( )
 
 	m_iDefaultAmmo = TRIPMINE_DEFAULT_GIVE;
 
-#ifdef CLIENT_DLL
 	if ( !bIsMultiplayer() )
-#else
-	if ( !g_pGameRules->IsDeathmatch() )
-#endif
 	{
 		UTIL_SetSize(pev, Vector(-16, -16, 0), Vector(16, 16, 28) ); 
 	}
@@ -412,9 +408,9 @@ BOOL CTripmine::Deploy( )
 }
 
 
-void CTripmine::Holster( int skiplocal /* = 0 */ )
+void CTripmine::Holster( void )
 {
-	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 0.5;
 
 	if (!m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 	{
@@ -442,11 +438,15 @@ void CTripmine::PrimaryAttack( void )
 	UTIL_TraceLine( vecSrc, vecSrc + vecAiming * 128, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
 
 	int flags;
-#ifdef CLIENT_WEAPONS
-	flags = FEV_NOTHOST;
-#else
-	flags = 0;
-#endif
+
+	if( IsLocalWeapon( ))
+	{
+		flags = FEV_NOTHOST;
+	}
+	else
+	{
+		flags = 0;
+	}
 
 	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usTripFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
 
@@ -481,13 +481,13 @@ void CTripmine::PrimaryAttack( void )
 
 	}
 	
-	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.3;
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+	m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.3;
+	m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 }
 
 void CTripmine::WeaponIdle( void )
 {
-	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
+	if ( m_flTimeWeaponIdle > m_pPlayer->WeaponTimeBase() )
 		return;
 
 	if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0 )
@@ -505,17 +505,17 @@ void CTripmine::WeaponIdle( void )
 	if (flRand <= 0.25)
 	{
 		iAnim = TRIPMINE_IDLE1;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 90.0 / 30.0;
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 90.0 / 30.0;
 	}
 	else if (flRand <= 0.75)
 	{
 		iAnim = TRIPMINE_IDLE2;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 60.0 / 30.0;
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 60.0 / 30.0;
 	}
 	else
 	{
 		iAnim = TRIPMINE_FIDGET;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 100.0 / 30.0;
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 100.0 / 30.0;
 	}
 
 	SendWeaponAnim( iAnim );

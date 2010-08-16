@@ -1244,7 +1244,7 @@ bool MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to )
 	// activate fields and call custom encode func
 	Delta_CustomEncode( dt, from, to );
 
-	BF_WriteByte( msg, svc_movevars );
+	BF_WriteByte( msg, svc_deltamovevars );
 
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )

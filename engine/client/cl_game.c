@@ -670,38 +670,36 @@ void CL_DrawHUD( int state )
 
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 {
-	int	i, j;
+	int	i;
 
 	if( !pszName || !*pszName )
-		return; // ignore blank names
+		Host_Error( "CL_LinkUserMessage: bad message name\n" );
+
+	if( svc_num < svc_lastmsg )
+		Host_Error( "CL_LinkUserMessage: tired to hook a system message \"%s\"\n", svc_strings[svc_num] );	
 
 	// see if already hooked
 	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
-		// hooked
-		if( !com.strcmp( clgame.msg[i].name, pszName ) && clgame.msg[i].func )
+		// NOTE: no check for DispatchFunc, check only name
+		if( !com.strcmp( clgame.msg[i].name, pszName ))
+		{
+			clgame.msg[i].number = svc_num;
+			clgame.msg[i].size = iSize;
 			return;
+		}
 	}
 
 	if( i == MAX_USER_MESSAGES ) 
 	{
-		MsgDev( D_ERROR, "LINK_USER_MSG: user messages limit exceeded\n" );
+		Host_Error( "CL_LinkUserMessage: MAX_USER_MESSAGES hit!\n" );
 		return;
 	}
 
-	// search for hook
-	for( j = 0; j < MAX_USER_MESSAGES && clgame.hook[j].name[0]; j++ )
-	{
-		// find the hook
-		if( !com.strcmp( clgame.hook[j].name, pszName ))
-			break;
-	}
-
-	// register new message
+	// register new message without DispatchFunc, so we should parse it properly
 	com.strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
 	clgame.msg[i].number = svc_num;
 	clgame.msg[i].size = iSize;
-	clgame.msg[i].func = clgame.hook[j].func;
 }
 
 static void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func )
@@ -710,7 +708,7 @@ static void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook fu
 
 	if( lastnum == MAX_EVENTS )
 	{
-		MsgDev( D_ERROR, "CL_RegisterEvent: MAX_EVENTS hit!!!\n" );
+		MsgDev( D_ERROR, "CL_RegisterEvent: MAX_EVENTS hit!\n" );
 		return;
 	}
 
@@ -1160,27 +1158,26 @@ static void pfnHookUserMsg( const char *pszName, pfnUserMsgHook pfn )
 {
 	int	i;
 
-	// ignore blank names or null callbacks
-	if( !pszName || !*pszName )
+	// ignore blank names or invalid callbacks
+	if( !pszName || !*pszName || !pfn )
 		return;	
 
-	// message 0 is reserved for svc_bad
-	for( i = 0; i < MAX_USER_MESSAGES && clgame.hook[i].name[0]; i++ )
+	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
 		// see if already hooked
-		if( !com.strcmp( clgame.hook[i].name, pszName ))
+		if( !com.strcmp( clgame.msg[i].name, pszName ))
 			return;
 	}
 
 	if( i == MAX_USER_MESSAGES ) 
 	{
-		MsgDev( D_ERROR, "HOOK_USER_MSG: user messages limit exceeded\n" );
+		Host_Error( "HookUserMsg: MAX_USER_MESSAGES hit!\n" );
 		return;
 	}
 
 	// hook new message
-	com.strncpy( clgame.hook[i].name, pszName, sizeof( clgame.hook[i].name ));
-	clgame.hook[i].func = pfn;
+	com.strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
+	clgame.msg[i].func = pfn;
 }
 
 /*
@@ -1574,69 +1571,6 @@ pfnPrecacheEvent
 static word pfnPrecacheEvent( int type, const char* psz )
 {
 	return CL_PrecacheEvent( psz );
-}
-
-/*
-=============
-pfnPlaybackEvent
-
-=============
-*/
-static void pfnPlaybackEvent( int flags, const cl_entity_t *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
-{
-	event_args_t	args;
-	int		invokerIndex = 0;
-
-	// first check event for out of bounds
-	if( eventindex < 1 || eventindex > MAX_EVENTS )
-	{
-		MsgDev( D_ERROR, "CL_PlaybackEvent: invalid eventindex %i\n", eventindex );
-		return;
-	}
-	// check event for precached
-	if( !CL_PrecacheEvent( cl.configstrings[CS_EVENTS+eventindex] ))
-	{
-		MsgDev( D_ERROR, "CL_PlaybackEvent: event %i was not precached\n", eventindex );
-		return;		
-	}
-
-	flags |= FEV_CLIENT; // it's a client event
-	flags &= ~(FEV_NOTHOST|FEV_HOSTONLY|FEV_GLOBAL);
-
-	if( delay < 0.0f )
-		delay = 0.0f; // fixup negative delays
-
-	if( pInvoker ) invokerIndex = NUM_FOR_EDICT( pInvoker );
-
-	args.flags = 0;
-	args.entindex = invokerIndex;
-	VectorCopy( origin, args.origin );
-	VectorCopy( angles, args.angles );
-
-	args.fparam1 = fparam1;
-	args.fparam2 = fparam2;
-	args.iparam1 = iparam1;
-	args.iparam2 = iparam2;
-	args.bparam1 = bparam1;
-	args.bparam2 = bparam2;
-
-	if( flags & FEV_RELIABLE )
-	{
-		args.ducking = 0;
-		VectorClear( args.velocity );
-	}
-	else if( invokerIndex )
-	{
-		// get up some info from invoker
-		if( VectorIsNull( args.origin )) 
-			VectorCopy( pInvoker->curstate.origin, args.origin );
-		if( VectorIsNull( args.angles )) 
-			VectorCopy( pInvoker->curstate.angles, args.angles );
-		VectorCopy( pInvoker->curstate.velocity, args.velocity );
-		args.ducking = pInvoker->curstate.usehull;
-	}
-
-	CL_QueueEvent( flags, eventindex, delay, &args );
 }
 
 /*
@@ -2395,7 +2329,7 @@ static event_api_t gEventApi =
 	pfnPlayerTrace,
 	CL_WeaponAnim,
 	pfnPrecacheEvent,
-	pfnPlaybackEvent,
+	CL_PlaybackEvent,
 	pfnTraceTexture,
 	pfnStopAllSounds,
 	pfnKillEvents,
@@ -2468,7 +2402,7 @@ static cl_enginefuncs_t gEngfuncs =
 	Mod_GetBounds,
 	pfnGetModFrames,
 	pfnPrecacheEvent,
-	pfnPlaybackEvent,
+	CL_PlaybackEvent,
 	CL_WeaponAnim,
 	pfnRandomFloat,
 	pfnRandomLong,
@@ -2557,11 +2491,6 @@ bool CL_LoadProgs( const char *name )
 	clgame.hStringTable = StringTable_Create( "Client", 0x10000 );
 
 	clgame.globals->maxEntities = GI->max_edicts; // merge during loading
-
-	// register svc_bad message
-	pfnHookUserMsg( "svc_bad", CL_BadMessage );
-	CL_LinkUserMessage( "svc_bad", svc_bad, 0 );
-
 	CL_InitTitles( "titles.txt" );
 
 	// initialize game

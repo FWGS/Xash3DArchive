@@ -737,7 +737,7 @@ void SV_TogglePause( const char *msg )
 
 	// send notification to all clients
 	BF_WriteByte( &sv.multicast, svc_setpause );
-	BF_WriteByte( &sv.multicast, sv.paused );
+	BF_WriteOneBit( &sv.multicast, sv.paused );
 	SV_Send( MSG_ALL, vec3_origin, NULL );
 }
 

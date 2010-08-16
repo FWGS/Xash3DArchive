@@ -27,22 +27,18 @@ extern ref_params_t		*gpViewParams;
 DECLARE_HUDMESSAGE( Logo );
 DECLARE_HUDMESSAGE( HUDColor );
 DECLARE_HUDMESSAGE( SetFog );
-DECLARE_HUDMESSAGE( RoomType );
 DECLARE_HUDMESSAGE( RainData );
 DECLARE_HUDMESSAGE( SetBody );
 DECLARE_HUDMESSAGE( SetSkin );
 DECLARE_HUDMESSAGE( ScreenFade );
-DECLARE_HUDMESSAGE( WeaponAnim );
 DECLARE_HUDMESSAGE( ResetHUD );
 DECLARE_HUDMESSAGE( InitHUD );
 DECLARE_HUDMESSAGE( ViewMode );
 DECLARE_HUDMESSAGE( Particle );
 DECLARE_HUDMESSAGE( Concuss );
 DECLARE_HUDMESSAGE( GameMode );
-DECLARE_HUDMESSAGE( TempEntity );
 DECLARE_HUDMESSAGE( ServerName );
 DECLARE_HUDMESSAGE( ScreenShake );
-DECLARE_HUDMESSAGE( Intermission );
 DECLARE_HUDCOMMAND( ChangeLevel );
 
 int CHud :: InitMessages( void )
@@ -51,17 +47,13 @@ int CHud :: InitMessages( void )
 	HOOK_MESSAGE( ResetHUD );
 	HOOK_MESSAGE( GameMode );
 	HOOK_MESSAGE( ServerName );
-	HOOK_MESSAGE( Intermission );
 	HOOK_MESSAGE( InitHUD );
 	HOOK_MESSAGE( ViewMode );
 	HOOK_MESSAGE( Concuss );
-	HOOK_MESSAGE( RoomType );
 	HOOK_MESSAGE( HUDColor );
 	HOOK_MESSAGE( Particle );
-	HOOK_MESSAGE( TempEntity );
 	HOOK_MESSAGE( SetFog );
 	HOOK_MESSAGE( RainData ); 
-	HOOK_MESSAGE( WeaponAnim );
 	HOOK_MESSAGE( SetBody );
 	HOOK_MESSAGE( SetSkin );
 	HOOK_MESSAGE( ScreenFade );
@@ -182,15 +174,6 @@ int CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 	return 1;
 }
 
-int CHud :: MsgFunc_Intermission( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-	m_iIntermission = 1;
-	END_READ();
-
-	return 1;
-}
-
 int CHud::MsgFunc_HUDColor(const char *pszName,  int iSize, void *pbuf)
 {
 	BEGIN_READ( pszName, iSize, pbuf );
@@ -286,20 +269,6 @@ int CHud :: MsgFunc_RainData( const char *pszName, int iSize, void *pbuf )
 	return 1;
 }
 
-int CHud :: MsgFunc_WeaponAnim( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	int iAnim = READ_BYTE();
-	int iBody = READ_BYTE();
-
-	SendWeaponAnim( iAnim, iBody ); 
-
-	END_READ();
-	
-	return 1;
-}
-
 int CHud :: MsgFunc_SetBody( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pszName, iSize, pbuf );
@@ -338,17 +307,6 @@ int CHud :: MsgFunc_Particle( const char *pszName,  int iSize, void *pbuf )
 	return 1;
 }
 
-int CHud :: MsgFunc_TempEntity( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	HUD_ParseTempEntity();
-
-	END_READ();
-	
-	return 1;
-}
-
 int CHud::MsgFunc_ServerName( const char *pszName, int iSize, void *pbuf )
 {
 	char	m_szServerName[32];
@@ -358,17 +316,6 @@ int CHud::MsgFunc_ServerName( const char *pszName, int iSize, void *pbuf )
 	END_READ();
 	
  	return 1;
-}
-
-int CHud :: MsgFunc_RoomType( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	CVAR_SET_FLOAT( "room_type", (float)READ_BYTE( ));
-
-	END_READ();
-
-	return 1;
 }
 
 int CHud :: MsgFunc_ScreenFade( const char *pszName, int iSize, void *pbuf )

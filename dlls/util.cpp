@@ -31,15 +31,6 @@
 #include "weapons.h"
 #include "gamerules.h"
 
-float UTIL_WeaponTimeBase( void )
-{
-#if defined( CLIENT_WEAPONS )
-	return 0.0;
-#else
-	return gpGlobals->time;
-#endif
-}
-
 static unsigned int glSeed = 0; 
 
 unsigned int seed_table[ 256 ] =
@@ -1662,6 +1653,7 @@ static int gSizes[FIELD_TYPECOUNT] =
 	sizeof(float),		// FIELD_TIME
 	sizeof(int),		// FIELD_MODELNAME
 	sizeof(int),		// FIELD_SOUNDNAME
+	sizeof(float),		// FIELD_WEAPONTIME
 };
 
 
@@ -2072,6 +2064,13 @@ int CSave :: WriteFields( const char *pname, void *pBaseData, TYPEDESCRIPTION *p
 		case FIELD_TIME:
 			WriteTime( pTest->fieldName, (float *)pOutputData, pTest->fieldSize );
 		break;
+		case FIELD_WEAPONTIME:
+			// NOTE: save\restore allowed only in singleplayer and client always has entindx == 1
+			// but this code may does wrong results if client switch cl_lw before restore
+			if( ENGINE_CANSKIP( INDEXENT( 1 )))
+				WriteFloat( pTest->fieldName, (float *)pOutputData, pTest->fieldSize );
+			else WriteTime( pTest->fieldName, (float *)pOutputData, pTest->fieldSize );
+		break;
 		case FIELD_MODELNAME:
 		case FIELD_SOUNDNAME:
 		case FIELD_STRING:
@@ -2248,6 +2247,17 @@ int CRestore::ReadField( void *pBaseData, TYPEDESCRIPTION *pFields, int fieldCou
 					break;
 					case FIELD_FLOAT:
 						*((float *)pOutputData) = *(float *)pInputData;
+					break;
+					case FIELD_WEAPONTIME:
+						// NOTE: save\restore allowed only in singleplayer and client always has entindx == 1
+						// but this code may does wrong results if client switch cl_lw before restore
+						timeData = *(float *)pInputData;
+						if( !ENGINE_CANSKIP( INDEXENT( 1 )))
+						{
+							// Re-base time variables
+							timeData += time;
+						}
+						*((float *)pOutputData) = timeData;
 					break;
 					case FIELD_MODELNAME:
 					case FIELD_SOUNDNAME:

@@ -17,10 +17,13 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	if( !mod || mod->type == mod_bad )
 		return false;
 
+	pe->player = false;
+
 	if( ed->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
 	{
 		// client or bot
 		com.strncpy( pe->name, "player", sizeof( pe->name ));
+		pe->player = true;
 	}
 	else if( ed == EDICT_NUM( 0 ))
 	{

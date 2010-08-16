@@ -37,21 +37,23 @@ extern "C"
 //======================
 void EV_HookEvents( void )
 {
+	g_engfuncs.pfnHookEvent( "events/crowbar.sc", EV_FireCrowbar );
+	g_engfuncs.pfnHookEvent( "events/glock1.sc", EV_FireGlock1 );
+	g_engfuncs.pfnHookEvent( "events/shotgun1.sc", EV_FireShotGunSingle );
+	g_engfuncs.pfnHookEvent( "events/shotgun2.sc", EV_FireShotGunDouble );
+	g_engfuncs.pfnHookEvent( "events/mp5.sc", EV_FireMP5 );
+	g_engfuncs.pfnHookEvent( "events/python.sc", EV_FirePython );
+	g_engfuncs.pfnHookEvent( "events/gauss.sc", EV_FireGauss );
+	g_engfuncs.pfnHookEvent( "events/gaussspin.sc", EV_SpinGauss );
+	g_engfuncs.pfnHookEvent( "events/egon_fire.sc", EV_EgonFire );
+	g_engfuncs.pfnHookEvent( "events/egon_stop.sc", EV_EgonStop );
+	g_engfuncs.pfnHookEvent( "events/train.sc", EV_TrainPitchAdjust );
+	g_engfuncs.pfnHookEvent( "events/snarkfire.sc", EV_SnarkFire );
+
+	// legacy. attempt to be removed
 	g_engfuncs.pfnHookEvent( "evEjectBrass", EV_EjectBrass );
 	g_engfuncs.pfnHookEvent( "evNull", EV_FireNull );
-	g_engfuncs.pfnHookEvent( "evCrowbar", EV_FireCrowbar );
 	g_engfuncs.pfnHookEvent( "evEmptySound", EV_PlayEmptySound );
-	g_engfuncs.pfnHookEvent( "evGlock1", EV_FireGlock1 );
-	g_engfuncs.pfnHookEvent( "evShotgun1", EV_FireShotGunSingle );
-	g_engfuncs.pfnHookEvent( "evShotgun2", EV_FireShotGunDouble );
-	g_engfuncs.pfnHookEvent( "evMP5", EV_FireMP5 );
-	g_engfuncs.pfnHookEvent( "evPython", EV_FirePython );
-	g_engfuncs.pfnHookEvent( "evGauss", EV_FireGauss );
-	g_engfuncs.pfnHookEvent( "evGaussSpin", EV_SpinGauss );
-	g_engfuncs.pfnHookEvent( "evEgonFire", EV_EgonFire );
-	g_engfuncs.pfnHookEvent( "evEgonStop", EV_EgonStop );
-	g_engfuncs.pfnHookEvent( "evTrain", EV_TrainPitchAdjust );
-	g_engfuncs.pfnHookEvent( "evSnarkFire", EV_SnarkFire );
 	g_engfuncs.pfnHookEvent( "evDecals", EV_Decals );
 }
 

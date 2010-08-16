@@ -5,42 +5,50 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define PROTOCOL_VERSION	38
+#define PROTOCOL_VERSION	39
 
 // server to client
 #define svc_bad		0	// immediately crash client when received
-				// space 1 - 200 it's reserved for user messages
-#define svc_nop		201	// end of user messages
-#define svc_disconnect	202	// kick client from server
-#define svc_reconnect	203	// reconnecting server request
-#define svc_stufftext	204	// [string] stuffed into client's console buffer, should be \n terminated
-#define svc_serverdata	205	// [long] protocol ...
-#define svc_configstring	206	// [short] [string]
-#define svc_spawnbaseline	207	// valid only at spawn		
-#define svc_download	208	// [short] size [size bytes]
-#define svc_changing	209	// changelevel by server request
-#define svc_deltatable	210	// [table header][...]
-#define svc_usermessage	211	// [string][byte] REG_USER_MSG stuff
-#define svc_packetentities	212	// [...]
-#define svc_frame		213	// begin a new server frame
-#define svc_sound		214	// <see code>
-#define svc_ambientsound	215	// <see code>
-#define svc_setangle	216	// [float float] set the view angle to this absolute value
-#define svc_addangle	217	// [float] add angles when client turn on mover
-#define svc_setview		218	// [short] entity number
-#define svc_print		219	// [byte] id [string] null terminated string
-#define svc_centerprint	220	// [string] to put in center of the screen
-#define svc_crosshairangle	221	// [short][short][short]
-#define svc_setpause	222	// [byte] 0 = unpaused, 1 = paused
-#define svc_movevars	223	// [movevars_t]
-#define svc_particle	224	// [float*3][char*3][byte][byte]
-#define svc_soundfade	225	// [float*4] sound fade parms
-#define svc_bspdecal	226	// [float*3][short][short][short]
-#define svc_event		227	// playback event queue
-#define svc_event_reliable	228	// playback event directly from message, not queue
-#define svc_updateuserinfo	229	// [byte] playernum, [string] userinfo
-#define svc_serverinfo	230	// [string] key [string] value
-#define svc_clientdata	231	// [...]
+#define svc_nop		1	// end of user messages
+#define svc_disconnect	2	// kick client from server
+#define svc_changing	3	// changelevel by server request
+#define svc_configstring	4	// [short] [string]
+#define svc_setview		5	// [short] entity number
+#define svc_sound		6	// <see code>
+#define svc_time		7	// [float] server time
+#define svc_print		8	// [byte] id [string] null terminated string
+#define svc_stufftext	9	// [string] stuffed into client's console buffer, should be \n terminated
+#define svc_setangle	10	// [angle angle] set the view angle to this absolute value
+#define svc_serverdata	11	// [long] protocol ...
+#define svc_addangle	12	// [angle] add angles when client turn on mover
+#define svc_frame		13	// begin a new server frame
+#define svc_clientdata	14	// [...]
+#define svc_packetentities	15	// [...]
+#define svc_download	16	// [short] size [size bytes]
+#define svc_usermessage	17	// [string][byte] REG_USER_MSG stuff
+#define svc_particle	18	// [float*3][char*3][byte][byte]
+#define svc_ambientsound	19	// <see code>
+#define svc_spawnstatic	20	// NOT IMPLEMENTED
+#define svc_crosshairangle	21	// [short][short][short]
+#define svc_spawnbaseline	22	// <see code>
+#define svc_temp_entity	23	// <variable sized>
+#define svc_setpause	24	// [byte] 0 = unpaused, 1 = paused
+#define svc_deltamovevars	25	// [movevars_t]
+#define svc_centerprint	26	// [string] to put in center of the screen
+#define svc_event		27	// playback event queue
+#define svc_event_reliable	28	// playback event directly from message, not queue
+#define svc_updateuserinfo	29	// [byte] playernum, [string] userinfo
+#define svc_intermission	30	// empty message (event)
+#define svc_soundfade	31	// [float*4] sound fade parms
+#define svc_cdtrack		32	// [byte] track [byte] looptrack
+#define svc_serverinfo	33	// [string] key [string] value
+#define svc_deltatable	34	// [table header][...]
+#define svc_weaponanim	35	// [byte]iAnim [byte]body
+#define svc_bspdecal	36	// [float*3][short][short][short]
+#define svc_roomtype	37	// [short] room type
+
+#define svc_director	51	// <variable sized>
+#define svc_lastmsg		64	// start user messages at this point
 
 // client to server
 #define clc_bad		0	// immediately drop client when received
@@ -50,7 +58,5 @@
 #define clc_userinfo	4	// [[userinfo string]
 #define clc_stringcmd	5	// [string] message
 #define clc_random_seed	6	// [long] random seed
-
-#define msg_end		255	// shared marker for end the message
 
 #endif//PROTOCOL_H

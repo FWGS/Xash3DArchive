@@ -395,7 +395,7 @@ bool CL_FireEvent( event_info_t *ei )
 {
 	user_event_t	*ev;
 	const char	*name;
-	int		i;
+	int		i, idx;
 
 	if( !ei || !ei->index )
 		return false;
@@ -404,7 +404,12 @@ bool CL_FireEvent( event_info_t *ei )
 	for( i = 0; i < MAX_EVENTS; i++ )
 	{
 		ev = clgame.events[i];		
-		if( !ev ) break;
+		if( !ev )
+		{
+			idx = bound( CS_EVENTS, CS_EVENTS + ei->index, CS_EVENTS + MAX_EVENTS );
+			Msg( "CL_FireEvent: %s not precached\n", cl.configstrings[idx] );
+			break;
+		}
 
 		if( ev->index == ei->index )
 		{
@@ -524,6 +529,70 @@ void CL_QueueEvent( int flags, int index, float delay, event_args_t *args )
 	
 	// copy in args event data
 	Mem_Copy( &ei->args, args, sizeof( ei->args ));
+}
+
+/*
+=============
+CL_PlaybackEvent
+
+=============
+*/
+void CL_PlaybackEvent( int flags, const cl_entity_t *pInvoker, word eventindex, float delay, float *origin,
+	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
+{
+	event_args_t	args;
+	int		invokerIndex = 0;
+
+	// first check event for out of bounds
+	if( eventindex < 1 || eventindex > MAX_EVENTS )
+	{
+		MsgDev( D_ERROR, "CL_PlaybackEvent: invalid eventindex %i\n", eventindex );
+		return;
+	}
+	// check event for precached
+	if( !CL_PrecacheEvent( cl.configstrings[CS_EVENTS+eventindex] ))
+	{
+		MsgDev( D_ERROR, "CL_PlaybackEvent: event %i was not precached\n", eventindex );
+		return;		
+	}
+
+	flags |= FEV_CLIENT; // it's a client event
+	flags &= ~(FEV_NOTHOST|FEV_HOSTONLY|FEV_GLOBAL);
+
+	if( delay < 0.0f )
+		delay = 0.0f; // fixup negative delays
+
+	if( pInvoker ) invokerIndex = NUM_FOR_EDICT( pInvoker );
+
+	args.flags = 0;
+	args.entindex = invokerIndex;
+	VectorCopy( origin, args.origin );
+	VectorCopy( angles, args.angles );
+
+	args.fparam1 = fparam1;
+	args.fparam2 = fparam2;
+	args.iparam1 = iparam1;
+	args.iparam2 = iparam2;
+	args.bparam1 = bparam1;
+	args.bparam2 = bparam2;
+
+	if( flags & FEV_RELIABLE )
+	{
+		args.ducking = 0;
+		VectorClear( args.velocity );
+	}
+	else if( invokerIndex )
+	{
+		// get up some info from invoker
+		if( VectorIsNull( args.origin )) 
+			VectorCopy( pInvoker->curstate.origin, args.origin );
+		if( VectorIsNull( args.angles )) 
+			VectorCopy( pInvoker->curstate.angles, args.angles );
+		VectorCopy( pInvoker->curstate.velocity, args.velocity );
+		args.ducking = pInvoker->curstate.usehull;
+	}
+
+	CL_QueueEvent( flags, eventindex, delay, &args );
 }
 
 /*

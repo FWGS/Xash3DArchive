@@ -305,7 +305,7 @@ void CRpg::Reload( void )
 	// Set the next attack time into the future so that WeaponIdle will get called more often
 	// than reload, allowing the RPG LTD to be updated
 	
-	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
+	m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.5;
 
 	if ( m_cActiveRockets && m_fSpotActive )
 	{
@@ -318,7 +318,7 @@ void CRpg::Reload( void )
 	if ( m_pSpot && m_fSpotActive )
 	{
 		m_pSpot->Suspend( 2.1 );
-		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 2.1;
+		m_flNextSecondaryAttack = m_pPlayer->WeaponTimeBase() + 2.1;
 	}
 #endif
 
@@ -326,7 +326,7 @@ void CRpg::Reload( void )
 		iResult = DefaultReload( RPG_MAX_CLIP, RPG_RELOAD, 2 );
 	
 	if ( iResult )
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 	
 }
 
@@ -338,11 +338,7 @@ void CRpg::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_rpg.mdl");
 	m_fSpotActive = 1;
 
-#ifdef CLIENT_DLL
 	if ( bIsMultiplayer() )
-#else
-	if ( g_pGameRules->IsMultiplayer() )
-#endif
 	{
 		// more default ammo in multiplay. 
 		m_iDefaultAmmo = RPG_DEFAULT_GIVE * 2;
@@ -425,11 +421,11 @@ BOOL CRpg::CanHolster( void )
 	return TRUE;
 }
 
-void CRpg::Holster( int skiplocal /* = 0 */ )
+void CRpg::Holster( void )
 {
 	m_fInReload = FALSE;// cancel any reload in progress.
 
-	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 0.5;
 	
 	SendWeaponAnim( RPG_HOLSTER1 );
 
@@ -442,8 +438,6 @@ void CRpg::Holster( int skiplocal /* = 0 */ )
 #endif
 
 }
-
-
 
 void CRpg::PrimaryAttack()
 {
@@ -469,18 +463,22 @@ void CRpg::PrimaryAttack()
 		// Ken signed up for this as a global change (sjb)
 
 		int flags;
-#if defined( CLIENT_WEAPONS )
-	flags = FEV_NOTHOST;
-#else
-	flags = 0;
-#endif
+
+		if( IsLocalWeapon( ))
+		{
+			flags = FEV_NOTHOST;
+		}
+		else
+		{
+			flags = 0;
+		}
 
 		PLAYBACK_EVENT( flags, m_pPlayer->edict(), m_usRpg );
 
 		m_iClip--; 
 				
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.5;
+		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 1.5;
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 1.5;
 	}
 	else
 	{
@@ -502,7 +500,7 @@ void CRpg::SecondaryAttack()
 	}
 #endif
 
-	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.2;
+	m_flNextSecondaryAttack = m_pPlayer->WeaponTimeBase() + 0.2;
 }
 
 
@@ -512,7 +510,7 @@ void CRpg::WeaponIdle( void )
 
 	ResetEmptySound( );
 
-	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
+	if ( m_flTimeWeaponIdle > m_pPlayer->WeaponTimeBase() )
 		return;
 
 	if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
@@ -526,7 +524,7 @@ void CRpg::WeaponIdle( void )
 			else
 				iAnim = RPG_IDLE;
 
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 90.0 / 15.0;
+			m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 90.0 / 15.0;
 		}
 		else
 		{
@@ -535,14 +533,14 @@ void CRpg::WeaponIdle( void )
 			else
 				iAnim = RPG_FIDGET;
 
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3.0;
+			m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 3.0;
 		}
 
 		SendWeaponAnim( iAnim );
 	}
 	else
 	{
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1;
+		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 1;
 	}
 }
 
@@ -590,11 +588,7 @@ class CRpgAmmo : public CBasePlayerAmmo
 	{ 
 		int iGive;
 
-#ifdef CLIENT_DLL
-	if ( bIsMultiplayer() )
-#else
-	if ( g_pGameRules->IsMultiplayer() )
-#endif
+		if ( bIsMultiplayer() )
 		{
 			// hand out more ammo per rocket in multiplayer.
 			iGive = AMMO_RPGCLIP_GIVE * 2;

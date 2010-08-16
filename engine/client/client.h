@@ -157,12 +157,6 @@ typedef enum
 typedef struct
 {
 	char		name[32];
-	pfnUserMsgHook	func;	// user-defined function	
-} cl_hook_info_t;
-
-typedef struct
-{
-	char		name[32];
 	int		number;	// svc_ number
 	int		size;	// if size == -1, size come from first byte after svcnum
 	pfnUserMsgHook	func;	// user-defined function	
@@ -229,9 +223,11 @@ typedef struct
 	movevars_t	oldmovevars;
 	playermove_t	*pmove;			// pmove state
 
+	vec3_t		player_mins[4];		// 4 hulls allowed
+	vec3_t		player_maxs[4];		// 4 hulls allowed
+
 	cl_globalvars_t	*globals;
 	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
-	cl_hook_info_t	hook[MAX_USER_MESSAGES];
 	user_event_t	*events[MAX_EVENTS];
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
@@ -438,6 +434,7 @@ _inline cl_entity_t *CL_EDICT_NUM( int n, const char *file, const int line )
 //
 // cl_parse.c
 //
+extern const char *svc_strings[256];
 void CL_ParseServerMessage( sizebuf_t *msg );
 void CL_RunBackgroundTrack( void );
 void CL_Download_f( void );
@@ -490,6 +487,8 @@ void CL_LightForPoint( const vec3_t point, vec3_t ambientLight );
 void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
 void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
+void CL_PlaybackEvent( int flags, const cl_entity_t *pInvoker, word eventindex, float delay, float *origin,
+	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 word CL_PrecacheEvent( const char *name );
 void CL_ResetEvent( event_info_t *ei );
 void CL_FireEvents( void );
