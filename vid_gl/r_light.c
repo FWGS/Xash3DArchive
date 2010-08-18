@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_local.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "pm_movevars.h"
 #include "bspfile.h"
 
 /*
@@ -304,7 +305,7 @@ static void R_ReadLightGrid( const vec3_t origin, vec3_t lightDir )
 	if( !r_worldbrushmodel->lightgrid )
 	{
 		// pre-defined light vector
-		VectorCopy( RI.refdef.skyVec, lightDir );
+		VectorSet( lightDir, RI.refdef.movevars->skyvec_x, RI.refdef.movevars->skyvec_y, RI.refdef.movevars->skyvec_z );
 		return;
 	}
 

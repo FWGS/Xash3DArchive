@@ -193,16 +193,6 @@ send updates to client if changed
 */
 void SV_UpdateMovevars( void )
 {
-	static int	oldserverflags = 0;
-	string		tmp;
-
-	if( svgame.globals->serverflags != oldserverflags )
-	{
-		// update serverflags
-		SV_ConfigString( CS_SERVERFLAGS, va( "%i", svgame.globals->serverflags ));
-		oldserverflags = svgame.globals->serverflags;		
-	}
-
 	if( sv_maxspeed->modified )
 	{
 		sv_client_t	*cl;
@@ -221,38 +211,6 @@ void SV_UpdateMovevars( void )
 		if( sv.state == ss_active )
 			SV_BroadcastPrintf( PRINT_HIGH, "sv_maxspeed is changed to %g\n", sv_maxspeed->value );
 		sv_maxspeed->modified = false;
-	}
-
-	if( sv_zmax->modified )
-	{
-		SV_ConfigString( CS_ZFAR, sv_zmax->string );
-		sv_zmax->modified = false;
-	}
-
-	if( sv_wateramp->modified )
-	{
-		SV_ConfigString( CS_WATERAMP, sv_wateramp->string );
-		sv_wateramp->modified = false;
-	}
-
-	if( sv_skyname->modified )
-	{
-		SV_ConfigString( CS_SKYNAME, sv_skyname->string );
-		sv_skyname->modified = false;
-	}
-
-	if( sv_skycolor_r->modified || sv_skycolor_g->modified || sv_skycolor_g->modified )
-	{
-		com.snprintf( tmp, sizeof( tmp ), "%d %d %d", sv_skycolor_r->integer, sv_skycolor_g->integer, sv_skycolor_b->integer );
-		sv_skycolor_r->modified = sv_skycolor_g->modified = sv_skycolor_g->modified = false;
-		SV_ConfigString( CS_SKYCOLOR, tmp );
-	}
-
-	if( sv_skyvec_x->modified || sv_skyvec_y->modified || sv_skyvec_z->modified )
-	{
-		com.snprintf( tmp, sizeof( tmp ), "%f %f %f", sv_skyvec_x->value, sv_skyvec_y->value, sv_skyvec_z->value );
-		sv_skyvec_x->modified = sv_skyvec_y->modified = sv_skyvec_z->modified = false;
-		SV_ConfigString( CS_SKYVEC, tmp );
 	}
 
 	if( !physinfo->modified ) return;
@@ -663,6 +621,7 @@ void SV_Init( void )
 	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
 	Cvar_Get ("servercfgfile","server.cfg", 0, "name of dedicated server configuration file" );
 	Cvar_Get ("lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );
+	Cvar_Get ("motdfile", "motd.txt", 0, "name of 'message of the day' file" );
 	Cvar_Get ("sv_language", "0", 0, "game language (currently unused)" );
 	
 	// half-life shared variables
@@ -681,7 +640,7 @@ void SV_Init( void )
 	sv_fps = Cvar_Get( "sv_fps", "60", CVAR_SERVERINFO|CVAR_ARCHIVE, "network game server fps" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
 	sv_newunit = Cvar_Get( "sv_newunit", "0", 0, "sets to 1 while new unit is loading" );
-	hostname = Cvar_Get( "sv_hostname", "unnamed", CVAR_SERVERINFO | CVAR_ARCHIVE, "host name" );
+	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERINFO | CVAR_ARCHIVE, "host name" );
 	timeout = Cvar_Get( "timeout", "125", 0, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", 0, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", 0, "allow players to pause or not" );

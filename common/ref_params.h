@@ -74,11 +74,6 @@ typedef struct ref_params_s
 
 	float		fov_x;
 	float		fov_y;		// fov_y = V_CalcFov( fov_x, viewport[2], viewport[3] );
-
-	vec3_t		skyColor;		// "sv_skycolor" come from server
-	vec3_t		skyVec;		// "sv_skyvec" come from server
-	float		zFar;		// "sv_zmax" come from server
-
 } ref_params_t;
 
 #endif//REF_PARAMS_H

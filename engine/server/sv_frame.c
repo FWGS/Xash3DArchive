@@ -169,7 +169,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		}
 
 		// don't double add an entity through portals (already added)
-		if( ent->pvEngineData->framenum == sv.net_framenum )
+		if( ent->framenum == sv.net_framenum )
 			continue;
 
 		if( ent->v.flags & FL_CHECK_PHS )
@@ -183,7 +183,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, ( netclient != NULL ), pset ))
 		{
 			// to prevent adds it twice through portals
-			ent->pvEngineData->framenum = sv.net_framenum;
+			ent->framenum = sv.net_framenum;
 
 			if( netclient && netclient->modelindex ) // apply custom model if present
 				state->modelindex = netclient->modelindex;
@@ -392,7 +392,7 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
-	if( !clent->pvEngineData->client ) return; // not in game yet
+	if( !SV_ClientFromEdict( clent, true )) return; // not in game yet
 
 	// update clientdata_t
 	svgame.dllFuncs.pfnUpdateClientData( clent, false, &frame->cd );
@@ -421,7 +421,7 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 		// this should never hit, map should always be restarted first in SV_Frame
 		if( svs.next_client_entities >= 0x7FFFFFFE )
-			Host_Error( "svs.next_client_entities wrapped (sv.time limit is out)\n" );
+			Host_Error( "svs.next_client_entities wrapped\n" );
 		frame->num_entities++;
 	}
 }

@@ -186,6 +186,12 @@ pfnLoadFile
 */
 byte* pfnLoadFile( const char *filename, int *pLength )
 {
+	if( !filename || !*filename )
+	{
+		if( pLength ) *pLength = 0;
+		return NULL;
+	}
+
 	return FS_LoadFile( filename, pLength );
 }
 

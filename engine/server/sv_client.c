@@ -181,7 +181,6 @@ gotnewcl:
 	edictnum = (newcl - svs.clients) + 1;
 
 	ent = EDICT_NUM( edictnum );
-	ent->pvEngineData->client = newcl;
 	newcl->edict = ent;
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
@@ -267,7 +266,6 @@ edict_t *SV_FakeConnect( const char *netname )
 	edictnum = (newcl - svs.clients) + 1;
 
 	ent = EDICT_NUM( edictnum );
-	ent->pvEngineData->client = newcl;
 	newcl->edict = ent;
 	newcl->challenge = -1;		// fake challenge
 	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
@@ -661,7 +659,8 @@ void SV_PutClientInServer( edict_t *ent )
 {
 	sv_client_t	*client;
 
-	client = ent->pvEngineData->client;
+	client = SV_ClientFromEdict( ent, true );
+	ASSERT( client != NULL );
 
 	if( !sv.loadgame )
 	{	
@@ -683,8 +682,6 @@ void SV_PutClientInServer( edict_t *ent )
 
 			// fisrt entering
 			svgame.dllFuncs.pfnClientPutInServer( ent );
-
-			SV_BaselineForEntity( ent );
 		}
 	}
 	else
@@ -984,7 +981,7 @@ void SV_Baselines_f( sv_client_t *cl )
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < svgame.numEntities )
 	{
 		base = &svs.baselines[start];
-		if( base->modelindex || base->effects )
+		if( base->modelindex || base->effects != EF_NODRAW )
 		{
 			BF_WriteByte( &cl->netchan.message, svc_spawnbaseline );
 			MSG_WriteDeltaEntity( &nullstate, base, &cl->netchan.message, true, sv.time );

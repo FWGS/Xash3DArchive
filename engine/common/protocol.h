@@ -46,6 +46,7 @@
 #define svc_weaponanim	35	// [byte]iAnim [byte]body
 #define svc_bspdecal	36	// [float*3][short][short][short]
 #define svc_roomtype	37	// [short] room type
+#define svc_restore		38	// restore saved game on the client
 
 #define svc_director	51	// <variable sized>
 #define svc_lastmsg		64	// start user messages at this point

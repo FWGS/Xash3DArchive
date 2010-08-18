@@ -73,6 +73,10 @@ struct cl_entity_s
 	vec3_t		origin;
 	vec3_t		angles;
 
+	// Calculated on client-side
+	vec3_t		absmin;
+	vec3_t		absmax;
+
 	// Attachment points
 	vec3_t		attachment_origin[16];
 	vec3_t		attachment_angles[16];
@@ -88,7 +92,7 @@ struct cl_entity_s
 	struct efrag_s	*efrag;		// linked list of efrags
 	struct mnode_s	*topnode;		// for bmodels, first world node that splits bmodel,
 					// or NULL if not split
-	int		visframe;		// last frame this entity was found in an active leaf
+	link_t		area;		// linked to a division node or leaf
 };
 
 #endif//CL_ENTITY_H

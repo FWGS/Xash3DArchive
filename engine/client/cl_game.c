@@ -41,28 +41,6 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 }
 
 /*
-=============
-CL_AllocString
-
-=============
-*/
-string_t CL_AllocString( const char *szValue )
-{
-	return StringTable_SetString( clgame.hStringTable, szValue );
-}		
-
-/*
-=============
-CL_GetString
-
-=============
-*/
-const char *CL_GetString( string_t iString )
-{
-	return StringTable_GetString( clgame.hStringTable, iString );
-}
-
-/*
 ====================
 CL_GetServerTime
 
@@ -760,16 +738,12 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 		return;
 
 	clgame.dllFuncs.pfnUpdateOnRemove( pEdict );
-
-	// clear curstate
-	Mem_Set( &pEdict->curstate, 0, sizeof( pEdict->curstate ));
 	pEdict->index = -1;	// freed
 }
 
 void CL_InitWorld( void )
 {
 	cl_entity_t	*ent;
-	int	i;
 
 	ent = EDICT_NUM( 0 );
 	ent->index = NUM_FOR_EDICT( ent );
@@ -777,14 +751,9 @@ void CL_InitWorld( void )
 	ent->curstate.solid = SOLID_BSP;
 	ent->curstate.movetype = MOVETYPE_PUSH;
 	clgame.globals->numEntities = 1;
-	clgame.globals->serverflags = com.atoi( cl.configstrings[CS_SERVERFLAGS] );
 
-	for( i = 0; i < clgame.globals->maxClients; i++ )
-	{
-		// setup all clients
-		ent = EDICT_NUM( i + 1 );
-		CL_InitEntity( ent );
-	}
+	// clear physics interaction links
+	CL_ClearWorld ();
 }
 
 void CL_InitEdicts( void )
@@ -820,10 +789,6 @@ void CL_FreeEdicts( void )
 	}
 
 	if( cl.frames ) Mem_Free( cl.frames );
-
-	// clear globals
-	StringTable_Clear( clgame.hStringTable );
-
 	clgame.globals->numEntities = 0;
 	clgame.entities = NULL;
 	cl.frames = NULL;
@@ -1505,9 +1470,16 @@ pfnPointContents
 
 =============
 */
-static int pfnPointContents( const float *rgflVector, int *truecont )
+static int pfnPointContents( const float *p, int *truecontents )
 {
-	return CM_PointContents( rgflVector );	// FIXME
+	int	cont, truecont;
+
+	truecont = cont = CL_TruePointContents( p );
+	if( truecontents ) *truecontents = truecont;
+
+	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
+		cont = CONTENTS_WATER;
+	return cont;
 }
 
 /*
@@ -1519,12 +1491,12 @@ pfnWaterEntity
 static cl_entity_t *pfnWaterEntity( const float *rgflPos )
 {
 	cl_entity_t	*pWater, *touch[MAX_EDICTS];
-	int	i, num;
+	int		i, num;
 
 	if( !rgflPos ) return NULL;
 
 	// grab contents from all the water entities
-	num = 0;// FIXME: CL_AreaEdicts( rgflPos, rgflPos, touch, MAX_EDICTS, AREA_CUSTOM );
+	num = CL_AreaEdicts( rgflPos, rgflPos, touch, MAX_EDICTS, AREA_CUSTOM );
 
 	for( i = 0; i < num; i++ )
 	{
@@ -2388,8 +2360,6 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnServerInfo_ValueForKey,
 	pfnGetClientMaxspeed,
 	pfnGetModelPtr,
-	CL_AllocString,
-	CL_GetString,
 	CL_GetLocalPlayer,
 	pfnGetViewModel,
 	CL_GetEntityByIndex,
@@ -2434,7 +2404,6 @@ void CL_UnloadProgs( void )
 
 	// deinitialize game
 	clgame.dllFuncs.pfnShutdown();
-	StringTable_Delete( clgame.hStringTable );
 
 	FS_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
@@ -2484,11 +2453,6 @@ bool CL_LoadProgs( const char *name )
 		clgame.hInstance = NULL;
 		return false;
 	}
-
-	clgame.globals->pStringBase = "";	// setup string base
-
-	// 65535 unique strings should be enough ...
-	clgame.hStringTable = StringTable_Create( "Client", 0x10000 );
 
 	clgame.globals->maxEntities = GI->max_edicts; // merge during loading
 	CL_InitTitles( "titles.txt" );

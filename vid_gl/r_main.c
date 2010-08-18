@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "effects_api.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "pm_movevars.h"
 
 render_imp_t	ri;
 stdlib_api_t	com;
@@ -899,7 +900,7 @@ static float R_FarClip( void )
 		}
 
 		farclip_dist = com.sqrt( farclip_dist );
-		farclip_dist = max( RI.refdef.zFar, farclip_dist );
+		farclip_dist = max( RI.refdef.movevars->zmax, farclip_dist );
 
 		if( r_worldbrushmodel->globalfog )
 		{
@@ -977,6 +978,12 @@ static void R_SetupFrame( void )
 	RI.vpn = RI.viewAxis[0];
 	RI.vright = RI.viewAxis[1];
 	RI.vup = RI.viewAxis[2];
+
+	// ambient lighting
+	mapConfig.environmentColor[0] = RI.refdef.movevars->skycolor_r;
+	mapConfig.environmentColor[1] = RI.refdef.movevars->skycolor_g;
+	mapConfig.environmentColor[2] = RI.refdef.movevars->skycolor_b;
+	mapConfig.environmentColor[3] = 255;
 
 	if( RI.params & RP_SHADOWMAPVIEW )
 		return;

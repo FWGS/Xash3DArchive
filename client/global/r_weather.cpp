@@ -424,7 +424,7 @@ void ParseRainFile( void )
 	const char *pfile;
 	char *afile;
 
-	strcpy( mapname, STRING( gpGlobals->mapname ));
+	strcpy( mapname, gpGlobals->mapname );
 	if ( strlen( mapname ) == 0 )
 	{
 		Con_Printf( "rain: unable to read map name\n" );

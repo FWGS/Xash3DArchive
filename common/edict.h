@@ -7,13 +7,22 @@
 
 #include "progdefs.h"
 
+#define MAX_ENT_LEAFS	48
+
 struct edict_s
 {
 	int		free;		// unused entity when true
-	float		freetime;		// sv.time when the object was freed
 	int		serialnumber;	// must match with entity num
 
-	struct sv_priv_s	*pvEngineData;	// alloced, freed and used by engine only
+	link_t		area;		// linked to a division node or leaf
+	int		headnode;		// -1 to use normal leaf check
+
+	int		num_leafs;
+	short		leafnums[MAX_ENT_LEAFS];
+
+	float		freetime;		// sv.time when the object was freed
+	int		framenum;		// update framenumber (to avoid add entities twice through portals)
+	
 	void		*pvPrivateData;	// alloced and freed by engine, used by DLLs
 	entvars_t		v;		// C exported fields from progs
 

@@ -283,7 +283,7 @@ public:
 
 	void		UpdateBeams( int fTrans );	// main drawing func
 private:
-	cl_entity_t	*LinkWithViewModel( cl_entity_t *pEnt );
+	cl_entity_t	*LinkWithViewModel( int entindex );
 	bool		AttemptToDie( Beam_t *pBeam );
 	void		FreeDeadTrails( BeamTrail_t **trail );
 	void		UpdateBeam( Beam_t *pbeam, float frametime );

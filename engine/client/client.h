@@ -19,8 +19,6 @@
 
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
-#define STRING( offset )	CL_GetString( offset )
-#define MAKE_STRING(str)	CL_AllocString( str )
 #define cl_time()		( cl.time * 0.001f )
 #define sv_time()		( cl.frame.servertime * 0.001f )
 #define sv_frametime()	( cl.serverframetime * 0.001f )
@@ -239,9 +237,6 @@ typedef struct
 	int		numTitles;
 
 	cl_entity_t	viewent;			// viewmodel
-	byte		*stringspool;		// for shared strings
-
-	int		hStringTable;		// stringtable handle
 } clgame_static_t;
 
 typedef struct
@@ -414,8 +409,6 @@ void CL_FreeEdicts( void );
 void CL_InitWorld( void );
 void CL_InitEntity( cl_entity_t *pEdict );
 void CL_FreeEntity( cl_entity_t *pEdict );
-string_t CL_AllocString( const char *szValue );
-const char *CL_GetString( string_t iString );
 void CL_CenterPrint( const char *text, float y );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
@@ -537,5 +530,15 @@ bool SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
 void CL_PlayVideo_f( void );
+
+//
+// cl_world.c
+//
+void CL_ClearWorld( void );
+void CL_UnlinkEdict( cl_entity_t *ent );
+void CL_LinkEdict( cl_entity_t *ent );
+int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, cl_entity_t **list, int maxcount, int areatype );
+int CL_TruePointContents( const vec3_t p );
+int CL_PointContents( const vec3_t p );
 
 #endif//CLIENT_H

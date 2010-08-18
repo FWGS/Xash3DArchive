@@ -23,19 +23,16 @@
 // each config string can be at most CS_SIZE characters.
 #define CS_SIZE			64	// size of one config string
 #define CS_TIME			16	// size of time string
+
+// FIXME: eliminate this. Configstrings must be started from CS_MODELS
+
 #define CS_NAME			0	// map name
 #define CS_MAPCHECKSUM		1	// level checksum (for catching cheater maps)
-#define CS_SKYNAME			2	// skybox shader name
 #define CS_BACKGROUND_TRACK		3	// basename of background track
-#define CS_SERVERFLAGS		4	// shared server flags
-#define CS_SKYCOLOR			5	// <float> <float> <float>
-#define CS_SKYVEC			6	// <float> <float> <float>
-#define CS_ZFAR			7	// zfar value came from server
-#define CS_WATERAMP			8	// water amplitude for world water surfaces
 
 // 8 - 32 it's a reserved strings
 
-#define CS_MODELS			32				// configstrings starts here
+#define CS_MODELS			8				// configstrings starts here
 #define CS_SOUNDS			(CS_MODELS+MAX_MODELS)		// sound names
 #define CS_DECALS			(CS_SOUNDS+MAX_SOUNDS)		// server decal indexes
 #define CS_EVENTS			(CS_DECALS+MAX_DECALNAMES)		// queue events

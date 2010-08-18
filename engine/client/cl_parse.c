@@ -54,7 +54,7 @@ const char *svc_strings[256] =
 	"svc_weaponanim",
 	"svc_bspdecal",
 	"svc_roomtype",
-	"svc_unused38",
+	"svc_restore",
 	"svc_unused39",
 	"svc_unused40",
 	"svc_unused41",
@@ -422,6 +422,11 @@ CL_ParseMovevars
 void CL_ParseMovevars( sizebuf_t *msg )
 {
 	MSG_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
+
+	// update sky if changed
+	if( com.strcmp( clgame.oldmovevars.skyName, clgame.movevars.skyName ) && cl.video_prepped )
+		re->RegisterShader( clgame.movevars.skyName, SHADER_SKY );
+
 	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
 }
 
@@ -586,13 +591,12 @@ CL_ParseBaseline
 */
 void CL_ParseBaseline( sizebuf_t *msg )
 {
-	int		newnum, timebase;
-	entity_state_t	nullstate;
+	int		newnum;
+	int		timebase;
 	cl_entity_t	*ent;
 
 	Delta_InitClient ();	// finalize client delta's
 
-	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 	newnum = BF_ReadWord( msg );
 
 	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
@@ -605,11 +609,14 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	ent = EDICT_NUM( newnum );
 	if( ent->index <= 0 ) CL_InitEntity( ent ); // initialize edict
 
+	Mem_Set( &ent->prevstate, 0, sizeof( ent->prevstate ));
+
 	if( cls.state == ca_active )
 		timebase = cl.frame.servertime;
 	else timebase = 1000; // sv.state == ss_loading
 
-	MSG_ReadDeltaEntity( msg, &nullstate, &ent->baseline, newnum, cl.time );
+	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, cl.time );
+	CL_LinkEdict( ent ); // relink entity
 }
 
 /*
@@ -627,38 +634,13 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	com.strcpy( cl.configstrings[i], BF_ReadString( msg ));
 		
 	// do something apropriate 
-	if( i == CS_SKYNAME && cl.video_prepped )
-	{
-		re->RegisterShader( cl.configstrings[CS_SKYNAME], SHADER_SKY );
-	}
-	else if( i == CS_SERVERFLAGS )
-	{
-		clgame.globals->serverflags = com.atoi( cl.configstrings[CS_SERVERFLAGS] );
-	}
-	else if( i == CS_ZFAR )
-	{
-		cl.refdef.zFar = com.atof( cl.configstrings[CS_ZFAR] );
-	}
-	else if( i == CS_SKYCOLOR )
-	{
-		com.atov( cl.refdef.skyColor, cl.configstrings[CS_SKYCOLOR], 3 );
-	}
-	else if( i == CS_WATERAMP )
-	{
-		cl_entity_t *world = CL_GetEntityByIndex( 0 );
-		world->curstate.scale = com.atof( cl.configstrings[CS_WATERAMP] );
-	}
-	else if( i == CS_SKYVEC )
-	{
-		com.atov( cl.refdef.skyVec, cl.configstrings[CS_SKYVEC], 3 );
-	}
-	else if( i > CS_WATERAMP && i < CS_MODELS )
-	{
-		Host_Error( "CL_ParseConfigString: reserved configstring #%i are used\n", i );
-	}
-	else if( i == CS_BACKGROUND_TRACK && cl.audio_prepped )
+	if( i == CS_BACKGROUND_TRACK && cl.audio_prepped )
 	{
 		CL_RunBackgroundTrack();
+	}
+	else if( i > CS_BACKGROUND_TRACK && i < CS_MODELS )
+	{
+		Host_Error( "CL_ParseConfigString: reserved configstring #%i are used\n", i );
 	}
 	else if( i >= CS_MODELS && i < CS_MODELS+MAX_MODELS && cl.video_prepped )
 	{

@@ -15,7 +15,6 @@
 
 //=============================================================================
 #define MAX_MASTERS		8 			// max recipients for heartbeat packets
-#define MAX_ENT_LEAFS	48
 #define RATE_MESSAGES	10
 
 #define SV_UPDATE_MASK	(SV_UPDATE_BACKUP - 1)
@@ -158,22 +157,6 @@ typedef struct sv_client_s
 	netchan_t		netchan;
 } sv_client_t;
 
-// sv_private_edict_t
-typedef struct sv_priv_s
-{
-	link_t		area;		// linked to a division node or leaf
-	sv_client_t	*client;		// filled for player ents
-
-	int		headnode;		// -1 to use normal leaf check
-	int		num_leafs;
-	short		leafnums[MAX_ENT_LEAFS];
-	int		framenum;		// update framenumber
-	bool		send_baseline;	// this entity already send baseline ?
-
-	vec3_t		moved_origin;
-	vec3_t		moved_angles;
-} sv_priv_t;
-
 /*
 =============================================================================
  a client can leave the server in one of four ways:
@@ -206,6 +189,13 @@ typedef struct
 
 typedef struct
 {
+	edict_t		*ent;
+	vec3_t		origin;
+	vec3_t		angles;
+} sv_pushed_t;
+
+typedef struct
+{
 	// user messages stuff
 	const char	*msg_name;		// just for debug
 	sv_user_message_t	msg[MAX_USER_MESSAGES];	// user messages array
@@ -234,13 +224,15 @@ typedef struct
 	movevars_t	oldmovevars;		// oldstate
 	playermove_t	*pmove;			// pmove state
 
+	sv_pushed_t	pushed[256];		// no reason to keep array for all edicts
+						// 256 it should be enough for any game situation
+
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
 	globalvars_t	*globals;			// server globals
 	DLL_FUNCTIONS	dllFuncs;			// dll exported funcs
 	NEW_DLL_FUNCTIONS	dllFuncs2;		// new dll exported funcs (can be NULL)
-	byte		*private;			// server.dll private pool
 	byte		*mempool;			// server premamnent pool: edicts etc
 	byte		*stringspool;		// for shared strings
 

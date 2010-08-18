@@ -402,10 +402,8 @@ void SV_InitEdict( edict_t *pEdict )
 {
 	ASSERT( pEdict );
 	ASSERT( pEdict->pvPrivateData == NULL );
-	ASSERT( pEdict->pvEngineData == NULL );
 
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
-	pEdict->pvEngineData = (sv_priv_t *)Mem_Alloc( svgame.mempool, sizeof( sv_priv_t ));
 	pEdict->pvPrivateData = NULL;	// will be alloced later by pfnAllocPrivateData
 	pEdict->serialnumber = NUM_FOR_EDICT( pEdict );
 	pEdict->free = false;
@@ -419,7 +417,6 @@ void SV_FreeEdict( edict_t *pEdict )
 	// unlink from world
 	SV_UnlinkEdict( pEdict );
 
-	if( pEdict->pvEngineData ) Mem_Free( pEdict->pvEngineData );
 	if( pEdict->pvPrivateData )
 	{
 		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
@@ -501,8 +498,6 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	}
 	else SpawnEdict( &ent->v );
 
-	ASSERT( ent->pvEngineData )
-
 	return ent;
 }
 
@@ -537,7 +532,7 @@ bool SV_IsValidEdict( const edict_t *e )
 {
 	if( !e ) return false;
 	if( e->free ) return false;
-	if( !e->pvEngineData ) return false;
+
 	// edict without pvPrivateData is valid edict
 	// server.dll know how allocate it
 	return true;
@@ -600,64 +595,47 @@ assume pEdict is valid
 */
 void SV_BaselineForEntity( edict_t *pEdict )
 {
-	sv_priv_t	*sv_ent;
+	int		usehull, player;
+	int		modelindex;
+	entity_state_t	baseline;
+	float		*mins, *maxs;
+	sv_client_t	*cl;
 
-	sv_ent = pEdict->pvEngineData;
-	if( !sv_ent ) return;
-
-	// update baseline for new entity
-	if( !sv_ent->send_baseline )
+	if( pEdict->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( pEdict, false )))
 	{
-		int		usehull, player;
-		int		modelindex;
-		entity_state_t	baseline;
-		float	*mins, *maxs;
-		sv_client_t	*cl;
-
-		if( pEdict->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( pEdict, false )))
-		{
-			usehull = ( pEdict->v.flags & FL_DUCKING ) ? true : false;
-			modelindex = cl->modelindex ? cl->modelindex : pEdict->v.modelindex;
-			mins = svgame.player_mins[usehull]; 
-			maxs = svgame.player_maxs[usehull]; 
-			player = true;
-		}
-		else
-		{
-			modelindex = pEdict->v.modelindex;
-			mins = pEdict->v.mins; 
-			maxs = pEdict->v.maxs; 
-			player = false;
-		}
-
-		if( modelindex && !( pEdict->v.effects & EF_NODRAW ))
-		{
-			// take current state as baseline
-			Mem_Set( &baseline, 0, sizeof( baseline )); 
-			baseline.number = pEdict->serialnumber;
-			svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
-
-			// set entity type
-			if( pEdict->v.flags & FL_CLIENT )
-				baseline.entityType = ET_PLAYER;
-			else if( pEdict->v.flags & FL_CUSTOMENTITY )
-				baseline.entityType = ET_BEAM;
-			else baseline.entityType = ET_NORMAL;
-
-			svs.baselines[pEdict->serialnumber] = baseline;
-			sv_ent->send_baseline = true;
-                    }
-
-		if( sv.state == ss_active && ( modelindex && !( pEdict->v.effects & EF_NODRAW )))
-		{
-			entity_state_t	nullstate;
-
-			Mem_Set( &nullstate, 0, sizeof( nullstate ));
-			BF_WriteByte( &sv.multicast, svc_spawnbaseline );
-			MSG_WriteDeltaEntity( &nullstate, &baseline, &sv.multicast, true, sv.time );
-			SV_DirectSend( MSG_ALL, vec3_origin, NULL );
-		}
+		usehull = ( pEdict->v.flags & FL_DUCKING ) ? true : false;
+		modelindex = cl->modelindex ? cl->modelindex : pEdict->v.modelindex;
+		mins = svgame.player_mins[usehull]; 
+		maxs = svgame.player_maxs[usehull]; 
+		player = true;
 	}
+	else
+	{
+		if( pEdict->v.effects == EF_NODRAW )
+			return;
+
+		if( !pEdict->v.modelindex || !STRING( pEdict->v.model ))
+			return; // invisible
+
+		modelindex = pEdict->v.modelindex;
+		mins = pEdict->v.mins; 
+		maxs = pEdict->v.maxs; 
+		player = false;
+	}
+
+	// take current state as baseline
+	Mem_Set( &baseline, 0, sizeof( baseline )); 
+	baseline.number = pEdict->serialnumber;
+	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
+
+	// set entity type
+	if( pEdict->v.flags & FL_CLIENT )
+		baseline.entityType = ET_PLAYER;
+	else if( pEdict->v.flags & FL_CUSTOMENTITY )
+		baseline.entityType = ET_BEAM;
+	else baseline.entityType = ET_NORMAL;
+
+	svs.baselines[pEdict->serialnumber] = baseline;
 }
 
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed )
@@ -1368,8 +1346,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	// can't track this entity on the client.
 	// write static sound
-	if( !ent->pvEngineData->num_leafs )
-		flags |= SND_FIXED_ORIGIN;
+	if( !ent->num_leafs ) flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
@@ -1412,7 +1389,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( !ent->pvEngineData->num_leafs )
+	if( !ent->num_leafs )
 		entityIndex = 0;
 	else if( SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = ent->v.aiment->serialnumber;
@@ -2235,10 +2212,9 @@ void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 {
 	ASSERT( pEdict );
 	ASSERT( pEdict->free == false );
-	ASSERT( pEdict->pvEngineData );
 
 	// to avoid multiple alloc
-	pEdict->pvPrivateData = (void *)Mem_Realloc( svgame.private, pEdict->pvPrivateData, cb );
+	pEdict->pvPrivateData = (void *)Mem_Realloc( svgame.mempool, pEdict->pvPrivateData, cb );
 
 	return pEdict->pvPrivateData;
 }
@@ -2679,7 +2655,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 		return;
 	}
 
-	client = pClient->pvEngineData->client;
+	client = SV_ClientFromEdict( pClient, true );
 	if( !client )
 	{
 		MsgDev( D_ERROR, "PF_SetView: not a client!\n" );
@@ -3290,27 +3266,27 @@ int pfnCheckVisibility( const edict_t *entity, byte *pset )
 	if( !pset ) return 1; // vis not set - fullvis enabled
 
 	// check individual leafs
-	if( !entity->pvEngineData->num_leafs )
+	if( !entity->num_leafs )
 		return 0; // not a linked in
 
-	if( entity->pvEngineData->num_leafs == -1 )
+	if( entity->num_leafs == -1 )
 	{
 		// too many leafs for individual check, go by headnode
-		if( !CM_HeadnodeVisible( entity->pvEngineData->headnode, pset ))
+		if( !CM_HeadnodeVisible( entity->headnode, pset ))
 			return 0;
 	}
 	else
 	{
 		// check individual leafs
-		for( i = 0; i < entity->pvEngineData->num_leafs; i++ )
+		for( i = 0; i < entity->num_leafs; i++ )
 		{
-			l = entity->pvEngineData->leafnums[i];
+			l = entity->leafnums[i];
 
 			if( pset[l>>3] & (1<<( l & 7 )))
 				break;
 		}
 
-		if( i == entity->pvEngineData->num_leafs )
+		if( i == entity->num_leafs )
 			return 0;	// not visible
 	}
 
@@ -3900,7 +3876,6 @@ void SV_UnloadProgs( void )
 
 	FS_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );
-	Mem_FreePool( &svgame.private );
 	Mem_Set( &svgame, 0, sizeof( svgame ));
 }
 
@@ -3920,7 +3895,6 @@ bool SV_LoadProgs( const char *name )
 	svgame.pmove = &gpMove;
 	svgame.globals = &gpGlobals;
 	svgame.mempool = Mem_AllocPool( "Server Edicts Zone" );
-	svgame.private = Mem_AllocPool( "Server Private Zone" );
 	svgame.hInstance = FS_LoadLibrary( name, true );
 	if( !svgame.hInstance ) return false;
 

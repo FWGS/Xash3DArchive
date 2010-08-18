@@ -24,14 +24,6 @@ ENTITY AREA CHECKING
 #define AREA_NODES			64
 #define AREA_DEPTH			5
 
-// link_t is only used for entity area links now
-typedef struct link_s
-{
-	struct link_s	*prev;
-	struct link_s	*next;
-	int		entnum;		// svs.edicts \ cls.entities actual number
-} link_t;
-
 typedef struct areanode_s
 {
 	int		axis;		// -1 = leaf node
@@ -63,7 +55,15 @@ typedef struct moveclip_s
 	const float	*start;
 	const float	*end;
 	trace_t		trace;
-	void		*passedict;
+
+	union
+	{
+
+	struct edict_s	*passedict;
+	struct cl_entity_s	*passentity;
+
+	};
+
 	int		type;	// move type
 	int		flags;	// trace flags
 } moveclip_t;

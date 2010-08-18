@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "byteorder.h"
 #include "bspfile.h"
 #include "cl_entity.h"
+#include "pm_movevars.h"
 
 #define Mod_CopyString( m, str )	com.stralloc( (m)->mempool, str, __FILE__, __LINE__ )
 #define MAX_SIDE_VERTS		256	// per one polygon
@@ -2569,11 +2570,6 @@ static void Mod_Finish( const dlump_t *faces, const dlump_t *light, vec3_t ambie
 {
 	// set up lightgrid
 //	R_BuildLightGrid( loadbmodel );
-
-	// ambient lighting
-	VectorCopy( RI.refdef.skyColor, mapConfig.environmentColor );
-	mapConfig.environmentColor[3] = 255;
-
 	Mem_EmptyPool( cached_mempool );
 }
 

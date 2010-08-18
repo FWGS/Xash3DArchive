@@ -271,6 +271,10 @@ static const delta_field_t ent_fields[] =
 { ENTS_DEF( vuser4[0] )	},
 { ENTS_DEF( vuser4[1] )	},
 { ENTS_DEF( vuser4[2] )	},
+{ ENTS_DEF( classname )	},
+{ ENTS_DEF( targetname )	},
+{ ENTS_DEF( target )	},
+{ ENTS_DEF( netname )	},
 { NULL },
 };
 

@@ -12,7 +12,6 @@ release.bat
 launchers.bat
 change.log
 
-bshift\
 client\
 client\hud\
 client\global\
@@ -28,13 +27,7 @@ engine\common\
 launch\
 launch\imagelib\
 launch\soundlib\
-pm_shared\
 public\
-server\
-server\ents\
-server\game\
-server\global\
-server\monsters\
 launch\
 snd_dx\
 vid_gl\

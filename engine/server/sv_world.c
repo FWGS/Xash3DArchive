@@ -130,12 +130,11 @@ SV_UnlinkEdict
 void SV_UnlinkEdict( edict_t *ent )
 {
 	// not linked in anywhere
-	if( !ent->pvEngineData->area.prev )
-		return;
+	if( !ent->area.prev ) return;
 
-	RemoveLink( &ent->pvEngineData->area );
-	ent->pvEngineData->area.prev = NULL;
-	ent->pvEngineData->area.next = NULL;
+	RemoveLink( &ent->area );
+	ent->area.prev = NULL;
+	ent->area.next = NULL;
 }
 
 /*
@@ -179,24 +178,16 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	areanode_t	*node;
 	short		leafs[MAX_TOTAL_ENT_LEAFS];
 	int		i, j, num_leafs, topNode;
-	sv_priv_t		*sv_ent;
 
-	sv_ent = ent->pvEngineData;
-
-	if( !sv_ent ) return;
-	if( sv_ent->area.prev ) SV_UnlinkEdict( ent ); // unlink from old position
+	if( ent->area.prev ) SV_UnlinkEdict( ent ); // unlink from old position
 	if( ent == EDICT_NUM( 0 )) return; // don't add the world
 	if( ent->free ) return;
-
-	// create baseline for new edicts in-game
-	if( sv.state == ss_active && !sv_ent->send_baseline )
-		SV_BaselineForEntity( ent );
 
 	// set the abs box
 	svgame.dllFuncs.pfnSetAbsBox( ent );
 
 	// link to PVS leafs
-	sv_ent->num_leafs = 0;
+	ent->num_leafs = 0;
 
 	// get all leafs, including solids
 	num_leafs = CM_BoxLeafnums( ent->v.absmin, ent->v.absmax, leafs, MAX_TOTAL_ENT_LEAFS, &topNode );
@@ -212,12 +203,12 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	if( num_leafs >= MAX_ENT_LEAFS )
 	{	
 		// assume we missed some leafs, and mark by headnode
-		sv_ent->num_leafs = -1;
-		sv_ent->headnode = topNode;
+		ent->num_leafs = -1;
+		ent->headnode = topNode;
 	}
 	else
 	{
-		sv_ent->num_leafs = 0;
+		ent->num_leafs = 0;
 
 		for( i = 0; i < num_leafs; i++ )
 		{
@@ -232,14 +223,14 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 
 			if( j == i )
 			{
-				if( sv_ent->num_leafs == MAX_ENT_LEAFS )
+				if( ent->num_leafs == MAX_ENT_LEAFS )
 				{
 					// assume we missed some leafs, and mark by headNode
-					sv_ent->num_leafs = -1;
-					sv_ent->headnode = topNode;
+					ent->num_leafs = -1;
+					ent->headnode = topNode;
 					break;
 				}
-				sv_ent->leafnums[sv_ent->num_leafs++] = leafs[i];
+				ent->leafnums[ent->num_leafs++] = leafs[i];
 			}
 		}
 	}
@@ -263,10 +254,10 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	
 	// link it in	
 	if( ent->v.solid == SOLID_TRIGGER )
-		InsertLinkBefore( &sv_ent->area, &node->trigger_edicts, NUM_FOR_EDICT( ent ));
+		InsertLinkBefore( &ent->area, &node->trigger_edicts, NUM_FOR_EDICT( ent ));
 	else if( ent->v.solid == SOLID_NOT && ent->v.skin != CONTENTS_NONE )
-		InsertLinkBefore( &sv_ent->area, &node->water_edicts, NUM_FOR_EDICT( ent ));
-	else InsertLinkBefore( &sv_ent->area, &node->solid_edicts, NUM_FOR_EDICT( ent ));
+		InsertLinkBefore( &ent->area, &node->water_edicts, NUM_FOR_EDICT( ent ));
+	else InsertLinkBefore( &ent->area, &node->solid_edicts, NUM_FOR_EDICT( ent ));
 
 	if( touch_triggers ) SV_TouchLinks( ent, sv_areanodes );
 }
@@ -369,7 +360,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( touch->v.solid == SOLID_NOT )
 			continue;
-		if( touch == (edict_t *)clip->passedict )
+		if( touch == clip->passedict )
 			continue;
 		if( touch->v.solid == SOLID_TRIGGER )
 			Host_Error( "trigger in clipping list\n" );
@@ -391,13 +382,13 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->v.absmin, touch->v.absmax ))
 			continue;
 
-		if( clip->passedict && !VectorIsNull(((edict_t *)clip->passedict)->v.size ) && VectorIsNull( touch->v.size ))
+		if( clip->passedict && !VectorIsNull( clip->passedict->v.size ) && VectorIsNull( touch->v.size ))
 			continue;	// points never interact
 
 		// monsterclip filter
 		if( CM_GetModelType( touch->v.modelindex ) == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
 		{
-			if( clip->passedict && ((edict_t *)clip->passedict)->v.flags & FL_MONSTERCLIP );
+			if( clip->passedict && clip->passedict->v.flags & FL_MONSTERCLIP );
 			else continue;
 		}
 
@@ -435,9 +426,9 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( clip->passedict )
 		{
-		 	if( touch->v.owner == (edict_t *)clip->passedict )
+		 	if( touch->v.owner == clip->passedict )
 				continue;	// don't clip against own missiles
-			if( ((edict_t *)clip->passedict)->v.owner == touch )
+			if( clip->passedict->v.owner == touch )
 				continue;	// don't clip against owner
 		}
 

@@ -138,13 +138,16 @@ void SV_ActivateServer( void )
 
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
-	
-	// create a baseline for more efficient communications
-	SV_CreateBaseline();
 
-	// run two frames to allow everything to settle
-	for( i = 0; i < 2 && !sv.loadgame; i++ )
-		SV_Physics();
+	if( !sv.loadgame )
+	{
+		// run two frames to allow everything to settle
+		for( i = 0; i < 2; i++ )
+			SV_Physics();
+
+		// create a baseline for more efficient communications
+		SV_CreateBaseline();
+	}
 
 	// invoke to refresh all movevars
 	Mem_Set( &svgame.oldmovevars, 0, sizeof( movevars_t ));
@@ -462,8 +465,6 @@ void SV_InitGame( void )
 
 		// make crosslinks
 		svs.clients[i].edict = ent;
-		ent->pvEngineData->client = svs.clients + i;
-		ent->pvEngineData->client->edict = ent;
 		Mem_Set( &svs.clients[i].lastcmd, 0, sizeof( svs.clients[i].lastcmd ));
 		Mem_Set( &svs.clients[i].physinfo, 0, sizeof( svs.clients[i].physinfo ));
 	}

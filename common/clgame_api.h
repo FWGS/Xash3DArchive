@@ -112,19 +112,13 @@ typedef struct cl_globalvars_s
 {	
 	float		time;		// time from server
 	float		frametime;
-	string_t		mapname;
+	char		mapname[64];
 
 	ref_params_t	*pViewParms;	// just for easy acess on client
 
-	int		serverflags;	// shared serverflags
 	int		maxClients;
-	int		windowState;	// 0 - inactive (minimize, notfocus), 1 - active
 	int		maxEntities;
 	int		numEntities;	// actual ents count
-
-	const char	*pStringBase;
-
-	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
 } cl_globalvars_t;
 
 typedef struct cl_enginefuncs_s
@@ -199,9 +193,7 @@ typedef struct cl_enginefuncs_s
 	const char* (*pfnPhysInfo_ValueForKey)( const char *key );
 	const char* (*pfnServerInfo_ValueForKey)( const char *key );
 	float	(*pfnGetClientMaxspeed)( void );
-	void*	(*pfnGetModelPtr)( struct cl_entity_s *pEdict );				// was CheckParm
-	string_t	(*pfnAllocString)( const char *szValue );			// was GetMousePosition
-	const char *(*pfnGetString)( string_t iString );				// was IsNoClipping
+	void*	(*pfnGetModelPtr)( struct cl_entity_s *pEdict );			// was CheckParm
 
 	// entity handlers
 	struct cl_entity_s *(*pfnGetLocalPlayer)( void );

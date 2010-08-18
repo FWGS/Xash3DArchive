@@ -179,22 +179,6 @@ usercmd_t CL_CreateCmd( void )
 	client_data_t	cdata;
 	int		ms;
 
-	// catch windowState for client.dll
-	switch( host.state )
-	{
-	case HOST_INIT:
-	case HOST_FRAME:
-	case HOST_SHUTDOWN:
-	case HOST_ERROR:
-		clgame.globals->windowState = true;	// active
-		break;
-	case HOST_SLEEP:
-	case HOST_NOFOCUS:
-	case HOST_RESTART:
-		clgame.globals->windowState = false;	// inactive
-		break;
-	}
-
 	// send milliseconds of time to apply the move
 	extramsec += cls.frametime * 1000;
 	ms = extramsec;
@@ -215,7 +199,6 @@ usercmd_t CL_CreateCmd( void )
 	cdata.fov = cl.frame.cd.fov;
 
 	clgame.dllFuncs.pfnUpdateClientData( &cdata, cl_time( ));
-
 	clgame.dllFuncs.pfnCreateMove( &cmd, host.inputmsec, ( cls.state == ca_active && !cl.refdef.paused ));
 
 	// random seed for predictable random values
@@ -549,6 +532,7 @@ void CL_ClearState( void )
 	// wipe the entire cl structure
 	Mem_Set( &cl, 0, sizeof( cl ));
 	BF_Clear( &cls.netchan.message );
+	cl.refdef.movevars = &clgame.movevars;
 
 	Cvar_SetValue( "scr_download", 0.0f );
 	Cvar_SetValue( "scr_loading", 0.0f );
@@ -820,7 +804,7 @@ void CL_PrepVideo( void )
 	MsgDev( D_LOAD, "CL_PrepVideo: %s\n", cl.configstrings[CS_NAME] );
 
 	// let the render dll load the map
-	clgame.globals->mapname = MAKE_STRING( cl.configstrings[CS_NAME] );
+	com.strcpy( clgame.globals->mapname, cl.configstrings[CS_NAME] );
 	com.strncpy( mapname, cl.configstrings[CS_MODELS+1], MAX_STRING ); 
 	CM_BeginRegistration( mapname, true, &map_checksum );
 	re->BeginRegistration( mapname );
@@ -846,7 +830,7 @@ void CL_PrepVideo( void )
 	}
 
 	// setup sky and free unneeded stuff
-	re->EndRegistration( cl.configstrings[CS_SKYNAME] );
+	re->EndRegistration( cl.refdef.movevars->skyName );
 	CM_EndRegistration (); // free unused models
 	Cvar_SetValue( "scr_loading", 100.0f );	// all done
 
@@ -1164,7 +1148,7 @@ void CL_RequestNextDownload( void )
 	{
 		if( allow_download->value )
 		{
-			com.sprintf( fn, "env/%s.dds", cl.configstrings[CS_SKYNAME] ); // cubemap pack
+			com.sprintf( fn, "env/%s.dds", cl.refdef.movevars->skyName ); // cubemap pack
 			if( !CL_CheckOrDownloadFile( fn )) return; // started a download
 		}
 		precache_check = TEXTURE_CNT;

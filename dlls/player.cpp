@@ -1769,7 +1769,7 @@ void CBasePlayer::PreThink(void)
 	
 	// Debounced button codes for pressed/released
 	// UNDONE: Do we need auto-repeat?
-	m_afButtonPressed =  buttonsChanged & pev->button;		// The changed ones still down are "pressed"
+	m_afButtonPressed =  buttonsChanged & pev->button;	// The changed ones still down are "pressed"
 	m_afButtonReleased = buttonsChanged & (~pev->button);	// The ones not down are "released"
 
 	g_pGameRules->PlayerThink( this );
@@ -1890,6 +1890,8 @@ void CBasePlayer::PreThink(void)
 		pev->velocity = g_vecZero;
 	}
 }
+
+
 /* Time based Damage works as follows: 
 	1) There are several types of timebased damage:
 

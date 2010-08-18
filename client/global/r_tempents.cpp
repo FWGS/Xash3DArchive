@@ -66,7 +66,7 @@ void CTempEnts::TE_Prepare( TEMPENTITY *pTemp, int modelIndex )
 	pTemp->hitSound = 0;
 	pTemp->clientIndex = 0;
 	pTemp->bounceFactor = 1;
-	pTemp->entity.baseline.scale = 1.0f;
+	pTemp->entity.curstate.scale = 1.0f;
 }
 
 int CTempEnts::TE_Active( TEMPENTITY *pTemp )
@@ -180,8 +180,8 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 		pTemp->x += pTemp->entity.baseline.origin.x * frametime;
 		pTemp->y += pTemp->entity.baseline.origin.y * frametime;
 
-		pTemp->entity.origin.x = pTemp->x + sin( pTemp->entity.baseline.origin.z + gpGlobals->time ) * ( 10 * pTemp->entity.baseline.scale );
-		pTemp->entity.origin.y = pTemp->y + sin( pTemp->entity.baseline.origin.z + fastFreq + 0.7f ) * ( 8 * pTemp->entity.baseline.scale);
+		pTemp->entity.origin.x = pTemp->x + sin( pTemp->entity.baseline.origin.z + gpGlobals->time ) * ( 10 * pTemp->entity.curstate.scale );
+		pTemp->entity.origin.y = pTemp->y + sin( pTemp->entity.baseline.origin.z + fastFreq + 0.7f ) * ( 8 * pTemp->entity.curstate.scale);
 		pTemp->entity.origin.z = pTemp->entity.origin.z + pTemp->entity.baseline.origin[2] * frametime;
 	}
 	else if( pTemp->flags & FTENT_SPIRAL )
@@ -202,7 +202,8 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	
 	if( pTemp->flags & FTENT_SPRANIMATE )
 	{
-		pTemp->entity.curstate.frame += frametime * pTemp->entity.baseline.framerate;
+		pTemp->entity.curstate.frame += frametime * pTemp->entity.curstate.framerate;
+
 		if( pTemp->entity.curstate.frame >= pTemp->frameMax )
 		{
 			pTemp->entity.curstate.frame = pTemp->entity.curstate.frame - (int)(pTemp->entity.curstate.frame);
@@ -230,13 +231,14 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	if( pTemp->flags & FTENT_SCALE )
 	{
 		// this only used for Egon effect
-		pTemp->entity.baseline.scale += frametime * 10;
+		pTemp->entity.curstate.scale += frametime * 10;
 	}
 
 	if( pTemp->flags & FTENT_ROTATE )
 	{
 		// just add angular velocity
 		pTemp->entity.angles += pTemp->entity.baseline.angles * frametime;
+		pTemp->entity.latched.prevangles = pTemp->entity.angles; 
 	}
 
 	if( pTemp->flags & ( FTENT_COLLIDEALL|FTENT_COLLIDEWORLD ))
@@ -710,7 +712,7 @@ void CTempEnts::FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 		pTemp->die = gpGlobals->time + ( maxHeight / zspeed ) - 0.1f;
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 		// Set sprite scale
-		pTemp->entity.baseline.scale = 1.0f / RANDOM_FLOAT( 2, 5 );
+		pTemp->entity.curstate.scale = 1.0f / RANDOM_FLOAT( 2, 5 );
 		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
 		pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 255;
 	}
@@ -759,7 +761,7 @@ void CTempEnts::Bubbles( const Vector &mins, const Vector &maxs, float height, i
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 		
 		// Set sprite scale
-		pTemp->entity.baseline.scale = 1.0 / RANDOM_FLOAT( 4, 16 );
+		pTemp->entity.curstate.scale = 1.0 / RANDOM_FLOAT( 4, 16 );
 		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
 		pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 192;	// g-cont. why difference with FizzEffect ???		
 	}
@@ -805,7 +807,7 @@ void CTempEnts::BubbleTrail( const Vector &start, const Vector &end, float flWat
 		pTemp->die = gpGlobals->time + (( flWaterZ - origin[2]) / zspeed ) - 0.1f;
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 		// Set sprite scale
-		pTemp->entity.baseline.scale = 1.0 / RANDOM_FLOAT( 4, 8 );
+		pTemp->entity.curstate.scale = 1.0 / RANDOM_FLOAT( 4, 8 );
 		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
 		pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 192;
 	}
@@ -870,7 +872,7 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 		frameCount = GetModelFrames( pTemp->entity.curstate.modelindex );
 		pTemp->frameMax = frameCount - 1;
 		pTemp->flags |= FTENT_SPRANIMATE|FTENT_SPRANIMATELOOP;
-		pTemp->entity.baseline.framerate = 10;
+		pTemp->entity.curstate.framerate = 10;
 	}
 	else
 	{
@@ -928,7 +930,7 @@ void CTempEnts::RicochetSprite( const Vector &pos, int modelIndex, float scale )
 	pTemp->entity.curstate.rendermode = kRenderGlow;
 	pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 200;
 	pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
-	pTemp->entity.baseline.scale = scale;
+	pTemp->entity.curstate.scale = scale;
 	pTemp->flags = FTENT_FADEOUT;
 	pTemp->fadeSpeed = 8;
 	pTemp->die = gpGlobals->time;
@@ -1053,9 +1055,9 @@ void CTempEnts::RocketFlare( const Vector& pos )
 	pTemp->entity.curstate.rendermode = kRenderGlow;
 	pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
 	pTemp->entity.curstate.renderamt = 200;
-	pTemp->entity.baseline.framerate = 1.0;
+	pTemp->entity.curstate.framerate = 1.0;
 	pTemp->entity.curstate.frame = RANDOM_LONG( 0, nframeCount - 1 );
-	pTemp->entity.baseline.scale = 1.0;
+	pTemp->entity.curstate.scale = 1.0;
 	pTemp->die = gpGlobals->time + 0.01f;	// when 100 fps die at next frame
 	pTemp->flags |= FTENT_SPRANIMATE;
 }
@@ -1101,12 +1103,12 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 	if( index == 0 )
 	{
 		// Rifle flash
-		pTemp->entity.baseline.scale = scale * RANDOM_FLOAT( 0.5f, 0.6f );
+		pTemp->entity.curstate.scale = scale * RANDOM_FLOAT( 0.5f, 0.6f );
 		pTemp->entity.angles[2] = 90 * RANDOM_LONG( 0, 3 );
 	}
 	else
 	{
-		pTemp->entity.baseline.scale = scale;
+		pTemp->entity.curstate.scale = scale;
 		pTemp->entity.angles[2] = RANDOM_LONG( 0, 359 );
 	}
 
@@ -1130,16 +1132,16 @@ void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, 
 		frameCount = GetModelFrames( modelIndex );
 		pTemp->entity.curstate.rendermode = kRenderTransTexture;
 		pTemp->entity.curstate.renderfx = kRenderFxClampMinScale;
-		pTemp->entity.baseline.scale = RANDOM_FLOAT(( size / 25.0f), ( size / 35.0f ));
+		pTemp->entity.curstate.scale = RANDOM_FLOAT(( size / 25.0f), ( size / 35.0f ));
 		pTemp->flags = FTENT_SPRANIMATE;
  
 		CL_GetPaletteColor( colorIndex, color );
 		pTemp->entity.curstate.rendercolor.r = color[0];
 		pTemp->entity.curstate.rendercolor.g = color[1];
 		pTemp->entity.curstate.rendercolor.b = color[2];
-		pTemp->entity.baseline.framerate = frameCount * 4; // Finish in 0.250 seconds
+		pTemp->entity.curstate.framerate = frameCount * 4; // Finish in 0.250 seconds
 		// play the whole thing once
-		pTemp->die = gpGlobals->time + (frameCount / pTemp->entity.baseline.framerate);
+		pTemp->die = gpGlobals->time + (frameCount / pTemp->entity.curstate.framerate);
 
 		pTemp->entity.angles[2] = RANDOM_LONG( 0, 360 );
 		pTemp->bounceFactor = 0;
@@ -1266,11 +1268,11 @@ TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float 
 	if( !pTemp ) return NULL;
 
 	pTemp->frameMax = frameCount - 1;
-	pTemp->entity.baseline.scale = 1.0f;
+	pTemp->entity.curstate.scale = 1.0f;
 	pTemp->flags |= FTENT_SPRANIMATE;
 	if( framerate == 0 ) framerate = 10;
 
-	pTemp->entity.baseline.framerate = framerate;
+	pTemp->entity.curstate.framerate = framerate;
 	pTemp->die = gpGlobals->time + (float)frameCount / framerate;
 	pTemp->entity.curstate.frame = 0;
 
@@ -1302,10 +1304,10 @@ TEMPENTITY *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float s
 	if( !pTemp ) return NULL;
 
 	pTemp->frameMax = frameCount - 1;
-	pTemp->entity.baseline.framerate = 10;
+	pTemp->entity.curstate.framerate = 10;
 	pTemp->entity.curstate.rendermode = rendermode;
 	pTemp->entity.curstate.renderfx = renderfx;
-	pTemp->entity.baseline.scale = scale;
+	pTemp->entity.curstate.scale = scale;
 	pTemp->entity.baseline.renderamt = a * 255;
 	pTemp->entity.curstate.renderamt = a * 255;
 	pTemp->flags |= flags;
@@ -1354,7 +1356,7 @@ void CTempEnts::Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags )
 	pTemp->entity.curstate.renderfx = kRenderFxNone;
 	pTemp->entity.baseline.origin[2] = 8;
 	pTemp->entity.origin[2] += 10;
-	pTemp->entity.baseline.scale = scale;
+	pTemp->entity.curstate.scale = scale;
 }
 
 void CTempEnts::Sprite_Smoke( TEMPENTITY *pTemp, float scale )
@@ -1369,11 +1371,10 @@ void CTempEnts::Sprite_Smoke( TEMPENTITY *pTemp, float scale )
 	pTemp->entity.baseline.origin[2] = 30;
 	pTemp->entity.curstate.rendercolor.r = iColor;
 	pTemp->entity.curstate.rendercolor.g = iColor;
-	pTemp->entity.curstate.rendercolor.g = iColor;
+	pTemp->entity.curstate.rendercolor.b = iColor;
 	pTemp->entity.origin[2] += 20;
-	pTemp->entity.baseline.scale = scale;
+	pTemp->entity.curstate.scale = scale;
 	pTemp->flags |= FTENT_WINDBLOWN;
-
 }
 
 void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelIndex, int count, int speed, int iRand, int renderMode )
@@ -1408,7 +1409,7 @@ void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelInd
 
 		pTemp->entity.curstate.rendermode = renderMode;
 		pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
-		pTemp->entity.baseline.scale = 0.5f;
+		pTemp->entity.curstate.scale = 0.5f;
 		pTemp->flags |= FTENT_FADEOUT|FTENT_SLOWGRAVITY;
 		pTemp->fadeSpeed = 2.0f;
 
@@ -1468,7 +1469,7 @@ void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &ve
 		pTemp->entity.baseline.origin = vecVel;
 		pTemp->entity.origin = vecPos;
 
-		pTemp->entity.baseline.scale = flSize;
+		pTemp->entity.curstate.scale = flSize;
 		pTemp->entity.curstate.rendermode = kRenderGlow;
 		pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
 		pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = nRenderamt;

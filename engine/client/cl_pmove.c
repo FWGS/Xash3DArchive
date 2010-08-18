@@ -147,12 +147,6 @@ static void pfnStuckTouch( int hitent, pmtrace_t *ptraceresult )
 	// FIXME: write some code
 }
 
-int CL_TruePointContents( const vec3_t p )
-{
-	// FIXME: write client pointcontents
-	return CM_PointContents( p );
-}
-
 static int pfnPointContents( float *p, int *truecontents )
 {
 	int	cont, truecont;

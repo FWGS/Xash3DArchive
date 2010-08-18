@@ -19,7 +19,7 @@ FRAME PARSING
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
 	// FIXME: this very-very temporary stuffffffff
-	// make the lerping
+	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
 }
@@ -31,7 +31,7 @@ CL_UpdateStudioVars
 Update studio latched vars so interpolation work properly
 ==================
 */
-void CL_UpdateStudioVars( cl_entity_t *ent, const entity_state_t *newstate )
+void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate )
 {
 	int	i;
 
@@ -52,6 +52,7 @@ void CL_UpdateStudioVars( cl_entity_t *ent, const entity_state_t *newstate )
 		for( i = 0; i < 4; i++ )
 			ent->latched.prevblending[i] = newstate->blending[i];
 
+		newstate->effects &= ~EF_NOINTERP;
 		return;
 	}
 
@@ -129,7 +130,11 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	cl.parse_entities++;
 	frame->num_entities++;
 
-	if( ent->index <= 0 ) CL_InitEntity( ent );
+	if( ent->index <= 0 )
+	{
+		CL_InitEntity( ent );
+		state->effects |= EF_NOINTERP;
+	}
 
 	// some data changes will force no lerping
 	if( state->effects & EF_NOINTERP )
@@ -151,6 +156,9 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	// NOTE: always check modelindex for new state not current
 	if( CM_GetModelType( state->modelindex ) == mod_studio )
 		CL_UpdateStudioVars( ent, state );
+
+	if( !VectorCompare( state->origin, ent->curstate.origin ))
+		CL_LinkEdict( ent ); // relink entity
 
 	// set right current state
 	ent->curstate = *state;
@@ -176,7 +184,10 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 	// delta from the entities present in oldframe
 	oldindex = 0;
 	oldstate = NULL;
-	if( !oldframe ) oldnum = MAX_ENTNUMBER;
+	if( !oldframe )
+	{
+		oldnum = MAX_ENTNUMBER;
+	}
 	else
 	{
 		if( oldindex >= oldframe->num_entities )

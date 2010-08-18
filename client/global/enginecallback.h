@@ -137,8 +137,6 @@ inline void CL_PlaySound( int iSound, float flVolume, Vector &pos, float pitch =
 #define POINT_CONTENTS( x )	(*g_engfuncs.pfnPointContents)( x, NULL )
 #define TRACE_LINE		(*g_engfuncs.pfnTraceLine)
 #define TRACE_HULL		(*g_engfuncs.pfnTraceHull)
-#define ALLOC_STRING	(*g_engfuncs.pfnAllocString)
-#define STRING		(*g_engfuncs.pfnGetString)
 #define RANDOM_LONG		(*g_engfuncs.pfnRandomLong)
 #define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)
 #define LOAD_FILE		(*g_engfuncs.pfnLoadFile)

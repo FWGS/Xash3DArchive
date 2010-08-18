@@ -90,7 +90,7 @@ static void UI_CreateGame_Begin( void )
 
 	CVAR_SET_FLOAT( "deathmatch", 1.0f );	// FIXME
 	CVAR_SET_FLOAT( "sv_maxclients", atoi( uiCreateGame.maxClients.buffer ));
-	CVAR_SET_STRING( "sv_hostname", uiCreateGame.hostName.buffer );
+	CVAR_SET_STRING( "hostname", uiCreateGame.hostName.buffer );
 	CVAR_SET_STRING( "defaultmap", uiCreateGame.mapName[uiCreateGame.mapsList.curItem] );
 
 	// all done, start server
@@ -348,7 +348,7 @@ static void UI_CreateGame_Init( void )
 	uiCreateGame.hostName.generic.height = 32;
 	uiCreateGame.hostName.generic.callback = UI_CreateGame_Callback;
 	uiCreateGame.hostName.maxLength = 16;
-	strcpy( uiCreateGame.hostName.buffer, CVAR_GET_STRING( "sv_hostname" ));
+	strcpy( uiCreateGame.hostName.buffer, CVAR_GET_STRING( "hostname" ));
 
 	uiCreateGame.maxClients.generic.id = ID_MAXCLIENTS;
 	uiCreateGame.maxClients.generic.type = QMTYPE_FIELD;

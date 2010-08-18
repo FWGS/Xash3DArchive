@@ -699,7 +699,7 @@ Beam_t *CViewRenderBeams::CreateBeamEntPoint( int nStartEntity, const Vector *pS
 	}
 	else
 	{
-		beamInfo.m_pStartEnt = LinkWithViewModel( GetEntityByIndex( BEAMENT_ENTITY( nStartEntity ) ) );
+		beamInfo.m_pStartEnt = LinkWithViewModel( BEAMENT_ENTITY( nStartEntity ) );
 		beamInfo.m_nStartAttachment = BEAMENT_ATTACHMENT( nStartEntity );
 
 		// don't start beams out of the PVS
@@ -714,7 +714,7 @@ Beam_t *CViewRenderBeams::CreateBeamEntPoint( int nStartEntity, const Vector *pS
 	}
 	else
 	{
-		beamInfo.m_pEndEnt = LinkWithViewModel( GetEntityByIndex( BEAMENT_ENTITY( nEndEntity ) ) );
+		beamInfo.m_pEndEnt = LinkWithViewModel( BEAMENT_ENTITY( nEndEntity ) );
 		beamInfo.m_nEndAttachment = BEAMENT_ATTACHMENT( nEndEntity );
 
 		// Don't start beams out of the PVS
@@ -1626,8 +1626,15 @@ void CViewRenderBeams::AddServerBeam( cl_entity_t *pEnvBeam )
 //-----------------------------------------------------------------------------
 // change client edict to viewmodel for local client in firstperson
 //-----------------------------------------------------------------------------
-cl_entity_t *CViewRenderBeams::LinkWithViewModel( cl_entity_t *pEnt )
+cl_entity_t *CViewRenderBeams::LinkWithViewModel( int entindex )
 {
+	if ( entindex <= 0 ) // no entity specified ?
+		return NULL;
+
+	cl_entity_t	*pEnt;
+
+	pEnt = GetEntityByIndex( entindex );
+
 	if ( !pEnt )
 		return NULL;
 
@@ -1712,27 +1719,27 @@ void CViewRenderBeams::DrawBeam( cl_entity_t *pbeam )
 	case BEAM_ENTS:
 		beam.type			= TE_BEAMPOINTS;
 		beam.flags		= FBEAM_STARTENTITY|FBEAM_ENDENTITY;
-		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.sequence & 0xFFF ));
+		beam.entity[0]		= LinkWithViewModel( BEAMENT_ENTITY( pbeam->curstate.sequence ));
 		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->curstate.sequence );
-		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.skin & 0xFFF ));
+		beam.entity[1]		= LinkWithViewModel( BEAMENT_ENTITY( pbeam->curstate.skin ));
 		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->curstate.skin );
 		beam.numAttachments		= (beam.entity[0]) ? ((beam.entity[1]) ? 2 : 1) : 0;
 		break;
 	case BEAM_HOSE:
 		beam.type			= TE_BEAMHOSE;
 		beam.flags		= FBEAM_STARTENTITY|FBEAM_ENDENTITY;
-		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.sequence & 0xFFF ) );
+		beam.entity[0]		= LinkWithViewModel( BEAMENT_ENTITY( pbeam->curstate.sequence ));
 		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->curstate.sequence );
-		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.skin & 0xFFF ));
+		beam.entity[1]		= LinkWithViewModel( BEAMENT_ENTITY( pbeam->curstate.skin ));
 		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->curstate.skin );
 		beam.numAttachments		= (beam.entity[0]) ? ((beam.entity[1]) ? 2 : 1) : 0;
 		break;
 	case BEAM_ENTPOINT:
 		beam.type			= TE_BEAMPOINTS;
 		beam.flags 		= 0;
-		beam.entity[0]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.sequence & 0xFFF ));
+		beam.entity[0]		= LinkWithViewModel( BEAMENT_ENTITY( pbeam->curstate.sequence ));
 		beam.attachmentIndex[0]	= BEAMENT_ATTACHMENT( pbeam->curstate.sequence );
-		beam.entity[1]		= LinkWithViewModel( GetEntityByIndex( pbeam->curstate.skin & 0xFFF ));
+		beam.entity[1]		= LinkWithViewModel( BEAMENT_ENTITY( pbeam->curstate.skin ));
 		beam.attachmentIndex[1]	= BEAMENT_ATTACHMENT( pbeam->curstate.skin );
 		beam.numAttachments		= 0;
 		beam.flags 		= 0;

@@ -1,0 +1,171 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: engine - Win32 Debug--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\ָּ״ְ\LOCALS~1\Temp\RSP56A.tmp" with contents
+[
+/nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "common" /I "server" /I "client" /I "uimenu" /I "../public" /I "../common" /I "../game_shared" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR"..\temp\engine\!debug/" /Fo"..\temp\engine\!debug/" /Fd"..\temp\engine\!debug/" /FD /c 
+"D:\Xash3D\src_main\engine\server\sv_frame.c"
+"D:\Xash3D\src_main\engine\server\sv_game.c"
+"D:\Xash3D\src_main\engine\server\sv_world.c"
+]
+Creating command line "cl.exe @"C:\DOCUME~1\ָּ״ְ\LOCALS~1\Temp\RSP56A.tmp"" 
+Creating temporary file "C:\DOCUME~1\ָּ״ְ\LOCALS~1\Temp\RSP56B.tmp" with contents
+[
+user32.lib msvcrtd.lib /nologo /subsystem:windows /dll /incremental:yes /pdb:"..\temp\engine\!debug/engine.pdb" /debug /machine:I386 /nodefaultlib:"msvcrt.lib" /out:"..\temp\engine\!debug/engine.dll" /implib:"..\temp\engine\!debug/engine.lib" /pdbtype:sept 
+"\Xash3D\src_main\temp\engine\!debug\build.obj"
+"\Xash3D\src_main\temp\engine\!debug\cinematic.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_cmds.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_demo.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_frame.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_game.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_main.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_menu.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_parse.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_pmove.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_pred.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_scrn.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_tent.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_video.obj"
+"\Xash3D\src_main\temp\engine\!debug\cl_view.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_debug.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_light.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_main.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_model.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_portals.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_studio.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_test.obj"
+"\Xash3D\src_main\temp\engine\!debug\cm_trace.obj"
+"\Xash3D\src_main\temp\engine\!debug\con_utils.obj"
+"\Xash3D\src_main\temp\engine\!debug\console.obj"
+"\Xash3D\src_main\temp\engine\!debug\engfuncs.obj"
+"\Xash3D\src_main\temp\engine\!debug\export.obj"
+"\Xash3D\src_main\temp\engine\!debug\host.obj"
+"\Xash3D\src_main\temp\engine\!debug\infostring.obj"
+"\Xash3D\src_main\temp\engine\!debug\input.obj"
+"\Xash3D\src_main\temp\engine\!debug\keys.obj"
+"\Xash3D\src_main\temp\engine\!debug\net_buffer.obj"
+"\Xash3D\src_main\temp\engine\!debug\net_chan.obj"
+"\Xash3D\src_main\temp\engine\!debug\net_encode.obj"
+"\Xash3D\src_main\temp\engine\!debug\net_huff.obj"
+"\Xash3D\src_main\temp\engine\!debug\pm_studio.obj"
+"\Xash3D\src_main\temp\engine\!debug\pm_surface.obj"
+"\Xash3D\src_main\temp\engine\!debug\pm_trace.obj"
+"\Xash3D\src_main\temp\engine\!debug\pm_utils.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_client.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_cmds.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_frame.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_game.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_init.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_main.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_move.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_phys.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_pmove.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_save.obj"
+"\Xash3D\src_main\temp\engine\!debug\sv_world.obj"
+"\Xash3D\src_main\temp\engine\!debug\titles.obj"
+"\Xash3D\src_main\temp\engine\!debug\world.obj"
+]
+Creating command line "link.exe @"C:\DOCUME~1\ָּ״ְ\LOCALS~1\Temp\RSP56B.tmp""
+Creating temporary file "C:\DOCUME~1\ָּ״ְ\LOCALS~1\Temp\RSP56C.bat" with contents
+[
+@echo off
+copy \Xash3D\src_main\temp\engine\!debug\engine.dll "D:\Xash3D\bin\engine.dll"
+]
+Creating command line ""C:\DOCUME~1\ָּ״ְ\LOCALS~1\Temp\RSP56C.bat""
+Compiling...
+sv_frame.c
+d:\xash3d\src_main\engine\server\sv_frame.c(172) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_frame.c(186) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+sv_game.c
+d:\xash3d\src_main\engine\server\sv_game.c(405) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(408) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(408) : error C2065: 'sv_priv_t' : undeclared identifier
+d:\xash3d\src_main\engine\server\sv_game.c(408) : error C2059: syntax error : ')'
+d:\xash3d\src_main\engine\server\sv_game.c(422) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(422) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(422) : warning C4047: 'function' : 'const char *' differs in levels of indirection from 'int '
+d:\xash3d\src_main\engine\server\sv_game.c(422) : warning C4024: 'com' : different types for formal and actual parameter 2
+d:\xash3d\src_main\engine\server\sv_game.c(422) : error C2198: 'com' : too few actual parameters
+d:\xash3d\src_main\engine\server\sv_game.c(504) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(540) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(607) : error C2065: 'sv_ent' : undeclared identifier
+d:\xash3d\src_main\engine\server\sv_game.c(607) : warning C4552: '*' : operator has no effect; expected operator with side-effect
+d:\xash3d\src_main\engine\server\sv_game.c(608) : error C2275: 'sv_client_t' : illegal use of this type as an expression
+        d:\xash3d\src_main\engine\server\server.h(158) : see declaration of 'sv_client_t'
+d:\xash3d\src_main\engine\server\sv_game.c(608) : error C2065: 'cl' : undeclared identifier
+d:\xash3d\src_main\engine\server\sv_game.c(610) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(613) : warning C4047: '=' : 'int ' differs in levels of indirection from 'struct sv_client_s *'
+d:\xash3d\src_main\engine\server\sv_game.c(616) : error C2223: left of '->modelindex' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_game.c(616) : error C2223: left of '->modelindex' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_game.c(1358) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(1402) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(2225) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(3280) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(3283) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(3286) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(3286) : warning C4047: 'function' : 'int ' differs in levels of indirection from 'unsigned char *'
+d:\xash3d\src_main\engine\server\sv_game.c(3286) : warning C4024: 'CM_HeadnodeVisible' : different types for formal and actual parameter 1
+d:\xash3d\src_main\engine\server\sv_game.c(3286) : error C2198: 'CM_HeadnodeVisible' : too few actual parameters
+d:\xash3d\src_main\engine\server\sv_game.c(3292) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(3294) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_game.c(3300) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+sv_world.c
+d:\xash3d\src_main\engine\server\sv_world.c(133) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_world.c(136) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_world.c(136) : error C2198: 'RemoveLink' : too few actual parameters
+d:\xash3d\src_main\engine\server\sv_world.c(137) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_world.c(138) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_world.c(182) : error C2065: 'sv_priv_t' : undeclared identifier
+d:\xash3d\src_main\engine\server\sv_world.c(182) : error C2065: 'sv_ent' : undeclared identifier
+d:\xash3d\src_main\engine\server\sv_world.c(182) : warning C4552: '*' : operator has no effect; expected operator with side-effect
+d:\xash3d\src_main\engine\server\sv_world.c(184) : error C2039: 'pvEngineData' : is not a member of 'edict_s'
+        d:\xash3d\src_main\common\edict.h(13) : see declaration of 'edict_s'
+d:\xash3d\src_main\engine\server\sv_world.c(187) : error C2223: left of '->area' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(195) : error C2223: left of '->num_leafs' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(211) : error C2223: left of '->num_leafs' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(212) : error C2223: left of '->headnode' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(216) : error C2223: left of '->num_leafs' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(231) : error C2223: left of '->num_leafs' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(234) : error C2223: left of '->num_leafs' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(235) : error C2223: left of '->headnode' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(238) : error C2223: left of '->leafnums' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(238) : error C2223: left of '->num_leafs' must point to struct/union
+d:\xash3d\src_main\engine\server\sv_world.c(238) : fatal error C1903: unable to recover from previous error(s); stopping compilation
+Generating Code...
+Error executing cl.exe.
+<h3>Output Window</h3>
+
+
+
+<h3>Results</h3>
+engine.dll - 46 error(s), 7 warning(s)
+</pre>
+</body>
+</html>
