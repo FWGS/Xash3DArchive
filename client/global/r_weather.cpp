@@ -147,8 +147,8 @@ void ProcessRain( void )
 			vecEnd[2] = -4096;
 
 			pmtrace_t pmtrace;
-			g_engfuncs.pEventAPI->EV_SetTraceHull( 2 );
-			g_engfuncs.pEventAPI->EV_PlayerTrace( vecStart, vecStart + vecEnd, PM_STUDIO_IGNORE, -1, &pmtrace );
+			gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			gEngfuncs.pEventAPI->EV_PlayerTrace( vecStart, vecStart + vecEnd, PM_STUDIO_IGNORE, -1, &pmtrace );
 
 			if ( pmtrace.startsolid || pmtrace.allsolid )
 			{
@@ -163,7 +163,7 @@ void ProcessRain( void )
 			{
 				// NOTE: in Xash3D PM_WaterEntity always return a valid water volume or NULL
 				// so not needs to run additional checks here
-				cl_entity_t *pWater = g_engfuncs.pfnWaterEntity( pmtrace.endpos );
+				cl_entity_t *pWater = gEngfuncs.pfnWaterEntity( pmtrace.endpos );
 				if ( pWater )
 				{
 					deathHeight = pWater->curstate.maxs[2];
@@ -506,7 +506,7 @@ void SetPoint( float x, float y, float z, float (*matrix)[4] )
 	result.y = DotProduct( point, matrix[1] ) + matrix[1][3];
 	result.z = DotProduct( point, matrix[2] ) + matrix[2][3];
 
-	g_engfuncs.pTriAPI->Vertex3f( result[0], result[1], result[2] );
+	gEngfuncs.pTriAPI->Vertex3f( result[0], result[1], result[2] );
 }
 
 /*
@@ -526,14 +526,14 @@ void DrawRain( void )
 		if ( gHUD.Rain.weatherMode == 0 )
 		{
 			// load rain sprite
-			int modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/hi_rain.spr" );
-			hsprDripTexture = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, 0 );
+			int modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/hi_rain.spr" );
+			hsprDripTexture = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, 0 );
 		}
 		else
 		{
 			// load snow sprite
-			int modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/snowflake.spr" );
-			hsprDripTexture = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, 0 );
+			int modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/snowflake.spr" );
+			hsprDripTexture = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, 0 );
           	}
 	}
 	if( hsprDripTexture <= 0 ) return;
@@ -541,10 +541,10 @@ void DrawRain( void )
 	float visibleHeight = gHUD.Rain.globalHeight - SNOWFADEDIST;
 
 	// usual triapi stuff
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->Bind( hsprDripTexture, 0 );
-	g_engfuncs.pTriAPI->RenderMode( kRenderTransAdd );
-	g_engfuncs.pTriAPI->CullFace( TRI_NONE );
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Bind( hsprDripTexture, 0 );
+	gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
+	gEngfuncs.pTriAPI->CullFace( TRI_NONE );
 	
 	// go through drips list
 	cl_drip *Drip = FirstChainDrip.p_Next;
@@ -568,19 +568,19 @@ void DrawRain( void )
 			float shiftX = (Drip->xDelta / DRIPSPEED) * DRIP_SPRITE_HALFHEIGHT;
 			float shiftY = (Drip->yDelta / DRIPSPEED) * DRIP_SPRITE_HALFHEIGHT;
 
-			g_engfuncs.pTriAPI->Color4f( 1.0, 1.0, 1.0, Drip->alpha );
-			g_engfuncs.pTriAPI->Begin( TRI_TRIANGLES );
+			gEngfuncs.pTriAPI->Color4f( 1.0, 1.0, 1.0, Drip->alpha );
+			gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );
 
-				g_engfuncs.pTriAPI->TexCoord2f( 0, 0 );
-				g_engfuncs.pTriAPI->Vertex3f( Drip->origin[0]-toPlayer.y - shiftX, Drip->origin[1]+toPlayer.x - shiftY,Drip->origin[2] + DRIP_SPRITE_HALFHEIGHT );
+				gEngfuncs.pTriAPI->TexCoord2f( 0, 0 );
+				gEngfuncs.pTriAPI->Vertex3f( Drip->origin[0]-toPlayer.y - shiftX, Drip->origin[1]+toPlayer.x - shiftY,Drip->origin[2] + DRIP_SPRITE_HALFHEIGHT );
 
-				g_engfuncs.pTriAPI->TexCoord2f( 0.5, 1 );
-				g_engfuncs.pTriAPI->Vertex3f( Drip->origin[0] + shiftX, Drip->origin[1] + shiftY, Drip->origin[2]-DRIP_SPRITE_HALFHEIGHT );
+				gEngfuncs.pTriAPI->TexCoord2f( 0.5, 1 );
+				gEngfuncs.pTriAPI->Vertex3f( Drip->origin[0] + shiftX, Drip->origin[1] + shiftY, Drip->origin[2]-DRIP_SPRITE_HALFHEIGHT );
 
-				g_engfuncs.pTriAPI->TexCoord2f( 1, 0 );
-				g_engfuncs.pTriAPI->Vertex3f( Drip->origin[0]+toPlayer.y - shiftX, Drip->origin[1]-toPlayer.x - shiftY, Drip->origin[2]+DRIP_SPRITE_HALFHEIGHT);
+				gEngfuncs.pTriAPI->TexCoord2f( 1, 0 );
+				gEngfuncs.pTriAPI->Vertex3f( Drip->origin[0]+toPlayer.y - shiftX, Drip->origin[1]-toPlayer.x - shiftY, Drip->origin[2]+DRIP_SPRITE_HALFHEIGHT);
 	
-			g_engfuncs.pTriAPI->End();
+			gEngfuncs.pTriAPI->End();
 			Drip = nextdDrip;
 		}
 	}
@@ -605,26 +605,26 @@ void DrawRain( void )
 			// apply start fading effect
 			float alpha = (Drip->origin[2] <= visibleHeight) ? Drip->alpha : ((gHUD.Rain.globalHeight - Drip->origin[2]) / (float)SNOWFADEDIST) * Drip->alpha;
 					
-			g_engfuncs.pTriAPI->Color4f( 1.0, 1.0, 1.0, alpha );
-			g_engfuncs.pTriAPI->Begin( TRI_QUADS );
+			gEngfuncs.pTriAPI->Color4f( 1.0, 1.0, 1.0, alpha );
+			gEngfuncs.pTriAPI->Begin( TRI_QUADS );
 
-				g_engfuncs.pTriAPI->TexCoord2f( 0, 0 );
+				gEngfuncs.pTriAPI->TexCoord2f( 0, 0 );
 				SetPoint( 0, SNOW_SPRITE_HALFSIZE, SNOW_SPRITE_HALFSIZE, matrix );
 
-				g_engfuncs.pTriAPI->TexCoord2f( 0, 1 );
+				gEngfuncs.pTriAPI->TexCoord2f( 0, 1 );
 				SetPoint( 0, SNOW_SPRITE_HALFSIZE, -SNOW_SPRITE_HALFSIZE, matrix );
 
-				g_engfuncs.pTriAPI->TexCoord2f( 1, 1 );
+				gEngfuncs.pTriAPI->TexCoord2f( 1, 1 );
 				SetPoint( 0, -SNOW_SPRITE_HALFSIZE, -SNOW_SPRITE_HALFSIZE, matrix );
 
-				g_engfuncs.pTriAPI->TexCoord2f( 1, 0 );
+				gEngfuncs.pTriAPI->TexCoord2f( 1, 0 );
 				SetPoint( 0, -SNOW_SPRITE_HALFSIZE, SNOW_SPRITE_HALFSIZE, matrix );
 				
-			g_engfuncs.pTriAPI->End();
+			gEngfuncs.pTriAPI->End();
 			Drip = nextdDrip;
 		}
 	}
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }
 
 /*
@@ -643,16 +643,16 @@ void DrawFXObjects( void )
 	if( hsprWaterRing == 0 )	// in case what we don't want search it if not found
 	{
 		// load water ring sprite
-		int modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/waterring.spr" );
-		hsprWaterRing = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, 0 );
+		int modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/waterring.spr" );
+		hsprWaterRing = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, 0 );
 	}
 
 	if( hsprWaterRing <= 0 ) return; // don't waste time
 
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->Bind( hsprWaterRing, 0 );
-	g_engfuncs.pTriAPI->RenderMode( kRenderTransAdd );
-	g_engfuncs.pTriAPI->CullFace( TRI_NONE );
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Bind( hsprWaterRing, 0 );
+	gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
+	gEngfuncs.pTriAPI->CullFace( TRI_NONE );
 	
 	// go through objects list
 	cl_rainfx* curFX = FirstChainFX.p_Next;
@@ -666,28 +666,28 @@ void DrawFXObjects( void )
 		float color[3];
 
 		// UNDONE: calc lighting right
-		g_engfuncs.pEfxAPI->R_LightForPoint( (const float *)curFX->origin, color );
+		gEngfuncs.pEfxAPI->R_LightForPoint( (const float *)curFX->origin, color );
 //		Con_Printf( "color %g %g %g\n", color[0], color[1], color[2] );
 
-		g_engfuncs.pTriAPI->Color4f( 0.4 + color[0], 0.4 + color[1], 0.4 + color[2], alpha );
-		g_engfuncs.pTriAPI->Begin( TRI_QUADS );
+		gEngfuncs.pTriAPI->Color4f( 0.4 + color[0], 0.4 + color[1], 0.4 + color[2], alpha );
+		gEngfuncs.pTriAPI->Begin( TRI_QUADS );
 
-			g_engfuncs.pTriAPI->TexCoord2f( 0, 0 );
-			g_engfuncs.pTriAPI->Vertex3f( curFX->origin[0] - size, curFX->origin[1] - size, curFX->origin[2] );
+			gEngfuncs.pTriAPI->TexCoord2f( 0, 0 );
+			gEngfuncs.pTriAPI->Vertex3f( curFX->origin[0] - size, curFX->origin[1] - size, curFX->origin[2] );
 
-			g_engfuncs.pTriAPI->TexCoord2f( 0, 1 );
-			g_engfuncs.pTriAPI->Vertex3f( curFX->origin[0] - size, curFX->origin[1] + size, curFX->origin[2] );
+			gEngfuncs.pTriAPI->TexCoord2f( 0, 1 );
+			gEngfuncs.pTriAPI->Vertex3f( curFX->origin[0] - size, curFX->origin[1] + size, curFX->origin[2] );
 
-			g_engfuncs.pTriAPI->TexCoord2f( 1, 1 );
-			g_engfuncs.pTriAPI->Vertex3f( curFX->origin[0] + size, curFX->origin[1] + size, curFX->origin[2] );
+			gEngfuncs.pTriAPI->TexCoord2f( 1, 1 );
+			gEngfuncs.pTriAPI->Vertex3f( curFX->origin[0] + size, curFX->origin[1] + size, curFX->origin[2] );
 
-			g_engfuncs.pTriAPI->TexCoord2f( 1, 0 );
-			g_engfuncs.pTriAPI->Vertex3f( curFX->origin[0] + size, curFX->origin[1] - size, curFX->origin[2] );
+			gEngfuncs.pTriAPI->TexCoord2f( 1, 0 );
+			gEngfuncs.pTriAPI->Vertex3f( curFX->origin[0] + size, curFX->origin[1] - size, curFX->origin[2] );
 	
-		g_engfuncs.pTriAPI->End();
+		gEngfuncs.pTriAPI->End();
 		curFX = nextFX;
 	}
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }
 
 /*

@@ -523,24 +523,12 @@ static cl_entity_t* pfnGetPlayerModel( void )
 pfnSetPlayerModel
 
 for drawing playermodel previews
-
-FIXME: move all this shit on the gameui.dll
 ====================
 */
 static void pfnSetPlayerModel( cl_entity_t *ent, const char *path )
 {
 	re->RegisterModel( path, MAX_MODELS - 1 );
 	ent->curstate.modelindex = MAX_MODELS - 1;
-
-	// setup latched controllers state to avoid unexpected poses :)
-	ent->curstate.controller[0] = 127;
-	ent->curstate.controller[1] = 127;
-	ent->curstate.controller[2] = 127;
-	ent->curstate.controller[3] = 127;
-	ent->latched.prevcontroller[0] = 127;
-	ent->latched.prevcontroller[1] = 127;
-	ent->latched.prevcontroller[2] = 127;
-	ent->latched.prevcontroller[3] = 127;
 }
 
 /*

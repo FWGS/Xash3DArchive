@@ -116,30 +116,30 @@ void V_PunchAxis( int axis, float punch )
 //==========================
 void V_Init( void )
 {
-	scr_ofsx = g_engfuncs.pfnRegisterVariable( "scr_ofsx", "0", 0, "screen offset by X" );
-	scr_ofsy = g_engfuncs.pfnRegisterVariable( "scr_ofsy", "0", 0, "screen offset by Y" );
-	scr_ofsz = g_engfuncs.pfnRegisterVariable( "scr_ofsz", "0", 0, "screen offset by Z" );
-	r_studio_lerping = g_engfuncs.pfnRegisterVariable( "r_studio_lerping", "1", FCVAR_ARCHIVE, "enables studio model animation lerping" ); // get copy of engine cvar
+	scr_ofsx = gEngfuncs.pfnRegisterVariable( "scr_ofsx", "0", 0, "screen offset by X" );
+	scr_ofsy = gEngfuncs.pfnRegisterVariable( "scr_ofsy", "0", 0, "screen offset by Y" );
+	scr_ofsz = gEngfuncs.pfnRegisterVariable( "scr_ofsz", "0", 0, "screen offset by Z" );
+	r_studio_lerping = gEngfuncs.pfnRegisterVariable( "r_studio_lerping", "1", FCVAR_ARCHIVE, "enables studio model animation lerping" ); // get copy of engine cvar
 
-	cl_vsmoothing = g_engfuncs.pfnRegisterVariable( "cl_vsmoothing", "0.05", 0, "enables lepring in multiplayer" );
-	cl_stairsmooth = g_engfuncs.pfnRegisterVariable( "cl_vstairsmooth", "100", FCVAR_ARCHIVE, "how fast your view moves upward/downward when running up/down stairs" );
+	cl_vsmoothing = gEngfuncs.pfnRegisterVariable( "cl_vsmoothing", "0.05", 0, "enables lepring in multiplayer" );
+	cl_stairsmooth = gEngfuncs.pfnRegisterVariable( "cl_vstairsmooth", "100", FCVAR_ARCHIVE, "how fast your view moves upward/downward when running up/down stairs" );
 
-	v_iyaw_cycle = g_engfuncs.pfnRegisterVariable( "v_iyaw_cycle", "2", 0, "viewing inverse yaw cycle" );
-	v_iroll_cycle = g_engfuncs.pfnRegisterVariable( "v_iroll_cycle", "0.5", 0, "viewing inverse roll cycle" );
-	v_ipitch_cycle = g_engfuncs.pfnRegisterVariable( "v_ipitch_cycle", "1", 0, "viewing inverse pitch cycle" );
-	v_iyaw_level = g_engfuncs.pfnRegisterVariable( "v_iyaw_level", "0.3", 0, "viewing inverse yaw level" );
-	v_iroll_level = g_engfuncs.pfnRegisterVariable( "v_iroll_level", "0.1", 0, "viewing inverse roll level" );
-	v_ipitch_level = g_engfuncs.pfnRegisterVariable( "v_iyaw_level", "0.3", 0, "viewing inverse pitch level" );
-	v_dark = g_engfuncs.pfnRegisterVariable( "v_dark", "0", 0, "gross hack to make first frame black. half-life legacy" );
+	v_iyaw_cycle = gEngfuncs.pfnRegisterVariable( "v_iyaw_cycle", "2", 0, "viewing inverse yaw cycle" );
+	v_iroll_cycle = gEngfuncs.pfnRegisterVariable( "v_iroll_cycle", "0.5", 0, "viewing inverse roll cycle" );
+	v_ipitch_cycle = gEngfuncs.pfnRegisterVariable( "v_ipitch_cycle", "1", 0, "viewing inverse pitch cycle" );
+	v_iyaw_level = gEngfuncs.pfnRegisterVariable( "v_iyaw_level", "0.3", 0, "viewing inverse yaw level" );
+	v_iroll_level = gEngfuncs.pfnRegisterVariable( "v_iroll_level", "0.1", 0, "viewing inverse roll level" );
+	v_ipitch_level = gEngfuncs.pfnRegisterVariable( "v_iyaw_level", "0.3", 0, "viewing inverse pitch level" );
+	v_dark = gEngfuncs.pfnRegisterVariable( "v_dark", "0", 0, "gross hack to make first frame black. half-life legacy" );
 
-	cl_weaponlag = g_engfuncs.pfnRegisterVariable( "v_viewmodel_lag", "0.0", FCVAR_ARCHIVE, "add some lag to viewmodel like in HL2" );
-	cl_bobcycle = g_engfuncs.pfnRegisterVariable( "cl_bobcycle","0.8", 0, "bob full cycle" );
-	cl_bob = g_engfuncs.pfnRegisterVariable( "cl_bob", "0.01", 0, "bob value" );
-	cl_bobup = g_engfuncs.pfnRegisterVariable( "cl_bobup", "0.5", 0, "bob upper limit" );
-	cl_waterdist = g_engfuncs.pfnRegisterVariable( "cl_waterdist", "4", 0, "distance between viewofs and water plane" );
-	cl_chasedist = g_engfuncs.pfnRegisterVariable( "cl_chasedist", "112", 0, "max distance to chase camera" );
-	g_engfuncs.pfnAddCommand( "thirdperson", V_ThirdPerson, "change camera to thirdperson" );
-	g_engfuncs.pfnAddCommand( "firstperson", V_FirstPerson, "change camera to firstperson" );
+	cl_weaponlag = gEngfuncs.pfnRegisterVariable( "v_viewmodel_lag", "0.0", FCVAR_ARCHIVE, "add some lag to viewmodel like in HL2" );
+	cl_bobcycle = gEngfuncs.pfnRegisterVariable( "cl_bobcycle","0.8", 0, "bob full cycle" );
+	cl_bob = gEngfuncs.pfnRegisterVariable( "cl_bob", "0.01", 0, "bob value" );
+	cl_bobup = gEngfuncs.pfnRegisterVariable( "cl_bobup", "0.5", 0, "bob upper limit" );
+	cl_waterdist = gEngfuncs.pfnRegisterVariable( "cl_waterdist", "4", 0, "distance between viewofs and water plane" );
+	cl_chasedist = gEngfuncs.pfnRegisterVariable( "cl_chasedist", "112", 0, "max distance to chase camera" );
+	gEngfuncs.pfnAddCommand( "thirdperson", V_ThirdPerson, "change camera to thirdperson" );
+	gEngfuncs.pfnAddCommand( "firstperson", V_FirstPerson, "change camera to firstperson" );
 }
 
 //==========================
@@ -364,7 +364,7 @@ void V_PreRender( ref_params_t *pparams )
 void V_CalcGlobalFog( ref_params_t *pparams )
 {
 	int bOn = (pparams->waterlevel < 2) && (gHUD.m_flStartDist > 0) && (gHUD.m_flEndDist > 0 && gHUD.m_flStartDist);
-	g_engfuncs.pTriAPI->Fog( gHUD.m_vecFogColor, gHUD.m_flStartDist, gHUD.m_flEndDist, bOn );
+	gEngfuncs.pTriAPI->Fog( gHUD.m_vecFogColor, gHUD.m_flStartDist, gHUD.m_flEndDist, bOn );
 }
 
 //==========================
@@ -488,7 +488,7 @@ void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &res
 
 	while( maxLoops > 0 )
 	{
-		trace = g_engfuncs.PM_TraceLine( vecStart, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, ignoreent );
+		trace = gEngfuncs.PM_TraceLine( vecStart, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, ignoreent );
 		if( trace->ent <= 0 ) break; // we hit the world or nothing, stop trace
 
 		ent = GetEntityByIndex( PM_GetPhysEntInfo( trace->ent ));
@@ -767,7 +767,7 @@ float V_CalcWaterLevel( ref_params_t *pparams )
 		float	waterDist = cl_waterdist->value;
 		Vector	point;
 
-		cl_entity_t *pwater = g_engfuncs.pfnWaterEntity( pparams->simorg );
+		cl_entity_t *pwater = gEngfuncs.pfnWaterEntity( pparams->simorg );
 		if( pwater ) waterDist += ( pwater->curstate.scale * 16 );
 
 		point = pparams->vieworg;

@@ -43,7 +43,7 @@ static bool CullTracer( const Vector &start, const Vector &end )
 	}
 
 	// check bbox
-	if( g_engfuncs.pEfxAPI->R_CullBox( mins, maxs ) )
+	if( gEngfuncs.pEfxAPI->R_CullBox( mins, maxs ) )
 		return true; // culled
 
 	return false;
@@ -66,8 +66,8 @@ static bool Tracer_ComputeVerts( const Vector &pos, const Vector &delta, float w
 	Vector screenStart, screenEnd;
 
 	// transform point into the screen space
-	g_engfuncs.pTriAPI->WorldToScreen( (float *)start, screenStart );
-	g_engfuncs.pTriAPI->WorldToScreen( (float *)end, screenEnd );
+	gEngfuncs.pTriAPI->WorldToScreen( (float *)start, screenStart );
+	gEngfuncs.pTriAPI->WorldToScreen( (float *)end, screenEnd );
 	
 	Vector tmp, normal;
 	
@@ -103,26 +103,26 @@ void Tracer_Draw( HSPRITE hSprite, Vector& start, Vector& delta, float width, by
 	// NOTE: Gotta get the winding right so it's not backface culled
 	// (we need to turn of backface culling for these bad boys)
 
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->RenderMode( kRenderTransTexture );
-	if ( color ) g_engfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], color[3] );
-	else g_engfuncs.pTriAPI->Color4ub( 255, 255, 255, 255 );
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->RenderMode( kRenderTransTexture );
+	if ( color ) gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], color[3] );
+	else gEngfuncs.pTriAPI->Color4ub( 255, 255, 255, 255 );
 
-	g_engfuncs.pTriAPI->Bind( hSprite, 0 );
-	g_engfuncs.pTriAPI->Begin( TRI_QUADS );
+	gEngfuncs.pTriAPI->Bind( hSprite, 0 );
+	gEngfuncs.pTriAPI->Begin( TRI_QUADS );
 
-	g_engfuncs.pTriAPI->TexCoord2f( 0.0f, endV );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[2] );
+	gEngfuncs.pTriAPI->TexCoord2f( 0.0f, endV );
+	gEngfuncs.pTriAPI->Vertex3fv( verts[2] );
 
-	g_engfuncs.pTriAPI->TexCoord2f( 1.0f, endV );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[3] );
+	gEngfuncs.pTriAPI->TexCoord2f( 1.0f, endV );
+	gEngfuncs.pTriAPI->Vertex3fv( verts[3] );
 
-	g_engfuncs.pTriAPI->TexCoord2f( 1.0f, startV );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[1] );
+	gEngfuncs.pTriAPI->TexCoord2f( 1.0f, startV );
+	gEngfuncs.pTriAPI->Vertex3fv( verts[1] );
 
-	g_engfuncs.pTriAPI->TexCoord2f( 0.0f, startV );
-	g_engfuncs.pTriAPI->Vertex3fv( verts[0] );
+	gEngfuncs.pTriAPI->TexCoord2f( 0.0f, startV );
+	gEngfuncs.pTriAPI->Vertex3fv( verts[0] );
 
-	g_engfuncs.pTriAPI->End();
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->End();
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }

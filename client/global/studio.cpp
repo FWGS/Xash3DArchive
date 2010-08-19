@@ -22,7 +22,7 @@ void EV_DrawBeam ( void )
 	cl_entity_t *view = GetViewModel();
 
 	float life = 1.05;	// animtime
-	int m_iBeam = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/plasma.spr" );
+	int m_iBeam = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/plasma.spr" );
 	int idx = GetLocalPlayer()->index; // link with client
 
 	g_pViewRenderBeams->CreateBeamEnts( idx | 0x1000, idx | 0x2000, m_iBeam, life, 0.8, 0.5, 127, 0.6, 0, 10, 20, 100, 0 );
@@ -42,7 +42,7 @@ void EV_EjectShell( const mstudioevent_t *event, cl_entity_t *entity )
 	
 	float fR, fU;
 
-          int shell = g_engfuncs.pEventAPI->EV_FindModelIndex( event->options );
+          int shell = gEngfuncs.pEventAPI->EV_FindModelIndex( event->options );
 	origin.z = origin.z - entity->curstate.usehull ? 12 : 28;
 
 	for( int j = 0; j < 3; j++ )

@@ -465,7 +465,6 @@ void CEgon::CreateEffect( void )
 
 void CEgon::DestroyEffect( void )
 {
-
 #ifndef CLIENT_DLL
 	if ( m_pBeam )
 	{
@@ -486,7 +485,6 @@ void CEgon::DestroyEffect( void )
 		m_pSprite = NULL;
 	}
 #endif
-
 }
 
 

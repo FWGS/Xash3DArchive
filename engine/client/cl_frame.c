@@ -18,6 +18,9 @@ FRAME PARSING
 */
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
+	// set player state
+	ent->player = ( ent->curstate.entityType == ET_PLAYER ) ? true : false;
+
 	// FIXME: this very-very temporary stuffffffff
 	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );

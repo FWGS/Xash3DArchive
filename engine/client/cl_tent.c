@@ -5,8 +5,8 @@
 
 #include "common.h"
 #include "client.h"
-#include "tmpent_def.h"
 #include "event_flags.h"
+#include "entity_types.h"
 
 /*
 ==============================================================
@@ -33,6 +33,8 @@ void CL_WeaponAnim( int iAnim, int body )
 		view->latched.prevanimtime = view->curstate.animtime;
 	}
 
+	com.strncpy( view->curstate.classname, "viewentity", sizeof( view->curstate.classname ));
+	view->curstate.entityType = ET_VIEWENTITY;
 	view->curstate.animtime = clgame.globals->time;	// start immediately
 	view->curstate.framerate = 1.0f;
 	view->curstate.sequence = iAnim;

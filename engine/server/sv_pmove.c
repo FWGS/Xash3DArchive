@@ -529,10 +529,8 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 
 	// setup physents
 	pmove->numvisent = 0; // FIXME: add visents for debugging
+	pmove->numphysent = 0;
 	pmove->nummoveent = 0;
-
-	VectorCopy( clent->v.absmin, absmin );
-	VectorCopy( clent->v.absmax, absmax );
 
 	for( i = 0; i < 3; i++ )
 	{

@@ -19,7 +19,7 @@
 #include "pm_movevars.h"
 #include "entity_types.h"
 
-cl_enginefuncs_t	g_engfuncs;
+cl_enginefuncs_t	gEngfuncs;
 cl_globalvars_t	*gpGlobals;
 movevars_t	*gpMovevars = NULL;
 ref_params_t	*gpViewParams = NULL;
@@ -82,7 +82,7 @@ int CreateAPI( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* pEngfuncsFromEng
 
 	// copy HUD_FUNCTIONS table to engine, copy engfuncs table from engine
 	memcpy( pFunctionTable, &gFunctionTable, sizeof( HUD_FUNCTIONS ));
-	memcpy( &g_engfuncs, pEngfuncsFromEngine, sizeof( cl_enginefuncs_t ));
+	memcpy( &gEngfuncs, pEngfuncsFromEngine, sizeof( cl_enginefuncs_t ));
 
 	gpGlobals = pGlobals;
 	gpViewParams = gpGlobals->pViewParms;
@@ -145,16 +145,16 @@ void HUD_ShutdownEffects( void )
 
 void HUD_Init( void )
 {
-	g_engfuncs.pfnAddCommand ("noclip", NULL, "enable or disable no clipping mode" );
-	g_engfuncs.pfnAddCommand ("notarget", NULL, "notarget mode (monsters do not see you)" );
-	g_engfuncs.pfnAddCommand ("fullupdate", NULL, "re-init HUD on start demo recording" );
-	g_engfuncs.pfnAddCommand ("give", NULL, "give specified item or weapon" );
-	g_engfuncs.pfnAddCommand ("drop", NULL, "drop current/specified item or weapon" );
-	g_engfuncs.pfnAddCommand ("intermission", NULL, "go to intermission" );
-	g_engfuncs.pfnAddCommand ("spectate", NULL, "enable spectator mode" );
-	g_engfuncs.pfnAddCommand ("gametitle", NULL, "show game logo" );
-	g_engfuncs.pfnAddCommand ("god", NULL, "classic cheat" );
-	g_engfuncs.pfnAddCommand ("fov", NULL, "set client field of view" );
+	gEngfuncs.pfnAddCommand ("noclip", NULL, "enable or disable no clipping mode" );
+	gEngfuncs.pfnAddCommand ("notarget", NULL, "notarget mode (monsters do not see you)" );
+	gEngfuncs.pfnAddCommand ("fullupdate", NULL, "re-init HUD on start demo recording" );
+	gEngfuncs.pfnAddCommand ("give", NULL, "give specified item or weapon" );
+	gEngfuncs.pfnAddCommand ("drop", NULL, "drop current/specified item or weapon" );
+	gEngfuncs.pfnAddCommand ("intermission", NULL, "go to intermission" );
+	gEngfuncs.pfnAddCommand ("spectate", NULL, "enable spectator mode" );
+	gEngfuncs.pfnAddCommand ("gametitle", NULL, "show game logo" );
+	gEngfuncs.pfnAddCommand ("god", NULL, "classic cheat" );
+	gEngfuncs.pfnAddCommand ("fov", NULL, "set client field of view" );
 
 	HUD_ShutdownEffects ();
 
@@ -467,14 +467,14 @@ void HUD_Shutdown( void )
 	IN_Shutdown ();
 
 	// perform shutdown operations
-	g_engfuncs.pfnDelCommand ("noclip" );
-	g_engfuncs.pfnDelCommand ("notarget" );
-	g_engfuncs.pfnDelCommand ("fullupdate" );
-	g_engfuncs.pfnDelCommand ("give" );
-	g_engfuncs.pfnDelCommand ("drop" );
-	g_engfuncs.pfnDelCommand ("intermission" );
-	g_engfuncs.pfnDelCommand ("spectate" );
-	g_engfuncs.pfnDelCommand ("gametitle" );
-	g_engfuncs.pfnDelCommand ("god" );
-	g_engfuncs.pfnDelCommand ("fov" );
+	gEngfuncs.pfnDelCommand ("noclip" );
+	gEngfuncs.pfnDelCommand ("notarget" );
+	gEngfuncs.pfnDelCommand ("fullupdate" );
+	gEngfuncs.pfnDelCommand ("give" );
+	gEngfuncs.pfnDelCommand ("drop" );
+	gEngfuncs.pfnDelCommand ("intermission" );
+	gEngfuncs.pfnDelCommand ("spectate" );
+	gEngfuncs.pfnDelCommand ("gametitle" );
+	gEngfuncs.pfnDelCommand ("god" );
+	gEngfuncs.pfnDelCommand ("fov" );
 }

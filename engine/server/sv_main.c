@@ -193,26 +193,6 @@ send updates to client if changed
 */
 void SV_UpdateMovevars( void )
 {
-	if( sv_maxspeed->modified )
-	{
-		sv_client_t	*cl;
-		int		i;
-
-		// maxspeed is modified, refresh maxspeed for each client
-		for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-		{
-			if( !SV_IsValidEdict( cl->edict ))
-				continue;
-
-			// can update even if client it's not active
-			SV_SetClientMaxspeed( cl, sv_maxspeed->value );
-		}
-                    
-		if( sv.state == ss_active )
-			SV_BroadcastPrintf( PRINT_HIGH, "sv_maxspeed is changed to %g\n", sv_maxspeed->value );
-		sv_maxspeed->modified = false;
-	}
-
 	if( !physinfo->modified ) return;
 
 	svgame.movevars.gravity = sv_gravity->value;
@@ -634,7 +614,7 @@ void SV_Init( void )
 	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", CVAR_PHYSICINFO, "sky direction y (hl1 compatibility)" );
 	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "-1", CVAR_PHYSICINFO, "sky direction z (hl1 compatibility)" );
 	sv_skyname = Cvar_Get ("sv_skyname", "2desert", CVAR_PHYSICINFO, "skybox name (can be dynamically changed in-game)" );
-	sv_footsteps = Cvar_Get ("mp_footsteps", "0", CVAR_PHYSICINFO, "can hear footsteps from other players" );
+	sv_footsteps = Cvar_Get ("mp_footsteps", "1", CVAR_PHYSICINFO, "can hear footsteps from other players" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
 	sv_fps = Cvar_Get( "sv_fps", "60", CVAR_SERVERINFO|CVAR_ARCHIVE, "network game server fps" );

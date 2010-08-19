@@ -7,148 +7,148 @@
 #define ENGINECALLBACKS_H
 
 // built-in memory manager
-#define MALLOC( x )		(*g_engfuncs.pfnMemAlloc)( x, __FILE__, __LINE__ )
-#define CALLOC( x, y )	(*g_engfuncs.pfnMemAlloc)((x) * (y), __FILE__, __LINE__ )
-#define FREE( x )		(*g_engfuncs.pfnMemFree)( x, __FILE__, __LINE__ )
+#define MALLOC( x )		(*gEngfuncs.pfnMemAlloc)( x, __FILE__, __LINE__ )
+#define CALLOC( x, y )	(*gEngfuncs.pfnMemAlloc)((x) * (y), __FILE__, __LINE__ )
+#define FREE( x )		(*gEngfuncs.pfnMemFree)( x, __FILE__, __LINE__ )
 
 // screen handlers
-#define SPR_GetList		(*g_engfuncs.pfnSPR_GetList)
-#define SPR_Frames		(*g_engfuncs.pfnSPR_Frames)
-#define SPR_Width		(*g_engfuncs.pfnSPR_Width)
-#define SPR_Height		(*g_engfuncs.pfnSPR_Height)
-#define SPR_EnableScissor	(*g_engfuncs.pfnSPR_EnableScissor)
-#define SPR_DisableScissor	(*g_engfuncs.pfnSPR_DisableScissor)
-#define FillRGBA		(*g_engfuncs.pfnFillRGBA)
-#define GetScreenInfo	(*g_engfuncs.pfnGetScreenInfo)
+#define SPR_GetList		(*gEngfuncs.pfnSPR_GetList)
+#define SPR_Frames		(*gEngfuncs.pfnSPR_Frames)
+#define SPR_Width		(*gEngfuncs.pfnSPR_Width)
+#define SPR_Height		(*gEngfuncs.pfnSPR_Height)
+#define SPR_EnableScissor	(*gEngfuncs.pfnSPR_EnableScissor)
+#define SPR_DisableScissor	(*gEngfuncs.pfnSPR_DisableScissor)
+#define FillRGBA		(*gEngfuncs.pfnFillRGBA)
+#define GetScreenInfo	(*gEngfuncs.pfnGetScreenInfo)
 
-#define SPR_Load		(*g_engfuncs.pfnSPR_Load)
-#define TEX_Load( x )	(*g_engfuncs.pTriAPI->LoadShader)( x, false )
-#define TEX_LoadNoMip( x )	(*g_engfuncs.pTriAPI->LoadShader)( x, true )
-#define SetCrosshair	(*g_engfuncs.pfnSetCrosshair)
+#define SPR_Load		(*gEngfuncs.pfnSPR_Load)
+#define TEX_Load( x )	(*gEngfuncs.pTriAPI->LoadShader)( x, false )
+#define TEX_LoadNoMip( x )	(*gEngfuncs.pTriAPI->LoadShader)( x, true )
+#define SetCrosshair	(*gEngfuncs.pfnSetCrosshair)
 
-#define SendWeaponAnim	(*g_engfuncs.pEventAPI->EV_WeaponAnimation)
-#define GetModelType	(*g_engfuncs.pfnGetModelType)
-#define GetModelFrames	(*g_engfuncs.pfnGetModFrames)
-#define GetModelBounds	(*g_engfuncs.pfnGetModBounds)
-#define CVAR_REGISTER	(*g_engfuncs.pfnRegisterVariable)
-#define CVAR_SET_FLOAT	(*g_engfuncs.pfnCvarSetValue)
-#define CVAR_GET_FLOAT	(*g_engfuncs.pfnGetCvarFloat)
-#define CVAR_GET_STRING	(*g_engfuncs.pfnGetCvarString)
-#define SERVER_COMMAND	(*g_engfuncs.pfnServerCmd)
-#define CLIENT_COMMAND	(*g_engfuncs.pfnClientCmd)
-#define GetPlayerInfo	(*g_engfuncs.pfnGetPlayerInfo)
-#define TextMessageGet	(*g_engfuncs.pfnTextMessageGet)
-#define Cmd_AddCommand	(*g_engfuncs.pfnAddCommand)
-#define Cmd_RemoveCommand	(*g_engfuncs.pfnDelCommand)
-#define CMD_ARGC		(*g_engfuncs.pfnCmdArgc)
-#define CMD_ARGV		(*g_engfuncs.pfnCmdArgv)
-#define Con_Printf		(*g_engfuncs.Con_Printf)
-#define Con_DPrintf		(*g_engfuncs.Con_DPrintf)
-#define IN_GAME		(*g_engfuncs.pfnIsInGame)
+#define SendWeaponAnim	(*gEngfuncs.pEventAPI->EV_WeaponAnimation)
+#define GetModelType	(*gEngfuncs.pfnGetModelType)
+#define GetModelFrames	(*gEngfuncs.pfnGetModFrames)
+#define GetModelBounds	(*gEngfuncs.pfnGetModBounds)
+#define CVAR_REGISTER	(*gEngfuncs.pfnRegisterVariable)
+#define CVAR_SET_FLOAT	(*gEngfuncs.pfnCvarSetValue)
+#define CVAR_GET_FLOAT	(*gEngfuncs.pfnGetCvarFloat)
+#define CVAR_GET_STRING	(*gEngfuncs.pfnGetCvarString)
+#define SERVER_COMMAND	(*gEngfuncs.pfnServerCmd)
+#define CLIENT_COMMAND	(*gEngfuncs.pfnClientCmd)
+#define GetPlayerInfo	(*gEngfuncs.pfnGetPlayerInfo)
+#define TextMessageGet	(*gEngfuncs.pfnTextMessageGet)
+#define Cmd_AddCommand	(*gEngfuncs.pfnAddCommand)
+#define Cmd_RemoveCommand	(*gEngfuncs.pfnDelCommand)
+#define CMD_ARGC		(*gEngfuncs.pfnCmdArgc)
+#define CMD_ARGV		(*gEngfuncs.pfnCmdArgv)
+#define Con_Printf		(*gEngfuncs.Con_Printf)
+#define Con_DPrintf		(*gEngfuncs.Con_DPrintf)
+#define IN_GAME		(*gEngfuncs.pfnIsInGame)
 
 inline void SPR_Set( HSPRITE hPic, int r, int g, int b )
 {
-	g_engfuncs.pfnSPR_Set( hPic, r, g, b, 255 );
+	gEngfuncs.pfnSPR_Set( hPic, r, g, b, 255 );
 }
 
 inline void SPR_Set( HSPRITE hPic, int r, int g, int b, int a )
 {
-	g_engfuncs.pfnSPR_Set( hPic, r, g, b, a );
+	gEngfuncs.pfnSPR_Set( hPic, r, g, b, a );
 }
 
 inline void SPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnSPR_Draw( frame, x, y, -1, -1, prc );
+	gEngfuncs.pfnSPR_Draw( frame, x, y, -1, -1, prc );
 }
 
 inline void SPR_Draw( int frame, int x, int y, int width, int height )
 {
-	g_engfuncs.pfnSPR_Draw( frame, x, y, width, height, NULL );
+	gEngfuncs.pfnSPR_Draw( frame, x, y, width, height, NULL );
 }
 
 inline void SPR_DrawTransColor( int frame, int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnSPR_DrawTrans( frame, x, y, -1, -1, prc );
+	gEngfuncs.pfnSPR_DrawTrans( frame, x, y, -1, -1, prc );
 }
 
 inline void SPR_DrawTransColor( int frame, int x, int y, int width, int height )
 {
-	g_engfuncs.pfnSPR_DrawTrans( frame, x, y, width, height, NULL );
+	gEngfuncs.pfnSPR_DrawTrans( frame, x, y, width, height, NULL );
 }
 
 inline void SPR_DrawHoles( int frame, int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnSPR_DrawHoles( frame, x, y, -1, -1, prc );
+	gEngfuncs.pfnSPR_DrawHoles( frame, x, y, -1, -1, prc );
 }
 
 inline void SPR_DrawHoles( int frame, int x, int y, int width, int height )
 {
-	g_engfuncs.pfnSPR_DrawHoles( frame, x, y, width, height, NULL );
+	gEngfuncs.pfnSPR_DrawHoles( frame, x, y, width, height, NULL );
 }
 
 inline void SPR_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnSPR_DrawAdditive( frame, x, y, -1, -1, prc );
+	gEngfuncs.pfnSPR_DrawAdditive( frame, x, y, -1, -1, prc );
 }
 
 inline void SPR_DrawAdditive( int frame, int x, int y, int width, int height )
 {
-	g_engfuncs.pfnSPR_DrawAdditive( frame, x, y, width, height, NULL );
+	gEngfuncs.pfnSPR_DrawAdditive( frame, x, y, width, height, NULL );
 }
 
 inline void CL_PlaySound( const char *szSound, float flVolume, float pitch = PITCH_NORM )
 {
-	g_engfuncs.pfnPlaySoundByName( szSound, flVolume, pitch, NULL );
+	gEngfuncs.pfnPlaySoundByName( szSound, flVolume, pitch, NULL );
 }
 
 inline void CL_PlaySound( int iSound, float flVolume, float pitch = PITCH_NORM )
 {
-	g_engfuncs.pfnPlaySoundByIndex( iSound, flVolume, pitch, NULL );
+	gEngfuncs.pfnPlaySoundByIndex( iSound, flVolume, pitch, NULL );
 }
 
 inline void CL_PlaySound( const char *szSound, float flVolume, Vector &pos, float pitch = PITCH_NORM )
 {
-	g_engfuncs.pfnPlaySoundByName( szSound, flVolume, pitch, pos );
+	gEngfuncs.pfnPlaySoundByName( szSound, flVolume, pitch, pos );
 }
 
 inline void CL_PlaySound( int iSound, float flVolume, Vector &pos, float pitch = PITCH_NORM )
 {
-	g_engfuncs.pfnPlaySoundByIndex( iSound, flVolume, pitch, pos );
+	gEngfuncs.pfnPlaySoundByIndex( iSound, flVolume, pitch, pos );
 }
 
-#define TextMessageDrawChar	(*g_engfuncs.pfnDrawCharacter)
-#define TextMessageSetColor	(*g_engfuncs.pfnDrawSetTextColor)
-#define DrawConsoleString	(*g_engfuncs.pfnDrawConsoleString)
-#define GetConsoleStringSize	(*g_engfuncs.pfnDrawConsoleStringLen)
-#define AngleVectors	(*g_engfuncs.pfnAngleVectors)
-#define CenterPrint		(*g_engfuncs.pfnCenterPrint)
-#define ConsolePrint	(*g_engfuncs.pfnConsolePrint)
-#define GetViewAngles	(*g_engfuncs.pfnGetViewAngles)
-#define SetViewAngles	(*g_engfuncs.pfnSetViewAngles)
-#define GetLocalPlayer	(*g_engfuncs.pfnGetLocalPlayer)
-#define GetClientMaxspeed	(*g_engfuncs.pfnGetClientMaxspeed)
-#define IsSpectateOnly	(*g_engfuncs.pfnIsSpectateOnly)
-#define GetClientTime	(*g_engfuncs.pfnGetClientTime)
-#define GetLerpFrac		(*g_engfuncs.pfnGetLerpFrac)
-#define GetViewModel	(*g_engfuncs.pfnGetViewModel)
-#define GetModelPtr		(*g_engfuncs.pfnGetModelPtr)
-#define CL_GetPaletteColor	(*g_engfuncs.pEfxAPI->R_GetPaletteColor)
-#define CL_AddEntity	(*g_engfuncs.pEfxAPI->R_AddEntity)
-#define POINT_CONTENTS( x )	(*g_engfuncs.pfnPointContents)( x, NULL )
-#define TRACE_LINE		(*g_engfuncs.pfnTraceLine)
-#define TRACE_HULL		(*g_engfuncs.pfnTraceHull)
-#define RANDOM_LONG		(*g_engfuncs.pfnRandomLong)
-#define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)
-#define LOAD_FILE		(*g_engfuncs.pfnLoadFile)
-#define FILE_EXISTS		(*g_engfuncs.pfnFileExists)
-#define FREE_FILE		(*g_engfuncs.pfnFreeFile)
-#define GET_GAME_DIR	(*g_engfuncs.pfnGetGameDir)
-#define LOAD_LIBRARY	(*g_engfuncs.pfnLoadLibrary)
-#define GET_PROC_ADDRESS	(*g_engfuncs.pfnGetProcAddress)
-#define FREE_LIBRARY	(*g_engfuncs.pfnFreeLibrary)
-#define HOST_ERROR		(*g_engfuncs.pfnHostError)
-#define COM_ParseToken	(*g_engfuncs.pfnParseToken)
-#define MAKE_ENVSHOT( x, y )	(*g_engfuncs.R_EnvShot)( x, y, 0 )
-#define MAKE_SKYSHOT( x, y )	(*g_engfuncs.R_EnvShot)( x, y, 1 )
+#define TextMessageDrawChar	(*gEngfuncs.pfnDrawCharacter)
+#define TextMessageSetColor	(*gEngfuncs.pfnDrawSetTextColor)
+#define DrawConsoleString	(*gEngfuncs.pfnDrawConsoleString)
+#define GetConsoleStringSize	(*gEngfuncs.pfnDrawConsoleStringLen)
+#define AngleVectors	(*gEngfuncs.pfnAngleVectors)
+#define CenterPrint		(*gEngfuncs.pfnCenterPrint)
+#define ConsolePrint	(*gEngfuncs.pfnConsolePrint)
+#define GetViewAngles	(*gEngfuncs.pfnGetViewAngles)
+#define SetViewAngles	(*gEngfuncs.pfnSetViewAngles)
+#define GetLocalPlayer	(*gEngfuncs.pfnGetLocalPlayer)
+#define GetClientMaxspeed	(*gEngfuncs.pfnGetClientMaxspeed)
+#define IsSpectateOnly	(*gEngfuncs.pfnIsSpectateOnly)
+#define GetClientTime	(*gEngfuncs.pfnGetClientTime)
+#define GetLerpFrac		(*gEngfuncs.pfnGetLerpFrac)
+#define GetViewModel	(*gEngfuncs.pfnGetViewModel)
+#define GetModelPtr		(*gEngfuncs.pfnGetModelPtr)
+#define CL_GetPaletteColor	(*gEngfuncs.pEfxAPI->R_GetPaletteColor)
+#define CL_AddEntity	(*gEngfuncs.pEfxAPI->R_AddEntity)
+#define POINT_CONTENTS( x )	(*gEngfuncs.PM_PointContents)( x, NULL )
+#define TRACE_LINE		(*gEngfuncs.pfnTraceLine)
+#define TRACE_HULL		(*gEngfuncs.pfnTraceHull)
+#define RANDOM_LONG		(*gEngfuncs.pfnRandomLong)
+#define RANDOM_FLOAT	(*gEngfuncs.pfnRandomFloat)
+#define LOAD_FILE		(*gEngfuncs.pfnLoadFile)
+#define FILE_EXISTS		(*gEngfuncs.pfnFileExists)
+#define FREE_FILE		(*gEngfuncs.pfnFreeFile)
+#define GET_GAME_DIR	(*gEngfuncs.pfnGetGameDir)
+#define LOAD_LIBRARY	(*gEngfuncs.pfnLoadLibrary)
+#define GET_PROC_ADDRESS	(*gEngfuncs.pfnGetProcAddress)
+#define FREE_LIBRARY	(*gEngfuncs.pfnFreeLibrary)
+#define HOST_ERROR		(*gEngfuncs.pfnHostError)
+#define COM_ParseToken	(*gEngfuncs.pfnParseToken)
+#define MAKE_ENVSHOT( x, y )	(*gEngfuncs.R_EnvShot)( x, y, 0 )
+#define MAKE_SKYSHOT( x, y )	(*gEngfuncs.R_EnvShot)( x, y, 1 )
 
 #endif//ENGINECALLBACKS_H

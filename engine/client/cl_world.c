@@ -196,7 +196,8 @@ void CL_AreaEdicts_r( areanode_t *node, area_t *ap )
 	for( l = start->next; l != start; l = next )
 	{
 		next = l->next;
-		check = EDICT_FROM_AREA( l );
+		check = CL_GetEntityByIndex( l->entnum );
+		if( !check ) continue;
 
 		if( check->curstate.solid == SOLID_NOT && check->curstate.skin == CONTENTS_NONE )
 			continue; // deactivated

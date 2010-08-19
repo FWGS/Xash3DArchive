@@ -129,13 +129,13 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	// that the client has the player list. We run this code once when we detect any COLLIDEALL 
 	// tent, then set this BOOL to true so the code doesn't get run again if there's more than
 	// one COLLIDEALL ent for this update. (often are).
-	g_engfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
 
 	// Store off the old count
-	g_engfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_PushPMStates();
 
 	// Now add in all of the players.
-	g_engfuncs.pEventAPI->EV_SetSolidPlayers ( -1 );	
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( -1 );	
 
 	// save oldorigin
 	pTemp->entity.prevstate.origin = pTemp->entity.origin;
@@ -147,7 +147,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 		if( gpGlobals->time > pTemp->entity.baseline.scale )
 		{
 			// show Sparks
-			DoSparks( pTemp->entity.origin );
+			SparkShower( pTemp->entity.origin );
 
 			// reduce life
 			pTemp->entity.baseline.framerate -= 0.1f;
@@ -172,7 +172,33 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 
 		if( pClient )
 		{
+			if( EV_IsLocal( pClient->index ))
+			{
+				// NOTE: if this a local client ?
+				// relink attachment with her viewmodel
+				pClient = GetViewEntity();
+			}
 			pTemp->entity.origin = pClient->origin + pTemp->tentOffset;
+		}
+	}
+	// same as FTENT_PLYRATTACHMENT but offset will be updated every frame
+	else if( pTemp->flags & FTENT_ATTACHMENT )
+	{
+		cl_entity_t *pClient = GetEntityByIndex( pTemp->clientIndex );
+
+		if( pClient )
+		{
+			if( EV_IsLocal( pClient->index ))
+			{
+				// NOTE: if this a local client ?
+				// relink attachment with her viewmodel
+				pClient = GetViewEntity();
+			}
+
+			pTemp->entity.origin = pClient->origin;
+
+			if( pTemp->entity.baseline.body > 0 )
+				pTemp->entity.origin += pClient->attachment_origin[pTemp->entity.baseline.body - 1];
 		}
 	}
 	else if( pTemp->flags & FTENT_SINEWAVE )
@@ -214,7 +240,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 				pTemp->die = 0.0f;
 
 				// restore state info
-				g_engfuncs.pEventAPI->EV_PopPMStates();
+				gEngfuncs.pEventAPI->EV_PopPMStates();
 				return false;
 			}
 		}
@@ -253,12 +279,12 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 			pmtrace_t pmtrace;
 			physent_t *pe;
 
-			g_engfuncs.pEventAPI->EV_SetTraceHull( 2 );
-			g_engfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX, -1, &pmtrace );
+			gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			gEngfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX, -1, &pmtrace );
 
 			if ( pmtrace.fraction != 1 )
 			{
-				pe = g_engfuncs.pEventAPI->EV_GetPhysent( pmtrace.ent );
+				pe = gEngfuncs.pEventAPI->EV_GetPhysent( pmtrace.ent );
 
 				if( !pmtrace.ent || ( pe->info != pTemp->clientIndex ))
 				{
@@ -274,8 +300,8 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 		{
 			pmtrace_t pmtrace;
 					
-			g_engfuncs.pEventAPI->EV_SetTraceHull( 2 );
-			g_engfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX|PM_WORLD_ONLY, -1, &pmtrace );
+			gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			gEngfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX|PM_WORLD_ONLY, -1, &pmtrace );
 
 			if( pmtrace.fraction != 1.0f )
 			{
@@ -355,7 +381,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	// FIXME: this code is right ???
 	if(( pTemp->flags & FTENT_FLICKER ) && m_iTempEntFrame == pTemp->entity.curstate.effects )
 	{
-		dlight_t *dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+		dlight_t *dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 
 		dl->origin = pTemp->entity.origin;
 		dl->radius = 60;
@@ -378,7 +404,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	if( pTemp->flags & FTENT_CLIENTCUSTOM )
 	{
 		if( pTemp->callback )
-			(*pTemp->callback)( pTemp );
+			(*pTemp->callback)( pTemp, frametime, GetClientTime( ));
 	}
 
 	if( pTemp->flags & FTENT_WINDBLOWN )
@@ -407,7 +433,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	}
 
 	// restore state info
-	g_engfuncs.pEventAPI->EV_PopPMStates();
+	gEngfuncs.pEventAPI->EV_PopPMStates();
 
 	return true;
 }
@@ -485,10 +511,10 @@ void CTempEnts::Clear( void )
 	m_iTempEntFrame = 0;
 
 	// update muzzleflash indexes
-	m_iMuzzleFlash[0] = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash1.spr" );
-	m_iMuzzleFlash[1] = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash2.spr" );
-	m_iMuzzleFlash[2] = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash3.spr" );
-	m_iMuzzleFlash[3] = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash.spr" );
+	m_iMuzzleFlash[0] = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash1.spr" );
+	m_iMuzzleFlash[1] = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash2.spr" );
+	m_iMuzzleFlash[2] = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash3.spr" );
+	m_iMuzzleFlash[3] = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/muzzleflash.spr" );
 
 	hSprGlowShell = TEX_Load( "renderfx/glowshell" );
 
@@ -622,7 +648,7 @@ TEMPENTITY *CTempEnts::TempEntAllocNoModel( const Vector& org )
 	return TempEntAlloc( org, 0 );
 }
 
-TEMPENTITY *CTempEnts::TempEntAllocCustom( const Vector& org, int modelIndex, int high, ENTCALLBACK pfnCallback )
+TEMPENTITY *CTempEnts::TempEntAllocCustom( const Vector& org, int modelIndex, int high, void ( *callback )( struct tempent_s *ent, float frametime, float currenttime ))
 {
 	TEMPENTITY	*pTemp;
 
@@ -635,9 +661,9 @@ TEMPENTITY *CTempEnts::TempEntAllocCustom( const Vector& org, int modelIndex, in
 		pTemp = TempEntAlloc( org, modelIndex );
 	}
 
-	if( pTemp && pfnCallback )
+	if( pTemp && callback )
 	{
-		pTemp->callback = pfnCallback;
+		pTemp->callback = callback;
 		pTemp->flags |= FTENT_CLIENTCUSTOM;
 	}
 
@@ -1043,7 +1069,7 @@ void CTempEnts::RocketFlare( const Vector& pos )
 	int		modelIndex;
 	int		nframeCount;
 
-	modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/animglow01.spr" );
+	modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/animglow01.spr" );
 	if( !modelIndex ) return;
 
 	nframeCount = GetModelFrames( modelIndex );
@@ -1077,19 +1103,15 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 	if( !modelIndex ) return;
 
 	frameCount = GetModelFrames( modelIndex );
-	pos = pEnt->origin;
 
-	if( iAttachment > 0 )
-		pos += pEnt->attachment_origin[iAttachment - 1];
-
-	if( pos == pEnt->origin )
+	if( iAttachment > 0 && pEnt->attachment_origin[iAttachment - 1] == g_vecZero )
 	{
 		Con_Printf( "Invalid muzzleflash entity!\n" );
 		return;
 	}
 
 	// must set position for right culling on render
-	pTemp = TempEntAlloc( pos, modelIndex );
+	pTemp = TempEntAlloc( pEnt->origin, modelIndex );
 	if( !pTemp ) return;
 	
 	pTemp->entity.curstate.rendermode = kRenderTransAdd;
@@ -1098,7 +1120,18 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 	pTemp->die = gpGlobals->time + 0.05; // die at next frame
 	pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 	pTemp->frameMax = frameCount - 1;
-	pTemp->clientIndex = pEnt->index;
+
+	// because viewentity doesn't have a valid index
+	if( pEnt->curstate.entityType == ET_VIEWENTITY )
+		pTemp->clientIndex = GetLocalPlayer()->index;
+	else pTemp->clientIndex = pEnt->index;
+
+	if( iAttachment > 0 )
+	{
+		// store attachment as baseline->body
+		pTemp->entity.baseline.body = iAttachment;
+		pTemp->flags |= FTENT_ATTACHMENT;
+	}		
 
 	if( index == 0 )
 	{
@@ -1111,9 +1144,6 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 		pTemp->entity.curstate.scale = scale;
 		pTemp->entity.angles[2] = RANDOM_LONG( 0, 359 );
 	}
-
-	// render now (guranteed that muzzleflash will be draw)
-	CL_AddEntity( &pTemp->entity, ET_TEMPENTITY, -1 );
 }
 
 void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, int modelIndex2, float size )
@@ -1224,11 +1254,11 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 	}
 }
 
-void CTempEnts::TempModel( const Vector &pos, const Vector &dir, const Vector &ang, float life, int modelIndex, int soundtype )
+TEMPENTITY *CTempEnts::TempModel( const Vector &pos, const Vector &dir, const Vector &ang, float life, int modelIndex, int soundtype )
 {
 	// alloc a new tempent
 	TEMPENTITY *pTemp = TempEntAlloc( pos, modelIndex );
-	if( !pTemp ) return;
+	if( !pTemp ) return NULL;
 
 	// keep track of shell type
 	switch( soundtype )
@@ -1249,6 +1279,8 @@ void CTempEnts::TempModel( const Vector &pos, const Vector &dir, const Vector &a
 	pTemp->entity.curstate.rendermode = kRenderNormal;
 	pTemp->entity.baseline.renderamt = 255;
 	pTemp->die = gpGlobals->time + life;
+
+	return pTemp;
 }
 
 TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float framerate )
@@ -1570,7 +1602,7 @@ void CTempEnts::Large_Funnel( Vector pos, int spriteIndex, int flags )
 	}
 }
 
-void CTempEnts::DoSparks( const Vector& pos )
+void CTempEnts::SparkShower( const Vector& pos )
 {
 	Vector m_vecPos, m_vecDir;
 
@@ -1579,7 +1611,7 @@ void CTempEnts::DoSparks( const Vector& pos )
 	m_vecPos.y = pos.y + RANDOM_FLOAT( -2, 2 );
 	m_vecPos.z = pos.z + RANDOM_FLOAT( -2, 2 );
 
-	int modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
+	int modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
 	RicochetSprite( m_vecPos, modelIndex, RANDOM_FLOAT( 0.4, 0.6f ));
 
 	// create a 8 random spakle tracers
@@ -1631,8 +1663,8 @@ void CTempEnts::PlaceDecal( Vector pos, int entityIndex, int decalIndex )
 
 	pEnt = GetEntityByIndex( entityIndex );
 	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
-	hDecal = g_engfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
-	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
+	hDecal = gEngfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
+	gEngfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
 }
 
 void CTempEnts::PlaceDecal( Vector pos, int entityIndex, const char *decalname )
@@ -1643,8 +1675,8 @@ void CTempEnts::PlaceDecal( Vector pos, int entityIndex, const char *decalname )
 
 	pEnt = GetEntityByIndex( entityIndex );
 	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
-	hDecal = g_engfuncs.pEfxAPI->CL_DecalIndexFromName( decalname );
-	g_engfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
+	hDecal = gEngfuncs.pEfxAPI->CL_DecalIndexFromName( decalname );
+	gEngfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
 }
 
 void CTempEnts::AllocDLight( Vector pos, byte r, byte g, byte b, float radius, float time, float decay )
@@ -1653,7 +1685,7 @@ void CTempEnts::AllocDLight( Vector pos, byte r, byte g, byte b, float radius, f
 
 	dlight_t	*dl;
 
-	dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+	dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 
 	dl->origin = pos;	
 	dl->die = gpGlobals->time + time;

@@ -433,7 +433,9 @@ static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextm
 			{
 				// draw sky
 				if(!( RI.params & RP_NOSKY ))
+				{
 					R_DrawSky( tr.currentSkyShader );
+				}
 				return;
 			}
 

@@ -232,6 +232,36 @@ void AngleMatrix( const vec3_t angles, float (*matrix)[4] )
 	matrix[2][3] = 0.0;
 }
 
+// g-cont. copied here from pm_math.cpp
+void VectorAngles( const Vector &forward, Vector &angles )
+{
+	float	tmp, yaw, pitch;
+	
+	if (forward[1] == 0 && forward[0] == 0)
+	{
+		yaw = 0;
+		if (forward[2] > 0)
+			pitch = 90;
+		else
+			pitch = 270;
+	}
+	else
+	{
+		yaw = (atan2(forward[1], forward[0]) * 180 / M_PI);
+		if (yaw < 0)
+			yaw += 360;
+
+		tmp = sqrt (forward[0]*forward[0] + forward[1]*forward[1]);
+		pitch = (atan2(forward[2], tmp) * 180 / M_PI);
+		if (pitch < 0)
+			pitch += 360;
+	}
+	
+	angles[0] = pitch;
+	angles[1] = yaw;
+	angles[2] = 0;
+}
+
 //
 // hl2 fade - this supports multiple fading
 // FIXME: make Class CHudFade instead of C-style code?
@@ -436,13 +466,13 @@ UTIL_Probe
 client explosion utility
 ====================
 */
-float UTIL_Probe( const Vector &origin, Vector *vecDirection, float strength )
+float UTIL_Probe( Vector &origin, Vector *vecDirection, float strength )
 {
 	// press out
 	Vector endpos = origin + (( *vecDirection ) * strength );
 
 	// Trace into the world
-	pmtrace_t *trace = g_engfuncs.PM_TraceLine( origin, endpos, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
+	pmtrace_t *trace = gEngfuncs.PM_TraceLine( origin, endpos, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
 
 	// push back a proportional amount to the probe
 	(*vecDirection) = -(*vecDirection) * (1.0f - trace->fraction);
@@ -453,7 +483,7 @@ float UTIL_Probe( const Vector &origin, Vector *vecDirection, float strength )
 	return (1.0f - trace->fraction);
 }
 
-void UTIL_GetForceDirection( const Vector &origin, float magnitude, Vector *resultDirection, float *resultForce )
+void UTIL_GetForceDirection( Vector &origin, float magnitude, Vector *resultDirection, float *resultForce )
 {
 	Vector	d[6];
 

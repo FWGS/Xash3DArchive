@@ -47,12 +47,20 @@ LINK_ENTITY_TO_CLASS( laser_spot, CLaserSpot );
 
 //=========================================================
 //=========================================================
-CLaserSpot *CLaserSpot::CreateSpot( void )
+CLaserSpot *CLaserSpot::CreateSpot( entvars_t *pevOwner )
 {
 	CLaserSpot *pSpot = GetClassPtr( (CLaserSpot *)NULL );
 	pSpot->Spawn();
 
 	pSpot->pev->classname = MAKE_STRING("laser_spot");
+
+	if( pevOwner ) 
+	{
+		// predictable laserspot (cl_lw must be set to 1)
+		pSpot->pev->flags |= FL_SKIPLOCALHOST;
+		pSpot->pev->owner = ENT( pevOwner );
+		pevOwner->effects |= EF_LASERSPOT;
+	}
 
 	return pSpot;
 }
@@ -79,6 +87,8 @@ void CLaserSpot::Spawn( void )
 void CLaserSpot::Suspend( float flSuspendTime )
 {
 	pev->effects |= EF_NODRAW;
+	if( pev->owner )
+		pev->owner->v.effects &= ~EF_LASERSPOT;
 	
 	SetThink( Revive );
 	pev->nextthink = gpGlobals->time + flSuspendTime;
@@ -90,6 +100,9 @@ void CLaserSpot::Suspend( float flSuspendTime )
 void CLaserSpot::Revive( void )
 {
 	pev->effects &= ~EF_NODRAW;
+
+	if( pev->owner )
+		pev->owner->v.effects |= EF_LASERSPOT;
 
 	SetThink( NULL );
 }
@@ -433,6 +446,7 @@ void CRpg::Holster( void )
 	if (m_pSpot)
 	{
 		m_pSpot->Killed( NULL, GIB_NEVER );
+		m_pPlayer->pev->effects &= ~EF_LASERSPOT;
 		m_pSpot = NULL;
 	}
 #endif
@@ -496,6 +510,7 @@ void CRpg::SecondaryAttack()
 	if (!m_fSpotActive && m_pSpot)
 	{
 		m_pSpot->Killed( NULL, GIB_NORMAL );
+		m_pPlayer->pev->effects &= ~EF_LASERSPOT;
 		m_pSpot = NULL;
 	}
 #endif
@@ -554,11 +569,11 @@ void CRpg::UpdateSpot( void )
 	{
 		if (!m_pSpot)
 		{
-			m_pSpot = CLaserSpot::CreateSpot();
+			m_pSpot = CLaserSpot::CreateSpot( m_pPlayer->pev );
 		}
 
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
-		Vector vecSrc = m_pPlayer->GetGunPosition( );;
+		Vector vecSrc = m_pPlayer->GetGunPosition( );
 		Vector vecAiming = gpGlobals->v_forward;
 
 		TraceResult tr;

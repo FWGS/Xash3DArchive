@@ -49,7 +49,7 @@ typedef struct event_api_s
 	void	(*EV_WeaponAnimation)( int sequence, int body );
 	word	(*EV_PrecacheEvent)( int type, const char* psz );
 	void	(*EV_PlaybackEvent)( int flags, const struct cl_entity_s *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
-	const char *(*EV_TraceTexture)( int ground, const float *v1, const float *v2 );
+	const char *(*EV_TraceTexture)( int ground, float *vstart, float *vend );
 	void	(*EV_StopAllSounds)( int ent, int entchannel );
 	void	(*EV_KillEvents)( int entnum, const char *eventname );
 } event_api_t;

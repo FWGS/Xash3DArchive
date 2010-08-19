@@ -136,6 +136,7 @@ public:
 	void		SparkleTracer( const Vector& pos, const Vector& dir );
 	void		BulletTracer( const Vector& pos, const Vector& end );
 	void		StreakTracer( const Vector& pos, const Vector& velocity, int color );
+	void		BulletImpactParticles( const Vector &pos );
 };
 
 extern CParticleSystem	*g_pParticles;

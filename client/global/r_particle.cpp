@@ -150,12 +150,12 @@ CBaseParticle *CParticleSystem :: AllocParticle( HSPRITE m_hSpr )
 void CParticleSystem :: DrawParticle( HSPRITE hSprite, const Vector &pos, const byte color[4], float size )
 {
 	// draw the particle
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
 
-	g_engfuncs.pTriAPI->RenderMode( kRenderTransTexture );
-	g_engfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], color[3] );
+	gEngfuncs.pTriAPI->RenderMode( kRenderTransTexture );
+	gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], color[3] );
 
-	g_engfuncs.pTriAPI->Bind( hSprite, 0 );
+	gEngfuncs.pTriAPI->Bind( hSprite, 0 );
 
 	if ( hSprite == m_hDefaultParticle )
 	{
@@ -175,22 +175,22 @@ void CParticleSystem :: DrawParticle( HSPRITE hSprite, const Vector &pos, const 
 	up = gpViewParams->up * size;
 
 	// Add the 4 corner vertices.
-	g_engfuncs.pTriAPI->Begin( TRI_QUADS );
-	g_engfuncs.pTriAPI->TexCoord2f ( 0.0f, 1.0f );
-	g_engfuncs.pTriAPI->Vertex3fv ( pos - right + up );
+	gEngfuncs.pTriAPI->Begin( TRI_QUADS );
+	gEngfuncs.pTriAPI->TexCoord2f ( 0.0f, 1.0f );
+	gEngfuncs.pTriAPI->Vertex3fv ( pos - right + up );
 
-	g_engfuncs.pTriAPI->TexCoord2f ( 0.0f, 0.0f );
-	g_engfuncs.pTriAPI->Vertex3fv ( pos + right + up );
+	gEngfuncs.pTriAPI->TexCoord2f ( 0.0f, 0.0f );
+	gEngfuncs.pTriAPI->Vertex3fv ( pos + right + up );
 
-	g_engfuncs.pTriAPI->TexCoord2f ( 1.0f, 0.0f );
-	g_engfuncs.pTriAPI->Vertex3fv ( pos + right - up );
+	gEngfuncs.pTriAPI->TexCoord2f ( 1.0f, 0.0f );
+	gEngfuncs.pTriAPI->Vertex3fv ( pos + right - up );
 
-	g_engfuncs.pTriAPI->TexCoord2f ( 1.0f, 1.0f );
-	g_engfuncs.pTriAPI->Vertex3fv ( pos - right - up );
+	gEngfuncs.pTriAPI->TexCoord2f ( 1.0f, 1.0f );
+	gEngfuncs.pTriAPI->Vertex3fv ( pos - right - up );
 
-	g_engfuncs.pTriAPI->End();
+	gEngfuncs.pTriAPI->End();
 		
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }
 
 void CParticleSystem :: SimulateAndRender( CBaseParticle *pParticle )
@@ -829,4 +829,15 @@ void CParticleSystem :: BulletTracer( const Vector& start, const Vector& end )
 	p->m_flLength = RANDOM_FLOAT( 0.05f, 0.06f );
 	p->m_Velocity = dir * vel;
 	p->pfnCallback = pfnBulletTracerDraw;
+}
+
+/*
+===============
+BulletImpactParticles
+
+===============
+*/
+void CParticleSystem :: BulletImpactParticles( const Vector &pos )
+{
+	// FIXME: implement
 }

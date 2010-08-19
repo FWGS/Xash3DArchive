@@ -89,11 +89,11 @@ void CBeamSegDraw::Start( int nSegs, HSPRITE m_hSprite, kRenderMode_t nRenderMod
 
 	ASSERT( nSegs >= 2 );
 
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->RenderMode( nRenderMode );
-	g_engfuncs.pTriAPI->Bind( m_hSprite, frame );	// GetSpriteTexture already set frame
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->RenderMode( nRenderMode );
+	gEngfuncs.pTriAPI->Bind( m_hSprite, frame );	// GetSpriteTexture already set frame
 
-	g_engfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );				
+	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );				
 }
 
 inline void CBeamSegDraw::ComputeNormal( const Vector &vStartPos, const Vector &vNextPos, Vector *pNormal )
@@ -128,17 +128,17 @@ inline void CBeamSegDraw::SpecifySeg( const Vector &vNormal )
 	vPoint2 = m_Seg.m_vPos + (-m_Seg.m_flWidth * 0.5f) * vNormal;
 
 	// Specify the points.
-	g_engfuncs.pTriAPI->Color4f( m_Seg.m_vColor[0], m_Seg.m_vColor[1], m_Seg.m_vColor[2], m_Seg.m_flAlpha );
-	g_engfuncs.pTriAPI->TexCoord2f( 0.0f, m_Seg.m_flTexCoord );
-	g_engfuncs.pTriAPI->Normal3fv( vNormal );
-//	g_engfuncs.pTriAPI->Tangent3fv( vTangentY );
-	g_engfuncs.pTriAPI->Vertex3fv( vPoint2 );
+	gEngfuncs.pTriAPI->Color4f( m_Seg.m_vColor[0], m_Seg.m_vColor[1], m_Seg.m_vColor[2], m_Seg.m_flAlpha );
+	gEngfuncs.pTriAPI->TexCoord2f( 0.0f, m_Seg.m_flTexCoord );
+	gEngfuncs.pTriAPI->Normal3fv( vNormal );
+//	gEngfuncs.pTriAPI->Tangent3fv( vTangentY );
+	gEngfuncs.pTriAPI->Vertex3fv( vPoint2 );
 	
-	g_engfuncs.pTriAPI->Color4f( m_Seg.m_vColor[0], m_Seg.m_vColor[1], m_Seg.m_vColor[2], m_Seg.m_flAlpha );
-	g_engfuncs.pTriAPI->TexCoord2f( 1.0f, m_Seg.m_flTexCoord );
-	g_engfuncs.pTriAPI->Normal3fv( vNormal );
-//	g_engfuncs.pTriAPI->Tangent3fv( vTangentY );
-	g_engfuncs.pTriAPI->Vertex3fv( vPoint1 );
+	gEngfuncs.pTriAPI->Color4f( m_Seg.m_vColor[0], m_Seg.m_vColor[1], m_Seg.m_vColor[2], m_Seg.m_flAlpha );
+	gEngfuncs.pTriAPI->TexCoord2f( 1.0f, m_Seg.m_flTexCoord );
+	gEngfuncs.pTriAPI->Normal3fv( vNormal );
+//	gEngfuncs.pTriAPI->Tangent3fv( vTangentY );
+	gEngfuncs.pTriAPI->Vertex3fv( vPoint1 );
 
 }
 
@@ -177,8 +177,8 @@ void CBeamSegDraw::NextSeg( CBeamSeg *pSeg )
 
 void CBeamSegDraw::End()
 {
-	g_engfuncs.pTriAPI->End();
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->End();
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }
 
 //-----------------------------------------------------------------------------
@@ -550,9 +550,9 @@ int CViewRenderBeams::CullBeam( const Vector &start, const Vector &end, int pvsO
 	}
 
 	// check bbox
-	if( g_engfuncs.pEfxAPI->CL_IsBoxVisible( mins, maxs ))
+	if( gEngfuncs.pEfxAPI->CL_IsBoxVisible( mins, maxs ))
 	{
-		if ( pvsOnly || !g_engfuncs.pEfxAPI->R_CullBox( mins, maxs ) )
+		if ( pvsOnly || !gEngfuncs.pEfxAPI->R_CullBox( mins, maxs ) )
 		{
 			// Beam is visible
 			return 1;	
@@ -862,7 +862,7 @@ Beam_t *CViewRenderBeams::CreateBeamPoints( BeamInfo_t &beamInfo )
 	// Model index.
 	if (( beamInfo.m_pszModelName ) && ( beamInfo.m_nModelIndex == -1 ) )
 	{
-		beamInfo.m_nModelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( beamInfo.m_pszModelName );
+		beamInfo.m_nModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( beamInfo.m_pszModelName );
 	}
 
 	// Create the new beam.
@@ -1352,14 +1352,14 @@ void CViewRenderBeams::DrawBeamFollow( int spriteIndex, Beam_t *pbeam, int frame
 	if ( !pnew && div != 0 )
 	{
 		delta = pbeam->attachment[0];
-		g_engfuncs.pTriAPI->WorldToScreen( pbeam->attachment[0], screenLast );
-		g_engfuncs.pTriAPI->WorldToScreen( particles->org, screen );
+		gEngfuncs.pTriAPI->WorldToScreen( pbeam->attachment[0], screenLast );
+		gEngfuncs.pTriAPI->WorldToScreen( particles->org, screen );
 	}
 	else if ( particles && particles->next )
 	{
 		delta = particles->org;
-		g_engfuncs.pTriAPI->WorldToScreen( particles->org, screenLast );
-		g_engfuncs.pTriAPI->WorldToScreen( particles->next->org, screen );
+		gEngfuncs.pTriAPI->WorldToScreen( particles->org, screenLast );
+		gEngfuncs.pTriAPI->WorldToScreen( particles->next->org, screen );
 		particles = particles->next;
 	}
 	else
@@ -1790,7 +1790,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 		return;
 	
 	ASSERT( fadeLength >= 0.0f );
-	HSPRITE m_hSprite = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
+	HSPRITE m_hSprite = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
 
 	if ( !m_hSprite )
 		return;
@@ -1984,7 +1984,7 @@ void DrawDisk( int noise_divisions, float *prgNoise, int modelIndex, float frame
 	Vector	point;
 	float	w;
 
-	HSPRITE m_hSprite = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
+	HSPRITE m_hSprite = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
 
 	if ( !m_hSprite )
 		return;
@@ -2010,11 +2010,11 @@ void DrawDisk( int noise_divisions, float *prgNoise, int modelIndex, float frame
 
 	w = freq * delta[2];
 
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
-	g_engfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
-	g_engfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
+	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
 
 	// NOTE: We must force the degenerate triangles to be on the edge
 	for ( i = 0; i < segments; i++ )
@@ -2026,9 +2026,9 @@ void DrawDisk( int noise_divisions, float *prgNoise, int modelIndex, float frame
 		point[1] = source[1];
 		point[2] = source[2];
 
-		g_engfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
-		g_engfuncs.pTriAPI->TexCoord2f( 1.0f, vLast );
-		g_engfuncs.pTriAPI->Vertex3fv( point );
+		gEngfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
+		gEngfuncs.pTriAPI->TexCoord2f( 1.0f, vLast );
+		gEngfuncs.pTriAPI->Vertex3fv( point );
 
 		s = sin( fraction * 2 * M_PI );
 		c = cos( fraction * 2 * M_PI );
@@ -2036,15 +2036,15 @@ void DrawDisk( int noise_divisions, float *prgNoise, int modelIndex, float frame
 		point[1] = c * w + source[1];
 		point[2] = source[2];
 
-		g_engfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
-		g_engfuncs.pTriAPI->TexCoord2f( 0.0f, vLast );
-		g_engfuncs.pTriAPI->Vertex3fv( point );
+		gEngfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
+		gEngfuncs.pTriAPI->TexCoord2f( 0.0f, vLast );
+		gEngfuncs.pTriAPI->Vertex3fv( point );
 
 		vLast += vStep;	// Advance texture scroll (v axis only)
 	}
 
-	g_engfuncs.pTriAPI->End();
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->End();
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }
 
 //-----------------------------------------------------------------------------
@@ -2071,7 +2071,7 @@ void DrawCylinder( int noise_divisions, float *prgNoise, int modelIndex, float f
 	float	div, length, fraction, vLast, vStep;
 	Vector	point;
 
-	HSPRITE m_hSprite = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
+	HSPRITE m_hSprite = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
 
 	if ( !m_hSprite )
 		return;
@@ -2095,12 +2095,12 @@ void DrawCylinder( int noise_divisions, float *prgNoise, int modelIndex, float f
 	vLast = fmod(freq * speed, 1.0f );
 	scale = scale * length;
 	
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->CullFace( TRI_NONE );
-	g_engfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
-	g_engfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->CullFace( TRI_NONE );
+	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
-	g_engfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
+	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
 
 	float radius = delta[2];
 	for ( i = 0; i < segments; i++ )
@@ -2114,24 +2114,24 @@ void DrawCylinder( int noise_divisions, float *prgNoise, int modelIndex, float f
 		point[1] = c * freq * radius + source[1];
 		point[2] = source[2] + width;
 
-		g_engfuncs.pTriAPI->Color4f( 0.0f, 0.0f, 0.0f, 1.0f );
-		g_engfuncs.pTriAPI->TexCoord2f( 1.0f, vLast );
-		g_engfuncs.pTriAPI->Vertex3fv( point );
+		gEngfuncs.pTriAPI->Color4f( 0.0f, 0.0f, 0.0f, 1.0f );
+		gEngfuncs.pTriAPI->TexCoord2f( 1.0f, vLast );
+		gEngfuncs.pTriAPI->Vertex3fv( point );
 
 		point[0] = s * freq * (radius + width) + source[0];
 		point[1] = c * freq * (radius + width) + source[1];
 		point[2] = source[2] - width;
 
-		g_engfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
-		g_engfuncs.pTriAPI->TexCoord2f( 0.0f, vLast );
-		g_engfuncs.pTriAPI->Vertex3fv( point );
+		gEngfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
+		gEngfuncs.pTriAPI->TexCoord2f( 0.0f, vLast );
+		gEngfuncs.pTriAPI->Vertex3fv( point );
 
 		vLast += vStep;	// Advance texture scroll (v axis only)
 	}
 	
-	g_engfuncs.pTriAPI->End();
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
-	g_engfuncs.pTriAPI->CullFace( TRI_FRONT );
+	gEngfuncs.pTriAPI->End();
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->CullFace( TRI_FRONT );
 }
 
 //-----------------------------------------------------------------------------
@@ -2151,7 +2151,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 	float	radius, x, y, scale;
 	Vector	d;
 
-	HSPRITE m_hSprite = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
+	HSPRITE m_hSprite = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
 
 	if ( !m_hSprite )
 		return;
@@ -2200,7 +2200,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 	screen = center - last1;	// mins
 
 	// Is that box in PVS && frustum?
-	if ( !g_engfuncs.pEfxAPI->CL_IsBoxVisible( screen, tmp ) || g_engfuncs.pEfxAPI->R_CullBox( screen, tmp ))	
+	if ( !gEngfuncs.pEfxAPI->CL_IsBoxVisible( screen, tmp ) || gEngfuncs.pEfxAPI->R_CullBox( screen, tmp ))	
 	{
 		return;
 	}
@@ -2214,11 +2214,11 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 
 	j = segments / 8;
 
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
-	g_engfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
-	g_engfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
+	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
 
 	for ( i = 0; i < segments + 1; i++ )
 	{
@@ -2239,7 +2239,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 		point = point + (gpViewParams->right * factor);
 		
 		// Transform point into screen space
-		g_engfuncs.pTriAPI->WorldToScreen( point, screen );
+		gEngfuncs.pTriAPI->WorldToScreen( point, screen );
 
 		if ( i != 0 )
 		{
@@ -2256,13 +2256,13 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 			last2 = point + (normal * -width);
 
 			vLast += vStep;	// Advance texture scroll (v axis only)
-			g_engfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
-			g_engfuncs.pTriAPI->TexCoord2f( 1.0f, vLast );
-			g_engfuncs.pTriAPI->Vertex3fv( last2 );
+			gEngfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
+			gEngfuncs.pTriAPI->TexCoord2f( 1.0f, vLast );
+			gEngfuncs.pTriAPI->Vertex3fv( last2 );
 
-			g_engfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
-			g_engfuncs.pTriAPI->TexCoord2f( 0.0f, vLast );
-			g_engfuncs.pTriAPI->Vertex3fv( last1 );
+			gEngfuncs.pTriAPI->Color4f( color[0], color[1], color[2], 1.0f );
+			gEngfuncs.pTriAPI->TexCoord2f( 0.0f, vLast );
+			gEngfuncs.pTriAPI->Vertex3fv( last1 );
 		}
 
 		screenLast = screen;
@@ -2276,8 +2276,8 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 		}
 	}
 
-	g_engfuncs.pTriAPI->End();
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->End();
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }
 
 //-----------------------------------------------------------------------------
@@ -2306,7 +2306,7 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 	Vector	last1, last2, tmp, normal;
 	float	scaledColor[3];
 
-	HSPRITE m_hSprite = g_engfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
+	HSPRITE m_hSprite = gEngfuncs.pTriAPI->GetSpriteTexture( modelIndex, frame );
 
 	if ( !m_hSprite )
 		return;
@@ -2337,25 +2337,25 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 	nColor[1] = (byte)bound( 0, (int)(scaledColor[1] * 255.0f), 255 );
 	nColor[2] = (byte)bound( 0, (int)(scaledColor[2] * 255.0f), 255 );
 
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
-	g_engfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
-	g_engfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
-	g_engfuncs.pTriAPI->Begin( TRI_QUADS );
+	gEngfuncs.pTriAPI->Begin( TRI_QUADS );
 
 	while ( pHead )
 	{
 		// Con_Printf( "%.2f ", fraction );
-		g_engfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		g_engfuncs.pTriAPI->TexCoord2f( 1.0f, 1.0f );
-		g_engfuncs.pTriAPI->Vertex3fv( last2 );
+		gEngfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
+		gEngfuncs.pTriAPI->TexCoord2f( 1.0f, 1.0f );
+		gEngfuncs.pTriAPI->Vertex3fv( last2 );
 
-		g_engfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		g_engfuncs.pTriAPI->TexCoord2f( 0.0f, 1.0f );
-		g_engfuncs.pTriAPI->Vertex3fv( last1 );
+		gEngfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
+		gEngfuncs.pTriAPI->TexCoord2f( 0.0f, 1.0f );
+		gEngfuncs.pTriAPI->Vertex3fv( last1 );
 
 		// Transform point into screen space
-		g_engfuncs.pTriAPI->WorldToScreen( pHead->org, screen );
+		gEngfuncs.pTriAPI->WorldToScreen( pHead->org, screen );
 
 		// Build world-space normal to screen-space direction vector
 		tmp = screen - screenLast;
@@ -2387,19 +2387,19 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 			nColor[0] = nColor[1] = nColor[2] = 0;
 		}
 	
-		g_engfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		g_engfuncs.pTriAPI->TexCoord2f( 0.0f, 0.0f );
-		g_engfuncs.pTriAPI->Vertex3fv( last1 );
+		gEngfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
+		gEngfuncs.pTriAPI->TexCoord2f( 0.0f, 0.0f );
+		gEngfuncs.pTriAPI->Vertex3fv( last1 );
 
-		g_engfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		g_engfuncs.pTriAPI->TexCoord2f( 1.0f, 0.0f );
-		g_engfuncs.pTriAPI->Vertex3fv( last2 );
+		gEngfuncs.pTriAPI->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
+		gEngfuncs.pTriAPI->TexCoord2f( 1.0f, 0.0f );
+		gEngfuncs.pTriAPI->Vertex3fv( last2 );
 		
 		screenLast = screen;
 
 		pHead = pHead->next;
 	}
 
-	g_engfuncs.pTriAPI->End();
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->End();
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }

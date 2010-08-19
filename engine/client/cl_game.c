@@ -12,7 +12,7 @@
 #include "triangle_api.h"
 #include "effects_api.h"
 #include "event_flags.h"
-#include "pm_defs.h"
+#include "pm_local.h"
 
 /*
 ====================
@@ -737,6 +737,7 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 	if( pEdict->index == -1 )
 		return;
 
+	CL_UnlinkEdict( pEdict );
 	clgame.dllFuncs.pfnUpdateOnRemove( pEdict );
 	pEdict->index = -1;	// freed
 }
@@ -1520,18 +1521,12 @@ pfnTraceLine
 
 =============
 */
-static pmtrace_t *pfnTraceLine( const float *start, const float *end, int flags, int usehull, int ignore_pe )
+static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull, int ignore_pe )
 {
-	static pmtrace_t	trace;
+	static pmtrace_t	tr;
 
-	// FIXME: implement traceline
-	Mem_Set( &trace, 0, sizeof( pmtrace_t ));
-	VectorCopy( end, trace.endpos );
-	trace.fraction = 1.0f;
-	trace.allsolid = true;
-	trace.hitgroup = -1;
-
-	return &trace;
+	tr = PM_PlayerTrace( clgame.pmove, start, end, flags, usehull, ignore_pe, NULL );
+	return &tr;
 }
 
 /*
@@ -1708,7 +1703,11 @@ pfnIndexFromTrace
 */
 int pfnIndexFromTrace( struct pmtrace_s *pTrace )
 {
-	// FIXME: implement
+	if( pTrace->ent >= 0 && pTrace->ent < clgame.pmove->numphysent )
+	{
+		// return cl.entities number
+		return clgame.pmove->physents[pTrace->ent].info;
+	}
 	return -1;
 }
 
@@ -1720,7 +1719,11 @@ pfnGetPhysent
 */
 physent_t *pfnGetPhysent( int idx )
 {
-	// FIXME: implement
+	if( idx >= 0 && idx < clgame.pmove->numphysent )
+	{
+		// return physent
+		return &clgame.pmove->physents[idx];
+	}
 	return NULL;
 }
 
@@ -1743,7 +1746,7 @@ pfnPushPMStates
 */
 void pfnPushPMStates( void )
 {
-	// FIXME: implement
+	clgame.oldcount = clgame.pmove->numphysent;
 }
 
 /*
@@ -1754,18 +1757,7 @@ pfnPopPMStates
 */
 void pfnPopPMStates( void )
 {
-	// FIXME: implement
-}
-
-/*
-=============
-pfnSetSolidPlayers
-
-=============
-*/
-void pfnSetSolidPlayers( int playernum )
-{
-	// FIXME: implement
+	clgame.pmove->numphysent = clgame.oldcount;
 }
 
 /*
@@ -1776,7 +1768,7 @@ pfnSetTraceHull
 */
 void pfnSetTraceHull( int hull )
 {
-	// FIXME: implement
+	clgame.trace_hull = bound( 0, hull, 3 );
 }
 
 /*
@@ -1787,7 +1779,9 @@ pfnPlayerTrace
 */
 static void pfnPlayerTrace( float *start, float *end, int traceFlags, int ignore_pe, pmtrace_t *tr )
 {
-	// FIXME: implement
+	if( !tr ) return;
+
+	*tr = PM_PlayerTrace( clgame.pmove, start, end, traceFlags, clgame.trace_hull, ignore_pe, NULL );
 }
 
 /*
@@ -1796,10 +1790,15 @@ pfnTraceTexture
 
 =============
 */
-static const char *pfnTraceTexture( int ground, const float *v1, const float *v2 )
+static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
 {
-	// FIXME: implement
-	return NULL;
+	physent_t *pe;
+
+	if( ground < 0 || ground >= clgame.pmove->numphysent )
+		return NULL; // bad ground
+
+	pe = &clgame.pmove->physents[ground];
+	return PM_TraceTexture( pe, vstart, vend );
 }
 	
 /*
@@ -2296,7 +2295,7 @@ static event_api_t gEventApi =
 	pfnSetUpPlayerPrediction,
 	pfnPushPMStates,
 	pfnPopPMStates,
-	pfnSetSolidPlayers,
+	CL_SetSolidPlayers,
 	pfnSetTraceHull,
 	pfnPlayerTrace,
 	CL_WeaponAnim,

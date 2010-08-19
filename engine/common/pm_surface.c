@@ -46,6 +46,9 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t v1, vec3_t v2 )
 	if( !bmodel || bmodel->type != mod_brush && bmodel->type != mod_world )
 		return NULL;
 
+	// making trace adjustments 
+	VectorSubtract( v1, pe->origin, vecStartPos );
+
 	// rotate start and end into the models frame of reference
 	if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
 	{
@@ -54,8 +57,9 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t v1, vec3_t v2 )
 		Matrix4x4_CreateFromEntity( matrix, pe->origin[0], pe->origin[1], pe->origin[2], pe->angles[PITCH], pe->angles[YAW], pe->angles[ROLL], 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
+		VectorCopy( vecStartPos, temp );
+		Matrix4x4_VectorTransform( imatrix, temp, vecStartPos );
 		VectorCopy( trace.endpos, temp );
-		Matrix4x4_VectorTransform( imatrix, v1, vecStartPos );
 		Matrix4x4_VectorTransform( imatrix, temp, trace.endpos );
 	}
 

@@ -666,16 +666,10 @@ void SV_PutClientInServer( edict_t *ent )
 	{	
 		if( ent->v.flags & FL_SPECTATOR )
 		{
-			// setup spectatormaxspeed and refresh physinfo
-			SV_SetClientMaxspeed( client, svgame.movevars.spectatormaxspeed );
-
 			svgame.dllFuncs.pfnSpectatorConnect( ent );
 		}
 		else
 		{
-			// setup maxspeed and refresh physinfo
-			SV_SetClientMaxspeed( client, svgame.movevars.maxspeed );
-
 			if( sv_maxclients->integer > 1 )
 				ent->v.netname = MAKE_STRING(Info_ValueForKey( client->userinfo, "name" ));
 			else ent->v.netname = MAKE_STRING( "player" );
@@ -686,9 +680,6 @@ void SV_PutClientInServer( edict_t *ent )
 	}
 	else
 	{
-		// setup maxspeed and refresh physinfo
-		SV_SetClientMaxspeed( client, svgame.movevars.maxspeed );
-
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
 		{

@@ -980,10 +980,13 @@ static void R_SetupFrame( void )
 	RI.vup = RI.viewAxis[2];
 
 	// ambient lighting
-	mapConfig.environmentColor[0] = RI.refdef.movevars->skycolor_r;
-	mapConfig.environmentColor[1] = RI.refdef.movevars->skycolor_g;
-	mapConfig.environmentColor[2] = RI.refdef.movevars->skycolor_b;
-	mapConfig.environmentColor[3] = 255;
+	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
+	{
+		mapConfig.environmentColor[0] = RI.refdef.movevars->skycolor_r;
+		mapConfig.environmentColor[1] = RI.refdef.movevars->skycolor_g;
+		mapConfig.environmentColor[2] = RI.refdef.movevars->skycolor_b;
+		mapConfig.environmentColor[3] = 255;
+	}
 
 	if( RI.params & RP_SHADOWMAPVIEW )
 		return;
@@ -2243,7 +2246,8 @@ shader_t Mod_RegisterShader( const char *name, int shaderType )
 		src = CL_LoadSprite( name );	// hud sprites
 		break;
 	case SHADER_SKY:
-		src = R_SetupSky( name );
+		R_SetupSky( name );
+		src = tr.currentSkyShader;
 		break;
 	default:
 		MsgDev( D_WARN, "Mod_RegisterShader: invalid shader type (%i)\n", shaderType );	

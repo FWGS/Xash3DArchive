@@ -1034,6 +1034,7 @@ static void R_FreeMedia( void )
 	if( !glState.initializedMedia )
 		return;
 
+	R_FreeSky();
 	R_ShutdownOcclusionQueries();
 	R_ShutdownDecals();
 	R_ShutdownShadows();

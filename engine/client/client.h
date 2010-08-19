@@ -221,6 +221,9 @@ typedef struct
 	movevars_t	oldmovevars;
 	playermove_t	*pmove;			// pmove state
 
+	int		trace_hull;		// used by PM_SetTraceHull
+	int		oldcount;			// used by PM_Push\Pop state
+
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
@@ -326,6 +329,7 @@ extern cvar_t	*cl_nodelta;
 extern cvar_t	*cl_crosshair;
 extern cvar_t	*cl_showmiss;
 extern cvar_t	*cl_testlights;
+extern cvar_t	*cl_solid_players;
 extern cvar_t	*cl_idealpitchscale;
 extern cvar_t	*cl_allow_levelshots;
 extern cvar_t	*cl_levelshot_name;
@@ -454,8 +458,10 @@ void V_PostRender( void );
 void V_RenderView( void );
 
 //
-// cl_move.c
+// cl_pmove.c
 //
+void CL_SetSolidEntities( void );
+void CL_SetSolidPlayers( int playernum );
 void CL_InitClientMove( void );
 void CL_PredictMovement( void );
 void CL_CheckPredictionError( void );
@@ -534,6 +540,8 @@ void CL_PlayVideo_f( void );
 //
 // cl_world.c
 //
+extern areanode_t	cl_areanodes[];
+
 void CL_ClearWorld( void );
 void CL_UnlinkEdict( cl_entity_t *ent );
 void CL_LinkEdict( cl_entity_t *ent );

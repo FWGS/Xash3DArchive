@@ -407,6 +407,10 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.ent->curstate.controller[1] = 127;
 	uiPlayerSetup.ent->curstate.controller[2] = 127;
 	uiPlayerSetup.ent->curstate.controller[3] = 127;
+	uiPlayerSetup.ent->latched.prevcontroller[0] = 127;
+	uiPlayerSetup.ent->latched.prevcontroller[1] = 127;
+	uiPlayerSetup.ent->latched.prevcontroller[2] = 127;
+	uiPlayerSetup.ent->latched.prevcontroller[3] = 127;
 	uiPlayerSetup.ent->origin[0] = 92;
 	uiPlayerSetup.ent->origin[2] = 2;
 	uiPlayerSetup.ent->angles[1] = 180;

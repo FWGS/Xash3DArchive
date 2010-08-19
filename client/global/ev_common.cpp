@@ -12,49 +12,50 @@
 
 extern ref_params_t		*gpViewParams;
 
-extern "C"
-{
-	void EV_EjectBrass( event_args_t *args );
-	void EV_FireNull( event_args_t *args );
-	void EV_FireCrowbar( event_args_t *args );
-	void EV_PlayEmptySound( event_args_t *args );
-	void EV_FireGlock1( event_args_t *args  );
-	void EV_FireMP5( event_args_t *args  );
-	void EV_FirePython( event_args_t *args  );
-	void EV_FireGauss( event_args_t *args  );
-	void EV_SpinGauss( event_args_t *args  );
-	void EV_EgonFire( event_args_t *args );
-	void EV_EgonStop( event_args_t *args );
-	void EV_FireShotGunSingle( event_args_t *args  );
-	void EV_FireShotGunDouble( event_args_t *args  );
-	void EV_SnarkFire( event_args_t *args );
-	void EV_TrainPitchAdjust( event_args_t *args );
-	void EV_Decals( event_args_t *args );
-}
+void EV_FireGlock1( struct event_args_s *args  );
+void EV_FireGlock2( struct event_args_s *args  );
+void EV_FireShotGunSingle( struct event_args_s *args  );
+void EV_FireShotGunDouble( struct event_args_s *args  );
+void EV_FireMP5( struct event_args_s *args  );
+void EV_FireMP52( struct event_args_s *args  );
+void EV_FirePython( struct event_args_s *args  );
+void EV_FireGauss( struct event_args_s *args  );
+void EV_SpinGauss( struct event_args_s *args  );
+void EV_Crowbar( struct event_args_s *args );
+void EV_FireCrossbow( struct event_args_s *args );
+void EV_FireCrossbow2( struct event_args_s *args );
+void EV_FireRpg( struct event_args_s *args );
+void EV_EgonFire( struct event_args_s *args );
+void EV_EgonStop( struct event_args_s *args );
+void EV_HornetGunFire( struct event_args_s *args );
+void EV_TripmineFire( struct event_args_s *args );
+void EV_SnarkFire( struct event_args_s *args );
+void EV_TrainPitchAdjust( struct event_args_s *args );
 
 //======================
 //    Game_HookEvents
 //======================
 void EV_HookEvents( void )
 {
-	g_engfuncs.pfnHookEvent( "events/crowbar.sc", EV_FireCrowbar );
-	g_engfuncs.pfnHookEvent( "events/glock1.sc", EV_FireGlock1 );
-	g_engfuncs.pfnHookEvent( "events/shotgun1.sc", EV_FireShotGunSingle );
-	g_engfuncs.pfnHookEvent( "events/shotgun2.sc", EV_FireShotGunDouble );
-	g_engfuncs.pfnHookEvent( "events/mp5.sc", EV_FireMP5 );
-	g_engfuncs.pfnHookEvent( "events/python.sc", EV_FirePython );
-	g_engfuncs.pfnHookEvent( "events/gauss.sc", EV_FireGauss );
-	g_engfuncs.pfnHookEvent( "events/gaussspin.sc", EV_SpinGauss );
-	g_engfuncs.pfnHookEvent( "events/egon_fire.sc", EV_EgonFire );
-	g_engfuncs.pfnHookEvent( "events/egon_stop.sc", EV_EgonStop );
-	g_engfuncs.pfnHookEvent( "events/train.sc", EV_TrainPitchAdjust );
-	g_engfuncs.pfnHookEvent( "events/snarkfire.sc", EV_SnarkFire );
-
-	// legacy. attempt to be removed
-	g_engfuncs.pfnHookEvent( "evEjectBrass", EV_EjectBrass );
-	g_engfuncs.pfnHookEvent( "evNull", EV_FireNull );
-	g_engfuncs.pfnHookEvent( "evEmptySound", EV_PlayEmptySound );
-	g_engfuncs.pfnHookEvent( "evDecals", EV_Decals );
+	gEngfuncs.pfnHookEvent( "events/glock1.sc",	EV_FireGlock1 );
+	gEngfuncs.pfnHookEvent( "events/glock2.sc",	EV_FireGlock2 );
+	gEngfuncs.pfnHookEvent( "events/shotgun1.sc",	EV_FireShotGunSingle );
+	gEngfuncs.pfnHookEvent( "events/shotgun2.sc",	EV_FireShotGunDouble );
+	gEngfuncs.pfnHookEvent( "events/mp5.sc",	EV_FireMP5 );
+	gEngfuncs.pfnHookEvent( "events/mp52.sc",	EV_FireMP52 );
+	gEngfuncs.pfnHookEvent( "events/python.sc",	EV_FirePython );
+	gEngfuncs.pfnHookEvent( "events/gauss.sc",	EV_FireGauss );
+	gEngfuncs.pfnHookEvent( "events/gaussspin.sc",	EV_SpinGauss );
+	gEngfuncs.pfnHookEvent( "events/train.sc",	EV_TrainPitchAdjust );
+	gEngfuncs.pfnHookEvent( "events/crowbar.sc",	EV_Crowbar );
+	gEngfuncs.pfnHookEvent( "events/crossbow1.sc",	EV_FireCrossbow );
+	gEngfuncs.pfnHookEvent( "events/crossbow2.sc",	EV_FireCrossbow2 );
+	gEngfuncs.pfnHookEvent( "events/rpg.sc",	EV_FireRpg );
+	gEngfuncs.pfnHookEvent( "events/egon_fire.sc",	EV_EgonFire );
+	gEngfuncs.pfnHookEvent( "events/egon_stop.sc",	EV_EgonStop );
+	gEngfuncs.pfnHookEvent( "events/firehornet.sc",	EV_HornetGunFire );
+	gEngfuncs.pfnHookEvent( "events/tripfire.sc",	EV_TripmineFire );
+	gEngfuncs.pfnHookEvent( "events/snarkfire.sc",	EV_SnarkFire );
 }
 
 /*
@@ -106,7 +107,7 @@ int EV_IsPlayer( int idx )
 //=================
 int EV_IsLocal( int idx )
 {
-	return g_engfuncs.pEventAPI->EV_IsLocal( idx - 1 ) ? true : false;
+	return gEngfuncs.pEventAPI->EV_IsLocal( idx - 1 ) ? true : false;
 }
 
 
@@ -129,7 +130,7 @@ void EV_GetGunPosition( event_args_t *args, float *pos, float *origin )
 		if ( EV_IsLocal( idx ))
 		{
 			// Grab predicted result for local player
-			g_engfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
+			gEngfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
 		}
 		else if ( args->ducking == 1 )
 		{
@@ -171,7 +172,7 @@ void EV_GetDefaultShellInfo( event_args_t *args, float *origin, float *velocity,
 	{
 		if ( EV_IsLocal( idx ) )
 		{
-			g_engfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
+			gEngfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
 		}
 		else if ( args->ducking == 1 )
 		{
@@ -235,7 +236,7 @@ void EV_UpadteFlashlight( cl_entity_t *pEnt )
 	{
 		if ( EV_IsLocal( pEnt->index ) )
 		{
-			g_engfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
+			gEngfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
 		}
 		else if ( pEnt->curstate.usehull == 1 )	// NOTE: needs changes in delta.lst
 		{
@@ -247,14 +248,14 @@ void EV_UpadteFlashlight( cl_entity_t *pEnt )
 	vecEnd = vecSrc + forward * 512;
 	int ignore = PM_FindPhysEntByIndex( pEnt->index );
 
-	trace = g_engfuncs.PM_TraceLine( vecSrc, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, ignore );
+	trace = gEngfuncs.PM_TraceLine( vecSrc, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, ignore );
 
 	if( trace->fraction != 1.0f )
 		vecPos = trace->endpos + (trace->plane.normal * -16.0f);
 	else vecPos = trace->endpos;
 
 	// update flashlight endpos
-	dlight_t	*dl = g_engfuncs.pEfxAPI->CL_AllocDLight( pEnt->index );
+	dlight_t	*dl = gEngfuncs.pEfxAPI->CL_AllocDLight( pEnt->index );
 	
 	dl->origin = vecPos;
 	dl->die = gpGlobals->time + 0.001f;	// die on next frame

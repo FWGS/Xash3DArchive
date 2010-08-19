@@ -7,7 +7,7 @@
 #include "client.h"
 #include "matrix_lib.h"
 #include "const.h"
-#include "pm_defs.h"
+#include "pm_local.h"
 #include "protocol.h"
 #include "net_encode.h"
 
@@ -101,13 +101,13 @@ CL_SetIdealPitch
 void CL_SetIdealPitch( cl_entity_t *ent )
 {
 	float	angleval, sinval, cosval;
-	trace_t	tr;
+	pmtrace_t	tr;
 	vec3_t	top, bottom;
 	float	z[MAX_FORWARD];
 	int	i, j;
 	int	step, dir, steps;
 
-	if( ent->curstate.onground == -1 )
+	if( !( cl.frame.cd.flags & FL_ONGROUND ))
 		return;
 		
 	angleval = ent->angles[YAW] * M_PI * 2 / 360;
@@ -123,15 +123,14 @@ void CL_SetIdealPitch( cl_entity_t *ent )
 		bottom[1] = top[1];
 		bottom[2] = top[2] - 160;
 
-// FIXME: write client trace
-//		tr = CL_Move( top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, ent );
-		if( tr.fAllSolid )
-			return;	// looking at a wall, leave ideal the way is was
+		// skip any monsters (only world and brush models)
+		tr = PM_PlayerTrace( clgame.pmove, top, bottom, PM_STUDIO_IGNORE, 2, -1, NULL );
+		if( tr.allsolid ) return; // looking at a wall, leave ideal the way is was
 
-		if( tr.flFraction == 1.0f )
+		if( tr.fraction == 1.0f )
 			return;	// near a dropoff
 		
-		z[i] = top[2] + tr.flFraction * (bottom[2] - top[2]);
+		z[i] = top[2] + tr.fraction * (bottom[2] - top[2]);
 	}
 	
 	dir = 0;

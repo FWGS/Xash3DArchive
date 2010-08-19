@@ -529,7 +529,7 @@ void IN_CreateMove( usercmd_t *cmd, int msec, int active )
 
 		if( freelook->integer )
 		{
-			if( !mlook_active && lookspring->value )
+			if( !mlook_active && lookspring->integer )
 				V_StartPitchDrift();
 		}
 	}
@@ -675,8 +675,8 @@ void IN_Init( void )
 	cl_lw = CVAR_REGISTER( "cl_lw", "1", FCVAR_ARCHIVE|FCVAR_USERINFO, "enable client weapon predicting" );
 
 	cl_movespeedkey = CVAR_REGISTER ( "cl_movespeedkey", "0.3", 0, "global scale factor between run and walk" );
-	cl_pitchup = CVAR_REGISTER ( "cl_pitchup", "70", 0, "how many pitch up" );
-	cl_pitchdown = CVAR_REGISTER ( "cl_pitchdown", "80", 0, "how many pitch down" );
+	cl_pitchup = CVAR_REGISTER ( "cl_pitchup", "89", 0, "how many pitch up" );
+	cl_pitchdown = CVAR_REGISTER ( "cl_pitchdown", "89", 0, "how many pitch down" );
 
 	freelook = CVAR_REGISTER( "freelook", "1", FCVAR_ARCHIVE, "enables mouse look" );
 	lookspring = CVAR_REGISTER( "lookspring", "0", FCVAR_ARCHIVE, "allow look spring" );

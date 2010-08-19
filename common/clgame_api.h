@@ -6,14 +6,11 @@
 #define CLGAME_API_H
 
 typedef int		HSPRITE;					// handle to a graphic
-typedef struct tempent_s	TEMPENTITY;
 typedef struct dlight_s	dlight_t;
 typedef struct usercmd_s	usercmd_t;
 typedef struct skyportal_s	skyportal_t;
 typedef struct ref_params_s	ref_params_t;
 typedef struct mstudioevent_s	mstudioevent_t;
-typedef void (*ENTCALLBACK)( TEMPENTITY *ent );
-typedef void (*HITCALLBACK)( TEMPENTITY *ent, struct pmtrace_s *ptr );
 typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );	// user message handle
 
 #include "wrect.h"
@@ -203,9 +200,9 @@ typedef struct cl_enginefuncs_s
 	float	(*pfnGetClientTime)( void );		// can use gpGlobals->time instead
 	void	(*pfnFadeClientVolume)( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );	// was V_CalcShake
 
-	int	(*pfnPointContents)( const float *rgflPos, int *truecontents );
+	int	(*PM_PointContents)( const float *rgflPos, int *truecontents );
 	struct cl_entity_s *(*pfnWaterEntity)( const float *rgflPos );
-	struct pmtrace_s *(*PM_TraceLine)( const float *start, const float *end, int flags, int usehull, int ignore_pe );
+	struct pmtrace_s *(*PM_TraceLine)( float *start, float *end, int flags, int usehull, int ignore_pe );
 
 	modtype_t	(*pfnGetModelType)( int modelIndex );
 	void	(*pfnGetModBounds)( int modelIndex, float *mins, float *maxs );

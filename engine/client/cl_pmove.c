@@ -25,13 +25,12 @@ bool CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	if( !mod || mod->type == mod_bad )
 		return false;
 		
-	pe->player = false;
+	pe->player = ent->player;
 
-	if( ent->index > 0 && ent->index < clgame.globals->maxClients )
+	if( pe->player )
 	{
 		// client or bot
 		com.strncpy( pe->name, "player", sizeof( pe->name ));
-		pe->player = true;
 	}
 	else if( ent == clgame.entities )
 	{
@@ -94,6 +93,91 @@ bool CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	VectorCopy( ent->curstate.vuser4, pe->vuser4 );
 
 	return true;
+}
+
+/*
+====================
+CL_AddLinksToPmove
+
+collect solid entities
+====================
+*/
+void CL_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t pmove_maxs )
+{
+	link_t		*l, *next;
+	cl_entity_t	*check;
+	physent_t		*pe;
+
+	// touch linked edicts
+	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
+	{
+		next = l->next;
+		check = CL_GetEntityByIndex( l->entnum );
+
+		// don't add the world and clients here
+		if( !check || check == &clgame.entities[0] || check->player )
+			continue;
+
+		if(check->curstate.solid == SOLID_BSP || check->curstate.solid == SOLID_BBOX || check->curstate.solid == SOLID_SLIDEBOX)
+		{
+			if( !BoundsIntersect( pmove_mins, pmove_maxs, check->absmin, check->absmax ))
+				continue;
+
+			if( clgame.pmove->numphysent == MAX_PHYSENTS )
+				return;
+
+			pe = &clgame.pmove->physents[clgame.pmove->numphysent];
+
+			if( CL_CopyEntityToPhysEnt( pe, check ))
+				clgame.pmove->numphysent++;
+		}
+	}
+	
+	// recurse down both sides
+	if( node->axis == -1 ) return;
+
+	if( pmove_maxs[node->axis] > node->dist )
+		CL_AddLinksToPmove( node->children[0], pmove_mins, pmove_maxs );
+	if( pmove_mins[node->axis] < node->dist )
+		CL_AddLinksToPmove( node->children[1], pmove_mins, pmove_maxs );
+}
+
+/*
+===============
+CL_SetSolid
+
+Builds all the pmove physents for the current frame
+Note that CL_SetUpPlayerPrediction() must be called first!
+pmove must be setup with world and solid entity hulls before calling
+(via CL_PredictMove)
+===============
+*/
+void CL_SetSolidPlayers( int playernum )
+{
+	int		j;
+	extern	vec3_t	player_mins;
+	extern	vec3_t	player_maxs;
+	cl_entity_t	*ent;
+	physent_t		*pe;
+
+	if( !cl_solid_players->integer )
+		return;
+
+	// FIXME: create predicted_players array
+	for( j = 0; j < clgame.globals->maxClients; j++ )
+	{
+		// the player object never gets added
+		if( j == playernum ) continue;
+
+		ent = CL_GetEntityByIndex( j + 1 );		
+
+		if( !ent || !ent->player )
+			continue; // not present this frame
+
+		pe = &clgame.pmove->physents[clgame.pmove->numphysent];
+		if( CL_CopyEntityToPhysEnt( pe, ent ))
+			clgame.pmove->numphysent++;
+	}
 }
 
 static void pfnParticle( float *origin, int color, float life, int zpos, int zvel )
@@ -341,4 +425,119 @@ void CL_InitClientMove( void )
 
 	// initalize pmove
 	clgame.dllFuncs.pfnPM_Init( clgame.pmove );
+}
+
+static void PM_CheckMovingGround( clientdata_t *cd, entity_state_t *state, float frametime )
+{
+	if(!( cd->flags & FL_BASEVELOCITY ))
+	{
+		// apply momentum (add in half of the previous frame of velocity first)
+		VectorMA( cd->velocity, 1.0f + (frametime * 0.5f), state->basevelocity, cd->velocity );
+		VectorClear( state->basevelocity );
+	}
+	cd->flags &= ~FL_BASEVELOCITY;
+}
+
+void CL_SetSolidEntities( void )
+{
+	physent_t		*pe;
+	vec3_t		absmin, absmax;
+	cl_entity_t	*touch[MAX_EDICTS];
+	int		i, count;
+
+	// world not initialized
+	if( !cl.frame.valid ) return;
+
+	// setup physents
+	clgame.pmove->numvisent = 0; // FIXME: add visents for debugging
+	clgame.pmove->numphysent = 0;
+	clgame.pmove->nummoveent = 0;
+
+	for( i = 0; i < 3; i++ )
+	{
+		absmin[i] = cl.frame.cd.origin[i] - 256;
+		absmax[i] = cl.frame.cd.origin[i] + 256;
+	}
+
+	CL_CopyEntityToPhysEnt( &clgame.pmove->physents[0], &clgame.entities[0] );
+	clgame.pmove->numphysent = 1;	// always have world
+
+	CL_AddLinksToPmove( cl_areanodes, absmin, absmax );
+	count = CL_AreaEdicts( absmin, absmax, touch, MAX_EDICTS, AREA_CUSTOM );
+
+	// build list of ladders around player
+	for( i = 0; i < count; i++ )
+	{
+		if( clgame.pmove->nummoveent >= MAX_MOVEENTS )
+		{
+			MsgDev( D_ERROR, "PM_PlayerMove: too many ladders in PVS\n" );
+			break;
+		}
+
+		if( touch[i] == CL_GetLocalPlayer( )) continue;
+
+		pe = &clgame.pmove->moveents[clgame.pmove->nummoveent];
+		if( CL_CopyEntityToPhysEnt( pe, touch[i] ))
+			clgame.pmove->nummoveent++;
+	}
+}
+
+static void PM_SetupMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd )
+{
+	pmove->player_index = cl.playernum;
+	pmove->multiplayer = (clgame.globals->maxClients > 1) ? true : false;
+	pmove->time = sv_time(); // probably never used
+	VectorCopy( cd->origin, pmove->origin );
+	VectorCopy( cl.refdef.cl_viewangles, pmove->angles );
+	VectorCopy( cl.refdef.cl_viewangles, pmove->oldangles );
+	VectorCopy( cd->velocity, pmove->velocity );
+	VectorCopy( state->basevelocity, pmove->basevelocity );
+	VectorCopy( cd->view_ofs, pmove->view_ofs );
+	VectorClear( pmove->movedir );
+	pmove->flDuckTime = cd->flDuckTime;
+	pmove->bInDuck = cd->bInDuck;
+	pmove->usehull = (cd->flags & FL_DUCKING) ? 1 : 0; // reset hull
+	pmove->flTimeStepSound = cd->flTimeStepSound;
+	pmove->iStepLeft = state->iStepLeft;
+	pmove->flFallVelocity = state->flFallVelocity;
+	pmove->flSwimTime = cd->flSwimTime;
+	VectorCopy( cd->punchangle, pmove->punchangle );
+	pmove->flSwimTime = cd->flSwimTime;
+	pmove->flNextPrimaryAttack = 0.0f; // not used by PM_ code
+	pmove->effects = state->effects;
+	pmove->flags = cd->flags;
+	pmove->gravity = state->gravity;
+	pmove->friction = state->friction;
+	pmove->oldbuttons = state->oldbuttons;
+	pmove->waterjumptime = cd->waterjumptime;
+	pmove->dead = (cd->health <= 0.0f ) ? true : false;
+	pmove->deadflag = cd->deadflag;
+	pmove->spectator = 0;	// FIXME: implement
+	pmove->movetype = state->movetype;
+	pmove->onground = -1; // will be set by PM_ code
+	pmove->waterlevel = cd->waterlevel;
+	pmove->watertype = cd->watertype;
+	pmove->maxspeed = clgame.movevars.maxspeed;
+	pmove->clientmaxspeed = cd->maxspeed;
+	pmove->iuser1 = cd->iuser1;
+	pmove->iuser2 = cd->iuser2;
+	pmove->iuser3 = cd->iuser3;
+	pmove->iuser4 = cd->iuser4;
+	pmove->fuser1 = cd->fuser1;
+	pmove->fuser2 = cd->fuser2;
+	pmove->fuser3 = cd->fuser3;
+	pmove->fuser4 = cd->fuser4;
+	VectorCopy( cd->vuser1, pmove->vuser1 );
+	VectorCopy( cd->vuser2, pmove->vuser2 );
+	VectorCopy( cd->vuser3, pmove->vuser3 );
+	VectorCopy( cd->vuser4, pmove->vuser4 );
+	pmove->cmd = *ucmd;	// setup current cmds	
+
+	com.strncpy( pmove->physinfo, cd->physinfo, MAX_INFO_STRING );
+}
+
+static void PM_FinishMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state )
+{
+	cd->waterjumptime = pmove->waterjumptime;
+	state->onground = pmove->onground;
 }

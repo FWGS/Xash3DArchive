@@ -492,6 +492,7 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 1; }
 	void EXPORT SwingAgain( void );
+	void EXPORT Smack( void );
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -499,6 +500,8 @@ public:
 	BOOL Deploy( void );
 	void Holster( void );
 	void WeaponIdle( void );
+	int m_iSwing;
+	TraceResult m_trHit;
 private:
 	unsigned short m_usCrowbar;
 };
@@ -609,7 +612,7 @@ public:
 	void Suspend( float flSuspendTime );
 	void EXPORT Revive( void );
 	
-	static CLaserSpot *CreateSpot( void );
+	static CLaserSpot *CreateSpot( entvars_t *pevOwner = NULL );
 };
 
 class CRpg : public CBasePlayerWeapon

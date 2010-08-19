@@ -800,7 +800,7 @@ void		R_FreeSkydome( skydome_t *skydome );
 void		R_ClearSkyBox( void );
 void		R_DrawSky( ref_shader_t *shader );
 bool		R_AddSkySurface( msurface_t *fa );
-ref_shader_t	*R_SetupSky( const char *name );
+void		R_SetupSky( const char *name );
 void		R_FreeSky( void );
 
 //====================================================================

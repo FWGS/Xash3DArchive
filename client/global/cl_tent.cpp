@@ -157,7 +157,7 @@ void TE_ParseExplosion( void )
 			dlight_t	*dl;
 
 			// big flash
-			dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+			dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 			dl->origin = pos2;
 			dl->radius = 200;
 			dl->color[0] = dl->color[1] = 250;
@@ -166,7 +166,7 @@ void TE_ParseExplosion( void )
 			dl->decay = 800;
 
 			// red glow
-			dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+			dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 			dl->origin = pos2;
 			dl->radius = 150;
 			dl->color[0] = 255;
@@ -330,7 +330,7 @@ void TE_ParseSparks( void )
 	pos.y = READ_COORD();
 	pos.z = READ_COORD();
 
-	g_pTempEnts->DoSparks( pos );
+	g_pTempEnts->SparkShower( pos );
 }
 
 /*
@@ -391,7 +391,7 @@ void TE_ParseExplosion2( void )
 
 	g_pParticles->ParticleExplosion2( pos, colorIndex, numColors );
 	
-	dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+	dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 	dl->origin = pos;
 	dl->radius = 350;
 	dl->die = gpGlobals->time + 0.5f;
@@ -678,11 +678,11 @@ void TE_ParseDynamicLight( int type )
 
 	if( type == TE_ELIGHT )
 	{
-		dl = g_engfuncs.pEfxAPI->CL_AllocELight( 0 );
+		dl = gEngfuncs.pEfxAPI->CL_AllocELight( 0 );
 	}
 	else
 	{
-		dl = g_engfuncs.pEfxAPI->CL_AllocDLight( 0 );
+		dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 	}
 
 	dl->origin = pos;
@@ -993,7 +993,7 @@ void TE_ParseArmorRicochet( void )
 	pos.z = READ_COORD();
 	radius = (float)(READ_BYTE() * 0.1f);
 
-	int modelIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
+	int modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
 	g_pTempEnts->RicochetSprite( pos, modelIndex, radius );
 
 	sprintf( soundpath, "weapons/ric%i.wav", RANDOM_LONG( 1, 5 ));
@@ -1026,8 +1026,8 @@ void TE_ParsePlayerDecal( void )
 	color[2] = 255;
 	color[3] = 255;	// alpha
 
-	HSPRITE hDecal = g_engfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
-	g_engfuncs.pEfxAPI->R_PlayerDecal( hDecal, entityIndex, pos, 0 );
+	HSPRITE hDecal = gEngfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
+	gEngfuncs.pEfxAPI->R_PlayerDecal( hDecal, entityIndex, pos, 0 );
 }
 
 /*

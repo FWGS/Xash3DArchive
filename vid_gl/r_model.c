@@ -28,7 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "byteorder.h"
 #include "bspfile.h"
 #include "cl_entity.h"
-#include "pm_movevars.h"
 
 #define Mod_CopyString( m, str )	com.stralloc( (m)->mempool, str, __FILE__, __LINE__ )
 #define MAX_SIDE_VERTS		256	// per one polygon
@@ -262,7 +261,6 @@ void Mod_FreeModel( ref_model_t *mod )
 {
 	if( !mod || !mod->mempool ) return;
 
-	if( mod == r_worldmodel ) R_FreeSky();
 	Mem_FreePool( &mod->mempool );
 	Mem_Set( mod, 0, sizeof( *mod ));
 }
@@ -1621,10 +1619,12 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			out->numstyles++;
 		}
 
-		if( !tr.currentSkyShader && ( out->flags & SURF_DRAWSKY || out->shader->flags & SHADER_SKYPARMS ))
+		if( out->flags & SURF_DRAWSKY )
 		{
-			// because sky shader may missing skyParms, but always has surfaceparm 'sky'
-			tr.currentSkyShader = out->shader;
+			// create fake skyshader for detect it while drawing
+			out->shader->flags |= SHADER_SKYPARMS;
+			out->shader->sort = SORT_SKY;
+			out->shader->skyParms = NULL;
 		}
 
 		// create lightmap

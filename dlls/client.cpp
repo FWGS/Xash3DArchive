@@ -1055,9 +1055,6 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	// Copy state data
 	//
 
-#ifdef DEBUG
-	strncpy( state->classname, STRING( ent->v.classname ), sizeof( state->classname ));
-#endif
 	// Round animtime to nearest millisecond
 	state->animtime   = (int)(1000.0 * ent->v.animtime ) / 1000.0;
 
@@ -1170,6 +1167,9 @@ Creates baselines used for network encoding, especially for player data since pl
 void CreateBaseline( int player, int eindex, struct entity_state_s *baseline, struct edict_s *entity, int playermodelindex, vec3_t player_mins, vec3_t player_maxs )
 {
 #ifdef DEBUG
+	// NOTE: edit delta.lst if you want to get it work: add new field
+	//	DEFINE_DELTA( classname, DT_STRING, 1, 1.0 ),
+	// into Entity_Encode, Player_Encode and Custom_Encode structures 
 	strncpy( baseline->classname, STRING( entity->v.classname ), sizeof( baseline->classname ));
 #endif
 	baseline->origin		= entity->v.origin;

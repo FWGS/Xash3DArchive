@@ -21,6 +21,7 @@ cvar_t	*cl_showfps;
 cvar_t	*cl_nodelta;
 cvar_t	*cl_crosshair;
 cvar_t	*cl_idealpitchscale;
+cvar_t	*cl_solid_players;
 cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
 cvar_t	*userinfo;
@@ -1011,6 +1012,9 @@ void CL_ReadPackets( void )
 		CL_ReadDemoMessage();
 	else CL_ReadNetMessage();
 
+	// build list of all solid entities per frame (exclude clients)
+	CL_SetSolidEntities ();
+
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
 		return;
@@ -1239,6 +1243,7 @@ void CL_InitLocal( void )
 	cl_crosshair = Cvar_Get( "crosshair", "1", CVAR_ARCHIVE|CVAR_USERINFO, "show weapon chrosshair" );
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0, "disable delta-compression for usercommnds" );
 	cl_idealpitchscale = Cvar_Get( "cl_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
+	cl_solid_players = Cvar_Get( "cl_solid_players", "1", 0, "Make all players not solid (can't traceline them)" );
 	
 	cl_shownet = Cvar_Get( "cl_shownet", "0", 0, "client show network packets" );
 	cl_showmiss = Cvar_Get( "cl_showmiss", "0", CVAR_ARCHIVE, "client show prediction errors" );

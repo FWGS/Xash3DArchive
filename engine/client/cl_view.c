@@ -35,7 +35,7 @@ void V_SetupRefDef( void )
 
 	VectorCopy( cl.frame.cd.punchangle, cl.refdef.punchangle );
 	cl.refdef.movevars = &clgame.movevars;
-	cl.refdef.onground = ( clent->curstate.onground == -1 ) ? false : true;
+	cl.refdef.onground = ( cl.frame.cd.flags & FL_ONGROUND ) ? 1 : 0;
 	cl.refdef.health = cl.frame.cd.health;
 	cl.refdef.movetype = clent->curstate.movetype;
 	cl.refdef.num_entities = clgame.globals->numEntities;

@@ -6,7 +6,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-extern cl_enginefuncs_t g_engfuncs;
+extern cl_enginefuncs_t gEngfuncs;
 
 #include "event_api.h"
 #include "enginecallback.h"
@@ -38,7 +38,7 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 #ifdef _DEBUG
 #define GetEntityByIndex(e)	DBG_GetEntityByIndex( e, __FILE__, __LINE__ )
 #else
-#define GetEntityByIndex	(*g_engfuncs.pfnGetEntityByIndex)
+#define GetEntityByIndex	(*gEngfuncs.pfnGetEntityByIndex)
 #endif
 
 extern DLL_GLOBAL const Vector	g_vecZero;
@@ -90,7 +90,7 @@ typedef struct dllfunction_s
 #include "cvardef.h"
 
 // macros to hook function calls into the HUD object
-#define HOOK_MESSAGE( x ) (*g_engfuncs.pfnHookUserMsg)( #x, __MsgFunc_##x );
+#define HOOK_MESSAGE( x ) (*gEngfuncs.pfnHookUserMsg)( #x, __MsgFunc_##x );
 
 #define DECLARE_MESSAGE( y, x ) int __MsgFunc_##x(const char *pszName, int iSize, void *pbuf) \
 { \
@@ -102,7 +102,7 @@ typedef struct dllfunction_s
 	return gHUD.MsgFunc_##x(pszName, iSize, pbuf ); \
 }
 
-#define HOOK_COMMAND( x, y ) (*g_engfuncs.pfnAddCommand)( x, __CmdFunc_##y, "user-defined command" );
+#define HOOK_COMMAND( x, y ) (*gEngfuncs.pfnAddCommand)( x, __CmdFunc_##y, "user-defined command" );
 #define DECLARE_HUDCOMMAND( x ) void __CmdFunc_##x( void ) \
 { \
 	gHUD.UserCmd_##x( ); \
@@ -195,7 +195,7 @@ inline int ConsoleStringLen( const char *string )
 inline cl_entity_t *DBG_GetEntityByIndex( int entnum, const char *file, const int line )
 {
 	DBG_AssertFunction(( entnum >= 0 && entnum < gpGlobals->numEntities ), "Invalid entnum", file, line, NULL );
-	return (*g_engfuncs.pfnGetEntityByIndex)( entnum );
+	return (*gEngfuncs.pfnGetEntityByIndex)( entnum );
 }
 #endif
 
@@ -214,8 +214,7 @@ extern float READ_HIRESANGLE( void );
 extern void END_READ( void );
 
 // misc utilities
-extern float UTIL_Probe( const Vector &origin, Vector *vecDirection, float strength );
-extern void UTIL_GetForceDirection( const Vector &origin, float magnitude, Vector *resultDirection, float *resultForce );
+extern void UTIL_GetForceDirection( Vector &origin, float magnitude, Vector *resultDirection, float *resultForce );
 extern void RotatePointAroundVector( Vector &dst, const Vector &dir, const Vector &point, float degrees );
 
 // client fade
@@ -236,6 +235,7 @@ extern void Tracer_Draw( HSPRITE hSpr, Vector& start, Vector& delta, float width
 
 // mathlib
 extern void AngleMatrix( const vec3_t angles, float (*matrix)[4] );
+extern void VectorAngles( const Vector &forward, Vector &angles );
 
 // from cl_view.c
 extern void DrawProgressBar( void );

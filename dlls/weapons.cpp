@@ -413,7 +413,6 @@ void W_Precache(void)
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
 
-
 	// used by explosions
 	PRECACHE_MODEL ("models/grenade.mdl");
 	PRECACHE_MODEL ("sprites/explode1.spr");
@@ -430,6 +429,20 @@ void W_Precache(void)
 	PRECACHE_SOUND ("weapons/bullet_hit2.wav");	// hit by bullet
 	
 	PRECACHE_SOUND ("items/weapondrop1.wav");// weapon falls to the ground
+
+	// g-cont. precache here resources that was precached in the engine (in original HL of course)
+
+	// custom muzzleflashes
+	PRECACHE_MODEL ("sprites/muzzleflash1.spr");
+	PRECACHE_MODEL ("sprites/muzzleflash2.spr");
+	PRECACHE_MODEL ("sprites/muzzleflash3.spr");
+	PRECACHE_MODEL ("sprites/muzzleflash.spr");
+
+	// ricochet sprite
+	PRECACHE_MODEL ("sprites/richo1.spr");
+
+	// rocket flare
+	PRECACHE_MODEL ("sprites/animglow01.spr");
 
 }
 

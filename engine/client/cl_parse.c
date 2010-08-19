@@ -580,6 +580,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.video_prepped = false;
 	cl.audio_prepped = false;
 
+	Mem_Set( &clgame.movevars, 0, sizeof( clgame.movevars ));
+	Mem_Set( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
+
 	// initialize world and clients
 	CL_InitWorld ();
 }
@@ -1044,5 +1047,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		}
 	}
+
 	cls_message_debug.parsing = false;	// done
 }

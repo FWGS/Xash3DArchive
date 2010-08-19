@@ -148,7 +148,7 @@ void ParticleSystemManager::UpdateSystems( void )
 			}
 		}
 	}
-	g_engfuncs.pTriAPI->RenderMode(kRenderNormal);
+	gEngfuncs.pTriAPI->RenderMode(kRenderNormal);
 }
 
 void ParticleSystemManager::ClearSystems( void )
@@ -494,7 +494,7 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 		else if ( !stricmp( szToken, "sprite" ) )
 		{
 			szToken = COM_ParseToken( szFile );
-			pType->m_SpriteIndex = g_engfuncs.pEventAPI->EV_FindModelIndex( szToken );
+			pType->m_SpriteIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( szToken );
 		}
 		else if ( !stricmp( szToken, "startalpha" ) )
 		{
@@ -874,7 +874,7 @@ bool ParticleSystem::UpdateParticle( particle *part, float frametime )
 		if( part->pType->m_bBouncing )
 		{
 			Vector vecTarget = part->origin + frametime * part->velocity;
-			pmtrace_t *tr = g_engfuncs.PM_TraceLine( part->origin, vecTarget, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
+			pmtrace_t *tr = gEngfuncs.PM_TraceLine( part->origin, vecTarget, PM_TRACELINE_PHYSENTSONLY, 2, -1 );
 
 			if( tr->fraction < 1.0f )
 			{
@@ -961,7 +961,7 @@ void ParticleSystem::DrawParticle( particle *part, Vector &right, Vector &up )
 
 	int iContents = 0;
 
-	g_engfuncs.pTriAPI->Enable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
 
 	for ( particle *pDraw = part; pDraw; pDraw = pDraw->m_pOverlay )
 	{
@@ -990,25 +990,25 @@ void ParticleSystem::DrawParticle( particle *part, Vector &right, Vector &up )
 
 		HSPRITE m_hSprite;
 
-		m_hSprite = g_engfuncs.pTriAPI->GetSpriteTexture( pDraw->pType->m_SpriteIndex, int( pDraw->frame ));
-		g_engfuncs.pTriAPI->RenderMode( pDraw->pType->m_iRenderMode );
-		g_engfuncs.pTriAPI->Color4f( pDraw->m_fRed, pDraw->m_fGreen, pDraw->m_fBlue, pDraw->m_fAlpha );
+		m_hSprite = gEngfuncs.pTriAPI->GetSpriteTexture( pDraw->pType->m_SpriteIndex, int( pDraw->frame ));
+		gEngfuncs.pTriAPI->RenderMode( pDraw->pType->m_iRenderMode );
+		gEngfuncs.pTriAPI->Color4f( pDraw->m_fRed, pDraw->m_fGreen, pDraw->m_fBlue, pDraw->m_fAlpha );
 			
-		g_engfuncs.pTriAPI->Bind( m_hSprite, int( pDraw->frame ));
+		gEngfuncs.pTriAPI->Bind( m_hSprite, int( pDraw->frame ));
 		
-		g_engfuncs.pTriAPI->Begin( TRI_QUADS );
-		g_engfuncs.pTriAPI->TexCoord2f ( 0, 0 );
-		g_engfuncs.pTriAPI->Vertex3fv( point1 );
+		gEngfuncs.pTriAPI->Begin( TRI_QUADS );
+		gEngfuncs.pTriAPI->TexCoord2f ( 0, 0 );
+		gEngfuncs.pTriAPI->Vertex3fv( point1 );
 
-		g_engfuncs.pTriAPI->TexCoord2f ( 1, 0 );
-		g_engfuncs.pTriAPI->Vertex3fv ( point2 );
+		gEngfuncs.pTriAPI->TexCoord2f ( 1, 0 );
+		gEngfuncs.pTriAPI->Vertex3fv ( point2 );
 
-		g_engfuncs.pTriAPI->TexCoord2f ( 1, 1 );
-		g_engfuncs.pTriAPI->Vertex3fv ( point3 );
+		gEngfuncs.pTriAPI->TexCoord2f ( 1, 1 );
+		gEngfuncs.pTriAPI->Vertex3fv ( point3 );
 
-		g_engfuncs.pTriAPI->TexCoord2f ( 0, 1 );
-		g_engfuncs.pTriAPI->Vertex3fv ( point4 );
-		g_engfuncs.pTriAPI->End();
+		gEngfuncs.pTriAPI->TexCoord2f ( 0, 1 );
+		gEngfuncs.pTriAPI->Vertex3fv ( point4 );
+		gEngfuncs.pTriAPI->End();
 	}
-	g_engfuncs.pTriAPI->Disable( TRI_SHADER );
+	gEngfuncs.pTriAPI->Disable( TRI_SHADER );
 }

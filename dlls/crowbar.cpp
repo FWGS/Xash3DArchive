@@ -152,6 +152,13 @@ void CCrowbar::PrimaryAttack()
 	}
 }
 
+
+void CCrowbar::Smack( )
+{
+	DecalGunshot( &m_trHit, BULLET_PLAYER_CROWBAR );
+}
+
+
 void CCrowbar::SwingAgain( void )
 {
 	Swing( 0 );
@@ -201,6 +208,10 @@ int CCrowbar::Swing( int fFirst )
 	{
 		if ( fFirst )
 		{
+			PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usCrowbar, 
+			0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, 0,
+			0.0, 0, 0.0 );
+
 			// miss
 			m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.5;
 			
@@ -210,6 +221,16 @@ int CCrowbar::Swing( int fFirst )
 	}
 	else
 	{
+		switch( ((m_iSwing++) % 2) + 1 )
+		{
+		case 0:
+			SendWeaponAnim( CROWBAR_ATTACK1HIT ); break;
+		case 1:
+			SendWeaponAnim( CROWBAR_ATTACK2HIT ); break;
+		case 2:
+			SendWeaponAnim( CROWBAR_ATTACK3HIT ); break;
+		}
+
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 		
@@ -241,15 +262,19 @@ int CCrowbar::Swing( int fFirst )
 		{
 			if ( pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE )
 			{
-				bHit = TRUE;//play hitbody sound on client
+				// play thwack or smack sound
+				switch( RANDOM_LONG(0,2) )
+				{
+				case 0:
+					EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hitbod1.wav", 1, ATTN_NORM); break;
+				case 1:
+					EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hitbod2.wav", 1, ATTN_NORM); break;
+				case 2:
+					EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hitbod3.wav", 1, ATTN_NORM); break;
+				}
 				m_pPlayer->m_iWeaponVolume = CROWBAR_BODYHIT_VOLUME;
 				if ( !pEntity->IsAlive() )
-				{
-					PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usCrowbar, 
-					0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, 0,
-					fFirst, bHit, 0 );
-					return TRUE;
-				}
+					  return TRUE;
 				else
 					  flVol = 0.1;
 
@@ -257,15 +282,45 @@ int CCrowbar::Swing( int fFirst )
 			}
 		}
 
+		// play texture hit sound
+		// UNDONE: Calculate the correct point of intersection when we hit with the hull instead of the line
+
+		if (fHitWorld)
+		{
+			float fvolbar = TEXTURETYPE_PlaySound(&tr, vecSrc, vecSrc + (vecEnd-vecSrc)*2, BULLET_PLAYER_CROWBAR);
+
+			if ( g_pGameRules->IsMultiplayer() )
+			{
+				// override the volume here, cause we don't play texture sounds in multiplayer, 
+				// and fvolbar is going to be 0 from the above call.
+
+				fvolbar = 1;
+			}
+
+			// also play crowbar strike
+			switch( RANDOM_LONG(0,1) )
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hit1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hit2.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+				break;
+			}
+
+			// delay the decal a bit
+			m_trHit = tr;
+		}
+
 		m_pPlayer->m_iWeaponVolume = flVol * CROWBAR_WALLHIT_VOLUME;
 #endif
 		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.25;
+
+		SetThink( Smack );
+		pev->nextthink = m_pPlayer->WeaponTimeBase() + 0.2;
+
+
 	}
-
-	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usCrowbar, 
-	0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, 0,
-	fFirst, bHit, 0 );
-
 	return fDidHit;
 }
 
