@@ -7,7 +7,7 @@
 #define CLIENT_H
 
 #include "mathlib.h"
-#include "clgame_api.h"
+#include "cdll_int.h"
 #include "gameui_api.h"
 #include "cl_entity.h"
 #include "com_model.h"
@@ -88,6 +88,7 @@ typedef struct
 
 	// server state information
 	int		playernum;
+	int		maxclients;
 	int		servercount;			// server identification for prespawns
 	int		movemessages;
 	int		serverframetime;			// server frametime
@@ -211,10 +212,14 @@ typedef struct
 	HUD_FUNCTIONS	dllFuncs;			// dll exported funcs
 	byte		*mempool;			// client edicts pool
 	byte		*private;			// client.dll private pool
+	string		mapname;			// map name
 	string		maptitle;			// display map title
 	string		itemspath;		// path to items description for auto-complete func
 
 	cl_entity_t	*entities;		// dynamically allocated entity array
+
+	int		numEntities;		// actual ents count
+	int		maxEntities;
 
 	// movement values from server
 	movevars_t	movevars;
@@ -227,7 +232,6 @@ typedef struct
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
-	cl_globalvars_t	*globals;
 	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
 	user_event_t	*events[MAX_EVENTS];
 
@@ -422,7 +426,7 @@ void VGui_ViewportPaintBackground( int extents[4] );
 
 _inline cl_entity_t *CL_EDICT_NUM( int n, const char *file, const int line )
 {
-	if(( n >= 0 ) && ( n < clgame.globals->maxEntities ))
+	if(( n >= 0 ) && ( n < clgame.maxEntities ))
 		return clgame.entities + n;
 	Host_Error( "CL_EDICT_NUM: bad number %i (called at %s:%i)\n", n, file, line );
 	return NULL;	
@@ -476,12 +480,12 @@ void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 //
 // cl_tent.c
 //
-int CL_AddEntity( cl_entity_t *pEnt, int entityType, shader_t customShader );
+int CL_AddEntity( int entityType, cl_entity_t *pEnt, shader_t customShader );
 void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
-dlight_t *CL_AllocDlight( int key );
-dlight_t *CL_AllocElight( int key );
+struct dlight_s *CL_AllocDlight( int key );
+struct dlight_s *CL_AllocElight( int key );
 void CL_LightForPoint( const vec3_t point, vec3_t ambientLight );
 void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );

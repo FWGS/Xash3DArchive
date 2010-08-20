@@ -7,9 +7,7 @@
 #include "byteorder.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
-#include "clgame_api.h"
 #include "cl_entity.h"
-#include "effects_api.h"
 #include "const.h"
 
 #define DIST_EPSILON	(0.03125)

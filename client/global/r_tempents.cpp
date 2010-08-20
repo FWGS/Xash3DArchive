@@ -7,11 +7,10 @@
 #include "utils.h"
 #include "studio_event.h"
 #include "triangle_api.h"
-#include "effects_api.h"
 #include "entity_types.h"
 #include "pm_movevars.h"
-#include "r_particle.h"
 #include "r_tempents.h"
+#include "r_particle.h"
 #include "pm_defs.h"
 #include "ev_hldm.h"
 #include "r_beams.h"
@@ -48,9 +47,9 @@ void CTempEnts::TE_Prepare( TEMPENTITY *pTemp, int modelIndex )
 
 	// Use these to set per-frame and termination conditions / actions
 	pTemp->flags = FTENT_NONE;		
-	pTemp->die = gpGlobals->time + 0.75f;
+	pTemp->die = GetClientTime() + 0.75f;
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 
 	pTemp->entity.curstate.modelindex = modelIndex;
 	pTemp->entity.curstate.rendermode = kRenderNormal;
@@ -75,7 +74,7 @@ int CTempEnts::TE_Active( TEMPENTITY *pTemp )
 	float	life;
 
 	if( !pTemp ) return false;
-	life = pTemp->die - gpGlobals->time;
+	life = pTemp->die - GetClientTime();
 	
 	if( life < 0.0f )
 	{
@@ -109,7 +108,7 @@ int CTempEnts::TE_Active( TEMPENTITY *pTemp )
 	return active;
 }
 
-int CTempEnts::TE_Update( TEMPENTITY *pTemp )
+int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 {
 	// before first frame when movevars not initialized
 	if( !gpMovevars )
@@ -119,9 +118,8 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	}
 
 	float	gravity, gravitySlow, fastFreq;
-	float	frametime = gpGlobals->frametime;
 
-	fastFreq = gpGlobals->time * 5.5;
+	fastFreq = GetClientTime() * 5.5;
 	gravity = -frametime * gpMovevars->gravity;
 	gravitySlow = gravity * 0.5;
 
@@ -144,25 +142,25 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 	{
 		// adjust speed if it's time
 		// scale is next think time
-		if( gpGlobals->time > pTemp->entity.baseline.scale )
+		if( GetClientTime() > pTemp->entity.baseline.scale )
 		{
 			// show Sparks
-			SparkShower( pTemp->entity.origin );
+			SparkEffect( pTemp->entity.origin, 8, -200, 200 );
 
 			// reduce life
 			pTemp->entity.baseline.framerate -= 0.1f;
 
 			if( pTemp->entity.baseline.framerate <= 0.0f )
 			{
-				pTemp->die = gpGlobals->time;
+				pTemp->die = GetClientTime();
 			}
 			else
 			{
 				// so it will die no matter what
-				pTemp->die = gpGlobals->time + 0.5f;
+				pTemp->die = GetClientTime() + 0.5f;
 
 				// next think
-				pTemp->entity.baseline.scale = gpGlobals->time + 0.1f;
+				pTemp->entity.baseline.scale = GetClientTime() + 0.1f;
 			}
 		}
 	}
@@ -206,7 +204,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 		pTemp->x += pTemp->entity.baseline.origin.x * frametime;
 		pTemp->y += pTemp->entity.baseline.origin.y * frametime;
 
-		pTemp->entity.origin.x = pTemp->x + sin( pTemp->entity.baseline.origin.z + gpGlobals->time ) * ( 10 * pTemp->entity.curstate.scale );
+		pTemp->entity.origin.x = pTemp->x + sin( pTemp->entity.baseline.origin.z + GetClientTime() ) * ( 10 * pTemp->entity.curstate.scale );
 		pTemp->entity.origin.y = pTemp->y + sin( pTemp->entity.baseline.origin.z + fastFreq + 0.7f ) * ( 8 * pTemp->entity.curstate.scale);
 		pTemp->entity.origin.z = pTemp->entity.origin.z + pTemp->entity.baseline.origin[2] * frametime;
 	}
@@ -216,8 +214,8 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 		s = sin( pTemp->entity.baseline.origin.z + fastFreq );
 		c = cos( pTemp->entity.baseline.origin.z + fastFreq );
 
-		pTemp->entity.origin.x = pTemp->entity.origin.x + pTemp->entity.baseline.origin.x * frametime + 8 * sin( gpGlobals->time * 20 );
-		pTemp->entity.origin.y = pTemp->entity.origin.y + pTemp->entity.baseline.origin.y * frametime + 4 * sin( gpGlobals->time * 30 );
+		pTemp->entity.origin.x = pTemp->entity.origin.x + pTemp->entity.baseline.origin.x * frametime + 8 * sin( GetClientTime() * 20 );
+		pTemp->entity.origin.y = pTemp->entity.origin.y + pTemp->entity.baseline.origin.y * frametime + 4 * sin( GetClientTime() * 30 );
 		pTemp->entity.origin.z = pTemp->entity.origin.z + pTemp->entity.baseline.origin.z * frametime;
 	}
 	else
@@ -355,7 +353,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 			{
 				// die on impact
 				pTemp->flags &= ~FTENT_FADEOUT;	
-				pTemp->die = gpGlobals->time;			
+				pTemp->die = GetClientTime();			
 			}
 			else
 			{
@@ -388,7 +386,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp )
 		dl->color[0] = 255;
 		dl->color[1]= 120;
 		dl->color[2] = 0;
-		dl->die = gpGlobals->time + 0.01f;
+		dl->die = GetClientTime() + 0.01f;
 	}
 
 	if( pTemp->flags & FTENT_SMOKETRAIL )
@@ -442,6 +440,10 @@ void CTempEnts :: Update( void )
 {
 	TEMPENTITY *current, *pnext, *pprev;
 
+	m_fOldTime = m_flTime;
+	m_flTime = GetClientTime();
+	float frametime = m_flTime - m_fOldTime;
+
 	if ( !m_pActiveTempEnts )		
 	{
 		return;
@@ -458,7 +460,7 @@ void CTempEnts :: Update( void )
 	{
 		while( current )
 		{
-			CL_AddEntity( &current->entity, ET_TEMPENTITY, -1 );
+			gEngfuncs.CL_CreateVisibleEntity( ET_TEMPENTITY, &current->entity, -1 );
 			current = current->next;
 		}
 	}
@@ -473,7 +475,7 @@ void CTempEnts :: Update( void )
 			pnext = current->next;
 
 			// Kill it
-			if( !TE_Active( current ) || !TE_Update( current ))
+			if( !TE_Active( current ) || !TE_Update( current, frametime ))
 			{
 				TempEntFree( current, pprev );
 				fTempEntFreed = true;
@@ -481,12 +483,12 @@ void CTempEnts :: Update( void )
 			else
 			{
 				// renderer rejected entity for some reasons...
-				if( !CL_AddEntity( &current->entity, ET_TEMPENTITY, -1 ))
+				if( !gEngfuncs.CL_CreateVisibleEntity( ET_TEMPENTITY, &current->entity, -1 ))
 				{
 					if(!( current->flags & FTENT_PERSIST )) 
 					{
 						// If we can't draw it this frame, just dump it.
-						current->die = gpGlobals->time;
+						current->die = GetClientTime();
 						// don't fade out, just die
 						current->flags &= ~FTENT_FADEOUT;
 
@@ -691,13 +693,13 @@ void CTempEnts::FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 	Vector		origin;
 	Vector		mins, maxs;
 
-	if( !pent || GetModelType( modelIndex ) == mod_bad )
+	if( !pent || Mod_GetModelType( modelIndex ) == mod_bad )
 		return;
 
 	count = density + 1;
 	density = count * 3 + 6;
 
-	GetModelBounds( pent->curstate.modelindex, mins, maxs );
+	Mod_GetBounds( pent->curstate.modelindex, mins, maxs );
 
 	maxHeight = maxs[2] - mins[2];
 	width = maxs[0] - mins[0];
@@ -717,7 +719,7 @@ void CTempEnts::FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 	}
 	else xspeed = yspeed = 0.0f;	// zonly
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 
 	for ( i = 0; i < count; i++ )
 	{
@@ -735,7 +737,7 @@ void CTempEnts::FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 
 		float zspeed = RANDOM_LONG( 80, 140 );
 		pTemp->entity.baseline.origin = Vector( xspeed, yspeed, zspeed );
-		pTemp->die = gpGlobals->time + ( maxHeight / zspeed ) - 0.1f;
+		pTemp->die = GetClientTime() + ( maxHeight / zspeed ) - 0.1f;
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 		// Set sprite scale
 		pTemp->entity.curstate.scale = 1.0f / RANDOM_FLOAT( 2, 5 );
@@ -760,10 +762,10 @@ void CTempEnts::Bubbles( const Vector &mins, const Vector &maxs, float height, i
 	float		sine, cosine;
 	Vector		origin;
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetModelType( modelIndex ) == mod_bad )
 		return;
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 
 	for ( i = 0; i < count; i++ )
 	{
@@ -783,7 +785,7 @@ void CTempEnts::Bubbles( const Vector &mins, const Vector &maxs, float height, i
 		
 		float zspeed = RANDOM_LONG( 80, 140 );
 		pTemp->entity.baseline.origin = Vector( speed * cosine, speed * sine, zspeed );
-		pTemp->die = gpGlobals->time + ((height - (origin[2] - mins[2])) / zspeed) - 0.1f;
+		pTemp->die = GetClientTime() + ((height - (origin[2] - mins[2])) / zspeed) - 0.1f;
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 		
 		// Set sprite scale
@@ -809,15 +811,14 @@ void CTempEnts::BubbleTrail( const Vector &start, const Vector &end, float flWat
 	float		dist, angle;
 	Vector		origin;
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetModelType( modelIndex ) == mod_bad )
 		return;
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 
 	for ( i = 0; i < count; i++ )
 	{
-		dist = RANDOM_FLOAT( 0, 1.0 );	// g-cont. hmm may be use GetLerpFrac instead ?
-
+		dist = RANDOM_FLOAT( 0, 1.0 );
 		origin = LerpPoint( start, end, dist );
 		pTemp = TempEntAlloc( origin, modelIndex );
 		if ( !pTemp ) return;
@@ -830,7 +831,7 @@ void CTempEnts::BubbleTrail( const Vector &start, const Vector &end, float flWat
 
 		float zspeed = RANDOM_LONG( 80, 140 );
 		pTemp->entity.baseline.origin = Vector( speed * cos( angle ), speed * sin( angle ), zspeed );
-		pTemp->die = gpGlobals->time + (( flWaterZ - origin[2]) / zspeed ) - 0.1f;
+		pTemp->die = GetClientTime() + (( flWaterZ - origin[2]) / zspeed ) - 0.1f;
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 		// Set sprite scale
 		pTemp->entity.curstate.scale = 1.0 / RANDOM_FLOAT( 4, 8 );
@@ -852,7 +853,7 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 	Vector		position;
 	int		frameCount;
 
-	if ( client <= 0 || client > gpGlobals->maxClients )
+	if ( client <= 0 || client > gEngfuncs.GetMaxClients() )
 	{
 		Con_Printf( "Bad client in AttachTentToPlayer()!\n" );
 		return;
@@ -865,7 +866,7 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 		return;
 	}
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
 		Con_Printf( "No model %d!\n", modelIndex );
 		return;
@@ -889,13 +890,13 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 	pTemp->tentOffset[0] = 0;
 	pTemp->tentOffset[1] = 0;
 	pTemp->tentOffset[2] = zoffset;
-	pTemp->die = gpGlobals->time + life;
+	pTemp->die = GetClientTime() + life;
 	pTemp->flags |= FTENT_PLYRATTACHMENT|FTENT_PERSIST;
 
 	// is the model a sprite?
-	if ( GetModelType( pTemp->entity.curstate.modelindex ) == mod_sprite )
+	if ( Mod_GetModelType( pTemp->entity.curstate.modelindex ) == mod_sprite )
 	{
-		frameCount = GetModelFrames( pTemp->entity.curstate.modelindex );
+		frameCount = Mod_GetFrames( pTemp->entity.curstate.modelindex );
 		pTemp->frameMax = frameCount - 1;
 		pTemp->flags |= FTENT_SPRANIMATE|FTENT_SPRANIMATELOOP;
 		pTemp->entity.curstate.framerate = 10;
@@ -916,7 +917,7 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 //-----------------------------------------------------------------------------
 void CTempEnts::KillAttachedTents( int client )
 {
-	if ( client <= 0 || client > gpGlobals->maxClients )
+	if ( client <= 0 || client > gEngfuncs.GetMaxClients() )
 	{
 		Con_Printf( "Bad client in KillAttachedTents()!\n" );
 		return;
@@ -932,7 +933,7 @@ void CTempEnts::KillAttachedTents( int client )
 			// if it is attached to this client, set it to die instantly.
 			if ( pTemp->clientIndex == client )
 			{
-				pTemp->die = gpGlobals->time; // good enough, it will die on next tent update. 
+				pTemp->die = GetClientTime(); // good enough, it will die on next tent update. 
 			}
 		}
 	}
@@ -959,7 +960,7 @@ void CTempEnts::RicochetSprite( const Vector &pos, int modelIndex, float scale )
 	pTemp->entity.curstate.scale = scale;
 	pTemp->flags = FTENT_FADEOUT;
 	pTemp->fadeSpeed = 8;
-	pTemp->die = gpGlobals->time;
+	pTemp->die = GetClientTime();
 
 	pTemp->entity.curstate.frame = 0;
 	pTemp->entity.angles[ROLL] = 45 * RANDOM_LONG( 0, 7 );
@@ -1057,9 +1058,10 @@ void CTempEnts::PlaySound( TEMPENTITY *pTemp, float damp )
 		}
 		else
 		{
-			pitch = 100; // FIXME
+			pitch = PITCH_NORM;
 		}
-		CL_PlaySound( soundname, fvol, pTemp->entity.origin, pitch );
+
+		gEngfuncs.pEventAPI->EV_PlaySound( 0, pTemp->entity.origin, CHAN_AUTO, soundname, fvol, ATTN_NORM, 0, pitch );
 	}
 }
 
@@ -1072,7 +1074,7 @@ void CTempEnts::RocketFlare( const Vector& pos )
 	modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/animglow01.spr" );
 	if( !modelIndex ) return;
 
-	nframeCount = GetModelFrames( modelIndex );
+	nframeCount = Mod_GetFrames( modelIndex );
 
 	pTemp = TempEntAlloc( pos, modelIndex );
 	if ( !pTemp ) return;
@@ -1084,7 +1086,7 @@ void CTempEnts::RocketFlare( const Vector& pos )
 	pTemp->entity.curstate.framerate = 1.0;
 	pTemp->entity.curstate.frame = RANDOM_LONG( 0, nframeCount - 1 );
 	pTemp->entity.curstate.scale = 1.0;
-	pTemp->die = gpGlobals->time + 0.01f;	// when 100 fps die at next frame
+	pTemp->die = GetClientTime() + 0.01f;	// when 100 fps die at next frame
 	pTemp->flags |= FTENT_SPRANIMATE;
 }
 
@@ -1102,7 +1104,7 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 	modelIndex = m_iMuzzleFlash[index];
 	if( !modelIndex ) return;
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 
 	if( iAttachment > 0 && pEnt->attachment_origin[iAttachment - 1] == g_vecZero )
 	{
@@ -1117,7 +1119,7 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 	pTemp->entity.curstate.rendermode = kRenderTransAdd;
 	pTemp->entity.curstate.renderamt = 255;
 	pTemp->entity.curstate.renderfx = 0;
-	pTemp->die = gpGlobals->time + 0.05; // die at next frame
+	pTemp->die = GetClientTime() + 0.05; // die at next frame
 	pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 	pTemp->frameMax = frameCount - 1;
 
@@ -1150,7 +1152,7 @@ void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, 
 {
 	TEMPENTITY	*pTemp;
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetModelType( modelIndex ) == mod_bad )
 		return;
 
 	// Large, single blood sprite is a high-priority tent
@@ -1159,7 +1161,7 @@ void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, 
 		int	frameCount;
 		Vector	color;
 
-		frameCount = GetModelFrames( modelIndex );
+		frameCount = Mod_GetFrames( modelIndex );
 		pTemp->entity.curstate.rendermode = kRenderTransTexture;
 		pTemp->entity.curstate.renderfx = kRenderFxClampMinScale;
 		pTemp->entity.curstate.scale = RANDOM_FLOAT(( size / 25.0f), ( size / 35.0f ));
@@ -1171,7 +1173,7 @@ void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, 
 		pTemp->entity.curstate.rendercolor.b = color[2];
 		pTemp->entity.curstate.framerate = frameCount * 4; // Finish in 0.250 seconds
 		// play the whole thing once
-		pTemp->die = gpGlobals->time + (frameCount / pTemp->entity.curstate.framerate);
+		pTemp->die = GetClientTime() + (frameCount / pTemp->entity.curstate.framerate);
 
 		pTemp->entity.angles[2] = RANDOM_LONG( 0, 360 );
 		pTemp->bounceFactor = 0;
@@ -1188,10 +1190,10 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 
 	type = flags & BREAK_TYPEMASK;
 
-	if ( GetModelType( modelIndex ) == mod_bad )
+	if ( Mod_GetModelType( modelIndex ) == mod_bad )
 		return;
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 		
 	if ( count == 0 )
 	{
@@ -1217,9 +1219,9 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 		// keep track of break_type, so we know how to play sound on collision
 		pTemp->hitSound = type;
 		
-		if( GetModelType( modelIndex ) == mod_sprite )
+		if( Mod_GetModelType( modelIndex ) == mod_sprite )
 			pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
-		else if( GetModelType( modelIndex ) == mod_studio )
+		else if( Mod_GetModelType( modelIndex ) == mod_studio )
 			pTemp->entity.curstate.body = RANDOM_LONG( 0, frameCount - 1 );
 
 		pTemp->flags |= FTENT_COLLIDEWORLD | FTENT_FADEOUT | FTENT_SLOWGRAVITY;
@@ -1250,7 +1252,7 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 		pTemp->entity.baseline.origin[1] = dir[1] + RANDOM_FLOAT( -random, random );
 		pTemp->entity.baseline.origin[2] = dir[2] + RANDOM_FLOAT( 0, random );
 
-		pTemp->die = gpGlobals->time + life + RANDOM_FLOAT( 0, 1 ); // Add an extra 0-1 secs of life
+		pTemp->die = GetClientTime() + life + RANDOM_FLOAT( 0, 1 ); // Add an extra 0-1 secs of life
 	}
 }
 
@@ -1278,7 +1280,7 @@ TEMPENTITY *CTempEnts::TempModel( const Vector &pos, const Vector &dir, const Ve
 	pTemp->entity.baseline.angles[2] = RANDOM_FLOAT( -255, 255 );
 	pTemp->entity.curstate.rendermode = kRenderNormal;
 	pTemp->entity.baseline.renderamt = 255;
-	pTemp->die = gpGlobals->time + life;
+	pTemp->die = GetClientTime() + life;
 
 	return pTemp;
 }
@@ -1288,13 +1290,13 @@ TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float 
 	TEMPENTITY	*pTemp;
 	int		frameCount;
 
-	if( !spriteIndex || GetModelType( spriteIndex ) != mod_sprite )
+	if( !spriteIndex || Mod_GetModelType( spriteIndex ) != mod_sprite )
 	{
 		Con_Printf( "No Sprite %d!\n", spriteIndex );
 		return NULL;
 	}
 
-	frameCount = GetModelFrames( spriteIndex );
+	frameCount = Mod_GetFrames( spriteIndex );
 
 	pTemp = TempEntAlloc( pos, spriteIndex );
 	if( !pTemp ) return NULL;
@@ -1305,7 +1307,7 @@ TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float 
 	if( framerate == 0 ) framerate = 10;
 
 	pTemp->entity.curstate.framerate = framerate;
-	pTemp->die = gpGlobals->time + (float)frameCount / framerate;
+	pTemp->die = GetClientTime() + (float)frameCount / framerate;
 	pTemp->entity.curstate.frame = 0;
 
 	return pTemp;
@@ -1324,13 +1326,13 @@ TEMPENTITY *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float s
 	if( !modelIndex ) 
 		return NULL;
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
 		Con_Printf( "No model %d!\n", modelIndex );
 		return NULL;
 	}
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 
 	pTemp = TempEntAlloc( pos, modelIndex );
 	if( !pTemp ) return NULL;
@@ -1347,8 +1349,8 @@ TEMPENTITY *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float s
 	pTemp->entity.origin = pos;
 	pTemp->entity.baseline.origin = dir;
 
-	if( life ) pTemp->die = gpGlobals->time + life;
-	else pTemp->die = gpGlobals->time + (frameCount * 0.1f) + 1.0f;
+	if( life ) pTemp->die = GetClientTime() + life;
+	else pTemp->die = GetClientTime() + (frameCount * 0.1f) + 1.0f;
 	pTemp->entity.curstate.frame = 0;
 
 	return pTemp;
@@ -1423,13 +1425,13 @@ void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelInd
 	
 	if( znoise > 1 ) znoise = 1;
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
 		Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}
 
-	frameCount = GetModelFrames( modelIndex );
+	frameCount = Mod_GetFrames( modelIndex );
 
 	for( i = 0; i < count; i++ )
 	{
@@ -1451,7 +1453,7 @@ void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelInd
 		velocity[2] = dir[2] + RANDOM_FLOAT( 0, znoise );
 		scale = RANDOM_FLOAT(( speed * 0.8f ), ( speed * 1.2f ));
 		pTemp->entity.baseline.origin = velocity * scale;
-		pTemp->die = gpGlobals->time + 0.35f;
+		pTemp->die = GetClientTime() + 0.35f;
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, frameCount - 1 );
 	}
 }
@@ -1462,13 +1464,13 @@ void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &ve
 	vec3_t		vecDelta, vecDir;
 	int		i, flFrameCount;
 
-	if( GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
 		Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}	
 
-	flFrameCount = GetModelFrames( modelIndex );
+	flFrameCount = Mod_GetFrames( modelIndex );
 
 	vecDelta = vecEnd - vecStart;
 	vecDir = vecDelta.Normalize();
@@ -1508,7 +1510,7 @@ void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &ve
 
 		pTemp->entity.curstate.frame = RANDOM_LONG( 0, flFrameCount - 1 );
 		pTemp->frameMax	= flFrameCount - 1;
-		pTemp->die = gpGlobals->time + flLife + RANDOM_FLOAT( 0, 4 );
+		pTemp->die = GetClientTime() + flLife + RANDOM_FLOAT( 0, 4 );
 	}
 }
 
@@ -1582,7 +1584,7 @@ void CTempEnts::Large_Funnel( Vector pos, int spriteIndex, int flags )
 					pTemp->entity.curstate.rendermode = kRenderTransAdd;
 					pTemp->flags |= FTENT_FADEOUT;
 					pTemp->fadeSpeed = 2.0f;
-					pTemp->die = gpGlobals->time + RANDOM_FLOAT( life * 0.5, life );
+					pTemp->die = GetClientTime() + RANDOM_FLOAT( life * 0.5, life );
 					pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 255;
 				}
 				
@@ -1599,6 +1601,20 @@ void CTempEnts::Large_Funnel( Vector pos, int spriteIndex, int flags )
 				}
 			}
 		}
+	}
+}
+
+void CTempEnts::SparkEffect( const Vector& pos, int count, int velocityMin, int velocityMax )
+{
+	Vector m_vecDir;
+
+	for ( int i = 0; i < count; i++ )
+	{
+		m_vecDir.x = pos.x + RANDOM_FLOAT( velocityMin, velocityMax );
+		m_vecDir.y = pos.y + RANDOM_FLOAT( velocityMin, velocityMax );
+		m_vecDir.z = pos.z + RANDOM_FLOAT( velocityMin, velocityMax );
+
+		g_pParticles->SparkleTracer( pos, m_vecDir );
 	}
 }
 
@@ -1688,7 +1704,7 @@ void CTempEnts::AllocDLight( Vector pos, byte r, byte g, byte b, float radius, f
 	dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 
 	dl->origin = pos;	
-	dl->die = gpGlobals->time + time;
+	dl->die = GetClientTime() + time;
 	dl->color[0] = r;
 	dl->color[1] = g;
 	dl->color[2] = b;

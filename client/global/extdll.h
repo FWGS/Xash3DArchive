@@ -29,7 +29,7 @@
 
 // Shared header describing protocol between engine and DLLs
 #include "cl_entity.h"
-#include "clgame_api.h"
+#include "cdll_int.h"
 #include "cdll_dll.h"
 
 #endif//EXTDLL_H

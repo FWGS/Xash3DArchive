@@ -55,7 +55,7 @@ public:
 	void		SetType( ptype_t ptype ) { m_Type = ptype; }
 	ptype_t		GetType( void ) { return m_Type; };
 
-	void		SetLifetime( float life ) { m_flLifetime = gpGlobals->time + life; }
+	void		SetLifetime( float life ) { m_flLifetime = GetClientTime() + life; }
 	float		GetLifetime( void ) { return m_flLifetime; }
 
 	void		SetTexture( HSPRITE hSpr ) { m_hSprite = hSpr; }
@@ -110,6 +110,16 @@ class CParticleSystem
 
 	// private partsystem shaders
 	HSPRITE		m_hDefaultParticle;
+
+	float		m_flTime;		// the current client time
+	float		m_fOldTime;	// the time at which the HUD was last redrawn
+
+	// view vectors
+	Vector		m_vecForward;
+	Vector		m_vecRight;
+	Vector		m_vecUp;
+	Vector		m_vecOrigin;	// view origin
+
 public:
 			CParticleSystem( void );
 	virtual		~CParticleSystem( void );
@@ -119,10 +129,13 @@ public:
 	void		SimulateAndRender( CBaseParticle *pCur );
 	void		FreeParticle( CBaseParticle *pCur );
 	CBaseParticle	*AllocParticle( HSPRITE m_hSpr = 0 );
-	float		GetTimeDelta( void ) { return gpGlobals->frametime; }
+	float		GetTimeDelta( void ) { return m_flTime - m_fOldTime; }
 
 	// draw methods
 	void		DrawParticle( HSPRITE hSpr, const Vector &pos, const byte color[4], float size );
+	bool		TracerComputeVerts( const Vector &pos, const Vector &delta, float width, Vector *pVerts );
+	void		DrawTracer( HSPRITE hSpr, Vector& start, Vector& delta, float width, byte *color,
+			float startV = 0.0f, float endV = 1.0f );
 
 	// begin user effects here
 	void		EntityParticles( cl_entity_t *ent );
@@ -140,6 +153,5 @@ public:
 };
 
 extern CParticleSystem	*g_pParticles;
-extern ref_params_t		*gpViewParams;
 
 #endif//R_PARTICLE_H

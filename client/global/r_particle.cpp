@@ -6,8 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "triangle_api.h"
-#include "effects_api.h"
-#include "ref_params.h"
+#include "r_efx.h"
 #include "pm_movevars.h"
 #include "ev_hldm.h"
 #include "hud.h"
@@ -160,9 +159,9 @@ void CParticleSystem :: DrawParticle( HSPRITE hSprite, const Vector &pos, const 
 	if ( hSprite == m_hDefaultParticle )
 	{
 		// HACKHACK a scale up to keep particles from disappearing
-		size += (pos.x - gpViewParams->vieworg.x) * gpViewParams->forward.x;
-		size += (pos.y - gpViewParams->vieworg.y) * gpViewParams->forward.y;
-		size += (pos.z - gpViewParams->vieworg.z) * gpViewParams->forward.z;
+		size += (pos.x - m_vecOrigin.x) * m_vecForward.x;
+		size += (pos.y - m_vecOrigin.y) * m_vecForward.y;
+		size += (pos.z - m_vecOrigin.z) * m_vecForward.z;
 
 		if( size < 20.0f ) size = 1.0f;
 		else size = 1.0f + size * 0.004f;
@@ -171,8 +170,8 @@ void CParticleSystem :: DrawParticle( HSPRITE hSprite, const Vector &pos, const 
 	Vector	right, up;
 
 	// scale the axes by radius
-	right = gpViewParams->right * size;
-	up = gpViewParams->up * size;
+	right = m_vecRight * size;
+	up = m_vecUp * size;
 
 	// Add the 4 corner vertices.
 	gEngfuncs.pTriAPI->Begin( TRI_QUADS );
@@ -322,13 +321,31 @@ void CParticleSystem :: Update( void )
 {
 	CBaseParticle	*pCur, *pKill;
 
+	m_fOldTime = m_flTime;
+	m_flTime = GetClientTime();
+
 	if( !cl_particles->integer ) return;
+
+	cl_entity_t *m_pPlayer = GetLocalPlayer();
+
+	if( !m_pPlayer ) return;
+
+	Vector	view_ofs;
+
+	// calc vectors
+	AngleVectors( gHUD.m_vecAngles, m_vecForward, m_vecRight, m_vecUp );
+
+	// calc vieworg
+	gEngfuncs.pEventAPI->EV_LocalPlayerViewheight( view_ofs );
+	m_vecOrigin[0] = gHUD.m_vecOrigin[0] + view_ofs.x;
+	m_vecOrigin[1] = gHUD.m_vecOrigin[1] + view_ofs.y;
+	m_vecOrigin[2] = gHUD.m_vecOrigin[2] + view_ofs.z;
 
 	while( 1 ) 
 	{
 		// free time-expired particles
 		pKill = m_pActiveParticles;
-		if ( pKill && pKill->GetLifetime() < gpGlobals->time )
+		if ( pKill && pKill->GetLifetime() < GetClientTime() )
 		{
 			m_pActiveParticles = pKill->m_pNext;
 			FreeParticle( pKill );
@@ -342,7 +359,7 @@ void CParticleSystem :: Update( void )
 		while( 1 )
 		{
 			pKill = pCur->m_pNext;
-			if ( pKill && pKill->GetLifetime() < gpGlobals->time )
+			if ( pKill && pKill->GetLifetime() < GetClientTime() )
 			{
 				pCur->m_pNext = pKill->m_pNext;
 				FreeParticle( pKill );
@@ -375,11 +392,11 @@ void CParticleSystem :: EntityParticles( cl_entity_t *ent )
 		p = AllocParticle ();
 		if( !p ) return;
 
-		angle = gpGlobals->time * m_vecAvelocities[i].x;
+		angle = GetClientTime() * m_vecAvelocities[i].x;
 		SinCos( angle, &sy, &cy );
-		angle = gpGlobals->time * m_vecAvelocities[i].y;
+		angle = GetClientTime() * m_vecAvelocities[i].y;
 		SinCos( angle, &sp, &cp );
-		angle = gpGlobals->time * m_vecAvelocities[i].z;
+		angle = GetClientTime() * m_vecAvelocities[i].z;
 		SinCos( angle, &sr, &cr );
 	
 		m_vecForward.Init( cp * cy, cp * sy, -sp ); 
@@ -729,14 +746,14 @@ void CParticleSystem :: RocketTrail( const Vector org, const Vector end, int typ
 */
 static void pfnSparkTracerDraw( CBaseParticle *pPart, float frametime )
 {
-	float	lifePerc = ( pPart->m_flLifetime - gpGlobals->time );
+	float	lifePerc = ( pPart->m_flLifetime - GetClientTime() );
 	float	scale = pPart->m_flLength;
 	Vector	delta = pPart->m_Velocity;
 
 	float	flLength = ( pPart->m_Velocity * scale ).Length();
 	float	flWidth = ( flLength < pPart->m_flWidth ) ? flLength : pPart->m_flWidth;
 
-	Tracer_Draw( pPart->m_hSprite, pPart->m_Pos, (delta * scale), flWidth, pPart->m_Color, 0.0f, 0.8f );
+	g_pParticles->DrawTracer(pPart->m_hSprite, pPart->m_Pos, delta * scale, flWidth, pPart->m_Color, 0.0f, 0.8f);
 
 	float grav = frametime * gpMovevars->gravity * 0.05f;
 	pPart->m_Velocity.z -= grav * 8; // use vox gravity
@@ -799,7 +816,7 @@ static void pfnBulletTracerDraw( CBaseParticle *pPart, float frametime )
 {
 	Vector	delta = pPart->m_Velocity * pPart->m_flLength;
 
-	Tracer_Draw( pPart->m_hSprite, pPart->m_Pos, delta, pPart->m_flWidth, pPart->m_Color, 0.0f, 0.8f );
+	g_pParticles->DrawTracer(pPart->m_hSprite, pPart->m_Pos, delta, pPart->m_flWidth, pPart->m_Color, 0.0f, 0.8f);
 
 	pPart->m_Pos = pPart->m_Pos + pPart->m_Velocity * frametime;
 }

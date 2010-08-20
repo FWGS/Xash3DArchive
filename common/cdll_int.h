@@ -1,89 +1,27 @@
 //=======================================================================
 //			Copyright XashXT Group 2008 ©
-//	      clgame_api.h - entity interface between engine and clgame
+//	      cdll_int.h - client dll interface declarations
 //=======================================================================
-#ifndef CLGAME_API_H
-#define CLGAME_API_H
+#ifndef CDLL_INT_H
+#define CDLL_INT_H
 
-typedef int		HSPRITE;					// handle to a graphic
-typedef struct dlight_s	dlight_t;
-typedef struct usercmd_s	usercmd_t;
-typedef struct skyportal_s	skyportal_t;
-typedef struct ref_params_s	ref_params_t;
-typedef struct mstudioevent_s	mstudioevent_t;
-typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );	// user message handle
+typedef int HSPRITE; // handle to a graphic
+typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );
 
 #include "wrect.h"
 
-#define SCRINFO_VIRTUALSPACE	1
+#define SCRINFO_SCREENFLASH	1
+#define SCRINFO_STRETCHED	2
 
 typedef struct
 {
-	int		iFlags;
-	int		iRealWidth;
-	int		iRealHeight;
+	int		iSize;
 	int		iWidth;
 	int		iHeight;
+	int		iFlags;
 	int		iCharHeight;
 	byte		charWidths[256];
 } SCREENINFO;
-
-// hud_player_info_t formed from player_info_t
-typedef struct
-{
-	char		*name;
-	short		ping;
-	byte		thisplayer;	// TRUE if this is the calling player
-
-	byte		spectator;
-	byte		packetloss;
-	const char	*model;
-	short		topcolor;
-	short		bottomcolor;
-} hud_player_info_t;
-
-#define MAX_INFO_STRING		512
-#define MAX_SCOREBOARDNAME		32
-
-typedef struct player_info_s
-{
-	int		userid;			// User id on server
-	char		userinfo[MAX_INFO_STRING];	// User info string
-	char		name[MAX_SCOREBOARDNAME];	// Name (extracted from userinfo)
-	int		spectator;		// Spectator or not, unused
-
-	int		ping;
-	int		packet_loss;
-
-	// skin information
-	char		model[64];
-	int		topcolor;
-	int		bottomcolor;
-
-	// last frame rendered
-	int		renderframe;	
-
-	// Gait frame estimation
-	int		gaitsequence;
-	float		gaitframe;
-	float		gaityaw;
-	vec3_t		prevgaitorigin;
-} player_info_t;
-
-typedef struct client_textmessage_s
-{
-	int		effect;
-	byte		r1, g1, b1, a1;	// 2 colors for effects
-	byte		r2, g2, b2, a2;
-	float		x;
-	float		y;
-	float		fadein;
-	float		fadeout;
-	float		holdtime;
-	float		fxtime;
-	const char	*pName;
-	const char	*pMessage;
-} client_textmessage_t;
 
 typedef struct client_data_s
 {
@@ -105,18 +43,34 @@ typedef struct client_sprite_s
 	wrect_t		rc;
 } client_sprite_t;
 
-typedef struct cl_globalvars_s
-{	
-	float		time;		// time from server
-	float		frametime;
-	char		mapname[64];
+typedef struct client_textmessage_s
+{
+	int		effect;
+	byte		r1, g1, b1, a1;	// 2 colors for effects
+	byte		r2, g2, b2, a2;
+	float		x;
+	float		y;
+	float		fadein;
+	float		fadeout;
+	float		holdtime;
+	float		fxtime;
+	const char	*pName;
+	const char	*pMessage;
+} client_textmessage_t;
 
-	ref_params_t	*pViewParms;	// just for easy acess on client
+// hud_player_info_t formed from player_info_t
+typedef struct hud_player_info_s
+{
+	char		*name;
+	short		ping;
+	byte		thisplayer;	// TRUE if this is the calling player
 
-	int		maxClients;
-	int		maxEntities;
-	int		numEntities;	// actual ents count
-} cl_globalvars_t;
+	byte		spectator;
+	byte		packetloss;
+	const char	*model;
+	short		topcolor;
+	short		bottomcolor;
+} hud_player_info_t;
 
 typedef struct cl_enginefuncs_s
 {
@@ -125,11 +79,10 @@ typedef struct cl_enginefuncs_s
 	int	(*pfnSPR_Frames)( HSPRITE hPic );
 	int	(*pfnSPR_Height)( HSPRITE hPic, int frame );
 	int	(*pfnSPR_Width)( HSPRITE hPic, int frame );
-	void	(*pfnSPR_Set)( HSPRITE hPic, int r, int g, int b, int a );
-	void	(*pfnSPR_Draw)( int frame, int x, int y, int width, int height, const wrect_t *prc );
-	void	(*pfnSPR_DrawHoles)( int frame, int x, int y, int width, int height, const wrect_t *prc );
-	void	(*pfnSPR_DrawTrans)( int frame, int x, int y, int width, int height, const wrect_t *prc );	// kRenderTransColor
-	void	(*pfnSPR_DrawAdditive)( int frame, int x, int y, int width, int height, const wrect_t *prc );
+	void	(*pfnSPR_Set)( HSPRITE hPic, int r, int g, int b );
+	void	(*pfnSPR_Draw)( int frame, int x, int y, const wrect_t *prc );
+	void	(*pfnSPR_DrawHoles)( int frame, int x, int y, const wrect_t *prc );
+	void	(*pfnSPR_DrawAdditive)( int frame, int x, int y, const wrect_t *prc );
 	void	(*pfnSPR_EnableScissor)( int x, int y, int width, int height );
 	void	(*pfnSPR_DisableScissor)( void );
 	client_sprite_t *(*pfnSPR_GetList)( char *psz, int *piCount );
@@ -152,9 +105,9 @@ typedef struct cl_enginefuncs_s
 
 	void	(*pfnGetPlayerInfo)( int player_num, hud_player_info_t *pinfo );
 
-	// sound handlers (NULL origin == play at current client origin)
-	void	(*pfnPlaySoundByName)( const char *szSound, float volume, int pitch, const float *org );
-	void	(*pfnPlaySoundByIndex)( int iSound, float volume, int pitch, const float *org );
+	// sound handlers
+	void	(*pfnPlaySoundByName)( const char *szSound, float volume );
+	void	(*pfnPlaySoundByIndex)( int iSound, float volume );
 
 	// vector helpers
 	void	(*pfnAngleVectors)( const float *rgflVector, float *forward, float *right, float *up );
@@ -169,44 +122,48 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnConsolePrint)( const char *string );
 	void	(*pfnCenterPrint)( const char *string );
 
-	// engine memory manager
-	void*	(*pfnMemAlloc)( size_t cb, const char *filename, const int fileline );// was GetWindowCenterX
-	void	(*pfnMemFree)( void *mem, const char *filename, const int fileline );	// was GetWindowCenterY
-
 	// added for user input processing
+	int	(*GetWindowCenterX)( void );
+	int	(*GetWindowCenterY)( void );
 	void	(*pfnGetViewAngles)( float *rgflAngles );
 	void	(*pfnSetViewAngles)( float *rgflAngles );
-	void	(*pfnCvarSetString)( const char *szName, const char *szValue );	// was GetMaxClients (see gpGlobals->maxClients)
+	int	(*GetMaxClients)( void );
 	void	(*pfnCvarSetValue)( const char *szName, float flValue );
 
 	int       (*pfnCmdArgc)( void );	
 	const char* (*pfnCmdArgv)( int argc );
-	const char *(*pfnCmd_Args)( void );					// was Con_Printf
-	float	(*pfnGetLerpFrac)( void );					// was Con_DPrintf
-	void	(*pfnDelCommand)( const char *cmd_name );			// was Con_NPrintf
-	void	(*Con_Printf)( char *fmt, ... );				// was Con_NXPrintf
-	void	(*Con_DPrintf)( char *fmt, ... );				// !!!
+	void	(*Con_Printf)( char *fmt, ... );
+	void	(*Con_DPrintf)( char *fmt, ... );
+	void	(*Con_NPrintf)( int pos, char *fmt, ... );
+	void	(*Con_NXPrintf)( struct con_nprint_s *info, char *fmt, ... );
 
 	const char* (*pfnPhysInfo_ValueForKey)( const char *key );
 	const char* (*pfnServerInfo_ValueForKey)( const char *key );
 	float	(*pfnGetClientMaxspeed)( void );
-	void*	(*pfnGetModelPtr)( struct cl_entity_s *pEdict );			// was CheckParm
+	int	(*CheckParm)( char *parm, char **ppnext );
+
+	void	(*Key_Event)( int key, int down );
+	void	(*GetMousePosition)( int *mx, int *my );
+	int	(*IsNoClipping)( void );
 
 	// entity handlers
 	struct cl_entity_s *(*pfnGetLocalPlayer)( void );
 	struct cl_entity_s *(*pfnGetViewModel)( void );
 	struct cl_entity_s *(*pfnGetEntityByIndex)( int idx );	// matched with entity serialnumber
 
-	float	(*pfnGetClientTime)( void );		// can use gpGlobals->time instead
+	float	(*pfnGetClientTime)( void );
 	void	(*pfnFadeClientVolume)( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );	// was V_CalcShake
+	struct model_s* (*pfnGetModelPtr)( int modelIndex );							// was V_ApplyShake
 
 	int	(*PM_PointContents)( const float *rgflPos, int *truecontents );
 	struct cl_entity_s *(*pfnWaterEntity)( const float *rgflPos );
 	struct pmtrace_s *(*PM_TraceLine)( float *start, float *end, int flags, int usehull, int ignore_pe );
 
-	modtype_t	(*pfnGetModelType)( int modelIndex );
-	void	(*pfnGetModBounds)( int modelIndex, float *mins, float *maxs );
-	int	(*pfnGetModFrames)( int modelIndex );
+	struct model_s *(*CL_LoadModel)( const char *modelname, int *index );
+	int	(*CL_CreateVisibleEntity)( int type, struct cl_entity_s *ent, HSPRITE customShader );
+
+	void	(*pfnHostError)( const char *szFmt, ... );							// was GetSpritePointer
+	void	(*pfnPlaySoundByNameAtLocation)( char *szSound, float volume, float *origin );
 	
 	word	(*pfnPrecacheEvent)( int type, const char* psz );
 	void	(*pfnPlaybackEvent)( int flags, const struct cl_entity_s *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
@@ -215,30 +172,28 @@ typedef struct cl_enginefuncs_s
 	long	(*pfnRandomLong)( long lLow, long lHigh );
 	void	(*pfnHookEvent)( const char *name, void ( *pfnEvent )( struct event_args_s *args ));
 	int	(*Con_IsVisible)( void );
-
-	// dlls managemenet
-	void*	(*pfnLoadLibrary)( const char *name );			// was pfnGetGameDirectory
-	void*	(*pfnGetProcAddress)( void *hInstance, const char *name );	// was pfnGetCvarPointer
-	void	(*pfnFreeLibrary)( void *hInstance );			// was Key_LookupBinding
-	void	(*pfnHostError)( const char *szFmt, ... );		// was pfnGetLevelName (see gpGlobals->mapname)
-	int	(*pfnFileExists)( const char *filename );		// was pfnGetScreenFade
-	void	(*pfnGetGameDir)( char *szGetGameDir );			// was pfnSetScreenFade
+	const char *(*pfnGetGameDirectory)( void );
+	struct cvar_s *(*pfnGetCvarPointer)( const char *szName );
+	const char *(*Key_LookupBinding)( const char *pBinding );
+	const char *(*pfnGetLevelName)( void );
+	struct movevars_s *(*pfnGetMovementVariables)( void );							// was pfnGetScreenFade
+	void	(*MakeEnvShot)( const float *vieworg, const char *name, int skyshot );				// was pfnSetScreenFade
 
 	// vgui handlers
 	void*	(*VGui_GetPanel)( void );				// UNDONE: wait for version 0.75
 	void	(*VGui_ViewportPaintBackground)( int extents[4] );
 
 	// parse txt files
-	byte*	(*pfnLoadFile)( const char *filename, int *pLength );	// was COM_LoadFile, like it
-	char 	*(*pfnParseToken)( const char **data_p );		// was COM_ParseFile, like it
-	void	(*pfnFreeFile)( void *buffer );			// was COM_FreeFile, like it
+	byte*	(*COM_LoadFile)( const char *filename, int *pLength );
+	char*	(*COM_ParseFile)( char *data, char *token );
+	void	(*COM_FreeFile)( void *buffer );
 
 	struct triapi_s	*pTriAPI;
 	struct efxapi_s	*pEfxAPI;
 	struct event_api_s	*pEventAPI;	
 
 	int	(*pfnIsSpectateOnly)( void );
-	int	(*pfnIsInGame)( void );	// was LoadMapSprite, return false for menu, console, etc
+	int	(*pfnIsInGame)( void );				// return false for menu, console, etc		// was LoadMapSprite 
 
 } cl_enginefuncs_t;
 
@@ -259,15 +214,15 @@ typedef struct
 	void	(*pfnDrawTriangles)( int fTrans );
 	void	(*pfnCreateEntities)( void );
 	int	(*pfnAddVisibleEntity)( struct cl_entity_s *pEnt, int entityType );
-	void	(*pfnStudioEvent)( const mstudioevent_t *event, struct cl_entity_s *entity );
+	void	(*pfnStudioEvent)( const struct mstudioevent_s *event, struct cl_entity_s *entity );
 	void	(*pfnStudioFxTransform)( struct cl_entity_s *pEdict, float transform[4][4] );
-	void	(*pfnCalcRefdef)( ref_params_t *parms );
+	void	(*pfnCalcRefdef)( struct ref_params_s *parms );
 	void	(*pfnPM_Move)( struct playermove_s *ppmove, int server );
 	void	(*pfnPM_Init)( struct playermove_s *ppmove );
 	char	(*pfnPM_FindTextureType)( char *name );
 	void	(*pfnCmdStart)( const struct cl_entity_s *player, int runfuncs );
-	void	(*pfnCmdEnd)( const struct cl_entity_s *player, const usercmd_t *cmd, unsigned int random_seed );
-	void	(*pfnCreateMove)( usercmd_t *cmd, int msec, int active );
+	void	(*pfnCmdEnd)( const struct cl_entity_s *player, const struct usercmd_s *cmd, unsigned int random_seed );
+	void	(*pfnCreateMove)( struct usercmd_s *cmd, int msec, float frametime, int active );
 	void	(*pfnMouseEvent)( int mx, int my );
 	int	(*pfnKeyEvent)( int down, int keynum, const char *pszBind );
 	void	(*VGui_ConsolePrint)( const char *text );
@@ -276,6 +231,6 @@ typedef struct
 	void	(*pfnDirectorMessage)( int iSize, void *pbuf );
 } HUD_FUNCTIONS;
 
-typedef int (*CLIENTAPI)( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* engfuncs, cl_globalvars_t *pGlobals );
+typedef int (*CLIENTAPI)( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* engfuncs );
 
-#endif//CLGAME_API_H
+#endif//CDLL_INT_H

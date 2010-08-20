@@ -108,6 +108,9 @@ typedef struct host_parm_s
 	int		developer;	// show all developer's message
 	bool		key_overstrike;	// key overstrike mode
 
+	int		window_center_x;
+	int		window_center_y;
+
 	// renderers info
 	char		*video_dlls[MAX_RENDERS];
 	char		*audio_dlls[MAX_RENDERS];
@@ -174,7 +177,6 @@ bool SV_Active( void );
 cvar_t *pfnCVarRegister( const char *szName, const char *szValue, int flags, const char *szDesc );
 char *pfnMemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
 byte* pfnLoadFile( const char *filename, int *pLength );
-char *pfnParseToken( const char **data_p );
 void pfnCVarSetString( const char *szName, const char *szValue );
 void pfnCVarSetValue( const char *szName, float flValue );
 float pfnCVarGetValue( const char *szName );
@@ -193,8 +195,8 @@ void *Cache_Check( byte *mempool, cache_user_t *c );
 void pfnGetGameDir( char *szGetGameDir );
 const char *pfnCmd_Args( void );
 const char *pfnCmd_Argv( int argc );
-void pfnCon_DPrintf( char *fmt, ... );
-void pfnCon_Printf( char *szFmt, ... );
+void Con_DPrintf( char *fmt, ... );
+void Con_Printf( char *szFmt, ... );
 int pfnCmd_Argc( void );
 int pfnIsInGame( void );
 float pfnTime( void );
@@ -206,8 +208,6 @@ float pfnTime( void );
 
 ==============================================================
 */
-#define MAX_INFO_STRING	512
-
 #define Z_Malloc(size)		Mem_Alloc( host.mempool, size )
 #define Z_Realloc( ptr, size )	Mem_Realloc( host.mempool, ptr, size )
 #define Z_Free( ptr )		if( ptr ) Mem_Free( ptr )
@@ -240,13 +240,13 @@ byte *CIN_ReadNextFrame( cinematics_t *cin, bool silent );
 bool CL_IsInGame( void );
 bool CL_IsInMenu( void );
 float CL_GetServerTime( void );
-float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );
 void Tri_DrawTriangles( int fTrans );
 int CL_PointContents( const vec3_t point );
+char *COM_ParseFile( char *data, char *token );
 void CL_StudioFxTransform( struct cl_entity_s *ent, float transform[4][4] );
 void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
-void CL_StudioEvent( mstudioevent_t *event, struct cl_entity_s *ent );
+void CL_StudioEvent( struct mstudioevent_s *event, struct cl_entity_s *ent );
 bool CL_GetComment( const char *demoname, char *comment );
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
@@ -271,6 +271,8 @@ void SCR_Init( void );
 void SCR_UpdateScreen( void );
 void SCR_Shutdown( void );
 void Con_Print( const char *txt );
+void Con_NPrintf( int idx, char *fmt, ... );
+void Con_NXPrintf( struct con_nprint_s *info, char *fmt, ... );
 char *Info_ValueForKey( const char *s, const char *key );
 void Info_RemovePrefixedKeys( char *start, char prefix );
 bool Info_RemoveKey( char *s, const char *key );

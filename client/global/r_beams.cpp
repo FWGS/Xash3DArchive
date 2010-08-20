@@ -6,13 +6,12 @@
 #include "extdll.h"
 #include "utils.h"
 #include "triangle_api.h"
-#include "effects_api.h"
+#include "r_efx.h"
 #include "ref_params.h"
 #include "ev_hldm.h"
 #include "hud.h"
 #include "r_beams.h"
 
-extern ref_params_t		*gpViewParams;
 CViewRenderBeams		*g_pViewRenderBeams = NULL;
 
 //-----------------------------------------------------------------------------
@@ -76,7 +75,7 @@ static void ComputeBeamPerpendicular( const Vector &vecBeamDelta, Vector *pPerp 
 	Vector vecBeamCenter = vecBeamDelta;
 	vecBeamCenter.Normalize();
 
-	*pPerp = CrossProduct( gpViewParams->vieworg, vecBeamCenter ).Normalize();
+	*pPerp = CrossProduct( g_pViewRenderBeams->GetViewParams()->vieworg, vecBeamCenter ).Normalize();
 }
 
 // ------------------------------------------------------------------------------------------ //
@@ -104,7 +103,7 @@ inline void CBeamSegDraw::ComputeNormal( const Vector &vStartPos, const Vector &
 	
 	// vDirToBeam = vector from viewer origin to beam
 	Vector vDirToBeam;
-	vDirToBeam = vStartPos - gpViewParams->vieworg;
+	vDirToBeam = vStartPos - g_pViewRenderBeams->GetViewParams()->vieworg;
 
 	// Get a vector that is perpendicular to us and perpendicular to the beam.
 	// This is used to fatten the beam.
@@ -117,7 +116,7 @@ inline void CBeamSegDraw::SpecifySeg( const Vector &vNormal )
 	// SUCKY: Need to do a fair amount more work to get the tangent owing to the averaged normal
 	Vector vDirToBeam, vTangentY;
 
-	vDirToBeam = m_Seg.m_vPos - gpViewParams->vieworg;
+	vDirToBeam = m_Seg.m_vPos - g_pViewRenderBeams->GetViewParams()->vieworg;
 	vTangentY = CrossProduct( vDirToBeam, vNormal );
 	VectorNormalizeFast( vTangentY );
 
@@ -422,13 +421,13 @@ void CViewRenderBeams::KillDeadBeams( cl_entity_t *pDeadEntity )
 		if ( pbeam->type != TE_BEAMFOLLOW )
 		{
 			// Die Die Die!
-			pbeam->die = gpGlobals->time - 0.1f;  
+			pbeam->die = GetClientTime() - 0.1f;  
 
 			// Kill off particles
 			pHead = pbeam->trail;
 			while (pHead)
 			{
-				pHead->die = gpGlobals->time - 0.1f;
+				pHead->die = GetClientTime() - 0.1f;
 				pHead = pHead->next;
 			}
 
@@ -455,16 +454,16 @@ void CViewRenderBeams::KillDeadBeams( cl_entity_t *pDeadEntity )
 //-----------------------------------------------------------------------------
 void CViewRenderBeams::SetupBeam( Beam_t *pBeam, const BeamInfo_t &beamInfo )
 {
-	if( GetModelType( beamInfo.m_nModelIndex ) != mod_sprite )
+	if( Mod_GetModelType( beamInfo.m_nModelIndex ) != mod_sprite )
 		return;
 
 	pBeam->type		= ( beamInfo.m_nType < 0 ) ? TE_BEAMPOINTS : beamInfo.m_nType;
 	pBeam->modelIndex		= beamInfo.m_nModelIndex;
 	pBeam->frame		= 0;
 	pBeam->frameRate		= 0;
-	pBeam->frameCount		= GetModelFrames( beamInfo.m_nModelIndex );
-	pBeam->freq		= gpGlobals->time * beamInfo.m_flSpeed;
-	pBeam->die		= gpGlobals->time + beamInfo.m_flLife;
+	pBeam->frameCount		= Mod_GetFrames( beamInfo.m_nModelIndex );
+	pBeam->freq		= GetClientTime() * beamInfo.m_flSpeed;
+	pBeam->die		= GetClientTime() + beamInfo.m_flLife;
 	pBeam->width		= beamInfo.m_flWidth;
 	pBeam->endWidth		= beamInfo.m_flEndWidth;
 	pBeam->fadeLength		= beamInfo.m_flFadeLength;
@@ -575,10 +574,10 @@ Beam_t *CViewRenderBeams::CreateGenericBeam( BeamInfo_t &beamInfo )
 		return NULL;
 
 	// In case we fail.
-	pBeam->die = gpGlobals->time;
+	pBeam->die = GetClientTime();
 
 	// Need a valid model.
-	if ( GetModelType( beamInfo.m_nModelIndex ) == mod_bad )
+	if ( Mod_GetModelType( beamInfo.m_nModelIndex ) == mod_bad )
 		return NULL;
 
 	// Set it up
@@ -1097,7 +1096,7 @@ void CViewRenderBeams::FreeDeadTrails( BeamTrail_t **trail )
 	while ( 1 ) 
 	{
 		kill = *trail;
-		if ( kill && kill->die < gpGlobals->time )
+		if ( kill && kill->die < GetClientTime() )
 		{
 			*trail = kill->next;
 			kill->next = m_pFreeTrails;
@@ -1113,7 +1112,7 @@ void CViewRenderBeams::FreeDeadTrails( BeamTrail_t **trail )
 		while ( 1 )
 		{
 			kill = p->next;
-			if ( kill && kill->die < gpGlobals->time )
+			if ( kill && kill->die < GetClientTime() )
 			{
 				p->next = kill->next;
 				kill->next = m_pFreeTrails;
@@ -1134,10 +1133,10 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime )
 {
 	pbeam->m_bCulled = false;
 
-	if ( GetModelType( pbeam->modelIndex ) == mod_bad )
+	if ( Mod_GetModelType( pbeam->modelIndex ) == mod_bad )
 	{
 		pbeam->m_bCulled = true; // force to ignore
-		pbeam->die = gpGlobals->time;
+		pbeam->die = GetClientTime();
 		return;
 	}
 
@@ -1205,7 +1204,7 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime )
 	}
 
 	// update life cycle
-	pbeam->t = pbeam->freq + (pbeam->die - gpGlobals->time);
+	pbeam->t = pbeam->freq + (pbeam->die - GetClientTime());
 	if ( pbeam->t != 0.0f ) pbeam->t = 1.0 - pbeam->freq / pbeam->t;
 	
 	// ------------------------------------------
@@ -1233,7 +1232,7 @@ bool CViewRenderBeams::AttemptToDie( Beam_t *pBeam )
 	}
 
 	// other beams
-	if( pBeam->die > gpGlobals->time )
+	if( pBeam->die > GetClientTime() )
 		return false;
 
 	return true;
@@ -1247,9 +1246,6 @@ void CViewRenderBeams::UpdateTempEntBeams( void )
 {
 	if ( !m_pActiveBeams )
 		return;
-
-	// Get frame time
-	float frametime = gpGlobals->frametime;
 
 	// Draw temporary entity beams
 	Beam_t* pPrev = 0;
@@ -1280,7 +1276,7 @@ void CViewRenderBeams::UpdateTempEntBeams( void )
 		}
 
 		// Update beam state
-		UpdateBeam( pBeam, frametime );
+		UpdateBeam( pBeam, m_flFrameTime );
 
 		// Compute bounds for the beam
 		pBeam->ComputeBounds();
@@ -1337,7 +1333,7 @@ void CViewRenderBeams::DrawBeamFollow( int spriteIndex, Beam_t *pbeam, int frame
 	if ( pnew )
 	{
 		pnew->org = pbeam->attachment[0];
-		pnew->die = gpGlobals->time + pbeam->amplitude;
+		pnew->die = GetClientTime() + pbeam->amplitude;
 		pnew->vel = g_vecZero;
 
 		pnew->next = particles;
@@ -1396,7 +1392,7 @@ void CViewRenderBeams::DrawLaser( Beam_t *pbeam, int frame, int rendermode, floa
 	Vector vecForward;
 	Vector beamDir = ( pbeam->attachment[1] - pbeam->attachment[0] ).Normalize();
 
-	AngleVectors( gpViewParams->viewangles, vecForward, NULL, NULL );
+	AngleVectors( pViewParams->viewangles, vecForward, NULL, NULL );
 	float flDot = DotProduct( beamDir, vecForward );
 
 	// abort if the player's looking along it away from the source
@@ -1410,7 +1406,7 @@ void CViewRenderBeams::DrawLaser( Beam_t *pbeam, int frame, int rendermode, floa
 		float flFade = pow( flDot, 10 );
 
 		// Fade the beam based on the player's proximity to the beam
-		Vector localDir = gpViewParams->vieworg - pbeam->attachment[0];
+		Vector localDir = pViewParams->vieworg - pbeam->attachment[0];
 		flDot = DotProduct( beamDir, localDir );
 		Vector vecProjection = flDot * beamDir;
 		float flDistance = ( localDir - vecProjection ).Length();
@@ -1460,13 +1456,13 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 		return;
 	}
 
-	if ( GetModelType( pbeam->modelIndex ) == mod_bad )
+	if ( Mod_GetModelType( pbeam->modelIndex ) == mod_bad )
 	{
-		pbeam->die = gpGlobals->time;
+		pbeam->die = GetClientTime();
 		return;
 	}
 
-	int frame = (( int )( pbeam->frame + gpGlobals->time * pbeam->frameRate) % pbeam->frameCount );
+	int frame = (( int )( pbeam->frame + GetClientTime() * pbeam->frameRate) % pbeam->frameCount );
 	int rendermode = ( pbeam->flags & FBEAM_SOLID ) ? kRenderNormal : kRenderTransAdd;
 
 	// set color
@@ -1522,7 +1518,7 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 			pbeam->flags, color, pbeam->fadeLength );
 		break;
 	case TE_BEAMFOLLOW:
-		DrawBeamFollow( pbeam->modelIndex, pbeam, frame, rendermode, gpGlobals->frametime, color );
+		DrawBeamFollow( pbeam->modelIndex, pbeam, frame, rendermode, m_flFrameTime, color );
 		break;
 	case TE_BEAMRING:
 		DrawRing( NOISE_DIVISIONS, pbeam->rgNoise, FracNoise, pbeam->modelIndex, frame, rendermode, 
@@ -1588,7 +1584,7 @@ bool CViewRenderBeams::RecomputeBeamEndpoints( Beam_t *pbeam )
 		else if (!( pbeam->flags & FBEAM_FOREVER ))
 		{
 			pbeam->flags &= ~(FBEAM_ENDENTITY);
-			pbeam->die = gpGlobals->time;
+			pbeam->die = GetClientTime();
 			return false;
 		}
 		else
@@ -1638,7 +1634,7 @@ cl_entity_t *CViewRenderBeams::LinkWithViewModel( int entindex )
 	if ( !pEnt )
 		return NULL;
 
-	if ( EV_IsLocal( pEnt->index ) && ( gpViewParams->flags & RDF_THIRDPERSON ) == 0 )
+	if ( EV_IsLocal( pEnt->index ) && ( pViewParams->flags & RDF_THIRDPERSON ) == 0 )
 	{
 		return GetViewModel(); // change client edict to viewmodel edict
 	}
@@ -1646,8 +1642,30 @@ cl_entity_t *CViewRenderBeams::LinkWithViewModel( int entindex )
 	return pEnt; // unchanged
 }
 
+ref_params_t *CViewRenderBeams::GetViewParams( void )
+{
+	return pViewParams;
+}
+
+void CViewRenderBeams::SetViewParams( ref_params_t *pparams )
+{
+	// always keep refdef an actual
+	pViewParams = pparams;
+}
+
 void CViewRenderBeams::UpdateBeams( int fTrans )
 {
+	if( !fTrans )
+	{
+		// get this once
+		m_fOldTime = m_flTime;
+		m_flTime = GetClientTime();
+	}
+
+	// Get frame time
+	m_flFrameTime = m_flTime - m_fOldTime;
+	// Con_DPrintf( "frametime %g\n", m_flFrameTime );
+ 
 	for( int i = 0; i < m_nNumServerBeams; i++ )
 	{
 		cl_entity_t	*pBeam = m_pServerBeams[i];
@@ -1762,7 +1780,7 @@ void CViewRenderBeams::DrawBeam( cl_entity_t *pbeam )
 	beam.flags |= ( pbeam->curstate.rendermode & 0xF0 ) & (FBEAM_SINENOISE|FBEAM_SOLID|FBEAM_SHADEIN|FBEAM_SHADEOUT);
 
 	// draw it
-	UpdateBeam( &beam, gpGlobals->frametime );
+	UpdateBeam( &beam, m_flFrameTime );
 	DrawBeam( &beam );
 }
 
@@ -1926,10 +1944,10 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 				s = sin( fraction * M_PI * length + freq );
 				c = cos( fraction * M_PI * length + freq );
 				
-				curSeg.m_vPos = curSeg.m_vPos + (gpViewParams->up * (factor * s));
+				curSeg.m_vPos = curSeg.m_vPos + (g_pViewRenderBeams->GetViewParams()->up * (factor * s));
 				// Rotate the noise along the perpendicluar axis a bit to keep the bolt
 				// from looking diagonal
-				curSeg.m_vPos = curSeg.m_vPos + (gpViewParams->right * (factor * c));
+				curSeg.m_vPos = curSeg.m_vPos + (g_pViewRenderBeams->GetViewParams()->right * (factor * c));
 			}
 			else
 			{
@@ -2232,11 +2250,11 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 
 		// Distort using noise
 		factor = prgNoise[(noiseIndex>>16) & NOISE_MASK] * scale;
-		point = point + (gpViewParams->up * factor);
+		point = point + (g_pViewRenderBeams->GetViewParams()->up * factor);
 
 		// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
 		factor = prgNoise[(noiseIndex>>16) & NOISE_MASK] * scale * cos(fraction * M_PI * 3 * 8 + freq);
-		point = point + (gpViewParams->right * factor);
+		point = point + (g_pViewRenderBeams->GetViewParams()->right * factor);
 		
 		// Transform point into screen space
 		gEngfuncs.pTriAPI->WorldToScreen( point, screen );
@@ -2248,8 +2266,10 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 			// We don't need Z, we're in screen space
 			tmp[2] = 0;
 			tmp = tmp.Normalize();
-			normal = gpViewParams->up * tmp.x; // Build point along normal line (normal is -y, x)
-			normal = normal - (gpViewParams->right * -tmp.y);
+
+			// Build point along normal line (normal is -y, x)
+			normal = g_pViewRenderBeams->GetViewParams()->up * tmp.x; 
+			normal = normal - (g_pViewRenderBeams->GetViewParams()->right * -tmp.y);
 			
 			// make a wide line
 			last1 = point + (normal * width );
@@ -2319,15 +2339,17 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 	// We don't need Z, we're in screen space
 	tmp.z = 0;
 	tmp = tmp.Normalize( );
-	normal = gpViewParams->up * tmp.x;	// Build point along noraml line (normal is -y, x)
-	normal = normal - (gpViewParams->right * -tmp.y );
+
+	// Build point along noraml line (normal is -y, x)
+	normal = g_pViewRenderBeams->GetViewParams()->up * tmp.x;
+	normal = normal - (g_pViewRenderBeams->GetViewParams()->right * -tmp.y );
 	
 	// Make a wide line
 	last1 = delta + ( normal * width );
 	last2 = delta + ( normal * -width );
 
 	div = 1.0f / amplitude;
-	fraction = ( die - gpGlobals->time ) * div;
+	fraction = ( die - GetClientTime() ) * div;
 	byte nColor[3];
 
 	scaledColor[0] = color[0] * fraction;
@@ -2362,8 +2384,10 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 		// We don't need Z, we're in screen space
 		tmp.z = 0;
 		tmp = tmp.Normalize();
-		normal = gpViewParams->up * tmp.x;	// Build point along noraml line (normal is -y, x)
-		normal = normal - (gpViewParams->right * -tmp.y );
+
+		// Build point along normal line (normal is -y, x)
+		normal = g_pViewRenderBeams->GetViewParams()->up * tmp.x;
+		normal = normal - (g_pViewRenderBeams->GetViewParams()->right * -tmp.y );
 		
 		// Make a wide line
 		last1 = pHead->org + (normal * width );
@@ -2373,7 +2397,7 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 
 		if ( pHead->next != NULL )
 		{
-			fraction = (pHead->die - gpGlobals->time) * div;
+			fraction = (pHead->die - GetClientTime()) * div;
 			scaledColor[0] = color[0] * fraction;
 			scaledColor[1] = color[1] * fraction;
 			scaledColor[2] = color[2] * fraction;

@@ -285,7 +285,7 @@ SOURCE=..\common\bullets.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\clgame_api.h
+SOURCE=..\common\cdll_int.h
 # End Source File
 # Begin Source File
 

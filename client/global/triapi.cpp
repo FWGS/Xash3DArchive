@@ -6,7 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "aurora.h"
-#include "effects_api.h"
+#include "r_efx.h"
 #include "r_particle.h"
 #include "r_weather.h"
 #include "r_beams.h"

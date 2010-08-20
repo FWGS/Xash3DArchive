@@ -80,7 +80,7 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnSetModel)( struct cl_entity_s *ed, const char *path );
 	void	(*pfnClearScene)( void );
 	void	(*pfnRenderScene)( const struct ref_params_s *fd );
-	int	(*R_AddEntity)( struct cl_entity_s *pEnt, int entityType, HIMAGE customShader );
+	int	(*CL_CreateVisibleEntity)( int type, struct cl_entity_s *ent, HIMAGE customShader );
 
 	// dlls managemenet
 	void*	(*pfnLoadLibrary)( const char *name );
@@ -100,9 +100,9 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnClientJoin)( const struct netadr_s adr );
 	
 	// parse txt files
-	byte*	(*pfnLoadFile)( const char *filename, int *pLength );
-	char 	*(*pfnParseToken)( const char **data_p );
-	void	(*pfnFreeFile)( void *buffer );
+	byte*	(*COM_LoadFile)( const char *filename, int *pLength );
+	char*	(*COM_ParseFile)( char *data, char *token );
+	void	(*COM_FreeFile)( void *buffer );
 
 	// keyfuncs
 	void	(*pfnKeyClearStates)( void );				// call when menu open or close

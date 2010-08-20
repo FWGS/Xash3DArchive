@@ -9,7 +9,7 @@
 #include "studio.h"
 #include "hud.h"
 #include "aurora.h"
-#include "effects_api.h"
+#include "r_efx.h"
 #include "r_particle.h"
 #include "r_tempents.h"
 #include "r_beams.h"
@@ -20,9 +20,7 @@
 #include "entity_types.h"
 
 cl_enginefuncs_t	gEngfuncs;
-cl_globalvars_t	*gpGlobals;
 movevars_t	*gpMovevars = NULL;
-ref_params_t	*gpViewParams = NULL;
 int		g_iPlayerClass;
 int		g_iTeamNumber;
 int		g_iUser1;
@@ -73,7 +71,7 @@ static HUD_FUNCTIONS gFunctionTable =
 //=======================================================================
 //			GetApi
 //=======================================================================
-int CreateAPI( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* pEngfuncsFromEngine, cl_globalvars_t *pGlobals )
+int CreateAPI( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* pEngfuncsFromEngine )
 {
 	if( !pFunctionTable || !pEngfuncsFromEngine )
 	{
@@ -84,15 +82,14 @@ int CreateAPI( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* pEngfuncsFromEng
 	memcpy( pFunctionTable, &gFunctionTable, sizeof( HUD_FUNCTIONS ));
 	memcpy( &gEngfuncs, pEngfuncsFromEngine, sizeof( cl_enginefuncs_t ));
 
-	gpGlobals = pGlobals;
-	gpViewParams = gpGlobals->pViewParms;
-	gpMovevars = gpViewParams->movevars;
-
 	return TRUE;
 }
 
 int HUD_VidInit( void )
 {
+	// always keep movevars an actual
+	gpMovevars = gEngfuncs.pfnGetMovementVariables();
+
 	if ( g_pParticleSystems )
 		g_pParticleSystems->ClearSystems();
 
@@ -349,7 +346,7 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType )
 		pEnt->curstate.renderamt = 255; // clear amount
 	}
 
-	result = CL_AddEntity( pEnt, entityType, -1 );
+	result = gEngfuncs.CL_CreateVisibleEntity( entityType, pEnt, -1 );
 
 	if ( pEnt->curstate.renderfx == kRenderFxGlowShell )
 	{
@@ -358,7 +355,7 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType )
 		pEnt->curstate.renderamt = 128;
 
 		// render glowshell
-		result |= CL_AddEntity( pEnt, entityType, g_pTempEnts->hSprGlowShell );
+		result |= gEngfuncs.CL_CreateVisibleEntity( entityType, pEnt, g_pTempEnts->hSprGlowShell );
 
 		// restore parms
 		pEnt->curstate.scale = oldScale;
@@ -465,16 +462,4 @@ void HUD_Shutdown( void )
 	HUD_ShutdownEffects ();
 
 	IN_Shutdown ();
-
-	// perform shutdown operations
-	gEngfuncs.pfnDelCommand ("noclip" );
-	gEngfuncs.pfnDelCommand ("notarget" );
-	gEngfuncs.pfnDelCommand ("fullupdate" );
-	gEngfuncs.pfnDelCommand ("give" );
-	gEngfuncs.pfnDelCommand ("drop" );
-	gEngfuncs.pfnDelCommand ("intermission" );
-	gEngfuncs.pfnDelCommand ("spectate" );
-	gEngfuncs.pfnDelCommand ("gametitle" );
-	gEngfuncs.pfnDelCommand ("god" );
-	gEngfuncs.pfnDelCommand ("fov" );
 }

@@ -6,14 +6,11 @@
 
 #include "extdll.h"
 #include "utils.h"
-#include "effects_api.h"
+#include "r_efx.h"
 #include "triangle_api.h"
-#include "ref_params.h"
 #include "hud.h"
 #include "r_weather.h"
 #include "pm_defs.h"
-
-extern ref_params_t		*gpViewParams;
 
 void WaterLandingEffect( cl_drip *drip );
 void ParseRainFile( void );
@@ -60,7 +57,7 @@ void ProcessRain( void )
 		return;
 	}
 
-	if ( gpViewParams->paused ) return; // not in pause
+	if ( !IN_GAME() ) return; // not in pause
 
 	double timeBetweenDrips = 1 / (double)gHUD.Rain.dripsPerSecond;
 
@@ -420,11 +417,11 @@ void ParseRainFile( void )
 		return;
 
 	char mapname[256], filepath[256];
-	const char *token = NULL;
-	const char *pfile;
+	char token[1024];
+	char *pfile;
 	char *afile;
 
-	strcpy( mapname, gpGlobals->mapname );
+	strcpy( mapname, gEngfuncs.pfnGetLevelName() );
 	if ( strlen( mapname ) == 0 )
 	{
 		Con_Printf( "rain: unable to read map name\n" );
@@ -436,7 +433,7 @@ void ParseRainFile( void )
 
 	sprintf( filepath, "scripts/weather/%s.txt", mapname ); 
 
-	afile = (char *)LOAD_FILE( filepath, NULL );
+	afile = (char *)gEngfuncs.COM_LoadFile( mapname, NULL);
 	pfile = afile;
 
 	if ( !pfile )
@@ -448,52 +445,54 @@ void ParseRainFile( void )
 
 	while ( true )
 	{
-		token = COM_ParseToken( &pfile );
-		if( !token ) break;
+		pfile = gEngfuncs.COM_ParseFile(pfile, token);
+		if (!pfile)
+			break;
 
 		if ( !stricmp( token, "drips" )) // dripsPerSecond
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.dripsPerSecond = atoi( token );
 		}
 		else if ( !stricmp( token, "distance" )) // distFromPlayer
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.distFromPlayer = atof( token );
 		}
 		else if ( !stricmp( token, "windx" )) // windX
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.windX = atof( token );
 		}
 		else if ( !stricmp( token, "windy" )) // windY
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.windY = atof( token );		
 		}
 		else if ( !stricmp( token, "randx" )) // randX
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.randX = atof( token );
 		}
 		else if ( !stricmp( token, "randy" )) // randY
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.randY = atof( token );
 		}
 		else if ( !stricmp( token, "mode" )) // weatherMode
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.weatherMode = atoi( token );
 		}
 		else if ( !stricmp( token, "height" )) // globalHeight
 		{
-			token = COM_ParseToken( &pfile );
+			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.globalHeight = atof( token );
 		}
 		else Con_Printf( "rain: unknown token %s in file %s\n", token, mapname );
 	}
-	FREE_FILE( afile );
+
+	gEngfuncs.COM_FreeFile( afile );
 }
 
 //-----------------------------------------------------

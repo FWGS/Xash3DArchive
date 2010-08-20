@@ -6,6 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "pm_defs.h"
+#include "com_model.h"
 #include "hud.h"
 
 DLL_GLOBAL const Vector g_vecZero = Vector( 0.0f, 0.0f, 0.0f );
@@ -517,56 +518,55 @@ void UTIL_GetForceDirection( Vector &origin, float magnitude, Vector *resultDire
 	(*resultDirection) = (*resultDirection).Normalize();
 }
 
-/*
-====================
-Sys LoadGameDLL
-
-some code from Darkplaces
-====================
-*/
-BOOL Sys_LoadLibrary( const char* dllname, dllhandle_t* handle, const dllfunction_t *fcts )
+modtype_t	Mod_GetModelType( int modelIndex )
 {
-	const dllfunction_t	*gamefunc;
-	dllhandle_t dllhandle = 0;
+	model_t *mod = GetModelPtr( modelIndex );
 
-	if( handle == NULL ) return false;
+	if( mod ) return mod->type;
+	return mod_bad;
+}
 
-	// Initializations
-	for( gamefunc = fcts; gamefunc && gamefunc->name != NULL; gamefunc++ )
-		*gamefunc->funcvariable = NULL;
+void Mod_GetBounds( int modelIndex, Vector &mins, Vector &maxs )
+{
+	model_t	*mod = GetModelPtr( modelIndex );
 
-	dllhandle = (dllhandle_t)LOAD_LIBRARY( dllname );
-        
-	// No DLL found
-	if( !dllhandle ) return false;
-
-	// Get the function adresses
-	for( gamefunc = fcts; gamefunc && gamefunc->name != NULL; gamefunc++ )
+	if( mod )
 	{
-		if(!( *gamefunc->funcvariable = (void *) Sys_GetProcAddress( dllhandle, gamefunc->name )))
-		{
-			Sys_UnloadLibrary( &dllhandle );
-			return false;
-		}
-	}          
-
-	Con_Printf( "%s loaded succesfully!\n", dllname );
-	*handle = dllhandle;
-	return true;
+		mins = mod->mins;
+		maxs = mod->maxs;
+	}
+	else
+	{
+		Con_DPrintf( "Mod_GetBounds: NULL model %i\n", modelIndex );
+		mins = g_vecZero;
+		maxs = g_vecZero;
+	}
 }
 
-void Sys_UnloadLibrary( dllhandle_t *handle )
+void *Mod_Extradata( int modelIndex )
 {
-	if( handle == NULL || *handle == NULL )
-		return;
+	model_t	*mod = GetModelPtr( modelIndex );
 
-	FREE_LIBRARY( *handle );
-	*handle = NULL;
+	if( mod && mod->type == mod_studio )
+		return mod->extradata;
+	return NULL;
 }
 
-void* Sys_GetProcAddress( dllhandle_t handle, const char* name )
+int Mod_GetFrames( int modelIndex )
 {
-	return (void *)GET_PROC_ADDRESS( handle, name );
+	model_t	*mod = GetModelPtr( modelIndex );
+
+	if( !mod ) return 1;
+
+	int numFrames;
+
+	if( mod->type == mod_sprite )
+		numFrames =  mod->numframes;
+	else if( mod->type == mod_studio )
+		numFrames = StudioBodyVariations( modelIndex );		
+	if( numFrames < 1 ) numFrames = 1;
+
+	return numFrames;
 }
 
 //============
@@ -595,7 +595,7 @@ HSPRITE LoadSprite( const char *pszName )
 	int i;
 	char sz[256]; 
 
-	if ( ActualWidth < 640 )
+	if ( ScreenWidth < 640 )
 		i = 320;
 	else
 		i = 640;

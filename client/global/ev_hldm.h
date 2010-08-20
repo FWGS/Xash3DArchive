@@ -191,7 +191,7 @@ extern Vector previousorigin;
 
 void EV_HookEvents( void );
 extern void HUD_CmdStart( const cl_entity_t *player, int runfuncs );
-extern void HUD_CmdEnd( const cl_entity_t *player, const usercmd_t *cmd, unsigned int random_seed );
+extern void HUD_CmdEnd( const cl_entity_t *player, const struct usercmd_s *cmd, unsigned int random_seed );
 
 cl_entity_t *GetEntity( int idx );
 cl_entity_t *GetViewEntity( void );

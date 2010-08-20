@@ -126,8 +126,8 @@ void UI_UnbindCommand( const char *command )
 static void UI_Controls_ParseKeysList( void )
 {
 	char *afile = (char *)LOAD_FILE( "gfx/shell/kb_act.lst", NULL );
-	const char *pfile = afile;
-	char *token;
+	char *pfile = afile;
+	char token[1024];
 	int i = 0;
 
 	if( !afile )
@@ -139,15 +139,15 @@ static void UI_Controls_ParseKeysList( void )
 		return;
 	}
 
-	while(( token = COM_ParseToken( &pfile )) != NULL )
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		char	str[128];
 
 		if( !stricmp( token, "blank" ))
 		{
 			// seperator
-			token = COM_ParseToken( &pfile );
-			if( !token ) break;	// technically an error
+			pfile = COM_ParseFile( pfile, token );
+			if( !pfile ) break;	// technically an error
 
 			sprintf( str, "^6%s^7", token );	// enable uiPromptTextColor
 			StringConcat( uiControls.keysDescription[i], str, strlen( str ) + 1 );
@@ -166,8 +166,8 @@ static void UI_Controls_ParseKeysList( void )
 			UI_Controls_GetKeyBindings( token, keys );
 			strncpy( uiControls.keysBind[i], token, sizeof( uiControls.keysBind[i] ));
 
-			token = COM_ParseToken( &pfile );
-			if( !token ) break; // technically an error
+			pfile = COM_ParseFile( pfile, token );
+			if( !pfile ) break; // technically an error
 
 			sprintf( str, "^6%s^7", token );	// enable uiPromptTextColor
 
@@ -236,8 +236,8 @@ static void UI_Controls_RestartMenu( void )
 static void UI_Controls_ResetKeysList( void )
 {
 	char *afile = (char *)LOAD_FILE( "gfx/shell/kb_def.lst", NULL );
-	const char *pfile = afile;
-	char *token;
+	char *pfile = afile;
+	char token[1024];
 	int i = 0;
 
 	if( !afile )
@@ -246,14 +246,14 @@ static void UI_Controls_ResetKeysList( void )
 		return;
 	}
 
-	while(( token = COM_ParseToken( &pfile )) != NULL )
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		char	key[32];
 
 		strncpy( key, token, sizeof( key ));
 
-		token = COM_ParseToken( &pfile );
-		if( !token ) break;	// technically an error
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;	// technically an error
 
 		char	cmd[128];
 

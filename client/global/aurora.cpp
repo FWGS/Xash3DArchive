@@ -10,8 +10,6 @@
 #include "aurora.h"
 #include "pm_defs.h"
 
-extern ref_params_t		*gpViewParams;
-
 ParticleSystemManager* g_pParticleSystems = NULL;
 
 void CreateAurora( int idx, char *file )
@@ -316,50 +314,47 @@ ParticleSystem::ParticleSystem( int iEntIndex, char *szFilename )
 	m_iEntIndex = iEntIndex;
 	m_pNextSystem = NULL;
 	m_pFirstType = NULL;
-
-	if ( !c_bCosTableInit )
+	if (!c_bCosTableInit)
 	{
-		for ( int i = 0; i < 360 + 90; i++ )
+		for (int i = 0; i < 360+90; i++)
 		{
-			c_fCosTable[i] = cos( i * M_PI / 180.0 );
+			c_fCosTable[i] = cos(i*M_PI/180.0);
 		}
 		c_bCosTableInit = true;
 	}
 
-	const char *memFile;
-	const char *szFile = (char *)LOAD_FILE( szFilename, NULL );
-	char *szToken;
+	char *szFile = (char *)gEngfuncs.COM_LoadFile( szFilename, NULL);
+	char szToken[1024];
 
-	if( !szFile )
+	if (!szFile)
 	{
-		Con_Printf( "Error: particle %s not found.\n", szFilename );
+		Con_DPrintf( "Particle %s not found.\n", szFilename );
 		return;
 	}
 	else
 	{
-		memFile = szFile;		
-		szToken = COM_ParseToken( &szFile );
+		szFile = gEngfuncs.COM_ParseFile(szFile, szToken);
 
-		while ( szToken )
+		while (szFile)
 		{
 			if ( !stricmp( szToken, "particles" ) )
 			{
-				szToken = COM_ParseToken( &szFile );
+				szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 				iParticles = atof(szToken);
 			}
 			else if ( !stricmp( szToken, "maintype" ) )
 			{
-				szToken = COM_ParseToken( &szFile );
+				szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 				m_pMainType = AddPlaceholderType(szToken);
 			}
 			else if ( !stricmp( szToken, "attachment" ) )
 			{
-				szToken = COM_ParseToken( &szFile );
+				szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 				m_iEntAttachment = atof(szToken);
 			}
 			else if ( !stricmp( szToken, "killcondition" ) )
 			{
-				szToken = COM_ParseToken( &szFile );
+				szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 				if ( !stricmp( szToken, "empty" ) )
 				{
 					m_iKillCondition = CONTENTS_EMPTY;
@@ -376,15 +371,15 @@ ParticleSystem::ParticleSystem( int iEntIndex, char *szFilename )
 			else if ( !stricmp( szToken, "{" ) )
 			{
 				// parse new type
-				this->ParseType( &szFile ); // parses the type, moves the file pointer
+				this->ParseType( szFile ); // parses the type, moves the file pointer
 			}
 
-			szToken = COM_ParseToken( &szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile, szToken);
 		}
 	}
 		
-	FREE_FILE( (void *)memFile );
-	AllocateParticles( iParticles );
+	gEngfuncs.COM_FreeFile( szFile );
+	AllocateParticles(iParticles);
 }
 
 void ParticleSystem::AllocateParticles( int iParticles )
@@ -444,14 +439,14 @@ ParticleType *ParticleSystem::AddPlaceholderType( const char *szName )
 
 // creates a new particletype from the given file
 // NB: this changes the value of szFile.
-ParticleType *ParticleSystem::ParseType( const char **szFile )
+ParticleType *ParticleSystem::ParseType( char *&szFile )
 {
 	ParticleType *pType = new ParticleType();
 
 	// parse the .aur file
-	char *szToken;
+	char szToken[1024];
 
-	szToken = COM_ParseToken( szFile );
+	szFile = gEngfuncs.COM_ParseFile(szFile, szToken);
 	while ( stricmp( szToken, "}" ) )
 	{
 		if (!szFile)
@@ -459,7 +454,7 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 
 		if ( !stricmp( szToken, "name" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			strncpy(pType->m_szName, szToken, sizeof(pType->m_szName) );
 
 			ParticleType *pTemp = GetType(szToken);
@@ -467,7 +462,7 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 			{
 				// there's already a type with this name
 				if (pTemp->m_bIsDefined)
-					Con_Printf( "Warning: particle type %s is defined more than once!\n", szToken);
+					Con_DPrintf( "Warning: Particle type %s is defined more than once!\n", szToken);
 
 				// copy all our data into the existing type, throw away the type we were making
 				*pTemp = *pType;
@@ -478,113 +473,113 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 		}
 		else if ( !stricmp( szToken, "gravity" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_Gravity = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "windyaw" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_WindYaw = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "windstrength" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_WindStrength = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "sprite" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_SpriteIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( szToken );
 		}
 		else if ( !stricmp( szToken, "startalpha" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_StartAlpha = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "endalpha" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_EndAlpha = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "startred" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_StartRed = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "endred" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_EndRed = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "startgreen" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_StartGreen = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "endgreen" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_EndGreen = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "startblue" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_StartBlue = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "endblue" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_EndBlue = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "startsize" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_StartSize = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "sizedelta" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_SizeDelta = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "endsize" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_EndSize = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "startangle" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_StartAngle = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "angledelta" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_AngleDelta = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "startframe" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_StartFrame = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "endframe" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_EndFrame = RandomRange( szToken );
 			pType->m_bEndFrame = true;
 		}
 		else if ( !stricmp( szToken, "framerate" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_FrameRate = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "lifetime" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_Life = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "spraytype" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			ParticleType *pTemp = GetType(szToken);
 
 			if (pTemp) pType->m_pSprayType = pTemp;
@@ -592,7 +587,7 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 		}
 		else if ( !stricmp( szToken, "overlaytype" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			ParticleType *pTemp = GetType(szToken);
 
 			if (pTemp) pType->m_pOverlayType = pTemp;
@@ -600,44 +595,44 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 		}
 		else if ( !stricmp( szToken, "sprayrate" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_SprayRate = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "sprayforce" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_SprayForce = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "spraypitch" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_SprayPitch = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "sprayyaw" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_SprayYaw = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "drag" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_Drag = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "bounce" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_Bounce = RandomRange( szToken );
 			if (pType->m_Bounce.m_fMin != 0 || pType->m_Bounce.m_fMax != 0)
 				pType->m_bBouncing = true;
 		}
 		else if ( !stricmp( szToken, "bouncefriction" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			pType->m_BounceFriction = RandomRange( szToken );
 		}
 		else if ( !stricmp( szToken, "rendermode" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			if ( !stricmp( szToken, "additive" ) )
 			{
 				pType->m_iRenderMode = kRenderTransAdd;
@@ -657,7 +652,7 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 		}
 		else if ( !stricmp( szToken, "drawcondition" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			if ( !stricmp( szToken, "empty" ) )
 			{
 				pType->m_iDrawCond = CONTENTS_EMPTY;
@@ -670,10 +665,22 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 			{
 				pType->m_iDrawCond = CONTENTS_SOLID;
 			}
+			else if ( !stricmp( szToken, "special" ) || !stricmp( szToken, "special1" ) )
+			{
+				pType->m_iDrawCond = CONTENT_SPECIAL1;
+			}
+			else if ( !stricmp( szToken, "special2" ) )
+			{
+				pType->m_iDrawCond = CONTENT_SPECIAL2;
+			}
+			else if ( !stricmp( szToken, "special3" ) )
+			{
+				pType->m_iDrawCond = CONTENT_SPECIAL3;
+			}
 		}
 		else if ( !stricmp( szToken, "collision" ) )
 		{
-			szToken = COM_ParseToken( szFile );
+			szFile = gEngfuncs.COM_ParseFile(szFile,szToken);
 			if ( !stricmp( szToken, "none" ) )
 			{
 				pType->m_iCollision = COLLISION_NONE;
@@ -688,7 +695,7 @@ ParticleType *ParticleSystem::ParseType( const char **szFile )
 			}
 		}
 		// get the next token
-		szToken = COM_ParseToken( szFile );
+		szFile = gEngfuncs.COM_ParseFile(szFile, szToken);
 	}
 
 	if (!pType->m_bIsDefined)
@@ -977,7 +984,7 @@ void ParticleSystem::DrawParticle( particle *part, Vector &right, Vector &up )
 				continue;
 		}
                     
-		int numFrames = GetModelFrames( pDraw->pType->m_SpriteIndex );
+		int numFrames = Mod_GetFrames( pDraw->pType->m_SpriteIndex );
 
 		// Con_Printf( "UpdParticle %d: age %f, life %f, R:%f G:%f, B, %f \n", pDraw->pType->m_hSprite, part->age, part->age_death, pDraw->m_fRed, pDraw->m_fGreen, pDraw->m_fBlue);
 

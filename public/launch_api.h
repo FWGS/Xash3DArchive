@@ -13,6 +13,7 @@
 #define false		0
 #define true		1
 #define MAX_STRING		256	// generic string
+#define MAX_INFO_STRING	256	// infostrings are transmitted across network
 #define MAX_SYSPATH		1024	// system filepath
 #define bound(min, num, max)	((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 #define MAX_MODS		128	// environment games that engine can keep visible

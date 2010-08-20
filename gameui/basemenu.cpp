@@ -1164,14 +1164,17 @@ void UI_Precache( void )
 	UI_Credits_Precache();
 }
 
-void UI_ParseColor( const char **pfile, int *outColor )
+void UI_ParseColor( char *&pfile, int *outColor )
 {
 	int	i, color[3];
-	char	*token;
+	char	token[1024];
+
+	memset( color, 0xFF, sizeof( color ));
 
 	for( i = 0; i < 3; i++ )
 	{
-		token = COM_ParseToken( pfile );
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
 		color[i] = atoi( token );
 	}
 
@@ -1181,8 +1184,8 @@ void UI_ParseColor( const char **pfile, int *outColor )
 void UI_ApplyCustomColors( void )
 {
 	char *afile = (char *)LOAD_FILE( "gfx/shell/colors.lst", NULL );
-	const char *pfile = afile;
-	char *token;
+	char *pfile = afile;
+	char token[1024];
 
 	if( !afile )
 	{
@@ -1191,35 +1194,35 @@ void UI_ApplyCustomColors( void )
 		return;
 	}
 
-	while(( token = COM_ParseToken( &pfile )) != NULL )
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		if( !stricmp( token, "HELP_COLOR" ))
 		{
-			UI_ParseColor( &pfile, &uiColorHelp );
+			UI_ParseColor( pfile, &uiColorHelp );
 		}
 		else if( !stricmp( token, "PROMPT_BG_COLOR" ))
 		{
-			UI_ParseColor( &pfile, &uiPromptBgColor );
+			UI_ParseColor( pfile, &uiPromptBgColor );
 		}
 		else if( !stricmp( token, "PROMPT_TEXT_COLOR" ))
 		{
-			UI_ParseColor( &pfile, &uiPromptTextColor );
+			UI_ParseColor( pfile, &uiPromptTextColor );
 		}
 		else if( !stricmp( token, "PROMPT_FOCUS_COLOR" ))
 		{
-			UI_ParseColor( &pfile, &uiPromptFocusColor );
+			UI_ParseColor( pfile, &uiPromptFocusColor );
 		}
 		else if( !stricmp( token, "INPUT_TEXT_COLOR" ))
 		{
-			UI_ParseColor( &pfile, &uiInputTextColor );
+			UI_ParseColor( pfile, &uiInputTextColor );
 		}
 		else if( !stricmp( token, "INPUT_BG_COLOR" ))
 		{
-			UI_ParseColor( &pfile, &uiInputBgColor );
+			UI_ParseColor( pfile, &uiInputBgColor );
 		}
 		else if( !stricmp( token, "INPUT_FG_COLOR" ))
 		{
-			UI_ParseColor( &pfile, &uiInputFgColor );
+			UI_ParseColor( pfile, &uiInputFgColor );
 		}
 	}
 

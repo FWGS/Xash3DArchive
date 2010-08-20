@@ -63,7 +63,7 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 {
 	int i, iRes;
 
-	if (ActualWidth < 640)
+	if (ScreenWidth < 640)
 		iRes = 320;
 	else
 		iRes = 640;
@@ -182,7 +182,7 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 	else pWeapon->hAmmo2 = 0;
 
 	// in original Half-Life this was a leak
-	FREE( pList );
+	free( pList );
 }
 
 // Returns the first weapon for a given slot.
@@ -389,7 +389,7 @@ void CHudAmmo :: Think( void )
 		gpActiveSel = NULL;
 		gHUD.m_iKeyBits &= ~IN_ATTACK;
 
-		CL_PlaySound( "common/wpn_select.wav", 1.0f );
+		PlaySound( "common/wpn_select.wav", 1.0f );
 	}
 
 }
@@ -443,7 +443,7 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 
 	if((gpActiveSel == NULL) || (gpActiveSel == (WEAPON *)1) || (iSlot != gpActiveSel->iSlot))
 	{
-		CL_PlaySound( "common/wpn_hudon.wav", 1.0f );
+		PlaySound( "common/wpn_hudon.wav", 1.0f );
 		p = GetFirstPos( iSlot );
 
 		if( p && fastSwitch ) // check for fast weapon switch mode
@@ -462,7 +462,7 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 	}
 	else
 	{
-		CL_PlaySound( "common/wpn_moveselect.wav", 1.0f );
+		PlaySound( "common/wpn_moveselect.wav", 1.0f );
 		if( gpActiveSel )
 			p = GetNextActivePos( gpActiveSel->iSlot, gpActiveSel->iSlotPos );
 		if( !p ) p = GetFirstPos( iSlot );
@@ -735,7 +735,7 @@ void CHudAmmo::UserCmd_Close( void )
 	{
 		gpLastSel = gpActiveSel;
 		gpActiveSel = NULL;
-		CL_PlaySound( "common/wpn_hudoff.wav", 1.0f );
+		PlaySound( "common/wpn_hudoff.wav", 1.0f );
 	}
 	else CLIENT_COMMAND( "escape\n" );
 }

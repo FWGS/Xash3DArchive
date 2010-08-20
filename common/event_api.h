@@ -5,7 +5,7 @@
 #ifndef EVENT_API_H
 #define EVENT_API_H
 
-#define EVENT_API_VERSION	2
+#define EVENT_API_VERSION	1
 
 typedef struct event_args_s
 {

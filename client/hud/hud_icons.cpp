@@ -131,7 +131,7 @@ void CHudStatusIcons::EnableIcon( char *pszIconName, byte red, byte green, byte 
 	// HACKHACK: Play Timer sound when a grenade icon is played (in 0.8 seconds)
 	if( strstr( m_IconList[i].szSpriteName, "grenade" ))
 	{
-		CL_PlaySound( "weapons/timer.wav", 1.0 );
+		PlaySound( "weapons/timer.wav", 1.0 );
 	}
 }
 

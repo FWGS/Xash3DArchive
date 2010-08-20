@@ -164,7 +164,7 @@ void CL_SetSolidPlayers( int playernum )
 		return;
 
 	// FIXME: create predicted_players array
-	for( j = 0; j < clgame.globals->maxClients; j++ )
+	for( j = 0; j < cl.maxclients; j++ )
 	{
 		// the player object never gets added
 		if( j == playernum ) continue;
@@ -203,21 +203,6 @@ static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 	trace = PM_PlayerTrace( clgame.pmove, pos, pos, PM_STUDIO_BOX, clgame.pmove->usehull, -1, NULL );
 	if( ptrace ) *ptrace = trace; 
 	return trace.ent;
-}
-
-static void pfnCon_NPrintf( int idx, char *fmt, ... )
-{
-	va_list	argptr;
-	char	string[MAX_SYSPATH];
-
-	if( idx != cl.playernum )
-		return;
-
-	va_start( argptr, fmt );
-	com.vsprintf( string, fmt, argptr );
-	va_end( argptr );
-
-	MsgDev( D_INFO, "^6%s\n", string );	
 }
 
 static double Sys_FloatTime( void )
@@ -396,9 +381,9 @@ void CL_InitClientMove( void )
 	clgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
 	clgame.pmove->PM_Particle = pfnParticle;
 	clgame.pmove->PM_TestPlayerPosition = pfnTestPlayerPosition;
-	clgame.pmove->ConNPrintf = pfnCon_NPrintf;
-	clgame.pmove->ConDPrintf = pfnCon_DPrintf;
-	clgame.pmove->ConPrintf = pfnCon_Printf;
+	clgame.pmove->ConNPrintf = Con_NPrintf;
+	clgame.pmove->ConDPrintf = Con_DPrintf;
+	clgame.pmove->ConPrintf = Con_Printf;
 	clgame.pmove->Sys_FloatTime = Sys_FloatTime;
 	clgame.pmove->PM_StuckTouch = pfnStuckTouch;
 	clgame.pmove->PM_PointContents = pfnPointContents;
@@ -485,7 +470,7 @@ void CL_SetSolidEntities( void )
 static void PM_SetupMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd )
 {
 	pmove->player_index = cl.playernum;
-	pmove->multiplayer = (clgame.globals->maxClients > 1) ? true : false;
+	pmove->multiplayer = (cl.maxclients > 1) ? true : false;
 	pmove->time = sv_time(); // probably never used
 	VectorCopy( cd->origin, pmove->origin );
 	VectorCopy( cl.refdef.cl_viewangles, pmove->angles );

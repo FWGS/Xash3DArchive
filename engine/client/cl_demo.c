@@ -62,8 +62,8 @@ void CL_WriteDemoHeader( const char *name )
 	BF_WriteLong( &buf, PROTOCOL_VERSION );
 	BF_WriteLong( &buf, cl.servercount );
 	BF_WriteByte( &buf, cl.playernum );
-	BF_WriteByte( &buf, clgame.globals->maxClients );
-	BF_WriteWord( &buf, clgame.globals->maxEntities );
+	BF_WriteByte( &buf, cl.maxclients );
+	BF_WriteWord( &buf, clgame.maxEntities );
 	BF_WriteString( &buf, cl.configstrings[CS_NAME] );
 	BF_WriteString( &buf, clgame.maptitle );
 
@@ -114,10 +114,11 @@ void CL_WriteDemoHeader( const char *name )
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 	Mem_Set( &nullmovevars, 0, sizeof( nullmovevars ));
 
-	for( i = 0; i < clgame.globals->maxEntities; i++ )
+	// FIXME: use clgame.numEntities instead ?
+	for( i = 0; i < clgame.maxEntities; i++ )
 	{
 		state = &clgame.entities[i].baseline;
-		if( !state->modelindex && !state->effects )
+		if( !state->modelindex || state->effects == EF_NODRAW )
 			continue;
 
 		BF_WriteByte( &buf, svc_spawnbaseline );		
@@ -140,7 +141,7 @@ void CL_WriteDemoHeader( const char *name )
 	BF_WriteWord( &buf, cl.refdef.viewentity );
 
 	// write all clients userinfo
-	for( i = 0; i < clgame.globals->maxClients; i++ )
+	for( i = 0; i < cl.maxclients; i++ )
 	{
 		player_info_t	*pi;
 

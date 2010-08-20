@@ -29,8 +29,6 @@ cvar_t	*userinfo;
 //
 // userinfo
 //
-cvar_t	*info_password;
-cvar_t	*info_spectator;
 cvar_t	*name;
 cvar_t	*model;
 cvar_t	*topcolor;
@@ -200,7 +198,7 @@ usercmd_t CL_CreateCmd( void )
 	cdata.fov = cl.frame.cd.fov;
 
 	clgame.dllFuncs.pfnUpdateClientData( &cdata, cl_time( ));
-	clgame.dllFuncs.pfnCreateMove( &cmd, host.inputmsec, ( cls.state == ca_active && !cl.refdef.paused ));
+	clgame.dllFuncs.pfnCreateMove( &cmd, host.inputmsec, cls.frametime, ( cls.state == ca_active && !cl.refdef.paused ));
 
 	// random seed for predictable random values
 	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
@@ -805,7 +803,6 @@ void CL_PrepVideo( void )
 	MsgDev( D_LOAD, "CL_PrepVideo: %s\n", cl.configstrings[CS_NAME] );
 
 	// let the render dll load the map
-	com.strcpy( clgame.globals->mapname, cl.configstrings[CS_NAME] );
 	com.strncpy( mapname, cl.configstrings[CS_MODELS+1], MAX_STRING ); 
 	CM_BeginRegistration( mapname, true, &map_checksum );
 	re->BeginRegistration( mapname );
@@ -1240,7 +1237,7 @@ void CL_InitLocal( void )
 
 	// register our variables
 	cl_predict = Cvar_Get( "cl_predict", "1", CVAR_ARCHIVE, "disables client movement prediction" );
-	cl_crosshair = Cvar_Get( "crosshair", "1", CVAR_ARCHIVE|CVAR_USERINFO, "show weapon chrosshair" );
+	cl_crosshair = Cvar_Get( "crosshair", "1", CVAR_ARCHIVE, "show weapon chrosshair" );
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0, "disable delta-compression for usercommnds" );
 	cl_idealpitchscale = Cvar_Get( "cl_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
 	cl_solid_players = Cvar_Get( "cl_solid_players", "1", 0, "Make all players not solid (can't traceline them)" );
@@ -1253,13 +1250,12 @@ void CL_InitLocal( void )
 	rcon_address = Cvar_Get( "rcon_address", "", 0, "remote control address" );
 
 	// userinfo
-	info_password = Cvar_Get( "password", "", CVAR_USERINFO, "player password" );
-	info_spectator = Cvar_Get( "spectator", "0", CVAR_USERINFO, "spectator mode" );
+	Cvar_Get( "password", "", CVAR_USERINFO, "player password" );
 	name = Cvar_Get( "name", SI->username, CVAR_USERINFO|CVAR_ARCHIVE|CVAR_PRINTABLEONLY, "player name" );
 	model = Cvar_Get( "model", "player", CVAR_USERINFO|CVAR_ARCHIVE, "player model ('player' it's a single player model)" );
 	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player top color" );
-	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO | CVAR_ARCHIVE, "player bottom color" );
-	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE, "player network rate" );	// FIXME
+	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player bottom color" );
+	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO|CVAR_ARCHIVE, "player network rate" );
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_lw = Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );

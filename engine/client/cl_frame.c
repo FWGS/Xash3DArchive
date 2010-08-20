@@ -213,8 +213,8 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 		if( BF_CheckOverflow( msg ))
 			Host_Error( "CL_ParsePacketEntities: read overflow\n" );
 
-		while( newnum >= clgame.globals->numEntities )
-			clgame.globals->numEntities++;
+		while( newnum >= clgame.numEntities )
+			clgame.numEntities++;
 
 		while( oldnum < newnum )
 		{	
@@ -391,6 +391,10 @@ void CL_ParseFrame( sizebuf_t *msg )
 		// getting a valid frame message ends the connection process
 		VectorCopy( player->origin, cl.predicted_origin );
 		VectorCopy( player->angles, cl.predicted_angles );
+
+		// request new HUD values
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, "fullupdate" );
 	}
 
 	CL_CheckPredictionError();
@@ -415,7 +419,7 @@ void CL_AddPacketEntities( frame_t *frame )
 	int		e, entityType;
 
 	// now recalc actual entcount
-	for( ; EDICT_NUM( clgame.globals->numEntities - 1 )->index == -1; clgame.globals->numEntities-- );
+	for( ; EDICT_NUM( clgame.numEntities - 1 )->index == -1; clgame.numEntities-- );
 
 	clent = CL_GetLocalPlayer();
 	if( !clent ) return;
@@ -433,7 +437,7 @@ void CL_AddPacketEntities( frame_t *frame )
 	// setup player viewmodel (only for local player!)
 	clgame.viewent.curstate.modelindex = cl.frame.cd.viewmodel;
 
-	for( e = 1; e < clgame.globals->numEntities; e++ )
+	for( e = 1; e < clgame.numEntities; e++ )
 	{
 		ent = CL_GetEntityByIndex( e );
 		if( !ent ) continue;

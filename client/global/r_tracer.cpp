@@ -6,8 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "triangle_api.h"
-#include "effects_api.h"
-#include "ref_params.h"
+#include "r_efx.h"
 #include "pm_movevars.h"
 #include "ev_hldm.h"
 #include "hud.h"
@@ -52,7 +51,7 @@ static bool CullTracer( const Vector &start, const Vector &end )
 //-----------------------------------------------------------------------------
 // Computes the four verts to draw the tracer with
 //-----------------------------------------------------------------------------
-static bool Tracer_ComputeVerts( const Vector &pos, const Vector &delta, float width, Vector *pVerts )
+bool CParticleSystem :: TracerComputeVerts( const Vector &pos, const Vector &delta, float width, Vector *pVerts )
 {
 	Vector start, end;
 
@@ -76,8 +75,8 @@ static bool Tracer_ComputeVerts( const Vector &pos, const Vector &delta, float w
 	tmp.z = 0;
 	tmp = tmp.Normalize();
 
-	normal = gpViewParams->up * tmp.x;	// Build point along noraml line (normal is -y, x)
-	normal = normal - ( gpViewParams->right * -tmp.y );
+	normal = m_vecUp * tmp.x;	// Build point along noraml line (normal is -y, x)
+	normal = normal - ( m_vecRight * -tmp.y );
 
 	// compute four vertexes
 	pVerts[0] = start - normal * width;
@@ -92,12 +91,12 @@ static bool Tracer_ComputeVerts( const Vector &pos, const Vector &delta, float w
 //-----------------------------------------------------------------------------
 // draw a tracer.
 //-----------------------------------------------------------------------------
-void Tracer_Draw( HSPRITE hSprite, Vector& start, Vector& delta, float width, byte *color, float startV, float endV )
+void CParticleSystem :: DrawTracer( HSPRITE hSprite, Vector& start, Vector& delta, float width, byte *color, float startV, float endV )
 {
 	// Clip the tracer
 	Vector verts[4];
 
-	if ( !Tracer_ComputeVerts( start, delta, width, verts ))
+	if ( !TracerComputeVerts( start, delta, width, verts ))
 		return;
 
 	// NOTE: Gotta get the winding right so it's not backface culled

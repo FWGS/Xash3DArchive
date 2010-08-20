@@ -7,10 +7,8 @@
 #include "utils.h"
 #include "ev_hldm.h"
 #include "r_tempents.h"
-#include "ref_params.h"
 #include "pm_defs.h"
-
-extern ref_params_t		*gpViewParams;
+#include "hud.h"
 
 void EV_FireGlock1( struct event_args_s *args  );
 void EV_FireGlock2( struct event_args_s *args  );
@@ -96,7 +94,7 @@ void EV_CreateTracer( float *start, float *end )
 //=================
 int EV_IsPlayer( int idx )
 {
-	if ( idx >= 1 && idx <= gpGlobals->maxClients )
+	if ( idx >= 1 && idx <= gEngfuncs.GetMaxClients() )
 		return true;
 	return false;
 }
@@ -214,8 +212,11 @@ void EV_UpadteFlashlight( cl_entity_t *pEnt )
 
 	if ( EV_IsLocal( pEnt->index ) )
 	{
+		float	viewangles[3];
+
 		// get the predicted angles
-		AngleVectors( gpViewParams->cl_viewangles, forward, NULL, NULL );
+		GetViewAngles( viewangles );
+		AngleVectors( viewangles, forward, NULL, NULL );
 	}
 	else
 	{
@@ -258,7 +259,7 @@ void EV_UpadteFlashlight( cl_entity_t *pEnt )
 	dlight_t	*dl = gEngfuncs.pEfxAPI->CL_AllocDLight( pEnt->index );
 	
 	dl->origin = vecPos;
-	dl->die = gpGlobals->time + 0.001f;	// die on next frame
+	dl->die = GetClientTime() + 0.001f;	// die on next frame
 	dl->color[0] = 255;
 	dl->color[1] = 255;
 	dl->color[2] = 255;
@@ -274,6 +275,7 @@ void HUD_CmdEnd( const cl_entity_t *player, const usercmd_t *cmd, unsigned int r
 	// Offset final origin by view_offset
 	if( cl_lw->integer )
 	{
-		previousorigin = gpViewParams->vieworg;	// FIXME: probably this is not correct
+		// FIXME: probably this is not correct
+		previousorigin = gHUD.m_vecOrigin;
 	}
 }

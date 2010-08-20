@@ -57,7 +57,7 @@ typedef struct ref_params_s
 	int		num_entities;	// entities actual count (was int playernum;)
 	int		max_entities;
 	int		demoplayback;	
-	int		movetype;		// client movetype (was int hardware;)
+	float		lerpfrac;		// interpolate value ( increase from 0.0 to 1.0 ) was int hardware;
 	int		smoothing;	// client movement predicting is running
 
 	struct usercmd_s	*cmd;		// last issued usercmd

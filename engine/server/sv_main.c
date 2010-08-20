@@ -588,14 +588,11 @@ void SV_Init( void )
 	SV_InitOperatorCommands();
 
 	Cvar_Get ("skill", "1", CVAR_LATCH, "game skill level" );
-	Cvar_Get ("deathmatch", "0", CVAR_SERVERINFO|CVAR_LATCH, "displays deathmatch state" );
-	Cvar_Get ("teamplay", "0", CVAR_SERVERINFO|CVAR_LATCH, "displays teamplay state" );
-	Cvar_Get ("coop", "0", CVAR_SERVERINFO|CVAR_LATCH, "displays cooperative state" );
-	Cvar_Get ("dmflags", "0", CVAR_SERVERINFO, "setup deathmatch flags" );
-	Cvar_Get ("fraglimit", "0", CVAR_SERVERINFO, "multiplayer fraglimit" );
-	Cvar_Get ("timelimit", "0", CVAR_SERVERINFO, "multiplayer timelimit" );
-	Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO|CVAR_INIT, "displays server protocol version" );
-	Cvar_Get ("defaultmap", "", CVAR_SERVERINFO, "holds the multiplayer mapname" );
+	Cvar_Get ("deathmatch", "0", CVAR_LATCH, "displays deathmatch state" );
+	Cvar_Get ("teamplay", "0", CVAR_LATCH, "displays teamplay state" );
+	Cvar_Get ("coop", "0", CVAR_LATCH, "displays cooperative state" );
+	Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_INIT, "displays server protocol version" );
+	Cvar_Get ("defaultmap", "", 0, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
 	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE, "enable auto-aiming" );
 	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
@@ -620,7 +617,7 @@ void SV_Init( void )
 	sv_fps = Cvar_Get( "sv_fps", "60", CVAR_SERVERINFO|CVAR_ARCHIVE, "network game server fps" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
 	sv_newunit = Cvar_Get( "sv_newunit", "0", 0, "sets to 1 while new unit is loading" );
-	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERINFO | CVAR_ARCHIVE, "host name" );
+	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERINFO|CVAR_ARCHIVE, "host name" );
 	timeout = Cvar_Get( "timeout", "125", 0, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", 0, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", 0, "allow players to pause or not" );
@@ -641,7 +638,7 @@ void SV_Init( void )
 	sv_friction = Cvar_Get( "sv_friction", "4", CVAR_PHYSICINFO, "how fast you slow down" );
 	sv_edgefriction = Cvar_Get( "sv_edgefriction", "1", CVAR_PHYSICINFO, "how much you slow down when nearing a ledge you might fall off" );
 	sv_stopspeed = Cvar_Get( "sv_stopspeed", "100", CVAR_PHYSICINFO, "how fast you come to a complete stop" );
-	sv_maxclients = Cvar_Get( "sv_maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH, "server clients limit" );
+	sv_maxclients = Cvar_Get( "sv_maxclients", "1", CVAR_LATCH, "server clients limit" );
 	sv_check_errors = Cvar_Get( "sv_check_errors", "0", CVAR_ARCHIVE, "ignore physic engine errors" );
 	sv_synchthink = Cvar_Get( "sv_fast_think", "0", CVAR_ARCHIVE, "allows entities to think more often than the server framerate" );
 	physinfo = Cvar_Get( "@physinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only

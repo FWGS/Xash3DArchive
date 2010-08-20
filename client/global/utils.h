@@ -35,14 +35,9 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 #define ASSERTSZ( f, sz )
 #endif
 
-#ifdef _DEBUG
-#define GetEntityByIndex(e)	DBG_GetEntityByIndex( e, __FILE__, __LINE__ )
-#else
 #define GetEntityByIndex	(*gEngfuncs.pfnGetEntityByIndex)
-#endif
 
 extern DLL_GLOBAL const Vector	g_vecZero;
-extern cl_globalvars_t		*gpGlobals;
 extern struct movevars_s	*gpMovevars;
 
 extern int HUD_VidInit( void );
@@ -61,20 +56,20 @@ extern void HUD_RenderCallback( int fTrans );
 extern void HUD_CreateEntities( void );
 extern int  HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType );
 extern void HUD_ParticleEffect( const float *org, const float *dir, int color, int count );
-extern void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity );
+extern void HUD_StudioEvent( const struct mstudioevent_s *event, cl_entity_t *entity );
 extern void HUD_StudioFxTransform( cl_entity_t *ent, float transform[4][4] );
 extern int HUD_StudioDoInterp( cl_entity_t *e );
 extern void HUD_ParseTempEntity( void );
 extern void HUD_TempEntityMessage( int iSize, void *pbuf );
 extern void HUD_DirectorMessage( int iSize, void *pbuf );
-extern void V_CalcRefdef( ref_params_t *parms );
+extern void V_CalcRefdef( struct ref_params_s *parms );
 extern void V_StartPitchDrift( void );
 extern void V_StopPitchDrift( void );
 extern void V_Init( void );
 extern void VGui_ConsolePrint( const char *text );
 extern void IN_Init( void );
 extern void IN_Shutdown( void );
-extern void IN_CreateMove( usercmd_t *cmd, int msec, int active );
+extern void IN_CreateMove( struct usercmd_s *cmd, int msec, float frametime, int active );
 extern int  IN_KeyEvent( int down, int keynum, const char *pszBind );
 extern void IN_MouseEvent( int mx, int my );
 
@@ -116,15 +111,10 @@ typedef struct dllfunction_s
 #define XRES(x)		((int)(float(x)  * ((float)ScreenWidth / 640.0f) + 0.5f))
 #define YRES(y)		((int)(float(y)  * ((float)ScreenHeight / 480.0f) + 0.5f))
 
-// ScreenHeight returns the virtual height of the screen, in pixels
-#define ScreenHeight	(gHUD.m_scrinfo.iHeight)
-// ScreenWidth returns the virtual width of the screen, in pixels
-#define ScreenWidth		(gHUD.m_scrinfo.iWidth)
-
 // ScreenHeight returns the height of the screen, in pixels
-#define ActualHeight	(gHUD.m_scrinfo.iRealHeight)
+#define ScreenHeight	(gHUD.m_scrinfo.iHeight)
 // ScreenWidth returns the width of the screen, in pixels
-#define ActualWidth		(gHUD.m_scrinfo.iRealWidth)
+#define ScreenWidth		(gHUD.m_scrinfo.iWidth)
 
 inline void UnpackRGB( int &r, int &g, int &b, dword ulRGB )
 {
@@ -191,14 +181,6 @@ inline int ConsoleStringLen( const char *string )
 	return _width;
 }
 
-#ifdef _DEBUG
-inline cl_entity_t *DBG_GetEntityByIndex( int entnum, const char *file, const int line )
-{
-	DBG_AssertFunction(( entnum >= 0 && entnum < gpGlobals->numEntities ), "Invalid entnum", file, line, NULL );
-	return (*gEngfuncs.pfnGetEntityByIndex)( entnum );
-}
-#endif
-
 // message reading
 extern void BEGIN_READ( const char *pszName, int iSize, void *pBuf );
 extern int READ_CHAR( void );
@@ -227,11 +209,15 @@ extern void DrawScreenFade( void );
 extern void DrawImageBar( float percent, const char *szSpriteName );
 extern void DrawImageBar( float percent, const char *szSpriteName, int x, int y );
 
+// modelinfo
+int StudioBodyVariations( int modelIndex );
+modtype_t	Mod_GetModelType( int modelIndex );
+void Mod_GetBounds( int modelIndex, Vector &mins, Vector &maxs );
+void *Mod_Extradata( int modelIndex );
+int Mod_GetFrames( int modelIndex );
+
 // sprite loading
 extern HSPRITE LoadSprite( const char *pszName );
-
-// tracer draw code
-extern void Tracer_Draw( HSPRITE hSpr, Vector& start, Vector& delta, float width, byte *color, float startV = 0.0f, float endV = 1.0f );
 
 // mathlib
 extern void AngleMatrix( const vec3_t angles, float (*matrix)[4] );
@@ -255,11 +241,6 @@ extern cvar_t	*cl_lw;
 
 extern int CL_ButtonBits( int bResetState );
 extern void CL_ResetButtonBits( int bits );
-
-// dlls stuff
-BOOL Sys_LoadLibrary( const char* dllname, dllhandle_t* handle, const dllfunction_t *fcts );
-void* Sys_GetProcAddress( dllhandle_t handle, const char* name );
-void Sys_UnloadLibrary( dllhandle_t* handle );
 
 // misc stuff
 const char *UTIL_FileExtension( const char *in );

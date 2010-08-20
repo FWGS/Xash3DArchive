@@ -39,6 +39,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static const char *uiVideoModes[] =
 {
+	"400 x 300",
+	"512 x 384",
 	"640 x 480",
 	"800 x 600",
 	"960 x 720",
@@ -51,6 +53,8 @@ static const char *uiVideoModes[] =
 	"2048 x 1536",
 	"856 x 480 (wide)",
 	"1024 x 576 (wide)",
+	"1280 x 720 (wide)",
+	"1360 x 768 (wide)",
 	"1440 x 900 (wide)",
 	"1680 x 1050 (wide)",
 	"1920 x 1200 (wide)",

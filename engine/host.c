@@ -119,7 +119,6 @@ bool Host_InitRender( void )
 	ri.GetPlayerInfo = CL_GetPlayerInfo;
 	ri.GetLocalPlayer = CL_GetLocalPlayer;
 	ri.GetMaxClients = CL_GetMaxClients;
-	ri.GetLerpFrac = CL_GetLerpFrac;
 	ri.DrawTriangles = Tri_DrawTriangles;
 	ri.RoQ_ReadChunk = CIN_ReadChunk;
 	ri.RoQ_ReadNextFrame = CIN_ReadNextFrame;

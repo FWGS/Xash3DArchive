@@ -8,6 +8,7 @@
 #include "keydefs.h"
 #include "protocol.h"		// get the protocol version
 #include "byteorder.h"
+#include "con_nprint.h"
 
 cvar_t	*con_notifytime;
 cvar_t	*scr_conspeed;
@@ -608,6 +609,16 @@ void Con_Print( const char *txt )
 		}
 		else con.times[con.current % CON_TIMES] = cls.realtime;
 	}
+}
+
+void Con_NPrintf( int idx, char *fmt, ... )
+{
+	// FIXME: implement
+}
+
+void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
+{
+	// FIXME: imeplemnt
 }
 
 /*

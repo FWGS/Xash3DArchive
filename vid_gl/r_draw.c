@@ -16,51 +16,6 @@ meshbuffer_t	pic_mbuffer;
 
 /*
 ===============
-R_Set2DMode
-===============
-*/
-void R_Set2DMode( bool enable )
-{
-	if( enable )
-	{
-		if( glState.in2DMode )
-			return;
-
-		// set 2D virtual screen size
-		pglScissor( 0, 0, glState.width, glState.height );
-		pglViewport( 0, 0, glState.width, glState.height );
-		pglMatrixMode( GL_PROJECTION );
-		pglLoadIdentity();
-		pglOrtho( 0, glState.width, glState.height, 0, -99999, 99999 );
-		pglMatrixMode( GL_MODELVIEW );
-		pglLoadIdentity();
-
-		GL_Cull( 0 );
-		GL_SetState( GLSTATE_NO_DEPTH_TEST );
-
-		pglColor4f( 1, 1, 1, 1 );
-
-		glState.in2DMode = true;
-		RI.currententity = RI.previousentity = NULL;
-		RI.currentmodel = NULL;
-
-		pic_mbuffer.infokey = -1;
-		pic_mbuffer.shaderkey = 0;
-	}
-	else
-	{
-		if( pic_mbuffer.infokey != -1 )
-		{
-			R_RenderMeshBuffer( &pic_mbuffer );
-			pic_mbuffer.infokey = -1;
-		}
-
-		glState.in2DMode = false;
-	}
-}
-
-/*
-===============
 R_DrawSetColor
 ===============
 */
@@ -612,4 +567,65 @@ void Tri_RenderCallback( int fTrans )
 	}
 
 	triState.fActive = false;
+}
+
+/*
+===============
+R_Set2DMode
+===============
+*/
+void R_Set2DMode( bool enable )
+{
+	if( enable )
+	{
+		if( glState.in2DMode )
+			return;
+
+		// set 2D virtual screen size
+		pglScissor( 0, 0, glState.width, glState.height );
+		pglViewport( 0, 0, glState.width, glState.height );
+		pglMatrixMode( GL_PROJECTION );
+		pglLoadIdentity();
+		pglOrtho( 0, glState.width, glState.height, 0, -99999, 99999 );
+		pglMatrixMode( GL_MODELVIEW );
+		pglLoadIdentity();
+
+		GL_Cull( 0 );
+		GL_SetState( GLSTATE_NO_DEPTH_TEST );
+
+		pglColor4f( 1, 1, 1, 1 );
+
+		glState.in2DMode = true;
+		RI.currententity = RI.previousentity = NULL;
+		RI.currentmodel = NULL;
+
+		pic_mbuffer.infokey = -1;
+		pic_mbuffer.shaderkey = 0;
+
+		// reset TriApi state too in case we want use it in 2d mode
+		Tri_ClearBounds ();
+
+		tri_mbuffer.infokey = -1;
+		tri_mbuffer.shaderkey = 0;
+		triState.numColor = 0;
+		triState.fActive = true;
+	}
+	else
+	{
+		if( pic_mbuffer.infokey != -1 )
+		{
+			R_RenderMeshBuffer( &pic_mbuffer );
+			pic_mbuffer.infokey = -1;
+		}
+
+		// fulsh remaining tris
+		if( tri_mbuffer.infokey != -1 )
+		{
+			R_RenderMeshBuffer( &tri_mbuffer );
+			tri_mbuffer.infokey = -1;
+		}
+
+		triState.fActive = false;
+		glState.in2DMode = false;
+	}
 }

@@ -11,54 +11,31 @@
 #include "cvardef.h"
 
 /*
-====================
-Cache_Check
-
-consistency check
-====================
-*/
-void *Cache_Check( byte *mempool, cache_user_t *c )
-{
-	if( !c->data )
-		return NULL;
-
-	if( !Mem_IsAllocated( mempool, c->data ))
-		return NULL;
-
-	return c->data;
-}
-
-/*
 ==============
-pfnParseToken
+COM_ParseFile
 
 simple dlls version
 ==============
 */
-char *pfnParseToken( const char **data_p )
+char *COM_ParseFile( char *data, char *token )
 {
-	int		c, len = 0;
-	const char	*data;
-	static char	token[8192];
-	
-	token[0] = 0;
-	data = *data_p;
-	
-	if( !data ) 
-	{
-		*data_p = NULL;
-		return NULL;
-	}		
+	int	c, len;
 
-	// skip whitespace
+	if( !token )
+		return NULL;
+	
+	len = 0;
+	token[0] = 0;
+	
+	if( !data )
+		return NULL;
+		
+// skip whitespace
 skipwhite:
-	while(( c = *data) <= ' ' )
+	while(( c = *data ) <= ' ' )
 	{
 		if( c == 0 )
-		{
-			*data_p = NULL;
-			return NULL; // end of file;
-		}
+			return NULL;	// end of file;
 		data++;
 	}
 	
@@ -70,28 +47,17 @@ skipwhite:
 		goto skipwhite;
 	}
 
-	// skip /* comments
-	if( c=='/' && data[1] == '*' )
-	{
-		while( data[1] && (data[0] != '*' || data[1] != '/' ))
-			data++;
-		data += 2;
-		goto skipwhite;
-	}
-	
-
 	// handle quoted strings specially
-	if( *data == '\"' || *data == '\'' )
+	if( c == '\"' )
 	{
 		data++;
 		while( 1 )
 		{
 			c = *data++;
-			if( c=='\"' || c=='\0' )
+			if( c == '\"' || !c )
 			{
 				token[len] = 0;
-				*data_p = data;
-				return token;
+				return data;
 			}
 			token[len] = c;
 			len++;
@@ -99,14 +65,12 @@ skipwhite:
 	}
 
 	// parse single characters
-	if( c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ':' || c == ',' )
+	if( c == '{' || c == '}'|| c == ')'|| c == '(' || c == '\'' || c == ',' )
 	{
 		token[len] = c;
-		data++;
 		len++;
 		token[len] = 0;
-		*data_p = data;
-		return token;
+		return data + 1;
 	}
 
 	// parse a regular word
@@ -116,13 +80,14 @@ skipwhite:
 		data++;
 		len++;
 		c = *data;
-		if( c == '{' || c == '}'|| c == ')'|| c == '(' || c == '\'' || c == ':' || c == ',' )
+
+		if( c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ',' )
 			break;
 	} while( c > 32 );
 	
 	token[len] = 0;
-	*data_p = data;
-	return token;
+
+	return data;
 }
 
 /*
@@ -176,6 +141,24 @@ char *pfnMemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, in
 		return pBuffer;
 	}
 	return NULL;
+}
+
+/*
+====================
+Cache_Check
+
+consistency check
+====================
+*/
+void *Cache_Check( byte *mempool, cache_user_t *c )
+{
+	if( !c->data )
+		return NULL;
+
+	if( !Mem_IsAllocated( mempool, c->data ))
+		return NULL;
+
+	return c->data;
 }
 
 /*
@@ -256,7 +239,6 @@ cvar_t *pfnCVarRegister( const char *szName, const char *szValue, int flags, con
 
 	if( flags & FCVAR_ARCHIVE ) real_flags |= CVAR_ARCHIVE;
 	if( flags & FCVAR_USERINFO ) real_flags |= CVAR_USERINFO;
-	if( flags & FCVAR_SERVER ) real_flags |= CVAR_SERVERINFO;
 	if( flags & FCVAR_SPONLY ) real_flags |= CVAR_CHEAT;
 	if( flags & FCVAR_PRINTABLEONLY ) real_flags |= CVAR_PRINTABLEONLY;
 
@@ -383,11 +365,11 @@ int pfnCmd_Argc( void )
 
 /*
 =============
-pfnCon_Printf
+Con_Printf
 
 =============
 */
-void pfnCon_Printf( char *szFmt, ... )
+void Con_Printf( char *szFmt, ... )
 {
 	char	buffer[2048];	// must support > 1k messages
 	va_list	args;
@@ -401,11 +383,11 @@ void pfnCon_Printf( char *szFmt, ... )
 
 /*
 =============
-pfnCon_DPrintf
+Con_DPrintf
 
 =============
 */
-void pfnCon_DPrintf( char *szFmt, ... )
+void Con_DPrintf( char *szFmt, ... )
 {
 	char	buffer[2048];	// must support > 1k messages
 	va_list	args;

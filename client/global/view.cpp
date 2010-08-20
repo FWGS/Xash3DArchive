@@ -8,6 +8,7 @@
 #include "ref_params.h"
 #include "triangle_api.h"
 #include "pm_movevars.h"
+#include "r_beams.h"
 #include "studio.h"
 #include "pm_defs.h"
 #include "hud.h"
@@ -86,7 +87,7 @@ cvar_t	*v_dark;
 void V_ThirdPerson( void )
 {
 	// no thirdperson in multiplayer
-	if( gpGlobals->maxClients > 1 ) return;
+	if( gEngfuncs.GetMaxClients() > 1 ) return;
 
 	gHUD.m_iCameraMode = 1;
 }
@@ -175,7 +176,7 @@ void V_DriftPitch( ref_params_t *pparams )
 {
 	float	delta, move;
 
-	if( pparams->movetype == MOVETYPE_NOCLIP || !pparams->onground || pparams->demoplayback )
+	if( gEngfuncs.IsNoClipping() || !pparams->onground || pparams->demoplayback )
 	{
 		pd.driftmove = 0;
 		pd.pitchvel = 0;
@@ -254,7 +255,7 @@ void V_DropPunchAngle( float frametime, Vector &ev_punchangle )
 	ev_punchangle *= len;
 }
 
-void V_CalcViewModelLag( Vector& origin, Vector& angles, Vector& original_angles )
+void V_CalcViewModelLag( ref_params_t *pparams, Vector& origin, Vector& angles, Vector& original_angles )
 {
 	static Vector m_vecLastFacing;
 	Vector vOriginalOrigin = origin;
@@ -264,7 +265,7 @@ void V_CalcViewModelLag( Vector& origin, Vector& angles, Vector& original_angles
 	Vector	forward;
 	AngleVectors( angles, forward, NULL, NULL );
 
-	if ( gpGlobals->frametime != 0.0f )
+	if ( pparams->frametime != 0.0f )
 	{
 		Vector vDifference;
 
@@ -283,7 +284,7 @@ void V_CalcViewModelLag( Vector& origin, Vector& angles, Vector& original_angles
 		}
 
 		// FIXME:  Needs to be predictable?
-		m_vecLastFacing = m_vecLastFacing + vDifference * ( flSpeed * gpGlobals->frametime );
+		m_vecLastFacing = m_vecLastFacing + vDifference * ( flSpeed * pparams->frametime );
 		// Make sure it doesn't grow out of control!!!
 		m_vecLastFacing = m_vecLastFacing.Normalize();
 		origin = origin + (vDifference * -1.0f) * 5.0f;
@@ -347,6 +348,9 @@ void V_CalcGunAngle( ref_params_t *pparams )
 //==========================
 void V_PreRender( ref_params_t *pparams )
 {
+	// pass into beam global vars
+	g_pViewRenderBeams->SetViewParams( pparams );
+
 	// input
 	pparams->intermission = gHUD.m_iIntermission;
 	if( gHUD.m_iCameraMode ) pparams->flags |= RDF_THIRDPERSON;
@@ -454,19 +458,6 @@ void V_SetViewport( ref_params_t *pparams )
 }
 
 //==========================
-// V_ResetViewport
-//==========================
-void V_ResetViewport( ref_params_t *pparams )
-{
-	pparams->viewport[0] = 0;
-	pparams->viewport[1] = 0;
-	pparams->viewport[2] = ActualWidth;
-	pparams->viewport[2] &= ~7;
-	pparams->viewport[3] = ActualHeight;
-	pparams->viewport[3] &= ~1;
-}
-
-//==========================
 // V_GetChaseOrigin
 //==========================
 void V_GetChaseOrigin( Vector angles, Vector origin, float distance, Vector &result )
@@ -558,8 +549,8 @@ void V_CalcCameraRefdef( ref_params_t *pparams )
 		cl_entity_t *viewentity = GetEntityByIndex( pparams->viewentity );
 	 	if( viewentity )
 		{		 
-			studiohdr_t *viewmonster = (studiohdr_t *)GetModelPtr( viewentity );
-			float m_fLerp = GetLerpFrac();
+			studiohdr_t *viewmonster = (studiohdr_t *)Mod_Extradata( viewentity->curstate.modelindex );
+			float m_fLerp = pparams->lerpfrac;
 
 			if( viewentity->curstate.movetype == MOVETYPE_STEP )
 				v_origin = LerpPoint( viewentity->prevstate.origin, viewentity->curstate.origin, m_fLerp );
@@ -949,7 +940,7 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 	view->origin[2] -= 1;
 
 	// add lag
-	V_CalcViewModelLag( view->origin, view->angles, lastAngles );
+	V_CalcViewModelLag( pparams, view->origin, view->angles, lastAngles );
 
 	// fudge position around to keep amount of weapon visible
 	// roughly equal with different FOV
@@ -1027,7 +1018,6 @@ void V_CalcRefdef( ref_params_t *pparams )
 {
 	V_PreRender( pparams );
 	V_CalcGlobalFog( pparams );
-	V_ResetViewport( pparams );
 	V_CalcFirstPersonRefdef( pparams );
 	V_CalcThirdPersonRefdef( pparams );
 	V_CalcIntermisionRefdef( pparams );

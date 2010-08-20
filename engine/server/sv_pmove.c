@@ -181,29 +181,6 @@ static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 	return trace.ent;
 }
 
-static void pfnCon_NPrintf( int idx, char *fmt, ... )
-{
-	va_list		argptr;
-	char		string[MAX_SYSPATH];
-	sv_client_t	*cl;
-
-	if( idx < 0 || idx >= sv_maxclients->integer )
-		return;
-
-	cl = svs.clients + idx;
-
-	if( !cl->edict || ( cl->edict->v.flags & FL_FAKECLIENT ))
-		return;
-	
-	va_start( argptr, fmt );
-	com.vsprintf( string, fmt, argptr );
-	va_end( argptr );
-	
-	BF_WriteByte( &cl->netchan.message, svc_print );
-	BF_WriteByte( &cl->netchan.message, PRINT_HIGH );
-	BF_WriteString( &cl->netchan.message, string );
-}
-
 static double Sys_FloatTime( void )
 {
 	return Sys_DoubleTime();
@@ -425,9 +402,9 @@ void SV_InitClientMove( void )
 	svgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
 	svgame.pmove->PM_Particle = pfnParticle;
 	svgame.pmove->PM_TestPlayerPosition = pfnTestPlayerPosition;
-	svgame.pmove->ConNPrintf = pfnCon_NPrintf;
-	svgame.pmove->ConDPrintf = pfnCon_DPrintf;
-	svgame.pmove->ConPrintf = pfnCon_Printf;
+	svgame.pmove->ConNPrintf = Con_NPrintf;
+	svgame.pmove->ConDPrintf = Con_DPrintf;
+	svgame.pmove->ConPrintf = Con_Printf;
 	svgame.pmove->Sys_FloatTime = Sys_FloatTime;
 	svgame.pmove->PM_StuckTouch = pfnStuckTouch;
 	svgame.pmove->PM_PointContents = pfnPointContents;

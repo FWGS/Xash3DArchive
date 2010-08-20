@@ -52,10 +52,13 @@ CHud :: ~CHud( void )
 		{
 			pList = m_pHudList;
 			m_pHudList = m_pHudList->pNext;
-			FREE( pList );
+			free( pList );
 		}
 		m_pHudList = NULL;
 	}
+
+	free( m_pSpriteList );
+	m_pSpriteList = NULL;
 }
 
 int CHud :: GetSpriteIndex( const char *SpriteName )
@@ -82,14 +85,11 @@ void CHud :: VidInit( void )
 
 	ClearAllFades ();
 
-	if( CVAR_GET_FLOAT( "hud_scale" ))
-		m_scrinfo.iFlags = SCRINFO_VIRTUALSPACE;
-	else m_scrinfo.iFlags = 0;
-
 	// setup screen info
+	m_scrinfo.iSize = sizeof(m_scrinfo);
 	GetScreenInfo( &m_scrinfo );
 
-	if( ActualWidth < 640 )
+	if( ScreenWidth < 640 )
 		m_iRes = 320;
 	else m_iRes = 640;
 
@@ -435,7 +435,11 @@ void CHud::AddHudElem( CHudBase *phudelem )
 
 	if( !phudelem ) return;
 
-	pdl = (HUDLIST *)CALLOC( sizeof( HUDLIST ), 1 );
+	pdl = (HUDLIST *)malloc( sizeof( HUDLIST ));
+	if (!pdl)
+		return;
+
+	memset(pdl, 0, sizeof(HUDLIST));
 	pdl->p = phudelem;
 
 	if( !m_pHudList )

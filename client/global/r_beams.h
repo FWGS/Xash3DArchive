@@ -282,6 +282,8 @@ public:
 	void		ClearServerBeams( void );
 
 	void		UpdateBeams( int fTrans );	// main drawing func
+	void		SetViewParams( struct ref_params_s *pparams );
+	struct ref_params_s	*GetViewParams( void );
 private:
 	cl_entity_t	*LinkWithViewModel( int entindex );
 	bool		AttemptToDie( Beam_t *pBeam );
@@ -313,6 +315,12 @@ private:
 	BeamTrail_t	*m_pBeamTrails;
 	BeamTrail_t	*m_pActiveTrails;
 	BeamTrail_t	*m_pFreeTrails;
+
+	struct ref_params_s	*pViewParams;		// actual refdef pointer
+
+	float		m_flTime;			// the current client time
+	float		m_fOldTime;		// the time at which the HUD was last redrawn
+	float		m_flFrameTime;		// time between beam draws
 
 	cl_entity_t	*m_pServerBeams[MAX_BEAMS];	// to avoid check of all the ents
 	int		m_nNumServerBeams;

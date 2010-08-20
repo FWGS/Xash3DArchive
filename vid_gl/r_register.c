@@ -503,7 +503,7 @@ void GL_InitCommands( void )
 	r_picmip = Cvar_Get( "r_picmip", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	r_skymip = Cvar_Get( "r_skymip", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
 	r_polyblend = Cvar_Get( "r_polyblend", "1", 0, "tints view while underwater, hurt, etc" );
-	r_lefthand = Cvar_Get( "hand", "0", CVAR_USERINFO | CVAR_ARCHIVE, "viewmodel handedness" );
+	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
 	r_physbdebug = Cvar_Get( "cm_debugdraw", "0", CVAR_ARCHIVE, "draw physics hulls" );
 
 	r_bloom_alpha = Cvar_Get( "r_bloom_alpha", "0.2", CVAR_ARCHIVE, "bloom alpha multiplier" );

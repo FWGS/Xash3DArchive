@@ -383,7 +383,7 @@ CL_AdjustAngles
 Moves the local angle positions
 ================
 */
-void CL_AdjustAngles( void )
+void CL_AdjustAngles( float cl_frametime )
 {
 	float	speed;
 	float	up, down;
@@ -393,11 +393,11 @@ void CL_AdjustAngles( void )
 
 	if ( in_speed.state & 1 )
 	{
-		speed = gpGlobals->frametime * cl_anglespeedkey->value;
+		speed = cl_frametime * cl_anglespeedkey->value;
 	}
 	else
 	{
-		speed = gpGlobals->frametime;
+		speed = cl_frametime;
 	}
 
 	if (!( in_strafe.state & 1 ))
@@ -486,7 +486,7 @@ void CL_BaseMove( usercmd_t *cmd )
 	}
 }
 
-void IN_CreateMove( usercmd_t *cmd, int msec, int active )
+void IN_CreateMove( usercmd_t *cmd, int msec, float cl_frametime, int active )
 {
 	static int	last_msec = 0;	// from previous frame
 
@@ -497,7 +497,7 @@ void IN_CreateMove( usercmd_t *cmd, int msec, int active )
 	{
 		GetViewAngles( cl_viewangles );
 
-		CL_AdjustAngles( );
+		CL_AdjustAngles( cl_frametime );
 
 		CL_BaseMove( cmd );
 
@@ -744,42 +744,4 @@ void IN_Init( void )
 
 void IN_Shutdown( void )
 {
-	Cmd_RemoveCommand ("centerview" );
-	Cmd_RemoveCommand ("impulse" );
-
-	// input commands
-	Cmd_RemoveCommand ("+moveup" );
-	Cmd_RemoveCommand ("-moveup" );
-	Cmd_RemoveCommand ("+movedown" );
-	Cmd_RemoveCommand ("-movedown" );
-	Cmd_RemoveCommand ("+left" );
-	Cmd_RemoveCommand ("-left" );
-	Cmd_RemoveCommand ("+right" );
-	Cmd_RemoveCommand ("-right" );
-	Cmd_RemoveCommand ("+forward" );
-	Cmd_RemoveCommand ("-forward" );
-	Cmd_RemoveCommand ("+back" );
-	Cmd_RemoveCommand ("-back" );
-	Cmd_RemoveCommand ("+lookup" );
-	Cmd_RemoveCommand ("-lookup" );
-	Cmd_RemoveCommand ("+lookdown" );
-	Cmd_RemoveCommand ("-lookdown" );
-	Cmd_RemoveCommand ("+strafe" );
-	Cmd_RemoveCommand ("-strafe" );
-	Cmd_RemoveCommand ("+moveleft" );
-	Cmd_RemoveCommand ("-moveleft" );
-	Cmd_RemoveCommand ("+moveright" );
-	Cmd_RemoveCommand ("-moveright" );
-	Cmd_RemoveCommand ("+speed" );
-	Cmd_RemoveCommand ("-speed" );
-	Cmd_RemoveCommand ("+attack" );
-	Cmd_RemoveCommand ("-attack" );
-	Cmd_RemoveCommand ("+attack2" );
-	Cmd_RemoveCommand ("-attack2" );
-	Cmd_RemoveCommand ("+reload" );
-	Cmd_RemoveCommand ("-reload" );
-	Cmd_RemoveCommand ("+use" );
-	Cmd_RemoveCommand ("-use" );
-	Cmd_RemoveCommand ("+mlook" );
-	Cmd_RemoveCommand ("-mlook" );
 }

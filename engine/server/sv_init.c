@@ -167,7 +167,7 @@ void SV_ActivateServer( void )
 	}
 
 	// set serverinfo variable
-	Cvar_FullSet( "mapname", sv.name, CVAR_SERVERINFO|CVAR_INIT );
+	Cvar_FullSet( "mapname", sv.name, CVAR_INIT );
 
 	CM_EndRegistration (); // free unused models
 
@@ -400,8 +400,8 @@ void SV_InitGame( void )
 	if( Cvar_VariableValue( "coop" ) && Cvar_VariableValue ( "deathmatch" ) && Cvar_VariableValue( "teamplay" ))
 	{
 		MsgDev( D_WARN, "Deathmatch, Teamplay and Coop set, defaulting to Deathmatch\n");
-		Cvar_FullSet( "coop", "0",  CVAR_SERVERINFO|CVAR_LATCH );
-		Cvar_FullSet( "teamplay", "0",  CVAR_SERVERINFO|CVAR_LATCH );
+		Cvar_FullSet( "coop", "0",  CVAR_LATCH );
+		Cvar_FullSet( "teamplay", "0", CVAR_LATCH );
 	}
 
 	// dedicated servers are can't be single player and are usually DM
@@ -409,26 +409,26 @@ void SV_InitGame( void )
 	if( host.type == HOST_DEDICATED )
 	{
 		if(!Cvar_VariableValue( "coop" ) && !Cvar_VariableValue( "teamplay" ))
-			Cvar_FullSet( "deathmatch", "1",  CVAR_SERVERINFO|CVAR_LATCH );
+			Cvar_FullSet( "deathmatch", "1",  CVAR_LATCH );
 	}
 
 	// init clients
 	if( Cvar_VariableValue( "deathmatch" ) || Cvar_VariableValue( "teamplay" ))
 	{
 		if( sv_maxclients->integer <= 1 )
-			Cvar_FullSet( "sv_maxclients", "8", CVAR_SERVERINFO|CVAR_LATCH );
+			Cvar_FullSet( "sv_maxclients", "8", CVAR_LATCH );
 		else if( sv_maxclients->integer > MAX_CLIENTS )
-			Cvar_FullSet( "sv_maxclients", "32", CVAR_SERVERINFO|CVAR_LATCH );
+			Cvar_FullSet( "sv_maxclients", "32", CVAR_LATCH );
 	}
 	else if( Cvar_VariableValue( "coop" ))
 	{
 		if( sv_maxclients->integer <= 1 || sv_maxclients->integer > 4 )
-			Cvar_FullSet( "sv_maxclients", "4", CVAR_SERVERINFO|CVAR_LATCH );
+			Cvar_FullSet( "sv_maxclients", "4", CVAR_LATCH );
 	}
 	else	
 	{
 		// non-deathmatch, non-coop is one player
-		Cvar_FullSet( "sv_maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH );
+		Cvar_FullSet( "sv_maxclients", "1", CVAR_LATCH );
 	}
 
 	svgame.globals->maxClients = sv_maxclients->integer;

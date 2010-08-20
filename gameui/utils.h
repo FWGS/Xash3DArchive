@@ -14,7 +14,7 @@ extern ui_enginefuncs_t g_engfuncs;
 #define FILE_GLOBAL	static
 #define DLL_GLOBAL
 
-#define MAX_INFO_STRING	512	// engine limit
+#define MAX_INFO_STRING	256	// engine limit
 
 #define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
 #define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))

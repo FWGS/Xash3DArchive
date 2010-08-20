@@ -6,7 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "studio_event.h"
-#include "effects_api.h"
+#include "r_efx.h"
 #include "pm_movevars.h"
 #include "r_particle.h"
 #include "r_tempents.h"
@@ -115,8 +115,10 @@ void TE_ParseGunShot( void )
 
 	if( RANDOM_LONG( 0, 32 ) <= 8 ) // 25% chanse
 	{
+		int iPitch = RANDOM_LONG( 90, 105 );
+		float fvol = RANDOM_FLOAT( 0.7f, 0.9f );
 		sprintf( soundpath, "weapons/ric%i.wav", RANDOM_LONG( 1, 5 ));
-		CL_PlaySound( soundpath, RANDOM_FLOAT( 0.7f, 0.9f ), pos, RANDOM_FLOAT( 95.0f, 105.0f ));
+		gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, soundpath, fvol, ATTN_NORM, 0, iPitch );
 	}
 }
 
@@ -162,7 +164,7 @@ void TE_ParseExplosion( void )
 			dl->radius = 200;
 			dl->color[0] = dl->color[1] = 250;
 			dl->color[2] = 150;
-			dl->die = gpGlobals->time + 0.01f;
+			dl->die = GetClientTime() + 0.01f;
 			dl->decay = 800;
 
 			// red glow
@@ -172,7 +174,7 @@ void TE_ParseExplosion( void )
 			dl->color[0] = 255;
 			dl->color[1]= 190;
 			dl->color[2] = 40;
-			dl->die = gpGlobals->time + 1.0f;
+			dl->die = GetClientTime() + 1.0f;
 			dl->decay = 200;
 		}
 	}
@@ -180,10 +182,9 @@ void TE_ParseExplosion( void )
 	if(!( flags & TE_EXPLFLAG_NOPARTICLES ))
 		g_pParticles->ParticleEffect( pos, g_vecZero, 224, 200 );
 
-	if( !( flags & TE_EXPLFLAG_NOSOUND ))
-	{
-		CL_PlaySound( "weapons/explode3.wav", 1.0f, pos2 );
-	}
+	if( flags & TE_EXPLFLAG_NOSOUND ) return;
+
+	gEngfuncs.pEventAPI->EV_PlaySound( 0, pos2, CHAN_AUTO, "weapons/explode3.wav", VOL_NORM, ATTN_NORM, 0, PITCH_NORM );
 }
 
 /*
@@ -394,10 +395,10 @@ void TE_ParseExplosion2( void )
 	dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 	dl->origin = pos;
 	dl->radius = 350;
-	dl->die = gpGlobals->time + 0.5f;
+	dl->die = GetClientTime() + 0.5f;
 	dl->decay = 300;
 
-	CL_PlaySound( "weapons/explode3.wav", 1.0f, pos );
+	gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, "weapons/explode3.wav", VOL_NORM, ATTN_NORM, 0, PITCH_NORM );
 }
 
 /*
@@ -441,7 +442,7 @@ void TE_ParseImplosion( void )
 	pos.z = READ_COORD();
 
 	// FIXME: create tracers moving toward a point
-	CL_PlaySound( "shambler/sattck1.wav", 1.0f, pos );
+	gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, "shambler/sattck1.wav", VOL_NORM, ATTN_NORM, 0, PITCH_NORM );
 }
 
 /*
@@ -691,7 +692,7 @@ void TE_ParseDynamicLight( int type )
 	dl->color[0] = r;
 	dl->color[1] = g;
 	dl->color[2] = b;
-	dl->die = gpGlobals->time + life;
+	dl->die = GetClientTime() + life;
 }
 
 /*
@@ -935,8 +936,10 @@ void TE_ParseGunShotDecal( void )
 
 	if( RANDOM_LONG( 0, 32 ) <= 8 ) // 25% chanse
 	{
+		int iPitch = RANDOM_LONG( 90, 105 );
+		float fvol = RANDOM_FLOAT( 0.7f, 0.9f );
 		sprintf( soundpath, "weapons/ric%i.wav", RANDOM_LONG( 1, 5 ));
-		CL_PlaySound( soundpath, RANDOM_FLOAT( 0.7f, 0.9f ), pos, RANDOM_FLOAT( 95.0f, 105.0f ));
+		gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, soundpath, fvol, ATTN_NORM, 0, iPitch );
 	}
 }
 
@@ -996,8 +999,10 @@ void TE_ParseArmorRicochet( void )
 	int modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
 	g_pTempEnts->RicochetSprite( pos, modelIndex, radius );
 
+	int iPitch = RANDOM_LONG( 90, 105 );
+	float fvol = RANDOM_FLOAT( 0.7f, 0.9f );
 	sprintf( soundpath, "weapons/ric%i.wav", RANDOM_LONG( 1, 5 ));
-	CL_PlaySound( soundpath, RANDOM_FLOAT( 0.7f, 0.9f ), pos, RANDOM_FLOAT( 95.0f, 105.0f ));
+	gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, soundpath, fvol, ATTN_NORM, 0, iPitch );
 }
 
 /*

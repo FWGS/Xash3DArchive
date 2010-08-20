@@ -188,17 +188,17 @@ static void UI_CreateGame_GetMapsList( void )
 		return;
 	}
 
-	const char *pfile = afile;
-	char *token;
+	char *pfile = afile;
+	char token[1024];
 	int numMaps = 0;
 	
-	while(( token = COM_ParseToken( &pfile )) != NULL )
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		if( numMaps >= UI_MAXGAMES ) break;
 		StringConcat( uiCreateGame.mapName[numMaps], token, sizeof( uiCreateGame.mapName[0] ));
 		StringConcat( uiCreateGame.mapsDescription[numMaps], token, MAPNAME_LENGTH );
 		StringConcat( uiCreateGame.mapsDescription[numMaps], uiEmptyString, MAPNAME_LENGTH );
-		if(( token = COM_ParseToken( &pfile )) == NULL ) break; // unexpected end of file
+		if(( pfile = COM_ParseFile( pfile, token )) == NULL ) break; // unexpected end of file
 		StringConcat( uiCreateGame.mapsDescription[numMaps], token, TITLE_LENGTH );
 		StringConcat( uiCreateGame.mapsDescription[numMaps], uiEmptyString, TITLE_LENGTH );
 		uiCreateGame.mapsDescriptionPtr[numMaps] = uiCreateGame.mapsDescription[numMaps];

@@ -149,7 +149,7 @@ void CHudSayText :: SayTextPrint( const char *pszBuf, int iBufSize, int clientIn
 	}
 
 	m_iFlags |= HUD_ACTIVE;
-	CL_PlaySound( "misc/talk.wav", 1.0f );
+	PlaySound( "common/menu2.wav", 1.0f );
 
 	Y_START = ScreenHeight - 60;
 	Y_START -= (line_height * (MAX_LINES+1));

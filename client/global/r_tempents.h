@@ -6,7 +6,7 @@
 #ifndef R_TEMPENTS_H
 #define R_TEMPENTS_H
 
-#include "effects_api.h"
+#include "r_efx.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: implementation for temp entities
@@ -88,7 +88,7 @@ public:
 
 	void	TE_Prepare( TEMPENTITY *pTemp, int modelIndex );
 	int	TE_Active( TEMPENTITY *pTemp );
-	int	TE_Update( TEMPENTITY *pTemp );	// return false for instantly die
+	int	TE_Update( TEMPENTITY *pTemp, float frametime );	// return false for instantly die
 
 	void	BloodSprite( const Vector &org, int colorIndex, int modelIndex, int modelIndex2, float size );
 	void	RicochetSprite( const Vector &pos, int modelIndex, float scale );
@@ -117,9 +117,13 @@ public:
 	void	RocketTrail( Vector start, Vector end, int type );
 	void	Large_Funnel( Vector pos, int spriteIndex, int flags );
 	void	SparkShower( const Vector& pos );
+	void	SparkEffect( const Vector& pos, int count, int velocityMin, int velocityMax );
 	void	StreakSplash( const Vector &pos, const Vector &dir, int color, int count, int speed, int velMin, int velMax );
 // Data
 private:
+	float		m_flTime;		// the current client time
+	float		m_fOldTime;	// the time at which the HUD was last redrawn
+	
 	int		m_iTempEntFrame;	// used for keyed dlights only
 
 	// Global temp entity pool

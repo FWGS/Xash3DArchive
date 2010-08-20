@@ -6,7 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "r_beams.h"
-#include "effects_api.h"
+#include "r_efx.h"
 #include "r_particle.h"
 #include "r_tempents.h"
 #include "pm_materials.h"
@@ -75,13 +75,13 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 	entity = gEngfuncs.pEventAPI->EV_IndexFromTrace( ptr );
 
 	// check if playtexture sounds movevar is set
-	if( gpGlobals->maxClients != 1 && gpMovevars->footsteps == 0 )
+	if( gEngfuncs.GetMaxClients() != 1 && gpMovevars->footsteps == 0 )
 		return 0.0f;
 
 	chTextureType = 0;
 
 	// Player
-	if ( entity >= 1 && entity <= gpGlobals->maxClients )
+	if ( entity >= 1 && entity <= gEngfuncs.GetMaxClients() )
 	{
 		// hit body
 		chTextureType = CHAR_TEX_FLESH;
@@ -282,7 +282,7 @@ void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType )
 int EV_HLDM_CheckTracer( int idx, Vector vecSrc, Vector end, Vector forward, Vector right, int iBulletType, int iTracerFreq, int *tracerCount )
 {
 	int tracer = 0;
-	BOOL player = (idx >= 1 && idx <= gpGlobals->maxClients) ? true : false;
+	BOOL player = (idx >= 1 && idx <= gEngfuncs.GetMaxClients()) ? true : false;
 
 	if ( iTracerFreq != 0 && ( ( *tracerCount )++ % iTracerFreq ) == 0 )
 	{
@@ -542,7 +542,7 @@ void EV_FireShotGunDouble( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	vecAiming = forward;
 
-	if ( gpGlobals->maxClients > 1 )
+	if ( gEngfuncs.GetMaxClients() > 1 )
 	{
 		EV_HLDM_FireBullets( idx, forward, right, up, 8, vecSrc, vecAiming, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1], 0.17365, 0.04362 );
 	}
@@ -594,7 +594,7 @@ void EV_FireShotGunSingle( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	vecAiming = forward;
 
-	if ( gpGlobals->maxClients > 1 )
+	if ( gEngfuncs.GetMaxClients() > 1 )
 	{
 		EV_HLDM_FireBullets( idx, forward, right, up, 4, vecSrc, vecAiming, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1], 0.08716, 0.04362 );
 	}
@@ -659,7 +659,7 @@ void EV_FireMP5( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	vecAiming = forward;
 
-	if ( gpGlobals->maxClients > 1 )
+	if ( gEngfuncs.GetMaxClients() > 1 )
 	{
 		EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, 8192, BULLET_PLAYER_MP5, 2, &tracerCount[idx-1], args->fparam1, args->fparam2 );
 	}
@@ -724,7 +724,7 @@ void EV_FirePython( event_args_t *args )
 	if ( EV_IsLocal( idx ) )
 	{
 		// Python uses different body in multiplayer versus single player
-		int multiplayer = gpGlobals->maxClients == 1 ? 0 : 1;
+		int multiplayer = gEngfuncs.GetMaxClients() == 1 ? 0 : 1;
 
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
@@ -1512,18 +1512,18 @@ void EV_UpdateBeams ( void )
 	switch( iFireMode )
 	{
 	case FIRE_NARROW:
-		if ( m_pBeam->m_flDmgTime < gpGlobals->time )
+		if ( m_pBeam->m_flDmgTime < GetClientTime() )
 		{
-			m_pBeam->m_flDmgTime = gpGlobals->time + EGON_PULSE_INTERVAL;
+			m_pBeam->m_flDmgTime = GetClientTime() + EGON_PULSE_INTERVAL;
 		}
-		timedist = ( m_pBeam->m_flDmgTime - gpGlobals->time ) / EGON_DISCHARGE_INTERVAL;
+		timedist = ( m_pBeam->m_flDmgTime - GetClientTime() ) / EGON_DISCHARGE_INTERVAL;
 		break;
 	case FIRE_WIDE:
-		if ( m_pBeam->m_flDmgTime < gpGlobals->time )
+		if ( m_pBeam->m_flDmgTime < GetClientTime() )
 		{
-			m_pBeam->m_flDmgTime = gpGlobals->time + EGON_PULSE_INTERVAL;
+			m_pBeam->m_flDmgTime = GetClientTime() + EGON_PULSE_INTERVAL;
 		}
-		timedist = ( m_pBeam->m_flDmgTime - gpGlobals->time ) / EGON_DISCHARGE_INTERVAL;
+		timedist = ( m_pBeam->m_flDmgTime - GetClientTime() ) / EGON_DISCHARGE_INTERVAL;
 		break;
 	}
 
@@ -1534,20 +1534,20 @@ void EV_UpdateBeams ( void )
 	m_pBeam->SetEndPos( tr.endpos );
 	m_pBeam->SetBrightness( 255 - ( timedist * 180 ));
 	m_pBeam->SetWidth( 40 - ( timedist * 20 ));
-	m_pBeam->die = gpGlobals->time + 0.1f; // We keep it alive just a little bit forward in the future, just in case.
+	m_pBeam->die = GetClientTime() + 0.1f; // We keep it alive just a little bit forward in the future, just in case.
 
 	if ( iFireMode == FIRE_WIDE )
-		m_pBeam->SetColor( 30 + (25 * timedist), 30  + (30 * timedist), 64 + 80 * fabs( sin( gpGlobals->time * 10 )));
+		m_pBeam->SetColor( 30 + (25 * timedist), 30  + (30 * timedist), 64 + 80 * fabs( sin( GetClientTime() * 10 )));
 	else
-		m_pBeam->SetColor( 60 + (25 * timedist), 120 + (30 * timedist), 64 + 80 * fabs( sin( gpGlobals->time * 10 )));
+		m_pBeam->SetColor( 60 + (25 * timedist), 120 + (30 * timedist), 64 + 80 * fabs( sin( GetClientTime() * 10 )));
 
 	m_pNoise->SetEndPos( tr.endpos );
-	m_pNoise->die = gpGlobals->time + 0.1f; // We keep it alive just a little bit forward in the future, just in case.
+	m_pNoise->die = GetClientTime() + 0.1f; // We keep it alive just a little bit forward in the future, just in case.
 
 	if( m_pEndFlare )
 	{
 		m_pEndFlare->entity.origin = tr.endpos;
-		m_pEndFlare->die = gpGlobals->time + 0.1f;
+		m_pEndFlare->die = GetClientTime() + 0.1f;
 	}
 }
 //======================
@@ -1735,7 +1735,7 @@ void EV_UpdateLaserSpot( void )
 
 	// update laserspot endpos
 	m_pLaserSpot->entity.origin = tr.endpos;
-	m_pLaserSpot->die = gpGlobals->time + 0.1f;
+	m_pLaserSpot->die = GetClientTime() + 0.1f;
 }
 //======================
 //	   LASERSPOT END

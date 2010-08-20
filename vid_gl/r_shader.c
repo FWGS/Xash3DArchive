@@ -4225,8 +4225,6 @@ void R_SetupSky( const char *name )
 	tr.currentSkyShader = R_LoadShader( loadname, SHADER_SKY, true, 0, SHADER_INVALID );
 	if( index != tr.currentSkyShader->shadernum )
 		MsgDev( D_ERROR, "R_SetupSky: mismatch shader indexes %i != %i\n", index, tr.currentSkyShader->shadernum );
-
-	Msg( "R_SetupSky( %s )\n", name );
 }
 
 void R_FreeSky( void )

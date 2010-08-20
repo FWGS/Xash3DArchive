@@ -169,7 +169,7 @@ int CHudGeiger::Draw( float flTime )
 
 			// player/geiger6.wav isn't used ?
 			sprintf( sz, "player/geiger%d.wav", j + 1 );
-			CL_PlaySound( sz, flvol );
+			PlaySound( sz, flvol );
 			
 		}
 	}

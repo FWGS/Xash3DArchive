@@ -23,9 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <stdio.h>		// sscanf
 #include "r_local.h"
-#include "clgame_api.h"
 #include "cl_entity.h"
-#include "effects_api.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "pm_movevars.h"
@@ -1855,7 +1853,8 @@ void R_RenderScene( const ref_params_t *fd )
 	RI.refdef = *fd;
 	RI.farClip = 0;
 	RI.clipFlags = 15;
-	RI.lerpFrac = ri.GetLerpFrac();
+	RI.lerpFrac = RI.refdef.lerpfrac;
+
 	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ) && r_worldbrushmodel->globalfog )
 	{
 		RI.farClip = r_worldbrushmodel->globalfog->shader->fog_dist;

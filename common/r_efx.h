@@ -1,9 +1,9 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//		       effects_api.h - client temp entities
+//		       r_efx.h - decals & dlight management
 //=======================================================================
-#ifndef EFFECTS_API_H
-#define EFFECTS_API_H
+#ifndef R_EFX_H
+#define R_EFX_H
 
 #include "dlight.h"
 
@@ -19,8 +19,6 @@ typedef struct efxapi_s
 	void		(*R_LightForPoint)( const float *rgflOrigin, float *lightValue );
 	int		(*CL_IsBoxVisible)( const float *mins, const float *maxs );
 	int		(*R_CullBox)( const float *mins, const float *maxs );
-	int		(*R_AddEntity)( struct cl_entity_s *pEnt, int entityType, HSPRITE customShader );
-	void		(*R_EnvShot)( const float *vieworg, const char *name, int skyshot );
 } efxapi_t;
 
-#endif//EFFECTS_API_H
+#endif//R_EFX_H

@@ -21,8 +21,6 @@
 #include "aurora.h"
 #include "ref_params.h"
 
-extern ref_params_t		*gpViewParams;
-
 // CHud message handlers
 DECLARE_HUDMESSAGE( Logo );
 DECLARE_HUDMESSAGE( HUDColor );
@@ -77,7 +75,7 @@ int CHud :: InitMessages( void )
 		{
 			pList = m_pHudList;
 			m_pHudList = m_pHudList->pNext;
-			FREE( pList );
+			free( pList );
 		}
 		m_pHudList = NULL;
 	}

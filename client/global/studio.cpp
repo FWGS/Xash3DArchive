@@ -5,8 +5,8 @@
 
 #include "extdll.h"
 #include "utils.h"
-#include "studio_event.h"
-#include "effects_api.h"
+#include "studio.h"
+#include "r_efx.h"
 #include "pm_movevars.h"
 #include "r_tempents.h"
 #include "ev_hldm.h"
@@ -69,7 +69,8 @@ void EV_EjectShell( const mstudioevent_t *event, cl_entity_t *entity )
 
 void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity )
 {
-	float	pitch;
+	int	pitch;
+	float	fvol;
 	Vector	pos;
 
 	switch( event->event )
@@ -92,20 +93,22 @@ void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity )
 		break;
 	case 5002:
 		// SparkEffect at attachment 1
+		g_pTempEnts->SparkEffect( entity->origin + entity->attachment_origin[0], 8, -200, 200 );
 		break;
 	case 5004:		
 		// Client side sound
 		pos = entity->origin + entity->attachment_origin[0];
-		CL_PlaySound( event->options, 1.0f, pos );
+		gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, event->options, VOL_NORM, ATTN_NORM, 0, PITCH_NORM );
 		break;
 	case 5005:		
-		// Client side sound with random pitch
+		// Client side sound with random pitch (most useful for reload sounds)
 		pitch = 85 + RANDOM_LONG( 0, 0x1F );
 		pos = entity->origin + entity->attachment_origin[0];
-		CL_PlaySound( event->options, RANDOM_FLOAT( 0.7f, 0.9f ), pos, pitch );
+		fvol = RANDOM_FLOAT( 0.7f, 0.9f );
+		gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, event->options, fvol, ATTN_NORM, 0, pitch );
 		break;
 	case 5050:
-		// Special event for displacer
+		// Special event for displacer ( Xash 0.1, XDM 3.3 )
 		EV_DrawBeam ();
 		break;
 	case 5060:
@@ -153,6 +156,27 @@ void HUD_StudioFxTransform( cl_entity_t *ent, float transform[4][4] )
 		transform[2][1] *= scale;
 		break;
 	}
+}
+
+int StudioBodyVariations( int modelIndex )
+{
+	studiohdr_t	*pstudiohdr;
+	mstudiobodyparts_t	*pbodypart;
+	int		i, count;
+
+	pstudiohdr = (studiohdr_t *)Mod_Extradata( modelIndex );
+	if( !pstudiohdr ) return 0;
+
+	count = 1;
+	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
+
+	// each body part has nummodels variations so there are as many total variations as there
+	// are in a matrix of each part by each other part
+	for( i = 0; i < pstudiohdr->numbodyparts; i++ )
+	{
+		count = count * pbodypart[i].nummodels;
+	}
+	return count;
 }
 
 // an example how to renderer determines interpolation methods

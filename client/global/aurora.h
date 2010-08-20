@@ -153,7 +153,7 @@ public:
 
 	ParticleType *GetType( const char *szName );
 	ParticleType *AddPlaceholderType( const char *szName );
-	ParticleType *ParseType( const char **szFile );
+	ParticleType *ParseType( char *&szFile );
 
 	cl_entity_t *GetEntity() { return GetEntityByIndex( m_iEntIndex ); }
 

@@ -20,7 +20,6 @@ int	in_newmouseparms[3] = { 0, 0, 1 };
 bool	in_mouse_suspended;
 bool	in_mouseparmsvalid;
 int	in_mouse_buttons;
-int	window_center_x, window_center_y;
 RECT	window_rect, real_rect;
 uint	in_mouse_wheel;
 int	wnd_caption;
@@ -205,9 +204,9 @@ void IN_ActivateMouse( void )
 	if( window_rect.right >= width ) window_rect.right = width - 1;
 	if( window_rect.bottom >= height - 1 ) window_rect.bottom = height - 1;
 
-	window_center_x = (window_rect.right + window_rect.left) / 2;
-	window_center_y = (window_rect.top + window_rect.bottom) / 2;
-	SetCursorPos( window_center_x, window_center_y );
+	host.window_center_x = (window_rect.right + window_rect.left) / 2;
+	host.window_center_y = (window_rect.top + window_rect.bottom) / 2;
+	SetCursorPos( host.window_center_x, host.window_center_y );
 
 	SetCapture( host.hWnd );
 	ClipCursor( &window_rect );
@@ -252,9 +251,9 @@ void IN_MouseMove( void )
 	GetCursorPos( &current_pos );
 
 	// force the mouse to the center, so there's room to move
-	SetCursorPos( window_center_x, window_center_y );
-	mx = current_pos.x - window_center_x;
-	my = current_pos.y - window_center_y;
+	SetCursorPos( host.window_center_x, host.window_center_y );
+	mx = current_pos.x - host.window_center_x;
+	my = current_pos.y - host.window_center_y;
 
 	if( !mx && !my ) return;
 	Sys_QueEvent( 0, SE_MOUSE, mx, my, 0, NULL );

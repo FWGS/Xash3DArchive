@@ -95,8 +95,8 @@ static dframetype_t *CL_LoadSpriteFrame( const char *szSpriteName, void *pin, in
 	SwapBlock((int *)pinframe, sizeof( dspriteframe_t ));
 
 	// NOTE: just loading all single frame into one shader
-	// we spported only single frames in this case
-	// bacause we can't properly merge multiple groups into single shader
+	// we supported only single frames in this case
+	// because we can't properly merge multiple groups into single shader
 	tex = R_FindTexture( name, (byte *)pin, pinframe->width * pinframe->height, tex_flags );
 	R_ShaderAddStageTexture( tex );
 

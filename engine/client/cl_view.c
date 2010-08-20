@@ -34,13 +34,14 @@ void V_SetupRefDef( void )
 	clent = CL_GetLocalPlayer ();
 
 	VectorCopy( cl.frame.cd.punchangle, cl.refdef.punchangle );
+
 	cl.refdef.movevars = &clgame.movevars;
 	cl.refdef.onground = ( cl.frame.cd.flags & FL_ONGROUND ) ? 1 : 0;
 	cl.refdef.health = cl.frame.cd.health;
-	cl.refdef.movetype = clent->curstate.movetype;
-	cl.refdef.num_entities = clgame.globals->numEntities;
-	cl.refdef.max_entities = clgame.globals->maxEntities;
-	cl.refdef.maxclients = clgame.globals->maxClients;
+	cl.refdef.lerpfrac = cl.lerpFrac;
+	cl.refdef.num_entities = clgame.numEntities;
+	cl.refdef.max_entities = clgame.maxEntities;
+	cl.refdef.maxclients = cl.maxclients;
 	cl.refdef.time = cl_time();
 	cl.refdef.frametime = cls.frametime;
 	cl.refdef.demoplayback = cls.demoplayback;
@@ -49,6 +50,11 @@ void V_SetupRefDef( void )
 	cl.refdef.flags = cl.render_flags;
 	cl.refdef.viewsize = 120; // FIXME if you can
 	cl.refdef.nextView = 0;
+
+	// setup default viewport
+	cl.refdef.viewport[0] = cl.refdef.viewport[1] = 0;
+	cl.refdef.viewport[2] = scr_width->integer;
+	cl.refdef.viewport[3] = scr_height->integer;
 
 	// calculate the origin
 	if( CL_IsPredicted( ) && !cl.refdef.demoplayback )
@@ -115,13 +121,6 @@ V_RenderView
 void V_RenderView( void )
 {
 	if( !cl.video_prepped ) return; // still loading
-
-	if( !cl.refdef.paused )
-	{
-		clgame.globals->time = cl_time(); // clamped
-		clgame.globals->frametime = cls.frametime; // used by input code
-	}
-	else clgame.globals->frametime = 0.0f;	// pause
 
 	if( cl.frame.valid && ( cl.force_refdef || !cl.refdef.paused ))
 	{

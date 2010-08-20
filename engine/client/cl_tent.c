@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "client.h"
+#include "r_efx.h"
 #include "event_flags.h"
 #include "entity_types.h"
 
@@ -35,22 +36,13 @@ void CL_WeaponAnim( int iAnim, int body )
 
 	com.strncpy( view->curstate.classname, "viewentity", sizeof( view->curstate.classname ));
 	view->curstate.entityType = ET_VIEWENTITY;
-	view->curstate.animtime = clgame.globals->time;	// start immediately
+	view->curstate.animtime = cl_time();	// start immediately
 	view->curstate.framerate = 1.0f;
 	view->curstate.sequence = iAnim;
 	view->latched.prevframe = 0.0f;
 	view->curstate.scale = 1.0f;
 	view->curstate.frame = 0.0f;
 	view->curstate.body = body;
-}
-
-int CL_AddEntity( cl_entity_t *pEnt, int entityType, shader_t customShader )
-{
-	if( !re || !pEnt || pEnt->index == -1 )
-		return false;
-
-	// let the render reject entity without model
-	return re->AddRefEntity( pEnt, entityType, customShader );
 }
 
 /*
@@ -150,19 +142,6 @@ DLIGHT MANAGEMENT
 
 ==============================================================
 */
-struct dlight_s
-{
-	vec3_t		origin;
-	float		radius;
-	byte		color[3];
-	float		die;	// stop lighting after this time
-	float		decay;	// drop this each second
-	float		minlight;	// don't add when contributing less
-	int		key;
-	bool		dark;	// subtracts light instead of adding
-	bool		elight;	// true when calls with CL_AllocElight
-};
-
 dlight_t	cl_dlights[MAX_DLIGHTS];
 
 /*
@@ -452,7 +431,7 @@ void CL_FireEvents( void )
 		}
 
 		// delayed event!
-		if( ei->fire_time && ( ei->fire_time > clgame.globals->time ))
+		if( ei->fire_time && ( ei->fire_time > cl_time() ))
 			continue;
 
 		success = CL_FireEvent( ei );
@@ -526,7 +505,7 @@ void CL_QueueEvent( int flags, int index, float delay, event_args_t *args )
 	}
 
 	ei->index	= index;
-	ei->fire_time = delay ? (clgame.globals->time + delay) : 0.0f;
+	ei->fire_time = delay ? (cl_time() + delay) : 0.0f;
 	ei->flags	= flags;
 	
 	// copy in args event data

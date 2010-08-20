@@ -13,15 +13,13 @@ typedef enum
 	TRI_NONE,
 } TRI_CULL;
 
-typedef enum
-{
-	TRI_TRIANGLES = 1,
-	TRI_TRIANGLE_FAN,
-	TRI_TRIANGLE_STRIP,
-	TRI_POLYGON,
-	TRI_QUADS,
-	TRI_LINES,
-} TRI_DRAW;
+#define TRI_TRIANGLES	0
+#define TRI_TRIANGLE_FAN	1
+#define TRI_QUADS		2
+#define TRI_POLYGON		3
+#define TRI_LINES		4	
+#define TRI_TRIANGLE_STRIP	5
+#define TRI_QUAD_STRIP	6	// UNDONE: not implemented 
 
 typedef enum
 {
@@ -36,7 +34,7 @@ typedef struct triapi_s
 	int	(*LoadShader)( const char *szShaderName, int fShaderNoMip );
 	int	(*GetSpriteTexture)( int spriteIndex, int spriteFrame );
 	void	(*RenderMode)( kRenderMode_t mode );
-	void	(*Begin)( TRI_DRAW mode );
+	void	(*Begin)( int primitiveCode );
 	void	(*End)( void );
 
 	void	(*Enable)( int cap );

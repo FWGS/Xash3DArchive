@@ -6,8 +6,6 @@
 #include "r_local.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
-#include "clgame_api.h"
-#include "effects_api.h"
 #include "cl_entity.h"
 #include "bspfile.h"
 #include "const.h"

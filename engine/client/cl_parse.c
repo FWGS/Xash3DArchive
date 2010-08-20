@@ -529,7 +529,6 @@ CL_ParseServerData
 */
 void CL_ParseServerData( sizebuf_t *msg )
 {
-	string	str;
 	int	i;
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
@@ -548,22 +547,22 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	cl.servercount = BF_ReadLong( msg );
 	cl.playernum = BF_ReadByte( msg );
-	clgame.globals->maxClients = BF_ReadByte( msg );
-	clgame.globals->maxEntities = BF_ReadWord( msg );
-	com.strncpy( str, BF_ReadString( msg ), MAX_STRING );
+	cl.maxclients = BF_ReadByte( msg );
+	clgame.maxEntities = BF_ReadWord( msg );
+	com.strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 
-	gameui.globals->maxClients = clgame.globals->maxClients;
+	gameui.globals->maxClients = cl.maxclients;
 	com.strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
 
 	// no effect for local client
 	// merge entcount only for remote clients 
-	GI->max_edicts = clgame.globals->maxEntities;
+	GI->max_edicts = clgame.maxEntities;
 
 	CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
-	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", str ));
+	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", clgame.mapname ));
 	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
 
 	if( cl_allow_levelshots->integer && !cls.changelevel )
@@ -603,11 +602,11 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	newnum = BF_ReadWord( msg );
 
 	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
-	if( newnum > clgame.globals->maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
+	if( newnum > clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
 
 	// increase edicts
-	while( newnum >= clgame.globals->numEntities )
-		clgame.globals->numEntities++;
+	while( newnum >= clgame.numEntities )
+		clgame.numEntities++;
 
 	ent = EDICT_NUM( newnum );
 	if( ent->index <= 0 ) CL_InitEntity( ent ); // initialize edict
@@ -943,7 +942,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_print:
 			i = BF_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
-				S_StartLocalSound( "misc/talk.wav" );	// FIXME: INTRESOURCE
+				S_StartLocalSound( "common/menu2.wav" );	// FIXME: INTRESOURCE
 			MsgDev( D_INFO, "^6%s\n", BF_ReadString( msg ));
 			break;
 		case svc_stufftext:

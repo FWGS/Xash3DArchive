@@ -1671,9 +1671,9 @@ bool SV_LoadGame( const char *pName )
 		return false;
 	}
 
-	Cvar_FullSet( "coop", "0",  CVAR_SERVERINFO|CVAR_LATCH );
-	Cvar_FullSet( "teamplay", "0",  CVAR_SERVERINFO|CVAR_LATCH );
-	Cvar_FullSet( "deathmatch", "0",  CVAR_SERVERINFO|CVAR_LATCH );
+	Cvar_FullSet( "coop", "0", CVAR_LATCH );
+	Cvar_FullSet( "teamplay", "0", CVAR_LATCH );
+	Cvar_FullSet( "deathmatch", "0", CVAR_LATCH );
 
 	return Host_NewGame( gameHeader.mapName, true );
 }
