@@ -24,7 +24,6 @@ flying/floating monsters are SOLID_BBOX and MOVETYPE_FLY
 
 solid_edge items only clip against bsp models.
 */
-#define DIST_EPSILON	(0.03125)		// 1/32 epsilon to keep floating point happy
 #define MOVE_EPSILON	0.01
 #define MAX_CLIP_PLANES	5
 
@@ -657,7 +656,7 @@ PUSHMOVE
 */
 /*
 ============
-PM_PushEntity
+SV_PushEntity
 
 Does not change the entities velocity at all
 ============
@@ -677,9 +676,14 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else type = MOVE_NORMAL;
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type|FMOVE_SIMPLEBOX, ent );
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 	VectorCopy( trace.vecEndPos, ent->v.origin );
 	SV_LinkEdict( ent, true );
+
+	if( !com.strcmp( SV_ClassName( ent ), "monster_tentacle" ))
+	{
+		Msg( "tentacle trace %g\n", trace.flFraction );
+	}
 
 	if( apush[YAW] && ent->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( ent, true )) != NULL )
 	{

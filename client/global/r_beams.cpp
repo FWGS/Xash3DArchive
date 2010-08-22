@@ -72,9 +72,7 @@ static bool ComputeBeamEntPosition( cl_entity_t *pEnt, int nAttachment, Vector& 
 static void ComputeBeamPerpendicular( const Vector &vecBeamDelta, Vector *pPerp )
 {
 	// Direction in worldspace of the center of the beam
-	Vector vecBeamCenter = vecBeamDelta;
-	vecBeamCenter.Normalize();
-
+	Vector vecBeamCenter = vecBeamDelta.Normalize();
 	*pPerp = CrossProduct( g_pViewRenderBeams->GetViewParams()->vieworg, vecBeamCenter ).Normalize();
 }
 
@@ -107,7 +105,7 @@ inline void CBeamSegDraw::ComputeNormal( const Vector &vStartPos, const Vector &
 
 	// Get a vector that is perpendicular to us and perpendicular to the beam.
 	// This is used to fatten the beam.
-	*pNormal = CrossProduct( vTangentY, -vDirToBeam );
+	*pNormal = CrossProduct( vTangentY, vDirToBeam );
 	VectorNormalizeFast( *pNormal );
 }
 
@@ -123,21 +121,21 @@ inline void CBeamSegDraw::SpecifySeg( const Vector &vNormal )
 	// Build the endpoints.
 	Vector vPoint1, vPoint2;
 
-	vPoint1 = m_Seg.m_vPos + ( m_Seg.m_flWidth * 0.5f) * vNormal;
-	vPoint2 = m_Seg.m_vPos + (-m_Seg.m_flWidth * 0.5f) * vNormal;
+	vPoint1 = m_Seg.m_vPos + vNormal * ( m_Seg.m_flWidth * 0.5f);
+	vPoint2 = m_Seg.m_vPos + vNormal * (-m_Seg.m_flWidth * 0.5f);
 
 	// Specify the points.
 	gEngfuncs.pTriAPI->Color4f( m_Seg.m_vColor[0], m_Seg.m_vColor[1], m_Seg.m_vColor[2], m_Seg.m_flAlpha );
 	gEngfuncs.pTriAPI->TexCoord2f( 0.0f, m_Seg.m_flTexCoord );
 	gEngfuncs.pTriAPI->Normal3fv( vNormal );
 //	gEngfuncs.pTriAPI->Tangent3fv( vTangentY );
-	gEngfuncs.pTriAPI->Vertex3fv( vPoint2 );
+	gEngfuncs.pTriAPI->Vertex3fv( vPoint1 );
 	
 	gEngfuncs.pTriAPI->Color4f( m_Seg.m_vColor[0], m_Seg.m_vColor[1], m_Seg.m_vColor[2], m_Seg.m_flAlpha );
 	gEngfuncs.pTriAPI->TexCoord2f( 1.0f, m_Seg.m_flTexCoord );
 	gEngfuncs.pTriAPI->Normal3fv( vNormal );
 //	gEngfuncs.pTriAPI->Tangent3fv( vTangentY );
-	gEngfuncs.pTriAPI->Vertex3fv( vPoint1 );
+	gEngfuncs.pTriAPI->Vertex3fv( vPoint2 );
 
 }
 
@@ -153,7 +151,8 @@ void CBeamSegDraw::NextSeg( CBeamSeg *pSeg )
 		if ( m_nSegsDrawn > 1 )
 		{
 			// Average this with the previous normal
-			vAveNormal = ( vNormal + m_vNormalLast ) * 0.5f;
+			vAveNormal = vNormal + m_vNormalLast;
+			vAveNormal *= 0.5f;
 			VectorNormalizeFast( vAveNormal );
 		}
 		else
@@ -318,6 +317,9 @@ CViewRenderBeams::CViewRenderBeams( void ) : m_pBeamTrails(0)
 	m_pBeamTrails = (BeamTrail_t *)new BeamTrail_t[MAX_BEAMTRAILS];
 
 	ASSERT( m_pBeamTrails != NULL );
+
+	// invalidate ref_params ptr
+	pViewParams = NULL;
 
 	// Clear them out
 	ClearBeams();
@@ -487,11 +489,11 @@ void CViewRenderBeams::SetupBeam( Beam_t *pBeam, const BeamInfo_t &beamInfo )
 	{
 		if ( pBeam->amplitude >= 0.50 )
 		{
-			pBeam->segments = pBeam->delta.Length() * 0.25 + 3; // one per 4 pixels
+			pBeam->segments = pBeam->delta.Length() * 0.25f + 3; // one per 4 pixels
 		}
 		else
 		{
-			pBeam->segments = pBeam->delta.Length() * 0.075 + 3; // one per 16 pixels
+			pBeam->segments = pBeam->delta.Length() * 0.075f + 3; // one per 16 pixels
 		}
 	}
 	else
@@ -1141,7 +1143,7 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime )
 	}
 
 	// If FBEAM_ONLYNOISEONCE is set, we don't want to move once we've first calculated noise
-	if ( !(pbeam->flags & FBEAM_ONLYNOISEONCE ) )
+	if (!( pbeam->flags & FBEAM_ONLYNOISEONCE ) )
 	{
 		pbeam->freq += frametime;
 	}
@@ -1158,7 +1160,7 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime )
 
 	if ( pbeam->amplitude != 0 )
 	{
-		if ( !(pbeam->flags & FBEAM_ONLYNOISEONCE ) || !pbeam->m_bCalculatedNoise )
+		if(!( pbeam->flags & FBEAM_ONLYNOISEONCE ) || !pbeam->m_bCalculatedNoise )
 		{
 			if ( pbeam->flags & FBEAM_SINENOISE )
 			{
@@ -1168,7 +1170,6 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime )
 			{
 				FracNoise( pbeam->rgNoise, NOISE_DIVISIONS, 1.0f );
 			}
-
 			pbeam->m_bCalculatedNoise = true;
 		}
 	}
@@ -1840,7 +1841,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 
 	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
 	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
-	vLast = fmod(freq * speed, 1 );
+	vLast = fmod( freq * speed, 1 );
 
 	if ( flags & FBEAM_SINENOISE )
 	{
@@ -1897,7 +1898,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 
 		// Fade in our out beam to fadeLength
 
-		if ( (flags & FBEAM_SHADEIN) && (flags & FBEAM_SHADEOUT) )
+		if (( flags & FBEAM_SHADEIN ) && ( flags & FBEAM_SHADEOUT ))
 		{
 			if (fraction < 0.5)
 			{
@@ -1941,17 +1942,16 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 			if ( flags & FBEAM_SINENOISE )
 			{
 				float	s, c;
-				s = sin( fraction * M_PI * length + freq );
-				c = cos( fraction * M_PI * length + freq );
+				SinCos( fraction * M_PI * length + freq, &s, &c );
 				
-				curSeg.m_vPos = curSeg.m_vPos + (g_pViewRenderBeams->GetViewParams()->up * (factor * s));
+				curSeg.m_vPos = curSeg.m_vPos + g_pViewRenderBeams->GetViewParams()->up * (factor * s);
 				// Rotate the noise along the perpendicluar axis a bit to keep the bolt
 				// from looking diagonal
-				curSeg.m_vPos = curSeg.m_vPos + (g_pViewRenderBeams->GetViewParams()->right * (factor * c));
+				curSeg.m_vPos = curSeg.m_vPos + g_pViewRenderBeams->GetViewParams()->right * (factor * c);
 			}
 			else
 			{
-				curSeg.m_vPos = curSeg.m_vPos + (perp1 * factor);
+				curSeg.m_vPos = curSeg.m_vPos + perp1 * factor;
 			}
 		}
 
@@ -1964,10 +1964,9 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 		{
 			curSeg.m_flWidth = ((fraction*(endWidth-startWidth))+startWidth) * 2;
 		}
-		
+
 		curSeg.m_flTexCoord = vLast;
 		segDraw.NextSeg( &curSeg );
-
 
 		vLast += vStep;	// Advance texture scroll (v axis only)
 		noiseIndex += noiseStep;
@@ -2249,11 +2248,11 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 		point[2] = xaxis[2] * x + yaxis[2] * y + center[2];
 
 		// Distort using noise
-		factor = prgNoise[(noiseIndex>>16) & NOISE_MASK] * scale;
+		factor = prgNoise[(noiseIndex>>16) & (noise_divisions-1)] * scale;
 		point = point + (g_pViewRenderBeams->GetViewParams()->up * factor);
 
 		// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
-		factor = prgNoise[(noiseIndex>>16) & NOISE_MASK] * scale * cos(fraction * M_PI * 3 * 8 + freq);
+		factor = prgNoise[(noiseIndex>>16) & (noise_divisions-1)] * scale * cos(fraction * M_PI * 3 * 8 + freq);
 		point = point + (g_pViewRenderBeams->GetViewParams()->right * factor);
 		
 		// Transform point into screen space

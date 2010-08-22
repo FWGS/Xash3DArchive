@@ -6,7 +6,7 @@
 #include "common.h"
 #include "server.h"
 #include "const.h"
-#include "pm_defs.h"
+#include "pm_local.h"
 
 areanode_t	sv_areanodes[AREA_NODES];
 int		sv_numareanodes;
@@ -339,6 +339,55 @@ int SV_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int max
 }
 
 /*
+==================
+SV_ClipMove
+
+Handles selection or creation of a clipping hull, and offseting (and
+eventually rotation) of the end points
+==================
+*/
+trace_t SV_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags )
+{
+	trace_t	trace;
+	pmtrace_t	pmtrace;
+	int	pm_flags = 0;
+	physent_t	pe;
+
+	// fill in a default trace
+	Mem_Set( &trace, 0, sizeof( trace_t ));
+	VectorCopy( end, trace.vecEndPos );
+	trace.flFraction = 1.0f;
+	trace.iHitgroup = -1;
+
+	// setup physentity
+	if( !SV_CopyEdictToPhysEnt( &pe, ent, true ))
+		return trace;
+
+	// setup pm_flags
+	if( flags & FMOVE_SIMPLEBOX )
+		pm_flags |= PM_STUDIO_BOX;
+	if( flags & FMOVE_IGNORE_GLASS )
+		pm_flags |= PM_GLASS_IGNORE; 
+
+	if( !PM_TraceModel( &pe, start, mins, maxs, end, &pmtrace, pm_flags ))
+		return trace; // didn't hit anything
+
+	// copy the trace results
+	trace.fAllSolid = pmtrace.allsolid;
+	trace.fStartSolid = pmtrace.startsolid;
+	trace.fInOpen = pmtrace.inopen;
+	trace.fInWater = pmtrace.inwater;
+	trace.flFraction = pmtrace.fraction;
+	VectorCopy( pmtrace.endpos, trace.vecEndPos );
+	trace.flPlaneDist = pmtrace.plane.dist;
+	VectorCopy( pmtrace.plane.normal, trace.vecPlaneNormal );
+	trace.iHitgroup = pmtrace.hitgroup;
+	trace.pHit = ent;
+
+	return trace;
+}
+
+/*
 ====================
 SV_ClipToLinks
 
@@ -433,8 +482,8 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		}
 
 		if( touch->v.flags & FL_MONSTER )
-			trace = CM_ClipMove( touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->flags );
-		else trace = CM_ClipMove( touch, clip->start, clip->mins, clip->maxs, clip->end, clip->flags );
+			trace = SV_ClipMove( touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->flags );
+		else trace = SV_ClipMove( touch, clip->start, clip->mins, clip->maxs, clip->end, clip->flags );
 
 		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );
 	}
@@ -469,7 +518,7 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 	clip.passedict = e;
 
 	// clip to world
-	clip.trace = CM_ClipMove( EDICT_NUM( 0 ), start, mins, maxs, end, 0 );
+	clip.trace = SV_ClipMove( EDICT_NUM( 0 ), start, mins, maxs, end, 0 );
 
 	if( type == MOVE_MISSILE )
 	{

@@ -475,6 +475,7 @@ bool CL_IsPredicted( void );
 // cl_frame.c
 //
 void CL_ParseFrame( sizebuf_t *msg );
+void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
 void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 
 //

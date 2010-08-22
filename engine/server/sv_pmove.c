@@ -9,7 +9,7 @@
 #include "protocol.h"
 #include "pm_local.h"
 
-bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
+bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool com_trace )
 {
 	model_t	*mod = CM_ClipHandleToModel( ed->v.modelindex );
 
@@ -44,7 +44,7 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	else if( mod->type == mod_brush || mod->type == mod_world )
 	{	
 		// this is monsterclip brush, player ignore it
-		if( ed->v.flags & FL_MONSTERCLIP )
+		if( !com_trace && ed->v.flags & FL_MONSTERCLIP )
 			return false;
 
 		pe->studiomodel = NULL;
@@ -58,7 +58,7 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	VectorCopy( ed->v.maxs, pe->maxs );
 
 	pe->solid = ed->v.solid;
-	pe->skin = ed->v.scale;
+	pe->scale = ed->v.scale;
 	pe->rendermode = ed->v.rendermode;
 	pe->framerate = ed->v.framerate;
 	pe->skin = ed->v.skin;
@@ -134,7 +134,7 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 
 			pe = &svgame.pmove->physents[svgame.pmove->numphysent];
 
-			if( SV_CopyEdictToPhysEnt( pe, check ))
+			if( SV_CopyEdictToPhysEnt( pe, check, false ))
 				svgame.pmove->numphysent++;
 		}
 	}
@@ -176,7 +176,7 @@ static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 {
 	pmtrace_t trace;
 
-	trace = PM_PlayerTrace( svgame.pmove, pos, pos, PM_STUDIO_BOX, svgame.pmove->usehull, -1, NULL );
+	trace = PM_PlayerTrace( svgame.pmove, pos, pos, PM_NORMAL, svgame.pmove->usehull, -1, NULL );
 	if( ptrace ) *ptrace = trace; 
 	return trace.ent;
 }
@@ -515,7 +515,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 		absmax[i] = clent->v.origin[i] + 256;
 	}
 
-	SV_CopyEdictToPhysEnt( &svgame.pmove->physents[0], &svgame.edicts[0] );
+	SV_CopyEdictToPhysEnt( &svgame.pmove->physents[0], &svgame.edicts[0], false );
 	svgame.pmove->numphysent = 1;	// always have world
 
 	SV_AddLinksToPmove( sv_areanodes, absmin, absmax );
@@ -533,7 +533,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 		if( touch[i] == clent ) continue;
 
 		pe = &svgame.pmove->moveents[svgame.pmove->nummoveent];
-		if( SV_CopyEdictToPhysEnt( pe, touch[i] ))
+		if( SV_CopyEdictToPhysEnt( pe, touch[i], false ))
 			svgame.pmove->nummoveent++;
 	}
 }

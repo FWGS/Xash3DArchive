@@ -15,7 +15,8 @@
 #define FMOVE_SIMPLEBOX	0x200
 
 // 1/32 epsilon to keep floating point happy
-#define DIST_EPSILON	(0.03125)
+#define DIST_EPSILON	(1.0f / 32.0f)
+#define FRAC_EPSILON	(1.0f / 1024.0f)
 #define MAX_BOX_LEAFS	256
 #define DVIS_PVS		0
 #define DVIS_PHS		1

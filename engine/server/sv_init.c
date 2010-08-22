@@ -309,6 +309,7 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	sv.paused = paused;
 	sv.loadgame = loadgame;
 	sv.time = 1000;			// server spawn time it's always 1.0 second
+	svgame.globals->time = sv_time();
 	
 	// initialize buffers
 	BF_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));

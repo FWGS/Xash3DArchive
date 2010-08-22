@@ -469,6 +469,11 @@ int SV_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int max
 // ??? does this always return the world?
 
 //
+// sv_pmove.c
+//
+bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool com_trace );
+
+//
 // sv_world.c
 //
 
@@ -476,6 +481,7 @@ extern areanode_t	sv_areanodes[];
 
 void SV_ClearWorld( void );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
+trace_t SV_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags );
 trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );
 void SV_LinkEdict( edict_t *ent, bool touch_triggers );
 void SV_TouchLinks( edict_t *ent, areanode_t *node );

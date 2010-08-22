@@ -939,7 +939,7 @@ int PM_FlyMove (void)
 	if ( allFraction == 0 )
 	{
 		VectorCopy (vec3_origin, pmove->velocity);
-		//ConDPrintf( "Don't stick\n" );
+//		pmove->ConDPrintf( "Don't stick\n" );
 	}
 
 	return blocked;

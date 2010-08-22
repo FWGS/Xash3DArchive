@@ -251,7 +251,7 @@ static void UI_PlayerSetup_Ownerdraw( void *self )
 	uiPlayerSetup.refdef.frametime = gpGlobals->frametime;
 
 	// draw the player model
-	R_AddEntity( ET_NORMAL, uiPlayerSetup.ent, ET_NORMAL );
+	R_AddEntity( ET_NORMAL, uiPlayerSetup.ent, -1 );
 	R_RenderFrame( &uiPlayerSetup.refdef );
 }
 

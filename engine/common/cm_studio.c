@@ -752,7 +752,7 @@ bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *
 		tr->fAllSolid = studio.trace.fAllSolid;
 		tr->pHit = e;
 
-		Matrix4x4_VectorRotate( studio.bones[outBone], studio.trace.vecEndPos, tr->vecEndPos );
+		Matrix4x4_VectorRotate( studio.bones[outBone], studio.trace.vecPlaneNormal, tr->vecPlaneNormal );
 		if( tr->flFraction == 1.0f )
 		{
 			VectorCopy( end, tr->vecEndPos );

@@ -609,15 +609,13 @@ void CL_ParseBaseline( sizebuf_t *msg )
 		clgame.numEntities++;
 
 	ent = EDICT_NUM( newnum );
-	if( ent->index <= 0 ) CL_InitEntity( ent ); // initialize edict
-
 	Mem_Set( &ent->prevstate, 0, sizeof( ent->prevstate ));
 
 	if( cls.state == ca_active )
 		timebase = cl.frame.servertime;
 	else timebase = 1000; // sv.state == ss_loading
 
-	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, cl.time );
+	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, timebase );
 	CL_LinkEdict( ent ); // relink entity
 }
 

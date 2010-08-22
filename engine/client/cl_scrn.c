@@ -209,11 +209,15 @@ void SCR_DrawPlaque( void )
 {
 	shader_t	levelshot;
 
-	if( re && cl_allow_levelshots->integer && !cls.changelevel )
+	if( !re ) return;
+
+	if( cl_allow_levelshots->integer && !cls.changelevel )
 	{
 		levelshot = re->RegisterShader( cl_levelshot_name->string, SHADER_NOMIP );
 		re->SetParms( levelshot, kRenderNormal, 0 );
 		re->DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
+
+		CL_DrawHUD( CL_LOADING );
 	}
 }
 

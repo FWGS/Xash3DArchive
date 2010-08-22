@@ -3115,8 +3115,17 @@ void R_DrawEntitiesDebug( void )
 		return;
 
 	pglDisable( GL_TEXTURE_2D );
-	GL_SetState( GLSTATE_NO_DEPTH_TEST|GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
-	pglDepthRange( 0, 0 );
+
+	if( r_drawentities->integer != 3 )
+	{
+		GL_SetState( GLSTATE_NO_DEPTH_TEST|GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+		pglDepthRange( 0, 0 );
+	}
+	else
+	{
+		// r_drawenities == 3 is a draw solid hitboxes
+		GL_SetState( GLSTATE_DEPTHWRITE );
+	}
 
 	for( i = 1; i < r_numEntities; i++ )
 	{
@@ -3164,7 +3173,11 @@ void R_DrawEntitiesDebug( void )
 		}
 	}
 
-	pglDepthRange( gldepthmin, gldepthmax );
+	if( r_drawentities->integer != 3 )
+	{
+		pglDepthRange( gldepthmin, gldepthmax );
+	}
+
 	pglEnable( GL_TEXTURE_2D );
 }
 

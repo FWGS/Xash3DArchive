@@ -25,28 +25,6 @@ inline unsigned long FloatAbsBits( vec_t f ) { return FloatBits(f) & 0x7FFFFFFF;
 inline float FloatMakeNegative( vec_t f ) { return BitsToFloat( FloatBits(f) | 0x80000000 ); }
 inline float FloatMakePositive( vec_t f ) { return BitsToFloat( FloatBits(f) & 0x7FFFFFFF ); }
 
-/*
-=================
-rsqrt
-=================
-*/
-inline float rsqrt( float number )
-{
-	int	i;
-	float	x, y;
-
-	if( number == 0.0f )
-		return 0.0f;
-
-	x = number * 0.5f;
-	i = *(int *)&number;	// evil floating point bit level hacking
-	i = 0x5f3759df - (i >> 1);	// what the fuck?
-	y = *(float *)&i;
-	y = y * (1.5f - (x * y * y));	// first iteration
-
-	return y;
-}
-
 inline void SinCos (float angle, float *sine, float *cosine) 
 {
 	__asm {
@@ -246,7 +224,15 @@ public:
 inline Vector operator*(float fl, const Vector& v)	{ return v * fl; }
 inline float DotProduct(const Vector& a, const Vector& b) { return(a.x*b.x+a.y*b.y+a.z*b.z); }
 inline Vector CrossProduct(const Vector& a, const Vector& b) { return Vector( a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x ); }
-inline void VectorNormalizeFast( Vector &v ) { v *= rsqrt( DotProduct( v, v )); }
+inline void VectorNormalizeFast( Vector &v )
+{
+	// FLT_EPSILON is added to the radius to eliminate the possibility of divide by zero.
+	float iradius = 1.f / ( sqrtf( v.x * v.x + v.y * v.y + v.z * v.z ) + FLT_EPSILON );
+	
+	v.x *= iradius;
+	v.y *= iradius;
+	v.z *= iradius;
+}
 #define vec3_t Vector
 
 //=========================================================

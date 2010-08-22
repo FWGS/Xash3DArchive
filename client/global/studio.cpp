@@ -93,7 +93,8 @@ void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity )
 		break;
 	case 5002:
 		// SparkEffect at attachment 1
-		g_pTempEnts->SparkEffect( entity->origin + entity->attachment_origin[0], 8, -200, 200 );
+		pos = entity->curstate.origin + entity->attachment_origin[0];
+		g_pTempEnts->SparkEffect( pos, 8, -200, 200 );
 		break;
 	case 5004:		
 		// Client side sound

@@ -9,15 +9,11 @@
 #include "pm_local.h"
 #include "world.h"
 
-static studiohdr_t	*pm_studiohdr;
-static mplane_t	pm_hitboxplanes[6];	// there a temp hitbox
+static mplane_t	pm_hitboxplanes[12];	// there a temp hitbox
+static mplane_t	pm_studioplanes[12];	// box created from trace mins\maxs
 static matrix4x4	pm_studiomatrix;
+static studiohdr_t	*pm_studiohdr;
 static matrix4x4	pm_studiobones[MAXSTUDIOBONES];
-typedef bool 	(*pfnTrace)( pmtrace_t *trace );
-static float	trace_realfraction;
-static vec3_t	trace_startmins, trace_endmins;
-static vec3_t	trace_startmaxs, trace_endmaxs;
-static vec3_t	trace_absmins, trace_absmaxs;
 
 /*
 ====================
@@ -34,21 +30,19 @@ void PM_InitStudioHull( void )
 		side = i & 1;
 
 		// planes
-		p = &pm_hitboxplanes[i];
+		p = &pm_hitboxplanes[i*2+0];
+		p->type = i>>1;
+		p->signbits = 0;
 		VectorClear( p->normal );
+		p->normal[i>>1] = 1.0f;
 
-		if( side )
-		{
-			p->type = PLANE_NONAXIAL;
-			p->normal[i>>1] = -1.0f;
-			p->signbits = (1<<(i>>1));
-		}
-		else
-		{
-			p->type = i>>1;
-			p->normal[i>>1] = 1.0f;
-			p->signbits = 0;
-		}
+		p = &pm_hitboxplanes[i*2+1];
+		p->type = 3 + (i>>1);
+		p->signbits = 0;
+		VectorClear( p->normal );
+		p->normal[i>>1] = -1.0f;
+
+		p->signbits = SignbitsForPlane( p->normal );
 	}    
 }
 
@@ -60,11 +54,17 @@ PM_HullForHitbox
 static void PM_HullForHitbox( const vec3_t mins, const vec3_t maxs )
 {
 	pm_hitboxplanes[0].dist = maxs[0];
-	pm_hitboxplanes[1].dist = -mins[0];
-	pm_hitboxplanes[2].dist = maxs[1];
-	pm_hitboxplanes[3].dist = -mins[1];
-	pm_hitboxplanes[4].dist = maxs[2];
-	pm_hitboxplanes[5].dist = -mins[2];
+	pm_hitboxplanes[1].dist = -maxs[0];
+	pm_hitboxplanes[2].dist = mins[0];
+	pm_hitboxplanes[3].dist = -mins[0];
+	pm_hitboxplanes[4].dist = maxs[1];
+	pm_hitboxplanes[5].dist = -maxs[1];
+	pm_hitboxplanes[6].dist = mins[1];
+	pm_hitboxplanes[7].dist = -mins[1];
+	pm_hitboxplanes[8].dist = maxs[2];
+	pm_hitboxplanes[9].dist = -maxs[2];
+	pm_hitboxplanes[10].dist = mins[2];
+	pm_hitboxplanes[11].dist = -mins[2];
 }
 
 /*
@@ -88,7 +88,7 @@ static void PM_StudioSetUpTransform( physent_t *pe )
 	ang = pe->angles;
 
 	if( pe->scale != 0.0f ) scale = pe->scale;
-	Matrix4x4_CreateFromEntity( pm_studiomatrix, org[0], org[1], org[2], -ang[PITCH], ang[YAW], ang[ROLL], scale );
+	Matrix4x4_CreateFromEntity( pm_studiomatrix, org[0], org[1], org[2], ang[PITCH], ang[YAW], ang[ROLL], scale );
 }
 
 /*
@@ -544,45 +544,35 @@ static bool PM_StudioSetupModel( physent_t *pe )
 	return true;
 }
 
-static bool PM_StudioExtractBbox( physent_t *pe, float *mins, float *maxs )
+static bool PM_StudioExtractBbox( int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
-	studiohdr_t	*phdr;
-	model_t		*mod;
 
-	ASSERT( pe != NULL );
-	mod = pe->studiomodel;
+	ASSERT( pm_studiohdr != NULL );
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pm_studiohdr + pm_studiohdr->seqindex);
 
-	if( !mod || !mod->extradata )
-		return false;
-
-	phdr = (studiohdr_t *)mod->extradata;
-	if( !phdr->numhitboxes ) return false;
-
-	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
-
-	if( pe->sequence < 0 || pe->sequence >= phdr->numseq )
-		return false;
+	if( sequence < 0 || sequence >= pm_studiohdr->numseq )
+		return 0;
 	
-	VectorCopy( pseqdesc[pe->sequence].bbmin, mins );
-	VectorCopy( pseqdesc[pe->sequence].bbmax, maxs );
+	VectorCopy( pseqdesc[sequence].bbmin, mins );
+	VectorCopy( pseqdesc[sequence].bbmax, maxs );
 
-	return true;
+	return 1;
 }
 
 /*
 ================
 PM_ClipBoxToHitbox
-
-trace hitbox
 ================
 */
-bool PM_ClipBoxToHitbox( pmtrace_t *trace )
+bool PM_ClipBoxToHitbox( const vec3_t p1, vec3_t mins, vec3_t maxs, const vec3_t p2, pmtrace_t *trace, bool trace_ispoint )
 {
-	int	i;
-	mplane_t	*p, *clipplane;
-	float	enterfrac, leavefrac, distfrac;
-	float	d, d1, d2;
+	int	i, j;
+	mplane_t	*plane, *clipplane;
+	float	dist;
+	float	enterfrac, leavefrac;
+	vec3_t	ofs;
+	float	d1, d2;
 	bool	getout, startout;
 	float	f;
 
@@ -595,85 +585,63 @@ bool PM_ClipBoxToHitbox( pmtrace_t *trace )
 
 	for( i = 0; i < 6; i++ )
 	{
-		p = &pm_hitboxplanes[i];
+		plane = &pm_hitboxplanes[i * 2 + (i & 1)];
 
-		// push the plane out apropriately for mins/maxs
-		if( p->type < 3 )
-		{
-			d1 = trace_startmins[p->type] - p->dist;
-			d2 = trace_endmins[p->type] - p->dist;
+		// FIXME: special case for axial
+		if( !trace_ispoint )
+		{	
+			// general box case
+			// push the plane out apropriately for mins/maxs
+			// FIXME: use signbits into 8 way lookup for each mins/maxs
+			for( j = 0; j < 3; j++ )
+			{
+				if( plane->normal[j] < 0.0f )
+					ofs[j] = maxs[j];
+				else ofs[j] = mins[j];
+			}
+			dist = DotProduct( ofs, plane->normal );
+			dist = plane->dist - dist;
 		}
 		else
-		{
-			switch( p->signbits )
-			{
-			case 0:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 1:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 2:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 3:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 4:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			case 5:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			case 6:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			case 7:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			default:
-				d1 = d2 = 0;	// shut up compiler
-				break;
-			}
+		{	// special point case
+			dist = plane->dist;
 		}
+
+		d1 = DotProduct( p1, plane->normal ) - dist;
+		d2 = DotProduct( p2, plane->normal ) - dist;
 
 		if( d2 > 0 ) getout = true;	// endpoint is not in solid
 		if( d1 > 0 ) startout = true;
 
 		// if completely in front of face, no intersection
-		if( d1 > 0 && d2 >= d1 )
+		if( d1 > 0 && ( d2 >= DIST_EPSILON || d2 >= d1 ))
 			return false;
 
 		if( d1 <= 0 && d2 <= 0 )
 			continue;
 
 		// crosses face
-		d = 1.0f / ( d1 - d2 );
-		f = d1 * d;
-
-		if( d > 0 )
-		{
+		if( d1 > d2 )
+		{	
 			// enter
+			f = (d1 - DIST_EPSILON ) / ( d1 - d2 );
+			if( f < 0.0f ) f = 0.0f;
+
 			if( f > enterfrac )
 			{
-				distfrac = d;
 				enterfrac = f;
-				clipplane = p;
+				clipplane = plane;
 			}
 		}
-		else if( d < 0 )
-		{	
-			// leave
+		else
+		{	// leave
+			f = ( d1 + DIST_EPSILON ) / ( d1 - d2 );
+			if( f > 1.0f ) f = 1.0f;
+
 			if( f < leavefrac )
+			{
 				leavefrac = f;
+			}
 		}
 	}
 
@@ -685,14 +653,13 @@ bool PM_ClipBoxToHitbox( pmtrace_t *trace )
 		return true;
 	}
 
-	if( enterfrac - FRAC_EPSILON <= leavefrac )
+	if( enterfrac < leavefrac )
 	{
-		if( enterfrac > -1.0f && enterfrac < trace_realfraction )
+		if( enterfrac > -1.0f && enterfrac < trace->fraction )
 		{
 			if( enterfrac < 0 )
 				enterfrac = 0;
-			trace_realfraction = enterfrac;
-			trace->fraction = enterfrac - DIST_EPSILON * distfrac;
+			trace->fraction = min( enterfrac, 1.0f );
             		VectorCopy( clipplane->normal, trace->plane.normal );
             		trace->plane.dist = clipplane->dist;
 			return true;
@@ -701,94 +668,29 @@ bool PM_ClipBoxToHitbox( pmtrace_t *trace )
 	return false;
 }
 
-/*
-================
-PM_TestBoxInHitbox
-
-test point trace in hibox
-================
-*/
-bool PM_TestBoxInHitbox( pmtrace_t *trace )
+bool PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr )
 {
-	int		i;
-	mplane_t		*p;
-
-	for( i = 0; i < 6; i++ )
-	{
-		p = &pm_hitboxplanes[i];
-
-		// push the plane out apropriately for mins/maxs
-		// if completely in front of face, no intersection
-		if( p->type < 3 )
-		{
-			if( trace_startmins[p->type] > p->dist )
-				return false;
-		}
-		else
-		{
-			switch( p->signbits )
-			{
-			case 0:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 1:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 2:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 3:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 4:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			case 5:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			case 6:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			case 7:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			default:
-				return false;
-			}
-		}
-	}
-
-	// inside this hitbox
-	trace_realfraction = 0;
-	trace->startsolid = trace->allsolid = true;
-
-	return true;
-}
-
-/*
-================
-PM_StudioIntersect
-
-testing for potentially intersection of trace and animation bboxes
-================
-*/
-static bool PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
-{
+	vec3_t	start_l, end_l;
+	int	i, outBone = -1;
 	vec3_t	trace_mins, trace_maxs;
 	vec3_t	anim_mins, anim_maxs;
+	bool	is_point = false;
+
+	// assume we didn't hit anything
+	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
+	VectorCopy( end, ptr->endpos );
+	ptr->fraction = 1.0f;
+	ptr->hitgroup = -1;
+	ptr->ent = -1;
+
+	// NOTE: some models intentionally has no hitboxes
+	if( !PM_StudioSetupModel( pe ) || !pm_studiohdr->numhitboxes )
+		return false;
 
 	// create the bounding box of the entire move
 	World_MoveBounds( start, mins, maxs, end, trace_mins, trace_maxs );
 
-	if( !PM_StudioExtractBbox( pe, anim_mins, anim_maxs ))
+	if( !PM_StudioExtractBbox( pe->sequence, anim_mins, anim_maxs ))
 		return false; // invalid sequence
 
 	if( !VectorIsNull( pe->angles ))
@@ -818,31 +720,11 @@ static bool PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mins, 
 	}
 
 	// check intersection with trace entire move and animation bbox
-	return BoundsIntersect( trace_mins, trace_maxs, anim_mins, anim_maxs );
-}
-
-bool PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr )
-{
-	vec3_t	start_l, end_l;
-	int	i, outBone = -1;
-	pfnTrace	StudioTrace = NULL;
-
-	// assume we didn't hit anything
-	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
-	VectorCopy( end, ptr->endpos );
-	ptr->fraction = trace_realfraction = 1.0f;
-	ptr->hitgroup = -1;
-	ptr->ent = -1;
-
-	if( !PM_StudioIntersect( pe, start, mins, maxs, end ))
+	if( !BoundsIntersect( trace_mins, trace_maxs, anim_mins, anim_maxs ))
 		return false;
 
-	if( !PM_StudioSetupModel( pe ))
-		return false;
-
-	if( VectorCompare( start, end ))
-		StudioTrace = PM_TestBoxInHitbox;
-	else StudioTrace = PM_ClipBoxToHitbox;
+	if( VectorIsNull( mins ) && VectorIsNull( maxs ))
+		is_point = true;
 
 	// go to check individual hitboxes		
 	for( i = 0; i < pm_studiohdr->numhitboxes; i++ )
@@ -857,12 +739,7 @@ bool PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs
 
 		PM_HullForHitbox( phitbox->bbmin, phitbox->bbmax );
 
-		VectorAdd( start_l, mins, trace_startmins );
-		VectorAdd( start_l, maxs, trace_startmaxs );
-		VectorAdd( end_l, mins, trace_endmins );
-		VectorAdd( end_l, maxs, trace_endmaxs );
-
-		if( StudioTrace( ptr ))
+		if( PM_ClipBoxToHitbox( start_l, mins, maxs, end_l, ptr, is_point ))
 		{
 			outBone = phitbox->bone;
 			ptr->hitgroup = phitbox->group;
@@ -878,9 +755,9 @@ bool PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs
 		vec3_t	temp;
 
 		VectorCopy( ptr->plane.normal, temp );
-		ptr->fraction = bound( 0, ptr->fraction, 1.0f );
 		VectorLerp( start, ptr->fraction, end, ptr->endpos );
 		Matrix4x4_TransformPositivePlane( pm_studiobones[outBone], temp, ptr->plane.dist, ptr->plane.normal, &ptr->plane.dist );
+		Msg( "Normal %g %g %g, fraction %g\n", ptr->plane.normal[0], ptr->plane.normal[1], ptr->plane.normal[2], ptr->fraction );
 		return true;
 	}
 	return false;

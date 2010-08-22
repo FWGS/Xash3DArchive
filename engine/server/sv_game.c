@@ -1613,7 +1613,7 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 
 	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
 		Host_Error( "TraceModel: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	if( ptr ) *ptr = CM_ClipMove( pent, v1, mins, maxs, v2, 0 );
+	if( ptr ) *ptr = SV_ClipMove( pent, v1, mins, maxs, v2, 0 );
 }
 
 /*

@@ -357,7 +357,6 @@ static bool PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3
 	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
 	VectorCopy( end, ptr->endpos );
 	ptr->fraction = 1.0f;
-	ptr->allsolid = true;
 	ptr->hitgroup = -1;
 	ptr->ent = -1;
 
@@ -421,7 +420,7 @@ static bool PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3
 	return false;
 }
 
-bool PM_TraceModel( physent_t *pe, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, pmtrace_t *ptr, int flags )
+bool PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, int flags )
 {
 	bool	hitEnt = false;
 
@@ -429,7 +428,6 @@ bool PM_TraceModel( physent_t *pe, vec3_t start, vec3_t mins, vec3_t maxs, vec3_
 	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
 	VectorCopy( end, ptr->endpos );
 	ptr->fraction = 1.0f;
-	ptr->allsolid = true;
 	ptr->hitgroup = -1;
 	ptr->ent = -1;
 
@@ -453,13 +451,7 @@ bool PM_TraceModel( physent_t *pe, vec3_t start, vec3_t mins, vec3_t maxs, vec3_
 			return hitEnt;
 		if( flags & PM_STUDIO_BOX )
 			hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-		else
-		{
-			// NOTE: only traceline can check hitboxes
-			if( !VectorIsNull( mins ) || !VectorIsNull( maxs ))
-				hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-			else hitEnt = PM_StudioTrace( pe, start, end, ptr );
-		}
+		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
 	}
 	else if( pe->model )
 	{
@@ -507,7 +499,7 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 
 		if( trace.allsolid || trace.startsolid || trace.fraction < total.fraction )
 		{
-			trace.ent = i;
+			total.ent = trace.ent;
 		
 			if( total.startsolid )
 			{
@@ -524,36 +516,4 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 
 	}
 	return total;
-}
-
-/*
-================
-PM_TestPlayerPosition
-
-Returns false if the given player position is not valid (in solid)
-================
-*/
-int PM_TestPlayerPosition( playermove_t *pmove, const vec3_t pos )
-{
-	physent_t	*pe;
-	float	*mins = pmove->player_mins[pmove->usehull];
-	float	*maxs = pmove->player_maxs[pmove->usehull];
-	hull_t	*hull;
-	vec3_t	test;
-	int	i;
-
-	for( i = 0; i < pmove->numphysent; i++ )
-	{
-		pe = &pmove->physents[i];
-
-		// get the clipping hull
-		hull = PM_HullForEntity( pe, mins, maxs, test );
-		VectorSubtract( pos, test, test );
-
-		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_SOLID )
-			return i;	// stuck
-	}
-
-	// we are okay
-	return -1;
 }

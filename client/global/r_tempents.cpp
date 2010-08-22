@@ -1608,11 +1608,15 @@ void CTempEnts::SparkEffect( const Vector& pos, int count, int velocityMin, int 
 {
 	Vector m_vecDir;
 
-	for ( int i = 0; i < count; i++ )
+	int modelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/richo1.spr" );
+	RicochetSprite( pos, modelIndex, RANDOM_FLOAT( 0.4, 0.6f ));
+
+	for ( int i = 0; i < RANDOM_LONG( 1, count ); i++ )
 	{
-		m_vecDir.x = pos.x + RANDOM_FLOAT( velocityMin, velocityMax );
-		m_vecDir.y = pos.y + RANDOM_FLOAT( velocityMin, velocityMax );
-		m_vecDir.z = pos.z + RANDOM_FLOAT( velocityMin, velocityMax );
+		m_vecDir.x = RANDOM_FLOAT( velocityMin, velocityMax );
+		m_vecDir.y = RANDOM_FLOAT( velocityMin, velocityMax );
+		m_vecDir.z = RANDOM_FLOAT( velocityMin, velocityMax );
+		m_vecDir = m_vecDir.Normalize();
 
 		g_pParticles->SparkleTracer( pos, m_vecDir );
 	}

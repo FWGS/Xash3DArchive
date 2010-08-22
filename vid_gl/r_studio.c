@@ -79,6 +79,18 @@ typedef struct studiovars_s
 	int		numbones;
 } studiovars_t;
 
+static vec3_t hullcolor[8] = 
+{
+{ 1.0, 1.0, 1.0 },
+{ 1.0, 0.5, 0.5 },
+{ 0.5, 1.0, 0.5 },
+{ 1.0, 1.0, 0.5 },
+{ 0.5, 0.5, 1.0 },
+{ 1.0, 0.5, 1.0 },
+{ 0.5, 1.0, 1.0 },
+{ 1.0, 1.0, 1.0 }
+};
+
 void R_StudioInitBoxHull( void );
 
 /*
@@ -686,14 +698,6 @@ void R_StudioProcessEvents( ref_entity_t *e, cl_entity_t *ent )
 	bool		bLooped = false;
 	int		i;
 
-	switch( e->ent_type )
-	{
-	case ET_VIEWENTITY:
-	case ET_TEMPENTITY:
-		break;
-	default:	return;
-	}
-
 	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->lerp->curstate.sequence;
 	pevent = (mstudioevent_t *)((byte *)m_pStudioHeader + pseqdesc->eventindex);
 
@@ -1159,7 +1163,7 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 		if( m_fDoInterp && ( RI.refdef.time < e->lerp->curstate.animtime + 1.0f ) && ( e->lerp->curstate.animtime != e->lerp->latched.prevanimtime ))
 		{
 			f = ( RI.refdef.time - e->lerp->curstate.animtime ) / ( e->lerp->curstate.animtime - e->lerp->latched.prevanimtime );
-			//Msg( "%4.2f %.2f %.2f\n", f, e->lerp->curstate.animtime, RI.refdef.time );
+			// Msg( "%4.2f %.2f %.2f\n", f, e->lerp->curstate.animtime, RI.refdef.time );
 		}
 
 		if( m_fDoInterp )
@@ -1891,10 +1895,7 @@ void R_StudioDrawHitboxes( int iHitbox )
 	int	i, j;
 
 	if( iHitbox >= 0 )
-		pglColor4f( 1, 1, 1, 1 );
-	else pglColor4f( 1, 0, 0, 1 );
-
-	pglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+		pglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
 	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
 	{
@@ -1948,6 +1949,12 @@ void R_StudioDrawHitboxes( int iHitbox )
 		Matrix4x4_VectorTransform( m_pbonestransform[pbboxes[i].bone], v[6], v2[6] );
 		Matrix4x4_VectorTransform( m_pbonestransform[pbboxes[i].bone], v[7], v2[7] );
 
+		if( iHitbox >= 0 ) j = 0;
+		else j = (pbboxes[i].group % 8);
+
+		// set properly color for hull
+		pglColor4f( hullcolor[j][0], hullcolor[j][1], hullcolor[j][2], 1.0f );
+
 		pglBegin( GL_QUAD_STRIP );
 		for( j = 0; j < 10; j++ )
 			pglVertex3fv( v2[j & 7] );
@@ -1967,7 +1974,9 @@ void R_StudioDrawHitboxes( int iHitbox )
 		pglVertex3fv( v2[5] );
 		pglEnd( );			
 	}
-	pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+	if( iHitbox >= 0 )
+		pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
 
 void R_StudioDrawAttachments( void )

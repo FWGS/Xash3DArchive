@@ -200,7 +200,7 @@ static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 {
 	pmtrace_t trace;
 
-	trace = PM_PlayerTrace( clgame.pmove, pos, pos, PM_STUDIO_BOX, clgame.pmove->usehull, -1, NULL );
+	trace = PM_PlayerTrace( clgame.pmove, pos, pos, PM_NORMAL, clgame.pmove->usehull, -1, NULL );
 	if( ptrace ) *ptrace = trace; 
 	return trace.ent;
 }

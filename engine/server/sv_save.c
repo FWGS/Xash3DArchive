@@ -1305,7 +1305,7 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 			}
 			else 
 			{
-				MsgDev( D_NOTE, "Transferring %s (%d)\n", STRING( pEntInfo->classname ), pent->serialnumber );
+				MsgDev( D_INFO, "Transferring %s (%d)\n", STRING( pEntInfo->classname ), pent->serialnumber );
 
 				if( svgame.dllFuncs.pfnRestore( pent, pSaveData, false ) < 0 )
 				{
