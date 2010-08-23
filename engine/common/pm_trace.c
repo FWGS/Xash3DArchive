@@ -356,6 +356,7 @@ static bool PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3
 	// assume we didn't hit anything
 	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
 	VectorCopy( end, ptr->endpos );
+	ptr->allsolid = true;
 	ptr->fraction = 1.0f;
 	ptr->hitgroup = -1;
 	ptr->ent = -1;
@@ -431,31 +432,57 @@ bool PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs,
 	ptr->hitgroup = -1;
 	ptr->ent = -1;
 
-	if( flags & PM_GLASS_IGNORE )
-	{
-		// we ignore brushes with rendermode != kRenderNormal
-		switch( pe->rendermode )
-		{
-		case kRenderTransAdd:
-		case kRenderTransAlpha:
-		case kRenderTransTexture:
-			// passed through glass
-			return hitEnt;
-		default: break;
-		}
-	}
+	// completely ignore studiomodels (same as MOVE_NOMONSTERS)
+	if( pe->studiomodel && flags & PM_STUDIO_IGNORE )
+		return hitEnt;
 
-	if( pe->studiomodel )
+	if( pe->movetype == MOVETYPE_PUSH || pe->solid == SOLID_BSP )
 	{
-		if( flags & PM_STUDIO_IGNORE )
-			return hitEnt;
-		if( flags & PM_STUDIO_BOX )
-			hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+		if( flags & PM_GLASS_IGNORE )
+		{
+			// we ignore brushes with rendermode != kRenderNormal
+			switch( pe->rendermode )
+			{
+			case kRenderTransAdd:
+			case kRenderTransAlpha:
+			case kRenderTransTexture:
+				// passed through glass
+				return hitEnt;
+			default: break;
+			}
+		}
+
+		if( pe->solid == SOLID_BSP && pe->movetype != MOVETYPE_PUSH )
+			Host_Error( "Entity #%i [%s] SOLID_BSP without MOVETYPE_PUSH\n", pe->info, pe->name );
+		if( !pe->model )
+			Host_Error( "Entity #%i [%s] SOLID_BSP with a non bsp model\n", pe->info, pe->name );
+
+		hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+	}
+	else if( pe->solid == SOLID_SLIDEBOX )
+	{
+		bool	bSimpleBox;
+
+		// NOTE: SOLID_SLIDEBOX force to tracing as simplebox like FTRACE_SIMPLEBOX for trace hull.
+		// otherwise it's using hitbox tracing e.g. for bullet damage
+		// and it completely ignoring FTRACE_SIMPLEBOX
+		bSimpleBox = VectorCompare( mins, maxs ) ? false : true;
+		if( !pe->studiomodel ) bSimpleBox = true; // ???
+
+		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
 		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
 	}
-	else if( pe->model )
+	else if( pe->solid == SOLID_BBOX )
 	{
-		hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+		bool	bSimpleBox;
+
+		// NOTE: this is similar SOLID_SLIDEBOX but trace type switched with trace flags
+		// not min\max. Used for static models (furniture, vehicle etc) for more realistic collisions
+		bSimpleBox = ( flags & PM_STUDIO_BOX ) ? true : false;
+		if( !pe->studiomodel ) bSimpleBox = true; // pushables
+
+		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
 	}
 	return hitEnt;
 }
@@ -491,6 +518,9 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 		if( pmFilter && pmFilter( pe ))
 			continue;
 
+		// might intersect, so do an exact clip
+		if( total.allsolid ) return total;
+
 		if( PM_TraceModel( pe, start, mins, maxs, end, &trace, flags ))
 		{
 			// set entity
@@ -499,8 +529,8 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 
 		if( trace.allsolid || trace.startsolid || trace.fraction < total.fraction )
 		{
-			total.ent = trace.ent;
-		
+			trace.ent = i;
+
 			if( total.startsolid )
 			{
 				total = trace;

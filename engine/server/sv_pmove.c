@@ -9,15 +9,28 @@
 #include "protocol.h"
 #include "pm_local.h"
 
-bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool com_trace )
+bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace )
 {
 	model_t	*mod = CM_ClipHandleToModel( ed->v.modelindex );
 
-	// bad model ?
-	if( !mod || mod->type == mod_bad )
+	// NOTE: player never collide with sprites (even with solid sprites)
+	if( !mod || mod->type == mod_bad || mod->type == mod_sprite )
 		return false;
 
 	pe->player = false;
+
+	if( player_trace )
+	{
+		// player completely ignore some movetypes here
+		switch( ed->v.movetype )
+		{
+		case MOVETYPE_TOSS:
+		case MOVETYPE_NOCLIP:
+		case MOVETYPE_BOUNCE:
+		case MOVETYPE_BOUNCEMISSILE:
+			return false;
+		}
+	}
 
 	if( ed->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
 	{
@@ -25,26 +38,21 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool com_trace )
 		com.strncpy( pe->name, "player", sizeof( pe->name ));
 		pe->player = true;
 	}
-	else if( ed == EDICT_NUM( 0 ))
-	{
-		// it's a world
-		com.strncpy( pe->name, "world", sizeof( pe->name ));
-	}
 	else
 	{
 		// otherwise copy the modelname
 		com.strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
-	if( ed->v.movetype == MOVETYPE_PUSHSTEP || mod->type == mod_studio && mod->extradata )
+	if( mod->type == mod_studio )
 	{
 		pe->studiomodel = mod;
 		pe->model = NULL;
 	}
-	else if( mod->type == mod_brush || mod->type == mod_world )
+	else
 	{	
 		// this is monsterclip brush, player ignore it
-		if( !com_trace && ed->v.flags & FL_MONSTERCLIP )
+		if( player_trace && ed->v.flags & FL_MONSTERCLIP )
 			return false;
 
 		pe->studiomodel = NULL;
@@ -124,7 +132,10 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 				continue;
 		}
 
-		if(check->v.solid == SOLID_BSP || check->v.solid == SOLID_BBOX || check->v.solid == SOLID_SLIDEBOX)
+		if( check->v.deadflag == DEAD_DEAD )
+			continue;
+		
+		if( check->v.solid == SOLID_BSP || check->v.solid == SOLID_BBOX || check->v.solid == SOLID_SLIDEBOX )
 		{
 			if( !BoundsIntersect( pmove_mins, pmove_maxs, check->v.absmin, check->v.absmax ))
 				continue;
@@ -134,7 +145,7 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 
 			pe = &svgame.pmove->physents[svgame.pmove->numphysent];
 
-			if( SV_CopyEdictToPhysEnt( pe, check, false ))
+			if( SV_CopyEdictToPhysEnt( pe, check, true ))
 				svgame.pmove->numphysent++;
 		}
 	}
@@ -515,7 +526,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 		absmax[i] = clent->v.origin[i] + 256;
 	}
 
-	SV_CopyEdictToPhysEnt( &svgame.pmove->physents[0], &svgame.edicts[0], false );
+	SV_CopyEdictToPhysEnt( &svgame.pmove->physents[0], &svgame.edicts[0], true );
 	svgame.pmove->numphysent = 1;	// always have world
 
 	SV_AddLinksToPmove( sv_areanodes, absmin, absmax );
@@ -533,7 +544,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 		if( touch[i] == clent ) continue;
 
 		pe = &svgame.pmove->moveents[svgame.pmove->nummoveent];
-		if( SV_CopyEdictToPhysEnt( pe, touch[i], false ))
+		if( SV_CopyEdictToPhysEnt( pe, touch[i], true ))
 			svgame.pmove->nummoveent++;
 	}
 }
@@ -546,6 +557,7 @@ static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
 	VectorCopy( pmove->view_ofs, clent->v.view_ofs );
 	VectorCopy( pmove->velocity, clent->v.velocity );
 	VectorCopy( pmove->basevelocity, clent->v.basevelocity );
+	VectorCopy( pmove->punchangle, clent->v.punchangle );
 	clent->v.flFallVelocity = pmove->flFallVelocity;
 	clent->v.oldbuttons = pmove->oldbuttons;
 	clent->v.waterlevel = pmove->waterlevel;

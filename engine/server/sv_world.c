@@ -360,7 +360,7 @@ trace_t SV_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs,
 	trace.iHitgroup = -1;
 
 	// setup physentity
-	if( !SV_CopyEdictToPhysEnt( &pe, ent, true ))
+	if( !SV_CopyEdictToPhysEnt( &pe, ent, false ))
 		return trace;
 
 	// setup pm_flags
@@ -419,6 +419,10 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		// don't clip points against points (they can't collide)
 		if( VectorCompare( touch->v.mins, touch->v.maxs ) && (clip->type != MOVE_MISSILE || !( touch->v.flags & FL_MONSTER )))
+			continue;
+
+		// can't tracehull at dead monsters, only traceline
+		if( touch->v.deadflag == DEAD_DEAD && !VectorCompare( touch->v.mins, touch->v.maxs ))
 			continue;
 
 		if( clip->type == MOVE_WORLDONLY )

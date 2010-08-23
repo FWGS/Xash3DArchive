@@ -471,7 +471,7 @@ int SV_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int max
 //
 // sv_pmove.c
 //
-bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool com_trace );
+bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace );
 
 //
 // sv_world.c

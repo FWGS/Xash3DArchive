@@ -27,14 +27,7 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 		return NULL;
 
 	if( index < 0 || index > clgame.numEntities )
-	{
-		if( index == -1 )
-			return NULL;
-#ifdef _DEBUG
-		MsgDev( D_ERROR, "CL_GetEntityByIndex: invalid entindex %i\n", index );
-#endif
 		return NULL;
-	}
 
 	if( EDICT_NUM( index )->index == -1 )
 		return NULL;

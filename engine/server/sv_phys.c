@@ -181,20 +181,18 @@ SV_Impact
 Two entities have touched, so run their touch functions
 ==================
 */
-bool SV_Impact( edict_t *e1, trace_t *trace )
+void SV_Impact( edict_t *e1, trace_t *trace )
 {
 	edict_t	*e2 = trace->pHit;
-	vec3_t	org;
 
 	// custom user filter
 	if( svgame.dllFuncs2.pfnShouldCollide )
 	{
 		if( !svgame.dllFuncs2.pfnShouldCollide( e1, e2 ))
-			return false;
+			return;
 	}
 
 	SV_CopyTraceToGlobal( trace );
-	VectorCopy( e1->v.origin, org );
 
 	if( !e1->free && !e2->free && e1->v.solid != SOLID_NOT )
 	{
@@ -203,15 +201,8 @@ bool SV_Impact( edict_t *e1, trace_t *trace )
 
 	if( !e1->free && !e2->free && e2->v.solid != SOLID_NOT )
 	{
-		// inverse plane and normal for second contacted edict
-		VectorCopy( e2->v.origin, svgame.globals->trace_endpos );
-		VectorNegate( trace->vecPlaneNormal, svgame.globals->trace_plane_normal );
-		svgame.globals->trace_plane_dist = -trace->flPlaneDist;
-		svgame.globals->trace_ent = e1;
-
 		svgame.dllFuncs.pfnTouch( e2, e1 );
 	}
-	return VectorCompare( e1->v.origin, org );
 }
 
 /*
@@ -507,7 +498,6 @@ int SV_TryMove( edict_t *ent, float time, trace_t *steptrace )
 
 		allFraction += trace.flFraction;
 
-
 		if( trace.fAllSolid )
 		{	
 			// entity is trapped in another solid
@@ -679,11 +669,6 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 	VectorCopy( trace.vecEndPos, ent->v.origin );
 	SV_LinkEdict( ent, true );
-
-	if( !com.strcmp( SV_ClassName( ent ), "monster_tentacle" ))
-	{
-		Msg( "tentacle trace %g\n", trace.flFraction );
-	}
 
 	if( apush[YAW] && ent->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( ent, true )) != NULL )
 	{
@@ -1200,15 +1185,6 @@ void SV_Physics_Toss( edict_t *ent )
 
 	SV_CheckVelocity( ent );
 
-	if( trace.fAllSolid )
-	{	
-		// entity is trapped in another solid
-		ent->v.flags |= FL_ONGROUND;
-		ent->v.groundentity = trace.pHit;
-		VectorClear( ent->v.velocity );
-		return;
-	}
-	
 	if( trace.flFraction == 1.0f )
 	{
 		SV_CheckWater( ent );
@@ -1280,6 +1256,7 @@ void SV_Physics_Step( edict_t *ent )
 	bool	inwater;
 	bool	hitsound = false;
 	bool	isfalling = false;
+	edict_t	*pHit;
 	trace_t	trace;
 
 	SV_CheckVelocity( ent );
@@ -1404,6 +1381,13 @@ void SV_Physics_Step( edict_t *ent )
 		SV_AddHalfGravity( ent, sv_frametime( ));
 	}
 
+	// check monster with another monster (e.g. tentacle damage)
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+	pHit = trace.pHit;
+
+	if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
+		SV_Impact( ent, &trace );
+
 	if( !SV_RunThink( ent )) return;
 
 	SV_CheckWaterTransition( ent );
@@ -1423,12 +1407,33 @@ void SV_Physics_None( edict_t *ent )
 
 
 //============================================================================
+static void SV_Physics_Client( edict_t *ent )
+{
+	trace_t	trace;
+	edict_t	*pHit;
+
+	switch( ent->v.movetype )
+	{
+	case MOVETYPE_FLY:
+	case MOVETYPE_WALK:
+	case MOVETYPE_NOCLIP:
+		break;
+	default: return;
+	}
+
+	// check client colliding with monster (e.g. tentacle damage)
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+	pHit = trace.pHit;
+
+	if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
+		SV_Impact( ent, &trace );
+}
 
 static void SV_Physics_Entity( edict_t *ent )
 {
 	SV_UpdateBaseVelocity( ent );
 
-	if(!( ent->v.flags & FL_BASEVELOCITY ) && !VectorIsNull( ent->v.basevelocity ))
+	if(!( ent->v.flags & FL_BASEVELOCITY ))
 	{
 		// Apply momentum (add in half of the previous frame of velocity first)
 		VectorMA( ent->v.velocity, 1.0f + (sv_frametime() * 0.5f), ent->v.basevelocity, ent->v.velocity );
@@ -1525,12 +1530,14 @@ void SV_Physics( void )
 	// treat each object in turn
 	if( !( sv.hostflags & SVF_PLAYERSONLY ))
 	{
-		for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
+		for( i = 0; i < svgame.numEntities; i++ )
 		{
 			ent = EDICT_NUM( i );
 			if( !SV_IsValidEdict( ent )) continue;
 
-			SV_Physics_Entity( ent );
+			if( i > 0 && i <= svgame.globals->maxClients )
+                    		SV_Physics_Client( ent );
+			else SV_Physics_Entity( ent );
 		}
 	}
 

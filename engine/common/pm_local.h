@@ -23,6 +23,7 @@ int PM_HullPointContents( hull_t *hull, int num, const vec3_t p );
 // pm_studio.c
 //
 void PM_InitStudioHull( void );
+bool PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
 bool PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr );
 
 //

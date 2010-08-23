@@ -61,7 +61,7 @@ bool CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	VectorCopy( ent->curstate.maxs, pe->maxs );
 
 	pe->solid = ent->curstate.solid;
-	pe->skin = ent->curstate.scale;
+	pe->scale = ent->curstate.scale;
 	pe->rendermode = ent->curstate.rendermode;
 	pe->framerate = ent->curstate.framerate;
 	pe->skin = ent->curstate.skin;

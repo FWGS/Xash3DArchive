@@ -1894,8 +1894,7 @@ void R_StudioDrawHitboxes( int iHitbox )
 {
 	int	i, j;
 
-	if( iHitbox >= 0 )
-		pglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+	pglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
 	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
 	{
@@ -1975,8 +1974,7 @@ void R_StudioDrawHitboxes( int iHitbox )
 		pglEnd( );			
 	}
 
-	if( iHitbox >= 0 )
-		pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
 
 void R_StudioDrawAttachments( void )

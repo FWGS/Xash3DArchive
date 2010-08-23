@@ -544,16 +544,14 @@ static bool PM_StudioSetupModel( physent_t *pe )
 	return true;
 }
 
-static bool PM_StudioExtractBbox( physent_t *pe, float *mins, float *maxs )
+bool PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
 	studiohdr_t	*phdr;
-	model_t		*mod;
 
-	ASSERT( pe != NULL );
-	mod = pe->studiomodel;
+	ASSERT( mod != NULL );
 
-	if( !mod || !mod->extradata )
+	if( mod->type != mod_studio || !mod->extradata )
 		return false;
 
 	phdr = (studiohdr_t *)mod->extradata;
@@ -561,11 +559,11 @@ static bool PM_StudioExtractBbox( physent_t *pe, float *mins, float *maxs )
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 
-	if( pe->sequence < 0 || pe->sequence >= phdr->numseq )
+	if( sequence < 0 || sequence >= phdr->numseq )
 		return false;
 	
-	VectorCopy( pseqdesc[pe->sequence].bbmin, mins );
-	VectorCopy( pseqdesc[pe->sequence].bbmax, maxs );
+	VectorCopy( pseqdesc[sequence].bbmin, mins );
+	VectorCopy( pseqdesc[sequence].bbmax, maxs );
 
 	return true;
 }
@@ -767,7 +765,7 @@ bool PM_TestBoxInHitbox( pmtrace_t *trace )
 	}
 
 	// inside this hitbox
-	trace_realfraction = 0;
+	trace->fraction = trace_realfraction = 0;
 	trace->startsolid = trace->allsolid = true;
 
 	return true;
@@ -788,7 +786,7 @@ static bool PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mins, 
 	// create the bounding box of the entire move
 	World_MoveBounds( start, mins, maxs, end, trace_mins, trace_maxs );
 
-	if( !PM_StudioExtractBbox( pe, anim_mins, anim_maxs ))
+	if( !PM_StudioExtractBbox( pe->studiomodel, pe->sequence, anim_mins, anim_maxs ))
 		return false; // invalid sequence
 
 	if( !VectorIsNull( pe->angles ))
