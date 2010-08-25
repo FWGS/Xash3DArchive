@@ -1382,11 +1382,21 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 
 	if( to == NULL )
 	{
+		int	fRemoveType;
+
 		if( from == NULL ) return;
 
 		// a NULL to is a delta remove message
 		BF_WriteWord( msg, from->number );
-		BF_WriteOneBit( msg, 1 );	// entity killed
+
+		// fRemoveType:
+		// 0 - keep alive, has delta-update
+		// 1 - remove from delta message (but keep states)
+		// 2 - completely remove from server
+		if( force ) fRemoveType = 2;
+		else fRemoveType = 1;
+
+		BF_WriteUBitLong( msg, fRemoveType, 2 );
 		return;
 	}
 
@@ -1396,7 +1406,7 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 		Host_Error( "MSG_WriteDeltaEntity: Bad entity number: %i\n", to->number );
 
 	BF_WriteWord( msg, to->number );
-	BF_WriteOneBit( msg, 0 );		// alive
+	BF_WriteUBitLong( msg, 0, 2 ); // alive
 
 	if( to->entityType != from->entityType )
 	{
@@ -1448,25 +1458,39 @@ If the delta removes the entity, entity_state_t->number will be set to MAX_EDICT
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-void MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase )
+bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase )
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
 	float		flTime = timebase * 0.001f;
-	int		i;
+	int		i, fRemoveType;
 
 	if( number < 0 || number >= GI->max_edicts )
 		Host_Error( "MSG_ReadDeltaEntity: bad delta entity number: %i\n", number );
 
 	*to = *from;
 	to->number = number;
+	fRemoveType = BF_ReadUBitLong( msg, 2 );
 
-	if( BF_ReadOneBit( msg ))
+	if( fRemoveType )
 	{
 		// check for a remove
-		Mem_Set( to, 0, sizeof( *to ));	
-		to->number = -1; // entity was removed
-		return;
+		Mem_Set( to, 0, sizeof( *to ));
+
+		if( fRemoveType & 1 )
+		{
+			// removed from delta-message
+			return false;
+                    }
+
+		if( fRemoveType & 2 )
+		{	
+			// entity was removed from server
+			to->number = -1;
+			return false;
+		}
+
+		Host_Error( "MSG_ReadDeltaEntity: unknown update type %i\n", fRemoveType );
 	}
 
 	if( BF_ReadOneBit( msg ))
@@ -1495,6 +1519,9 @@ void MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *
 	{
 		Delta_ReadField( msg, pField, from, to, flTime );
 	}
+
+	// message parsed
+	return true;
 }
 
 void Delta_AddEncoder( char *name, pfnDeltaEncode encodeFunc )

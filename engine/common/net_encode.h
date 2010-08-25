@@ -101,6 +101,6 @@ void MSG_ReadDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to );
 void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase );
 void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase );
 void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, int timebase );
-void MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase );
+bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase );
 
 #endif//NET_ENCODE_H

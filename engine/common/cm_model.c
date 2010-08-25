@@ -855,6 +855,55 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 	}
 }
 
+static void CM_StudioModel( model_t *mod, byte *buffer )
+{
+	studiohdr_t	*phdr;
+	mstudioseqdesc_t	*pseqdesc;
+
+	phdr = (studiohdr_t *)buffer;
+	if( phdr->version != STUDIO_VERSION )
+	{
+		MsgDev( D_ERROR, "CM_StudioModel: %s has wrong version number (%i should be %i)\n", loadmodel->name, phdr->version, STUDIO_VERSION );
+		return;
+	}
+
+	loadmodel->type = mod_studio;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
+	loadmodel->numframes = pseqdesc[0].numframes;
+	loadmodel->registration_sequence = cm.registration_sequence;
+
+	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
+	loadmodel->extradata = Mem_Alloc( loadmodel->mempool, LittleLong( phdr->length ));
+	Mem_Copy( loadmodel->extradata, buffer, LittleLong( phdr->length ));
+
+	// setup bounding box
+	VectorCopy( phdr->bbmin, loadmodel->mins );
+	VectorCopy( phdr->bbmax, loadmodel->maxs );
+}
+
+static void CM_SpriteModel( model_t *mod, byte *buffer )
+{
+	dsprite_t		*phdr;
+
+	phdr = (dsprite_t *)buffer;
+
+	if( phdr->version != SPRITE_VERSION )
+	{
+		MsgDev( D_ERROR, "CM_SpriteModel: %s has wrong version number (%i should be %i)\n", loadmodel->name, phdr->version, SPRITE_VERSION );
+		return;
+	}
+          
+	loadmodel->type = mod_sprite;
+	loadmodel->numframes = phdr->numframes;
+	loadmodel->registration_sequence = cm.registration_sequence;
+
+	// setup bounding box
+	loadmodel->mins[0] = loadmodel->mins[1] = -phdr->bounds[0] / 2;
+	loadmodel->maxs[0] = loadmodel->maxs[1] = phdr->bounds[0] / 2;
+	loadmodel->mins[2] = -phdr->bounds[1] / 2;
+	loadmodel->maxs[2] = phdr->bounds[1] / 2;
+}
+
 void CM_FreeWorld( void )
 {
 	if( worldmodel )

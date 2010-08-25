@@ -90,7 +90,6 @@ byte *CM_LeafPVS( int leafnum );
 byte *CM_LeafPHS( int leafnum );
 int CM_PointLeafnum( const vec3_t p );
 mleaf_t *CM_PointInLeaf( const vec3_t p, mnode_t *node );
-bool CM_HeadnodeVisible( int nodenum, byte *visbits );
 int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 int CM_TempBoxModel( const vec3_t mins, const vec3_t maxs, bool capsule );
 bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, byte *visbits );
@@ -126,8 +125,6 @@ void CM_EndRegistration( void );
 //
 // cm_studio.c
 //
-void CM_SpriteModel( model_t *mod, byte *buffer );
-void CM_StudioModel( model_t *mod, byte *buffer );
 void CM_StudioInitBoxHull( void );
 int CM_StudioBodyVariations( int handle );
 void CM_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );

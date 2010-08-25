@@ -187,7 +187,7 @@ gotnewcl:
 	newcl->userid = g_userid++;	// create unique userid
 		
 	// get the game a chance to reject this connection or modify the userinfo
-	if(!(SV_ClientConnect( ent, userinfo )))
+	if( !( SV_ClientConnect( ent, userinfo )))
 	{
 		if(*Info_ValueForKey( userinfo, "rejmsg" )) 
 			Netchan_OutOfBandPrint( NS_SERVER, from, "print\n%s\nConnection refused.\n", Info_ValueForKey( userinfo, "rejmsg" ));

@@ -111,3 +111,92 @@ trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch 
 
 	return *cliptrace;
 }
+
+/*
+==================
+RankForContents
+
+Used for determine contents priority
+==================
+*/
+int RankForContents( int contents )
+{
+	switch( contents )
+	{
+	case CONTENTS_EMPTY:	return 0;
+	case CONTENTS_WATER:	return 1;
+	case CONTENTS_TRANSLUCENT:	return 2;
+	case CONTENTS_CURRENT_0:	return 3;
+	case CONTENTS_CURRENT_90:	return 4;
+	case CONTENTS_CURRENT_180:	return 5;
+	case CONTENTS_CURRENT_270:	return 6;
+	case CONTENTS_CURRENT_UP:	return 7;
+	case CONTENTS_CURRENT_DOWN:	return 8;
+	case CONTENTS_SLIME:	return 9;
+	case CONTENTS_LAVA:		return 10;
+	case CONTENTS_SKY:		return 11;
+	case CONTENTS_SOLID:	return 12;
+	}
+	return -1;
+}
+
+/*
+==================
+BoxOnPlaneSide
+
+Returns 1, 2, or 1 + 2
+==================
+*/
+int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p )
+{
+	float	dist1, dist2;
+	int	sides = 0;
+
+	// general case
+	switch( p->signbits )
+	{
+	case 0:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 1:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 2:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 3:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 4:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 5:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 6:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	case 7:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	default:
+		// shut up compiler
+		dist1 = dist2 = 0;
+		break;
+	}
+
+	if( dist1 >= p->dist )
+		sides = 1;
+	if( dist2 < p->dist )
+		sides |= 2;
+
+	return sides;
+}

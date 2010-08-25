@@ -151,7 +151,8 @@ bool R_VisCullBox( const vec3_t mins, const vec3_t maxs )
 		if( !node->plane )
 			return false;
 
-		s = BoxOnPlaneSide( extmins, extmaxs, node->plane ) - 1;
+		s = BOX_ON_PLANE_SIDE( extmins, extmaxs, node->plane ) - 1;
+
 		if( s < 2 )
 		{
 			node = node->children[s];

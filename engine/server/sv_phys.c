@@ -35,22 +35,6 @@ Utility functions
 ===============================================================================
 */
 /*
-============
-SV_TestEntityPosition
-
-returns true if the entity is in solid currently
-============
-*/
-bool SV_TestEntityPosition( edict_t *ent )
-{
-	trace_t	trace;
-
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent );
-
-	return trace.fStartSolid;
-}
-
-/*
 ================
 SV_CheckAllEnts
 ================

@@ -314,6 +314,10 @@ SOURCE=.\server\sv_save.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\server\sv_studio.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\server\sv_world.c
 # End Source File
 # Begin Source File

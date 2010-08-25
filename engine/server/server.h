@@ -43,6 +43,7 @@ extern int SV_UPDATE_BACKUP;
 // convert msecs to float time properly
 #define sv_time()		( sv.time * 0.001f )
 #define sv_frametime()	( sv.frametime * 0.001f )
+#define SV_IsValidEdict( e )	( e && !e->free )
 
 typedef enum
 {
@@ -84,6 +85,8 @@ typedef struct server_s
 
 	sizebuf_t		signon;
 	byte		signon_buf[MAX_MSGLEN];
+
+	model_t		*worldmodel;	// pointer to world
 
 	bool		write_bad_message;	// just for debug
 	bool		paused;
@@ -422,7 +425,6 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
-bool SV_IsValidEdict( const edict_t *e );
 script_t *CM_GetEntityScript( void );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
@@ -443,6 +445,16 @@ void SV_ChangeLevel( bool loadfromsavedgame, const char *mapname, const char *st
 const char *SV_GetLatestSave( void );
 int SV_LoadGameState( char const *level, bool createPlayers );
 void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
+
+//
+// sv_studio.c
+//
+void SV_InitStudioHull( void );
+bool SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
+void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
+bool SV_StudioTrace( edict_t *ent, const vec3_t p1, vec3_t mins, vec3_t maxs, const vec3_t p2, trace_t *ptr );
+void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );
+
 //============================================================
 
 // high level object sorting to reduce interaction tests
@@ -480,6 +492,8 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace );
 extern areanode_t	sv_areanodes[];
 
 void SV_ClearWorld( void );
+bool SV_HeadnodeVisible( mnode_t *node, byte *visbits );
+int SV_HullPointContents( hull_t *hull, int num, const vec3_t p );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
 trace_t SV_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags );
 trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );

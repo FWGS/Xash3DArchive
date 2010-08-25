@@ -21,8 +21,8 @@ ENTITY AREA CHECKING
 */
 #define EDICT_FROM_AREA( l )		EDICT_NUM( l->entnum )
 #define MAX_TOTAL_ENT_LEAFS		128
-#define AREA_NODES			64
-#define AREA_DEPTH			5
+#define AREA_NODES			32
+#define AREA_DEPTH			4
 
 typedef struct areanode_s
 {
@@ -44,30 +44,6 @@ typedef struct area_s
 	int		type;
 } area_t;
 
-typedef struct moveclip_s
-{
-	vec3_t		boxmins;	// enclose the test object along entire move
-	vec3_t		boxmaxs;
-	float		*mins;
-	float		*maxs;	// size of the moving object
-	vec3_t		mins2;
-	vec3_t		maxs2;
-	const float	*start;
-	const float	*end;
-	trace_t		trace;
-
-	union
-	{
-
-	struct edict_s	*passedict;
-	struct cl_entity_s	*passentity;
-
-	};
-
-	int		type;	// move type
-	int		flags;	// trace flags
-} moveclip_t;
-
 extern const char		*et_name[];
 
 // linked list
@@ -78,6 +54,25 @@ void ClearLink( link_t *l );
 // trace common
 void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, vec3_t boxmins, vec3_t boxmaxs );
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch );
+int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p );
+int RankForContents( int contents );
+
+#define BOX_ON_PLANE_SIDE( emins, emaxs, p )			\
+	((( p )->type < 3 ) ?				\
+	(						\
+		((p)->dist <= (emins)[(p)->type]) ?		\
+			1				\
+		:					\
+		(					\
+			((p)->dist >= (emaxs)[(p)->type]) ?	\
+				2			\
+			:				\
+				3			\
+		)					\
+	)						\
+	:						\
+		BoxOnPlaneSide(( emins ), ( emaxs ), ( p )))
+
 
 #include "bspfile.h"
 #include "pm_shared.h"

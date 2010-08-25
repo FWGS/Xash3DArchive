@@ -342,6 +342,7 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	com.sprintf( sv.configstrings[CS_MODELS+1], "maps/%s.bsp", sv.name );
 	CM_BeginRegistration( sv.configstrings[CS_MODELS+1], false, &checksum );
 	com.sprintf( sv.configstrings[CS_MAPCHECKSUM], "%i", checksum );
+	sv.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 
 	for( i = 1; i < CM_NumBmodels(); i++ )
 	{

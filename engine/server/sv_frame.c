@@ -117,8 +117,14 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 
 		if( newnum > oldnum )
 		{	
+			bool	force;
+
+			if( EDICT_NUM( oldent->number )->free )
+				force = true;	// entity completely removed from server
+			else force = false;		// just removed from delta-message 
+
 			// remove from message
-			MSG_WriteDeltaEntity( oldent, NULL, msg, false, sv.time );
+			MSG_WriteDeltaEntity( oldent, NULL, msg, force, sv.time );
 			oldindex++;
 			continue;
 		}

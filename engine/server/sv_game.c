@@ -65,6 +65,7 @@ void SV_SysError( const char *error_string )
 
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 {
+	float	scale = 1.0f;
 	int	i;
 
 	if( !SV_IsValidEdict( e ) || !min || !max )
@@ -79,9 +80,21 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 			return;
 		}
 	}
-
-	VectorCopy( min, e->v.mins );
-	VectorCopy( max, e->v.maxs );
+#if 0
+	// FIXME: enable this when other server parts will be done and tested
+	if( e->v.scale > 0.0f && e->v.scale != 1.0f )
+	{
+		switch( CM_GetModelType( e->v.modelindex ))
+		{
+		case mod_sprite:
+		case mod_studio:
+			scale = e->v.scale;
+			break;
+		}
+	}
+#endif
+	VectorScale( min, scale, e->v.mins );
+	VectorScale( max, scale, e->v.maxs );
 	VectorSubtract( max, min, e->v.size );
 
 	SV_LinkEdict( e, false );
@@ -106,7 +119,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 {
 	vec3_t	mins = { 0.0f, 0.0f, 0.0f };
 	vec3_t	maxs = { 0.0f, 0.0f, 0.0f };
-	int	i;
+	int	i, mod_type;
 
 	i = SV_ModelIndex( name );
 	if( i == 0 ) return;
@@ -114,9 +127,16 @@ void SV_SetModel( edict_t *ent, const char *name )
 	ent->v.model = MAKE_STRING( sv.configstrings[CS_MODELS+i] );
 	ent->v.modelindex = i;
 
-	// set sizes only for brush models
-	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
+	mod_type = CM_GetModelType( ent->v.modelindex );
+
+	// studio models set to zero sizes as default
+	switch( mod_type )
+	{
+	case mod_brush:
+	case mod_sprite:
 		Mod_GetBounds( ent->v.modelindex, mins, maxs );
+		break;
+	}
 
 	SV_SetMinMaxSize( ent, mins, maxs );
 }
@@ -526,16 +546,6 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 	BF_WriteWord( msg, info->index );			// send event index
 	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
 	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// FIXME: zero-compressing
-}
-
-bool SV_IsValidEdict( const edict_t *e )
-{
-	if( !e ) return false;
-	if( e->free ) return false;
-
-	// edict without pvPrivateData is valid edict
-	// server.dll know how allocate it
-	return true;
 }
 
 const char *SV_ClassName( const edict_t *e )
@@ -1346,7 +1356,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	// can't track this entity on the client.
 	// write static sound
-	if( !ent->num_leafs ) flags |= SND_FIXED_ORIGIN;
+	if( !ent->headnode ) flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
@@ -1389,7 +1399,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( !ent->num_leafs )
+	if( !ent->headnode )
 		entityIndex = 0;
 	else if( SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = ent->v.aiment->serialnumber;
@@ -2334,6 +2344,9 @@ edict_t* pfnPEntityOfEntIndex( int iEntIndex )
 {
 	if( iEntIndex < 0 || iEntIndex >= svgame.numEntities )
 		return NULL; // out of range
+
+	if( EDICT_NUM( iEntIndex )->free )
+		return NULL;
 	return EDICT_NUM( iEntIndex );
 }
 
@@ -2467,7 +2480,7 @@ static void pfnGetBonePosition( const edict_t* pEdict, int iBone, float *rgflOri
 		return;
 	}
 
-	CM_GetBonePosition( (edict_t *)pEdict, iBone, rgflOrigin, rgflAngles );
+	SV_GetBonePosition( (edict_t *)pEdict, iBone, rgflOrigin, rgflAngles );
 }
 
 /*
@@ -2564,7 +2577,7 @@ static void pfnGetAttachment( const edict_t *pEdict, int iAttachment, float *rgf
 		MsgDev( D_WARN, "SV_GetAttachment: invalid entity %s\n", SV_ClassName( pEdict ));
 		return;
 	}
-	CM_StudioGetAttachment(( edict_t *)pEdict, iAttachment, rgflOrigin, rgflAngles );
+	SV_StudioGetAttachment(( edict_t *)pEdict, iAttachment, rgflOrigin, rgflAngles );
 }
 
 /*
@@ -3253,50 +3266,51 @@ pfnCheckVisibility
 
 =============
 */
-int pfnCheckVisibility( const edict_t *entity, byte *pset )
+int pfnCheckVisibility( const edict_t *ent, byte *pset )
 {
-	int	i, l;
-
-	if( !SV_IsValidEdict( entity ))
+	if( !SV_IsValidEdict( ent ))
 	{
-		MsgDev( D_WARN, "SV_CheckVisibility: invalid entity %s\n", SV_ClassName( entity ));
+		MsgDev( D_WARN, "SV_CheckVisibility: invalid entity %s\n", SV_ClassName( ent ));
 		return 0;
 	}
 
-	if( !pset ) return 1; // vis not set - fullvis enabled
+	// vis not set - fullvis enabled
+	if( !pset ) return 1;
 
-	// check individual leafs
-	if( !entity->num_leafs )
-		return 0; // not a linked in
+	if( !ent->headnode )
+		return 0; // not a linked in ?
 
-	if( entity->num_leafs == -1 )
+	if( ent->headnode == -1 )
 	{
-		// too many leafs for individual check, go by headnode
-		if( !CM_HeadnodeVisible( entity->headnode, pset ))
-			return 0;
-	}
-	else
-	{
+		int	i;
+
 		// check individual leafs
-		for( i = 0; i < entity->num_leafs; i++ )
+		for( i = 0; i < ent->num_leafs; i++ )
 		{
-			l = entity->leafnums[i];
-
-			if( pset[l>>3] & (1<<( l & 7 )))
+			if( pset[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i] & 7 )))
 				break;
 		}
 
-		if( i == entity->num_leafs )
+		if( i == ent->num_leafs )
 			return 0;	// not visible
 	}
-
-	// run additional check for BoxVisible
-	if( CM_GetModelType( entity->v.modelindex ) == mod_brush )
+	else
 	{
-		if( !CM_BoxVisible( entity->v.absmin, entity->v.absmax, pset ))
+		mnode_t	*node;
+
+		// too many leafs for individual check, go by headnode
+		node = sv.worldmodel->nodes + ent->headnode;
+		if( !SV_HeadnodeVisible( node, pset ))
 			return 0;
 	}
-
+#if 0
+	// NOTE: uncommenat this if you want to get more accuracy culling on large brushes
+	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
+	{
+		if( !CM_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))
+			return 0;
+	}
+#endif
 	return 1;
 }
 

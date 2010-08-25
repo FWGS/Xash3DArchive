@@ -8,6 +8,159 @@
 #include "const.h"
 #include "pm_local.h"
 
+typedef struct moveclip_s
+{
+	vec3_t		boxmins, boxmaxs;	// enclose the test object along entire move
+	float		*mins, *maxs;	// size of the moving object
+	vec3_t		mins2, maxs2;	// size when clipping against mosnters
+	const float	*start, *end;
+	trace_t		trace;
+	edict_t		*passedict;
+	int		type;		// move type
+	int		flags;		// trace flags
+	int		trace_hull;	// -1 to let entity select hull
+} moveclip_t;
+
+/*
+===============================================================================
+
+HULL BOXES
+
+===============================================================================
+*/
+
+static hull_t	box_hull;
+static dclipnode_t	box_clipnodes[6];
+static mplane_t	box_planes[6];
+
+/*
+===================
+SV_InitBoxHull
+
+Set up the planes and clipnodes so that the six floats of a bounding box
+can just be stored out and get a proper hull_t structure.
+===================
+*/
+void SV_InitBoxHull( void )
+{
+	int	i, side;
+
+	box_hull.clipnodes = box_clipnodes;
+	box_hull.planes = box_planes;
+	box_hull.firstclipnode = 0;
+	box_hull.lastclipnode = 5;
+
+	for( i = 0; i < 6; i++ )
+	{
+		box_clipnodes[i].planenum = i;
+		
+		side = i & 1;
+		
+		box_clipnodes[i].children[side] = CONTENTS_EMPTY;
+		if( i != 5 ) box_clipnodes[i].children[side^1] = i + 1;
+		else box_clipnodes[i].children[side^1] = CONTENTS_SOLID;
+		
+		box_planes[i].type = i>>1;
+		box_planes[i].normal[i>>1] = 1;
+	}
+	
+}
+
+/*
+===================
+SV_HullForBox
+
+To keep everything totally uniform, bounding boxes are turned into small
+BSP trees instead of being compared directly.
+===================
+*/
+hull_t *SV_HullForBox( const vec3_t mins, const vec3_t maxs )
+{
+	box_planes[0].dist = maxs[0];
+	box_planes[1].dist = mins[0];
+	box_planes[2].dist = maxs[1];
+	box_planes[3].dist = mins[1];
+	box_planes[4].dist = maxs[2];
+	box_planes[5].dist = mins[2];
+
+	return &box_hull;
+}
+
+/*
+================
+SV_HullForEntity
+
+Returns a hull that can be used for testing or clipping an object of mins/maxs
+size.
+Offset is filled in to contain the adjustment that must be added to the
+testing object's origin to get a point to use with the returned hull.
+================
+*/
+hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs, vec3_t offset )
+{
+	hull_t	*hull;
+	model_t	*model;
+	vec3_t	hullmins, hullmaxs;
+	vec3_t	size;
+
+	// decide which clipping hull to use, based on the size
+	if( ent->v.solid == SOLID_BSP )
+	{
+		// explicit hulls in the BSP model
+		if( ent->v.movetype != MOVETYPE_PUSH )
+			Host_Error( "SOLID_BSP without MOVETYPE_PUSH\n" );
+
+		model = CM_ClipHandleToModel( ent->v.modelindex );
+
+		if( !model || model->type != mod_brush && model->type != mod_world )
+			Host_Error( "MOVETYPE_PUSH with a non bsp model\n" );
+
+		VectorSubtract( maxs, mins, size );
+
+		if( hullNumber == -1 )
+		{
+			// FIXME: these constanst doesn't works with user-defined hulls
+			// revisit this
+			if( size[0] < 3 )
+				hull = &model->hulls[0];		// point hull
+			else if( size[0] <= 36 )
+			{
+				if( size[2] <= 36 )
+					hull = &model->hulls[3];	// head hull (ducked)
+				else hull = &model->hulls[1];		// human hull
+			}
+			else hull = &model->hulls[2];			// large hull
+		}
+		else
+		{
+			// TraceHull stuff
+			hull = &model->hulls[hullNumber];
+		}
+
+		// calculate an offset value to center the origin
+		VectorSubtract( hull->clip_mins, mins, offset );
+		VectorAdd( offset, ent->v.origin, offset );
+	}
+	else
+	{
+		// create a temp hull from bounding box sizes
+		VectorSubtract( ent->v.mins, maxs, hullmins );
+		VectorSubtract( ent->v.maxs, mins, hullmaxs );
+		hull = SV_HullForBox( hullmins, hullmaxs );
+		
+		VectorCopy( ent->v.origin, offset );
+	}
+	return hull;
+}
+
+/*
+===============================================================================
+
+ENTITY AREA CHECKING
+
+===============================================================================
+*/
+
 areanode_t	sv_areanodes[AREA_NODES];
 int		sv_numareanodes;
 
@@ -43,7 +196,7 @@ areanode_t *SV_CreateAreaNode( int depth, vec3_t mins, vec3_t maxs )
 		anode->axis = 0;
 	else anode->axis = 1;
 	
-	anode->dist = 0.5f * (maxs[anode->axis] + mins[anode->axis]);
+	anode->dist = 0.5f * ( maxs[anode->axis] + mins[anode->axis] );
 	VectorCopy( mins, mins1 );	
 	VectorCopy( mins, mins2 );	
 	VectorCopy( maxs, maxs1 );	
@@ -64,13 +217,28 @@ SV_ClearWorld
 */
 void SV_ClearWorld( void )
 {
-	vec3_t	mins, maxs;
-	int	worldIndex = 1;
+	SV_InitBoxHull();	// for box testing
+	SV_InitStudioHull();// for hitbox testing
 
-	sv_numareanodes = 0;
-	Mod_GetBounds( worldIndex, mins, maxs );
 	Mem_Set( sv_areanodes, 0, sizeof( sv_areanodes ));
-	SV_CreateAreaNode( 0, mins, maxs );
+	sv_numareanodes = 0;
+
+	SV_CreateAreaNode( 0, sv.worldmodel->mins, sv.worldmodel->maxs );
+}
+
+/*
+===============
+SV_UnlinkEdict
+===============
+*/
+void SV_UnlinkEdict( edict_t *ent )
+{
+	// not linked in anywhere
+	if( !ent->area.prev ) return;
+
+	RemoveLink( &ent->area );
+	ent->area.prev = NULL;
+	ent->area.next = NULL;
 }
 
 /*
@@ -90,27 +258,27 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 	{
 		next = l->next;
 		touch = EDICT_FROM_AREA( l );
-		if( touch == ent ) continue;
-		if( touch->free || touch->v.solid != SOLID_TRIGGER ) // disabled ?
+
+		if( touch == ent || touch->v.solid != SOLID_TRIGGER ) // disabled ?
 			continue;
 
 		if( !BoundsIntersect( ent->v.absmin, ent->v.absmax, touch->v.absmin, touch->v.absmax ))
 			continue;
 
+		// check triggers accuracy
 		if( CM_GetModelType( touch->v.modelindex ) == mod_brush )
 		{
-			hull = CM_HullForBsp( touch, ent->v.mins, ent->v.maxs, test );
+			hull = SV_HullForEntity( touch, -1, ent->v.mins, ent->v.maxs, test );
 
 			// offset the test point appropriately for this hull.
 			VectorSubtract( ent->v.origin, test, test );
 
 			// test hull for intersection with this model
-			if( CM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
+			if( SV_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 				continue;
 		}
 
 		svgame.dllFuncs.pfnTouch( touch, ent );
-		if( ent->free ) break; // killtarget issues
 	}
 	
 	// recurse down both sides
@@ -124,28 +292,15 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 
 /*
 ===============
-SV_UnlinkEdict
-===============
-*/
-void SV_UnlinkEdict( edict_t *ent )
-{
-	// not linked in anywhere
-	if( !ent->area.prev ) return;
-
-	RemoveLink( &ent->area );
-	ent->area.prev = NULL;
-	ent->area.next = NULL;
-}
-
-/*
-===============
 SV_CheckForOutside
 
-Remove entity out of level
+Remove entity out of the level
 ===============
 */
 void SV_CheckForOutside( edict_t *ent )
 {
+	const float	*org;
+
 	// not solid edicts can be fly through walls
 	if( ent->v.solid == SOLID_NOT ) return;
 
@@ -159,29 +314,105 @@ void SV_CheckForOutside( edict_t *ent )
 	if( CM_GetModelType( ent->v.modelindex ) != mod_studio )
 		return;
 
-	if( SV_PointContents( ent->v.origin ) == CONTENTS_SOLID )
-	{
-		const float *org = ent->v.origin;
+	org = ent->v.origin;
 
-		MsgDev( D_ERROR, "%s outside of the world at %g %g %g\n", SV_ClassName( ent ), org[0], org[1], org[2] );
-		ent->v.flags |= FL_KILLME;
-	}
+	if( SV_PointContents( org ) != CONTENTS_SOLID )
+		return;
+
+	MsgDev( D_ERROR, "%s outside of the world at %g %g %g\n", SV_ClassName( ent ), org[0], org[1], org[2] );
+
+	ent->v.flags |= FL_KILLME;
 }
 
 /*
 ===============
-SV_LinkEntity
+SV_FindTouchedLeafs
+
+===============
+*/
+void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node )
+{
+	mplane_t	*splitplane;
+	int	sides, leafnum;
+	mleaf_t	*leaf;
+
+	if( node->contents == CONTENTS_SOLID )
+		return;
+	
+	// add an efrag if the node is a leaf
+	if(  node->contents < 0 )
+	{
+		// get headnode
+		if( ent->headnode == -1 )
+			ent->headnode = node - worldmodel->nodes;
+
+		if( ent->num_leafs == MAX_ENT_LEAFS )
+			return;
+
+		leaf = (mleaf_t *)node;
+		leafnum = leaf - sv.worldmodel->leafs - 1;
+
+		ent->leafnums[ent->num_leafs] = leafnum;
+		ent->num_leafs++;			
+		return;
+	}
+	
+	// NODE_MIXED
+	splitplane = node->plane;
+	sides = BOX_ON_PLANE_SIDE( ent->v.absmin, ent->v.absmax, splitplane );
+
+	if( sides == 3 )
+	{
+		// get headnode
+		if( ent->headnode == -1 )
+			ent->headnode = node - worldmodel->nodes;
+	}
+	
+	// recurse down the contacted sides
+	if( sides & 1 ) SV_FindTouchedLeafs( ent, node->children[0] );
+	if( sides & 2 ) SV_FindTouchedLeafs( ent, node->children[1] );
+}
+
+/*
+=============
+SV_HeadnodeVisible
+=============
+*/
+bool SV_HeadnodeVisible( mnode_t *node, byte *visbits )
+{
+	mleaf_t	*leaf;
+	int	leafnum;
+
+	if( node->contents < 0 )
+	{
+		if( node->contents != CONTENTS_SOLID )
+		{
+			leaf = (mleaf_t *)node;
+			leafnum = (leaf - worldmodel->leafs - 1);
+
+			if( visbits[leafnum >> 3] & (1<<( leafnum & 7 )))
+				return true;
+		}
+		return false;
+	}
+	
+	if( SV_HeadnodeVisible( node->children[0], visbits ))
+		return true;
+	return SV_HeadnodeVisible( node->children[1], visbits );
+}
+
+/*
+===============
+SV_LinkEdict
 ===============
 */
 void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 {
 	areanode_t	*node;
-	short		leafs[MAX_TOTAL_ENT_LEAFS];
-	int		i, j, num_leafs, topNode;
 
-	if( ent->area.prev ) SV_UnlinkEdict( ent ); // unlink from old position
-	if( ent == EDICT_NUM( 0 )) return; // don't add the world
-	if( ent->free ) return;
+	if( ent->area.prev ) SV_UnlinkEdict( ent );	// unlink from old position
+	if( ent == svgame.edicts ) return;		// don't add the world
+	if( !SV_IsValidEdict( ent )) return;		// never add freed ents
 
 	// set the abs box
 	svgame.dllFuncs.pfnSetAbsBox( ent );
@@ -189,50 +420,23 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	// link to PVS leafs
 	ent->num_leafs = 0;
 
-	// get all leafs, including solids
-	num_leafs = CM_BoxLeafnums( ent->v.absmin, ent->v.absmax, leafs, MAX_TOTAL_ENT_LEAFS, &topNode );
-
-	// if none of the leafs were inside the map, the
-	// entity is outside the world and can be considered unlinked
-	if( !num_leafs )
+	if( ent->v.modelindex )
 	{
-		SV_CheckForOutside( ent );
-		return;
-	}
+		ent->headnode = -1;
+		SV_FindTouchedLeafs( ent, sv.worldmodel->nodes );
 
-	if( num_leafs >= MAX_ENT_LEAFS )
-	{	
-		// assume we missed some leafs, and mark by headnode
-		ent->num_leafs = -1;
-		ent->headnode = topNode;
-	}
-	else
-	{
-		ent->num_leafs = 0;
-
-		for( i = 0; i < num_leafs; i++ )
+		// if none of the leafs were inside the map, the
+		// entity is outside the world and can be considered unlinked
+		if( !ent->num_leafs )
 		{
-			if( leafs[i] == -1 )
-				continue;		// not a visible leaf
-
-			for( j = 0; j < i; j++ )
-			{
-				if( leafs[j] == leafs[i] )
-					break;
-			}
-
-			if( j == i )
-			{
-				if( ent->num_leafs == MAX_ENT_LEAFS )
-				{
-					// assume we missed some leafs, and mark by headNode
-					ent->num_leafs = -1;
-					ent->headnode = topNode;
-					break;
-				}
-				ent->leafnums[ent->num_leafs++] = leafs[i];
-			}
+			SV_CheckForOutside( ent );
+			ent->headnode = -1;
+			return;
 		}
+
+		if( ent->num_leafs == MAX_ENT_LEAFS )
+			ent->num_leafs = 0;		// so we use headnode instead
+		else ent->headnode = -1;		// use normal leafs check
 	}
 
 	// ignore not solid bodies
@@ -263,79 +467,256 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 }
 
 /*
-============================================================================
+===============================================================================
 
-AREA QUERY
+POINT TESTING IN HULLS
 
-Fills in a list of all entities who's absmin / absmax intersects the given
-bounds.  This does NOT mean that they actually touch in the case of bmodels.
-============================================================================
+===============================================================================
 */
 /*
-====================
-SV_AreaEdicts_r
-====================
+==================
+SV_HullPointContents
+
+==================
 */
-void SV_AreaEdicts_r( areanode_t *node, area_t *ap )
+int SV_HullPointContents( hull_t *hull, int num, const vec3_t p )
 {
-	link_t	*l, *next, *start;
-	edict_t	*check;
-	int	count = 0;
+	float		d;
+	dclipnode_t	*node;
+	mplane_t		*plane;
 
-	// touch linked edicts
-	if( ap->type == AREA_SOLID )
-		start = &node->solid_edicts;
-	else if( ap->type == AREA_TRIGGERS )
-		start = &node->trigger_edicts;
-	else start = &node->water_edicts;
-
-	for( l = start->next; l != start; l = next )
+	while( num >= 0 )
 	{
-		next = l->next;
-		check = EDICT_FROM_AREA( l );
-
-		if( check->v.solid == SOLID_NOT && check->v.skin == CONTENTS_NONE )
-			continue; // deactivated
-
-		if( !BoundsIntersect( check->v.absmin, check->v.absmax, ap->mins, ap->maxs ))
-			continue;	// not touching
-
-		if( ap->count == ap->maxcount )
-		{
-			MsgDev( D_WARN, "SV_AreaEdicts: maxcount hit\n" );
-			return;
-		}
-
-		ap->list[ap->count] = check;
-		ap->count++;
-	}
+		if( num < hull->firstclipnode || num > hull->lastclipnode )
+			Host_Error( "SV_HullPointContents: bad node number %i\n", num );
 	
-	if( node->axis == -1 ) return; // terminal node
+		node = hull->clipnodes + num;
+		plane = hull->planes + node->planenum;
+		
+		if( plane->type < 3 )
+			d = p[plane->type] - plane->dist;
+		else d = DotProduct( plane->normal, p ) - plane->dist;
 
-	// recurse down both sides
-	if( ap->maxs[node->axis] > node->dist ) SV_AreaEdicts_r( node->children[0], ap );
-	if( ap->mins[node->axis] < node->dist ) SV_AreaEdicts_r( node->children[1], ap );
+		if( d < 0 ) num = node->children[1];
+		else num = node->children[0];
+	}
+	return num;
 }
 
 /*
-================
-SV_AreaEdicts
-================
+====================
+SV_WaterLinks
+====================
 */
-int SV_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype )
+void SV_WaterLinks( const vec3_t mins, const vec3_t maxs, int *pCont, areanode_t *node )
 {
-	area_t	ap;
+	link_t	*l, *next;
+	edict_t	*touch;
 
-	ap.mins = mins;
-	ap.maxs = maxs;
-	ap.list = list;
-	ap.count = 0;
-	ap.maxcount = maxcount;
-	ap.type = areatype;
+	// get water edicts
+	for( l = node->water_edicts.next; l != &node->water_edicts; l = next )
+	{
+		next = l->next;
+		touch = EDICT_FROM_AREA( l );
 
-	SV_AreaEdicts_r( sv_areanodes, &ap );
+		if( touch->v.solid != SOLID_NOT ) // disabled ?
+			continue;
 
-	return ap.count;
+		// only brushes can have special contents
+		if( CM_GetModelType( touch->v.modelindex ) != mod_brush )
+			continue;
+
+		if( !BoundsIntersect( mins, maxs, touch->v.absmin, touch->v.absmax ))
+			continue;
+
+		// compare contents ranking
+		if( RankForContents( touch->v.skin ) > RankForContents( *pCont ))
+			*pCont = touch->v.skin; // new content has more priority
+	}
+	
+	// recurse down both sides
+	if( node->axis == -1 ) return;
+	
+	if( maxs[node->axis] > node->dist )
+		SV_WaterLinks( mins, maxs, pCont, node->children[0] );
+	if( mins[node->axis] < node->dist )
+		SV_WaterLinks( mins, maxs, pCont, node->children[1] );
+}
+
+/*
+=============
+SV_TruePointContents
+
+=============
+*/
+int SV_TruePointContents( const vec3_t p )
+{
+	int	cont;
+
+	// sanity check
+	if( !p ) return CONTENTS_NONE;
+
+	// get base contents from world
+	cont = SV_HullPointContents( &sv.worldmodel->hulls[0], 0, p );
+
+	// check all water entities
+	SV_WaterLinks( p, p, &cont, sv_areanodes );
+
+	return cont;
+}
+
+/*
+=============
+SV_PointContents
+
+=============
+*/
+int SV_PointContents( const vec3_t p )
+{
+	int cont = SV_TruePointContents( p );
+
+	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
+		cont = CONTENTS_WATER;
+	return cont;
+}
+
+//===========================================================================
+
+/*
+============
+SV_TestEntityPosition
+
+returns true if the entity is in solid currently
+============
+*/
+bool SV_TestEntityPosition( edict_t *ent )
+{
+	trace_t	trace;
+
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+
+	return trace.fStartSolid;
+}
+
+/*
+===============================================================================
+
+LINE TESTING IN HULLS
+
+===============================================================================
+*/
+/*
+==================
+SV_RecursiveHullCheck
+
+==================
+*/
+bool SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace )
+{
+	dclipnode_t	*node;
+	mplane_t		*plane;
+	float		t1, t2;
+	float		frac, midf;
+	int		side;
+	vec3_t		mid;
+
+	// check for empty
+	if( num < 0 )
+	{
+		if( num != CONTENTS_SOLID )
+		{
+			trace->fAllSolid = false;
+			if( num == CONTENTS_EMPTY )
+				trace->fInOpen = true;
+			else trace->fInWater = true;
+		}
+		else trace->fStartSolid = true;
+		return true; // empty
+	}
+
+	if( num < hull->firstclipnode || num > hull->lastclipnode )
+		Host_Error( "SV_RecursiveHullCheck: bad node number %i\n", num );
+
+	// find the point distances
+	node = hull->clipnodes + num;
+	plane = hull->planes + node->planenum;
+
+	if( plane->type < 3 )
+	{
+		t1 = p1[plane->type] - plane->dist;
+		t2 = p2[plane->type] - plane->dist;
+	}
+	else
+	{
+		t1 = DotProduct( plane->normal, p1 ) - plane->dist;
+		t2 = DotProduct( plane->normal, p2 ) - plane->dist;
+	}
+	
+	if( t1 >= 0 && t2 >= 0 )
+		return SV_RecursiveHullCheck( hull, node->children[0], p1f, p2f, p1, p2, trace );
+	if( t1 < 0 && t2 < 0 )
+		return SV_RecursiveHullCheck( hull, node->children[1], p1f, p2f, p1, p2, trace );
+
+	// put the crosspoint DIST_EPSILON pixels on the near side
+	if( t1 < 0 ) frac = ( t1 + DIST_EPSILON ) / ( t1 - t2 );
+	else frac = ( t1 - DIST_EPSILON ) / ( t1 - t2 );
+
+	if( frac < 0.0f ) frac = 0.0f;
+	if( frac > 1.0f ) frac = 1.0f;
+		
+	midf = p1f + ( p2f - p1f ) * frac;
+	VectorLerp( p1, frac, p2, mid );
+
+	side = (t1 < 0);
+
+	// move up to the node
+	if( !SV_RecursiveHullCheck( hull, node->children[side], p1f, midf, p1, mid, trace ))
+		return false;
+
+	if( SV_HullPointContents( hull, node->children[side^1], mid ) != CONTENTS_SOLID )
+	{
+		// go past the node
+		return SV_RecursiveHullCheck (hull, node->children[side^1], midf, p2f, mid, p2, trace);
+	}	
+
+	if( trace->fAllSolid )
+		return false; // never got out of the solid area
+		
+	//==================
+	// the other side of the node is solid, this is the impact point
+	//==================
+	if( !side )
+	{
+		VectorCopy( plane->normal, trace->vecPlaneNormal );
+		trace->flPlaneDist = plane->dist;
+	}
+	else
+	{
+		VectorNegate( plane->normal, trace->vecPlaneNormal );
+		trace->flPlaneDist = -plane->dist;
+	}
+
+	while( SV_HullPointContents( hull, hull->firstclipnode, mid ) == CONTENTS_SOLID )
+	{
+		// shouldn't really happen, but does occasionally
+		frac -= 0.1f;
+
+		if( frac < 0.0f )
+		{
+			trace->flFraction = midf;
+			VectorCopy( mid, trace->vecEndPos );
+			MsgDev( D_WARN, "trace backed up 0.0\n" );
+			return false;
+		}
+
+		midf = p1f + (p2f - p1f) * frac;
+		VectorLerp( p1, frac, p2, mid );
+	}
+
+	trace->flFraction = midf;
+	VectorCopy( mid, trace->vecEndPos );
+
+	return false;
 }
 
 /*
@@ -590,62 +971,79 @@ trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore )
 }
 
 /*
-=============
-SV_PointContents
+============================================================================
 
-=============
+AREA QUERY
+
+Fills in a list of all entities who's absmin / absmax intersects the given
+bounds.  This does NOT mean that they actually touch in the case of bmodels.
+============================================================================
 */
-int SV_TruePointContents( const vec3_t p )
+/*
+====================
+SV_AreaEdicts_r
+====================
+*/
+void SV_AreaEdicts_r( areanode_t *node, area_t *ap )
 {
-	int	i, num, contents;
-	edict_t	*hit, *touch[MAX_EDICTS];
+	link_t	*l, *next, *start;
+	edict_t	*check;
+	int	count = 0;
 
-	// sanity check
-	if( !p ) return CONTENTS_NONE;
+	// touch linked edicts
+	if( ap->type == AREA_SOLID )
+		start = &node->solid_edicts;
+	else if( ap->type == AREA_TRIGGERS )
+		start = &node->trigger_edicts;
+	else start = &node->water_edicts;
 
-	// get base contents from world
-	contents = CM_PointContents( p );
-
-	if( contents != CONTENTS_EMPTY )
-		return contents; // have some world contents
-
-	// check contents from all the solid entities
-	num = SV_AreaEdicts( p, p, touch, MAX_EDICTS, AREA_SOLID );
-
-	for( i = 0; i < num; i++ )
+	for( l = start->next; l != start; l = next )
 	{
-		hit = touch[i];
+		next = l->next;
+		check = EDICT_FROM_AREA( l );
 
-		if( hit->v.solid != SOLID_BSP )
-			continue; // monsters, players
+		if( check->v.solid == SOLID_NOT && check->v.skin == CONTENTS_NONE )
+			continue; // deactivated
 
-		// solid entity found
-		return CONTENTS_SOLID;
+		if( !BoundsIntersect( check->v.absmin, check->v.absmax, ap->mins, ap->maxs ))
+			continue;	// not touching
+
+		if( ap->count == ap->maxcount )
+		{
+			MsgDev( D_WARN, "SV_AreaEdicts: maxcount hit\n" );
+			return;
+		}
+
+		ap->list[ap->count] = check;
+		ap->count++;
 	}
+	
+	if( node->axis == -1 ) return; // terminal node
 
-	// check contents from all the custom entities
-	num = SV_AreaEdicts( p, p, touch, MAX_EDICTS, AREA_CUSTOM );
-
-	for( i = 0; i < num; i++ )
-	{
-		hit = touch[i];
-
-		if( hit->v.solid != SOLID_NOT || hit->v.skin == CONTENTS_NONE )
-			continue; // invalid water ?
-
-		// custom contents found
-		return hit->v.skin;
-	}
-	return contents;
+	// recurse down both sides
+	if( ap->maxs[node->axis] > node->dist ) SV_AreaEdicts_r( node->children[0], ap );
+	if( ap->mins[node->axis] < node->dist ) SV_AreaEdicts_r( node->children[1], ap );
 }
 
-int SV_PointContents( const vec3_t p )
+/*
+================
+SV_AreaEdicts
+================
+*/
+int SV_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype )
 {
-	int cont = SV_TruePointContents( p );
+	area_t	ap;
 
-	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
-		cont = CONTENTS_WATER;
-	return cont;
+	ap.mins = mins;
+	ap.maxs = maxs;
+	ap.list = list;
+	ap.count = 0;
+	ap.maxcount = maxcount;
+	ap.type = areatype;
+
+	SV_AreaEdicts_r( sv_areanodes, &ap );
+
+	return ap.count;
 }
 
 /*

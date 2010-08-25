@@ -114,6 +114,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	cl_entity_t	*ent;
 	entity_state_t	*state;
 	bool		newent = (old) ? false : true;
+	int		result = 1;
 
 	ent = EDICT_NUM( newnum );
 	state = &cl.entity_curstates[cl.parse_entities & (MAX_PARSE_ENTITIES-1)];
@@ -121,13 +122,25 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( newent ) old = &ent->baseline;
 
 	if( unchanged ) *state = *old;
-	else MSG_ReadDeltaEntity( msg, old, state, newnum, cl.frame.servertime );
+	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, cl.frame.servertime );
 
-	if( state->number == -1 )
+	if( !result )
 	{
 		if( newent ) Host_Error( "Cl_DeltaEntity: tried to release new entity\n" );
-		CL_FreeEntity( ent );
-		return; // entity was delta removed
+			
+		if( state->number == -1 )
+		{
+//			Msg( "Entity %s was removed from server\n", ent->curstate.classname );
+			CL_FreeEntity( ent );
+		}
+		else
+		{
+//			Msg( "Entity %s was removed from delta-message\n", ent->curstate.classname );
+			ent->curstate.effects |= EF_NODRAW; // don't rendering
+		}
+
+		// entity was delta removed
+		return;
 	}
 
 	cl.parse_entities++;
@@ -441,6 +454,10 @@ void CL_AddPacketEntities( frame_t *frame )
 	{
 		ent = CL_GetEntityByIndex( e );
 		if( !ent ) continue;
+
+		// entity not visible for this client
+		if( ent->curstate.effects & EF_NODRAW )
+			continue;
 
 		entityType = ent->curstate.entityType;
 		CL_UpdateEntityFields( ent );

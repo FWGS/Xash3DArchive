@@ -1055,6 +1055,13 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	// Copy state data
 	//
 
+#ifdef DEBUG
+	// NOTE: edit delta.lst if you want to get it work: add new field
+	//	DEFINE_DELTA( classname, DT_STRING, 1, 1.0 ),
+	// into Entity_Encode, Player_Encode and Custom_Encode structures 
+	strncpy( state->classname, STRING( ent->v.classname ), sizeof( state->classname ));
+#endif
+
 	// Round animtime to nearest millisecond
 	state->animtime   = (int)(1000.0 * ent->v.animtime ) / 1000.0;
 

@@ -5,30 +5,7 @@
 
 #include "cm_local.h"
 #include "mathlib.h"
-
-/*
-==============
-BoxOnPlaneSide (engine fast version)
-
-Returns SIDE_FRONT, SIDE_BACK, or SIDE_ON
-==============
-*/
-int CM_BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p )
-{
-	if( p->type < 3 ) return ((emaxs[p->type] >= p->dist) | ((emins[p->type] < p->dist) << 1));
-	switch( p->signbits )
-	{
-	default:
-	case 0: return (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) < p->dist) << 1));
-	case 1: return (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) < p->dist) << 1));
-	case 2: return (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) < p->dist) << 1));
-	case 3: return (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) < p->dist) << 1));
-	case 4: return (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
-	case 5: return (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
-	case 6: return (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
-	case 7: return (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
-	}
-}
+#include "world.h"
 
 /*
 ==================
@@ -89,7 +66,7 @@ void CM_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
 		}
 	
 		plane = node->plane;
-		s = CM_BoxOnPlaneSide( ll->mins, ll->maxs, plane );
+		s = BOX_ON_PLANE_SIDE( ll->mins, ll->maxs, plane );
 
 		if( s == 1 )
 		{
@@ -134,54 +111,6 @@ int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int lists
 
 	if( topnode ) *topnode = ll.topnode;
 	return ll.count;
-}
-
-/*
-=============
-CM_HeadnodeVisible_r
-=============
-*/
-bool CM_HeadnodeVisible_r( mnode_t *node, byte *visbits )
-{
-	mleaf_t	*leaf;
-	int	leafnum;
-
-	if( node->contents < 0 )
-	{
-		if( node->contents != CONTENTS_SOLID )
-		{
-			leaf = (mleaf_t *)node;
-			leafnum = (leaf - worldmodel->leafs - 1);
-
-			if( visbits[leafnum>>3] & (1<<( leafnum & 7 )))
-				return true;
-		}
-		return false;
-	}
-	
-	if( CM_HeadnodeVisible_r( node->children[0], visbits ))
-		return true;
-	return CM_HeadnodeVisible_r( node->children[1], visbits );
-}
-
-/*
-=============
-CM_HeadnodeVisible
-
-returns true if any leaf under headnode 
-is potentially visible
-=============
-*/
-bool CM_HeadnodeVisible( int nodenum, byte *visbits )
-{
-	mnode_t	*node;
-
-	if( !worldmodel ) return false;
-	if( nodenum == -1 ) return false;
-
-	node = (mnode_t *)worldmodel->nodes + nodenum;
-
-	return CM_HeadnodeVisible_r( node, visbits );
 }
 
 /*
