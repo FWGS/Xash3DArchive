@@ -3,7 +3,7 @@
 //		      sv_studio.c - server studio utilities
 //=======================================================================
 
-// FIXME: these code needs be some cleanup from lerping code
+// FIXME: these code needs to be some cleanup from lerping code
 
 #include "common.h"
 #include "server.h"
@@ -14,10 +14,10 @@ static mplane_t	sv_hitboxplanes[6];	// there a temp hitbox
 static matrix4x4	sv_studiomatrix;
 static matrix4x4	sv_studiobones[MAXSTUDIOBONES];
 typedef bool 	(*pfnHitboxTrace)( trace_t *trace );
-static float	trace_realfraction;
 static vec3_t	trace_startmins, trace_endmins;
 static vec3_t	trace_startmaxs, trace_endmaxs;
 static vec3_t	trace_absmins, trace_absmaxs;
+static float	trace_realfraction;
 
 /*
 ====================
@@ -871,23 +871,24 @@ static bool SV_StudioIntersect( edict_t *ent, const vec3_t start, vec3_t mins, v
 	return BoundsIntersect( trace_mins, trace_maxs, anim_mins, anim_maxs );
 }
 
-bool SV_StudioTrace( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, trace_t *ptr )
+trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
 {
 	vec3_t		start_l, end_l;
 	int		i, outBone = -1;
 	pfnHitboxTrace	TraceHitbox = NULL;
+	trace_t		trace;
 
 	// assume we didn't hit anything
-	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
-	VectorCopy( end, ptr->vecEndPos );
-	ptr->flFraction = trace_realfraction = 1.0f;
-	ptr->iHitgroup = -1;
+	Mem_Set( &trace, 0, sizeof( trace_t ));
+	VectorCopy( end, trace.vecEndPos );
+	trace.flFraction = trace_realfraction = 1.0f;
+	trace.iHitgroup = -1;
 
 	if( !SV_StudioIntersect( ent, start, mins, maxs, end ))
-		return false;
+		return trace;
 
 	if( !SV_StudioSetupModel( ent ))
-		return false;
+		return trace;
 
 	if( VectorCompare( start, end ))
 		TraceHitbox = SV_StudioTestToHitbox;	// special case for test position
@@ -911,13 +912,13 @@ bool SV_StudioTrace( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs,
 		VectorAdd( end_l, mins, trace_endmins );
 		VectorAdd( end_l, maxs, trace_endmaxs );
 
-		if( TraceHitbox( ptr ))
+		if( TraceHitbox( &trace ))
 		{
 			outBone = phitbox->bone;
-			ptr->iHitgroup = phitbox->group;
+			trace.iHitgroup = phitbox->group;
 		}
 
-		if( ptr->fAllSolid )
+		if( trace.fAllSolid )
 			break;
 	}
 
@@ -926,14 +927,13 @@ bool SV_StudioTrace( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs,
 	{
 		vec3_t	temp;
 
-		ptr->pHit = ent;
-		VectorCopy( ptr->vecPlaneNormal, temp );
-		ptr->flFraction = bound( 0, ptr->flFraction, 1.0f );
-		VectorLerp( start, ptr->flFraction, end, ptr->vecEndPos );
-		Matrix4x4_TransformPositivePlane( sv_studiobones[outBone], temp, ptr->flPlaneDist, ptr->vecPlaneNormal, &ptr->flPlaneDist );
-		return true;
+		trace.pHit = ent;
+		VectorCopy( trace.vecPlaneNormal, temp );
+		trace.flFraction = bound( 0, trace.flFraction, 1.0f );
+		VectorLerp( start, trace.flFraction, end, trace.vecEndPos );
+		Matrix4x4_TransformPositivePlane( sv_studiobones[outBone], temp, trace.flPlaneDist, trace.vecPlaneNormal, &trace.flPlaneDist );
 	}
-	return false;
+	return trace;
 }
 
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang )
@@ -963,5 +963,4 @@ void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 	Matrix3x3_FromMatrix4x4( axis, sv_studiobones[iBone] );
 	if( org ) Matrix4x4_OriginFromMatrix( sv_studiobones[iBone], org );
 	if( ang ) Matrix3x3_ToAngles( axis, ang, true );
-	
 }

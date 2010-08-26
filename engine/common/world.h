@@ -24,6 +24,13 @@ ENTITY AREA CHECKING
 #define AREA_NODES			32
 #define AREA_DEPTH			4
 
+typedef enum
+{
+	AREA_SOLID,		// find any solid edicts
+	AREA_TRIGGERS,		// find all SOLID_TRIGGER edicts
+	AREA_CUSTOM,		// find all edicts with custom contents - water, lava, fog, laders etc
+} AREA_TYPE;
+
 typedef struct areanode_s
 {
 	int		axis;		// -1 = leaf node

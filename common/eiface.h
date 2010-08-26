@@ -39,13 +39,6 @@ typedef enum
 	force_model_specifybounds,	// for model files only, the geometry must fit in the specified bbox
 } FORCE_TYPE;
 
-typedef enum
-{
-	AREA_SOLID,		// find any solid edicts
-	AREA_TRIGGERS,		// find all SOLID_TRIGGER edicts
-	AREA_CUSTOM,		// find all edicts with custom contents - water, lava, fog, laders etc
-} AREA_TYPE;
-
 typedef struct
 {
 	int	fAllSolid;	// if true, plane is not valid
@@ -100,7 +93,7 @@ typedef struct enginefuncs_s
 	void	(*pfnTraceHull)( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr );
 	void	(*pfnTraceModel)( const float *v1, const float *v2, int hullNumber, edict_t *pent, TraceResult *ptr );
 	const char *(*pfnTraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 );
-	int	(*pfnAreaEdicts)( const float *mins, const float *maxs, edict_t **list, int maxcount, AREA_TYPE areatype ); // a part of CustomPhysics implementation
+	void	(*pfnTraceSphere)( const float *v1, const float *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr );
 	void	(*pfnGetAimVector)( edict_t* ent, float speed, float *rgflReturn );
 	void	(*pfnServerCommand)( const char* str );
 	void	(*pfnServerExecute)( void );

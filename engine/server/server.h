@@ -452,7 +452,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 void SV_InitStudioHull( void );
 bool SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
-bool SV_StudioTrace( edict_t *ent, const vec3_t p1, vec3_t mins, vec3_t maxs, const vec3_t p2, trace_t *ptr );
+trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );
 
 //============================================================
@@ -472,14 +472,6 @@ void SV_UnlinkEdict (edict_t *ent);
 // sets ent->leafnums[] for pvs determination even if the entity
 // is not solid
 
-int SV_AreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype );
-// fills in a table of edict pointers with edicts that have bounding boxes
-// that intersect the given area.  It is possible for a non-axial bmodel
-// to be returned that doesn't actually intersect the area on an exact
-// test.
-// returns the number of pointers filled in
-// ??? does this always return the world?
-
 //
 // sv_pmove.c
 //
@@ -494,12 +486,12 @@ extern areanode_t	sv_areanodes[];
 void SV_ClearWorld( void );
 bool SV_HeadnodeVisible( mnode_t *node, byte *visbits );
 int SV_HullPointContents( hull_t *hull, int num, const vec3_t p );
+trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
-trace_t SV_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags );
+trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int type, edict_t *e );
 trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );
 void SV_LinkEdict( edict_t *ent, bool touch_triggers );
 void SV_TouchLinks( edict_t *ent, areanode_t *node );
-edict_t *SV_TestPlayerPosition( const vec3_t origin, edict_t *pass, TraceResult *trace );
 int SV_TruePointContents( const vec3_t p );
 int SV_PointContents( const vec3_t p );
 

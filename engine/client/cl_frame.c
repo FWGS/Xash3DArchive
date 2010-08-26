@@ -137,6 +137,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		{
 //			Msg( "Entity %s was removed from delta-message\n", ent->curstate.classname );
 			ent->curstate.effects |= EF_NODRAW; // don't rendering
+			clgame.dllFuncs.pfnUpdateOnRemove( ent );
 		}
 
 		// entity was delta removed

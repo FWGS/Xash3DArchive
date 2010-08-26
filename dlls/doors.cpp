@@ -880,6 +880,7 @@ class CMomentaryDoor : public CBaseToggle
 public:
 	void	Spawn( void );
 	void Precache( void );
+	void EXPORT MomentaryMoveDone( void );
 
 	void	KeyValue( KeyValueData *pkvd );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -1021,6 +1022,13 @@ void CMomentaryDoor::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 			EMIT_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseMoving), 1, ATTN_NORM);
 
 		LinearMove( move, speed );
+		SetMoveDone( MomentaryMoveDone );
 	}
 
+}
+
+void CMomentaryDoor::MomentaryMoveDone( void )
+{
+	STOP_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseMoving));
+	EMIT_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseArrived), 1, ATTN_NORM);
 }

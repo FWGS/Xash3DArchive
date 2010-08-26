@@ -1356,7 +1356,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	// can't track this entity on the client.
 	// write static sound
-	if( !ent->headnode ) flags |= SND_FIXED_ORIGIN;
+	if( !ent->v.modelindex ) flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
@@ -1399,7 +1399,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( !ent->headnode )
+	if( !ent->v.modelindex )
 		entityIndex = 0;
 	else if( SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = ent->v.aiment->serialnumber;
@@ -1512,16 +1512,13 @@ pfnTraceLine
 */
 static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr )
 {
-	trace_t	result;
+	if( !ptr ) return;
 
 	if( svgame.globals->trace_flags & 1 )
 		fNoMonsters |= FMOVE_SIMPLEBOX;
 	svgame.globals->trace_flags = 0;
 
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceLine: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	result = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
-	if( ptr ) *ptr = result;
+	*ptr = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
 }
 
 /*
@@ -1532,7 +1529,7 @@ pfnTraceToss
 */
 static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr )
 {
-	trace_t	result;
+	if( !ptr ) return;
 
 	if( !SV_IsValidEdict( pent ))
 	{
@@ -1540,8 +1537,7 @@ static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr
 		return;
 	}
 
-	result = SV_MoveToss( pent, pentToIgnore );
-	if( ptr ) *ptr = result;
+	*ptr = SV_MoveToss( pent, pentToIgnore );
 }
 
 /*
@@ -1552,21 +1548,13 @@ pfnTraceHull
 */
 static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr )
 {
-	trace_t	result;
-	float	*mins, *maxs;
-
-	hullNumber = bound( 0, hullNumber, 3 );
-	mins = GI->client_mins[hullNumber];
-	maxs = GI->client_maxs[hullNumber];
+	if( !ptr ) return;
 
 	if( svgame.globals->trace_flags & 1 )
 		fNoMonsters |= FMOVE_SIMPLEBOX;
 	svgame.globals->trace_flags = 0;
 
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceHull: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	result = SV_Move( v1, mins, maxs, v2, fNoMonsters, pentToSkip );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
+	*ptr = SV_MoveHull( v1, hullNumber, v2, fNoMonsters, pentToSkip );
 }
 
 /*
@@ -1611,6 +1599,8 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 {
 	float	*mins, *maxs;
 
+	if( !ptr ) return;
+
 	if( !SV_IsValidEdict( pent ))
 	{
 		MsgDev( D_WARN, "TraceModel: invalid entity %s\n", SV_ClassName( pent ));
@@ -1618,12 +1608,10 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 	}
 
 	hullNumber = bound( 0, hullNumber, 3 );
-	mins = svgame.player_mins[hullNumber];
-	maxs = svgame.player_maxs[hullNumber];
+	mins = sv.worldmodel->hulls[hullNumber].clip_mins;
+	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
 
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceModel: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	if( ptr ) *ptr = SV_ClipMove( pent, v1, mins, maxs, v2, 0 );
+	*ptr = SV_TraceHull( pent, hullNumber, v1, mins, maxs, v2 );
 }
 
 /*
@@ -1649,32 +1637,13 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 
 /*
 =============
-pfnAreaEdicts
+pfnTraceSphere
 
-returns true if the entity is in solid currently
+FIXME: implement
 =============
 */
-static int pfnAreaEdicts( const vec3_t mins, const vec3_t maxs, edict_t **list, int maxcount, int areatype )
+static void pfnTraceSphere( const float *v1, const float *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr )
 {
-	if( !mins || !maxs )
-	{
-		MsgDev( D_ERROR, "SV_AreaEdicts: invalid area bounds\n" );
-		return 0;
-	}
-
-	if( VectorIsNAN( mins ) || VectorIsNAN( maxs ))
-		Host_Error( "SV_AreaEdicts: NAN errors detected '%f %f %f', '%f %f %f'\n", mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2] );
-
-	if( !list || maxcount <= 0 )
-		return 0;
-
-	if( areatype < AREA_SOLID || areatype > AREA_CUSTOM )
-	{
-		MsgDev( D_WARN, "SV_AreaEdicts: bad area type %i. Defaulting to AREA_SOLID\n", areatype );
-		areatype = AREA_SOLID;
-	}
-	
-	return SV_AreaEdicts( mins, maxs, list, maxcount, areatype );
 }
 
 /*
@@ -3277,9 +3246,6 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	// vis not set - fullvis enabled
 	if( !pset ) return 1;
 
-	if( !ent->headnode )
-		return 0; // not a linked in ?
-
 	if( ent->headnode == -1 )
 	{
 		int	i;
@@ -3298,11 +3264,15 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	{
 		mnode_t	*node;
 
+		if( ent->headnode < 0 )
+			node = (mnode_t *)(sv.worldmodel->leafs + (-1 - ent->headnode));			
+		else node = sv.worldmodel->nodes + ent->headnode;
+
 		// too many leafs for individual check, go by headnode
-		node = sv.worldmodel->nodes + ent->headnode;
 		if( !SV_HeadnodeVisible( node, pset ))
 			return 0;
 	}
+
 #if 0
 	// NOTE: uncommenat this if you want to get more accuracy culling on large brushes
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
@@ -3555,7 +3525,7 @@ static enginefuncs_t gEngfuncs =
 	pfnTraceHull,
 	pfnTraceModel,
 	pfnTraceTexture,
-	pfnAreaEdicts,
+	pfnTraceSphere,
 	pfnGetAimVector,
 	pfnServerCommand,
 	pfnServerExecute,

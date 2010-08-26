@@ -159,6 +159,51 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 		SV_AddLinksToPmove( node->children[1], pmove_mins, pmove_maxs );
 }
 
+/*
+====================
+SV_AddLaddersToPmove
+====================
+*/
+void SV_AddLaddersToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t pmove_maxs )
+{
+	link_t	*l, *next;
+	edict_t	*check;
+	physent_t	*pe;
+	
+	// get water edicts
+	for( l = node->water_edicts.next; l != &node->water_edicts; l = next )
+	{
+		next = l->next;
+		check = EDICT_FROM_AREA( l );
+
+		if( check->v.solid != SOLID_NOT ) // disabled ?
+			continue;
+
+		// only brushes can have special contents
+		if( CM_GetModelType( check->v.modelindex ) != mod_brush )
+			continue;
+
+		if( !BoundsIntersect( pmove_mins, pmove_maxs, check->v.absmin, check->v.absmax ))
+			continue;
+
+		if( svgame.pmove->nummoveent == MAX_MOVEENTS )
+			return;
+
+		pe = &svgame.pmove->moveents[svgame.pmove->nummoveent];
+
+		if( SV_CopyEdictToPhysEnt( pe, check, true ))
+			svgame.pmove->nummoveent++;
+	}
+	
+	// recurse down both sides
+	if( node->axis == -1 ) return;
+	
+	if( pmove_maxs[node->axis] > node->dist )
+		SV_AddLaddersToPmove( node->children[0], pmove_mins, pmove_maxs );
+	if( pmove_mins[node->axis] < node->dist )
+		SV_AddLaddersToPmove( node->children[1], pmove_mins, pmove_maxs );
+}
+
 static void pfnParticle( float *origin, int color, float life, int zpos, int zvel )
 {
 	int	v;
@@ -244,7 +289,7 @@ static pmtrace_t pfnPlayerTrace( float *start, float *end, int traceFlags, int i
 	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
 	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
 
-	result = SV_Move( start, mins, maxs, end, FMOVE_SIMPLEBOX, clent );
+	result = SV_Move( start, mins, maxs, end, MOVE_NORMAL, clent );
 
 	VectorCopy( result.vecEndPos, out.endpos );
 	VectorCopy( result.vecPlaneNormal, out.plane.normal );
@@ -315,13 +360,13 @@ static float pfnTraceModel( physent_t *pEnt, float *start, float *end, pmtrace_t
 
 static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
 {
-	physent_t *pe;
+	edict_t *ent;
 
 	if( ground < 0 || ground >= svgame.pmove->numphysent )
 		return NULL; // bad ground
 
-	pe = &svgame.pmove->physents[ground];
-	return PM_TraceTexture( pe, vstart, vend );
+	ent = EDICT_NUM( svgame.pmove->physents[ground].info );
+	return CM_TraceTexture( ent, vstart, vend );
 }			
 
 static int pfnCOM_FileSize( const char *filename )
@@ -459,10 +504,8 @@ static void PM_CheckMovingGround( edict_t *ent, float frametime )
 
 static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
 {
-	physent_t	*pe;
-	edict_t	*touch[MAX_EDICTS];
 	vec3_t	absmin, absmax;
-	int	i, count;
+	int	i;
 
 	pmove->player_index = NUM_FOR_EDICT( clent ) - 1;
 	pmove->multiplayer = (sv_maxclients->integer > 1) ? true : false;
@@ -530,23 +573,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	svgame.pmove->numphysent = 1;	// always have world
 
 	SV_AddLinksToPmove( sv_areanodes, absmin, absmax );
-	count = SV_AreaEdicts( absmin, absmax, touch, MAX_EDICTS, AREA_CUSTOM );
-
-	// build list of ladders around player
-	for( i = 0; i < count; i++ )
-	{
-		if( pmove->nummoveent >= MAX_MOVEENTS )
-		{
-			MsgDev( D_ERROR, "PM_PlayerMove: too many ladders in PVS\n" );
-			break;
-		}
-
-		if( touch[i] == clent ) continue;
-
-		pe = &svgame.pmove->moveents[svgame.pmove->nummoveent];
-		if( SV_CopyEdictToPhysEnt( pe, touch[i], true ))
-			svgame.pmove->nummoveent++;
-	}
+	SV_AddLaddersToPmove( sv_areanodes, absmin, absmax );
 }
 
 static void PM_FinishMove( playermove_t *pmove, edict_t *clent )

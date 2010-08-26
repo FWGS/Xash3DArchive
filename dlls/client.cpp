@@ -694,7 +694,15 @@ void StartFrame( void )
 
 	if ( g_fGameOver )
 		return;
+#if 0
+	for( int i = 0; i < g_engfuncs.pfnNumberOfEntities(); i++ )
+	{
+		edict_t *ed = INDEXENT( i );
 
+		if( !ed ) continue;
+		ALERT( at_console, "Entity #%i, %s, headnode %i, num_leafs %i\n", i, STRING( ed->v.classname ), ed->headnode, ed->num_leafs );
+	}
+#endif
 	gpGlobals->teamplay = teamplay->value;
 	g_ulFrameCount++;
 }
