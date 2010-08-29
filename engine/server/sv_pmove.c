@@ -360,13 +360,13 @@ static float pfnTraceModel( physent_t *pEnt, float *start, float *end, pmtrace_t
 
 static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
 {
-	edict_t *ent;
+	physent_t *pe;
 
 	if( ground < 0 || ground >= svgame.pmove->numphysent )
 		return NULL; // bad ground
 
-	ent = EDICT_NUM( svgame.pmove->physents[ground].info );
-	return CM_TraceTexture( ent, vstart, vend );
+	pe = &svgame.pmove->physents[ground];
+	return PM_TraceTexture( pe, vstart, vend );
 }			
 
 static int pfnCOM_FileSize( const char *filename )
@@ -537,7 +537,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	pmove->deadflag = clent->v.deadflag;
 	pmove->spectator = 0;	// FIXME: implement
 	pmove->movetype = clent->v.movetype;
-	pmove->onground = -1; // will be set by PM_ code
+	pmove->onground = -1; // will be set later
 	pmove->waterlevel = clent->v.waterlevel;
 	pmove->watertype = clent->v.watertype;
 	pmove->maxspeed = svgame.movevars.maxspeed;
@@ -574,6 +574,16 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 
 	SV_AddLinksToPmove( sv_areanodes, absmin, absmax );
 	SV_AddLaddersToPmove( sv_areanodes, absmin, absmax );
+
+	// setup ground entity
+	for( i = 0; clent->v.groundentity && i < svgame.pmove->numphysent; i++ )
+	{
+		if( NUM_FOR_EDICT( clent->v.groundentity ) == svgame.pmove->physents[i].info )
+		{
+			pmove->onground = i;
+			break;
+		}
+	}
 }
 
 static void PM_FinishMove( playermove_t *pmove, edict_t *clent )

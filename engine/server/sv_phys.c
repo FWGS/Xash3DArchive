@@ -59,6 +59,7 @@ void SV_CheckAllEnts( void )
 		case MOVETYPE_NONE:
 		case MOVETYPE_FOLLOW:
 		case MOVETYPE_NOCLIP:
+		case MOVETYPE_COMPOUND:
 			continue;
 		default:
 			break;
@@ -77,9 +78,6 @@ SV_CheckVelocity
 void SV_CheckVelocity( edict_t *ent )
 {
 	int	i;
-	float	maxvel;
-
-	maxvel = fabs( svgame.movevars.maxvelocity );
 
 	// bound velocity
 	for( i = 0; i < 3; i++ )
@@ -94,10 +92,12 @@ void SV_CheckVelocity( edict_t *ent )
 			MsgDev( D_INFO, "Got a NaN origin on %s\n", STRING( ent->v.classname ));
 			ent->v.origin[i] = 0.0f;
 		}
-	}
 
-	if( VectorLength( ent->v.velocity ) > maxvel )
-		VectorScale( ent->v.velocity, maxvel / VectorLength( ent->v.velocity ), ent->v.velocity );
+		if( ent->v.velocity[i] > sv_maxvelocity->value )
+			ent->v.velocity[i] = sv_maxvelocity->value;
+		else if( ent->v.velocity[i] < -sv_maxvelocity->value )
+			ent->v.velocity[i] = -sv_maxvelocity->value;
+	}
 }
 
 /*
@@ -190,74 +190,6 @@ void SV_Impact( edict_t *e1, trace_t *trace )
 }
 
 /*
-============
-SV_TransformedBBox
-
-Returns the actual bounding box of a bmodel. This is a big improvement over
-what quake normally does with rotating bmodels - quake sets absmin, absmax to a cube
-that will completely contain the bmodel at *any* rotation on *any* axis, whether
-the bmodel can actually rotate to that angle or not. This leads to a lot of
-false block tests in SV_MovePush if another bmodel is in the vicinity.
-============
-*/
-void SV_TransformedBBox( edict_t *ent, vec3_t mins, vec3_t maxs )
-{
-	vec3_t	forward, left, up, f1, l1, u1;
-	int	i, j, k, j2, k4;
-	vec3_t	p[8];
-
-	for( k = 0; k < 2; k++ )
-	{
-		k4 = k * 4;
-		if( k ) p[k4][2] = ent->v.maxs[2];
-		else p[k4][2] = ent->v.mins[2];
-
-		p[k4+1][2] = p[k4][2];
-		p[k4+2][2] = p[k4][2];
-		p[k4+3][2] = p[k4][2];
-
-		for( j = 0; j < 2; j++ )
-		{
-			j2 = j * 2;
-			if( j ) p[j2+k4][1] = ent->v.maxs[1];
-			else p[j2+k4][1] = ent->v.mins[1];
-			p[j2+k4+1][1] = p[j2+k4][1];
-
-			for( i = 0; i < 2; i++ )
-			{
-				if( i ) p[i+j2+k4][0] = ent->v.maxs[0];
-				else p[i+j2+k4][0] = ent->v.mins[0];
-			}
-		}
-	}
-
-	AngleVectorsFLU( ent->v.angles, forward, left, up );
-
-	for( i = 0; i < 8; i++ )
-	{
-		VectorScale( forward, p[i][0], f1 );
-		VectorScale( left, -p[i][1], l1 );
-		VectorScale( up, p[i][2], u1 );
-		VectorAdd( ent->v.origin, f1, p[i] );
-		VectorAdd( p[i], l1, p[i] );
-		VectorAdd( p[i], u1, p[i] );
-	}
-
-	VectorCopy( p[0], mins );
-	VectorCopy( p[0], maxs );
-
-	for( i = 1; i < 8; i++ )
-	{
-		mins[0] = min( mins[0], p[i][0] );
-		mins[1] = min( mins[1], p[i][1] );
-		mins[2] = min( mins[2], p[i][2] );
-		maxs[0] = max( maxs[0], p[i][0] );
-		maxs[1] = max( maxs[1], p[i][1] );
-		maxs[2] = max( maxs[2], p[i][2] );
-	}
-}
-
-/*
 =============
 SV_AngularMove
 
@@ -278,12 +210,14 @@ void SV_AngularMove( edict_t *ent, float frametime, float friction )
 		if( ent->v.avelocity[i] > 0.0f )
 		{
 			ent->v.avelocity[i] -= adjustment;
-			if( ent->v.avelocity[i] < 0.0f ) ent->v.avelocity[i] = 0.0f;
+			if( ent->v.avelocity[i] < 0.0f )
+				ent->v.avelocity[i] = 0.0f;
 		}
 		else
 		{
 			ent->v.avelocity[i] += adjustment;
-			if( ent->v.avelocity[i] > 0.0f ) ent->v.avelocity[i] = 0.0f;
+			if( ent->v.avelocity[i] > 0.0f )
+				ent->v.avelocity[i] = 0.0f;
 		}
 	}
 }
@@ -326,93 +260,56 @@ SV_CheckWater
 */
 bool SV_CheckWater( edict_t *ent )
 {
-	int	cont;
+	int	cont, truecont;
 	vec3_t	point;
 
-	point[0] = (ent->v.absmin[0] + ent->v.absmax[0]) * 0.5f;
-	point[1] = (ent->v.absmin[1] + ent->v.absmax[1]) * 0.5f;
-	point[2] = ent->v.absmin[2] + 1;
+	point[0] = ent->v.origin[0] + (ent->v.mins[0] + ent->v.maxs[0]) * 0.5f;
+	point[1] = ent->v.origin[1] + (ent->v.mins[1] + ent->v.maxs[1]) * 0.5f;
+	point[2] = ent->v.origin[2] + ent->v.mins[2] + 1;	
 
 	ent->v.waterlevel = 0;
 	ent->v.watertype = CONTENTS_EMPTY;
-	cont = SV_TruePointContents( point );
+	cont = SV_PointContents( point );
 
-	if( cont <= CONTENTS_WATER )
+	if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
 	{
+		truecont = SV_TruePointContents( point );
+
 		ent->v.watertype = cont;
 		ent->v.waterlevel = 1;
-			
-		// point sized entities are always fully submerged
-		if( ent->v.absmin[2] == ent->v.absmax[2] )
+
+		point[2] = ent->v.origin[2] + (ent->v.mins[2] + ent->v.maxs[2]) * 0.5f;			
+
+		cont = SV_PointContents( point );
+		if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
 		{
-			ent->v.waterlevel = 3;
+			ent->v.waterlevel = 2;
+			point[2] = ent->v.origin[2] + ent->v.view_ofs[2];
+			cont = SV_PointContents( point );
+			if( cont <= CONTENTS_WATER )
+				ent->v.waterlevel = 3;
 		}
-		else
+
+		if( truecont <= CONTENTS_CURRENT_0 && truecont >= CONTENTS_CURRENT_DOWN )
 		{
-			// check the exact center of the box
-			point[2] = (ent->v.absmin[2] + ent->v.absmax[2]) * 0.5f;
-
-			if( SV_PointContents( point ) <= CONTENTS_WATER )
+			static vec3_t current_table[] =
 			{
-				ent->v.waterlevel = 2;
-				point[2] = ent->v.origin[2] + ent->v.view_ofs[2];
+			{ 1,  0, 0 },
+			{ 0,  1, 0 },
+			{-1,  0, 0 },
+			{ 0, -1, 0 },
+			{ 0,  0, 1 },
+			{ 0,  0, -1}
+			};
 
-				// now check where the eyes are...
-				if( SV_PointContents( point ) <= CONTENTS_WATER )
-					ent->v.waterlevel = 3;
-			}
+			float speed = 50.0f * ent->v.waterlevel;
+			float *dir = current_table[CONTENTS_CURRENT_0 - truecont];
 
-			if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
-			{
-				static vec3_t current_table[] =
-				{
-					{ 1,  0, 0 },
-					{ 0,  1, 0 },
-					{-1,  0, 0 },
-					{ 0, -1, 0 },
-					{ 0,  0, 1 },
-					{ 0,  0, -1}
-				};
-
-				float speed = ent->v.waterlevel * 50.0f;
-				float *dir = current_table[CONTENTS_CURRENT_0 - cont];
-
-				VectorMA( ent->v.basevelocity, speed, dir, ent->v.basevelocity );
-			}
+			VectorMA( ent->v.basevelocity, speed, dir, ent->v.basevelocity );
 		}
 	}
 
 	return ent->v.waterlevel > 1;
-}
-
-/*
-============
-SV_ClampOrigin
-
-clamp the move to 1/32 units, so the position will
-be accurate for client side prediction
-============
-*/
-void SV_ClampOrigin( vec3_t origin )
-{
-	origin[0] -= 32.0f * floor( origin[0] * ( 1.0f / 32.0f ));
-	origin[1] -= 32.0f * floor( origin[1] * ( 1.0f / 32.0f ));
-	origin[2] -= 32.0f * floor( origin[2] * ( 1.0f / 32.0f ));
-}
-
-/*
-============
-SV_ClampAngles
-
-clamp the angles to 1/360 degrees, so the position will
-be accurate for client side prediction
-============
-*/
-void SV_ClampAngles( vec3_t angles )
-{
-	angles[0] -= 360.0f * floor( angles[0] * ( 1.0f / 360.0f ));
-	angles[1] -= 360.0f * floor( angles[1] * ( 1.0f / 360.0f ));
-	angles[2] -= 360.0f * floor( angles[2] * ( 1.0f / 360.0f ));
 }
 
 /*
@@ -422,19 +319,28 @@ SV_ClipVelocity
 Slide off of the impacting object
 ==================
 */
-void SV_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce )
+int SV_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce )
 {
-	int i;
-	float backoff;
+	float	backoff;
+	float	change;
+	int	i, blocked;
 
-	backoff = -DotProduct (in, normal) * overbounce;
-	VectorMA( in, backoff, normal, out );
+	blocked = 0;
+	if( normal[2] > 0.0f ) blocked |= 1;	// floor
+	if( !normal[2] ) blocked |= 2;	// step
+	
+	backoff = DotProduct( in, normal ) * overbounce;
 
 	for( i = 0; i < 3; i++ )
 	{
+		change = normal[i] * backoff;
+		out[i] = in[i] - change;
+
 		if( out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON )
 			out[i] = 0.0f;
 	}
+
+	return blocked;
 }
 
 /*
@@ -446,7 +352,7 @@ void SV_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce )
 */
 /*
 ============
-SV_TryMove
+SV_FlyMove
 
 The basic solid body movement clip that slides along multiple planes
 *steptrace - if not NULL, the trace results of any vertical wall hit will be stored
@@ -456,7 +362,7 @@ Returns the clipflags if the velocity was modified (hit something solid)
 4 = dead stop
 ============
 */
-int SV_TryMove( edict_t *ent, float time, trace_t *steptrace )
+int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 {
 	int		i, j, numplanes, bumpcount, blocked;
 	vec3_t		dir, end, planes[MAX_CLIP_PLANES];
@@ -501,10 +407,7 @@ int SV_TryMove( edict_t *ent, float time, trace_t *steptrace )
 			 break; // moved the entire distance
 
 		if( !trace.pHit )
-		{
-			MsgDev( D_WARN, "SV_TryMove: trace.pHit == NULL\n" );
-			return 4;
-		}
+			MsgDev( D_ERROR, "SV_FlyMove: trace.pHit == NULL\n" );
 
 		if( trace.vecPlaneNormal[2] > 0.7f )
 		{
@@ -599,9 +502,18 @@ SV_AddGravity
 */
 void SV_AddGravity( edict_t *ent )
 {
-	if( ent->v.gravity ) // gravity modifier
-		ent->v.velocity[2] -= sv_gravity->value * ent->v.gravity * sv_frametime();
-	else ent->v.velocity[2] -= sv_gravity->value * sv_frametime();
+	float	ent_gravity;
+
+	if( ent->v.gravity )
+		ent_gravity = ent->v.gravity;
+	else ent_gravity = 1.0;
+
+	// add gravity incorrectly
+	ent->v.velocity[2] -= (ent_gravity * sv_gravity->value * sv_frametime( ));
+	ent->v.velocity[2] += ent->v.basevelocity[2] * sv_frametime();
+	ent->v.basevelocity[2] = 0.0f;
+
+	SV_CheckVelocity( ent );
 }
 
 void SV_AddHalfGravity( edict_t *ent, float timestep )
@@ -660,7 +572,11 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		ent->v.fixangle = 2;
 	}
 
-	ent->v.angles[YAW] += trace.flFraction * apush[YAW];
+	// don't rotate pushables!
+	if( ent->v.movetype != MOVETYPE_PUSHSTEP )
+	{
+		ent->v.angles[YAW] += trace.flFraction * apush[YAW];
+	}
 
 	if( blocked ) *blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
 
@@ -679,6 +595,7 @@ static bool SV_CanPushed( edict_t *ent )
 	case MOVETYPE_PUSH:
 	case MOVETYPE_FOLLOW:
 	case MOVETYPE_NOCLIP:
+	case MOVETYPE_COMPOUND:
 		return false;
 	}
 	return true;
@@ -752,11 +669,6 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		if( !SV_CanPushed( check ))
 			continue;
 
-		pusher->v.solid = SOLID_NOT;
-		block = SV_TestEntityPosition( check );
-		pusher->v.solid = oldsolid;
-		if( block ) continue;
-
 		// if the entity is standing on the pusher, it will definately be moved
 		if( !(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == pusher ))
 		{
@@ -789,7 +701,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( block )// || SV_TestEntityPosition( check ))
+		if( block )//|| SV_TestEntityPosition( check ))
 		{	
 			if( !SV_CanBlock( check ))
 				continue;
@@ -826,12 +738,12 @@ SV_PushRotate
 */
 static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 {
-	int		i, e, block;
-	int		num_moved, oldsolid;
-	vec3_t		lmove, a, amove;
+	int		i, e, block, oldsolid;
+	matrix4x4		start_l, end_l, temp_l;
+	vec3_t		lmove, amove;
 	sv_pushed_t	*p, *pushed_p;
-	vec3_t		forward, right, up;
-	vec3_t		org, org2;
+	vec3_t		org, org2, temp;
+	float		*p_org, *p_ang;
 	edict_t		*check;
 
 	if( VectorIsNull( pusher->v.avelocity ))
@@ -843,8 +755,12 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	for( i = 0; i < 3; i++ )
 		amove[i] = pusher->v.avelocity[i] * movetime;
 
-	VectorNegate( amove, a );
-	AngleVectors( a, forward, right, up );
+	p_org = pusher->v.origin;
+	p_ang = pusher->v.angles;
+
+	// create pusher initial position
+	Matrix4x4_CreateFromEntity( temp_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+	Matrix4x4_Invert_Simple( start_l, temp_l );
 
 	pushed_p = svgame.pushed;
 
@@ -860,8 +776,10 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;
 
+	// create pusher final position
+	Matrix4x4_CreateFromEntity( end_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+
 	// see if any solid entities are inside the final position
-	num_moved = 0;
 	for( e = 1; e < svgame.numEntities; e++ )
 	{
 		check = EDICT_NUM( e );
@@ -874,7 +792,6 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		// if the entity is standing on the pusher, it will definately be moved
 		if( !(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == pusher ))
 		{
-
 			if( check->v.absmin[0] >= pusher->v.absmax[0]
 			|| check->v.absmin[1] >= pusher->v.absmax[1]
 			|| check->v.absmin[2] >= pusher->v.absmax[2]
@@ -895,22 +812,16 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		pushed_p++;
 
 		// calculate destination position
-		VectorSubtract( check->v.origin, pusher->v.origin, org );
-		org2[0] = DotProduct( org, forward );
-		org2[1] = -DotProduct( org, right );
-		org2[2] = DotProduct( org, up );
+		VectorCopy( check->v.origin, org );
+		Matrix4x4_VectorTransform( start_l, org, temp );
+		Matrix4x4_VectorTransform( end_l, temp, org2 );
 		VectorSubtract( org2, org, lmove );
 
 		// try moving the contacted entity 
-#if 0
-		VectorAdd( check->v.angles, amove, check->v.angles );
-		VectorAdd( check->v.origin, lmove, check->v.origin );
-		block = false;
-#else
 		pusher->v.solid = SOLID_NOT;
 		SV_PushEntity( check, lmove, amove, &block );
 		pusher->v.solid = oldsolid;
-#endif
+
 		// if it is still inside the pusher, block
 		if( block )//|| SV_TestEntityPosition( check ))
 		{	
@@ -997,7 +908,7 @@ void SV_Physics_Pusher( edict_t *ent )
 	// otherwise, just stay in place until the obstacle is gone
 	if( pBlocker )
 	{
-//		Msg( "%s is blocked by %s\n", SV_ClassName( ent ), SV_ClassName( pBlocker ));
+		Msg( "%s is blocked by %s\n", SV_ClassName( ent ), SV_ClassName( pBlocker ));
 		svgame.dllFuncs.pfnBlocked( ent, pBlocker );
 	}
 
@@ -1036,7 +947,84 @@ void SV_Physics_Follow( edict_t *ent )
 	VectorCopy( parent->v.origin, ent->v.origin );
 	VectorCopy( parent->v.angles, ent->v.angles );
 
-	SV_LinkEdict( ent, false );	// nocip ents never touch triggers
+	// noclip ents never touch triggers
+	SV_LinkEdict( ent, false );
+}
+
+/*
+=============
+SV_Physics_Compound
+
+a glue two entities together
+=============
+*/
+void SV_Physics_Compound( edict_t *ent )
+{
+	edict_t	*parent;
+	float	*p_org, *p_ang;
+	matrix4x4	start_l, end_l, temp_l;
+	vec3_t	temp, org, org2, amove, lmove;
+	float	movetime;
+	
+	// regular thinking
+	if( !SV_RunThink( ent )) return;
+
+	parent = ent->v.aiment;
+	if( !SV_IsValidEdict( parent )) return;
+	ent->v.solid = SOLID_NOT;
+
+	switch( parent->v.movetype )
+	{
+	case MOVETYPE_PUSH:
+	case MOVETYPE_PUSHSTEP:
+		break;
+	default: return;
+	}
+
+	if( ent->v.ltime == 0.0f )
+	{
+		// not initialized ?
+		VectorCopy( parent->v.origin, ent->v.oldorigin );
+		VectorCopy( parent->v.angles, ent->v.avelocity );
+		ent->v.ltime = parent->v.ltime ? parent->v.ltime : sv_frametime();
+		return;
+	}
+
+	movetime = parent->v.ltime - ent->v.ltime;
+	VectorScale( parent->v.velocity, movetime, lmove );
+	VectorScale( parent->v.avelocity, movetime, amove );
+
+	// restore old position
+	p_org = ent->v.oldorigin;
+	p_ang = ent->v.avelocity;
+
+	// create parent old position
+	Matrix4x4_CreateFromEntity( temp_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+	Matrix4x4_Invert_Simple( start_l, temp_l );
+
+	p_org = parent->v.origin;
+	p_ang = parent->v.angles;
+
+	// create parent actual position
+	Matrix4x4_CreateFromEntity( end_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+
+	VectorCopy( ent->v.origin, org );
+	Matrix4x4_VectorTransform( start_l, org, temp );
+	Matrix4x4_VectorTransform( end_l, temp, org2 );
+	VectorSubtract( org2, org, lmove );
+
+	amove[0] = 0.0f;	// don't pitch rotate
+
+	VectorAdd( ent->v.angles, amove, ent->v.angles );
+	VectorAdd( ent->v.origin, lmove, ent->v.origin );
+
+	// noclip ents never touch triggers
+	SV_LinkEdict( ent, false );
+
+	// shuffle states
+	VectorCopy( parent->v.origin, ent->v.oldorigin );
+	VectorCopy( parent->v.angles, ent->v.avelocity );
+	ent->v.ltime = parent->v.ltime ? parent->v.ltime : sv_frametime();
 }
 
 /*
@@ -1056,7 +1044,8 @@ void SV_Physics_Noclip( edict_t *ent )
 	VectorMA( ent->v.origin, sv_frametime(), ent->v.velocity,  ent->v.origin );
 	VectorMA( ent->v.angles, sv_frametime(), ent->v.avelocity, ent->v.angles );
 
-	SV_LinkEdict( ent, false );	// nocip ents never touch triggers
+	// noclip ents never touch triggers
+	SV_LinkEdict( ent, false );
 }
 
 /*
@@ -1074,7 +1063,9 @@ SV_CheckWaterTransition
 */
 void SV_CheckWaterTransition( edict_t *ent )
 {
-	int	cont = SV_PointContents( ent->v.origin );
+	int	cont;
+
+	cont = SV_PointContents( ent->v.origin );
 
 	if( !ent->v.watertype )
 	{
@@ -1169,6 +1160,15 @@ void SV_Physics_Toss( edict_t *ent )
 
 	SV_CheckVelocity( ent );
 
+	if( trace.fAllSolid )
+	{
+		// entity is trapped in another solid
+		ent->v.groundentity = trace.pHit;
+		ent->v.flags |= FL_ONGROUND;
+		VectorClear( ent->v.velocity );
+		return;
+	}
+
 	if( trace.flFraction == 1.0f )
 	{
 		SV_CheckWater( ent );
@@ -1188,6 +1188,7 @@ void SV_Physics_Toss( edict_t *ent )
 	{		
 		float	vel;
 
+		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 		if( ent->v.velocity[2] < sv_gravity->value * sv_frametime( ))
 		{
 			// we're rolling on the ground, add static friction.
@@ -1210,6 +1211,7 @@ void SV_Physics_Toss( edict_t *ent )
 			trace = SV_PushEntity( ent, move, vec3_origin, NULL );
 			if( ent->free ) return;
 		}
+		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 	}
 	
 	// check for in water
@@ -1292,8 +1294,7 @@ void SV_Physics_Step( edict_t *ent )
 		float	friction = sv_friction->value;
 		int	x, y;
 
-		if( ent->v.friction != 0.0f )
-			friction *= ent->v.friction;
+		friction *= ent->v.friction;
 
 		ent->v.flags &= ~FL_ONGROUND;
 
@@ -1325,7 +1326,7 @@ void SV_Physics_Step( edict_t *ent )
 		SV_AngularMove( ent, sv_frametime(), friction );
 
 		SV_CheckVelocity( ent );
-		SV_TryMove( ent, sv_frametime(), NULL );
+		SV_FlyMove( ent, sv_frametime(), NULL );
 		SV_CheckVelocity( ent );
 
 		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
@@ -1352,6 +1353,7 @@ void SV_Physics_Step( edict_t *ent )
 				{
 					ent->v.flags |= FL_ONGROUND;
 					ent->v.groundentity = trace.pHit;
+					ent->v.friction = 1.0f;
 					break;
 				}
 			}
@@ -1417,7 +1419,7 @@ static void SV_Physics_Entity( edict_t *ent )
 {
 	SV_UpdateBaseVelocity( ent );
 
-	if(!( ent->v.flags & FL_BASEVELOCITY ))
+	if(!( ent->v.flags & FL_BASEVELOCITY ) && !VectorIsNull( ent->v.basevelocity ))
 	{
 		// Apply momentum (add in half of the previous frame of velocity first)
 		VectorMA( ent->v.velocity, 1.0f + (sv_frametime() * 0.5f), ent->v.basevelocity, ent->v.velocity );
@@ -1442,6 +1444,9 @@ static void SV_Physics_Entity( edict_t *ent )
 		break;
 	case MOVETYPE_FOLLOW:
 		SV_Physics_Follow( ent );
+		break;
+	case MOVETYPE_COMPOUND:
+		SV_Physics_Compound( ent );
 		break;
 	case MOVETYPE_STEP:
 	case MOVETYPE_PUSHSTEP:

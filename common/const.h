@@ -58,7 +58,7 @@
 
 // edict->movetype values
 #define MOVETYPE_NONE		0	// never moves
-//#define	MOVETYPE_ANGLENOCLIP	1
+#define MOVETYPE_COMPOUND		1	// Xash3D extension: glue two entities together (simple movewith)
 //#define	MOVETYPE_ANGLECLIP		2
 #define MOVETYPE_WALK		3	// Player only - moving on the ground
 #define MOVETYPE_STEP		4	// gravity, special edge handling -- monsters use this

@@ -891,6 +891,7 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 
 	BYTE	m_bMoveSnd;			// sound a door makes while moving	
+	BYTE	m_bStopSnd;			// sound a door makes when it stops
 };
 
 LINK_ENTITY_TO_CLASS( momentary_door, CMomentaryDoor );
@@ -898,6 +899,7 @@ LINK_ENTITY_TO_CLASS( momentary_door, CMomentaryDoor );
 TYPEDESCRIPTION	CMomentaryDoor::m_SaveData[] = 
 {
 	DEFINE_FIELD( CMomentaryDoor, m_bMoveSnd, FIELD_CHARACTER ),
+	DEFINE_FIELD( CMomentaryDoor, m_bStopSnd, FIELD_CHARACTER ),
 };
 
 IMPLEMENT_SAVERESTORE( CMomentaryDoor, CBaseToggle );
@@ -978,6 +980,49 @@ void CMomentaryDoor::Precache( void )
 		pev->noiseMoving = ALLOC_STRING("common/null.wav");
 		break;
 	}
+
+// set the door's 'reached destination' stop sound
+	switch (m_bStopSnd)
+	{
+	case	0:
+		pev->noiseArrived = ALLOC_STRING("common/null.wav");
+		break;
+	case	1:
+		PRECACHE_SOUND ("doors/doorstop1.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop1.wav");
+		break;
+	case	2:
+		PRECACHE_SOUND ("doors/doorstop2.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop2.wav");
+		break;
+	case	3:
+		PRECACHE_SOUND ("doors/doorstop3.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop3.wav");
+		break;
+	case	4:
+		PRECACHE_SOUND ("doors/doorstop4.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop4.wav");
+		break;
+	case	5:
+		PRECACHE_SOUND ("doors/doorstop5.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop5.wav");
+		break;
+	case	6:
+		PRECACHE_SOUND ("doors/doorstop6.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop6.wav");
+		break;
+	case	7:
+		PRECACHE_SOUND ("doors/doorstop7.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop7.wav");
+		break;
+	case	8:
+		PRECACHE_SOUND ("doors/doorstop8.wav");
+		pev->noiseArrived = ALLOC_STRING("doors/doorstop8.wav");
+		break;
+	default:
+		pev->noiseArrived = ALLOC_STRING("common/null.wav");
+		break;
+	}
 }
 
 void CMomentaryDoor::KeyValue( KeyValueData *pkvd )
@@ -990,7 +1035,7 @@ void CMomentaryDoor::KeyValue( KeyValueData *pkvd )
 	}
 	else if (FStrEq(pkvd->szKeyName, "stopsnd"))
 	{
-//		m_bStopSnd = atof(pkvd->szValue);
+		m_bStopSnd = atof(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else if (FStrEq(pkvd->szKeyName, "healthvalue"))

@@ -3257,7 +3257,7 @@ void PM_Move ( struct playermove_s *ppmove, int server )
 	assert( pm_shared_initialized );
 
 	pmove = ppmove;
-	
+
 	PM_PlayerMove( ( server != 0 ) ? TRUE : FALSE );
 
 	if ( pmove->onground != -1 )

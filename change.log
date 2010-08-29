@@ -5,6 +5,11 @@ Engine: implement custom delta-encoding with user defined script (delta.lst)
 Engine: reworking client entity for get more compatibility with original HL client
 Engine: make SDK compatible with HLSDK 2.3 on the server-side
 Engine: fixup across transition time-bug
+Engine: completely rewrite server trace
+Engine: rewrite hitbox trace
+Engine: rewrite SV_PointContents
+Engine: implement a new movetype: compound for gluing two entities together (like movewith in spirit)
+Engine: fix toss entities on conveyors
 
 build 1271
 

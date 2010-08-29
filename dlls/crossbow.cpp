@@ -52,7 +52,7 @@ CCrossbowBolt *CCrossbowBolt::BoltCreate( void )
 {
 	// Create a new entity with CCrossbowBolt private data
 	CCrossbowBolt *pBolt = GetClassPtr( (CCrossbowBolt *)NULL );
-	pBolt->pev->classname = MAKE_STRING("bolt");
+	pBolt->pev->classname = MAKE_STRING("crossbow_bolt");	// g-cont. enable save\restore
 	pBolt->Spawn();
 
 	return pBolt;
@@ -154,6 +154,21 @@ void CCrossbowBolt::BoltTouch( CBaseEntity *pOther )
 			pev->avelocity.z = 0;
 			pev->angles.z = RANDOM_LONG(0,360);
 			pev->nextthink = gpGlobals->time + 10.0;
+		}
+		else if ( pOther->pev->movetype == MOVETYPE_PUSH || pOther->pev->movetype == MOVETYPE_PUSHSTEP )
+		{
+			Vector vecDir = pev->velocity.Normalize( );
+			UTIL_SetOrigin( pev, pev->origin - vecDir * 12 );
+			pev->angles = UTIL_VecToAngles( vecDir );
+			pev->solid = SOLID_NOT;
+			pev->velocity = Vector( 0, 0, 0 );
+			pev->avelocity.z = 0;
+			pev->angles.z = RANDOM_LONG(0,360);
+			pev->nextthink = gpGlobals->time + 10.0;			
+
+			// g-cont. Setup movewith feature
+			pev->movetype = MOVETYPE_COMPOUND;	// set movewith type
+			pev->aiment = ENT( pOther->pev );	// set parent
 		}
 
 		if (UTIL_PointContents(pev->origin) != CONTENTS_WATER)

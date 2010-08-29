@@ -48,6 +48,7 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t v1, vec3_t v2 )
 
 	// making trace adjustments 
 	VectorSubtract( v1, pe->origin, vecStartPos );
+	VectorSubtract( trace.endpos, pe->origin, trace.endpos );
 
 	// rotate start and end into the models frame of reference
 	if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))

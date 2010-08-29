@@ -7,7 +7,7 @@
 
 // NOTE: engine has a two methods to detect basedir:
 // first method: by filename, e.g. spirit.exe will be use basedir 'spirit', hostname must be "normal"
-// secode method: by hostname with leading symbol '$'. e.g. hl.exe with hostname '$valve' set the basedor to 'valve'
+// second method: by hostname with leading symbol '$'. e.g. hl.exe with hostname '$valve' set the basedir to 'valve'
 // for dedicated servers rename 'YourExeName.exe' to '#YourExeName.exe'
 // Keyword "normal" it's a reserved word which switch engine to game mode, other reserved words runs Xash Tools.
 //

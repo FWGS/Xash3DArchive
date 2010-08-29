@@ -171,6 +171,46 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 }
 
 /*
+==================
+SV_HullForBsp
+
+forcing to select BSP hull
+==================
+*/
+hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset )
+{
+	hull_t		*hull;
+	model_t		*model;
+	vec3_t		size;
+
+	// decide which clipping hull to use, based on the size
+	model = CM_ClipHandleToModel( ent->v.modelindex );
+
+	if( !model || ( model->type != mod_brush && model->type != mod_world ))
+		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", ent->serialnumber, model->type );
+
+	VectorSubtract( maxs, mins, size );
+
+	// FIXME: these constant doesn't works with user-defined hulls
+	// revisit this
+	if( size[0] < 3 )
+		hull = &model->hulls[0];		// point hull
+	else if( size[0] <= 36 )
+	{
+		if( size[2] <= 36 )
+			hull = &model->hulls[3];	// head hull (ducked)
+		else hull = &model->hulls[1];		// human hull
+	}
+	else hull = &model->hulls[2];			// large hull
+
+	// calculate an offset value to center the origin
+	VectorSubtract( hull->clip_mins, mins, offset );
+	VectorAdd( offset, ent->v.origin, offset );
+
+	return hull;
+}
+
+/*
 ===============================================================================
 
 ENTITY AREA CHECKING
@@ -285,7 +325,8 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 		// check brush triggers accuracy
 		if( CM_GetModelType( touch->v.modelindex ) == mod_brush )
 		{
-			hull = SV_HullForEntity( touch, -1, ent->v.mins, ent->v.maxs, test );
+			// force to select bsp-hull
+			hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, test );
 
 			// offset the test point appropriately for this hull.
 			VectorSubtract( ent->v.origin, test, test );
@@ -294,7 +335,6 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 			if( SV_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 				continue;
 		}
-
 		svgame.dllFuncs.pfnTouch( touch, ent );
 	}
 	
@@ -615,6 +655,14 @@ bool SV_TestEntityPosition( edict_t *ent )
 {
 	trace_t	trace;
 
+	if( ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
+	{
+		// to avoid falling through tracktrain update client mins\maxs here
+		if( ent->v.flags & FL_DUCKING ) 
+			SV_SetMinMaxSize( ent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
+		else SV_SetMinMaxSize( ent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );
+	}
+
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
 
 	return trace.fStartSolid;
@@ -776,7 +824,7 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 		matrix4x4		imatrix;
 		const float	*org, *ang;
 
-		org = ent->v.origin;
+		org = offset;
 		ang = ent->v.angles;
 	
 		Matrix4x4_CreateFromEntity( matrix, org[0], org[1], org[2], ang[0], ang[1], ang[2], 1.0f );
@@ -784,13 +832,14 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
 		Matrix4x4_VectorTransform( imatrix, end, end_l );
-
+#if 0
 		// calc hull offsets (monsters use this)
 		VectorCopy( start_l, temp );
 		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, start_l );
 
 		VectorCopy( end_l, temp );
 		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, end_l );
+#endif
 	}
 
 	// trace a line through the apropriate clipping hull
@@ -802,9 +851,7 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 		if( trace.flFraction != 1.0f )
 		{
 			// compute endpos
-			trace.vecEndPos[0] = start[0] + trace.flFraction * ( end[0] - start[0] );
-			trace.vecEndPos[1] = start[1] + trace.flFraction * ( end[1] - start[1] );
-			trace.vecEndPos[2] = start[2] + trace.flFraction * ( end[2] - start[2] );
+			VectorLerp( start, trace.flFraction, end, trace.vecEndPos );
 
 			VectorCopy( trace.vecPlaneNormal, temp );
 			Matrix4x4_TransformPositivePlane( matrix, temp, trace.flPlaneDist,
