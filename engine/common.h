@@ -245,7 +245,7 @@ void Tri_DrawTriangles( int fTrans );
 int CL_PointContents( const vec3_t point );
 char *COM_ParseFile( char *data, char *token );
 void CL_StudioFxTransform( struct cl_entity_s *ent, float transform[4][4] );
-void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
+bool CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
 void CL_StudioEvent( struct mstudioevent_s *event, struct cl_entity_s *ent );
 bool CL_GetComment( const char *demoname, char *comment );
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );

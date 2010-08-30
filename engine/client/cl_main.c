@@ -806,6 +806,7 @@ void CL_PrepVideo( void )
 	com.strncpy( mapname, cl.configstrings[CS_MODELS+1], MAX_STRING ); 
 	CM_BeginRegistration( mapname, true, &map_checksum );
 	re->BeginRegistration( mapname );
+	cl.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 	SCR_RegisterShaders(); // update with new sequence
 	SCR_UpdateScreen();
 
@@ -856,6 +857,9 @@ void CL_PrepVideo( void )
 
 	SCR_UpdateScreen ();
 	CL_RunLightStyles ();
+
+	// initialize world and clients
+	CL_InitWorld ();
 
 	cl.video_prepped = true;
 	cl.force_refdef = true;

@@ -518,6 +518,9 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 		if( pmFilter && pmFilter( pe ))
 			continue;
 
+		if(( i > 0 ) && !VectorIsNull( mins ) && VectorIsNull( pe->mins ))
+			continue;	// points never interact
+
 		// might intersect, so do an exact clip
 		if( total.allsolid ) return total;
 

@@ -345,7 +345,8 @@ void SND_Spatialize( channel_t *ch )
 
 	if( !ch->staticsound )
 	{
-		si.GetEntitySpatialization( ch->entnum, ch->origin, NULL );
+		if( !si.GetEntitySpatialization( ch->entnum, ch->origin, NULL ))
+			return;	// entity not exist on client
 	}
 
 	// calculate stereo seperation and distance attenuation
@@ -560,7 +561,7 @@ void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float f
 
 	if( !pos ) pos = origin;
 
-	si.GetEntitySpatialization( ent, origin, NULL );
+	if( ent != 0 ) si.GetEntitySpatialization( ent, origin, NULL );
 
 	// pick a channel to play on from the static area
 	ch = SND_PickStaticChannel( ent, sfx );	// autolooping sounds are always fixed origin(?)

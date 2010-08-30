@@ -931,12 +931,14 @@ void CPushable :: Move( CBaseEntity *pOther, int push )
 		return;
 	}
 
-
+	// g-cont. fix pushable acceleration bug
 	if ( pOther->IsPlayer() )
 	{
-		if ( push && !(pevToucher->button & (IN_FORWARD|IN_USE)) )	// Don't push unless the player is pushing forward and NOT use (pull)
+		// Don't push unless the player is pushing forward and NOT use (pull)
+		if ( push && !(pevToucher->button & (IN_FORWARD|IN_MOVERIGHT|IN_MOVELEFT|IN_BACK)) )
 			return;
-		playerTouch = 1;
+		if ( !push && !(pevToucher->button & (IN_BACK)) ) return;
+			playerTouch = 1;
 	}
 
 	float factor;

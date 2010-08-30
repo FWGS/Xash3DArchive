@@ -26,9 +26,11 @@ int SV_FindIndex( const char *name, int start, int end, bool create )
 	if( !name || !name[0] ) return 0;
 
 	for( i = 1; i < end && sv.configstrings[start+i][0]; i++ )
-		if(!com.strcmp( sv.configstrings[start+i], name ))
+		if( !com.strcmp( sv.configstrings[start+i], name ))
 			return i;
+
 	if( !create ) return 0;
+
 	if( i == end ) 
 	{
 		MsgDev( D_WARN, "SV_FindIndex: %d out of range [%d - %d]\n", start, end );
@@ -98,27 +100,6 @@ void SV_CreateBaseline( void )
 }
 
 /*
-=================
-SV_CheckForSavegame
-=================
-*/
-void SV_CheckForSavegame( const char *savename )
-{
-	sv.loadgame = false;
-
-	if( savename )
-	{
-		sv.loadgame = true; // predicting state
-		if( sv_noreload->value ) sv.loadgame = false;
-		if( svgame.globals->deathmatch || svgame.globals->coop || svgame.globals->teamplay )
-			sv.loadgame = false;
-		if( !savename ) sv.loadgame = false;
-		if( !FS_FileExists( va( "save/%s", savename )))
-			sv.loadgame = false;
-	}
-}
-
-/*
 ================
 SV_ActivateServer
 
@@ -139,15 +120,12 @@ void SV_ActivateServer( void )
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 
-	if( !sv.loadgame )
-	{
-		// run two frames to allow everything to settle
-		for( i = 0; i < 2; i++ )
-			SV_Physics();
+	// create a baseline for more efficient communications
+	SV_CreateBaseline();
 
-		// create a baseline for more efficient communications
-		SV_CreateBaseline();
-	}
+	// run two frames to allow everything to settle
+	for( i = 0; !sv.loadgame && i < 2; i++ )
+		SV_Physics();
 
 	// invoke to refresh all movevars
 	Mem_Set( &svgame.oldmovevars, 0, sizeof( movevars_t ));

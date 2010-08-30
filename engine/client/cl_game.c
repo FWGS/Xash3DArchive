@@ -966,8 +966,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	Com_ReadUlong( script, SC_ALLOW_NEWLINES, &numSprites );
 
 	// name, res, pic, x, y, w, h
-	// NOTE: we intentionally use malloc to let client.dll freeing it with standard methods
-	pList = malloc( sizeof( *pList ) * numSprites );
+	pList = Mem_Alloc( cls.mempool, sizeof( client_sprite_t ) * numSprites );
 
 	for( index = 0; index < numSprites; index++ )
 	{
@@ -2504,7 +2503,6 @@ void CL_UnloadProgs( void )
 	FS_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
-	Mem_FreePool( &clgame.private );
 	Mem_Set( &clgame, 0, sizeof( clgame ));
 }
 
@@ -2523,7 +2521,6 @@ bool CL_LoadProgs( const char *name )
 
 	cls.mempool = Mem_AllocPool( "Client Static Pool" );
 	clgame.mempool = Mem_AllocPool( "Client Edicts Zone" );
-	clgame.private = Mem_AllocPool( "Client Private Zone" );
 	clgame.entities = NULL;
 
 	clgame.hInstance = FS_LoadLibrary( name, false );

@@ -51,6 +51,8 @@ typedef struct clipmap_s
 	byte		*phs;
 	byte		nullrow[MAX_MAP_LEAFS/8];
 
+	vec3_t		hull_sizes[4];	// hull sizes
+
 	script_t		*entityscript;	// only actual for world
 
 	// run local lightstyles to get SV_LightPoint grab the actual information

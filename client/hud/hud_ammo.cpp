@@ -181,8 +181,8 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 	}
 	else pWeapon->hAmmo2 = 0;
 
-	// in original Half-Life this was a leak
-	free( pList );
+	// release weapon file
+	gEngfuncs.COM_FreeFile( pList );
 }
 
 // Returns the first weapon for a given slot.

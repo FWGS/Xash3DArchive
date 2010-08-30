@@ -43,7 +43,7 @@ areanode_t *CL_CreateAreaNode( int depth, vec3_t mins, vec3_t maxs )
 		anode->axis = 0;
 	else anode->axis = 1;
 	
-	anode->dist = 0.5f * (maxs[anode->axis] + mins[anode->axis]);
+	anode->dist = 0.5f * ( maxs[anode->axis] + mins[anode->axis] );
 	VectorCopy( mins, mins1 );	
 	VectorCopy( mins, mins2 );	
 	VectorCopy( maxs, maxs1 );	
@@ -64,13 +64,10 @@ CL_ClearWorld
 */
 void CL_ClearWorld( void )
 {
-	vec3_t	mins, maxs;
-	int	worldIndex = 1;
-
-	cl_numareanodes = 0;
-	Mod_GetBounds( worldIndex, mins, maxs );
 	Mem_Set( cl_areanodes, 0, sizeof( cl_areanodes ));
-	CL_CreateAreaNode( 0, mins, maxs );
+	cl_numareanodes = 0;
+
+	CL_CreateAreaNode( 0, cl.worldmodel->mins, cl.worldmodel->maxs );
 }
 
 /*

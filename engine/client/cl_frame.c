@@ -174,11 +174,10 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( CM_GetModelType( state->modelindex ) == mod_studio )
 		CL_UpdateStudioVars( ent, state );
 
-	if( !VectorCompare( state->origin, ent->curstate.origin ))
-		CL_LinkEdict( ent ); // relink entity
-
 	// set right current state
 	ent->curstate = *state;
+
+	CL_LinkEdict( ent ); // relink entity
 }
 
 /*
@@ -517,24 +516,56 @@ void CL_AddEntities( void )
 //
 // sound engine implementation
 //
-void CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
+bool CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
 {
 	cl_entity_t	*ent;
+	bool		from_baseline = false;
 
-	ent = CL_GetEntityByIndex( entnum );
-	if( !ent ) return; // leave uncahnged
+	if( entnum < 0 || entnum > clgame.numEntities )
+		return false;
 
-	// setup origin and velocity
-	if( origin ) VectorCopy( ent->origin, origin );
-	if( velocity ) VectorCopy( ent->curstate.velocity, velocity );
+	ent = EDICT_NUM( entnum );
 
-	// if a brush model, offset the origin
-	if( origin && CM_GetModelType( ent->curstate.modelindex ) == mod_brush )
+	if( ent->index == -1 || ent->curstate.number != entnum )
 	{
-		vec3_t	mins, maxs, midPoint;
-	
-		Mod_GetBounds( ent->curstate.modelindex, mins, maxs );
-		VectorAverage( mins, maxs, midPoint );
-		VectorAdd( origin, midPoint, origin );
+		// this entity isn't visible but maybe it have baseline ?
+		if( ent->baseline.number != entnum )
+			return false;
+		from_baseline = true;
 	}
+
+	if( from_baseline )
+	{
+		// setup origin and velocity
+		if( origin ) VectorCopy( ent->baseline.origin, origin );
+		if( velocity ) VectorCopy( ent->baseline.velocity, velocity );
+
+		// if a brush model, offset the origin
+		if( origin && CM_GetModelType( ent->baseline.modelindex ) == mod_brush )
+		{
+			vec3_t	mins, maxs, midPoint;
+	
+			Mod_GetBounds( ent->baseline.modelindex, mins, maxs );
+			VectorAverage( mins, maxs, midPoint );
+			VectorAdd( origin, midPoint, origin );
+		}
+	}
+	else
+	{
+
+		// setup origin and velocity
+		if( origin ) VectorCopy( ent->origin, origin );
+		if( velocity ) VectorCopy( ent->curstate.velocity, velocity );
+
+		// if a brush model, offset the origin
+		if( origin && CM_GetModelType( ent->curstate.modelindex ) == mod_brush )
+		{
+			vec3_t	mins, maxs, midPoint;
+	
+			Mod_GetBounds( ent->curstate.modelindex, mins, maxs );
+			VectorAverage( mins, maxs, midPoint );
+			VectorAdd( origin, midPoint, origin );
+		}
+	}
+	return true;
 }

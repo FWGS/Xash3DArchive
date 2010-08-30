@@ -57,7 +57,8 @@ CHud :: ~CHud( void )
 		m_pHudList = NULL;
 	}
 
-	free( m_pSpriteList );
+	// release hud.txt file
+	gEngfuncs.COM_FreeFile( m_pSpriteList );
 	m_pSpriteList = NULL;
 }
 

@@ -686,6 +686,7 @@ static void BSP_LoadClipnodes( dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[1], hull->clip_mins ); // copy human hull
 	VectorCopy( GI->client_maxs[1], hull->clip_maxs );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, cm.hull_sizes[1] );
 
 	hull = &loadmodel->hulls[2];
 	hull->clipnodes = out;
@@ -694,6 +695,7 @@ static void BSP_LoadClipnodes( dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[2], hull->clip_mins ); // copy large hull
 	VectorCopy( GI->client_maxs[2], hull->clip_maxs );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, cm.hull_sizes[2] );
 
 	hull = &loadmodel->hulls[3];
 	hull->clipnodes = out;
@@ -702,6 +704,7 @@ static void BSP_LoadClipnodes( dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[3], hull->clip_mins ); // copy head hull
 	VectorCopy( GI->client_maxs[3], hull->clip_maxs );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, cm.hull_sizes[3] );
 
 	for( i = 0; i < count; i++, out++, in++ )
 	{

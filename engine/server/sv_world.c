@@ -120,23 +120,28 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 
 		if( hullNumber == -1 )
 		{
-			// FIXME: these constant doesn't works with user-defined hulls
-			// revisit this
-			if( size[0] < 3 )
-				hull = &model->hulls[0];		// point hull
-			else if( size[0] <= 36 )
+			float	curdiff;
+			float	lastdiff = 999;
+			int	i;
+
+			hullNumber = 0;	// assume we fail
+
+			// select the hull automatically
+			for( i = 0; i < 4; i++ )
 			{
-				if( size[2] <= 36 )
-					hull = &model->hulls[3];	// head hull (ducked)
-				else hull = &model->hulls[1];		// human hull
+				curdiff = floor( VectorAvg( size )) - floor( VectorAvg( cm.hull_sizes[i] ));
+				curdiff = fabs( curdiff );
+
+				if( curdiff < lastdiff )
+				{
+					hullNumber = i;
+					lastdiff = curdiff;
+				}
 			}
-			else hull = &model->hulls[2];			// large hull
 		}
-		else
-		{
-			// TraceHull stuff
-			hull = &model->hulls[hullNumber];
-		}
+
+		// TraceHull stuff
+		hull = &model->hulls[hullNumber];
 
 		// calculate an offset value to center the origin
 		VectorSubtract( hull->clip_mins, mins, offset );
@@ -182,7 +187,9 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	hull_t		*hull;
 	model_t		*model;
 	vec3_t		size;
-
+	float		curdiff, lastdiff = 999;
+	int		i, hullNumber = 0;
+			
 	// decide which clipping hull to use, based on the size
 	model = CM_ClipHandleToModel( ent->v.modelindex );
 
@@ -191,17 +198,20 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 
 	VectorSubtract( maxs, mins, size );
 
-	// FIXME: these constant doesn't works with user-defined hulls
-	// revisit this
-	if( size[0] < 3 )
-		hull = &model->hulls[0];		// point hull
-	else if( size[0] <= 36 )
+	// select the hull automatically
+	for( i = 0; i < 4; i++ )
 	{
-		if( size[2] <= 36 )
-			hull = &model->hulls[3];	// head hull (ducked)
-		else hull = &model->hulls[1];		// human hull
+		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( cm.hull_sizes[i] ));
+		curdiff = fabs( curdiff );
+
+		if( curdiff < lastdiff )
+		{
+			hullNumber = i;
+			lastdiff = curdiff;
+		}
 	}
-	else hull = &model->hulls[2];			// large hull
+
+	hull = &model->hulls[hullNumber];
 
 	// calculate an offset value to center the origin
 	VectorSubtract( hull->clip_mins, mins, offset );

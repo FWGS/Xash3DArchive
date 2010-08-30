@@ -95,6 +95,8 @@ typedef struct
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 	entity_state_t	entity_curstates[MAX_PARSE_ENTITIES];	// FIXME: this is must match with max_edicts ?
 
+	model_t		*worldmodel;			// pointer to world
+
 	// locally derived information from server state
 	model_t		models[MAX_MODELS];
 	sound_t		sound_precache[MAX_SOUNDS];
@@ -211,7 +213,6 @@ typedef struct
 	void		*hInstance;		// pointer to client.dll
 	HUD_FUNCTIONS	dllFuncs;			// dll exported funcs
 	byte		*mempool;			// client edicts pool
-	byte		*private;			// client.dll private pool
 	string		mapname;			// map name
 	string		maptitle;			// display map title
 	string		itemspath;		// path to items description for auto-complete func
@@ -476,7 +477,7 @@ bool CL_IsPredicted( void );
 //
 void CL_ParseFrame( sizebuf_t *msg );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
-void CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
+bool CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 
 //
 // cl_tent.c

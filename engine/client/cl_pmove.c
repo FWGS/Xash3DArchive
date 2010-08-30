@@ -32,23 +32,18 @@ bool CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 		// client or bot
 		com.strncpy( pe->name, "player", sizeof( pe->name ));
 	}
-	else if( ent == clgame.entities )
-	{
-		// it's a world
-		com.strncpy( pe->name, "world", sizeof( pe->name ));
-	}
 	else
 	{
 		// otherwise copy the modelname
 		com.strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
-	if( ent->curstate.movetype == MOVETYPE_PUSHSTEP || mod->type == mod_studio && mod->extradata )
+	if( mod->type == mod_studio )
 	{
 		pe->studiomodel = mod;
 		pe->model = NULL;
 	}
-	else if( mod->type == mod_brush || mod->type == mod_world )
+	else
 	{	
 		pe->studiomodel = NULL;
 		pe->model = mod;

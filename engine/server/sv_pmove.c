@@ -19,19 +19,6 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace )
 
 	pe->player = false;
 
-	if( player_trace )
-	{
-		// player completely ignore some movetypes here
-		switch( ed->v.movetype )
-		{
-		case MOVETYPE_TOSS:
-		case MOVETYPE_NOCLIP:
-		case MOVETYPE_BOUNCE:
-		case MOVETYPE_BOUNCEMISSILE:
-			return false;
-		}
-	}
-
 	if( ed->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
 	{
 		// client or bot

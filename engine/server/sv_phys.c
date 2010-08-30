@@ -1160,11 +1160,15 @@ void SV_Physics_Toss( edict_t *ent )
 
 	SV_CheckVelocity( ent );
 
-	if( trace.fAllSolid )
+	// make sure what we don't collide with like entity (e.g. gib with gib)
+	if( trace.fAllSolid && SV_IsValidEdict( trace.pHit ) && trace.pHit->v.movetype != ent->v.movetype )
 	{
 		// entity is trapped in another solid
-		ent->v.groundentity = trace.pHit;
-		ent->v.flags |= FL_ONGROUND;
+		if( trace.vecPlaneNormal[2] > 0.7f )
+		{
+			ent->v.groundentity = trace.pHit;
+			ent->v.flags |= FL_ONGROUND;
+		}
 		VectorClear( ent->v.velocity );
 		return;
 	}
@@ -1241,7 +1245,6 @@ void SV_Physics_Step( edict_t *ent )
 	bool	wasonground;
 	bool	inwater;
 	bool	hitsound = false;
-	bool	isfalling = false;
 	edict_t	*pHit;
 	trace_t	trace;
 
@@ -1254,35 +1257,39 @@ void SV_Physics_Step( edict_t *ent )
 	// swimming monsters who are in the water
 	inwater = SV_CheckWater( ent );
 
-	if( !wasonground )
+	if( ent->v.movetype == MOVETYPE_PUSHSTEP )
 	{
-		if( !( ent->v.flags & FL_FLY ))
+		if( inwater && ( ent->v.flags & FL_FLOAT ))
 		{
-			if(!( ent->v.flags & (FL_SWIM|FL_FLOAT) && ent->v.waterlevel > 0 ))
+			// floating pushables
+			if( ent->v.waterlevel == 2 )
 			{
-				if( ent->v.velocity[2] < ( sv_gravity->value * -sv_frametime( )))
-				{
-					hitsound = true;
-				}
-
-				if( !inwater )
-				{
-					SV_AddHalfGravity( ent, sv_frametime( ));
-					isfalling = true;
-				}
+				VectorScale( ent->v.velocity, 1.0f - (svgame.globals->frametime * 0.5f), ent->v.velocity );
+				ent->v.velocity[2] += (ent->v.skin * svgame.globals->frametime);
 			}
-			else if( ent->v.waterlevel > 0 )
+			else if( ent->v.waterlevel == 0 )
 			{
-				if( ent->v.waterlevel > 1 )
+			}
+			else
+			{
+				ent->v.velocity[2] -= (ent->v.skin * svgame.globals->frametime);
+			}
+		}
+		else if( !wasonground )
+		{
+			SV_AddGravity( ent );
+		}
+	}
+	else 
+	{
+		// monster gravity
+		if( !wasonground )
+		{
+			if(!( ent->v.flags & FL_FLY ))
+			{
+				if(!( ent->v.flags & FL_SWIM && ent->v.waterlevel > 0 ))
 				{
-					VectorScale( ent->v.velocity, 0.9f, ent->v.velocity );
-					ent->v.velocity[2] += (ent->v.skin * svgame.globals->frametime);
-				}
-				else if( ent->v.waterlevel == 1 )
-				{
-					if( ent->v.velocity[2] > 0.0f )
-						ent->v.velocity[2] = svgame.globals->frametime;
-					ent->v.velocity[2] -= (ent->v.skin * svgame.globals->frametime);
+					if( !inwater ) SV_AddGravity( ent );
 				}
 			}
 		}
@@ -1295,7 +1302,6 @@ void SV_Physics_Step( edict_t *ent )
 		int	x, y;
 
 		friction *= ent->v.friction;
-
 		ent->v.flags &= ~FL_ONGROUND;
 
 		// apply friction
@@ -1303,9 +1309,14 @@ void SV_Physics_Step( edict_t *ent )
 		if( wasonground )
 		{
 			float	speed, newspeed;
-			float	control;
-	
-			speed = VectorLength( ent->v.velocity );	
+			float	*vel, control;
+
+			vel = ent->v.velocity;
+			speed = com.sqrt( vel[0] * vel[0] + vel[1] * vel[1] );	
+
+			// add ground speed
+			if( ent->v.groundentity->v.flags & FL_CONVEYOR )
+				speed += ent->v.groundentity->v.speed;
 
 			if( speed )
 			{
@@ -1322,14 +1333,9 @@ void SV_Physics_Step( edict_t *ent )
 		}
 
 		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
-
-		SV_AngularMove( ent, sv_frametime(), friction );
-
-		SV_CheckVelocity( ent );
 		SV_FlyMove( ent, sv_frametime(), NULL );
-		SV_CheckVelocity( ent );
-
 		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
+
 		SV_CheckVelocity( ent );
 
 		// determine if it's on solid ground at all
@@ -1362,17 +1368,15 @@ void SV_Physics_Step( edict_t *ent )
 		SV_LinkEdict( ent, true );
 	}
 
-	if(!( ent->v.flags & FL_ONGROUND ) && isfalling )
+	if( ent->v.movetype == MOVETYPE_STEP )
 	{
-		SV_AddHalfGravity( ent, sv_frametime( ));
+		// check monster with another monster intersect (e.g. tentacle damage)
+		trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+		pHit = trace.pHit;
+
+		if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
+			SV_Impact( ent, &trace );
 	}
-
-	// check monster with another monster (e.g. tentacle damage)
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
-	pHit = trace.pHit;
-
-	if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
-		SV_Impact( ent, &trace );
 
 	if( !SV_RunThink( ent )) return;
 

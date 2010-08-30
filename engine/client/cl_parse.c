@@ -366,7 +366,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
 	int 	chan, sound;
 	float 	volume, attn;  
 	int	flags, pitch, entnum;
-	sound_t	handle;
+	sound_t	handle = 0;
 
 	flags = BF_ReadWord( msg );
 	sound = BF_ReadWord( msg );
@@ -551,6 +551,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.maxEntities = BF_ReadWord( msg );
 	com.strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
+	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 
 	gameui.globals->maxClients = cl.maxclients;
 	com.strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
@@ -581,9 +582,6 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	Mem_Set( &clgame.movevars, 0, sizeof( clgame.movevars ));
 	Mem_Set( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
-
-	// initialize world and clients
-	CL_InitWorld ();
 }
 
 /*
@@ -616,7 +614,6 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	else timebase = 1000; // sv.state == ss_loading
 
 	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, timebase );
-	CL_LinkEdict( ent ); // relink entity
 }
 
 /*

@@ -1356,7 +1356,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	// can't track this entity on the client.
 	// write static sound
-	if( !ent->v.modelindex ) flags |= SND_FIXED_ORIGIN;
+	if( !ent->v.modelindex || !ent->v.model )
+		flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
@@ -1399,7 +1400,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( !ent->v.modelindex )
+	if( !ent->v.modelindex || !ent->v.model )
 		entityIndex = 0;
 	else if( SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = ent->v.aiment->serialnumber;

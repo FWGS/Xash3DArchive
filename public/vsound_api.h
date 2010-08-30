@@ -63,7 +63,7 @@ typedef struct vsound_imp_s
 	// interface validator
 	size_t	api_size;		// must matched with sizeof(vsound_imp_t)
 
-	void (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
+	bool (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
 	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
 	struct cl_entity_s *(*GetClientEdict)( int index );
 	float (*GetServerTime)( void );
