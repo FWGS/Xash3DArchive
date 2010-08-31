@@ -658,6 +658,9 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;
 
+	// UNDONE: make adjustment above floor
+	if( lmove[2] < 0.0f ) lmove[2] += 0.01f;
+
 	// see if any solid entities are inside the final position
 	num_moved = 0;
 	for( e = 1; e < svgame.numEntities; e++ )
@@ -1244,7 +1247,7 @@ void SV_Physics_Step( edict_t *ent )
 {
 	bool	wasonground;
 	bool	inwater;
-	bool	hitsound = false;
+	bool	isfalling = false;
 	edict_t	*pHit;
 	trace_t	trace;
 
@@ -1262,17 +1265,18 @@ void SV_Physics_Step( edict_t *ent )
 		if( inwater && ( ent->v.flags & FL_FLOAT ))
 		{
 			// floating pushables
-			if( ent->v.waterlevel == 2 )
+			if( ent->v.waterlevel >= 2 )
 			{
-				VectorScale( ent->v.velocity, 1.0f - (svgame.globals->frametime * 0.5f), ent->v.velocity );
-				ent->v.velocity[2] += (ent->v.skin * svgame.globals->frametime);
+				VectorScale( ent->v.velocity, 1.0f - (sv_frametime( ) * 0.5f), ent->v.velocity );
+				ent->v.velocity[2] += (ent->v.skin * sv_frametime( ));
 			}
 			else if( ent->v.waterlevel == 0 )
 			{
+				SV_AddGravity( ent );
 			}
 			else
 			{
-				ent->v.velocity[2] -= (ent->v.skin * svgame.globals->frametime);
+				ent->v.velocity[2] -= (ent->v.skin * sv_frametime( ));
 			}
 		}
 		else if( !wasonground )
@@ -1289,7 +1293,11 @@ void SV_Physics_Step( edict_t *ent )
 			{
 				if(!( ent->v.flags & FL_SWIM && ent->v.waterlevel > 0 ))
 				{
-					if( !inwater ) SV_AddGravity( ent );
+					if( !inwater )
+					{
+						SV_AddHalfGravity( ent, sv_frametime( ));
+						isfalling = true;
+					}
 				}
 			}
 		}
@@ -1366,6 +1374,11 @@ void SV_Physics_Step( edict_t *ent )
 
 		}
 		SV_LinkEdict( ent, true );
+	}
+
+	if(!( ent->v.flags & FL_ONGROUND ) && isfalling )
+	{
+		SV_AddHalfGravity( ent, sv_frametime( ));
 	}
 
 	if( ent->v.movetype == MOVETYPE_STEP )

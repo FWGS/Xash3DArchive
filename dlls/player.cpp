@@ -3594,6 +3594,7 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		{
 			if ( pEntity->pev->takedamage )
 				pEntity->SetThink(SUB_Remove);
+			else UTIL_Remove( pEntity );
 		}
 		break;
 	}

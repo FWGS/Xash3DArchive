@@ -1080,7 +1080,8 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 
 	memcpy( state->startpos, ent->v.startpos, 3 * sizeof( float ) );
 	memcpy( state->endpos, ent->v.endpos, 3 * sizeof( float ) );
-
+	memcpy( state->velocity, ent->v.velocity, 3 * sizeof( float ) );
+		
 	state->impacttime = ent->v.impacttime;
 	state->starttime = ent->v.starttime;
 
@@ -1140,6 +1141,12 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 		{
 			state->owner = owner;	
 		}
+	}
+
+	state->onground = 0;
+	if ( ent->v.groundentity )
+	{
+		state->onground = ENTINDEX( ent->v.groundentity );
 	}
 
 	// HACK:  Somewhat...

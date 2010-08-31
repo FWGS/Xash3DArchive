@@ -20,6 +20,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 {
 	// set player state
 	ent->player = ( ent->curstate.entityType == ET_PLAYER ) ? true : false;
+	ent->onground = CL_GetEntityByIndex( ent->curstate.onground );
 
 	// FIXME: this very-very temporary stuffffffff
 	// make me lerping
