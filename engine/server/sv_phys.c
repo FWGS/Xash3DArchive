@@ -658,9 +658,6 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;
 
-	// UNDONE: make adjustment above floor
-	if( lmove[2] < 0.0f ) lmove[2] += 0.01f;
-
 	// see if any solid entities are inside the final position
 	num_moved = 0;
 	for( e = 1; e < svgame.numEntities; e++ )
@@ -671,6 +668,11 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		// filter movetypes to collide with
 		if( !SV_CanPushed( check ))
 			continue;
+
+		pusher->v.solid = SOLID_NOT;
+		block = SV_TestEntityPosition( check );
+		pusher->v.solid = oldsolid;
+		if( block ) continue;
 
 		// if the entity is standing on the pusher, it will definately be moved
 		if( !(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == pusher ))
@@ -791,6 +793,11 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		// filter movetypes to collide with
 		if( !SV_CanPushed( check ))
 			continue;
+
+		pusher->v.solid = SOLID_NOT;
+		block = SV_TestEntityPosition( check );
+		pusher->v.solid = oldsolid;
+		if( block ) continue;
 
 		// if the entity is standing on the pusher, it will definately be moved
 		if( !(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == pusher ))
@@ -1246,6 +1253,7 @@ will fall if the floor is pulled out from under them.
 void SV_Physics_Step( edict_t *ent )
 {
 	bool	wasonground;
+	bool	wasinwater;
 	bool	inwater;
 	bool	isfalling = false;
 	edict_t	*pHit;
@@ -1254,16 +1262,25 @@ void SV_Physics_Step( edict_t *ent )
 	SV_CheckVelocity( ent );
 
 	wasonground = (ent->v.flags & FL_ONGROUND) ? true : false;
+	wasinwater = (ent->v.flags & FL_INWATER) ? true : false;
 
 	// add gravity except:
 	// flying monsters
 	// swimming monsters who are in the water
+	// pushables
 	inwater = SV_CheckWater( ent );
 
 	if( ent->v.movetype == MOVETYPE_PUSHSTEP )
 	{
+		if( wasinwater && !inwater )
+		{
+			ent->v.velocity[2] = 0.0f;
+		}
+
 		if( inwater && ( ent->v.flags & FL_FLOAT ))
 		{
+			ent->v.flags |= FL_INWATER;
+
 			// floating pushables
 			if( ent->v.waterlevel >= 2 )
 			{
@@ -1272,7 +1289,6 @@ void SV_Physics_Step( edict_t *ent )
 			}
 			else if( ent->v.waterlevel == 0 )
 			{
-				SV_AddGravity( ent );
 			}
 			else
 			{
@@ -1281,6 +1297,7 @@ void SV_Physics_Step( edict_t *ent )
 		}
 		else if( !wasonground )
 		{
+			ent->v.flags &= ~FL_INWATER;
 			SV_AddGravity( ent );
 		}
 	}
@@ -1311,7 +1328,7 @@ void SV_Physics_Step( edict_t *ent )
 
 		friction *= ent->v.friction;
 		ent->v.flags &= ~FL_ONGROUND;
-
+			
 		// apply friction
 		// let dead monsters who aren't completely onground slide
 		if( wasonground )

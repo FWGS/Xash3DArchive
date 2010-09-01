@@ -580,10 +580,12 @@ int SV_HullPointContents( hull_t *hull, int num, const vec3_t p )
 SV_WaterLinks
 ====================
 */
-void SV_WaterLinks( const vec3_t mins, const vec3_t maxs, int *pCont, areanode_t *node )
+void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 {
 	link_t	*l, *next;
 	edict_t	*touch;
+	hull_t	*hull;
+	vec3_t	test;
 
 	// get water edicts
 	for( l = node->water_edicts.next; l != &node->water_edicts; l = next )
@@ -598,7 +600,17 @@ void SV_WaterLinks( const vec3_t mins, const vec3_t maxs, int *pCont, areanode_t
 		if( CM_GetModelType( touch->v.modelindex ) != mod_brush )
 			continue;
 
-		if( !BoundsIntersect( mins, maxs, touch->v.absmin, touch->v.absmax ))
+		if( !BoundsIntersect( origin, origin, touch->v.absmin, touch->v.absmax ))
+			continue;
+
+		// check water brushes accuracy
+		hull = SV_HullForBsp( touch, vec3_origin, vec3_origin, test );
+
+		// offset the test point appropriately for this hull.
+		VectorSubtract( origin, test, test );
+
+		// test hull for intersection with this model
+		if( SV_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 			continue;
 
 		// compare contents ranking
@@ -609,10 +621,10 @@ void SV_WaterLinks( const vec3_t mins, const vec3_t maxs, int *pCont, areanode_t
 	// recurse down both sides
 	if( node->axis == -1 ) return;
 	
-	if( maxs[node->axis] > node->dist )
-		SV_WaterLinks( mins, maxs, pCont, node->children[0] );
-	if( mins[node->axis] < node->dist )
-		SV_WaterLinks( mins, maxs, pCont, node->children[1] );
+	if( origin[node->axis] > node->dist )
+		SV_WaterLinks( origin, pCont, node->children[0] );
+	if( origin[node->axis] < node->dist )
+		SV_WaterLinks( origin, pCont, node->children[1] );
 }
 
 /*
@@ -632,7 +644,7 @@ int SV_TruePointContents( const vec3_t p )
 	cont = SV_HullPointContents( &sv.worldmodel->hulls[0], 0, p );
 
 	// check all water entities
-	SV_WaterLinks( p, p, &cont, sv_areanodes );
+	SV_WaterLinks( p, &cont, sv_areanodes );
 
 	return cont;
 }
@@ -899,6 +911,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 	trace_t	trace;
 	bool	traceHitbox;
 	float	*mins, *maxs;
+	int	modType;
 
 	// touch linked edicts
 	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
@@ -910,6 +923,8 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( touch == clip->passedict || touch->v.solid == SOLID_NOT )
 			continue;
 
+		modType = CM_GetModelType( touch->v.modelindex );
+
 		if( touch->v.solid == SOLID_TRIGGER )
 			Host_Error( "trigger in clipping list\n" );
 
@@ -919,12 +934,9 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( clip->type == MOVE_WORLDONLY )
 		{
-			if( CM_GetModelType( touch->v.modelindex ) != mod_brush )
-				continue;
-
 			// accept only real bsp models with FL_WORLDBRUSH set
-			if(!( touch->v.flags & FL_WORLDBRUSH ));
-				continue;
+			if( modType == mod_brush && touch->v.flags & FL_WORLDBRUSH );
+			else continue;
 		}
 
 		if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->v.absmin, touch->v.absmax ))
@@ -943,13 +955,13 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 			continue;	// points never interact
 
 		// monsterclip filter
-		if( CM_GetModelType( touch->v.modelindex ) == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
+		if( modType == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
 		{
 			if( clip->passedict && clip->passedict->v.flags & FL_MONSTERCLIP );
 			else continue;
 		}
 
-		if( clip->flags & FMOVE_IGNORE_GLASS && CM_GetModelType( touch->v.modelindex ) == mod_brush )
+		if( clip->flags & FMOVE_IGNORE_GLASS && modType == mod_brush )
 		{
 			// we ignore brushes with rendermode != kRenderNormal
 			switch( touch->v.rendermode )
@@ -976,7 +988,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		traceHitbox = false;
 
 		// select a properly trace method
-		if( CM_GetModelType( touch->v.modelindex ) == mod_studio && !( clip->flags & FMOVE_SIMPLEBOX ))
+		if( modType == mod_studio && !( clip->flags & FMOVE_SIMPLEBOX ))
 		{
 			// always do hitbox trace for bbox solidity
 			if( touch->v.solid == SOLID_BBOX )
