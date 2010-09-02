@@ -156,7 +156,8 @@ void CRpgRocket :: Spawn( void )
 	pev->velocity = gpGlobals->v_forward * 250;
 	pev->gravity = 0.5;
 
-	pev->nextthink = gpGlobals->time + 0.4;
+	if( RANDOM_LONG( 0, 1 ))
+		pev->nextthink = gpGlobals->time + 0.4;
 
 	pev->dmg = gSkillData.plrDmgRPG;
 }

@@ -754,8 +754,7 @@ void S_RenderFrame( ref_params_t *fd )
 	s_listener.inmenu = si.IsInMenu();
 	s_listener.paused = fd->paused;
 
-	VectorCopy( fd->simorg, s_listener.origin );
-	VectorCopy( fd->vieworg, s_listener.vieworg );
+	VectorCopy( fd->vieworg, s_listener.origin );
 	VectorCopy( fd->simvel, s_listener.velocity );
 	VectorCopy( fd->forward, s_listener.forward );
 	VectorCopy( fd->right, s_listener.right );

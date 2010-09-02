@@ -1415,6 +1415,10 @@ void CL_Init( void )
 	Host_CheckChanges ();
 
 	cls.initialized = true;
+
+	// g-cont. disable for now
+	Cvar_SetValue( "cl_lw", 0 );
+	Cvar_SetValue( "cl_predict", 0 );
 }
 
 

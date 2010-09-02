@@ -1265,11 +1265,13 @@ bool SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, bool direc
 	sv_client_t	*cl, *current = svs.clients;
 	bool		reliable = false;
 	bool		specproxy = false;
+	float		*viewOrg = NULL;
 
 	switch( dest )
 	{
 	case MSG_INIT:
-		if( sv.state == ss_loading )
+		// FIXME: implement back bufffers this solution is suxx
+		if( sv.state == ss_loading && BF_GetNumBytesWritten( &sv.signon ) < BF_GetMaxBytes( &sv.signon ) / 2 )
 		{
 			// copy signon buffer
 			BF_WriteBits( &sv.signon, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
@@ -1322,6 +1324,7 @@ bool SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, bool direc
 	{
 		if( cl->state == cs_free || cl->state == cs_zombie )
 			continue;
+
 		if( cl->state != cs_spawned && !reliable )
 			continue;
 
@@ -1333,7 +1336,11 @@ bool SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, bool direc
 
 		if( mask )
 		{
-			leafnum = CM_PointLeafnum( cl->edict->v.origin );
+			if( SV_IsValidEdict( cl->pViewEntity ))
+				viewOrg = cl->pViewEntity->v.origin;
+			else viewOrg = cl->edict->v.origin;
+
+			leafnum = CM_PointLeafnum( viewOrg );
 			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}

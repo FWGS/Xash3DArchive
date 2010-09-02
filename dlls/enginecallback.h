@@ -133,6 +133,7 @@ inline void *GET_PRIVATE( edict_t *pent )
 #define ENGINE_SET_PAS			(*g_engfuncs.pfnSetFatPAS)
 
 #define ENGINE_CHECK_VISIBILITY (*g_engfuncs.pfnCheckVisibility)
+#define ENGINE_BOX_VISIBLE (*g_engfuncs.pfnCheckVisible)
 
 #define DELTA_SET				( *g_engfuncs.pfnDeltaSetField )
 #define DELTA_UNSET				( *g_engfuncs.pfnDeltaUnsetField )

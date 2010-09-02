@@ -198,20 +198,37 @@ void CHud :: Think( void )
 		pList = pList->pNext;
 	}
 
-	// think about default fov
-	float def_fov = CVAR_GET_FLOAT( "default_fov" );
-	if( m_flFOV == 0.0f ) m_flFOV = max( CVAR_GET_FLOAT( "default_fov" ), 90 );
-	
-	// change sensitivity
-	if( m_flFOV == def_fov )
+	int newfov = HUD_GetFOV();
+
+	if ( newfov == 0 )
 	{
-		m_flMouseSensitivity = 0;
+		m_iFOV = default_fov->value;
 	}
 	else
 	{
+		m_iFOV = newfov;
+	}
+
+	// the clients fov is actually set in the client data update section of the hud
+
+	// Set a new sensitivity
+	if ( m_iFOV == default_fov->value )
+	{  
+		// reset to saved sensitivity
+		m_flMouseSensitivity = 0;
+	}
+	else
+	{  
 		// set a new sensitivity that is proportional to the change from the FOV default
-		m_flMouseSensitivity = CVAR_GET_FLOAT( "sensitivity" ) * ( m_flFOV / def_fov );
-		m_flMouseSensitivity *= CVAR_GET_FLOAT( "zoom_sensitivity_ratio" ); // apply zoom factor
+		m_flMouseSensitivity = m_sensitivity->value * ((float)newfov / (float)default_fov->value );
+		m_flMouseSensitivity *= CVAR_GET_FLOAT( "zoom_sensitivity_ratio" );
+	}
+
+	// think about default fov
+	if ( m_iFOV == 0 )
+	{  
+		// only let players adjust up in fov,  and only if they are not overriden by something else
+		m_iFOV = max( default_fov->value, 90 );  
 	}
 }
 
@@ -231,11 +248,11 @@ int CHud :: UpdateClientData( client_data_t *cdata, float time )
 	m_iKeyBits = CL_ButtonBits( 0 );
 	m_iWeaponBits = cdata->iWeaponBits;
 
-//	in_fov = cdata->fov;
+	float in_fov = cdata->fov;
 
 	Think();
 
-//	cdata->fov = m_iFOV;
+	cdata->fov = m_iFOV;
 
 	v_idlescale = m_iConcussionEffect;
 

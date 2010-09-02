@@ -25,6 +25,7 @@
 DECLARE_HUDMESSAGE( Logo );
 DECLARE_HUDMESSAGE( HUDColor );
 DECLARE_HUDMESSAGE( SetFog );
+DECLARE_HUDMESSAGE( SetFOV );
 DECLARE_HUDMESSAGE( RainData );
 DECLARE_HUDMESSAGE( SetBody );
 DECLARE_HUDMESSAGE( SetSkin );
@@ -39,6 +40,9 @@ DECLARE_HUDMESSAGE( ServerName );
 DECLARE_HUDMESSAGE( ScreenShake );
 DECLARE_HUDCOMMAND( ChangeLevel );
 
+cvar_t *cl_lw = NULL;
+float g_lastFOV = 0.0f;
+
 int CHud :: InitMessages( void )
 {
 	HOOK_MESSAGE( Logo );
@@ -51,6 +55,7 @@ int CHud :: InitMessages( void )
 	HOOK_MESSAGE( HUDColor );
 	HOOK_MESSAGE( Particle );
 	HOOK_MESSAGE( SetFog );
+	HOOK_MESSAGE( SetFOV );
 	HOOK_MESSAGE( RainData ); 
 	HOOK_MESSAGE( SetBody );
 	HOOK_MESSAGE( SetSkin );
@@ -59,13 +64,15 @@ int CHud :: InitMessages( void )
 
 	HOOK_COMMAND( "hud_changelevel", ChangeLevel );	// send by engine
 
-	m_flFOV = 0;
+	m_iLogo = 0;
+	m_iFOV = 0;
 	m_iHUDColor = RGB_YELLOWISH; // 255, 160, 0
 	
 	CVAR_REGISTER( "zoom_sensitivity_ratio", "1.2", 0, "mouse sensitivity when zooming" );
-	CVAR_REGISTER( "default_fov", "90", 0, "default client fov" );
+	default_fov = CVAR_REGISTER( "default_fov", "90", 0, "default client fov" );
 	CVAR_REGISTER( "hud_draw", "1", 0, "disable hud rendering" );
 	CVAR_REGISTER( "hud_takesshots", "0", 0, "take screenshots at 30 fps" );
+	cl_lw = gEngfuncs.pfnGetCvarPointer( "cl_lw" );
 
 	// clear any old HUD list
 	if( m_pHudList )
@@ -196,6 +203,51 @@ int CHud :: MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf )
 
 	END_READ();
 	
+	return 1;
+}
+
+int CHud::MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf)
+{
+	BEGIN_READ( pszName, iSize, pbuf );
+
+	int newfov = READ_BYTE();
+	int def_fov = CVAR_GET_FLOAT( "default_fov" );
+
+	//Weapon prediction already takes care of changing the fog. ( g_lastFOV ).
+	if ( cl_lw && cl_lw->integer )
+	{
+		END_READ();
+		return 1;
+	}
+
+	g_lastFOV = newfov;
+
+	if ( newfov == 0 )
+	{
+		m_iFOV = def_fov;
+	}
+	else
+	{
+		m_iFOV = newfov;
+	}
+
+	// the clients fov is actually set in the client data update section of the hud
+
+	// Set a new sensitivity
+	if ( m_iFOV == def_fov )
+	{  
+		// reset to saved sensitivity
+		m_flMouseSensitivity = 0;
+	}
+	else
+	{  
+		// set a new sensitivity that is proportional to the change from the FOV default
+		m_flMouseSensitivity = m_sensitivity->value * ((float)newfov / (float)def_fov );
+		m_flMouseSensitivity *= CVAR_GET_FLOAT( "zoom_sensitivity_ratio" );
+	}
+
+	END_READ();
+
 	return 1;
 }
 
@@ -356,4 +408,16 @@ int CHud::MsgFunc_ScreenShake( const char *pszName, int iSize, void *pbuf )
 	END_READ();
 
 	return 1;
+}
+
+/*
+=====================
+HUD_GetFOV
+
+Returns last FOV
+=====================
+*/
+float HUD_GetFOV( void )
+{
+	return g_lastFOV;
 }

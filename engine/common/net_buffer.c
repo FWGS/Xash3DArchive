@@ -112,7 +112,7 @@ void BF_WriteOneBit( sizebuf_t *bf, int nValue )
 
 void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, bool bCheckRange )
 {
-#ifdef PARANOID
+#ifdef _DEBUG
 	// make sure it doesn't overflow.
 	if( bCheckRange && numbits < 32 )
 	{

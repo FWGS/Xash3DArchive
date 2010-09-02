@@ -535,7 +535,7 @@ public:
 	float m_vecAngles[3];
 	int m_iKeyBits;
 	int m_iHideHUDDisplay;
-	float m_flFOV;
+	float m_iFOV;
 	int m_Teamplay;
 	int m_iRes;
 	int m_iCameraMode;
@@ -553,6 +553,7 @@ private:
 	wrect_t *m_rgrcRects;
 	wrect_t nullRect;
 	char *m_rgszSpriteNames;
+	cvar_t *default_fov;
 public:
 	HSPRITE GetSprite( int index ) { return (index < 0) ? 0 : m_rghSprites[index]; }
 	wrect_t& GetSpriteRect( int index ) { return (index < 0) ? nullRect : m_rgrcRects[index]; }
@@ -594,6 +595,7 @@ public:
 	int _cdecl MsgFunc_ResetHUD( const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ViewMode( const char *pszName, int iSize, void *pbuf );
+	int _cdecl MsgFunc_SetFOV( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ScreenShake( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_RainData( const char *pszName, int iSize, void *pbuf ); 
@@ -648,6 +650,8 @@ public:
 };
 
 extern CHud gHUD;
+
+float HUD_GetFOV( void );
 
 extern int g_iPlayerClass;
 extern int g_iTeamNumber;

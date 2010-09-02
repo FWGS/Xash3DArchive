@@ -93,7 +93,7 @@ typedef struct enginefuncs_s
 	void	(*pfnTraceHull)( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr );
 	void	(*pfnTraceModel)( const float *v1, const float *v2, int hullNumber, edict_t *pent, TraceResult *ptr );
 	const char *(*pfnTraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 );
-	void	(*pfnTraceSphere)( const float *v1, const float *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr );
+	int	(*pfnBoxVisible)( const float *mins, const float *maxs, const byte *pset );
 	void	(*pfnGetAimVector)( edict_t* ent, float speed, float *rgflReturn );
 	void	(*pfnServerCommand)( const char* str );
 	void	(*pfnServerExecute)( void );
@@ -385,5 +385,6 @@ typedef struct
 
 typedef int (*APIFUNCTION)( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion );
 typedef int (*APIFUNCTION2)( DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion );
+typedef int (*NEW_DLL_FUNCTIONS_FN)( NEW_DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion );
 
 #endif//EIFACE_H

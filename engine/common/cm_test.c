@@ -121,7 +121,7 @@ Returns true if any leaf in boxspace
 is potentially visible
 =============
 */
-bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, byte *visbits )
+bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits )
 {
 	short	leafList[MAX_BOX_LEAFS];
 	int	i, count;

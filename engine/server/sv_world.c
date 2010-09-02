@@ -691,6 +691,20 @@ bool SV_TestEntityPosition( edict_t *ent )
 }
 
 /*
+============
+SV_TestPlayerPosition
+
+same as SV_TestEntityPosition but check only players
+============
+*/
+bool SV_TestPlayerPosition( edict_t *ent )
+{
+	if( ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
+		return SV_TestEntityPosition( ent );
+	return false;
+}
+
+/*
 ===============================================================================
 
 LINE TESTING IN HULLS
@@ -963,19 +977,16 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( clip->flags & FMOVE_IGNORE_GLASS && modType == mod_brush )
 		{
-			// we ignore brushes with rendermode != kRenderNormal
-			switch( touch->v.rendermode )
-			{
-			case kRenderTransAdd:
-			case kRenderTransAlpha:
-			case kRenderTransTexture:
-				continue;		// passed through glass
-			default: break;
-			}
+			// we ignore brushes with rendermode != kRenderNormal and without FL_WORLDBRUSH set
+			if( touch->v.flags & FL_WORLDBRUSH );
+			else if( touch->v.rendermode != kRenderNormal )
+				continue;
 		}
 
 		// might intersect, so do an exact clip
 		if( clip->trace.fAllSolid ) return;
+
+		traceHitbox = false;
 
 		if( clip->passedict )
 		{
@@ -983,9 +994,9 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				continue;	// don't clip against own missiles
 			if( clip->passedict->v.owner == touch )
 				continue;	// don't clip against owner
+			if( clip->passedict->v.solid == SOLID_BBOX && touch->v.solid != SOLID_BSP )
+				traceHitbox = true;
 		}
-
-		traceHitbox = false;
 
 		// select a properly trace method
 		if( modType == mod_studio && !( clip->flags & FMOVE_SIMPLEBOX ))

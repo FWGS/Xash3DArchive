@@ -356,7 +356,7 @@ void V_PreRender( ref_params_t *pparams )
 	if( gHUD.m_iCameraMode ) pparams->flags |= RDF_THIRDPERSON;
 	else pparams->flags &= ~RDF_THIRDPERSON;
 
-	pparams->fov_x = gHUD.m_flFOV; // this is a final fov value
+	pparams->fov_x = gHUD.m_iFOV; // this is a final fov value
 	pparams->fov_y = V_CalcFov( pparams->fov_x, pparams->viewport[2], pparams->viewport[3] );
 
 	memset( pparams->blend, 0, sizeof( pparams->blend ));

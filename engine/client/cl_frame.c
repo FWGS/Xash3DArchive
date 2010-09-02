@@ -497,9 +497,6 @@ void CL_AddEntities( void )
 	}
 	else cl.lerpFrac = 1.0f - ( cl.frame.servertime - cl.time ) * (float)( cl.serverframetime * 0.0001f );
 
-	if( cl.refdef.paused )
-		cl.lerpFrac = 1.0f;
-
 	cl.render_flags = 0;
 
 	clgame.dllFuncs.pfnStartFrame();	// new frame has begin

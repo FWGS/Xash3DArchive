@@ -102,8 +102,7 @@ typedef struct
 
 typedef struct
 {
-	vec3_t		origin;		// simorg
-	vec3_t		vieworg;		// simorg + view_ofs
+	vec3_t		origin;		// simorg + view_ofs
 	vec3_t		velocity;
 	vec3_t		forward;
 	vec3_t		right;

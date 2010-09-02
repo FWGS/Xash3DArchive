@@ -94,7 +94,7 @@ int CM_PointLeafnum( const vec3_t p );
 mleaf_t *CM_PointInLeaf( const vec3_t p, mnode_t *node );
 int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 int CM_TempBoxModel( const vec3_t mins, const vec3_t maxs, bool capsule );
-bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, byte *visbits );
+bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
 int CM_HullPointContents( hull_t *hull, int num, const vec3_t p );
 int CM_PointContents( const vec3_t p );
 void CM_AmbientLevels( const vec3_t p, byte *pvolumes );

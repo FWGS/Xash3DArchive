@@ -274,7 +274,7 @@ void SetScreenFade( Vector fadeColor, float alpha, float duration, float holdTim
 	for( int i = 0; i < HUD_MAX_FADES; i++ )
 	{
 		// search for free spot
-		if( gHUD.m_FadeList[i].fadeFlags == 0 )
+		if( !gHUD.m_FadeList[i].bActive )
 		{
 			sf = &gHUD.m_FadeList[i];
 			break;
@@ -358,22 +358,19 @@ void DrawScreenFade( void )
 
 		// Fading...
 		int iFadeAlpha;
-		if( pFade->fadeFlags & FFADE_OUT )
+		if( pFade->fadeFlags == FFADE_STAYOUT )
 		{
-			iFadeAlpha = pFade->fadeSpeed * ( pFade->fadeEnd - gHUD.m_flTime );
-			iFadeAlpha += pFade->fadeAlpha;
-			iFadeAlpha = min( iFadeAlpha, pFade->fadeAlpha );
-			iFadeAlpha = max( 0, iFadeAlpha );
-		}
-		else if( !( pFade->fadeFlags & FFADE_STAYOUT ))
-		{
-			iFadeAlpha = pFade->fadeSpeed * ( pFade->fadeEnd - gHUD.m_flTime );
-			iFadeAlpha = min( iFadeAlpha, pFade->fadeAlpha );
-			iFadeAlpha = max( 0, iFadeAlpha );
+			iFadeAlpha = pFade->fadeAlpha;
 		}
 		else
 		{
-			iFadeAlpha = pFade->fadeAlpha;
+			iFadeAlpha = pFade->fadeSpeed * ( pFade->fadeEnd - gHUD.m_flTime );
+			if( pFade->fadeFlags & FFADE_OUT )
+			{
+				iFadeAlpha += pFade->fadeAlpha;
+			}
+			iFadeAlpha = min( iFadeAlpha, pFade->fadeAlpha );
+			iFadeAlpha = max( 0, iFadeAlpha );
 		}
 
 		// Use highest alpha

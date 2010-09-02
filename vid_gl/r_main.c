@@ -2262,7 +2262,7 @@ byte *Mod_GetCurrentVis( void )
 
 bool Mod_CullBox( const vec3_t mins, const vec3_t maxs )
 {
-	return R_CullBox( mins, maxs, 15 );
+	return R_CullBox( mins, maxs, RI.clipFlags );
 }
 
 shader_t R_GetSpriteTexture( int spriteIndex, int spriteFrame )

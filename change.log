@@ -1,4 +1,4 @@
-build ????
+build 1305
 
 Engine: implement bit-stream network buffer
 Engine: implement custom delta-encoding with user defined script (delta.lst)
@@ -10,6 +10,13 @@ Engine: rewrite hitbox trace
 Engine: rewrite SV_PointContents
 Engine: implement a new movetype: compound for gluing two entities together (like movewith in spirit)
 Engine: fix toss entities on conveyors
+Engine: rewrite MOVETYPE_PUSH
+Engine: rewrite monsters movement code
+Engine: reworking client and game interfaces
+Engine: fix camera bugs (no sounds when client see in the camera)
+SDK: fix many-many small HL bugs in original sdk code
+Engine: fix trigger retouching system
+Engine: adjust beam visibility
 
 build 1271
 

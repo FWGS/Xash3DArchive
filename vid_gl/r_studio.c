@@ -1219,7 +1219,7 @@ void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
 		}
 
 		// update it so attachments always have right pos
-		VectorCopy( origin, e->origin );
+		if( !RI.refdef.paused ) VectorCopy( origin, e->origin );
 	}
 
 	// don't rotate clients, only aim

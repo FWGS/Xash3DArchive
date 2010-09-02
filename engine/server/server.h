@@ -338,6 +338,7 @@ bool SV_CheckWater( edict_t *ent );
 bool SV_RunThink( edict_t *ent );
 void SV_FreeOldEntities( void );
 bool SV_TestEntityPosition( edict_t *ent );	// for EntityInSolid checks
+bool SV_TestPlayerPosition( edict_t *ent );	// for PlayerInSolid checks
 
 //
 // sv_move.c

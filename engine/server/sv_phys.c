@@ -562,20 +562,23 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else type = MOVE_NORMAL;
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
-	VectorCopy( trace.vecEndPos, ent->v.origin );
-	SV_LinkEdict( ent, true );
-
-	if( apush[YAW] && ent->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( ent, true )) != NULL )
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type|FMOVE_SIMPLEBOX, ent );
+	if( !trace.fAllSolid && !trace.fStartSolid )
 	{
-		cl->addangle = apush[1];
-		ent->v.fixangle = 2;
-	}
+		VectorCopy( trace.vecEndPos, ent->v.origin );
+		SV_LinkEdict( ent, true );
 
-	// don't rotate pushables!
-	if( ent->v.movetype != MOVETYPE_PUSHSTEP )
-	{
-		ent->v.angles[YAW] += trace.flFraction * apush[YAW];
+		if( apush[YAW] && ent->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( ent, true )) != NULL )
+		{
+			cl->addangle = apush[1];
+			ent->v.fixangle = 2;
+		}
+
+		// don't rotate pushables!
+		if( ent->v.movetype != MOVETYPE_PUSHSTEP )
+		{
+			ent->v.angles[YAW] += trace.flFraction * apush[YAW];
+		}
 	}
 
 	if( blocked ) *blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
@@ -1441,6 +1444,12 @@ static void SV_Physics_Client( edict_t *ent )
 	default: return;
 	}
 
+	if( svgame.globals->force_retouch )
+	{
+		// force retouch even for stationary
+		SV_LinkEdict( ent, true );
+	}
+
 	// check client colliding with monster (e.g. tentacle damage)
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
 	pHit = trace.pHit;
@@ -1460,6 +1469,12 @@ static void SV_Physics_Entity( edict_t *ent )
 		VectorClear( ent->v.basevelocity );
 	}
 	ent->v.flags &= ~FL_BASEVELOCITY;
+
+	if( svgame.globals->force_retouch )
+	{
+		// force retouch even for stationary
+		SV_LinkEdict( ent, true );
+	}
 
 	// user dll can override movement type
 	if( svgame.dllFuncs2.pfnPhysicsEntity )
@@ -1539,16 +1554,6 @@ void SV_Physics( void )
 	svgame.dllFuncs.pfnStartFrame();
 
 	SV_CheckAllEnts ();
-
-	// treat each object in turn
-	for( i = 1; ( svgame.globals->force_retouch > 0 ) && i < svgame.numEntities; i++ )
-	{
-		ent = EDICT_NUM( i );
-		if( !SV_IsValidEdict( ent )) continue;
-
-		// force retouch even for stationary
-		SV_LinkEdict( ent, true );
-	}
 
 	// treat each object in turn
 	if( !( sv.hostflags & SVF_PLAYERSONLY ))

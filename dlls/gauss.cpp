@@ -294,6 +294,9 @@ void CGauss::SecondaryAttack()
 			UTIL_ScreenFade( m_pPlayer, Vector(255,128,0), 2, 0.5, 128, FFADE_IN );
 #endif
 			SendWeaponAnim( GAUSS_IDLE );
+
+			// g-cont. kill spinning sound after shock (SDK 2.3 bug)
+			PLAYBACK_EVENT_FULL( flags | FEV_RELIABLE, m_pPlayer->edict(), m_usGaussFire, 0.01, (float *)&m_pPlayer->pev->origin, (float *)&m_pPlayer->pev->angles, 0.0, 0.0, 0, 0, 0, 1 );
 			
 			// Player may have been killed and this weapon dropped, don't execute any more code after this!
 			return;

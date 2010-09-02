@@ -1638,13 +1638,13 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 
 /*
 =============
-pfnTraceSphere
+pfnBoxVisible
 
-FIXME: implement
 =============
 */
-static void pfnTraceSphere( const float *v1, const float *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr )
+static int pfnBoxVisible( const float *mins, const float *maxs, const byte *pset )
 {
+	return CM_BoxVisible( mins, maxs, pset );
 }
 
 /*
@@ -2037,7 +2037,7 @@ pfnWriteShort
 */
 void pfnWriteShort( int iValue )
 {
-	BF_WriteShort( &sv.multicast, iValue );
+	BF_WriteShort( &sv.multicast, (short)iValue );
 	svgame.msg_realsize += 2;
 }
 
@@ -3526,7 +3526,7 @@ static enginefuncs_t gEngfuncs =
 	pfnTraceHull,
 	pfnTraceModel,
 	pfnTraceTexture,
-	pfnTraceSphere,
+	pfnBoxVisible,
 	pfnGetAimVector,
 	pfnServerCommand,
 	pfnServerExecute,
@@ -3866,13 +3866,14 @@ void SV_UnloadProgs( void )
 
 bool SV_LoadProgs( const char *name )
 {
+	int			i, version;
 	static APIFUNCTION		GetEntityAPI;
 	static APIFUNCTION2		GetEntityAPI2;
 	static GIVEFNPTRSTODLL	GiveFnptrsToDll;
+	static NEW_DLL_FUNCTIONS_FN	GiveNewDllFuncs;
 	static globalvars_t		gpGlobals;
 	static playermove_t		gpMove;
 	edict_t			*e;
-	int			i;
 
 	if( svgame.hInstance ) SV_UnloadProgs();
 
@@ -3887,6 +3888,8 @@ bool SV_LoadProgs( const char *name )
 	Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 
 	GetEntityAPI = (APIFUNCTION)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
+	GetEntityAPI2 = (APIFUNCTION2)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
+	GiveNewDllFuncs = (NEW_DLL_FUNCTIONS_FN)FS_GetProcAddress( svgame.hInstance, "GetNewDLLFunctions" );
 
 	if( !GetEntityAPI )
 	{
@@ -3906,15 +3909,39 @@ bool SV_LoadProgs( const char *name )
 		return false;
 	}
 
-	if( !GetEntityAPI( &svgame.dllFuncs, INTERFACE_VERSION ))
+	version = INTERFACE_VERSION;
+
+	if( !GetEntityAPI( &svgame.dllFuncs, version ))
 	{
-		FS_FreeLibrary( svgame.hInstance );
-		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
-		svgame.hInstance = NULL;
-		return false;
+		if( !GetEntityAPI2 )
+		{
+			FS_FreeLibrary( svgame.hInstance );
+			MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
+			svgame.hInstance = NULL;
+			return false;
+		}
+		else if( !GetEntityAPI2( &svgame.dllFuncs, &version ))
+		{
+			FS_FreeLibrary( svgame.hInstance );
+			MsgDev( D_ERROR, "SV_LoadProgs: interface version %i should be %i\n", INTERFACE_VERSION, version );
+			svgame.hInstance = NULL;
+			return false;
+		}
 	}
 
 	GiveFnptrsToDll( &gEngfuncs, svgame.globals );
+
+	// get extended callbacks
+	if( GiveNewDllFuncs )
+	{
+		version = NEW_DLL_FUNCTIONS_VERSION;
+	
+		if( !GiveNewDllFuncs( &svgame.dllFuncs2, &version ))
+		{
+			MsgDev( D_WARN, "SV_LoadProgs: new interface version %i should be %i\n", NEW_DLL_FUNCTIONS_VERSION, version );
+			Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
+		}
+	}
 
 	svgame.globals->pStringBase = ""; // setup string base
 

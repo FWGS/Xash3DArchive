@@ -352,12 +352,12 @@ void CHudAmmo :: Think( void )
 		}
 	}
 
-	if( Q_rint( gHUD.m_flFOV ) != gWR.iOldFOV )
+	if( gHUD.m_iFOV != gWR.iOldFOV )
 	{
 		if( m_pWeapon )
 		{
 			// update crosshairs
-			if( gHUD.m_flFOV >= 90 )
+			if( gHUD.m_iFOV >= 90 )
 			{
 				// normal crosshairs
 				if( m_pWeapon->iOnTarget && m_pWeapon->hAutoaim )
@@ -372,7 +372,7 @@ void CHudAmmo :: Think( void )
 				else SetCrosshair( m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255 );
 			}
 		}
-		gWR.iOldFOV = gHUD.m_flFOV;
+		gWR.iOldFOV = gHUD.m_iFOV;
 	}
 
 	if( !gpActiveSel ) return;
@@ -615,7 +615,7 @@ int CHudAmmo::MsgFunc_CurWeapon( const char *pszName, int iSize, void *pbuf )
 	m_pWeapon->iOnTarget = fOnTarget;
 
 	// update crosshairs
-	if( gHUD.m_flFOV >= 90 )
+	if( gHUD.m_iFOV >= 90 )
 	{
 		// normal crosshairs
 		if( m_pWeapon->iOnTarget && m_pWeapon->hAutoaim )

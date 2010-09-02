@@ -298,6 +298,11 @@ static void Con_LoadConchars( void )
 	if( con_fontsize->integer < 0 ) Cvar_SetValue( "con_fontsize", 0 );
 	if( con_fontsize->integer > 2 ) Cvar_SetValue( "con_fontsize", 2 );
 
+	// select properly fontsize
+	if( scr_width->integer < 640 ) Cvar_SetValue( "con_fontsize", 0 );
+	else if( scr_width->integer >= 1280 ) Cvar_SetValue( "con_fontsize", 2 );
+	else Cvar_SetValue( "con_fontsize", 1 );
+
 	if( !re ) return;
 
 	// loading conchars

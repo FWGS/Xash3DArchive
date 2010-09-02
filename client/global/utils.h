@@ -234,6 +234,7 @@ extern int g_iAlive;		// indicates alive local client or not
 extern cvar_t	*v_centerspeed;
 extern cvar_t	*v_centermove;
 extern cvar_t	*r_studio_lerping;
+extern cvar_t	*m_sensitivity;
 extern cvar_t	*cl_forwardspeed;
 extern cvar_t	*cl_particles;
 extern cvar_t	*cl_draw_beams;
