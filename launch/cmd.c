@@ -280,7 +280,7 @@ void Cmd_Exec_f( void )
 		return;
 	}
 
-	com.strncpy( cfgpath, Cmd_Argv( 1 ), MAX_STRING ); 
+	com.strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
 	FS_DefaultExtension( cfgpath, ".cfg" ); // append as default
 
 	f = FS_LoadFile( cfgpath, &len );
@@ -328,7 +328,7 @@ typedef struct cmd_function_s
 } cmd_function_t;
 
 static int		cmd_argc;
-static char		*cmd_argv[MAX_STRING_TOKENS];
+static char		*cmd_argv[MAX_CMD_TOKENS];
 static char		cmd_tokenized[MAX_CMD_BUFFER];	// will have 0 bytes inserted
 static cmd_function_t	*cmd_functions;			// possible commands to execute
 
@@ -400,7 +400,7 @@ void Cmd_TokenizeString( const char *text_in )
 	while( 1 )
 	{
 		// this is usually something malicious
-		if( cmd_argc == MAX_STRING_TOKENS ) return;
+		if( cmd_argc == MAX_CMD_TOKENS ) return;
 
 		while( 1 )
 		{

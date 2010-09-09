@@ -366,7 +366,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 						// this name will be used only for tell user about problems 
 						if( format->loadfunc( path, f, filesize ))
 						{         
-							com.snprintf( sidename, MAX_STRING, "%s%s.%s", loadname, cmap->type[i].suf, format->ext );
+							com.snprintf( sidename, sizeof( sidename ), "%s%s.%s", loadname, cmap->type[i].suf, format->ext );
 							if( FS_AddSideToPack( sidename, cmap->type[i].flags )) // process flags to flip some sides
 							{
 								Mem_Free( f );

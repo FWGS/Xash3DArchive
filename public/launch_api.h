@@ -16,8 +16,7 @@
 #define MAX_INFO_STRING	256	// infostrings are transmitted across network
 #define MAX_SYSPATH		1024	// system filepath
 #define bound(min, num, max)	((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
-#define MAX_MODS		128	// environment games that engine can keep visible
-#define MAP_DEFAULT_SHADER	"*black"	// engine built-in default shader
+#define MAX_MODS		512	// environment games that engine can keep visible
 #define MAX_STRING_TABLES	8	// seperately stringsystems
 #define DLLEXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
@@ -25,7 +24,6 @@
 #define NULL		((void *)0)
 
 // color strings
-#define ColorIndex( c )	((( c ) - '0' ) & 7 )
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 
 #ifndef __cplusplus
@@ -35,7 +33,6 @@
 #include "const.h"
 
 typedef int		BOOL;
-typedef int		func_t;
 typedef int		sound_t;
 typedef int		shader_t;
 typedef vec_t		vec2_t[2];
@@ -69,10 +66,8 @@ enum dev_level
 	D_INFO = 1,	// "-dev 1", shows various system messages
 	D_WARN,		// "-dev 2", shows not critical system warnings
 	D_ERROR,		// "-dev 3", shows critical warnings 
-	D_LOAD,		// "-dev 4", show messages about loading resources
-	D_NOTE,		// "-dev 5", show system notifications for engine develeopers
-	D_MEMORY,		// "-dev 6", writes to log memory allocation
-	D_STRING,		// "-dev 7", writes to log tempstrings allocation
+	D_AICONSOLE,	// "-dev 4", special case for game aiconsole
+	D_NOTE,		// "-dev 5", show system notifications for engine developers
 };
 
 typedef long fs_offset_t;
@@ -83,7 +78,6 @@ typedef struct script_s script_t;	// script machine
 typedef struct stream_s stream_t;	// sound stream for background music playing
 typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
 typedef struct { int numfilenames; char **filenames; char *filenamesbuffer; } search_t;
-typedef void ( *cmsave_t )( void* handle, const void* buffer, size_t size );
 typedef void ( *cmdraw_t )( int color, int numpoints, const float *points );
 typedef void ( *setpair_t )( const char *key, const char *value, void *buffer, void *numpairs );
 typedef enum { NS_CLIENT, NS_SERVER } netsrc_t;
@@ -210,13 +204,13 @@ internal shared gameinfo structure (readonly for engine parts)
 typedef struct gameinfo_s
 {
 	// filesystem info
-	string		gamefolder;	// used for change game '-game x'
-	string		basedir;		// main game directory (like 'id1' for Quake or 'valve' for Half-Life)
-	string		gamedir;		// game directory (can be match with basedir, used as primary dir and as write path
-	string		startmap;		// map to start singleplayer game
-	string		trainmap;		// map to start hazard course (if specified)
-	string		title;		// Game Main Title
-	string		gameHint;		// hint to configure ImageLib and SoundLib
+	char		gamefolder[64];	// used for change game '-game x'
+	char		basedir[64];	// main game directory (like 'id1' for Quake or 'valve' for Half-Life)
+	char		gamedir[64];	// game directory (can be match with basedir, used as primary dir and as write path
+	char		startmap[64];	// map to start singleplayer game
+	char		trainmap[64];	// map to start hazard course (if specified)
+	char		title[64];	// Game Main Title
+	char		gameHint[32];	// hint to configure ImageLib and SoundLib
 	float		version;		// game version (optional)
 
 	// path info
@@ -225,25 +219,22 @@ typedef struct gameinfo_s
 	// about mod info
 	string		game_url;		// link to a developer's site
 	string		update_url;	// link to updates page
-	string		type;		// single, toolkit, multiplayer etc
-	string		date;
+	char		type[64];		// single, toolkit, multiplayer etc
+	char		date[64];
 	size_t		size;
 
-	int		viewmode;
 	int		gamemode;
-	int		sp_inhibite_ents;	// allows spawnflags to inhibite entities like in q1
 
-	string		sp_entity;	// e.g. info_player_start
-	string		dm_entity;	// e.g. info_player_deathmatch
-	string		coop_entity;	// e.g. info_player_coop
-	string		ctf_entity;	// e.g. info_player_ctf
-	string		team_entity;	// e.g. info_player_team
+	char		sp_entity[32];	// e.g. info_player_start
+	char		dm_entity[32];	// e.g. info_player_deathmatch
+	char		coop_entity[32];	// e.g. info_player_coop
+	char		team_entity[32];	// e.g. info_player_team
 
 	vec3_t		client_mins[4];	// 4 hulls allowed
 	vec3_t		client_maxs[4];	// 4 hulls allowed
 	float		viewheight[4];	// client viewheight (from hull center)
 
-	int		max_edicts;	// min edicts is 600, max edicts is 32000
+	int		max_edicts;	// min edicts is 600, max edicts is 4096
 } gameinfo_t;
 
 typedef struct sysinfo_s
@@ -423,9 +414,9 @@ typedef enum
 // imagelib global settings
 typedef enum
 {
-	SL_USE_LERPING	= BIT(0),	// lerping sounds during resample
-	SL_KEEP_8BIT	= BIT(1),	// don't expand 8bit sounds automatically up to 16 bit
-	SL_ALLOW_OVERWRITE	= BIT(2),	// allow to overwrite stored sounds
+	SL_USE_LERPING	= BIT(0),		// lerping sounds during resample
+	SL_KEEP_8BIT	= BIT(1),		// don't expand 8bit sounds automatically up to 16 bit
+	SL_ALLOW_OVERWRITE	= BIT(2),		// allow to overwrite stored sounds
 } slFlags_t;
 
 // wavdata output flags
@@ -471,7 +462,7 @@ typedef struct stdilib_api_s
 	size_t		api_size;				// must matched with sizeof(launch_exp_t)
 	size_t		com_size;				// must matched with sizeof(stdlib_api_t)
 
-	sysinfo_t		*SysInfo;				// engine sysinfo (filled by engine)
+	sysinfo_t		*SysInfo;				// engine sysinfo (filled by launcher)
 
 	// base events
 	void (*instance)( const char *name, const char *fmsg );	// restart engine with new instance
@@ -505,21 +496,11 @@ typedef struct stdilib_api_s
 	void (*move)(byte *pool, void **dest, void *src, size_t size, const char *file, int line); // not a memmove
 	void *(*malloc)(byte *pool, size_t size, const char *file, int line);
 	void (*free)(void *data, const char *file, int line);
-
-	// xash memlib extension - memory pools
 	byte *(*mallocpool)(const char *name, const char *file, int line);
 	void (*freepool)(byte **poolptr, const char *file, int line);
 	void (*clearpool)(byte *poolptr, const char *file, int line);
 	void (*memcheck)(const char *file, int line);		// check memory pools for consistensy
 	bool (*is_allocated)( byte *poolptr, void *data );	// return true is memory is allocated
-
-	// xash memlib extension - memory arrays
-	byte *(*newarray)( byte *pool, size_t elementsize, int count, const char *file, int line );
-	void (*delarray)( byte *array, const char *file, int line );
-	void *(*newelement)( byte *array, const char *file, int line );
-	void (*delelement)( byte *array, void *element, const char *file, int line );
-	void *(*getelement)( byte *array, size_t index );
-	size_t (*arraysize)( byte *arrayptr );
 
 	// network.c funcs
 	void (*NET_Init)( void );
@@ -547,7 +528,7 @@ typedef struct stdilib_api_s
 	long (*Com_FileSize)(const char *filename);		// same as Com_FileExists but return filesize
 	long (*Com_FileTime)(const char *filename);		// same as Com_FileExists but return filetime
 	const char *(*Com_FileExtension)(const char *in);		// return extension of file
-	const char *(*Com_RemovePath)(const char *in);		// return file without path
+	const char *(*Com_RemovePath)(const char *in);		// return filename without path
 	void (*Com_StripExtension)(char *path);			// remove extension if present
 	void (*Com_StripFilePath)(const char* const src, char* dst);// get file path without filename.ext
 	void (*Com_DefaultExtension)(char *path, const char *ext );	// append extension if not present
@@ -602,9 +583,9 @@ typedef struct stdilib_api_s
 	char *(*Cmd_Args)( void );
 	char *(*Cmd_Argv)( uint arg ); 
 	void (*Cmd_LookupCmds)( char *buffer, void *ptr, setpair_t callback );
-	void (*Cmd_AddCommand)(const char *name, xcommand_t function, const char *desc);
-	void (*Cmd_TokenizeString)(const char *text_in);
-	void (*Cmd_DelCommand)(const char *name);
+	void (*Cmd_AddCommand)( const char *name, xcommand_t function, const char *desc );
+	void (*Cmd_TokenizeString)( const char *text_in );
+	void (*Cmd_DelCommand)( const char *name );
 
 	// real filesystem
 	file_t *(*fopen)(const char* path, const char* mode);		// same as fopen
@@ -643,7 +624,7 @@ typedef struct stdilib_api_s
 	long (*wfwrite)( wfile_t *wad, const char *lump, const void* data, size_t size, char type, char cmp );
 	byte *(*wfread)( wfile_t *wad, const char *lump, size_t *lumpsizeptr, const char type );
 
-	// filesystem simply user interface
+	// filesystem simple user interface
 	byte *(*Com_LoadFile)(const char *path, long *filesize );		// load file into heap
 	bool (*Com_WriteFile)(const char *path, const void *data, long len );	// write file into disk
 	bool (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
@@ -714,8 +695,6 @@ typedef struct stdilib_api_s
 	int (*strcmp)(const char *s1, const char *s2);			// compare strings with case sensative
 	char *(*stristr)( const char *s1, const char *s2 );		// find s2 in s1 with case insensative
 	char *(*strstr)( const char *s1, const char *s2 );		// find s2 in s1 with case sensative
-	size_t (*strpack)( byte *buf, size_t pos, char *s1, int n );	// put string at end ofbuffer
-	size_t (*strunpack)( byte *buf, size_t pos, char *s1 );		// extract string from buffer
 	int (*vsprintf)(char *buf, const char *fmt, va_list args);		// format message
 	int (*sprintf)(char *buffer, const char *format, ...);		// print into buffer
 	char *(*va)(const char *format, ...);				// print into temp buffer
@@ -781,12 +760,6 @@ typedef struct script_s
 #define Mem_Set(dest, val, size )	com.memset(dest, val, size, __FILE__, __LINE__)
 #define Mem_Check()			com.memcheck(__FILE__, __LINE__)
 #define Mem_IsAllocated( pool, ptr )	com.is_allocated( pool, ptr )
-#define Mem_CreateArray( p, s, n )	com.newarray( p, s, n, __FILE__, __LINE__)
-#define Mem_RemoveArray( array )	com.delarray( array, __FILE__, __LINE__)
-#define Mem_AllocElement( array )	com.newelement( array, __FILE__, __LINE__)
-#define Mem_FreeElement( array, el )	com.delelement( array, el, __FILE__, __LINE__ )
-#define Mem_GetElement( array, idx )	com.getelement( array, idx )
-#define Mem_ArraySize( array )	com.arraysize( array )
 
 /*
 ==========================================

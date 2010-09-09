@@ -7,6 +7,8 @@
 
 #include "ref_params.h"
 
+#define MAP_DEFAULT_SHADER		"*black"	// engine built-in default shader
+
 // shader types used for shader loading
 #define SHADER_SKY			1	// sky box shader
 #define SHADER_NOMIP		2	// 2d images

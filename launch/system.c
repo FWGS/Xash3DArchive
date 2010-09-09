@@ -73,12 +73,6 @@ void Sys_GetStdAPI( void )
 	com.freepool = _mem_freepool;
 	com.clearpool = _mem_emptypool;
 	com.memcheck = _mem_check;
-	com.newarray = _mem_alloc_array;
-	com.delarray = _mem_free_array;
-	com.newelement = _mem_alloc_array_element;
-	com.delelement = _mem_free_array_element;
-	com.getelement = _mem_get_array_element;
-	com.arraysize = _mem_array_size;
 
 	// network.c funcs
 	com.NET_Init = NET_Init;
@@ -271,8 +265,6 @@ void Sys_GetStdAPI( void )
 	com.strcmp = com_strcmp;
 	com.stristr = com_stristr;
 	com.strstr = com_strstr;
-	com.strpack = com_strpack;
-	com.strunpack = com_strunpack;
 	com.vsprintf = com_vsprintf;
 	com.sprintf = com_sprintf;
 	com.va = va;
@@ -642,9 +634,7 @@ void Sys_Print( const char *pMsg )
 
 	Sys_PrintLog( logbuf );
 
-	// don't flood system console with memory allocation messages or another
-	if( Sys.Con_Print && Sys.printlevel < D_MEMORY )
-		Sys.Con_Print( buffer );
+	Sys.Con_Print( buffer );
 	Sys.printlevel = 0; // reset before next message
 }
 
@@ -682,26 +672,16 @@ void Sys_MsgDev( int level, const char *pMsg, ... )
 
 	switch( level )
 	{
-	case D_INFO:	
-		Sys_Print( text );
-		break;
 	case D_WARN:
-		Sys_Print(va("^3Warning:^7 %s", text));
+		Sys_Print( va( "^3Warning:^7 %s", text ));
 		break;
 	case D_ERROR:
-		Sys_Print(va("^1Error:^7 %s", text));
+		Sys_Print( va( "^1Error:^7 %s", text ));
 		break;
-	case D_LOAD:
-		Sys_Print(va("^2Loading: ^7%s", text));
-		break;
+	case D_INFO:
 	case D_NOTE:
+	case D_AICONSOLE:
 		Sys_Print( text );
-		break;
-	case D_MEMORY:
-		Sys_Print( text );
-		break;
-	case D_STRING:
-		Sys_Print(va("^6AllocString: ^7%s", text));
 		break;
 	}
 }

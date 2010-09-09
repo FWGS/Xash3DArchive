@@ -195,10 +195,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const 
 			Mem_Free( var->reset_string );
 			var->reset_string = copystring( var_value );
 		}
-		else if( var_value[0] && com.strcmp( var->reset_string, var_value ))
-		{
-			MsgDev( D_STRING, "cvar \"%s\" given initial values: \"%s\" and \"%s\"\n", var_name, var->reset_string, var_value );
-		}
 
 		// if we have a latched string, take that value now
 		if( var->latched_string )
@@ -711,7 +707,7 @@ weren't declared in C code.
 void Cvar_Set_f( void )
 {
 	int	i, c, l = 0, len;
-	char	combined[MAX_STRING_TOKENS];
+	char	combined[MAX_CMD_TOKENS];
 
 	c = Cmd_Argc();
 	if( c < 3 )
@@ -724,7 +720,7 @@ void Cvar_Set_f( void )
 	for( i = 2; i < c; i++ )
 	{
 		len = com.strlen( Cmd_Argv(i) + 1 );
-		if ( l + len >= MAX_STRING_TOKENS - 2 )
+		if ( l + len >= MAX_CMD_TOKENS - 2 )
 			break;
 		com.strcat( combined, Cmd_Argv(i));
 		if ( i != c-1 ) com.strcat( combined, " " );

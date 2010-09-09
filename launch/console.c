@@ -187,7 +187,7 @@ long _stdcall Con_InputLineProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 			Msg( ">%s\n", inputBuffer );
 
 			// copy line to history buffer
-			com_strncpy( s_wcd.historyLines[s_wcd.nextHistoryLine % COMMAND_HISTORY], inputBuffer, MAX_STRING );
+			com.strncpy( s_wcd.historyLines[s_wcd.nextHistoryLine % COMMAND_HISTORY], inputBuffer, MAX_STRING );
 			s_wcd.nextHistoryLine++;
 			s_wcd.historyLine = s_wcd.nextHistoryLine;
 			return 0;
@@ -303,7 +303,7 @@ void Con_CreateConsole( void )
 		rect.right = 536;
 		rect.top = 0;
 		rect.bottom = 280;
-		com.strncpy( FontName, "Arial", MAX_STRING );
+		com.strncpy( FontName, "Arial", sizeof( FontName ));
 		fontsize = 16;
 	}
 	else if( Sys.con_readonly )
@@ -312,7 +312,7 @@ void Con_CreateConsole( void )
 		rect.right = 536;
 		rect.top = 0;
 		rect.bottom = 364;
-		com.strncpy( FontName, "Fixedsys", MAX_STRING );
+		com.strncpy( FontName, "Fixedsys", sizeof( FontName ));
 		fontsize = 8;
 	}
 	else // dedicated console
@@ -321,11 +321,11 @@ void Con_CreateConsole( void )
 		rect.right = 640;
 		rect.top = 0;
 		rect.bottom = 392;
-		com.strncpy( FontName, "System", MAX_STRING );
+		com.strncpy( FontName, "System", sizeof( FontName ));
 		fontsize = 14;
 	}
 
-	com.strncpy( Title, Sys.caption, MAX_STRING );
+	com.strncpy( Title, Sys.caption, sizeof( Title ));
 	AdjustWindowRect( &rect, DEDSTYLE, FALSE );
 
 	hDC = GetDC( GetDesktopWindow() );
@@ -484,11 +484,11 @@ void Sys_CloseLog( void )
 	// continue logged
 	switch( Sys.app_state )
 	{
-	case SYS_CRASH: com_strncpy( event_name, "crashed", MAX_STRING ); break;
-	case SYS_ABORT: com_strncpy( event_name, "aborted by user", MAX_STRING ); break;
-	case SYS_ERROR: com_strncpy( event_name, "stopped with error", MAX_STRING ); break;
-	case SYS_RESTART: com_strncpy( event_name, "restarted", MAX_STRING ); break;
-	default: com_strncpy( event_name, "stopped", MAX_STRING ); break;
+	case SYS_CRASH: com_strncpy( event_name, "crashed", sizeof( event_name )); break;
+	case SYS_ABORT: com_strncpy( event_name, "aborted by user", sizeof( event_name )); break;
+	case SYS_ERROR: com_strncpy( event_name, "stopped with error", sizeof( event_name )); break;
+	case SYS_RESTART: com_strncpy( event_name, "restarted", sizeof( event_name )); break;
+	default: com_strncpy( event_name, "stopped", sizeof( event_name )); break;
 	}
 
 	if( Sys.logfile )

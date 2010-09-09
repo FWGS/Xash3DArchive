@@ -17,6 +17,7 @@ cvar_t	*con_fontsize;
 #define CON_TIMES		5	// need for 4 lines
 #define COLOR_DEFAULT	'7'
 #define CON_HISTORY		32
+#define ColorIndex( c )	((( c ) - '0' ) & 7 )
 
 #define CON_TEXTSIZE	131072	// 128 kb buffer
 

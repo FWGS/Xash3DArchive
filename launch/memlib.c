@@ -74,17 +74,6 @@ typedef struct memcluster_s
 	size_t	numflaggedrecords;
 } memcluster_t;
 
-typedef struct memarray_s
-{
-	byte		*mempool;
-	size_t		recordsize;
-	size_t		count;
-	size_t		numarrays;
-	size_t		maxarrays;
-	memcluster_t	*arrays;
-
-} memarray_t;
-
 mempool_t *poolchain = NULL; // critical stuff
 
 // crt safe version
@@ -968,8 +957,6 @@ choseclump:
 	if (mem->next) mem->next->prev = mem;
 	com.memset((void *)((byte *) mem + sizeof(memheader_t)), 0, mem->size, filename, fileline );
 
-	MsgDev( D_MEMORY, "Mem_Alloc: \"%s\"[%s], at (%s:%i)\n", pool->name, com_pretifymem( size, 1 ), filename, fileline );
-
 	return (void *)((byte *) mem + sizeof(memheader_t));
 }
 
@@ -1012,7 +999,6 @@ static void _mem_freeblock(memheader_t *mem, const char *filename, int fileline)
 	// memheader has been unlinked, do the actual free now
 	pool->totalsize -= mem->size;
 
-	MsgDev( D_MEMORY, "Mem_Free: \"%s\"[%s], at (%s:%i)\n", pool->name, com_pretifymem( mem->size, 1 ), filename, fileline );
 	if((clump = mem->clump))
 	{
 		if (clump->sentinel1 != MEMCLUMP_SENTINEL)
@@ -1134,7 +1120,6 @@ byte *_mem_allocpool(const char *name, const char *filename, int fileline)
 	pool->next = poolchain;
 	poolchain = pool;
 
-	MsgDev( D_MEMORY, "Create pool: \"%s\", at (%s:%i)\n", pool->name, filename, fileline );
 	return (byte *)((mempool_t *)pool);
 }
 
@@ -1151,8 +1136,6 @@ void _mem_freepool(byte **poolptr, const char *filename, int fileline)
 		if (pool->sentinel1 != MEMHEADER_SENTINEL1) Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
 		if (pool->sentinel2 != MEMHEADER_SENTINEL1) Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline);
 		*chainaddress = pool->next;
-
-		MsgDev(D_MEMORY, "Free pool: \"%s\", at (%s:%i)\n", pool->name, filename, fileline );
 
 		// free memory owned by the pool
 		while (pool->chain) _mem_freeblock( pool->chain, filename, fileline );
@@ -1208,131 +1191,6 @@ bool _is_allocated( byte *poolptr, void *data )
 	if( poolptr ) pool = (mempool_t *)((byte *)poolptr);
 
 	return _mem_allocated( pool, data );
-}
-
-byte *_mem_alloc_array( byte *poolptr, size_t recordsize, int count, const char *filename, int fileline )
-{
-	memarray_t *l = _mem_alloc( poolptr, sizeof(memarray_t), filename, fileline);
-
-	l->mempool = poolptr;
-	l->recordsize = recordsize;
-	l->count = count;
-
-	return (byte *)((memarray_t *)l);
-}
-
-void _mem_free_array( byte *arrayptr, const char *filename, int fileline )
-{
-	memarray_t *l = (memarray_t *)((byte *)arrayptr);
-	size_t i;
-
-	if(l == NULL) Sys_Error("Mem_RemoveArray: array == NULL (called at %s:%i)\n", filename, fileline );
-
-	if (l->maxarrays)
-	{
-		for (i = 0; i != l->numarrays; i++)
-			_mem_free(l->arrays[i].data, filename, fileline );
-		_mem_free(l->arrays, filename, fileline );
-	}
-	_mem_free( l, filename, fileline); // himself
-}
-
-void *_mem_alloc_array_element( byte *arrayptr, const char *filename, int fileline )
-{
-	memarray_t	*l = (memarray_t *)((byte *)arrayptr);
-	size_t		i, j;
-
-	if(l == NULL) Sys_Error("Mem_AllocElement: array == NULL (called at %s:%i)\n", filename, fileline );
-
-	for(i = 0; ; i++)
-	{
-		if(i == l->numarrays)
-		{
-			if (l->numarrays == l->maxarrays)
-			{
-				memcluster_t *oldarrays = l->arrays;
-				l->maxarrays = max(l->maxarrays * 2, 128);
-				l->arrays = _mem_alloc( l->mempool, l->maxarrays * sizeof(*l->arrays), filename, fileline);
-				if (oldarrays)
-				{
-					com.memcpy(l->arrays, oldarrays, l->numarrays * sizeof(*l->arrays), filename, fileline);
-					_mem_free(oldarrays, filename, fileline);
-				}
-			}
-			l->arrays[i].numflaggedrecords = 0;
-			l->arrays[i].data = _mem_alloc(l->mempool, (l->recordsize + 1) * l->count, filename, fileline);
-			l->arrays[i].allocflags = l->arrays[i].data + l->recordsize * l->count;
-			l->numarrays++;
-		}
-		if(l->arrays[i].numflaggedrecords < l->count)
-		{
-			for (j = 0; j < l->count; j++)
-			{
-				if(!l->arrays[i].allocflags[j])
-				{
-					l->arrays[i].allocflags[j] = true;
-					l->arrays[i].numflaggedrecords++;
-					return (void *)(l->arrays[i].data + l->recordsize * j);
-				}
-			}
-		}
-	}
-}
-
-void _mem_free_array_element( byte *arrayptr, void *element, const char *filename, int fileline )
-{
-	size_t	i, j;
-	byte	*p = (byte *)element;
-	memarray_t *l = (memarray_t *)((byte *)arrayptr);
-
-	if(l == NULL) Sys_Error("Mem_FreeElement: array == NULL (called at %s:%i)\n", filename, fileline );
-
-	for (i = 0; i != l->numarrays; i++)
-	{
-		if(p >= l->arrays[i].data && p < (l->arrays[i].data + l->recordsize * l->count))
-		{
-			j = (p - l->arrays[i].data) / l->recordsize;
-			if (p != l->arrays[i].data + j * l->recordsize)
-				Sys_Error("Mem_FreeArrayElement: no such element %p\n", p);
-			if (!l->arrays[i].allocflags[j])
-				Sys_Error("Mem_FreeArrayElement: element %p is already free!\n", p);
-			l->arrays[i].allocflags[j] = false;
-			l->arrays[i].numflaggedrecords--;
-			return;
-		}
-	}
-}
-
-size_t _mem_array_size( byte *arrayptr )
-{
-	size_t i, j, k;
-	memarray_t *l = (memarray_t *)((byte *)arrayptr);
-	
-	if(l && l->numarrays)
-	{
-		i = l->numarrays - 1;
-
-		for (j = 0, k = 0; k < l->arrays[i].numflaggedrecords; j++)
-			if (l->arrays[i].allocflags[j]) k++;
-
-		return l->count * i + j;
-	}
-	return 0;
-}
-
-void *_mem_get_array_element( byte *arrayptr, size_t index )
-{
-	size_t	i, j;
-	memarray_t *l = (memarray_t *)((byte *)arrayptr);
-
-	if(!l) return NULL;
-
-	i = index / l->count;
-	j = index % l->count;
-	if (i >= l->numarrays || !l->arrays[i].allocflags[j])
-		return NULL;
-
-	return (void *)(l->arrays[i].data + j * l->recordsize);
 }
 
 void _mem_checkheadersentinels( void *data, const char *filename, int fileline )

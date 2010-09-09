@@ -3019,7 +3019,6 @@ texture_t *R_LoadTexture( const char *name, rgbdata_t *pic, int samples, texFlag
 
 	R_UploadTexture( pic, texture );
 	GL_TexFilter( texture ); // update texture filter, wrap etc
-	MsgDev( D_LOAD, "%s [%s] \n", name, PFDesc( image_desc.format )->name );
 
 	// add to hash table
 	hash = Com_HashKey( texture->name, TEXTURES_HASH_SIZE );

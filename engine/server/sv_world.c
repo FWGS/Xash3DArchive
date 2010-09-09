@@ -120,6 +120,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 
 		if( hullNumber == -1 )
 		{
+#if 1
 			float	curdiff;
 			float	lastdiff = 999;
 			int	i;
@@ -138,6 +139,31 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 					lastdiff = curdiff;
 				}
 			}
+#else
+			if( size[0] < 3 )
+			{
+				// point hull
+				hullNumber = 0;
+			}
+			else if( size[0] <= 36 )
+			{
+				if( size[2] <= 36 )
+				{
+					// head hull (ducked)
+					hullNumber = 3;
+				}
+				else
+				{
+					// human hull
+					hullNumber = 1;
+				}
+			}
+			else
+			{
+				// large hull
+				hullNumber = 2;
+			}
+#endif
 		}
 
 		// TraceHull stuff

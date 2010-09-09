@@ -216,7 +216,7 @@ int StringTable_CreateNewSystem( const char *name, size_t max_strings )
 			// found free slot
 			dstring[i] = Mem_Alloc( Sys.basepool, sizeof( stringtable_t ));
 			dstring[i]->mempool = Mem_AllocPool( va( "StringTable_%s", name ));
-			com.strncpy( dstring[i]->name, name, MAX_STRING );
+			com.strncpy( dstring[i]->name, name, sizeof( dstring[i]->name ));
 			dstring[i]->maxdatasize = max_strings * 8;
 			dstring[i]->maxstrings = max_strings;
 #ifdef ST_STATIC_ALLOCATE

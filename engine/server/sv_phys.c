@@ -1343,8 +1343,12 @@ void SV_Physics_Step( edict_t *ent )
 			speed = com.sqrt( vel[0] * vel[0] + vel[1] * vel[1] );	
 
 			// add ground speed
-			if( ent->v.groundentity->v.flags & FL_CONVEYOR )
-				speed += ent->v.groundentity->v.speed;
+			if( ent->v.groundentity )
+			{
+				if( ent->v.groundentity->v.flags & FL_CONVEYOR )
+					speed += ent->v.groundentity->v.speed;
+
+			}
 
 			if( speed )
 			{

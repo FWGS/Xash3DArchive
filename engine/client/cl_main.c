@@ -765,7 +765,7 @@ void CL_PrepSound( void )
 {
 	int	i, sndcount;
 
-	MsgDev( D_LOAD, "CL_PrepSound: %s\n", cl.configstrings[CS_NAME] );		
+	MsgDev( D_NOTE, "CL_PrepSound: %s\n", cl.configstrings[CS_NAME] );		
 	for( i = 0, sndcount = 0; i < MAX_SOUNDS && cl.configstrings[CS_SOUNDS+i+1][0]; i++ )
 		sndcount++; // total num sounds
 
@@ -800,7 +800,7 @@ void CL_PrepVideo( void )
 		return; // no map loaded
 
 	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
-	MsgDev( D_LOAD, "CL_PrepVideo: %s\n", cl.configstrings[CS_NAME] );
+	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", cl.configstrings[CS_NAME] );
 
 	// let the render dll load the map
 	com.strncpy( mapname, cl.configstrings[CS_MODELS+1], MAX_STRING ); 

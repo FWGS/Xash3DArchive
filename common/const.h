@@ -114,13 +114,6 @@
 
 // entity flags
 #define EFLAG_SLERP			1	// do studio interpolation of this entity
-
-// classic quake flags (must be not collide with any dll spawnflags - engine uses this)
-// please include string "allow_inhibited_entities" into your gameinfo.txt if you want to enable this feature
-#define SF_NOT_EASY			(1<<8)
-#define SF_NOT_MEDIUM		(1<<9)
-#define SF_NOT_HARD			(1<<10)
-#define SF_NOT_DEATHMATCH		(1<<11)
 		
 //
 // temp entity events (engine ignore it)

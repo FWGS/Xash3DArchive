@@ -1317,7 +1317,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 			if( altanims[j] ) altmax = j + 1;
 		}
 
-		MsgDev( D_LOAD, "linking animation %s ( %i:%i frames )\n", tx1->name, max, altmax );
+		MsgDev( D_NOTE, "linking animation %s ( %i:%i frames )\n", tx1->name, max, altmax );
 
 		incomplete = false;
 		for( j = 0; j < max; j++ )

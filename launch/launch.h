@@ -22,7 +22,7 @@
 #define XASH_VERSION		0.72f	// current version will be shared across gameinfo struct
 
 #define MAX_NUM_ARGVS		128
-#define MAX_STRING_TOKENS		80
+#define MAX_CMD_TOKENS		80
 #define LOG_QUEUE_SIZE		131072	// 128 kb intermediate buffer
 
 // just for last chanse to view message (debug only)
@@ -219,8 +219,6 @@ bool com_stricmpext( const char *s1, const char *s2 );
 const char* com_timestamp( int format );
 char *com_stristr( const char *string, const char *string2 );
 char *com_strstr( const char *string, const char *string2 );
-size_t com_strpack( byte *buffer, size_t pos, char *string, int n );
-size_t com_strunpack( byte *buffer, size_t pos, char *string );
 int com_vsnprintf(char *buffer, size_t buffersize, const char *format, va_list args);
 int com_vsprintf(char *buffer, const char *format, va_list args);
 int com_snprintf(char *buffer, size_t buffersize, const char *format, ...);
@@ -273,12 +271,6 @@ byte *_mem_allocpool(const char *name, const char *filename, int fileline);
 void _mem_freepool(byte **poolptr, const char *filename, int fileline);
 void _mem_emptypool(byte *poolptr, const char *filename, int fileline);
 void _mem_free(void *data, const char *filename, int fileline);
-byte *_mem_alloc_array( byte *poolptr, size_t recordsize, int count, const char *filename, int fileline );
-void _mem_free_array( byte *arrayptr, const char *filename, int fileline );
-void *_mem_alloc_array_element( byte *arrayptr, const char *filename, int fileline );
-void _mem_free_array_element( byte *arrayptr, void *element, const char *filename, int fileline );
-void *_mem_get_array_element( byte *arrayptr, size_t index );
-size_t _mem_array_size( byte *arrayptr );
 void _mem_check(const char *filename, int fileline);
 bool _is_allocated( byte *poolptr, void *data );
 
@@ -291,12 +283,6 @@ bool _is_allocated( byte *poolptr, void *data );
 #define Mem_Move(pool, dest, src, size ) _mem_move(pool, dest, src, size, __FILE__, __LINE__)
 #define Mem_Copy(dest, src, size ) com.memcpy(dest, src, size, __FILE__, __LINE__)
 #define Mem_Set(dest, val, size ) com.memset(dest, val, size, __FILE__, __LINE__)
-#define Mem_CreateArray( p, s, n ) _mem_alloc_array( p, s, n, __FILE__, __LINE__)
-#define Mem_RemoveArray( array ) _mem_free_array( array, __FILE__, __LINE__)
-#define Mem_AllocElement( array ) _mem_alloc_array_element( array, __FILE__, __LINE__)
-#define Mem_FreeElement( array, el ) _mem_free_array_element( array, el, __FILE__, __LINE__ )
-#define Mem_GetElement( array, idx ) _mem_get_array_element( array, idx )
-#define Mem_ArraySize( array ) _mem_array_size( array )
 #define Mem_IsAllocated( mem ) _is_allocated( NULL, mem )
 #define Mem_Check() _mem_check(__FILE__, __LINE__)
 #define Mem_Pretify( x ) com_pretifymem(x, 3)

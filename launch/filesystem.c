@@ -349,7 +349,7 @@ pack_t *FS_LoadPackPK3( const char *packfile )
 		return NULL;
 	}
 
-	MsgDev( D_LOAD, "Adding packfile %s (%i files)\n", packfile, real_nb_files );
+	MsgDev( D_NOTE, "Adding packfile %s (%i files)\n", packfile, real_nb_files );
 	return pack;
 }
 
@@ -782,7 +782,7 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 	}
 
 	Mem_Free( info );
-	MsgDev( D_LOAD, "Adding packfile: %s (%i files)\n", packfile, numpackfiles );
+	MsgDev( D_NOTE, "Adding packfile: %s (%i files)\n", packfile, numpackfiles );
 	return pack;
 }
 
@@ -857,7 +857,7 @@ pack_t *FS_LoadPackPK2(const char *packfile)
 	}
 
 	Mem_Free( info );
-	MsgDev( D_LOAD, "Adding packfile %s (%i files)\n", packfile, numpackfiles );
+	MsgDev( D_NOTE, "Adding packfile %s (%i files)\n", packfile, numpackfiles );
 	return pack;
 }
 
@@ -1016,7 +1016,7 @@ static bool FS_AddWad_Fullpath( const char *wadfile, bool *already_loaded, bool 
 			search->next = fs_searchpaths;
 			fs_searchpaths = search;
 		}
-		MsgDev( D_LOAD, "Adding wadfile %s (%i files)\n", wadfile, wad->numlumps );
+		MsgDev( D_NOTE, "Adding wadfile %s (%i files)\n", wadfile, wad->numlumps );
 		return true;
 	}
 	else
@@ -1024,39 +1024,6 @@ static bool FS_AddWad_Fullpath( const char *wadfile, bool *already_loaded, bool 
 		MsgDev( D_ERROR, "FS_AddWad_Fullpath: unable to load wad \"%s\"\n", wadfile );
 		return false;
 	}
-}
-
-/*
-================
-FS_AddPack
-
-Adds the given pack to the search path and searches for it in the game path.
-The pack type is autodetected by the file extension.
-
-Returns true if the file was successfully added to the
-search path or if it was already included.
-
-If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
-plain directories.
-================
-*/
-bool FS_AddPack( const char *pakfile, bool *already_loaded, bool keep_plain_dirs )
-{
-	char		fullpath[ MAX_STRING ];
-	searchpath_t	*search;
-	int		index;
-
-	if( already_loaded ) *already_loaded = false;
-
-	// then find the real name...
-	search = FS_FindFile( pakfile, &index, true, false );
-	if( !search || search->pack )
-	{
-		MsgDev( D_WARN, "FS_AddPack: could not find pak \"%s\"\n", pakfile );
-		return false;
-	}
-	com.sprintf( fullpath, "%s%s", search->filename, pakfile );
-	return FS_AddPack_Fullpath( fullpath, already_loaded, keep_plain_dirs, 0 );
 }
 
 /*
@@ -1417,25 +1384,14 @@ static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	case 2: FS_Print( f, "gamemode\t\t\"multiplayer_only\"\n" ); break;
 	}
 
-	switch( GameInfo->viewmode )
-	{
-	case 1: FS_Print( f, "viewmode\t\t\"firstperson\"\n" ); break;
-	case 2: FS_Print( f, "viewmode\t\t\"thirdperson\"\n" ); break;
-	}
-
 	if( com.strlen( GameInfo->sp_entity ))
 		FS_Printf( f, "sp_spawn\t\t\"%s\"\n", GameInfo->sp_entity );
 	if( com.strlen( GameInfo->dm_entity ))
 		FS_Printf( f, "dm_spawn\t\t\"%s\"\n", GameInfo->dm_entity );
-	if( com.strlen( GameInfo->ctf_entity ))
-		FS_Printf( f, "ctf_spawn\t\t\"%s\"\n", GameInfo->sp_entity );
 	if( com.strlen( GameInfo->coop_entity ))
 		FS_Printf( f, "coop_spawn\t\"%s\"\n", GameInfo->coop_entity );	
 	if( com.strlen( GameInfo->team_entity ))
 		FS_Printf( f, "team_spawn\t\"%s\"\n", GameInfo->team_entity );
-
-	if( GameInfo->sp_inhibite_ents )
-		FS_Print( f, "allow_inhibited_entities\n" );
 
 	for( i = 0; i < 4; i++ )
 	{
@@ -1447,12 +1403,6 @@ static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 		min = GameInfo->client_mins[i];
 		max = GameInfo->client_maxs[i];
 		FS_Printf( f, "hull%i\t\t( %g %g %g ) ( %g %g %g )\n", i, min[0], min[1], min[2], max[0], max[1], max[2] );
-	}
-
-	for( i = 0; i < 4; i++ )
-	{
-		if( GameInfo->viewheight[i] == 0.0f ) continue;
-		FS_Printf( f, "viewheight%i\t%g\n", i, GameInfo->viewheight[i] ); 
 	}
 
 	if( GameInfo->max_edicts > 0 )
@@ -1478,20 +1428,16 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	// setup default values
 	defGI.max_edicts = 1024;	// default value if not specified
 	defGI.version = 1.0;
-	defGI.viewheight[0] = 28.0f;
-	defGI.viewheight[1] = 12.0f;
-	defGI.sp_inhibite_ents = false;
-	
-	com.strncpy( defGI.gameHint, "Half-Life", MAX_STRING );
-	com.strncpy( defGI.title, "New Game", MAX_STRING );
-	com.strncpy( defGI.gamedir, gs_basedir, MAX_STRING );
-	com.strncpy( defGI.basedir, fs_defaultdir->string, MAX_STRING );
-	com.strncpy( defGI.sp_entity, "info_player_start", MAX_STRING );
-	com.strncpy( defGI.dm_entity, "info_player_deathmatch", MAX_STRING );
-	com.strncpy( defGI.ctf_entity, "info_player_ctf", MAX_STRING );
-	com.strncpy( defGI.coop_entity, "info_player_coop", MAX_STRING );
-	com.strncpy( defGI.team_entity, "info_player_team", MAX_STRING );
-	com.strncpy( defGI.startmap, "newmap", MAX_STRING );
+
+	com.strncpy( defGI.gameHint, "Half-Life", sizeof( defGI.gameHint ));
+	com.strncpy( defGI.title, "New Game", sizeof( defGI.title ));
+	com.strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
+	com.strncpy( defGI.basedir, fs_defaultdir->string, sizeof( defGI.basedir ));
+	com.strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
+	com.strncpy( defGI.dm_entity, "info_player_deathmatch", sizeof( defGI.dm_entity ));
+	com.strncpy( defGI.coop_entity, "info_player_coop", sizeof( defGI.coop_entity ));
+	com.strncpy( defGI.team_entity, "info_player_team", sizeof( defGI.team_entity ));
+	com.strncpy( defGI.startmap, "newmap", sizeof( defGI.startmap ));
 
 	VectorSet( defGI.client_mins[0],   0,   0,  0  );
 	VectorSet( defGI.client_maxs[0],   0,   0,  0  );
@@ -1517,21 +1463,17 @@ static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gamei
 
 	// setup default values
 	GameInfo->max_edicts = 1024;	// default value if not specified
-	GameInfo->version = 1.0;
-	GameInfo->viewheight[0] = 28.0f;
-	GameInfo->viewheight[1] = 12.0f;
-	GameInfo->sp_inhibite_ents = false;
+	GameInfo->version = 1.0f;
 	
-	com.strncpy( GameInfo->gameHint, "Half-Life", MAX_STRING );
-	com.strncpy( GameInfo->title, "New Game", MAX_STRING );
-	com.strncpy( GameInfo->gamedir, gamedir, MAX_STRING );
-	com.strncpy( GameInfo->basedir, "valve", MAX_STRING ); // all liblist.gam have 'valve' as basedir
-	com.strncpy( GameInfo->sp_entity, "info_player_start", MAX_STRING );
-	com.strncpy( GameInfo->dm_entity, "info_player_deathmatch", MAX_STRING );
-	com.strncpy( GameInfo->ctf_entity, "info_player_ctf", MAX_STRING );
-	com.strncpy( GameInfo->coop_entity, "info_player_coop", MAX_STRING );
-	com.strncpy( GameInfo->team_entity, "info_player_team", MAX_STRING );
-	com.strncpy( GameInfo->startmap, "newmap", MAX_STRING );
+	com.strncpy( GameInfo->gameHint, "Half-Life", sizeof( GameInfo->gameHint ));
+	com.strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
+	com.strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
+	com.strncpy( GameInfo->basedir, "valve", sizeof( GameInfo->basedir )); // all liblist.gam have 'valve' as basedir
+	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
+	com.strncpy( GameInfo->dm_entity, "info_player_deathmatch", sizeof( GameInfo->dm_entity ));
+	com.strncpy( GameInfo->coop_entity, "info_player_coop", sizeof( GameInfo->coop_entity ));
+	com.strncpy( GameInfo->team_entity, "info_player_team", sizeof( GameInfo->team_entity ));
+	com.strncpy( GameInfo->startmap, "newmap", sizeof( GameInfo->startmap ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
 	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
@@ -1658,21 +1600,17 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	if( !script ) return false;
 
 	// setup default values
-	com.strncpy( GameInfo->gamefolder, gamedir, MAX_STRING );
+	com.strncpy( GameInfo->gamefolder, gamedir, sizeof( GameInfo->gamefolder ));
 	GameInfo->max_edicts = 1024;	// default value if not specified
-	GameInfo->version = 1.0;
-	GameInfo->viewheight[0] = 28.0f;
-	GameInfo->viewheight[1] = 12.0f;
-	GameInfo->sp_inhibite_ents = false;
+	GameInfo->version = 1.0f;
 	
-	com.strncpy( GameInfo->gameHint, "Half-Life", MAX_STRING );
-	com.strncpy( GameInfo->title, "New Game", MAX_STRING );
-	com.strncpy( GameInfo->sp_entity, "info_player_start", MAX_STRING );
-	com.strncpy( GameInfo->dm_entity, "info_player_deathmatch", MAX_STRING );
-	com.strncpy( GameInfo->ctf_entity, "info_player_ctf", MAX_STRING );
-	com.strncpy( GameInfo->coop_entity, "info_player_coop", MAX_STRING );
-	com.strncpy( GameInfo->team_entity, "info_player_team", MAX_STRING );
-	com.strncpy( GameInfo->startmap, "", MAX_STRING );
+	com.strncpy( GameInfo->gameHint, "Half-Life", sizeof( GameInfo->gameHint ));
+	com.strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
+	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
+	com.strncpy( GameInfo->dm_entity, "info_player_deathmatch", sizeof( GameInfo->dm_entity ));
+	com.strncpy( GameInfo->coop_entity, "info_player_coop", sizeof( GameInfo->coop_entity ));
+	com.strncpy( GameInfo->team_entity, "info_player_team", sizeof( GameInfo->team_entity ));
+	com.strncpy( GameInfo->startmap, "", sizeof( GameInfo->startmap ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
 	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
@@ -1690,15 +1628,15 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 
 		if( !com.stricmp( token.string, "basedir" ))
 		{
-			PS_GetString( script, false, fs_path, MAX_STRING );
+			PS_GetString( script, false, fs_path, sizeof( fs_path ));
 			if( com.stricmp( fs_path, GameInfo->basedir ) || com.stricmp( fs_path, GameInfo->gamedir ))
-				com.strncpy( GameInfo->basedir, fs_path, MAX_STRING );
+				com.strncpy( GameInfo->basedir, fs_path, sizeof( GameInfo->basedir ));
 		}
 		else if( !com.stricmp( token.string, "gamedir" ))
 		{
-			PS_GetString( script, false, fs_path, MAX_STRING );
+			PS_GetString( script, false, fs_path, sizeof( fs_path ));
 			if( com.stricmp( fs_path, GameInfo->basedir ) || com.stricmp( fs_path, GameInfo->gamedir ))
-				com.strncpy( GameInfo->gamedir, fs_path, MAX_STRING );
+				com.strncpy( GameInfo->gamedir, fs_path, sizeof( GameInfo->gamedir ));
 		}
 		else if( !com.stricmp( token.string, "title" ))
 		{
@@ -1715,10 +1653,6 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		else if( !com.stricmp( token.string, "dm_spawn" ))
 		{
 			PS_GetString( script, false, GameInfo->dm_entity, sizeof( GameInfo->dm_entity ));
-		}
-		else if( !com.stricmp( token.string, "ctf_spawn" ))
-		{
-			PS_GetString( script, false, GameInfo->ctf_entity, sizeof( GameInfo->ctf_entity ));
 		}
 		else if( !com.stricmp( token.string, "coop_spawn" ))
 		{
@@ -1765,23 +1699,10 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 			PS_ReadToken( script, 0, &token );
 			GameInfo->size = com.atoi( token.string );
 		}
-		else if( !com.stricmp( token.string, "allow_inhibited_entities" ))
-		{
-			MsgDev( D_INFO, "GameInfo: Q1-like inhibite entities mode enabled\n" );
-			GameInfo->sp_inhibite_ents = true;
-		}
 		else if( !com.stricmp( token.string, "max_edicts" ))
 		{
 			PS_GetInteger( script, false, &GameInfo->max_edicts );
 			GameInfo->max_edicts = bound( 600, GameInfo->max_edicts, 32000 ); // reserve some edicts for tempents
-		}
-		else if( !com.stricmp( token.string, "viewmode" ))
-		{
-			PS_ReadToken( script, 0, &token );
-			if( !com.stricmp( token.string, "firstperson" ))
-				GameInfo->viewmode = 1;
-			else if( !com.stricmp( token.string, "thirdperson" ))
-				GameInfo->viewmode = 2;
 		}
 		else if( !com.stricmp( token.string, "gamemode" ))
 		{
@@ -1804,22 +1725,6 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 			{
 				FS_ParseVector( script, GameInfo->client_mins[hullNum], 3 );
 				FS_ParseVector( script, GameInfo->client_maxs[hullNum], 3 );
-			}
-		}
-		else if( !com.strnicmp( token.string, "viewheight", 10 ))
-		{
-			int	hullNum = com.atoi( token.string + 10 );
-			float	value;
-
-			if( hullNum < 0 || hullNum > 3 )
-			{
-				MsgDev( D_ERROR, "FS_ParseGameInfo: Invalid hull number %i. Ignored.\n", hullNum );
-				PS_SkipRestOfLine( script ); 
-			}
-			else
-			{
-				if( PS_GetFloat( script, false, &value ))
-					GameInfo->viewheight[hullNum] = value;
 			}
 		}
 	}

@@ -2643,7 +2643,6 @@ void R_InitShaders( void )
 		}
 
 		// parse this file
-		MsgDev( D_LOAD, "%s\n", t->filenames[i] );
 		Shader_ParseFile( script, t->filenames[i] );
 		Com_CloseScript( script );
 	}

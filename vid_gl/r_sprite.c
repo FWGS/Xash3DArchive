@@ -264,7 +264,6 @@ void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer )
 		return;
 	}
 
-	MsgDev( D_LOAD, "%s, rendermode %d\n", mod->name, psprite->rendermode );
 	mod->touchFrame = tr.registration_sequence;
 	frames = NULL; // invalidate pointer
 	sp_name[0] = 0;
@@ -395,7 +394,6 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 		return NULL;
 	}
 
-	MsgDev( D_LOAD, "%s, rendermode %d\n", szSpriteName, LittleLong( pin->texFormat ));
 	com.strncpy( frame_prefix, "one", MAX_STRING );
 	tex_flags = TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP;
 	frames = NULL; // invalidate pointer

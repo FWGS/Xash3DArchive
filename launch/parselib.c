@@ -1336,10 +1336,11 @@ void PS_ScriptError( script_t *script, scFlags_t flags, const char *fmt, ... )
 	string	errorstring;
 	va_list	argPtr;
 
-	if(!(flags & SC_PRINT_ERRORS)) return;
+	if(!( flags & SC_PRINT_ERRORS ))
+		return;
 
 	va_start( argPtr, fmt );
-	com_vsnprintf( errorstring, MAX_STRING, fmt, argPtr );
+	com_vsnprintf( errorstring, sizeof( errorstring ), fmt, argPtr );
 	va_end( argPtr );
 
 	MsgDev( D_ERROR, "source '%s', line %i: %s\n", script->name, script->line, errorstring );
@@ -1355,10 +1356,11 @@ void PS_ScriptWarning( script_t *script, scFlags_t flags, const char *fmt, ... )
 	string	warnstring;
 	va_list	argPtr;
 
-	if(!(flags & SC_PRINT_WARNINGS)) return;
+	if(!( flags & SC_PRINT_WARNINGS ))
+		return;
 
 	va_start( argPtr, fmt );
-	com.vsnprintf( warnstring, MAX_STRING, fmt, argPtr );
+	com.vsnprintf( warnstring, sizeof( warnstring ), fmt, argPtr );
 	va_end( argPtr );
 
 	MsgDev( D_WARN, "source '%s', line %i: %s\n", script->name, script->line, warnstring );

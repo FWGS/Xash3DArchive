@@ -2174,10 +2174,10 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 		com.print( buffer );
 		break;
 	case at_warning:
-		com.print( va("^3Warning:^7 %s", buffer ));
+		com.print( va( "^3Warning:^7 %s", buffer ));
 		break;
 	case at_error:
-		com.print( va("^1Error:^7 %s", buffer ));
+		com.print( va( "^1Error:^7 %s", buffer ));
 		break;
 	}
 }
@@ -3767,39 +3767,11 @@ void SV_LoadFromFile( script_t *entities )
 		if( !SV_ParseEdict( entities, ent ))
 			continue;
 
-		// remove things from different skill levels or deathmatch
-		if( deathmatch )
-		{
-			if( ent->v.spawnflags & SF_NOT_DEATHMATCH )
-			{
-				SV_FreeEdict( ent );
-				inhibited++;
-				continue;
-			}
-		}
-		else if( GI->sp_inhibite_ents && current_skill == 0 && ent->v.spawnflags & SF_NOT_EASY )
-		{
-			SV_FreeEdict( ent );
-			inhibited++;
-			continue;
-		}
-		else if( GI->sp_inhibite_ents && current_skill == 1 && ent->v.spawnflags & SF_NOT_MEDIUM )
-		{
-			SV_FreeEdict( ent );
-			inhibited++;
-			continue;
-		}
-		else if( GI->sp_inhibite_ents && current_skill >= 2 && ent->v.spawnflags & SF_NOT_HARD )
-		{
-			SV_FreeEdict( ent );
-			inhibited++;
-			continue;
-		}
-
 		if( svgame.dllFuncs.pfnSpawn( ent ) == -1 )
 			died++;
 		else spawned++;
 	}
+
 	MsgDev( D_INFO, "%i entities inhibited\n", inhibited );
 }
 

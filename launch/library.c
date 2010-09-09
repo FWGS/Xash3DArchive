@@ -352,7 +352,7 @@ void *MemoryLoadLibrary( const char *name )
 	DWORD		locationDelta;
 	DllEntryProc	DllEntry;
 	string		errorstring;
-	BOOL		successfull;
+	bool		successfull;
 	void		*data = NULL;
 
 	data = FS_LoadFile( name, NULL );

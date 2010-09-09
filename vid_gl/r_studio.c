@@ -1081,7 +1081,7 @@ mstudioanim_t *R_StudioGetAnim( ref_model_t *m_pRefModel, mstudioseqdesc_t *pseq
 		if( IDSEQGRPHEADER != LittleLong(*(uint *)buf ))
 			Host_Error( "R_StudioGetAnim: %s is corrupted\n", filepath );
 
-		MsgDev( D_LOAD, "R_StudioGetAnim: %s\n", filepath );
+		MsgDev( D_NOTE, "R_StudioGetAnim: %s\n", filepath );
 			
 		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( m_pRefModel->mempool, filesize );
 		Mem_Copy( paSequences[pseqdesc->seqgroup].data, buf, filesize );

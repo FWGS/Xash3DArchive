@@ -392,7 +392,8 @@ void Con_DPrintf( char *szFmt, ... )
 	char	buffer[2048];	// must support > 1k messages
 	va_list	args;
 
-	if( !host.developer ) return;
+	if( host.developer < D_AICONSOLE )
+		return;
 
 	va_start( args, szFmt );
 	com.vsnprintf( buffer, 2048, szFmt, args );

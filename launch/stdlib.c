@@ -209,7 +209,6 @@ char *com_stralloc( byte *mempool, const char *s, const char *filename, int file
 	if( !s ) return NULL;
 	if( !mempool ) mempool = Sys.stringpool;
 
-	MsgDev( D_STRING, "new system string %p\n", s );
 	b = _mem_alloc( mempool, com_strlen(s) + 1, filename, fileline );
 	com_strcpy( b, s );
 
@@ -328,7 +327,7 @@ void com_atov( float *vec, const char *str, size_t siz )
 	char	*pstr, *pfront;
 	int	j;
 
-	com.strncpy( buffer, str, MAX_STRING );
+	com.strncpy( buffer, str, sizeof( buffer ));
 	Mem_Set( vec, 0, sizeof(vec_t) * siz );
 	pstr = pfront = buffer;
 
@@ -540,7 +539,7 @@ const char* com_timestamp( int format )
 	default: return NULL;
 	}
 
-	com.strncpy( timestamp, timestring, MAX_STRING );
+	com.strncpy( timestamp, timestring, sizeof( timestamp ));
 	return timestamp;
 }
 
@@ -584,30 +583,6 @@ char *com_stristr( const char *string, const char *string2 )
 		else return NULL;
 	}
 	return (char *)string;
-}
-
-size_t com_strpack( byte *buffer, size_t pos, char *string, int n )
-{
-	if(!buffer || !string) return 0;
-
-	n++; // get space for terminator	
-
-	com_strncpy(buffer + pos, string, n ); 
-	return pos + n;
-}
-
-size_t com_strunpack( byte *buffer, size_t pos, char *string )
-{
-	int	n = 0;
-	char	*in;
-
-	if(!buffer || !string) return 0;
-	in = buffer + pos;
-
-	do { in++, n++; } while(*in != '\0' && in != NULL );
-
-	com_strncpy( string, in - (n - 1), n ); 
-	return pos + n;
 }
 
 int com_vsnprintf(char *buffer, size_t buffersize, const char *format, va_list args)
