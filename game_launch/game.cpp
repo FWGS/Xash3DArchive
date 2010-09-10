@@ -9,7 +9,7 @@
 // first method: by filename, e.g. spirit.exe will be use basedir 'spirit', hostname must be "normal"
 // second method: by hostname with leading symbol '$'. e.g. hl.exe with hostname '$valve' set the basedir to 'valve'
 // for dedicated servers rename 'YourExeName.exe' to '#YourExeName.exe'
-// Keyword "normal" it's a reserved word which switch engine to game mode, other reserved words runs Xash Tools.
+// Keyword "normal" it's a reserved word which switch engine to game mode, other reserved words run Xash Tools.
 //
 // reserved words list:
 //
@@ -21,7 +21,7 @@
 // "ximage"	- launch the image convertor
 //
 
-#define GAME_PATH	"$valve"	// $ indicates a start of basefolder name
+#define GAME_PATH	"$valve"	// '$' indicates a start of basefolder name
 
 typedef int (*pfnExecute)( const char *hostname, int console );	// engine entry point format
 
@@ -44,7 +44,7 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 	if(( mainFunc = (pfnExecute)GetProcAddress( hmain, "CreateAPI" )) == NULL )
 	{
-		Sys_Error( "Unable to find entry point in launch.dll" );
+		Sys_Error( "Unable to find entry point in the launch.dll" );
 	}	
 
 	return mainFunc( GAME_PATH, false );

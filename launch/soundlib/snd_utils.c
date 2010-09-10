@@ -199,6 +199,15 @@ void Sound_Shutdown( void )
 	Mem_FreePool( &Sys.soundpool );
 }
 
+byte *Sound_Copy( size_t size )
+{
+	byte	*out;
+
+	out = Mem_Alloc( Sys.soundpool, size );
+	Mem_Copy( out, sound.tempbuffer, size );
+	return out; 
+}
+
 /*
 =================
 Sound_ByteSwapRawSamples
@@ -218,8 +227,145 @@ void Sound_ByteSwapRawSamples( int samples, int width, int s_channels, const byt
 		((short *)data)[i] = LittleShort((( short *)data)[i] );
 }
 
+/*
+================
+Sound_ConvertToSigned
+
+Convert unsigned data to signed
+================
+*/
+void Sound_ConvertToSigned( const byte *data, int channels, int samples )
+{
+	int	i;
+
+	if( channels == 2 )
+	{
+		for( i = 0; i < samples; i++ )
+		{
+			((signed char *)sound.tempbuffer)[i*2+0] = (int)((byte)(data[i*2+0]) - 128);
+			((signed char *)sound.tempbuffer)[i*2+1] = (int)((byte)(data[i*2+1]) - 128);
+		}
+	}
+	else
+	{
+		for( i = 0; i < samples; i++ )
+			((signed char *)sound.tempbuffer)[i] = (int)((unsigned char)(data[i]) - 128);
+	}
+}
+
+/*
+================
+Sound_ResampleInternal
+
+We need convert sound to signed even if nothing to resample
+================
+*/
+bool Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int outrate, int outwidth )
+{
+	float	stepscale;
+	int	outcount, srcsample;
+	int	i, sample, sample2, samplefrac, fracstep;
+	byte	*data;
+
+	data = sc->buffer;
+	stepscale = (float)inrate / outrate;	// this is usually 0.5, 1, or 2
+	outcount = sc->samples / stepscale;
+	sc->size = outcount * outwidth * sc->channels;
+
+	sound.tempbuffer = (byte *)Mem_Realloc( Sys.soundpool, sound.tempbuffer, sc->size );
+
+	sc->samples = outcount;
+	if( sc->loopStart != -1 )
+		sc->loopStart = sc->loopStart / stepscale;
+
+	// resample / decimate to the current source rate
+	if( stepscale == 1.0f && inwidth == 1 && outwidth == 1 )
+	{
+		Sound_ConvertToSigned( data, sc->channels, outcount );
+	}
+	else
+	{
+		// general case
+		samplefrac = 0;
+		fracstep = stepscale * 256;
+
+		if( sc->channels == 2 )
+		{
+			for( i = 0; i < outcount; i++ )
+			{
+				srcsample = samplefrac >> 8;
+				samplefrac += fracstep;
+
+				if( inwidth == 2 )
+				{
+					sample = LittleShort(((short *)data)[srcsample*2+0] );
+					sample2 = LittleShort(((short *)data)[srcsample*2+1] );
+				}
+				else
+				{
+					sample = (int)( (unsigned char)(data[srcsample*2+0]) - 128) << 8;
+					sample2 = (int)( (unsigned char)(data[srcsample*2+1]) - 128) << 8;
+				}
+
+				if( outwidth == 2 )
+				{
+					((short *)sound.tempbuffer)[i*2+0] = sample;
+					((short *)sound.tempbuffer)[i*2+1] = sample2;
+				}
+				else
+				{
+					((signed char *)sound.tempbuffer)[i*2+0] = sample >> 8;
+					((signed char *)sound.tempbuffer)[i*2+1] = sample2 >> 8;
+				}
+			}
+		}
+		else
+		{
+			for( i = 0; i < outcount; i++ )
+			{
+				srcsample = samplefrac >> 8;
+				samplefrac += fracstep;
+
+				if( inwidth == 2 ) sample = LittleShort(((short *)data)[srcsample] );
+				else sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
+
+				if( outwidth == 2 ) ((short *)sound.tempbuffer)[i] = sample;
+				else ((signed char *)sound.tempbuffer)[i] = sample >> 8;
+			}
+		}
+
+		MsgDev( D_NOTE, "Sound_Resample: from[%d bit %d kHz] to [%d bit %d kHz]\n",
+			inwidth * 8, inrate, outwidth * 8, outrate );
+	}
+
+	sc->rate = outrate;
+	sc->width = outwidth;
+
+	return true;
+}
+
 bool Sound_Process( wavdata_t **wav, int rate, int width, uint flags )
 {
-	// FIXME: not implemented
+	wavdata_t	*snd = *wav;
+	bool	result = true;
+				
+	// check for buffers
+	if( !snd || !snd->buffer )
+	{
+		MsgDev( D_WARN, "Sound_Process: NULL sound\n" );
+		return false;
+	}
+
+	if( flags & SOUND_RESAMPLE && ( width > 0 || rate > 0 ))
+	{
+		if( Sound_ResampleInternal( snd, snd->rate, snd->width, rate, width ))
+		{
+			Mem_Free( snd->buffer );		// free original image buffer
+			snd->buffer = Sound_Copy( snd->size );	// unzone buffer (don't touch image.tempbuffer)
+		}
+		else result = false; // not a resampled
+	}
+	*wav = snd;
+
 	return false;
 }

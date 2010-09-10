@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "cm_local.h"
+#include "studio.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "edict.h"

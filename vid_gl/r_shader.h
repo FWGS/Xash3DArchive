@@ -350,7 +350,7 @@ void R_ShaderFreeUnused( void );
 float R_LookupTable( int tableIndex, float index );
 float *R_GetTableByHandle( int tableIndex );
 bool R_ShaderCheckCache( const char *name );
-void R_SetInternalTexture( mip_t *mt );
+void R_SetInternalTexture( struct mip_s *mt );
 void Shader_TouchImages( ref_shader_t *shader, bool free_unused );
 void R_ShaderAddStageTexture( texture_t *mipTex );
 void R_ShaderSetMiptexFlags( uint addFlags );

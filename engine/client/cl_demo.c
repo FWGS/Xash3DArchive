@@ -554,15 +554,15 @@ void CL_PlayDemo_f( void )
 	CL_Disconnect();
 	Host_ShutdownServer();
 
-	com.snprintf( filename, MAX_STRING, "†demos/%s.dem", Cmd_Argv( 1 ));
-	if(!FS_FileExists( filename ))
+	com.snprintf( filename, sizeof( filename ), "demos/%s.dem", Cmd_Argv( 1 ));
+	if( !FS_FileExistsEx( filename, true ))
 	{
 		MsgDev( D_ERROR, "couldn't open %s\n", filename );
 		cls.demonum = -1; // stop demo loop
 		return;
 	}
 
-	cls.demofile = FS_Open( filename, "rb" );
+	cls.demofile = FS_OpenEx( filename, "rb", true );
 	com.strncpy( cls.demoname, Cmd_Argv( 1 ), sizeof( cls.demoname ));
 	com.strncpy( gameui.globals->demoname, Cmd_Argv( 1 ), sizeof( gameui.globals->demoname ));
 

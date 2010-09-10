@@ -437,7 +437,7 @@ void SV_ClearSaveDir( void )
 	int	i;
 
 	// just delete all HL? files
-	t = FS_Search( "†save/*.HL?", true );
+	t = FS_SearchExt( "save/*.HL?", true, true );	// lookup only in gamedir
 	if( !t ) return; // already empty
 
 	for( i = 0; i < t->numfilenames; i++ )
@@ -699,10 +699,10 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	char			*pszTokenList;
 	int			i, id, size, version;
 	
-	com.snprintf( name, sizeof( name ), "†save/%s.HL1", level );
+	com.snprintf( name, sizeof( name ), "save/%s.HL1", level );
 	MsgDev( D_INFO, "Loading game from %s...\n", name + 1 );
 
-	pFile = FS_Open( name, "rb" );
+	pFile = FS_OpenEx( name, "rb", true );
 	if( !pFile )
 	{
 		MsgDev( D_INFO, "ERROR: couldn't open.\n" );
@@ -871,9 +871,9 @@ void SV_EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 	file_t	*pFile;
 	int	i, size, entityId;
 
-	com.snprintf( name, sizeof( name ), "†save/%s.HL3", level );
+	com.snprintf( name, sizeof( name ), "save/%s.HL3", level );
 
-	pFile = FS_Open( name, "rb" );
+	pFile = FS_OpenEx( name, "rb", true );
 	if( !pFile ) return;
 
 	// patch count
@@ -962,9 +962,9 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, bool adj
 	decallist_t	*decalList;
 	int		decalCount;
 	
-	com.snprintf( name, sizeof( name ), "†save/%s.HL2", level );
+	com.snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
-	pFile = FS_Open( name, "rb" );
+	pFile = FS_OpenEx( name, "rb", true );
 	if( !pFile ) return;
 
 	FS_Read( pFile, &tag, sizeof( int ));
@@ -1501,7 +1501,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 
 	pSaveData = SV_SaveInit( 0 );
 
-	com.strncpy( hlPath, "†save/*.HL?", sizeof( hlPath ));
+	com.strncpy( hlPath, "save/*.HL?", sizeof( hlPath ));
 	gameHeader.mapCount = SV_MapCount( hlPath );
 	com.strncpy( gameHeader.mapName, sv.name, sizeof( gameHeader.mapName ));
 	com.strncpy( gameHeader.comment, pSaveComment, sizeof( gameHeader.comment ));
@@ -1644,14 +1644,14 @@ bool SV_LoadGame( const char *pName )
 	if( !pName || !pName[0] )
 		return false;
 
-	com.snprintf( name, sizeof( name ), "†save/%s.sav", pName );
+	com.snprintf( name, sizeof( name ), "save/%s.sav", pName );
 
 	MsgDev( D_INFO, "Loading game from %s...\n", name + 1 );
 	SV_ClearSaveDir();
 
 	if( !svs.initialized ) SV_InitGame ();
 
-	pFile = FS_Open( name, "rb" );
+	pFile = FS_OpenEx( name, "rb", true );
 
 	if( pFile )
 	{
@@ -1763,7 +1763,7 @@ used for reload game after player death
 */
 const char *SV_GetLatestSave( void )
 {
-	search_t	*f = FS_Search( "†save/*.sav", true );
+	search_t	*f = FS_SearchExt( "save/*.sav", true, true );	// lookup only in gamedir
 	int	i, found = 0;
 	long	newest = 0, ft;
 	string	savename;	

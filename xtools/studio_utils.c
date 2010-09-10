@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "mdllib.h"
+
 typedef struct { int type; char *name; } activity_map_t;	// studio activity map conversion
 int		used[MAXSTUDIOTRIANGLES];		// the command list holds counts and s/t values
 short		commands[MAXSTUDIOTRIANGLES * 13];	// that are valid for every frame

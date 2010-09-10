@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "server.h"
+#include "studio.h"
 #include "matrix_lib.h"
 
 static studiohdr_t	*sv_studiohdr;

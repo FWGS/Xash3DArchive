@@ -81,14 +81,14 @@ infotable	dlumpinfo_t[dwadinfo_t->numlumps]
 #define MAX_FILES_IN_WAD	8192
 
 // hidden virtual lump types
-#define TYPE_ANY		-1	// any type can be accepted
-#define TYPE_NONE		0	// unknown lump type
-#define TYPE_FLMP		1	// doom1 hud picture (doom1 mapped lump)
-#define TYPE_SND		2	// doom1 wav sound (doom1 mapped lump)
-#define TYPE_MUS		3	// doom1 music file (doom1 mapped lump)
-#define TYPE_SKIN		4	// doom1 sprite model (doom1 mapped lump)
-#define TYPE_FLAT		5	// doom1 wall texture (doom1 mapped lump)
-#define TYPE_MAXHIDDEN	63	// after this number started typeing letters ( 'a', 'b' etc )
+#define TYP_ANY		-1	// any type can be accepted
+#define TYP_NONE		0	// unknown lump type
+#define TYP_FLMP		1	// doom1 hud picture (doom1 mapped lump)
+#define TYP_SND		2	// doom1 wav sound (doom1 mapped lump)
+#define TYP_MUS		3	// doom1 music file (doom1 mapped lump)
+#define TYP_SKIN		4	// doom1 sprite model (doom1 mapped lump)
+#define TYP_FLAT		5	// doom1 wall texture (doom1 mapped lump)
+#define TYP_MAXHIDDEN	63	// after this number started typeing letters ( 'a', 'b' etc )
 
 #include "const.h"
 

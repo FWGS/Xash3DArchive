@@ -569,7 +569,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	if( cl_allow_levelshots->integer && !cls.changelevel )
 	{
 		// FIXME: Quake3 may be use both 'jpg' and 'tga' levelshot types
-		if( !FS_FileExists( va( "†%s.%s", cl_levelshot_name->string, SI->levshot_ext ))) 
+		if( !FS_FileExistsEx( va( "%s.%s", cl_levelshot_name->string, SI->levshot_ext ), true )) 
 		{
 			Cvar_Set( "cl_levelshot_name", MAP_DEFAULT_SHADER );	// render a black screen
 			cls.scrshot_request = scrshot_plaque;			// make levelshot

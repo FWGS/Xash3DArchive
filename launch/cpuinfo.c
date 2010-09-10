@@ -143,7 +143,7 @@ const char* GetProcessorVendorId()
 	Mem_Set( VendorID, 0, sizeof( VendorID ));
 	if( !vendor.retval )
 	{
-		com_strcpy( VendorID, "Generic_x86" ); 
+		com.strcpy( VendorID, "Generic_x86" ); 
 	}
 	else
 	{
@@ -475,7 +475,7 @@ void Sys_InitCPU( void )
 		szFrequencyDenomination = "Ghz";
 	}
 
-	com_strcpy(szFeatureString, "" ); 
+	com.strcpy(szFeatureString, "" ); 
 	if( cpu.m_bMMX ) com.strcat( szFeatureString, "MMX " );
 	if( cpu.m_b3DNow ) com.strcat( szFeatureString, "3DNow " );
 	if( cpu.m_bSSE ) com.strcat( szFeatureString, "SSE " );
@@ -493,7 +493,7 @@ void Sys_InitCPU( void )
 	{
 		char buffer[256] = "";
 		if( cpu.m_usNumPhysCore != cpu.m_usNumLogicCore )
-			com_sprintf(buffer, " (%i physical)", (int) cpu.m_usNumPhysCore );
+			com.sprintf(buffer, " (%i physical)", (int) cpu.m_usNumPhysCore );
 		MsgDev(D_INFO, "CPU: %s [%i core's %s]. Frequency: %.01f %s\n ", cpu.m_szCPUID, (int)cpu.m_usNumLogicCore, buffer, fFrequency, szFrequencyDenomination );
 	}
 	MsgDev(D_NOTE, "CPU Features: %s\n", szFeatureString );

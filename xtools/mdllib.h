@@ -6,8 +6,8 @@
 #define STUDIOMDL_H
 
 #include "xtools.h"
-#include "qfiles_ref.h"
 #include "utils.h"
+#include "studio.h"
 #include "mathlib.h"
 
 #define FILEBUFFER		(1024 * 1024 * 16)	// 16 megs filebuffer

@@ -11,7 +11,6 @@
 #include <windows.h>
 
 #include "launch_api.h"
-#include "qfiles_ref.h"
 #include "engine_api.h"
 #include "render_api.h"
 #include "vsound_api.h"
@@ -191,7 +190,7 @@ long pfnRandomLong( long lLow, long lHigh );
 float pfnRandomFloat( float flLow, float flHigh );
 void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc );
 void pfnDelCommand( const char *cmd_name );
-void *Cache_Check( byte *mempool, cache_user_t *c );
+void *Cache_Check( byte *mempool, struct cache_user_s *c );
 void pfnGetGameDir( char *szGetGameDir );
 const char *pfnCmd_Args( void );
 const char *pfnCmd_Argv( int argc );

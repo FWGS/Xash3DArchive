@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2010 ©
-//		  bmodel_ref.h - BSP format included q1, hl1 support
+//		   bspfile.h - BSP format included q1, hl1 support
 //=======================================================================
 #ifndef BSPFILE_H
 #define BSPFILE_H

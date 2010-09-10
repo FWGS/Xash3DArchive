@@ -4,7 +4,10 @@
 //=======================================================================
 
 #include "imagelib.h"
-#include "qfiles_ref.h"
+#include "wadfile.h"
+#include "studio.h"
+#include "sprite.h"
+#include "qfont.h"
 
 /*
 ============

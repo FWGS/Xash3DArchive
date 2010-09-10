@@ -5,6 +5,12 @@
 
 #include "common.h"
 
+// main DLL entry point
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
+{
+	return TRUE;
+}
+
 /*
 =================
 Engine entry point

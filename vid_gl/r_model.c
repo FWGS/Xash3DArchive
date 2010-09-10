@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "stdio.h"		// sscanf
 #include "r_local.h"
+#include "wadfile.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "byteorder.h"
@@ -1981,14 +1982,9 @@ static epair_t *Mod_ParseEpair( script_t *script, token_t *token )
 	epair_t	*e;
 
 	e = Mem_Alloc( cached_mempool, sizeof( epair_t ));
-	
-	if( com.strlen( token->string ) >= MAX_KEY - 1 )
-		Host_Error( "Mod_ParseEpair: key %s too long\n", token->string );
 	e->key = com.stralloc( cached_mempool, token->string, __FILE__, __LINE__ );
 
 	Com_ReadToken( script, SC_PARSE_GENERIC, token );
-	if( com.strlen( token->string ) >= MAX_VALUE - 1 )
-		Host_Error( "Mod_ParseEpair: value %s too long\n", token->string );
 	e->value = com.stralloc( cached_mempool, token->string, __FILE__, __LINE__ );
 
 	// strip trailing spaces if needs

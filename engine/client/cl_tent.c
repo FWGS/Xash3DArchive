@@ -8,6 +8,7 @@
 #include "r_efx.h"
 #include "event_flags.h"
 #include "entity_types.h"
+#include "studio.h"
 
 /*
 ==============================================================

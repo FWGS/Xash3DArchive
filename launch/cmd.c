@@ -66,10 +66,9 @@ Cbuf_InsertText
 
 Adds command text immediately after the current command
 Adds a \n to the text
-FIXME: actually change the command buffer to do less copying
 ============
 */
-void Cbuf_InsertText (const char *text)
+void Cbuf_InsertText( const char *text )
 {
 	int	i, len;
 
@@ -605,7 +604,7 @@ void Cmd_List_f( void )
 
 	for( cmd = cmd_functions; cmd; cmd = cmd->next )
 	{
-		if( match && !com_stricmpext( match, cmd->name ))
+		if( match && !com.stricmpext( match, cmd->name ))
 			continue;
 		Msg( "%s\n", cmd->name );
 		i++;

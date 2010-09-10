@@ -166,5 +166,4 @@ _inline void SwapBlock( int *block, int sizeOfBlock )
 		block[i] = LittleLong( block[i] );
 }
 
-
 #endif//BYTEORDER_H

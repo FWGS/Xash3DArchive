@@ -1340,7 +1340,7 @@ void PS_ScriptError( script_t *script, scFlags_t flags, const char *fmt, ... )
 		return;
 
 	va_start( argPtr, fmt );
-	com_vsnprintf( errorstring, sizeof( errorstring ), fmt, argPtr );
+	com.vsnprintf( errorstring, sizeof( errorstring ), fmt, argPtr );
 	va_end( argPtr );
 
 	MsgDev( D_ERROR, "source '%s', line %i: %s\n", script->name, script->line, errorstring );

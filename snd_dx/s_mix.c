@@ -304,7 +304,6 @@ void S_MixAllChannels( int endtime, int end )
 
 			if( si.GetClientEdict( ch->entnum ) && ( ch->entchannel == CHAN_VOICE ))
 			{
-				// UNDONE: recode this as a member function of CAudioMixer
 				SND_MoveMouth8( ch, sc, count );
 			}
 

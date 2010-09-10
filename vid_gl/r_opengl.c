@@ -457,7 +457,7 @@ bool R_CreateWindow( int width, int height, bool fullscreen )
 	wc.lpszMenuName  = 0;
 
 	// find the icon file in the filesystem
-	if( FS_FileExists( "†game.ico" ))
+	if( FS_FileExistsEx( "game.ico", true ))
 	{
 		char	localPath[MAX_PATH];
 

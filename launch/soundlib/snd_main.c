@@ -81,9 +81,9 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 	// now try all the formats in the selected list
 	for( format = sound.loadformats; format && format->formatstring; format++)
 	{
-		if( anyformat || !com_stricmp( ext, format->ext ))
+		if( anyformat || !com.stricmp( ext, format->ext ))
 		{
-			com_sprintf( path, format->formatstring, loadname, "", format->ext );
+			com.sprintf( path, format->formatstring, loadname, "", format->ext );
 			f = FS_LoadFile( path, &filesize );
 			if( f && filesize > 0 )
 			{
@@ -100,7 +100,7 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 load_internal:
 	for( format = sound.baseformats; format && format->formatstring; format++ )
 	{
-		if( anyformat || !com_stricmp( ext, format->ext ))
+		if( anyformat || !com.stricmp( ext, format->ext ))
 		{
 			if( buffer && size > 0  )
 			{
@@ -127,8 +127,24 @@ writes image as any known format
 */
 bool FS_SaveSound( const char *filename, wavdata_t *wav )
 {
-	// FIXME: not implemented
-	return false;
+          const char	*ext = FS_FileExtension( filename );
+	bool		anyformat = !com.stricmp( ext, "" ) ? true : false;
+	string		path, savename;
+	const savewavformat_t *format;
+
+	if( !wav || !wav->buffer || anyformat ) return false;
+	com.strncpy( savename, filename, sizeof( savename ));
+	FS_StripExtension( savename ); // remove extension if needed
+
+	for( format = sound.saveformats; format && format->formatstring; format++ )
+	{
+		if( !com.stricmp( ext, format->ext ))
+		{
+			com.sprintf( path, format->formatstring, savename, "", format->ext );
+			if( format->savefunc( path, wav )) return true; // saved
+		}
+	}
+	return false;	
 }
 
 /*
@@ -187,9 +203,9 @@ stream_t *FS_OpenStream( const char *filename )
 	// now try all the formats in the selected list
 	for( format = sound.streamformat; format && format->formatstring; format++)
 	{
-		if( anyformat || !com_stricmp( ext, format->ext ))
+		if( anyformat || !com.stricmp( ext, format->ext ))
 		{
-			com_sprintf( path, format->formatstring, loadname, "", format->ext );
+			com.sprintf( path, format->formatstring, loadname, "", format->ext );
 			if(( stream = format->openfunc( path )) != NULL )
 			{
 				stream->format = format;

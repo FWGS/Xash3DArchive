@@ -179,8 +179,7 @@ static void UI_CreateGame_GetMapsList( void )
 {
 	char *afile;
 
-	// HACKHACK: symbol '†' allow lookup only gamedir not basedir
-	if( !CHECK_MAP_LIST( FALSE ) || (afile = (char *)LOAD_FILE( "†maps.lst", NULL )) == NULL )
+	if( !CHECK_MAP_LIST( FALSE ) || (afile = (char *)LOAD_FILE( "maps.lst", NULL )) == NULL )
 	{
 		uiCreateGame.done.generic.flags |= QMF_GRAYED;
 		uiCreateGame.mapsList.itemNames = (const char **)uiCreateGame.mapsDescriptionPtr;

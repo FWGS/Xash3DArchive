@@ -130,7 +130,7 @@ static void UI_LoadGame_GetGameList( void )
 	char	**filenames;
 	int	i, numFiles;
 
-	filenames = FS_SEARCH( "†save/*.sav", &numFiles );
+	filenames = FS_SEARCH( "save/*.sav", &numFiles, TRUE );
 
 	for ( i = 0; i < numFiles; i++ )
 	{

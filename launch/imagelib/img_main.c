@@ -67,7 +67,7 @@ static const cubepack_t load_cubemap[] =
 { "3Ds Sky1", skybox_qv1 },
 { "3Ds Sky2", skybox_qv2 },
 { "3Ds Cube", cubemap_v2 },
-{ "Tenebrae", cubemap_v1 },		// FIXME: remove this ?
+{ "Tenebrae", cubemap_v1 },
 { NULL, NULL },
 };
 
@@ -75,7 +75,7 @@ static const cubepack_t load_cubemap[] =
 const bpc_desc_t PFDesc[] =
 {
 {PF_UNKNOWN,	"raw",	0x1908,	0x1401, 0,  0,  0 },
-{PF_INDEXED_24,	"pal 24",	0x1908,	0x1401, 1,  1,  0 }, // expand data to RGBA buffer
+{PF_INDEXED_24,	"pal 24",	0x1908,	0x1401, 1,  1,  0 },
 {PF_INDEXED_32,	"pal 32",	0x1908,	0x1401, 1,  1,  0 },
 {PF_RGBA_32,	"RGBA 32",0x1908,	0x1401, 4,  1, -4 },
 {PF_BGRA_32,	"BGRA 32",0x80E1,	0x1401, 4,  1, -4 },
@@ -83,7 +83,7 @@ const bpc_desc_t PFDesc[] =
 {PF_ABGR_64,	"ABGR 64",0x80E1,	0x1401, 4,  2, -8 },
 {PF_RGB_24,	"RGB 24",	0x1908,	0x1401, 3,  1, -3 },
 {PF_BGR_24,	"BGR 24",	0x80E0,	0x1401, 3,  1, -3 },
-{PF_RGB_16,	"RGB 16",	0x8054,	0x8364, 3,  2, 16 }, // FIXME: do revision
+{PF_RGB_16,	"RGB 16",	0x8054,	0x8364, 3,  2, 16 },
 {PF_DXT1,		"DXT1",	0x1908,	0x1401, 4,  1,  8 },
 {PF_DXT2,		"DXT2",	0x1908,	0x1401, 4,  1, 16 },
 {PF_DXT3,		"DXT3",	0x1908,	0x1401, 4,  1, 16 },
@@ -97,7 +97,7 @@ const bpc_desc_t PFDesc[] =
 {PF_LUMINANCE_ALPHA,"LUM A",	0x190A,	0x1401, 2,  1, -2 },
 {PF_UV_16,	"UV 16",	0x190A,	0x1401, 2,  1, -2 },
 {PF_UV_16,	"UV 16",	0x190A,	0x1401, 2,  1, -4 },
-{PF_R_16F,	"R 16f",	0x8884,	0x1406, 1,  4, -2 }, // FIXME: these NV extension, reinstall for ATI
+{PF_R_16F,	"R 16f",	0x8884,	0x1406, 1,  4, -2 }, // UNDONE: these NV extension, reinstall for ATI
 {PF_R_32F,	"R 32f",	0x8885,	0x1406, 1,  4, -4 },
 {PF_GR_32F,	"GR 32f",	0x8886,	0x1406, 2,  4, -4 },
 {PF_GR_64F,	"GR 64f",	0x8887,	0x1406, 2,  4, -8 },
@@ -177,7 +177,6 @@ rgbdata_t *ImagePack( void )
 ================
 FS_AddSideToPack
 
-FIXME: rewrite with VirtualFS using ?
 ================
 */
 bool FS_AddSideToPack( const char *name, int adjust_flags )
@@ -192,7 +191,9 @@ bool FS_AddSideToPack( const char *name, int adjust_flags )
 		image.source_height = image.height;
 		image.source_type = image.type;
 	}
-	image.size = image.source_width * image.source_height * 4; // keep constant size, render.dll expecting it
+
+	// keep constant size, render.dll expecting it
+	image.size = image.source_width * image.source_height * 4;
           
 	// mixing dds format with any existing ?
 	if( image.type != image.source_type )
@@ -261,9 +262,6 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	const cubepack_t	*cmap;
 	byte		*f;
 
-#if 0     // don't try to be very clever
-	if( !buffer || !buffsize ) buffer = (char *)florr1_2_jpg, buffsize = sizeof(florr1_2_jpg);
-#endif
 	Image_Reset(); // clear old image
 	com.strncpy( loadname, filename, sizeof( loadname ));
 
@@ -291,10 +289,10 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	// now try all the formats in the selected list
 	for( format = image.loadformats; format && format->formatstring; format++)
 	{
-		if( !com_stricmp( format->ext, "dds" )) dds_installed = true;
-		if( anyformat || !com_stricmp( ext, format->ext ))
+		if( !com.stricmp( format->ext, "dds" )) dds_installed = true;
+		if( anyformat || !com.stricmp( ext, format->ext ))
 		{
-			com_sprintf( path, format->formatstring, loadname, "", format->ext );
+			com.sprintf( path, format->formatstring, loadname, "", format->ext );
 			image.hint = format->hint;
 			f = FS_LoadFile( path, &filesize );
 			if( f && filesize > 0 )
@@ -310,7 +308,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	}
 
 	// special case for extract cubemap side from dds image
-	if( dds_installed && (anyformat || !com_stricmp( ext, "dds" )))
+	if( dds_installed && (anyformat || !com.stricmp( ext, "dds" )))
 	{
 		// first, check for cubemap suffixes
 		for( cmap = load_cubemap; cmap && cmap->type; cmap++ )
@@ -357,7 +355,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 			{
 				if( anyformat || !com.stricmp( ext, format->ext ))
 				{
-					com_sprintf( path, format->formatstring, loadname, cmap->type[i].suf, format->ext );
+					com.sprintf( path, format->formatstring, loadname, cmap->type[i].suf, format->ext );
 					image.hint = cmap->type[i].hint; // side hint
 
 					f = FS_LoadFile( path, &filesize );
@@ -408,7 +406,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 load_internal:
 	for( format = image.baseformats; format && format->formatstring; format++ )
 	{
-		if( anyformat || !com_stricmp( ext, format->ext ))
+		if( anyformat || !com.stricmp( ext, format->ext ))
 		{
 			image.hint = format->hint;
 			if( buffer && size > 0  )
@@ -437,7 +435,7 @@ writes image as any known format
 bool FS_SaveImage( const char *filename, rgbdata_t *pix )
 {
           const char	*ext = FS_FileExtension( filename );
-	bool		anyformat = !com_stricmp( ext, "" ) ? true : false;
+	bool		anyformat = !com.stricmp( ext, "" ) ? true : false;
 	string		path, savename;
 	const savepixformat_t *format;
 
@@ -492,7 +490,7 @@ bool FS_SaveImage( const char *filename, rgbdata_t *pix )
 			}
 		}
 	}
-	return false;	
+	return false;
 }
 
 /*

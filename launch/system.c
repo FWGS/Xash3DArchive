@@ -184,7 +184,6 @@ void Sys_GetStdAPI( void )
 	com.vfprint = VFS_Print;		// write message
 	com.vfprintf = VFS_Printf;		// write formatted message
 	com.vfseek = VFS_Seek;		// fseek, can seek in packfiles too
-	com.vfunpack = VFS_Unpack;		// inflate zipped buffer
 	com.vfbuffer = VFS_GetBuffer;		// get pointer at start vfile buffer
 	com.vftell = VFS_Tell;		// like a ftell
 	com.vfeof = VFS_Eof;		// like a feof
@@ -267,6 +266,7 @@ void Sys_GetStdAPI( void )
 	com.strstr = com_strstr;
 	com.vsprintf = com_vsprintf;
 	com.sprintf = com_sprintf;
+	com.stricmpext = com_stricmpext;
 	com.va = va;
 	com.vsnprintf = com_vsnprintf;
 	com.snprintf = com_snprintf;
@@ -323,7 +323,7 @@ void Sys_LookupInstance( void )
 	if( Sys.ModuleName[0] == '#' || Sys.ModuleName[0] == '©' )
 	{
 		if( Sys.ModuleName[0] == '#' ) dedicated = true;
-		if( Sys.ModuleName[0] == '©' ) com_strcpy( Sys.progname, "credits" );
+		if( Sys.ModuleName[0] == '©' ) com.strcpy( Sys.progname, "credits" );
 
 		// cutoff hidden symbols
 		com.strncpy( szTemp, Sys.ModuleName + 1, MAX_SYSPATH );
@@ -343,7 +343,7 @@ void Sys_LookupInstance( void )
 		Sys.app_name = HOST_CREDITS;		// easter egg
 		Sys.linked_dll = NULL;		// no need to loading library
 		Sys.log_active = Sys.developer = 0;	// clear all dbg states
-		com_strcpy( Sys.caption, "About" );
+		com.strcpy( Sys.caption, "About" );
 		Sys.con_showcredits = true;
 	}
 	else if( !com.strcmp( Sys.progname, "normal" ))
@@ -365,7 +365,7 @@ void Sys_LookupInstance( void )
 			CloseHandle( Sys.hMutex );
 			Sys.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
 			if( !Sys.developer ) Sys.developer = 3;	// otherwise we see empty console
-			com_sprintf( Sys.log_path, "engine.log", com_timestamp( TIME_FILENAME )); // logs folder
+			com.sprintf( Sys.log_path, "engine.log", com.timestamp( TIME_FILENAME )); // logs folder
 		}
 		else
 		{
@@ -375,39 +375,39 @@ void Sys_LookupInstance( void )
 			if( Sys.developer < D_WARN )
 				Sys.con_showalways = false;
 
-			com_sprintf( Sys.log_path, "engine.log", com_timestamp( TIME_FILENAME )); // logs folder
+			com.sprintf( Sys.log_path, "engine.log", com.timestamp( TIME_FILENAME )); // logs folder
 		}
 
 		Sys.linked_dll = &engine_dll;	// pointer to engine.dll info
-		com_strcpy( Sys.caption, va( "Xash3D ver.%g", XASH_VERSION ));
+		com.strcpy( Sys.caption, va( "Xash3D ver.%g", XASH_VERSION ));
 	}
 	else if( !com.strcmp( Sys.progname, "bsplib" ))
 	{
 		Sys.app_name = HOST_BSPLIB;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
-		com_strcpy( Sys.log_path, "bsplib.log" ); // xash3d root directory
-		com_strcpy( Sys.caption, "Xash3D BSP Compiler");
+		com.strcpy( Sys.log_path, "bsplib.log" ); // xash3d root directory
+		com.strcpy( Sys.caption, "Xash3D BSP Compiler");
 	}
 	else if( !com.strcmp( Sys.progname, "sprite" ))
 	{
 		Sys.app_name = HOST_SPRITE;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
-		com_sprintf( Sys.log_path, "%s/spritegen.log", sys_rootdir ); // same as .exe file
-		com_strcpy( Sys.caption, "Xash3D Sprite Compiler");
+		com.sprintf( Sys.log_path, "%s/spritegen.log", sys_rootdir ); // same as .exe file
+		com.strcpy( Sys.caption, "Xash3D Sprite Compiler");
 	}
 	else if( !com.strcmp( Sys.progname, "studio" ))
 	{
 		Sys.app_name = HOST_STUDIO;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
-		com_sprintf( Sys.log_path, "%s/studiomdl.log", sys_rootdir ); // same as .exe file
-		com_strcpy( Sys.caption, "Xash3D Studio Models Compiler" );
+		com.sprintf( Sys.log_path, "%s/studiomdl.log", sys_rootdir ); // same as .exe file
+		com.strcpy( Sys.caption, "Xash3D Studio Models Compiler" );
 	}
 	else if( !com.strcmp( Sys.progname, "wadlib" ))
 	{
 		Sys.app_name = HOST_WADLIB;
 		Sys.linked_dll = &xtools_dll;	// pointer to common.dll info
-		com_sprintf( Sys.log_path, "%s/wadlib.log", sys_rootdir ); // same as .exe file
-		com_strcpy( Sys.caption, "Xash3D Wad2\\Wad3 maker" );
+		com.sprintf( Sys.log_path, "%s/wadlib.log", sys_rootdir ); // same as .exe file
+		com.strcpy( Sys.caption, "Xash3D Wad2\\Wad3 maker" );
 	}
 	else if( !com.strcmp( Sys.progname, "ripper" ))
 	{
@@ -415,16 +415,16 @@ void Sys_LookupInstance( void )
 		Sys.con_readonly = true;
 		Sys.log_active = true;	// always create log
 		Sys.linked_dll = &xtools_dll;	// pointer to wdclib.dll info
-		com_sprintf( Sys.log_path, "%s/decompile.log", sys_rootdir ); // default
-		com_strcpy( Sys.caption, va("Quake Recource Extractor ver.%g", XASH_VERSION ));
+		com.sprintf( Sys.log_path, "%s/decompile.log", sys_rootdir ); // default
+		com.strcpy( Sys.caption, va("Quake Recource Extractor ver.%g", XASH_VERSION ));
 	}
 	else if( !com.strcmp( Sys.progname, "ximage" ))
 	{
 		Sys.app_name = HOST_XIMAGE;
 		Sys.con_readonly = true;
 		Sys.linked_dll = &xtools_dll;	// pointer to dpvenc.dll info
-		com_sprintf( Sys.log_path, "%s/image.log", sys_rootdir ); // logs folder
-		com_strcpy( Sys.caption, "Image Processing Tool" );
+		com.sprintf( Sys.log_path, "%s/image.log", sys_rootdir ); // logs folder
+		com.strcpy( Sys.caption, "Image Processing Tool" );
 	}
 
 	// share instance over all system
@@ -465,7 +465,7 @@ void Sys_CreateInstance( void )
 		Sys.CmdAuto = Host->CmdComplete;
 		break;
 	case HOST_CREDITS:
-		Sys_Break( show_credits, com_timestamp( TIME_YEAR_ONLY ));
+		Sys_Break( show_credits, com.timestamp( TIME_YEAR_ONLY ));
 		break;
 	case HOST_OFFLINE:
 		Sys_Break( "Host offline\n" );		
@@ -544,24 +544,24 @@ void Sys_ParseCommandLine( LPSTR lpCmdLine )
 
 void Sys_MergeCommandLine( LPSTR lpCmdLine )
 {
-	const char *blank = "censored";
-	int	i;
+	const char	*blank = "censored";
+	int		i;
 	
 	for( i = 0; i < fs_argc; i++ )
 	{
 		// we wan't return to first game
-		if(!com_stricmp( "-game", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "-game", fs_argv[i] )) fs_argv[i] = (char *)blank;
 		// probably it's timewaster, because engine rejected second change
-		if(!com_stricmp( "+game", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+game", fs_argv[i] )) fs_argv[i] = (char *)blank;
 		// you sure what is map exists in new game?
-		if(!com_stricmp( "+map", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+map", fs_argv[i] )) fs_argv[i] = (char *)blank;
 		// just stupid action
-		if(!com_stricmp( "+load", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+load", fs_argv[i] )) fs_argv[i] = (char *)blank;
 		// changelevel beetwen games? wow it's great idea!
-		if(!com_stricmp( "+changelevel", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+changelevel", fs_argv[i] )) fs_argv[i] = (char *)blank;
 
 		// second call
-		if( Sys.app_name == HOST_DEDICATED && !com_strnicmp( "+menu_", fs_argv[i], 6 ))
+		if( Sys.app_name == HOST_DEDICATED && !com.strnicmp( "+menu_", fs_argv[i], 6 ))
 			fs_argv[i] = (char *)blank;
 	}
 }
@@ -587,8 +587,8 @@ void Sys_Print( const char *pMsg )
 		Sys.CPrint( pMsg );
 
 	// if the message is REALLY long, use just the last portion of it
-	if ( com_strlen( pMsg ) > sizeof( buffer ) - 1 )
-		msg = pMsg + com_strlen( pMsg ) - sizeof( buffer ) + 1;
+	if ( com.strlen( pMsg ) > sizeof( buffer ) - 1 )
+		msg = pMsg + com.strlen( pMsg ) - sizeof( buffer ) + 1;
 	else msg = pMsg;
 
 	// copy into an intermediate buffer
@@ -651,7 +651,7 @@ void Sys_Msg( const char *pMsg, ... )
 	char text[MAX_SYSPATH];
 	
 	va_start( argptr, pMsg );
-	com_vsprintf( text, pMsg, argptr );
+	com.vsprintf( text, pMsg, argptr );
 	va_end( argptr );
 	Sys.printlevel = 0;
 
@@ -667,7 +667,7 @@ void Sys_MsgDev( int level, const char *pMsg, ... )
 	Sys.printlevel = level;
 
 	va_start( argptr, pMsg );
-	com_vsprintf( text, pMsg, argptr );
+	com.vsprintf( text, pMsg, argptr );
 	va_end( argptr );
 
 	switch( level )
@@ -771,9 +771,9 @@ char *Sys_GetCurrentUser( void )
 	dword size = sizeof( s_userName );
 
 	if( !GetUserName( s_userName, &size ))
-		com_strcpy( s_userName, "player" );
+		com.strcpy( s_userName, "player" );
 	if( !s_userName[0] )
-		com_strcpy( s_userName, "player" );
+		com.strcpy( s_userName, "player" );
 
 	return s_userName;
 }
@@ -846,7 +846,7 @@ void Sys_Error( const char *error, ... )
 	Sys.error = true;
 	Sys.app_state = SYS_ERROR;	
 	va_start( argptr, error );
-	com_vsprintf( text, error, argptr );
+	com.vsprintf( text, error, argptr );
 	va_end( argptr );
 
 	if( Sys.app_name == HOST_NORMAL )
@@ -873,7 +873,7 @@ void Sys_Break( const char *error, ... )
 	char		text[MAX_SYSPATH];
          
 	va_start( argptr, error );
-	com_vsprintf( text, error, argptr );
+	com.vsprintf( text, error, argptr );
 	va_end( argptr );
 
 	Sys.error = true;	
@@ -969,7 +969,7 @@ void Sys_Init( void )
 		if( FS_GetParmFromCmdLine( "-dev", dev_level, sizeof( dev_level )))
 		{
 			if( com.is_digit( dev_level ))
-				Sys.developer = abs( com_atoi( dev_level ));
+				Sys.developer = abs( com.atoi( dev_level ));
 			else Sys.developer++; // -dev == 1, -dev -console == 2
 		}
 		else Sys.developer++; // -dev == 1, -dev -console == 2

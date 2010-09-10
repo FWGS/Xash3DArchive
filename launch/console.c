@@ -74,7 +74,7 @@ void Con_SetInputText( const char *inputText )
 	if( Sys.con_readonly ) return;
 
 	SetWindowText( s_wcd.hwndInputLine, inputText );
-	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, com_strlen( inputText ), -1 );
+	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, com.strlen( inputText ), -1 );
 }
 
 static int Con_KeyEvent( int key, bool down )
@@ -181,8 +181,8 @@ long _stdcall Con_InputLineProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		if( wParam == 13 && Sys.app_state != SYS_ERROR )
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ));
-			com_strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - com_strlen( s_wcd.consoleText ) - 5 );
-			com_strcat( s_wcd.consoleText, "\n" );
+			com.strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - com.strlen( s_wcd.consoleText ) - 5 );
+			com.strcat( s_wcd.consoleText, "\n" );
 			SetWindowText( s_wcd.hwndInputLine, "" );
 			Msg( ">%s\n", inputBuffer );
 
@@ -216,7 +216,7 @@ void Con_PrintA( const char *pMsg )
 {
 	DWORD	cbWritten;
 
-	WriteFile( GetStdHandle( STD_OUTPUT_HANDLE ), pMsg, com_strlen( pMsg ), &cbWritten, 0 );
+	WriteFile( GetStdHandle( STD_OUTPUT_HANDLE ), pMsg, com.strlen( pMsg ), &cbWritten, 0 );
 }
 
 /*
@@ -427,7 +427,7 @@ char *Sys_Input( void )
 	if( s_wcd.consoleText[0] == 0 )
 		return NULL;
 		
-	com_strncpy( s_wcd.returnedText, s_wcd.consoleText, sizeof( s_wcd.returnedText ));
+	com.strncpy( s_wcd.returnedText, s_wcd.consoleText, sizeof( s_wcd.returnedText ));
 	s_wcd.consoleText[0] = 0;
 	
 	return s_wcd.returnedText;
@@ -472,7 +472,7 @@ void Sys_InitLog( void )
 		if(!Sys.logfile) MsgDev( D_ERROR, "Sys_InitLog: can't create log file %s\n", Sys.log_path );
 
 		fprintf( Sys.logfile, "=======================================================================\n" );
-		fprintf( Sys.logfile, "\t%s started at %s\n", Sys.caption, com_timestamp( TIME_FULL ));
+		fprintf( Sys.logfile, "\t%s started at %s\n", Sys.caption, com.timestamp( TIME_FULL ));
 		fprintf( Sys.logfile, "=======================================================================\n");
 	}
 }
@@ -484,18 +484,18 @@ void Sys_CloseLog( void )
 	// continue logged
 	switch( Sys.app_state )
 	{
-	case SYS_CRASH: com_strncpy( event_name, "crashed", sizeof( event_name )); break;
-	case SYS_ABORT: com_strncpy( event_name, "aborted by user", sizeof( event_name )); break;
-	case SYS_ERROR: com_strncpy( event_name, "stopped with error", sizeof( event_name )); break;
-	case SYS_RESTART: com_strncpy( event_name, "restarted", sizeof( event_name )); break;
-	default: com_strncpy( event_name, "stopped", sizeof( event_name )); break;
+	case SYS_CRASH: com.strncpy( event_name, "crashed", sizeof( event_name )); break;
+	case SYS_ABORT: com.strncpy( event_name, "aborted by user", sizeof( event_name )); break;
+	case SYS_ERROR: com.strncpy( event_name, "stopped with error", sizeof( event_name )); break;
+	case SYS_RESTART: com.strncpy( event_name, "restarted", sizeof( event_name )); break;
+	default: com.strncpy( event_name, "stopped", sizeof( event_name )); break;
 	}
 
 	if( Sys.logfile )
 	{
 		fprintf( Sys.logfile, "\n");
 		fprintf( Sys.logfile, "=======================================================================");
-		fprintf( Sys.logfile, "\n\t%s %s at %s\n", Sys.caption, event_name, com_timestamp(TIME_FULL));
+		fprintf( Sys.logfile, "\n\t%s %s at %s\n", Sys.caption, event_name, com.timestamp(TIME_FULL));
 		fprintf( Sys.logfile, "=======================================================================\n");
 		if( Sys.app_state == SYS_RESTART ) fprintf( Sys.logfile, "\n" ); // just for tabulate
 

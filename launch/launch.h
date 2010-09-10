@@ -235,6 +235,10 @@ long Com_RandomLong( long lMin, long lMax );
 float Com_RandomFloat( float fMin, float fMax );
 uint Com_HashKey( const char *string, uint hashSize );
 
+// lzss compression
+uint lzss_compress( const byte *in, const byte *inend, byte *out, byte *outend );
+bool lzss_decompress( const byte *in, const byte *inend, byte *out, byte *outend );
+
 //
 // math.c
 //
@@ -341,23 +345,21 @@ wavdata_t *FS_StreamInfo( stream_t *stream );
 long FS_ReadStream( stream_t *stream, int bytes, void *buffer );
 void FS_FreeStream( stream_t *stream );
 
-search_t *FS_Search(const char *pattern, int caseinsensitive );
-search_t *FS_SearchDirs(const char *pattern, int caseinsensitive );
+search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
 
 // files managment (like fopen, fread etc)
-file_t *FS_Open( const char *filepath, const char *mode );
-file_t* _FS_Open( const char *filepath, const char *mode, bool quiet );
+file_t *FS_Open( const char *filepath, const char *mode, bool gamedironly );
 fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize );
 fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize );
 int FS_VPrintf( file_t *file, const char *format, va_list ap );
 int FS_Seek( file_t *file, fs_offset_t offset, int whence );
 int FS_Gets( file_t *file, byte *string, size_t bufsize );
 int FS_Printf( file_t *file, const char *format, ... );
-fs_offset_t FS_FileSize( const char *filename );
-fs_offset_t FS_FileTime( const char *filename );
+fs_offset_t FS_FileSize( const char *filename, bool gamedironly );
+fs_offset_t FS_FileTime( const char *filename, bool gamedironly );
 int FS_Print( file_t *file, const char *msg );
 bool FS_Rename( const char *oldname, const char *newname );
-bool FS_FileExists( const char *filename );
+bool FS_FileExists( const char *filename, bool gamedironly );
 bool FS_Delete( const char *path );
 int FS_UnGetc( file_t *file, byte c );
 void FS_StripExtension( char *path );
@@ -428,7 +430,6 @@ int VFS_Print( vfile_t* file, const char *msg );
 int VFS_Printf( vfile_t* file, const char* format, ... );
 int VFS_Seek( vfile_t *file, fs_offset_t offset, int whence );
 int VFS_Gets( vfile_t *file, byte *string, size_t bufsize );
-bool VFS_Unpack( void *compbuf, size_t compsize, void **buf, size_t size );
 byte *VFS_GetBuffer( vfile_t *file );
 fs_offset_t VFS_Tell (vfile_t *file );
 file_t *VFS_Close( vfile_t *file );

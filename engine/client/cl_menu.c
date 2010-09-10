@@ -635,13 +635,13 @@ pfnGetFilesList
 release prev search on a next call
 =========
 */
-static char **pfnGetFilesList( const char *pattern, int *numFiles )
+static char **pfnGetFilesList( const char *pattern, int *numFiles, int gamedironly )
 {
 	static search_t	*t = NULL;
 
 	if( t ) Mem_Free( t ); // release prev search
 
-	t = FS_Search( pattern, true );
+	t = FS_SearchExt( pattern, true, gamedironly );
 	if( !t )
 	{
 		if( numFiles ) *numFiles = 0;

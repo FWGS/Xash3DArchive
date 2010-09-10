@@ -55,105 +55,6 @@ void S_SoundList_f( void )
 	Msg( "\n" );
 }
 
-/*
-================
-S_ResampleSfx
-================
-*/
-void S_ResampleSfx( sfx_t *sfx, int inrate, int inwidth, byte *data )
-{
-	float	stepscale;
-	int	outcount, srcsample;
-	int	i, sample, sample2, samplefrac, fracstep;
-	wavdata_t	*sc;
-
-	if( !sfx ) return;	
-	sc = sfx->cache;
-	if( !sc ) return;
-
-	stepscale = (float)inrate / dma.speed;	// this is usually 0.5, 1, or 2
-
-	outcount = sc->samples / stepscale;
-	sc->samples = outcount;
-	if( sc->loopStart != -1 )
-		sc->loopStart = sc->loopStart / stepscale;
-
-	sc->rate = dma.speed;
-	sc->width = inwidth;
-	sc->channels = sc->channels;
-
-	// resample / decimate to the current source rate
-	if( stepscale == 1 && inwidth == 1 && sc->width == 1 )
-	{
-		if( sc->channels == 2 )
-		{
-			// fast special case
-			for( i = 0; i < outcount; i++ )
-			{
-				((signed char *)sc->buffer)[i*2+0] = (int)((unsigned char)(data[i*2+0]) - 128);
-				((signed char *)sc->buffer)[i*2+1] = (int)((unsigned char)(data[i*2+1]) - 128);
-			}
-		}
-		else
-		{
-			// fast special case
-			for( i = 0; i < outcount; i++ )
-				((signed char *)sc->buffer)[i] = (int)((unsigned char)(data[i]) - 128);
-		}
-	}
-	else
-	{
-		// general case
-		samplefrac = 0;
-		fracstep = stepscale * 256;
-
-		if( sc->channels == 2 )
-		{
-			for( i = 0; i < outcount; i++ )
-			{
-				srcsample = samplefrac >> 8;
-				samplefrac += fracstep;
-
-				if( inwidth == 2 )
-				{
-					sample = LittleShort(((short *)data)[srcsample*2+0] );
-					sample2 = LittleShort(((short *)data)[srcsample*2+1] );
-				}
-				else
-				{
-					sample = (int)( (unsigned char)(data[srcsample*2+0]) - 128) << 8;
-					sample2 = (int)( (unsigned char)(data[srcsample*2+1]) - 128) << 8;
-				}
-
-				if( sc->width == 2 )
-				{
-					((short *)sc->buffer)[i*2+0] = sample;
-					((short *)sc->buffer)[i*2+1] = sample2;
-				}
-				else
-				{
-					((signed char *)sc->buffer)[i*2+0] = sample >> 8;
-					((signed char *)sc->buffer)[i*2+1] = sample2 >> 8;
-				}
-			}
-		}
-		else
-		{
-			for( i = 0; i < outcount; i++ )
-			{
-				srcsample = samplefrac >> 8;
-				samplefrac += fracstep;
-
-				if( inwidth == 2 ) sample = LittleShort(((short *)data)[srcsample] );
-				else sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
-
-				if( sc->width == 2 ) ((short *)sc->buffer)[i] = sample;
-				else ((signed char *)sc->buffer)[i] = sample >> 8;
-			}
-		}
-	}
-}
-
 // return true if char 'c' is one of 1st 2 characters in pch
 bool S_TestSoundChar( const char *pch, char c )
 {
@@ -179,31 +80,6 @@ char *S_SkipSoundChar( const char *pch )
 	if( *pcht == '!' )
 		pcht++;
 	return pcht;
-}
-
-/*
-=================
-S_UploadSound
-=================
-*/
-static void S_UploadSound( wavdata_t *sc, sfx_t *sfx )
-{
-	size_t	samples;
-	float	stepscale;
-	byte	*indata;
-	
-	// calculate buffer size
-	stepscale = (float)sc->rate / dma.speed;	
-	samples = sc->samples / stepscale;
-	sc->size = samples * sc->width * sc->channels;
-	indata = sc->buffer; // detach old buffer
-	sfx->cache = sc;
-
-	// UNDONE: we need resample sounds in launch.dll, not here
-	sc->buffer = Z_Malloc( sc->size ); // allocate room for resampled wav
-
-	S_ResampleSfx( sfx, sc->rate, sc->width, indata );
-	Mem_Free( indata );	// no reason to keep this data
 }
 
 /*
@@ -253,7 +129,9 @@ wavdata_t *S_LoadSound( sfx_t *sfx )
 	if( !sc ) sc = S_CreateDefaultSound();
 
 	// upload and resample
-	S_UploadSound( sc, sfx );
+	Sound_Process( &sc, dma.speed, sc->width, SOUND_RESAMPLE );
+
+	sfx->cache = sc;
 
 	return sfx->cache;
 }

@@ -874,7 +874,7 @@ void Cvar_List_f( void )
 
 	for( var = cvar_vars; var; var = var->next, i++ )
 	{
-		if( match && !com_stricmpext( match, var->name ))
+		if( match && !com.stricmpext( match, var->name ))
 			continue;
 
 		if( var->flags & CVAR_SERVERINFO ) Msg( "SV   " );
@@ -934,7 +934,7 @@ void Cvar_Restart_f( void )
 		if( !var ) break;
 
 		// don't mess with rom values, or some inter-module
-		// communication will get broken (com_cl_running, etc)
+		// communication will get broken (cl.active, etc)
 		if( var->flags & ( CVAR_READ_ONLY|CVAR_INIT|CVAR_RENDERINFO ))
 		{
 			prev = &var->next;

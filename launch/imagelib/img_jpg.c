@@ -581,11 +581,11 @@ bool Image_SaveJPG( const char *name, rgbdata_t *pix )
 	uint			i, linesize;
 	file_t			*file;
 
-	if( FS_FileExists( name ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name, false ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
 		return false; // already existed
 
 	// Open the file
-	file = FS_Open( name, "wb" );
+	file = FS_Open( name, "wb", false );
 	if( !file ) return false;
 
 	if( setjmp( error_save_jpeg ))

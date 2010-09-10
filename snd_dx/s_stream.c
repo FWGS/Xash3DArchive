@@ -74,15 +74,11 @@ void S_StreamBackgroundTrack( void )
 	int	fileSamples;
 	byte	raw[MAX_RAW_SAMPLES];
 	int	r, fileBytes;
-	float	musicVolume = 0.5f;
 
 	if( !s_bgTrack.stream ) return;
 
-	// graeme see if this is OK
-	musicVolume = ( musicVolume + ( s_musicvolume->value * 2 )) / 4.0f;
-
 	// don't bother playing anything if musicvolume is 0
-	if( musicVolume <= 0 ) return;
+	if( !s_musicvolume->value ) return;
 
 	// see how many samples should be copied into the raw buffer
 	if( s_rawend < soundtime )
@@ -118,7 +114,6 @@ void S_StreamBackgroundTrack( void )
 		if( r > 0 )
 		{
 			// add to raw buffer
-			// FIXME: apply musicVolume
 			S_StreamRawSamples( fileSamples, info->rate, info->width, info->channels, raw );
 		}
 		else
@@ -169,77 +164,56 @@ Cinematic streaming and voice over network
 */
 void S_StreamRawSamples( int samples, int rate, int width, int channels, const byte *data )
 {
-	int	i, src, dst;
-	float	scale;
+	int	i, snd_vol;
+	int	a, b, src, dst;
+	int	fracstep, samplefrac;
+	int	incount, outcount;
 
+	snd_vol = (int)(s_musicvolume->value * 256);
+	if( snd_vol < 0 ) snd_vol = 0;
+
+	src = 0;
+	samplefrac = 0;
+	fracstep = (((double)rate) / (double)dma.speed) * 256.0;
+	outcount = (double)samples * (double) dma.speed / (double)rate;
+	incount = samples * channels;
+
+#define TAKE_SAMPLE( s )	(sizeof(*in) == 1 ? (a = (in[src+(s)]-128)<<8,\
+			b = (src < incount - channels) ? (in[src+channels+(s)]-128)<<8 : 128) : \
+			(a = in[src+(s)],\
+			b = (src < incount - channels) ? (in[src+channels+(s)]) : 0))
+
+#define LERP_SAMPLE		((((((b - a) * (samplefrac & 255)) >> 8) + a) * snd_vol))
+
+#define RESAMPLE_RAW \
+	if( channels == 2 ) { \
+		for( i = 0; i < outcount; i++, samplefrac += fracstep, src = (samplefrac >> 8) << 1 ) { \
+			dst = s_rawend++ & (MAX_RAW_SAMPLES - 1); \
+			TAKE_SAMPLE(0); \
+			s_rawsamples[dst].left = LERP_SAMPLE; \
+			TAKE_SAMPLE(1); \
+			s_rawsamples[dst].right = LERP_SAMPLE; \
+		} \
+	} else { \
+		for( i = 0; i < outcount; i++, samplefrac += fracstep, src = (samplefrac >> 8) << 0 ) { \
+			dst = s_rawend++ & (MAX_RAW_SAMPLES - 1); \
+			TAKE_SAMPLE(0); \
+			s_rawsamples[dst].left = LERP_SAMPLE; \
+			s_rawsamples[dst].right = s_rawsamples[dst].left; \
+		} \
+	}
+		
 	if( s_rawend < paintedtime )
 		s_rawend = paintedtime;
-	scale = (float)rate / dma.speed;
 
-	if( channels == 2 && width == 2 )
+	if( width == 2 )
 	{
-		if( scale == 1.0f )
-		{	
-			// optimized case
-			for( i = 0; i < samples; i++ )
-			{
-				dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-				s_rawend++;
-				s_rawsamples[dst].left = LittleShort(((short *)data)[i*2]) << 8;
-				s_rawsamples[dst].right = LittleShort(((short *)data)[i*2+1]) << 8;
-			}
-		}
-		else
-		{
-			for( i = src = 0; src < samples; i++ )
-			{
-				src = i * scale;
-				if( src >= samples ) break;
-
-				dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-				s_rawend++;
-				s_rawsamples[dst].left = LittleShort(((short *)data)[src*2]) << 8;
-				s_rawsamples[dst].right = LittleShort(((short *)data)[src*2+1]) << 8;
-			}
-		}
+		short *in = (short *)data;
+		RESAMPLE_RAW
 	}
-	else if( channels == 1 && width == 2 )
+	else
 	{
-		for( i = src = 0; src < samples; i++ )
-		{
-			src = i * scale;
-			if( src >= samples ) break;
-
-			dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-			s_rawend++;
-			s_rawsamples[dst].left = LittleShort(((short *)data)[src]) << 8;
-			s_rawsamples[dst].right = LittleShort(((short *)data)[src]) << 8;
-		}
-	}
-	else if( channels == 2 && width == 1 )
-	{
-		for( i = src = 0; src < samples; i++ )
-		{
-			src = i * scale;
-			if( src >= samples ) break;
-
-			dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-			s_rawend++;
-			s_rawsamples[dst].left = ((char *)data)[src*2] << 16;
-			s_rawsamples[dst].right = ((char *)data)[src*2+1] << 16;
-		}
-	}
-	else if( channels == 1 && width == 1 )
-	{
-		for( i = src = 0; src < samples; i++ )
-		{
-			src = i * scale;
-			if( src >= samples ) break;
-
-			dst = s_rawend & (MAX_RAW_SAMPLES - 1);
-			s_rawend++;
-			s_rawsamples[dst].left = (((byte *)data)[src]-128) << 16;
-			s_rawsamples[dst].right = (((byte *)data)[src]-128) << 16;
-		}
+		byte *in = (unsigned char *)data;
+		RESAMPLE_RAW
 	}
 }

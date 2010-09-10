@@ -524,11 +524,11 @@ typedef struct stdilib_api_s
 	int  (*Com_CheckParm)( const char *parm );		// check parm in cmdline  
 	bool (*Com_GetParm)( char *parm, char *out, size_t size );	// get parm from cmdline
 	void (*Com_FileBase)(const char *in, char *out);		// get filename without path & ext
-	bool (*Com_FileExists)(const char *filename);		// return true if file exist
-	long (*Com_FileSize)(const char *filename);		// same as Com_FileExists but return filesize
-	long (*Com_FileTime)(const char *filename);		// same as Com_FileExists but return filetime
-	const char *(*Com_FileExtension)(const char *in);		// return extension of file
-	const char *(*Com_RemovePath)(const char *in);		// return filename without path
+	bool (*Com_FileExists)( const char *filename, bool gamedir);// return true if file exist
+	long (*Com_FileSize)( const char *filename, bool gamedir );	// same as Com_FileExists but return filesize
+	long (*Com_FileTime)( const char *filename, bool gamedir );	// same as Com_FileExists but return filetime
+	const char *(*Com_FileExtension)( const char *in );	// return extension of file
+	const char *(*Com_RemovePath)( const char *in );		// return filename without path
 	void (*Com_StripExtension)(char *path);			// remove extension if present
 	void (*Com_StripFilePath)(const char* const src, char* dst);// get file path without filename.ext
 	void (*Com_DefaultExtension)(char *path, const char *ext );	// append extension if not present
@@ -561,7 +561,7 @@ typedef struct stdilib_api_s
 	bool (*Com_ReadDword)( script_t *script, int flags, uint *value );		// unsigned integer
 	bool (*Com_ReadLong)( script_t *script, int flags, int *value );		// signed integer
 
-	search_t *(*Com_Search)( const char *pattern, int casecmp ); // returned list of found files
+	search_t *(*Com_Search)( const char *pattern, int casecmp, int gamedironly ); // returned list of found files
 	uint (*Com_HashKey)( const char *string, uint hashSize );	// returns hash key for a string
 
 	// console variables
@@ -588,7 +588,7 @@ typedef struct stdilib_api_s
 	void (*Cmd_DelCommand)( const char *name );
 
 	// real filesystem
-	file_t *(*fopen)(const char* path, const char* mode);		// same as fopen
+	file_t *(*fopen)( const char* path, const char* mode, bool gamedir );	// same as fopen
 	int (*fclose)(file_t* file);					// same as fclose
 	long (*fwrite)(file_t* file, const void* data, size_t datasize);	// same as fwrite
 	long (*fread)(file_t* file, void* buffer, size_t buffersize);	// same as fread, can see through pakfile
@@ -697,6 +697,7 @@ typedef struct stdilib_api_s
 	char *(*strstr)( const char *s1, const char *s2 );		// find s2 in s1 with case sensative
 	int (*vsprintf)(char *buf, const char *fmt, va_list args);		// format message
 	int (*sprintf)(char *buffer, const char *format, ...);		// print into buffer
+	bool (*stricmpext)( const char *s1, const char *s2 );		// allow '*', '?' etc
 	char *(*va)(const char *format, ...);				// print into temp buffer
 	int (*vsnprintf)(char *buf, size_t size, const char *fmt, va_list args);	// format message
 	int (*snprintf)(char *buffer, size_t buffersize, const char *format, ...);	// print into buffer
@@ -793,18 +794,23 @@ filesystem manager
 #define FS_InitRootDir		com.Com_InitRootDir
 #define FS_AllowDirectPaths		com.Com_AllowDirectPaths
 #define FS_LoadFile			com.Com_LoadFile
-#define FS_Search			com.Com_Search
+#define FS_Search( str, casecmp )	com.Com_Search( str, casecmp, false )
+#define FS_SearchExt		com.Com_Search
 #define FS_WriteFile		com.Com_WriteFile
-#define FS_Open( path, mode )		com.fopen( path, mode )
+#define FS_Open( path, mode )		com.fopen( path, mode, false )
+#define FS_OpenEx			com.fopen
 #define FS_Read( file, buffer, size )	com.fread( file, buffer, size )
 #define FS_Write( file, buffer, size )	com.fwrite( file, buffer, size )
 #define FS_StripExtension( path )	com.Com_StripExtension( path )
 #define FS_ExtractFilePath( src, dest)	com.Com_StripFilePath( src, dest )
 #define FS_DefaultExtension		com.Com_DefaultExtension
 #define FS_FileExtension( ext )	com.Com_FileExtension( ext )
-#define FS_FileExists( file )		com.Com_FileExists( file )
-#define FS_FileSize( file )		com.Com_FileSize( file )
-#define FS_FileTime( file )		com.Com_FileTime( file )
+#define FS_FileExists( file )		com.Com_FileExists( file, false )
+#define FS_FileSize( file )		com.Com_FileSize( file, false )
+#define FS_FileTime( file )		com.Com_FileTime( file, false )
+#define FS_FileExistsEx		com.Com_FileExists
+#define FS_FileSizeEx		com.Com_FileSize
+#define FS_FileTimeEx		com.Com_FileTime
 #define FS_Close( file )		com.fclose( file )
 #define FS_FileBase( x, y )		com.Com_FileBase( x, y )
 #define FS_RemovePath( x )		com.Com_RemovePath( x )
@@ -896,7 +902,6 @@ virtual filesystem manager
 #define VFS_Tell			com.vftell
 #define VFS_Eof			com.vfeof
 #define VFS_Close			com.vfclose
-#define VFS_Unpack			com.vfunpack
 
 /*
 ===========================================

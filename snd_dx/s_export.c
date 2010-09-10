@@ -8,6 +8,12 @@
 vsound_imp_t	si;
 stdlib_api_t	com;
 
+// main DLL entry point
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
+{
+	return TRUE;
+}
+
 vsound_exp_t DLLEXPORT *CreateAPI( stdlib_api_t *input, vsound_imp_t *engfuncs )
 {
 	static vsound_exp_t		snd;

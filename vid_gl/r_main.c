@@ -2496,6 +2496,12 @@ bool R_AddDynamicLight( vec3_t pos, rgb_t color, float radius, int flags )
 
 	return true;
 }
+
+// main DLL entry point
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
+{
+	return TRUE;
+}
 	
 /*
 @@@@@@@@@@@@@@@@@@@@@

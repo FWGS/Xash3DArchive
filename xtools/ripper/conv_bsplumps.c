@@ -4,8 +4,8 @@
 //=======================================================================
 
 #include "ripper.h"
+#include "wadfile.h"
 #include "byteorder.h"
-#include "qfiles_ref.h"
 
 #define IDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'I')	// little-endian "IBSP" q2, q3 bsp's
 #define VDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'V')	// little-endian "VBSP" hl2 bsp's
@@ -269,6 +269,7 @@ void Conv_BspTextures( const char *name, dlump_t *l, const char *ext )
 		if( !FS_FileExists( va( "%s/%s/%s.%s", gs_gamedir, name, mip->name, ext )))
 			ConvMIP( va("%s/%s", name, mip->name ), buffer, size, ext ); // convert it
 	}
+
 	mip_count = 0; // freed and invaliadte
 	FS_Close( detail_txt );
 }

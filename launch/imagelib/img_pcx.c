@@ -110,7 +110,7 @@ bool Image_SavePCX( const char *name, rgbdata_t *pix )
 	int	i, j;
 	pcx_t	pcx;
 
-	if(FS_FileExists( name ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name, false ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
 		return false; // already existed
 
 	// bogus parameter check
@@ -173,7 +173,7 @@ bool Image_SavePCX( const char *name, rgbdata_t *pix )
 	for( i = 0; i < 768; i++ )
 		*pack++ = *palette++;
 
-	file = FS_Open( name, "wb" );
+	file = FS_Open( name, "wb", false );
 	if( !file ) return false;
 
 	// write header

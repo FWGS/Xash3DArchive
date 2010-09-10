@@ -21,10 +21,17 @@ int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample )
 
 	if( pWaveData->type == WF_PCMDATA )
 	{
+		int	sampleSize;
+
+		sampleSize = pWaveData->width * pWaveData->channels;
+
+		// this can never be zero -- other functions divide by this. 
+		// This should never happen, but avoid crashing
+		if( sampleSize <= 0 ) sampleSize = 1;
+			
 		if( pWaveData->width == 1 )
 		{
-								// FIXME: this is right ?
-			char	*pData = pWaveData->buffer + sample * pWaveData->width;
+			char	*pData = pWaveData->buffer + sample * sampleSize;
 			bool	zero = false;
 
 			if( pWaveData->channels == 1 )
@@ -59,8 +66,8 @@ int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample )
 			}
 		}
 		else
-		{							// FIXME: this is right ?
-			short	*pData = (short *)(pWaveData->buffer + sample * pWaveData->width);
+		{
+			short	*pData = (short *)(pWaveData->buffer + sample * sampleSize);
 			bool	zero = false;
 
 			if( pWaveData->channels == 1 )
@@ -110,10 +117,17 @@ int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample )
 
 	if( pWaveData->type == WF_PCMDATA )
 	{
+		int	sampleSize;
+
+		sampleSize = pWaveData->width * pWaveData->channels;
+
+		// this can never be zero -- other functions divide by this. 
+		// This should never happen, but avoid crashing
+		if( sampleSize <= 0 ) sampleSize = 1;
+
 		if( pWaveData->width == 1 )	// 8-bit
 		{
-								// FIXME: this is right ?
-			char	*pData = pWaveData->buffer + sample * pWaveData->width;
+			char	*pData = pWaveData->buffer + sample * sampleSize;
 			bool	zero = false;
 
 			if( pWaveData->channels == 1 )
@@ -148,8 +162,8 @@ int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample )
 			}
 		}
 		else
-		{							// FIXME: this is right ?
-			short	*pData = (short *)(pWaveData->buffer + sample * pWaveData->width);
+		{
+			short	*pData = (short *)(pWaveData->buffer + sample * sampleSize);
 			bool	zero = false;
 
 			if( pWaveData->channels == 1 )
@@ -219,6 +233,7 @@ int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition )
 int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount )
 {
 	int	totalSampleCount;
+	int	sampleSize;
 
 	// handle position looping
 	samplePosition = S_ConvertLoopedPosition( pSource, samplePosition );
@@ -233,13 +248,20 @@ int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int s
 	if( sampleCount > totalSampleCount )
 		sampleCount = totalSampleCount;
 
+	sampleSize = pSource->width * pSource->channels;
+
+	// this can never be zero -- other functions divide by this. 
+	// This should never happen, but avoid crashing
+	if( sampleSize <= 0 ) sampleSize = 1;
+
 	// byte offset in sample database
-	samplePosition *= pSource->width;	// FIXME: this is right ?
+	samplePosition *= sampleSize;
 
 	// if we are returning some samples, store the pointer
 	if( sampleCount )
 	{
 		*pData = pSource->buffer + samplePosition;
 	}
+
 	return sampleCount;
 }

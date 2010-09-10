@@ -415,7 +415,7 @@ stream_t *Stream_OpenOGG( const char *filename )
 	stream_t		*stream;
 	file_t		*file;
 
-	file = FS_Open( filename, "rb" );
+	file = FS_Open( filename, "rb", false );
 	if( !file ) return NULL;
 
 	// at this point we have valid stream

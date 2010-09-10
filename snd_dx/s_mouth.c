@@ -56,8 +56,7 @@ void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count )
 
 	pMouth = &clientEntity->mouth;
 
-	S_GetOutputData( pSource, &pdata, ch->pos, count );
-
+	count = S_GetOutputData( pSource, &pdata, ch->pos, count );
 	if( pdata == NULL ) return;
 	
 	i = 0;

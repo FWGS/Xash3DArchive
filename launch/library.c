@@ -542,7 +542,7 @@ bool LibraryLoadSymbols( dll_user_t *hInst )
 	for( i = 0; i < hInst->num_ordinals; i++ )
 		hInst->names[i] = NULL;
 
-	f = FS_Open( hInst->shortPath, "rb" );
+	f = FS_Open( hInst->shortPath, "rb", false );
 	if( !f )
 	{
 		com.sprintf( errorstring, "couldn't load %s", hInst->shortPath );

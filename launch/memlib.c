@@ -1116,7 +1116,7 @@ byte *_mem_allocpool(const char *name, const char *filename, int fileline)
 	pool->chain = NULL;
 	pool->totalsize = 0;
 	pool->realsize = sizeof(mempool_t);
-	com_strncpy(pool->name, name, sizeof (pool->name));
+	com.strncpy(pool->name, name, sizeof (pool->name));
 	pool->next = poolchain;
 	poolchain = pool;
 
@@ -1281,14 +1281,14 @@ void _mem_printlist( size_t minallocationsize )
 
 void MemList_f( void )
 {
-	switch(Cmd_Argc())
+	switch( Cmd_Argc( ))
 	{
 	case 1:
-		_mem_printlist(1<<30);
+		_mem_printlist( 1<<30 );
 		_mem_printstats();
 		break;
 	case 2:
-		_mem_printlist(com_atoi(Cmd_Argv(1)) * 1024);
+		_mem_printlist( com.atoi( Cmd_Argv( 1 )) * 1024 );
 		_mem_printstats();
 		break;
 	default:

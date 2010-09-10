@@ -4,7 +4,7 @@
 //=======================================================================
 
 #include "xtools.h"
-#include "qfiles_ref.h"
+#include "sprite.h"
 #include "byteorder.h"
 #include "utils.h"
 #include "mathlib.h"

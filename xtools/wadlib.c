@@ -4,13 +4,14 @@
 //=======================================================================
 
 #include "xtools.h"
-#include "qfiles_ref.h"
+#include "wadfile.h"
 #include "byteorder.h"
 #include "utils.h"
 #include "mathlib.h"
 
 string		wadoutname;
 bool		wad_append = false;
+bool		wad_compress = false;
 script_t		*wadqc = NULL;
 wfile_t		*handle = NULL;
 string		lumpname;
@@ -146,7 +147,7 @@ void Wad3_AddLump( const byte *buffer, size_t lumpsize, int lump_type, bool comp
 {
 	int result;
 	if( !handle ) Wad3_NewWad(); 	// create wad file
-	result = WAD_Write( handle, lumpname, buffer, lumpsize, lump_type, ( compress ? CMP_ZLIB : CMP_NONE ));
+	result = WAD_Write( handle, lumpname, buffer, lumpsize, lump_type, ( compress ? CMP_LZSS : CMP_NONE ));
 	if( result != -1 ) Msg("Add %s\t#%3i\n", lumpname, result ); // FIXME: align message
 }
 
@@ -320,7 +321,7 @@ void Cmd_GrabMip( void )
 		plump += 768;
 
 		// write out and release intermediate buffers
-		Wad3_AddLump( lump, plump_size, TYPE_MIPTEX, false );
+		Wad3_AddLump( lump, plump_size, TYP_MIPTEX, wad_compress );
 	}
 	else MsgDev( D_WARN, "lump %s have invalid size, ignore\n", lumpname ); 
 	FS_FreeImage( image );
@@ -377,7 +378,7 @@ void Cmd_GrabPic( void )
 		yh = image->height;
 	}
 
-	// lmp_t + picture[w*h] + numolors[short] + palette[768];
+	// lmp_t + picture[w*h] + numcolors[short] + palette[768];
 	plump_size = (int)sizeof(*pic) + (xh * yh) + sizeof(short) + 768;
 	plump = lump = (byte *)Mem_Alloc( wadpool, plump_size );
 	pic = (lmp_t *)plump;
@@ -396,38 +397,8 @@ void Cmd_GrabPic( void )
 	plump += 768;
 
 	// write out and release intermediate buffers
-	Wad3_AddLump( lump, plump_size, TYPE_QPIC, false );
+	Wad3_AddLump( lump, plump_size, TYP_QPIC, wad_compress );
 	FS_FreeImage( image );
-	Mem_Free( lump );
-}
-
-/*
-==============
-Cmd_GrabScript
-
-$wadqc filename
-==============
-*/
-void Cmd_GrabScript( void )
-{
-	byte	*lump;
-	size_t	plump_size;
-
-	Com_ReadString( wadqc, SC_PARSE_GENERIC, lumpname );
-
-	// load mip image or replaced with error.bmp
-	lump = FS_LoadFile( lumpname, &plump_size );
-	
-	if( !lump || !plump_size )
-	{
-		Com_SkipRestOfLine( wadqc );
-		// no fatal error, just ignore this image for adding into wad-archive
-		MsgDev( D_ERROR, "Cmd_LoadScript: unable to loading %s\n", lumpname );
-		return;
-	}
-
-	// write out and release intermediate buffers
-	Wad3_AddLump( lump, plump_size, TYPE_SCRIPT, true ); // always compress text files
 	Mem_Free( lump );
 }
 
@@ -442,6 +413,11 @@ void Cmd_WadName( void )
 
 	if( Com_ReadString( wadqc, SC_ALLOW_PATHNAMES2, parm ))
 		if( !com.stricmp( parm, "append" )) wad_append = true;	
+}
+
+void Cmd_WadCompress( void )
+{
+	wad_compress = true;
 }
 
 /*
@@ -461,7 +437,9 @@ void ResetWADInfo( void )
 {
 	FS_FileBase( gs_filename, wadoutname );		// kill path and ext
 	FS_DefaultExtension( wadoutname, ".wad" );	// set new ext
+
 	handle = NULL;
+	wad_compress = wad_append = false;
 }
 
 /*
@@ -481,9 +459,9 @@ bool ParseWADfileScript( void )
 			break;
 
 		if( !com.stricmp( token.string, "$wadname" )) Cmd_WadName();
+		if( !com.stricmp( token.string, "$compress" )) Cmd_WadCompress();
 		else if( !com.stricmp( token.string, "$mipmap" )) Cmd_GrabMip();
 		else if( !com.stricmp( token.string, "$gfxpic" )) Cmd_GrabPic();
-		else if( !com.stricmp( token.string, "$wadqc" )) Cmd_GrabScript();
 		else if( !Com_ValidScript( token.string, QC_WADLIB )) return false;
 		else Cmd_WadUnknown( token.string );
 	}
@@ -506,7 +484,7 @@ bool BuildCurrentWAD( const char *name )
 	
 	if( wadqc )
 	{
-		if(!ParseWADfileScript())
+		if( !ParseWADfileScript( ))
 			return false;
 		return WriteWADFile();
 	}

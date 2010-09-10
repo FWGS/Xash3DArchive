@@ -214,7 +214,7 @@ bool Cmd_GetDemoList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numdems;
 
-	t = FS_Search( va( "†demos/%s*.dem", s ), true );
+	t = FS_SearchExt( va( "demos/%s*.dem", s ), true, true );	// lookup only in gamedir
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -348,7 +348,7 @@ bool Cmd_GetSavesList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numsaves;
 
-	t = FS_Search( va( "†save/%s*.sav", s ), true );
+	t = FS_SearchExt( va( "save/%s*.sav", s ), true, true );	// lookup only in gamedir
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -663,10 +663,10 @@ bool Cmd_CheckMapsList( bool fRefresh )
 	file_t	*f;
 	int	i;
 
-	if( FS_FileExists( "†maps.lst" ) && !fRefresh )
+	if( FS_FileExistsEx( "maps.lst", true ) && !fRefresh )
 		return true; // exist 
 
-	t = FS_Search( "maps/*.bsp", false );
+	t = FS_SearchExt( "maps/*.bsp", false, true );
 	if( !t ) return false;
 
 	buffer = Mem_Alloc( host.mempool, t->numfilenames * 2 * sizeof( result ));
@@ -678,7 +678,7 @@ bool Cmd_CheckMapsList( bool fRefresh )
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 
 		if( com.stricmp( ext, "bsp" )) continue;
-		f = FS_Open( t->filenames[i], "rb" );
+		f = FS_OpenEx( t->filenames[i], "rb", true );
 		FS_FileBase( t->filenames[i], mapname );
 
 		if( f )
@@ -756,8 +756,6 @@ bool Cmd_CheckMapsList( bool fRefresh )
 
 			if( f ) FS_Close( f );
 
-
-			Msg( "spawnpoints %i\n", num_spawnpoints );
 			if( num_spawnpoints > 1 )
 			{
 				// format: mapname "maptitle"\n

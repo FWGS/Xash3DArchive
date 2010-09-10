@@ -6,6 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "byteorder.h"
+#include "qfont.h"
 
 cvar_t *scr_viewsize;
 cvar_t *scr_centertime;

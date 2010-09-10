@@ -131,7 +131,7 @@ static void UI_RecDemo_GetDemoList( void )
 	char	**filenames;
 	int	i = 0, j, numFiles;
 
-	filenames = FS_SEARCH( "†demos/*.dem", &numFiles );
+	filenames = FS_SEARCH( "demos/*.dem", &numFiles, TRUE );
 
 	if ( CL_IsActive () && !gpGlobals->demorecording && !gpGlobals->demoplayback )
 	{

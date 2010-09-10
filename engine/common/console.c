@@ -9,6 +9,7 @@
 #include "protocol.h"		// get the protocol version
 #include "byteorder.h"
 #include "con_nprint.h"
+#include "qfont.h"
 
 cvar_t	*con_notifytime;
 cvar_t	*scr_conspeed;

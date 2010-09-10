@@ -1,3 +1,9 @@
+build ????
+
+Launch: code revision, remove dead code, implement some missed functions
+Sound: fix some errors and crash
+Sound: implement music volume
+
 build 1305
 
 Engine: implement bit-stream network buffer

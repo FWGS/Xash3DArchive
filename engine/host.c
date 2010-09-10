@@ -71,7 +71,7 @@ void Host_EndGame( const char *message, ... )
 	static char	string[MAX_SYSPATH];
 	
 	va_start( argptr, message );
-	vsprintf( string, message, argptr );
+	com.vsprintf( string, message, argptr );
 	va_end( argptr );
 
 	MsgDev( D_INFO, "Host_EndGame: %s\n", string );

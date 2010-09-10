@@ -6,6 +6,7 @@
 #define RENDER_API_H
 
 #include "ref_params.h"
+#include "movie.h"
 
 #define MAP_DEFAULT_SHADER		"*black"	// engine built-in default shader
 
@@ -189,7 +190,7 @@ typedef struct render_imp_s
 
 	// client fundamental callbacks
 	void	(*UpdateScreen)( void );	// update screen while loading
-	void	(*StudioEvent)( mstudioevent_t *event, struct cl_entity_s *ent );
+	void	(*StudioEvent)( struct mstudioevent_s *event, struct cl_entity_s *ent );
 	void	(*StudioFxTransform)( struct cl_entity_s *ent, float matrix[4][4] );
 	void	(*ShowCollision)( cmdraw_t callback );	// debug
 	long	(*WndProc)( void *hWnd, uint uMsg, uint wParam, long lParam );

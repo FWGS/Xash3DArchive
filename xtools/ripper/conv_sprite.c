@@ -5,7 +5,7 @@
 
 #include "ripper.h"
 #include "byteorder.h"
-#include "qfiles_ref.h"
+#include "sprite.h"
 
 // sprite_decompiler.c
 #define SPR_VP_PARALLEL_UPRIGHT	0

@@ -248,7 +248,7 @@ bool Image_SaveBMP( const char *name, rgbdata_t *pix )
 	dword		biTrueWidth;
 	int		i, rc = 0;
 
-	if(FS_FileExists( name ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name, false ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
 		return false; // already existed
 
 	// bogus parameter check
@@ -265,7 +265,7 @@ bool Image_SaveBMP( const char *name, rgbdata_t *pix )
 		return false;
 	}
 
-	pfile = FS_Open( name, "wb");
+	pfile = FS_Open( name, "wb", false );
 	if( !pfile ) return false;
 
 	// NOTE: align transparency column will sucessfully removed

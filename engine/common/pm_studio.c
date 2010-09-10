@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "common.h"
+#include "studio.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "pm_local.h"

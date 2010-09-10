@@ -8,7 +8,6 @@
 
 #include <windows.h>
 #include "launch_api.h"
-#include "qfiles_ref.h"
 #include "engine_api.h"
 #include "vsound_api.h"
 #include "cl_entity.h"

@@ -2357,7 +2357,7 @@ bool Image_ForceDecompress( void )
 	if( image.filter != CB_HINT_NO )
 		return true;
 
-	// FIXME: load it properly with gl loader
+	// UNDONE: load it properly with gl loader
 	switch( image.type )
 	{
 	case PF_RXGB: return true;	// g-cont. test it with GL_COMPRESSED_RGBA_S3TC_DXT5_EXT ?
@@ -2459,7 +2459,7 @@ bool Image_SaveDDS( const char *name, rgbdata_t *pix )
 {
 	vfile_t	*file;	// virtual file
 
-	if( FS_FileExists( name ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name, false ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
 		return false; // already existed
 
 	file = VFS_Open( NULL, "w" );

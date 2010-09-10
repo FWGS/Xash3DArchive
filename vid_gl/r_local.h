@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <windows.h>
 #include "launch_api.h"
-#include "qfiles_ref.h"
 #include "engine_api.h"
 #include "render_api.h"
 #include "pmtrace.h"

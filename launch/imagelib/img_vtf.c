@@ -100,8 +100,8 @@ size_t Image_VTFCalcMipmapSize( vtf_t *hdr, int mipNum )
 	size_t	buffsize = 0;
 	int	w, h, mipsize;
 
-	w = max( 1, LittleShort(hdr->width)>>mipNum );
-	h = max( 1, LittleShort(hdr->height)>>mipNum );
+	w = max( 1, LittleShort( hdr->width )>>mipNum );
+	h = max( 1, LittleShort( hdr->height )>>mipNum );
 	mipsize = Image_DXTGetLinearSize( image.type, w, h, 1, 0 );
 	return mipsize;
 }
@@ -223,7 +223,9 @@ bool Image_LoadVTF( const char *name, const byte *buffer, size_t filesize )
 	hdrSize = LittleLong( vtf.hdr_size );
 	biasSize = 0;
 
-	if( LittleLong( vtf.ident ) != VTFHEADER ) return false; // it's not a vtf file, just skip it
+	if( LittleLong( vtf.ident ) != VTFHEADER )
+		return false; // it's not a vtf file, just skip it
+
 	FS_FileBase( name, shortname );
 
 	// bounds check
@@ -245,7 +247,7 @@ bool Image_LoadVTF( const char *name, const byte *buffer, size_t filesize )
 
 	// translate VF_flags into IMAGE_flags
 	flags = LittleLong( vtf.flags );
-	if((flags & VF_ONEBITALPHA) || (flags & VF_EIGHTBITALPHA))
+	if(( flags & VF_ONEBITALPHA ) || ( flags & VF_EIGHTBITALPHA ))
 		image.flags |= IMAGE_HAS_ALPHA;
 	if( flags & VF_ENVMAP ) image.flags |= IMAGE_CUBEMAP;
 
@@ -278,10 +280,10 @@ bool Image_LoadVTF( const char *name, const byte *buffer, size_t filesize )
 	// convert VTF to DXT
 	Image_VTFSwapBuffer( &vtf, fin, resSize, oldformat );
 
-	// FIXME: set IMAGE_HAS_ALPHA and IMAGE_HAS_COLOR properly
+	// all supported VTF formats for now potentially has color
 	image.flags |= IMAGE_HAS_COLOR;
 
-	if( Image_ForceDecompress())
+	if( Image_ForceDecompress( ))
 	{
 		int	offset, numsides = 1;
 		uint	target = 1;

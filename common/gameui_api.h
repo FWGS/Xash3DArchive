@@ -121,7 +121,7 @@ typedef struct ui_enginefuncs_s
 	// collect info from engine
 	int	(*pfnGetGameInfo)( GAMEINFO *pgameinfo );
 	GAMEINFO	**(*pfnGetGamesList)( int *numGames );			// collect info about all mods
-	char 	**(*pfnGetFilesList)( const char *pattern, int *numFiles );	// find in files
+	char 	**(*pfnGetFilesList)( const char *pattern, int *numFiles, int gamedironly );	// find in files
 	char 	**(*pfnGetVideoList)( int *numRenders );
 	char 	**(*pfnGetAudioList)( int *numRenders );
 	int 	(*pfnGetSaveComment)( const char *savename, char *comment );
@@ -129,7 +129,7 @@ typedef struct ui_enginefuncs_s
 	char	*(*pfnGetClipboardData)( void );
 
 	// engine launcher
-	void	(*pfnShellExecute)( const char *name, const char *args, bool closeEngine );
+	void	(*pfnShellExecute)( const char *name, const char *args, int closeEngine );
 	void	(*pfnWriteServerConfig)( const char *name );
 	void	(*pfnChangeInstance)( const char *newInstance, const char *szFinalMessage );
 	void	(*pfnChangeVideo)( const char *dllName );

@@ -329,7 +329,7 @@ typedef struct
 	int		normindex;	// normal vec3_t
 } mstudiomesh_t;
 
-typedef struct
+typedef struct cache_user_s
 {
 	void		*data;
 } cache_user_t;

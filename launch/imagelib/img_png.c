@@ -115,14 +115,13 @@ bool Image_LoadPNG( const char *name, const byte *buffer, size_t filesize )
 	uint	y;
 	void	*fin, *pnginfo;
 
-	// FIXME: register an error handler so that abort() won't be called on error
-
-	if(png_sig_cmp((char*)buffer, 0, filesize ))
+	if( png_sig_cmp((char *)buffer, 0, filesize ))
 		return false;
-	fin = (void *)png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, (void *)png_error_fn, (void *)png_warning_fn );
+
+	fin = (void *)png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, png_error_fn, png_warning_fn );
 	if( !fin ) return false;
 
-	if(setjmp((int*)fin))
+	if( setjmp((int *)fin ))
 	{
 		png_destroy_read_struct( &fin, &pnginfo, 0 );
 		return false;
@@ -136,7 +135,7 @@ bool Image_LoadPNG( const char *name, const byte *buffer, size_t filesize )
 	}
 	png_set_sig_bytes( fin, 0);
 
-	Mem_Set(&png, 0, sizeof( png ));
+	Mem_Set( &png, 0, sizeof( png ));
 	png.tmpBuf = buffer;
 	png.tmpBuflength = filesize;
 	png.tmpi = 0;
@@ -186,7 +185,7 @@ bool Image_LoadPNG( const char *name, const byte *buffer, size_t filesize )
 	png_read_update_info( fin, pnginfo );
 	png.FRowBytes = png_get_rowbytes( fin, pnginfo );
 	png.bpp = png_get_channels( fin, pnginfo );
-	png.FRowPtrs = (byte **)Mem_Alloc( Sys.imagepool, png.height * sizeof(*png.FRowPtrs));
+	png.FRowPtrs = (byte **)Mem_Alloc( Sys.imagepool, png.height * sizeof( *png.FRowPtrs ));
 
 	if( png.FRowPtrs )
 	{
@@ -226,7 +225,7 @@ bool Image_SavePNG( const char *name, rgbdata_t *pix )
 	byte	**row;
 	int	i, pixel_size;
 	
-	if(FS_FileExists( name ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name, false ) && !( image.cmd_flags & IL_ALLOW_OVERWRITE ))
 		return false; // already existed
 
 	// get image description
@@ -243,7 +242,7 @@ bool Image_SavePNG( const char *name, rgbdata_t *pix )
 		return false;
 	}
 
-	png.file = FS_Open( name, "wb" );
+	png.file = FS_Open( name, "wb", false );
 	if( !png.file ) return false;
 
 	if(!(fin = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL )))
@@ -252,14 +251,14 @@ bool Image_SavePNG( const char *name, rgbdata_t *pix )
 		return false;
 	}
 
-	if(!(info = png_create_info_struct( fin )))
+	if(!( info = png_create_info_struct( fin )))
 	{
 		png_destroy_write_struct( &fin, NULL );
 		FS_Close( png.file );
 		return false;
 	}
 
-	if(setjmp((int*)fin))
+	if( setjmp((int *)fin ))
 	{
 		png_destroy_write_struct( &fin, &info );
 		FS_Close( png.file );

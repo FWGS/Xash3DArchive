@@ -4,9 +4,12 @@
 //=======================================================================
 
 #include "cm_local.h"
+#include "sprite.h"
 #include "byteorder.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "studio.h"
+#include "wadfile.h"
 #include "const.h"
 
 clipmap_t		cm;
