@@ -89,9 +89,11 @@ S_FreeChannel
 */
 void S_FreeChannel( channel_t *ch )
 {
-	ch->isSentence = false;
 	ch->sfx = NULL;
 	ch->use_loop = false;
+	ch->isSentence = false;
+
+	Mem_Set( &ch->pMixer, 0, sizeof( ch->pMixer ));
 
 	SND_CloseMouth( ch );
 }
@@ -156,6 +158,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
 	int	ch_idx;
 	int	first_to_die;
 	int	life_left;
+	int	timeleft;
 
 	// check for replacement sound, or find the best one to replace
 	first_to_die = -1;
@@ -183,9 +186,16 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
 		if( ch->sfx && S_IsClient( ch->entnum ) && !S_IsClient( entnum ))
 			continue;
 
-		if( ch->end - paintedtime < life_left )
+		// try to pick the sound with the least amount of data left to play
+		timeleft = 0;
+		if( ch->sfx )
 		{
-			life_left = ch->end - paintedtime;
+			timeleft = 1;	//ch->end - paintedtime
+		}
+
+		if( timeleft < life_left )
+		{
+			life_left = timeleft;
 			first_to_die = ch_idx;
 		}
 	}
@@ -497,22 +507,16 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	// Init client entity mouth movement vars
 	SND_InitMouth( ent, chan );
 
-	target_chan->pos = 0;
-	target_chan->end = paintedtime + sfx->cache->samples;
-
 	for( ch_idx = 0, check = channels; ch_idx < MAX_DYNAMIC_CHANNELS; ch_idx++, check++ )
 	{
 		if( check == target_chan ) continue;
 
-		if( check->sfx == sfx && !check->pos )
+		if( check->sfx == sfx && !check->pMixer.sample )
 		{
 			// skip up to 0.1 seconds of audio
-			int skip = Com_RandomLong( 0, (long)( 0.1f * dma.speed ));
-
-			if( skip >= target_chan->end )
-				skip = target_chan->end - 1;
-			target_chan->pos += skip;
-			target_chan->end -= skip;
+			int skip = Com_RandomLong( 0, (long)( 0.1f * check->sfx->cache->rate ));
+                              
+			S_SetSampleStart( check, sfx->cache, skip );
 			break;
 		}
 	}
@@ -605,9 +609,6 @@ void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float f
 	ch->basePitch = pitch;
 	ch->entnum = ent;
 	ch->entchannel = chan;
-
-	ch->pos = 0;
-	ch->end = paintedtime + sfx->cache->samples;
 
 	SND_Spatialize( ch );
 }

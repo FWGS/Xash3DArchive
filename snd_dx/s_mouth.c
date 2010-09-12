@@ -48,7 +48,7 @@ void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count )
 	char		*pdata = NULL;
 	mouth_t		*pMouth = NULL;
 	int		savg, data;
-	int		scount;
+	int		scount, pos = 0;
 	uint 		i;
 
 	clientEntity = si.GetClientEdict( ch->entnum );
@@ -56,7 +56,14 @@ void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count )
 
 	pMouth = &clientEntity->mouth;
 
-	count = S_GetOutputData( pSource, &pdata, ch->pos, count );
+	if( ch->isSentence )
+	{
+		if( ch->currentWord )
+			pos = ch->currentWord->sample;
+	}
+	else pos = ch->pMixer.sample;
+
+	count = S_GetOutputData( pSource, &pdata, pos, count, ch->use_loop );
 	if( pdata == NULL ) return;
 	
 	i = 0;

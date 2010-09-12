@@ -51,7 +51,7 @@ static char *ScanForwardUntil( char *string, char scan )
 {
 	while( string[0] )
 	{
-		if ( string[0] == scan )
+		if( string[0] == scan )
 			return string;
 		string++;
 	}
@@ -65,13 +65,13 @@ static char *VOX_GetDirectory( char *szpath, char *psz )
 {
 	char	c;
 	int	cb = 0;
-	char	*pszscan = psz + com.strlen( psz ) - 1;
+	char	*p = psz + com.strlen( psz ) - 1;
 
 	// scan backwards until first '/' or start of string
-	c = *pszscan;
-	while( pszscan > psz && c != '/' )
+	c = *p;
+	while( p > psz && c != '/' )
 	{
-		c = *( --pszscan );
+		c = *( --p );
 		cb++;
 	}
 
@@ -86,7 +86,7 @@ static char *VOX_GetDirectory( char *szpath, char *psz )
 	Mem_Copy( szpath, psz, cb );
 	szpath[cb] = 0;
 
-	return pszscan + 1;
+	return p + 1;
 }
 
 // scan g_Sentences, looking for pszin sentence name
@@ -121,7 +121,7 @@ char *VOX_LookupString( const char *pSentenceName, int *psentencenum )
 char **VOX_ParseString( char *psz ) 
 {
 	int	i, fdone = 0;
-	char	c, *pszscan = psz;
+	char	c, *p = psz;
 
 	Mem_Set( rgpparseword, 0, sizeof( char* ) * CVOXWORDMAX );
 
@@ -133,15 +133,15 @@ char **VOX_ParseString( char *psz )
 	while( !fdone && i < CVOXWORDMAX )
 	{
 		// scan up to next word
-		c = *pszscan;
+		c = *p;
 		while( c && !IsNextWord( c ))
-			c = *(++pszscan);
+			c = *(++p);
 			
 		// if '(' then scan for matching ')'
 		if( c == '(' )
 		{
-			pszscan = ScanForwardUntil( pszscan, ')' );
-			c = *(++pszscan);
+			p = ScanForwardUntil( p, ')' );
+			c = *(++p);
 			if( !c ) fdone = 1;
 		}
 
@@ -153,7 +153,7 @@ char **VOX_ParseString( char *psz )
 		{	
 			// if . or , insert pause into rgpparseword,
 			// unless this is the last character
-			if(( c == '.' || c == ',' ) && *(pszscan+1) != '\n' && *(pszscan+1) != '\r' && *(pszscan+1) != 0 )
+			if(( c == '.' || c == ',' ) && *(p+1) != '\n' && *(p+1) != '\r' && *(p+1) != 0 )
 			{
 				if( c == '.' ) rgpparseword[i++] = voxperiod;
 				else rgpparseword[i++] = voxcomma;
@@ -163,15 +163,15 @@ char **VOX_ParseString( char *psz )
 			}
 
 			// null terminate substring
-			*pszscan++ = 0;
+			*p++ = 0;
 
 			// skip whitespace
-			c = *pszscan;
+			c = *p;
 			while( c && IsSkipSpace( c ))
-				c = *(++pszscan);
+				c = *(++p);
 
 			if( !c ) fdone = 1;
-			else rgpparseword[i++] = pszscan;
+			else rgpparseword[i++] = p;
 		}
 	}
 	return rgpparseword;
@@ -179,7 +179,7 @@ char **VOX_ParseString( char *psz )
 
 float VOX_GetVolumeScale( channel_t *pchan )
 {
-	if( pchan->currentWord.pData )
+	if( pchan->currentWord )
 	{
 		if ( pchan->words[pchan->wordIndex].volume )
 		{
@@ -194,7 +194,7 @@ void VOX_SetChanVol( channel_t *ch )
 {
 	float	scale;
 
-	if( !ch->currentWord.pData )
+	if( !ch->currentWord )
 		return;
 
 	scale = VOX_GetVolumeScale( ch );
@@ -202,6 +202,18 @@ void VOX_SetChanVol( channel_t *ch )
 
 	ch->rightvol = (int)(ch->rightvol * scale);
 	ch->leftvol = (int)(ch->leftvol * scale);
+}
+
+float VOX_ModifyPitch( channel_t *ch, float pitch )
+{
+	if( ch->currentWord )
+	{
+		if ( ch->words[ch->wordIndex].pitch > 0 )
+		{
+			pitch += ( ch->words[ch->wordIndex].pitch - PITCH_NORM ) * 0.01f;
+		}
+	}
+	return pitch;
 }
 
 //===============================================================================
@@ -325,6 +337,10 @@ void VOX_LoadWord( channel_t *pchan )
 		{
 			int	start = pchan->words[pchan->wordIndex].start;
 			int	end = pchan->words[pchan->wordIndex].end;
+
+			// apply mixer
+			pchan->currentWord = &pchan->pMixer;
+			pchan->currentWord->pData = pSource; 
 				
 			// don't allow overlapped ranges
 			if( end <= start ) end = 0;
@@ -335,22 +351,31 @@ void VOX_LoadWord( channel_t *pchan )
 
 				if( start )
 				{
-					pchan->currentWord.sample = S_ZeroCrossingAfter( pSource, (int)(sampleCount * 0.01f * start));
+					S_SetSampleStart( pchan, pSource, (int)(sampleCount * 0.01f * start));
 				}
 
 				if( end )
 				{
-					pchan->currentWord.forcedEndSample = S_ZeroCrossingBefore( pSource, (int)(sampleCount * 0.01f * end) );
-
-					// past current position?  limit.
-					if( pchan->currentWord.forcedEndSample < pchan->currentWord.sample )
-						pchan->currentWord.forcedEndSample = pchan->currentWord.sample;
+					S_SetSampleEnd( pchan, pSource, (int)(sampleCount * 0.01f * end));
 				}
 			}
-			pchan->currentWord.pData = pSource; 
 		}
 	}
-	else pchan->currentWord.pData = NULL;	// sentence is finished
+}
+
+void VOX_FreeWord( channel_t *pchan )
+{
+	pchan->currentWord = NULL; // sentence is finished
+	Mem_Set( &pchan->pMixer, 0, sizeof( pchan->pMixer ));
+
+	if( pchan->words[pchan->wordIndex].sfx )
+	{
+		// If this wave wasn't precached by the game code
+		if( !pchan->words[pchan->wordIndex].fKeepCached )
+		{
+			S_FreeSound( pchan->words[pchan->wordIndex].sfx );
+		}
+	}
 }
 
 void VOX_LoadFirstWord( channel_t *pchan, voxword_t *pwords )
@@ -369,22 +394,36 @@ void VOX_LoadFirstWord( channel_t *pchan, voxword_t *pwords )
 	VOX_LoadWord( pchan );
 }
 
-wavdata_t *VOX_LoadNextWord( channel_t *pchan )
+// return number of samples mixed
+int VOX_MixDataToDevice( channel_t *pchan, int sampleCount, int outputRate, int outputOffset )
 {
-	pchan->wordIndex++;
-	VOX_LoadWord( pchan );
+	// save this to compute total output
+	int	startingOffset = outputOffset;
 
-	// set new word
-	if( pchan->currentWord.pData )
+	if( !pchan->currentWord )
+		return 0;
+
+	while( sampleCount > 0 && pchan->currentWord )
 	{
-		pchan->sfx = pchan->words[pchan->wordIndex].sfx;
-		pchan->pos = pchan->currentWord.sample;
-		pchan->end = paintedtime + pchan->currentWord.forcedEndSample;
-		return pchan->currentWord.pData;
-	}
+		int	outputCount = S_MixDataToDevice( pchan, sampleCount, outputRate, outputOffset );
 
-	S_FreeChannel( pchan ); // channel stopped
-	return NULL;
+		outputOffset += outputCount;
+		sampleCount -= outputCount;
+
+		// if we finished load a next word
+		if( pchan->currentWord->finished )
+		{
+			VOX_FreeWord( pchan );
+			pchan->wordIndex++;
+			VOX_LoadWord( pchan );
+
+			if( pchan->currentWord )
+			{
+				pchan->sfx = pchan->words[pchan->wordIndex].sfx;
+			}
+		}
+	}
+	return outputOffset - startingOffset;
 }
 
 // link all sounds in sentence, start playing first word.
@@ -514,7 +553,6 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 				g_Sentences[sentenceIndex].length = com.atof( pSentenceData + 3 );
 			}
 			break;
-
 		case 0:
 		default:
 			break;
@@ -599,8 +637,7 @@ void VOX_ReadSentenceFile( const char *psentenceFileName )
 			pch++;
 	
 		// insert null terminator
-		if( pch < pchlast )
-			*pch++ = 0;
+		if( pch < pchlast ) *pch++ = 0;
 
 		// If we have some sentence data, parse out any line commands
 		if( pSentenceData && pSentenceData < pchlast )

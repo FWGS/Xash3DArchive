@@ -22,6 +22,16 @@ extern byte *sndpool;
 #define SND_LOCALSOUND	(1<<9)	// not paused, not looped, for internal use
 #define SND_STOP_LOOPING	(1<<10)	// stop all looping sounds on the entity.
 
+// fixed point stuff for real-time resampling
+#define FIX_BITS		28
+#define FIX_SCALE		(1 << FIX_BITS)
+#define FIX_MASK		((1 << FIX_BITS)-1)
+#define FIX_FLOAT(a)	((int)((a) * FIX_SCALE))
+#define FIX(a)		(((int)(a)) << FIX_BITS)
+#define FIX_INTPART(a)	(((int)(a)) >> FIX_BITS)
+#define FIX_FRACTION(a,b)	(FIX(a)/(b))
+#define FIX_FRACPART(a)	((a) & FIX_MASK)
+
 typedef struct
 {
 	int		left;
@@ -68,15 +78,12 @@ typedef struct
 
 	wavdata_t		*pData;
 	double 		forcedEndSample;
-	bool		m_finished;
-	int		delaySamples;
+	bool		finished;
 } mixer_t;
 
 typedef struct
 {
 	sfx_t		*sfx;		// sfx number
-	int		end;		// end time in global paintsamples
-	int 		pos;		// sample position in sfx
 
 	int		leftvol;		// 0-255 left volume
 	int		rightvol;		// 0-255 right volume
@@ -92,10 +99,11 @@ typedef struct
 	bool		use_loop;		// don't loop default and local sounds
 	bool		staticsound;	// use origin instead of fetching entnum's origin
 	bool		localsound;	// it's a local menu sound (not looped, not paused)
+	mixer_t		pMixer;
 
 	// sentence mixer
 	int		wordIndex;
-	mixer_t		currentWord;
+	mixer_t		*currentWord;	// NULL if sentence is finished
 	voxword_t		words[CVOXWORDMAX];
 } channel_t;
 
@@ -175,11 +183,16 @@ void S_PrintDeviceName( void );
 void S_FreeChannel( channel_t *ch );
 void S_BeginFrame( void );
 
+//
+// s_mix.c
+//
+int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
 
 // s_load.c
 bool S_TestSoundChar( const char *pch, char c );
 char *S_SkipSoundChar( const char *pch );
 sfx_t *S_FindName( const char *name, int *pfInCache );
+void S_FreeSound( sfx_t *sfx );
 
 // s_dsp.c
 void SX_Init( void );
@@ -227,7 +240,9 @@ void S_StopBackgroundTrack( void );
 //
 int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample );
 int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample );
-int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount );
+int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, bool use_loop );
+void S_SetSampleStart( channel_t *pChan, wavdata_t *pSource, int newPosition );
+void S_SetSampleEnd( channel_t *pChan, wavdata_t *pSource, int newEndPosition );
 
 //
 // s_vox.c
@@ -236,8 +251,8 @@ void VOX_Init( void );
 void VOX_Shutdown( void );
 void VOX_SetChanVol( channel_t *ch );
 void VOX_LoadSound( channel_t *pchan, const char *psz );
-wavdata_t *VOX_LoadNextWord( channel_t *pchan );
-
+float VOX_ModifyPitch( channel_t *ch, float pitch );
+int VOX_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
 
 void S_BeginRegistration( void );
 sound_t S_RegisterSound( const char *sample );

@@ -129,119 +129,306 @@ CHANNEL MIXING
 
 ===============================================================================
 */
-void S_PaintChannelFrom8( channel_t *ch, wavdata_t *sc, int count, int offset )
+void S_PaintMonoFrom8( portable_samplepair_t *pbuf, int *volume, byte *pData, int outCount )
 {
-	int 			data;
-	int			*lscale, *rscale;
-	byte			*sfx;
-	portable_samplepair_t	*samp;
-	int			i;
-
-	if( ch->leftvol > 255 ) ch->leftvol = 255;
-	if( ch->rightvol > 255 ) ch->rightvol = 255;
+	int 	i, data;
+	int	*lscale, *rscale;
 		
-	lscale = snd_scaletable[ch->leftvol>>3];
-	rscale = snd_scaletable[ch->rightvol>>3];
-	sfx = (signed char *)sc->buffer + ch->pos;
+	lscale = snd_scaletable[volume[0] >> 3];
+	rscale = snd_scaletable[volume[1] >> 3];
 
-	samp = &paintbuffer[offset];
-
-	for( i = 0; i < count; i++, samp++ )
+	for( i = 0; i < outCount; i++ )
 	{
-		data = sfx[i];
-		samp->left += lscale[data];
-		samp->right += rscale[data];
+		data = pData[i];
+		pbuf[i].left += lscale[data];
+		pbuf[i].right += rscale[data];
 	}
-	ch->pos += count;
 }
 
-void S_PaintStereoFrom8( channel_t *ch, wavdata_t *sc, int count, int offset )
+void S_PaintStereoFrom8( portable_samplepair_t *pbuf, int *volume, byte *pData, int outCount )
 {
-	int			*lscale, *rscale;
-	uint			left, right;
-	unsigned short		*data;
-	portable_samplepair_t	*samp;
-	int			i;
-	
-	if( ch->leftvol > 255 ) ch->leftvol = 255;
-	if( ch->rightvol > 255 ) ch->rightvol = 255;
-		
-	lscale = snd_scaletable[ch->leftvol>>3];
-	rscale = snd_scaletable[ch->rightvol>>3];
-	data = (unsigned short *)sc->buffer + ch->pos;
+	int	*lscale, *rscale;
+	uint	left, right;
+	word	*data;
+	int	i;
 
-	samp = &paintbuffer[offset];
+	lscale = snd_scaletable[volume[0] >> 3];
+	rscale = snd_scaletable[volume[1] >> 3];
+	data = (word *)pData;
 
-	for( i = 0; i < count; i++, samp++, data++ )
+	for( i = 0; i < outCount; i++, data++ )
 	{
 		left = (byte)((*data & 0x00FF));
 		right = (byte)((*data & 0xFF00) >> 8);
-		samp->left += lscale[left];
-		samp->right += rscale[right];
+		pbuf[i].left += lscale[left];
+		pbuf[i].right += rscale[right];
 	}
-	ch->pos += count;
 }
 
-void S_PaintChannelFrom16( channel_t *ch, wavdata_t *sc, int count, int offset )
+void S_PaintMonoFrom16( portable_samplepair_t *pbuf, int *volume, short *pData, int outCount )
 {
-	int			data;
-	int			left, right;
-	int			leftvol, rightvol;
-	signed short		*sfx;
-	portable_samplepair_t	*samp;
-	int			i;
+	int	i, data;
+	int	left, right;
+	int	lscale, rscale;
 
-	leftvol = ch->leftvol * snd_vol;
-	rightvol = ch->rightvol * snd_vol;
-	sfx = (signed short *)sc->buffer + ch->pos;
+	lscale = volume[0] * snd_vol;
+	rscale = volume[1] * snd_vol;
 
-	samp = &paintbuffer[offset];
-
-	for( i = 0; i < count; i++, samp++ )
+	for( i = 0; i < outCount; i++ )
 	{
-		data = sfx[i];
-		left = ( data * leftvol ) >> 8;
-		right = (data * rightvol) >> 8;
-		samp->left += left;
-		samp->right += right;
+		data = pData[i];
+		left = ( data * lscale ) >> 8;
+		right = (data * rscale ) >> 8;
+		pbuf[i].left += left;
+		pbuf[i].right += right;
 	}
-	ch->pos += count;
 }
 
-void S_PaintStereoFrom16( channel_t *ch, wavdata_t *sc, int count, int offset )
+void S_PaintStereoFrom16( portable_samplepair_t *pbuf, int *volume, short *pData, int outCount )
 {
-	uint			*data;
-	int			leftvol, rightvol;
-	int			left, right;
-	portable_samplepair_t	*samp;
-	int			i;
+	uint	*data;
+	int	lscale, rscale;
+	int	left, right;
+	int	i;
 
-	data = (uint *)sc->buffer + ch->pos;
-	samp = &paintbuffer[offset];
-
-	leftvol = ch->leftvol * snd_vol;
-	rightvol = ch->rightvol * snd_vol;
-
-	for( i = 0; i < count; i++, samp++, data++ )
+	lscale = volume[0] * snd_vol;
+	rscale = volume[1] * snd_vol;
+	data = (uint *)pData;
+		
+	for( i = 0; i < outCount; i++, data++ )
 	{
 		left = (signed short)((*data & 0x0000FFFF));
 		right = (signed short)((*data & 0xFFFF0000) >> 16);
 
-		left =  (left * leftvol ) >> 8;
-		right = (right * rightvol) >> 8;
+		left =  (left * lscale ) >> 8;
+		right = (right * rscale) >> 8;
 
-		samp->left += left;
-		samp->right += right;
+		pbuf[i].left += left;
+		pbuf[i].right += right;
 	}
-	ch->pos += count;
+}
+
+void S_Mix8Mono( portable_samplepair_t *pbuf, int *volume, byte *pData, int inputOffset, uint rateScaleFix, int outCount )
+{
+	int	i, sampleIndex = 0;
+	uint	sampleFrac = inputOffset;
+	int	*lscale, *rscale;
+
+	// Not using pitch shift?
+	if( rateScaleFix == FIX( 1 ))
+	{
+		S_PaintMonoFrom8( pbuf, volume, pData, outCount );
+		return;
+	}
+
+	lscale = snd_scaletable[volume[0] >> 3];
+	rscale = snd_scaletable[volume[1] >> 3];
+
+	for( i = 0; i < outCount; i++ )
+	{
+		pbuf[i].left += lscale[pData[sampleIndex]];
+		pbuf[i].right += rscale[pData[sampleIndex]];
+		sampleFrac += rateScaleFix;
+		sampleIndex += FIX_INTPART( sampleFrac );
+		sampleFrac = FIX_FRACPART( sampleFrac );
+	}
+}
+
+void S_Mix8Stereo( portable_samplepair_t *pbuf, int *volume, byte *pData, int inputOffset, uint rateScaleFix, int outCount )
+{
+	int	i, sampleIndex = 0;
+	uint	sampleFrac = inputOffset;
+	int	*lscale, *rscale;
+
+	// Not using pitch shift?
+	if( rateScaleFix == FIX( 1 ))
+	{
+		S_PaintStereoFrom8( pbuf, volume, pData, outCount );
+		return;
+	}
+
+	lscale = snd_scaletable[volume[0] >> 3];
+	rscale = snd_scaletable[volume[1] >> 3];
+
+	for( i = 0; i < outCount; i++ )
+	{
+		pbuf[i].left += lscale[pData[sampleIndex+0]];
+		pbuf[i].right += rscale[pData[sampleIndex+1]];
+		sampleFrac += rateScaleFix;
+		sampleIndex += FIX_INTPART( sampleFrac )<<1;
+		sampleFrac = FIX_FRACPART( sampleFrac );
+	}
+}
+
+void S_Mix16Mono( portable_samplepair_t *pbuf, int *volume, short *pData, int inputOffset, uint rateScaleFix, int outCount )
+{
+	int	i, sampleIndex = 0;
+	uint	sampleFrac = inputOffset;
+	int	lscale, rscale;
+
+	// Not using pitch shift?
+	if( rateScaleFix == FIX( 1 ))
+	{
+		S_PaintMonoFrom16( pbuf, volume, pData, outCount );
+		return;
+	}
+
+	lscale = volume[0] * snd_vol;
+	rscale = volume[1] * snd_vol;
+
+	for( i = 0; i < outCount; i++ )
+	{
+		pbuf[i].left += (lscale * (int)( pData[sampleIndex] ))>>8;
+		pbuf[i].right += (rscale * (int)( pData[sampleIndex] ))>>8;
+		sampleFrac += rateScaleFix;
+		sampleIndex += FIX_INTPART( sampleFrac );
+		sampleFrac = FIX_FRACPART( sampleFrac );
+	}
+}
+
+void S_Mix16Stereo( portable_samplepair_t *pbuf, int *volume, short *pData, int inputOffset, uint rateScaleFix, int outCount )
+{
+	int	i, sampleIndex = 0;
+	uint	sampleFrac = inputOffset;
+	int	lscale, rscale;
+
+	// Not using pitch shift?
+	if( rateScaleFix == FIX( 1 ))
+	{
+		S_PaintStereoFrom16( pbuf, volume, pData, outCount );
+		return;
+	}
+	
+	lscale = volume[0] * snd_vol;
+	rscale = volume[1] * snd_vol;
+
+	for( i = 0; i < outCount; i++ )
+	{
+		pbuf[i].left += (lscale * (int)( pData[sampleIndex+0] ))>>8;
+		pbuf[i].right += (rscale * (int)( pData[sampleIndex+1] ))>>8;
+
+		sampleFrac += rateScaleFix;
+		sampleIndex += FIX_INTPART(sampleFrac)<<1;
+		sampleFrac = FIX_FRACPART(sampleFrac);
+	}
+}
+
+int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset )
+{
+	// save this to compute total output
+	int	startingOffset = outputOffset;
+	float	inputRate = ( pChannel->pitch * pChannel->sfx->cache->rate );
+	float	rate = inputRate / outputRate;
+	int	pvol[2];
+		
+	// shouldn't be playing this if finished, but return if we are
+	if( pChannel->pMixer.finished )
+		return 0;
+
+	// If we are terminating this wave prematurely, then make sure we detect the limit
+	if( pChannel->pMixer.forcedEndSample )
+	{
+		// how many total input samples will we need?
+		int	samplesRequired = (int)(sampleCount * rate);
+
+		// will this hit the end?
+		if( pChannel->pMixer.sample + samplesRequired >= pChannel->pMixer.forcedEndSample )
+		{
+			// yes, mark finished and truncate the sample request
+			pChannel->pMixer.finished = true;
+			sampleCount = (int)(( pChannel->pMixer.forcedEndSample - pChannel->pMixer.sample ) / rate );
+		}
+	}
+
+	pvol[0] = pChannel->leftvol;
+	pvol[1] = pChannel->rightvol;
+
+	while( sampleCount > 0 )
+	{
+		double	sampleFraction;
+		portable_samplepair_t *pbuf;
+		bool	advanceSample = true;
+		int	availableSamples, outputSampleCount;
+		wavdata_t	*pSource = pChannel->sfx->cache;
+		bool	use_loop = pChannel->use_loop;
+		char	*pData = NULL;
+
+		// compute number of input samples required
+		double	end = pChannel->pMixer.sample + rate * sampleCount;
+		int	inputSampleCount = (int)(ceil( end ) - floor( pChannel->pMixer.sample ));
+
+		availableSamples = S_GetOutputData( pSource, &pData, pChannel->pMixer.sample, inputSampleCount, use_loop );
+
+		// none available, bail out
+		if( !availableSamples ) break;
+
+		sampleFraction = pChannel->pMixer.sample - floor( pChannel->pMixer.sample );
+
+		if( availableSamples < inputSampleCount )
+		{
+			// how many samples are there given the number of input samples and the rate.
+			outputSampleCount = (int)ceil(( availableSamples - sampleFraction ) / rate );
+		}
+		else
+		{
+			outputSampleCount = sampleCount;
+		}
+
+		// Verify that we won't get a buffer overrun.
+		ASSERT( floor( sampleFraction + rate * ( outputSampleCount - 1 )) <= availableSamples );
+
+		// mix this data to all active paintbuffers
+		pbuf = &paintbuffer[outputOffset];
+
+		if( pSource->channels == 1 )
+		{
+			if( pSource->width == 1 )
+				S_Mix8Mono( pbuf, pvol, (char *)pData, FIX_FLOAT(sampleFraction), FIX_FLOAT(rate), outputSampleCount );
+			else S_Mix16Mono( pbuf, pvol, (short *)pData, FIX_FLOAT(sampleFraction), FIX_FLOAT(rate), outputSampleCount );
+		}
+		else
+		{
+			if( pSource->width == 1 )
+				S_Mix8Stereo( pbuf, pvol, (char *)pData, FIX_FLOAT(sampleFraction), FIX_FLOAT(rate), outputSampleCount );
+			else S_Mix16Stereo( pbuf, pvol, (short *)pData, FIX_FLOAT(sampleFraction), FIX_FLOAT(rate), outputSampleCount );
+		}
+
+		if( advanceSample )
+		{
+			pChannel->pMixer.sample += outputSampleCount * rate;
+		}
+
+		outputOffset += outputSampleCount;
+		sampleCount -= outputSampleCount;
+	}
+
+	// Did we run out of samples? if so, mark finished
+	if( sampleCount > 0 )
+	{
+		pChannel->pMixer.finished = true;
+	}
+
+	// total number of samples mixed !!! at the output clock rate !!!
+	return outputOffset - startingOffset;
+}
+
+bool S_ShouldContinueMixing( channel_t *ch )
+{
+	if( ch->isSentence )
+	{
+		if( ch->currentWord )
+			return true;
+		return false;
+	}
+
+	return !ch->pMixer.finished;
 }
 
 void S_MixAllChannels( int endtime, int end )
 {
 	channel_t *ch;
 	wavdata_t	*sc;
-	int	i, count = 0;	
-	int	ltime;
+	int	i, count = end - paintedtime;
 
 	// paint in the channels.
 	for( i = 0, ch = channels; i < total_channels; i++, ch++ )
@@ -259,74 +446,40 @@ void S_MixAllChannels( int endtime, int end )
 		if( s_listener.inmenu && !ch->localsound )
 		{
 			// play only local sounds, keep pause for other
-			ch->end = paintedtime + sc->samples - ch->pos; 
 			continue;
 		}
 		else if( !s_listener.inmenu && !s_listener.active && !ch->staticsound )
 		{
 			// play only ambient sounds, keep pause for other
-			ch->end = paintedtime + sc->samples - ch->pos; 
 			continue;
 		}
 		else if( s_listener.paused )
 		{
 			// play only ambient sounds, keep pause for other
-			ch->end = paintedtime + sc->samples - ch->pos; 
 			continue;
 		}
 
-		ltime = paintedtime;
-		
-		while( ltime < end )
+		// get playback pitch
+		if( ch->isSentence )
+			ch->pitch = VOX_ModifyPitch( ch, ch->basePitch * 0.01f );
+		else ch->pitch = ch->basePitch * 0.01f;
+
+		// check volume
+		ch->leftvol = bound( 0, ch->leftvol, 255 );
+		ch->rightvol = bound( 0, ch->rightvol, 255 );
+
+		if( si.GetClientEdict( ch->entnum ) && ( ch->entchannel == CHAN_VOICE ))
 		{
-			// max painting is to the end of the buffer
-			count = end - ltime;
+			SND_MoveMouth8( ch, sc, count );
+		}
 
-			// might be stopped by running out of data
-			if( ch->end - ltime < count ) count = ch->end - ltime;
+		if( ch->isSentence )
+			VOX_MixDataToDevice( ch, count, dma.speed, 0 );
+		else S_MixDataToDevice( ch, count, dma.speed, 0 );
 
-			if( count > 0 )
-			{	
-				if( sc->channels == 1 )
-				{
-					if( sc->width == 1 )
-						S_PaintChannelFrom8( ch, sc, count, ltime - paintedtime );
-					else S_PaintChannelFrom16( ch, sc, count, ltime - paintedtime );
-	                              }
-	                              else
-	                              {
-					if( sc->width == 1 )
-						S_PaintStereoFrom8( ch, sc, count, ltime - paintedtime );
-					else S_PaintStereoFrom16( ch, sc, count, ltime - paintedtime );
-	                              }
-				ltime += count;
-			}
-
-			if( si.GetClientEdict( ch->entnum ) && ( ch->entchannel == CHAN_VOICE ))
-			{
-				SND_MoveMouth8( ch, sc, count );
-			}
-
-			// if at end of loop, restart
-			if( ltime >= ch->end )
-			{
-				if( ch->isSentence )
-				{
-					sc = VOX_LoadNextWord( ch );
-					if( !sc ) break; // sentence is finished
-				}
-				else if( sc->loopStart >= 0 && ch->use_loop )
-				{
-					ch->pos = sc->loopStart;
-					ch->end = ltime + sc->samples - ch->pos;
-				}
-				else
-				{
-					// channel just stopped
-					S_FreeChannel( ch );
-					break;
-				}
-			}
+		if( !S_ShouldContinueMixing( ch ))
+		{
+			S_FreeChannel( ch );
 		}
 	}
 }

@@ -209,7 +209,7 @@ sfx_t *S_FindName( const char *name, int *pfInCache )
 S_FreeSound
 ==================
 */
-static void S_FreeSound( sfx_t *sfx )
+void S_FreeSound( sfx_t *sfx )
 {
 	sfx_t	*hashSfx;
 	sfx_t	**prev;

@@ -384,6 +384,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			ShowWindow( host.hWnd, SW_SHOWMINNOACTIVE );
 		break;
 	case WM_MOUSEWHEEL:
+		if( !in_mouseactive ) break;
 		if(( short )HIWORD( wParam ) > 0 )
 		{
 			Sys_QueEvent( -1, SE_KEY, K_MWHEELUP, true, 0, NULL );

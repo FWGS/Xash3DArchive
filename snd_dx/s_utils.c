@@ -206,13 +206,13 @@ int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample )
 // Input  : samplePosition - absolute position
 // Output : int - looped position
 //-----------------------------------------------------------------------------
-int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition )
+int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition, bool use_loop )
 {
 	// if the wave is looping and we're past the end of the sample
 	// convert to a position within the loop
 	// At the end of the loop, we return a short buffer, and subsequent call
 	// will loop back and get the rest of the buffer
-	if( pSource->loopStart >= 0 && samplePosition >= pSource->samples )
+	if( pSource->loopStart >= 0 && samplePosition >= pSource->samples && use_loop )
 	{
 		// size of loop
 		int	loopSize = pSource->samples - pSource->loopStart;
@@ -230,13 +230,13 @@ int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition )
 	return samplePosition;
 }
 
-int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount )
+int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, bool use_loop )
 {
 	int	totalSampleCount;
 	int	sampleSize;
 
 	// handle position looping
-	samplePosition = S_ConvertLoopedPosition( pSource, samplePosition );
+	samplePosition = S_ConvertLoopedPosition( pSource, samplePosition, use_loop );
 
 	// how many samples are available (linearly not counting looping)
 	totalSampleCount = pSource->samples - samplePosition;
@@ -264,4 +264,29 @@ int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int s
 	}
 
 	return sampleCount;
+}
+
+// move the current position to newPosition
+void S_SetSampleStart( channel_t *pChan, wavdata_t *pSource, int newPosition )
+{
+	if( pSource )
+		newPosition = S_ZeroCrossingAfter( pSource, newPosition );
+
+	pChan->pMixer.sample = newPosition;
+}
+
+// end playback at newEndPosition
+void S_SetSampleEnd( channel_t *pChan, wavdata_t *pSource, int newEndPosition )
+{
+	// forced end of zero means play the whole sample
+	if( !newEndPosition ) newEndPosition = 1;
+
+	if( pSource )
+		newEndPosition = S_ZeroCrossingBefore( pSource, newEndPosition );
+
+	// past current position?  limit.
+	if( newEndPosition < pChan->pMixer.sample )
+		newEndPosition = pChan->pMixer.sample;
+
+	pChan->pMixer.forcedEndSample = newEndPosition;
 }
