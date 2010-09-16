@@ -303,8 +303,8 @@ bool Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int outrate
 				}
 				else
 				{
-					sample = (int)( (unsigned char)(data[srcsample*2+0]) - 128) << 8;
-					sample2 = (int)( (unsigned char)(data[srcsample*2+1]) - 128) << 8;
+					sample = (int)((char)(data[srcsample*2+0])) << 8;
+					sample2 = (int)((char)(data[srcsample*2+1])) << 8;
 				}
 
 				if( outwidth == 2 )
@@ -327,7 +327,7 @@ bool Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int outrate
 				samplefrac += fracstep;
 
 				if( inwidth == 2 ) sample = LittleShort(((short *)data)[srcsample] );
-				else sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
+				else sample = (int)( (char)(data[srcsample])) << 8;
 
 				if( outwidth == 2 ) ((short *)sound.tempbuffer)[i] = sample;
 				else ((signed char *)sound.tempbuffer)[i] = sample >> 8;

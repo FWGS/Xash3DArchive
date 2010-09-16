@@ -303,35 +303,36 @@ bool Cmd_GetMusicList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numtracks;
 
-	t = FS_Search( va( "media/%s*.ogg", s ), true );
+	t = FS_Search( va( "media/%s*.*", s ), true );
 	if( !t ) return false;
 
-	FS_FileBase(t->filenames[0], matchbuf ); 
-	if(completedname && length) com.strncpy( completedname, matchbuf, length );
-	if(t->numfilenames == 1) return true;
+	FS_FileBase( t->filenames[0], matchbuf ); 
+	if( completedname && length ) com.strncpy( completedname, matchbuf, length );
+	if( t->numfilenames == 1 ) return true;
 
 	for(i = 0, numtracks = 0; i < t->numfilenames; i++)
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( com.stricmp(ext, "ogg" )) continue;
-		FS_FileBase(t->filenames[i], matchbuf );
-		Msg("%16s\n", matchbuf );
+		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "ogg" ));
+		else continue;
+
+		FS_FileBase( t->filenames[i], matchbuf );
+		Msg( "%16s\n", matchbuf );
 		numtracks++;
 	}
-	Msg("\n^3 %i soundtracks found.\n", numtracks );
+	Msg( "\n^3 %i soundtracks found.\n", numtracks );
 	Mem_Free(t);
 
 	// cut shortestMatch to the amount common with s
-	if(completedname && length)
+	if( completedname && length )
 	{
 		for( i = 0; matchbuf[i]; i++ )
 		{
-			if(com.tolower(completedname[i]) != com.tolower(matchbuf[i]))
+			if( com.tolower( completedname[i]) != com.tolower( matchbuf[i] ))
 				completedname[i] = 0;
 		}
 	}
-
 	return true;
 }
 
@@ -451,7 +452,9 @@ bool Cmd_GetSoundList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( com.stricmp( ext, "wav" ) && com.stricmp( ext, "ogg" )) continue;
+		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "ogg" ));
+		else continue;
+
 		com.strncpy( matchbuf, t->filenames[i] + com.strlen(snddir), MAX_STRING ); 
 		FS_StripExtension( matchbuf );
 		Msg( "%16s\n", matchbuf );
@@ -783,7 +786,7 @@ autocomplete_list_t cmd_list[] =
 { "playdemo", Cmd_GetDemoList, },
 { "menufont", Cmd_GetFontList, },
 { "setfont", Cmd_GetFontList, },
-{ "music", Cmd_GetSoundList, },
+{ "music", Cmd_GetMusicList, },
 { "movie", Cmd_GetMovieList },
 { "exec", Cmd_GetConfigList },
 { "give", Cmd_GetItemsList },

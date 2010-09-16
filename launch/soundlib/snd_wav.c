@@ -239,6 +239,21 @@ bool Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 
 	Mem_Copy( sound.wav, buffer + (iff_dataPtr - buffer), sound.size );
 
+	// now convert 8-bit sounds to signed
+	if( sound.width == 1 )
+	{
+		int	i, j;
+		char	*pData = sound.wav;
+
+		for( i = 0; i < sound.samples; i++ )
+		{
+			for( j = 0; j < sound.channels; j++ )
+			{
+				*pData = (byte)((int)((byte)*pData) - 128 );
+				pData++;
+			}
+		}
+	}
 	return true;
 }
 

@@ -127,10 +127,6 @@ wavdata_t *S_LoadSound( sfx_t *sfx )
 	else sc = FS_LoadSound( sfx->name, NULL, 0 );
 
 	if( !sc ) sc = S_CreateDefaultSound();
-
-	// upload and resample
-	Sound_Process( &sc, dma.speed, sc->width, SOUND_RESAMPLE );
-
 	sfx->cache = sc;
 
 	return sfx->cache;

@@ -26,10 +26,12 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 	{
 		introTrack = "";
 	}
+
 	if( !mainTrack || !*mainTrack )
 	{
 		mainTrack = introTrack;
 	}
+
 	if( !*introTrack ) return;
 
 	if( mainTrack )
@@ -78,7 +80,7 @@ void S_StreamBackgroundTrack( void )
 	if( !s_bgTrack.stream ) return;
 
 	// don't bother playing anything if musicvolume is 0
-	if( !s_musicvolume->value ) return;
+	if( !s_musicvolume->value || s_listener.paused ) return;
 
 	// see how many samples should be copied into the raw buffer
 	if( s_rawend < soundtime )
@@ -91,7 +93,7 @@ void S_StreamBackgroundTrack( void )
 		bufferSamples = MAX_RAW_SAMPLES - (s_rawend - soundtime);
 
 		// decide how much data needs to be read from the file
-		fileSamples = bufferSamples * info->rate / dma.speed;
+		fileSamples = bufferSamples * info->rate / SOUND_DMA_SPEED;
 
 		// our max buffer size
 		fileBytes = fileSamples * ( info->width * info->channels );
@@ -164,18 +166,14 @@ Cinematic streaming and voice over network
 */
 void S_StreamRawSamples( int samples, int rate, int width, int channels, const byte *data )
 {
-	int	i, snd_vol;
-	int	a, b, src, dst;
+	int	i, a, b, src, dst;
 	int	fracstep, samplefrac;
 	int	incount, outcount;
 
-	snd_vol = (int)(s_musicvolume->value * 256);
-	if( snd_vol < 0 ) snd_vol = 0;
-
 	src = 0;
 	samplefrac = 0;
-	fracstep = (((double)rate) / (double)dma.speed) * 256.0;
-	outcount = (double)samples * (double) dma.speed / (double)rate;
+	fracstep = (((double)rate) / (double)SOUND_DMA_SPEED) * 256.0;
+	outcount = (double)samples * (double)SOUND_DMA_SPEED / (double)rate;
 	incount = samples * channels;
 
 #define TAKE_SAMPLE( s )	(sizeof(*in) == 1 ? (a = (in[src+(s)]-128)<<8,\
@@ -183,7 +181,7 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 			(a = in[src+(s)],\
 			b = (src < incount - channels) ? (in[src+channels+(s)]) : 0))
 
-#define LERP_SAMPLE		((((((b - a) * (samplefrac & 255)) >> 8) + a) * snd_vol))
+#define LERP_SAMPLE		(((((b - a) * (samplefrac & 255)) >> 8) + a))
 
 #define RESAMPLE_RAW \
 	if( channels == 2 ) { \

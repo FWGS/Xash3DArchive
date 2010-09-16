@@ -928,7 +928,7 @@ int CTalkMonster :: FOkToSpeak( void )
 	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime)
 		return FALSE;
 
-	if ( pev->spawnflags & SF_MONSTER_GAG )
+	if ( pev->spawnflags & SF_MONSTER_GAG && !FClassnameIs(pev, "monster_generic") )
 		return FALSE;
 
 	if ( m_MonsterState == MONSTERSTATE_PRONE )

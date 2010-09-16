@@ -700,7 +700,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	int			i, id, size, version;
 	
 	com.snprintf( name, sizeof( name ), "save/%s.HL1", level );
-	MsgDev( D_INFO, "Loading game from %s...\n", name + 1 );
+	MsgDev( D_INFO, "Loading game from %s...\n", name );
 
 	pFile = FS_OpenEx( name, "rb", true );
 	if( !pFile )
@@ -1646,7 +1646,7 @@ bool SV_LoadGame( const char *pName )
 
 	com.snprintf( name, sizeof( name ), "save/%s.sav", pName );
 
-	MsgDev( D_INFO, "Loading game from %s...\n", name + 1 );
+	MsgDev( D_INFO, "Loading game from %s...\n", name );
 	SV_ClearSaveDir();
 
 	if( !svs.initialized ) SV_InitGame ();

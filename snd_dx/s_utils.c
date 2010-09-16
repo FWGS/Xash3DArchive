@@ -6,8 +6,8 @@
 #include "sound.h"
 
 // hardcoded macros to test for zero crossing
-#define ZERO_X_8( b )	(( b )< 2 && ( b ) > -2 )
-#define ZERO_X_16( b )	(( b )< 512 && ( b ) > -512 )
+#define ZERO_X_8( b )	(( b ) < 2 && ( b ) > -2 )
+#define ZERO_X_16( b )	(( b ) < 512 && ( b ) > -512 )
 
 //-----------------------------------------------------------------------------
 // Purpose: Search backward for a zero crossing starting at sample

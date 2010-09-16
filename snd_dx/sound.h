@@ -22,6 +22,12 @@ extern byte *sndpool;
 #define SND_LOCALSOUND	(1<<9)	// not paused, not looped, for internal use
 #define SND_STOP_LOOPING	(1<<10)	// stop all looping sounds on the entity.
 
+// sound engine rate defines
+#define SOUND_DMA_SPEED	44100	// hardware playback rate
+#define SOUND_11k		11025	// 11khz sample rate
+#define SOUND_22k		22050	// 22khz sample rate
+#define SOUND_44k		44100	// 44khz sample rate
+
 // fixed point stuff for real-time resampling
 #define FIX_BITS		28
 #define FIX_SCALE		(1 << FIX_BITS)
@@ -32,11 +38,33 @@ extern byte *sndpool;
 #define FIX_FRACTION(a,b)	(FIX(a)/(b))
 #define FIX_FRACPART(a)	((a) & FIX_MASK)
 
+#define CLIP( x )		(( x ) > 32767 ? 32767 : (( x ) < -32767 ? -32767 : ( x )))
+#define SWAP( a, b, t )	{(t) = (a); (a) = (b); (b) = (t);}
+#define AVG( a, b )		(((a) + (b)) >> 1 )
+#define AVG4( a, b, c, d )	(((a) + (b) + (c) + (d)) >> 2 )
+
+#define PAINTBUFFER_SIZE	1024	// 44k: was 512
+#define PAINTBUFFER		(g_curpaintbuffer)
+#define CPAINTBUFFERS	3
+
 typedef struct
 {
 	int		left;
 	int		right;
 } portable_samplepair_t;
+
+// sound mixing buffer
+
+#define CPAINTFILTERMEM		3
+#define CPAINTFILTERS		4	// maximum number of consecutive upsample passes per paintbuffer
+
+typedef struct
+{
+	bool			factive;	// if true, mix to this paintbuffer using flags
+	portable_samplepair_t	*pbuf;	// front stereo mix buffer, for 2 or 4 channel mixing
+	int			ifilter;	// current filter memory buffer to use for upsampling pass
+	portable_samplepair_t	fltmem[CPAINTFILTERS][CPAINTFILTERMEM];
+} paintbuffer_t;
 
 typedef struct sfx_s
 {
@@ -47,6 +75,13 @@ typedef struct sfx_s
 	uint		hashValue;
 	struct sfx_s	*hashNext;
 } sfx_t;
+
+extern portable_samplepair_t	drybuffer[];
+extern portable_samplepair_t	paintbuffer[];
+extern portable_samplepair_t	roombuffer[];
+extern portable_samplepair_t	temppaintbuffer[];
+extern portable_samplepair_t	*g_curpaintbuffer;
+extern paintbuffer_t	paintbuffers[];
 
 // structure used for fading in and out client sound volume.
 typedef struct
@@ -61,12 +96,8 @@ typedef struct
 
 typedef struct
 {
-	int		channels;
 	int		samples;		// mono samples in buffer
-	int		submission_chunk;	// don't mix less than this #
 	int		samplepos;	// in mono samples
-	int		samplebits;
-	int		speed;
 	byte		*buffer;
 } dma_t;
 
@@ -99,6 +130,7 @@ typedef struct
 	bool		use_loop;		// don't loop default and local sounds
 	bool		staticsound;	// use origin instead of fetching entnum's origin
 	bool		localsound;	// it's a local menu sound (not looped, not paused)
+	bool		bdry;		// if true, bypass all dsp processing for this sound (ie: music)
 	mixer_t		pMixer;
 
 	// sentence mixer
@@ -152,7 +184,6 @@ void SNDDMA_Submit( void );
 #define MAX_CHANNELS	128
 #define MAX_RAW_SAMPLES	8192
 
-extern portable_samplepair_t paintbuffer[];
 extern channel_t	channels[MAX_CHANNELS];
 extern int	total_channels;
 extern int	paintedtime;
@@ -160,20 +191,21 @@ extern int	s_rawend;
 extern int	soundtime;
 extern dma_t	dma;
 extern listener_t	s_listener;
+extern int	idsp_room;
 
 extern cvar_t	*s_check_errors;
 extern cvar_t	*s_volume;
 extern cvar_t	*s_musicvolume;
-extern cvar_t	*s_khz;
 extern cvar_t	*s_show;
 extern cvar_t	*s_mixahead;
 extern cvar_t	*s_primary;
+extern cvar_t	*s_lerping;
+extern cvar_t	*dsp_off;
 
 extern portable_samplepair_t		s_rawsamples[MAX_RAW_SAMPLES];
 
 void S_InitScaletable( void );
 wavdata_t *S_LoadSound( sfx_t *sfx );
-void S_PaintChannels( int endtime );
 float S_GetMasterVolume( void );
 void S_PrintDeviceName( void );
 
@@ -187,6 +219,10 @@ void S_BeginFrame( void );
 // s_mix.c
 //
 int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
+void MIX_ClearAllPaintBuffers( int SampleCount, bool clearFilters );
+void MIX_InitAllPaintbuffers( void );
+void MIX_FreeAllPaintbuffers( void );
+void MIX_PaintChannels( int endtime );
 
 // s_load.c
 bool S_TestSoundChar( const char *pch, char c );
@@ -195,9 +231,16 @@ sfx_t *S_FindName( const char *name, int *pfInCache );
 void S_FreeSound( sfx_t *sfx );
 
 // s_dsp.c
+bool AllocDsps( void );
+void FreeDsps( void );
+void CheckNewDspPresets( void );
+void DSP_Process( int idsp, portable_samplepair_t *pbfront, int sampleCount );
+float DSP_GetGain( int idsp );
+void DSP_ClearState( void );
+
 void SX_Init( void );
 void SX_Free( void );
-void SX_RoomFX( int endtime, int fFilter, int fTimefx );
+void SX_RoomFX( portable_samplepair_t *pbuf, int sampleCount );
 
 bool S_Init( void *hInst );
 void S_Shutdown( void );

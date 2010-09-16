@@ -21,8 +21,8 @@ bool CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 {
 	model_t	*mod = CM_ClipHandleToModel( ent->curstate.modelindex );
 
-	// bad model ?
-	if( !mod || mod->type == mod_bad )
+	// NOTE: player never collide with sprites (even with solid sprites)
+	if( !mod || mod->type == mod_bad || mod->type == mod_sprite )
 		return false;
 		
 	pe->player = ent->player;
@@ -435,8 +435,8 @@ void CL_SetSolidEntities( void )
 
 	for( i = 0; i < 3; i++ )
 	{
-		absmin[i] = cl.frame.cd.origin[i] - 256;
-		absmax[i] = cl.frame.cd.origin[i] + 256;
+		absmin[i] = cl.frame.cd.origin[i] - 1024;
+		absmax[i] = cl.frame.cd.origin[i] + 1024;
 	}
 
 	CL_CopyEntityToPhysEnt( &clgame.pmove->physents[0], &clgame.entities[0] );

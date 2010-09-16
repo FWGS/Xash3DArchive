@@ -368,6 +368,8 @@ void VOX_FreeWord( channel_t *pchan )
 	pchan->currentWord = NULL; // sentence is finished
 	Mem_Set( &pchan->pMixer, 0, sizeof( pchan->pMixer ));
 
+// UNDONE: add references to sources
+return;
 	if( pchan->words[pchan->wordIndex].sfx )
 	{
 		// If this wave wasn't precached by the game code

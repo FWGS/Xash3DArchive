@@ -1,8 +1,13 @@
-build ????
+build 1313
 
 Launch: code revision, remove dead code, implement some missed functions
 Sound: fix some errors and crash
 Sound: implement music volume
+Sound: reworking sound mixer
+Sound: implement DSP
+Engine: add support for five mouse extra-buttons
+Engine: fix some physics bugs
+SDK: add blue-shift game source to SDK (combined with main game source)
 
 build 1305
 

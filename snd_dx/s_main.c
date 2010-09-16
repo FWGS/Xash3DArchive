@@ -20,14 +20,12 @@ int   		paintedtime; 	// sample PAIRS
 
 cvar_t		*s_check_errors;
 cvar_t		*s_volume;
-cvar_t		*s_suitvolume;	// game.dll requires this
 cvar_t		*s_musicvolume;
-cvar_t		*s_khz;
 cvar_t		*s_show;
 cvar_t		*s_mixahead;
 cvar_t		*s_primary;
-cvar_t		*s_allowEAX;
-cvar_t		*s_allowA3D;
+cvar_t		*s_lerping;
+cvar_t		*dsp_off;		// set to 1 to disable all dsp processing
 
 /*
 =============================================================================
@@ -93,6 +91,7 @@ void S_FreeChannel( channel_t *ch )
 	ch->use_loop = false;
 	ch->isSentence = false;
 
+	// clear mixer
 	Mem_Set( &ch->pMixer, 0, sizeof( ch->pMixer ));
 
 	SND_CloseMouth( ch );
@@ -366,16 +365,8 @@ void SND_Spatialize( channel_t *ch )
 	dist = VectorNormalizeLength( source_vec ) * ch->dist_mult;
 	dot = DotProduct( s_listener.right, source_vec );
 
-	if( dma.channels == 1 )
-	{
-		rscale = 1.0f;
-		lscale = 1.0f;
-	}
-	else
-	{
-		rscale = 1.0f + dot;
-		lscale = 1.0f - dot;
-	}
+	rscale = 1.0f + dot;
+	lscale = 1.0f - dot;
 
 	// add in distance effect
 	scale = ( 1.0f - dist ) * rscale;
@@ -634,17 +625,13 @@ S_ClearBuffer
 */
 void S_ClearBuffer( void )
 {
-	int	clear;
-		
 	s_rawend = 0;
 
-	if( dma.samplebits == 8 )
-		clear = 0x80;
-	else clear = 0;
-
 	SNDDMA_BeginPainting ();
-	if( dma.buffer ) Mem_Set( dma.buffer, clear, dma.samples * dma.samplebits / 8 );
+	if( dma.buffer ) Mem_Set( dma.buffer, 0, dma.samples * 2 );
 	SNDDMA_Submit ();
+
+	MIX_ClearAllPaintBuffers( PAINTBUFFER_SIZE, true );
 }
 
 /*
@@ -679,13 +666,13 @@ void S_StopAllSounds( void )
 		S_FreeChannel( &channels[i] );
 	}
 
-	// clear any remaining soundfade
-	Mem_Set( &soundfade, 0, sizeof( soundfade ));
-	s_volume->modified = true; // rebuild scaletable
-
 	// clear all the channels
 	Mem_Set( channels, 0, sizeof( channels ));
+
 	S_ClearBuffer ();
+
+	// clear any remaining soundfade
+	Mem_Set( &soundfade, 0, sizeof( soundfade ));
 }
 
 //=============================================================================
@@ -700,19 +687,37 @@ void S_UpdateChannels( void )
 
 	// updates DMA time
 	soundtime = SNDDMA_GetSoundtime();
-
+#if 0
 	// check to make sure that we haven't overshot
 	if( paintedtime < soundtime ) paintedtime = soundtime;
 
 	// mix ahead of current position
-	endtime = soundtime + s_mixahead->value * dma.speed;
+	endtime = soundtime + s_mixahead->value * SOUND_DMA_SPEED;
 
 	// mix to an even submission block size
 	endtime = (endtime + dma.submission_chunk - 1) & ~(dma.submission_chunk - 1);
-	samps = dma.samples >> (dma.channels - 1);
+	samps = dma.samples >> 1;
 	if( endtime - soundtime > samps ) endtime = soundtime + samps;
+#else
+	// soundtime - total samples that have been played out to hardware at dmaspeed
+	// paintedtime - total samples that have been mixed at speed
+	// endtime - target for samples in mixahead buffer at speed
+	endtime = soundtime + s_mixahead->value * SOUND_DMA_SPEED;
+	samps = dma.samples >> 1;
 
-	S_PaintChannels( endtime );
+	if((int)( endtime - soundtime ) > samps )
+		endtime = soundtime + samps;
+	
+	if(( endtime - paintedtime ) & 0x3 )
+	{
+		// The difference between endtime and painted time should align on 
+		// boundaries of 4 samples. This is important when upsampling from 11khz -> 44khz.
+		endtime -= ( endtime - paintedtime ) & 0x3;
+	}
+#endif
+
+	MIX_PaintChannels( endtime );
+
 	SNDDMA_Submit();
 }
 
@@ -760,10 +765,6 @@ void S_RenderFrame( ref_params_t *fd )
 	VectorCopy( fd->forward, s_listener.forward );
 	VectorCopy( fd->right, s_listener.right );
 	VectorCopy( fd->up, s_listener.up );
-
-	// rebuild scale tables if volume is modified
-	if( s_volume->modified || soundfade.percent != 0 )
-		S_InitScaletable();
 
 	// update spatialization for static and dynamic sounds	
 	for( i = 0, ch = channels; i < total_channels; i++, ch++ )
@@ -818,8 +819,44 @@ void S_Music_f( void )
 {
 	int	c = Cmd_Argc();
 
-	if( c == 2 ) S_StartBackgroundTrack( Cmd_Argv(1), Cmd_Argv(1) );
-	else if( c == 3 ) S_StartBackgroundTrack( Cmd_Argv(1), Cmd_Argv(2) );
+	// run background track
+	if( c == 1 )
+	{
+		// blank name stopped last track
+		S_StopBackgroundTrack();
+	}
+	else if( c == 2 )
+	{
+		string	intro, main, track;
+		char	*ext[] = { "wav", "ogg" };
+		int	i;
+
+		com.strncpy( track, Cmd_Argv( 1 ), sizeof( track ));
+		com.snprintf( intro, sizeof( intro ), "%s_intro", Cmd_Argv( 1 ));
+		com.snprintf( main, sizeof( main ), "%s_main", Cmd_Argv( 1 ));
+
+		for( i = 0; i < 2; i++ )
+		{
+			if( FS_FileExists( va( "media/%s.%s", intro, ext[i] ))
+				&& FS_FileExists( va( "media/%s.%s", main, ext[i] )))
+			{
+				// combined track with introduction and main loop theme
+				S_StartBackgroundTrack( intro, main );
+				break;
+			}
+			else if( FS_FileExists( va( "media/%s.%s", track, ext[i] )))
+			{
+				// single looped theme
+				S_StartBackgroundTrack( track, track );
+				break;
+			}
+		}
+
+	}
+	else if( c == 3 )
+	{
+		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ));
+	}
 	else Msg( "Usage: music <musicfile> [loopfile]\n" );
 }
 
@@ -841,15 +878,12 @@ S_SoundInfo_f
 void S_SoundInfo_f( void )
 {
 	S_PrintDeviceName();
-	Msg( "%5d channel(s)\n", dma.channels );
+
+	Msg( "%5d channel(s)\n", 2 );
 	Msg( "%5d samples\n", dma.samples );
-	Msg( "%5d bits/sample\n", dma.samplebits );
-	Msg( "%5d bytes/sec\n", dma.speed );
+	Msg( "%5d bits/sample\n", 16 );
+	Msg( "%5d bytes/sec\n", SOUND_DMA_SPEED );
 	Msg( "%5d total_channels\n", total_channels );
-	
-	MsgDev( D_NOTE, "%5d samplepos\n", dma.samplepos );
-	MsgDev( D_NOTE, "%5d submission_chunk\n", dma.submission_chunk );
-	MsgDev( D_NOTE, "0x%x dma buffer\n", dma.buffer );
 }
 
 /*
@@ -862,15 +896,13 @@ bool S_Init( void *hInst )
 	Cmd_ExecuteString( "sndlatch\n" );
 
 	s_volume = Cvar_Get( "volume", "0.7", CVAR_ARCHIVE, "sound volume" );
-	s_suitvolume = Cvar_Get( "suitvolume", "0.5", CVAR_ARCHIVE, "HEV suit volume" );
 	s_musicvolume = Cvar_Get( "musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
-	s_khz = Cvar_Get( "s_khz", "22", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "output sound frequency" );
 	s_mixahead = Cvar_Get( "s_mixahead", "0.1", 0, "how much sound to mix ahead of time" );
 	s_show = Cvar_Get( "s_show", "0", 0, "show playing sounds" );
 	s_primary = Cvar_Get( "s_primary", "0", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "use direct primary buffer" ); 
 	s_check_errors = Cvar_Get( "s_check_errors", "1", CVAR_ARCHIVE, "ignore audio engine errors" );
-	s_allowEAX = Cvar_Get("s_allowEAX", "1", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "allow EAX 2.0 extension" );
-	s_allowA3D = Cvar_Get("s_allowA3D", "1", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "allow A3D 2.0 extension" );
+	s_lerping = Cvar_Get( "s_lerping", "0", CVAR_ARCHIVE, "apply interpolation to sound output" );
+	dsp_off = Cvar_Get( "dsp_off", "0", CVAR_ARCHIVE, "set to 1 to disable all dsp processing" );
 
 	Cmd_AddCommand( "play", S_Play_f, "playing a specified sound file" );
 	Cmd_AddCommand( "stopsound", S_StopSound_f, "stop all sounds" );
@@ -888,10 +920,12 @@ bool S_Init( void *hInst )
 	soundtime = 0;
 	paintedtime = 0;
 
+	MIX_InitAllPaintbuffers ();
+
 	S_InitScaletable ();
 	S_StopAllSounds ();
 	VOX_Init ();
-	SX_Init ();
+	AllocDsps ();
 
 	return true;
 }
@@ -910,8 +944,9 @@ void S_Shutdown( void )
 	S_StopAllSounds ();
 	S_FreeSounds ();
 	VOX_Shutdown ();
-	SX_Free ();
+	FreeDsps ();
 
 	SNDDMA_Shutdown ();
+	MIX_FreeAllPaintbuffers ();
 	Mem_FreePool( &sndpool );
 }

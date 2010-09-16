@@ -32,8 +32,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_SOUNDLIBRARY		4
 #define ID_SOUNDVOLUME		5
 #define ID_MUSICVOLUME		6
-#define ID_EAX			7
-#define ID_A3D			8
+#define ID_INTERP			7
+#define ID_NODSP			8
 #define ID_MSGHINT			9
 
 typedef struct
@@ -41,8 +41,6 @@ typedef struct
 	int		soundLibrary;
 	float		soundVolume;
 	float		musicVolume;
-	int		enableEAX;
-	int		enableA3D;
 } uiAudioValues_t;
 
 static uiAudioValues_t	uiAudioInitial;
@@ -63,8 +61,8 @@ typedef struct
 	menuSpinControl_s	soundLibrary;
 	menuSlider_s	soundVolume;
 	menuSlider_s	musicVolume;
-	menuCheckBox_s	EAX;
-	menuCheckBox_s	A3D;
+	menuCheckBox_s	lerping;
+	menuCheckBox_s	noDSP;
 
 	menuAction_s	hintMessage;
 	char		hintText[MAX_HINT_TEXT];
@@ -103,18 +101,16 @@ static void UI_Audio_GetConfig( void )
 	uiAudio.soundVolume.curValue = CVAR_GET_FLOAT( "volume" );
 	uiAudio.musicVolume.curValue = CVAR_GET_FLOAT( "musicvolume" );
 
-	if( CVAR_GET_FLOAT( "s_allowEAX" ))
-		uiAudio.EAX.enabled = 1;
+	if( CVAR_GET_FLOAT( "s_lerping" ))
+		uiAudio.lerping.enabled = 1;
 
-	if( CVAR_GET_FLOAT( "s_allowA3D" ))
-		uiAudio.A3D.enabled = 1;
+	if( CVAR_GET_FLOAT( "dsp_off" ))
+		uiAudio.noDSP.enabled = 1;
 
 	// save initial values
 	uiAudioInitial.soundLibrary = uiAudio.soundLibrary.curValue;
 	uiAudioInitial.soundVolume = uiAudio.soundVolume.curValue;
 	uiAudioInitial.musicVolume = uiAudio.musicVolume.curValue;
-	uiAudioInitial.enableEAX = uiAudio.EAX.enabled;
-	uiAudioInitial.enableA3D = uiAudio.A3D.enabled;
 }
 
 /*
@@ -126,8 +122,8 @@ static void UI_Audio_SetConfig( void )
 {
 	CVAR_SET_FLOAT( "volume", uiAudio.soundVolume.curValue );
 	CVAR_SET_FLOAT( "musicvolume", uiAudio.musicVolume.curValue );
-	CVAR_SET_FLOAT( "s_allowEAX", uiAudio.EAX.enabled );
-	CVAR_SET_FLOAT( "s_allowA3D", uiAudio.A3D.enabled );
+	CVAR_SET_FLOAT( "s_lerping", uiAudio.lerping.enabled );
+	CVAR_SET_FLOAT( "dsp_off", uiAudio.noDSP.enabled );
 
 	CHANGE_AUDIO( uiAudio.audioList[(int)uiAudio.soundLibrary.curValue] );
 }
@@ -143,23 +139,13 @@ static void UI_Audio_UpdateConfig( void )
 
 	CVAR_SET_FLOAT( "volume", uiAudio.soundVolume.curValue );
 	CVAR_SET_FLOAT( "musicvolume", uiAudio.musicVolume.curValue );
+	CVAR_SET_FLOAT( "s_lerping", uiAudio.lerping.enabled );
+	CVAR_SET_FLOAT( "dsp_off", uiAudio.noDSP.enabled );
 
 	// See if the apply button should be enabled or disabled
 	uiAudio.apply.generic.flags |= QMF_GRAYED;
 
 	if( uiAudioInitial.soundLibrary != uiAudio.soundLibrary.curValue )
-	{
-		uiAudio.apply.generic.flags &= ~QMF_GRAYED;
-		return;
-	}
-
-	if( uiAudioInitial.enableEAX != uiAudio.EAX.enabled )
-	{
-		uiAudio.apply.generic.flags &= ~QMF_GRAYED;
-		return;
-	}
-
-	if( uiAudioInitial.enableA3D != uiAudio.A3D.enabled )
 	{
 		uiAudio.apply.generic.flags &= ~QMF_GRAYED;
 		return;
@@ -177,8 +163,8 @@ static void UI_Audio_Callback( void *self, int event )
 
 	switch( item->id )
 	{
-	case ID_EAX:
-	case ID_A3D:
+	case ID_INTERP:
+	case ID_NODSP:
 		if( event == QM_PRESSED )
 			((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_PRESSED;
 		else ((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_FOCUS;
@@ -300,23 +286,23 @@ static void UI_Audio_Init( void )
 	uiAudio.musicVolume.maxValue = 1.0;
 	uiAudio.musicVolume.range = 0.05f;
 
-	uiAudio.EAX.generic.id = ID_EAX;
-	uiAudio.EAX.generic.type = QMTYPE_CHECKBOX;
-	uiAudio.EAX.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
-	uiAudio.EAX.generic.name = "Enable EAX 2.0 support";
-	uiAudio.EAX.generic.x = 320;
-	uiAudio.EAX.generic.y = 370;
-	uiAudio.EAX.generic.callback = UI_Audio_Callback;
-	uiAudio.EAX.generic.statusText = "enable/disable Environmental Audio eXtensions";
+	uiAudio.lerping.generic.id = ID_INTERP;
+	uiAudio.lerping.generic.type = QMTYPE_CHECKBOX;
+	uiAudio.lerping.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
+	uiAudio.lerping.generic.name = "Enable sound interpolation";
+	uiAudio.lerping.generic.x = 320;
+	uiAudio.lerping.generic.y = 370;
+	uiAudio.lerping.generic.callback = UI_Audio_Callback;
+	uiAudio.lerping.generic.statusText = "enable/disable interpolation on sound output";
 
-	uiAudio.A3D.generic.id = ID_A3D;
-	uiAudio.A3D.generic.type = QMTYPE_CHECKBOX;
-	uiAudio.A3D.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_GRAYED|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
-	uiAudio.A3D.generic.name = "Enable A3D 2.0 support";
-	uiAudio.A3D.generic.x = 320;
-	uiAudio.A3D.generic.y = 420;
-	uiAudio.A3D.generic.callback = UI_Audio_Callback;
-	uiAudio.A3D.generic.statusText = "enable/disable Aureal Audio 3D environment sound";
+	uiAudio.noDSP.generic.id = ID_NODSP;
+	uiAudio.noDSP.generic.type = QMTYPE_CHECKBOX;
+	uiAudio.noDSP.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
+	uiAudio.noDSP.generic.name = "Disable DSP effects";
+	uiAudio.noDSP.generic.x = 320;
+	uiAudio.noDSP.generic.y = 420;
+	uiAudio.noDSP.generic.callback = UI_Audio_Callback;
+	uiAudio.noDSP.generic.statusText = "this disables sound processing (like echo, flanger etc)";
 
 	UI_Audio_GetConfig();
 
@@ -328,8 +314,8 @@ static void UI_Audio_Init( void )
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.soundLibrary );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.soundVolume );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.musicVolume );
-	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.EAX );
-	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.A3D );
+	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.lerping );
+	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.noDSP );
 }
 
 /*

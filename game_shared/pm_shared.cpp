@@ -2800,13 +2800,15 @@ void PM_CheckParamters( void )
 		pmove->cmd.upmove      *= fRatio;
 	}
 
-	if ( pmove->flags & FL_FROZEN ||
-		 pmove->flags & FL_ONTRAIN || 
-		 pmove->dead )
+	if ( pmove->flags & FL_FROZEN || pmove->flags & FL_ONTRAIN || pmove->dead )
 	{
 		pmove->cmd.forwardmove = 0;
 		pmove->cmd.sidemove    = 0;
 		pmove->cmd.upmove      = 0;
+
+		// clearing IN_JUMP flag when frozen
+		if( pmove->flags & FL_FROZEN )
+			pmove->cmd.buttons     = 0;
 	}
 
 

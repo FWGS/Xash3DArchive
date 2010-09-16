@@ -3,7 +3,19 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "bshift"=".\dlls\hl.dsp" - Package Owner=<4>
+Project: "hl"=".\dlls\hl.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "bshift"=".\dlls\bshift.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

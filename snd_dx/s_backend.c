@@ -18,6 +18,8 @@ static dllfunc_t dsound_funcs[] =
 
 dll_info_t dsound_dll = { "dsound.dll", dsound_funcs, NULL, NULL, NULL, false, 0, 0 };
 
+#define SAMPLE_16BIT_SHIFT		1
+
 // 64K is > 1 second at 16-bit, 22050 Hz
 #define WAV_BUFFERS			64
 #define WAV_MASK			0x3F
@@ -41,7 +43,6 @@ static bool	snd_isdirect, snd_iswave;
 static bool	primary_format_set;
 static int	snd_buffer_count = 0;
 static int	snd_sent, snd_completed;
-static int	sample16;
 
 /* 
 =======================================================================
@@ -95,9 +96,9 @@ static bool DS_CreateBuffers( void *hInst )
 	Mem_Set( &format, 0, sizeof( format ));
 
 	format.wFormatTag = WAVE_FORMAT_PCM;
-	format.nChannels = dma.channels;
-	format.wBitsPerSample = dma.samplebits;
-	format.nSamplesPerSec = dma.speed;
+	format.nChannels = 2;
+	format.wBitsPerSample = 16;
+	format.nSamplesPerSec = SOUND_DMA_SPEED;
 	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
 	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign; 
 	format.cbSize = 0;
@@ -177,10 +178,6 @@ static bool DS_CreateBuffers( void *hInst )
 			MsgDev( D_INFO, "- failed. forced to software\n" );
 		}
 
-		dma.channels = format.nChannels;
-		dma.samplebits = format.wBitsPerSample;
-		dma.speed = format.nSamplesPerSec;
-
 		if( pDSBuf->lpVtbl->GetCaps( pDSBuf, &dsbcaps ) != DS_OK )
 		{
 			MsgDev( D_ERROR, "DS_CreateBuffers: GetCaps failed\n");
@@ -223,13 +220,11 @@ static bool DS_CreateBuffers( void *hInst )
 	dma.samplepos = 0;
 	snd_hwnd = (HWND)hInst;
 	gSndBufSize = dsbcaps.dwBufferBytes;
-	dma.samples = gSndBufSize / (dma.samplebits / 8 );
-	dma.submission_chunk = 1;
+	dma.samples = gSndBufSize / 2;
 	dma.buffer = (byte *)lpData;
-	sample16 = (dma.samplebits / 8) - 1;
 
 	SNDDMA_BeginPainting();
-	if( dma.buffer ) Mem_Set( dma.buffer, 0, dma.samples * dma.samplebits / 8 );
+	if( dma.buffer ) Mem_Set( dma.buffer, 0, dma.samples * 2 );
 	SNDDMA_Submit();
 
 	return true;
@@ -335,16 +330,6 @@ si_state_t SNDDMA_InitDirect( void *hInst )
 	DSCAPS	dscaps;
 	HRESULT	hresult;
 
-	dma.channels = 2;
-	dma.samplebits = 16;
-
-	switch( s_khz->integer )
-	{
-	case 44: dma.speed = 44100; break;
-	case 22: dma.speed = 22050; break;
-	default: dma.speed = 11025; break;
-	}
-
 	if( !dsound_dll.link )
 	{
 		if( !Sys_LoadLibrary( NULL, &dsound_dll ))
@@ -402,21 +387,11 @@ si_state_t SNDDMA_InitWav( void )
 	snd_sent = 0;
 	snd_completed = 0;
 
-	dma.channels = 2;
-	dma.samplebits = 16;
-
-	switch( s_khz->integer )
-	{
-	case 44: dma.speed = 44100; break;
-	case 22: dma.speed = 22050; break;
-	default: dma.speed = 11025; break;
-	}
-
 	Mem_Set( &format, 0, sizeof( format ));
 	format.wFormatTag = WAVE_FORMAT_PCM;
-	format.nChannels = dma.channels;
-	format.wBitsPerSample = dma.samplebits;
-	format.nSamplesPerSec = dma.speed;
+	format.nChannels = 2;
+	format.wBitsPerSample = 16;
+	format.nSamplesPerSec = SOUND_DMA_SPEED;
 	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
 	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign; 
 	format.cbSize = 0;	
@@ -493,10 +468,8 @@ si_state_t SNDDMA_InitWav( void )
 	}
 
 	dma.samplepos = 0;
-	dma.samples = gSndBufSize / ( dma.samplebits / 8 );
-	dma.submission_chunk = 512;
+	dma.samples = gSndBufSize / 2;
 	dma.buffer = (byte *)lpData;
-	sample16 = (dma.samplebits / 8) - 1;
 	wav_init = true;
 
 	return SIS_SUCCESS;
@@ -598,7 +571,7 @@ int SNDDMA_GetDMAPos( void )
 	}
 
 
-	s >>= sample16;
+	s >>= SAMPLE_16BIT_SHIFT;
 	s &= (dma.samples - 1);
 
 	return s;
@@ -616,7 +589,7 @@ int SNDDMA_GetSoundtime( void )
 	static int	buffers, oldsamplepos;
 	int		samplepos, fullsamples;
 	
-	fullsamples = dma.samples / dma.channels;
+	fullsamples = dma.samples / 2;
 
 	// it is possible to miscount buffers
 	// if it has wrapped twice between
@@ -637,7 +610,7 @@ int SNDDMA_GetSoundtime( void )
 	}
 	oldsamplepos = samplepos;
 
-	return (buffers * fullsamples + samplepos / dma.channels);
+	return (buffers * fullsamples + samplepos / 2);
 }
 
 /*
@@ -719,7 +692,7 @@ void SNDDMA_Submit( void )
 	}
 
 	// submit a few new sound blocks
-	while((( snd_sent - snd_completed ) >> sample16 ) < 8 )
+	while((( snd_sent - snd_completed ) >> SAMPLE_16BIT_SHIFT ) < 8 )
 	{
 		h = lpWaveHdr + ( snd_sent & WAV_MASK );
 

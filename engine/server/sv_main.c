@@ -600,6 +600,7 @@ void SV_Init( void )
 	Cvar_Get ("lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );
 	Cvar_Get ("motdfile", "motd.txt", 0, "name of 'message of the day' file" );
 	Cvar_Get ("sv_language", "0", 0, "game language (currently unused)" );
+	Cvar_Get ("suitvolume", "0.25", CVAR_ARCHIVE, "HEV suit volume" );
 	
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "0", CVAR_PHYSICINFO, "zfar server value" );

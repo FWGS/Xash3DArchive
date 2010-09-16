@@ -8,6 +8,14 @@
 #include "client.h"
 
 #define WM_MOUSEWHEEL	( WM_MOUSELAST + 1 )	// message that will be supported by the OS
+#define MK_XBUTTON1		0x0020
+#define MK_XBUTTON2		0x0040
+#define MK_XBUTTON3		0x0080
+#define MK_XBUTTON4		0x0100
+#define MK_XBUTTON5		0x0200
+#define WM_XBUTTONUP	0x020C
+#define WM_XBUTTONDOWN	0x020B
+
 #define WND_HEADSIZE	wnd_caption		// some offset
 #define WND_BORDER		3			// sentinel border in pixels
 
@@ -42,6 +50,19 @@ static byte scan_to_key[128] =
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
 
+// extra mouse buttons
+static int mouse_buttons[] =
+{
+	MK_LBUTTON,
+	MK_RBUTTON,
+	MK_MBUTTON,
+	MK_XBUTTON1,
+	MK_XBUTTON2,
+	MK_XBUTTON3,
+	MK_XBUTTON4,
+	MK_XBUTTON5
+};
+	
 /*
 =======
 Host_MapKey
@@ -102,7 +123,7 @@ void IN_StartupMouse( void )
 	if( host.type == HOST_DEDICATED ) return;
 	if( FS_CheckParm( "-nomouse" )) return; 
 
-	in_mouse_buttons = 3;
+	in_mouse_buttons = 8;
 	in_mouseparmsvalid = SystemParametersInfo( SPI_GETMOUSE, 0, in_originalmouseparms, 0 );
 	in_mouseinitialized = true;
 	in_mouse_wheel = RegisterWindowMessage( "MSWHEEL_ROLLMSG" );
@@ -372,7 +393,7 @@ main window procedure
 */
 long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 {
-	int	 temp = 0;
+	int	i, temp = 0;
 
 	if( uMsg == in_mouse_wheel )
 		uMsg = WM_MOUSEWHEEL;
@@ -454,10 +475,14 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 	case WM_RBUTTONUP:
 	case WM_MBUTTONDOWN:
 	case WM_MBUTTONUP:
+	case WM_XBUTTONDOWN:
+	case WM_XBUTTONUP:
 	case WM_MOUSEMOVE:
-		if( wParam & MK_LBUTTON ) temp |= 1;
-		if( wParam & MK_RBUTTON ) temp |= 2;
-		if( wParam & MK_MBUTTON ) temp |= 4;
+		for( i = 0; i < in_mouse_buttons; i++ )
+		{
+			if( wParam & mouse_buttons[i] )
+				temp |= (1<<i);
+		}
 		IN_MouseEvent( temp );
 		break;
 	case WM_SYSCOMMAND:
