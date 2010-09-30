@@ -66,6 +66,8 @@ typedef struct vsound_imp_s
 	bool (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
 	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
 	struct cl_entity_s *(*GetClientEdict)( int index );
+	long (*GetAudioChunk)( char *rawdata, long length );		// movie soundtrack update
+	wavdata_t *(*GetMovieInfo)( void );				// params for soundtrack
 	float (*GetServerTime)( void );
 	bool (*IsInMenu)( void );	// returns true when client is in-menu
 	bool (*IsActive)( void );	// returns true when client is completely in-game

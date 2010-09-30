@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386 /opt:nowin98
-# ADD LINK32 user32.lib msvcrt.lib /nologo /subsystem:windows /dll /pdb:none /machine:I386 /nodefaultlib:"libc.lib" /opt:nowin98
+# ADD LINK32 user32.lib msvcrt.lib vfw32.lib msacm32.lib gdi32.lib /nologo /subsystem:windows /dll /pdb:none /machine:I386 /nodefaultlib:"libc.lib" /opt:nowin98
 # SUBTRACT LINK32 /debug /nodefaultlib
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\engine\!release
@@ -91,7 +91,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386
-# ADD LINK32 user32.lib msvcrtd.lib /nologo /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"msvcrt.lib" /pdbtype:sept
+# ADD LINK32 user32.lib msvcrtd.lib vfw32.lib msacm32.lib gdi32.lib /nologo /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"msvcrt.lib" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no /map /nodefaultlib
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\engine\!debug
@@ -239,6 +239,10 @@ SOURCE=.\common\input.c
 # Begin Source File
 
 SOURCE=.\common\keys.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\movie.c
 # End Source File
 # Begin Source File
 

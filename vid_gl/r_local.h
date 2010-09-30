@@ -529,7 +529,7 @@ void		R_ShutdownOcclusionQueries( void );
 void R_Set2DMode( bool enable );
 void R_DrawSetColor( const void *data );
 void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, shader_t shadernum );
-void R_DrawStretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *data, bool redraw );
+void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, bool redraw );
 void R_DrawSetParms( shader_t handle, kRenderMode_t rendermode, int frame );
 void R_DrawGetParms( int *w, int *h, int *f, int frame, shader_t shader );
 void Tri_RenderMode( const kRenderMode_t mode );

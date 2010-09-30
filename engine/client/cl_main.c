@@ -715,7 +715,7 @@ void CL_Reconnect_f( void )
 
 	if( cls.state == ca_connected )
 	{
-		cls.demonum = -1;	// not in the demo loop now
+		cls.demonum = cls.movienum = -1;	// not in the demo loop now
 		cls.state = ca_connected;
 		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
 		BF_WriteString( &cls.netchan.message, "new" );
@@ -731,7 +731,7 @@ void CL_Reconnect_f( void )
 		}
 		else cls.connect_time = MAX_HEARTBEAT; // fire immediately
 
-		cls.demonum = -1;	// not in the demo loop now
+		cls.demonum = cls.movienum = -1;	// not in the demo loop now
 		cls.state = ca_connecting;
 		Msg( "reconnecting...\n" );
 	}
@@ -1281,6 +1281,7 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("startdemos", CL_StartDemos_f, "start playing back the selected demos sequentially" );
 	Cmd_AddCommand ("demos", CL_Demos_f, "restart looping demos defined by the last startdemos command" );
 	Cmd_AddCommand ("movie", CL_PlayVideo_f, "playing a movie" );
+	Cmd_AddCommand ("startmovies", SCR_StartMovies_f, "start playing back the selected movies sequentially" );
 	Cmd_AddCommand ("stop", CL_Stop_f, "stop playing or recording a demo" );
 	Cmd_AddCommand ("info", NULL, "collect info about local servers with specified protocol" );
 	Cmd_AddCommand ("escape", CL_Escape_f, "escape from game to menu" );

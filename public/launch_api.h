@@ -529,6 +529,7 @@ typedef struct stdilib_api_s
 	long (*Com_FileTime)( const char *filename, bool gamedir );	// same as Com_FileExists but return filetime
 	const char *(*Com_FileExtension)( const char *in );	// return extension of file
 	const char *(*Com_RemovePath)( const char *in );		// return filename without path
+	const char *(*Com_DiskPath)( const char *in, bool gamedir );// return disk path for unpacked files
 	void (*Com_StripExtension)(char *path);			// remove extension if present
 	void (*Com_StripFilePath)(const char* const src, char* dst);// get file path without filename.ext
 	void (*Com_DefaultExtension)(char *path, const char *ext );	// append extension if not present
@@ -808,6 +809,7 @@ filesystem manager
 #define FS_FileExists( file )		com.Com_FileExists( file, false )
 #define FS_FileSize( file )		com.Com_FileSize( file, false )
 #define FS_FileTime( file )		com.Com_FileTime( file, false )
+#define FS_GetDiskPath( file )	com.Com_DiskPath( file, false )
 #define FS_FileExistsEx		com.Com_FileExists
 #define FS_FileSizeEx		com.Com_FileSize
 #define FS_FileTimeEx		com.Com_FileTime

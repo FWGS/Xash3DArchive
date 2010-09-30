@@ -16,6 +16,7 @@
 #include "world.h"
 
 #define MAX_DEMOS		32
+#define MAX_MOVIES		8
 
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
@@ -196,6 +197,7 @@ typedef struct
 	HSPRITE		hCrosshair;
 	wrect_t		rcCrosshair;
 	rgba_t		rgbaCrosshair;
+	byte		gammaTable[256];
 } draw_stuff_t;
 
 typedef struct
@@ -260,6 +262,9 @@ typedef struct
 	GAMEINFO		*modsInfo[MAX_MODS];	// simplified gameInfo for GameUI
 
 	ui_globalvars_t	*globals;
+	bool		drawLogo;			// set to TRUE if logo.avi missed or corrupted
+	long		logo_xres;
+	long		logo_yres;
 } gameui_static_t;
 
 typedef struct
@@ -306,6 +311,10 @@ typedef struct
 	// demo loop control
 	int		demonum;			// -1 = don't play demos
 	string		demos[MAX_DEMOS];		// when not playing
+
+	// movie playlist
+	int		movienum;
+	string		movies[MAX_MOVIES];
 
 	// demo recording info must be here, so it isn't clearing on level change
 	bool		demorecording;
@@ -537,10 +546,12 @@ bool UI_IsVisible( void );
 // cl_video.c
 //
 void SCR_InitCinematic( void );
+void SCR_FreeCinematic( void );
 bool SCR_PlayCinematic( const char *name );
 bool SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
+void SCR_StartMovies_f( void );
 void CL_PlayVideo_f( void );
 
 //

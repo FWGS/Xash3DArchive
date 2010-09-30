@@ -21,6 +21,10 @@
 #define GetScreenInfo	(*g_engfuncs.pfnGetScreenInfo)
 #define GetGameInfo		(*g_engfuncs.pfnGetGameInfo)
 
+#define DRAW_LOGO		(*g_engfuncs.pfnDrawLogo)
+#define GetLogoWidth	(*g_engfuncs.pfnGetLogoWidth)
+#define GetLogoHeight	(*g_engfuncs.pfnGetLogoHeight)
+
 #define PIC_Load		(*g_engfuncs.pfnPIC_Load)
 #define PIC_Free		(*g_engfuncs.pfnPIC_Free)
 #define PLAY_SOUND		(*g_engfuncs.pfnPlayLocalSound)

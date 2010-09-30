@@ -687,18 +687,7 @@ void S_UpdateChannels( void )
 
 	// updates DMA time
 	soundtime = SNDDMA_GetSoundtime();
-#if 0
-	// check to make sure that we haven't overshot
-	if( paintedtime < soundtime ) paintedtime = soundtime;
 
-	// mix ahead of current position
-	endtime = soundtime + s_mixahead->value * SOUND_DMA_SPEED;
-
-	// mix to an even submission block size
-	endtime = (endtime + dma.submission_chunk - 1) & ~(dma.submission_chunk - 1);
-	samps = dma.samples >> 1;
-	if( endtime - soundtime > samps ) endtime = soundtime + samps;
-#else
 	// soundtime - total samples that have been played out to hardware at dmaspeed
 	// paintedtime - total samples that have been mixed at speed
 	// endtime - target for samples in mixahead buffer at speed
@@ -714,7 +703,6 @@ void S_UpdateChannels( void )
 		// boundaries of 4 samples. This is important when upsampling from 11khz -> 44khz.
 		endtime -= ( endtime - paintedtime ) & 0x3;
 	}
-#endif
 
 	MIX_PaintChannels( endtime );
 
@@ -788,6 +776,7 @@ void S_RenderFrame( ref_params_t *fd )
 	}
 
 	S_StreamBackgroundTrack ();
+	S_StreamSoundTrack ();
 
 	// mix some sound
 	S_UpdateChannels ();

@@ -2893,6 +2893,25 @@ bool FS_FileExists( const char *filename, bool gamedironly )
 	return false;
 }
 
+const char *FS_GetDiskPath( const char *name, bool gamedironly )
+{
+	int		index;
+	searchpath_t	*search;
+	
+	search = FS_FindFile( name, &index, gamedironly );
+
+	if( search )
+	{
+		if( index != -1 )
+		{
+			// file in pack or wad
+			return NULL;
+		}
+		return va( "%s%s", search->filename, name );
+	}
+	return NULL;
+}
+
 /*
 ==================
 FS_FindLibrary

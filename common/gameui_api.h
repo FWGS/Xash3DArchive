@@ -68,6 +68,11 @@ typedef struct ui_enginefuncs_s
 	// sound handlers
 	void	(*pfnPlayLocalSound)( const char *szSound );
 
+	// cinematic handlers
+	void	(*pfnDrawLogo)( const char *filename, float x, float y, float width, float height );
+	int	(*pfnGetLogoWidth)( void );
+	int	(*pfnGetLogoHeight)( void );
+
 	// text message system
 	void	(*pfnDrawCharacter)( int x, int y, int width, int height, int ch, int ulRGBA, HIMAGE hFont );
 	int	(*pfnDrawConsoleString)( int x, int y, const char *string );

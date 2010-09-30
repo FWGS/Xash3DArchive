@@ -310,6 +310,7 @@ const char *FS_FileExtension( const char *in );
 void FS_DefaultExtension( char *path, const char *extension );
 bool FS_GetParmFromCmdLine( char *parm, char *out, size_t size );
 void FS_ExtractFilePath( const char* const path, char* dest );
+const char *FS_GetDiskPath( const char *name, bool gamedironly );
 void FS_UpdateEnvironmentVariables( void );
 const char *FS_FileWithoutPath( const char *in );
 extern char sys_rootdir[];

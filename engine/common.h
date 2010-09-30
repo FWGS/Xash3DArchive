@@ -29,6 +29,9 @@
 #define MAX_ENTNUMBER	99999		// for server and client parsing
 #define MAX_HEARTBEAT	-99999		// connection time
 
+#define CIN_MAIN		0
+#define CIN_LOGO		1
+
 #ifdef _DEBUG
 void DBG_AssertFunction( bool fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
 #define Assert( f )		DBG_AssertFunction( f, #f, __FILE__, __LINE__, NULL )
@@ -235,6 +238,20 @@ void CIN_Init( void );
 void CIN_ReadChunk( cinematics_t *cin );
 byte *CIN_ReadNextFrame( cinematics_t *cin, bool silent );
 
+//
+// movie.c
+//
+typedef struct movie_state_s	movie_state_t;
+long AVI_GetVideoFrameNumber( movie_state_t *Avi, float time );
+void AVI_GetVideoFrame( movie_state_t *Avi, char *framedata, long frame );
+bool AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration );
+bool AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info );
+fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length );
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, bool ignore_hwgamma );
+void AVI_CloseVideo( movie_state_t *Avi );
+bool AVI_IsActive( movie_state_t *Avi );
+movie_state_t *AVI_GetState( int num );
+
 // shared calls
 bool CL_IsInGame( void );
 bool CL_IsInMenu( void );
@@ -268,6 +285,8 @@ void CL_ForceVid( void );
 void CL_ForceSnd( void );
 void SCR_Init( void );
 void SCR_UpdateScreen( void );
+long SCR_GetAudioChunk( char *rawdata, long length );
+wavdata_t *SCR_GetMovieInfo( void );
 void SCR_Shutdown( void );
 void Con_Print( const char *txt );
 void Con_NPrintf( int idx, char *fmt, ... );

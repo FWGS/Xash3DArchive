@@ -29,8 +29,18 @@ void UI_MouseMove( int x, int y )
 
 void UI_SetActiveMenu( bool fActive )
 {
+	movie_state_t	*cin_state;
+
 	if( !gameui.hInstance ) return;
 	gameui.dllFuncs.pfnSetActiveMenu( fActive );
+	gameui.drawLogo = fActive;
+
+	if( !fActive )
+	{
+		// close logo when menu is shutdown
+		cin_state = AVI_GetState( CIN_LOGO );
+		AVI_CloseVideo( cin_state );
+	}
 }
 
 void UI_AddServerToList( netadr_t adr, const char *info )
@@ -81,6 +91,80 @@ bool UI_IsVisible( void )
 	return gameui.dllFuncs.pfnIsVisible();
 }
 
+static void UI_DrawLogo( const char *filename, float x, float y, float width, float height )
+{
+	static float	video_duration;
+	static float	cin_time;
+	static int	last_frame = -1;
+	static byte	*cin_data;	// dynamically allocated array
+	movie_state_t	*cin_state;
+	int		cin_frame;
+	bool		redraw = false;
+
+	if( !gameui.drawLogo ) return;
+
+	cin_state = AVI_GetState( CIN_LOGO );
+
+	if( !AVI_IsActive( cin_state ))
+	{
+		string		path;
+		const char	*fullpath;
+	
+		// run cinematic if not
+		com.snprintf( path, sizeof( path ), "media/%s", filename );
+		FS_DefaultExtension( path, ".avi" );
+		fullpath = FS_GetDiskPath( path );
+
+		if( FS_FileExists( path ) && !fullpath )
+		{
+			MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
+			gameui.drawLogo = false;
+			return;
+		}
+
+		AVI_OpenVideo( cin_state, fullpath, false, false );
+		if( !( AVI_GetVideoInfo( cin_state, &gameui.logo_xres, &gameui.logo_yres, &video_duration )))
+		{
+			AVI_CloseVideo( cin_state );
+			gameui.drawLogo = false;
+			return;
+		}
+
+		cin_data = Mem_Realloc( cls.mempool, cin_data, gameui.logo_xres * gameui.logo_yres * 3 );
+		cin_time = 0.0f;
+		last_frame = -1;
+	}
+
+	// advances cinematic time	
+	cin_time += cls.frametime;
+
+	// restarts the cinematic
+	if( cin_time > video_duration )
+		cin_time = 0.0f;
+
+	// read the next frame
+	cin_frame = AVI_GetVideoFrameNumber( cin_state, cin_time );
+
+	if( cin_frame != last_frame )
+	{
+		AVI_GetVideoFrame( cin_state, cin_data, cin_frame );
+		last_frame = cin_frame;
+		redraw = true;
+	}
+
+	re->DrawStretchRaw( x, y, width, height, gameui.logo_xres, gameui.logo_yres, cin_data, redraw );
+}
+
+static int UI_GetLogoWidth( void )
+{
+	return gameui.logo_xres;
+}
+
+static int UI_GetLogoHeight( void )
+{
+	return gameui.logo_yres;
+}
+	
 void Host_Credits( void )
 {
 	if( !gameui.hInstance ) return;
@@ -801,6 +885,9 @@ static ui_enginefuncs_t gEngfuncs =
 	Con_Printf,
 	Con_DPrintf,
 	pfnPlaySound,
+	UI_DrawLogo,
+	UI_GetLogoWidth,
+	UI_GetLogoHeight,
 	pfnDrawCharacter,
 	pfnDrawConsoleString,
 	pfnDrawSetTextColor,

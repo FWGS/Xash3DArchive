@@ -5,71 +5,106 @@
 
 #include "common.h"
 #include "client.h"
+#include <vfw.h> // video for windows
 
 /*
 =================================================================
 
-ROQ PLAYING
+AVI PLAYING
 
 =================================================================
 */
 
-/*
-==================
-SCR_StopCinematic
-==================
-*/
-void SCR_StopCinematic( void )
+cvar_t			*vid_gamma;
+static long		xres, yres;
+static float		video_duration;
+static float		cin_time;
+static int		cin_frame;
+static char		*cin_data;	// dynamically allocated array
+static wavdata_t		cin_audio;
+static movie_state_t	*cin_state;
+
+void SCR_RebuildGammaTable( void )
 {
-	cinematics_t	*cin = cl.cin;
+	float	g;
+	int	i;
 
-	if( !cin || !cin->file )
-		return;
+	g = bound( 0.5f, vid_gamma->value, 2.3f );
 
-	cl.cin = NULL;
-	cin->time = 0.0f;	// done
-	cin->pic = NULL;
-	cin->pic_pending = NULL;
-
-	if( cin->file ) FS_Close( cin->file );
-	cin->file = NULL;
-
-	Mem_Free( cin->name );
-	cin->name = NULL;
-
-	if( cin->vid_buffer )
+	// screenshots gamma	
+	for( i = 0; i < 256; i++ )
 	{
-		Mem_Free( cin->vid_buffer );
-		cin->vid_buffer = NULL;
+		if( g == 1 ) clgame.ds.gammaTable[i] = i;
+		else clgame.ds.gammaTable[i] = bound( 0, pow( i * ( 1.0f / 255.0f ), g ) * 255.0f, 255 );
+	}
+}
+
+/*
+==================
+SCR_NextMovie
+
+Called when a demo or cinematic finishes
+If the "nextmovie" cvar is set, that command will be issued
+==================
+*/
+bool SCR_NextMovie( void )
+{
+	string	str;
+
+	S_StopAllSounds();
+	SCR_StopCinematic();
+
+	if( cls.movienum == -1 )
+		return false; // don't play movies
+
+	if( !cls.movies[cls.movienum][0] || cls.movienum == MAX_MOVIES )
+	{
+		cls.movienum = -1;
+		return false;
 	}
 
-	cls.state = ca_disconnected;
-	UI_SetActiveMenu( true );
-}
+	com.snprintf( str, MAX_STRING, "movie %s\n", cls.movies[cls.movienum] );
 
-//==========================================================================
+	Cbuf_InsertText( str );
+	cls.movienum++;
 
-/*
-==================
-SCR_InitCinematic
-==================
-*/
-void SCR_InitCinematic( void )
-{
-	CIN_Init ();
+	return true;
 }
 
 /*
 ==================
-SCR_InitCinematic
+SCR_StartMovies_f
 ==================
 */
-uint SCR_GetCinematicTime( void )
+void SCR_StartMovies_f( void )
 {
-	cinematics_t	*cin = cl.cin;
-	return (cin ? cin->time : 0.0f);
-}
+	int	i, c;
 
+	if( host.developer >= 2 )
+	{
+		// don't run movies where we in developer-mode
+		cls.movienum = -1;
+		return;
+	}
+
+	c = Cmd_Argc() - 1;
+	if( c > MAX_MOVIES )
+	{
+		MsgDev( D_WARN, "Host_StartMovies: max %i movies in StartupVids\n", MAX_DEMOS );
+		c = MAX_MOVIES;
+	}
+
+	for( i = 1; i < c + 1; i++ )
+		com.strncpy( cls.movies[i-1], Cmd_Argv( i ), sizeof( cls.movies[0] ));
+
+	if( !SV_Active() && cls.movienum != -1 && cls.state != ca_cinematic )
+	{
+		cls.movienum = 0;
+		SCR_NextMovie ();
+	}
+	else cls.movienum = -1;
+}
+		
 /*
 ==================
 SCR_RunCinematic
@@ -77,32 +112,27 @@ SCR_RunCinematic
 */
 void SCR_RunCinematic( void )
 {
-	uint		frame;
-	cinematics_t	*cin = cl.cin;
+	if( !AVI_IsActive( cin_state ))
+		return;
 
-	if( !cin || cin->time == 0.0f )
+	if( vid_gamma->modified )
 	{
-		SCR_StopCinematic ();
+		SCR_RebuildGammaTable();
+		vid_gamma->modified = false;
+	}
+
+	// advances cinematic time	
+	cin_time += cls.frametime;
+
+	// stop the video after it finishes
+	if( cin_time > video_duration + 0.1f )
+	{
+		SCR_NextMovie( );
 		return;
 	}
 
-	frame = (Sys_DoubleTime() - cin->time) * (float)(RoQ_FRAMERATE);
-	if( frame <= cin->frame ) return;
-
-	if( frame > cin->frame + 1 )
-	{
-		MsgDev( D_WARN, "dropped frame: %i > %i\n", frame, cin->frame + 1 );
-		cin->time = Sys_DoubleTime() - cin->frame / RoQ_FRAMERATE;
-	}
-
-	cin->pic = cin->pic_pending;
-	cin->pic_pending = CIN_ReadNextFrame( cin, false );
-
-	if( !cin->pic_pending )
-	{
-		SCR_StopCinematic ();
-		return;
-	}
+	// read the next frame
+	cin_frame = AVI_GetVideoFrameNumber( cin_state, cin_time );
 }
 
 /*
@@ -115,19 +145,24 @@ should be skipped
 */
 bool SCR_DrawCinematic( void )
 {
-	cinematics_t	*cin = cl.cin;
- 
-	if( !re || !cin || cin->time <= 0.0f )
+	static int	last_frame = -1;
+	bool		redraw = false;
+
+	if( !re || cin_time <= 0.0f )
 		return false;
 
-	if( !cin->pic )
-		return true;
+	if( cin_frame != last_frame )
+	{
+		AVI_GetVideoFrame( cin_state, cin_data, cin_frame );
+		last_frame = cin_frame;
+		redraw = true;
+	}
 
-	re->DrawStretchRaw( 0, 0, scr_width->integer, scr_height->integer, cin->width, cin->height, cin->pic, true );
+	re->DrawStretchRaw( 0, 0, scr_width->integer, scr_height->integer, xres, yres, cin_data, redraw );
 
 	return true;
 }
-
+  
 /*
 ==================
 SCR_PlayCinematic
@@ -135,57 +170,101 @@ SCR_PlayCinematic
 */
 bool SCR_PlayCinematic( const char *arg )
 {
-	size_t		name_size;
-	static cinematics_t	clientCin;
-	cinematics_t	*cin = cl.cin = &clientCin;
-	droqchunk_t	*chunk = &cin->chunk;
+	string		path;
+	const char	*fullpath;
 
-	if( cls.state == ca_cinematic )
+	com.snprintf( path, sizeof( path ), "media/%s.avi", arg );
+	fullpath = FS_GetDiskPath( path );
+
+	if( FS_FileExists( path ) && !fullpath )
 	{
-		// first stop the old movie
-		SCR_StopCinematic ();
-	}
-
-	name_size = com.strlen( "media/" ) + com.strlen( arg ) + com.strlen( ".roq" ) + 1;
-	cin->name = Mem_Alloc( cls.mempool, name_size );
-	com.snprintf( cin->name, name_size, "media/%s", arg );
-	FS_DefaultExtension( cin->name, ".roq" );
-
-	// nasty hack
-	cin->s_rate = 22050;
-	cin->s_width = 2;
-	cin->width = cin->height = 0;
-
-	cin->frame = 0;
-	cin->file = FS_Open( cin->name, "rb" );
-
-	if( !cin->file )
-	{
-		MsgDev( D_INFO, "SCR_PlayCinematic: unable to find %s\n", cin->name );
-		SCR_StopCinematic ();
+		MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
 		return false;
 	}
 
-	// read header
-	CIN_ReadChunk( cin );
-
-	if( chunk->id != RoQ_HEADER1 || chunk->size != RoQ_HEADER2 || chunk->argument != RoQ_HEADER3 )
+	AVI_OpenVideo( cin_state, fullpath, true, true );
+	if( !AVI_IsActive( cin_state ))
 	{
-		MsgDev( D_ERROR, "%s invalid header chunk %x\n", cin->name, chunk->id );
-		SCR_StopCinematic();
+		AVI_CloseVideo( cin_state );
 		return false;
+	}
+
+	if( !( AVI_GetVideoInfo( cin_state, &xres, &yres, &video_duration ))) // couldn't open this at all.
+	{
+		AVI_CloseVideo( cin_state );
+		return false;
+	}
+
+	cin_data = Mem_Realloc( cls.mempool, cin_data, xres * yres * 3 );
+
+	if( AVI_GetAudioInfo( cin_state, &cin_audio ))
+	{
+		// begin streaming
+		S_StopAllSounds();
+		S_StartStreaming();
 	}
 
 	UI_SetActiveMenu( false );
-	S_StopAllSounds();
-	S_StartStreaming();
+	SCR_RebuildGammaTable();
 
 	cls.state = ca_cinematic;
-
-	cin->headerlen = FS_Tell( cin->file );
-	cin->frame = 0;
-	cin->pic = cin->pic_pending = CIN_ReadNextFrame( cin, false );
-	cin->time = Sys_DoubleTime();
-
+	cin_time = 0.0f;
+	
 	return true;
+}
+
+long SCR_GetAudioChunk( char *rawdata, long length )
+{
+	int	r;
+
+	r = AVI_GetAudioChunk( cin_state, rawdata, cin_audio.loopStart, length );
+	cin_audio.loopStart += r;	// advance play position
+
+	return r;
+}
+
+wavdata_t *SCR_GetMovieInfo( void )
+{
+	if( AVI_IsActive( cin_state ))
+		return &cin_audio;
+	return NULL;
+}
+	
+/*
+==================
+SCR_StopCinematic
+==================
+*/
+void SCR_StopCinematic( void )
+{
+	AVI_CloseVideo( cin_state );
+	S_StopStreaming();
+	cin_time = 0.0f;
+
+	cls.state = ca_disconnected;
+	UI_SetActiveMenu( true );
+}
+
+/*
+==================
+SCR_InitCinematic
+==================
+*/
+void SCR_InitCinematic( void )
+{
+	AVIFileInit();
+
+	// used for movie gamma correction
+	vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
+	cin_state = AVI_GetState( CIN_MAIN );
+}
+
+/*
+==================
+SCR_FreeCinematic
+==================
+*/
+void SCR_FreeCinematic( void )
+{
+	AVIFileExit();
 }

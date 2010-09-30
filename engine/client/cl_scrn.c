@@ -408,6 +408,7 @@ void SCR_Shutdown( void )
 	Cmd_RemoveCommand( "viewpos" );
 
 	UI_SetActiveMenu( false );
+	SCR_FreeCinematic();
 	UI_UnloadProgs();
 	scr_init = false;
 }

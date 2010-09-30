@@ -103,6 +103,7 @@ void Sys_GetStdAPI( void )
 	com.Com_FileTime = FS_FileTime;		// same as Com_FileExists but return filetime
 	com.Com_FileExtension = FS_FileExtension;	// return extension of file
 	com.Com_RemovePath = FS_FileWithoutPath;	// return file without path
+	com.Com_DiskPath = FS_GetDiskPath;		// build fullpath for disk files
 	com.Com_StripExtension = FS_StripExtension;	// remove extension if present
 	com.Com_StripFilePath = FS_ExtractFilePath;	// get file path without filename.ext
 	com.Com_DefaultExtension = FS_DefaultExtension;	// append extension if not present

@@ -24,6 +24,7 @@ _inline int CL_CreateDecalList( decallist_t *pList, bool changelevel )
 //
 #define S_Shutdown			if( se ) se->Shutdown
 #define S_StartStreaming		if( se ) se->StartStreaming
+#define S_StopStreaming		if( se ) se->StopStreaming
 #define S_StartSound		if( se ) se->StartSound
 #define S_AmbientSound		if( se ) se->StaticSound
 #define S_StartLocalSound		if( se ) se->StartLocalSound

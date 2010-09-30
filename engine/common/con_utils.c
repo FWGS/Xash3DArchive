@@ -258,31 +258,31 @@ bool Cmd_GetMovieList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, nummovies;
 
-	t = FS_Search( va( "media/%s*.roq", s ), true );
+	t = FS_Search( va( "media/%s*.avi", s ), true );
 	if( !t ) return false;
 
-	FS_FileBase(t->filenames[0], matchbuf ); 
-	if(completedname && length) com.strncpy( completedname, matchbuf, length );
-	if(t->numfilenames == 1) return true;
+	FS_FileBase( t->filenames[0], matchbuf ); 
+	if( completedname && length ) com.strncpy( completedname, matchbuf, length );
+	if( t->numfilenames == 1 ) return true;
 
 	for(i = 0, nummovies = 0; i < t->numfilenames; i++)
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( com.stricmp( ext, "roq" )) continue;
-		FS_FileBase(t->filenames[i], matchbuf );
-		Msg("%16s\n", matchbuf );
+		if( com.stricmp( ext, "avi" )) continue;
+		FS_FileBase( t->filenames[i], matchbuf );
+		Msg( "%16s\n", matchbuf );
 		nummovies++;
 	}
-	Msg("\n^3 %i movies found.\n", nummovies );
-	Mem_Free(t);
+	Msg( "\n^3 %i movies found.\n", nummovies );
+	Mem_Free( t );
 
 	// cut shortestMatch to the amount common with s
-	if(completedname && length)
+	if( completedname && length )
 	{
 		for( i = 0; matchbuf[i]; i++ )
 		{
-			if(com.tolower(completedname[i]) != com.tolower(matchbuf[i]))
+			if( com.tolower( completedname[i] ) != com.tolower( matchbuf[i] ))
 				completedname[i] = 0;
 		}
 	}

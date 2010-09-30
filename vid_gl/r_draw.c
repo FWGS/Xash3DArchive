@@ -99,7 +99,7 @@ void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, f
 R_DrawStretchRaw
 =============
 */
-void R_DrawStretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *data, bool dirty )
+void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, bool dirty )
 {
 	if( !GL_Support( R_ARB_TEXTURE_NPOT_EXT ))
 	{
@@ -118,17 +118,23 @@ void R_DrawStretchRaw( int x, int y, int w, int h, int cols, int rows, const byt
 	if( rows > glConfig.max_2d_texture_size )
 		Host_Error( "R_DrawStretchRaw: size exceeds hardware limits (%i > %i)\n", rows, glConfig.max_2d_texture_size );
 
+	if( pic_mbuffer.infokey != -1 )
+	{
+		R_RenderMeshBuffer( &pic_mbuffer );
+		pic_mbuffer.infokey = -1;
+	}
+
 	GL_Bind( 0, tr.cinTexture );
 
 	if( cols == tr.cinTexture->width && rows == tr.cinTexture->height )
 	{
-		if( dirty ) pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_RGBA, GL_UNSIGNED_BYTE, data );
+		if( dirty ) pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_RGB, GL_UNSIGNED_BYTE, data );
 	}
 	else
 	{
 		tr.cinTexture->width = cols;
 		tr.cinTexture->height = rows;
-		if( dirty ) pglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+		if( dirty ) pglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, cols, rows, 0, GL_RGB, GL_UNSIGNED_BYTE, data );
 	}
 
 	R_CheckForErrors();

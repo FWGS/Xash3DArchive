@@ -172,7 +172,7 @@ typedef struct render_exp_s
 	bool	(*ScrShot)( const char *filename, int shot_type ); // write screenshot with same name 
 	bool	(*EnvShot)( const char *filename, uint size, const float *vieworg, bool skyshot );
 	void	(*LightForPoint)( const vec3_t point, vec3_t ambientLight );
-	void	(*DrawStretchRaw)( int x, int y, int w, int h, int cols, int rows, byte *data, bool redraw );
+	void	(*DrawStretchRaw)( float x, float y, float w, float h, int cols, int rows, byte *data, bool redraw );
 	void	(*DrawStretchPic)( float x, float y, float w, float h, float s1, float t1, float s2, float t2, shader_t shader );
 	int	(*WorldToScreen)( const float *world, float *screen );
 	void	(*ScreenToWorld)( const float *screen, float *world );

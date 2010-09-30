@@ -92,6 +92,30 @@ static void UI_MsgBox_Ownerdraw( void *self )
 	UI_FillRect( item->x, item->y, item->width, item->height, uiPromptBgColor );
 }
 
+/*
+=================
+UI_Background_Ownerdraw
+=================
+*/
+static void UI_Background_Ownerdraw( void *self )
+{
+	menuCommon_s	*item = (menuCommon_s *)self;
+
+	UI_DrawPic( item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic );
+
+	float	logoWidth, logoHeight, logoPosY;
+	float	scaleX, scaleY;
+
+	scaleX = ScreenWidth / 640.0f;
+	scaleY = ScreenHeight / 480.0f;
+
+	logoWidth = GetLogoWidth() * scaleX;
+	logoHeight = GetLogoHeight() * scaleY;
+	logoPosY = 70 * scaleY;	// 70 it's empirically determined value (magic number)
+
+	DRAW_LOGO( "logo.avi", 0, logoPosY, logoWidth, logoHeight );
+}
+
 static void UI_QuitDialog( void )
 {
 	// toggle main menu between active\inactive
@@ -307,6 +331,7 @@ static void UI_Main_Init( void )
 	uiMain.background.generic.width = 1024;
 	uiMain.background.generic.height = 768;
 	uiMain.background.pic = ART_BACKGROUND;
+	uiMain.background.generic.ownerdraw = UI_Background_Ownerdraw;
 
 	uiMain.console.generic.id = ID_CONSOLE;
 	uiMain.console.generic.type = QMTYPE_ACTION;

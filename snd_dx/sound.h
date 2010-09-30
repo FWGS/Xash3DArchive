@@ -153,6 +153,7 @@ typedef struct
 	bool		active;
 	bool		inmenu;		// listener in-menu ?
 	bool		paused;
+	bool		streaming;	// playing AVI-file
 } listener_t;
 
 typedef struct
@@ -238,10 +239,6 @@ void DSP_Process( int idsp, portable_samplepair_t *pbfront, int sampleCount );
 float DSP_GetGain( int idsp );
 void DSP_ClearState( void );
 
-void SX_Init( void );
-void SX_Free( void );
-void SX_RoomFX( portable_samplepair_t *pbuf, int sampleCount );
-
 bool S_Init( void *hInst );
 void S_Shutdown( void );
 void S_Activate( bool active, void *hInst );
@@ -273,6 +270,7 @@ void SND_CloseMouth( channel_t *ch );
 //
 void S_StartStreaming( void );
 void S_StopStreaming( void );
+void S_StreamSoundTrack( void );
 void S_StreamRawSamples( int samples, int rate, int width, int channels, const byte *data );
 void S_StartBackgroundTrack( const char *intro, const char *loop );
 void S_StreamBackgroundTrack( void );

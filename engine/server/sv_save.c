@@ -1739,6 +1739,9 @@ void SV_SaveGame( const char *pName )
 	if( FS_FileExists( va( "save/%s.%s", savename, SI->savshot_ext )))
 		FS_Delete( va( "save/%s.%s", savename, SI->savshot_ext ));
 
+	// HACKHACK: unload previous shader from memory
+	if( re ) re->FreeShader( va( "save/%s.%s", savename, SI->savshot_ext ));
+
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );
 

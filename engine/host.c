@@ -166,6 +166,8 @@ bool Host_InitSound( void )
 	si.AmbientLevels = CM_AmbientLevels;
 	si.GetClientEdict = CL_GetEntityByIndex;
 	si.GetServerTime = CL_GetServerTime;
+	si.GetAudioChunk = SCR_GetAudioChunk;
+	si.GetMovieInfo = SCR_GetMovieInfo;
 	si.IsInMenu = CL_IsInMenu;
 	si.IsActive = CL_IsInGame;
 

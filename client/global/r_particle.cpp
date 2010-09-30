@@ -856,5 +856,32 @@ BulletImpactParticles
 */
 void CParticleSystem :: BulletImpactParticles( const Vector &pos )
 {
-	// FIXME: implement
+	CBaseParticle	*p;
+
+	// uncomment this to enable texture based particle
+	// HSPRITE	sprtex = SPR_Load("sprites/debris/debris_concrete01.spr");
+
+	g_pTempEnts->SparkShower( pos ); // Sparks
+
+	for( int i = 0; i < 25; i++ )
+	{
+		p = AllocParticle();
+		if( !p ) return;
+            
+		p->SetLifetime( 2.0 );
+		p->SetColor( 0, 0, 0 ); // 0,0,0 = black
+		p->SetAlpha( 255 );
+        
+		//p->SetTexture ( sprtex ) ; // Uncomment to enable texture based particle
+        
+		if( i & 1 )
+		{
+			p->SetType( pt_grav );
+			for( int j = 0; j < 3; j++ )
+			{
+				p->m_Pos[j] = pos[j] + RANDOM_FLOAT( -2, 3 ); // distance between particles
+				p->m_Velocity[j] = RANDOM_FLOAT( -70, 70 ); // speed, velocity of particles
+			}
+		}
+	}
 }

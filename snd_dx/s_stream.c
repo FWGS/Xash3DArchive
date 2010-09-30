@@ -7,8 +7,8 @@
 #include "byteorder.h"
 
 portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
-int			s_rawend;
 static bg_track_t		s_bgTrack;
+int			s_rawend;
 
 /*
 =================
@@ -78,6 +78,7 @@ void S_StreamBackgroundTrack( void )
 	int	r, fileBytes;
 
 	if( !s_bgTrack.stream ) return;
+	if( s_listener.streaming ) return;	// we are playing movie or somewhat
 
 	// don't bother playing anything if musicvolume is 0
 	if( !s_musicvolume->value || s_listener.paused ) return;
@@ -145,6 +146,8 @@ S_StartStreaming
 */
 void S_StartStreaming( void )
 {
+	// begin streaming movie soundtrack
+	s_listener.streaming = true;
 }
 
 /*
@@ -154,7 +157,62 @@ S_StopStreaming
 */
 void S_StopStreaming( void )
 {
-	// clear s_rawend here ?
+	s_listener.streaming = false;
+	s_rawend = 0;
+}
+
+/*
+=================
+S_StreamSoundTrack
+=================
+*/
+void S_StreamSoundTrack( void )
+{
+	int	bufferSamples;
+	int	fileSamples;
+	byte	raw[MAX_RAW_SAMPLES];
+	int	r, fileBytes;
+
+	if( !s_listener.streaming || s_listener.paused ) return;
+
+	// see how many samples should be copied into the raw buffer
+	if( s_rawend < soundtime )
+		s_rawend = soundtime;
+
+	while( s_rawend < soundtime + MAX_RAW_SAMPLES )
+	{
+		wavdata_t	*info = si.GetMovieInfo();
+
+		bufferSamples = MAX_RAW_SAMPLES - (s_rawend - soundtime);
+
+		// decide how much data needs to be read from the file
+		fileSamples = bufferSamples * info->rate / SOUND_DMA_SPEED;
+
+		// our max buffer size
+		fileBytes = fileSamples * ( info->width * info->channels );
+
+		if( fileBytes > sizeof( raw ))
+		{
+			fileBytes = sizeof( raw );
+			fileSamples = fileBytes / ( info->width * info->channels );
+		}
+
+		// read audio stream
+		r = si.GetAudioChunk( raw, fileBytes );
+
+		if( r < fileBytes )
+		{
+			fileBytes = r;
+			fileSamples = r / ( info->width * info->channels );
+		}
+
+		if( r > 0 )
+		{
+			// add to raw buffer
+			S_StreamRawSamples( fileSamples, info->rate, info->width, info->channels, raw );
+		}
+		else break; // no more samples for this frame
+	}
 }
 
 /*
@@ -181,7 +239,8 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 			(a = in[src+(s)],\
 			b = (src < incount - channels) ? (in[src+channels+(s)]) : 0))
 
-#define LERP_SAMPLE		(((((b - a) * (samplefrac & 255)) >> 8) + a))
+			// NOTE: disable lerping for cinematic sountracks
+#define LERP_SAMPLE		s_listener.streaming ? a : (((((b - a) * (samplefrac & 255)) >> 8) + a))
 
 #define RESAMPLE_RAW \
 	if( channels == 2 ) { \
