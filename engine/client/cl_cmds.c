@@ -28,8 +28,7 @@ void CL_PlayVideo_f( void )
 
 	if( cls.state == ca_active )
 	{
-		// FIXME: get rid of this stupid alias
-		Cbuf_AddText( va( "killserver\n; wait\n; movie %s\n;", Cmd_Argv( 1 )));
+		Msg( "Can't play movie while connected to a server.\nPlease disconnect first.\n" );
 		return;
 	}
 

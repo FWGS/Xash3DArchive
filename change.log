@@ -1,3 +1,9 @@
+build 1343
+
+Engine: prevent auto-repeat for most keys in-game
+Engine: implement AVI movies support (instead of RoQ support)
+Engine: enable logo.avi in main menu (see GameUI source for details) 
+
 build 1313
 
 Launch: code revision, remove dead code, implement some missed functions

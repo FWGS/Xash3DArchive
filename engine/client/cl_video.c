@@ -20,7 +20,6 @@ static long		xres, yres;
 static float		video_duration;
 static float		cin_time;
 static int		cin_frame;
-static char		*cin_data;	// dynamically allocated array
 static wavdata_t		cin_audio;
 static movie_state_t	*cin_state;
 
@@ -147,18 +146,19 @@ bool SCR_DrawCinematic( void )
 {
 	static int	last_frame = -1;
 	bool		redraw = false;
+	byte		*frame = NULL;
 
 	if( !re || cin_time <= 0.0f )
 		return false;
 
 	if( cin_frame != last_frame )
 	{
-		AVI_GetVideoFrame( cin_state, cin_data, cin_frame );
+		frame = AVI_GetVideoFrame( cin_state, cin_frame );
 		last_frame = cin_frame;
 		redraw = true;
 	}
 
-	re->DrawStretchRaw( 0, 0, scr_width->integer, scr_height->integer, xres, yres, cin_data, redraw );
+	re->DrawStretchRaw( 0, 0, scr_width->integer, scr_height->integer, xres, yres, frame, redraw );
 
 	return true;
 }
@@ -182,7 +182,7 @@ bool SCR_PlayCinematic( const char *arg )
 		return false;
 	}
 
-	AVI_OpenVideo( cin_state, fullpath, true, true );
+	AVI_OpenVideo( cin_state, fullpath, true, true, false );
 	if( !AVI_IsActive( cin_state ))
 	{
 		AVI_CloseVideo( cin_state );
@@ -194,8 +194,6 @@ bool SCR_PlayCinematic( const char *arg )
 		AVI_CloseVideo( cin_state );
 		return false;
 	}
-
-	cin_data = Mem_Realloc( cls.mempool, cin_data, xres * yres * 3 );
 
 	if( AVI_GetAudioInfo( cin_state, &cin_audio ))
 	{

@@ -22,6 +22,7 @@
 #define GetGameInfo		(*g_engfuncs.pfnGetGameInfo)
 
 #define DRAW_LOGO		(*g_engfuncs.pfnDrawLogo)
+#define PRECACHE_LOGO( x )	(*g_engfuncs.pfnDrawLogo)( x, 0, 0, 0, 0 )
 #define GetLogoWidth	(*g_engfuncs.pfnGetLogoWidth)
 #define GetLogoHeight	(*g_engfuncs.pfnGetLogoHeight)
 

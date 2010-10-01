@@ -32,8 +32,8 @@ void UI_SetActiveMenu( bool fActive )
 	movie_state_t	*cin_state;
 
 	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnSetActiveMenu( fActive );
 	gameui.drawLogo = fActive;
+	gameui.dllFuncs.pfnSetActiveMenu( fActive );
 
 	if( !fActive )
 	{
@@ -96,13 +96,12 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 	static float	video_duration;
 	static float	cin_time;
 	static int	last_frame = -1;
-	static byte	*cin_data;	// dynamically allocated array
+	byte		*cin_data = NULL;
 	movie_state_t	*cin_state;
 	int		cin_frame;
 	bool		redraw = false;
 
 	if( !gameui.drawLogo ) return;
-
 	cin_state = AVI_GetState( CIN_LOGO );
 
 	if( !AVI_IsActive( cin_state ))
@@ -122,7 +121,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 			return;
 		}
 
-		AVI_OpenVideo( cin_state, fullpath, false, false );
+		AVI_OpenVideo( cin_state, fullpath, false, false, true );
 		if( !( AVI_GetVideoInfo( cin_state, &gameui.logo_xres, &gameui.logo_yres, &video_duration )))
 		{
 			AVI_CloseVideo( cin_state );
@@ -130,9 +129,16 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 			return;
 		}
 
-		cin_data = Mem_Realloc( cls.mempool, cin_data, gameui.logo_xres * gameui.logo_yres * 3 );
 		cin_time = 0.0f;
 		last_frame = -1;
+	}
+
+	if( width <= 0 || height <= 0 )
+	{
+		// precache call, don't draw
+		cin_time = 0.0f;
+		last_frame = -1;
+		return;
 	}
 
 	// advances cinematic time	
@@ -147,7 +153,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 
 	if( cin_frame != last_frame )
 	{
-		AVI_GetVideoFrame( cin_state, cin_data, cin_frame );
+		cin_data = AVI_GetVideoFrame( cin_state, cin_frame );
 		last_frame = cin_frame;
 		redraw = true;
 	}

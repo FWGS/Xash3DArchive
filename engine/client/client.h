@@ -72,8 +72,6 @@ typedef struct
 	float		lerpFrac;			// interpolation value
 	ref_params_t	refdef;			// shared refdef
 
-	cinematics_t	*cin;
-
 	char		serverinfo[MAX_INFO_STRING];
 	player_info_t	players[MAX_CLIENTS];
 	event_state_t	events;

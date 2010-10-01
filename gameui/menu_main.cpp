@@ -109,6 +109,8 @@ static void UI_Background_Ownerdraw( void *self )
 	scaleX = ScreenWidth / 640.0f;
 	scaleY = ScreenHeight / 480.0f;
 
+	if( GetLogoWidth() <= 16 ) return;	// don't draw stub logo
+
 	logoWidth = GetLogoWidth() * scaleX;
 	logoHeight = GetLogoHeight() * scaleY;
 	logoPosY = 70 * scaleY;	// 70 it's empirically determined value (magic number)
@@ -599,6 +601,9 @@ void UI_Main_Precache( void )
 	PIC_Load( ART_CLOSEBTN_N );
 	PIC_Load( ART_CLOSEBTN_F );
 	PIC_Load( ART_CLOSEBTN_D );
+
+	// precache .avi file and get logo width and height
+	PRECACHE_LOGO( "logo.avi" );
 }
 
 /*

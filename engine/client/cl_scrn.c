@@ -390,11 +390,11 @@ void SCR_Init( void )
 	SCR_LoadCreditsFont ();
 
 	SCR_InstallParticlePalette ();
+	SCR_InitCinematic();
 
 	if( host.developer && FS_CheckParm( "-toconsole" ))
 		Cbuf_AddText( "toggleconsole\n" );
 	else UI_SetActiveMenu( true );
-	SCR_InitCinematic();
 
 	scr_init = true;
 }

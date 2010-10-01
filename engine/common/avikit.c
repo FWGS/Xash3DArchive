@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2010 ©
-//	    movie.c - playing AVI files (based on original AVIKit code)
+//	    avikit.c - playing AVI files (based on original AVIKit code)
 //=======================================================================
 
 #include "common.h"
@@ -12,6 +12,7 @@ typedef struct movie_state_s
 {
 	bool		active;
 	bool		ignore_hwgamma;	// ignore hw gamma-correction
+	bool		quiet;		// ignore error messages
 
 	PAVIFILE		pfile;		// avi file pointer
 	PAVISTREAM	video_stream;	// video stream pointer
@@ -61,7 +62,7 @@ bool AVI_ACMConvertAudio( movie_state_t *Avi )
 	// WMA codecs, both versions - they simply don't work.
 	if( Avi->audio_header->wFormatTag == 0x160 || Avi->audio_header->wFormatTag == 0x161 )
 	{
-		MsgDev( D_ERROR, "ACM does not support this audio codec.\n" );
+		if( !Avi->quiet ) MsgDev( D_ERROR, "ACM does not support this audio codec.\n" );
 		return false;
 	}
 
@@ -70,7 +71,7 @@ bool AVI_ACMConvertAudio( movie_state_t *Avi )
 
 	if( Avi->audio_header_size < sizeof( WAVEFORMATEX ))
 	{
-		MsgDev( D_ERROR, "ACM failed to open conversion stream.\n" );
+		if( !Avi->quiet ) MsgDev( D_ERROR, "ACM failed to open conversion stream.\n" );
 		return false;
 	}
 
@@ -100,7 +101,7 @@ bool AVI_ACMConvertAudio( movie_state_t *Avi )
 
 		if( acmStreamOpen( &Avi->cpa_conversion_stream, NULL, sh, dh, NULL, 0, 0, 0 ) != MMSYSERR_NOERROR )
 		{
-			MsgDev( D_ERROR, "ACM failed to open conversion stream.\n" );
+			if( !Avi->quiet ) MsgDev( D_ERROR, "ACM failed to open conversion stream.\n" );
 			return false;
 		}
 	}
@@ -120,7 +121,7 @@ bool AVI_ACMConvertAudio( movie_state_t *Avi )
 	// get the size of the output buffer for streaming the compressed audio
 	if( acmStreamSize( Avi->cpa_conversion_stream, Avi->cpa_blockalign, &dest_length, ACM_STREAMSIZEF_SOURCE ) != MMSYSERR_NOERROR )
 	{
-		MsgDev( D_ERROR, "Couldn't get ACM conversion stream size.\n" );
+		if( !Avi->quiet ) MsgDev( D_ERROR, "Couldn't get ACM conversion stream size.\n" );
 		acmStreamClose( Avi->cpa_conversion_stream, 0 );
 		return false;
 	}
@@ -143,7 +144,7 @@ bool AVI_ACMConvertAudio( movie_state_t *Avi )
 
 	if( acmStreamPrepareHeader( Avi->cpa_conversion_stream, &Avi->cpa_conversion_header, 0 ) != MMSYSERR_NOERROR )
 	{
-		MsgDev( D_ERROR, "couldn't prep headers.\n" );
+		if( !Avi->quiet ) MsgDev( D_ERROR, "couldn't prep headers.\n" );
 		acmStreamClose( Avi->cpa_conversion_stream, 0 );
 		return false;
 	}
@@ -195,16 +196,15 @@ long AVI_GetVideoFrameNumber( movie_state_t *Avi, float time )
 }
 
 // gets the raw frame data
-void AVI_GetVideoFrame( movie_state_t *Avi, char *framedata, long frame )
+byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame )
 {
 	LPBITMAPINFOHEADER	frame_info;
-	byte		*frame_raw;
-	byte		*in, *out;
+	byte		*frame_raw, *tmp;
 	int		i;
 
 	ASSERT( Avi != NULL );
 
-	if( !Avi->active ) return;
+	if( !Avi->active ) return NULL;
 
 	if( frame >= Avi->video_frames )
 		frame = Avi->video_frames - 1;
@@ -213,29 +213,16 @@ void AVI_GetVideoFrame( movie_state_t *Avi, char *framedata, long frame )
 	frame_raw = (char *)frame_info + frame_info->biSize + frame_info->biClrUsed * sizeof( RGBQUAD );
 	DrawDibDraw( Avi->hDD, Avi->hDC, 0, 0, Avi->video_xres, Avi->video_yres, frame_info, frame_raw, 0, 0, Avi->video_xres, Avi->video_yres, 0 );
 
-	in = Avi->pframe_data;
-	out = framedata;
-
 	if( Avi->ignore_hwgamma )
 	{
-		// flip BGR to RGB and renormalize gamma
-		for( i = 0; i < Avi->video_xres * Avi->video_yres; i++, in += 3 )
-		{
-			*out++ = clgame.ds.gammaTable[in[2]];
-			*out++ = clgame.ds.gammaTable[in[1]];
-			*out++ = clgame.ds.gammaTable[in[0]];
-		}
+		tmp = Avi->pframe_data;
+
+		// renormalize gamma
+		for( i = 0; i < Avi->video_xres * Avi->video_yres * 4; i++, tmp++ )
+			*tmp = clgame.ds.gammaTable[*tmp];
 	}
-	else
-	{
-		// only flip BGR to RGB
-		for( i = 0; i < Avi->video_xres * Avi->video_yres; i++, in += 3 )
-		{
-			*out++ = in[2];
-			*out++ = in[1];
-			*out++ = in[0];
-		}
-	}
+
+	return Avi->pframe_data;
 }
 
 bool AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info )
@@ -416,7 +403,7 @@ void AVI_CloseVideo( movie_state_t *Avi )
 	Mem_Set( Avi, 0, sizeof( movie_state_t ));
 }
 
-void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, bool ignore_hwgamma )
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, bool ignore_hwgamma, bool quiet )
 {
 	AVISTREAMINFO	stream_info;
 	BITMAPINFOHEADER	bmih;
@@ -427,6 +414,7 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, b
 
 	// default state: non-working.
 	Avi->active = false;
+	Avi->quiet = quiet;
 
 	// load the AVI
 	hr = AVIFileOpen( &Avi->pfile, filename, OF_SHARE_DENY_WRITE, 0L );
@@ -436,20 +424,20 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, b
 		switch( hr )
 		{
 		case AVIERR_BADFORMAT:
-			MsgDev( D_ERROR, "corrupt file or unknown format.\n" );
+			if( !Avi->quiet ) MsgDev( D_ERROR, "corrupt file or unknown format.\n" );
 			break;
 		case AVIERR_MEMORY:
-			MsgDev( D_ERROR, "insufficient memory to open file.\n" );
+			if( !Avi->quiet ) MsgDev( D_ERROR, "insufficient memory to open file.\n" );
 			break;
 		case AVIERR_FILEREAD:
-			MsgDev( D_ERROR, "disk error reading file.\n" );
+			if( !Avi->quiet ) MsgDev( D_ERROR, "disk error reading file.\n" );
 			break;
 		case AVIERR_FILEOPEN:
-			MsgDev( D_ERROR, "disk error opening file.\n" );
+			if( !Avi->quiet ) MsgDev( D_ERROR, "disk error opening file.\n" );
 			break;
 		case REGDB_E_CLASSNOTREG:
 		default:
-			MsgDev( D_ERROR, "no handler found (or file not found).\n" );
+			if( !Avi->quiet ) MsgDev( D_ERROR, "no handler found (or file not found).\n" );
 			break;
 		}
 		return;
@@ -517,9 +505,9 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, b
 	// display error message-stream not found. 
 	if( Avi->video_stream == NULL )
 	{
-		if( Avi->pfile ) // If file is open, close it 
+		if( Avi->pfile ) // if file is open, close it 
 			AVIFileRelease( Avi->pfile );
-		MsgDev( D_ERROR, "couldn't find a valid video stream.\n" );
+		if( !Avi->quiet ) MsgDev( D_ERROR, "couldn't find a valid video stream.\n" );
 		return;
 	}
 
@@ -528,7 +516,7 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, b
 
 	if( Avi->video_getframe == NULL )
 	{
-		MsgDev( D_ERROR, "error attempting to read video frames.\n" );
+		if( !Avi->quiet ) MsgDev( D_ERROR, "error attempting to read video frames.\n" );
 		return; // couldn't open frame getter.
 	}
 
@@ -536,10 +524,8 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, b
 
 	bmih.biSize = sizeof( BITMAPINFOHEADER );
 	bmih.biPlanes = 1;	
-	bmih.biBitCount = 24;
+	bmih.biBitCount = 32;
 	bmih.biCompression = BI_RGB;	
-
-	// FIXME: check for supports GL_ARB_texture_non_power_of_two
 	bmih.biWidth = Avi->video_xres;
 	bmih.biHeight = -Avi->video_yres; // invert height to flip image upside down
 

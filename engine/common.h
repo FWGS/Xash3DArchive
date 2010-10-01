@@ -243,11 +243,11 @@ byte *CIN_ReadNextFrame( cinematics_t *cin, bool silent );
 //
 typedef struct movie_state_s	movie_state_t;
 long AVI_GetVideoFrameNumber( movie_state_t *Avi, float time );
-void AVI_GetVideoFrame( movie_state_t *Avi, char *framedata, long frame );
+byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame );
 bool AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration );
 bool AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info );
 fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length );
-void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, bool ignore_hwgamma );
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, bool ignore_hwgamma, bool quiet );
 void AVI_CloseVideo( movie_state_t *Avi );
 bool AVI_IsActive( movie_state_t *Avi );
 movie_state_t *AVI_GetState( int num );

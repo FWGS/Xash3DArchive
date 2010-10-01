@@ -1055,6 +1055,13 @@ void *_mem_realloc(byte *poolptr, void *memptr, size_t size, const char *filenam
 	memheader_t	*memhdr;
 
 	if( size <= 0 ) return memptr; // no need to reallocate
+
+	if( memptr )
+	{
+		memhdr = (memheader_t *)((byte *)memptr - sizeof( memheader_t ));
+		if( size == memhdr->size ) return memptr;
+	}
+
 	nb = _mem_alloc( poolptr, size, filename, fileline );
 
 	if( memptr ) // first allocate?
@@ -1062,7 +1069,6 @@ void *_mem_realloc(byte *poolptr, void *memptr, size_t size, const char *filenam
 		size_t	newsize;
 
 		// get size of old block
-		memhdr = (memheader_t *)((byte *)memptr - sizeof(memheader_t));
 		newsize = memhdr->size < size ? memhdr->size : size; // upper data can be trucnated!
 		com.memcpy( nb, memptr, newsize, filename, fileline );
 		_mem_free( memptr, filename, fileline); // free unused old block
