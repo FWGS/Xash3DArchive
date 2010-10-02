@@ -833,6 +833,56 @@ void SV_Configstrings_f( sv_client_t *cl )
 
 /*
 ==================
+SV_UserMessages_f
+==================
+*/
+void SV_UserMessages_f( sv_client_t *cl )
+{
+	int		start;
+	sv_user_message_t	*message;
+	string		cmd;
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "usermessages is not valid from the console\n" );
+		return;
+	}
+	
+	// handle the case of a level changing while a client was connecting
+	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	{
+		MsgDev( D_INFO, "usermessages from different level\n" );
+		SV_New_f( cl );
+		return;
+	}
+	
+	start = com.atoi( Cmd_Argv( 2 ));
+
+	// write a packet full of data
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_USER_MESSAGES )
+	{
+		message = &svgame.msg[start];
+		if( message->name[0] )
+		{
+			BF_WriteByte( &cl->netchan.message, svc_usermessage );
+			BF_WriteString( &cl->netchan.message, message->name );
+			BF_WriteByte( &cl->netchan.message, message->number );
+			BF_WriteByte( &cl->netchan.message, (byte)message->size );
+		}
+		start++;
+	}
+
+	if( start == MAX_USER_MESSAGES ) com.snprintf( cmd, MAX_STRING, "cmd deltainfo %i 0 0\n", svs.spawncount );
+	else com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
+
+	// send next command
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
+}
+
+
+/*
+==================
 SV_DeltaInfo_f
 ==================
 */
@@ -884,55 +934,6 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 
 	if( tableIndex == Delta_NumTables() ) com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
 	else com.snprintf( cmd, MAX_STRING, "cmd deltainfo %i %i %i\n", svs.spawncount, tableIndex, fieldIndex );
-
-	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
-}
-
-/*
-==================
-SV_UserMessages_f
-==================
-*/
-void SV_UserMessages_f( sv_client_t *cl )
-{
-	int		start;
-	sv_user_message_t	*message;
-	string		cmd;
-
-	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "usermessages is not valid from the console\n" );
-		return;
-	}
-	
-	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
-	{
-		MsgDev( D_INFO, "usermessages from different level\n" );
-		SV_New_f( cl );
-		return;
-	}
-	
-	start = com.atoi( Cmd_Argv( 2 ));
-
-	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_USER_MESSAGES )
-	{
-		message = &svgame.msg[start];
-		if( message->name[0] )
-		{
-			BF_WriteByte( &cl->netchan.message, svc_usermessage );
-			BF_WriteString( &cl->netchan.message, message->name );
-			BF_WriteByte( &cl->netchan.message, message->number );
-			BF_WriteByte( &cl->netchan.message, (byte)message->size );
-		}
-		start++;
-	}
-
-	if( start == MAX_USER_MESSAGES ) com.snprintf( cmd, MAX_STRING, "cmd deltainfo %i 0 0\n", svs.spawncount );
-	else com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );

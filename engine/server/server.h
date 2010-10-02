@@ -73,7 +73,7 @@ typedef struct server_s
 
 	int		hostflags;	// misc server flags: predicting etc
 
-	string		name;		// map name, or cinematic name
+	string		name;		// map name
 	string		startspot;	// player_start name on nextmap
 
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];

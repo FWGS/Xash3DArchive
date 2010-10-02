@@ -35,11 +35,12 @@ void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
 
 void CL_WriteDemoHeader( const char *name )
 {
+	int		i, j, len;
 	char		buf_data[MAX_MSGLEN];
 	entity_state_t	*state, nullstate;
 	movevars_t	nullmovevars;
 	sizebuf_t		buf;
-	int		i, len;
+	delta_info_t	*dt;
 
 	MsgDev( D_INFO, "recording to %s.\n", name );
 	cls.demofile = FS_Open( name, "wb" );
@@ -91,7 +92,7 @@ void CL_WriteDemoHeader( const char *name )
 	// user messages
 	for( i = 0; i < MAX_USER_MESSAGES; i++ )
 	{
-		if( clgame.msg[i].name[0] )
+		if( clgame.msg[i].name[0] && clgame.msg[i].number >= svc_lastmsg )
 		{
 			BF_WriteByte( &buf, svc_usermessage );
 			BF_WriteString( &buf, clgame.msg[i].name );
@@ -108,6 +109,26 @@ void CL_WriteDemoHeader( const char *name )
 			}
 		}
 
+	}
+
+	// delta tables
+	for( i = 0; i < Delta_NumTables( ); i++ )
+	{
+		dt = Delta_FindStructByIndex( i );
+
+		for( j = 0; j < dt->numFields; j++ )
+		{
+			Delta_WriteTableField( &buf, i, &dt->pFields[j] );
+
+			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
+			{	
+				// write it out
+				len = LittleLong( BF_GetNumBytesWritten( &buf ));
+				FS_Write( cls.demofile, &len, 4 );
+				FS_Write( cls.demofile, BF_GetData( &buf ), len );
+				BF_Clear( &buf );
+			}
+		}
 	}
 
 	// baselines

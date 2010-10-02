@@ -1731,9 +1731,6 @@ void R_BeginFrame( bool clearScene )
 		GL_UpdateGammaRamp();
 	}
 
-	// run cinematic passes on shaders
-	R_RunAllCinematics();
-
 	// go into 2D mode
 	R_Set2DMode( true );
 

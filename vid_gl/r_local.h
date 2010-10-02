@@ -82,7 +82,6 @@ typedef enum
 	TF_LIGHTMAP	= BIT(11),	// no resample etc
 } texFlags_t;
 
-#define TF_CINEMATIC		( TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP|TF_NOMIPMAP )
 #define TF_PORTALMAP		( TF_NOMIPMAP|TF_UNCOMPRESSED|TF_NOPICMIP|TF_CLAMP )
 #define TF_SHADOWMAP		( TF_NOMIPMAP|TF_UNCOMPRESSED|TF_NOPICMIP|TF_CLAMP|TF_DEPTHMAP )
 
@@ -480,16 +479,6 @@ void		ColorToBytes( const float *color, byte *colorBytes );
 //
 void		R_InitBloomTextures( void );
 void		R_BloomBlend( const ref_params_t *fd );
-
-//
-// r_cin.c
-//
-void		R_InitCinematics( void );
-void		R_ShutdownCinematics( void );
-uint		R_StartCinematics( const char *arg );
-void		R_FreeCinematics( uint id );
-void		R_RunAllCinematics( void );
-texture_t		*R_UploadCinematics( uint id );
 
 //
 // r_cull.c

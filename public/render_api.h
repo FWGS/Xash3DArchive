@@ -76,7 +76,7 @@ typedef struct
 {
 	vec3_t		position;
 	char		name[64];		// same as CS_SIZE
-	short		entityIndex;
+	short		entityIndex;	// FIXME: replace with pointer to entity ?
 	byte		depth;
 	byte		flags;
 
@@ -85,36 +85,6 @@ typedef struct
 	// transitions if they hit similar geometry
 	vec3_t		impactPlaneNormal;
 } decallist_t;
-
-typedef struct
-{
-	char		*name;
-	byte		*mempool;
-
-	droqchunk_t	chunk;
-	dcell_t		cells[256];
-	dquadcell_t	qcells[256];
-	
-	byte		*vid_buffer; 
-	byte		*vid_pic[2]; 
-	byte		*pic;
-	byte		*pic_pending;
-
-	bool		new_frame;
-
-	int		s_rate;
-	int		s_width;
-	int		s_channels;
-
-	int		width;
-	int		height;
-
-	file_t		*file;
-	int		headerlen;
-
-	float		time;		// curtime for first cinematic frame
-	uint		frame;
-} cinematics_t;
 
 /*
 ==============================================================================
@@ -199,10 +169,6 @@ typedef struct render_imp_s
 	struct cl_entity_s *(*GetLocalPlayer)( void );
 	int	(*GetMaxClients)( void );
 	void	(*DrawTriangles)( int fTrans );
-
-	// RoQ decoder imports
-	void	(*RoQ_ReadChunk)( cinematics_t *cin );
-	byte	*(*RoQ_ReadNextFrame)( cinematics_t *cin, bool silent );
 } render_imp_t;
 
 #endif//RENDER_API_H

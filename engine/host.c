@@ -120,8 +120,6 @@ bool Host_InitRender( void )
 	ri.GetLocalPlayer = CL_GetLocalPlayer;
 	ri.GetMaxClients = CL_GetMaxClients;
 	ri.DrawTriangles = Tri_DrawTriangles;
-	ri.RoQ_ReadChunk = CIN_ReadChunk;
-	ri.RoQ_ReadNextFrame = CIN_ReadNextFrame;
 	ri.WndProc = IN_WndProc;          
 
 	Sys_LoadLibrary( host_video->string, &render_dll );

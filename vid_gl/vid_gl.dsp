@@ -122,10 +122,6 @@ SOURCE=.\r_bloom.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\r_cin.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\r_cull.c
 # End Source File
 # Begin Source File

@@ -90,21 +90,16 @@ S_CreateDefaultSound
 static wavdata_t *S_CreateDefaultSound( void )
 {
 	wavdata_t	*sc;
-	int	i;
 
 	sc = Z_Malloc( sizeof( wavdata_t ));
 
-	sc->rate = 22050;
 	sc->width = 2;
 	sc->channels = 1;
-	sc->samples = 11025;
 	sc->loopStart = -1;
+	sc->rate = SOUND_DMA_SPEED;
+	sc->samples = SOUND_DMA_SPEED;
 	sc->size = sc->samples * sc->width * sc->channels;
 	sc->buffer = Z_Malloc( sc->size );
-
-	// create silent sound
-	for( i = 0; i < sc->samples; i++ )
-		((short *)sc->buffer)[i] =  i;
 
 	return sc;
 }

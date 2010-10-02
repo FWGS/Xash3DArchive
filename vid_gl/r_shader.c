@@ -79,7 +79,6 @@ static bool		r_shaderNoCompress;
 static bool		r_shaderNearest;
 static bool		r_shaderHasDlightPass;
 
-#define Shader_FreePassCinematics( s )	if((s)->cinHandle ) { R_FreeCinematics((s)->cinHandle ); (s)->cinHandle = 0; }
 #define Shader_CopyString( str )	com.stralloc( r_shaderpool, str, __FILE__, __LINE__ )
 #define Shader_Malloc( size )		Mem_Alloc( r_shaderpool, size )
 #define Shader_Free( data )		Mem_Free( data )
@@ -1329,8 +1328,6 @@ static bool Shaderpass_MapExt( ref_shader_t *shader, ref_stage_t *pass, int addF
 	string	name;
 	token_t	tok;
 
-	Shader_FreePassCinematics( pass );
-
 	if( pass->num_textures )
 	{
 		if( pass->num_textures == MAX_STAGE_TEXTURES )
@@ -1421,7 +1418,6 @@ static bool Shaderpass_AnimMapExt( ref_shader_t *shader, ref_stage_t *pass, int 
 	float	anim_fps;
 	token_t	tok;
 
-	Shader_FreePassCinematics( pass );
 	flags = Shader_SetImageFlags( shader ) | addFlags;
 
 	pass->tcgen = TCGEN_BASE;
@@ -1475,8 +1471,6 @@ static bool Shaderpass_CubeMapExt( ref_shader_t *shader, ref_stage_t *pass, int 
 	string	name;
 	token_t	tok;
 	
-	Shader_FreePassCinematics( pass );
-
 	if( pass->num_textures )
 	{
 		if( pass->num_textures == MAX_STAGE_TEXTURES )
@@ -1555,27 +1549,6 @@ static bool Shaderpass_ShadeCubeMap( ref_shader_t *shader, ref_stage_t *pass, sc
 	return Shaderpass_CubeMapExt( shader, pass, TF_CLAMP, TCGEN_REFLECTION_CELLSHADE, script );
 }
 
-static bool Shaderpass_VideoMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
-{
-	token_t	tok;
-
-	Shader_FreePassCinematics( pass );
-
-	if( !Com_ReadToken( script, SC_ALLOW_PATHNAMES2, &tok ))
-	{
-		MsgDev( D_ERROR, "missing parameters for 'videoMap' in shader '%s'\n", shader->name );
-		return false;
-	}
-
-	pass->tcgen = TCGEN_BASE;
-	pass->cinHandle = R_StartCinematics( tok.string );
-	pass->flags &= ~(SHADERSTAGE_LIGHTMAP|SHADERSTAGE_DLIGHT|SHADERSTAGE_PORTALMAP|SHADERSTAGE_ANIMFREQUENCY|SHADERSTAGE_FRAMES);
-	pass->animFrequency[0] = pass->animFrequency[1] = 0.0f;
-	pass->anim_offset = 0;
-
-	return true;
-}
-
 static bool Shaderpass_NormalMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	int		flags;
@@ -1588,8 +1561,6 @@ static bool Shaderpass_NormalMap( ref_shader_t *shader, ref_stage_t *pass, scrip
 		MsgDev( D_ERROR, "shader %s has a normalmap stage, while GLSL is not supported\n", shader->name );
 		return false;
 	}
-
-	Shader_FreePassCinematics( pass );
 
 	flags = Shader_SetImageFlags( shader );
 	if( !Com_ReadToken( script, SC_ALLOW_PATHNAMES2, &tok ))
@@ -1658,8 +1629,6 @@ static bool Shaderpass_Material( ref_shader_t *shader, ref_stage_t *pass, script
 		MsgDev( D_ERROR, "missing parameters for 'material' in shader '%s'\n", shader->name );
 		return false;
 	}
-
-	Shader_FreePassCinematics( pass );
 
 	if( pass->num_textures )
 	{
@@ -1780,8 +1749,6 @@ static bool Shaderpass_Distortion( ref_shader_t *shader, ref_stage_t *pass, scri
 		else MsgDev( D_ERROR, "shader %s has a distortion stage, while GLSL is not supported\n", shader->name );
 		return false;
 	}
-
-	Shader_FreePassCinematics( pass );
 
 	if( pass->num_textures )
 	{
@@ -2376,7 +2343,6 @@ static const ref_parsekey_t shaderpasskeys[] =
 { "animMap",	Shaderpass_AnimMap		},
 { "cubeMap",	Shaderpass_CubeMap		},
 { "shadeCubeMap",	Shaderpass_ShadeCubeMap	},
-{ "videoMap",	Shaderpass_VideoMap		},
 { "clampMap",	Shaderpass_ClampMap		},
 { "animClampMap",	Shaderpass_AnimClampMap	},
 { "normalMap",	Shaderpass_NormalMap	},
@@ -2688,9 +2654,6 @@ void Shader_TouchImages( ref_shader_t *shader, e_free free_unused )
 	{
 		stage = &shader->stages[i];
 
-		if( free_unused != FREE_IGNORE && stage->cinHandle )
-			Shader_FreePassCinematics( stage );
-
 		for( j = 0; j < stage->num_textures; j++ )
 		{
 			// prolonge registration for all shader textures
@@ -2732,7 +2695,6 @@ void Shader_FreeShader( ref_shader_t *shader, e_free free_unused )
 	uint		i, hashKey;
 	ref_shader_t	*cur, **prev;
 	shader_t		handle;
-	ref_stage_t	*pass;
 
 	ASSERT( shader );
 
@@ -2775,12 +2737,6 @@ void Shader_FreeShader( ref_shader_t *shader, e_free free_unused )
 			R_FreeSkydome( shader->skyParms );
 			shader->skyParms = NULL;
 		}
-	}
-
-	if( free_unused != FREE_IGNORE && shader->flags & SHADER_VIDEOMAP )
-	{
-		for( i = 0, pass = shader->stages; i < shader->num_stages; i++, pass++ )
-			Shader_FreePassCinematics( pass );
 	}
 
 	if( free_unused != FREE_IGNORE )
@@ -3275,8 +3231,6 @@ void Shader_Finish( ref_shader_t *s )
 			pass->anim_offset = pass->num_textures;	// alt-anim is missing
 			pass->animFrequency[1] = 0.0f;
 		}
-		if( pass->cinHandle )
-			s->flags |= SHADER_VIDEOMAP;
 		if( pass->flags & SHADERSTAGE_LIGHTMAP )
 			s->flags |= SHADER_HASLIGHTMAP;
 		if( pass->program )
@@ -3378,19 +3332,6 @@ void Shader_Finish( ref_shader_t *s )
 
  	// refresh registration sequence
  	Shader_TouchImages( s, FREE_IGNORE );
-}
-
-void R_UploadCinematicShader( const ref_shader_t *shader )
-{
-	int j;
-	ref_stage_t *pass;
-
-	// upload cinematics
-	for( j = 0, pass = shader->stages; j < shader->num_stages; j++, pass++ )
-	{
-		if( pass->cinHandle )
-			pass->textures[0] = R_UploadCinematics( pass->cinHandle );
-	}
 }
 
 void R_DeformvBBoxForShader( const ref_shader_t *shader, vec3_t ebbox )

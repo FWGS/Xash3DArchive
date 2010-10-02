@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//			cl_video.c - roq video player
+//			cl_video.c - avi video player
 //=======================================================================
 
 #include "common.h"
@@ -235,6 +235,9 @@ SCR_StopCinematic
 */
 void SCR_StopCinematic( void )
 {
+	if( cls.state != ca_cinematic )
+		return;
+
 	AVI_CloseVideo( cin_state );
 	S_StopStreaming();
 	cin_time = 0.0f;

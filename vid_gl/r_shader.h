@@ -56,7 +56,7 @@ typedef enum
 	SHADER_POLYGONOFFSET	= BIT(4),
 	SHADER_CULL_FRONT		= BIT(5),
 	SHADER_CULL_BACK		= BIT(6),
-	SHADER_VIDEOMAP		= BIT(7),
+	SHADER_DEFAULTED		= BIT(7),
 	SHADER_MATERIAL		= BIT(8),
 	SHADER_DEFORM_NORMAL	= BIT(9),
 	SHADER_ENTITY_MERGABLE	= BIT(10),
@@ -67,7 +67,6 @@ typedef enum
 	SHADER_PORTAL_CAPTURE1	= BIT(15),
 	SHADER_PORTAL_CAPTURE2	= BIT(16),
 	SHADER_RENDERMODE		= BIT(17),
-	SHADER_DEFAULTED		= BIT(18),
 	SHADER_PORTAL_CAPTURE	= (SHADER_PORTAL_CAPTURE1|SHADER_PORTAL_CAPTURE1),
 	SHADER_CULL		= (SHADER_CULL_FRONT|SHADER_CULL_BACK),
 
@@ -288,8 +287,6 @@ typedef struct ref_stage_s
 	word		numtcMods;
 	tcMod_t		*tcMods;
 
-	uint		cinHandle;
-
 	const char	*program;
 	word		program_type;
 
@@ -357,7 +354,6 @@ void R_ShaderSetMiptexFlags( uint addFlags );
 void R_ShaderSetRenderMode( kRenderMode_t mode, bool twoSided );
 void R_SetAnimFrequency( float anim_fps );
 void R_ShaderAddStageIntervals( float interval );
-void R_UploadCinematicShader( const ref_shader_t *shader );
 void R_DeformvBBoxForShader( const ref_shader_t *shader, vec3_t ebbox );
 
 #endif // R_SHADER_H

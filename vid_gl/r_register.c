@@ -1008,7 +1008,6 @@ static void R_InitMedia( void )
 	R_InitMeshLists();
 	R_InitGLSLPrograms();
 	R_InitImages();
-	R_InitCinematics ();
 	R_InitShaders();
 	R_InitModels();
 	R_InitDecals();
@@ -1040,7 +1039,6 @@ static void R_FreeMedia( void )
 	R_ShutdownShadows();
 	R_ShutdownModels();
 	R_ShutdownShaders();
-	R_ShutdownCinematics ();
 	R_ShutdownImages();
 	R_ShutdownGLSLPrograms();
 

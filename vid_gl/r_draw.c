@@ -73,8 +73,6 @@ void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, f
 	pic_mbuffer.shaderkey = shader->sortkey;
 	pic_mbuffer.infokey -= 4;
 
-	// upload video right before rendering
-	if( shader->flags & SHADER_VIDEOMAP ) R_UploadCinematicShader( shader );
 	R_PushMesh( &pic_mesh, MF_TRIFAN|shader->features | ( r_shownormals->integer ? MF_NORMALS : 0 ));
 
 	if( oldframe != glState.draw_frame )
@@ -355,9 +353,6 @@ static void Tri_DrawPolygon( void )
 	if( triState.noCulling )
 		triState.features |= MF_NOCULL;
 
-	// upload video right before rendering
-	if( shader->flags & SHADER_VIDEOMAP )
-		R_UploadCinematicShader( shader );
 	R_PushMesh( &tri_mesh, triState.features );
 
 	if( oldframe != glState.draw_frame )

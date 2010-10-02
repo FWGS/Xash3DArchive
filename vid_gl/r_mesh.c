@@ -367,9 +367,6 @@ meshbuffer_t *R_AddMeshToList( int type, mfog_t *fog, ref_shader_t *shader, int 
 		meshbuf = &list->meshbuffer_opaque[list->num_opaque_meshes++];
 	}
 
-	if( shader->flags & SHADER_VIDEOMAP )
-		R_UploadCinematicShader( shader );
-
 	meshbuf->sortkey = MB_ENTITY2NUM( RI.currententity ) | MB_FOG2NUM( fog ) | type;
 	meshbuf->shaderkey = shader->sortkey;
 	meshbuf->infokey = infokey;

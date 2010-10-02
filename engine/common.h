@@ -232,14 +232,7 @@ void Key_EnumCmds_f( void );
 void Key_SetKeyDest( int key_dest );
 
 //
-// cinematic.c
-//
-void CIN_Init( void );
-void CIN_ReadChunk( cinematics_t *cin );
-byte *CIN_ReadNextFrame( cinematics_t *cin, bool silent );
-
-//
-// movie.c
+// avikit.c
 //
 typedef struct movie_state_s	movie_state_t;
 long AVI_GetVideoFrameNumber( movie_state_t *Avi, float time );
