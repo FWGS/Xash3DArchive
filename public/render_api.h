@@ -6,7 +6,6 @@
 #define RENDER_API_H
 
 #include "ref_params.h"
-#include "movie.h"
 
 #define MAP_DEFAULT_SHADER		"*black"	// engine built-in default shader
 
@@ -105,6 +104,7 @@ typedef struct render_exp_s
 	void	(*BeginRegistration)( const char *map );
 	bool	(*RegisterModel)( const char *name, int cl_index ); // also build replacement index table
 	shader_t	(*RegisterShader)( const char *name, int shaderType );
+	shader_t	(*RegisterShaderInt)( const char *name, const byte *image_buf, size_t image_size );	// from memory
 	void	(*EndRegistration)( const char *skyname );
 	void	(*FreeShader)( const char *shadername );
 

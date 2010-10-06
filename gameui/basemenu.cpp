@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "keydefs.h"
+#include "images.h"		// built-in resources
 #include "utils.h"
 
 cvar_t	*ui_precache;
@@ -296,12 +297,12 @@ void UI_DrawMouseCursor( void )
 
 		if ( !(item->flags & QMF_GRAYED) && item->type == QMTYPE_FIELD )
 		{
-			hCursor = PIC_Load( UI_CURSOR_TYPING );
+			hCursor = PIC_Load( UI_CURSOR_TYPING, typing_tga, sizeof( typing_tga ));
 		}
 		break;
 	}
 
-	if( hCursor == -1 ) hCursor = PIC_Load( UI_CURSOR_NORMAL );
+	if( hCursor == -1 ) hCursor = PIC_Load( UI_CURSOR_NORMAL, cursor_tga, sizeof( cursor_tga ));
 
 	PIC_Set( hCursor, 255, 255, 255 );
 	PIC_DrawTrans( 0, uiStatic.cursorX, uiStatic.cursorY, w, h );
@@ -614,7 +615,7 @@ const char *UI_DefaultKey( menuFramework_s *menu, int key, int down )
 	int		cursorPrev;
 
 	// menu system key
-	if( down && ( key == K_ESCAPE || key == K_MOUSE2 ))
+	if( down && key == K_ESCAPE )
 	{
 		UI_PopMenu();
 		return uiSoundOut;
@@ -1262,7 +1263,7 @@ int UI_VidInit( void )
 	UI_ApplyCustomColors ();
 
 	// register ui font
-	uiStatic.hFont = PIC_Load( "gfx/shell/font" );
+	uiStatic.hFont = PIC_Load( "menufont", font_tga, sizeof( font_tga ));
 
 	return 1;
 }

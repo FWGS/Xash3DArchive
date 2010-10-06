@@ -26,7 +26,16 @@
 #define GetLogoWidth	(*g_engfuncs.pfnGetLogoWidth)
 #define GetLogoHeight	(*g_engfuncs.pfnGetLogoHeight)
 
-#define PIC_Load		(*g_engfuncs.pfnPIC_Load)
+inline HIMAGE PIC_Load( const char *szPicName )
+{
+	return g_engfuncs.pfnPIC_Load( szPicName, NULL, 0 );
+}
+
+inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRawImageSize )
+{
+	return g_engfuncs.pfnPIC_Load( szPicName, ucRawImage, ulRawImageSize );
+}
+
 #define PIC_Free		(*g_engfuncs.pfnPIC_Free)
 #define PLAY_SOUND		(*g_engfuncs.pfnPlayLocalSound)
 #define CVAR_REGISTER	(*g_engfuncs.pfnRegisterVariable)

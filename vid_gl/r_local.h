@@ -546,6 +546,7 @@ void		GL_LoadTexMatrix( const matrix4x4 m );
 void		GL_LoadIdentityTexMatrix( void );
 void		GL_EnableTexGen( int coord, int mode );
 void		GL_SetTexCoordArrayMode( int mode );
+void		GL_TexFilter( texture_t *tex );
 
 void		R_InitImages( void );
 void		R_ShutdownImages( void );

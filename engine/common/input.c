@@ -434,7 +434,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			host.state = HOST_NOFOCUS;
 		else host.state = HOST_FRAME;
 
-		wnd_caption = GetSystemMetrics( SM_CYCAPTION );
+		wnd_caption = GetSystemMetrics( SM_CYCAPTION ) + WND_BORDER;
 		S_Activate(( host.state == HOST_FRAME ) ? true : false, host.hWnd );
 		Key_ClearStates();	// FIXME!!!
 

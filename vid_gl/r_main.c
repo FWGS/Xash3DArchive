@@ -2252,6 +2252,24 @@ shader_t Mod_RegisterShader( const char *name, int shaderType )
 	return src - r_shaders;
 }
 
+shader_t Mod_RegisterShaderInt( const char *name, const byte *image_buf, size_t image_size )
+{
+	texture_t		*tex = R_FindTexture( va( "#%s", name ), image_buf, image_size, TF_CLAMP|TF_NOMIPMAP|TF_NOPICMIP );
+	ref_shader_t	*src;
+
+	if( !tex )
+	{
+		// no reason to duplicate default shader
+		MsgDev( D_ERROR, "Mod_RegisterShader: couldn't load %s\n", name );
+		return tr.defaultShader - r_shaders;
+	}
+
+	R_ShaderAddStageTexture( tex );	// set shader texture
+	src = R_LoadShader( name, SHADER_NOMIP, 0, 0, SHADER_INVALID );
+
+	return src - r_shaders;
+}
+
 byte *Mod_GetCurrentVis( void )
 {
 	return Mod_LeafPVS( r_viewleaf, r_worldmodel );
@@ -2526,6 +2544,7 @@ render_exp_t DLLEXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.BeginRegistration = R_BeginRegistration;
 	re.RegisterModel = R_UploadModel;
 	re.RegisterShader = Mod_RegisterShader;
+	re.RegisterShaderInt = Mod_RegisterShaderInt;
 	re.EndRegistration = R_EndRegistration;
 	re.FreeShader = Mod_FreeShader;
 

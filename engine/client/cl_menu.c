@@ -302,7 +302,7 @@ pfnPIC_Load
 
 =========
 */
-static HIMAGE pfnPIC_Load( const char *szPicName )
+static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long image_size )
 {
 	if( !re ) return 0; // render not initialized
 	if( !szPicName || !*szPicName )
@@ -310,6 +310,9 @@ static HIMAGE pfnPIC_Load( const char *szPicName )
 		MsgDev( D_ERROR, "CL_LoadImage: bad name!\n" );
 		return 0;
 	}
+
+	if( image_buf && image_size > 0 )
+		return re->RegisterShaderInt( szPicName, image_buf, image_size );
 	return re->RegisterShader( szPicName, SHADER_NOMIP );
 }
 

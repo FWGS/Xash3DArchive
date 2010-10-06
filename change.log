@@ -1,4 +1,11 @@
-build 1343
+build 1338
+
+Engine: fix a broken demos recording\playing
+GameUI: get support for internal resources (built-in)
+GameUI: make font.bmp, cursor.bmp and typing.bmp as part of GameUI.dll
+GameUI: remove demo menus heads.
+
+build 1334
 
 Engine: prevent auto-repeat for most keys in-game
 Engine: implement AVI movies support (instead of RoQ support)

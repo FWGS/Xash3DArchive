@@ -508,8 +508,11 @@ void Key_Event( int key, bool down, int time )
 
 		if( key != K_BACKSPACE && key != K_PAUSE && keys[key].repeats > 1 )
 		{
-			// ignore most autorepeats
-			return;
+			if( cls.key_dest == key_game )
+			{
+				// ignore most autorepeats
+				return;
+			}
 		}
 	}
 	else

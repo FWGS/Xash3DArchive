@@ -25,8 +25,8 @@
 #include "netadr.h"
 
 #define ART_BACKGROUND		"gfx/shell/splash"
-#define UI_CURSOR_NORMAL		"gfx/shell/cursor"
-#define UI_CURSOR_TYPING		"gfx/shell/typing"
+#define UI_CURSOR_NORMAL		"cursor"
+#define UI_CURSOR_TYPING		"typing"
 #define UI_SLIDER_MAIN		"gfx/shell/slider"
 #define UI_LEFTARROW		"gfx/shell/larrowdefault"
 #define UI_LEFTARROWFOCUS		"gfx/shell/larrowflyover"

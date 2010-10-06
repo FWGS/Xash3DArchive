@@ -806,9 +806,20 @@ static texture_t *Shader_FindImage( ref_shader_t *shader, const char *name, int 
 	{
 		if( !r_internalTexture )
 		{
-			// this never should happens
-			MsgDev( D_ERROR, "$default image is missing, apply 'default' image\n" );
-			image = tr.defaultTexture;
+			if( r_numStageTextures )
+			{
+				// most usefully by SHADER_NOMIP
+				// HACKHACK: apply imageflags specified by shader with external image
+				image = r_stageTexture[0];
+				image->flags |= Shader_SetImageFlags( shader );
+				GL_TexFilter( image );
+			}
+			else
+			{
+				// this never should happens
+				MsgDev( D_ERROR, "$default image is missing, apply 'default' image\n" );
+				image = tr.defaultTexture;
+			}
 		}
 		else image = Mod_LoadTexture( r_internalTexture );
 
@@ -3587,11 +3598,14 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		shader->num_stages = 1;
 		shader->name = Shader_Malloc( length + 1 + sizeof( ref_stage_t ) * shader->num_stages );
 		strcpy( shader->name, shortname );
-		shader->stages = ( ref_stage_t * )( ( byte * )shader->name + length + 1 );
+		shader->stages = (ref_stage_t *)((byte *)shader->name + length + 1 );
 		pass = &shader->stages[0];
 		pass->flags = SHADERSTAGE_BLEND_REPLACE|SHADERSTAGE_RENDERMODE;
 		pass->glState = GLSTATE_NONE; 
-		pass->textures[0] = Shader_FindImage( shader, shortname, addFlags|TF_NOPICMIP|TF_CLAMP|TF_NOMIPMAP );
+
+		if( r_numStageTextures ) pass->textures[0] = r_stageTexture[0];
+		else pass->textures[0] = Shader_FindImage( shader, shortname, addFlags|TF_NOPICMIP|TF_CLAMP|TF_NOMIPMAP );
+
 		pass->rgbGen.type = RGBGEN_IDENTITY;
 		pass->alphaGen.type = ALPHAGEN_IDENTITY;
 		pass->tcgen = TCGEN_BASE;

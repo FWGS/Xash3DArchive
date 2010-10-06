@@ -30,7 +30,7 @@ typedef struct ui_globalvars_s
 typedef struct ui_enginefuncs_s
 {
 	// image handlers
-	HIMAGE	(*pfnPIC_Load)( const char *szPicName );
+	HIMAGE	(*pfnPIC_Load)( const char *szPicName, const byte *ucRawImage, long ulRawImageSize );
 	void	(*pfnPIC_Free)( const char *szPicName );
 	int	(*pfnPIC_Frames)( HIMAGE hPic );
 	int	(*pfnPIC_Height)( HIMAGE hPic, int frame );

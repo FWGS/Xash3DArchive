@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 
-#define ART_BANNER		"gfx/shell/head_playrec"
+#define ART_BANNER		"gfx/shell/head_saveload"
 
 #define ID_BACKGROUND	0
 #define ID_BANNER		1
