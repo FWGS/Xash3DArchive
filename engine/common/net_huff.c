@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "common.h"
+#include "netchan.h"
 
 #define VALUE(a)			((int   )(a))
 #define NODE(a)			((void *)(a))

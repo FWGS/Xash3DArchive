@@ -331,6 +331,22 @@ void SV_ReadPackets( void )
 					SV_ExecuteClientMessage( cl, &net_message );
 				}
 			}
+
+			// Fragmentation/reassembly sending takes priority over all game messages, want this in the future?
+			if( Netchan_IncomingReady( &cl->netchan ))
+			{
+				if( Netchan_CopyNormalFragments( &cl->netchan, &net_message ))
+				{
+					BF_Clear( &net_message );
+					SV_ExecuteClientMessage( cl, &net_message );
+				}
+
+				if( Netchan_CopyFileFragments( &cl->netchan, &net_message ))
+				{
+//					SV_ProcessFile( cl, cl->netchan.incomingfilename );
+				}
+			}
+
 			break;
 		}
 

@@ -4,11 +4,15 @@
 //=======================================================================
 
 #include "common.h"
+#include "netchan.h"
 #include "byteorder.h"
 #include "mathlib.h"
 #include "protocol.h"
 #include "net_encode.h"
 #include "event_api.h"
+#include "usercmd.h"
+#include "pm_movevars.h"
+#include "entity_state.h"
 #include "weaponinfo.h"
 #include "entity_types.h"
 

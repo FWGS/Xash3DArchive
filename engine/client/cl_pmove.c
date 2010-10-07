@@ -361,6 +361,8 @@ void CL_InitClientMove( void )
 {
 	int	i;
 
+	Pmove_Init ();
+
 	clgame.pmove->server = false;	// running at client
 	clgame.pmove->movevars = &clgame.movevars;
 	clgame.pmove->runfuncs = false;

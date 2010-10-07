@@ -740,3 +740,21 @@ char *BF_ReadStringExt( sizebuf_t *bf, bool bLine )
 
 	return string;
 }
+
+void BF_ExciseBits( sizebuf_t *bf, int startbit, int bitstoremove )
+{
+	int	i, endbit = startbit + bitstoremove;
+	int	remaining_to_end = bf->nDataBits - endbit;
+	sizebuf_t	temp;
+
+	BF_StartWriting( &temp, bf->pData, bf->nDataBits << 3, startbit, -1 );
+	BF_SeekToBit( bf, endbit );
+
+	for( i = 0; i < remaining_to_end; i++ )
+	{
+		BF_WriteOneBit( &temp, BF_ReadOneBit( bf ));
+	}
+
+	BF_SeekToBit( bf, startbit );
+	bf->nDataBits -= bitstoremove;
+}

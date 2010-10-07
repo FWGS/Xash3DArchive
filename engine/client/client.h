@@ -13,6 +13,8 @@
 #include "com_model.h"
 #include "cm_local.h"
 #include "pm_defs.h"
+#include "pm_movevars.h"
+#include "netchan.h"
 #include "world.h"
 
 #define MAX_DEMOS		32

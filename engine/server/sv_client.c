@@ -75,8 +75,8 @@ void SV_DirectConnect( netadr_t from )
 	sv_client_t	temp, *cl, *newcl;
 	edict_t		*ent;
 	int		i, edictnum;
-	int		version;
-	int		qport, count = 0;
+	int		qport, version;
+	int		count = 0;
 	int		challenge;
 
 	version = com.atoi( Cmd_Argv( 1 ));
@@ -96,7 +96,7 @@ void SV_DirectConnect( netadr_t from )
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->state == cs_free ) continue;
-		if( NET_CompareBaseAdr(from, cl->netchan.remote_address) && (cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
+		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && ( cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
 		{
 			if( !NET_IsLocalAddress( from ) && ( svs.realtime - cl->lastconnect ) < sv_reconnect_limit->value * 1000 )
 			{
@@ -139,7 +139,7 @@ void SV_DirectConnect( netadr_t from )
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->state == cs_free ) continue;
-		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && (cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
+		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && ( cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
 		{
 			MsgDev( D_INFO, "%s:reconnect\n", NET_AdrToString( from ));
 			newcl = cl;
@@ -360,6 +360,9 @@ void SV_DropClient( sv_client_t *drop )
 	drop->state = cs_zombie; // become free in a few seconds
 	drop->name[0] = 0;
 
+	// Throw away any residual garbage in the channel.
+	Netchan_Clear( &drop->netchan );
+
 	SV_RefreshUserinfo(); // refresh userinfo on disconnect
 
 	// if this was the last client on the server, send a heartbeat
@@ -444,9 +447,9 @@ char *SV_StatusString( void )
 	int		statusLength;
 	int		playerLength;
 
-	com.strcpy( status, Cvar_Serverinfo());
+	com.strcpy( status, Cvar_Serverinfo( ));
 	com.strcat( status, "\n" );
-	statusLength = com.strlen(status);
+	statusLength = com.strlen( status );
 
 	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
@@ -1401,10 +1404,10 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !com.strcmp( c, "getchallenge" )) SV_GetChallenge( from );
 	else if( !com.strcmp( c, "connect" )) SV_DirectConnect( from );
 	else if( !com.strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
-	else if( svgame.dllFuncs.pfnConnectionlessPacket( &net_from, args, buf, &len ))
+	else if( svgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
 	{
 		// user out of band message (must be handled in CL_ConnectionlessPacket)
-		if( len > 0 ) Netchan_OutOfBand( NS_SERVER, net_from, len, buf );
+		if( len > 0 ) Netchan_OutOfBand( NS_SERVER, from, len, buf );
 	}
 	else MsgDev( D_ERROR, "bad connectionless packet from %s:\n%s\n", NET_AdrToString( from ), args );
 }

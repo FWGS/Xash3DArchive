@@ -16,7 +16,6 @@
 #include "vsound_api.h"
 #include "com_export.h"
 #include "com_model.h"
-#include "net_msg.h"
 
 // PERFORMANCE INFO
 #define MIN_FPS         	0.1		// host minimum fps value for maxfps.
@@ -32,6 +31,28 @@
 #define CIN_MAIN		0
 #define CIN_LOGO		1
 
+// config strings are a general means of communication from
+// the server to all connected clients.
+// each config string can be at most CS_SIZE characters.
+#define CS_SIZE			64	// size of one config string
+#define CS_TIME			16	// size of time string
+
+// FIXME: eliminate this. Configstrings must be started from CS_MODELS
+
+#define CS_NAME			0	// map name
+#define CS_MAPCHECKSUM		1	// level checksum (for catching cheater maps)
+#define CS_BACKGROUND_TRACK		3	// basename of background track
+
+// 8 - 32 it's a reserved strings
+
+#define CS_MODELS			8				// configstrings starts here
+#define CS_SOUNDS			(CS_MODELS+MAX_MODELS)		// sound names
+#define CS_DECALS			(CS_SOUNDS+MAX_SOUNDS)		// server decal indexes
+#define CS_EVENTS			(CS_DECALS+MAX_DECALNAMES)		// queue events
+#define CS_GENERICS			(CS_EVENTS+MAX_EVENTS)		// generic resources (e.g. color decals)
+#define CS_LIGHTSTYLES		(CS_GENERICS+MAX_GENERICS)		// lightstyle patterns 
+#define MAX_CONFIGSTRINGS		(CS_LIGHTSTYLES+MAX_LIGHTSTYLES)	// total count
+
 #ifdef _DEBUG
 void DBG_AssertFunction( bool fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
 #define Assert( f )		DBG_AssertFunction( f, #f, __FILE__, __LINE__, NULL )
@@ -41,6 +62,7 @@ void DBG_AssertFunction( bool fExpr, const char* szExpr, const char* szFile, int
 
 extern cvar_t	*scr_width;
 extern cvar_t	*scr_height;
+extern cvar_t	*scr_download;
 extern cvar_t	*allow_download;
 extern cvar_t	*host_maxfps;
 

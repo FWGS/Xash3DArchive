@@ -307,6 +307,9 @@ void CL_WritePacket( void )
 
 	// deliver the message
 	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
+
+	// update download/upload slider.
+	Netchan_UpdateProgress( &cls.netchan );
 }
 
 /*
@@ -580,6 +583,9 @@ void CL_Disconnect( void )
 	CL_SendDisconnectMessage();
 	CL_ClearState ();
 
+	// clear the network channel, too.
+	Netchan_Clear( &cls.netchan );
+
 	// stop download
 	if( cls.download )
 	{
@@ -717,6 +723,11 @@ void CL_Reconnect_f( void )
 	{
 		cls.demonum = cls.movienum = -1;	// not in the demo loop now
 		cls.state = ca_connected;
+
+		// clear channel and stuff
+		Netchan_Clear( &cls.netchan );
+		BF_Clear( &cls.netchan.message );
+
 		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
 		BF_WriteString( &cls.netchan.message, "new" );
 		return;
@@ -973,23 +984,23 @@ void CL_ReadNetMessage( void )
 		if( BF_GetMaxBytes( &net_message ) >= 4 && *(int *)net_message.pData == -1 )
 		{
 			CL_ConnectionlessPacket( net_from, &net_message );
-			return;
+			continue;
 		}
 
 		// can't be a valid sequenced packet	
-		if( cls.state < ca_connected ) return;
+		if( cls.state < ca_connected ) continue;
 
 		if( BF_GetMaxBytes( &net_message ) < 8 )
 		{
 			MsgDev( D_WARN, "%s: runt packet\n", NET_AdrToString( net_from ));
-			return;
+			continue;
 		}
 
 		// packet from server
 		if( !NET_CompareAdr( net_from, cls.netchan.remote_address ))
 		{
 			MsgDev( D_WARN, "CL_ReadPackets: %s:sequenced packet without connection\n", NET_AdrToString( net_from ));
-			return;
+			continue;
 		}
 
 		if( Netchan_Process( &cls.netchan, &net_message ))
@@ -1005,6 +1016,32 @@ void CL_ReadNetMessage( void )
 				CL_WriteDemoMessage( &net_message, headerBytes );
 		}
 	}
+
+	// check for fragmentation/reassembly related packets.
+	if( cls.state != ca_disconnected && Netchan_IncomingReady( &cls.netchan ))
+	{
+		// the header is different lengths for reliable and unreliable messages
+		int headerBytes = BF_GetNumBytesRead( &net_message );
+
+		// process the incoming buffer(s)
+		if( Netchan_CopyNormalFragments( &cls.netchan, &net_message ))
+		{
+			CL_ParseServerMessage( &net_message );
+
+			// we don't know if it is ok to save a demo message until
+			// after we have parsed the frame
+			if( cls.demorecording && !cls.demowaiting )
+				CL_WriteDemoMessage( &net_message, headerBytes );
+		}
+		
+		if( Netchan_CopyFileFragments( &cls.netchan, &net_message ))
+		{
+			// Remove from resource request stuff.
+//			CL_ProcessFile( true, cls.netchan.incomingfilename );
+		}
+	}
+
+	Netchan_UpdateProgress( &cls.netchan );
 }
 
 void CL_ReadPackets( void )

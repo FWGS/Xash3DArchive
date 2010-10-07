@@ -35,6 +35,7 @@ typedef struct
 #define BF_WriteUBitLong( bf, data, bits )	BF_WriteUBitLongExt( bf, data, bits, true );
 #define BF_StartReading			BF_StartWriting
 #define BF_GetNumBytesRead			BF_GetNumBytesWritten
+#define BF_GetNumBitsRead			BF_GetNumBitsWritten
 #define BF_ReadBitAngles			BF_ReadBitVec3Coord
 #define BF_ReadString( bf )			BF_ReadStringExt( bf, false )
 #define BF_ReadStringLine( bf )		BF_ReadStringExt( bf, true )
@@ -45,6 +46,7 @@ void BF_InitExt( sizebuf_t *bf, const char *pDebugName, void *pData, int nBytes,
 void BF_InitMasks( void );	// called once at startup engine
 void BF_SeekToBit( sizebuf_t *bf, int bitPos );
 void BF_SeekToByte( sizebuf_t *bf, int bytePos );
+void BF_ExciseBits( sizebuf_t *bf, int startbit, int bitstoremove );
 bool BF_CheckOverflow( sizebuf_t *bf );
 
 // init writing
@@ -76,7 +78,7 @@ bool BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes );	// same as MS
 bool BF_WriteString(  sizebuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.
 
 // delta-write functions
-bool BF_WriteDeltaMovevars( sizebuf_t *sb, movevars_t *from, movevars_t *cmd );
+bool BF_WriteDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );
 
 // helper functions
 _inline int BF_GetNumBytesWritten( sizebuf_t *bf )	{ return BitByte( bf->iCurBit ); }
@@ -111,6 +113,6 @@ bool BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes );
 char *BF_ReadStringExt( sizebuf_t *bf, bool bLine );
 
 // delta-read functions
-void BF_ReadDeltaMovevars( sizebuf_t *sb, movevars_t *from, movevars_t *cmd );
+void BF_ReadDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );
 					
 #endif//NET_BUFFER_H

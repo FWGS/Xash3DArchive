@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "common.h"
+#include "netchan.h"
 #include "cm_local.h"
 #include "input.h"
 
@@ -710,6 +711,7 @@ void Host_InitCommon( const int argc, const char **argv )
 void Host_FreeCommon( void )
 {
 	IN_Shutdown();
+	Netchan_Shutdown();
 	Mem_FreePool( &host.mempool );
 }
 

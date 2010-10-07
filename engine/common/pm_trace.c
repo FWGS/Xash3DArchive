@@ -254,6 +254,15 @@ loc0:
 		
 	// find the point distances
 	node = hull->clipnodes + num;
+
+	if( hull->planes == NULL )
+	{
+		if( hull == &pm_boxhull )
+			com.error( "temp hull without planes\n" );
+		else com.error( "Hull %i without planes\n", hull - worldmodel->hulls );
+	}
+	ASSERT( node != NULL );
+
 	plane = hull->planes + node->planenum;
 
 	if( plane->type < 3 )

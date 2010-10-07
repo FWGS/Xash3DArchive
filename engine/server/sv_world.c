@@ -120,7 +120,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 
 		if( hullNumber == -1 )
 		{
-#if 1
+#if 0	// more precision but doesn't matched with HL gameplay
 			float	curdiff;
 			float	lastdiff = 999;
 			int	i;
@@ -139,38 +139,34 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 					lastdiff = curdiff;
 				}
 			}
+
+			// TraceHull stuff
+			hull = &model->hulls[hullNumber];
+
+			// calculate an offset value to center the origin
+			// NOTE: never get offset of drawing hull
+			if( !hullNumber ) VectorCopy( hull->clip_mins, offset );
+			else  VectorSubtract( hull->clip_mins, mins, offset );
 #else
-			if( size[0] < 3 )
+			if( size[0] <= 8.0f )
 			{
-				// point hull
-				hullNumber = 0;
-			}
-			else if( size[0] <= 36 )
-			{
-				if( size[2] <= 36 )
-				{
-					// head hull (ducked)
-					hullNumber = 3;
-				}
-				else
-				{
-					// human hull
-					hullNumber = 1;
-				}
+				hull = &model->hulls[0];
+				VectorCopy( hull->clip_mins, offset ); 
 			}
 			else
 			{
-				// large hull
-				hullNumber = 2;
+				if( size[0] <= 36.0f )
+				{
+					if( size[2] <= 36.0f )
+						hull = &model->hulls[3];
+					else hull = &model->hulls[1];
+				}
+				else hull = &model->hulls[2];
+
+				VectorSubtract( hull->clip_mins, mins, offset );
 			}
 #endif
 		}
-
-		// TraceHull stuff
-		hull = &model->hulls[hullNumber];
-
-		// calculate an offset value to center the origin
-		VectorSubtract( hull->clip_mins, mins, offset );
 		VectorAdd( offset, ent->v.origin, offset );
 	}
 	else

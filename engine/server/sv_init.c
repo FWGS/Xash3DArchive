@@ -123,6 +123,16 @@ void SV_ActivateServer( void )
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
+	// Send serverinfo to all connected clients
+	for( i = 0; i < sv_maxclients->integer; i++ )
+	{
+		if( svs.clients[i].state >= cs_connected )
+		{
+			Netchan_Clear( &svs.clients[i].netchan );
+			svs.clients[i].lastframe = -1;
+		}
+	}
+
 	// run two frames to allow everything to settle
 	for( i = 0; !sv.loadgame && i < 2; i++ )
 		SV_Physics();

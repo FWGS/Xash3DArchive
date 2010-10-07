@@ -430,7 +430,7 @@ void SV_InitClientMove( void )
 
 	Pmove_Init ();
 
-	svgame.pmove->server = false;	// running at client
+	svgame.pmove->server = true;
 	svgame.pmove->movevars = &svgame.movevars;
 	svgame.pmove->runfuncs = false;
 
