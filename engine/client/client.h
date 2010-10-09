@@ -14,6 +14,7 @@
 #include "cm_local.h"
 #include "pm_defs.h"
 #include "pm_movevars.h"
+#include "protocol.h"
 #include "netchan.h"
 #include "world.h"
 
@@ -22,15 +23,13 @@
 
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
-#define cl_time()		( cl.time * 0.001f )
-#define sv_time()		( cl.frame.servertime * 0.001f )
-#define sv_frametime()	( cl.serverframetime * 0.001f )
+#define cl_time()		( cl.time )
+#define sv_time()		( cl.mtime[0] )
 
 //=============================================================================
 typedef struct frame_s
 {
 	bool		valid;		// cleared if delta parsing was invalid
-	int		servertime;
 	int		serverframe;
 	int		deltaframe;
 	int		num_entities;
@@ -67,9 +66,13 @@ typedef struct
 	int		surpressCount;		// number of messages rate supressed
 	frame_t		*frames;			// alloced on svc_serverdata
 
-	int		time;			// this is the time value that the client
+	double		time;			// this is the time value that the client
 						// is rendering at.  always <= cls.realtime
 						// a lerp point for other data
+	double		oldtime;			// previous cl.time, time-oldtime is used
+						// to decay light values and smooth step ups
+	double		mtime[2];			// the timestamp of the last two messages
+
 	int		render_flags;		// clearing at end of frame
 	float		lerpFrac;			// interpolation value
 	ref_params_t	refdef;			// shared refdef
@@ -92,7 +95,6 @@ typedef struct
 	int		maxclients;
 	int		servercount;			// server identification for prespawns
 	int		movemessages;
-	int		serverframetime;			// server frametime
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 	entity_state_t	entity_curstates[MAX_PARSE_ENTITIES];	// FIXME: this is must match with max_edicts ?
 
@@ -262,6 +264,7 @@ typedef struct
 	GAMEINFO		*modsInfo[MAX_MODS];	// simplified gameInfo for GameUI
 
 	ui_globalvars_t	*globals;
+
 	bool		drawLogo;			// set to TRUE if logo.avi missed or corrupted
 	long		logo_xres;
 	long		logo_yres;
@@ -278,9 +281,6 @@ typedef struct
 	byte		*mempool;			// client premamnent pool: edicts etc
 	
 	int		framecount;
-	float		frametime;		// seconds since last frame
-	int		realtime;
-
 	int		quakePort;		// a 16 bit value that allows quake servers
 						// to work around address translating routers
 	// connection information
@@ -337,7 +337,6 @@ extern render_exp_t		*re;
 extern cvar_t	*cl_predict;
 extern cvar_t	*cl_smooth;
 extern cvar_t	*cl_showfps;
-extern cvar_t	*cl_shownet;
 extern cvar_t	*cl_envshot_size;
 extern cvar_t	*cl_nodelta;
 extern cvar_t	*cl_crosshair;
@@ -392,12 +391,6 @@ void CL_GetChallengePacket( void );
 void CL_PingServers_f( void );
 void CL_RequestNextDownload( void );
 void CL_ClearState( void );
-
-//
-// cl_input.c
-//
-void CL_MouseEvent( int mx, int my );
-void CL_SendCmd( void );
 
 //
 // cl_demo.c
@@ -551,7 +544,6 @@ bool SCR_PlayCinematic( const char *name );
 bool SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
-void SCR_StartMovies_f( void );
 void CL_PlayVideo_f( void );
 
 //

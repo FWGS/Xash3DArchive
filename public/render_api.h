@@ -169,6 +169,7 @@ typedef struct render_imp_s
 	struct cl_entity_s *(*GetLocalPlayer)( void );
 	int	(*GetMaxClients)( void );
 	void	(*DrawTriangles)( int fTrans );
+	void	(*ExtraUpdate)( void );				// call during RenderFrame
 } render_imp_t;
 
 #endif//RENDER_API_H

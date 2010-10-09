@@ -60,4 +60,8 @@
 #define clc_stringcmd	5	// [string] message
 #define clc_random_seed	6	// [long] random seed
 
+// additional protocol data
+#define MAX_CLIENT_BITS	5
+#define MAX_CLIENTS		(1<<MAX_CLIENT_BITS)
+
 #endif//PROTOCOL_H

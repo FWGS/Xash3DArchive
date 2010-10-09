@@ -91,7 +91,7 @@ void CL_RunLightStyles( void )
 
 	if( cls.state != ca_active ) return;
 
-	ofs = cl.time / 100;
+	ofs = (cl.time * 10);
 	if( ofs == lastofs ) return;
 	lastofs = ofs;
 
@@ -184,7 +184,7 @@ dlight_t *CL_AllocDlight( int key )
 	// then look for anything else
 	for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
 	{
-		if( dl->die < cl_time( ))
+		if( dl->die < cl.time )
 		{
 			Mem_Set( dl, 0, sizeof( *dl ));
 			dl->key = key;
@@ -248,7 +248,7 @@ void CL_AddDLights( void )
 	float	time;
 	int	i;
 	
-	time = cls.frametime;
+	time = cl.time - cl.oldtime;
 
 	for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
 	{

@@ -214,7 +214,7 @@ void S_PrintDeviceName( void );
 // s_main.c
 //
 void S_FreeChannel( channel_t *ch );
-void S_BeginFrame( void );
+void S_ExtraUpdate( void );
 
 //
 // s_mix.c

@@ -8,11 +8,10 @@
 #include "protocol.h"
 #include "net_encode.h"
 
-#define HEARTBEAT_SECONDS	(300 * 1000) 	// 300 seconds
+#define HEARTBEAT_SECONDS	300.0 		// 300 seconds
 
 netadr_t	master_adr[MAX_MASTERS];		// address of group servers
 
-cvar_t	*sv_fps;
 cvar_t	*sv_zmax;
 cvar_t	*sv_pausable;
 cvar_t	*sv_newunit;
@@ -21,13 +20,11 @@ cvar_t	*timeout;				// seconds without any message
 cvar_t	*zombietime;			// seconds to sink messages after disconnect
 cvar_t	*rcon_password;			// password for remote server commands
 cvar_t	*allow_download;
-cvar_t	*sv_enforcetime;
 cvar_t	*sv_airaccelerate;
 cvar_t	*sv_wateraccelerate;
 cvar_t	*sv_maxvelocity;
 cvar_t	*sv_gravity;
 cvar_t	*sv_stepheight;
-cvar_t	*sv_noreload;		// don't reload level state when reentering
 cvar_t	*sv_rollangle;
 cvar_t	*sv_rollspeed;
 cvar_t	*sv_wallbounce;
@@ -116,7 +113,7 @@ int SV_CalcPacketLoss( sv_client_t *cl )
 	lost  = 0;
 	count = 0;
 
-	if( cl->edict->v.flags & FL_FAKECLIENT )
+	if( cl->fakeclient )
 		return 0;
 
 	numsamples = SV_UPDATE_BACKUP / 2;
@@ -133,32 +130,6 @@ int SV_CalcPacketLoss( sv_client_t *cl )
 	losspercent = 100.0 * ( float )lost / ( float )count;
 
 	return (int)losspercent;
-}
-
-/*
-===================
-SV_GiveMsec
-
-Every few frames, gives all clients an allotment of milliseconds
-for their command moves.  If they exceed it, assume cheating.
-===================
-*/
-void SV_GiveMsec( void )
-{
-	int		i;
-	sv_client_t	*cl;
-
-	if( sv.framenum & 15 )
-		return;
-
-	for( i = 0; i < sv_maxclients->integer; i++ )
-	{
-		cl = &svs.clients[i];
-		if( cl->state == cs_free )
-			continue;
-		
-		cl->commandMsec = 1800; // 1600 + some slop
-	}
 }
 
 /*
@@ -221,13 +192,9 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skyvec_y = sv_skyvec_y->value;
 	svgame.movevars.skyvec_z = sv_skyvec_z->value;
 
-	BF_Clear( &sv.multicast );
-
-	if( MSG_WriteDeltaMovevars( &sv.multicast, &svgame.oldmovevars, &svgame.movevars ))
-	{
-		SV_Send( MSG_ALL, vec3_origin, NULL );
+	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
 		Mem_Copy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
-	}
+
 	physinfo->modified = false;
 }
 
@@ -237,10 +204,9 @@ void pfnUpdateServerInfo( const char *szKey, const char *szValue, const char *un
 
 	if( !cv || !cv->modified ) return; // this cvar not changed
 
-	BF_WriteByte( &sv.multicast, svc_serverinfo );
-	BF_WriteString( &sv.multicast, szKey );
-	BF_WriteString( &sv.multicast, szValue );
-	SV_Send( MSG_ALL, vec3_origin, NULL );
+	BF_WriteByte( &sv.reliable_datagram, svc_serverinfo );
+	BF_WriteString( &sv.reliable_datagram, szKey );
+	BF_WriteString( &sv.reliable_datagram, szValue );
 	cv->modified = false; // reset state
 }
 
@@ -251,32 +217,6 @@ void SV_UpdateServerInfo( void )
 	Cvar_LookupVars( CVAR_SERVERINFO, NULL, NULL, pfnUpdateServerInfo ); 
 
 	serverinfo->modified = false;
-}
-
-/*
-=================
-SV_CalcFrameTime
-=================
-*/
-void SV_CalcFrameTime( void )
-{
-	if( sv_fps->modified )
-	{
-		if( sv_fps->value < 10 ) Cvar_Set( "sv_fps", "10" ); // too slow, also, netcode uses a byte
-		else if( sv_fps->value > 72.1f ) Cvar_Set( "sv_fps", "72.1" ); // abusive
-		sv_fps->modified = false;
-	}
-
-	if( Host_IsLocalGame( ))
-	{
-		// don't allow really short or long frames
-		sv.frametime = bound( 16, host.frametime, 100 );
-	}
-	else
-	{
-		// calc sv.frametime
-		sv.frametime = ( 1000 / sv_fps->integer );
-	}
 }
 
 /*
@@ -311,7 +251,7 @@ void SV_ReadPackets( void )
 		for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 		{
 			if( cl->state == cs_free ) continue;
-			if( cl->edict && (cl->edict->v.flags & FL_FAKECLIENT )) continue;
+			if( cl->fakeclient ) continue;
 			if( !NET_CompareBaseAdr( net_from, cl->netchan.remote_address )) continue;
 			if( cl->netchan.qport != qport ) continue;
 			if( cl->netchan.remote_address.port != net_from.port )
@@ -327,7 +267,7 @@ void SV_ReadPackets( void )
 				// this is a valid, sequenced packet, so process it
 				if( cl->state != cs_zombie )
 				{
-					cl->lastmessage = svs.realtime; // don't timeout
+					cl->lastmessage = host.realtime; // don't timeout
 					SV_ExecuteClientMessage( cl, &net_message );
 				}
 			}
@@ -371,12 +311,12 @@ if necessary
 void SV_CheckTimeouts( void )
 {
 	sv_client_t	*cl;
-	int		droppoint;
-	int		zombiepoint;
+	float		droppoint;
+	float		zombiepoint;
 	int		i, numclients = 0;
 
-	droppoint = svs.realtime - ( timeout->value * 1000 );
-	zombiepoint = svs.realtime - ( zombietime->value * 1000 );
+	droppoint = host.realtime - timeout->value;
+	zombiepoint = host.realtime - zombietime->value;
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -387,12 +327,11 @@ void SV_CheckTimeouts( void )
                     }
 
 		// fake clients do not timeout
-		if( cl->edict && (cl->edict->v.flags & FL_FAKECLIENT ))
-			cl->lastmessage = svs.realtime;
+		if( cl->fakeclient ) cl->lastmessage = host.realtime;
 
 		// message times may be wrong across a changelevel
-		if( cl->lastmessage > svs.realtime )
-			cl->lastmessage = svs.realtime;
+		if( cl->lastmessage > host.realtime )
+			cl->lastmessage = host.realtime;
 
 		if( cl->state == cs_zombie && cl->lastmessage < zombiepoint )
 		{
@@ -448,40 +387,28 @@ SV_RunGameFrame
 void SV_RunGameFrame( void )
 {
 	if( !SV_HasActivePlayers()) return;
-
-	// we always need to bump framenum, even if we
-	// don't run the world, otherwise the delta
-	// compression can get confused when a client
-	// has the "current" frame
-	sv.framenum++;
-
-	// don't run if paused or not in game
-	if( !sv.paused && CL_IsInGame( ))
-		SV_Physics();
-
-	// never get more than one tic behind
-	if( sv.time < svs.realtime )
-		svs.realtime = sv.time;
+	if( sv.frametime ) SV_Physics();
 }
 
 /*
 ==================
-SV_Frame
+Host_ServerFrame
 
 ==================
 */
-void SV_Frame( int time )
+void Host_ServerFrame( void )
 {
 	// if server is not active, do nothing
 	if( !svs.initialized ) return;
 
-	svs.realtime += time;
-
-	// keep the random time dependent
-	rand ();
-
-	// calc sv.frametime
-	SV_CalcFrameTime ();
+	// advances servertime
+	if( !sv.paused && CL_IsInGame( ) && !sv.loadgame )
+	{
+		if(!( sv.hostflags & SVF_PLAYERSONLY ))
+			sv.time += host.frametime;
+		sv.frametime = host.frametime;
+	}
+	else sv.frametime = 0.0f;
 
 	// check timeouts
 	SV_CheckTimeouts ();
@@ -489,21 +416,8 @@ void SV_Frame( int time )
 	// read packets from clients
 	SV_ReadPackets ();
 
-	// move autonomous things around if enough time has passed
-	if( svs.realtime < sv.time )
-	{
-		// never let the time get too far off
-		if( sv.time - svs.realtime > sv.frametime )
-			svs.realtime = sv.time - sv.frametime;
-		NET_Sleep( sv.time - svs.realtime );
-		return;
-	}
-
 	// update ping based on the last known frame from all clients
 	SV_CalcPings ();
-
-	// give the clients some timeslices
-	SV_GiveMsec ();
 
 	// refresh serverinfo on the client side
 	SV_UpdateServerInfo ();
@@ -543,13 +457,13 @@ void Master_Heartbeat( void )
 		return;	// only dedicated servers send heartbeats
 
 	// check for time wraparound
-	if( svs.last_heartbeat > svs.realtime )
-		svs.last_heartbeat = svs.realtime;
+	if( svs.last_heartbeat > host.realtime )
+		svs.last_heartbeat = host.realtime;
 
-	if(( svs.realtime - svs.last_heartbeat ) < HEARTBEAT_SECONDS )
+	if(( host.realtime - svs.last_heartbeat ) < HEARTBEAT_SECONDS )
 		return; // not time to send yet
 
-	svs.last_heartbeat = svs.realtime;
+	svs.last_heartbeat = host.realtime;
 
 	// send the same string that we would give for a status OOB command
 	string = SV_StatusString( );
@@ -607,7 +521,7 @@ void SV_Init( void )
 	Cvar_Get ("deathmatch", "0", CVAR_LATCH, "displays deathmatch state" );
 	Cvar_Get ("teamplay", "0", CVAR_LATCH, "displays teamplay state" );
 	Cvar_Get ("coop", "0", CVAR_LATCH, "displays cooperative state" );
-	Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_INIT, "displays server protocol version" );
+	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), CVAR_INIT, "displays server protocol version" );
 	Cvar_Get ("defaultmap", "", 0, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
 	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE, "enable auto-aiming" );
@@ -631,16 +545,13 @@ void SV_Init( void )
 	sv_footsteps = Cvar_Get ("mp_footsteps", "1", CVAR_PHYSICINFO, "can hear footsteps from other players" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
-	sv_fps = Cvar_Get( "sv_fps", "60", CVAR_SERVERINFO|CVAR_ARCHIVE, "network game server fps" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
 	sv_newunit = Cvar_Get( "sv_newunit", "0", 0, "sets to 1 while new unit is loading" );
 	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERINFO|CVAR_ARCHIVE, "host name" );
 	timeout = Cvar_Get( "timeout", "125", 0, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", 0, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", 0, "allow players to pause or not" );
-	sv_enforcetime = Cvar_Get( "sv_enforcetime", "0", 0, "enable client enforce time (anti-cheating)" );
 	allow_download = Cvar_Get( "allow_download", "0", CVAR_ARCHIVE, "allow download resources" );
-	sv_noreload = Cvar_Get( "sv_noreload", "0", 0, "ignore savepoints for singleplayer" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );
 	sv_waterfriction = Cvar_Get( "sv_waterfriction", "4", CVAR_PHYSICINFO, "how fast you slow down in water" );
@@ -705,11 +616,11 @@ void SV_FinalMessage( char *message, bool reconnect )
 	// send it twice
 	// stagger the packets to crutch operating system limited buffers
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-		if( cl->state >= cs_connected && !(cl->edict && cl->edict->v.flags & FL_FAKECLIENT ))
+		if( cl->state >= cs_connected && !cl->fakeclient )
 			Netchan_Transmit( &cl->netchan, BF_GetNumBytesWritten( &msg ), BF_GetData( &msg ));
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-		if( cl->state >= cs_connected && !(cl->edict && cl->edict->v.flags & FL_FAKECLIENT ))
+		if( cl->state >= cs_connected && !cl->fakeclient )
 			Netchan_Transmit( &cl->netchan, BF_GetNumBytesWritten( &msg ), BF_GetData( &msg ));
 }
 

@@ -194,7 +194,6 @@ typedef struct cl_enginefuncs_s
 
 	int	(*pfnIsSpectateOnly)( void );
 	int	(*pfnIsInGame)( void );				// return false for menu, console, etc		// was LoadMapSprite 
-
 } cl_enginefuncs_t;
 
 typedef struct
@@ -222,7 +221,7 @@ typedef struct
 	char	(*pfnPM_FindTextureType)( char *name );
 	void	(*pfnCmdStart)( const struct cl_entity_s *player, int runfuncs );
 	void	(*pfnCmdEnd)( const struct cl_entity_s *player, const struct usercmd_s *cmd, unsigned int random_seed );
-	void	(*pfnCreateMove)( struct usercmd_s *cmd, int msec, float frametime, int active );
+	void	(*pfnCreateMove)( struct usercmd_s *cmd, float frametime, int active );
 	void	(*pfnMouseEvent)( int mx, int my );
 	int	(*pfnKeyEvent)( int down, int keynum, const char *pszBind );
 	void	(*VGui_ConsolePrint)( const char *text );

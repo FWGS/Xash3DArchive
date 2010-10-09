@@ -8,8 +8,9 @@
 #include "byteorder.h"
 #include "protocol.h"
 #include "net_encode.h"
+#include "input.h"
 
-#define CONNECTION_PROBLEM_TIME	15.0 * 1000	// 15 seconds
+#define CONNECTION_PROBLEM_TIME	15.0	// 15 seconds
 
 cvar_t	*rcon_client_password;
 cvar_t	*rcon_address;
@@ -22,7 +23,6 @@ cvar_t	*cl_nodelta;
 cvar_t	*cl_crosshair;
 cvar_t	*cl_idealpitchscale;
 cvar_t	*cl_solid_players;
-cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
 cvar_t	*userinfo;
 
@@ -73,6 +73,51 @@ void CL_ForceVid( void )
 void CL_ForceSnd( void )
 {
 	cl.audio_prepped = false;
+}
+
+/*
+===============
+CL_LerpPoint
+
+Determines the fraction between the last two messages that the objects
+should be put at.
+===============
+*/
+static float CL_LerpPoint( void )
+{
+	float	f, frac;
+
+	f = cl.mtime[0] - cl.mtime[1];
+	
+	if( !f || SV_Active( ))
+	{
+		cl.time = cl.mtime[0];
+		return 1.0f;
+	}
+		
+	if( f > 0.1f )
+	{	
+		// dropped packet, or start of demo
+		cl.mtime[1] = cl.mtime[0] - 0.1f;
+		f = 0.1f;
+	}
+
+	frac = ( cl.time - cl.mtime[1] ) / f;
+
+	if( frac < 0 )
+	{
+		if( frac < -0.01f )
+			cl.time = cl.mtime[1];
+		frac = 0.0f;
+	}
+	else if( frac > 1.0f )
+	{
+		if( frac > 1.01f )
+			cl.time = cl.mtime[0];
+		frac = 1.0f;
+	}
+		
+	return frac;
 }
 
 /*
@@ -179,18 +224,13 @@ usercmd_t CL_CreateCmd( void )
 	int		ms;
 
 	// send milliseconds of time to apply the move
-	extramsec += cls.frametime * 1000;
+//	extramsec += ( cl.time - cl.oldtime ) * 1000;
+	extramsec += ( host.frametime * 1000 );
 	ms = extramsec;
 	extramsec -= ms;		// fractional part is left for next frame
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
-
-	// allways dump the first ten messages,
-	// because it may contain leftover inputs
-	// from the last level
-	if( ++cl.movemessages <= 10 )
-		return cmd;
 
 	VectorCopy( cl.frame.cd.origin, cdata.origin );
 	VectorCopy( cl.refdef.cl_viewangles, cdata.viewangles );
@@ -198,7 +238,14 @@ usercmd_t CL_CreateCmd( void )
 	cdata.fov = cl.frame.cd.fov;
 
 	clgame.dllFuncs.pfnUpdateClientData( &cdata, cl_time( ));
-	clgame.dllFuncs.pfnCreateMove( &cmd, host.inputmsec, cls.frametime, ( cls.state == ca_active && !cl.refdef.paused ));
+
+	// allways dump the first ten messages,
+	// because it may contain leftover inputs
+	// from the last level
+	if( ++cl.movemessages <= 10 )
+		return cmd;
+
+	clgame.dllFuncs.pfnCreateMove( &cmd, cl.time - cl.oldtime, ( cls.state == ca_active && !cl.refdef.paused ));
 
 	// random seed for predictable random values
 	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
@@ -244,7 +291,7 @@ void CL_WritePacket( void )
 	if( cls.state == ca_connected )
 	{
 		// just update reliable
-		if( BF_GetNumBytesWritten( &cls.netchan.message ) || cls.realtime - cls.netchan.last_sent > 1000 )
+		if( cls.netchan.message.iCurBit || host.realtime - cls.netchan.last_sent > 1.0f )
 			Netchan_Transmit( &cls.netchan, 0, NULL );
 		return;
 	}
@@ -254,7 +301,7 @@ void CL_WritePacket( void )
 
 	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CMD_BACKUP )
 	{
-		if(( cls.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
+		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
 		{
 			MsgDev( D_WARN, "^1 Connection Problem^7\n" );
 			noDelta = true;	// request a fullupdate
@@ -406,7 +453,7 @@ void CL_CheckForResend( void )
 	if( cls.demoplayback || cls.state != ca_connecting )
 		return;
 
-	if(( cls.realtime - cls.connect_time ) < 3000 )
+	if(( host.realtime - cls.connect_time ) < 3.0f )
 		return;
 
 	if( !NET_StringToAdr( cls.servername, &adr ))
@@ -417,7 +464,7 @@ void CL_CheckForResend( void )
 	}
 
 	if( adr.port == 0 ) adr.port = BigShort( PORT_SERVER );
-	cls.connect_time = cls.realtime; // for retransmit requests
+	cls.connect_time = host.realtime; // for retransmit requests
 
 	MsgDev( D_NOTE, "Connecting to %s...\n", cls.servername );
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
@@ -738,7 +785,7 @@ void CL_Reconnect_f( void )
 		if( cls.state >= ca_connected )
 		{
 			CL_Disconnect();
-			cls.connect_time = cls.realtime - 1500;
+			cls.connect_time = host.realtime - 1.5;
 		}
 		else cls.connect_time = MAX_HEARTBEAT; // fire immediately
 
@@ -1050,6 +1097,8 @@ void CL_ReadPackets( void )
 		CL_ReadDemoMessage();
 	else CL_ReadNetMessage();
 
+	cl.lerpFrac = CL_LerpPoint();
+
 	// build list of all solid entities per frame (exclude clients)
 	CL_SetSolidEntities ();
 
@@ -1060,7 +1109,7 @@ void CL_ReadPackets( void )
 	// check timeout
 	if( cls.state >= ca_connected && !cls.demoplayback )
 	{
-		if( cls.realtime - cls.netchan.last_received > ( cl_timeout->value * 1000 ))
+		if( host.realtime - cls.netchan.last_received > cl_timeout->value )
 		{
 			if( ++cl.timeoutcount > 5 ) // timeoutcount saves debugger
 			{
@@ -1283,9 +1332,8 @@ void CL_InitLocal( void )
 	cl_idealpitchscale = Cvar_Get( "cl_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
 	cl_solid_players = Cvar_Get( "cl_solid_players", "1", 0, "Make all players not solid (can't traceline them)" );
 	
-	cl_shownet = Cvar_Get( "cl_shownet", "0", 0, "client show network packets" );
 	cl_showmiss = Cvar_Get( "cl_showmiss", "0", CVAR_ARCHIVE, "client show prediction errors" );
-	cl_timeout = Cvar_Get( "cl_timeout", "120", 0, "connect timeout (in-seconds)" );
+	cl_timeout = Cvar_Get( "cl_timeout", "60", 0, "connect timeout (in-seconds)" );
 
 	rcon_client_password = Cvar_Get( "rcon_password", "", 0, "remote control client password" );
 	rcon_address = Cvar_Get( "rcon_address", "", 0, "remote control address" );
@@ -1318,7 +1366,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("startdemos", CL_StartDemos_f, "start playing back the selected demos sequentially" );
 	Cmd_AddCommand ("demos", CL_Demos_f, "restart looping demos defined by the last startdemos command" );
 	Cmd_AddCommand ("movie", CL_PlayVideo_f, "playing a movie" );
-	Cmd_AddCommand ("startmovies", SCR_StartMovies_f, "start playing back the selected movies sequentially" );
 	Cmd_AddCommand ("stop", CL_Stop_f, "stop playing or recording a demo" );
 	Cmd_AddCommand ("info", NULL, "collect info about local servers with specified protocol" );
 	Cmd_AddCommand ("escape", CL_Escape_f, "escape from game to menu" );
@@ -1369,34 +1416,23 @@ Host_ClientFrame
 
 ==================
 */
-void CL_Frame( int time )
+void Host_ClientFrame( void )
 {
-	static int	extratime;
-
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
 
-	extratime += time;
-	cls.realtime += time;
-
-	if( extratime < ( 1000 / host_maxfps->value ))
-		return;				// framerate is too high
-
 	// decide the simulation time
-	cl.time += extratime;			// can be merged by cl.frame.servertime 
-	cls.frametime = extratime * 0.001f;
-	extratime = 0;
-
-	if( cls.frametime > 0.2f ) cls.frametime = 0.2f;
+	cl.oldtime = cl.time;
+	cl.time += host.frametime;
 
 	// menu time (not paused, not clamped)
-	gameui.globals->time = cls.realtime * 0.001f;
-	gameui.globals->frametime = cls.frametime;
+	gameui.globals->time = host.realtime;
+	gameui.globals->frametime = host.realframetime;
 	gameui.globals->demoplayback = cls.demoplayback;
 	gameui.globals->demorecording = cls.demorecording;
-	
+
 	// if in the debugger last frame, don't timeout
-	if( time > 5000 ) cls.netchan.last_received = Sys_Milliseconds();
+	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
 
 	// fetch results from server
 	CL_ReadPackets();

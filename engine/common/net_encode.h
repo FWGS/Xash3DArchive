@@ -98,9 +98,9 @@ void MSG_WriteDeltaEvent( sizebuf_t *msg, struct event_args_s *from, struct even
 void MSG_ReadDeltaEvent( sizebuf_t *msg, struct event_args_s *from, struct event_args_s *to );
 bool MSG_WriteDeltaMovevars( sizebuf_t *msg, struct movevars_s *from, struct movevars_s *to );
 void MSG_ReadDeltaMovevars( sizebuf_t *msg, struct movevars_s *from, struct movevars_s *to );
-void MSG_WriteClientData( sizebuf_t *msg, struct clientdata_s *from, struct clientdata_s *to, int timebase );
-void MSG_ReadClientData( sizebuf_t *msg, struct clientdata_s *from, struct clientdata_s *to, int timebase );
-void MSG_WriteDeltaEntity( struct entity_state_s *from, struct entity_state_s *to, sizebuf_t *msg, bool frc, int time );
-bool MSG_ReadDeltaEntity( sizebuf_t *msg, struct entity_state_s *from, struct entity_state_s *to, int num, int time );
+void MSG_WriteClientData( sizebuf_t *msg, struct clientdata_s *from, struct clientdata_s *to, float timebase );
+void MSG_ReadClientData( sizebuf_t *msg, struct clientdata_s *from, struct clientdata_s *to, float timebase );
+void MSG_WriteDeltaEntity( struct entity_state_s *from, struct entity_state_s *to, sizebuf_t *msg, bool force, float timebase );
+bool MSG_ReadDeltaEntity( sizebuf_t *msg, struct entity_state_s *from, struct entity_state_s *to, int num, float timebase );
 
 #endif//NET_ENCODE_H

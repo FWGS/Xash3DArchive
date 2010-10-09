@@ -69,7 +69,7 @@ extern void V_Init( void );
 extern void VGui_ConsolePrint( const char *text );
 extern void IN_Init( void );
 extern void IN_Shutdown( void );
-extern void IN_CreateMove( struct usercmd_s *cmd, int msec, float frametime, int active );
+extern void IN_CreateMove( struct usercmd_s *cmd, float frametime, int active );
 extern int  IN_KeyEvent( int down, int keynum, const char *pszBind );
 extern void IN_MouseEvent( int mx, int my );
 

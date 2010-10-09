@@ -141,8 +141,8 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		return;
 	}
 
-	// advances cinematic time	
-	cin_time += cls.frametime;
+	// advances cinematic time (ignores maxfps and host_framerate settings)
+	cin_time += host.realframetime;
 
 	// restarts the cinematic
 	if( cin_time > video_duration )

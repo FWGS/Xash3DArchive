@@ -43,7 +43,7 @@ void V_SetupRefDef( void )
 	cl.refdef.max_entities = clgame.maxEntities;
 	cl.refdef.maxclients = cl.maxclients;
 	cl.refdef.time = cl_time();
-	cl.refdef.frametime = cls.frametime;
+	cl.refdef.frametime = cl.time - cl.oldtime;
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
 	cl.refdef.waterlevel = cl.frame.cd.waterlevel;		
@@ -157,7 +157,6 @@ bool V_PreRender( void )
 		clearScene = false;
 
 	re->BeginFrame( clearScene );
-	S_BeginFrame ();
 
 	if( !oldState && cls.changelevel )
 	{
@@ -185,8 +184,9 @@ void V_PostRender( void )
 		SCR_RSpeeds();
 		SCR_NetSpeeds();
 		SCR_DrawFPS();
-		UI_UpdateMenu( cls.realtime * 0.001f );
+		UI_UpdateMenu( host.realtime );
 		Con_DrawConsole();
+		S_ExtraUpdate();
 	}
 
 	SCR_MakeScreenShot();

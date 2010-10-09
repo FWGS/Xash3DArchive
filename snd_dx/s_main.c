@@ -711,12 +711,12 @@ void S_UpdateChannels( void )
 
 /*
 =================
-S_BeginFrame
+S_ExtraUpdate
 
-Starts a new rendering frame
+Don't let sound skip if going slow
 =================
 */
-void S_BeginFrame( void )
+void S_ExtraUpdate( void )
 {
 	S_UpdateChannels ();
 }

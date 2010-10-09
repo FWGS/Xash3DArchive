@@ -32,7 +32,7 @@ challenge, they must give a valid IP address.
 void SV_GetChallenge( netadr_t from )
 {
 	int	i, oldest = 0;
-	int	oldestTime;
+	double	oldestTime;
 
 	oldestTime = 0x7fffffff;
 	// see if we already have a challenge for this ip
@@ -50,9 +50,9 @@ void SV_GetChallenge( netadr_t from )
 	if( i == MAX_CHALLENGES )
 	{
 		// this is the first time this client has asked for a challenge
-		svs.challenges[oldest].challenge = ((rand()<<16) ^ rand()) ^ svs.realtime;
+		svs.challenges[oldest].challenge = (rand()<<16) ^ rand();
 		svs.challenges[oldest].adr = from;
-		svs.challenges[oldest].time = svs.realtime;
+		svs.challenges[oldest].time = host.realtime;
 		svs.challenges[oldest].connected = false;
 		i = oldest;
 	}
@@ -98,7 +98,7 @@ void SV_DirectConnect( netadr_t from )
 		if( cl->state == cs_free ) continue;
 		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && ( cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
 		{
-			if( !NET_IsLocalAddress( from ) && ( svs.realtime - cl->lastconnect ) < sv_reconnect_limit->value * 1000 )
+			if( !NET_IsLocalAddress( from ) && ( host.realtime - cl->lastconnect ) < sv_reconnect_limit->value )
 			{
 				MsgDev( D_INFO, "%s:reconnect rejected : too soon\n", NET_AdrToString( from ));
 				return;
@@ -203,12 +203,11 @@ gotnewcl:
 	Netchan_OutOfBandPrint( NS_SERVER, from, "client_connect" );
 
 	Netchan_Setup( NS_SERVER, &newcl->netchan, from, qport );
-	BF_Init( &newcl->reliable, "Reliable", newcl->reliable_buf, sizeof( newcl->reliable_buf )); // reliable buf
 	BF_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
 
 	newcl->state = cs_connected;
-	newcl->lastmessage = svs.realtime;
-	newcl->lastconnect = svs.realtime;
+	newcl->lastmessage = host.realtime;
+	newcl->lastconnect = host.realtime;
 
 	// if this was the first client on the server, or the last client
 	// the server can hold, send a heartbeat to the master.
@@ -268,6 +267,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	ent = EDICT_NUM( edictnum );
 	newcl->edict = ent;
 	newcl->challenge = -1;		// fake challenge
+	newcl->fakeclient = true;
 	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
 
 	// get the game a chance to reject this connection or modify the userinfo
@@ -281,8 +281,8 @@ edict_t *SV_FakeConnect( const char *netname )
 	SV_UserinfoChanged( newcl, userinfo );
 
 	newcl->state = cs_spawned;
-	newcl->lastmessage = svs.realtime;	// don't timeout
-	newcl->lastconnect = svs.realtime;
+	newcl->lastmessage = host.realtime;	// don't timeout
+	newcl->lastconnect = host.realtime;
 	
 	return ent;
 }
@@ -331,8 +331,10 @@ void SV_DropClient( sv_client_t *drop )
 	if( drop->state == cs_zombie ) return;	// already dropped
 
 	// add the disconnect
-	if(!( drop->edict && (drop->edict->v.flags & FL_FAKECLIENT )))
+	if( !drop->fakeclient )
+	{
 		BF_WriteByte( &drop->netchan.message, svc_disconnect );
+	}
 
 	// let the game known about client state
 	if( drop->edict->v.flags & FL_SPECTATOR )
@@ -363,7 +365,8 @@ void SV_DropClient( sv_client_t *drop )
 	// Throw away any residual garbage in the channel.
 	Netchan_Clear( &drop->netchan );
 
-	SV_RefreshUserinfo(); // refresh userinfo on disconnect
+	// send notification to all other clients
+	SV_FullClientUpdate( drop, &sv.reliable_datagram );
 
 	// if this was the last client on the server, send a heartbeat
 	// to the master so it is known the server is empty
@@ -401,7 +404,7 @@ void SV_BeginRedirect( netadr_t adr, int target, char *buffer, int buffersize, v
 
 void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 {
-	if( sv_client->edict && (sv_client->edict->v.flags & FL_FAKECLIENT))
+	if( sv_client->fakeclient )
 		return;
 
 	switch( dest )
@@ -457,7 +460,7 @@ char *SV_StatusString( void )
 		if( cl->state == cs_connected || cl->state == cs_spawned )
 		{
 			com.sprintf( player, "%i %i \"%s\"\n", (int)cl->edict->v.frags, cl->ping, cl->name );
-			playerLength = com.strlen(player);
+			playerLength = com.strlen( player );
 			if( statusLength + playerLength >= sizeof(status))
 				break; // can't hold any more
 			com.strcpy( status + statusLength, player );
@@ -604,11 +607,11 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 	i = cl - svs.clients;
 
 	BF_WriteByte( msg, svc_updateuserinfo );
-	BF_WriteByte( msg, i );
+	BF_WriteUBitLong( msg, i, MAX_CLIENT_BITS );
 
 	if( cl->name[0] )
 	{
-		BF_WriteByte( msg, true );
+		BF_WriteOneBit( msg, 1 );
 
 		com.strncpy( info, cl->userinfo, sizeof( info ));
 
@@ -616,10 +619,7 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 		Info_RemovePrefixedKeys( info, '_' );
 		BF_WriteString( msg, info );
 	}
-	else BF_WriteByte( msg, false );
-	
-	SV_DirectSend( MSG_ALL, vec3_origin, NULL );
-	BF_Clear( msg );
+	else BF_WriteOneBit( msg, 0 );
 }
 
 void SV_RefreshUserinfo( void )
@@ -628,26 +628,23 @@ void SV_RefreshUserinfo( void )
 	sv_client_t	*cl;
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-		if( cl->state >= cs_connected && !(cl->edict && cl->edict->v.flags & FL_FAKECLIENT ))
-			cl->sendinfo = true;
+		if( cl->state >= cs_connected ) cl->sendinfo = true;
 }
 
 /*
 ===================
-SV_UpdatePhysinfo
+SV_FullUpdateMovevars
 
 this is send all movevars values when client connected
 otherwise see code SV_UpdateMovevars()
 ===================
 */
-void SV_UpdatePhysinfo( sv_client_t *cl, sizebuf_t *msg )
+void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg )
 {
 	movevars_t	nullmovevars;
 
 	Mem_Set( &nullmovevars, 0, sizeof( nullmovevars ));
 	MSG_WriteDeltaMovevars( msg, &nullmovevars, &svgame.movevars );
-	SV_DirectSend( MSG_ONE, NULL, cl->edict );
-	BF_Clear( msg );
 }
 
 /*
@@ -686,10 +683,9 @@ void SV_PutClientInServer( edict_t *ent )
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
 		{
-			BF_WriteByte( &sv.multicast, svc_setangle );
-			BF_WriteBitAngle( &sv.multicast, ent->v.angles[0], 16 );
-			BF_WriteBitAngle( &sv.multicast, ent->v.angles[1], 16 );
-			SV_DirectSend( MSG_ONE, vec3_origin, client->edict );
+			BF_WriteByte( &client->netchan.message, svc_setangle );
+			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[0], 16 );
+			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[1], 16 );
 			ent->v.fixangle = 0;
 		}
 		ent->v.effects |= EF_NOINTERP;
@@ -697,14 +693,13 @@ void SV_PutClientInServer( edict_t *ent )
 
 	client->pViewEntity = NULL; // reset pViewEntity
 
-	if( !( ent->v.flags & FL_FAKECLIENT ))
+	if( !client->fakeclient )
 	{
 		// copy signon buffer
 		BF_WriteBits( &client->netchan.message, BF_GetData( &sv.signon ), BF_GetNumBitsWritten( &sv.signon ));
 	
 		BF_WriteByte( &client->netchan.message, svc_setview );
 		BF_WriteWord( &client->netchan.message, NUM_FOR_EDICT( client->edict ));
-		SV_Send( MSG_ONE, NULL, client->edict );
 	}
 
 	// clear any temp states
@@ -727,9 +722,8 @@ void SV_TogglePause( const char *msg )
 	if( msg ) SV_BroadcastPrintf( PRINT_HIGH, "%s", msg );
 
 	// send notification to all clients
-	BF_WriteByte( &sv.multicast, svc_setpause );
-	BF_WriteOneBit( &sv.multicast, sv.paused );
-	SV_Send( MSG_ALL, vec3_origin, NULL );
+	BF_WriteByte( &sv.reliable_datagram, svc_setpause );
+	BF_WriteOneBit( &sv.reliable_datagram, sv.paused );
 }
 
 /*
@@ -1015,9 +1009,8 @@ void SV_Begin_f( sv_client_t *cl )
 	// if we are paused, tell the client
 	if( sv.paused )
 	{
-		BF_WriteByte( &sv.multicast, svc_setpause );
-		BF_WriteByte( &sv.multicast, sv.paused );
-		SV_Send( MSG_ONE, vec3_origin, cl->edict );
+		BF_WriteByte( &sv.reliable_datagram, svc_setpause );
+		BF_WriteByte( &sv.reliable_datagram, sv.paused );
 		SV_ClientPrintf( cl, PRINT_HIGH, "Server is paused.\n" );
 	}
 }
@@ -1250,130 +1243,6 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 
 /*
 =================
-SV_Send
-
-Sends the contents of sv.multicast to a subset of the clients,
-then clears sv.multicast.
-
-MSG_ONE	send to one client (ent can't be NULL)
-MSG_ALL	same as broadcast (origin can be NULL)
-MSG_PVS	send to clients potentially visible from org
-MSG_PHS	send to clients potentially hearable from org
-=================
-*/
-bool SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, bool direct )
-{
-	byte		*mask = NULL;
-	int		leafnum = 0, numsends = 0;
-	int		j, numclients = sv_maxclients->integer;
-	sv_client_t	*cl, *current = svs.clients;
-	bool		reliable = false;
-	bool		specproxy = false;
-	float		*viewOrg = NULL;
-
-	switch( dest )
-	{
-	case MSG_INIT:
-		// FIXME: implement back bufffers this solution is suxx
-		if( sv.state == ss_loading && BF_GetNumBytesWritten( &sv.signon ) < BF_GetMaxBytes( &sv.signon ) / 2 )
-		{
-			// copy signon buffer
-			BF_WriteBits( &sv.signon, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
-			BF_Clear( &sv.multicast );
-			return true;
-		}
-		// intentional fallthrough (in-game BF_INIT it's a BF_ALL reliable)
-	case MSG_ALL:
-		reliable = true;
-		// intentional fallthrough
-	case MSG_BROADCAST:
-		// nothing to sort	
-		break;
-	case MSG_PAS_R:
-		reliable = true;
-		// intentional fallthrough
-	case MSG_PAS:
-		if( origin == NULL ) return false;
-		leafnum = CM_PointLeafnum( origin );
-		mask = CM_LeafPHS( leafnum );
-		break;
-	case MSG_PVS_R:
-		reliable = true;
-		// intentional fallthrough
-	case MSG_PVS:
-		if( origin == NULL ) return false;
-		leafnum = CM_PointLeafnum( origin );
-		mask = CM_LeafPVS( leafnum );
-		break;
-	case MSG_ONE:
-		reliable = true;
-		// intentional fallthrough
-	case MSG_ONE_UNRELIABLE:
-		if( ent == NULL ) return false;
-		j = NUM_FOR_EDICT( ent );
-		if( j < 1 || j > numclients ) return false;
-		current = svs.clients + (j - 1);
-		numclients = 1; // send to one
-		break;
-	case MSG_SPEC:
-		specproxy = reliable = true;
-		break;
-	default:
-		Host_Error( "SV_Send: bad dest: %i\n", dest );
-		return false;
-	}
-
-	// send the data to all relevent clients (or once only)
-	for( j = 0, cl = current; j < numclients; j++, cl++ )
-	{
-		if( cl->state == cs_free || cl->state == cs_zombie )
-			continue;
-
-		if( cl->state != cs_spawned && !reliable )
-			continue;
-
-		if( specproxy && !( cl->edict->v.flags & FL_PROXY ))
-			continue;
-
-		if( !cl->edict || ( cl->edict->v.flags & FL_FAKECLIENT ))
-			continue;
-
-		if( mask )
-		{
-			if( SV_IsValidEdict( cl->pViewEntity ))
-				viewOrg = cl->pViewEntity->v.origin;
-			else viewOrg = cl->edict->v.origin;
-
-			leafnum = CM_PointLeafnum( viewOrg );
-			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
-				continue;
-		}
-
-		if( reliable )
-		{
-			if( direct ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
-			else BF_WriteBits( &cl->reliable, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
-		}
-		else BF_WriteBits( &cl->datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
-		numsends++;
-	}
-	BF_Clear( &sv.multicast );
-
-	// 25% chanse for simulate random network bugs
-	if( sv.write_bad_message && Com_RandomLong( 0, 32 ) <= 8 )
-	{
-		// just for network debugging (send only for local client)
-		BF_WriteByte( &sv.multicast, svc_bad );
-		BF_WriteLong( &sv.multicast, rand( ));		// send some random data
-		BF_WriteString( &sv.multicast, host.finalmsg );	// send final message
-		SV_Send( MSG_ALL, vec3_origin, NULL );
-		sv.write_bad_message = false;
-	}
-	return numsends;	// debug
-}
-
-/*
-=================
 SV_ConnectionlessPacket
 
 A connectionless packet has four leading 0xff
@@ -1440,7 +1309,7 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 		if( cl->lastframe > 0 )
 		{
 			client_frame_t *frame = &cl->frames[cl->lastframe & SV_UPDATE_MASK];
-			frame->latency = svs.realtime - frame->senttime;
+			frame->latency = host.realtime - frame->senttime;
 		}
 	}
 
@@ -1512,8 +1381,8 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	else cl->send_message = false; // don't reply, sequences have slipped	
 
 	// save time for ping calculations
-	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].senttime = svs.realtime;
-	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].latency = -1;
+	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].senttime = host.realtime;
+	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].latency = -1.0f;
 		
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )

@@ -148,7 +148,7 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	
 	chan->sock = sock;
 	chan->remote_address = adr;
-	chan->last_received = Sys_Milliseconds ();
+	chan->last_received = host.realtime;
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
 	chan->rate = DEFAULT_RATE;
@@ -190,11 +190,11 @@ bool Netchan_CanPacket( netchan_t *chan )
 	// never choke loopback packets.
 	if( !net_chokeloopback->integer && NET_IsLocalAddress( chan->remote_address ))
 	{
-		chan->cleartime = Sys_DoubleTime();
+		chan->cleartime = host.realtime;
 		return true;
 	}
 
-	if( chan->cleartime < Sys_DoubleTime( ))
+	if( chan->cleartime < host.realtime )
 	{
 		return true;
 	}
@@ -429,10 +429,10 @@ void Netchan_UpdateFlow( netchan_t *chan )
 	{
 		pflow = &chan->flow[flow];
 
-		if(( Sys_DoubleTime() - pflow->nextcompute ) < FLOW_INTERVAL )
+		if(( host.realtime - pflow->nextcompute ) < FLOW_INTERVAL )
 			continue;
 
-		pflow->nextcompute = Sys_DoubleTime() + FLOW_INTERVAL;
+		pflow->nextcompute = host.realtime + FLOW_INTERVAL;
 
 		start = pflow->current - 1;
 
@@ -1342,7 +1342,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	}
 
 	chan->outgoing_sequence++;
-	chan->last_sent = Sys_Milliseconds ();
+	chan->last_sent = host.realtime;
 
 	BF_WriteLong( &send, w1 );
 	BF_WriteLong( &send, w2 );
@@ -1402,7 +1402,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	}
 
 	chan->flow[FLOW_OUTGOING].stats[chan->flow[FLOW_OUTGOING].current & ( MAX_LATENT-1 )].size = BF_GetNumBytesWritten( &send ) + UDP_HEADER_SIZE;
-	chan->flow[FLOW_OUTGOING].stats[chan->flow[FLOW_OUTGOING].current & ( MAX_LATENT-1 )].time = Sys_DoubleTime();
+	chan->flow[FLOW_OUTGOING].stats[chan->flow[FLOW_OUTGOING].current & ( MAX_LATENT-1 )].time = host.realtime;
 	chan->flow[FLOW_OUTGOING].totalbytes += ( BF_GetNumBytesWritten( &send ) + UDP_HEADER_SIZE );
 	chan->flow[FLOW_OUTGOING].current++;
 
@@ -1420,9 +1420,9 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 
 	fRate = 1.0f / chan->rate;
 
-	if( chan->cleartime < Sys_DoubleTime( ))
+	if( chan->cleartime < host.realtime )
 	{
-		chan->cleartime = Sys_DoubleTime();
+		chan->cleartime = host.realtime;
 	}
 
 	chan->cleartime += ( BF_GetNumBytesWritten( &send ) + UDP_HEADER_SIZE ) * fRate;
@@ -1589,11 +1589,11 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 		chan->incoming_reliable_sequence ^= 1;
 	}
 
-	chan->last_received = Sys_Milliseconds ();
+	chan->last_received = host.realtime;
 
 	// Update data flow stats
 	chan->flow[FLOW_INCOMING].stats[chan->flow[FLOW_INCOMING].current & ( MAX_LATENT-1 )].size = BF_GetMaxBytes( msg ) + UDP_HEADER_SIZE;
-	chan->flow[FLOW_INCOMING].stats[chan->flow[FLOW_INCOMING].current & ( MAX_LATENT-1 )].time = Sys_DoubleTime();
+	chan->flow[FLOW_INCOMING].stats[chan->flow[FLOW_INCOMING].current & ( MAX_LATENT-1 )].time = host.realtime;
 	chan->flow[FLOW_INCOMING].totalbytes += ( BF_GetMaxBytes( msg ) + UDP_HEADER_SIZE );
 	chan->flow[FLOW_INCOMING].current++;
 

@@ -100,7 +100,7 @@ void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
 		return;
 	}
 
-	time = cls.realtime - starttime;
+	time = (host.realtime * 1000) - starttime;	// FIXME; convert it to float properly
 
 	if( time >= endtime )
 	{
@@ -198,7 +198,7 @@ void CL_CenterPrint( const char *text, float y )
 
 	clgame.centerPrint.lines = 1;
 	clgame.centerPrint.totalWidth = 0;
-	clgame.centerPrint.time = cl.frame.servertime; // allow pause for centerprint
+	clgame.centerPrint.time = cl.mtime[0] * 1000; // allow pause for centerprint
 	com.strncpy( clgame.centerPrint.message, text, sizeof( clgame.centerPrint.message ));
 	s = clgame.centerPrint.message;
 
@@ -1429,7 +1429,8 @@ pfnKey_Event
 */
 static void pfnKey_Event( int key, int down )
 {
-	// FIXME: implement
+	// add event to queue
+	Sys_QueEvent( SE_KEY, key, down, 0, NULL );
 }
 
 
@@ -2488,7 +2489,7 @@ static cl_enginefuncs_t gEngfuncs =
 	&gEfxApi,
 	&gEventApi,
 	pfnIsSpectateOnly,
-	pfnIsInGame
+	pfnIsInGame,
 };
 
 void CL_UnloadProgs( void )

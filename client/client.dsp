@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
-# ADD LINK32 msvcrt.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libc.lib" /def:".\client.def" /libpath:"..\common\libs"
+# ADD LINK32 msvcrt.lib user32.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libc.lib" /def:".\client.def" /libpath:"..\common\libs"
 # SUBTRACT LINK32 /map
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\client\!release
@@ -82,7 +82,7 @@ SOURCE="$(InputPath)"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /Zi /O2 /I "..\common\vgui" /I "..\client" /I "..\client\render" /I ".\hud" /I "..\common\engine" /I "..\common" /I "..\server" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "CLIENT_DLL" /YX /FD /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MDd /W3 /Gm /Gi- /GX /ZI /Od /I "./" /I "../common" /I "global" /I "hud" /I "../game_shared" /I "../dlls" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "./" /I "../common" /I "global" /I "hud" /I "../game_shared" /I "../dlls" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -94,7 +94,7 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib opengl32.lib glu32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib winmm.lib vgui.lib wsock32.lib cvaLib.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libc" /def:".\client.def" /libpath:"..\common\libs"
 # SUBTRACT BASE LINK32 /map
-# ADD LINK32 msvcrtd.lib /nologo /subsystem:windows /dll /incremental:yes /debug /machine:I386 /nodefaultlib:"libc.lib" /def:".\client.def" /pdbtype:sept /libpath:"..\common\libs"
+# ADD LINK32 msvcrtd.lib user32.lib /nologo /subsystem:windows /dll /incremental:yes /debug /machine:I386 /nodefaultlib:"libc.lib" /def:".\client.def" /pdbtype:sept /libpath:"..\common\libs"
 # SUBTRACT LINK32 /map
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\client\!debug

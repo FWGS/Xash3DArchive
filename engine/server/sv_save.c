@@ -1223,7 +1223,7 @@ int SV_LoadGameState( char const *level, bool createPlayers )
 	SV_SaveFinish( pSaveData );
 
 	// restore server time
-	sv.time = header.time * 1000;
+	sv.time = header.time;
 	
 	return 1;
 }
@@ -1749,11 +1749,14 @@ void SV_SaveGame( const char *pName )
 	if( com.stricmp( pName, "autosave" ) && svgame.gmsgHudText != -1 )
 	{
 		const char *pMsg = "GAMESAVED"; // defined in titles.txt
+		sv_client_t *cl;;
 
-		BF_WriteByte( &sv.multicast, svgame.gmsgHudText );
-		BF_WriteByte( &sv.multicast, com.strlen( pMsg ) + 1 );
-		BF_WriteString( &sv.multicast, pMsg );
-		SV_Send( MSG_ONE, NULL, EDICT_NUM( 1 ));
+		if(( cl = SV_ClientFromEdict( EDICT_NUM( 1 ), true )) != NULL )
+		{
+			BF_WriteByte( &cl->netchan.message, svgame.gmsgHudText );
+			BF_WriteByte( &cl->netchan.message, com.strlen( pMsg ) + 1 );
+			BF_WriteString( &cl->netchan.message, pMsg );
+		}
 	}
 }
 

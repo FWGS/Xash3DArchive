@@ -8,6 +8,7 @@
 #include "protocol.h"
 #include "net_encode.h"
 #include "entity_types.h"
+#include "input.h"
 
 /*
 =========================================================================
@@ -123,7 +124,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( newent ) old = &ent->baseline;
 
 	if( unchanged ) *state = *old;
-	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, cl.frame.servertime );
+	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, sv_time( ));
 
 	if( !result )
 	{
@@ -314,7 +315,7 @@ void CL_ParseClientData( frame_t *from, frame_t *to, sizebuf_t *msg )
 	}
 	else ocd = &from->cd;
 
-	MSG_ReadClientData( msg, ocd, cd, to->servertime );
+	MSG_ReadClientData( msg, ocd, cd, sv_time( ));
 }
 		
 /*
@@ -324,15 +325,15 @@ CL_ParseFrame
 */
 void CL_ParseFrame( sizebuf_t *msg )
 {
-	int	cmd;
+	int		cmd;
 	cl_entity_t	*clent;
           
 	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
 
+	cl.mtime[1] = cl.mtime[0];
+	cl.mtime[0] = BF_ReadFloat( msg );
 	cl.frame.serverframe = BF_ReadLong( msg );
-	cl.frame.servertime = BF_ReadLong( msg );
 	cl.frame.deltaframe = BF_ReadLong( msg );
-	cl.serverframetime = BF_ReadByte( msg );
 	cl.surpressCount = BF_ReadByte( msg );
 
 	// If the frame is delta compressed from data that we
@@ -365,12 +366,6 @@ void CL_ParseFrame( sizebuf_t *msg )
 		}
 		else cl.frame.valid = true;	// valid delta parse
 	}
-
-	// clamp time 
-	if( cl.time > cl.frame.servertime )
-		cl.time = cl.frame.servertime;
-	else if( cl.time < cl.frame.servertime - cl.serverframetime )
-		cl.time = cl.frame.servertime - cl.serverframetime;
 
 	// read clientdata
 	cmd = BF_ReadByte( msg );
@@ -485,18 +480,6 @@ void CL_AddEntities( void )
 	if( cls.state != ca_active )
 		return;
 
-	if( cl.time > cl.frame.servertime )
-	{
-		cl.time = cl.frame.servertime;
-		cl.lerpFrac = 1.0f;
-	}
-	else if( cl.time < cl.frame.servertime - cl.serverframetime )
-	{
-		cl.time = cl.frame.servertime - cl.serverframetime;
-		cl.lerpFrac = 0;
-	}
-	else cl.lerpFrac = 1.0f - ( cl.frame.servertime - cl.time ) * (float)( cl.serverframetime * 0.0001f );
-
 	cl.render_flags = 0;
 
 	clgame.dllFuncs.pfnStartFrame();	// new frame has begin
@@ -566,4 +549,9 @@ bool CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
 		}
 	}
 	return true;
+}
+
+void CL_ExtraUpdate( void )
+{
+	S_ExtraUpdate();
 }

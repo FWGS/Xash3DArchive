@@ -179,15 +179,13 @@ typedef enum
 	SE_NONE = 0,	// end of events queue
 	SE_KEY,		// ev.value[0] is a key code, ev.value[1] is the down flag
 	SE_CHAR,		// ev.value[0] is an ascii char
-	SE_MOUSE,		// ev.value[0] and ev.value[1] are reletive signed x / y moves
-	SE_JOYSTICK,	// evValue is an axis number and evValue2 is the current state (-127 to 127)
 	SE_CONSOLE,	// ev.data is a char*
+	SE_MOUSE,		// ev.value[0] and ev.value[1] are reletive signed x / y moves
 } ev_type_t;
 
 typedef struct
 {
 	ev_type_t		type;
-	int		time;	// actual timestamp
 	int		value[2];
 	void		*data;
 	size_t		length;
@@ -474,7 +472,7 @@ typedef struct stdilib_api_s
 	void (*exit)( void );				// normal silent termination
 	void (*sleep)( int msec );				// sleep for some msec
 	char *(*clipboard)( void );				// get clipboard data
-	void (*queevent)( int time, ev_type_t type, int value, int value2, int length, void *ptr );
+	void (*queevent)( ev_type_t type, int value, int value2, int length, void *ptr );
 	sys_event_t (*getevent)( void );			// get system events
 
 	// crclib.c funcs
@@ -632,7 +630,6 @@ typedef struct stdilib_api_s
 	bool (*Com_FreeLibrary)( dll_info_t *dll );			// free library
 	void*(*Com_GetProcAddress)( dll_info_t *dll, const char* name );	// gpa
 	double (*Com_DoubleTime)( void );				// hi-res timer
-	dword (*Com_Milliseconds)( void );				// low-res timer
 	void (*Com_ShellExecute)( const char *p1, const char *p2, bool exit );// execute shell programs
 
 	// built-in imagelib functions
@@ -741,7 +738,7 @@ typedef struct script_s
 	char	*buffer;
 	char	*text;
 	size_t	size;
-	char	TXcommand;
+	char	TXcommand;	// contain QuArK 'TX' command in the map file descriptions
 };
 
 #include "cvardef.h"
@@ -983,7 +980,6 @@ misc utils
 #define Sys_Quit			com.exit
 #define Sys_Break			com.abort
 #define Sys_DoubleTime		com.Com_DoubleTime
-#define Sys_Milliseconds		com.Com_Milliseconds
 #define GetNumThreads		com.Com_NumThreads
 #define ThreadLock			com.Com_ThreadLock
 #define ThreadUnlock		com.Com_ThreadUnlock

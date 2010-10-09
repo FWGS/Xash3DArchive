@@ -1306,11 +1306,10 @@ Writes current client data only for local client
 Other clients can grab the client state from entity_state_t
 ==================
 */
-void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase )
+void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, float timebase )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
-	float		flTime = timebase * 0.001f;
 	int		i;
 
 	dt = Delta_FindStruct( "clientdata_t" );
@@ -1325,7 +1324,7 @@ void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, 
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )
 	{
-		 Delta_WriteField( msg, pField, from, to, flTime );
+		 Delta_WriteField( msg, pField, from, to, timebase );
 	}
 }
 
@@ -1336,11 +1335,10 @@ MSG_ReadClientData
 Read the clientdata
 ==================
 */
-void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, int timebase )
+void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, float timebase )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
-	float		flTime = timebase * 0.001f;
 	int		i;
 
 	dt = Delta_FindStruct( "clientdata_t" );
@@ -1354,7 +1352,7 @@ void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, i
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )
 	{
-		Delta_ReadField( msg, pField, from, to, flTime );
+		Delta_ReadField( msg, pField, from, to, timebase );
 	}
 }
 
@@ -1376,13 +1374,12 @@ If force is not set, then nothing at all will be generated if the entity is
 identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
-void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, int timebase ) 
+void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, float timebase ) 
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
 	int		i, startBit;
 	int		numChanges = 0;
-	float		flTime = timebase * 0.001f;
 
 	if( to == NULL )
 	{
@@ -1443,7 +1440,7 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )
 	{
-		if( Delta_WriteField( msg, pField, from, to, flTime ))
+		if( Delta_WriteField( msg, pField, from, to, timebase ))
 			numChanges++;
 	}
 
@@ -1462,11 +1459,10 @@ If the delta removes the entity, entity_state_t->number will be set to MAX_EDICT
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, int timebase )
+bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, float timebase )
 {
 	delta_info_t	*dt;
 	delta_t		*pField;
-	float		flTime = timebase * 0.001f;
 	int		i, fRemoveType;
 
 	if( number < 0 || number >= GI->max_edicts )
@@ -1521,7 +1517,7 @@ bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )
 	{
-		Delta_ReadField( msg, pField, from, to, flTime );
+		Delta_ReadField( msg, pField, from, to, timebase );
 	}
 
 	// message parsed

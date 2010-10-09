@@ -185,27 +185,151 @@ void SV_ConfigString( int index, const char *val )
 	if( sv.state != ss_loading )
 	{
 		// send the update to everyone
-		BF_Clear( &sv.multicast );
-		BF_WriteByte( &sv.multicast, svc_configstring );
-		BF_WriteShort( &sv.multicast, index );
-		BF_WriteString( &sv.multicast, val );
-		SV_Send( MSG_ALL, vec3_origin, NULL );
+		BF_WriteByte( &sv.reliable_datagram, svc_configstring );
+		BF_WriteShort( &sv.reliable_datagram, index );
+		BF_WriteString( &sv.reliable_datagram, val );
 	}
+}
+
+/*
+=================
+SV_Send
+
+Sends the contents of sv.multicast to a subset of the clients,
+then clears sv.multicast.
+
+MSG_ONE	send to one client (ent can't be NULL)
+MSG_ALL	same as broadcast (origin can be NULL)
+MSG_PVS	send to clients potentially visible from org
+MSG_PHS	send to clients potentially hearable from org
+=================
+*/
+bool SV_Send( int dest, const vec3_t origin, const edict_t *ent )
+{
+	byte		*mask = NULL;
+	int		leafnum = 0, numsends = 0;
+	int		j, numclients = sv_maxclients->integer;
+	sv_client_t	*cl, *current = svs.clients;
+	bool		reliable = false;
+	bool		specproxy = false;
+	float		*viewOrg = NULL;
+
+	switch( dest )
+	{
+	case MSG_INIT:
+		if( sv.state == ss_loading )
+		{
+			// copy signon buffer
+			BF_WriteBits( &sv.signon, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
+			BF_Clear( &sv.multicast );
+			return true;
+		}
+		// intentional fallthrough (in-game MSG_INIT it's a MSG_ALL reliable)
+	case MSG_ALL:
+		reliable = true;
+		// intentional fallthrough
+	case MSG_BROADCAST:
+		// nothing to sort	
+		break;
+	case MSG_PAS_R:
+		reliable = true;
+		// intentional fallthrough
+	case MSG_PAS:
+		if( origin == NULL ) return false;
+		leafnum = CM_PointLeafnum( origin );
+		mask = CM_LeafPHS( leafnum );
+		break;
+	case MSG_PVS_R:
+		reliable = true;
+		// intentional fallthrough
+	case MSG_PVS:
+		if( origin == NULL ) return false;
+		leafnum = CM_PointLeafnum( origin );
+		mask = CM_LeafPVS( leafnum );
+		break;
+	case MSG_ONE:
+		reliable = true;
+		// intentional fallthrough
+	case MSG_ONE_UNRELIABLE:
+		if( ent == NULL ) return false;
+		j = NUM_FOR_EDICT( ent );
+		if( j < 1 || j > numclients ) return false;
+		current = svs.clients + (j - 1);
+		numclients = 1; // send to one
+		break;
+	case MSG_SPEC:
+		specproxy = reliable = true;
+		break;
+	default:
+		Host_Error( "SV_Multicast: bad dest: %i\n", dest );
+		return false;
+	}
+
+	// send the data to all relevent clients (or once only)
+	for( j = 0, cl = current; j < numclients; j++, cl++ )
+	{
+		if( cl->state == cs_free || cl->state == cs_zombie )
+			continue;
+
+		if( cl->state != cs_spawned && !reliable )
+			continue;
+
+		if( specproxy && !( cl->edict->v.flags & FL_PROXY ))
+			continue;
+
+		if( !cl->edict || cl->fakeclient )
+			continue;
+
+		if( mask )
+		{
+			if( SV_IsValidEdict( cl->pViewEntity ))
+				viewOrg = cl->pViewEntity->v.origin;
+			else viewOrg = cl->edict->v.origin;
+
+			leafnum = CM_PointLeafnum( viewOrg );
+			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+				continue;
+		}
+
+		if( reliable ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
+		else BF_WriteBits( &cl->datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
+		numsends++;
+	}
+
+	BF_Clear( &sv.multicast );
+
+	// 1% chanse for simulate random network bugs
+	if( sv.write_bad_message && Com_RandomLong( 0, 512 ) == 443 )
+	{
+		// just for network debugging (send only for local client)
+		BF_WriteByte( &sv.datagram, svc_bad );
+		BF_WriteLong( &sv.datagram, rand( ));		// send some random data
+		BF_WriteString( &sv.datagram, host.finalmsg );	// send final message
+		sv.write_bad_message = false;
+	}
+	return numsends;	// debug
 }
 
 void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags )
 {
+	if( sv.state != ss_loading ) return;
+
 	ASSERT( origin );
 
+	// this can happens if serialized map contain 4096 static decals...
+	if(( BF_GetNumBytesWritten( &sv.signon ) + 20 ) >= BF_GetMaxBytes( &sv.signon ))
+	{
+		return;
+	} 
+
 	// static decals are posters, it's always reliable
-	BF_WriteByte( &sv.multicast, svc_bspdecal );
-	BF_WriteBitVec3Coord( &sv.multicast, origin );
-	BF_WriteWord( &sv.multicast, decalIndex );
-	BF_WriteShort( &sv.multicast, entityIndex );
+	BF_WriteByte( &sv.signon, svc_bspdecal );
+	BF_WriteBitVec3Coord( &sv.signon, origin );
+	BF_WriteWord( &sv.signon, decalIndex );
+	BF_WriteShort( &sv.signon, entityIndex );
 	if( entityIndex > 0 )
-		BF_WriteWord( &sv.multicast, modelIndex );
-	BF_WriteByte( &sv.multicast, flags );
-	SV_Send( MSG_INIT, NULL, NULL );
+		BF_WriteWord( &sv.signon, modelIndex );
+	BF_WriteByte( &sv.signon, flags );
 }
 
 static bool SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
@@ -779,7 +903,7 @@ void pfnChangeLevel( const char* s1, const char* s2 )
 	if( svs.changelevel_next_time > sv.time )
 		return;
 
-	svs.changelevel_next_time = sv.time + 1000;		// rest 1 secs if failed
+	svs.changelevel_next_time = sv.time + 1.0f;		// rest 1 secs if failed
 
 	if( !s2 ) Cbuf_AddText( va( "changelevel %s\n", s1 ));	// Quake changlevel
 	else Cbuf_AddText( va( "changelevel %s %s\n", s1, s2 ));	// Half-Life changelevel
@@ -1774,7 +1898,7 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 		return;
 	}
 
-	if( pEdict->v.flags & FL_FAKECLIENT )
+	if( client->fakeclient )
 		return;
 
 	va_start( args, szFmt );
@@ -1783,9 +1907,8 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 
 	if( SV_IsValidCmd( buffer ))
 	{
-		BF_WriteByte( &sv.multicast, svc_stufftext );
-		BF_WriteString( &sv.multicast, buffer );
-		SV_Send( MSG_ONE, NULL, client->edict );
+		BF_WriteByte( &client->netchan.message, svc_stufftext );
+		BF_WriteString( &client->netchan.message, buffer );
 	}
 	else MsgDev( D_ERROR, "Tried to stuff bad command %s\n", buffer );
 }
@@ -1808,17 +1931,17 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 		return;
 	}
 
-	BF_WriteByte( &sv.multicast, svc_particle );
-	BF_WriteBitVec3Coord( &sv.multicast, org );
+	BF_WriteByte( &sv.datagram, svc_particle );
+	BF_WriteBitVec3Coord( &sv.datagram, org );
 
 	for( i = 0; i < 3; i++ )
 	{
 		v = bound( -128, dir[i] * 16, 127 );
-		BF_WriteChar( &sv.multicast, v );
+		BF_WriteChar( &sv.datagram, v );
 	}
-	BF_WriteByte( &sv.multicast, count );
-	BF_WriteByte( &sv.multicast, color );
-	SV_Send( MSG_ALL, org, NULL );
+
+	BF_WriteByte( &sv.datagram, count );
+	BF_WriteByte( &sv.datagram, color );
 }
 
 /*
@@ -1977,7 +2100,7 @@ void pfnMessageEnd( void )
 	else if( svgame.msg_size_index != -1 )
 	{
 		// variable sized message
-		if( svgame.msg_realsize > 255 )
+		if( svgame.msg_realsize >= 255 )
 		{
 			MsgDev( D_ERROR, "SV_Message: %s too long (more than 255 bytes)\n", name );
 			BF_Clear( &sv.multicast );
@@ -1989,6 +2112,7 @@ void pfnMessageEnd( void )
 			BF_Clear( &sv.multicast );
 			return;
 		}
+
 		sv.multicast.pData[svgame.msg_size_index] = svgame.msg_realsize;
 	}
 	else
@@ -2415,12 +2539,12 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	if( sv.state == ss_active )
 	{
 		// tell the client about new user message
-		BF_WriteByte( &sv.multicast, svc_usermessage );
-		BF_WriteString( &sv.multicast, svgame.msg[i].name );
-		BF_WriteByte( &sv.multicast, svgame.msg[i].number );
-		BF_WriteByte( &sv.multicast, (byte)iSize );
-		SV_Send( MSG_ALL, vec3_origin, NULL );
+		BF_WriteByte( &sv.reliable_datagram, svc_usermessage );
+		BF_WriteString( &sv.reliable_datagram, svgame.msg[i].name );
+		BF_WriteByte( &sv.reliable_datagram, svgame.msg[i].number );
+		BF_WriteByte( &sv.reliable_datagram, (byte)iSize );
 	}
+
 	return svgame.msg[i].number;
 }
 
@@ -2484,7 +2608,6 @@ pfnClientPrintf
 void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 {
 	sv_client_t	*client;
-	bool		fake;
 
 	if( sv.state != ss_active )
 	{
@@ -2500,23 +2623,20 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 		return;
 	}
 
-	fake = ( pEdict->v.flags & FL_FAKECLIENT ) ? true : false;
-
 	switch( ptype )
 	{
 	case print_console:
-		if( fake ) MsgDev( D_INFO, szMsg );
+		if( client->fakeclient ) MsgDev( D_INFO, szMsg );
 		else SV_ClientPrintf( client, PRINT_HIGH, "%s", szMsg );
 		break;
 	case print_chat:
-		if( fake ) return;
+		if( client->fakeclient ) return;
 		SV_ClientPrintf( client, PRINT_CHAT, "%s", szMsg );
 		break;
 	case print_center:
-		if( fake ) return;
-		BF_WriteByte( &sv.multicast, svc_centerprint );
-		BF_WriteString( &sv.multicast, szMsg );
-		SV_Send( MSG_ONE, NULL, client->edict );
+		if( client->fakeclient ) return;
+		BF_WriteByte( &client->netchan.message, svc_centerprint );
+		BF_WriteString( &client->netchan.message, szMsg );
 		break;
 	}
 }
@@ -2613,13 +2733,12 @@ void pfnCrosshairAngle( const edict_t *pClient, float pitch, float yaw )
 		return;
 	}
 
-	// fakeclients ignore it silently
-	if( pClient->v.flags & FL_FAKECLIENT ) return;
+	// fakeclients ignores it silently
+	if( client->fakeclient ) return;
 
-	BF_WriteByte( &sv.multicast, svc_crosshairangle );
-	BF_WriteBitAngle( &sv.multicast, pitch, 8 );
-	BF_WriteBitAngle( &sv.multicast, yaw, 8 );
-	SV_Send( MSG_ONE, vec3_origin, pClient );
+	BF_WriteByte( &client->netchan.message, svc_crosshairangle );
+	BF_WriteBitAngle( &client->netchan.message, pitch, 8 );
+	BF_WriteBitAngle( &client->netchan.message, yaw, 8 );
 }
 
 /*
@@ -2655,11 +2774,10 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 	else client->pViewEntity = (edict_t *)pViewent;
 
 	// fakeclients ignore to send client message
-	if( pClient->v.flags & FL_FAKECLIENT ) return;
+	if( client->fakeclient ) return;
 
 	BF_WriteByte( &client->netchan.message, svc_setview );
 	BF_WriteWord( &client->netchan.message, NUM_FOR_EDICT( pViewent ));
-	SV_Send( MSG_ONE, NULL, client->edict );
 }
 
 /*
@@ -2782,12 +2900,11 @@ void pfnFadeClientVolume( const edict_t *pEdict, float fadePercent, float fadeOu
 		return;
 	}
 
-	BF_WriteByte( &sv.multicast, svc_soundfade );
-	BF_WriteFloat( &sv.multicast, fadePercent );
-	BF_WriteFloat( &sv.multicast, fadeOutSeconds );
-	BF_WriteFloat( &sv.multicast, holdTime );
-	BF_WriteFloat( &sv.multicast, fadeInSeconds );
-	SV_Send( MSG_ONE, NULL, cl->edict );
+	BF_WriteByte( &cl->netchan.message, svc_soundfade );
+	BF_WriteFloat( &cl->netchan.message, fadePercent );
+	BF_WriteFloat( &cl->netchan.message, fadeOutSeconds );
+	BF_WriteFloat( &cl->netchan.message, holdTime );
+	BF_WriteFloat( &cl->netchan.message, fadeInSeconds );
 }
 
 /*
@@ -2840,7 +2957,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 		return;
 	}
 
-	if(!( pClient->v.flags & FL_FAKECLIENT ))
+	if( !cl->fakeclient )
 		return;	// only fakeclients allows
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
@@ -3140,7 +3257,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	// process all the clients
 	for( slot = 0, cl = svs.clients; slot < sv_maxclients->integer; slot++, cl++ )
 	{
-		if( cl->state != cs_spawned || !cl->edict || ( cl->edict->v.flags & FL_FAKECLIENT ))
+		if( cl->state != cs_spawned || !cl->edict || cl->fakeclient )
 			continue;
 
 		if( flags & FEV_NOTHOST && cl->edict == pInvoker )
@@ -3171,8 +3288,8 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 			info.flags = 0; // server ignore flags
 
 			// skipping queue, write in reliable datagram
-			BF_WriteByte( &cl->reliable, svc_event_reliable );
-			SV_PlaybackEvent( &cl->reliable, &info );
+			BF_WriteByte( &cl->netchan.message, svc_event_reliable );
+			SV_PlaybackEvent( &cl->netchan.message, &info );
 			continue;
 		}
 

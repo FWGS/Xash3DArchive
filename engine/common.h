@@ -120,8 +120,10 @@ typedef struct host_parm_s
 	string		finalmsg;		// server shutdown final message
 	host_redirect_t	rd;		// remote console
 
-	int		inputmsec;	// time for buttons
-	int		frametime;	// time between engine frames
+	double		realtime;		// host.curtime
+	double		frametime;	// time between engine frames
+	double		realframetime;	// for some system events, e.g. console animations
+
 	uint		framecount;	// global framecount
 
 	int		events_head;
@@ -132,6 +134,7 @@ typedef struct host_parm_s
 	int		developer;	// show all developer's message
 	bool		key_overstrike;	// key overstrike mode
 
+	// for IN_MouseMove() easy access
 	int		window_center_x;
 	int		window_center_y;
 
@@ -183,12 +186,12 @@ CLIENT / SERVER SYSTEMS
 */
 void CL_Init( void );
 void CL_Shutdown( void );
-void CL_Frame( int time );
+void Host_ClientFrame( void );
 bool CL_Active( void );
 
 void SV_Init( void );
 void SV_Shutdown( bool reconnect );
-void SV_Frame( int time );
+void Host_ServerFrame( void );
 bool SV_Active( void );
 
 /*
@@ -241,7 +244,7 @@ float pfnTime( void );
 //
 bool Key_IsDown( int keynum );
 const char *Key_IsBind( int keynum );
-void Key_Event( int key, bool down, int time );
+void Key_Event( int key, bool down );
 void Key_Init( void );
 void Key_WriteBindings( file_t *f );
 const char *Key_GetBinding( int keynum );
@@ -283,6 +286,7 @@ struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
+void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );
 bool CL_IsPlaybackDemo( void );
 bool SV_GetComment( const char *savename, char *comment );
@@ -300,6 +304,7 @@ void CL_ForceVid( void );
 void CL_ForceSnd( void );
 void SCR_Init( void );
 void SCR_UpdateScreen( void );
+void SCR_CheckStartupVids( void );
 long SCR_GetAudioChunk( char *rawdata, long length );
 wavdata_t *SCR_GetMovieInfo( void );
 void SCR_Shutdown( void );

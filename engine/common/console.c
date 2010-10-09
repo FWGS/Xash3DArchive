@@ -59,7 +59,7 @@ typedef struct
 	float		finalFrac;	// 0.0 to 1.0 lines of console to display
 
 	int		vislines;		// in scanlines
-	int		times[CON_TIMES];	// host.realtime the line was generated for transparent notify lines
+	double		times[CON_TIMES];	// host.realtime the line was generated for transparent notify lines
 	rgba_t		color;
 
 	// console images
@@ -527,7 +527,7 @@ void Con_Linefeed( bool skipnotify )
 	if( con.current >= 0 )
 	{
 		if( skipnotify ) con.times[con.current % CON_TIMES] = 0;
-		else con.times[con.current % CON_TIMES] = cls.realtime;
+		else con.times[con.current % CON_TIMES] = host.realtime;
 	}
 
 	con.x = 0;
@@ -614,7 +614,7 @@ void Con_Print( const char *txt )
 			if( prev < 0 ) prev = CON_TIMES - 1;
 			con.times[prev] = 0;
 		}
-		else con.times[con.current % CON_TIMES] = cls.realtime;
+		else con.times[con.current % CON_TIMES] = host.realtime;
 	}
 }
 
@@ -1159,7 +1159,7 @@ void Con_DrawInput( void )
 	// save char for overstrike
 	cursorChar = str[con.input.cursor - prestep];
 
-	if( host.key_overstrike && cursorChar && !((int)(cls.realtime >> 8) & 1 ))
+	if( host.key_overstrike && cursorChar && !((int)( host.realtime * 4 ) & 1 ))
 		hideChar = con.input.cursor - prestep;	// skip this char
 	
 	// draw it
@@ -1167,7 +1167,7 @@ void Con_DrawInput( void )
 	Con_DrawCharacter( QCHAR_WIDTH >> 1, y, ']', colorDefault );
 
 	// draw the cursor
-	if((int)(cls.realtime >> 8) & 1 ) return; // off blink
+	if((int)( host.realtime * 4 ) & 1 ) return; // off blink
 
 	// calc cursor position
 	str[con.input.cursor - prestep] = 0;
@@ -1192,9 +1192,9 @@ Draws the last few lines of output transparently over the game top
 void Con_DrawNotify( void )
 {
 	int	i, x, v = 0;
-	int	currentColor;
-	int	start, time;
+	int	start, currentColor;
 	short	*text;
+	float	time;
 
 	if( !host.developer ) return;
 
@@ -1206,9 +1206,9 @@ void Con_DrawNotify( void )
 		if( i < 0 ) continue;
 		time = con.times[i % CON_TIMES];
 		if( time == 0 ) continue;
-		time = cls.realtime - time;
+		time = host.realtime - time;
 
-		if( time > ( con_notifytime->value * 1000 ))
+		if( time > con_notifytime->value )
 			continue;	// expired
 
 		text = con.text + (i % con.totallines) * con.linewidth;
@@ -1409,8 +1409,6 @@ Scroll it up or down
 */
 void Con_RunConsole( void )
 {
-	float	frametime;
-
 	// decide on the destination height of the console
 	if( host.developer && cls.key_dest == key_console )
 	{
@@ -1420,20 +1418,19 @@ void Con_RunConsole( void )
 	}
 	else con.finalFrac = 0; // none visible
 
-	// whel level is loading frametime may be is wrong
+	// when level is loading frametime may be is wrong
 	if( cls.state == ca_connecting || cls.state == ca_connected )
-		frametime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
-	else frametime = cls.frametime;
+		host.realframetime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
 
 	if( con.finalFrac < con.displayFrac )
 	{
-		con.displayFrac -= scr_conspeed->value * 0.002 * frametime;
+		con.displayFrac -= scr_conspeed->value * 0.002 * host.realframetime;
 		if( con.finalFrac > con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
 	else if( con.finalFrac > con.displayFrac )
 	{
-		con.displayFrac += scr_conspeed->value * 0.002 * frametime;
+		con.displayFrac += scr_conspeed->value * 0.002 * host.realframetime;
 		if( con.finalFrac < con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}

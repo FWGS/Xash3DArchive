@@ -101,7 +101,7 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 			// delta update from old position
 			// because the force parm is false, this will not result
 			// in any bytes being emited if the entity has not changed at all
-			MSG_WriteDeltaEntity( oldent, newent, msg, false, sv.time );
+			MSG_WriteDeltaEntity( oldent, newent, msg, false, sv_time( ));
 			oldindex++;
 			newindex++;
 			continue;
@@ -110,7 +110,7 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 		if( newnum < oldnum )
 		{	
 			// this is a new entity, send it from the baseline
-			MSG_WriteDeltaEntity( &svs.baselines[newnum], newent, msg, true, sv.time );
+			MSG_WriteDeltaEntity( &svs.baselines[newnum], newent, msg, true, sv_time( ));
 			newindex++;
 			continue;
 		}
@@ -124,7 +124,7 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 			else force = false;		// just removed from delta-message 
 
 			// remove from message
-			MSG_WriteDeltaEntity( oldent, NULL, msg, force, sv.time );
+			MSG_WriteDeltaEntity( oldent, NULL, msg, force, sv_time( ));
 			oldindex++;
 			continue;
 		}
@@ -139,7 +139,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 	bool		fullvis = false;
 	sv_client_t	*cl, *netclient;
 	entity_state_t	*state;
-	int		e;
+	int		e, player;
 
 	// during an error shutdown message we may need to transmit
 	// the shutdown message after the server has shutdown, so
@@ -184,9 +184,10 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 
 		state = &ents->entities[ents->num_entities];
 		netclient = SV_ClientFromEdict( ent, true );
+		player = ( netclient != NULL );
 
 		// add entity to the net packet
-		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, ( netclient != NULL ), pset ))
+		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, player, pset ))
 		{
 			// to prevent adds it twice through portals
 			ent->framenum = sv.net_framenum;
@@ -327,10 +328,9 @@ void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 	SV_EmitEvents( cl, frame, msg );
 
 	BF_WriteByte( msg, svc_frame );
+	BF_WriteFloat( msg, (float)sv.time );	// send a servertime each frame
 	BF_WriteLong( msg, sv.framenum );
-	BF_WriteLong( msg, sv.time );		// send a servertime each frame
 	BF_WriteLong( msg, lastframe );	// what we are delta'ing from
-	BF_WriteByte( msg, sv.frametime );
 	BF_WriteByte( msg, cl->surpressCount );	// rate dropped packets
 	cl->surpressCount = 0;
 
@@ -376,16 +376,14 @@ void SV_BuildClientFrame( sv_client_t *cl )
 		switch( clent->v.fixangle )
 		{
 		case 1:
-			BF_WriteByte( &sv.multicast, svc_setangle );
-			BF_WriteBitAngle( &sv.multicast, clent->v.angles[0], 16 );
-			BF_WriteBitAngle( &sv.multicast, clent->v.angles[1], 16 );
-			SV_DirectSend( MSG_ONE, vec3_origin, clent );
+			BF_WriteByte( &cl->netchan.message, svc_setangle );
+			BF_WriteBitAngle( &cl->netchan.message, clent->v.angles[0], 16 );
+			BF_WriteBitAngle( &cl->netchan.message, clent->v.angles[1], 16 );
 			clent->v.effects |= EF_NOINTERP;
 			break;
 		case 2:
-			BF_WriteByte( &sv.multicast, svc_addangle );
-			BF_WriteBitAngle( &sv.multicast, cl->addangle, 16 );
-			SV_DirectSend( MSG_ONE, vec3_origin, clent );
+			BF_WriteByte( &cl->netchan.message, svc_addangle );
+			BF_WriteBitAngle( &cl->netchan.message, cl->addangle, 16 );
 			cl->addangle = 0;
 			break;
 		}
@@ -394,7 +392,7 @@ void SV_BuildClientFrame( sv_client_t *cl )
 
 	// this is the frame we are creating
 	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
-	frame->senttime = svs.realtime; // save it for ping calc later
+	frame->senttime = host.realtime; // save it for ping calc later
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
@@ -457,14 +455,6 @@ bool SV_SendClientDatagram( sv_client_t *cl )
 	// and the player state
 	SV_WriteFrameToClient( cl, &msg );
 
-	// copy the accumulated reliable datagram
-	// for this client out to the message
-	// it is necessary for this to be after the WriteEntities
-	// so that entity references will be current
-	if( BF_CheckOverflow( &cl->reliable )) MsgDev( D_ERROR, "reliable datagram overflowed for %s\n", cl->name );
-	else BF_WriteBits( &msg, BF_GetData( &cl->reliable ), BF_GetNumBitsWritten( &cl->reliable ));
-	BF_Clear( &cl->reliable );
-
 	if( BF_CheckOverflow( &msg ))
 	{	
 		// must have room left for the packet header
@@ -526,6 +516,53 @@ bool SV_RateDrop( sv_client_t *cl )
 
 /*
 =======================
+SV_UpdateToReliableMessages
+=======================
+*/
+void SV_UpdateToReliableMessages( void )
+{
+	int		i;
+	sv_client_t	*cl;
+
+	// check for changes to be sent over the reliable streams to all clients
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( !cl->edict ) continue;	// not in game yet
+
+		if( cl->state != cs_spawned )
+			continue;
+
+		if( cl->sendinfo )
+		{
+			cl->sendinfo = false;
+			SV_FullClientUpdate( cl, &sv.reliable_datagram );
+		}
+	}
+
+	// clear the server datagram if it overflowed.
+	if( BF_CheckOverflow( &sv.datagram ))
+	{
+		MsgDev( D_ERROR, "sv.datagram overflowed!\n" );
+		BF_Clear( &sv.datagram );
+	}
+
+	// now send the reliable and server datagrams to all clients.
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( cl->state < cs_connected || cl->fakeclient )
+			continue;	// reliables go to all connected or spawned
+
+		BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.reliable_datagram ), BF_GetNumBitsWritten( &sv.reliable_datagram ));
+		BF_WriteBits( &cl->datagram, BF_GetData( &sv.datagram ), BF_GetNumBitsWritten( &sv.datagram ));
+	}
+
+	// now clear the reliable and datagram buffers.
+	BF_Clear( &sv.reliable_datagram );
+	BF_Clear( &sv.datagram );
+}
+
+/*
+=======================
 SV_SendClientMessages
 =======================
 */
@@ -539,6 +576,14 @@ void SV_SendClientMessages( void )
 	if( sv.state == ss_dead )
 		return;
 
+	SV_UpdateToReliableMessages ();
+
+	// we always need to bump framenum, even if we
+	// don't run the world, otherwise the delta
+	// compression can get confused when a client
+	// has the "current" frame
+	sv.framenum++;
+
 	// send a message to each connected client
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -549,24 +594,16 @@ void SV_SendClientMessages( void )
 
 		svs.currentPlayer = cl;
 
-		// update any userinfo packets that have changed
-		if( cl->sendinfo )
-		{
-			cl->sendinfo = false;
-			SV_FullClientUpdate( cl, &sv.multicast );
-		}
-                    
 		if( cl->sendmovevars )
 		{
 			cl->sendmovevars = false;
-			SV_UpdatePhysinfo( cl, &sv.multicast );
+			SV_FullUpdateMovevars( cl, &cl->netchan.message );
                     }
 
 		// if the reliable message overflowed, drop the client
 		if( BF_CheckOverflow( &cl->netchan.message ))
 		{
 			BF_Clear( &cl->netchan.message );
-			BF_Clear( &cl->reliable );
 			BF_Clear( &cl->datagram );
 			SV_BroadcastPrintf( PRINT_HIGH, "%s overflowed\n", cl->name );
 			SV_DropClient( cl );
@@ -584,7 +621,7 @@ void SV_SendClientMessages( void )
 		}
 		else
 		{
-			if( BF_GetNumBytesWritten( &cl->netchan.message ) || svs.realtime - cl->netchan.last_sent > 1000 )
+			if( cl->netchan.message.iCurBit || host.realtime - cl->netchan.last_sent > 1.0f )
 				Netchan_Transmit( &cl->netchan, 0, NULL );
 		}
 		// yes, message really sended 

@@ -33,19 +33,18 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_HAS_SPAWNPOINT	BIT( 1 )
 #define MAP_HAS_LANDMARK	BIT( 2 )
 
-#define SV_Send(x,y,z)	SV_Multicast(x, y, z, false )
-#define SV_DirectSend(x,y,z)	SV_Multicast( x, y, z, true )
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - svgame.edicts))
 #define EDICT_NUM( num )	SV_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	SV_GetString( offset )
 #define MAKE_STRING(str)	SV_AllocString( str )
+#define MAX_MULTICAST	2500
 
 #define DVIS_PVS		0
 #define DVIS_PHS		1
 
 // convert msecs to float time properly
-#define sv_time()		( sv.time * 0.001f )
-#define sv_frametime()	( sv.frametime * 0.001f )
+#define sv_time()		( sv.time )
+#define sv_frametime()	( sv.frametime )
 #define SV_IsValidEdict( e )	( e && !e->free )
 
 typedef enum
@@ -69,8 +68,8 @@ typedef struct server_s
 
 	bool		loadgame;		// client begins should reuse existing entity
 
-	int		time;		// sv.time += sv.frametime
-	int		frametime;
+	double		time;		// sv.time += sv.frametime
+	float		frametime;
 	int		framenum;
 	int		net_framenum;	// to avoid send edicts twice through portals
 
@@ -81,8 +80,15 @@ typedef struct server_s
 
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 
+	// unreliable data to send to clients.
+	sizebuf_t		datagram;
+	byte		datagram_buf[NET_MAX_PAYLOAD];
+
+	// reliable data to send to clients.
+	sizebuf_t		reliable_datagram;	// copied to all clients at end of frame
+	byte		reliable_datagram_buf[NET_MAX_PAYLOAD];
+
 	// the multicast buffer is used to send a message to a set of clients
-	// it is only used to marshall data until SV_Message is called
 	sizebuf_t		multicast;
 	byte		multicast_buf[MAX_MSGLEN];
 
@@ -99,8 +105,8 @@ typedef struct
 {
 	int  		num_entities;
 	int  		first_entity;		// into the circular sv_packet_entities[]
-	int		senttime;			// time the message was transmitted
-	int		latency;
+	double		senttime;			// time the message was transmitted
+	float		latency;
 	clientdata_t	cd;			// clientdata
 } client_frame_t;
 
@@ -111,8 +117,15 @@ typedef struct sv_client_s
 	char		userinfo[MAX_INFO_STRING];	// name, etc (received from client)
 	char		physinfo[MAX_INFO_STRING];	// set on server (transmit to client)
 	bool		send_message;
+	bool		skip_message;
+
+	double		next_messagetime;		// time when we should send next world state update  
+	double		next_messageinterval;	// default time to wait for next message
+
 	bool		sendmovevars;
 	bool		sendinfo;
+
+	bool		fakeclient;		// This client is a fake player controlled by the game DLL
 
 	int		random_seed;		// fpr predictable random values
 	int		lastframe;		// for delta compression
@@ -125,9 +138,6 @@ typedef struct sv_client_s
 	int		message_size[RATE_MESSAGES];	// used to rate drop packets
 	int		rate;
 
-	int		commandMsec;		// every seconds this is reset, if user
-	   					// commands exhaust it, assume time cheating
-
 	int		surpressCount;		// number of messages rate supressed
 
 	float		addangle;			// add angles to client position
@@ -136,11 +146,6 @@ typedef struct sv_client_s
 	edict_t		*pViewEntity;		// svc_setview member
 	char		name[32];			// extracted from userinfo, color string allowed
 	int		messagelevel;		// for filtering printed messages
-
-	// The reliable buf contain reliable user messages that must be followed
-	// after pvs frame
-	sizebuf_t		reliable;
-	byte		reliable_buf[MAX_MSGLEN];
 
 	// the datagram is written to by sound calls, prints, temp ents, etc.
 	// it can be harmlessly overflowed.
@@ -154,8 +159,8 @@ typedef struct sv_client_s
 	int		downloadsize;		// total bytes (can't use EOF because of paks)
 	int		downloadcount;		// bytes sent
 
-	int		lastmessage;		// time when packet was last received
-	int		lastconnect;
+	double		lastmessage;		// time when packet was last received
+	double		lastconnect;
 
 	int		challenge;		// challenge of this user, randomly generated
 	int		userid;			// identifying number on server
@@ -182,7 +187,7 @@ typedef struct
 {
 	netadr_t		adr;
 	int		challenge;
-	int		time;
+	double		time;
 	bool		connected;
 } challenge_t;
 
@@ -249,13 +254,12 @@ typedef struct
 typedef struct
 {
 	bool		initialized;		// sv_init has completed
-	int		realtime;			// always increasing, no clamping, etc
 	double		timestart;		// just for profiling
 
 	int		groupmask;
 	int		groupop;
 
-	int		changelevel_next_time;	// don't execute multiple changelevels at once time
+	double		changelevel_next_time;	// don't execute multiple changelevels at once time
 	int		spawncount;		// incremented each server start
 						// used to check late spawns
 	sv_client_t	*clients;			// [sv_maxclients->integer]
@@ -265,7 +269,7 @@ typedef struct
 	entity_state_t	*client_entities;		// [num_client_entities]
 	entity_state_t	*baselines;		// [GI->max_edicts]
 
-	int		last_heartbeat;
+	double		last_heartbeat;
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 } server_static_t;
 
@@ -277,7 +281,6 @@ extern	server_t		sv;			// local server
 extern	svgame_static_t	svgame;			// persistant game info
 
 extern	cvar_t		*sv_pausable;		// allows pause in multiplayer
-extern	cvar_t		*sv_noreload;		// don't reload level state when reentering
 extern	cvar_t		*sv_newunit;
 extern	cvar_t		*sv_airaccelerate;
 extern	cvar_t		*sv_accelerate;
@@ -287,7 +290,6 @@ extern	cvar_t		*sv_maxvelocity;
 extern	cvar_t		*sv_gravity;
 extern	cvar_t		*sv_stopspeed;
 extern	cvar_t		*sv_check_errors;
-extern	cvar_t		*sv_enforcetime;
 extern	cvar_t		*sv_reconnect_limit;
 extern	cvar_t		*rcon_password;
 extern	cvar_t		*hostname;
@@ -369,12 +371,11 @@ void SV_DirectConnect( netadr_t from );
 void SV_TogglePause( const char *msg );
 void SV_PutClientInServer( edict_t *ent );
 void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg );
-void SV_UpdatePhysinfo( sv_client_t *cl, sizebuf_t *msg );
+void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg );
 bool SV_ClientConnect( edict_t *ent, char *userinfo );
 void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
-int SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, bool direct );
 edict_t *SV_FakeConnect( const char *netname );
 void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd );
@@ -459,23 +460,6 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );
 
-//============================================================
-
-// high level object sorting to reduce interaction tests
-
-// called after the world model has been loaded, before linking any entities
-
-void SV_UnlinkEdict (edict_t *ent);
-// call before removing an entity, and before trying to move one,
-// so it doesn't clip against itself
-
-
-// Needs to be called any time an entity changes origin, mins, maxs,
-// or solid.  Automatically unlinks if needed.
-// sets ent->v.absmin and ent->v.absmax
-// sets ent->leafnums[] for pvs determination even if the entity
-// is not solid
-
 //
 // sv_pmove.c
 //
@@ -488,6 +472,7 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace );
 extern areanode_t	sv_areanodes[];
 
 void SV_ClearWorld( void );
+void SV_UnlinkEdict( edict_t *ent );
 bool SV_HeadnodeVisible( mnode_t *node, byte *visbits );
 int SV_HullPointContents( hull_t *hull, int num, const vec3_t p );
 trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );

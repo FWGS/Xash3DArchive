@@ -290,7 +290,7 @@ void CL_ReadDemoMessage( void )
 		return;
 
 	// don't need another message yet
-	if( cl.time <= cl.frame.servertime )
+	if(( cl.time + host.frametime ) <= cl.mtime[0] )
 		return;
 
 	// get the length
@@ -325,7 +325,7 @@ void CL_ReadDemoMessage( void )
 		return;
 	}
 
-	cls.connect_time = cls.realtime;
+	cls.connect_time = host.realtime;
 	BF_Clear( &buf );	// reset curpos
 
 	CL_ParseServerMessage( &buf );

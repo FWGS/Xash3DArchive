@@ -129,32 +129,25 @@ hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset
 
 		VectorSubtract( maxs, mins, size );
 
-		if( size[0] < 3 )
+		if( size[0] <= 8.0f )
 		{
-			// point hull
 			hull = &pe->model->hulls[0];
-		}
-		else if( size[0] <= 36 )
-		{
-			if( size[2] <= 36 )
-			{
-				// head hull (ducked)
-				hull = &pe->model->hulls[3];
-			}
-			else
-			{
-				// human hull
-				hull = &pe->model->hulls[1];
-			}
+			VectorCopy( hull->clip_mins, offset ); 
 		}
 		else
 		{
-			// large hull
-			hull = &pe->model->hulls[2];
+			if( size[0] <= 36.0f )
+			{
+				if( size[2] <= 36.0f )
+					hull = &pe->model->hulls[3];
+				else hull = &pe->model->hulls[1];
+			}
+			else hull = &pe->model->hulls[2];
+
+			VectorSubtract( hull->clip_mins, mins, offset );
 		}
 
 		// calculate an offset value to center the origin
-		VectorSubtract( hull->clip_mins, mins, offset );
 		VectorAdd( offset, pe->origin, offset );
 	}
 	else
@@ -254,15 +247,6 @@ loc0:
 		
 	// find the point distances
 	node = hull->clipnodes + num;
-
-	if( hull->planes == NULL )
-	{
-		if( hull == &pm_boxhull )
-			com.error( "temp hull without planes\n" );
-		else com.error( "Hull %i without planes\n", hull - worldmodel->hulls );
-	}
-	ASSERT( node != NULL );
-
 	plane = hull->planes + node->planenum;
 
 	if( plane->type < 3 )

@@ -20,9 +20,11 @@ movie <moviename>
 */
 void CL_PlayVideo_f( void )
 {
-	if( Cmd_Argc() != 2 )
+	string	path;
+
+	if( Cmd_Argc() != 2 && Cmd_Argc() != 3 )
 	{
-		Msg( "movie <moviename>\n" );
+		Msg( "movie <moviename> [full]\n" );
 		return;
 	}
 
@@ -32,7 +34,16 @@ void CL_PlayVideo_f( void )
 		return;
 	}
 
-	SCR_PlayCinematic( Cmd_Argv( 1 ));
+	switch( Cmd_Argc( ))
+	{
+	case 2:	// simple user version
+		com.snprintf( path, sizeof( path ), "media/%s.avi", Cmd_Argv( 1 ));
+		SCR_PlayCinematic( path );
+		break;
+	case 3:	// sequenced cinematics used this
+		SCR_PlayCinematic( Cmd_Argv( 1 ));
+		break;
+	}
 }
 
 /*
@@ -49,7 +60,7 @@ void CL_Download_f( void )
 		Msg( "Usage: download <filename>\n" );
 		return;
 	}
-	CL_CheckOrDownloadFile(Cmd_Argv(1));
+	CL_CheckOrDownloadFile( Cmd_Argv( 1 ));
 }
 
 /* 
@@ -229,7 +240,7 @@ void CL_SetSky_f( void )
 {
 	if( Cmd_Argc() < 2 )
 	{
-		Msg( "Usage: sky <shadername>\n" );
+		Msg( "Usage: skyname <shadername>\n" );
 		return;
 	}
 	re->RegisterShader( Cmd_Argv(1), SHADER_SKY );
@@ -239,14 +250,14 @@ void CL_SetSky_f( void )
 ================
 SCR_TimeRefresh_f
 
-timerefres [noflip]
+timerefresh [noflip]
 ================
 */
 void SCR_TimeRefresh_f( void )
 {
-	int		i;
-	double		start, stop;
-	double		time;
+	int	i;
+	double	start, stop;
+	double	time;
 
 	if( cls.state != ca_active )
 		return;

@@ -468,7 +468,7 @@ static void PM_SetupMove( playermove_t *pmove, clientdata_t *cd, entity_state_t 
 {
 	pmove->player_index = cl.playernum;
 	pmove->multiplayer = (cl.maxclients > 1) ? true : false;
-	pmove->time = sv_time(); // probably never used
+	pmove->time = cl_time(); // probably never used
 	VectorCopy( cd->origin, pmove->origin );
 	VectorCopy( cl.refdef.cl_viewangles, pmove->angles );
 	VectorCopy( cl.refdef.cl_viewangles, pmove->oldangles );

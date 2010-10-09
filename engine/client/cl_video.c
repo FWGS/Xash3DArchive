@@ -62,7 +62,7 @@ bool SCR_NextMovie( void )
 		return false;
 	}
 
-	com.snprintf( str, MAX_STRING, "movie %s\n", cls.movies[cls.movienum] );
+	com.snprintf( str, MAX_STRING, "movie %s full\n", cls.movies[cls.movienum] );
 
 	Cbuf_InsertText( str );
 	cls.movienum++;
@@ -70,15 +70,25 @@ bool SCR_NextMovie( void )
 	return true;
 }
 
-/*
-==================
-SCR_StartMovies_f
-==================
-*/
-void SCR_StartMovies_f( void )
+void SCR_CreateStartupVids( void )
 {
-	int	i, c;
+	file_t	*f;
 
+	f = FS_Open( "media/StartupVids.txt", "w" );
+	if( !f ) return;
+
+	// make standard video playlist: sierra, valve
+	FS_Print( f, "media/sierra.avi\n" );
+	FS_Print( f, "media/valve.avi\n" );
+	FS_Close( f );
+}
+
+void SCR_CheckStartupVids( void )
+{
+	int	c = 0;
+	script_t	*vidlist = NULL;
+	string	token;
+		
 	if( host.developer >= 2 )
 	{
 		// don't run movies where we in developer-mode
@@ -86,16 +96,28 @@ void SCR_StartMovies_f( void )
 		return;
 	}
 
-	c = Cmd_Argc() - 1;
-	if( c > MAX_MOVIES )
+	if( !FS_FileExists( "media/StartupVids.txt" ))
 	{
-		MsgDev( D_WARN, "Host_StartMovies: max %i movies in StartupVids\n", MAX_DEMOS );
-		c = MAX_MOVIES;
+		SCR_CreateStartupVids();
 	}
 
-	for( i = 1; i < c + 1; i++ )
-		com.strncpy( cls.movies[i-1], Cmd_Argv( i ), sizeof( cls.movies[0] ));
+	vidlist = Com_OpenScript( "media/StartupVids.txt", NULL, 0 );
+	if( !vidlist ) return; // something bad happens
 
+	while( Com_ReadString( vidlist, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, token ))
+	{
+		com.strncpy( cls.movies[c], token, sizeof( cls.movies[0] ));
+
+		if( ++c > MAX_MOVIES - 1 )
+		{
+			MsgDev( D_WARN, "Host_StartMovies: max %i movies in StartupVids\n", MAX_DEMOS );
+			break;
+		}
+	}
+
+	Com_CloseScript( vidlist );
+
+	// run cinematic
 	if( !SV_Active() && cls.movienum != -1 && cls.state != ca_cinematic )
 	{
 		cls.movienum = 0;
@@ -120,8 +142,8 @@ void SCR_RunCinematic( void )
 		vid_gamma->modified = false;
 	}
 
-	// advances cinematic time	
-	cin_time += cls.frametime;
+	// advances cinematic time (ignores maxfps and host_framerate settings)	
+	cin_time += host.realframetime;
 
 	// stop the video after it finishes
 	if( cin_time > video_duration + 0.1f )
@@ -173,10 +195,9 @@ bool SCR_PlayCinematic( const char *arg )
 	string		path;
 	const char	*fullpath;
 
-	com.snprintf( path, sizeof( path ), "media/%s.avi", arg );
-	fullpath = FS_GetDiskPath( path );
+	fullpath = FS_GetDiskPath( arg );
 
-	if( FS_FileExists( path ) && !fullpath )
+	if( FS_FileExists( arg ) && !fullpath )
 	{
 		MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
 		return false;

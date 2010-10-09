@@ -592,7 +592,7 @@ CL_ParseBaseline
 void CL_ParseBaseline( sizebuf_t *msg )
 {
 	int		newnum;
-	int		timebase;
+	float		timebase;
 	cl_entity_t	*ent;
 
 	Delta_InitClient ();	// finalize client delta's
@@ -610,8 +610,8 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	Mem_Set( &ent->prevstate, 0, sizeof( ent->prevstate ));
 
 	if( cls.state == ca_active )
-		timebase = cl.frame.servertime;
-	else timebase = 1000; // sv.state == ss_loading
+		timebase = sv_time();
+	else timebase = 1.0f; // sv.state == ss_loading
 
 	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, timebase );
 }
@@ -739,13 +739,13 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 	bool		active;
 	player_info_t	*player;
 
-	slot = BF_ReadByte( msg );
+	slot = BF_ReadUBitLong( msg, MAX_CLIENT_BITS );
 
 	if( slot >= MAX_CLIENTS )
 		Host_Error( "CL_ParseServerMessage: svc_updateuserinfo > MAX_CLIENTS\n" );
 
 	player = &cl.players[slot];
-	active = BF_ReadByte( msg ) ? true : false;
+	active = BF_ReadOneBit( msg ) ? true : false;
 
 	if( active )
 	{

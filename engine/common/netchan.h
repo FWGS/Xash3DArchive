@@ -84,7 +84,6 @@ typedef struct
 
 typedef struct
 {
-
 	flowstats_t	stats[MAX_LATENT];	// data for last MAX_LATENT messages
 	int		current;		// current message position
 	double		nextcompute; 	// time when we should recompute k/sec data
@@ -118,7 +117,6 @@ typedef struct fragbufwaiting_s
 // Network Connection Channel
 typedef struct netchan_s
 {
-
 	netsrc_t		sock;		// NS_SERVER or NS_CLIENT, depending on channel.
 	netadr_t		remote_address;	// address this channel is talking to.  
 	int		qport;		// qport value to write when transmitting
@@ -126,8 +124,8 @@ typedef struct netchan_s
 	int		dropped;		// between last packet and previous
 	bool		compress;		// enable huffman compression
 			
-	long		last_received;	// for timeouts
-	long		last_sent;	// for retransmits		
+	double		last_received;	// for timeouts
+	double		last_sent;	// for retransmits		
 
 	double		rate;		// bandwidth choke. bytes per second
 	long		cleartime;	// if realtime > cleartime, free to send next packet

@@ -49,10 +49,10 @@ typedef struct vsound_exp_s
 	void (*StartStreaming)( void );
 	void (*StopStreaming)( void );
 
-	void (*BeginFrame)( void );
 	void (*RenderFrame)( struct ref_params_s *fd );
 	void (*StopSound)( int entnum, int channel, const char *soundname );
 	void (*StopAllSounds)( void );
+	void (*ExtraUpdate)( void );
 
 	void (*Activate)( bool active, void *hInst );
 

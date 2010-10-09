@@ -141,9 +141,6 @@ char* READ_STRING( void )
 		if( c == -1 || c == '\0' )
 			break;
 
-		// translate all fmt spec to avoid crash bugs
-		if( c == '%' ) c = '.';
-
 		gMsg.string[l] = c;
 		l++;
 	} while( l < sizeof( gMsg.string ) - 1 );

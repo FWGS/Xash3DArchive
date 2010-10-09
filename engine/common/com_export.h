@@ -35,7 +35,7 @@ _inline int CL_CreateDecalList( decallist_t *pList, bool changelevel )
 #define S_StopSound			if( se ) se->StopSound
 #define S_AddLoopingSound		if( se ) se->AddLoopingSound
 #define S_Activate			if( se ) se->Activate
-#define S_BeginFrame		if( se ) se->BeginFrame
+#define S_ExtraUpdate		if( se ) se->ExtraUpdate
 #define S_RenderFrame		if( se ) se->RenderFrame
 #define S_BeginRegistration		if( se ) se->BeginRegistration
 #define S_EndRegistration		if( se ) se->EndRegistration

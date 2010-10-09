@@ -121,6 +121,7 @@ bool Host_InitRender( void )
 	ri.GetLocalPlayer = CL_GetLocalPlayer;
 	ri.GetMaxClients = CL_GetMaxClients;
 	ri.DrawTriangles = Tri_DrawTriangles;
+	ri.ExtraUpdate = CL_ExtraUpdate;
 	ri.WndProc = IN_WndProc;          
 
 	Sys_LoadLibrary( host_video->string, &render_dll );
@@ -212,7 +213,7 @@ void Host_CheckChanges( void )
 	if( host_video->modified && CL_Active( ))
 	{
 		// we're in game and want keep decals when renderer is changed
-		host.decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_DECALS );
+		host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_DECALS );
 		host.numdecals = CL_CreateDecalList( host.decalList, false );
 	}
 
@@ -409,10 +410,10 @@ sys_event_t Host_GetEvent( void )
 =================
 Host_EventLoop
 
-Returns last event time
+Returns false while events is out
 =================
 */
-int Host_EventLoop( void )
+void Host_EventLoop( void )
 {
 	sys_event_t	ev;
 
@@ -422,9 +423,10 @@ int Host_EventLoop( void )
 		switch( ev.type )
 		{
 		case SE_NONE:
-			return ev.time;
+			Cbuf_Execute();
+			return;
 		case SE_KEY:
-			Key_Event( ev.value[0], ev.value[1], ev.time );
+			Key_Event( ev.value[0], ev.value[1] );
 			break;
 		case SE_CHAR:
 			CL_CharEvent( ev.value[0] );
@@ -437,52 +439,61 @@ int Host_EventLoop( void )
 			break;
 		default:
 			MsgDev( D_ERROR, "Host_EventLoop: bad event type %i", ev.type );
-			return false;
+			return;
 		}
 		if( ev.data ) Mem_Free( ev.data );
 	}
-	return 0;	// never reached
 }
 
 /*
-================
-Host_ModifyTime
-================
+===================
+Host_FilterTime
+
+Returns false if the time is too short to run a frame
+===================
 */
-int Host_ModifyTime( int msec )
+bool Host_FilterTime( float time )
 {
-	int	clamp_time;
+	static double	oldtime;
+	float		fps;
 
-	// modify time for debugging values
-	if( host_framerate->value )
-		msec = host_framerate->value * 1000;
-	if( msec < 1 && host_framerate->value ) msec = 1;
+	host.realtime += time;
 
-	if( host.type == HOST_DEDICATED )
+	// dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
+	fps = host_maxfps->value;
+
+	if( fps != 0 )
 	{
-		// dedicated servers don't want to clamp for a much longer
-		// period, because it would mess up all the client's views of time.
-		if( msec > 500 ) MsgDev( D_NOTE, "Host_ModifyTime: %i msec frame time\n", msec );
-		clamp_time = 5000;
+		float	minframetime;
+
+		// limit fps to withing tolerable range
+		fps = bound( MIN_FPS, fps, MAX_FPS );
+
+		minframetime = 1.0f / fps;
+
+		if(( host.realtime - oldtime ) < minframetime )
+		{
+			// framerate is too high
+			return false;		
+		}
 	}
-	else if( SV_Active( ))
+
+	host.frametime = host.realtime - oldtime;
+	host.realframetime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
+	oldtime = host.realtime;
+
+	if( host_framerate->value > 0 && ( Host_IsLocalGame() || CL_IsPlaybackDemo() ))
 	{
-		// for local single player gaming
-		// we may want to clamp the time to prevent players from
-		// flying off edges when something hitches.
-		clamp_time = 200;
+		float fps = host_framerate->value;
+		if( fps > 1 ) fps = 1.0f / fps;
+		host.frametime = fps;
 	}
 	else
-	{
-		// clients of remote servers do not want to clamp time, because
-		// it would skew their view of the server's time temporarily
-		clamp_time = 5000;
+	{	// don't allow really long or short frames
+		host.frametime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
 	}
-
-	if( msec > clamp_time )
-		msec = clamp_time;
-
-	return msec;
+	
+	return true;
 }
 
 /*
@@ -490,43 +501,24 @@ int Host_ModifyTime( int msec )
 Host_Frame
 =================
 */
-void Host_Frame( void )
+void Host_Frame( float time )
 {
-	static int	last_time;
-
 	if( setjmp( host.abortframe ))
 		return;
 
-	rand(); // keep the random time dependent
-
-	do {
-		host.inputmsec = Host_EventLoop();
-		if( last_time > host.inputmsec )
-			last_time = host.inputmsec;
-		host.frametime = host.inputmsec - last_time;
-	} while( host.frametime < 1 );
-	Cbuf_Execute();
-
-	last_time = host.inputmsec;
-	host.frametime = Host_ModifyTime( host.frametime );
-
-	SV_Frame ( host.frametime ); // server frame
-
-	if( host.type == HOST_DEDICATED )
-	{
-		// end frame of dedicated server
-		host.framecount++;
-		return;
-	}
-
-	// run event loop a second time to get server to client packets
-	// without a frame of latency
+	Host_InputFrame ();	// input frame
 	Host_EventLoop();
-	Cbuf_Execute();
 
-	CL_Frame ( host.frametime ); // client frame
+	// decide the simulation time
+	if( !Host_FilterTime( time ))
+		return;
+
+	Host_ServerFrame (); // server frame
+	Host_ClientFrame (); // client frame
+
 	host.framecount++;
 }
+
 /*
 ================
 Host_Print
@@ -682,7 +674,7 @@ void Host_InitCommon( const int argc, const char **argv )
 
 	for( i = 0; i < dlls->numfilenames; i++ )
 	{
-		if(!com.strnicmp( "vid_", dlls->filenames[i], 4 ))
+		if( !com.strnicmp( "vid_", dlls->filenames[i], 4 ))
 		{
 			// make sure what found library is valid
 			if( Sys_LoadLibrary( dlls->filenames[i], &check_vid ))
@@ -693,7 +685,7 @@ void Host_InitCommon( const int argc, const char **argv )
 				host.num_video_dlls++;
 			}
 		}
-		else if(!com.strnicmp( "snd_", dlls->filenames[i], 4 ))
+		else if( !com.strnicmp( "snd_", dlls->filenames[i], 4 ))
 		{
 			// make sure what found library is valid
 			if( Sys_LoadLibrary( dlls->filenames[i], &check_snd ))
@@ -793,6 +785,8 @@ void Host_Init( const int argc, const char **argv )
 
 	host.errorframe = 0;
 	Cbuf_Execute();
+
+	SCR_CheckStartupVids();	// must be last
 }
 
 /*
@@ -802,11 +796,16 @@ Host_Main
 */
 void Host_Main( void )
 {
+	static double	oldtime, newtime;
+
+	oldtime = Sys_DoubleTime();
+
 	// main window message loop
 	while( host.type != HOST_OFFLINE )
 	{
-		IN_Frame();
-		Host_Frame();
+		newtime = Sys_DoubleTime ();
+		Host_Frame( newtime - oldtime );
+		oldtime = newtime;
 	}
 }
 

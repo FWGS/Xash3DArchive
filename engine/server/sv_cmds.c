@@ -25,7 +25,7 @@ void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
 
 	if( level < cl->messagelevel )
 		return;
-	if( cl->edict && (cl->edict->v.flags & FL_FAKECLIENT ))
+	if( cl->fakeclient )
 		return;
 	
 	va_start( argptr, fmt );
@@ -61,8 +61,8 @@ void SV_BroadcastPrintf( int level, char *fmt, ... )
 	{
 		if( level < cl->messagelevel ) continue;
 		if( cl->state != cs_spawned ) continue;
-		if( cl->edict && (cl->edict->v.flags & FL_FAKECLIENT ))
-			continue;
+		if( cl->fakeclient ) continue;
+
 		BF_WriteByte( &cl->netchan.message, svc_print );
 		BF_WriteByte( &cl->netchan.message, level );
 		BF_WriteString( &cl->netchan.message, string );
@@ -86,9 +86,8 @@ void SV_BroadcastCommand( char *fmt, ... )
 	com.vsprintf( string, fmt, argptr );
 	va_end( argptr );
 
-	BF_WriteByte( &sv.multicast, svc_stufftext );
-	BF_WriteString( &sv.multicast, string );
-	SV_Send( MSG_ALL, NULL, NULL );
+	BF_WriteByte( &sv.reliable_datagram, svc_stufftext );
+	BF_WriteString( &sv.reliable_datagram, string );
 }
 
 /*
@@ -121,15 +120,15 @@ void SV_SetMaster_f( void )
 	for( i = 1, slot = 1; i < Cmd_Argc(); i++ )
 	{
 		if( slot == MAX_MASTERS ) break;
-		if(!NET_StringToAdr(Cmd_Argv(i), &master_adr[i]))
+		if( !NET_StringToAdr( Cmd_Argv( i ), &master_adr[i] ))
 		{
-			Msg( "Bad address: %s\n", Cmd_Argv(i));
+			Msg( "Bad address: %s\n", Cmd_Argv( i ));
 			continue;
 		}
 
-		if(!master_adr[slot].port) master_adr[slot].port = BigShort (PORT_MASTER);
-		Msg( "Master server at %s\n", NET_AdrToString (master_adr[slot]));
-		Msg( "Sending a ping.\n");
+		if( !master_adr[slot].port ) master_adr[slot].port = BigShort( PORT_MASTER );
+		Msg( "Master server at %s\n", NET_AdrToString( master_adr[slot] ));
+		Msg( "Sending a ping.\n" );
 		Netchan_OutOfBandPrint( NS_SERVER, master_adr[slot], "ping" );
 		slot++;
 	}
@@ -490,7 +489,7 @@ void SV_Kick_f( void )
 	SV_DropClient( sv_client );
 
 	// min case there is a funny zombie
-	sv_client->lastmessage = svs.realtime;
+	sv_client->lastmessage = host.realtime;
 }
 
 /*
@@ -577,7 +576,7 @@ void SV_Status_f( void )
 		Msg( "%s", cl->name );
 		l = 24 - com.strlen( cl->name );
 		for( j = 0; j < l; j++ ) Msg( " " );
-		Msg( "%g ", ( svs.realtime - cl->lastmessage ) * 0.001f );
+		Msg( "%g ", ( host.realtime - cl->lastmessage ));
 		s = NET_BaseAdrToString( cl->netchan.remote_address );
 		Msg( "%s", s );
 		l = 22 - com.strlen( s );
@@ -690,7 +689,7 @@ void SV_PlayersOnly_f( void )
 	if( !Cvar_VariableInteger( "sv_cheats" )) return;
 	sv.hostflags = sv.hostflags ^ SVF_PLAYERSONLY;
 
-	if ( !( sv.hostflags & SVF_PLAYERSONLY ))
+	if(!( sv.hostflags & SVF_PLAYERSONLY ))
 		SV_BroadcastPrintf( D_INFO, "Resume server physic" );
 	else SV_BroadcastPrintf( D_INFO, "Freeze server physic" );
 }
@@ -708,9 +707,9 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "status", SV_Status_f, "print server status information" );
 	Cmd_AddCommand( "serverinfo", SV_ServerInfo_f, "print server settings" );
 	Cmd_AddCommand( "clientinfo", SV_ClientInfo_f, "print user infostring (player num required)" );
+	Cmd_AddCommand( "playersonly", SV_PlayersOnly_f, "freezes time, except for players" );
 
 	Cmd_AddCommand( "map", SV_Map_f, "start new level" );
-	Cmd_AddCommand( "devmap", SV_Map_f, "start new level" );
 	Cmd_AddCommand( "newgame", SV_Newgame_f, "begin new game" );
 	Cmd_AddCommand( "endgame", SV_Endgame_f, "end current game" );
 	Cmd_AddCommand( "hazardcourse", SV_HazardCourse_f, "starting a Hazard Course" );
@@ -732,7 +731,7 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
 	Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
 	Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
-	Cmd_AddCommand( "playersonly", SV_PlayersOnly_f, "freezes time, except for players" );
+
 }
 
 void SV_KillOperatorCommands( void )
@@ -746,7 +745,6 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "playersonly" );
 
 	Cmd_RemoveCommand( "map" );
-	Cmd_RemoveCommand( "movie" );
 	Cmd_RemoveCommand( "newgame" );
 	Cmd_RemoveCommand( "endgame" );
 	Cmd_RemoveCommand( "hazardcourse" );
@@ -763,6 +761,8 @@ void SV_KillOperatorCommands( void )
 
 	Cmd_RemoveCommand( "save" );
 	Cmd_RemoveCommand( "load" );
+	Cmd_RemoveCommand( "savequick" );
+	Cmd_RemoveCommand( "loadquick" );
 	Cmd_RemoveCommand( "killsave" );
 	Cmd_RemoveCommand( "autosave" );
 	Cmd_RemoveCommand( "killserver" );

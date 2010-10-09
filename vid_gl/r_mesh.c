@@ -710,6 +710,12 @@ void R_DrawMeshes( void )
 	// don't fogging translucent surfaces
 	if( triState.fogEnabled ) pglDisable( GL_FOG );
 
+	if( !( RI.params & RP_NONVIEWERREF ))
+	{
+		// all solid meshes are drawing. It's time to call sound extra update
+		ri.ExtraUpdate();
+	}
+
 	if( RI.meshlist->num_translucent_meshes )
 	{
 		meshbuf = RI.meshlist->meshbuffer_translucent;

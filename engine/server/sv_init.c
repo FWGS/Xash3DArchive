@@ -43,11 +43,9 @@ int SV_FindIndex( const char *name, int start, int end, bool create )
 	if( sv.state != ss_loading )
 	{	
 		// send the update to everyone
-		BF_Clear( &sv.multicast );
-		BF_WriteByte( &sv.multicast, svc_configstring );
-		BF_WriteShort( &sv.multicast, start + i );
-		BF_WriteString( &sv.multicast, name );
-		SV_Send( MSG_ALL, vec3_origin, NULL );
+		BF_WriteByte( &sv.reliable_datagram, svc_configstring );
+		BF_WriteShort( &sv.reliable_datagram, start + i );
+		BF_WriteString( &sv.reliable_datagram, name );
 	}
 	return i;
 }
@@ -89,11 +87,11 @@ baseline will be transmitted
 void SV_CreateBaseline( void )
 {
 	edict_t	*pEdict;
-	int	entnum;	
+	int	e;	
 
-	for( entnum = 0; entnum < svgame.numEntities; entnum++ )
+	for( e = 0; e < svgame.numEntities; e++ )
 	{
-		pEdict = EDICT_NUM( entnum );
+		pEdict = EDICT_NUM( e );
 		if( !SV_IsValidEdict( pEdict )) continue;
 		SV_BaselineForEntity( pEdict );
 	}
@@ -111,11 +109,7 @@ void SV_ActivateServer( void )
 	int	i;
 
 	if( !svs.initialized )
-	{
-		// probably server.dll doesn't loading
-//		Host_AbortCurrentFrame ();
 		return;
-	}
 
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
@@ -274,7 +268,6 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	svgame.globals->changelevel = false;	// will be restored later if needed
 	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
-	svs.realtime = 0;
 
 	if( startspot )
 	{
@@ -296,10 +289,12 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	// restore state
 	sv.paused = paused;
 	sv.loadgame = loadgame;
-	sv.time = 1000;			// server spawn time it's always 1.0 second
+	sv.time = 1.0f;			// server spawn time it's always 1.0 second
 	svgame.globals->time = sv_time();
 	
 	// initialize buffers
+	BF_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));
+	BF_Init( &sv.reliable_datagram, "Datagram R", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
 	BF_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
 	BF_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
 

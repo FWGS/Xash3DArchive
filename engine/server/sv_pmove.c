@@ -201,18 +201,17 @@ static void pfnParticle( float *origin, int color, float life, int zpos, int zve
 		return;
 	}
 
-	BF_WriteByte( &sv.multicast, svc_particle );
-	BF_WriteBitVec3Coord( &sv.multicast, origin );
-	BF_WriteChar( &sv.multicast, 0 ); // no x-vel
-	BF_WriteChar( &sv.multicast, 0 ); // no y-vel
+	BF_WriteByte( &sv.reliable_datagram, svc_particle );
+	BF_WriteBitVec3Coord( &sv.reliable_datagram, origin );
+	BF_WriteChar( &sv.reliable_datagram, 0 ); // no x-vel
+	BF_WriteChar( &sv.reliable_datagram, 0 ); // no y-vel
 	v = bound( -128, (zpos * zvel) * 16, 127 );
-	BF_WriteChar( &sv.multicast, v ); // write z-vel
+	BF_WriteChar( &sv.reliable_datagram, v ); // write z-vel
 
 	// FIXME: send lifetime too
 
-	BF_WriteByte( &sv.multicast, 1 );
-	BF_WriteByte( &sv.multicast, color );
-	SV_Send( MSG_ALL, origin, NULL );
+	BF_WriteByte( &sv.reliable_datagram, 1 );
+	BF_WriteByte( &sv.reliable_datagram, color );
 }
 
 static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
@@ -630,14 +629,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
 {
 	edict_t	*clent;
 	vec3_t	oldvel;
-
-	cl->commandMsec -= ucmd->msec;
-
-	if( cl->commandMsec < 0 && sv_enforcetime->integer )
-	{
-		MsgDev( D_INFO, "SV_ClientThink: commandMsec underflow from %s\n", cl->name );
-		return;
-	}
 
 	clent = cl->edict;
 	if( !SV_IsValidEdict( clent )) return;

@@ -20,7 +20,7 @@ INPUT
 // input.c
 //
 void IN_Init( void );
-void IN_Frame( void );
+void Host_InputFrame( void );
 void IN_Shutdown( void );
 void IN_MouseEvent( int mstate );
 long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam );

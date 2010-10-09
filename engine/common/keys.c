@@ -494,7 +494,7 @@ Key_Event
 Called by the system for both key up and key down events
 ===================
 */
-void Key_Event( int key, bool down, int time )
+void Key_Event( int key, bool down )
 {
 	const char	*kb;
 	char		cmd[1024];
@@ -596,9 +596,7 @@ void Key_Event( int key, bool down, int time )
 					*buttonPtr = '\0';
 					if( button[0] == '+' )
 					{
-						// button commands add keynum and time as parms so that multiple
-						// sources can be discriminated and subframe corrected
-						com.sprintf( cmd, "%s %i %i\n", button, key, time );
+						com.sprintf( cmd, "%s %i\n", button, key );
 						Cbuf_AddText( cmd );
 					}
 					else
@@ -662,9 +660,11 @@ void Key_ClearStates( void )
 {
 	int	i;
 
-	for ( i = 0; i < 256; i++ )
+	for( i = 0; i < 256; i++ )
 	{
-		if( keys[i].down ) Key_Event( i, false, 0 );
+		if( keys[i].down )
+			Key_Event( i, false );
+
 		keys[i].down = 0;
 		keys[i].repeats = 0;
 	}

@@ -277,7 +277,7 @@ void IN_MouseMove( void )
 	my = current_pos.y - host.window_center_y;
 
 	if( !mx && !my ) return;
-	Sys_QueEvent( 0, SE_MOUSE, mx, my, 0, NULL );
+	Sys_QueEvent( SE_MOUSE, mx, my, 0, NULL );
 }
 
 /*
@@ -295,15 +295,16 @@ void IN_MouseEvent( int mstate )
 	// perform button actions
 	for( i = 0; i < in_mouse_buttons; i++ )
 	{
-		if(( mstate & (1<<i)) && !( in_mouse_oldbuttonstate & (1<<i)) )
+		if(( mstate & ( 1<<i )) && !( in_mouse_oldbuttonstate & ( 1<<i )))
 		{
-			Sys_QueEvent( -1, SE_KEY, K_MOUSE1 + i, true, 0, NULL );
+			Sys_QueEvent( SE_KEY, K_MOUSE1 + i, true, 0, NULL );
 		}
-		if(!( mstate & (1<<i)) && ( in_mouse_oldbuttonstate & (1<<i)) )
+		if(!( mstate & ( 1<<i )) && ( in_mouse_oldbuttonstate & ( 1<<i )))
 		{
-			Sys_QueEvent( -1, SE_KEY, K_MOUSE1 + i, false, 0, NULL );
+			Sys_QueEvent( SE_KEY, K_MOUSE1 + i, false, 0, NULL );
 		}
 	}	
+
 	in_mouse_oldbuttonstate = mstate;
 }
 
@@ -330,14 +331,16 @@ void IN_Init( void )
 
 /*
 ==================
-IN_Frame
+Host_InputFrame
 
 Called every frame, even if not generating commands
 ==================
 */
-void IN_Frame( void )
+void Host_InputFrame( void )
 {
 	bool	shutdownMouse = false;
+
+	rand (); // keep the random time dependent
 
 	if( host.state == HOST_RESTART )
 		host.state = HOST_FRAME; // restart is finished
@@ -364,6 +367,7 @@ void IN_Frame( void )
 
 	if( !in_mouseinitialized )
 		return;
+
 	if( host.state != HOST_FRAME )
 	{
 		IN_DeactivateMouse();
@@ -381,7 +385,6 @@ void IN_Frame( void )
 
 	IN_ActivateMouse();
 	IN_MouseMove();
-
 }
 
 /*
@@ -408,13 +411,13 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		if( !in_mouseactive ) break;
 		if(( short )HIWORD( wParam ) > 0 )
 		{
-			Sys_QueEvent( -1, SE_KEY, K_MWHEELUP, true, 0, NULL );
-			Sys_QueEvent( -1, SE_KEY, K_MWHEELUP, false, 0, NULL );
+			Sys_QueEvent( SE_KEY, K_MWHEELUP, true, 0, NULL );
+			Sys_QueEvent( SE_KEY, K_MWHEELUP, false, 0, NULL );
 		}
 		else
 		{
-			Sys_QueEvent( -1, SE_KEY, K_MWHEELDOWN, true, 0, NULL );
-			Sys_QueEvent( -1, SE_KEY, K_MWHEELDOWN, false, 0, NULL );
+			Sys_QueEvent( SE_KEY, K_MWHEELDOWN, true, 0, NULL );
+			Sys_QueEvent( SE_KEY, K_MWHEELDOWN, false, 0, NULL );
 		}
 		break;
 	case WM_CREATE:
@@ -500,14 +503,14 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		}
 		// intentional fallthrough
 	case WM_KEYDOWN:
-		Sys_QueEvent( -1, SE_KEY, Host_MapKey( lParam ), true, 0, NULL );
+		Sys_QueEvent( SE_KEY, Host_MapKey( lParam ), true, 0, NULL );
 		break;
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
-		Sys_QueEvent( -1, SE_KEY, Host_MapKey( lParam ), false, 0, NULL );
+		Sys_QueEvent( SE_KEY, Host_MapKey( lParam ), false, 0, NULL );
 		break;
 	case WM_CHAR:
-		Sys_QueEvent( -1, SE_CHAR, wParam, false, 0, NULL );
+		Sys_QueEvent( SE_CHAR, wParam, false, 0, NULL );
 		break;
 	}
 	return DefWindowProc( hWnd, uMsg, wParam, lParam );

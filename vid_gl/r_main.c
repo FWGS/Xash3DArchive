@@ -1858,6 +1858,7 @@ void R_RenderScene( const ref_params_t *fd )
 		RI.farClip = max( r_farclip_min, RI.farClip ) + r_farclip_bias;
 		RI.clipFlags |= 16;
 	}
+
 	RI.meshlist = &r_worldlist;
 	RI.shadowBits = 0;
 	RI.shadowGroup = NULL;
