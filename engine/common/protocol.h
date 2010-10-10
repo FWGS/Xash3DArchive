@@ -9,7 +9,7 @@
 
 // server to client
 #define svc_bad		0	// immediately crash client when received
-#define svc_nop		1	// end of user messages
+#define svc_nop		1	// does nothing
 #define svc_disconnect	2	// kick client from server
 #define svc_changing	3	// changelevel by server request
 #define svc_configstring	4	// [short] [string]
@@ -63,5 +63,19 @@
 // additional protocol data
 #define MAX_CLIENT_BITS	5
 #define MAX_CLIENTS		(1<<MAX_CLIENT_BITS)
+
+/*
+==============================================================
+
+DELTA-PACKET ENTITIES
+
+==============================================================
+*/
+
+typedef struct
+{
+	int		num_entities;
+	entity_state_t	*entities;
+} packet_entities_t;
 
 #endif//PROTOCOL_H

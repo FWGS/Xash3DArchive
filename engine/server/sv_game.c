@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "server.h"
-#include "protocol.h"
 #include "net_encode.h"
 #include "byteorder.h"
 #include "matrix_lib.h"

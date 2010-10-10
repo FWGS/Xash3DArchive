@@ -13,6 +13,7 @@
 #include "pm_defs.h"
 #include "pm_movevars.h"
 #include "entity_state.h"
+#include "protocol.h"
 #include "netchan.h"
 #include "world.h"
 
@@ -103,11 +104,14 @@ typedef struct server_s
 
 typedef struct
 {
-	int  		num_entities;
-	int  		first_entity;		// into the circular sv_packet_entities[]
-	double		senttime;			// time the message was transmitted
+	double		senttime;
+	float		ping_time;
+	clientdata_t	clientdata;
+	weapon_data_t	weapondata[32];
+	packet_entities_t	entities;
+
+	// legacy (needs to be removed)
 	float		latency;
-	clientdata_t	cd;			// clientdata
 } client_frame_t;
 
 typedef struct sv_client_s
@@ -118,6 +122,10 @@ typedef struct sv_client_s
 	char		physinfo[MAX_INFO_STRING];	// set on server (transmit to client)
 	bool		send_message;
 	bool		skip_message;
+
+	netchan_t		netchan;
+	int		chokecount;         	// number of messages rate supressed
+	int		delta_sequence;		// -1 = no compression.
 
 	double		next_messagetime;		// time when we should send next world state update  
 	double		next_messageinterval;	// default time to wait for next message
@@ -164,8 +172,6 @@ typedef struct sv_client_s
 
 	int		challenge;		// challenge of this user, randomly generated
 	int		userid;			// identifying number on server
-
-	netchan_t		netchan;
 } sv_client_t;
 
 /*
@@ -394,6 +400,7 @@ void SV_Newgame_f( void );
 //
 void SV_WriteFrameToClient( sv_client_t *client, sizebuf_t *msg );
 void SV_BuildClientFrame( sv_client_t *client );
+void SV_ClearFrames( client_frame_t **frames );
 void SV_InactivateClients( void );
 void SV_SendMessagesToAll( void );
 

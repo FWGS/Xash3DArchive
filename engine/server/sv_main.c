@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "server.h"
-#include "protocol.h"
 #include "net_encode.h"
 
 #define HEARTBEAT_SECONDS	300.0 		// 300 seconds
@@ -653,6 +652,6 @@ void SV_Shutdown( bool reconnect )
 	// free server static data
 	if( svs.clients ) Z_Free( svs.clients );
 	if( svs.baselines ) Z_Free( svs.baselines );
-	if( svs.client_entities ) Z_Free( svs.client_entities );
+
 	Mem_Set( &svs, 0, sizeof( svs ));
 }

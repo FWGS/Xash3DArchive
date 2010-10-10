@@ -6,7 +6,6 @@
 #include "common.h"
 #include "server.h"
 #include "const.h"
-#include "protocol.h"
 #include "pm_local.h"
 
 bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace )

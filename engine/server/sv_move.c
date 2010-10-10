@@ -6,7 +6,6 @@
 #include "common.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
-#include "protocol.h"
 #include "server.h"
 #include "const.h"
 #include "pm_defs.h"

@@ -7,7 +7,6 @@
 #include "netchan.h"
 #include "mathlib.h"
 #include "byteorder.h"
-#include "protocol.h"
 #include "net_encode.h"
 
 #define MAKE_FRAGID( id, count )	((( id & 0xffff ) << 16 ) | ( count & 0xffff ))
@@ -1397,7 +1396,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		for( i = BF_GetNumBytesWritten( &send ); i < 16; i++ )		
 		{
 			// NOTE: that the server can parse svc_nop, too.
-			BF_WriteByte( &send, svc_nop );
+			BF_WriteByte( &send, 1 );
 		}
 	}
 

@@ -6,7 +6,6 @@
 #include "common.h"
 #include "const.h"
 #include "server.h"
-#include "protocol.h"
 #include "net_encode.h"
 #include "entity_types.h"
 
@@ -180,6 +179,8 @@ gotnewcl:
 	sv_client = newcl;
 	edictnum = (newcl - svs.clients) + 1;
 
+	SV_ClearFrames( &newcl->frames );
+
 	ent = EDICT_NUM( edictnum );
 	newcl->edict = ent;
 	newcl->challenge = challenge; // save challenge for checksumming
@@ -263,6 +264,8 @@ edict_t *SV_FakeConnect( const char *netname )
 	*newcl = temp;
 	sv_client = newcl;
 	edictnum = (newcl - svs.clients) + 1;
+
+	SV_ClearFrames( &newcl->frames );	// fakeclients doesn't have frames
 
 	ent = EDICT_NUM( edictnum );
 	newcl->edict = ent;
@@ -361,6 +364,8 @@ void SV_DropClient( sv_client_t *drop )
 
 	drop->state = cs_zombie; // become free in a few seconds
 	drop->name[0] = 0;
+
+	SV_ClearFrames( &drop->frames );
 
 	// Throw away any residual garbage in the channel.
 	Netchan_Clear( &drop->netchan );

@@ -8,7 +8,6 @@
 #include "matrix_lib.h"
 #include "const.h"
 #include "pm_local.h"
-#include "protocol.h"
 #include "net_encode.h"
 
 #define MAX_FORWARD			6

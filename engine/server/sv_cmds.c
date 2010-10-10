@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "server.h"
-#include "protocol.h"
 #include "byteorder.h"
 
 sv_client_t *sv_client; // current client

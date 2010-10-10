@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "server.h"
-#include "protocol.h"
 
 int SV_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 
@@ -305,6 +304,9 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 		if( svs.clients[i].state > cs_connected )
 			svs.clients[i].state = cs_connected;
 		svs.clients[i].lastframe = -1;
+
+		// release frames
+		SV_ClearFrames( &svs.clients[i].frames );
 	}
 
 	// make cvars consistant
@@ -422,8 +424,6 @@ void SV_InitGame( void )
 
 	svs.spawncount = Com_RandomLong( 0, 65535 );
 	svs.clients = Z_Malloc( sizeof( sv_client_t ) * sv_maxclients->integer );
-	svs.num_client_entities = sv_maxclients->integer * SV_UPDATE_BACKUP * 64; // g-cont: what a mem waster ???
-	svs.client_entities = Z_Malloc( sizeof( entity_state_t ) * svs.num_client_entities );
 	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
 
 	// client frames will be allocated in SV_DirectConnect
@@ -447,6 +447,8 @@ void SV_InitGame( void )
 		// setup all the clients
 		ent = EDICT_NUM( i + 1 );
 		SV_InitEdict( ent );
+
+		SV_ClearFrames( &svs.clients[i].frames );
 
 		// make crosslinks
 		svs.clients[i].edict = ent;

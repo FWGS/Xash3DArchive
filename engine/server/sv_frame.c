@@ -6,7 +6,6 @@
 #include "common.h"
 #include "server.h"
 #include "const.h"
-#include "protocol.h"
 #include "net_encode.h"
 #include "entity_types.h"
 
@@ -44,6 +43,79 @@ static int SV_EntityNumbers( const void *a, const void *b )
 }
 
 /*
+=======================
+SV_ClearPacketEntities
+=======================
+*/
+void SV_ClearPacketEntities( client_frame_t *frame )
+{
+	packet_entities_t	*packet;
+
+	ASSERT( frame != NULL );
+
+	packet = &frame->entities;
+
+	if( packet )
+	{
+		if( packet->entities != NULL )
+			Mem_Free( packet->entities );
+
+		packet->num_entities = 0;
+		packet->entities = NULL;
+	}
+}
+
+/*
+=======================
+SV_AllocPacketEntities
+=======================
+*/
+void SV_AllocPacketEntities( client_frame_t *frame, int count )
+{
+	packet_entities_t	*packet;
+
+	ASSERT( frame != NULL );
+
+	packet = &frame->entities;
+
+	if( packet->entities != NULL )
+	{
+		SV_ClearPacketEntities( frame );
+	}
+
+	if( count < 1 ) count = 1;
+
+	packet->entities = Mem_Alloc( svgame.mempool, sizeof( entity_state_t ) * count );
+	packet->num_entities = count;
+}
+
+/*
+================
+SV_ClearFrames
+
+free client frames memory
+================
+*/
+void SV_ClearFrames( client_frame_t **frames )
+{
+	client_frame_t	*frame;
+	int		i;
+
+	if( *frames == NULL )
+		return;
+
+	for( i = 0, frame = *frames; i < SV_UPDATE_BACKUP; i++, frames++ )
+	{
+		SV_ClearPacketEntities( frame );
+		frame->senttime = 0.0f;
+		frame->ping_time = -1;
+	}
+
+	Mem_Free( *frames );
+	*frames = NULL;
+}
+
+/*
 =============================================================================
 
 Encode a client frame onto the network channel
@@ -57,51 +129,31 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message->
 =============
 */
-void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t *msg )
+void SV_EmitPacketEntities( packet_entities_t *from, packet_entities_t *to, sizebuf_t *msg )
 {
-	entity_state_t	*oldent, *newent;
-	int		oldindex, newindex;
-	int		oldnum, newnum;
-	int		from_num_entities;
+	int	oldindex, newindex;
+	int	oldnum, newnum;
+	int	oldmax;
 
 	BF_WriteByte( msg, svc_packetentities );
 
-	if( !from ) from_num_entities = 0;
-	else from_num_entities = from->num_entities;
+	if( !from ) oldmax = 0;
+	else oldmax = from->num_entities;
 
-	newent = NULL;
-	oldent = NULL;
 	newindex = 0;
 	oldindex = 0;
 
-	while( newindex < to->num_entities || oldindex < from_num_entities )
+	while( newindex < to->num_entities || oldindex < oldmax )
 	{
-		if( newindex >= to->num_entities )
-		{
-			newnum = MAX_ENTNUMBER;
-		}
-		else
-		{
-			newent = &svs.client_entities[(to->first_entity+newindex)%svs.num_client_entities];
-			newnum = newent->number;
-		}
-
-		if( oldindex >= from_num_entities )
-		{
-			oldnum = MAX_ENTNUMBER;
-		}
-		else
-		{
-			oldent = &svs.client_entities[(from->first_entity+oldindex)%svs.num_client_entities];
-			oldnum = oldent->number;
-		}
+		newnum = newindex >= to->num_entities ? MAX_ENTNUMBER : to->entities[newindex].number;
+		oldnum = oldindex >= oldmax ? MAX_ENTNUMBER : from->entities[oldindex].number;
 
 		if( newnum == oldnum )
 		{	
 			// delta update from old position
 			// because the force parm is false, this will not result
 			// in any bytes being emited if the entity has not changed at all
-			MSG_WriteDeltaEntity( oldent, newent, msg, false, sv_time( ));
+			MSG_WriteDeltaEntity( &from->entities[oldindex], &to->entities[newindex], msg, false, sv_time( ));
 			oldindex++;
 			newindex++;
 			continue;
@@ -110,7 +162,7 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 		if( newnum < oldnum )
 		{	
 			// this is a new entity, send it from the baseline
-			MSG_WriteDeltaEntity( &svs.baselines[newnum], newent, msg, true, sv_time( ));
+			MSG_WriteDeltaEntity( &svs.baselines[newnum], &to->entities[newindex], msg, true, sv_time( ));
 			newindex++;
 			continue;
 		}
@@ -119,12 +171,12 @@ void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to, sizebuf_t 
 		{	
 			bool	force;
 
-			if( EDICT_NUM( oldent->number )->free )
+			if( EDICT_NUM( from->entities[oldindex].number )->free )
 				force = true;	// entity completely removed from server
 			else force = false;		// just removed from delta-message 
 
 			// remove from message
-			MSG_WriteDeltaEntity( oldent, NULL, msg, force, sv_time( ));
+			MSG_WriteDeltaEntity( &from->entities[oldindex], NULL, msg, force, sv_time( ));
 			oldindex++;
 			continue;
 		}
@@ -272,14 +324,14 @@ void SV_WriteClientData( client_frame_t *from, client_frame_t *to, sizebuf_t *ms
 	clientdata_t	*cd, *ocd;
 	clientdata_t	dummy;
 
-	cd = &to->cd;
+	cd = &to->clientdata;
 
 	if( !from )
 	{
 		Mem_Set( &dummy, 0, sizeof( dummy ));
 		ocd = &dummy;
 	}
-	else ocd = &from->cd;
+	else ocd = &from->clientdata;
 
 	BF_WriteByte( msg, svc_clientdata );
 	MSG_WriteClientData( msg, ocd, cd, sv.time );
@@ -293,35 +345,32 @@ SV_WriteFrameToClient
 void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 {
 	client_frame_t	*frame, *oldframe;
+	packet_entities_t	*from, *to;
 	int		lastframe;
 
 	// this is the frame we are creating
 	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
+	to = &frame->entities;
 
 	if( cl->lastframe <= 0 )
 	{	
 		// client is asking for a retransmit
 		oldframe = NULL;
 		lastframe = -1;
+		from = NULL;
 	}
 	else if( sv.framenum - cl->lastframe >= (SV_UPDATE_BACKUP - 3))
 	{
 		// client hasn't gotten a good message through in a long time
 		oldframe = NULL;
 		lastframe = -1;
+		from = NULL;
 	}
 	else
 	{	// we have a valid message to delta from
 		oldframe = &cl->frames[cl->lastframe & SV_UPDATE_MASK];
 		lastframe = cl->lastframe;
-
-		// the snapshot's entities may still have rolled off the buffer, though
-		if( oldframe->first_entity <= svs.next_client_entities - svs.num_client_entities )
-		{
-			MsgDev( D_WARN, "%s: ^7delta request from out of date entities.\n", cl->name );
-			oldframe = NULL;
-			lastframe = 0;
-		}
+		from = &oldframe->entities;
 	}
 
 	// delta encode the events
@@ -338,7 +387,7 @@ void SV_WriteFrameToClient( sv_client_t *cl, sizebuf_t *msg )
 	SV_WriteClientData( oldframe, frame, msg );
 
 	// delta encode the entities
-	SV_EmitPacketEntities( oldframe, frame, msg );
+	SV_EmitPacketEntities( from, to, msg );
 }
 
 
@@ -362,9 +411,8 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	edict_t		*clent;
 	edict_t		*viewent;	// may be NULL
 	client_frame_t	*frame;
-	entity_state_t	*state;
+	packet_entities_t	*packet;
 	static sv_ents_t	frame_ents;
-	int		i;
 
 	clent = cl->edict;
 	viewent = cl->pViewEntity;
@@ -393,13 +441,14 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	// this is the frame we are creating
 	frame = &cl->frames[sv.framenum & SV_UPDATE_MASK];
 	frame->senttime = host.realtime; // save it for ping calc later
-
+	packet = &frame->entities;
+ 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = 0;
 	if( !SV_ClientFromEdict( clent, true )) return; // not in game yet
 
 	// update clientdata_t
-	svgame.dllFuncs.pfnUpdateClientData( clent, false, &frame->cd );
+	svgame.dllFuncs.pfnUpdateClientData( clent, false, &frame->clientdata );
 
 	// add all the entities directly visible to the eye, which
 	// may include portal entities that merge other viewpoints
@@ -412,22 +461,9 @@ void SV_BuildClientFrame( sv_client_t *cl )
 	// of an entity being included twice.
 	qsort( frame_ents.entities, frame_ents.num_entities, sizeof( frame_ents.entities[0] ), SV_EntityNumbers );
 
-	// copy the entity states out
-	frame->num_entities = 0;
-	frame->first_entity = svs.next_client_entities;
-
-	for( i = 0; i < frame_ents.num_entities; i++ )
-	{
-		// add it to the circular client_entities array
-		state = &svs.client_entities[svs.next_client_entities % svs.num_client_entities];
-		*state = frame_ents.entities[i];
-		svs.next_client_entities++;
-
-		// this should never hit, map should always be restarted first in SV_Frame
-		if( svs.next_client_entities >= 0x7FFFFFFE )
-			Host_Error( "svs.next_client_entities wrapped\n" );
-		frame->num_entities++;
-	}
+	// copy the entity states to client frame
+	SV_AllocPacketEntities( frame, frame_ents.num_entities );
+	Mem_Copy( packet->entities, frame_ents.entities, sizeof( entity_state_t ) * frame_ents.num_entities );
 }
 
 /*

@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "protocol.h"
 #include "net_encode.h"
 #include "event_flags.h"
 

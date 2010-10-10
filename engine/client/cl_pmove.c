@@ -6,7 +6,6 @@
 #include "common.h"
 #include "client.h"
 #include "const.h"
-#include "protocol.h"
 #include "pm_local.h"
 
 void CL_ClearPhysEnts( void )
