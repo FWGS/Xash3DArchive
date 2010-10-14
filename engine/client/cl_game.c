@@ -487,7 +487,7 @@ void CL_DrawCrosshair( void )
 
 	pPlayer = CL_GetLocalPlayer();
 
-	if( cl.frame.cd.deadflag != DEAD_NO || cl.frame.cd.flags & FL_FROZEN )
+	if( cl.frame.clientdata.deadflag != DEAD_NO || cl.frame.clientdata.flags & FL_FROZEN )
 		return;
 
 	// any camera on
@@ -743,8 +743,6 @@ void CL_InitEdicts( void )
 	ASSERT( clgame.entities == NULL );
 
 	CL_UPDATE_BACKUP = ( cl.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
-
-	cl.frames = Mem_Alloc( clgame.mempool, sizeof( frame_t ) * CL_UPDATE_BACKUP );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
 
 	for( i = 0, e = clgame.entities; i < clgame.maxEntities; i++, e++ )
@@ -767,10 +765,8 @@ void CL_FreeEdicts( void )
 		Mem_Free( clgame.entities );
 	}
 
-	if( cl.frames ) Mem_Free( cl.frames );
 	clgame.numEntities = 0;
 	clgame.entities = NULL;
-	cl.frames = NULL;
 }
 
 /*
@@ -1176,8 +1172,8 @@ static void pfnGetPlayerInfo( int ent_num, hud_player_info_t *pinfo )
 	pinfo->model = player->model;
 
 	pinfo->spectator = spec;		
-	pinfo->ping = com.atoi( Info_ValueForKey( player->userinfo, "ping" ));
-	pinfo->packetloss = com.atoi( Info_ValueForKey( player->userinfo, "loss" ));
+	pinfo->ping = player->ping;
+	pinfo->packetloss = player->packet_loss;
 	pinfo->topcolor = com.atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
 	pinfo->bottomcolor = com.atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
 }
@@ -1375,7 +1371,7 @@ pfnPhysInfo_ValueForKey
 */
 static const char* pfnPhysInfo_ValueForKey( const char *key )
 {
-	return Info_ValueForKey( cl.frame.cd.physinfo, key );
+	return Info_ValueForKey( cl.frame.clientdata.physinfo, key );
 }
 
 /*
@@ -1398,7 +1394,7 @@ value that come from server
 */
 static float pfnGetClientMaxspeed( void )
 {
-	return cl.frame.cd.maxspeed;
+	return cl.frame.clientdata.maxspeed;
 }
 
 /*
@@ -1704,7 +1700,7 @@ pfnLocalPlayerDucking
 */
 int pfnLocalPlayerDucking( void )
 {
-	return cl.frame.cd.bInDuck;
+	return cl.frame.clientdata.bInDuck;
 }
 
 /*

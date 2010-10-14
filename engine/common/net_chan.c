@@ -83,6 +83,7 @@ cvar_t	*net_showdrop;
 cvar_t	*net_speeds;
 cvar_t	*net_qport;
 
+int	net_drop;
 netadr_t	net_from;
 sizebuf_t	net_message;
 byte	*net_mempool;
@@ -1556,9 +1557,11 @@ bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	}
 
 	// dropped packets don't keep the message from being used
-	chan->dropped = sequence - ( chan->incoming_sequence + 1 );
-	if( chan->dropped > 0 )
+	net_drop = sequence - ( chan->incoming_sequence + 1 );
+	if( net_drop > 0 )
 	{
+		chan->drop_count += 1;
+				
 		if( net_showdrop->integer )
 		{
 			Msg( "%s:Dropped %i packets at %i\n"

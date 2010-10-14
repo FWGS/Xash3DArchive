@@ -27,12 +27,12 @@ const char *svc_strings[256] =
 	"svc_stufftext",
 	"svc_setangle",
 	"svc_serverdata",
-	"svc_addangle",
+	"svc_restore",
 	"svc_frame",
-	"svc_clientdata",
-	"svc_packetentities",
-	"svc_download",
 	"svc_usermessage",
+	"svc_clientdata",
+	"svc_download",
+	"svc_updatepings",
 	"svc_particle",
 	"svc_ambientsound",
 	"svc_spawnstatic",
@@ -53,11 +53,11 @@ const char *svc_strings[256] =
 	"svc_weaponanim",
 	"svc_bspdecal",
 	"svc_roomtype",
-	"svc_restore",
+	"svc_addangle",
 	"svc_unused39",
-	"svc_unused40",
-	"svc_unused41",
-	"svc_unused42",
+	"svc_packetentities",
+	"svc_deltapacketentities",
+	"svc_chokecount",
 	"svc_unused43",
 	"svc_unused44",
 	"svc_unused45",
@@ -182,7 +182,7 @@ void CL_WriteMessageHistory( void )
 
 	for( i = 0; i < MSG_COUNT - 1; i++ )
 	{
-		thecmd &= CMD_MASK;
+		thecmd &= MSG_MASK;
 		old = &cls_message_debug.oldcmd[thecmd];
 
 		MsgDev( D_INFO,"%i %04i %s\n", old->frame_number, old->starting_offset, CL_MsgInfo( old->command ));
@@ -584,6 +584,85 @@ void CL_ParseServerData( sizebuf_t *msg )
 }
 
 /*
+===================
+CL_ParseClientData
+===================
+*/
+void CL_ParseClientData( sizebuf_t *msg )
+{
+	int		i, j;
+	clientdata_t	*from_cd, *to_cd;
+	weapon_data_t	*from_wd, *to_wd;
+	weapon_data_t	nullwd[32];
+	clientdata_t	nullcd;
+	frame_t		*frame;
+	int		idx;
+
+	// this is the frame update that this message corresponds to
+	i = cls.netchan.incoming_sequence;
+
+	// did we drop some frames?
+	if( i > cl.last_incoming_sequence + 1 )
+	{
+		// mark as dropped
+		for( j = cl.last_incoming_sequence + 1; j < i; j++ )
+		{
+			if( cl.frames[j & CL_UPDATE_MASK].receivedtime >= 0.0 )
+			{
+				cl.frames[j & CL_UPDATE_MASK ].receivedtime = -1;
+				cl.frames[j & CL_UPDATE_MASK ].latency = 0;
+			}
+		}
+	}
+
+
+	cl.parsecount = i;					// ack'd incoming messages.  
+	cl.parsecountmod = cl.parsecount & CL_UPDATE_MASK;	// index into window.     
+	frame = &cl.frames[cl.parsecountmod];			// frame at index.
+
+	frame->time = cl.mtime[0];				// mark network received time
+	frame->receivedtime = host.realtime;			// time now that we are parsing.  
+
+	// Fixme, do this after all packets read for this frame?
+	cl.last_incoming_sequence = cls.netchan.incoming_sequence;
+	
+	to_cd = &frame->clientdata;
+	to_wd = frame->weapondata;
+
+	// clear to old value before delta parsing
+	if( !BF_ReadOneBit( msg ))
+	{
+		Mem_Set( &nullcd, 0, sizeof( nullcd ));
+		Mem_Set( nullwd, 0, sizeof( nullwd ));
+		from_cd = &nullcd;
+		from_wd = nullwd;
+	}
+	else
+	{
+		int	delta_sequence = BF_ReadByte( msg );
+
+		from_cd = &cl.frames[delta_sequence & CL_UPDATE_MASK].clientdata;
+		from_wd = cl.frames[delta_sequence & CL_UPDATE_MASK].weapondata;
+
+		if(( delta_sequence & CL_UPDATE_MASK ) != ( cl.delta_sequence & CL_UPDATE_MASK ))
+			MsgDev( D_WARN, "CL_ParseClientData: mismatch delta_sequence\n" );
+	}
+
+	MSG_ReadClientData( msg, from_cd, to_cd, sv_time( ));
+
+	for( i = 0; i < MAX_WEAPONS; i++ )
+	{
+		// check for end of weapondata (and clientdata_t message)
+		if( !BF_ReadOneBit( msg )) break;
+
+		// read the weapon idx
+		idx = BF_ReadUBitLong( msg, MAX_WEAPON_BITS );
+
+		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], sv_time( ));
+	}
+}
+
+/*
 ==================
 CL_ParseBaseline
 ==================
@@ -756,6 +835,33 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 }
 
 /*
+================
+CL_UpdateUserPings
+
+collect pings and packet lossage from clients
+================
+*/
+void CL_UpdateUserPings( sizebuf_t *msg )
+{
+	int		i, slot;
+	player_info_t	*player;
+	
+	for( i = 0; i < MAX_CLIENTS; i++ )
+	{
+		if( !BF_ReadOneBit( msg )) break; // end of message
+
+		slot = BF_ReadUBitLong( msg, MAX_CLIENT_BITS );
+
+		if( slot >= MAX_CLIENTS )
+			Host_Error( "CL_ParseServerMessage: svc_updatepings > MAX_CLIENTS\n" );
+
+		player = &cl.players[slot];
+		player->ping = BF_ReadUBitLong( msg, 12 );
+		player->packet_loss = BF_ReadUBitLong( msg, 7 );
+	}
+}
+
+/*
 ==============
 CL_ServerInfo
 
@@ -863,7 +969,7 @@ CL_ParseServerMessage
 void CL_ParseServerMessage( sizebuf_t *msg )
 {
 	char	*s;
-	int	i, cmd;
+	int	i, j, cmd;
 	int	param1, param2;
 	int	bufStart;
 
@@ -898,7 +1004,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			Host_Error( "svc_bad\n" );
 			break;
 		case svc_nop:
-			MsgDev( D_ERROR, "CL_ParseServerMessage: user message out of bounds\n" );
 			break;
 		case svc_disconnect:
 			CL_Drop ();
@@ -931,7 +1036,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseSoundPacket( msg, false );
 			break;
 		case svc_time:
-			BF_ReadFloat( msg ); // time
+			cl.mtime[1] = cl.mtime[0];
+			cl.mtime[0] = BF_ReadFloat( msg );			
+			break;
 			break;
 		case svc_print:
 			i = BF_ReadByte( msg );
@@ -953,17 +1060,20 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_addangle:
 			CL_ParseAddAngle( msg );
 			break;
-		case svc_frame:
-			CL_ParseFrame( msg );
-			break;
 		case svc_clientdata:
-			Host_Error( "svc_clientdata: out of place frame data\n" );
+			CL_ParseClientData( msg );
 			break;
 		case svc_packetentities:
-			Host_Error( "svc_packetentities: out of place frame data\n" );
+			CL_ParsePacketEntities( msg, false );
+			break;
+		case svc_deltapacketentities:
+			CL_ParsePacketEntities( msg, true );
 			break;
 		case svc_download:
 			CL_ParseDownload( msg );
+			break;
+		case svc_updatepings:
+			CL_UpdateUserPings( msg );
 			break;
 		case svc_usermessage:
 			CL_RegisterUserMessage( msg );
@@ -1031,6 +1141,18 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_roomtype:
 			param1 = BF_ReadShort( msg );
 			Cvar_SetValue( "room_type", param1 );
+			break;
+		case svc_chokecount:
+			i = BF_ReadByte( msg );
+			j = cls.netchan.incoming_acknowledged - 1;
+			for( ; i > 0 && j > cls.netchan.outgoing_sequence - CL_UPDATE_BACKUP; j-- )
+			{
+				if( cl.frames[j & CL_UPDATE_MASK].receivedtime != -3.0 )
+				{
+					cl.frames[j & CL_UPDATE_MASK].receivedtime = -2.0;
+					i--;
+				}
+			}
 			break;
 		case svc_director:
 			CL_ParseDirector( msg );

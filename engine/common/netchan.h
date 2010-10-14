@@ -119,7 +119,6 @@ typedef struct netchan_s
 	netadr_t		remote_address;	// address this channel is talking to.  
 	int		qport;		// qport value to write when transmitting
 	
-	int		dropped;		// between last packet and previous
 	bool		compress;		// enable huffman compression
 			
 	double		last_received;	// for timeouts
@@ -183,6 +182,7 @@ extern netadr_t		net_from;
 extern sizebuf_t		net_message;
 extern byte		net_message_buffer[MAX_MSGLEN];
 extern cvar_t		*net_speeds;
+extern int		net_drop;
 
 void Netchan_Init( void );
 void Netchan_Shutdown( void );
@@ -197,6 +197,7 @@ void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... );
 bool Netchan_Process( netchan_t *chan, sizebuf_t *msg );
 void Netchan_UpdateProgress( netchan_t *chan );
 bool Netchan_IncomingReady( netchan_t *chan );
+bool Netchan_CanPacket( netchan_t *chan );
 void Netchan_Clear( netchan_t *chan );
 
 // huffman compression

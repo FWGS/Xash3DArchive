@@ -69,7 +69,7 @@ void CL_CheckPredictionError( void )
 
 	// calculate the last usercmd_t we sent that the server has processed
 	frame = cls.netchan.incoming_acknowledged;
-	frame &= CMD_MASK;
+	frame &= CL_UPDATE_MASK;
 
 	// compare what the server returned with what we had predicted it to be
 	VectorSubtract( player->curstate.origin, cl.predicted_origins[frame], delta );
@@ -106,7 +106,7 @@ void CL_SetIdealPitch( cl_entity_t *ent )
 	int	i, j;
 	int	step, dir, steps;
 
-	if( !( cl.frame.cd.flags & FL_ONGROUND ))
+	if( !( cl.frame.clientdata.flags & FL_ONGROUND ))
 		return;
 		
 	angleval = ent->angles[YAW] * M_PI * 2 / 360;
@@ -116,7 +116,7 @@ void CL_SetIdealPitch( cl_entity_t *ent )
 	{
 		top[0] = ent->origin[0] + cosval * (i + 3) * 12;
 		top[1] = ent->origin[1] + sinval * (i + 3) * 12;
-		top[2] = ent->origin[2] + cl.frame.cd.view_ofs[2];
+		top[2] = ent->origin[2] + cl.frame.clientdata.view_ofs[2];
 		
 		bottom[0] = top[0];
 		bottom[1] = top[1];
@@ -177,7 +177,7 @@ void CL_PredictMovement( void )
 
 	player = CL_GetLocalPlayer ();
 	viewent = CL_GetEntityByIndex( cl.refdef.viewentity );
-	cd = &cl.frame.cd;
+	cd = &cl.frame.clientdata;
 
 	CL_SetIdealPitch( player );
 
@@ -230,7 +230,7 @@ void CL_PredictMovement( void )
 	// run frames
 	while( ++ack < current )
 	{
-		frame = ack & CMD_MASK;
+		frame = ack & CL_UPDATE_MASK;
 		cmd = &cl.cmds[frame];
 
 		CL_PreRunCmd( player, cmd );

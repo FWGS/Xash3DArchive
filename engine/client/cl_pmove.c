@@ -436,8 +436,8 @@ void CL_SetSolidEntities( void )
 
 	for( i = 0; i < 3; i++ )
 	{
-		absmin[i] = cl.frame.cd.origin[i] - 1024;
-		absmax[i] = cl.frame.cd.origin[i] + 1024;
+		absmin[i] = cl.frame.clientdata.origin[i] - 1024;
+		absmax[i] = cl.frame.clientdata.origin[i] + 1024;
 	}
 
 	CL_CopyEntityToPhysEnt( &clgame.pmove->physents[0], &clgame.entities[0] );

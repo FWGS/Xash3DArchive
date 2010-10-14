@@ -9,6 +9,9 @@
 #include "net_encode.h"
 #include "input.h"
 
+#define MAX_TOTAL_CMDS		16
+#define MIN_CMD_RATE		10.0
+#define MAX_CMD_BUFFER		4000
 #define CONNECTION_PROBLEM_TIME	15.0	// 15 seconds
 
 cvar_t	*rcon_client_password;
@@ -20,9 +23,11 @@ cvar_t	*cl_predict;
 cvar_t	*cl_showfps;
 cvar_t	*cl_nodelta;
 cvar_t	*cl_crosshair;
+cvar_t	*cl_cmdbackup;
 cvar_t	*cl_idealpitchscale;
 cvar_t	*cl_solid_players;
 cvar_t	*cl_showmiss;
+cvar_t	*cl_cmdrate;
 cvar_t	*userinfo;
 
 //
@@ -117,6 +122,40 @@ static float CL_LerpPoint( void )
 	}
 		
 	return frac;
+}
+
+/*
+=================
+CL_ComputePacketLoss
+
+=================
+*/
+void CL_ComputePacketLoss( void )
+{
+	int	i, frm;
+	frame_t	*frame;
+	int	count = 0;
+	int	lost = 0;
+
+	if( host.realtime < cls.packet_loss_recalc_time )
+		return;
+
+	// recalc every second
+	cls.packet_loss_recalc_time = host.realtime + 1.0;
+
+	// compuate packet loss
+	for( i = cls.netchan.incoming_sequence - CL_UPDATE_BACKUP+1; i <= cls.netchan.incoming_sequence; i++ )
+	{
+		frm = i;
+		frame = &cl.frames[frm & CL_UPDATE_MASK];
+
+		if( frame->receivedtime == -1 )
+			lost++;
+		count++;
+	}
+
+	if( count <= 0 ) cls.packet_loss = 0.0f;
+	else cls.packet_loss = ( 100.0f * (float)lost ) / (float)count;
 }
 
 /*
@@ -231,10 +270,10 @@ usercmd_t CL_CreateCmd( void )
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
 
-	VectorCopy( cl.frame.cd.origin, cdata.origin );
+	VectorCopy( cl.frame.clientdata.origin, cdata.origin );
 	VectorCopy( cl.refdef.cl_viewangles, cdata.viewangles );
-	cdata.iWeaponBits = cl.frame.cd.weapons;
-	cdata.fov = cl.frame.cd.fov;
+	cdata.iWeaponBits = cl.frame.clientdata.weapons;
+	cdata.fov = cl.frame.clientdata.fov;
 
 	clgame.dllFuncs.pfnUpdateClientData( &cdata, cl_time( ));
 
@@ -256,6 +295,30 @@ usercmd_t CL_CreateCmd( void )
 	return cmd;
 }
 
+void CL_WriteUsercmd( sizebuf_t *msg, int from, int to )
+{
+	usercmd_t	nullcmd;
+	usercmd_t	*f, *t;
+
+	ASSERT( from == -1 || ( from >= 0 && from < MULTIPLAYER_BACKUP ) );
+	ASSERT( to >= 0 && to < MULTIPLAYER_BACKUP );
+
+	if( from == -1 )
+	{
+		Mem_Set( &nullcmd, 0, sizeof( nullcmd ));
+		f = &nullcmd;
+	}
+	else
+	{
+		f = &cl.cmds[from];
+	}
+
+	t = &cl.cmds[to];
+
+	// write it into the buffer
+	MSG_WriteDeltaUsercmd( msg, f, t );
+}
+
 /*
 ===================
 CL_WritePacket
@@ -273,13 +336,15 @@ During normal gameplay, a client packet will contain something like:
 */
 void CL_WritePacket( void )
 {
-	sizebuf_t	buf;
-	bool	noDelta = false;
-	byte	data[MAX_MSGLEN];
-	usercmd_t	*cmd, *oldcmd;
-	usercmd_t	nullcmd;
-	int	key, size;
-
+	sizebuf_t		buf;
+	bool		send_command = false;
+	byte		data[MAX_CMD_BUFFER];
+	int		i, from, to, key, size;
+	int		numbackup = 2;
+	int		numcmds;
+	int		newcmds;
+	int		cmdnumber;
+	
 	// don't send anything if playing back a demo
 	if( cls.demoplayback || cls.state == ca_cinematic )
 		return;
@@ -287,6 +352,7 @@ void CL_WritePacket( void )
 	if( cls.state == ca_disconnected || cls.state == ca_connecting )
 		return;
 
+/*
 	if( cls.state == ca_connected )
 	{
 		// just update reliable
@@ -294,17 +360,47 @@ void CL_WritePacket( void )
 			Netchan_Transmit( &cls.netchan, 0, NULL );
 		return;
 	}
+*/
+	CL_ComputePacketLoss ();
 
-	if( cl_nodelta->integer || !cl.frame.valid || cls.demowaiting )
-		noDelta = true;
-
-	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CMD_BACKUP )
+	if( cl_cmdrate->value < MIN_CMD_RATE )
 	{
-		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
+		Cvar_SetValue( "cl_cmdrate", MIN_CMD_RATE );
+	}
+
+	BF_Init( &buf, "ClientData", data, sizeof( data ));
+
+	// Determine number of backup commands to send along
+	numbackup = bound( 0, cl_cmdbackup->integer, MAX_BACKUP_COMMANDS );
+	if( cls.state == ca_connected ) numbackup = 0;
+
+	// Check to see if we can actually send this command
+
+	// In single player, send commands as fast as possible
+	// Otherwise, only send when ready and when not choking bandwidth
+	if(( cl.maxclients == 1 ) || ( NET_IsLocalAddress( cls.netchan.remote_address ) && !host_limitlocal->integer ))
+		send_command = true;
+	else if(( host.realtime >= cls.nextcmdtime ) && Netchan_CanPacket( &cls.netchan ))
+		send_command = true;
+
+	if( cl.force_send_usercmd )
+	{
+		send_command = true;
+		cl.force_send_usercmd = false;
+	}
+
+	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CL_UPDATE_MASK )
+	{
+		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME && !cls.demoplayback )
 		{
 			MsgDev( D_WARN, "^1 Connection Problem^7\n" );
-			noDelta = true;	// request a fullupdate
+			cl.validsequence = 0;
 		}
+	}
+
+	if( cl_nodelta->integer )
+	{
+		cl.validsequence = 0;
 	}
 
 	// send a userinfo update if needed
@@ -315,44 +411,97 @@ void CL_WritePacket( void )
 		BF_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
 	}
 
-	BF_Init( &buf, "ClientData", data, sizeof( data ));
+	if( send_command )
+	{
+		int	outgoing_sequence;
+	
+		if( cl_cmdrate->integer > 0 )
+			cls.nextcmdtime = host.realtime + ( 1.0f / cl_cmdrate->value );
+		else cls.nextcmdtime = host.realtime; // always able to send right away
 
-	// write new random_seed
-	BF_WriteByte( &buf, clc_random_seed );
-	BF_WriteUBitLong( &buf, cl.random_seed, 32 );	// full range
+		if( cls.lastoutgoingcommand == -1 )
+		{
+			outgoing_sequence = cls.netchan.outgoing_sequence;
+			cls.lastoutgoingcommand = cls.netchan.outgoing_sequence;
+		}
+		else outgoing_sequence = cls.lastoutgoingcommand + 1;
 
-	// begin a client move command
-	BF_WriteByte( &buf, clc_move );
+		// begin a client move command
+		BF_WriteByte( &buf, clc_move );
 
-	// save the position for a checksum byte
-	key = BF_GetNumBytesWritten( &buf );
-	BF_WriteByte( &buf, 0 );
+		// save the position for a checksum byte
+		key = BF_GetRealBytesWritten( &buf );
+		BF_WriteByte( &buf, 0 );
 
-	// let the server know what the last frame we
-	// got was, so the next message can be delta compressed
-	if( noDelta ) BF_WriteLong( &buf, -1 ); // no compression
-	else BF_WriteLong( &buf, cl.frame.serverframe );
+		// write packet lossage percentation
+		BF_WriteByte( &buf, cls.packet_loss );
 
-	// send this and the previous cmds in the message, so
-	// if the last packet was dropped, it can be recovered
-	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 2) & CMD_MASK];
-	Mem_Set( &nullcmd, 0, sizeof( nullcmd ));
-	MSG_WriteDeltaUsercmd( &buf, &nullcmd, cmd );
-	oldcmd = cmd;
+		// say how many backups we'll be sending
+		BF_WriteByte( &buf, numbackup );
 
-	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 1) & CMD_MASK];
-	MSG_WriteDeltaUsercmd( &buf, oldcmd, cmd );
-	oldcmd = cmd;
+		// how many real commands have queued up
+		newcmds = ( cls.netchan.outgoing_sequence - cls.lastoutgoingcommand );
 
-	cmd = &cl.cmds[(cls.netchan.outgoing_sequence - 0) & CMD_MASK];
-	MSG_WriteDeltaUsercmd( &buf, oldcmd, cmd );
+		// put an upper/lower bound on this
+		newcmds = bound( 0, newcmds, MAX_TOTAL_CMDS );
+		if( cls.state == ca_connected ) newcmds = 0;
+	
+		BF_WriteByte( &buf, newcmds );
 
-	// calculate a checksum over the move commands
-	size = BF_GetNumBytesWritten( &buf ) - key - 1;
-	buf.pData[key] = CRC_Sequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
+		numcmds = newcmds + numbackup;
+		from = -1;
 
-	// deliver the message
-	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
+		for( i = numcmds - 1; i >= 0; i-- )
+		{
+			cmdnumber = ( cls.netchan.outgoing_sequence - i ) & CL_UPDATE_MASK;
+
+			to = cmdnumber;
+			CL_WriteUsercmd( &buf, from, to );
+			from = to;
+
+			if( BF_CheckOverflow( &buf ))
+			{
+				Host_Error( "CL_Move, overflowed command buffer (%i bytes)\n", MAX_CMD_BUFFER );
+			}
+		}
+
+		// calculate a checksum over the move commands
+		size = BF_GetRealBytesWritten( &buf ) - key - 1;
+		buf.pData[key] = CRC_Sequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
+
+		// message we are constructing.
+		i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;
+	
+		// determine if we need to ask for a new set of delta's.
+		if( cl.validsequence && !( cls.demorecording && cls.demowaiting ))
+		{
+			cl.delta_sequence = cl.validsequence;
+
+			BF_WriteByte( &buf, clc_delta );
+			BF_WriteByte( &buf, cl.validsequence & 0xFF );
+		}
+		else
+		{
+			// request delta compression of entities
+			cl.delta_sequence = -1;
+		}
+
+		if( BF_CheckOverflow( &buf ))
+		{
+			Host_Error( "CL_Move, overflowed command buffer (%i bytes)\n", MAX_CMD_BUFFER );
+		}
+
+		// remember outgoing command that we are sending
+		cls.lastoutgoingcommand = cls.netchan.outgoing_sequence;
+
+		// deliver the message (or update reliable)
+		Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
+	}
+	else
+	{
+		// Increment sequence number so we can detect that we've held back packets.
+		cls.netchan.outgoing_sequence++;
+	}
 
 	// update download/upload slider.
 	Netchan_UpdateProgress( &cls.netchan );
@@ -368,7 +517,7 @@ Called every frame to builds and sends a command packet to the server.
 void CL_SendCmd( void )
 {
 	// we create commands even if a demo is playing,
-	cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CMD_MASK];
+	cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CL_UPDATE_MASK];
 	*cl.refdef.cmd = CL_CreateCmd();
 
 	// clc_move, userinfo etc
@@ -574,6 +723,7 @@ void CL_ClearState( void )
 	S_StopAllSounds ();
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
+	CL_ClearFrames ();
 
 	if( clgame.hInstance ) clgame.dllFuncs.pfnReset();
 
@@ -956,6 +1106,12 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
 		BF_WriteString( &cls.netchan.message, "new" );
 		cls.state = ca_connected;
+
+		cl.validsequence = 0;		// haven't gotten a valid frame update yet
+		cl.delta_sequence = -1;		// we'll request a full delta from the baseline
+		cls.lastoutgoingcommand = -1;		// we don't have a backed up cmd history yet
+		cls.nextcmdtime = host.realtime;	// we can send a cmd right away
+
 		UI_SetActiveMenu( false );
 	}
 	else if( !com.strcmp( c, "info" ))
@@ -1143,7 +1299,7 @@ CL_Physinfo_f
 void CL_Physinfo_f( void )
 {
 	Msg( "Phys info settings:\n" );
-	Info_Print( cl.frame.cd.physinfo );
+	Info_Print( cl.frame.clientdata.physinfo );
 }
 
 int precache_check; // for autodownload of precache items
@@ -1348,6 +1504,8 @@ void CL_InitLocal( void )
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_lw = Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 	cl_smooth = Cvar_Get ("cl_smooth", "1", 0, "smooth up stair climbing and interpolate position in multiplayer" );
+	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "2", CVAR_ARCHIVE, "how many additional history commands are sent" );
+	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 		
 	// register our commands

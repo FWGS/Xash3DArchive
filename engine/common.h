@@ -64,6 +64,7 @@ extern cvar_t	*scr_width;
 extern cvar_t	*scr_height;
 extern cvar_t	*scr_download;
 extern cvar_t	*allow_download;
+extern cvar_t	*host_limitlocal;
 extern cvar_t	*host_maxfps;
 
 /*

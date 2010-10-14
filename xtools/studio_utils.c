@@ -1060,8 +1060,8 @@ void ResizeTexture( s_texture_t *ptexture )
 	// dword alignment for each scan
 	ptexture->skintop = ptexture->min_t;
 	ptexture->skinleft = ptexture->min_s;
-	ptexture->skinwidth = (int)(ptexture->max_s - ptexture->min_s) + 1;
-	ptexture->skinheight = (int)(ptexture->max_t - ptexture->min_t) + 1;
+	ptexture->skinwidth = ((int)(ptexture->max_s - ptexture->min_s + 1) + 3) & ~3;
+	ptexture->skinheight = (int)(ptexture->max_t - ptexture->min_t + 1);
 	ptexture->size = ptexture->skinwidth * ptexture->skinheight + 256 * 3;
 	percent = ((ptexture->skinwidth * ptexture->skinheight) / (float)(ptexture->srcwidth * ptexture->srcheight)) * 100.0f;
 

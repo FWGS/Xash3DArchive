@@ -112,7 +112,7 @@ void BF_WriteOneBit( sizebuf_t *bf, int nValue )
 
 void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, bool bCheckRange )
 {
-#ifdef _DEBUG
+#ifdef _NETDEBUG
 	// make sure it doesn't overflow.
 	if( bCheckRange && numbits < 32 )
 	{
@@ -175,7 +175,7 @@ void BF_WriteSBitLong( sizebuf_t *bf, int data, int numbits )
 	// (Some old code writes direct integers right into the buffer).
 	if( data < 0 )
 	{
-#ifdef _DEBUG
+#ifdef _NETDEBUG
 	if( numbits < 32 )
 	{
 		// Make sure it doesn't overflow.

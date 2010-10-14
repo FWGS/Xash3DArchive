@@ -35,6 +35,7 @@ typedef struct
 #define BF_WriteUBitLong( bf, data, bits )	BF_WriteUBitLongExt( bf, data, bits, true );
 #define BF_StartReading			BF_StartWriting
 #define BF_GetNumBytesRead			BF_GetNumBytesWritten
+#define BF_GetRealBytesRead			BF_GetRealBytesWritten
 #define BF_GetNumBitsRead			BF_GetNumBitsWritten
 #define BF_ReadBitAngles			BF_ReadBitVec3Coord
 #define BF_ReadString( bf )			BF_ReadStringExt( bf, false )
@@ -81,7 +82,8 @@ bool BF_WriteString(  sizebuf_t *bf, const char *pStr );		// returns false if it
 bool BF_WriteDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );
 
 // helper functions
-_inline int BF_GetNumBytesWritten( sizebuf_t *bf )	{ return BitByte( bf->iCurBit ); }
+_inline int BF_GetNumBytesWritten( sizebuf_t *bf ) { return BitByte( bf->iCurBit ); }
+_inline int BF_GetRealBytesWritten( sizebuf_t *bf ) { return bf->iCurBit >> 3; }	// unpadded
 _inline int BF_GetNumBitsWritten( sizebuf_t *bf ) { return bf->iCurBit; }
 _inline int BF_GetMaxBits( sizebuf_t *bf ) { return bf->nDataBits; }
 _inline int BF_GetMaxBytes( sizebuf_t *bf ) { return bf->nDataBits >> 3; }

@@ -2970,8 +2970,8 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 
 	cl->random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
 
-	SV_PreRunCmd( cl, &cmd );
-	SV_RunCmd( cl, &cmd );
+	SV_PreRunCmd( cl, &cmd, cl->random_seed );
+	SV_RunCmd( cl, &cmd, cl->random_seed );
 	SV_PostRunCmd( cl );
 
 	cl->lastcmd = cmd;
@@ -3418,9 +3418,7 @@ int pfnCanSkipPlayer( const edict_t *player )
 		return false;
 	}
 
-	if( com.atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) == 1 )
-		return true;
-	return false;
+	return cl->local_weapons;
 }
 
 /*
@@ -3551,7 +3549,7 @@ void pfnGetPlayerStats( const edict_t *pClient, int *ping, int *packet_loss )
 		return;
 	}
 
-	if( ping ) *ping = cl->ping;
+	if( ping ) *ping = cl->ping * 1000;
 	if( packet_loss ) *packet_loss = cl->packet_loss;
 }
 

@@ -102,34 +102,20 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate )
 		VectorCopy( ent->curstate.angles, ent->latched.prevangles );
 }
 
-/*
-==================
-CL_DeltaEntity
-
-Parses deltas from the given base and adds the resulting entity
-to the current frame
-==================
-*/
-void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, bool unchanged )
+bool CL_ParseDelta( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int newnum )
 {
 	cl_entity_t	*ent;
-	entity_state_t	*state;
-	bool		newent = (old) ? false : true;
-	int		result = 1;
+	int		alive;
+	int		noInterp = false;
 
 	ent = EDICT_NUM( newnum );
-	state = &cl.entity_curstates[cl.parse_entities & (MAX_PARSE_ENTITIES-1)];
+	alive = MSG_ReadDeltaEntity( msg, from, to, newnum, sv_time( ));
 
-	if( newent ) old = &ent->baseline;
-
-	if( unchanged ) *state = *old;
-	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, sv_time( ));
-
-	if( !result )
+	if( !alive )
 	{
-		if( newent ) Host_Error( "Cl_DeltaEntity: tried to release new entity\n" );
-			
-		if( state->number == -1 )
+		// entity was delta removed
+
+		if( to->number == -1 )
 		{
 //			Msg( "Entity %s was removed from server\n", ent->curstate.classname );
 			CL_FreeEntity( ent );
@@ -140,45 +126,128 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 			ent->curstate.effects |= EF_NODRAW; // don't rendering
 			clgame.dllFuncs.pfnUpdateOnRemove( ent );
 		}
-
-		// entity was delta removed
-		return;
+		return false;
 	}
-
-	cl.parse_entities++;
-	frame->num_entities++;
 
 	if( ent->index <= 0 )
 	{
+		// spawn entity
 		CL_InitEntity( ent );
-		state->effects |= EF_NOINTERP;
+		noInterp = true;
 	}
 
-	// some data changes will force no lerping
-	if( state->effects & EF_NOINTERP )
-		ent->serverframe = -99;
-
-	if( ent->serverframe != cl.frame.serverframe - 1 )
-	{	
-		// duplicate the current state so lerping doesn't hurt anything
-		ent->prevstate = *state;
-	}
-	else
-	{	
-		// shuffle the last state to previous
-		ent->prevstate = ent->curstate;
-	}
-
-	ent->serverframe = cl.frame.serverframe;
+	if( to->effects & EF_NOINTERP || noInterp )
+		ent->prevstate = *to;	// duplicate the current state so lerping doesn't hurt anything
+	else ent->prevstate = ent->curstate;	// shuffle the last state to previous
 
 	// NOTE: always check modelindex for new state not current
-	if( CM_GetModelType( state->modelindex ) == mod_studio )
-		CL_UpdateStudioVars( ent, state );
+	if( CM_GetModelType( to->modelindex ) == mod_studio )
+		CL_UpdateStudioVars( ent, to );
 
 	// set right current state
-	ent->curstate = *state;
+	ent->curstate = *to;
 
 	CL_LinkEdict( ent ); // relink entity
+
+	return true;
+}
+
+/*
+=======================
+CL_ClearPacketEntities
+=======================
+*/
+void CL_ClearPacketEntities( frame_t *frame )
+{
+	packet_entities_t	*packet;
+
+	ASSERT( frame != NULL );
+
+	packet = &frame->entities;
+
+	if( packet )
+	{
+		if( packet->entities != NULL )
+			Mem_Free( packet->entities );
+
+		packet->num_entities = 0;
+		packet->max_entities = 0;
+		packet->entities = NULL;
+	}
+}
+
+/*
+=======================
+CL_AllocPacketEntities
+=======================
+*/
+void CL_AllocPacketEntities( frame_t *frame, int count )
+{
+	packet_entities_t	*packet;
+
+	ASSERT( frame != NULL );
+
+	packet = &frame->entities;
+	if( count < 1 ) count = 1;
+
+	// check if new frame has more entities than previous
+	if( packet->max_entities < count )
+	{
+		CL_ClearPacketEntities( frame );
+		packet->entities = Mem_Alloc( clgame.mempool, sizeof( entity_state_t ) * count );
+		packet->max_entities = count;
+	}
+	packet->num_entities = count;
+}
+
+/*
+================
+CL_ClearFrames
+
+free client frames memory
+================
+*/
+void CL_ClearFrames( void )
+{
+	frame_t	*frame;
+	int	i;
+
+	for( i = 0, frame = cl.frames; i < CL_UPDATE_BACKUP; i++, frame++ )
+	{
+		CL_ClearPacketEntities( frame );
+	}
+}
+
+/*
+=================
+CL_FlushEntityPacket
+=================
+*/
+void CL_FlushEntityPacket( sizebuf_t *msg )
+{
+	int		newnum;
+	entity_state_t	from, to;
+
+	MsgDev( D_INFO, "FlushEntityPacket()\n" );
+	Mem_Set( &from, 0, sizeof( from ));
+
+	cl.frames[cl.parsecountmod].valid = false;
+	cl.validsequence = 0; // can't render a frame
+
+	// read it all, but ignore it
+	while( 1 )
+	{
+		newnum = BF_ReadWord( msg );
+		if( !newnum ) break; // done
+
+		if( BF_CheckOverflow( msg ))
+			Host_Error( "CL_FlushEntityPacket: read overflow\n" );
+
+		while( newnum >= clgame.numEntities )
+			clgame.numEntities++;
+
+		MSG_ReadDeltaEntity( msg, &from, &to, newnum, sv_time( ));
+	}
 }
 
 /*
@@ -189,40 +258,91 @@ An svc_packetentities has just been parsed, deal with the
 rest of the data stream.
 ==================
 */
-void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newframe )
+void CL_ParsePacketEntities( sizebuf_t *msg, bool delta )
 {
-	int		newnum;
-	entity_state_t	*oldstate;
-	int		oldindex, oldnum;
+	frame_t		*frame;
+	int		oldpacket, newpacket;
+	packet_entities_t	*from, *to, dummy;
+	int		oldindex, newindex;
+	int		count, delta_sequence = -1;
+	int		newnum, oldnum;
+	bool		full = false;
 
-	newframe->parse_entities = cl.parse_entities;
-	newframe->num_entities = 0;
+	// first, allocate packet for new frame
+	count = BF_ReadWord( msg );
 
-	// delta from the entities present in oldframe
-	oldindex = 0;
-	oldstate = NULL;
-	if( !oldframe )
+	newpacket = cl.parsecountmod;
+	frame = &cl.frames[newpacket];
+	frame->valid = true;
+
+	if( delta )
 	{
-		oldnum = MAX_ENTNUMBER;
+		oldpacket = BF_ReadByte( msg );
+
+		if(( cl.delta_sequence & CL_UPDATE_MASK ) != ( oldpacket & CL_UPDATE_MASK ))
+			MsgDev( D_WARN, "CL_ParsePacketEntities: mismatch delta_sequence %i != %i\n", cl.delta_sequence, oldpacket );
+	}
+	else oldpacket = -1;
+
+	if( oldpacket != -1 )
+	{
+		int	subtracted = ((( cls.netchan.incoming_sequence & 0xFF ) - oldpacket ) & 0xFF );
+
+		if( subtracted == 0 )
+		{
+			Host_Error( "CL_DeltaPacketEntities: update too old, connection dropped.\n" );
+			return;
+		}
+
+		if( subtracted >= CL_UPDATE_MASK )
+		{	
+			// we can't use this, it is too old
+			CL_FlushEntityPacket( msg );
+			return;
+		}
+
+		from = &cl.frames[oldpacket & CL_UPDATE_MASK].entities;
+
+		// alloc room for save entities from prevframe too
+		if( from->num_entities > count )
+			count = from->num_entities;
 	}
 	else
-	{
-		if( oldindex >= oldframe->num_entities )
-		{
-			oldnum = MAX_ENTNUMBER;
-		}
-		else
-		{
-			oldstate = &cl.entity_curstates[(oldframe->parse_entities+oldindex) & (MAX_PARSE_ENTITIES-1)];
-			oldnum = oldstate->number;
-		}
+	{	
+		// this is a full update that we can start delta compressing from now
+		dummy.entities = NULL;
+		dummy.num_entities = 0;
+		cls.demowaiting = false;	// we can start recording now
+		cl.force_send_usercmd = true;
+		from = &dummy;
+		full = true;
 	}
+
+	CL_AllocPacketEntities( frame, count );
+	to = &frame->entities;
+
+	// mark current delta state
+	cl.validsequence = cls.netchan.incoming_sequence;
+
+	oldindex = 0;
+	newindex = 0;
+	to->num_entities = 0;
 
 	while( 1 )
 	{
-		// read the entity index number
-		newnum = BF_ReadShort( msg );
-		if( !newnum ) break; // end of packet entities
+		newnum = BF_ReadWord( msg );
+
+		if( !newnum )
+		{
+			while( oldindex < from->num_entities )
+			{	
+				// copy all the rest of the entities from the old packet
+				to->entities[newindex] = from->entities[oldindex];
+				newindex++;
+				oldindex++;
+			}
+			break;
+		}
 
 		if( BF_CheckOverflow( msg ))
 			Host_Error( "CL_ParsePacketEntities: read overflow\n" );
@@ -230,91 +350,96 @@ void CL_ParsePacketEntities( sizebuf_t *msg, frame_t *oldframe, frame_t *newfram
 		while( newnum >= clgame.numEntities )
 			clgame.numEntities++;
 
-		while( oldnum < newnum )
-		{	
-			// one or more entities from the old packet are unchanged
-			CL_DeltaEntity( msg, newframe, oldnum, oldstate, true );
-			
-			oldindex++;
+		oldnum = oldindex >= from->num_entities ? MAX_ENTNUMBER : from->entities[oldindex].number;
 
-			if( oldindex >= oldframe->num_entities )
+		while( newnum > oldnum )
+		{
+			if( full )
 			{
-				oldnum = MAX_ENTNUMBER;
+				MsgDev( D_WARN, "CL_ParsePacketEntities: oldcopy on full update\n" );
+				CL_FlushEntityPacket( msg );
+				return;
 			}
-			else
-			{
-				oldstate = &cl.entity_curstates[(oldframe->parse_entities+oldindex) & (MAX_PARSE_ENTITIES-1)];
-				oldnum = oldstate->number;
-			}
+
+			to->entities[newindex] = from->entities[oldindex];
+			newindex++;
+			oldindex++;
+			oldnum = oldindex >= from->num_entities ? MAX_ENTNUMBER : from->entities[oldindex].number;
 		}
 
-		if( oldnum == newnum )
-		{	
-			// delta from previous state
-			CL_DeltaEntity( msg, newframe, newnum, oldstate, false );
-			oldindex++;
+		if( newnum < oldnum )
+		{
+			cl_entity_t	*ent;
 
-			if( oldindex >= oldframe->num_entities )
+			// new from baseline
+			ent = EDICT_NUM( newnum );
+
+			if( !CL_ParseDelta( msg, &ent->baseline, &to->entities[newindex], newnum ))
 			{
-				oldnum = MAX_ENTNUMBER;
+				if( full )
+				{
+					MsgDev( D_WARN, "CL_ParsePacketEntities: remove on full update\n" );
+					CL_FlushEntityPacket( msg );
+					return;
+				}
+				continue;
 			}
-			else
-			{
-				oldstate = &cl.entity_curstates[(oldframe->parse_entities+oldindex) & (MAX_PARSE_ENTITIES-1)];
-				oldnum = oldstate->number;
-			}
+
+			newindex++;
 			continue;
 		}
 
-		if( oldnum > newnum )
+		if( newnum == oldnum )
 		{	
-			// delta from baseline ?
-			CL_DeltaEntity( msg, newframe, newnum, NULL, false );
-			continue;
+			// delta from previous
+			if( full )
+			{
+				cl.validsequence = 0;
+				MsgDev( D_WARN, "CL_ParsePacketEntities: delta on full update\n" );
+			}
+
+			if( !CL_ParseDelta( msg, &from->entities[oldindex], &to->entities[newindex], newnum ))
+			{
+				// entity was delta-removed
+				oldindex++;
+				continue;
+			}
+
+			newindex++;
+			oldindex++;
 		}
 
 	}
 
-	// any remaining entities in the old frame are copied over
-	while( oldnum != MAX_ENTNUMBER )
-	{	
-		// one or more entities from the old packet are unchanged
-		CL_DeltaEntity( msg, newframe, oldnum, oldstate, true );
-		oldindex++;
+	to->num_entities = newindex;	// done
 
-		if( oldindex >= oldframe->num_entities )
-		{
-			oldnum = MAX_ENTNUMBER;
-		}
-		else
-		{
-			oldstate = &cl.entity_curstates[(oldframe->parse_entities+oldindex) & (MAX_PARSE_ENTITIES-1)];
-			oldnum = oldstate->number;
-		}
-	}
-}
-
-/*
-===================
-CL_ParseClientData
-===================
-*/
-void CL_ParseClientData( frame_t *from, frame_t *to, sizebuf_t *msg )
-{
-	clientdata_t	*cd, *ocd;
-	clientdata_t	dummy;
-	
-	cd = &to->cd;
-
-	// clear to old value before delta parsing
-	if( !from )
+	cl.frame = *frame;
+	if( !cl.frame.valid ) return;
+		
+	if( cls.state != ca_active )
 	{
-		ocd = &dummy;
-		Mem_Set( &dummy, 0, sizeof( dummy ));
-	}
-	else ocd = &from->cd;
+		cl_entity_t	*player;
 
-	MSG_ReadClientData( msg, ocd, cd, sv_time( ));
+		// client entered the game
+		cls.state = ca_active;
+		cl.force_refdef = true;
+		cls.changelevel = false;	// changelevel is done
+
+		player = CL_GetLocalPlayer();
+		SCR_MakeLevelShot();	// make levelshot if needs
+
+		Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar	
+
+		// getting a valid frame message ends the connection process
+		VectorCopy( player->origin, cl.predicted_origin );
+		VectorCopy( player->angles, cl.predicted_angles );
+
+		// request new HUD values
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, "fullupdate" );
+	}
+
+	CL_CheckPredictionError();
 }
 		
 /*
@@ -324,62 +449,11 @@ CL_ParseFrame
 */
 void CL_ParseFrame( sizebuf_t *msg )
 {
-	int		cmd;
-	cl_entity_t	*clent;
-          
 	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
 
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = BF_ReadFloat( msg );
-	cl.frame.serverframe = BF_ReadLong( msg );
-	cl.frame.deltaframe = BF_ReadLong( msg );
 	cl.surpressCount = BF_ReadByte( msg );
-
-	// If the frame is delta compressed from data that we
-	// no longer have available, we must suck up the rest of
-	// the frame, but not use it, then ask for a non-compressed
-	// message 
-	if( cl.frame.deltaframe <= 0 )
-	{
-		cl.frame.valid = true;	// uncompressed frame
-		cls.demowaiting = false;	// we can start recording now
-		cl.oldframe = NULL;
-	}
-	else
-	{
-		cl.oldframe = &cl.frames[cl.frame.deltaframe & CL_UPDATE_MASK];
-		if( !cl.oldframe->valid )
-		{	
-			// should never happen
-			MsgDev( D_INFO, "delta from invalid frame (not supposed to happen!)\n" );
-		}
-		if( cl.oldframe->serverframe != cl.frame.deltaframe )
-		{	
-			// The frame that the server did the delta from
-			// is too old, so we can't reconstruct it properly.
-			MsgDev( D_INFO, "delta frame too old\n" );
-		}
-		else if( cl.parse_entities - cl.oldframe->parse_entities > MAX_PARSE_ENTITIES - 128 )
-		{
-			MsgDev( D_INFO, "delta parse_entities too old\n" );
-		}
-		else cl.frame.valid = true;	// valid delta parse
-	}
-
-	// read clientdata
-	cmd = BF_ReadByte( msg );
-	if( cmd != svc_clientdata ) Host_Error( "CL_ParseFrame: not cliendata[%d]\n", cmd );
-	CL_ParseClientData( cl.oldframe, &cl.frame, msg );
-
-	clent = CL_GetLocalPlayer(); // get client
-
-	// read packet entities
-	cmd = BF_ReadByte( msg );
-	if( cmd != svc_packetentities ) Host_Error( "CL_ParseFrame: not packetentities[%d]\n", cmd );
-	CL_ParsePacketEntities( msg, cl.oldframe, &cl.frame );
-
-	// save the frame off in the backup array for later delta comparisons
-	cl.frames[cl.frame.serverframe & CL_UPDATE_MASK] = cl.frame;
 
 	if( !cl.frame.valid ) return;
 
@@ -433,17 +507,17 @@ void CL_AddPacketEntities( frame_t *frame )
 	if( !clent ) return;
 
 	// update client vars
-	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.cd );
+	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.clientdata );
 
 	// if viewmodel has changed update sequence here
-	if( clgame.viewent.curstate.modelindex != cl.frame.cd.viewmodel )
+	if( clgame.viewent.curstate.modelindex != cl.frame.clientdata.viewmodel )
 	{
 		cl_entity_t *view = &clgame.viewent;
 		CL_WeaponAnim( view->curstate.sequence, view->curstate.body );
 	}
 
 	// setup player viewmodel (only for local player!)
-	clgame.viewent.curstate.modelindex = cl.frame.cd.viewmodel;
+	clgame.viewent.curstate.modelindex = cl.frame.clientdata.viewmodel;
 
 	for( e = 1; e < clgame.numEntities; e++ )
 	{

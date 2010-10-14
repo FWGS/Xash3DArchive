@@ -12,6 +12,10 @@
 netadr_t	master_adr[MAX_MASTERS];		// address of group servers
 
 cvar_t	*sv_zmax;
+cvar_t	*sv_unlag;
+cvar_t	*sv_maxunlag;
+cvar_t	*sv_unlagpush;
+cvar_t	*sv_unlagsamples;
 cvar_t	*sv_pausable;
 cvar_t	*sv_newunit;
 cvar_t	*sv_wateramp;
@@ -41,8 +45,10 @@ cvar_t	*sv_check_errors;
 cvar_t	*sv_footsteps;
 cvar_t	*public_server;		// should heartbeats be sent
 cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
+cvar_t	*sv_failuretime;
 cvar_t	*serverinfo;
 cvar_t	*physinfo;
+cvar_t	*clockwindow;
 
 // sky variables
 cvar_t	*sv_skycolor_r;
@@ -216,6 +222,47 @@ void SV_UpdateServerInfo( void )
 	Cvar_LookupVars( CVAR_SERVERINFO, NULL, NULL, pfnUpdateServerInfo ); 
 
 	serverinfo->modified = false;
+}
+
+/*
+=================
+SV_CheckCmdTimes
+=================
+*/
+void SV_CheckCmdTimes( void )
+{
+	sv_client_t	*cl;
+	static double	lastreset = 0;
+	double		timewindow;
+	int		i;
+
+	if( 1.0 > host.realtime - lastreset )
+		return;
+
+	lastreset = host.realtime;
+
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( cl->state != cs_spawned )
+			continue;
+
+		if( cl->last_cmdtime == 0.0 )
+		{
+			cl->last_cmdtime = host.realtime;
+		}
+
+		timewindow = cl->last_movetime + cl->last_cmdtime - host.realtime;
+
+		if( timewindow > clockwindow->value )
+		{
+			cl->next_movetime = clockwindow->value + host.realtime;
+			cl->last_movetime = host.realtime - cl->last_cmdtime;
+		}
+		else if( timewindow < -clockwindow->value )
+		{
+			cl->last_movetime = host.realtime - cl->last_cmdtime;
+		}
+	}
 }
 
 /*
@@ -412,6 +459,9 @@ void Host_ServerFrame( void )
 	// check timeouts
 	SV_CheckTimeouts ();
 
+	// check clients timewindow
+	SV_CheckCmdTimes ();
+
 	// read packets from clients
 	SV_ReadPackets ();
 
@@ -572,6 +622,12 @@ void SV_Init( void )
 	serverinfo = Cvar_Get( "@serverinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	public_server = Cvar_Get ("public", "0", 0, "change server type from private to public" );
 	sv_reconnect_limit = Cvar_Get ("sv_reconnect_limit", "3", CVAR_ARCHIVE, "max reconnect attempts" );
+	sv_failuretime = Cvar_Get( "sv_failuretime", "0.5", 0, "after this long without a packet from client, don't send any more until client starts sending again" );
+	sv_unlag = Cvar_Get( "sv_unlag", "1", 0, "allow lag compensation on server-side" );
+	sv_maxunlag = Cvar_Get( "sv_maxunlag", "0.5", 0, "max latency which can be interpolated" );
+	sv_unlagpush = Cvar_Get( "sv_unlagpush", "0.0", 0, "unlag push bias" );
+	sv_unlagsamples = Cvar_Get( "sv_unlagsamples", "1", 0, "max samples to interpolate" );
+	clockwindow = Cvar_Get( "clockwindow", "0.5", 0, "timewindow to execute client moves" );
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 	BF_Init( &net_message, "NetMessage", net_message_buffer, sizeof( net_message_buffer ));

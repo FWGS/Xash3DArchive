@@ -613,10 +613,207 @@ static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
 	else clent->v.groundentity = NULL;
 }
 
-void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd )
+int nofind = 0;
+
+entity_state_t *SV_FindEntInPack( int index, packet_entities_t *PacksToSearch )
+{
+	int	i;
+
+	for( i = 0; i < PacksToSearch->max_entities; i++ )
+	{
+		if( PacksToSearch->entities[i].number == index )
+			return(&(PacksToSearch->entities[i]));
+	}
+	return NULL;
+}
+
+int SV_UnlagCheckTeleport( vec3_t old_pos, vec3_t new_pos )
+{
+	int	i;
+
+	for( i = 0; i < 3; i++ )
+	{
+		if( fabs( old_pos[i] - new_pos[i] ) > 50 )
+			return 1;
+	}
+	return 0;
+}
+
+void SV_SetupMoveInterpolant( sv_client_t *cl )
+{
+	int		i, j, var_C_entindex;
+	float		finalpush, lerp_msec, latency, temp, lerpFrac;
+	client_frame_t	*frame, *var_24;
+	packet_entities_t	*entities;
+	entity_state_t	*state, *var_38_FoundEntity;
+	sv_client_t	*check;
+	sv_interp_t	*lerp;
+	vec3_t		tempvec, tempvec2;
+
+	Mem_Set( svgame.interp, 0, sizeof( svgame.interp ));
+	nofind = 1;
+
+	// don't allow unlag in singleplayer
+	if( sv_maxclients->integer <= 1 ) return;
+
+	// unlag disabled by game request
+	if( !svgame.dllFuncs.pfnAllowLagCompensation() || !sv_unlag->integer )
+		return;
+
+	// unlag disabled for current client
+	if( cl->state != cs_spawned || !cl->lag_compensation )
+		return;
+
+	nofind = 0;
+
+	for( i = 0, check = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( check->state != cs_spawned || check == cl )
+			continue;
+
+		lerp = &svgame.interp[i];
+
+		VectorCopy( check->edict->v.origin, lerp->oldpos );
+		VectorCopy( check->edict->v.absmin, lerp->mins );
+		VectorCopy( check->edict->v.absmax, lerp->maxs );
+		lerp->active = true;
+	}
+
+	if( cl->latency > 1.5f )
+		latency = 1.5f;
+	else latency = cl->latency;
+
+	temp = sv_maxunlag->value;
+
+	if( temp > 0 && latency > temp )
+		latency = temp;
+
+	lerp_msec = cl->lastcmd.lerp_msec * 0.001f;
+	if( lerp_msec > 0.1f ) lerp_msec = 0.1f;
+
+	if( lerp_msec < cl->cl_updaterate )
+		lerp_msec = cl->cl_updaterate;
+
+	finalpush = sv_unlagpush->value + (( host.realtime - latency ) - lerp_msec );
+
+	if( finalpush > host.realtime )
+		finalpush = host.realtime;
+
+	frame = NULL;
+
+	for( var_24 = NULL, i = 0; i < SV_UPDATE_BACKUP; i++, var_24 = frame )
+	{
+		frame = &cl->frames[(cl->netchan.outgoing_sequence - 1) & SV_UPDATE_MASK];
+		entities = &frame->entities;
+
+		for( j = 0; j < entities->num_entities; j++ )
+		{
+			state = &entities->entities[j];
+
+			if( state->number <= 0 || state->number >= sv_maxclients->integer )
+				continue;
+
+			// you know, jge doesn't sound right given how the indexing normally works.
+
+			lerp = &svgame.interp[state->number-1];
+
+			if( lerp->nointerp )
+				continue;
+
+			if( state->health <= 0 || ( state->effects & EF_NOINTERP ))
+				lerp->nointerp = true;
+
+			if( !lerp->firstframe )
+				lerp->firstframe = true;
+			else if( SV_UnlagCheckTeleport( state->origin, lerp->finalpos ))
+				lerp->nointerp = true;
+
+			VectorCopy( state->origin, lerp->finalpos );
+		}
+
+		if( finalpush > frame->senttime )
+			break;
+	}
+
+
+	if( i == SV_UPDATE_BACKUP || finalpush - frame->senttime > 1.0 )
+	{
+		Mem_Set( svgame.interp, 0, sizeof( svgame.interp ));
+		nofind = 1;
+		return;
+	}
+
+	entities = &frame->entities;
+
+	if( var_24 == NULL )
+	{
+		var_24 = frame;
+		lerpFrac = 0;
+	}
+	else
+	{
+		if( var_24->senttime - frame->senttime == 0.0 )
+		{
+			lerpFrac = 0;
+		}
+		else
+		{
+			lerpFrac = (finalpush - frame->senttime) / (var_24->senttime - frame->senttime);
+			lerpFrac = bound( 0.0f, lerpFrac, 1.0f );
+		}
+	}
+
+	for( i = 0; i < entities->num_entities; i++ )
+	{
+		state = &entities->entities[i];
+
+		if( state->number <= 0 || state->number >= sv_maxclients->integer )
+			continue;
+
+		var_C_entindex = state->number - 1;
+		check = &svs.clients[var_C_entindex];
+
+		if( check->state != cs_spawned || check == cl )
+			continue;
+
+		lerp = &svgame.interp[var_C_entindex];
+
+		if( !lerp->active || lerp->nointerp )
+			continue;
+
+		var_38_FoundEntity = SV_FindEntInPack( state->number, &var_24->entities );
+
+		if( var_38_FoundEntity == NULL )
+		{
+			tempvec[0] = state->origin[0];
+			tempvec[1] = state->origin[1];
+			tempvec[2] = state->origin[2];
+		}
+		else
+		{
+			tempvec2[0] = var_38_FoundEntity->origin[0] - state->origin[0];
+			tempvec2[1] = var_38_FoundEntity->origin[1] - state->origin[1];
+			tempvec2[2] = var_38_FoundEntity->origin[2] - state->origin[2];
+
+			VectorMA( state->origin, lerpFrac, tempvec2, tempvec );
+		}
+
+		VectorCopy( tempvec, lerp->curpos );
+		VectorCopy( tempvec, lerp->newpos );
+
+		if( !VectorCompare( tempvec, check->edict->v.origin ))
+		{
+			VectorCopy( tempvec, check->edict->v.origin );
+			SV_LinkEdict( check->edict, false );
+			lerp->moving = true;
+		}
+	}
+}
+
+void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 {
 	svgame.pmove->runfuncs = true; // FIXME: check cl_lc ?
-	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, cl->random_seed );
+	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, random_seed );
 }
 
 /*
@@ -624,13 +821,38 @@ void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd )
 SV_RunCmd
 ===========
 */
-void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd )
+void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 {
 	edict_t	*clent;
 	vec3_t	oldvel;
-
+	usercmd_t cmd;
+	int	oldmsec;
+   
 	clent = cl->edict;
-	if( !SV_IsValidEdict( clent )) return;
+
+	if( cl->next_movetime > host.realtime )
+	{
+		cl->last_movetime += ( ucmd->msec * 0.001f );
+		return;
+	}
+
+	cl->next_movetime = 0.0;
+
+	// chop up very long commands
+	if( ucmd->msec > 50 )
+	{
+		cmd = *ucmd;
+		oldmsec = ucmd->msec;
+		cmd.msec = oldmsec / 2;
+
+		SV_RunCmd( cl, &cmd, random_seed );
+
+		cmd.msec = oldmsec / 2 + (oldmsec & 1);	// give them back thier msec.
+		cmd.impulse = 0;
+		SV_RunCmd( cl, &cmd, random_seed );
+		return;
+	}
+
 
 	PM_CheckMovingGround( clent, ucmd->msec * 0.001f );
 

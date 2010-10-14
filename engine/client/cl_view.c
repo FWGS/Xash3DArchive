@@ -33,11 +33,11 @@ void V_SetupRefDef( void )
 
 	clent = CL_GetLocalPlayer ();
 
-	VectorCopy( cl.frame.cd.punchangle, cl.refdef.punchangle );
+	VectorCopy( cl.frame.clientdata.punchangle, cl.refdef.punchangle );
 
 	cl.refdef.movevars = &clgame.movevars;
-	cl.refdef.onground = ( cl.frame.cd.flags & FL_ONGROUND ) ? 1 : 0;
-	cl.refdef.health = cl.frame.cd.health;
+	cl.refdef.onground = ( cl.frame.clientdata.flags & FL_ONGROUND ) ? 1 : 0;
+	cl.refdef.health = cl.frame.clientdata.health;
 	cl.refdef.lerpfrac = cl.lerpFrac;
 	cl.refdef.num_entities = clgame.numEntities;
 	cl.refdef.max_entities = clgame.maxEntities;
@@ -46,7 +46,7 @@ void V_SetupRefDef( void )
 	cl.refdef.frametime = cl.time - cl.oldtime;
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
-	cl.refdef.waterlevel = cl.frame.cd.waterlevel;		
+	cl.refdef.waterlevel = cl.frame.clientdata.waterlevel;		
 	cl.refdef.flags = cl.render_flags;
 	cl.refdef.viewsize = 120; // FIXME if you can
 	cl.refdef.nextView = 0;
@@ -73,8 +73,8 @@ void V_SetupRefDef( void )
 	else
 	{
 		VectorCopy( clent->origin, cl.refdef.simorg );
-		VectorCopy( cl.frame.cd.view_ofs, cl.refdef.viewheight );
-		VectorCopy( cl.frame.cd.velocity, cl.refdef.simvel );
+		VectorCopy( cl.frame.clientdata.view_ofs, cl.refdef.viewheight );
+		VectorCopy( cl.frame.clientdata.velocity, cl.refdef.simvel );
 	}
 }
 

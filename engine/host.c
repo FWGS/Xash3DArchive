@@ -19,6 +19,7 @@ dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_ex
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
 
 cvar_t	*host_serverstate;
+cvar_t	*host_limitlocal;
 cvar_t	*host_cheats;
 cvar_t	*host_maxfps;
 cvar_t	*host_framerate;
@@ -742,6 +743,7 @@ void Host_Init( const int argc, const char **argv )
 	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
 	host_serverstate = Cvar_Get( "host_serverstate", "0", 0, "displays current server state" );
+	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
 
 	// content control
 	Cvar_Get( "violence_hgibs", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human gibs" );

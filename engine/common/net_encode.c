@@ -1359,6 +1359,81 @@ void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, f
 /*
 =============================================================================
 
+weapon_data_t communication
+
+=============================================================================
+*/
+/*
+==================
+MSG_WriteWeaponData
+
+Writes current client data only for local client
+Other clients can grab the client state from entity_state_t
+==================
+*/
+void MSG_WriteWeaponData( sizebuf_t *msg, weapon_data_t *from, weapon_data_t *to, float timebase, int index )
+{
+	delta_t		*pField;
+	delta_info_t	*dt;
+	int		i, startBit;
+	int		numChanges = 0;
+
+	dt = Delta_FindStruct( "weapon_data_t" );
+	ASSERT( dt && dt->bInitialized );
+
+	pField = dt->pFields;
+	ASSERT( pField );
+
+	// activate fields and call custom encode func
+	Delta_CustomEncode( dt, from, to );
+
+	startBit = msg->iCurBit;
+
+	BF_WriteOneBit( msg, 1 );
+	BF_WriteUBitLong( msg, index, MAX_WEAPON_BITS );
+               
+	// process fields
+	for( i = 0; i < dt->numFields; i++, pField++ )
+	{
+		if( Delta_WriteField( msg, pField, from, to, timebase ))
+			numChanges++;
+	}
+
+	// if we have no changes - kill the message
+	if( !numChanges ) BF_SeekToBit( msg, startBit );
+}
+
+/*
+==================
+MSG_ReadWeaponData
+
+Read the clientdata
+==================
+*/
+void MSG_ReadWeaponData( sizebuf_t *msg, weapon_data_t *from, weapon_data_t *to, float timebase )
+{
+	delta_t		*pField;
+	delta_info_t	*dt;
+	int		i;
+
+	dt = Delta_FindStruct( "weapon_data_t" );
+	ASSERT( dt && dt->bInitialized );
+
+	pField = dt->pFields;
+	ASSERT( pField );
+
+	*to = *from;
+
+	// process fields
+	for( i = 0; i < dt->numFields; i++, pField++ )
+	{
+		Delta_ReadField( msg, pField, from, to, timebase );
+	}
+}
+
+/*
+=============================================================================
+
 entity_state_t communication
 
 =============================================================================

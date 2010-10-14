@@ -122,7 +122,7 @@ void SV_ActivateServer( void )
 		if( svs.clients[i].state >= cs_connected )
 		{
 			Netchan_Clear( &svs.clients[i].netchan );
-			svs.clients[i].lastframe = -1;
+			svs.clients[i].delta_sequence = -1;
 		}
 	}
 
@@ -183,13 +183,10 @@ void SV_DeactivateServer( void )
 
 	svgame.dllFuncs.pfnServerDeactivate();
 
-	// set client fields on player ents
 	for( i = 0; i < svgame.globals->maxClients; i++ )
 	{
-		// free client frames
-		if( svs.clients[i].frames )
-			Mem_Free( svs.clients[i].frames );
-		svs.clients[i].frames = NULL;
+		// release client frames
+		SV_ClearFrames( &svs.clients[i].frames );
 	}
 
 	svgame.globals->maxEntities = GI->max_edicts;
@@ -303,10 +300,6 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 		// needs to reconnect
 		if( svs.clients[i].state > cs_connected )
 			svs.clients[i].state = cs_connected;
-		svs.clients[i].lastframe = -1;
-
-		// release frames
-		SV_ClearFrames( &svs.clients[i].frames );
 	}
 
 	// make cvars consistant
@@ -447,13 +440,7 @@ void SV_InitGame( void )
 		// setup all the clients
 		ent = EDICT_NUM( i + 1 );
 		SV_InitEdict( ent );
-
-		SV_ClearFrames( &svs.clients[i].frames );
-
-		// make crosslinks
 		svs.clients[i].edict = ent;
-		Mem_Set( &svs.clients[i].lastcmd, 0, sizeof( svs.clients[i].lastcmd ));
-		Mem_Set( &svs.clients[i].physinfo, 0, sizeof( svs.clients[i].physinfo ));
 	}
 
 	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world

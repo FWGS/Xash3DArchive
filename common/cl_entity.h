@@ -54,7 +54,6 @@ struct cl_entity_s
 	int		index;      	// Index into cl_entities ( always match actual slot )
 	int		player;     	// True if this entity is a "player"
 
-	int		serverframe;	// TEMPORARY PLACED HERE
 	entity_state_t	baseline;   	// The original state from which to delta during an uncompressed message
 	entity_state_t	prevstate;  	// The state information from the penultimate message received from the server
 	entity_state_t	curstate;   	// The state information from the last message received from server

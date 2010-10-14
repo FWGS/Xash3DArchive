@@ -71,7 +71,6 @@ typedef struct server_s
 
 	double		time;		// sv.time += sv.frametime
 	float		frametime;
-	int		framenum;
 	int		net_framenum;	// to avoid send edicts twice through portals
 
 	int		hostflags;	// misc server flags: predicting etc
@@ -105,13 +104,12 @@ typedef struct server_s
 typedef struct
 {
 	double		senttime;
-	float		ping_time;
+	float		raw_ping;
+	float		latency;
+
 	clientdata_t	clientdata;
 	weapon_data_t	weapondata[32];
 	packet_entities_t	entities;
-
-	// legacy (needs to be removed)
-	float		latency;
 } client_frame_t;
 
 typedef struct sv_client_s
@@ -120,15 +118,22 @@ typedef struct sv_client_s
 
 	char		userinfo[MAX_INFO_STRING];	// name, etc (received from client)
 	char		physinfo[MAX_INFO_STRING];	// set on server (transmit to client)
+
 	bool		send_message;
 	bool		skip_message;
+
+	bool		local_weapons;		// enable weapon predicting
+	bool		lag_compensation;		// enable lag compensation
+	bool		hltv_proxy;		// this is spectator proxy (hltv)		
 
 	netchan_t		netchan;
 	int		chokecount;         	// number of messages rate supressed
 	int		delta_sequence;		// -1 = no compression.
 
 	double		next_messagetime;		// time when we should send next world state update  
-	double		next_messageinterval;	// default time to wait for next message
+	double		cl_updaterate;		// default time to wait for next message
+	double		next_checkpingtime;		// time to send all players pings to client
+	double		timebase;			// client timebase
 
 	bool		sendmovevars;
 	bool		sendinfo;
@@ -136,17 +141,16 @@ typedef struct sv_client_s
 	bool		fakeclient;		// This client is a fake player controlled by the game DLL
 
 	int		random_seed;		// fpr predictable random values
-	int		lastframe;		// for delta compression
 	usercmd_t		lastcmd;			// for filling in big drops
+
+	double		last_cmdtime;
+	double		last_movetime;
+	double		next_movetime;
 
 	int		modelindex;		// custom playermodel index
 	int		packet_loss;
-	int		ping;
-
-	int		message_size[RATE_MESSAGES];	// used to rate drop packets
-	int		rate;
-
-	int		surpressCount;		// number of messages rate supressed
+	float		latency;
+	float		ping;
 
 	float		addangle;			// add angles to client position
 
@@ -213,6 +217,22 @@ typedef struct
 
 typedef struct
 {
+	bool		active;
+	bool		moving;
+	bool		firstframe;
+	bool		nointerp;
+
+	vec3_t		mins;
+	vec3_t		maxs;
+
+	vec3_t		curpos;
+	vec3_t		oldpos;
+	vec3_t		newpos;
+	vec3_t		finalpos;
+} sv_interp_t;
+
+typedef struct
+{
 	// user messages stuff
 	const char	*msg_name;		// just for debug
 	sv_user_message_t	msg[MAX_USER_MESSAGES];	// user messages array
@@ -240,6 +260,7 @@ typedef struct
 	movevars_t	movevars;			// curstate
 	movevars_t	oldmovevars;		// oldstate
 	playermove_t	*pmove;			// pmove state
+	sv_interp_t	interp[32];		// interpolate clients
 
 	sv_pushed_t	pushed[256];		// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
@@ -306,6 +327,11 @@ extern	cvar_t		*sv_maxspeed;
 extern	cvar_t		*sv_maxclients;
 extern	cvar_t		*sv_skyname;
 extern	cvar_t		*serverinfo;
+extern	cvar_t		*sv_failuretime;
+extern	cvar_t		*sv_unlag;
+extern	cvar_t		*sv_maxunlag;
+extern	cvar_t		*sv_unlagpush;
+extern	cvar_t		*sv_unlagsamples;
 extern	cvar_t		*physinfo;
 extern	sv_client_t	*sv_client;
 
@@ -376,15 +402,17 @@ void SV_GetChallenge( netadr_t from );
 void SV_DirectConnect( netadr_t from );
 void SV_TogglePause( const char *msg );
 void SV_PutClientInServer( edict_t *ent );
+bool SV_ShouldUpdatePing( sv_client_t *cl );
 void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg );
 void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg );
+void SV_GetPlayerStats( sv_client_t *cl, int *ping, int *packet_loss );
 bool SV_ClientConnect( edict_t *ent, char *userinfo );
 void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
 edict_t *SV_FakeConnect( const char *netname );
-void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd );
-void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd );
+void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
+void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_PostRunCmd( sv_client_t *cl );
 void SV_InitClientMove( void );
 void SV_UpdateServerInfo( void );

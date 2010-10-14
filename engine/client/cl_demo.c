@@ -535,7 +535,7 @@ void CL_Record_f( void )
 			return;
 		}
 	}
-	else com.strncpy( demoname, name, sizeof( name ));
+	else com.strncpy( demoname, name, sizeof( demoname ));
 
 	// open the demo file
 	com.sprintf( demopath, "demos/%s.dem", demoname );

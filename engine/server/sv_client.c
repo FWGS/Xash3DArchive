@@ -9,6 +9,20 @@
 #include "net_encode.h"
 #include "entity_types.h"
 
+const char *clc_strings[10] =
+{
+	"clc_bad",
+	"clc_nop",
+	"clc_move",
+	"clc_stringcmd",
+	"clc_delta",
+	"clc_resourcelist",
+	"clc_userinfo",
+	"clc_fileconsistency",
+	"clc_voicedata",
+	"clc_random_seed",
+};
+
 typedef struct ucmd_s
 {
 	const char	*name;
@@ -179,8 +193,6 @@ gotnewcl:
 	sv_client = newcl;
 	edictnum = (newcl - svs.clients) + 1;
 
-	SV_ClearFrames( &newcl->frames );
-
 	ent = EDICT_NUM( edictnum );
 	newcl->edict = ent;
 	newcl->challenge = challenge; // save challenge for checksumming
@@ -207,8 +219,11 @@ gotnewcl:
 	BF_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
 
 	newcl->state = cs_connected;
+	newcl->cl_updaterate = 0.05;
 	newcl->lastmessage = host.realtime;
 	newcl->lastconnect = host.realtime;
+	newcl->next_messagetime = host.realtime + newcl->cl_updaterate;
+	newcl->delta_sequence = -1;
 
 	// if this was the first client on the server, or the last client
 	// the server can hold, send a heartbeat to the master.
@@ -271,6 +286,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	newcl->edict = ent;
 	newcl->challenge = -1;		// fake challenge
 	newcl->fakeclient = true;
+	newcl->delta_sequence = -1;
 	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
 
 	// get the game a chance to reject this connection or modify the userinfo
@@ -599,6 +615,81 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 
 /*
 ===================
+SV_CalcPing
+
+recalc ping on current client
+===================
+*/
+int SV_CalcPing( sv_client_t *cl )
+{
+	float		ping = 0;
+	int		i, count;
+	client_frame_t	*frame;
+
+	// bots don't have a real ping
+	if( cl->fakeclient )
+		return 5;
+
+	count = 0;
+
+	for( i = 0; i < SV_UPDATE_BACKUP; i++ )
+	{
+		frame = &cl->frames[(cl->netchan.incoming_acknowledged - (i + 1)) & SV_UPDATE_MASK];
+
+		if( frame->raw_ping > 0 )
+		{
+			ping += frame->raw_ping;
+			count++;
+		}
+	}
+
+	if( !count )
+		return 0;
+
+	return (( ping / count ) * 1000 );
+}
+
+/*
+===================
+SV_EstablishTimeBase
+
+Finangles latency and the like. 
+===================
+*/
+void SV_EstablishTimeBase( sv_client_t *cl, usercmd_t *ucmd, int numdrops, int numbackup, int newcmds )
+{
+	double	start;
+	double	end;
+	int	i;
+
+	start = 0;
+	end = sv.time + sv.frametime;
+
+	if( numdrops < 24 )
+	{
+		while( numdrops > numbackup )
+		{
+			start += cl->lastcmd.msec / 1000.0;
+			numdrops--;
+		}
+
+		while( numdrops > 0 )
+		{
+			start += ucmd[numdrops + newcmds - 1].msec / 1000.0;
+			numdrops--;
+		}
+	}
+
+	for( i = newcmds - 1; i >= 0; i-- )
+	{
+		start += ucmd[i].msec / 1000.0;
+	}
+
+	cl->timebase = end - start;
+}
+
+/*
+===================
 SV_FullClientUpdate
 
 Writes all update values to a bitbuf
@@ -653,6 +744,58 @@ void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg )
 }
 
 /*
+===================
+SV_ShouldUpdatePing
+
+this calls SV_CalcPing, and returns true
+if this person needs ping data.
+===================
+*/
+bool SV_ShouldUpdatePing( sv_client_t *cl )
+{
+	if( !cl->hltv_proxy )
+	{
+		SV_CalcPing( cl );
+		return cl->lastcmd.buttons & IN_SCORE;	// they are viewing the scoreboard.  Send them pings.
+	}
+
+	if( host.realtime > cl->next_checkpingtime )
+	{
+		cl->next_checkpingtime = host.realtime + 2.0;
+		return true;
+	}
+	return false;
+}
+
+/*
+===================
+SV_GetPlayerStats
+
+This function and its static vars track some of the networking
+conditions.  I haven't bothered to trace it beyond that, because
+this fucntion sucks pretty badly.
+===================
+*/
+void SV_GetPlayerStats( sv_client_t *cl, int *ping, int *packet_loss )
+{
+	static int	last_ping[MAX_CLIENTS];
+	static int	last_loss[MAX_CLIENTS];
+	int		i;
+
+	i = cl - svs.clients;
+
+	if( cl->next_checkpingtime < host.realtime )
+	{
+		cl->next_checkpingtime = host.realtime + 2.0;
+		last_ping[i] = SV_CalcPing( cl );
+		last_loss[i] = cl->packet_loss;
+	}
+
+	if( ping ) *ping = last_ping[i];
+	if( packet_loss ) *packet_loss = last_loss[i];
+}
+
+/*
 ===========
 PutClientInServer
 
@@ -697,6 +840,11 @@ void SV_PutClientInServer( edict_t *ent )
 	}
 
 	client->pViewEntity = NULL; // reset pViewEntity
+
+	// reset client times
+	client->last_cmdtime = 0.0;
+	client->last_movetime = 0.0;
+	client->next_movetime = 0.0;
 
 	if( !client->fakeclient )
 	{
@@ -1153,13 +1301,16 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	// rate command
 	val = Info_ValueForKey( cl->userinfo, "rate" );
 	if( com.strlen( val ))
-		cl->rate = bound ( 100, com.atoi( val ), 15000 );
-	else cl->rate = 5000;
+		cl->netchan.rate = bound( MIN_RATE, com.atoi( val ), MAX_RATE );
+	else cl->netchan.rate = DEFAULT_RATE;
 	
 	// msg command
 	val = Info_ValueForKey( cl->userinfo, "msg" );
 	if( com.strlen( val ))
 		cl->messagelevel = com.atoi( val );
+
+	cl->local_weapons = com.atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) ? true : false;
+	cl->lag_compensation = com.atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )) ? true : false;
 
 	if( SV_IsValidEdict( ent ))
 	{
@@ -1300,23 +1451,12 @@ each of the backup packets.
 */
 static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 {
+	int	key, size;
 	int	checksum1, checksum2;
-	int	key, lastframe, net_drop, size;
 	usercmd_t	oldest, oldcmd, newcmd, nulcmd;
 
 	key = BF_GetNumBytesRead( msg );
 	checksum1 = BF_ReadByte( msg );
-	lastframe = BF_ReadLong( msg );
-
-	if( lastframe != cl->lastframe )
-	{
-		cl->lastframe = lastframe;
-		if( cl->lastframe > 0 )
-		{
-			client_frame_t *frame = &cl->frames[cl->lastframe & SV_UPDATE_MASK];
-			frame->latency = host.realtime - frame->senttime;
-		}
-	}
 
 	cl->packet_loss = SV_CalcPacketLoss( cl );
 
@@ -1327,7 +1467,7 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 	if( cl->state != cs_spawned )
 	{
-		cl->lastframe = -1;
+		cl->delta_sequence = -1;
 		return;
 	}
 
@@ -1342,29 +1482,151 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 	if( !sv.paused )
 	{
-		SV_PreRunCmd( cl, &newcmd );	// get random_seed from newcmd
-
-		net_drop = cl->netchan.dropped;
-		cl->netchan.dropped = 0;	// reset counter
+		SV_PreRunCmd( cl, &newcmd, cl->random_seed );	// get random_seed from newcmd
 
 		if( net_drop < 20 )
 		{
 			while( net_drop > 2 )
 			{
-				SV_RunCmd( cl, &cl->lastcmd );
+				SV_RunCmd( cl, &cl->lastcmd, cl->random_seed );
 				net_drop--;
 			}
 
-			if( net_drop > 1 ) SV_RunCmd( cl, &oldest );
-			if( net_drop > 0 ) SV_RunCmd( cl, &oldcmd );
+			if( net_drop > 1 ) SV_RunCmd( cl, &oldest, cl->random_seed );
+			if( net_drop > 0 ) SV_RunCmd( cl, &oldcmd, cl->random_seed );
 
 		}
-		SV_RunCmd( cl, &newcmd );
+		SV_RunCmd( cl, &newcmd, cl->random_seed );
 		SV_PostRunCmd( cl );
 	}
 
 	cl->lastcmd = newcmd;
 	cl->lastcmd.buttons = 0; // avoid multiple fires on lag
+}
+
+static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
+{
+	client_frame_t	*frame;
+	int		key, size, checksum1, checksum2;
+	int		i, numbackup, newcmds, numcmds;
+	usercmd_t		nullcmd, *from;
+	usercmd_t		cmds[32], *to;
+	edict_t		*player;
+
+	numbackup = 2;
+	player = cl->edict;
+
+	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];
+	Mem_Set( &nullcmd, 0, sizeof( usercmd_t ));
+
+	key = BF_GetRealBytesRead( msg );
+	checksum1 = BF_ReadByte( msg );
+	cl->packet_loss = BF_ReadByte( msg );
+
+	numbackup = BF_ReadByte( msg );
+	newcmds = BF_ReadByte( msg );
+
+	numcmds = numbackup + newcmds;
+	net_drop = net_drop + 1 - newcmds;
+
+	if( numcmds < 0 || numcmds > 28 )
+	{
+		MsgDev( D_ERROR, "%s sending too many commands %i\n", cl->name, numcmds );
+		SV_DropClient( cl );
+		return;
+	}
+
+	from = &nullcmd;	// first cmd are starting from null-comressed usercmd_t
+
+	for( i = numcmds - 1; i >= 0; i-- )
+	{
+		to = &cmds[i];
+		MSG_ReadDeltaUsercmd( msg, from, to );
+		from = to; // get new baseline
+	}
+
+	if( cl->state != cs_spawned )
+	{
+		cl->delta_sequence = -1;
+		return;
+	}
+
+	// if the checksum fails, ignore the rest of the packet
+	size = BF_GetRealBytesRead( msg ) - key - 1;
+	checksum2 = CRC_Sequence( msg->pData + key + 1, size, cl->netchan.incoming_sequence );
+
+	if( checksum2 != checksum1 )
+	{
+		MsgDev( D_ERROR, "SV_UserMove: failed command checksum for %s (%d != %d)\n", cl->name, checksum2, checksum1 );
+		return;
+	}
+
+	// check for pause or frozen
+	if( sv.paused || sv.loadgame || !CL_IsInGame() || ( player->v.flags & FL_FROZEN ))
+	{
+		for( i = 0; i < newcmds; i++ )
+		{
+			cmds[i].msec = 0;
+			cmds[i].forwardmove = 0;
+			cmds[i].sidemove = 0;
+			cmds[i].upmove = 0;
+			cmds[i].buttons = 0;
+
+			if( player->v.flags & FL_FROZEN )
+				cmds[i].impulse = 0;
+
+			VectorCopy( cmds[i].viewangles, player->v.v_angle );
+		}
+		net_drop = 0;
+	}
+	else
+	{
+		VectorCopy( cmds[0].viewangles, player->v.v_angle );
+	}
+
+	player->v.button = cmds[0].buttons;
+	player->v.light_level = cmds[0].lightlevel;
+
+	SV_EstablishTimeBase( cl, cmds, net_drop, numbackup, newcmds );
+
+	if( net_drop < 24 )
+	{
+
+		while( net_drop > numbackup )
+		{
+			SV_PreRunCmd( cl, &cl->lastcmd, 0 );
+			SV_RunCmd( cl, &cl->lastcmd, 0 );
+			SV_PostRunCmd( cl );
+			net_drop--;
+		}
+
+		while( net_drop > 0 )
+		{
+			i = net_drop + newcmds - 1;
+			SV_PreRunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
+			SV_RunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
+			SV_PostRunCmd( cl );
+			net_drop--;
+		}
+	}
+
+	for( i = newcmds - 1; i >= 0; i-- )
+	{
+		SV_PreRunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
+		SV_RunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
+		SV_PostRunCmd( cl );
+	}
+
+	cl->lastcmd = cmds[0];
+	cl->lastcmd.buttons = 0; // avoid multiple fires on lag
+
+	// adjust latency time by 1/2 last client frame since
+	// the message probably arrived 1/2 through client's frame loop
+	frame->latency -= cl->lastcmd.msec * 0.5f / 1000.0f;
+	frame->latency = max( 0.0f, frame->latency );
+
+	if( player->v.animtime > sv.time + sv.frametime )
+		player->v.animtime = sv.time + sv.frametime;
 }
 
 /*
@@ -1376,19 +1638,33 @@ Parse a client packet
 */
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 {
-	int	c, stringCmdCount = 0;
-	bool	move_issued = false;
-	char	*s;
+	int		c, stringCmdCount = 0;
+	bool		move_issued = false;
+	client_frame_t	*frame;
+	char		*s;
 
-	// make sure the reply sequence number matches the incoming sequence number 
-	if( cl->netchan.incoming_sequence >= cl->netchan.outgoing_sequence )
-		cl->netchan.outgoing_sequence = cl->netchan.incoming_sequence;
-	else cl->send_message = false; // don't reply, sequences have slipped	
+	// calc ping time
+	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];
 
-	// save time for ping calculations
-	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].senttime = host.realtime;
-	cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK].latency = -1.0f;
-		
+	// raw ping doesn't factor in message interval, either
+	frame->raw_ping = host.realtime - frame->senttime;
+
+	// on first frame ( no senttime ) don't skew ping
+	if( frame->senttime == 0.0f )
+	{
+		frame->latency = 0.0f;
+		frame->raw_ping = 0.0f;
+	}
+
+	// don't skew ping based on signon stuff either
+	if(( host.realtime - cl->lastconnect ) < 2.0f && ( frame->latency > 0.0 ))
+	{
+		frame->latency = 0.0f;
+		frame->raw_ping = 0.0f;
+	}
+
+	cl->delta_sequence = -1; // no delta unless requested
+				
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )
 	{
@@ -1412,10 +1688,14 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 		case clc_userinfo:
 			SV_UserinfoChanged( cl, BF_ReadString( msg ));
 			break;
+		case clc_delta:
+			cl->delta_sequence = BF_ReadByte( msg );
+			break;
 		case clc_move:
 			if( move_issued ) return; // someone is trying to cheat...
 			move_issued = true;
-			SV_ReadClientMove( cl, msg );
+//			SV_ReadClientMove( cl, msg );
+			SV_ParseClientMove( cl, msg );
 			break;
 		case clc_stringcmd:	
 			s = BF_ReadString( msg );

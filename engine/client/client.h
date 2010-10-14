@@ -29,24 +29,23 @@
 //=============================================================================
 typedef struct frame_s
 {
+	// received from server
+	double		receivedtime;	// time message was received, or -1
+	double		latency;
+	double		time;		// server timestamp
+
+	clientdata_t	clientdata;	// message received that reflects performing
+	weapon_data_t	weapondata[32];
+	packet_entities_t	entities;
+
 	bool		valid;		// cleared if delta parsing was invalid
-	int		serverframe;
-	int		deltaframe;
-	int		num_entities;
-	int		parse_entities;	// non-masked index into cl_parse_entities array
-	clientdata_t        cd;		// current client data
 } frame_t;
 
-#define CMD_BACKUP		64		// allow a lot of command backups for very fast systems
+#define CMD_BACKUP		MULTIPLAYER_BACKUP	// allow a lot of command backups for very fast systems
 #define CMD_MASK		(CMD_BACKUP - 1)
 
 #define CL_UPDATE_MASK	(CL_UPDATE_BACKUP - 1)
 extern int CL_UPDATE_BACKUP;
-
-// the cl_parse_entities must be large enough to hold CL_UPDATE_BACKUP frames of
-// entities, so that when a delta compressed message arives from the server
-// it can be un-deltad from the original 
-#define MAX_PARSE_ENTITIES	2048
 
 // the client_t structure is wiped completely at every
 // server map change
@@ -54,24 +53,37 @@ typedef struct
 {
 	int		timeoutcount;
 
+	int		servercount;		// server identification for prespawns
+	int		validsequence;		// this is the sequence number of the last good
+						// world snapshot/update we got.  If this is 0, we can't
+						// render a frame yet
+	int		parsecount;		// server message counter
+	int		parsecountmod;		// modulo with network window
+	double		parsecounttime;		// timestamp of parse
+									
 	bool		video_prepped;		// false if on new level or new ref dll
 	bool		audio_prepped;		// false if on new level or new snd dll
 	bool		force_refdef;		// vid has changed, so we can't use a paused refdef
-	int		parse_entities;		// index (not anded off) into cl_parse_entities[]
 
-	usercmd_t		cmds[CMD_BACKUP];		// each mesage will send several old cmds
+	int		delta_sequence;		// acknowledged sequence number
+
+	double		mtime[2];			// the timestamp of the last two messages
+
+
+	int		last_incoming_sequence;
+
+	bool		force_send_usercmd;
 
 	frame_t		frame;			// received from server
-	frame_t		*oldframe;		// previous frame to lerping from
 	int		surpressCount;		// number of messages rate supressed
-	frame_t		*frames;			// alloced on svc_serverdata
+	frame_t		frames[MULTIPLAYER_BACKUP];	// alloced on svc_serverdata
+	usercmd_t		cmds[MULTIPLAYER_BACKUP];	// each mesage will send several old cmds
 
 	double		time;			// this is the time value that the client
 						// is rendering at.  always <= cls.realtime
 						// a lerp point for other data
 	double		oldtime;			// previous cl.time, time-oldtime is used
 						// to decay light values and smooth step ups
-	double		mtime[2];			// the timestamp of the last two messages
 
 	int		render_flags;		// clearing at end of frame
 	float		lerpFrac;			// interpolation value
@@ -93,10 +105,8 @@ typedef struct
 	// server state information
 	int		playernum;
 	int		maxclients;
-	int		servercount;			// server identification for prespawns
 	int		movemessages;
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
-	entity_state_t	entity_curstates[MAX_PARSE_ENTITIES];	// FIXME: this is must match with max_edicts ?
 
 	model_t		*worldmodel;			// pointer to world
 
@@ -291,6 +301,12 @@ typedef struct
 	int		serverProtocol;		// in case we are doing some kind of version hack
 	int		challenge;		// from the server to use for connecting
 
+	float		packet_loss;
+	double		packet_loss_recalc_time;
+
+	float		nextcmdtime;		// when can we send the next command packet?                
+	int		lastoutgoingcommand;	// sequence number of last outgoing command
+
 	// internal shaders
 	shader_t		fillShader;		// used for emulate FillRGBA to avoid wrong draw-sort
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
@@ -477,9 +493,10 @@ bool CL_IsPredicted( void );
 //
 // cl_frame.c
 //
-void CL_ParseFrame( sizebuf_t *msg );
+void CL_ParsePacketEntities( sizebuf_t *msg, bool delta );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
 bool CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
+void CL_ClearFrames( void );
 
 //
 // cl_tent.c
