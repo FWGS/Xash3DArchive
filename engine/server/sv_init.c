@@ -417,6 +417,8 @@ void SV_InitGame( void )
 
 	svs.spawncount = Com_RandomLong( 0, 65535 );
 	svs.clients = Z_Malloc( sizeof( sv_client_t ) * sv_maxclients->integer );
+	svs.num_client_entities = sv_maxclients->integer * SV_UPDATE_BACKUP * 64;
+	svs.packet_entities = Z_Malloc( sizeof( entity_state_t ) * svs.num_client_entities );
 	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
 
 	// client frames will be allocated in SV_DirectConnect

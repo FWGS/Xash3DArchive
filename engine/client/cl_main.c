@@ -723,7 +723,6 @@ void CL_ClearState( void )
 	S_StopAllSounds ();
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
-	CL_ClearFrames ();
 
 	if( clgame.hInstance ) clgame.dllFuncs.pfnReset();
 

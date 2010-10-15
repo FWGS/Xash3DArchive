@@ -8,6 +8,9 @@
 #include "engine_api.h"	// network message length
 #include "byteorder.h"
 
+// This is the packet payload without any header bytes (which are attached for actual sending)
+#define NET_MAX_PAYLOAD	80000
+
 #define PORT_ANY		-1
 #define PORT_CLIENT		27901
 #define PORT_SERVER		27910
@@ -67,7 +70,7 @@ dll_info_t winsock_dll = { "wsock32.dll", winsock_funcs, NULL, NULL, NULL, false
 
 typedef struct
 {
-	byte	data[MAX_MSGLEN];
+	byte	data[NET_MAX_PAYLOAD];
 	int	datalen;
 } loopmsg_t;
 
@@ -411,7 +414,7 @@ bool NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
 	if( !net_socket ) return false;
 
 	addr_len = sizeof( addr );
-	ret = pRecvFrom( net_socket, data, MAX_MSGLEN, 0, (struct sockaddr *)&addr, &addr_len );
+	ret = pRecvFrom( net_socket, data, NET_MAX_PAYLOAD, 0, (struct sockaddr *)&addr, &addr_len );
 
 	NET_SockadrToNetadr( &addr, from );
 
@@ -427,7 +430,7 @@ bool NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
 		return false;
 	}
 
-	if( ret == MAX_MSGLEN )
+	if( ret == NET_MAX_PAYLOAD )
 	{
 		MsgDev( D_ERROR, "NET_GetPacket: oversize packet from %s\n", NET_AdrToString( *from ));
 		return false;

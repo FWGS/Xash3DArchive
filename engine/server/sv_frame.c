@@ -43,54 +43,6 @@ static int SV_EntityNumbers( const void *a, const void *b )
 }
 
 /*
-=======================
-SV_ClearPacketEntities
-=======================
-*/
-void SV_ClearPacketEntities( client_frame_t *frame )
-{
-	packet_entities_t	*packet;
-
-	ASSERT( frame != NULL );
-
-	packet = &frame->entities;
-
-	if( packet )
-	{
-		if( packet->entities != NULL )
-			Mem_Free( packet->entities );
-
-		packet->num_entities = 0;
-		packet->max_entities = 0;
-		packet->entities = NULL;
-	}
-}
-
-/*
-=======================
-SV_AllocPacketEntities
-=======================
-*/
-void SV_AllocPacketEntities( client_frame_t *frame, int count )
-{
-	packet_entities_t	*packet;
-
-	ASSERT( frame != NULL );
-
-	packet = &frame->entities;
-	if( count < 1 ) count = 1;
-
-	// check if new frame has more entities than previous
-	if( packet->max_entities < count )
-	{
-		SV_ClearPacketEntities( frame );
-		packet->entities = Mem_Alloc( svgame.mempool, sizeof( entity_state_t ) * count );
-		packet->max_entities = count;
-	}
-	packet->num_entities = count;
-}
-
-/*
 ================
 SV_ClearFrames
 
@@ -99,16 +51,8 @@ free client frames memory
 */
 void SV_ClearFrames( client_frame_t **frames )
 {
-	client_frame_t	*frame;
-	int		i;
-
 	if( *frames == NULL )
 		return;
-
-	for( i = 0, frame = *frames; i < SV_UPDATE_BACKUP; i++, frame++ )
-	{
-		SV_ClearPacketEntities( frame );
-	}
 
 	Mem_Free( *frames );
 	*frames = NULL;
@@ -226,48 +170,80 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message->
 =============
 */
-void SV_EmitPacketEntities( sv_client_t *cl, packet_entities_t *to, sizebuf_t *msg )
+void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 {
-	packet_entities_t	*from;
-	client_frame_t	*oldframe;
+	entity_state_t	*oldent, *newent;
 	int		oldindex, newindex;
 	int		oldnum, newnum;
-	int		oldmax;
+	int		from_num_entities;
+	client_frame_t	*from;
 
 	// this is the frame that we are going to delta update from
 	if( cl->delta_sequence != -1 )
 	{
-		oldframe = &cl->frames[cl->delta_sequence & SV_UPDATE_MASK];
-		from = &oldframe->entities;
-		oldmax = from->num_entities;
+		from = &cl->frames[cl->delta_sequence & SV_UPDATE_MASK];
+		from_num_entities = from->num_entities;
 
-		BF_WriteByte( msg, svc_deltapacketentities );
-		BF_WriteWord( msg, to->num_entities );
-		BF_WriteByte( msg, cl->delta_sequence );
+		// the snapshot's entities may still have rolled off the buffer, though
+		if( from->first_entity <= svs.next_client_entities - svs.num_client_entities )
+		{
+			MsgDev( D_WARN, "%s: delta request from out of date entities.\n", cl->name );
+
+			from = NULL;
+			from_num_entities = 0;
+
+			BF_WriteByte( msg, svc_packetentities );
+			BF_WriteWord( msg, to->num_entities );
+		}
+		else
+		{
+			BF_WriteByte( msg, svc_deltapacketentities );
+			BF_WriteWord( msg, to->num_entities );
+			BF_WriteByte( msg, cl->delta_sequence );
+		}
 	}
 	else
 	{
-		oldmax = 0;	// no delta update
 		from = NULL;
+		from_num_entities = 0;
 
 		BF_WriteByte( msg, svc_packetentities );
 		BF_WriteWord( msg, to->num_entities );
 	}
 
+	newent = NULL;
+	oldent = NULL;
 	newindex = 0;
 	oldindex = 0;
 
-	while( newindex < to->num_entities || oldindex < oldmax )
+	while( newindex < to->num_entities || oldindex < from_num_entities )
 	{
-		newnum = newindex >= to->num_entities ? MAX_ENTNUMBER : to->entities[newindex].number;
-		oldnum = oldindex >= oldmax ? MAX_ENTNUMBER : from->entities[oldindex].number;
+		if( newindex >= to->num_entities )
+		{
+			newnum = MAX_ENTNUMBER;
+		}
+		else
+		{
+			newent = &svs.packet_entities[(to->first_entity+newindex)%svs.num_client_entities];
+			newnum = newent->number;
+		}
+
+		if( oldindex >= from_num_entities )
+		{
+			oldnum = MAX_ENTNUMBER;
+		}
+		else
+		{
+			oldent = &svs.packet_entities[(from->first_entity+oldindex)%svs.num_client_entities];
+			oldnum = oldent->number;
+		}
 
 		if( newnum == oldnum )
 		{	
 			// delta update from old position
 			// because the force parm is false, this will not result
 			// in any bytes being emited if the entity has not changed at all
-			MSG_WriteDeltaEntity( &from->entities[oldindex], &to->entities[newindex], msg, false, sv_time( ));
+			MSG_WriteDeltaEntity( oldent, newent, msg, false, sv_time( ));
 			oldindex++;
 			newindex++;
 			continue;
@@ -276,7 +252,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, packet_entities_t *to, sizebuf_t *m
 		if( newnum < oldnum )
 		{	
 			// this is a new entity, send it from the baseline
-			MSG_WriteDeltaEntity( &svs.baselines[newnum], &to->entities[newindex], msg, true, sv_time( ));
+			MSG_WriteDeltaEntity( &svs.baselines[newnum], newent, msg, true, sv_time( ));
 			newindex++;
 			continue;
 		}
@@ -285,12 +261,12 @@ void SV_EmitPacketEntities( sv_client_t *cl, packet_entities_t *to, sizebuf_t *m
 		{	
 			bool	force;
 
-			if( EDICT_NUM( from->entities[oldindex].number )->free )
+			if( EDICT_NUM( oldent->number )->free )
 				force = true;	// entity completely removed from server
 			else force = false;		// just removed from delta-message 
 
 			// remove from message
-			MSG_WriteDeltaEntity( &from->entities[oldindex], NULL, msg, force, sv_time( ));
+			MSG_WriteDeltaEntity( oldent, NULL, msg, force, sv_time( ));
 			oldindex++;
 			continue;
 		}
@@ -305,7 +281,7 @@ SV_EmitEvents
 
 =============
 */
-static void SV_EmitEvents( sv_client_t *cl, packet_entities_t *to, sizebuf_t *msg )
+static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 {
 	int		i, ev;
 	event_state_t	*es;
@@ -482,15 +458,14 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 	edict_t		*clent;
 	edict_t		*viewent;	// may be NULL
 	client_frame_t	*frame;
-	packet_entities_t	*packet;
+	entity_state_t	*state;
 	static sv_ents_t	frame_ents;
-	bool		send_pings;
+	int		i, send_pings;
 
 	clent = cl->edict;
 	viewent = cl->pViewEntity;	// himself or trigger_camera
 
 	frame = &cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK];
-	packet = &frame->entities;
 
 	send_pings = SV_ShouldUpdatePing( cl );
 
@@ -510,12 +485,25 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 	// of an entity being included twice.
 	qsort( frame_ents.entities, frame_ents.num_entities, sizeof( frame_ents.entities[0] ), SV_EntityNumbers );
 
-	// copy the entity states to client frame
-	SV_AllocPacketEntities( frame, frame_ents.num_entities );
-	Mem_Copy( packet->entities, frame_ents.entities, sizeof( entity_state_t ) * frame_ents.num_entities );
+	// copy the entity states out
+	frame->num_entities = 0;
+	frame->first_entity = svs.next_client_entities;
 
-	SV_EmitPacketEntities( cl, packet, msg );
-	SV_EmitEvents( cl, packet, msg );
+	for( i = 0; i < frame_ents.num_entities; i++ )
+	{
+		// add it to the circular packet_entities array
+		state = &svs.packet_entities[svs.next_client_entities % svs.num_client_entities];
+		*state = frame_ents.entities[i];
+		svs.next_client_entities++;
+
+		// this should never hit, map should always be restarted first in SV_Frame
+		if( svs.next_client_entities >= 0x7FFFFFFE )
+			Host_Error( "svs.next_client_entities wrapped\n" );
+		frame->num_entities++;
+	}
+
+	SV_EmitPacketEntities( cl, frame, msg );
+	SV_EmitEvents( cl, frame, msg );
 	if( send_pings ) SV_EmitPings( msg );
 }
 

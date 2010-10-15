@@ -743,6 +743,8 @@ void CL_InitEdicts( void )
 	ASSERT( clgame.entities == NULL );
 
 	CL_UPDATE_BACKUP = ( cl.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
+	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
+	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
 
 	for( i = 0, e = clgame.entities; i < clgame.maxEntities; i++, e++ )
@@ -763,6 +765,14 @@ void CL_FreeEdicts( void )
 			CL_FreeEntity( ent );
 		}
 		Mem_Free( clgame.entities );
+	}
+
+	if( cls.packet_entities )
+	{
+		Z_Free( cls.packet_entities );
+		cls.packet_entities = NULL;
+		cls.num_client_entities = 0;
+		cls.next_client_entities = 0;
 	}
 
 	clgame.numEntities = 0;

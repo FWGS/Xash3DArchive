@@ -615,14 +615,17 @@ static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
 
 int nofind = 0;
 
-entity_state_t *SV_FindEntInPack( int index, packet_entities_t *PacksToSearch )
+entity_state_t *SV_FindEntInPack( int index, client_frame_t *frame )
 {
-	int	i;
+	entity_state_t	*state;
+	int		i;	
 
-	for( i = 0; i < PacksToSearch->max_entities; i++ )
+	for( i = 0; i < frame->num_entities; i++ )
 	{
-		if( PacksToSearch->entities[i].number == index )
-			return(&(PacksToSearch->entities[i]));
+		state = &svs.packet_entities[(frame->first_entity+i)%svs.num_client_entities];
+
+		if( state->number == index )
+			return state;
 	}
 	return NULL;
 }
@@ -644,7 +647,6 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 	int		i, j, var_C_entindex;
 	float		finalpush, lerp_msec, latency, temp, lerpFrac;
 	client_frame_t	*frame, *var_24;
-	packet_entities_t	*entities;
 	entity_state_t	*state, *var_38_FoundEntity;
 	sv_client_t	*check;
 	sv_interp_t	*lerp;
@@ -704,11 +706,10 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 	for( var_24 = NULL, i = 0; i < SV_UPDATE_BACKUP; i++, var_24 = frame )
 	{
 		frame = &cl->frames[(cl->netchan.outgoing_sequence - 1) & SV_UPDATE_MASK];
-		entities = &frame->entities;
 
-		for( j = 0; j < entities->num_entities; j++ )
+		for( j = 0; j < frame->num_entities; j++ )
 		{
-			state = &entities->entities[j];
+			state = &svs.packet_entities[(frame->first_entity+j)%svs.num_client_entities];
 
 			if( state->number <= 0 || state->number >= sv_maxclients->integer )
 				continue;
@@ -743,8 +744,6 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 		return;
 	}
 
-	entities = &frame->entities;
-
 	if( var_24 == NULL )
 	{
 		var_24 = frame;
@@ -763,9 +762,9 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 		}
 	}
 
-	for( i = 0; i < entities->num_entities; i++ )
+	for( i = 0; i < frame->num_entities; i++ )
 	{
-		state = &entities->entities[i];
+		state = &svs.packet_entities[(frame->first_entity+i)%svs.num_client_entities];
 
 		if( state->number <= 0 || state->number >= sv_maxclients->integer )
 			continue;
@@ -781,7 +780,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 		if( !lerp->active || lerp->nointerp )
 			continue;
 
-		var_38_FoundEntity = SV_FindEntInPack( state->number, &var_24->entities );
+		var_38_FoundEntity = SV_FindEntInPack( state->number, var_24 );
 
 		if( var_38_FoundEntity == NULL )
 		{

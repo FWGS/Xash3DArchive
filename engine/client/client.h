@@ -36,8 +36,10 @@ typedef struct frame_s
 
 	clientdata_t	clientdata;	// message received that reflects performing
 	weapon_data_t	weapondata[32];
-	packet_entities_t	entities;
+	int		num_entities;
+	int		first_entity;	// into the circular cl_packet_entities[]
 
+	int		delta_sequence;	// last valid sequence
 	bool		valid;		// cleared if delta parsing was invalid
 } frame_t;
 
@@ -312,6 +314,10 @@ typedef struct
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
 	shader_t		loadingBar;		// 'loading' progress bar
 	cl_font_t		creditsFont;		// shared creditsfont
+
+	int		num_client_entities;	// cl.maxclients * CL_UPDATE_BACKUP * MAX_PACKET_ENTITIES
+	int		next_client_entities;	// next client_entity to use
+	entity_state_t	*packet_entities;		// [num_client_entities]
 	
 	file_t		*download;		// file transfer from server
 	string		downloadname;
@@ -496,7 +502,6 @@ bool CL_IsPredicted( void );
 void CL_ParsePacketEntities( sizebuf_t *msg, bool delta );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
 bool CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
-void CL_ClearFrames( void );
 
 //
 // cl_tent.c

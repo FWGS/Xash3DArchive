@@ -78,19 +78,4 @@
 #define NUM_BACKUP_COMMAND_BITS	3
 #define MAX_BACKUP_COMMANDS		(1 << NUM_BACKUP_COMMAND_BITS)
 
-/*
-==============================================================
-
-DELTA-PACKET ENTITIES
-
-==============================================================
-*/
-
-typedef struct
-{
-	entity_state_t	*entities;
-	int		max_entities;	// this is a real allocated space
-	int		num_entities;
-} packet_entities_t;
-
 #endif//PROTOCOL_H

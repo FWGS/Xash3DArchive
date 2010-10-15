@@ -896,13 +896,21 @@ pfnChangeLevel
 */
 void pfnChangeLevel( const char* s1, const char* s2 )
 {
+	static uint	last_spawncount = 0;
+
 	if( !s1 || s1[0] <= ' ' ) return;
 
 	// make sure we don't issue two changelevels
-	if( svs.changelevel_next_time > sv.time )
+	if( svs.spawncount == last_spawncount )
 		return;
 
-	svs.changelevel_next_time = sv.time + 1.0f;		// rest 1 secs if failed
+	last_spawncount = svs.spawncount;
+
+	// make sure we don't issue two changelevels
+	if( svs.changelevel_next_time > host.realtime )
+		return;
+
+	svs.changelevel_next_time = host.realtime + 1.0f;		// rest 1 secs if failed
 
 	if( !s2 ) Cbuf_AddText( va( "changelevel %s\n", s1 ));	// Quake changlevel
 	else Cbuf_AddText( va( "changelevel %s %s\n", s1, s2 ));	// Half-Life changelevel

@@ -50,6 +50,8 @@ void SV_BroadcastPrintf( int level, char *fmt, ... )
 	sv_client_t	*cl;
 	int		i;
 
+	if( !sv.state ) return;
+
 	va_start( argptr, fmt );
 	com.vsprintf( string, fmt, argptr );
 	va_end( argptr );

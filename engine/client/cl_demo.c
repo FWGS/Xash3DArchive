@@ -166,15 +166,15 @@ void CL_WriteDemoHeader( const char *name )
 		player_info_t	*pi;
 
 		BF_WriteByte( &buf, svc_updateuserinfo );
-		BF_WriteByte( &buf, i );
+		BF_WriteUBitLong( &buf, i, MAX_CLIENT_BITS );
 		pi = &cl.players[i];
 
 		if( pi->name[0] )
 		{
-			BF_WriteByte( &buf, true );
+			BF_WriteOneBit( &buf, 1 );
 			BF_WriteString( &buf, pi->userinfo );
 		}
-		else BF_WriteByte( &buf, false );
+		else BF_WriteOneBit( &buf, 0 );
 	}
 
 	MSG_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );

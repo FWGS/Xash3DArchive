@@ -109,7 +109,8 @@ typedef struct
 
 	clientdata_t	clientdata;
 	weapon_data_t	weapondata[32];
-	packet_entities_t	entities;
+	int  		num_entities;
+	int  		first_entity;		// into the circular sv_packet_entities[]
 } client_frame_t;
 
 typedef struct sv_client_s
@@ -293,7 +294,7 @@ typedef struct
 	sv_client_t	*currentPlayer;		// current client who network message sending on
 	int		num_client_entities;	// sv_maxclients->integer*UPDATE_BACKUP*MAX_PACKET_ENTITIES
 	int		next_client_entities;	// next client_entity to use
-	entity_state_t	*client_entities;		// [num_client_entities]
+	entity_state_t	*packet_entities;		// [num_client_entities]
 	entity_state_t	*baselines;		// [GI->max_edicts]
 
 	double		last_heartbeat;

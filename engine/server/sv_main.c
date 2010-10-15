@@ -706,8 +706,25 @@ void SV_Shutdown( bool reconnect )
 	Host_SetServerState( sv.state );
 
 	// free server static data
-	if( svs.clients ) Z_Free( svs.clients );
-	if( svs.baselines ) Z_Free( svs.baselines );
+	if( svs.clients )
+	{
+		Z_Free( svs.clients );
+		svs.clients = NULL;
+	}
 
-	Mem_Set( &svs, 0, sizeof( svs ));
+	if( svs.baselines )
+	{
+		Z_Free( svs.baselines );
+		svs.baselines = NULL;
+	}
+
+	if( svs.packet_entities )
+	{
+		Z_Free( svs.packet_entities );
+		svs.packet_entities = NULL;
+		svs.num_client_entities = 0;
+		svs.next_client_entities = 0;
+	}
+
+	svs.initialized = false;
 }
