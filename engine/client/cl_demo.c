@@ -8,6 +8,62 @@
 #include "byteorder.h"
 #include "net_encode.h"
 
+#define dem_cmd	0
+#define dem_read	1
+#define dem_set	2
+
+/*
+====================
+CL_WriteDemoCmd
+
+Writes the current user cmd
+====================
+*/
+void CL_WriteDemoCmd( usercmd_t *pcmd )
+{
+	int	i;
+	float	fl;
+	usercmd_t cmd;
+	byte	c;
+
+	fl = LittleFloat(( float )host.realtime );
+	FS_Write( cls.demofile, &fl, sizeof( fl ));
+
+	c = dem_cmd;
+	FS_Write( cls.demofile, &c, sizeof( c ));
+
+	// correct for byte order, bytes don't matter
+	cmd = *pcmd;
+
+	cmd.lerp_msec = LittleShort( cmd.lerp_msec );
+	cmd.msec = LittleLong( cmd.msec );
+
+	// byte order stuff
+	for( i = 0; i < 3; i++ )
+		cmd.viewangles[i] = LittleFloat( cmd.viewangles[i] );
+
+	cmd.forwardmove = LittleFloat( cmd.forwardmove );
+	cmd.sidemove = LittleFloat( cmd.sidemove );
+	cmd.upmove = LittleFloat( cmd.upmove );
+	cmd.lightlevel = LittleLong( cmd.lightlevel );
+	cmd.buttons = LittleLong( cmd.buttons );
+	cmd.impulse = LittleLong( cmd.impulse );
+	cmd.weaponselect = LittleLong( cmd.weaponselect );
+	cmd.impact_index = LittleLong( cmd.impact_index );
+
+	cmd.impact_position[0] = LittleFloat( cmd.impact_position[0] );
+	cmd.impact_position[1] = LittleFloat( cmd.impact_position[1] );
+	cmd.impact_position[2] = LittleFloat( cmd.impact_position[2] );	
+
+	FS_Write( cls.demofile, &cmd, sizeof( cmd ));
+
+	for( i = 0; i < 3; i++ )
+	{
+		fl = LittleFloat( cl.refdef.cl_viewangles[i] );
+		FS_Write( cls.demofile, &fl, sizeof( fl ));
+	}
+}
+
 /*
 ====================
 CL_WriteDemoMessage

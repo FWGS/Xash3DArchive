@@ -986,6 +986,25 @@ void CL_PrepSound( void )
 	S_EndRegistration();
 	CL_RunBackgroundTrack();
 
+	if( host.soundList )
+	{
+		// need to reapply all ambient sounds after restarting
+		for( i = 0; i < host.numsounds; i++)
+		{
+			soundlist_t *entry = &host.soundList[i];
+			if( entry->looping && entry->entnum != -1 )
+			{
+				MsgDev( D_NOTE, "Restarting sound %s...\n", entry->name );
+				S_AmbientSound( entry->origin, entry->entnum, entry->entchannel,
+				S_RegisterSound( entry->name ), entry->volume, entry->attenuation,
+				entry->pitch, 0 );
+			}
+		}
+	}
+
+	host.soundList = NULL; 
+	host.numsounds = 0;
+
 	cl.audio_prepped = true;
 }
 
@@ -1057,6 +1076,25 @@ void CL_PrepVideo( void )
 
 	host.decalList = NULL; 
 	host.numdecals = 0;
+
+	if( host.soundList )
+	{
+		// need to reapply all ambient sounds after restarting
+		for( i = 0; i < host.numsounds; i++ )
+		{
+			soundlist_t *entry = &host.soundList[i];
+			if( entry->looping && entry->entnum != -1 )
+			{
+				MsgDev( D_NOTE, "Restarting sound %s...\n", entry->name );
+				S_AmbientSound( entry->origin, entry->entnum, entry->entchannel,
+				S_RegisterSound( entry->name ), entry->volume, entry->attenuation,
+				entry->pitch, 0 );
+			}
+		}
+	}
+
+	host.soundList = NULL; 
+	host.numsounds = 0;
 	
 	if( host.developer <= 2 )
 		Con_ClearNotify(); // clear any lines of console text

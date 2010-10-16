@@ -202,8 +202,6 @@ void Host_CheckChanges( void )
 
 	if( host_video->modified || host_audio->modified )
 	{
-		S_StopAllSounds();	// don't let them loop during the restart
-
 		if( host_video->modified ) CL_ForceVid();
 		if( host_audio->modified ) CL_ForceSnd();
 	}
@@ -217,6 +215,15 @@ void Host_CheckChanges( void )
 		host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_DECALS );
 		host.numdecals = CL_CreateDecalList( host.decalList, false );
 	}
+
+	if(( host_video->modified || host_audio->modified ) && CL_Active( ))
+	{
+		host.soundList = (soundlist_t *)Z_Malloc( sizeof( soundlist_t ) * 128 );
+		host.numsounds = S_GetCurrentStaticSounds( host.soundList, 128, CHAN_AUTO );
+		Msg( "Total stored %i sounds\n", host.numsounds );
+	}
+
+	S_StopAllSounds();	// don't let them loop during the restart
 
 	// restart or change renderer
 	while( host_video->modified )
@@ -443,6 +450,35 @@ void Host_EventLoop( void )
 			return;
 		}
 		if( ev.data ) Mem_Free( ev.data );
+	}
+}
+
+/*
+===================
+Host_RestartAmbientSounds
+
+Restarts the sounds to let demo writing them
+===================
+*/
+void Host_RestartAmbientSounds( void )
+{
+	soundlist_t	soundInfo[100];
+	int		i, nSounds;
+
+	if( !SV_Active( )) return;
+
+	nSounds = S_GetCurrentStaticSounds( soundInfo, 100, CHAN_STATIC );
+	
+	for( i = 0; i < nSounds; i++)
+	{
+		if( soundInfo[i].looping && soundInfo[i].entnum != -1 )
+		{
+			S_StopSound( soundInfo[i].entnum, soundInfo[i].entchannel, soundInfo[i].name );
+
+			// FIXME: replace with SV_StartAmbientSound
+			SV_StartSound( pfnPEntityOfEntIndex( soundInfo[i].entnum ), CHAN_STATIC,
+			soundInfo[i].name, soundInfo[i].volume, soundInfo[i].attenuation, 0, soundInfo[i].pitch );
+		}
 	}
 }
 

@@ -181,7 +181,7 @@ void SNDDMA_Submit( void );
 
 //====================================================================
 
-#define MAX_DYNAMIC_CHANNELS	24
+#define MAX_DYNAMIC_CHANNELS	28
 #define MAX_CHANNELS	128
 #define MAX_RAW_SAMPLES	8192
 
@@ -250,6 +250,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, 
 void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags );
 channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx );
 channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx );
+int S_GetCurrentStaticSounds( soundlist_t *pout, int size, int entchannel );
 void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
 void S_StartLocalSound( const char *name );
 sfx_t *S_GetSfxByHandle( sound_t handle );

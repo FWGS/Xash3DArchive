@@ -147,6 +147,9 @@ typedef struct host_parm_s
 
 	decallist_t	*decalList;	// used for keep decals, when renderer is restarted or changed
 	int		numdecals;
+
+	soundlist_t	*soundList;	// used for keep ambient sounds, when renderer or sound is restarted
+	int		numsounds;
 } host_parm_t;
 
 extern host_parm_t	host;
@@ -220,6 +223,7 @@ float pfnRandomFloat( float flLow, float flHigh );
 void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc );
 void pfnDelCommand( const char *cmd_name );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );
+edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 void pfnGetGameDir( char *szGetGameDir );
 const char *pfnCmd_Args( void );
 const char *pfnCmd_Argv( int argc );
@@ -284,6 +288,7 @@ bool CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
 void CL_StudioEvent( struct mstudioevent_s *event, struct cl_entity_s *ent );
 bool CL_GetComment( const char *demoname, char *comment );
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
+void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );

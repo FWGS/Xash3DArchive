@@ -51,4 +51,10 @@ _inline sound_t S_RegisterSound( const char *name )
 	return se->RegisterSound( name );
 }
 
+_inline int S_GetCurrentStaticSounds( soundlist_t *pout, int size, int entchannel )
+{
+	if( !se ) return 0;
+	return se->GetCurrentStaticSounds( pout, size, entchannel );
+}
+
 #endif//COM_EXPORT_H

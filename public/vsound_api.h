@@ -7,6 +7,18 @@
 
 typedef int	sound_t;
 
+typedef struct
+{
+	string	name;
+	int	entnum;
+	int	entchannel;
+	vec3_t	origin;
+	float	volume;
+	float	attenuation;
+	bool	looping;
+	int	pitch;
+} soundlist_t;
+
 // sound flags
 #define SND_VOLUME			(1<<0)	// a scaled byte
 #define SND_ATTENUATION		(1<<1)	// a byte
@@ -43,6 +55,7 @@ typedef struct vsound_exp_s
 	void (*StaticSound)( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, float attn, int pitch, int flags );
 	void (*StreamRawSamples)( int samples, int rate, int width, int channels, const byte *data );
 	void (*FadeClientVolume)( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
+	int  (*GetCurrentStaticSounds)( soundlist_t *pout, int size, int entchannel );
 	void (*StartBackgroundTrack)( const char *introTrack, const char *loopTrack );
 	void (*StopBackgroundTrack)( void );
 

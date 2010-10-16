@@ -1017,7 +1017,10 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 			if( clip->passedict->v.owner == touch )
 				continue;	// don't clip against owner
 			if( clip->passedict->v.solid == SOLID_BBOX && touch->v.solid != SOLID_BSP )
-				traceHitbox = true;
+			{
+				if( CM_GetModelType( clip->passedict->v.modelindex ) == mod_studio )
+					traceHitbox = true;
+			}
 		}
 
 		// select a properly trace method

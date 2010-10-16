@@ -620,6 +620,39 @@ void S_StartLocalSound(  const char *name )
 
 /*
 ==================
+S_GetCurrentStaticSounds
+
+grab all static sounds playing at current channel
+==================
+*/
+int S_GetCurrentStaticSounds( soundlist_t *pout, int size, int entchannel )
+{
+	int	sounds_left = size;
+	int	i;
+
+	for( i = MAX_DYNAMIC_CHANNELS; i < total_channels && sounds_left; i++ )
+	{
+		if(( !entchannel || channels[i].entchannel == entchannel ) && channels[i].sfx )
+		{
+			com.strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
+			pout->entnum = channels[i].entnum;
+			pout->entchannel = channels[i].entchannel;
+			VectorCopy( channels[i].origin, pout->origin );
+			pout->volume = (float)channels[i].master_vol / 255.0f;
+			pout->attenuation = channels[i].dist_mult * SND_CLIP_DISTANCE;
+			pout->looping = ( channels[i].use_loop && channels[i].sfx->cache->loopStart != -1 );
+			pout->pitch = channels[i].basePitch;
+
+			sounds_left--;
+			pout++;
+		}
+	}
+
+	return ( size - sounds_left );
+}
+
+/*
+==================
 S_ClearBuffer
 ==================
 */
