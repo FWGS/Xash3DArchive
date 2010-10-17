@@ -172,10 +172,10 @@ void SV_DeactivateServer( void )
 
 	if( !svs.initialized ) return;
 
-	SV_FreeEdicts ();
-
 	if( sv.state == ss_dead ) return;
 	sv.state = ss_dead;
+
+	SV_FreeEdicts ();
 
 	if( svgame.globals->pStringBase )
 		Mem_EmptyPool( svgame.stringspool );

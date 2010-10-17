@@ -639,6 +639,9 @@ public:
 	Vector	m_vecFadeColor;
 	float	m_flFadeAlpha;
 	BOOL	m_bModulate;
+
+	// v_dark issues
+	BOOL	v_dark;
 		
 	// error sprite
 	int m_HUD_error;

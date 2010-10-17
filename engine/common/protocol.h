@@ -21,14 +21,14 @@
 #define svc_setangle		10	// [angle angle] set the view angle to this absolute value
 #define svc_serverdata		11	// [long] protocol ...
 #define svc_restore			12	// restore saved game on the client
-#define svc_frame			13	// begin a new server frame
+#define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
 #define svc_usermessage		14	// [string][byte] REG_USER_MSG stuff
 #define svc_clientdata		15	// [...]
 #define svc_download		16	// [short] size [size bytes]
 #define svc_updatepings		17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
-#define svc_ambientsound		19	// <see code>
-#define svc_spawnstatic		20	// NOT IMPLEMENTED
+#define svc_frame			19	// <OBSOLETE>
+#define svc_spawnstatic		20	// creates a static client entity
 #define svc_crosshairangle		21	// [short][short][short]
 #define svc_spawnbaseline		22	// <see code>
 #define svc_temp_entity		23	// <variable sized>
@@ -37,7 +37,7 @@
 #define svc_centerprint		26	// [string] to put in center of the screen
 #define svc_event			27	// playback event queue
 #define svc_event_reliable		28	// playback event directly from message, not queue
-#define svc_updateuserinfo		29	// [byte] playernum, [string] userinfo
+#define svc_ambientsound		29	// <see code>
 #define svc_intermission		30	// empty message (event)
 #define svc_soundfade		31	// [float*4] sound fade parms
 #define svc_cdtrack			32	// [byte] track [byte] looptrack

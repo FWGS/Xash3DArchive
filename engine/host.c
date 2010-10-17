@@ -219,7 +219,7 @@ void Host_CheckChanges( void )
 	if(( host_video->modified || host_audio->modified ) && CL_Active( ))
 	{
 		host.soundList = (soundlist_t *)Z_Malloc( sizeof( soundlist_t ) * 128 );
-		host.numsounds = S_GetCurrentStaticSounds( host.soundList, 128, CHAN_AUTO );
+		host.numsounds = S_GetCurrentStaticSounds( host.soundList, 128, CHAN_STATIC );
 		Msg( "Total stored %i sounds\n", host.numsounds );
 	}
 

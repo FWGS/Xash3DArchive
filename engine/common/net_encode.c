@@ -697,7 +697,7 @@ void Delta_ParseTable( script_t *delta_script, delta_info_t *dt, const char *enc
 	if( !com.stricmp( encodeDll, "none" ))
 		dt->customEncode = CUSTOM_NONE;
 	else if( !com.stricmp( encodeDll, "gamedll" ))
-		dt->customEncode = CUSTOM_SEREVR_ENCODE;
+		dt->customEncode = CUSTOM_SERVER_ENCODE;
 	else if( !com.stricmp( encodeDll, "clientdll" ))
 		dt->customEncode = CUSTOM_CLIENT_ENCODE;
 

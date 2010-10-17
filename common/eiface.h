@@ -6,6 +6,7 @@
 #define EIFACE_H
 
 #include "cvardef.h"
+#include "custom.h"
 
 #define INTERFACE_VERSION		140	// GetEntityAPI, GetEntityAPI2
 #define NEW_DLL_FUNCTIONS_VERSION	2	// GetNewDLLFunctions	(Xash3D uses version 2)
@@ -17,9 +18,9 @@ typedef enum
 {
 	at_notice,
 	at_console,		// format: [msg]
+	at_aiconsole,		// same as at_console, but only shown if developer level is 2!
 	at_warning,		// format: Warning: [msg]
 	at_error,			// format: Error: [msg]
-	at_aiconsole,		// same as at_console, but only shown if developer level is 5!
 	at_logged			// server print to console ( only in multiplayer games ). (NOT IMPLEMENTED)
 } ALERT_TYPE;
 
@@ -34,9 +35,10 @@ typedef enum
 // for integrity checking of content on clients
 typedef enum
 {
-	force_exactfile,		// file on client must exactly match server's file
-	force_model_samebounds,	// for model files only, the geometry must fit in the same bbox
-	force_model_specifybounds,	// for model files only, the geometry must fit in the specified bbox
+	force_exactfile,			// file on client must exactly match server's file
+	force_model_samebounds,		// for model files only, the geometry must fit in the same bbox
+	force_model_specifybounds,		// for model files only, the geometry must fit in the specified bbox
+	force_model_specifybounds_if_avail,	// for model files only, the geometry must fit in the specified bbox (if the file is available)
 } FORCE_TYPE;
 
 typedef struct
@@ -63,16 +65,16 @@ typedef struct enginefuncs_s
 	int	(*pfnModelFrames)( int modelIndex );
 	void	(*pfnSetSize)( edict_t *e, const float *rgflMin, const float *rgflMax );
 	void	(*pfnChangeLevel)( const char* s1, const char* s2 );
-	edict_t*	(*pfnFindClientInPHS)( edict_t *pEdict );
-	edict_t*	(*pfnEntitiesInPHS)( edict_t *pplayer );
+	edict_t*	(*pfnFindClientInPHS)( edict_t *pEdict );				// was pfnGetSpawnParms
+	edict_t*	(*pfnEntitiesInPHS)( edict_t *pplayer );				// was pfnSaveSpawnParms
 	float	(*pfnVecToYaw)( const float *rgflVector );
 	void	(*pfnVecToAngles)( const float *rgflVectorIn, float *rgflVectorOut );
 	void	(*pfnMoveToOrigin)( edict_t *ent, const float *pflGoal, float dist, int iMoveType );
 	void	(*pfnChangeYaw)( edict_t* ent );
 	void	(*pfnChangePitch)( edict_t* ent );
-	edict_t*	(*pfnFindEntityByString)( edict_t *pStartEdict, const char *pszField, const char *pszValue);
+	edict_t*	(*pfnFindEntityByString)( edict_t *pEdictStartSearchAfter, const char *pszField, const char *pszValue );
 	int	(*pfnGetEntityIllum)( edict_t* pEnt );
-	edict_t*	(*pfnFindEntityInSphere)( edict_t *pStartEdict, const float *org, float rad );
+	edict_t*	(*pfnFindEntityInSphere)( edict_t *pEdictStartSearchAfter, const float *org, float rad );
 	edict_t*	(*pfnFindClientInPVS)( edict_t *pEdict );
 	edict_t*	(*pfnEntitiesInPVS)( edict_t *pplayer );
 	void	(*pfnMakeVectors)( const float *rgflVector );
@@ -81,7 +83,7 @@ typedef struct enginefuncs_s
 	void	(*pfnRemoveEntity)( edict_t* e );
 	edict_t*	(*pfnCreateNamedEntity)( string_t className );
 	void	(*pfnMakeStatic)( edict_t *ent );
-	void	(*pfnLinkEdict)( edict_t *e, int touch_triggers ); // a part of CustomPhysics implementation
+	int	(*pfnEntIsOnFloor)( edict_t *e );
 	int	(*pfnDropToFloor)( edict_t* e );
 	int	(*pfnWalkMove)( edict_t *ent, float yaw, float dist, int iMode );
 	void	(*pfnSetOrigin)( edict_t *e, const float *rgflOrigin );
@@ -93,7 +95,7 @@ typedef struct enginefuncs_s
 	void	(*pfnTraceHull)( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr );
 	void	(*pfnTraceModel)( const float *v1, const float *v2, int hullNumber, edict_t *pent, TraceResult *ptr );
 	const char *(*pfnTraceTexture)( edict_t *pTextureEntity, const float *v1, const float *v2 );
-	int	(*pfnBoxVisible)( const float *mins, const float *maxs, const byte *pset );
+	int	(*pfnBoxVisible)( const float *mins, const float *maxs, const byte *pset );	// was pfnTraceSphere
 	void	(*pfnGetAimVector)( edict_t* ent, float speed, float *rgflReturn );
 	void	(*pfnServerCommand)( const char* str );
 	void	(*pfnServerExecute)( void );

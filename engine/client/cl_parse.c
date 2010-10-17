@@ -28,13 +28,13 @@ const char *svc_strings[256] =
 	"svc_setangle",
 	"svc_serverdata",
 	"svc_restore",
-	"svc_frame",
+	"svc_updateuserinfo",
 	"svc_usermessage",
 	"svc_clientdata",
 	"svc_download",
 	"svc_updatepings",
 	"svc_particle",
-	"svc_ambientsound",
+	"svc_frame",
 	"svc_spawnstatic",
 	"svc_crosshairangle",
 	"svc_spawnbaseline",
@@ -44,7 +44,7 @@ const char *svc_strings[256] =
 	"svc_centerprint",
 	"svc_event",
 	"svc_event_reliable",
-	"svc_updateuserinfo",
+	"svc_ambientsound",
 	"svc_intermission",
 	"svc_soundfade",
 	"svc_cdtrack",
@@ -450,6 +450,46 @@ void CL_ParseParticles( sizebuf_t *msg )
 	if( count == 255 ) count = 1024;
 
 	clgame.dllFuncs.pfnParticleEffect( org, dir, color, count );
+}
+
+/*
+==================
+CL_ParseStaticEntity
+
+==================
+*/
+void CL_ParseStaticEntity( sizebuf_t *msg )
+{
+	entity_state_t	ent;
+	int		i;
+
+	Mem_Set( &ent, 0, sizeof( ent ));
+
+	ent.modelindex = BF_ReadShort( msg );
+	ent.sequence = BF_ReadByte( msg );
+	ent.frame = BF_ReadByte( msg );
+	ent.colormap = BF_ReadWord( msg );
+	ent.skin = BF_ReadByte( msg );
+
+	for( i = 0; i < 3; i++ )
+	{
+		ent.origin[i] = BF_ReadBitCoord( msg );
+		ent.angles[i] = BF_ReadBitAngle( msg, 16 );
+	}
+
+	ent.rendermode = BF_ReadByte( msg );
+
+	if( ent.rendermode != kRenderNormal )
+	{
+		ent.renderamt = BF_ReadByte( msg );
+		ent.rendercolor.r = BF_ReadByte( msg );
+		ent.rendercolor.g = BF_ReadByte( msg );
+		ent.rendercolor.b = BF_ReadByte( msg );
+		ent.renderfx = BF_ReadByte( msg );
+	}
+
+	// FIXME: allocate client entity, add new static...
+	MsgDev( D_ERROR, "Static entities are not implemented\n" );
 }
 
 /*
@@ -1081,11 +1121,11 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_particle:
 			CL_ParseParticles( msg );
 			break;
+		case svc_spawnstatic:
+			CL_ParseStaticEntity( msg );
+			break;
 		case svc_ambientsound:
 			CL_ParseSoundPacket( msg, true );
-			break;
-		case svc_spawnstatic:
-			Host_Error( "svc_spawnstatic: not implemented\n" );
 			break;
 		case svc_crosshairangle:
 			CL_ParseCrosshairAngle( msg );

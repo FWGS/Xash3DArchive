@@ -153,6 +153,8 @@ typedef struct sv_client_s
 	float		latency;
 	float		ping;
 
+	int		listeners;		// 32 bits == MAX_CLIENTS (voice listeners)
+
 	float		addangle;			// add angles to client position
 
 	edict_t		*edict;			// EDICT_NUM(clientnum+1)
@@ -381,9 +383,10 @@ bool SV_TestPlayerPosition( edict_t *ent );	// for PlayerInSolid checks
 //
 // sv_move.c
 //
-bool SV_WalkMove( edict_t *ent, const vec3_t move, int iMode );
+bool SV_MoveStep( edict_t *ent, vec3_t move, bool relink );
+bool SV_MoveTest( edict_t *ent, vec3_t move, bool relink );
 void SV_MoveToOrigin( edict_t *ed, const vec3_t goal, float dist, int iMode );
-bool SV_CheckBottom( edict_t *ent, float flStepSize, int iMode );
+bool SV_CheckBottom( edict_t *ent, int iMode );
 float SV_VecToYaw( const vec3_t src );
 
 //
@@ -432,6 +435,7 @@ void SV_BuildClientFrame( sv_client_t *client );
 void SV_ClearFrames( client_frame_t **frames );
 void SV_InactivateClients( void );
 void SV_SendMessagesToAll( void );
+void SV_SkipUpdates( void );
 
 //
 // sv_game.c

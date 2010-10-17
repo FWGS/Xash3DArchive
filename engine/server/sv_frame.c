@@ -723,12 +723,38 @@ void SV_SendMessagesToAll( void )
 	int		i;
 	sv_client_t	*cl;
 
+	if( sv.state == ss_dead )
+		return;
+
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->state >= cs_connected )
 			cl->send_message = true;
 	}	
 	SV_SendClientMessages();
+}
+
+/*
+=======================
+SV_SkipUpdates
+
+used before changing level
+=======================
+*/
+void SV_SkipUpdates( void )
+{
+	int		i;
+	sv_client_t	*cl;
+
+	if( sv.state == ss_dead )
+		return;
+
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( cl->state != cs_spawned || cl->fakeclient )
+			continue;
+		cl->skip_message = true;
+	}
 }
 
 /*

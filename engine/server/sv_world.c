@@ -367,6 +367,8 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 			if( SV_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 				continue;
 		}
+
+      		svgame.globals->time = sv.time;
 		svgame.dllFuncs.pfnTouch( touch, ent );
 	}
 	
@@ -931,6 +933,83 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 		trace.pHit = ent;
 
 	return trace;
+}
+
+/* DESCRIPTION: SurfaceAtPoint
+// LOCATION:
+// PATH: TraceTexture, recursive
+//
+// A weird one.  First, it seems to recursively call itself to dig deep into
+// the node tree, treating its own failure as a sign that it's dug deep
+// enough.  Then, it loops through some odd texture stuff, looking for
+// a match.  A match of what?  Don't know yet.
+*/
+msurface_t *SV_RecursiveSurfCheck( model_t *model, mnode_t *node, vec3_t v1, vec3_t v2 )
+{
+	double var_4, var_8, var_c;
+	int var_10, var_10_2;
+	mplane_t   * var_14_plane;
+	vec3_t var_20;
+	msurface_t * var_24_surface;
+	int var_28, var_2c;
+	int var_30, var_34;
+	int var_38;
+	mtexinfo_t * var_3C_texinfo;
+
+
+   if(node->contents < 0) { return(NULL); }
+
+   var_14_plane = node->plane;
+
+   var_4 = ((v1[0] * var_14_plane->normal[0]) + (v1[1] * var_14_plane->normal[1]) + (v1[2] * var_14_plane->normal[2])) - var_14_plane->dist;
+   var_8 = ((v2[0] * var_14_plane->normal[0]) + (v2[1] * var_14_plane->normal[1]) + (v2[2] * var_14_plane->normal[2])) - var_14_plane->dist;
+
+   if(var_4 < 0) { var_10 = 1; }
+   else { var_10 = 0; }
+
+   if(var_8 < 0) { var_10_2 = 1; }
+   else { var_10_2 = 0; }
+
+   if(var_10 == var_10_2) {
+
+      return(SV_RecursiveSurfCheck(model, node->children[var_10], v1, v2));
+   }
+
+   var_c = var_4 / (var_4 - var_8);
+
+   var_20[0] = ((v2[0] - v1[0]) * var_c) + v1[0];
+   var_20[1] = ((v2[1] - v1[1]) * var_c) + v1[1];
+   var_20[2] = ((v2[2] - v1[2]) * var_c) + v1[2];
+
+   //Now THIS is weird.
+   var_24_surface = SV_RecursiveSurfCheck(model, node->children[var_10], v1, var_20);
+   if(var_24_surface != NULL || var_10 == var_10_2) { return(var_24_surface); } //Second check not possible as in asm... I think.
+
+
+   var_24_surface = node->firstface;
+
+   for(var_38 = 0; var_38 < node->numfaces; var_38++, var_24_surface++) {
+
+      var_3C_texinfo = var_24_surface->texinfo;
+
+      var_28 = (var_20[0] * var_3C_texinfo->vecs[0][0]) + (var_20[1] * var_3C_texinfo->vecs[0][1]) + (var_20[2] * var_3C_texinfo->vecs[0][2]) + var_3C_texinfo->vecs[0][3];
+      var_2c = (var_20[0] * var_3C_texinfo->vecs[1][0]) + (var_20[1] * var_3C_texinfo->vecs[1][1]) + (var_20[2] * var_3C_texinfo->vecs[1][2]) + var_3C_texinfo->vecs[1][3];
+
+      if(var_28 >= var_24_surface->texturemins[0] && var_2c >= var_24_surface->texturemins[1]) {
+
+         var_30 = var_28 - var_24_surface->texturemins[0];
+         var_34 = var_2c - var_24_surface->texturemins[1];
+
+         if(var_30 <= var_24_surface->extents[0] && var_34 <= var_24_surface->extents[1]) {
+
+            return(var_24_surface);
+         }
+      }
+   }
+
+   if(var_10 == 1) { var_10 = 0; }
+   else { var_10 = 1; }
+   return(SV_RecursiveSurfCheck( model, node->children[var_10], var_20, v2 ));
 }
 
 /*

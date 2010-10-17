@@ -814,6 +814,7 @@ void SV_PutClientInServer( edict_t *ent )
 	{	
 		if( ent->v.flags & FL_SPECTATOR )
 		{
+      			svgame.globals->time = sv.time;
 			svgame.dllFuncs.pfnSpectatorConnect( ent );
 		}
 		else
@@ -823,6 +824,7 @@ void SV_PutClientInServer( edict_t *ent )
 			else ent->v.netname = MAKE_STRING( "player" );
 
 			// fisrt entering
+      			svgame.globals->time = sv.time;
 			svgame.dllFuncs.pfnClientPutInServer( ent );
 		}
 	}

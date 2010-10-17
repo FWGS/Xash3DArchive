@@ -187,6 +187,13 @@ int CM_LightEntity( edict_t *pEdict )
 		return 255;
 	}
 
+	if( pEdict->v.flags & FL_CLIENT )
+	{
+		// client has more precision light level
+		// that come from client
+		return pEdict->v.light_level;
+	}
+
 	VectorCopy( pEdict->v.origin, start );
 	VectorCopy( pEdict->v.origin, end );
 

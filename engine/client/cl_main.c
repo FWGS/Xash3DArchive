@@ -285,6 +285,14 @@ usercmd_t CL_CreateCmd( void )
 
 	clgame.dllFuncs.pfnCreateMove( &cmd, cl.time - cl.oldtime, ( cls.state == ca_active && !cl.refdef.paused ));
 
+	if( re )
+	{
+		vec3_t	color;
+	
+		re->LightForPoint( cl.frame.clientdata.origin, color );
+		cmd.lightlevel = VectorAvg( color ) * 255;
+	}
+
 	// random seed for predictable random values
 	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
 

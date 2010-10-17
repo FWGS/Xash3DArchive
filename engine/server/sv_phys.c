@@ -176,6 +176,7 @@ void SV_Impact( edict_t *e1, trace_t *trace )
 			return;
 	}
 
+	svgame.globals->time = sv.time;
 	SV_CopyTraceToGlobal( trace );
 
 	if( !e1->free && !e2->free && e1->v.solid != SOLID_NOT )
@@ -562,7 +563,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else type = MOVE_NORMAL;
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type|FMOVE_SIMPLEBOX, ent );
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 	if( !trace.fAllSolid && !trace.fStartSolid )
 	{
 		VectorCopy( trace.vecEndPos, ent->v.origin );
@@ -928,12 +929,14 @@ void SV_Physics_Pusher( edict_t *ent )
 	if( thinktime > oldtime && thinktime <= ent->v.ltime )
 	{
 		ent->v.nextthink = 0.0f;
+		svgame.globals->time = sv.time;
 		svgame.dllFuncs.pfnThink( ent );
 		if( ent->free ) return;
 	}
 	else if( ent->v.flags & FL_ALWAYSTHINK || ( sv.state == ss_loading && !sv.loadgame ))
 	{
 		ent->v.nextthink = 0.0f;
+		svgame.globals->time = sv.time;
 		svgame.dllFuncs.pfnThink( ent );
 		if( ent->free ) return;
 	}

@@ -560,6 +560,18 @@ void SV_FreeEdict( edict_t *pEdict )
 	// unlink from world
 	SV_UnlinkEdict( pEdict );
 
+	// never remove global entities from map
+	if( pEdict->v.globalname && sv.state == ss_active )
+	{
+		pEdict->v.solid = SOLID_NOT;
+		pEdict->v.flags &= ~FL_KILLME;
+		pEdict->v.effects = EF_NODRAW;
+		pEdict->v.movetype = MOVETYPE_NONE;
+		pEdict->v.modelindex = 0;
+		pEdict->v.nextthink = -1;
+		return;
+	}
+
 	if( pEdict->pvPrivateData )
 	{
 		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
@@ -911,6 +923,8 @@ void pfnChangeLevel( const char* s1, const char* s2 )
 		return;
 
 	svs.changelevel_next_time = host.realtime + 1.0f;		// rest 1 secs if failed
+
+	SV_SkipUpdates ();
 
 	if( !s2 ) Cbuf_AddText( va( "changelevel %s\n", s1 ));	// Quake changlevel
 	else Cbuf_AddText( va( "changelevel %s %s\n", s1, s2 ));	// Half-Life changelevel
@@ -1341,32 +1355,60 @@ disable entity updates to client
 */
 static void pfnMakeStatic( edict_t *ent )
 {
+	int	index, i;
+
 	if( !SV_IsValidEdict( ent ))
 	{
 		MsgDev( D_WARN, "SV_MakeStatic: invalid entity %s\n", SV_ClassName( ent ));
 		return;
 	}
 
-	// FIXME: write svc_spawnstatic to the client
-	ent->v.flags |= FL_KILLME;
+	index = SV_ModelIndex( STRING( ent->v.model ));
 
+	BF_WriteByte( &sv.signon, svc_spawnstatic );
+	BF_WriteShort(&sv.signon, index );
+	BF_WriteByte( &sv.signon, ent->v.sequence );
+	BF_WriteByte( &sv.signon, ent->v.frame );
+	BF_WriteWord( &sv.signon, ent->v.colormap );
+	BF_WriteByte( &sv.signon, ent->v.skin );
+
+	for(i = 0; i < 3; i++ )
+	{
+		BF_WriteBitCoord( &sv.signon, ent->v.origin[i] );
+		BF_WriteBitAngle( &sv.signon, ent->v.angles[i], 16 );
+	}
+
+	BF_WriteByte( &sv.signon, ent->v.rendermode );
+
+	if( ent->v.rendermode != kRenderNormal )
+	{
+		BF_WriteByte( &sv.signon, ent->v.renderamt );
+		BF_WriteByte( &sv.signon, ent->v.rendercolor[0] );
+		BF_WriteByte( &sv.signon, ent->v.rendercolor[1] );
+		BF_WriteByte( &sv.signon, ent->v.rendercolor[2] );
+		BF_WriteByte( &sv.signon, ent->v.renderfx );
+	}
+
+	// remove at end of the frame
+	ent->v.flags |= FL_KILLME;
 }
 
 /*
 =============
-pfnLinkEntity
+pfnEntIsOnFloor
 
-Xash3D extension
+legacy builtin
 =============
 */
-static void pfnLinkEntity( edict_t *e, int touch_triggers )
+static int pfnEntIsOnFloor( edict_t *e )
 {
 	if( !SV_IsValidEdict( e ))
 	{
-		MsgDev( D_WARN, "SV_LinkEntity: invalid entity %s\n", SV_ClassName( e ));
-		return;
+		MsgDev( D_WARN, "SV_CheckBottom: invalid entity %s\n", SV_ClassName( e ));
+		return 0;
 	}
-	SV_LinkEdict( e, touch_triggers );
+
+	return SV_CheckBottom( e, MOVE_NORMAL );
 }
 	
 /*
@@ -1429,7 +1471,19 @@ int pfnWalkMove( edict_t *ent, float yaw, float dist, int iMode )
 	yaw = yaw * M_PI * 2 / 360;
 	VectorSet( move, com.cos( yaw ) * dist, com.sin( yaw ) * dist, 0.0f );
 
-	return SV_WalkMove( ent, move, iMode );
+	switch( iMode )
+	{
+	case WALKMOVE_NORMAL:
+		return SV_MoveStep( ent, move, true );
+	case WALKMOVE_WORLDONLY:
+		return SV_MoveTest( ent, move, true );
+	case WALKMOVE_CHECKONLY:
+		return SV_MoveStep( ent, move, false);
+	default:
+		MsgDev( D_ERROR, "SV_WalkMove: invalid walk mode %i.\n", iMode );
+		break;
+	}
+	return false;
 }
 
 /*
@@ -1623,7 +1677,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	BF_WriteByte( &sv.multicast, svc_ambientsound );
 	BF_WriteWord( &sv.multicast, flags );
 	BF_WriteWord( &sv.multicast, sound_idx );
-	BF_WriteByte( &sv.multicast, CHAN_AUTO );
+	BF_WriteByte( &sv.multicast, CHAN_STATIC );
 
 	if( flags & SND_VOLUME ) BF_WriteByte( &sv.multicast, vol * 255 );
 	if( flags & SND_ATTENUATION ) BF_WriteByte( &sv.multicast, attn * 64 );
@@ -1651,6 +1705,7 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 	svgame.globals->trace_flags = 0;
 
 	*ptr = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
+	SV_CopyTraceToGlobal( ptr );
 }
 
 /*
@@ -1670,6 +1725,7 @@ static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr
 	}
 
 	*ptr = SV_MoveToss( pent, pentToIgnore );
+	SV_CopyTraceToGlobal( ptr );
 }
 
 /*
@@ -1687,6 +1743,7 @@ static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int
 	svgame.globals->trace_flags = 0;
 
 	*ptr = SV_MoveHull( v1, hullNumber, v2, fNoMonsters, pentToSkip );
+	SV_CopyTraceToGlobal( ptr );
 }
 
 /*
@@ -1698,7 +1755,6 @@ pfnTraceMonsterHull
 static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr )
 {
 	trace_t	result;
-	float	*mins, *maxs;
 
 	if( !SV_IsValidEdict( pEdict ))
 	{
@@ -1710,15 +1766,16 @@ static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v
 		fNoMonsters |= FMOVE_SIMPLEBOX;
 	svgame.globals->trace_flags = 0;
 
-	mins = pEdict->v.mins;
-	maxs = pEdict->v.maxs;
+	result = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip );
+	if( ptr )
+	{
+		SV_CopyTraceToGlobal( ptr );
+		*ptr = result;
+	}
 
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceMonsterHull: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-	result = SV_Move( v1, mins, maxs, v2, fNoMonsters, pentToSkip );
-	if( ptr ) Mem_Copy( ptr, &result, sizeof( *ptr ));
-
-	return ptr->fAllSolid;
+	if( result.fAllSolid || result.flFraction != 1.0f )
+		return true;
+	return false;
 }
 
 /*
@@ -1744,6 +1801,7 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
 
 	*ptr = SV_TraceHull( pent, hullNumber, v1, mins, maxs, v2 );
+	SV_CopyTraceToGlobal( ptr );
 }
 
 /*
@@ -2294,23 +2352,26 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	com.vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
-	if( host.developer < level )
-		return;
-
-	switch( level )
+	if( level == at_notice )
 	{
-	case at_notice:
-	case at_console:	
-	case at_aiconsole:
-		com.print( buffer );
-		break;
-	case at_warning:
-		com.print( va( "^3Warning:^7 %s", buffer ));
-		break;
-	case at_error:
-		com.print( va( "^1Error:^7 %s", buffer ));
-		break;
+		com.print( buffer ); // notice printing always
 	}
+	else if( level == at_console && host.developer >= D_INFO )
+	{
+		com.print( buffer );
+	}
+	else if( level == at_aiconsole && host.developer >= D_AICONSOLE )
+	{
+		com.print( buffer );
+	}
+	else if( level == at_warning && host.developer >= D_WARN )
+	{
+		com.print( va( "^3Warning:^7 %s", buffer ));
+	}
+	else if( level == at_error && host.developer >= D_ERROR )
+	{
+		com.print( va( "^1Error:^7 %s", buffer ));
+	} 
 }
 
 /*
@@ -3636,7 +3697,7 @@ static enginefuncs_t gEngfuncs =
 	pfnRemoveEntity,
 	pfnCreateNamedEntity,
 	pfnMakeStatic,
-	pfnLinkEntity,
+	pfnEntIsOnFloor,
 	pfnDropToFloor,
 	pfnWalkMove,
 	pfnSetOrigin,

@@ -29,7 +29,7 @@
 enum
 {
 	CUSTOM_NONE = 0,
-	CUSTOM_SEREVR_ENCODE,	// keyword "gamedll"
+	CUSTOM_SERVER_ENCODE,	// keyword "gamedll"
 	CUSTOM_CLIENT_ENCODE,	// keyword "client"
 };
 

@@ -146,12 +146,9 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 	m_flStartDist = 0;
 	m_flEndDist = 0;
 
-	if( CVAR_GET_FLOAT( "v_dark" ))
-	{
-		SetScreenFade( Vector( 0, 0, 0 ), 255, 4, 4, FFADE_IN );
-		CVAR_SET_FLOAT( "v_dark", 0.0f );
-	}
-
+	v_dark = CVAR_GET_FLOAT( "v_dark" );
+	CVAR_SET_FLOAT( "v_dark", 0.0f );
+		
 	return 1;
 }
 
