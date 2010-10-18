@@ -178,15 +178,7 @@ SOURCE=.\client\cl_world.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\cm_debug.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\common\cm_light.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\cm_main.c
 # End Source File
 # Begin Source File
 
@@ -198,15 +190,7 @@ SOURCE=.\common\cm_portals.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\cm_studio.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\common\cm_test.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\cm_trace.c
 # End Source File
 # Begin Source File
 
@@ -267,10 +251,6 @@ SOURCE=.\common\pm_surface.c
 # Begin Source File
 
 SOURCE=.\common\pm_trace.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\pm_utils.c
 # End Source File
 # Begin Source File
 

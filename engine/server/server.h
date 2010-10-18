@@ -470,7 +470,6 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
-script_t *CM_GetEntityScript( void );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {
@@ -518,6 +517,7 @@ int SV_HullPointContents( hull_t *hull, int num, const vec3_t p );
 trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
 trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int type, edict_t *e );
+const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end );
 trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );
 void SV_LinkEdict( edict_t *ent, bool touch_triggers );
 void SV_TouchLinks( edict_t *ent, areanode_t *node );

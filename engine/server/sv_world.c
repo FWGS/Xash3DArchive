@@ -9,6 +9,12 @@
 #include "pm_local.h"
 #include "matrix_lib.h"
 
+// more precision but doesn't matched with HL gameplay
+// g-cont. this is pretty generic solution for maps with different hull sizes
+// but in HL this got 'wrong' sizes for pushables :(
+	
+//#define HULL_AUTOSELECT
+
 typedef struct moveclip_s
 {
 	vec3_t		boxmins, boxmaxs;	// enclose the test object along entire move
@@ -120,7 +126,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 
 		if( hullNumber == -1 )
 		{
-#if 0	// more precision but doesn't matched with HL gameplay
+#ifdef HULL_AUTOSELECT
 			float	curdiff;
 			float	lastdiff = 999;
 			int	i;
@@ -209,8 +215,8 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	hull_t		*hull;
 	model_t		*model;
 	vec3_t		size;
-	float		curdiff, lastdiff = 999;
-	int		i, hullNumber = 0;
+	float		curdiff = 0, lastdiff = 999;
+	int		i = 0, hullNumber = 0;
 			
 	// decide which clipping hull to use, based on the size
 	model = CM_ClipHandleToModel( ent->v.modelindex );
@@ -219,6 +225,8 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", ent->serialnumber, model->type );
 
 	VectorSubtract( maxs, mins, size );
+
+#ifdef HULL_AUTOSELECT	// more precision but doesn't matched with HL gameplay
 
 	// select the hull automatically
 	for( i = 0; i < 4; i++ )
@@ -233,10 +241,32 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 		}
 	}
 
+	// TraceHull stuff
 	hull = &model->hulls[hullNumber];
 
 	// calculate an offset value to center the origin
-	VectorSubtract( hull->clip_mins, mins, offset );
+	// NOTE: never get offset of drawing hull
+	if( !hullNumber ) VectorCopy( hull->clip_mins, offset );
+	else  VectorSubtract( hull->clip_mins, mins, offset );
+#else
+	if( size[0] <= 8.0f )
+	{
+		hull = &model->hulls[0];
+		VectorCopy( hull->clip_mins, offset ); 
+	}
+	else
+	{
+		if( size[0] <= 36.0f )
+		{
+			if( size[2] <= 36.0f )
+				hull = &model->hulls[3];
+			else hull = &model->hulls[1];
+		}
+		else hull = &model->hulls[2];
+
+		VectorSubtract( hull->clip_mins, mins, offset );
+	}
+#endif
 	VectorAdd( offset, ent->v.origin, offset );
 
 	return hull;
@@ -935,81 +965,131 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 	return trace;
 }
 
-/* DESCRIPTION: SurfaceAtPoint
-// LOCATION:
-// PATH: TraceTexture, recursive
-//
-// A weird one.  First, it seems to recursively call itself to dig deep into
-// the node tree, treating its own failure as a sign that it's dug deep
-// enough.  Then, it loops through some odd texture stuff, looking for
-// a match.  A match of what?  Don't know yet.
+/*
+==================
+SV_RecursiveSurfCheck
+
+==================
 */
-msurface_t *SV_RecursiveSurfCheck( model_t *model, mnode_t *node, vec3_t v1, vec3_t v2 )
+msurface_t *SV_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
 {
-	double var_4, var_8, var_c;
-	int var_10, var_10_2;
-	mplane_t   * var_14_plane;
-	vec3_t var_20;
-	msurface_t * var_24_surface;
-	int var_28, var_2c;
-	int var_30, var_34;
-	int var_38;
-	mtexinfo_t * var_3C_texinfo;
+	float		t1, t2, frac;
+	int		side, ds, dt;
+	mplane_t		*plane;
+	msurface_t	*surf;
+	vec3_t		mid;
+	int		i;
 
+	if( node->contents < 0 )
+		return NULL;
 
-   if(node->contents < 0) { return(NULL); }
+	plane = node->plane;
 
-   var_14_plane = node->plane;
+	if( plane->type < 3 )
+	{
+		t1 = p1[plane->type] - plane->dist;
+		t2 = p2[plane->type] - plane->dist;
+	}
+	else
+	{
+		t1 = DotProduct( plane->normal, p1 ) - plane->dist;
+		t2 = DotProduct( plane->normal, p2 ) - plane->dist;
+	}
 
-   var_4 = ((v1[0] * var_14_plane->normal[0]) + (v1[1] * var_14_plane->normal[1]) + (v1[2] * var_14_plane->normal[2])) - var_14_plane->dist;
-   var_8 = ((v2[0] * var_14_plane->normal[0]) + (v2[1] * var_14_plane->normal[1]) + (v2[2] * var_14_plane->normal[2])) - var_14_plane->dist;
+	if( t1 >= 0 && t2 >= 0 )
+		return SV_RecursiveSurfCheck( node->children[0], p1, p2 );
+	if( t1 < 0 && t2 < 0 )
+		return SV_RecursiveSurfCheck( node->children[1], p1, p2 );
 
-   if(var_4 < 0) { var_10 = 1; }
-   else { var_10 = 0; }
+	frac = t1 / ( t1 - t2 );
 
-   if(var_8 < 0) { var_10_2 = 1; }
-   else { var_10_2 = 0; }
+	if( frac < 0.0f ) frac = 0.0f;
+	if( frac > 1.0f ) frac = 1.0f;
 
-   if(var_10 == var_10_2) {
+	VectorLerp( p1, frac, p2, mid );
 
-      return(SV_RecursiveSurfCheck(model, node->children[var_10], v1, v2));
-   }
+	side = (t1 < 0);
 
-   var_c = var_4 / (var_4 - var_8);
+	// now this is weird.
+	surf = SV_RecursiveSurfCheck( node->children[side], p1, mid );
 
-   var_20[0] = ((v2[0] - v1[0]) * var_c) + v1[0];
-   var_20[1] = ((v2[1] - v1[1]) * var_c) + v1[1];
-   var_20[2] = ((v2[2] - v1[2]) * var_c) + v1[2];
+	if( surf != NULL || ( t1 >= 0 && t2 >= 0 ) || ( t1 < 0 && t2 < 0 ))
+	{
+		return surf;
+	}
 
-   //Now THIS is weird.
-   var_24_surface = SV_RecursiveSurfCheck(model, node->children[var_10], v1, var_20);
-   if(var_24_surface != NULL || var_10 == var_10_2) { return(var_24_surface); } //Second check not possible as in asm... I think.
+	surf = node->firstface;
 
+	for( i = 0; i < node->numfaces; i++, surf++ )
+	{
+		ds = (int)((float)DotProduct( mid, surf->texinfo->vecs[0] ) + surf->texinfo->vecs[0][3] );
+		dt = (int)((float)DotProduct( mid, surf->texinfo->vecs[1] ) + surf->texinfo->vecs[1][3] );
 
-   var_24_surface = node->firstface;
+		if( ds >= surf->texturemins[0] && dt >= surf->texturemins[1] )
+		{
+			int	s = ds - surf->texturemins[0];
+			int	t = dt - surf->texturemins[1];
 
-   for(var_38 = 0; var_38 < node->numfaces; var_38++, var_24_surface++) {
+			if( s <= surf->extents[0] && t <= surf->extents[1] )
+				return surf;
+		}
+	}
 
-      var_3C_texinfo = var_24_surface->texinfo;
+	return SV_RecursiveSurfCheck( node->children[side^1], mid, p2 );
+}
 
-      var_28 = (var_20[0] * var_3C_texinfo->vecs[0][0]) + (var_20[1] * var_3C_texinfo->vecs[0][1]) + (var_20[2] * var_3C_texinfo->vecs[0][2]) + var_3C_texinfo->vecs[0][3];
-      var_2c = (var_20[0] * var_3C_texinfo->vecs[1][0]) + (var_20[1] * var_3C_texinfo->vecs[1][1]) + (var_20[2] * var_3C_texinfo->vecs[1][2]) + var_3C_texinfo->vecs[1][3];
+/*
+==================
+SV_TraceTexture
 
-      if(var_28 >= var_24_surface->texturemins[0] && var_2c >= var_24_surface->texturemins[1]) {
+find the face where the traceline hit
+assume pTextureEntity is valid
+==================
+*/
+const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end )
+{
+	msurface_t	*surf;
+	matrix4x4		matrix;
+	model_t		*bmodel;
+	hull_t		*hull;
+	vec3_t		start_l, end_l;
+	vec3_t		temp, offset;
 
-         var_30 = var_28 - var_24_surface->texturemins[0];
-         var_34 = var_2c - var_24_surface->texturemins[1];
+	bmodel = CM_ClipHandleToModel( ent->v.modelindex );
+	if( !bmodel || bmodel->type != mod_brush && bmodel->type != mod_world )
+		return NULL;
 
-         if(var_30 <= var_24_surface->extents[0] && var_34 <= var_24_surface->extents[1]) {
+	hull = SV_HullForBsp( ent, vec3_origin, vec3_origin, offset );
 
-            return(var_24_surface);
-         }
-      }
-   }
+	VectorSubtract( start, offset, start_l );
+	VectorSubtract( end, offset, end_l );
 
-   if(var_10 == 1) { var_10 = 0; }
-   else { var_10 = 1; }
-   return(SV_RecursiveSurfCheck( model, node->children[var_10], var_20, v2 ));
+	// rotate start and end into the models frame of reference
+	if( !VectorIsNull( ent->v.angles ))
+	{
+		matrix4x4	imatrix;
+		float	*org = ent->v.origin;
+		float	*ang = ent->v.angles;
+	
+		Matrix4x4_CreateFromEntity( matrix, org[0], org[1], org[2], ang[PITCH], ang[YAW], ang[ROLL], 1.0f );
+		Matrix4x4_Invert_Simple( imatrix, matrix );
+
+		Matrix4x4_VectorTransform( imatrix, start, start_l );
+		Matrix4x4_VectorTransform( imatrix, end, end_l );
+#if 1
+		// calc hull offsets (monsters use this)
+		VectorCopy( start_l, temp );
+		VectorMAMAM( 1, temp, 1, vec3_origin, -1, hull->clip_mins, start_l );
+
+		VectorCopy( end_l, temp );
+		VectorMAMAM( 1, temp, 1, vec3_origin, -1, hull->clip_mins, end_l );
+#endif
+	}
+
+	surf = SV_RecursiveSurfCheck( &bmodel->nodes[hull->firstclipnode], start_l, end_l );
+	if( !surf ) return NULL;
+
+	return surf->texinfo->texture->name;
 }
 
 /*
@@ -1044,7 +1124,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 			Host_Error( "trigger in clipping list\n" );
 
 		// completely ignore all edicts but brushes
-		if( clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP )
+		if( clip->type == MOVE_NOMONSTERS && modType != mod_brush )
 			continue;
 
 		if( clip->type == MOVE_WORLDONLY )

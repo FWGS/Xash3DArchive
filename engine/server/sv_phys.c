@@ -1576,8 +1576,8 @@ void SV_Physics( void )
 		}
 	}
 
-	// let everything in the world think and move
-	CM_Frame( sv_time( ));
+	// animate lightstyles (used for GetEntityIllum)
+	CM_RunLightStyles( sv.time );
 
 	// at end of frame kill all entities which supposed to it 
 	SV_FreeOldEntities();

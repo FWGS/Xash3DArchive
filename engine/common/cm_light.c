@@ -7,124 +7,107 @@
 #include "edict.h"
 #include "mathlib.h"
 
-int CM_RecursiveLightPoint( vec3_t color, mnode_t *node, const vec3_t start, const vec3_t end )
-{
-	float	front, back, frac;
-	vec3_t	mid;
+static vec3_t	cm_pointColor;
+static float	cm_modulate;
 
-loc0:
-	if( node->contents < 0 )
-		return false;	// didn't hit anything
+/*
+=================
+CM_RecursiveLightPoint
+=================
+*/
+static bool CM_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
+{
+	int		side;
+	mplane_t		*plane;
+	msurface_t	*surf;
+	mtexinfo_t	*tex;
+	vec3_t		mid, scale;
+	float		front, back, frac;
+	int		i, map, size, s, t;
+	byte		*lm;
+
+	// didn't hit anything
+	if( !node->plane ) return false;
 
 	// calculate mid point
-	if( node->plane->type < 3 )
+	plane = node->plane;
+	if( plane->type < 3 )
 	{
-		front = start[node->plane->type] - node->plane->dist;
-		back = end[node->plane->type] - node->plane->dist;
+		front = start[plane->type] - plane->dist;
+		back = end[plane->type] - plane->dist;
 	}
 	else
 	{
-		front = DotProduct( start, node->plane->normal ) - node->plane->dist;
-		back = DotProduct( end, node->plane->normal ) - node->plane->dist;
+		front = DotProduct( start, plane->normal ) - plane->dist;
+		back = DotProduct( end, plane->normal ) - plane->dist;
 	}
 
-	// optimized recursion
-	if(( back < 0 ) == ( front < 0 ))
-	{
-		node = node->children[front < 0];
-		goto loc0;
-	}
+	side = front < 0;
+	if(( back < 0 ) == side )
+		return CM_RecursiveLightPoint( node->children[side], start, end );
 
 	frac = front / ( front - back );
+
 	VectorLerp( start, frac, end, mid );
 
-	// go down front side
-	if( CM_RecursiveLightPoint( color, node->children[front < 0], start, mid ))
+	// co down front side	
+	if( CM_RecursiveLightPoint( node->children[side], start, mid ))
+		return true; // hit something
+
+	if(( back < 0 ) == side )
+		return false;// didn't hit anything
+
+	// check for impact on this node
+	surf = node->firstface;
+
+	for( i = 0; i < node->numfaces; i++, surf++ )
 	{
-		// hit something
+		tex = surf->texinfo;
+
+		if( surf->flags & SURF_DRAWTILED )
+			continue;	// no lightmaps
+
+		s = DotProduct( mid, tex->vecs[0] ) + tex->vecs[0][3] - surf->texturemins[0];
+		t = DotProduct( mid, tex->vecs[1] ) + tex->vecs[1][3] - surf->texturemins[1];
+
+		if(( s < 0 || s > surf->extents[0] ) || ( t < 0 || t > surf->extents[1] ))
+			continue;
+
+		s >>= 4;
+		t >>= 4;
+
+		if( !surf->samples )
+			return true;
+
+		VectorClear( cm_pointColor );
+
+		lm = surf->samples + 3 * (t * ((surf->extents[0] >> 4) + 1) + s);
+		size = ((surf->extents[0] >> 4) + 1) * ((surf->extents[1] >> 4) + 1) * 3;
+
+		for( map = 0; map < surf->numstyles; map++ )
+		{
+			VectorScale( cm.lightstyle[surf->styles[map]].rgb, cm_modulate, scale );
+
+			cm_pointColor[0] += lm[0] * scale[0];
+			cm_pointColor[1] += lm[1] * scale[1];
+			cm_pointColor[2] += lm[2] * scale[2];
+
+			lm += size; // skip to next lightmap
+		}
 		return true;
 	}
-	else
-	{
-		int		i, ds, dt;
-		msurface_t	*surf;
 
-		// check for impact on this node
-		for( i = 0, surf = node->firstface; i < node->numfaces; i++, surf++ )
-		{
-			if( surf->flags & SURF_DRAWTILED )
-				continue;	// no lightmaps
-
-			ds = (int)((float)DotProduct( mid, surf->texinfo->vecs[0] ) + surf->texinfo->vecs[0][3] );
-			dt = (int)((float)DotProduct( mid, surf->texinfo->vecs[1] ) + surf->texinfo->vecs[1][3] );
-
-			if( ds < surf->texturemins[0] || dt < surf->texturemins[1] )
-				continue;
-
-			ds -= surf->texturemins[0];
-			dt -= surf->texturemins[1];
-
-			if( ds > surf->extents[0] || dt > surf->extents[1] )
-				continue;
-
-			if( surf->samples )
-			{
-				// enhanced to interpolate lighting
-				byte	*lightmap;
-				int	maps, line3, dsfrac = ds & 15, dtfrac = dt & 15;
-				int	r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0;
-				int	r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
-				float	scale;
-
-				line3 = ((surf->extents[0] >> 4) + 1) * 3;
-				lightmap = surf->samples + ((dt >> 4) * ((surf->extents[0] >> 4) + 1) + (ds >> 4)) * 3;
-
-				for( maps = 0; maps < LM_STYLES && surf->styles[maps] != 255; maps++ )
-				{
-					scale = (float)cm.lightstyle[surf->styles[maps]].value;
-					r00 += (float)lightmap[0] * scale;
-					g00 += (float)lightmap[1] * scale;
-					b00 += (float)lightmap[2] * scale;
-
-					r01 += (float)lightmap[3] * scale;
-					g01 += (float)lightmap[4] * scale;
-					b01 += (float)lightmap[5] * scale;
-
-					r10 += (float)lightmap[line3+0] * scale;
-					g10 += (float)lightmap[line3+1] * scale;
-					b10 += (float)lightmap[line3+2] * scale;
-
-					r11 += (float)lightmap[line3+3] * scale;
-					g11 += (float)lightmap[line3+4] * scale;
-					b11 += (float)lightmap[line3+5] * scale;
-
-					lightmap += ((surf->extents[0] >> 4) + 1) * ((surf->extents[1] >> 4) + 1) * 3;
-				}
-				color[0] += (float)((int)((((((((r11 - r10) * dsfrac) >> 4) + r10) 
-					- ((((r01 - r00) * dsfrac) >> 4) + r00)) * dtfrac) >> 4) 
-					+ ((((r01 - r00) * dsfrac) >> 4) + r00)));
-				color[1] += (float)((int)((((((((g11 - g10) * dsfrac) >> 4) + g10) 
-					- ((((g01 - g00) * dsfrac) >> 4) + g00)) * dtfrac) >> 4) 
-					+ ((((g01 - g00) * dsfrac) >> 4) + g00)));
-				color[2] += (float)((int)((((((((b11 - b10) * dsfrac) >> 4) + b10) 
-					- ((((b01 - b00) * dsfrac) >> 4) + b00)) * dtfrac) >> 4) 
-					+ ((((b01 - b00) * dsfrac) >> 4) + b00)));
-			}
-			return true; // success
-		}
-
-		// go down back side
-		return CM_RecursiveLightPoint( color, node->children[front >= 0], mid, end );
-	}
+	// go down back side
+	return CM_RecursiveLightPoint( node->children[!side], mid, end );
 }
 
 void CM_RunLightStyles( float time )
 {
 	int		i, ofs;
 	clightstyle_t	*ls;
+	float		l;
 
-	if( !sv_models[1] )
-		return;	// no world
+	if( !worldmodel ) return;
 
 	// run lightstyles animation
 	ofs = (time * 10);
@@ -134,9 +117,11 @@ void CM_RunLightStyles( float time )
 
 	for( i = 0, ls = cm.lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		if( ls->length == 0 ) ls->value = 0.0f;
-		else if( ls->length == 1 ) ls->value = ls->map[0];
-		else ls->value = ls->map[ofs%ls->length];
+		if( ls->length == 0 ) l = 0.0f;
+		else if( ls->length == 1 ) l = ls->map[0];
+		else l = ls->map[ofs%ls->length];
+
+		VectorSet( ls->rgb, l, l, l );
 	}
 }
 
@@ -166,7 +151,7 @@ void CM_ClearLightStyles( void )
 	Mem_Set( cm.lightstyle, 0, sizeof( cm.lightstyle ));
 
 	for( i = 0, ls = cm.lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
-		cm.lightstyle[i].value = 1.0f;
+		VectorSet( cm.lightstyle[i].rgb, 1.0f, 1.0f, 1.0f );
 	cm.lastofs = -1;
 }
 
@@ -179,7 +164,7 @@ grab the ambient lighting color for current point
 */
 int CM_LightEntity( edict_t *pEdict )
 {
-	vec3_t	start, end, color;
+	vec3_t	start, end;
 
 	if( !pEdict ) return 0;
 	if( pEdict->v.effects & EF_FULLBRIGHT || !worldmodel->lightdata )
@@ -198,11 +183,12 @@ int CM_LightEntity( edict_t *pEdict )
 	VectorCopy( pEdict->v.origin, end );
 
 	if( pEdict->v.effects & EF_INVLIGHT )
-		end[2] = start[2] + 4096;
-	else end[2] = start[2] - 4096;
+		end[2] = start[2] + 8192;
+	else end[2] = start[2] - 8192;
+	VectorSet( cm_pointColor, 1.0f, 1.0f, 1.0f );
 
-	VectorClear( color );	
-	CM_RecursiveLightPoint( color, worldmodel->nodes, start, end );
+	cm_modulate = cm_lighting_modulate->value * (1.0 / 255);
+	CM_RecursiveLightPoint( worldmodel->nodes, start, end );
 
-	return VectorAvg( color );
+	return VectorAvg( cm_pointColor );
 }

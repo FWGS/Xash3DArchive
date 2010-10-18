@@ -93,6 +93,13 @@ void Host_EndGame( const char *message, ... )
 	Host_AbortCurrentFrame ();
 }
 
+static void Host_DrawDebugCollision( cmdraw_t drawPoly ) 
+{ 
+	if( !drawPoly ) return;
+
+	// FIXME: get collision polys here
+}
+
 void Host_FreeRender( void )
 {
 	if( render_dll.link )
@@ -116,7 +123,7 @@ bool Host_InitRender( void )
 	ri.UpdateScreen = SCR_UpdateScreen;
 	ri.StudioEvent = CL_StudioEvent;
 	ri.StudioFxTransform = CL_StudioFxTransform;
-	ri.ShowCollision = CM_DrawCollision;
+	ri.ShowCollision = Host_DrawDebugCollision;
 	ri.GetClientEdict = CL_GetEntityByIndex;
 	ri.GetPlayerInfo = CL_GetPlayerInfo;
 	ri.GetLocalPlayer = CL_GetLocalPlayer;

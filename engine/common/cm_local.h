@@ -22,12 +22,13 @@
 #define DVIS_PHS		1
 
 extern cvar_t		*cm_novis;
+extern cvar_t		*cm_lighting_modulate;
 
 typedef struct
 {
 	int		length;
 	float		map[MAX_STRING];
-	float		value;		// current lightvalue
+	vec3_t		rgb;		// 0.0 - 2.0
 } clightstyle_t;
 
 typedef struct leaflist_s
@@ -61,14 +62,8 @@ typedef struct clipmap_s
 } clipmap_t;
 
 extern clipmap_t		cm;
-extern model_t		*sv_models[MAX_MODELS];	// replacement client-server table
 extern model_t		*loadmodel;
 extern model_t		*worldmodel;
-
-//
-// cm_debug.c
-//
-void CM_DrawCollision( cmdraw_t callback );
 
 //
 // cm_light.c
@@ -79,13 +74,6 @@ int CM_LightEntity( edict_t *pEdict );
 void CM_ClearLightStyles( void );
 
 //
-// cm_main.c
-//
-bool CM_InitPhysics( void );
-void CM_Frame( float time );
-void CM_FreePhysics( void );
-
-//
 // cm_test.c
 //
 byte *CM_LeafPVS( int leafnum );
@@ -93,7 +81,6 @@ byte *CM_LeafPHS( int leafnum );
 int CM_PointLeafnum( const vec3_t p );
 mleaf_t *CM_PointInLeaf( const vec3_t p, mnode_t *node );
 int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
-int CM_TempBoxModel( const vec3_t mins, const vec3_t maxs, bool capsule );
 bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
 int CM_HullPointContents( hull_t *hull, int num, const vec3_t p );
 int CM_PointContents( const vec3_t p );
@@ -109,35 +96,16 @@ byte *CM_FatPHS( const vec3_t org, bool portal );
 //
 // cm_model.c
 //
-void CM_FreeModels( void );
-int CM_NumBmodels( void );
+bool CM_InitPhysics( void );
+void CM_FreePhysics( void );
 script_t *CM_GetEntityScript( void );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
 modtype_t CM_GetModelType( int handle );
 model_t *CM_ClipHandleToModel( int handle );
-hull_t *CM_HullForBox( const vec3_t mins, const vec3_t maxs );
-int CM_TempBoxModel( const vec3_t mins, const vec3_t maxs, bool capsule );
 void CM_BeginRegistration ( const char *name, bool clientload, uint *checksum );
 bool CM_RegisterModel( const char *name, int sv_index );
 void *Mod_Extradata( int handle );
-model_t *CM_ModForName( const char *name, bool world );
 void CM_EndRegistration( void );
-
-//
-// cm_studio.c
-//
-void CM_StudioInitBoxHull( void );
-int CM_StudioBodyVariations( int handle );
-void CM_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
-bool CM_StudioTrace( edict_t *e, const vec3_t start, const vec3_t end, trace_t *tr );
-void CM_GetBonePosition( edict_t* e, int iBone, float *rgflOrigin, float *rgflAngles );
-	
-//
-// cm_trace.c
-//
-trace_t CM_ClipMove( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int flags );
-const char *CM_TraceTexture( edict_t *pTextureEntity, const vec3_t v1, const vec3_t v2 );
-hull_t *CM_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset );
 
 #endif//CM_LOCAL_H

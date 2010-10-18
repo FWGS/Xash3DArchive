@@ -183,29 +183,26 @@ hull_t *PM_HullForBsp( physent_t *pe, const vec3_t mins, const vec3_t maxs, floa
 
 	VectorSubtract( maxs, mins, size );
 
-	if( size[0] < 3 )
+	if( size[0] <= 8.0f )
 	{
-		// point hull
-		hull = &model->hulls[0];
-	}
-	else if( size[0] <= 36 )
-	{
-		if( size[2] <= 36 )
-		{
-			// head hull (ducked)
-			hull = &model->hulls[3];
-		}
-		else
-		{
-			// human hull
-			hull = &model->hulls[1];
-		}
+		hull = &pe->model->hulls[0];
+		VectorCopy( hull->clip_mins, offset ); 
 	}
 	else
 	{
-		// large hull
-		hull = &model->hulls[2];
+		if( size[0] <= 36.0f )
+		{
+			if( size[2] <= 36.0f )
+				hull = &pe->model->hulls[3];
+			else hull = &pe->model->hulls[1];
+		}
+		else hull = &pe->model->hulls[2];
+
+		VectorSubtract( hull->clip_mins, mins, offset );
 	}
+
+	// calculate an offset value to center the origin
+	VectorAdd( offset, pe->origin, offset );
 
 	// calculate an offset value to center the origin
 	VectorSubtract( hull->clip_mins, mins, offset );

@@ -322,7 +322,7 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 	com.sprintf( sv.configstrings[CS_MAPCHECKSUM], "%i", checksum );
 	sv.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 
-	for( i = 1; i < CM_NumBmodels(); i++ )
+	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )
 	{
 		com.sprintf( sv.configstrings[CS_MODELS+1+i], "*%i", i );
 		CM_RegisterModel( sv.configstrings[CS_MODELS+1+i], i+1 );

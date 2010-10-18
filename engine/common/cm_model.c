@@ -15,16 +15,17 @@
 clipmap_t		cm;
 
 byte		*mod_base;
-model_t		*sv_models[MAX_MODELS];	// server replacement modeltable
+static model_t	*sv_models[MAX_MODELS];	// server replacement modeltable
 static model_t	cm_inline[MAX_MAP_MODELS];	// inline bsp models
 static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels;
 
-mplane_t		box_planes[6];
-dclipnode_t	box_clipnodes[6];
-hull_t		box_hull[1];
 model_t		*loadmodel;
 model_t		*worldmodel;
+
+// cvars
+cvar_t		*cm_novis;
+cvar_t		*cm_lighting_modulate;
 
 /*
 ===============================================================================
@@ -33,88 +34,6 @@ model_t		*worldmodel;
 
 ===============================================================================
 */
-/*
-===================
-CM_BmodelInitBoxHull
-
-Set up the planes and nodes so that the six floats of a bounding box
-can just be stored out and get a proper clipping hull structure.
-===================
-*/
-void CM_BmodelInitBoxHull( void )
-{
-	mplane_t		*p;
-	dclipnode_t	*c;
-	int		i, side;
-
-	box_hull->clipnodes = box_clipnodes;
-	box_hull->planes = box_planes;
-	box_hull->firstclipnode = 0;
-	box_hull->lastclipnode = 5;
-
-	for( i = 0; i < 6; i++ )
-	{
-		side = i & 1;
-
-		// setup clipnodes
-		c = &box_clipnodes[i];
-		c->planenum = i;
-		
-		c->children[side] = CONTENTS_EMPTY;
-		if( i != 5 ) c->children[side^1] = i + 1;
-		else c->children[side^1] = CONTENTS_SOLID;
-
-		// setup planes
-		p = &box_planes[i];
-		VectorClear( p->normal );
-
-		p->type = i>>1;
-		p->normal[i>>1] = 1.0f;
-		p->signbits = 0;
-	}
-}
-
-/*
-===================
-CM_HullForBox
-
-To keep everything totally uniform, bounding boxes are turned into small
-BSP trees instead of being compared directly.
-===================
-*/
-hull_t *CM_HullForBox( const vec3_t mins, const vec3_t maxs )
-{
-	box_planes[0].dist = maxs[0];
-	box_planes[1].dist = mins[0];
-	box_planes[2].dist = maxs[1];
-	box_planes[3].dist = mins[1];
-	box_planes[4].dist = maxs[2];
-	box_planes[5].dist = mins[2];
-
-	return box_hull;
-}
-
-/*
-================
-CM_FreeModel
-================
-*/
-void CM_FreeModel( model_t *mod )
-{
-	if( !mod || !mod->mempool )
-		return;
-
-	Mem_FreePool( &mod->mempool );
-	Mem_Set( mod, 0, sizeof( *mod ));
-}
-
-int CM_NumBmodels( void )
-{
-	if( worldmodel )
-		return worldmodel->numsubmodels;
-	return 0;
-}
-
 script_t *CM_GetEntityScript( void )
 {
 	string	entfilename;
@@ -134,6 +53,71 @@ script_t *CM_GetEntityScript( void )
 		return ents;
 	}
 	return cm.entityscript;
+}
+
+/*
+================
+CM_StudioBodyVariations
+================
+*/
+static int CM_StudioBodyVariations( int handle )
+{
+	studiohdr_t	*pstudiohdr;
+	mstudiobodyparts_t	*pbodypart;
+	int		i, count;
+
+	pstudiohdr = (studiohdr_t *)Mod_Extradata( handle );
+	if( !pstudiohdr ) return 0;
+
+	count = 1;
+	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
+
+	// each body part has nummodels variations so there are as many total variations as there
+	// are in a matrix of each part by each other part
+	for( i = 0; i < pstudiohdr->numbodyparts; i++ )
+	{
+		count = count * pbodypart[i].nummodels;
+	}
+	return count;
+}
+
+/*
+================
+CM_FreeModel
+================
+*/
+static void CM_FreeModel( model_t *mod )
+{
+	if( !mod || !mod->mempool )
+		return;
+
+	Mem_FreePool( &mod->mempool );
+	Mem_Set( mod, 0, sizeof( *mod ));
+}
+
+/*
+===============================================================================
+
+			CM INITALIZE\SHUTDOWN
+
+===============================================================================
+*/
+
+bool CM_InitPhysics( void )
+{
+	cm_novis = Cvar_Get( "cm_novis", "0", 0, "force to ignore server visibility" );
+	cm_lighting_modulate = Cvar_Get( "r_lighting_modulate", "1", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "lightstyles modulate scale" );
+
+	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
+	return true;
+}
+
+void CM_FreePhysics( void )
+{
+	int	i;
+
+	for( i = 0; i < cm_nummodels; i++ )
+		CM_FreeModel( &cm_models[i] );
 }
 
 /*
@@ -635,7 +619,7 @@ static void BSP_LoadPlanes( dlump_t *l )
 BSP_LoadVisibility
 =================
 */
-void BSP_LoadVisibility( dlump_t *l )
+static void BSP_LoadVisibility( dlump_t *l )
 {
 	if( !l->filelen )
 	{
@@ -653,7 +637,7 @@ void BSP_LoadVisibility( dlump_t *l )
 BSP_LoadEntityString
 =================
 */
-void BSP_LoadEntityString( dlump_t *l )
+static void BSP_LoadEntityString( dlump_t *l )
 {
 	byte	*in;
 
@@ -724,7 +708,7 @@ CM_MakeHull0
 Duplicate the drawing hull structure as a clipping hull
 =================
 */
-void CM_MakeHull0( void )
+static void CM_MakeHull0( void )
 {
 	mnode_t		*in, *child;
 	dclipnode_t	*out;
@@ -756,7 +740,6 @@ void CM_MakeHull0( void )
 		}
 	}
 }
-
 
 /*
 =================
@@ -910,7 +893,100 @@ static void CM_SpriteModel( model_t *mod, byte *buffer )
 	loadmodel->maxs[2] = phdr->bounds[1] / 2;
 }
 
-void CM_FreeWorld( void )
+static model_t *CM_ModForName( const char *name, bool world )
+{
+	byte	*buf;
+	model_t	*mod;
+	int	i, size;
+
+	if( !name || !name[0] )
+		return NULL;
+
+	// fast check for worldmodel
+	if( !com.strcmp( name, cm_models[0].name ))
+		return &cm_models[0];
+
+	// check for submodel
+	if( name[0] == '*' ) 
+	{
+		i = com.atoi( name + 1 );
+		if( i < 1 || !worldmodel || i >= worldmodel->numsubmodels )
+		{
+			MsgDev( D_ERROR, "CM_InlineModel: bad submodel number %d\n", i );
+			return NULL;
+		}
+		return &cm_inline[i];
+	}
+
+	// search the currently loaded models
+	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+          {
+		if( !mod->name[0] ) continue;
+		if( !com.strcmp( name, mod->name ))
+		{
+			// prolonge registration
+			mod->registration_sequence = cm.registration_sequence;
+			return mod;
+		}
+	}
+
+	// find a free model slot spot
+	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+		if( !mod->name[0] ) break; // free spot
+
+	if( i == cm_nummodels )
+	{
+		if( cm_nummodels == MAX_MODELS )
+			Host_Error( "Mod_ForName: MAX_MODELS limit exceeded\n" );
+		cm_nummodels++;
+	}
+	
+	buf = FS_LoadFile( name, &size );
+	if( !buf )
+	{
+		MsgDev( D_ERROR, "CM_LoadModel: %s couldn't load\n", name );
+		return NULL;
+	}
+
+	// if it's world - calc the map checksum
+	if( world ) cm.checksum = LittleLong( Com_BlockChecksum( buf, size ));
+
+	MsgDev( D_NOTE, "CM_LoadModel: %s\n", name );
+	com.strncpy( mod->name, name, sizeof( mod->name ));
+	mod->registration_sequence = cm.registration_sequence;	// register mod
+	mod->type = mod_bad;
+	loadmodel = mod;
+
+	// call the apropriate loader
+	switch( LittleLong( *(uint *)buf ))
+	{
+	case IDSTUDIOHEADER:
+		CM_StudioModel( mod, buf );
+		break;
+	case IDSPRITEHEADER:
+		CM_SpriteModel( mod, buf );
+		break;
+	default:
+		CM_BrushModel( mod, buf );
+		break;
+	}
+
+	Mem_Free( buf ); 
+
+	if( mod->type == mod_bad )
+	{
+		CM_FreeModel( mod );
+
+		// check for loading problems
+		if( world ) Host_Error( "Mod_ForName: %s unknown format\n", name );
+		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", name );
+		return NULL;
+	}
+
+	return mod;
+}
+
+static void CM_FreeWorld( void )
 {
 	if( worldmodel )
 		CM_FreeModel( &cm_models[0] );
@@ -921,14 +997,6 @@ void CM_FreeWorld( void )
 		cm.entityscript = NULL;
 	}
 	worldmodel = NULL;
-}
-
-void CM_FreeModels( void )
-{
-	int	i;
-
-	for( i = 0; i < cm_nummodels; i++ )
-		CM_FreeModel( &cm_models[i] );
 }
 
 /*
@@ -979,9 +1047,6 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 	sv_models[1] = cm_models; // make link to world
 		
 	if( checksum ) *checksum = cm.checksum;
-
-	CM_BmodelInitBoxHull ();
-	CM_StudioInitBoxHull (); // hitbox tracing
 
 	CM_ClearLightStyles();
 	CM_CalcPHS ();
@@ -1084,98 +1149,6 @@ void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs )
 		if( mins ) VectorClear( mins );
 		if( maxs ) VectorClear( maxs );
 	}
-}
-
-model_t *CM_ModForName( const char *name, bool world )
-{
-	byte	*buf;
-	model_t	*mod;
-	int	i, size;
-
-	if( !name || !name[0] )
-		return NULL;
-
-	// fast check for worldmodel
-	if( !com.strcmp( name, cm_models[0].name ))
-		return &cm_models[0];
-
-	// check for submodel
-	if( name[0] == '*' ) 
-	{
-		i = com.atoi( name + 1 );
-		if( i < 1 || !worldmodel || i >= worldmodel->numsubmodels )
-		{
-			MsgDev( D_ERROR, "CM_InlineModel: bad submodel number %d\n", i );
-			return NULL;
-		}
-		return &cm_inline[i];
-	}
-
-	// search the currently loaded models
-	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
-          {
-		if( !mod->name[0] ) continue;
-		if( !com.strcmp( name, mod->name ))
-		{
-			// prolonge registration
-			mod->registration_sequence = cm.registration_sequence;
-			return mod;
-		}
-	}
-
-	// find a free model slot spot
-	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
-		if( !mod->name[0] ) break; // free spot
-
-	if( i == cm_nummodels )
-	{
-		if( cm_nummodels == MAX_MODELS )
-			Host_Error( "Mod_ForName: MAX_MODELS limit exceeded\n" );
-		cm_nummodels++;
-	}
-	
-	buf = FS_LoadFile( name, &size );
-	if( !buf )
-	{
-		MsgDev( D_ERROR, "CM_LoadModel: %s couldn't load\n", name );
-		return NULL;
-	}
-
-	// if it's world - calc the map checksum
-	if( world ) cm.checksum = LittleLong( Com_BlockChecksum( buf, size ));
-
-	MsgDev( D_NOTE, "CM_LoadModel: %s\n", name );
-	com.strncpy( mod->name, name, sizeof( mod->name ));
-	mod->registration_sequence = cm.registration_sequence;	// register mod
-	mod->type = mod_bad;
-	loadmodel = mod;
-
-	// call the apropriate loader
-	switch( LittleLong( *(uint *)buf ))
-	{
-	case IDSTUDIOHEADER:
-		CM_StudioModel( mod, buf );
-		break;
-	case IDSPRITEHEADER:
-		CM_SpriteModel( mod, buf );
-		break;
-	default:
-		CM_BrushModel( mod, buf );
-		break;
-	}
-
-	Mem_Free( buf ); 
-
-	if( mod->type == mod_bad )
-	{
-		// check for loading problems
-		if( world ) Host_Error( "CMod_ForName: %s unknown format\n", name );
-		else MsgDev( D_ERROR, "CMod_ForName: %s unknown format\n", name );
-		CM_FreeModel( mod );
-		return NULL;
-	}
-
-	return mod;
 }
 
 bool CM_RegisterModel( const char *name, int index )

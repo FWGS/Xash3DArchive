@@ -1819,10 +1819,7 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 		return NULL;
 	}
 
-	if( VectorIsNAN( v1 ) || VectorIsNAN( v2 ))
-		Host_Error( "TraceTexture: NAN errors detected '%f %f %f', '%f %f %f'\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2] );
-
-	return CM_TraceTexture( pTextureEntity, v1, v2 );
+	return SV_TraceTexture( pTextureEntity, v1, v2 );
 }
 
 /*
