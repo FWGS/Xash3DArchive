@@ -29,14 +29,14 @@ const char *svc_strings[256] =
 	"svc_serverdata",
 	"svc_restore",
 	"svc_updateuserinfo",
-	"svc_usermessage",
+	"svc_unused14",
 	"svc_clientdata",
 	"svc_download",
 	"svc_updatepings",
 	"svc_particle",
 	"svc_frame",
 	"svc_spawnstatic",
-	"svc_crosshairangle",
+	"svc_unused21",
 	"svc_spawnbaseline",
 	"svc_temp_entity",
 	"svc_setpause",
@@ -46,7 +46,7 @@ const char *svc_strings[256] =
 	"svc_event_reliable",
 	"svc_ambientsound",
 	"svc_intermission",
-	"svc_soundfade",
+	"svc_unused31",
 	"svc_cdtrack",
 	"svc_serverinfo",
 	"svc_deltatable",
@@ -54,7 +54,7 @@ const char *svc_strings[256] =
 	"svc_bspdecal",
 	"svc_roomtype",
 	"svc_addangle",
-	"svc_unused39",
+	"svc_usermessage",
 	"svc_packetentities",
 	"svc_deltapacketentities",
 	"svc_chokecount",
@@ -62,8 +62,8 @@ const char *svc_strings[256] =
 	"svc_unused44",
 	"svc_unused45",
 	"svc_unused46",
-	"svc_unused47",
-	"svc_unused48",
+	"svc_crosshairangle",
+	"svc_soundfade",
 	"svc_unused49",
 	"svc_unused50",
 	"svc_director",
@@ -521,10 +521,10 @@ void CL_ParseSoundFade( sizebuf_t *msg )
 	float	fadePercent, fadeOutSeconds;
 	float	holdTime, fadeInSeconds;
 
-	fadePercent = BF_ReadFloat( msg );
-	fadeOutSeconds = BF_ReadFloat( msg );
-	holdTime = BF_ReadFloat( msg );
-	fadeInSeconds = BF_ReadFloat( msg );
+	fadePercent = (float)BF_ReadByte( msg );
+	holdTime = (float)BF_ReadByte( msg );
+	fadeOutSeconds = (float)BF_ReadByte( msg );
+	fadeInSeconds = (float)BF_ReadByte( msg );
 
 	S_FadeClientVolume( fadePercent, fadeOutSeconds, holdTime, fadeInSeconds );
 }
@@ -807,6 +807,7 @@ void CL_ParseAddAngle( sizebuf_t *msg )
 	add_angle = BF_ReadBitAngle( msg, 16 );
 	cl.refdef.cl_viewangles[1] += add_angle;
 }
+
 /*
 ================
 CL_ParseCrosshairAngle
@@ -816,8 +817,8 @@ offset crosshair angles
 */
 void CL_ParseCrosshairAngle( sizebuf_t *msg )
 {
-	cl.refdef.crosshairangle[0] = BF_ReadBitAngle( msg, 8 );
-	cl.refdef.crosshairangle[1] = BF_ReadBitAngle( msg, 8 );
+	cl.refdef.crosshairangle[0] = BF_ReadChar( msg ) * 0.2f;
+	cl.refdef.crosshairangle[1] = BF_ReadChar( msg ) * 0.2f;
 	cl.refdef.crosshairangle[2] = 0.0f; // not used for screen space
 }
 
@@ -833,9 +834,9 @@ void CL_RegisterUserMessage( sizebuf_t *msg )
 	char	*pszName;
 	int	svc_num, size;
 	
-	pszName = BF_ReadString( msg );
 	svc_num = BF_ReadByte( msg );
 	size = BF_ReadByte( msg );
+	pszName = BF_ReadString( msg );
 
 	// important stuff
 	if( size == 0xFF ) size = -1;

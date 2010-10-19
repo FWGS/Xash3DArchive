@@ -11,9 +11,6 @@
 #include "eiface.h"
 #include "com_model.h"
 
-#define FMOVE_IGNORE_GLASS	0x100
-#define FMOVE_SIMPLEBOX	0x200
-
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON	(1.0f / 32.0f)
 #define FRAC_EPSILON	(1.0f / 1024.0f)
@@ -22,14 +19,6 @@
 #define DVIS_PHS		1
 
 extern cvar_t		*cm_novis;
-extern cvar_t		*cm_lighting_modulate;
-
-typedef struct
-{
-	int		length;
-	float		map[MAX_STRING];
-	vec3_t		rgb;		// 0.0 - 2.0
-} clightstyle_t;
 
 typedef struct leaflist_s
 {
@@ -55,23 +44,11 @@ typedef struct clipmap_s
 	vec3_t		hull_sizes[4];	// hull sizes
 
 	script_t		*entityscript;	// only actual for world
-
-	// run local lightstyles to get SV_LightPoint grab the actual information
-	clightstyle_t	lightstyle[MAX_LIGHTSTYLES];
-	int		lastofs;
 } clipmap_t;
 
 extern clipmap_t		cm;
 extern model_t		*loadmodel;
 extern model_t		*worldmodel;
-
-//
-// cm_light.c
-//
-void CM_RunLightStyles( float time );
-void CM_SetLightStyle( int style, const char* val );
-int CM_LightEntity( edict_t *pEdict );
-void CM_ClearLightStyles( void );
 
 //
 // cm_test.c

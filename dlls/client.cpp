@@ -854,11 +854,42 @@ void Sys_Error( const char *error_string )
 ================
 PlayerCustomization
 
-Completely ignored in Xash3D
+A new player customization has been registered on the server
+UNDONE:  This only sets the # of frames of the spray can logo
+animation right now.
 ================
 */
-void PlayerCustomization( edict_t *pEntity, void *pCust )
+void PlayerCustomization( edict_t *pEntity, customization_t *pCust )
 {
+	entvars_t *pev = &pEntity->v;
+	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE(pEntity);
+
+	if (!pPlayer)
+	{
+		ALERT(at_console, "PlayerCustomization:  Couldn't get player!\n");
+		return;
+	}
+
+	if (!pCust)
+	{
+		ALERT(at_console, "PlayerCustomization:  NULL customization!\n");
+		return;
+	}
+
+	switch (pCust->resource.type)
+	{
+	case t_decal:
+		pPlayer->SetCustomDecalFrames(pCust->nUserData2); // Second int is max # of frames.
+		break;
+	case t_sound:
+	case t_skin:
+	case t_model:
+		// Ignore for now.
+		break;
+	default:
+		ALERT(at_console, "PlayerCustomization:  Unknown customization type!\n");
+		break;
+	}
 }
 
 /*

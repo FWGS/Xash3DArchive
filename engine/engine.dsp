@@ -178,10 +178,6 @@ SOURCE=.\client\cl_world.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\cm_light.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\common\cm_model.c
 # End Source File
 # Begin Source File

@@ -1577,7 +1577,7 @@ void SV_Physics( void )
 	}
 
 	// animate lightstyles (used for GetEntityIllum)
-	CM_RunLightStyles( sv.time );
+	SV_RunLightStyles ();
 
 	// at end of frame kill all entities which supposed to it 
 	SV_FreeOldEntities();

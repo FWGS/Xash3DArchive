@@ -25,7 +25,6 @@ model_t		*worldmodel;
 
 // cvars
 cvar_t		*cm_novis;
-cvar_t		*cm_lighting_modulate;
 
 /*
 ===============================================================================
@@ -106,7 +105,6 @@ static void CM_FreeModel( model_t *mod )
 bool CM_InitPhysics( void )
 {
 	cm_novis = Cvar_Get( "cm_novis", "0", 0, "force to ignore server visibility" );
-	cm_lighting_modulate = Cvar_Get( "r_lighting_modulate", "1", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "lightstyles modulate scale" );
 
 	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
 	return true;
@@ -1025,11 +1023,8 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 		if( checksum ) *checksum = cm.checksum;
 		if( !clientload )
 		{
-			// reset entity script...
+			// reset the entity script
 			Com_ResetScript( cm.entityscript );
-
-			// ..and lightstyles
-			CM_ClearLightStyles();
 		}
 		sv_models[1] = cm_models; // make link to world
 
@@ -1048,7 +1043,6 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 		
 	if( checksum ) *checksum = cm.checksum;
 
-	CM_ClearLightStyles();
 	CM_CalcPHS ();
 }
 

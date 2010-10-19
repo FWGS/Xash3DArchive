@@ -252,6 +252,9 @@ edict_t *SV_FakeConnect( const char *netname )
 
 	// setup fake client name
 	Info_SetValueForKey( userinfo, "name", netname );
+	Info_SetValueForKey( userinfo, "model", "gordon" );
+	Info_SetValueForKey( userinfo, "topcolor", "1" );
+	Info_SetValueForKey( userinfo, "bottomcolor", "1" );
 
 	// force the IP key/value pair so the game can filter based on ip
 	Info_SetValueForKey( userinfo, "ip", "127.0.0.1" );
@@ -287,6 +290,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	newcl->challenge = -1;		// fake challenge
 	newcl->fakeclient = true;
 	newcl->delta_sequence = -1;
+	newcl->userid = g_userid++;		// create unique userid
 	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
 
 	// get the game a chance to reject this connection or modify the userinfo
@@ -489,6 +493,50 @@ char *SV_StatusString( void )
 		}
 	}
 	return status;
+}
+
+/*
+===============
+SV_GetClientIDString
+
+Returns a pointer to a static char for most likely only printing.
+===============
+*/
+const char *SV_GetClientIDString( sv_client_t *cl )
+{
+	static char	result[CS_SIZE];
+
+	result[0] = '\0';
+
+	if( !cl )
+	{
+		MsgDev( D_ERROR, "SV_GetClientIDString: invalid client\n" );
+		return result;
+	}
+
+	if( cl->authentication_method == 0 )
+	{
+		// probably some old compatibility code.
+		com.snprintf( result, sizeof( result ), "%010lu", cl->WonID );
+	}
+	else if( cl->authentication_method == 2 )
+	{
+		if( NET_IsLocalAddress( cl->netchan.remote_address ))
+		{
+			com.strncpy( result, "VALVE_ID_LOOPBACK", sizeof( result ));
+		}
+		else if( cl->WonID == 0 )
+		{
+			com.strncpy( result, "VALVE_ID_PENDING", sizeof( result ));
+		}
+		else
+		{
+			com.snprintf( result, sizeof( result ), "VALVE_%010lu", cl->WonID );
+		}
+	}
+	else com.strncpy( result, "UNKNOWN", sizeof( result ));
+
+	return result;
 }
 
 /*
@@ -1017,9 +1065,9 @@ void SV_UserMessages_f( sv_client_t *cl )
 		if( message->name[0] )
 		{
 			BF_WriteByte( &cl->netchan.message, svc_usermessage );
-			BF_WriteString( &cl->netchan.message, message->name );
 			BF_WriteByte( &cl->netchan.message, message->number );
 			BF_WriteByte( &cl->netchan.message, (byte)message->size );
+			BF_WriteString( &cl->netchan.message, message->name );
 		}
 		start++;
 	}

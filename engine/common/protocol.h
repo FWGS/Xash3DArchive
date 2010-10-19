@@ -22,14 +22,14 @@
 #define svc_serverdata		11	// [long] protocol ...
 #define svc_restore			12	// restore saved game on the client
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
-#define svc_usermessage		14	// [string][byte] REG_USER_MSG stuff
+
 #define svc_clientdata		15	// [...]
 #define svc_download		16	// [short] size [size bytes]
 #define svc_updatepings		17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
 #define svc_frame			19	// <OBSOLETE>
 #define svc_spawnstatic		20	// creates a static client entity
-#define svc_crosshairangle		21	// [short][short][short]
+
 #define svc_spawnbaseline		22	// <see code>
 #define svc_temp_entity		23	// <variable sized>
 #define svc_setpause		24	// [byte] 0 = unpaused, 1 = paused
@@ -39,7 +39,7 @@
 #define svc_event_reliable		28	// playback event directly from message, not queue
 #define svc_ambientsound		29	// <see code>
 #define svc_intermission		30	// empty message (event)
-#define svc_soundfade		31	// [float*4] sound fade parms
+
 #define svc_cdtrack			32	// [byte] track [byte] looptrack
 #define svc_serverinfo		33	// [string] key [string] value
 #define svc_deltatable		34	// [table header][...]
@@ -47,10 +47,13 @@
 #define svc_bspdecal		36	// [float*3][short][short][short]
 #define svc_roomtype		37	// [short] room type
 #define svc_addangle		38	// [angle] add angles when client turn on mover
-
+#define svc_usermessage		39	// [byte][byte][string] REG_USER_MSG stuff
 #define svc_packetentities		40	// [short][...]
 #define svc_deltapacketentities	41	// [short][byte][...] 
 #define svc_chokecount		42	// [byte]
+
+#define svc_crosshairangle		47	// [byte][byte]
+#define svc_soundfade		48	// [float*4] sound fade parms
 
 #define svc_director		51	// <variable sized>
 #define svc_lastmsg			64	// start user messages at this point

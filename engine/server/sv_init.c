@@ -94,6 +94,9 @@ void SV_CreateBaseline( void )
 		if( !SV_IsValidEdict( pEdict )) continue;
 		SV_BaselineForEntity( pEdict );
 	}
+
+	// create the instanced baselines
+	svgame.dllFuncs.pfnCreateInstancedBaselines();
 }
 
 /*

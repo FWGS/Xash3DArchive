@@ -63,6 +63,29 @@ typedef enum
 	cs_spawned	// client is fully in game
 } cl_state_t;
 
+// server lightstyles (used for GetEntityIllum)
+typedef struct
+{
+	int		length;
+	float		map[MAX_STRING];
+	vec3_t		rgb;		// 0.0 - 2.0
+} sv_lightstyle_t;
+
+// instanced baselines container
+typedef struct
+{
+	int		count;
+	string_t		classnames[64];
+	entity_state_t	baselines[64];
+} sv_baselines_t;
+
+typedef struct
+{
+	const char	*name;
+	FORCE_TYPE	force_state;
+	vec3_t		mins, maxs;
+} sv_consistency_t;
+
 typedef struct server_s
 {
 	sv_state_t	state;		// precache commands are only valid during load
@@ -80,6 +103,11 @@ typedef struct server_s
 
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 
+	sv_consistency_t	consistency_files[MAX_MODELS];
+	int		num_consistency_files;
+
+	sv_baselines_t	instanced;	// instanced baselines
+
 	// unreliable data to send to clients.
 	sizebuf_t		datagram;
 	byte		datagram_buf[NET_MAX_PAYLOAD];
@@ -96,6 +124,9 @@ typedef struct server_s
 	byte		signon_buf[MAX_MSGLEN];
 
 	model_t		*worldmodel;	// pointer to world
+
+	// run local lightstyles to let SV_LightPoint grab the actual information
+	sv_lightstyle_t	lightstyle[MAX_LIGHTSTYLES];
 
 	bool		write_bad_message;	// just for debug
 	bool		paused;
@@ -179,6 +210,8 @@ typedef struct sv_client_s
 
 	int		challenge;		// challenge of this user, randomly generated
 	int		userid;			// identifying number on server
+	int		authentication_method;
+	uint		WonID;			// WonID
 } sv_client_t;
 
 /*
@@ -321,6 +354,7 @@ extern	cvar_t		*sv_gravity;
 extern	cvar_t		*sv_stopspeed;
 extern	cvar_t		*sv_check_errors;
 extern	cvar_t		*sv_reconnect_limit;
+extern	cvar_t		*sv_lighting_modulate;
 extern	cvar_t		*rcon_password;
 extern	cvar_t		*hostname;
 extern	cvar_t		*sv_stepheight;
@@ -407,6 +441,7 @@ void SV_DirectConnect( netadr_t from );
 void SV_TogglePause( const char *msg );
 void SV_PutClientInServer( edict_t *ent );
 bool SV_ShouldUpdatePing( sv_client_t *cl );
+const char *SV_GetClientIDString( sv_client_t *cl );
 void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg );
 void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg );
 void SV_GetPlayerStats( sv_client_t *cl, int *ping, int *packet_loss );
@@ -523,5 +558,8 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers );
 void SV_TouchLinks( edict_t *ent, areanode_t *node );
 int SV_TruePointContents( const vec3_t p );
 int SV_PointContents( const vec3_t p );
+void SV_RunLightStyles( void );
+void SV_SetLightStyle( int style, const char* s );
+int SV_LightForEntity( edict_t *pEdict );
 
 #endif//SERVER_H

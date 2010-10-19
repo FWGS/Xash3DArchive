@@ -1106,7 +1106,7 @@ int pfnGetEntityIllum( edict_t* pEnt )
 		MsgDev( D_WARN, "SV_GetEntityIllum: invalid entity %s\n", SV_ClassName( pEnt ));
 		return 0;
 	}
-	return CM_LightEntity( pEnt );
+	return SV_LightForEntity( pEnt );
 }
 
 /*
@@ -2018,7 +2018,7 @@ void pfnLightStyle( int style, const char* val )
 	if( style >= MAX_LIGHTSTYLES )
 		Host_Error( "SV_LightStyle: style: %i >= %d", style, MAX_LIGHTSTYLES );
 
-	CM_SetLightStyle( style, val ); // update info for SV_LightPoint
+	SV_SetLightStyle( style, val ); // update info for SV_LightPoint
 	SV_ConfigString( CS_LIGHTSTYLES + style, val );
 }
 
@@ -2527,11 +2527,8 @@ edict_t* pfnFindEntityByVars( entvars_t *pvars )
 	for( i = 0; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
-		if( !memcmp( &e->v, pvars, sizeof( entvars_t )))
-		{
-			MsgDev( D_INFO, "FindEntityByVars: %s\n", SV_ClassName( e ));
+		if( &e->v == pvars )
 			return e;	// found it
-		}
 	}
 	return NULL;
 }
@@ -2605,9 +2602,9 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	{
 		// tell the client about new user message
 		BF_WriteByte( &sv.reliable_datagram, svc_usermessage );
-		BF_WriteString( &sv.reliable_datagram, svgame.msg[i].name );
 		BF_WriteByte( &sv.reliable_datagram, svgame.msg[i].number );
 		BF_WriteByte( &sv.reliable_datagram, (byte)iSize );
+		BF_WriteString( &sv.reliable_datagram, svgame.msg[i].name );
 	}
 
 	return svgame.msg[i].number;
@@ -2622,7 +2619,7 @@ animating studiomodel
 */
 void pfnAnimationAutomove( const edict_t* pEdict, float flTime )
 {
-	// FIXME: implement
+	// this is empty in the original HL
 }
 
 /*
@@ -2801,9 +2798,14 @@ void pfnCrosshairAngle( const edict_t *pClient, float pitch, float yaw )
 	// fakeclients ignores it silently
 	if( client->fakeclient ) return;
 
+	if( pitch > 180.0f ) pitch -= 360;
+	if( pitch < -180.0f ) pitch += 360;
+	if( yaw > 180.0f ) yaw -= 360;
+	if( yaw < -180.0f ) yaw += 360;
+
 	BF_WriteByte( &client->netchan.message, svc_crosshairangle );
-	BF_WriteBitAngle( &client->netchan.message, pitch, 8 );
-	BF_WriteBitAngle( &client->netchan.message, yaw, 8 );
+	BF_WriteChar( &client->netchan.message, pitch * 5 );
+	BF_WriteChar( &client->netchan.message, yaw * 5 );
 }
 
 /*
@@ -2916,7 +2918,22 @@ pfnGetPlayerWONId
 */
 uint pfnGetPlayerWONId( edict_t *e )
 {
-	// FIXME: implement
+	int		i;
+	sv_client_t	*cl;
+
+	if( sv.state != ss_active )
+		return -1;
+
+	if( !SV_ClientFromEdict( e, false ))
+		return -1;
+
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( cl->edict == e && cl->authentication_method == 0 )
+		{
+			return cl->WonID;
+		}
+	}
 	return -1;
 }
 
@@ -2954,7 +2971,7 @@ pfnFadeClientVolume
 
 =============
 */
-void pfnFadeClientVolume( const edict_t *pEdict, float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds )
+void pfnFadeClientVolume( const edict_t *pEdict, int fadePercent, int fadeOutSeconds, int holdTime, int fadeInSeconds )
 {
 	sv_client_t *cl;
 
@@ -2965,17 +2982,20 @@ void pfnFadeClientVolume( const edict_t *pEdict, float fadePercent, float fadeOu
 		return;
 	}
 
+	if( cl->fakeclient ) return;
+
 	BF_WriteByte( &cl->netchan.message, svc_soundfade );
-	BF_WriteFloat( &cl->netchan.message, fadePercent );
-	BF_WriteFloat( &cl->netchan.message, fadeOutSeconds );
-	BF_WriteFloat( &cl->netchan.message, holdTime );
-	BF_WriteFloat( &cl->netchan.message, fadeInSeconds );
+	BF_WriteByte( &cl->netchan.message, fadePercent );
+	BF_WriteByte( &cl->netchan.message, holdTime );
+	BF_WriteByte( &cl->netchan.message, fadeOutSeconds );
+	BF_WriteByte( &cl->netchan.message, fadeInSeconds );
 }
 
 /*
 =============
 pfnSetClientMaxspeed
 
+fakeclients can be changed speed to
 =============
 */
 void pfnSetClientMaxspeed( const edict_t *pEdict, float fNewMaxspeed )
@@ -3053,7 +3073,15 @@ returns actual entity count
 */
 int pfnNumberOfEntities( void )
 {
-	return svgame.numEntities;
+	int	i, total = 0;
+
+	for( i = 0; i < svgame.numEntities; i++ )
+	{
+		if( !svgame.edicts[i].free )
+			total++;
+	}
+
+	return total;
 }
 	
 /*
@@ -3420,6 +3448,8 @@ pfnCheckVisibility
 */
 int pfnCheckVisibility( const edict_t *ent, byte *pset )
 {
+	int	result = 0;
+
 	if( !SV_IsValidEdict( ent ))
 	{
 		MsgDev( D_WARN, "SV_CheckVisibility: invalid entity %s\n", SV_ClassName( ent ));
@@ -3442,6 +3472,8 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 
 		if( i == ent->num_leafs )
 			return 0;	// not visible
+
+		result = 1;	// visible passed by leafs
 	}
 	else
 	{
@@ -3454,6 +3486,8 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 		// too many leafs for individual check, go by headnode
 		if( !SV_HeadnodeVisible( node, pset ))
 			return 0;
+
+		result = 2;	// visible passed by headnode
 	}
 
 #if 0
@@ -3462,9 +3496,10 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	{
 		if( !CM_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))
 			return 0;
+		result = 3;	// visible passed by BoxVisible
 	}
 #endif
-	return 1;
+	return result;
 }
 
 /*
@@ -3520,8 +3555,18 @@ pfnCreateInstancedBaseline
 */
 int pfnCreateInstancedBaseline( int classname, struct entity_state_s *baseline )
 {
-	// FIXME: implement
-	return 0;
+	int	i;
+
+	if( !baseline ) return -1;
+
+	i = sv.instanced.count;
+	if( i > 62 ) return 0;
+
+	sv.instanced.classnames[i] = classname;
+	sv.instanced.baselines[i] = *baseline;
+	sv.instanced.count++;
+
+	return i+1;
 }
 
 /*
@@ -3548,7 +3593,7 @@ int pfnGetPlayerUserId( edict_t *e )
 	sv_client_t	*cl;
 	int		i;
 		
-	if( !svs.initialized )
+	if( sv.state != ss_active )
 		return -1;
 
 	if( !SV_ClientFromEdict( e, false ))
@@ -3615,7 +3660,7 @@ void pfnGetPlayerStats( const edict_t *pClient, int *ping, int *packet_loss )
 		return;
 	}
 
-	if( ping ) *ping = cl->ping * 1000;
+	if( ping ) *ping = cl->ping * 1000;	// this is should be cl->latency not ping!
 	if( packet_loss ) *packet_loss = cl->packet_loss;
 }
 
@@ -3638,7 +3683,46 @@ pfnForceUnmodified
 */
 void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *filename )
 {
-	// FIXME: implement
+	sv_consistency_t	*pData;
+	int		i;
+
+	if( !filename || !*filename )
+	{
+		Host_Error( "SV_ForceUnmodified: bad filename string.\n" );
+	}
+
+	if( sv.state == ss_loading )
+	{
+		for( i = 0, pData = sv.consistency_files; i < MAX_MODELS; i++, pData++ )
+		{
+			if( !pData->name )
+			{
+				pData->name = filename;
+				pData->force_state = type;
+
+				if( mins ) VectorCopy( mins, pData->mins );
+				if( maxs ) VectorCopy( maxs, pData->maxs );
+				return;
+			}
+			else if( !com.strcmp( filename, pData->name ))
+			{
+				return;
+			}
+		}
+		Host_Error( "SV_ForceUnmodified: MAX_MODELS limit exceeded\n" );
+	}
+	else
+	{
+		for( i = 0, pData = sv.consistency_files; i < MAX_MODELS; i++, pData++ )
+		{
+			if( !pData->name || com.strcmp( filename, pData->name ))
+				continue;
+
+			// if we are here' we found a match.
+			return;
+		}
+		Host_Error( "SV_ForceUnmodified: can only be done during precache\n" );
+	}
 }
 
 /*
@@ -3654,6 +3738,56 @@ void pfnAddServerCommand( const char *cmd_name, void (*function)(void), const ch
 
 /*
 =============
+pfnVoice_GetClientListening
+
+=============
+*/
+bool pfnVoice_GetClientListening( int iReceiver, int iSender )
+{
+	int	iMaxClients = sv_maxclients->integer;
+
+	if( !svs.initialized ) return false;
+
+	if( iReceiver <= 0 || iReceiver > iMaxClients || iSender <= 0 || iSender > iMaxClients )
+	{
+		MsgDev( D_ERROR, "Voice_GetClientListening: invalid client indexes (%i, %i).\n", iReceiver, iSender );
+		return false;
+	}
+
+	return ((svs.clients[iSender].listeners & ( 1 << iReceiver )) != 0 );
+}
+
+/*
+=============
+pfnVoice_SetClientListening
+
+=============
+*/
+bool pfnVoice_SetClientListening( int iReceiver, int iSender, bool bListen )
+{
+	int	iMaxClients = sv_maxclients->integer;
+
+	if( !svs.initialized ) return false;
+
+	if( iReceiver <= 0 || iReceiver > iMaxClients || iSender <= 0 || iSender > iMaxClients )
+	{
+		MsgDev( D_ERROR, "Voice_SetClientListening: invalid client indexes (%i, %i).\n", iReceiver, iSender );
+		return false;
+	}
+
+	if( bListen )
+	{
+		svs.clients[iSender].listeners |= (1 << iReceiver);
+	}
+	else
+	{
+		svs.clients[iSender].listeners &= ~(1 << iReceiver);
+	}
+	return true;
+}
+
+/*
+=============
 pfnGetPlayerAuthId
 
 These function must returns cd-key hashed value
@@ -3663,7 +3797,38 @@ return nullstring for now
 */
 const char *pfnGetPlayerAuthId( edict_t *e )
 {
-	return "";
+	sv_client_t	*cl;
+	static string	result;
+	int		i;
+
+	if( sv.state != ss_active || !SV_IsValidEdict( e ))
+	{
+		result[0] = '\0';
+		return result;
+	}
+
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	{
+		if( cl->edict == e )
+		{
+			if( cl->fakeclient )
+			{
+				com.strncat( result, "BOT", sizeof( result ));
+			}
+			else if( cl->authentication_method == 0 )
+			{
+				com.snprintf( result, sizeof( result ), "%u", (uint)cl->WonID );
+			}
+			else
+			{
+				com.snprintf( result, sizeof( result ), "%s", SV_GetClientIDString( cl ));
+			}
+			return result;
+		}
+	}
+
+	result[0] = '\0';
+	return result;
 }
 					
 // engine callbacks
@@ -3810,6 +3975,8 @@ static enginefuncs_t gEngfuncs =
 	pfnForceUnmodified,
 	pfnGetPlayerStats,
 	pfnAddServerCommand,
+	pfnVoice_GetClientListening,
+	pfnVoice_SetClientListening,
 	pfnGetPlayerAuthId,
 };
 

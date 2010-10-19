@@ -159,7 +159,7 @@ typedef struct enginefuncs_s
 	int	(*pfnCompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void	(*pfnGetGameDir)( char *szGetGameDir );
 	void	(*pfnHostError)( const char *szFmt, ... );
-	void	(*pfnFadeClientVolume)( const edict_t *pEdict, float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
+	void	(*pfnFadeClientVolume)( const edict_t *pEdict, int fadePercent, int fadeOutSeconds, int holdTime, int fadeInSeconds );
 	void	(*pfnSetClientMaxspeed)( const edict_t *pEdict, float fNewMaxspeed );
 	edict_t	*(*pfnCreateFakeClient)( const char *netname ); // returns NULL if fake client can't be created
 	void	(*pfnRunPlayerMove)( edict_t *fakeclient, const float *viewangles, float forwardmove, float sidemove, float upmove, word buttons, byte impulse, byte msec );
@@ -199,6 +199,8 @@ typedef struct enginefuncs_s
 	void	(*pfnForceUnmodified)( FORCE_TYPE type, float *mins, float *maxs, const char *filename );
 	void	(*pfnGetPlayerStats)( const edict_t *pClient, int *ping, int *packet_loss );
 	void	(*pfnAddServerCommand)( const char *cmd_name, void (*function)(void), const char *cmd_desc );
+	int	(*pfnVoice_GetClientListening)( int iReceiver, int iSender );
+	int	(*pfnVoice_SetClientListening)( int iReceiver, int iSender, int bListen );
 	const char *(*pfnGetPlayerAuthId)( edict_t *e );
 	// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 138
 } enginefuncs_t;
@@ -345,8 +347,8 @@ typedef struct
 	 // returns string describing current .dll.  E.g., TeamFotrress 2, Half-Life
 	const char *(*pfnGetGameDescription)( void );     
 
-	// Notify dll about a player customization. (completely ignored in Xash3D)
-	void	(*pfnPlayerCustomization)( edict_t *pEntity, void *pUnused );
+	// Notify dll about a player customization.
+	void	(*pfnPlayerCustomization)( edict_t *pEntity, customization_t *pCustom );
 
 	// Spectator funcs
 	void	(*pfnSpectatorConnect)( edict_t *pEntity );

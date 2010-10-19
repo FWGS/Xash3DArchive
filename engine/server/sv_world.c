@@ -28,6 +28,8 @@ typedef struct moveclip_s
 	int		hull;		// -1 to let entity select hull
 } moveclip_t;
 
+static int		sv_lastofs;	// lightstyles code use this
+
 /*
 ===============================================================================
 
@@ -336,8 +338,16 @@ SV_ClearWorld
 */
 void SV_ClearWorld( void )
 {
+	sv_lightstyle_t	*ls;
+	int		i;
+
 	SV_InitBoxHull();		// for box testing
 	SV_InitStudioHull();	// for hitbox testing
+
+	// clear lightstyles
+	for( i = 0, ls = sv.lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
+		VectorSet( sv.lightstyle[i].rgb, 1.0f, 1.0f, 1.0f );
+	sv_lastofs = -1;
 
 	Mem_Set( sv_areanodes, 0, sizeof( sv_areanodes ));
 	sv_numareanodes = 0;
@@ -1360,4 +1370,184 @@ trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore )
 	VectorCopy( original_avelocity, tossent->v.avelocity );
 
 	return trace;
+}
+
+/*
+===============================================================================
+
+	LIGHTING INFO
+
+===============================================================================
+*/
+
+static vec3_t	sv_pointColor;
+static float	sv_modulate;
+
+/*
+=================
+SV_RecursiveLightPoint
+=================
+*/
+static bool SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
+{
+	int		side;
+	mplane_t		*plane;
+	msurface_t	*surf;
+	mtexinfo_t	*tex;
+	vec3_t		mid, scale;
+	float		front, back, frac;
+	int		i, map, size, s, t;
+	byte		*lm;
+
+	// didn't hit anything
+	if( !node->plane ) return false;
+
+	// calculate mid point
+	plane = node->plane;
+	if( plane->type < 3 )
+	{
+		front = start[plane->type] - plane->dist;
+		back = end[plane->type] - plane->dist;
+	}
+	else
+	{
+		front = DotProduct( start, plane->normal ) - plane->dist;
+		back = DotProduct( end, plane->normal ) - plane->dist;
+	}
+
+	side = front < 0;
+	if(( back < 0 ) == side )
+		return SV_RecursiveLightPoint( node->children[side], start, end );
+
+	frac = front / ( front - back );
+
+	VectorLerp( start, frac, end, mid );
+
+	// co down front side	
+	if( SV_RecursiveLightPoint( node->children[side], start, mid ))
+		return true; // hit something
+
+	if(( back < 0 ) == side )
+		return false;// didn't hit anything
+
+	// check for impact on this node
+	surf = node->firstface;
+
+	for( i = 0; i < node->numfaces; i++, surf++ )
+	{
+		tex = surf->texinfo;
+
+		if( surf->flags & SURF_DRAWTILED )
+			continue;	// no lightmaps
+
+		s = DotProduct( mid, tex->vecs[0] ) + tex->vecs[0][3] - surf->texturemins[0];
+		t = DotProduct( mid, tex->vecs[1] ) + tex->vecs[1][3] - surf->texturemins[1];
+
+		if(( s < 0 || s > surf->extents[0] ) || ( t < 0 || t > surf->extents[1] ))
+			continue;
+
+		s >>= 4;
+		t >>= 4;
+
+		if( !surf->samples )
+			return true;
+
+		VectorClear( sv_pointColor );
+
+		lm = surf->samples + 3 * (t * ((surf->extents[0] >> 4) + 1) + s);
+		size = ((surf->extents[0] >> 4) + 1) * ((surf->extents[1] >> 4) + 1) * 3;
+
+		for( map = 0; map < surf->numstyles; map++ )
+		{
+			VectorScale( sv.lightstyle[surf->styles[map]].rgb, sv_modulate, scale );
+
+			sv_pointColor[0] += lm[0] * scale[0];
+			sv_pointColor[1] += lm[1] * scale[1];
+			sv_pointColor[2] += lm[2] * scale[2];
+
+			lm += size; // skip to next lightmap
+		}
+		return true;
+	}
+
+	// go down back side
+	return SV_RecursiveLightPoint( node->children[!side], mid, end );
+}
+
+void SV_RunLightStyles( void )
+{
+	int		i, ofs;
+	sv_lightstyle_t	*ls;
+	float		l;
+
+	// run lightstyles animation
+	ofs = (sv.time * 10);
+
+	if( ofs == sv_lastofs ) return;
+	sv_lastofs = ofs;
+
+	for( i = 0, ls = sv.lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
+	{
+		if( ls->length == 0 ) l = 0.0f;
+		else if( ls->length == 1 ) l = ls->map[0];
+		else l = ls->map[ofs%ls->length];
+
+		VectorSet( ls->rgb, l, l, l );
+	}
+}
+
+/*
+==================
+SV_AddLightStyle
+
+needs to get correct working SV_LightPoint
+==================
+*/
+void SV_SetLightStyle( int style, const char* s )
+{
+	int	j, k;
+
+	j = com.strlen( s );
+	sv.lightstyle[style].length = j;
+
+	for( k = 0; k < j; k++ )
+		sv.lightstyle[style].map[k] = (float)( s[k]-'a' ) / (float)( 'm'-'a' );
+}
+
+/*
+==================
+SV_LightForEntity
+
+grab the ambient lighting color for current point
+==================
+*/
+int SV_LightForEntity( edict_t *pEdict )
+{
+	vec3_t	start, end;
+
+	if( !pEdict ) return 0;
+	if( pEdict->v.effects & EF_FULLBRIGHT || !sv.worldmodel->lightdata )
+	{
+		return 255;
+	}
+
+	if( pEdict->v.flags & FL_CLIENT )
+	{
+		// client has more precision light level
+		// that come from client
+		return pEdict->v.light_level;
+	}
+
+	VectorCopy( pEdict->v.origin, start );
+	VectorCopy( pEdict->v.origin, end );
+
+	if( pEdict->v.effects & EF_INVLIGHT )
+		end[2] = start[2] + 8192;
+	else end[2] = start[2] - 8192;
+	VectorSet( sv_pointColor, 1.0f, 1.0f, 1.0f );
+
+	sv_modulate = sv_lighting_modulate->value * (1.0f / 255);
+	SV_RecursiveLightPoint( worldmodel->nodes, start, end );
+
+	return VectorAvg( sv_pointColor );
 }

@@ -10,6 +10,9 @@
 #define MOVE_MISSILE	2	// extra size for monsters
 #define MOVE_WORLDONLY	3	// clip only world
 
+#define FMOVE_IGNORE_GLASS	0x100
+#define FMOVE_SIMPLEBOX	0x200
+
 #define CONTENTS_NONE	0	// no custom contents specified
 
 /*
