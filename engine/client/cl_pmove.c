@@ -55,9 +55,7 @@ bool CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	VectorCopy( ent->curstate.maxs, pe->maxs );
 
 	pe->solid = ent->curstate.solid;
-	pe->scale = ent->curstate.scale;
 	pe->rendermode = ent->curstate.rendermode;
-	pe->framerate = ent->curstate.framerate;
 	pe->skin = ent->curstate.skin;
 	pe->frame = ent->curstate.frame;
 	pe->sequence = ent->curstate.sequence;
@@ -106,7 +104,7 @@ void CL_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
 	{
 		next = l->next;
-		check = CL_GetEntityByIndex( l->entnum );
+		check = EDICT_FROM_AREA( l );
 
 		// don't add the world and clients here
 		if( !check || check == &clgame.entities[0] || check->player )
@@ -366,6 +364,8 @@ void CL_InitClientMove( void )
 	clgame.pmove->movevars = &clgame.movevars;
 	clgame.pmove->runfuncs = false;
 
+	CM_SetupHulls( clgame.player_mins, clgame.player_maxs );
+
 	// enumerate client hulls
 	for( i = 0; i < 4; i++ )
 		clgame.dllFuncs.pfnGetHullBounds( i, clgame.player_mins[i], clgame.player_maxs[i] );
@@ -377,9 +377,9 @@ void CL_InitClientMove( void )
 	clgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
 	clgame.pmove->PM_Particle = pfnParticle;
 	clgame.pmove->PM_TestPlayerPosition = pfnTestPlayerPosition;
-	clgame.pmove->ConNPrintf = Con_NPrintf;
-	clgame.pmove->ConDPrintf = Con_DPrintf;
-	clgame.pmove->ConPrintf = Con_Printf;
+	clgame.pmove->Con_NPrintf = Con_NPrintf;
+	clgame.pmove->Con_DPrintf = Con_DPrintf;
+	clgame.pmove->Con_Printf = Con_Printf;
 	clgame.pmove->Sys_FloatTime = Sys_FloatTime;
 	clgame.pmove->PM_StuckTouch = pfnStuckTouch;
 	clgame.pmove->PM_PointContents = pfnPointContents;

@@ -7,7 +7,6 @@
 #include "server.h"
 #include "const.h"
 #include "net_encode.h"
-#include "entity_types.h"
 
 #define MAX_VISIBLE_PACKET	512
 
@@ -109,7 +108,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		}
 
 		// don't double add an entity through portals (already added)
-		if( ent->framenum == sv.net_framenum )
+		if( ent->v.pushmsec == sv.net_framenum )
 			continue;
 
 		if( ent->v.flags & FL_CHECK_PHS )
@@ -124,7 +123,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, player, pset ))
 		{
 			// to prevent adds it twice through portals
-			ent->framenum = sv.net_framenum;
+			ent->v.pushmsec = sv.net_framenum;
 
 			if( netclient && netclient->modelindex ) // apply custom model if present
 				state->modelindex = netclient->modelindex;
@@ -243,7 +242,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			// delta update from old position
 			// because the force parm is false, this will not result
 			// in any bytes being emited if the entity has not changed at all
-			MSG_WriteDeltaEntity( oldent, newent, msg, false, sv_time( ));
+			MSG_WriteDeltaEntity( oldent, newent, msg, false, SV_IsPlayerIndex( newent->number ), sv_time( ));
 			oldindex++;
 			newindex++;
 			continue;
@@ -252,7 +251,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		if( newnum < oldnum )
 		{	
 			// this is a new entity, send it from the baseline
-			MSG_WriteDeltaEntity( &svs.baselines[newnum], newent, msg, true, sv_time( ));
+			MSG_WriteDeltaEntity( &svs.baselines[newnum], newent, msg, true, SV_IsPlayerIndex( newent->number ), sv.time );
 			newindex++;
 			continue;
 		}
@@ -266,7 +265,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			else force = false;		// just removed from delta-message 
 
 			// remove from message
-			MSG_WriteDeltaEntity( oldent, NULL, msg, force, sv_time( ));
+			MSG_WriteDeltaEntity( oldent, NULL, msg, force, false, sv.time );
 			oldindex++;
 			continue;
 		}
@@ -402,7 +401,9 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 		cl->addangle = 0;
 		break;
 	}
+
 	clent->v.fixangle = 0; // reset fixangle
+	clent->v.pushmsec = 0; // reset pushmsec
 
 	Mem_Set( &frame->clientdata, 0, sizeof( frame->clientdata ));
 

@@ -33,8 +33,6 @@
 #define Cmd_AddCommand	(*gEngfuncs.pfnAddCommand)
 #define CMD_ARGC		(*gEngfuncs.pfnCmdArgc)
 #define CMD_ARGV		(*gEngfuncs.pfnCmdArgv)
-#define Con_Printf		(*gEngfuncs.Con_Printf)
-#define Con_DPrintf		(*gEngfuncs.Con_DPrintf)
 #define IN_GAME		(*gEngfuncs.pfnIsInGame)
 
 inline void SPR_Set( HSPRITE hPic, int r, int g, int b )

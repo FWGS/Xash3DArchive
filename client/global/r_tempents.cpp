@@ -113,7 +113,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 	// before first frame when movevars not initialized
 	if( !gpMovevars )
 	{
-		Con_Printf( "ERROR: TempEntUpdate: no movevars!!!\n" );
+		gEngfuncs.Con_Printf( "ERROR: TempEntUpdate: no movevars!!!\n" );
 		return true;
 	}
 
@@ -585,7 +585,7 @@ TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, int modelIndex )
 
 	if ( !m_pFreeTempEnts )
 	{
-		Con_Printf( "Overflow %d temporary ents!\n", MAX_TEMP_ENTITIES );
+		gEngfuncs.Con_Printf( "Overflow %d temporary ents!\n", MAX_TEMP_ENTITIES );
 		return NULL;
 	}
 
@@ -625,7 +625,7 @@ TEMPENTITY *CTempEnts::TempEntAllocHigh( const Vector& org, int modelIndex )
 	{
 		// didn't find anything? The tent list is either full of high-priority tents
 		// or all tents in the list are still due to live for > 10 seconds. 
-		Con_Printf( "Couldn't alloc a high priority TENT!\n" );
+		gEngfuncs.Con_Printf( "Couldn't alloc a high priority TENT!\n" );
 		return NULL;
 	}
 
@@ -855,20 +855,20 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 
 	if ( client <= 0 || client > gEngfuncs.GetMaxClients() )
 	{
-		Con_Printf( "Bad client in AttachTentToPlayer()!\n" );
+		gEngfuncs.Con_Printf( "Bad client in AttachTentToPlayer()!\n" );
 		return;
 	}
 
 	cl_entity_t *pClient = GetEntityByIndex( client );
 	if ( !pClient )
 	{
-		Con_Printf( "Couldn't get ClientEntity for %i\n", client );
+		gEngfuncs.Con_Printf( "Couldn't get ClientEntity for %i\n", client );
 		return;
 	}
 
 	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
-		Con_Printf( "No model %d!\n", modelIndex );
+		gEngfuncs.Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}
 
@@ -878,7 +878,7 @@ void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, f
 	pTemp = TempEntAllocHigh( position, modelIndex );
 	if ( !pTemp )
 	{
-		Con_Printf( "No temp ent.\n" );
+		gEngfuncs.Con_Printf( "No temp ent.\n" );
 		return;
 	}
 
@@ -919,7 +919,7 @@ void CTempEnts::KillAttachedTents( int client )
 {
 	if ( client <= 0 || client > gEngfuncs.GetMaxClients() )
 	{
-		Con_Printf( "Bad client in KillAttachedTents()!\n" );
+		gEngfuncs.Con_Printf( "Bad client in KillAttachedTents()!\n" );
 		return;
 	}
 
@@ -1108,7 +1108,7 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 
 	if( iAttachment > 0 && pEnt->attachment_origin[iAttachment - 1] == g_vecZero )
 	{
-		Con_Printf( "Invalid muzzleflash entity!\n" );
+		gEngfuncs.Con_Printf( "Invalid muzzleflash entity!\n" );
 		return;
 	}
 
@@ -1292,7 +1292,7 @@ TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float 
 
 	if( !spriteIndex || Mod_GetModelType( spriteIndex ) != mod_sprite )
 	{
-		Con_Printf( "No Sprite %d!\n", spriteIndex );
+		gEngfuncs.Con_Printf( "No Sprite %d!\n", spriteIndex );
 		return NULL;
 	}
 
@@ -1328,7 +1328,7 @@ TEMPENTITY *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float s
 
 	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
-		Con_Printf( "No model %d!\n", modelIndex );
+		gEngfuncs.Con_Printf( "No model %d!\n", modelIndex );
 		return NULL;
 	}
 
@@ -1427,7 +1427,7 @@ void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelInd
 
 	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
-		Con_Printf( "No model %d!\n", modelIndex );
+		gEngfuncs.Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}
 
@@ -1466,7 +1466,7 @@ void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &ve
 
 	if( Mod_GetModelType( modelIndex ) == mod_bad )
 	{
-		Con_Printf( "No model %d!\n", modelIndex );
+		gEngfuncs.Con_Printf( "No model %d!\n", modelIndex );
 		return;
 	}	
 

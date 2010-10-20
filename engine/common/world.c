@@ -36,7 +36,6 @@ ClearLink is used for new headnodes
 */
 void ClearLink( link_t *l )
 {
-	l->entnum = 0;
 	l->prev = l->next = l;
 }
 
@@ -60,13 +59,12 @@ InsertLinkBefore
 kept trigger and solid entities seperate
 ===============
 */
-void InsertLinkBefore( link_t *l, link_t *before, int entnum )
+void InsertLinkBefore( link_t *l, link_t *before )
 {
 	l->next = before;
 	l->prev = before->prev;
 	l->prev->next = l;
 	l->next->prev = l;
-	l->entnum = entnum;
 }
 
 /*

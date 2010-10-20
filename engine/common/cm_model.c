@@ -26,6 +26,24 @@ model_t		*worldmodel;
 // cvars
 cvar_t		*cm_novis;
 
+// default hullmins
+static vec3_t cm_hullmins[4] =
+{
+{ -16, -16, -36 },
+{ -16, -16, -18 },
+{   0,   0,   0 },
+{ -32, -32, -32 },
+};
+
+// defualt hummaxs
+static vec3_t cm_hullmaxs[4] =
+{
+{  16,  16,  36 },
+{  16,  16,  18 },
+{   0,   0,   0 },
+{  32,  32,  32 },
+};
+
 /*
 ===============================================================================
 
@@ -52,6 +70,12 @@ script_t *CM_GetEntityScript( void )
 		return ents;
 	}
 	return cm.entityscript;
+}
+
+void CM_SetupHulls( float mins[4][3], float maxs[4][3] )
+{
+	Mem_Copy( mins, cm_hullmins, sizeof( cm_hullmins ));
+	Mem_Copy( maxs, cm_hullmaxs, sizeof( cm_hullmaxs ));
 }
 
 /*

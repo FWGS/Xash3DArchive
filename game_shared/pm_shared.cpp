@@ -621,7 +621,7 @@ int PM_AddToTouched(pmtrace_t tr, vec3_t impactvelocity)
 	VectorCopy( impactvelocity, tr.deltavelocity );
 
 	if (pmove->numtouch >= MAX_PHYSENTS)
-		pmove->ConDPrintf("Too many entities were touched!\n");
+		pmove->Con_DPrintf("Too many entities were touched!\n");
 
 	pmove->touchindex[pmove->numtouch++] = tr;
 	return TRUE;
@@ -646,24 +646,24 @@ void PM_CheckVelocity ()
 		// See if it's bogus.
 		if (IS_NAN(pmove->velocity[i]))
 		{
-			pmove->ConPrintf ("PM  Got a NaN velocity %i\n", i);
+			pmove->Con_Printf ("PM  Got a NaN velocity %i\n", i);
 			pmove->velocity[i] = 0;
 		}
 		if (IS_NAN(pmove->origin[i]))
 		{
-			pmove->ConPrintf ("PM  Got a NaN origin on %i\n", i);
+			pmove->Con_Printf ("PM  Got a NaN origin on %i\n", i);
 			pmove->origin[i] = 0;
 		}
 
 		// Bound it.
 		if (pmove->velocity[i] > pmove->movevars->maxvelocity) 
 		{
-			pmove->ConDPrintf ("PM  Got a velocity too high on %i\n", i);
+			pmove->Con_DPrintf ("PM  Got a velocity too high on %i\n", i);
 			pmove->velocity[i] = pmove->movevars->maxvelocity;
 		}
 		else if (pmove->velocity[i] < -pmove->movevars->maxvelocity)
 		{
-			pmove->ConDPrintf ("PM  Got a velocity too low on %i\n", i);
+			pmove->Con_DPrintf ("PM  Got a velocity too low on %i\n", i);
 			pmove->velocity[i] = -pmove->movevars->maxvelocity;
 		}
 	}
@@ -939,7 +939,7 @@ int PM_FlyMove (void)
 	if ( allFraction == 0 )
 	{
 		VectorCopy (vec3_origin, pmove->velocity);
-//		pmove->ConDPrintf( "Don't stick\n" );
+//		pmove->Con_DPrintf( "Don't stick\n" );
 	}
 
 	return blocked;
@@ -2975,7 +2975,7 @@ void PM_PlayerMove ( int server )
 	switch ( pmove->movetype )
 	{
 	default:
-		pmove->ConDPrintf("Bogus pmove player movetype %i on (%i) 0=cl 1=sv\n", pmove->movetype, pmove->server);
+		pmove->Con_DPrintf("Bogus pmove player movetype %i on (%i) 0=cl 1=sv\n", pmove->movetype, pmove->server);
 		break;
 
 	case MOVETYPE_NONE:

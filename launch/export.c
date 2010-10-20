@@ -16,7 +16,7 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 Main Entry Point
 =================
 */
-DLLEXPORT int CreateAPI( const char *hostname, bool console )
+EXPORT int CreateAPI( const char *hostname, bool console )
 {
 	com_strncpy( Sys.progname, hostname, sizeof( Sys.progname ));
 	Sys.hooked_out = console;

@@ -394,44 +394,6 @@ void ClientCommand( edict_t *pEntity )
 			GetClassPtr((CBasePlayer *)pev)->GiveNamedItem( STRING(iszItem) );
 		}
 	}
-	else if ( FStrEq( pcmd, "noclip" ))
-	{
-		if ( g_flWeaponCheat != 0.0)
-		{
-			if( pEntity->v.movetype != MOVETYPE_NOCLIP )
-			{
-				pEntity->v.movetype = MOVETYPE_NOCLIP;
-				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "noclip on\n" );
-			}
-			else
-			{
-				pEntity->v.movetype =  MOVETYPE_WALK;
-				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "noclip off\n" );
-			}
-		}
-	}
-	else if ( FStrEq( pcmd, "god" ))
-	{
-		if ( g_flWeaponCheat != 0.0)
-		{
-			pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
-
-			if ( !( pEntity->v.flags & FL_GODMODE ))
-				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "godmode OFF\n" );
-			else ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "godmode ON\n" );
-		}
-	}
-	else if ( FStrEq( pcmd, "notarget" ))
-	{
-		if ( g_flWeaponCheat != 0.0)
-		{
-			pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
-
-			if ( !( pEntity->v.flags & FL_NOTARGET ))
-				ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "notarget OFF\n" );
-			else ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "notarget ON\n" );
-		}
-	}
 	else if ( FStrEq(pcmd, "fire" ))
 	{
 		if ( g_flWeaponCheat != 0.0)
@@ -694,15 +656,7 @@ void StartFrame( void )
 
 	if ( g_fGameOver )
 		return;
-#if 0
-	for( int i = 0; i < g_engfuncs.pfnNumberOfEntities(); i++ )
-	{
-		edict_t *ed = INDEXENT( i );
 
-		if( !ed ) continue;
-		ALERT( at_console, "Entity #%i, %s, headnode %i, num_leafs %i\n", i, STRING( ed->v.classname ), ed->headnode, ed->num_leafs );
-	}
-#endif
 	gpGlobals->teamplay = teamplay->value;
 	g_ulFrameCount++;
 }
@@ -998,7 +952,6 @@ void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, unsigned char **pv
 }
 
 #include "entity_state.h"
-#include "entity_types.h"
 
 /*
 AddToFullPack
@@ -1081,14 +1034,13 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	// Assign index so we can track this entity from frame to frame and
 	// delta from it.
 	state->number = e;
-
-	// set entity type
-	if ( ent->v.flags & FL_CLIENT )
-		state->entityType = ET_PLAYER;
-	else if ( ent->v.flags & FL_CUSTOMENTITY )
-		state->entityType = ET_BEAM;
-	else
-		state->entityType = ET_NORMAL;
+	state->entityType = ENTITY_NORMAL;
+	
+	// Flag custom entities.
+	if ( ent->v.flags & FL_CUSTOMENTITY )
+	{
+		state->entityType = ENTITY_BEAM;
+	}
 
 	// 
 	// Copy state data

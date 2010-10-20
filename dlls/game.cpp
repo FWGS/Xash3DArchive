@@ -18,7 +18,7 @@
 #include "game.h"
 
 // special macros for handle skill data
-#define CVAR_REGISTER_SKILL( x )	(*g_engfuncs.pfnCVarRegister)( #x, "0", 0, "skill config cvar" )
+#define CVAR_REGISTER_SKILL( x )	(*g_engfuncs.pfnCvar_RegisterVariable)( #x, "0", 0, "skill config cvar" )
 
 cvar_t	*displaysoundlist;
 

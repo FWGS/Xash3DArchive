@@ -731,7 +731,7 @@ void CL_ParseBaseline( sizebuf_t *msg )
 		timebase = sv_time();
 	else timebase = 1.0f; // sv.state == ss_loading
 
-	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, timebase );
+	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, CL_IsPlayerIndex( newnum ), timebase );
 }
 
 /*

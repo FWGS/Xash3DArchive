@@ -217,7 +217,7 @@ void FreeCommon( void )
 	Mem_FreePool( &zonepool );
 }
 
-launch_exp_t DLLEXPORT *CreateAPI( stdlib_api_t *input, void *unused )
+launch_exp_t EXPORT *CreateAPI( stdlib_api_t *input, void *unused )
 {
 	static launch_exp_t		Com;
 

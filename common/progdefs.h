@@ -169,7 +169,8 @@ typedef struct entvars_s
 
 	float		fov;		// client fov, used instead m_iFov
 	int		weaponanim;	// FIXME: shorten these ?
-	int		pushmsec;		// g-cont. in HL always zeroed
+	int		pushmsec;		// g-cont. used to store last network frame to prevent add entities
+					// twice through portals (in HL does nothing)
 
 	int		bInDuck;
 	int		flTimeStepSound;	// Next time we can play a step sound

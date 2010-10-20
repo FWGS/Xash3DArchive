@@ -880,7 +880,7 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnPIC_EnableScissor,
 	pfnPIC_DisableScissor,
 	pfnFillRGBA,
-	pfnCVarRegister,
+	pfnCvar_RegisterVariable,
 	pfnCVarGetValue,
 	pfnCVarGetString,
 	pfnCVarSetString,

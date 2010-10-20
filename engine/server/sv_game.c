@@ -9,13 +9,12 @@
 #include "byteorder.h"
 #include "matrix_lib.h"
 #include "event_flags.h"
-#include "entity_types.h"
 #include "pm_defs.h"
 #include "const.h"
 
 // exports
 typedef void (*LINK_ENTITY_FUNC)( entvars_t *pev );
-typedef void (*GIVEFNPTRSTODLL)( enginefuncs_t* engfuncs, globalvars_t *pGlobals );
+typedef void (__stdcall *GIVEFNPTRSTODLL)( enginefuncs_t* engfuncs, globalvars_t *pGlobals );
 
 /*
 =============
@@ -774,11 +773,9 @@ void SV_BaselineForEntity( edict_t *pEdict )
 	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
 
 	// set entity type
-	if( pEdict->v.flags & FL_CLIENT )
-		baseline.entityType = ET_PLAYER;
-	else if( pEdict->v.flags & FL_CUSTOMENTITY )
-		baseline.entityType = ET_BEAM;
-	else baseline.entityType = ET_NORMAL;
+	if( pEdict->v.flags & FL_CUSTOMENTITY )
+		baseline.entityType = ENTITY_BEAM;
+	else baseline.entityType = ENTITY_NORMAL;
 
 	svs.baselines[pEdict->serialnumber] = baseline;
 }
@@ -1502,6 +1499,93 @@ void pfnSetOrigin( edict_t *e, const float *rgflOrigin )
 
 	VectorCopy( rgflOrigin, e->v.origin );
 	SV_LinkEdict( e, false );
+}
+
+/*
+=================
+SV_BuildSoundMsg
+
+=================
+*/
+int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float attn, int flags, int pitch, const vec3_t pos )
+{
+	int	sound_idx;
+	int	entityIndex;
+
+	if( vol < 0 || vol > 255 )
+	{
+		MsgDev( D_ERROR, "SV_StartSound: volume = %i\n", vol );
+		return 0;
+	}
+
+	if( attn < ATTN_NONE || attn > ATTN_IDLE )
+	{
+		MsgDev( D_ERROR, "SV_StartSound: attenuation = %g\n", attn );
+		return 0;
+	}
+
+	if( chan < 0 || chan > 7 )
+	{
+		MsgDev( D_ERROR, "SV_StartSound: channel = %i\n", chan );
+		return 0;
+	}
+
+	if( pitch < 0 || pitch > 255 )
+	{
+		MsgDev( D_ERROR, "SV_StartSound: pitch = %i\n", pitch );
+		return 0;
+	}
+
+	if( !samp || !*samp )
+	{
+		MsgDev( D_ERROR, "SV_StartSound: passed NULL sample\n" );
+		return 0;
+	}
+
+	if( samp[0] == '!' && com.is_digit( samp + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		sound_idx = com.atoi( samp + 1 );
+
+		if( sound_idx >= 1536 )
+		{
+			MsgDev( D_ERROR, "SV_StartSound: invalid sentence number %s.\n", samp );
+			return 0;
+		}
+	}
+	else if( samp[0] == '#' && com.is_digit( samp + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		sound_idx = com.atoi( samp + 1 ) + 1536;
+	}
+	else
+	{
+		sound_idx = SV_SoundIndex( samp );
+	}
+
+	if( !ent->v.modelindex || !ent->v.model )
+		entityIndex = 0;
+	else if( SV_IsValidEdict( ent->v.aiment ))
+		entityIndex = ent->v.aiment->serialnumber;
+	else entityIndex = ent->serialnumber;
+
+	if( vol != 255 ) flags |= SND_VOLUME;
+	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
+	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
+
+	BF_WriteByte( &sv.multicast, svc_sound );
+	BF_WriteWord( &sv.multicast, flags );
+	BF_WriteWord( &sv.multicast, sound_idx );
+	BF_WriteByte( &sv.multicast, chan );
+
+	if( flags & SND_VOLUME ) BF_WriteByte( &sv.multicast, vol );
+	if( flags & SND_ATTENUATION ) BF_WriteByte( &sv.multicast, attn * 64 );
+	if( flags & SND_PITCH ) BF_WriteByte( &sv.multicast, pitch );
+
+	BF_WriteWord( &sv.multicast, entityIndex );
+	if( flags & SND_FIXED_ORIGIN ) BF_WriteBitVec3Coord( &sv.multicast, pos );
+
+	return 1;
 }
 
 /*
@@ -2369,6 +2453,19 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	{
 		com.print( va( "^1Error:^7 %s", buffer ));
 	} 
+}
+
+/*
+=============
+pfnPvAllocEntPrivateData
+
+=============
+*/
+void pfnBuildSoundMsg( edict_t *pSource, int chan, const char *samp, float fvol, float attn, int fFlags, int pitch, int msg_dest, int msg_type, const float *pOrigin, edict_t *pSend )
+{
+	pfnMessageBegin( msg_dest, msg_type, pOrigin, pSend );
+	SV_BuildSoundMsg( pSource, chan, samp, fvol * 255, attn, fFlags, pitch, pOrigin );
+	pfnMessageEnd();
 }
 
 /*
@@ -3934,7 +4031,7 @@ static enginefuncs_t gEngfuncs =
 	pfnEndSection,
 	pfnCompareFileTime,
 	pfnGetGameDir,
-	Host_Error,
+	pfnCvar_RegisterVariable,
 	pfnFadeClientVolume,
 	pfnSetClientMaxspeed,
 	pfnCreateFakeClient,
@@ -3948,7 +4045,7 @@ static enginefuncs_t gEngfuncs =
 	pfnStaticDecal,
 	pfnPrecacheGeneric,
 	pfnGetPlayerUserId,
-	pfnSoundTrack,
+	pfnBuildSoundMsg,
 	pfnIsDedicatedServer,
 	pfnCVarGetPointer,
 	pfnGetPlayerWONId,

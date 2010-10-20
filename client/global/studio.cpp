@@ -116,7 +116,7 @@ void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity )
 		EV_EjectShell( event, entity );
 		break;
 	default:
-		Con_Printf( "Unhandled client-side attachment %i ( %s )\n", event->event, event->options );
+		gEngfuncs.Con_Printf( "Unhandled client-side attachment %i ( %s )\n", event->event, event->options );
 		break;
 	}
 }

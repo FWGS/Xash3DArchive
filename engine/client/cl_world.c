@@ -157,10 +157,10 @@ void CL_LinkEdict( cl_entity_t *ent )
 	
 	// link it in	
 	if( ent->curstate.solid == SOLID_TRIGGER )
-		InsertLinkBefore( &ent->area, &node->trigger_edicts, ent->index );
+		InsertLinkBefore( &ent->area, &node->trigger_edicts );
 	else if( ent->curstate.solid == SOLID_NOT && ent->curstate.skin != CONTENTS_NONE )
-		InsertLinkBefore (&ent->area, &node->water_edicts, ent->index );
-	else InsertLinkBefore (&ent->area, &node->solid_edicts, ent->index );
+		InsertLinkBefore (&ent->area, &node->water_edicts );
+	else InsertLinkBefore (&ent->area, &node->solid_edicts );
 }
 
 /*
@@ -193,7 +193,7 @@ void CL_AreaEdicts_r( areanode_t *node, area_t *ap )
 	for( l = start->next; l != start; l = next )
 	{
 		next = l->next;
-		check = CL_GetEntityByIndex( l->entnum );
+		check = EDICT_FROM_AREA( l );
 		if( !check ) continue;
 
 		if( check->curstate.solid == SOLID_NOT && check->curstate.skin == CONTENTS_NONE )

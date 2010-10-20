@@ -88,7 +88,7 @@ static void PM_StudioSetUpTransform( physent_t *pe )
 	org = pe->origin;
 	ang = pe->angles;
 
-	if( pe->scale != 0.0f ) scale = pe->scale;
+	// FIXME: apply scale to studiomodels
 	Matrix4x4_CreateFromEntity( pm_studiomatrix, org[0], org[1], org[2], -ang[PITCH], ang[YAW], ang[ROLL], scale );
 }
 
@@ -346,7 +346,7 @@ static void PM_StudioCalcRotations( physent_t *pe, float pos[][3], vec4_t *q, ms
 	if( pseqdesc->motiontype & STUDIO_Y ) pos[pseqdesc->motionbone][1] = 0.0f;
 	if( pseqdesc->motiontype & STUDIO_Z ) pos[pseqdesc->motionbone][2] = 0.0f;
 
-	s = 0 * ((1.0 - (f - (int)(f))) / (pseqdesc->numframes)) * pe->framerate;
+	s = 0 * ((1.0 - (f - (int)(f))) / (pseqdesc->numframes)) * 1.0f; // framerate
 
 	if( pseqdesc->motiontype & STUDIO_LX ) pos[pseqdesc->motionbone][0] += s * pseqdesc->linearmovement[0];
 	if( pseqdesc->motiontype & STUDIO_LY ) pos[pseqdesc->motionbone][1] += s * pseqdesc->linearmovement[1];

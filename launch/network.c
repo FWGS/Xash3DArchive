@@ -460,7 +460,7 @@ void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to
 		return;
 
 	if( to.type != NA_BROADCAST && to.type != NA_IP )
-		Sys_Error( "NET_SendPacket: bad address type\n" );
+		Sys_Error( "NET_SendPacket: bad address type %i\n", to.type );
 
 	net_socket = ip_sockets[sock];
 	if( !net_socket ) return;

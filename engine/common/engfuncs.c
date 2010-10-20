@@ -228,13 +228,20 @@ float pfnTime( void )
 	return Sys_DoubleTime();
 }
 
+void pfnCVarRegister( cvar_t *pCvar )
+{
+	if( !pCvar ) return;
+
+	Msg( "CVarRegister: %s\n", pCvar->name );
+}
+	
 /*
 =============
-pfnCVarRegister
+pfnCvar_RegisterVariable
 
 =============
 */
-cvar_t *pfnCVarRegister( const char *szName, const char *szValue, int flags, const char *szDesc )
+cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags, const char *szDesc )
 {
 	int	real_flags = 0;
 

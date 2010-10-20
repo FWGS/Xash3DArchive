@@ -136,7 +136,7 @@ void CHud :: VidInit( void )
 		}
 		else
 		{
-			Con_Printf( "Warning: hud.txt couldn't load\n" );
+			gEngfuncs.Con_Printf( "Warning: hud.txt couldn't load\n" );
 			CVAR_SET_FLOAT( "hud_draw", 0 );
 			return;
 		}

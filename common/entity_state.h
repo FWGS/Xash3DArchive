@@ -5,6 +5,10 @@
 #ifndef ENTITY_STATE_H
 #define ENTITY_STATE_H
 
+// for entityType below
+#define ENTITY_NORMAL		(1<<0)
+#define ENTITY_BEAM			(1<<1)
+
 typedef struct entity_state_s
 {
 	// Fields which are filled in by routines outside of delta compression

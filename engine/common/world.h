@@ -22,7 +22,7 @@ ENTITY AREA CHECKING
 
 ===============================================================================
 */
-#define EDICT_FROM_AREA( l )		EDICT_NUM( l->entnum )
+#define STRUCT_FROM_LINK( l, t, m )	((t *)((byte *)l - (int)&(((t *)0)->m)))
 #define MAX_TOTAL_ENT_LEAFS		128
 #define AREA_NODES			32
 #define AREA_DEPTH			4
@@ -57,7 +57,7 @@ typedef struct area_s
 extern const char		*et_name[];
 
 // linked list
-void InsertLinkBefore( link_t *l, link_t *before, int entnum );
+void InsertLinkBefore( link_t *l, link_t *before );
 void RemoveLink( link_t *l );
 void ClearLink( link_t *l );
 

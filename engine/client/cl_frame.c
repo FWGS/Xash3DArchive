@@ -9,6 +9,13 @@
 #include "entity_types.h"
 #include "input.h"
 
+bool CL_IsPlayerIndex( int idx )
+{
+	if( idx > 0 && idx <= cl.maxclients )
+		return true;
+	return false;
+}
+
 /*
 =========================================================================
 
@@ -19,7 +26,7 @@ FRAME PARSING
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
 	// set player state
-	ent->player = ( ent->curstate.entityType == ET_PLAYER ) ? true : false;
+	ent->player = CL_IsPlayerIndex( ent->index );
 	ent->onground = CL_GetEntityByIndex( ent->curstate.onground );
 
 	// FIXME: this very-very temporary stuffffffff
@@ -63,7 +70,7 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate )
 	// sequence has changed, hold the previous sequence info
 	if( newstate->sequence != ent->curstate.sequence )
 	{
-		if( ent->curstate.entityType == ET_PLAYER )
+		if( ent->index > 0 && ent->index <= cl.maxclients )
 			ent->latched.sequencetime = ent->curstate.animtime + 0.01f;
 		else ent->latched.sequencetime = ent->curstate.animtime + 0.1f;
 			
@@ -116,7 +123,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( newent ) old = &ent->baseline;
 
 	if( unchanged ) *state = *old;
-	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, sv_time( ));
+	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
 
 	if( !result )
 	{
@@ -196,7 +203,7 @@ void CL_FlushEntityPacket( sizebuf_t *msg )
 		while( newnum >= clgame.numEntities )
 			clgame.numEntities++;
 
-		MSG_ReadDeltaEntity( msg, &from, &to, newnum, sv_time( ));
+		MSG_ReadDeltaEntity( msg, &from, &to, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
 	}
 }
 
@@ -488,8 +495,12 @@ void CL_AddPacketEntities( frame_t *frame )
 		if( ent->curstate.effects & EF_NODRAW )
 			continue;
 
-		entityType = ent->curstate.entityType;
 		CL_UpdateEntityFields( ent );
+
+		if( ent->player ) entityType = ET_PLAYER;
+		else if( ent->curstate.entityType == ENTITY_BEAM )
+			entityType = ET_BEAM;
+		else entityType = ET_NORMAL;
 
 		if( clgame.dllFuncs.pfnAddVisibleEntity( ent, entityType ))
 		{

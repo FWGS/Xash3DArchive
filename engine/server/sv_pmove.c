@@ -52,9 +52,7 @@ bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace )
 	VectorCopy( ed->v.maxs, pe->maxs );
 
 	pe->solid = ed->v.solid;
-	pe->scale = ed->v.scale;
 	pe->rendermode = ed->v.rendermode;
-	pe->framerate = ed->v.framerate;
 	pe->skin = ed->v.skin;
 	pe->frame = ed->v.frame;
 	pe->sequence = ed->v.sequence;
@@ -432,6 +430,8 @@ void SV_InitClientMove( void )
 	svgame.pmove->movevars = &svgame.movevars;
 	svgame.pmove->runfuncs = false;
 
+	CM_SetupHulls( svgame.player_mins, svgame.player_maxs );
+	
 	// enumerate client hulls
 	for( i = 0; i < 4; i++ )
 		svgame.dllFuncs.pfnGetHullBounds( i, svgame.player_mins[i], svgame.player_maxs[i] );
@@ -443,9 +443,9 @@ void SV_InitClientMove( void )
 	svgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
 	svgame.pmove->PM_Particle = pfnParticle;
 	svgame.pmove->PM_TestPlayerPosition = pfnTestPlayerPosition;
-	svgame.pmove->ConNPrintf = Con_NPrintf;
-	svgame.pmove->ConDPrintf = Con_DPrintf;
-	svgame.pmove->ConPrintf = Con_Printf;
+	svgame.pmove->Con_NPrintf = Con_NPrintf;
+	svgame.pmove->Con_DPrintf = Con_DPrintf;
+	svgame.pmove->Con_Printf = Con_Printf;
 	svgame.pmove->Sys_FloatTime = Sys_FloatTime;
 	svgame.pmove->PM_StuckTouch = pfnStuckTouch;
 	svgame.pmove->PM_PointContents = pfnPointContents;

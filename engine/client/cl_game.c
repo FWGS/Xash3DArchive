@@ -2422,7 +2422,7 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnFillRGBA,
 	pfnGetScreenInfo,
 	pfnSetCrosshair,
-	pfnCVarRegister,
+	pfnCvar_RegisterVariable,
 	pfnCVarGetValue,
 	pfnCVarGetString,
 	pfnAddCommand,

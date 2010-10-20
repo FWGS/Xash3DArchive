@@ -18,7 +18,7 @@
 #define bound(min, num, max)	((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 #define MAX_MODS		512	// environment games that engine can keep visible
 #define MAX_STRING_TABLES	8	// seperately stringsystems
-#define DLLEXPORT		__declspec( dllexport )
+#define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
 #define trace_t		TraceResult
 #define NULL		((void *)0)

@@ -21,7 +21,6 @@ struct edict_s
 	short		leafnums[MAX_ENT_LEAFS];
 
 	float		freetime;		// sv.time when the object was freed
-	int		framenum;		// update framenumber (to avoid add entities twice through portals)
 	
 	void		*pvPrivateData;	// alloced and freed by engine, used by DLLs
 	entvars_t		v;		// C exported fields from progs

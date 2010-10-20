@@ -16,7 +16,7 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 Engine entry point
 =================
 */
-launch_exp_t DLLEXPORT *CreateAPI( stdlib_api_t *input, void *unused )
+launch_exp_t EXPORT *CreateAPI( stdlib_api_t *input, void *unused )
 {
          	static launch_exp_t Host;
 

@@ -14,7 +14,7 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 	return TRUE;
 }
 
-vsound_exp_t DLLEXPORT *CreateAPI( stdlib_api_t *input, vsound_imp_t *engfuncs )
+vsound_exp_t EXPORT *CreateAPI( stdlib_api_t *input, vsound_imp_t *engfuncs )
 {
 	static vsound_exp_t		snd;
 

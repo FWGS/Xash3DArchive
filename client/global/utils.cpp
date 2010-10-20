@@ -20,7 +20,7 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 	if( szMessage != NULL )
 		sprintf( szOut, "ASSERT FAILED:\n %s \n(%s@%d)\n%s", szExpr, szFile, szLine, szMessage );
 	else sprintf( szOut, "ASSERT FAILED:\n %s \n(%s@%d)", szExpr, szFile, szLine );
-	Con_Printf( szOut );
+	gEngfuncs.Con_Printf( szOut );
 }
 #endif	// DEBUG
 
@@ -49,7 +49,7 @@ void END_READ( void )
 {
 	if( gMsg.badRead )
 	{
-		Con_Printf( "%s was received with errors\n", gMsg.name );
+		gEngfuncs.Con_Printf( "%s was received with errors\n", gMsg.name );
 	}
 }
 
@@ -531,7 +531,7 @@ void Mod_GetBounds( int modelIndex, Vector &mins, Vector &maxs )
 	}
 	else
 	{
-		Con_DPrintf( "Mod_GetBounds: NULL model %i\n", modelIndex );
+		gEngfuncs.Con_DPrintf( "Mod_GetBounds: NULL model %i\n", modelIndex );
 		mins = g_vecZero;
 		maxs = g_vecZero;
 	}

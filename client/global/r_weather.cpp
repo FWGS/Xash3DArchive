@@ -179,7 +179,7 @@ void ProcessRain( void )
 			// just in case..
 			if ( deathHeight > vecStart[2] )
 			{
-				Con_Printf( "rain: can't create drip in water\n" );
+				gEngfuncs.Con_Printf( "rain: can't create drip in water\n" );
 				continue;
 			}
 
@@ -188,7 +188,7 @@ void ProcessRain( void )
 			if ( !newClDrip )
 			{
 				gHUD.Rain.dripsPerSecond = 0; // disable rain
-				Con_Printf( "rain: failed to allocate object!\n");
+				gEngfuncs.Con_Printf( "rain: failed to allocate object!\n");
 				return;
 			}
 			
@@ -219,22 +219,22 @@ void ProcessRain( void )
 		else
 		{
 			if ( cl_debugrain->value )
-				Con_Printf( "rain: drip limit overflow! %i > %i\n", dripcounter, MAXDRIPS );
+				gEngfuncs.Con_Printf( "rain: drip limit overflow! %i > %i\n", dripcounter, MAXDRIPS );
 			return;
 		}
 	}
 
 	if ( cl_debugrain->value ) // print debug info
 	{
-		Con_Printf( "Rain info: Drips exist: %i\n", dripcounter );
-		Con_Printf( "Rain info: FX's exist: %i\n", fxcounter );
-		Con_Printf( "Rain info: Attempted/Dropped: %i, %i\n", debug_attempted, debug_dropped );
+		gEngfuncs.Con_Printf( "Rain info: Drips exist: %i\n", dripcounter );
+		gEngfuncs.Con_Printf( "Rain info: FX's exist: %i\n", fxcounter );
+		gEngfuncs.Con_Printf( "Rain info: Attempted/Dropped: %i, %i\n", debug_attempted, debug_dropped );
 		if ( debug_howmany )
 		{
 			float ave = debug_lifetime / (float)debug_howmany;
-			Con_Printf( "Rain info: Average drip life time: %f\n", ave);
+			gEngfuncs.Con_Printf( "Rain info: Average drip life time: %f\n", ave);
 		}
-		else Con_Printf( "Rain info: Average drip life time: --\n" );
+		else gEngfuncs.Con_Printf( "Rain info: Average drip life time: --\n" );
 	}
 	return;
 }
@@ -248,14 +248,14 @@ void WaterLandingEffect( cl_drip *drip )
 {
 	if ( fxcounter >= MAXFX )
 	{
-		Con_Printf( "Rain error: FX limit overflow!\n" );
+		gEngfuncs.Con_Printf( "Rain error: FX limit overflow!\n" );
 		return;
 	}	
 	
 	cl_rainfx *newFX = new cl_rainfx;
 	if ( !newFX )
 	{
-		Con_Printf( "Rain error: failed to allocate FX object!\n");
+		gEngfuncs.Con_Printf( "Rain error: failed to allocate FX object!\n");
 		return;
 	}
 			
@@ -424,7 +424,7 @@ void ParseRainFile( void )
 	strcpy( mapname, gEngfuncs.pfnGetLevelName() );
 	if ( strlen( mapname ) == 0 )
 	{
-		Con_Printf( "rain: unable to read map name\n" );
+		gEngfuncs.Con_Printf( "rain: unable to read map name\n" );
 		return;
 	}
 
@@ -439,7 +439,7 @@ void ParseRainFile( void )
 	if ( !pfile )
 	{
 		if (cl_debugrain->value > 1 )
-			Con_Printf( "rain: couldn't open rain settings file %s\n", mapname );
+			gEngfuncs.Con_Printf( "rain: couldn't open rain settings file %s\n", mapname );
 		return;
 	}
 
@@ -489,7 +489,7 @@ void ParseRainFile( void )
 			pfile = gEngfuncs.COM_ParseFile(pfile, token);
 			gHUD.Rain.globalHeight = atof( token );
 		}
-		else Con_Printf( "rain: unknown token %s in file %s\n", token, mapname );
+		else gEngfuncs.Con_Printf( "rain: unknown token %s in file %s\n", token, mapname );
 	}
 
 	gEngfuncs.COM_FreeFile( afile );
@@ -666,7 +666,7 @@ void DrawFXObjects( void )
 
 		// UNDONE: calc lighting right
 		gEngfuncs.pEfxAPI->R_LightForPoint( (const float *)curFX->origin, color );
-//		Con_Printf( "color %g %g %g\n", color[0], color[1], color[2] );
+//		gEngfuncs.Con_Printf( "color %g %g %g\n", color[0], color[1], color[2] );
 
 		gEngfuncs.pTriAPI->Color4f( 0.4 + color[0], 0.4 + color[1], 0.4 + color[2], alpha );
 		gEngfuncs.pTriAPI->Begin( TRI_QUADS );

@@ -135,7 +135,7 @@ void IN_KeyDown( kbutton_t *b )
 	}
 	else
 	{
-		Con_Printf( "Error: three keys down for a button '%c' '%c' '%c'!\n", b->down[0], b->down[1], c );
+		gEngfuncs.Con_Printf( "Error: three keys down for a button '%c' '%c' '%c'!\n", b->down[0], b->down[1], c );
 		return;
 	}
 	

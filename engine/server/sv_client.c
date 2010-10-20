@@ -7,7 +7,6 @@
 #include "const.h"
 #include "server.h"
 #include "net_encode.h"
-#include "entity_types.h"
 
 const char *clc_strings[10] =
 {
@@ -815,6 +814,13 @@ bool SV_ShouldUpdatePing( sv_client_t *cl )
 	return false;
 }
 
+bool SV_IsPlayerIndex( int idx )
+{
+	if( idx > 0 && idx <= sv_maxclients->integer )
+		return true;
+	return false;
+}
+
 /*
 ===================
 SV_GetPlayerStats
@@ -1173,10 +1179,10 @@ void SV_Baselines_f( sv_client_t *cl )
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < svgame.numEntities )
 	{
 		base = &svs.baselines[start];
-		if( base->modelindex || base->effects != EF_NODRAW )
+		if( base->number && ( base->modelindex || base->effects != EF_NODRAW ))
 		{
 			BF_WriteByte( &cl->netchan.message, svc_spawnbaseline );
-			MSG_WriteDeltaEntity( &nullstate, base, &cl->netchan.message, true, sv.time );
+			MSG_WriteDeltaEntity( &nullstate, base, &cl->netchan.message, true, SV_IsPlayerIndex( base->number ), sv.time );
 		}
 		start++;
 	}
@@ -1403,11 +1409,73 @@ static void SV_UpdateUserinfo_f( sv_client_t *cl )
 	SV_UserinfoChanged( cl, Cmd_Argv( 1 ));
 }
 
+/*
+==================
+SV_Noclip_f
+==================
+*/
+static void SV_Noclip_f( sv_client_t *cl )
+{
+	edict_t	*pEntity = cl->edict;
+
+	if( !Cvar_VariableInteger( "sv_cheats" )) return;
+
+	if( pEntity->v.movetype != MOVETYPE_NOCLIP )
+	{
+		pEntity->v.movetype = MOVETYPE_NOCLIP;
+		SV_ClientPrintf( cl, PRINT_HIGH, "noclip ON\n" );
+	}
+	else
+	{
+		pEntity->v.movetype =  MOVETYPE_WALK;
+		SV_ClientPrintf( cl, PRINT_HIGH, "noclip OFF\n" );
+	}
+}
+
+/*
+==================
+SV_Godmode_f
+==================
+*/
+static void SV_Godmode_f( sv_client_t *cl )
+{
+	edict_t	*pEntity = cl->edict;
+
+	if( !Cvar_VariableInteger( "sv_cheats" )) return;
+
+	pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
+
+	if ( !( pEntity->v.flags & FL_GODMODE ))
+		SV_ClientPrintf( cl, PRINT_HIGH, "godmode OFF\n" );
+	else SV_ClientPrintf( cl, PRINT_HIGH, "godmode ON\n" );
+}
+
+/*
+==================
+SV_Notarget_f
+==================
+*/
+static void SV_Notarget_f( sv_client_t *cl )
+{
+	edict_t	*pEntity = cl->edict;
+
+	if( !Cvar_VariableInteger( "sv_cheats" )) return;
+
+	pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
+
+	if ( !( pEntity->v.flags & FL_NOTARGET ))
+		SV_ClientPrintf( cl, PRINT_HIGH, "notarget OFF\n" );
+	else SV_ClientPrintf( cl, PRINT_HIGH, "notarget ON\n" );
+}
+
 ucmd_t ucmds[] =
 {
 { "new", SV_New_f },
+{ "god", SV_Godmode_f },
 { "begin", SV_Begin_f },
 { "pause", SV_Pause_f },
+{ "noclip", SV_Noclip_f },
+{ "notarget", SV_Notarget_f },
 { "baselines", SV_Baselines_f },
 { "deltainfo", SV_DeltaInfo_f },
 { "info", SV_ShowServerinfo_f },

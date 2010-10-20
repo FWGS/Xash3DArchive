@@ -231,7 +231,7 @@ float V_CalcFov( float fov_x, float width, float height )
 	// check to avoid division by zero
 	if( fov_x < 1 || fov_x > 179 )
 	{
-		Con_Printf( "V_CalcFov: invalid fov %g!\n", fov_x );
+		gEngfuncs.Con_Printf( "V_CalcFov: invalid fov %g!\n", fov_x );
 		fov_x = 90;
 	}
 

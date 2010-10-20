@@ -76,6 +76,7 @@ byte *CM_FatPHS( const vec3_t org, bool portal );
 bool CM_InitPhysics( void );
 void CM_FreePhysics( void );
 script_t *CM_GetEntityScript( void );
+void CM_SetupHulls( float mins[4][3], float maxs[4][3] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
 modtype_t CM_GetModelType( int handle );

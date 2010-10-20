@@ -2525,7 +2525,7 @@ CreateAPI
 
 @@@@@@@@@@@@@@@@@@@@@
 */
-render_exp_t DLLEXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
+render_exp_t EXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 {
 	static render_exp_t re;
 

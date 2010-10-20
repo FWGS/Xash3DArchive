@@ -102,7 +102,7 @@ void MSG_WriteClientData( sizebuf_t *msg, struct clientdata_s *from, struct clie
 void MSG_ReadClientData( sizebuf_t *msg, struct clientdata_s *from, struct clientdata_s *to, float timebase );
 void MSG_WriteWeaponData( sizebuf_t *msg, struct weapon_data_s *from, struct weapon_data_s *to, float timebase, int index );
 void MSG_ReadWeaponData( sizebuf_t *msg, struct weapon_data_s *from, struct weapon_data_s *to, float timebase );
-void MSG_WriteDeltaEntity( struct entity_state_s *from, struct entity_state_s *to, sizebuf_t *msg, bool force, float timebase );
-bool MSG_ReadDeltaEntity( sizebuf_t *msg, struct entity_state_s *from, struct entity_state_s *to, int num, float timebase );
+void MSG_WriteDeltaEntity( struct entity_state_s *from, struct entity_state_s *to, sizebuf_t *msg, bool force, bool player, float timebase );
+bool MSG_ReadDeltaEntity( sizebuf_t *msg, struct entity_state_s *from, struct entity_state_s *to, int num, bool player, float timebase );
 
 #endif//NET_ENCODE_H

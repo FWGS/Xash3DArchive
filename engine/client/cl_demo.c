@@ -194,11 +194,12 @@ void CL_WriteDemoHeader( const char *name )
 	for( i = 0; i < clgame.maxEntities; i++ )
 	{
 		state = &clgame.entities[i].baseline;
+		if( !state->number ) continue;
 		if( !state->modelindex || state->effects == EF_NODRAW )
 			continue;
 
 		BF_WriteByte( &buf, svc_spawnbaseline );		
-		MSG_WriteDeltaEntity( &nullstate, state, &buf, true, true );
+		MSG_WriteDeltaEntity( &nullstate, state, &buf, true, CL_IsPlayerIndex( state->number ), sv_time( ));
 
 		if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 		{	

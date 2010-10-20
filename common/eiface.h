@@ -8,6 +8,8 @@
 #include "cvardef.h"
 #include "custom.h"
 
+#define DLLEXPORT			__stdcall
+
 #define INTERFACE_VERSION		140	// GetEntityAPI, GetEntityAPI2
 #define NEW_DLL_FUNCTIONS_VERSION	2	// GetNewDLLFunctions	(Xash3D uses version 2)
 
@@ -114,7 +116,7 @@ typedef struct enginefuncs_s
 	void	(*pfnWriteCoord)( float flValue );
 	void	(*pfnWriteString)( const char *sz );
 	void	(*pfnWriteEntity)( int iValue );
-	cvar_t*	(*pfnCVarRegister)( const char *name, const char *value, int flags, const char *desc );
+	void	(*pfnCVarRegister)( cvar_t *pCvar );
 	float	(*pfnCVarGetFloat)( const char *szVarName );
 	char*	(*pfnCVarGetString)( const char *szVarName );
 	void	(*pfnCVarSetFloat)( const char *szVarName, float flValue );
@@ -158,7 +160,7 @@ typedef struct enginefuncs_s
 	void	(*pfnEndSection)( const char *pszSectionName );
 	int	(*pfnCompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void	(*pfnGetGameDir)( char *szGetGameDir );
-	void	(*pfnHostError)( const char *szFmt, ... );
+	cvar_t*	(*pfnCvar_RegisterVariable)( const char *name, const char *value, int flags, const char *desc );
 	void	(*pfnFadeClientVolume)( const edict_t *pEdict, int fadePercent, int fadeOutSeconds, int holdTime, int fadeInSeconds );
 	void	(*pfnSetClientMaxspeed)( const edict_t *pEdict, float fNewMaxspeed );
 	edict_t	*(*pfnCreateFakeClient)( const char *netname ); // returns NULL if fake client can't be created
@@ -172,7 +174,7 @@ typedef struct enginefuncs_s
 	void	(*pfnStaticDecal)( const float *origin, int decalIndex, int entityIndex, int modelIndex );
 	int	(*pfnPrecacheGeneric)( const char* s );
 	int	(*pfnGetPlayerUserId)(edict_t *e ); // returns the server assigned userid for this player.  useful for logging frags, etc.
-	void	(*pfnSoundTrack)( const char *trackname, int flags );	// playing looped soundtrack
+	void	(*pfnBuildSoundMsg)( edict_t *pSource, int chan, const char *samp, float fvol, float attn, int fFlags, int pitch, int msg_dest, int msg_type, const float *pOrigin, edict_t *pSend );
 	int	(*pfnIsDedicatedServer)( void );			// is this a dedicated server?
 	cvar_t	*(*pfnCVarGetPointer)( const char *szVarName );
 	uint	(*pfnGetPlayerWONId)( edict_t *e ); // returns the server assigned WONid for this player. useful for logging frags, etc. returns -1 if the edict couldn't be found in the list of clients

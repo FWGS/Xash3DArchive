@@ -594,10 +594,10 @@ void SV_LinkEdict( edict_t *ent, bool touch_triggers )
 	
 	// link it in	
 	if( ent->v.solid == SOLID_TRIGGER )
-		InsertLinkBefore( &ent->area, &node->trigger_edicts, NUM_FOR_EDICT( ent ));
+		InsertLinkBefore( &ent->area, &node->trigger_edicts );
 	else if( ent->v.solid == SOLID_NOT && ent->v.skin != CONTENTS_NONE )
-		InsertLinkBefore( &ent->area, &node->water_edicts, NUM_FOR_EDICT( ent ));
-	else InsertLinkBefore( &ent->area, &node->solid_edicts, NUM_FOR_EDICT( ent ));
+		InsertLinkBefore( &ent->area, &node->water_edicts );
+	else InsertLinkBefore( &ent->area, &node->solid_edicts );
 
 	if( touch_triggers ) SV_TouchLinks( ent, sv_areanodes );
 }

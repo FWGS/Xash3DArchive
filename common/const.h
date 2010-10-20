@@ -741,8 +741,6 @@ typedef struct link_s
 {
 	struct link_s	*prev;
 	struct link_s	*next;
-	short		entnum;		// svs.edicts \ cls.entities actual number
 } link_t;
-
 
 #endif//CONST_H

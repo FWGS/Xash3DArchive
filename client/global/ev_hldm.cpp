@@ -839,7 +839,7 @@ void EV_FireGauss( event_args_t *args )
 		return;
 	}
 
-//	Con_Printf( "firing gauss with %f\n", flDamage );
+//	gEngfuncs.Con_Printf( "firing gauss with %f\n", flDamage );
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	m_iBeam = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/smoke.spr" );
@@ -938,7 +938,7 @@ void EV_FireGauss( event_args_t *args )
 
 			if ( n < 0.5f ) // 60 degrees	
 			{
-				// Con_Printf( "reflect %f\n", n );
+				// gEngfuncs.Con_Printf( "reflect %f\n", n );
 				// reflect
 				Vector r;
 			
@@ -1691,12 +1691,12 @@ void EV_UpdateLaserSpot( void )
 		m_pLaserSpot->entity.baseline.rendercolor.r = 200;
 		m_pLaserSpot->entity.baseline.rendercolor.g = 12;
 		m_pLaserSpot->entity.baseline.rendercolor.b = 12;
-//		Con_Printf( "CLaserSpot::Create()\n" );
+//		gEngfuncs.Con_Printf( "CLaserSpot::Create()\n" );
 	}
 	else if( !( m_pPlayer->curstate.effects & EF_LASERSPOT ) && m_pLaserSpot )
 	{
 		// destroy laserspot
-//		Con_Printf( "CLaserSpot::Killed()\n" );
+//		gEngfuncs.Con_Printf( "CLaserSpot::Killed()\n" );
 		m_pLaserSpot->die = 0.0f;
 		m_pLaserSpot = NULL;
 		return;

@@ -33,7 +33,7 @@ extern void ParmsChangeLevel( void );
 extern void ClientPrecache( void );
 
 extern const char *GetGameDescription( void );
-extern void PlayerCustomization( edict_t *pEntity, customization_t *pCustom );
+extern void PlayerCustomization( edict_t *pEntity, customization_t *pCust );
 
 extern void SpectatorConnect ( edict_t *pEntity );
 extern void SpectatorDisconnect ( edict_t *pEntity );

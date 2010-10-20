@@ -21,6 +21,7 @@
 #define MAX_DEMOS		32
 #define MAX_MOVIES		8
 
+#define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, cl_entity_t, area )
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
 #define cl_time()		( cl.time )
@@ -502,6 +503,7 @@ bool CL_IsPredicted( void );
 void CL_ParsePacketEntities( sizebuf_t *msg, bool delta );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
 bool CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
+bool CL_IsPlayerIndex( int idx );
 
 //
 // cl_tent.c

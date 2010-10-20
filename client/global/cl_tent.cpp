@@ -714,7 +714,7 @@ void TE_AddClientMessage( void )
 	if( channel <= 0 || channel > ( MAX_CHANNELS - 1 ))
 	{
 		// invalid channel specified, use internal counter		
-		if( channel != 0 ) Con_Printf( "ERROR: HUD_Message: invalid channel %i\n", channel );
+		if( channel != 0 ) gEngfuncs.Con_Printf( "ERROR: HUD_Message: invalid channel %i\n", channel );
 		channel = msgindex;
 		msgindex = (msgindex + 1) & (MAX_CHANNELS - 1);
 	}	

@@ -127,7 +127,7 @@ CBaseParticle *CParticleSystem :: AllocParticle( HSPRITE m_hSpr )
 
 	if( !m_pFreeParticles )
 	{
-		Con_Printf( "Overflow %d particles\n", MAX_PARTICLES );
+		gEngfuncs.Con_Printf( "Overflow %d particles\n", MAX_PARTICLES );
 		return NULL;
 	}
 

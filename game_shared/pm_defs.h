@@ -38,9 +38,7 @@ typedef struct physent_s
 	int		solid;		// Triggers and func_door type WATER brushes are SOLID_NOT
 	int		skin;		// BSP Contents for such things like fun_door water brushes.
 	int		rendermode;	// So we can ignore glass
-	float		scale;		// For scaled studio models
-	float		framerate;	// For studio models with custom framerate set
-	
+
 	// Complex collision detection.
 	float		frame;
 	int		sequence;
@@ -169,9 +167,9 @@ typedef struct playermove_s
 	const char	*(*PM_Info_ValueForKey) ( const char *s, const char *key );
 	void		(*PM_Particle)( float *origin, int color, float life, int zpos, int zvel );
 	int		(*PM_TestPlayerPosition)( float *pos, pmtrace_t *ptrace );
-	void		(*ConNPrintf)( int idx, char *fmt, ... );
-	void		(*ConDPrintf)( char *fmt, ... );
-	void		(*ConPrintf)( char *fmt, ... );
+	void		(*Con_NPrintf)( int idx, char *fmt, ... );
+	void		(*Con_DPrintf)( char *fmt, ... );
+	void		(*Con_Printf)( char *fmt, ... );
 	double		(*Sys_FloatTime)( void );
 	void		(*PM_StuckTouch)( int hitent, pmtrace_t *ptraceresult );
 	int		(*PM_PointContents)( float *p, int *truecontents /*filled in if this is non-null*/ );

@@ -205,7 +205,8 @@ bool SV_Active( void );
 
 ==============================================================
 */
-cvar_t *pfnCVarRegister( const char *szName, const char *szValue, int flags, const char *szDesc );
+void pfnCVarRegister( cvar_t *pCvar );
+cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags, const char *szDesc );
 char *pfnMemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
 byte* pfnLoadFile( const char *filename, int *pLength );
 void pfnCVarSetString( const char *szName, const char *szValue );

@@ -34,6 +34,7 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_HAS_SPAWNPOINT	BIT( 1 )
 #define MAP_HAS_LANDMARK	BIT( 2 )
 
+#define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, edict_t, area )
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - svgame.edicts))
 #define EDICT_NUM( num )	SV_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	SV_GetString( offset )
@@ -453,6 +454,7 @@ edict_t *SV_FakeConnect( const char *netname );
 void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_PostRunCmd( sv_client_t *cl );
+bool SV_IsPlayerIndex( int idx );
 void SV_InitClientMove( void );
 void SV_UpdateServerInfo( void );
 

@@ -13,7 +13,6 @@
 #include "pm_movevars.h"
 #include "entity_state.h"
 #include "weaponinfo.h"
-#include "entity_types.h"
 #include "protocol.h"
 
 #define DELTA_PATH		"delta.lst"
@@ -1449,9 +1448,9 @@ If force is not set, then nothing at all will be generated if the entity is
 identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
-void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, float timebase ) 
+void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, bool player, float timebase ) 
 {
-	delta_info_t	*dt;
+	delta_info_t	*dt = NULL;
 	delta_t		*pField;
 	int		i, startBit;
 	int		numChanges = 0;
@@ -1487,21 +1486,24 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	if( to->entityType != from->entityType )
 	{
 		BF_WriteOneBit( msg, 1 );
-		BF_WriteUBitLong( msg, to->entityType, 4 );
+		BF_WriteUBitLong( msg, to->entityType, 2 );
 	}
 	else BF_WriteOneBit( msg, 0 ); 
 
-	switch( to->entityType )
+	if( to->entityType == ENTITY_NORMAL )
 	{
-	case ET_PLAYER:
-		dt = Delta_FindStruct( "entity_state_player_t" );
-		break;
-	case ET_BEAM:
+		if( player )
+		{
+			dt = Delta_FindStruct( "entity_state_player_t" );
+		}
+		else
+		{
+			dt = Delta_FindStruct( "entity_state_t" );
+		}
+	}
+	else if( to->entityType == ENTITY_BEAM )
+	{
 		dt = Delta_FindStruct( "custom_entity_state_t" );
-		break;
-	default:
-		dt = Delta_FindStruct( "entity_state_t" );
-		break;
 	}
 
 	ASSERT( dt && dt->bInitialized );
@@ -1534,9 +1536,9 @@ If the delta removes the entity, entity_state_t->number will be set to MAX_EDICT
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, float timebase )
+bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, bool player, float timebase )
 {
-	delta_info_t	*dt;
+	delta_info_t	*dt = NULL;
 	delta_t		*pField;
 	int		i, fRemoveType;
 
@@ -1569,19 +1571,22 @@ bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *
 	}
 
 	if( BF_ReadOneBit( msg ))
-		to->entityType = BF_ReadUBitLong( msg, 4 );
+		to->entityType = BF_ReadUBitLong( msg, 2 );
 
-	switch( to->entityType )
+	if( to->entityType == ENTITY_NORMAL )
 	{
-	case ET_PLAYER:
-		dt = Delta_FindStruct( "entity_state_player_t" );
-		break;
-	case ET_BEAM:
+		if( player )
+		{
+			dt = Delta_FindStruct( "entity_state_player_t" );
+		}
+		else
+		{
+			dt = Delta_FindStruct( "entity_state_t" );
+		}
+	}
+	else if( to->entityType == ENTITY_BEAM )
+	{
 		dt = Delta_FindStruct( "custom_entity_state_t" );
-		break;
-	default:
-		dt = Delta_FindStruct( "entity_state_t" );
-		break;
 	}
 
 	ASSERT( dt && dt->bInitialized );
