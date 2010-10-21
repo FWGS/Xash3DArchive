@@ -109,7 +109,7 @@ static void UI_Background_Ownerdraw( void *self )
 	scaleX = ScreenWidth / 640.0f;
 	scaleY = ScreenHeight / 480.0f;
 
-	if( GetLogoWidth() <= 16 ) return;	// don't draw stub logo
+	if( GetLogoWidth() <= 32 ) return;	// don't draw stub logo
 
 	logoWidth = GetLogoWidth() * scaleX;
 	logoHeight = GetLogoHeight() * scaleY;

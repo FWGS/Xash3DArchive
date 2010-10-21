@@ -211,6 +211,10 @@ typedef struct gameinfo_s
 	char		gameHint[32];	// hint to configure ImageLib and SoundLib
 	float		version;		// game version (optional)
 
+	// .dll pathes
+	char		dll_path[64];	// e.g. "bin" or "cl_dlls"
+	char		game_dll[64];	// custom path for game.dll
+
 	// path info
 	string		texpath;		// implicit texpath (apply in shaderpath)
 
@@ -224,13 +228,10 @@ typedef struct gameinfo_s
 	int		gamemode;
 
 	char		sp_entity[32];	// e.g. info_player_start
-	char		dm_entity[32];	// e.g. info_player_deathmatch
-	char		coop_entity[32];	// e.g. info_player_coop
-	char		team_entity[32];	// e.g. info_player_team
+	char		mp_entity[32];	// e.g. info_player_deathmatch
 
 	vec3_t		client_mins[4];	// 4 hulls allowed
 	vec3_t		client_maxs[4];	// 4 hulls allowed
-	float		viewheight[4];	// client viewheight (from hull center)
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
 } gameinfo_t;

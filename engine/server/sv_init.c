@@ -369,9 +369,9 @@ void SV_InitGame( void )
 		// init game after host error
 		if( !svgame.hInstance )
 		{
-			if( !SV_LoadProgs( "server.dll" ))
+			if( !SV_LoadProgs( GI->game_dll ))
 			{
-				MsgDev( D_ERROR, "SV_InitGame: can't initialize server.dll\n" );
+				MsgDev( D_ERROR, "SV_InitGame: can't initialize %s\n", GI->game_dll );
 				return; // can't loading
 			}
 		}
@@ -469,7 +469,7 @@ void SV_InitGameProgs( void )
 	if( svgame.hInstance ) return; // not needs
 
 	// just try to initialize
-	SV_LoadProgs( "server.dll" );
+	SV_LoadProgs( GI->game_dll );
 }
 
 bool SV_NewGame( const char *mapName, bool loadGame )

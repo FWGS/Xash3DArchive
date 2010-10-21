@@ -34,6 +34,7 @@ void V_SetupRefDef( void )
 	clent = CL_GetLocalPlayer ();
 
 	VectorCopy( cl.frame.clientdata.punchangle, cl.refdef.punchangle );
+	clgame.viewent.curstate.modelindex = cl.frame.clientdata.viewmodel;
 
 	cl.refdef.movevars = &clgame.movevars;
 	cl.refdef.onground = ( cl.frame.clientdata.flags & FL_ONGROUND ) ? 1 : 0;

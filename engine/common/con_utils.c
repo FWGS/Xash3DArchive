@@ -749,17 +749,17 @@ bool Cmd_CheckMapsList( bool fRefresh )
 					else if( !com.strcmp( token.string, "classname" ))
 					{
 						Com_ReadToken( ents, SC_ALLOW_PATHNAMES2, &token );
-						if( !com.strcmp( token.string, GI->dm_entity ))
+						if( !com.strcmp( token.string, GI->mp_entity ))
 							num_spawnpoints++;
 					}
-					if( num_spawnpoints > 1 ) break; // valid map
+					if( num_spawnpoints ) break; // valid map
 				}
 				Com_CloseScript( ents );
 			}
 
 			if( f ) FS_Close( f );
 
-			if( num_spawnpoints > 1 )
+			if( num_spawnpoints )
 			{
 				// format: mapname "maptitle"\n
 				com.sprintf( result, "%s \"%s\"\n", mapname, message );

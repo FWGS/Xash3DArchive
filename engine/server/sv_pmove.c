@@ -898,7 +898,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 
 	// copy results back to client
 	PM_FinishMove( svgame.pmove, clent );
-	VectorCopy( clent->v.velocity, oldvel ); // save velocity
 
 	if(!( clent->v.flags & FL_SPECTATOR ))
 	{
@@ -907,11 +906,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 			
 		// link into place and touch triggers
 		SV_LinkEdict( clent, true );
-
-		// NOTE: one of triggers apply new velocity to client
-		// e.g trigger_teleport resets it or add new
-		// so we need to apply new velocity immediately here
-		if( clent->v.fixangle ) VectorCopy( clent->v.velocity, oldvel );
+		VectorCopy( clent->v.velocity, oldvel ); // save velocity
 
 		// touch other objects
 		for( i = 0; i < svgame.pmove->numtouch; i++ )
@@ -923,10 +918,11 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 			VectorCopy( svgame.pmove->touchindex[i].deltavelocity, clent->v.velocity );
 			svgame.dllFuncs.pfnTouch( touch, clent );
 		}
+
+		// restore velocity
+		VectorCopy( oldvel, clent->v.velocity );
 	}
 
-	// restore velocity
-	VectorCopy( oldvel, clent->v.velocity );
 	svgame.pmove->numtouch = 0;
 }
 

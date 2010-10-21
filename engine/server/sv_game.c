@@ -1933,7 +1933,7 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 	int		i, j;
 	trace_t		tr;
 
-	// these vairable defined in server.dll	
+	// these vairable defined in game.dll	
 	fNoFriendlyFire = Cvar_VariableValue( "mp_friendlyfire" );
 	VectorCopy( svgame.globals->v_forward, rgflReturn );	// assume failure if it returns early
 
@@ -3047,13 +3047,10 @@ int pfnIsMapValid( char *filename )
 	int	flags;
 
 	// determine spawn entity classname
-	if( Cvar_VariableInteger( "deathmatch" ))
-		spawn_entity = GI->dm_entity;
-	else if( Cvar_VariableInteger( "coop" ))
-		spawn_entity = GI->coop_entity;
-	else if( Cvar_VariableInteger( "teamplay" ))
-		spawn_entity = GI->team_entity;
-	else spawn_entity = GI->sp_entity;
+	// determine spawn entity classname
+	if( sv_maxclients->integer == 1 )
+		spawn_entity = GI->sp_entity;
+	else spawn_entity = GI->mp_entity;
 
 	flags = SV_MapIsValid( filename, spawn_entity, NULL );
 
@@ -3450,7 +3447,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		if( cl->state != cs_spawned || !cl->edict || cl->fakeclient )
 			continue;
 
-		if( flags & FEV_NOTHOST && cl->edict == pInvoker )
+		if( flags & FEV_NOTHOST && cl->edict == pInvoker && cl->local_weapons )
 			continue;	// will be played on client side
 
 		if( flags & FEV_HOSTONLY && cl->edict != pInvoker )

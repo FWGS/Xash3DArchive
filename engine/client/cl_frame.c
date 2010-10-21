@@ -476,16 +476,6 @@ void CL_AddPacketEntities( frame_t *frame )
 	// update client vars
 	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.clientdata );
 
-	// if viewmodel has changed update sequence here
-	if( clgame.viewent.curstate.modelindex != cl.frame.clientdata.viewmodel )
-	{
-		cl_entity_t *view = &clgame.viewent;
-		CL_WeaponAnim( view->curstate.sequence, view->curstate.body );
-	}
-
-	// setup player viewmodel (only for local player!)
-	clgame.viewent.curstate.modelindex = cl.frame.clientdata.viewmodel;
-
 	for( e = 1; e < clgame.numEntities; e++ )
 	{
 		ent = CL_GetEntityByIndex( e );

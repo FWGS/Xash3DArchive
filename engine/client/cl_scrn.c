@@ -287,9 +287,9 @@ static void SCR_LoadCreditsFont( void )
 			// build rectangles
 			for( i = 0; i < 256; i++ )
 			{
-				cls.creditsFont.fontRc[i].left = LittleShort( src->fontinfo[i].startoffset ) % fontWidth;
+				cls.creditsFont.fontRc[i].left = LittleShort( (word)src->fontinfo[i].startoffset ) % fontWidth;
 				cls.creditsFont.fontRc[i].right = cls.creditsFont.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
-				cls.creditsFont.fontRc[i].top = LittleShort( src->fontinfo[i].startoffset ) / fontWidth;
+				cls.creditsFont.fontRc[i].top = LittleShort( (word)src->fontinfo[i].startoffset ) / fontWidth;
 				cls.creditsFont.fontRc[i].bottom = cls.creditsFont.fontRc[i].top + LittleLong( src->rowheight );
 				clgame.scrInfo.charWidths[i] = LittleLong( src->fontinfo[i].charwidth );
 			}
@@ -380,7 +380,7 @@ void SCR_Init( void )
 	Cmd_AddCommand( "skyname", CL_SetSky_f, "set new skybox by basename" );
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
-	if( !UI_LoadProgs( "GameUI.dll" ))
+	if( !UI_LoadProgs( va( "%s/GameUI.dll", GI->dll_path ) ))
 	{
 		Msg( "^1Error: ^7can't initialize gameui.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing

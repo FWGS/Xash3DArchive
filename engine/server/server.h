@@ -285,7 +285,7 @@ typedef struct
 	// catched user messages (nasty hack)
 	int		gmsgHudText;		// -1 if not catched
 
-	void		*hInstance;		// pointer to server.dll
+	void		*hInstance;		// pointer to game.dll
 
 	union
 	{

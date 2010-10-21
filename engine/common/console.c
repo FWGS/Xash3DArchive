@@ -334,9 +334,9 @@ static void Con_LoadConchars( void )
 			// build rectangles
 			for( i = 0; i < 256; i++ )
 			{
-				con.chars.fontRc[i].left = LittleShort( src->fontinfo[i].startoffset ) % fontWidth;
+				con.chars.fontRc[i].left = LittleShort( (word)src->fontinfo[i].startoffset ) % fontWidth;
 				con.chars.fontRc[i].right = con.chars.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
-				con.chars.fontRc[i].top = LittleShort( src->fontinfo[i].startoffset ) / fontWidth;
+				con.chars.fontRc[i].top = LittleShort( (word)src->fontinfo[i].startoffset ) / fontWidth;
 				con.chars.fontRc[i].bottom = con.chars.fontRc[i].top + LittleLong( src->rowheight );
 				con.charWidths[i] = LittleLong( src->fontinfo[i].charwidth );
 			}
@@ -1457,8 +1457,35 @@ void Con_VidInit( void )
 
 	// loading console image
 	if( host.developer )
-		con.background = re->RegisterShader( "cached/conback", SHADER_NOMIP );
-	else con.background = re->RegisterShader( "cached/loading", SHADER_NOMIP );
+	{
+		if( scr_width->integer < 640 )
+		{
+			if( FS_FileExists( "cached/conback400" ))
+				con.background = re->RegisterShader( "cached/conback400", SHADER_NOMIP );
+			else con.background = re->RegisterShader( "cached/conback", SHADER_NOMIP );
+		}
+		else
+		{
+			if( FS_FileExists( "cached/conback640" ))
+				con.background = re->RegisterShader( "cached/conback640", SHADER_NOMIP );
+			else con.background = re->RegisterShader( "cached/conback", SHADER_NOMIP );
+		}
+	}
+	else
+	{
+		if( scr_width->integer < 640 )
+		{
+			if( FS_FileExists( "cached/loading400" ))
+				con.background = re->RegisterShader( "cached/loading400", SHADER_NOMIP );
+			else con.background = re->RegisterShader( "cached/loading", SHADER_NOMIP );
+		}
+		else
+		{
+			if( FS_FileExists( "cached/loading640" ))
+				con.background = re->RegisterShader( "cached/loading640", SHADER_NOMIP );
+			else con.background = re->RegisterShader( "cached/loading", SHADER_NOMIP );
+		}
+	}
 
 	Con_LoadConchars();
 }

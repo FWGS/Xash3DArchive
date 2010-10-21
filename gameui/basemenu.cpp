@@ -33,13 +33,13 @@ cvar_t	*ui_sensitivity;
 uiStatic_t	uiStatic;
 
 char		uiEmptyString[256];
-const char	*uiSoundIn	= "common/launch_upmenu1.wav";
-const char	*uiSoundOut	= "common/launch_dnmenu1.wav";
-const char	*uiSoundLaunch	= "common/launch_select2.wav";
-const char	*uiSoundGlow	= "common/launch_glow1.wav";
-const char	*uiSoundBuzz	= "common/menu1.wav";
-const char	*uiSoundKey	= "common/launch_select1.wav";
-const char	*uiSoundRemoveKey	= "commons/launch_deny1.wav";
+const char	*uiSoundIn	= "media/launch_upmenu1.wav";
+const char	*uiSoundOut	= "media/launch_dnmenu1.wav";
+const char	*uiSoundLaunch	= "media/launch_select2.wav";
+const char	*uiSoundGlow	= "media/launch_glow1.wav";
+const char	*uiSoundBuzz	= "media/menu1.wav";
+const char	*uiSoundKey	= "media/launch_select1.wav";
+const char	*uiSoundRemoveKey	= "media/launch_deny1.wav";
 const char	*uiSoundMove	= "";		// Xash3D not use movesound
 const char	*uiSoundNull	= "";
 

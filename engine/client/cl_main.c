@@ -1685,7 +1685,7 @@ void CL_Init( void )
 	Con_Init();	
 	CL_InitLocal();
 
-	if( !CL_LoadProgs( "client.dll" ))
+	if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
 		Host_Error( "CL_InitGame: can't initialize client.dll\n" );
 
 	Host_CheckChanges ();

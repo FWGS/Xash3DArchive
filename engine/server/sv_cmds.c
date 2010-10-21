@@ -216,13 +216,9 @@ void SV_Map_f( void )
 	com.strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
 	
 	// determine spawn entity classname
-	if( Cvar_VariableInteger( "deathmatch" ))
-		spawn_entity = GI->dm_entity;
-	else if( Cvar_VariableInteger( "coop" ))
-		spawn_entity = GI->coop_entity;
-	else if( Cvar_VariableInteger( "teamplay" ))
-		spawn_entity = GI->team_entity;
-	else spawn_entity = GI->sp_entity;
+	if( sv_maxclients->integer == 1 )
+		spawn_entity = GI->sp_entity;
+	else spawn_entity = GI->mp_entity;
 
 	flags = SV_MapIsValid( mapname, spawn_entity, NULL );
 
@@ -379,13 +375,9 @@ void SV_ChangeLevel_f( void )
 	mapname = Cmd_Argv( 1 );
 
 	// determine spawn entity classname
-	if( Cvar_VariableInteger( "deathmatch" ))
-		spawn_entity = GI->dm_entity;
-	else if( Cvar_VariableInteger( "coop" ))
-		spawn_entity = GI->coop_entity;
-	else if( Cvar_VariableInteger( "teamplay" ))
-		spawn_entity = GI->team_entity;
-	else spawn_entity = GI->sp_entity;
+	if( sv_maxclients->integer == 1 )
+		spawn_entity = GI->sp_entity;
+	else spawn_entity = GI->mp_entity;
 
 	flags = SV_MapIsValid( mapname, spawn_entity, Cmd_Argv( 2 ));
 

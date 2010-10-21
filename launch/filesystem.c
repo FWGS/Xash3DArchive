@@ -1223,10 +1223,6 @@ int FS_CheckNastyPath( const char *path, bool isgamedir )
 	// all: never allow an empty path, as for gamedir it would access the parent directory and a non-gamedir path it is just useless
 	if( !path[0] ) return 2;
 
-	// Windows: don't allow \ in filenames (windows-only), period.
-	// (on Windows \ is a directory separator, but / is also supported)
-	if( com.strstr( path, "\\" ) && !fs_ext_path ) return 1; // non-portable
-
 	// Mac: don't allow Mac-only filenames - : is a directory separator
 	// instead of /, but we rely on / working already, so there's no reason to
 	// support a Mac-only path
@@ -1377,6 +1373,11 @@ static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( com.strlen( GameInfo->date ))
 		FS_Printf( f, "date\t\t\"%s\"\n", GameInfo->date );
 
+	if( com.strlen( GameInfo->dll_path ))
+		FS_Printf( f, "dllpath\t\t\"%s\"\n", GameInfo->dll_path );	
+	if( com.strlen( GameInfo->game_dll ))
+		FS_Printf( f, "gamedll\t\t\"%s\"\n", GameInfo->game_dll );
+
 	switch( GameInfo->gamemode )
 	{
 	case 1: FS_Print( f, "gamemode\t\t\"singleplayer_only\"\n" ); break;
@@ -1384,13 +1385,9 @@ static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	}
 
 	if( com.strlen( GameInfo->sp_entity ))
-		FS_Printf( f, "sp_spawn\t\t\"%s\"\n", GameInfo->sp_entity );
-	if( com.strlen( GameInfo->dm_entity ))
-		FS_Printf( f, "dm_spawn\t\t\"%s\"\n", GameInfo->dm_entity );
-	if( com.strlen( GameInfo->coop_entity ))
-		FS_Printf( f, "coop_spawn\t\"%s\"\n", GameInfo->coop_entity );	
-	if( com.strlen( GameInfo->team_entity ))
-		FS_Printf( f, "team_spawn\t\"%s\"\n", GameInfo->team_entity );
+		FS_Printf( f, "sp_entity\t\t\"%s\"\n", GameInfo->sp_entity );
+	if( com.strlen( GameInfo->mp_entity ))
+		FS_Printf( f, "mp_entity\t\t\"%s\"\n", GameInfo->mp_entity );
 
 	for( i = 0; i < 4; i++ )
 	{
@@ -1433,9 +1430,9 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	com.strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
 	com.strncpy( defGI.basedir, fs_defaultdir->string, sizeof( defGI.basedir ));
 	com.strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
-	com.strncpy( defGI.dm_entity, "info_player_deathmatch", sizeof( defGI.dm_entity ));
-	com.strncpy( defGI.coop_entity, "info_player_coop", sizeof( defGI.coop_entity ));
-	com.strncpy( defGI.team_entity, "info_player_team", sizeof( defGI.team_entity ));
+	com.strncpy( defGI.mp_entity, "info_player_deathmatch", sizeof( defGI.mp_entity ));
+	com.strncpy( defGI.dll_path, "bin", sizeof( defGI.dll_path ));
+	com.strncpy( defGI.game_dll, "bin/server.dll", sizeof( defGI.game_dll ));
 	com.strncpy( defGI.startmap, "newmap", sizeof( defGI.startmap ));
 
 	VectorSet( defGI.client_mins[0],   0,   0,  0  );
@@ -1469,10 +1466,12 @@ static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gamei
 	com.strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
 	com.strncpy( GameInfo->basedir, "valve", sizeof( GameInfo->basedir )); // all liblist.gam have 'valve' as basedir
 	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
-	com.strncpy( GameInfo->dm_entity, "info_player_deathmatch", sizeof( GameInfo->dm_entity ));
-	com.strncpy( GameInfo->coop_entity, "info_player_coop", sizeof( GameInfo->coop_entity ));
-	com.strncpy( GameInfo->team_entity, "info_player_team", sizeof( GameInfo->team_entity ));
+	com.strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
+	com.strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
 	com.strncpy( GameInfo->startmap, "newmap", sizeof( GameInfo->startmap ));
+
+	// FIXME: replace with "cl_dlls" when support for client.dll will be it's finished
+	com.strncpy( GameInfo->dll_path, "bin", sizeof( GameInfo->dll_path ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
 	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
@@ -1499,10 +1498,12 @@ static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gamei
 		else if( !com.stricmp( token.string, "startmap" ))
 		{
 			PS_GetString( script, false, GameInfo->startmap, sizeof( GameInfo->startmap ));
+			FS_StripExtension( GameInfo->startmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !com.stricmp( token.string, "trainmap" ))
 		{
 			PS_GetString( script, false, GameInfo->trainmap, sizeof( GameInfo->trainmap ));
+			FS_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !com.stricmp( token.string, "url_info" ))
 		{
@@ -1511,6 +1512,10 @@ static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gamei
 		else if( !com.stricmp( token.string, "url_dl" ))
 		{
 			PS_GetString( script, false, GameInfo->update_url, sizeof( GameInfo->update_url ));
+		}
+		else if( !com.stricmp( token.string, "gamedll" ))
+		{
+			PS_GetString( script, false, GameInfo->game_dll, sizeof( GameInfo->game_dll ));
 		}
 		else if( !com.stricmp( token.string, "type" ))
 		{
@@ -1545,7 +1550,7 @@ static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gamei
 		}
 		else if( !com.stricmp( token.string, "mpentity" ))
 		{
-			PS_GetString( script, false, GameInfo->dm_entity, sizeof( GameInfo->dm_entity ));
+			PS_GetString( script, false, GameInfo->mp_entity, sizeof( GameInfo->mp_entity ));
 		}
 	}
 
@@ -1606,9 +1611,9 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	com.strncpy( GameInfo->gameHint, "Half-Life", sizeof( GameInfo->gameHint ));
 	com.strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
-	com.strncpy( GameInfo->dm_entity, "info_player_deathmatch", sizeof( GameInfo->dm_entity ));
-	com.strncpy( GameInfo->coop_entity, "info_player_coop", sizeof( GameInfo->coop_entity ));
-	com.strncpy( GameInfo->team_entity, "info_player_team", sizeof( GameInfo->team_entity ));
+	com.strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
+	com.strncpy( GameInfo->dll_path, "bin", sizeof( GameInfo->dll_path ));
+	com.strncpy( GameInfo->game_dll, "bin/server.dll", sizeof( GameInfo->game_dll ));
 	com.strncpy( GameInfo->startmap, "", sizeof( GameInfo->startmap ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
@@ -1645,29 +1650,31 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		{
 			PS_GetString( script, false, GameInfo->gameHint, sizeof( GameInfo->gameHint ));
 		}
-		else if( !com.stricmp( token.string, "sp_spawn" ))
+		else if( !com.stricmp( token.string, "sp_entity" ))
 		{
 			PS_GetString( script, false, GameInfo->sp_entity, sizeof( GameInfo->sp_entity ));
 		}
-		else if( !com.stricmp( token.string, "dm_spawn" ))
+		else if( !com.stricmp( token.string, "mp_entity" ))
 		{
-			PS_GetString( script, false, GameInfo->dm_entity, sizeof( GameInfo->dm_entity ));
+			PS_GetString( script, false, GameInfo->mp_entity, sizeof( GameInfo->mp_entity ));
 		}
-		else if( !com.stricmp( token.string, "coop_spawn" ))
+		else if( !com.stricmp( token.string, "gamedll" ))
 		{
-			PS_GetString( script, false, GameInfo->coop_entity, sizeof( GameInfo->coop_entity ));
+			PS_GetString( script, false, GameInfo->game_dll, sizeof( GameInfo->game_dll ));
 		}
-		else if( !com.stricmp( token.string, "team_spawn" ))
+		else if( !com.stricmp( token.string, "dllpath" ))
 		{
-			PS_GetString( script, false, GameInfo->team_entity, sizeof( GameInfo->team_entity ));
+			PS_GetString( script, false, GameInfo->dll_path, sizeof( GameInfo->dll_path ));
 		}
 		else if( !com.stricmp( token.string, "startmap" ))
 		{
 			PS_GetString( script, false, GameInfo->startmap, sizeof( GameInfo->startmap ));
+			FS_StripExtension( GameInfo->startmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !com.stricmp( token.string, "trainmap" ))
 		{
 			PS_GetString( script, false, GameInfo->trainmap, sizeof( GameInfo->trainmap ));
+			FS_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !com.stricmp( token.string, "url_info" ))
 		{
@@ -2931,11 +2938,13 @@ dll_user_t *FS_FindLibrary( const char *dllname, bool directpath )
 	if( !dllname || !*dllname )
 		return NULL;
 
+	// some mods used direct path to dlls
+	if( com.strstr( dllname, ".." ))
+		directpath = true;
+
 	fs_ext_path = directpath;
 
-	if( !directpath )
-		com.snprintf( dllpath, sizeof( dllpath ), "bin/%s", dllname );
-	else com.strncpy( dllpath, dllname, sizeof( dllpath ));
+	com.strncpy( dllpath, dllname, sizeof( dllpath ));
 	FS_DefaultExtension( dllpath, ".dll" );	// trying to apply if forget
 
 	search = FS_FindFile( dllpath, &index, false );
