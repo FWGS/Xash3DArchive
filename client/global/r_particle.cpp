@@ -324,7 +324,7 @@ void CParticleSystem :: Update( void )
 	m_fOldTime = m_flTime;
 	m_flTime = GetClientTime();
 
-	if( !cl_particles->integer ) return;
+	if( !cl_particles->value ) return;
 
 	cl_entity_t *m_pPlayer = GetLocalPlayer();
 

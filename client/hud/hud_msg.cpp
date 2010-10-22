@@ -68,10 +68,10 @@ int CHud :: InitMessages( void )
 	m_iFOV = 0;
 	m_iHUDColor = RGB_YELLOWISH; // 255, 160, 0
 	
-	CVAR_REGISTER( "zoom_sensitivity_ratio", "1.2", 0, "mouse sensitivity when zooming" );
-	default_fov = CVAR_REGISTER( "default_fov", "90", 0, "default client fov" );
-	CVAR_REGISTER( "hud_draw", "1", 0, "disable hud rendering" );
-	CVAR_REGISTER( "hud_takesshots", "0", 0, "take screenshots at 30 fps" );
+	CVAR_REGISTER( "zoom_sensitivity_ratio", "1.2", 0 );
+	default_fov = CVAR_REGISTER( "default_fov", "90", 0 );
+	CVAR_REGISTER( "hud_draw", "1", 0 );
+	CVAR_REGISTER( "hud_takesshots", "0", 0 );
 	cl_lw = gEngfuncs.pfnGetCvarPointer( "cl_lw" );
 
 	// clear any old HUD list
@@ -211,7 +211,7 @@ int CHud::MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf)
 	int def_fov = CVAR_GET_FLOAT( "default_fov" );
 
 	//Weapon prediction already takes care of changing the fog. ( g_lastFOV ).
-	if ( cl_lw && cl_lw->integer )
+	if ( cl_lw && cl_lw->value )
 	{
 		END_READ();
 		return 1;

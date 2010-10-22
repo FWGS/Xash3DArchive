@@ -391,11 +391,8 @@ static void UI_LanGame_Init( void )
 	uiLanGame.gameList.generic.callback = UI_LanGame_Callback;
 	uiLanGame.gameList.itemNames = (const char **)uiLanGame.gameDescriptionPtr;
 
-	char	libpath[128];
-
 	// server.dll needs for reading savefiles or startup newgame
-	UI_BuildPath( "server", libpath );
-	if( !FILE_EXISTS( libpath ))
+	if( !CheckGameDll( ))
 		uiLanGame.createGame.generic.flags |= QMF_GRAYED;	// server.dll is missed - remote servers only
 
 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.background );

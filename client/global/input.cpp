@@ -8,7 +8,7 @@
 #include "usercmd.h"
 #include "hud.h"
 
-#define mlook_active	(freelook->integer || (in_mlook.state & 1))
+#define mlook_active	((int)freelook->value || (in_mlook.state & 1))
 
 typedef struct
 {
@@ -307,7 +307,7 @@ void IN_MLookUp(void)
 {
 	IN_KeyUp( &in_mlook );
 
-	if( !mlook_active && lookspring->integer )
+	if( !mlook_active && lookspring->value )
 	{
 		V_StopPitchDrift ();
 	}
@@ -323,7 +323,7 @@ void CL_MouseMove( usercmd_t *cmd )
 	float	mx, my;
 
 	// allow mouse smoothing
-	if( m_filter->integer )
+	if( m_filter->value )
 	{
 		mx = (mouse_x[0] + mouse_x[1]) * 0.5f;
 		my = (mouse_y[0] + mouse_y[1]) * 0.5f;
@@ -353,7 +353,7 @@ void CL_MouseMove( usercmd_t *cmd )
 	}
 
 	// add mouse X/Y movement to cmd
-	if(( in_strafe.state & 1 ) || (lookstrafe->integer && mlook_active))
+	if(( in_strafe.state & 1 ) || (lookstrafe->value && mlook_active))
 		cmd->sidemove += m_side->value * mx;
 	else cl_viewangles[YAW] -= m_yaw->value * mx;
 
@@ -451,7 +451,7 @@ void CL_BaseMove( usercmd_t *cmd )
 	}
 
 	// adjust for speed key / running
-	if( in_speed.state & 1 ^ !cl_run->integer )
+	if( in_speed.state & 1 ^ !(int)cl_run->value )
 	{
 		cmd->forwardmove *= cl_movespeedkey->value;
 		cmd->sidemove *= cl_movespeedkey->value;
@@ -516,9 +516,9 @@ void IN_CreateMove( usercmd_t *cmd, float frametime, int active )
 		cmd->viewangles[1] = cl_oldviewangles[1] = cl_viewangles[1]; 
 		cmd->viewangles[2] = cl_oldviewangles[2] = cl_viewangles[2]; 
 
-		if( freelook->integer )
+		if( freelook->value )
 		{
-			if( !mlook_active && lookspring->integer )
+			if( !mlook_active && lookspring->value )
 				V_StartPitchDrift();
 		}
 	}
@@ -645,86 +645,86 @@ void CL_ResetButtonBits( int bits )
 void IN_Init( void )
 {
 	// mouse variables
-	m_filter = CVAR_REGISTER("m_filter", "0", FCVAR_ARCHIVE, "enable mouse filter" );
-	m_sensitivity = CVAR_REGISTER( "m_sensitivity", "3", FCVAR_ARCHIVE, "mouse in-game sensitivity" );
+	m_filter = CVAR_REGISTER("m_filter", "0", FCVAR_ARCHIVE );
+	m_sensitivity = CVAR_REGISTER( "m_sensitivity", "3", FCVAR_ARCHIVE );
 
 	// centering
-	v_centermove = CVAR_REGISTER ("v_centermove", "0.15", 0, "client center moving" );
-	v_centerspeed = CVAR_REGISTER ("v_centerspeed", "500", 0, "client center speed" );
+	v_centermove = CVAR_REGISTER ("v_centermove", "0.15", 0 );
+	v_centerspeed = CVAR_REGISTER ("v_centerspeed", "500", 0 );
 
-	cl_upspeed = CVAR_REGISTER( "cl_upspeed", "400", 0, "client upspeed limit" );
-	cl_forwardspeed = CVAR_REGISTER( "cl_forwardspeed", "400", 0, "client forward speed limit" );
-	cl_backspeed = CVAR_REGISTER( "cl_backspeed", "400", 0, "client bask speed limit" );
-	cl_sidespeed = CVAR_REGISTER( "cl_sidespeed", "400", 0, "client side-speed limit" );
-	cl_yawspeed = CVAR_REGISTER( "cl_yawspeed", "140", 0, "client yaw speed" );
-	cl_pitchspeed = CVAR_REGISTER( "cl_pitchspeed", "150", 0, "client pitch speed" );
-	cl_anglespeedkey = CVAR_REGISTER( "cl_anglespeedkey", "1.5", 0, "client anglespeed" );
-	cl_run = CVAR_REGISTER( "cl_run", "1", FCVAR_ARCHIVE, "keep client for always run mode" );
+	cl_upspeed = CVAR_REGISTER( "cl_upspeed", "400", 0 );
+	cl_forwardspeed = CVAR_REGISTER( "cl_forwardspeed", "400", 0 );
+	cl_backspeed = CVAR_REGISTER( "cl_backspeed", "400", 0 );
+	cl_sidespeed = CVAR_REGISTER( "cl_sidespeed", "400", 0 );
+	cl_yawspeed = CVAR_REGISTER( "cl_yawspeed", "140", 0 );
+	cl_pitchspeed = CVAR_REGISTER( "cl_pitchspeed", "150", 0 );
+	cl_anglespeedkey = CVAR_REGISTER( "cl_anglespeedkey", "1.5", 0 );
+	cl_run = CVAR_REGISTER( "cl_run", "1", FCVAR_ARCHIVE );
 
-	cl_movespeedkey = CVAR_REGISTER ( "cl_movespeedkey", "0.3", 0, "global scale factor between run and walk" );
-	cl_pitchup = CVAR_REGISTER ( "cl_pitchup", "89", 0, "how many pitch up" );
-	cl_pitchdown = CVAR_REGISTER ( "cl_pitchdown", "89", 0, "how many pitch down" );
+	cl_movespeedkey = CVAR_REGISTER ( "cl_movespeedkey", "0.3", 0 );
+	cl_pitchup = CVAR_REGISTER ( "cl_pitchup", "89", 0 );
+	cl_pitchdown = CVAR_REGISTER ( "cl_pitchdown", "89", 0 );
 
-	freelook = CVAR_REGISTER( "freelook", "1", FCVAR_ARCHIVE, "enables mouse look" );
-	lookspring = CVAR_REGISTER( "lookspring", "0", FCVAR_ARCHIVE, "allow look spring" );
-	lookstrafe = CVAR_REGISTER( "lookstrafe", "0", FCVAR_ARCHIVE, "allow look strafe" );
+	freelook = CVAR_REGISTER( "freelook", "1", FCVAR_ARCHIVE );
+	lookspring = CVAR_REGISTER( "lookspring", "0", FCVAR_ARCHIVE );
+	lookstrafe = CVAR_REGISTER( "lookstrafe", "0", FCVAR_ARCHIVE );
 
-	m_pitch = CVAR_REGISTER ("m_pitch", "0.022", FCVAR_ARCHIVE, "mouse pitch value" );
-	m_yaw = CVAR_REGISTER ("m_yaw", "0.022", 0, "mouse yaw value" );
-	m_forward = CVAR_REGISTER ("m_forward", "1", 0, "mouse forward speed" );
-	m_side = CVAR_REGISTER ("m_side", "1", 0, "mouse side speed" );
+	m_pitch = CVAR_REGISTER ("m_pitch", "0.022", FCVAR_ARCHIVE );
+	m_yaw = CVAR_REGISTER ("m_yaw", "0.022", 0 );
+	m_forward = CVAR_REGISTER ("m_forward", "1", 0 );
+	m_side = CVAR_REGISTER ("m_side", "1", 0 );
 
-	cl_particles = CVAR_REGISTER ( "cl_particles", "1", FCVAR_ARCHIVE, "disables particle effects" );
-	cl_draw_beams = CVAR_REGISTER ( "cl_draw_beams", "1", FCVAR_ARCHIVE, "disables beam rendering" );
+	cl_particles = CVAR_REGISTER ( "cl_particles", "1", FCVAR_ARCHIVE );
+	cl_draw_beams = CVAR_REGISTER ( "cl_draw_beams", "1", FCVAR_ARCHIVE );
 	
-	Cmd_AddCommand ("centerview", IN_CenterView, "gradually recenter view (stop looking up/down)" );
+	Cmd_AddCommand ("centerview", IN_CenterView );
 
 	// input commands
-	Cmd_AddCommand ("+moveup",IN_UpDown, "swim upward");
-	Cmd_AddCommand ("-moveup",IN_UpUp, "stop swimming upward");
-	Cmd_AddCommand ("+movedown",IN_DownDown, "swim downward");
-	Cmd_AddCommand ("-movedown",IN_DownUp, "stop swimming downward");
-	Cmd_AddCommand ("+left",IN_LeftDown, "turn left");
-	Cmd_AddCommand ("-left",IN_LeftUp, "stop turning left");
-	Cmd_AddCommand ("+right",IN_RightDown, "turn right");
-	Cmd_AddCommand ("-right",IN_RightUp, "stop turning right");
-	Cmd_AddCommand ("+forward",IN_ForwardDown, "move forward");
-	Cmd_AddCommand ("-forward",IN_ForwardUp, "stop moving forward");
-	Cmd_AddCommand ("+back",IN_BackDown, "move backward");
-	Cmd_AddCommand ("-back",IN_BackUp, "stop moving backward");
-	Cmd_AddCommand ("+lookup", IN_LookupDown, "look upward");
-	Cmd_AddCommand ("-lookup", IN_LookupUp, "stop looking upward");
-	Cmd_AddCommand ("+lookdown", IN_LookdownDown, "look downward");
-	Cmd_AddCommand ("-lookdown", IN_LookdownUp, "stop looking downward");
-	Cmd_AddCommand ("+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)\n");
-	Cmd_AddCommand ("-strafe", IN_StrafeUp, "deactivate strafing mode");
-	Cmd_AddCommand ("+moveleft", IN_MoveleftDown, "strafe left");
-	Cmd_AddCommand ("-moveleft", IN_MoveleftUp, "stop strafing left");
-	Cmd_AddCommand ("+moveright", IN_MoverightDown, "strafe right");
-	Cmd_AddCommand ("-moveright", IN_MoverightUp, "stop strafing right");
-	Cmd_AddCommand ("+speed", IN_SpeedDown, "activate run mode (faster movement and turning)");
-	Cmd_AddCommand ("-speed", IN_SpeedUp, "deactivate run mode");
-	Cmd_AddCommand ("+attack", IN_AttackDown, "begin firing");
-	Cmd_AddCommand ("-attack", IN_AttackUp, "stop firing");
-	Cmd_AddCommand ("+attack2", IN_Attack2Down, "begin alternate firing");
-	Cmd_AddCommand ("-attack2", IN_Attack2Up, "stop alternate firing");
-	Cmd_AddCommand ("+use", IN_UseDown, "use item (doors, monsters, inventory, etc)" );
-	Cmd_AddCommand ("-use", IN_UseUp, "stop using item" );
-	Cmd_AddCommand ("+jump", IN_JumpDown, "jump" );
-	Cmd_AddCommand ("-jump", IN_JumpUp, "end jump (so you can jump again)");
-	Cmd_AddCommand ("+duck", IN_DuckDown, "duck" );
-	Cmd_AddCommand ("-duck", IN_DuckUp, "end duck (so you can duck again)");
-	Cmd_AddCommand ("+klook", IN_KLookDown, "activate keyboard looking mode, do not recenter view");
-	Cmd_AddCommand ("-klook", IN_KLookUp, "deactivate keyboard looking mode");
-	Cmd_AddCommand ("+reload", IN_ReloadDown, "reload current weapon" );
-	Cmd_AddCommand ("-reload", IN_ReloadUp, "continue reload weapon" );
-	Cmd_AddCommand ("+mlook", IN_MLookDown, "activate mouse looking mode, do not recenter view" );
-	Cmd_AddCommand ("-mlook", IN_MLookUp, "deactivate mouse looking mode" );
-	Cmd_AddCommand ("+alt1", IN_Alt1Down, "hold modyifycator" );
-	Cmd_AddCommand ("-alt1", IN_Alt1Up, "release modifycator" );
-	Cmd_AddCommand ("+break",IN_BreakDown, "cancel" );
-	Cmd_AddCommand ("-break",IN_BreakUp, "stop cancel" );
-	Cmd_AddCommand ( "impulse", IN_Impulse, "send impulse to a client" );
+	Cmd_AddCommand ("+moveup",IN_UpDown );
+	Cmd_AddCommand ("-moveup",IN_UpUp );
+	Cmd_AddCommand ("+movedown",IN_DownDown );
+	Cmd_AddCommand ("-movedown",IN_DownUp );
+	Cmd_AddCommand ("+left",IN_LeftDown );
+	Cmd_AddCommand ("-left",IN_LeftUp );
+	Cmd_AddCommand ("+right",IN_RightDown );
+	Cmd_AddCommand ("-right",IN_RightUp );
+	Cmd_AddCommand ("+forward",IN_ForwardDown );
+	Cmd_AddCommand ("-forward",IN_ForwardUp );
+	Cmd_AddCommand ("+back",IN_BackDown );
+	Cmd_AddCommand ("-back",IN_BackUp );
+	Cmd_AddCommand ("+lookup", IN_LookupDown );
+	Cmd_AddCommand ("-lookup", IN_LookupUp );
+	Cmd_AddCommand ("+lookdown", IN_LookdownDown );
+	Cmd_AddCommand ("-lookdown", IN_LookdownUp );
+	Cmd_AddCommand ("+strafe", IN_StrafeDown );
+	Cmd_AddCommand ("-strafe", IN_StrafeUp );
+	Cmd_AddCommand ("+moveleft", IN_MoveleftDown );
+	Cmd_AddCommand ("-moveleft", IN_MoveleftUp );
+	Cmd_AddCommand ("+moveright", IN_MoverightDown );
+	Cmd_AddCommand ("-moveright", IN_MoverightUp );
+	Cmd_AddCommand ("+speed", IN_SpeedDown );
+	Cmd_AddCommand ("-speed", IN_SpeedUp );
+	Cmd_AddCommand ("+attack", IN_AttackDown );
+	Cmd_AddCommand ("-attack", IN_AttackUp );
+	Cmd_AddCommand ("+attack2", IN_Attack2Down );
+	Cmd_AddCommand ("-attack2", IN_Attack2Up );
+	Cmd_AddCommand ("+use", IN_UseDown );
+	Cmd_AddCommand ("-use", IN_UseUp );
+	Cmd_AddCommand ("+jump", IN_JumpDown );
+	Cmd_AddCommand ("-jump", IN_JumpUp );
+	Cmd_AddCommand ("+duck", IN_DuckDown );
+	Cmd_AddCommand ("-duck", IN_DuckUp );
+	Cmd_AddCommand ("+klook", IN_KLookDown );
+	Cmd_AddCommand ("-klook", IN_KLookUp );
+	Cmd_AddCommand ("+reload", IN_ReloadDown );
+	Cmd_AddCommand ("-reload", IN_ReloadUp );
+	Cmd_AddCommand ("+mlook", IN_MLookDown );
+	Cmd_AddCommand ("-mlook", IN_MLookUp );
+	Cmd_AddCommand ("+alt1", IN_Alt1Down );
+	Cmd_AddCommand ("-alt1", IN_Alt1Up );
+	Cmd_AddCommand ("+break",IN_BreakDown );
+	Cmd_AddCommand ("-break",IN_BreakUp );
+	Cmd_AddCommand ( "impulse", IN_Impulse );
 
 	V_Init ();
 }

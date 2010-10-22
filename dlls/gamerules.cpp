@@ -321,7 +321,7 @@ CGameRules *InstallGameRules( void )
 	}
 	else
 	{
-		if ( teamplay->value > 0 )
+		if ( teamplay.value > 0 )
 		{
 			// teamplay
 

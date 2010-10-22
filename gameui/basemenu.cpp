@@ -318,36 +318,6 @@ void UI_StartSound( const char *sound )
 	PLAY_SOUND( sound );
 }
 
-/*
-=================
-UI_BuildPath
-
-helper to search dlls
-assume fullpath is valid
-=================
-*/
-void UI_BuildPath( const char *dllname, char *fullpath )
-{
-	char	name[128];
-
-	ASSERT( dllname != NULL );
-	ASSERT( fullpath != NULL );
-
-	// only libraries with extension .dll are valid
-	strncpy( name, dllname, sizeof( name ));
-	COM_FileBase( name, name );
-
-	// game path (Xash3D/game/bin/)
-	sprintf( fullpath, "bin/%s.dll", name );
-	if( FILE_EXISTS( fullpath )) return; // found
-
-	// absoulte path (Xash3D/bin/)
-	sprintf( fullpath, "%s.dll", name );	
-	if( FILE_EXISTS( fullpath )) return; // found
-
-	fullpath[0] = 0;
-}
-
 // =====================================================================
 
 
@@ -1124,7 +1094,7 @@ void UI_Precache( void )
 	if( !uiStatic.initialized )
 		return;
 
-	if( !ui_precache->integer )
+	if( !ui_precache->value )
 		return;
 
 	PIC_Load( UI_CURSOR_NORMAL );
@@ -1138,7 +1108,7 @@ void UI_Precache( void )
 	PIC_Load( UI_DOWNARROW );
 	PIC_Load( UI_DOWNARROWFOCUS );
 
-	if( ui_precache->integer == 1 )
+	if( ui_precache->value == 1 )
 		return;
 
 	UI_Main_Precache();
@@ -1276,30 +1246,30 @@ UI_Init
 void UI_Init( void )
 {
 	// register our cvars and commands
-	ui_precache = CVAR_REGISTER( "ui_precache", "0", FCVAR_ARCHIVE, "enable precache all resources for menu" );
-	ui_sensitivity = CVAR_REGISTER( "ui_sensitivity", "1", FCVAR_ARCHIVE, "mouse sensitivity while in-menu" );
+	ui_precache = CVAR_REGISTER( "ui_precache", "0", FCVAR_ARCHIVE );
+	ui_sensitivity = CVAR_REGISTER( "ui_sensitivity", "1", FCVAR_ARCHIVE );
 
-	Cmd_AddCommand( "menu_main", UI_Main_Menu, "open the main menu" );
-	Cmd_AddCommand( "menu_newgame", UI_NewGame_Menu, "open the newgame menu" );
-	Cmd_AddCommand( "menu_loadgame", UI_LoadGame_Menu, "open the loadgame menu" );
-	Cmd_AddCommand( "menu_savegame", UI_SaveGame_Menu, "open the savegame menu" );
-	Cmd_AddCommand( "menu_saveload", UI_SaveLoad_Menu, "open the save\\load menu" );
-	Cmd_AddCommand( "menu_record", UI_RecDemo_Menu, "open the record demo menu" );
-	Cmd_AddCommand( "menu_playback", UI_PlayDemo_Menu, "open the playback demo menu" );
-	Cmd_AddCommand( "menu_playrec", UI_PlayRec_Menu, "open the play\\record demo menu" );
-	Cmd_AddCommand( "menu_multiplayer", UI_MultiPlayer_Menu, "open the multiplayer menu" );
-	Cmd_AddCommand( "menu_options", UI_Options_Menu, "open the options menu" );
-	Cmd_AddCommand( "menu_langame", UI_LanGame_Menu, "open the LAN game menu" );
-	Cmd_AddCommand( "menu_playersetup", UI_PlayerSetup_Menu, "open the player setup menu" );
-	Cmd_AddCommand( "menu_controls", UI_Controls_Menu, "open the controls menu" );
-	Cmd_AddCommand( "menu_advcontrols", UI_AdvControls_Menu, "open the advanced controls menu" );
-	Cmd_AddCommand( "menu_gameoptions", UI_GameOptions_Menu, "open the game options menu" );
-	Cmd_AddCommand( "menu_creategame", UI_CreateGame_Menu, "open the create LAN game menu" );
-	Cmd_AddCommand( "menu_audio", UI_Audio_Menu, "open the sound options menu" );
-	Cmd_AddCommand( "menu_video", UI_Video_Menu, "open the video settings head menu" );
-	Cmd_AddCommand( "menu_vidoptions", UI_VidOptions_Menu, "open the video options menu" );
-	Cmd_AddCommand( "menu_vidmodes", UI_VidModes_Menu, "open the video modes menu" );
-	Cmd_AddCommand( "menu_customgame", UI_CustomGame_Menu, "open the change game menu" );
+	Cmd_AddCommand( "menu_main", UI_Main_Menu );
+	Cmd_AddCommand( "menu_newgame", UI_NewGame_Menu );
+	Cmd_AddCommand( "menu_loadgame", UI_LoadGame_Menu );
+	Cmd_AddCommand( "menu_savegame", UI_SaveGame_Menu );
+	Cmd_AddCommand( "menu_saveload", UI_SaveLoad_Menu );
+	Cmd_AddCommand( "menu_record", UI_RecDemo_Menu );
+	Cmd_AddCommand( "menu_playback", UI_PlayDemo_Menu );
+	Cmd_AddCommand( "menu_playrec", UI_PlayRec_Menu );
+	Cmd_AddCommand( "menu_multiplayer", UI_MultiPlayer_Menu );
+	Cmd_AddCommand( "menu_options", UI_Options_Menu );
+	Cmd_AddCommand( "menu_langame", UI_LanGame_Menu );
+	Cmd_AddCommand( "menu_playersetup", UI_PlayerSetup_Menu );
+	Cmd_AddCommand( "menu_controls", UI_Controls_Menu );
+	Cmd_AddCommand( "menu_advcontrols", UI_AdvControls_Menu );
+	Cmd_AddCommand( "menu_gameoptions", UI_GameOptions_Menu );
+	Cmd_AddCommand( "menu_creategame", UI_CreateGame_Menu );
+	Cmd_AddCommand( "menu_audio", UI_Audio_Menu );
+	Cmd_AddCommand( "menu_video", UI_Video_Menu );
+	Cmd_AddCommand( "menu_vidoptions", UI_VidOptions_Menu );
+	Cmd_AddCommand( "menu_vidmodes", UI_VidModes_Menu );
+	Cmd_AddCommand( "menu_customgame", UI_CustomGame_Menu );
 
 //	CHECK_MAP_LIST( TRUE );
 

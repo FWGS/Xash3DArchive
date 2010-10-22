@@ -1318,7 +1318,7 @@ void EV_EgonFire( event_args_t *args )
 	if ( EV_IsLocal( idx ) )
 		gEngfuncs.pEventAPI->EV_WeaponAnimation ( g_fireAnims1[ gEngfuncs.pfnRandomLong( 0, 3 ) ], 1 );
 
-	if ( iStartup == 1 && EV_IsLocal( idx ) && !m_pBeam && !m_pNoise && cl_lw->integer ) //Adrian: Added the cl_lw check for those lital people that hate weapon prediction.
+	if ( iStartup == 1 && EV_IsLocal( idx ) && !m_pBeam && !m_pNoise && cl_lw->value ) //Adrian: Added the cl_lw check for those lital people that hate weapon prediction.
 	{
 		Vector vecSrc, vecEnd, origin, angles, forward;
 		pmtrace_t tr;
@@ -1680,7 +1680,7 @@ void EV_UpdateLaserSpot( void )
 
 	if( !m_pPlayer ) return;
 
-	if( m_pPlayer->curstate.effects & EF_LASERSPOT && !m_pLaserSpot && cl_lw->integer )
+	if( m_pPlayer->curstate.effects & EF_LASERSPOT && !m_pLaserSpot && cl_lw->value )
 	{
 		// create laserspot
 		int m_iSpotModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/laserdot.spr" );

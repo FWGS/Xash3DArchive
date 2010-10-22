@@ -467,10 +467,7 @@ void UI_SaveGame_Menu( void )
 		return;
 	}
 
-	char	libpath[128];
-	
-	UI_BuildPath( "server", libpath );
-	if( !FILE_EXISTS( libpath )) return;
+	if( !CheckGameDll( )) return;
 
 	UI_SaveGame_Precache();
 	UI_SaveGame_Init();

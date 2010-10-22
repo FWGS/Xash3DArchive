@@ -183,7 +183,7 @@ int StudioBodyVariations( int modelIndex )
 // an example how to renderer determines interpolation methods
 int HUD_StudioDoInterp( cl_entity_t *e )
 {
-	if( r_studio_lerping->integer )
+	if( r_studio_lerping->value )
 	{
 		return (e->curstate.effects & EF_NOINTERP) ? false : true;
 	}

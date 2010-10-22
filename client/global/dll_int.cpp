@@ -142,17 +142,6 @@ void HUD_ShutdownEffects( void )
 
 void HUD_Init( void )
 {
-	gEngfuncs.pfnAddCommand ("noclip", NULL, "enable or disable no clipping mode" );
-	gEngfuncs.pfnAddCommand ("notarget", NULL, "notarget mode (monsters do not see you)" );
-	gEngfuncs.pfnAddCommand ("fullupdate", NULL, "re-init HUD on start demo recording" );
-	gEngfuncs.pfnAddCommand ("give", NULL, "give specified item or weapon" );
-	gEngfuncs.pfnAddCommand ("drop", NULL, "drop current/specified item or weapon" );
-	gEngfuncs.pfnAddCommand ("intermission", NULL, "go to intermission" );
-	gEngfuncs.pfnAddCommand ("spectate", NULL, "enable spectator mode" );
-	gEngfuncs.pfnAddCommand ("gametitle", NULL, "show game logo" );
-	gEngfuncs.pfnAddCommand ("god", NULL, "classic cheat" );
-	gEngfuncs.pfnAddCommand ("fov", NULL, "set client field of view" );
-
 	HUD_ShutdownEffects ();
 
 	g_pParticleSystems = new ParticleSystemManager();

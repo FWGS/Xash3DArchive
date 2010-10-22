@@ -33,7 +33,7 @@ typedef enum
 	SIS_NOTAVAIL
 } si_state_t;
 
-cvar_t		*s_wavonly;
+convar_t		*s_wavonly;
 
 static HWND	snd_hwnd;
 static bool	dsound_init;

@@ -584,6 +584,16 @@ void SV_UpdateToReliableMessages( void )
                     }
 	}
 
+	// 1% chanse for simulate random network bugs
+	if( sv.write_bad_message && Com_RandomLong( 0, 512 ) == 443 )
+	{
+		// just for network debugging (send only for local client)
+		BF_WriteByte( &sv.datagram, svc_bad );
+		BF_WriteLong( &sv.datagram, rand( ));		// send some random data
+		BF_WriteString( &sv.datagram, host.finalmsg );	// send final message
+		sv.write_bad_message = false;
+	}
+
 	// clear the server datagram if it overflowed.
 	if( BF_CheckOverflow( &sv.datagram ))
 	{

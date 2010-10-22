@@ -85,10 +85,10 @@ loopback_t loopbacks[2];
 static WSADATA winsockdata;
 static bool winsockInitialized = false;
 static const char *net_src[2] = { "client", "server" };
-static cvar_t *net_ip;
-static cvar_t *net_hostport;
-static cvar_t *net_clientport;
-static cvar_t *net_showpackets;
+static convar_t *net_ip;
+static convar_t *net_hostport;
+static convar_t *net_clientport;
+static convar_t *net_showpackets;
 static int ip_sockets[2];
 void NET_Restart_f( void );
 

@@ -21,7 +21,7 @@ uint		frame_type;
 uint		group_num;
 string		sp_name;
 ref_shader_t	**frames = NULL;
-cvar_t		*r_sprite_lerping;
+convar_t		*r_sprite_lerping;
 uint		tex_flags = 0;
 vec3_t		sprite_mins, sprite_maxs;
 float		sprite_radius;

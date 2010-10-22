@@ -296,15 +296,6 @@ bool SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 
 	BF_Clear( &sv.multicast );
 
-	// 1% chanse for simulate random network bugs
-	if( sv.write_bad_message && Com_RandomLong( 0, 512 ) == 443 )
-	{
-		// just for network debugging (send only for local client)
-		BF_WriteByte( &sv.datagram, svc_bad );
-		BF_WriteLong( &sv.datagram, rand( ));		// send some random data
-		BF_WriteString( &sv.datagram, host.finalmsg );	// send final message
-		sv.write_bad_message = false;
-	}
 	return numsends;	// debug
 }
 
@@ -2420,6 +2411,28 @@ void pfnWriteEntity( int iValue )
 
 /*
 =============
+pfnCVarRegister
+
+=============
+*/
+void pfnCVarRegister( cvar_t *pCvar )
+{
+	Cvar_Register( pCvar );
+}
+
+/*
+=============
+pfnCvar_DirectSet
+
+=============
+*/
+void pfnCvar_DirectSet( cvar_t *var, char *value )
+{
+	Cvar_DirectSet( var, value );
+}
+
+/*
+=============
 pfnAlertMessage
 
 =============
@@ -3757,17 +3770,6 @@ void pfnGetPlayerStats( const edict_t *pClient, int *ping, int *packet_loss )
 	if( ping ) *ping = cl->ping * 1000;	// this is should be cl->latency not ping!
 	if( packet_loss ) *packet_loss = cl->packet_loss;
 }
-
-/*
-=============
-pfnCvar_DirectSet
-
-=============
-*/
-void pfnCvar_DirectSet( cvar_t *var, char *value )
-{
-	Cvar_DirectSet( var, value );
-}
 	
 /*
 =============
@@ -3825,9 +3827,9 @@ pfnAddServerCommand
 
 =============
 */
-void pfnAddServerCommand( const char *cmd_name, void (*function)(void), const char *cmd_desc )
+void pfnAddServerCommand( const char *cmd_name, void (*function)(void) )
 {
-	Cmd_AddCommand( cmd_name, function, cmd_desc );
+	Cmd_AddCommand( cmd_name, function, "" );
 }
 
 /*
@@ -4028,7 +4030,7 @@ static enginefuncs_t gEngfuncs =
 	pfnEndSection,
 	pfnCompareFileTime,
 	pfnGetGameDir,
-	pfnCvar_RegisterVariable,
+	pfnCVarRegister,
 	pfnFadeClientVolume,
 	pfnSetClientMaxspeed,
 	pfnCreateFakeClient,
@@ -4265,12 +4267,18 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 void SV_UnloadProgs( void )
 {
 	SV_DeactivateServer ();
-
 	Delta_Shutdown ();
 
 	if( svgame.globals->pStringBase )
 		Mem_FreePool( &svgame.stringspool );
 	else StringTable_Delete( svgame.hStringTable );
+
+	// now we can unload cvars
+	Cvar_FullSet( "host_gameloaded", "0", CVAR_INIT );
+
+	// must unlink all game cvars,
+	// before pointers on them will be lost...
+	Cmd_ExecuteString( "@unlink\n" );
 
 	FS_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );
@@ -4322,6 +4330,20 @@ bool SV_LoadProgs( const char *name )
 		return false;
 	}
 
+	GiveFnptrsToDll( &gEngfuncs, svgame.globals );
+
+	// get extended callbacks
+	if( GiveNewDllFuncs )
+	{
+		version = NEW_DLL_FUNCTIONS_VERSION;
+	
+		if( !GiveNewDllFuncs( &svgame.dllFuncs2, &version ))
+		{
+			MsgDev( D_WARN, "SV_LoadProgs: new interface version %i should be %i\n", NEW_DLL_FUNCTIONS_VERSION, version );
+			Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
+		}
+	}
+
 	version = INTERFACE_VERSION;
 
 	if( !GetEntityAPI( &svgame.dllFuncs, version ))
@@ -4342,20 +4364,6 @@ bool SV_LoadProgs( const char *name )
 		}
 	}
 
-	GiveFnptrsToDll( &gEngfuncs, svgame.globals );
-
-	// get extended callbacks
-	if( GiveNewDllFuncs )
-	{
-		version = NEW_DLL_FUNCTIONS_VERSION;
-	
-		if( !GiveNewDllFuncs( &svgame.dllFuncs2, &version ))
-		{
-			MsgDev( D_WARN, "SV_LoadProgs: new interface version %i should be %i\n", NEW_DLL_FUNCTIONS_VERSION, version );
-			Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
-		}
-	}
-
 	svgame.globals->pStringBase = ""; // setup string base
 
 	svgame.globals->maxEntities = GI->max_edicts;
@@ -4367,6 +4375,8 @@ bool SV_LoadProgs( const char *name )
 
 	// clear user messages
 	svgame.gmsgHudText = -1;
+
+	Cvar_FullSet( "host_gameloaded", "1", CVAR_INIT );
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();

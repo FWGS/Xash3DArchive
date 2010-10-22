@@ -113,7 +113,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 	vec3_t	size;
 
 	// decide which clipping hull to use, based on the size
-	if( ent->v.solid == SOLID_BSP )
+	if( ent->v.solid == SOLID_BSP || ent->v.skin == CONTENTS_LADDER )
 	{
 		// explicit hulls in the BSP model
 		if( ent->v.movetype != MOVETYPE_PUSH )

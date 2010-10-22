@@ -152,9 +152,9 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 // longest the intermission can last, in seconds
 #define MAX_INTERMISSION_TIME		120
 
-extern cvar_t *timeleft, *fragsleft;
+extern cvar_t timeleft, fragsleft;
 
-extern cvar_t *mp_chattime;
+extern cvar_t mp_chattime;
 
 //=========================================================
 //=========================================================
@@ -176,7 +176,7 @@ void CHalfLifeMultiplay :: Think ( void )
 		else if ( time > MAX_INTERMISSION_TIME )
 			CVAR_SET_STRING( "mp_chattime", UTIL_dtos1( MAX_INTERMISSION_TIME ) );
 
-		m_flIntermissionEndTime = g_flIntermissionStartTime + mp_chattime->value;
+		m_flIntermissionEndTime = g_flIntermissionStartTime + mp_chattime.value;
 
 		// check to see if we should change levels now
 		if ( m_flIntermissionEndTime < gpGlobals->time )
@@ -189,8 +189,8 @@ void CHalfLifeMultiplay :: Think ( void )
 		return;
 	}
 
-	float flTimeLimit = timelimit->value * 60;
-	float flFragLimit = fraglimit->value;
+	float flTimeLimit = timelimit.value * 60;
+	float flFragLimit = fraglimit.value;
 
 	time_remaining = (int)(flTimeLimit ? ( flTimeLimit - gpGlobals->time ) : 0);
 	
@@ -233,13 +233,13 @@ void CHalfLifeMultiplay :: Think ( void )
 	// Updates when frags change
 	if ( frags_remaining != last_frags )
 	{
-		g_engfuncs.pfnCvar_DirectSet( fragsleft, UTIL_VarArgs( "%i", frags_remaining ) );
+		g_engfuncs.pfnCvar_DirectSet( &fragsleft, UTIL_VarArgs( "%i", frags_remaining ) );
 	}
 
 	// Updates once per second
-	if ( timeleft->value != last_time )
+	if ( timeleft.value != last_time )
 	{
-		g_engfuncs.pfnCvar_DirectSet( timeleft, UTIL_VarArgs( "%i", time_remaining ) );
+		g_engfuncs.pfnCvar_DirectSet( &timeleft, UTIL_VarArgs( "%i", time_remaining ) );
 	}
 
 	last_frags = frags_remaining;
@@ -484,7 +484,7 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 //=========================================================
 float CHalfLifeMultiplay :: FlPlayerFallDamage( CBasePlayer *pPlayer )
 {
-	int iFallDamage = (int)falldamage->value;
+	int iFallDamage = (int)falldamage.value;
 
 	switch ( iFallDamage )
 	{
@@ -564,7 +564,7 @@ float CHalfLifeMultiplay :: FlPlayerSpawnTime( CBasePlayer *pPlayer )
 
 BOOL CHalfLifeMultiplay :: AllowAutoTargetCrosshair( void )
 {
-	return ( aimcrosshair->value != 0 );
+	return ( aimcrosshair.value != 0 );
 }
 
 //=========================================================
@@ -860,7 +860,7 @@ void CHalfLifeMultiplay :: PlayerGotWeapon( CBasePlayer *pPlayer, CBasePlayerIte
 //=========================================================
 float CHalfLifeMultiplay :: FlWeaponRespawnTime( CBasePlayerItem *pWeapon )
 {
-	if ( weaponstay->value > 0 )
+	if ( weaponstay.value > 0 )
 	{
 		// make sure it's only certain weapons
 		if ( !(pWeapon->iFlags() & ITEM_FLAG_LIMITINWORLD) )
@@ -924,7 +924,7 @@ int CHalfLifeMultiplay :: WeaponShouldRespawn( CBasePlayerItem *pWeapon )
 //=========================================================
 BOOL CHalfLifeMultiplay::CanHavePlayerItem( CBasePlayer *pPlayer, CBasePlayerItem *pItem )
 {
-	if ( weaponstay->value > 0 )
+	if ( weaponstay.value > 0 )
 	{
 		if ( pItem->iFlags() & ITEM_FLAG_LIMITINWORLD )
 			return CGameRules::CanHavePlayerItem( pPlayer, pItem );
@@ -1094,14 +1094,14 @@ BOOL CHalfLifeMultiplay :: PlayFootstepSounds( CBasePlayer *pl, float fvol )
 
 BOOL CHalfLifeMultiplay :: FAllowFlashlight( void ) 
 { 
-	return flashlight->value != 0; 
+	return flashlight.value != 0; 
 }
 
 //=========================================================
 //=========================================================
 BOOL CHalfLifeMultiplay :: FAllowMonsters( void )
 {
-	return ( allowmonsters->value != 0 );
+	return ( allowmonsters.value != 0 );
 }
 
 //=========================================================
@@ -1123,7 +1123,7 @@ void CHalfLifeMultiplay :: GoToIntermission( void )
 	else if ( time > MAX_INTERMISSION_TIME )
 		CVAR_SET_STRING( "mp_chattime", UTIL_dtos1( MAX_INTERMISSION_TIME ) );
 
-	m_flIntermissionEndTime = gpGlobals->time + ( (int)mp_chattime->value );
+	m_flIntermissionEndTime = gpGlobals->time + ( (int)mp_chattime.value );
 	g_flIntermissionStartTime = gpGlobals->time;
 
 	g_fGameOver = TRUE;

@@ -273,7 +273,7 @@ void HUD_CmdStart( const cl_entity_t *player, int runfuncs )
 void HUD_CmdEnd( const cl_entity_t *player, const usercmd_t *cmd, unsigned int random_seed )
 {
 	// Offset final origin by view_offset
-	if( cl_lw && cl_lw->integer )
+	if( cl_lw && cl_lw->value )
 	{
 		// FIXME: probably this is not correct
 		previousorigin = gHUD.m_vecOrigin;

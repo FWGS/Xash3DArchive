@@ -75,13 +75,13 @@ such as during the connection stage while waiting for the client to load,
 then a packet only needs to be delivered if there is something in the
 unacknowledged reliable
 */
-cvar_t	*net_showpackets;
-cvar_t	*net_chokeloopback;
-cvar_t	*net_drawslider;
-cvar_t	*net_blocksize;
-cvar_t	*net_showdrop;
-cvar_t	*net_speeds;
-cvar_t	*net_qport;
+convar_t	*net_showpackets;
+convar_t	*net_chokeloopback;
+convar_t	*net_drawslider;
+convar_t	*net_blocksize;
+convar_t	*net_showdrop;
+convar_t	*net_speeds;
+convar_t	*net_qport;
 
 int	net_drop;
 netadr_t	net_from;

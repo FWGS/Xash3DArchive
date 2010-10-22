@@ -445,10 +445,7 @@ void UI_LoadGame_Menu( void )
 		return;
 	}
 
-	char	libpath[128];
-	
-	UI_BuildPath( "server", libpath );
-	if( !FILE_EXISTS( libpath )) return;
+	if( !CheckGameDll( )) return;
 
 	UI_LoadGame_Precache();
 	UI_LoadGame_Init();

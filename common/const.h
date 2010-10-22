@@ -718,7 +718,6 @@ typedef unsigned int	uint;
 typedef float		vec_t;
 
 typedef int		string_t;
-typedef struct cvar_s	cvar_t;
 typedef struct edict_s	edict_t;
 
 typedef struct

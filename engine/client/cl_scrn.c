@@ -8,17 +8,17 @@
 #include "byteorder.h"
 #include "qfont.h"
 
-cvar_t *scr_viewsize;
-cvar_t *scr_centertime;
-cvar_t *scr_printspeed;
-cvar_t *scr_loading;
-cvar_t *scr_download;
-cvar_t *scr_width;
-cvar_t *scr_height;
-cvar_t *cl_testlights;
-cvar_t *cl_allow_levelshots;
-cvar_t *cl_levelshot_name;
-cvar_t *cl_envshot_size;
+convar_t *scr_viewsize;
+convar_t *scr_centertime;
+convar_t *scr_printspeed;
+convar_t *scr_loading;
+convar_t *scr_download;
+convar_t *scr_width;
+convar_t *scr_height;
+convar_t *cl_testlights;
+convar_t *cl_allow_levelshots;
+convar_t *cl_levelshot_name;
+convar_t *cl_envshot_size;
 
 static bool scr_init = false;
 

@@ -415,11 +415,8 @@ static void UI_Main_Init( void )
 		uiMain.saveRestore.generic.type = QMTYPE_ACTION;
 		uiMain.saveRestore.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 
-		char	libpath[128];
-
 		// server.dll needs for reading savefiles or startup newgame
-		UI_BuildPath( "server", libpath );
-		if( !FILE_EXISTS( libpath ))
+		if( !CheckGameDll( ))
 		{
 			uiMain.saveRestore.generic.flags |= QMF_GRAYED;
 			uiMain.newGame.generic.flags |= QMF_GRAYED;

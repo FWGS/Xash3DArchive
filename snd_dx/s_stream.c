@@ -40,8 +40,6 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 	}
 	else s_bgTrack.loopName[0] = 0;
 
-	S_StartStreaming();
-
 	// close the background track, but DON'T reset s_rawend
 	// if restarting the same back ground track
 	if( s_bgTrack.stream )
@@ -56,8 +54,6 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 
 void S_StopBackgroundTrack( void )
 {
-	S_StopStreaming();
-
 	if( !s_bgTrack.stream ) return;
 
 	FS_CloseStream( s_bgTrack.stream );

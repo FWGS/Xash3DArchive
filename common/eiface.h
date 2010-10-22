@@ -160,7 +160,7 @@ typedef struct enginefuncs_s
 	void	(*pfnEndSection)( const char *pszSectionName );
 	int	(*pfnCompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void	(*pfnGetGameDir)( char *szGetGameDir );
-	cvar_t*	(*pfnCvar_RegisterVariable)( const char *name, const char *value, int flags, const char *desc );
+	void	(*pfnCvar_RegisterVariable)( cvar_t *variable );
 	void	(*pfnFadeClientVolume)( const edict_t *pEdict, int fadePercent, int fadeOutSeconds, int holdTime, int fadeInSeconds );
 	void	(*pfnSetClientMaxspeed)( const edict_t *pEdict, float fNewMaxspeed );
 	edict_t	*(*pfnCreateFakeClient)( const char *netname ); // returns NULL if fake client can't be created
@@ -200,7 +200,7 @@ typedef struct enginefuncs_s
 	void	(*pfnCvar_DirectSet)( cvar_t *var, char *value );
 	void	(*pfnForceUnmodified)( FORCE_TYPE type, float *mins, float *maxs, const char *filename );
 	void	(*pfnGetPlayerStats)( const edict_t *pClient, int *ping, int *packet_loss );
-	void	(*pfnAddServerCommand)( const char *cmd_name, void (*function)(void), const char *cmd_desc );
+	void	(*pfnAddServerCommand)( const char *cmd_name, void (*function)(void));
 	int	(*pfnVoice_GetClientListening)( int iReceiver, int iSender );
 	int	(*pfnVoice_SetClientListening)( int iReceiver, int iSender, int bListen );
 	const char *(*pfnGetPlayerAuthId)( edict_t *e );

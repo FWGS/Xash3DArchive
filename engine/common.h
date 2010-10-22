@@ -60,12 +60,12 @@ void DBG_AssertFunction( bool fExpr, const char* szExpr, const char* szFile, int
 #define Assert( f )
 #endif
 
-extern cvar_t	*scr_width;
-extern cvar_t	*scr_height;
-extern cvar_t	*scr_download;
-extern cvar_t	*allow_download;
-extern cvar_t	*host_limitlocal;
-extern cvar_t	*host_maxfps;
+extern convar_t	*scr_width;
+extern convar_t	*scr_height;
+extern convar_t	*scr_download;
+extern convar_t	*allow_download;
+extern convar_t	*host_limitlocal;
+extern convar_t	*host_maxfps;
 
 /*
 ==============================================================
@@ -205,8 +205,7 @@ bool SV_Active( void );
 
 ==============================================================
 */
-void pfnCVarRegister( cvar_t *pCvar );
-cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags, const char *szDesc );
+cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags );
 char *pfnMemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
 byte* pfnLoadFile( const char *filename, int *pLength );
 void pfnCVarSetString( const char *szName, const char *szValue );
@@ -221,7 +220,7 @@ void *pfnGetProcAddress( void *hInstance, const char *name );
 void pfnFreeLibrary( void *hInstance );
 long pfnRandomLong( long lLow, long lHigh );
 float pfnRandomFloat( float flLow, float flHigh );
-void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc );
+void pfnAddCommand( const char *cmd_name, xcommand_t func );
 void pfnDelCommand( const char *cmd_name );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );

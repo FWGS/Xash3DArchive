@@ -18,13 +18,14 @@ stdlib_api_t	com, newcom;
 dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
 dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
 
-cvar_t	*host_serverstate;
-cvar_t	*host_limitlocal;
-cvar_t	*host_cheats;
-cvar_t	*host_maxfps;
-cvar_t	*host_framerate;
-cvar_t	*host_video;
-cvar_t	*host_audio;
+convar_t	*host_serverstate;
+convar_t	*host_gameloaded;
+convar_t	*host_limitlocal;
+convar_t	*host_cheats;
+convar_t	*host_maxfps;
+convar_t	*host_framerate;
+convar_t	*host_video;
+convar_t	*host_audio;
 
 // these cvars will be duplicated on each client across network
 int Host_ServerState( void ) { return Cvar_VariableInteger( "host_serverstate" ); }
@@ -297,7 +298,7 @@ Host_SetServerState
 */
 void Host_SetServerState( int state )
 {
-	Cvar_SetValue( "host_serverstate", state );
+	Cvar_FullSet( "host_serverstate", va( "%i", state ), CVAR_INIT );
 }
 
 /*
@@ -766,7 +767,7 @@ void Host_Init( const int argc, const char **argv )
 
 	if( host.type != HOST_DEDICATED )
 	{
-		// get user configuration 
+		// get the user configuration 
 		Cbuf_AddText( "exec config.cfg\n" );
 		Cbuf_Execute();
 	}
@@ -785,7 +786,8 @@ void Host_Init( const int argc, const char **argv )
 	host_cheats = Cvar_Get( "sv_cheats", "0", CVAR_LATCH, "allow cheat variables to enable" );
 	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
-	host_serverstate = Cvar_Get( "host_serverstate", "0", 0, "displays current server state" );
+	host_serverstate = Cvar_Get( "host_serverstate", "0", CVAR_INIT, "displays current server state" );
+	host_gameloaded = Cvar_Get( "host_gameloaded", "0", CVAR_INIT, "inidcates a loaded game.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
 
 	// content control

@@ -18,14 +18,14 @@ int		total_channels;
 int		soundtime;	// sample PAIRS
 int   		paintedtime; 	// sample PAIRS
 
-cvar_t		*s_check_errors;
-cvar_t		*s_volume;
-cvar_t		*s_musicvolume;
-cvar_t		*s_show;
-cvar_t		*s_mixahead;
-cvar_t		*s_primary;
-cvar_t		*s_lerping;
-cvar_t		*dsp_off;		// set to 1 to disable all dsp processing
+convar_t		*s_check_errors;
+convar_t		*s_volume;
+convar_t		*s_musicvolume;
+convar_t		*s_show;
+convar_t		*s_mixahead;
+convar_t		*s_primary;
+convar_t		*s_lerping;
+convar_t		*dsp_off;		// set to 1 to disable all dsp processing
 
 /*
 =============================================================================

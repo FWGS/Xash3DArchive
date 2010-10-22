@@ -338,7 +338,6 @@ void UI_FillRect( int x, int y, int w, int h, const int color );
 #define UI_DrawRectangle( x, y, w, h, color ) UI_DrawRectangleExt( x, y, w, h, color, uiStatic.outlineWidth )
 void UI_DrawRectangleExt( int in_x, int in_y, int in_w, int in_h, const int color, int outlineWidth );
 void UI_DrawString( int x, int y, int w, int h, const char *str, const int col, int forceCol, int charW, int charH, int justify, int shadow );
-void UI_BuildPath( const char *dllname, char *fullpath );
 void UI_StartSound( const char *sound );
 
 void UI_AddItem ( menuFramework_s *menu, void *item );

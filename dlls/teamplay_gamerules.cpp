@@ -43,12 +43,12 @@ CHalfLifeTeamplay :: CHalfLifeTeamplay()
 	m_szTeamList[0] = 0;
 
 	// Cache this because the team code doesn't want to deal with changing this in the middle of a game
-	strncpy( m_szTeamList, teamlist->string, TEAMPLAY_TEAMLISTLENGTH );
+	strncpy( m_szTeamList, teamlist.string, TEAMPLAY_TEAMLISTLENGTH );
 
 	edict_t *pWorld = INDEXENT(0);
 	if ( pWorld && pWorld->v.team )
 	{
-		if ( teamoverride->value )
+		if ( teamoverride.value )
 		{
 			const char *pTeamList = STRING(pWorld->v.team);
 			if ( pTeamList && strlen(pTeamList) )
@@ -66,7 +66,7 @@ CHalfLifeTeamplay :: CHalfLifeTeamplay()
 	RecountTeams();
 }
 
-extern cvar_t *timeleft, *fragsleft;
+extern cvar_t timeleft, fragsleft;
 
 void CHalfLifeTeamplay :: Think ( void )
 {
@@ -93,7 +93,7 @@ void CHalfLifeTeamplay :: Think ( void )
 		return;
 	}
 
-	float flFragLimit = fraglimit->value;
+	float flFragLimit = fraglimit.value;
 	if ( flFragLimit )
 	{
 		int bestfrags = 9999;
@@ -120,13 +120,13 @@ void CHalfLifeTeamplay :: Think ( void )
 	// Updates when frags change
 	if ( frags_remaining != last_frags )
 	{
-		g_engfuncs.pfnCvar_DirectSet( fragsleft, UTIL_VarArgs( "%i", frags_remaining ) );
+		g_engfuncs.pfnCvar_DirectSet( &fragsleft, UTIL_VarArgs( "%i", frags_remaining ) );
 	}
 
 	// Updates once per second
-	if ( timeleft->value != last_time )
+	if ( timeleft.value != last_time )
 	{
-		g_engfuncs.pfnCvar_DirectSet( timeleft, UTIL_VarArgs( "%i", time_remaining ) );
+		g_engfuncs.pfnCvar_DirectSet( &timeleft, UTIL_VarArgs( "%i", time_remaining ) );
 	}
 
 	last_frags = frags_remaining;
@@ -178,11 +178,11 @@ const char *CHalfLifeTeamplay::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
 	RecountTeams();
 
 	// update the current player of the team he is joining
-	if ( pPlayer->m_szTeamName[0] == '\0' || !IsValidTeam( pPlayer->m_szTeamName ) || defaultteam->value )
+	if ( pPlayer->m_szTeamName[0] == '\0' || !IsValidTeam( pPlayer->m_szTeamName ) || defaultteam.value )
 	{
 		const char *pTeamName = NULL;
 		
-		if ( defaultteam->value )
+		if ( defaultteam.value )
 		{
 			pTeamName = team_names[0];
 		}
@@ -312,7 +312,7 @@ void CHalfLifeTeamplay::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infob
 	if ( !stricmp( mdls, pPlayer->m_szTeamName ) )
 		return;
 
-	if ( defaultteam->value )
+	if ( defaultteam.value )
 	{
 		int clientIndex = pPlayer->entindex();
 
@@ -323,7 +323,7 @@ void CHalfLifeTeamplay::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infob
 		return;
 	}
 
-	if ( defaultteam->value || !IsValidTeam( mdls ) )
+	if ( defaultteam.value || !IsValidTeam( mdls ) )
 	{
 		int clientIndex = pPlayer->entindex();
 
@@ -406,7 +406,7 @@ BOOL CHalfLifeTeamplay::FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity 
 	if ( pAttacker && PlayerRelationship( pPlayer, pAttacker ) == GR_TEAMMATE )
 	{
 		// my teammate hit me.
-		if ( (friendlyfire->value == 0) && (pAttacker != pPlayer) )
+		if ( (friendlyfire.value == 0) && (pAttacker != pPlayer) )
 		{
 			// friendly fire is off, and this hit came from someone other than myself,  then don't get hurt
 			return FALSE;

@@ -11,54 +11,54 @@
 
 netadr_t	master_adr[MAX_MASTERS];		// address of group servers
 
-cvar_t	*sv_zmax;
-cvar_t	*sv_unlag;
-cvar_t	*sv_maxunlag;
-cvar_t	*sv_unlagpush;
-cvar_t	*sv_unlagsamples;
-cvar_t	*sv_pausable;
-cvar_t	*sv_newunit;
-cvar_t	*sv_wateramp;
-cvar_t	*timeout;				// seconds without any message
-cvar_t	*zombietime;			// seconds to sink messages after disconnect
-cvar_t	*rcon_password;			// password for remote server commands
-cvar_t	*allow_download;
-cvar_t	*sv_airaccelerate;
-cvar_t	*sv_wateraccelerate;
-cvar_t	*sv_maxvelocity;
-cvar_t	*sv_gravity;
-cvar_t	*sv_stepheight;
-cvar_t	*sv_rollangle;
-cvar_t	*sv_rollspeed;
-cvar_t	*sv_wallbounce;
-cvar_t	*sv_maxspeed;
-cvar_t	*sv_spectatormaxspeed;
-cvar_t	*sv_accelerate;
-cvar_t	*sv_friction;
-cvar_t	*sv_edgefriction;
-cvar_t	*sv_waterfriction;
-cvar_t	*sv_synchthink;
-cvar_t	*sv_stopspeed;
-cvar_t	*hostname;
-cvar_t	*sv_lighting_modulate;
-cvar_t	*sv_maxclients;
-cvar_t	*sv_check_errors;
-cvar_t	*sv_footsteps;
-cvar_t	*public_server;		// should heartbeats be sent
-cvar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
-cvar_t	*sv_failuretime;
-cvar_t	*serverinfo;
-cvar_t	*physinfo;
-cvar_t	*clockwindow;
+convar_t	*sv_zmax;
+convar_t	*sv_unlag;
+convar_t	*sv_maxunlag;
+convar_t	*sv_unlagpush;
+convar_t	*sv_unlagsamples;
+convar_t	*sv_pausable;
+convar_t	*sv_newunit;
+convar_t	*sv_wateramp;
+convar_t	*timeout;				// seconds without any message
+convar_t	*zombietime;			// seconds to sink messages after disconnect
+convar_t	*rcon_password;			// password for remote server commands
+convar_t	*allow_download;
+convar_t	*sv_airaccelerate;
+convar_t	*sv_wateraccelerate;
+convar_t	*sv_maxvelocity;
+convar_t	*sv_gravity;
+convar_t	*sv_stepheight;
+convar_t	*sv_rollangle;
+convar_t	*sv_rollspeed;
+convar_t	*sv_wallbounce;
+convar_t	*sv_maxspeed;
+convar_t	*sv_spectatormaxspeed;
+convar_t	*sv_accelerate;
+convar_t	*sv_friction;
+convar_t	*sv_edgefriction;
+convar_t	*sv_waterfriction;
+convar_t	*sv_synchthink;
+convar_t	*sv_stopspeed;
+convar_t	*hostname;
+convar_t	*sv_lighting_modulate;
+convar_t	*sv_maxclients;
+convar_t	*sv_check_errors;
+convar_t	*sv_footsteps;
+convar_t	*public_server;		// should heartbeats be sent
+convar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
+convar_t	*sv_failuretime;
+convar_t	*serverinfo;
+convar_t	*physinfo;
+convar_t	*clockwindow;
 
 // sky variables
-cvar_t	*sv_skycolor_r;
-cvar_t	*sv_skycolor_g;
-cvar_t	*sv_skycolor_b;
-cvar_t	*sv_skyvec_x;
-cvar_t	*sv_skyvec_y;
-cvar_t	*sv_skyvec_z;
-cvar_t	*sv_skyname;
+convar_t	*sv_skycolor_r;
+convar_t	*sv_skycolor_g;
+convar_t	*sv_skycolor_b;
+convar_t	*sv_skyvec_x;
+convar_t	*sv_skyvec_y;
+convar_t	*sv_skyvec_z;
+convar_t	*sv_skyname;
 
 void Master_Shutdown( void );
 
@@ -206,7 +206,7 @@ void SV_UpdateMovevars( void )
 
 void pfnUpdateServerInfo( const char *szKey, const char *szValue, const char *unused, void *unused2 )
 {
-	cvar_t	*cv = Cvar_FindVar( szKey );
+	convar_t	*cv = Cvar_FindVar( szKey );
 
 	if( !cv || !cv->modified ) return; // this cvar not changed
 
@@ -568,11 +568,11 @@ void SV_Init( void )
 	SV_InitOperatorCommands();
 
 	Cvar_Get ("skill", "1", CVAR_LATCH, "game skill level" );
-	Cvar_Get ("deathmatch", "0", CVAR_LATCH, "displays deathmatch state" );
-	Cvar_Get ("teamplay", "0", CVAR_LATCH, "displays teamplay state" );
-	Cvar_Get ("coop", "0", CVAR_LATCH, "displays cooperative state" );
+	Cvar_Get ("deathmatch", "0", CVAR_LATCH|CVAR_SERVERNOTIFY, "displays deathmatch state" );
+	Cvar_Get ("teamplay", "0", CVAR_LATCH|CVAR_SERVERNOTIFY, "displays teamplay state" );
+	Cvar_Get ("coop", "0", CVAR_LATCH|CVAR_SERVERNOTIFY, "displays cooperative state" );
 	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), CVAR_INIT, "displays server protocol version" );
-	Cvar_Get ("defaultmap", "", 0, "holds the multiplayer mapname" );
+	Cvar_Get ("defaultmap", "", CVAR_SERVERNOTIFY, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
 	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE, "enable auto-aiming" );
 	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
@@ -597,10 +597,10 @@ void SV_Init( void )
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
 	sv_stepheight = Cvar_Get( "sv_stepheight", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
 	sv_newunit = Cvar_Get( "sv_newunit", "0", 0, "sets to 1 while new unit is loading" );
-	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERINFO|CVAR_ARCHIVE, "host name" );
-	timeout = Cvar_Get( "timeout", "125", 0, "connection timeout" );
-	zombietime = Cvar_Get( "zombietime", "2", 0, "timeout for clients-zombie (who died but not respawned)" );
-	sv_pausable = Cvar_Get( "pausable", "1", 0, "allow players to pause or not" );
+	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERINFO|CVAR_SERVERNOTIFY|CVAR_ARCHIVE, "host name" );
+	timeout = Cvar_Get( "timeout", "125", CVAR_SERVERNOTIFY, "connection timeout" );
+	zombietime = Cvar_Get( "zombietime", "2", CVAR_SERVERNOTIFY, "timeout for clients-zombie (who died but not respawned)" );
+	sv_pausable = Cvar_Get( "pausable", "1", CVAR_SERVERNOTIFY, "allow players to pause or not" );
 	allow_download = Cvar_Get( "allow_download", "0", CVAR_ARCHIVE, "allow download resources" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );
@@ -616,7 +616,7 @@ void SV_Init( void )
 	sv_friction = Cvar_Get( "sv_friction", "4", CVAR_PHYSICINFO, "how fast you slow down" );
 	sv_edgefriction = Cvar_Get( "sv_edgefriction", "1", CVAR_PHYSICINFO, "how much you slow down when nearing a ledge you might fall off" );
 	sv_stopspeed = Cvar_Get( "sv_stopspeed", "100", CVAR_PHYSICINFO, "how fast you come to a complete stop" );
-	sv_maxclients = Cvar_Get( "sv_maxclients", "1", CVAR_LATCH, "server clients limit" );
+	sv_maxclients = Cvar_Get( "sv_maxclients", "1", CVAR_LATCH|CVAR_SERVERNOTIFY, "server clients limit" );
 	sv_check_errors = Cvar_Get( "sv_check_errors", "0", CVAR_ARCHIVE, "ignore physic engine errors" );
 	sv_synchthink = Cvar_Get( "sv_fast_think", "0", CVAR_ARCHIVE, "allows entities to think more often than the server framerate" );
 	physinfo = Cvar_Get( "@physinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only

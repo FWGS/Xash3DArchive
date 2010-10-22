@@ -117,7 +117,7 @@ hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset
 	vec3_t	hullmins, hullmaxs;
 
 	// decide which clipping hull to use, based on the size
-	if( pe->solid == SOLID_BSP )
+	if( pe->solid == SOLID_BSP || pe->skin == CONTENTS_LADDER )
 	{
 		vec3_t	size;
 

@@ -6,7 +6,7 @@
 #include "imagelib.h"
 #include "mathlib.h"
 
-cvar_t *gl_round_down;
+convar_t *gl_round_down;
 
 #define LERPBYTE( i )	r = resamplerow1[i]; out[i] = (byte)(((( resamplerow2[i] - r ) * lerp)>>16 ) + r )
 

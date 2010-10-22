@@ -4803,19 +4803,19 @@ _inline int PSET_GetNext( pset_t *ppset, int x )
 
 // Dsp presets
 
-cvar_t	*dsp_room;	// room dsp preset - sounds more distant from player (1ch)
+convar_t	*dsp_room;	// room dsp preset - sounds more distant from player (1ch)
 
 int	ipset_room_prev;
 
 // legacy room_type support
-cvar_t	*dsp_room_type;
+convar_t	*dsp_room_type;
 int	ipset_room_typeprev;
 
 
 // DSP processors
 
 int	idsp_room;
-cvar_t	*dsp_stereo;	// set to 1 for true stereo processing.  2x perf hit.
+convar_t	*dsp_stereo;	// set to 1 for true stereo processing.  2x perf hit.
 
 // DSP preset executor
 #define CDSPS		32	// max number dsp executors active

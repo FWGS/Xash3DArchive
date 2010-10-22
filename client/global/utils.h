@@ -97,7 +97,7 @@ typedef struct dllfunction_s
 	return gHUD.MsgFunc_##x(pszName, iSize, pbuf ); \
 }
 
-#define HOOK_COMMAND( x, y ) (*gEngfuncs.pfnAddCommand)( x, __CmdFunc_##y, "user-defined command" );
+#define HOOK_COMMAND( x, y ) (*gEngfuncs.pfnAddCommand)( x, __CmdFunc_##y );
 #define DECLARE_HUDCOMMAND( x ) void __CmdFunc_##x( void ) \
 { \
 	gHUD.UserCmd_##x( ); \

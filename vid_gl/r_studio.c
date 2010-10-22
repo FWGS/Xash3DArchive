@@ -51,7 +51,7 @@ vec3_t		studio_mins, studio_maxs;
 float		studio_radius;
 
 // studio cvars
-cvar_t		*r_studio_lerping;
+convar_t		*r_studio_lerping;
 
 typedef struct studioverts_s
 {

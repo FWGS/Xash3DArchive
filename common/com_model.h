@@ -22,8 +22,9 @@ typedef struct mplane_s
 {
 	vec3_t		normal;
 	float		dist;
-	short		type;		// for fast side tests
-	short		signbits;		// signx + (signy<<1) + (signz<<1)
+	byte		type;		// for fast side tests
+	byte		signbits;		// signx + (signy<<1) + (signz<<1)
+	byte		pad[2];
 } mplane_t;
 
 typedef struct hull_s

@@ -477,10 +477,7 @@ UI_RecDemo_Menu
 */
 void UI_RecDemo_Menu( void )
 {
-	char	libpath[128];
-
-	UI_BuildPath( "server", libpath );
-	if( !FILE_EXISTS( libpath )) return;
+	if( !CheckGameDll( )) return;
 
 	UI_RecDemo_Precache();
 	UI_RecDemo_Init();

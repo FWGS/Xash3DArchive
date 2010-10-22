@@ -11,9 +11,9 @@
 #include "con_nprint.h"
 #include "qfont.h"
 
-cvar_t	*con_notifytime;
-cvar_t	*scr_conspeed;
-cvar_t	*con_fontsize;
+convar_t	*con_notifytime;
+convar_t	*scr_conspeed;
+convar_t	*con_fontsize;
 
 #define CON_TIMES		5	// need for 4 lines
 #define COLOR_DEFAULT	'7'

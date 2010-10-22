@@ -20,6 +20,7 @@
 #define FillRGBA		(*g_engfuncs.pfnFillRGBA)
 #define GetScreenInfo	(*g_engfuncs.pfnGetScreenInfo)
 #define GetGameInfo		(*g_engfuncs.pfnGetGameInfo)
+#define CheckGameDll	(*g_engfuncs.pfnCheckGameDll)
 
 #define DRAW_LOGO		(*g_engfuncs.pfnDrawLogo)
 #define PRECACHE_LOGO( x )	(*g_engfuncs.pfnDrawLogo)( x, 0, 0, 0, 0 )

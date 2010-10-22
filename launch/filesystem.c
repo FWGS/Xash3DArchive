@@ -135,7 +135,7 @@ int fs_argc;
 char *fs_argv[MAX_NUM_ARGVS];
 bool fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
 bool fs_use_wads = false; // some utilities needs this
-cvar_t *fs_defaultdir;
+convar_t *fs_defaultdir;
 sysinfo_t SI;
 
 /*

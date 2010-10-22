@@ -74,6 +74,7 @@ typedef long fs_offset_t;
 typedef struct file_s file_t;		// normal file
 typedef struct vfile_s vfile_t;	// virtual file
 typedef struct wfile_s wfile_t;	// wad file
+typedef struct convar_s convar_t;	// console variable
 typedef struct script_s script_t;	// script machine
 typedef struct stream_s stream_t;	// sound stream for background music playing
 typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
@@ -107,19 +108,26 @@ typedef enum
 {
 	CVAR_ARCHIVE	= BIT(0),	// set to cause it to be saved to config.cfg
 	CVAR_USERINFO	= BIT(1),	// added to userinfo  when changed
-	CVAR_SERVERINFO	= BIT(2),	// added to serverinfo when changed
-	CVAR_PHYSICINFO	= BIT(3),	// added to physinfo when changed
-	CVAR_RENDERINFO	= BIT(4),	// save to a seperate config called opengl.cfg
-	CVAR_CHEAT	= BIT(5),	// can not be changed if cheats are disabled
-	CVAR_INIT		= BIT(6), // don't allow change from console at all, but can be set from the command line
-	CVAR_LATCH	= BIT(7),	// save changes until server restart
-	CVAR_READ_ONLY	= BIT(8),	// display only, cannot be set by user at all
-	CVAR_USER_CREATED	= BIT(9),	// created by a set command (dll's used)
-	CVAR_LATCH_VIDEO	= BIT(10),// save changes until render restart
-	CVAR_LATCH_AUDIO	= BIT(11),// save changes until vsound restart
-	CVAR_PRINTABLEONLY	= BIT(12),// this cvar's string cannot contain unprintable characters ( player name )
+	CVAR_SERVERNOTIFY	= BIT(2),	// notifies players when changed
+	CVAR_EXTDLL	= BIT(3),	// defined by external DLL
+	CVAR_CLIENTDLL	= BIT(4),	// defined by the client dll
+	CVAR_PROTECTED	= BIT(5),	// it's a server cvar, but we don't send the data since it's a password, etc.
+	CVAR_SPONLY	= BIT(6),	// this cvar cannot be changed by clients connected to a multiplayer server.
+	CVAR_PRINTABLEONLY	= BIT(7),	// this cvar's string cannot contain unprintable characters ( player name )
+	CVAR_UNLOGGED	= BIT(8),	// if this is a FCVAR_SERVER, don't log changes to the log file / console
+	CVAR_SERVERINFO	= BIT(9),	// added to serverinfo when changed
+	CVAR_PHYSICINFO	= BIT(10),// added to physinfo when changed
+	CVAR_RENDERINFO	= BIT(11),// save to a seperate config called opengl.cfg
+	CVAR_CHEAT	= BIT(12),// can not be changed if cheats are disabled
+	CVAR_INIT		= BIT(13),// don't allow change from console at all, but can be set from the command line
+	CVAR_LATCH	= BIT(14),// save changes until server restart
+	CVAR_READ_ONLY	= BIT(15),// display only, cannot be set by user at all
+	CVAR_LATCH_VIDEO	= BIT(16),// save changes until render restart
+	CVAR_LATCH_AUDIO	= BIT(17),// save changes until vsound restart
+	CVAR_USER_CREATED	= BIT(18),// created by a set command (dll's used)
 } cvar_flags_t;
 
+#include "cvardef.h"
 #include "netadr.h"
 
 /*
@@ -565,17 +573,18 @@ typedef struct stdilib_api_s
 	uint (*Com_HashKey)( const char *string, uint hashSize );	// returns hash key for a string
 
 	// console variables
-	cvar_t *(*Cvar_Get)( const char *name, const char *value, int flags, const char *desc );
+	convar_t *(*Cvar_Get)( const char *name, const char *value, int flags, const char *desc );
 	void (*Cvar_LookupVars)( int checkbit, void *buffer, void *ptr, setpair_t callback );
 	void (*Cvar_SetString)( const char *name, const char *value );
 	void (*Cvar_SetLatched)( const char *name, const char *value );
 	void (*Cvar_FullSet)( const char *name, const char *value, int flags );
-	void (*Cvar_SetValue )( const char *name, float value );
-	long (*Cvar_GetInteger)(const char *name);
-	float (*Cvar_GetValue )(const char *name);
-	char *(*Cvar_GetString)(const char *name);
-	cvar_t *(*Cvar_FindVar)(const char *name);
+	void (*Cvar_SetValue)( const char *name, float value );
+	long (*Cvar_GetInteger)(const char *name );
+	float (*Cvar_GetValue)(const char *name );
+	char *(*Cvar_GetString)(const char *name );
+	convar_t *(*Cvar_FindVar)(const char *name );
 	void (*Cvar_DirectSet)( cvar_t *var, const char *value );
+	void (*Cvar_Register)( cvar_t *variable );		// register game.dll variables
 
 	// console commands
 	void (*Cmd_Exec)(int exec_when, const char *text);	// process cmd buffer
@@ -742,7 +751,19 @@ typedef struct script_s
 	char	TXcommand;	// contain QuArK 'TX' command in the map file descriptions
 };
 
-#include "cvardef.h"
+typedef struct convar_s
+{
+	// this part shared with cvar_t
+	char		*name;
+	char		*string;
+	int		flags;
+	float		value;
+	struct convar_s	*next;
+
+	// this part unique for convar_t
+	int		integer;
+	bool		modified;
+};
 
 /*
 ==========================================
@@ -865,6 +886,7 @@ console variables
 #define Cvar_VariableString		com.Cvar_GetString
 #define Cvar_FindVar		com.Cvar_FindVar
 #define Cvar_DirectSet		com.Cvar_DirectSet
+#define Cvar_Register		com.Cvar_Register
 
 /*
 ===========================================

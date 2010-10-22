@@ -37,7 +37,7 @@ int CHudStatusBar :: Init( void )
 
 	Reset();
 
-	CVAR_REGISTER( "hud_centerid", "0", FCVAR_ARCHIVE, "disables center id" );
+	CVAR_REGISTER( "hud_centerid", "0", FCVAR_ARCHIVE );
 
 	return 1;
 }

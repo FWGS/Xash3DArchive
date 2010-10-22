@@ -46,7 +46,7 @@ int CHudSayText :: Init( void )
 
 	InitHUDData();
 
-	CVAR_REGISTER( "hud_saytext_time", "5", 0, "time to show message text" );
+	CVAR_REGISTER( "hud_saytext_time", "5", 0 );
 	m_iFlags |= HUD_INTERMISSION; // is always drawn during an intermission
 
 	return 1;

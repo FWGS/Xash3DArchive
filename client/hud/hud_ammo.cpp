@@ -277,8 +277,8 @@ int CHudAmmo::Init( void )
 
 	Reset();
 
-	CVAR_REGISTER( "hud_drawhistory_time", HISTORY_DRAW_TIME, 0, "weapons pickup history show time" );
-	CVAR_REGISTER( "hud_fastswitch", "0", FCVAR_ARCHIVE, "controls whether or not weapons can be selected in one keypress" ); 
+	CVAR_REGISTER( "hud_drawhistory_time", HISTORY_DRAW_TIME, 0 );
+	CVAR_REGISTER( "hud_fastswitch", "0", FCVAR_ARCHIVE ); 
 
 	m_iFlags |= HUD_ACTIVE; //!!!
 

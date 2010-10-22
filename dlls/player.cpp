@@ -1330,7 +1330,7 @@ void CBasePlayer::PlayerDeathThink(void)
 	
 // wait for any button down,  or mp_forcerespawn is set and the respawn time is up
 	if (!fAnyButtonDown 
-		&& !( g_pGameRules->IsMultiplayer() && forcerespawn->value > 0 && (gpGlobals->time > (m_fDeadTime + 5))) )
+		&& !( g_pGameRules->IsMultiplayer() && forcerespawn.value > 0 && (gpGlobals->time > (m_fDeadTime + 5))) )
 		return;
 
 	pev->button = 0;
@@ -3405,7 +3405,7 @@ void CBasePlayer::ImpulseCommands( )
 
 		if ( tr.flFraction != 1.0 )
 		{// line hit something, so paint a decal
-			m_flNextDecalTime = gpGlobals->time + decalfrequency->value;
+			m_flNextDecalTime = gpGlobals->time + decalfrequency.value;
 			CSprayCan *pCan = GetClassPtr((CSprayCan *)NULL);
 			pCan->Spawn( pev );
 		}
@@ -4412,7 +4412,7 @@ int CBasePlayer :: GetCustomDecalFrames( void )
 //=========================================================
 void CBasePlayer::DropPlayerItem ( char *pszItemName )
 {
-	if ( !g_pGameRules->IsMultiplayer() || (weaponstay->value > 0) )
+	if ( !g_pGameRules->IsMultiplayer() || (weaponstay.value > 0) )
 	{
 		// no dropping in single player.
 		return;

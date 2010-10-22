@@ -22,14 +22,13 @@ console variables
 external and internal cvars struct have some differences
 ========================================================================
 */
-struct cvar_s
+typedef struct cvar_s
 {
-	char	*name;
-	char	*string;		// normal string
-	uint	flags;		// state flags
-	float	value;		// com.atof( string )
-	int	integer;		// com.atoi( string )
-	bool	modified;		// set each time the cvar is changed
-};
+	char		*name;
+	char		*string;
+	int		flags;
+	float		value;
+	struct cvar_s	*next;
+} cvar_t;
 
 #endif//CVARDEF_H

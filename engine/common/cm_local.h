@@ -18,7 +18,7 @@
 #define DVIS_PVS		0
 #define DVIS_PHS		1
 
-extern cvar_t		*cm_novis;
+extern convar_t		*cm_novis;
 
 typedef struct leaflist_s
 {

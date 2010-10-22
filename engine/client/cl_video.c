@@ -15,7 +15,7 @@ AVI PLAYING
 =================================================================
 */
 
-cvar_t			*vid_gamma;
+convar_t			*vid_gamma;
 static long		xres, yres;
 static float		video_duration;
 static float		cin_time;

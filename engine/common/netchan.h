@@ -181,7 +181,7 @@ typedef struct netchan_s
 extern netadr_t		net_from;
 extern sizebuf_t		net_message;
 extern byte		net_message_buffer[MAX_MSGLEN];
-extern cvar_t		*net_speeds;
+extern convar_t		*net_speeds;
 extern int		net_drop;
 
 void Netchan_Init( void );

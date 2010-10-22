@@ -352,7 +352,7 @@ initialze system
 */
 void InitRain( void )
 {
-	cl_debugrain = CVAR_REGISTER( "cl_debugrain", "0", 0, "display rain debug info (trace missing, drops etc)" );
+	cl_debugrain = CVAR_REGISTER( "cl_debugrain", "0", 0 );
 
 	gHUD.Rain.dripsPerSecond = 0;
 	gHUD.Rain.distFromPlayer = 0;

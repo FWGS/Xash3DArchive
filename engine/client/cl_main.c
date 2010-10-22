@@ -14,31 +14,31 @@
 #define MAX_CMD_BUFFER		4000
 #define CONNECTION_PROBLEM_TIME	15.0	// 15 seconds
 
-cvar_t	*rcon_client_password;
-cvar_t	*rcon_address;
+convar_t	*rcon_client_password;
+convar_t	*rcon_address;
 
-cvar_t	*cl_smooth;
-cvar_t	*cl_timeout;
-cvar_t	*cl_predict;
-cvar_t	*cl_showfps;
-cvar_t	*cl_nodelta;
-cvar_t	*cl_crosshair;
-cvar_t	*cl_cmdbackup;
-cvar_t	*cl_idealpitchscale;
-cvar_t	*cl_solid_players;
-cvar_t	*cl_showmiss;
-cvar_t	*cl_cmdrate;
-cvar_t	*userinfo;
+convar_t	*cl_smooth;
+convar_t	*cl_timeout;
+convar_t	*cl_predict;
+convar_t	*cl_showfps;
+convar_t	*cl_nodelta;
+convar_t	*cl_crosshair;
+convar_t	*cl_cmdbackup;
+convar_t	*cl_idealpitchscale;
+convar_t	*cl_solid_players;
+convar_t	*cl_showmiss;
+convar_t	*cl_cmdrate;
+convar_t	*userinfo;
 
 //
 // userinfo
 //
-cvar_t	*name;
-cvar_t	*model;
-cvar_t	*topcolor;
-cvar_t	*bottomcolor;
-cvar_t	*rate;
-cvar_t	*cl_lw;
+convar_t	*name;
+convar_t	*model;
+convar_t	*topcolor;
+convar_t	*bottomcolor;
+convar_t	*rate;
+convar_t	*cl_lw;
 
 client_t		cl;
 client_static_t	cls;
@@ -811,6 +811,7 @@ void CL_Disconnect_f( void )
 void CL_Crashed_f( void )
 {
 	// already freed
+	if( cls.state == ca_disconnected ) return;
 	if( host.state == HOST_CRASHED ) return;
 	if( host.type != HOST_NORMAL ) return;
 	if( !cls.initialized ) return;
@@ -1552,6 +1553,18 @@ void CL_InitLocal( void )
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "2", CVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
+
+	// server commands
+	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );
+	Cmd_AddCommand ("notarget", NULL, "notarget mode (monsters do not see you)" );
+	Cmd_AddCommand ("fullupdate", NULL, "re-init HUD on start demo recording" );
+	Cmd_AddCommand ("give", NULL, "give specified item or weapon" );
+	Cmd_AddCommand ("drop", NULL, "drop current/specified item or weapon" );
+	Cmd_AddCommand ("intermission", NULL, "go to intermission" );
+	Cmd_AddCommand ("spectate", NULL, "enable spectator mode" );
+	Cmd_AddCommand ("gametitle", NULL, "show game logo" );
+	Cmd_AddCommand ("god", NULL, "enable godmode" );
+	Cmd_AddCommand ("fov", NULL, "set client field of view" );
 		
 	// register our commands
 	Cmd_AddCommand ("cmd", CL_ForwardToServer_f, "send a console commandline to the server" );

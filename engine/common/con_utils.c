@@ -817,7 +817,7 @@ static void Cmd_WriteCvar(const char *name, const char *string, const char *desc
 static void Cmd_WriteServerCvar(const char *name, const char *string, const char *desc, void *f )
 {
 	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf(f, "sets %s \"%s\"\n", name, string );
+	FS_Printf(f, "set %s \"%s\"\n", name, string );
 }
 
 static void Cmd_WriteOpenGLCvar( const char *name, const char *string, const char *desc, void *f )
@@ -842,7 +842,7 @@ void Cmd_WriteVariables( file_t *f )
 
 void Cmd_WriteServerVariables( file_t *f )
 {
-	Cvar_LookupVars( CVAR_SERVERINFO, NULL, f, Cmd_WriteServerCvar ); 
+	Cvar_LookupVars( CVAR_SERVERNOTIFY, NULL, f, Cmd_WriteServerCvar ); 
 }
 
 void Cmd_WriteOpenGLVariables( file_t *f )

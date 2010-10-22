@@ -9,7 +9,6 @@
 #include "mathlib.h"
 #include "const.h"
 #include "client.h"
-#include "cvardef.h"
 
 /*
 ==============
@@ -227,13 +226,6 @@ float pfnTime( void )
 {
 	return Sys_DoubleTime();
 }
-
-void pfnCVarRegister( cvar_t *pCvar )
-{
-	if( !pCvar ) return;
-
-	Msg( "CVarRegister: %s\n", pCvar->name );
-}
 	
 /*
 =============
@@ -241,17 +233,11 @@ pfnCvar_RegisterVariable
 
 =============
 */
-cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags, const char *szDesc )
+cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags )
 {
-	int	real_flags = 0;
-
-	if( flags & FCVAR_ARCHIVE ) real_flags |= CVAR_ARCHIVE;
-	if( flags & FCVAR_USERINFO ) real_flags |= CVAR_USERINFO;
-	if( flags & FCVAR_SPONLY ) real_flags |= CVAR_CHEAT;
-	if( flags & FCVAR_PRINTABLEONLY ) real_flags |= CVAR_PRINTABLEONLY;
-
-	return Cvar_Get( szName, szValue, real_flags, szDesc );
+	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_CLIENTDLL, "" );
 }
+
 /*
 =============
 pfnCVarSetString
@@ -305,7 +291,7 @@ can return NULL
 */
 cvar_t *pfnCVarGetPointer( const char *szVarName )
 {
-	return Cvar_FindVar( szVarName );
+	return (cvar_t *)Cvar_FindVar( szVarName );
 }
 	
 /*
@@ -314,13 +300,12 @@ pfnAddCommand
 
 =============
 */
-void pfnAddCommand( const char *cmd_name, xcommand_t func, const char *cmd_desc )
+void pfnAddCommand( const char *cmd_name, xcommand_t func )
 {
 	if( !cmd_name || !*cmd_name ) return;
-	if( !cmd_desc ) cmd_desc = ""; // hidden for makehelep system
 
 	// NOTE: if( func == NULL ) cmd will be forwarded to a server
-	Cmd_AddCommand( cmd_name, func, cmd_desc );
+	Cmd_AddCommand( cmd_name, func, "" );
 }
 
 /*
@@ -451,6 +436,9 @@ pfnGetGameDir
 */
 void pfnGetGameDir( char *szGetGameDir )
 {
+	char	rootdir[MAX_SYSPATH];
+
 	if( !szGetGameDir ) return;
-	com.strcpy( szGetGameDir, GI->gamedir );
+	GetCurrentDirectory( MAX_SYSPATH, rootdir );
+	com.sprintf( szGetGameDir, "%s/%s", rootdir, GI->gamedir );
 }

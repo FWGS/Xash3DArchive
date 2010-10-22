@@ -194,14 +194,14 @@ extern dma_t	dma;
 extern listener_t	s_listener;
 extern int	idsp_room;
 
-extern cvar_t	*s_check_errors;
-extern cvar_t	*s_volume;
-extern cvar_t	*s_musicvolume;
-extern cvar_t	*s_show;
-extern cvar_t	*s_mixahead;
-extern cvar_t	*s_primary;
-extern cvar_t	*s_lerping;
-extern cvar_t	*dsp_off;
+extern convar_t	*s_check_errors;
+extern convar_t	*s_volume;
+extern convar_t	*s_musicvolume;
+extern convar_t	*s_show;
+extern convar_t	*s_mixahead;
+extern convar_t	*s_primary;
+extern convar_t	*s_lerping;
+extern convar_t	*dsp_off;
 
 extern portable_samplepair_t		s_rawsamples[MAX_RAW_SAMPLES];
 

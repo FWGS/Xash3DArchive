@@ -30,7 +30,7 @@ int CHudMOTD :: Init( void )
 	gHUD.AddHudElem( this );
 
 	HOOK_MESSAGE( MOTD );
-	CVAR_REGISTER( "motd_display_time", "6", 0, "time to show message of the day" );
+	CVAR_REGISTER( "motd_display_time", "6", 0 );
 	m_iFlags &= ~HUD_ACTIVE;  // start out inactive
 	m_szMOTD[0] = 0;
 

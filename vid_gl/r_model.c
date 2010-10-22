@@ -1227,7 +1227,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 {
 	dmiptexlump_t	*in;
 	cachedimage_t	*out, *tx1, *tx2, *anims[10], *altanims[10];
-	cvar_t		*scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
+	convar_t		*scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
 	int		i, j, k, num, max, altmax, count;
 	bool		incomplete;
 	mip_t		*mt;

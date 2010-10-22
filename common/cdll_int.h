@@ -9,6 +9,7 @@ typedef int HSPRITE; // handle to a graphic
 typedef int (*pfnUserMsgHook)( const char *pszName, int iSize, void *pbuf );
 
 #include "wrect.h"
+#include "cvardef.h"
 
 #define SCRINFO_SCREENFLASH	1
 #define SCRINFO_STRETCHED	2
@@ -93,12 +94,12 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnSetCrosshair)( HSPRITE hspr, wrect_t rc, int r, int g, int b );
 
 	// cvar handlers
-	cvar_t*	(*pfnRegisterVariable)( const char *szName, const char *szValue, int flags, const char *szDesc );
+	cvar_t*	(*pfnRegisterVariable)( const char *szName, const char *szValue, int flags );
 	float	(*pfnGetCvarFloat)( const char *szName );
 	char*	(*pfnGetCvarString)( const char *szName );
 
 	// command handlers
-	void	(*pfnAddCommand)( const char *cmd_name, void (*function)(void), const char *cmd_desc );
+	void	(*pfnAddCommand)( const char *cmd_name, void (*function)(void) );
 	void	(*pfnHookUserMsg)( const char *szMsgName, pfnUserMsgHook pfn );
 	void	(*pfnServerCmd)( const char *szCmdString );
 	void	(*pfnClientCmd)( const char *szCmdString );

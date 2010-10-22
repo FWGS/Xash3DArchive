@@ -150,9 +150,6 @@ void SV_ActivateServer( void )
 		MsgDev( D_INFO, "Game started\n" );
 	}
 
-	// set serverinfo variable
-	Cvar_FullSet( "mapname", sv.name, CVAR_INIT );
-
 	CM_EndRegistration (); // free unused models
 
 	sv.state = ss_active;

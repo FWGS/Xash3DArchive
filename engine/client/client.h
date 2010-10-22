@@ -357,22 +357,22 @@ extern render_exp_t		*re;
 //
 // cvars
 //
-extern cvar_t	*cl_predict;
-extern cvar_t	*cl_smooth;
-extern cvar_t	*cl_showfps;
-extern cvar_t	*cl_envshot_size;
-extern cvar_t	*cl_nodelta;
-extern cvar_t	*cl_crosshair;
-extern cvar_t	*cl_showmiss;
-extern cvar_t	*cl_testlights;
-extern cvar_t	*cl_solid_players;
-extern cvar_t	*cl_idealpitchscale;
-extern cvar_t	*cl_allow_levelshots;
-extern cvar_t	*cl_levelshot_name;
-extern cvar_t	*scr_centertime;
-extern cvar_t	*scr_download;
-extern cvar_t	*scr_loading;
-extern cvar_t	*userinfo;
+extern convar_t	*cl_predict;
+extern convar_t	*cl_smooth;
+extern convar_t	*cl_showfps;
+extern convar_t	*cl_envshot_size;
+extern convar_t	*cl_nodelta;
+extern convar_t	*cl_crosshair;
+extern convar_t	*cl_showmiss;
+extern convar_t	*cl_testlights;
+extern convar_t	*cl_solid_players;
+extern convar_t	*cl_idealpitchscale;
+extern convar_t	*cl_allow_levelshots;
+extern convar_t	*cl_levelshot_name;
+extern convar_t	*scr_centertime;
+extern convar_t	*scr_download;
+extern convar_t	*scr_loading;
+extern convar_t	*userinfo;
 
 //=============================================================================
 

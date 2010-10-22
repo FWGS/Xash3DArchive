@@ -88,24 +88,23 @@ typedef struct system_s
 } system_t;
 
 // NOTE: if this is changed, it must be changed in cvardef.h too
-typedef struct cvar_s
+typedef struct convar_s
 {
-	// shared part
-	char	*name;
-	char	*string;		// normal string
-	uint	flags;		// state flags
-	float	value;		// atof( string )
-	int	integer;		// atoi( string )
-	bool	modified;		// set each time the cvar is changed
+	// this part shared with convar_t
+	char		*name;
+	char		*string;
+	int		flags;
+	float		value;
+	struct convar_s	*next;
 
-	// private to launch.dll
-	char	*reset_string;	// cvar_restart will reset to this value
-	char	*latched_string;	// for CVAR_LATCH vars
-	char	*description;	// variable descrition info
-	uint	modificationCount;	// incremented each time the cvar is changed
+	// this part unique for convar_t
+	int		integer;		// atoi( string )
+	bool		modified;		// set each time the cvar is changed
 
-	struct cvar_s *next;
-	struct cvar_s *hash;
+	// this part are private to launch.dll
+	char		*reset_string;	// cvar_restart will reset to this value
+	char		*latched_string;	// for CVAR_LATCH vars
+	char		*description;	// variable descrition info
 };
 
 extern system_t Sys;
@@ -372,10 +371,11 @@ bool FS_Eof( file_t *file );
 //
 // cvar.c
 //
-cvar_t *Cvar_FindVar( const char *var_name );
-cvar_t *Cvar_Get( const char *var_name, const char *value, int flags, const char *description );
+convar_t *Cvar_FindVar( const char *var_name );
+void Cvar_RegisterVariable( cvar_t *variable );
+convar_t *Cvar_Get( const char *var_name, const char *value, int flags, const char *description );
 void Cvar_Set( const char *var_name, const char *value );
-cvar_t *Cvar_Set2( const char *var_name, const char *value, bool force );
+convar_t *Cvar_Set2( const char *var_name, const char *value, bool force );
 void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback );
 void Cvar_FullSet( const char *var_name, const char *value, int flags );
 void Cvar_SetLatched( const char *var_name, const char *value );
@@ -395,7 +395,7 @@ void Info_RemoveKey( char *s, char *key );
 void Info_SetValueForKey( char *s, char *key, char *value );
 bool Info_Validate( char *s );
 void Info_Print( char *s );
-extern cvar_t *cvar_vars;
+extern convar_t *cvar_vars;
 
 //
 // cmd.c

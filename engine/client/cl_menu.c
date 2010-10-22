@@ -787,6 +787,26 @@ static char *pfnGetClipboardData( void )
 
 /*
 =========
+pfnCheckGameDll
+
+=========
+*/
+int pfnCheckGameDll( void )
+{
+	void	*hInst;
+
+	if( SV_Active( )) return true;
+
+	if(( hInst = FS_LoadLibrary( GI->game_dll, true )) != NULL )
+	{
+		FS_FreeLibrary( hInst );
+		return true;
+	}
+	return false;
+}
+
+/*
+=========
 pfnShellExecute
 
 =========
@@ -938,6 +958,7 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnGetAudioList,
 	SV_GetComment,
 	CL_GetComment,
+	pfnCheckGameDll,
 	pfnGetClipboardData,
 	pfnShellExecute,
 	Host_WriteServerConfig,

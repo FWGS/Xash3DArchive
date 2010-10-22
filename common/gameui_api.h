@@ -5,6 +5,7 @@
 #ifndef GAMEUI_API_H
 #define GAMEUI_API_H
 
+#include "cvardef.h"
 #include "gameinfo.h"
 #include "wrect.h"
 
@@ -47,14 +48,14 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnFillRGBA)( int x, int y, int width, int height, int r, int g, int b, int a );
 
 	// cvar handlers
-	cvar_t*	(*pfnRegisterVariable)( const char *szName, const char *szValue, int flags, const char *szDesc );
+	cvar_t*	(*pfnRegisterVariable)( const char *szName, const char *szValue, int flags );
 	float	(*pfnGetCvarFloat)( const char *szName );
 	char*	(*pfnGetCvarString)( const char *szName );
 	void	(*pfnCvarSetString)( const char *szName, const char *szValue );
 	void	(*pfnCvarSetValue)( const char *szName, float flValue );
 
 	// command handlers
-	void	(*pfnAddCommand)( const char *cmd_name, void (*function)(void), const char *cmd_desc );
+	void	(*pfnAddCommand)( const char *cmd_name, void (*function)(void) );
 	void	(*pfnClientCmd)( int execute_now, const char *szCmdString );
 	void	(*pfnDelCommand)( const char *cmd_name );
 	int       (*pfnCmdArgc)( void );	
@@ -131,6 +132,7 @@ typedef struct ui_enginefuncs_s
 	char 	**(*pfnGetAudioList)( int *numRenders );
 	int 	(*pfnGetSaveComment)( const char *savename, char *comment );
 	int	(*pfnGetDemoComment)( const char *demoname, char *comment );
+	int	(*pfnCheckGameDll)( void );				// returns false if hl.dll is missed
 	char	*(*pfnGetClipboardData)( void );
 
 	// engine launcher

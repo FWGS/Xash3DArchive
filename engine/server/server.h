@@ -344,33 +344,33 @@ extern	server_static_t	svs;			// persistant server info
 extern	server_t		sv;			// local server
 extern	svgame_static_t	svgame;			// persistant game info
 
-extern	cvar_t		*sv_pausable;		// allows pause in multiplayer
-extern	cvar_t		*sv_newunit;
-extern	cvar_t		*sv_airaccelerate;
-extern	cvar_t		*sv_accelerate;
-extern	cvar_t		*sv_friction;
-extern	cvar_t		*sv_edgefriction;
-extern	cvar_t		*sv_maxvelocity;
-extern	cvar_t		*sv_gravity;
-extern	cvar_t		*sv_stopspeed;
-extern	cvar_t		*sv_check_errors;
-extern	cvar_t		*sv_reconnect_limit;
-extern	cvar_t		*sv_lighting_modulate;
-extern	cvar_t		*rcon_password;
-extern	cvar_t		*hostname;
-extern	cvar_t		*sv_stepheight;
-extern	cvar_t		*sv_rollangle;
-extern	cvar_t		*sv_rollspeed;
-extern	cvar_t		*sv_maxspeed;
-extern	cvar_t		*sv_maxclients;
-extern	cvar_t		*sv_skyname;
-extern	cvar_t		*serverinfo;
-extern	cvar_t		*sv_failuretime;
-extern	cvar_t		*sv_unlag;
-extern	cvar_t		*sv_maxunlag;
-extern	cvar_t		*sv_unlagpush;
-extern	cvar_t		*sv_unlagsamples;
-extern	cvar_t		*physinfo;
+extern	convar_t		*sv_pausable;		// allows pause in multiplayer
+extern	convar_t		*sv_newunit;
+extern	convar_t		*sv_airaccelerate;
+extern	convar_t		*sv_accelerate;
+extern	convar_t		*sv_friction;
+extern	convar_t		*sv_edgefriction;
+extern	convar_t		*sv_maxvelocity;
+extern	convar_t		*sv_gravity;
+extern	convar_t		*sv_stopspeed;
+extern	convar_t		*sv_check_errors;
+extern	convar_t		*sv_reconnect_limit;
+extern	convar_t		*sv_lighting_modulate;
+extern	convar_t		*rcon_password;
+extern	convar_t		*hostname;
+extern	convar_t		*sv_stepheight;
+extern	convar_t		*sv_rollangle;
+extern	convar_t		*sv_rollspeed;
+extern	convar_t		*sv_maxspeed;
+extern	convar_t		*sv_maxclients;
+extern	convar_t		*sv_skyname;
+extern	convar_t		*serverinfo;
+extern	convar_t		*sv_failuretime;
+extern	convar_t		*sv_unlag;
+extern	convar_t		*sv_maxunlag;
+extern	convar_t		*sv_unlagpush;
+extern	convar_t		*sv_unlagsamples;
+extern	convar_t		*physinfo;
 extern	sv_client_t	*sv_client;
 
 //===========================================================

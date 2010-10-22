@@ -32,9 +32,9 @@ RECT	window_rect, real_rect;
 uint	in_mouse_wheel;
 int	wnd_caption;
 
-cvar_t	*scr_xpos;		// X coordinate of window position
-cvar_t	*scr_ypos;		// Y coordinate of window position
-cvar_t	*scr_fullscreen;
+convar_t	*scr_xpos;		// X coordinate of window position
+convar_t	*scr_ypos;		// Y coordinate of window position
+convar_t	*scr_fullscreen;
 
 static byte scan_to_key[128] = 
 { 

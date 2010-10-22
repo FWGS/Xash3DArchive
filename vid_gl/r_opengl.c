@@ -437,7 +437,7 @@ bool R_CreateWindow( int width, int height, bool fullscreen )
 {
 	WNDCLASS		wc;
 	RECT		rect;
-	cvar_t		*r_xpos, *r_ypos;
+	convar_t		*r_xpos, *r_ypos;
 	int		x = 0, y = 0, w, h;
 	int		stylebits = WINDOW_STYLE;
 	int		exstyle = WINDOW_EX_STYLE;

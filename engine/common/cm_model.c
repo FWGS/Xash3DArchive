@@ -10,7 +10,6 @@
 #include "matrix_lib.h"
 #include "studio.h"
 #include "wadfile.h"
-#include "const.h"
 
 clipmap_t		cm;
 
@@ -24,7 +23,7 @@ model_t		*loadmodel;
 model_t		*worldmodel;
 
 // cvars
-cvar_t		*cm_novis;
+convar_t		*cm_novis;
 
 // default hullmins
 static vec3_t cm_hullmins[4] =
