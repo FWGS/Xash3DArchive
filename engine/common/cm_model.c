@@ -378,11 +378,15 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 		out->plane = loadmodel->planes + LittleLong( in->planenum );
 		out->texinfo = loadmodel->texinfo + LittleLong( in->texinfo );
 
-		if( !com.strncmp( out->texinfo->texture->name, "sky", 3 ))
-			out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
+		// some DMC maps have bad textures
+		if( out->texinfo->texture )
+		{
+			if( !com.strncmp( out->texinfo->texture->name, "sky", 3 ))
+				out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
 
-		if( out->texinfo->texture->name[0] == '*' || out->texinfo->texture->name[0] == '!' )
-			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+			if( out->texinfo->texture->name[0] == '*' || out->texinfo->texture->name[0] == '!' )
+				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+		}
 
 		BSP_CalcSurfaceExtents( out );
 
@@ -841,7 +845,7 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 
 		*starmod = *loadmodel;
 
-		starmod->type = (i == 0) ? mod_world : mod_brush;
+		starmod->type = mod_brush;
 		starmod->hulls[0].firstclipnode = bm->headnode[0];
 
 		for( j = 1; j < MAX_MAP_HULLS; j++ )
@@ -1061,7 +1065,6 @@ void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
 	// load the newmap
 	worldmodel = CM_ModForName( name, true );
 	if( !worldmodel ) Host_Error( "Couldn't load %s\n", name );
-	worldmodel->type = mod_world;
 	sv_models[1] = cm_models; // make link to world
 		
 	if( checksum ) *checksum = cm.checksum;

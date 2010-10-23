@@ -2932,7 +2932,7 @@ dll_user_t *FS_FindLibrary( const char *dllname, bool directpath )
 	string		dllpath;
 	searchpath_t	*search;
 	dll_user_t	*hInst;
-	int		index;
+	int		i, index;
 
 	// check for bad exports
 	if( !dllname || !*dllname )
@@ -2944,7 +2944,14 @@ dll_user_t *FS_FindLibrary( const char *dllname, bool directpath )
 
 	fs_ext_path = directpath;
 
-	com.strncpy( dllpath, dllname, sizeof( dllpath ));
+	// replace all backward slashes
+	for( i = 0; i < com.strlen( dllname ); i++ )
+	{
+		if( dllname[i] == '\\' ) dllpath[i] = '/';
+		else dllpath[i] = com.tolower( dllname[i] );
+	}
+	dllpath[i] = '\0';
+
 	FS_DefaultExtension( dllpath, ".dll" );	// trying to apply if forget
 
 	search = FS_FindFile( dllpath, &index, false );

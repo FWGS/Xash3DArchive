@@ -230,33 +230,74 @@ Adds a freestanding variable to the variable list.
 */
 void Cvar_RegisterVariable( cvar_t *var )
 {
-	const char	*oldstring;
+	convar_t	**prev, *cur = NULL;
+	convar_t	*find;
 
 	ASSERT( var != NULL );
-	
-	// first check to see if it has allready been defined
-	if( Cvar_FindVar( var->name ))
-	{
-		MsgDev( D_ERROR, "can't register variable %s, allready defined\n", var->name );
-		return;
-	}
-	
+
 	// check for overlap with a command
 	if( Cmd_Exists( var->name ))
 	{
 		MsgDev( D_ERROR, "Cvar_Register: %s is a command\n", var->name );
 		return;
 	}
-		
-	// copy the value off, because future sets will Z_Free it
-	oldstring = var->string;
-	var->string = copystring( oldstring );
-	var->value = com.atof( var->string );
-	var->flags |= CVAR_EXTDLL;		// all cvars passed this function are game cvars
 	
-	// link the variable in
-	var->next = (cvar_t *)cvar_vars;
-	cvar_vars = (convar_t *)var;
+	// first check to see if it has allready been defined
+	if(( cur = Cvar_FindVar( var->name )) != NULL )
+	{
+		// this cvar is already registered with Cvar_RegisterVariable
+		// so we can't replace it
+		if( cur->flags & CVAR_EXTDLL )
+		{
+			MsgDev( D_ERROR, "can't register variable %s, allready defined\n", var->name );
+			return;
+		}
+	}
+
+	if( cur )
+	{
+		prev = &cvar_vars;
+
+		while( 1 )
+		{
+			find = *prev;
+			ASSERT( find != NULL );
+
+			// search for previous cvar
+			if( cur != find->next )
+			{
+				prev = &find->next;
+				continue;
+			}
+
+			// link new variable
+			find->next = (convar_t *)var;
+			break;
+		}
+
+		var->string = cur->string;	// we already have right string
+		var->value = com.atof( var->string );
+		var->flags |= CVAR_EXTDLL;	// all cvars passed this function are game cvars
+		var->next = (cvar_t *)cur->next;
+
+		// release current cvar (but keep string)
+		if( cur->name ) Mem_Free( cur->name );
+		if( cur->latched_string ) Mem_Free( cur->latched_string );
+		if( cur->reset_string ) Mem_Free( cur->reset_string );
+		if( cur->description ) Mem_Free( cur->description );
+		Mem_Free( cur );
+	}
+	else
+	{
+		// copy the value off, because future sets will Z_Free it
+		var->string = copystring( var->string );
+		var->value = com.atof( var->string );
+		var->flags |= CVAR_EXTDLL;		// all cvars passed this function are game cvars
+	
+		// link the variable in
+		var->next = (cvar_t *)cvar_vars;
+		cvar_vars = (convar_t *)var;
+	}
 }
 	
 /*
@@ -689,10 +730,8 @@ bool Cvar_Command( void )
 	// perform a variable print or set
 	if( Cmd_Argc() == 1 )
 	{
-		if( v->flags & CVAR_INIT ) Msg( "%s: %s\n", v->name, v->string );
+		if( v->flags & ( CVAR_INIT|CVAR_EXTDLL )) Msg( "%s: %s\n", v->name, v->string );
 		else Msg( "%s: %s ( ^3%s^7 )\n", v->name, v->string, v->reset_string );
-		if( v->flags & CVAR_EXTDLL ) Msg( "%s: %s\n", v->name, v->string );
-		else if( v->latched_string ) Msg( "%s: %s\n", v->name, v->latched_string );
 		return true;
 	}
 
@@ -1098,7 +1137,7 @@ void Cvar_LatchedAudio_f( void )
 ============
 Cvar_Unlink_f
 
-Now all latched audio strings is valid
+unlink all cvars with flag CVAR_EXTDLL
 ============
 */
 void Cvar_Unlink_f( void )

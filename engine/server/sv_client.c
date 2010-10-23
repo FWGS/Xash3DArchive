@@ -269,7 +269,8 @@ edict_t *SV_FakeConnect( const char *netname )
 			break;
 		}
 	}
-	if( !newcl )
+
+	if( i == sv_maxclients->integer )
 	{
 		MsgDev( D_INFO, "SV_DirectConnect: rejected a connection.\n");
 		return NULL;
@@ -305,6 +306,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	newcl->state = cs_spawned;
 	newcl->lastmessage = host.realtime;	// don't timeout
 	newcl->lastconnect = host.realtime;
+	newcl->sendinfo = true;
 	
 	return ent;
 }

@@ -103,6 +103,31 @@ void Con_Clear_f( void )
 		con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 	con.display = con.current; // go to end
 }
+
+/*
+================
+Con_SetColor_f
+================
+*/
+void Con_SetColor_f( void )
+{
+	vec3_t	color;
+
+	switch( Cmd_Argc() )
+	{
+	case 1:
+		Msg( "\"con_color\" is %i %i %i\n", g_color_table[7][0], g_color_table[7][1], g_color_table[7][2] );
+		break;
+	case 2:
+		VectorSet( color, g_color_table[7][0], g_color_table[7][1], g_color_table[7][2] );
+		com.atov( color, Cmd_Argv( 1 ), 3 );
+		Con_DefaultColor( color[0], color[1], color[2] );
+		break;
+	default:
+		Msg( "Usage: con_color \"r g b\"\n" );
+		break;
+	}
+}
 						
 /*
 ================
@@ -507,6 +532,7 @@ void Con_Init( void )
 	}
 
 	Cmd_AddCommand( "toggleconsole", Con_ToggleConsole_f, "opens or closes the console" );
+	Cmd_AddCommand( "con_color", Con_SetColor_f, "set a custom console color" );
 	Cmd_AddCommand( "clear", Con_Clear_f, "clear console history" );
 
 	MsgDev( D_NOTE, "Console initialized.\n" );

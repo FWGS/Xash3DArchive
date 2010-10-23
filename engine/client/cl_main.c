@@ -755,6 +755,8 @@ void CL_SendDisconnectMessage( void )
 	sizebuf_t	buf;
 	byte	data[32];
 
+	if( cls.state == ca_disconnected ) return;
+
 	BF_Init( &buf, "LastMessage", data, sizeof( data ));
 	BF_WriteByte( &buf, clc_stringcmd );
 	BF_WriteString( &buf, "disconnect" );
@@ -811,7 +813,6 @@ void CL_Disconnect_f( void )
 void CL_Crashed_f( void )
 {
 	// already freed
-	if( cls.state == ca_disconnected ) return;
 	if( host.state == HOST_CRASHED ) return;
 	if( host.type != HOST_NORMAL ) return;
 	if( !cls.initialized ) return;
@@ -1553,6 +1554,7 @@ void CL_InitLocal( void )
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "2", CVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
+	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
 
 	// server commands
 	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );

@@ -82,6 +82,7 @@ void SV_CalcPings( void )
 	{
 		cl = &svs.clients[i];
 		if( cl->state != cs_spawned ) continue;
+		if( cl->fakeclient ) continue;
 
 		total = count = 0;
 
@@ -89,7 +90,7 @@ void SV_CalcPings( void )
 		{
 			client_frame_t	*frame;
 
-			frame = &cl->frames[(cl->netchan.incoming_acknowledged - 1 - j) & SV_UPDATE_MASK];
+			frame = &cl->frames[(cl->netchan.incoming_acknowledged - (j + 1)) & SV_UPDATE_MASK];
 			if( frame->latency > 0 )
 			{
 				count++;

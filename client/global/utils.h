@@ -11,6 +11,7 @@ extern cl_enginefuncs_t gEngfuncs;
 #include "event_api.h"
 #include "enginecallback.h"
 #include "shake.h"
+#include "com_model.h"
 
 #define FILE_GLOBAL	static
 #define DLL_GLOBAL

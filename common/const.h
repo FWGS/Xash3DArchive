@@ -725,16 +725,6 @@ typedef struct
 	byte	r, g, b;
 } color24;
 
-// model types
-typedef enum
-{
-	mod_bad,
-	mod_world,
-	mod_brush,
-	mod_studio,
-	mod_sprite
-} modtype_t;
-
 // link_t is only used for entity area links now
 typedef struct link_s
 {

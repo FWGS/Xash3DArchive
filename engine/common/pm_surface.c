@@ -99,7 +99,7 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 	vec3_t		temp, offset;
 
 	bmodel = pe->model;
-	if( !bmodel || bmodel->type != mod_brush && bmodel->type != mod_world )
+	if( !bmodel || bmodel->type != mod_brush )
 		return NULL;
 
 	hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, offset );
@@ -130,7 +130,9 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 	}
 
 	surf = PM_RecursiveSurfCheck( &bmodel->nodes[hull->firstclipnode], start_l, end_l );
-	if( !surf ) return NULL;
+
+	if( !surf || !surf->texinfo || !surf->texinfo->texture )
+		return NULL;
 
 	return surf->texinfo->texture->name;
 }

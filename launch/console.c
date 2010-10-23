@@ -508,4 +508,5 @@ void Sys_PrintLog( const char *pMsg )
 {
 	if( !Sys.logfile ) return;
 	fprintf( Sys.logfile, pMsg );
+	fflush( Sys.logfile );
 }

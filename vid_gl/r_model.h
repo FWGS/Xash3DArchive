@@ -41,6 +41,16 @@ BRUSH MODELS
 //
 // in memory representation
 //
+typedef enum
+{
+	mod_bad = -1,
+	mod_brush, 
+	mod_sprite, 
+	mod_alias, 
+	mod_studio,
+	mod_world,	// added
+} modtype_t;
+
 typedef struct
 {
 	vec3_t		mins, maxs;

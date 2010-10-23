@@ -50,6 +50,11 @@ void Host_ShutdownServer( void )
 	SV_Shutdown( false );
 }
 
+void Host_Null( void )
+{
+	// just a stub for some commands in dedicated-mode
+}
+
 /*
 ================
 Host_NewGame
@@ -813,6 +818,7 @@ void Host_Init( const int argc, const char **argv )
 	{
 		Cmd_AddCommand( "quit", Sys_Quit, "quit the game" );
 		Cmd_AddCommand( "exit", Sys_Quit, "quit the game" );
+		Cmd_AddCommand( "@crashed", Host_Null, "" );
 
 		// dedicated servers using settings from server.cfg file
 		Cbuf_AddText( va( "exec %s\n", Cvar_VariableString( "servercfgfile" )));

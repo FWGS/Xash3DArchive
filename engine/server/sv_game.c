@@ -2822,7 +2822,7 @@ pfnServerPrint
 void pfnServerPrint( const char *szMsg )
 {
 	// while loading in-progress we can sending message only for local client
-	if( sv.state == ss_loading ) MsgDev( D_INFO, szMsg );	
+	if( sv.state != ss_active ) MsgDev( D_INFO, szMsg );	
 	else SV_BroadcastPrintf( PRINT_HIGH, "%s", szMsg );
 }
 
@@ -3829,7 +3829,7 @@ pfnAddServerCommand
 */
 void pfnAddServerCommand( const char *cmd_name, void (*function)(void) )
 {
-	Cmd_AddCommand( cmd_name, function, "" );
+	Cmd_AddGameCommand( cmd_name, function );
 }
 
 /*
@@ -4273,6 +4273,11 @@ void SV_UnloadProgs( void )
 		Mem_FreePool( &svgame.stringspool );
 	else StringTable_Delete( svgame.hStringTable );
 
+	if( svgame.dllFuncs2.pfnGameShutdown )
+	{
+		svgame.dllFuncs2.pfnGameShutdown ();
+	}
+
 	// now we can unload cvars
 	Cvar_FullSet( "host_gameloaded", "0", CVAR_INIT );
 
@@ -4292,6 +4297,7 @@ bool SV_LoadProgs( const char *name )
 	static APIFUNCTION2		GetEntityAPI2;
 	static GIVEFNPTRSTODLL	GiveFnptrsToDll;
 	static NEW_DLL_FUNCTIONS_FN	GiveNewDllFuncs;
+	static enginefuncs_t	gpEngfuncs;
 	static globalvars_t		gpGlobals;
 	static playermove_t		gpMove;
 	edict_t			*e;
@@ -4307,6 +4313,9 @@ bool SV_LoadProgs( const char *name )
 
 	// make sure what new dll functions is cleared
 	Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
+
+	// make local copy of engfuncs to prevent overwrite it with bots.dll
+	Mem_Copy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
 	GetEntityAPI = (APIFUNCTION)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
 	GetEntityAPI2 = (APIFUNCTION2)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
@@ -4330,7 +4339,7 @@ bool SV_LoadProgs( const char *name )
 		return false;
 	}
 
-	GiveFnptrsToDll( &gEngfuncs, svgame.globals );
+	GiveFnptrsToDll( &gpEngfuncs, svgame.globals );
 
 	// get extended callbacks
 	if( GiveNewDllFuncs )

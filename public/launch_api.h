@@ -593,6 +593,7 @@ typedef struct stdilib_api_s
 	char *(*Cmd_Argv)( uint arg ); 
 	void (*Cmd_LookupCmds)( char *buffer, void *ptr, setpair_t callback );
 	void (*Cmd_AddCommand)( const char *name, xcommand_t function, const char *desc );
+	void (*Cmd_AddGameCommand)( const char *cmd_name, xcommand_t function );
 	void (*Cmd_TokenizeString)( const char *text_in );
 	void (*Cmd_DelCommand)( const char *name );
 
@@ -905,6 +906,7 @@ console commands
 #define Cmd_TokenizeString		com.Cmd_TokenizeString
 #define Cmd_LookupCmds		com.Cmd_LookupCmds
 #define Cmd_AddCommand		com.Cmd_AddCommand
+#define Cmd_AddGameCommand		com.Cmd_AddGameCommand
 #define Cmd_RemoveCommand		com.Cmd_DelCommand
 
 /*

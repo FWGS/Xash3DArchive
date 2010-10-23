@@ -318,12 +318,15 @@ void Cmd_Echo_f( void )
 =============================================================================
 */
 
+#define CMD_EXTDLL		BIT( 0 )
+
 typedef struct cmd_function_s
 {
 	struct cmd_function_s	*next;
 	char			*name;
 	char			*desc;
 	xcommand_t		function;
+	int			flags;
 } cmd_function_t;
 
 static int		cmd_argc;
@@ -336,7 +339,7 @@ static cmd_function_t	*cmd_functions;			// possible commands to execute
 Cmd_Argc
 ============
 */
-uint Cmd_Argc (void)
+uint Cmd_Argc( void )
 {
 	return cmd_argc;
 }
@@ -465,17 +468,42 @@ void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_
 	cmd_function_t	*cmd;
 	
 	// fail if the command already exists
-	if(Cmd_Exists( cmd_name ))
+	if( Cmd_Exists( cmd_name ))
 	{
 		MsgDev(D_INFO, "Cmd_AddCommand: %s already defined\n", cmd_name);
 		return;
 	}
 
 	// use a small malloc to avoid zone fragmentation
-	cmd = Malloc(sizeof(cmd_function_t));
+	cmd = Malloc( sizeof( cmd_function_t ));
 	cmd->name = copystring( cmd_name );
 	cmd->desc = copystring( cmd_desc );
 	cmd->function = function;
+	cmd->next = cmd_functions;
+	cmd_functions = cmd;
+}
+
+/*
+============
+Cmd_AddGameCommand
+============
+*/
+void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function )
+{
+	cmd_function_t	*cmd;
+	
+	// fail if the command already exists
+	if( Cmd_Exists( cmd_name ))
+	{
+		MsgDev(D_INFO, "Cmd_AddCommand: %s already defined\n", cmd_name);
+		return;
+	}
+
+	// use a small malloc to avoid zone fragmentation
+	cmd = Malloc( sizeof( cmd_function_t ));
+	cmd->name = copystring( cmd_name );
+	cmd->function = function;
+	cmd->flags = CMD_EXTDLL;
 	cmd->next = cmd_functions;
 	cmd_functions = cmd;
 }
@@ -610,6 +638,48 @@ void Cmd_List_f( void )
 		i++;
 	}
 	Msg( "%i commands\n", i );
+}
+
+/*
+============
+Cmd_Unlink
+
+unlink all commands with flag CVAR_EXTDLL
+============
+*/
+void Cmd_Unlink( void )
+{
+	cmd_function_t	*cmd;
+	cmd_function_t	**prev;
+	int		count = 0;
+
+	if( Cvar_VariableInteger( "host_gameloaded" ))
+	{
+		Msg( "can't unlink cvars while game is loaded\n" );
+		return;
+	}
+
+	// unlink commands first
+	Cmd_Unlink ();
+
+	prev = &cmd_functions;
+	while( 1 )
+	{
+		cmd = *prev;
+		if( !cmd ) break;
+
+		if( !( cmd->flags & CMD_EXTDLL ))
+		{
+			prev = &cmd->next;
+			continue;
+		}
+
+		*prev = cmd->next;
+		if( cmd->name ) Mem_Free( cmd->name );
+		if( cmd->desc ) Mem_Free( cmd->desc );
+		Mem_Free( cmd );
+		count++;
+	}
 }
 
 /*

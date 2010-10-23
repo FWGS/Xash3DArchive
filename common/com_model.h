@@ -18,6 +18,16 @@
 
 #define CONTENTS_NODE	1		// fake contents to determine nodes
 
+// model types
+typedef enum
+{
+	mod_bad = -1,
+	mod_brush, 
+	mod_sprite, 
+	mod_alias, 
+	mod_studio
+} modtype_t;
+
 typedef struct mplane_s
 {
 	vec3_t		normal;

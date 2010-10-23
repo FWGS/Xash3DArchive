@@ -124,7 +124,7 @@ hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset
 		if( pe->movetype != MOVETYPE_PUSH )
 			Host_Error( "SOLID_BSP without MOVETYPE_PUSH\n" );
 
-		if( !pe->model || pe->model->type != mod_brush && pe->model->type != mod_world )
+		if( !pe->model || pe->model->type != mod_brush )
 			Host_Error( "Entity %s has MOVETYPE_PUSH with a non bsp model\n", pe->name );
 
 		VectorSubtract( maxs, mins, size );
@@ -178,7 +178,7 @@ hull_t *PM_HullForBsp( physent_t *pe, const vec3_t mins, const vec3_t maxs, floa
 	// decide which clipping hull to use, based on the size
 	model = pe->model;
 
-	if( !model || ( model->type != mod_brush && model->type != mod_world ))
+	if( !model || model->type != mod_brush )
 		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", pe->info, model->type );
 
 	VectorSubtract( maxs, mins, size );

@@ -2625,7 +2625,9 @@ void R_AddStudioModelToList( ref_entity_t *e )
 
 void R_StudioRunEvents( ref_entity_t *e )
 {
-	if( !e->model->extradata ) return;
+	if( !e || !e->model || !e->model->extradata )
+		return;
+
 	if( RP_FOLLOWENTITY( e )) return;
 
 	RI.currententity = e;

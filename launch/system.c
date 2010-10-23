@@ -158,6 +158,7 @@ void Sys_GetStdAPI( void )
 	com.Cmd_Argv = Cmd_Argv; 
 	com.Cmd_LookupCmds = Cmd_LookupCmds;
 	com.Cmd_AddCommand = Cmd_AddCommand;
+	com.Cmd_AddGameCommand = Cmd_AddGameCommand;
 	com.Cmd_DelCommand = Cmd_RemoveCommand;
 	com.Cmd_TokenizeString = Cmd_TokenizeString;
 

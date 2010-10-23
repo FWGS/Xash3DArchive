@@ -306,22 +306,10 @@ static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull
 	return &tr;
 }
 
-// FIXME: re-order modtypes
 static int pfnGetModelType( model_t *mod )
 {
-	if( !mod ) return -1;
-
-	switch( mod->type )
-	{
-	case mod_brush:
-	case mod_world:
-		return 0;
-	case mod_studio:
-		return 3;
-	case mod_sprite:
-		return 1;
-	}
-	return -1;
+	if( !mod ) return mod_bad;
+	return mod->type;
 }
 
 static void pfnGetModelBounds( model_t *mod, float *mins, float *maxs )

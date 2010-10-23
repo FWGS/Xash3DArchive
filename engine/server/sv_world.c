@@ -121,7 +121,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 
 		model = CM_ClipHandleToModel( ent->v.modelindex );
 
-		if( !model || model->type != mod_brush && model->type != mod_world )
+		if( !model || model->type != mod_brush )
 			Host_Error( "MOVETYPE_PUSH with a non bsp model\n" );
 
 		VectorSubtract( maxs, mins, size );
@@ -223,7 +223,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	// decide which clipping hull to use, based on the size
 	model = CM_ClipHandleToModel( ent->v.modelindex );
 
-	if( !model || ( model->type != mod_brush && model->type != mod_world ))
+	if( !model || model->type != mod_brush )
 		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", ent->serialnumber, model->type );
 
 	VectorSubtract( maxs, mins, size );
@@ -1066,7 +1066,7 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 	vec3_t		temp, offset;
 
 	bmodel = CM_ClipHandleToModel( ent->v.modelindex );
-	if( !bmodel || bmodel->type != mod_brush && bmodel->type != mod_world )
+	if( !bmodel || bmodel->type != mod_brush )
 		return NULL;
 
 	hull = SV_HullForBsp( ent, vec3_origin, vec3_origin, offset );
@@ -1097,7 +1097,9 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 	}
 
 	surf = SV_RecursiveSurfCheck( &bmodel->nodes[hull->firstclipnode], start_l, end_l );
-	if( !surf ) return NULL;
+
+	if( !surf || !surf->texinfo || !surf->texinfo->texture )
+		return NULL;
 
 	return surf->texinfo->texture->name;
 }
