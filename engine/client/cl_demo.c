@@ -282,7 +282,7 @@ Called when a demo or cinematic finishes
 If the "nextdemo" cvar is set, that command will be issued
 ==================
 */
-bool CL_NextDemo( void )
+qboolean CL_NextDemo( void )
 {
 	string	str;
 
@@ -431,7 +431,7 @@ void CL_StopRecord( void )
 CL_GetComment
 ================== 
 */  
-bool CL_GetComment( const char *demoname, char *comment )
+qboolean CL_GetComment( const char *demoname, char *comment )
 {
 	file_t	*demfile;
 	char     	buf_data[MAX_MSGLEN];

@@ -60,7 +60,7 @@ static bool ComputeBeamEntPosition( cl_entity_t *pEnt, int nAttachment, Vector& 
 
 	// get attachment
 	if( nAttachment > 0 )
-		pt = pEnt->origin + pEnt->attachment_origin[nAttachment - 1];
+		pt = pEnt->origin + pEnt->attachment[nAttachment - 1];
 	else pt = pEnt->origin;
 
 	return true;
@@ -79,7 +79,7 @@ static void ComputeBeamPerpendicular( const Vector &vecBeamDelta, Vector *pPerp 
 // ------------------------------------------------------------------------------------------ //
 // CBeamSegDraw implementation.
 // ------------------------------------------------------------------------------------------ //
-void CBeamSegDraw::Start( int nSegs, HSPRITE m_hSprite, kRenderMode_t nRenderMode, int frame )
+void CBeamSegDraw::Start( int nSegs, HSPRITE m_hSprite, int nRenderMode, int frame )
 {
 	m_nSegsDrawn = 0;
 	m_nTotalSegs = nSegs;
@@ -1886,7 +1886,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, int modelIndex, float frame
 
 	// Specify all the segments.
 	CBeamSegDraw segDraw;
-	segDraw.Start( segments, m_hSprite, (kRenderMode_t)rendermode, frame );
+	segDraw.Start( segments, m_hSprite, rendermode, frame );
 
 	for ( i = 0; i < segments; i++ )
 	{
@@ -2028,7 +2028,7 @@ void DrawDisk( int noise_divisions, float *prgNoise, int modelIndex, float frame
 	w = freq * delta[2];
 
 	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
-	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->RenderMode( rendermode );
 	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
@@ -2114,7 +2114,7 @@ void DrawCylinder( int noise_divisions, float *prgNoise, int modelIndex, float f
 	
 	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
 	gEngfuncs.pTriAPI->CullFace( TRI_NONE );
-	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->RenderMode( rendermode );
 	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
@@ -2232,7 +2232,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 	j = segments / 8;
 
 	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
-	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->RenderMode( rendermode );
 	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLE_STRIP );
@@ -2359,7 +2359,7 @@ void DrawBeamFollow( int modelIndex, BeamTrail_t* pHead, int frame, int rendermo
 	nColor[2] = (byte)bound( 0, (int)(scaledColor[2] * 255.0f), 255 );
 
 	gEngfuncs.pTriAPI->Enable( TRI_SHADER );
-	gEngfuncs.pTriAPI->RenderMode( (kRenderMode_t)rendermode );
+	gEngfuncs.pTriAPI->RenderMode( rendermode );
 	gEngfuncs.pTriAPI->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
 	gEngfuncs.pTriAPI->Begin( TRI_QUADS );

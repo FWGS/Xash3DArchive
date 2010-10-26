@@ -49,7 +49,7 @@ float CalcFov( float fov_x, float width, float height )
 AdjustFov
 ====================
 */
-void AdjustFov( float *fov_x, float *fov_y, float width, float height, bool lock_x )
+void AdjustFov( float *fov_x, float *fov_y, float width, float height, qboolean lock_x )
 {
 	float x, y;
 

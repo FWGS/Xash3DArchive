@@ -667,15 +667,15 @@ ParticleType *ParticleSystem::ParseType( char *&szFile )
 			}
 			else if ( !stricmp( szToken, "special" ) || !stricmp( szToken, "special1" ) )
 			{
-				pType->m_iDrawCond = CONTENT_SPECIAL1;
+				pType->m_iDrawCond = -20;
 			}
 			else if ( !stricmp( szToken, "special2" ) )
 			{
-				pType->m_iDrawCond = CONTENT_SPECIAL2;
+				pType->m_iDrawCond = -21;
 			}
 			else if ( !stricmp( szToken, "special3" ) )
 			{
-				pType->m_iDrawCond = CONTENT_SPECIAL3;
+				pType->m_iDrawCond = -22;
 			}
 		}
 		else if ( !stricmp( szToken, "collision" ) )
@@ -741,7 +741,7 @@ bool ParticleSystem::UpdateSystem( float frametime )
 	if( !source ) return false;
 
 	// Don't update if the system is outside the player's PVS.
-	enable = (source->curstate.renderfx == kRenderFxAurora);
+	enable = (source->curstate.renderfx == 21);
 
 	// check for contents to remove
 	if( POINT_CONTENTS( source->origin ) == m_iKillCondition )
@@ -847,7 +847,7 @@ bool ParticleSystem::UpdateParticle( particle *part, float frametime )
 		{
 			if( m_iEntAttachment )
 			{
-				Vector pos = source->origin + source->attachment_origin[m_iEntAttachment - 1];
+				Vector pos = source->origin + source->attachment[m_iEntAttachment - 1];
 
 				part->velocity = (pos - part->origin) / frametime;
 				part->origin = pos;

@@ -85,7 +85,7 @@ _inline void Matrix3x3_FromMatrix4x4( matrix3x3 out, const matrix4x4 in )
 #endif
 }
 
-_inline void Matrix3x3_ToAngles( const matrix3x3 matrix, vec3_t out, bool rhand )
+_inline void Matrix3x3_ToAngles( const matrix3x3 matrix, vec3_t out, qboolean rhand )
 {
 	float	pitch, cpitch, yaw, roll;
 
@@ -113,7 +113,7 @@ _inline void Matrix3x3_ToAngles( const matrix3x3 matrix, vec3_t out, bool rhand 
 	out[ROLL] = roll;
 }
 
-_inline bool Matrix3x3_Compare( const matrix3x3 mat1, const matrix3x3 mat2 )
+_inline qboolean Matrix3x3_Compare( const matrix3x3 mat1, const matrix3x3 mat2 )
 {
 	if( mat1[0][0] != mat2[0][0] || mat1[0][1] != mat2[0][1] || mat1[0][2] != mat2[0][2] )
 		return false;
@@ -819,7 +819,7 @@ _inline void Matrix4x4_Concat( matrix4x4 out, const matrix4x4 in1, const matrix4
 #endif
 }
 
-_inline bool Matrix4x4_CompareRotateOnly( const matrix4x4 mat1, const matrix4x4 mat2 )
+_inline qboolean Matrix4x4_CompareRotateOnly( const matrix4x4 mat1, const matrix4x4 mat2 )
 {
 #ifdef OPENGL_STYLE
 	if( mat1[0][0] != mat2[0][0] || mat1[0][1] != mat2[0][1] || mat1[0][2] != mat2[0][2] )
@@ -839,7 +839,7 @@ _inline bool Matrix4x4_CompareRotateOnly( const matrix4x4 mat1, const matrix4x4 
 	return true;
 }
 
-_inline bool Matrix4x4_Compare( const matrix4x4 mat1, const matrix4x4 mat2 )
+_inline qboolean Matrix4x4_Compare( const matrix4x4 mat1, const matrix4x4 mat2 )
 {
 #ifdef OPENGL_STYLE
 	if( mat1[0][0] != mat2[0][0] || mat1[0][1] != mat2[0][1] || mat1[0][2] != mat2[0][2] )
@@ -1194,7 +1194,7 @@ _inline void Matrix4x4_ToMatrix3x3( matrix3x3 out, const matrix4x4 in )
 #endif
 }
 
-_inline bool Matrix4x4_Invert_Full( matrix4x4 out, const matrix4x4 in1 )
+_inline qboolean Matrix4x4_Invert_Full( matrix4x4 out, const matrix4x4 in1 )
 {
 	float	*temp;
 	float	*r[4];

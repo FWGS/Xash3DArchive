@@ -65,24 +65,24 @@ typedef struct dllfunction_s
 // ScreenWidth returns the width of the screen, in pixels
 #define ScreenWidth		(gpGlobals->scrWidth)
 
-inline dword PackRGB( int r, int g, int b )
+inline unsigned int PackRGB( int r, int g, int b )
 {
 	return ((0xFF)<<24|(r)<<16|(g)<<8|(b));
 }
 
-inline dword PackRGBA( int r, int g, int b, int a )
+inline unsigned int PackRGBA( int r, int g, int b, int a )
 {
 	return ((a)<<24|(r)<<16|(g)<<8|(b));
 }
 
-inline void UnpackRGB( int &r, int &g, int &b, dword ulRGB )
+inline void UnpackRGB( int &r, int &g, int &b, unsigned int ulRGB )
 {
 	r = (ulRGB & 0xFF0000) >> 16;
 	g = (ulRGB & 0xFF00) >> 8;
 	b = (ulRGB & 0xFF) >> 0;
 }
 
-inline void UnpackRGBA( int &r, int &g, int &b, int &a, dword ulRGBA )
+inline void UnpackRGBA( int &r, int &g, int &b, int &a, unsigned int ulRGBA )
 {
 	a = (ulRGBA & 0xFF000000) >> 24;
 	r = (ulRGBA & 0xFF0000) >> 16;
@@ -90,12 +90,12 @@ inline void UnpackRGBA( int &r, int &g, int &b, int &a, dword ulRGBA )
 	b = (ulRGBA & 0xFF) >> 0;
 }
 
-inline int PackAlpha( dword ulRGB, dword ulAlpha )
+inline int PackAlpha( unsigned int ulRGB, unsigned int ulAlpha )
 {
 	return (ulRGB)|(ulAlpha<<24);
 }
 
-inline int UnpackAlpha( dword ulRGBA )
+inline int UnpackAlpha( unsigned int ulRGBA )
 {
 	return ((ulRGBA & 0xFF000000) >> 24);	
 }

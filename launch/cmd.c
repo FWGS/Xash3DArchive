@@ -558,7 +558,7 @@ void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback )
 Cmd_Exists
 ============
 */
-bool Cmd_Exists( const char *cmd_name )
+qboolean Cmd_Exists( const char *cmd_name )
 {
 	cmd_function_t	*cmd;
 

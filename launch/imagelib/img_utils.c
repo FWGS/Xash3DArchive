@@ -14,9 +14,9 @@ uint d_8toD1table[256];
 uint d_8toQ1table[256];
 uint d_8toQ2table[256];
 uint d_8to24table[256];
-bool d1palette_init = false;
-bool q1palette_init = false;
-bool q2palette_init = false;
+qboolean d1palette_init = false;
+qboolean q1palette_init = false;
+qboolean q2palette_init = false;
 
 static byte palette_d1[768] = 
 {
@@ -424,14 +424,14 @@ void Image_RoundDimensions( int *width, int *height )
 	*height = NearestPOW( *height, gl_round_down->integer );
 }
 
-bool Image_ValidSize( const char *name )
+qboolean Image_ValidSize( const char *name )
 {
 	if( image.width > IMAGE_MAXWIDTH || image.height > IMAGE_MAXHEIGHT || image.width <= 0 || image.height <= 0 )
 		return false;
 	return true;
 }
 
-bool Image_LumpValidSize( const char *name )
+qboolean Image_LumpValidSize( const char *name )
 {
 	if( image.width > LUMP_MAXWIDTH || image.height > LUMP_MAXHEIGHT || image.width <= 0 || image.height <= 0 )
 	{
@@ -672,7 +672,7 @@ Image_Copy8bitRGBA
 NOTE: must call Image_GetPaletteXXX before used
 ============
 */
-bool Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
+qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 {
 	int	*iout = (int *)out;
 	color32	*col;
@@ -1162,9 +1162,9 @@ void Image_Resample8Nolerp( const void *indata, int inwidth, int inheight, void 
 Image_Resample
 ================
 */
-byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int outwidth, int outheight, int type, bool *resampled )
+byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int outwidth, int outheight, int type, qboolean *resampled )
 {
-	bool	quality = (image.cmd_flags & IL_USE_LERPING);
+	qboolean	quality = (image.cmd_flags & IL_USE_LERPING);
 
 	// nothing to resample ?
 	if( inwidth == outwidth && inheight == outheight )
@@ -1206,9 +1206,9 @@ byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int
 Image_Flood
 ================
 */
-byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int outwidth, int outheight, int type, bool *resampled )
+byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int outwidth, int outheight, int type, qboolean *resampled )
 {
-	bool	quality = (image.cmd_flags & IL_USE_LERPING);
+	qboolean	quality = (image.cmd_flags & IL_USE_LERPING);
 	int	samples = PFDesc[type].bpp;
 	int	newsize, x, y, i;
 	byte	*in, *out;
@@ -1262,9 +1262,9 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 	word	width = *srcwidth;
 	word	height = *srcheight; 
 	int	samples = PFDesc[type].bpp;
-	bool	flip_x = ( flags & IMAGE_FLIP_X ) ? true : false;
-	bool	flip_y = ( flags & IMAGE_FLIP_Y ) ? true : false;
-	bool	flip_i = ( flags & IMAGE_ROT_90 ) ? true : false;
+	qboolean	flip_x = ( flags & IMAGE_FLIP_X ) ? true : false;
+	qboolean	flip_y = ( flags & IMAGE_FLIP_Y ) ? true : false;
+	qboolean	flip_i = ( flags & IMAGE_ROT_90 ) ? true : false;
 	int	row_inc = ( flip_y ? -samples : samples ) * width;
 	int	col_inc = ( flip_x ? -samples : samples );
 	int	row_ofs = ( flip_y ? ( height - 1 ) * width * samples : 0 );
@@ -1397,10 +1397,10 @@ rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 	return ImagePack();
 }
 
-bool Image_Process( rgbdata_t **pix, int width, int height, uint flags )
+qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 {
 	rgbdata_t	*pic = *pix;
-	bool	result = true;
+	qboolean	result = true;
 	byte	*out;
 				
 	// check for buffers
@@ -1427,7 +1427,7 @@ bool Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 	if(( flags & IMAGE_RESAMPLE && width > 0 && height > 0 ) || flags & IMAGE_ROUND || flags & IMAGE_ROUNDFILLER )
 	{
 		int	w, h;
-		bool	resampled = false;
+		qboolean	resampled = false;
 
 		if( flags & IMAGE_ROUND || flags & IMAGE_ROUNDFILLER )
 		{

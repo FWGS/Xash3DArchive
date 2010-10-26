@@ -309,7 +309,7 @@ NOTE: at this day we have ten instances
 void Sys_LookupInstance( void )
 {
 	char	szTemp[4096];
-	bool	dedicated = false;
+	qboolean	dedicated = false;
 
 	// NOTE: we want set "real" work directory
 	// defined in environment variables, but in some reasons
@@ -1032,10 +1032,10 @@ void Sys_Exit( void )
 //=======================================================================
 //			DLL'S MANAGER SYSTEM
 //=======================================================================
-bool Sys_LoadLibrary( const char *dll_name, dll_info_t *dll )
+qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll )
 {
 	const dllfunc_t	*func;
-	bool		native_lib = false;
+	qboolean		native_lib = false;
 	string		errorstring;
 
 	// check errors
@@ -1131,7 +1131,7 @@ void* Sys_GetProcAddress( dll_info_t *dll, const char* name )
 	return (void *)GetProcAddress( dll->link, name );
 }
 
-bool Sys_FreeLibrary( dll_info_t *dll )
+qboolean Sys_FreeLibrary( dll_info_t *dll )
 {
 	// invalid desc or alredy freed
 	if( !dll || !dll->link )
@@ -1155,7 +1155,7 @@ bool Sys_FreeLibrary( dll_info_t *dll )
 Sys_ShellExecute
 =================
 */
-void Sys_ShellExecute( const char *path, const char *parms, bool exit )
+void Sys_ShellExecute( const char *path, const char *parms, qboolean exit )
 {
 	ShellExecute( NULL, "open", path, parms, NULL, SW_SHOW );
 
@@ -1170,8 +1170,8 @@ void Sys_ShellExecute( const char *path, const char *parms, bool exit )
 int	dispatch;
 int	workcount;
 int	oldf;
-bool	pacifier;
-bool	threaded;
+qboolean	pacifier;
+qboolean	threaded;
 void (*workfunction) (int);
 int numthreads = -1;
 CRITICAL_SECTION crit;
@@ -1247,7 +1247,7 @@ void Sys_ThreadSetDefault( void )
 	}
 }
 
-void Sys_RunThreadsOnIndividual( int workcnt, bool showpacifier, void(*func)(int))
+void Sys_RunThreadsOnIndividual( int workcnt, qboolean showpacifier, void(*func)(int))
 {
 	if (numthreads == -1) Sys_ThreadSetDefault();
 	workfunction = func;
@@ -1259,7 +1259,7 @@ void Sys_RunThreadsOnIndividual( int workcnt, bool showpacifier, void(*func)(int
 Sys_RunThreadsOn
 =============
 */
-void Sys_RunThreadsOn( int workcnt, bool showpacifier, void(*func)(int))
+void Sys_RunThreadsOn( int workcnt, qboolean showpacifier, void(*func)(int))
 {
 	int	i, threadid[MAX_THREADS];
 	HANDLE	threadhandle[MAX_THREADS];
@@ -1381,7 +1381,7 @@ sys_event_t Sys_GetEvent( void )
 	return ev;
 }
 
-bool Sys_GetModuleName( char *buffer, size_t length )
+qboolean Sys_GetModuleName( char *buffer, size_t length )
 {
 	if( Sys.ModuleName[0] == '\0' )
 		return false;
@@ -1416,7 +1416,7 @@ void Sys_NewInstance( const char *name, const char *fmsg )
 //=======================================================================
 //			REGISTRY COMMON TOOLS
 //=======================================================================
-bool REG_GetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer)
+qboolean REG_GetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer)
 {
 	dword dwBufLen = 4096;
 	long lRet;
@@ -1432,7 +1432,7 @@ bool REG_GetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuff
 	return true;
 }
 
-bool REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer )
+qboolean REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer )
 {
 	dword dwBufLen = 4096;
 	long lRet;

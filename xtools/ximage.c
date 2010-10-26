@@ -6,15 +6,15 @@
 #include "xtools.h"
 #include "utils.h"
 
-bool unknown_rotate = false;
-bool unknown_flip = false;
+qboolean unknown_rotate = false;
+qboolean unknown_flip = false;
 
-bool ConvertImages( byte *mempool, const char *name, byte parms )
+qboolean ConvertImages( byte *mempool, const char *name, byte parms )
 {
 	rgbdata_t		*pic = FS_LoadImage( name, NULL, 0 );
 	int		flags = 0, width = 0, height = 0;
 	string		value, outputname;
-	bool		result;
+	qboolean		result;
 	const char	*ext;
 
 	if( !pic ) return false;

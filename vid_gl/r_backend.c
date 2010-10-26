@@ -75,9 +75,9 @@ static vec4_t	colorGreen   = { 0.0f, 1.0f, 0.0f, 1.0f };
 static vec4_t	colorBlue	   = { 0.0f, 0.0f, 1.0f, 1.0f };
 static vec4_t	colorYellow  = { 1.0f, 1.0f, 0.0f, 1.0f };
 static vec4_t	colorMagenta = { 1.0f, 0.0f, 1.0f, 1.0f };
-static bool	r_arraysLocked;
-static bool	r_normalsEnabled;
-static bool	r_triangleOutlines;
+static qboolean	r_arraysLocked;
+static qboolean	r_normalsEnabled;
+static qboolean	r_triangleOutlines;
 static ref_style_t	*r_currentLightStyle;
 
 static const meshbuffer_t *r_currentMeshBuffer;
@@ -946,11 +946,11 @@ void R_DeformVertices( void )
 R_VertexTCBase
 ==============
 */
-static bool R_VertexTCBase( const ref_stage_t *pass, int unit, matrix4x4 matrix )
+static qboolean R_VertexTCBase( const ref_stage_t *pass, int unit, matrix4x4 matrix )
 {
 	uint	i;
 	float	*outCoords;
-	bool	identityMatrix = false;
+	qboolean	identityMatrix = false;
 
 	Matrix4x4_LoadIdentity( matrix );
 
@@ -1561,7 +1561,7 @@ R_BindShaderpass
 static void R_BindShaderpass( const ref_stage_t *pass, texture_t *tex, int unit )
 {
 	matrix4x4	m1, m2, result;
-	bool	identityMatrix;
+	qboolean	identityMatrix;
 
 	if( !tex ) tex = R_ShaderpassTex( pass, unit );
 
@@ -1603,7 +1603,7 @@ void R_ModifyColor( const ref_stage_t *pass )
 	vec3_t		t, v;
 	int		i, c, bits;
 	byte		*bArray, *inArray, rgba[4] = { 255, 255, 255, 255 };
-	bool		noArray, identityAlpha, entityAlpha;
+	qboolean		noArray, identityAlpha, entityAlpha;
 	const waveFunc_t	*rgbgenfunc, *alphagenfunc;
 
 	noArray = ( pass->flags & SHADERSTAGE_NOCOLORARRAY ) && !r_colorFog;
@@ -1877,7 +1877,7 @@ void R_ModifyColor( const ref_stage_t *pass )
 		float fogNormal[3], vpnNormal[3];
 		float fogDist, vpnDist, fogShaderDistScale;
 		int fogptype;
-		bool alphaFog;
+		qboolean alphaFog;
 		int blendsrc, blenddst;
 
 		blendsrc = pass->glState & GLSTATE_SRCBLEND_MASK;
@@ -2121,7 +2121,7 @@ static void R_RenderMeshGLSL_Material( void )
 {
 	int		i, tcgen;
 	int		state;
-	bool		breakIntoPasses = false;
+	qboolean		breakIntoPasses = false;
 	int		program, object;
 	int		programFeatures = 0;
 	texture_t		*base, *normalmap, *glossmap, *decalmap;
@@ -2403,7 +2403,7 @@ static void R_RenderMeshGLSL_Distortion( void )
 	matrix4x4		unused;
 	ref_stage_t	*pass = r_accumPasses[0];
 	texture_t		*portaltexture1, *portaltexture2;
-	bool		frontPlane;
+	qboolean		frontPlane;
 
 	if( !( RI.params & ( RP_PORTALCAPTURED|RP_PORTALCAPTURED2 )))
 		return;
@@ -2596,7 +2596,7 @@ R_AccumulatePass
 */
 static void R_AccumulatePass( ref_stage_t *pass )
 {
-	bool accumulate, renderNow;
+	qboolean accumulate, renderNow;
 	const ref_stage_t *prevPass;
 
 	// for depth texture we render light's view to, ignore passes that do not write into depth buffer
@@ -2704,7 +2704,7 @@ void R_SetupLightmapMode( void )
 R_NeedLightmapPass
 ================
 */
-bool R_NeedLightmapPass( msurface_t *surf )
+qboolean R_NeedLightmapPass( msurface_t *surf )
 {
 	if( r_fullbright->integer )
 		return false;

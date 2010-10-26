@@ -10,7 +10,7 @@
 Image_LoadBMP
 =============
 */
-bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 {
 	byte	*buf_p, *pixbuf;
 	byte	palette[256][4];
@@ -235,7 +235,7 @@ bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	return true;
 }
 
-bool Image_SaveBMP( const char *name, rgbdata_t *pix )
+qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 {
 	file_t		*pfile = NULL;
 	BITMAPFILEHEADER	bmfh;

@@ -14,7 +14,7 @@ static studiohdr_t	*pm_studiohdr;
 static mplane_t	pm_hitboxplanes[6];	// there a temp hitbox
 static matrix4x4	pm_studiomatrix;
 static matrix4x4	pm_studiobones[MAXSTUDIOBONES];
-typedef bool 	(*pfnTrace)( pmtrace_t *trace );
+typedef qboolean 	(*pfnTrace)( pmtrace_t *trace );
 static float	trace_realfraction;
 static vec3_t	trace_startmins, trace_endmins;
 static vec3_t	trace_startmaxs, trace_endmaxs;
@@ -532,7 +532,7 @@ static void PM_StudioSetupBones( physent_t *pe )
 	pe->sequence = oldseq; // restore original value
 }
 
-static bool PM_StudioSetupModel( physent_t *pe )
+static qboolean PM_StudioSetupModel( physent_t *pe )
 {
 	model_t	*mod = pe->studiomodel;
 
@@ -545,7 +545,7 @@ static bool PM_StudioSetupModel( physent_t *pe )
 	return true;
 }
 
-bool PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs )
+qboolean PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
 	studiohdr_t	*phdr;
@@ -576,13 +576,13 @@ PM_ClipBoxToHitbox
 trace hitbox
 ================
 */
-bool PM_ClipBoxToHitbox( pmtrace_t *trace )
+qboolean PM_ClipBoxToHitbox( pmtrace_t *trace )
 {
 	int	i;
 	mplane_t	*p, *clipplane;
 	float	enterfrac, leavefrac, distfrac;
 	float	d, d1, d2;
-	bool	getout, startout;
+	qboolean	getout, startout;
 	float	f;
 
 	enterfrac = -1.0f;
@@ -707,7 +707,7 @@ PM_TestBoxInHitbox
 test point trace in hibox
 ================
 */
-bool PM_TestBoxInHitbox( pmtrace_t *trace )
+qboolean PM_TestBoxInHitbox( pmtrace_t *trace )
 {
 	int		i;
 	mplane_t		*p;
@@ -779,7 +779,7 @@ PM_StudioIntersect
 testing for potentially intersection of trace and animation bboxes
 ================
 */
-static bool PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
+static qboolean PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
 {
 	vec3_t	trace_mins, trace_maxs;
 	vec3_t	anim_mins, anim_maxs;
@@ -820,7 +820,7 @@ static bool PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mins, 
 	return BoundsIntersect( trace_mins, trace_maxs, anim_mins, anim_maxs );
 }
 
-bool PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr )
+qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr )
 {
 	vec3_t	start_l, end_l;
 	int	i, outBone = -1;

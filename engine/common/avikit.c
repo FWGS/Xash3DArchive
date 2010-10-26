@@ -10,9 +10,9 @@
 
 typedef struct movie_state_s
 {
-	bool		active;
-	bool		ignore_hwgamma;	// ignore hw gamma-correction
-	bool		quiet;		// ignore error messages
+	qboolean		active;
+	qboolean		ignore_hwgamma;	// ignore hw gamma-correction
+	qboolean		quiet;		// ignore error messages
 
 	PAVIFILE		pfile;		// avi file pointer
 	PAVISTREAM	video_stream;	// video stream pointer
@@ -50,7 +50,7 @@ typedef struct movie_state_s
 static movie_state_t	avi[2];
 
 // Converts a compressed audio stream into uncompressed PCM.
-bool AVI_ACMConvertAudio( movie_state_t *Avi )
+qboolean AVI_ACMConvertAudio( movie_state_t *Avi )
 {
 	WAVEFORMATEX	dest_header, *sh, *dh;
 	AVISTREAMINFO	stream_info;
@@ -165,7 +165,7 @@ bool AVI_ACMConvertAudio( movie_state_t *Avi )
 	return true;
 }
 
-bool AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration )
+qboolean AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration )
 {
 	ASSERT( Avi != NULL );
 
@@ -225,7 +225,7 @@ byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame )
 	return Avi->pframe_data;
 }
 
-bool AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info )
+qboolean AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info )
 {
 	ASSERT( Avi != NULL );
 
@@ -248,7 +248,7 @@ bool AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info )
 }
 
 // sync the current audio read to a specific offset
-bool AVI_SeekPosition( movie_state_t *Avi, dword offset )
+qboolean AVI_SeekPosition( movie_state_t *Avi, dword offset )
 {
 	int	breaker;
 
@@ -403,7 +403,7 @@ void AVI_CloseVideo( movie_state_t *Avi )
 	Mem_Set( Avi, 0, sizeof( movie_state_t ));
 }
 
-void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, bool ignore_hwgamma, bool quiet )
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, qboolean quiet )
 {
 	AVISTREAMINFO	stream_info;
 	BITMAPINFOHEADER	bmih;
@@ -537,7 +537,7 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, b
 	Avi->active = true; // done
 }
 
-bool AVI_IsActive( movie_state_t *Avi )
+qboolean AVI_IsActive( movie_state_t *Avi )
 {
 	ASSERT( Avi != NULL );
 

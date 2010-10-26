@@ -179,10 +179,10 @@ FS_AddSideToPack
 
 ================
 */
-bool FS_AddSideToPack( const char *name, int adjust_flags )
+qboolean FS_AddSideToPack( const char *name, int adjust_flags )
 {
 	byte	*out, *flipped;
-	bool	resampled = false;
+	qboolean	resampled = false;
 	
 	// first side set average size for all cubemap sides!
 	if( !image.cubemap )
@@ -219,7 +219,7 @@ bool FS_AddSideToPack( const char *name, int adjust_flags )
 	return true;
 }
 
-bool FS_AddMipmapToPack( const byte *in, int width, int height )
+qboolean FS_AddMipmapToPack( const byte *in, int width, int height )
 {
 	int mipsize = width * height;
 	int outsize = width * height;
@@ -255,8 +255,8 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 {
           const char	*ext = FS_FileExtension( filename );
 	string		path, loadname, sidename;
-	bool		dds_installed = false; // current loadformats list supported dds
-	bool		anyformat = true;
+	qboolean		dds_installed = false; // current loadformats list supported dds
+	qboolean		anyformat = true;
 	int		i, filesize = 0;
 	const loadpixformat_t *format;
 	const cubepack_t	*cmap;
@@ -432,10 +432,10 @@ Image_Save
 writes image as any known format
 ================
 */
-bool FS_SaveImage( const char *filename, rgbdata_t *pix )
+qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 {
           const char	*ext = FS_FileExtension( filename );
-	bool		anyformat = !com.stricmp( ext, "" ) ? true : false;
+	qboolean		anyformat = !com.stricmp( ext, "" ) ? true : false;
 	string		path, savename;
 	const savepixformat_t *format;
 

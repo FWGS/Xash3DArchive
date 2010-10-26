@@ -46,7 +46,7 @@ typedef struct
 } WinConData;
 static WinConData s_wcd;
 
-void Con_ShowConsole( bool show )
+void Con_ShowConsole( qboolean show )
 {
 	if( !s_wcd.hWnd || Sys.hooked_out )
 		return;
@@ -77,7 +77,7 @@ void Con_SetInputText( const char *inputText )
 	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, com.strlen( inputText ), -1 );
 }
 
-static int Con_KeyEvent( int key, bool down )
+static int Con_KeyEvent( int key, qboolean down )
 {
 	char	inputBuffer[1024];
 

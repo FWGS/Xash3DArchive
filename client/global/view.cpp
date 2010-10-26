@@ -583,12 +583,14 @@ cl_entity_t *V_FindIntermisionSpot( ref_params_t *pparams )
 	for( int i = 0; i < pparams->num_entities; i++ )
 	{
 		ent = GetEntityByIndex( i );
+#if 0
 		if( ent && !stricmp( ent->curstate.classname, "info_intermission" ))
 		{
 			if( j > 15 ) break; // spotlist is full
 			spotindex[j] = ent->index; // save entindex
 			j++;
 		}
+#endif
 	}	
 	
 	// ok, we have list of intermission spots

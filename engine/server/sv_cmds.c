@@ -143,7 +143,7 @@ SV_SetPlayer
 Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
 ==================
 */
-bool SV_SetPlayer( void )
+qboolean SV_SetPlayer( void )
 {
 	char		*s;
 	sv_client_t	*cl;

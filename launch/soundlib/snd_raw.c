@@ -10,7 +10,7 @@
 Sound_LoadSND
 ============
 */
-bool Sound_LoadSND( const char *name, const byte *buffer, size_t filesize )
+qboolean Sound_LoadSND( const char *name, const byte *buffer, size_t filesize )
 {
 	// FIXME: implement
 	// this is doom1 raw sounds - set rate to 11025, width to 1, channels to 1

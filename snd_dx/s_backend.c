@@ -36,11 +36,11 @@ typedef enum
 convar_t		*s_wavonly;
 
 static HWND	snd_hwnd;
-static bool	dsound_init;
-static bool	wav_init;
-static bool	snd_firsttime = true;
-static bool	snd_isdirect, snd_iswave;
-static bool	primary_format_set;
+static qboolean	dsound_init;
+static qboolean	wav_init;
+static qboolean	snd_firsttime = true;
+static qboolean	snd_isdirect, snd_iswave;
+static qboolean	primary_format_set;
 static int	snd_buffer_count = 0;
 static int	snd_sent, snd_completed;
 
@@ -62,8 +62,8 @@ MMTIME		mmstarttime;
 LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
 LPDIRECTSOUND	pDS;
 
-bool SNDDMA_InitDirect( void *hInst );
-bool SNDDMA_InitWav( void );
+qboolean SNDDMA_InitDirect( void *hInst );
+qboolean SNDDMA_InitWav( void );
 void SNDDMA_FreeSound( void );
 
 static const char *DSoundError( int error )
@@ -87,7 +87,7 @@ static const char *DSoundError( int error )
 DS_CreateBuffers
 ==================
 */
-static bool DS_CreateBuffers( void *hInst )
+static qboolean DS_CreateBuffers( void *hInst )
 {
 	DSBUFFERDESC	dsbuf;
 	DSBCAPS		dsbcaps;
@@ -746,7 +746,7 @@ The window have been destroyed and recreated
 between a deactivate and an activate.
 ===========
 */
-void S_Activate( bool active, void *hInst )
+void S_Activate( qboolean active, void *hInst )
 {
 	snd_hwnd = (HWND)hInst;
 

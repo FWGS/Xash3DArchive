@@ -114,7 +114,7 @@ Image_VTFCalcImageSize
 main image size without header and lowres
 ================
 */
-size_t Image_VTFCalcImageSize( vtf_t *hdr, bool oldformat ) 
+size_t Image_VTFCalcImageSize( vtf_t *hdr, qboolean oldformat ) 
 {
 	size_t	buffsize = 0;
 	int	i, numSides = 1;
@@ -143,11 +143,11 @@ sides
     layers 
 ================
 */
-void Image_VTFSwapBuffer( vtf_t *hdr, const byte *input, size_t input_size, bool oldformat )
+void Image_VTFSwapBuffer( vtf_t *hdr, const byte *input, size_t input_size, qboolean oldformat )
 {
 	int	numSides = (image.flags & IMAGE_CUBEMAP) ? oldformat ? 6 : CB_FACECOUNT : 1; 
 	vtex_t	*texture = Mem_Alloc( Sys.imagepool, sizeof( vtex_t ));
-	bool	ignore_mips = (image.cmd_flags & IL_IGNORE_MIPS); 
+	qboolean	ignore_mips = (image.cmd_flags & IL_IGNORE_MIPS); 
 	uint	i, j, k, out_size = 0;
 	byte	*src, *dst;
 
@@ -209,12 +209,12 @@ void Image_VTFSwapBuffer( vtf_t *hdr, const byte *input, size_t input_size, bool
 Image_LoadVTF
 =============
 */
-bool Image_LoadVTF( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadVTF( const char *name, const byte *buffer, size_t filesize )
 {            
 	vtf_t	vtf;
 	byte	*fin;
 	string	shortname;
-	bool	oldformat = false;
+	qboolean	oldformat = false;
 	int	i, flags, vtfFormat;
 	uint	hdrSize, biasSize, resSize, lowResSize;
 

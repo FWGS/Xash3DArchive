@@ -191,7 +191,7 @@ void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer )
 	msprite_t		*psprite;
 	dframetype_t	*pframetype;
 	int		i, size, numframes;
-	bool		twoSided;
+	qboolean		twoSided;
 
 	pin = (dsprite_t *)buffer;
 	i = LittleLong( pin->version );
@@ -313,7 +313,7 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 	ref_shader_t	*shader;
 	byte		*buffer;
 	dframetype_t	*pframetype;
-	bool		twoSided;
+	qboolean		twoSided;
 	int		i, numframes;
 	short		*numi;
 
@@ -689,7 +689,7 @@ static float R_SpriteGlowBlend( ref_entity_t *e )
 	return brightness;
 }
 
-bool R_SpriteOccluded( ref_entity_t *e )
+qboolean R_SpriteOccluded( ref_entity_t *e )
 {
 	if( e->rendermode == kRenderGlow )
 	{
@@ -774,7 +774,7 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 
 			// pev->colormap is hardcoded to attachment number
 			// NOTE: use interpolated origin to avoid flickering attachments
-			VectorAdd( e->parent->origin, e->parent->lerp->attachment_origin[num-1], e->origin2 );
+			VectorAdd( e->parent->origin, e->parent->lerp->attachment[num-1], e->origin2 );
 		}
 		else VectorCopy( e->parent->origin, e->origin2 );
 	}
@@ -827,9 +827,9 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 		pglDepthRange( gldepthmin, gldepthmax );
 }
 
-bool R_CullSpriteModel( ref_entity_t *e )
+qboolean R_CullSpriteModel( ref_entity_t *e )
 {
-	bool	frustum, query, clipped;
+	qboolean	frustum, query, clipped;
 
 	if( !e->model->extradata )
 		return true;

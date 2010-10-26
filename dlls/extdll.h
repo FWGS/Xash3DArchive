@@ -64,10 +64,10 @@ typedef float vec_t;				// needed before including progdefs.h
 // Shared engine/DLL constants
 #include "const.h"
 #include "progdefs.h"
-#include "edict.h"
+#include "../engine/edict.h"
 
 // Shared header describing protocol between engine and DLLs
-#include "eiface.h"
+#include "../engine/eiface.h"
 
 // Shared header between the client DLL and the game DLLs
 #include "cdll_dll.h"

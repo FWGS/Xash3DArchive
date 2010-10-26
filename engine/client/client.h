@@ -41,7 +41,7 @@ typedef struct frame_s
 	int		first_entity;	// into the circular cl_packet_entities[]
 
 	int		delta_sequence;	// last valid sequence
-	bool		valid;		// cleared if delta parsing was invalid
+	qboolean		valid;		// cleared if delta parsing was invalid
 } frame_t;
 
 #define CMD_BACKUP		MULTIPLAYER_BACKUP	// allow a lot of command backups for very fast systems
@@ -64,9 +64,9 @@ typedef struct
 	int		parsecountmod;		// modulo with network window
 	double		parsecounttime;		// timestamp of parse
 									
-	bool		video_prepped;		// false if on new level or new ref dll
-	bool		audio_prepped;		// false if on new level or new snd dll
-	bool		force_refdef;		// vid has changed, so we can't use a paused refdef
+	qboolean		video_prepped;		// false if on new level or new ref dll
+	qboolean		audio_prepped;		// false if on new level or new snd dll
+	qboolean		force_refdef;		// vid has changed, so we can't use a paused refdef
 
 	int		delta_sequence;		// acknowledged sequence number
 
@@ -75,7 +75,7 @@ typedef struct
 
 	int		last_incoming_sequence;
 
-	bool		force_send_usercmd;
+	qboolean		force_send_usercmd;
 
 	frame_t		frame;			// received from server
 	int		surpressCount;		// number of messages rate supressed
@@ -111,12 +111,13 @@ typedef struct
 	int		movemessages;
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 
-	model_t		*worldmodel;			// pointer to world
+	char		model_precache[MAX_MODELS][CS_SIZE];
+	char		sound_precache[MAX_SOUNDS][CS_SIZE];
 
-	// locally derived information from server state
-	model_t		models[MAX_MODELS];
-	sound_t		sound_precache[MAX_SOUNDS];
-	shader_t		decal_shaders[MAX_DECALNAMES];
+	sound_t		sound_index[MAX_SOUNDS];
+	shader_t		decal_index[MAX_DECALS];
+
+	model_t		*worldmodel;			// pointer to world
 } client_t;
 
 /*
@@ -179,6 +180,8 @@ typedef struct
 	pfnUserMsgHook	func;	// user-defined function	
 } cl_user_message_t;
 
+typedef void (*pfnEventHook)( event_args_t *args );
+
 typedef struct
 {
 	char		name[CS_SIZE];
@@ -190,7 +193,7 @@ typedef struct
 {
 	HSPRITE		hFontTexture;		// handle to texture shader
 	wrect_t		fontRc[256];		// rectangles
-	bool		valid;			// rectangles are valid
+	qboolean		valid;			// rectangles are valid
 } cl_font_t;
 
 typedef struct
@@ -203,7 +206,7 @@ typedef struct
 	int		scissor_y;
 	int		scissor_width;
 	int		scissor_height;
-	bool		scissor_test;
+	qboolean		scissor_test;
 
 	// holds text color
 	rgba_t		textColor;
@@ -247,6 +250,8 @@ typedef struct
 	int		trace_hull;		// used by PM_SetTraceHull
 	int		oldcount;			// used by PM_Push\Pop state
 
+	char		draw_decals[MAX_DECALS][64];	// a list of unique decalindexes
+
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
@@ -278,7 +283,7 @@ typedef struct
 
 	ui_globalvars_t	*globals;
 
-	bool		drawLogo;			// set to TRUE if logo.avi missed or corrupted
+	qboolean		drawLogo;			// set to TRUE if logo.avi missed or corrupted
 	long		logo_xres;
 	long		logo_yres;
 } gameui_static_t;
@@ -286,8 +291,8 @@ typedef struct
 typedef struct
 {
 	connstate_t	state;
-	bool		initialized;
-	bool		changelevel;		// during changelevel
+	qboolean		initialized;
+	qboolean		changelevel;		// during changelevel
 
 	keydest_t		key_dest;
 
@@ -340,9 +345,9 @@ typedef struct
 	string		movies[MAX_MOVIES];
 
 	// demo recording info must be here, so it isn't clearing on level change
-	bool		demorecording;
-	bool		demoplayback;
-	bool		demowaiting;		// don't record until a non-delta message is received
+	qboolean		demorecording;
+	qboolean		demoplayback;
+	qboolean		demowaiting;		// don't record until a non-delta message is received
 	string		demoname;			// for demo looping
 
 	file_t		*demofile;
@@ -376,7 +381,7 @@ extern convar_t	*userinfo;
 
 //=============================================================================
 
-bool CL_CheckOrDownloadFile( const char *filename );
+qboolean CL_CheckOrDownloadFile( const char *filename );
 void CL_ParseConfigString( sizebuf_t *msg );
 void CL_SetLightstyle( int i );
 void CL_RunLightStyles( void );
@@ -434,7 +439,7 @@ void CL_Stop_f( void );
 // cl_game.c
 //
 void CL_UnloadProgs( void );
-bool CL_LoadProgs( const char *name );
+qboolean CL_LoadProgs( const char *name );
 void CL_ParseUserMessage( sizebuf_t *msg, int svc_num );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
 void CL_DrawHUD( int state );
@@ -483,7 +488,7 @@ void SCR_DrawFPS( void );
 void V_Init (void);
 void V_Shutdown( void );
 void V_ClearScene( void );
-bool V_PreRender( void );
+qboolean V_PreRender( void );
 void V_PostRender( void );
 void V_RenderView( void );
 
@@ -495,15 +500,15 @@ void CL_SetSolidPlayers( int playernum );
 void CL_InitClientMove( void );
 void CL_PredictMovement( void );
 void CL_CheckPredictionError( void );
-bool CL_IsPredicted( void );
+qboolean CL_IsPredicted( void );
 
 //
 // cl_frame.c
 //
-void CL_ParsePacketEntities( sizebuf_t *msg, bool delta );
+void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
-bool CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
-bool CL_IsPlayerIndex( int idx );
+qboolean CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
+qboolean CL_IsPlayerIndex( int idx );
 
 //
 // cl_tent.c
@@ -518,7 +523,7 @@ void CL_LightForPoint( const vec3_t point, vec3_t ambientLight );
 void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
 void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
-void CL_PlaybackEvent( int flags, const cl_entity_t *pInvoker, word eventindex, float delay, float *origin,
+void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 word CL_PrecacheEvent( const char *name );
 void CL_ResetEvent( event_info_t *ei );
@@ -527,7 +532,7 @@ void CL_FireEvents( void );
 //
 // console.c
 //
-bool Con_Visible( void );
+qboolean Con_Visible( void );
 void Con_Init( void );
 void Con_VidInit( void );
 void Con_ToggleConsole_f( void );
@@ -545,27 +550,27 @@ void Con_Close( void );
 // cl_menu.c
 //
 void UI_UnloadProgs( void );
-bool UI_LoadProgs( const char *name );
+qboolean UI_LoadProgs( const char *name );
 void UI_UpdateMenu( float realtime );
-void UI_KeyEvent( int key, bool down );
+void UI_KeyEvent( int key, qboolean down );
 void UI_MouseMove( int x, int y );
-void UI_SetActiveMenu( bool fActive );
+void UI_SetActiveMenu( qboolean fActive );
 void UI_AddServerToList( netadr_t adr, const char *info );
 void UI_GetCursorPos( int *pos_x, int *pos_y );
 void UI_SetCursorPos( int pos_x, int pos_y );
-void UI_ShowCursor( bool show );
-bool UI_CreditsActive( void );
+void UI_ShowCursor( qboolean show );
+qboolean UI_CreditsActive( void );
 void UI_CharEvent( int key );
-bool UI_MouseInRect( void );
-bool UI_IsVisible( void );
+qboolean UI_MouseInRect( void );
+qboolean UI_IsVisible( void );
 
 //
 // cl_video.c
 //
 void SCR_InitCinematic( void );
 void SCR_FreeCinematic( void );
-bool SCR_PlayCinematic( const char *name );
-bool SCR_DrawCinematic( void );
+qboolean SCR_PlayCinematic( const char *name );
+qboolean SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
 void CL_PlayVideo_f( void );

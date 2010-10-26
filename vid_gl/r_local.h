@@ -209,7 +209,7 @@ typedef struct ref_entity_s
 	uint			m_nCachedFrameCount;// keep current render frame
 	int			index;		// viewmodel has entindex -1
 	refEntityType_t		rtype;
-	bool			doOcclusionTest;	// check this entity for occlusion
+	qboolean			doOcclusionTest;	// check this entity for occlusion
 
 	struct ref_model_s		*model;		// opaque type outside refresh
 	struct ref_entity_s		*parent;		// link to parent entity (FOLLOW or weaponmodel)
@@ -506,22 +506,22 @@ ref_shader_t	*R_OcclusionShader( void );
 void		R_AddOccludingSurface( msurface_t *surf, ref_shader_t *shader );
 int		R_GetOcclusionQueryNum( int type, int key );
 int		R_IssueOcclusionQuery( int query, ref_entity_t *e, vec3_t mins, vec3_t maxs );
-bool		R_OcclusionQueryIssued( int query );
-uint		R_GetOcclusionQueryResult( int query, bool wait );
-bool		R_GetOcclusionQueryResultBool( int type, int key, bool wait );
+qboolean		R_OcclusionQueryIssued( int query );
+uint		R_GetOcclusionQueryResult( int query, qboolean wait );
+qboolean		R_GetOcclusionQueryResultBool( int type, int key, qboolean wait );
 void		R_EndOcclusionPass( void );
 void		R_ShutdownOcclusionQueries( void );
 
 //
 // r_draw.c
 //
-void R_Set2DMode( bool enable );
+void R_Set2DMode( qboolean enable );
 void R_DrawSetColor( const void *data );
 void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, shader_t shadernum );
-void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, bool redraw );
-void R_DrawSetParms( shader_t handle, kRenderMode_t rendermode, int frame );
+void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, qboolean redraw );
+void R_DrawSetParms( shader_t handle, int rendermode, int frame );
 void R_DrawGetParms( int *w, int *h, int *f, int frame, shader_t shader );
-void Tri_RenderMode( const kRenderMode_t mode );
+void Tri_RenderMode( const int mode );
 void Tri_Normal3f( const float x, const float y, const float z );
 void Tri_Vertex3f( const float x, const float y, const float z );
 void Tri_Color4ub( const byte r, const byte g, const byte b, const byte a );
@@ -561,8 +561,8 @@ void		R_ShowTextures( void );
 texture_t		*R_LoadTexture( const char *name, rgbdata_t *pic, int samples, texFlags_t flags );
 texture_t		*R_FindTexture( const char *name, const byte *buf, size_t size, texFlags_t flags );
 
-bool		VID_ScreenShot( const char *filename, int shot_type );
-bool		VID_CubemapShot( const char *base, uint size, const float *vieworg, bool skyshot );
+qboolean		VID_ScreenShot( const char *filename, int shot_type );
+qboolean		VID_CubemapShot( const char *base, uint size, const float *vieworg, qboolean skyshot );
 
 //
 // r_light.c
@@ -573,7 +573,7 @@ void	R_EndBuildingLightmaps( void );
 
 void	R_UpdateSurfaceLightmap( msurface_t *surf );
 void	R_LightBounds( const vec3_t origin, float intensity, vec3_t mins, vec3_t maxs );
-bool	R_SurfPotentiallyLit( msurface_t *surf );
+qboolean	R_SurfPotentiallyLit( msurface_t *surf );
 uint	R_AddSurfDlighbits( msurface_t *surf, uint dlightbits );
 void	R_AddDynamicLights( uint dlightbits, int state );
 void	R_LightForEntity( ref_entity_t *e, byte *bArray );
@@ -591,31 +591,31 @@ void	R_DrawCoronas( void );
 void	GL_Cull( int cull );
 void	GL_SetState( int state );
 void	GL_FrontFace( int front );
-void	R_BeginFrame( bool clearScene );
+void	R_BeginFrame( qboolean clearScene );
 void	R_EndFrame( void );
 void	R_RenderScene( const ref_params_t *fd );
 void	R_RenderView( const ref_params_t *fd );
 void	R_ClearScene( void );
 
-bool	R_CullBox( const vec3_t mins, const vec3_t maxs, const uint clipflags );
-bool	R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
-bool	R_VisCullBox( const vec3_t mins, const vec3_t maxs );
-bool	R_VisCullSphere( const vec3_t origin, float radius );
+qboolean	R_CullBox( const vec3_t mins, const vec3_t maxs, const uint clipflags );
+qboolean	R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
+qboolean	R_VisCullBox( const vec3_t mins, const vec3_t maxs );
+qboolean	R_VisCullSphere( const vec3_t origin, float radius );
 int	R_CullModel( ref_entity_t *e, vec3_t mins, vec3_t maxs, float radius );
 
 mfog_t	*R_FogForSphere( const vec3_t centre, const float radius );
-bool	R_CompletelyFogged( mfog_t *fog, vec3_t origin, float radius );
+qboolean	R_CompletelyFogged( mfog_t *fog, vec3_t origin, float radius );
 
 void	R_LoadIdentity( void );
 void	R_RotateForEntity( ref_entity_t *e );
 void	R_TranslateForEntity( ref_entity_t *e );
-bool	R_TransformToScreen_Vec3( const vec3_t in, vec3_t out );
+qboolean	R_TransformToScreen_Vec3( const vec3_t in, vec3_t out );
 void	R_TransformVectorToScreen( const ref_params_t *rd, const vec3_t in, vec2_t out );
-void	R_TransformEntityBBox( ref_entity_t *e, vec3_t mins, vec3_t maxs, vec3_t bbox[8], bool local );
+void	R_TransformEntityBBox( ref_entity_t *e, vec3_t mins, vec3_t maxs, vec3_t bbox[8], qboolean local );
 
-bool	R_SpriteOverflow( void );
-bool	R_PushSpritePoly( const meshbuffer_t *mb );
-bool	R_PushSprite( const meshbuffer_t *mb, int type, float right, float left, float up, float down );
+qboolean	R_SpriteOverflow( void );
+qboolean	R_PushSpritePoly( const meshbuffer_t *mb );
+qboolean	R_PushSprite( const meshbuffer_t *mb, int type, float right, float left, float up, float down );
 
 #define NUM_CUSTOMCOLORS	16
 void	R_InitCustomColors( void );
@@ -640,7 +640,7 @@ void		R_AllocMeshbufPointers( refinst_t *RI );
 
 void		R_SortMeshes( void );
 void		R_DrawMeshes( void );
-void		R_DrawTriangleOutlines( bool showTris, bool showNormals );
+void		R_DrawTriangleOutlines( qboolean showTris, qboolean showNormals );
 void		R_DrawPortals( void );
 
 void		R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
@@ -694,7 +694,7 @@ int	R_FindGLSLProgram( const char *name );
 int	R_RegisterGLSLProgram( const char *name, const char *string, unsigned int features );
 int	R_GetProgramObject( int elem );
 void	R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir,
-	vec4_t ambient, vec4_t diffuse, ref_style_t *lightStyle, bool frontPlane, int TexWidth, int TexHeight,
+	vec4_t ambient, vec4_t diffuse, ref_style_t *lightStyle, qboolean frontPlane, int TexWidth, int TexHeight,
 	float projDistance, float offsetmappingScale );
 
 void	R_ShutdownGLSLPrograms( void );
@@ -708,9 +708,9 @@ void	R_ProgramDump_f( void );
 void R_InitDecals( void );
 void R_ClearDecals( void );
 void R_ShutdownDecals( void );
-bool R_DecalShoot( shader_t texture, int entity, int modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
+qboolean R_DecalShoot( shader_t texture, int entity, int modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
 decal_t *R_DecalFromMeshbuf( const meshbuffer_t *mb );
-int R_CreateDecalList( decallist_t *pList, bool changelevel );
+int R_CreateDecalList( decallist_t *pList, qboolean changelevel );
 void R_AddSurfaceDecals( msurface_t *surf );
 void R_PushDecal( const meshbuffer_t *mb );
 
@@ -729,8 +729,8 @@ void R_SpriteInit( void );
 mspriteframe_t *R_GetSpriteFrame( ref_model_t *pModel, int frame, float yawAngle );
 ref_shader_t *CL_LoadSprite( const char *szSpriteName );
 void R_DrawSpriteModel( const meshbuffer_t *mb );
-bool R_SpriteOccluded( ref_entity_t *e );
-bool R_CullSpriteModel( ref_entity_t *e );
+qboolean R_SpriteOccluded( ref_entity_t *e );
+qboolean R_CullSpriteModel( ref_entity_t *e );
 void R_SpriteDrawDebug( void );
 
 //
@@ -740,12 +740,12 @@ void R_SpriteDrawDebug( void );
 void R_AddStudioModelToList( ref_entity_t *e );
 void R_DrawStudioModel( const meshbuffer_t *mb );
 void R_StudioModelBBox( ref_entity_t *e, vec3_t mins, vec3_t maxs );
-bool R_CullStudioModel( ref_entity_t *e );
+qboolean R_CullStudioModel( ref_entity_t *e );
 void R_StudioRunEvents( ref_entity_t *e );
 void R_StudioDrawHitbox( ref_entity_t *e, int iHitbox );
 void R_StudioDrawDebug( void );
 void R_StudioInit( void );
-bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, pmtrace_t *tr );
+qboolean R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, pmtrace_t *tr );
 void R_StudioAllocExtradata( struct cl_entity_s *in, ref_entity_t *e );
 void R_StudioFreeAllExtradata( void );
 void R_StudioShutdown( void );
@@ -755,8 +755,8 @@ void R_StudioShutdown( void );
 // r_register.c
 //
 void R_NewMap( void );
-bool R_Init( bool full );
-void R_Shutdown( bool full );
+qboolean R_Init( qboolean full );
+void R_Shutdown( qboolean full );
 
 //
 // r_opengl.c
@@ -773,8 +773,8 @@ void R_CheckForErrors_( const char *filename, const int fileline );
 void	R_MarkLeaves( void );
 void	R_DrawWorld( void );
 void	R_BmodelDrawDebug( void );
-bool	R_SurfPotentiallyVisible( msurface_t *surf );
-bool	R_CullBrushModel( ref_entity_t *e );
+qboolean	R_SurfPotentiallyVisible( msurface_t *surf );
+qboolean	R_CullBrushModel( ref_entity_t *e );
 void		R_AddBrushModelToList( ref_entity_t *e );
 
 void		R_ClearSurfOcclusionQueryKeys( void );
@@ -788,7 +788,7 @@ skydome_t		*R_CreateSkydome( byte *mempool, float skyheight, ref_shader_t **farb
 void		R_FreeSkydome( skydome_t *skydome );
 void		R_ClearSkyBox( void );
 void		R_DrawSky( ref_shader_t *shader );
-bool		R_AddSkySurface( msurface_t *fa );
+qboolean		R_AddSkySurface( msurface_t *fa );
 void		R_SetupSky( const char *name );
 void		R_FreeSky( void );
 
@@ -850,7 +850,7 @@ typedef struct
 	float		ambient[3];
 	rgba_t		environmentColor;
 
-	bool		deluxeMappingEnabled;  // true if deluxeMaps is true and r_lighting_deluxemaps->integer != 0
+	qboolean		deluxeMappingEnabled;  // true if deluxeMaps is true and r_lighting_deluxemaps->integer != 0
 } mapconfig_t;
 
 extern mapconfig_t	mapConfig;

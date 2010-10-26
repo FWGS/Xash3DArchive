@@ -49,12 +49,12 @@ typedef struct system_s
 	int			printlevel;
 
 	// log stuff
-	bool			log_active;
+	qboolean			log_active;
 	char			log_path[MAX_SYSPATH];
 	FILE			*logfile;
 	
-	bool			hooked_out;
-	bool			stuffcmdsrun;
+	qboolean			hooked_out;
+	qboolean			stuffcmdsrun;
 	char			ModuleName[4096];		// exe.filename
 
 	HANDLE			hMutex;
@@ -63,17 +63,17 @@ typedef struct system_s
 	dll_info_t		*linked_dll;
 
 	char			caption[64];
-	bool			con_readonly;
-	bool			con_showalways;
-	bool			con_showcredits;
-	bool			con_silentmode;
+	qboolean			con_readonly;
+	qboolean			con_showalways;
+	qboolean			con_showcredits;
+	qboolean			con_silentmode;
 	byte			*basepool;
 	byte			*imagepool;
 	byte			*soundpool;
 	byte			*scriptpool;
 	byte			*stringpool;
-	bool			shutdown_issued;
-	bool			error;
+	qboolean			shutdown_issued;
+	qboolean			error;
 
 	// simply profiling
 	double			start, end;
@@ -99,7 +99,7 @@ typedef struct convar_s
 
 	// this part unique for convar_t
 	int		integer;		// atoi( string )
-	bool		modified;		// set each time the cvar is changed
+	qboolean		modified;		// set each time the cvar is changed
 
 	// this part are private to launch.dll
 	char		*reset_string;	// cvar_restart will reset to this value
@@ -114,7 +114,7 @@ extern stdlib_api_t	com;
 //
 // console.c
 //
-void Con_ShowConsole( bool show );
+void Con_ShowConsole( qboolean show );
 void Con_PrintA(const char *pMsg);
 void Con_PrintW(const char *pMsg);
 void Con_CreateConsole( void );
@@ -134,15 +134,15 @@ void Sys_NewInstance( const char *name, const char *fmsg );
 double Sys_DoubleTime( void );
 char *Sys_GetClipboardData( void );
 char *Sys_GetCurrentUser( void );
-bool Sys_GetModuleName( char *buffer, size_t length );
+qboolean Sys_GetModuleName( char *buffer, size_t length );
 void Sys_Sleep( int msec );
 void Sys_Init( void );
 void Sys_Exit( void );
 void Sys_Abort( void );
-bool Sys_LoadLibrary( const char *dll_name, dll_info_t *dll );
+qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll );
 void* Sys_GetProcAddress ( dll_info_t *dll, const char* name );
-void Sys_ShellExecute( const char *path, const char *parms, bool exit );
-bool Sys_FreeLibrary ( dll_info_t *dll );
+void Sys_ShellExecute( const char *path, const char *parms, qboolean exit );
+qboolean Sys_FreeLibrary ( dll_info_t *dll );
 void Sys_WaitForQuit( void );
 void Sys_InitLog( void );
 void Sys_CloseLog( void );
@@ -160,15 +160,15 @@ void Sys_ThreadSetDefault( void );
 void Sys_ThreadLock( void );
 void Sys_ThreadUnlock( void );
 int Sys_GetNumThreads( void );
-void Sys_RunThreadsOnIndividual( int workcnt, bool showpacifier, void(*func)(int));
-void Sys_RunThreadsOn( int workcnt, bool showpacifier, void(*func)(int));
+void Sys_RunThreadsOnIndividual( int workcnt, qboolean showpacifier, void(*func)(int));
+void Sys_RunThreadsOn( int workcnt, qboolean showpacifier, void(*func)(int));
 
 #define Msg Sys_Msg
 #define MsgDev Sys_MsgDev
 
 // registry common tools
-bool REG_GetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer);
-bool REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer);
+qboolean REG_GetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer);
+qboolean REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer);
 
 //
 // network.c
@@ -176,14 +176,14 @@ bool REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuff
 void NET_Init( void );
 void NET_Shutdown( void );
 void NET_Sleep( int msec );
-void NET_Config( bool net_enable );
-bool NET_IsLocalAddress( netadr_t adr );
+void NET_Config( qboolean net_enable );
+qboolean NET_IsLocalAddress( netadr_t adr );
 char *NET_AdrToString( const netadr_t a );
 char *NET_BaseAdrToString( const netadr_t a );
-bool NET_StringToAdr( const char *string, netadr_t *adr );
-bool NET_CompareAdr( const netadr_t a, const netadr_t b );
-bool NET_CompareBaseAdr( const netadr_t a, const netadr_t b );
-bool NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
+qboolean NET_StringToAdr( const char *string, netadr_t *adr );
+qboolean NET_CompareAdr( const netadr_t a, const netadr_t b );
+qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b );
+qboolean NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
 void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 //
@@ -202,7 +202,7 @@ size_t com_strcat(char *dst, const char *src );
 size_t com_strncpy(char *dst, const char *src, size_t siz);
 size_t com_strcpy(char *dst, const char *src );
 char *com_stralloc(byte *mempool, const char *s, const char *filename, int fileline);
-bool com_isdigit( const char *str );
+qboolean com_isdigit( const char *str );
 int com_atoi(const char *str);
 float com_atof(const char *str);
 void com_atov( float *vec, const char *str, size_t siz );
@@ -212,7 +212,7 @@ int com_strnicmp(const char *s1, const char *s2, int n);
 int com_stricmp(const char *s1, const char *s2);
 int com_strncmp (const char *s1, const char *s2, int n);
 int com_strcmp (const char *s1, const char *s2);
-bool com_stricmpext( const char *s1, const char *s2 );
+qboolean com_stricmpext( const char *s1, const char *s2 );
 const char* com_timestamp( int format );
 char *com_stristr( const char *string, const char *string2 );
 char *com_strstr( const char *string, const char *string2 );
@@ -234,7 +234,7 @@ uint Com_HashKey( const char *string, uint hashSize );
 
 // lzss compression
 uint lzss_compress( const byte *in, const byte *inend, byte *out, byte *outend );
-bool lzss_decompress( const byte *in, const byte *inend, byte *out, byte *outend );
+qboolean lzss_decompress( const byte *in, const byte *inend, byte *out, byte *outend );
 
 //
 // math.c
@@ -273,7 +273,7 @@ void _mem_freepool(byte **poolptr, const char *filename, int fileline);
 void _mem_emptypool(byte *poolptr, const char *filename, int fileline);
 void _mem_free(void *data, const char *filename, int fileline);
 void _mem_check(const char *filename, int fileline);
-bool _is_allocated( byte *poolptr, void *data );
+qboolean _is_allocated( byte *poolptr, void *data );
 
 #define Mem_Alloc(pool, size) _mem_alloc(pool, size, __FILE__, __LINE__)
 #define Mem_Realloc(pool, ptr, size) _mem_realloc(pool, ptr, size, __FILE__, __LINE__)
@@ -298,16 +298,16 @@ void FS_Shutdown( void );
 void FS_InitEditor( void );
 void FS_InitRootDir( char *path );
 void FS_ClearSearchPath( void );
-void FS_AllowDirectPaths( bool enable );
+void FS_AllowDirectPaths( qboolean enable );
 void FS_AddGameHierarchy( const char *dir, int flags );
 int FS_CheckParm( const char *parm );
 void FS_LoadGameInfo( const char *rootfolder );
 void FS_FileBase( const char *in, char *out );
 const char *FS_FileExtension( const char *in );
 void FS_DefaultExtension( char *path, const char *extension );
-bool FS_GetParmFromCmdLine( char *parm, char *out, size_t size );
+qboolean FS_GetParmFromCmdLine( char *parm, char *out, size_t size );
 void FS_ExtractFilePath( const char* const path, char* dest );
-const char *FS_GetDiskPath( const char *name, bool gamedironly );
+const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
 void FS_UpdateEnvironmentVariables( void );
 const char *FS_FileWithoutPath( const char *in );
 extern char sys_rootdir[];
@@ -323,19 +323,19 @@ void W_Close( wfile_t *wad );
 
 // simply files managment interface
 byte *FS_LoadFile (const char *path, fs_offset_t *filesizeptr );
-bool FS_WriteFile (const char *filename, const void *data, fs_offset_t len);
+qboolean FS_WriteFile (const char *filename, const void *data, fs_offset_t len);
 
 // imagelib exports
 rgbdata_t *FS_LoadImage( const char *name, const byte *buffer, size_t size );
-bool Image_Process( rgbdata_t **pix, int w, int h, uint flags );
-bool FS_SaveImage( const char *name, rgbdata_t *image );
+qboolean Image_Process( rgbdata_t **pix, int w, int h, uint flags );
+qboolean FS_SaveImage( const char *name, rgbdata_t *image );
 bpc_desc_t *Image_GetPixelFormat( pixformat_t type );
 void FS_FreeImage( rgbdata_t *pack );
 
 // soundlib exports
 wavdata_t *FS_LoadSound( const char *name, const byte *buffer, size_t size );
-bool Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
-bool FS_SaveSound( const char *name, wavdata_t *sound );
+qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
+qboolean FS_SaveSound( const char *name, wavdata_t *sound );
 void FS_FreeSound( wavdata_t *pack );
 
 stream_t *FS_OpenStream( const char *filename );
@@ -346,27 +346,27 @@ void FS_FreeStream( stream_t *stream );
 search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
 
 // files managment (like fopen, fread etc)
-file_t *FS_Open( const char *filepath, const char *mode, bool gamedironly );
+file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
 fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize );
 fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize );
 int FS_VPrintf( file_t *file, const char *format, va_list ap );
 int FS_Seek( file_t *file, fs_offset_t offset, int whence );
 int FS_Gets( file_t *file, byte *string, size_t bufsize );
 int FS_Printf( file_t *file, const char *format, ... );
-fs_offset_t FS_FileSize( const char *filename, bool gamedironly );
-fs_offset_t FS_FileTime( const char *filename, bool gamedironly );
+fs_offset_t FS_FileSize( const char *filename, qboolean gamedironly );
+fs_offset_t FS_FileTime( const char *filename, qboolean gamedironly );
 int FS_Print( file_t *file, const char *msg );
-bool FS_Rename( const char *oldname, const char *newname );
-bool FS_FileExists( const char *filename, bool gamedironly );
-bool FS_Delete( const char *path );
+qboolean FS_Rename( const char *oldname, const char *newname );
+qboolean FS_FileExists( const char *filename, qboolean gamedironly );
+qboolean FS_Delete( const char *path );
 int FS_UnGetc( file_t *file, byte c );
 void FS_StripExtension( char *path );
 fs_offset_t FS_Tell( file_t *file );
-bool FS_Eof( file_t *file );
+qboolean FS_Eof( file_t *file );
 void FS_Purge( file_t *file );
 int FS_Close( file_t *file );
 int FS_Getc( file_t *file );
-bool FS_Eof( file_t *file );
+qboolean FS_Eof( file_t *file );
 
 //
 // cvar.c
@@ -375,7 +375,7 @@ convar_t *Cvar_FindVar( const char *var_name );
 void Cvar_RegisterVariable( cvar_t *variable );
 convar_t *Cvar_Get( const char *var_name, const char *value, int flags, const char *description );
 void Cvar_Set( const char *var_name, const char *value );
-convar_t *Cvar_Set2( const char *var_name, const char *value, bool force );
+convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force );
 void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback );
 void Cvar_FullSet( const char *var_name, const char *value, int flags );
 void Cvar_SetLatched( const char *var_name, const char *value );
@@ -384,16 +384,16 @@ float Cvar_VariableValue( const char *var_name );
 int Cvar_VariableInteger( const char *var_name );
 char *Cvar_VariableString( const char *var_name );
 void Cvar_DirectSet( cvar_t *var, const char *value );
-bool Cvar_Command( void );
+qboolean Cvar_Command( void );
 void Cvar_WriteVariables( file_t *f );
 void Cvar_Init( void );
 char *Cvar_Userinfo( void );
 char *Cvar_Serverinfo( void );
-extern bool userinfo_modified;
+extern qboolean userinfo_modified;
 char *Info_ValueForKey( char *s, char *key );
 void Info_RemoveKey( char *s, char *key );
 void Info_SetValueForKey( char *s, char *key, char *value );
-bool Info_Validate( char *s );
+qboolean Info_Validate( char *s );
 void Info_Print( char *s );
 extern convar_t *cvar_vars;
 
@@ -413,11 +413,11 @@ void Cmd_Unlink( void );
 void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_desc );
 void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function );
 void Cmd_RemoveCommand( const char *cmd_name );
-bool Cmd_Exists( const char *cmd_name );
+qboolean Cmd_Exists( const char *cmd_name );
 void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback );
-bool Cmd_GetMapList( const char *s, char *completedname, int length );
-bool Cmd_GetDemoList( const char *s, char *completedname, int length );
-bool Cmd_GetMovieList( const char *s, char *completedname, int length );
+qboolean Cmd_GetMapList( const char *s, char *completedname, int length );
+qboolean Cmd_GetDemoList( const char *s, char *completedname, int length );
+qboolean Cmd_GetMovieList( const char *s, char *completedname, int length );
 void Cmd_TokenizeString( const char *text );
 void Cmd_ExecuteString( const char *text );
 void Cmd_ForwardToServer( void );
@@ -434,7 +434,7 @@ int VFS_Gets( vfile_t *file, byte *string, size_t bufsize );
 byte *VFS_GetBuffer( vfile_t *file );
 fs_offset_t VFS_Tell (vfile_t *file );
 file_t *VFS_Close( vfile_t *file );
-bool VFS_Eof( vfile_t *file );
+qboolean VFS_Eof( vfile_t *file );
 
 //
 // crclib.c
@@ -470,19 +470,19 @@ typedef struct script_s
 	// private part of script
 	string		name;
 	int		line;
-	bool		allocated;
+	qboolean		allocated;
 	punctuation_t	*punctuations;
-	bool		tokenAvailable;
+	qboolean		tokenAvailable;
 	token_t		token;
 };
 
-bool PS_ReadToken( script_t *script, scFlags_t flags, token_t *token );
+qboolean PS_ReadToken( script_t *script, scFlags_t flags, token_t *token );
 void PS_SaveToken( script_t *script, token_t *token );
-bool PS_GetString( script_t *script, int flags, char *value, size_t size );
-bool PS_GetDouble( script_t *script, int flags, double *value );
-bool PS_GetFloat( script_t *script, int flags, float *value );
-bool PS_GetUnsigned( script_t *script, int flags, uint *value );
-bool PS_GetInteger( script_t *script, int flags, int *value );
+qboolean PS_GetString( script_t *script, int flags, char *value, size_t size );
+qboolean PS_GetDouble( script_t *script, int flags, double *value );
+qboolean PS_GetFloat( script_t *script, int flags, float *value );
+qboolean PS_GetUnsigned( script_t *script, int flags, uint *value );
+qboolean PS_GetInteger( script_t *script, int flags, int *value );
 
 void PS_SkipWhiteSpace( script_t *script );
 void PS_SkipRestOfLine( script_t *script );
@@ -491,10 +491,10 @@ void PS_SkipBracedSection( script_t *script, int depth );
 void PS_ScriptError( script_t *script, scFlags_t flags, const char *fmt, ... );
 void PS_ScriptWarning( script_t *script, scFlags_t flags, const char *fmt, ... );
 
-bool PS_MatchToken( token_t *token, const char *keyword );
+qboolean PS_MatchToken( token_t *token, const char *keyword );
 void PS_SetPunctuationsTable( script_t *script, punctuation_t *punctuationsTable );
 void PS_ResetScript( script_t *script );
-bool PS_EndOfScript( script_t *script );
+qboolean PS_EndOfScript( script_t *script );
 
 script_t	*PS_LoadScript( const char *filename, const char *buf, size_t size );
 void	PS_FreeScript( script_t *script );
@@ -520,7 +520,7 @@ int StringTable_CreateNewSystem( const char *name, size_t max_strings );
 string_t StringTable_SetString( int handle, const char *string );
 const char *StringTable_GetString( int handle, string_t index );
 int StringTable_LoadSystem( wfile_t *wad, const char *name );
-bool StringTable_SaveSystem( int h, wfile_t *wad );
+qboolean StringTable_SaveSystem( int h, wfile_t *wad );
 const char *StringTable_GetName( int handle );
 void StringTable_DeleteSystem( int handle );
 void StringTable_ClearSystem( int handle );

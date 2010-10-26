@@ -43,7 +43,7 @@ BRUSH MODELS
 R_SurfPotentiallyVisible
 =================
 */
-bool R_SurfPotentiallyVisible( msurface_t *surf )
+qboolean R_SurfPotentiallyVisible( msurface_t *surf )
 {
 	if( !surf->texinfo )
 		return false;
@@ -61,7 +61,7 @@ bool R_SurfPotentiallyVisible( msurface_t *surf )
 R_CullSurface
 =================
 */
-bool R_CullSurface( msurface_t *surf, uint clipflags )
+qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 {
 	ref_shader_t *shader = surf->shader;
 
@@ -136,7 +136,7 @@ static meshbuffer_t *R_AddSurfaceToList( msurface_t *surf, unsigned int clipflag
 
 	if( shader->flags & SHADER_SKYPARMS )
 	{
-		bool vis = R_AddSkySurface( surf );
+		qboolean vis = R_AddSkySurface( surf );
 		if(( RI.params & RP_NOSKY ) && vis )
 		{
 			R_AddMeshToList( MB_MODEL, surf->fog, shader, surf - r_worldbrushmodel->surfaces + 1 );
@@ -169,9 +169,9 @@ static meshbuffer_t *R_AddSurfaceToList( msurface_t *surf, unsigned int clipflag
 R_CullBrushModel
 =================
 */
-bool R_CullBrushModel( ref_entity_t *e )
+qboolean R_CullBrushModel( ref_entity_t *e )
 {
-	bool		rotated;
+	qboolean		rotated;
 	ref_model_t	*model = e->model;
 	mbrushmodel_t	*bmodel = (mbrushmodel_t *)model->extradata;
 	int		i;
@@ -266,7 +266,7 @@ R_AddBrushModelToList
 */
 void R_AddBrushModelToList( ref_entity_t *e )
 {
-	bool		rotated;
+	qboolean		rotated;
 	uint		i, dlightbits;
 	ref_model_t	*model = e->model;
 	mbrushmodel_t	*bmodel = (mbrushmodel_t *)model->extradata;

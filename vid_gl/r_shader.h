@@ -339,19 +339,19 @@ void R_ShutdownShaders( void );
 void R_ShaderList_f( void );
 void R_ShaderDump_f( void );
 ref_shader_t *R_FindShader( const char *name, int type, int ignoreType );
-ref_shader_t *R_LoadShader( const char *name, int type, bool forceDefault, int addFlags, int ignoreType );
+ref_shader_t *R_LoadShader( const char *name, int type, qboolean forceDefault, int addFlags, int ignoreType );
 void Mod_FreeShader( const char *name ); // used for delete save menu previews only
 
 // misc utilities
 void R_ShaderFreeUnused( void );
 float R_LookupTable( int tableIndex, float index );
 float *R_GetTableByHandle( int tableIndex );
-bool R_ShaderCheckCache( const char *name );
+qboolean R_ShaderCheckCache( const char *name );
 void R_SetInternalTexture( struct mip_s *mt );
-void Shader_TouchImages( ref_shader_t *shader, bool free_unused );
+void Shader_TouchImages( ref_shader_t *shader, qboolean free_unused );
 void R_ShaderAddStageTexture( texture_t *mipTex );
 void R_ShaderSetMiptexFlags( uint addFlags );
-void R_ShaderSetRenderMode( kRenderMode_t mode, bool twoSided );
+void R_ShaderSetRenderMode( int mode, qboolean twoSided );
 void R_SetAnimFrequency( float anim_fps );
 void R_ShaderAddStageIntervals( float interval );
 void R_DeformvBBoxForShader( const ref_shader_t *shader, vec3_t ebbox );

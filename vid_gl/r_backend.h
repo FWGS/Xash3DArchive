@@ -92,7 +92,7 @@ typedef struct
 {
 	// renderer global variables
 	int		registration_sequence;
-	kRenderMode_t	iRenderMode;
+	int	iRenderMode;
 
 	// vbo stuff
 	int		numVertexBufferObjects;
@@ -103,7 +103,7 @@ typedef struct
 	vbo_buffer_t	*tcoordBuffer[MAX_TEXTURE_UNITS];
 
 	// OpenGL matrix states
-	bool		modelviewIdentity;
+	qboolean		modelviewIdentity;
 
 	// super lightstyles
 	ref_style_t	superLightStyles[MAX_SUPER_STYLES];
@@ -282,19 +282,19 @@ static _inline void R_PushMesh( const mesh_t *mesh, int features )
 	r_backacc.c_totalVerts += numverts;
 }
 
-static _inline bool R_MeshOverflow( const mesh_t *mesh )
+static _inline qboolean R_MeshOverflow( const mesh_t *mesh )
 {
 	if( !mesh ) return false;
 	return ( r_backacc.numVerts + mesh->numVerts > MAX_ARRAY_VERTS || r_backacc.numElems + mesh->numElems > MAX_ARRAY_ELEMENTS );
 }
 
-static _inline bool R_MeshOverflow2( const mesh_t *mesh1, const mesh_t *mesh2 )
+static _inline qboolean R_MeshOverflow2( const mesh_t *mesh1, const mesh_t *mesh2 )
 {
 	return ( r_backacc.numVerts + mesh1->numVerts + mesh2->numVerts > MAX_ARRAY_VERTS ||
 		r_backacc.numElems + mesh1->numElems + mesh2->numElems > MAX_ARRAY_ELEMENTS );
 }
 
-static _inline bool R_InvalidMesh( const mesh_t *mesh )
+static _inline qboolean R_InvalidMesh( const mesh_t *mesh )
 {
 	return ( !mesh->numVerts || !mesh->numElems ||mesh->numVerts > MAX_ARRAY_VERTS || mesh->numElems > MAX_ARRAY_ELEMENTS );
 }
@@ -373,8 +373,8 @@ typedef struct
 	int		depth_bits;
 	int		stencil_bits;
 
-	bool		allowCDS;
-	bool		deviceSupportsGamma;
+	qboolean		allowCDS;
+	qboolean		deviceSupportsGamma;
 	int		prev_mode;
 } glconfig_t;
 
@@ -386,33 +386,33 @@ typedef struct
 	word		stateRamp[768];		// original gamma ramp
 
 	int		width, height;
-	bool		fullScreen;
-	bool		wideScreen;
+	qboolean		fullScreen;
+	qboolean		wideScreen;
 
-	bool		initializedMedia;
+	qboolean		initializedMedia;
 
 	int		activeTMU;
 	GLuint		currentTextures[MAX_TEXTURE_UNITS];
 	GLenum		currentEnvModes[MAX_TEXTURE_UNITS];
-	GLboolean		texIdentityMatrix[MAX_TEXTURE_UNITS];
+	GLqbooleanean		texIdentityMatrix[MAX_TEXTURE_UNITS];
 	GLint		genSTEnabled[MAX_TEXTURE_UNITS];	// 0 - disabled, OR 1 - S, OR 2 - T, OR 4 - R
 	GLint		texCoordArrayMode[MAX_TEXTURE_UNITS];	// 0 - disabled, 1 - enabled, 2 - cubemap
 
 	rgba_t		draw_color;
-	kRenderMode_t	draw_rendermode;			// rendermode for drawing
+	int	draw_rendermode;			// rendermode for drawing
 	int		draw_frame;			// will be reset after each drawing
 
 	int		faceCull;
 	int		frontFace;
 
-	bool		stencilEnabled;
-	bool		in2DMode;
+	qboolean		stencilEnabled;
+	qboolean		in2DMode;
 } glstate_t;
 
 typedef struct
 {
-	bool		fActive;		// drawing in progress
-	kRenderMode_t	currentRenderMode;
+	qboolean		fActive;		// drawing in progress
+	int	currentRenderMode;
 	shader_t		currentShader;
 	int		vertexState;
 	int		drawMode;
@@ -424,16 +424,16 @@ typedef struct
 	vec4_t		fogColor;
 	float		fogStartDist;
 	float		fogEndDist;
-	bool		fogEnabled;
+	qboolean		fogEnabled;
 
 	int		features;
 	int		numVertex;
 	int		numColor;
 	int		numIndex;
 
-	bool		noCulling;
-	bool		checkFlush;
-	bool		hasNormals;
+	qboolean		noCulling;
+	qboolean		checkFlush;
+	qboolean		hasNormals;
 } tristate_t;
 
 extern glconfig_t	glConfig;
@@ -442,7 +442,7 @@ extern tristate_t	triState;
 	
 // r_register.c
 void GL_InitBackend( void );
-bool GL_Support( int r_ext );
+qboolean GL_Support( int r_ext );
 void GL_InitExtensions( void );
 void GL_ShutdownBackend( void );
 void GL_UpdateSwapInterval( void );
@@ -450,7 +450,7 @@ void GL_UpdateGammaRamp( void );
 void GL_SetExtension( int r_ext, int enable );
 void GL_BuildGammaTable( void );
 
-bool R_Init_OpenGL( void );
+qboolean R_Init_OpenGL( void );
 void R_Free_OpenGL( void );
 
 #endif /*__R_BACKEND_H__*/

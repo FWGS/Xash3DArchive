@@ -67,7 +67,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 {
 	edict_t		*ent;
 	byte		*pset;
-	bool		fullvis = false;
+	qboolean		fullvis = false;
 	sv_client_t	*cl, *netclient;
 	entity_state_t	*state;
 	int		e, player;
@@ -111,7 +111,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( ent->v.pushmsec == sv.net_framenum )
 			continue;
 
-		if( ent->v.flags & FL_CHECK_PHS )
+		if( ent->v.effects & EF_REQUEST_PHS )
 			pset = clientphs;
 		else pset = clientpvs;
 
@@ -258,7 +258,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 
 		if( newnum > oldnum )
 		{	
-			bool	force;
+			qboolean	force;
 
 			if( EDICT_NUM( oldent->number )->free )
 				force = true;	// entity completely removed from server

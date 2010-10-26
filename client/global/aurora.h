@@ -86,7 +86,7 @@ public:
 	ParticleType( char *szFilename );
 
 	bool		m_bIsDefined; // is this ParticleType just a placeholder?
-	kRenderMode_t	m_iRenderMode;
+	int	m_iRenderMode;
 	int		m_iDrawCond;
 	int		m_iCollision;
 	RandomRange	m_Bounce;

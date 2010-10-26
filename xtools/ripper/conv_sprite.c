@@ -43,7 +43,7 @@ struct qcsprite_s
 
 	int	type;		// rendering type
 	int	texFormat;	// half-life texture
-	bool	truecolor;	// spr32
+	qboolean	truecolor;	// spr32
 	byte	palette[256][4];	// shared palette
 
 	int	numgroup;		// groups counter
@@ -223,7 +223,7 @@ void *SPR_ConvertFrame( const char *name, const char *ext, void *pin, int framen
 	return (void *)((byte *)(pinframe + 1) + pixels ); // no mipmap stored
 }
 
-bool SP2_ConvertFrame( const char *name, const char *ext, int framenum )
+qboolean SP2_ConvertFrame( const char *name, const char *ext, int framenum )
 {
 	byte	*fin;
 	size_t	filesize;
@@ -276,7 +276,7 @@ void *SPR_ConvertGroup( const char *name, const char *ext, void *pin, int framen
 	return ptemp;
 }
 
-bool SPR_WriteScript( const char *name, const char *ext )
+qboolean SPR_WriteScript( const char *name, const char *ext )
 {
 	string	shortname;
 	int	i, j;
@@ -338,7 +338,7 @@ bool SPR_WriteScript( const char *name, const char *ext )
 ConvSPR
 ============
 */
-bool ConvSPR( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvSPR( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	dframetype_t	*pframetype = NULL;
 	dspriteq2_t	*pinq2;

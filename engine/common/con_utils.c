@@ -10,7 +10,7 @@
 #include "bspfile.h"
 
 #ifdef _DEBUG
-void DBG_AssertFunction( bool fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
+void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
 {
 	if( fExpr ) return;
 
@@ -33,7 +33,7 @@ Cmd_GetMapList
 Prints or complete map filename
 =====================================
 */
-bool Cmd_GetMapList( const char *s, char *completedname, int length )
+qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	file_t		*f;
@@ -56,7 +56,7 @@ bool Cmd_GetMapList( const char *s, char *completedname, int length )
 		int		ver = -1, lumpofs = 0, lumplen = 0;
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 		script_t		*ents = NULL;
-		bool		gearbox;
+		qboolean		gearbox;
 			
 		if( com.stricmp( ext, "bsp" )) continue;
 		com.strncpy( message, "^1error^7", sizeof( message ));
@@ -163,7 +163,7 @@ Cmd_GetFontList
 Prints or complete font filename
 =====================================
 */
-bool Cmd_GetFontList( const char *s, char *completedname, int length )
+qboolean Cmd_GetFontList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -208,7 +208,7 @@ Cmd_GetDemoList
 Prints or complete demo filename
 =====================================
 */
-bool Cmd_GetDemoList( const char *s, char *completedname, int length )
+qboolean Cmd_GetDemoList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -252,7 +252,7 @@ Cmd_GetMovieList
 Prints or complete movie filename
 =====================================
 */
-bool Cmd_GetMovieList( const char *s, char *completedname, int length )
+qboolean Cmd_GetMovieList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -297,7 +297,7 @@ Cmd_GetMusicList
 Prints or complete background track filename
 =====================================
 */
-bool Cmd_GetMusicList( const char *s, char *completedname, int length )
+qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -343,7 +343,7 @@ Cmd_GetSavesList
 Prints or complete savegame filename
 =====================================
 */
-bool Cmd_GetSavesList( const char *s, char *completedname, int length )
+qboolean Cmd_GetSavesList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -388,7 +388,7 @@ Cmd_GetConfigList
 Prints or complete .cfg filename
 =====================================
 */
-bool Cmd_GetConfigList( const char *s, char *completedname, int length )
+qboolean Cmd_GetConfigList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -433,7 +433,7 @@ Cmd_GetSoundList
 Prints or complete sound filename
 =====================================
 */
-bool Cmd_GetSoundList( const char *s, char *completedname, int length )
+qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -475,7 +475,7 @@ bool Cmd_GetSoundList( const char *s, char *completedname, int length )
 
 	return true;
 }
-bool Cmd_GetStringTablesList( const char *s, char *completedname, int length )
+qboolean Cmd_GetStringTablesList( const char *s, char *completedname, int length )
 {
 	int	i, numtables;
 	string	tables[MAX_STRING_TABLES];
@@ -521,7 +521,7 @@ Cmd_GetItemsList
 Prints or complete item classname
 =====================================
 */
-bool Cmd_GetItemsList( const char *s, char *completedname, int length )
+qboolean Cmd_GetItemsList( const char *s, char *completedname, int length )
 {
 	search_t		*t;
 	string		matchbuf;
@@ -566,7 +566,7 @@ Cmd_GetTexturemodes
 Prints or complete sound filename
 =====================================
 */
-bool Cmd_GetTexturemodes( const char *s, char *completedname, int length )
+qboolean Cmd_GetTexturemodes( const char *s, char *completedname, int length )
 {
 	int	i, numtexturemodes;
 	string	texturemodes[6];	// keep an actual ( sizeof( gl_texturemode) / sizeof( gl_texturemode[0] ))
@@ -620,7 +620,7 @@ Cmd_GetGameList
 Prints or complete gamedir name
 =====================================
 */
-bool Cmd_GetGamesList( const char *s, char *completedname, int length )
+qboolean Cmd_GetGamesList( const char *s, char *completedname, int length )
 {
 	int	i, numgamedirs;
 	string	gamedirs[MAX_MODS];
@@ -657,7 +657,7 @@ bool Cmd_GetGamesList( const char *s, char *completedname, int length )
 	return true;
 }
 
-bool Cmd_CheckMapsList( bool fRefresh )
+qboolean Cmd_CheckMapsList( qboolean fRefresh )
 {
 	byte	buf[MAX_MSGLEN];
 	char	*buffer;
@@ -732,7 +732,7 @@ bool Cmd_CheckMapsList( bool fRefresh )
 				// if there are entities to parse, a missing message key just
 				// means there is no title, so clear the message string now
 				token_t	token;
-				bool	worldspawn = true;
+				qboolean	worldspawn = true;
 
 				message[0] = 0;
 				com.strncpy( message, "No Title", MAX_STRING );

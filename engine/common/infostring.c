@@ -110,7 +110,7 @@ char *Info_ValueForKey( const char *s, const char *key )
 	}
 }
 
-bool Info_RemoveKey( char *s, const char *key )
+qboolean Info_RemoveKey( char *s, const char *key )
 {
 	char	*start;
 	char	pkey[MAX_INFO_STRING];
@@ -198,14 +198,14 @@ Some characters are illegal in info strings because they
 can mess up the server's parsing
 ==================
 */
-bool Info_Validate( const char *s )
+qboolean Info_Validate( const char *s )
 {
 	if( com.strstr( s, "\"" )) return false;
 	if( com.strstr( s, ";" )) return false;
 	return true;
 }
 
-bool Info_SetValueForKey( char *s, const char *key, const char *value )
+qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
 {
 	char	newi[MAX_INFO_STRING], *v;
 	int	c, maxsize = MAX_INFO_STRING;

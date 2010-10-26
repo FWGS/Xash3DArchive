@@ -13,7 +13,7 @@ convar_t	*userinfo, *physinfo, *serverinfo;
 Cvar_InfoValidate
 ============
 */
-static bool Cvar_ValidateString( const char *s, bool isvalue )
+static qboolean Cvar_ValidateString( const char *s, qboolean isvalue )
 {
 	if( !s ) return false;
 	if( com.strstr( s, "\\" ) && !isvalue )
@@ -305,12 +305,12 @@ void Cvar_RegisterVariable( cvar_t *var )
 Cvar_Set2
 ============
 */
-convar_t *Cvar_Set2( const char *var_name, const char *value, bool force )
+convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 {
 	convar_t		*var;
 	const char	*pszValue;
 	char		szNew[MAX_SYSPATH];
-	bool		dll_variable = false;
+	qboolean		dll_variable = false;
 	
 	if( !Cvar_ValidateString( var_name, false ))
 	{
@@ -515,7 +515,7 @@ Cvar_FullSet
 void Cvar_FullSet( const char *var_name, const char *value, int flags )
 {
 	convar_t	*var;
-	bool	dll_variable = false;
+	qboolean	dll_variable = false;
 		
 	var = Cvar_FindVar( var_name );
 	if( !var ) 
@@ -719,7 +719,7 @@ Cvar_Command
 Handles variable inspection and changing from the console
 ============
 */
-bool Cvar_Command( void )
+qboolean Cvar_Command( void )
 {
 	convar_t	*v;
 

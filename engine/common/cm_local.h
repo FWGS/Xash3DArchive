@@ -24,7 +24,7 @@ typedef struct leaflist_s
 {
 	int		count;
 	int		maxcount;
-	bool		overflowed;
+	qboolean		overflowed;
 	short		*list;
 	vec3_t		mins, maxs;
 	int		topnode;		// for overflows where each leaf can't be stored individually
@@ -58,7 +58,7 @@ byte *CM_LeafPHS( int leafnum );
 int CM_PointLeafnum( const vec3_t p );
 mleaf_t *CM_PointInLeaf( const vec3_t p, mnode_t *node );
 int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
-bool CM_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
+qboolean CM_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
 int CM_HullPointContents( hull_t *hull, int num, const vec3_t p );
 int CM_PointContents( const vec3_t p );
 void CM_AmbientLevels( const vec3_t p, byte *pvolumes );
@@ -67,13 +67,13 @@ void CM_AmbientLevels( const vec3_t p, byte *pvolumes );
 // cm_portals.c
 //
 void CM_CalcPHS( void );
-byte *CM_FatPVS( const vec3_t org, bool portal );
-byte *CM_FatPHS( const vec3_t org, bool portal );
+byte *CM_FatPVS( const vec3_t org, qboolean portal );
+byte *CM_FatPHS( const vec3_t org, qboolean portal );
 
 //
 // cm_model.c
 //
-bool CM_InitPhysics( void );
+qboolean CM_InitPhysics( void );
 void CM_FreePhysics( void );
 script_t *CM_GetEntityScript( void );
 void CM_SetupHulls( float mins[4][3], float maxs[4][3] );
@@ -81,8 +81,8 @@ void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
 modtype_t CM_GetModelType( int handle );
 model_t *CM_ClipHandleToModel( int handle );
-void CM_BeginRegistration ( const char *name, bool clientload, uint *checksum );
-bool CM_RegisterModel( const char *name, int sv_index );
+void CM_BeginRegistration ( const char *name, qboolean clientload, uint *checksum );
+qboolean CM_RegisterModel( const char *name, int index );
 void *Mod_Extradata( int handle );
 void CM_EndRegistration( void );
 

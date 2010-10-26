@@ -525,7 +525,7 @@ void PRC_CheckParams( prc_t *pprc, prm_rng_t *prng );
 
 typedef struct
 {
-	bool	fused;			// true if slot in use
+	qboolean	fused;			// true if slot in use
 
 	int	b[FLT_M+1];		// filter numerator parameters  (convert 0.0-1.0 to 0-PMAX representation)
 	int	a[FLT_M+1];		// filter denominator parameters (convert 0.0-1.0 to 0-PMAX representation)
@@ -983,7 +983,7 @@ _inline int POS_GetNext ( pos_t *p )
 typedef struct
 {
 	pos_t	p;				// pos_t
-	bool	fhitend;				// flag indicating we hit end of oneshot wav
+	qboolean	fhitend;				// flag indicating we hit end of oneshot wav
 } pos_one_t;
 
 // set initial update value - fstep can have no more than 8 bits of integer and 20 bits of fract
@@ -1039,7 +1039,7 @@ _inline int POS_ONE_GetNext( pos_one_t *p1 )
 // delay line 
 typedef struct
 {
-	bool	fused;				// true if dly is in use
+	qboolean	fused;				// true if dly is in use
 	int	type;				// delay type
 	int	D;				// delay size, in samples
 	int	t;				// current tap, <= D
@@ -1400,7 +1400,7 @@ _inline void DLY_Mod( void *p, float v )
 
 typedef struct
 {
-	bool	fused;
+	qboolean	fused;
 	int	m;			// number of parallel plain or lowpass delays
 	int	fparallel;		// true if filters in parallel with delays, otherwise single output filter	
 	flt_t	*pflt;
@@ -1734,7 +1734,7 @@ _inline void RVA_Mod( void *p, float v )
 
 typedef struct
 {
-	bool	fused;
+	qboolean	fused;
 	int	n;			// series allpass delays
 	int	w[CDFR_DLYS];		// internal state array for series allpass filters
 	dly_t	*pdlys[CDFR_DLYS];		// array of pointers to delays
@@ -2099,7 +2099,7 @@ void LFOWAV_InitAll( void )
 
 typedef struct
 {
-	bool	fused;	// true if slot take
+	qboolean	fused;	// true if slot take
 	dly_t	*pdly;	// delay points to lfo wav within lfowav_t (don't free this)
 	float	f;	// playback frequency in hz
 	pos_t	pos;	// current position within wav table, looping
@@ -2133,7 +2133,7 @@ _inline float LFO_HzToStep( float freqHz )
 
 // return pointer to new lfo
 
-lfo_t *LFO_Alloc( int wtype, float freqHz, bool foneshot )
+lfo_t *LFO_Alloc( int wtype, float freqHz, qboolean foneshot )
 {
 	int	i, type = min( CLFOWAV - 1, wtype );
 	float	lfostep;
@@ -2239,7 +2239,7 @@ prm_rng_t lfo_rng[] =
 lfo_t * LFO_Params( prc_t *pprc )
 {
 	lfo_t	*plfo;
-	bool	foneshot = pprc->prm[lfo_ifoneshot] > 0 ? true : false;
+	qboolean	foneshot = pprc->prm[lfo_ifoneshot] > 0 ? true : false;
 
 	plfo = LFO_Alloc( pprc->prm[lfo_iwav], pprc->prm[lfo_irate], foneshot );
 
@@ -2286,7 +2286,7 @@ typedef struct
 	int	target;			// final ramp value
 	int	sign;			// increasing (1) or decreasing (-1) ramp
 	int	yprev;			// previous output value
-	bool	fhitend;			// true if hit end of ramp
+	qboolean	fhitend;			// true if hit end of ramp
 	pos_one_t	ps;			// current ramp output
 } rmp_t;
 
@@ -2325,7 +2325,7 @@ void RMP_SetNext( rmp_t *prmp, float ramptime, int targetval )
 	RMP_Init( prmp, ramptime, prmp->yprev, targetval );
 }
 
-_inline bool RMP_HitEnd( rmp_t *prmp )
+_inline qboolean RMP_HitEnd( rmp_t *prmp )
 {
 	return prmp->fhitend;
 }
@@ -2381,7 +2381,7 @@ _inline int RMP_GetCurrent( rmp_t *prmp )
 
 typedef struct
 {
-	bool	fused;
+	qboolean	fused;
 	dly_t	*pdly_in;		// input buffer space
 	dly_t	*pdly_out;	// output buffer space
 	int	*pin;		// input buffer (pdly_in->w)
@@ -2393,7 +2393,7 @@ typedef struct
 	int	cduplicate;	// # samples to duplicate (redundant - same as ccut)
 	int	iin;		// current index into input buffer (reading)
 	pos_one_t	psn;		// stepping index through output buffer
-	bool	fdup;		// true if duplicating, false if cutting
+	qboolean	fdup;		// true if duplicating, false if cutting
 	float	fstep;		// pitch shift & time compress/expand
 } ptc_t;
 
@@ -2659,7 +2659,7 @@ void TimeCompress( int *w, int *v, int cin, int cout, int cxfade, int ccut )
 _inline int PTC_GetNext( ptc_t *pptc, int x ) 
 {
 	int	iout, xout;
-	bool	fhitend = false;
+	qboolean	fhitend = false;
 
 	// write x into input buffer
 	ASSERT( pptc->iin < pptc->cin );
@@ -2810,8 +2810,8 @@ void PTC_Mod( ptc_t *pptc, float v )
 
 typedef struct
 {
-	bool	fused;
-	bool	fhitend;			// true if done
+	qboolean	fused;
+	qboolean	fhitend;			// true if done
 	int	ienv;			// current ramp
 	rmp_t	rmps[CENVRMPS];		// ramps
 } env_t;
@@ -2993,7 +2993,7 @@ _inline void ENV_Mod ( void *p, float v )
 
 typedef struct
 {
-	bool	fused;
+	qboolean	fused;
 	int	avg;			// accumulating average over sample window
 	int	cavg;			// count down
 	int	xout;			// current output value
@@ -3115,8 +3115,8 @@ _inline void EFO_Mod( void *p, float v )
 
 typedef struct
 {
-	bool	fused;
-	bool	fchanging;	// true if modulating to new delay value
+	qboolean	fused;
+	qboolean	fchanging;	// true if modulating to new delay value
 	dly_t	*pdly;		// delay
 	int	Dcur;		// current delay value
 	float	ramptime;		// ramp 'glide' time - time in seconds to change between values
@@ -3374,7 +3374,7 @@ void MDY_Mod( mdy_t *pmdy, float v )
 
 typedef struct
 {
-	bool	fused;
+	qboolean	fused;
 	mdy_t	*pmdy;			// modulatable delay
 	lfo_t	*plfo;			// modulating lfo
 	int	lfoprev;			// previous modulator value from lfo
@@ -3569,7 +3569,7 @@ _inline void CRS_Mod( void *p, float v )
 
 typedef struct
 {
-	bool	fused;
+	qboolean	fused;
 	float	gain;			// amplification 0-6.0
 	float	vthresh;			// clip distortion threshold 0-1.0
 	float	distmix;			// 0-1.0 mix of distortion with clean
@@ -4012,7 +4012,7 @@ _inline void * NULL_VParams( void *p ) { return (void *)(&nuls[0]); }
 // count - number of elements in the array
 // returns false if failed to init one or more processors
 
-bool PRC_InitAll( prc_t *prcs, int count ) 
+qboolean PRC_InitAll( prc_t *prcs, int count ) 
 { 
 	int		i;
 	prc_Param_t	pfnParam;		// allocation function - takes ptr to prc, returns ptr to specialized data struct for proc type
@@ -4020,7 +4020,7 @@ bool PRC_InitAll( prc_t *prcs, int count )
 	prc_GetNextN_t	pfnGetNextN;	// get next function, batch version
 	prc_Free_t	pfnFree;	
 	prc_Mod_t		pfnMod;	
-	bool		fok = true;
+	qboolean		fok = true;
 
 	// set up pointers to XXX_Free, XXX_GetNext and XXX_Params functions
 
@@ -4399,7 +4399,7 @@ void PSET_FreeAll() { int i; for( i = 0; i < CPSETS; i++ ) PSET_Free( &psets[i] 
 pset_t *PSET_Alloc( int ipsettemplate )
 {
 	pset_t	*ppset;
-	bool	fok;
+	qboolean	fok;
 	int	i;
 
 	// don't excede array bounds
@@ -4823,7 +4823,7 @@ convar_t	*dsp_stereo;	// set to 1 for true stereo processing.  2x perf hit.
 
 typedef struct
 {
-	bool	fused;
+	qboolean	fused;
 	int	cchan;			// 1-4 channels, ie: mono, FrontLeft, FrontRight, RearLeft, RearRight
 	pset_t	*ppset[DSPCHANMAX];		// current preset (1-4 channels)
 	int	ipset;			// current ipreset
@@ -5139,7 +5139,7 @@ void DSP_SetPreset( int idsp, int ipsetnew )
 ///////////////////////////////////////
 
 // return true if batch processing version of preset exists
-_inline bool FBatchPreset( pset_t *ppset )
+_inline qboolean FBatchPreset( pset_t *ppset )
 {
 	switch( ppset->type )
 	{
@@ -5154,7 +5154,7 @@ _inline bool FBatchPreset( pset_t *ppset )
 
 // Helper: called only from DSP_Process
 // mix front stereo buffer to mono buffer, apply dsp fx
-_inline void DSP_ProcessStereoToMono( dsp_t *pdsp, portable_samplepair_t *pbfront, int sampleCount, bool bcrossfading )
+_inline void DSP_ProcessStereoToMono( dsp_t *pdsp, portable_samplepair_t *pbfront, int sampleCount, qboolean bcrossfading )
 {
 	portable_samplepair_t *pbf = pbfront;		// pointer to buffer of front stereo samples to process
 	int count = sampleCount;
@@ -5229,7 +5229,7 @@ _inline void DSP_ProcessStereoToMono( dsp_t *pdsp, portable_samplepair_t *pbfron
 
 // Helper: called only from DSP_Process
 // DSP_Process stereo in to stereo out (if more than 2 procs, ignore them)
-_inline void DSP_ProcessStereoToStereo( dsp_t *pdsp, portable_samplepair_t *pbfront, int sampleCount, bool bcrossfading )
+_inline void DSP_ProcessStereoToStereo( dsp_t *pdsp, portable_samplepair_t *pbfront, int sampleCount, qboolean bcrossfading )
 {
 	portable_samplepair_t *pbf = pbfront;		// pointer to buffer of front stereo samples to process
 	int count = sampleCount;
@@ -5322,7 +5322,7 @@ void DSP_ClearState( void )
 
 void DSP_Process( int idsp, portable_samplepair_t *pbfront, int sampleCount )
 {
-	bool 	bcrossfading;
+	qboolean 	bcrossfading;
 	int	cprocs;		// output cannels (1, 2 or 4)
 	dsp_t	*pdsp;
 
@@ -5385,7 +5385,7 @@ void FreeDsps( void )
 }
 
 // alloc dsp processors
-bool AllocDsps( void )
+qboolean AllocDsps( void )
 {
 	DSP_InitAll();
 

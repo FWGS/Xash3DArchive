@@ -357,7 +357,7 @@ extern JDIMENSION jpeg_write_scanlines( j_compress_ptr cinfo, byte** scanlines, 
 static byte	jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
 static jmp_buf	error_load_jpeg;
 static jmp_buf	error_save_jpeg;
-static bool	jpeg_toolarge;
+static qboolean	jpeg_toolarge;
 
 // our own output manager for JPEG compression
 typedef struct
@@ -433,7 +433,7 @@ static void JPEG_ErrorSave( j_common_ptr cinfo )
 Image_LoadJPG
 =============
 */
-bool Image_LoadJPG( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize )
 {
 	struct jpeg_decompress_struct	cinfo;
 	struct jpeg_error_mgr	jerr;
@@ -573,7 +573,7 @@ static void JPEG_FileDest( j_compress_ptr cinfo, file_t *outfile )
 Image_SaveJPG
 =============
 */
-bool Image_SaveJPG( const char *name, rgbdata_t *pix )
+qboolean Image_SaveJPG( const char *name, rgbdata_t *pix )
 {
 	struct jpeg_compress_struct	cinfo;
 	struct jpeg_error_mgr	jerr;

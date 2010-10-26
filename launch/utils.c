@@ -167,7 +167,7 @@ typedef struct stringtable_s
 
 stringtable_t *dstring[MAX_STRING_TABLES];
 
-bool StringTable_CheckHandle( int handle, bool silent )
+qboolean StringTable_CheckHandle( int handle, qboolean silent )
 {
 	if( handle < 0 || handle > MAX_STRING_TABLES )
 	{
@@ -184,7 +184,7 @@ bool StringTable_CheckHandle( int handle, bool silent )
 	return true;
 }
 
-bool StringTable_CheckString( int handle, string_t str )
+qboolean StringTable_CheckString( int handle, string_t str )
 {
 	if(!StringTable_CheckHandle( handle, true ))
 		return false;
@@ -303,7 +303,7 @@ string_t StringTable_SetString( int handle, const char *string )
 	return dstring[handle]->numstrings - 1; // current index
 }
 
-bool StringTable_SaveSystem( int h, wfile_t *wad )
+qboolean StringTable_SaveSystem( int h, wfile_t *wad )
 {
 	int table_size;
 
@@ -603,7 +603,7 @@ uint lzss_compress( const byte *in, const byte *inend, byte *out, byte *outend )
 	return out - outstart;
 }
 
-bool lzss_decompress( const byte *in, const byte *inend, byte *out, byte *outend )
+qboolean lzss_decompress( const byte *in, const byte *inend, byte *out, byte *outend )
 {
 	int		i, commandbyte, code;
 	const byte	*copy;

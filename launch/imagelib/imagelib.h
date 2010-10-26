@@ -45,7 +45,7 @@ typedef struct loadformat_s
 {
 	const char *formatstring;
 	const char *ext;
-	bool (*loadfunc)( const char *name, const byte *buffer, size_t filesize );
+	qboolean (*loadfunc)( const char *name, const byte *buffer, size_t filesize );
 	image_hint_t hint;
 } loadpixformat_t;
 
@@ -53,7 +53,7 @@ typedef struct saveformat_s
 {
 	const char *formatstring;
 	const char *ext;
-	bool (*savefunc)( const char *name, rgbdata_t *pix );
+	qboolean (*savefunc)( const char *name, rgbdata_t *pix );
 } savepixformat_t;
 
 typedef struct imglib_s
@@ -98,7 +98,7 @@ typedef struct imglib_s
 	int		SizeOfPlane;	// bps * height
 	int		SizeOfData;	// SizeOfPlane * bps
 	int		SizeOfFile;	// Image_DxtGetSize
-	bool		(*decompress)( uint, int, int, uint, uint, uint, const void* );
+	qboolean		(*decompress)( uint, int, int, uint, uint, uint, const void* );
 
 	image_hint_t	hint;		// hint for some loaders
 	byte		*tempbuffer;	// for convert operations
@@ -465,14 +465,14 @@ extern byte *fs_mempool;
 extern const bpc_desc_t PFDesc[];
 
 void Image_RoundDimensions( int *scaled_width, int *scaled_height );
-byte *Image_ResampleInternal( const void *indata, int in_w, int in_h, int out_w, int out_h, int intype, bool *done );
+byte *Image_ResampleInternal( const void *indata, int in_w, int in_h, int out_w, int out_h, int intype, qboolean *done );
 byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int type, int flags );
 void Image_FreeImage( rgbdata_t *pack );
 void Image_Save( const char *filename, rgbdata_t *pix );
 size_t Image_DXTGetLinearSize( int type, int width, int height, int depth, int rgbcount );
 rgbdata_t *Image_Load(const char *filename, const byte *buffer, size_t buffsize );
-bool Image_Copy8bitRGBA( const byte *in, byte *out, int pixels );
-bool FS_AddMipmapToPack( const byte *in, int width, int height );
+qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels );
+qboolean FS_AddMipmapToPack( const byte *in, int width, int height );
 void Image_SetPixelFormat( int width, int height, int depth );
 void Image_ConvertPalTo24bit( rgbdata_t *pic );
 void Image_DecompressDDS( const byte *buffer, uint target );
@@ -482,7 +482,7 @@ void Image_GetPaletteBMP( const byte *pal );
 int Image_ComparePalette( const byte *pal );
 void Image_CopyPalette24bit( void );
 void Image_CopyPalette32bit( void );
-bool Image_ForceDecompress( void );
+qboolean Image_ForceDecompress( void );
 uint Image_ShortToFloat( word y );
 void Image_GetPaletteQ2( void );
 void Image_GetPaletteQ1( void );
@@ -492,31 +492,31 @@ void Image_GetPaletteD1( void );	// doom 2 on TNT :)
 //
 // formats load
 //
-bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadMDL( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadSPR( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadTGA( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadDDS( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadBMP( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadJPG( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadVTF( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadPNG( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadPCX( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadLMP( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadWAL( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadFLT( const char *name, const byte *buffer, size_t filesize );
-bool Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadTGA( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadVTF( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadPNG( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadFLT( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
 
 //
 // formats save
 //
-bool Image_SaveTGA( const char *name, rgbdata_t *pix );
-bool Image_SaveDDS( const char *name, rgbdata_t *pix );
-bool Image_SaveBMP( const char *name, rgbdata_t *pix );
-bool Image_SavePNG( const char *name, rgbdata_t *pix );
-bool Image_SaveJPG( const char *name, rgbdata_t *pix );
-bool Image_SavePCX( const char *name, rgbdata_t *pix );
+qboolean Image_SaveTGA( const char *name, rgbdata_t *pix );
+qboolean Image_SaveDDS( const char *name, rgbdata_t *pix );
+qboolean Image_SaveBMP( const char *name, rgbdata_t *pix );
+qboolean Image_SavePNG( const char *name, rgbdata_t *pix );
+qboolean Image_SaveJPG( const char *name, rgbdata_t *pix );
+qboolean Image_SavePCX( const char *name, rgbdata_t *pix );
 
 //
 // img_utils.c
@@ -524,7 +524,7 @@ bool Image_SavePCX( const char *name, rgbdata_t *pix );
 void Image_Reset( void );
 rgbdata_t *ImagePack( void );
 byte *Image_Copy( size_t size );
-bool Image_ValidSize( const char *name );
-bool Image_LumpValidSize( const char *name );
+qboolean Image_ValidSize( const char *name );
+qboolean Image_LumpValidSize( const char *name );
 
 #endif//IMAGELIB_H

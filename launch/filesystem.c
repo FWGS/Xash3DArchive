@@ -77,7 +77,7 @@ typedef struct wfile_s
 	byte		*mempool;	// W_ReadLump temp buffers
 	int		numlumps;
 	int		mode;
-	file_t		*file;
+	int		handle;
 	dlumpinfo_t	*lumps;
 	time_t		filetime;
 };
@@ -115,11 +115,11 @@ searchpath_t fs_directpath; // static direct path
 
 static void FS_InitMemory( void );
 const char *FS_FileExtension( const char *in );
-static searchpath_t *FS_FindFile( const char *name, int *index, bool gamedironly );
+static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedironly );
 static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char matchtype );
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack, fs_offset_t offset, fs_offset_t packsize, fs_offset_t realsize, int flags);
 static byte *W_LoadFile( const char *path, fs_offset_t *filesizeptr );
-static bool FS_SysFileExists( const char *path );
+static qboolean FS_SysFileExists( const char *path );
 static long FS_SysFileTime( const char *filename );
 static char W_TypeFromExt( const char *lumpname );
 static const char *W_ExtFromType( char lumptype );
@@ -133,8 +133,8 @@ char gs_basedir[MAX_SYSPATH]; // initial dir before loading gameinfo.txt (used f
 // command ilne parms
 int fs_argc;
 char *fs_argv[MAX_NUM_ARGVS];
-bool fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
-bool fs_use_wads = false; // some utilities needs this
+qboolean fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
+qboolean fs_use_wads = false; // some utilities needs this
 convar_t *fs_defaultdir;
 sysinfo_t SI;
 
@@ -152,7 +152,7 @@ PK3_GetEndOfCentralDir
 Extract the end of the central directory from a PK3 package
 ====================
 */
-bool PK3_GetEndOfCentralDir (const char *packfile, int packhandle, dpak3file_t *eocd)
+qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, dpak3file_t *eocd)
 {
 	fs_offset_t filesize, maxsize;
 	byte *buffer, *ptr;
@@ -359,7 +359,7 @@ PK3_GetTrueFileOffset
 Find where the true file data offset is
 ====================
 */
-bool PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
+qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 {
 	byte buffer [ZIP_LOCAL_CHUNK_BASE_SIZE];
 	fs_offset_t count;
@@ -389,7 +389,7 @@ FILEMATCH COMMON SYSTEM
 
 =============================================================================
 */
-int matchpattern(const char *in, const char *pattern, bool caseinsensitive)
+int matchpattern(const char *in, const char *pattern, qboolean caseinsensitive)
 {
 	int	c1, c2;
 
@@ -647,7 +647,7 @@ FS_FileBase
 Extracts the base name of a file (no path, no extension, assumes '/' as path separator)
 ============
 */
-void _FS_FileBase( const char *in, char *out, bool kill_backwardslash )
+void _FS_FileBase( const char *in, char *out, qboolean kill_backwardslash )
 {
 	int	len, start, end;
 
@@ -874,7 +874,7 @@ If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
 plain directories.
 ================
 */
-static bool FS_AddPack_Fullpath( const char *pakfile, bool *already_loaded, bool keep_plain_dirs, int flags )
+static qboolean FS_AddPack_Fullpath( const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs, int flags )
 {
 	searchpath_t	*search;
 	pack_t		*pak = NULL;
@@ -955,7 +955,7 @@ static bool FS_AddPack_Fullpath( const char *pakfile, bool *already_loaded, bool
 FS_AddWad_Fullpath
 ====================
 */
-static bool FS_AddWad_Fullpath( const char *wadfile, bool *already_loaded, bool keep_plain_dirs )
+static qboolean FS_AddWad_Fullpath( const char *wadfile, qboolean *already_loaded, qboolean keep_plain_dirs )
 {
 	searchpath_t	*search;
 	wfile_t		*wad = NULL;
@@ -1015,6 +1015,7 @@ static bool FS_AddWad_Fullpath( const char *wadfile, bool *already_loaded, bool 
 			search->next = fs_searchpaths;
 			fs_searchpaths = search;
 		}
+
 		MsgDev( D_NOTE, "Adding wadfile %s (%i files)\n", wadfile, wad->numlumps );
 		return true;
 	}
@@ -1037,8 +1038,7 @@ void FS_AddGameDirectory( const char *dir, int flags )
 {
 	stringlist_t	list;
 	searchpath_t	*search;
-	string		pakfile;
-	search_t		*wads;
+	string		fullpath;
 	int		i;
 
 	if(!( flags & FS_NOWRITE_PATH ))
@@ -1053,8 +1053,8 @@ void FS_AddGameDirectory( const char *dir, int flags )
 	{
 		if( !com.stricmp( FS_FileExtension( list.strings[i] ), "pak" ))
 		{
-			com.sprintf( pakfile, "%s%s", dir, list.strings[i] );
-			FS_AddPack_Fullpath( pakfile, NULL, false, flags );
+			com.sprintf( fullpath, "%s%s", dir, list.strings[i] );
+			FS_AddPack_Fullpath( fullpath, NULL, false, flags );
 		}
 	}
 
@@ -1063,8 +1063,8 @@ void FS_AddGameDirectory( const char *dir, int flags )
 	{
 		if( !com.stricmp( FS_FileExtension( list.strings[i]), "pk2" ))
 		{
-			com.sprintf( pakfile, "%s%s", dir, list.strings[i] );
-			FS_AddPack_Fullpath( pakfile, NULL, false, flags );
+			com.sprintf( fullpath, "%s%s", dir, list.strings[i] );
+			FS_AddPack_Fullpath( fullpath, NULL, false, flags );
 		}
 	}
 
@@ -1073,10 +1073,22 @@ void FS_AddGameDirectory( const char *dir, int flags )
 	{
 		if( !com.stricmp( FS_FileExtension( list.strings[i] ), "pk3" ))
 		{
-			com.sprintf( pakfile, "%s%s", dir, list.strings[i] );
-			FS_AddPack_Fullpath( pakfile, NULL, false, flags );
+			com.sprintf( fullpath, "%s%s", dir, list.strings[i] );
+			FS_AddPack_Fullpath( fullpath, NULL, false, flags );
 		}
 	}
+
+	// add any WAD package in the directory
+	for( i = 0; i < list.numstrings; i++ )
+	{
+		if( !com.stricmp( FS_FileExtension( list.strings[i] ), "wad" ))
+		{
+			com.sprintf( fullpath, "%s%s", dir, list.strings[i] );
+			FS_AddWad_Fullpath( fullpath, NULL, false );
+		}
+	}
+
+	stringlistfreecontents( &list );
 
 	// add the directory to the search path
 	// (unpacked files have the priority over packed files)
@@ -1086,19 +1098,7 @@ void FS_AddGameDirectory( const char *dir, int flags )
 	search->flags = flags;
 	fs_searchpaths = search;
 
-	stringlistfreecontents( &list );
 
-	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED || Sys.app_name == HOST_BSPLIB )
-	{
-		// because we want first add gamedir wads
-		if(!( flags & FS_GAMEDIR_PATH )) return;
-	}
-
-	// use normal method because we want take access to wad files through pak or pk3 archives
-	wads = FS_Search( "*.wad", true, false );
-	for( i = 0; wads && i < wads->numfilenames; i++ )
-		FS_AddWad_Fullpath( wads->filenames[i], NULL, false );
-	if( wads ) Mem_Free( wads );
 }
 
 /*
@@ -1218,7 +1218,7 @@ Return true if the path should be rejected due to one of the following:
    or are just not a good idea for a mod to be using.
 ====================
 */
-int FS_CheckNastyPath( const char *path, bool isgamedir )
+int FS_CheckNastyPath( const char *path, qboolean isgamedir )
 {
 	// all: never allow an empty path, as for gamedir it would access the parent directory and a non-gamedir path it is just useless
 	if( !path[0] ) return 2;
@@ -1283,11 +1283,11 @@ void FS_UpdateSysInfo( void )
 	SI.version = XASH_VERSION;
 }
 
-static bool FS_ParseVector( script_t *script, float *v, size_t size )
+static qboolean FS_ParseVector( script_t *script, float *v, size_t size )
 {
 	uint	i;
 	token_t	token;
-	bool	bracket = false;
+	qboolean	bracket = false;
 
 	if( v == NULL || size == 0 )
 		return false;
@@ -1326,7 +1326,7 @@ FS_WriteGameInfo
 assume GameInfo is valid
 ================
 */
-static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
+static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 {
 	file_t	*f;
 	int	i;
@@ -1403,6 +1403,12 @@ static bool FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 
 	if( GameInfo->max_edicts > 0 )
 		FS_Printf( f, "max_edicts\t%i\n", GameInfo->max_edicts );
+	if( GameInfo->max_tents > 0 )
+		FS_Printf( f, "max_tempents\t%i\n", GameInfo->max_tents );
+	if( GameInfo->max_beams > 0 )
+		FS_Printf( f, "max_beams\t%i\n", GameInfo->max_beams );
+	if( GameInfo->max_particles > 0 )
+		FS_Printf( f, "max_particles\t%i\n", GameInfo->max_particles );
 
 	FS_Print( f, "\r\r\n" );
 	FS_Close( f );	// all done
@@ -1422,7 +1428,10 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	Mem_Set( &defGI, 0, sizeof( defGI ));
 
 	// setup default values
-	defGI.max_edicts = 1024;	// default value if not specified
+	defGI.max_edicts = 900;	// default value if not specified
+	defGI.max_tents = 500;
+	defGI.max_tents = 64;
+	defGI.max_particles = 2048;
 	defGI.version = 1.0;
 
 	com.strncpy( defGI.gameHint, "Half-Life", sizeof( defGI.gameHint ));
@@ -1448,7 +1457,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	FS_WriteGameInfo( filename, &defGI );
 } 
 
-static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gameinfo_t *GameInfo )
+static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, gameinfo_t *GameInfo )
 {
 	script_t	*script = NULL;
 	token_t	token;
@@ -1458,7 +1467,10 @@ static bool FS_ParseLiblistGam( const char *filename, const char *gamedir, gamei
 	if( !script ) return false;
 
 	// setup default values
-	GameInfo->max_edicts = 1024;	// default value if not specified
+	GameInfo->max_edicts = 900;	// default value if not specified
+	GameInfo->max_tents = 500;
+	GameInfo->max_tents = 64;
+	GameInfo->max_particles = 2048;
 	GameInfo->version = 1.0f;
 	
 	com.strncpy( GameInfo->gameHint, "Half-Life", sizeof( GameInfo->gameHint ));
@@ -1581,7 +1593,7 @@ void FS_ConvertGameInfo( const char *gamedir, const char *gameinfo_path, const c
 FS_ParseGameInfo
 ================
 */
-static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
+static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 {
 	script_t	*script = NULL;
 	string	fs_path, filepath;
@@ -1605,7 +1617,10 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 
 	// setup default values
 	com.strncpy( GameInfo->gamefolder, gamedir, sizeof( GameInfo->gamefolder ));
-	GameInfo->max_edicts = 1024;	// default value if not specified
+	GameInfo->max_edicts = 900;	// default value if not specified
+	GameInfo->max_tents = 500;
+	GameInfo->max_tents = 64;
+	GameInfo->max_particles = 2048;
 	GameInfo->version = 1.0f;
 	
 	com.strncpy( GameInfo->gameHint, "Half-Life", sizeof( GameInfo->gameHint ));
@@ -1708,7 +1723,22 @@ static bool FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		else if( !com.stricmp( token.string, "max_edicts" ))
 		{
 			PS_GetInteger( script, false, &GameInfo->max_edicts );
-			GameInfo->max_edicts = bound( 600, GameInfo->max_edicts, 32000 ); // reserve some edicts for tempents
+			GameInfo->max_edicts = bound( 600, GameInfo->max_edicts, 4096 );
+		}
+		else if( !com.stricmp( token.string, "max_tempents" ))
+		{
+			PS_GetInteger( script, false, &GameInfo->max_tents );
+			GameInfo->max_tents = bound( 300, GameInfo->max_tents, 2048 );
+		}
+		else if( !com.stricmp( token.string, "max_beams" ))
+		{
+			PS_GetInteger( script, false, &GameInfo->max_beams );
+			GameInfo->max_beams = bound( 64, GameInfo->max_beams, 512 );
+		}
+		else if( !com.stricmp( token.string, "max_particles" ))
+		{
+			PS_GetInteger( script, false, &GameInfo->max_particles );
+			GameInfo->max_particles = bound( 1024, GameInfo->max_particles, 8192 );
 		}
 		else if( !com.stricmp( token.string, "gamemode" ))
 		{
@@ -1781,7 +1811,7 @@ FS_Init
 void FS_Init( void )
 {
 	stringlist_t	dirs;
-	bool		hasDefaultDir = false;
+	qboolean		hasDefaultDir = false;
 	int		i;
 	
 	FS_InitMemory();
@@ -1886,7 +1916,7 @@ void FS_InitRootDir( char *path )
 	FS_AddGameHierarchy( path, FS_STATIC_PATH );
 }
 
-bool FS_GetParmFromCmdLine( char *parm, char *out, size_t size )
+qboolean FS_GetParmFromCmdLine( char *parm, char *out, size_t size )
 {
 	int argc = FS_CheckParm( parm );
 
@@ -1898,7 +1928,7 @@ bool FS_GetParmFromCmdLine( char *parm, char *out, size_t size )
 	return true;
 }
 
-void FS_AllowDirectPaths( bool enable )
+void FS_AllowDirectPaths( qboolean enable )
 {
 	fs_ext_path = enable;
 }
@@ -2087,7 +2117,7 @@ FS_SysFileExists
 Look for a file in the filesystem only
 ==================
 */
-bool FS_SysFileExists( const char *path )
+qboolean FS_SysFileExists( const char *path )
 {
 	int desc;
      
@@ -2108,7 +2138,7 @@ Return the searchpath where the file was found (or NULL)
 and the file index in the package if relevant
 ====================
 */
-static searchpath_t *FS_FindFile( const char *name, int* index, bool gamedironly )
+static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedironly )
 {
 	searchpath_t	*search;
 	char		*pEnvPath;
@@ -2154,7 +2184,7 @@ static searchpath_t *FS_FindFile( const char *name, int* index, bool gamedironly
 		{
 			dlumpinfo_t	*lump;	
 			char		type = W_TypeFromExt( name );
-			bool		anywadname = true;
+			qboolean		anywadname = true;
 			string		wadname, wadfolder;
 			string		shortname;
 
@@ -2171,8 +2201,12 @@ static searchpath_t *FS_FindFile( const char *name, int* index, bool gamedironly
 				anywadname = false;
 			}
 
+			// make wadname from wad fullpath
+			FS_FileBase( search->wad->filename, shortname );
+			FS_DefaultExtension( shortname, ".wad" );
+
 			// quick reject by wadname
-			if( !anywadname && com.stricmp( wadname, search->wad->filename ))
+			if( !anywadname && com.stricmp( wadname, shortname ))
 				continue;
 
 			// NOTE: we can't using long names for wad,
@@ -2237,7 +2271,7 @@ FS_OpenReadFile
 Look for a file in the search paths and open it in read-only mode
 ===========
 */
-file_t *FS_OpenReadFile( const char *filename, const char *mode, bool gamedironly )
+file_t *FS_OpenReadFile( const char *filename, const char *mode, qboolean gamedironly )
 {
 	searchpath_t	*search;
 	int		pack_ind;
@@ -2276,7 +2310,7 @@ FS_Open
 Open a file. The syntax is the same as fopen
 ====================
 */
-file_t *FS_Open( const char *filepath, const char *mode, bool gamedironly )
+file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly )
 {
 	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED || Sys.app_name == HOST_BSPLIB )
           {
@@ -2759,7 +2793,7 @@ FS_Eof
 indicates at reached end of file
 ====================
 */
-bool FS_Eof( file_t* file )
+qboolean FS_Eof( file_t* file )
 {
 	if( !file ) return true;
 	return (file->position == file->real_length) ? true : false;
@@ -2819,7 +2853,7 @@ FS_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-bool FS_WriteFile( const char *filename, const void *data, fs_offset_t len )
+qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len )
 {
 	file_t *file;
 
@@ -2893,14 +2927,14 @@ FS_FileExists
 Look for a file in the packages and in the filesystem
 ==================
 */
-bool FS_FileExists( const char *filename, bool gamedironly )
+qboolean FS_FileExists( const char *filename, qboolean gamedironly )
 {
 	if( FS_FindFile( filename, NULL, gamedironly ))
 		return true;
 	return false;
 }
 
-const char *FS_GetDiskPath( const char *name, bool gamedironly )
+const char *FS_GetDiskPath( const char *name, qboolean gamedironly )
 {
 	int		index;
 	searchpath_t	*search;
@@ -2927,7 +2961,7 @@ search for library, assume index is valid
 only for internal use
 ==================
 */
-dll_user_t *FS_FindLibrary( const char *dllname, bool directpath )
+dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 {
 	string		dllpath;
 	searchpath_t	*search;
@@ -2997,7 +3031,7 @@ FS_FileSize
 return size of file in bytes
 ==================
 */
-fs_offset_t FS_FileSize( const char *filename, bool gamedironly )
+fs_offset_t FS_FileSize( const char *filename, qboolean gamedironly )
 {
 	file_t	*fp;
 	int	length = 0;
@@ -3021,7 +3055,7 @@ FS_FileTime
 return time of creation file in seconds
 ==================
 */
-fs_offset_t FS_FileTime( const char *filename, bool gamedironly )
+fs_offset_t FS_FileTime( const char *filename, qboolean gamedironly )
 {
 	searchpath_t	*search;
 	int		pack_ind;
@@ -3051,10 +3085,10 @@ FS_Rename
 rename specified file from gamefolder
 ==================
 */
-bool FS_Rename( const char *oldname, const char *newname )
+qboolean FS_Rename( const char *oldname, const char *newname )
 {
 	char	oldpath[MAX_SYSPATH], newpath[MAX_SYSPATH];
-	bool	iRet;
+	qboolean	iRet;
 
 	if( !oldname || !newname || !*oldname || !*newname )
 		return false;
@@ -3074,10 +3108,10 @@ FS_Delete
 delete specified file from gamefolder
 ==================
 */
-bool FS_Delete( const char *path )
+qboolean FS_Delete( const char *path )
 {
 	char	real_path[MAX_SYSPATH];
-	bool	iRet;
+	qboolean	iRet;
 
 	if( !path || !*path )
 		return false;
@@ -3178,7 +3212,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 		{
 			string	wadpattern, wadname, temp2;
 			char	type = W_TypeFromExt( pattern );
-			bool	anywadname = true;
+			qboolean	anywadname = true;
 			string	wadfolder;
 
 			// quick reject by filetype
@@ -3195,8 +3229,12 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 				anywadname = false;
 			}
 
+			// make wadname from wad fullpath
+			FS_FileBase( searchpath->wad->filename, temp2 );
+			FS_DefaultExtension( temp2, ".wad" );
+
 			// quick reject by wadname
-			if( !anywadname && com.stricmp( wadname, searchpath->wad->filename ))
+			if( !anywadname && com.stricmp( wadname, temp2 ))
 				continue;
 
 			// look through all the wad file elements
@@ -3605,7 +3643,7 @@ fs_offset_t VFS_Tell( vfile_t *file )
 	return file->offset;
 }
 
-bool VFS_Eof( vfile_t *file )
+qboolean VFS_Eof( vfile_t *file )
 {
 	if( !file ) return true;
 	return (file->offset == file->length) ? true : false;
@@ -3858,12 +3896,12 @@ static dlumpinfo_t *W_AddFileToWad( const char *name, wfile_t *wad, int filepos,
 	return plump;
 }
 
-static bool W_ConvertIWADLumps( wfile_t *wad )
+static qboolean W_ConvertIWADLumps( wfile_t *wad )
 {
 	dlumpfile_t	*doomlumps;
-	bool		flat_images = false;	// doom1 wall texture marker
-	bool		skin_images = false;	// doom1 skin image ( sprite model ) marker
-	bool		flmp_images = false;	// doom1 menu image marker
+	qboolean		flat_images = false;	// doom1 wall texture marker
+	qboolean		skin_images = false;	// doom1 skin image ( sprite model ) marker
+	qboolean		flmp_images = false;	// doom1 menu image marker
 	size_t		lat_size;			// LAT - LumpAllocationTable		
 	int		i, k, numlumps;
 
@@ -3875,7 +3913,7 @@ static bool W_ConvertIWADLumps( wfile_t *wad )
 	numlumps = wad->numlumps;
 	wad->numlumps = 0;	// reset it
 
-	if( FS_Read( wad->file, doomlumps, lat_size ) != lat_size )
+	if( read( wad->handle, doomlumps, lat_size ) != lat_size )
 	{
 		MsgDev( D_ERROR, "W_ConvertIWADLumps: %s has corrupted lump allocation table\n", wad->filename );
 		Mem_Free( doomlumps );
@@ -3963,7 +4001,7 @@ static bool W_ConvertIWADLumps( wfile_t *wad )
 	return true;
 }
 
-static bool W_ReadLumpTable( wfile_t *wad )
+static qboolean W_ReadLumpTable( wfile_t *wad )
 {
 	size_t		lat_size;
 	dlumpinfo_t	*srclumps;
@@ -3977,7 +4015,7 @@ static bool W_ReadLumpTable( wfile_t *wad )
 	numlumps = wad->numlumps;
 	wad->numlumps = 0;	// reset it
 
-	if( FS_Read( wad->file, srclumps, lat_size ) != lat_size )
+	if( read( wad->handle, srclumps, lat_size ) != lat_size )
 	{
 		MsgDev( D_ERROR, "W_ReadLumpTable: %s has corrupted lump allocation table\n", wad->filename );
 		W_Close( wad );
@@ -4019,7 +4057,7 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, size_t *lumpsizeptr )
 	// no wads loaded
 	if( !wad || !lump ) return NULL;
 
-	if( FS_Seek( wad->file, lump->filepos, SEEK_SET ))
+	if( lseek( wad->handle, lump->filepos, SEEK_SET ) == -1 )
 	{
 		MsgDev( D_ERROR, "W_ReadLump: %s is corrupted\n", lump->name );
 		return NULL;
@@ -4029,7 +4067,7 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, size_t *lumpsizeptr )
 	{
 	case CMP_LZSS:
 		cbuf = (byte *)Mem_Alloc( wad->mempool, lump->disksize );
-		size = FS_Read( wad->file, cbuf, lump->disksize );
+		size = read( wad->handle, cbuf, lump->disksize );
 		buf = (byte *)Mem_Alloc( wad->mempool, lump->size );
 
 		if( size < lump->disksize )
@@ -4052,7 +4090,7 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, size_t *lumpsizeptr )
 		break;
 	default:
 		buf = (byte *)Mem_Alloc( wad->mempool, lump->disksize );
-		size = FS_Read( wad->file, buf, lump->disksize );
+		size = read( wad->handle, buf, lump->disksize );
 		if( size < lump->disksize )
 		{
 			MsgDev( D_WARN, "W_ReadLump: %s is probably corrupted\n", lump->name );
@@ -4066,7 +4104,7 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, size_t *lumpsizeptr )
 	return buf;
 }
 
-bool W_WriteLump( wfile_t *wad, dlumpinfo_t *lump, const void* data, size_t datasize, char cmp )
+qboolean W_WriteLump( wfile_t *wad, dlumpinfo_t *lump, const void* data, size_t datasize, char cmp )
 {
 	byte	*inbuf, *outbuf;
 
@@ -4087,16 +4125,18 @@ bool W_WriteLump( wfile_t *wad, dlumpinfo_t *lump, const void* data, size_t data
 		outbuf = Mem_Alloc( fs_mempool, datasize - 1 );
 		lump->disksize = lzss_compress( inbuf, inbuf + datasize, outbuf, outbuf + datasize - 1 );
 		lump->size = datasize; // realsize
+		lump->compression = CMP_LZSS;
 
 		if( lump->disksize > 0 )
 		{
-			FS_Write( wad->file, outbuf, lump->disksize ); // write compressed file
+			write( wad->handle, outbuf, lump->disksize ); // write compressed file
 		}
 		Mem_Free( outbuf );
 		return ( lump->disksize != 0 ) ? true : false;		
 	default:	// CMP_NONE method
 		lump->size = lump->disksize = LittleLong( datasize );
-		FS_Write( wad->file, data, datasize ); // just write file
+		lump->compression = CMP_NONE;
+		write( wad->handle, data, datasize ); // just write file
 		return true;
 	}
 }
@@ -4118,7 +4158,7 @@ int W_Check( const char *filename )
 	testwad = FS_Open( filename, "rb", false );
 	if( !testwad ) return 0; // just not exist
 
-	if( FS_Read( testwad, &header, sizeof(dwadinfo_t)) != sizeof(dwadinfo_t))
+	if( FS_Read( testwad, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
 	{
 		// corrupted or not wad
 		FS_Close( testwad );
@@ -4160,12 +4200,13 @@ wfile_t *W_Open( const char *filename, const char *mode )
 {
 	dwadinfo_t	header;
 	wfile_t		*wad = (wfile_t *)Mem_Alloc( fs_mempool, sizeof( wfile_t ));
+	const char	*comment = "Generated by Xash WadLib. ";
 
-	if( mode[0] == 'a' ) wad->file = FS_Open( filename, "r+b", false );
-	else if( mode[0] == 'w' ) wad->file = FS_Open( filename, "wb", false );
-	else if( mode[0] == 'r' ) wad->file = FS_Open( filename, "rb", false );
+	if( mode[0] == 'a' ) wad->handle = open( filename, O_RDWR|O_BINARY, 0x666 );
+	else if( mode[0] == 'w' ) wad->handle = open( filename, O_CREAT|O_TRUNC|O_WRONLY|O_BINARY, 0x666 );
+	else if( mode[0] == 'r' ) wad->handle = open( filename, O_RDONLY|O_BINARY, 0x666 );
 
-	if( !wad->file )
+	if( wad->handle < 0 )
 	{
 		W_Close( wad );
 		MsgDev( D_ERROR, "W_Open: couldn't open %s\n", filename );
@@ -4175,7 +4216,7 @@ wfile_t *W_Open( const char *filename, const char *mode )
 	// copy wad name
 	com.strncpy( wad->filename, filename, sizeof( wad->filename ));
 	wad->mempool = Mem_AllocPool( filename );
-	wad->filetime = wad->file->filetime;
+	wad->filetime = FS_SysFileTime( filename );
 
 	// if the file is opened in "write", "append", or "read/write" mode
 	if( mode[0] == 'w' )
@@ -4190,19 +4231,19 @@ wfile_t *W_Open( const char *filename, const char *mode )
 		hdr.ident = IDWAD3HEADER;
 		hdr.numlumps = LittleLong( wad->numlumps );
 		hdr.infotableofs = LittleLong(sizeof( dwadinfo_t ));
-		FS_Write( wad->file, &hdr, sizeof( hdr ));
-		FS_Print( wad->file, "Generated by Xash WadLib. " );
-		wad->infotableofs = FS_Tell( wad->file );
+		write( wad->handle, &hdr, sizeof( hdr ));
+		write( wad->handle, comment, com.strlen( comment ) + 1 );
+		wad->infotableofs = tell( wad->handle );
 	}
 	else if( mode[0] == 'r' || mode[0] == 'a' )
 	{
 		if( mode[0] == 'a' )
 		{
-			FS_Seek( wad->file, 0, SEEK_SET );
+			lseek( wad->handle, 0, SEEK_SET );
 			wad->mode = O_APPEND;
 		}
 
-		if( FS_Read( wad->file, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
+		if( read( wad->handle, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
 		{
 			MsgDev( D_ERROR, "W_Open: %s can't read header\n", filename );
 			W_Close( wad );
@@ -4235,7 +4276,7 @@ wfile_t *W_Open( const char *filename, const char *mode )
 			wad->mode = O_RDONLY; // set read-only mode
 		}
 		wad->infotableofs = LittleLong( header.infotableofs ); // save infotableofs position
-		if( FS_Seek( wad->file, wad->infotableofs, SEEK_SET ))
+		if( lseek( wad->handle, wad->infotableofs, SEEK_SET ) == -1 )
 		{
 			MsgDev( D_ERROR, "W_Open: %s can't find lump allocation table\n", filename );
 			W_Close( wad );
@@ -4249,7 +4290,7 @@ wfile_t *W_Open( const char *filename, const char *mode )
 		{ 
 			size_t	lat_size = wad->numlumps * sizeof( dlumpinfo_t );
 
-			if( FS_Read( wad->file, wad->lumps, lat_size ) != lat_size )
+			if( read( wad->handle, wad->lumps, lat_size ) != lat_size )
 			{
 				MsgDev( D_ERROR, "W_ReadLumpTable: %s has corrupted lump allocation table\n", wad->filename );
 				W_Close( wad );
@@ -4258,7 +4299,7 @@ wfile_t *W_Open( const char *filename, const char *mode )
 
 			// if we are in append mode - we need started from infotableofs poisition
 			// overwrite lumptable as well, we have her copy in wad->lumps
-			FS_Seek( wad->file, wad->infotableofs, SEEK_SET );
+			lseek( wad->handle, wad->infotableofs, SEEK_SET );
 		}
 		else
 		{
@@ -4288,25 +4329,25 @@ void W_Close( wfile_t *wad )
 
 	if( !wad ) return;
 
-	if( wad->file && ( wad->mode == O_APPEND || wad->mode == O_WRONLY ))
+	if( wad->handle >= 0 && ( wad->mode == O_APPEND || wad->mode == O_WRONLY ))
 	{
 		dwadinfo_t	hdr;
 
 		// write the lumpingo
-		ofs = FS_Tell( wad->file );
-		FS_Write( wad->file, wad->lumps, wad->numlumps * sizeof( dlumpinfo_t ));
+		ofs = tell( wad->handle );
+		write( wad->handle, wad->lumps, wad->numlumps * sizeof( dlumpinfo_t ));
 		
 		// write the header
 		hdr.ident = IDWAD3HEADER;
 		hdr.numlumps = LittleLong( wad->numlumps );
 		hdr.infotableofs = LittleLong( ofs );
 
-		FS_Seek( wad->file, 0, SEEK_SET );
-		FS_Write( wad->file, &hdr, sizeof( hdr ));
+		lseek( wad->handle, 0, SEEK_SET );
+		write( wad->handle, &hdr, sizeof( hdr ));
 	}
 
 	Mem_FreePool( &wad->mempool );
-	if( wad->file ) FS_Close( wad->file );	
+	if( wad->handle >= 0 ) close( wad->handle );	
 	Mem_Free( wad ); // free himself
 }
 
@@ -4351,13 +4392,22 @@ fs_offset_t W_SaveLump( wfile_t *wad, const char *lump, const void* data, size_t
 
 	// write header
 	W_CleanupName( lump, info->name );
-	info->filepos = LittleLong( FS_Tell( wad->file ));
+	info->filepos = LittleLong( tell( wad->handle ));
 	info->compression = cmp;
 	info->type = type;
 
-	i = FS_Tell( wad->file );
+	i = tell( wad->handle );
 	if( !W_WriteLump( wad, info, data, datasize, cmp ))
-		return -1;		
+	{
+		if( cmp == CMP_LZSS )
+		{
+			MsgDev( D_NOTE, "W_SaveLump: %s failed to compress\n", info->name );
+			// in case we fail compress this lump, store it as non-compressed
+			if( !W_WriteLump( wad, info, data, datasize, CMP_NONE ))
+				return -1;
+		}
+		else return -1;
+	}
 
 	MsgDev( D_NOTE, "W_SaveLump: %s, size %d\n", info->name, info->disksize );
 	return wad->numlumps++;

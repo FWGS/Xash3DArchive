@@ -125,7 +125,7 @@ static void CM_FreeModel( model_t *mod )
 ===============================================================================
 */
 
-bool CM_InitPhysics( void )
+qboolean CM_InitPhysics( void )
 {
 	cm_novis = Cvar_Get( "cm_novis", "0", 0, "force to ignore server visibility" );
 
@@ -918,7 +918,7 @@ static void CM_SpriteModel( model_t *mod, byte *buffer )
 	loadmodel->maxs[2] = phdr->bounds[1] / 2;
 }
 
-static model_t *CM_ModForName( const char *name, bool world )
+static model_t *CM_ModForName( const char *name, qboolean world )
 {
 	byte	*buf;
 	model_t	*mod;
@@ -1031,7 +1031,7 @@ CM_BeginRegistration
 Loads in the map and all submodels
 ==================
 */
-void CM_BeginRegistration( const char *name, bool clientload, uint *checksum )
+void CM_BeginRegistration( const char *name, qboolean clientload, uint *checksum )
 {
 	// now replacement table is invalidate
 	Mem_Set( sv_models, 0, sizeof( sv_models ));
@@ -1171,7 +1171,7 @@ void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs )
 	}
 }
 
-bool CM_RegisterModel( const char *name, int index )
+qboolean CM_RegisterModel( const char *name, int index )
 {
 	model_t	*mod;
 
@@ -1182,5 +1182,5 @@ bool CM_RegisterModel( const char *name, int index )
 	mod = CM_ModForName( name, false );
 	sv_models[index] = mod;
 
-	return (mod != NULL);
+	return ( mod != NULL );
 }

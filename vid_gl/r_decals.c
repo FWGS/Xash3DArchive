@@ -28,17 +28,17 @@ typedef struct
 // FIXME: move this out to the r_math.c ?
 typedef struct
 {
-	bool	(*pfnInside)( decalvert_t *pVert );
+	qboolean	(*pfnInside)( decalvert_t *pVert );
 	float	(*pfnClip)( decalvert_t *one, decalvert_t *two );
 } decal_clip_t;
 
-static bool Top_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[1] < 1.0f; }
+static qboolean Top_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[1] < 1.0f; }
 static float Top_Clip( decalvert_t *one, decalvert_t *two ){ return ( 1.0f - one->m_tCoords[1] ) / ( two->m_tCoords[1] - one->m_tCoords[1] ); }
-static bool Left_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[0] > 0.0f; }
+static qboolean Left_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[0] > 0.0f; }
 static float Left_Clip( decalvert_t *one, decalvert_t *two ){ return one->m_tCoords[0] / ( one->m_tCoords[0] - two->m_tCoords[0] ); }
-static bool Right_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[0] < 1.0f; }
+static qboolean Right_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[0] < 1.0f; }
 static float Right_Clip( decalvert_t *one, decalvert_t *two ){ return ( 1.0f - one->m_tCoords[0] ) / ( two->m_tCoords[0] - one->m_tCoords[0] ); }
-static bool Bottom_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[1] > 0.0f; }
+static qboolean Bottom_Inside( decalvert_t *pVert ){ return pVert->m_tCoords[1] > 0.0f; }
 static float Bottom_Clip( decalvert_t *one, decalvert_t *two ){ return one->m_tCoords[1] / ( one->m_tCoords[1] - two->m_tCoords[1] ); }
 
 // clippanes
@@ -80,7 +80,7 @@ static decalvert_t	g_DecalClipVerts[MAX_DECALCLIPVERT];
 static decalvert_t	g_DecalClipVerts2[MAX_DECALCLIPVERT];
 static byte	*r_decalPool;		// pool of decal meshes
 
-static decal_t	gDecalPool[MAX_DECALS];
+static decal_t	gDecalPool[MAX_RENDER_DECALS];
 static int	gDecalCount;
 
 void R_ClearDecals( void )
@@ -143,7 +143,7 @@ static void R_DecalUnlink( decal_t *pdecal )
 // it's own.
 static decal_t *R_DecalAlloc( decal_t *pdecal )
 {
-	int	limit = MAX_DECALS;
+	int	limit = MAX_RENDER_DECALS;
 
 	if( r_decals->integer < limit )
 		limit = r_decals->integer;
@@ -855,7 +855,7 @@ static void R_DecalShoot_( ref_shader_t *shader, int entity, ref_model_t *model,
 	R_DecalNode( pnodes, &decalInfo );
 }
 
-bool R_DecalShoot( shader_t texture, int entityIndex, int modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration )
+qboolean R_DecalShoot( shader_t texture, int entityIndex, int modelIndex, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration )
 {
 	ref_shader_t	*shader;
 	ref_model_t	*model;
@@ -903,7 +903,7 @@ void R_AddSurfaceDecals( msurface_t *surf )
 //-----------------------------------------------------------------------------
 // Updates all decals, returns true if the decal should be retired
 //-----------------------------------------------------------------------------
-bool DecalUpdate( decal_t *pDecal )
+qboolean DecalUpdate( decal_t *pDecal )
 {
 	// retire the decal if it's time has come
 	if( pDecal->fadeDuration > 0.0f )
@@ -944,7 +944,7 @@ mesh_t *R_BuildMeshForDecal( decal_t *pDecal )
 {
 	decalvert_t	*v;
 	uint		index, bufSize;
-	bool		createSTverts = false;
+	qboolean		createSTverts = false;
 	int		i, numVerts, numElems;
 	byte		*buffer;
 	vec3_t		normal;
@@ -1049,7 +1049,7 @@ void R_PushDecal( const meshbuffer_t *mb )
 {
 	decal_t		*pDecal;
 	ref_shader_t	*shader;
-	bool		retire = false;
+	qboolean		retire = false;
 	int		features;
 
 	MB_NUM2SHADER( mb->shaderkey, shader );
@@ -1109,7 +1109,7 @@ void R_PushDecal( const meshbuffer_t *mb )
 
 =============================================================
 */
-static bool R_DecalUnProject( decal_t *pdecal, decallist_t *entry )
+static qboolean R_DecalUnProject( decal_t *pdecal, decallist_t *entry )
 {
 	cl_entity_t	*ent;
 		
@@ -1205,14 +1205,14 @@ static int DecalDepthCompare( const void *a, const void *b )
 // Input  : *pList - 
 // Output : int
 //-----------------------------------------------------------------------------
-int R_CreateDecalList( decallist_t *pList, bool changelevel )
+int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 {
 	int	total = 0;
 	int	i, depth;
 
 	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
 	{
-		for( i = 0; i < MAX_DECALS; i++ )
+		for( i = 0; i < MAX_RENDER_DECALS; i++ )
 		{
 			decal_t	*decal = &gDecalPool[i];
 			decal_t	*pdecals;

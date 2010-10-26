@@ -17,7 +17,7 @@ static int	s_numSfx = 0;
 static sfx_t	s_knownSfx[MAX_SFX];
 static sfx_t	*s_sfxHashList[MAX_SFX_HASH];
 static string	s_sentenceImmediateName;	// keep dummy sentence name
-bool		s_registering = false;
+qboolean		s_registering = false;
 int		s_registration_sequence = 0;
 
 /*
@@ -56,7 +56,7 @@ void S_SoundList_f( void )
 }
 
 // return true if char 'c' is one of 1st 2 characters in pch
-bool S_TestSoundChar( const char *pch, char c )
+qboolean S_TestSoundChar( const char *pch, char c )
 {
 	int	i;
 	char	*pcht = (char *)pch;

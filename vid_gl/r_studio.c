@@ -151,7 +151,7 @@ void R_StudioShutdown( void )
 void R_StudioAllocExtradata( cl_entity_t *in, ref_entity_t *e )
 {
 	studiovars_t	*studio;
-	bool		hasChrome = (((mstudiodata_t *)e->model->extradata)->phdr->flags & STUDIO_HAS_CHROME) ? true : false;
+	qboolean		hasChrome = (((mstudiodata_t *)e->model->extradata)->phdr->flags & STUDIO_HAS_CHROME) ? true : false;
 	int		numbones = ((mstudiodata_t *)e->model->extradata)->phdr->numbones;
 			
 	if( !e->mempool ) e->mempool = Mem_AllocPool( va( "Entity Pool %i", e - r_entities ));
@@ -285,12 +285,12 @@ void R_StudioBoxHullFromBounds( const vec3_t mins, const vec3_t maxs )
 	studio_planes[11].dist = -mins[2];
 }
 
-bool R_StudioTraceBox( vec3_t start, vec3_t end ) 
+qboolean R_StudioTraceBox( vec3_t start, vec3_t end ) 
 {
 	int	i;
 	mplane_t	*plane, *clipplane;
 	float	enterFrac, leaveFrac;
-	bool	getout, startout;
+	qboolean	getout, startout;
 	float	d1, d2;
 	float	f;
 
@@ -373,7 +373,7 @@ bool R_StudioTraceBox( vec3_t start, vec3_t end )
 	return false;
 }
 
-bool R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, pmtrace_t *tr )
+qboolean R_StudioTrace( ref_entity_t *e, const vec3_t start, const vec3_t end, pmtrace_t *tr )
 {
 	matrix4x4	m;
 	vec3_t	start_l, end_l;
@@ -695,7 +695,7 @@ void R_StudioProcessEvents( ref_entity_t *e, cl_entity_t *ent )
 	mstudioseqdesc_t	*pseqdesc;
 	mstudioevent_t	*pevent;
 	float		flEventFrame;
-	bool		bLooped = false;
+	qboolean		bLooped = false;
 	int		i;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->lerp->curstate.sequence;
@@ -1126,7 +1126,7 @@ StudioSetUpTransform
 
 ====================
 */
-void R_StudioSetUpTransform( ref_entity_t *e, bool trivial_accept )
+void R_StudioSetUpTransform( ref_entity_t *e, qboolean trivial_accept )
 {
 	vec3_t		angles, origin;
 	int		i;
@@ -1629,7 +1629,7 @@ static void R_StudioCalcAttachments( ref_entity_t *e )
 		// clear attachments
 		for( i = 0; i < MAXSTUDIOATTACHMENTS; i++ )
 		{
-			VectorClear( e->lerp->attachment_origin[i] );
+			VectorClear( e->lerp->attachment[i] );
 			VectorClear( e->lerp->attachment_angles[i] );
 		}
 		return;
@@ -1656,12 +1656,12 @@ static void R_StudioCalcAttachments( ref_entity_t *e )
 
 		Matrix3x3_ToAngles( axis, localAng, false );	// FIXME: dll's uses FLU ?
 
-		VectorCopy( localOrg, e->lerp->attachment_origin[i] );
+		VectorCopy( localOrg, e->lerp->attachment[i] );
 		VectorCopy( localAng, e->lerp->attachment_angles[i] );
 	}
 }
 
-bool R_StudioComputeBBox( vec3_t bbox[8] )
+qboolean R_StudioComputeBBox( vec3_t bbox[8] )
 {
 	vec3_t		tmp_mins, tmp_maxs;
 	ref_entity_t	*e = RI.currententity;
@@ -1772,7 +1772,7 @@ void R_StudioDrawMesh( const meshbuffer_t *mb, short *ptricmds, float s, float t
 	while( i = *( ptricmds++ ))
 	{
 		int	vertexState = 0;
-		bool	tri_strip;
+		qboolean	tri_strip;
 		
 		if( i < 0 )
 		{
@@ -2230,7 +2230,7 @@ void R_StudioProcessGait( ref_entity_t *e, entity_state_t *pplayer, studiovars_t
 	if( m_pPlayerInfo->gaitframe < 0 ) m_pPlayerInfo->gaitframe += pseqdesc->numframes;
 }
 
-static bool R_StudioSetupModel( ref_entity_t *e, ref_model_t *mod )
+static qboolean R_StudioSetupModel( ref_entity_t *e, ref_model_t *mod )
 {
 	studiovars_t	*pstudio = e->extradata;
 	int		i, m_nPlayerIndex;
@@ -2456,11 +2456,11 @@ void R_DrawStudioModel( const meshbuffer_t *mb )
 	}
 }
 
-bool R_CullStudioModel( ref_entity_t *e )
+qboolean R_CullStudioModel( ref_entity_t *e )
 {
 	int		i, j, clipped;
 	int		sequence;
-	bool		frustum, query;
+	qboolean		frustum, query;
 	uint		modhandle;
 	mstudiotexture_t	*ptexture;
 	short		*pskinref;

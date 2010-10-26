@@ -319,9 +319,9 @@ QC code can rejected a connection for some reasons
 e.g. ipban
 =====================
 */
-bool SV_ClientConnect( edict_t *ent, char *userinfo )
+qboolean SV_ClientConnect( edict_t *ent, char *userinfo )
 {
-	bool	result = true;
+	qboolean	result = true;
 	char	*pszName, *pszAddress;
 	char	szRejectReason[128];
 
@@ -617,7 +617,7 @@ void SV_Ping( netadr_t from )
 	Netchan_OutOfBandPrint( NS_SERVER, from, "ack" );
 }
 
-bool Rcon_Validate( void )
+qboolean Rcon_Validate( void )
 {
 	if( !com.strlen( rcon_password->string ))
 		return false;
@@ -800,7 +800,7 @@ this calls SV_CalcPing, and returns true
 if this person needs ping data.
 ===================
 */
-bool SV_ShouldUpdatePing( sv_client_t *cl )
+qboolean SV_ShouldUpdatePing( sv_client_t *cl )
 {
 	if( !cl->hltv_proxy )
 	{
@@ -816,7 +816,7 @@ bool SV_ShouldUpdatePing( sv_client_t *cl )
 	return false;
 }
 
-bool SV_IsPlayerIndex( int idx )
+qboolean SV_IsPlayerIndex( int idx )
 {
 	if( idx > 0 && idx <= sv_maxclients->integer )
 		return true;
@@ -987,10 +987,102 @@ void SV_New_f( sv_client_t *cl )
 		cl->edict = ent;
 		Mem_Set( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
-		// begin fetching configstrings
+		// begin fetching modellist
 		BF_WriteByte( &cl->netchan.message, svc_stufftext );
-		BF_WriteString( &cl->netchan.message, va( "cmd configstrings %i %i\n", svs.spawncount, 0 ));
+		BF_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
 	}
+}
+
+/*
+==================
+SV_WriteModels_f
+==================
+*/
+void SV_WriteModels_f( sv_client_t *cl )
+{
+	int	start;
+	string	cmd;
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "modellist is not valid from the console\n" );
+		return;
+	}
+
+	// handle the case of a level changing while a client was connecting
+	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	{
+		MsgDev( D_INFO, "modellist from different level\n" );
+		SV_New_f( cl );
+		return;
+	}
+	
+	start = com.atoi( Cmd_Argv( 2 ));
+
+	// write a packet full of data
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_MODELS )
+	{
+		if( sv.model_precache[start][0] )
+		{
+			BF_WriteByte( &cl->netchan.message, svc_modelindex );
+			BF_WriteUBitLong( &cl->netchan.message, start, MAX_MODEL_BITS );
+			BF_WriteString( &cl->netchan.message, sv.model_precache[start] );
+		}
+		start++;
+	}
+
+	if( start == MAX_MODELS ) com.snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, 0 );
+	else com.snprintf( cmd, MAX_STRING, "cmd modellist %i %i\n", svs.spawncount, start );
+
+	// send next command
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
+}
+
+/*
+==================
+SV_WriteSounds_f
+==================
+*/
+void SV_WriteSounds_f( sv_client_t *cl )
+{
+	int	start;
+	string	cmd;
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "soundlist is not valid from the console\n" );
+		return;
+	}
+
+	// handle the case of a level changing while a client was connecting
+	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	{
+		MsgDev( D_INFO, "soundlist from different level\n" );
+		SV_New_f( cl );
+		return;
+	}
+	
+	start = com.atoi( Cmd_Argv( 2 ));
+
+	// write a packet full of data
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_SOUNDS )
+	{
+		if( sv.sound_precache[start][0] )
+		{
+			BF_WriteByte( &cl->netchan.message, svc_soundindex );
+			BF_WriteUBitLong( &cl->netchan.message, start, MAX_SOUND_BITS );
+			BF_WriteString( &cl->netchan.message, sv.sound_precache[start] );
+		}
+		start++;
+	}
+
+	if( start == MAX_SOUNDS ) com.snprintf( cmd, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, 0 );
+	else com.snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, start );
+
+	// send next command
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1204,6 +1296,12 @@ SV_Begin_f
 */
 void SV_Begin_f( sv_client_t *cl )
 {
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "begin is not valid from the console\n" );
+		return;
+	}
+
 	// handle the case of a level changing while a client was connecting
 	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
@@ -1482,6 +1580,8 @@ ucmd_t ucmds[] =
 { "deltainfo", SV_DeltaInfo_f },
 { "info", SV_ShowServerinfo_f },
 { "nextdl", SV_NextDownload_f },
+{ "modellist", SV_WriteModels_f },
+{ "soundlist", SV_WriteSounds_f },
 { "disconnect", SV_Disconnect_f },
 { "usermsgs", SV_UserMessages_f },
 { "download", SV_BeginDownload_f },
@@ -1759,7 +1859,7 @@ Parse a client packet
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 {
 	int		c, stringCmdCount = 0;
-	bool		move_issued = false;
+	qboolean		move_issued = false;
 	client_frame_t	*frame;
 	char		*s;
 

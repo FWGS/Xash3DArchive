@@ -141,10 +141,10 @@ V_PreRender
 
 ==================
 */
-bool V_PreRender( void )
+qboolean V_PreRender( void )
 {
-	bool		clearScene = true;
-	static bool	oldState;
+	qboolean		clearScene = true;
+	static qboolean	oldState;
 
 	// too early
 	if( !re ) return false;

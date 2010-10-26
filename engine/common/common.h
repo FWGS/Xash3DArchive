@@ -37,7 +37,7 @@
 #define CS_SIZE			64	// size of one config string
 #define CS_TIME			16	// size of time string
 
-// FIXME: eliminate this. Configstrings must be started from CS_MODELS
+// FIXME: get rid of configstrings
 
 #define CS_NAME			0	// map name
 #define CS_MAPCHECKSUM		1	// level checksum (for catching cheater maps)
@@ -45,16 +45,13 @@
 
 // 8 - 32 it's a reserved strings
 
-#define CS_MODELS			8				// configstrings starts here
-#define CS_SOUNDS			(CS_MODELS+MAX_MODELS)		// sound names
-#define CS_DECALS			(CS_SOUNDS+MAX_SOUNDS)		// server decal indexes
-#define CS_EVENTS			(CS_DECALS+MAX_DECALNAMES)		// queue events
+#define CS_EVENTS			8				// queue events
 #define CS_GENERICS			(CS_EVENTS+MAX_EVENTS)		// generic resources (e.g. color decals)
 #define CS_LIGHTSTYLES		(CS_GENERICS+MAX_GENERICS)		// lightstyle patterns 
 #define MAX_CONFIGSTRINGS		(CS_LIGHTSTYLES+MAX_LIGHTSTYLES)	// total count
 
 #ifdef _DEBUG
-void DBG_AssertFunction( bool fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
+void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
 #define Assert( f )		DBG_AssertFunction( f, #f, __FILE__, __LINE__, NULL )
 #else
 #define Assert( f )
@@ -133,7 +130,7 @@ typedef struct host_parm_s
 
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
-	bool		key_overstrike;	// key overstrike mode
+	qboolean		key_overstrike;	// key overstrike mode
 
 	// for IN_MouseMove() easy access
 	int		window_center_x;
@@ -168,13 +165,13 @@ void Host_Free( void );
 void Host_SetServerState( int state );
 int Host_ServerState( void );
 int Host_CompareFileTime( long ft1, long ft2 );
-bool Host_NewGame( const char *mapName, bool loadGame );
+qboolean Host_NewGame( const char *mapName, qboolean loadGame );
 void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
 void Host_WriteServerConfig( const char *name );
 void Host_WriteOpenGLConfig( void );
 void Host_WriteConfig( void );
-bool Host_IsLocalGame( void );
+qboolean Host_IsLocalGame( void );
 void Host_ShutdownServer( void );
 void Host_CheckChanges( void );
 void Host_Print( const char *txt );
@@ -191,12 +188,12 @@ CLIENT / SERVER SYSTEMS
 void CL_Init( void );
 void CL_Shutdown( void );
 void Host_ClientFrame( void );
-bool CL_Active( void );
+qboolean CL_Active( void );
 
 void SV_Init( void );
-void SV_Shutdown( bool reconnect );
+void SV_Shutdown( qboolean reconnect );
 void Host_ServerFrame( void );
-bool SV_Active( void );
+qboolean SV_Active( void );
 
 /*
 ==============================================================
@@ -247,9 +244,9 @@ float pfnTime( void );
 //
 // keys.c
 //
-bool Key_IsDown( int keynum );
+qboolean Key_IsDown( int keynum );
 const char *Key_IsBind( int keynum );
-void Key_Event( int key, bool down );
+void Key_Event( int key, qboolean down );
 void Key_Init( void );
 void Key_WriteBindings( file_t *f );
 const char *Key_GetBinding( int keynum );
@@ -267,26 +264,26 @@ void Key_SetKeyDest( int key_dest );
 typedef struct movie_state_s	movie_state_t;
 long AVI_GetVideoFrameNumber( movie_state_t *Avi, float time );
 byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame );
-bool AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration );
-bool AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info );
+qboolean AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration );
+qboolean AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info );
 fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length );
-void AVI_OpenVideo( movie_state_t *Avi, const char *filename, bool load_audio, bool ignore_hwgamma, bool quiet );
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, qboolean quiet );
 void AVI_CloseVideo( movie_state_t *Avi );
-bool AVI_IsActive( movie_state_t *Avi );
+qboolean AVI_IsActive( movie_state_t *Avi );
 movie_state_t *AVI_GetState( int num );
 
 // shared calls
-bool CL_IsInGame( void );
-bool CL_IsInMenu( void );
+qboolean CL_IsInGame( void );
+qboolean CL_IsInMenu( void );
 float CL_GetServerTime( void );
 void CL_CharEvent( int key );
 void Tri_DrawTriangles( int fTrans );
 int CL_PointContents( const vec3_t point );
 char *COM_ParseFile( char *data, char *token );
 void CL_StudioFxTransform( struct cl_entity_s *ent, float transform[4][4] );
-bool CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
+qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
 void CL_StudioEvent( struct mstudioevent_s *event, struct cl_entity_s *ent );
-bool CL_GetComment( const char *demoname, char *comment );
+qboolean CL_GetComment( const char *demoname, char *comment );
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
@@ -294,9 +291,9 @@ struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
 void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );
-bool CL_IsPlaybackDemo( void );
-bool SV_GetComment( const char *savename, char *comment );
-bool SV_NewGame( const char *mapName, bool loadGame );
+qboolean CL_IsPlaybackDemo( void );
+qboolean SV_GetComment( const char *savename, char *comment );
+qboolean SV_NewGame( const char *mapName, qboolean loadGame );
 void SV_SysError( const char *error_string );
 void SV_InitGameProgs( void );
 void SV_ForceError( void );
@@ -304,7 +301,7 @@ void CL_WriteMessageHistory( void );
 void CL_MouseEvent( int mx, int my );
 void CL_SendCmd( void );
 void CL_Disconnect( void );
-bool CL_NextDemo( void );
+qboolean CL_NextDemo( void );
 void CL_Drop( void );
 void CL_ForceVid( void );
 void CL_ForceSnd( void );
@@ -319,21 +316,21 @@ void Con_NPrintf( int idx, char *fmt, ... );
 void Con_NXPrintf( struct con_nprint_s *info, char *fmt, ... );
 char *Info_ValueForKey( const char *s, const char *key );
 void Info_RemovePrefixedKeys( char *start, char prefix );
-bool Info_RemoveKey( char *s, const char *key );
-bool Info_SetValueForKey( char *s, const char *key, const char *value );
-bool Info_Validate( const char *s );
+qboolean Info_RemoveKey( char *s, const char *key );
+qboolean Info_SetValueForKey( char *s, const char *key, const char *value );
+qboolean Info_Validate( const char *s );
 void Info_Print( const char *s );
 char *Cvar_Userinfo( void );
 char *Cvar_Serverinfo( void );
 void Cmd_WriteVariables( file_t *f );
-bool Cmd_CheckMapsList( bool fRefresh );
+qboolean Cmd_CheckMapsList( qboolean fRefresh );
 void Cmd_ForwardToServer( void );
 void Cmd_AutoComplete( char *complete_string );
 
 typedef struct autocomplete_list_s
 {
 	const char *name;
-	bool (*func)( const char *s, char *name, int length );
+	qboolean (*func)( const char *s, char *name, int length );
 } autocomplete_list_t;
 
 extern autocomplete_list_t cmd_list[];

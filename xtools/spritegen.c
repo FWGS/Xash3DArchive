@@ -24,8 +24,8 @@ float	frameinterval;
 int	framecount;
 int	origin_x;
 int	origin_y;
-bool	need_resample;
-bool	ignore_resample;
+qboolean	need_resample;
+qboolean	ignore_resample;
 int	resample_w;
 int	resample_h;
 
@@ -127,7 +127,7 @@ void WriteSprite( file_t *f )
 WriteSPRFile
 ==============
 */
-bool WriteSPRFile( void )
+qboolean WriteSPRFile( void )
 {
 	file_t	*f;
 	uint	i, groups = 0, grpframes = 0, sngframes = framecount;
@@ -322,7 +322,7 @@ void Cmd_Frame( void )
 	int		x, y, xl, yl, xh, yh, w, h;
 	int		org_x, org_y;
 	int		pixels, linedelta;
-	bool		resampled = false;
+	qboolean		resampled = false;
 	dspriteframe_t	*pframe;
 	byte		*fin, *plump;
 
@@ -457,7 +457,7 @@ $group or $angled
 }	
 ===============
 */
-void Cmd_Group( bool angled )
+void Cmd_Group( qboolean angled )
 {
 	int	groupframe;
 	int	is_started = 0;
@@ -574,7 +574,7 @@ void ResetSpriteInfo( void )
 ParseScript	
 ===============
 */
-bool ParseSpriteScript( void )
+qboolean ParseSpriteScript( void )
 {
 	token_t	token;
 
@@ -613,7 +613,7 @@ bool ParseSpriteScript( void )
 	return true;
 }
 
-bool CompileCurrentSprite( const char *name )
+qboolean CompileCurrentSprite( const char *name )
 {
 	if( name ) com.strcpy( gs_filename, name );
 	FS_DefaultExtension( gs_filename, ".qc" );
@@ -630,7 +630,7 @@ bool CompileCurrentSprite( const char *name )
 	return false;
 }
 
-bool CompileSpriteModel( byte *mempool, const char *name, byte parms )
+qboolean CompileSpriteModel( byte *mempool, const char *name, byte parms )
 {
 	if( mempool ) spritepool = mempool;
 	else

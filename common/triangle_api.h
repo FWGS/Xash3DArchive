@@ -33,7 +33,7 @@ typedef struct triapi_s
 
 	int	(*LoadShader)( const char *szShaderName, int fShaderNoMip );
 	int	(*GetSpriteTexture)( int spriteIndex, int spriteFrame );
-	void	(*RenderMode)( kRenderMode_t mode );
+	void	(*RenderMode)( int mode );
 	void	(*Begin)( int primitiveCode );
 	void	(*End)( void );
 

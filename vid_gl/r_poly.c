@@ -186,7 +186,7 @@ static void R_TraceAgainstTriangle( const vec_t *a, const vec_t *b, const vec_t 
 R_TraceAgainstSurface
 =================
 */
-static bool R_TraceAgainstSurface( msurface_t *surf )
+static qboolean R_TraceAgainstSurface( msurface_t *surf )
 {
 	int	i;
 	mesh_t	*mesh;
@@ -362,7 +362,7 @@ msurface_t *R_TransformedTraceLine( pmtrace_t *tr, const vec3_t start, const vec
 		if( model->type == mod_world || model->type == mod_brush || model->type == mod_studio )
 		{
 			mbrushmodel_t	*bmodel = (mbrushmodel_t *)model->extradata;
-			bool		rotated = !Matrix3x3_Compare( test->axis, matrix3x3_identity );
+			qboolean		rotated = !Matrix3x3_Compare( test->axis, matrix3x3_identity );
 			vec3_t		temp, start_l, end_l, axis[3];
 			vec3_t		model_mins, model_maxs;
 			float		v, max = 0.0f;

@@ -1,41 +1,53 @@
-//=======================================================================
-//			Copyright XashXT Group 2010 ©
-//		     progdefs.h - global and entity variables
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
+
 #ifndef PROGDEFS_H
 #define PROGDEFS_H
 
-typedef struct globalvars_s
+typedef struct
 {	
 	float		time;
 	float		frametime;
-	int		force_retouch;
+	float		force_retouch;
 	string_t		mapname;
 	string_t		startspot;
 	float		deathmatch;
 	float		coop;
 	float		teamplay;
-	int		serverflags;
-	int		found_secrets;
+	float		serverflags;
+	float		found_secrets;
 	vec3_t		v_forward;
 	vec3_t		v_up;
 	vec3_t		v_right;
-	int		trace_allsolid;
-	int		trace_startsolid;
+	float		trace_allsolid;
+	float		trace_startsolid;
 	float		trace_fraction;
 	vec3_t		trace_endpos;
 	vec3_t		trace_plane_normal;
 	float		trace_plane_dist;
 	edict_t		*trace_ent;
-	int		trace_inopen;
-	int		trace_inwater;
+	float		trace_inopen;
+	float		trace_inwater;
 	int		trace_hitgroup;
 	int		trace_flags;
 	int		changelevel;	// transition in progress when true (was msg_entity)
 	int		cdAudioTrack;
 	int		maxClients;
 	int		maxEntities;
-	const char	*pStringBase;	// set to NULL during initialize if you want use StringTable system
+	const char	*pStringBase;	// set to NULL during initialize (in GameDllInit)
+					// if you want to use StringTable system instead
 	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
 	vec3_t		vecLandmarkOffset;
 } globalvars_t;
@@ -43,19 +55,18 @@ typedef struct globalvars_s
 typedef struct entvars_s
 {
 	string_t		classname;
-	string_t		globalname;	// global entity name transmitted across levels
+	string_t		globalname;
 	
 	vec3_t		origin;
 	vec3_t		oldorigin;
 	vec3_t		velocity;
 	vec3_t		basevelocity;
 	vec3_t		clbasevelocity;	// Base velocity that was passed in to server physics so 
-					// client can predict conveyors correctly.
-					// Server zeroes it, so we need to store here, too.
+					// client can predict conveyors correctly. Server zeroes it, so we need to store here, too.
 	vec3_t		movedir;
 
-	vec3_t		angles;
-	vec3_t		avelocity;	// angular velocity (degrees per second)
+	vec3_t		angles;		// Model angles
+	vec3_t		avelocity;	// angle velocity (degrees per second)
 	vec3_t		punchangle;	// auto-decaying view angle adjustment
 	vec3_t		v_angle;		// Viewing angle (player only)
 
@@ -65,7 +76,7 @@ typedef struct entvars_s
 	float		impacttime;
 	float		starttime;
 
-	int		fixangle;		// 0 - nothing, 1 - force view angles, 2 - add avelocity	
+	int		fixangle;		// 0:nothing, 1:force view angles, 2:add avelocity
 	float		idealpitch;
 	float		pitch_speed;
 	float		ideal_yaw;
@@ -73,7 +84,7 @@ typedef struct entvars_s
 
 	int		modelindex;
 
-	string_t		model;		// model name
+	string_t		model;
 	int		viewmodel;	// player's viewmodel
 	int		weaponmodel;	// what other players see
 
@@ -84,7 +95,7 @@ typedef struct entvars_s
 	vec3_t		size;		// maxs - mins
 
 	float		ltime;
-	float		nextthink;	// time to next call of think function
+	float		nextthink;
 
 	int		movetype;
 	int		solid;
@@ -95,7 +106,7 @@ typedef struct entvars_s
 	float		gravity;		// % of "normal" gravity
 	float		friction;		// inverse elasticity of MOVETYPE_BOUNCE
 
-	int		light_level;	// entity current lightlevel
+	int		light_level;
 
 	int		sequence;		// animation sequence
 	int		gaitsequence;	// movement animation sequence for player (0 for none)
@@ -122,27 +133,27 @@ typedef struct entvars_s
 	int		button;
 	int		impulse;
 
-	edict_t		*chain;		// linked list for EntitiesInPVS\PHS
+	edict_t		*chain;		// Entity pointer when linked into a linked list
 	edict_t		*dmg_inflictor;
 	edict_t		*enemy;
 	edict_t		*aiment;		// entity pointer when MOVETYPE_FOLLOW
 	edict_t		*owner;
-	edict_t		*groundentity;	// only if FL_ONGROUND is set
+	edict_t		*groundentity;
 
-	int		spawnflags;	// spwanflags are used only during level loading
-	int		flags;		// generic flags that can be send to client
-
-	short		colormap;		// lowbyte topcolor, highbyte bottomcolor
-	int		team;		// for teamplay
+	int		spawnflags;
+	int		flags;
+	
+	int		colormap;		// lowbyte topcolor, highbyte bottomcolor
+	int		team;
 
 	float		max_health;
-	float		teleport_time;	// engine will be reset this value on next frame
-	int		armortype;
+	float		teleport_time;
+	float		armortype;
 	float		armorvalue;
 	int		waterlevel;
 	int		watertype;
 
-	string_t		target;		// various server strings
+	string_t		target;
 	string_t		targetname;
 	string_t		netname;
 	string_t		message;
@@ -162,43 +173,42 @@ typedef struct entvars_s
 	float		pain_finished;
 	float		radsuit_finished;
 
-	edict_t		*pContainingEntity;	// filled by engine, don't save, don't modifiy
+	edict_t		*pContainingEntity;
 
 	int		playerclass;
-	float		maxspeed;		// uses to limit speed for current client
+	float		maxspeed;
 
-	float		fov;		// client fov, used instead m_iFov
-	int		weaponanim;	// FIXME: shorten these ?
-	int		pushmsec;		// g-cont. used to store last network frame to prevent add entities
-					// twice through portals (in HL does nothing)
+	float		fov;
+	int		weaponanim;
+
+	int		pushmsec;
 
 	int		bInDuck;
-	int		flTimeStepSound;	// Next time we can play a step sound
-	int		flSwimTime;         // In process of ducking or ducked already?
-	int		flDuckTime;	// Time we started duck
-	int		iStepLeft;         	// 0 - 4
-	float		flFallVelocity;	// falling velocity z
+	int		flTimeStepSound;
+	int		flSwimTime;
+	int		flDuckTime;
+	int		iStepLeft;
+	float		flFallVelocity;
 
 	int		gamestate;
-	int		oldbuttons;	// buttons last usercmd
-	int		groupinfo;	// entities culling (on server)
 
-	// for mods
+	int		oldbuttons;
+
+	int		groupinfo;
+
+	// For mods
 	int		iuser1;
 	int		iuser2;
 	int		iuser3;
 	int		iuser4;
-
 	float		fuser1;
 	float		fuser2;
 	float		fuser3;
 	float		fuser4;
-
 	vec3_t		vuser1;
 	vec3_t		vuser2;
 	vec3_t		vuser3;
 	vec3_t		vuser4;
-
 	edict_t		*euser1;
 	edict_t		*euser2;
 	edict_t		*euser3;

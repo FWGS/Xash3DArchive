@@ -123,7 +123,7 @@ _inline float VectorNormalizeLength2( const vec3_t v, vec3_t out )
 	return length;
 }
 
-_inline bool VectorIsNull( const vec3_t v )
+_inline qboolean VectorIsNull( const vec3_t v )
 {
 	int	i;
 	float	result = 0.0f;
@@ -410,7 +410,7 @@ _inline void QuaternionSlerp( vec4_t p, vec4_t q, float t, vec4_t qt )
 BoundsIntersect
 =================
 */
-_inline bool BoundsIntersect( const vec3_t mins1, const vec3_t maxs1, const vec3_t mins2, const vec3_t maxs2 )
+_inline qboolean BoundsIntersect( const vec3_t mins1, const vec3_t maxs1, const vec3_t mins2, const vec3_t maxs2 )
 {
 	if( mins1[0] > maxs2[0] || mins1[1] > maxs2[1] || mins1[2] > maxs2[2] )
 		return false;
@@ -424,7 +424,7 @@ _inline bool BoundsIntersect( const vec3_t mins1, const vec3_t maxs1, const vec3
 BoundsAndSphereIntersect
 =================
 */
-_inline bool BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t origin, float radius )
+_inline qboolean BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t origin, float radius )
 {
 	if( mins[0] > origin[0] + radius || mins[1] > origin[1] + radius || mins[2] > origin[2] + radius )
 		return false;
@@ -501,7 +501,7 @@ _inline float SimpleSpline( float value )
 NearestPOW
 =================
 */
-_inline int NearestPOW( int value, bool roundDown )
+_inline int NearestPOW( int value, qboolean roundDown )
 {
 	int	n = 1;
 

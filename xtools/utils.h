@@ -12,7 +12,7 @@
 
 extern byte *basepool;
 extern byte *zonepool;
-extern bool enable_log;
+extern qboolean enable_log;
 extern stdlib_api_t com;
 extern file_t *bsplog;
 
@@ -34,16 +34,16 @@ typedef enum
 	QC_WADLIB
 } qctype_t;
 
-bool Com_ValidScript( const char *token, qctype_t script_type );
+qboolean Com_ValidScript( const char *token, qctype_t script_type );
 float ColorNormalize( const vec3_t in, vec3_t out );
 void NormalToLatLong( const vec3_t normal, byte bytes[2] );
 
 // misc
-bool CompileStudioModel( byte *mempool, const char *name, byte parms );
-bool CompileSpriteModel( byte *mempool, const char *name, byte parms );
-bool CompileWad3Archive( byte *mempool, const char *name, byte parms );
-bool ConvertImages( byte *mempool, const char *name, byte parms );
-bool PrepareBSPModel( int argc, char **argv );
-bool CompileBSPModel( void );
+qboolean CompileStudioModel( byte *mempool, const char *name, byte parms );
+qboolean CompileSpriteModel( byte *mempool, const char *name, byte parms );
+qboolean CompileWad3Archive( byte *mempool, const char *name, byte parms );
+qboolean ConvertImages( byte *mempool, const char *name, byte parms );
+qboolean PrepareBSPModel( int argc, char **argv );
+qboolean CompileBSPModel( void );
 
 #endif//UTILS_H

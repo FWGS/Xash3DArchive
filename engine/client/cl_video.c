@@ -46,7 +46,7 @@ Called when a demo or cinematic finishes
 If the "nextmovie" cvar is set, that command will be issued
 ==================
 */
-bool SCR_NextMovie( void )
+qboolean SCR_NextMovie( void )
 {
 	string	str;
 
@@ -164,10 +164,10 @@ Returns true if a cinematic is active, meaning the view rendering
 should be skipped
 ==================
 */
-bool SCR_DrawCinematic( void )
+qboolean SCR_DrawCinematic( void )
 {
 	static int	last_frame = -1;
-	bool		redraw = false;
+	qboolean		redraw = false;
 	byte		*frame = NULL;
 
 	if( !re || cin_time <= 0.0f )
@@ -190,7 +190,7 @@ bool SCR_DrawCinematic( void )
 SCR_PlayCinematic
 ==================
 */
-bool SCR_PlayCinematic( const char *arg )
+qboolean SCR_PlayCinematic( const char *arg )
 {
 	string		path;
 	const char	*fullpath;

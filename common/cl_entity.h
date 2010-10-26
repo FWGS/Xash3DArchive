@@ -1,22 +1,26 @@
-//=======================================================================
-//			Copyright XashXT Group 2008 ©
-//			  cl_entity.h - cient entity
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
+
 #ifndef CL_ENTITY_H
 #define CL_ENTITY_H
-
-#include "entity_state.h"
-
-#define HISTORY_MAX		64		// Must be power of 2
-#define HISTORY_MASK	( HISTORY_MAX - 1 )
-
-typedef struct cl_entity_s	cl_entity_t;
 
 typedef struct efrag_s
 {
 	struct mleaf_s	*leaf;
 	struct efrag_s	*leafnext;
-	cl_entity_t	*entity;
+	struct cl_entity_s	*entity;
 	struct efrag_s	*entnext;
 } efrag_t;
 
@@ -31,15 +35,15 @@ typedef struct
 {
 	float		prevanimtime;  
 	float		sequencetime;
-	byte		prevseqblending[16];//MAXSTUDIOBLENDINGS
+	byte		prevseqblending[2];
 	vec3_t		prevorigin;
 	vec3_t		prevangles;
 
 	int		prevsequence;
 	float		prevframe;
 
-	byte		prevcontroller[16];
-	byte		prevblending[16];
+	byte		prevcontroller[4];
+	byte		prevblending[2];
 } latchedvars_t;
 
 typedef struct
@@ -49,10 +53,17 @@ typedef struct
 	vec3_t		angles;
 } position_history_t;
 
+typedef struct cl_entity_s cl_entity_t;
+
+#define HISTORY_MAX		64		// Must be power of 2
+#define HISTORY_MASK	( HISTORY_MAX - 1 )
+
+#include "entity_state.h"
+
 struct cl_entity_s
 {
 	int		index;      	// Index into cl_entities ( always match actual slot )
-	int		player;     	// True if this entity is a "player"
+	qboolean		player;     	// True if this entity is a "player"
 
 	entity_state_t	baseline;   	// The original state from which to delta during an uncompressed message
 	entity_state_t	prevstate;  	// The state information from the penultimate message received from the server
@@ -72,25 +83,27 @@ struct cl_entity_s
 	vec3_t		origin;
 	vec3_t		angles;
 
-	// Calculated on client-side
-	vec3_t		absmin;
-	vec3_t		absmax;
-
-	// Attachment points
-	vec3_t		attachment_origin[16];
-	vec3_t		attachment_angles[16];
+	vec3_t		attachment[4];
 
 	// Other entity local information
 	int		trivial_accept;
+
+	struct model_s	*model;	// cl.model_precache[ curstate.modelindes ];  all visible entities have a model
+	struct efrag_s	*efrag;	// linked list of efrags
+	struct mnode_s	*topnode;	// for bmodels, first world node that splits bmodel, or NULL if not split
+
+	float		syncbase;	// for client-side animations -- used by obsolete alias animation system, remove?
+	int		visframe;	// last frame this entity was found in an active leaf
+	colorVec		cvFloorColor;
+
+	// INCOMPATIBLE!!!
+	vec3_t		absmin, absmax;
+
+	// Attachment points
+	vec3_t		attachment_angles[4];
 	float		m_flPrevEventFrame;	// previous event frame
 	int		m_iEventSequence;	// current event sequence
-
 	cl_entity_t	*onground;	// Entity standing on
-
-	struct model_s	*model;		// all visible entities have a model
-	struct efrag_s	*efrag;		// linked list of efrags
-	struct mnode_s	*topnode;		// for bmodels, first world node that splits bmodel,
-					// or NULL if not split
 	link_t		area;		// linked to a division node or leaf
 };
 

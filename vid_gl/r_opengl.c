@@ -26,7 +26,7 @@ typedef struct vidmode_s
 	const char	*desc;
 	int		width; 
 	int		height;
-	bool		wideScreen;
+	qboolean		wideScreen;
 } vidmode_t;
 
 vidmode_t vidmode[] =
@@ -72,7 +72,7 @@ static dllfunc_t wgl_funcs[] =
 
 dll_info_t opengl_dll = { "opengl32.dll", wgl_funcs, NULL, NULL, NULL, true };
 
-bool R_DeleteContext( void )
+qboolean R_DeleteContext( void )
 {
 	if( glw_state.hGLRC )
 	{
@@ -217,7 +217,7 @@ static int R_ChoosePFD( int colorBits, int depthBits, int stencilBits )
 	return pixelFormat;
 }
 
-bool R_SetPixelformat( void )
+qboolean R_SetPixelformat( void )
 {
 	PIXELFORMATDESCRIPTOR	PFD;
 	int			colorBits, depthBits, stencilBits;
@@ -433,7 +433,7 @@ void R_SaveVideoMode( int vid_mode )
 	MsgDev( D_NOTE, "Set: %s [%dx%d]\n", vidmode[mode].desc, vidmode[mode].width, vidmode[mode].height );
 }
 
-bool R_CreateWindow( int width, int height, bool fullscreen )
+qboolean R_CreateWindow( int width, int height, qboolean fullscreen )
 {
 	WNDCLASS		wc;
 	RECT		rect;
@@ -542,7 +542,7 @@ bool R_CreateWindow( int width, int height, bool fullscreen )
 	return true;
 }
 
-rserr_t R_ChangeDisplaySettings( int vid_mode, bool fullscreen )
+rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 {
 	int	width, height;
 	HDC	hDC;
@@ -630,10 +630,10 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, bool fullscreen )
 R_Init_OpenGL
 ==================
 */
-bool R_Init_OpenGL( void )
+qboolean R_Init_OpenGL( void )
 {
 	rserr_t	err;
-	bool	fullscreen;
+	qboolean	fullscreen;
 
 	fullscreen = vid_fullscreen->integer;
 	vid_fullscreen->modified = false;

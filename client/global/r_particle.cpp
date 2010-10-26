@@ -16,7 +16,7 @@
 // particle velocities
 static const float r_avertexnormals[NUMVERTEXNORMALS][3] =
 {
-#include "anorms.h"
+#include "../engine/anorms.h"
 };
 
 // particle ramps

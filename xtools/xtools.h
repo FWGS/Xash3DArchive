@@ -19,7 +19,7 @@ void ClosePlatform ( void ); // close host
 //=====================================
 //	extragen export
 //=====================================
-bool ConvertResource( byte *mempool, const char *filename, byte parms );
+qboolean ConvertResource( byte *mempool, const char *filename, byte parms );
 void Bsp_PrintLog( const char *pMsg );
 void Skin_FinalizeScript( void );
 void Conv_RunSearch( void );

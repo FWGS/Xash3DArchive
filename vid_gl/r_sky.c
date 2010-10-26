@@ -43,7 +43,7 @@ meshbuffer_t		r_skydome_mbuffer;
 
 static mfog_t		*r_skyfog;
 static msurface_t		*r_warpface;
-static bool		r_warpfacevis;
+static qboolean		r_warpfacevis;
 
 static void Gen_BoxSide( skydome_t *skydome, int side, vec3_t orig, vec3_t drow, vec3_t dcol, float skyheight );
 static void MakeSkyVec( float x, float y, float z, int axis, vec3_t v );
@@ -346,7 +346,7 @@ void R_DrawSky( ref_shader_t *shader )
 
 	if( shader->num_stages )
 	{
-		bool flush = false;
+		qboolean flush = false;
 		int features = shader->features;
 
 		if( r_shownormals->integer )
@@ -484,7 +484,7 @@ void ClipSkyPolygon( int nump, vec3_t vecs, int stage )
 {
 	float	*norm;
 	float	*v;
-	bool	front, back;
+	qboolean	front, back;
 	float	d, e;
 	float	dists[MAX_CLIP_VERTS + 1];
 	int	sides[MAX_CLIP_VERTS + 1];
@@ -582,7 +582,7 @@ loc1:
 R_AddSkySurface
 =================
 */
-bool R_AddSkySurface( msurface_t *fa )
+qboolean R_AddSkySurface( msurface_t *fa )
 {
 	int	i;
 	vec4_t	*vert;

@@ -182,7 +182,7 @@ int SaveRestore_SizeBuffer( SAVERESTOREDATA *pSaveData )
 	return pSaveData->bufferSize;
 }
 
-bool SaveRestore_Write( SAVERESTOREDATA *pSaveData, const void *pData, int nBytes )
+qboolean SaveRestore_Write( SAVERESTOREDATA *pSaveData, const void *pData, int nBytes )
 {
 	if( nBytes > SaveRestore_BytesAvailable( pSaveData ))
 	{
@@ -196,7 +196,7 @@ bool SaveRestore_Write( SAVERESTOREDATA *pSaveData, const void *pData, int nByte
 	return true;
 }
 
-bool SaveRestore_Read( SAVERESTOREDATA *pSaveData, void *pOutput, int nBytes )
+qboolean SaveRestore_Read( SAVERESTOREDATA *pSaveData, void *pOutput, int nBytes )
 {
 	if( !SaveRestore_BytesAvailable( pSaveData ))
 		return false;
@@ -223,7 +223,7 @@ char *SaveRestore_AccessCurPos( SAVERESTOREDATA *pSaveData )
 	return pSaveData->pCurrentData;
 }
 
-bool SaveRestore_Seek( SAVERESTOREDATA *pSaveData, int absPosition )
+qboolean SaveRestore_Seek( SAVERESTOREDATA *pSaveData, int absPosition )
 {
 	if( absPosition < 0 || absPosition >= pSaveData->bufferSize )
 		return false;
@@ -280,7 +280,7 @@ char **SaveRestore_DetachSymbolTable( SAVERESTOREDATA *pSaveData )
 	return pResult;
 }
 
-bool SaveRestore_DefineSymbol( SAVERESTOREDATA *pSaveData, const char *pszToken, int token )
+qboolean SaveRestore_DefineSymbol( SAVERESTOREDATA *pSaveData, const char *pszToken, int token )
 {
 	if( pSaveData->pTokens[token] == NULL )
 	{
@@ -379,7 +379,7 @@ int EntityInSolid( edict_t *ent )
 	return SV_TestEntityPosition( ent );
 }
 
-void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, bool adjacent )
+void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adjacent )
 {
 	int	flags = entry->flags;
 	int	decalIndex, entityIndex;
@@ -915,7 +915,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	FS_Write( pFile, &id, sizeof( int ));
 	FS_Write( pFile, &version, sizeof( int ));
 
-	decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_DECALS );
+	decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_RENDER_DECALS );
 	decalCount = CL_CreateDecalList( decalList, svgame.globals->changelevel );
 
 	FS_Write( pFile, &decalCount, sizeof( int ));
@@ -954,7 +954,7 @@ SV_LoadClientState
 read the list of decals and reapply them again
 =============
 */
-void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, bool adjacent )
+void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean adjacent )
 {
 	string		name;
 	file_t		*pFile;
@@ -1110,7 +1110,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 	return pSaveData;
 }
 
-int SV_LoadGameState( char const *level, bool createPlayers )
+int SV_LoadGameState( char const *level, qboolean createPlayers )
 {
 	SAVE_HEADER	header;
 	SAVERESTOREDATA	*pSaveData;
@@ -1342,7 +1342,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 	SAVERESTOREDATA	currentLevelData, *pSaveData;
 	int		i, test, flags, index, movedCount = 0;
 	vec3_t		landmarkOrigin;
-	bool		foundprevious = false;
+	qboolean		foundprevious = false;
 	
 	Mem_Set( &currentLevelData, 0, sizeof( SAVERESTOREDATA ));
 	svgame.globals->pSaveData = &currentLevelData;
@@ -1424,7 +1424,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 SV_ChangeLevel
 =============
 */
-void SV_ChangeLevel( bool loadfromsavedgame, const char *mapname, const char *start )
+void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start )
 {
 	string		level;
 	string		oldlevel;
@@ -1631,10 +1631,10 @@ int SV_SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader, int readGlobalState 
 	return 1;
 }
 
-bool SV_LoadGame( const char *pName )
+qboolean SV_LoadGame( const char *pName )
 {
 	file_t		*pFile;
-	bool		validload = false;
+	qboolean		validload = false;
 	GAME_HEADER	gameHeader;
 	string		name;
 
@@ -1799,7 +1799,7 @@ const char *SV_GetLatestSave( void )
 	return NULL; 
 }
 
-bool SV_GetComment( const char *savename, char *comment )
+qboolean SV_GetComment( const char *savename, char *comment )
 {
 	int	i, tag, size, nNumberOfFields, nFieldSize, tokenSize, tokenCount;
 	char	*pData, *pSaveData, *pFieldName, **pTokenList;

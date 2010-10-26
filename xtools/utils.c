@@ -78,7 +78,7 @@ Com_ValidScript
 validate qc-script for unexcpected keywords
 ================
 */
-bool Com_ValidScript( const char *token, qctype_t scripttype )
+qboolean Com_ValidScript( const char *token, qctype_t scripttype )
 { 
 	if( !com.stricmp( token, "$spritename") && scripttype != QC_SPRITEGEN )
 	{

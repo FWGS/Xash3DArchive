@@ -10,17 +10,21 @@
 //
 // engine constant limits, touching networking protocol modify with precaution
 //
+#define MAX_MODEL_BITS		11
+#define MAX_MODELS			(1<<MAX_MODEL_BITS)	// 11 bits == 2048 models
+
+#define MAX_SOUND_BITS		11
+#define MAX_SOUNDS			(1<<MAX_SOUND_BITS)	// 11 bits == 2048 sounds
+
 #define MAX_DLIGHTS			32	// dynamic lights (rendered per one frame)
 #define MAX_LIGHTSTYLES		256	// can't be blindly increased
-#define MAX_DECALS			4096	// max rendering decals per a level
-#define MAX_DECALNAMES		1024	// server decal indexes (different decalnames, not a render limit)
+#define MAX_DECALS			1024	// server decal indexes (different decalnames, not a render limit)
 #define MAX_USER_MESSAGES		191	// another 63 messages reserved for engine routines
 #define MAX_EVENTS			1024	// playback events that can be queued (a byte range, don't touch)
 #define MAX_MSGLEN			32768	// max length of network message
 #define MAX_GENERICS		1024	// generic files that can download from server
-#define MAX_SOUNDS			2048	// max unique loaded sounds (not counting sequences)
-#define MAX_MODELS			2048	// total count of brush & studio various models per one map
 #define MAX_EDICTS			32768	// absolute limit that never be reached, (do not edit!)
+#define MAX_RENDER_DECALS		4096	// max rendering decals per a level
 
 // decal flags
 #define FDECAL_PERMANENT		0x01	// This decal should not be removed in favor of any new decals

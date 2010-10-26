@@ -148,7 +148,7 @@ static void PS_NumberValue( token_t *token )
 {
 	char	*string = token->string;
 	double	fraction = 0.1, power = 1.0;
-	bool	negative = false;
+	qboolean	negative = false;
 	int	i, exponent = 0;
 
 	token->floatValue = 0.0;
@@ -252,11 +252,11 @@ static void PS_NumberValue( token_t *token )
 PS_ReadWhiteSpace
 =================
 */
-static bool PS_ReadWhiteSpace( script_t *script, scFlags_t flags )
+static qboolean PS_ReadWhiteSpace( script_t *script, scFlags_t flags )
 {
 	char	*text;
 	int	line;
-	bool	hasNewLines = false;
+	qboolean	hasNewLines = false;
 
 	// backup text and line
 	text = script->text;
@@ -334,7 +334,7 @@ static bool PS_ReadWhiteSpace( script_t *script, scFlags_t flags )
 PS_ReadEscapeChar
 =================
 */
-static bool PS_ReadEscapeChar( script_t *script, scFlags_t flags, char *ch )
+static qboolean PS_ReadEscapeChar( script_t *script, scFlags_t flags, char *ch )
 {
 	int	value;
 
@@ -433,7 +433,7 @@ static bool PS_ReadEscapeChar( script_t *script, scFlags_t flags, char *ch )
 PS_ReadGeneric
 =================
 */
-static bool PS_ReadGeneric( script_t *script, scFlags_t flags, token_t *token )
+static qboolean PS_ReadGeneric( script_t *script, scFlags_t flags, token_t *token )
 {
 	token->type = TT_GENERIC;
 	token->subType = 0;
@@ -461,7 +461,7 @@ static bool PS_ReadGeneric( script_t *script, scFlags_t flags, token_t *token )
 PS_ReadString
 =================
 */
-static bool PS_ReadString( script_t *script, scFlags_t flags, token_t *token )
+static qboolean PS_ReadString( script_t *script, scFlags_t flags, token_t *token )
 {
 	char	*text;
 	int	line;
@@ -544,7 +544,7 @@ static bool PS_ReadString( script_t *script, scFlags_t flags, token_t *token )
 PS_ReadLine
 =================
 */
-static bool PS_ReadLine( script_t *script, scFlags_t flags, token_t *token )
+static qboolean PS_ReadLine( script_t *script, scFlags_t flags, token_t *token )
 {
 	token->type = TT_STRING;
 	token->subType = 0;
@@ -582,7 +582,7 @@ static bool PS_ReadLine( script_t *script, scFlags_t flags, token_t *token )
 PS_ReadLiteral
 =================
 */
-static bool PS_ReadLiteral( script_t *script, scFlags_t flags, token_t *token )
+static qboolean PS_ReadLiteral( script_t *script, scFlags_t flags, token_t *token )
 {
 	char	*text;
 	int	line;
@@ -657,9 +657,9 @@ static bool PS_ReadLiteral( script_t *script, scFlags_t flags, token_t *token )
 PS_ReadNumber
 =================
 */
-static bool PS_ReadNumber( script_t *script, scFlags_t flags, token_t *token )
+static qboolean PS_ReadNumber( script_t *script, scFlags_t flags, token_t *token )
 {
-	bool	hasDot = false;
+	qboolean	hasDot = false;
 	int	c;
 
 	token->type = TT_NUMBER;
@@ -847,7 +847,7 @@ static bool PS_ReadNumber( script_t *script, scFlags_t flags, token_t *token )
 PS_ReadName
 =================
 */
-static bool PS_ReadName( script_t *script, scFlags_t flags, token_t *token )
+static qboolean PS_ReadName( script_t *script, scFlags_t flags, token_t *token )
 {
 	int	c;
 
@@ -900,7 +900,7 @@ static bool PS_ReadName( script_t *script, scFlags_t flags, token_t *token )
 PS_ReadPunctuation
 =================
 */
-static bool PS_ReadPunctuation( script_t *script, scFlags_t flags, token_t *token )
+static qboolean PS_ReadPunctuation( script_t *script, scFlags_t flags, token_t *token )
 {
 	punctuation_t	*punctuation;
 	int		i, len;
@@ -947,7 +947,7 @@ PS_ReadToken
 Reads a token from the script
  =================
 */
-bool PS_ReadToken( script_t *script, scFlags_t flags, token_t *token )
+qboolean PS_ReadToken( script_t *script, scFlags_t flags, token_t *token )
 {
 	token_t	dummy;
 
@@ -1079,7 +1079,7 @@ PARSER SIMPLY USER INTERFACE
 PS_GetString
 =================
 */
-bool PS_GetString( script_t *script, int flags, char *value, size_t size )
+qboolean PS_GetString( script_t *script, int flags, char *value, size_t size )
 {
 	token_t	token;
 
@@ -1095,7 +1095,7 @@ bool PS_GetString( script_t *script, int flags, char *value, size_t size )
 PS_GetDouble
 =================
 */
-bool PS_GetDouble( script_t *script, int flags, double *value )
+qboolean PS_GetDouble( script_t *script, int flags, double *value )
 {
 	token_t	token;
 
@@ -1131,7 +1131,7 @@ bool PS_GetDouble( script_t *script, int flags, double *value )
 PS_GetFloat
 =================
 */
-bool PS_GetFloat( script_t *script, int flags, float *value )
+qboolean PS_GetFloat( script_t *script, int flags, float *value )
 {
 	token_t	token;
 
@@ -1167,7 +1167,7 @@ bool PS_GetFloat( script_t *script, int flags, float *value )
 PS_GetUnsigned
 =================
 */
-bool PS_GetUnsigned( script_t *script, int flags, uint *value )
+qboolean PS_GetUnsigned( script_t *script, int flags, uint *value )
 {
 	token_t	token;
 
@@ -1189,7 +1189,7 @@ bool PS_GetUnsigned( script_t *script, int flags, uint *value )
 PS_GetInteger
 =================
 */
-bool PS_GetInteger( script_t *script, int flags, int *value )
+qboolean PS_GetInteger( script_t *script, int flags, int *value )
 {
 	token_t	token;
 
@@ -1403,7 +1403,7 @@ void PS_ResetScript( script_t *script )
 PS_EndOfScript
 =================
 */
-bool PS_EndOfScript( script_t *script )
+qboolean PS_EndOfScript( script_t *script )
 {
 	if( !script || !script->text )
 		return true;

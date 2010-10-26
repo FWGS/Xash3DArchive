@@ -117,7 +117,7 @@ typedef struct dllfunction_s
 // ScreenWidth returns the width of the screen, in pixels
 #define ScreenWidth		(gHUD.m_scrinfo.iWidth)
 
-inline void UnpackRGB( int &r, int &g, int &b, dword ulRGB )
+inline void UnpackRGB( int &r, int &g, int &b, unsigned long ulRGB )
 {
 	r = (ulRGB & 0xFF0000) >>16;\
 	g = (ulRGB & 0xFF00) >> 8;\

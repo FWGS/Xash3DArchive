@@ -260,7 +260,7 @@ Sound_ResampleInternal
 We need convert sound to signed even if nothing to resample
 ================
 */
-bool Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int outrate, int outwidth )
+qboolean Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int outrate, int outwidth )
 {
 	float	stepscale;
 	int	outcount, srcsample;
@@ -344,10 +344,10 @@ bool Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int outrate
 	return true;
 }
 
-bool Sound_Process( wavdata_t **wav, int rate, int width, uint flags )
+qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags )
 {
 	wavdata_t	*snd = *wav;
-	bool	result = true;
+	qboolean	result = true;
 				
 	// check for buffers
 	if( !snd || !snd->buffer )

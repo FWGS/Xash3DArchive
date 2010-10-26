@@ -20,7 +20,7 @@ convar_t *cl_allow_levelshots;
 convar_t *cl_levelshot_name;
 convar_t *cl_envshot_size;
 
-static bool scr_init = false;
+static qboolean scr_init = false;
 
 /*
 ==============
@@ -174,7 +174,7 @@ void SCR_MakeLevelShot( void )
 
 void SCR_MakeScreenShot( void )
 {
-	bool	iRet = false;
+	qboolean	iRet = false;
 
 	if( !re && host.type == HOST_NORMAL )
 		return;	// don't reset action - it will be wait until render initalization is done

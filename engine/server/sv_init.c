@@ -18,7 +18,7 @@ SV_FindIndex
 
 ================
 */
-int SV_FindIndex( const char *name, int start, int end, bool create )
+int SV_FindIndex( const char *name, int start, int end, qboolean create )
 {
 	int	i;
 	
@@ -51,17 +51,96 @@ int SV_FindIndex( const char *name, int start, int end, bool create )
 
 int SV_ModelIndex( const char *name )
 {
-	return SV_FindIndex( name, CS_MODELS, MAX_MODELS, true );
+	int	i;
+
+	if( !name || !name[0] )
+		return 0;
+
+	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
+	{
+		if( !com.strcmp( sv.model_precache[i], name ))
+			return i;
+	}
+
+	if( i == MAX_MODELS )
+	{
+		Host_Error( "SV_ModelIndex: MAX_MODELS limit exceeded\n" );
+		return 0;
+	}
+
+	// register new model
+	com.strncpy( sv.model_precache[i], name, sizeof( sv.model_precache[i] ));
+
+	if( sv.state != ss_loading )
+	{	
+		// send the update to everyone
+		BF_WriteByte( &sv.reliable_datagram, svc_modelindex );
+		BF_WriteUBitLong( &sv.reliable_datagram, i, MAX_MODEL_BITS );
+		BF_WriteString( &sv.reliable_datagram, name );
+	}
+
+	return i;
 }
 
 int SV_SoundIndex( const char *name )
 {
-	return SV_FindIndex( name, CS_SOUNDS, MAX_SOUNDS, true );
+	int	i;
+
+	if( !name || !name[0] )
+		return 0;
+
+	for( i = 1; i < MAX_SOUNDS && sv.sound_precache[i][0]; i++ )
+	{
+		if( !com.strcmp( sv.sound_precache[i], name ))
+			return i;
+	}
+
+	if( i == MAX_SOUNDS )
+	{
+		Host_Error( "SV_SoundIndex: MAX_SOUNDS limit exceeded\n" );
+		return 0;
+	}
+
+	// register new sound
+	com.strncpy( sv.sound_precache[i], name, sizeof( sv.sound_precache[i] ));
+
+	if( sv.state != ss_loading )
+	{	
+		// send the update to everyone
+		BF_WriteByte( &sv.reliable_datagram, svc_modelindex );
+		BF_WriteUBitLong( &sv.reliable_datagram, i, MAX_SOUND_BITS );
+		BF_WriteString( &sv.reliable_datagram, name );
+	}
+
+	return i;
 }
 
 int SV_DecalIndex( const char *name )
 {
-	return SV_FindIndex( name, CS_DECALS, MAX_DECALNAMES, true );
+	char	shortname[CS_SIZE];
+	int	i;
+
+	if( !name || !name[0] )
+		return 0;
+
+	FS_FileBase( name, shortname );
+
+	for( i = 1; i < MAX_DECALS && svgame.draw_decals[i][0]; i++ )
+	{
+		if( !com.stricmp( svgame.draw_decals[i], shortname ))
+			return i;
+	}
+
+	if( i == MAX_DECALS )
+	{
+		MsgDev( D_ERROR, "SV_DecalIndex: MAX_DECALS limit exceeded\n" );
+		return 0;
+	}
+
+	// register new decal
+	com.strncpy( svgame.draw_decals[i], shortname, sizeof( svgame.draw_decals[i] ));
+
+	return i;
 }
 
 int SV_EventIndex( const char *name )
@@ -112,6 +191,18 @@ void SV_ActivateServer( void )
 
 	if( !svs.initialized )
 		return;
+
+	// custom muzzleflashes
+	pfnPrecacheModel( "sprites/muzzleflash.spr" );
+	pfnPrecacheModel( "sprites/muzzleflash1.spr" );
+	pfnPrecacheModel( "sprites/muzzleflash2.spr" );
+	pfnPrecacheModel( "sprites/muzzleflash3.spr" );
+
+	// rocket flare
+	pfnPrecacheModel( "sprites/animglow01.spr" );
+
+	// ricochet sprite
+	pfnPrecacheModel( "sprites/richo1.spr" );
 
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
@@ -202,7 +293,7 @@ SV_LevelInit
 Spawn all entities
 ================
 */
-void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, bool loadGame )
+void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame )
 {
 	if( !svs.initialized )
 		return;
@@ -247,11 +338,11 @@ clients along with it.
 
 ================
 */
-bool SV_SpawnServer( const char *mapname, const char *startspot )
+qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 {
 	uint	i, checksum;
 	int	current_skill;
-	bool	loadgame, paused;
+	qboolean	loadgame, paused;
 
 	Cmd_ExecuteString( "latch\n" );
 
@@ -317,15 +408,16 @@ bool SV_SpawnServer( const char *mapname, const char *startspot )
 		com.strncpy( sv.startspot, startspot, sizeof( sv.startspot ));
 	else sv.startspot[0] = '\0';
 
-	com.sprintf( sv.configstrings[CS_MODELS+1], "maps/%s.bsp", sv.name );
-	CM_BeginRegistration( sv.configstrings[CS_MODELS+1], false, &checksum );
+	com.strcpy( sv.model_precache[0], "" );	// slot 0 isn't used
+	com.snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
+	CM_BeginRegistration( sv.model_precache[1], false, &checksum );
 	com.sprintf( sv.configstrings[CS_MAPCHECKSUM], "%i", checksum );
 	sv.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 
 	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )
 	{
-		com.sprintf( sv.configstrings[CS_MODELS+1+i], "*%i", i );
-		CM_RegisterModel( sv.configstrings[CS_MODELS+1+i], i+1 );
+		com.sprintf( sv.model_precache[i+1], "*%i", i );
+		CM_RegisterModel( sv.model_precache[i+1], i+1 );
 	}
 
 	// precache and static commands can be issued during map initialization
@@ -449,7 +541,7 @@ void SV_InitGame( void )
 	svs.initialized = true;
 }
 
-bool SV_Active( void )
+qboolean SV_Active( void )
 {
 	return svs.initialized;
 }
@@ -469,7 +561,7 @@ void SV_InitGameProgs( void )
 	SV_LoadProgs( GI->game_dll );
 }
 
-bool SV_NewGame( const char *mapName, bool loadGame )
+qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 {
 	if( !loadGame )
 	{

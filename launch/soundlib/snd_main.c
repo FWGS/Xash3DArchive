@@ -49,7 +49,7 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 {
           const char	*ext = FS_FileExtension( filename );
 	string		path, loadname;
-	bool		anyformat = true;
+	qboolean		anyformat = true;
 	int		filesize = 0;
 	const loadwavformat_t *format;
 	byte		*f;
@@ -125,10 +125,10 @@ Sound_Save
 writes image as any known format
 ================
 */
-bool FS_SaveSound( const char *filename, wavdata_t *wav )
+qboolean FS_SaveSound( const char *filename, wavdata_t *wav )
 {
           const char	*ext = FS_FileExtension( filename );
-	bool		anyformat = !com.stricmp( ext, "" ) ? true : false;
+	qboolean		anyformat = !com.stricmp( ext, "" ) ? true : false;
 	string		path, savename;
 	const savewavformat_t *format;
 
@@ -175,7 +175,7 @@ stream_t *FS_OpenStream( const char *filename )
 {
           const char	*ext = FS_FileExtension( filename );
 	string		path, loadname;
-	bool		anyformat = true;
+	qboolean		anyformat = true;
 	const streamformat_t *format;
 	stream_t		*stream;
 

@@ -45,25 +45,25 @@ client_static_t	cls;
 clgame_static_t	clgame;
 
 //======================================================================
-bool CL_Active( void )
+qboolean CL_Active( void )
 {
 	return ( cls.state == ca_active );
 }
 
 //======================================================================
-bool CL_IsInGame( void )
+qboolean CL_IsInGame( void )
 {
 	if( host.type == HOST_DEDICATED ) return true;	// always active for dedicated servers
 	if( CL_GetMaxClients() > 1 ) return true;	// always active for multiplayer
 	return ( cls.key_dest == key_game );		// active if not menu or console
 }
 
-bool CL_IsInMenu( void )
+qboolean CL_IsInMenu( void )
 {
 	return ( cls.key_dest == key_menu );
 }
 
-bool CL_IsPlaybackDemo( void )
+qboolean CL_IsPlaybackDemo( void )
 {
 	return cls.demoplayback;
 }
@@ -345,7 +345,7 @@ During normal gameplay, a client packet will contain something like:
 void CL_WritePacket( void )
 {
 	sizebuf_t		buf;
-	bool		send_command = false;
+	qboolean		send_command = false;
 	byte		data[MAX_CMD_BUFFER];
 	int		i, from, to, key, size;
 	int		numbackup = 2;
@@ -982,13 +982,13 @@ void CL_PrepSound( void )
 	int	i, sndcount;
 
 	MsgDev( D_NOTE, "CL_PrepSound: %s\n", cl.configstrings[CS_NAME] );		
-	for( i = 0, sndcount = 0; i < MAX_SOUNDS && cl.configstrings[CS_SOUNDS+i+1][0]; i++ )
+	for( i = 0, sndcount = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
 		sndcount++; // total num sounds
 
 	S_BeginRegistration();
-	for( i = 0; i < MAX_SOUNDS && cl.configstrings[CS_SOUNDS+1+i][0]; i++ )
+	for( i = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
 	{
-		cl.sound_precache[i+1] = S_RegisterSound( cl.configstrings[CS_SOUNDS+1+i] );
+		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
 		Cvar_SetValue( "scr_loading", scr_loading->value + 5.0f / sndcount );
 		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
@@ -1031,37 +1031,35 @@ void CL_PrepVideo( void )
 	int	i, mdlcount;
 	int	map_checksum; // dummy
 
-	if( !cl.configstrings[CS_MODELS+1][0] )
+	if( !cl.model_precache[1][0] )
 		return; // no map loaded
 
 	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
 	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", cl.configstrings[CS_NAME] );
 
 	// let the render dll load the map
-	com.strncpy( mapname, cl.configstrings[CS_MODELS+1], MAX_STRING ); 
+	com.strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
 	CM_BeginRegistration( mapname, true, &map_checksum );
 	re->BeginRegistration( mapname );
 	cl.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 	SCR_RegisterShaders(); // update with new sequence
 	SCR_UpdateScreen();
 
-	for( i = 0, mdlcount = 0; i < MAX_MODELS && cl.configstrings[CS_MODELS+1+i][0]; i++ )
+	for( i = 0, mdlcount = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
 		mdlcount++; // total num models
 
-	for( i = 0; i < MAX_MODELS && cl.configstrings[CS_MODELS+1+i][0]; i++ )
+	for( i = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
 	{
-		com.strncpy( name, cl.configstrings[CS_MODELS+1+i], MAX_STRING );
+		com.strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		re->RegisterModel( name, i+1 );
 		CM_RegisterModel( name, i+1 );
 		Cvar_SetValue( "scr_loading", scr_loading->value + 45.0f / mdlcount );
 		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
 
-	for( i = 0; i < MAX_DECALNAMES && cl.configstrings[CS_DECALS+1+i][0]; i++ )
-	{
-		com.strncpy( name, cl.configstrings[CS_DECALS+1+i], MAX_STRING );
-		cl.decal_shaders[i+1] = re->RegisterShader( name, SHADER_DECAL );
-	}
+	// reload all decals
+	for( i = 0; i < MAX_DECALS && clgame.draw_decals[i+1][0]; i++ )
+		cl.decal_index[i+1] = re->RegisterShader( clgame.draw_decals[i+1], SHADER_DECAL );
 
 	// setup sky and free unneeded stuff
 	re->EndRegistration( cl.refdef.movevars->skyName );
@@ -1349,114 +1347,9 @@ void CL_Physinfo_f( void )
 	Info_Print( cl.frame.clientdata.physinfo );
 }
 
-int precache_check; // for autodownload of precache items
-int precache_spawncount;
-
-// ENV_CNT is map load, ENV_CNT+1 is first cubemap
-#define ENV_CNT		MAX_CONFIGSTRINGS
-#define TEXTURE_CNT		(ENV_CNT+1)
-
 void CL_RequestNextDownload( void )
 {
-	string	fn;
-	uint	map_checksum;	// for detecting cheater maps
-
-	if( cls.state != ca_connected )
-		return;
-
-	if( !allow_download->value && precache_check < ENV_CNT )
-		precache_check = ENV_CNT;
-
-	if( precache_check == CS_MODELS )
-	{
-		// confirm map
-		precache_check = CS_MODELS+2; // 0 isn't used
-		if(!CL_CheckOrDownloadFile( cl.configstrings[CS_MODELS+1] ))
-			return; // started a download map
-	}
-
-	if( precache_check >= CS_MODELS && precache_check < CS_MODELS+MAX_MODELS )
-	{
-		while( precache_check < CS_MODELS+MAX_MODELS && cl.configstrings[precache_check][0])
-		{
-			if( cl.configstrings[precache_check][0] == '*' || cl.configstrings[precache_check][0] == '#' )
-			{
-				precache_check++; // ignore bsp models or built-in models
-				continue;
-			}
-			com.sprintf( fn, "%s", cl.configstrings[precache_check++]);
-			if(!CL_CheckOrDownloadFile( fn )) return; // started a download
-		}
-		precache_check = CS_SOUNDS;
-	}
-
-	if( precache_check >= CS_SOUNDS && precache_check < CS_SOUNDS+MAX_SOUNDS )
-	{
-		if( precache_check == CS_SOUNDS ) precache_check++; // zero is blank
-		while( precache_check < CS_SOUNDS+MAX_SOUNDS && cl.configstrings[precache_check][0])
-		{
-			// sound pathes from model events
-			if( cl.configstrings[precache_check][0] == '*' || cl.configstrings[precache_check][0] == '#' )
-			{
-				precache_check++;
-				continue;
-			}
-			com.sprintf( fn, "sound/%s", cl.configstrings[precache_check++]);
-			if(!CL_CheckOrDownloadFile( fn )) return; // started a download
-		}
-		precache_check = CS_GENERICS;
-	}
-
-	if( precache_check >= CS_GENERICS && precache_check < CS_GENERICS+MAX_GENERICS )
-	{
-		if( precache_check == CS_GENERICS ) precache_check++; // zero is blank
-		while( precache_check < CS_GENERICS+MAX_GENERICS && cl.configstrings[precache_check][0] )
-		{
-			// generic recources - pakfiles, wadfiles etc
-			if( cl.configstrings[precache_check][0] == '#' )
-			{
-				precache_check++;
-				continue;
-			}
-			com.sprintf( fn, "%s", cl.configstrings[precache_check++]);
-			if(!CL_CheckOrDownloadFile( fn )) return; // started a download
-		}
-		precache_check = ENV_CNT;
-	}
-
-	if( precache_check == ENV_CNT )
-	{
-		precache_check = ENV_CNT + 1;
-
-		CM_BeginRegistration( cl.configstrings[CS_MODELS+1], true, &map_checksum );
-
-		if( map_checksum != com.atoi( cl.configstrings[CS_MAPCHECKSUM] ))
-		{
-			Host_Error( "Local map version differs from server: %i != '%s'\n", map_checksum, cl.configstrings[CS_MAPCHECKSUM] );
-			return;
-		}
-	}
-
-	if( precache_check > ENV_CNT && precache_check < TEXTURE_CNT )
-	{
-		if( allow_download->value )
-		{
-			com.sprintf( fn, "env/%s.dds", cl.refdef.movevars->skyName ); // cubemap pack
-			if( !CL_CheckOrDownloadFile( fn )) return; // started a download
-		}
-		precache_check = TEXTURE_CNT;
-	}
-
-	// skip textures: use generic for downloading packs
-	if( precache_check == TEXTURE_CNT )
-		precache_check = TEXTURE_CNT + 999;
-
-	CL_PrepSound();
-	CL_PrepVideo();
-
-	if( cls.demoplayback ) return; // not really connected
-	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-	BF_WriteString( &cls.netchan.message, va( "begin %i\n", precache_spawncount ));
+	Host_Error( "CL_RequestNextDownload: not implemented (yet)\n" );
 }
 
 /*
@@ -1469,9 +1362,17 @@ before allowing the client into the server
 */
 void CL_Precache_f( void )
 {
-	precache_check = CS_MODELS;
-	precache_spawncount = com.atoi( Cmd_Argv( 1 ));
-	CL_RequestNextDownload();
+	int	spawncount;
+
+	spawncount = com.atoi( Cmd_Argv( 1 ));
+
+	CL_PrepSound();
+	CL_PrepVideo();
+
+	if( cls.demoplayback ) return; // not really connected
+
+	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+	BF_WriteString( &cls.netchan.message, va( "begin %i\n", spawncount ));
 }
 
 /*

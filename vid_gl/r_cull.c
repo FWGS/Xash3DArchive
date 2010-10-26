@@ -37,7 +37,7 @@ R_CullBox
 Returns true if the box is completely outside the frustum
 =================
 */
-bool R_CullBox( const vec3_t mins, const vec3_t maxs, const uint clipflags )
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, const uint clipflags )
 {
 	uint		i, bit;
 	const mplane_t	*p;
@@ -99,7 +99,7 @@ R_CullSphere
 Returns true if the sphere is completely outside the frustum
 =================
 */
-bool R_CullSphere( const vec3_t centre, const float radius, const uint clipflags )
+qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags )
 {
 	uint	i, bit;
 	const mplane_t *p;
@@ -121,7 +121,7 @@ bool R_CullSphere( const vec3_t centre, const float radius, const uint clipflags
 R_VisCullBox
 ===================
 */
-bool R_VisCullBox( const vec3_t mins, const vec3_t maxs )
+qboolean R_VisCullBox( const vec3_t mins, const vec3_t maxs )
 {
 	int s, stackdepth = 0;
 	vec3_t extmins, extmaxs;
@@ -173,7 +173,7 @@ bool R_VisCullBox( const vec3_t mins, const vec3_t maxs )
 R_VisCullSphere
 ===================
 */
-bool R_VisCullSphere( const vec3_t origin, float radius )
+qboolean R_VisCullSphere( const vec3_t origin, float radius )
 {
 	float dist;
 	int stackdepth = 0;
@@ -301,7 +301,7 @@ static GLuint r_occlusionQueries[MAX_OQ_TOTAL];
 
 static meshbuffer_t r_occluderMB;
 static ref_shader_t *r_occlusionShader;
-static bool r_occludersQueued;
+static qboolean r_occludersQueued;
 static ref_entity_t	*r_occlusionEntity;
 
 static void R_RenderOccludingSurfaces( void );
@@ -506,7 +506,7 @@ int R_IssueOcclusionQuery( int query, ref_entity_t *e, vec3_t mins, vec3_t maxs 
 R_OcclusionQueryIssued
 ===============
 */
-bool R_OcclusionQueryIssued( int query )
+qboolean R_OcclusionQueryIssued( int query )
 {
 	ASSERT( query >= 0 && query < MAX_OQ_TOTAL );
 
@@ -518,7 +518,7 @@ bool R_OcclusionQueryIssued( int query )
 R_GetOcclusionQueryResult
 ===============
 */
-unsigned int R_GetOcclusionQueryResult( int query, bool wait )
+unsigned int R_GetOcclusionQueryResult( int query, qboolean wait )
 {
 	GLint available;
 	GLuint sampleCount;
@@ -554,7 +554,7 @@ unsigned int R_GetOcclusionQueryResult( int query, bool wait )
 R_GetOcclusionQueryResultBool
 ===============
 */
-bool R_GetOcclusionQueryResultBool( int type, int key, bool wait )
+qboolean R_GetOcclusionQueryResultBool( int type, int key, qboolean wait )
 {
 	int query = R_GetOcclusionQueryNum( type, key );
 

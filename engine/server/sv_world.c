@@ -514,7 +514,7 @@ void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node )
 SV_HeadnodeVisible
 =============
 */
-bool SV_HeadnodeVisible( mnode_t *node, byte *visbits )
+qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits )
 {
 	mleaf_t	*leaf;
 	int	leafnum;
@@ -542,7 +542,7 @@ bool SV_HeadnodeVisible( mnode_t *node, byte *visbits )
 SV_LinkEdict
 ===============
 */
-void SV_LinkEdict( edict_t *ent, bool touch_triggers )
+void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 {
 	areanode_t	*node;
 
@@ -737,7 +737,7 @@ SV_TestEntityPosition
 returns true if the entity is in solid currently
 ============
 */
-bool SV_TestEntityPosition( edict_t *ent )
+qboolean SV_TestEntityPosition( edict_t *ent )
 {
 	trace_t	trace;
 
@@ -761,7 +761,7 @@ SV_TestPlayerPosition
 same as SV_TestEntityPosition but check only players
 ============
 */
-bool SV_TestPlayerPosition( edict_t *ent )
+qboolean SV_TestPlayerPosition( edict_t *ent )
 {
 	if( ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
 		return SV_TestEntityPosition( ent );
@@ -781,7 +781,7 @@ SV_RecursiveHullCheck
 
 ==================
 */
-bool SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace )
+qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace )
 {
 	dclipnode_t	*node;
 	mplane_t		*plane;
@@ -1116,7 +1116,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 	link_t	*l, *next;
 	edict_t	*touch;
 	trace_t	trace;
-	bool	traceHitbox;
+	qboolean	traceHitbox;
 	float	*mins, *maxs;
 	int	modType;
 
@@ -1390,7 +1390,7 @@ static float	sv_modulate;
 SV_RecursiveLightPoint
 =================
 */
-static bool SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
+static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
 {
 	int		side;
 	mplane_t		*plane;

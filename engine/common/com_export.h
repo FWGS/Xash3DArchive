@@ -12,7 +12,7 @@ extern stdlib_api_t	com;
 extern vsound_exp_t	*se;
 extern render_exp_t	*re;
 
-_inline int CL_CreateDecalList( decallist_t *pList, bool changelevel )
+_inline int CL_CreateDecalList( decallist_t *pList, qboolean changelevel )
 {
 	if( !re ) return 0;
 

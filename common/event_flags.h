@@ -1,7 +1,18 @@
-//=======================================================================
-//			Copyright XashXT Group 2010 ©
-//		       event_flags.h - common event flags
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
+
 #ifndef EVENT_FLAGS_H
 #define EVENT_FLAGS_H
 
@@ -18,8 +29,8 @@
 //  sounds started by client event when client is not in PVS anymore ( hwguy in TFC e.g. ).
 #define FEV_GLOBAL		(1<<2)
 
-// If this client already has one of these events in its queue,
-// just update the event instead of sending it as a duplicate
+// If this client already has one of these events in its queue, just update the event instead of sending it as a duplicate
+//
 #define FEV_UPDATE		(1<<3)
 
 // Only send to entity specified as the invoker

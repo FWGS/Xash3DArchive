@@ -10,8 +10,6 @@
 #pragma warning(disable : 4018)	// signed/unsigned mismatch
 #pragma warning(disable : 4305)	// truncation from const double to float
 
-#define false		0
-#define true		1
 #define MAX_STRING		256	// generic string
 #define MAX_INFO_STRING	256	// infostrings are transmitted across network
 #define MAX_SYSPATH		1024	// system filepath
@@ -26,13 +24,10 @@
 // color strings
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 
-#ifndef __cplusplus
-#define bool		BOOL	// sizeof( int )
-#endif
-
 #include "const.h"
 
-typedef int		BOOL;
+typedef unsigned long	dword;
+typedef unsigned int	uint;
 typedef int		sound_t;
 typedef int		shader_t;
 typedef vec_t		vec2_t[2];
@@ -242,6 +237,9 @@ typedef struct gameinfo_s
 	vec3_t		client_maxs[4];	// 4 hulls allowed
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
+	int		max_tents;	// min temp ents is 300, max is 2048
+	int		max_beams;	// min beams is 64, max beams is 512
+	int		max_particles;	// min particles is 512, max particles is 8192
 } gameinfo_t;
 
 typedef struct sysinfo_s
@@ -286,7 +284,7 @@ typedef struct dll_info_s
 
 	// xash interface
 	void		*(*main)( void*, void* );
-	bool		crash;	// crash if dll not found
+	qboolean		crash;	// crash if dll not found
 
 	size_t		api_size;	// interface size
 	size_t		com_size;	// main interface size == sizeof( stdilib_api_t )
@@ -507,44 +505,44 @@ typedef struct stdilib_api_s
 	void (*freepool)(byte **poolptr, const char *file, int line);
 	void (*clearpool)(byte *poolptr, const char *file, int line);
 	void (*memcheck)(const char *file, int line);		// check memory pools for consistensy
-	bool (*is_allocated)( byte *poolptr, void *data );	// return true is memory is allocated
+	qboolean (*is_allocated)( byte *poolptr, void *data );	// return true is memory is allocated
 
 	// network.c funcs
 	void (*NET_Init)( void );
 	void (*NET_Shutdown)( void );
 	void (*NET_Sleep)( int msec );
-	void (*NET_Config)( bool net_enable );
+	void (*NET_Config)( qboolean net_enable );
 	char *(*NET_AdrToString)( netadr_t a );
-	bool (*NET_IsLocalAddress)( netadr_t adr );
+	qboolean (*NET_IsLocalAddress)( netadr_t adr );
 	char *(*NET_BaseAdrToString)( const netadr_t a );
-	bool (*NET_StringToAdr)( const char *s, netadr_t *a );
-	bool (*NET_CompareAdr)( const netadr_t a, const netadr_t b );
-	bool (*NET_CompareBaseAdr)( const netadr_t a, const netadr_t b );
-	bool (*NET_GetPacket)( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
+	qboolean (*NET_StringToAdr)( const char *s, netadr_t *a );
+	qboolean (*NET_CompareAdr)( const netadr_t a, const netadr_t b );
+	qboolean (*NET_CompareBaseAdr)( const netadr_t a, const netadr_t b );
+	qboolean (*NET_GetPacket)( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
 	void (*NET_SendPacket)( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 	// common functions
-	void (*Com_InitRootDir)( char *path );			// init custom rootdir 
-	void (*Com_LoadGameInfo)( const char *rootfolder );	// initialize gamedir
-	void (*Com_AddGameHierarchy)( const char *dir, int flags );	// add base directory in search list
-	void (*Com_AllowDirectPaths)( bool enable );		// allow direct paths e.g. C:\windows
-	int  (*Com_CheckParm)( const char *parm );		// check parm in cmdline  
-	bool (*Com_GetParm)( char *parm, char *out, size_t size );	// get parm from cmdline
-	void (*Com_FileBase)(const char *in, char *out);		// get filename without path & ext
-	bool (*Com_FileExists)( const char *filename, bool gamedir);// return true if file exist
-	long (*Com_FileSize)( const char *filename, bool gamedir );	// same as Com_FileExists but return filesize
-	long (*Com_FileTime)( const char *filename, bool gamedir );	// same as Com_FileExists but return filetime
-	const char *(*Com_FileExtension)( const char *in );	// return extension of file
-	const char *(*Com_RemovePath)( const char *in );		// return filename without path
-	const char *(*Com_DiskPath)( const char *in, bool gamedir );// return disk path for unpacked files
-	void (*Com_StripExtension)(char *path);			// remove extension if present
-	void (*Com_StripFilePath)(const char* const src, char* dst);// get file path without filename.ext
-	void (*Com_DefaultExtension)(char *path, const char *ext );	// append extension if not present
-	void (*Com_ClearSearchPath)( void );			// delete all search pathes
-	void (*Com_CreateThread)(int, bool, void(*fn)(int));	// run individual thread
-	void (*Com_ThreadLock)( void );			// lock current thread
-	void (*Com_ThreadUnlock)( void );			// unlock numthreads
-	int (*Com_NumThreads)( void );			// returns count of active threads
+	void (*Com_InitRootDir)( char *path );				// init custom rootdir 
+	void (*Com_LoadGameInfo)( const char *rootfolder );		// initialize gamedir
+	void (*Com_AddGameHierarchy)( const char *dir, int flags );		// add base directory in search list
+	void (*Com_AllowDirectPaths)( qboolean enable );			// allow direct paths e.g. C:\windows
+	int  (*Com_CheckParm)( const char *parm );			// check parm in cmdline  
+	qboolean (*Com_GetParm)( char *parm, char *out, size_t size );	// get parm from cmdline
+	void (*Com_FileBase)(const char *in, char *out);			// get filename without path & ext
+	qboolean (*Com_FileExists)( const char *filename, qboolean gamedir );	// return true if file exist
+	long (*Com_FileSize)( const char *filename, qboolean gamedir );	// same as Com_FileExists but return filesize
+	long (*Com_FileTime)( const char *filename, qboolean gamedir );	// same as Com_FileExists but return filetime
+	const char *(*Com_FileExtension)( const char *in );		// return extension of file
+	const char *(*Com_RemovePath)( const char *in );			// return filename without path
+	const char *(*Com_DiskPath)( const char *in, qboolean gamedir );	// return disk path for unpacked files
+	void (*Com_StripExtension)(char *path);				// remove extension if present
+	void (*Com_StripFilePath)(const char* const src, char* dst);	// get file path without filename.ext
+	void (*Com_DefaultExtension)(char *path, const char *ext );		// append extension if not present
+	void (*Com_ClearSearchPath)( void );				// delete all search pathes
+	void (*Com_CreateThread)(int, qboolean, void(*fn)(int));		// run individual thread
+	void (*Com_ThreadLock)( void );				// lock current thread
+	void (*Com_ThreadUnlock)( void );				// unlock numthreads
+	int (*Com_NumThreads)( void );				// returns count of active threads
 
 	// user dlls interface
 	void *(*LoadLibrary)( const char *dllname, int build_ordinals_table );
@@ -557,17 +555,17 @@ typedef struct stdilib_api_s
 	script_t *(*Com_OpenScript)( const char *filename, const char *buf, size_t size );
 	void (*Com_CloseScript)( script_t *script );		// release current script
 	void (*Com_ResetScript)( script_t *script );		// jump to start of scriptfile 
-	bool (*Com_EndOfScript)( script_t *script );		// returns true if end of script reached
+	qboolean (*Com_EndOfScript)( script_t *script );		// returns true if end of script reached
 	void (*Com_SkipBracedSection)(script_t *script, int depth);	// skip braced section with specified depth
 	void (*Com_SkipRestOfLine)( script_t *script );		// skip all tokene the rest of line
-	bool (*Com_ReadToken)( script_t *script, scFlags_t flags, token_t *token ); // generic reading
+	qboolean (*Com_ReadToken)( script_t *script, scFlags_t flags, token_t *token ); // generic reading
 	void (*Com_SaveToken)( script_t *script, token_t *token );	// save current token to get it again
 
 	// script machine simple user interface
-	bool (*Com_ReadString)( script_t *script, int flags, char *value, size_t size );// string
-	bool (*Com_ReadFloat)( script_t *script, int flags, float *value );		// float value
-	bool (*Com_ReadDword)( script_t *script, int flags, uint *value );		// unsigned integer
-	bool (*Com_ReadLong)( script_t *script, int flags, int *value );		// signed integer
+	qboolean (*Com_ReadString)( script_t *script, int flags, char *value, size_t size );	// string
+	qboolean (*Com_ReadFloat)( script_t *script, int flags, float *value );		// float value
+	qboolean (*Com_ReadDword)( script_t *script, int flags, uint *value );		// unsigned integer
+	qboolean (*Com_ReadLong)( script_t *script, int flags, int *value );			// signed integer
 
 	search_t *(*Com_Search)( const char *pattern, int casecmp, int gamedironly ); // returned list of found files
 	uint (*Com_HashKey)( const char *string, uint hashSize );	// returns hash key for a string
@@ -598,19 +596,19 @@ typedef struct stdilib_api_s
 	void (*Cmd_DelCommand)( const char *name );
 
 	// real filesystem
-	file_t *(*fopen)( const char* path, const char* mode, bool gamedir );	// same as fopen
-	int (*fclose)(file_t* file);					// same as fclose
-	long (*fwrite)(file_t* file, const void* data, size_t datasize);	// same as fwrite
-	long (*fread)(file_t* file, void* buffer, size_t buffersize);	// same as fread, can see through pakfile
-	int (*fprint)(file_t* file, const char *msg);			// printed message into file		
-	int (*fprintf)(file_t* file, const char* format, ...);		// same as fprintf
-	int (*fgetc)( file_t* file );					// same as fgetc
-	int (*fgets)(file_t* file, byte *string, size_t bufsize );		// like a fgets, but can return EOF
-	int (*fseek)(file_t* file, fs_offset_t offset, int whence);		// fseek, can seek in packfiles too
-	long (*ftell)( file_t *file );				// like a ftell
-	bool (*feof)( file_t *file );					// like a feof
-	bool (*fremove)( const char *path );				// remove specified file
-	bool (*frename)( const char *oldname, const char *newname );	// rename specified file
+	file_t *(*fopen)( const char* path, const char* mode, qboolean gamedir );	// same as fopen
+	int (*fclose)(file_t* file);						// same as fclose
+	long (*fwrite)(file_t* file, const void* data, size_t datasize);		// same as fwrite
+	long (*fread)(file_t* file, void* buffer, size_t buffersize);		// same as fread, can see through pakfile
+	int (*fprint)(file_t* file, const char *msg);				// printed message into file		
+	int (*fprintf)(file_t* file, const char* format, ...);			// same as fprintf
+	int (*fgetc)( file_t* file );						// same as fgetc
+	int (*fgets)(file_t* file, byte *string, size_t bufsize );			// like a fgets, but can return EOF
+	int (*fseek)(file_t* file, fs_offset_t offset, int whence);			// fseek, can seek in packfiles too
+	long (*ftell)( file_t *file );					// like a ftell
+	qboolean (*feof)( file_t *file );					// like a feof
+	qboolean (*fremove)( const char *path );				// remove specified file
+	qboolean (*frename)( const char *oldname, const char *newname );		// rename specified file
 
 	// virtual filesystem
 	vfile_t *(*vfcreate)( const byte *buffer, size_t buffsize );	// create virtual stream
@@ -622,10 +620,9 @@ typedef struct stdilib_api_s
 	int  (*vfprint)(vfile_t* file, const char *msg);			// write message
 	int  (*vfprintf)(vfile_t* file, const char* format, ...);		// write formatted message
 	int (*vfseek)(vfile_t* file, fs_offset_t offset, int whence);	// fseek, can seek in packfiles too
-	bool (*vfunpack)( void* comp, size_t size1, void **buf, size_t size2);// deflate zipped buffer
 	byte *(*vfbuffer)( vfile_t *file );				// get pointer to virtual filebuff
 	long (*vftell)(vfile_t* file);				// like a ftell
-	bool (*vfeof)( vfile_t* file);				// like a feof
+	qboolean (*vfeof)( vfile_t* file);				// like a feof
 
 	// wadstorage filesystem
 	int (*wfcheck)( const char *filename );				// validate container
@@ -636,26 +633,26 @@ typedef struct stdilib_api_s
 
 	// filesystem simple user interface
 	byte *(*Com_LoadFile)(const char *path, long *filesize );		// load file into heap
-	bool (*Com_WriteFile)(const char *path, const void *data, long len );	// write file into disk
-	bool (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
-	bool (*Com_FreeLibrary)( dll_info_t *dll );			// free library
+	qboolean (*Com_WriteFile)(const char *path, const void *data, long len );	// write file into disk
+	qboolean (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
+	qboolean (*Com_FreeLibrary)( dll_info_t *dll );			// free library
 	void*(*Com_GetProcAddress)( dll_info_t *dll, const char* name );	// gpa
 	double (*Com_DoubleTime)( void );				// hi-res timer
-	void (*Com_ShellExecute)( const char *p1, const char *p2, bool exit );// execute shell programs
+	void (*Com_ShellExecute)( const char *p1, const char *p2, qboolean exit );// execute shell programs
 
 	// built-in imagelib functions
 	void (*ImglibSetup)( const char *formats, const uint flags );	// set main attributes
 	rgbdata_t *(*ImageLoad)( const char *, const byte *, size_t );	// load image from disk or buffer
-	bool (*ImageSave)( const char *name, rgbdata_t *image );		// save image into specified format
-	bool (*ImageConvert)( rgbdata_t **pix, int w, int h, uint flags );	// image manipulations
+	qboolean (*ImageSave)( const char *name, rgbdata_t *image );	// save image into specified format
+	qboolean (*ImageConvert)( rgbdata_t **pix, int w, int h, uint flags );// image manipulations
 	bpc_desc_t *(*ImagePFDesc)( pixformat_t imagetype );		// get const info about specified fmt
  	void (*ImageFree)( rgbdata_t *pack );				// release image buffer
 
 	// built-in soundlib functions
 	void (*SndlibSetup)( const char *formats, const uint flags );	// set main attributes
 	wavdata_t *(*SoundLoad)( const char *, const byte *, size_t );	// load sound from disk or buffer
-	bool (*SoundSave)( const char *name, wavdata_t *image );		// save sound into specified format
-	bool (*SoundConvert)( wavdata_t **pix, int rt, int wdth, uint flags );// sound manipulations
+	qboolean (*SoundSave)( const char *name, wavdata_t *image );	// save sound into specified format
+	qboolean (*SoundConvert)( wavdata_t **pix, int rt, int wdth, uint flags );// sound manipulations
  	void (*SoundFree)( wavdata_t *pack );				// release sound buffer
 
 	// music stream reading funcs
@@ -692,7 +689,7 @@ typedef struct stdilib_api_s
 	size_t (*strncpy)(char *dst, const char *src, size_t n);		// copy string to existing buffer
 	size_t (*strcpy)(char *dst, const char *src);			// copy string to existing buffer
 	char *(*stralloc)(byte *mp,const char *in,const char *file,int line);	// create buffer and copy string here
-	bool (*is_digit)( const char *str );				// check string for digits
+	qboolean (*is_digit)( const char *str );			// check string for digits
 	int (*atoi)(const char *str);					// convert string to integer
 	float (*atof)(const char *str);				// convert string to float
 	void (*atov)( float *dst, const char *src, size_t n );		// convert string to vector
@@ -706,10 +703,10 @@ typedef struct stdilib_api_s
 	char *(*strstr)( const char *s1, const char *s2 );		// find s2 in s1 with case sensative
 	int (*vsprintf)(char *buf, const char *fmt, va_list args);		// format message
 	int (*sprintf)(char *buffer, const char *format, ...);		// print into buffer
-	bool (*stricmpext)( const char *s1, const char *s2 );		// allow '*', '?' etc
+	qboolean (*stricmpext)( const char *s1, const char *s2 );		// allow '*', '?' etc
 	char *(*va)(const char *format, ...);				// print into temp buffer
-	int (*vsnprintf)(char *buf, size_t size, const char *fmt, va_list args);	// format message
-	int (*snprintf)(char *buffer, size_t buffersize, const char *format, ...);	// print into buffer
+	int (*vsnprintf)( char *buf, size_t size, const char *fmt, va_list args );	// format message
+	int (*snprintf)( char *buffer, size_t buffersize, const char *format, ... );	// print into buffer
 	char *(*pretifymem)( float value, int digitsafterdecimal );		// pretify memory string
 	const char* (*timestamp)( int format );				// returns current time stamp
 
@@ -719,7 +716,7 @@ typedef struct stdilib_api_s
 	string_t (*st_setstring)( int handle, const char *string );
 	int (*st_load)( wfile_t *wad, const char *name );
 	const char *(*st_getname)( int handle );
-	bool (*st_save)( int h, wfile_t *wad );
+	qboolean (*st_save)( int h, wfile_t *wad );
 	void (*st_clear)( int handle );
 	void (*st_remove)( int handle );
 } stdlib_api_t;
@@ -763,7 +760,7 @@ typedef struct convar_s
 
 	// this part unique for convar_t
 	int		integer;
-	bool		modified;
+	qboolean		modified;
 };
 
 /*

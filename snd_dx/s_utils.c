@@ -32,7 +32,7 @@ int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample )
 		if( pWaveData->width == 1 )
 		{
 			char	*pData = pWaveData->buffer + sample * sampleSize;
-			bool	zero = false;
+			qboolean	zero = false;
 
 			if( pWaveData->channels == 1 )
 			{
@@ -68,7 +68,7 @@ int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample )
 		else
 		{
 			short	*pData = (short *)(pWaveData->buffer + sample * sampleSize);
-			bool	zero = false;
+			qboolean	zero = false;
 
 			if( pWaveData->channels == 1 )
 			{
@@ -128,7 +128,7 @@ int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample )
 		if( pWaveData->width == 1 )	// 8-bit
 		{
 			char	*pData = pWaveData->buffer + sample * sampleSize;
-			bool	zero = false;
+			qboolean	zero = false;
 
 			if( pWaveData->channels == 1 )
 			{
@@ -164,7 +164,7 @@ int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample )
 		else
 		{
 			short	*pData = (short *)(pWaveData->buffer + sample * sampleSize);
-			bool	zero = false;
+			qboolean	zero = false;
 
 			if( pWaveData->channels == 1 )
 			{
@@ -206,7 +206,7 @@ int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample )
 // Input  : samplePosition - absolute position
 // Output : int - looped position
 //-----------------------------------------------------------------------------
-int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition, bool use_loop )
+int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition, qboolean use_loop )
 {
 	// if the wave is looping and we're past the end of the sample
 	// convert to a position within the loop
@@ -230,7 +230,7 @@ int S_ConvertLoopedPosition( wavdata_t *pSource, int samplePosition, bool use_lo
 	return samplePosition;
 }
 
-int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, bool use_loop )
+int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, qboolean use_loop )
 {
 	int	totalSampleCount;
 	int	sampleSize;

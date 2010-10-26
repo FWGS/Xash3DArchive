@@ -60,7 +60,7 @@ typedef struct
 
 typedef struct
 {
-	bool			factive;	// if true, mix to this paintbuffer using flags
+	qboolean			factive;	// if true, mix to this paintbuffer using flags
 	portable_samplepair_t	*pbuf;	// front stereo mix buffer, for 2 or 4 channel mixing
 	int			ifilter;	// current filter memory buffer to use for upsampling pass
 	portable_samplepair_t	fltmem[CPAINTFILTERS][CPAINTFILTERMEM];
@@ -109,7 +109,7 @@ typedef struct
 
 	wavdata_t		*pData;
 	double 		forcedEndSample;
-	bool		finished;
+	qboolean		finished;
 } mixer_t;
 
 typedef struct
@@ -124,13 +124,13 @@ typedef struct
 	vec3_t		origin;		// only use if fixed_origin is set
 	float		dist_mult;	// distance multiplier (attenuation/clipK)
 	int		master_vol;	// 0-255 master volume
-	bool		isSentence;	// bit who indicated sentence
+	qboolean		isSentence;	// bit who indicated sentence
 	int		basePitch;	// base pitch percent (100% is normal pitch playback)
 	float		pitch;		// real-time pitch after any modulation or shift by dynamic data
-	bool		use_loop;		// don't loop default and local sounds
-	bool		staticsound;	// use origin instead of fetching entnum's origin
-	bool		localsound;	// it's a local menu sound (not looped, not paused)
-	bool		bdry;		// if true, bypass all dsp processing for this sound (ie: music)
+	qboolean		use_loop;		// don't loop default and local sounds
+	qboolean		staticsound;	// use origin instead of fetching entnum's origin
+	qboolean		localsound;	// it's a local menu sound (not looped, not paused)
+	qboolean		bdry;		// if true, bypass all dsp processing for this sound (ie: music)
 	mixer_t		pMixer;
 
 	// sentence mixer
@@ -150,10 +150,10 @@ typedef struct
 	int		entnum;
 	int		waterlevel;
 	float		frametime;	// used for sound fade
-	bool		active;
-	bool		inmenu;		// listener in-menu ?
-	bool		paused;
-	bool		streaming;	// playing AVI-file
+	qboolean		active;
+	qboolean		inmenu;		// listener in-menu ?
+	qboolean		paused;
+	qboolean		streaming;	// playing AVI-file
 } listener_t;
 
 typedef struct
@@ -173,7 +173,7 @@ typedef struct
 #define Z_Malloc( size )	Mem_Alloc( sndpool, size )
 
 // initializes cycling through a DMA buffer and returns information on it
-bool SNDDMA_Init( void *hInst );
+qboolean SNDDMA_Init( void *hInst );
 int SNDDMA_GetSoundtime( void );
 void SNDDMA_Shutdown( void );
 void SNDDMA_BeginPainting( void );
@@ -220,28 +220,28 @@ void S_ExtraUpdate( void );
 // s_mix.c
 //
 int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
-void MIX_ClearAllPaintBuffers( int SampleCount, bool clearFilters );
+void MIX_ClearAllPaintBuffers( int SampleCount, qboolean clearFilters );
 void MIX_InitAllPaintbuffers( void );
 void MIX_FreeAllPaintbuffers( void );
 void MIX_PaintChannels( int endtime );
 
 // s_load.c
-bool S_TestSoundChar( const char *pch, char c );
+qboolean S_TestSoundChar( const char *pch, char c );
 char *S_SkipSoundChar( const char *pch );
 sfx_t *S_FindName( const char *name, int *pfInCache );
 void S_FreeSound( sfx_t *sfx );
 
 // s_dsp.c
-bool AllocDsps( void );
+qboolean AllocDsps( void );
 void FreeDsps( void );
 void CheckNewDspPresets( void );
 void DSP_Process( int idsp, portable_samplepair_t *pbfront, int sampleCount );
 float DSP_GetGain( int idsp );
 void DSP_ClearState( void );
 
-bool S_Init( void *hInst );
+qboolean S_Init( void *hInst );
 void S_Shutdown( void );
-void S_Activate( bool active, void *hInst );
+void S_Activate( qboolean active, void *hInst );
 void S_SoundList_f( void );
 void S_SoundInfo_f( void );
 
@@ -282,7 +282,7 @@ void S_StopBackgroundTrack( void );
 //
 int S_ZeroCrossingAfter( wavdata_t *pWaveData, int sample );
 int S_ZeroCrossingBefore( wavdata_t *pWaveData, int sample );
-int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, bool use_loop );
+int S_GetOutputData( wavdata_t *pSource, void **pData, int samplePosition, int sampleCount, qboolean use_loop );
 void S_SetSampleStart( channel_t *pChan, wavdata_t *pSource, int newPosition );
 void S_SetSampleEnd( channel_t *pChan, wavdata_t *pSource, int newEndPosition );
 

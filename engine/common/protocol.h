@@ -29,17 +29,17 @@
 #define svc_particle		18	// [float*3][char*3][byte][byte]
 #define svc_frame			19	// <OBSOLETE>
 #define svc_spawnstatic		20	// creates a static client entity
-
+#define svc_event_reliable		21	// playback event directly from message, not queue
 #define svc_spawnbaseline		22	// <see code>
 #define svc_temp_entity		23	// <variable sized>
 #define svc_setpause		24	// [byte] 0 = unpaused, 1 = paused
-#define svc_deltamovevars		25	// [movevars_t]
+
 #define svc_centerprint		26	// [string] to put in center of the screen
 #define svc_event			27	// playback event queue
-#define svc_event_reliable		28	// playback event directly from message, not queue
+#define svc_soundindex		28	// [index][soundpath]
 #define svc_ambientsound		29	// <see code>
 #define svc_intermission		30	// empty message (event)
-
+#define svc_modelindex		31	// [index][modelpath]
 #define svc_cdtrack			32	// [byte] track [byte] looptrack
 #define svc_serverinfo		33	// [string] key [string] value
 #define svc_deltatable		34	// [table header][...]
@@ -51,6 +51,8 @@
 #define svc_packetentities		40	// [short][...]
 #define svc_deltapacketentities	41	// [short][byte][...] 
 #define svc_chokecount		42	// [byte]
+
+#define svc_deltamovevars		44	// [movevars_t]
 
 #define svc_crosshairangle		47	// [byte][byte]
 #define svc_soundfade		48	// [float*4] sound fade parms

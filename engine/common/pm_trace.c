@@ -216,7 +216,7 @@ hull_t *PM_HullForBsp( physent_t *pe, const vec3_t mins, const vec3_t maxs, floa
 PM_RecursiveHullCheck
 ==================
 */
-bool PM_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace )
+qboolean PM_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace )
 {
 	dclipnode_t	*node;
 	mplane_t		*plane;
@@ -339,7 +339,7 @@ Handles selection or creation of a clipping hull, and offseting
 (and eventually rotation) of the end points
 ==================
 */
-static bool PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr ) 
+static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr ) 
 {
 	vec3_t	offset, temp;
 	vec3_t	start_l, end_l;
@@ -414,9 +414,9 @@ static bool PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3
 	return false;
 }
 
-bool PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, int flags )
+qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, int flags )
 {
-	bool	hitEnt = false;
+	qboolean	hitEnt = false;
 
 	// assume we didn't hit anything
 	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
@@ -454,7 +454,7 @@ bool PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs,
 	}
 	else if( pe->solid == SOLID_SLIDEBOX )
 	{
-		bool	bSimpleBox;
+		qboolean	bSimpleBox;
 
 		// NOTE: SOLID_SLIDEBOX force to tracing as simplebox like FTRACE_SIMPLEBOX for trace hull.
 		// otherwise it's using hitbox tracing e.g. for bullet damage
@@ -467,7 +467,7 @@ bool PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs,
 	}
 	else if( pe->solid == SOLID_BBOX )
 	{
-		bool	bSimpleBox;
+		qboolean	bSimpleBox;
 
 		// NOTE: this is similar SOLID_SLIDEBOX but trace type switched with trace flags
 		// not min\max. Used for static models (furniture, vehicle etc) for more realistic collisions

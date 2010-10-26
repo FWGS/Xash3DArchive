@@ -6,6 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "ev_hldm.h"
+#include "event_args.h"
 #include "r_tempents.h"
 #include "pm_defs.h"
 #include "hud.h"
@@ -260,9 +261,9 @@ void EV_UpadteFlashlight( cl_entity_t *pEnt )
 	
 	dl->origin = vecPos;
 	dl->die = GetClientTime() + 0.001f;	// die on next frame
-	dl->color[0] = 255;
-	dl->color[1] = 255;
-	dl->color[2] = 255;
+	dl->color.r = 255;
+	dl->color.g = 255;
+	dl->color.b = 255;
 	dl->radius = 96;
 }
 

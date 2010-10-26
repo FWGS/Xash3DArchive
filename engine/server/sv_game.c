@@ -122,7 +122,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 	i = SV_ModelIndex( name );
 	if( i == 0 ) return;
 
-	ent->v.model = MAKE_STRING( sv.configstrings[CS_MODELS+i] );
+	ent->v.model = MAKE_STRING( sv.model_precache[i] );
 	ent->v.modelindex = i;
 
 	mod_type = CM_GetModelType( ent->v.modelindex );
@@ -202,14 +202,14 @@ MSG_PVS	send to clients potentially visible from org
 MSG_PHS	send to clients potentially hearable from org
 =================
 */
-bool SV_Send( int dest, const vec3_t origin, const edict_t *ent )
+qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 {
 	byte		*mask = NULL;
 	int		leafnum = 0, numsends = 0;
 	int		j, numclients = sv_maxclients->integer;
 	sv_client_t	*cl, *current = svs.clients;
-	bool		reliable = false;
-	bool		specproxy = false;
+	qboolean		reliable = false;
+	qboolean		specproxy = false;
 	float		*viewOrg = NULL;
 
 	switch( dest )
@@ -321,7 +321,7 @@ void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int m
 	BF_WriteByte( &sv.signon, flags );
 }
 
-static bool SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
+static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 {
 	int	leafnum;
 	byte	*mask;
@@ -355,7 +355,7 @@ SV_BoxInPVS
 check brush boxes in fat pvs
 ==============
 */
-static bool SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
+static qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
 //	if( !CM_BoxVisible( absmin, absmax, CM_FatPVS( org, false )))
 	if( !CM_BoxVisible( absmin, absmax, CM_LeafPVS( CM_PointLeafnum( org ))))
@@ -369,7 +369,7 @@ void SV_WriteEntityPatch( const char *filename )
 	dheader_t		*header;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
-	bool		result = false;
+	qboolean		result = false;
 			
 	f = FS_Open( va( "maps/%s.bsp", filename ), "rb" );
 	if( !f ) return;
@@ -421,7 +421,7 @@ script_t *SV_GetEntityScript( const char *filename )
 	script_t		*ents = NULL;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
-	bool		result = false;
+	qboolean		result = false;
 			
 	f = FS_Open( va( "maps/%s.bsp", filename ), "rb" );
 	if( !f ) return NULL;
@@ -483,7 +483,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 		// means there is no title, so clear the message string now
 		token_t	token;
 		string	check_name;
-		bool	need_landmark = com.strlen( landmark_name ) > 0 ? true : false;
+		qboolean	need_landmark = com.strlen( landmark_name ) > 0 ? true : false;
 
 		if( !need_landmark && host.developer >= 2 )
 		{
@@ -680,7 +680,7 @@ const char *SV_ClassName( const edict_t *e )
 	return STRING( e->v.classname );
 }
 
-static bool SV_IsValidCmd( const char *pCmd )
+static qboolean SV_IsValidCmd( const char *pCmd )
 {
 	size_t	len;
                               	
@@ -692,7 +692,7 @@ static bool SV_IsValidCmd( const char *pCmd )
 	return false;
 }
 
-sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, bool spawned_only )
+sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only )
 {
 	sv_client_t	*client;
 	int		i;
@@ -843,13 +843,19 @@ pfnModelIndex
 */
 int pfnModelIndex( const char *m )
 {
-	int	index;
+	int	i;
 
-	if( !m || !m[0] ) return 0;
-	index = SV_FindIndex( m, CS_MODELS, MAX_MODELS, false );	
-	if( !index ) MsgDev( D_WARN, "SV_ModelIndex: %s not precached\n", m );
+	if( !m || !m[0] )
+		return 0;
 
-	return index; 
+	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
+	{
+		if( !com.strcmp( sv.model_precache[i], m ))
+			return i;
+	}
+	MsgDev( D_ERROR, "SV_ModelIndex: %s not precached\n", m );
+
+	return 0; 
 }
 
 /*
@@ -916,6 +922,30 @@ void pfnChangeLevel( const char* s1, const char* s2 )
 
 	if( !s2 ) Cbuf_AddText( va( "changelevel %s\n", s1 ));	// Quake changlevel
 	else Cbuf_AddText( va( "changelevel %s %s\n", s1, s2 ));	// Half-Life changelevel
+}
+
+/*
+=================
+pfnGetSpawnParms
+
+obsolete
+=================
+*/
+void pfnGetSpawnParms( edict_t *ent )
+{
+	Host_Error( "SV_GetSpawnParms: %s [%i]\n", SV_ClassName( ent ), NUM_FOR_EDICT( ent ));
+}
+
+/*
+=================
+pfnSaveSpawnParms
+
+obsolete
+=================
+*/
+void pfnSaveSpawnParms( edict_t *ent )
+{
+	Host_Error( "SV_SaveSpawnParms: %s [%i]\n", SV_ClassName( ent ), NUM_FOR_EDICT( ent ));
 }
 
 /*
@@ -1899,6 +1929,18 @@ static const char *pfnTraceTexture( edict_t *pTextureEntity, const float *v1, co
 
 /*
 =============
+pfnTraceSphere
+
+trace sphere instead of bbox
+=============
+*/
+void pfnTraceSphere( const float *v1, const float *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr )
+{
+	// FIXME: implement
+}
+
+/*
+=============
 pfnBoxVisible
 
 =============
@@ -1920,7 +1962,7 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 	edict_t		*check, *bestent;
 	vec3_t		start, dir, end, bestdir;
 	float		dist, bestdist;
-	bool		fNoFriendlyFire;
+	qboolean		fNoFriendlyFire;
 	int		i, j;
 	trace_t		tr;
 
@@ -2106,7 +2148,21 @@ register decal shader on client
 */
 int pfnDecalIndex( const char *m )
 {
-	return SV_DecalIndex( m );	
+	int	i;
+
+	if( !m || !m[0] )
+		return 0;
+
+	for( i = 1; i < MAX_DECALS && svgame.draw_decals[i][0]; i++ )
+	{
+		if( !com.stricmp( svgame.draw_decals[i], m ))
+			return i;
+	}
+
+	// throw warning
+	MsgDev( D_WARN, "Can't find decal %s\n", m );
+
+	return 0;	
 }
 
 /*
@@ -2468,6 +2524,25 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	} 
 }
 
+/*
+=============
+pfnEngineFprintf
+
+legacy. probably was a part of early save\restore system
+=============
+*/
+static void pfnEngineFprintf( FILE *pfile, char *szFmt, ... )
+{
+	char	buffer[2048];	// must support > 1k messages
+	va_list	args;
+
+	va_start( args, szFmt );
+	com.vsnprintf( buffer, 2048, szFmt, args );
+	va_end( args );
+
+	fprintf( pfile, buffer );
+}
+	
 /*
 =============
 pfnPvAllocEntPrivateData
@@ -3197,7 +3272,7 @@ pfnInfo_RemoveKey
 
 =============
 */
-void pfnInfo_RemoveKey( char *s, char *key )
+void pfnInfo_RemoveKey( char *s, const char *key )
 {
 	Info_RemoveKey( s, key );
 }
@@ -3838,7 +3913,7 @@ pfnVoice_GetClientListening
 
 =============
 */
-bool pfnVoice_GetClientListening( int iReceiver, int iSender )
+qboolean pfnVoice_GetClientListening( int iReceiver, int iSender )
 {
 	int	iMaxClients = sv_maxclients->integer;
 
@@ -3859,7 +3934,7 @@ pfnVoice_SetClientListening
 
 =============
 */
-bool pfnVoice_SetClientListening( int iReceiver, int iSender, bool bListen )
+qboolean pfnVoice_SetClientListening( int iReceiver, int iSender, qboolean bListen )
 {
 	int	iMaxClients = sv_maxclients->integer;
 
@@ -3937,8 +4012,8 @@ static enginefuncs_t gEngfuncs =
 	pfnModelFrames,
 	pfnSetSize,	
 	pfnChangeLevel,
-	pfnFindClientInPHS,
-	pfnEntitiesInPHS,
+	pfnGetSpawnParms,
+	pfnSaveSpawnParms,
 	pfnVecToYaw,
 	pfnVecToAngles,
 	pfnMoveToOrigin,
@@ -3967,7 +4042,7 @@ static enginefuncs_t gEngfuncs =
 	pfnTraceHull,
 	pfnTraceModel,
 	pfnTraceTexture,
-	pfnBoxVisible,
+	pfnTraceSphere,
 	pfnGetAimVector,
 	pfnServerCommand,
 	pfnServerExecute,
@@ -3992,7 +4067,7 @@ static enginefuncs_t gEngfuncs =
 	pfnCVarSetValue,
 	pfnCVarSetString,
 	pfnAlertMessage,
-	pfnDropClient,
+	pfnEngineFprintf,
 	pfnPvAllocEntPrivateData,
 	pfnPvEntPrivateData,
 	pfnFreeEntPrivateData,
@@ -4084,12 +4159,12 @@ Parses an edict out of the given string, returning the new position
 ed should be a properly initialized empty edict.
 ====================
 */
-bool SV_ParseEdict( script_t *script, edict_t *ent )
+qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 {
 	KeyValueData	pkvd[256]; // per one entity
 	int		i, numpairs = 0;
 	const char	*classname = NULL;
-	bool		anglehack;
+	qboolean		anglehack;
 	token_t		token;
 
 	// go through all the dictionary pairs
@@ -4186,8 +4261,8 @@ void SV_LoadFromFile( script_t *entities )
 	token_t	token;
 	int	inhibited, spawned, died;
 	int	current_skill = Cvar_VariableInteger( "skill" ); // lock skill level
-	bool	deathmatch = Cvar_VariableInteger( "deathmatch" );
-	bool	create_world = true;
+	qboolean	deathmatch = Cvar_VariableInteger( "deathmatch" );
+	qboolean	create_world = true;
 	edict_t	*ent;
 
 	inhibited = 0;
@@ -4247,7 +4322,7 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 
 	ent = EDICT_NUM( 0 );
 	if( ent->free ) SV_InitEdict( ent );
-	ent->v.model = MAKE_STRING( sv.configstrings[CS_MODELS+1] );
+	ent->v.model = MAKE_STRING( sv.model_precache[1] );
 	ent->v.modelindex = 1;	// world model
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
@@ -4262,6 +4337,26 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 	SV_LoadFromFile( entities );
 
 	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.numEntities );
+}
+
+/*
+====================
+SV_InitDecals
+
+build list of unique decalnames
+====================
+*/
+static void SV_InitDecals( void )
+{
+	search_t	*t;
+	int	i;
+
+	// lookup all decals in decals.wad
+	t = FS_Search( "decals.wad/*.*", true );
+
+	for( i = 0; t && i < t->numfilenames; i++ )
+		SV_DecalIndex( t->filenames[i] );
+	if( t ) Mem_Free( t );
 }
 
 void SV_UnloadProgs( void )
@@ -4290,7 +4385,7 @@ void SV_UnloadProgs( void )
 	Mem_Set( &svgame, 0, sizeof( svgame ));
 }
 
-bool SV_LoadProgs( const char *name )
+qboolean SV_LoadProgs( const char *name )
 {
 	int			i, version;
 	static APIFUNCTION		GetEntityAPI;
@@ -4348,7 +4443,8 @@ bool SV_LoadProgs( const char *name )
 	
 		if( !GiveNewDllFuncs( &svgame.dllFuncs2, &version ))
 		{
-			MsgDev( D_WARN, "SV_LoadProgs: new interface version %i should be %i\n", NEW_DLL_FUNCTIONS_VERSION, version );
+			if( version != NEW_DLL_FUNCTIONS_VERSION )
+				MsgDev( D_WARN, "SV_LoadProgs: new interface version %i should be %i\n", NEW_DLL_FUNCTIONS_VERSION, version );
 			Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 		}
 	}
@@ -4386,6 +4482,8 @@ bool SV_LoadProgs( const char *name )
 	svgame.gmsgHudText = -1;
 
 	Cvar_FullSet( "host_gameloaded", "1", CVAR_INIT );
+
+	SV_InitDecals ();
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();

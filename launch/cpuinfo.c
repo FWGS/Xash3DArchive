@@ -11,14 +11,14 @@ typedef signed __int64	int64;
 // Processor Information:
 typedef struct cpuinfo_s
 {
-	bool m_bRDTSC	: 1;	// Is RDTSC supported?
-	bool m_bCMOV	: 1;	// Is CMOV supported?
-	bool m_bFCMOV	: 1;	// Is FCMOV supported?
-	bool m_bSSE	: 1;	// Is SSE supported?
-	bool m_bSSE2	: 1;	// Is SSE2 Supported?
-	bool m_b3DNow	: 1;	// Is 3DNow! Supported?
-	bool m_bMMX	: 1;	// Is MMX supported?
-	bool m_bHT	: 1;	// Is HyperThreading supported?
+	qboolean m_bRDTSC	: 1;	// Is RDTSC supported?
+	qboolean m_bCMOV	: 1;	// Is CMOV supported?
+	qboolean m_bFCMOV	: 1;	// Is FCMOV supported?
+	qboolean m_bSSE	: 1;	// Is SSE supported?
+	qboolean m_bSSE2	: 1;	// Is SSE2 Supported?
+	qboolean m_b3DNow	: 1;	// Is 3DNow! Supported?
+	qboolean m_bMMX	: 1;	// Is MMX supported?
+	qboolean m_bHT	: 1;	// Is HyperThreading supported?
 
 	byte m_usNumLogicCore;	// Number op logical processors.
 	byte m_usNumPhysCore;	// Number of physical processors
@@ -34,7 +34,7 @@ typedef struct register_s
 	dword	ebx;
 	dword	ecx;
 	dword	edx;
-	bool	retval;
+	qboolean	retval;
 } register_t;
 
 static register_t cpuid(uint function )
@@ -68,7 +68,7 @@ static register_t cpuid(uint function )
 	return local;
 }
 
-bool CheckMMXTechnology(void)
+qboolean CheckMMXTechnology(void)
 {
 	register_t mmx = cpuid(1);
 
@@ -76,7 +76,7 @@ bool CheckMMXTechnology(void)
 	return ( mmx.edx & 0x800000 ) != 0;
 }
 
-bool CheckSSETechnology(void)
+qboolean CheckSSETechnology(void)
 {
 	register_t sse = cpuid(1);
 	
@@ -84,7 +84,7 @@ bool CheckSSETechnology(void)
 	return ( sse.edx & 0x2000000L ) != 0;
 }
 
-bool CheckSSE2Technology(void)
+qboolean CheckSSE2Technology(void)
 {
 	register_t sse2 = cpuid(1);
 
@@ -92,7 +92,7 @@ bool CheckSSE2Technology(void)
 	return ( sse2.edx & 0x04000000 ) != 0;
 }
 
-bool Check3DNowTechnology(void)
+qboolean Check3DNowTechnology(void)
 {
 	register_t amd = cpuid( 0x80000000 );
 	
@@ -106,7 +106,7 @@ bool Check3DNowTechnology(void)
 	return false;
 }
 
-bool CheckCMOVTechnology()
+qboolean CheckCMOVTechnology()
 {
 	register_t cmov = cpuid(1);
 
@@ -114,7 +114,7 @@ bool CheckCMOVTechnology()
 	return ( cmov.edx & (1<<15) ) != 0;
 }
 
-bool CheckFCMOVTechnology(void)
+qboolean CheckFCMOVTechnology(void)
 {
 	register_t fcmov = cpuid(1);
 
@@ -122,7 +122,7 @@ bool CheckFCMOVTechnology(void)
 	return ( fcmov.edx & (1<<16) ) != 0;
 }
 
-bool CheckRDTSCTechnology(void)
+qboolean CheckRDTSCTechnology(void)
 {
 	register_t rdtsc = cpuid(1);
 
@@ -160,7 +160,7 @@ Returns non-zero if Hyper-Threading Technology is supported on the processors an
 This does not mean that Hyper-Threading Technology is necessarily enabled.
 ================
 */
-static bool HTSupported(void)
+static qboolean HTSupported(void)
 {
 	const uint HT_BIT	= 0x10000000;	// EDX[28] - Bit 28 set indicates Hyper-Threading Technology is supported in hardware.
 	const uint FAMILY_ID = 0x0f00;	// EAX[11:8] - Bit 11 thru 8 contains family processor id

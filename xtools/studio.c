@@ -8,8 +8,8 @@
 #include "matrix_lib.h"
 #include "stdio.h"		// sscanf
 
-bool		cdset;
-bool		ignore_errors;
+qboolean		cdset;
+qboolean		ignore_errors;
 
 byte		*studiopool;
 byte		*pData;
@@ -81,7 +81,7 @@ string		mirrored[MAXSTUDIOSRCBONES];
 s_mesh_t		*pmesh;
 token_t		token;
 studiohdr_t	*phdr;
-mstudioseqhdr_t	*pseqhdr;
+studioseqhdr_t	*pseqhdr;
 file_t		*smdfile;
 char		line[2048];
 int		linecount;
@@ -2525,7 +2525,7 @@ void Cmd_StudioUnknown( const char *token )
 	Com_SkipRestOfLine( studioqc );
 }
 
-bool ParseModelScript( void )
+qboolean ParseModelScript( void )
 {
 	ResetModelInfo();
 
@@ -2631,7 +2631,7 @@ void ClearModel( void )
 	Mem_EmptyPool( studiopool );	// free all memory
 }
 
-bool CompileCurrentModel( const char *name )
+qboolean CompileCurrentModel( const char *name )
 {
 	cdset = false;
 	cdtextureset = numincludes = 0;
@@ -2659,7 +2659,7 @@ bool CompileCurrentModel( const char *name )
 	return false;
 }
 
-bool CompileStudioModel ( byte *mempool, const char *name, byte parms )
+qboolean CompileStudioModel ( byte *mempool, const char *name, byte parms )
 {
 	if(mempool) studiopool = mempool;
 	else

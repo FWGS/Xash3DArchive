@@ -16,7 +16,7 @@ void CL_ClearPhysEnts( void )
 	clgame.pmove->numphysent = 0;
 }
 
-bool CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
+qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 {
 	model_t	*mod = CM_ClipHandleToModel( ent->curstate.modelindex );
 
@@ -319,7 +319,7 @@ static void pfnPlaybackEventFull( int flags, int clientindex, word eventindex, f
 	ent = CL_GetEntityByIndex( clientindex + 1 );
 	if( ent == NULL ) return;
 
-	CL_PlaybackEvent( flags, ent, eventindex,
+	CL_PlaybackEvent( flags, (edict_t *)ent, eventindex,
 		delay, origin, angles,
 		fparam1, fparam2,
 		iparam1, iparam2,

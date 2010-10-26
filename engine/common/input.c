@@ -19,14 +19,14 @@
 #define WND_HEADSIZE	wnd_caption		// some offset
 #define WND_BORDER		3			// sentinel border in pixels
 
-bool	in_mouseactive;		// false when not focus app
-bool	in_restore_spi;
-bool	in_mouseinitialized;
+qboolean	in_mouseactive;		// false when not focus app
+qboolean	in_restore_spi;
+qboolean	in_mouseinitialized;
 int	in_originalmouseparms[3];
 int	in_mouse_oldbuttonstate;
 int	in_newmouseparms[3] = { 0, 0, 1 };
-bool	in_mouse_suspended;
-bool	in_mouseparmsvalid;
+qboolean	in_mouse_suspended;
+qboolean	in_mouseparmsvalid;
 int	in_mouse_buttons;
 RECT	window_rect, real_rect;
 uint	in_mouse_wheel;
@@ -73,7 +73,7 @@ Map from windows to engine keynums
 static int Host_MapKey( int key )
 {
 	int	result, modified;
-	bool	is_extended = false;
+	qboolean	is_extended = false;
 
 	modified = ( key >> 16 ) & 255;
 	if( modified > 127 ) return 0;
@@ -129,7 +129,7 @@ void IN_StartupMouse( void )
 	in_mouse_wheel = RegisterWindowMessage( "MSWHEEL_ROLLMSG" );
 }
 
-static bool IN_CursorInRect( void )
+static qboolean IN_CursorInRect( void )
 {
 	POINT	curpos;
 	
@@ -338,7 +338,7 @@ Called every frame, even if not generating commands
 */
 void Host_InputFrame( void )
 {
-	bool	shutdownMouse = false;
+	qboolean	shutdownMouse = false;
 
 	rand (); // keep the random time dependent
 

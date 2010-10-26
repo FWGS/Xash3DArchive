@@ -277,7 +277,7 @@ void GL_FrontFace( int front )
 R_TransformEntityBBox
 =============
 */
-void R_TransformEntityBBox( ref_entity_t *e, vec3_t mins, vec3_t maxs, vec3_t bbox[8], bool local )
+void R_TransformEntityBBox( ref_entity_t *e, vec3_t mins, vec3_t maxs, vec3_t bbox[8], qboolean local )
 {
 	int	i;
 	vec3_t	axis[3], tmp;
@@ -407,7 +407,7 @@ mfog_t *R_FogForSphere( const vec3_t centre, const float radius )
 R_CompletelyFogged
 =============
 */
-bool R_CompletelyFogged( mfog_t *fog, vec3_t origin, float radius )
+qboolean R_CompletelyFogged( mfog_t *fog, vec3_t origin, float radius )
 {
 	// note that fog->distanceToEye < 0 is always true if
 	// globalfog is not NULL and we're inside the world boundaries
@@ -480,7 +480,7 @@ static mesh_t spr_mesh = { 4, 6, spr_xyz, spr_xyz, NULL, NULL, spr_st, NULL, spr
 R_PushSprite
 =================
 */
-bool R_PushSprite( const meshbuffer_t *mb, int type, float right, float left, float up, float down )
+qboolean R_PushSprite( const meshbuffer_t *mb, int type, float right, float left, float up, float down )
 {
 	int		i, features;
 	vec3_t		v_forward, v_right, v_up;
@@ -673,7 +673,7 @@ static void R_PushCorona( const meshbuffer_t *mb )
 R_PushSpritePoly
 =================
 */
-bool R_PushSpritePoly( const meshbuffer_t *mb )
+qboolean R_PushSpritePoly( const meshbuffer_t *mb )
 {
 	ref_entity_t *e = RI.currententity;
 
@@ -733,7 +733,7 @@ static void R_AddSpriteModelToList( ref_entity_t *e )
 R_SpriteOverflow
 =================
 */
-bool R_SpriteOverflow( void )
+qboolean R_SpriteOverflow( void )
 {
 	return R_MeshOverflow( &spr_mesh );
 }
@@ -1272,7 +1272,7 @@ static void R_CullEntities( void )
 {
 	uint		i;
 	ref_entity_t	*e;
-	bool		culled;
+	qboolean		culled;
 
 	Mem_Set( r_entVisBits, 0, sizeof( r_entVisBits ));
 	if( !r_drawentities->integer )
@@ -1370,7 +1370,7 @@ static void R_DrawRegularEntities( void )
 {
 	uint		i;
 	ref_entity_t	*e;
-	bool		shadowmap = (( RI.params & RP_SHADOWMAPVIEW ) != 0 );
+	qboolean		shadowmap = (( RI.params & RP_SHADOWMAPVIEW ) != 0 );
 
 	for( i = 1; i < r_numEntities; i++ )
 	{
@@ -1453,7 +1453,7 @@ R_DrawEntities
 */
 static void R_DrawEntities( void )
 {
-	bool shadowmap = (( RI.params & RP_SHADOWMAPVIEW ) != 0 );
+	qboolean shadowmap = (( RI.params & RP_SHADOWMAPVIEW ) != 0 );
 
 	if( r_drawentities->integer <= 0 )
 		return;
@@ -1545,7 +1545,7 @@ RI.refdef must be set before the first call
 void R_RenderView( const ref_params_t *fd )
 {
 	double	starttime;
-	bool	shadowMap = RI.params & RP_SHADOWMAPVIEW ? true : false;
+	qboolean	shadowMap = RI.params & RP_SHADOWMAPVIEW ? true : false;
 
 	RI.refdef = *fd;
 
@@ -1665,7 +1665,7 @@ void R_RenderView( const ref_params_t *fd )
 R_BeginFrame
 ===============
 */
-void R_BeginFrame( bool clearScene )
+void R_BeginFrame( qboolean clearScene )
 {
 	if( gl_finish->integer && gl_delayfinish->integer )
 	{
@@ -1774,7 +1774,7 @@ void R_ClearScene( void )
 R_AddPolyToScene
 =====================
 */
-bool R_AddPolyToScene( const poly_t *poly )
+qboolean R_AddPolyToScene( const poly_t *poly )
 {
 	if(( r_numPolys < MAX_POLYS ) && poly && poly->numverts )
 	{
@@ -1928,7 +1928,7 @@ void R_EndFrame( void )
 R_SpeedsMessage
 ===============
 */
-static bool R_SpeedsMessage( char *out, size_t size )
+static qboolean R_SpeedsMessage( char *out, size_t size )
 {
 	if( r_speeds->integer <= 0 ) return false;
 	if( !out || !size ) return false;
@@ -2073,7 +2073,7 @@ int R_ComputeFxBlend( ref_entity_t *e )
 R_TransformToScreen_Vec3
 =============
 */
-bool R_TransformToScreen_Vec3( const vec3_t in, vec3_t out )
+qboolean R_TransformToScreen_Vec3( const vec3_t in, vec3_t out )
 {
 	vec4_t	temp, temp2;
 
@@ -2129,10 +2129,10 @@ R_ScreenTransform
 transform world position into screen
 =============
 */
-bool R_ScreenTransform( const vec3_t point, vec3_t pClip )
+qboolean R_ScreenTransform( const vec3_t point, vec3_t pClip )
 {
 	matrix4x4	worldToScreen;
-	bool behind;
+	qboolean behind;
 	float w;
 
 	Matrix4x4_Copy( worldToScreen, RI.worldviewProjectionMatrix );
@@ -2164,7 +2164,7 @@ static void R_ScreenToWorld( const float *screen, float *world )
 	// FIXME: implement
 }
 
-static bool R_WorldToScreen( const float *world, float *screen )
+static qboolean R_WorldToScreen( const float *world, float *screen )
 {
 	return R_ScreenTransform( world, screen );
 }
@@ -2212,7 +2212,7 @@ msurface_t *R_TraceLine( pmtrace_t *tr, const vec3_t start, const vec3_t end, in
 	return surf;
 }
 
-bool R_UploadModel( const char *name, int index )
+qboolean R_UploadModel( const char *name, int index )
 {
 	ref_model_t	*mod;
 
@@ -2276,7 +2276,7 @@ byte *Mod_GetCurrentVis( void )
 	return Mod_LeafPVS( r_viewleaf, r_worldmodel );
 }
 
-bool Mod_CullBox( const vec3_t mins, const vec3_t maxs )
+qboolean Mod_CullBox( const vec3_t mins, const vec3_t maxs )
 {
 	return R_CullBox( mins, maxs, RI.clipFlags );
 }
@@ -2303,7 +2303,7 @@ shader_t R_GetSpriteTexture( int spriteIndex, int spriteFrame )
 	return pSpriteFrame->shader;
 }
 
-bool R_AddLightStyle( int stylenum, vec3_t color )
+qboolean R_AddLightStyle( int stylenum, vec3_t color )
 {
 	if( stylenum < 0 || stylenum > MAX_LIGHTSTYLES )
 		return false; // invalid lightstyle
@@ -2312,7 +2312,7 @@ bool R_AddLightStyle( int stylenum, vec3_t color )
 	return true;
 }
 
-bool R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
+qboolean R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 {
 	// check model
 	if( !refent->model ) return false;
@@ -2383,7 +2383,7 @@ bool R_AddGenericEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 	return true;
 }
 
-bool R_AddPortalEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
+qboolean R_AddPortalEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 {
 	refent->rtype = RT_PORTALSURFACE;
 
@@ -2397,11 +2397,11 @@ bool R_AddPortalEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 	return true;
 }
 
-bool R_AddEntityToScene( cl_entity_t *pRefEntity, int entityType, shader_t customShader )
+qboolean R_AddEntityToScene( cl_entity_t *pRefEntity, int entityType, shader_t customShader )
 {
 	ref_entity_t	*refent;
 	ref_shader_t	*shader;
-	bool		result = false;
+	qboolean		result = false;
 
 	if( !pRefEntity || pRefEntity->curstate.modelindex <= 0 || pRefEntity->curstate.modelindex >= MAX_MODELS )
 		return false; // if set to invisible, skip
@@ -2493,7 +2493,7 @@ bool R_AddEntityToScene( cl_entity_t *pRefEntity, int entityType, shader_t custo
 	return result;
 }
 
-bool R_AddDynamicLight( vec3_t pos, rgb_t color, float radius, int flags )
+qboolean R_AddDynamicLight( vec3_t pos, color24 color, float radius, int flags )
 {
 	ref_dlight_t	*dl;
 
@@ -2503,7 +2503,9 @@ bool R_AddDynamicLight( vec3_t pos, rgb_t color, float radius, int flags )
 	dl = &r_dlights[r_numDlights++];
 
 	VectorCopy( pos, dl->origin );
-	VectorScale( color, ( 1.0f / 255.0f ), dl->color );
+	dl->color[0] = color.r * ( 1.0f / 255.0f );
+	dl->color[1] = color.g * ( 1.0f / 255.0f );
+	dl->color[2] = color.b * ( 1.0f / 255.0f );
 	dl->intensity = radius * 0.5f;
 	dl->flags = flags;
 	dl->shader = NULL;

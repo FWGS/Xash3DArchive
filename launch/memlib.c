@@ -1164,7 +1164,7 @@ void _mem_emptypool(byte *poolptr, const char *filename, int fileline)
 	while (pool->chain) _mem_freeblock(pool->chain, filename, fileline);
 }
 
-bool _mem_allocated( mempool_t *pool, void *data )
+qboolean _mem_allocated( mempool_t *pool, void *data )
 {
 	memheader_t *header, *target;
 
@@ -1191,7 +1191,7 @@ Check pointer for memory
 allocated by memlib.c
 ========================
 */
-bool _is_allocated( byte *poolptr, void *data )
+qboolean _is_allocated( byte *poolptr, void *data )
 {
 	mempool_t	*pool = NULL;
 	if( poolptr ) pool = (mempool_t *)((byte *)poolptr);

@@ -60,9 +60,9 @@ void Host_Null( void )
 Host_NewGame
 ================
 */
-bool Host_NewGame( const char *mapName, bool loadGame )
+qboolean Host_NewGame( const char *mapName, qboolean loadGame )
 {
-	bool	iRet;
+	qboolean	iRet;
 
 	iRet = SV_NewGame( mapName, loadGame );
 
@@ -117,11 +117,11 @@ void Host_FreeRender( void )
 	Sys_FreeLibrary( &render_dll );
 }
 
-bool Host_InitRender( void )
+qboolean Host_InitRender( void )
 {
 	static render_imp_t	ri;
 	launch_t		CreateRender;
-	bool		result = false;
+	qboolean		result = false;
 	
 	ri.api_size = sizeof( render_imp_t );
 
@@ -164,11 +164,11 @@ void Host_FreeSound( void )
 	Sys_FreeLibrary( &vsound_dll );
 }
 
-bool Host_InitSound( void )
+qboolean Host_InitSound( void )
 {
 	static vsound_imp_t	si;
 	launch_t		CreateSound;  
-	bool		result = false;
+	qboolean		result = false;
 
 	if( FS_CheckParm( "-nosound" ))
 		return result;
@@ -204,7 +204,7 @@ bool Host_InitSound( void )
 void Host_CheckChanges( void )
 {
 	int	num_changes;
-	bool	audio_disabled = false;
+	qboolean	audio_disabled = false;
 
 	if( FS_CheckParm( "-nosound" ))
 	{
@@ -225,7 +225,7 @@ void Host_CheckChanges( void )
 	if( host_video->modified && CL_Active( ))
 	{
 		// we're in game and want keep decals when renderer is changed
-		host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_DECALS );
+		host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS );
 		host.numdecals = CL_CreateDecalList( host.decalList, false );
 	}
 
@@ -365,7 +365,7 @@ void Host_Minimize_f( void )
 	if( host.hWnd ) ShowWindow( host.hWnd, SW_MINIMIZE );
 }
 
-bool Host_IsLocalGame( void )
+qboolean Host_IsLocalGame( void )
 {
 	if( CL_Active() && SV_Active() && CL_GetMaxClients() == 1 )
 		return true;
@@ -392,7 +392,7 @@ Host_PushEvent
 void Host_PushEvent( sys_event_t *event )
 {
 	sys_event_t	*ev;
-	static bool	overflow = false;
+	static qboolean	overflow = false;
 
 	ev = &host.events[host.events_head & (MAX_SYSEVENTS-1)];
 
@@ -502,7 +502,7 @@ Host_FilterTime
 Returns false if the time is too short to run a frame
 ===================
 */
-bool Host_FilterTime( float time )
+qboolean Host_FilterTime( float time )
 {
 	static double	oldtime;
 	float		fps;
@@ -605,7 +605,7 @@ void Host_Error( const char *error, ... )
 {
 	static char	hosterror1[MAX_SYSPATH];
 	static char	hosterror2[MAX_SYSPATH];
-	static bool	recursive = false;
+	static qboolean	recursive = false;
 	va_list		argptr;
 
 	va_start( argptr, error );
@@ -883,4 +883,33 @@ void Host_Free( void )
 	CL_Shutdown();
 	NET_Shutdown();
 	Host_FreeCommon();
+}
+
+// main DLL entry point
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
+{
+	return TRUE;
+}
+
+/*
+=================
+Engine entry point
+=================
+*/
+launch_exp_t EXPORT *CreateAPI( stdlib_api_t *input, void *unused )
+{
+         	static launch_exp_t Host;
+
+	com = *input;
+	Host.api_size = sizeof( launch_exp_t );
+	Host.com_size = sizeof( stdlib_api_t );
+
+	Host.Init = Host_Init;
+	Host.Main = Host_Main;
+	Host.Free = Host_Free;
+	Host.CPrint = Host_Print;
+	Host.CmdForward = Cmd_ForwardToServer;
+	Host.CmdComplete = Cmd_AutoComplete;
+
+	return &Host;
 }

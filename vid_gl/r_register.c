@@ -647,7 +647,7 @@ void GL_SetExtension( int r_ext, int enable )
 	else MsgDev( D_ERROR, "GL_SetExtension: invalid extension %d\n", r_ext );
 }
 
-bool GL_Support( int r_ext )
+qboolean GL_Support( int r_ext )
 {
 	if( r_ext >= 0 && r_ext < R_EXTCOUNT )
 		return glConfig.extension[r_ext] ? true : false;
@@ -1047,7 +1047,7 @@ static void R_FreeMedia( void )
 	glState.initializedMedia = false;
 }
 
-bool R_Init( bool full )
+qboolean R_Init( qboolean full )
 {
 	if( full )
 	{
@@ -1077,7 +1077,7 @@ bool R_Init( bool full )
 R_Shutdown
 ===============
 */
-void R_Shutdown( bool full )
+void R_Shutdown( qboolean full )
 {
 	// free shaders, models, etc.
 	R_FreeMedia();

@@ -338,7 +338,7 @@ void		R_InitModels( void );
 void		R_ShutdownModels( void );
 
 void		Mod_ClearAll( void );
-ref_model_t	*Mod_ForName( const char *name, bool crash );
+ref_model_t	*Mod_ForName( const char *name, qboolean crash );
 mleaf_t		*Mod_PointInLeaf( const vec3_t p, ref_model_t *model );
 byte		*Mod_LeafPVS( mleaf_t *leaf, ref_model_t *model );
 uint		Mod_Handle( ref_model_t *mod );

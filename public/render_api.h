@@ -98,30 +98,30 @@ typedef struct render_exp_s
 	size_t	com_size;			// must matched with sizeof(stdlib_api_t)
 
 	// initialize
-	bool	(*Init)( bool full );	// init all render systems
-	void	(*Shutdown)( bool full );	// shutdown all render systems
+	qboolean	(*Init)( qboolean full );	// init all render systems
+	void	(*Shutdown)( qboolean full );	// shutdown all render systems
 
 	void	(*BeginRegistration)( const char *map );
-	bool	(*RegisterModel)( const char *name, int cl_index ); // also build replacement index table
+	qboolean	(*RegisterModel)( const char *name, int cl_index ); // also build replacement index table
 	shader_t	(*RegisterShader)( const char *name, int shaderType );
 	shader_t	(*RegisterShaderInt)( const char *name, const byte *image_buf, size_t image_size );	// from memory
 	void	(*EndRegistration)( const char *skyname );
 	void	(*FreeShader)( const char *shadername );
 
 	// prepare frame to rendering
-	bool	(*AddRefEntity)( struct cl_entity_s *pRefEntity, int entityType, shader_t customShader );
-	bool	(*DecalShoot)( shader_t decal, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
-	bool	(*AddDLight)( vec3_t pos, rgb_t color, float radius, int flags );
-	bool	(*AddPolygon)( const poly_t *poly );
-	bool	(*AddLightStyle)( int stylenum, vec3_t color );
+	qboolean	(*AddRefEntity)( struct cl_entity_s *pRefEntity, int entityType, shader_t customShader );
+	qboolean	(*DecalShoot)( shader_t decal, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color, float fadeTime, float fadeDuration );
+	qboolean	(*AddDLight)( vec3_t pos, color24 color, float radius, int flags );
+	qboolean	(*AddPolygon)( const poly_t *poly );
+	qboolean	(*AddLightStyle)( int stylenum, vec3_t color );
 	void	(*ClearScene)( void );
 
-	void	(*BeginFrame)( bool clearScene );
+	void	(*BeginFrame)( qboolean clearScene );
 	void	(*RenderFrame)( const ref_params_t *fd );
 	void	(*EndFrame)( void );
 
 	// triapi implementation
-	void	(*RenderMode)( const kRenderMode_t mode );
+	void	(*RenderMode)( const int mode );
 	shader_t	(*GetSpriteTexture)( int spriteIndex, int spriteFrame );
 	void	(*Normal3f)( const float x, const float y, const float z );
 	void	(*Vertex3f)( const float x, const float y, const float z );
@@ -137,18 +137,18 @@ typedef struct render_exp_s
 
 	// misc utilities
 	void	(*SetColor)( const rgba_t color );
-	void	(*SetParms)( shader_t handle, kRenderMode_t rendermode, int frame );
+	void	(*SetParms)( shader_t handle, int rendermode, int frame );
 	void	(*GetParms)( int *w, int *h, int *frames, int frame, shader_t shader );
-	bool	(*ScrShot)( const char *filename, int shot_type ); // write screenshot with same name 
-	bool	(*EnvShot)( const char *filename, uint size, const float *vieworg, bool skyshot );
+	qboolean	(*ScrShot)( const char *filename, int shot_type ); // write screenshot with same name 
+	qboolean	(*EnvShot)( const char *filename, uint size, const float *vieworg, qboolean skyshot );
 	void	(*LightForPoint)( const vec3_t point, vec3_t ambientLight );
-	void	(*DrawStretchRaw)( float x, float y, float w, float h, int cols, int rows, byte *data, bool redraw );
+	void	(*DrawStretchRaw)( float x, float y, float w, float h, int cols, int rows, byte *data, qboolean redraw );
 	void	(*DrawStretchPic)( float x, float y, float w, float h, float s1, float t1, float s2, float t2, shader_t shader );
 	int	(*WorldToScreen)( const float *world, float *screen );
 	void	(*ScreenToWorld)( const float *screen, float *world );
-	bool	(*CullBox)( const vec3_t mins, const vec3_t maxs );
-	bool 	(*RSpeedsMessage)( char *out, size_t size );
-	int	(*CreateDecalList)( decallist_t *pList, bool changelevel );	// helper to serialize decals
+	qboolean	(*CullBox)( const vec3_t mins, const vec3_t maxs );
+	qboolean 	(*RSpeedsMessage)( char *out, size_t size );
+	int	(*CreateDecalList)( decallist_t *pList, qboolean changelevel );	// helper to serialize decals
 	byte	*(*GetCurrentVis)( void );
 	void	(*RestoreGamma)( void );
 } render_exp_t;

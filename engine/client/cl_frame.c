@@ -9,7 +9,7 @@
 #include "entity_types.h"
 #include "input.h"
 
-bool CL_IsPlayerIndex( int idx )
+qboolean CL_IsPlayerIndex( int idx )
 {
 	if( idx > 0 && idx <= cl.maxclients )
 		return true;
@@ -109,12 +109,12 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate )
 		VectorCopy( ent->curstate.angles, ent->latched.prevangles );
 }
 
-void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, bool unchanged )
+void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, qboolean unchanged )
 {
 	cl_entity_t	*ent;
 	entity_state_t	*state;
-	bool		newent = (old) ? false : true;
-	bool		noInterp = false;
+	qboolean		newent = (old) ? false : true;
+	qboolean		noInterp = false;
 	int		result = 1;
 
 	ent = EDICT_NUM( newnum );
@@ -215,7 +215,7 @@ An svc_packetentities has just been parsed, deal with the
 rest of the data stream.
 ==================
 */
-void CL_ParsePacketEntities( sizebuf_t *msg, bool delta )
+void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 {
 	frame_t		*newframe, *oldframe;
 	int		oldindex, newnum, oldnum;
@@ -531,10 +531,10 @@ void CL_AddEntities( void )
 //
 // sound engine implementation
 //
-bool CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
+qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
 {
 	cl_entity_t	*ent;
-	bool		from_baseline = false;
+	qboolean		from_baseline = false;
 
 	if( entnum < 0 || entnum > clgame.numEntities )
 		return false;

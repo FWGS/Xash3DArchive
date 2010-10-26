@@ -24,7 +24,7 @@ _inline int BitByte( int bits )
 
 typedef struct
 {
-	bool		bOverflow;	// overflow reading or writing
+	qboolean		bOverflow;	// overflow reading or writing
 	const char	*pDebugName;	// buffer name (pointer to const name)
 
 	byte		*pData;
@@ -48,7 +48,7 @@ void BF_InitMasks( void );	// called once at startup engine
 void BF_SeekToBit( sizebuf_t *bf, int bitPos );
 void BF_SeekToByte( sizebuf_t *bf, int bytePos );
 void BF_ExciseBits( sizebuf_t *bf, int startbit, int bitstoremove );
-bool BF_CheckOverflow( sizebuf_t *bf );
+qboolean BF_CheckOverflow( sizebuf_t *bf );
 
 // init writing
 void BF_StartWriting( sizebuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits );
@@ -56,10 +56,10 @@ void BF_Clear( sizebuf_t *bf );
 
 // Bit-write functions
 void BF_WriteOneBit( sizebuf_t *bf, int nValue );
-void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, bool bCheckRange );
+void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCheckRange );
 void BF_WriteSBitLong( sizebuf_t *bf, int data, int numbits );
-void BF_WriteBitLong( sizebuf_t *bf, uint data, int numbits, bool bSigned );
-bool BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits );
+void BF_WriteBitLong( sizebuf_t *bf, uint data, int numbits, qboolean bSigned );
+qboolean BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits );
 void BF_WriteBitAngle( sizebuf_t *bf, float fAngle, int numbits );
 void BF_WriteBitCoord( sizebuf_t *bf, const float f );
 void BF_WriteBitFloat( sizebuf_t *bf, float val );
@@ -75,11 +75,11 @@ void BF_WriteShort( sizebuf_t *bf, int val );
 void BF_WriteWord( sizebuf_t *bf, int val );
 void BF_WriteLong( sizebuf_t *bf, long val );
 void BF_WriteFloat( sizebuf_t *bf, float val );
-bool BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes );	// same as MSG_WriteData
-bool BF_WriteString(  sizebuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.
+qboolean BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes );	// same as MSG_WriteData
+qboolean BF_WriteString(  sizebuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.
 
 // delta-write functions
-bool BF_WriteDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );
+qboolean BF_WriteDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );
 
 // helper functions
 _inline int BF_GetNumBytesWritten( sizebuf_t *bf ) { return BitByte( bf->iCurBit ); }
@@ -94,11 +94,11 @@ _inline byte *BF_GetData( sizebuf_t *bf ) { return bf->pData; }
 // Bit-read functions
 int BF_ReadOneBit( sizebuf_t *bf );
 float BF_ReadBitFloat( sizebuf_t *bf );
-bool BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits );
+qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits );
 float BF_ReadBitAngle( sizebuf_t *bf, int numbits );
 int BF_ReadSBitLong( sizebuf_t *bf, int numbits );
 uint BF_ReadUBitLong( sizebuf_t *bf, int numbits );
-uint BF_ReadBitLong( sizebuf_t *bf, int numbits, bool bSigned );
+uint BF_ReadBitLong( sizebuf_t *bf, int numbits, qboolean bSigned );
 float BF_ReadBitCoord( sizebuf_t *bf );
 void BF_ReadBitVec3Coord( sizebuf_t *bf, vec3_t fa );
 float BF_ReadBitNormal( sizebuf_t *bf );
@@ -111,8 +111,8 @@ int BF_ReadShort( sizebuf_t *bf );
 int BF_ReadWord( sizebuf_t *bf );
 long BF_ReadLong( sizebuf_t *bf );
 float BF_ReadFloat( sizebuf_t *bf );
-bool BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes );
-char *BF_ReadStringExt( sizebuf_t *bf, bool bLine );
+qboolean BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes );
+char *BF_ReadStringExt( sizebuf_t *bf, qboolean bLine );
 
 // delta-read functions
 void BF_ReadDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );

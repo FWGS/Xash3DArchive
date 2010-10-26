@@ -15,7 +15,7 @@ typedef struct
 	vec3_t	origin;
 	float	volume;
 	float	attenuation;
-	bool	looping;
+	qboolean	looping;
 	int	pitch;
 } soundlist_t;
 
@@ -42,7 +42,7 @@ typedef struct vsound_exp_s
 	size_t	api_size;		// must matched with sizeof(vsound_api_t)
 	size_t	com_size;		// must matched with sizeof(stdlib_api_t)
 
-	bool (*Init)( void *hInst );	// init sound
+	qboolean (*Init)( void *hInst );	// init sound
 	void (*Shutdown)( void );
 
 	// sound manager
@@ -67,7 +67,7 @@ typedef struct vsound_exp_s
 	void (*StopAllSounds)( void );
 	void (*ExtraUpdate)( void );
 
-	void (*Activate)( bool active, void *hInst );
+	void (*Activate)( qboolean active, void *hInst );
 
 } vsound_exp_t;
 
@@ -76,14 +76,14 @@ typedef struct vsound_imp_s
 	// interface validator
 	size_t	api_size;		// must matched with sizeof(vsound_imp_t)
 
-	bool (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
+	qboolean (*GetEntitySpatialization)( int entnum, vec3_t origin, vec3_t velocity );
 	void (*AmbientLevels)( const vec3_t p, byte *pvolumes );
 	struct cl_entity_s *(*GetClientEdict)( int index );
 	long (*GetAudioChunk)( char *rawdata, long length );		// movie soundtrack update
 	wavdata_t *(*GetMovieInfo)( void );				// params for soundtrack
 	float (*GetServerTime)( void );
-	bool (*IsInMenu)( void );	// returns true when client is in-menu
-	bool (*IsActive)( void );	// returns true when client is completely in-game
+	qboolean (*IsInMenu)( void );	// returns true when client is in-menu
+	qboolean (*IsActive)( void );	// returns true when client is completely in-game
 } vsound_imp_t;
 
 #endif//VSOUND_API_H

@@ -202,7 +202,7 @@ class CBeamSegDraw
 {
 public:
 	// pass null for pMaterial if you have already set the material you want.
-	void		Start( int nSegs, HSPRITE m_hSprite, kRenderMode_t nRenderMode, int frame = 0 );
+	void		Start( int nSegs, HSPRITE m_hSprite, int nRenderMode, int frame = 0 );
 	void		NextSeg( CBeamSeg *pSeg );
 	void		End();
 private:

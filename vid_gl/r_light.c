@@ -39,7 +39,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 R_SurfPotentiallyLit
 =============
 */
-bool R_SurfPotentiallyLit( msurface_t *surf )
+qboolean R_SurfPotentiallyLit( msurface_t *surf )
 {
 	ref_shader_t *shader;
 
@@ -101,7 +101,7 @@ R_AddDynamicLights
 void R_AddDynamicLights( uint dlightbits, int state )
 {
 	uint		i, j, numTempElems;
-	bool		cullAway;
+	qboolean		cullAway;
 	const ref_dlight_t	*light;
 	const ref_shader_t	*shader;
 	vec3_t		tvec, dlorigin, normal;
@@ -382,7 +382,7 @@ static vec3_t	r_lightColors[MAX_ARRAY_VERTS];
 R_RecursiveLightPoint
 =================
 */
-static bool R_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
+static qboolean R_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
 {
 	int		side;
 	mplane_t		*plane;
@@ -674,7 +674,7 @@ dynamic:
 		ref_dlight_t	*dl;
 		float		dist, dist2, add;
 		vec3_t		direction;
-		bool		anyDlights = false;
+		qboolean		anyDlights = false;
 
 		for( lnum = 0, dl = r_dlights; lnum < r_numDlights; lnum++, dl++ )
 		{

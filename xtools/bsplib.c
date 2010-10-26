@@ -10,13 +10,13 @@ void Bsp_PrintLog( const char *pMsg )
 	FS_Print( bsplog, pMsg );
 }
 
-bool PrepareBSPModel( int argc, char **argv )
+qboolean PrepareBSPModel( int argc, char **argv )
 {
 	Sys_Break( "\r\rbsplib not implemented. Wait for Xash 0.72\r\r" );
 	return false;
 }
 
-bool CompileBSPModel ( void )
+qboolean CompileBSPModel ( void )
 {
 	return false;
 }

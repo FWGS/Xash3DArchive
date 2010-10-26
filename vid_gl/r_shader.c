@@ -39,7 +39,7 @@ typedef struct ref_script_s
 typedef struct
 {
 	const char *name;
-	bool (*func)( ref_shader_t *shader, ref_stage_t *pass, script_t *script );
+	qboolean (*func)( ref_shader_t *shader, ref_stage_t *pass, script_t *script );
 } ref_parsekey_t;
 
 typedef enum
@@ -68,16 +68,16 @@ const char	*r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" }; // FIXME
 static mip_t		*r_internalTexture;			// pointer to built-in map texture
 static texture_t		*r_stageTexture[MAX_STAGE_TEXTURES];	// MAX_FRAMES in spritegen.c
 static uint		r_miptexFeatures;			// bmodel miptex features
-static kRenderMode_t	r_shaderRenderMode;			// sprite or studiomodel rendermode
+static int	r_shaderRenderMode;			// sprite or studiomodel rendermode
 static int		r_numStageTextures;			// num textures in group
 static float		r_stageAnimFrequency[2];		// anim fps / alt anim fps
 static int		r_stageAnimOffset;			// offset for alternative animation
-static bool		r_shaderTwoSided;
-static bool		r_shaderNoMipMaps;
-static bool		r_shaderNoPicMip;
-static bool		r_shaderNoCompress;
-static bool		r_shaderNearest;
-static bool		r_shaderHasDlightPass;
+static qboolean		r_shaderTwoSided;
+static qboolean		r_shaderNoMipMaps;
+static qboolean		r_shaderNoPicMip;
+static qboolean		r_shaderNoCompress;
+static qboolean		r_shaderNearest;
+static qboolean		r_shaderHasDlightPass;
 
 #define Shader_CopyString( str )	com.stralloc( r_shaderpool, str, __FILE__, __LINE__ )
 #define Shader_Malloc( size )		Mem_Alloc( r_shaderpool, size )
@@ -149,12 +149,12 @@ static table_t *R_FindTable( const char *name )
 R_ParseTable
 =================
 */
-static bool R_ParseTable( script_t *script, tableFlags_t flags )
+static qboolean R_ParseTable( script_t *script, tableFlags_t flags )
 {
 	token_t	token;
 	string	name;
 	size_t	size = 0, bufsize = 0;
-	bool	variable = false;
+	qboolean	variable = false;
 	float	*values = NULL;
 
 	if( !Com_ReadToken( script, SC_ALLOW_NEWLINES, &token ))
@@ -348,11 +348,11 @@ float *R_GetTableByHandle( int tableIndex )
 
 =======================================================================
 */
-static bool Shader_ParseVector( script_t *script, float *v, size_t size )
+static qboolean Shader_ParseVector( script_t *script, float *v, size_t size )
 {
 	uint	i;
 	token_t	token;
-	bool	bracket = false;
+	qboolean	bracket = false;
 
 	if( v == NULL || size == 0 )
 		return false;
@@ -415,7 +415,7 @@ typedef struct
 {
 	int	operand;
 	conOp_t	op;
-	bool	negative;
+	qboolean	negative;
 	int	val;
 	conOp2_t	logic;
 } shaderCon_t;
@@ -423,13 +423,13 @@ typedef struct
 char *conOpStrings[] = { "<", "<=", "==", ">", ">=", "!=", NULL };
 char *conOpStrings2[] = { "&&", "||", NULL };
 
-static bool Shader_ParseConditions( script_t *script, ref_shader_t *shader )
+static qboolean Shader_ParseConditions( script_t *script, ref_shader_t *shader )
 {
 	int		i;
 	token_t		tok;
 	int		numConditions;
 	shaderCon_t	conditions[MAX_CONDITIONS];
-	bool		result = false, val = false, skip, expectingOperator;
+	qboolean		result = false, val = false, skip, expectingOperator;
 	static const int	falseCondition = 0;
 
 	numConditions = 0;
@@ -605,7 +605,7 @@ static bool Shader_ParseConditions( script_t *script, ref_shader_t *shader )
 	return result;
 }
 
-static bool Shader_SkipConditionBlock( script_t *script )
+static qboolean Shader_SkipConditionBlock( script_t *script )
 {
 	token_t	tok;
 	int	condition_count = 1;
@@ -623,7 +623,7 @@ static bool Shader_SkipConditionBlock( script_t *script )
 }
 
 //===========================================================================
-static bool Shader_CheckSkybox( const char *name )
+static qboolean Shader_CheckSkybox( const char *name )
 {
 	const char	*skybox_ext[5] = { "tga", "bmp", "jpg", "png", "dds" };
 	int		i, j, num_checked_sides;
@@ -669,7 +669,7 @@ static bool Shader_CheckSkybox( const char *name )
 	return false;
 }
 
-static bool Shader_ParseSkySides( script_t *script, ref_shader_t *shader, ref_shader_t **shaders, bool farbox )
+static qboolean Shader_ParseSkySides( script_t *script, ref_shader_t *shader, ref_shader_t **shaders, qboolean farbox )
 {
 	int		i, shaderType;
 	texture_t		*image;
@@ -728,7 +728,7 @@ static bool Shader_ParseSkySides( script_t *script, ref_shader_t *shader, ref_sh
 	return true;
 }
 
-static bool Shader_ParseFunc( script_t *script, waveFunc_t *func, ref_shader_t *shader )
+static qboolean Shader_ParseFunc( script_t *script, waveFunc_t *func, ref_shader_t *shader )
 {
 	token_t	tok;
 	table_t	*tb;
@@ -850,7 +850,7 @@ static texture_t *Shader_FindImage( ref_shader_t *shader, const char *name, int 
 
 /****************** shader keyword functions ************************/
 
-static bool Shader_Cull( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_Cull( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -877,31 +877,31 @@ static bool Shader_Cull( ref_shader_t *shader, ref_stage_t *pass, script_t *scri
 	return true;
 }
 
-static bool Shader_shaderNoMipMaps( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_shaderNoMipMaps( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	r_shaderNoMipMaps = r_shaderNoPicMip = true;
 	return true;
 }
 
-static bool Shader_shaderNoPicMip( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_shaderNoPicMip( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	r_shaderNoPicMip = true;
 	return true;
 }
 
-static bool Shader_shaderNoCompress( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_shaderNoCompress( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	r_shaderNoCompress = true;
 	return true;
 }
 
-static bool Shader_shaderNearest( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_shaderNearest( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	r_shaderNearest = true;
 	return true;
 }
 
-static bool Shader_DeformVertexes( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_DeformVertexes( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 	deform_t	*deformv;
@@ -1006,7 +1006,7 @@ static bool Shader_DeformVertexes( ref_shader_t *shader, ref_stage_t *pass, scri
 	return true;
 }
 
-static bool Shader_SkyParms( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_SkyParms( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	float		cloudHeight;
 	ref_shader_t	*farboxShaders[6];
@@ -1057,7 +1057,7 @@ static bool Shader_SkyParms( ref_shader_t *shader, ref_stage_t *pass, script_t *
 	return true;
 }
 
-static bool Shader_FogParms( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_FogParms( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	float	div;
 	vec3_t	color, fcolor;
@@ -1102,7 +1102,7 @@ static bool Shader_FogParms( ref_shader_t *shader, ref_stage_t *pass, script_t *
 	return true;
 }
 
-static bool Shader_SkyRotate( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_SkyRotate( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	VectorSet( shader->skyAxis, 0.0f, 0.0f, 1.0f );
 	shader->skySpeed = 0.0f;
@@ -1126,13 +1126,13 @@ static bool Shader_SkyRotate( ref_shader_t *shader, ref_stage_t *pass, script_t 
 	return true;
 }
 
-static bool Shader_CustomDecal( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_CustomDecal( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	shader->flags |= SHADER_DECALPARMS;
 	return true;
 }
 
-static bool Shader_Sort( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_Sort( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -1165,7 +1165,7 @@ static bool Shader_Sort( ref_shader_t *shader, ref_stage_t *pass, script_t *scri
 	return true;
 }
 
-static bool Shader_Portal( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_Portal( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	shader->flags |= SHADER_PORTAL;
 	shader->sort = SORT_PORTAL;
@@ -1173,19 +1173,19 @@ static bool Shader_Portal( ref_shader_t *shader, ref_stage_t *pass, script_t *sc
 	return true;
 }
 
-static bool Shader_PolygonOffset( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_PolygonOffset( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	shader->flags |= SHADER_POLYGONOFFSET;
 	return true;
 }
 
-static bool Shader_EntityMergable( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_EntityMergable( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	shader->flags |= SHADER_ENTITY_MERGABLE;
 	return true;
 }
 
-static bool Shader_If( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_If( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	if( !Shader_ParseConditions( script, shader ))
 	{
@@ -1198,36 +1198,36 @@ static bool Shader_If( ref_shader_t *shader, ref_stage_t *pass, script_t *script
 	return true;
 }
 
-static bool Shader_Endif( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_Endif( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	return true;
 }
 
-static bool Shader_SurfaceParm( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_SurfaceParm( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	Com_SkipRestOfLine( script );
 	return true;
 }
 
-static bool Shader_TessSize( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_TessSize( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	Com_ReadFloat( script, false, &shader->tessSize );
 	return true;
 }
 
-static bool Shader_Light( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_Light( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	Com_SkipRestOfLine( script );
 	return true;
 }
 
-static bool Shader_NoModulativeDlights( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_NoModulativeDlights( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	shader->flags |= SHADER_NO_MODULATIVE_DLIGHTS;
 	return true;
 }
 
-static bool Shader_OffsetMappingScale( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shader_OffsetMappingScale( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	if( !Com_ReadFloat( script, false, &shader->offsetmapping_scale ))
 	{
@@ -1268,7 +1268,7 @@ static const ref_parsekey_t shaderkeys[] =
 };
 
 // ===============================================================
-static bool Shaderpass_LoadMaterial( texture_t **normalmap, texture_t **glossmap, texture_t **decalmap, const char *name, int addFlags, float bumpScale )
+static qboolean Shaderpass_LoadMaterial( texture_t **normalmap, texture_t **glossmap, texture_t **decalmap, const char *name, int addFlags, float bumpScale )
 {
 	texture_t		*images[3];
 	
@@ -1303,7 +1303,7 @@ static bool Shaderpass_LoadMaterial( texture_t **normalmap, texture_t **glossmap
 	return true;
 }
 
-static bool Shaderpass_AnimFrequency( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_AnimFrequency( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	float	anim_fps;
 
@@ -1333,7 +1333,7 @@ static bool Shaderpass_AnimFrequency( ref_shader_t *shader, ref_stage_t *pass, s
 	return true;
 }
 
-static bool Shaderpass_MapExt( ref_shader_t *shader, ref_stage_t *pass, int addFlags, script_t *script )
+static qboolean Shaderpass_MapExt( ref_shader_t *shader, ref_stage_t *pass, int addFlags, script_t *script )
 {
 	int	flags;
 	string	name;
@@ -1423,7 +1423,7 @@ static bool Shaderpass_MapExt( ref_shader_t *shader, ref_stage_t *pass, int addF
 	return true;
 }
 
-static bool Shaderpass_AnimMapExt( ref_shader_t *shader, ref_stage_t *pass, int addFlags, script_t *script )
+static qboolean Shaderpass_AnimMapExt( ref_shader_t *shader, ref_stage_t *pass, int addFlags, script_t *script )
 {
 	int	flags;
 	float	anim_fps;
@@ -1476,7 +1476,7 @@ static bool Shaderpass_AnimMapExt( ref_shader_t *shader, ref_stage_t *pass, int 
 	return true;
 }
 
-static bool Shaderpass_CubeMapExt( ref_shader_t *shader, ref_stage_t *pass, int addFlags, int tcgen, script_t *script )
+static qboolean Shaderpass_CubeMapExt( ref_shader_t *shader, ref_stage_t *pass, int addFlags, int tcgen, script_t *script )
 {
 	int	flags;
 	string	name;
@@ -1530,37 +1530,37 @@ static bool Shaderpass_CubeMapExt( ref_shader_t *shader, ref_stage_t *pass, int 
 	return true;
 }
 
-static bool Shaderpass_Map( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_Map( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	return Shaderpass_MapExt( shader, pass, 0, script );
 }
 
-static bool Shaderpass_ClampMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_ClampMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	return Shaderpass_MapExt( shader, pass, TF_CLAMP, script );
 }
 
-static bool Shaderpass_AnimMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_AnimMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	return Shaderpass_AnimMapExt( shader, pass, 0, script );
 }
 
-static bool Shaderpass_AnimClampMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_AnimClampMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	return Shaderpass_AnimMapExt( shader, pass, TF_CLAMP, script );
 }
 
-static bool Shaderpass_CubeMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_CubeMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	return Shaderpass_CubeMapExt( shader, pass, TF_CLAMP, TCGEN_REFLECTION, script );
 }
 
-static bool Shaderpass_ShadeCubeMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_ShadeCubeMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	return Shaderpass_CubeMapExt( shader, pass, TF_CLAMP, TCGEN_REFLECTION_CELLSHADE, script );
 }
 
-static bool Shaderpass_NormalMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_NormalMap( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	int		flags;
 	const char	*name;
@@ -1622,7 +1622,7 @@ static bool Shaderpass_NormalMap( ref_shader_t *shader, ref_stage_t *pass, scrip
 	return true;
 }
 
-static bool Shaderpass_Material( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_Material( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	int		flags;
 	float		bumpScale = 0;
@@ -1747,7 +1747,7 @@ static bool Shaderpass_Material( ref_shader_t *shader, ref_stage_t *pass, script
 	return true;
 }
 
-static bool Shaderpass_Distortion( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_Distortion( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	int	flags;
 	float	bumpScale = 0;
@@ -1812,7 +1812,7 @@ static bool Shaderpass_Distortion( ref_shader_t *shader, ref_stage_t *pass, scri
 	return true;
 }
 
-static bool Shaderpass_RGBGen( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_RGBGen( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -1901,7 +1901,7 @@ static bool Shaderpass_RGBGen( ref_shader_t *shader, ref_stage_t *pass, script_t
 	return true;
 }
 
-static bool Shaderpass_AlphaGen( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_AlphaGen( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -2079,7 +2079,7 @@ static _inline int Shaderpass_DstBlendBits( const char *token )
 	return GLSTATE_DSTBLEND_ONE;
 }
 
-static bool Shaderpass_BlendFunc( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_BlendFunc( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -2116,7 +2116,7 @@ static bool Shaderpass_BlendFunc( ref_shader_t *shader, ref_stage_t *pass, scrip
 	return true;
 }
 
-static bool Shaderpass_AlphaFunc( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_AlphaFunc( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -2141,7 +2141,7 @@ static bool Shaderpass_AlphaFunc( ref_shader_t *shader, ref_stage_t *pass, scrip
 	return true;
 }
 
-static bool Shaderpass_DepthFunc( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_DepthFunc( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -2163,7 +2163,7 @@ static bool Shaderpass_DepthFunc( ref_shader_t *shader, ref_stage_t *pass, scrip
 	return true;
 }
 
-static bool Shaderpass_DepthWrite( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_DepthWrite( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	shader->flags |= SHADER_DEPTHWRITE;
 	pass->glState |= GLSTATE_DEPTHWRITE;
@@ -2171,7 +2171,7 @@ static bool Shaderpass_DepthWrite( ref_shader_t *shader, ref_stage_t *pass, scri
 	return true;
 }
 
-static bool Shaderpass_TcMod( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_TcMod( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	int	i;
 	tcMod_t	*tcMod;
@@ -2281,7 +2281,7 @@ static bool Shaderpass_TcMod( ref_shader_t *shader, ref_stage_t *pass, script_t 
 	return true;
 }
 
-static bool Shaderpass_TcGen( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_TcGen( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	token_t	tok;
 
@@ -2328,13 +2328,13 @@ static bool Shaderpass_TcGen( ref_shader_t *shader, ref_stage_t *pass, script_t 
 	return true;
 }
 
-static bool Shaderpass_Detail( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_Detail( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	pass->flags |= SHADERSTAGE_DETAIL;
 	return true;
 }
 
-static bool Shaderpass_RenderMode( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
+static qboolean Shaderpass_RenderMode( ref_shader_t *shader, ref_stage_t *pass, script_t *script )
 {
 	shader->flags |= SHADER_RENDERMODE;
 	pass->flags |= SHADERSTAGE_RENDERMODE;
@@ -2585,7 +2585,7 @@ void R_ShaderDump_f( void )
 	Msg( "^2%s%s\n", name, cache->buffer );
 }
 
-bool R_ShaderCheckCache( const char *name )
+qboolean R_ShaderCheckCache( const char *name )
 {
 	return (Shader_GetCache( name, SHADER_INVALID, Com_HashKey( name, SHADERS_HASH_SIZE ))) ? true : false;
 }
@@ -2843,7 +2843,7 @@ void Shader_SetBlendmode( ref_stage_t *pass )
 		pass->flags |= SHADERSTAGE_BLEND_DECAL;	// for detail textures
 }
 
-static bool Shader_ParseCommand( ref_shader_t *shader, script_t *script, const char *command )
+static qboolean Shader_ParseCommand( ref_shader_t *shader, script_t *script, const char *command )
 {
 	const ref_parsekey_t	*cmd;
 
@@ -2865,7 +2865,7 @@ static bool Shader_ParseCommand( ref_shader_t *shader, script_t *script, const c
 	return true;
 }
 
-static bool Shader_ParseStageCommand( ref_shader_t *shader, ref_stage_t *stage, script_t *script, const char *command )
+static qboolean Shader_ParseStageCommand( ref_shader_t *shader, ref_stage_t *stage, script_t *script, const char *command )
 {
 	const ref_parsekey_t	*cmd;
 
@@ -2880,7 +2880,7 @@ static bool Shader_ParseStageCommand( ref_shader_t *shader, ref_stage_t *stage, 
 	return true;
 }
 
-static bool Shader_ParseShader( ref_shader_t *shader, script_t *script )
+static qboolean Shader_ParseShader( ref_shader_t *shader, script_t *script )
 {
 	ref_stage_t	*stage;
 	token_t		tok;
@@ -3726,7 +3726,7 @@ static ref_shader_t *Shader_CreateDefault( ref_shader_t *shader, int type, int a
 		else
 		{
 			int	size, offset; 
-			bool	hasLightmap = ( r_miptexFeatures & MIPTEX_NOLIGHTMAP ) ? false : true;
+			qboolean	hasLightmap = ( r_miptexFeatures & MIPTEX_NOLIGHTMAP ) ? false : true;
 
 			shader->type = SHADER_TEXTURE;
 			shader->flags = SHADER_DEPTHWRITE|SHADER_CULL_FRONT|SHADER_RENDERMODE;
@@ -3856,7 +3856,7 @@ kill backward slashes and turn all leters
 into lower register
 ================
 */
-static bool R_CleanupShaderName( const char *name, char *outname, size_t outsize )
+static qboolean R_CleanupShaderName( const char *name, char *outname, size_t outsize )
 {
 	int	i, length = 0;
 
@@ -3909,7 +3909,7 @@ ref_shader_t *R_FindShader( const char *name, int type, int ignoreType )
 	return NULL;
 }
 
-ref_shader_t *R_LoadShader( const char *name, int type, bool forceDefault, int addFlags, int ignoreType )
+ref_shader_t *R_LoadShader( const char *name, int type, qboolean forceDefault, int addFlags, int ignoreType )
 {
 	ref_shader_t	*shader;
 	string		shortname;
@@ -4044,7 +4044,7 @@ void R_ShaderSetMiptexFlags( uint addFlags )
 	r_miptexFeatures |= addFlags;
 }
 
-void R_ShaderSetRenderMode( kRenderMode_t mode, bool twoSided )
+void R_ShaderSetRenderMode( int mode, qboolean twoSided )
 {
 	r_shaderRenderMode = mode;
 	r_shaderTwoSided = twoSided;
@@ -4080,8 +4080,8 @@ R_SetupSky
 void R_SetupSky( const char *name )
 {
 	string		loadname;
-	bool		shader_valid = false;
-	bool		force_default = false;
+	qboolean		shader_valid = false;
+	qboolean		force_default = false;
 	ref_script_t	*cache;
 	ref_shader_t	*shader;
 	uint		hashKey;

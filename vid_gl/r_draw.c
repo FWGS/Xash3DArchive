@@ -154,7 +154,7 @@ static byte *R_ResampleRaw( const byte *source, int inWidth, int inHeight, int o
 R_DrawStretchRaw
 =============
 */
-void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, bool dirty )
+void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, qboolean dirty )
 {
 	byte	*raw;
 
@@ -244,7 +244,7 @@ void R_DrawGetParms( int *w, int *h, int *f, int frame, shader_t handle )
 	if( f ) *f = (int)shader->stages[0].num_textures;
 }
 
-void R_DrawSetParms( shader_t handle, kRenderMode_t rendermode, int frame )
+void R_DrawSetParms( shader_t handle, int rendermode, int frame )
 {
 	ref_shader_t	*shader;
 
@@ -289,7 +289,7 @@ static vec2_t		tri_coords[MAX_TRIVERTS];
 static rgba_t		tri_colors[MAX_TRIVERTS];
 static elem_t		tri_elems[MAX_TRIELEMS];
 static mesh_t		tri_mesh;
-static bool		tri_caps[3];
+static qboolean		tri_caps[3];
 meshbuffer_t		tri_mbuffer;
 tristate_t		triState;
 
@@ -411,7 +411,7 @@ void Tri_CullFace( int mode )
 		triState.noCulling = true;
 }
 
-void Tri_RenderMode( const kRenderMode_t mode )
+void Tri_RenderMode( const int mode )
 {
 	triState.currentRenderMode = mode;
 }
@@ -644,7 +644,7 @@ void Tri_RenderCallback( int fTrans )
 R_Set2DMode
 ===============
 */
-void R_Set2DMode( bool enable )
+void R_Set2DMode( qboolean enable )
 {
 	if( enable )
 	{

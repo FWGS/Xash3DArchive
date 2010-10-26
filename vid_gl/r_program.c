@@ -979,7 +979,7 @@ R_UpdateProgramUniforms
 ================
 */
 void R_UpdateProgramUniforms( int elem, vec3_t eyeOrigin, vec3_t lightOrigin, vec3_t lightDir, vec4_t ambient,
-	vec4_t diffuse, ref_style_t *lightStyle, bool frontPlane, int TexWidth, int TexHeight,
+	vec4_t diffuse, ref_style_t *lightStyle, qboolean frontPlane, int TexWidth, int TexHeight,
 	float projDistance, float offsetmappingScale )
 {
 	glsl_program_t *program = r_glslprograms + elem - 1;

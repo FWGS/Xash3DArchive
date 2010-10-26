@@ -432,7 +432,7 @@ int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int
 		double	sampleFraction;
 		int	availableSamples, outputSampleCount;
 		wavdata_t	*pSource = pChannel->sfx->cache;
-		bool	use_loop = pChannel->use_loop;
+		qboolean	use_loop = pChannel->use_loop;
 		char	*pData = NULL;
 		int	i, j;
 
@@ -497,7 +497,7 @@ int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int
 	return outputOffset - startingOffset;
 }
 
-bool S_ShouldContinueMixing( channel_t *ch )
+qboolean S_ShouldContinueMixing( channel_t *ch )
 {
 	if( ch->isSentence )
 	{
@@ -523,7 +523,7 @@ void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate )
 	channel_t *ch;
 	wavdata_t	*pSource;
 	int	i, sampleCount;
-	bool	bZeroVolume;
+	qboolean	bZeroVolume;
 
 	// mix each channel into paintbuffer
 	ch = channels;
@@ -785,7 +785,7 @@ void S_MixBufferUpsample2x( int count, portable_samplepair_t *pbuffer, portable_
 }
 
 // zero out all paintbuffers
-void MIX_ClearAllPaintBuffers( int SampleCount, bool clearFilters )
+void MIX_ClearAllPaintBuffers( int SampleCount, qboolean clearFilters )
 {
 	int	count = min( SampleCount, PAINTBUFFER_SIZE );
 	int	i;

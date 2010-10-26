@@ -110,7 +110,7 @@ void png_warning_fn( void *unused, const char *message )
 Image_LoadPNG
 =============
 */
-bool Image_LoadPNG( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadPNG( const char *name, const byte *buffer, size_t filesize )
 {
 	uint	y;
 	void	*fin, *pnginfo;
@@ -218,7 +218,7 @@ bool Image_LoadPNG( const char *name, const byte *buffer, size_t filesize )
 Image_SavePNG
 =============
 */
-bool Image_SavePNG( const char *name, rgbdata_t *pix )
+qboolean Image_SavePNG( const char *name, rgbdata_t *pix )
 {
 	void	*fin;
 	void	*info;

@@ -523,7 +523,7 @@ int R_SetSamples( int s1, int s2 )
 R_TextureFormat
 ===============
 */
-static void R_TextureFormat( texture_t *tex, bool compress )
+static void R_TextureFormat( texture_t *tex, qboolean compress )
 {
 	// set texture format
 	if( tex->flags & TF_DEPTHMAP )
@@ -584,7 +584,7 @@ static void R_TextureFormat( texture_t *tex, bool compress )
 	}
 }
 
-void R_RoundImageDimensions( int *width, int *height, int *depth, bool force )
+void R_RoundImageDimensions( int *width, int *height, int *depth, qboolean force )
 {
 	int	scaledWidth, scaledHeight, scaledDepth;
 
@@ -667,7 +667,7 @@ R_BuildMipMap
 Operates in place, quartering the size of the texture
 =================
 */
-static void R_BuildMipMap( byte *in, int width, int height, bool isNormalMap )
+static void R_BuildMipMap( byte *in, int width, int height, qboolean isNormalMap )
 {
 	byte	*out = in;
 	vec3_t	normal;
@@ -715,7 +715,7 @@ static void R_BuildMipMap( byte *in, int width, int height, bool isNormalMap )
 R_ResampleTexture
 =================
 */
-static void R_ResampleTexture( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight, bool isNormalMap )
+static void R_ResampleTexture( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight, qboolean isNormalMap )
 {
 	uint	frac, fracStep;
 	uint	*in = (uint *)source;
@@ -799,7 +799,7 @@ R_GetPixelFormat
 filled additional info
 ===============
 */
-bool R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
+qboolean R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 {
 	int	w, h, d, i, s, BlockSize;
 	size_t	mipsize, totalsize = 0;
@@ -1585,7 +1585,7 @@ R_ClearPixels
 clear specified area: color or alpha
 ================
 */
-static rgbdata_t *R_ClearPixels( rgbdata_t *in, bool clearAlpha )
+static rgbdata_t *R_ClearPixels( rgbdata_t *in, qboolean clearAlpha )
 {
 	int	i;
 	byte	*pic;
@@ -2665,7 +2665,7 @@ static rgbdata_t *R_ParseClearPixels( script_t *script, int *samples, texFlags_t
 {
 	token_t	token;
 	rgbdata_t *pic;
-	bool	clearAlpha;
+	qboolean	clearAlpha;
 
 	Com_ReadToken( script, 0, &token );
 	if( com.stricmp( token.string, "(" ))
@@ -2895,8 +2895,8 @@ void GL_TexFilter( texture_t *tex )
 static void R_UploadTexture( rgbdata_t *pic, texture_t *tex )
 {
 	uint		mipsize = 0, offset = 0;
-	bool		dxtformat = true;
-	bool		compress;
+	qboolean		dxtformat = true;
+	qboolean		compress;
 	int		i, j, w, h, d;
 	byte		*buf, *data;
 	const byte	*bufend;
@@ -3160,12 +3160,12 @@ void VID_ImageAdjustGamma( byte *in, uint width, uint height )
 	}
 }
 
-bool VID_ScreenShot( const char *filename, int shot_type )
+qboolean VID_ScreenShot( const char *filename, int shot_type )
 {
 	rgbdata_t *r_shot;
 	uint	flags = IMAGE_FLIP_Y;
 	int	width = 0, height = 0;
-	bool	result;
+	qboolean	result;
 
 	r_shot = Mem_Alloc( r_temppool, sizeof( rgbdata_t ));
 	r_shot->width = glState.width;
@@ -3212,7 +3212,7 @@ bool VID_ScreenShot( const char *filename, int shot_type )
 VID_CubemapShot
 =================
 */
-bool VID_CubemapShot( const char *base, uint size, const float *vieworg, bool skyshot )
+qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qboolean skyshot )
 {
 	rgbdata_t		*r_shot, *r_side;
 	byte		*temp = NULL;

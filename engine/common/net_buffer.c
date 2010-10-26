@@ -75,14 +75,14 @@ void BF_Clear( sizebuf_t *bf )
 	bf->bOverflow = false;
 }
 
-static bool BF_Overflow( sizebuf_t *bf, int nBits )
+static qboolean BF_Overflow( sizebuf_t *bf, int nBits )
 {
 	if( bf->iCurBit + nBits > bf->nDataBits )
 		bf->bOverflow = true;
 	return bf->bOverflow;
 }
 
-bool BF_CheckOverflow( sizebuf_t *bf )
+qboolean BF_CheckOverflow( sizebuf_t *bf )
 {
 	ASSERT( bf );
 	
@@ -110,7 +110,7 @@ void BF_WriteOneBit( sizebuf_t *bf, int nValue )
 	}
 }
 
-void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, bool bCheckRange )
+void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCheckRange )
 {
 #ifdef _NETDEBUG
 	// make sure it doesn't overflow.
@@ -200,14 +200,14 @@ void BF_WriteSBitLong( sizebuf_t *bf, int data, int numbits )
 	}
 }
 
-void BF_WriteBitLong( sizebuf_t *bf, uint data, int numbits, bool bSigned )
+void BF_WriteBitLong( sizebuf_t *bf, uint data, int numbits, qboolean bSigned )
 {
 	if( bSigned )
 		BF_WriteSBitLong( bf, (int)data, numbits );
 	else BF_WriteUBitLong( bf, data, numbits );
 }
 
-bool BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
+qboolean BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
 {
 	byte	*pOut = (byte *)pData;
 	int	nBitsLeft = nBits;
@@ -396,12 +396,12 @@ void BF_WriteFloat( sizebuf_t *bf, float val )
 	BF_WriteBits( bf, &val, sizeof( val ) << 3 );
 }
 
-bool BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes )
+qboolean BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes )
 {
 	return BF_WriteBits( bf, pBuf, nBytes << 3 );
 }
 
-bool BF_WriteString( sizebuf_t *bf, const char *pStr )
+qboolean BF_WriteString( sizebuf_t *bf, const char *pStr )
 {
 	if( pStr )
 	{
@@ -501,7 +501,7 @@ float BF_ReadBitFloat( sizebuf_t *bf )
 	return *((float *)&val);
 }
 
-bool BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
+qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
 {
 	byte	*pOut = (byte *)pOutData;
 	int	nBitsLeft = nBits;
@@ -572,7 +572,7 @@ int BF_ReadSBitLong( sizebuf_t *bf, int numbits )
 	return r;
 }
 
-uint BF_ReadBitLong( sizebuf_t *bf, int numbits, bool bSigned )
+uint BF_ReadBitLong( sizebuf_t *bf, int numbits, qboolean bSigned )
 {
 	if( bSigned )
 		return (uint)BF_ReadSBitLong( bf, numbits );
@@ -711,12 +711,12 @@ float BF_ReadFloat( sizebuf_t *bf )
 	return ret;
 }
 
-bool BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes )
+qboolean BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes )
 {
 	return BF_ReadBits( bf, pOut, nBytes << 3 );
 }
 
-char *BF_ReadStringExt( sizebuf_t *bf, bool bLine )
+char *BF_ReadStringExt( sizebuf_t *bf, qboolean bLine )
 {
 	static char	string[MAX_SYSPATH];
 	int		l = 0, c;

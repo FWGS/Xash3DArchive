@@ -12,7 +12,7 @@
 
 #define MAX_FORWARD			6
 
-bool CL_IsPredicted( void )
+qboolean CL_IsPredicted( void )
 {
 	cl_entity_t	*player = CL_GetLocalPlayer();
 

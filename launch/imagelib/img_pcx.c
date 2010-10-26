@@ -10,10 +10,10 @@
 Image_LoadPCX
 =============
 */
-bool Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 {
 	pcx_t	pcx;
-	bool	result = false;
+	qboolean	result = false;
 	int	s, i, x, y, x2, dataByte;
 	byte	*pix, *pbuf, *palette, *fin, *enddata;
 
@@ -102,7 +102,7 @@ bool Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 Image_SavePCX
 ============== 
 */ 
-bool Image_SavePCX( const char *name, rgbdata_t *pix )
+qboolean Image_SavePCX( const char *name, rgbdata_t *pix )
 {
 	byte	*data, *out, *pack;
 	byte	*palette;

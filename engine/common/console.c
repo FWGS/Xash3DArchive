@@ -45,7 +45,7 @@ typedef struct
 
 typedef struct
 {
-	bool		initialized;
+	qboolean		initialized;
 
 	short		text[CON_TEXTSIZE];
 	int		current;		// line where next message will be printed
@@ -307,7 +307,7 @@ void Con_Bottom( void )
 Con_Visible
 ================
 */
-bool Con_Visible( void )
+qboolean Con_Visible( void )
 {
 	return (con.finalFrac != 0.0f);
 }
@@ -453,7 +453,7 @@ Draws a multi-colored string, optionally forcing
 to a fixed color.
 ==================
 */
-int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, bool forceColor, int hideChar )
+int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qboolean forceColor, int hideChar )
 {
 	rgba_t		color;
 	int		drawLen = 0;
@@ -545,7 +545,7 @@ void Con_Init( void )
 Con_Linefeed
 ===============
 */
-void Con_Linefeed( bool skipnotify )
+void Con_Linefeed( qboolean skipnotify )
 {
 	int	i;
 
@@ -575,7 +575,7 @@ If no console is visible, the text will appear at the top of the game window
 void Con_Print( const char *txt )
 {
 	int	y, c, l, color;
-	bool	skipnotify = false;
+	qboolean	skipnotify = false;
 	int	prev;
 
 	// client not running
@@ -668,7 +668,7 @@ Cmd_CheckName
 compare first argument with string
 ===============
 */
-static bool Cmd_CheckName( const char *name )
+static qboolean Cmd_CheckName( const char *name )
 {
 	if( !com.stricmp( Cmd_Argv( 0 ), name ))
 		return true;
@@ -790,7 +790,7 @@ void Con_CompleteCommand( field_t *field )
 
 	if( Cmd_Argc() == 2 )
 	{
-		bool result = false;
+		qboolean result = false;
 
 		// autocomplete second arg
 		for( list = cmd_list; list->name; list++ )

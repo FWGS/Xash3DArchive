@@ -118,7 +118,7 @@ SOURCE=.\common\avikit.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\build.c
+SOURCE=.\common\build.c
 # End Source File
 # Begin Source File
 
@@ -202,11 +202,7 @@ SOURCE=.\common\engfuncs.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\export.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\host.c
+SOURCE=.\common\host.c
 # End Source File
 # Begin Source File
 
@@ -318,7 +314,7 @@ SOURCE=.\common\cm_local.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\common.h
+SOURCE=.\common\common.h
 # End Source File
 # Begin Source File
 

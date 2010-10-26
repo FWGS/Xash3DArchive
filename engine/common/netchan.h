@@ -97,8 +97,8 @@ typedef struct fragbuf_s
 	int		bufferid;		// id of this buffer
 	sizebuf_t		frag_message;	// message buffer where raw data is stored
 	byte		frag_message_buf[FRAGMENT_SIZE];	// the actual data sits here
-	bool		isfile;		// is this a file buffer?
-	bool		isbuffer;		// is this file buffer from memory ( custom decal, etc. ).
+	qboolean		isfile;		// is this a file buffer?
+	qboolean		isbuffer;		// is this file buffer from memory ( custom decal, etc. ).
 	char		filename[CS_SIZE];	// name of the file to save out on remote host
 	int		foffset;		// offset in file from which to read data  
 	int		size;		// size of data to read at that offset
@@ -119,7 +119,7 @@ typedef struct netchan_s
 	netadr_t		remote_address;	// address this channel is talking to.  
 	int		qport;		// qport value to write when transmitting
 	
-	bool		compress;		// enable huffman compression
+	qboolean		compress;		// enable huffman compression
 			
 	double		last_received;	// for timeouts
 	double		last_sent;	// for retransmits		
@@ -162,7 +162,7 @@ typedef struct netchan_s
 	short		frag_length[MAX_STREAMS];	// length of frag data in the buffer
 
 	fragbuf_t		*incomingbufs[MAX_STREAMS];	// incoming fragments are stored here
-	bool		incomingready[MAX_STREAMS];	// set to true when incoming data is ready
+	qboolean		incomingready[MAX_STREAMS];	// set to true when incoming data is ready
 
 	// Only referenced by the FRAG_FILE_STREAM component
 	char		incomingfilename[CS_SIZE];	// Name of file being downloaded
@@ -187,17 +187,17 @@ extern int		net_drop;
 void Netchan_Init( void );
 void Netchan_Shutdown( void );
 void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport );
-bool Netchan_CopyNormalFragments( netchan_t *chan, sizebuf_t *msg );
-bool Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg );
-void Netchan_CreateFragments( bool server, netchan_t *chan, sizebuf_t *msg );
+qboolean Netchan_CopyNormalFragments( netchan_t *chan, sizebuf_t *msg );
+qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg );
+void Netchan_CreateFragments( qboolean server, netchan_t *chan, sizebuf_t *msg );
 void Netchan_Transmit( netchan_t *chan, int lengthInBytes, byte *data );
 void Netchan_TransmitBits( netchan_t *chan, int lengthInBits, byte *data );
 void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data );
 void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... );
-bool Netchan_Process( netchan_t *chan, sizebuf_t *msg );
+qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg );
 void Netchan_UpdateProgress( netchan_t *chan );
-bool Netchan_IncomingReady( netchan_t *chan );
-bool Netchan_CanPacket( netchan_t *chan );
+qboolean Netchan_IncomingReady( netchan_t *chan );
+qboolean Netchan_CanPacket( netchan_t *chan );
 void Netchan_Clear( netchan_t *chan );
 
 // huffman compression

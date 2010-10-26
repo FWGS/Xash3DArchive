@@ -76,7 +76,7 @@ static void R_GetShadowImpactAndDir( ref_entity_t *e, pmtrace_t *tr, vec3_t ligh
 R_CullPlanarShadow
 ===============
 */
-bool R_CullPlanarShadow( ref_entity_t *e, vec3_t mins, vec3_t maxs, bool occlusion_query )
+qboolean R_CullPlanarShadow( ref_entity_t *e, vec3_t mins, vec3_t maxs, qboolean occlusion_query )
 {
 	float	planedist, dist;
 	vec3_t	lightdir, point;
@@ -233,7 +233,7 @@ void R_ClearShadowmaps( void )
 R_AddShadowCaster
 ===============
 */
-bool R_AddShadowCaster( ref_entity_t *ent )
+qboolean R_AddShadowCaster( ref_entity_t *ent )
 {
 	int i;
 	float radius;

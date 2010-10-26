@@ -93,18 +93,18 @@ void HUD_StudioEvent( const mstudioevent_t *event, cl_entity_t *entity )
 		break;
 	case 5002:
 		// SparkEffect at attachment 1
-		pos = entity->curstate.origin + entity->attachment_origin[0];
+		pos = entity->curstate.origin + entity->attachment[0];
 		g_pTempEnts->SparkEffect( pos, 8, -200, 200 );
 		break;
 	case 5004:		
 		// Client side sound
-		pos = entity->origin + entity->attachment_origin[0];
+		pos = entity->origin + entity->attachment[0];
 		gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, event->options, VOL_NORM, ATTN_NORM, 0, PITCH_NORM );
 		break;
 	case 5005:		
 		// Client side sound with random pitch (most useful for reload sounds)
 		pitch = 85 + RANDOM_LONG( 0, 0x1F );
-		pos = entity->origin + entity->attachment_origin[0];
+		pos = entity->origin + entity->attachment[0];
 		fvol = RANDOM_FLOAT( 0.7f, 0.9f );
 		gEngfuncs.pEventAPI->EV_PlaySound( 0, pos, CHAN_AUTO, event->options, fvol, ATTN_NORM, 0, pitch );
 		break;

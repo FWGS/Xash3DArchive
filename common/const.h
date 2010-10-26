@@ -1,10 +1,19 @@
-//=======================================================================
-//			Copyright XashXT Group 2007 ©
-//			  const.h - engine constants
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
 #ifndef CONST_H
 #define CONST_H
-
 //
 // Constants shared by the engine and dlls
 // This header file included by engine files and DLL files.
@@ -41,8 +50,6 @@
 #define FL_ONTRAIN		(1<<24)	// Player is _controlling_ a train, so movement commands should be ignored on client during prediction.
 #define FL_WORLDBRUSH	(1<<25)	// Not moveable/removeable brush entity (really part of the world, but represented as an entity for transparency or something)
 #define FL_SPECTATOR	(1<<26)	// This client is a spectator, don't run touch functions, etc.
-#define FL_CHECK_PHS	(1<<27)	// This entity requested phs bitvector instead of pvsbitvector in AddToFullPack calls
-#define FL_PLAYERCLIP	(1<<28)	// Only collide in with clients who have FL_PLAYERCLIP set
 #define FL_CUSTOMENTITY	(1<<29)	// This is a custom entity
 #define FL_KILLME		(1<<30)	// This entity is marked for death -- This allows the engine to kill ents at the appropriate time
 #define FL_DORMANT		(1<<31)	// Entity is dormant, no updates to client
@@ -58,7 +65,7 @@
 
 // edict->movetype values
 #define MOVETYPE_NONE		0	// never moves
-#define MOVETYPE_COMPOUND		1	// Xash3D extension: glue two entities together (simple movewith)
+//#define	MOVETYPE_ANGLENOCLIP	1
 //#define	MOVETYPE_ANGLECLIP		2
 #define MOVETYPE_WALK		3	// Player only - moving on the ground
 #define MOVETYPE_STEP		4	// gravity, special edge handling -- monsters use this
@@ -71,6 +78,7 @@
 #define MOVETYPE_BOUNCEMISSILE	11	// bounce w/o gravity
 #define MOVETYPE_FOLLOW		12	// track movement of aiment
 #define MOVETYPE_PUSHSTEP		13	// BSP model that needs physics/world collisions (uses nearest hull for world collision)
+#define MOVETYPE_COMPOUND		14	// glue two entities together (simple movewith)
 
 // edict->solid values
 // NOTE: Some movetypes will cause collisions independent of SOLID_NOT/SOLID_TRIGGER when the entity moves
@@ -85,38 +93,39 @@
 #define DEAD_NO			0 	// alive
 #define DEAD_DYING			1 	// playing death animation or still falling off of a ledge waiting to hit ground
 #define DEAD_DEAD			2 	// dead. lying still.
-#define DEAD_RESPAWNABLE		3	// wait for respawn
+#define DEAD_RESPAWNABLE		3
 #define DEAD_DISCARDBODY		4
 
-#define DAMAGE_NO			0	// can't be damaged
-#define DAMAGE_YES			1	// attempt to damage
-#define DAMAGE_AIM			2	// special case for aiming damage
+#define DAMAGE_NO			0
+#define DAMAGE_YES			1
+#define DAMAGE_AIM			2
 
 // entity effects
-#define EF_BRIGHTFIELD		(1<<0)	// swirling cloud of particles
-#define EF_MUZZLEFLASH 		(1<<1)	// single frame ELIGHT on entity attachment 0
-#define EF_BRIGHTLIGHT 		(1<<2)	// DLIGHT centered at entity origin
-#define EF_DIMLIGHT 		(1<<3)	// player flashlight
-#define EF_INVLIGHT			(1<<4)	// get lighting from ceiling
-#define EF_NOINTERP			(1<<5)	// don't interpolate the next frame
-#define EF_LIGHT			(1<<6)	// rocket flare glow sprite
-#define EF_NODRAW			(1<<7)	// don't draw entity
-#define EF_NOREFLECT		(1<<8)	// entity won't reflecting in mirrors
-#define EF_REFLECTONLY		(1<<9)	// entity will be drawing only in mirrors
-#define EF_NOWATERCSG		(1<<10)	// do not remove sides for func_water entity
-#define EF_MINLIGHT			(1<<11)	// allways have some light (e.g. viewentity)
-#define EF_FULLBRIGHT		(1<<12)	// just get fullbright
-#define EF_NOSHADOW			(1<<13)	// ignore shadow for this entity
-#define EF_MERGE_VISIBILITY		(1<<14)	// this entity allowed to merge vis (e.g. env_sky or portal camera)
+#define EF_BRIGHTFIELD		1	// swirling cloud of particles
+#define EF_MUZZLEFLASH		2	// single frame ELIGHT on entity attachment 0
+#define EF_BRIGHTLIGHT		4	// DLIGHT centered at entity origin
+#define EF_DIMLIGHT			8	// player flashlight
+#define EF_INVLIGHT			16	// get lighting from ceiling
+#define EF_NOINTERP			32	// don't interpolate the next frame
+#define EF_LIGHT			64	// rocket flare glow sprite
+#define EF_NODRAW			128	// don't draw entity
+#define EF_NOREFLECT		256	// Entity won't reflecting in mirrors
+#define EF_REFLECTONLY		512	// Entity will be drawing only in mirrors
+#define EF_NOWATERCSG		1024	// Do not remove sides for func_water entity
+#define EF_MINLIGHT			2048	// Allways have some light (e.g. viewentity)
+#define EF_FULLBRIGHT		4096	// Just get fullbright
+#define EF_NOSHADOW			8192	// ignore shadow for this entity
+#define EF_MERGE_VISIBILITY		16384	// this entity allowed to merge vis (e.g. env_sky or portal camera)
+#define EF_REQUEST_PHS		32768	// This entity requested phs bitvector instead of pvsbitvector in AddToFullPack calls
 
 // user-specified entity effects
-#define EF_LASERSPOT		(1<<16)	// tempentity laserspot at attachment #1 from player or npc
+#define EF_LASERSPOT		65536	// tempentity laserspot at attachment #1 from player or npc
 
 // entity flags
 #define EFLAG_SLERP			1	// do studio interpolation of this entity
 		
 //
-// temp entity events (engine ignore it)
+// temp entity events
 //
 #define	TE_BEAMPOINTS		0	// beam effect between two points
 // coord coord coord (start position) 
@@ -339,9 +348,9 @@
 #define TE_TEXTMESSAGE		29
 // short 1.2.13 x (-1 = center)
 // short 1.2.13 y (-1 = center)
-// byte Effect	0 = fade in/fade out
-//		1 = flickery credits
-//		2 = write out (training room)
+// byte Effect 0 = fade in/fade out
+// 1 is flickery credits
+// 2 is write out (training room)
 // 4 bytes r,g,b,a color1	(text color)
 // 4 bytes r,g,b,a color2	(effect color)
 // ushort 8.8 fadein time
@@ -580,6 +589,7 @@
 #define CONTENTS_SLIME		-4
 #define CONTENTS_LAVA		-5
 #define CONTENTS_SKY		-6
+// These additional contents constants are defined in bspfile.h
 #define CONTENTS_ORIGIN		-7	// removed at csg time
 #define CONTENTS_CLIP		-8	// changed to contents_solid
 #define CONTENTS_CURRENT_0		-9
@@ -589,15 +599,13 @@
 #define CONTENTS_CURRENT_UP		-13
 #define CONTENTS_CURRENT_DOWN		-14
 #define CONTENTS_TRANSLUCENT		-15
+
 #define CONTENTS_LADDER		-16
+
 #define CONTENT_FLYFIELD		-17
 #define CONTENT_GRAVITY_FLYFIELD	-18
 #define CONTENT_FOG			-19
-#define CONTENT_SPECIAL1		-20
-#define CONTENT_SPECIAL2		-21
-#define CONTENT_SPECIAL3		-22
 
-// same as CONTENTS_*
 #define CONTENT_EMPTY		-1
 #define CONTENT_SOLID		-2
 #define CONTENT_WATER		-3
@@ -613,12 +621,14 @@
 #define CHAN_BODY			4
 #define CHAN_STREAM			5	// allocate stream channel from the static or dynamic area
 #define CHAN_STATIC			6	// allocate channel from the static area 
+#define CHAN_NETWORKVOICE_BASE	7	// voice data coming across the network
+#define CHAN_NETWORKVOICE_END		500	// network voice data reserves slots (CHAN_NETWORKVOICE_BASE through CHAN_NETWORKVOICE_END).
 
 // attenuation values
-#define ATTN_NONE			0.0f
-#define ATTN_NORM			0.8f
-#define ATTN_IDLE			2.0f
-#define ATTN_STATIC			1.25f 
+#define ATTN_NONE			0
+#define ATTN_NORM			(float)0.8
+#define ATTN_IDLE			(float)2
+#define ATTN_STATIC			(float)1.25 
 
 // pitch values
 #define PITCH_NORM			100	// non-pitch shifted
@@ -626,7 +636,15 @@
 #define PITCH_HIGH			120
 
 // volume values
-#define VOL_NORM			1.0f
+#define VOL_NORM			1.0
+
+// plats
+#define	PLAT_LOW_TRIGGER	1
+
+// Trains
+#define SF_TRAIN_WAIT_RETRIGGER	1
+#define SF_TRAIN_START_ON		4	// Train is initially moving
+#define SF_TRAIN_PASSABLE		8	// Train is not solid -- used to make water trains
 
 // buttons
 #define IN_ATTACK			(1<<0)
@@ -673,7 +691,7 @@
 #define TE_BOUNCE_SHOTSHELL		2
 
 // Rendering constants
-typedef enum 
+enum 
 {	
 	kRenderNormal,		// src
 	kRenderTransColor,		// c*a+dest*(1-a)
@@ -682,7 +700,7 @@ typedef enum
 	kRenderTransAlpha,		// src*srca+dest*(1-srca)
 	kRenderTransAdd,		// src*a+dest
 	kRenderTransInverse		// src*(1-a)+dest*a
-} kRenderMode_t;
+};
 
 enum 
 {	
@@ -707,29 +725,52 @@ enum
 	kRenderFxExplode,			// Scale up really big!
 	kRenderFxGlowShell,			// Glowing Shell
 	kRenderFxClampMinScale,		// Keep this sprite from getting very small (SPRITES only!)
-	kRenderFxAurora,			// set particle trail for this entity
 };
 
-// shared typedefs
+typedef int		func_t;
+typedef int		string_t;
+
 typedef unsigned char	byte;
 typedef unsigned short	word;
-typedef unsigned long	dword;
-typedef unsigned int	uint;
 typedef float		vec_t;
 
-typedef int		string_t;
-typedef struct edict_s	edict_t;
+#undef true
+#undef false
+
+#ifndef __cplusplus
+typedef enum { false, true }	qboolean;
+#else 
+typedef int qboolean;
+#endif
 
 typedef struct
 {
 	byte	r, g, b;
 } color24;
 
-// link_t is only used for entity area links now
+typedef struct
+{
+	unsigned	r, g, b, a;
+} colorVec;
+
+#ifdef _WIN32
+#pragma pack( push, 2 )
+#endif
+
+typedef struct
+{
+	unsigned short r, g, b, a;
+} PackedColorVec;
+
+#ifdef _WIN32
+#pragma pack( pop )
+#endif
+
 typedef struct link_s
 {
-	struct link_s	*prev;
-	struct link_s	*next;
+	struct link_s	*prev, *next;
 } link_t;
+
+typedef struct edict_s edict_t;
 
 #endif//CONST_H

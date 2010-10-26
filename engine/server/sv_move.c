@@ -22,7 +22,7 @@ is not a staircase.
 
 =============
 */
-bool SV_CheckBottom( edict_t *ent, int iMode )
+qboolean SV_CheckBottom( edict_t *ent, int iMode )
 {
 	vec3_t	mins, maxs, start, stop;
 	float	mid, bottom;
@@ -111,7 +111,7 @@ float SV_VecToYaw( const vec3_t src )
 
 //============================================================================
 
-bool SV_MoveStep( edict_t *ent, vec3_t move, bool relink )
+qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 {
 	int	i;
 	trace_t	trace;
@@ -238,7 +238,7 @@ bool SV_MoveStep( edict_t *ent, vec3_t move, bool relink )
 	}
 }
 
-bool SV_MoveTest( edict_t *ent, vec3_t move, bool relink )
+qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 {
 	float	temp;
 	vec3_t	oldorg, neworg, end;
@@ -315,7 +315,7 @@ bool SV_MoveTest( edict_t *ent, vec3_t move, bool relink )
 	}
 }
 
-bool SV_StepDirection( edict_t *ent, float yaw, float dist )
+qboolean SV_StepDirection( edict_t *ent, float yaw, float dist )
 {
 	int	ret;
 	vec3_t	move;
@@ -329,7 +329,7 @@ bool SV_StepDirection( edict_t *ent, float yaw, float dist )
 	return ret;
 }
 
-bool SV_FlyDirection( edict_t *ent, vec3_t move )
+qboolean SV_FlyDirection( edict_t *ent, vec3_t move )
 {
 	int	ret;
 

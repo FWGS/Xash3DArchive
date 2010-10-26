@@ -33,7 +33,7 @@
 #include "soundent.h"
 #include "gamerules.h"
 #include "game.h"
-#include "customentity.h"
+#include "../engine/customentity.h"
 #include "weapons.h"
 #include "weaponinfo.h"
 #include "usercmd.h"

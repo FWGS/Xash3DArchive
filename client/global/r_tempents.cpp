@@ -196,7 +196,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 			pTemp->entity.origin = pClient->origin;
 
 			if( pTemp->entity.baseline.body > 0 )
-				pTemp->entity.origin += pClient->attachment_origin[pTemp->entity.baseline.body - 1];
+				pTemp->entity.origin += pClient->attachment[pTemp->entity.baseline.body - 1];
 		}
 	}
 	else if( pTemp->flags & FTENT_SINEWAVE )
@@ -383,9 +383,9 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 
 		dl->origin = pTemp->entity.origin;
 		dl->radius = 60;
-		dl->color[0] = 255;
-		dl->color[1]= 120;
-		dl->color[2] = 0;
+		dl->color.r = 255;
+		dl->color.g = 120;
+		dl->color.b = 0;
 		dl->die = GetClientTime() + 0.01f;
 	}
 
@@ -1106,7 +1106,7 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 
 	frameCount = Mod_GetFrames( modelIndex );
 
-	if( iAttachment > 0 && pEnt->attachment_origin[iAttachment - 1] == g_vecZero )
+	if( iAttachment > 0 && pEnt->attachment[iAttachment - 1] == g_vecZero )
 	{
 		gEngfuncs.Con_Printf( "Invalid muzzleflash entity!\n" );
 		return;
@@ -1669,7 +1669,7 @@ void CTempEnts::WeaponFlash( cl_entity_t *pEnt, int iAttachment )
 	Vector	pos = pEnt->origin;
 
 	if( iAttachment > 0 )
-		pos += pEnt->attachment_origin[iAttachment - 1];
+		pos += pEnt->attachment[iAttachment - 1];
 	if( pos == pEnt->origin ) return; // missing attachment
 
 	AllocDLight( pos, 255, 180, 64, 100, 0.05f );
@@ -1709,9 +1709,9 @@ void CTempEnts::AllocDLight( Vector pos, byte r, byte g, byte b, float radius, f
 
 	dl->origin = pos;	
 	dl->die = GetClientTime() + time;
-	dl->color[0] = r;
-	dl->color[1] = g;
-	dl->color[2] = b;
+	dl->color.r = r;
+	dl->color.g = g;
+	dl->color.b = b;
 	dl->radius = radius;
 	dl->decay = decay;
 }

@@ -65,7 +65,7 @@ struct angledframe_s
 
 	char	membername[8];	// current model name, four characsters
 	char	animation;	// current animation number
-	bool	in_progress;	// current state
+	qboolean	in_progress;	// current state
 	file_t	*f;		// skin script
 } flat;
 
@@ -118,9 +118,9 @@ static void Conv_WriteFirstTrack( vfile_t *file )
 	mid_write1( file, TRACKMAGIC6, 4 );
 }
 
-static bool Conv_ReadMusHeader( vfile_t *f, mus_t *hdr )
+static qboolean Conv_ReadMusHeader( vfile_t *f, mus_t *hdr )
 {
-	bool result = true;
+	qboolean result = true;
 
 	VFS_Read( f, &hdr->ident, 4 );
 	if( hdr->ident != MUSIDHEADER )
@@ -216,7 +216,7 @@ static void Conv_WriteVarLen( int tracknum, register uint value, struct track_s 
 	}
 }
 
-static bool Conv_Mus2Mid( const char *musicname, byte *buffer, int bufsize )
+static qboolean Conv_Mus2Mid( const char *musicname, byte *buffer, int bufsize )
 {
 	struct track_s	track[16];
 	word		TrackCnt = 0;
@@ -621,7 +621,7 @@ void Skin_CreateScript( const char *name, rgbdata_t *pic )
 ConvSKN
 ============
 */
-bool ConvSKN( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvSKN( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t *pic = FS_LoadImage( va( "#%s.flt", name ), buffer, filesize );
 
@@ -641,7 +641,7 @@ bool ConvSKN( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvFLP
 ============
 */
-bool ConvFLP( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvFLP( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t *pic = FS_LoadImage( va( "#%s.flt", name ), buffer, filesize );
 
@@ -660,7 +660,7 @@ bool ConvFLP( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvFLT
 ============
 */
-bool ConvFLT( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvFLT( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t *pic = FS_LoadImage( va( "#%s.flt", name ), buffer, filesize );
 
@@ -691,7 +691,7 @@ bool ConvFLT( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvMID
 ============
 */
-bool ConvMID( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvMID( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	if(Conv_Mus2Mid( name, buffer, filesize ))
 	{

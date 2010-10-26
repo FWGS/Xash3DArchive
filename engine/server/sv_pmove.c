@@ -8,7 +8,7 @@
 #include "const.h"
 #include "pm_local.h"
 
-bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace )
+qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trace )
 {
 	model_t	*mod = CM_ClipHandleToModel( ed->v.modelindex );
 
@@ -108,13 +108,6 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 
 		if( check == pl || check->v.owner == pl )
 			continue; // player or player's own missile
-
-		// only clients with specified flag FL_PLAYERCLIP can collide with him
-		if( CM_GetModelType( check->v.modelindex ) == mod_brush && ( check->v.flags & FL_PLAYERCLIP ))
-		{
-			if( !( pl->v.flags & FL_PLAYERCLIP ))
-				continue;
-		}
 
 		if( check->v.deadflag == DEAD_DEAD )
 			continue;

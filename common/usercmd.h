@@ -1,27 +1,37 @@
-//=======================================================================
-//			Copyright XashXT Group 2009 ©
-//		        usercmd.h - usercmd communication
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
+
 #ifndef USERCMD_H
 #define USERCMD_H
 
-// usercmd_t communication (a part of network protocol)
 typedef struct usercmd_s
 {
-	short		lerp_msec;	// interpolation time on client
-	byte		msec;		// duration in ms of command
-	vec3_t		viewangles;	// command view angles
+	short		lerp_msec;	// Interpolation time on client
+	byte		msec;		// Duration in ms of command
+	vec3_t		viewangles;	// Command view angles
 
 	// intended velocities
-	float		forwardmove;	// forward velocity
-	float		sidemove;		// sideways velocity
-	float		upmove;		// upward velocity
-	byte		lightlevel;	// light level at spot where we are standing.
-	word		buttons;		// attack and move buttons
-	byte		impulse;		// impulse command issued
-	byte		weaponselect;	// current weapon id
+	float		forwardmove;	// Forward velocity
+	float		sidemove;		// Sideways velocity
+	float		upmove;		// Upward velocity
+	byte		lightlevel;	// Light level at spot where we are standing.
+	unsigned short	buttons;		// Attack and move buttons
+	byte		impulse;		// Impulse command issued
+	byte		weaponselect;	// Current weapon id
 
-	// experimental player impact stuff.
+	// Experimental player impact stuff.
 	int		impact_index;
 	vec3_t		impact_position;
 } usercmd_t;

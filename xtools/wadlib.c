@@ -10,8 +10,8 @@
 #include "mathlib.h"
 
 string		wadoutname;
-bool		wad_append = false;
-bool		wad_compress = false;
+qboolean		wad_append = false;
+qboolean		wad_compress = false;
 script_t		*wadqc = NULL;
 wfile_t		*handle = NULL;
 string		lumpname;
@@ -143,7 +143,7 @@ void Wad3_NewWad( void )
 AddLump
 ===============
 */
-void Wad3_AddLump( const byte *buffer, size_t lumpsize, int lump_type, bool compress )
+void Wad3_AddLump( const byte *buffer, size_t lumpsize, int lump_type, qboolean compress )
 {
 	int result;
 	if( !handle ) Wad3_NewWad(); 	// create wad file
@@ -447,7 +447,7 @@ void ResetWADInfo( void )
 ParseScript	
 ===============
 */
-bool ParseWADfileScript( void )
+qboolean ParseWADfileScript( void )
 {
 	token_t	token;
 
@@ -459,7 +459,7 @@ bool ParseWADfileScript( void )
 			break;
 
 		if( !com.stricmp( token.string, "$wadname" )) Cmd_WadName();
-		if( !com.stricmp( token.string, "$compress" )) Cmd_WadCompress();
+		else if( !com.stricmp( token.string, "$compress" )) Cmd_WadCompress();
 		else if( !com.stricmp( token.string, "$mipmap" )) Cmd_GrabMip();
 		else if( !com.stricmp( token.string, "$gfxpic" )) Cmd_GrabPic();
 		else if( !Com_ValidScript( token.string, QC_WADLIB )) return false;
@@ -468,7 +468,7 @@ bool ParseWADfileScript( void )
 	return true;
 }
 
-bool WriteWADFile( void )
+qboolean WriteWADFile( void )
 {
 	if( !handle ) return false;
 	WAD_Close( handle );
@@ -476,7 +476,7 @@ bool WriteWADFile( void )
 	return true;
 }
 
-bool BuildCurrentWAD( const char *name )
+qboolean BuildCurrentWAD( const char *name )
 {
 	if( name ) com.strncpy( gs_filename, name, sizeof( gs_filename ));
 	FS_DefaultExtension( gs_filename, ".qc" );
@@ -493,7 +493,7 @@ bool BuildCurrentWAD( const char *name )
 	return false;
 }
 
-bool CompileWad3Archive( byte *mempool, const char *name, byte parms )
+qboolean CompileWad3Archive( byte *mempool, const char *name, byte parms )
 {
 	if( mempool ) wadpool = mempool;
 	else

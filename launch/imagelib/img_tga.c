@@ -10,13 +10,13 @@
 Image_LoadTGA
 =============
 */
-bool Image_LoadTGA( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadTGA( const char *name, const byte *buffer, size_t filesize )
 {
 	int	i, columns, rows, row_inc, row, col;
 	byte	*buf_p, *pixbuf, *targa_rgba;
 	byte	palette[256][4], red = 0, green = 0, blue = 0, alpha = 0;
 	int	readpixelcount, pixelcount;
-	bool	compressed;
+	qboolean	compressed;
 	tga_t	targa_header;
 
 	if( filesize < sizeof( tga_t ))
@@ -203,7 +203,7 @@ bool Image_LoadTGA( const char *name, const byte *buffer, size_t filesize )
 Image_SaveTGA
 =============
 */
-bool Image_SaveTGA( const char *name, rgbdata_t *pix )
+qboolean Image_SaveTGA( const char *name, rgbdata_t *pix )
 {
 	int		y, outsize, pixel_size;
 	const byte	*bufend, *in;

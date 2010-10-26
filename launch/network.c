@@ -83,7 +83,7 @@ typedef struct
 loopback_t loopbacks[2];
 
 static WSADATA winsockdata;
-static bool winsockInitialized = false;
+static qboolean winsockInitialized = false;
 static const char *net_src[2] = { "client", "server" };
 static convar_t *net_ip;
 static convar_t *net_hostport;
@@ -92,7 +92,7 @@ static convar_t *net_showpackets;
 static int ip_sockets[2];
 void NET_Restart_f( void );
 
-bool NET_OpenWinSock( void )
+qboolean NET_OpenWinSock( void )
 {
 	// initialize the Winsock function vectors (we do this instead of statically linking
 	// so we can run on Win 3.1, where there isn't necessarily Winsock)
@@ -204,7 +204,7 @@ idnewt:28000
 192.246.40.70:28000
 =============
 */
-static bool NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
+static qboolean NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 {
 	struct hostent	*h;
 	char		*colon;
@@ -265,7 +265,7 @@ NET_CompareBaseAdr
 Compares without the port
 ===================
 */
-bool NET_CompareBaseAdr( const netadr_t a, const netadr_t b )
+qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b )
 {
 	if( a.type != b.type ) return false;
 	if( a.type == NA_LOOPBACK ) return true;
@@ -281,7 +281,7 @@ bool NET_CompareBaseAdr( const netadr_t a, const netadr_t b )
 	return false;
 }
 
-bool NET_CompareAdr( const netadr_t a, const netadr_t b )
+qboolean NET_CompareAdr( const netadr_t a, const netadr_t b )
 {
 	if( a.type != b.type )
 		return false;
@@ -299,7 +299,7 @@ bool NET_CompareAdr( const netadr_t a, const netadr_t b )
 	return false;
 }
 
-bool NET_IsLocalAddress( netadr_t adr )
+qboolean NET_IsLocalAddress( netadr_t adr )
 {
 	return adr.type == NA_LOOPBACK;
 }
@@ -312,7 +312,7 @@ idnewt
 192.246.40.70
 =============
 */
-bool NET_StringToAdr( const char *string, netadr_t *adr )
+qboolean NET_StringToAdr( const char *string, netadr_t *adr )
 {
 	struct sockaddr s;
 
@@ -337,7 +337,7 @@ LOOPBACK BUFFERS FOR LOCAL PLAYER
 
 =============================================================================
 */
-static bool NET_GetLoopPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
+static qboolean NET_GetLoopPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
 {
 	loopback_t	*loop;
 	int		i;
@@ -365,7 +365,7 @@ static bool NET_GetLoopPacket( netsrc_t sock, netadr_t *from, byte *data, size_t
 
 }
 
-static bool NET_SendLoopPacket( netsrc_t sock, size_t length, const void *data, netadr_t to )
+static qboolean NET_SendLoopPacket( netsrc_t sock, size_t length, const void *data, netadr_t to )
 {
 	int		i;
 	loopback_t	*loop;
@@ -397,7 +397,7 @@ NET_GetPacket
 Never called by the game logic, just the system event queing
 ==================
 */
-bool NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
+qboolean NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
 {
 	uint 		ret;
 	struct sockaddr	addr;
@@ -583,10 +583,10 @@ NET_Config
 A single player game will only use the loopback code
 ====================
 */
-void NET_Config( bool multiplayer )
+void NET_Config( qboolean multiplayer )
 {
 	int		i;
-	static bool	old_config;
+	static qboolean	old_config;
 
 	if( old_config == multiplayer )
 		return;

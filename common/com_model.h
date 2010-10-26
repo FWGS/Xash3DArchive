@@ -111,7 +111,7 @@ typedef struct mnode_s
 	struct mnode_s	*children[2];	
 
 	msurface_t	*firstface;	// used for grab lighting info, decals etc
-	uint		numfaces;
+	unsigned int	numfaces;
 } mnode_t;
 
 typedef struct model_s

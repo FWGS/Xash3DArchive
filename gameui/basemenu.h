@@ -138,7 +138,7 @@ typedef struct
 	const char	*name;
 	int		id;
 
-	uint		flags;
+	unsigned int	flags;
 
 	int		x;
 	int		y;

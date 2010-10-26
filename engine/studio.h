@@ -1,7 +1,18 @@
-//=======================================================================
-//			Copyright XashXT Group 2008 ©
-//		       studio.h - studio model reference
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
+
 #ifndef STUDIO_H
 #define STUDIO_H
 
@@ -34,8 +45,8 @@ Studio models are position independent, so the cache manager can move them.
 #define MAXSTUDIOEVENTS		1024	// events per model
 #define MAXSTUDIOPIVOTS		256	// pivot points
 #define MAXSTUDIOBLENDS		16	// max anim blends
-#define MAXSTUDIOCONTROLLERS		16	// max controllers per model
-#define MAXSTUDIOATTACHMENTS		16	// max attachments per model
+#define MAXSTUDIOCONTROLLERS		8	// max controllers per model
+#define MAXSTUDIOATTACHMENTS		4	// max attachments per model
 
 // model global flags
 #define STUDIO_STATIC		0x0001	// model without anims
@@ -150,7 +161,7 @@ typedef struct
 
 	char		name[64];
 	int		length;
-} mstudioseqhdr_t;
+} studioseqhdr_t;
 
 // bones
 typedef struct 
@@ -183,19 +194,24 @@ typedef struct
 	vec3_t		bbmax;		
 } mstudiobbox_t;
 
+typedef struct cache_user_s
+{
+	void		*data;
+} cache_user_t;
+
 // demand loaded sequence groups
 typedef struct
 {
 	char		label[32];	// textual name
 	char		name[64];		// file name
-	void		*cache;		// cache index pointer (only in memory)
+	cache_user_t	cache;		// cache index pointer
 	int		data;		// hack for group 0
 } mstudioseqgroup_t;
 
 // sequence descriptions
 typedef struct
 {
-	char		label[32];	// sequence label (name)
+	char		label[32];	// sequence label
 
 	float		fps;		// frames per second	
 	int		flags;		// looping/non-looping flags
@@ -295,7 +311,7 @@ typedef struct
 } mstudiotexture_t;
 
 // skin families
-// short	index[skinfamilies][skinref]		// skingroup info
+// short	index[skinfamilies][skinref]
 
 // studio models
 typedef struct
@@ -303,7 +319,7 @@ typedef struct
 	char		name[64];
 
 	int		type;
-	float		boundingradius;	// software stuff
+	float		boundingradius;
 
 	int		nummesh;
 	int		meshindex;
@@ -319,6 +335,8 @@ typedef struct
 	int		groupindex;
 } mstudiomodel_t;
 
+// vec3_t	boundingbox[model][bone][2];	// complex intersection info
+
 // meshes
 typedef struct 
 {
@@ -329,9 +347,12 @@ typedef struct
 	int		normindex;	// normal vec3_t
 } mstudiomesh_t;
 
-typedef struct cache_user_s
+// triangles
+typedef struct 
 {
-	void		*data;
-} cache_user_t;
+	short		vertindex;	// index into vertex array
+	short		normindex;	// index into normal array
+	short		s,t;		// s,t position on skin
+} mstudiotrivert_t;
 
 #endif//STUDIO_H

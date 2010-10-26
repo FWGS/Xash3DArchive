@@ -1,27 +1,43 @@
-//=======================================================================
-//			Copyright XashXT Group 2009 ©
-//		   entity_state.h - a part of network protocol
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
 #ifndef ENTITY_STATE_H
 #define ENTITY_STATE_H
 
-// for entityType below
+// For entityType below
 #define ENTITY_NORMAL		(1<<0)
 #define ENTITY_BEAM			(1<<1)
 
-typedef struct entity_state_s
+// Entity state is used for the baseline and for delta compression of a packet of 
+//  entities that is sent to a client.
+typedef struct entity_state_s entity_state_t;
+
+struct entity_state_s
 {
-	// Fields which are filled in by routines outside of delta compression
-	int		entityType;	// hint for engine
-	int		number;		// edict index
+// Fields which are filled in by routines outside of delta compression
+	int		entityType;
+	// Index into cl_entities array for this entity.
+	int		number;      
 	float		msg_time;
 
 	// Message number last time the player/entity state was updated.
 	int		messagenum;
 
-	// Fields which can be transitted and reconstructed over the network stream
+// Fields which can be transitted and reconstructed over the network stream
 	vec3_t		origin;
-	vec3_t		angles;		// entity angles, not viewangles
+	vec3_t		angles;
+
 	int		modelindex;
 	int		sequence;
 	float		frame;
@@ -51,33 +67,43 @@ typedef struct entity_state_s
 	vec3_t		maxs;
 
 	int		aiment;
-	int		owner;		// If owned by a player, the index of that player ( for projectiles )
-	float		friction;		// Friction, for prediction.       
-	float		gravity;		// Gravity multiplier		
+	// If owned by a player, the index of that player ( for projectiles ).
+	int		owner; 
 
-	// client specific
+	// Friction, for prediction.
+	float		friction;       
+	// Gravity multiplier
+	float		gravity;				
+
+// PLAYER SPECIFIC
 	int		team;
 	int		playerclass;
 	int		health;
-	int		spectator;  
+	qboolean		spectator;  
 	int		weaponmodel;
 	int		gaitsequence;
-	vec3_t		basevelocity;	// If standing on conveyor, e.g.   
-	int		usehull;		// Use the crouched hull, or the regular player hull.		
-	int		oldbuttons;	// Latched buttons last time state updated.     
-	int		onground;		// -1 = in air, else pmove entity number		
+	// If standing on conveyor, e.g.
+	vec3_t		basevelocity;   
+	// Use the crouched hull, or the regular player hull.
+	int		usehull;		
+	// Latched buttons last time state updated.
+	int		oldbuttons;     
+	// -1 = in air, else pmove entity number
+	int		onground;		
 	int		iStepLeft;
-	float		flFallVelocity;	// How fast we are falling  
+	// How fast we are falling
+	float		flFallVelocity;  
+
 	float		fov;
 	int		weaponanim;
 
-	// parametric movement overrides
+	// Parametric movement overrides
 	vec3_t		startpos;
 	vec3_t		endpos;
 	float		impacttime;
 	float		starttime;
 
-	// for mods
+	// For mods
 	int		iuser1;
 	int		iuser2;
 	int		iuser3;
@@ -90,13 +116,7 @@ typedef struct entity_state_s
 	vec3_t		vuser2;
 	vec3_t		vuser3;
 	vec3_t		vuser4;
-
-	// xash shared strings
-	char		classname[32];
-	char		targetname[32];
-	char		target[32];
-	char		netname[32];
-} entity_state_t;
+};
 
 #include "pm_info.h"
 
@@ -138,7 +158,7 @@ typedef struct clientdata_s
 	int		deadflag;
 	char		physinfo[MAX_PHYSINFO_STRING];
 
-	// for mods
+	// For mods
 	int		iuser1;
 	int		iuser2;
 	int		iuser3;
@@ -160,7 +180,7 @@ typedef struct local_state_s
 {
 	entity_state_t	playerstate;
 	clientdata_t	client;
-	weapon_data_t	weapondata[32];	// store 32 weapons
+	weapon_data_t	weapondata[32];
 } local_state_t;
 
 #endif//ENTITY_STATE_H

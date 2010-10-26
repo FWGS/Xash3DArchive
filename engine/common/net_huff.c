@@ -62,7 +62,7 @@ static tree_t	huffTree;
 
 // received from MSG_* code
 static int	huffBitPos;
-static bool	huffInit = false;
+static qboolean	huffInit = false;
 
 /*
 =======================================================================================

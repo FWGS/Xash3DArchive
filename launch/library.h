@@ -126,7 +126,7 @@ typedef struct
 typedef struct dll_user_s
 {
 	void	*hInstance;		// to avoid possible hacks
-	bool	custom_loader;		// a bit who indicated loader type
+	qboolean	custom_loader;		// a bit who indicated loader type
 	char	dllName[32];		// for debug messages
 	string	fullPath, shortPath;	// actual dll paths
 
@@ -138,9 +138,9 @@ typedef struct dll_user_s
 	dword	funcBase;			// base offset
 } dll_user_t;
 
-dll_user_t *FS_FindLibrary( const char *dllname, bool directpath );
+dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath );
 void *Com_LoadLibrary( const char *dllname, int build_ordinals_table );
-void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, bool directpath );
+void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath );
 void *Com_GetProcAddress( void *hInstance, const char *name );
 const char *Com_NameForFunction( void *hInstance, dword function );
 dword Com_FunctionFromName( void *hInstance, const char *pName );

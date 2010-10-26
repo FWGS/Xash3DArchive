@@ -12,14 +12,14 @@ typedef struct loadwavformat_s
 {
 	const char *formatstring;
 	const char *ext;
-	bool (*loadfunc)( const char *name, const byte *buffer, size_t filesize );
+	qboolean (*loadfunc)( const char *name, const byte *buffer, size_t filesize );
 } loadwavformat_t;
 
 typedef struct savewavformat_s
 {
 	const char *formatstring;
 	const char *ext;
-	bool (*savefunc)( const char *name, wavdata_t *pix );
+	qboolean (*savefunc)( const char *name, wavdata_t *pix );
 } savewavformat_t;
 
 typedef struct streamformat_s
@@ -82,9 +82,9 @@ extern sndlib_t sound;
 //
 // formats load
 //
-bool Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize );
-bool Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize );
-bool Sound_LoadSND( const char *name, const byte *buffer, size_t filesize );	// snd - doom1 sounds
+qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize );
+qboolean Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize );
+qboolean Sound_LoadSND( const char *name, const byte *buffer, size_t filesize );	// snd - doom1 sounds
 
 //
 // stream operate
@@ -99,7 +99,7 @@ void Stream_FreeOGG( stream_t *stream );
 //
 // formats save
 //
-bool Sound_SaveWAV( const char *name, wavdata_t *pix );
+qboolean Sound_SaveWAV( const char *name, wavdata_t *pix );
 
 //
 // snd_utils.c

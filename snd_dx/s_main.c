@@ -70,7 +70,7 @@ void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime
 S_IsClient
 =================
 */
-bool S_IsClient( int entnum )
+qboolean S_IsClient( int entnum )
 {
 	return ( entnum == s_listener.entnum );
 }
@@ -533,7 +533,7 @@ void S_StaticSound( const vec3_t pos, int ent, int chan, sound_t handle, float f
 	wavdata_t	*pSource = NULL;
 	sfx_t	*sfx = NULL;
 	int	vol, fvox = 0;
-	bool	looping = false;
+	qboolean	looping = false;
 	vec3_t	origin;		
 
 	sfx = S_GetSfxByHandle( handle );
@@ -913,7 +913,7 @@ void S_SoundInfo_f( void )
 S_Init
 ================
 */
-bool S_Init( void *hInst )
+qboolean S_Init( void *hInst )
 {
 	Cmd_ExecuteString( "sndlatch\n" );
 

@@ -33,6 +33,34 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	return EDICT_NUM( index );
 }
 
+int CL_DecalIndex( const char *name )
+{
+	char	shortname[CS_SIZE];
+	int	i;
+
+	if( !name || !name[0] )
+		return 0;
+
+	FS_FileBase( name, shortname );
+
+	for( i = 1; i < MAX_DECALS && clgame.draw_decals[i][0]; i++ )
+	{
+		if( !com.stricmp( clgame.draw_decals[i], shortname ))
+			return i;
+	}
+
+	if( i == MAX_DECALS )
+	{
+		MsgDev( D_ERROR, "CL_DecalIndex: MAX_DECALS limit exceeded\n" );
+		return 0;
+	}
+
+	// register new decal
+	com.strncpy( clgame.draw_decals[i], shortname, sizeof( clgame.draw_decals[i] ));
+
+	return i;
+}
+
 /*
 ====================
 CL_GetServerTime
@@ -243,7 +271,7 @@ static void SPR_AdjustSize( float *x, float *y, float *w, float *h )
 	if( h ) *h *= yscale;
 }
 
-static bool SPR_Scissor( float *x, float *y, float *width, float *height, float *u0, float *v0, float *u1, float *v1 )
+static qboolean SPR_Scissor( float *x, float *y, float *width, float *height, float *u0, float *v0, float *u1, float *v1 )
 {
 	float	dudx, dvdy;
 
@@ -431,6 +459,26 @@ static void CL_InitTitles( const char *filename )
 
 	CL_TextMessageParse( pMemFile, fileSize );
 	Mem_Free( pMemFile );
+}
+
+/*
+====================
+CL_InitDecals
+
+build list of unique decalnames
+====================
+*/
+static void CL_InitDecals( void )
+{
+	search_t	*t;
+	int	i;
+
+	// lookup all decals in decals.wad
+	t = FS_Search( "decals.wad/*.*", true );
+
+	for( i = 0; t && i < t->numfilenames; i++ )
+		CL_DecalIndex( t->filenames[i] );
+	if( t ) Mem_Free( t );
 }
 
 /*
@@ -1163,7 +1211,7 @@ static void pfnGetPlayerInfo( int ent_num, hud_player_info_t *pinfo )
 {
 	player_info_t	*player;
 	cl_entity_t	*ent;
-	bool		spec = false;
+	qboolean		spec = false;
 
 	ent = CL_GetEntityByIndex( ent_num );
 	ent_num -= 1; // player list if offset by 1 from ents
@@ -1212,7 +1260,7 @@ static void pfnPlaySoundByIndex( int iSound, float volume )
 
 	// make sure what we in-bounds
 	iSound = bound( 0, iSound, MAX_SOUNDS );
-	hSound = cl.sound_precache[iSound];
+	hSound = cl.sound_index[iSound];
 
 	if( !hSound )
 	{
@@ -1676,15 +1724,23 @@ pfnFindModelIndex
 
 =============
 */
-int pfnFindModelIndex( const char *model )
+int pfnFindModelIndex( const char *m )
 {
 	int	i;
 
-	if( !model || !*model ) return 0;
-	for( i = 1; i < MAX_MODELS; i++ )
+	if( !m || !m[0] )
+		return 0;
+
+	for( i = 1; i < MAX_MODELS && cl.model_precache[i][0]; i++ )
 	{
-		if( !com.strcmp( model, cl.configstrings[CS_MODELS+i] ))
+		if( !com.strcmp( cl.model_precache[i], m ))
 			return i;
+	}
+
+	if( cls.state == ca_active )
+	{
+		// tell user about problem
+		MsgDev( D_ERROR, "CL_ModelIndex: %s not precached\n", m );
 	}
 	return 0;
 }
@@ -1863,7 +1919,7 @@ pfnBoxVisible
 
 =============
 */
-static bool pfnBoxVisible( const vec3_t mins, const vec3_t maxs )
+static qboolean pfnBoxVisible( const vec3_t mins, const vec3_t maxs )
 {
 	if( !re ) return false;
 	return CM_BoxVisible( mins, maxs, re->GetCurrentVis());
@@ -1990,11 +2046,18 @@ int pfnDecalIndexFromName( const char *szDecalName )
 {
 	int	i;
 
+	if( !szDecalName || !szDecalName[0] )
+		return 0;
+
 	// look through the loaded sprite name list for SpriteName
-	for( i = 0; i < MAX_DECALNAMES && cl.configstrings[CS_DECALS+i+1][0]; i++ )
+	for( i = 0; i < MAX_DECALS && clgame.draw_decals[i+1][0]; i++ )
 	{
-		if( !com.stricmp( szDecalName, cl.configstrings[CS_DECALS+i+1] ))
-			return cl.decal_shaders[i+1];
+		if( !com.stricmp( szDecalName, clgame.draw_decals[i+1] ))
+		{
+			if( !cl.decal_index[i+1] )
+				cl.decal_index[i+1] = re->RegisterShader( szDecalName, SHADER_DECAL );
+			return cl.decal_index[i+1];
+		}
 	}
 	return 0; // invalid decal
 }
@@ -2007,8 +2070,10 @@ pfnDecalIndex
 */
 static int pfnDecalIndex( int id )
 {
-	id = bound( 0, id, MAX_DECALNAMES - 1 );
-	return cl.decal_shaders[id];
+	id = bound( 0, id, MAX_DECALS - 1 );
+	if( !cl.decal_index[id] )
+		cl.decal_index[id] = re->RegisterShader( clgame.draw_decals[id], SHADER_DECAL );
+	return cl.decal_index[id];
 }
 
 /*
@@ -2117,7 +2182,7 @@ TriRenderMode
 
 =============
 */
-void TriRenderMode( kRenderMode_t mode )
+void TriRenderMode( int mode )
 {
 	if( !re ) return;
 	re->RenderMode( mode );
@@ -2512,7 +2577,7 @@ void CL_UnloadProgs( void )
 	Mem_Set( &clgame, 0, sizeof( clgame ));
 }
 
-bool CL_LoadProgs( const char *name )
+qboolean CL_LoadProgs( const char *name )
 {
 	static CLIENTAPI		GetClientAPI;
 	static playermove_t		gpMove;
@@ -2552,6 +2617,8 @@ bool CL_LoadProgs( const char *name )
 
 	clgame.maxEntities = GI->max_edicts; // merge during loading
 	CL_InitTitles( "titles.txt" );
+
+	CL_InitDecals();
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

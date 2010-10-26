@@ -91,7 +91,7 @@ typedef struct server_s
 {
 	sv_state_t	state;		// precache commands are only valid during load
 
-	bool		loadgame;		// client begins should reuse existing entity
+	qboolean		loadgame;		// client begins should reuse existing entity
 
 	double		time;		// sv.time += sv.frametime
 	float		frametime;
@@ -103,6 +103,9 @@ typedef struct server_s
 	string		startspot;	// player_start name on nextmap
 
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
+
+	char		model_precache[MAX_MODELS][CS_SIZE];
+	char		sound_precache[MAX_SOUNDS][CS_SIZE];
 
 	sv_consistency_t	consistency_files[MAX_MODELS];
 	int		num_consistency_files;
@@ -129,8 +132,8 @@ typedef struct server_s
 	// run local lightstyles to let SV_LightPoint grab the actual information
 	sv_lightstyle_t	lightstyle[MAX_LIGHTSTYLES];
 
-	bool		write_bad_message;	// just for debug
-	bool		paused;
+	qboolean		write_bad_message;	// just for debug
+	qboolean		paused;
 } server_t;
 
 typedef struct
@@ -152,12 +155,12 @@ typedef struct sv_client_s
 	char		userinfo[MAX_INFO_STRING];	// name, etc (received from client)
 	char		physinfo[MAX_INFO_STRING];	// set on server (transmit to client)
 
-	bool		send_message;
-	bool		skip_message;
+	qboolean		send_message;
+	qboolean		skip_message;
 
-	bool		local_weapons;		// enable weapon predicting
-	bool		lag_compensation;		// enable lag compensation
-	bool		hltv_proxy;		// this is spectator proxy (hltv)		
+	qboolean		local_weapons;		// enable weapon predicting
+	qboolean		lag_compensation;		// enable lag compensation
+	qboolean		hltv_proxy;		// this is spectator proxy (hltv)		
 
 	netchan_t		netchan;
 	int		chokecount;         	// number of messages rate supressed
@@ -168,10 +171,10 @@ typedef struct sv_client_s
 	double		next_checkpingtime;		// time to send all players pings to client
 	double		timebase;			// client timebase
 
-	bool		sendmovevars;
-	bool		sendinfo;
+	qboolean		sendmovevars;
+	qboolean		sendinfo;
 
-	bool		fakeclient;		// This client is a fake player controlled by the game DLL
+	qboolean		fakeclient;		// This client is a fake player controlled by the game DLL
 
 	int		random_seed;		// fpr predictable random values
 	usercmd_t		lastcmd;			// for filling in big drops
@@ -235,7 +238,7 @@ typedef struct
 	netadr_t		adr;
 	int		challenge;
 	double		time;
-	bool		connected;
+	qboolean		connected;
 } challenge_t;
 
 typedef struct
@@ -254,10 +257,10 @@ typedef struct
 
 typedef struct
 {
-	bool		active;
-	bool		moving;
-	bool		firstframe;
-	bool		nointerp;
+	qboolean		active;
+	qboolean		moving;
+	qboolean		firstframe;
+	qboolean		nointerp;
 
 	vec3_t		mins;
 	vec3_t		maxs;
@@ -277,8 +280,8 @@ typedef struct
 	int		msg_realsize;		// left in bytes
 	int		msg_index;		// for debug messages
 	int		msg_dest;			// msg destination ( MSG_ONE, MSG_ALL etc )
-	bool		msg_started;		// to avoid include messages
-	bool		msg_system;		// this is message with engine index
+	qboolean		msg_started;		// to avoid include messages
+	qboolean		msg_system;		// this is message with engine index
 	edict_t		*msg_ent;			// user message member entity
 	vec3_t		msg_org;			// user message member origin
 
@@ -302,6 +305,8 @@ typedef struct
 	sv_pushed_t	pushed[256];		// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
 
+	char		draw_decals[MAX_DECALS][64];	// a list of unique decalindexes
+
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
@@ -317,7 +322,7 @@ typedef struct
 
 typedef struct
 {
-	bool		initialized;		// sv_init has completed
+	qboolean		initialized;		// sv_init has completed
 	double		timestart;		// just for profiling
 
 	int		groupmask;
@@ -377,7 +382,7 @@ extern	sv_client_t	*sv_client;
 //
 // sv_main.c
 //
-void SV_FinalMessage( char *message, bool reconnect );
+void SV_FinalMessage( char *message, qboolean reconnect );
 void SV_DropClient( sv_client_t *drop );
 
 int SV_ModelIndex( const char *name );
@@ -400,28 +405,28 @@ void Master_Packet( void );
 void SV_InitGame( void );
 void SV_ActivateServer( void );
 void SV_DeactivateServer( void );
-void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, bool loadGame );
-bool SV_SpawnServer( const char *server, const char *startspot );
-int SV_FindIndex( const char *name, int start, int end, bool create );
+void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame );
+qboolean SV_SpawnServer( const char *server, const char *startspot );
+int SV_FindIndex( const char *name, int start, int end, qboolean create );
 
 //
 // sv_phys.c
 //
 void SV_Physics( void );
 void SV_CheckVelocity( edict_t *ent );
-bool SV_CheckWater( edict_t *ent );
-bool SV_RunThink( edict_t *ent );
+qboolean SV_CheckWater( edict_t *ent );
+qboolean SV_RunThink( edict_t *ent );
 void SV_FreeOldEntities( void );
-bool SV_TestEntityPosition( edict_t *ent );	// for EntityInSolid checks
-bool SV_TestPlayerPosition( edict_t *ent );	// for PlayerInSolid checks
+qboolean SV_TestEntityPosition( edict_t *ent );	// for EntityInSolid checks
+qboolean SV_TestPlayerPosition( edict_t *ent );	// for PlayerInSolid checks
 
 //
 // sv_move.c
 //
-bool SV_MoveStep( edict_t *ent, vec3_t move, bool relink );
-bool SV_MoveTest( edict_t *ent, vec3_t move, bool relink );
+qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink );
+qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink );
 void SV_MoveToOrigin( edict_t *ed, const vec3_t goal, float dist, int iMode );
-bool SV_CheckBottom( edict_t *ent, int iMode );
+qboolean SV_CheckBottom( edict_t *ent, int iMode );
 float SV_VecToYaw( const vec3_t src );
 
 //
@@ -441,12 +446,12 @@ void SV_GetChallenge( netadr_t from );
 void SV_DirectConnect( netadr_t from );
 void SV_TogglePause( const char *msg );
 void SV_PutClientInServer( edict_t *ent );
-bool SV_ShouldUpdatePing( sv_client_t *cl );
+qboolean SV_ShouldUpdatePing( sv_client_t *cl );
 const char *SV_GetClientIDString( sv_client_t *cl );
 void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg );
 void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg );
 void SV_GetPlayerStats( sv_client_t *cl, int *ping, int *packet_loss );
-bool SV_ClientConnect( edict_t *ent, char *userinfo );
+qboolean SV_ClientConnect( edict_t *ent, char *userinfo );
 void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
@@ -454,7 +459,7 @@ edict_t *SV_FakeConnect( const char *netname );
 void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_PostRunCmd( sv_client_t *cl );
-bool SV_IsPlayerIndex( int idx );
+qboolean SV_IsPlayerIndex( int idx );
 void SV_InitClientMove( void );
 void SV_UpdateServerInfo( void );
 
@@ -477,7 +482,7 @@ void SV_SkipUpdates( void );
 //
 // sv_game.c
 //
-bool SV_LoadProgs( const char *name );
+qboolean SV_LoadProgs( const char *name );
 void SV_UnloadProgs( void );
 void SV_FreeEdicts( void );
 edict_t *SV_AllocEdict( void );
@@ -499,7 +504,7 @@ float SV_AngleMod( float ideal, float current, float speed );
 void SV_SpawnEntities( const char *mapname, script_t *entities );
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className );
 string_t SV_AllocString( const char *szValue );
-sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, bool spawned_only );
+sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only );
 const char *SV_GetString( string_t iString );
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed );
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name );
@@ -507,6 +512,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
+int pfnPrecacheModel( const char *s );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {
@@ -521,17 +527,17 @@ _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 //
 void SV_ClearSaveDir( void );
 void SV_SaveGame( const char *pName );
-bool SV_LoadGame( const char *pName );
-void SV_ChangeLevel( bool loadfromsavedgame, const char *mapname, const char *start );
+qboolean SV_LoadGame( const char *pName );
+void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start );
 const char *SV_GetLatestSave( void );
-int SV_LoadGameState( char const *level, bool createPlayers );
+int SV_LoadGameState( char const *level, qboolean createPlayers );
 void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 
 //
 // sv_studio.c
 //
 void SV_InitStudioHull( void );
-bool SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
+qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
 trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );
@@ -539,7 +545,7 @@ void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );
 //
 // sv_pmove.c
 //
-bool SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, bool player_trace );
+qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trace );
 
 //
 // sv_world.c
@@ -549,14 +555,14 @@ extern areanode_t	sv_areanodes[];
 
 void SV_ClearWorld( void );
 void SV_UnlinkEdict( edict_t *ent );
-bool SV_HeadnodeVisible( mnode_t *node, byte *visbits );
+qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits );
 int SV_HullPointContents( hull_t *hull, int num, const vec3_t p );
 trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
 trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int type, edict_t *e );
 const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end );
 trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );
-void SV_LinkEdict( edict_t *ent, bool touch_triggers );
+void SV_LinkEdict( edict_t *ent, qboolean touch_triggers );
 void SV_TouchLinks( edict_t *ent, areanode_t *node );
 int SV_TruePointContents( const vec3_t p );
 int SV_PointContents( const vec3_t p );

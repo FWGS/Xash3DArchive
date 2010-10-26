@@ -36,17 +36,17 @@ const char *svc_strings[256] =
 	"svc_particle",
 	"svc_frame",
 	"svc_spawnstatic",
-	"svc_unused21",
+	"svc_event_reliable",
 	"svc_spawnbaseline",
 	"svc_temp_entity",
 	"svc_setpause",
-	"svc_deltamovevars",
+	"svc_unused25",
 	"svc_centerprint",
 	"svc_event",
-	"svc_event_reliable",
+	"svc_soundindex",
 	"svc_ambientsound",
 	"svc_intermission",
-	"svc_unused31",
+	"svc_modelindex",
 	"svc_cdtrack",
 	"svc_serverinfo",
 	"svc_deltatable",
@@ -59,7 +59,7 @@ const char *svc_strings[256] =
 	"svc_deltapacketentities",
 	"svc_chokecount",
 	"svc_unused43",
-	"svc_unused44",
+	"svc_deltamovevars",
 	"svc_unused45",
 	"svc_unused46",
 	"svc_crosshairangle",
@@ -80,7 +80,7 @@ typedef struct
 {
 	oldcmd_t	oldcmd[MSG_COUNT];   
 	int	currentcmd;
-	bool	parsing;
+	qboolean	parsing;
 } msg_debug_t;
 
 static msg_debug_t	cls_message_debug;
@@ -209,7 +209,7 @@ Returns true if the file exists, otherwise it attempts
 to start a download from the server.
 ===============
 */
-bool CL_CheckOrDownloadFile( const char *filename )
+qboolean CL_CheckOrDownloadFile( const char *filename )
 {
 	string	name;
 	file_t	*f;
@@ -358,7 +358,7 @@ CL_ParseSoundPacket
 
 ==================
 */
-void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
+void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 {
 	vec3_t	pos_;
 	float	*pos = NULL;
@@ -400,7 +400,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg, bool is_ambient )
 		com.snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
 		handle = S_RegisterSound( sentenceName );
 	}
-	else handle = cl.sound_precache[sound];	// see precached sound
+	else handle = cl.sound_index[sound];	// see precached sound
 
 	if( is_ambient )
 	{
@@ -513,7 +513,10 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	else modelIndex = 0;
 	flags = BF_ReadByte( msg );
 
-	CL_DecalShoot( cl.decal_shaders[decalIndex], entityIndex, modelIndex, origin, flags );
+	if( !cl.decal_index[decalIndex] )
+		cl.decal_index[decalIndex] = re->RegisterShader( clgame.draw_decals[decalIndex], SHADER_DECAL );
+
+	CL_DecalShoot( cl.decal_index[decalIndex], entityIndex, modelIndex, origin, flags );
 }
 
 void CL_ParseSoundFade( sizebuf_t *msg )
@@ -753,22 +756,9 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	{
 		CL_RunBackgroundTrack();
 	}
-	else if( i > CS_BACKGROUND_TRACK && i < CS_MODELS )
+	else if( i > CS_BACKGROUND_TRACK && i < CS_EVENTS )
 	{
 		Host_Error( "CL_ParseConfigString: reserved configstring #%i are used\n", i );
-	}
-	else if( i >= CS_MODELS && i < CS_MODELS+MAX_MODELS && cl.video_prepped )
-	{
-		re->RegisterModel( cl.configstrings[i], i-CS_MODELS );
-		CM_RegisterModel( cl.configstrings[i], i-CS_MODELS );
-	}
-	else if( i >= CS_SOUNDS && i < CS_SOUNDS+MAX_SOUNDS && cl.audio_prepped )
-	{
-		cl.sound_precache[i-CS_SOUNDS] = S_RegisterSound( cl.configstrings[i] );
-	}
-	else if( i >= CS_DECALS && i < CS_DECALS+MAX_DECALNAMES && cl.video_prepped )
-	{
-		cl.decal_shaders[i-CS_DECALS] = re->RegisterShader( cl.configstrings[i], SHADER_DECAL );
 	}
 	else if( i >= CS_EVENTS && i < CS_EVENTS+MAX_EVENTS )
 	{
@@ -855,7 +845,7 @@ collect userinfo from all players
 void CL_UpdateUserinfo( sizebuf_t *msg )
 {
 	int		slot;
-	bool		active;
+	qboolean		active;
 	player_info_t	*player;
 
 	slot = BF_ReadUBitLong( msg, MAX_CLIENT_BITS );
@@ -873,6 +863,55 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 		com.strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
 	}
 	else Mem_Set( player, 0, sizeof( *player ));
+}
+
+/*
+================
+CL_PrecacheModel
+
+prceache model from server
+================
+*/
+void CL_PrecacheModel( sizebuf_t *msg )
+{
+	int	modelIndex;
+
+	modelIndex = BF_ReadUBitLong( msg, MAX_MODEL_BITS );
+
+	if( modelIndex < 0 || modelIndex >= MAX_MODELS )
+		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", modelIndex );
+
+	com.strcpy( cl.model_precache[modelIndex], BF_ReadString( msg ));
+
+	// when we loading map all resources is precached sequentially
+	if( !cl.video_prepped ) return;
+
+	re->RegisterModel( cl.model_precache[modelIndex], modelIndex );
+	CM_RegisterModel( cl.model_precache[modelIndex], modelIndex );
+}
+
+/*
+================
+CL_PrecacheSound
+
+prceache sound from server
+================
+*/
+void CL_PrecacheSound( sizebuf_t *msg )
+{
+	int	soundIndex;
+
+	soundIndex = BF_ReadUBitLong( msg, MAX_SOUND_BITS );
+
+	if( soundIndex < 0 || soundIndex >= MAX_SOUNDS )
+		Host_Error( "CL_PrecacheSound: bad soundindex %i\n", soundIndex );
+
+	com.strcpy( cl.sound_precache[soundIndex], BF_ReadString( msg ));
+
+	// when we loading map all resources is precached sequentially
+	if( !cl.audio_prepped ) return;
+
+	cl.sound_index[soundIndex] = S_RegisterSound( cl.sound_precache[soundIndex] );
 }
 
 /*
@@ -1157,6 +1196,12 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_intermission:
 			cl.refdef.intermission = true;
+			break;
+		case svc_modelindex:
+			CL_PrecacheModel( msg );
+			break;
+		case svc_soundindex:
+			CL_PrecacheSound( msg );
 			break;
 		case svc_soundfade:
 			CL_ParseSoundFade( msg );

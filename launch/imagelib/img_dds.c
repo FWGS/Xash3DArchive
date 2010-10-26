@@ -14,7 +14,7 @@
 #define CHAN_MAX		255
 #define ALPHACUT		127
 
-static void Image_BaseColorSearch( byte *blkaddr, byte srccolors[4][4][4], byte *bestcolor[2], int numxpixels, int numypixels, int type, bool haveAlpha )
+static void Image_BaseColorSearch( byte *blkaddr, byte srccolors[4][4][4], byte *bestcolor[2], int numxpixels, int numypixels, int type, qboolean haveAlpha )
 {
 	// use same luminance-weighted distance metric to determine encoding as for finding the base colors
 
@@ -231,7 +231,7 @@ static void Image_BaseColorSearch( byte *blkaddr, byte srccolors[4][4][4], byte 
 	}
 }
 
-static void Image_StoreBlock( byte *blkaddr, byte srccolors[4][4][4], byte *bestcolor[2], int numxpixels, int numypixels, uint type, bool haveAlpha )
+static void Image_StoreBlock( byte *blkaddr, byte srccolors[4][4][4], byte *bestcolor[2], int numxpixels, int numypixels, uint type, qboolean haveAlpha )
 {
 	// use same luminance-weighted distance metric to determine encoding as for finding the base colors
 	int	i, j, colors;
@@ -384,7 +384,7 @@ static void Image_EncodeColorBlock( byte *blkaddr, byte srccolors[4][4][4], int 
 	byte	*bestcolor[2];
 	byte	basecolors[2][3];
 	uint	lowcv, highcv, testcv;
-	bool	haveAlpha = false;
+	qboolean	haveAlpha = false;
 	byte	i, j;
 
 	lowcv = highcv = srccolors[0][0][0] * srccolors[0][0][0] * REDWEIGHT + srccolors[0][0][1] * srccolors[0][0][1] * GREENWEIGHT + srccolors[0][0][2] * srccolors[0][0][2] * BLUEWEIGHT;
@@ -457,8 +457,8 @@ static void Image_EncodeDXT5alpha( byte *blkaddr, byte srccolors[4][4][4], int n
 	uint	alphablockerror1, alphablockerror2, alphablockerror3;
 	byte	i, j, aindex, acutValues[7];
 	byte	alphaenc1[16], alphaenc2[16], alphaenc3[16];
-	bool	alphaabsmin = false;
-	bool	alphaabsmax = false;
+	qboolean	alphaabsmin = false;
+	qboolean	alphaabsmax = false;
 	short	alphadist;
 
 	// find lowest and highest alpha value in block, alphabase[0] lowest, alphabase[1] highest
@@ -922,7 +922,7 @@ void Image_GetBitsFromMask( uint Mask, uint *ShiftLeft, uint *ShiftRight )
 	*ShiftLeft = 8 - i;
 }
 
-bool Image_DXTWriteHeader( vfile_t *f, rgbdata_t *pix )
+qboolean Image_DXTWriteHeader( vfile_t *f, rgbdata_t *pix )
 {
 	uint	dwFourCC = 0, dwFlags1 = 0, dwFlags2 = 0, dwCaps1 = 0, dwCaps2 = 0;
 	uint	dwLinearSize, dwBlockSize, dwSize = 124, dwSize2 = sizeof( dds_pixf_t );
@@ -1228,7 +1228,7 @@ void Image_CompressDDS( vfile_t *f, byte *buffer )
 #endif
 }
 
-bool Image_DXTWriteImage( vfile_t *f, rgbdata_t *pix )
+qboolean Image_DXTWriteImage( vfile_t *f, rgbdata_t *pix )
 {
 	byte	*in, *out, *buffer;
 	int	i, bpp = PFDesc[pix->type].bpp;
@@ -1452,7 +1452,7 @@ void Image_SetPixelFormat( int width, int height, int depth )
 	image.SizeOfFile = Image_DXTGetLinearSize( image.type, width, height, depth, image.bits_count / 8 );
 }
 
-bool Image_DecompressFloat( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_DecompressFloat( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
 {
 	uint	floatformat = 0;
 	uint	i, size = 0;
@@ -1487,13 +1487,13 @@ bool Image_DecompressFloat( uint target, int level, int intformat, uint width, u
 	return true;
 }
 
-bool Image_DecompressATI( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_DecompressATI( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
 {
 	int	x, y, z, i, j, k, t1, t2, size;
 	byte	Colours[8], XColours[8], YColours[8];
 	uint	bitmask, bitmask2, CurrOffset, Offset = 0;
 	byte	*fin, *fin2, *fout;
-	bool	has_alpha = false;
+	qboolean	has_alpha = false;
 
 	if( !data ) return false;
 	fin = (byte *)data;
@@ -1668,7 +1668,7 @@ bool Image_DecompressATI( uint target, int level, int intformat, uint width, uin
 	return true;
 }
 
-bool Image_DecompressDXT( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_DecompressDXT( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
 {
 	color32	colours[4], *col;
 	color16	*color_0, *color_1;
@@ -1676,7 +1676,7 @@ bool Image_DecompressDXT( uint target, int level, int intformat, uint width, uin
 	uint	bits, bitmask, Offset, size;
 	byte	alphas[8], *alpha, *alphamask; 
 	int	w, h, x, y, z, i, j, k, Select; 
-	bool	has_alpha = false;
+	qboolean	has_alpha = false;
 	byte	*fin, *fout;
 
 	if( !data ) return false;
@@ -2074,7 +2074,7 @@ bool Image_DecompressDXT( uint target, int level, int intformat, uint width, uin
 	return true;
 }
 
-bool Image_DecompressARGB( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_DecompressARGB( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
 {
 	uint	ReadI = 0, TempBpp;
 	uint	RedL, RedR, GreenL, GreenR, BlueL, BlueR, AlphaL, AlphaR;
@@ -2152,7 +2152,7 @@ bool Image_DecompressARGB( uint target, int level, int intformat, uint width, ui
 	return true;
 }
 
-bool Image_DecompressPal8( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_DecompressPal8( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
 {
 	byte	*fin, *fout;
 	int	size; 
@@ -2185,7 +2185,7 @@ bool Image_DecompressPal8( uint target, int level, int intformat, uint width, ui
 	return true;
 }
 
-bool Image_DecompressDUDV( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_DecompressDUDV( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
 {
 	byte	*fin, *fout;
 	int	i, size; 
@@ -2218,7 +2218,7 @@ bool Image_DecompressDUDV( uint target, int level, int intformat, uint width, ui
 	return true;
 }
 
-bool Image_DecompressRGBA( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_DecompressRGBA( uint target, int level, int intformat, uint width, uint height, uint imageSize, const void* data )
 {
 	byte	*fin, *fout;
 	int	i, size; 
@@ -2339,7 +2339,7 @@ void Image_DecompressDDS( const byte *buffer, uint target )
 	}
 }
 
-bool Image_ForceDecompress( void )
+qboolean Image_ForceDecompress( void )
 {
 	int	w, h;
 
@@ -2372,7 +2372,7 @@ bool Image_ForceDecompress( void )
 Image_LoadDDS
 =============
 */
-bool Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 {
 	dds_t		header;
 	byte		*fin;
@@ -2455,7 +2455,7 @@ bool Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 	return true;
 }
 
-bool Image_SaveDDS( const char *name, rgbdata_t *pix )
+qboolean Image_SaveDDS( const char *name, rgbdata_t *pix )
 {
 	vfile_t	*file;	// virtual file
 

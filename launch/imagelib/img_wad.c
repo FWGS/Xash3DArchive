@@ -14,7 +14,7 @@
 Image_LoadPAL
 ============
 */
-bool Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 {
 	int	rendermode = LUMP_NORMAL; 
 
@@ -57,7 +57,7 @@ bool Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 Image_LoadFNT
 ============
 */
-bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 {
 	qfont_t		font;
 	const byte	*pal, *fin;
@@ -134,7 +134,7 @@ bool Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 Image_LoadMDL
 ============
 */
-bool Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 {
 	byte		*fin;
 	size_t		pixels;
@@ -207,7 +207,7 @@ bool Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 Image_LoadSPR
 ============
 */
-bool Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 {
 	dspriteframe_t	*pin;	// indetical for q1\hl sprites
 
@@ -252,7 +252,7 @@ bool Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 Image_LoadWAL
 ==============
 */
-bool Image_LoadWAL( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize )
 {
 	wal_t 	wal;
 	int	pixels, ofs[4], mipsize;
@@ -306,11 +306,11 @@ bool Image_LoadWAL( const char *name, const byte *buffer, size_t filesize )
 Image_LoadFLT
 ============
 */
-bool Image_LoadFLT( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadFLT( const char *name, const byte *buffer, size_t filesize )
 {
 	flat_t	flat;
 	vfile_t	*f;
-	bool	result = false;
+	qboolean	result = false;
 	int	trans_pixels = 0;
 	word	column_loop, row_loop;
 	int	i, column_offset, pointer_position, first_pos;
@@ -394,7 +394,7 @@ img_trunc:
 Image_LoadLMP
 ============
 */
-bool Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 {
 	lmp_t	lmp;
 	byte	*fin, *pal;
@@ -459,7 +459,7 @@ bool Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 Image_LoadMIP
 =============
 */
-bool Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
+qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 {
 	mip_t	mip;
 	byte	*fin, *pal;

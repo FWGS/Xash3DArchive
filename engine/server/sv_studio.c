@@ -14,7 +14,7 @@ static studiohdr_t	*sv_studiohdr;
 static mplane_t	sv_hitboxplanes[6];	// there a temp hitbox
 static matrix4x4	sv_studiomatrix;
 static matrix4x4	sv_studiobones[MAXSTUDIOBONES];
-typedef bool 	(*pfnHitboxTrace)( trace_t *trace );
+typedef qboolean 	(*pfnHitboxTrace)( trace_t *trace );
 static vec3_t	trace_startmins, trace_endmins;
 static vec3_t	trace_startmaxs, trace_endmaxs;
 static vec3_t	trace_absmins, trace_absmaxs;
@@ -537,7 +537,7 @@ StudioCalcAttachments
 
 ====================
 */
-static bool SV_StudioCalcAttachments( edict_t *e, int iAttachment, float *org, float *ang )
+static qboolean SV_StudioCalcAttachments( edict_t *e, int iAttachment, float *org, float *ang )
 {
 	int			i;
 	mstudioattachment_t		*pAtt;
@@ -583,7 +583,7 @@ static bool SV_StudioCalcAttachments( edict_t *e, int iAttachment, float *org, f
 	return true;
 }
 
-static bool SV_StudioSetupModel( edict_t *ent )
+static qboolean SV_StudioSetupModel( edict_t *ent )
 {
 	void	*hdr = Mod_Extradata( ent->v.modelindex );
 
@@ -596,7 +596,7 @@ static bool SV_StudioSetupModel( edict_t *ent )
 	return true;
 }
 
-bool SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs )
+qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
 	studiohdr_t	*phdr;
@@ -627,7 +627,7 @@ StudioTestToHitbox
 test point trace in hitbox
 ================
 */
-static bool SV_StudioTestToHitbox( trace_t *trace )
+static qboolean SV_StudioTestToHitbox( trace_t *trace )
 {
 	int		i;
 	mplane_t		*p;
@@ -699,13 +699,13 @@ StudioClipToHitbox
 trace hitbox
 ================
 */
-static bool SV_StudioClipToHitbox( trace_t *trace )
+static qboolean SV_StudioClipToHitbox( trace_t *trace )
 {
 	int	i;
 	mplane_t	*p, *clipplane;
 	float	enterfrac, leavefrac, distfrac;
 	float	d, d1, d2;
-	bool	getout, startout;
+	qboolean	getout, startout;
 	float	f;
 
 	enterfrac = -1.0f;
@@ -830,7 +830,7 @@ SV_StudioIntersect
 testing for potentially intersection of trace and animation bboxes
 ================
 */
-static bool SV_StudioIntersect( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
+static qboolean SV_StudioIntersect( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
 {
 	vec3_t	trace_mins, trace_maxs;
 	vec3_t	anim_mins, anim_maxs;

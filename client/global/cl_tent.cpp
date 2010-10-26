@@ -162,8 +162,8 @@ void TE_ParseExplosion( void )
 			dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 			dl->origin = pos2;
 			dl->radius = 200;
-			dl->color[0] = dl->color[1] = 250;
-			dl->color[2] = 150;
+			dl->color.r = dl->color.g = 250;
+			dl->color.b = 150;
 			dl->die = GetClientTime() + 0.01f;
 			dl->decay = 800;
 
@@ -171,9 +171,9 @@ void TE_ParseExplosion( void )
 			dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 			dl->origin = pos2;
 			dl->radius = 150;
-			dl->color[0] = 255;
-			dl->color[1]= 190;
-			dl->color[2] = 40;
+			dl->color.r = 255;
+			dl->color.g= 190;
+			dl->color.b = 40;
 			dl->die = GetClientTime() + 1.0f;
 			dl->decay = 200;
 		}
@@ -395,6 +395,7 @@ void TE_ParseExplosion2( void )
 	dl = gEngfuncs.pEfxAPI->CL_AllocDLight( 0 );
 	dl->origin = pos;
 	dl->radius = 350;
+	dl->color.r = dl->color.g = dl->color.b = 255;
 	dl->die = GetClientTime() + 0.5f;
 	dl->decay = 300;
 
@@ -689,9 +690,9 @@ void TE_ParseDynamicLight( int type )
 	dl->origin = pos;
 	dl->radius = radius;
 	dl->decay = decay;
-	dl->color[0] = r;
-	dl->color[1] = g;
-	dl->color[2] = b;
+	dl->color.r = r;
+	dl->color.g = g;
+	dl->color.b = b;
 	dl->die = GetClientTime() + life;
 }
 

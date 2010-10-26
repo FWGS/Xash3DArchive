@@ -5,14 +5,14 @@
 
 #include "ripper.h"
 
-bool write_qscsript;
+qboolean write_qscsript;
 int game_family;
 
 typedef struct convformat_s
 {
 	const char *path;
 	const char *ext;
-	bool (*convfunc)( const char *name, byte *buffer, size_t filesize, const char *ext );
+	qboolean (*convfunc)( const char *name, byte *buffer, size_t filesize, const char *ext );
 	const char *ext2;	// save format
 } convformat_t;
 
@@ -61,7 +61,7 @@ convformat_t convert_formats32[] =
 	{NULL, NULL, NULL, NULL }		// list terminator
 };
 
-bool CheckForExist( const char *path, const char *ext )
+qboolean CheckForExist( const char *path, const char *ext )
 {
 	if( game_family == GAME_DOOM1 )
 	{
@@ -77,11 +77,11 @@ bool CheckForExist( const char *path, const char *ext )
 	return FS_FileExists( va( "%s/%s.%s", gs_gamedir, path, ext ));
 }
 
-bool ConvertResource( byte *mempool, const char *filename, byte parms )
+qboolean ConvertResource( byte *mempool, const char *filename, byte parms )
 {
 	convformat_t	*format;
           const char	*ext = FS_FileExtension( filename );
-	bool		anyformat = !com.stricmp(ext, "") ? true : false;
+	qboolean		anyformat = !com.stricmp(ext, "") ? true : false;
 	string		path, convname, basename;
 	int		filesize = 0;
 	byte		*buffer = NULL;

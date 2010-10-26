@@ -139,7 +139,7 @@ in a frame.  Not used for pushmove objects, because they must be exact.
 Returns false if the entity removed itself.
 =============
 */
-bool SV_RunThink( edict_t *ent )
+qboolean SV_RunThink( edict_t *ent )
 {
 	float	thinktime;
 
@@ -259,7 +259,7 @@ void SV_LinearMove( edict_t *ent, float frametime, float friction )
 SV_CheckWater
 =============
 */
-bool SV_CheckWater( edict_t *ent )
+qboolean SV_CheckWater( edict_t *ent )
 {
 	int	cont, truecont;
 	vec3_t	point;
@@ -590,7 +590,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	return trace;
 }
 
-static bool SV_CanPushed( edict_t *ent )
+static qboolean SV_CanPushed( edict_t *ent )
 {
 	// filter movetypes to collide with
 	switch( ent->v.movetype )
@@ -605,7 +605,7 @@ static bool SV_CanPushed( edict_t *ent )
 	return true;
 }
 
-static bool SV_CanBlock( edict_t *ent )
+static qboolean SV_CanBlock( edict_t *ent )
 {
 	if( ent->v.solid == SOLID_NOT || ent->v.solid == SOLID_TRIGGER )
 		return false;
@@ -1258,10 +1258,10 @@ will fall if the floor is pulled out from under them.
 */
 void SV_Physics_Step( edict_t *ent )
 {
-	bool	wasonground;
-	bool	wasinwater;
-	bool	inwater;
-	bool	isfalling = false;
+	qboolean	wasonground;
+	qboolean	wasinwater;
+	qboolean	inwater;
+	qboolean	isfalling = false;
 	edict_t	*pHit;
 	trace_t	trace;
 

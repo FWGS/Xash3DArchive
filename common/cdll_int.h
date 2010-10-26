@@ -167,7 +167,7 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnPlaySoundByNameAtLocation)( char *szSound, float volume, float *origin );
 	
 	word	(*pfnPrecacheEvent)( int type, const char* psz );
-	void	(*pfnPlaybackEvent)( int flags, const struct cl_entity_s *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
+	void	(*pfnPlaybackEvent)( int flags, const struct edict_s *pInvoker, word eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 	void	(*pfnWeaponAnim)( int iAnim, int body );
 	float	(*pfnRandomFloat)( float flLow, float flHigh );	
 	long	(*pfnRandomLong)( long lLow, long lHigh );

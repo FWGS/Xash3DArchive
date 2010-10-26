@@ -42,14 +42,14 @@ extern int r_entShadowBits[MAX_ENTITIES];
 void		R_InitShadows( void );
 void		R_ShutdownShadows( void );
 
-bool		R_CullPlanarShadow( struct ref_entity_s *e, vec3_t mins, vec3_t maxs, bool occclusionQuery );
+qboolean		R_CullPlanarShadow( struct ref_entity_s *e, vec3_t mins, vec3_t maxs, qboolean occclusionQuery );
 void		R_DeformVPlanarShadow( int numV, float *v );
 void		R_PlanarShadowPass( int state );
 ref_shader_t	*R_PlanarShadowShader( void );
 
 void		R_ClearShadowmaps( void );
 void		R_GroupShadowCasters( void );
-bool		R_AddShadowCaster( struct ref_entity_s *ent );
+qboolean		R_AddShadowCaster( struct ref_entity_s *ent );
 void		R_CullShadowmapGroups( void );
 void		R_DrawShadowmaps( void );
 

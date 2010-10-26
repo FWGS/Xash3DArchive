@@ -49,7 +49,7 @@ void com_strlwr( const char *in, char *out )
 isdigit
 ==============
 */
-bool com_isdigit( const char *str )
+qboolean com_isdigit( const char *str )
 {
 	if( str && *str )
 	{
@@ -460,7 +460,7 @@ int com_strcmp( const char *s1, const char *s2 )
 Q_WildCmpAfterStar
 ==============
 */
-static bool com_starcmp( const char *pattern, const char *text )
+static qboolean com_starcmp( const char *pattern, const char *text )
 {
 	char		c, c1;
 	const char	*p = pattern, *t = text;
@@ -486,7 +486,7 @@ static bool com_starcmp( const char *pattern, const char *text )
 stricmpext
 ==============
 */
-bool com_stricmpext( const char *pattern, const char *text )
+qboolean com_stricmpext( const char *pattern, const char *text )
 {
 	char	c;
 

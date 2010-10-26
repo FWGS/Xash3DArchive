@@ -60,7 +60,7 @@ typedef struct
 } dmaterial_t;
 
 byte*		bsp_base;
-bool		bsp_halflife = false;
+qboolean		bsp_halflife = false;
 dmiptexname_t	*mipnames = NULL;
 int		mip_count = 0;
 file_t		*detail_txt;
@@ -131,7 +131,7 @@ static const dmaterial_t detail_table[] =
 { NULL, NULL, 0, 0, 0 }
 };
 
-bool MipExist( const char *name )
+qboolean MipExist( const char *name )
 {
 	int	i;
 
@@ -279,7 +279,7 @@ void Conv_BspTextures( const char *name, dlump_t *l, const char *ext )
 ConvBSP
 ============
 */
-bool ConvBSP( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvBSP( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	dbspheader_t *header = (dbspheader_t *)buffer;
 	int i = LittleLong( header->version );
@@ -308,7 +308,7 @@ bool ConvBSP( const char *name, byte *buffer, size_t filesize, const char *ext )
 	return true;
 }
 
-bool Conv_CheckMap( const char *mapname )
+qboolean Conv_CheckMap( const char *mapname )
 {
 	file_t	*f = FS_Open( mapname, "rb" );
 	gbsphdr_t	hdr; // generic header
@@ -372,7 +372,7 @@ bool Conv_CheckMap( const char *mapname )
 	}
 }
 
-bool Conv_CheckWad( const char *wadname )
+qboolean Conv_CheckWad( const char *wadname )
 {
 	file_t	*f = FS_Open( wadname, "rb" );
 	dwadheader_t hdr; // generic header

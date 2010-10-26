@@ -146,7 +146,7 @@ SV_HasActivePlayers
 returns true if server have spawned players
 ================
 */
-bool SV_HasActivePlayers( void )
+qboolean SV_HasActivePlayers( void )
 {
 	int	i;
 
@@ -646,7 +646,7 @@ not just stuck on the outgoing message list, because the server is going
 to totally exit after returning from this function.
 ==================
 */
-void SV_FinalMessage( char *message, bool reconnect )
+void SV_FinalMessage( char *message, qboolean reconnect )
 {
 	sv_client_t	*cl;
 	byte		msg_buf[MAX_MSGLEN];
@@ -690,7 +690,7 @@ Called when each game quits,
 before Sys_Quit or Sys_Error
 ================
 */
-void SV_Shutdown( bool reconnect )
+void SV_Shutdown( qboolean reconnect )
 {
 	// already freed
 	if( host.state == HOST_ERROR ) return;

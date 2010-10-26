@@ -164,7 +164,7 @@ Netchan_IncomingReady
 
 ==============================
 */
-bool Netchan_IncomingReady( netchan_t *chan )
+qboolean Netchan_IncomingReady( netchan_t *chan )
 {
 	int	i;
 
@@ -185,7 +185,7 @@ Netchan_CanPacket
 Returns true if the bandwidth choke isn't active
 ================
 */
-bool Netchan_CanPacket( netchan_t *chan )
+qboolean Netchan_CanPacket( netchan_t *chan )
 {
 	// never choke loopback packets.
 	if( !net_chokeloopback->integer && NET_IsLocalAddress( chan->remote_address ))
@@ -556,7 +556,7 @@ Netchan_CreateFragments_
 
 ==============================
 */
-void Netchan_CreateFragments_( bool server, netchan_t *chan, sizebuf_t *msg )
+void Netchan_CreateFragments_( qboolean server, netchan_t *chan, sizebuf_t *msg )
 {
 	fragbuf_t		*buf;
 	int		chunksize;
@@ -615,7 +615,7 @@ Netchan_CreateFragments
 
 ==============================
 */
-void Netchan_CreateFragments( bool server, netchan_t *chan, sizebuf_t *msg )
+void Netchan_CreateFragments( qboolean server, netchan_t *chan, sizebuf_t *msg )
 {
 	// always queue any pending reliable data ahead of the fragmentation buffer
 	if( BF_GetNumBytesWritten( &chan->message ) > 0 )
@@ -633,7 +633,7 @@ Netchan_FindBufferById
 
 ==============================
 */
-fragbuf_t *Netchan_FindBufferById( fragbuf_t **pplist, int id, bool allocate )
+fragbuf_t *Netchan_FindBufferById( fragbuf_t **pplist, int id, qboolean allocate )
 {
 	fragbuf_t	*list = *pplist;
 	fragbuf_t	*pnewbuf;
@@ -706,13 +706,13 @@ Netchan_CreateFileFragmentsFromBuffer
 
 ==============================
 */
-void Netchan_CreateFileFragmentsFromBuffer ( bool server, netchan_t *chan, char *filename, byte *pbuf, int size )
+void Netchan_CreateFileFragmentsFromBuffer ( qboolean server, netchan_t *chan, char *filename, byte *pbuf, int size )
 {
 	int		chunksize;
 	int		send, pos;
 	int		remaining;
 	int		bufferid = 1;
-	bool		firstfragment = true;
+	qboolean		firstfragment = true;
 	fragbufwaiting_t	*wait, *p;
 	fragbuf_t 	*buf;
 
@@ -780,14 +780,14 @@ Netchan_CreateFileFragments
 
 ==============================
 */
-int Netchan_CreateFileFragments( bool server, netchan_t *chan, const char *filename )
+int Netchan_CreateFileFragments( qboolean server, netchan_t *chan, const char *filename )
 {
 	int		chunksize;
 	int		send, pos;
 	int		remaining;
 	int		bufferid = 1;
 	int		filesize = 0;
-	bool		firstfragment = true;
+	qboolean		firstfragment = true;
 	fragbufwaiting_t	*wait, *p;
 	fragbuf_t		*buf;
 	
@@ -884,7 +884,7 @@ Netchan_CopyNormalFragments
 
 ==============================
 */
-bool Netchan_CopyNormalFragments( netchan_t *chan, sizebuf_t *msg )
+qboolean Netchan_CopyNormalFragments( netchan_t *chan, sizebuf_t *msg )
 {
 	fragbuf_t	*p, *n;
 
@@ -927,7 +927,7 @@ Netchan_CopyFileFragments
 
 ==============================
 */
-bool Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
+qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 {
 	fragbuf_t	*p, *n;
 	char	filename[CS_SIZE];
@@ -1149,9 +1149,9 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 {
 	sizebuf_t	send;
 	byte	send_buf[NET_MAX_MESSAGE];
-	bool	send_reliable_fragment;
-	bool	send_resending = false;
-	bool	send_reliable;
+	qboolean	send_reliable_fragment;
+	qboolean	send_resending = false;
+	qboolean	send_reliable;
 	size_t	size1, size2;
 	uint	w1, w2;
 	int	i, j;
@@ -1182,7 +1182,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	// if the reliable transmit buffer is empty, copy the current message out
 	if( !chan->reliable_length )
 	{
-		bool	send_frag = false;
+		qboolean	send_frag = false;
 		fragbuf_t	*pbuf;
 
 		// will be true if we are active and should let chan->message get some bandwidth
@@ -1467,15 +1467,15 @@ called when the current net_message is from remote_address
 modifies net_message so that it points to the packet payload
 =================
 */
-bool Netchan_Process( netchan_t *chan, sizebuf_t *msg )
+qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 {
 	uint	sequence, sequence_ack;
 	uint	reliable_ack, reliable_message;
 	uint	fragid[MAX_STREAMS] = { 0, 0 };
-	bool	frag_message[MAX_STREAMS] = { false, false };
+	qboolean	frag_message[MAX_STREAMS] = { false, false };
 	int	frag_offset[MAX_STREAMS] = { 0, 0 };
 	int	frag_length[MAX_STREAMS] = { 0, 0 };
-	bool	message_contains_fragments;
+	qboolean	message_contains_fragments;
 	size_t	size1, size2;
 	int	i, qport;
 

@@ -28,7 +28,7 @@ typedef struct wal_s
 ConvWAL
 ============
 */
-bool ConvWAL( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvWAL( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t	*pic = FS_LoadImage( va( "#%s.wal", name ), buffer, filesize );
 
@@ -49,7 +49,7 @@ bool ConvWAL( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvJPG
 =============
 */
-bool ConvJPG( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvJPG( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t	*pic = FS_LoadImage( va( "#%s.jpg", name ), buffer, filesize );
 
@@ -69,7 +69,7 @@ bool ConvJPG( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvBMP
 =============
 */
-bool ConvBMP( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvBMP( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t	*pic = FS_LoadImage( va( "#%s.bmp", name ), buffer, filesize );
 
@@ -91,7 +91,7 @@ ConvPCX
 this also uses by SP2_ConvertFrame
 =============
 */
-bool ConvPCX( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvPCX( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t	*pic = FS_LoadImage( va( "#%s.pcx", name ), buffer, filesize );
 
@@ -111,7 +111,7 @@ bool ConvPCX( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvVTF
 =============
 */
-bool ConvVTF( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvVTF( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t	*pic = FS_LoadImage( va( "#%s.vtf", name ), buffer, filesize );
 
@@ -131,7 +131,7 @@ bool ConvVTF( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvMIP
 ============
 */
-bool ConvMIP( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvMIP( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t *pic = FS_LoadImage( va( "#%s.mip", name ), buffer, filesize );
 	
@@ -151,7 +151,7 @@ bool ConvMIP( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvLMP
 ============
 */
-bool ConvLMP( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvLMP( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t *pic = FS_LoadImage( va( "#%s.lmp", name ), buffer, filesize );
 
@@ -170,7 +170,7 @@ bool ConvLMP( const char *name, byte *buffer, size_t filesize, const char *ext )
 ConvFNT
 ============
 */
-bool ConvFNT( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvFNT( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	rgbdata_t *pic = FS_LoadImage( va( "#%s.fnt", name ), buffer, filesize );
 
@@ -191,7 +191,7 @@ ConvRAW
 write to disk without conversions
 ============
 */
-bool ConvRAW( const char *name, byte *buffer, size_t filesize, const char *ext )
+qboolean ConvRAW( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
 	if( FS_WriteFile( va("%s/%s.%s", gs_gamedir, name, ext ), buffer, filesize ))
 	{

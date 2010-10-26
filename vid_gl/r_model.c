@@ -90,7 +90,7 @@ typedef struct
 
 	mip_t		*base;		// general texture
 
-	bool		animated;
+	qboolean		animated;
 	mip_t		*anim_frames[2][10];// (indexed as [alternate][frame])
 	int		anim_total[2];	// total frames in sequence and alternate sequence
 
@@ -125,7 +125,7 @@ void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer );
 void Mod_StudioLoadModel( ref_model_t *mod, const void *buffer );
 void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer );
 
-ref_model_t *Mod_LoadModel( ref_model_t *mod, bool crash );
+ref_model_t *Mod_LoadModel( ref_model_t *mod, qboolean crash );
 
 static ref_model_t		*r_inlinemodels = NULL;
 static byte		mod_novis[MAX_MAP_LEAFS/8];
@@ -406,7 +406,7 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-ref_model_t *Mod_ForName( const char *name, bool crash )
+ref_model_t *Mod_ForName( const char *name, qboolean crash )
 {
 	ref_model_t	*mod;
 	uint		*buf;
@@ -608,7 +608,7 @@ static void Mod_BuildPolygon( msurface_t *surf, int numVerts, const float *verts
 	float		s, t;
 	uint		index, bufSize;
 	mtexinfo_t	*texinfo = surf->texinfo;
-	bool		createSTverts = false;
+	qboolean		createSTverts = false;
 	int		i, numElems;
 	byte		*buffer;
 	vec3_t		normal;
@@ -720,7 +720,7 @@ static void Mod_SubdividePolygon( msurface_t *surf, int numVerts, float *verts )
 	mtexinfo_t	*texinfo = surf->texinfo;
 	vec3_t		front[MAX_SIDE_VERTS], back[MAX_SIDE_VERTS];
 	float		*v, m, oneDivVerts, dist, dists[MAX_SIDE_VERTS];
-	bool		createSTverts = false;
+	qboolean		createSTverts = false;
 	vec2_t		totalST, totalLM;
 	uint		bufSize;
 	byte		*buffer;
@@ -1229,7 +1229,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 	cachedimage_t	*out, *tx1, *tx2, *anims[10], *altanims[10];
 	convar_t		*scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
 	int		i, j, k, num, max, altmax, count;
-	bool		incomplete;
+	qboolean		incomplete;
 	mip_t		*mt;
 
 	if( !l->filelen )
@@ -1689,7 +1689,7 @@ static void Mod_LoadNodes( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		bool	badBounds = false;
+		qboolean	badBounds = false;
 
 		out->plane = loadbmodel->planes + LittleLong( in->planenum );
 		out->firstface = loadbmodel->surfaces + LittleLong( in->firstface );
@@ -1747,7 +1747,7 @@ static void Mod_LoadLeafs( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		bool	badBounds = false;
+		qboolean	badBounds = false;
 
 		for( j = 0; j < 3; j++ )
 		{
@@ -2001,7 +2001,7 @@ ParseEntity
 parses an entity's epairs
 ================
 */
-static bool Mod_ParseEntity( void )
+static qboolean Mod_ParseEntity( void )
 {
 	epair_t	*pair;
 	token_t	token;
@@ -2238,7 +2238,7 @@ static void Mod_LoadEntities( const dlump_t *l, vec3_t ambient )
 
 =============================================================================
 */
-static bool R_PointInSolid( const vec3_t p )
+static qboolean R_PointInSolid( const vec3_t p )
 {
 	return (Mod_PointInLeaf( p, loadmodel )->contents == CONTENTS_SOLID);
 }
@@ -2296,7 +2296,7 @@ float R_PointToPolygonFormFactor( const vec3_t point, const vec3_t normal, const
 R_LightContributionToPoint
 ========================
 */
-bool R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3_t color )
+qboolean R_LightContributionToPoint( const light_t *light, const vec3_t origin, vec3_t color )
 {
 	pmtrace_t	trace;
 	float	add;

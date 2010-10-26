@@ -27,7 +27,7 @@ void CL_WeaponAnim( int iAnim, int body )
 		int	i;
 			
 		// save current blends to right lerping from last sequence
-		for( i = 0; i < MAXSTUDIOBLENDS; i++ )
+		for( i = 0; i < 2; i++ )
 			view->latched.prevseqblending[i] = view->curstate.blending[i];
 		view->latched.prevsequence = view->curstate.sequence; // save old sequence
 
@@ -35,7 +35,6 @@ void CL_WeaponAnim( int iAnim, int body )
 		view->latched.prevanimtime = view->curstate.animtime;
 	}
 
-	com.strncpy( view->curstate.classname, "viewentity", sizeof( view->curstate.classname ));
 	view->curstate.entityType = ET_VIEWENTITY;
 	view->curstate.animtime = cl_time();	// start immediately
 	view->curstate.framerate = 1.0f;
@@ -223,10 +222,10 @@ CL_AddDlight
 copy dlight to renderer
 ===============
 */
-bool CL_AddDlight( dlight_t *dl )
+qboolean CL_AddDlight( dlight_t *dl )
 {
 	int	flags = 0;
-	bool	add;
+	qboolean	add;
 
 	if( dl->dark ) flags |= DLIGHT_DARK;
 	if( dl->elight ) flags |= DLIGHT_ONLYENTS;
@@ -287,9 +286,9 @@ void CL_TestLights( void )
 		for( j = 0; j < 3; j++ )
 			dl.origin[j] = cl.refdef.vieworg[j] + cl.refdef.forward[j] * f + cl.refdef.right[j] * r;
 
-		dl.color[0] = ((((i % 6) + 1) & 1)>>0) * 255;
-		dl.color[1] = ((((i % 6) + 1) & 2)>>1) * 255;
-		dl.color[2] = ((((i % 6) + 1) & 4)>>2) * 255;
+		dl.color.r = ((((i % 6) + 1) & 1)>>0) * 255;
+		dl.color.g = ((((i % 6) + 1) & 2)>>1) * 255;
+		dl.color.b = ((((i % 6) + 1) & 4)>>2) * 255;
 		dl.radius = 200;
 
 		if( !CL_AddDlight( &dl ))
@@ -373,7 +372,7 @@ word CL_PrecacheEvent( const char *name )
 	return 0;
 }
 
-bool CL_FireEvent( event_info_t *ei )
+qboolean CL_FireEvent( event_info_t *ei )
 {
 	user_event_t	*ev;
 	const char	*name;
@@ -414,7 +413,7 @@ void CL_FireEvents( void )
 	int		i;
 	event_state_t	*es;
 	event_info_t	*ei;
-	bool		success;
+	qboolean		success;
 
 	es = &cl.events;
 
@@ -488,7 +487,7 @@ event_info_t *CL_FindUnreliableEvent( void )
 
 void CL_QueueEvent( int flags, int index, float delay, event_args_t *args )
 {
-	bool		unreliable = (flags & FEV_RELIABLE) ? false : true;
+	qboolean		unreliable = (flags & FEV_RELIABLE) ? false : true;
 	event_info_t	*ei;
 
 	// find a normal slot
@@ -519,7 +518,7 @@ CL_PlaybackEvent
 
 =============
 */
-void CL_PlaybackEvent( int flags, const cl_entity_t *pInvoker, word eventindex, float delay, float *origin,
+void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
 {
 	event_args_t	args;
@@ -567,11 +566,11 @@ void CL_PlaybackEvent( int flags, const cl_entity_t *pInvoker, word eventindex, 
 	{
 		// get up some info from invoker
 		if( VectorIsNull( args.origin )) 
-			VectorCopy( pInvoker->curstate.origin, args.origin );
+			VectorCopy(((cl_entity_t *)&pInvoker)->curstate.origin, args.origin );
 		if( VectorIsNull( args.angles )) 
-			VectorCopy( pInvoker->curstate.angles, args.angles );
-		VectorCopy( pInvoker->curstate.velocity, args.velocity );
-		args.ducking = pInvoker->curstate.usehull;
+			VectorCopy(((cl_entity_t *)&pInvoker)->curstate.angles, args.angles );
+		VectorCopy(((cl_entity_t *)&pInvoker)->curstate.velocity, args.velocity );
+		args.ducking = ((cl_entity_t *)&pInvoker)->curstate.usehull;
 	}
 
 	CL_QueueEvent( flags, eventindex, delay, &args );

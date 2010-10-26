@@ -37,8 +37,8 @@ static meshbuffer_t **r_skyPortalSurfMbuffers;
 static void R_QSortMeshBuffers( meshbuffer_t *meshes, int Li, int Ri );
 static void R_ISortMeshBuffers( meshbuffer_t *meshes, int num_meshes );
 
-static bool R_AddPortalSurface( const meshbuffer_t *mb );
-static bool R_DrawPortalSurface( void );
+static qboolean R_AddPortalSurface( const meshbuffer_t *mb );
+static qboolean R_DrawPortalSurface( void );
 
 #define R_MBCopy( in, out ) \
 	( \
@@ -399,7 +399,7 @@ Draw the mesh or batch it.
 static void R_BatchMeshBuffer( const meshbuffer_t *mb, const meshbuffer_t *nextmb )
 {
 	int		type, features;
-	bool		nonMergable;
+	qboolean		nonMergable;
 	msurface_t	*surf, *nextSurf;
 	decal_t		*decal, *nextDecal;
 	ref_shader_t	*shader;
@@ -819,7 +819,7 @@ void R_ClearMeshList( meshlist_t *meshlist )
 R_DrawTriangleOutlines
 ===============
 */
-void R_DrawTriangleOutlines( bool showTris, bool showNormals )
+void R_DrawTriangleOutlines( qboolean showTris, qboolean showNormals )
 {
 	if( !showTris && !showNormals )
 		return;
@@ -838,7 +838,7 @@ R_ScissorForPortal
 Returns the on-screen scissor box for given bounding box in 3D-space.
 ===============
 */
-bool R_ScissorForPortal( ref_entity_t *ent, vec3_t mins, vec3_t maxs, int *x, int *y, int *w, int *h )
+qboolean R_ScissorForPortal( ref_entity_t *ent, vec3_t mins, vec3_t maxs, int *x, int *y, int *w, int *h )
 {
 	int	i;
 	int	ix1, iy1, ix2, iy2;
@@ -899,7 +899,7 @@ static mplane_t r_portal_plane, r_original_portal_plane;
 static ref_shader_t *r_portal_shader;
 static vec3_t r_portal_mins, r_portal_maxs, r_portal_centre;
 
-static bool R_AddPortalSurface( const meshbuffer_t *mb )
+static qboolean R_AddPortalSurface( const meshbuffer_t *mb )
 {
 	int		i;
 	float		dist;
@@ -1032,7 +1032,7 @@ use a different viewport.
 Return true upon success so that we can stop rendering portals.
 ===============
 */
-static bool R_DrawPortalSurface( void )
+static qboolean R_DrawPortalSurface( void )
 {
 	float		dist, d;
 	refinst_t		oldRI;
@@ -1041,10 +1041,10 @@ static bool R_DrawPortalSurface( void )
 	mplane_t		*portal_plane = &r_portal_plane;
 	mplane_t		*original_plane = &r_original_portal_plane;
 	ref_shader_t	*shader = r_portal_shader;
-	bool		mirror, refraction = false;
+	qboolean		mirror, refraction = false;
 	texture_t		**captureTexture;
 	int		captureTextureID;
-	bool		doReflection, doRefraction;
+	qboolean		doReflection, doRefraction;
 	int		i, x, y, w, h;
 
 	if( !r_portal_shader )

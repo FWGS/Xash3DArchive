@@ -11,7 +11,7 @@
 #endif
 
 typedef uint GLenum;
-typedef byte GLboolean;
+typedef byte GLqbooleanean;
 typedef uint GLbitfield;
 typedef void GLvoid;
 typedef signed char GLbyte;
@@ -672,7 +672,7 @@ void ( APIENTRY *pglColor4ui )(GLuint red, GLuint green, GLuint blue, GLuint alp
 void ( APIENTRY *pglColor4uiv )(const GLuint *v);
 void ( APIENTRY *pglColor4us )(GLushort red, GLushort green, GLushort blue, GLushort alpha);
 void ( APIENTRY *pglColor4usv )(const GLushort *v);
-void ( APIENTRY *pglColorMask )(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+void ( APIENTRY *pglColorMask )(GLqbooleanean red, GLqbooleanean green, GLqbooleanean blue, GLqbooleanean alpha);
 void ( APIENTRY *pglColorMaterial )(GLenum face, GLenum mode);
 void ( APIENTRY *pglColorPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 void ( APIENTRY *pglCopyPixels )(GLint x, GLint y, GLsizei width, GLsizei height, GLenum type);
@@ -684,7 +684,7 @@ void ( APIENTRY *pglCullFace )(GLenum mode);
 void ( APIENTRY *pglDeleteLists )(GLuint list, GLsizei range);
 void ( APIENTRY *pglDeleteTextures )(GLsizei n, const GLuint *textures);
 void ( APIENTRY *pglDepthFunc )(GLenum func);
-void ( APIENTRY *pglDepthMask )(GLboolean flag);
+void ( APIENTRY *pglDepthMask )(GLqbooleanean flag);
 void ( APIENTRY *pglDepthRange )(GLclampd zNear, GLclampd zFar);
 void ( APIENTRY *pglDisable )(GLenum cap);
 void ( APIENTRY *pglDisableClientState )(GLenum array);
@@ -692,9 +692,9 @@ void ( APIENTRY *pglDrawArrays )(GLenum mode, GLint first, GLsizei count);
 void ( APIENTRY *pglDrawBuffer )(GLenum mode);
 void ( APIENTRY *pglDrawElements )(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 void ( APIENTRY *pglDrawPixels )(GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
-void ( APIENTRY *pglEdgeFlag )(GLboolean flag);
+void ( APIENTRY *pglEdgeFlag )(GLqbooleanean flag);
 void ( APIENTRY *pglEdgeFlagPointer )(GLsizei stride, const GLvoid *pointer);
-void ( APIENTRY *pglEdgeFlagv )(const GLboolean *flag);
+void ( APIENTRY *pglEdgeFlagv )(const GLqbooleanean *flag);
 void ( APIENTRY *pglEnable )(GLenum cap);
 void ( APIENTRY *pglEnableClientState )(GLenum array);
 void ( APIENTRY *pglEnd )(void);
@@ -721,7 +721,7 @@ void ( APIENTRY *pglFogiv )(GLenum pname, const GLint *params);
 void ( APIENTRY *pglFrontFace )(GLenum mode);
 void ( APIENTRY *pglFrustum )(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar);
 void ( APIENTRY *pglGenTextures )(GLsizei n, GLuint *textures);
-void ( APIENTRY *pglGetBooleanv )(GLenum pname, GLboolean *params);
+void ( APIENTRY *pglGetBooleanv )(GLenum pname, GLqbooleanean *params);
 void ( APIENTRY *pglGetClipPlane )(GLenum plane, GLdouble *equation);
 void ( APIENTRY *pglGetDoublev )(GLenum pname, GLdouble *params);
 void ( APIENTRY *pglGetFloatv )(GLenum pname, GLfloat *params);
@@ -1011,9 +1011,9 @@ void ( APIENTRY *pglUniform1ivARB)(GLint location, GLsizei count, const GLint *v
 void ( APIENTRY *pglUniform2ivARB)(GLint location, GLsizei count, const GLint *value);
 void ( APIENTRY *pglUniform3ivARB)(GLint location, GLsizei count, const GLint *value);
 void ( APIENTRY *pglUniform4ivARB)(GLint location, GLsizei count, const GLint *value);
-void ( APIENTRY *pglUniformMatrix2fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-void ( APIENTRY *pglUniformMatrix3fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-void ( APIENTRY *pglUniformMatrix4fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+void ( APIENTRY *pglUniformMatrix2fvARB)(GLint location, GLsizei count, GLqbooleanean transpose, const GLfloat *value);
+void ( APIENTRY *pglUniformMatrix3fvARB)(GLint location, GLsizei count, GLqbooleanean transpose, const GLfloat *value);
+void ( APIENTRY *pglUniformMatrix4fvARB)(GLint location, GLsizei count, GLqbooleanean transpose, const GLfloat *value);
 void ( APIENTRY *pglGetObjectParameterfvARB)(GLhandleARB obj, GLenum pname, GLfloat *params);
 void ( APIENTRY *pglGetObjectParameterivARB)(GLhandleARB obj, GLenum pname, GLint *params);
 void ( APIENTRY *pglGetInfoLogARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *infoLog);
@@ -1031,7 +1031,7 @@ void ( APIENTRY *pglBlendEquationEXT)(GLenum);
 void ( APIENTRY *pglStencilOpSeparate)(GLenum, GLenum, GLenum, GLenum);
 void ( APIENTRY *pglStencilFuncSeparate)(GLenum, GLenum, GLint, GLuint);
 void ( APIENTRY *pglActiveStencilFaceEXT)(GLenum);
-void ( APIENTRY *pglVertexAttribPointerARB)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
+void ( APIENTRY *pglVertexAttribPointerARB)(GLuint index, GLint size, GLenum type, GLqbooleanean normalized, GLsizei stride, const GLvoid *pointer);
 void ( APIENTRY *pglEnableVertexAttribArrayARB)(GLuint index);
 void ( APIENTRY *pglDisableVertexAttribArrayARB)(GLuint index);
 void ( APIENTRY *pglBindAttribLocationARB)(GLhandleARB programObj, GLuint index, const GLcharARB *name);
@@ -1040,14 +1040,14 @@ GLint ( APIENTRY *pglGetAttribLocationARB)(GLhandleARB programObj, const GLcharA
 void ( APIENTRY *pglBindBufferARB) (GLenum target, GLuint buffer);
 void ( APIENTRY *pglDeleteBuffersARB) (GLsizei n, const GLuint *buffers);
 void ( APIENTRY *pglGenBuffersARB) (GLsizei n, GLuint *buffers);
-GLboolean ( APIENTRY *pglIsBufferARB) (GLuint buffer);
+GLqbooleanean ( APIENTRY *pglIsBufferARB) (GLuint buffer);
 GLvoid* ( APIENTRY *pglMapBufferARB) (GLenum target, GLenum access);
-GLboolean ( APIENTRY *pglUnmapBufferARB) (GLenum target);
+GLqbooleanean ( APIENTRY *pglUnmapBufferARB) (GLenum target);
 void ( APIENTRY *pglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
 void ( APIENTRY *pglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 void ( APIENTRY *pglGenQueriesARB) (GLsizei n, GLuint *ids);
 void ( APIENTRY *pglDeleteQueriesARB) (GLsizei n, const GLuint *ids);
-GLboolean ( APIENTRY *pglIsQueryARB) (GLuint id);
+GLqbooleanean ( APIENTRY *pglIsQueryARB) (GLuint id);
 void ( APIENTRY *pglBeginQueryARB) (GLenum target, GLuint id);
 void ( APIENTRY *pglEndQueryARB) (GLenum target);
 void ( APIENTRY *pglGetQueryivARB) (GLenum target, GLenum pname, GLint *params);
@@ -1116,9 +1116,9 @@ typedef struct
 	int	desktopWidth;
 	int	desktopHeight;
 
-	bool	software;		// software emulation uses RB_RenderShader()
-	bool	initialized;	// OpenGL subsystem started
-	bool	minidriver;
+	qboolean	software;		// software emulation uses RB_RenderShader()
+	qboolean	initialized;	// OpenGL subsystem started
+	qboolean	minidriver;
 	int	developer;	// engine developer level;
 
 } glwstate_t;

@@ -26,7 +26,7 @@ byte	*error_bmp;
 size_t	error_bmp_size;
 static	double start, end;
 uint	app_name = HOST_OFFLINE;
-bool	enable_log = false;
+qboolean	enable_log = false;
 file_t	*bsplog = NULL;
 
 void ClrMask( void )
@@ -114,7 +114,7 @@ void InitCommon( const int argc, const char **argv )
 void CommonMain( void )
 {
 	search_t	*search;
-	bool	(*CompileMod)( byte *mempool, const char *name, byte parms ) = NULL;
+	qboolean	(*CompileMod)( byte *mempool, const char *name, byte parms ) = NULL;
 	byte	parms = 0; // future expansion
 	int	i, j, numCompiledMods = 0;
 	string	errorstring;

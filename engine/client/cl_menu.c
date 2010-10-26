@@ -15,7 +15,7 @@ void UI_UpdateMenu( float realtime )
 	gameui.dllFuncs.pfnRedraw( realtime );
 }
 
-void UI_KeyEvent( int key, bool down )
+void UI_KeyEvent( int key, qboolean down )
 {
 	if( !gameui.hInstance ) return;
 	gameui.dllFuncs.pfnKeyEvent( key, down );
@@ -27,7 +27,7 @@ void UI_MouseMove( int x, int y )
 	gameui.dllFuncs.pfnMouseMove( x, y );
 }
 
-void UI_SetActiveMenu( bool fActive )
+void UI_SetActiveMenu( qboolean fActive )
 {
 	movie_state_t	*cin_state;
 
@@ -61,13 +61,13 @@ void UI_SetCursorPos( int pos_x, int pos_y )
 	gameui.dllFuncs.pfnSetCursorPos( pos_x, pos_y );
 }
 
-void UI_ShowCursor( bool show )
+void UI_ShowCursor( qboolean show )
 {
 	if( !gameui.hInstance ) return;
 	gameui.dllFuncs.pfnShowCursor( show );
 }
 
-bool UI_CreditsActive( void )
+qboolean UI_CreditsActive( void )
 {
 	if( !gameui.hInstance ) return 0;
 	return gameui.dllFuncs.pfnCreditsActive();
@@ -79,13 +79,13 @@ void UI_CharEvent( int key )
 	gameui.dllFuncs.pfnCharEvent( key );
 }
 
-bool UI_MouseInRect( void )
+qboolean UI_MouseInRect( void )
 {
 	if( !gameui.hInstance ) return 1;
 	return gameui.dllFuncs.pfnMouseInRect();
 }
 
-bool UI_IsVisible( void )
+qboolean UI_IsVisible( void )
 {
 	if( !gameui.hInstance ) return 0;
 	return gameui.dllFuncs.pfnIsVisible();
@@ -99,7 +99,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 	byte		*cin_data = NULL;
 	movie_state_t	*cin_state;
 	int		cin_frame;
-	bool		redraw = false;
+	qboolean		redraw = false;
 
 	if( !gameui.drawLogo ) return;
 	cin_state = AVI_GetState( CIN_LOGO );
@@ -194,7 +194,7 @@ static void UI_ConvertGameInfo( GAMEINFO *out, gameinfo_t *in )
 	out->gamemode = in->gamemode;
 }
 
-static bool PIC_Scissor( float *x, float *y, float *width, float *height, float *u0, float *v0, float *u1, float *v1 )
+static qboolean PIC_Scissor( float *x, float *y, float *width, float *height, float *u0, float *v0, float *u1, float *v1 )
 {
 	float	dudx, dvdy;
 
@@ -811,7 +811,7 @@ pfnShellExecute
 
 =========
 */
-static void pfnShellExecute( const char *name, const char *args, bool closeEngine )
+static void pfnShellExecute( const char *name, const char *args, qboolean closeEngine )
 {
 	Sys_ShellExecute( name, args, closeEngine );
 }
@@ -980,7 +980,7 @@ void UI_UnloadProgs( void )
 	Mem_Set( &gameui, 0, sizeof( gameui ));
 }
 
-bool UI_LoadProgs( const char *name )
+qboolean UI_LoadProgs( const char *name )
 {
 	static GAMEUIAPI		GetMenuAPI;
 	static ui_globalvars_t	gpGlobals;

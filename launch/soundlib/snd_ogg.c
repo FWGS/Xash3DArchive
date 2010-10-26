@@ -300,7 +300,7 @@ static long ovcf_tell( void *datasrc )
 =================================================================
 */
 
-bool Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize )
+qboolean Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize )
 {
 	vorbisfile_t	vf;
 	vorbis_info_t	*vi;

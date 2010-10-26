@@ -1,7 +1,18 @@
-//=======================================================================
-//			Copyright XashXT Group 2010 ©
-//		     qfont.h - Quake font width variable widths
-//=======================================================================
+/***
+*
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	
+*	This product contains software technology licensed from Id 
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
+
 #ifndef QFONT_H
 #define QFONT_H
 
@@ -12,15 +23,16 @@
 
 ========================================================================
 */
-#define	QCHAR_WIDTH	16
-#define	QFONT_WIDTH	16	// valve fonts used contant sizes	
-#define	QFONT_HEIGHT        ((128 - 32) / 16)
+#define QCHAR_WIDTH		16
+#define QFONT_WIDTH		16	// valve fonts used contant sizes	
+#define QFONT_HEIGHT	((128 - 32) / 16)
+#define NUM_GLYPHS		256
 
 typedef struct
 {
 	short	startoffset;
 	short	charwidth;
-} charset_t;
+} charinfo;
 
 typedef struct
 {
@@ -28,7 +40,7 @@ typedef struct
 	int	height;
 	int	rowcount;
 	int	rowheight;
-	charset_t	fontinfo[256];
+	charinfo	fontinfo[NUM_GLYPHS];
 	byte 	data[4];		// variable sized
 } qfont_t;
 

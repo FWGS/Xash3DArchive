@@ -259,7 +259,7 @@ The client will interpolate the view position,
 so we can't use a single PVS point
 ===========
 */
-byte *CM_FatPVS( const vec3_t org, bool portal )
+byte *CM_FatPVS( const vec3_t org, qboolean portal )
 {
 	if( !cm.pvs || cm_novis->integer )
 		return cm.nullrow;
@@ -280,7 +280,7 @@ The client will interpolate the hear position,
 so we can't use a single PHS point
 ===========
 */
-byte *CM_FatPHS( const vec3_t org, bool portal )
+byte *CM_FatPHS( const vec3_t org, qboolean portal )
 {
 	if( !cm.pvs || cm_novis->integer )
 		return cm.nullrow;

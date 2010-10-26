@@ -13,10 +13,11 @@
 #include "pm_movevars.h"
 #include "entity_state.h"
 #include "weaponinfo.h"
+#include "event_args.h"
 #include "protocol.h"
 
 #define DELTA_PATH		"delta.lst"
-static bool		delta_init = false;
+static qboolean		delta_init = false;
  
 // list of all the struct names
 static const delta_field_t cmd_fields[] =
@@ -274,10 +275,6 @@ static const delta_field_t ent_fields[] =
 { ENTS_DEF( vuser4[0] )	},
 { ENTS_DEF( vuser4[1] )	},
 { ENTS_DEF( vuser4[2] )	},
-{ ENTS_DEF( classname )	},
-{ ENTS_DEF( targetname )	},
-{ ENTS_DEF( target )	},
-{ ENTS_DEF( netname )	},
 { NULL },
 };
 
@@ -401,7 +398,7 @@ int Delta_IndexForFieldInfo( const delta_field_t *pInfo, const char *fieldName )
 	return -1;
 }
 
-bool Delta_AddField( const char *pStructName, const char *pName, int flags, int bits, float mul, float post_mul )
+qboolean Delta_AddField( const char *pStructName, const char *pName, int flags, int bits, float mul, float post_mul )
 {
 	delta_info_t	*dt;
 	delta_field_t	*pFieldInfo;
@@ -524,7 +521,7 @@ void Delta_ParseTableField( sizebuf_t *msg )
 	Delta_AddField( dt->pName, pName, flags, bits, mul, post_mul );
 }
 
-bool Delta_ParseField( script_t *delta_script, const delta_field_t *pInfo, delta_t *pField, bool bPost )
+qboolean Delta_ParseField( script_t *delta_script, const delta_field_t *pInfo, delta_t *pField, qboolean bPost )
 {
 	token_t		token;
 	delta_field_t	*pFieldInfo;
@@ -847,7 +844,7 @@ compare fields by offsets
 assume from and to is valid
 =====================
 */
-bool Delta_CompareField( delta_t *pField, void *from, void *to )
+qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 {
 	int	fromF, toF;
 
@@ -926,9 +923,9 @@ write fields by offsets
 assume from and to is valid
 =====================
 */
-bool Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
+qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
 {
-	bool		bSigned = ( pField->flags & DT_SIGNED ) ? true : false;
+	qboolean		bSigned = ( pField->flags & DT_SIGNED ) ? true : false;
 	float		flValue, flAngle, flTime;
 	uint		iValue;
 	const char	*pStr;
@@ -997,11 +994,11 @@ read fields by offsets
 assume from and to is valid
 =====================
 */
-bool Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
+qboolean Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
 {
-	bool		bSigned = ( pField->flags & DT_SIGNED ) ? true : false;
+	qboolean		bSigned = ( pField->flags & DT_SIGNED ) ? true : false;
 	float		flValue, flAngle, flTime;
-	bool		bChanged;
+	qboolean		bChanged;
 	uint		iValue;	
 	const char	*pStr;
 	char		*pOut;
@@ -1233,7 +1230,7 @@ movevars_t communication
   
 =============================================================================
 */
-bool MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to )
+qboolean MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *to )
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
@@ -1448,7 +1445,7 @@ If force is not set, then nothing at all will be generated if the entity is
 identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
-void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, bool force, bool player, float timebase ) 
+void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, qboolean force, qboolean player, float timebase ) 
 {
 	delta_info_t	*dt = NULL;
 	delta_t		*pField;
@@ -1536,7 +1533,7 @@ If the delta removes the entity, entity_state_t->number will be set to MAX_EDICT
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-bool MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, bool player, float timebase )
+qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state_t *to, int number, qboolean player, float timebase )
 {
 	delta_info_t	*dt = NULL;
 	delta_t		*pField;

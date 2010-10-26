@@ -352,7 +352,7 @@ void *MemoryLoadLibrary( const char *name )
 	DWORD		locationDelta;
 	DllEntryProc	DllEntry;
 	string		errorstring;
-	bool		successfull;
+	qboolean		successfull;
 	void		*data = NULL;
 
 	data = FS_LoadFile( name, NULL );
@@ -516,7 +516,7 @@ char *GetMSVCName( const char *in_name )
 	return com.stralloc( Sys.stringpool, in_name, __FILE__, __LINE__ );
 }
 
-bool LibraryLoadSymbols( dll_user_t *hInst )
+qboolean LibraryLoadSymbols( dll_user_t *hInst )
 {
 	file_t		*f;
 	string		errorstring;
@@ -524,7 +524,7 @@ bool LibraryLoadSymbols( dll_user_t *hInst )
 	LONG		nt_signature;
 	PE_HEADER		pe_header;
 	SECTION_HEADER	section_header;
-	bool		edata_found;
+	qboolean		edata_found;
 	OPTIONAL_HEADER	optional_header;
 	long		edata_offset;
 	long		edata_delta;
@@ -747,7 +747,7 @@ Com_LoadLibrary
 smart dll loader - can loading dlls from pack or wad files
 ================
 */
-void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, bool directpath )
+void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath )
 {
 	dll_user_t *hInst;
 

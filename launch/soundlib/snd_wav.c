@@ -85,7 +85,7 @@ static void FindNextChunk( const char *name )
 StreamFindNextChunk
 ============
 */
-bool StreamFindNextChunk( file_t *file, const char *name, int *last_chunk )
+qboolean StreamFindNextChunk( file_t *file, const char *name, int *last_chunk )
 {
 	char	chunkName[4];
 	int	iff_chunk_len;
@@ -128,7 +128,7 @@ static void FindChunk( const char *name )
 Sound_LoadWAV
 =============
 */
-bool Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
+qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 {
 	int	samples;
 
@@ -394,7 +394,7 @@ void Stream_FreeWAV( stream_t *stream )
 Sound_SaveWAV
 =============
 */
-bool Sound_SaveWAV( const char *name, wavdata_t *pix )
+qboolean Sound_SaveWAV( const char *name, wavdata_t *pix )
 {
 	// FIXME: implement
 	return false;

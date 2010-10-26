@@ -60,7 +60,7 @@ int	animcount;	// process counter
 int	num_anims;	// shader total count
 file_t	*f;
 
-bool Conv_WriteShader( const char *shaderpath, const char *imagepath, rgbdata_t *p, float *rad, float scale, int flags, int contents )
+qboolean Conv_WriteShader( const char *shaderpath, const char *imagepath, rgbdata_t *p, float *rad, float scale, int flags, int contents )
 {
 	file_t	*f = NULL;
 	string	qcname, qcpath;
@@ -430,7 +430,7 @@ void Conv_ShaderGetFlags( const char *imagename, const char *shadername, const c
 	}
 }
 
-bool Conv_CreateShader( const char *name, rgbdata_t *pic, const char *ext, const char *anim, int surf, int cnt )
+qboolean Conv_CreateShader( const char *name, rgbdata_t *pic, const char *ext, const char *anim, int surf, int cnt )
 {
 	string	shadername, imagename;
 	string	shaderpath, imagepath;

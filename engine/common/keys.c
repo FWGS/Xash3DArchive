@@ -9,7 +9,7 @@
 
 typedef struct key_s
 {
-	bool		down;
+	qboolean		down;
 	int		repeats;	// if > 1, it is autorepeating
 	const char	*binding;
 } key_t;
@@ -94,7 +94,7 @@ keyname_t keynames[] =
 Key_IsDown
 ===================
 */
-bool Key_IsDown( int keynum )
+qboolean Key_IsDown( int keynum )
 {
 	if ( keynum == -1 )
 		return false;
@@ -450,7 +450,7 @@ void Key_AddKeyUpCommands( int key, const char *kb )
 	int	i;
 	char	button[1024], *buttonPtr;
 	char	cmd[1024];
-	bool	keyevent;
+	qboolean	keyevent;
 
 	if( !kb ) return;
 	keyevent = false;
@@ -494,7 +494,7 @@ Key_Event
 Called by the system for both key up and key down events
 ===================
 */
-void Key_Event( int key, bool down )
+void Key_Event( int key, qboolean down )
 {
 	const char	*kb;
 	char		cmd[1024];
