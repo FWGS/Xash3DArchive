@@ -2135,8 +2135,7 @@ void pfnLightStyle( int style, const char* val )
 	if( style >= MAX_LIGHTSTYLES )
 		Host_Error( "SV_LightStyle: style: %i >= %d", style, MAX_LIGHTSTYLES );
 
-	SV_SetLightStyle( style, val ); // update info for SV_LightPoint
-	SV_ConfigString( CS_LIGHTSTYLES + style, val );
+	SV_SetLightStyle( style, val ); // set correct style
 }
 
 /*
@@ -2153,9 +2152,9 @@ int pfnDecalIndex( const char *m )
 	if( !m || !m[0] )
 		return 0;
 
-	for( i = 1; i < MAX_DECALS && svgame.draw_decals[i][0]; i++ )
+	for( i = 1; i < MAX_DECALS && host.draw_decals[i][0]; i++ )
 	{
-		if( !com.stricmp( svgame.draw_decals[i], m ))
+		if( !com.stricmp( host.draw_decals[i], m ))
 			return i;
 	}
 
@@ -3400,11 +3399,12 @@ const char *pfnGetPhysicsInfoString( const edict_t *pClient )
 pfnPrecacheEvent
 
 register or returns already registered event id
+a type of event is ignored at this moment
 =============
 */
 word pfnPrecacheEvent( int type, const char *psz )
 {
-	return SV_FindIndex( psz, CS_EVENTS, MAX_EVENTS, type );
+	return (word)SV_EventIndex( psz );
 }
 
 /*
@@ -3433,7 +3433,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	}
 
 	// check event for precached
-	if( !SV_FindIndex( sv.configstrings[CS_EVENTS+eventindex], CS_EVENTS, MAX_EVENTS, false ))
+	if( !sv.event_precache[eventindex][0] )
 	{
 		MsgDev( D_ERROR, "SV_PlaybackEvent: event %i was not precached\n", eventindex );
 		return;		
@@ -3467,7 +3467,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		}
 		else
 		{
-			const char *ev_name = sv.configstrings[CS_EVENTS+eventindex];
+			const char *ev_name = sv.event_precache[eventindex];
 			MsgDev( D_ERROR, "%s: not a FEV_GLOBAL event missing origin. Ignored.\n", ev_name );
 			return;
 		}
@@ -3478,7 +3478,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	{
 		if( !SV_ClientFromEdict( pInvoker, true ))
 		{
-			const char *ev_name = sv.configstrings[CS_EVENTS+eventindex];
+			const char *ev_name = sv.event_precache[eventindex];
 			if( flags & FEV_NOTHOST )
 				MsgDev( D_WARN, "%s: specified FEV_NOTHOST when invoker not a client\n", ev_name );
 			if( flags & FEV_HOSTONLY )
@@ -4339,26 +4339,6 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.numEntities );
 }
 
-/*
-====================
-SV_InitDecals
-
-build list of unique decalnames
-====================
-*/
-static void SV_InitDecals( void )
-{
-	search_t	*t;
-	int	i;
-
-	// lookup all decals in decals.wad
-	t = FS_Search( "decals.wad/*.*", true );
-
-	for( i = 0; t && i < t->numfilenames; i++ )
-		SV_DecalIndex( t->filenames[i] );
-	if( t ) Mem_Free( t );
-}
-
 void SV_UnloadProgs( void )
 {
 	SV_DeactivateServer ();
@@ -4482,8 +4462,6 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.gmsgHudText = -1;
 
 	Cvar_FullSet( "host_gameloaded", "1", CVAR_INIT );
-
-	SV_InitDecals ();
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();

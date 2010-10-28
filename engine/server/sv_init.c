@@ -58,7 +58,7 @@ int SV_ModelIndex( const char *name )
 
 	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 	{
-		if( !com.strcmp( sv.model_precache[i], name ))
+		if( !com.stricmp( sv.model_precache[i], name ))
 			return i;
 	}
 
@@ -91,7 +91,7 @@ int SV_SoundIndex( const char *name )
 
 	for( i = 1; i < MAX_SOUNDS && sv.sound_precache[i][0]; i++ )
 	{
-		if( !com.strcmp( sv.sound_precache[i], name ))
+		if( !com.stricmp( sv.sound_precache[i], name ))
 			return i;
 	}
 
@@ -115,42 +115,69 @@ int SV_SoundIndex( const char *name )
 	return i;
 }
 
-int SV_DecalIndex( const char *name )
+int SV_EventIndex( const char *name )
 {
-	char	shortname[CS_SIZE];
 	int	i;
 
 	if( !name || !name[0] )
 		return 0;
 
-	FS_FileBase( name, shortname );
-
-	for( i = 1; i < MAX_DECALS && svgame.draw_decals[i][0]; i++ )
+	for( i = 1; i < MAX_EVENTS && sv.event_precache[i][0]; i++ )
 	{
-		if( !com.stricmp( svgame.draw_decals[i], shortname ))
+		if( !com.stricmp( sv.event_precache[i], name ))
 			return i;
 	}
 
-	if( i == MAX_DECALS )
+	if( i == MAX_EVENTS )
 	{
-		MsgDev( D_ERROR, "SV_DecalIndex: MAX_DECALS limit exceeded\n" );
+		Host_Error( "SV_EventIndex: MAX_EVENTS limit exceeded\n" );
 		return 0;
 	}
 
-	// register new decal
-	com.strncpy( svgame.draw_decals[i], shortname, sizeof( svgame.draw_decals[i] ));
+	// register new event
+	com.strncpy( sv.event_precache[i], name, sizeof( sv.event_precache[i] ));
+
+	if( sv.state != ss_loading )
+	{
+		// send the update to everyone
+		BF_WriteByte( &sv.reliable_datagram, svc_eventindex );
+		BF_WriteUBitLong( &sv.reliable_datagram, i, MAX_EVENT_BITS );
+		BF_WriteString( &sv.reliable_datagram, name );
+	}
 
 	return i;
 }
 
-int SV_EventIndex( const char *name )
-{
-	return SV_FindIndex( name, CS_EVENTS, MAX_EVENTS, true );
-}
-
 int SV_GenericIndex( const char *name )
 {
-	return SV_FindIndex( name, CS_GENERICS, MAX_GENERICS, true );
+	int	i;
+
+	if( !name || !name[0] )
+		return 0;
+
+	for( i = 1; i < MAX_CUSTOM && sv.files_precache[i][0]; i++ )
+	{
+		if( !com.stricmp( sv.files_precache[i], name ))
+			return i;
+	}
+
+	if( i == MAX_CUSTOM )
+	{
+		Host_Error( "SV_GenericIndex: MAX_RESOURCES limit exceeded\n" );
+		return 0;
+	}
+
+	if( sv.state != ss_loading )
+	{
+		// g-cont. can we downloading resources in-game ? need testing
+		Host_Error( "SV_PrecacheGeneric: ( %s ). Precache can only be done in spawn functions.", name );
+		return 0;
+	}
+
+	// register new generic resource
+	com.strncpy( sv.files_precache[i], name, sizeof( sv.files_precache[i] ));
+
+	return i;
 }
 
 /*
@@ -402,13 +429,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	// make sure what server name doesn't contain path and extension
 	FS_FileBase( mapname, sv.name );
-	com.strncpy( sv.configstrings[CS_NAME], sv.name, CS_SIZE );
 
 	if( startspot )
 		com.strncpy( sv.startspot, startspot, sizeof( sv.startspot ));
 	else sv.startspot[0] = '\0';
 
-	com.strcpy( sv.model_precache[0], "" );	// slot 0 isn't used
 	com.snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
 	CM_BeginRegistration( sv.model_precache[1], false, &checksum );
 	com.sprintf( sv.configstrings[CS_MAPCHECKSUM], "%i", checksum );

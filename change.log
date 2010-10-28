@@ -2,6 +2,7 @@ build ????
 
 Engine: support for StartupVids.txt
 Engine: get full compatibility with hl.dll
+FS: recode wad resource management (now support lumps from wads with same name) 
 
 build 1338
 

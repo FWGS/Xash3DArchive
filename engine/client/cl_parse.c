@@ -27,9 +27,9 @@ const char *svc_strings[256] =
 	"svc_stufftext",
 	"svc_setangle",
 	"svc_serverdata",
-	"svc_restore",
+	"svc_lightstyle",
 	"svc_updateuserinfo",
-	"svc_unused14",
+	"svc_deltatable",
 	"svc_clientdata",
 	"svc_download",
 	"svc_updatepings",
@@ -49,7 +49,7 @@ const char *svc_strings[256] =
 	"svc_modelindex",
 	"svc_cdtrack",
 	"svc_serverinfo",
-	"svc_deltatable",
+	"svc_eventindex",
 	"svc_weaponanim",
 	"svc_bspdecal",
 	"svc_roomtype",
@@ -514,7 +514,7 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	flags = BF_ReadByte( msg );
 
 	if( !cl.decal_index[decalIndex] )
-		cl.decal_index[decalIndex] = re->RegisterShader( clgame.draw_decals[decalIndex], SHADER_DECAL );
+		cl.decal_index[decalIndex] = re->RegisterShader( host.draw_decals[decalIndex], SHADER_DECAL );
 
 	CL_DecalShoot( cl.decal_index[decalIndex], entityIndex, modelIndex, origin, flags );
 }
@@ -739,6 +739,22 @@ void CL_ParseBaseline( sizebuf_t *msg )
 
 /*
 ================
+CL_ParseLightStyle
+================
+*/
+void CL_ParseLightStyle( sizebuf_t *msg )
+{
+	int		style;
+	const char	*s;
+
+	style = BF_ReadByte( msg );
+	s = BF_ReadString( msg );
+
+	CL_SetLightstyle( style, s );
+}
+
+/*
+================
 CL_ParseConfigString
 ================
 */
@@ -755,18 +771,6 @@ void CL_ParseConfigString( sizebuf_t *msg )
 	if( i == CS_BACKGROUND_TRACK && cl.audio_prepped )
 	{
 		CL_RunBackgroundTrack();
-	}
-	else if( i > CS_BACKGROUND_TRACK && i < CS_EVENTS )
-	{
-		Host_Error( "CL_ParseConfigString: reserved configstring #%i are used\n", i );
-	}
-	else if( i >= CS_EVENTS && i < CS_EVENTS+MAX_EVENTS )
-	{
-		CL_SetEventIndex( cl.configstrings[i], i - CS_EVENTS );
-	}
-	else if( i >= CS_LIGHTSTYLES && i < CS_LIGHTSTYLES+MAX_LIGHTSTYLES )
-	{
-		CL_SetLightstyle( i - CS_LIGHTSTYLES );
 	}
 }
 
@@ -881,7 +885,7 @@ void CL_PrecacheModel( sizebuf_t *msg )
 	if( modelIndex < 0 || modelIndex >= MAX_MODELS )
 		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", modelIndex );
 
-	com.strcpy( cl.model_precache[modelIndex], BF_ReadString( msg ));
+	com.strncpy( cl.model_precache[modelIndex], BF_ReadString( msg ), sizeof( cl.model_precache[0] ));
 
 	// when we loading map all resources is precached sequentially
 	if( !cl.video_prepped ) return;
@@ -906,12 +910,34 @@ void CL_PrecacheSound( sizebuf_t *msg )
 	if( soundIndex < 0 || soundIndex >= MAX_SOUNDS )
 		Host_Error( "CL_PrecacheSound: bad soundindex %i\n", soundIndex );
 
-	com.strcpy( cl.sound_precache[soundIndex], BF_ReadString( msg ));
+	com.strncpy( cl.sound_precache[soundIndex], BF_ReadString( msg ), sizeof( cl.sound_precache[0] ));
 
 	// when we loading map all resources is precached sequentially
 	if( !cl.audio_prepped ) return;
 
 	cl.sound_index[soundIndex] = S_RegisterSound( cl.sound_precache[soundIndex] );
+}
+
+/*
+================
+CL_PrecacheEvent
+
+prceache event from server
+================
+*/
+void CL_PrecacheEvent( sizebuf_t *msg )
+{
+	int	eventIndex;
+
+	eventIndex = BF_ReadUBitLong( msg, MAX_EVENT_BITS );
+
+	if( eventIndex < 0 || eventIndex >= MAX_EVENTS )
+		Host_Error( "CL_PrecacheEvent: bad eventindex %i\n", eventIndex );
+
+	com.strncpy( cl.event_precache[eventIndex], BF_ReadString( msg ), sizeof( cl.event_precache[0] ));
+
+	// can be set now
+	CL_SetEventIndex( cl.event_precache[eventIndex], eventIndex );
 }
 
 /*
@@ -1130,6 +1156,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			s = BF_ReadString( msg );
 			Cbuf_AddText( s );
 			break;
+		case svc_lightstyle:
+			CL_ParseLightStyle( msg );
+			break;
 		case svc_setangle:
 			CL_ParseSetAngle( msg );
 			break;
@@ -1212,6 +1241,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_serverinfo:
 			CL_ServerInfo( msg );
+			break;
+		case svc_eventindex:
+			CL_PrecacheEvent( msg );
 			break;
 		case svc_deltatable:
 			Delta_ParseTableField( msg );

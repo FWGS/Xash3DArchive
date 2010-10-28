@@ -54,6 +54,14 @@ typedef struct area_s
 	int		type;
 } area_t;
 
+typedef struct
+{
+	char		pattern[CS_SIZE];
+	float		map[MAX_STRING];
+	int		length;
+	vec3_t		rgb;		// 0.0 - 2.0
+} lightstyle_t;
+
 extern const char		*et_name[];
 
 // linked list

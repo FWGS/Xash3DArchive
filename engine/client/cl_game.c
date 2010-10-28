@@ -33,34 +33,6 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	return EDICT_NUM( index );
 }
 
-int CL_DecalIndex( const char *name )
-{
-	char	shortname[CS_SIZE];
-	int	i;
-
-	if( !name || !name[0] )
-		return 0;
-
-	FS_FileBase( name, shortname );
-
-	for( i = 1; i < MAX_DECALS && clgame.draw_decals[i][0]; i++ )
-	{
-		if( !com.stricmp( clgame.draw_decals[i], shortname ))
-			return i;
-	}
-
-	if( i == MAX_DECALS )
-	{
-		MsgDev( D_ERROR, "CL_DecalIndex: MAX_DECALS limit exceeded\n" );
-		return 0;
-	}
-
-	// register new decal
-	com.strncpy( clgame.draw_decals[i], shortname, sizeof( clgame.draw_decals[i] ));
-
-	return i;
-}
-
 /*
 ====================
 CL_GetServerTime
@@ -459,26 +431,6 @@ static void CL_InitTitles( const char *filename )
 
 	CL_TextMessageParse( pMemFile, fileSize );
 	Mem_Free( pMemFile );
-}
-
-/*
-====================
-CL_InitDecals
-
-build list of unique decalnames
-====================
-*/
-static void CL_InitDecals( void )
-{
-	search_t	*t;
-	int	i;
-
-	// lookup all decals in decals.wad
-	t = FS_Search( "decals.wad/*.*", true );
-
-	for( i = 0; t && i < t->numfilenames; i++ )
-		CL_DecalIndex( t->filenames[i] );
-	if( t ) Mem_Free( t );
 }
 
 /*
@@ -1629,7 +1581,7 @@ pfnPrecacheEvent
 */
 static word pfnPrecacheEvent( int type, const char* psz )
 {
-	return CL_PrecacheEvent( psz );
+	return CL_EventIndex( psz );
 }
 
 /*
@@ -1640,7 +1592,7 @@ pfnHookEvent
 */
 static void pfnHookEvent( const char *name, pfnEventHook pfn )
 {
-	word		event_index = CL_PrecacheEvent( name );
+	word		event_index = CL_EventIndex( name );
 	user_event_t	*ev;
 	int		i;
 
@@ -1675,7 +1627,7 @@ static void pfnKillEvents( int entnum, const char *eventname )
 	int		i;
 	event_state_t	*es;
 	event_info_t	*ei;
-	int		eventIndex = CL_PrecacheEvent( eventname );
+	int		eventIndex = CL_EventIndex( eventname );
 
 	if( eventIndex < 0 || eventIndex >= MAX_EVENTS )
 		return;
@@ -2050,9 +2002,9 @@ int pfnDecalIndexFromName( const char *szDecalName )
 		return 0;
 
 	// look through the loaded sprite name list for SpriteName
-	for( i = 0; i < MAX_DECALS && clgame.draw_decals[i+1][0]; i++ )
+	for( i = 0; i < MAX_DECALS && host.draw_decals[i+1][0]; i++ )
 	{
-		if( !com.stricmp( szDecalName, clgame.draw_decals[i+1] ))
+		if( !com.stricmp( szDecalName, host.draw_decals[i+1] ))
 		{
 			if( !cl.decal_index[i+1] )
 				cl.decal_index[i+1] = re->RegisterShader( szDecalName, SHADER_DECAL );
@@ -2072,7 +2024,7 @@ static int pfnDecalIndex( int id )
 {
 	id = bound( 0, id, MAX_DECALS - 1 );
 	if( !cl.decal_index[id] )
-		cl.decal_index[id] = re->RegisterShader( clgame.draw_decals[id], SHADER_DECAL );
+		cl.decal_index[id] = re->RegisterShader( host.draw_decals[id], SHADER_DECAL );
 	return cl.decal_index[id];
 }
 
@@ -2617,8 +2569,6 @@ qboolean CL_LoadProgs( const char *name )
 
 	clgame.maxEntities = GI->max_edicts; // merge during loading
 	CL_InitTitles( "titles.txt" );
-
-	CL_InitDecals();
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

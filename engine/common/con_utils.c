@@ -475,6 +475,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 
 	return true;
 }
+
 qboolean Cmd_GetStringTablesList( const char *s, char *completedname, int length )
 {
 	int	i, numtables;
@@ -553,6 +554,52 @@ qboolean Cmd_GetItemsList( const char *s, char *completedname, int length )
 		for( i = 0; matchbuf[i]; i++ )
 		{
 			if(com.tolower(completedname[i]) != com.tolower(matchbuf[i]))
+				completedname[i] = 0;
+		}
+	}
+	return true;
+}
+
+/*
+=====================================
+Cmd_GetCustomList
+
+Prints or complete .HPK filenames
+=====================================
+*/
+qboolean Cmd_GetCustomList( const char *s, char *completedname, int length )
+{
+	search_t		*t;
+	string		matchbuf;
+	int		i, numitems;
+
+	if( !clgame.itemspath[0] ) return false; // not in game yet
+	t = FS_Search( va( "%s*.hpk", s ), true );
+	if( !t ) return false;
+
+	FS_FileBase( t->filenames[0], matchbuf ); 
+	if( completedname && length ) com.strncpy( completedname, matchbuf, length );
+	if( t->numfilenames == 1 ) return true;
+
+	for(i = 0, numitems = 0; i < t->numfilenames; i++)
+	{
+		const char *ext = FS_FileExtension( t->filenames[i] ); 
+
+		if( com.stricmp( ext, "hpk" )) continue;
+		FS_FileBase( t->filenames[i], matchbuf );
+		Msg( "%16s\n", matchbuf );
+		numitems++;
+	}
+
+	Msg( "\n^3 %i items found.\n", numitems );
+	Mem_Free( t );
+
+	// cut shortestMatch to the amount common with s
+	if( completedname && length )
+	{
+		for( i = 0; matchbuf[i]; i++ )
+		{
+			if( com.tolower( completedname[i] ) != com.tolower( matchbuf[i] ))
 				completedname[i] = 0;
 		}
 	}
@@ -786,6 +833,7 @@ autocomplete_list_t cmd_list[] =
 { "playdemo", Cmd_GetDemoList, },
 { "menufont", Cmd_GetFontList, },
 { "setfont", Cmd_GetFontList, },
+{ "hpkval", Cmd_GetCustomList },
 { "music", Cmd_GetMusicList, },
 { "movie", Cmd_GetMovieList },
 { "exec", Cmd_GetConfigList },

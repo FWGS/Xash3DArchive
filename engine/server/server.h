@@ -15,6 +15,7 @@
 #include "entity_state.h"
 #include "protocol.h"
 #include "netchan.h"
+#include "custom.h"
 #include "world.h"
 
 //=============================================================================
@@ -64,14 +65,6 @@ typedef enum
 	cs_spawned	// client is fully in game
 } cl_state_t;
 
-// server lightstyles (used for GetEntityIllum)
-typedef struct
-{
-	int		length;
-	float		map[MAX_STRING];
-	vec3_t		rgb;		// 0.0 - 2.0
-} sv_lightstyle_t;
-
 // instanced baselines container
 typedef struct
 {
@@ -92,6 +85,8 @@ typedef struct server_s
 	sv_state_t	state;		// precache commands are only valid during load
 
 	qboolean		loadgame;		// client begins should reuse existing entity
+	int		viewentity;	// applied on client restore. this is temporare place
+					// until client connected
 
 	double		time;		// sv.time += sv.frametime
 	float		frametime;
@@ -106,6 +101,11 @@ typedef struct server_s
 
 	char		model_precache[MAX_MODELS][CS_SIZE];
 	char		sound_precache[MAX_SOUNDS][CS_SIZE];
+	char		files_precache[MAX_CUSTOM][CS_SIZE];
+	char		event_precache[MAX_EVENTS][CS_SIZE];
+
+	// run local lightstyles to let SV_LightPoint grab the actual information
+	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 
 	sv_consistency_t	consistency_files[MAX_MODELS];
 	int		num_consistency_files;
@@ -128,9 +128,6 @@ typedef struct server_s
 	byte		signon_buf[MAX_MSGLEN];
 
 	model_t		*worldmodel;	// pointer to world
-
-	// run local lightstyles to let SV_LightPoint grab the actual information
-	sv_lightstyle_t	lightstyle[MAX_LIGHTSTYLES];
 
 	qboolean		write_bad_message;	// just for debug
 	qboolean		paused;
@@ -171,6 +168,10 @@ typedef struct sv_client_s
 	double		next_checkpingtime;		// time to send all players pings to client
 	double		timebase;			// client timebase
 
+	customization_t	customization;		// player customization linked list
+	resource_t	resource1;
+	resource_t	resource2;		// <mapname.res> from client (server downloading)
+   
 	qboolean		sendmovevars;
 	qboolean		sendinfo;
 
@@ -305,8 +306,6 @@ typedef struct
 	sv_pushed_t	pushed[256];		// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
 
-	char		draw_decals[MAX_DECALS][64];	// a list of unique decalindexes
-
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
@@ -375,6 +374,11 @@ extern	convar_t		*sv_unlag;
 extern	convar_t		*sv_maxunlag;
 extern	convar_t		*sv_unlagpush;
 extern	convar_t		*sv_unlagsamples;
+extern	convar_t		*sv_allow_upload;
+extern	convar_t		*sv_allow_download;
+extern	convar_t		*sv_send_resources;
+extern	convar_t		*sv_send_logos;
+extern	convar_t		*mp_consistency;
 extern	convar_t		*physinfo;
 extern	sv_client_t	*sv_client;
 
@@ -387,7 +391,6 @@ void SV_DropClient( sv_client_t *drop );
 
 int SV_ModelIndex( const char *name );
 int SV_SoundIndex( const char *name );
-int SV_DecalIndex( const char *name );
 int SV_EventIndex( const char *name );
 int SV_GenericIndex( const char *name );
 int SV_CalcPacketLoss( sv_client_t *cl );
@@ -513,6 +516,7 @@ edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
 int pfnPrecacheModel( const char *s );
+int pfnDecalIndex( const char *m );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {

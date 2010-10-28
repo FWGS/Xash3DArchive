@@ -140,6 +140,10 @@ SOURCE=.\filesystem.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\hpak.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\imagelib\img_bmp.c
 # End Source File
 # Begin Source File

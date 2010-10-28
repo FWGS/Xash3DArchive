@@ -254,6 +254,10 @@ SOURCE=.\server\sv_cmds.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\server\sv_custom.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\server\sv_frame.c
 # End Source File
 # Begin Source File

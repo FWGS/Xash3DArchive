@@ -883,6 +883,8 @@ void SV_PutClientInServer( edict_t *ent )
       			svgame.globals->time = sv.time;
 			svgame.dllFuncs.pfnClientPutInServer( ent );
 		}
+
+		client->pViewEntity = NULL; // reset pViewEntity
 	}
 	else
 	{
@@ -895,9 +897,12 @@ void SV_PutClientInServer( edict_t *ent )
 			ent->v.fixangle = 0;
 		}
 		ent->v.effects |= EF_NOINTERP;
-	}
 
-	client->pViewEntity = NULL; // reset pViewEntity
+		// trigger_camera restored here
+		if( sv.viewentity > 0 )
+			client->pViewEntity = EDICT_NUM( sv.viewentity );
+		else client->pViewEntity = NULL;
+	}
 
 	// reset client times
 	client->last_cmdtime = 0.0;
@@ -906,11 +911,17 @@ void SV_PutClientInServer( edict_t *ent )
 
 	if( !client->fakeclient )
 	{
+		int	viewEnt;
+
 		// copy signon buffer
 		BF_WriteBits( &client->netchan.message, BF_GetData( &sv.signon ), BF_GetNumBitsWritten( &sv.signon ));
+
+		if( client->pViewEntity )
+			viewEnt = NUM_FOR_EDICT( client->pViewEntity );
+		else viewEnt = NUM_FOR_EDICT( client->edict );
 	
 		BF_WriteByte( &client->netchan.message, svc_setview );
-		BF_WriteWord( &client->netchan.message, NUM_FOR_EDICT( client->edict ));
+		BF_WriteWord( &client->netchan.message, viewEnt );
 	}
 
 	// clear any temp states
@@ -972,7 +983,7 @@ void SV_New_f( sv_client_t *cl )
 	BF_WriteByte( &cl->netchan.message, playernum );
 	BF_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
 	BF_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
-	BF_WriteString( &cl->netchan.message, sv.configstrings[CS_NAME] );
+	BF_WriteString( &cl->netchan.message, sv.name );
 	BF_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message ));	// Map Message
 
 	// refresh userinfo on spawn
@@ -1077,8 +1088,100 @@ void SV_WriteSounds_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_SOUNDS ) com.snprintf( cmd, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, 0 );
+	if( start == MAX_SOUNDS ) com.snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, 0 );
 	else com.snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, start );
+
+	// send next command
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
+}
+
+/*
+==================
+SV_WriteEvents_f
+==================
+*/
+void SV_WriteEvents_f( sv_client_t *cl )
+{
+	int	start;
+	string	cmd;
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "eventlist is not valid from the console\n" );
+		return;
+	}
+
+	// handle the case of a level changing while a client was connecting
+	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	{
+		MsgDev( D_INFO, "eventlist from different level\n" );
+		SV_New_f( cl );
+		return;
+	}
+	
+	start = com.atoi( Cmd_Argv( 2 ));
+
+	// write a packet full of data
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_EVENTS )
+	{
+		if( sv.event_precache[start][0] )
+		{
+			BF_WriteByte( &cl->netchan.message, svc_eventindex );
+			BF_WriteUBitLong( &cl->netchan.message, start, MAX_EVENT_BITS );
+			BF_WriteString( &cl->netchan.message, sv.event_precache[start] );
+		}
+		start++;
+	}
+
+	if( start == MAX_EVENTS ) com.snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, 0 );
+	else com.snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, start );
+
+	// send next command
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, cmd );
+}
+
+/*
+==================
+SV_WriteLightstyles_f
+==================
+*/
+void SV_WriteLightstyles_f( sv_client_t *cl )
+{
+	int	start;
+	string	cmd;
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "lightstyles is not valid from the console\n" );
+		return;
+	}
+
+	// handle the case of a level changing while a client was connecting
+	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	{
+		MsgDev( D_INFO, "lightstyles from different level\n" );
+		SV_New_f( cl );
+		return;
+	}
+	
+	start = com.atoi( Cmd_Argv( 2 ));
+
+	// write a packet full of data
+	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_LIGHTSTYLES )
+	{
+		if( sv.lightstyles[start].pattern[0] )
+		{
+			BF_WriteByte( &cl->netchan.message, svc_lightstyle );
+			BF_WriteByte( &cl->netchan.message, start );
+			BF_WriteString( &cl->netchan.message, sv.lightstyles[start].pattern );
+		}
+		start++;
+	}
+
+	if( start == MAX_LIGHTSTYLES ) com.snprintf( cmd, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, 0 );
+	else com.snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1582,10 +1685,12 @@ ucmd_t ucmds[] =
 { "nextdl", SV_NextDownload_f },
 { "modellist", SV_WriteModels_f },
 { "soundlist", SV_WriteSounds_f },
+{ "eventlist", SV_WriteEvents_f },
 { "disconnect", SV_Disconnect_f },
 { "usermsgs", SV_UserMessages_f },
 { "download", SV_BeginDownload_f },
 { "userinfo", SV_UpdateUserinfo_f },
+{ "lightstyles", SV_WriteLightstyles_f },
 { "configstrings", SV_Configstrings_f },
 { NULL, NULL }
 };
@@ -1693,7 +1798,7 @@ static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 	// if the checksum fails, ignore the rest of the packet
 	size = BF_GetNumBytesRead( msg ) - key - 1;
-	checksum2 = CRC_Sequence( BF_GetData( msg ) + key + 1, size, cl->netchan.incoming_sequence );
+	checksum2 = CRC32_Sequence( BF_GetData( msg ) + key + 1, size, cl->netchan.incoming_sequence );
 	if( checksum2 != checksum1 )
 	{
 		MsgDev( D_ERROR, "SV_UserMove: failed command checksum for %s (%d != %d)\n", cl->name, checksum2, checksum1 );
@@ -1773,7 +1878,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 	// if the checksum fails, ignore the rest of the packet
 	size = BF_GetRealBytesRead( msg ) - key - 1;
-	checksum2 = CRC_Sequence( msg->pData + key + 1, size, cl->netchan.incoming_sequence );
+	checksum2 = CRC32_Sequence( msg->pData + key + 1, size, cl->netchan.incoming_sequence );
 
 	if( checksum2 != checksum1 )
 	{

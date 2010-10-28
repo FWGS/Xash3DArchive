@@ -8,8 +8,6 @@
 #include "cm_local.h"
 #include "input.h"
 
-#define MAX_SYSEVENTS	1024	// system events
-
 render_exp_t	*re;
 vsound_exp_t	*se;
 host_parm_t	host;	// host parms
@@ -372,6 +370,68 @@ qboolean Host_IsLocalGame( void )
 	return false;
 }
 
+static int num_decals;
+
+/*
+=================
+Host_RegisterDecal
+=================
+*/
+qboolean Host_RegisterDecal( const char *name )
+{
+	char	shortname[CS_SIZE];
+	int	i;
+
+	if( !name || !name[0] )
+		return 0;
+
+	FS_FileBase( name, shortname );
+
+	for( i = 1; i < MAX_DECALS && host.draw_decals[i][0]; i++ )
+	{
+		if( !com.stricmp( host.draw_decals[i], shortname ))
+			return true;
+	}
+
+	if( i == MAX_DECALS )
+	{
+		MsgDev( D_ERROR, "Host_RegisterDecal: MAX_DECALS limit exceeded\n" );
+		return false;
+	}
+
+	// register new decal
+	com.strncpy( host.draw_decals[i], shortname, sizeof( host.draw_decals[i] ));
+	num_decals++;
+
+	return true;
+}
+
+/*
+=================
+Host_InitDecals
+=================
+*/
+void Host_InitDecals( void )
+{
+	search_t	*t;
+	int	i;
+
+	Mem_Set( host.draw_decals, 0, sizeof( host.draw_decals ));
+	num_decals = 0;
+
+	// lookup all decals in decals.wad
+	t = FS_Search( "decals.wad/*.*", true );
+
+	for( i = 0; t && i < t->numfilenames; i++ )
+	{
+		if( !Host_RegisterDecal( t->filenames[i] ))
+			break;
+	}
+
+	if( t ) Mem_Free( t );
+	MsgDev( D_INFO, "InitDecals: %i decals\n", num_decals );
+}
+
 /*
 =================
 Host_InitEvents
@@ -695,13 +755,14 @@ void Host_InitCommon( const int argc, const char **argv )
 	// get developer mode
 	host.developer = SI->developer;
 
-	Host_InitEvents();
-
 	FS_LoadGameInfo( NULL );
 	Image_Init( GI->gameHint, -1 );
 	Sound_Init( GI->gameHint, -1 );
 
 	host.mempool = Mem_AllocPool( "Zone Engine" );
+
+	Host_InitEvents();
+	Host_InitDecals();
 
 	IN_Init();
 

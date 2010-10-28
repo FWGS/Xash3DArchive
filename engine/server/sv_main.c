@@ -47,6 +47,11 @@ convar_t	*sv_footsteps;
 convar_t	*public_server;		// should heartbeats be sent
 convar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
 convar_t	*sv_failuretime;
+convar_t	*sv_allow_upload;
+convar_t	*sv_allow_download;
+convar_t	*sv_send_resources;
+convar_t	*sv_send_logos;
+convar_t	*mp_consistency;
 convar_t	*serverinfo;
 convar_t	*physinfo;
 convar_t	*clockwindow;
@@ -630,6 +635,11 @@ void SV_Init( void )
 	sv_maxunlag = Cvar_Get( "sv_maxunlag", "0.5", 0, "max latency which can be interpolated" );
 	sv_unlagpush = Cvar_Get( "sv_unlagpush", "0.0", 0, "unlag push bias" );
 	sv_unlagsamples = Cvar_Get( "sv_unlagsamples", "1", 0, "max samples to interpolate" );
+	sv_allow_upload = Cvar_Get( "sv_allow_upload", "1", 0, "allow uploading custom resources from clients" );
+	sv_allow_download = Cvar_Get( "sv_allow_download", "1", 0, "allow download missed resources to clients" );
+	sv_send_logos = Cvar_Get( "sv_send_logos", "1", 0, "send custom player decals to other clients" );
+	sv_send_resources = Cvar_Get( "sv_send_resources", "1", 0, "send generic resources that specified in 'mapname.res'" );
+	mp_consistency = Cvar_Get( "mp_consistency", "1", CVAR_SERVERNOTIFY, "enbale consistency check in multiplayer" );
 	clockwindow = Cvar_Get( "clockwindow", "0.5", 0, "timewindow to execute client moves" );
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files

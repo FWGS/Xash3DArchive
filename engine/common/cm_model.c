@@ -974,7 +974,7 @@ static model_t *CM_ModForName( const char *name, qboolean world )
 	}
 
 	// if it's world - calc the map checksum
-	if( world ) cm.checksum = LittleLong( Com_BlockChecksum( buf, size ));
+	if( world ) CRC32_MapFile( &cm.checksum, name );
 
 	MsgDev( D_NOTE, "CM_LoadModel: %s\n", name );
 	com.strncpy( mod->name, name, sizeof( mod->name ));

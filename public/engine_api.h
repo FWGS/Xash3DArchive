@@ -17,13 +17,9 @@
 #define MAX_SOUNDS			(1<<MAX_SOUND_BITS)	// 11 bits == 2048 sounds
 
 #define MAX_DLIGHTS			32	// dynamic lights (rendered per one frame)
-#define MAX_LIGHTSTYLES		256	// can't be blindly increased
-#define MAX_DECALS			1024	// server decal indexes (different decalnames, not a render limit)
-#define MAX_USER_MESSAGES		191	// another 63 messages reserved for engine routines
-#define MAX_EVENTS			1024	// playback events that can be queued (a byte range, don't touch)
-#define MAX_MSGLEN			32768	// max length of network message
-#define MAX_GENERICS		1024	// generic files that can download from server
-#define MAX_EDICTS			32768	// absolute limit that never be reached, (do not edit!)
+#define MAX_DECALS			512	// touching TE_DECAL messages, etc
+#define MAX_LIGHTSTYLES		256	// a byte limit, don't modify
+#define MAX_EDICTS			4096	// absolute limit, should be enough. (can be up to 32768)
 #define MAX_RENDER_DECALS		4096	// max rendering decals per a level
 
 // decal flags

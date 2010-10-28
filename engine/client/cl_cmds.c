@@ -76,7 +76,7 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 	if( lastnum < 0 || lastnum > 9999 )
 	{
 		// bound
-		com.sprintf( filename, "scrshots/%s/!error.%s", cl.configstrings[CS_NAME], SCRSHOT_TYPE );
+		com.sprintf( filename, "scrshots/%s/!error.%s", clgame.mapname, SCRSHOT_TYPE );
 		return;
 	}
 
@@ -88,7 +88,7 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 	lastnum -= c * 10;
 	d = lastnum;
 
-	com.sprintf( filename, "scrshots/%s/shot%i%i%i%i.%s", cl.configstrings[CS_NAME], a, b, c, d, SCRSHOT_TYPE );
+	com.sprintf( filename, "scrshots/%s/shot%i%i%i%i.%s", clgame.mapname, a, b, c, d, SCRSHOT_TYPE );
 }
 
 /* 
@@ -160,7 +160,7 @@ void CL_LevelShot_f( void )
 	cls.scrshot_request = scrshot_inactive;
 
 	// check for exist
-	com.sprintf( cls.shotname, "levelshots/%s.%s", cl.configstrings[CS_NAME], LEVELSHOT_TYPE );
+	com.sprintf( cls.shotname, "levelshots/%s.%s", clgame.mapname, LEVELSHOT_TYPE );
 	if( !FS_FileExistsEx( cls.shotname, true ))
 		cls.scrshot_action = scrshot_plaque;	// build new frame for levelshot
 	else cls.scrshot_action = scrshot_inactive;	// disable - not needs

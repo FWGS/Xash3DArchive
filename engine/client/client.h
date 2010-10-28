@@ -113,6 +113,8 @@ typedef struct
 
 	char		model_precache[MAX_MODELS][CS_SIZE];
 	char		sound_precache[MAX_SOUNDS][CS_SIZE];
+	char		event_precache[MAX_EVENTS][CS_SIZE];
+	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 
 	sound_t		sound_index[MAX_SOUNDS];
 	shader_t		decal_index[MAX_DECALS];
@@ -250,8 +252,6 @@ typedef struct
 	int		trace_hull;		// used by PM_SetTraceHull
 	int		oldcount;			// used by PM_Push\Pop state
 
-	char		draw_decals[MAX_DECALS][64];	// a list of unique decalindexes
-
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
@@ -383,7 +383,7 @@ extern convar_t	*userinfo;
 
 qboolean CL_CheckOrDownloadFile( const char *filename );
 void CL_ParseConfigString( sizebuf_t *msg );
-void CL_SetLightstyle( int i );
+void CL_SetLightstyle( int style, const char* s );
 void CL_RunLightStyles( void );
 
 void CL_AddEntities( void );
@@ -525,7 +525,7 @@ void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
 void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
 void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
-word CL_PrecacheEvent( const char *name );
+word CL_EventIndex( const char *name );
 void CL_ResetEvent( event_info_t *ei );
 void CL_FireEvents( void );
 

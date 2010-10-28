@@ -2883,7 +2883,7 @@ OTHERS PUBLIC FUNCTIONS
 FS_StripExtension
 ============
 */
-void FS_StripExtension (char *path)
+void FS_StripExtension( char *path )
 {
 	size_t	length;
 
@@ -3046,6 +3046,19 @@ fs_offset_t FS_FileSize( const char *filename, qboolean gamedironly )
 		FS_Close( fp );
 	}
 	return length;
+}
+
+/*
+==================
+FS_FileLength
+
+return size of file in bytes
+==================
+*/
+fs_offset_t FS_FileLength( file_t *f )
+{
+	if( !f ) return 0;
+	return f->real_length;
 }
 
 /*

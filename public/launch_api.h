@@ -483,15 +483,12 @@ typedef struct stdilib_api_s
 	sys_event_t (*getevent)( void );			// get system events
 
 	// crclib.c funcs
-	void (*crc_init)( word *pusCRC );			// set initial crc value
-	word (*crc_block)( byte *start, int count );		// calculate crc block
-	void (*crc_process)( word *crcvalue, byte data );	// process crc byte
-	byte (*crc_sequence)( byte *base, int len, int sequence );	// calculate crc for sequence
-	uint (*crc_blockchecksum)( void *buffer, int length );	// map checksum
-	uint (*crc_blockchecksumkey)( void *buf, int len, int key );// process key checksum
 	void (*crc32_init)( dword *pulCRC );
 	void (*crc32_process)( dword *crcvalue, byte data );	// process crc32 byte
 	void (*crc32_block)( dword *pulCRC, const void *pBuffer, int nBuffer );
+	byte (*crc32_sequence)( byte *base, int len, int sequence );// calculate crc for sequence
+	qboolean (*crc32_file)( dword *crcvalue, const char *filename );
+	qboolean (*crc32_mapfile)( dword *crcvalue, const char *filename );
 	void (*crc32_final)( dword *pulCRC );
 
 	// memlib.c funcs
@@ -630,6 +627,14 @@ typedef struct stdilib_api_s
 	void (*wfclose)( wfile_t *wad );				// close wadfile
 	long (*wfwrite)( wfile_t *wad, const char *lump, const void* data, size_t size, char type, char cmp );
 	byte *(*wfread)( wfile_t *wad, const char *lump, size_t *lumpsizeptr, const char type );
+
+	// custom hpk filesystem
+	qboolean (*hpk_getdataptr)( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
+	qboolean (*hpk_findres)( const char *filename, char *hash, struct resource_s *pRes );
+	void (*hpk_addlump)( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, file_t *f );
+	void (*hpk_check_integrity)( const char *filename );
+	void (*hpk_check_size)( const char *filename );
+	void (*hpk_flush_queue)( void );
 
 	// filesystem simple user interface
 	byte *(*Com_LoadFile)(const char *path, long *filesize );		// load file into heap
@@ -937,20 +942,28 @@ wadstorage filesystem manager
 
 /*
 ===========================================
+HPAK custom data storage
+===========================================
+*/
+#define HPAK_GetDataPointer		com.hpk_getdataptr
+#define HPAK_ResourceForHash		com.hpk_findres
+#define HPAK_AddLump		com.hpk_addlump
+#define HPAK_CheckIntegrity		com.hpk_check_integrity
+#define HPAK_CheckSize		com.hpk_check_size
+#define HPAK_FlushHostQueue		com.hpk_flush_queue
+
+/*
+===========================================
 crclib manager
 ===========================================
 */
-#define CRC_Init			com.crc_init
-#define CRC_Block			com.crc_block
-#define CRC_ProcessByte		com.crc_process
-#define CRC_Sequence		com.crc_sequence
 #define CRC32_Init			com.crc32_init
 #define CRC32_ProcessBuffer		com.crc32_block
 #define CRC32_ProcessByte		com.crc32_process
 #define CRC32_Final			com.crc32_final
-#define CRC_Sequence		com.crc_sequence
-#define Com_BlockChecksum		com.crc_blockchecksum
-#define Com_BlockChecksumKey		com.crc_blockchecksumkey
+#define CRC32_Sequence		com.crc32_sequence
+#define CRC32_File			com.crc32_file
+#define CRC32_MapFile		com.crc32_mapfile
 
 /*
 ===========================================

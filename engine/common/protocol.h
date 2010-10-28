@@ -20,9 +20,9 @@
 #define svc_stufftext		9	// [string] stuffed into client's console buffer
 #define svc_setangle		10	// [angle angle] set the view angle to this absolute value
 #define svc_serverdata		11	// [long] protocol ...
-#define svc_restore			12	// restore saved game on the client
+#define svc_lightstyle		12	// [index][pattern]
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
-
+#define svc_deltatable		14	// [table header][...]
 #define svc_clientdata		15	// [...]
 #define svc_download		16	// [short] size [size bytes]
 #define svc_updatepings		17	// [bit][idx][ping][packet_loss]
@@ -42,7 +42,7 @@
 #define svc_modelindex		31	// [index][modelpath]
 #define svc_cdtrack			32	// [byte] track [byte] looptrack
 #define svc_serverinfo		33	// [string] key [string] value
-#define svc_deltatable		34	// [table header][...]
+#define svc_eventindex		34	// [index][eventname]
 #define svc_weaponanim		35	// [byte]iAnim [byte]body
 #define svc_bspdecal		36	// [float*3][short][short][short]
 #define svc_roomtype		37	// [short] room type
@@ -74,10 +74,18 @@
 
 // additional protocol data
 #define MAX_CLIENT_BITS		5
-#define MAX_CLIENTS			(1<<MAX_CLIENT_BITS)
+#define MAX_CLIENTS			(1<<MAX_CLIENT_BITS)// 5 bits == 32 clients ( int32 limit )
 
 #define MAX_WEAPON_BITS		5
-#define MAX_WEAPONS			(1<<MAX_WEAPON_BITS)
+#define MAX_WEAPONS			(1<<MAX_WEAPON_BITS)// 5 bits == 32 weapons ( int32 limit )
+
+#define MAX_EVENT_BITS		10
+#define MAX_EVENTS			(1<<MAX_EVENT_BITS)	// 10 bits == 1024 events (the original Half-Life limit)
+
+#define MAX_CUSTOM			1024	// max custom resources per level
+
+#define MAX_USER_MESSAGES		191	// another 63 messages reserved for engine routines
+					// FIXME: tune this
 
 // Max number of history commands to send ( 2 by default ) in case of dropped packets
 #define NUM_BACKUP_COMMAND_BITS	3

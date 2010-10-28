@@ -42,8 +42,6 @@ typedef struct
 	char	mapName[32];
 	char	comment[80];
 	int	mapCount;
-	int	serverflags;	// Xash3D added
-	int	found_secrets;	// Xash3D added
 } GAME_HEADER;
 
 typedef struct
@@ -61,6 +59,7 @@ typedef struct
 	float	skyVec_x;
 	float	skyVec_y;
 	float	skyVec_z;
+	int	viewentity;	// Xash3D added
 } SAVE_HEADER;
 
 typedef struct
@@ -74,8 +73,6 @@ static TYPEDESCRIPTION gGameHeader[] =
 	DEFINE_ARRAY( GAME_HEADER, mapName, FIELD_CHARACTER, 32 ),
 	DEFINE_ARRAY( GAME_HEADER, comment, FIELD_CHARACTER, 80 ),
 	DEFINE_FIELD( GAME_HEADER, mapCount, FIELD_INTEGER ),
-	DEFINE_FIELD( GAME_HEADER, serverflags, FIELD_INTEGER ),
-	DEFINE_FIELD( GAME_HEADER, found_secrets, FIELD_INTEGER ),
 };
 
 static TYPEDESCRIPTION gSaveHeader[] =
@@ -93,6 +90,7 @@ static TYPEDESCRIPTION gSaveHeader[] =
 	DEFINE_FIELD( SAVE_HEADER, skyVec_x, FIELD_FLOAT ),
 	DEFINE_FIELD( SAVE_HEADER, skyVec_y, FIELD_FLOAT ),
 	DEFINE_FIELD( SAVE_HEADER, skyVec_z, FIELD_FLOAT ),
+	DEFINE_FIELD( SAVE_HEADER, viewentity, FIELD_SHORT ),
 };
 
 static TYPEDESCRIPTION gAdjacency[] =
@@ -388,7 +386,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	if( adjacent ) flags |= FDECAL_DONTSAVE;
 
 	// NOTE: at this point all decal indexes is valid
-	decalIndex = SV_DecalIndex( entry->name );
+	decalIndex = pfnDecalIndex( entry->name );
 	
 	if( adjacent )
 	{
@@ -633,6 +631,7 @@ SAVERESTOREDATA *SV_SaveInit( int size )
 
 void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 {
+	sv_client_t	*cl;
 	SAVE_HEADER	header;
 	SAVE_LIGHTSTYLE	light;
 	int		i;
@@ -652,7 +651,7 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 
 	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
 	{
-		if( sv.configstrings[CS_LIGHTSTYLES+i][0] )
+		if( sv.lightstyles[i].pattern[0] )
 			header.lightStyleCount++;
 	}
 
@@ -663,6 +662,15 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 	header.skyVec_x = Cvar_VariableValue( "sv_skyvec_x" );
 	header.skyVec_y = Cvar_VariableValue( "sv_skyvec_y" );
 	header.skyVec_z = Cvar_VariableValue( "sv_skyvec_z" );
+
+	// save viewentity to allow camera works after save\restore
+	if(( cl = SV_ClientFromEdict( EDICT_NUM( 1 ), true )) != NULL )
+	{
+		if( cl->pViewEntity )
+			header.viewentity = NUM_FOR_EDICT( cl->pViewEntity );
+		else header.viewentity = 1;
+	}
+	else header.viewentity = 1;
 
 	pSaveData->time = 0; // prohibits rebase of header.time (why not just save time as a field_float and ditch this hack?)
 	svgame.dllFuncs.pfnSaveWriteFields( pSaveData, "Save Header", &header, gSaveHeader, ARRAYSIZE( gSaveHeader ));
@@ -681,10 +689,10 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 	// write the lightstyles
 	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
 	{
-		if( sv.configstrings[CS_LIGHTSTYLES+i][0] )
+		if( sv.lightstyles[i].pattern[0] )
 		{
 			light.index = i;
-			com.strncpy( light.style, sv.configstrings[CS_LIGHTSTYLES+i], sizeof( light.style ));
+			com.strncpy( light.style, sv.lightstyles[i].pattern, sizeof( light.style ));
 			svgame.dllFuncs.pfnSaveWriteFields( pSaveData, "LIGHTSTYLE", &light, gLightStyle, ARRAYSIZE( gLightStyle ));
 		}
 	}
@@ -807,16 +815,13 @@ void SV_ParseSaveTables( SAVERESTOREDATA *pSaveData, SAVE_HEADER *pHeader, int u
 
 	if( updateGlobals )	// g-cont. maybe this rename to 'clearLightstyles' ?
 	{
-		for( i = 0; i < MAX_LIGHTSTYLES; i++ )
-		{
-			SV_ConfigString( CS_LIGHTSTYLES + i, "" );
-		}
+		Mem_Set( sv.lightstyles, 0, sizeof( sv.lightstyles ));
 	}
 
 	for( i = 0; i < pHeader->lightStyleCount; i++ )
 	{
 		svgame.dllFuncs.pfnSaveReadFields( pSaveData, "LIGHTSTYLE", &light, gLightStyle, ARRAYSIZE( gLightStyle ));
-		if( updateGlobals ) SV_ConfigString( CS_LIGHTSTYLES + light.index, light.style );
+		if( updateGlobals ) SV_SetLightStyle( light.index, light.style );
 	}
 }
 
@@ -1138,6 +1143,8 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	Cvar_SetValue( "sv_skyvec_x", header.skyVec_x );
 	Cvar_SetValue( "sv_skyvec_y", header.skyVec_y );
 	Cvar_SetValue( "sv_skyvec_z", header.skyVec_z );
+
+	sv.viewentity = ( header.viewentity == 1 ) ? 0 : header.viewentity;
 
 	// re-base the savedata since we re-ordered the entity/table / restore fields
 	SaveRestore_Rebase( pSaveData );
@@ -1505,8 +1512,6 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	gameHeader.mapCount = SV_MapCount( hlPath );
 	com.strncpy( gameHeader.mapName, sv.name, sizeof( gameHeader.mapName ));
 	com.strncpy( gameHeader.comment, pSaveComment, sizeof( gameHeader.comment ));
-	gameHeader.serverflags = svgame.globals->serverflags;
-	gameHeader.found_secrets = svgame.globals->found_secrets;
 
 	svgame.dllFuncs.pfnSaveWriteFields( pSaveData, "GameHeader", &gameHeader, gGameHeader, ARRAYSIZE( gGameHeader ));
 	svgame.dllFuncs.pfnSaveGlobalState( pSaveData );

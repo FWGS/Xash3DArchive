@@ -52,15 +52,6 @@ LIGHT STYLE MANAGEMENT
 
 ==============================================================
 */
-
-typedef struct
-{
-	int	length;
-	float	value[3];
-	float	map[MAX_STRING];
-} cl_lightstyle_t;
-
-cl_lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 static int	lastofs;
 		
 /*
@@ -70,7 +61,7 @@ CL_ClearLightStyles
 */
 void CL_ClearLightStyles( void )
 {
-	Mem_Set( cl_lightstyle, 0, sizeof( cl_lightstyle ));
+	Mem_Set( cl.lightstyles, 0, sizeof( cl.lightstyles ));
 	lastofs = -1;
 }
 
@@ -85,7 +76,7 @@ light animations
 void CL_RunLightStyles( void )
 {
 	int		i, ofs;
-	cl_lightstyle_t	*ls;		
+	lightstyle_t	*ls;		
 	float		l;
 
 	if( cls.state != ca_active ) return;
@@ -94,31 +85,30 @@ void CL_RunLightStyles( void )
 	if( ofs == lastofs ) return;
 	lastofs = ofs;
 
-	for( i = 0, ls = cl_lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
+	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
 		if( ls->length == 0 ) l = 0.0f;
 		else if( ls->length == 1 ) l = ls->map[0];
 		else l = ls->map[ofs%ls->length];
 
-		VectorSet( ls->value, l, l, l );
+		VectorSet( ls->rgb, l, l, l );
 	}
 }
 
-void CL_SetLightstyle( int i )
+void CL_SetLightstyle( int style, const char *s )
 {
-	char	*s;
 	int	j, k;
 
-	s = cl.configstrings[i+CS_LIGHTSTYLES];
+	ASSERT( s );
+	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
+
+	com.strncpy( cl.lightstyles[style].pattern, s, sizeof( cl.lightstyles[0].pattern ));
+
 	j = com.strlen( s );
-
-	if( j >= MAX_STRING )
-		Host_Error("CL_SetLightStyle: lightstyle %s is too long\n", s );
-
-	cl_lightstyle[i].length = j;
+	cl.lightstyles[style].length = j;
 
 	for( k = 0; k < j; k++ )
-		cl_lightstyle[i].map[k] = (float)(s[k]-'a') / (float)('m'-'a');
+		cl.lightstyles[style].map[k] = (float)(s[k]-'a') / (float)('m'-'a');
 }
 
 /*
@@ -129,10 +119,10 @@ CL_AddLightStyles
 void CL_AddLightStyles( void )
 {
 	int		i;
-	cl_lightstyle_t	*ls;
+	lightstyle_t	*ls;
 
-	for( i = 0, ls = cl_lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
-		re->AddLightStyle( i, ls->value );
+	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
+		re->AddLightStyle( i, ls->rgb );
 }
 
 /*
@@ -360,14 +350,15 @@ void CL_ResetEvent( event_info_t *ei )
 	Mem_Set( ei, 0, sizeof( *ei ));
 }
 
-word CL_PrecacheEvent( const char *name )
+word CL_EventIndex( const char *name )
 {
 	int	i;
 	
-	if( !name || !name[0] ) return 0;
+	if( !name || !name[0] )
+		return 0;
 
-	for( i = 1; i < MAX_EVENTS && cl.configstrings[CS_EVENTS+i][0]; i++ )
-		if( !com.strcmp( cl.configstrings[CS_EVENTS+i], name ))
+	for( i = 1; i < MAX_EVENTS && cl.event_precache[i][0]; i++ )
+		if( !com.stricmp( cl.event_precache[i], name ))
 			return i;
 	return 0;
 }
@@ -387,8 +378,8 @@ qboolean CL_FireEvent( event_info_t *ei )
 		ev = clgame.events[i];		
 		if( !ev )
 		{
-			idx = bound( CS_EVENTS, CS_EVENTS + ei->index, CS_EVENTS + MAX_EVENTS );
-			Msg( "CL_FireEvent: %s not precached\n", cl.configstrings[idx] );
+			idx = bound( 1, ei->index, MAX_EVENTS );
+			Msg( "CL_FireEvent: %s not precached\n", cl.event_precache[idx] );
 			break;
 		}
 
@@ -400,7 +391,7 @@ qboolean CL_FireEvent( event_info_t *ei )
 				return true;
 			}
 
-			name = cl.configstrings[CS_EVENTS+ei->index];
+			name = cl.event_precache[ei->index];
 			MsgDev( D_ERROR, "CL_FireEvent: %s not hooked\n", name );
 			break;			
 		}
@@ -531,7 +522,7 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 		return;
 	}
 	// check event for precached
-	if( !CL_PrecacheEvent( cl.configstrings[CS_EVENTS+eventindex] ))
+	if( !CL_EventIndex( cl.event_precache[eventindex] ))
 	{
 		MsgDev( D_ERROR, "CL_PlaybackEvent: event %i was not precached\n", eventindex );
 		return;		

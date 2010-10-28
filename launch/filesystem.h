@@ -119,6 +119,41 @@ typedef struct
 	char		name[16];		// must be null terminated
 } dlumpinfo_t;
 
+#include "custom.h"
+
+#define IDCUSTOMHEADER	(('K'<<24)+('A'<<16)+('P'<<8)+'H') // little-endian "HPAK"
+#define IDCUSTOM_VERSION	1
+
+typedef struct hpak_s
+{
+	char		*name;
+	resource_t	HpakResource;
+	size_t		size;
+	void		*data;
+	struct hpak_s	*next;
+} hpak_t;
+
+typedef struct
+{
+	int		ident;		// should be equal HPAK
+	int		version;
+	int		seek;		// infotableofs ?
+} hpak_header_t;
+
+typedef struct
+{
+	resource_t	DirectoryResource;
+	int		seek;		// filepos ?
+	int		size;
+} hpak_dir_t;
+
+typedef struct
+{
+	int		count;
+	hpak_dir_t	*dirs;		// variable sized.
+} hpak_container_t;
+
+
 #define ZLIB_VERSION	"1.2.3"
 #define MAX_WBITS		15
 

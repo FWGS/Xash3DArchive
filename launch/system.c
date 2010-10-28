@@ -50,15 +50,12 @@ void Sys_GetStdAPI( void )
 	com.getevent = Sys_GetEvent;			// get system events
 
 	// crclib.c funcs
-	com.crc_init = CRC_Init;
-	com.crc_block = CRC_Block;
-	com.crc_process = CRC_ProcessByte;
-	com.crc_sequence = CRC_BlockSequence;
-	com.crc_blockchecksum = Com_BlockChecksum;
-	com.crc_blockchecksumkey = Com_BlockChecksumKey;
 	com.crc32_init = CRC32_Init;
 	com.crc32_block = CRC32_ProcessBuffer;
 	com.crc32_process = CRC32_ProcessByte;
+	com.crc32_file = CRC32_File;
+	com.crc32_mapfile = CRC32_MapFile;
+	com.crc32_sequence = CRC32_BlockSequence;
 	com.crc32_final = CRC32_Final;
 
 	// memlib.c
@@ -191,12 +188,20 @@ void Sys_GetStdAPI( void )
 	com.vftell = VFS_Tell;		// like a ftell
 	com.vfeof = VFS_Eof;		// like a feof
 
-	// wadstorag filesystem
+	// wadstorage filesystem
 	com.wfcheck = W_Check;		// validate container
 	com.wfopen = W_Open;		// open wad file or create new
 	com.wfclose = W_Close;		// close wadfile
 	com.wfwrite = W_SaveLump;		// dump lump into disk
 	com.wfread = W_LoadLump;		// load lump into memory
+
+	// custom HPAK storage system
+	com.hpk_getdataptr = HPAK_GetDataPointer;	// find resource lump and return pointer
+	com.hpk_findres = HPAK_ResourceForHash;		// find resource by hash	
+	com.hpk_addlump = HPAK_AddLump;		// add lump to specified wad	
+	com.hpk_check_integrity = HPAK_CheckIntegrity;	// check hpk for integrity	
+	com.hpk_check_size = HPAK_CheckSize;		// check hpk for maxsize	
+	com.hpk_flush_queue = HPAK_FlushHostQueue;	// flush all added lumps into specified hpk
 
 	// filesystem simply user interface
 	com.Com_LoadFile = FS_LoadFile;		// load file into heap
@@ -988,6 +993,7 @@ void Sys_Init( void )
 	FS_Init();
 	Image_Init();
 	Sound_Init();
+	HPAK_Init();
 
 	Sys_CreateInstance();
 }

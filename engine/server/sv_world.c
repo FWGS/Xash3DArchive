@@ -338,15 +338,15 @@ SV_ClearWorld
 */
 void SV_ClearWorld( void )
 {
-	sv_lightstyle_t	*ls;
+	lightstyle_t	*ls;
 	int		i;
 
 	SV_InitBoxHull();		// for box testing
 	SV_InitStudioHull();	// for hitbox testing
 
 	// clear lightstyles
-	for( i = 0, ls = sv.lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
-		VectorSet( sv.lightstyle[i].rgb, 1.0f, 1.0f, 1.0f );
+	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
+		VectorSet( ls->rgb, 1.0f, 1.0f, 1.0f );
 	sv_lastofs = -1;
 
 	Mem_Set( sv_areanodes, 0, sizeof( sv_areanodes ));
@@ -1461,7 +1461,7 @@ static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const
 
 		for( map = 0; map < surf->numstyles; map++ )
 		{
-			VectorScale( sv.lightstyle[surf->styles[map]].rgb, sv_modulate, scale );
+			VectorScale( sv.lightstyles[surf->styles[map]].rgb, sv_modulate, scale );
 
 			sv_pointColor[0] += lm[0] * scale[0];
 			sv_pointColor[1] += lm[1] * scale[1];
@@ -1479,7 +1479,7 @@ static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const
 void SV_RunLightStyles( void )
 {
 	int		i, ofs;
-	sv_lightstyle_t	*ls;
+	lightstyle_t	*ls;
 	float		l;
 
 	// run lightstyles animation
@@ -1488,7 +1488,7 @@ void SV_RunLightStyles( void )
 	if( ofs == sv_lastofs ) return;
 	sv_lastofs = ofs;
 
-	for( i = 0, ls = sv.lightstyle; i < MAX_LIGHTSTYLES; i++, ls++ )
+	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
 		if( ls->length == 0 ) l = 0.0f;
 		else if( ls->length == 1 ) l = ls->map[0];
@@ -1509,11 +1509,23 @@ void SV_SetLightStyle( int style, const char* s )
 {
 	int	j, k;
 
+	ASSERT( s );
+	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
+
+	com.strncpy( sv.lightstyles[style].pattern, s, sizeof( sv.lightstyles[0].pattern ));
+
 	j = com.strlen( s );
-	sv.lightstyle[style].length = j;
+	sv.lightstyles[style].length = j;
 
 	for( k = 0; k < j; k++ )
-		sv.lightstyle[style].map[k] = (float)( s[k]-'a' ) / (float)( 'm'-'a' );
+		sv.lightstyles[style].map[k] = (float)( s[k]-'a' ) / (float)( 'm'-'a' );
+
+	if( sv.state != ss_active ) return;
+
+	// tell the clients about changed lightstyle
+	BF_WriteByte( &sv.reliable_datagram, svc_lightstyle );
+	BF_WriteByte( &sv.reliable_datagram, style );
+	BF_WriteString( &sv.reliable_datagram, sv.lightstyles[style].pattern );
 }
 
 /*

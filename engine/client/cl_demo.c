@@ -120,7 +120,7 @@ void CL_WriteDemoHeader( const char *name )
 	BF_WriteByte( &buf, cl.playernum );
 	BF_WriteByte( &buf, cl.maxclients );
 	BF_WriteWord( &buf, clgame.maxEntities );
-	BF_WriteString( &buf, cl.configstrings[CS_NAME] );
+	BF_WriteString( &buf, clgame.mapname );
 	BF_WriteString( &buf, clgame.maptitle );
 
 	// configstrings

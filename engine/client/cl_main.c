@@ -475,7 +475,7 @@ void CL_WritePacket( void )
 
 		// calculate a checksum over the move commands
 		size = BF_GetRealBytesWritten( &buf ) - key - 1;
-		buf.pData[key] = CRC_Sequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
+		buf.pData[key] = CRC32_Sequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
 
 		// message we are constructing.
 		i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;
@@ -981,7 +981,7 @@ void CL_PrepSound( void )
 {
 	int	i, sndcount;
 
-	MsgDev( D_NOTE, "CL_PrepSound: %s\n", cl.configstrings[CS_NAME] );		
+	MsgDev( D_NOTE, "CL_PrepSound: %s\n", clgame.mapname );
 	for( i = 0, sndcount = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
 		sndcount++; // total num sounds
 
@@ -1035,7 +1035,7 @@ void CL_PrepVideo( void )
 		return; // no map loaded
 
 	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
-	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", cl.configstrings[CS_NAME] );
+	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", clgame.mapname );
 
 	// let the render dll load the map
 	com.strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
@@ -1057,9 +1057,8 @@ void CL_PrepVideo( void )
 		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
 
-	// reload all decals
-	for( i = 0; i < MAX_DECALS && clgame.draw_decals[i+1][0]; i++ )
-		cl.decal_index[i+1] = re->RegisterShader( clgame.draw_decals[i+1], SHADER_DECAL );
+	// invalidate all decal indexes
+	Mem_Set( cl.decal_index, 0, sizeof( cl.decal_index ));
 
 	// setup sky and free unneeded stuff
 	re->EndRegistration( cl.refdef.movevars->skyName );

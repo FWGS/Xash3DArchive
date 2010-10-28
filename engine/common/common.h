@@ -37,18 +37,13 @@
 #define CS_SIZE			64	// size of one config string
 #define CS_TIME			16	// size of time string
 
+#define MAX_MSGLEN			32768	// max length of network message
+					// FIXME: replace with NET_MAX_PAYLOAD
 // FIXME: get rid of configstrings
 
-#define CS_NAME			0	// map name
-#define CS_MAPCHECKSUM		1	// level checksum (for catching cheater maps)
-#define CS_BACKGROUND_TRACK		3	// basename of background track
-
-// 8 - 32 it's a reserved strings
-
-#define CS_EVENTS			8				// queue events
-#define CS_GENERICS			(CS_EVENTS+MAX_EVENTS)		// generic resources (e.g. color decals)
-#define CS_LIGHTSTYLES		(CS_GENERICS+MAX_GENERICS)		// lightstyle patterns 
-#define MAX_CONFIGSTRINGS		(CS_LIGHTSTYLES+MAX_LIGHTSTYLES)	// total count
+#define CS_MAPCHECKSUM		0	// level checksum (for catching cheater maps)
+#define CS_BACKGROUND_TRACK		1	// basename of background track
+#define MAX_CONFIGSTRINGS		2
 
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
@@ -71,6 +66,8 @@ HOST INTERFACE
 
 ==============================================================
 */
+#define MAX_SYSEVENTS	1024
+
 typedef enum
 {
 	HOST_INIT = 0,	// initalize operations
@@ -126,7 +123,10 @@ typedef struct host_parm_s
 
 	int		events_head;
 	int		events_tail;
-	sys_event_t	events[MAX_EVENTS];
+	sys_event_t	events[MAX_SYSEVENTS];
+
+	// list of unique decal indexes
+	char		draw_decals[MAX_DECALS][CS_SIZE];
 
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
@@ -237,7 +237,7 @@ float pfnTime( void );
 
 ==============================================================
 */
-#define Z_Malloc(size)		Mem_Alloc( host.mempool, size )
+#define Z_Malloc( size )		Mem_Alloc( host.mempool, size )
 #define Z_Realloc( ptr, size )	Mem_Realloc( host.mempool, ptr, size )
 #define Z_Free( ptr )		if( ptr ) Mem_Free( ptr )
 

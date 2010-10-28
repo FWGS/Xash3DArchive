@@ -107,6 +107,14 @@ typedef struct convar_s
 	char		*description;	// variable descrition info
 };
 
+// MD5 Hash
+typedef struct
+{
+	uint	buf[4];
+	uint	bits[2];
+	byte	in[64];
+} MD5Context_t;
+
 extern system_t Sys;
 extern sysinfo_t SI;
 extern stdlib_api_t	com;
@@ -367,6 +375,18 @@ void FS_Purge( file_t *file );
 int FS_Close( file_t *file );
 int FS_Getc( file_t *file );
 qboolean FS_Eof( file_t *file );
+fs_offset_t FS_FileLength( file_t *f );
+
+//
+// hpak.c
+//
+void HPAK_Init( void );
+qboolean HPAK_GetDataPointer( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
+qboolean HPAK_ResourceForHash( const char *filename, char *hash, struct resource_s *pRes );
+void HPAK_AddLump( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, file_t *f );
+void HPAK_CheckIntegrity( const char *filename );
+void HPAK_CheckSize( const char *filename );
+void HPAK_FlushHostQueue( void );
 
 //
 // cvar.c
@@ -439,16 +459,16 @@ qboolean VFS_Eof( vfile_t *file );
 //
 // crclib.c
 //
-void CRC_Init( word *crcvalue );
-word CRC_Block( byte *start, int count );
-void CRC_ProcessByte( word *crcvalue, byte data );
-byte CRC_BlockSequence( byte *base, int length, int sequence );
-uint Com_BlockChecksum( void *buffer, int length );
-uint Com_BlockChecksumKey( void *buffer, int length, int key );
+void CRC32_Init( dword *pulCRC );
+byte CRC32_BlockSequence( byte *base, int length, int sequence );
 void CRC32_ProcessBuffer( dword *pulCRC, const void *pBuffer, int nBuffer );
 void CRC32_ProcessByte( dword *pulCRC, byte ch );
-void CRC32_Init( dword *pulCRC );
 void CRC32_Final( dword *pulCRC );
+qboolean CRC32_File( dword *crcvalue, const char *filename );
+qboolean CRC32_MapFile( dword *crcvalue, const char *filename );
+void MD5Init( MD5Context_t *ctx );
+void MD5Update( MD5Context_t *ctx, const byte *buf, uint len );
+void MD5Final( byte digest[16], MD5Context_t *ctx );
 
 //
 // parselib.c

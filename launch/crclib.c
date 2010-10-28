@@ -4,55 +4,12 @@
 //=======================================================================
 
 #include "launch.h"
+#include "bspfile.h"
+#include "byteorder.h"
 
-/*
-=============================================================================
-this is a 16 bit, non-reflected CRC using the polynomial 0x1021
-and the initial and final xor values shown below...  in other words, the
-CCITT standard CRC used by XMODEM
-=============================================================================
-*/
 #define NUM_BYTES		256
-#define CRC_INIT_VALUE	0xffff
-#define CRC_XOR_VALUE	0x0000
 #define CRC32_INIT_VALUE	0xFFFFFFFFUL
 #define CRC32_XOR_VALUE	0xFFFFFFFFUL
-
-static const word crctable[NUM_BYTES] =
-{
-0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
-0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
-0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7, 0x62d6,
-0x9339, 0x8318, 0xb37b, 0xa35a, 0xd3bd, 0xc39c, 0xf3ff, 0xe3de,
-0x2462, 0x3443, 0x0420, 0x1401, 0x64e6, 0x74c7, 0x44a4, 0x5485,
-0xa56a, 0xb54b, 0x8528, 0x9509, 0xe5ee, 0xf5cf, 0xc5ac, 0xd58d,
-0x3653, 0x2672, 0x1611, 0x0630, 0x76d7, 0x66f6, 0x5695, 0x46b4,
-0xb75b, 0xa77a, 0x9719, 0x8738, 0xf7df, 0xe7fe, 0xd79d, 0xc7bc,
-0x48c4, 0x58e5, 0x6886, 0x78a7, 0x0840, 0x1861, 0x2802, 0x3823,
-0xc9cc, 0xd9ed, 0xe98e, 0xf9af, 0x8948, 0x9969, 0xa90a, 0xb92b,
-0x5af5, 0x4ad4, 0x7ab7, 0x6a96, 0x1a71, 0x0a50, 0x3a33, 0x2a12,
-0xdbfd, 0xcbdc, 0xfbbf, 0xeb9e, 0x9b79, 0x8b58, 0xbb3b, 0xab1a,
-0x6ca6, 0x7c87, 0x4ce4, 0x5cc5, 0x2c22, 0x3c03, 0x0c60, 0x1c41,
-0xedae, 0xfd8f, 0xcdec, 0xddcd, 0xad2a, 0xbd0b, 0x8d68, 0x9d49,
-0x7e97, 0x6eb6, 0x5ed5, 0x4ef4, 0x3e13, 0x2e32, 0x1e51, 0x0e70,
-0xff9f, 0xefbe, 0xdfdd, 0xcffc, 0xbf1b, 0xaf3a, 0x9f59, 0x8f78,
-0x9188, 0x81a9, 0xb1ca, 0xa1eb, 0xd10c, 0xc12d, 0xf14e, 0xe16f,
-0x1080, 0x00a1, 0x30c2, 0x20e3, 0x5004, 0x4025, 0x7046, 0x6067,
-0x83b9, 0x9398, 0xa3fb, 0xb3da, 0xc33d, 0xd31c, 0xe37f, 0xf35e,
-0x02b1, 0x1290, 0x22f3, 0x32d2, 0x4235, 0x5214, 0x6277, 0x7256,
-0xb5ea, 0xa5cb, 0x95a8, 0x8589, 0xf56e, 0xe54f, 0xd52c, 0xc50d,
-0x34e2, 0x24c3, 0x14a0, 0x0481, 0x7466, 0x6447, 0x5424, 0x4405,
-0xa7db, 0xb7fa, 0x8799, 0x97b8, 0xe75f, 0xf77e, 0xc71d, 0xd73c,
-0x26d3, 0x36f2, 0x0691, 0x16b0, 0x6657, 0x7676, 0x4615, 0x5634,
-0xd94c, 0xc96d, 0xf90e, 0xe92f, 0x99c8, 0x89e9, 0xb98a, 0xa9ab,
-0x5844, 0x4865, 0x7806, 0x6827, 0x18c0, 0x08e1, 0x3882, 0x28a3,
-0xcb7d, 0xdb5c, 0xeb3f, 0xfb1e, 0x8bf9, 0x9bd8, 0xabbb, 0xbb9a,
-0x4a75, 0x5a54, 0x6a37, 0x7a16, 0x0af1, 0x1ad0, 0x2ab3, 0x3a92,
-0xfd2e, 0xed0f, 0xdd6c, 0xcd4d, 0xbdaa, 0xad8b, 0x9de8, 0x8dc9,
-0x7c26, 0x6c07, 0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0, 0x0cc1,
-0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
-0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
-};
 
 static const dword crc32table[NUM_BYTES] =
 {
@@ -122,126 +79,6 @@ static const dword crc32table[NUM_BYTES] =
 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-static byte chktbl[1024] = 
-{
-0x84, 0x47, 0x51, 0xc1, 0x93, 0x22, 0x21, 0x24, 0x2f, 0x66, 0x60, 0x4d, 0xb0, 0x7c, 0xda,
-0x88, 0x54, 0x15, 0x2b, 0xc6, 0x6c, 0x89, 0xc5, 0x9d, 0x48, 0xee, 0xe6, 0x8a, 0xb5, 0xf4,
-0xcb, 0xfb, 0xf1, 0x0c, 0x2e, 0xa0, 0xd7, 0xc9, 0x1f, 0xd6, 0x06, 0x9a, 0x09, 0x41, 0x54,
-0x67, 0x46, 0xc7, 0x74, 0xe3, 0xc8, 0xb6, 0x5d, 0xa6, 0x36, 0xc4, 0xab, 0x2c, 0x7e, 0x85,
-0xa8, 0xa4, 0xa6, 0x4d, 0x96, 0x19, 0x19, 0x9a, 0xcc, 0xd8, 0xac, 0x39, 0x5e, 0x3c, 0xf2,
-0xf5, 0x5a, 0x72, 0xe5, 0xa9, 0xd1, 0xb3, 0x23, 0x82, 0x6f, 0x29, 0xcb, 0xd1, 0xcc, 0x71,
-0xfb, 0xea, 0x92, 0xeb, 0x1c, 0xca, 0x4c, 0x70, 0xfe, 0x4d, 0xc9, 0x67, 0x43, 0x47, 0x94,
-0xb9, 0x47, 0xbc, 0x3f, 0x01, 0xab, 0x7b, 0xa6, 0xe2, 0x76, 0xef, 0x5a, 0x7a, 0x29, 0x0b,
-0x51, 0x54, 0x67, 0xd8, 0x1c, 0x14, 0x3e, 0x29, 0xec, 0xe9, 0x2d, 0x48, 0x67, 0xff, 0xed,
-0x54, 0x4f, 0x48, 0xc0, 0xaa, 0x61, 0xf7, 0x78, 0x12, 0x03, 0x7a, 0x9e, 0x8b, 0xcf, 0x83,
-0x7b, 0xae, 0xca, 0x7b, 0xd9, 0xe9, 0x53, 0x2a, 0xeb, 0xd2, 0xd8, 0xcd, 0xa3, 0x10, 0x25,
-0x78, 0x5a, 0xb5, 0x23, 0x06, 0x93, 0xb7, 0x84, 0xd2, 0xbd, 0x96, 0x75, 0xa5, 0x5e, 0xcf,
-0x4e, 0xe9, 0x50, 0xa1, 0xe6, 0x9d, 0xb1, 0xe3, 0x85, 0x66, 0x28, 0x4e, 0x43, 0xdc, 0x6e,
-0xbb, 0x33, 0x9e, 0xf3, 0x0d, 0x00, 0xc1, 0xcf, 0x67, 0x34, 0x06, 0x7c, 0x71, 0xe3, 0x63,
-0xb7, 0xb7, 0xdf, 0x92, 0xc4, 0xc2, 0x25, 0x5c, 0xff, 0xc3, 0x6e, 0xfc, 0xaa, 0x1e, 0x2a,
-0x48, 0x11, 0x1c, 0x36, 0x68, 0x78, 0x86, 0x79, 0x30, 0xc3, 0xd6, 0xde, 0xbc, 0x3a, 0x2a,
-0x6d, 0x1e, 0x46, 0xdd, 0xe0, 0x80, 0x1e, 0x44, 0x3b, 0x6f, 0xaf, 0x31, 0xda, 0xa2, 0xbd,
-0x77, 0x06, 0x56, 0xc0, 0xb7, 0x92, 0x4b, 0x37, 0xc0, 0xfc, 0xc2, 0xd5, 0xfb, 0xa8, 0xda,
-0xf5, 0x57, 0xa8, 0x18, 0xc0, 0xdf, 0xe7, 0xaa, 0x2a, 0xe0, 0x7c, 0x6f, 0x77, 0xb1, 0x26,
-0xba, 0xf9, 0x2e, 0x1d, 0x16, 0xcb, 0xb8, 0xa2, 0x44, 0xd5, 0x2f, 0x1a, 0x79, 0x74, 0x87,
-0x4b, 0x00, 0xc9, 0x4a, 0x3a, 0x65, 0x8f, 0xe6, 0x5d, 0xe5, 0x0a, 0x77, 0xd8, 0x1a, 0x14,
-0x41, 0x75, 0xb1, 0xe2, 0x50, 0x2c, 0x93, 0x38, 0x2b, 0x6d, 0xf3, 0xf6, 0xdb, 0x1f, 0xcd,
-0xff, 0x14, 0x70, 0xe7, 0x16, 0xe8, 0x3d, 0xf0, 0xe3, 0xbc, 0x5e, 0xb6, 0x3f, 0xcc, 0x81,
-0x24, 0x67, 0xf3, 0x97, 0x3b, 0xfe, 0x3a, 0x96, 0x85, 0xdf, 0xe4, 0x6e, 0x3c, 0x85, 0x05,
-0x0e, 0xa3, 0x2b, 0x07, 0xc8, 0xbf, 0xe5, 0x13, 0x82, 0x62, 0x08, 0x61, 0x69, 0x4b, 0x47,
-0x62, 0x73, 0x44, 0x64, 0x8e, 0xe2, 0x91, 0xa6, 0x9a, 0xb7, 0xe9, 0x04, 0xb6, 0x54, 0x0c,
-0xc5, 0xa9, 0x47, 0xa6, 0xc9, 0x08, 0xfe, 0x4e, 0xa6, 0xcc, 0x8a, 0x5b, 0x90, 0x6f, 0x2b,
-0x3f, 0xb6, 0x0a, 0x96, 0xc0, 0x78, 0x58, 0x3c, 0x76, 0x6d, 0x94, 0x1a, 0xe4, 0x4e, 0xb8,
-0x38, 0xbb, 0xf5, 0xeb, 0x29, 0xd8, 0xb0, 0xf3, 0x15, 0x1e, 0x99, 0x96, 0x3c, 0x5d, 0x63,
-0xd5, 0xb1, 0xad, 0x52, 0xb8, 0x55, 0x70, 0x75, 0x3e, 0x1a, 0xd5, 0xda, 0xf6, 0x7a, 0x48,
-0x7d, 0x44, 0x41, 0xf9, 0x11, 0xce, 0xd7, 0xca, 0xa5, 0x3d, 0x7a, 0x79, 0x7e, 0x7d, 0x25,
-0x1b, 0x77, 0xbc, 0xf7, 0xc7, 0x0f, 0x84, 0x95, 0x10, 0x92, 0x67, 0x15, 0x11, 0x5a, 0x5e,
-0x41, 0x66, 0x0f, 0x38, 0x03, 0xb2, 0xf1, 0x5d, 0xf8, 0xab, 0xc0, 0x02, 0x76, 0x84, 0x28,
-0xf4, 0x9d, 0x56, 0x46, 0x60, 0x20, 0xdb, 0x68, 0xa7, 0xbb, 0xee, 0xac, 0x15, 0x01, 0x2f,
-0x20, 0x09, 0xdb, 0xc0, 0x16, 0xa1, 0x89, 0xf9, 0x94, 0x59, 0x00, 0xc1, 0x76, 0xbf, 0xc1,
-0x4d, 0x5d, 0x2d, 0xa9, 0x85, 0x2c, 0xd6, 0xd3, 0x14, 0xcc, 0x02, 0xc3, 0xc2, 0xfa, 0x6b,
-0xb7, 0xa6, 0xef, 0xdd, 0x12, 0x26, 0xa4, 0x63, 0xe3, 0x62, 0xbd, 0x56, 0x8a, 0x52, 0x2b,
-0xb9, 0xdf, 0x09, 0xbc, 0x0e, 0x97, 0xa9, 0xb0, 0x82, 0x46, 0x08, 0xd5, 0x1a, 0x8e, 0x1b,
-0xa7, 0x90, 0x98, 0xb9, 0xbb, 0x3c, 0x17, 0x9a, 0xf2, 0x82, 0xba, 0x64, 0x0a, 0x7f, 0xca,
-0x5a, 0x8c, 0x7c, 0xd3, 0x79, 0x09, 0x5b, 0x26, 0xbb, 0xbd, 0x25, 0xdf, 0x3d, 0x6f, 0x9a,
-0x8f, 0xee, 0x21, 0x66, 0xb0, 0x8d, 0x84, 0x4c, 0x91, 0x45, 0xd4, 0x77, 0x4f, 0xb3, 0x8c,
-0xbc, 0xa8, 0x99, 0xaa, 0x19, 0x53, 0x7c, 0x02, 0x87, 0xbb, 0x0b, 0x7c, 0x1a, 0x2d, 0xdf,
-0x48, 0x44, 0x06, 0xd6, 0x7d, 0x0c, 0x2d, 0x35, 0x76, 0xae, 0xc4, 0x5f, 0x71, 0x85, 0x97,
-0xc4, 0x3d, 0xef, 0x52, 0xbe, 0x00, 0xe4, 0xcd, 0x49, 0xd1, 0xd1, 0x1c, 0x3c, 0xd0, 0x1c,
-0x42, 0xaf, 0xd4, 0xbd, 0x58, 0x34, 0x07, 0x32, 0xee, 0xb9, 0xb5, 0xea, 0xff, 0xd7, 0x8c,
-0x0d, 0x2e, 0x2f, 0xaf, 0x87, 0xbb, 0xe6, 0x52, 0x71, 0x22, 0xf5, 0x25, 0x17, 0xa1, 0x82,
-0x04, 0xc2, 0x4a, 0xbd, 0x57, 0xc6, 0xab, 0xc8, 0x35, 0x0c, 0x3c, 0xd9, 0xc2, 0x43, 0xdb,
-0x27, 0x92, 0xcf, 0xb8, 0x25, 0x60, 0xfa, 0x21, 0x3b, 0x04, 0x52, 0xc8, 0x96, 0xba, 0x74,
-0xe3, 0x67, 0x3e, 0x8e, 0x8d, 0x61, 0x90, 0x92, 0x59, 0xb6, 0x1a, 0x1c, 0x5e, 0x21, 0xc1,
-0x65, 0xe5, 0xa6, 0x34, 0x05, 0x6f, 0xc5, 0x60, 0xb1, 0x83, 0xc1, 0xd5, 0xd5, 0xed, 0xd9,
-0xc7, 0x11, 0x7b, 0x49, 0x7a, 0xf9, 0xf9, 0x84, 0x47, 0x9b, 0xe2, 0xa5, 0x82, 0xe0, 0xc2,
-0x88, 0xd0, 0xb2, 0x58, 0x88, 0x7f, 0x45, 0x09, 0x67, 0x74, 0x61, 0xbf, 0xe6, 0x40, 0xe2,
-0x9d, 0xc2, 0x47, 0x05, 0x89, 0xed, 0xcb, 0xbb, 0xb7, 0x27, 0xe7, 0xdc, 0x7a, 0xfd, 0xbf,
-0xa8, 0xd0, 0xaa, 0x10, 0x39, 0x3c, 0x20, 0xf0, 0xd3, 0x6e, 0xb1, 0x72, 0xf8, 0xe6, 0x0f,
-0xef, 0x37, 0xe5, 0x09, 0x33, 0x5a, 0x83, 0x43, 0x80, 0x4f, 0x65, 0x2f, 0x7c, 0x8c, 0x6a,
-0xa0, 0x82, 0x0c, 0xd4, 0xd4, 0xfa, 0x81, 0x60, 0x3d, 0xdf, 0x06, 0xf1, 0x5f, 0x08, 0x0d,
-0x6d, 0x43, 0xf2, 0xe3, 0x11, 0x7d, 0x80, 0x32, 0xc5, 0xfb, 0xc5, 0xd9, 0x27, 0xec, 0xc6,
-0x4e, 0x65, 0x27, 0x76, 0x87, 0xa6, 0xee, 0xee, 0xd7, 0x8b, 0xd1, 0xa0, 0x5c, 0xb0, 0x42,
-0x13, 0x0e, 0x95, 0x4a, 0xf2, 0x06, 0xc6, 0x43, 0x33, 0xf4, 0xc7, 0xf8, 0xe7, 0x1f, 0xdd,
-0xe4, 0x46, 0x4a, 0x70, 0x39, 0x6c, 0xd0, 0xed, 0xca, 0xbe, 0x60, 0x3b, 0xd1, 0x7b, 0x57,
-0x48, 0xe5, 0x3a, 0x79, 0xc1, 0x69, 0x33, 0x53, 0x1b, 0x80, 0xb8, 0x91, 0x7d, 0xb4, 0xf6,
-0x17, 0x1a, 0x1d, 0x5a, 0x32, 0xd6, 0xcc, 0x71, 0x29, 0x3f, 0x28, 0xbb, 0xf3, 0x5e, 0x71,
-0xb8, 0x43, 0xaf, 0xf8, 0xb9, 0x64, 0xef, 0xc4, 0xa5, 0x6c, 0x08, 0x53, 0xc7, 0x00, 0x10,
-0x39, 0x4f, 0xdd, 0xe4, 0xb6, 0x19, 0x27, 0xfb, 0xb8, 0xf5, 0x32, 0x73, 0xe5, 0xcb, 0x32
-};
-
-void CRC_Init( word *crcvalue )
-{
-	*crcvalue = CRC_INIT_VALUE;
-}
-
-void CRC_ProcessByte( word *crcvalue, byte data )
-{
-	*crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
-}
-
-word CRC_Block( byte *start, int count )
-{
-	word	crc;
-
-	CRC_Init (&crc);
-	while(count--) CRC_ProcessByte( &crc, *start++ );
-
-	return crc;
-}
-
-/*
-====================
-CRC_BlockSequence
-
-For proxy protecting
-====================
-*/
-byte CRC_BlockSequence(byte *base, int length, int sequence)
-{
-	int	n, x;
-	word	crc;
-	byte	*p, chkb[60 + 4];
-
-	if (sequence < 0) sequence = abs(sequence);
-	p = chktbl + (sequence % (sizeof(chktbl) - 4));
-
-	if( length > 60 ) length = 60;
-	Mem_Copy( chkb, base, length );
-
-	chkb[length] = p[0];
-	chkb[length + 1] = p[1];
-	chkb[length + 2] = p[2];
-	chkb[length + 3] = p[3];
-	length += 4;
-
-	crc = CRC_Block(chkb, length);
-	for (x = 0, n = 0; n < length; n++) x += chkb[n];
-	crc = (crc ^ x) & 0xff;
-
-	return crc;
-}
-
 void CRC32_Init( dword *pulCRC )
 {
 	*pulCRC = CRC32_INIT_VALUE;
@@ -274,7 +111,6 @@ JustAfew:
 	case 6: ulCrc  = crc32table[*pb++ ^ (byte)ulCrc] ^ (ulCrc >> 8);
 	case 5: ulCrc  = crc32table[*pb++ ^ (byte)ulCrc] ^ (ulCrc >> 8);
 	case 4:
-		
 		ulCrc ^= *(dword *)pb;	// warning, this only works on little-endian.
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
 		ulCrc  = crc32table[(byte)ulCrc] ^ (ulCrc >> 8);
@@ -325,240 +161,350 @@ JustAfew:
 }
 
 /*
-=============================================================================
-MD4C.C - RSA Data Security, Inc., MD4 message-digest algorithm
-Copyright (C) 1990-2, RSA Data Security, Inc. All rights reserved.
-=============================================================================
+====================
+CRC32_BlockSequence
+
+For proxy protecting
+====================
 */
-#pragma warning(disable : 4711) // selected for automatic inline expansion
-
-typedef byte *POINTER;
-typedef unsigned short int UINT2;
-typedef unsigned long int UINT4;
-
-// MD4 context
-typedef struct
+byte CRC32_BlockSequence( byte *base, int length, int sequence )
 {
-	UINT4	state[4];		// state (ABCD)
-	UINT4	count[2];		// number of bits, modulo 2^64 (lsb first)
-	byte	buffer[64];	// input buffer
-} MD4_CTX;
+	dword	CRC;
+	char	*ptr;
+	char	buffer[64];
 
-void MD4Init( MD4_CTX * );
-void MD4Update( MD4_CTX *, const byte *, uint);
-void MD4Final (byte [16], MD4_CTX *);
+	if( sequence < 0 ) sequence = abs( sequence );
 
-#define S11	3
-#define S12	7
-#define S13	11
-#define S14	19
-#define S21	3
-#define S22	5
-#define S23	9
-#define S24	13
-#define S31	3
-#define S32	9
-#define S33	11
-#define S34	15
+	ptr = (char *)crc32table + (sequence % 0x3FC);
 
-static void MD4Transform (UINT4 [4], const byte [64]);
-static void Encode (byte*, UINT4*, uint);
-static void Decode (UINT4*, const byte*, uint);
+	if( length > 60 ) length = 60;
+	Mem_Copy( buffer, base, length );
 
-static byte PADDING[64] = 
-{
-0x80, 0, 0, 0, 0, 0, 0, 0,
-0, 0, 0, 0, 0, 0, 0, 0, 0,
-0, 0, 0, 0, 0, 0, 0, 0, 0,
-0, 0, 0, 0, 0, 0, 0, 0, 0,
-0, 0, 0, 0, 0, 0, 0, 0, 0,
-0, 0, 0, 0, 0, 0, 0, 0, 0,
-0, 0, 0, 0, 0, 0, 0, 0, 0,
-0, 0
-};
+	buffer[length+0] = ptr[0];
+	buffer[length+1] = ptr[1];
+	buffer[length+2] = ptr[2];
+	buffer[length+3] = ptr[3];
 
-// F, G and H are basic MD4 functions.
-#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
-#define G(x, y, z) (((x) & (y)) | ((x) & (z)) | ((y) & (z)))
-#define H(x, y, z) ((x) ^ (y) ^ (z))
+	length += 4;
 
-// ROTATE_LEFT rotates x left n bits.
-#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
+	CRC32_Init( &CRC );
+	CRC32_ProcessBuffer( &CRC, buffer, length );
+	CRC32_Final( &CRC );
 
-// FF, GG and HH are transformations for rounds 1, 2 and 3
-// Rotation is separate from addition to prevent recomputation
-#define FF(a, b, c, d, x, s) {(a) += F ((b), (c), (d)) + (x); (a) = ROTATE_LEFT ((a), (s));}
-#define GG(a, b, c, d, x, s) {(a) += G ((b), (c), (d)) + (x) + (UINT4)0x5a827999; (a) = ROTATE_LEFT ((a), (s));}
-#define HH(a, b, c, d, x, s) {(a) += H ((b), (c), (d)) + (x) + (UINT4)0x6ed9eba1; (a) = ROTATE_LEFT ((a), (s));}
-
-void MD4Init (MD4_CTX *context)
-{
-	context->count[0] = context->count[1] = 0;
-
-	// load magic initialization constants
-	context->state[0] = 0x67452301;
-	context->state[1] = 0xefcdab89;
-	context->state[2] = 0x98badcfe;
-	context->state[3] = 0x10325476;
+	return (byte)CRC;
 }
 
-void MD4Update (MD4_CTX *context, const byte *input, uint inputLen)
+qboolean CRC32_File( dword *crcvalue, const char *filename )
 {
-	uint i, index, partLen;
+	file_t	*f;
+	char	buffer[1024];
+	int	num_bytes;
 
-	index = (uint)((context->count[0] >> 3) & 0x3F);
+	f = FS_Open( filename, "rb", false );
+	if( !f ) return false;
 
-	if ((context->count[0] += ((UINT4)inputLen << 3))< ((UINT4)inputLen << 3))
-		context->count[1]++;
+	ASSERT( crcvalue != NULL );
+	CRC32_Init( crcvalue );
 
-	context->count[1] += ((UINT4)inputLen >> 29);
-	partLen = 64 - index;
-
-	if (inputLen >= partLen)
+	while( 1 )
 	{
- 		Mem_Copy((POINTER)&context->buffer[index], (POINTER)input, partLen);
- 		MD4Transform (context->state, context->buffer);
+		num_bytes = FS_Read( f, buffer, sizeof( buffer ));
 
- 		for (i = partLen; i + 63 < inputLen; i += 64)
- 			MD4Transform (context->state, &input[i]);
-  		index = 0;
+		if( num_bytes > 0 )
+			CRC32_ProcessBuffer( crcvalue, buffer, num_bytes );
+
+		if( FS_Eof( f )) break;
 	}
-	else i = 0;
-	Mem_Copy ((POINTER)&context->buffer[index], (POINTER)&input[i], inputLen-i);
+
+	FS_Close( f );
+	return true;
 }
 
-void MD4Final( byte digest[16], MD4_CTX *context )
+qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 {
-	byte	bits[8];
-	uint	index, padLen;
+	file_t	*f;
+	dheader_t	header;
+	char	buffer[1024];
+	int	i, num_bytes;
+	int	lumpofs, lumplen;
+	qboolean	blue_shift = false;
 
-	Encode (bits, context->count, 8);
-	index = (unsigned int)((context->count[0] >> 3) & 0x3f);
-	padLen = (index < 56) ? (56 - index) : (120 - index);
-	MD4Update (context, PADDING, padLen);
-	MD4Update (context, bits, 8);
-	Encode (digest, context->state, 16);
-	Mem_Set((POINTER)context, 0, sizeof (*context));
-}
+	f = FS_Open( filename, "rb", false );
+	if( !f ) return false;
 
-static void MD4Transform (UINT4 state[4], const byte block[64])
-{
-	UINT4	a = state[0], b = state[1], c = state[2], d = state[3], x[16];
+	num_bytes = FS_Read( f, &header, sizeof( header ));
 
-	Decode(x, block, 64);
-
-	// Round 1
-	FF (a, b, c, d, x[ 0], S11); 			/* 1 */
-	FF (d, a, b, c, x[ 1], S12); 			/* 2 */
-	FF (c, d, a, b, x[ 2], S13); 			/* 3 */
-	FF (b, c, d, a, x[ 3], S14); 			/* 4 */
-	FF (a, b, c, d, x[ 4], S11); 			/* 5 */
-	FF (d, a, b, c, x[ 5], S12); 			/* 6 */
-	FF (c, d, a, b, x[ 6], S13); 			/* 7 */
-	FF (b, c, d, a, x[ 7], S14); 			/* 8 */
-	FF (a, b, c, d, x[ 8], S11); 			/* 9 */
-	FF (d, a, b, c, x[ 9], S12); 			/* 10 */
-	FF (c, d, a, b, x[10], S13); 			/* 11 */
-	FF (b, c, d, a, x[11], S14); 			/* 12 */
-	FF (a, b, c, d, x[12], S11); 			/* 13 */
-	FF (d, a, b, c, x[13], S12); 			/* 14 */
-	FF (c, d, a, b, x[14], S13); 			/* 15 */
-	FF (b, c, d, a, x[15], S14); 			/* 16 */
-
-	// Round 2
-	GG (a, b, c, d, x[ 0], S21); 			/* 17 */
-	GG (d, a, b, c, x[ 4], S22); 			/* 18 */
-	GG (c, d, a, b, x[ 8], S23); 			/* 19 */
-	GG (b, c, d, a, x[12], S24); 			/* 20 */
-	GG (a, b, c, d, x[ 1], S21); 			/* 21 */
-	GG (d, a, b, c, x[ 5], S22); 			/* 22 */
-	GG (c, d, a, b, x[ 9], S23); 			/* 23 */
-	GG (b, c, d, a, x[13], S24); 			/* 24 */
-	GG (a, b, c, d, x[ 2], S21); 			/* 25 */
-	GG (d, a, b, c, x[ 6], S22); 			/* 26 */
-	GG (c, d, a, b, x[10], S23); 			/* 27 */
-	GG (b, c, d, a, x[14], S24); 			/* 28 */
-	GG (a, b, c, d, x[ 3], S21); 			/* 29 */
-	GG (d, a, b, c, x[ 7], S22); 			/* 30 */
-	GG (c, d, a, b, x[11], S23); 			/* 31 */
-	GG (b, c, d, a, x[15], S24); 			/* 32 */
-
-	// Round 3
-	HH (a, b, c, d, x[ 0], S31);			/* 33 */
-	HH (d, a, b, c, x[ 8], S32); 			/* 34 */
-	HH (c, d, a, b, x[ 4], S33); 			/* 35 */
-	HH (b, c, d, a, x[12], S34); 			/* 36 */
-	HH (a, b, c, d, x[ 2], S31); 			/* 37 */
-	HH (d, a, b, c, x[10], S32); 			/* 38 */
-	HH (c, d, a, b, x[ 6], S33); 			/* 39 */
-	HH (b, c, d, a, x[14], S34); 			/* 40 */
-	HH (a, b, c, d, x[ 1], S31); 			/* 41 */
-	HH (d, a, b, c, x[ 9], S32); 			/* 42 */
-	HH (c, d, a, b, x[ 5], S33); 			/* 43 */
-	HH (b, c, d, a, x[13], S34); 			/* 44 */
-	HH (a, b, c, d, x[ 3], S31); 			/* 45 */
-	HH (d, a, b, c, x[11], S32); 			/* 46 */
-	HH (c, d, a, b, x[ 7], S33); 			/* 47 */
-	HH (b, c, d, a, x[15], S34);			/* 48 */
-
-	state[0] += a;
-	state[1] += b;
-	state[2] += c;
-	state[3] += d;
-	Mem_Set((POINTER)x, 0, sizeof (x));
-}
-
-static void Encode(byte *output, UINT4 *input, uint len)
-{
-	uint	i, j;
-
-	for (i = 0, j = 0; j < len; i++, j += 4)
+	// corrupted map ?
+	if( num_bytes != sizeof( header ))
 	{
- 		output[j+0] = (byte)(input[i] & 0xff);
- 		output[j+1] = (byte)((input[i]>>8)  & 0xff);
- 		output[j+2] = (byte)((input[i]>>16) & 0xff);
- 		output[j+3] = (byte)((input[i]>>24) & 0xff);
+		FS_Close( f );
+		return false;
 	}
-}
 
-static void Decode (UINT4 *output, const byte *input, uint len)
-{
-	uint i, j;
+	i = LittleLong( header.version );
 
-	for (i = 0, j = 0; j < len; i++, j += 4)
+	// invalid version ?
+	if( i != Q1BSP_VERSION && i != HLBSP_VERSION )
 	{
- 		output[i] = ((UINT4)input[j]) | (((UINT4)input[j+1]) << 8) | (((UINT4)input[j+2]) << 16) | (((UINT4)input[j+3]) << 24);
+		FS_Close( f );
+		return false;
 	}
+
+	ASSERT( crcvalue != NULL );
+	CRC32_Init( crcvalue );
+
+	// check for Blue-Shift maps
+	if( LittleLong( header.lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+		blue_shift = true;
+
+	for( i = 0; i < HEADER_LUMPS; i++ )
+	{
+		if( blue_shift && i == LUMP_PLANES ) continue;
+		else if( i == LUMP_ENTITIES ) continue;
+
+		lumpofs = LittleLong( header.lumps[i].fileofs );
+		lumplen = LittleLong( header.lumps[i].filelen );
+		FS_Seek( f, lumpofs, SEEK_SET );
+
+		while( lumplen > 0 )
+		{
+			if( lumplen >= sizeof( buffer ))
+				num_bytes = FS_Read( f, buffer, sizeof( buffer ));
+			else num_bytes = FS_Read( f, buffer, lumplen );
+
+			if( num_bytes > 0 )
+			{
+				lumplen -= num_bytes;
+				CRC32_ProcessBuffer( crcvalue, buffer, num_bytes );
+			}
+
+			// file unexpected end ?
+			if( FS_Eof( f )) break;
+		}
+	}
+
+	FS_Close( f );
+	return 1;
 }
 
-//===================================================================
+void MD5Transform( uint buf[4], const uint in[16] );
 
-uint Com_BlockChecksum (void *buffer, int length)
+/*
+==================
+MD5Init
+
+Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious initialization constants.
+==================
+*/
+void MD5Init( MD5Context_t *ctx )
 {
-	int		digest[4];
-	uint		val;
-	MD4_CTX		ctx;
+	ctx->buf[0] = 0x67452301;
+	ctx->buf[1] = 0xefcdab89;
+	ctx->buf[2] = 0x98badcfe;
+	ctx->buf[3] = 0x10325476;
 
-	MD4Init(&ctx);
-	MD4Update(&ctx, (byte *)buffer, length);
-	MD4Final((byte *)digest, &ctx);
-	val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
-
-	return val;
+	ctx->bits[0] = 0;
+	ctx->bits[1] = 0;
 }
 
-uint Com_BlockChecksumKey(void *buffer, int length, int key)
+/*
+===================
+MD5Update
+
+Update context to reflect the concatenation of another buffer full of bytes.
+===================
+*/
+void MD5Update( MD5Context_t *ctx, const byte *buf, uint len )
 {
-	int		digest[4];
-	uint		val;
-	MD4_CTX		ctx;
+	uint	t;
 
-	MD4Init(&ctx);
-	MD4Update(&ctx, (byte *)&key, 4);
-	MD4Update(&ctx, (byte *)buffer, length);
-	MD4Final((byte *)digest, &ctx);
-	
-	val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
+	// update bitcount
+	t = ctx->bits[0];
 
-	return val;
+	if(( ctx->bits[0] = t + ((uint) len << 3 )) < t )
+		ctx->bits[1]++;	// carry from low to high
+	ctx->bits[1] += len >> 29;
+
+	t = (t >> 3) & 0x3f;	// bytes already in shsInfo->data
+
+	// handle any leading odd-sized chunks
+	if( t )
+	{
+		byte	*p = (byte *)ctx->in + t;
+
+		t = 64 - t;
+		if( len < t )
+		{
+			Mem_Copy( p, buf, len );
+			return;
+		}
+
+		Mem_Copy( p, buf, t );
+		MD5Transform( ctx->buf, (uint *)ctx->in );
+		buf += t;
+		len -= t;
+	}
+
+	// process data in 64-byte chunks
+	while( len >= 64 )
+	{
+		Mem_Copy( ctx->in, buf, 64 );
+		MD5Transform( ctx->buf, (uint *)ctx->in );
+		buf += 64;
+		len -= 64;
+	}
+
+	// handle any remaining bytes of data.
+	Mem_Copy( ctx->in, buf, len );
+}
+
+/*
+===============
+MD5Final
+
+Final wrapup - pad to 64-byte boundary with the bit pattern 
+1 0* (64-bit count of bits processed, MSB-first)
+===============
+*/
+void MD5Final( byte digest[16], MD5Context_t *ctx )
+{
+	uint	count;
+	byte	*p;
+
+	// compute number of bytes mod 64
+	count = ( ctx->bits[0] >> 3 ) & 0x3F;
+
+	// set the first char of padding to 0x80.
+	// this is safe since there is always at least one byte free
+	p = ctx->in + count;
+	*p++ = 0x80;
+
+	// bytes of padding needed to make 64 bytes
+	count = 64 - 1 - count;
+
+	// pad out to 56 mod 64
+	if( count < 8 )
+	{
+
+		// two lots of padding: pad the first block to 64 bytes
+		Mem_Set( p, 0, count );
+		MD5Transform( ctx->buf, (uint *)ctx->in );
+
+		// now fill the next block with 56 bytes
+		Mem_Set( ctx->in, 0, 56 );
+	}
+	else
+	{
+		// pad block to 56 bytes
+		Mem_Set( p, 0, count - 8 );
+	}
+
+	// append length in bits and transform
+	((uint *)ctx->in)[14] = ctx->bits[0];
+	((uint *)ctx->in)[15] = ctx->bits[1];
+
+	MD5Transform( ctx->buf, (uint *)ctx->in );
+	Mem_Copy( digest, ctx->buf, 16 );
+	Mem_Set( ctx, 0, sizeof( ctx ));	// in case it's sensitive
+}
+
+// The four core functions
+#define F1( x, y, z ) ( z ^ ( x & ( y ^ z )))
+#define F2( x, y, z ) F1( z, x, y )
+#define F3( x, y, z ) ( x ^ y ^ z )
+#define F4( x, y, z ) ( y ^ ( x | ~z ))
+
+// this is the central step in the MD5 algorithm.
+#define MD5STEP( f, w, x, y, z, data, s )	( w += f( x, y, z ) + data,  w = w << s|w >> (32 - s), w += x )
+
+/*
+=================
+MD5Transform
+
+The core of the MD5 algorithm, this alters an existing MD5 hash to
+reflect the addition of 16 longwords of new data.  MD5Update blocks
+the data and converts bytes into longwords for this routine.
+=================
+*/
+void MD5Transform( uint buf[4], const uint in[16] )
+{
+	register uint	a, b, c, d;
+
+	a = buf[0];
+	b = buf[1];
+	c = buf[2];
+	d = buf[3];
+
+	MD5STEP( F1, a, b, c, d, in[0] + 0xd76aa478, 7 );
+	MD5STEP( F1, d, a, b, c, in[1] + 0xe8c7b756, 12 );
+	MD5STEP( F1, c, d, a, b, in[2] + 0x242070db, 17 );
+	MD5STEP( F1, b, c, d, a, in[3] + 0xc1bdceee, 22 );
+	MD5STEP( F1, a, b, c, d, in[4] + 0xf57c0faf, 7 );
+	MD5STEP( F1, d, a, b, c, in[5] + 0x4787c62a, 12 );
+	MD5STEP( F1, c, d, a, b, in[6] + 0xa8304613, 17 );
+	MD5STEP( F1, b, c, d, a, in[7] + 0xfd469501, 22 );
+	MD5STEP( F1, a, b, c, d, in[8] + 0x698098d8, 7 );
+	MD5STEP( F1, d, a, b, c, in[9] + 0x8b44f7af, 12 );
+	MD5STEP( F1, c, d, a, b, in[10] + 0xffff5bb1, 17 );
+	MD5STEP( F1, b, c, d, a, in[11] + 0x895cd7be, 22 );
+	MD5STEP( F1, a, b, c, d, in[12] + 0x6b901122, 7 );
+	MD5STEP( F1, d, a, b, c, in[13] + 0xfd987193, 12 );
+	MD5STEP( F1, c, d, a, b, in[14] + 0xa679438e, 17 );
+	MD5STEP( F1, b, c, d, a, in[15] + 0x49b40821, 22 );
+
+	MD5STEP( F2, a, b, c, d, in[1] + 0xf61e2562, 5 );
+	MD5STEP( F2, d, a, b, c, in[6] + 0xc040b340, 9 );
+	MD5STEP( F2, c, d, a, b, in[11] + 0x265e5a51, 14 );
+	MD5STEP( F2, b, c, d, a, in[0] + 0xe9b6c7aa, 20 );
+	MD5STEP( F2, a, b, c, d, in[5] + 0xd62f105d, 5 );
+	MD5STEP( F2, d, a, b, c, in[10] + 0x02441453, 9 );
+	MD5STEP( F2, c, d, a, b, in[15] + 0xd8a1e681, 14 );
+	MD5STEP( F2, b, c, d, a, in[4] + 0xe7d3fbc8, 20 );
+	MD5STEP( F2, a, b, c, d, in[9] + 0x21e1cde6, 5 );
+	MD5STEP( F2, d, a, b, c, in[14] + 0xc33707d6, 9 );
+	MD5STEP( F2, c, d, a, b, in[3] + 0xf4d50d87, 14 );
+	MD5STEP( F2, b, c, d, a, in[8] + 0x455a14ed, 20 );
+	MD5STEP( F2, a, b, c, d, in[13] + 0xa9e3e905, 5 );
+	MD5STEP( F2, d, a, b, c, in[2] + 0xfcefa3f8, 9 );
+	MD5STEP( F2, c, d, a, b, in[7] + 0x676f02d9, 14 );
+	MD5STEP( F2, b, c, d, a, in[12] + 0x8d2a4c8a, 20 );
+
+	MD5STEP( F3, a, b, c, d, in[5] + 0xfffa3942, 4 );
+	MD5STEP( F3, d, a, b, c, in[8] + 0x8771f681, 11 );
+	MD5STEP( F3, c, d, a, b, in[11] + 0x6d9d6122, 16 );
+	MD5STEP( F3, b, c, d, a, in[14] + 0xfde5380c, 23 );
+	MD5STEP( F3, a, b, c, d, in[1] + 0xa4beea44, 4 );
+	MD5STEP( F3, d, a, b, c, in[4] + 0x4bdecfa9, 11 );
+	MD5STEP( F3, c, d, a, b, in[7] + 0xf6bb4b60, 16 );
+	MD5STEP( F3, b, c, d, a, in[10] + 0xbebfbc70, 23 );
+	MD5STEP( F3, a, b, c, d, in[13] + 0x289b7ec6, 4 );
+	MD5STEP( F3, d, a, b, c, in[0] + 0xeaa127fa, 11 );
+	MD5STEP( F3, c, d, a, b, in[3] + 0xd4ef3085, 16 );
+	MD5STEP( F3, b, c, d, a, in[6] + 0x04881d05, 23 );
+	MD5STEP( F3, a, b, c, d, in[9] + 0xd9d4d039, 4 );
+	MD5STEP( F3, d, a, b, c, in[12] + 0xe6db99e5, 11 );
+	MD5STEP( F3, c, d, a, b, in[15] + 0x1fa27cf8, 16 );
+	MD5STEP( F3, b, c, d, a, in[2] + 0xc4ac5665, 23 );
+
+	MD5STEP( F4, a, b, c, d, in[0] + 0xf4292244, 6 );
+	MD5STEP( F4, d, a, b, c, in[7] + 0x432aff97, 10 );
+	MD5STEP( F4, c, d, a, b, in[14] + 0xab9423a7, 15 );
+	MD5STEP( F4, b, c, d, a, in[5] + 0xfc93a039, 21 );
+	MD5STEP( F4, a, b, c, d, in[12] + 0x655b59c3, 6 );
+	MD5STEP( F4, d, a, b, c, in[3] + 0x8f0ccc92, 10 );
+	MD5STEP( F4, c, d, a, b, in[10] + 0xffeff47d, 15 );
+	MD5STEP( F4, b, c, d, a, in[1] + 0x85845dd1, 21 );
+	MD5STEP( F4, a, b, c, d, in[8] + 0x6fa87e4f, 6 );
+	MD5STEP( F4, d, a, b, c, in[15] + 0xfe2ce6e0, 10 );
+	MD5STEP( F4, c, d, a, b, in[6] + 0xa3014314, 15 );
+	MD5STEP( F4, b, c, d, a, in[13] + 0x4e0811a1, 21 );
+	MD5STEP( F4, a, b, c, d, in[4] + 0xf7537e82, 6 );
+	MD5STEP( F4, d, a, b, c, in[11] + 0xbd3af235, 10 );
+	MD5STEP( F4, c, d, a, b, in[2] + 0x2ad7d2bb, 15 );
+	MD5STEP( F4, b, c, d, a, in[9] + 0xeb86d391, 21 );
+
+	buf[0] += a;
+	buf[1] += b;
+	buf[2] += c;
+	buf[3] += d;
 }
