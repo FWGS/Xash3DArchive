@@ -5301,8 +5301,8 @@ _inline void DSP_ProcessStereoToStereo( dsp_t *pdsp, portable_samplepair_t *pbfr
 
 void DSP_ClearState( void )
 {
-	Cvar_SetValue( "dsp_room", 0.0f );
-	Cvar_SetValue( "room_type", 0.0f );
+	Cvar_SetFloat( "dsp_room", 0.0f );
+	Cvar_SetFloat( "room_type", 0.0f );
 
 	CheckNewDspPresets();
 
@@ -5429,7 +5429,7 @@ void CheckNewDspPresets( void )
 	{
 		// force dsp_room = room_type
 		ipset_room_typeprev = iroomtype;
-		Cvar_SetValue( "dsp_room", iroomtype );
+		Cvar_SetFloat( "dsp_room", iroomtype );
 	}
 
 	if( iroom != ipset_room_prev )
@@ -5438,7 +5438,7 @@ void CheckNewDspPresets( void )
 		ipset_room_prev = iroom;
 
 		// force room_type = dsp_room
-		Cvar_SetValue( "room_type", iroom );
+		Cvar_SetFloat( "room_type", iroom );
 		ipset_room_typeprev = iroom;
 	}
 }

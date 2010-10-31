@@ -465,8 +465,8 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			style = GetWindowLong( hWnd, GWL_STYLE );
 			AdjustWindowRect( &rect, style, FALSE );
 
-			Cvar_SetValue( "r_xpos", xPos + rect.left );
-			Cvar_SetValue( "r_ypos", yPos + rect.top );
+			Cvar_SetFloat( "r_xpos", xPos + rect.left );
+			Cvar_SetFloat( "r_ypos", yPos + rect.top );
 			scr_xpos->modified = false;
 			scr_ypos->modified = false;
 			GetWindowRect( host.hWnd, &real_rect );
@@ -497,7 +497,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		if( wParam == VK_RETURN )
 		{
 			// alt+enter fullscreen switch
-			Cvar_SetValue( "fullscreen", !Cvar_VariableValue( "fullscreen" ));
+			Cvar_SetFloat( "fullscreen", !Cvar_VariableValue( "fullscreen" ));
 			Cbuf_AddText( "vid_restart\n" );
 			return 0;
 		}

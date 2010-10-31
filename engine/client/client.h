@@ -14,6 +14,7 @@
 #include "cm_local.h"
 #include "pm_defs.h"
 #include "pm_movevars.h"
+#include "screenfade.h"
 #include "protocol.h"
 #include "netchan.h"
 #include "world.h"
@@ -76,6 +77,8 @@ typedef struct
 	int		last_incoming_sequence;
 
 	qboolean		force_send_usercmd;
+
+	uint		checksum;			// for catching cheater maps
 
 	frame_t		frame;			// received from server
 	int		surpressCount;		// number of messages rate supressed
@@ -232,6 +235,19 @@ typedef struct
 
 typedef struct
 {
+	float		time;
+	float		duration;
+	float		amplitude;
+	float		frequency;
+	float		next_shake;
+	vec3_t		offset;
+	float		angle;
+	vec3_t		applied_offset;
+	float		applied_angle;
+} screen_shake_t;
+
+typedef struct
+{
 	void		*hInstance;		// pointer to client.dll
 	HUD_FUNCTIONS	dllFuncs;			// dll exported funcs
 	byte		*mempool;			// client edicts pool
@@ -259,6 +275,8 @@ typedef struct
 	user_event_t	*events[MAX_EVENTS];
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
+	screenfade_t	fade;			// screen fade
+	screen_shake_t	shake;			// screen shake
 	center_print_t	centerPrint;		// centerprint variables
 	SCREENINFO	scrInfo;			// actual screen info
 	rgb_t		palette[256];		// Quake1 palette used for particle colors
@@ -344,6 +362,8 @@ typedef struct
 	int		movienum;
 	string		movies[MAX_MOVIES];
 
+	string		background_track;		// background soundtrack
+
 	// demo recording info must be here, so it isn't clearing on level change
 	qboolean		demorecording;
 	qboolean		demoplayback;
@@ -377,6 +397,7 @@ extern convar_t	*cl_levelshot_name;
 extern convar_t	*scr_centertime;
 extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
+extern convar_t	*scr_dark;	// start from dark
 extern convar_t	*userinfo;
 
 //=============================================================================
@@ -513,7 +534,7 @@ qboolean CL_IsPlayerIndex( int idx );
 //
 // cl_tent.c
 //
-int CL_AddEntity( int entityType, cl_entity_t *pEnt, shader_t customShader );
+int CL_AddEntity( int entityType, cl_entity_t *pEnt );
 void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );

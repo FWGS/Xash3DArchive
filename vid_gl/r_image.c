@@ -272,18 +272,18 @@ void R_SetTextureParameters( void )
 	if( GL_Support( R_ANISOTROPY_EXT ))
 	{
 		if( gl_texture_anisotropy->value > glConfig.max_texture_anisotropy )
-			Cvar_SetValue( "r_anisotropy", glConfig.max_texture_anisotropy );
+			Cvar_SetFloat( "r_anisotropy", glConfig.max_texture_anisotropy );
 		else if( gl_texture_anisotropy->value < 1.0f )
-			Cvar_SetValue( "r_anisotropy", 1.0f );
+			Cvar_SetFloat( "r_anisotropy", 1.0f );
 	}
 	gl_texture_anisotropy->modified = false;
 
 	if( GL_Support( R_TEXTURE_LODBIAS ))
 	{
 		if( gl_texture_lodbias->value > glConfig.max_texture_lodbias )
-			Cvar_SetValue( "r_texture_lodbias", glConfig.max_texture_lodbias );
+			Cvar_SetFloat( "r_texture_lodbias", glConfig.max_texture_lodbias );
 		else if( gl_texture_lodbias->value < -glConfig.max_texture_lodbias )
-			Cvar_SetValue( "r_texture_lodbias", -glConfig.max_texture_lodbias );
+			Cvar_SetFloat( "r_texture_lodbias", -glConfig.max_texture_lodbias );
 	}
 	gl_texture_lodbias->modified = false;
 

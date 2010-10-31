@@ -31,6 +31,7 @@ extern float	vJumpAngles[3];
 Vector	v_origin, v_angles, v_cl_angles;	// base client vectors
 float	v_idlescale, v_lastDistance;		// misc variables
 Vector	ev_punchangle;			// client punchangles
+float	sv_gravity;
 cl_entity_t *spot;
 
 typedef struct 
@@ -75,7 +76,6 @@ cvar_t	*v_ipitch_cycle;
 cvar_t	*v_iyaw_level;
 cvar_t	*v_iroll_level;
 cvar_t	*v_ipitch_level;
-cvar_t	*v_dark;
 
 //============================================================================== 
 //				VIEW RENDERING 
@@ -131,7 +131,6 @@ void V_Init( void )
 	v_iyaw_level = gEngfuncs.pfnRegisterVariable( "v_iyaw_level", "0.3", 0 );
 	v_iroll_level = gEngfuncs.pfnRegisterVariable( "v_iroll_level", "0.1", 0 );
 	v_ipitch_level = gEngfuncs.pfnRegisterVariable( "v_iyaw_level", "0.3", 0 );
-	v_dark = gEngfuncs.pfnRegisterVariable( "v_dark", "0", 0 );
 
 	cl_weaponlag = gEngfuncs.pfnRegisterVariable( "v_viewmodel_lag", "0.0", FCVAR_ARCHIVE );
 	cl_bobcycle = gEngfuncs.pfnRegisterVariable( "cl_bobcycle","0.8", 0 );
@@ -348,6 +347,9 @@ void V_CalcGunAngle( ref_params_t *pparams )
 //==========================
 void V_PreRender( ref_params_t *pparams )
 {
+	// get the global gravity
+	sv_gravity = pparams->movevars->gravity;
+
 	// pass into beam global vars
 	g_pViewRenderBeams->SetViewParams( pparams );
 
@@ -634,78 +636,6 @@ void V_CalcIntermisionRefdef( ref_params_t *pparams )
 }
 
 //==========================
-// V_CalcShake
-//==========================
-void V_CalcShake( void )
-{
-	float	frametime;
-	int	i;
-	float	fraction, freq;
-
-	if( gHUD.m_Shake.time == 0 )
-		return;
-
-	if(( gHUD.m_flTime > gHUD.m_Shake.time ) || gHUD.m_Shake.duration <= 0 || gHUD.m_Shake.amplitude <= 0 || gHUD.m_Shake.frequency <= 0 )
-	{
-		memset( &gHUD.m_Shake, 0, sizeof( gHUD.m_Shake ));
-		return;
-	}
-
-	frametime = gHUD.m_flTimeDelta;
-
-	if( gHUD.m_flTime > gHUD.m_Shake.nextShake )
-	{
-		// higher frequency means we recalc the extents more often and perturb the display again
-		gHUD.m_Shake.nextShake = gHUD.m_flTime + (1.0f / gHUD.m_Shake.frequency);
-
-		// Compute random shake extents (the shake will settle down from this)
-		for( i = 0; i < 3; i++ )
-		{
-			gHUD.m_Shake.offset[i] = RANDOM_FLOAT( -gHUD.m_Shake.amplitude, gHUD.m_Shake.amplitude );
-		}
-		gHUD.m_Shake.angle = RANDOM_FLOAT( -gHUD.m_Shake.amplitude * 0.25, gHUD.m_Shake.amplitude * 0.25 );
-	}
-
-	// ramp down amplitude over duration (fraction goes from 1 to 0 linearly with slope 1/duration)
-	fraction = ( gHUD.m_Shake.time - gHUD.m_flTime ) / gHUD.m_Shake.duration;
-
-	// ramp up frequency over duration
-	if( fraction )
-	{
-		freq = (gHUD.m_Shake.frequency / fraction);
-	}
-	else
-	{
-		freq = 0;
-	}
-
-	// square fraction to approach zero more quickly
-	fraction *= fraction;
-
-	// Sine wave that slowly settles to zero
-	fraction = fraction * sin( gHUD.m_flTime * freq );
-	
-	// add to view origin
-	gHUD.m_Shake.appliedOffset = gHUD.m_Shake.offset * fraction;
-	
-	// add to roll
-	gHUD.m_Shake.appliedAngle = gHUD.m_Shake.angle * fraction;
-
-	// drop amplitude a bit, less for higher frequency shakes
-	float localAmp = gHUD.m_Shake.amplitude * ( frametime / ( gHUD.m_Shake.duration * gHUD.m_Shake.frequency ));
-	gHUD.m_Shake.amplitude -= localAmp;
-}
-
-//==========================
-// V_ApplyShake
-//==========================
-void V_ApplyShake( Vector& origin, Vector& angles, float factor )
-{
-	origin.MA( factor, origin, gHUD.m_Shake.appliedOffset );
-	angles.z += gHUD.m_Shake.appliedAngle * factor;
-}
-
-//==========================
 // V_CalcThirdPersonRefdef
 //==========================
 void V_CalcThirdPersonRefdef( ref_params_t *pparams )
@@ -731,8 +661,8 @@ void V_CalcThirdPersonRefdef( ref_params_t *pparams )
 	pparams->vieworg = v_origin;
 
 	// apply shake for thirdperson too
-	V_CalcShake();
-	V_ApplyShake( pparams->vieworg, pparams->viewangles, 1.0 );
+	gEngfuncs.V_CalcShake();
+	gEngfuncs.V_ApplyShake( pparams->vieworg, pparams->viewangles, 1.0 );
 }
 
 //==========================
@@ -756,12 +686,27 @@ float V_CalcWaterLevel( ref_params_t *pparams )
 	
 	if( pparams->waterlevel >= 2 )
 	{
-		int	i, contents;
-		float	waterDist = cl_waterdist->value;
-		Vector	point;
+		int	i, contents, waterDist, waterEntity;
+		cl_entity_t *pwater;
+		vec3_t	point;
+		waterDist = cl_waterdist->value;
 
-		cl_entity_t *pwater = gEngfuncs.pfnWaterEntity( pparams->simorg );
-		if( pwater ) waterDist += ( pwater->curstate.scale * 16 );
+		if ( 1 ) //pparams->hardware )
+		{
+			waterEntity = gEngfuncs.PM_WaterEntity( pparams->simorg );
+			if ( waterEntity >= 0 && waterEntity < pparams->max_entities )
+			{
+				pwater = GetEntityByIndex( waterEntity );
+				if ( pwater && ( pwater->model != NULL ) )
+				{
+					waterDist += ( pwater->curstate.scale * 16 );	// Add in wave height
+				}
+			}
+		}
+		else
+		{
+			waterEntity = 0;	// Don't need this in software
+		}
 
 		point = pparams->vieworg;
 
@@ -906,8 +851,8 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 
 	pparams->viewangles = pparams->cl_viewangles;
 
-	V_CalcShake();
-	V_ApplyShake( pparams->vieworg, pparams->viewangles, 1.0 );
+	gEngfuncs.V_CalcShake();
+	gEngfuncs.V_ApplyShake( pparams->vieworg, pparams->viewangles, 1.0 );
 
 	V_CalcSendOrigin( pparams );
 	waterOffset = V_CalcWaterLevel( pparams );
@@ -930,7 +875,7 @@ void V_CalcFirstPersonRefdef( ref_params_t *pparams )
 	view->origin += pparams->viewheight;
 
 	// Let the viewmodel shake at about 10% of the amplitude
-	V_ApplyShake( view->origin, view->angles, 0.9 );
+	gEngfuncs.V_ApplyShake( view->origin, view->angles, 0.9 );
 
 	for( i = 0; i < 3; i++ )
 		view->origin[i] += bob * 0.4 * pparams->forward[i];

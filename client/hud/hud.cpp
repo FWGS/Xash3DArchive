@@ -84,8 +84,6 @@ void CHud :: VidInit( void )
 	m_hHudError = 0;
 	spot = NULL; // clear intermission spot
 
-	ClearAllFades ();
-
 	// setup screen info
 	m_scrinfo.iSize = sizeof(m_scrinfo);
 	GetScreenInfo( &m_scrinfo );
@@ -270,15 +268,6 @@ int CHud :: Redraw( float flTime )
 
 	// clock was reset, reset delta
 	if( m_flTimeDelta < 0 ) m_flTimeDelta = 0;
-
-	if( v_dark )
-	{
-		SetScreenFade( Vector( 0, 0, 0 ), 255, 4, 4, FFADE_IN );
-		v_dark = FALSE;
-	}
-
-	// draw screen fade before hud
-	DrawScreenFade();
 
 	// take a screenshot if the client's got the cvar set
 	if( m_flShotTime && m_flShotTime < flTime )

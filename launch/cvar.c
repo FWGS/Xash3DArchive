@@ -658,10 +658,10 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 
 /*
 ============
-Cvar_SetValue
+Cvar_SetFloat
 ============
 */
-void Cvar_SetValue( const char *var_name, float value )
+void Cvar_SetFloat( const char *var_name, float value )
 {
 	char	val[32];
 

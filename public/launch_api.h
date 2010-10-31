@@ -573,7 +573,7 @@ typedef struct stdilib_api_s
 	void (*Cvar_SetString)( const char *name, const char *value );
 	void (*Cvar_SetLatched)( const char *name, const char *value );
 	void (*Cvar_FullSet)( const char *name, const char *value, int flags );
-	void (*Cvar_SetValue)( const char *name, float value );
+	void (*Cvar_SetFloat)( const char *name, float value );
 	long (*Cvar_GetInteger)(const char *name );
 	float (*Cvar_GetValue)(const char *name );
 	char *(*Cvar_GetString)(const char *name );
@@ -883,7 +883,7 @@ console variables
 #define Cvar_FullSet		com.Cvar_FullSet
 #define Cvar_SetLatched		com.Cvar_SetLatched
 #define Cvar_Reset( name )		Cvar_SetLatched( name, NULL )
-#define Cvar_SetValue		com.Cvar_SetValue
+#define Cvar_SetFloat		com.Cvar_SetFloat
 #define Cvar_VariableValue		com.Cvar_GetValue
 #define Cvar_VariableInteger		com.Cvar_GetInteger
 #define Cvar_VariableString		com.Cvar_GetString
@@ -902,9 +902,9 @@ console commands
 #define Cbuf_InsertText( text ) 	com.Cmd_Exec( EXEC_INSERT, text )
 #define Cbuf_Execute()		com.Cmd_Exec( EXEC_NOW, NULL )
 
-#define Cmd_Argc			com.Cmd_Argc
-#define Cmd_Args			com.Cmd_Args
-#define Cmd_Argv			com.Cmd_Argv
+#define Cmd_Argc()			com.Cmd_Argc()
+#define Cmd_Args()			com.Cmd_Args()
+#define Cmd_Argv( x )		com.Cmd_Argv( x )
 #define Cmd_TokenizeString		com.Cmd_TokenizeString
 #define Cmd_LookupCmds		com.Cmd_LookupCmds
 #define Cmd_AddCommand		com.Cmd_AddCommand

@@ -128,6 +128,7 @@ typedef struct server_s
 	byte		signon_buf[MAX_MSGLEN];
 
 	model_t		*worldmodel;	// pointer to world
+	uint		checksum;		// for catching cheater maps
 
 	qboolean		write_bad_message;	// just for debug
 	qboolean		paused;

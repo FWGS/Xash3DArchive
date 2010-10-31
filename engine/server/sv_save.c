@@ -1130,21 +1130,21 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 
 	SV_EntityPatchRead( pSaveData, level );
 
-	Cvar_SetValue( "skill", header.skillLevel );
+	Cvar_SetFloat( "skill", header.skillLevel );
 	com.strncpy( sv.name, header.mapName, sizeof( sv.name ));
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 
 	Cvar_Set( "sv_skyname", header.skyName );
 
 	// restore sky parms
-	Cvar_SetValue( "sv_skycolor_r", header.skyColor_r );
-	Cvar_SetValue( "sv_skycolor_g", header.skyColor_g );
-	Cvar_SetValue( "sv_skycolor_b", header.skyColor_b );
-	Cvar_SetValue( "sv_skyvec_x", header.skyVec_x );
-	Cvar_SetValue( "sv_skyvec_y", header.skyVec_y );
-	Cvar_SetValue( "sv_skyvec_z", header.skyVec_z );
+	Cvar_SetFloat( "sv_skycolor_r", header.skyColor_r );
+	Cvar_SetFloat( "sv_skycolor_g", header.skyColor_g );
+	Cvar_SetFloat( "sv_skycolor_b", header.skyColor_b );
+	Cvar_SetFloat( "sv_skyvec_x", header.skyVec_x );
+	Cvar_SetFloat( "sv_skyvec_y", header.skyVec_y );
+	Cvar_SetFloat( "sv_skyvec_z", header.skyVec_z );
 
-	sv.viewentity = ( header.viewentity == 1 ) ? 0 : header.viewentity;
+	sv.viewentity = ( header.viewentity == 1 ) ? 0 : (word)header.viewentity;
 
 	// re-base the savedata since we re-ordered the entity/table / restore fields
 	SaveRestore_Rebase( pSaveData );

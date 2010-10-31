@@ -428,7 +428,7 @@ void R_SaveVideoMode( int vid_mode )
 
 	Cvar_FullSet( "width", va( "%i", vidmode[mode].width ), CVAR_READ_ONLY );
 	Cvar_FullSet( "height", va( "%i", vidmode[mode].height ), CVAR_READ_ONLY );
-	Cvar_SetValue( "r_mode", mode ); // merge if it out of bounds
+	Cvar_SetFloat( "r_mode", mode ); // merge if it out of bounds
 
 	MsgDev( D_NOTE, "Set: %s [%dx%d]\n", vidmode[mode].desc, vidmode[mode].width, vidmode[mode].height );
 }
@@ -647,7 +647,7 @@ qboolean R_Init_OpenGL( void )
 	{
 		if( err == rserr_invalid_fullscreen )
 		{
-			Cvar_SetValue( "fullscreen", 0 );
+			Cvar_SetFloat( "fullscreen", 0 );
 			vid_fullscreen->modified = false;
 			MsgDev( D_ERROR, "R_SetMode: fullscreen unavailable in this mode\n" );
 			if(( err = R_ChangeDisplaySettings( r_mode->integer, false )) == rserr_ok )
@@ -655,7 +655,7 @@ qboolean R_Init_OpenGL( void )
 		}
 		else if( err == rserr_invalid_mode )
 		{
-			Cvar_SetValue( "r_mode", glConfig.prev_mode );
+			Cvar_SetFloat( "r_mode", glConfig.prev_mode );
 			r_mode->modified = false;
 			MsgDev( D_ERROR, "R_SetMode: invalid mode\n" );
 		}

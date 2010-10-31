@@ -3797,11 +3797,22 @@ int pfnGetPlayerUserId( edict_t *e )
 =============
 pfnSoundTrack
 
+empty trackname - stop previous
 =============
 */
 void pfnSoundTrack( const char *trackname, int flags )
 {
-	SV_ConfigString( CS_BACKGROUND_TRACK, trackname );
+	sizebuf_t	*msg;
+
+	if( !trackname ) return;
+
+	if( sv.state == ss_loading )
+		msg = &sv.signon;
+	else msg = &sv.reliable_datagram;
+
+	// tell the client about new user message
+	BF_WriteByte( &sv.reliable_datagram, svc_cdtrack );
+	BF_WriteString( &sv.reliable_datagram, trackname );
 }
 
 /*

@@ -12,6 +12,7 @@
 #include "r_efx.h"
 #include "event_flags.h"
 #include "pm_local.h"
+#include "shake.h"
 
 /*
 ====================
@@ -408,6 +409,58 @@ static void CL_DrawCenterPrint( void )
 }
 
 /*
+=============
+CL_DrawScreenFade
+
+fill screen with specfied color
+can be modulated
+=============
+*/
+void CL_DrawScreenFade( void )
+{
+	rgba_t		color;
+	screenfade_t	*sf = &clgame.fade;
+	int		iFadeAlpha;
+		
+	if( sf->fadeReset == 0.0f && sf->fadeEnd == 0.0f )
+		return;	// inactive
+
+	// keep pushing reset time out indefinitely
+	if( sf->fadeFlags & FFADE_STAYOUT )
+	{
+		sf->fadeReset = cl.time + 0.1f;
+	}
+
+	// all done?
+	if(( cl.time > sf->fadeReset ) && ( cl.time > sf->fadeEnd ))
+	{
+		Mem_Set( &clgame.fade, 0, sizeof( clgame.fade ));
+		return;
+	}
+
+	// fading...
+	if( sf->fadeFlags == FFADE_STAYOUT )
+	{
+		iFadeAlpha = sf->fadealpha;
+	}
+	else
+	{
+		iFadeAlpha = sf->fadeSpeed * ( sf->fadeEnd - cl.time );
+		if( sf->fadeFlags & FFADE_OUT ) iFadeAlpha += sf->fadealpha;
+		iFadeAlpha = bound( 0, iFadeAlpha, sf->fadealpha );
+	}
+
+	if( !re ) return;
+
+	MakeRGBA( color, sf->fader, sf->fadeg, sf->fadeb, iFadeAlpha );
+	re->SetColor( color );
+
+	re->SetParms( cls.fillShader, kRenderTransTexture, 0 );
+	re->DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, cls.fillShader );
+	re->SetColor( NULL );
+}
+
+/*
 ====================
 CL_InitTitles
 
@@ -607,13 +660,18 @@ void CL_DrawHUD( int state )
 
 	switch( state )
 	{
-	case CL_PAUSED:
-		CL_DrawPause();
-		// intentionally fallthrough
 	case CL_ACTIVE:
+		CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
 		clgame.dllFuncs.pfnRedraw( cl_time(), false );
+		break;
+	case CL_PAUSED:
+		CL_DrawScreenFade ();
+		CL_DrawCrosshair ();
+		CL_DrawCenterPrint ();
+		clgame.dllFuncs.pfnRedraw( cl_time(), false );
+		CL_DrawPause();
 		break;
 	case CL_LOADING:
 		CL_DrawLoading( scr_loading->value );
@@ -1103,30 +1161,32 @@ pfnHookUserMsg
 
 =============
 */
-static void pfnHookUserMsg( const char *pszName, pfnUserMsgHook pfn )
+static int pfnHookUserMsg( const char *pszName, pfnUserMsgHook pfn )
 {
 	int	i;
 
 	// ignore blank names or invalid callbacks
 	if( !pszName || !*pszName || !pfn )
-		return;	
+		return 0;	
 
 	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
 		// see if already hooked
 		if( !com.strcmp( clgame.msg[i].name, pszName ))
-			return;
+			return 1;
 	}
 
 	if( i == MAX_USER_MESSAGES ) 
 	{
 		Host_Error( "HookUserMsg: MAX_USER_MESSAGES hit!\n" );
-		return;
+		return 0;
 	}
 
 	// hook new message
 	com.strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
 	clgame.msg[i].func = pfn;
+
+	return 1;
 }
 
 /*
@@ -1135,10 +1195,11 @@ pfnServerCmd
 
 =============
 */
-static void pfnServerCmd( const char *szCmdString )
+static int pfnServerCmd( const char *szCmdString )
 {
 	// server command adding in cmds queue
 	Cbuf_AddText( va( "cmd %s", szCmdString ));
+	return 1;
 }
 
 /*
@@ -1147,10 +1208,11 @@ pfnClientCmd
 
 =============
 */
-static void pfnClientCmd( const char *szCmdString )
+static int pfnClientCmd( const char *szCmdString )
 {
 	// client command executes immediately
 	Cbuf_AddText( szCmdString );
+	return 1;
 }
 
 /*
@@ -1490,6 +1552,80 @@ static float pfnGetClientTime( void )
 
 /*
 =============
+pfnCalcShake
+
+=============
+*/
+void pfnCalcShake( void )
+{
+	int	i;
+	float	fraction, freq;
+	float	localAmp;
+
+	if( clgame.shake.time == 0 )
+		return;
+
+	if(( cl.time > clgame.shake.time ) || clgame.shake.amplitude <= 0 || clgame.shake.frequency <= 0 )
+	{
+		Mem_Set( &clgame.shake, 0, sizeof( clgame.shake ));
+		return;
+	}
+
+	if( cl.time > clgame.shake.next_shake )
+	{
+		// higher frequency means we recalc the extents more often and perturb the display again
+		clgame.shake.next_shake = cl.time + ( 1.0f / clgame.shake.frequency );
+
+		// compute random shake extents (the shake will settle down from this)
+		for( i = 0; i < 3; i++ )
+			clgame.shake.offset[i] = Com_RandomFloat( -clgame.shake.amplitude, clgame.shake.amplitude );
+		clgame.shake.angle = Com_RandomFloat( -clgame.shake.amplitude * 0.25, clgame.shake.amplitude * 0.25 );
+	}
+
+	// ramp down amplitude over duration (fraction goes from 1 to 0 linearly with slope 1/duration)
+	fraction = ( clgame.shake.time - cl.time ) / clgame.shake.duration;
+
+	// ramp up frequency over duration
+	if( fraction )
+	{
+		freq = ( clgame.shake.frequency / fraction );
+	}
+	else
+	{
+		freq = 0;
+	}
+
+	// square fraction to approach zero more quickly
+	fraction *= fraction;
+
+	// Sine wave that slowly settles to zero
+	fraction = fraction * com.sin( cl.time * freq );
+	
+	// add to view origin
+	VectorScale( clgame.shake.offset, fraction, clgame.shake.applied_offset );
+
+	// add to roll
+	clgame.shake.applied_angle = clgame.shake.angle * fraction;
+
+	// drop amplitude a bit, less for higher frequency shakes
+	localAmp = clgame.shake.amplitude * ( host.frametime / ( clgame.shake.duration * clgame.shake.frequency ));
+	clgame.shake.amplitude -= localAmp;
+}
+
+/*
+=============
+pfnApplyShake
+
+=============
+*/
+void pfnApplyShake( float *origin, float *angles, float factor )
+{
+	if( origin ) VectorMA( origin, factor, clgame.shake.applied_offset, origin );
+	if( angles ) angles[ROLL] += clgame.shake.applied_angle * factor;
+}
+	
+/*
+=============
 pfnIsSpectateOnly
 
 =============
@@ -1527,12 +1663,12 @@ pfnWaterEntity
 
 =============
 */
-static cl_entity_t *pfnWaterEntity( const float *rgflPos )
+static int pfnWaterEntity( const float *rgflPos )
 {
 	cl_entity_t	*pWater, *touch[MAX_EDICTS];
 	int		i, num;
 
-	if( !rgflPos ) return NULL;
+	if( !rgflPos ) return -1;
 
 	// grab contents from all the water entities
 	num = CL_AreaEdicts( rgflPos, rgflPos, touch, MAX_EDICTS, AREA_CUSTOM );
@@ -1548,9 +1684,9 @@ static cl_entity_t *pfnWaterEntity( const float *rgflPos )
 			continue; // invalid water ?
 
 		// return first valid water entity
-		return pWater;
+		return pWater - clgame.entities;
 	}
-	return NULL;
+	return -1;
 }
 
 /*
@@ -1894,13 +2030,13 @@ model_t *CL_LoadModel( const char *modelname, int *index )
 	return CM_ClipHandleToModel( idx );
 }
 
-int CL_AddEntity( int entityType, cl_entity_t *pEnt, shader_t customShader )
+int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 {
 	if( !re || !pEnt || pEnt->index == -1 )
 		return false;
 
 	// let the render reject entity without model
-	return re->AddRefEntity( pEnt, entityType, customShader );
+	return re->AddRefEntity( pEnt, entityType, -1 );
 }
 
 /*
@@ -1939,13 +2075,24 @@ static const char *pfnGetLevelName( void )
 
 /*
 =============
-pfnGetMovementVariables
+pfnGetScreenFade
 
 =============
 */
-movevars_t *pfnGetMovementVariables( void )
+static void pfnGetScreenFade( struct screenfade_s *fade )
 {
-	return &clgame.movevars;
+	if( fade ) *fade = clgame.fade;
+}
+
+/*
+=============
+pfnSetScreenFade
+
+=============
+*/
+static void pfnSetScreenFade( struct screenfade_s *fade )
+{
+	if( fade ) clgame.fade = *fade;
 }
 
 /*
@@ -2358,7 +2505,7 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 	if( re ) re->Fog( flFogColor, flStart, flEnd, bOn );
 }
 
-static triapi_t gTriApi =
+static triangleapi_t gTriApi =
 {
 	TRI_API_VERSION,	
 	TriLoadShader,
@@ -2382,7 +2529,7 @@ static triapi_t gTriApi =
 	TriFog
 };
 
-static efxapi_t gEfxApi =
+static efx_api_t gEfxApi =
 {
 	pfnGetPaletteColor,
 	pfnDecalIndex,
@@ -2423,7 +2570,7 @@ static event_api_t gEventApi =
 };
 
 // engine callbacks
-static cl_enginefuncs_t gEngfuncs = 
+static cl_enginefunc_t gEngfuncs = 
 {
 	pfnSPR_Load,
 	pfnSPR_Frames,
@@ -2480,14 +2627,14 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnGetViewModel,
 	CL_GetEntityByIndex,
 	pfnGetClientTime,
-	S_FadeClientVolume,
-	CM_ClipHandleToModel,
+	pfnCalcShake,
+	pfnApplyShake,
 	pfnPointContents,
 	pfnWaterEntity,
 	pfnTraceLine,
 	CL_LoadModel,
 	CL_AddEntity,
-	Host_Error,
+	CM_ClipHandleToModel,
 	pfnPlaySoundByNameAtLocation,
 	pfnPrecacheEvent,
 	CL_PlaybackEvent,
@@ -2500,18 +2647,21 @@ static cl_enginefuncs_t gEngfuncs =
 	pfnCVarGetPointer,
 	Key_LookupBinding,
 	pfnGetLevelName,
-	pfnGetMovementVariables,
-	pfnEnvShot,
+	pfnGetScreenFade,
+	pfnSetScreenFade,
 	VGui_GetPanel,
 	VGui_ViewportPaintBackground,
-	pfnLoadFile,
+	COM_LoadFile,
 	COM_ParseFile,
 	pfnFreeFile,
 	&gTriApi,
 	&gEfxApi,
 	&gEventApi,
+	NULL,
+	NULL,
+	NULL,
 	pfnIsSpectateOnly,
-	pfnIsInGame,
+	// FIXME: add missed builtins
 };
 
 void CL_UnloadProgs( void )

@@ -399,7 +399,7 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force );
 void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback );
 void Cvar_FullSet( const char *var_name, const char *value, int flags );
 void Cvar_SetLatched( const char *var_name, const char *value );
-void Cvar_SetValue( const char *var_name, float value );
+void Cvar_SetFloat( const char *var_name, float value );
 float Cvar_VariableValue( const char *var_name );
 int Cvar_VariableInteger( const char *var_name );
 char *Cvar_VariableString( const char *var_name );

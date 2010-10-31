@@ -373,7 +373,7 @@ void CL_WritePacket( void )
 
 	if( cl_cmdrate->value < MIN_CMD_RATE )
 	{
-		Cvar_SetValue( "cl_cmdrate", MIN_CMD_RATE );
+		Cvar_SetFloat( "cl_cmdrate", MIN_CMD_RATE );
 	}
 
 	BF_Init( &buf, "ClientData", data, sizeof( data ));
@@ -737,10 +737,12 @@ void CL_ClearState( void )
 	// wipe the entire cl structure
 	Mem_Set( &cl, 0, sizeof( cl ));
 	BF_Clear( &cls.netchan.message );
+	Mem_Set( &clgame.fade, 0, sizeof( clgame.fade ));
+	Mem_Set( &clgame.shake, 0, sizeof( clgame.shake ));
 	cl.refdef.movevars = &clgame.movevars;
 
-	Cvar_SetValue( "scr_download", 0.0f );
-	Cvar_SetValue( "scr_loading", 0.0f );
+	Cvar_SetFloat( "scr_download", 0.0f );
+	Cvar_SetFloat( "scr_loading", 0.0f );
 }
 
 /*
@@ -989,7 +991,7 @@ void CL_PrepSound( void )
 	for( i = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
 	{
 		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
-		Cvar_SetValue( "scr_loading", scr_loading->value + 5.0f / sndcount );
+		Cvar_SetFloat( "scr_loading", scr_loading->value + 5.0f / sndcount );
 		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
 
@@ -1034,7 +1036,7 @@ void CL_PrepVideo( void )
 	if( !cl.model_precache[1][0] )
 		return; // no map loaded
 
-	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
+	Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar
 	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", clgame.mapname );
 
 	// let the render dll load the map
@@ -1045,6 +1047,10 @@ void CL_PrepVideo( void )
 	SCR_RegisterShaders(); // update with new sequence
 	SCR_UpdateScreen();
 
+	// make sure what map is valid
+	if( map_checksum != cl.checksum )
+		Host_Error( "Local map version differs from server: %i != '%i'\n", map_checksum, cl.checksum );
+
 	for( i = 0, mdlcount = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
 		mdlcount++; // total num models
 
@@ -1053,7 +1059,7 @@ void CL_PrepVideo( void )
 		com.strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		re->RegisterModel( name, i+1 );
 		CM_RegisterModel( name, i+1 );
-		Cvar_SetValue( "scr_loading", scr_loading->value + 45.0f / mdlcount );
+		Cvar_SetFloat( "scr_loading", scr_loading->value + 45.0f / mdlcount );
 		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
 
@@ -1063,7 +1069,7 @@ void CL_PrepVideo( void )
 	// setup sky and free unneeded stuff
 	re->EndRegistration( cl.refdef.movevars->skyName );
 	CM_EndRegistration (); // free unused models
-	Cvar_SetValue( "scr_loading", 100.0f );	// all done
+	Cvar_SetFloat( "scr_loading", 100.0f );	// all done
 
 	if( host.decalList )
 	{
@@ -1608,8 +1614,8 @@ void CL_Init( void )
 	cls.initialized = true;
 
 	// g-cont. disable for now
-	Cvar_SetValue( "cl_lw", 0 );
-	Cvar_SetValue( "cl_predict", 0 );
+	Cvar_SetFloat( "cl_lw", 0 );
+	Cvar_SetFloat( "cl_predict", 0 );
 }
 
 

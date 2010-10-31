@@ -110,17 +110,10 @@ int CTempEnts::TE_Active( TEMPENTITY *pTemp )
 
 int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 {
-	// before first frame when movevars not initialized
-	if( !gpMovevars )
-	{
-		gEngfuncs.Con_Printf( "ERROR: TempEntUpdate: no movevars!!!\n" );
-		return true;
-	}
-
 	float	gravity, gravitySlow, fastFreq;
 
 	fastFreq = GetClientTime() * 5.5;
-	gravity = -frametime * gpMovevars->gravity;
+	gravity = -frametime * sv_gravity;
 	gravitySlow = gravity * 0.5;
 
 	// in order to have tents collide with players, we have to run the player prediction code so
@@ -456,11 +449,11 @@ void CTempEnts :: Update( void )
 	current = m_pActiveTempEnts;
 
 	// !!! Don't simulate while paused....  This is sort of a hack, revisit.
-	if( IN_GAME() == 0 )
+	if( frametime == 0 )
 	{
 		while( current )
 		{
-			gEngfuncs.CL_CreateVisibleEntity( ET_TEMPENTITY, &current->entity, -1 );
+			gEngfuncs.CL_CreateVisibleEntity( ET_TEMPENTITY, &current->entity );
 			current = current->next;
 		}
 	}
@@ -483,7 +476,7 @@ void CTempEnts :: Update( void )
 			else
 			{
 				// renderer rejected entity for some reasons...
-				if( !gEngfuncs.CL_CreateVisibleEntity( ET_TEMPENTITY, &current->entity, -1 ))
+				if( !gEngfuncs.CL_CreateVisibleEntity( ET_TEMPENTITY, &current->entity ))
 				{
 					if(!( current->flags & FTENT_PERSIST )) 
 					{

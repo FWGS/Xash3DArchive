@@ -1396,7 +1396,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 //		out->contents = Mod_ContentsFromShader( out->name );	// FIXME: implement
 		loadmodel->shaders[i] = Mod_LoadCachedImage( out );
 
-		Cvar_SetValue( "scr_loading", scr_loading->value + 50.0f / count );
+		Cvar_SetFloat( "scr_loading", scr_loading->value + 50.0f / count );
 
 		if( ri.UpdateScreen && ( Cvar_VariableInteger( "allow_levelshots" ) || glw_state.developer > 3 ))
 			ri.UpdateScreen();
@@ -2709,7 +2709,7 @@ void R_BeginRegistration( const char *mapname )
 	else
 	{
 		// update progress bar
-		Cvar_SetValue( "scr_loading", 50.0f );
+		Cvar_SetFloat( "scr_loading", 50.0f );
 		if( ri.UpdateScreen ) ri.UpdateScreen();
 	}
 

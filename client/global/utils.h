@@ -6,7 +6,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-extern cl_enginefuncs_t gEngfuncs;
+extern cl_enginefunc_t gEngfuncs;
 
 #include "event_api.h"
 #include "enginecallback.h"
@@ -36,10 +36,10 @@ void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int
 #define ASSERTSZ( f, sz )
 #endif
 
-#define GetEntityByIndex	(*gEngfuncs.pfnGetEntityByIndex)
+#define GetEntityByIndex	(*gEngfuncs.GetEntityByIndex)
 
 extern DLL_GLOBAL const Vector	g_vecZero;
-extern struct movevars_s	*gpMovevars;
+extern float			sv_gravity;
 
 extern int HUD_VidInit( void );
 extern void HUD_Init( void );
@@ -199,12 +199,6 @@ extern void END_READ( void );
 // misc utilities
 extern void UTIL_GetForceDirection( Vector &origin, float magnitude, Vector *resultDirection, float *resultForce );
 extern void RotatePointAroundVector( Vector &dst, const Vector &dir, const Vector &point, float degrees );
-
-// client fade
-extern void SetScreenFade( Vector fadeColor, float alpha, float duration, float holdTime, int fadeFlags );
-extern void ClearAllFades( void );
-extern void ClearPermanentFades( void );
-extern void DrawScreenFade( void );
 
 // drawing progress bar (image must be grayscale)
 extern void DrawImageBar( float percent, const char *szSpriteName );

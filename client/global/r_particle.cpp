@@ -122,7 +122,7 @@ CBaseParticle *CParticleSystem :: AllocParticle( HSPRITE m_hSpr )
 	CBaseParticle	*pAlloc;
 
 	// never alloc particles when we not in game
-	if ( IN_GAME() == 0 )
+	if (( m_flTime - m_fOldTime ) == 0 )
 		return NULL;
 
 	if( !m_pFreeParticles )
@@ -200,7 +200,7 @@ void CParticleSystem :: SimulateAndRender( CBaseParticle *pParticle )
 	float	time1 = 5.0 * ft;
 	float	dvel = 4 * ft;
 
-	float grav = ft * gpMovevars->gravity * 0.05f;
+	float grav = ft * sv_gravity * 0.05f;
 
 	int	iRamp;
 
@@ -755,7 +755,7 @@ static void pfnSparkTracerDraw( CBaseParticle *pPart, float frametime )
 
 	g_pParticles->DrawTracer(pPart->m_hSprite, pPart->m_Pos, delta * scale, flWidth, pPart->m_Color, 0.0f, 0.8f);
 
-	float grav = frametime * gpMovevars->gravity * 0.05f;
+	float grav = frametime * sv_gravity * 0.05f;
 	pPart->m_Velocity.z -= grav * 8; // use vox gravity
 	pPart->m_Pos = pPart->m_Pos + pPart->m_Velocity * frametime;
 	if( lifePerc < 0.5 ) pPart->SetAlpha( lifePerc * 2 );	// fade alpha

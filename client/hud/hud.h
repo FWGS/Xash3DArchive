@@ -22,31 +22,6 @@ typedef struct
 	int	x, y;
 } POSITION;
 
-// This structure is sent over the net to describe a screen shake event
-typedef struct
-{
-	float	time;
-	float	duration;
-	float	amplitude;
-	float	frequency;
-	float	nextShake;
-	Vector	offset;
-	float	angle;
-	Vector	appliedOffset;
-	float	appliedAngle;
-} CL_ScreenShake;
-
-typedef struct
-{
-	float	fadeSpeed;	// How fast to fade (tics / second) (+ fade in, - fade out)
-	float	fadeEnd;		// When the fading hits maximum
-	float	fadeReset;	// When to reset to not fading (for fadeout and hold)
-	Vector	fadeColor;
-	float	fadeAlpha;
-	int	fadeFlags;	// Fading flags
-	int	bActive;
-} CL_ScreenFade;
-
 typedef struct
 {
 	int	dripsPerSecond;
@@ -590,14 +565,12 @@ public:
 	int _cdecl MsgFunc_Damage( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_GameMode( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_Logo( const char *pszName,  int iSize, void *pbuf );
-	int _cdecl MsgFunc_ScreenFade( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ServerName( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ResetHUD( const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_ViewMode( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetFOV( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
-	int _cdecl MsgFunc_ScreenShake( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_RainData( const char *pszName, int iSize, void *pbuf ); 
 	int _cdecl MsgFunc_HUDColor( const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf );
@@ -630,19 +603,6 @@ public:
 	// sprite indexes
 	int	m_HUD_number_0;
 
-	// screen shake handler
-	CL_ScreenShake	m_Shake;
-
-	// screen fade handler
-	CL_ScreenFade	m_FadeList[HUD_MAX_FADES];
-
-	Vector	m_vecFadeColor;
-	float	m_flFadeAlpha;
-	BOOL	m_bModulate;
-
-	// v_dark issues
-	BOOL	v_dark;
-		
 	// error sprite
 	int m_HUD_error;
 	HSPRITE m_hHudError;

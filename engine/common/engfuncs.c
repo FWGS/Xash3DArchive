@@ -11,6 +11,23 @@
 #include "client.h"
 
 /*
+=============
+COM_LoadFile
+
+=============
+*/
+byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
+{
+	if( !filename || !*filename )
+	{
+		if( pLength ) *pLength = 0;
+		return NULL;
+	}
+
+	return FS_LoadFile( filename, pLength );
+}
+
+/*
 ==============
 COM_ParseFile
 
@@ -257,7 +274,7 @@ pfnCVarSetValue
 */
 void pfnCVarSetValue( const char *szName, float flValue )
 {
-	Cvar_SetValue( szName, flValue );
+	Cvar_SetFloat( szName, flValue );
 }
 
 /*
@@ -300,12 +317,15 @@ pfnAddCommand
 
 =============
 */
-void pfnAddCommand( const char *cmd_name, xcommand_t func )
+int pfnAddCommand( const char *cmd_name, xcommand_t func )
 {
-	if( !cmd_name || !*cmd_name ) return;
+	if( !cmd_name || !*cmd_name )
+		return 0;
 
 	// NOTE: if( func == NULL ) cmd will be forwarded to a server
 	Cmd_AddCommand( cmd_name, func, "" );
+
+	return 1;
 }
 
 /*
@@ -327,7 +347,7 @@ pfnCmd_Args
 
 =============
 */
-const char *pfnCmd_Args( void )
+char *pfnCmd_Args( void )
 {
 	return Cmd_Args();
 }
@@ -338,7 +358,7 @@ pfnCmd_Argv
 
 =============
 */
-const char *pfnCmd_Argv( int argc )
+char *pfnCmd_Argv( int argc )
 {
 	if( argc >= 0 && argc < Cmd_Argc())
 		return Cmd_Argv( argc );

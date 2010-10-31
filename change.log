@@ -2,7 +2,8 @@ build ????
 
 Engine: support for StartupVids.txt
 Engine: get full compatibility with hl.dll
-FS: recode wad resource management (now support lumps from wads with same name) 
+FS: recode wad resource management (now support lumps from wads with same name)
+Engine: trigger_camera is now correctly saved and restored 
 
 build 1338
 

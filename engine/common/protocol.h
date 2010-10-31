@@ -40,7 +40,7 @@
 #define svc_ambientsound		29	// <see code>
 #define svc_intermission		30	// empty message (event)
 #define svc_modelindex		31	// [index][modelpath]
-#define svc_cdtrack			32	// [byte] track [byte] looptrack
+#define svc_cdtrack			32	// [string] trackname
 #define svc_serverinfo		33	// [string] key [string] value
 #define svc_eventindex		34	// [index][eventname]
 #define svc_weaponanim		35	// [byte]iAnim [byte]body

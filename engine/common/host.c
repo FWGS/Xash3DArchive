@@ -865,7 +865,7 @@ void Host_Init( const int argc, const char **argv )
 	if( host.type != HOST_DEDICATED )
 	{
 		// when we in developer-mode automatically turn cheats on
-		if( host.developer > 1 ) Cvar_SetValue( "sv_cheats", 1.0f );
+		if( host.developer > 1 ) Cvar_SetFloat( "sv_cheats", 1.0f );
 	}
 
 	NET_Init();

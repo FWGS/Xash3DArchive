@@ -399,7 +399,7 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		player = CL_GetLocalPlayer();
 		SCR_MakeLevelShot();	// make levelshot if needs
 
-		Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar	
+		Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar	
 
 		// getting a valid frame message ends the connection process
 		VectorCopy( player->origin, cl.predicted_origin );
@@ -436,7 +436,7 @@ void CL_ParseFrame( sizebuf_t *msg )
 		player = CL_GetLocalPlayer();
 		SCR_MakeLevelShot();	// make levelshot if needs
 
-		Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar	
+		Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar	
 		// getting a valid frame message ends the connection process
 		VectorCopy( player->origin, cl.predicted_origin );
 		VectorCopy( player->angles, cl.predicted_angles );

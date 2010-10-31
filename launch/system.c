@@ -138,7 +138,7 @@ void Sys_GetStdAPI( void )
 	com.Cvar_Get = Cvar_Get;
 	com.Cvar_FullSet = Cvar_FullSet;
 	com.Cvar_SetLatched = Cvar_SetLatched;
-	com.Cvar_SetValue = Cvar_SetValue;
+	com.Cvar_SetFloat = Cvar_SetFloat;
 	com.Cvar_SetString = Cvar_Set;
 	com.Cvar_GetInteger = Cvar_VariableInteger;
 	com.Cvar_GetValue = Cvar_VariableValue;

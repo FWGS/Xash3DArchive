@@ -57,7 +57,7 @@ void ProcessRain( void )
 		return;
 	}
 
-	if ( !IN_GAME() ) return; // not in pause
+	if ( rain_timedelta == 0 ) return; // not in pause
 
 	double timeBetweenDrips = 1 / (double)gHUD.Rain.dripsPerSecond;
 
@@ -158,16 +158,23 @@ void ProcessRain( void )
 
 			if ( contents == CONTENTS_WATER )
 			{
-				// NOTE: in Xash3D PM_WaterEntity always return a valid water volume or NULL
-				// so not needs to run additional checks here
-				cl_entity_t *pWater = gEngfuncs.pfnWaterEntity( pmtrace.endpos );
-				if ( pWater )
+				int waterEntity = gEngfuncs.PM_WaterEntity( pmtrace.endpos );
+				if ( waterEntity > 0 )
 				{
-					deathHeight = pWater->curstate.maxs[2];
+					cl_entity_t *pwater = GetEntityByIndex( waterEntity );
+					if ( pwater && ( pwater->model != NULL ) )
+					{
+						deathHeight = pwater->curstate.maxs[2];
+					}
+					else
+					{
+						gEngfuncs.Con_Printf("Rain error: can't get water entity\n");
+						continue;
+					}
 				}
 				else
 				{
-					// hit the world
+					// hit the world ?
 					deathHeight = pmtrace.endpos[2];
 				}
 			}
@@ -433,7 +440,7 @@ void ParseRainFile( void )
 
 	sprintf( filepath, "scripts/weather/%s.txt", mapname ); 
 
-	afile = (char *)gEngfuncs.COM_LoadFile( mapname, NULL);
+	afile = (char *)gEngfuncs.COM_LoadFile( mapname, 5, NULL);
 	pfile = afile;
 
 	if ( !pfile )

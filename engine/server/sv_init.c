@@ -339,7 +339,7 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 
 		if( sv_newunit->integer )
 		{
-			Cvar_SetValue( "sv_newunit", 0 );
+			Cvar_SetFloat( "sv_newunit", 0 );
 			SV_ClearSaveDir();
 		}
 	}
@@ -367,8 +367,7 @@ clients along with it.
 */
 qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 {
-	uint	i, checksum;
-	int	current_skill;
+	int	i, current_skill;
 	qboolean	loadgame, paused;
 
 	Cmd_ExecuteString( "latch\n" );
@@ -421,11 +420,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	}
 
 	// make cvars consistant
-	if( Cvar_VariableInteger( "coop" )) Cvar_SetValue( "deathmatch", 0 );
+	if( Cvar_VariableInteger( "coop" )) Cvar_SetFloat( "deathmatch", 0 );
 	current_skill = (int)(Cvar_VariableValue( "skill" ) + 0.5f);
 	current_skill = bound( 0, current_skill, 3 );
 
-	Cvar_SetValue( "skill", (float)current_skill );
+	Cvar_SetFloat( "skill", (float)current_skill );
 
 	// make sure what server name doesn't contain path and extension
 	FS_FileBase( mapname, sv.name );
@@ -435,8 +434,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	else sv.startspot[0] = '\0';
 
 	com.snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
-	CM_BeginRegistration( sv.model_precache[1], false, &checksum );
-	com.sprintf( sv.configstrings[CS_MAPCHECKSUM], "%i", checksum );
+	CM_BeginRegistration( sv.model_precache[1], false, &sv.checksum );
 	sv.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 
 	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )

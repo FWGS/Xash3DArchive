@@ -29,7 +29,6 @@ DECLARE_HUDMESSAGE( SetFOV );
 DECLARE_HUDMESSAGE( RainData );
 DECLARE_HUDMESSAGE( SetBody );
 DECLARE_HUDMESSAGE( SetSkin );
-DECLARE_HUDMESSAGE( ScreenFade );
 DECLARE_HUDMESSAGE( ResetHUD );
 DECLARE_HUDMESSAGE( InitHUD );
 DECLARE_HUDMESSAGE( ViewMode );
@@ -37,7 +36,6 @@ DECLARE_HUDMESSAGE( Particle );
 DECLARE_HUDMESSAGE( Concuss );
 DECLARE_HUDMESSAGE( GameMode );
 DECLARE_HUDMESSAGE( ServerName );
-DECLARE_HUDMESSAGE( ScreenShake );
 DECLARE_HUDCOMMAND( ChangeLevel );
 
 cvar_t *cl_lw = NULL;
@@ -59,8 +57,6 @@ int CHud :: InitMessages( void )
 	HOOK_MESSAGE( RainData ); 
 	HOOK_MESSAGE( SetBody );
 	HOOK_MESSAGE( SetSkin );
-	HOOK_MESSAGE( ScreenFade );
-	HOOK_MESSAGE( ScreenShake );
 
 	HOOK_COMMAND( "hud_changelevel", ChangeLevel );	// send by engine
 
@@ -94,10 +90,6 @@ int CHud :: InitMessages( void )
 
 void CHud :: UserCmd_ChangeLevel( void )
 {
-	// reset shake during changelevel
-	m_Shake.amplitude = 0;
-	m_Shake.frequency = 0;
-	m_Shake.duration = 0;
 }
 
 int CHud :: MsgFunc_Logo( const char *pszName, int iSize, void *pbuf )
@@ -123,9 +115,6 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 		pList = pList->pNext;
 	}
 
-	// needs to clear any remaining screenfade
-	ClearAllFades ();
-
 	// reset sensitivity
 	m_flMouseSensitivity = 0;
 
@@ -137,17 +126,9 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 	// reset windspeed
 	m_vecWindVelocity = Vector( 0, 0, 0 );
 
-	// reset shake
-	m_Shake.amplitude = 0;
-	m_Shake.frequency = 0;
-	m_Shake.duration = 0;
-
 	// reset fog
 	m_flStartDist = 0;
 	m_flEndDist = 0;
-
-	v_dark = CVAR_GET_FLOAT( "v_dark" );
-	CVAR_SET_FLOAT( "v_dark", 0.0f );
 		
 	return 1;
 }
@@ -363,48 +344,6 @@ int CHud::MsgFunc_ServerName( const char *pszName, int iSize, void *pbuf )
 	END_READ();
 	
  	return 1;
-}
-
-int CHud :: MsgFunc_ScreenFade( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );	
-
-	float fadeTime = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<12));
-	float holdTime = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<12));
-	int fadeFlags = READ_SHORT();
-
-	Vector m_FadeColor;
-
-	m_FadeColor.x = READ_BYTE();	// fade red
-	m_FadeColor.y = READ_BYTE();	// fade green
-	m_FadeColor.z = READ_BYTE();	// fade blue
-
-	float alpha = READ_BYTE();	// fade alpha
-
-	SetScreenFade( m_FadeColor, alpha, fadeTime, holdTime, fadeFlags );
-
-	END_READ();
-
-	return 1;
-}
-
-int CHud::MsgFunc_ScreenShake( const char *pszName, int iSize, void *pbuf )
-{
-	BEGIN_READ( pszName, iSize, pbuf );
-
-	float amplitude = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<12));
-	float duration = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<12));
-	float frequency = (float)(unsigned short)READ_SHORT() * (1.0f / (float)(1<<8));
-
-	m_Shake.frequency = frequency;
-	m_Shake.amplitude = amplitude;
-	m_Shake.duration = duration;
-	m_Shake.time = m_flTime + duration;
-	m_Shake.nextShake = 0;
-
-	END_READ();
-
-	return 1;
 }
 
 /*

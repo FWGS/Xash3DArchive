@@ -27,7 +27,7 @@ typedef enum
 	TRI_MAXCAPS
 } TRI_CAPS;
 
-typedef struct triapi_s
+typedef struct triangleapi_s
 {
 	int	version;
 
@@ -51,6 +51,6 @@ typedef struct triapi_s
 	void	(*ScreenToWorld)( float *screen, float *world  ); 
 	int	(*WorldToScreen)( float *world, float *screen );  // returns 1 if it's z clipped
 	void	(*Fog)( float flFogColor[3], float flStart, float flEnd, int bOn );
-} triapi_t;
+} triangleapi_t;
 
 #endif//TRIANGLE_API_H

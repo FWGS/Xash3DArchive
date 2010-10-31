@@ -7,6 +7,7 @@
 #include "client.h"
 #include "net_encode.h"
 #include "event_flags.h"
+#include "shake.h"
 
 #define MSG_COUNT		32		// last 32 messages parsed
 #define MSG_MASK		(MSG_COUNT - 1)
@@ -306,7 +307,7 @@ void CL_ParseDownload( sizebuf_t *msg )
 	if( percent != 100 )
 	{
 		// request next block
-		Cvar_SetValue("scr_download", percent );
+		Cvar_SetFloat("scr_download", percent );
 		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
 		BF_WriteString( &cls.netchan.message, "nextdl" );
 	}
@@ -319,7 +320,7 @@ void CL_ParseDownload( sizebuf_t *msg )
 		if( r ) MsgDev( D_ERROR, "failed to rename.\n" );
 
 		cls.download = NULL;
-		Cvar_SetValue( "scr_download", 0.0f );
+		Cvar_SetFloat( "scr_download", 0.0f );
 
 		// get another file if needed
 		CL_RequestNextDownload();
@@ -331,7 +332,7 @@ void CL_RunBackgroundTrack( void )
 	string	intro, main, track;
 
 	// run background track
-	com.strncpy( track, cl.configstrings[CS_BACKGROUND_TRACK], MAX_STRING );
+	com.strncpy( track, cls.background_track, MAX_STRING );
 	com.snprintf( intro, MAX_STRING, "%s_intro", cl.configstrings[CS_BACKGROUND_TRACK] );
 	com.snprintf( main, MAX_STRING, "%s_main", cl.configstrings[CS_BACKGROUND_TRACK] );
 
@@ -588,6 +589,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 		Host_Error( "Server use invalid protocol (%i should be %i)\n", i, PROTOCOL_VERSION );
 
 	cl.servercount = BF_ReadLong( msg );
+	cl.checksum = BF_ReadLong( msg );
 	cl.playernum = BF_ReadByte( msg );
 	cl.maxclients = BF_ReadByte( msg );
 	clgame.maxEntities = BF_ReadWord( msg );
@@ -606,7 +608,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	// get splash name
 	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", clgame.mapname ));
-	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
+	Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar
 
 	if( cl_allow_levelshots->integer && !cls.changelevel )
 	{
@@ -616,6 +618,21 @@ void CL_ParseServerData( sizebuf_t *msg )
 			Cvar_Set( "cl_levelshot_name", MAP_DEFAULT_SHADER );	// render a black screen
 			cls.scrshot_request = scrshot_plaque;			// make levelshot
 		}
+	}
+
+	if( scr_dark->integer )
+	{
+		screenfade_t	*sf = &clgame.fade;
+	
+		sf->fadeFlags = FFADE_IN;
+		sf->fader = sf->fadeg = sf->fadeb = 0;
+		sf->fadeEnd = sf->fadeReset = 4.0f;
+		sf->fadealpha = 255;
+		sf->fadeSpeed = (float)sf->fadealpha / sf->fadeEnd;
+		sf->fadeReset += cl.time;
+		sf->fadeEnd += sf->fadeReset;
+		
+		Cvar_SetFloat( "v_dark", 0.0f );
 	}
 
 	// need to prep refresh at next oportunity
@@ -1020,6 +1037,72 @@ void CL_ParseDirector( sizebuf_t *msg )
 
 /*
 ==============
+CL_ParseScreenShake
+
+Set screen shake
+==============
+*/
+void CL_ParseScreenShake( sizebuf_t *msg )
+{
+	clgame.shake.amplitude = (float)(word)BF_ReadShort( msg ) * (1.0f / (float)(1<<12));
+	clgame.shake.duration = (float)(word)BF_ReadShort( msg ) * (1.0f / (float)(1<<12));
+	clgame.shake.frequency = (float)(word)BF_ReadShort( msg ) * (1.0f / (float)(1<<8));
+	clgame.shake.time = cl.time + max( clgame.shake.duration, 0.01f );
+	clgame.shake.next_shake = 0.0f;	// apply immediately
+}
+
+/*
+==============
+CL_ParseScreenFade
+
+Set screen fade
+==============
+*/
+void CL_ParseScreenFade( sizebuf_t *msg )
+{
+	float		duration, holdTime;
+	screenfade_t	*sf = &clgame.fade;
+
+	duration = (float)(word)BF_ReadShort( msg ) * (1.0f / (float)(1<<12));
+	holdTime = (float)(word)BF_ReadShort( msg ) * (1.0f / (float)(1<<12));
+	sf->fadeFlags = BF_ReadShort( msg );
+
+	sf->fader = BF_ReadByte( msg );
+	sf->fadeg = BF_ReadByte( msg );
+	sf->fadeb = BF_ReadByte( msg );
+	sf->fadealpha = BF_ReadByte( msg );
+	sf->fadeSpeed = 0.0f;
+	sf->fadeEnd = duration;
+	sf->fadeReset = holdTime;
+
+	// calc fade speed
+	if( duration > 0 )
+	{
+		if( sf->fadeFlags & FFADE_OUT )
+		{
+			if( sf->fadeEnd )
+			{
+				sf->fadeSpeed = -(float)sf->fadealpha / sf->fadeEnd;
+			}
+
+			sf->fadeEnd += cl.time;
+			sf->fadeReset += sf->fadeEnd;
+		}
+		else
+		{
+			if( sf->fadeEnd )
+			{
+				sf->fadeSpeed = (float)sf->fadealpha / sf->fadeEnd;
+			}
+
+			sf->fadeReset += cl.time;
+			sf->fadeEnd += sf->fadeReset;
+		}
+	}
+}
+
+/*
+==============
 CL_ParseUserMessage
 
 handles all user messages
@@ -1047,6 +1130,18 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 
 	if( i == MAX_USER_MESSAGES )
 		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
+
+	// NOTE: some user messages handled into engine
+	if( !com.strcmp( clgame.msg[i].name, "ScreenShake" ))
+	{
+		CL_ParseScreenShake( msg );
+		return;
+	}
+	else if( !com.strcmp( clgame.msg[i].name, "ScreenFade" ))
+	{
+		CL_ParseScreenFade( msg );
+		return;
+	}
 
 	iSize = clgame.msg[i].size;
 
@@ -1145,7 +1240,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = BF_ReadFloat( msg );			
 			break;
-			break;
 		case svc_print:
 			i = BF_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
@@ -1236,8 +1330,8 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseSoundFade( msg );
 			break;
 		case svc_cdtrack:
-			param1 = BF_ReadByte( msg );	// tracknum
-			param2 = BF_ReadByte( msg );	// loopnum
+			com.strncpy( cls.background_track, BF_ReadString( msg ), sizeof( cls.background_track ));
+			if( cl.audio_prepped ) CL_RunBackgroundTrack();
 			break;
 		case svc_serverinfo:
 			CL_ServerInfo( msg );
@@ -1258,7 +1352,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_roomtype:
 			param1 = BF_ReadShort( msg );
-			Cvar_SetValue( "room_type", param1 );
+			Cvar_SetFloat( "room_type", param1 );
 			break;
 		case svc_chokecount:
 			i = BF_ReadByte( msg );

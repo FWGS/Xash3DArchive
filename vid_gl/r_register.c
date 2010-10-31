@@ -973,7 +973,7 @@ void GL_InitExtensions( void )
 
 	// MCD has buffering issues
 	if(com.strstr( glConfig.renderer_string, "gdi" ))
-		Cvar_SetValue( "gl_finish", 1 );
+		Cvar_SetFloat( "gl_finish", 1 );
 
 	glConfig.allowCDS = true;
 	if( com.strstr( glConfig.renderer_string, "permedia" ) || com.strstr( glConfig.renderer_string, "glint" ))

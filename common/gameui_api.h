@@ -55,12 +55,12 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnCvarSetValue)( const char *szName, float flValue );
 
 	// command handlers
-	void	(*pfnAddCommand)( const char *cmd_name, void (*function)(void) );
+	int	(*pfnAddCommand)( const char *cmd_name, void (*function)(void) );
 	void	(*pfnClientCmd)( int execute_now, const char *szCmdString );
 	void	(*pfnDelCommand)( const char *cmd_name );
 	int       (*pfnCmdArgc)( void );	
-	const char* (*pfnCmdArgv)( int argc );
-	const char *(*pfnCmd_Args)( void );
+	char*	(*pfnCmdArgv)( int argc );
+	char*	(*pfnCmd_Args)( void );
 
 	// debug messages (im-menu shows only notify)	
 	void	(*Con_Printf)( char *fmt, ... );
@@ -86,7 +86,7 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnSetModel)( struct cl_entity_s *ed, const char *path );
 	void	(*pfnClearScene)( void );
 	void	(*pfnRenderScene)( const struct ref_params_s *fd );
-	int	(*CL_CreateVisibleEntity)( int type, struct cl_entity_s *ent, HIMAGE customShader );
+	int	(*CL_CreateVisibleEntity)( int type, struct cl_entity_s *ent );
 
 	// dlls managemenet
 	void*	(*pfnLoadLibrary)( const char *name );

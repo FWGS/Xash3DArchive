@@ -899,7 +899,7 @@ void SV_PutClientInServer( edict_t *ent )
 		ent->v.effects |= EF_NOINTERP;
 
 		// trigger_camera restored here
-		if( sv.viewentity > 0 )
+		if( sv.viewentity > 0 && sv.viewentity < GI->max_edicts )
 			client->pViewEntity = EDICT_NUM( sv.viewentity );
 		else client->pViewEntity = NULL;
 	}
@@ -980,6 +980,7 @@ void SV_New_f( sv_client_t *cl )
 	BF_WriteByte( &cl->netchan.message, svc_serverdata );
 	BF_WriteLong( &cl->netchan.message, PROTOCOL_VERSION );
 	BF_WriteLong( &cl->netchan.message, svs.spawncount );
+	BF_WriteLong( &cl->netchan.message, sv.checksum );
 	BF_WriteByte( &cl->netchan.message, playernum );
 	BF_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
 	BF_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );

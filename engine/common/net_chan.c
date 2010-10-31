@@ -1055,7 +1055,7 @@ void Netchan_UpdateProgress( netchan_t *chan )
 
 	if( scr_download->integer != -1 )
 	{
-		Cvar_SetValue( "scr_download", -1 );
+		Cvar_SetFloat( "scr_download", -1 );
 	}
 
 	if ( net_drawslider->integer != 1 )
@@ -1132,7 +1132,7 @@ void Netchan_UpdateProgress( netchan_t *chan )
 
 	}
 
-	Cvar_SetValue( "scr_download", bestpercent );
+	Cvar_SetFloat( "scr_download", bestpercent );
 }
 
 /*

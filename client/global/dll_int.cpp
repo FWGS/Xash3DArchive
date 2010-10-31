@@ -19,8 +19,7 @@
 #include "pm_movevars.h"
 #include "entity_types.h"
 
-cl_enginefuncs_t	gEngfuncs;
-movevars_t	*gpMovevars = NULL;
+cl_enginefunc_t	gEngfuncs;
 int		g_iPlayerClass;
 int		g_iTeamNumber;
 int		g_iUser1;
@@ -71,7 +70,7 @@ static HUD_FUNCTIONS gFunctionTable =
 //=======================================================================
 //			GetApi
 //=======================================================================
-int CreateAPI( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* pEngfuncsFromEngine )
+int CreateAPI( HUD_FUNCTIONS *pFunctionTable, cl_enginefunc_t* pEngfuncsFromEngine )
 {
 	if( !pFunctionTable || !pEngfuncsFromEngine )
 	{
@@ -80,16 +79,13 @@ int CreateAPI( HUD_FUNCTIONS *pFunctionTable, cl_enginefuncs_t* pEngfuncsFromEng
 
 	// copy HUD_FUNCTIONS table to engine, copy engfuncs table from engine
 	memcpy( pFunctionTable, &gFunctionTable, sizeof( HUD_FUNCTIONS ));
-	memcpy( &gEngfuncs, pEngfuncsFromEngine, sizeof( cl_enginefuncs_t ));
+	memcpy( &gEngfuncs, pEngfuncsFromEngine, sizeof( cl_enginefunc_t ));
 
 	return TRUE;
 }
 
 int HUD_VidInit( void )
 {
-	// always keep movevars an actual
-	gpMovevars = gEngfuncs.pfnGetMovementVariables();
-
 	if ( g_pParticleSystems )
 		g_pParticleSystems->ClearSystems();
 
@@ -315,8 +311,6 @@ void HUD_ProcessPlayerState( struct entity_state_s *dst, const struct entity_sta
 
 int HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType )
 {
-	float	oldScale, oldRenderAmt;
-	float	shellScale = 1.0f;
 	int	result;
 
 	// if entity is beam add it here
@@ -327,29 +321,7 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType )
 		return 1;
 	}
 
-	if ( pEnt->curstate.renderfx == kRenderFxGlowShell )
-	{
-		oldRenderAmt = pEnt->curstate.renderamt;
-		oldScale = pEnt->curstate.scale;
-		
-		pEnt->curstate.renderamt = 255; // clear amount
-	}
-
-	result = gEngfuncs.CL_CreateVisibleEntity( entityType, pEnt, -1 );
-
-	if ( pEnt->curstate.renderfx == kRenderFxGlowShell )
-	{
-		shellScale = (oldRenderAmt * 0.0015f);	// shellOffset
-		pEnt->curstate.scale = oldScale + shellScale;	// sets new scale
-		pEnt->curstate.renderamt = 128;
-
-		// render glowshell
-		result |= gEngfuncs.CL_CreateVisibleEntity( entityType, pEnt, g_pTempEnts->hSprGlowShell );
-
-		// restore parms
-		pEnt->curstate.scale = oldScale;
-		pEnt->curstate.renderamt = oldRenderAmt;
-	}	
+	result = gEngfuncs.CL_CreateVisibleEntity( entityType, pEnt );
 
 	if ( pEnt->curstate.effects & EF_BRIGHTFIELD )
 	{

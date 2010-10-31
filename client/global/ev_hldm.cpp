@@ -75,9 +75,8 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 
 	entity = gEngfuncs.pEventAPI->EV_IndexFromTrace( ptr );
 
-	// check if playtexture sounds movevar is set
-	if( gEngfuncs.GetMaxClients() != 1 && gpMovevars->footsteps == 0 )
-		return 0.0f;
+	// FIXME check if playtexture sounds movevar is set
+	//
 
 	chTextureType = 0;
 
