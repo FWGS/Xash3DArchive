@@ -5,7 +5,7 @@
 
 #include "extdll.h"
 #include "utils.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 #include "hud.h"
 #include "aurora.h"
 #include "pm_defs.h"

@@ -8,7 +8,320 @@
 #include "r_efx.h"
 #include "event_flags.h"
 #include "entity_types.h"
+#include "triangleapi.h"
 #include "studio.h"
+
+/*
+==============================================================
+
+PARTICLES MANAGEMENT
+
+==============================================================
+*/
+#define NUMVERTEXNORMALS	162
+#define SPARK_COLORCOUNT	9
+
+// particle velocities
+static const float	cl_avertexnormals[NUMVERTEXNORMALS][3] =
+{
+#include "anorms.h"
+};
+
+// particle ramps
+static int ramp1[8] = { 0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61 };
+static int ramp2[8] = { 0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66 };
+static int ramp3[6] = { 0x6d, 0x6b, 6, 5, 4, 3 };
+
+static int gTracerColors[][3] =
+{
+{ 255, 255, 255 },		// White
+{ 255, 0, 0 },		// Red
+{ 0, 255, 0 },		// Green
+{ 0, 0, 255 },		// Blue
+{ 0, 0, 0 },		// Tracer default, filled in from cvars, etc.
+{ 255, 167, 17 },		// Yellow-orange sparks
+{ 255, 130, 90 },		// Yellowish streaks (garg)
+{ 55, 60, 144 },		// Blue egon streak
+{ 255, 130, 90 },		// More Yellowish streaks (garg)
+{ 255, 140, 90 },		// More Yellowish streaks (garg)
+{ 200, 130, 90 },		// More red streaks (garg)
+{ 255, 120, 70 },		// Darker red streaks (garg)
+};
+
+static int gSparkRamp[SPARK_COLORCOUNT][3] =
+{
+{ 255, 255, 255 },
+{ 255, 247, 199 },
+{ 255, 243, 147 },
+{ 255, 243, 27 },
+{ 239, 203, 31 },
+{ 223, 171, 39 },
+{ 207, 143, 43 },
+{ 127, 59, 43 },
+{ 35, 19, 7 }
+};
+
+particle_t	*cl_active_particles;
+particle_t	*cl_free_particles;
+particle_t	*cl_particles = NULL;	// particle pool
+static vec3_t	cl_avelocities[NUMVERTEXNORMALS];
+
+/*
+================
+CL_InitParticles
+
+================
+*/
+void CL_InitParticles( void )
+{
+	int	i;
+
+	cl_particles = Mem_Alloc( cls.mempool, sizeof( particle_t ) * GI->max_particles );
+	CL_ClearParticles ();
+
+	// this is used for EF_BRIGHTFIELD
+	for( i = 0; i < NUMVERTEXNORMALS; i++ )
+	{
+		cl_avelocities[i][0] = Com_RandomLong( 0, 255 ) * 0.01f;
+		cl_avelocities[i][1] = Com_RandomLong( 0, 255 ) * 0.01f;
+		cl_avelocities[i][2] = Com_RandomLong( 0, 255 ) * 0.01f;
+	}
+}
+
+/*
+================
+CL_ClearParticles
+
+================
+*/
+void CL_ClearParticles( void )
+{
+	int	i;
+
+	cl_free_particles = cl_particles;
+	cl_active_particles = NULL;
+
+	for( i = 0; i < GI->max_particles; i++ )
+		cl_particles[i].next = &cl_particles[i+1];
+
+	cl_particles[GI->max_particles-1].next = NULL;
+}
+
+/*
+================
+CL_FreeParticles
+
+================
+*/
+void CL_FreeParticles( void )
+{
+	if( cl_particles ) Mem_Free( cl_particles );
+}
+
+/*
+================
+CL_FreeParticle
+
+move particle to freelist
+================
+*/
+void CL_FreeParticle( particle_t *p )
+{
+	if( p->type == pt_clientcustom && p->deathfunc )
+	{
+		// call right the deathfunc func before die
+		p->deathfunc( p );
+	}
+
+	p->next = cl_free_particles;
+	cl_free_particles = p;
+}
+
+/*
+================
+CL_AllocParticle
+
+can return NULL if particles is out
+================
+*/
+particle_t *CL_AllocParticle( void (*callback)( particle_t*, float ))
+{
+	particle_t	*p;
+
+	// never alloc particles when we not in game
+	if( !CL_IsInGame( )) return NULL;
+
+	if( !cl_free_particles )
+	{
+		MsgDev( D_INFO, "Overflow %d particles\n", GI->max_particles );
+		return NULL;
+	}
+
+	p = cl_free_particles;
+	cl_free_particles = p->next;
+	p->next = cl_active_particles;
+	cl_active_particles = p;
+
+	// clear old particle
+	p->type = pt_static;
+	VectorClear( p->vel );
+	VectorClear( p->org );
+	p->ramp = 0;
+
+	if( callback )
+	{
+		p->type = pt_clientcustom;
+		p->callback = callback;
+	}
+
+	return p;
+}
+void CL_UpdateParticle( particle_t *p, float ft )
+{
+	float	time3 = 15.0 * ft;
+	float	time2 = 10.0 * ft;
+	float	time1 = 5.0 * ft;
+	float	dvel = 4 * ft;
+	float	grav = ft * clgame.movevars.gravity * 0.05f;
+	float	size = 1.5f;
+	vec3_t	right, up;
+	rgb_t	color;
+	int	i;
+
+	switch( p->type )
+	{
+	case pt_static:
+		break;
+	case pt_clientcustom:
+		if( p->callback )
+			p->callback( p, ft );
+		return;
+	case pt_fire:
+		p->ramp += time1;
+		if( p->ramp >= 6 ) p->die = -1;
+		else p->color = ramp3[(int)p->ramp];
+		p->vel[2] += grav;
+		break;
+	case pt_explode:
+		p->ramp += time2;
+		if( p->ramp >= 8 ) p->die = -1;
+		else p->color = ramp1[(int)p->ramp];
+		for( i = 0; i < 3; i++ )
+			p->vel[i] += p->vel[i] * dvel;
+		p->vel[2] -= grav;
+		break;
+	case pt_explode2:
+		p->ramp += time3;
+		if( p->ramp >= 8 ) p->die = -1;
+		else p->color = ramp2[(int)p->ramp];
+		for( i = 0; i < 3; i++ )
+			p->vel[i] -= p->vel[i] * ft;
+		p->vel[2] -= grav;
+		break;
+	case pt_blob:
+		for( i = 0; i < 3; i++ )
+			p->vel[i] += p->vel[i] * dvel;
+		p->vel[2] -= grav;
+		break;
+	case pt_blob2:
+		for( i = 0; i < 2; i++ )
+			p->vel[i] -= p->vel[i] * dvel;
+		p->vel[2] -= grav;
+		break;
+	case pt_grav:
+		p->vel[2] -= grav * 20;
+		break;
+	case pt_slowgrav:
+		p->vel[2] = grav;
+		break;
+	case pt_vox_grav:
+		p->vel[2] -= grav * 8;
+		break;
+	case pt_vox_slowgrav:
+		p->vel[2] -= grav * 4;
+		break;
+	}
+
+	// HACKHACK a scale up to keep particles from disappearing
+	size += (p->org[0] - cl.refdef.vieworg[0]) * cl.refdef.forward[0];
+	size += (p->org[1] - cl.refdef.vieworg[1]) * cl.refdef.forward[1];
+	size += (p->org[2] - cl.refdef.vieworg[2]) * cl.refdef.forward[2];
+
+	if( size < 20.0f ) size = 1.0f;
+	else size = 1.0f + size * 0.004f;
+
+ 	// scale the axes by radius
+	VectorScale( cl.refdef.right, size, right );
+	VectorScale( cl.refdef.up, size, up );
+
+	p->color = bound( 0, p->color, 255 );
+	VectorSet( color, clgame.palette[p->color][0], clgame.palette[p->color][1], clgame.palette[p->color][2] );
+
+	re->Enable( TRI_SHADER );
+	re->RenderMode( kRenderTransTexture );
+	re->Color4ub( color[0], color[1], color[2], 0xFF );
+
+	re->Bind( cls.particleShader, 0 );
+
+	// add the 4 corner vertices.
+	re->Begin( TRI_QUADS );
+
+	re->TexCoord2f( 0.0f, 1.0f );
+	re->Vertex3f( p->org[0] - right[0] + up[0], p->org[1] - right[1] + up[1], p->org[2] - right[2] + up[2] );
+	re->TexCoord2f( 0.0f, 0.0f );
+	re->Vertex3f( p->org[0] + right[0] + up[0], p->org[1] + right[1] + up[1], p->org[2] + right[2] + up[2] );
+	re->TexCoord2f( 1.0f, 0.0f );
+	re->Vertex3f( p->org[0] + right[0] - up[0], p->org[1] + right[1] - up[1], p->org[2] + right[2] - up[2] );
+	re->TexCoord2f( 1.0f, 1.0f );
+	re->Vertex3f( p->org[0] - right[0] - up[0], p->org[1] - right[1] - up[1], p->org[2] - right[2] - up[2] );
+
+	re->End();
+	re->Disable( TRI_SHADER );
+
+	// update position.
+	VectorMA( p->org, ft, p->vel, p->org );
+}
+
+void CL_DrawParticles( void )
+{
+	particle_t	*p, *kill;
+	float		frametime;
+
+	frametime = cl.time - cl.oldtime;
+
+	if( !cl_draw_particles->integer )
+		return;
+
+	while( 1 ) 
+	{
+		// free time-expired particles
+		kill = cl_active_particles;
+		if( kill && kill->die < cl.time )
+		{
+			cl_active_particles = kill->next;
+			CL_FreeParticle( kill );
+			continue;
+		}
+		break;
+	}
+
+	for( p = cl_active_particles; p; p = p->next )
+	{
+		while( 1 )
+		{
+			kill = p->next;
+			if( kill && kill->die < cl.time )
+			{
+				p->next = kill->next;
+				CL_FreeParticle( kill );
+				continue;
+			}
+			break;
+		}
+
+		CL_UpdateParticle( p, frametime );
+	}
+}
 
 /*
 ==============================================================
@@ -575,5 +888,6 @@ CL_ClearEffects
 void CL_ClearEffects( void )
 {
 	CL_ClearDlights ();
+	CL_ClearParticles ();
 	CL_ClearLightStyles ();
 }

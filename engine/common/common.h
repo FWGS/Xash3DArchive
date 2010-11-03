@@ -285,6 +285,8 @@ void CL_StudioFxTransform( struct cl_entity_s *ent, float transform[4][4] );
 qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
 void CL_StudioEvent( struct mstudioevent_s *event, struct cl_entity_s *ent );
 qboolean CL_GetComment( const char *demoname, char *comment );
+void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appName );
+int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBufferSize );
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 struct cl_entity_s *CL_GetEntityByIndex( int index );

@@ -109,6 +109,61 @@ skipwhite:
 
 /*
 =============
+COM_AddAppDirectoryToSearchPath
+
+=============
+*/
+void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appName )
+{
+	string	dir;
+
+	if( !pszBaseDir || !appName )
+	{
+		MsgDev( D_ERROR, "COM_AddDirectorySearchPath: bad directory or appname\n" );
+		return;
+	}
+
+	com.snprintf( dir, sizeof( dir ), "%s/%s", pszBaseDir, appName );
+	FS_AddGameDirectory( dir, FS_GAMEDIR_PATH );
+}
+
+/*
+===========
+COM_ExpandFilename
+
+Finds the file in the search path, copies over the name with the full path name.
+This doesn't search in the pak file.
+===========
+*/
+int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBufferSize )
+{
+	const char	*path;
+	char		rootdir[MAX_SYSPATH];
+	char		result[MAX_SYSPATH];
+
+	if( !fileName || !*fileName || !nameOutBuffer || nameOutBufferSize <= 0 )
+		return 0;
+
+	// filename examples:
+	// media\sierra.avi - D:\Xash3D\valve\media\sierra.avi
+	// models\barney.mdl - D:\Xash3D\bshift\models\barney.mdl
+	if(( path = FS_GetDiskPath( fileName )) != NULL )
+	{
+		GetCurrentDirectory( MAX_SYSPATH, rootdir );
+		com.sprintf( result, "%s/%s", rootdir, path );		
+
+		// check for enough room
+		if( com.strlen( result ) > nameOutBufferSize )
+			return 0;
+
+		com.strncpy( nameOutBuffer, result, nameOutBufferSize );
+		return 1;
+	}
+	return 0;
+}
+
+/*
+=============
 pfnMemFgets
 
 =============

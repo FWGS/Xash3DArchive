@@ -248,8 +248,52 @@ typedef struct
 
 typedef struct
 {
+	int	(*pfnInitialize)( cl_enginefunc_t *pEnginefuncs, int iVersion );
+	int	(*pfnVidInit)( void );
+	void	(*pfnInit)( void );
+	void	(*pfnShutdown)( void );
+	int	(*pfnRedraw)( float flTime, int intermission );
+	int	(*pfnUpdateClientData)( client_data_t *cdata, float flTime );
+	void	(*pfnReset)( void );
+	void	(*pfnPlayerMove)( struct playermove_s *ppmove, int server );
+	void	(*pfnPlayerMoveInit)( struct playermove_s *ppmove );
+	char	(*pfnPlayerMoveTexture)( char *name );
+	int	(*pfnConnectionlessPacket)( const netadr_t *net_from, const char *args, char *buffer, int *size );
+	int	(*pfnGetHullBounds)( int hullnumber, float *mins, float *maxs );
+	void	(*pfnFrame)( double time );
+	void	(*pfnVoiceStatus)( int entindex, qboolean bTalking );
+	void	(*pfnDirectorMessage)( int iSize, void *pbuf );
+	void	(*pfnPostRunCmd)( local_state_t *from, local_state_t *to, usercmd_t *cmd, int runfuncs, double time, uint random_seed );
+	int	(*pfnKey_Event)( int eventcode, int keynum, const char *pszCurrentBinding );
+	void	(*pfnDemo_ReadBuffer)( int size, byte *buffer );
+	int	(*pfnAddEntity)( int type, cl_entity_t *ent, const char *modelname );
+	void	(*pfnCreateEntities)( void );
+	void	(*pfnStudioEvent)( const struct mstudioevent_s *event, const cl_entity_t *entity );
+	void	(*pfnTxferLocalOverrides)( entity_state_t *state, const clientdata_t *client );
+	void	(*pfnProcessPlayerState)( entity_state_t *dst, const entity_state_t *src );
+	void	(*pfnTxferPredictionData)( entity_state_t *ps, const entity_state_t *pps, clientdata_t *pcd, const clientdata_t *ppcd, weapon_data_t *wd, const weapon_data_t *pwd );
+	void	(*pfnTempEntUpdate)( double frametime, double client_time, double cl_gravity, struct tempent_s **ppTempEntFree, struct tempent_s **ppTempEntActive, int ( *Callback_AddVisibleEntity )( cl_entity_t *pEntity ), void ( *Callback_TempEntPlaySound )( struct tempent_s *pTemp, float damp ));
+	void	(*pfnDrawNormalTriangles)( void );
+	void	(*pfnDrawTransparentTriangles)( void );
+	cl_entity_t (*pfnGetUserEntity)( int index );
+	void	*(*KB_Find)( const char *name );	// returns kbutton_t. Probably Xash3D doesn't need for it
+	void	(*CAM_Think)( void );		// camera stuff (QW issues)
+	int	(*CL_IsThirdPerson)( void );
+	void	(*CL_CameraOffset)( float *ofs );
+	void	(*CL_CreateMove)( float frametime, usercmd_t *cmd, int active );
+	void	(*IN_ActivateMouse)( void );
+	void	(*IN_DeactivateMouse)( void );
+	void	(*IN_MouseEvent)( int mstate );
+	void	(*IN_Accumulate)( void );
+	void	(*IN_ClearStates)( void );
+	void	(*V_CalcRefdef)( ref_params_t *pparams );
+} CDLL_FUNCTIONS;
+
+typedef struct
+{
 	void		*hInstance;		// pointer to client.dll
 	HUD_FUNCTIONS	dllFuncs;			// dll exported funcs
+	CDLL_FUNCTIONS	cdllFuncs;		// dll exported funcs (under construction)
 	byte		*mempool;			// client edicts pool
 	string		mapname;			// map name
 	string		maptitle;			// display map title
@@ -335,6 +379,7 @@ typedef struct
 
 	// internal shaders
 	shader_t		fillShader;		// used for emulate FillRGBA to avoid wrong draw-sort
+	shader_t		particleShader;		// built-in particle and sparks shader
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
 	shader_t		loadingBar;		// 'loading' progress bar
 	cl_font_t		creditsFont;		// shared creditsfont
@@ -368,6 +413,7 @@ typedef struct
 	qboolean		demorecording;
 	qboolean		demoplayback;
 	qboolean		demowaiting;		// don't record until a non-delta message is received
+	qboolean		timedemo;
 	string		demoname;			// for demo looping
 
 	file_t		*demofile;
@@ -393,6 +439,7 @@ extern convar_t	*cl_testlights;
 extern convar_t	*cl_solid_players;
 extern convar_t	*cl_idealpitchscale;
 extern convar_t	*cl_allow_levelshots;
+extern convar_t	*cl_draw_particles;
 extern convar_t	*cl_levelshot_name;
 extern convar_t	*scr_centertime;
 extern convar_t	*scr_download;
@@ -549,6 +596,10 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 word CL_EventIndex( const char *name );
 void CL_ResetEvent( event_info_t *ei );
 void CL_FireEvents( void );
+void CL_InitParticles( void );
+void CL_ClearParticles( void );
+void CL_FreeParticles( void );
+void CL_DrawParticles( void );
 
 //
 // console.c

@@ -5,7 +5,7 @@
 
 #include "extdll.h"
 #include "utils.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 #include "r_efx.h"
 #include "ref_params.h"
 #include "ev_hldm.h"
@@ -1492,6 +1492,10 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 		color[1] = srcColor[1];
 		color[2] = srcColor[2];
 	}
+
+	// HACKHACK: for Salute mod
+	if( pbeam->type == TE_BEAMFOLLOW && pbeam->entity[0] )
+		pbeam->brightness = pbeam->entity[0]->curstate.renderamt;
 
 	color[0] *= ((float)pbeam->brightness / 255.0);
 	color[1] *= ((float)pbeam->brightness / 255.0);

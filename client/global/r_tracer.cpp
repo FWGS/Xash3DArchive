@@ -5,7 +5,7 @@
 
 #include "extdll.h"
 #include "utils.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 #include "r_efx.h"
 #include "pm_movevars.h"
 #include "ev_hldm.h"

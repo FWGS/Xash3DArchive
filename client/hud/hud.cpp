@@ -5,7 +5,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "hud.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 
 #define MAX_LOGO_FRAMES 56
 

@@ -6,7 +6,7 @@
 #include "r_local.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 
 static vec4_t	pic_xyz[4] = { {0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {0,0,0,1} };
 static vec2_t	pic_st[4];

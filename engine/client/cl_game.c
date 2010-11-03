@@ -8,11 +8,59 @@
 #include "byteorder.h"
 #include "matrix_lib.h"
 #include "const.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 #include "r_efx.h"
+#include "net_api.h"
+#include "demo_api.h"
 #include "event_flags.h"
+#include "ivoicetweak.h"
 #include "pm_local.h"
+#include "input.h"
 #include "shake.h"
+
+static dllfunc_t cdll_exports[] =
+{
+	{ "Initialize", (void **)&clgame.cdllFuncs.pfnInitialize },
+	{ "HUD_VidInit", (void **)&clgame.cdllFuncs.pfnVidInit },
+	{ "HUD_Init", (void **)&clgame.cdllFuncs.pfnInit },
+	{ "HUD_Shutdown", (void **)&clgame.cdllFuncs.pfnShutdown },
+	{ "HUD_Redraw", (void **)&clgame.cdllFuncs.pfnRedraw },
+	{ "HUD_UpdateClientData", (void **)&clgame.cdllFuncs.pfnUpdateClientData },
+	{ "HUD_Reset", (void **)&clgame.cdllFuncs.pfnReset },
+	{ "HUD_PlayerMove", (void **)&clgame.cdllFuncs.pfnPlayerMove },
+	{ "HUD_PlayerMoveInit", (void **)&clgame.cdllFuncs.pfnPlayerMoveInit },
+	{ "HUD_PlayerMoveTexture", (void **)&clgame.cdllFuncs.pfnPlayerMoveTexture },
+	{ "HUD_ConnectionlessPacket", (void **)&clgame.cdllFuncs.pfnConnectionlessPacket },
+	{ "HUD_GetHullBounds", (void **)&clgame.cdllFuncs.pfnGetHullBounds },
+	{ "HUD_Frame", (void **)&clgame.cdllFuncs.pfnFrame },
+	{ "HUD_VoiceStatus", (void **)&clgame.cdllFuncs.pfnVoiceStatus },
+	{ "HUD_DirectorMessage", (void **)&clgame.cdllFuncs.pfnDirectorMessage },
+	{ "HUD_PostRunCmd", (void **)&clgame.cdllFuncs.pfnPostRunCmd },
+	{ "HUD_Key_Event", (void **)&clgame.cdllFuncs.pfnKey_Event },
+	{ "HUD_AddEntity", (void **)&clgame.cdllFuncs.pfnAddEntity },
+	{ "HUD_CreateEntities", (void **)&clgame.cdllFuncs.pfnCreateEntities },
+	{ "HUD_StudioEvent", (void **)&clgame.cdllFuncs.pfnStudioEvent },
+	{ "HUD_TxferLocalOverrides", (void **)&clgame.cdllFuncs.pfnTxferLocalOverrides },
+	{ "HUD_ProcessPlayerState", (void **)&clgame.cdllFuncs.pfnProcessPlayerState },
+	{ "HUD_TxferPredictionData", (void **)&clgame.cdllFuncs.pfnTxferPredictionData },
+	{ "HUD_TempEntUpdate", (void **)&clgame.cdllFuncs.pfnTempEntUpdate },
+	{ "HUD_DrawNormalTriangles", (void **)&clgame.cdllFuncs.pfnDrawNormalTriangles },
+	{ "HUD_DrawTransparentTriangles", (void **)&clgame.cdllFuncs.pfnDrawTransparentTriangles },
+	{ "HUD_GetUserEntity", (void **)&clgame.cdllFuncs.pfnGetUserEntity },
+	{ "Demo_ReadBuffer", (void **)&clgame.cdllFuncs.pfnDemo_ReadBuffer },
+	{ "CAM_Think", (void **)&clgame.cdllFuncs.CAM_Think },
+	{ "CL_IsThirdPerson", (void **)&clgame.cdllFuncs.CL_IsThirdPerson },
+	{ "CL_CameraOffset", (void **)&clgame.cdllFuncs.CL_CameraOffset },
+	{ "CL_CreateMove", (void **)&clgame.cdllFuncs.CL_CreateMove },
+	{ "IN_ActivateMouse", (void **)&clgame.cdllFuncs.IN_ActivateMouse },
+	{ "IN_DeactivateMouse", (void **)&clgame.cdllFuncs.IN_DeactivateMouse },
+	{ "IN_MouseEvent", (void **)&clgame.cdllFuncs.IN_MouseEvent },
+	{ "IN_Accumulate", (void **)&clgame.cdllFuncs.IN_Accumulate },
+	{ "IN_ClearStates", (void **)&clgame.cdllFuncs.IN_ClearStates },
+	{ "V_CalcRefdef", (void **)&clgame.cdllFuncs.V_CalcRefdef },
+	{ "KB_Find", (void **)&clgame.cdllFuncs.KB_Find },
+	{ NULL, NULL }
+};
 
 /*
 ====================
@@ -2120,13 +2168,146 @@ void VGui_ViewportPaintBackground( int extents[4] )
 
 /*
 =============
-pfnIsInGame
+pfnLoadMapSprite
 
 =============
 */
-int pfnIsInGame( void )
+model_t *pfnLoadMapSprite( const char *filename )
 {
-	return ( cls.key_dest == key_game ) ? true : false;
+	// FIXME: implement
+	return NULL;
+}
+
+/*
+=============
+PlayerInfo_ValueForKey
+
+=============
+*/
+const char *PlayerInfo_ValueForKey( int playerNum, const char *key )
+{
+	// find the player
+	if(( playerNum > cl.maxclients ) || ( playerNum < 1 ))
+		return NULL;
+
+	if(( cl.players[playerNum-1].name == NULL ) || (*(cl.players[playerNum-1].name) == 0 ))
+		return NULL;
+
+	return Info_ValueForKey( cl.players[playerNum-1].userinfo, key );
+}
+
+/*
+=============
+PlayerInfo_SetValueForKey
+
+=============
+*/
+void PlayerInfo_SetValueForKey( const char *key, const char *value )
+{
+	// FIXME: implement
+}
+
+/*
+=============
+pfnGetPlayerUniqueID
+
+=============
+*/
+qboolean pfnGetPlayerUniqueID( int iPlayer, char playerID[16] )
+{
+	// FIXME: implement
+	return false;
+}
+
+/*
+=============
+pfnGetTrackerIDForPlayer
+
+=============
+*/
+int pfnGetTrackerIDForPlayer( int playerSlot )
+{
+	playerSlot -= 1;	// make into a client index
+
+	if( !cl.players[playerSlot].userinfo[0] || !cl.players[playerSlot].name[0] )
+			return 0;
+	return com.atoi( Info_ValueForKey( cl.players[playerSlot].userinfo, "*tracker" ));
+}
+
+/*
+=============
+pfnGetPlayerForTrackerID
+
+=============
+*/
+int pfnGetPlayerForTrackerID( int trackerID )
+{
+	int	i;
+
+	for( i = 0; i < MAX_CLIENTS; i++ )
+	{
+		if( !cl.players[i].userinfo[0] || !cl.players[i].name[0] )
+			continue;
+
+		if( com.atoi( Info_ValueForKey( cl.players[i].userinfo, "*tracker" )) == trackerID )
+		{
+			// make into a player slot
+			return (i+1);
+		}
+	}
+	return 0;
+}
+
+/*
+=============
+pfnServerCmdUnreliable
+
+=============
+*/
+int pfnServerCmdUnreliable( char *szCmdString )
+{
+	if( !szCmdString || !*szCmdString )
+		return 0;
+
+	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+	BF_WriteString( &cls.netchan.message, szCmdString );
+
+	return 1;
+}
+
+/*
+=============
+pfnGetMousePos
+
+=============
+*/
+void pfnGetMousePos( struct tagPOINT *ppt )
+{
+	GetCursorPos( ppt );
+}
+
+/*
+=============
+pfnSetMousePos
+
+=============
+*/
+void pfnSetMousePos( int mx, int my )
+{
+	if( !mx && !my ) return;
+	Sys_QueEvent( SE_MOUSE, mx, my, 0, NULL );
+}
+
+/*
+=============
+pfnSetMouseEnable
+
+=============
+*/
+void pfnSetMouseEnable( qboolean fEnable )
+{
+	if( fEnable ) IN_ActivateMouse();
+	else IN_DeactivateMouse();
 }
 
 /*
@@ -2253,6 +2434,11 @@ callback from renderer
 */
 void Tri_DrawTriangles( int fTrans )
 {
+	if( fTrans )
+	{
+		CL_DrawParticles ();
+	}
+
 	clgame.dllFuncs.pfnDrawTriangles( fTrans );
 }
 
@@ -2446,11 +2632,22 @@ void TriTexCoord2f( float u, float v )
 
 /*
 =============
+TriBrightness
+
+=============
+*/
+void TriBrightness( float brightness )
+{
+	// FIXME: implement
+}
+
+/*
+=============
 TriCullFace
 
 =============
 */
-void TriCullFace( TRI_CULL mode )
+void TriCullFace( TRICULLSTYLE mode )
 {
 	if( !re ) return;
 	re->CullFace( mode );
@@ -2505,28 +2702,262 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 	if( re ) re->Fog( flFogColor, flStart, flEnd, bOn );
 }
 
+/*
+=================
+DemoApi implementation
+
+=================
+*/
+/*
+=================
+Demo_IsRecording
+
+=================
+*/
+static int Demo_IsRecording( void )
+{
+	return cls.demorecording;
+}
+
+/*
+=================
+Demo_IsPlayingback
+
+=================
+*/
+static int Demo_IsPlayingback( void )
+{
+	return cls.demoplayback;
+}
+
+/*
+=================
+Demo_IsTimeDemo
+
+=================
+*/
+static int Demo_IsTimeDemo( void )
+{
+	return cls.timedemo;
+}
+
+/*
+=================
+Demo_WriteBuffer
+
+=================
+*/
+static void Demo_WriteBuffer( int size, byte *buffer )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+NetworkApi implementation
+
+=================
+*/
+/*
+=================
+NetAPI_InitNetworking
+
+=================
+*/
+void NetAPI_InitNetworking( void )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+NetAPI_InitNetworking
+
+=================
+*/
+void NetAPI_Status( net_status_t *status )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+NetAPI_SendRequest
+
+=================
+*/
+void NetAPI_SendRequest( int context, int request, int flags, double timeout, netadr_t *remote_address, net_api_response_func_t response )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+NetAPI_CancelRequest
+
+=================
+*/
+void NetAPI_CancelRequest( int context )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+NetAPI_CancelAllRequests
+
+=================
+*/
+void NetAPI_CancelAllRequests( void )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+NetAPI_AdrToString
+
+=================
+*/
+char *NetAPI_AdrToString( netadr_t *a )
+{
+	return NET_AdrToString( *a );
+}
+
+/*
+=================
+NetAPI_CompareAdr
+
+=================
+*/
+int NetAPI_CompareAdr( netadr_t *a, netadr_t *b )
+{
+	return NET_CompareAdr( *a, *b );
+}
+
+/*
+=================
+NetAPI_StringToAdr
+
+=================
+*/
+int NetAPI_StringToAdr( char *s, netadr_t *a )
+{
+	return NET_StringToAdr( s, a );
+}
+
+/*
+=================
+NetAPI_ValueForKey
+
+=================
+*/
+const char *NetAPI_ValueForKey( const char *s, const char *key )
+{
+	return Info_ValueForKey( s, key );
+}
+
+/*
+=================
+NetAPI_RemoveKey
+
+=================
+*/
+void NetAPI_RemoveKey( char *s, const char *key )
+{
+	Info_RemoveKey( s, key );
+}
+
+/*
+=================
+NetAPI_SetValueForKey
+
+=================
+*/
+void NetAPI_SetValueForKey( char *s, const char *key, const char *value, int maxsize )
+{
+	if( maxsize > MAX_INFO_STRING ) return;
+	Info_SetValueForKey( s, key, value );
+}
+
+
+/*
+=================
+IVoiceTweak implementation
+
+=================
+*/
+/*
+=================
+Voice_StartVoiceTweakMode
+
+=================
+*/
+int Voice_StartVoiceTweakMode( void )
+{
+	// UNDONE: wait for voice implementation in snd_dx.dll
+	// g-cont. may be move snd_dx.dll back into the engine ?
+	return 0;
+}
+
+/*
+=================
+Voice_EndVoiceTweakMode
+
+=================
+*/
+void Voice_EndVoiceTweakMode( void )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+Voice_SetControlFloat
+
+=================
+*/	
+void Voice_SetControlFloat( VoiceTweakControl iControl, float value )
+{
+	// FIXME: implement
+}
+
+/*
+=================
+Voice_GetControlFloat
+
+=================
+*/
+float Voice_GetControlFloat( VoiceTweakControl iControl )
+{
+	// FIXME: implement
+	return 1.0f;
+}
+			
 static triangleapi_t gTriApi =
 {
 	TRI_API_VERSION,	
-	TriLoadShader,
-	TriGetSpriteFrame,
 	TriRenderMode,
 	TriBegin,
 	TriEnd,
-	TriEnable,
-	TriDisable,
-	TriVertex3f,
-	TriVertex3fv,
-	TriNormal3f,
-	TriNormal3fv,
 	TriColor4f,
 	TriColor4ub,
 	TriTexCoord2f,
-	TriBind,
+	TriVertex3fv,
+	TriVertex3f,
+	TriBrightness,
 	TriCullFace,
-	TriScreenToWorld,
+	TriGetSpriteFrame,
 	TriWorldToScreen,
-	TriFog
+	TriFog,
+	TriScreenToWorld,
+
+	TriLoadShader,
+	TriEnable,
+	TriDisable,
+	TriNormal3f,
+	TriNormal3fv,
+	TriBind,
 };
 
 static efx_api_t gEfxApi =
@@ -2567,6 +2998,37 @@ static event_api_t gEventApi =
 	pfnTraceTexture,
 	pfnStopAllSounds,
 	pfnKillEvents,
+};
+
+static demo_api_t gDemoApi =
+{
+	Demo_IsRecording,
+	Demo_IsPlayingback,
+	Demo_IsTimeDemo,
+	Demo_WriteBuffer,
+};
+
+static net_api_t gNetApi =
+{
+	NetAPI_InitNetworking,
+	NetAPI_Status,
+	NetAPI_SendRequest,
+	NetAPI_CancelRequest,
+	NetAPI_CancelAllRequests,
+	NetAPI_AdrToString,
+	NetAPI_CompareAdr,
+	NetAPI_StringToAdr,
+	NetAPI_ValueForKey,
+	NetAPI_RemoveKey,
+	NetAPI_SetValueForKey,
+};
+
+static IVoiceTweak gVoiceApi =
+{
+	Voice_StartVoiceTweakMode,
+	Voice_EndVoiceTweakMode,
+	Voice_SetControlFloat,
+	Voice_GetControlFloat,
 };
 
 // engine callbacks
@@ -2657,11 +3119,22 @@ static cl_enginefunc_t gEngfuncs =
 	&gTriApi,
 	&gEfxApi,
 	&gEventApi,
-	NULL,
-	NULL,
-	NULL,
+	&gDemoApi,
+	&gNetApi,
+	&gVoiceApi,
 	pfnIsSpectateOnly,
-	// FIXME: add missed builtins
+	pfnLoadMapSprite,
+	COM_AddAppDirectoryToSearchPath,
+	COM_ExpandFilename,
+	PlayerInfo_ValueForKey,
+	PlayerInfo_SetValueForKey,
+	pfnGetPlayerUniqueID,
+	pfnGetTrackerIDForPlayer,
+	pfnGetPlayerForTrackerID,
+	pfnServerCmdUnreliable,
+	pfnGetMousePos,
+	pfnSetMousePos,
+	pfnSetMouseEnable,
 };
 
 void CL_UnloadProgs( void )
@@ -2669,6 +3142,7 @@ void CL_UnloadProgs( void )
 	if( !clgame.hInstance ) return;
 
 	CL_FreeEdicts();
+	CL_FreeParticles();
 
 	// deinitialize game
 	clgame.dllFuncs.pfnShutdown();
@@ -2683,6 +3157,7 @@ qboolean CL_LoadProgs( const char *name )
 {
 	static CLIENTAPI		GetClientAPI;
 	static playermove_t		gpMove;
+	const dllfunc_t		*func;
 
 	if( clgame.hInstance ) CL_UnloadProgs();
 
@@ -2699,6 +3174,23 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.hInstance = FS_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
 
+	// clear exports
+	for( func = cdll_exports; func && func->name; func++ )
+		*func->func = NULL;
+#if 0
+	// UNDONE: waiting for finalize client.dll interface
+	for( func = cdll_exports; func && func->name != NULL; func++ )
+	{
+		// functions are cleared before all the extensions are evaluated
+		if(!( *func->func = (void *)FS_GetProcAddress( clgame.hInstance, func->name )))
+		{
+          		MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
+			FS_FreeLibrary( clgame.hInstance );
+			clgame.hInstance = NULL;
+			return false;
+		}
+	}
+#endif
 	GetClientAPI = (CLIENTAPI)FS_GetProcAddress( clgame.hInstance, "CreateAPI" );
 
 	if( !GetClientAPI )
@@ -2719,6 +3211,7 @@ qboolean CL_LoadProgs( const char *name )
 
 	clgame.maxEntities = GI->max_edicts; // merge during loading
 	CL_InitTitles( "titles.txt" );
+	CL_InitParticles ();
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

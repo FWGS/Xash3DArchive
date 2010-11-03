@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_LIGHTMAPS		128
 #define MAX_SUPER_STYLES		1024	// unique lightstyle combiantions
 #define MAX_TEXTURES		4096
-#define MAX_ARRAY_VERTS		6144
+#define MAX_ARRAY_VERTS		12288
 #define MAX_ARRAY_ELEMENTS		MAX_ARRAY_VERTS * 6
 #define MAX_ARRAY_TRIANGLES		MAX_ARRAY_ELEMENTS / 3
 #define MAX_ARRAY_NEIGHBORS		MAX_ARRAY_TRIANGLES * 3
@@ -296,7 +296,7 @@ static _inline qboolean R_MeshOverflow2( const mesh_t *mesh1, const mesh_t *mesh
 
 static _inline qboolean R_InvalidMesh( const mesh_t *mesh )
 {
-	return ( !mesh->numVerts || !mesh->numElems ||mesh->numVerts > MAX_ARRAY_VERTS || mesh->numElems > MAX_ARRAY_ELEMENTS );
+	return ( !mesh->numVerts || !mesh->numElems || mesh->numVerts > MAX_ARRAY_VERTS || mesh->numElems > MAX_ARRAY_ELEMENTS );
 }
 
 void R_RenderMeshBuffer( const meshbuffer_t *mb );

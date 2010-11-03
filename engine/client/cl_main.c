@@ -24,6 +24,7 @@ convar_t	*cl_showfps;
 convar_t	*cl_nodelta;
 convar_t	*cl_crosshair;
 convar_t	*cl_cmdbackup;
+convar_t	*cl_draw_particles;
 convar_t	*cl_idealpitchscale;
 convar_t	*cl_solid_players;
 convar_t	*cl_showmiss;
@@ -1459,6 +1460,8 @@ void CL_InitLocal( void )
 	cl_smooth = Cvar_Get ("cl_smooth", "1", 0, "smooth up stair climbing and interpolate position in multiplayer" );
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "2", CVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
+	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", CVAR_ARCHIVE, "Disable any particle effects" );
+
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
 

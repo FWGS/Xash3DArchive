@@ -307,6 +307,7 @@ void FS_InitEditor( void );
 void FS_InitRootDir( char *path );
 void FS_ClearSearchPath( void );
 void FS_AllowDirectPaths( qboolean enable );
+void FS_AddGameDirectory( const char *dir, int flags );
 void FS_AddGameHierarchy( const char *dir, int flags );
 int FS_CheckParm( const char *parm );
 void FS_LoadGameInfo( const char *rootfolder );

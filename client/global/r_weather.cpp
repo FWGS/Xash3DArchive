@@ -7,7 +7,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "r_efx.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 #include "hud.h"
 #include "r_weather.h"
 #include "pm_defs.h"

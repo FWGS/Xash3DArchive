@@ -12,21 +12,6 @@
 #define SIMSHIFT			10
 #define SPARK_COLORCOUNT		9
 
-typedef enum
-{
-	pt_static, 
-	pt_grav,
-	pt_slowgrav,
-	pt_fire,
-	pt_explode,
-	pt_explode2,
-	pt_blob,
-	pt_blob2,
-	pt_vox_slowgrav,
-	pt_vox_grav,
-	pt_clientcustom		// Must have callback function specified
-} ptype_t;
-
 class CBaseParticle
 {
 public:

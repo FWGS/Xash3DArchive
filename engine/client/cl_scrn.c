@@ -335,6 +335,7 @@ void SCR_RegisterShaders( void )
 	if( re )
 	{
 		cls.fillShader = re->RegisterShader( "*white", SHADER_NOMIP ); // used for FillRGBA
+		cls.particleShader = re->RegisterShader( "*particle", SHADER_NOMIP );
 
 		// register gfx.wad images
 		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE

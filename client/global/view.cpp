@@ -6,7 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "ref_params.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 #include "pm_movevars.h"
 #include "r_beams.h"
 #include "studio.h"

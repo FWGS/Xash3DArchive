@@ -5,7 +5,10 @@
 #ifndef R_EFX_H
 #define R_EFX_H
 
+#include "particledef.h"
+#include "beamdef.h"
 #include "dlight.h"
+#include "cl_entity.h"
 
 typedef struct efx_api_s
 {

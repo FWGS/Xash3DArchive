@@ -6,7 +6,7 @@
 #include "extdll.h"
 #include "utils.h"
 #include "studio_event.h"
-#include "triangle_api.h"
+#include "triangleapi.h"
 #include "entity_types.h"
 #include "pm_movevars.h"
 #include "r_tempents.h"

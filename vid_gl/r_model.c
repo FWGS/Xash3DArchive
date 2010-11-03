@@ -909,7 +909,7 @@ Mod_ConvertSurface
 */
 static void Mod_ConvertSurface( msurface_t *surf )
 {
-	byte		*buffer;
+	byte		*buffer, *mem;
 	mesh_t		*poly, *next;
 	uint		totalIndexes;
 	uint		totalVerts;
@@ -936,7 +936,7 @@ static void Mod_ConvertSurface( msurface_t *surf )
 	if( surf->flags & (SURF_DRAWSKY|SURF_DRAWTURB))
 	{
 
-		buffer = Mod_Malloc( loadmodel, sizeof( mesh_t )
+		mem = buffer = Mod_Malloc( loadmodel, sizeof( mesh_t )
 			+ (totalVerts * sizeof( vec4_t ) * 2 )
 			+ (totalIndexes * sizeof( elem_t ))
 			+ (totalVerts * sizeof( vec2_t ))
@@ -944,7 +944,7 @@ static void Mod_ConvertSurface( msurface_t *surf )
 	}
 	else
 	{
-		buffer = Mod_Malloc( loadmodel, sizeof( mesh_t )
+		mem = buffer = Mod_Malloc( loadmodel, sizeof( mesh_t )
 			+ (totalVerts * sizeof( vec4_t ) * 2 )
 			+ (totalIndexes * sizeof( elem_t ))
 			+ (totalVerts * sizeof( vec2_t ) * 2 )
@@ -993,7 +993,7 @@ static void Mod_ConvertSurface( msurface_t *surf )
 	if( R_InvalidMesh( outMesh ))
 	{
 		MsgDev( D_ERROR, "Mod_ConvertSurface: surface mesh is invalid!\n" );
-		Mem_Free( buffer );
+		Mem_Free( mem );
 		return;
 	}
 
