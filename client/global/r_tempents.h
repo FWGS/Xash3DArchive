@@ -12,43 +12,9 @@
 // Purpose: implementation for temp entities
 //-----------------------------------------------------------------------------
 
-// TEMPENTITY priority
-#define TENTPRIORITY_LOW		0
-#define TENTPRIORITY_HIGH		1
+typedef struct tent_s TENT;
 
-// TEMPENTITY flags
-#define FTENT_NONE			0
-#define FTENT_SINEWAVE		(1<<0)
-#define FTENT_GRAVITY		(1<<1)
-#define FTENT_ROTATE		(1<<2)
-#define FTENT_SLOWGRAVITY		(1<<3)
-#define FTENT_SMOKETRAIL		(1<<4)
-#define FTENT_COLLIDEWORLD		(1<<5)
-#define FTENT_FLICKER		(1<<6)
-#define FTENT_FADEOUT		(1<<7)
-#define FTENT_SPRANIMATE		(1<<8)
-#define FTENT_HITSOUND		(1<<9)
-#define FTENT_SPIRAL		(1<<10)
-#define FTENT_SPRCYCLE		(1<<11)
-#define FTENT_COLLIDEALL		(1<<12)	// will collide with world and slideboxes
-#define FTENT_PERSIST		(1<<13)	// tent is not removed when unable to draw 
-#define FTENT_COLLIDEKILL		(1<<14)	// tent is removed upon collision with anything
-#define FTENT_PLYRATTACHMENT		(1<<15)	// tent is attached to a player (owner)
-#define FTENT_SPRANIMATELOOP		(1<<16)	// animating sprite doesn't die when last frame is displayed
-#define FTENT_SCALE			(1<<17)	// an experiment
-#define FTENT_SPARKSHOWER		(1<<18)
-#define FTENT_NOMODEL		(1<<19)	// sets by engine, never draw (it just triggers other things)
-#define FTENT_CLIENTCUSTOM		(1<<20)	// Must specify callback. Callback function is responsible
-					// for killing tempent and updating fields
-					// ( unless other flags specify how to do things )
-#define FTENT_WINDBLOWN		(1<<21)	// This is set when the temp entity is blown by the wind
-#define FTENT_NEVERDIE		(1<<22)	// Don't die as long as die != 0
-#define FTENT_BEOCCLUDED		(1<<23)	// Don't draw if my specified normal's facing away from the view
-#define FTENT_ATTACHMENT		(1<<24)	// This is a dynamically relinked attachment (update every frame)
-
-typedef struct tempent_s TEMPENTITY;
-
-struct tempent_s
+struct tent_s
 {
 	int		flags;
 	float		die;
@@ -57,9 +23,9 @@ struct tempent_s
 	float		fadeSpeed;
 	float		bounceFactor;
 	int		hitSound;
-	void		(*hitcallback)( struct tempent_s *ent, struct pmtrace_s *ptr );
-	void		(*callback)( struct tempent_s *ent, float frametime, float currenttime );
-	TEMPENTITY	*next;
+	void		(*hitcallback)( struct tent_s *ent, struct pmtrace_s *ptr );
+	void		(*callback)( struct tent_s *ent, float frametime, float currenttime );
+	TENT	*next;
 	int		priority;		// 0 - low, 1 - high
 	short		clientIndex;	// if attached, this is the index of the client to stick to
 					// if COLLIDEALL, this is the index of the client to ignore
@@ -86,28 +52,28 @@ public:
 	void	Update( void );
 	void	Clear( void );
 
-	void	TE_Prepare( TEMPENTITY *pTemp, int modelIndex );
-	int	TE_Active( TEMPENTITY *pTemp );
-	int	TE_Update( TEMPENTITY *pTemp, float frametime );	// return false for instantly die
+	void	TE_Prepare( TENT *pTemp, int modelIndex );
+	int	TE_Active( TENT *pTemp );
+	int	TE_Update( TENT *pTemp, float frametime );	// return false for instantly die
 
 	void	BloodSprite( const Vector &org, int colorIndex, int modelIndex, int modelIndex2, float size );
 	void	RicochetSprite( const Vector &pos, int modelIndex, float scale );
 	void	MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type );
-	TEMPENTITY *TempModel( const Vector &pos, const Vector &dir, const Vector &ang, float life, int modelIndex, int soundtype );
+	TENT *TempModel( const Vector &pos, const Vector &dir, const Vector &ang, float life, int modelIndex, int soundtype );
 	void	BreakModel( const Vector &pos, const Vector &size, const Vector &dir, float random, float life, int count, int modelIndex, char flags );
 	void	Bubbles( const Vector &mins, const Vector &maxs, float height, int modelIndex, int count, float speed );
 	void	BubbleTrail( const Vector &start, const Vector &end, float height, int modelIndex, int count, float speed );
-	void	Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags );
+	void	Sprite_Explode( TENT *pTemp, float scale, int flags );
 	void	FizzEffect( cl_entity_t *pent, int modelIndex, int density );
-	TEMPENTITY *DefaultSprite( const Vector &pos, int spriteIndex, float framerate );
-	void	Sprite_Smoke( TEMPENTITY *pTemp, float scale );
-	TEMPENTITY *TempSprite( const Vector &pos, const Vector &dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags );
+	TENT *DefaultSprite( const Vector &pos, int spriteIndex, float framerate );
+	void	Sprite_Smoke( TENT *pTemp, float scale );
+	TENT *TempSprite( const Vector &pos, const Vector &dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags );
 	void	AttachTentToPlayer( int client, int modelIndex, float zoffset, float life );
 	void	KillAttachedTents( int client );
 	void	Sprite_Spray( const Vector &pos, const Vector &dir, int modelIndex, int count, int speed, int iRand, int renderMode = kRenderTransAlpha );
 	void	Sprite_Trail( int type, const Vector &vecStart, const Vector &vecEnd, int modelIndex, int nCount, float flLife, float flSize, float flAmplitude, int nRenderamt, float flSpeed );
 	void	RocketFlare( const Vector& pos );
-	void	PlaySound( TEMPENTITY *pTemp, float damp );
+	void	PlaySound( TENT *pTemp, float damp );
 	void	TracerEffect( const Vector &start, const Vector &end );
 	void	WeaponFlash( cl_entity_t *pEnt, int iAttachment );
 	void	PlaceDecal( Vector pos, int entityIndex, int decalIndex );
@@ -127,22 +93,22 @@ private:
 	int		m_iTempEntFrame;	// used for keyed dlights only
 
 	// Global temp entity pool
-	TEMPENTITY	m_TempEnts[MAX_TEMP_ENTITIES];
+	TENT	m_TempEnts[MAX_TEMP_ENTITIES];
 
 	// Free and active temp entity lists
-	TEMPENTITY	*m_pFreeTempEnts;
-	TEMPENTITY	*m_pActiveTempEnts;
+	TENT	*m_pFreeTempEnts;
+	TENT	*m_pActiveTempEnts;
 
 	// muzzle flash sprites
 	int		m_iMuzzleFlash[MAX_MUZZLEFLASH];
 
-	void		TempEntFree( TEMPENTITY *pTemp, TEMPENTITY *pPrev );
+	void		TempEntFree( TENT *pTemp, TENT *pPrev );
 	bool		FreeLowPriorityTempEnt( void );
 public:
-	TEMPENTITY	*TempEntAllocNoModel( const Vector& org );
-	TEMPENTITY	*TempEntAlloc( const Vector& org, int modelindex );
-	TEMPENTITY	*TempEntAllocHigh( const Vector& org, int modelIndex );
-	TEMPENTITY	*TempEntAllocCustom( const Vector& org, int modelIndex, int high, void ( *callback )( struct tempent_s *ent, float frametime, float currenttime ));
+	TENT	*TempEntAllocNoModel( const Vector& org );
+	TENT	*TempEntAlloc( const Vector& org, int modelindex );
+	TENT	*TempEntAllocHigh( const Vector& org, int modelIndex );
+	TENT	*TempEntAllocCustom( const Vector& org, int modelIndex, int high, void ( *callback )( struct tent_s *ent, float frametime, float currenttime ));
 
 	// misc utility shaders
 	HSPRITE		hSprGlowShell;	// glowshell shader

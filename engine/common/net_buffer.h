@@ -40,6 +40,7 @@ typedef struct
 #define BF_ReadBitAngles			BF_ReadBitVec3Coord
 #define BF_ReadString( bf )			BF_ReadStringExt( bf, false )
 #define BF_ReadStringLine( bf )		BF_ReadStringExt( bf, true )
+#define BF_ReadCoord( bf )			(float)(BF_ReadShort( bf ) * (1.0f / 8.0f ))
 #define BF_Init( bf, name, data, bytes )	BF_InitExt( bf, name, data, bytes, -1 )
 
 // common functions

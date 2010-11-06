@@ -7,6 +7,7 @@
 #include "client.h"
 #include "net_encode.h"
 #include "event_flags.h"
+#include "cl_tent.h"
 #include "shake.h"
 
 #define MSG_COUNT		32		// last 32 messages parsed
@@ -1003,23 +1004,6 @@ void CL_ServerInfo( sizebuf_t *msg )
 
 /*
 ==============
-CL_ParseTempEntity
-
-temp entity is handled in the client.dll
-==============
-*/
-void CL_ParseTempEntity( sizebuf_t *msg )
-{
-	byte	pbuf[256];
-	int	iSize = BF_ReadByte( msg );
-
-	// parse user message into buffer
-	BF_ReadBytes( msg, pbuf, iSize );
-	clgame.dllFuncs.pfnTempEntityMessage( iSize, pbuf );
-}
-
-/*
-==============
 CL_ParseDirector
 
 hltv is handled in the client.dll
@@ -1216,6 +1200,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 				cls.changelevel = true;
 				Cmd_ExecuteString( "hud_changelevel\n" );
 				S_StopAllSounds();
+				S_StopBackgroundTrack();
 			}
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 

@@ -712,4 +712,5 @@ void CL_Stop_f( void )
 	CL_StopRecord();
 	CL_StopPlayback();
 	SCR_StopCinematic();
+	S_StopBackgroundTrack();
 }

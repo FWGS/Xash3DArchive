@@ -73,7 +73,7 @@ static const char *uiCreditsDefault[] =
 	"Half-Life (Valve Software)",
 	"Darkplaces (Darkplaces Team)",
 	"Quake 2 Evolved (Team Blur)",
-	"",
+	"AVIKit (by randomnine)",
 	"",
 	"",
 	"",

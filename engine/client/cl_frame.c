@@ -7,6 +7,7 @@
 #include "client.h"
 #include "net_encode.h"
 #include "entity_types.h"
+#include "cl_tent.h"
 #include "input.h"
 
 qboolean CL_IsPlayerIndex( int idx )
@@ -33,6 +34,46 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
+
+	if( ent->curstate.effects & EF_BRIGHTFIELD )
+	{
+		CL_EntityParticles( ent );
+	}
+}
+
+/*
+==================
+CL_WeaponAnim
+
+Set new weapon animation
+==================
+*/
+void CL_WeaponAnim( int iAnim, int body )
+{
+	cl_entity_t	*view = &clgame.viewent;
+
+	// anim is changed. update latchedvars
+	if( iAnim != view->curstate.sequence )
+	{
+		int	i;
+			
+		// save current blends to right lerping from last sequence
+		for( i = 0; i < 2; i++ )
+			view->latched.prevseqblending[i] = view->curstate.blending[i];
+		view->latched.prevsequence = view->curstate.sequence; // save old sequence
+
+		// save animtime
+		view->latched.prevanimtime = view->curstate.animtime;
+	}
+
+	view->curstate.entityType = ET_VIEWENTITY;
+	view->curstate.animtime = cl_time();	// start immediately
+	view->curstate.framerate = 1.0f;
+	view->curstate.sequence = iAnim;
+	view->latched.prevframe = 0.0f;
+	view->curstate.scale = 1.0f;
+	view->curstate.frame = 0.0f;
+	view->curstate.body = body;
 }
 
 /*

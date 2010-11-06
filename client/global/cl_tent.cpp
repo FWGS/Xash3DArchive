@@ -134,7 +134,7 @@ void TE_ParseExplosion( void )
 	Vector dir, pos, pos2;
 	float scale, magnitude, frameRate;
 	int flags, spriteIndex;
-	TEMPENTITY *pTemp;
+	TENT *pTemp;
 
 	pos.x = READ_COORD();
 	pos.y = READ_COORD();
@@ -214,7 +214,7 @@ Creates alphablend sprite, move vertically 30 pps
 */
 void TE_ParseSmoke( void )
 {
-	TEMPENTITY *pTemp;
+	TENT *pTemp;
 	float scale, framerate;
 	int modelIndex;
 	Vector pos;
@@ -514,7 +514,7 @@ Creates a additive sprite, plays 1 cycle
 void TE_ParseSprite( void )
 {
 	Vector pos;
-	TEMPENTITY *pTemp;
+	TENT *pTemp;
 	float scale, brightness;
 	int spriteIndex;
 	

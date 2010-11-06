@@ -306,7 +306,7 @@ static void SCR_InstallParticlePalette( void )
 	int	i;
 
 	// NOTE: imagelib required this fakebuffer for loading internal palette
-	pic = FS_LoadImage( "#quake.pal", ((byte *)&i), 768 );
+	pic = FS_LoadImage( "#valve.pal", ((byte *)&i), 768 );
 
 	if( pic )
 	{

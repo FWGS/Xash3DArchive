@@ -15,6 +15,7 @@
 #include "event_flags.h"
 #include "ivoicetweak.h"
 #include "pm_local.h"
+#include "cl_tent.h"
 #include "input.h"
 #include "shake.h"
 
@@ -804,6 +805,273 @@ void CL_SetEventIndex( const char *szEvName, int ev_index )
 			return;
 		}
 	}
+}
+
+/*
+===============
+CL_ResetEvent
+
+===============
+*/
+void CL_ResetEvent( event_info_t *ei )
+{
+	Mem_Set( ei, 0, sizeof( *ei ));
+}
+
+/*
+=============
+CL_EventIndex
+
+=============
+*/
+word CL_EventIndex( const char *name )
+{
+	int	i;
+	
+	if( !name || !name[0] )
+		return 0;
+
+	for( i = 1; i < MAX_EVENTS && cl.event_precache[i][0]; i++ )
+		if( !com.stricmp( cl.event_precache[i], name ))
+			return i;
+	return 0;
+}
+
+/*
+=============
+CL_FireEvent
+
+=============
+*/
+qboolean CL_FireEvent( event_info_t *ei )
+{
+	user_event_t	*ev;
+	const char	*name;
+	int		i, idx;
+
+	if( !ei || !ei->index )
+		return false;
+
+	// get the func pointer
+	for( i = 0; i < MAX_EVENTS; i++ )
+	{
+		ev = clgame.events[i];		
+		if( !ev )
+		{
+			idx = bound( 1, ei->index, MAX_EVENTS );
+			MsgDev( D_ERROR, "CL_FireEvent: %s not precached\n", cl.event_precache[idx] );
+			break;
+		}
+
+		if( ev->index == ei->index )
+		{
+			if( ev->func )
+			{
+				ev->func( &ei->args );
+				return true;
+			}
+
+			name = cl.event_precache[ei->index];
+			MsgDev( D_ERROR, "CL_FireEvent: %s not hooked\n", name );
+			break;			
+		}
+	}
+	return false;
+}
+
+/*
+=============
+CL_FireEvents
+
+called right before draw frame
+=============
+*/
+void CL_FireEvents( void )
+{
+	int		i;
+	event_state_t	*es;
+	event_info_t	*ei;
+	qboolean		success;
+
+	es = &cl.events;
+
+	for( i = 0; i < MAX_EVENT_QUEUE; i++ )
+	{
+		ei = &es->ei[i];
+
+		if( ei->index == 0 )
+			continue;
+
+		if( cls.state == ca_disconnected )
+		{
+			CL_ResetEvent( ei );
+			continue;
+		}
+
+		// delayed event!
+		if( ei->fire_time && ( ei->fire_time > cl_time() ))
+			continue;
+
+		success = CL_FireEvent( ei );
+
+		// zero out the remaining fields
+		CL_ResetEvent( ei );
+	}
+}
+
+/*
+=============
+CL_FindEvent
+
+find first empty event
+=============
+*/
+event_info_t *CL_FindEmptyEvent( void )
+{
+	int		i;
+	event_state_t	*es;
+	event_info_t	*ei;
+
+	es = &cl.events;
+
+	// look for first slot where index is != 0
+	for( i = 0; i < MAX_EVENT_QUEUE; i++ )
+	{
+		ei = &es->ei[i];
+		if( ei->index != 0 )
+			continue;
+		return ei;
+	}
+
+	// no slots available
+	return NULL;
+}
+
+/*
+=============
+CL_FindEvent
+
+replace only unreliable events
+=============
+*/
+event_info_t *CL_FindUnreliableEvent( void )
+{
+	int		i;
+	event_state_t	*es;
+	event_info_t	*ei;
+
+	es = &cl.events;
+	for ( i = 0; i < MAX_EVENT_QUEUE; i++ )
+	{
+		ei = &es->ei[i];
+		if( ei->index != 0 )
+		{
+			// it's reliable, so skip it
+			if( ei->flags & FEV_RELIABLE )
+				continue;
+		}
+		return ei;
+	}
+
+	// this should never happen
+	return NULL;
+}
+
+/*
+=============
+CL_QueueEvent
+
+=============
+*/
+void CL_QueueEvent( int flags, int index, float delay, event_args_t *args )
+{
+	qboolean		unreliable = (flags & FEV_RELIABLE) ? false : true;
+	event_info_t	*ei;
+
+	// find a normal slot
+	ei = CL_FindEmptyEvent();
+	if( !ei && unreliable )
+	{
+		return;
+	}
+
+	// okay, so find any old unreliable slot
+	if( !ei )
+	{
+		ei = CL_FindUnreliableEvent();
+		if( !ei ) return;
+	}
+
+	ei->index	= index;
+	ei->fire_time = delay ? (cl_time() + delay) : 0.0f;
+	ei->flags	= flags;
+	
+	// copy in args event data
+	Mem_Copy( &ei->args, args, sizeof( ei->args ));
+}
+
+/*
+=============
+CL_PlaybackEvent
+
+=============
+*/
+void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
+	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
+{
+	event_args_t	args;
+	int		invokerIndex = 0;
+
+	// first check event for out of bounds
+	if( eventindex < 1 || eventindex > MAX_EVENTS )
+	{
+		MsgDev( D_ERROR, "CL_PlaybackEvent: invalid eventindex %i\n", eventindex );
+		return;
+	}
+	// check event for precached
+	if( !CL_EventIndex( cl.event_precache[eventindex] ))
+	{
+		MsgDev( D_ERROR, "CL_PlaybackEvent: event %i was not precached\n", eventindex );
+		return;		
+	}
+
+	flags |= FEV_CLIENT; // it's a client event
+	flags &= ~(FEV_NOTHOST|FEV_HOSTONLY|FEV_GLOBAL);
+
+	if( delay < 0.0f )
+		delay = 0.0f; // fixup negative delays
+
+	if( pInvoker ) invokerIndex = NUM_FOR_EDICT( pInvoker );
+
+	args.flags = 0;
+	args.entindex = invokerIndex;
+	VectorCopy( origin, args.origin );
+	VectorCopy( angles, args.angles );
+
+	args.fparam1 = fparam1;
+	args.fparam2 = fparam2;
+	args.iparam1 = iparam1;
+	args.iparam2 = iparam2;
+	args.bparam1 = bparam1;
+	args.bparam2 = bparam2;
+
+	if( flags & FEV_RELIABLE )
+	{
+		args.ducking = 0;
+		VectorClear( args.velocity );
+	}
+	else if( invokerIndex )
+	{
+		// get up some info from invoker
+		if( VectorIsNull( args.origin )) 
+			VectorCopy(((cl_entity_t *)&pInvoker)->curstate.origin, args.origin );
+		if( VectorIsNull( args.angles )) 
+			VectorCopy(((cl_entity_t *)&pInvoker)->curstate.angles, args.angles );
+		VectorCopy(((cl_entity_t *)&pInvoker)->curstate.velocity, args.velocity );
+		args.ducking = ((cl_entity_t *)&pInvoker)->curstate.usehull;
+	}
+
+	CL_QueueEvent( flags, eventindex, delay, &args );
 }
 
 void CL_InitEntity( cl_entity_t *pEdict )
@@ -1860,7 +2128,7 @@ pfnFindModelIndex
 
 =============
 */
-int pfnFindModelIndex( const char *m )
+int CL_FindModelIndex( const char *m )
 {
 	int	i;
 
@@ -2071,7 +2339,7 @@ model_t *CL_LoadModel( const char *modelname, int *index )
 {
 	int	idx;
 
-	idx = pfnFindModelIndex( modelname );
+	idx = CL_FindModelIndex( modelname );
 	if( !idx ) return NULL;
 	if( index ) *index = idx;
 	
@@ -2979,7 +3247,7 @@ static event_api_t gEventApi =
 	EVENT_API_VERSION,
 	pfnPlaySound,
 	pfnStopSound,
-	pfnFindModelIndex,
+	CL_FindModelIndex,
 	pfnIsLocal,
 	pfnLocalPlayerDucking,
 	pfnLocalPlayerViewheight,

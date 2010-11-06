@@ -150,6 +150,10 @@ SOURCE=.\client\cl_parse.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\cl_part.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\cl_pmove.c
 # End Source File
 # Begin Source File
@@ -308,6 +312,10 @@ SOURCE=.\common\world.c
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;fi;fd"
+# Begin Source File
+
+SOURCE=.\client\cl_tent.h
+# End Source File
 # Begin Source File
 
 SOURCE=.\client\client.h

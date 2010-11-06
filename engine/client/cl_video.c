@@ -279,6 +279,8 @@ void SCR_InitCinematic( void )
 	// used for movie gamma correction
 	vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
 	cin_state = AVI_GetState( CIN_MAIN );
+
+	SCR_RebuildGammaTable();
 }
 
 /*

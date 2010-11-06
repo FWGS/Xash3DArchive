@@ -1494,7 +1494,7 @@ void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 	}
 
 	// HACKHACK: for Salute mod
-	if( pbeam->type == TE_BEAMFOLLOW && pbeam->entity[0] )
+	if( pbeam->type == TE_BEAMFOLLOW && pbeam->entity[0] && pbeam->entity[0]->curstate.rendermode != kRenderNormal )
 		pbeam->brightness = pbeam->entity[0]->curstate.renderamt;
 
 	color[0] *= ((float)pbeam->brightness / 255.0);

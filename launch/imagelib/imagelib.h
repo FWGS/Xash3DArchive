@@ -458,6 +458,7 @@ enum
 	PAL_DOOM1,
 	PAL_QUAKE1,
 	PAL_QUAKE2,
+	PAL_HALFLIFE
 };
 
 extern imglib_t image;
@@ -487,7 +488,7 @@ uint Image_ShortToFloat( word y );
 void Image_GetPaletteQ2( void );
 void Image_GetPaletteQ1( void );
 void Image_GetPaletteD1( void );	// doom 2 on TNT :)
-
+void Image_GetPaletteHL( void );
 
 //
 // formats load

@@ -1120,7 +1120,7 @@ void EV_Crowbar( event_args_t *args )
 // This function is used to correct the origin and angles 
 // of the bolt, so it looks like it's stuck on the wall.
 //=====================
-void EV_BoltCallback ( struct tempent_s *ent, float frametime, float currenttime )
+void EV_BoltCallback ( struct tent_s *ent, float frametime, float currenttime )
 {
 	ent->entity.origin = ent->entity.baseline.vuser1;
 	ent->entity.angles = ent->entity.baseline.vuser2;
@@ -1198,7 +1198,7 @@ void EV_FireCrossbow2( event_args_t *args )
 
 			VectorAngles( forward, vBoltAngles );
 
-			TEMPENTITY *bolt = g_pTempEnts->TempModel( tr.endpos - forward * 10, Vector( 0, 0, 0), vBoltAngles , 5, iModelIndex, TE_BOUNCE_NULL );
+			TENT *bolt = g_pTempEnts->TempModel( tr.endpos - forward * 10, Vector( 0, 0, 0), vBoltAngles , 5, iModelIndex, TE_BOUNCE_NULL );
 			
 			if ( bolt )
 			{
@@ -1287,7 +1287,7 @@ enum EGON_FIREMODE { FIRE_NARROW = 0, FIRE_WIDE };
 Beam_t *m_pBeam = NULL;
 Beam_t *m_pNoise = NULL;
 
-TEMPENTITY *m_pEndFlare = NULL;
+TENT *m_pEndFlare = NULL;
 
 void EV_EgonFire( event_args_t *args )
 {
@@ -1671,7 +1671,7 @@ void EV_SnarkFire( event_args_t *args )
 //======================
 //	   LASERSPOT START
 //======================
-TEMPENTITY *m_pLaserSpot = NULL;
+TENT *m_pLaserSpot = NULL;
 
 void EV_UpdateLaserSpot( void )
 {

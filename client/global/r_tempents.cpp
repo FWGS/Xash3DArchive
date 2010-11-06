@@ -16,8 +16,8 @@
 #include "r_beams.h"
 #include "hud.h"
 
-extern TEMPENTITY *m_pEndFlare;
-extern TEMPENTITY *m_pLaserSpot;
+extern TENT *m_pEndFlare;
+extern TENT *m_pLaserSpot;
 
 CTempEnts *g_pTempEnts;
 
@@ -26,7 +26,7 @@ CTempEnts *g_pTempEnts;
 //-----------------------------------------------------------------------------
 CTempEnts::CTempEnts( void )
 {
-	memset( m_TempEnts, 0, sizeof( TEMPENTITY ) * MAX_TEMP_ENTITIES );
+	memset( m_TempEnts, 0, sizeof( TENT ) * MAX_TEMP_ENTITIES );
 
 	m_pFreeTempEnts = m_TempEnts;
 	m_pActiveTempEnts = NULL;
@@ -41,7 +41,7 @@ CTempEnts::~CTempEnts( void )
 	Clear();
 }
 
-void CTempEnts::TE_Prepare( TEMPENTITY *pTemp, int modelIndex )
+void CTempEnts::TE_Prepare( TENT *pTemp, int modelIndex )
 {
 	int	frameCount;
 
@@ -68,7 +68,7 @@ void CTempEnts::TE_Prepare( TEMPENTITY *pTemp, int modelIndex )
 	pTemp->entity.curstate.scale = 1.0f;
 }
 
-int CTempEnts::TE_Active( TEMPENTITY *pTemp )
+int CTempEnts::TE_Active( TENT *pTemp )
 {
 	bool	active = true;
 	float	life;
@@ -99,16 +99,10 @@ int CTempEnts::TE_Active( TEMPENTITY *pTemp )
 			active = false;
 		}
 	}
-
-	// never die tempents only die when their die is cleared
-	if( pTemp->flags & FTENT_NEVERDIE )
-	{
-		active = (pTemp->die != 0.0f);
-	}
 	return active;
 }
 
-int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
+int CTempEnts::TE_Update( TENT *pTemp, float frametime )
 {
 	float	gravity, gravitySlow, fastFreq;
 
@@ -182,7 +176,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 			if( EV_IsLocal( pClient->index ))
 			{
 				// NOTE: if this a local client ?
-				// relink attachment with her viewmodel
+				// relink attachment with him viewmodel
 				pClient = GetViewEntity();
 			}
 
@@ -397,32 +391,6 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 		if( pTemp->callback )
 			(*pTemp->callback)( pTemp, frametime, GetClientTime( ));
 	}
-
-	if( pTemp->flags & FTENT_WINDBLOWN )
-	{
-		Vector	vecWind = gHUD.m_vecWindVelocity;
-
-		for( int i = 0 ; i < 2 ; i++ )
-		{
-			if( pTemp->entity.baseline.origin[i] < vecWind[i] )
-			{
-				pTemp->entity.baseline.origin[i] += ( frametime * TENT_WIND_ACCEL );
-
-				// clamp
-				if( pTemp->entity.baseline.origin[i] > vecWind[i] )
-					pTemp->entity.baseline.origin[i] = vecWind[i];
-			}
-			else if( pTemp->entity.baseline.origin[i] > vecWind[i] )
-			{
-				pTemp->entity.baseline.origin[i] -= ( frametime * TENT_WIND_ACCEL );
-
-				// clamp
-				if( pTemp->entity.baseline.origin[i] < vecWind[i] )
-					pTemp->entity.baseline.origin[i] = vecWind[i];
-			}
-		}
-	}
-
 	// restore state info
 	gEngfuncs.pEventAPI->EV_PopPMStates();
 
@@ -431,7 +399,7 @@ int CTempEnts::TE_Update( TEMPENTITY *pTemp, float frametime )
 
 void CTempEnts :: Update( void )
 {
-	TEMPENTITY *current, *pnext, *pprev;
+	TENT *current, *pnext, *pprev;
 
 	m_fOldTime = m_flTime;
 	m_flTime = GetClientTime();
@@ -527,7 +495,7 @@ void CTempEnts::Clear( void )
 	m_pEndFlare = NULL;
 }
 
-void CTempEnts::TempEntFree( TEMPENTITY *pTemp, TEMPENTITY *pPrev )
+void CTempEnts::TempEntFree( TENT *pTemp, TENT *pPrev )
 {
 	// Remove from the active list.
 	if( pPrev )	
@@ -539,7 +507,7 @@ void CTempEnts::TempEntFree( TEMPENTITY *pTemp, TEMPENTITY *pPrev )
 		m_pActiveTempEnts = pTemp->next;
 	}
 
-	memset( pTemp, 0, sizeof( TEMPENTITY ));
+	memset( pTemp, 0, sizeof( TENT ));
 
 	// Add to the free list.
 	pTemp->next = m_pFreeTempEnts;
@@ -549,8 +517,8 @@ void CTempEnts::TempEntFree( TEMPENTITY *pTemp, TEMPENTITY *pPrev )
 // free the first low priority tempent it finds.
 bool CTempEnts::FreeLowPriorityTempEnt( void )
 {
-	TEMPENTITY	*pActive = m_pActiveTempEnts;
-	TEMPENTITY	*pPrev = NULL;
+	TENT	*pActive = m_pActiveTempEnts;
+	TENT	*pPrev = NULL;
 
 	while( pActive )
 	{
@@ -572,9 +540,9 @@ bool CTempEnts::FreeLowPriorityTempEnt( void )
 //			*model - 
 // Output : C_LocalTempEntity
 //-----------------------------------------------------------------------------
-TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, int modelIndex )
+TENT *CTempEnts::TempEntAlloc( const Vector& org, int modelIndex )
 {
-	TEMPENTITY *pTemp;
+	TENT *pTemp;
 
 	if ( !m_pFreeTempEnts )
 	{
@@ -603,9 +571,9 @@ TEMPENTITY *CTempEnts::TempEntAlloc( const Vector& org, int modelIndex )
 //			*model - 
 // Output : C_LocalTempEntity
 //-----------------------------------------------------------------------------
-TEMPENTITY *CTempEnts::TempEntAllocHigh( const Vector& org, int modelIndex )
+TENT *CTempEnts::TempEntAllocHigh( const Vector& org, int modelIndex )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 
 	if ( !m_pFreeTempEnts )
 	{
@@ -638,14 +606,14 @@ TEMPENTITY *CTempEnts::TempEntAllocHigh( const Vector& org, int modelIndex )
 }
 
 
-TEMPENTITY *CTempEnts::TempEntAllocNoModel( const Vector& org )
+TENT *CTempEnts::TempEntAllocNoModel( const Vector& org )
 {
 	return TempEntAlloc( org, 0 );
 }
 
-TEMPENTITY *CTempEnts::TempEntAllocCustom( const Vector& org, int modelIndex, int high, void ( *callback )( struct tempent_s *ent, float frametime, float currenttime ))
+TENT *CTempEnts::TempEntAllocCustom( const Vector& org, int modelIndex, int high, void ( *callback )( struct tent_s *ent, float frametime, float currenttime ))
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 
 	if( high )
 	{
@@ -680,7 +648,7 @@ TEMPENTITY *CTempEnts::TempEntAllocCustom( const Vector& org, int modelIndex, in
 //-----------------------------------------------------------------------------
 void CTempEnts::FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	int		i, width, depth, count, frameCount;
 	float		angle, maxHeight, speed, xspeed, yspeed;
 	Vector		origin;
@@ -750,7 +718,7 @@ void CTempEnts::FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 //-----------------------------------------------------------------------------
 void CTempEnts::Bubbles( const Vector &mins, const Vector &maxs, float height, int modelIndex, int count, float speed )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	int		i, frameCount;
 	float		sine, cosine;
 	Vector		origin;
@@ -799,7 +767,7 @@ void CTempEnts::Bubbles( const Vector &mins, const Vector &maxs, float height, i
 //-----------------------------------------------------------------------------
 void CTempEnts::BubbleTrail( const Vector &start, const Vector &end, float flWaterZ, int modelIndex, int count, float speed )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	int		i, frameCount;
 	float		dist, angle;
 	Vector		origin;
@@ -842,7 +810,7 @@ void CTempEnts::BubbleTrail( const Vector &start, const Vector &end, float flWat
 //-----------------------------------------------------------------------------
 void CTempEnts::AttachTentToPlayer( int client, int modelIndex, float zoffset, float life )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	Vector		position;
 	int		frameCount;
 
@@ -918,7 +886,7 @@ void CTempEnts::KillAttachedTents( int client )
 
 	for( int i = 0; i < MAX_TEMP_ENTITIES; i++ )
 	{
-		TEMPENTITY *pTemp = &m_TempEnts[i];
+		TENT *pTemp = &m_TempEnts[i];
 
 		if ( pTemp->flags & FTENT_PLYRATTACHMENT )
 		{
@@ -941,7 +909,7 @@ void CTempEnts::KillAttachedTents( int client )
 //-----------------------------------------------------------------------------
 void CTempEnts::RicochetSprite( const Vector &pos, int modelIndex, float scale )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 
 	pTemp = TempEntAlloc( pos, modelIndex );
 	if (!pTemp)
@@ -959,7 +927,7 @@ void CTempEnts::RicochetSprite( const Vector &pos, int modelIndex, float scale )
 	pTemp->entity.angles[ROLL] = 45 * RANDOM_LONG( 0, 7 );
 }
 
-void CTempEnts::PlaySound( TEMPENTITY *pTemp, float damp )
+void CTempEnts::PlaySound( TENT *pTemp, float damp )
 {
 	float fvol;
 	char soundname[32];
@@ -1060,7 +1028,7 @@ void CTempEnts::PlaySound( TEMPENTITY *pTemp, float damp )
 
 void CTempEnts::RocketFlare( const Vector& pos )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	int		modelIndex;
 	int		nframeCount;
 
@@ -1086,7 +1054,7 @@ void CTempEnts::RocketFlare( const Vector& pos )
 void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 {
 	Vector pos;
-	TEMPENTITY *pTemp;
+	TENT *pTemp;
 	int index, modelIndex, frameCount;
 	float scale;
 
@@ -1143,7 +1111,7 @@ void CTempEnts::MuzzleFlash( cl_entity_t *pEnt, int iAttachment, int type )
 
 void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, int modelIndex2, float size )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 
 	if( Mod_GetModelType( modelIndex ) == mod_bad )
 		return;
@@ -1176,7 +1144,7 @@ void CTempEnts::BloodSprite( const Vector &org, int colorIndex, int modelIndex, 
 void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector &dir, float random, float life, int count, int modelIndex, char flags )
 {
 	int i, frameCount;
-	TEMPENTITY *pTemp;
+	TENT *pTemp;
 	char type;
 
 	if ( !modelIndex ) return;
@@ -1249,10 +1217,10 @@ void CTempEnts::BreakModel( const Vector &pos, const Vector &size, const Vector 
 	}
 }
 
-TEMPENTITY *CTempEnts::TempModel( const Vector &pos, const Vector &dir, const Vector &ang, float life, int modelIndex, int soundtype )
+TENT *CTempEnts::TempModel( const Vector &pos, const Vector &dir, const Vector &ang, float life, int modelIndex, int soundtype )
 {
 	// alloc a new tempent
-	TEMPENTITY *pTemp = TempEntAlloc( pos, modelIndex );
+	TENT *pTemp = TempEntAlloc( pos, modelIndex );
 	if( !pTemp ) return NULL;
 
 	// keep track of shell type
@@ -1278,9 +1246,9 @@ TEMPENTITY *CTempEnts::TempModel( const Vector &pos, const Vector &dir, const Ve
 	return pTemp;
 }
 
-TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float framerate )
+TENT *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float framerate )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	int		frameCount;
 
 	if( !spriteIndex || Mod_GetModelType( spriteIndex ) != mod_sprite )
@@ -1311,9 +1279,9 @@ TEMPENTITY *CTempEnts::DefaultSprite( const Vector &pos, int spriteIndex, float 
 CL_TempSprite
 ===============
 */
-TEMPENTITY *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags )
+TENT *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	int		frameCount;
 
 	if( !modelIndex ) 
@@ -1349,7 +1317,7 @@ TEMPENTITY *CTempEnts::TempSprite( const Vector &pos, const Vector &dir, float s
 	return pTemp;
 }
 
-void CTempEnts::Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags )
+void CTempEnts::Sprite_Explode( TENT *pTemp, float scale, int flags )
 {
 	if( !pTemp ) return;
 
@@ -1386,7 +1354,7 @@ void CTempEnts::Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags )
 	pTemp->entity.curstate.scale = scale;
 }
 
-void CTempEnts::Sprite_Smoke( TEMPENTITY *pTemp, float scale )
+void CTempEnts::Sprite_Smoke( TENT *pTemp, float scale )
 {
 	int	iColor;
 
@@ -1401,12 +1369,11 @@ void CTempEnts::Sprite_Smoke( TEMPENTITY *pTemp, float scale )
 	pTemp->entity.curstate.rendercolor.b = iColor;
 	pTemp->entity.origin[2] += 20;
 	pTemp->entity.curstate.scale = scale;
-	pTemp->flags |= FTENT_WINDBLOWN;
 }
 
 void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelIndex, int count, int speed, int iRand, int renderMode )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	float		noise;
 	float		znoise;
 	int		i, frameCount;
@@ -1453,7 +1420,7 @@ void CTempEnts::Sprite_Spray( const Vector &pos, const Vector &dir, int modelInd
 
 void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &vecEnd, int modelIndex, int nCount, float flLife, float flSize, float flAmplitude, int nRenderamt, float flSpeed )
 {
-	TEMPENTITY	*pTemp;
+	TENT	*pTemp;
 	vec3_t		vecDelta, vecDir;
 	int		i, flFrameCount;
 
@@ -1509,7 +1476,7 @@ void CTempEnts::Sprite_Trail( int type, const Vector &vecStart, const Vector &ve
 
 void CTempEnts::Large_Funnel( Vector pos, int spriteIndex, int flags )
 {
-	TEMPENTITY	*pTemp = NULL;
+	TENT	*pTemp = NULL;
 	CBaseParticle	*pPart = NULL;
 	float		vel;
 	Vector		dir;
@@ -1677,7 +1644,7 @@ void CTempEnts::PlaceDecal( Vector pos, int entityIndex, int decalIndex )
 	pEnt = GetEntityByIndex( entityIndex );
 	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
 	hDecal = gEngfuncs.pEfxAPI->CL_DecalIndex( decalIndex );
-	gEngfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
+	gEngfuncs.pEfxAPI->CL_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
 }
 
 void CTempEnts::PlaceDecal( Vector pos, int entityIndex, const char *decalname )
@@ -1689,7 +1656,7 @@ void CTempEnts::PlaceDecal( Vector pos, int entityIndex, const char *decalname )
 	pEnt = GetEntityByIndex( entityIndex );
 	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
 	hDecal = gEngfuncs.pEfxAPI->CL_DecalIndexFromName( decalname );
-	gEngfuncs.pEfxAPI->R_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
+	gEngfuncs.pEfxAPI->CL_DecalShoot( hDecal, entityIndex, modelIndex, pos, 0 );
 }
 
 void CTempEnts::AllocDLight( Vector pos, byte r, byte g, byte b, float radius, float time, float decay )

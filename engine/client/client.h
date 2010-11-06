@@ -450,7 +450,6 @@ extern convar_t	*userinfo;
 //=============================================================================
 
 qboolean CL_CheckOrDownloadFile( const char *filename );
-void CL_ParseConfigString( sizebuf_t *msg );
 void CL_SetLightstyle( int style, const char* s );
 void CL_RunLightStyles( void );
 
@@ -520,6 +519,7 @@ void CL_CenterPrint( const char *text, float y );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
 int pfnDecalIndexFromName( const char *szDecalName );
+int CL_FindModelIndex( const char *m );
 void *VGui_GetPanel( void );
 void VGui_ViewportPaintBackground( int extents[4] );
 
@@ -536,6 +536,7 @@ _inline cl_entity_t *CL_EDICT_NUM( int n, const char *file, const int line )
 //
 extern const char *svc_strings[256];
 void CL_ParseServerMessage( sizebuf_t *msg );
+void CL_ParseTempEntity( sizebuf_t *msg );
 void CL_RunBackgroundTrack( void );
 void CL_Download_f( void );
 

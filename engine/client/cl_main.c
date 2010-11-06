@@ -729,6 +729,7 @@ CL_ClearState
 */
 void CL_ClearState( void )
 {
+	S_StopBackgroundTrack ();
 	S_StopAllSounds ();
 	CL_ClearEffects ();
 	CL_FreeEdicts ();

@@ -35,8 +35,8 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 			rendermode = LUMP_DECAL;
 		else if( com.stristr( name, "qfont" ))
 			rendermode = LUMP_QFONT;
-		else if( com.stristr( name, "quake" ))
-			buffer = NULL; // force to get Q1 palette
+		else if( com.stristr( name, "valve" ))
+			buffer = NULL; // force to get HL palette
 	}
 
 	// NOTE: image.d_currentpal not cleared with Image_Reset()
@@ -406,6 +406,10 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 		MsgDev( D_ERROR, "Image_LoadLMP: file (%s) have invalid size\n", name );
 		return false;
 	}
+
+	// greatest hack from valve software (particle palette)
+	if( com.stristr( name, "palette.lmp" ))
+		return Image_LoadPAL( name, buffer, filesize );
 
 	// greatest hack from id software
 	if( image.hint != IL_HINT_HL && com.stristr( name, "conchars" ))
