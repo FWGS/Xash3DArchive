@@ -2588,6 +2588,7 @@ render_exp_t EXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.WorldToScreen = R_WorldToScreen;
 	re.RSpeedsMessage = R_SpeedsMessage;
 	re.CreateDecalList = R_CreateDecalList;
+	re.DecalRemoveAll = R_DecalRemoveAll;
 	re.CullBox = Mod_CullBox;
 	re.GetCurrentVis = Mod_GetCurrentVis;
 	re.RestoreGamma = R_RestoreGamma;

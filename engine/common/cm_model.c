@@ -1099,6 +1099,7 @@ model_t *CM_ClipHandleToModel( int handle )
 	}
 	return sv_models[handle];
 }
+
 /*
 ===================
 Mod_Extradata

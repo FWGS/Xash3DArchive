@@ -337,6 +337,10 @@ void SCR_RegisterShaders( void )
 		cls.fillShader = re->RegisterShader( "*white", SHADER_NOMIP ); // used for FillRGBA
 		cls.particleShader = re->RegisterShader( "*particle", SHADER_NOMIP );
 
+		// FIXME: register new type shader 'GLOWSHELL', allow to loading sprites with this type
+		// apply by default 'deformVertices' etc
+		cls.glowShell = re->RegisterShader( "renderfx/glowshell", SHADER_GENERIC );
+
 		// register gfx.wad images
 		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE
 		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE

@@ -23,6 +23,7 @@ PARTICLES MANAGEMENT
 #define NUMVERTEXNORMALS	162
 #define SPARK_COLORCOUNT	9
 #define TRACER_WIDTH	0.5f	// FIXME: tune this
+#define SIMSHIFT		10
 
 // particle velocities
 static const float	cl_avertexnormals[NUMVERTEXNORMALS][3] =
@@ -174,10 +175,12 @@ void CL_ClearParticles( void )
 {
 	int	i;
 
+	if( !cl_particles ) return;
+
 	cl_free_particles = cl_particles;
 	cl_active_particles = NULL;
 
-	for( i = 0; i < GI->max_particles; i++ )
+	for( i = 0; i < GI->max_particles - 1; i++ )
 		cl_particles[i].next = &cl_particles[i+1];
 
 	cl_particles[GI->max_particles-1].next = NULL;
@@ -192,6 +195,7 @@ CL_FreeParticles
 void CL_FreeParticles( void )
 {
 	if( cl_particles ) Mem_Free( cl_particles );
+	cl_particles = NULL;
 }
 
 /*
@@ -269,9 +273,9 @@ void CL_UpdateParticle( particle_t *p, float ft )
 	float	dvel = 4 * ft;
 	float	grav = ft * clgame.movevars.gravity * 0.05f;
 	float	size = 1.5f;
+	int	i, iRamp, alpha = 255;
 	vec3_t	right, up;
 	rgb_t	color;
-	int	i;
 
 	switch( p->type )
 	{
@@ -304,14 +308,32 @@ void CL_UpdateParticle( particle_t *p, float ft )
 		p->vel[2] -= grav;
 		break;
 	case pt_blob:
-		for( i = 0; i < 3; i++ )
-			p->vel[i] += p->vel[i] * dvel;
-		p->vel[2] -= grav;
-		break;
 	case pt_blob2:
-		for( i = 0; i < 2; i++ )
-			p->vel[i] -= p->vel[i] * dvel;
-		p->vel[2] -= grav;
+		p->ramp += time2;
+		iRamp = (int)p->ramp >> SIMSHIFT;
+
+		if( iRamp >= SPARK_COLORCOUNT )
+		{
+			p->ramp = 0.0f;
+			iRamp = 0;
+		}
+		
+		p->color = CL_LookupColor( gSparkRamp[iRamp][0], gSparkRamp[iRamp][1], gSparkRamp[iRamp][2] );
+
+		for( i = 0; i < 2; i++ )		
+			p->vel[i] -= p->vel[i] * 0.5f * ft;
+		p->vel[2] -= grav * 5.0f;
+
+		if( Com_RandomLong( 0, 3 ))
+		{
+			p->type = pt_blob;
+			alpha = 0;
+		}
+		else
+		{
+			p->type = pt_blob2;
+			alpha = 255;
+		}
 		break;
 	case pt_grav:
 		p->vel[2] -= grav * 20;
@@ -327,6 +349,7 @@ void CL_UpdateParticle( particle_t *p, float ft )
 		break;
 	}
 
+#if 0
 	// HACKHACK a scale up to keep particles from disappearing
 	size += (p->org[0] - cl.refdef.vieworg[0]) * cl.refdef.forward[0];
 	size += (p->org[1] - cl.refdef.vieworg[1]) * cl.refdef.forward[1];
@@ -334,7 +357,7 @@ void CL_UpdateParticle( particle_t *p, float ft )
 
 	if( size < 20.0f ) size = 1.0f;
 	else size = 1.0f + size * 0.004f;
-
+#endif
  	// scale the axes by radius
 	VectorScale( cl.refdef.right, size, right );
 	VectorScale( cl.refdef.up, size, up );
@@ -344,7 +367,7 @@ void CL_UpdateParticle( particle_t *p, float ft )
 
 	re->Enable( TRI_SHADER );
 	re->RenderMode( kRenderTransTexture );
-	re->Color4ub( color[0], color[1], color[2], 0xFF );
+	re->Color4ub( color[0], color[1], color[2], alpha );
 
 	re->Bind( cls.particleShader, 0 );
 
@@ -565,7 +588,7 @@ void CL_BlobExplosion( const vec3_t org )
 
 		if( i & 1 )
 		{
-			p->type = pt_blob;
+			p->type = pt_explode;
 			p->color = 66 + rand() % 6;
 
 			for( j = 0; j < 3; j++ )
@@ -576,7 +599,7 @@ void CL_BlobExplosion( const vec3_t org )
 		}
 		else
 		{
-			p->type = pt_blob2;
+			p->type = pt_explode2;
 			p->color = 150 + rand() % 6;
 
 			for( j = 0; j < 3; j++ )
@@ -620,6 +643,64 @@ void CL_RunParticleEffect( const vec3_t org, const vec3_t dir, int color, int co
 		{
 			p->org[j] = org[j] + Com_RandomFloat( -16, 16 );
 			p->vel[j] = dir[j] * 15;
+		}
+	}
+}
+
+/*
+===============
+CL_Blood
+
+particle spray
+===============
+*/
+void CL_Blood( const vec3_t org, const vec3_t dir, int pcolor, int speed )
+{
+	particle_t	*p;
+	int		i, j;
+
+	for( i = 0; i < speed * 20; i++ )
+	{
+		p = CL_AllocParticle( NULL );
+		if( !p ) return;
+
+		p->die += Com_RandomFloat( 0.1f, 0.5f );
+		p->type = pt_slowgrav;
+		p->color = pcolor;
+
+		for( j = 0; j < 3; j++ )
+		{
+			p->org[j] = org[j] + Com_RandomFloat( -16.0f, 16.0f );
+			p->vel[j] = dir[j] * speed;
+		}
+	}
+}
+
+/*
+===============
+CL_BloodStream
+
+particle spray 2
+===============
+*/
+void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
+{
+	particle_t	*p;
+	int		i, j;
+
+	for( i = 0; i < speed * 20; i++ )
+	{
+		p = CL_AllocParticle( NULL );
+		if( !p ) return;
+
+		p->die += Com_RandomFloat( 0.2f, 0.8f );
+		p->type = pt_slowgrav;
+		p->color = pcolor;
+
+		for( j = 0; j < 3; j++ )
+		{
+			p->org[j] = org[j];
+			p->vel[j] = dir[j] * speed;
 		}
 	}
 }
@@ -978,6 +1059,31 @@ void CL_BulletImpactParticles( const vec3_t pos )
 }
 
 /*
+===============
+CL_FlickerParticles
+
+===============
+*/
+void CL_FlickerParticles( const vec3_t org )
+{
+	particle_t	*p;
+	int		i, j;
+
+	for( i = 0; i < 16; i++ )
+	{
+		p = CL_AllocParticle( NULL );
+		if( !p ) return;
+
+		p->die += Com_RandomFloat( 0.5f, 2.0f );
+		p->type = pt_blob;
+
+		for( j = 0; j < 3; j++ )
+			p->org[j] = org[j] + Com_RandomFloat( -32.0f, 32.0f );
+		p->vel[2] = Com_RandomFloat( 64.0f, 100.0f );
+	}
+}
+
+/*
 ==============================================================
 
 TRACERS MANAGEMENT (particle extension)
@@ -1143,9 +1249,6 @@ static void CL_BulletTracerDraw( particle_t *p, float frametime )
 	VectorMA( p->org, frametime, p->vel, p->org );
 }
 
-#define SPARK_ELECTRIC_MINSPEED	64.0f
-#define SPARK_ELECTRIC_MAXSPEED	100.0f
-
 /*
 ===============
 CL_SparkleTracer
@@ -1272,15 +1375,17 @@ Creates 8 random tracers
 void CL_SparkShower( const vec3_t org )
 {
 	vec3_t	pos, dir;
+	model_t	*pmodel;
 	int	i;
 
 	// randomize position
 	pos[0] = org[0] + Com_RandomFloat( -2.0f, 2.0f );
 	pos[1] = org[1] + Com_RandomFloat( -2.0f, 2.0f );
 	pos[2] = org[2] + Com_RandomFloat( -2.0f, 2.0f );
-#if 0
-	CL_RicochetSprite( pos, CL_FindModelIndex( "sprites/richo1.spr" ), Com_RandomFloat( 0.4, 0.6f ));
-#endif
+
+	pmodel = CM_ClipHandleToModel( CL_FindModelIndex( "sprites/richo1.spr" ));
+	CL_RicochetSprite( pos, pmodel, 0.0f, Com_RandomFloat( 0.4, 0.6f ));
+
 	// create a 8 random spakle tracers
 	for( i = 0; i < 8; i++ )
 	{
@@ -1289,5 +1394,58 @@ void CL_SparkShower( const vec3_t org )
 		dir[2] = Com_RandomFloat( -1.0f, 1.0f );
 
 		CL_SparkleTracer( pos, dir );
+	}
+}
+
+/*
+===============
+CL_Implosion
+
+===============
+*/
+void CL_Implosion( const vec3_t end, float radius, int count, float life )
+{
+	particle_t	*p;
+	vec3_t		dir, dest;
+	vec3_t		m_vecPos;
+	float		flDist, vel;
+	int		i, j, colorIndex;
+	int		step;
+
+	colorIndex = CL_LookupColor( gTracerColors[5][0], gTracerColors[5][1], gTracerColors[5][2] );
+	step = count / 4;
+
+	for( i = -radius; i <= radius; i += step )
+	{
+		for( j = -radius; j <= radius; j += step )
+		{
+			p = CL_AllocParticle( CL_SparkTracerDraw );
+			if( !p ) return;
+
+			VectorCopy( end, m_vecPos );
+
+			dest[0] = end[0] + i;
+			dest[1] = end[1] + j;
+			dest[2] = end[2] + Com_RandomFloat( 100, 800 );
+
+			// send particle heading to dest at a random speed
+			VectorSubtract( dest, m_vecPos, dir );
+
+			vel = dest[2] / 8;// velocity based on how far particle has to travel away from org
+
+			flDist = VectorNormalizeLength( dir );	// save the distance
+			if( vel < 64 ) vel = 64;
+				
+			vel += Com_RandomFloat( 64, 128  );
+			life += ( flDist / vel );
+
+			VectorCopy( m_vecPos, p->org );
+			p->color = colorIndex;
+			p->ramp = 1.0f; // length based on velocity
+
+			VectorScale( dir, vel, p->vel );
+			// die right when you get there
+			p->die += life;
+		}
 	}
 }

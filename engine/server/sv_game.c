@@ -962,50 +962,6 @@ float pfnVecToYaw( const float *rgflVector )
 
 /*
 =================
-pfnVecToAngles
-
-=================
-*/
-void pfnVecToAngles( const float *rgflVectorIn, float *rgflVectorOut )
-{
-	float	forward;
-	float	yaw, pitch;
-
-	if( !rgflVectorIn )
-	{
-		if( rgflVectorOut ) VectorClear( rgflVectorOut );
-		return;
-	}
-
-	if( rgflVectorIn[1] == 0 && rgflVectorIn[0] == 0 )
-	{
-		yaw = 0;
-		if( rgflVectorIn[2] > 0 )
-			pitch = 90;
-		else pitch = 270;
-	}
-	else
-	{
-		if( rgflVectorIn[0] )
-		{
-			yaw = (int)( com.atan2( rgflVectorIn[1], rgflVectorIn[0] ) * 180 / M_PI );
-			if( yaw < 0 ) yaw += 360;
-		}
-		else if( rgflVectorIn[1] > 0 )
-			yaw = 90;
-		else yaw = 270;
-
-		forward = com.sqrt( rgflVectorIn[0] * rgflVectorIn[0] + rgflVectorIn[1] * rgflVectorIn[1] );
-		pitch = (int)( com.atan2( rgflVectorIn[2], forward ) * 180 / M_PI );
-		if( pitch < 0 ) pitch += 360;
-	}
-
-	if( rgflVectorOut ) VectorSet( rgflVectorOut, pitch, yaw, 0 ); 
-	else MsgDev( D_ERROR, "SV_VecToAngles: no output vector specified\n" );
-}
-
-/*
-=================
 pfnMoveToOrigin
 
 =================

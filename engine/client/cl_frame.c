@@ -179,7 +179,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		{
 //			Msg( "Entity %s was removed from delta-message\n", ent->curstate.classname );
 			ent->curstate.effects |= EF_NODRAW; // don't rendering
-			clgame.dllFuncs.pfnUpdateOnRemove( ent );
+			CL_KillDeadBeams( ent ); // release dead beams
 		}
 
 		// entity was delta removed
@@ -533,6 +533,14 @@ void CL_AddPacketEntities( frame_t *frame )
 			entityType = ET_BEAM;
 		else entityType = ET_NORMAL;
 
+		// if entity is beam add it here
+		// because render doesn't know how to draw beams
+		if ( entityType == ET_BEAM )
+		{
+			CL_AddCustomBeam( ent );
+			continue;
+		}
+
 		if( clgame.dllFuncs.pfnAddVisibleEntity( ent, entityType ))
 		{
 			if( entityType == ET_PORTAL && !VectorCompare( ent->curstate.origin, ent->curstate.vuser1 ))
@@ -556,13 +564,14 @@ void CL_AddEntities( void )
 		return;
 
 	cl.render_flags = 0;
+	cl.num_custombeams = 0;
 
-	clgame.dllFuncs.pfnStartFrame();	// new frame has begin
 	CL_AddPacketEntities( &cl.frame );
 	clgame.dllFuncs.pfnCreateEntities();
 
 	CL_FireEvents();	// so tempents can be created immediately
 	CL_AddDLights();
+	CL_AddTempEnts();
 	CL_AddLightStyles();
 
 	// perfomance test

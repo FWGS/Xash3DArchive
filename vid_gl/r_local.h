@@ -713,6 +713,7 @@ decal_t *R_DecalFromMeshbuf( const meshbuffer_t *mb );
 int R_CreateDecalList( decallist_t *pList, qboolean changelevel );
 void R_AddSurfaceDecals( msurface_t *surf );
 void R_PushDecal( const meshbuffer_t *mb );
+void R_DecalRemoveAll( shader_t shader );
 
 //
 // r_poly.c

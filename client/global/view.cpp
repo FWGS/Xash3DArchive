@@ -350,9 +350,6 @@ void V_PreRender( ref_params_t *pparams )
 	// get the global gravity
 	sv_gravity = pparams->movevars->gravity;
 
-	// pass into beam global vars
-	g_pViewRenderBeams->SetViewParams( pparams );
-
 	// input
 	pparams->intermission = gHUD.m_iIntermission;
 	if( gHUD.m_iCameraMode ) pparams->flags |= RDF_THIRDPERSON;

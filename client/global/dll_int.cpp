@@ -313,14 +313,6 @@ int HUD_AddVisibleEntity( cl_entity_t *pEnt, int entityType )
 {
 	int	result;
 
-	// if entity is beam add it here
-	// because render doesn't know how to draw beams
-	if ( entityType == ET_BEAM )
-	{
-		g_pViewRenderBeams->AddServerBeam( pEnt );
-		return 1;
-	}
-
 	result = gEngfuncs.CL_CreateVisibleEntity( entityType, pEnt );
 
 	if ( pEnt->curstate.effects & EF_BRIGHTFIELD )
@@ -371,9 +363,6 @@ void HUD_CreateEntities( void )
 {
 	EV_UpdateBeams ();		// egon use this
 	EV_UpdateLaserSpot ();	// predictable laserspot
-
-	// add in any game specific objects here
-	g_pViewRenderBeams->UpdateTempEntBeams( );
 
 	g_pTempEnts->Update();
 }

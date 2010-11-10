@@ -21,46 +21,46 @@
 
 static dllfunc_t cdll_exports[] =
 {
-	{ "Initialize", (void **)&clgame.cdllFuncs.pfnInitialize },
-	{ "HUD_VidInit", (void **)&clgame.cdllFuncs.pfnVidInit },
-	{ "HUD_Init", (void **)&clgame.cdllFuncs.pfnInit },
-	{ "HUD_Shutdown", (void **)&clgame.cdllFuncs.pfnShutdown },
-	{ "HUD_Redraw", (void **)&clgame.cdllFuncs.pfnRedraw },
-	{ "HUD_UpdateClientData", (void **)&clgame.cdllFuncs.pfnUpdateClientData },
-	{ "HUD_Reset", (void **)&clgame.cdllFuncs.pfnReset },
-	{ "HUD_PlayerMove", (void **)&clgame.cdllFuncs.pfnPlayerMove },
-	{ "HUD_PlayerMoveInit", (void **)&clgame.cdllFuncs.pfnPlayerMoveInit },
-	{ "HUD_PlayerMoveTexture", (void **)&clgame.cdllFuncs.pfnPlayerMoveTexture },
-	{ "HUD_ConnectionlessPacket", (void **)&clgame.cdllFuncs.pfnConnectionlessPacket },
-	{ "HUD_GetHullBounds", (void **)&clgame.cdllFuncs.pfnGetHullBounds },
-	{ "HUD_Frame", (void **)&clgame.cdllFuncs.pfnFrame },
-	{ "HUD_VoiceStatus", (void **)&clgame.cdllFuncs.pfnVoiceStatus },
-	{ "HUD_DirectorMessage", (void **)&clgame.cdllFuncs.pfnDirectorMessage },
-	{ "HUD_PostRunCmd", (void **)&clgame.cdllFuncs.pfnPostRunCmd },
-	{ "HUD_Key_Event", (void **)&clgame.cdllFuncs.pfnKey_Event },
-	{ "HUD_AddEntity", (void **)&clgame.cdllFuncs.pfnAddEntity },
-	{ "HUD_CreateEntities", (void **)&clgame.cdllFuncs.pfnCreateEntities },
-	{ "HUD_StudioEvent", (void **)&clgame.cdllFuncs.pfnStudioEvent },
-	{ "HUD_TxferLocalOverrides", (void **)&clgame.cdllFuncs.pfnTxferLocalOverrides },
-	{ "HUD_ProcessPlayerState", (void **)&clgame.cdllFuncs.pfnProcessPlayerState },
-	{ "HUD_TxferPredictionData", (void **)&clgame.cdllFuncs.pfnTxferPredictionData },
-	{ "HUD_TempEntUpdate", (void **)&clgame.cdllFuncs.pfnTempEntUpdate },
-	{ "HUD_DrawNormalTriangles", (void **)&clgame.cdllFuncs.pfnDrawNormalTriangles },
-	{ "HUD_DrawTransparentTriangles", (void **)&clgame.cdllFuncs.pfnDrawTransparentTriangles },
-	{ "HUD_GetUserEntity", (void **)&clgame.cdllFuncs.pfnGetUserEntity },
-	{ "Demo_ReadBuffer", (void **)&clgame.cdllFuncs.pfnDemo_ReadBuffer },
-	{ "CAM_Think", (void **)&clgame.cdllFuncs.CAM_Think },
-	{ "CL_IsThirdPerson", (void **)&clgame.cdllFuncs.CL_IsThirdPerson },
-	{ "CL_CameraOffset", (void **)&clgame.cdllFuncs.CL_CameraOffset },
-	{ "CL_CreateMove", (void **)&clgame.cdllFuncs.CL_CreateMove },
-	{ "IN_ActivateMouse", (void **)&clgame.cdllFuncs.IN_ActivateMouse },
-	{ "IN_DeactivateMouse", (void **)&clgame.cdllFuncs.IN_DeactivateMouse },
-	{ "IN_MouseEvent", (void **)&clgame.cdllFuncs.IN_MouseEvent },
-	{ "IN_Accumulate", (void **)&clgame.cdllFuncs.IN_Accumulate },
-	{ "IN_ClearStates", (void **)&clgame.cdllFuncs.IN_ClearStates },
-	{ "V_CalcRefdef", (void **)&clgame.cdllFuncs.V_CalcRefdef },
-	{ "KB_Find", (void **)&clgame.cdllFuncs.KB_Find },
-	{ NULL, NULL }
+{ "Initialize", (void **)&clgame.cdllFuncs.pfnInitialize },
+{ "HUD_VidInit", (void **)&clgame.cdllFuncs.pfnVidInit },
+{ "HUD_Init", (void **)&clgame.cdllFuncs.pfnInit },
+{ "HUD_Shutdown", (void **)&clgame.cdllFuncs.pfnShutdown },
+{ "HUD_Redraw", (void **)&clgame.cdllFuncs.pfnRedraw },
+{ "HUD_UpdateClientData", (void **)&clgame.cdllFuncs.pfnUpdateClientData },
+{ "HUD_Reset", (void **)&clgame.cdllFuncs.pfnReset },
+{ "HUD_PlayerMove", (void **)&clgame.cdllFuncs.pfnPlayerMove },
+{ "HUD_PlayerMoveInit", (void **)&clgame.cdllFuncs.pfnPlayerMoveInit },
+{ "HUD_PlayerMoveTexture", (void **)&clgame.cdllFuncs.pfnPlayerMoveTexture },
+{ "HUD_ConnectionlessPacket", (void **)&clgame.cdllFuncs.pfnConnectionlessPacket },
+{ "HUD_GetHullBounds", (void **)&clgame.cdllFuncs.pfnGetHullBounds },
+{ "HUD_Frame", (void **)&clgame.cdllFuncs.pfnFrame },
+{ "HUD_VoiceStatus", (void **)&clgame.cdllFuncs.pfnVoiceStatus },
+{ "HUD_DirectorMessage", (void **)&clgame.cdllFuncs.pfnDirectorMessage },
+{ "HUD_PostRunCmd", (void **)&clgame.cdllFuncs.pfnPostRunCmd },
+{ "HUD_Key_Event", (void **)&clgame.cdllFuncs.pfnKey_Event },
+{ "HUD_AddEntity", (void **)&clgame.cdllFuncs.pfnAddEntity },
+{ "HUD_CreateEntities", (void **)&clgame.cdllFuncs.pfnCreateEntities },
+{ "HUD_StudioEvent", (void **)&clgame.cdllFuncs.pfnStudioEvent },
+{ "HUD_TxferLocalOverrides", (void **)&clgame.cdllFuncs.pfnTxferLocalOverrides },
+{ "HUD_ProcessPlayerState", (void **)&clgame.cdllFuncs.pfnProcessPlayerState },
+{ "HUD_TxferPredictionData", (void **)&clgame.cdllFuncs.pfnTxferPredictionData },
+{ "HUD_TempEntUpdate", (void **)&clgame.cdllFuncs.pfnTempEntUpdate },
+{ "HUD_DrawNormalTriangles", (void **)&clgame.cdllFuncs.pfnDrawNormalTriangles },
+{ "HUD_DrawTransparentTriangles", (void **)&clgame.cdllFuncs.pfnDrawTransparentTriangles },
+{ "HUD_GetUserEntity", (void **)&clgame.cdllFuncs.pfnGetUserEntity },
+{ "Demo_ReadBuffer", (void **)&clgame.cdllFuncs.pfnDemo_ReadBuffer },
+{ "CAM_Think", (void **)&clgame.cdllFuncs.CAM_Think },
+{ "CL_IsThirdPerson", (void **)&clgame.cdllFuncs.CL_IsThirdPerson },
+{ "CL_CameraOffset", (void **)&clgame.cdllFuncs.CL_CameraOffset },
+{ "CL_CreateMove", (void **)&clgame.cdllFuncs.CL_CreateMove },
+{ "IN_ActivateMouse", (void **)&clgame.cdllFuncs.IN_ActivateMouse },
+{ "IN_DeactivateMouse", (void **)&clgame.cdllFuncs.IN_DeactivateMouse },
+{ "IN_MouseEvent", (void **)&clgame.cdllFuncs.IN_MouseEvent },
+{ "IN_Accumulate", (void **)&clgame.cdllFuncs.IN_Accumulate },
+{ "IN_ClearStates", (void **)&clgame.cdllFuncs.IN_ClearStates },
+{ "V_CalcRefdef", (void **)&clgame.cdllFuncs.V_CalcRefdef },
+{ "KB_Find", (void **)&clgame.cdllFuncs.KB_Find },
+{ NULL, NULL }
 };
 
 /*
@@ -1090,7 +1090,7 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 		return;
 
 	CL_UnlinkEdict( pEdict );
-	clgame.dllFuncs.pfnUpdateOnRemove( pEdict );
+	CL_KillDeadBeams( pEdict );
 	pEdict->index = -1;	// freed
 }
 
@@ -2124,7 +2124,7 @@ void pfnStopSound( int ent, int channel, const char *sample )
 
 /*
 =============
-pfnFindModelIndex
+CL_FindModelIndex
 
 =============
 */
@@ -2702,10 +2702,9 @@ callback from renderer
 */
 void Tri_DrawTriangles( int fTrans )
 {
-	if( fTrans )
-	{
-		CL_DrawParticles ();
-	}
+	CL_DrawBeams( fTrans );
+
+	if( fTrans ) CL_DrawParticles();
 
 	clgame.dllFuncs.pfnDrawTriangles( fTrans );
 }
@@ -3410,6 +3409,8 @@ void CL_UnloadProgs( void )
 	if( !clgame.hInstance ) return;
 
 	CL_FreeEdicts();
+	CL_FreeTempEnts();
+	CL_FreeViewBeams();
 	CL_FreeParticles();
 
 	// deinitialize game
@@ -3461,6 +3462,9 @@ qboolean CL_LoadProgs( const char *name )
 #endif
 	GetClientAPI = (CLIENTAPI)FS_GetProcAddress( clgame.hInstance, "CreateAPI" );
 
+	// FIXME: this very-very temporary stuffffffff
+	clgame.cdllFuncs.pfnTempEntUpdate = FS_GetProcAddress( clgame.hInstance, "HUD_TempEntUpdate" );
+
 	if( !GetClientAPI )
 	{
 		FS_FreeLibrary( clgame.hInstance );
@@ -3480,6 +3484,8 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.maxEntities = GI->max_edicts; // merge during loading
 	CL_InitTitles( "titles.txt" );
 	CL_InitParticles ();
+	CL_InitViewBeams ();
+	CL_InitTempEnts ();
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

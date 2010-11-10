@@ -30,6 +30,4 @@ void HUD_RenderCallback( int fTrans )
 {
 	if( !fTrans ) HUD_DrawTriangles ();
 	else HUD_DrawTransparentTriangles();
-
-	g_pViewRenderBeams->UpdateBeams( fTrans );
 }

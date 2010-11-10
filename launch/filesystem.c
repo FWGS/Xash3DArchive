@@ -1619,7 +1619,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	com.strncpy( GameInfo->gamefolder, gamedir, sizeof( GameInfo->gamefolder ));
 	GameInfo->max_edicts = 900;	// default value if not specified
 	GameInfo->max_tents = 500;
-	GameInfo->max_tents = 64;
+	GameInfo->max_beams = 128;
 	GameInfo->max_particles = 2048;
 	GameInfo->version = 1.0f;
 	

@@ -112,6 +112,7 @@ typedef struct
 	int		playernum;
 	int		maxclients;
 	int		movemessages;
+	int		num_custombeams;			// server beams count
 	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 
 	char		model_precache[MAX_MODELS][CS_SIZE];
@@ -382,6 +383,7 @@ typedef struct
 	shader_t		particleShader;		// built-in particle and sparks shader
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
 	shader_t		loadingBar;		// 'loading' progress bar
+	shader_t		glowShell;		// for renderFxGlowShell
 	cl_font_t		creditsFont;		// shared creditsfont
 
 	int		num_client_entities;	// cl.maxclients * CL_UPDATE_BACKUP * MAX_PACKET_ENTITIES
@@ -441,6 +443,7 @@ extern convar_t	*cl_idealpitchscale;
 extern convar_t	*cl_allow_levelshots;
 extern convar_t	*cl_draw_particles;
 extern convar_t	*cl_levelshot_name;
+extern convar_t	*cl_draw_beams;
 extern convar_t	*scr_centertime;
 extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
@@ -586,8 +589,6 @@ int CL_AddEntity( int entityType, cl_entity_t *pEnt );
 void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
-struct dlight_s *CL_AllocDlight( int key );
-struct dlight_s *CL_AllocElight( int key );
 void CL_LightForPoint( const vec3_t point, vec3_t ambientLight );
 void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
@@ -601,6 +602,17 @@ void CL_InitParticles( void );
 void CL_ClearParticles( void );
 void CL_FreeParticles( void );
 void CL_DrawParticles( void );
+void CL_InitTempEnts( void );
+void CL_ClearTempEnts( void );
+void CL_FreeTempEnts( void );
+void CL_AddTempEnts( void );
+void CL_InitViewBeams( void );
+void CL_ClearViewBeams( void );
+void CL_FreeViewBeams( void );
+void CL_DrawBeams( int fTrans );
+void CL_AddCustomBeam( cl_entity_t *pEnvBeam );
+void CL_KillDeadBeams( cl_entity_t *pDeadEntity );
+void CL_ParseViewBeam( sizebuf_t *msg, int beamType );
 
 //
 // console.c

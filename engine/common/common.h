@@ -217,6 +217,7 @@ void *pfnGetProcAddress( void *hInstance, const char *name );
 void pfnFreeLibrary( void *hInstance );
 long pfnRandomLong( long lLow, long lHigh );
 float pfnRandomFloat( float flLow, float flHigh );
+void pfnVecToAngles( const float *rgflVectorIn, float *rgflVectorOut );
 int pfnAddCommand( const char *cmd_name, xcommand_t func );
 void pfnDelCommand( const char *cmd_name );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );

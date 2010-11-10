@@ -149,6 +149,7 @@ typedef struct render_exp_s
 	qboolean	(*CullBox)( const vec3_t mins, const vec3_t maxs );
 	qboolean 	(*RSpeedsMessage)( char *out, size_t size );
 	int	(*CreateDecalList)( decallist_t *pList, qboolean changelevel );	// helper to serialize decals
+	void	(*DecalRemoveAll)( shader_t shader );
 	byte	*(*GetCurrentVis)( void );
 	void	(*RestoreGamma)( void );
 } render_exp_t;

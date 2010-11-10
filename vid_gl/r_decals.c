@@ -1252,3 +1252,28 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 
 	return total;
 }
+
+/*
+===============
+R_DecalRemoveAll
+
+remove all decals with specified shader
+===============
+*/
+void R_DecalRemoveAll( shader_t handle )
+{
+	decal_t		*pdecal;
+	ref_shader_t	*shader;
+	int		i;
+
+	if( handle < 0 || handle > MAX_SHADERS || !( shader = &r_shaders[handle] ))
+		return;
+
+	for( i = 0; i < gDecalCount; i++ )
+	{
+		pdecal = &gDecalPool[i];
+
+		if( pdecal->shader == shader )
+			R_DecalUnlink( pdecal );
+	}
+}
