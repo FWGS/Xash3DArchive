@@ -201,7 +201,7 @@ qboolean R_CullBrushModel( ref_entity_t *e )
 			return true;
 	}
 
-	if( RI.refdef.flags & ( RDF_PORTALINVIEW|RDF_SKYPORTALINVIEW ) || ( RI.params & RP_SKYPORTALVIEW ))
+	if( RI.rdflags & ( RDF_PORTALINVIEW|RDF_SKYPORTALINVIEW ) || ( RI.params & RP_SKYPORTALVIEW ))
 	{
 		if( rotated )
 		{
@@ -603,8 +603,7 @@ void R_DrawWorld( void )
 	if( !r_drawworld->integer )
 		return;
 
-	if( RI.refdef.flags & RDF_NOWORLDMODEL )
-		return;
+	if( !RI.drawWorld ) return;
 
 	if( !r_worldmodel || !r_worldbrushmodel )
 		return;
@@ -658,8 +657,7 @@ void R_MarkLeaves( void )
 	mnode_t	*node;
 	int	i;
 
-	if( RI.refdef.flags & RDF_NOWORLDMODEL )
-		return;
+	if( !RI.drawWorld ) return;
 
 	if( RI.params & RP_SHADOWMAPVIEW )
 		return;

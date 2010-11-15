@@ -406,7 +406,7 @@ void CL_StopPlayback( void )
 	// let game known about movie state	
 	cls.state = ca_disconnected;
 	cls.demoname[0] = '\0';	// clear demoname too
-	gameui.globals->demoname[0] = '\0';
+	menu.globals->demoname[0] = '\0';
 
 	if( clgame.hInstance ) clgame.dllFuncs.pfnReset(); // end of demos, stop the client
 }
@@ -423,7 +423,7 @@ void CL_StopRecord( void )
 	cls.demofile = NULL;
 	cls.demorecording = false;
 	cls.demoname[0] = '\0';
-	gameui.globals->demoname[0] = '\0';
+	menu.globals->demoname[0] = '\0';
 }
 
 /* 
@@ -605,7 +605,7 @@ void CL_Record_f( void )
 	// write demoshot for preview
 	Cbuf_AddText( va( "demoshot \"%s\"\n", demoname ));
 	com.strncpy( cls.demoname, demoname, sizeof( cls.demoname ));
-	com.strncpy( gameui.globals->demoname, demoname, sizeof( gameui.globals->demoname ));
+	com.strncpy( menu.globals->demoname, demoname, sizeof( menu.globals->demoname ));
 	
 	CL_WriteDemoHeader( demopath );
 }
@@ -641,7 +641,7 @@ void CL_PlayDemo_f( void )
 
 	cls.demofile = FS_OpenEx( filename, "rb", true );
 	com.strncpy( cls.demoname, Cmd_Argv( 1 ), sizeof( cls.demoname ));
-	com.strncpy( gameui.globals->demoname, Cmd_Argv( 1 ), sizeof( gameui.globals->demoname ));
+	com.strncpy( menu.globals->demoname, Cmd_Argv( 1 ), sizeof( menu.globals->demoname ));
 
 	Con_Close();
 	UI_SetActiveMenu( false );

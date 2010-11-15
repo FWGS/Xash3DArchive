@@ -337,27 +337,28 @@ void SCR_RegisterShaders( void )
 		cls.fillShader = re->RegisterShader( "*white", SHADER_NOMIP ); // used for FillRGBA
 		cls.particleShader = re->RegisterShader( "*particle", SHADER_NOMIP );
 
+		// register gfx.wad images
+		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP );
+		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP );
+		cls.creditsFont.hFontTexture = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
+
 		// FIXME: register new type shader 'GLOWSHELL', allow to loading sprites with this type
 		// apply by default 'deformVertices' etc
 		cls.glowShell = re->RegisterShader( "renderfx/glowshell", SHADER_GENERIC );
-
-		// register gfx.wad images
-		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE
-		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE
-		cls.creditsFont.hFontTexture = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP ); // FIXME: MAKE INTRESOURCE
+		cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
 	}
 
 	Mem_Set( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
-	Mem_Set( &gameui.ds, 0, sizeof( gameui.ds )); // reset a draw state
+	Mem_Set( &menu.ds, 0, sizeof( menu.ds )); // reset a draw state
 	Mem_Set( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
 
 	// update screen sizes for menu
-	gameui.globals->scrWidth = scr_width->integer;
-	gameui.globals->scrHeight = scr_height->integer;
+	menu.globals->scrWidth = scr_width->integer;
+	menu.globals->scrHeight = scr_height->integer;
 
 	// vid_state has changed
 	if( clgame.hInstance ) clgame.dllFuncs.pfnVidInit();
-	if( gameui.hInstance ) gameui.dllFuncs.pfnVidInit();
+	if( menu.hInstance ) menu.dllFuncs.pfnVidInit();
 
 	// restart console size
 	Con_VidInit ();
@@ -387,9 +388,9 @@ void SCR_Init( void )
 	Cmd_AddCommand( "skyname", CL_SetSky_f, "set new skybox by basename" );
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
-	if( !UI_LoadProgs( va( "%s/GameUI.dll", GI->dll_path ) ))
+	if( !UI_LoadProgs( va( "%s/MainUI.dll", GI->dll_path ) ))
 	{
-		Msg( "^1Error: ^7can't initialize gameui.dll\n" ); // there is non fatal for us
+		Msg( "^1Error: ^7can't initialize MainUI.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
 	}
 

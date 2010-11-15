@@ -452,10 +452,6 @@ cvar_t	sk_player_leg3	= { "sk_player_leg3","1" };
 // This gets called one time when the game is initialied
 void GameDLLInit( void )
 {
-#ifndef SYS_SHAREDSTRINGS
-	// tell engine what we want use StringTable system instead of shared strings
-	gpGlobals->pStringBase = NULL;
-#endif
 	// Register cvars here:
 
 	g_psv_gravity = CVAR_GET_POINTER( "sv_gravity" );
@@ -889,7 +885,3 @@ void GameDLLInit( void )
 	SERVER_COMMAND( "exec skill.cfg\n" );
 }
 
-// perform any shutdown operations
-void GameDLLShutdown( void )
-{
-}

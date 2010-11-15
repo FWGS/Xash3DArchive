@@ -23,6 +23,5 @@
 #define ET_FRAGMENTED	4	// BMODEL or SPRITE that was split across BSP nodes
 #define ET_VIEWENTITY	5	// special case for firstperson viewmodel
 #define ET_PORTAL		6	// this is portal surface
-#define ET_SKYPORTAL	7	// env_sky use this
 
 #endif//ENTITY_TYPES_H

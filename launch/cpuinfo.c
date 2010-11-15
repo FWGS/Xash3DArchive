@@ -3,7 +3,6 @@
 //		         cpuinfo.c - get cpu information
 //=======================================================================
 
-#include "const.h"
 #include "launch.h"
 
 typedef signed __int64	int64;

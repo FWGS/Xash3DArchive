@@ -429,6 +429,7 @@ void CL_ParseMovevars( sizebuf_t *msg )
 		re->RegisterShader( clgame.movevars.skyName, SHADER_SKY );
 
 	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
+	clgame.entities->curstate.scale = clgame.movevars.waveHeight;
 }
 
 /*
@@ -451,7 +452,7 @@ void CL_ParseParticles( sizebuf_t *msg )
 	color = BF_ReadByte( msg );
 	if( count == 255 ) count = 1024;
 
-	clgame.dllFuncs.pfnParticleEffect( org, dir, color, count );
+	CL_RunParticleEffect( org, dir, color, count );
 }
 
 /*
@@ -598,8 +599,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 
-	gameui.globals->maxClients = cl.maxclients;
-	com.strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
+	menu.globals->maxClients = cl.maxclients;
+	com.strncpy( menu.globals->maptitle, clgame.maptitle, sizeof( menu.globals->maptitle ));
 
 	// no effect for local client
 	// merge entcount only for remote clients 
@@ -687,8 +688,8 @@ void CL_ParseClientData( sizebuf_t *msg )
 	// Fixme, do this after all packets read for this frame?
 	cl.last_incoming_sequence = cls.netchan.incoming_sequence;
 	
-	to_cd = &frame->clientdata;
-	to_wd = frame->weapondata;
+	to_cd = &frame->local.client;
+	to_wd = frame->local.weapondata;
 
 	// clear to old value before delta parsing
 	if( !BF_ReadOneBit( msg ))
@@ -702,8 +703,8 @@ void CL_ParseClientData( sizebuf_t *msg )
 	{
 		int	delta_sequence = BF_ReadByte( msg );
 
-		from_cd = &cl.frames[delta_sequence & CL_UPDATE_MASK].clientdata;
-		from_wd = cl.frames[delta_sequence & CL_UPDATE_MASK].weapondata;
+		from_cd = &cl.frames[delta_sequence & CL_UPDATE_MASK].local.client;
+		from_wd = cl.frames[delta_sequence & CL_UPDATE_MASK].local.weapondata;
 
 		if(( delta_sequence & CL_UPDATE_MASK ) != ( cl.delta_sequence & CL_UPDATE_MASK ))
 			MsgDev( D_WARN, "CL_ParseClientData: mismatch delta_sequence\n" );
@@ -1083,6 +1084,39 @@ void CL_ParseScreenFade( sizebuf_t *msg )
 			sf->fadeEnd += sf->fadeReset;
 		}
 	}
+}
+
+/*
+==============
+CL_DispatchUserMessage
+
+Dispatch user message by engine request
+==============
+*/
+qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf )
+{
+	int	i;
+
+	if( !pszName || !*pszName )
+		return false;
+
+	for( i = 0; i < MAX_USER_MESSAGES; i++ )
+	{
+		// search for user message
+		if( !com.strcmp( clgame.msg[i].name, pszName ))
+			break;
+	}
+
+	if( i == MAX_USER_MESSAGES )
+	{
+		MsgDev( D_ERROR, "CL_DispatchUserMessage: bad message %s\n", pszName );
+		return false;
+	}
+
+	if( clgame.msg[i].func ) clgame.msg[i].func( pszName, iSize, pbuf );
+	else MsgDev( D_ERROR, "CL_DispatchUserMessage: %s not hooked\n", pszName );
+
+	return true;
 }
 
 /*

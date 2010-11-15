@@ -774,7 +774,7 @@ void R_DrawSpriteModel( const meshbuffer_t *mb )
 
 			// pev->colormap is hardcoded to attachment number
 			// NOTE: use interpolated origin to avoid flickering attachments
-			VectorAdd( e->parent->origin, e->parent->lerp->attachment[num-1], e->origin2 );
+			VectorCopy( e->parent->lerp->attachment[num-1], e->origin2 );
 		}
 		else VectorCopy( e->parent->origin, e->origin2 );
 	}

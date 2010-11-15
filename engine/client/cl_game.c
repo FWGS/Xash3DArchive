@@ -19,47 +19,53 @@
 #include "input.h"
 #include "shake.h"
 
+#define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channel)
+#define TEXT_MSGNAME	"TextMessage%i"
+
+char			cl_textbuffer[MAX_TEXTCHANNELS][512];
+client_textmessage_t	cl_textmessage[MAX_TEXTCHANNELS];
+
 static dllfunc_t cdll_exports[] =
 {
-{ "Initialize", (void **)&clgame.cdllFuncs.pfnInitialize },
-{ "HUD_VidInit", (void **)&clgame.cdllFuncs.pfnVidInit },
-{ "HUD_Init", (void **)&clgame.cdllFuncs.pfnInit },
-{ "HUD_Shutdown", (void **)&clgame.cdllFuncs.pfnShutdown },
-{ "HUD_Redraw", (void **)&clgame.cdllFuncs.pfnRedraw },
-{ "HUD_UpdateClientData", (void **)&clgame.cdllFuncs.pfnUpdateClientData },
-{ "HUD_Reset", (void **)&clgame.cdllFuncs.pfnReset },
-{ "HUD_PlayerMove", (void **)&clgame.cdllFuncs.pfnPlayerMove },
-{ "HUD_PlayerMoveInit", (void **)&clgame.cdllFuncs.pfnPlayerMoveInit },
-{ "HUD_PlayerMoveTexture", (void **)&clgame.cdllFuncs.pfnPlayerMoveTexture },
-{ "HUD_ConnectionlessPacket", (void **)&clgame.cdllFuncs.pfnConnectionlessPacket },
-{ "HUD_GetHullBounds", (void **)&clgame.cdllFuncs.pfnGetHullBounds },
-{ "HUD_Frame", (void **)&clgame.cdllFuncs.pfnFrame },
-{ "HUD_VoiceStatus", (void **)&clgame.cdllFuncs.pfnVoiceStatus },
-{ "HUD_DirectorMessage", (void **)&clgame.cdllFuncs.pfnDirectorMessage },
-{ "HUD_PostRunCmd", (void **)&clgame.cdllFuncs.pfnPostRunCmd },
-{ "HUD_Key_Event", (void **)&clgame.cdllFuncs.pfnKey_Event },
-{ "HUD_AddEntity", (void **)&clgame.cdllFuncs.pfnAddEntity },
-{ "HUD_CreateEntities", (void **)&clgame.cdllFuncs.pfnCreateEntities },
-{ "HUD_StudioEvent", (void **)&clgame.cdllFuncs.pfnStudioEvent },
-{ "HUD_TxferLocalOverrides", (void **)&clgame.cdllFuncs.pfnTxferLocalOverrides },
-{ "HUD_ProcessPlayerState", (void **)&clgame.cdllFuncs.pfnProcessPlayerState },
-{ "HUD_TxferPredictionData", (void **)&clgame.cdllFuncs.pfnTxferPredictionData },
-{ "HUD_TempEntUpdate", (void **)&clgame.cdllFuncs.pfnTempEntUpdate },
-{ "HUD_DrawNormalTriangles", (void **)&clgame.cdllFuncs.pfnDrawNormalTriangles },
-{ "HUD_DrawTransparentTriangles", (void **)&clgame.cdllFuncs.pfnDrawTransparentTriangles },
-{ "HUD_GetUserEntity", (void **)&clgame.cdllFuncs.pfnGetUserEntity },
-{ "Demo_ReadBuffer", (void **)&clgame.cdllFuncs.pfnDemo_ReadBuffer },
-{ "CAM_Think", (void **)&clgame.cdllFuncs.CAM_Think },
-{ "CL_IsThirdPerson", (void **)&clgame.cdllFuncs.CL_IsThirdPerson },
-{ "CL_CameraOffset", (void **)&clgame.cdllFuncs.CL_CameraOffset },
-{ "CL_CreateMove", (void **)&clgame.cdllFuncs.CL_CreateMove },
-{ "IN_ActivateMouse", (void **)&clgame.cdllFuncs.IN_ActivateMouse },
-{ "IN_DeactivateMouse", (void **)&clgame.cdllFuncs.IN_DeactivateMouse },
-{ "IN_MouseEvent", (void **)&clgame.cdllFuncs.IN_MouseEvent },
-{ "IN_Accumulate", (void **)&clgame.cdllFuncs.IN_Accumulate },
-{ "IN_ClearStates", (void **)&clgame.cdllFuncs.IN_ClearStates },
-{ "V_CalcRefdef", (void **)&clgame.cdllFuncs.V_CalcRefdef },
-{ "KB_Find", (void **)&clgame.cdllFuncs.KB_Find },
+{ "Initialize", (void **)&clgame.dllFuncs.pfnInitialize },
+{ "HUD_VidInit", (void **)&clgame.dllFuncs.pfnVidInit },
+{ "HUD_Init", (void **)&clgame.dllFuncs.pfnInit },
+{ "HUD_Shutdown", (void **)&clgame.dllFuncs.pfnShutdown },
+{ "HUD_Redraw", (void **)&clgame.dllFuncs.pfnRedraw },
+{ "HUD_UpdateClientData", (void **)&clgame.dllFuncs.pfnUpdateClientData },
+{ "HUD_Reset", (void **)&clgame.dllFuncs.pfnReset },
+{ "HUD_PlayerMove", (void **)&clgame.dllFuncs.pfnPlayerMove },
+{ "HUD_PlayerMoveInit", (void **)&clgame.dllFuncs.pfnPlayerMoveInit },
+{ "HUD_PlayerMoveTexture", (void **)&clgame.dllFuncs.pfnPlayerMoveTexture },
+{ "HUD_ConnectionlessPacket", (void **)&clgame.dllFuncs.pfnConnectionlessPacket },
+{ "HUD_GetHullBounds", (void **)&clgame.dllFuncs.pfnGetHullBounds },
+{ "HUD_Frame", (void **)&clgame.dllFuncs.pfnFrame },
+{ "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
+{ "HUD_DirectorMessage", (void **)&clgame.dllFuncs.pfnDirectorMessage },
+{ "HUD_PostRunCmd", (void **)&clgame.dllFuncs.pfnPostRunCmd },
+{ "HUD_Key_Event", (void **)&clgame.dllFuncs.pfnKey_Event },
+{ "HUD_AddEntity", (void **)&clgame.dllFuncs.pfnAddEntity },
+{ "HUD_CreateEntities", (void **)&clgame.dllFuncs.pfnCreateEntities },
+{ "HUD_StudioEvent", (void **)&clgame.dllFuncs.pfnStudioEvent },
+{ "HUD_TxferLocalOverrides", (void **)&clgame.dllFuncs.pfnTxferLocalOverrides },
+{ "HUD_ProcessPlayerState", (void **)&clgame.dllFuncs.pfnProcessPlayerState },
+{ "HUD_TxferPredictionData", (void **)&clgame.dllFuncs.pfnTxferPredictionData },
+{ "HUD_TempEntUpdate", (void **)&clgame.dllFuncs.pfnTempEntUpdate },
+{ "HUD_GetStudioModelInterface", (void **)&clgame.dllFuncs.pfnGetStudioModelInterface },
+{ "HUD_DrawNormalTriangles", (void **)&clgame.dllFuncs.pfnDrawNormalTriangles },
+{ "HUD_DrawTransparentTriangles", (void **)&clgame.dllFuncs.pfnDrawTransparentTriangles },
+{ "HUD_GetUserEntity", (void **)&clgame.dllFuncs.pfnGetUserEntity },
+{ "Demo_ReadBuffer", (void **)&clgame.dllFuncs.pfnDemo_ReadBuffer },
+{ "CAM_Think", (void **)&clgame.dllFuncs.CAM_Think },
+{ "CL_IsThirdPerson", (void **)&clgame.dllFuncs.CL_IsThirdPerson },
+{ "CL_CreateMove", (void **)&clgame.dllFuncs.CL_CreateMove },
+{ "IN_ActivateMouse", (void **)&clgame.dllFuncs.IN_ActivateMouse },
+{ "IN_DeactivateMouse", (void **)&clgame.dllFuncs.IN_DeactivateMouse },
+{ "IN_MouseEvent", (void **)&clgame.dllFuncs.IN_MouseEvent },
+{ "IN_Accumulate", (void **)&clgame.dllFuncs.IN_Accumulate },
+{ "IN_ClearStates", (void **)&clgame.dllFuncs.IN_ClearStates },
+{ "V_CalcRefdef", (void **)&clgame.dllFuncs.pfnCalcRefdef },
+{ "KB_Find", (void **)&clgame.dllFuncs.KB_Find },
 { NULL, NULL }
 };
 
@@ -75,10 +81,13 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	if( !clgame.entities )
 		return NULL;
 
-	if( index < 0 || index > clgame.numEntities )
+	if( index < 0 )
+		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
+
+	if( index > clgame.numEntities )
 		return NULL;
 
-	if( EDICT_NUM( index )->index == -1 )
+	if( !EDICT_NUM( index )->index )
 		return NULL;
 	return EDICT_NUM( index );
 }
@@ -93,6 +102,30 @@ don't clamped time that come from server
 float CL_GetServerTime( void )
 {
 	return sv_time();
+}
+
+/*
+====================
+CL_GetLerpFrac
+
+returns current lerp fraction
+====================
+*/
+float CL_GetLerpFrac( void )
+{
+	return cl.lerpFrac;
+}
+
+/*
+====================
+CL_IsThirdPerson
+
+returns true if thirdperson is enabled
+====================
+*/
+qboolean CL_IsThirdPerson( void )
+{
+	return cl.thirdperson;
 }
 
 /*
@@ -112,6 +145,22 @@ player_info_t *CL_GetPlayerInfo( int playerIndex )
 
 /*
 ====================
+CL_PointContents
+
+Return contents for point
+====================
+*/
+int CL_PointContents( const vec3_t p )
+{
+	int cont = CL_TruePointContents( p );
+
+	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
+		cont = CONTENTS_WATER;
+	return cont;
+}
+
+/*
+====================
 StudioEvent
 
 Event callback for studio models
@@ -120,18 +169,6 @@ Event callback for studio models
 void CL_StudioEvent( struct mstudioevent_s *event, cl_entity_t *pEdict )
 {
 	clgame.dllFuncs.pfnStudioEvent( event, pEdict );
-}
-
-/*
-====================
-Studio_FxTransform
-
-apply fxtransforms for each studio bone
-====================
-*/
-void CL_StudioFxTransform( cl_entity_t *ent, float transform[4][4] )
-{
-	clgame.dllFuncs.pfnStudioFxTransform( ent, transform );
 }
 
 /*
@@ -521,6 +558,14 @@ static void CL_InitTitles( const char *filename )
 {
 	size_t	fileSize;
 	byte	*pMemFile;
+	int	i;
+
+	// initialize text messages (game_text)
+	for( i = 0; i < MAX_TEXTCHANNELS; i++ )
+	{
+		cl_textmessage[i].pName = com.stralloc( clgame.mempool, va( TEXT_MSGNAME, i ), __FILE__, __LINE__ );
+		cl_textmessage[i].pMessage = cl_textbuffer[i];
+	}
 
 	// clear out any old data that's sitting around.
 	if( clgame.titles ) Mem_Free( clgame.titles );
@@ -533,6 +578,60 @@ static void CL_InitTitles( const char *filename )
 
 	CL_TextMessageParse( pMemFile, fileSize );
 	Mem_Free( pMemFile );
+}
+
+/*
+====================
+CL_ParseTextMessage
+
+Parse TE_TEXTMESSAGE
+====================
+*/
+void CL_ParseTextMessage( sizebuf_t *msg )
+{
+	static int		msgindex = 0;
+	client_textmessage_t	*text;
+	int			channel;
+
+	// read channel ( 0 - auto)
+	channel = BF_ReadByte( msg );
+
+	if( channel <= 0 || channel > ( MAX_TEXTCHANNELS - 1 ))
+	{
+		// invalid channel specified, use internal counter		
+		if( channel != 0 ) MsgDev( D_ERROR, "HudText: invalid channel %i\n", channel );
+		channel = msgindex;
+		msgindex = (msgindex + 1) & (MAX_TEXTCHANNELS - 1);
+	}	
+
+	// grab message channel
+	text = &cl_textmessage[channel];
+
+	text->x = (float)(BF_ReadShort( msg ) / 8192.0f);
+	text->y = (float)(BF_ReadShort( msg ) / 8192.0f);
+	text->effect = BF_ReadByte( msg );
+	text->r1 = BF_ReadByte( msg );
+	text->g1 = BF_ReadByte( msg );
+	text->b1 = BF_ReadByte( msg );
+	text->a1 = BF_ReadByte( msg );
+	text->r2 = BF_ReadByte( msg );
+	text->g2 = BF_ReadByte( msg );
+	text->b2 = BF_ReadByte( msg );
+	text->a2 = BF_ReadByte( msg );
+	text->fadein = (float)(BF_ReadShort( msg ) / 256.0f );
+	text->fadeout = (float)(BF_ReadShort( msg ) / 256.0f );
+	text->holdtime = (float)(BF_ReadShort( msg ) / 256.0f );
+
+	if( text->effect == 2 )
+		text->fxtime = (float)(BF_ReadShort( msg ) / 256.0f );
+	else text->fxtime = 0.0f;
+
+	// to prevent grab too long messages
+	com.strncpy( (char *)text->pMessage, BF_ReadString( msg ), 512 ); 		
+
+	// NOTE: a "HudText" message contain only 'string' with message name, so we
+	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
+	CL_DispatchUserMessage( "HudText", com.strlen( text->pName ) + 1, (void *)text->pName );
 }
 
 /*
@@ -557,12 +656,13 @@ Render callback for studio models
 */
 cl_entity_t *CL_GetLocalPlayer( void )
 {
-	if( cls.state == ca_active )
+	if( cls.state >= ca_connected )
 	{
-		cl_entity_t	*player = EDICT_NUM( cl.playernum + 1 );
+		cl_entity_t *player;
 
-		if( player ) return player;
-		Host_Error( "CL_GetLocalPlayer: invalid edict\n" );
+		player = EDICT_NUM( cl.playernum + 1 );
+		ASSERT( player != NULL );
+		return player;
 	}
 	return NULL;
 }
@@ -589,7 +689,7 @@ void CL_DrawCrosshair( void )
 
 	pPlayer = CL_GetLocalPlayer();
 
-	if( cl.frame.clientdata.deadflag != DEAD_NO || cl.frame.clientdata.flags & FL_FROZEN )
+	if( cl.frame.local.client.deadflag != DEAD_NO || cl.frame.local.client.flags & FL_FROZEN )
 		return;
 
 	// any camera on
@@ -909,7 +1009,7 @@ void CL_FireEvents( void )
 		}
 
 		// delayed event!
-		if( ei->fire_time && ( ei->fire_time > cl_time() ))
+		if( ei->fire_time && ( ei->fire_time > cl.time ))
 			continue;
 
 		success = CL_FireEvent( ei );
@@ -1003,7 +1103,7 @@ void CL_QueueEvent( int flags, int index, float delay, event_args_t *args )
 	}
 
 	ei->index	= index;
-	ei->fire_time = delay ? (cl_time() + delay) : 0.0f;
+	ei->fire_time = delay ? (cl.time + delay) : 0.0f;
 	ei->flags	= flags;
 	
 	// copy in args event data
@@ -1041,7 +1141,7 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	if( delay < 0.0f )
 		delay = 0.0f; // fixup negative delays
 
-	if( pInvoker ) invokerIndex = NUM_FOR_EDICT( pInvoker );
+	invokerIndex = cl.playernum + 1;
 
 	args.flags = 0;
 	args.entindex = invokerIndex;
@@ -1063,12 +1163,10 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	else if( invokerIndex )
 	{
 		// get up some info from invoker
-		if( VectorIsNull( args.origin )) 
-			VectorCopy(((cl_entity_t *)&pInvoker)->curstate.origin, args.origin );
-		if( VectorIsNull( args.angles )) 
-			VectorCopy(((cl_entity_t *)&pInvoker)->curstate.angles, args.angles );
-		VectorCopy(((cl_entity_t *)&pInvoker)->curstate.velocity, args.velocity );
-		args.ducking = ((cl_entity_t *)&pInvoker)->curstate.usehull;
+		VectorCopy( cl.data.origin, args.origin );
+		VectorCopy( cl.data.viewangles, args.angles );
+		VectorCopy( cl.frame.local.playerstate.velocity, args.velocity );
+		args.ducking = cl.frame.local.playerstate.usehull;
 	}
 
 	CL_QueueEvent( flags, eventindex, delay, &args );
@@ -1086,12 +1184,10 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 	ASSERT( pEdict );
 
 	// already freed ?
-	if( pEdict->index == -1 )
-		return;
+	if( !pEdict->index ) return;
 
-	CL_UnlinkEdict( pEdict );
 	CL_KillDeadBeams( pEdict );
-	pEdict->index = -1;	// freed
+	pEdict->index = 0;	// freed
 }
 
 void CL_InitWorld( void )
@@ -1104,25 +1200,16 @@ void CL_InitWorld( void )
 	ent->curstate.solid = SOLID_BSP;
 	ent->curstate.movetype = MOVETYPE_PUSH;
 	clgame.numEntities = 1;
-
-	// clear physics interaction links
-	CL_ClearWorld ();
 }
 
 void CL_InitEdicts( void )
 {
-	cl_entity_t	*e;
-	int	i;
-
 	ASSERT( clgame.entities == NULL );
 
 	CL_UPDATE_BACKUP = ( cl.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
-
-	for( i = 0, e = clgame.entities; i < clgame.maxEntities; i++, e++ )
-		e->index = -1; // mark all entities as freed
 }
 
 void CL_FreeEdicts( void )
@@ -1159,21 +1246,71 @@ void CL_FreeEdicts( void )
 
 ===============================================================================
 */
+static void CL_LoadHudSprite( const char *szPicName, model_t *m_pSprite, int shaderType )
+{
+	ASSERT( m_pSprite != NULL );
+
+	// register new sprite
+	com.strncpy( m_pSprite->name, szPicName, sizeof( m_pSprite->name ));
+	m_pSprite->numtexinfo = re->RegisterShader( m_pSprite->name, shaderType );
+
+	if( !m_pSprite->numtexinfo )
+	{
+		// can't loading or something
+		Mem_Set( m_pSprite, 0, sizeof( *m_pSprite ));
+		return;
+	}
+
+	m_pSprite->registration_sequence = -1;	// to differentiate from normal sprites
+	m_pSprite->type = mod_sprite;
+	re->GetParms( NULL, NULL, &m_pSprite->numframes, 0, m_pSprite->numtexinfo );
+}
+
+static shader_t CL_GetHudSpriteShader( HSPRITE hSpr )
+{
+	if( hSpr <= 0 || hSpr > MAX_IMAGES )
+		return 0;	// bad image
+
+	return clgame.ds.images[hSpr].numtexinfo;	
+}
+
 /*
 =========
 pfnSPR_Load
 
 =========
 */
-static HSPRITE pfnSPR_Load( const char *szPicName )
+HSPRITE pfnSPR_Load( const char *szPicName )
 {
+	int	i;
+
 	if( !re ) return 0; // render not initialized
 	if( !szPicName || !*szPicName )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: bad name!\n" );
 		return 0;
 	}
-	return re->RegisterShader( szPicName, SHADER_SPRITE );
+
+	// slot 0 isn't used
+	for( i = 1; i < MAX_IMAGES && clgame.ds.images[i].name[0]; i++ )
+	{
+		if( !com.strcmp( clgame.ds.images[i].name, szPicName ))
+		{
+			// refresh shader
+			CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE );
+			return i;
+		}
+	}
+
+	if( i == MAX_IMAGES ) 
+	{
+		MsgDev( D_ERROR, "SPR_Load: can't load %s, MAX_HSPRITES limit exceeded\n", szPicName );
+		return 0;
+	}
+
+	// load new shader
+	CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE );
+	return i;
 }
 
 /*
@@ -1187,7 +1324,7 @@ static int pfnSPR_Frames( HSPRITE hPic )
 	int	numFrames;
 
 	if( !re ) return 1;
-	re->GetParms( NULL, NULL, &numFrames, 0, hPic );
+	re->GetParms( NULL, NULL, &numFrames, 0, CL_GetHudSpriteShader( hPic ));
 
 	return numFrames;
 }
@@ -1203,7 +1340,7 @@ static int pfnSPR_Height( HSPRITE hPic, int frame )
 	int	sprHeight;
 
 	if( !re ) return 0;
-	re->GetParms( NULL, &sprHeight, NULL, frame, hPic );
+	re->GetParms( NULL, &sprHeight, NULL, frame, CL_GetHudSpriteShader( hPic ));
 
 	return sprHeight;
 }
@@ -1219,7 +1356,7 @@ static int pfnSPR_Width( HSPRITE hPic, int frame )
 	int	sprWidth;
 
 	if( !re ) return 0;
-	re->GetParms( &sprWidth, NULL, NULL, frame, hPic );
+	re->GetParms( &sprWidth, NULL, NULL, frame, CL_GetHudSpriteShader( hPic ));
 
 	return sprWidth;
 }
@@ -1236,7 +1373,7 @@ static void pfnSPR_Set( HSPRITE hPic, int r, int g, int b )
 
 	if( !re ) return; // render not initialized
 
-	clgame.ds.hSprite = hPic;
+	clgame.ds.hSprite = CL_GetHudSpriteShader( hPic );
 	MakeRGBA( color, r, g, b, 255 );
 	re->SetColor( color );
 }
@@ -1467,7 +1604,7 @@ static void pfnSetCrosshair( HSPRITE hspr, wrect_t rc, int r, int g, int b )
 	clgame.ds.rgbaCrosshair[1] = (byte)g;
 	clgame.ds.rgbaCrosshair[2] = (byte)b;
 	clgame.ds.rgbaCrosshair[3] = (byte)0xFF;
-	clgame.ds.hCrosshair = hspr;
+	clgame.ds.hCrosshair = CL_GetHudSpriteShader( hspr );
 	clgame.ds.rcCrosshair = rc;
 }
 
@@ -1611,6 +1748,13 @@ static client_textmessage_t *pfnTextMessageGet( const char *pName )
 {
 	int	i;
 
+	// first check internal messages
+	for( i = 0; i < MAX_TEXTCHANNELS; i++ )
+	{
+		if( !com.strcmp( pName, va( TEXT_MSGNAME, i )))
+			return cl_textmessage + i;
+	}
+
 	// find desired message
 	for( i = 0; i < clgame.numTitles; i++ )
 	{
@@ -1629,16 +1773,20 @@ returns drawed chachter width (in real screen pixels)
 */
 static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 {
-	number &= 255;
+	rgba_t	color;
 
 	if( !cls.creditsFont.valid )
 		return 0;
+
+	number &= 255;
 
 	if( number < 32 ) return 0;
 	if( y < -clgame.scrInfo.iCharHeight )
 		return 0;
 
-	pfnSPR_Set( cls.creditsFont.hFontTexture, r, g, b );
+	MakeRGBA( color, r, g, b, 255 );
+	re->SetColor( color );
+	clgame.ds.hSprite = cls.creditsFont.hFontTexture;
 	pfnSPR_DrawAdditive( 0, x, y, &cls.creditsFont.fontRc[number] );
 	return clgame.scrInfo.charWidths[number];
 }
@@ -1759,7 +1907,7 @@ pfnPhysInfo_ValueForKey
 */
 static const char* pfnPhysInfo_ValueForKey( const char *key )
 {
-	return Info_ValueForKey( cl.frame.clientdata.physinfo, key );
+	return Info_ValueForKey( cl.frame.local.client.physinfo, key );
 }
 
 /*
@@ -1782,7 +1930,7 @@ value that come from server
 */
 static float pfnGetClientMaxspeed( void )
 {
-	return cl.frame.clientdata.maxspeed;
+	return cl.frame.local.client.maxspeed;
 }
 
 /*
@@ -1825,7 +1973,11 @@ pfnGetMousePosition
 */
 static void pfnGetMousePosition( int *mx, int *my )
 {
-	// FIXME: implement
+	POINT	curpos;
+
+	GetCursorPos( &curpos );
+	if( mx ) *mx = curpos.x;
+	if( my ) *my = curpos.y;
 }
 
 /*
@@ -1847,7 +1999,6 @@ int pfnIsNoClipping( void )
 =============
 pfnGetViewModel
 
-can return NULL
 =============
 */
 static cl_entity_t* pfnGetViewModel( void )
@@ -1981,26 +2132,36 @@ pfnWaterEntity
 */
 static int pfnWaterEntity( const float *rgflPos )
 {
-	cl_entity_t	*pWater, *touch[MAX_EDICTS];
-	int		i, num;
+	physent_t		*pe;
+	hull_t		*hull;
+	vec3_t		test;
+	int		i;
 
 	if( !rgflPos ) return -1;
 
-	// grab contents from all the water entities
-	num = CL_AreaEdicts( rgflPos, rgflPos, touch, MAX_EDICTS, AREA_CUSTOM );
-
-	for( i = 0; i < num; i++ )
+	for( i = 0; i < clgame.pmove->nummoveent; i++ )
 	{
-		pWater = touch[i];
+		pe = &clgame.pmove->moveents[i];
 
-		if( !pWater || pWater->index == -1 )
+		if( pe->solid != SOLID_NOT ) // disabled ?
 			continue;
 
-		if( pWater->curstate.solid != SOLID_NOT || pWater->curstate.skin == CONTENTS_NONE )
-			continue; // invalid water ?
+		// only brushes can have special contents
+		if( pe->model->type != mod_brush )
+			continue;
 
-		// return first valid water entity
-		return pWater - clgame.entities;
+		// check water brushes accuracy
+		hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, test );
+
+		// offset the test point appropriately for this hull.
+		VectorSubtract( rgflPos, test, test );
+
+		// test hull for intersection with this model
+		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
+			continue;
+
+		// found water entity
+		return pe->info;
 	}
 	return -1;
 }
@@ -2170,7 +2331,7 @@ pfnLocalPlayerDucking
 */
 int pfnLocalPlayerDucking( void )
 {
-	return cl.frame.clientdata.bInDuck;
+	return cl.frame.local.client.bInDuck;
 }
 
 /*
@@ -2331,6 +2492,20 @@ static qboolean pfnBoxVisible( const vec3_t mins, const vec3_t maxs )
 
 /*
 =============
+CL_GetSpritePointer
+
+=============
+*/
+const model_t *CL_GetSpritePointer( HSPRITE hSprite )
+{
+	if( hSprite <= 0 || hSprite > MAX_IMAGES )
+		return 0;	// bad image
+
+	return &clgame.ds.images[hSprite];
+}
+
+/*
+=============
 CL_LoadModel
 
 =============
@@ -2348,11 +2523,11 @@ model_t *CL_LoadModel( const char *modelname, int *index )
 
 int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 {
-	if( !re || !pEnt || pEnt->index == -1 )
+	if( !re || !pEnt || !pEnt->index )
 		return false;
 
 	// let the render reject entity without model
-	return re->AddRefEntity( pEnt, entityType, -1 );
+	return CL_AddVisibleEntity( pEnt, entityType );
 }
 
 /*
@@ -2386,7 +2561,13 @@ pfnGetLevelName
 */
 static const char *pfnGetLevelName( void )
 {
-	return clgame.mapname;
+	static char	mapname[64];
+
+	if( cls.state >= ca_connected )
+		com.snprintf( mapname, sizeof( mapname ), "maps/%s.bsp", clgame.mapname );
+	else mapname[0] = '\0'; // not in game
+
+	return mapname;
 }
 
 /*
@@ -2442,8 +2623,35 @@ pfnLoadMapSprite
 */
 model_t *pfnLoadMapSprite( const char *filename )
 {
-	// FIXME: implement
-	return NULL;
+	int	i;
+
+	if( !re ) return NULL; // render not initialized
+	if( !filename || !*filename )
+	{
+		MsgDev( D_ERROR, "CL_LoadMapSprite: bad name!\n" );
+		return 0;
+	}
+
+	// slot 0 isn't used
+	for( i = 1; i < MAX_IMAGES && clgame.ds.images[i].name[0]; i++ )
+	{
+		if( !com.strcmp( clgame.ds.images[i].name, filename ))
+		{
+			// refresh shader
+			CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC );
+			return clgame.ds.images + i;
+		}
+	}
+
+	if( i == MAX_IMAGES ) 
+	{
+		MsgDev( D_ERROR, "LoadMapSprite: can't load %s, MAX_HSPRITES limit exceeded\n", filename );
+		return 0;
+	}
+
+	// load new shader
+	CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC );
+	return clgame.ds.images + i;
 }
 
 /*
@@ -2586,58 +2794,6 @@ void pfnSetMouseEnable( qboolean fEnable )
 */
 /*
 =================
-pfnDecalIndexFromName
-
-=================
-*/
-int pfnDecalIndexFromName( const char *szDecalName )
-{
-	int	i;
-
-	if( !szDecalName || !szDecalName[0] )
-		return 0;
-
-	// look through the loaded sprite name list for SpriteName
-	for( i = 0; i < MAX_DECALS && host.draw_decals[i+1][0]; i++ )
-	{
-		if( !com.stricmp( szDecalName, host.draw_decals[i+1] ))
-		{
-			if( !cl.decal_index[i+1] )
-				cl.decal_index[i+1] = re->RegisterShader( szDecalName, SHADER_DECAL );
-			return cl.decal_index[i+1];
-		}
-	}
-	return 0; // invalid decal
-}
-
-/*
-=================
-pfnDecalIndex
-
-=================
-*/
-static int pfnDecalIndex( int id )
-{
-	id = bound( 0, id, MAX_DECALS - 1 );
-	if( !cl.decal_index[id] )
-		cl.decal_index[id] = re->RegisterShader( host.draw_decals[id], SHADER_DECAL );
-	return cl.decal_index[id];
-}
-
-/*
-=================
-pfnCullBox
-
-=================
-*/
-static int pfnCullBox( const vec3_t mins, const vec3_t maxs )
-{
-	if( !re ) return false;
-	return re->CullBox( mins, maxs );
-}
-
-/*
-=================
 pfnEnvShot
 
 =================
@@ -2676,15 +2832,16 @@ static void pfnEnvShot( const float *vieworg, const char *name, int skyshot )
 
 /*
 =================
-pfnGetPaletteColor
+pfnSkyCamera
 
 =================
 */
-static void pfnGetPaletteColor( int colorIndex, vec3_t outColor )
+static void pfnSkyCamera( const float *vieworg, const float *viewangles, float scale, float fov )
 {
-	if( !outColor ) return;
-	colorIndex = bound( 0, colorIndex, 255 );
-	VectorCopy( clgame.palette[colorIndex], outColor );
+	if( !re || !vieworg || !viewangles )
+		return;
+
+	re->SetSkyPortal( vieworg, viewangles, scale, fov );
 }
 
 /*
@@ -2702,30 +2859,17 @@ callback from renderer
 */
 void Tri_DrawTriangles( int fTrans )
 {
-	CL_DrawBeams( fTrans );
-
-	if( fTrans ) CL_DrawParticles();
-
-	clgame.dllFuncs.pfnDrawTriangles( fTrans );
-}
-
-/*
-=============
-TriLoadShader
-
-=============
-*/
-shader_t TriLoadShader( const char *szShaderName, int fShaderNoMip )
-{
-	if( !re ) return 0; // render not initialized
-	if( !szShaderName || !*szShaderName )
+	if( fTrans )
 	{
-		MsgDev( D_ERROR, "Tri_LoadShader: invalid shadername (%s)\n", fShaderNoMip ? "nomip" : "generic" );
-		return -1;
+		CL_DrawBeams( true );
+		CL_DrawParticles();
+		clgame.dllFuncs.pfnDrawTransparentTriangles ();
 	}
-	if( fShaderNoMip )
-		return re->RegisterShader( szShaderName, SHADER_NOMIP );
-	return re->RegisterShader( szShaderName, SHADER_GENERIC );
+	else
+	{
+		CL_DrawBeams( false );
+		clgame.dllFuncs.pfnDrawNormalTriangles ();
+	}
 }
 
 /*
@@ -2738,25 +2882,6 @@ void TriRenderMode( int mode )
 {
 	if( !re ) return;
 	re->RenderMode( mode );
-}
-
-shader_t TriGetSpriteFrame( int spriteIndex, int spriteFrame )
-{
-	if( !re ) return 0;
-	return re->GetSpriteTexture( spriteIndex, spriteFrame );
-}
-	
-/*
-=============
-TriBind
-
-bind current shader
-=============
-*/
-void TriBind( shader_t shader, int frame )
-{
-	if( !re ) return;
-	re->Bind( shader, frame );
 }
 
 /*
@@ -2781,78 +2906,6 @@ draw triangle sequence
 void TriEnd( void )
 {
 	if( re ) re->End();
-}
-
-/*
-=============
-TriEnable
-
-=============
-*/
-void TriEnable( int cap )
-{
-	if( !re ) return;
-	re->Enable( cap );
-}
-
-/*
-=============
-TriDisable
-
-=============
-*/
-void TriDisable( int cap )
-{
-	if( !re ) return;
-	re->Disable( cap );
-}
-
-/*
-=============
-TriVertex3f
-
-=============
-*/
-void TriVertex3f( float x, float y, float z )
-{
-	if( !re ) return;
-	re->Vertex3f( x, y, z );
-}
-
-/*
-=============
-TriVertex3fv
-
-=============
-*/
-void TriVertex3fv( const float *v )
-{
-	if( !re || !v ) return;
-	re->Vertex3f( v[0], v[1], v[2] );
-}
-
-/*
-=============
-TriNormal3f
-
-=============
-*/
-void TriNormal3f( float x, float y, float z )
-{
-	if( !re ) return;
-	re->Normal3f( x, y, z );
-}
-
-/*
-=============
-TriNormal3fv
-
-=============
-*/
-void TriNormal3fv( const float *v )
-{
-	if( !re || !v ) return;
-	re->Normal3f( v[0], v[1], v[2] );
 }
 
 /*
@@ -2899,13 +2952,40 @@ void TriTexCoord2f( float u, float v )
 
 /*
 =============
+TriVertex3fv
+
+=============
+*/
+void TriVertex3fv( const float *v )
+{
+	if( !re || !v ) return;
+	re->Vertex3f( v[0], v[1], v[2] );
+}
+
+/*
+=============
+TriVertex3f
+
+=============
+*/
+void TriVertex3f( float x, float y, float z )
+{
+	if( !re ) return;
+	re->Vertex3f( x, y, z );
+}
+
+/*
+=============
 TriBrightness
 
 =============
 */
 void TriBrightness( float brightness )
 {
-	// FIXME: implement
+	int	color;
+
+	color = brightness * 255;
+	re->Color4ub( color, color, color, 255 );
 }
 
 /*
@@ -2922,16 +3002,28 @@ void TriCullFace( TRICULLSTYLE mode )
 
 /*
 =============
-TriScreenToWorld
+TriSpriteTexture
 
-convert screen coordinates (x,y) into world (x, y, z)
+bind current texture
 =============
 */
-void TriScreenToWorld( float *screen, float *world )
+int TriSpriteTexture( model_t *pSpriteModel, int frame )
 {
-	if( !re ) return;
-	re->ScreenToWorld( screen, world );
-} 
+	shader_t	shader;
+
+	if( !re || !pSpriteModel )
+		return 0;
+
+	if( pSpriteModel->registration_sequence == -1 )
+		shader = pSpriteModel->numtexinfo;
+	else if( pSpriteModel->type == mod_sprite && pSpriteModel->numframes )
+		shader = re->GetSpriteTexture( CM_ClipModelToHandle( pSpriteModel ), frame );
+	else return 0;
+
+	re->Bind( shader, frame );
+
+	return 1;
+}
 
 /*
 =============
@@ -2967,6 +3059,43 @@ enables global fog on the level
 void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 {
 	if( re ) re->Fog( flFogColor, flStart, flEnd, bOn );
+}
+
+/*
+=============
+TriScreenToWorld
+
+convert screen coordinates (x,y) into world (x, y, z)
+=============
+*/
+void TriScreenToWorld( float *screen, float *world )
+{
+	if( !re ) return;
+	re->ScreenToWorld( screen, world );
+} 
+
+/*
+=============
+TriNormal3fv
+
+=============
+*/
+void TriNormal3fv( const float *v )
+{
+	if( !re || !v ) return;
+	re->Normal3f( v[0], v[1], v[2] );
+}
+
+/*
+=============
+TriNormal3f
+
+=============
+*/
+void TriNormal3f( float x, float y, float z )
+{
+	if( !re ) return;
+	re->Normal3f( x, y, z );
 }
 
 /*
@@ -3214,31 +3343,87 @@ static triangleapi_t gTriApi =
 	TriVertex3f,
 	TriBrightness,
 	TriCullFace,
-	TriGetSpriteFrame,
+	TriSpriteTexture,
 	TriWorldToScreen,
 	TriFog,
 	TriScreenToWorld,
-
-	TriLoadShader,
-	TriEnable,
-	TriDisable,
-	TriNormal3f,
-	TriNormal3fv,
-	TriBind,
 };
 
 static efx_api_t gEfxApi =
 {
-	pfnGetPaletteColor,
-	pfnDecalIndex,
-	pfnDecalIndexFromName,
+	CL_AllocParticle,
+	CL_BlobExplosion,
+	CL_Blood,
+	CL_BloodSprite,
+	CL_BloodStream,
+	CL_BreakModel,
+	CL_Bubbles,
+	CL_BubbleTrail,
+	CL_BulletImpactParticles,
+	CL_EntityParticles,
+	CL_Explosion,
+	CL_FizzEffect,
+	CL_FireField,
+	CL_FlickerParticles,
+	CL_FunnelSprite,
+	CL_Implosion,
+	CL_Large_Funnel,
+	CL_LavaSplash,
+	CL_MultiGunshot,
+	CL_MuzzleFlash,
+	CL_ParticleBox,
+	CL_ParticleBurst,
+	CL_ParticleExplosion,
+	CL_ParticleExplosion2,
+	CL_ParticleLine,
+	CL_PlayerSprites,
+	CL_Projectile,
+	CL_RicochetSound,
+	CL_RicochetSprite,
+	CL_RocketFlare,
+	CL_RocketTrail,
+	CL_RunParticleEffect,
+	CL_ShowLine,
+	CL_SparkEffect,
+	CL_SparkShower,
+	CL_SparkStreaks,
+	CL_Spray,
+	CL_Sprite_Explode,
+	CL_Sprite_Smoke,
+	CL_Sprite_Spray,
+	CL_Sprite_Trail,
+	CL_Sprite_WallPuff,
+	CL_StreakSplash,
+	CL_TracerEffect,
+	CL_UserTracerParticle,
+	CL_TracerParticles,
+	CL_TeleportSplash,
+	CL_TempSphereModel,
+	CL_TempModel,
+	CL_DefaultSprite,
+	CL_TempSprite,
+	CL_DecalIndex,
+	CL_DecalIndexFromName,
 	CL_DecalShoot,
-	CL_PlayerDecal,
+	CL_AttachTentToPlayer,
+	CL_KillAttachedTents,
+	CL_BeamCirclePoints,
+	CL_BeamEntPoint,
+	CL_BeamEnts,
+	CL_BeamFollow,
+	CL_BeamKill,
+	CL_BeamLightning,
+	CL_BeamPoints,
+	CL_BeamRing,
 	CL_AllocDlight,
 	CL_AllocElight,
-	CL_LightForPoint,
-	pfnBoxVisible,
-	pfnCullBox,
+	CL_TempEntAlloc,
+	CL_TempEntAllocNoModel,
+	CL_TempEntAllocHigh,
+	CL_TempEntAllocCustom,
+	CL_GetPackedColor,
+	CL_LookupColor,
+	CL_DecalRemoveAll,
 };
 
 static event_api_t gEventApi =
@@ -3363,7 +3548,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnTraceLine,
 	CL_LoadModel,
 	CL_AddEntity,
-	CM_ClipHandleToModel,
+	CL_GetSpritePointer,
 	pfnPlaySoundByNameAtLocation,
 	pfnPrecacheEvent,
 	CL_PlaybackEvent,
@@ -3413,9 +3598,8 @@ void CL_UnloadProgs( void )
 	CL_FreeViewBeams();
 	CL_FreeParticles();
 
-	// deinitialize game
 	clgame.dllFuncs.pfnShutdown();
-
+	
 	FS_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
@@ -3424,7 +3608,6 @@ void CL_UnloadProgs( void )
 
 qboolean CL_LoadProgs( const char *name )
 {
-	static CLIENTAPI		GetClientAPI;
 	static playermove_t		gpMove;
 	const dllfunc_t		*func;
 
@@ -3446,8 +3629,7 @@ qboolean CL_LoadProgs( const char *name )
 	// clear exports
 	for( func = cdll_exports; func && func->name; func++ )
 		*func->func = NULL;
-#if 0
-	// UNDONE: waiting for finalize client.dll interface
+
 	for( func = cdll_exports; func && func->name != NULL; func++ )
 	{
 		// functions are cleared before all the extensions are evaluated
@@ -3459,27 +3641,24 @@ qboolean CL_LoadProgs( const char *name )
 			return false;
 		}
 	}
-#endif
-	GetClientAPI = (CLIENTAPI)FS_GetProcAddress( clgame.hInstance, "CreateAPI" );
 
-	// FIXME: this very-very temporary stuffffffff
-	clgame.cdllFuncs.pfnTempEntUpdate = FS_GetProcAddress( clgame.hInstance, "HUD_TempEntUpdate" );
-
-	if( !GetClientAPI )
-	{
-		FS_FreeLibrary( clgame.hInstance );
-          	MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of CreateAPI proc\n" );
-		clgame.hInstance = NULL;
-		return false;
-	}
-
-	if( !GetClientAPI( &clgame.dllFuncs, &gEngfuncs ))
+	if( !clgame.dllFuncs.pfnInitialize( &gEngfuncs, CLDLL_INTERFACE_VERSION ))
 	{
 		FS_FreeLibrary( clgame.hInstance );
 		MsgDev( D_NOTE, "CL_LoadProgs: can't init client API\n" );
 		clgame.hInstance = NULL;
 		return false;
 	}
+
+	if( !CL_InitStudioAPI( ))
+	{
+		FS_FreeLibrary( clgame.hInstance );
+		MsgDev( D_NOTE, "CL_LoadProgs: can't init studio API\n" );
+		clgame.hInstance = NULL;
+		return false;
+	}
+
+	Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 
 	clgame.maxEntities = GI->max_edicts; // merge during loading
 	CL_InitTitles( "titles.txt" );

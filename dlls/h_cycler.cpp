@@ -315,7 +315,7 @@ public:
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
 	BOOL Deploy( void );
-	void Holster( void );
+	void Holster( int skiplocal = 0 );
 	int m_iszModel;
 	int m_iModel;
 };
@@ -342,16 +342,16 @@ void CWeaponCycler::Spawn( )
 BOOL CWeaponCycler::Deploy( )
 {
 	m_pPlayer->pev->viewmodel = m_iszModel;
-	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 1.0;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1.0;
 	SendWeaponAnim( 0 );
 	m_iClip = 0;
 	return TRUE;
 }
 
 
-void CWeaponCycler::Holster( void )
+void CWeaponCycler::Holster( int skiplocal /* = 0 */ )
 {
-	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 0.5;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 }
 
 

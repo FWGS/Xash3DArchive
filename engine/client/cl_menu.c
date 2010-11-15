@@ -1,39 +1,39 @@
 //=======================================================================
 //			Copyright XashXT Group 2010 ©
-//		        cl_menu.c - gameui dlls interaction
+//		        cl_menu.c - menu dlls interaction
 //=======================================================================
 
 #include "common.h"
 #include "client.h"
 #include "const.h"
 
-gameui_static_t	gameui;
+menu_static_t	menu;
 
 void UI_UpdateMenu( float realtime )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnRedraw( realtime );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnRedraw( realtime );
 }
 
 void UI_KeyEvent( int key, qboolean down )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnKeyEvent( key, down );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnKeyEvent( key, down );
 }
 
 void UI_MouseMove( int x, int y )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnMouseMove( x, y );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnMouseMove( x, y );
 }
 
 void UI_SetActiveMenu( qboolean fActive )
 {
 	movie_state_t	*cin_state;
 
-	if( !gameui.hInstance ) return;
-	gameui.drawLogo = fActive;
-	gameui.dllFuncs.pfnSetActiveMenu( fActive );
+	if( !menu.hInstance ) return;
+	menu.drawLogo = fActive;
+	menu.dllFuncs.pfnSetActiveMenu( fActive );
 
 	if( !fActive )
 	{
@@ -45,50 +45,50 @@ void UI_SetActiveMenu( qboolean fActive )
 
 void UI_AddServerToList( netadr_t adr, const char *info )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnAddServerToList( adr, info );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnAddServerToList( adr, info );
 }
 
 void UI_GetCursorPos( int *pos_x, int *pos_y )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnGetCursorPos( pos_x, pos_y );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnGetCursorPos( pos_x, pos_y );
 }
 
 void UI_SetCursorPos( int pos_x, int pos_y )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnSetCursorPos( pos_x, pos_y );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnSetCursorPos( pos_x, pos_y );
 }
 
 void UI_ShowCursor( qboolean show )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnShowCursor( show );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnShowCursor( show );
 }
 
 qboolean UI_CreditsActive( void )
 {
-	if( !gameui.hInstance ) return 0;
-	return gameui.dllFuncs.pfnCreditsActive();
+	if( !menu.hInstance ) return 0;
+	return menu.dllFuncs.pfnCreditsActive();
 }
 
 void UI_CharEvent( int key )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnCharEvent( key );
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnCharEvent( key );
 }
 
 qboolean UI_MouseInRect( void )
 {
-	if( !gameui.hInstance ) return 1;
-	return gameui.dllFuncs.pfnMouseInRect();
+	if( !menu.hInstance ) return 1;
+	return menu.dllFuncs.pfnMouseInRect();
 }
 
 qboolean UI_IsVisible( void )
 {
-	if( !gameui.hInstance ) return 0;
-	return gameui.dllFuncs.pfnIsVisible();
+	if( !menu.hInstance ) return 0;
+	return menu.dllFuncs.pfnIsVisible();
 }
 
 static void UI_DrawLogo( const char *filename, float x, float y, float width, float height )
@@ -101,7 +101,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 	int		cin_frame;
 	qboolean		redraw = false;
 
-	if( !gameui.drawLogo ) return;
+	if( !menu.drawLogo ) return;
 	cin_state = AVI_GetState( CIN_LOGO );
 
 	if( !AVI_IsActive( cin_state ))
@@ -117,15 +117,15 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		if( FS_FileExists( path ) && !fullpath )
 		{
 			MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
-			gameui.drawLogo = false;
+			menu.drawLogo = false;
 			return;
 		}
 
 		AVI_OpenVideo( cin_state, fullpath, false, false, true );
-		if( !( AVI_GetVideoInfo( cin_state, &gameui.logo_xres, &gameui.logo_yres, &video_duration )))
+		if( !( AVI_GetVideoInfo( cin_state, &menu.logo_xres, &menu.logo_yres, &video_duration )))
 		{
 			AVI_CloseVideo( cin_state );
-			gameui.drawLogo = false;
+			menu.drawLogo = false;
 			return;
 		}
 
@@ -158,23 +158,23 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		redraw = true;
 	}
 
-	re->DrawStretchRaw( x, y, width, height, gameui.logo_xres, gameui.logo_yres, cin_data, redraw );
+	re->DrawStretchRaw( x, y, width, height, menu.logo_xres, menu.logo_yres, cin_data, redraw );
 }
 
 static int UI_GetLogoWidth( void )
 {
-	return gameui.logo_xres;
+	return menu.logo_xres;
 }
 
 static int UI_GetLogoHeight( void )
 {
-	return gameui.logo_yres;
+	return menu.logo_yres;
 }
 	
 void Host_Credits( void )
 {
-	if( !gameui.hInstance ) return;
-	gameui.dllFuncs.pfnFinalCredits();
+	if( !menu.hInstance ) return;
+	menu.dllFuncs.pfnFinalCredits();
 }
 
 static void UI_ConvertGameInfo( GAMEINFO *out, gameinfo_t *in )
@@ -202,42 +202,42 @@ static qboolean PIC_Scissor( float *x, float *y, float *width, float *height, fl
 	if(( width == 0 ) || ( height == 0 ))
 		return false;
 
-	if( *x + *width <= gameui.ds.scissor_x )
+	if( *x + *width <= menu.ds.scissor_x )
 		return false;
-	if( *x >= gameui.ds.scissor_x + gameui.ds.scissor_width )
+	if( *x >= menu.ds.scissor_x + menu.ds.scissor_width )
 		return false;
-	if( *y + *height <= gameui.ds.scissor_y )
+	if( *y + *height <= menu.ds.scissor_y )
 		return false;
-	if( *y >= gameui.ds.scissor_y + gameui.ds.scissor_height )
+	if( *y >= menu.ds.scissor_y + menu.ds.scissor_height )
 		return false;
 
 	dudx = (*u1 - *u0) / *width;
 	dvdy = (*v1 - *v0) / *height;
 
-	if( *x < gameui.ds.scissor_x )
+	if( *x < menu.ds.scissor_x )
 	{
-		*u0 += (gameui.ds.scissor_x - *x) * dudx;
-		*width -= gameui.ds.scissor_x - *x;
-		*x = gameui.ds.scissor_x;
+		*u0 += (menu.ds.scissor_x - *x) * dudx;
+		*width -= menu.ds.scissor_x - *x;
+		*x = menu.ds.scissor_x;
 	}
 
-	if( *x + *width > gameui.ds.scissor_x + gameui.ds.scissor_width )
+	if( *x + *width > menu.ds.scissor_x + menu.ds.scissor_width )
 	{
-		*u1 -= (*x + *width - (gameui.ds.scissor_x + gameui.ds.scissor_width)) * dudx;
-		*width = gameui.ds.scissor_x + gameui.ds.scissor_width - *x;
+		*u1 -= (*x + *width - (menu.ds.scissor_x + menu.ds.scissor_width)) * dudx;
+		*width = menu.ds.scissor_x + menu.ds.scissor_width - *x;
 	}
 
-	if( *y < gameui.ds.scissor_y )
+	if( *y < menu.ds.scissor_y )
 	{
-		*v0 += (gameui.ds.scissor_y - *y) * dvdy;
-		*height -= gameui.ds.scissor_y - *y;
-		*y = gameui.ds.scissor_y;
+		*v0 += (menu.ds.scissor_y - *y) * dvdy;
+		*height -= menu.ds.scissor_y - *y;
+		*y = menu.ds.scissor_y;
 	}
 
-	if( *y + *height > gameui.ds.scissor_y + gameui.ds.scissor_height )
+	if( *y + *height > menu.ds.scissor_y + menu.ds.scissor_height )
 	{
-		*v1 -= (*y + *height - (gameui.ds.scissor_y + gameui.ds.scissor_height)) * dvdy;
-		*height = gameui.ds.scissor_y + gameui.ds.scissor_height - *y;
+		*v1 -= (*y + *height - (menu.ds.scissor_y + menu.ds.scissor_height)) * dvdy;
+		*height = menu.ds.scissor_y + menu.ds.scissor_height - *y;
 	}
 	return true;
 }
@@ -260,7 +260,7 @@ static void PIC_DrawGeneric( int frame, float x, float y, float width, float hei
 		int	w, h;
 
 		// assume we get sizes from image
-		re->GetParms( &w, &h, NULL, frame, gameui.ds.hSprite );
+		re->GetParms( &w, &h, NULL, frame, menu.ds.hSprite );
 
 		width = w;
 		height = h;
@@ -283,16 +283,16 @@ static void PIC_DrawGeneric( int frame, float x, float y, float width, float hei
 	}
 
 	// pass scissor test if supposed
-	if( gameui.ds.scissor_test && !PIC_Scissor( &x, &y, &width, &height, &s1, &t1, &s2, &t2 ))
+	if( menu.ds.scissor_test && !PIC_Scissor( &x, &y, &width, &height, &s1, &t1, &s2, &t2 ))
 		return;
 
-	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, gameui.ds.hSprite );
+	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, menu.ds.hSprite );
 	re->SetColor( NULL );
 }
 
 /*
 ===============================================================================
-	GameUI Builtin Functions
+	MainUI Builtin Functions
 
 ===============================================================================
 */
@@ -387,7 +387,7 @@ static void pfnPIC_Set( HIMAGE hPic, int r, int g, int b, int a )
 
 	if( !re ) return; // render not initialized
 
-	gameui.ds.hSprite = hPic;
+	menu.ds.hSprite = hPic;
 	MakeRGBA( color, r, g, b, a );
 	re->SetColor( color );
 }
@@ -402,7 +402,7 @@ static void pfnPIC_Draw( int frame, int x, int y, int width, int height, const w
 {
 	if( !re ) return; // render not initialized
 
-	re->SetParms( gameui.ds.hSprite, kRenderNormal, frame );
+	re->SetParms( menu.ds.hSprite, kRenderNormal, frame );
 	PIC_DrawGeneric( frame, x, y, width, height, prc );
 }
 
@@ -416,7 +416,7 @@ static void pfnPIC_DrawTrans( int frame, int x, int y, int width, int height, co
 {
 	if( !re ) return; // render not initialized
 
-	re->SetParms( gameui.ds.hSprite, kRenderTransTexture, frame );
+	re->SetParms( menu.ds.hSprite, kRenderTransTexture, frame );
 	PIC_DrawGeneric( frame, x, y, width, height, prc );
 }
 
@@ -430,7 +430,7 @@ static void pfnPIC_DrawHoles( int frame, int x, int y, int width, int height, co
 {
 	if( !re ) return; // render not initialized
 
-	re->SetParms( gameui.ds.hSprite, kRenderTransAlpha, frame );
+	re->SetParms( menu.ds.hSprite, kRenderTransAlpha, frame );
 	PIC_DrawGeneric( frame, x, y, width, height, prc );
 }
 
@@ -444,7 +444,7 @@ static void pfnPIC_DrawAdditive( int frame, int x, int y, int width, int height,
 {
 	if( !re ) return; // render not initialized
 
-	re->SetParms( gameui.ds.hSprite, kRenderTransAdd, frame );
+	re->SetParms( menu.ds.hSprite, kRenderTransAdd, frame );
 	PIC_DrawGeneric( frame, x, y, width, height, prc );
 }
 
@@ -457,16 +457,16 @@ pfnPIC_EnableScissor
 static void pfnPIC_EnableScissor( int x, int y, int width, int height )
 {
 	// check bounds
-	x = bound( 0, x, gameui.globals->scrWidth );
-	y = bound( 0, y, gameui.globals->scrHeight );
-	width = bound( 0, width, gameui.globals->scrWidth - x );
-	height = bound( 0, height, gameui.globals->scrHeight - y );
+	x = bound( 0, x, menu.globals->scrWidth );
+	y = bound( 0, y, menu.globals->scrHeight );
+	width = bound( 0, width, menu.globals->scrWidth - x );
+	height = bound( 0, height, menu.globals->scrHeight - y );
 
-	gameui.ds.scissor_x = x;
-	gameui.ds.scissor_width = width;
-	gameui.ds.scissor_y = y;
-	gameui.ds.scissor_height = height;
-	gameui.ds.scissor_test = true;
+	menu.ds.scissor_x = x;
+	menu.ds.scissor_width = width;
+	menu.ds.scissor_y = y;
+	menu.ds.scissor_height = height;
+	menu.ds.scissor_test = true;
 }
 
 /*
@@ -477,11 +477,11 @@ pfnPIC_DisableScissor
 */
 static void pfnPIC_DisableScissor( void )
 {
-	gameui.ds.scissor_x = 0;
-	gameui.ds.scissor_width = 0;
-	gameui.ds.scissor_y = 0;
-	gameui.ds.scissor_height = 0;
-	gameui.ds.scissor_test = false;
+	menu.ds.scissor_x = 0;
+	menu.ds.scissor_width = 0;
+	menu.ds.scissor_y = 0;
+	menu.ds.scissor_height = 0;
+	menu.ds.scissor_test = false;
 }
 
 /*
@@ -577,8 +577,8 @@ static int pfnDrawConsoleString( int x, int y, const char *string )
 	int	drawLen;
 
 	if( !string || !*string ) return 0; // silent ignore
-	drawLen = Con_DrawString( x, y, string, gameui.ds.textColor );
-	MakeRGBA( gameui.ds.textColor, 255, 255, 255, 255 );
+	drawLen = Con_DrawString( x, y, string, menu.ds.textColor );
+	MakeRGBA( menu.ds.textColor, 255, 255, 255, 255 );
 
 	return drawLen; // exclude color prexfixes
 }
@@ -593,10 +593,10 @@ set color for anything
 static void pfnDrawSetTextColor( int r, int g, int b, int alpha )
 {
 	// bound color and convert to byte
-	gameui.ds.textColor[0] = r;
-	gameui.ds.textColor[1] = g;
-	gameui.ds.textColor[2] = b;
-	gameui.ds.textColor[3] = alpha;
+	menu.ds.textColor[0] = r;
+	menu.ds.textColor[1] = g;
+	menu.ds.textColor[2] = b;
+	menu.ds.textColor[3] = alpha;
 }
 
 /*
@@ -608,7 +608,7 @@ for drawing playermodel previews
 */
 static cl_entity_t* pfnGetPlayerModel( void )
 {
-	return &gameui.playermodel;
+	return &menu.playermodel;
 }
 
 /*
@@ -634,7 +634,8 @@ for drawing playermodel previews
 static void pfnRenderScene( const ref_params_t *fd )
 {
 	if( !re || !fd ) return;
-	re->RenderFrame( fd );
+	if( fd->fov_x <= 0.0f || fd->fov_y <= 0.0f ) return;
+	re->RenderFrame( fd, false );
 }
 
 /*
@@ -681,7 +682,7 @@ pfnMemAlloc
 */
 static void *pfnMemAlloc( size_t cb, const char *filename, const int fileline )
 {
-	return com.malloc( gameui.mempool, cb, filename, fileline );
+	return com.malloc( menu.mempool, cb, filename, fileline );
 }
 
 /*
@@ -705,7 +706,7 @@ static int pfnGetGameInfo( GAMEINFO *pgameinfo )
 {
 	if( !pgameinfo ) return 0;
 
-	*pgameinfo = gameui.gameInfo;
+	*pgameinfo = menu.gameInfo;
 	return 1;
 }
 
@@ -718,7 +719,7 @@ pfnGetGamesList
 static GAMEINFO **pfnGetGamesList( int *numGames )
 {
 	if( numGames ) *numGames = SI->numgames;
-	return gameui.modsInfo;
+	return menu.modsInfo;
 }
 
 /*
@@ -970,64 +971,64 @@ static ui_enginefuncs_t gEngfuncs =
 
 void UI_UnloadProgs( void )
 {
-	if( !gameui.hInstance ) return;
+	if( !menu.hInstance ) return;
 
 	// deinitialize game
-	gameui.dllFuncs.pfnShutdown();
+	menu.dllFuncs.pfnShutdown();
 
-	FS_FreeLibrary( gameui.hInstance );
-	Mem_FreePool( &gameui.mempool );
-	Mem_Set( &gameui, 0, sizeof( gameui ));
+	FS_FreeLibrary( menu.hInstance );
+	Mem_FreePool( &menu.mempool );
+	Mem_Set( &menu, 0, sizeof( menu ));
 }
 
 qboolean UI_LoadProgs( const char *name )
 {
-	static GAMEUIAPI		GetMenuAPI;
+	static MENUAPI		GetMenuAPI;
 	static ui_globalvars_t	gpGlobals;
 	int			i;
 
-	if( gameui.hInstance ) UI_UnloadProgs();
+	if( menu.hInstance ) UI_UnloadProgs();
 
 	// setup globals
-	gameui.globals = &gpGlobals;
+	menu.globals = &gpGlobals;
 
-	gameui.mempool = Mem_AllocPool( "GameUI Pool" );
-	gameui.hInstance = FS_LoadLibrary( name, false );
-	if( !gameui.hInstance ) return false;
+	menu.mempool = Mem_AllocPool( "Menu Pool" );
+	menu.hInstance = FS_LoadLibrary( name, false );
+	if( !menu.hInstance ) return false;
 
-	GetMenuAPI = (GAMEUIAPI)FS_GetProcAddress( gameui.hInstance, "CreateAPI" );
+	GetMenuAPI = (MENUAPI)FS_GetProcAddress( menu.hInstance, "GetMenuAPI" );
 
 	if( !GetMenuAPI )
 	{
-		FS_FreeLibrary( gameui.hInstance );
-          	MsgDev( D_NOTE, "UI_LoadProgs: failed to get address of CreateAPI proc\n" );
-		gameui.hInstance = NULL;
+		FS_FreeLibrary( menu.hInstance );
+          	MsgDev( D_NOTE, "UI_LoadProgs: failed to get address of GetMenuAPI proc\n" );
+		menu.hInstance = NULL;
 		return false;
 	}
 
-	if( !GetMenuAPI( &gameui.dllFuncs, &gEngfuncs, gameui.globals ))
+	if( !GetMenuAPI( &menu.dllFuncs, &gEngfuncs, menu.globals ))
 	{
-		FS_FreeLibrary( gameui.hInstance );
+		FS_FreeLibrary( menu.hInstance );
 		MsgDev( D_NOTE, "UI_LoadProgs: can't init client API\n" );
-		gameui.hInstance = NULL;
+		menu.hInstance = NULL;
 		return false;
 	}
 
 	// setup gameinfo
 	for( i = 0; i < SI->numgames; i++ )
 	{
-		gameui.modsInfo[i] = Mem_Alloc( gameui.mempool, sizeof( GAMEINFO ));
-		UI_ConvertGameInfo( gameui.modsInfo[i], SI->games[i] );
+		menu.modsInfo[i] = Mem_Alloc( menu.mempool, sizeof( GAMEINFO ));
+		UI_ConvertGameInfo( menu.modsInfo[i], SI->games[i] );
 	}
 
-	UI_ConvertGameInfo( &gameui.gameInfo, SI->GameInfo ); // current gameinfo
+	UI_ConvertGameInfo( &menu.gameInfo, SI->GameInfo ); // current gameinfo
 
 	// setup globals
-	gameui.globals->developer = host.developer;
-	com.strncpy( gameui.globals->shotExt, SI->savshot_ext, sizeof( gameui.globals->shotExt ));
+	menu.globals->developer = host.developer;
+	com.strncpy( menu.globals->shotExt, SI->savshot_ext, sizeof( menu.globals->shotExt ));
 
 	// initialize game
-	gameui.dllFuncs.pfnInit();
+	menu.dllFuncs.pfnInit();
 
 	return true;
 }

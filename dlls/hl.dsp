@@ -19,6 +19,7 @@ CFG=hl - Win32 Release
 !MESSAGE 
 !MESSAGE "hl - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE "hl - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "hl - Win32 Profile" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE 
 
 # Begin Project
@@ -38,13 +39,13 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "..\temp\hl\!release"
-# PROP Intermediate_Dir "..\temp\hl\!release"
+# PROP Output_Dir "..\temp\dlls\!release"
+# PROP Intermediate_Dir "..\temp\dlls\!release"
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\dlls" /I "..\common" /I "..\engine" /I "..\game_shared" /I "..\\" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
-# SUBTRACT CPP /Fr /YX
+# ADD CPP /nologo /G5 /MT /W3 /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /Fr /YX /FD /c
+# SUBTRACT CPP /Z<none>
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -54,15 +55,15 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
-# ADD LINK32 msvcrt.lib /nologo /subsystem:windows /dll /pdb:none /machine:I386 /nodefaultlib:"libc.lib" /def:".\hl.def"
-# SUBTRACT LINK32 /profile /map /debug
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /debug /machine:I386 /def:".\hl.def"
+# SUBTRACT LINK32 /profile /map
 # Begin Custom Build
-TargetDir=\Xash3D\src_main\temp\hl\!release
-InputPath=\Xash3D\src_main\temp\hl\!release\hl.dll
+TargetDir=\Xash3D\src_main\temp\dlls\!release
+InputPath=\Xash3D\src_main\temp\dlls\!release\hl.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\valve\bin\server.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\hl.dll "D:\Xash3D\valve\bin\server.dll"
+"D:\Xash3D\valve\dlls\hl.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\hl.dll "D:\Xash3D\valve\dlls\hl.dll"
 
 # End Custom Build
 
@@ -75,31 +76,68 @@ SOURCE="$(InputPath)"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "..\temp\hl\!debug"
-# PROP Intermediate_Dir "..\temp\hl\!debug"
+# PROP Output_Dir "..\temp\dlls\!debug"
+# PROP Intermediate_Dir "..\temp\dlls\!debug"
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\dlls" /I "..\common" /I "..\engine" /I "..\game_shared" /I "..\\" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
-# SUBTRACT CPP /YX
+# ADD CPP /nologo /G5 /MTd /W3 /Gm /ZI /Od /I "..\dlls" /I "..\engine" /I "..\common" /I "..\game_shared" /I "..\pm_shared" /I "..\\" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
-# ADD RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /i "..\engine" /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /debug /machine:I386
-# ADD LINK32 msvcrtd.lib /nologo /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libc.lib" /def:".\hl.def" /pdbtype:sept
+# ADD LINK32 user32.lib advapi32.lib /nologo /subsystem:windows /dll /debug /machine:I386 /def:".\hl.def"
 # SUBTRACT LINK32 /profile
 # Begin Custom Build
-TargetDir=\Xash3D\src_main\temp\hl\!debug
-InputPath=\Xash3D\src_main\temp\hl\!debug\hl.dll
+TargetDir=\Xash3D\src_main\temp\dlls\!debug
+InputPath=\Xash3D\src_main\temp\dlls\!debug\hl.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\valve\bin\server.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\hl.dll "D:\Xash3D\valve\bin\server.dll"
+"D:\Xash3D\valve\dlls\hl.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\hl.dll "D:\Xash3D\valve\dlls\hl.dll"
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir ".\hl___Win"
+# PROP BASE Intermediate_Dir ".\hl___Win"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "..\temp\dlls\!profile"
+# PROP Intermediate_Dir "..\temp\dlls\!profile"
+# PROP Ignore_Export_Lib 1
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /YX /c
+# SUBTRACT BASE CPP /Fr
+# ADD CPP /nologo /G5 /MT /W3 /Zi /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /YX /FD /c
+# SUBTRACT CPP /Fr
+# ADD BASE MTL /nologo /D "NDEBUG" /win32
+# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
+# ADD BASE RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /debug /machine:I386 /def:".\hl.def"
+# SUBTRACT BASE LINK32 /profile
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /profile /debug /machine:I386 /def:".\hl.def"
+# Begin Custom Build
+TargetDir=\Xash3D\src_main\temp\dlls\!profile
+InputPath=\Xash3D\src_main\temp\dlls\!profile\hl.dll
+SOURCE="$(InputPath)"
+
+"D:\Xash3D\valve\dlls\hl.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\hl.dll "D:\Xash3D\valve\dlls\hl.dll"
 
 # End Custom Build
 
@@ -109,6 +147,7 @@ SOURCE="$(InputPath)"
 
 # Name "hl - Win32 Release"
 # Name "hl - Win32 Debug"
+# Name "hl - Win32 Profile"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90"
@@ -250,10 +289,6 @@ SOURCE=.\globals.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\glock.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\gman.cpp
 # End Source File
 # Begin Source File
@@ -295,6 +330,10 @@ SOURCE=.\healthkit.cpp
 # Begin Source File
 
 SOURCE=.\hgrunt.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\hl_wpn_glock.cpp
 # End Source File
 # Begin Source File
 
@@ -386,15 +425,15 @@ SOURCE=.\player.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_debug.cpp
+SOURCE=..\pm_shared\pm_debug.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_math.cpp
+SOURCE=..\pm_shared\pm_math.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_shared.cpp
+SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
@@ -495,6 +534,10 @@ SOURCE=.\turret.cpp
 # Begin Source File
 
 SOURCE=.\util.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\game_shared\voice_gamemgr.cpp
 # End Source File
 # Begin Source File
 
@@ -618,27 +661,27 @@ SOURCE=.\player.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_debug.h
+SOURCE=..\pm_shared\pm_debug.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_defs.h
+SOURCE=..\pm_shared\pm_defs.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_info.h
+SOURCE=..\pm_shared\pm_info.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_materials.h
+SOURCE=..\pm_shared\pm_materials.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_movevars.h
+SOURCE=..\pm_shared\pm_movevars.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\pm_shared.h
+SOURCE=..\pm_shared\pm_shared.h
 # End Source File
 # Begin Source File
 

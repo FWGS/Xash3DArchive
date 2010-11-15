@@ -33,17 +33,30 @@
 #pragma warning(disable : 4100)		// unreferenced formal parameter
 
 // Prevent tons of unused windows definitions
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOWINRES
 #define NOSERVICE
 #define NOMCX
 #define NOIME
 #include "windows.h"
-
+#else // _WIN32
+#define FALSE 0
+#define TRUE (!FALSE)
+typedef unsigned long ULONG;
+typedef unsigned char BYTE;
+typedef int BOOL;
+#define MAX_PATH PATH_MAX
+#include <limits.h>
+#include <stdarg.h>
+#ifndef min
+#define min(a,b)  (((a) < (b)) ? (a) : (b))
+#endif
 #ifndef max
 #define max(a,b)  (((a) > (b)) ? (a) : (b))
 #define _vsnprintf(a,b,c,d) vsnprintf(a,b,c,d)
 #endif
+#endif //_WIN32
 
 // Misc C-runtime library headers
 #include "stdio.h"
@@ -64,10 +77,10 @@ typedef float vec_t;				// needed before including progdefs.h
 // Shared engine/DLL constants
 #include "const.h"
 #include "progdefs.h"
-#include "../engine/edict.h"
+#include "edict.h"
 
 // Shared header describing protocol between engine and DLLs
-#include "../engine/eiface.h"
+#include "eiface.h"
 
 // Shared header between the client DLL and the game DLLs
 #include "cdll_dll.h"

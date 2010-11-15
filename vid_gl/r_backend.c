@@ -414,7 +414,7 @@ void R_BackendEndFrame( void )
 	// clean up texture units
 	R_CleanUpTextureUnits( 1 );
 
-	if( r_speeds->integer && !( RI.refdef.flags & RDF_NOWORLDMODEL ) )
+	if( r_speeds->integer && RI.drawWorld )
 	{
 		switch( r_speeds->integer )
 		{
@@ -565,7 +565,7 @@ void R_FlushArrays( void )
 		pglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tr.colorsBuffer->pointer );
 	}
 
-	if( r_drawelements->integer || glState.in2DMode || RI.refdef.flags & RDF_NOWORLDMODEL )
+	if( r_drawelements->integer || glState.in2DMode || RI.drawWorld == false )
 	{
 		if( GL_Support( R_DRAW_RANGEELEMENTS_EXT ))
 			pglDrawRangeElementsEXT( GL_TRIANGLES, 0, r_backacc.numVerts, r_backacc.numElems, GL_UNSIGNED_INT, elemsArray );
@@ -3111,7 +3111,7 @@ void R_DrawEntitiesDebug( void )
 {
 	int	i;
 
-	if(( RI.refdef.flags & RDF_NOWORLDMODEL ) || ( r_drawentities->integer < 2 ))
+	if(( RI.drawWorld == false ) || ( r_drawentities->integer < 2 ))
 		return;
 
 	pglDisable( GL_TEXTURE_2D );
@@ -3129,11 +3129,11 @@ void R_DrawEntitiesDebug( void )
 		if( RP_LOCALCLIENT( RI.currententity ))
 		{
 			// ignore localcient in firstperson mode
-			if(!(RI.refdef.flags & RDF_THIRDPERSON) && !( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
+			if( !RI.thirdPerson && !( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
 				continue;
 		}
 
-		if( RP_FOLLOWENTITY( RI.currententity ) && RP_LOCALCLIENT( RI.currententity->parent ) && !(RI.refdef.flags & RDF_THIRDPERSON ))
+		if( RP_FOLLOWENTITY( RI.currententity ) && RP_LOCALCLIENT( RI.currententity->parent ) && !RI.thirdPerson )
 		{
 			// ignore entities that linked to localcient
 			if(!( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))

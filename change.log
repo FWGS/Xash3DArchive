@@ -1,5 +1,7 @@
 build ????
 
+Tools: renamed xtools.dll into utils.dll
+GameUI: GameUI.dll renamed to MainUI.dll to avoid conflict with original valve's GameUI.dll
 Engine: support for StartupVids.txt
 Engine: get full compatibility with hl.dll
 FS: recode wad resource management (now support lumps from wads with same name)

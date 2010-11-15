@@ -298,7 +298,7 @@ int R_ReAllocMeshList( meshbuffer_t **mb, int minMeshes, int maxMeshes )
 	*mb = newMB;
 
 	// NULL all pointers to old membuffers so we don't crash
-	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
+	if( r_worldmodel && RI.drawWorld )
 		Mem_Set( RI.surfmbuffers, 0, r_worldbrushmodel->numsurfaces * sizeof( meshbuffer_t* ));
 
 	return newSize;
@@ -651,7 +651,7 @@ void R_DrawPortals( void )
 		}
 	}
 
-	if(( RI.refdef.flags & RDF_SKYPORTALINVIEW ) && !( RI.params & RP_NOSKY ) && !r_fastsky->integer )
+	if(( RI.rdflags & RDF_SKYPORTALINVIEW ) && !( RI.params & RP_NOSKY ) && !r_fastsky->integer )
 	{
 		for( i = 0, mb = RI.meshlist->meshbuffer_opaque; i < RI.meshlist->num_opaque_meshes; i++, mb++ )
 		{
@@ -1310,14 +1310,14 @@ void R_DrawSkyPortal( skyportal_t *skyportal, vec3_t mins, vec3_t maxs )
 		VectorCopy( skyportal->vieworg, RI.refdef.vieworg );
 	}
 
-	VectorAdd( RI.refdef.viewangles, skyportal->viewanglesOffset, RI.refdef.viewangles );
+	VectorCopy( skyportal->viewangles, RI.refdef.viewangles );
 
-	RI.refdef.flags &= ~RDF_SKYPORTALINVIEW;
+	RI.rdflags &= ~RDF_SKYPORTALINVIEW;
 	if( skyportal->fov )
 	{
 		RI.refdef.fov_x = skyportal->fov;
 		RI.refdef.fov_y = CalcFov( RI.refdef.fov_x, RI.refdef.viewport[2], RI.refdef.viewport[3] );
-		if( glState.wideScreen && !( RI.refdef.flags & RDF_NOFOVADJUSTMENT ) )
+		if( glState.wideScreen && r_adjust_fov->integer )
 			AdjustFov( &RI.refdef.fov_x, &RI.refdef.fov_y, glState.width, glState.height, false );
 	}
 
@@ -1353,7 +1353,7 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 	r_numPolys = 0;
 	r_numDlights = 0;
 
-	R_RenderScene( fd );
+	R_RenderScene( fd, RI.drawWorld );
 
 	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
 }

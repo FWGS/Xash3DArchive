@@ -32,8 +32,7 @@ qboolean CL_IsPredicted( void )
 
 void CL_PreRunCmd( cl_entity_t *clent, usercmd_t *ucmd )
 {
-	clgame.pmove->runfuncs = false;
-	clgame.dllFuncs.pfnCmdStart( clent, clgame.pmove->runfuncs );
+	clgame.pmove->runfuncs = (( clent->index - 1 ) == cl.playernum ) ? true : false;
 }
 
 /*
@@ -45,9 +44,14 @@ Done after running a player command.
 */
 void CL_PostRunCmd( cl_entity_t *clent, usercmd_t *ucmd )
 {
+	local_state_t	*from, *to;
+
 	if( !clent ) return;
-	clgame.pmove->runfuncs = false; // all next calls ignore footstep sounds
-	clgame.dllFuncs.pfnCmdEnd( clent, ucmd, cl.random_seed );
+
+	from = &cl.frames[cl.delta_sequence & CL_UPDATE_MASK].local;
+	to = &cl.frame.local;
+
+	clgame.dllFuncs.pfnPostRunCmd( from, to, ucmd, clgame.pmove->runfuncs, cl.time, cl.random_seed );
 }
 
 /*
@@ -106,7 +110,7 @@ void CL_SetIdealPitch( cl_entity_t *ent )
 	int	i, j;
 	int	step, dir, steps;
 
-	if( !( cl.frame.clientdata.flags & FL_ONGROUND ))
+	if( !( cl.frame.local.client.flags & FL_ONGROUND ))
 		return;
 		
 	angleval = ent->angles[YAW] * M_PI * 2 / 360;
@@ -116,7 +120,7 @@ void CL_SetIdealPitch( cl_entity_t *ent )
 	{
 		top[0] = ent->origin[0] + cosval * (i + 3) * 12;
 		top[1] = ent->origin[1] + sinval * (i + 3) * 12;
-		top[2] = ent->origin[2] + cl.frame.clientdata.view_ofs[2];
+		top[2] = ent->origin[2] + cl.frame.local.client.view_ofs[2];
 		
 		bottom[0] = top[0];
 		bottom[1] = top[1];
@@ -166,7 +170,7 @@ Sets cl.predicted_origin and cl.predicted_angles
 */
 void CL_PredictMovement( void )
 {
-	int		frame;
+	int		frame = 0;
 	int		ack, current;
 	cl_entity_t	*player, *viewent;
 	clientdata_t	*cd;
@@ -177,7 +181,7 @@ void CL_PredictMovement( void )
 
 	player = CL_GetLocalPlayer ();
 	viewent = CL_GetEntityByIndex( cl.refdef.viewentity );
-	cd = &cl.frame.clientdata;
+	cd = &cl.frame.local.client;
 
 	CL_SetIdealPitch( player );
 
@@ -205,7 +209,7 @@ void CL_PredictMovement( void )
 		CL_PostRunCmd( player, cmd );
 		return;
 	}
-#if 0
+
 	ack = cls.netchan.incoming_acknowledged;
 	current = cls.netchan.outgoing_sequence;
 
@@ -216,7 +220,7 @@ void CL_PredictMovement( void )
 			MsgDev( D_ERROR, "CL_Predict: exceeded CMD_BACKUP\n" );
 		return;	
 	}
-
+#if 0
 	// setup initial pmove state
 // FIXME!!!!...
 //	VectorCopy( player->v.movedir, clgame.pmove->movedir );

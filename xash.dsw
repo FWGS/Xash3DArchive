@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "bshift"=".\dlls\bshift.dsp" - Package Owner=<4>
+Project: "client"=".\cl_dll\cl_dll.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -27,7 +27,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "client"=".\client\client.dsp" - Package Owner=<4>
+Project: "mainui"=".\mainui\mainui.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -39,19 +39,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "gameui"=".\gameui\gameui.dsp" - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-}}}
-
-###############################################################################
-
-Project: "xtools"=".\xtools\xtools.dsp" - Package Owner=<4>
+Project: "utils"=".\utils\utils.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

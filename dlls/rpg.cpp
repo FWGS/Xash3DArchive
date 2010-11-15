@@ -47,20 +47,12 @@ LINK_ENTITY_TO_CLASS( laser_spot, CLaserSpot );
 
 //=========================================================
 //=========================================================
-CLaserSpot *CLaserSpot::CreateSpot( entvars_t *pevOwner )
+CLaserSpot *CLaserSpot::CreateSpot( void )
 {
 	CLaserSpot *pSpot = GetClassPtr( (CLaserSpot *)NULL );
 	pSpot->Spawn();
 
 	pSpot->pev->classname = MAKE_STRING("laser_spot");
-
-	if( pevOwner ) 
-	{
-		// predictable laserspot (cl_lw must be set to 1)
-		pSpot->pev->flags |= FL_SKIPLOCALHOST;
-		pSpot->pev->owner = ENT( pevOwner );
-		pevOwner->effects |= EF_LASERSPOT;
-	}
 
 	return pSpot;
 }
@@ -77,7 +69,7 @@ void CLaserSpot::Spawn( void )
 	pev->renderfx = kRenderFxNoDissipation;
 	pev->renderamt = 255;
 
-	SET_MODEL( ENT( pev ), "sprites/laserdot.spr" );
+	SET_MODEL(ENT(pev), "sprites/laserdot.spr");
 	UTIL_SetOrigin( pev, pev->origin );
 };
 
@@ -87,8 +79,6 @@ void CLaserSpot::Spawn( void )
 void CLaserSpot::Suspend( float flSuspendTime )
 {
 	pev->effects |= EF_NODRAW;
-	if( pev->owner )
-		pev->owner->v.effects &= ~EF_LASERSPOT;
 	
 	SetThink( Revive );
 	pev->nextthink = gpGlobals->time + flSuspendTime;
@@ -100,9 +90,6 @@ void CLaserSpot::Suspend( float flSuspendTime )
 void CLaserSpot::Revive( void )
 {
 	pev->effects &= ~EF_NODRAW;
-
-	if( pev->owner )
-		pev->owner->v.effects |= EF_LASERSPOT;
 
 	SetThink( NULL );
 }
@@ -156,7 +143,7 @@ void CRpgRocket :: Spawn( void )
 	pev->velocity = gpGlobals->v_forward * 250;
 	pev->gravity = 0.5;
 
-	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.3, 0.5 );
+	pev->nextthink = gpGlobals->time + 0.4;
 
 	pev->dmg = gSkillData.plrDmgRPG;
 }
@@ -318,7 +305,7 @@ void CRpg::Reload( void )
 	// Set the next attack time into the future so that WeaponIdle will get called more often
 	// than reload, allowing the RPG LTD to be updated
 	
-	m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.5;
+	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
 
 	if ( m_cActiveRockets && m_fSpotActive )
 	{
@@ -331,7 +318,7 @@ void CRpg::Reload( void )
 	if ( m_pSpot && m_fSpotActive )
 	{
 		m_pSpot->Suspend( 2.1 );
-		m_flNextSecondaryAttack = m_pPlayer->WeaponTimeBase() + 2.1;
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 2.1;
 	}
 #endif
 
@@ -339,7 +326,7 @@ void CRpg::Reload( void )
 		iResult = DefaultReload( RPG_MAX_CLIP, RPG_RELOAD, 2 );
 	
 	if ( iResult )
-		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 	
 }
 
@@ -351,7 +338,11 @@ void CRpg::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_rpg.mdl");
 	m_fSpotActive = 1;
 
+#ifdef CLIENT_DLL
 	if ( bIsMultiplayer() )
+#else
+	if ( g_pGameRules->IsMultiplayer() )
+#endif
 	{
 		// more default ammo in multiplay. 
 		m_iDefaultAmmo = RPG_DEFAULT_GIVE * 2;
@@ -434,11 +425,11 @@ BOOL CRpg::CanHolster( void )
 	return TRUE;
 }
 
-void CRpg::Holster( void )
+void CRpg::Holster( int skiplocal /* = 0 */ )
 {
 	m_fInReload = FALSE;// cancel any reload in progress.
 
-	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 0.5;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	
 	SendWeaponAnim( RPG_HOLSTER1 );
 
@@ -446,12 +437,13 @@ void CRpg::Holster( void )
 	if (m_pSpot)
 	{
 		m_pSpot->Killed( NULL, GIB_NEVER );
-		m_pPlayer->pev->effects &= ~EF_LASERSPOT;
 		m_pSpot = NULL;
 	}
 #endif
 
 }
+
+
 
 void CRpg::PrimaryAttack()
 {
@@ -477,22 +469,18 @@ void CRpg::PrimaryAttack()
 		// Ken signed up for this as a global change (sjb)
 
 		int flags;
-
-		if( IsLocalWeapon( ))
-		{
-			flags = FEV_NOTHOST;
-		}
-		else
-		{
-			flags = 0;
-		}
+#if defined( CLIENT_WEAPONS )
+	flags = FEV_NOTHOST;
+#else
+	flags = 0;
+#endif
 
 		PLAYBACK_EVENT( flags, m_pPlayer->edict(), m_usRpg );
 
 		m_iClip--; 
 				
-		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 1.5;
-		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 1.5;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.5;
 	}
 	else
 	{
@@ -510,12 +498,11 @@ void CRpg::SecondaryAttack()
 	if (!m_fSpotActive && m_pSpot)
 	{
 		m_pSpot->Killed( NULL, GIB_NORMAL );
-		m_pPlayer->pev->effects &= ~EF_LASERSPOT;
 		m_pSpot = NULL;
 	}
 #endif
 
-	m_flNextSecondaryAttack = m_pPlayer->WeaponTimeBase() + 0.2;
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.2;
 }
 
 
@@ -525,7 +512,7 @@ void CRpg::WeaponIdle( void )
 
 	ResetEmptySound( );
 
-	if ( m_flTimeWeaponIdle > m_pPlayer->WeaponTimeBase() )
+	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
 		return;
 
 	if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
@@ -539,7 +526,7 @@ void CRpg::WeaponIdle( void )
 			else
 				iAnim = RPG_IDLE;
 
-			m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 90.0 / 15.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 90.0 / 15.0;
 		}
 		else
 		{
@@ -548,14 +535,14 @@ void CRpg::WeaponIdle( void )
 			else
 				iAnim = RPG_FIDGET;
 
-			m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 3.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3.0;
 		}
 
 		SendWeaponAnim( iAnim );
 	}
 	else
 	{
-		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 1;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1;
 	}
 }
 
@@ -569,11 +556,11 @@ void CRpg::UpdateSpot( void )
 	{
 		if (!m_pSpot)
 		{
-			m_pSpot = CLaserSpot::CreateSpot( m_pPlayer->pev );
+			m_pSpot = CLaserSpot::CreateSpot();
 		}
 
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
-		Vector vecSrc = m_pPlayer->GetGunPosition( );
+		Vector vecSrc = m_pPlayer->GetGunPosition( );;
 		Vector vecAiming = gpGlobals->v_forward;
 
 		TraceResult tr;
@@ -603,7 +590,11 @@ class CRpgAmmo : public CBasePlayerAmmo
 	{ 
 		int iGive;
 
-		if ( bIsMultiplayer() )
+#ifdef CLIENT_DLL
+	if ( bIsMultiplayer() )
+#else
+	if ( g_pGameRules->IsMultiplayer() )
+#endif
 		{
 			// hand out more ammo per rocket in multiplayer.
 			iGive = AMMO_RPGCLIP_GIVE * 2;

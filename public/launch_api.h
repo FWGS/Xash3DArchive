@@ -10,6 +10,7 @@
 #pragma warning(disable : 4018)	// signed/unsigned mismatch
 #pragma warning(disable : 4305)	// truncation from const double to float
 
+#define QCHAR_WIDTH		16	// font width
 #define MAX_STRING		256	// generic string
 #define MAX_INFO_STRING	256	// infostrings are transmitted across network
 #define MAX_SYSPATH		1024	// system filepath
@@ -18,18 +19,16 @@
 #define MAX_STRING_TABLES	8	// seperately stringsystems
 #define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
-#define trace_t		TraceResult
 #define NULL		((void *)0)
 
 // color strings
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 
-#include "const.h"
-
 typedef unsigned long	dword;
 typedef unsigned int	uint;
 typedef int		sound_t;
 typedef int		shader_t;
+typedef float		vec_t;
 typedef vec_t		vec2_t[2];
 typedef vec_t		vec3_t[3];
 typedef vec_t		vec4_t[4];
@@ -39,6 +38,8 @@ typedef byte		rgb_t[3];		// unsigned byte colorpack
 typedef vec_t		matrix3x3[3][3];
 typedef vec_t		matrix4x4[4][4];
 typedef char		string[MAX_STRING];
+
+#include "const.h"
 
 // platform instances
 typedef enum

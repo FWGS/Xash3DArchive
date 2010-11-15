@@ -624,7 +624,6 @@ void CFuncPlatRot :: RotMove( Vector &destAngle, float time )
 //
 //====================== TRAIN code ==================================================
 //
-#define	SF_TRAIN_WAIT_RETRIGGER	1
 
 class CFuncTrain : public CBasePlatTrain
 {

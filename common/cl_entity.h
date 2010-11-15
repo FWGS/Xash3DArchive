@@ -48,7 +48,9 @@ typedef struct
 
 typedef struct
 {
-	float		animtime;		// Time stamp for this movement
+	// Time stamp for this movement
+	float		animtime;
+
 	vec3_t		origin;
 	vec3_t		angles;
 } position_history_t;
@@ -59,10 +61,12 @@ typedef struct cl_entity_s cl_entity_t;
 #define HISTORY_MASK	( HISTORY_MAX - 1 )
 
 #include "entity_state.h"
+#include "event_args.h"
+#include "playerinfo.h"
 
 struct cl_entity_s
 {
-	int		index;      	// Index into cl_entities ( always match actual slot )
+	int		index;      	// Index into cl_entities ( should match actual slot, but not necessarily )
 	qboolean		player;     	// True if this entity is a "player"
 
 	entity_state_t	baseline;   	// The original state from which to delta during an uncompressed message
@@ -77,12 +81,14 @@ struct cl_entity_s
 	latchedvars_t	latched;		// Variables used by studio model rendering routines
 
 	// Information based on interplocation, extrapolation, prediction, or just copied from last msg received.
+	//
 	float		lastmove;
 
 	// Actual render position and angles
 	vec3_t		origin;
 	vec3_t		angles;
 
+	// Attachment points
 	vec3_t		attachment[4];
 
 	// Other entity local information
@@ -95,16 +101,6 @@ struct cl_entity_s
 	float		syncbase;	// for client-side animations -- used by obsolete alias animation system, remove?
 	int		visframe;	// last frame this entity was found in an active leaf
 	colorVec		cvFloorColor;
-
-	// INCOMPATIBLE!!!
-	vec3_t		absmin, absmax;
-
-	// Attachment points
-	vec3_t		attachment_angles[4];
-	float		m_flPrevEventFrame;	// previous event frame
-	int		m_iEventSequence;	// current event sequence
-	cl_entity_t	*onground;	// Entity standing on
-	link_t		area;		// linked to a division node or leaf
 };
 
 #endif//CL_ENTITY_H

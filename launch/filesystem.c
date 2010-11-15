@@ -1187,7 +1187,7 @@ void FS_ClearSearchPath( void )
 
 		if( search->flags & FS_STATIC_PATH )
 		{
-			// skip read-only pathes e.g. "bin"
+			// skip read-only pathes
 			if( search->next )
 				fs_searchpaths = search->next->next;
 			else break;
@@ -1440,8 +1440,8 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	com.strncpy( defGI.basedir, fs_defaultdir->string, sizeof( defGI.basedir ));
 	com.strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
 	com.strncpy( defGI.mp_entity, "info_player_deathmatch", sizeof( defGI.mp_entity ));
-	com.strncpy( defGI.dll_path, "bin", sizeof( defGI.dll_path ));
-	com.strncpy( defGI.game_dll, "bin/server.dll", sizeof( defGI.game_dll ));
+	com.strncpy( defGI.dll_path, "cl_dlls", sizeof( defGI.dll_path ));
+	com.strncpy( defGI.game_dll, "dlls/hl.dll", sizeof( defGI.game_dll ));
 	com.strncpy( defGI.startmap, "newmap", sizeof( defGI.startmap ));
 
 	VectorSet( defGI.client_mins[0],   0,   0,  0  );
@@ -1481,9 +1481,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	com.strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
 	com.strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
 	com.strncpy( GameInfo->startmap, "newmap", sizeof( GameInfo->startmap ));
-
-	// FIXME: replace with "cl_dlls" when support for client.dll will be it's finished
-	com.strncpy( GameInfo->dll_path, "bin", sizeof( GameInfo->dll_path ));
+	com.strncpy( GameInfo->dll_path, "cl_dlls", sizeof( GameInfo->dll_path ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
 	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
@@ -1627,8 +1625,8 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	com.strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
 	com.strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
-	com.strncpy( GameInfo->dll_path, "bin", sizeof( GameInfo->dll_path ));
-	com.strncpy( GameInfo->game_dll, "bin/server.dll", sizeof( GameInfo->game_dll ));
+	com.strncpy( GameInfo->dll_path, "cl_dlls", sizeof( GameInfo->dll_path ));
+	com.strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
 	com.strncpy( GameInfo->startmap, "", sizeof( GameInfo->startmap ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
@@ -1816,7 +1814,7 @@ void FS_Init( void )
 	
 	FS_InitMemory();
 
-	FS_AddGameDirectory( "bin/", FS_STATIC_PATH ); // execute system config
+	FS_AddGameDirectory( "./", FS_STATIC_PATH ); // execute system config
 
 	Cmd_AddCommand( "fs_rescan", FS_Rescan_f, "rescan filesystem search pathes" );
 	Cmd_AddCommand( "fs_path", FS_Path_f, "show filesystem search pathes" );
@@ -1839,8 +1837,7 @@ void FS_Init( void )
 			else com.strcpy( gs_basedir, fs_defaultdir->string ); // default dir
 		}
 
-		// checked nasty path: "bin" it's a reserved word
-		if( FS_CheckNastyPath( gs_basedir, true ) || !com.stricmp( "bin", gs_basedir ))
+		if( FS_CheckNastyPath( gs_basedir, true ))
 		{
 			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", gs_basedir );		
 			com.strcpy( gs_basedir, fs_defaultdir->string ); // default dir
@@ -3420,7 +3417,7 @@ static void FS_BuildPath( char *pPath, char *pOut )
 {
 	// set working directory
 	SetCurrentDirectory ( pPath );
-	com.sprintf( pOut, "%s\\bin\\launch.dll", pPath );
+	com.sprintf( pOut, "%s\\launch.dll", pPath );
 }
 
 void FS_UpdateEnvironmentVariables( void )

@@ -60,8 +60,8 @@ TargetDir=\Xash3D\src_main\temp\launch\!release
 InputPath=\Xash3D\src_main\temp\launch\!release\launch.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\launch.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\launch.dll "D:\Xash3D\bin\launch.dll"
+"D:\Xash3D\launch.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\launch.dll "D:\Xash3D\launch.dll"
 
 # End Custom Build
 
@@ -96,8 +96,8 @@ TargetDir=\Xash3D\src_main\temp\launch\!debug
 InputPath=\Xash3D\src_main\temp\launch\!debug\launch.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\launch.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\launch.dll "D:\Xash3D\bin\launch.dll"
+"D:\Xash3D\launch.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\launch.dll "D:\Xash3D\launch.dll"
 
 # End Custom Build
 

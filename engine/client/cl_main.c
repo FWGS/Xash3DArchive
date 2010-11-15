@@ -7,6 +7,7 @@
 #include "client.h"
 #include "byteorder.h"
 #include "net_encode.h"
+#include "cl_tent.h"
 #include "input.h"
 
 #define MAX_TOTAL_CMDS		16
@@ -40,7 +41,6 @@ convar_t	*model;
 convar_t	*topcolor;
 convar_t	*bottomcolor;
 convar_t	*rate;
-convar_t	*cl_lw;
 
 client_t		cl;
 client_static_t	cls;
@@ -260,7 +260,6 @@ usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
 	static double	extramsec = 0;
-	client_data_t	cdata;
 	int		ms;
 
 	// send milliseconds of time to apply the move
@@ -272,12 +271,17 @@ usercmd_t CL_CreateCmd( void )
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
 
-	VectorCopy( cl.frame.clientdata.origin, cdata.origin );
-	VectorCopy( cl.refdef.cl_viewangles, cdata.viewangles );
-	cdata.iWeaponBits = cl.frame.clientdata.weapons;
-	cdata.fov = cl.frame.clientdata.fov;
+	VectorCopy( cl.frame.local.client.origin, cl.data.origin );
+	VectorCopy( cl.refdef.cl_viewangles, cl.data.viewangles );
+	cl.data.iWeaponBits = cl.frame.local.client.weapons;
+	cl.data.fov = cl.frame.local.client.fov;
 
-	clgame.dllFuncs.pfnUpdateClientData( &cdata, cl_time( ));
+	clgame.dllFuncs.pfnUpdateClientData( &cl.data, cl.time );
+
+	// grab changes
+	VectorCopy( cl.data.viewangles, cl.refdef.cl_viewangles );
+	cl.frame.local.client.weapons = cl.data.iWeaponBits;
+	cl.frame.local.client.fov = cl.data.fov;
 
 	// allways dump the first ten messages,
 	// because it may contain leftover inputs
@@ -285,13 +289,13 @@ usercmd_t CL_CreateCmd( void )
 	if( ++cl.movemessages <= 10 )
 		return cmd;
 
-	clgame.dllFuncs.pfnCreateMove( &cmd, cl.time - cl.oldtime, ( cls.state == ca_active && !cl.refdef.paused ));
+	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
 
 	if( re )
 	{
 		vec3_t	color;
 	
-		re->LightForPoint( cl.frame.clientdata.origin, color );
+		re->LightForPoint( cl.frame.local.client.origin, color );
 		cmd.lightlevel = VectorAvg( color ) * 255;
 	}
 
@@ -1081,7 +1085,7 @@ void CL_PrepVideo( void )
 		{
 			decallist_t *entry = &host.decalList[i];
 			cl_entity_t *pEdict = CL_GetEntityByIndex( entry->entityIndex );
-			shader_t decalIndex = pfnDecalIndexFromName( entry->name );
+			shader_t decalIndex = CL_DecalIndex( CL_DecalIndexFromName( entry->name ));
 			int modelIndex = 0;
 
 			if( pEdict ) modelIndex = pEdict->curstate.modelindex;
@@ -1306,6 +1310,7 @@ void CL_ReadPackets( void )
 	else CL_ReadNetMessage();
 
 	cl.lerpFrac = CL_LerpPoint();
+	cl.thirdperson = clgame.dllFuncs.CL_IsThirdPerson();
 
 	// build list of all solid entities per frame (exclude clients)
 	CL_SetSolidEntities ();
@@ -1352,7 +1357,7 @@ CL_Physinfo_f
 void CL_Physinfo_f( void )
 {
 	Msg( "Phys info settings:\n" );
-	Info_Print( cl.frame.clientdata.physinfo );
+	Info_Print( cl.frame.local.client.physinfo );
 }
 
 void CL_RequestNextDownload( void )
@@ -1458,8 +1463,7 @@ void CL_InitLocal( void )
 	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO|CVAR_ARCHIVE, "player network rate" );
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
-	cl_lw = Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
-	cl_smooth = Cvar_Get ("cl_smooth", "1", 0, "smooth up stair climbing and interpolate position in multiplayer" );
+	cl_smooth = Cvar_Get ("cl_smooth", "0", CVAR_ARCHIVE, "smooth up stair climbing and interpolate position in multiplayer" );
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "2", CVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
 	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", CVAR_ARCHIVE, "Disable any particle effects" );
@@ -1555,10 +1559,10 @@ void Host_ClientFrame( void )
 	cl.time += host.frametime;
 
 	// menu time (not paused, not clamped)
-	gameui.globals->time = host.realtime;
-	gameui.globals->frametime = host.realframetime;
-	gameui.globals->demoplayback = cls.demoplayback;
-	gameui.globals->demorecording = cls.demorecording;
+	menu.globals->time = host.realtime;
+	menu.globals->frametime = host.realframetime;
+	menu.globals->demoplayback = cls.demoplayback;
+	menu.globals->demorecording = cls.demorecording;
 
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
@@ -1612,9 +1616,6 @@ void CL_Init( void )
 	Con_Init();	
 	CL_InitLocal();
 
-	if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
-		Host_Error( "CL_InitGame: can't initialize client.dll\n" );
-
 	Host_CheckChanges ();
 
 	cls.initialized = true;
@@ -1641,7 +1642,9 @@ void CL_Shutdown( void )
 
 	Host_WriteOpenGLConfig ();
 	Host_WriteConfig (); 
-	CL_UnloadProgs ();
+
+	IN_Shutdown ();
 	SCR_Shutdown ();
+	CL_UnloadProgs ();
 	cls.initialized = false;
 }

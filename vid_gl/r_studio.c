@@ -216,6 +216,8 @@ static void R_StudioSetupRender( ref_entity_t *e, ref_model_t *mod )
 	// GetPlayerInfo returns NULL for non player entities
 	m_pPlayerInfo = ri.GetPlayerInfo( e->index - 1 );
 
+	m_fGaitEstimation = ( m_pPlayerInfo ) ? 1 : 0;
+
 	ASSERT( e->extradata );
 
 	// set cached bones
@@ -709,23 +711,22 @@ void R_StudioProcessEvents( ref_entity_t *e, cl_entity_t *ent )
 
 	//Msg( "%i frame %f\n", r_framecount, e->lerp->latched.prevframe );
 
-	if( e->lerp->m_iEventSequence != e->lerp->curstate.sequence )
+	if( e->lerp->syncbase == -0.01f )
 	{
 		flEventFrame = 0.0f;
-		e->lerp->m_flPrevEventFrame = -0.01f; // back up to get 0'th frame animations
-		e->lerp->m_iEventSequence = e->lerp->curstate.sequence;
+		// Msg( "Sequence changed\n" );
 	}
 
 	// stalled?
-	if( flEventFrame == e->lerp->m_flPrevEventFrame )
+	if( flEventFrame == e->lerp->syncbase )
 		return;
 
-	//Msg( "(seq %d cycle %.3f ) evframe %.3f prevevframe %.3f (time %.3f)\n", e->lerp->curstate.sequence, e->lerp->latched.prevframe, flEventFrame, e->lerp->m_flPrevEventFrame, RI.refdef.time );
+	//Msg( "(seq %d cycle %.3f ) evframe %.3f prevevframe %.3f (time %.3f)\n", e->lerp->curstate.sequence, e->lerp->latched.prevframe, flEventFrame, e->lerp->syncbase, RI.refdef.time );
 
 	// check for looping
-	if( flEventFrame <= e->lerp->m_flPrevEventFrame )
+	if( flEventFrame <= e->lerp->syncbase )
 	{
-		if( e->lerp->m_flPrevEventFrame - flEventFrame > 0.5f )
+		if( e->lerp->syncbase - flEventFrame > 0.5f )
 		{
 			bLooped = true;
 		}
@@ -746,23 +747,23 @@ void R_StudioProcessEvents( ref_entity_t *e, cl_entity_t *ent )
 		// looped
 		if( bLooped )
 		{
-			if(( pevent[i].frame > e->lerp->m_flPrevEventFrame || pevent[i].frame <= flEventFrame ))
+			if(( pevent[i].frame > e->lerp->syncbase || pevent[i].frame <= flEventFrame ))
 			{
-				//Msg( "FE %i Looped frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->lerp->m_flPrevEventFrame, flEventFrame, RI.refdef.time );
+				//Msg( "FE %i Looped frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->lerp->syncbase, flEventFrame, RI.refdef.time );
 				ri.StudioEvent( &pevent[i], ent );
 			}
 		}
 		else
 		{
-			if(( pevent[i].frame > e->lerp->m_flPrevEventFrame && pevent[i].frame <= flEventFrame ))
+			if(( pevent[i].frame > e->lerp->syncbase && pevent[i].frame <= flEventFrame ))
 			{
-				//Msg( "FE %i Normal frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->lerp->m_flPrevEventFrame, flEventFrame, RI.refdef.time );
+				//Msg( "FE %i Normal frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->lerp->syncbase, flEventFrame, RI.refdef.time );
 				ri.StudioEvent( &pevent[i], ent );
 			}
 		}
 	}
 
-	e->lerp->m_flPrevEventFrame = flEventFrame;
+	e->lerp->syncbase = flEventFrame;
 }
 
 /*
@@ -1173,7 +1174,7 @@ void R_StudioSetUpTransform( ref_entity_t *e, qboolean trivial_accept )
 			f = f - 1.0f;
 		}
 
-		m_pGroundEntity = e->lerp->onground;
+		m_pGroundEntity = ri.GetClientEdict( e->lerp->curstate.onground );
 
 		if( m_pGroundEntity && m_pGroundEntity->curstate.movetype == MOVETYPE_PUSH && !VectorIsNull( m_pGroundEntity->curstate.velocity ))
 		{
@@ -1225,9 +1226,6 @@ void R_StudioSetUpTransform( ref_entity_t *e, qboolean trivial_accept )
 	// don't rotate clients, only aim
 	if( e->ent_type == ET_PLAYER )
 		angles[PITCH] = 0;
-
-	if( e->ent_type == ET_VIEWENTITY )
-		angles[PITCH] = -angles[PITCH]; // stupid Half-Life bug
 
 	Matrix4x4_CreateFromEntity( m_protationmatrix, origin[0], origin[1], origin[2], -angles[PITCH], angles[YAW], angles[ROLL], e->scale );
 
@@ -1359,6 +1357,67 @@ float R_StudioEstimateFrame( mstudioseqdesc_t *pseqdesc )
 		if( f < 0.0 )  f = 0.0;
 	}
 	return f;
+}
+
+/*
+====================
+StudioFxTransform
+
+====================
+*/
+void R_StudioFxTransform( cl_entity_t *ent, matrix4x4 transform )
+{
+	switch( ent->curstate.renderfx )
+	{
+	case kRenderFxDistort:
+	case kRenderFxHologram:
+		if(!Com_RandomLong( 0, 49 ))
+		{
+			int	axis = Com_RandomLong( 0, 1 );
+			float	scale = Com_RandomFloat( 1, 1.484 );
+
+			if( axis == 1 ) axis = 2; // choose between x & z
+#ifdef OPENGL_STYLE
+			transform[0][axis] *= scale;
+			transform[1][axis] *= scale;
+			transform[2][axis] *= scale;
+#else
+			transform[axis][0] *= scale;
+			transform[axis][1] *= scale;
+			transform[axis][2] *= scale;
+#endif
+		}
+		else if(!Com_RandomLong( 0, 49 ))
+		{
+			float offset;
+			int axis = Com_RandomLong( 0, 1 );
+			if( axis == 1 ) axis = 2; // choose between x & z
+			offset = Com_RandomFloat( -10, 10 );
+#ifdef OPENGL_STYLE
+			transform[3][Com_RandomLong( 0, 2 )] += offset;
+#else
+			transform[Com_RandomLong( 0, 2 )][3] += offset;
+#endif
+		}
+		break;
+	case kRenderFxExplode:
+		{
+			float	scale;
+
+			scale = 1.0f + ( RI.refdef.time - ent->curstate.animtime ) * 10.0f;
+			if( scale > 2 ) scale = 2; // don't blow up more than 200%
+#ifdef OPENGL_STYLE
+			transform[1][0] *= scale;
+			transform[1][1] *= scale;
+			transform[1][2] *= scale;
+#else		
+			transform[0][1] *= scale;
+			transform[1][1] *= scale;
+			transform[2][1] *= scale;
+#endif
+		}
+		break;
+	}
 }
 
 /*
@@ -1515,7 +1574,7 @@ void R_StudioSetupBones( ref_entity_t *e )
 			Matrix4x4_ConcatTransforms( m_pbonestransform[i], m_protationmatrix, bonematrix );
 
 			// apply client-side effects to the transformation matrix
-			ri.StudioFxTransform( e->lerp, m_pbonestransform[i] );
+			R_StudioFxTransform( e->lerp, m_pbonestransform[i] );
 		} 
 		else Matrix4x4_ConcatTransforms( m_pbonestransform[i], m_pbonestransform[pbones[i].parent], bonematrix );
 	}
@@ -1596,7 +1655,7 @@ void R_StudioMergeBones( ref_entity_t *e, ref_model_t *m_pSubModel )
 				Matrix4x4_ConcatTransforms( localbones[i], m_protationmatrix, bonematrix );
 
 				// apply client-side effects to the transformation matrix
-				if( cl_entity ) ri.StudioFxTransform( cl_entity, m_pbonestransform[i] );
+				R_StudioFxTransform( cl_entity, m_pbonestransform[i] );
 			} 
 			else Matrix4x4_ConcatTransforms( localbones[i], m_pbonestransform[pbones[i].parent], bonematrix );
 		}
@@ -1628,10 +1687,7 @@ static void R_StudioCalcAttachments( ref_entity_t *e )
 	{
 		// clear attachments
 		for( i = 0; i < MAXSTUDIOATTACHMENTS; i++ )
-		{
 			VectorClear( e->lerp->attachment[i] );
-			VectorClear( e->lerp->attachment_angles[i] );
-		}
 		return;
 	}
 	else if( m_pStudioHeader->numattachments > MAXSTUDIOATTACHMENTS )
@@ -1656,8 +1712,7 @@ static void R_StudioCalcAttachments( ref_entity_t *e )
 
 		Matrix3x3_ToAngles( axis, localAng, false );	// FIXME: dll's uses FLU ?
 
-		VectorCopy( localOrg, e->lerp->attachment[i] );
-		VectorCopy( localAng, e->lerp->attachment_angles[i] );
+		VectorAdd( e->lerp->origin, localOrg, e->lerp->attachment[i] );
 	}
 }
 
@@ -2164,7 +2219,7 @@ void R_StudioProcessGait( ref_entity_t *e, entity_state_t *pplayer, studiovars_t
 	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->lerp->curstate.sequence;
 	R_StudioPlayerBlend( pseqdesc, &iBlend, &e->lerp->angles[PITCH] );
 
-	pstudio->lerp->latched.prevangles[PITCH] = e->lerp->angles[PITCH];
+	pstudio->lerp->latched.prevangles[PITCH] = e->angles[PITCH];
 	pstudio->lerp->curstate.blending[0] = iBlend;
 	pstudio->lerp->latched.prevblending[0] = pstudio->lerp->curstate.blending[0];
 	pstudio->lerp->latched.prevseqblending[0] = pstudio->lerp->curstate.blending[0];
@@ -2206,9 +2261,9 @@ void R_StudioProcessGait( ref_entity_t *e, entity_state_t *pplayer, studiovars_t
 	pstudio->lerp->latched.prevcontroller[2] = pstudio->lerp->curstate.controller[2];
 	pstudio->lerp->latched.prevcontroller[3] = pstudio->lerp->curstate.controller[3];
 
-	e->lerp->angles[YAW] = m_pPlayerInfo->gaityaw;
-	if( e->lerp->angles[YAW] < -0 ) e->angles[YAW] += 360;
-	e->lerp->latched.prevangles[YAW] = e->lerp->angles[YAW];
+	e->angles[YAW] = m_pPlayerInfo->gaityaw;
+	if( e->angles[YAW] < -0 ) e->angles[YAW] += 360;
+	e->lerp->latched.prevangles[YAW] = e->angles[YAW];
 
 	if( pplayer->gaitsequence >= m_pStudioHeader->numseq ) 
 		pplayer->gaitsequence = 0;
@@ -2496,7 +2551,7 @@ qboolean R_CullStudioModel( ref_entity_t *e )
 	query = OCCLUSION_QUERIES_ENABLED( RI ) && OCCLUSION_TEST_ENTITY( e ) ? true : false;
 	if( !frustum && query ) R_IssueOcclusionQuery( R_GetOcclusionQueryNum( OQ_ENTITY, e - r_entities ), e, studio_mins, studio_maxs );
 
-	if(( RI.refdef.flags & RDF_NOWORLDMODEL ) || ( r_shadows->integer != 1 ) || R_CullPlanarShadow( e, studio_mins, studio_maxs, query ))
+	if( !RI.drawWorld || ( r_shadows->integer != 1 ) || R_CullPlanarShadow( e, studio_mins, studio_maxs, query ))
 		return frustum; // entity is not in PVS or shadow is culled away by frustum culling
 
 	R_StudioSetupRender( e, e->model );

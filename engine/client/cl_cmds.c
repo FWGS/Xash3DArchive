@@ -271,7 +271,7 @@ void SCR_TimeRefresh_f( void )
 		for( i = 0; i < 128; i++ )
 		{
 			cl.refdef.viewangles[1] = i / 128.0 * 360.0f;
-			re->RenderFrame( &cl.refdef );
+			re->RenderFrame( &cl.refdef, true );
 		}
 		re->EndFrame();
 	}
@@ -282,7 +282,7 @@ void SCR_TimeRefresh_f( void )
 			cl.refdef.viewangles[1] = i / 128.0 * 360.0f;
 
 			re->BeginFrame( true );
-			re->RenderFrame( &cl.refdef );
+			re->RenderFrame( &cl.refdef, true );
 			re->EndFrame();
 		}
 	}

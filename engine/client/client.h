@@ -8,7 +8,7 @@
 
 #include "mathlib.h"
 #include "cdll_int.h"
-#include "gameui_api.h"
+#include "menu_int.h"
 #include "cl_entity.h"
 #include "com_model.h"
 #include "cm_local.h"
@@ -21,6 +21,7 @@
 
 #define MAX_DEMOS		32
 #define MAX_MOVIES		8
+#define MAX_IMAGES		256	// HSPRITE pics
 
 #define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, cl_entity_t, area )
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
@@ -36,8 +37,8 @@ typedef struct frame_s
 	double		latency;
 	double		time;		// server timestamp
 
-	clientdata_t	clientdata;	// message received that reflects performing
-	weapon_data_t	weapondata[32];
+	local_state_t	local;		// local client state
+	entity_state_t	playerstate[MAX_CLIENTS];
 	int		num_entities;
 	int		first_entity;	// into the circular cl_packet_entities[]
 
@@ -77,8 +78,11 @@ typedef struct
 	int		last_incoming_sequence;
 
 	qboolean		force_send_usercmd;
+	qboolean		thirdperson;
 
 	uint		checksum;			// for catching cheater maps
+
+	client_data_t	data;			// some clientdata holds
 
 	frame_t		frame;			// received from server
 	int		surpressCount;		// number of messages rate supressed
@@ -91,7 +95,6 @@ typedef struct
 	double		oldtime;			// previous cl.time, time-oldtime is used
 						// to decay light values and smooth step ups
 
-	int		render_flags;		// clearing at end of frame
 	float		lerpFrac;			// interpolation value
 	ref_params_t	refdef;			// shared refdef
 
@@ -197,15 +200,17 @@ typedef struct
 
 typedef struct
 {
-	HSPRITE		hFontTexture;		// handle to texture shader
+	shader_t		hFontTexture;		// handle to texture shader
 	wrect_t		fontRc[256];		// rectangles
 	qboolean		valid;			// rectangles are valid
 } cl_font_t;
 
 typedef struct
 {
+	model_t		images[MAX_IMAGES];		// conatin handle to spriteshader etc
+
 	// temp handle
-	HSPRITE		hSprite;
+	shader_t		hSprite;
 
 	// scissor test
 	int		scissor_x;
@@ -218,7 +223,7 @@ typedef struct
 	rgba_t		textColor;
 
 	// crosshair members
-	HSPRITE		hCrosshair;
+	shader_t		hCrosshair;
 	wrect_t		rcCrosshair;
 	rgba_t		rgbaCrosshair;
 	byte		gammaTable[256];
@@ -274,27 +279,26 @@ typedef struct
 	void	(*pfnProcessPlayerState)( entity_state_t *dst, const entity_state_t *src );
 	void	(*pfnTxferPredictionData)( entity_state_t *ps, const entity_state_t *pps, clientdata_t *pcd, const clientdata_t *ppcd, weapon_data_t *wd, const weapon_data_t *pwd );
 	void	(*pfnTempEntUpdate)( double frametime, double client_time, double cl_gravity, struct tempent_s **ppTempEntFree, struct tempent_s **ppTempEntActive, int ( *Callback_AddVisibleEntity )( cl_entity_t *pEntity ), void ( *Callback_TempEntPlaySound )( struct tempent_s *pTemp, float damp ));
+	int	(*pfnGetStudioModelInterface)( int version, struct r_studio_interface_s **ppinterface, struct engine_studio_api_s *pstudio );
 	void	(*pfnDrawNormalTriangles)( void );
 	void	(*pfnDrawTransparentTriangles)( void );
-	cl_entity_t (*pfnGetUserEntity)( int index );
-	void	*(*KB_Find)( const char *name );	// returns kbutton_t. Probably Xash3D doesn't need for it
-	void	(*CAM_Think)( void );		// camera stuff (QW issues)
+	cl_entity_t *(*pfnGetUserEntity)( int index );
+	void	*(*KB_Find)( const char *name );
+	void	(*CAM_Think)( void );		// camera stuff
 	int	(*CL_IsThirdPerson)( void );
-	void	(*CL_CameraOffset)( float *ofs );
 	void	(*CL_CreateMove)( float frametime, usercmd_t *cmd, int active );
 	void	(*IN_ActivateMouse)( void );
 	void	(*IN_DeactivateMouse)( void );
 	void	(*IN_MouseEvent)( int mstate );
 	void	(*IN_Accumulate)( void );
 	void	(*IN_ClearStates)( void );
-	void	(*V_CalcRefdef)( ref_params_t *pparams );
-} CDLL_FUNCTIONS;
+	void	(*pfnCalcRefdef)( ref_params_t *pparams );
+} HUD_FUNCTIONS;
 
 typedef struct
 {
 	void		*hInstance;		// pointer to client.dll
 	HUD_FUNCTIONS	dllFuncs;			// dll exported funcs
-	CDLL_FUNCTIONS	cdllFuncs;		// dll exported funcs (under construction)
 	byte		*mempool;			// client edicts pool
 	string		mapname;			// map name
 	string		maptitle;			// display map title
@@ -342,14 +346,14 @@ typedef struct
 
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	GAMEINFO		gameInfo;			// current gameInfo
-	GAMEINFO		*modsInfo[MAX_MODS];	// simplified gameInfo for GameUI
+	GAMEINFO		*modsInfo[MAX_MODS];	// simplified gameInfo for MainUI
 
 	ui_globalvars_t	*globals;
 
 	qboolean		drawLogo;			// set to TRUE if logo.avi missed or corrupted
 	long		logo_xres;
 	long		logo_yres;
-} gameui_static_t;
+} menu_static_t;
 
 typedef struct
 {
@@ -384,6 +388,7 @@ typedef struct
 	shader_t		pauseIcon;		// draw 'paused' when game in-pause
 	shader_t		loadingBar;		// 'loading' progress bar
 	shader_t		glowShell;		// for renderFxGlowShell
+	HSPRITE		hChromeSprite;		// this is a really HudSprite handle, not shader_t!
 	cl_font_t		creditsFont;		// shared creditsfont
 
 	int		num_client_entities;	// cl.maxclients * CL_UPDATE_BACKUP * MAX_PACKET_ENTITIES
@@ -424,7 +429,7 @@ typedef struct
 extern client_t		cl;
 extern client_static_t	cls;
 extern clgame_static_t	clgame;
-extern gameui_static_t	gameui;
+extern menu_static_t	menu;
 extern render_exp_t		*re;
 
 //
@@ -512,6 +517,7 @@ void CL_UnloadProgs( void );
 qboolean CL_LoadProgs( const char *name );
 void CL_ParseUserMessage( sizebuf_t *msg, int svc_num );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
+void CL_ParseTextMessage( sizebuf_t *msg );
 void CL_DrawHUD( int state );
 void CL_InitEdicts( void );
 void CL_FreeEdicts( void );
@@ -523,6 +529,7 @@ void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
 int pfnDecalIndexFromName( const char *szDecalName );
 int CL_FindModelIndex( const char *m );
+HSPRITE pfnSPR_Load( const char *szPicName );
 void *VGui_GetPanel( void );
 void VGui_ViewportPaintBackground( int extents[4] );
 
@@ -540,6 +547,7 @@ _inline cl_entity_t *CL_EDICT_NUM( int n, const char *file, const int line )
 extern const char *svc_strings[256];
 void CL_ParseServerMessage( sizebuf_t *msg );
 void CL_ParseTempEntity( sizebuf_t *msg );
+qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
 void CL_RunBackgroundTrack( void );
 void CL_Download_f( void );
 
@@ -573,11 +581,19 @@ void CL_InitClientMove( void );
 void CL_PredictMovement( void );
 void CL_CheckPredictionError( void );
 qboolean CL_IsPredicted( void );
+int CL_TruePointContents( const vec3_t p );
+int CL_PointContents( const vec3_t p );
+
+//
+// cl_studio.c
+//
+qboolean CL_InitStudioAPI( void );
 
 //
 // cl_frame.c
 //
 void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
+qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
 qboolean CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 qboolean CL_IsPlayerIndex( int idx );
@@ -659,17 +675,5 @@ qboolean SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
 void CL_PlayVideo_f( void );
-
-//
-// cl_world.c
-//
-extern areanode_t	cl_areanodes[];
-
-void CL_ClearWorld( void );
-void CL_UnlinkEdict( cl_entity_t *ent );
-void CL_LinkEdict( cl_entity_t *ent );
-int CL_AreaEdicts( const vec3_t mins, const vec3_t maxs, cl_entity_t **list, int maxcount, int areatype );
-int CL_TruePointContents( const vec3_t p );
-int CL_PointContents( const vec3_t p );
 
 #endif//CLIENT_H

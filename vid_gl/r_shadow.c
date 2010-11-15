@@ -219,7 +219,7 @@ void R_ClearShadowmaps( void )
 {
 	r_numShadowGroups = 0;
 
-	if( r_shadows->integer != SHADOW_MAPPING || RI.refdef.flags & RDF_NOWORLDMODEL )
+	if( r_shadows->integer != SHADOW_MAPPING || !RI.drawWorld )
 		return;
 
 	// clear all possible values, should be called once per scene
@@ -243,7 +243,7 @@ qboolean R_AddShadowCaster( ref_entity_t *ent )
 	mleaf_t *leaf;
 	vec3_t mins, maxs, bbox[8];
 
-	if( r_shadows->integer != SHADOW_MAPPING || RI.refdef.flags & RDF_NOWORLDMODEL )
+	if( r_shadows->integer != SHADOW_MAPPING || !RI.drawWorld )
 		return false;
 	if( !GL_Support( R_SHADER_GLSL100_EXT ) || !GL_Support( R_DEPTH_TEXTURE ) || !GL_Support( R_SHADOW_EXT ))
 		return false;
@@ -329,8 +329,7 @@ void R_CullShadowmapGroups( void )
 	vec3_t		mins, maxs;
 	shadowGroup_t	*group;
 
-	if( RI.refdef.flags & RDF_NOWORLDMODEL )
-		return;
+	if( !RI.drawWorld ) return;
 
 	Mem_Set( r_shadowCullBits, 0, sizeof( r_shadowCullBits ));
 
@@ -379,9 +378,9 @@ void R_DrawShadowmaps( void )
 	height = r_lastRefdef.viewport[3];
 
 	RI.previousentity = NULL;
-	Mem_Copy( &oldRI, &prevRI, sizeof( refinst_t ) );
-	Mem_Copy( &prevRI, &RI, sizeof( refinst_t ) );
-	RI.refdef.flags &= ~RDF_SKYPORTALINVIEW;
+	Mem_Copy( &oldRI, &prevRI, sizeof( refinst_t ));
+	Mem_Copy( &prevRI, &RI, sizeof( refinst_t ));
+	RI.rdflags &= ~RDF_SKYPORTALINVIEW;
 
 	// find lighting group containing entities with same lightingOrigin as ours
 	for( i = 0, group = r_shadowGroups; i < r_numShadowGroups; i++, group++ )

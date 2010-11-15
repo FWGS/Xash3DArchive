@@ -93,19 +93,19 @@ void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_
 
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch )
 {
-	if( trace->fAllSolid || trace->fStartSolid || trace->flFraction < cliptrace->flFraction )
+	if( trace->allsolid || trace->startsolid || trace->fraction < cliptrace->fraction )
 	{
-		trace->pHit = touch;
+		trace->ent = touch;
 		
-		if( cliptrace->fStartSolid )
+		if( cliptrace->startsolid )
 		{
 			*cliptrace = *trace;
-			cliptrace->fStartSolid = true;
+			cliptrace->startsolid = true;
 		}
 		else *cliptrace = *trace;
 	}
-	else if( trace->fStartSolid )
-		cliptrace->fStartSolid = true;
+	else if( trace->startsolid )
+		cliptrace->startsolid = true;
 
 	return *cliptrace;
 }

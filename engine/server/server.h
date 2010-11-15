@@ -411,7 +411,6 @@ void SV_ActivateServer( void );
 void SV_DeactivateServer( void );
 void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame );
 qboolean SV_SpawnServer( const char *server, const char *startspot );
-int SV_FindIndex( const char *name, int start, int end, qboolean create );
 
 //
 // sv_phys.c
@@ -493,7 +492,6 @@ edict_t *SV_AllocEdict( void );
 void SV_FreeEdict( edict_t *pEdict );
 void SV_InitEdict( edict_t *pEdict );
 const char *SV_ClassName( const edict_t *e );
-void SV_ConfigString( int index, const char *val );
 void SV_SetModel( edict_t *ent, const char *name );
 void SV_CopyTraceToGlobal( trace_t *trace );
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max );
@@ -542,6 +540,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 // sv_studio.c
 //
 void SV_InitStudioHull( void );
+qboolean SV_InitStudioAPI( void );
 qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
 trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );

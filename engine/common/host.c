@@ -126,7 +126,6 @@ qboolean Host_InitRender( void )
           // studio callbacks
 	ri.UpdateScreen = SCR_UpdateScreen;
 	ri.StudioEvent = CL_StudioEvent;
-	ri.StudioFxTransform = CL_StudioFxTransform;
 	ri.ShowCollision = Host_DrawDebugCollision;
 	ri.GetClientEdict = CL_GetEntityByIndex;
 	ri.GetPlayerInfo = CL_GetPlayerInfo;
@@ -134,6 +133,8 @@ qboolean Host_InitRender( void )
 	ri.GetMaxClients = CL_GetMaxClients;
 	ri.DrawTriangles = Tri_DrawTriangles;
 	ri.ExtraUpdate = CL_ExtraUpdate;
+	ri.GetLerpFrac = CL_GetLerpFrac;
+	ri.IsThirdPerson = CL_IsThirdPerson;
 	ri.WndProc = IN_WndProc;          
 
 	Sys_LoadLibrary( host_video->string, &render_dll );
@@ -429,7 +430,7 @@ void Host_InitDecals( void )
 	}
 
 	if( t ) Mem_Free( t );
-	MsgDev( D_INFO, "InitDecals: %i decals\n", num_decals );
+	MsgDev( D_NOTE, "InitDecals: %i decals\n", num_decals );
 }
 
 /*
@@ -813,7 +814,6 @@ void Host_InitCommon( const int argc, const char **argv )
 
 void Host_FreeCommon( void )
 {
-	IN_Shutdown();
 	Netchan_Shutdown();
 	Mem_FreePool( &host.mempool );
 }
@@ -833,6 +833,10 @@ void Host_Init( const int argc, const char **argv )
 
 	if( host.type != HOST_DEDICATED )
 	{
+		// NOTE: client.dll must be loaded first to get mlook state from congig.cfg
+		if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
+			Host_Error( "CL_InitGame: can't initialize client.dll\n" );
+
 		// get the user configuration 
 		Cbuf_AddText( "exec config.cfg\n" );
 		Cbuf_Execute();

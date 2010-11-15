@@ -751,7 +751,7 @@ qboolean SV_TestEntityPosition( edict_t *ent )
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
 
-	return trace.fStartSolid;
+	return trace.startsolid;
 }
 
 /*
@@ -795,12 +795,12 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 	{
 		if( num != CONTENTS_SOLID )
 		{
-			trace->fAllSolid = false;
+			trace->allsolid = false;
 			if( num == CONTENTS_EMPTY )
-				trace->fInOpen = true;
-			else trace->fInWater = true;
+				trace->inopen = true;
+			else trace->inwater = true;
 		}
-		else trace->fStartSolid = true;
+		else trace->startsolid = true;
 		return true; // empty
 	}
 
@@ -849,7 +849,7 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 		return SV_RecursiveHullCheck (hull, node->children[side^1], midf, p2f, mid, p2, trace);
 	}	
 
-	if( trace->fAllSolid )
+	if( trace->allsolid )
 		return false; // never got out of the solid area
 		
 	//==================
@@ -857,13 +857,13 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 	//==================
 	if( !side )
 	{
-		VectorCopy( plane->normal, trace->vecPlaneNormal );
-		trace->flPlaneDist = plane->dist;
+		VectorCopy( plane->normal, trace->plane.normal );
+		trace->plane.dist = plane->dist;
 	}
 	else
 	{
-		VectorNegate( plane->normal, trace->vecPlaneNormal );
-		trace->flPlaneDist = -plane->dist;
+		VectorNegate( plane->normal, trace->plane.normal );
+		trace->plane.dist = -plane->dist;
 	}
 
 	while( SV_HullPointContents( hull, hull->firstclipnode, mid ) == CONTENTS_SOLID )
@@ -873,8 +873,8 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 
 		if( frac < 0.0f )
 		{
-			trace->flFraction = midf;
-			VectorCopy( mid, trace->vecEndPos );
+			trace->fraction = midf;
+			VectorCopy( mid, trace->endpos );
 			MsgDev( D_WARN, "trace backed up 0.0\n" );
 			return false;
 		}
@@ -883,8 +883,8 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 		VectorLerp( p1, frac, p2, mid );
 	}
 
-	trace->flFraction = midf;
-	VectorCopy( mid, trace->vecEndPos );
+	trace->fraction = midf;
+	VectorCopy( mid, trace->endpos );
 
 	return false;
 }
@@ -907,10 +907,10 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 
 	// fill in a default trace
 	Mem_Set( &trace, 0, sizeof( trace_t ));
-	VectorCopy( end, trace.vecEndPos );
-	trace.flFraction = 1.0f;
-	trace.fAllSolid = true;
-	trace.iHitgroup = -1;
+	VectorCopy( end, trace.endpos );
+	trace.fraction = 1.0f;
+	trace.allsolid = true;
+	trace.hitgroup = -1;
 
 	// get the clipping hull
 	hull = SV_HullForEntity( ent, hullNum, mins, maxs, offset );
@@ -948,29 +948,29 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 	// rotate endpos back to world frame of reference
 	if( ent->v.solid == SOLID_BSP && !VectorIsNull( ent->v.angles ))
 	{
-		if( trace.flFraction != 1.0f )
+		if( trace.fraction != 1.0f )
 		{
 			// compute endpos
-			VectorLerp( start, trace.flFraction, end, trace.vecEndPos );
+			VectorLerp( start, trace.fraction, end, trace.endpos );
 
-			VectorCopy( trace.vecPlaneNormal, temp );
-			Matrix4x4_TransformPositivePlane( matrix, temp, trace.flPlaneDist,
-				trace.vecPlaneNormal, &trace.flPlaneDist );
+			VectorCopy( trace.plane.normal, temp );
+			Matrix4x4_TransformPositivePlane( matrix, temp, trace.plane.dist,
+				trace.plane.normal, &trace.plane.dist );
 		}
 	}
 	else
 	{
 		// special case for non-rotated bmodels
 		// fix trace up by the offset
-		if( trace.flFraction != 1.0f )
-			VectorAdd( trace.vecEndPos, offset, trace.vecEndPos );
+		if( trace.fraction != 1.0f )
+			VectorAdd( trace.endpos, offset, trace.endpos );
 
-		trace.flPlaneDist = DotProduct( trace.vecEndPos, trace.vecPlaneNormal );
+		trace.plane.dist = DotProduct( trace.endpos, trace.plane.normal );
 	}
 
 	// did we clip the move?
-	if( trace.flFraction < 1.0f || trace.fStartSolid )
-		trace.pHit = ent;
+	if( trace.fraction < 1.0f || trace.startsolid )
+		trace.ent = ent;
 
 	return trace;
 }
@@ -1177,7 +1177,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		}
 
 		// might intersect, so do an exact clip
-		if( clip->trace.fAllSolid ) return;
+		if( clip->trace.allsolid ) return;
 
 		traceHitbox = false;
 
@@ -1362,8 +1362,8 @@ trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore )
 		VectorScale( tossent->v.velocity, 0.05f, move );
 		VectorAdd( tossent->v.origin, move, end );
 		trace = SV_Move( tossent->v.origin, tossent->v.mins, tossent->v.maxs, end, MOVE_NORMAL, tossent );
-		VectorCopy( trace.vecEndPos, tossent->v.origin );
-		if( trace.flFraction < 1.0f ) break;
+		VectorCopy( trace.endpos, tossent->v.origin );
+		if( trace.fraction < 1.0f ) break;
 	}
 
 	VectorCopy( original_origin, tossent->v.origin );

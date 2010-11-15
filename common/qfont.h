@@ -16,16 +16,8 @@
 #ifndef QFONT_H
 #define QFONT_H
 
-/*
-========================================================================
+// Font stuff
 
-.QFONT image format
-
-========================================================================
-*/
-#define QCHAR_WIDTH		16
-#define QFONT_WIDTH		16	// valve fonts used contant sizes	
-#define QFONT_HEIGHT	((128 - 32) / 16)
 #define NUM_GLYPHS		256
 
 typedef struct
@@ -34,14 +26,13 @@ typedef struct
 	short	charwidth;
 } charinfo;
 
-typedef struct
+typedef struct qfont_s
 {
-	int 	width;
-	int	height;
+	int	width, height;
 	int	rowcount;
 	int	rowheight;
 	charinfo	fontinfo[NUM_GLYPHS];
-	byte 	data[4];		// variable sized
+	byte	data[4];
 } qfont_t;
 
 #endif//QFONT_H

@@ -300,9 +300,7 @@ void CL_AddTempEnts( void )
 	double	ft = cl.time - cl.oldtime;
 	float	gravity = clgame.movevars.gravity;
 
-	if( !clgame.cdllFuncs.pfnTempEntUpdate ) return;
-
-	clgame.cdllFuncs.pfnTempEntUpdate( ft, cl.time, gravity, &cl_free_tents, &cl_active_tents,
+	clgame.dllFuncs.pfnTempEntUpdate( ft, cl.time, gravity, &cl_free_tents, &cl_active_tents,
 		CL_TEntAddEntity, CL_TEntPlaySound );	// callbacks
 }
 
@@ -367,13 +365,13 @@ TEMPENTITY *CL_TempEntAllocHigh( const vec3_t org, model_t *pmodel )
 	pTemp = cl_free_tents;
 	cl_free_tents = pTemp->next;
 
-	pTemp->next = cl_active_tents;
-	cl_active_tents = pTemp;
-
-	CL_TempEntAlloc( org, pmodel );
+	CL_PrepareTEnt( pTemp, pmodel );
 
 	pTemp->priority = TENTPRIORITY_HIGH;
 	if( org ) VectorCopy( org, pTemp->entity.origin );
+
+	pTemp->next = cl_active_tents;
+	cl_active_tents = pTemp;
 
 	return pTemp;
 }
@@ -822,9 +820,9 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 		Mod_GetFrames( modelIndex, &frameCount );
 		pTemp->entity.curstate.rendermode = kRenderTransTexture;
 		pTemp->entity.curstate.renderfx = kRenderFxClampMinScale;
-		pTemp->entity.curstate.scale = Com_RandomFloat(( size / 25.0f), ( size / 35.0f ));
+		pTemp->entity.curstate.scale = Com_RandomFloat(( size / 25.0f ), ( size / 35.0f ));
 		pTemp->flags = FTENT_SPRANIMATE;
- 
+
 		pTemp->entity.curstate.rendercolor.r = clgame.palette[colorIndex][0];
 		pTemp->entity.curstate.rendercolor.g = clgame.palette[colorIndex][1];
 		pTemp->entity.curstate.rendercolor.b = clgame.palette[colorIndex][2];
@@ -849,14 +847,16 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			pTemp = CL_TempEntAllocHigh( org, CM_ClipHandleToModel( modelIndex2 ));
 			if( !pTemp ) return;
 
-			pTemp->flags = FTENT_SPRANIMATE|FTENT_COLLIDEWORLD|FTENT_SLOWGRAVITY;
- 
+			pTemp->flags = FTENT_SPRANIMATELOOP|FTENT_COLLIDEWORLD|FTENT_SLOWGRAVITY;
+
+			pTemp->entity.curstate.rendermode = kRenderTransTexture;
+			pTemp->entity.curstate.renderfx = kRenderFxClampMinScale; 
+			pTemp->entity.curstate.scale = Com_RandomFloat(( size / 25.0f), ( size / 35.0f ));
 			pTemp->entity.curstate.rendercolor.r = clgame.palette[colorIndex][0];
 			pTemp->entity.curstate.rendercolor.g = clgame.palette[colorIndex][1];
 			pTemp->entity.curstate.rendercolor.b = clgame.palette[colorIndex][2];
 			pTemp->entity.curstate.framerate = frameCount * 4; // Finish in 0.250 seconds
-			// play the whole thing once
-			pTemp->die = cl.time + (frameCount / pTemp->entity.curstate.framerate) + 5.0f;
+			pTemp->die = cl.time + Com_RandomFloat( 4.0f, 16.0f );
 
 			pTemp->entity.angles[2] = Com_RandomLong( 0, 360 );
 			pTemp->bounceFactor = 0;
@@ -865,7 +865,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			dir[1] = forward[1] + Com_RandomFloat( -0.3f, 0.3f );
 			dir[2] = forward[2] + Com_RandomFloat( -0.3f, 0.3f );
 
-			VectorScale( dir, Com_RandomFloat( 4.0f * size, 40.0f * size ), pTemp->entity.baseline.origin );
+			VectorScale( dir, Com_RandomFloat( 4.0f * size, 16.0f * size ), pTemp->entity.baseline.origin );
 			pTemp->entity.baseline.origin[2] += Com_RandomFloat( 4.0f, 16.0f ) * size;
 		}
 	}
@@ -1405,7 +1405,7 @@ CL_StreakSplash
 Create a streak tracers
 ===============
 */
-void CL_StreakSplash( const vec3_t pos, const vec3_t dir, int color, int count, int speed, int velMin, int velMax )
+void CL_StreakSplash( const vec3_t pos, const vec3_t dir, int color, int count, float speed, int velMin, int velMax )
 {
 	int	i;
 
@@ -1643,16 +1643,17 @@ handle temp-entity messages
 */
 void CL_ParseTempEntity( sizebuf_t *msg )
 {
-	sizebuf_t	buf;
-	byte	pbuf[256];
-	TEMPENTITY   *pTemp;
-	int	iSize = BF_ReadByte( msg );
-	int	type, color, count, flags;
-	int	decalIndex, modelIndex, entityIndex;
-	float	scale, life, frameRate, vel, random;
-	float	brightness;
-	vec3_t	pos, pos2;
-	dlight_t	*dl;
+	sizebuf_t		buf;
+	byte		pbuf[256];
+	int		iSize = BF_ReadByte( msg );
+	int		type, color, count, flags;
+	int		decalIndex, modelIndex, entityIndex;
+	float		scale, life, frameRate, vel, random;
+	float		brightness, r, g, b;
+	vec3_t		pos, pos2, ang;
+	TEMPENTITY	*pTemp;
+	cl_entity_t	*pEnt;
+	dlight_t		*dl;
 
 	// parse user message into buffer
 	BF_ReadBytes( msg, pbuf, iSize );
@@ -1851,14 +1852,273 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		dl->decay = BF_ReadCoord( &buf );
 		break;
 	case TE_TEXTMESSAGE:
+		CL_ParseTextMessage( &buf );
+		break;
+	case TE_LINE:
+	case TE_BOX:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		life = (float)(BF_ReadShort( &buf ) * 0.1f);
+		r = BF_ReadByte( &buf );
+		g = BF_ReadByte( &buf );
+		b = BF_ReadByte( &buf );
+		if( type == TE_LINE ) CL_ParticleLine( pos, pos2, r, g, b, life );
+		else CL_ParticleBox( pos, pos2, r, g, b, life );
+		break;
+	case TE_LARGEFUNNEL:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		modelIndex = BF_ReadShort( &buf );
+		flags = BF_ReadShort( &buf );
+		CL_FunnelSprite( pos, modelIndex, flags );
+		break;
+	case TE_BLOODSTREAM:
+	case TE_BLOOD:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		color = BF_ReadByte( &buf );
+		vel = (float)BF_ReadByte( &buf );
+		if( type == TE_BLOOD ) CL_Blood( pos, pos2, color, vel );
+		else CL_BloodStream( pos, pos2, color, vel );
+		break;
+	case TE_SHOWLINE:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		CL_ShowLine( pos, pos2 );
+		break;
+	case TE_DECAL:
+	case TE_DECALHIGH:
+	case TE_WORLDDECAL:
+	case TE_WORLDDECALHIGH:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		decalIndex = BF_ReadByte( &buf );
+		if( type == TE_DECAL || type == TE_DECALHIGH )
+			entityIndex = BF_ReadShort( &buf );
+		else entityIndex = 0;
+		if( type == TE_DECALHIGH || type == TE_WORLDDECALHIGH )
+			decalIndex += 256;
+		pEnt = CL_GetEntityByIndex( entityIndex );
+		modelIndex = (pEnt) ? pEnt->curstate.modelindex : 0;
+		CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, pos, 0 );
+		break;
+	case TE_FIZZ:
+		entityIndex = BF_ReadShort( &buf );
+		modelIndex = BF_ReadShort( &buf );
+		scale = BF_ReadByte( &buf );	// same as density
+		pEnt = CL_GetEntityByIndex( entityIndex );
+		CL_FizzEffect( pEnt, modelIndex, scale );
+		break;
+	case TE_MODEL:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		VectorSet( ang, 0.0f, BF_ReadAngle( &buf ), 0.0f ); // yaw angle
+		modelIndex = BF_ReadShort( &buf );
+		flags = BF_ReadByte( &buf );	// sound flags
+		life = (float)(BF_ReadByte( &buf ) * 0.1f);
+		CL_TempModel( pos, pos2, ang, life, modelIndex, flags );
+		break;
+	case TE_EXPLODEMODEL:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		vel = BF_ReadCoord( &buf );
+		modelIndex = BF_ReadShort( &buf );
+		count = BF_ReadShort( &buf );
+		life = (float)(BF_ReadByte( &buf ) * 0.1f);
+		CL_TempSphereModel( pos, vel, life, count, modelIndex );
+		break;
+	case TE_BREAKMODEL:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		ang[0] = BF_ReadCoord( &buf );
+		ang[1] = BF_ReadCoord( &buf );
+		ang[2] = BF_ReadCoord( &buf );
+		random = (float)BF_ReadByte( &buf );
+		modelIndex = BF_ReadShort( &buf );
+		count = BF_ReadByte( &buf );
+		life = (float)(BF_ReadByte( &buf ) * 0.1f);
+		flags = BF_ReadByte( &buf );
+		CL_BreakModel( pos, pos2, ang, random, life, count, modelIndex, (char)flags );
+		break;
+	case TE_GUNSHOTDECAL:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		entityIndex = BF_ReadShort( &buf );
+		decalIndex = BF_ReadByte( &buf );
+		pEnt = CL_GetEntityByIndex( entityIndex );
+		modelIndex = (pEnt) ? pEnt->curstate.modelindex : 0;
+		CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, pos, 0 );
+		CL_RicochetSound( pos );
+		break;
+	case TE_SPRAY:
+	case TE_SPRITE_SPRAY:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		modelIndex = BF_ReadShort( &buf );
+		count = BF_ReadByte( &buf );
+		vel = (float)BF_ReadByte( &buf );
+		random = (float)BF_ReadByte( &buf );
+		if( type == TE_SPRAY )
+		{
+			flags = BF_ReadByte( &buf );	// rendermode
+			CL_Spray( pos, pos2, modelIndex, count, vel, random, flags );
+		}
+		else CL_Sprite_Spray( pos, pos2, modelIndex, count, vel, random );
+		break;
+	case TE_ARMOR_RICOCHET:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		scale = (float)(BF_ReadByte( &buf ) * 0.1f);
+		modelIndex = CL_FindModelIndex( "sprites/richo1.spr" );
+		CL_RicochetSprite( pos, CM_ClipHandleToModel( modelIndex ), 0.0f, scale );
+		CL_RicochetSound( pos );
+		break;
+	case TE_PLAYERDECAL:
+		color = BF_ReadByte( &buf );	// playernum
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		entityIndex = BF_ReadShort( &buf );
+		decalIndex = BF_ReadByte( &buf );
+		CL_PlayerDecal( CL_DecalIndex( decalIndex ), entityIndex, pos, NULL );
+		break;
+	case TE_BUBBLES:
+	case TE_BUBBLETRAIL:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		scale = BF_ReadCoord( &buf );	// water height
+		modelIndex = BF_ReadShort( &buf );
+		count = BF_ReadByte( &buf );
+		vel = BF_ReadCoord( &buf );
+		if( type == TE_BUBBLES ) CL_Bubbles( pos, pos2, scale, modelIndex, count, vel );
+		else CL_BubbleTrail( pos, pos2, scale, modelIndex, count, vel );
+		break;
+	case TE_BLOODSPRITE:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		modelIndex = BF_ReadShort( &buf );	// sprite #1
+		decalIndex = BF_ReadShort( &buf );	// sprite #2
+		color = BF_ReadByte( &buf );
+		scale = (float)BF_ReadByte( &buf );
+		CL_BloodSprite( pos, color, modelIndex, decalIndex, scale );
+		break;
+	case TE_PROJECTILE:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		modelIndex = BF_ReadShort( &buf );
+		life = (float)(BF_ReadByte( &buf ) * 0.1f);
+		color = BF_ReadByte( &buf );	// playernum
+		CL_Projectile( pos, pos2, modelIndex, life, color, NULL );
+		break;
+	case TE_PLAYERSPRITES:
+		color = BF_ReadByte( &buf );	// playernum
+		modelIndex = BF_ReadShort( &buf );
+		count = BF_ReadByte( &buf );
+		random = (float)BF_ReadByte( &buf );
+		CL_PlayerSprites( color, modelIndex, count, random );
+		break;
+	case TE_PARTICLEBURST:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		scale = (float)BF_ReadShort( &buf );
+		color = BF_ReadByte( &buf );
+		life = (float)(BF_ReadByte( &buf ) * 0.1f);
+		CL_ParticleBurst( pos, scale, color, life );
+		break;
+	case TE_FIREFIELD:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		scale = (float)BF_ReadShort( &buf );
+		modelIndex = BF_ReadShort( &buf );
+		count = BF_ReadByte( &buf );
+		flags = BF_ReadByte( &buf );
+		life = (float)(BF_ReadByte( &buf ) * 0.1f);
+		CL_FireField( pos, scale, modelIndex, count, flags, life );
+		break;
+	case TE_PLAYERATTACHMENT:
+		color = BF_ReadByte( &buf );	// playernum
+		scale = BF_ReadCoord( &buf );	// height
+		modelIndex = BF_ReadShort( &buf );
+		life = (float)(BF_ReadShort( &buf ) * 0.1f);
+		CL_AttachTentToPlayer( color, modelIndex, scale, life );
+		break;
+	case TE_KILLPLAYERATTACHMENTS:
+		color = BF_ReadByte( &buf );	// playernum
+		CL_KillAttachedTents( color );
+		break;
+	case TE_MULTIGUNSHOT:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		ang[0] = BF_ReadCoord( &buf ) * 0.01f;
+		ang[1] = BF_ReadCoord( &buf ) * 0.01f;
+		ang[2] = 0.0f;
+		count = BF_ReadByte( &buf );
+		decalIndex = BF_ReadByte( &buf );
+		CL_MultiGunshot( pos, pos2, ang, count, 1, &decalIndex );
+		break;
+	case TE_USERTRACER:
+		pos[0] = BF_ReadCoord( &buf );
+		pos[1] = BF_ReadCoord( &buf );
+		pos[2] = BF_ReadCoord( &buf );
+		pos2[0] = BF_ReadCoord( &buf );
+		pos2[1] = BF_ReadCoord( &buf );
+		pos2[2] = BF_ReadCoord( &buf );
+		life = (float)(BF_ReadByte( &buf ) * 0.1f);
+		color = BF_ReadByte( &buf );
+		scale = (float)(BF_ReadByte( &buf ) * 0.1f);
+		CL_UserTracerParticle( pos, pos2, life, color, scale, 0, NULL );
 		break;
 	default:
-		clgame.dllFuncs.pfnTempEntityMessage( iSize, pbuf );
+		MsgDev( D_ERROR, "ParseTempEntity: illegible te_message %i\n", type );
 		break;
 	}
 
 	// throw warning
-	if( BF_CheckOverflow( &buf )) MsgDev( D_WARN, "ParseTempEntity: bad message\n" );
+	if( BF_CheckOverflow( &buf )) MsgDev( D_WARN, "ParseTempEntity: overflow te_message\n" );
 }
 
 
@@ -2070,6 +2330,74 @@ void CL_AddDLights( void )
 
 /*
 ================
+CL_UpadteFlashlight
+
+update client flashlight
+================
+*/
+void CL_UpadteFlashlight( cl_entity_t *pEnt )
+{
+	vec3_t	vecSrc, vecEnd, vecPos;
+	vec3_t	forward, view_ofs;
+	pmtrace_t	trace;
+	dlight_t	*dl;
+
+	if(( pEnt->index - 1 ) == cl.playernum )
+	{
+		// get the predicted angles
+		AngleVectors( cl.refdef.cl_viewangles, forward, NULL, NULL );
+	}
+	else
+	{
+		vec3_t	v_angle;
+
+		// restore viewangles from angles
+		v_angle[PITCH] = -pEnt->angles[PITCH] * 3;
+		v_angle[YAW] = pEnt->angles[YAW];
+		v_angle[ROLL] = 0; 	// no roll
+
+		AngleVectors( v_angle, forward, NULL, NULL );
+	}
+
+	VectorClear( view_ofs );
+
+	// FIXME: grab viewheight from other place
+	view_ofs[2] = 28.0f;
+
+	if( pEnt->player )
+	{
+		if(( pEnt->index - 1 ) == cl.playernum )
+		{
+			VectorCopy( cl.predicted_viewofs, view_ofs );
+		}
+		else if( pEnt->curstate.usehull == 1 )
+		{
+			// FIXME: grab ducked viewheight from other place
+			view_ofs[2] = 12.0f;
+		}
+	}
+
+	VectorAdd( pEnt->origin, view_ofs, vecSrc );
+	VectorMA( vecSrc, 512.0f, forward, vecEnd );
+
+	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, -1, NULL );
+
+	if( trace.fraction != 1.0f )
+		VectorMA( trace.endpos, -16.0f, trace.plane.normal, vecPos );
+	else VectorCopy( trace.endpos, vecPos );
+
+	// update flashlight endpos
+	dl = CL_AllocDlight( pEnt->index );
+	VectorCopy( vecPos, dl->origin );
+	dl->die = cl.time + 0.001f;	// die on next frame
+	dl->color.r = 255;
+	dl->color.g = 255;
+	dl->color.b = 255;
+	dl->radius = 96;
+}
+
+/*
+================
 CL_TestLights
 
 if cl_testlights is set, create 32 lights models
@@ -2136,9 +2464,11 @@ void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color )
 {
 	cl_entity_t	*pEnt;
 	int		modelIndex = 0;
+	rgb_t		_clr = { 255, 255, 255 };
 
 	pEnt = CL_GetEntityByIndex( entityIndex );
 	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
+	if( !color ) color = _clr;
 
 	if( re ) re->DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, FDECAL_CUSTOM, color, 0.0f, 0.0f );
 }

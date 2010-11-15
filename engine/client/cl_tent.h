@@ -10,6 +10,7 @@
 #define SPARK_ELECTRIC_MAXSPEED	100.0f
 
 // EfxAPI
+void CL_DrawTracer( vec3_t start, vec3_t delta, float width, rgb_t color, int alpha, float startV, float endV );
 struct particle_s *CL_AllocParticle( void (*callback)( struct particle_s*, float ));
 void CL_Explosion( vec3_t pos, int model, float scale, float framerate, int flags );
 void CL_ParticleExplosion( const vec3_t org );
@@ -32,6 +33,9 @@ void CL_StreakTracer( const vec3_t pos, const vec3_t velocity, int colorIndex );
 void CL_TracerEffect( const vec3_t start, const vec3_t end );
 void CL_UserTracerParticle( float *org, float *vel, float life, int colorIndex, float length, byte deathcontext, void (*deathfunc)( struct particle_s* ));
 struct particle_s *CL_TracerParticles( float *org, float *vel, float life );
+void CL_ParticleLine( const vec3_t start, const vec3_t end, byte r, byte g, byte b, float life );
+void CL_ParticleBox( const vec3_t mins, const vec3_t maxs, byte r, byte g, byte b, float life );
+void CL_ShowLine( const vec3_t start, const vec3_t end );
 void CL_BulletImpactParticles( const vec3_t pos );
 void CL_SparkShower( const vec3_t org );
 struct tempent_s *CL_TempEntAlloc( const vec3_t org, model_t *pmodel );
@@ -59,7 +63,7 @@ void CL_Sprite_Trail( int type, const vec3_t vecStart, const vec3_t vecEnd, int 
 void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags );
 void CL_Large_Funnel( const vec3_t pos, int flags );
 void CL_SparkEffect( const vec3_t pos, int count, int velocityMin, int velocityMax );
-void CL_StreakSplash( const vec3_t pos, const vec3_t dir, int color, int count, int speed, int velMin, int velMax );
+void CL_StreakSplash( const vec3_t pos, const vec3_t dir, int color, int count, float speed, int velMin, int velMax );
 void CL_SparkStreaks( const vec3_t pos, int count, int velocityMin, int velocityMax );
 void CL_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, int life, int owner, void (*hitcallback)( struct tempent_s*, struct pmtrace_s* ));
 void CL_TempSphereModel( const vec3_t pos, float speed, float life, int count, int modelIndex );
@@ -70,6 +74,7 @@ void CL_Sprite_WallPuff( struct tempent_s *pTemp, float scale );
 void CL_RicochetSound( const vec3_t pos );
 struct dlight_s *CL_AllocDlight( int key );
 struct dlight_s *CL_AllocElight( int key );
+void CL_UpadteFlashlight( cl_entity_t *pEnt );
 void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_DecalRemoveAll( int textureIndex );
 int CL_DecalIndexFromName( const char *name );

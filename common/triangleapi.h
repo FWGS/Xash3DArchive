@@ -32,12 +32,6 @@ typedef enum
 #define TRI_TRIANGLE_STRIP	5
 #define TRI_QUAD_STRIP	6
 
-typedef enum
-{
-	TRI_SHADER = 1,
-	TRI_MAXCAPS
-} TRI_CAPS;
-
 typedef struct triangleapi_s
 {
 	int	version;
@@ -53,18 +47,11 @@ typedef struct triangleapi_s
 	void	(*Vertex3f)( float x, float y, float z );
 	void	(*Brightness)( float brightness );
 	void	(*CullFace)( TRICULLSTYLE style );	
-	int	(*GetSpriteTexture)( int spriteIndex, int spriteFrame );
+	int	(*SpriteTexture)( struct model_s *pSpriteModel, int frame );
 	int	(*WorldToScreen)( float *world, float *screen );  // Returns 1 if it's z clipped
 	void	(*Fog)( float flFogColor[3], float flStart, float flEnd, int bOn ); //Works just like GL_FOG, flFogColor is r/g/b.
 	void	(*ScreenToWorld)( float *screen, float *world  ); 
 
-	// Xash3D interface starts here 
-	int	(*LoadShader)( const char *szShaderName, int fShaderNoMip );
-	void	(*Enable)( int cap );
-	void	(*Disable)( int cap );
-	void	(*Normal3f)( float x, float y, float z );
-	void	(*Normal3fv)( const float *v );
-	void	(*Bind)( int shader, int frame );	// use handle that return LoadShader
 } triangleapi_t;
 
 #endif//TRIANGLEAPI_H

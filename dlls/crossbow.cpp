@@ -315,7 +315,7 @@ BOOL CCrossbow::Deploy( )
 	return DefaultDeploy( "models/v_crossbow.mdl", "models/p_crossbow.mdl", CROSSBOW_DRAW2, "bow" );
 }
 
-void CCrossbow::Holster( void )
+void CCrossbow::Holster( int skiplocal /* = 0 */ )
 {
 	m_fInReload = FALSE;// cancel any reload in progress.
 
@@ -324,7 +324,7 @@ void CCrossbow::Holster( void )
 		SecondaryAttack( );
 	}
 
-	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 0.5;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	if (m_iClip)
 		SendWeaponAnim( CROSSBOW_HOLSTER1 );
 	else
@@ -333,7 +333,12 @@ void CCrossbow::Holster( void )
 
 void CCrossbow::PrimaryAttack( void )
 {
+
+#ifdef CLIENT_DLL
 	if ( m_fInZoom && bIsMultiplayer() )
+#else
+	if ( m_fInZoom && g_pGameRules->IsMultiplayer() )
+#endif
 	{
 		FireSniperBolt();
 		return;
@@ -345,7 +350,7 @@ void CCrossbow::PrimaryAttack( void )
 // this function only gets called in multiplayer
 void CCrossbow::FireSniperBolt()
 {
-	m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.75;
+	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.75;
 
 	if (m_iClip == 0)
 	{
@@ -359,15 +364,11 @@ void CCrossbow::FireSniperBolt()
 	m_iClip--;
 
 	int flags;
-
-	if( IsLocalWeapon( ))
-	{
-		flags = FEV_NOTHOST;
-	}
-	else
-	{
-		flags = 0;
-	}
+#if defined( CLIENT_WEAPONS )
+	flags = FEV_NOTHOST;
+#else
+	flags = 0;
+#endif
 
 	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usCrossbow2, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, m_iClip, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType], 0, 0 );
 
@@ -406,15 +407,11 @@ void CCrossbow::FireBolt()
 	m_iClip--;
 
 	int flags;
-
-	if( IsLocalWeapon( ))
-	{
-		flags = FEV_NOTHOST;
-	}
-	else
-	{
-		flags = 0;
-	}
+#if defined( CLIENT_WEAPONS )
+	flags = FEV_NOTHOST;
+#else
+	flags = 0;
+#endif
 
 	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usCrossbow, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, m_iClip, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType], 0, 0 );
 
@@ -451,14 +448,14 @@ void CCrossbow::FireBolt()
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
 
-	m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.75;
+	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.75;
 
-	m_flNextSecondaryAttack = m_pPlayer->WeaponTimeBase() + 0.75;
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
 
 	if (m_iClip != 0)
-		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 5.0;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 5.0;
 	else
-		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 0.75;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.75;
 }
 
 
@@ -475,8 +472,8 @@ void CCrossbow::SecondaryAttack()
 		m_fInZoom = 1;
 	}
 	
-	pev->nextthink = m_pPlayer->WeaponTimeBase() + 0.1;
-	m_flNextSecondaryAttack = m_pPlayer->WeaponTimeBase() + 1.0;
+	pev->nextthink = UTIL_WeaponTimeBase() + 0.1;
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.0;
 }
 
 
@@ -503,7 +500,7 @@ void CCrossbow::WeaponIdle( void )
 
 	ResetEmptySound( );
 	
-	if ( m_flTimeWeaponIdle < m_pPlayer->WeaponTimeBase() )
+	if ( m_flTimeWeaponIdle < UTIL_WeaponTimeBase() )
 	{
 		float flRand = UTIL_SharedRandomFloat( m_pPlayer->random_seed, 0, 1 );
 		if (flRand <= 0.75)
@@ -516,19 +513,19 @@ void CCrossbow::WeaponIdle( void )
 			{
 				SendWeaponAnim( CROSSBOW_IDLE2 );
 			}
-			m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 		}
 		else
 		{
 			if (m_iClip)
 			{
 				SendWeaponAnim( CROSSBOW_FIDGET1 );
-				m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 90.0 / 30.0;
+				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 90.0 / 30.0;
 			}
 			else
 			{
 				SendWeaponAnim( CROSSBOW_FIDGET2 );
-				m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + 80.0 / 30.0;
+				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 80.0 / 30.0;
 			}
 		}
 	}

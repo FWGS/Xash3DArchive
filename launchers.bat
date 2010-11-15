@@ -1,6 +1,6 @@
 @echo off
 
-cd xtools
+cd utils
 cd bsplib
 makefile.nmake
 

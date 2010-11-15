@@ -61,9 +61,9 @@ realcheck:
 		trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_WORLDONLY, ent );
 	else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
 
-	if( trace.flFraction == 1.0f )
+	if( trace.fraction == 1.0f )
 		return false;
-	mid = bottom = trace.vecEndPos[2];
+	mid = bottom = trace.endpos[2];
 
 	// the corners must be within 16 of the midpoint
 	for( x = 0; x <= 1; x++ )
@@ -77,9 +77,9 @@ realcheck:
 				trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_WORLDONLY, ent );
 			else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
 
-			if( trace.flFraction != 1.0f && trace.vecEndPos[2] > bottom )
-				bottom = trace.vecEndPos[2];
-			if( trace.flFraction == 1.0f || mid - trace.vecEndPos[2] > svgame.movevars.stepsize )
+			if( trace.fraction != 1.0f && trace.endpos[2] > bottom )
+				bottom = trace.endpos[2];
+			if( trace.fraction == 1.0f || mid - trace.endpos[2] > svgame.movevars.stepsize )
 				return false;
 		}
 	}
@@ -141,18 +141,18 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 
 			trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, neworg, MOVE_NORMAL, ent );
 
-			if( trace.flFraction == 1.0f )
+			if( trace.fraction == 1.0f )
 			{
 				svs.groupmask = ent->v.groupinfo;
 
 				// that move takes us out of the water.
 				// apparently though, it's okay to travel into solids, lava, sky, etc :)
-				if(( ent->v.flags & FL_SWIM ) && SV_PointContents( trace.vecEndPos ) == CONTENTS_EMPTY )
+				if(( ent->v.flags & FL_SWIM ) && SV_PointContents( trace.endpos ) == CONTENTS_EMPTY )
 				{
 					return 0;
 				}
 
-				VectorCopy( trace.vecEndPos, ent->v.origin );
+				VectorCopy( trace.endpos, ent->v.origin );
 
 				if( relink != 0 )
 				{
@@ -177,19 +177,19 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 		end[2] -= dz * 2.0f;
 
 		trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
-		if( trace.fAllSolid != 0 )
+		if( trace.allsolid != 0 )
 			return 0;
 
-		if( trace.fStartSolid != 0 )
+		if( trace.startsolid != 0 )
 		{
 			neworg[2] -= dz;
 			trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
 
-			if( trace.fAllSolid != 0 || trace.fStartSolid != 0 )
+			if( trace.allsolid != 0 || trace.startsolid != 0 )
 				return 0;
 		}
 
-		if( trace.flFraction == 1.0f )
+		if( trace.fraction == 1.0f )
 		{
 			if( ent->v.flags & FL_PARTIALGROUND )
 			{
@@ -205,7 +205,7 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 		}
 		else
 		{
-			VectorCopy( trace.vecEndPos, ent->v.origin );
+			VectorCopy( trace.endpos, ent->v.origin );
 
 			if( SV_CheckBottom( ent, MOVE_NORMAL ) == 0 )
 			{
@@ -226,7 +226,7 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 				if( ent->v.flags & FL_PARTIALGROUND )
 					ent->v.flags &= ~FL_PARTIALGROUND;
 
-				ent->v.groundentity = trace.pHit;
+				ent->v.groundentity = trace.ent;
 
 				if( relink != 0 )
 				{
@@ -255,19 +255,19 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 
 	trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_WORLDONLY, ent );
 
-	if( trace.fAllSolid != 0 )
+	if( trace.allsolid != 0 )
 		return 0;
 
-	if( trace.fStartSolid != 0 )
+	if( trace.startsolid != 0 )
 	{
 		neworg[2] -= temp;
 		trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_WORLDONLY, ent );
 
-		if( trace.fAllSolid != 0 || trace.fStartSolid != 0 )
+		if( trace.allsolid != 0 || trace.startsolid != 0 )
 			return 0;
 	}
 
-	if( trace.flFraction == 1.0f )
+	if( trace.fraction == 1.0f )
 	{
 		if( ent->v.flags & FL_PARTIALGROUND )
 		{
@@ -283,7 +283,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 	}
 	else
 	{
-		VectorCopy( trace.vecEndPos, ent->v.origin );
+		VectorCopy( trace.endpos, ent->v.origin );
 
 		if( SV_CheckBottom( ent, MOVE_WORLDONLY ) == 0 )
 		{
@@ -304,7 +304,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 			if( ent->v.flags & FL_PARTIALGROUND )
 				ent->v.flags &= ~FL_PARTIALGROUND;
 
-			ent->v.groundentity = trace.pHit;
+			ent->v.groundentity = trace.ent;
 
 			if( relink != 0 )
 			{

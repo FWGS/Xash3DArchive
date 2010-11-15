@@ -43,34 +43,6 @@ typedef struct
 	vec3_t		lightingOrigin;
 } poly_t;
 
-#define MAX_SCOREBOARDNAME	32
-
-// NOTE: share this with user SDK when StudioRenderer will be moved on the client.dll
-typedef struct player_info_s
-{
-	int		userid;			// User id on server
-	char		userinfo[MAX_INFO_STRING];	// User info string
-	char		name[MAX_SCOREBOARDNAME];	// Name (extracted from userinfo)
-	int		spectator;		// Spectator or not, unused
-
-	int		ping;
-	int		packet_loss;
-
-	// skin information
-	char		model[64];
-	int		topcolor;
-	int		bottomcolor;
-
-	// last frame rendered
-	int		renderframe;	
-
-	// Gait frame estimation
-	int		gaitsequence;
-	float		gaitframe;
-	float		gaityaw;
-	vec3_t		prevgaitorigin;
-} player_info_t;
-
 typedef struct
 {
 	vec3_t		position;
@@ -117,7 +89,7 @@ typedef struct render_exp_s
 	void	(*ClearScene)( void );
 
 	void	(*BeginFrame)( qboolean clearScene );
-	void	(*RenderFrame)( const ref_params_t *fd );
+	void	(*RenderFrame)( const ref_params_t *fd, qboolean drawWorld );
 	void	(*EndFrame)( void );
 
 	// triapi implementation
@@ -130,8 +102,6 @@ typedef struct render_exp_s
 	void	(*TexCoord2f)( const float u, const float v );
 	void	(*Bind)( shader_t shader, int frame );
 	void	(*CullFace)( int mode );
-	void	(*Enable)( int cap );
-	void	(*Disable)( int cap );
 	void	(*Begin)( int mode );
 	void	(*End)( void );
 
@@ -141,6 +111,7 @@ typedef struct render_exp_s
 	void	(*GetParms)( int *w, int *h, int *frames, int frame, shader_t shader );
 	qboolean	(*ScrShot)( const char *filename, int shot_type ); // write screenshot with same name 
 	qboolean	(*EnvShot)( const char *filename, uint size, const float *vieworg, qboolean skyshot );
+	void	(*SetSkyPortal)( const vec3_t vieworg, const vec3_t viewangles, float scale, float fov );
 	void	(*LightForPoint)( const vec3_t point, vec3_t ambientLight );
 	void	(*DrawStretchRaw)( float x, float y, float w, float h, int cols, int rows, byte *data, qboolean redraw );
 	void	(*DrawStretchPic)( float x, float y, float w, float h, float s1, float t1, float s2, float t2, shader_t shader );
@@ -162,15 +133,16 @@ typedef struct render_imp_s
 	// client fundamental callbacks
 	void	(*UpdateScreen)( void );	// update screen while loading
 	void	(*StudioEvent)( struct mstudioevent_s *event, struct cl_entity_s *ent );
-	void	(*StudioFxTransform)( struct cl_entity_s *ent, float matrix[4][4] );
 	void	(*ShowCollision)( cmdraw_t callback );	// debug
 	long	(*WndProc)( void *hWnd, uint uMsg, uint wParam, long lParam );
-	struct cl_entity_s *(*GetClientEdict)( int index );		// get rid of this
+	struct cl_entity_s *(*GetClientEdict)( int index );
 	struct player_info_s *(*GetPlayerInfo)( int playerIndex );		// not an entityIndex!!!
 	struct cl_entity_s *(*GetLocalPlayer)( void );
 	int	(*GetMaxClients)( void );
 	void	(*DrawTriangles)( int fTrans );
+	qboolean	(*IsThirdPerson)( void );
 	void	(*ExtraUpdate)( void );				// call during RenderFrame
+	float	(*GetLerpFrac)( void );
 } render_imp_t;
 
 #endif//RENDER_API_H

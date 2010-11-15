@@ -164,6 +164,10 @@ typedef struct mplane_s
 #define SIDE_BACK			1
 #define SIDE_ON			2
 
+// renderer flags
+#define RDF_PORTALINVIEW		BIT( 0 )	// draw portal pass
+#define RDF_SKYPORTALINVIEW		BIT( 1 )	// draw skyportal instead of regular sky
+
 #define RP_NONE			0x0
 #define RP_MIRRORVIEW		0x1     // lock pvs at vieworg
 #define RP_PORTALVIEW		0x2
@@ -181,7 +185,7 @@ typedef struct mplane_s
 #define RP_SHOWNORMALS		0x2000
 
 #define RP_NONVIEWERREF		( RP_PORTALVIEW|RP_MIRRORVIEW|RP_ENVVIEW|RP_SKYPORTALVIEW|RP_SHADOWMAPVIEW )
-#define RP_LOCALCLIENT(e)		(ri.GetLocalPlayer() && ((e)->index == ri.GetLocalPlayer()->index ))
+#define RP_LOCALCLIENT(e)		(ri.GetLocalPlayer() && ((e)->index == ri.GetLocalPlayer()->index && e->lerp->player ))
 #define RP_FOLLOWENTITY(e)		(((e)->movetype == MOVETYPE_FOLLOW && (e)->parent))
 #define MOD_ALLOWBUMP()		(r_lighting_models_followdeluxe->integer ? mapConfig.deluxeMappingEnabled : GL_Support( R_SHADER_GLSL100_EXT ))
 
@@ -251,14 +255,25 @@ typedef struct ref_entity_s
 	float			radius;		// used as RT_SPRITE's radius
 } ref_entity_t;
 
+typedef struct skyportal_s
+{
+	float		fov;
+	float		scale;
+	vec3_t		vieworg;
+	vec3_t		viewangles;
+} skyportal_t;
+
 typedef struct
 {
 	int		params;			// rendering parameters
+	int		rdflags;			// actual rendering flags
 
 	ref_params_t	refdef;
 	int		scissor[4];
 	int		viewport[4];
 	float		lerpFrac;			// lerpfraction
+	qboolean		drawWorld;		// ignore world for drawing PlayerModel
+	qboolean		thirdPerson;		// thirdperson camera is enabled
 
 	meshlist_t	*meshlist;		// meshes to be rendered
 	meshbuffer_t	**surfmbuffers;		// pointers to meshbuffers of world surfaces
@@ -290,6 +305,8 @@ typedef struct
 
 	float		skyMins[2][6];
 	float		skyMaxs[2][6];
+
+	skyportal_t	skyportal;		// skyportal params
 
 	float		fog_dist_to_eye[256];	// MAX_MAP_FOGS
 
@@ -365,6 +382,7 @@ extern convar_t *r_physbdebug;
 extern convar_t *r_check_errors;
 extern convar_t *r_allow_software;
 extern convar_t *r_frontbuffer;
+extern convar_t *r_adjust_fov;
 extern convar_t *r_width;
 extern convar_t *r_height;
 
@@ -437,7 +455,6 @@ extern convar_t *r_nobind;
 extern convar_t *r_picmip;
 extern convar_t *r_skymip;
 extern convar_t *gl_clear;
-extern convar_t *r_polyblend;
 extern convar_t *r_lockpvs;
 extern convar_t *r_swapInterval;
 
@@ -493,9 +510,9 @@ enum
 };
 
 #define OCCLUSION_QUERIES_CVAR_HACK( RI ) ( !(r_occlusion_queries->integer == 2 && r_shadows->integer != SHADOW_MAPPING) \
-											|| ((RI).refdef.flags & RDF_PORTALINVIEW) )
+											|| ((RI).rdflags & RDF_PORTALINVIEW) )
 #define OCCLUSION_QUERIES_ENABLED( RI )	( GL_Support( R_OCCLUSION_QUERIES_EXT ) && r_occlusion_queries->integer && r_drawentities->integer \
-											&& !((RI).params & RP_NONVIEWERREF) && !((RI).refdef.flags & RDF_NOWORLDMODEL) \
+											&& !((RI).params & RP_NONVIEWERREF) && ((RI).drawWorld) \
 											&& OCCLUSION_QUERIES_CVAR_HACK( RI ) )
 #define OCCLUSION_OPAQUE_SHADER( s )	(((s)->sort == SORT_OPAQUE ) && ((s)->flags & SHADER_DEPTHWRITE ) && !(s)->numDeforms )
 #define OCCLUSION_TEST_ENTITY( e )	(((e)->doOcclusionTest ) || ((e)->ent_type == ET_VIEWENTITY ))
@@ -530,8 +547,6 @@ void Tri_TexCoord2f( const float u, const float v );
 void Tri_Bind( shader_t shader, int frame );
 void Tri_RenderCallback( int fTrans );
 void Tri_CullFace( int mode );
-void Tri_Enable( int cap );
-void Tri_Disable( int cap );
 void Tri_Begin( int mode );
 void Tri_End( void );
 
@@ -593,7 +608,7 @@ void	GL_SetState( int state );
 void	GL_FrontFace( int front );
 void	R_BeginFrame( qboolean clearScene );
 void	R_EndFrame( void );
-void	R_RenderScene( const ref_params_t *fd );
+void	R_RenderScene( const ref_params_t *fd, qboolean drawWorld );
 void	R_RenderView( const ref_params_t *fd );
 void	R_ClearScene( void );
 

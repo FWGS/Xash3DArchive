@@ -1554,7 +1554,7 @@ void Con_Close( void )
 =========
 Con_DefaultColor
 
-called from GameUI
+called from MainUI
 =========
 */
 void Con_DefaultColor( int r, int g, int b )

@@ -83,7 +83,6 @@ color24 gTracerColors[] =
 #define FTENT_NOMODEL		0x00040000 // Doesn't have a model, never try to draw ( it just triggers other things )
 #define FTENT_CLIENTCUSTOM		0x00080000 // Must specify callback.  Callback function is responsible for killing tempent and updating fields ( unless other flags specify how to do things )
 #define FTENT_SCALE			0x00100000 // An experiment
-#define FTENT_ATTACHMENT		0x00200000 // This is a dynamically relinked attachment (update every frame)
 
 typedef struct tempent_s	TEMPENTITY;
 typedef struct tempent_s
@@ -117,17 +116,6 @@ typedef struct efx_api_s efx_api_t;
 
 struct efx_api_s
 {
-	void		(*R_GetPaletteColor)( int colorIndex, float *outColor );
-	int		(*CL_DecalIndex)( int id );
-	int		(*CL_DecalIndexFromName)( const char *szDecalName );
-	void		(*CL_DecalShoot)( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
-	void		(*R_PlayerDecal)( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
-	dlight_t*		(*CL_AllocDLight)( int key );
-	dlight_t*		(*CL_AllocELight)( int key );
-	void		(*R_LightForPoint)( const float *rgflOrigin, float *lightValue );
-	int		(*CL_IsBoxVisible)( const float *mins, const float *maxs );
-	int		(*R_CullBox)( const float *mins, const float *maxs );
-// ORIGINAL HL INTEFACE
 	particle_t	*(*R_AllocParticle)( void (*callback)( struct particle_s *particle, float frametime ));
 	void		(*R_BlobExplosion)( float *org );
 	void		(*R_Blood)( float *org, float *dir, int pcolor, int speed );

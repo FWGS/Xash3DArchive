@@ -26,23 +26,9 @@ inline void MESSAGE_BEGIN( int msg_dest, int msg_type, const float *pOrigin, ent
 
 extern globalvars_t				*gpGlobals;
 
-// defaulting to use StringTable
-// #define SYS_SHAREDSTRINGS
-
-#ifdef SYS_SHAREDSTRINGS
-
-	// Use this instead of ALLOC_STRING on constant strings
-	#define STRING( offset )	(const char *)(gpGlobals->pStringBase + (int)offset)
-	#define MAKE_STRING(str)	((int)str - (int)STRING(0))
-
-#else
-	// NOTE: Xash3D have a StringTable system which compress strings in memory
-	// and not produce duplicated strings. If we want to use this system we must
-	// reset pStringBase in the GameDllInit (see game.cpp for details)
-	#define STRING		(*g_engfuncs.pfnSzFromIndex)
-	#define MAKE_STRING		ALLOC_STRING
-
-#endif
+// Use this instead of ALLOC_STRING on constant strings
+#define STRING(offset)		(const char *)(gpGlobals->pStringBase + (int)offset)
+#define MAKE_STRING(str)	((int)str - (int)STRING(0))
 
 inline edict_t *FIND_ENTITY_BY_CLASSNAME(edict_t *entStart, const char *pszName) 
 {
@@ -550,3 +536,5 @@ void UTIL_UnsetGroupTrace( void );
 
 int UTIL_SharedRandomLong( unsigned int seed, int low, int high );
 float UTIL_SharedRandomFloat( unsigned int seed, float low, float high );
+
+float UTIL_WeaponTimeBase( void );

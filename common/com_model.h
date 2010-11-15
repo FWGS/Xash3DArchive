@@ -13,10 +13,14 @@
 	ENGINE MODEL FORMAT
 ==============================================================================
 */
+#define STUDIO_RENDER	1
+#define STUDIO_EVENTS	2
+
 // surface flags
 #define SURF_PLANEBACK	BIT( 0 )
 
 #define CONTENTS_NODE	1		// fake contents to determine nodes
+#define ZISCALE		((float)0x8000)
 
 // model types
 typedef enum
@@ -27,6 +31,14 @@ typedef enum
 	mod_alias, 
 	mod_studio
 } modtype_t;
+
+typedef struct alight_s
+{
+	int		ambientlight;	// clip at 128
+	int		shadelight;	// clip at 192 - ambientlight
+	vec3_t		color;
+	float		*plightvec;
+} alight_t;
 
 typedef struct mplane_s
 {
@@ -117,11 +129,13 @@ typedef struct mnode_s
 typedef struct model_s
 {
 	char		name[64];		// model name
-	byte		*mempool;		// private mempool
 	int		registration_sequence;
 
 	// shared modelinfo
 	modtype_t		type;		// model type
+	int		numframes;	// sprite's framecount
+	byte		*mempool;		// private mempool (was synctype)
+	int		flags;		// hl compatibility
 	vec3_t		mins, maxs;	// bounding box at angles '0 0 0'
 
 	// brush model
@@ -169,7 +183,7 @@ typedef struct model_s
 	byte		*lightdata;	// for GetEntityIllum
 	byte		*extradata;	// models extradata
 
-	int		numframes;	// sprite's framecount
+	char		*entities;
 } model_t;
 
 #endif//COM_MODEL_H

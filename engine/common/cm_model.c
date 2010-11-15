@@ -82,13 +82,13 @@ void CM_SetupHulls( float mins[4][3], float maxs[4][3] )
 CM_StudioBodyVariations
 ================
 */
-static int CM_StudioBodyVariations( int handle )
+static int CM_StudioBodyVariations( model_t *mod )
 {
 	studiohdr_t	*pstudiohdr;
 	mstudiobodyparts_t	*pbodypart;
 	int		i, count;
 
-	pstudiohdr = (studiohdr_t *)Mod_Extradata( handle );
+	pstudiohdr = (studiohdr_t *)Mod_Extradata( mod );
 	if( !pstudiohdr ) return 0;
 
 	count = 1;
@@ -129,6 +129,8 @@ qboolean CM_InitPhysics( void )
 {
 	cm_novis = Cvar_Get( "cm_novis", "0", 0, "force to ignore server visibility" );
 
+	cm.studiopool = Mem_AllocPool( "Studio Cache" );
+
 	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
 	return true;
 }
@@ -139,6 +141,8 @@ void CM_FreePhysics( void )
 
 	for( i = 0; i < cm_nummodels; i++ )
 		CM_FreeModel( &cm_models[i] );
+
+	Mem_FreePool( &cm.studiopool );
 }
 
 /*
@@ -667,7 +671,9 @@ static void BSP_LoadEntityString( dlump_t *l )
 	byte	*in;
 
 	in = (void *)(mod_base + l->fileofs);
-	cm.entityscript = Com_OpenScript( LUMP_ENTITIES, in, l->filelen );
+	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen );	
+	Mem_Copy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
+	cm.entityscript = Com_OpenScript( "entities", in, l->filelen );
 }
 
 /*
@@ -918,7 +924,7 @@ static void CM_SpriteModel( model_t *mod, byte *buffer )
 	loadmodel->maxs[2] = phdr->bounds[1] / 2;
 }
 
-static model_t *CM_ModForName( const char *name, qboolean world )
+model_t *CM_ModForName( const char *name, qboolean world )
 {
 	byte	*buf;
 	model_t	*mod;
@@ -969,7 +975,8 @@ static model_t *CM_ModForName( const char *name, qboolean world )
 	buf = FS_LoadFile( name, &size );
 	if( !buf )
 	{
-		MsgDev( D_ERROR, "CM_LoadModel: %s couldn't load\n", name );
+		if( world ) Host_Error( "Mod_ForName: %s couldn't load\n", name );
+		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", name );
 		return NULL;
 	}
 
@@ -1022,6 +1029,9 @@ static void CM_FreeWorld( void )
 		cm.entityscript = NULL;
 	}
 	worldmodel = NULL;
+
+	// purge all submodels
+	Mem_EmptyPool( cm.studiopool );
 }
 
 /*
@@ -1101,17 +1111,20 @@ model_t *CM_ClipHandleToModel( int handle )
 }
 
 /*
-===================
-Mod_Extradata
-===================
+==================
+CM_ClipHandleToModel
+==================
 */
-void *Mod_Extradata( int handle )
+int CM_ClipModelToHandle( const model_t *pmodel )
 {
-	model_t	*mod = CM_ClipHandleToModel( handle );
+	int	i;
 
-	if( mod && mod->type == mod_studio )
-		return mod->extradata;
-	return NULL;
+	if( !pmodel ) return 0;
+
+	for( i = 0; i < MAX_MODELS; i++ )
+		if( sv_models[i] == pmodel )
+			return i;
+	return 0;
 }
 
 /*
@@ -1133,7 +1146,7 @@ void Mod_GetFrames( int handle, int *numFrames )
 	if( mod->type == mod_sprite )
 		*numFrames = mod->numframes;
 	else if( mod->type == mod_studio )
-		*numFrames = CM_StudioBodyVariations( handle );		
+		*numFrames = CM_StudioBodyVariations( mod );		
 	if( *numFrames < 1 ) *numFrames = 1;
 }
 
@@ -1184,4 +1197,72 @@ qboolean CM_RegisterModel( const char *name, int index )
 	sv_models[index] = mod;
 
 	return ( mod != NULL );
+}
+
+/*
+===============
+Mod_Calloc
+
+===============
+*/
+void *Mod_Calloc( int number, size_t size )
+{
+	if( number <= 0 || size <= 0 ) return NULL;
+	return Mem_Alloc( cm.studiopool, number * size );
+}
+
+/*
+===============
+Mod_CacheCheck
+
+===============
+*/
+void *Mod_CacheCheck( cache_user_t *c )
+{
+	return Cache_Check( cm.studiopool, c );
+}
+
+/*
+===============
+Mod_LoadCacheFile
+
+===============
+*/
+void Mod_LoadCacheFile( const char *path, cache_user_t *cu )
+{
+	byte	*buf;
+	string	filepath;
+	size_t	i, size;
+
+	ASSERT( cu != NULL );
+
+	if( !path || !path[0] ) return;
+
+	// replace all '\' with '/'
+	for( i = ( path[0] == '/' ||path[0] == '\\' ), size = 0; path[i] && ( size < sizeof( filepath )-1 ); i++ )
+	{
+		if( path[i] == '\\' ) filepath[size++] = '/';
+		else filepath[size++] = path[i];
+	}
+
+	if( !size ) return;
+	filepath[size] = 0;
+
+	buf = FS_LoadFile( filepath, &size );
+	cu->data = Mem_Alloc( cm.studiopool, size );
+	Mem_Copy( cu->data, buf, size );
+	Mem_Free( buf );
+}
+
+/*
+===============
+Mod_Extradata
+
+===============
+*/
+void *Mod_Extradata( model_t *mod )
+{
+	if( mod && mod->type == mod_studio )
+		return mod->extradata;
+	return NULL;
 }

@@ -33,7 +33,7 @@
 #include "soundent.h"
 #include "gamerules.h"
 #include "game.h"
-#include "../engine/customentity.h"
+#include "customentity.h"
 #include "weapons.h"
 #include "weaponinfo.h"
 #include "usercmd.h"
@@ -199,6 +199,9 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->pev->effects |= EF_NOINTERP;
 }
 
+#include "voice_gamemgr.h"
+extern CVoiceGameMgr g_VoiceGameMgr;
+
 //// HOST_SAY
 // String comes in as
 // say blah blah blah
@@ -305,6 +308,10 @@ void Host_Say( edict_t *pEntity, int teamonly )
 		if ( !(client->IsNetClient()) )	// Not a client ? (should never be true)
 			continue;
 
+		// can the receiver hear the sender? or has he muted him?
+		if ( g_VoiceGameMgr.PlayerHasBlockedPlayer( client, player ) )
+			continue;
+
 		if ( teamonly && g_pGameRules->PlayerRelationship(client, CBaseEntity::Instance(pEntity)) != GR_TEAMMATE )
 			continue;
 
@@ -394,37 +401,7 @@ void ClientCommand( edict_t *pEntity )
 			GetClassPtr((CBasePlayer *)pev)->GiveNamedItem( STRING(iszItem) );
 		}
 	}
-	else if ( FStrEq(pcmd, "fire" ))
-	{
-		if ( g_flWeaponCheat != 0.0)
-		{
-			CBaseEntity *pPlayer = CBaseEntity::Instance(pEntity);
-			if (CMD_ARGC() > 1)
-			{
-				FireTargets(CMD_ARGV(1), pPlayer, pPlayer, USE_TOGGLE, 0);
-			}
-			else
-			{
-				TraceResult tr;
-				UTIL_MakeVectors(pev->v_angle);
-				UTIL_TraceLine(
-					pev->origin + pev->view_ofs,
-					pev->origin + pev->view_ofs + gpGlobals->v_forward * 1024,
-					dont_ignore_monsters, pEntity, &tr
-				);
 
-				if (tr.pHit)
-				{
-					CBaseEntity *pHitEnt = CBaseEntity::Instance(tr.pHit);
-					if (pHitEnt)
-					{
-						pHitEnt->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
-						ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, UTIL_VarArgs( "Fired %s \"%s\"\n", STRING(pHitEnt->pev->classname), STRING(pHitEnt->pev->targetname) ) );
-					}
-				}
-			}
-		}
-	}
 	else if ( FStrEq(pcmd, "drop" ) )
 	{
 		// player is dropping an item. 
@@ -968,14 +945,15 @@ we could also use the pas/ pvs that we set in SetupVisibility, if we wanted to. 
 */
 int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *host, int hostflags, int player, unsigned char *pSet )
 {
-	int	i;
+	int					i;
 
 	// don't send if flagged for NODRAW and it's not the host getting the message
-	if (( ent->v.effects == EF_NODRAW ) && ( ent != host ))
+	if ( ( ent->v.effects == EF_NODRAW ) &&
+		 ( ent != host ) )
 		return 0;
 
 	// Ignore ents without valid / visible models
-	if ( !ent->v.modelindex || !STRING( ent->v.model ))
+	if ( !ent->v.modelindex || !STRING( ent->v.model ) )
 		return 0;
 
 	// Don't send spectators to other players
@@ -988,7 +966,7 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	// If pSet is NULL, then the test will always succeed and the entity will be added to the update
 	if ( ent != host )
 	{
-		if ( !ENGINE_CHECK_VISIBILITY( ent, pSet ))
+		if ( !ENGINE_CHECK_VISIBILITY( (const struct edict_s *)ent, pSet ) )
 		{
 			// env_sky is visible always
 			if( !FClassnameIs( ent, "env_sky" ))
@@ -1003,7 +981,7 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	if ( ent->v.flags & FL_SKIPLOCALHOST )
 	{
 		if ( hostflags & 4 ) return 0; // it's a portal pass
-		if (( hostflags & 1 ) && ( ent->v.owner == host ))
+		if ( ( hostflags & 1 ) && ( ent->v.owner == host ) )
 			return 0;
 	}
 	
@@ -1032,8 +1010,8 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	memset( state, 0, sizeof( *state ) );
 
 	// Assign index so we can track this entity from frame to frame and
-	// delta from it.
-	state->number = e;
+	//  delta from it.
+	state->number	  = e;
 	state->entityType = ENTITY_NORMAL;
 	
 	// Flag custom entities.
@@ -1057,7 +1035,7 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	memcpy( state->startpos, ent->v.startpos, 3 * sizeof( float ) );
 	memcpy( state->endpos, ent->v.endpos, 3 * sizeof( float ) );
 	memcpy( state->velocity, ent->v.velocity, 3 * sizeof( float ) );
-		
+
 	state->impacttime = ent->v.impacttime;
 	state->starttime = ent->v.starttime;
 
@@ -1070,14 +1048,18 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 
 	// This non-player entity is being moved by the game .dll and not the physics simulation system
 	//  make sure that we interpolate it's position on the client if it moves
-	if ( !player && ent->v.animtime && ent->v.velocity == g_vecZero )
+	if ( !player &&
+		 ent->v.animtime &&
+		 ent->v.velocity[ 0 ] == 0 && 
+		 ent->v.velocity[ 1 ] == 0 && 
+		 ent->v.velocity[ 2 ] == 0 )
 	{
 		state->eflags |= EFLAG_SLERP;
 	}
 
-	state->scale	= ent->v.scale;
-	state->solid	= ent->v.solid;
-	state->colormap	= ent->v.colormap;
+	state->scale	  = ent->v.scale;
+	state->solid	  = ent->v.solid;
+	state->colormap   = ent->v.colormap;
 
 	state->movetype   = ent->v.movetype;
 	state->sequence   = ent->v.sequence;
@@ -1139,14 +1121,14 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 
 		state->weaponmodel  = MODEL_INDEX( STRING( ent->v.weaponmodel ) );
 		state->gaitsequence = ent->v.gaitsequence;
-		state->spectator	= ent->v.flags & FL_SPECTATOR;
+		state->spectator = ent->v.flags & FL_SPECTATOR;
 		state->friction     = ent->v.friction;
 
 		state->gravity      = ent->v.gravity;
-//		state->team	= ent->v.team;
+//		state->team			= ent->v.team;
 //		
 		state->usehull      = ( ent->v.flags & FL_DUCKING ) ? 1 : 0;
-		state->health	= ent->v.health;
+		state->health		= ent->v.health;
 	}
 
 	return 1;
@@ -1166,8 +1148,8 @@ void CreateBaseline( int player, int eindex, struct entity_state_s *baseline, st
 {
 	baseline->origin		= entity->v.origin;
 	baseline->angles		= entity->v.angles;
-	baseline->frame		= entity->v.frame;
-	baseline->skin		= (short)entity->v.skin;
+	baseline->frame			= entity->v.frame;
+	baseline->skin			= (short)entity->v.skin;
 
 	// render information
 	baseline->rendermode	= (byte)entity->v.rendermode;
@@ -1179,31 +1161,31 @@ void CreateBaseline( int player, int eindex, struct entity_state_s *baseline, st
 
 	if ( player )
 	{
-		baseline->mins		= player_mins;
-		baseline->maxs		= player_maxs;
+		baseline->mins			= player_mins;
+		baseline->maxs			= player_maxs;
 
 		baseline->colormap		= eindex;
 		baseline->modelindex	= playermodelindex;
 		baseline->friction		= 1.0;
 		baseline->movetype		= MOVETYPE_WALK;
 
-		baseline->scale		= entity->v.scale;
-		baseline->solid		= SOLID_SLIDEBOX;
+		baseline->scale			= entity->v.scale;
+		baseline->solid			= SOLID_SLIDEBOX;
 		baseline->framerate		= 1.0;
 		baseline->gravity		= 1.0;
 
 	}
 	else
 	{
-		baseline->mins		= entity->v.mins;
-		baseline->maxs		= entity->v.maxs;
+		baseline->mins			= entity->v.mins;
+		baseline->maxs			= entity->v.maxs;
 
 		baseline->colormap		= 0;
 		baseline->modelindex	= entity->v.modelindex;//SV_ModelIndex(pr_strings + entity->v.model);
 		baseline->movetype		= entity->v.movetype;
 
-		baseline->scale		= entity->v.scale;
-		baseline->solid		= entity->v.solid;
+		baseline->scale			= entity->v.scale;
+		baseline->solid			= entity->v.solid;
 		baseline->framerate		= entity->v.framerate;
 		baseline->gravity		= entity->v.gravity;
 	}
@@ -1463,15 +1445,9 @@ void RegisterEncoders( void )
 	DELTA_ADDENCODER( "Player_Encode", Player_Encode );
 }
 
-/*
-=================
-GetWeaponData
-
-Engine call this function only for clients with cl_lw == 1
-=================
-*/
 int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 {
+#if defined( CLIENT_WEAPONS )
 	int i;
 	weapon_data_t *item;
 	entvars_t *pev = &player->v;
@@ -1480,7 +1456,7 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 	
 	ItemInfo II;
 
-	memset( info, 0, 32 * sizeof( weapon_data_t ));
+	memset( info, 0, 32 * sizeof( weapon_data_t ) );
 
 	if ( !pl )
 		return 1;
@@ -1509,27 +1485,29 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 						item->m_iId						= II.iId;
 						item->m_iClip					= gun->m_iClip;
 
-						item->m_flTimeWeaponIdle	= max( gun->m_flTimeWeaponIdle, -0.001 );
-						item->m_flNextPrimaryAttack	= max( gun->m_flNextPrimaryAttack, -0.001 );
+						item->m_flTimeWeaponIdle		= max( gun->m_flTimeWeaponIdle, -0.001 );
+						item->m_flNextPrimaryAttack		= max( gun->m_flNextPrimaryAttack, -0.001 );
 						item->m_flNextSecondaryAttack	= max( gun->m_flNextSecondaryAttack, -0.001 );
-						item->m_fInReload		= gun->m_fInReload;
-						item->m_fInSpecialReload	= gun->m_fInSpecialReload;
-						item->fuser1		= max( gun->pev->fuser1, -0.001 );
-						item->fuser2		= gun->m_flStartThrow;
-						item->fuser3		= gun->m_flReleaseThrow;
-						item->iuser1		= gun->m_chargeReady;
-						item->iuser2		= gun->m_fInAttack;
-						item->iuser3		= gun->m_fireState;
+						item->m_fInReload				= gun->m_fInReload;
+						item->m_fInSpecialReload		= gun->m_fInSpecialReload;
+						item->fuser1					= max( gun->pev->fuser1, -0.001 );
+						item->fuser2					= gun->m_flStartThrow;
+						item->fuser3					= gun->m_flReleaseThrow;
+						item->iuser1					= gun->m_chargeReady;
+						item->iuser2					= gun->m_fInAttack;
+						item->iuser3					= gun->m_fireState;
 						
 											
-//						item->m_flPumpTime		= max( gun->m_flPumpTime, -0.001 );
+//						item->m_flPumpTime				= max( gun->m_flPumpTime, -0.001 );
 					}
 				}
 				pPlayerItem = pPlayerItem->m_pNext;
 			}
 		}
 	}
-
+#else
+	memset( info, 0, 32 * sizeof( weapon_data_t ) );
+#endif
 	return 1;
 }
 
@@ -1572,7 +1550,7 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 
 	cd->pushmsec		= ent->v.pushmsec;
 
-	// engine determine which client is using predicting
+#if defined( CLIENT_WEAPONS )
 	if ( sendweapons )
 	{
 		entvars_t *pev = (entvars_t *)&ent->v;
@@ -1612,13 +1590,14 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 					
 					if ( pl->m_pActiveItem->m_iId == WEAPON_RPG )
 					{
-						cd->vuser2.y = (( CRpg * )pl->m_pActiveItem)->m_fSpotActive;
-						cd->vuser2.z = (( CRpg * )pl->m_pActiveItem)->m_cActiveRockets;
+						cd->vuser2.y = ( ( CRpg * )pl->m_pActiveItem)->m_fSpotActive;
+						cd->vuser2.z = ( ( CRpg * )pl->m_pActiveItem)->m_cActiveRockets;
 					}
 				}
 			}
 		}
 	}
+#endif
 }
 
 /*
@@ -1634,7 +1613,9 @@ void CmdStart( const edict_t *player, const struct usercmd_s *cmd, unsigned int 
 	entvars_t *pev = (entvars_t *)&player->v;
 	CBasePlayer *pl = ( CBasePlayer *) CBasePlayer::Instance( pev );
 
-	if ( !pl ) return;
+	if( !pl )
+		return;
+
 	if ( pl->pev->groupinfo != 0 )
 	{
 		UTIL_SetGroupTrace( pl->pev->groupinfo, GROUP_OP_AND );
@@ -1650,13 +1631,13 @@ CmdEnd
 Each cmdstart is exactly matched with a cmd end, clean up any group trace flags, etc. here
 =================
 */
-void CmdEnd( const edict_t *player )
+void CmdEnd ( const edict_t *player )
 {
 	entvars_t *pev = (entvars_t *)&player->v;
 	CBasePlayer *pl = ( CBasePlayer *) CBasePlayer::Instance( pev );
 
-	if ( !pl ) return;
-
+	if( !pl )
+		return;
 	if ( pl->pev->groupinfo != 0 )
 	{
 		UTIL_UnsetGroupTrace();
@@ -1698,19 +1679,19 @@ int GetHullBounds( int hullnumber, float *mins, float *maxs )
 
 	switch ( hullnumber )
 	{
-	case 0:	// Normal player
-		VEC_HULL_MIN.CopyToArray( mins );
-		VEC_HULL_MAX.CopyToArray( maxs );
+	case 0:				// Normal player
+		mins = VEC_HULL_MIN;
+		maxs = VEC_HULL_MAX;
 		iret = 1;
 		break;
-	case 1:	// Crouched player
-		VEC_DUCK_HULL_MIN.CopyToArray( mins );
-		VEC_DUCK_HULL_MAX.CopyToArray( maxs );
+	case 1:				// Crouched player
+		mins = VEC_DUCK_HULL_MIN;
+		maxs = VEC_DUCK_HULL_MAX;
 		iret = 1;
 		break;
-	case 2:	// Point based hull
-		g_vecZero.CopyToArray( mins );
-		g_vecZero.CopyToArray( maxs );
+	case 2:				// Point based hull
+		mins = Vector( 0, 0, 0 );
+		maxs = Vector( 0, 0, 0 );
 		iret = 1;
 		break;
 	}

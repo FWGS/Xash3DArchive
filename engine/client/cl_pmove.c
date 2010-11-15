@@ -6,6 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "const.h"
+#include "cl_tent.h"
 #include "pm_local.h"
 
 void CL_ClearPhysEnts( void )
@@ -94,27 +95,23 @@ CL_AddLinksToPmove
 collect solid entities
 ====================
 */
-void CL_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t pmove_maxs )
+void CL_AddLinksToPmove( void )
 {
-	link_t		*l, *next;
 	cl_entity_t	*check;
 	physent_t		*pe;
+	int		i, idx;
 
-	// touch linked edicts
-	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
+	for( i = 0; i < cl.frame.num_entities; i++ )
 	{
-		next = l->next;
-		check = EDICT_FROM_AREA( l );
+		idx = cls.packet_entities[(cl.frame.first_entity + i) % cls.num_client_entities].number;
+		check = CL_GetEntityByIndex( idx );
 
 		// don't add the world and clients here
 		if( !check || check == &clgame.entities[0] || check->player )
 			continue;
 
-		if(check->curstate.solid == SOLID_BSP || check->curstate.solid == SOLID_BBOX || check->curstate.solid == SOLID_SLIDEBOX)
+		if( check->curstate.solid == SOLID_BSP || check->curstate.solid == SOLID_BBOX || check->curstate.solid == SOLID_SLIDEBOX )
 		{
-			if( !BoundsIntersect( pmove_mins, pmove_maxs, check->absmin, check->absmax ))
-				continue;
-
 			if( clgame.pmove->numphysent == MAX_PHYSENTS )
 				return;
 
@@ -123,15 +120,17 @@ void CL_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 			if( CL_CopyEntityToPhysEnt( pe, check ))
 				clgame.pmove->numphysent++;
 		}
-	}
-	
-	// recurse down both sides
-	if( node->axis == -1 ) return;
+		else if( check->curstate.solid == SOLID_NOT && check->curstate.skin != CONTENTS_NONE )
+		{
+			if( clgame.pmove->nummoveent >= MAX_MOVEENTS )
+				continue;
 
-	if( pmove_maxs[node->axis] > node->dist )
-		CL_AddLinksToPmove( node->children[0], pmove_mins, pmove_maxs );
-	if( pmove_mins[node->axis] < node->dist )
-		CL_AddLinksToPmove( node->children[1], pmove_mins, pmove_maxs );
+			pe = &clgame.pmove->moveents[clgame.pmove->nummoveent];
+
+			if( CL_CopyEntityToPhysEnt( pe, check ))
+				clgame.pmove->nummoveent++;
+		}
+	}
 }
 
 /*
@@ -172,6 +171,54 @@ void CL_SetSolidPlayers( int playernum )
 	}
 }
 
+/*
+=============
+CL_TruePointContents
+
+=============
+*/
+int CL_TruePointContents( const vec3_t p )
+{
+	int	i, contents;
+	hull_t	*hull;
+	vec3_t	test;
+	physent_t	*pe;
+
+	// sanity check
+	if( !p ) return CONTENTS_NONE;
+
+	// get base contents from world
+	contents = PM_HullPointContents( &cl.worldmodel->hulls[0], 0, p );
+
+	for( i = 0; i < clgame.pmove->nummoveent; i++ )
+	{
+		pe = &clgame.pmove->moveents[i];
+
+		if( pe->solid != SOLID_NOT ) // disabled ?
+			continue;
+
+		// only brushes can have special contents
+		if( pe->model->type != mod_brush )
+			continue;
+
+		// check water brushes accuracy
+		hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, test );
+
+		// offset the test point appropriately for this hull.
+		VectorSubtract( p, test, test );
+
+		// test hull for intersection with this model
+		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
+			continue;
+
+		// compare contents ranking
+		if( RankForContents( pe->skin ) > RankForContents( contents ))
+			contents = pe->skin; // new content has more priority
+	}
+
+	return contents;
+}
+
 static void pfnParticle( float *origin, int color, float life, int zpos, int zvel )
 {
 	vec3_t	dir;
@@ -185,7 +232,7 @@ static void pfnParticle( float *origin, int color, float life, int zpos, int zve
 	// FIXME: send lifetime too
 
 	VectorSet( dir, 0.0f, 0.0f, ( zpos * zvel ));
-	clgame.dllFuncs.pfnParticleEffect( origin, dir, color, 1 );
+	CL_RunParticleEffect( origin, dir, color, 1 );
 }
 
 static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
@@ -271,11 +318,22 @@ static hull_t *pfnHullForBsp( physent_t *pe, float *offset )
 	return PM_HullForBsp( pe, mins, maxs, offset );
 }
 
-static float pfnTraceModel( physent_t *pEnt, float *start, float *end, pmtrace_t *trace )
+static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *trace )
 {
-	if( PM_TraceModel( pEnt, start, vec3_origin, vec3_origin, end, trace, PM_STUDIO_BOX ))
-		return trace->fraction;
-	return 1.0f;
+	pmtrace_t	pmtrace;
+
+	PM_TraceModel( pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
+
+	// copy pmtrace_t to trace_t
+	if( trace )
+	{
+		// NOTE: if pmtrace.h is changed is must be changed too
+		Mem_Copy( trace, &pmtrace, sizeof( *trace ));
+		trace->hitgroup = pmtrace.hitgroup;
+		trace->ent = NULL;
+	}
+
+	return pmtrace.fraction;
 }
 
 static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
@@ -405,7 +463,7 @@ void CL_InitClientMove( void )
 	clgame.pmove->PM_TraceLineEx = pfnTraceLineEx;
 
 	// initalize pmove
-	clgame.dllFuncs.pfnPM_Init( clgame.pmove );
+	clgame.dllFuncs.pfnPlayerMoveInit( clgame.pmove );
 }
 
 static void PM_CheckMovingGround( clientdata_t *cd, entity_state_t *state, float frametime )
@@ -421,11 +479,6 @@ static void PM_CheckMovingGround( clientdata_t *cd, entity_state_t *state, float
 
 void CL_SetSolidEntities( void )
 {
-	physent_t		*pe;
-	vec3_t		absmin, absmax;
-	cl_entity_t	*touch[MAX_EDICTS];
-	int		i, count;
-
 	// world not initialized
 	if( !cl.frame.valid ) return;
 
@@ -434,33 +487,10 @@ void CL_SetSolidEntities( void )
 	clgame.pmove->numphysent = 0;
 	clgame.pmove->nummoveent = 0;
 
-	for( i = 0; i < 3; i++ )
-	{
-		absmin[i] = cl.frame.clientdata.origin[i] - 1024;
-		absmax[i] = cl.frame.clientdata.origin[i] + 1024;
-	}
-
 	CL_CopyEntityToPhysEnt( &clgame.pmove->physents[0], &clgame.entities[0] );
 	clgame.pmove->numphysent = 1;	// always have world
 
-	CL_AddLinksToPmove( cl_areanodes, absmin, absmax );
-	count = CL_AreaEdicts( absmin, absmax, touch, MAX_EDICTS, AREA_CUSTOM );
-
-	// build list of ladders around player
-	for( i = 0; i < count; i++ )
-	{
-		if( clgame.pmove->nummoveent >= MAX_MOVEENTS )
-		{
-			MsgDev( D_ERROR, "PM_PlayerMove: too many ladders in PVS\n" );
-			break;
-		}
-
-		if( touch[i] == CL_GetLocalPlayer( )) continue;
-
-		pe = &clgame.pmove->moveents[clgame.pmove->nummoveent];
-		if( CL_CopyEntityToPhysEnt( pe, touch[i] ))
-			clgame.pmove->nummoveent++;
-	}
+	CL_AddLinksToPmove();
 }
 
 static void PM_SetupMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd )

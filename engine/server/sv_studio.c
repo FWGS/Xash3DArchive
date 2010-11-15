@@ -8,17 +8,21 @@
 #include "common.h"
 #include "server.h"
 #include "studio.h"
+#include "r_studioint.h"
 #include "matrix_lib.h"
 
-static studiohdr_t	*sv_studiohdr;
-static mplane_t	sv_hitboxplanes[6];	// there a temp hitbox
-static matrix4x4	sv_studiomatrix;
-static matrix4x4	sv_studiobones[MAXSTUDIOBONES];
-typedef qboolean 	(*pfnHitboxTrace)( trace_t *trace );
-static vec3_t	trace_startmins, trace_endmins;
-static vec3_t	trace_startmaxs, trace_endmaxs;
-static vec3_t	trace_absmins, trace_absmaxs;
-static float	trace_realfraction;
+typedef int	(*STUDIOAPI)( int, sv_blending_interface_t*, server_studio_api_t*, matrix4x4, matrix4x4[MAXSTUDIOBONES] );
+
+static studiohdr_t			*sv_studiohdr;
+static mplane_t			sv_hitboxplanes[6];	// there a temp hitbox
+static matrix4x4			sv_studiomatrix;
+static matrix4x4			sv_studiobones[MAXSTUDIOBONES];
+typedef qboolean 			(*pfnHitboxTrace)( trace_t *trace );
+static vec3_t			trace_startmins, trace_endmins;
+static vec3_t			trace_startmaxs, trace_endmaxs;
+static vec3_t			trace_absmins, trace_absmaxs;
+static float			trace_realfraction;
+static sv_blending_interface_t	*pBlendAPI;
 
 /*
 ====================
@@ -316,12 +320,12 @@ StudioCalcRotations
 
 ====================
 */
-static void SV_StudioCalcRotations( edict_t *ent, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f )
+static void SV_StudioCalcRotations( const edict_t *ent, int boneused[], int numbones, const byte *pcontroller, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f )
 {
-	int		i, frame;
+	int		i, j, frame;
 	mstudiobone_t	*pbone;
 	float		adj[MAXSTUDIOCONTROLLERS];
-	float		s, dadt = 1.0f; // noInterp
+	float		s;
 
 	if( f > pseqdesc->numframes - 1 )
 		f = 0;
@@ -334,12 +338,13 @@ static void SV_StudioCalcRotations( edict_t *ent, float pos[][3], vec4_t *q, mst
 	// add in programtic controllers
 	pbone = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
 
-	SV_StudioCalcBoneAdj( dadt, adj, ent->v.controller, ent->v.controller );
+	SV_StudioCalcBoneAdj( 1.0f, adj, pcontroller, pcontroller );
 
-	for( i = 0; i < sv_studiohdr->numbones; i++, pbone++, panim++ ) 
+	for( j = numbones - 1; j >= 0; j-- )
 	{
-		SV_StudioCalcBoneQuaterion( frame, s, pbone, panim, adj, q[i] );
-		SV_StudioCalcBonePosition( frame, s, pbone, panim, adj, pos[i] );
+		i = boneused[j];
+		SV_StudioCalcBoneQuaterion( frame, s, &pbone[i], &panim[i], adj, q[i] );
+		SV_StudioCalcBonePosition( frame, s, &pbone[i], &panim[i], adj, pos[i] );
 	}
 
 	if( pseqdesc->motiontype & STUDIO_X ) pos[pseqdesc->motionbone][0] = 0.0f;
@@ -359,13 +364,13 @@ StudioEstimateFrame
 
 ====================
 */
-static float SV_StudioEstimateFrame( edict_t *ent, mstudioseqdesc_t *pseqdesc )
+static float SV_StudioEstimateFrame( float frame, mstudioseqdesc_t *pseqdesc )
 {
 	double	f;
 	
 	if( pseqdesc->numframes <= 1 )
 		f = 0;
-	else f = (ent->v.frame * ( pseqdesc->numframes - 1 )) / 256.0;
+	else f = ( frame * ( pseqdesc->numframes - 1 )) / 256.0;
  
 	if( pseqdesc->flags & STUDIO_LOOPING ) 
 	{
@@ -459,17 +464,20 @@ static mstudioanim_t *SV_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 /*
 ====================
 StudioSetupBones
+
+NOTE: pEdict is unused
 ====================
 */
-static void SV_StudioSetupBones( edict_t *ent )
+static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, const vec3_t angles, const vec3_t origin,
+	const byte *pcontroller, const byte *pblending, int iBone, const edict_t *pEdict )
 {
-	int		i;
+	int		i, j, numbones;
+	int		boneused[MAXSTUDIOBONES];
 	double		f;
 
 	mstudiobone_t	*pbones;
 	mstudioseqdesc_t	*pseqdesc;
 	mstudioanim_t	*panim;
-	model_t		*m_pModel;
 
 	static float	pos[MAXSTUDIOBONES][3];
 	static vec4_t	q[MAXSTUDIOBONES];
@@ -482,15 +490,38 @@ static void SV_StudioSetupBones( edict_t *ent )
 	static float	pos4[MAXSTUDIOBONES][3];
 	static vec4_t	q4[MAXSTUDIOBONES];
 
-	m_pModel = CM_ClipHandleToModel( ent->v.modelindex );
+	if( sequence >= sv_studiohdr->numseq ) sequence = 0;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)sv_studiohdr + sv_studiohdr->seqindex) + sequence;
+	pbones = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
 
-	if( ent->v.sequence >= sv_studiohdr->numseq ) ent->v.sequence = 0;
-	pseqdesc = (mstudioseqdesc_t *)((byte *)sv_studiohdr + sv_studiohdr->seqindex) + ent->v.sequence;
+	if( iBone < -1 || iBone >= sv_studiohdr->numbones )
+	{
+		iBone = 0;
+	}
 
-	f = SV_StudioEstimateFrame( ent, pseqdesc );
+	numbones = 0;
 
-	panim = SV_StudioGetAnim( m_pModel, pseqdesc );
-	SV_StudioCalcRotations( ent, pos, q, pseqdesc, panim, f );
+	if( iBone == -1 )
+	{
+		numbones = sv_studiohdr->numbones;
+		for( i = 0; i < sv_studiohdr->numbones; i++ )
+		{
+			boneused[(numbones - i) - 1] = i;
+		}
+	}
+	else
+	{
+		for( i = iBone; i != -1; i = pbones[i].parent )
+		{
+			boneused[numbones] = i;
+			numbones++;
+		}
+	}
+
+	f = SV_StudioEstimateFrame( frame, pseqdesc );
+
+	panim = SV_StudioGetAnim( pModel, pseqdesc );
+	SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos, q, pseqdesc, panim, f );
 
 	if( pseqdesc->numblends > 1 )
 	{
@@ -498,32 +529,31 @@ static void SV_StudioSetupBones( edict_t *ent )
 		float	dadt = 1.0f;
 
 		panim += sv_studiohdr->numbones;
-		SV_StudioCalcRotations( ent, pos2, q2, pseqdesc, panim, f );
+		SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos2, q2, pseqdesc, panim, f );
 
-		s = (ent->v.blending[0] * dadt + ent->v.blending[0] * ( 1.0f - dadt )) / 255.0f;
+		s = (float)pblending[0] / 255.0f;
 
 		SV_StudioSlerpBones( q, pos, q2, pos2, s );
 
 		if( pseqdesc->numblends == 4 )
 		{
 			panim += sv_studiohdr->numbones;
-			SV_StudioCalcRotations( ent, pos3, q3, pseqdesc, panim, f );
+			SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos3, q3, pseqdesc, panim, f );
 
 			panim += sv_studiohdr->numbones;
-			SV_StudioCalcRotations( ent, pos4, q4, pseqdesc, panim, f );
+			SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos4, q4, pseqdesc, panim, f );
 
-			s = ( ent->v.blending[0] * dadt + ent->v.blending[0] * ( 1.0f - dadt )) / 255.0f;
+			s = (float)pblending[0] / 255.0f;
 			SV_StudioSlerpBones( q3, pos3, q4, pos4, s );
 
-			s = ( ent->v.blending[1] * dadt + ent->v.blending[1] * ( 1.0f - dadt )) / 255.0f;
+			s = (float)pblending[1] / 255.0f;
 			SV_StudioSlerpBones( q, pos, q3, pos3, s );
 		}
 	}
 
-	pbones = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
-
-	for( i = 0; i < sv_studiohdr->numbones; i++ ) 
+	for( j = numbones - 1; j >= 0; j-- )
 	{
+		i = boneused[j];
 		Matrix4x4_FromOriginQuat( bonematrix, pos[i][0], pos[i][1], pos[i][2], q[i][0], q[i][1], q[i][2], q[i][3] );
 		if( pbones[i].parent == -1 ) 
 			Matrix4x4_ConcatTransforms( sv_studiobones[i], sv_studiomatrix, bonematrix );
@@ -533,65 +563,21 @@ static void SV_StudioSetupBones( edict_t *ent )
 
 /*
 ====================
-StudioCalcAttachments
+StudioSetupModel
 
 ====================
 */
-static qboolean SV_StudioCalcAttachments( edict_t *e, int iAttachment, float *org, float *ang )
+static qboolean SV_StudioSetupModel( edict_t *ent, int iBone )
 {
-	int			i;
-	mstudioattachment_t		*pAtt;
-	vec3_t			axis[3];
-	vec3_t			localOrg, localAng;
-	void			*hdr = Mod_Extradata( e->v.modelindex );
-
-	if( !hdr ) return false;
-
-	sv_studiohdr = (studiohdr_t *)hdr;
-	if( sv_studiohdr->numattachments <= 0 )
-		return false;
-
-	SV_StudioSetUpTransform( e );
-	SV_StudioSetupBones( e );
-
-	if( sv_studiohdr->numattachments > MAXSTUDIOATTACHMENTS )
-	{
-		sv_studiohdr->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
-		MsgDev( D_WARN, "SV_StudioCalcAttahments: too many attachments on %s\n", sv_studiohdr->name );
-	}
-
-	iAttachment = bound( 0, iAttachment, sv_studiohdr->numattachments );
-
-	// calculate attachment points
-	pAtt = (mstudioattachment_t *)((byte *)sv_studiohdr + sv_studiohdr->attachmentindex);
-
-	for( i = 0; i < sv_studiohdr->numattachments; i++ )
-	{
-		if( i == iAttachment )
-		{
-			// compute pos and angles
-			Matrix4x4_VectorTransform( sv_studiobones[pAtt[i].bone], pAtt[i].org, localOrg );
-			Matrix4x4_VectorTransform( sv_studiobones[pAtt[i].bone], pAtt[i].vectors[0], axis[0] );
-			Matrix4x4_VectorTransform( sv_studiobones[pAtt[i].bone], pAtt[i].vectors[1], axis[1] );
-			Matrix4x4_VectorTransform( sv_studiobones[pAtt[i].bone], pAtt[i].vectors[2], axis[2] );
-			Matrix3x3_ToAngles( axis, localAng, true ); // FIXME: dll's uses FLU ?
-			if( org ) VectorCopy( localOrg, org );
-			if( ang ) VectorCopy( localAng, ang );
-			break; // done
-		}
-	}
-	return true;
-}
-
-static qboolean SV_StudioSetupModel( edict_t *ent )
-{
-	void	*hdr = Mod_Extradata( ent->v.modelindex );
+	model_t	*mod = CM_ClipHandleToModel( ent->v.modelindex );
+	void	*hdr = Mod_Extradata( mod );
 
 	if( !hdr ) return false;
 
 	sv_studiohdr = (studiohdr_t *)hdr;
 	SV_StudioSetUpTransform( ent );
-	SV_StudioSetupBones( ent );
+	pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, ent->v.angles, ent->v.origin,
+		ent->v.controller, ent->v.blending, iBone, ent );
 
 	return true;
 }
@@ -686,8 +672,8 @@ static qboolean SV_StudioTestToHitbox( trace_t *trace )
 	}
 
 	// inside this hitbox
-	trace->flFraction = trace_realfraction = 0;
-	trace->fStartSolid = trace->fAllSolid = true;
+	trace->fraction = trace_realfraction = 0;
+	trace->startsolid = trace->allsolid = true;
 
 	return true;
 }
@@ -802,8 +788,8 @@ static qboolean SV_StudioClipToHitbox( trace_t *trace )
 	if( !startout )
 	{	
 		// original point was inside hitbox
-		trace->fStartSolid = true;
-		if( !getout ) trace->fAllSolid = true;
+		trace->startsolid = true;
+		if( !getout ) trace->allsolid = true;
 		return true;
 	}
 
@@ -814,9 +800,9 @@ static qboolean SV_StudioClipToHitbox( trace_t *trace )
 			if( enterfrac < 0 )
 				enterfrac = 0;
 			trace_realfraction = enterfrac;
-			trace->flFraction = enterfrac - DIST_EPSILON * distfrac;
-            		VectorCopy( clipplane->normal, trace->vecPlaneNormal );
-            		trace->flPlaneDist = clipplane->dist;
+			trace->fraction = enterfrac - DIST_EPSILON * distfrac;
+            		VectorCopy( clipplane->normal, trace->plane.normal );
+            		trace->plane.dist = clipplane->dist;
 			return true;
 		}
 	}
@@ -881,14 +867,14 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 
 	// assume we didn't hit anything
 	Mem_Set( &trace, 0, sizeof( trace_t ));
-	VectorCopy( end, trace.vecEndPos );
-	trace.flFraction = trace_realfraction = 1.0f;
-	trace.iHitgroup = -1;
+	VectorCopy( end, trace.endpos );
+	trace.fraction = trace_realfraction = 1.0f;
+	trace.hitgroup = -1;
 
 	if( !SV_StudioIntersect( ent, start, mins, maxs, end ))
 		return trace;
 
-	if( !SV_StudioSetupModel( ent ))
+	if( !SV_StudioSetupModel( ent, -1 ))	// all bones used
 		return trace;
 
 	if( VectorCompare( start, end ))
@@ -916,10 +902,10 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 		if( TraceHitbox( &trace ))
 		{
 			outBone = phitbox->bone;
-			trace.iHitgroup = phitbox->group;
+			trace.hitgroup = phitbox->group;
 		}
 
-		if( trace.fAllSolid )
+		if( trace.allsolid )
 			break;
 	}
 
@@ -928,40 +914,102 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 	{
 		vec3_t	temp;
 
-		trace.pHit = ent;
-		VectorCopy( trace.vecPlaneNormal, temp );
-		trace.flFraction = bound( 0, trace.flFraction, 1.0f );
-		VectorLerp( start, trace.flFraction, end, trace.vecEndPos );
-		Matrix4x4_TransformPositivePlane( sv_studiobones[outBone], temp, trace.flPlaneDist, trace.vecPlaneNormal, &trace.flPlaneDist );
+		trace.ent = ent;
+		VectorCopy( trace.plane.normal, temp );
+		trace.fraction = bound( 0, trace.fraction, 1.0f );
+		VectorLerp( start, trace.fraction, end, trace.endpos );
+		Matrix4x4_TransformPositivePlane( sv_studiobones[outBone], temp, trace.plane.dist, trace.plane.normal, &trace.plane.dist );
 	}
 	return trace;
 }
 
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang )
 {
-	if( !SV_StudioCalcAttachments( e, iAttachment, org, ang ))
-	{
-		// reset attachments
-		if( org ) VectorCopy( e->v.origin, org );
-		if( ang ) VectorCopy( e->v.angles, ang );
+	mstudioattachment_t		*pAtt;
+	vec3_t			axis[3], bonepos;
+	vec3_t			localOrg, localAng;
+	void			*hdr;
+
+	hdr = Mod_Extradata( CM_ClipHandleToModel( e->v.modelindex ));
+	if( !hdr ) return;
+
+	sv_studiohdr = (studiohdr_t *)hdr;
+	if( sv_studiohdr->numattachments <= 0 )
 		return;
+
+	if( sv_studiohdr->numattachments > MAXSTUDIOATTACHMENTS )
+	{
+		sv_studiohdr->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
+		MsgDev( D_WARN, "SV_StudioGetAttahment: too many attachments on %s\n", sv_studiohdr->name );
 	}
+
+	iAttachment = bound( 0, iAttachment, sv_studiohdr->numattachments );
+
+	// calculate attachment origin and angles
+	pAtt = (mstudioattachment_t *)((byte *)sv_studiohdr + sv_studiohdr->attachmentindex);
+
+	SV_StudioSetupModel( e, pAtt[iAttachment].bone );
+
+	// compute pos and angles
+	Matrix4x4_VectorTransform( sv_studiobones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
+	Matrix4x4_OriginFromMatrix( sv_studiobones[pAtt[iAttachment].bone], bonepos );
+	VectorSubtract( localOrg, bonepos, axis[0] );	// make forward
+	VectorNormalizeFast( axis[0] );
+	VectorVectors( axis[0], axis[1], axis[2] );	// make right and up
+	Matrix3x3_ToAngles( axis, localAng, false );	// FIXME: dll's uses FLU ?
+
+	if( org ) VectorCopy( localOrg, org );
+	if( ang ) VectorCopy( localAng, ang );
 }
 
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 {
 	matrix3x3	axis;
 
-	if( !SV_StudioSetupModel( e ) || sv_studiohdr->numbones <= 0 )
-	{
-		// reset bones
-		if( org ) VectorCopy( e->v.origin, org );
-		if( ang ) VectorCopy( e->v.angles, ang );
+	if( !SV_StudioSetupModel( e, iBone ) || sv_studiohdr->numbones <= 0 )
 		return;
-	}
 
 	iBone = bound( 0, iBone, sv_studiohdr->numbones );
 	Matrix3x3_FromMatrix4x4( axis, sv_studiobones[iBone] );
 	if( org ) Matrix4x4_OriginFromMatrix( sv_studiobones[iBone], org );
 	if( ang ) Matrix3x3_ToAngles( axis, ang, true );
+}
+
+static sv_blending_interface_t gBlendAPI =
+{
+	SV_BLENDING_INTERFACE_VERSION,
+	SV_StudioSetupBones,
+};
+
+static server_studio_api_t gStudioAPI =
+{
+	Mod_Calloc,
+	Mod_CacheCheck,
+	Mod_LoadCacheFile,
+	Mod_Extradata,
+};
+   
+/*
+===============
+SV_InitStudioAPI
+
+Initialize server studio (blending interface)
+===============
+*/
+qboolean SV_InitStudioAPI( void )
+{
+	static STUDIOAPI	pBlendIface;
+
+	pBlendAPI = &gBlendAPI;
+
+	pBlendIface = (STUDIOAPI)FS_GetProcAddress( svgame.hInstance, "Server_GetBlendingInterface" );
+	if( pBlendIface && pBlendIface( SV_BLENDING_INTERFACE_VERSION, pBlendAPI, &gStudioAPI, sv_studiomatrix, sv_studiobones ))
+		return true;
+
+	// NOTE: we always return true even if game interface was not correct
+	// because SetupBones is used for hitbox tracing on the server-side
+	// just restore pointer to builtin function
+	pBlendAPI = &gBlendAPI;
+
+	return true;
 }

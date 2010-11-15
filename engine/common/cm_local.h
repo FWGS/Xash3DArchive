@@ -43,6 +43,8 @@ typedef struct clipmap_s
 
 	vec3_t		hull_sizes[4];	// hull sizes
 
+	byte		*studiopool;	// cache for submodels
+
 	script_t		*entityscript;	// only actual for world
 } clipmap_t;
 
@@ -81,9 +83,14 @@ void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
 modtype_t CM_GetModelType( int handle );
 model_t *CM_ClipHandleToModel( int handle );
+int CM_ClipModelToHandle( const model_t *pmodel );
 void CM_BeginRegistration ( const char *name, qboolean clientload, uint *checksum );
+model_t *CM_ModForName( const char *name, qboolean world );
 qboolean CM_RegisterModel( const char *name, int index );
-void *Mod_Extradata( int handle );
 void CM_EndRegistration( void );
+void *Mod_Calloc( int number, size_t size );
+void *Mod_CacheCheck( struct cache_user_s *c );
+void Mod_LoadCacheFile( const char *path, struct cache_user_s *cu );
+void *Mod_Extradata( model_t *mod );
 
 #endif//CM_LOCAL_H

@@ -403,19 +403,19 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 
 		tr = SV_Move( testspot, vec3_origin, vec3_origin, testend, MOVE_NOMONSTERS, NULL );
 
-		if( tr.flFraction != 1.0f && !tr.fAllSolid )
+		if( tr.fraction != 1.0f && !tr.allsolid )
 		{
 			// check impact plane normal
-			float	dot = DotProduct( entry->impactPlaneNormal, tr.vecPlaneNormal );
+			float	dot = DotProduct( entry->impactPlaneNormal, tr.plane.normal );
 
 			if( dot >= 0.95f )
 			{
-				entityIndex = pfnIndexOfEdict( tr.pHit );
+				entityIndex = pfnIndexOfEdict( tr.ent );
 				if( entityIndex > 0 )
-					modelIndex = tr.pHit->v.modelindex;
+					modelIndex = tr.ent->v.modelindex;
 
 				// FIXME: probably some rotating or moving objects can't receive decal properly
-				SV_CreateDecal( tr.vecEndPos, decalIndex, entityIndex, modelIndex, flags );
+				SV_CreateDecal( tr.endpos, decalIndex, entityIndex, modelIndex, flags );
 			}
 		}
 	}

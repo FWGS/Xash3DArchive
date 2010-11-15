@@ -289,7 +289,6 @@ static vec2_t		tri_coords[MAX_TRIVERTS];
 static rgba_t		tri_colors[MAX_TRIVERTS];
 static elem_t		tri_elems[MAX_TRIELEMS];
 static mesh_t		tri_mesh;
-static qboolean		tri_caps[3];
 meshbuffer_t		tri_mbuffer;
 tristate_t		triState;
 
@@ -305,9 +304,7 @@ static void Tri_DrawPolygon( void )
 	ref_shader_t	*shader;
 	static int	i, oldframe;
 
-	if( tri_caps[TRI_SHADER] )
-		shader = &r_shaders[triState.currentShader];
-	else shader = tr.fillShader;
+	shader = &r_shaders[triState.currentShader];
 
 	tri_mesh.numVerts = triState.numVertex;
 	tri_mesh.numElems = triState.numIndex;
@@ -581,18 +578,6 @@ void Tri_Bind( shader_t handle, int frame )
 		glState.draw_frame = bound( 0, frame, shader->stages[0].num_textures );
 }
 
-void Tri_Enable( int cap )
-{
-	if( cap < 0 || cap > TRI_MAXCAPS ) return;
-	tri_caps[cap] = true;
-}
-
-void Tri_Disable( int cap )
-{
-	if( cap < 0 || cap > TRI_MAXCAPS ) return;
-	tri_caps[cap] = false;
-}
-
 void Tri_Begin( int mode )
 {
 	triState.drawMode = mode;
@@ -609,8 +594,7 @@ void Tri_End( void )
 
 void Tri_RenderCallback( int fTrans )
 {
-	if( RI.refdef.flags & RDF_NOWORLDMODEL )
-		return;
+	if( !RI.drawWorld ) return;
 
 	triState.fActive = true;
 

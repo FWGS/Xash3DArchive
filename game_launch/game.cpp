@@ -35,7 +35,7 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 {
 	HINSTANCE	hmain;
 
-	if(( hmain = LoadLibrary( "bin\\launch.dll" )) == NULL )
+	if(( hmain = LoadLibrary( "launch.dll" )) == NULL )
 	{
 		Sys_Error( "Unable to load the launch.dll" );
 	}

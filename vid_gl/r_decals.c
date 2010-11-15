@@ -1210,7 +1210,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 	int	total = 0;
 	int	i, depth;
 
-	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
+	if( r_worldmodel && RI.drawWorld )
 	{
 		for( i = 0; i < MAX_RENDER_DECALS; i++ )
 		{

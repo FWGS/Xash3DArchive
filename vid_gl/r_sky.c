@@ -309,9 +309,9 @@ void R_DrawSky( ref_shader_t *shader )
 	VectorAdd( mins, RI.viewOrigin, mins );
 	VectorAdd( maxs, RI.viewOrigin, maxs );
 
-	if( RI.refdef.flags & RDF_SKYPORTALINVIEW )
+	if( RI.rdflags & RDF_SKYPORTALINVIEW )
 	{
-		R_DrawSkyPortal( &RI.refdef.skyportal, mins, maxs );
+		R_DrawSkyPortal( &RI.skyportal, mins, maxs );
 		return;
 	}
 

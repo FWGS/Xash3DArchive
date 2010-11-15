@@ -8,6 +8,7 @@
 #include "byteorder.h"
 #include "const.h"
 #include "bspfile.h"
+#include "../cl_dll/kbutton.h"
 
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
@@ -908,6 +909,7 @@ Writes key bindings and archived cvars to config.cfg
 void Host_WriteConfig( void )
 {
 	file_t	*f;
+	kbutton_t	*mlook, *jlook;
 
 	if( !cls.initialized ) return;
 
@@ -920,6 +922,16 @@ void Host_WriteConfig( void )
 		FS_Printf( f, "//=======================================================================\n" );
 		Key_WriteBindings( f );
 		Cmd_WriteVariables( f );
+
+		mlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_mlook" );
+		jlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_jlook" );
+
+		if( mlook && ( mlook->state & 1 )) 
+			FS_Printf( f, "+mlook\n" );
+
+		if( jlook && ( jlook->state & 1 ))
+			FS_Printf( f, "+jlook\n" );
+
 		FS_Close( f );
 	}
 	else MsgDev( D_ERROR, "Couldn't write config.cfg.\n" );

@@ -150,6 +150,26 @@ static qboolean IN_CursorInRect( void )
 	return true;
 }
 
+/*
+===========
+IN_ToggleClientMouse
+
+Called when key_dest is changed
+===========
+*/
+void IN_ToggleClientMouse( int newstate, int oldstate )
+{
+	if( newstate == oldstate ) return;
+
+	if( oldstate == key_game )
+	{
+		clgame.dllFuncs.IN_DeactivateMouse();
+	}
+	else if( newstate == key_game )
+	{
+		clgame.dllFuncs.IN_ActivateMouse();
+	}
+}
 
 /*
 ===========
@@ -213,7 +233,11 @@ void IN_ActivateMouse( void )
 	if( in_mouseactive ) return;
 	in_mouseactive = true;
 
-	if( in_mouseparmsvalid )
+	if( CL_IsInGame( ))
+	{
+		clgame.dllFuncs.IN_ActivateMouse();
+	}
+	else if( in_mouseparmsvalid )
 		in_restore_spi = SystemParametersInfo( SPI_SETMOUSE, 0, in_newmouseparms, 0 );
 
 	width = GetSystemMetrics( SM_CXSCREEN );
@@ -246,7 +270,11 @@ void IN_DeactivateMouse( void )
 	if( !in_mouseinitialized || !in_mouseactive )
 		return;
 
-	if( in_restore_spi )
+	if( CL_IsInGame( ))
+	{
+		clgame.dllFuncs.IN_DeactivateMouse();
+	}
+	else if( in_restore_spi )
 		SystemParametersInfo( SPI_SETMOUSE, 0, in_originalmouseparms, 0 );
 
 	in_mouseactive = false;
@@ -265,7 +293,7 @@ void IN_MouseMove( void )
 	POINT	current_pos;
 	int	mx, my;
 	
-	if( !in_mouseinitialized || !in_mouseactive || in_mouse_suspended )
+	if( !in_mouseinitialized || !in_mouseactive || in_mouse_suspended || CL_IsInGame( ))
 		return;
 
 	// find mouse movement
@@ -291,6 +319,12 @@ void IN_MouseEvent( int mstate )
 
 	if( !in_mouseinitialized || !in_mouseactive )
 		return;
+
+	if( CL_IsInGame( ))
+	{
+		clgame.dllFuncs.IN_MouseEvent( mstate );
+		return;
+	}
 
 	// perform button actions
 	for( i = 0; i < in_mouse_buttons; i++ )
@@ -440,6 +474,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		wnd_caption = GetSystemMetrics( SM_CYCAPTION ) + WND_BORDER;
 		S_Activate(( host.state == HOST_FRAME ) ? true : false, host.hWnd );
 		Key_ClearStates();	// FIXME!!!
+		clgame.dllFuncs.IN_ClearStates();
 
 		if( host.state == HOST_FRAME )
 		{

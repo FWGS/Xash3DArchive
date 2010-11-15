@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "server" /I "client" /I "uimenu" /I "../public" /I "../common" /I "../game_shared" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "server" /I "client" /I "uimenu" /I "../public" /I "../common" /I "../game_shared" /I "../pm_shared" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -61,8 +61,8 @@ TargetDir=\Xash3D\src_main\temp\engine\!release
 InputPath=\Xash3D\src_main\temp\engine\!release\engine.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\engine.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\engine.dll "D:\Xash3D\bin\engine.dll"
+"D:\Xash3D\engine.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\engine.dll "D:\Xash3D\engine.dll"
 
 # End Custom Build
 
@@ -80,7 +80,7 @@ SOURCE="$(InputPath)"
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "common" /I "server" /I "client" /I "uimenu" /I "../public" /I "../common" /I "../game_shared" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
+# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "common" /I "server" /I "client" /I "uimenu" /I "../public" /I "../common" /I "../game_shared" /I "../pm_shared" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -98,8 +98,8 @@ TargetDir=\Xash3D\src_main\temp\engine\!debug
 InputPath=\Xash3D\src_main\temp\engine\!debug\engine.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\engine.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\engine.dll "D:\Xash3D\bin\engine.dll"
+"D:\Xash3D\engine.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\engine.dll "D:\Xash3D\engine.dll"
 
 # End Custom Build
 
@@ -170,6 +170,10 @@ SOURCE=.\client\cl_scrn.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\cl_studio.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\cl_tent.c
 # End Source File
 # Begin Source File
@@ -179,10 +183,6 @@ SOURCE=.\client\cl_video.c
 # Begin Source File
 
 SOURCE=.\client\cl_view.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\client\cl_world.c
 # End Source File
 # Begin Source File
 

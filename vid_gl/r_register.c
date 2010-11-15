@@ -52,6 +52,7 @@ convar_t *r_faceplanecull;
 convar_t *gl_wireframe;
 convar_t *r_shownormals;
 convar_t *r_showtextures;
+convar_t *r_adjust_fov;
 convar_t *r_draworder;
 convar_t *r_width;
 convar_t *r_height;
@@ -117,7 +118,6 @@ convar_t *r_picmip;
 convar_t *r_skymip;
 convar_t *r_nobind;
 convar_t *gl_clear;
-convar_t *r_polyblend;
 convar_t *r_lockpvs;
 convar_t *r_swapInterval;
 convar_t *r_frontbuffer;
@@ -502,7 +502,6 @@ void GL_InitCommands( void )
 	r_nobind = Cvar_Get( "r_nobind", "0", 0, "disable all textures (perfomance test)" );
 	r_picmip = Cvar_Get( "r_picmip", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	r_skymip = Cvar_Get( "r_skymip", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
-	r_polyblend = Cvar_Get( "r_polyblend", "1", 0, "tints view while underwater, hurt, etc" );
 	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
 	r_physbdebug = Cvar_Get( "cm_debugdraw", "0", CVAR_ARCHIVE, "draw physics hulls" );
 
@@ -532,6 +531,7 @@ void GL_InitCommands( void )
 	r_shownormals = Cvar_Get( "r_shownormals", "0", CVAR_CHEAT, "show mesh normals" );
 	r_showtextures = Cvar_Get("r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures" );
 	r_draworder = Cvar_Get( "r_draworder", "0", CVAR_CHEAT, "ignore mesh sorting" );
+	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", CVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
 
 	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytem fo fast sky rendering (for old machines)" );
 	r_portalonly = Cvar_Get( "r_portalonly", "0", 0, "render only portals" );

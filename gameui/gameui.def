@@ -1,5 +1,0 @@
-LIBRARY gameui
-EXPORTS
-	CreateAPI			@1
-SECTIONS
-	.data READ WRITE

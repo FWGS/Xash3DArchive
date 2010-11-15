@@ -91,9 +91,9 @@ BOOL CCrowbar::Deploy( )
 	return DefaultDeploy( "models/v_crowbar.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
 }
 
-void CCrowbar::Holster( void )
+void CCrowbar::Holster( int skiplocal /* = 0 */ )
 {
-	m_pPlayer->m_flNextAttack = m_pPlayer->WeaponTimeBase() + 0.5;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	SendWeaponAnim( CROWBAR_HOLSTER );
 }
 
@@ -168,7 +168,7 @@ void CCrowbar::SwingAgain( void )
 int CCrowbar::Swing( int fFirst )
 {
 	int fDidHit = FALSE;
-	BOOL bHit = FALSE;
+
 	TraceResult tr;
 
 	UTIL_MakeVectors (m_pPlayer->pev->v_angle);
@@ -193,27 +193,17 @@ int CCrowbar::Swing( int fFirst )
 	}
 #endif
 
-	int flags;
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usCrowbar, 
+	0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, 0,
+	0.0, 0, 0.0 );
 
-	if( IsLocalWeapon( ))
-	{
-		flags = FEV_NOTHOST;
-	}
-	else
-	{
-		flags = 0;
-	}
 
 	if ( tr.flFraction >= 1.0 )
 	{
-		if ( fFirst )
+		if (fFirst)
 		{
-			PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usCrowbar, 
-			0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, 0,
-			0.0, 0, 0.0 );
-
 			// miss
-			m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.5;
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
 			
 			// player "shoot" animation
 			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -242,15 +232,15 @@ int CCrowbar::Swing( int fFirst )
 
 		ClearMultiDamage( );
 
-		if (( m_flNextPrimaryAttack + 1 < m_pPlayer->WeaponTimeBase() ) || g_pGameRules->IsMultiplayer() )
+		if ( (m_flNextPrimaryAttack + 1 < UTIL_WeaponTimeBase() ) || g_pGameRules->IsMultiplayer() )
 		{
 			// first swing does full damage
-			pEntity->TraceAttack( m_pPlayer->pev, gSkillData.plrDmgCrowbar, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar, gpGlobals->v_forward, &tr, DMG_CLUB ); 
 		}
 		else
 		{
 			// subsequent swings do half
-			pEntity->TraceAttack( m_pPlayer->pev, gSkillData.plrDmgCrowbar / 2, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar / 2, gpGlobals->v_forward, &tr, DMG_CLUB ); 
 		}	
 		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 
@@ -314,23 +304,15 @@ int CCrowbar::Swing( int fFirst )
 
 		m_pPlayer->m_iWeaponVolume = flVol * CROWBAR_WALLHIT_VOLUME;
 #endif
-		m_flNextPrimaryAttack = m_pPlayer->WeaponTimeBase() + 0.25;
-
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.25;
+		
 		SetThink( Smack );
-		pev->nextthink = m_pPlayer->WeaponTimeBase() + 0.2;
+		pev->nextthink = UTIL_WeaponTimeBase() + 0.2;
 
-
+		
 	}
 	return fDidHit;
 }
 
-void CCrowbar:: WeaponIdle( void )
-{
-	if ( m_flTimeWeaponIdle > m_pPlayer->WeaponTimeBase() ) return;
-	float flRand = RANDOM_FLOAT(0, 1);
-	if ( flRand <= 0.5 )
-	{
-		SendWeaponAnim( CROWBAR_IDLE );
-		m_flTimeWeaponIdle = m_pPlayer->WeaponTimeBase() + RANDOM_FLOAT ( 10, 15 );
-	}
-}
+
+

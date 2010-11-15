@@ -634,6 +634,8 @@ Key_SetKeyDest
 */
 void Key_SetKeyDest( int key_dest )
 {
+	IN_ToggleClientMouse( key_dest, cls.key_dest );
+
 	switch( key_dest )
 	{
 	case key_game:
@@ -704,10 +706,5 @@ void CL_MouseEvent( int mx, int my )
 	{
 		// if the menu is visible, move the menu cursor
 		UI_MouseMove( mx, my );
-	}
-	else if( cls.key_dest != key_console && CL_Active( ))
-	{
-		// otherwise passed into client.dll
-		clgame.dllFuncs.pfnMouseEvent( mx, my );
 	}
 }

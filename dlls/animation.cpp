@@ -16,10 +16,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "extdll.h"
-#include "studio.h"
-#include "util.h"
+#include "../common/nowin.h"
 
+typedef int BOOL;
+#define TRUE	 1	
+#define FALSE	0
+
+// hack into header files that we can ship
+typedef int qboolean;
+typedef unsigned char byte;
+#include "mathlib.h"
+#include "const.h"
+#include "progdefs.h"
+#include "edict.h"
+#include "eiface.h"
+
+#include "studio.h"
 
 #ifndef ACTIVITY_H
 #include "activity.h"
@@ -35,7 +47,17 @@
 #include "scriptevent.h"
 #endif
 
-int ExtractBbox( void *pmodel, int sequence, Vector &mins, Vector &maxs )
+#ifndef ENGINECALLBACK_H
+#include "enginecallback.h"
+#endif
+
+extern globalvars_t				*gpGlobals;
+
+#pragma warning( disable : 4244 )
+
+
+
+int ExtractBbox( void *pmodel, int sequence, float *mins, float *maxs )
 {
 	studiohdr_t *pstudiohdr;
 	
@@ -116,7 +138,7 @@ int LookupActivityHeaviest( void *pmodel, entvars_t *pev, int activity )
 	return seq;
 }
 
-void GetEyePosition ( void *pmodel, Vector &vecEyePosition )
+void GetEyePosition ( void *pmodel, float *vecEyePosition )
 {
 	studiohdr_t *pstudiohdr;
 	
@@ -128,7 +150,7 @@ void GetEyePosition ( void *pmodel, Vector &vecEyePosition )
 		return;
 	}
 
-	vecEyePosition = pstudiohdr->eyeposition;
+	VectorCopy ( pstudiohdr->eyeposition, vecEyePosition );
 }
 
 int LookupSequence( void *pmodel, const char *label )
@@ -193,10 +215,7 @@ void SequencePrecache( void *pmodel, const char *pSequenceName )
 					ALERT( at_error, "Bad sound event %d in sequence %s :: %s (sound is \"%s\")\n", pevent[i].event, pstudiohdr->name, pSequenceName, pevent[i].options );
 				}
 
-				// g-cont. old code crash server when using StringTable
-				// new code working fine in both modes                                        
-				PRECACHE_SOUND( (char *)STRING( ALLOC_STRING( pevent[i].options )) );
-//				PRECACHE_SOUND( (char *)(gpGlobals->pStringBase + ALLOC_STRING(pevent[i].options) ) );
+				PRECACHE_SOUND( (char *)(gpGlobals->pStringBase + ALLOC_STRING(pevent[i].options) ) );
 			}
 		}
 	}

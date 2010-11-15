@@ -11,13 +11,13 @@ call vcvars32
 %MSDEV% dlls/hl.dsp %CONFIG%"hl - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% client/client.dsp %CONFIG%"client - Win32 Debug" %build_target%
+%MSDEV% cl_dll/cl_dll.dsp %CONFIG%"cl_dll - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 %MSDEV% engine/engine.dsp %CONFIG%"engine - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% gameui/gameui.dsp %CONFIG%"gameui - Win32 Debug" %build_target%
+%MSDEV% mainui/mainui.dsp %CONFIG%"mainui - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 %MSDEV% launch/launch.dsp %CONFIG%"launch - Win32 Debug" %build_target%
@@ -29,7 +29,7 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% snd_dx/snd_dx.dsp %CONFIG%"snd_dx - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% xtools/xtools.dsp %CONFIG%"xtools - Win32 Debug" %build_target%
+%MSDEV% utils/utils.dsp %CONFIG%"utils - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 if "%BUILD_ERROR%"=="" goto build_ok
@@ -52,14 +52,14 @@ goto done
 
 rem //delete log files
 if exist dlls\hl.plg del /f /q dlls\hl.plg
-if exist client\client.plg del /f /q client\client.plg
+if exist cl_dll\cl_dll.plg del /f /q cl_dll\cl_dll.plg
 if exist engine\engine.plg del /f /q engine\engine.plg
-if exist gameui\gameui.plg del /f /q gameui\gameui.plg
+if exist mainui\mainui.plg del /f /q mainui\mainui.plg
 if exist launch\launch.plg del /f /q launch\launch.plg
 if exist vid_gl\vid_gl.plg del /f /q vid_gl\vid_gl.plg
 if exist viewer\viewer.plg del /f /q viewer\viewer.plg
 if exist snd_dx\snd_dx.plg del /f /q snd_dx\snd_dx.plg
-if exist xtools\xtools.plg del /f /q xtools\xtools.plg
+if exist utils\utils.plg del /f /q utils\utils.plg
 
 echo
 echo 	     Build succeeded!

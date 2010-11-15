@@ -374,7 +374,7 @@ mfog_t *R_FogForSphere( const vec3_t centre, const float radius )
 	mfog_t *fog;
 	mplane_t *plane;
 
-	if( !r_worldmodel || ( RI.refdef.flags & RDF_NOWORLDMODEL ) || !r_worldbrushmodel->numfogs )
+	if( !r_worldmodel || !RI.drawWorld || !r_worldbrushmodel->numfogs )
 		return NULL;
 	if( RI.params & RP_SHADOWMAPVIEW )
 		return NULL;
@@ -718,7 +718,7 @@ static void R_AddSpriteModelToList( ref_entity_t *e )
 	if( e->customShader ) shader = e->customShader;
 	else shader = &r_shaders[frame->shader];
 
-	if( RI.refdef.flags & (RDF_PORTALINVIEW|RDF_SKYPORTALINVIEW) || ( RI.params & RP_SKYPORTALVIEW ))
+	if( RI.rdflags & (RDF_PORTALINVIEW|RDF_SKYPORTALINVIEW) || ( RI.params & RP_SKYPORTALVIEW ))
 	{
 		if( R_VisCullSphere( e->origin, frame->radius ))
 			return;
@@ -739,43 +739,6 @@ qboolean R_SpriteOverflow( void )
 }
 
 //==================================================================================
-/*
-============
-R_PolyBlend
-============
-*/
-static void R_PolyBlend( void )
-{
-	if( !r_polyblend->integer )
-		return;
-	if( RI.refdef.blend[3] < 0.01f )
-		return;
-
-	pglMatrixMode( GL_PROJECTION );
-	pglLoadIdentity();
-	pglOrtho( 0, 1, 1, 0, -99999, 99999 );
-
-	pglMatrixMode( GL_MODELVIEW );
-	pglLoadIdentity();
-
-	GL_Cull( 0 );
-	GL_SetState( GLSTATE_NO_DEPTH_TEST|GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
-
-	pglDisable( GL_TEXTURE_2D );
-
-	pglColor4fv( RI.refdef.blend );
-
-	pglBegin( GL_TRIANGLES );
-	pglVertex2f( -5, -5 );
-	pglVertex2f( 10, -5 );
-	pglVertex2f( -5, 10 );
-	pglEnd();
-
-	pglEnable( GL_TEXTURE_2D );
-
-	pglColor4f( 1, 1, 1, 1 );
-}
-
 /*
 ===============
 R_ApplySoftwareGamma
@@ -880,7 +843,7 @@ static float R_FarClip( void )
 {
 	float farclip_dist;
 
-	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
+	if( r_worldmodel && RI.drawWorld )
 	{
 		int	i;
 		float	dist;
@@ -926,10 +889,8 @@ static void R_SetupProjectionMatrix( const ref_params_t *rd, matrix4x4 m )
 {
 	GLdouble xMin, xMax, yMin, yMax, zNear, zFar;
 
-	if( rd->flags & RDF_NOWORLDMODEL )
-		RI.farClip = 2048;
-	else
-		RI.farClip = R_FarClip();
+	if( !RI.drawWorld ) RI.farClip = 2048;
+	else RI.farClip = R_FarClip();
 
 	zNear = Z_NEAR;
 	zFar = RI.farClip;
@@ -978,7 +939,7 @@ static void R_SetupFrame( void )
 	RI.vup = RI.viewAxis[2];
 
 	// ambient lighting
-	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
+	if( r_worldmodel && RI.drawWorld )
 	{
 		mapConfig.environmentColor[0] = RI.refdef.movevars->skycolor_r;
 		mapConfig.environmentColor[1] = RI.refdef.movevars->skycolor_g;
@@ -992,7 +953,7 @@ static void R_SetupFrame( void )
 	r_framecount++;
 
 	// current viewleaf
-	if(!( RI.refdef.flags & RDF_NOWORLDMODEL ))
+	if( RI.drawWorld )
 	{
 		mleaf_t	*leaf;
 		vec3_t	tmp;
@@ -1097,7 +1058,7 @@ static void R_Clear( int bitMask )
 
 	bits = GL_DEPTH_BUFFER_BIT;
 
-	if( !( RI.refdef.flags & RDF_NOWORLDMODEL ) && r_fastsky->integer )
+	if( RI.drawWorld && r_fastsky->integer )
 		bits |= GL_COLOR_BUFFER_BIT;
 	if( glState.stencilEnabled && ( r_shadows->integer >= SHADOW_PLANAR ) )
 		bits |= GL_STENCIL_BUFFER_BIT;
@@ -1109,7 +1070,7 @@ static void R_Clear( int bitMask )
 
 	if( bits & GL_COLOR_BUFFER_BIT )
 	{
-		byte *color = r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ) && r_worldbrushmodel->globalfog ?
+		byte *color = ( r_worldmodel && RI.drawWorld && r_worldbrushmodel->globalfog ) ?
 			r_worldbrushmodel->globalfog->shader->fog_color : mapConfig.environmentColor;
 		pglClearColor( (float)color[0]*( 1.0/255.0 ), (float)color[1]*( 1.0/255.0 ), (float)color[2]*( 1.0/255.0 ), 1 );
 	}
@@ -1495,7 +1456,7 @@ void R_RenderDebugSurface( void )
 	vec3_t	forward;
 	vec3_t	start, end;
 
-	if( RI.params & RP_NONVIEWERREF || RI.refdef.flags & RDF_NOWORLDMODEL )
+	if( RI.params & RP_NONVIEWERREF || !RI.drawWorld )
 		return;
 
 	r_debug_surface = NULL;
@@ -1551,7 +1512,7 @@ void R_RenderView( const ref_params_t *fd )
 
 	R_ClearMeshList( RI.meshlist );
 
-	if( !r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ))
+	if( !r_worldmodel && RI.drawWorld )
 		Host_Error( "R_RenderView: NULL worldmodel\n" );
 
 	R_SetupFrame();
@@ -1826,7 +1787,7 @@ void R_AddLightStyleToScene( int style, float r, float g, float b )
 R_RenderScene
 ===============
 */
-void R_RenderScene( const ref_params_t *fd )
+void R_RenderScene( const ref_params_t *fd, qboolean drawWorld )
 {
 	// flush any remaining 2D bits
 	R_Set2DMode( false );
@@ -1836,7 +1797,7 @@ void R_RenderScene( const ref_params_t *fd )
 
 	R_BackendStartFrame();
 
-	if(!( fd->flags & RDF_NOWORLDMODEL ))
+	if( drawWorld )
 	{
 		r_lastRefdef = *fd;
 	}
@@ -1849,10 +1810,13 @@ void R_RenderScene( const ref_params_t *fd )
 	RI.params = RP_NONE;
 	RI.refdef = *fd;
 	RI.farClip = 0;
+	RI.rdflags = 0;
 	RI.clipFlags = 15;
-	RI.lerpFrac = RI.refdef.lerpfrac;
+	RI.drawWorld = drawWorld;
+	RI.lerpFrac = ri.GetLerpFrac();
+	RI.thirdPerson = ri.IsThirdPerson();
 
-	if( r_worldmodel && !( RI.refdef.flags & RDF_NOWORLDMODEL ) && r_worldbrushmodel->globalfog )
+	if( r_worldmodel && RI.drawWorld && r_worldbrushmodel->globalfog )
 	{
 		RI.farClip = r_worldbrushmodel->globalfog->shader->fog_dist;
 		RI.farClip = max( r_farclip_min, RI.farClip ) + r_farclip_bias;
@@ -1864,14 +1828,14 @@ void R_RenderScene( const ref_params_t *fd )
 	RI.shadowGroup = NULL;
 
 	// adjust field of view for widescreen
-	if( glState.wideScreen && !( fd->flags & RDF_NOFOVADJUSTMENT ))
+	if( glState.wideScreen && r_adjust_fov->integer )
 		AdjustFov( &RI.refdef.fov_x, &RI.refdef.fov_y, glState.width, glState.height, false );
 
 	Vector4Set( RI.scissor, fd->viewport[0], glState.height - fd->viewport[3] - fd->viewport[1], fd->viewport[2], fd->viewport[3] );
 	Vector4Set( RI.viewport, fd->viewport[0], glState.height - fd->viewport[3] - fd->viewport[1], fd->viewport[2], fd->viewport[3] );
 	VectorCopy( fd->vieworg, RI.pvsOrigin );
 
-	if( gl_finish->integer && !gl_delayfinish->integer && !( fd->flags & RDF_NOWORLDMODEL ))
+	if( gl_finish->integer && !gl_delayfinish->integer && drawWorld )
 		pglFinish();
 
 	R_ClearShadowmaps();
@@ -1881,8 +1845,6 @@ void R_RenderScene( const ref_params_t *fd )
 	R_RenderView( fd );
 
 	R_BloomBlend( fd );
-
-	R_PolyBlend();
 
 	R_BackendEndFrame();
 
@@ -2193,7 +2155,7 @@ msurface_t *R_TraceLine( pmtrace_t *tr, const vec3_t start, const vec3_t end, in
 		e = &r_entities[i];
 
 		// don't trace localclient
-		if( RP_LOCALCLIENT( e ) && !( RI.refdef.flags & RDF_THIRDPERSON ))
+		if( RP_LOCALCLIENT( e ) && !RI.thirdPerson )
 			continue;
 
 		if( !e->model || ( e->model->type != mod_brush && e->model->type != mod_studio ))
@@ -2303,6 +2265,15 @@ shader_t R_GetSpriteTexture( int spriteIndex, int spriteFrame )
 	return pSpriteFrame->shader;
 }
 
+void R_SetSkyPortal( const vec3_t vieworg, const vec3_t viewangles, float scale, float fov )
+{
+	VectorCopy( vieworg, RI.skyportal.vieworg );
+	VectorCopy( viewangles, RI.skyportal.viewangles );
+	RI.skyportal.fov = max( 1.0f, fov );	// to avoid division by zero
+	RI.skyportal.scale = scale;
+	RI.rdflags |= RDF_SKYPORTALINVIEW;	// enable sky portal
+}
+
 qboolean R_AddLightStyle( int stylenum, vec3_t color )
 {
 	if( stylenum < 0 || stylenum > MAX_LIGHTSTYLES )
@@ -2391,6 +2362,9 @@ qboolean R_AddPortalEntity( cl_entity_t *pRefEntity, ref_entity_t *refent )
 	VectorCopy( pRefEntity->curstate.vuser2, refent->movedir );	// FIXME: movedir
 	VectorCopy( pRefEntity->origin, refent->origin );
 	VectorCopy( pRefEntity->curstate.vuser1, refent->origin2 );	// FIXME: oldorigin
+
+	if( !VectorCompare( pRefEntity->curstate.origin, pRefEntity->curstate.vuser1 ))
+		RI.rdflags |= RDF_PORTALINVIEW;
 
 	// calculate angles
 	Matrix3x3_FromAngles( refent->angles, refent->axis );
@@ -2568,8 +2542,6 @@ render_exp_t EXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.Vertex3f = Tri_Vertex3f;
 	re.Color4ub = Tri_Color4ub;
 	re.CullFace = Tri_CullFace;
-	re.Disable = Tri_Disable;
-	re.Enable = Tri_Enable;
 	re.Begin = Tri_Begin;
 	re.Bind = Tri_Bind;
 	re.End = Tri_End;
@@ -2580,6 +2552,7 @@ render_exp_t EXPORT *CreateAPI(stdlib_api_t *input, render_imp_t *engfuncs )
 	re.SetParms = R_DrawSetParms;
 	re.ScrShot = VID_ScreenShot;
 	re.EnvShot = VID_CubemapShot;
+	re.SetSkyPortal = R_SetSkyPortal;
 	re.LightForPoint = R_LightForPoint;
 	re.DrawStretchRaw = R_DrawStretchRaw;
 	re.DrawStretchPic = R_DrawStretchPic;

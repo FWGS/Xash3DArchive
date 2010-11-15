@@ -258,6 +258,41 @@ particle_t *CL_AllocParticle( void (*callback)( particle_t*, float ))
 	return p;
 }
 
+static void CL_SparkTracerDraw( particle_t *p, float frametime )
+{
+	float	lifePerc = p->die - cl.time;
+	float	grav = frametime * clgame.movevars.gravity * 0.05f;
+	float	length, width;
+	int	alpha = 255;
+	vec3_t	delta;
+
+	VectorScale( p->vel, p->ramp, delta );
+	length = VectorLength( delta );
+	width = ( length < TRACER_WIDTH ) ? length : TRACER_WIDTH;
+	if( lifePerc < 0.5f ) alpha = (lifePerc * 2) * 255;
+
+	CL_DrawTracer( p->org, delta, width, clgame.palette[p->color], alpha, 0.0f, 0.8f );
+
+	p->vel[2] -= grav * 8; // use vox gravity
+	VectorMA( p->org, frametime, p->vel, p->org );
+}
+
+static void CL_BulletTracerDraw( particle_t *p, float frametime )
+{
+	int	alpha = (int)(traceralpha->value * 255);
+	float	length, width;
+	vec3_t	delta;
+
+	VectorScale( p->vel, p->ramp, delta );
+	length = VectorLength( delta );
+	width = ( length < TRACER_WIDTH ) ? length : TRACER_WIDTH;
+
+	// bullet tracers used particle palette
+	CL_DrawTracer( p->org, delta, width, clgame.palette[p->color], alpha, 0.0f, 0.8f );
+
+	VectorMA( p->org, frametime, p->vel, p->org );
+}
+
 /*
 ================
 CL_UpdateParticle
@@ -283,8 +318,14 @@ void CL_UpdateParticle( particle_t *p, float ft )
 		break;
 	case pt_clientcustom:
 		if( p->callback )
+		{
 			p->callback( p, ft );
-		return;
+			if( p->callback == CL_BulletTracerDraw )
+				return;	// already drawed
+			else if( p->callback == CL_SparkTracerDraw )
+				return;	// already drawed
+		}
+		break;
 	case pt_fire:
 		p->ramp += time1;
 		if( p->ramp >= 6 ) p->die = -1;
@@ -365,7 +406,6 @@ void CL_UpdateParticle( particle_t *p, float ft )
 	p->color = bound( 0, p->color, 255 );
 	VectorSet( color, clgame.palette[p->color][0], clgame.palette[p->color][1], clgame.palette[p->color][2] );
 
-	re->Enable( TRI_SHADER );
 	re->RenderMode( kRenderTransTexture );
 	re->Color4ub( color[0], color[1], color[2], alpha );
 
@@ -384,10 +424,12 @@ void CL_UpdateParticle( particle_t *p, float ft )
 	re->Vertex3f( p->org[0] - right[0] - up[0], p->org[1] - right[1] - up[1], p->org[2] - right[2] - up[2] );
 
 	re->End();
-	re->Disable( TRI_SHADER );
 
-	// update position.
-	VectorMA( p->org, ft, p->vel, p->org );
+	if( p->type != pt_clientcustom )
+	{
+		// update position.
+		VectorMA( p->org, ft, p->vel, p->org );
+	}
 }
 
 void CL_DrawParticles( void )
@@ -1031,13 +1073,27 @@ CL_BulletImpactParticles
 
 ===============
 */
-void CL_BulletImpactParticles( const vec3_t pos )
+void CL_BulletImpactParticles( const vec3_t org )
 {
 	particle_t	*p;
+	vec3_t		pos, dir;
 	int		i, j;
 
 	// do sparks
-	CL_SparkShower( pos );
+	// randomize position
+	pos[0] = org[0] + Com_RandomFloat( -2.0f, 2.0f );
+	pos[1] = org[1] + Com_RandomFloat( -2.0f, 2.0f );
+	pos[2] = org[2] + Com_RandomFloat( -2.0f, 2.0f );
+
+	// create a 8 random spakle tracers
+	for( i = 0; i < 8; i++ )
+	{
+		dir[0] = Com_RandomFloat( -1.0f, 1.0f );
+		dir[1] = Com_RandomFloat( -1.0f, 1.0f );
+		dir[2] = Com_RandomFloat( -1.0f, 1.0f );
+
+		CL_SparkleTracer( pos, dir );
+	}
 
 	for( i = 0; i < 25; i++ )
 	{
@@ -1045,13 +1101,14 @@ void CL_BulletImpactParticles( const vec3_t pos )
 		if( !p ) return;
             
 		p->die += 2.0f;
+		p->color = 0; // black
 
 		if( i & 1 )
 		{
 			p->type = pt_grav;
 			for( j = 0; j < 3; j++ )
 			{
-				p->org[j] = pos[j] + Com_RandomFloat( -2.0f, 3.0f );
+				p->org[j] = org[j] + Com_RandomFloat( -2.0f, 3.0f );
 				p->vel[j] = Com_RandomFloat( -70.0f, 70.0f );
 			}
 		}
@@ -1190,7 +1247,6 @@ void CL_DrawTracer( vec3_t start, vec3_t delta, float width, rgb_t color, int al
 	// NOTE: Gotta get the winding right so it's not backface culled
 	// (we need to turn of backface culling for these bad boys)
 
-	re->Enable( TRI_SHADER );
 	re->RenderMode( kRenderTransTexture );
 
 	re->Color4ub( color[0], color[1], color[2], alpha );
@@ -1211,42 +1267,6 @@ void CL_DrawTracer( vec3_t start, vec3_t delta, float width, rgb_t color, int al
 	TriVertex3fv( verts[0] );
 
 	re->End();
-	re->Disable( TRI_SHADER );
-}
-
-static void CL_SparkTracerDraw( particle_t *p, float frametime )
-{
-	float	lifePerc = p->die - cl.time;
-	float	grav = frametime * clgame.movevars.gravity * 0.05f;
-	float	length, width;
-	int	alpha = 255;
-	vec3_t	delta;
-
-	VectorScale( p->vel, p->ramp, delta );
-	length = VectorLength( delta );
-	width = ( length < TRACER_WIDTH ) ? length : TRACER_WIDTH;
-	if( lifePerc < 0.5f ) alpha = (lifePerc * 2) * 255;
-
-	CL_DrawTracer( p->org, delta, width, clgame.palette[p->color], alpha, 0.0f, 0.8f );
-
-	p->vel[2] -= grav * 8; // use vox gravity
-	VectorMA( p->org, frametime, p->vel, p->org );
-}
-
-static void CL_BulletTracerDraw( particle_t *p, float frametime )
-{
-	int	alpha = (int)(traceralpha->value * 255);
-	float	length, width;
-	vec3_t	delta;
-
-	VectorScale( p->vel, p->ramp, delta );
-	length = VectorLength( delta );
-	width = ( length < TRACER_WIDTH ) ? length : TRACER_WIDTH;
-
-	// bullet tracers used particle palette
-	CL_DrawTracer( p->org, delta, width, clgame.palette[p->color], alpha, 0.0f, 0.8f );
-
-	VectorMA( p->org, frametime, p->vel, p->org );
 }
 
 /*

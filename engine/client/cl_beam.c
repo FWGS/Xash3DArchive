@@ -67,13 +67,23 @@ static void SineNoise( float *noise, int divs )
 	}
 }
 
+static cl_entity_t *CL_GetBeamEntityByIndex( int index )
+{
+	cl_entity_t	*ent;
+
+	if( index > 0 ) index = BEAMENT_ENTITY( index );
+	ent = CL_GetEntityByIndex( index );
+
+	return ent;
+}
+
 static qboolean ComputeBeamEntPosition( int beamEnt, vec3_t pt )
 {
 	cl_entity_t	*pEnt;
 	int		nAttachment;
 
-	pEnt = CL_GetEntityByIndex( BEAMENT_ENTITY( beamEnt ));
-	nAttachment = BEAMENT_ATTACHMENT( beamEnt );
+	pEnt = CL_GetBeamEntityByIndex( beamEnt );
+	nAttachment = ( beamEnt > 0 ) ? BEAMENT_ATTACHMENT( beamEnt ) : 0;
 
 	if( !pEnt )
 	{
@@ -81,7 +91,7 @@ static qboolean ComputeBeamEntPosition( int beamEnt, vec3_t pt )
 		return false;
 	}
 
-	if(( pEnt->index - 1 ) == cl.playernum && !( cl.refdef.flags & RDF_THIRDPERSON ))
+	if(( pEnt->index - 1 ) == cl.playernum && !cl.thirdperson )
 	{
 		// if we view beam at firstperson use viewmodel instead
 		pEnt = &clgame.viewent;
@@ -89,7 +99,7 @@ static qboolean ComputeBeamEntPosition( int beamEnt, vec3_t pt )
 
 	// get attachment
 	if( nAttachment > 0 )
-		VectorAdd( pEnt->origin, pEnt->attachment[nAttachment - 1], pt );
+		VectorCopy( pEnt->attachment[nAttachment - 1], pt );
 	else VectorCopy( pEnt->origin, pt );
 
 	return true;
@@ -209,7 +219,6 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 	segs_drawn = 0;
 	total_segs = segments;
 
-	re->Enable( TRI_SHADER );
 	re->RenderMode( rendermode );
 	re->Bind( m_hSprite, frame );		// GetSpriteTexture already set frame
 	re->Begin( TRI_TRIANGLE_STRIP );
@@ -340,7 +349,6 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 	}
 
 	re->End();
-	re->Disable( TRI_SHADER );
 }
 
 /*
@@ -380,7 +388,6 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 
 	w = freq * delta[2];
 
-	re->Enable( TRI_SHADER );
 	re->RenderMode( rendermode );
 	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
@@ -411,7 +418,6 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 	}
 
 	re->End();
-	re->Disable( TRI_SHADER );
 }
 
 /*
@@ -449,7 +455,6 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 	vLast = fmod( freq * speed, 1.0f );
 	scale = scale * length;
 	
-	re->Enable( TRI_SHADER );
 	re->CullFace( TRI_NONE );	// FIXME: get it to work properly with enabled culling
 	re->RenderMode( rendermode );
 	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
@@ -483,7 +488,6 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 	}
 	
 	re->End();
-	re->Disable( TRI_SHADER );
 	re->CullFace( TRI_FRONT );
 }
 
@@ -565,7 +569,6 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 
 	j = segments / 8;
 
-	re->Enable( TRI_SHADER );
 	re->RenderMode( rendermode );
 	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
@@ -602,8 +605,6 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 			// Build point along normal line (normal is -y, x)
 			VectorScale( cl.refdef.up, tmp[0], normal );
 			VectorMA( normal, tmp[1], cl.refdef.right, normal );
-// FIXME: check this			
-//			normal = normal - (g_pViewRenderBeams->GetViewParams()->right * -tmp.y);
 			
 			// make a wide line
 			VectorMA( point, width, normal, last1 );
@@ -631,7 +632,6 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	}
 
 	re->End();
-	re->Disable( TRI_SHADER );
 }
 
 /*
@@ -729,9 +729,6 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	VectorScale( cl.refdef.up, tmp[0], normal );	// Build point along noraml line (normal is -y, x)
 	VectorMA( normal, tmp[1], cl.refdef.right, normal );
 
-// FIXME: check this
-//	normal = normal - (g_pViewRenderBeams->GetViewParams()->right * -tmp.y );
-	
 	// make a wide line
 	VectorMA( delta, width, normal, last1 );
 	VectorMA( delta, -width, normal, last2 );
@@ -744,7 +741,6 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	nColor[1] = (byte)bound( 0, (int)(scaledColor[1] * 255.0f), 255 );
 	nColor[2] = (byte)bound( 0, (int)(scaledColor[2] * 255.0f), 255 );
 
-	re->Enable( TRI_SHADER );
 	re->RenderMode( rendermode );
 	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
 
@@ -773,9 +769,6 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 		VectorScale( cl.refdef.up, tmp[0], normal );
 		VectorMA( normal, tmp[1], cl.refdef.right, normal );
 
-// FIXME: check this
-//		normal = normal - (g_pViewRenderBeams->GetViewParams()->right * -tmp.y );
-		
 		// Make a wide line
 		VectorMA( pHead->org,  width, normal, last1 );
 		VectorMA( pHead->org, -width, normal, last2 );
@@ -810,7 +803,6 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	}
 
 	re->End();
-	re->Disable( TRI_SHADER );
 }
 
 /*
@@ -972,6 +964,9 @@ BEAM *CL_AllocBeam( void )
 
 	pBeam = cl_free_beams;
 	cl_free_beams = pBeam->next;
+
+	Mem_Set( pBeam, 0, sizeof( *pBeam ));
+
 	pBeam->next = cl_active_beams;
 	cl_active_beams = pBeam;
 
@@ -990,9 +985,6 @@ void CL_FreeBeam( BEAM *pBeam )
 {
 	// free particles that have died off.
 	CL_FreeDeadTrails( &pBeam->particles );
-
-	// clear us out
-	Mem_Set( pBeam, 0, sizeof( *pBeam ));
 
 	// now link into free list;
 	pBeam->next = cl_free_beams;
@@ -1020,7 +1012,7 @@ void CL_KillDeadBeams( cl_entity_t *pDeadEntity )
 		pnext = pbeam->next;
 
 		// link into new list.
-		if( CL_GetEntityByIndex( pbeam->startEntity ) != pDeadEntity )
+		if( CL_GetBeamEntityByIndex( pbeam->startEntity ) != pDeadEntity )
 		{
 			pbeam->next = pnewlist;
 			pnewlist = pbeam;
@@ -1257,9 +1249,12 @@ void CL_UpdateBeam( BEAM *pbeam, float frametime )
 		break;
 	}
 
-	// update life cycle
-	pbeam->t = pbeam->freq + ( pbeam->die - cl.time );
-	if( pbeam->t != 0.0f ) pbeam->t = 1.0f - pbeam->freq / pbeam->t;
+	if( pbeam->flags & ( FBEAM_FADEIN|FBEAM_FADEOUT ))
+	{
+		// update life cycle
+		pbeam->t = pbeam->freq + ( pbeam->die - cl.time );
+		if( pbeam->t != 0.0f ) pbeam->t = 1.0f - pbeam->freq / pbeam->t;
+	}
 }
 
 /*
@@ -1401,7 +1396,7 @@ void CL_DrawBeam( BEAM *pbeam )
 		cl_entity_t	*pStart;
 
 		// HACKHACK: get brightness from head entity
-		pStart = CL_GetEntityByIndex( BEAMENT_ENTITY( pbeam->startEntity )); 
+		pStart = CL_GetBeamEntityByIndex( pbeam->startEntity ); 
 		if( pStart && pStart->curstate.rendermode != kRenderNormal )
 			pbeam->brightness = pStart->curstate.renderamt;
 	}
@@ -1583,7 +1578,7 @@ void CL_BeamKill( int deadEntity )
 {
 	cl_entity_t	*pDeadEntity;
 
-	pDeadEntity = CL_GetEntityByIndex( deadEntity );
+	pDeadEntity = CL_GetBeamEntityByIndex( deadEntity );
 	if( !pDeadEntity ) return;
 
 	CL_KillDeadBeams( pDeadEntity );
@@ -1606,8 +1601,8 @@ BEAM *CL_BeamEnts( int startEnt, int endEnt, int modelIndex, float life, float w
 	if( CM_GetModelType( modelIndex ) != mod_sprite )
 		return NULL;
 
-	pStart = CL_GetEntityByIndex( BEAMENT_ENTITY( startEnt ));
-	pEnd = CL_GetEntityByIndex( BEAMENT_ENTITY( endEnt ));
+	pStart = CL_GetBeamEntityByIndex( startEnt );
+	pEnd = CL_GetBeamEntityByIndex( endEnt );
 
 	// don't start temporary beams out of the PVS
 	if( life != 0 && ( !pStart || !pStart->curstate.modelindex || !pEnd || !pEnd->curstate.modelindex ))
@@ -1767,12 +1762,13 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 {
 	cl_entity_t	*pStart;
 	BEAM		*pBeam;
+	float		scale;
 
 	// need a valid model.
 	if( CM_GetModelType( modelIndex ) != mod_sprite )
 		return NULL;
 
-	pStart = CL_GetEntityByIndex( BEAMENT_ENTITY( startEnt ));
+	pStart = CL_GetBeamEntityByIndex( startEnt );
 
 	// don't start temporary beams out of the PVS
 	if( life != 0.0f && ( !pStart || !pStart->curstate.modelindex ))
@@ -1780,6 +1776,11 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 
 	pBeam = CL_AllocBeam();
 	if( !pBeam ) return NULL;
+
+	scale = max( max( r, g ), b );
+	if( scale <= 1.0f )
+		scale = 255.0f;
+	else scale = 1.0f;
 
 	pBeam->type = TE_BEAMPOINTS;
 	pBeam->flags = FBEAM_STARTENTITY;
@@ -1793,12 +1794,12 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 	if( life == 0.0f ) pBeam->flags |= FBEAM_FOREVER;
 	pBeam->die += life;
 	pBeam->width = width;
-	pBeam->amplitude = amplitude;
-	pBeam->brightness = brightness;
+	pBeam->amplitude = amplitude * 10;
+	pBeam->brightness = brightness * scale;
 	pBeam->speed = speed;
-	pBeam->r = r;
-	pBeam->g = g;
-	pBeam->b = b;
+	pBeam->r = r * scale;
+	pBeam->g = g * scale;
+	pBeam->b = b * scale;
 
 	VectorSubtract( pBeam->target, pBeam->source, pBeam->delta );
 
@@ -1828,8 +1829,8 @@ BEAM *CL_BeamRing( int startEnt, int endEnt, int modelIndex, float life, float w
 	if( CM_GetModelType( modelIndex ) != mod_sprite )
 		return NULL;
 
-	pStart = CL_GetEntityByIndex( BEAMENT_ENTITY( startEnt ));
-	pEnd = CL_GetEntityByIndex( BEAMENT_ENTITY( endEnt ));
+	pStart = CL_GetBeamEntityByIndex( startEnt );
+	pEnd = CL_GetBeamEntityByIndex( endEnt );
 
 	// don't start temporary beams out of the PVS
 	if( life != 0 && ( !pStart || !pStart->curstate.modelindex || !pEnd || !pEnd->curstate.modelindex ))
@@ -1878,7 +1879,7 @@ BEAM *CL_BeamFollow( int startEnt, int modelIndex, float life, float width, floa
 	if( CM_GetModelType( modelIndex ) != mod_sprite )
 		return NULL;
 
-	pStart = CL_GetEntityByIndex( BEAMENT_ENTITY( startEnt ));
+	pStart = CL_GetBeamEntityByIndex( startEnt );
 
 	// don't start temporary beams out of the PVS
 	if( life != 0.0f && ( !pStart || !pStart->curstate.modelindex ))
@@ -1898,7 +1899,7 @@ BEAM *CL_BeamFollow( int startEnt, int modelIndex, float life, float width, floa
 	pBeam->freq = cl.time;
 	pBeam->die += life;
 	pBeam->width = width;
-	pBeam->amplitude = 1.0f;	// beamfollow doesn't have amplitude
+	pBeam->amplitude = life;	// partilces lifetime
 	pBeam->brightness = bright;
 	pBeam->speed = 1.0f;
 	pBeam->r = r;
@@ -1908,6 +1909,20 @@ BEAM *CL_BeamFollow( int startEnt, int modelIndex, float life, float width, floa
 	CL_UpdateBeam( pBeam, 0.0f );
 
 	return pBeam;
+}
+
+/*
+==============
+CL_BeamSprite
+
+Create a beam with sprite at the end
+Valve legacy
+==============
+*/
+void CL_BeamSprite( const vec3_t start, const vec3_t end, int beamIndex, int spriteIndex )
+{
+	CL_BeamLightning( start, end, beamIndex, 0.1f, 1.0f, 0.0f, 255, 1.0f );
+	CL_DefaultSprite( end, spriteIndex, 1.0f );
 }
 
 /*
@@ -1986,7 +2001,7 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		endEnt = BF_ReadShort( msg );
 		modelIndex = BF_ReadShort( msg );
 		startFrame = BF_ReadByte( msg );
-		frameRate = (float)(BF_ReadByte( msg ) * 0.1f);	// FIXME: this is correct ?
+		frameRate = (float)(BF_ReadByte( msg ) * 0.1f);
 		life = (float)(BF_ReadByte( msg ) * 0.1f);
 		width = (float)(BF_ReadByte( msg ) * 0.1f);
 		noise = (float)(BF_ReadByte( msg ) * 0.1f);
@@ -2002,7 +2017,15 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		MsgDev( D_ERROR, "TE_BEAM is obsolete\n" );
 		break;
 	case TE_BEAMSPRITE:
-		// FIXME: implement
+		start[0] = BF_ReadCoord( msg );
+		start[1] = BF_ReadCoord( msg );
+		start[2] = BF_ReadCoord( msg );
+		end[0] = BF_ReadCoord( msg );
+		end[1] = BF_ReadCoord( msg );
+		end[2] = BF_ReadCoord( msg );
+		modelIndex = BF_ReadShort( msg );	// beam model
+		startFrame = BF_ReadShort( msg );	// sprite model
+		CL_BeamSprite( start, end, modelIndex, startFrame );
 		break;
 	case TE_BEAMTORUS:
 	case TE_BEAMDISK:
@@ -2015,7 +2038,7 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		end[2] = BF_ReadCoord( msg );
 		modelIndex = BF_ReadShort( msg );
 		startFrame = BF_ReadByte( msg );
-		frameRate = (float)(BF_ReadByte( msg ) * 0.1f);	// FIXME: this is correct ?
+		frameRate = (float)(BF_ReadByte( msg ) * 0.1f);
 		life = (float)(BF_ReadByte( msg ) * 0.1f);
 		width = (float)BF_ReadByte( msg );
 		noise = (float)(BF_ReadByte( msg ) * 0.1f);

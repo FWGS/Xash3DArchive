@@ -327,37 +327,22 @@ static hull_t *pfnHullForBsp( physent_t *pe, float *offset )
 	return PM_HullForBsp( pe, mins, maxs, offset );
 }
 
-static float pfnTraceModel( physent_t *pEnt, float *start, float *end, void *rawTrace )
+static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *trace )
 {
-	trace_t	*result;
-	pmtrace_t	trace;
+	pmtrace_t	pmtrace;
 
-	PM_TraceModel( pEnt, start, vec3_origin, vec3_origin, end, &trace, PM_STUDIO_BOX );
+	PM_TraceModel( pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
 
-	// copy pmtrace_t to rawTrace
-	if( rawTrace )
+	// copy pmtrace_t to trace_t
+	if( trace )
 	{
-		// NOTE: in original HL stupid fucking coders declared three different traces:
-		// TraceResult, trace_t and pmtrace_t. In Xash3D trace_t is equal TraceResult
-		// but in HL this is has some differences: plane.dist and plane.normal are swapped.
-		// don't forget about it
-		result = (trace_t *)rawTrace;
-
-		result->fAllSolid = trace.allsolid;
-		result->fStartSolid = trace.startsolid;
-		result->fInOpen = trace.inopen;
-		result->fInWater = trace.inwater;
-		result->flFraction = trace.fraction;
-		VectorCopy( result->vecEndPos, trace.endpos );
-		result->flPlaneDist = trace.plane.normal[0];
-		result->vecPlaneNormal[0] = trace.plane.normal[1];
-		result->vecPlaneNormal[1] = trace.plane.normal[2];
-		result->vecPlaneNormal[2] = trace.plane.dist; 
-		result->iHitgroup = trace.hitgroup;
-		result->pHit = NULL; // no acess to edicts from pm_* code
+		// NOTE: if pmtrace.h is changed is must be changed too
+		Mem_Copy( trace, &pmtrace, sizeof( *trace ));
+		trace->hitgroup = pmtrace.hitgroup;
+		trace->ent = NULL;
 	}
 
-	return trace.fraction;
+	return pmtrace.fraction;
 }
 
 static const char *pfnTraceTexture( int ground, float *vstart, float *vend )

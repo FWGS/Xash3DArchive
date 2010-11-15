@@ -8,6 +8,7 @@
 #include "net_encode.h"
 #include "entity_types.h"
 #include "cl_tent.h"
+#include "dlight.h"
 #include "input.h"
 
 qboolean CL_IsPlayerIndex( int idx )
@@ -26,19 +27,129 @@ FRAME PARSING
 */
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
-	// set player state
-	ent->player = CL_IsPlayerIndex( ent->index );
-	ent->onground = CL_GetEntityByIndex( ent->curstate.onground );
-
 	// FIXME: this very-very temporary stuffffffff
 	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
+}
 
-	if( ent->curstate.effects & EF_BRIGHTFIELD )
+qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
+{
+	model_t	*mod;
+	float	oldScale, oldRenderAmt;
+	float	shellScale = 1.0f;
+	int	result = 0;
+
+	mod = CM_ClipHandleToModel( ent->curstate.modelindex );
+	if( !mod ) return false;
+
+	// if entity is beam add it here
+	// because render doesn't know how to draw beams
+	if( entityType == ET_BEAM )
 	{
-		CL_EntityParticles( ent );
+		CL_AddCustomBeam( ent );
+		return true;
 	}
+
+	// check for adding this entity
+	if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, mod->name ))
+		return false;
+
+	if( ent->curstate.renderfx == kRenderFxGlowShell )
+	{
+		oldRenderAmt = ent->curstate.renderamt;
+		oldScale = ent->curstate.scale ? ent->curstate.scale : 1.0f;
+		ent->curstate.renderamt = 255; // clear amount
+	}
+
+	result = re->AddRefEntity( ent, entityType, -1 );
+
+	if( ent->curstate.renderfx == kRenderFxGlowShell )
+	{
+		shellScale = ( oldRenderAmt * 0.00015f );	// shellOffset
+		ent->curstate.scale = oldScale + shellScale;	// sets new scale
+		ent->curstate.renderamt = 128;
+
+		// render glowshell
+		result |= re->AddRefEntity( ent, entityType, cls.glowShell ); // FIXME
+
+		// restore parms
+		ent->curstate.scale = oldScale;
+		ent->curstate.renderamt = oldRenderAmt;
+	}
+
+	if( !result ) return false;
+
+	// apply effects
+	if( ent->curstate.effects & EF_BRIGHTFIELD )
+		CL_EntityParticles( ent );
+
+	// add in muzzleflash effect
+	if( ent->curstate.effects & EF_MUZZLEFLASH )
+	{
+		vec3_t	pos;
+
+		if( entityType == ET_VIEWENTITY )
+			ent->curstate.effects &= ~EF_MUZZLEFLASH;
+
+		VectorCopy( ent->attachment[0], pos );
+
+		if(!VectorCompare( pos, ent->origin ))
+                    {
+			dlight_t	*dl = CL_AllocDlight( 0 );
+
+			VectorCopy( ent->origin, dl->origin );
+			dl->die = cl.time + 0.05f;
+			dl->color.r = 255;
+			dl->color.g = 180;
+			dl->color.b = 64;
+			dl->radius = 100;
+                    }
+	}
+
+	// add light effect
+	if( ent->curstate.effects & EF_LIGHT )
+	{
+		dlight_t	*dl = CL_AllocDlight( 0 );
+		VectorCopy( ent->origin, dl->origin );
+		dl->die = cl.time + 0.001f;	// die at next frame
+		dl->color.r = 100;
+		dl->color.g = 100;
+		dl->color.b = 100;
+		dl->radius = 200;
+		CL_RocketFlare( ent->origin );
+	}
+
+	// add dimlight
+	if( ent->curstate.effects & EF_DIMLIGHT )
+	{
+		if( entityType == ET_PLAYER )
+		{
+			CL_UpadteFlashlight( ent );
+		}
+		else
+		{
+			dlight_t	*dl = CL_AllocDlight( 0 );
+			VectorCopy( ent->origin, dl->origin );
+			dl->die = cl.time + 0.001f;	// die at next frame
+			dl->color.r = 255;
+			dl->color.g = 255;
+			dl->color.b = 255;
+			dl->radius = Com_RandomLong( 200, 230 );
+		}
+	}	
+
+	if( ent->curstate.effects & EF_BRIGHTLIGHT )
+	{			
+		dlight_t	*dl = CL_AllocDlight( 0 );
+		VectorSet( dl->origin, ent->origin[0], ent->origin[1], ent->origin[2] + 16 );
+		dl->die = cl.time + 0.001f;	// die at next frame
+		dl->color.r = 255;
+		dl->color.g = 255;
+		dl->color.b = 255;
+		dl->radius = Com_RandomLong( 400, 430 );
+	}
+	return true;
 }
 
 /*
@@ -64,6 +175,7 @@ void CL_WeaponAnim( int iAnim, int body )
 
 		// save animtime
 		view->latched.prevanimtime = view->curstate.animtime;
+		view->syncbase = -0.01f; // back up to get 0'th frame animations
 	}
 
 	view->curstate.entityType = ET_VIEWENTITY;
@@ -118,7 +230,8 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate )
 		// save current blends to right lerping from last sequence
 		for( i = 0; i < 4; i++ )
 			ent->latched.prevseqblending[i] = ent->curstate.blending[i];
-		ent->latched.prevsequence = ent->curstate.sequence;	// save old sequence
+		ent->latched.prevsequence = ent->curstate.sequence;	// save old sequence	
+		ent->syncbase = -0.01f; // back up to get 0'th frame animations
 	}
 
 	if( newstate->animtime != ent->curstate.animtime )
@@ -189,11 +302,14 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	cls.next_client_entities++;
 	frame->num_entities++;
 
-	if( ent->index <= 0 )
+	if( !ent->index )
 	{
 		CL_InitEntity( ent );
 		noInterp = true;
 	}
+
+	// set player state
+	ent->player = CL_IsPlayerIndex( ent->index );
 
 	if( state->effects & EF_NOINTERP || noInterp )
 	{	
@@ -213,7 +329,14 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	// set right current state
 	ent->curstate = *state;
 
-	CL_LinkEdict( ent ); // relink entity
+	if( ent->player )
+	{
+		clgame.dllFuncs.pfnProcessPlayerState( &cl.frame.playerstate[ent->index-1], state );
+
+		// fill private structure for local client
+		if(( ent->index - 1 ) == cl.playernum )
+			cl.frame.local.playerstate = cl.frame.playerstate[ent->index-1];
+	}
 }
 
 /*
@@ -509,18 +632,18 @@ void CL_AddPacketEntities( frame_t *frame )
 	int		e, entityType;
 
 	// now recalc actual entcount
-	for( ; EDICT_NUM( clgame.numEntities - 1 )->index == -1; clgame.numEntities-- );
+	for( ; !EDICT_NUM( clgame.numEntities - 1 )->index; clgame.numEntities-- );
 
 	clent = CL_GetLocalPlayer();
 	if( !clent ) return;
 
 	// update client vars
-	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.clientdata );
+	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.local.client );
 
 	for( e = 1; e < clgame.numEntities; e++ )
 	{
 		ent = CL_GetEntityByIndex( e );
-		if( !ent ) continue;
+		if( !ent || !ent->index ) continue;
 
 		// entity not visible for this client
 		if( ent->curstate.effects & EF_NODRAW )
@@ -533,21 +656,7 @@ void CL_AddPacketEntities( frame_t *frame )
 			entityType = ET_BEAM;
 		else entityType = ET_NORMAL;
 
-		// if entity is beam add it here
-		// because render doesn't know how to draw beams
-		if ( entityType == ET_BEAM )
-		{
-			CL_AddCustomBeam( ent );
-			continue;
-		}
-
-		if( clgame.dllFuncs.pfnAddVisibleEntity( ent, entityType ))
-		{
-			if( entityType == ET_PORTAL && !VectorCompare( ent->curstate.origin, ent->curstate.vuser1 ))
-				cl.render_flags |= RDF_PORTALINVIEW;
-		}
-		// NOTE: skyportal entity never added to rendering
-		if( entityType == ET_SKYPORTAL ) cl.render_flags |= RDF_SKYPORTALINVIEW;
+		CL_AddVisibleEntity( ent, entityType );
 	}
 }
 
@@ -563,8 +672,9 @@ void CL_AddEntities( void )
 	if( cls.state != ca_active )
 		return;
 
-	cl.render_flags = 0;
 	cl.num_custombeams = 0;
+
+	clgame.dllFuncs.CAM_Think();
 
 	CL_AddPacketEntities( &cl.frame );
 	clgame.dllFuncs.pfnCreateEntities();
@@ -591,7 +701,7 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity 
 
 	ent = EDICT_NUM( entnum );
 
-	if( ent->index == -1 || ent->curstate.number != entnum )
+	if( !ent->index || ent->curstate.number != entnum )
 	{
 		// this entity isn't visible but maybe it have baseline ?
 		if( ent->baseline.number != entnum )
@@ -637,5 +747,6 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity 
 
 void CL_ExtraUpdate( void )
 {
+	clgame.dllFuncs.IN_Accumulate();
 	S_ExtraUpdate();
 }

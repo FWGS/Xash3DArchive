@@ -100,17 +100,17 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 
 void SV_CopyTraceToGlobal( trace_t *trace )
 {
-	svgame.globals->trace_allsolid = trace->fAllSolid;
-	svgame.globals->trace_startsolid = trace->fStartSolid;
-	svgame.globals->trace_fraction = trace->flFraction;
-	svgame.globals->trace_plane_dist = trace->flPlaneDist;
-	svgame.globals->trace_ent = trace->pHit;
+	svgame.globals->trace_allsolid = trace->allsolid;
+	svgame.globals->trace_startsolid = trace->startsolid;
+	svgame.globals->trace_fraction = trace->fraction;
+	svgame.globals->trace_plane_dist = trace->plane.dist;
+	svgame.globals->trace_ent = trace->ent;
 	svgame.globals->trace_flags = 0;
-	svgame.globals->trace_inopen = trace->fInOpen;
-	svgame.globals->trace_inwater = trace->fInWater;
-	VectorCopy( trace->vecEndPos, svgame.globals->trace_endpos );
-	VectorCopy( trace->vecPlaneNormal, svgame.globals->trace_plane_normal );
-	svgame.globals->trace_hitgroup = trace->iHitgroup;
+	svgame.globals->trace_inopen = trace->inopen;
+	svgame.globals->trace_inwater = trace->inwater;
+	VectorCopy( trace->endpos, svgame.globals->trace_endpos );
+	VectorCopy( trace->plane.normal, svgame.globals->trace_plane_normal );
+	svgame.globals->trace_hitgroup = trace->hitgroup;
 }
 
 void SV_SetModel( edict_t *ent, const char *name )
@@ -170,23 +170,27 @@ float SV_AngleMod( float ideal, float current, float speed )
 	return anglemod( current + move );
 }
 
-void SV_ConfigString( int index, const char *val )
+/*
+=============
+SV_ConvertTrace
+
+convert trace_t to TraceResult
+=============
+*/
+void SV_ConvertTrace( TraceResult *dst, trace_t *src )
 {
-	if( index < 0 || index >= MAX_CONFIGSTRINGS )
-		Host_Error( "SV_ConfigString: bad index %i value %s\n", index, val );
+	ASSERT( src != NULL && dst != NULL );
 
-	if( !val || !*val ) val = "";
-
-	// change the string in sv
-	com.strcpy( sv.configstrings[index], val );
-
-	if( sv.state != ss_loading )
-	{
-		// send the update to everyone
-		BF_WriteByte( &sv.reliable_datagram, svc_configstring );
-		BF_WriteShort( &sv.reliable_datagram, index );
-		BF_WriteString( &sv.reliable_datagram, val );
-	}
+	dst->fAllSolid = src->allsolid;
+	dst->fStartSolid = src->startsolid;
+	dst->fInOpen = src->inopen;
+	dst->fInWater = src->inwater;
+	dst->flFraction = src->fraction;
+	VectorCopy( src->endpos, dst->vecEndPos );
+	dst->flPlaneDist = src->plane.dist;
+	VectorCopy( src->plane.normal, dst->vecPlaneNormal );
+	dst->pHit = src->ent;
+	dst->iHitgroup = src->hitgroup;
 }
 
 /*
@@ -1410,15 +1414,15 @@ int pfnDropToFloor( edict_t* e )
 
 	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
 
-	if( trace.flFraction == 1.0f || trace.fAllSolid )
+	if( trace.fraction == 1.0f || trace.allsolid )
 	{
 		return false;
 	}
 
-	VectorCopy( trace.vecEndPos, e->v.origin );
+	VectorCopy( trace.endpos, e->v.origin );
 	SV_LinkEdict( e, false );
 	e->v.flags |= FL_ONGROUND;
-	e->v.groundentity = trace.pHit;
+	e->v.groundentity = trace.ent;
 
 	return true;
 }
@@ -1759,14 +1763,17 @@ pfnTraceLine
 */
 static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr )
 {
+	trace_t	trace;
+
 	if( !ptr ) return;
 
 	if( svgame.globals->trace_flags & 1 )
 		fNoMonsters |= FMOVE_SIMPLEBOX;
 	svgame.globals->trace_flags = 0;
 
-	*ptr = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
-	SV_CopyTraceToGlobal( ptr );
+	trace = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
+	SV_ConvertTrace( ptr, &trace );
+	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -1777,6 +1784,8 @@ pfnTraceToss
 */
 static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr )
 {
+	trace_t	trace;
+
 	if( !ptr ) return;
 
 	if( !SV_IsValidEdict( pent ))
@@ -1785,8 +1794,9 @@ static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr
 		return;
 	}
 
-	*ptr = SV_MoveToss( pent, pentToIgnore );
-	SV_CopyTraceToGlobal( ptr );
+	trace = SV_MoveToss( pent, pentToIgnore );
+	SV_ConvertTrace( ptr, &trace );
+	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -1797,14 +1807,17 @@ pfnTraceHull
 */
 static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr )
 {
+	trace_t	trace;
+
 	if( !ptr ) return;
 
 	if( svgame.globals->trace_flags & 1 )
 		fNoMonsters |= FMOVE_SIMPLEBOX;
 	svgame.globals->trace_flags = 0;
 
-	*ptr = SV_MoveHull( v1, hullNumber, v2, fNoMonsters, pentToSkip );
-	SV_CopyTraceToGlobal( ptr );
+	trace = SV_MoveHull( v1, hullNumber, v2, fNoMonsters, pentToSkip );
+	SV_ConvertTrace( ptr, &trace );
+	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -1815,7 +1828,7 @@ pfnTraceMonsterHull
 */
 static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr )
 {
-	trace_t	result;
+	trace_t	trace;
 
 	if( !SV_IsValidEdict( pEdict ))
 	{
@@ -1827,14 +1840,14 @@ static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v
 		fNoMonsters |= FMOVE_SIMPLEBOX;
 	svgame.globals->trace_flags = 0;
 
-	result = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip );
+	trace = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip );
 	if( ptr )
 	{
-		SV_CopyTraceToGlobal( ptr );
-		*ptr = result;
+		SV_ConvertTrace( ptr, &trace );
+		SV_CopyTraceToGlobal( &trace );
 	}
 
-	if( result.fAllSolid || result.flFraction != 1.0f )
+	if( trace.allsolid || trace.fraction != 1.0f )
 		return true;
 	return false;
 }
@@ -1848,6 +1861,7 @@ pfnTraceModel
 static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edict_t *pent, TraceResult *ptr )
 {
 	float	*mins, *maxs;
+	trace_t	trace;
 
 	if( !ptr ) return;
 
@@ -1861,8 +1875,9 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 	mins = sv.worldmodel->hulls[hullNumber].clip_mins;
 	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
 
-	*ptr = SV_TraceHull( pent, hullNumber, v1, mins, maxs, v2 );
-	SV_CopyTraceToGlobal( ptr );
+	trace = SV_TraceHull( pent, hullNumber, v1, mins, maxs, v2 );
+	SV_ConvertTrace( ptr, &trace );
+	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -1940,7 +1955,7 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 	VectorMA( start, 2048, dir, end );
 	tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent );
 
-	if( tr.pHit && (tr.pHit->v.takedamage == DAMAGE_AIM && fNoFriendlyFire || ent->v.team <= 0 || ent->v.team != tr.pHit->v.team ))
+	if( tr.ent && (tr.ent->v.takedamage == DAMAGE_AIM && fNoFriendlyFire || ent->v.team <= 0 || ent->v.team != tr.ent->v.team ))
 	{
 		VectorCopy( svgame.globals->v_forward, rgflReturn );
 		return;
@@ -1965,7 +1980,7 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 		dist = DotProduct( dir, svgame.globals->v_forward );
 		if( dist < bestdist ) continue; // to far to turn
 		tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent );
-		if( tr.pHit == check )
+		if( tr.ent == check )
 		{	
 			// can shoot at this one
 			bestdist = dist;
@@ -2682,9 +2697,12 @@ returns pointer to a studiomodel
 */
 static void *pfnGetModelPtr( edict_t* pEdict )
 {
+	model_t	*mod;
+
 	if( !pEdict || pEdict->free )
 		return NULL;
-	return Mod_Extradata( pEdict->v.modelindex );
+	mod = CM_ClipHandleToModel( pEdict->v.modelindex );
+	return Mod_Extradata( mod );
 }
 
 /*
@@ -3892,7 +3910,7 @@ qboolean pfnVoice_GetClientListening( int iReceiver, int iSender )
 		return false;
 	}
 
-	return ((svs.clients[iSender].listeners & ( 1 << iReceiver )) != 0 );
+	return ((svs.clients[iSender-1].listeners & ( 1 << iReceiver )) != 0 );
 }
 
 /*
@@ -3915,11 +3933,11 @@ qboolean pfnVoice_SetClientListening( int iReceiver, int iSender, qboolean bList
 
 	if( bListen )
 	{
-		svs.clients[iSender].listeners |= (1 << iReceiver);
+		svs.clients[iSender-1].listeners |= (1 << iReceiver);
 	}
 	else
 	{
-		svs.clients[iSender].listeners &= ~(1 << iReceiver);
+		svs.clients[iSender-1].listeners &= ~(1 << iReceiver);
 	}
 	return true;
 }
@@ -4414,6 +4432,14 @@ qboolean SV_LoadProgs( const char *name )
 			svgame.hInstance = NULL;
 			return false;
 		}
+	}
+
+	if( !SV_InitStudioAPI( ))
+	{
+		FS_FreeLibrary( svgame.hInstance );
+		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get studio API\n" );
+		svgame.hInstance = NULL;
+		return false;
 	}
 
 	svgame.globals->pStringBase = ""; // setup string base

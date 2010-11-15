@@ -20,6 +20,22 @@ void V_ClearScene( void )
 	if( re ) re->ClearScene();
 }
 
+float V_CalcFov( float fov_x, float width, float height )
+{
+	float	x, half_fov_y;
+
+	// check to avoid division by zero
+	if( fov_x < 1 || fov_x > 179 )
+	{
+		MsgDev( D_ERROR, "V_CalcFov: invalid fov %g!\n", fov_x );
+		fov_x = 90;
+	}
+
+	x = width / com.tan( DEG2RAD( fov_x ) * 0.5f );
+	half_fov_y = atan( height / x );
+	return RAD2DEG( half_fov_y ) * 2;
+}
+
 /*
 ===============
 V_SetupRefDef
@@ -33,29 +49,32 @@ void V_SetupRefDef( void )
 
 	clent = CL_GetLocalPlayer ();
 
-	VectorCopy( cl.frame.clientdata.punchangle, cl.refdef.punchangle );
-	clgame.viewent.curstate.modelindex = cl.frame.clientdata.viewmodel;
+	VectorCopy( cl.frame.local.client.punchangle, cl.refdef.punchangle );
+	clgame.viewent.curstate.modelindex = cl.frame.local.client.viewmodel;
 
 	cl.refdef.movevars = &clgame.movevars;
-	cl.refdef.onground = ( cl.frame.clientdata.flags & FL_ONGROUND ) ? 1 : 0;
-	cl.refdef.health = cl.frame.clientdata.health;
-	cl.refdef.lerpfrac = cl.lerpFrac;
-	cl.refdef.num_entities = clgame.numEntities;
+	cl.refdef.onground = ( cl.frame.local.client.flags & FL_ONGROUND ) ? 1 : 0;
+	cl.refdef.health = cl.frame.local.client.health;
+	cl.refdef.playernum = cl.playernum;
 	cl.refdef.max_entities = clgame.maxEntities;
 	cl.refdef.maxclients = cl.maxclients;
 	cl.refdef.time = cl_time();
 	cl.refdef.frametime = cl.time - cl.oldtime;
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
-	cl.refdef.waterlevel = cl.frame.clientdata.waterlevel;		
-	cl.refdef.flags = cl.render_flags;
-	cl.refdef.viewsize = 120; // FIXME if you can
+	cl.refdef.waterlevel = cl.frame.local.client.waterlevel;		
+	cl.refdef.viewsize = 120;	// FIXME if you can
+	cl.refdef.hardware = true;	// always true
 	cl.refdef.nextView = 0;
 
 	// setup default viewport
 	cl.refdef.viewport[0] = cl.refdef.viewport[1] = 0;
 	cl.refdef.viewport[2] = scr_width->integer;
 	cl.refdef.viewport[3] = scr_height->integer;
+
+	// calc FOV
+	cl.refdef.fov_x = cl.data.fov; // this is a final fov value
+	cl.refdef.fov_y = V_CalcFov( cl.refdef.fov_x, cl.refdef.viewport[2], cl.refdef.viewport[3] );
 
 	// calculate the origin
 	if( CL_IsPredicted( ) && !cl.refdef.demoplayback )
@@ -74,8 +93,8 @@ void V_SetupRefDef( void )
 	else
 	{
 		VectorCopy( clent->origin, cl.refdef.simorg );
-		VectorCopy( cl.frame.clientdata.view_ofs, cl.refdef.viewheight );
-		VectorCopy( cl.frame.clientdata.velocity, cl.refdef.simvel );
+		VectorCopy( cl.frame.local.client.view_ofs, cl.refdef.viewheight );
+		VectorCopy( cl.frame.local.client.velocity, cl.refdef.simvel );
 	}
 }
 
@@ -89,9 +108,9 @@ apply pre-calculated values
 void V_AddViewModel( void )
 {
 	if( cl.refdef.nextView ) return; // add viewmodel only at firstperson pass
-	if( !cl.frame.valid || cl.refdef.paused ) return;
+	if( !cl.frame.valid || cl.refdef.paused || cl.thirdperson ) return;
 
-	clgame.dllFuncs.pfnAddVisibleEntity( &clgame.viewent, ET_VIEWENTITY );
+	CL_AddVisibleEntity( &clgame.viewent, ET_VIEWENTITY );
 }
 
 /*
@@ -107,7 +126,7 @@ void V_CalcRefDef( void )
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
 		V_AddViewModel();
-		re->RenderFrame( &cl.refdef );
+		re->RenderFrame( &cl.refdef, true );
 	} while( cl.refdef.nextView );
 }
 

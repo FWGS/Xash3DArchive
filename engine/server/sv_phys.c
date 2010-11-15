@@ -167,7 +167,7 @@ Two entities have touched, so run their touch functions
 */
 void SV_Impact( edict_t *e1, trace_t *trace )
 {
-	edict_t	*e2 = trace->pHit;
+	edict_t	*e2 = trace->ent;
 
 	// custom user filter
 	if( svgame.dllFuncs2.pfnShouldCollide )
@@ -387,40 +387,40 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 		VectorMA( ent->v.origin, time_left, ent->v.velocity, end );
 		trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
 
-		allFraction += trace.flFraction;
+		allFraction += trace.fraction;
 
-		if( trace.fAllSolid )
+		if( trace.allsolid )
 		{	
 			// entity is trapped in another solid
 			VectorClear( ent->v.velocity );
 			return 4;
 		}
 
-		if( trace.flFraction > 0.0f )
+		if( trace.fraction > 0.0f )
 		{	
 			// actually covered some distance
-			VectorCopy( trace.vecEndPos, ent->v.origin );
+			VectorCopy( trace.endpos, ent->v.origin );
 			VectorCopy( ent->v.velocity, original_velocity );
 			numplanes = 0;
 		}
 
-		if( trace.flFraction == 1.0f )
+		if( trace.fraction == 1.0f )
 			 break; // moved the entire distance
 
-		if( !trace.pHit )
-			MsgDev( D_ERROR, "SV_FlyMove: trace.pHit == NULL\n" );
+		if( !trace.ent )
+			MsgDev( D_ERROR, "SV_FlyMove: trace.ent == NULL\n" );
 
-		if( trace.vecPlaneNormal[2] > 0.7f )
+		if( trace.plane.normal[2] > 0.7f )
 		{
 			blocked |= 1; // floor
-			if( trace.pHit->v.solid == SOLID_BSP )
+			if( trace.ent->v.solid == SOLID_BSP )
 			{
 				ent->v.flags |= FL_ONGROUND;
-				ent->v.groundentity = trace.pHit;
+				ent->v.groundentity = trace.ent;
 			}
 		}
 
-		if( trace.vecPlaneNormal[2] == 0.0f )
+		if( trace.plane.normal[2] == 0.0f )
 		{
 			blocked |= 2; // step
 			if( steptrace ) *steptrace = trace; // save for player extrafriction
@@ -432,7 +432,7 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 		// break if removed by the impact function
 		if( ent->free ) break;
 
-		time_left -= time_left * trace.flFraction;
+		time_left -= time_left * trace.fraction;
 
 		// clipped to another plane
 		if( numplanes >= MAX_CLIP_PLANES )
@@ -442,7 +442,7 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 			break;
 		}
 
-		VectorCopy( trace.vecPlaneNormal, planes[numplanes] );
+		VectorCopy( trace.plane.normal, planes[numplanes] );
 		numplanes++;
 
 		// modify original_velocity so it parallels all of the clip planes
@@ -564,9 +564,9 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	else type = MOVE_NORMAL;
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
-	if( !trace.fAllSolid && !trace.fStartSolid )
+	if( !trace.allsolid && !trace.startsolid )
 	{
-		VectorCopy( trace.vecEndPos, ent->v.origin );
+		VectorCopy( trace.endpos, ent->v.origin );
 		SV_LinkEdict( ent, true );
 
 		if( apush[YAW] && ent->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( ent, true )) != NULL )
@@ -578,14 +578,14 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		// don't rotate pushables!
 		if( ent->v.movetype != MOVETYPE_PUSHSTEP )
 		{
-			ent->v.angles[YAW] += trace.flFraction * apush[YAW];
+			ent->v.angles[YAW] += trace.fraction * apush[YAW];
 		}
 	}
 
 	if( blocked ) *blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
 
 	// so we can run impact function afterwards.
-	if( trace.pHit ) SV_Impact( ent, &trace );
+	if( trace.ent ) SV_Impact( ent, &trace );
 
 	return trace;
 }
@@ -1177,19 +1177,19 @@ void SV_Physics_Toss( edict_t *ent )
 	SV_CheckVelocity( ent );
 
 	// make sure what we don't collide with like entity (e.g. gib with gib)
-	if( trace.fAllSolid && SV_IsValidEdict( trace.pHit ) && trace.pHit->v.movetype != ent->v.movetype )
+	if( trace.allsolid && SV_IsValidEdict( trace.ent ) && trace.ent->v.movetype != ent->v.movetype )
 	{
 		// entity is trapped in another solid
-		if( trace.vecPlaneNormal[2] > 0.7f )
+		if( trace.plane.normal[2] > 0.7f )
 		{
-			ent->v.groundentity = trace.pHit;
+			ent->v.groundentity = trace.ent;
 			ent->v.flags |= FL_ONGROUND;
 		}
 		VectorClear( ent->v.velocity );
 		return;
 	}
 
-	if( trace.flFraction == 1.0f )
+	if( trace.fraction == 1.0f )
 	{
 		SV_CheckWater( ent );
 		return;
@@ -1201,10 +1201,10 @@ void SV_Physics_Toss( edict_t *ent )
 		backoff = 2.0f;
 	else backoff = 1.0f;
 
-	SV_ClipVelocity( ent->v.velocity, trace.vecPlaneNormal, ent->v.velocity, backoff );
+	SV_ClipVelocity( ent->v.velocity, trace.plane.normal, ent->v.velocity, backoff );
 
 	// stop if on ground
-	if( trace.vecPlaneNormal[2] > 0.7f )
+	if( trace.plane.normal[2] > 0.7f )
 	{		
 		float	vel;
 
@@ -1212,7 +1212,7 @@ void SV_Physics_Toss( edict_t *ent )
 		if( ent->v.velocity[2] < sv_gravity->value * sv_frametime( ))
 		{
 			// we're rolling on the ground, add static friction.
-			ent->v.groundentity = trace.pHit;
+			ent->v.groundentity = trace.ent;
 			ent->v.flags |= FL_ONGROUND;
 			ent->v.velocity[2] = 0.0f;
 		}
@@ -1222,12 +1222,12 @@ void SV_Physics_Toss( edict_t *ent )
 		if( vel < 900 || ( ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE ))
 		{
 			ent->v.flags |= FL_ONGROUND;
-			ent->v.groundentity = trace.pHit;
+			ent->v.groundentity = trace.ent;
 			VectorClear( ent->v.velocity ); // avelocity clearing in server.dll
 		}
 		else
 		{
-			VectorScale( ent->v.velocity, (1.0f - trace.flFraction) * sv_frametime() * 0.9f, move );
+			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * sv_frametime() * 0.9f, move );
 			trace = SV_PushEntity( ent, move, vec3_origin, NULL );
 			if( ent->free ) return;
 		}
@@ -1390,10 +1390,10 @@ void SV_Physics_Step( edict_t *ent )
 
 				trace = SV_Move( point, vec3_origin, vec3_origin, point, MOVE_NORMAL, ent );			
 
-				if( trace.fStartSolid )
+				if( trace.startsolid )
 				{
 					ent->v.flags |= FL_ONGROUND;
-					ent->v.groundentity = trace.pHit;
+					ent->v.groundentity = trace.ent;
 					ent->v.friction = 1.0f;
 					break;
 				}
@@ -1412,7 +1412,7 @@ void SV_Physics_Step( edict_t *ent )
 	{
 		// check monster with another monster intersect (e.g. tentacle damage)
 		trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
-		pHit = trace.pHit;
+		pHit = trace.ent;
 
 		if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
 			SV_Impact( ent, &trace );
@@ -1459,7 +1459,7 @@ static void SV_Physics_Client( edict_t *ent )
 
 	// check client colliding with monster (e.g. tentacle damage)
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
-	pHit = trace.pHit;
+	pHit = trace.ent;
 
 	if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
 		SV_Impact( ent, &trace );

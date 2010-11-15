@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir "."
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob2 /I "../public" /I "../common" /I "../game_shared" /I "../engine" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob2 /I "../public" /I "../common" /I "../pm_shared" /I "../engine" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -61,8 +61,8 @@ TargetDir=\Xash3D\src_main\temp\vid_gl\!release
 InputPath=\Xash3D\src_main\temp\vid_gl\!release\vid_gl.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\vid_gl.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\vid_gl.dll "D:\Xash3D\bin\vid_gl.dll"
+"D:\Xash3D\vid_gl.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\vid_gl.dll "D:\Xash3D\vid_gl.dll"
 
 # End Custom Build
 
@@ -80,7 +80,7 @@ SOURCE="$(InputPath)"
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir "."
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "../public" /I "../common" /I "../game_shared" /I "../engine" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
+# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "../public" /I "../common" /I "../pm_shared" /I "../engine" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -98,8 +98,8 @@ TargetDir=\Xash3D\src_main\temp\vid_gl\!debug
 InputPath=\Xash3D\src_main\temp\vid_gl\!debug\vid_gl.dll
 SOURCE="$(InputPath)"
 
-"D:\Xash3D\bin\vid_gl.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	copy $(TargetDir)\vid_gl.dll "D:\Xash3D\bin\vid_gl.dll"
+"D:\Xash3D\vid_gl.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\vid_gl.dll "D:\Xash3D\vid_gl.dll"
 
 # End Custom Build
 

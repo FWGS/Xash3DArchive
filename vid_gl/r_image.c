@@ -3220,7 +3220,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	string		basename;
 	int		i = 1, flags, result;
 
-	if((RI.refdef.flags & RDF_NOWORLDMODEL) || !r_worldmodel )
+	if( !RI.drawWorld || !r_worldmodel )
 		return false;
 
 	// make sure the specified size is valid
