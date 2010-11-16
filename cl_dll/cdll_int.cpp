@@ -166,9 +166,7 @@ so the HUD can reinitialize itself.
 int DLLEXPORT HUD_VidInit( void )
 {
 	gHUD.VidInit();
-
-// FIXME: implement Vgui
-//	VGui_Startup();
+	VGui_Startup();
 
 	return 1;
 }
@@ -253,8 +251,7 @@ void DLLEXPORT HUD_Frame( double time )
 {
 	ServersThink( time );
 
-	if( gViewPort )
-		GetClientVoiceMgr()->Frame(time);
+	GetClientVoiceMgr()->Frame(time);
 }
 
 
@@ -268,8 +265,7 @@ Called when a player starts or stops talking.
 
 void DLLEXPORT HUD_VoiceStatus(int entindex, qboolean bTalking)
 {
-	if( gViewPort )
-		GetClientVoiceMgr()->UpdateSpeakerStatus(entindex, bTalking);
+	GetClientVoiceMgr()->UpdateSpeakerStatus(entindex, bTalking);
 }
 
 /*

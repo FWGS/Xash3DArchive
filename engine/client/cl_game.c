@@ -2594,29 +2594,6 @@ static void pfnSetScreenFade( struct screenfade_s *fade )
 
 /*
 =============
-VGui_GetPanel
-
-=============
-*/
-void *VGui_GetPanel( void )
-{
-	// UNDONE: wait for version 0.75
-	return NULL;
-}
-
-/*
-=============
-VGui_ViewportPaintBackground
-
-=============
-*/
-void VGui_ViewportPaintBackground( int extents[4] )
-{
-	// UNDONE: wait for version 0.75
-}
-
-/*
-=============
 pfnLoadMapSprite
 
 =============
@@ -3665,6 +3642,8 @@ qboolean CL_LoadProgs( const char *name )
 	CL_InitParticles ();
 	CL_InitViewBeams ();
 	CL_InitTempEnts ();
+
+	VGui_Startup ();
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

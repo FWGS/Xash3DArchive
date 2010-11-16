@@ -7,10 +7,18 @@
 
 #include "cm_local.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // linked interfaces
 extern stdlib_api_t	com;
 extern vsound_exp_t	*se;
 extern render_exp_t	*re;
+
+#ifdef __cplusplus
+}
+#endif
 
 _inline int CL_CreateDecalList( decallist_t *pList, qboolean changelevel )
 {

@@ -258,8 +258,10 @@ void SCR_UpdateScreen( void )
 		V_PostRender();
           }
 
-	if( clgame.hInstance )
-		clgame.dllFuncs.pfnFrame( cl_time( ));
+	if( !clgame.hInstance ) return;
+
+	clgame.dllFuncs.pfnFrame( cl.time );
+	VGui_Paint ();
 }
 
 static void SCR_LoadCreditsFont( void )
@@ -355,6 +357,8 @@ void SCR_RegisterShaders( void )
 	// update screen sizes for menu
 	menu.globals->scrWidth = scr_width->integer;
 	menu.globals->scrHeight = scr_height->integer;
+
+	VGui_Startup ();
 
 	// vid_state has changed
 	if( clgame.hInstance ) clgame.dllFuncs.pfnVidInit();

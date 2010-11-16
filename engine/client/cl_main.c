@@ -770,6 +770,9 @@ void CL_SendDisconnectMessage( void )
 	BF_WriteByte( &buf, clc_stringcmd );
 	BF_WriteString( &buf, "disconnect" );
 
+	if( !cls.netchan.remote_address.type )
+		cls.netchan.remote_address.type = NA_LOOPBACK;
+
 	// make sure message will be delivered
 	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
 	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));

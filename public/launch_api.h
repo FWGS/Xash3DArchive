@@ -19,7 +19,10 @@
 #define MAX_STRING_TABLES	8	// seperately stringsystems
 #define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
+
+#ifndef NULL
 #define NULL		((void *)0)
+#endif
 
 // color strings
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
@@ -748,7 +751,7 @@ script shared declaration
 external and internal script_t struct have some differences
 ========================================================================
 */
-typedef struct script_s
+struct script_s
 {
 	char	*buffer;
 	char	*text;
@@ -756,7 +759,7 @@ typedef struct script_s
 	char	TXcommand;	// contain QuArK 'TX' command in the map file descriptions
 };
 
-typedef struct convar_s
+struct convar_s
 {
 	// this part shared with cvar_t
 	char		*name;

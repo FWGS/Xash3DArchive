@@ -426,11 +426,19 @@ typedef struct
 	file_t		*demofile;
 } client_static_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern client_t		cl;
 extern client_static_t	cls;
 extern clgame_static_t	clgame;
 extern menu_static_t	menu;
 extern render_exp_t		*re;
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 // cvars
@@ -530,8 +538,6 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize );
 int pfnDecalIndexFromName( const char *szDecalName );
 int CL_FindModelIndex( const char *m );
 HSPRITE pfnSPR_Load( const char *szPicName );
-void *VGui_GetPanel( void );
-void VGui_ViewportPaintBackground( int extents[4] );
 
 _inline cl_entity_t *CL_EDICT_NUM( int n, const char *file, const int line )
 {
@@ -675,5 +681,21 @@ qboolean SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
 void CL_PlayVideo_f( void );
+
+//
+// vgui_int.cpp
+//
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void VGui_Startup( void );
+void *VGui_GetPanel( void );
+void VGui_Paint( void );
+void VGui_ViewportPaintBackground( int extents[4] );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif//CLIENT_H
