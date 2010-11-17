@@ -511,6 +511,10 @@ Initialize client studio
 */
 qboolean CL_InitStudioAPI( void )
 {
+	// Xash will be used internal StudioModelRenderer
+	if( !clgame.dllFuncs.pfnGetStudioModelInterface )
+		return true;
+
 	pStudioDraw = NULL;	// clear previous API
 
 	return clgame.dllFuncs.pfnGetStudioModelInterface( STUDIO_INTERFACE_VERSION, &pStudioDraw, &gStudioAPI );

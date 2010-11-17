@@ -1758,7 +1758,7 @@ qboolean R_StudioComputeBBox( vec3_t bbox[8] )
   		if( p2[2] > studio_maxs[2] ) studio_maxs[2] = p2[2];
 	}
 
-	studio_radius = RadiusFromBounds( studio_mins, studio_maxs );
+	studio_radius = RadiusFromBounds( studio_mins, studio_maxs ) * e->scale;
 
 	return true;
 }

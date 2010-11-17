@@ -4,7 +4,7 @@
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
-CFG=LAUNCH - WIN32 RELEASE
+CFG=game - Win32 Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,7 +13,7 @@ CFG=LAUNCH - WIN32 RELEASE
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "game.mak" CFG="LAUNCH - WIN32 RELEASE"
+!MESSAGE NMAKE /f "game.mak" CFG="game - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
@@ -59,11 +59,11 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\game.rc
+SOURCE=.\game.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\game.cpp
+SOURCE=.\game.rc
 # End Source File
 # End Group
 # Begin Group "Header Files"

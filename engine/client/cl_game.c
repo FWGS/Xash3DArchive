@@ -40,8 +40,6 @@ static dllfunc_t cdll_exports[] =
 { "HUD_ConnectionlessPacket", (void **)&clgame.dllFuncs.pfnConnectionlessPacket },
 { "HUD_GetHullBounds", (void **)&clgame.dllFuncs.pfnGetHullBounds },
 { "HUD_Frame", (void **)&clgame.dllFuncs.pfnFrame },
-{ "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
-{ "HUD_DirectorMessage", (void **)&clgame.dllFuncs.pfnDirectorMessage },
 { "HUD_PostRunCmd", (void **)&clgame.dllFuncs.pfnPostRunCmd },
 { "HUD_Key_Event", (void **)&clgame.dllFuncs.pfnKey_Event },
 { "HUD_AddEntity", (void **)&clgame.dllFuncs.pfnAddEntity },
@@ -51,7 +49,6 @@ static dllfunc_t cdll_exports[] =
 { "HUD_ProcessPlayerState", (void **)&clgame.dllFuncs.pfnProcessPlayerState },
 { "HUD_TxferPredictionData", (void **)&clgame.dllFuncs.pfnTxferPredictionData },
 { "HUD_TempEntUpdate", (void **)&clgame.dllFuncs.pfnTempEntUpdate },
-{ "HUD_GetStudioModelInterface", (void **)&clgame.dllFuncs.pfnGetStudioModelInterface },
 { "HUD_DrawNormalTriangles", (void **)&clgame.dllFuncs.pfnDrawNormalTriangles },
 { "HUD_DrawTransparentTriangles", (void **)&clgame.dllFuncs.pfnDrawTransparentTriangles },
 { "HUD_GetUserEntity", (void **)&clgame.dllFuncs.pfnGetUserEntity },
@@ -66,6 +63,14 @@ static dllfunc_t cdll_exports[] =
 { "IN_ClearStates", (void **)&clgame.dllFuncs.IN_ClearStates },
 { "V_CalcRefdef", (void **)&clgame.dllFuncs.pfnCalcRefdef },
 { "KB_Find", (void **)&clgame.dllFuncs.KB_Find },
+{ NULL, NULL }
+};
+
+static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3
+{
+{ "HUD_GetStudioModelInterface", (void **)&clgame.dllFuncs.pfnGetStudioModelInterface },
+{ "HUD_DirectorMessage", (void **)&clgame.dllFuncs.pfnDirectorMessage },
+{ "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
 { NULL, NULL }
 };
 
@@ -1835,8 +1840,8 @@ prints dirctly into console (can skip notify)
 static void pfnConsolePrint( const char *string )
 {
 	if( !string || !*string ) return;
-	if( *string != 1 ) Con_Print( string ); // show notify
-	else Con_Print( va( "[skipnotify]%s", string + 1 )); // skip notify
+	if( *string != 1 ) Msg( string ); // show notify
+	else Msg( "[skipnotify]%s", string + 1 ); // skip notify
 }
 
 /*
@@ -3574,9 +3579,10 @@ void CL_UnloadProgs( void )
 	CL_FreeTempEnts();
 	CL_FreeViewBeams();
 	CL_FreeParticles();
+	VGui_Shutdown();
 
 	clgame.dllFuncs.pfnShutdown();
-	
+
 	FS_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
@@ -3600,6 +3606,11 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.mempool = Mem_AllocPool( "Client Edicts Zone" );
 	clgame.entities = NULL;
 
+	// NOTE: important stuff!
+	// vgui must startup BEFORE loading client.dll to avoid get error ERROR_NOACESS
+	// during LoadLibrary
+	VGui_Startup ();
+	
 	clgame.hInstance = FS_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
 
@@ -3617,6 +3628,18 @@ qboolean CL_LoadProgs( const char *name )
 			clgame.hInstance = NULL;
 			return false;
 		}
+	}
+
+	// clear new exports
+	for( func = cdll_new_exports; func && func->name; func++ )
+		*func->func = NULL;
+
+	for( func = cdll_new_exports; func && func->name != NULL; func++ )
+	{
+		// functions are cleared before all the extensions are evaluated
+		// NOTE: new exports can be missed without stop the engine
+		if(!( *func->func = (void *)FS_GetProcAddress( clgame.hInstance, func->name )))
+          		MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
 	}
 
 	if( !clgame.dllFuncs.pfnInitialize( &gEngfuncs, CLDLL_INTERFACE_VERSION ))
@@ -3642,8 +3665,6 @@ qboolean CL_LoadProgs( const char *name )
 	CL_InitParticles ();
 	CL_InitViewBeams ();
 	CL_InitTempEnts ();
-
-	VGui_Startup ();
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

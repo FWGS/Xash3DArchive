@@ -833,7 +833,7 @@ void Host_Init( const int argc, const char **argv )
 
 	if( host.type != HOST_DEDICATED )
 	{
-		// NOTE: client.dll must be loaded first to get mlook state from congig.cfg
+		// NOTE: client.dll must be loaded first to get mlook state from config.cfg
 		if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
 			Host_Error( "CL_InitGame: can't initialize client.dll\n" );
 

@@ -261,6 +261,7 @@ void SCR_UpdateScreen( void )
 	if( !clgame.hInstance ) return;
 
 	clgame.dllFuncs.pfnFrame( cl.time );
+
 	VGui_Paint ();
 }
 

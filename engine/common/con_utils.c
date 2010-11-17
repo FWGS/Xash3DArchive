@@ -705,19 +705,19 @@ qboolean Cmd_GetGamesList( const char *s, char *completedname, int length )
 	return true;
 }
 
-qboolean Cmd_CheckMapsList( qboolean fRefresh )
+qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 {
-	byte	buf[MAX_MSGLEN];
+	byte	buf[MAX_SYSPATH];
 	char	*buffer;
 	string	result;
+	int	i, size;
 	search_t	*t;
 	file_t	*f;
-	int	i;
 
-	if( FS_FileExistsEx( "maps.lst", true ) && !fRefresh )
+	if( FS_FileSizeEx( "maps.lst", onlyingamedir ) > 0 && !fRefresh )
 		return true; // exist 
 
-	t = FS_SearchExt( "maps/*.bsp", false, true );
+	t = FS_SearchExt( "maps/*.bsp", false, onlyingamedir );
 	if( !t ) return false;
 
 	buffer = Mem_Alloc( host.mempool, t->numfilenames * 2 * sizeof( result ));
@@ -729,7 +729,7 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 
 		if( com.stricmp( ext, "bsp" )) continue;
-		f = FS_OpenEx( t->filenames[i], "rb", true );
+		f = FS_OpenEx( t->filenames[i], "rb", onlyingamedir );
 		FS_FileBase( t->filenames[i], mapname );
 
 		if( f )
@@ -817,6 +817,13 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 	}
 	if( t ) Mem_Free( t ); // free search result
 
+	size = com.strlen( buffer );
+	if( !size && onlyingamedir )
+	{
+          	if( buffer ) Mem_Free( buffer );
+		return Cmd_CheckMapsList_R( fRefresh, false );
+	}
+
 	// write generated maps.lst
 	if( FS_WriteFile( "maps.lst", buffer, com.strlen( buffer )))
 	{
@@ -824,6 +831,11 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 		return true;
 	}
 	return false;
+}
+
+qboolean Cmd_CheckMapsList( qboolean fRefresh )
+{
+	return Cmd_CheckMapsList_R( fRefresh, true );
 }
 
 autocomplete_list_t cmd_list[] =

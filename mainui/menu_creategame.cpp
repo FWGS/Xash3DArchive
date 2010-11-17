@@ -204,6 +204,8 @@ static void UI_CreateGame_GetMapsList( void )
 		numMaps++;
 	}
 
+	if( !numMaps ) uiCreateGame.done.generic.flags |= QMF_GRAYED;
+
 	for( ; numMaps < UI_MAXGAMES; numMaps++ ) uiCreateGame.mapsDescriptionPtr[numMaps] = NULL;
 	uiCreateGame.mapsList.itemNames = (const char **)uiCreateGame.mapsDescriptionPtr;
 	FREE_FILE( afile );

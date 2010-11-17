@@ -1904,7 +1904,7 @@ void FS_InitRootDir( char *path )
 	// just set cwd
 	GetModuleFileName( NULL, szTemp, MAX_SYSPATH );
 	FS_ExtractFilePath( szTemp, szTemp );	
-	SetCurrentDirectory ( szTemp );
+	SetCurrentDirectory( szTemp );
 
 	// use extended pathname
 	fs_ext_path = true;

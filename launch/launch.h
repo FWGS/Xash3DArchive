@@ -19,7 +19,7 @@
 #define LAUNCH_DLL			// ignore alias names
 #include "launch_api.h"
 
-#define XASH_VERSION		0.72f	// current version will be shared across gameinfo struct
+#define XASH_VERSION		0.73f	// current version will be shared across gameinfo struct
 
 #define MAX_NUM_ARGVS		128
 #define MAX_CMD_TOKENS		80
