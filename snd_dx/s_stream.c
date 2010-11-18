@@ -17,6 +17,8 @@ S_StartBackgroundTrack
 */
 void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 {
+	wavdata_t	*info;
+		
 	S_StopBackgroundTrack();
 
 	if(( !introTrack || !*introTrack ) && ( !mainTrack || !*mainTrack ))
@@ -50,6 +52,12 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 
 	// open stream
 	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
+
+	info = FS_StreamInfo( s_bgTrack.stream );
+	s_listener.lerping = false;
+
+	if( info && ((float)info->rate / SOUND_DMA_SPEED ) >= 1.0f )
+		s_listener.lerping = s_lerping->integer;
 }
 
 void S_StopBackgroundTrack( void )
@@ -58,6 +66,7 @@ void S_StopBackgroundTrack( void )
 
 	FS_CloseStream( s_bgTrack.stream );
 	Mem_Set( &s_bgTrack, 0, sizeof( bg_track_t ));
+	s_listener.lerping = false;
 	s_rawend = 0;
 }
 
@@ -90,7 +99,8 @@ void S_StreamBackgroundTrack( void )
 		bufferSamples = MAX_RAW_SAMPLES - (s_rawend - soundtime);
 
 		// decide how much data needs to be read from the file
-		fileSamples = bufferSamples * info->rate / SOUND_DMA_SPEED;
+		fileSamples = bufferSamples * ((float)info->rate / SOUND_DMA_SPEED );
+		if( fileSamples <= 0 ) return; // no more samples need
 
 		// our max buffer size
 		fileBytes = fileSamples * ( info->width * info->channels );
@@ -144,6 +154,7 @@ void S_StartStreaming( void )
 {
 	// begin streaming movie soundtrack
 	s_listener.streaming = true;
+	s_listener.lerping = false;
 }
 
 /*
@@ -154,6 +165,7 @@ S_StopStreaming
 void S_StopStreaming( void )
 {
 	s_listener.streaming = false;
+	s_listener.lerping = false;
 	s_rawend = 0;
 }
 
@@ -236,7 +248,7 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 			b = (src < incount - channels) ? (in[src+channels+(s)]) : 0))
 
 			// NOTE: disable lerping for cinematic sountracks
-#define LERP_SAMPLE		s_listener.streaming ? a : (((((b - a) * (samplefrac & 255)) >> 8) + a))
+#define LERP_SAMPLE		s_listener.lerping ? (((((b - a) * (samplefrac & 255)) >> 8) + a)) : a
 
 #define RESAMPLE_RAW \
 	if( channels == 2 ) { \

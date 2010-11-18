@@ -47,6 +47,8 @@ static const loadwavformat_t load_xash[] =
 {
 { "sound/%s%s.%s", "wav", Sound_LoadWAV },
 { "%s%s.%s", "wav", Sound_LoadWAV },
+{ "sound/%s%s.%s", "mpg", Sound_LoadMPG },
+{ "%s%s.%s", "mpg", Sound_LoadMPG },
 { "sound/%s%s.%s", "ogg", Sound_LoadOGG },
 { "%s%s.%s", "ogg", Sound_LoadOGG },
 { NULL, NULL, NULL }
@@ -82,6 +84,7 @@ static const streamformat_t stream_quake3[] =
 // version3 - Xash3D default stream profile
 static const streamformat_t stream_xash[] =
 {
+{ "%s%s.%s", "mp3", Stream_OpenMPG, Stream_ReadMPG, Stream_FreeMPG },
 { "%s%s.%s", "ogg", Stream_OpenOGG, Stream_ReadOGG, Stream_FreeOGG },
 { "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_FreeWAV },
 { NULL, NULL, NULL, NULL, NULL }

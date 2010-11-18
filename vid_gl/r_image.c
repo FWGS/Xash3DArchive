@@ -3289,8 +3289,6 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	result = FS_SaveImage( basename, r_shot );
 	FS_FreeImage( r_shot );
 	FS_FreeImage( r_side );
-	Mem_Free( buffer );
-	Mem_Free( temp );
 
 	return result;
 }

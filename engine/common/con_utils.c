@@ -315,7 +315,7 @@ qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "ogg" ));
+		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "mp3" ) || !com.stricmp( ext, "ogg" ));
 		else continue;
 
 		FS_FileBase( t->filenames[i], matchbuf );
@@ -453,7 +453,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "ogg" ));
+		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "mp3" ) || !com.stricmp( ext, "ogg" ));
 		else continue;
 
 		com.strncpy( matchbuf, t->filenames[i] + com.strlen(snddir), MAX_STRING ); 

@@ -84,6 +84,7 @@ extern sndlib_t sound;
 //
 qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize );
 qboolean Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize );
+qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize );
 qboolean Sound_LoadSND( const char *name, const byte *buffer, size_t filesize );	// snd - doom1 sounds
 
 //
@@ -95,6 +96,9 @@ void Stream_FreeWAV( stream_t *stream );
 stream_t *Stream_OpenOGG( const char *filename );
 long Stream_ReadOGG( stream_t *stream, long bytes, void *buffer );
 void Stream_FreeOGG( stream_t *stream );
+stream_t *Stream_OpenMPG( const char *filename );
+long Stream_ReadMPG( stream_t *stream, long bytes, void *buffer );
+void Stream_FreeMPG( stream_t *stream );
 
 //
 // formats save

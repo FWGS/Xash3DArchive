@@ -1521,7 +1521,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	}
 
 	if( index < numSprites )
-		MsgDev( D_WARN, "SPR_GetList: unexpected end of %s (%i should be %i)\n", psz, index, numSprites );
+		MsgDev( D_WARN, "SPR_GetList: unexpected end of %s (%i should be %i)\n", psz, numSprites, index );
 
 	Com_CloseScript( script );
 
@@ -1951,7 +1951,7 @@ static int pfnCheckParm( char *parm, char **ppnext )
 	if( FS_GetParmFromCmdLine( parm, str ))
 	{
 		// get the pointer on cmdline param
-		*ppnext = str;
+		if( ppnext ) *ppnext = str;
 		return 1;
 	}
 	return 0;

@@ -754,6 +754,13 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 		return NULL;
 	}
 
+	if( numpackfiles <= 0 )
+	{
+		MsgDev( D_ERROR, "%s has no files. Ignored.\n", packfile );
+		close( packhandle );
+		return NULL;
+	}
+
 	info = (dpackfile_t *)Mem_Alloc( fs_mempool, sizeof( *info ) * numpackfiles );
 	lseek( packhandle, header.dirofs, SEEK_SET );
 

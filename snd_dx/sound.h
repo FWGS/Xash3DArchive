@@ -154,6 +154,7 @@ typedef struct
 	qboolean		inmenu;		// listener in-menu ?
 	qboolean		paused;
 	qboolean		streaming;	// playing AVI-file
+	qboolean		lerping;		// lerp stream ?
 } listener_t;
 
 typedef struct

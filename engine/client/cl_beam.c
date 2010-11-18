@@ -1974,7 +1974,7 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		frameRate = (float)BF_ReadByte( msg );
 		life = (float)(BF_ReadByte( msg ) * 0.1f);
 		width = (float)(BF_ReadByte( msg ) * 0.1f);
-		noise = (float)(BF_ReadByte( msg ) * 0.1f);
+		noise = (float)(BF_ReadByte( msg ) * 0.01f);
 		r = (float)BF_ReadByte( msg );
 		g = (float)BF_ReadByte( msg );
 		b = (float)BF_ReadByte( msg );
