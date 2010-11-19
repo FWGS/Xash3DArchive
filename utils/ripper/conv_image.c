@@ -46,26 +46,6 @@ qboolean ConvWAL( const char *name, byte *buffer, size_t filesize, const char *e
 
 /*
 =============
-ConvJPG
-=============
-*/
-qboolean ConvJPG( const char *name, byte *buffer, size_t filesize, const char *ext )
-{
-	rgbdata_t	*pic = FS_LoadImage( va( "#%s.jpg", name ), buffer, filesize );
-
-	if( pic )
-	{
-		FS_SaveImage( va("%s/%s.%s", gs_gamedir, name, ext ), pic );
-		Conv_CreateShader( name, pic, ext, NULL, 0, 0 );
-		Msg( "%s.jpg\n", name, ext ); // echo to console
-		FS_FreeImage( pic );
-		return true;
-	}
-	return false;
-}
-
-/*
-=============
 ConvBMP
 =============
 */
@@ -179,23 +159,6 @@ qboolean ConvFNT( const char *name, byte *buffer, size_t filesize, const char *e
 		FS_SaveImage(va("%s/%s.%s", gs_gamedir, name, ext ), pic );
 		Msg("%s.fnt\n", name ); // echo to console
 		FS_FreeImage( pic );
-		return true;
-	}
-	return false;
-}
-
-/*
-============
-ConvRAW
-
-write to disk without conversions
-============
-*/
-qboolean ConvRAW( const char *name, byte *buffer, size_t filesize, const char *ext )
-{
-	if( FS_WriteFile( va("%s/%s.%s", gs_gamedir, name, ext ), buffer, filesize ))
-	{
-		Msg( "%s.%s\n", name, ext ); // echo to console
 		return true;
 	}
 	return false;

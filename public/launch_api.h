@@ -720,16 +720,6 @@ typedef struct stdilib_api_s
 	int (*snprintf)( char *buffer, size_t buffersize, const char *format, ... );	// print into buffer
 	char *(*pretifymem)( float value, int digitsafterdecimal );		// pretify memory string
 	const char* (*timestamp)( int format );				// returns current time stamp
-
-	// stringtable system
-	int (*st_create)( const char *name, size_t max_strings );
-	const char *(*st_getstring)( int handle, string_t index );
-	string_t (*st_setstring)( int handle, const char *string );
-	int (*st_load)( wfile_t *wad, const char *name );
-	const char *(*st_getname)( int handle );
-	qboolean (*st_save)( int h, wfile_t *wad );
-	void (*st_clear)( int handle );
-	void (*st_remove)( int handle );
 } stdlib_api_t;
 
 // this is the only function actually exported at the linker level
@@ -1028,14 +1018,6 @@ misc utils
 #define RunThreadsOnIndividual	com.Com_CreateThread
 #define Com_RandomLong		com.Com_RandomLong
 #define Com_RandomFloat		com.Com_RandomFloat
-#define StringTable_Create		com.st_create
-#define StringTable_Delete		com.st_remove
-#define StringTable_Clear		com.st_clear
-#define StringTable_GetString		com.st_getstring
-#define StringTable_SetString		com.st_setstring
-#define StringTable_GetName		com.st_getname
-#define StringTable_Load		com.st_load
-#define StringTable_Save		com.st_save
 
 #define FS_LoadLibrary		com.LoadLibrary
 #define FS_GetProcAddress		com.GetProcAddress

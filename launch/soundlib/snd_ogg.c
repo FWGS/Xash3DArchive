@@ -328,9 +328,9 @@ qboolean Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize )
 	// get the stream information
 	vi = ov_info( &vf, -1 );
 
-	if( vi->channels != 1 )
+	if( vi->channels != 1 && vi->channels != 2 )
 	{
-		MsgDev( D_ERROR, "Sound_LoadOGG: only mono OGG files supported (%s)\n", name );
+		MsgDev( D_ERROR, "Sound_LoadOGG: only mono and stereo OGG files supported (%s)\n", name );
 		ov_clear( &vf );
 		return false;
 	}

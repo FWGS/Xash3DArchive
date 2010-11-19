@@ -193,6 +193,45 @@ static int mpeg_read( file_t *file, mpegfile_t *mpeg )
 	return 0;
 }
 
+static int mpeg_read_mem( const byte *buffer, int *pos, size_t filesize, mpegfile_t *mpeg )
+{
+	int	ret, readSize;
+
+	while( 1 )
+	{
+		readSize = ( BUFFER_SIZE - mpeg->buffer_length );
+
+		if(( *pos + readSize ) > filesize )
+			readSize = ( filesize - *pos );
+		Mem_Copy( &mpeg->buffer[mpeg->buffer_length], buffer + *pos, readSize );
+
+		// no more bytes are left
+		if( readSize <= 0 ) break;
+		*pos += readSize;
+		mpeg->buffer_length += readSize;
+
+		while( 1 )
+		{
+			mad_stream_buffer( &mpeg->stream, mpeg->buffer, mpeg->buffer_length );
+			ret = mad_frame_decode( &mpeg->frame, &mpeg->stream );
+
+			if( mpeg->stream.next_frame )
+			{
+				int	length;
+
+				length = mpeg->buffer + mpeg->buffer_length - mpeg->stream.next_frame;
+				memmove( mpeg->buffer, mpeg->stream.next_frame, length );
+				mpeg->buffer_length = length;
+			}
+
+			if( !ret ) return 1;
+			if( mpeg->stream.error == MP3_ERROR_BUFLEN )
+				break;
+		}
+	}
+	return 0;
+}
+
 static int mpeg_scale( int sample )
 {
 	sample += (1 << ( MPEG_F_FRACBITS - 16 ));
@@ -205,7 +244,7 @@ static int mpeg_scale( int sample )
 
 static int mpeg_size( mp3_frame_t *frame, long bytes )
 {
-	return bytes * 8 / frame->header.bitrate * sound.channels * sound.rate * 2;
+	return bytes * 8 / frame->header.bitrate * sound.channels * sound.rate * sound.width;
 }
 
 
@@ -219,35 +258,39 @@ static int mpeg_size( mp3_frame_t *frame, long bytes )
 
 qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize )
 {
-	synth_t		synth;
-	mp3_stream_t	stream;
-	mp3_frame_t	frame;
-	byte		buf[BUFFER_SIZE];
-	size_t		i, ret, pos = 0;
-	size_t		bufsize = 0;
+	mpegfile_t	mpeg;
+	size_t		pos = 0;
 	size_t		bytesWrite = 0;
-	word		*data;
 
 	// load the file
 	if( !buffer || filesize <= 0 )
 		return false;
 
-	mad_synth_init( &synth );
-	mad_stream_init( &stream );
-	mad_frame_init( &frame );
+	Mem_Set( &mpeg, 0, sizeof( mpeg ));
+	mad_synth_init( &mpeg.synth );
+	mad_stream_init( &mpeg.stream );
+	mad_frame_init( &mpeg.frame );
 
-	sound.channels = ( frame.header.mode == MODE_SINGLE_CHANNEL ) ? 1 : 2;
-	sound.rate = frame.header.samplerate;
+	if( mpeg_read_mem( buffer, &pos, filesize, &mpeg ) == 0 )
+	{
+		MsgDev( D_ERROR, "Sound_LoadMPG: (%s) is probably corrupted\n", name );
+		mad_stream_finish( &mpeg.stream );
+		mad_frame_finish( &mpeg.frame );
+		return false;
+	}
+
+	sound.channels = ( mpeg.frame.header.mode == MODE_SINGLE_CHANNEL ) ? 1 : 2;
+	sound.rate = mpeg.frame.header.samplerate;
 	sound.width = 2; // always 16-bit PCM
 	sound.loopstart = -1;
-	sound.size = mpeg_size( &frame, filesize );
+	sound.size = mpeg_size( &mpeg.frame, filesize );
 
 	if( !sound.size )
 	{
 		// bad ogg file
 		MsgDev( D_ERROR, "Sound_LoadMPG: (%s) is probably corrupted\n", name );
-		mad_stream_finish( &stream );
-		mad_frame_finish( &frame );
+		mad_stream_finish( &mpeg.stream );
+		mad_frame_finish( &mpeg.frame );
 		return false;
 	}
 
@@ -255,60 +298,39 @@ qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize )
 	sound.wav = (byte *)Mem_Alloc( Sys.soundpool, sound.size );
 
 	// decompress mpg into pcm wav format
-	while( 1 )
+	while( bytesWrite < sound.size )
 	{
-		Mem_Copy( &buf[bufsize], buffer + pos, BUFFER_SIZE - bufsize );
-		pos += ( BUFFER_SIZE - bufsize );
-		if( pos >= filesize ) break;	// end
+		word	*data;
+		int	i;
 
-		bufsize += ( BUFFER_SIZE - bufsize );
+		mad_synth_frame( &mpeg.synth, &mpeg.frame );
+		data = (short *)(sound.wav + bytesWrite);
 
-		while( 1 )
-		{
-			mad_stream_buffer( &stream, buf, bufsize );
-			ret = mad_frame_decode( &frame, &stream );
-
-			if( stream.next_frame )
-			{
-				int	length;
-
-				length = buf + bufsize - stream.next_frame;
-				memmove( buf, stream.next_frame, length );
-				bufsize = length;
-			}
-
-			if( !ret ) break;
-			if( stream.error == MP3_ERROR_BUFLEN )
-			{
-				break;
-			}
-		}
-
-		mad_synth_frame( &synth, &frame );
-		data = (word *)(sound.wav + bytesWrite);
-
-		for( i = 0; i < synth.pcm.length; i++ )
+		for( i = 0; i < mpeg.synth.pcm.length; i++ )
 		{
 			if( sound.channels == 2 )
 			{
-				*data++ = mpeg_scale( synth.pcm.samples[0][i] );
-				*data++ = mpeg_scale( synth.pcm.samples[1][i] );
+				*data++ = mpeg_scale( mpeg.synth.pcm.samples[0][i] );
+				*data++ = mpeg_scale( mpeg.synth.pcm.samples[1][i] );
 			}
 			else
 			{
-				*data++ = mpeg_scale( synth.pcm.samples[0][i] );
+				*data++ = mpeg_scale( mpeg.synth.pcm.samples[0][i] );
 			}
-			bytesWrite += ( sound.width * sound.channels );
 
-			if( bytesWrite >= sound.size )
-			{
-				ASSERT( 0 );
-				break;
-			}
+			bytesWrite += ( sound.width * sound.channels );
+			if( bytesWrite >= sound.size ) break;
 		}
+
+		if( !mpeg_read_mem( buffer, &pos, filesize, &mpeg ))
+			break;
 	}
 
-	return false;
+	sound.samples = bytesWrite / ( sound.width * sound.channels );
+	mad_stream_finish( &mpeg.stream );
+	mad_frame_finish( &mpeg.frame );
+
+	return true;
 }
 
 /*

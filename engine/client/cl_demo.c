@@ -123,27 +123,6 @@ void CL_WriteDemoHeader( const char *name )
 	BF_WriteString( &buf, clgame.mapname );
 	BF_WriteString( &buf, clgame.maptitle );
 
-	// configstrings
-	for( i = 0; i < MAX_CONFIGSTRINGS; i++ )
-	{
-		if( cl.configstrings[i][0] )
-		{
-			BF_WriteByte( &buf, svc_configstring );
-			BF_WriteShort( &buf, i );
-			BF_WriteString( &buf, cl.configstrings[i] );
-
-			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
-			{	
-				// write it out
-				len = LittleLong( BF_GetNumBytesWritten( &buf ));
-				FS_Write( cls.demofile, &len, 4 );
-				FS_Write( cls.demofile, BF_GetData( &buf ), len );
-				BF_Clear( &buf );
-			}
-		}
-
-	}
-
 	// user messages
 	for( i = 0; i < MAX_USER_MESSAGES; i++ )
 	{

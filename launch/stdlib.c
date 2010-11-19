@@ -223,6 +223,9 @@ int com_atoi( const char *str )
 	int	c, sign;
 
 	if( !str ) return 0;
+
+	// check for empty charachters in string
+	while( *str == ' ' && str ) str++;
 	
 	if( *str == '-' )
 	{
@@ -230,9 +233,6 @@ int com_atoi( const char *str )
 		str++;
 	}
 	else sign = 1;
-
-	// check for empty charachters in string
-	while( *str == ' ' && str ) str++;
 		
 	// check for hex
 	if( str[0] == '0' && ( str[1] == 'x' || str[1] == 'X' ))
@@ -269,6 +269,9 @@ float com_atof( const char *str )
 	int	c, sign, decimal, total;
 
 	if( !str ) return 0.0f;
+
+	// check for empty charachters in string
+	while( *str == ' ' && str ) str++;
 	
 	if( *str == '-' )
 	{
@@ -276,9 +279,6 @@ float com_atof( const char *str )
 		str++;
 	}
 	else sign = 1;
-
-	// check for empty charachters in string
-	while( *str == ' ' && str ) str++;
 		
 	// check for hex
 	if( str[0] == '0' && ( str[1] == 'x' || str[1] == 'X' ))
@@ -334,7 +334,7 @@ void com_atov( float *vec, const char *str, size_t siz )
 	int	j;
 
 	com_strncpy( buffer, str, sizeof( buffer ));
-	Mem_Set( vec, 0, sizeof(vec_t) * siz );
+	Mem_Set( vec, 0, sizeof( vec_t ) * siz );
 	pstr = pfront = buffer;
 
 	for( j = 0; j < siz; j++ )

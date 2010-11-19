@@ -10,6 +10,18 @@ portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
 static bg_track_t		s_bgTrack;
 int			s_rawend;
 
+void S_CheckLerpingState( void )
+{
+	wavdata_t	*info;
+
+	s_listener.lerping = false;
+	if( !s_bgTrack.stream ) return;
+	info = FS_StreamInfo( s_bgTrack.stream );
+
+	if( info && ((float)info->rate / SOUND_DMA_SPEED ) >= 1.0f )
+		s_listener.lerping = s_lerping->integer;
+}
+
 /*
 =================
 S_StartBackgroundTrack
@@ -17,57 +29,38 @@ S_StartBackgroundTrack
 */
 void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 {
-	wavdata_t	*info;
-		
 	S_StopBackgroundTrack();
 
 	if(( !introTrack || !*introTrack ) && ( !mainTrack || !*mainTrack ))
 		return;
 
-	if( !introTrack )
-	{
-		introTrack = "";
-	}
-
-	if( !mainTrack || !*mainTrack )
-	{
-		mainTrack = introTrack;
-	}
-
+	if( !introTrack ) introTrack = mainTrack;
 	if( !*introTrack ) return;
 
-	if( mainTrack )
-	{
-		com.strncpy( s_bgTrack.loopName, mainTrack, sizeof( s_bgTrack.loopName ));
-	}
-	else s_bgTrack.loopName[0] = 0;
-
-	// close the background track, but DON'T reset s_rawend
-	// if restarting the same back ground track
-	if( s_bgTrack.stream )
-	{
-		FS_CloseStream( s_bgTrack.stream );
-		s_bgTrack.stream = NULL;
-	}
+	if( !mainTrack || !*mainTrack ) s_bgTrack.loopName[0] = '\0';
+	else com.strncpy( s_bgTrack.loopName, mainTrack, sizeof( s_bgTrack.loopName ));
 
 	// open stream
 	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
 
-	info = FS_StreamInfo( s_bgTrack.stream );
-	s_listener.lerping = false;
-
-	if( info && ((float)info->rate / SOUND_DMA_SPEED ) >= 1.0f )
-		s_listener.lerping = s_lerping->integer;
+	S_CheckLerpingState();
 }
 
 void S_StopBackgroundTrack( void )
 {
+	s_listener.stream_paused = false;
+
 	if( !s_bgTrack.stream ) return;
 
 	FS_CloseStream( s_bgTrack.stream );
 	Mem_Set( &s_bgTrack, 0, sizeof( bg_track_t ));
 	s_listener.lerping = false;
 	s_rawend = 0;
+}
+
+void S_StreamSetPause( int pause )
+{
+	s_listener.stream_paused = pause;
 }
 
 /*
@@ -86,7 +79,8 @@ void S_StreamBackgroundTrack( void )
 	if( s_listener.streaming ) return;	// we are playing movie or somewhat
 
 	// don't bother playing anything if musicvolume is 0
-	if( !s_musicvolume->value || s_listener.paused ) return;
+	if( !s_musicvolume->value || s_listener.paused || s_listener.stream_paused )
+		return;
 
 	// see how many samples should be copied into the raw buffer
 	if( s_rawend < soundtime )
@@ -131,9 +125,10 @@ void S_StreamBackgroundTrack( void )
 			if( s_bgTrack.loopName[0] )
 			{
 				FS_CloseStream( s_bgTrack.stream );
-				s_bgTrack.stream = NULL;
-				S_StartBackgroundTrack( s_bgTrack.loopName, NULL );
+				s_bgTrack.stream = FS_OpenStream( va( "media/%s", s_bgTrack.loopName ));
+
 				if( !s_bgTrack.stream ) return;
+				S_CheckLerpingState();
 			}
 			else
 			{

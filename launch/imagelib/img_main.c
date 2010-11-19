@@ -349,7 +349,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	{
 		for( i = 0; i < 6; i++ )
 		{
-			// for support mixed cubemaps e.g. sky_ft.jpg, sky_rt.tga, sky_bk.png
+			// for support mixed cubemaps e.g. sky_ft.jpg, sky_rt.tga, sky_bk.bmp
 			// NOTE: all loaders must keep sides in one format for all
 			for( format = image.loadformats; format && format->formatstring; format++ )
 			{

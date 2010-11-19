@@ -48,6 +48,73 @@ void CL_PlayVideo_f( void )
 
 /*
 ===============
+CL_PlayCDTrack_f
+
+Emulate cd-audio system
+===============
+*/
+void CL_PlayCDTrack_f( void )
+{
+	const char	*command;
+	static int	track = 0;
+	static qboolean	paused = false;
+	static qboolean	looped = false;
+
+	if( Cmd_Argc() < 2 ) return;
+	command = Cmd_Argv( 1 );
+
+	if( !com.stricmp( command, "play" ))
+	{
+		track = bound( 1, com.atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
+		S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL );
+		paused = false;
+		looped = false;
+	}
+	else if( !com.stricmp( command, "loop" ))
+	{
+		track = bound( 1, com.atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
+		S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1] );
+		paused = false;
+		looped = true;
+	}
+	else if( !com.stricmp( command, "pause" ))
+	{
+		S_StreamSetPause( true );
+		paused = true;
+	}
+	else if( !com.stricmp( command, "resume" ))
+	{
+		S_StreamSetPause( false );
+		paused = false;
+	}
+	else if( !com.stricmp( command, "stop" ))
+	{
+		S_StopBackgroundTrack();
+		paused = false;
+		looped = false;
+		track = 0;
+	}
+	else if( !com.stricmp( command, "info" ))
+	{
+		int	i, maxTrack;
+
+		for( maxTrack = i = 0; i < MAX_CDTRACKS; i++ )
+			if( com.strlen( clgame.cdtracks[i] )) maxTrack++;
+			
+		Msg( "%u tracks\n", maxTrack );
+		if( track )
+		{
+			if( paused ) Msg( "Paused %s track %u\n", looped ? "looping" : "playing", track );
+			else Msg( "Currently %s track %u\n", looped ? "looping" : "playing", track );
+		}
+		Msg( "Volume is %f\n", Cvar_VariableValue( "musicvolume" ));
+		return;
+	}
+	else Msg( "cd: unknown command %s\n", command );
+}
+
+/*
+===============
 CL_Download_f
 
 Request a download from the server

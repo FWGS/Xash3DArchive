@@ -46,8 +46,8 @@ typedef struct
 	int		cdAudioTrack;
 	int		maxClients;
 	int		maxEntities;
-	const char	*pStringBase;	// set to NULL during initialize (in GameDllInit)
-					// if you want to use StringTable system instead
+	const char	*pStringBase;
+
 	void		*pSaveData;	// (SAVERESTOREDATA *) pointer
 	vec3_t		vecLandmarkOffset;
 } globalvars_t;

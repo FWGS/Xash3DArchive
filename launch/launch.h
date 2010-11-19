@@ -534,17 +534,4 @@ void Sound_Init( void );
 void Sound_Setup( const char *formats, const uint flags );
 void Sound_Shutdown( void );
 
-//
-// stringtable.c
-//
-int StringTable_CreateNewSystem( const char *name, size_t max_strings );
-string_t StringTable_SetString( int handle, const char *string );
-const char *StringTable_GetString( int handle, string_t index );
-int StringTable_LoadSystem( wfile_t *wad, const char *name );
-qboolean StringTable_SaveSystem( int h, wfile_t *wad );
-const char *StringTable_GetName( int handle );
-void StringTable_DeleteSystem( int handle );
-void StringTable_ClearSystem( int handle );
-void StringTable_Info_f( void );
-
 #endif//LAUNCHER_H

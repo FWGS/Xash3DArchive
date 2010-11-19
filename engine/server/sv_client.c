@@ -1181,54 +1181,8 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_LIGHTSTYLES ) com.snprintf( cmd, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, 0 );
+	if( start == MAX_LIGHTSTYLES ) com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, 0 );
 	else com.snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, start );
-
-	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
-}
-
-/*
-==================
-SV_Configstrings_f
-==================
-*/
-void SV_Configstrings_f( sv_client_t *cl )
-{
-	int	start;
-	string	cmd;
-
-	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "configstrings is not valid from the console\n" );
-		return;
-	}
-
-	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
-	{
-		MsgDev( D_INFO, "configstrings from different level\n" );
-		SV_New_f( cl );
-		return;
-	}
-	
-	start = com.atoi( Cmd_Argv( 2 ));
-
-	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_CONFIGSTRINGS )
-	{
-		if( sv.configstrings[start][0] )
-		{
-			BF_WriteByte( &cl->netchan.message, svc_configstring );
-			BF_WriteShort( &cl->netchan.message, start );
-			BF_WriteString( &cl->netchan.message, sv.configstrings[start] );
-		}
-		start++;
-	}
-
-	if( start == MAX_CONFIGSTRINGS ) com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, 0 );
-	else com.snprintf( cmd, MAX_STRING, "cmd configstrings %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1692,7 +1646,6 @@ ucmd_t ucmds[] =
 { "download", SV_BeginDownload_f },
 { "userinfo", SV_UpdateUserinfo_f },
 { "lightstyles", SV_WriteLightstyles_f },
-{ "configstrings", SV_Configstrings_f },
 { NULL, NULL }
 };
 

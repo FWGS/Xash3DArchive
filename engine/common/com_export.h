@@ -38,6 +38,7 @@ _inline int CL_CreateDecalList( decallist_t *pList, qboolean changelevel )
 #define S_StartLocalSound		if( se ) se->StartLocalSound
 #define S_StartBackgroundTrack	if( se ) se->StartBackgroundTrack
 #define S_StopBackgroundTrack		if( se ) se->StopBackgroundTrack
+#define S_StreamSetPause		if( se ) se->PauseBackgroundTrack
 #define S_RawSamples 		if( se ) se->StreamRawSamples
 #define S_StopAllSounds		if( se ) se->StopAllSounds
 #define S_StopSound			if( se ) se->StopSound

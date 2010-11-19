@@ -159,51 +159,6 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 
 /*
 =====================================
-Cmd_GetFontList
-
-Prints or complete font filename
-=====================================
-*/
-qboolean Cmd_GetFontList( const char *s, char *completedname, int length )
-{
-	search_t		*t;
-	string		matchbuf;
-	int		i, numfonts;
-
-	t = FS_Search( va( "gfx/fonts/%s*.*", s ), true);
-	if( !t ) return false;
-
-	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) com.strncpy( completedname, matchbuf, length );
-	if( t->numfilenames == 1 ) return true;
-
-	for( i = 0, numfonts = 0; i < t->numfilenames; i++ )
-	{
-		const char *ext = FS_FileExtension( t->filenames[i] ); 
-
-		if( com.stricmp( ext, "png" ) && com.stricmp( ext, "dds" ) && com.stricmp( ext, "tga" ))
-			continue;
-		FS_FileBase( t->filenames[i], matchbuf );
-		Msg( "%16s\n", matchbuf );
-		numfonts++;
-	}
-	Msg( "\n^3 %i fonts found.\n", numfonts );
-	Mem_Free( t );
-
-	// cut shortestMatch to the amount common with s
-	if( completedname && length )
-	{
-		for( i = 0; matchbuf[i]; i++ )
-		{
-			if(com.tolower( completedname[i] ) != com.tolower( matchbuf[i] ))
-				completedname[i] = 0;
-		}
-	}
-	return true;
-}
-
-/*
-=====================================
 Cmd_GetDemoList
 
 Prints or complete demo filename
@@ -474,45 +429,6 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 		}
 	}
 
-	return true;
-}
-
-qboolean Cmd_GetStringTablesList( const char *s, char *completedname, int length )
-{
-	int	i, numtables;
-	string	tables[MAX_STRING_TABLES];
-	string	matchbuf;
-	const char *name;
-
-	// compare gamelist with current keyword
-	for( i = 0, numtables = 0; i < MAX_STRING_TABLES; i++ )
-	{
-		name = StringTable_GetName( i );
-		if( name && ( *s == '*' || !com.strnicmp( name, s, com.strlen( s ))))
-			com.strcpy( tables[numtables++], name ); 
-	}
-	if( !numtables ) return false;
-
-	com.strncpy( matchbuf, tables[0], MAX_STRING ); 
-	if( completedname && length ) com.strncpy( completedname, matchbuf, length );
-	if( numtables == 1 ) return true;
-
-	for( i = 0; i < numtables; i++ )
-	{
-		com.strncpy( matchbuf, tables[i], MAX_STRING ); 
-		Msg("%16s\n", matchbuf );
-	}
-	Msg( "\n^3 %i stringtables found.\n", numtables );
-
-	// cut shortestMatch to the amount common with s
-	if( completedname && length )
-	{
-		for( i = 0; matchbuf[i]; i++ )
-		{
-			if( com.tolower( completedname[i]) != com.tolower( matchbuf[i] ))
-				completedname[i] = 0;
-		}
-	}
 	return true;
 }
 
@@ -841,11 +757,8 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 autocomplete_list_t cmd_list[] =
 {
 { "gl_texturemode", Cmd_GetTexturemodes },
-{ "stringlist", Cmd_GetStringTablesList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
-{ "menufont", Cmd_GetFontList, },
-{ "setfont", Cmd_GetFontList, },
 { "hpkval", Cmd_GetCustomList },
 { "music", Cmd_GetMusicList, },
 { "movie", Cmd_GetMovieList },

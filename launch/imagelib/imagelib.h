@@ -218,16 +218,7 @@ typedef struct tga_s
 
 ========================================================================
 */
-// defined in image_jpg.c
-
-/*
-========================================================================
-
-.PNG image format
-
-========================================================================
-*/
-// defined in image_png.c
+// defined in img_jpg.c
 
 /*
 ========================================================================
@@ -502,7 +493,6 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadVTF( const char *name, const byte *buffer, size_t filesize );
-qboolean Image_LoadPNG( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize );
@@ -515,7 +505,6 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_SaveTGA( const char *name, rgbdata_t *pix );
 qboolean Image_SaveDDS( const char *name, rgbdata_t *pix );
 qboolean Image_SaveBMP( const char *name, rgbdata_t *pix );
-qboolean Image_SavePNG( const char *name, rgbdata_t *pix );
 qboolean Image_SaveJPG( const char *name, rgbdata_t *pix );
 qboolean Image_SavePCX( const char *name, rgbdata_t *pix );
 

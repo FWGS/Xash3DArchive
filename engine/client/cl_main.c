@@ -734,7 +734,12 @@ CL_ClearState
 */
 void CL_ClearState( void )
 {
-	S_StopBackgroundTrack ();
+	if( !cls.changelevel ) 
+	{
+		// continue playing if we are changing level
+		S_StopBackgroundTrack ();
+	}
+
 	S_StopAllSounds ();
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
@@ -1006,7 +1011,6 @@ void CL_PrepSound( void )
 	}
 
 	S_EndRegistration();
-	CL_RunBackgroundTrack();
 
 	if( host.soundList )
 	{
@@ -1393,33 +1397,6 @@ void CL_Precache_f( void )
 
 /*
 =================
-CL_DumpCfgStrings_f
-
-Dump all the configstring that used on the client-side
-=================
-*/
-void CL_DumpCfgStrings_f( void )
-{
-	int	i, numStrings = 0;
-
-	if( cls.state != ca_active )
-	{
-		Msg( "No server running\n" );
-		return;
-	}
-
-	for( i = 0; i < MAX_CONFIGSTRINGS; i++ )
-	{
-		if( !cl.configstrings[i][0] ) continue;
-		Msg( "%s [%i]\n", cl.configstrings[i], i );
-		numStrings++;
-	}
-
-	Msg( "%i total strings used\n", numStrings );
-}
-
-/*
-=================
 CL_Escape_f
 
 Escape to menu from game
@@ -1491,6 +1468,7 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("cmd", CL_ForwardToServer_f, "send a console commandline to the server" );
 	Cmd_AddCommand ("pause", NULL, "pause the game (if the server allows pausing)" );
 	Cmd_AddCommand ("localservers", CL_LocalServers_f, "collect info about local servers" );
+	Cmd_AddCommand ("cd", CL_PlayCDTrack_f, "Play cd-track (not real cd-player of course)" );
 
 	Cmd_AddCommand ("@crashed",  CL_Crashed_f, "" );	// internal system command
 	Cmd_AddCommand ("userinfo", CL_Userinfo_f, "print current client userinfo" );
@@ -1505,7 +1483,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("stop", CL_Stop_f, "stop playing or recording a demo" );
 	Cmd_AddCommand ("info", NULL, "collect info about local servers with specified protocol" );
 	Cmd_AddCommand ("escape", CL_Escape_f, "escape from game to menu" );
-	Cmd_AddCommand ("cfgstringslist", CL_DumpCfgStrings_f, "dump all configstrings that used on the client" );
 	
 	Cmd_AddCommand ("quit", CL_Quit_f, "quit from game" );
 	Cmd_AddCommand ("exit", CL_Quit_f, "quit from game" );

@@ -249,7 +249,6 @@ static const loadpixformat_t load_wadlib[] =
 static const loadpixformat_t load_xash[] =
 {
 { "%s%s.%s", "dds", Image_LoadDDS, IL_HINT_NO },	// cubemaps, depthmaps, 2d textures
-{ "%s%s.%s", "png", Image_LoadPNG, IL_HINT_NO },	// levelshot save as .png
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// screenshots, etc
 { "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// 2d textures
 { "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures (WorldCraft support)
@@ -264,7 +263,6 @@ static const loadpixformat_t load_xash[] =
 static const loadpixformat_t load_ximage[] =
 {
 { "%s%s.%s", "dds", Image_LoadDDS, IL_HINT_NO },	// cubemaps, depthmaps, 2d textures
-{ "%s%s.%s", "png", Image_LoadPNG, IL_HINT_NO },	// levelshot save as .png
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// screenshots, etc
 { "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// 2d textures
 { "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// there all wad package types
@@ -290,7 +288,6 @@ static const savepixformat_t save_extragen[] =
 {
 { "%s%s.%s", "tga", Image_SaveTGA },		// tga screenshots
 { "%s%s.%s", "jpg", Image_SaveJPG },		// jpg screenshots
-{ "%s%s.%s", "png", Image_SavePNG },		// png levelshots
 { "%s%s.%s", "dds", Image_SaveDDS },		// vtf use this
 { "%s%s.%s", "pcx", Image_SavePCX },		// just in case
 { "%s%s.%s", "bmp", Image_SaveBMP },		// all 8-bit images
@@ -302,7 +299,6 @@ static const savepixformat_t save_xash[] =
 {
 { "%s%s.%s", "tga", Image_SaveTGA },		// tga screenshots
 { "%s%s.%s", "jpg", Image_SaveJPG },		// tga levelshots or screenshots
-{ "%s%s.%s", "png", Image_SavePNG },		// png levelshots
 { "%s%s.%s", "dds", Image_SaveDDS },		// dds envshots
 { NULL, NULL, NULL }
 };
@@ -311,7 +307,6 @@ static const savepixformat_t save_ximage[] =
 {
 { "%s%s.%s", "tga", Image_SaveTGA },
 { "%s%s.%s", "jpg", Image_SaveJPG },
-{ "%s%s.%s", "png", Image_SavePNG },
 { "%s%s.%s", "dds", Image_SaveDDS },
 { "%s%s.%s", "pcx", Image_SavePCX },
 { "%s%s.%s", "bmp", Image_SaveBMP },
@@ -380,7 +375,7 @@ void Image_Setup( const char *formats, const uint flags )
 	if( !com.stricmp( formats, "Xash3D" ) || !com.stricmp( formats, "Xash" ))
 	{
 		image.loadformats = load_xash;
-		Image_SetPaths( "env", "jpg", "png", "png" );
+		Image_SetPaths( "env", "jpg", "jpg", "jpg" );
 	}
 	else if( !com.stricmp( formats, "stalker" ) || !com.stricmp( formats, "S.T.A.L.K.E.R" ))
 	{
@@ -425,7 +420,7 @@ void Image_Setup( const char *formats, const uint flags )
 	else
 	{
 		image.loadformats = load_xash; // unrecognized version, use default
-		Image_SetPaths( "env", "jpg", "png", "png" );
+		Image_SetPaths( "env", "jpg", "jpg", "jpg" );
 	}
 
 	if( Sys.app_name == HOST_RIPPER )

@@ -12,43 +12,6 @@ server_static_t	svs;	// persistant server info
 svgame_static_t	svgame;	// persistant game info
 server_t		sv;	// local server
 
-/*
-================
-SV_FindIndex
-
-================
-*/
-int SV_FindIndex( const char *name, int start, int end, qboolean create )
-{
-	int	i;
-	
-	if( !name || !name[0] ) return 0;
-
-	for( i = 1; i < end && sv.configstrings[start+i][0]; i++ )
-		if( !com.strcmp( sv.configstrings[start+i], name ))
-			return i;
-
-	if( !create ) return 0;
-
-	if( i == end ) 
-	{
-		MsgDev( D_WARN, "SV_FindIndex: %d out of range [%d - %d]\n", start, end );
-		return 0;
-	}
-
-	// register new resource
-	com.strncpy( sv.configstrings[start+i], name, sizeof( sv.configstrings[i] ));
-
-	if( sv.state != ss_loading )
-	{	
-		// send the update to everyone
-		BF_WriteByte( &sv.reliable_datagram, svc_configstring );
-		BF_WriteShort( &sv.reliable_datagram, start + i );
-		BF_WriteString( &sv.reliable_datagram, name );
-	}
-	return i;
-}
-
 int SV_ModelIndex( const char *name )
 {
 	int	i;
@@ -281,7 +244,7 @@ void SV_ActivateServer( void )
 ================
 SV_DeactivateServer
 
-deactivate server, free edicts stringtables etc
+deactivate server, free edicts, strings etc
 ================
 */
 void SV_DeactivateServer( void )
@@ -295,9 +258,7 @@ void SV_DeactivateServer( void )
 
 	SV_FreeEdicts ();
 
-	if( svgame.globals->pStringBase )
-		Mem_EmptyPool( svgame.stringspool );
-	else StringTable_Clear( svgame.hStringTable );
+	Mem_EmptyPool( svgame.stringspool );
 
 	svgame.dllFuncs.pfnServerDeactivate();
 

@@ -7,7 +7,7 @@
 #include "wadfile.h"
 #include "byteorder.h"
 
-#define IDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'I')	// little-endian "IBSP" q2, q3 bsp's
+#define IDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'I')	// little-endian "IBSP" q2 bsp's
 #define VDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'V')	// little-endian "VBSP" hl2 bsp's
 #define IDIWADHEADER	(('D'<<24)+('A'<<16)+('W'<<8)+'I')	// little-endian "IWAD" doom1 game wad
 #define IDPWADHEADER	(('D'<<24)+('A'<<16)+('W'<<8)+'P')	// little-endian "PWAD" doom1 game wad
@@ -315,11 +315,12 @@ qboolean Conv_CheckMap( const char *mapname )
 
 	if( !f ) return false;
 
-	if(FS_Read( f, &hdr, sizeof(gbsphdr_t)) != sizeof(gbsphdr_t))
+	if( FS_Read( f, &hdr, sizeof(gbsphdr_t)) != sizeof( gbsphdr_t ))
 	{
 		FS_Close( f );	// very strange file with size smaller than 8 bytes and ext .bsp
 		return false;
 	}
+
 	// detect game type
 	switch( LittleLong( hdr.ident ))
 	{
@@ -333,21 +334,13 @@ qboolean Conv_CheckMap( const char *mapname )
 		FS_Close( f );
 		return true;
 	case IDBSPMODHEADER: // continue checking
-		switch( LittleLong( hdr.version ))
+		if( LittleLong( hdr.version ) == 38 )
 		{
-		case 38:
 			game_family = GAME_QUAKE2;
 			FS_Close( f );
 			return true;
-		case 46:
-			game_family = GAME_QUAKE3;
-			FS_Close( f );
-			return true;
-		case 47:
-			game_family = GAME_RTCW;
-			FS_Close( f );
-			return true;
 		}
+		break;
 	case VDBSPMODHEADER: // continue checking
 		switch( LittleLong( hdr.version ))
 		{
@@ -361,15 +354,12 @@ qboolean Conv_CheckMap( const char *mapname )
 			FS_Close( f );
 			return true;
 		}
-	case IDWAD3HEADER:
-		game_family = GAME_XASH3D;
-		FS_Close( f );
-		return true;
-	default:
-		game_family = GAME_GENERIC;
-		FS_Close( f );
-		return false;
 	}
+
+	game_family = GAME_GENERIC;
+	FS_Close( f );
+
+	return false;
 }
 
 qboolean Conv_CheckWad( const char *wadname )
@@ -409,7 +399,7 @@ qboolean Conv_CheckWad( const char *wadname )
 	// and check wadnames in case
 	if(!com.stricmp( wadname, "tnt.wad" ) && game_family == GAME_DOOM1 )
 	{
-		Msg("Wow! Doom2 na TNT!\n" );
+		Msg( "Wow! Doom2 na TNT!\n" );
 	}
 	return (game_family != GAME_GENERIC);
 }

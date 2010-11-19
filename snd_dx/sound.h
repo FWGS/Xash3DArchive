@@ -155,6 +155,7 @@ typedef struct
 	qboolean		paused;
 	qboolean		streaming;	// playing AVI-file
 	qboolean		lerping;		// lerp stream ?
+	qboolean		stream_paused;	// pause only background track
 } listener_t;
 
 typedef struct
@@ -277,6 +278,7 @@ void S_StreamRawSamples( int samples, int rate, int width, int channels, const b
 void S_StartBackgroundTrack( const char *intro, const char *loop );
 void S_StreamBackgroundTrack( void );
 void S_StopBackgroundTrack( void );
+void S_StreamSetPause( int pause );
 
 //
 // s_utils.c

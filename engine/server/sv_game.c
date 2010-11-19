@@ -2578,13 +2578,10 @@ SV_AllocString
 */
 string_t SV_AllocString( const char *szValue )
 {
-	if( svgame.globals->pStringBase )
-	{
-		const char *newString;
-		newString = com.stralloc( svgame.stringspool, szValue, __FILE__, __LINE__ );
-		return newString - svgame.globals->pStringBase;
-	}
-	return StringTable_SetString( svgame.hStringTable, szValue );
+	const char	*newString;
+
+	newString = com.stralloc( svgame.stringspool, szValue, __FILE__, __LINE__ );
+	return newString - svgame.globals->pStringBase;
 }		
 
 /*
@@ -2595,9 +2592,7 @@ SV_GetString
 */
 const char *SV_GetString( string_t iString )
 {
-	if( svgame.globals->pStringBase )
-		return (svgame.globals->pStringBase + iString);
-	return StringTable_GetString( svgame.hStringTable, iString );
+	return (svgame.globals->pStringBase + iString);
 }
 
 /*
@@ -4329,9 +4324,7 @@ void SV_UnloadProgs( void )
 	SV_DeactivateServer ();
 	Delta_Shutdown ();
 
-	if( svgame.globals->pStringBase )
-		Mem_FreePool( &svgame.stringspool );
-	else StringTable_Delete( svgame.hStringTable );
+	Mem_FreePool( &svgame.stringspool );
 
 	if( svgame.dllFuncs2.pfnGameShutdown )
 	{
@@ -4455,22 +4448,10 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.gmsgHudText = -1;
 
 	Cvar_FullSet( "host_gameloaded", "1", CVAR_INIT );
+	svgame.stringspool = Mem_AllocPool( "Server Strings" );
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();
-
-	// NOTE: game can resest pStringBase in case we want use StringTable system
-	if( svgame.globals->pStringBase )
-	{
-		// just use Half-Life system - base pointer and malloc
-		svgame.stringspool = Mem_AllocPool( "Server Strings" );
-	}
-	else
-	{
-		// 65535 unique strings should be enough ...
-		MsgDev( D_INFO, "Create stringtable ^2Server^7\n" ); 
-		svgame.hStringTable = StringTable_Create( "Server", 0x10000 );
-	}
 
 	// initialize pm_shared
 	SV_InitClientMove();

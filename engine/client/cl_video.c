@@ -110,7 +110,7 @@ void SCR_CheckStartupVids( void )
 
 		if( ++c > MAX_MOVIES - 1 )
 		{
-			MsgDev( D_WARN, "Host_StartMovies: max %i movies in StartupVids\n", MAX_DEMOS );
+			MsgDev( D_WARN, "Host_StartMovies: max %i movies in StartupVids\n", MAX_MOVIES );
 			break;
 		}
 	}

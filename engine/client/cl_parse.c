@@ -21,7 +21,7 @@ const char *svc_strings[256] =
 	"svc_nop",
 	"svc_disconnect",
 	"svc_changing",
-	"svc_configstring",
+	"svc_unused4",
 	"svc_setview",
 	"svc_sound",
 	"svc_time",
@@ -325,32 +325,6 @@ void CL_ParseDownload( sizebuf_t *msg )
 
 		// get another file if needed
 		CL_RequestNextDownload();
-	}
-}
-
-void CL_RunBackgroundTrack( void )
-{
-	string	intro, main, track;
-
-	// run background track
-	com.strncpy( track, cls.background_track, MAX_STRING );
-	com.snprintf( intro, MAX_STRING, "%s_intro", cl.configstrings[CS_BACKGROUND_TRACK] );
-	com.snprintf( main, MAX_STRING, "%s_main", cl.configstrings[CS_BACKGROUND_TRACK] );
-
-	if( FS_FileExists( va( "media/%s.ogg", intro )) && FS_FileExists( va( "media/%s.ogg", main )))
-	{
-		// combined track with introduction and main loop theme
-		S_StartBackgroundTrack( intro, main );
-	}
-	else if( FS_FileExists( va( "media/%s.ogg", track )))
-	{
-		// single looped theme
-		S_StartBackgroundTrack( track, track );
-	}
-	else if( !com.strcmp( track, "" ))
-	{
-		// blank name stopped last track
-		S_StopBackgroundTrack();
 	}
 }
 
@@ -770,27 +744,6 @@ void CL_ParseLightStyle( sizebuf_t *msg )
 	s = BF_ReadString( msg );
 
 	CL_SetLightstyle( style, s );
-}
-
-/*
-================
-CL_ParseConfigString
-================
-*/
-void CL_ParseConfigString( sizebuf_t *msg )
-{
-	int	i;
-
-	i = BF_ReadShort( msg );
-	if( i < 0 || i >= MAX_CONFIGSTRINGS )
-		Host_Error( "configstring > MAX_CONFIGSTRINGS\n" );
-	com.strcpy( cl.configstrings[i], BF_ReadString( msg ));
-		
-	// do something apropriate 
-	if( i == CS_BACKGROUND_TRACK && cl.audio_prepped )
-	{
-		CL_RunBackgroundTrack();
-	}
 }
 
 /*
@@ -1232,9 +1185,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			if( BF_ReadOneBit( msg ))
 			{
 				cls.changelevel = true;
-				Cmd_ExecuteString( "hud_changelevel\n" );
 				S_StopAllSounds();
-				S_StopBackgroundTrack();
 			}
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 
@@ -1245,9 +1196,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			}
 			cls.state = ca_connecting;
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
-			break;
-		case svc_configstring:
-			CL_ParseConfigString( msg );
 			break;
 		case svc_setview:
 			cl.refdef.viewentity = BF_ReadWord( msg );
@@ -1349,8 +1297,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseSoundFade( msg );
 			break;
 		case svc_cdtrack:
-			com.strncpy( cls.background_track, BF_ReadString( msg ), sizeof( cls.background_track ));
-			if( cl.audio_prepped ) CL_RunBackgroundTrack();
+			param1 = bound( 1, BF_ReadByte( msg ), 32 );	// tracknum
+			param2 = bound( 1, BF_ReadByte( msg ), 32 );	// loopnum
+			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1] );
 			break;
 		case svc_serverinfo:
 			CL_ServerInfo( msg );

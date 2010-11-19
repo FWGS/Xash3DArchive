@@ -12,7 +12,7 @@
 #define svc_nop			1	// does nothing
 #define svc_disconnect		2	// kick client from server
 #define svc_changing		3	// changelevel by server request
-#define svc_configstring		4	// [short] [string]
+
 #define svc_setview			5	// [short] entity number
 #define svc_sound			6	// <see code>
 #define svc_time			7	// [float] server time

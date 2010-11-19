@@ -21,6 +21,7 @@
 
 #define MAX_DEMOS		32
 #define MAX_MOVIES		8
+#define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// HSPRITE pics
 
 #define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, cl_entity_t, area )
@@ -116,7 +117,6 @@ typedef struct
 	int		maxclients;
 	int		movemessages;
 	int		num_custombeams;			// server beams count
-	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
 
 	char		model_precache[MAX_MODELS][CS_SIZE];
 	char		sound_precache[MAX_SOUNDS][CS_SIZE];
@@ -323,6 +323,8 @@ typedef struct
 	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
 	user_event_t	*events[MAX_EVENTS];
 
+	string		cdtracks[MAX_CDTRACKS];	// 32 cd-tracks read from cdaudio.txt
+
 	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	screenfade_t	fade;			// screen fade
 	screen_shake_t	shake;			// screen shake
@@ -414,8 +416,6 @@ typedef struct
 	int		movienum;
 	string		movies[MAX_MOVIES];
 
-	string		background_track;		// background soundtrack
-
 	// demo recording info must be here, so it isn't clearing on level change
 	qboolean		demorecording;
 	qboolean		demoplayback;
@@ -483,6 +483,7 @@ void CL_PrepSound( void );
 //
 void CL_Quit_f( void );
 void CL_ScreenShot_f( void );
+void CL_PlayCDTrack_f( void );
 void CL_EnvShot_f( void );
 void CL_SkyShot_f( void );
 void CL_SaveShot_f( void );
@@ -554,7 +555,6 @@ extern const char *svc_strings[256];
 void CL_ParseServerMessage( sizebuf_t *msg );
 void CL_ParseTempEntity( sizebuf_t *msg );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
-void CL_RunBackgroundTrack( void );
 void CL_Download_f( void );
 
 //

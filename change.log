@@ -1,5 +1,7 @@
 build ????
 
+Sound: implement CDAudio emulator with support mp3 tracks from original Half-Life
+Sound: implement mp3 support
 Tools: renamed xtools.dll into utils.dll
 GameUI: GameUI.dll renamed to MainUI.dll to avoid conflict with original valve's GameUI.dll
 Engine: support for StartupVids.txt

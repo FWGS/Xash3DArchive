@@ -869,7 +869,7 @@ void S_Music_f( void )
 			else if( FS_FileExists( va( "media/%s.%s", track, ext[i] )))
 			{
 				// single looped theme
-				S_StartBackgroundTrack( track, track );
+				S_StartBackgroundTrack( track, NULL );
 				break;
 			}
 		}

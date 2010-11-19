@@ -58,6 +58,7 @@ typedef struct vsound_exp_s
 	int  (*GetCurrentStaticSounds)( soundlist_t *pout, int size, int entchannel );
 	void (*StartBackgroundTrack)( const char *introTrack, const char *loopTrack );
 	void (*StopBackgroundTrack)( void );
+	void (*PauseBackgroundTrack)( int pause );
 
 	void (*StartStreaming)( void );
 	void (*StopStreaming)( void );

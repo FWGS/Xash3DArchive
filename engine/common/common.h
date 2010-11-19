@@ -39,11 +39,6 @@
 
 #define MAX_MSGLEN			32768	// max length of network message
 					// FIXME: replace with NET_MAX_PAYLOAD
-// FIXME: get rid of configstrings
-
-#define CS_MAPCHECKSUM		0	// level checksum (for catching cheater maps)
-#define CS_BACKGROUND_TRACK		1	// basename of background track
-#define MAX_CONFIGSTRINGS		2
 
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );

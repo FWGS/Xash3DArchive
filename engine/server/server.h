@@ -97,8 +97,6 @@ typedef struct server_s
 	string		name;		// map name
 	string		startspot;	// player_start name on nextmap
 
-	char		configstrings[MAX_CONFIGSTRINGS][CS_SIZE];
-
 	char		model_precache[MAX_MODELS][CS_SIZE];
 	char		sound_precache[MAX_SOUNDS][CS_SIZE];
 	char		files_precache[MAX_CUSTOM][CS_SIZE];
@@ -316,7 +314,6 @@ typedef struct
 	byte		*mempool;			// server premamnent pool: edicts etc
 	byte		*stringspool;		// for shared strings
 
-	int		hStringTable;		// stringtable handle
 	SAVERESTOREDATA	SaveData;			// shared struct, used for save data
 } svgame_static_t;
 

@@ -45,6 +45,7 @@ vsound_exp_t EXPORT *CreateAPI( stdlib_api_t *input, vsound_imp_t *engfuncs )
 	snd.StartBackgroundTrack = S_StartBackgroundTrack;
 	snd.StopBackgroundTrack = S_StopBackgroundTrack;
 	snd.GetCurrentStaticSounds = S_GetCurrentStaticSounds;
+	snd.PauseBackgroundTrack = S_StreamSetPause;
 
 	snd.StartStreaming = S_StartStreaming;
 	snd.StopStreaming = S_StopStreaming;

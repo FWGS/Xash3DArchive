@@ -281,16 +281,6 @@ void Sys_GetStdAPI( void )
 	com.pretifymem = com_pretifymem;
 	com.timestamp = com_timestamp;
 
-	// stringtable.c system
-	com.st_create = StringTable_CreateNewSystem;
-	com.st_getstring = StringTable_GetString;
-	com.st_setstring = StringTable_SetString;
-	com.st_load = StringTable_LoadSystem;
-	com.st_getname = StringTable_GetName;
-	com.st_save = StringTable_SaveSystem;
-	com.st_clear = StringTable_ClearSystem;
-	com.st_remove = StringTable_DeleteSystem;
-
 	com.SysInfo = &SI;
 }
 

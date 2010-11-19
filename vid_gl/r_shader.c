@@ -625,7 +625,7 @@ static qboolean Shader_SkipConditionBlock( script_t *script )
 //===========================================================================
 static qboolean Shader_CheckSkybox( const char *name )
 {
-	const char	*skybox_ext[5] = { "tga", "bmp", "jpg", "png", "dds" };
+	const char	*skybox_ext[5] = { "tga", "bmp", "jpg", "dds" };
 	int		i, j, num_checked_sides;
 	const char	*sidename;
 	string		loadname;

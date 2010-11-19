@@ -21,7 +21,6 @@ convformat_t convert_formats[] =
 	{"%s.%s", "spr", ConvSPR, "bmp" },	// quake1/half-life sprite
 	{"%s.%s","spr32",ConvSPR, "tga" },	// spr32 sprite
 	{"%s.%s", "sp2", ConvSPR, "bmp" },	// quake2 sprite
-	{"%s.%s", "jpg", ConvJPG, "tga" },	// quake3 textures
 	{"%s.%s", "pcx", ConvPCX, "bmp" },	// quake2 pics
 	{"%s.%s", "flt", ConvFLT, "bmp" },	// doom1 textures
 	{"%s.%s", "flp", ConvFLP, "bmp" },	// doom1 menu pics
@@ -33,31 +32,26 @@ convformat_t convert_formats[] =
 	{"%s.%s", "skn", ConvSKN, "bmp" },	// doom1 sprite models
 	{"%s.%s", "bsp", ConvBSP, "bmp" },	// Quake1\Half-Life map textures
 	{"%s.%s", "mus", ConvMID, "mid" },	// doom1\2 music files
-	{"%s.%s", "txt", ConvRAW, "txt" },	// (hidden) Xash-extract scripts
-	{"%s.%s", "dat", ConvRAW, "dat" },	// (hidden) Xash-extract progs
 	{NULL, NULL, NULL, NULL }		// list terminator
 };
 
 convformat_t convert_formats32[] =
 {
-	{"%s.%s", "spr", ConvSPR, "png" },	// quake1/half-life sprite
+	{"%s.%s", "spr", ConvSPR, "tga" },	// quake1/half-life sprite
 	{"%s.%s","spr32",ConvSPR, "dds" },	// spr32 sprite
 	{"%s.%s", "sp2", ConvSPR, "dds" },	// quake2 sprite
-	{"%s.%s", "jpg", ConvJPG, "jpg" },	// quake3 textures
 	{"%s.%s", "bmp", ConvBMP, "dds" },	// 8-bit maps with alpha-cnahnel	
-	{"%s.%s", "pcx", ConvPCX, "png" },	// quake2 pics
-	{"%s.%s", "flt", ConvFLT, "png" },	// doom1 textures
-	{"%s.%s", "flp", ConvFLP, "png" },	// doom1 menu pics
-	{"%s.%s", "mip", ConvMIP, "png" },	// Quake1/Half-Life textures
-	{"%s.%s", "lmp", ConvLMP, "png" },	// Quake1/Half-Life gfx
-	{"%s.%s", "fnt", ConvFNT, "png" },	// Quake1/Half-Life gfx
-	{"%s.%s", "wal", ConvWAL, "png" },	// Quake2 textures
+	{"%s.%s", "pcx", ConvPCX, "tga" },	// quake2 pics
+	{"%s.%s", "flt", ConvFLT, "tga" },	// doom1 textures
+	{"%s.%s", "flp", ConvFLP, "tga" },	// doom1 menu pics
+	{"%s.%s", "mip", ConvMIP, "tga" },	// Quake1/Half-Life textures
+	{"%s.%s", "lmp", ConvLMP, "tga" },	// Quake1/Half-Life gfx
+	{"%s.%s", "fnt", ConvFNT, "tga" },	// Quake1/Half-Life gfx
+	{"%s.%s", "wal", ConvWAL, "tga" },	// Quake2 textures
 	{"%s.%s", "vtf", ConvVTF, "dds" },	// Half-Life 2 materials
-	{"%s.%s", "skn", ConvSKN, "png" },	// doom1 sprite models
-	{"%s.%s", "bsp", ConvBSP, "png" },	// Quake1\Half-Life map textures
+	{"%s.%s", "skn", ConvSKN, "tga" },	// doom1 sprite models
+	{"%s.%s", "bsp", ConvBSP, "tga" },	// Quake1\Half-Life map textures
 	{"%s.%s", "mus", ConvMID, "mid" },	// doom1\2 music files
-	{"%s.%s", "txt", ConvRAW, "txt" },	// (hidden) Xash-extract scripts
-	{"%s.%s", "dat", ConvRAW, "dat" },	// (hidden) Xash-extract progs
 	{NULL, NULL, NULL, NULL }		// list terminator
 };
 
@@ -252,32 +246,6 @@ void Conv_RunSearch( void )
 		}
 		Image_Init( "Quake2", imageflags );
 		break;
-	case GAME_RTCW:
-	case GAME_QUAKE3:
-		search = FS_Search("textures/*", true );
-		// find subdirectories
-		for( i = 0; search && i < search->numfilenames; i++ )
-		{
-			if( com.strstr( search->filenames[i], "/." )) continue;
-			if( com.strstr( search->filenames[i], "/.." )) continue;
-			if( com.stricmp(FS_FileExtension( search->filenames[i] ), "" ))
-				continue;
-			AddMask(va("%s/*.jpg", search->filenames[i]));
-		}
-		if( search ) Mem_Free( search );
-		else AddMask( "*.jpg" );	// Quake3 textures
-		search = FS_Search("gfx/*", true );
-		if( search )
-		{
-			// find subdirectories
-			for( i = 0; i < search->numfilenames; i++ )
-				AddMask(va("%s/*.jpg", search->filenames[i]));
-			Mem_Free( search );
-		}
-		else  AddMask( "gfx/*.jpg" );	// Quake3 hud pics
-		AddMask( "sprites/*.jpg" );	// Quake3 sprite frames
-		Image_Init( "Quake3", imageflags );
-		break;
 	case GAME_HALFLIFE2:
 	case GAME_HALFLIFE2_BETA:
 		search = FS_Search("materials/*", true );
@@ -318,11 +286,6 @@ void Conv_RunSearch( void )
 		imageflags |= IL_DDS_HARDWARE; // because we want save textures into original DXT format
 		Image_Init( "Half-Life 2", imageflags );
 		break;
-	case GAME_QUAKE4:
-		// i'm lazy today and i'm forget textures representation of IdTech4 :)
-		Sys_Break( "Sorry, nothing to decompile (not implemeneted yet)\n" );
-		Image_Init( "Quake4", imageflags );
-		break;
 	case GAME_HALFLIFE:
 		search = FS_Search( "*.wad", true );
 		if( search )
@@ -351,10 +314,6 @@ void Conv_RunSearch( void )
 			write_qscsript = true;
 		}
 		Image_Init( "Half-Life", imageflags );
-		break;
-	case GAME_XASH3D:
-		Sys_Break("Sorry, but i'm can't decompile himself\n" );
-		Image_Init( "Xash3D", imageflags );
 		break;
 	default:
 		Image_Init( "Generic", imageflags );	// everything else

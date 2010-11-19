@@ -47,8 +47,8 @@ static const loadwavformat_t load_xash[] =
 {
 { "sound/%s%s.%s", "wav", Sound_LoadWAV },
 { "%s%s.%s", "wav", Sound_LoadWAV },
-{ "sound/%s%s.%s", "mpg", Sound_LoadMPG },
-{ "%s%s.%s", "mpg", Sound_LoadMPG },
+{ "sound/%s%s.%s", "mp3", Sound_LoadMPG },
+{ "%s%s.%s", "mp3", Sound_LoadMPG },
 { "sound/%s%s.%s", "ogg", Sound_LoadOGG },
 { "%s%s.%s", "ogg", Sound_LoadOGG },
 { NULL, NULL, NULL }

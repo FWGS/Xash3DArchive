@@ -78,9 +78,8 @@ qboolean ConvertImages( byte *mempool, const char *name, byte parms )
 	if( !gs_filename[0] ) ext = FS_FileExtension( name );
 	else ext = gs_filename;
 
-	if( com.stricmp( ext, "tga" ) && com.stricmp( ext, "jpg" ) && com.stricmp( ext, "png" ) &&
-	    com.stricmp( ext, "dds" ) && com.stricmp( ext, "pcx" ) && com.stricmp( ext, "bmp" ))
-		Sys_Break( "unsupported output format %s\n", ext );
+	if( com.stricmp( ext, "tga" ) && com.stricmp( ext, "jpg" ) && com.stricmp( ext, "dds" )
+	 && com.stricmp( ext, "pcx" ) && com.stricmp( ext, "bmp" )) Sys_Break( "unknown output format %s\n", ext );
 
 	com.strncpy( outputname, name, sizeof( outputname ));
 	FS_StripExtension( outputname );
