@@ -769,9 +769,10 @@ retuns list of valid audio renderers
 */
 static char **pfnGetAudioList( int *numRenders )
 {
-	if( numRenders )
-		*numRenders = host.num_audio_dlls;
-	return host.audio_dlls;
+	static const char	*sndlib = "default";
+
+	if( numRenders ) *numRenders = 1;
+	return &(char *)sndlib;
 }
 
 /*
@@ -854,11 +855,6 @@ pfnChangeAudio
 */
 static void pfnChangeAudio( const char *dllName )
 {
-	if( !dllName || !*dllName ) return;
-
-	// sound subsystem will be automatically restarted on nextframe
-	Cvar_FullSet( "host_audio", dllName, CVAR_INIT|CVAR_ARCHIVE );
-	Cbuf_ExecuteText( EXEC_APPEND, "snd_restart\n" );
 }
 
 /*

@@ -86,6 +86,16 @@
 
 #define MAX_USER_MESSAGES		191	// another 63 messages reserved for engine routines
 					// FIXME: tune this
+// sound flags
+#define SND_VOLUME			(1<<0)	// a scaled byte
+#define SND_ATTENUATION		(1<<1)	// a byte
+#define SND_PITCH			(1<<2)	// a byte
+#define SND_FIXED_ORIGIN		(1<<3)	// a vector
+#define SND_SENTENCE		(1<<4)	// set if sound num is actually a sentence num
+#define SND_STOP			(1<<5)	// stop the sound
+#define SND_CHANGE_VOL		(1<<6)	// change sound vol
+#define SND_CHANGE_PITCH		(1<<7)	// change sound pitch
+#define SND_SPAWNING		(1<<8)	// we're spawning, used in some cases for ambients
 
 // Max number of history commands to send ( 2 by default ) in case of dropped packets
 #define NUM_BACKUP_COMMAND_BITS	3

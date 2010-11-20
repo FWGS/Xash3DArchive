@@ -7,6 +7,7 @@
 #include "studio.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "cm_local.h"
 #include "pm_local.h"
 #include "world.h"
 

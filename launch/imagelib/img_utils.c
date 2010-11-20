@@ -657,11 +657,12 @@ void Image_ConvertPalTo24bit( rgbdata_t *pic )
 	byte	*converted;
 	int	i;
 
-	if( !pic || !pic->palette )
+	if( !pic->palette )
 	{
-		MsgDev(D_ERROR,"Image_ConvertPalTo24bit: no palette found\n");
+		MsgDev( D_ERROR, "Image_ConvertPalTo24bit: no palette found\n" );
 		return;
 	}
+
 	if( pic->type == PF_INDEXED_24 )
 	{
 		MsgDev( D_ERROR, "Image_ConvertPalTo24bit: palette already converted\n" );

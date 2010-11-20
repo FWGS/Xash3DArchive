@@ -13,7 +13,6 @@
 #include "launch_api.h"
 #include "engine_api.h"
 #include "render_api.h"
-#include "vsound_api.h"
 #include "com_export.h"
 #include "com_model.h"
 
@@ -133,9 +132,7 @@ typedef struct host_parm_s
 
 	// renderers info
 	char		*video_dlls[MAX_RENDERS];
-	char		*audio_dlls[MAX_RENDERS];
 	int		num_video_dlls;
-	int		num_audio_dlls;
 
 	decallist_t	*decalList;	// used for keep decals, when renderer is restarted or changed
 	int		numdecals;
@@ -161,6 +158,7 @@ void Host_SetServerState( int state );
 int Host_ServerState( void );
 int Host_CompareFileTime( long ft1, long ft2 );
 qboolean Host_NewGame( const char *mapName, qboolean loadGame );
+int Host_CreateDecalList( decallist_t *pList, qboolean changelevel );
 void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
 void Host_WriteServerConfig( const char *name );
@@ -335,5 +333,13 @@ typedef struct autocomplete_list_s
 } autocomplete_list_t;
 
 extern autocomplete_list_t cmd_list[];
+
+// soundlib shared exports
+qboolean S_Init( void *hInst );
+void S_Shutdown( void );
+void S_Activate( qboolean active, void *hInst );
+void S_StopSound( int entnum, int channel, const char *soundname );
+int S_GetCurrentStaticSounds( soundlist_t *pout, int size, int entchannel );
+void S_StopAllSounds( void );
 
 #endif//COMMON_H

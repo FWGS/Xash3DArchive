@@ -26,12 +26,6 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% vid_gl/vid_gl.dsp %CONFIG%"vid_gl - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% snd_dx/snd_dx.dsp %CONFIG%"snd_dx - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
-%MSDEV% utils/utils.dsp %CONFIG%"utils - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 if "%BUILD_ERROR%"=="" goto build_ok
 
 echo *********************
@@ -57,8 +51,6 @@ if exist engine\engine.plg del /f /q engine\engine.plg
 if exist mainui\mainui.plg del /f /q mainui\mainui.plg
 if exist launch\launch.plg del /f /q launch\launch.plg
 if exist vid_gl\vid_gl.plg del /f /q vid_gl\vid_gl.plg
-if exist snd_dx\snd_dx.plg del /f /q snd_dx\snd_dx.plg
-if exist utils\utils.plg del /f /q utils\utils.plg
 
 echo
 echo 	     Build succeeded!

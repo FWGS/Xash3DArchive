@@ -517,7 +517,9 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			{
 				// apply decal palette immediately
 				image.flags |= IMAGE_COLORINDEX;
-				rendermode = LUMP_DECAL;
+				if( Sys.app_name == HOST_NORMAL )
+					rendermode = LUMP_DECAL;
+				else rendermode = LUMP_TRANSPARENT;
 			}
 			image.flags |= IMAGE_HAS_ALPHA;
 		}

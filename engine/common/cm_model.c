@@ -671,7 +671,7 @@ static void BSP_LoadEntityString( dlump_t *l )
 	byte	*in;
 
 	in = (void *)(mod_base + l->fileofs);
-	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen );	
+	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen + 1 );	
 	Mem_Copy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
 	cm.entityscript = Com_OpenScript( "entities", in, l->filelen );
 }

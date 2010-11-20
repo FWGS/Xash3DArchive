@@ -534,4 +534,12 @@ void Sound_Init( void );
 void Sound_Setup( const char *formats, const uint flags );
 void Sound_Shutdown( void );
 
+//
+// tools.c
+//
+void Init_Tools( const int argc, const char **argv );
+void Tools_Main( void );
+void Free_Tools( void );
+void Bsp_PrintLog( const char *pMsg );
+
 #endif//LAUNCHER_H

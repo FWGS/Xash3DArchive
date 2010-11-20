@@ -2422,6 +2422,29 @@ const char *FS_GetDiskPath( const char *name, qboolean gamedironly )
 
 /*
 ==================
+FS_CheckForCrypt
+
+return true is library is crypted
+==================
+*/
+qboolean FS_CheckForCrypt( const char *dllname )
+{
+	file_t	*f;
+	int	key;
+
+	f = FS_Open( dllname, "rb", false );
+	if( !f ) return false;
+
+	FS_Seek( f, 64, SEEK_SET );	// skip first 64 bytes
+	FS_Read( f, &key, sizeof( key ));
+	FS_Close( f );
+
+	return ( key == 0x12345678 ) ? true : false;
+}
+
+
+/*
+==================
 FS_FindLibrary
 
 search for library, assume index is valid
@@ -2476,7 +2499,9 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	// shortPath is used for LibraryLoadSymbols only
 	com.strncpy( hInst->shortPath, dllpath, sizeof( hInst->shortPath ));
 
-	if( index < 0 )
+	hInst->encrypted = FS_CheckForCrypt( dllpath );
+
+	if( index < 0 && !hInst->encrypted )
 	{
 		com.snprintf( hInst->fullPath, sizeof( hInst->fullPath ), "%s%s", search->filename, dllpath );
 		hInst->custom_loader = false;	// we can loading from disk and use normal debugging
@@ -3041,7 +3066,7 @@ fs_offset_t VFS_Write( vfile_t *file, const void *buf, size_t size )
 		if( file->buffsize < newsize )
 		{
 			// reallocate buffer now
-			file->buff = Mem_Realloc( fs_mempool, file->buff, newsize );		
+			file->buff = Mem_Realloc( fs_mempool, file->buff, newsize );
 			file->buffsize = newsize; // merge buffsize
 		}
 	}
@@ -3193,8 +3218,26 @@ int VFS_Seek( vfile_t *file, fs_offset_t offset, int whence )
 		return -1;
 	}
 
-	if( offset < 0 || offset > (long)file->length )
-		return -1;
+	if( offset < 0 ) return -1;
+
+	if( offset > (long)file->length )
+	{
+		if( file->mode == O_WRONLY )
+		{
+			int	newsize = offset + (64 * 1024);
+
+			if( file->buffsize < newsize )
+			{
+				// reallocate buffer now
+				file->buff = Mem_Realloc( fs_mempool, file->buff, newsize );
+				file->buffsize = newsize; // merge buffsize
+			}
+		}
+		else
+		{
+			return -1;
+		}
+	}
 
 	file->offset = offset;
 	return 0;
@@ -3492,7 +3535,8 @@ static qboolean W_ReadLumpTable( wfile_t *wad )
 	int		i, k, numlumps;
 
 	// nothing to convert ?
-	if( !wad ) return false;
+	if( !wad || !wad->numlumps )
+		return false;
 
 	lat_size = wad->numlumps * sizeof( dlumpinfo_t );
 	srclumps = (dlumpinfo_t *)Mem_Alloc( wad->mempool, lat_size );

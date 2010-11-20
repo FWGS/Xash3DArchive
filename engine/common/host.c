@@ -9,12 +9,10 @@
 #include "input.h"
 
 render_exp_t	*re;
-vsound_exp_t	*se;
 host_parm_t	host;	// host parms
 stdlib_api_t	com, newcom;
 
 dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
-dll_info_t vsound_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(vsound_exp_t), sizeof(stdlib_api_t) };
 
 convar_t	*host_serverstate;
 convar_t	*host_gameloaded;
@@ -23,7 +21,7 @@ convar_t	*host_cheats;
 convar_t	*host_maxfps;
 convar_t	*host_framerate;
 convar_t	*host_video;
-convar_t	*host_audio;
+qboolean	sound_restart;
 
 // these cvars will be duplicated on each client across network
 int Host_ServerState( void ) { return Cvar_VariableInteger( "host_serverstate" ); }
@@ -104,6 +102,13 @@ static void Host_DrawDebugCollision( cmdraw_t drawPoly )
 	// FIXME: get collision polys here
 }
 
+int Host_CreateDecalList( decallist_t *pList, qboolean changelevel )
+{
+	if( !re ) return 0;
+
+	return re->CreateDecalList( pList, changelevel );
+}
+
 void Host_FreeRender( void )
 {
 	if( render_dll.link )
@@ -153,53 +158,6 @@ qboolean Host_InitRender( void )
 	return result;
 }
 
-void Host_FreeSound( void )
-{
-	if( vsound_dll.link )
-	{
-		se->Shutdown();
-		Mem_Set( &se, 0, sizeof( se ));
-	}
-	Sys_FreeLibrary( &vsound_dll );
-}
-
-qboolean Host_InitSound( void )
-{
-	static vsound_imp_t	si;
-	launch_t		CreateSound;  
-	qboolean		result = false;
-
-	if( FS_CheckParm( "-nosound" ))
-		return result;
-
-	si.api_size = sizeof( vsound_imp_t );
-
-	// sound callbacks
-	si.GetEntitySpatialization = CL_GetEntitySpatialization;
-	si.AmbientLevels = CM_AmbientLevels;
-	si.GetClientEdict = CL_GetEntityByIndex;
-	si.GetServerTime = CL_GetServerTime;
-	si.GetAudioChunk = SCR_GetAudioChunk;
-	si.GetMovieInfo = SCR_GetMovieInfo;
-	si.IsInMenu = CL_IsInMenu;
-	si.IsActive = CL_IsInGame;
-
-	Sys_LoadLibrary( host_audio->string, &vsound_dll );
-
-	if( vsound_dll.link )
-	{
-		CreateSound = (void *)vsound_dll.main;
-		se = CreateSound( &newcom, &si );
-	
-		if( se->Init( host.hWnd )) result = true;
-	}
-
-	// audio system not started, shutdown sound subsystem
-	if( !result ) Host_FreeSound();
-
-	return result;
-}
-
 void Host_CheckChanges( void )
 {
 	int	num_changes;
@@ -209,13 +167,13 @@ void Host_CheckChanges( void )
 	{
 		if( host.state == HOST_INIT )
 			audio_disabled = true;
-		host_audio->modified = false;
+		sound_restart = false;
 	}
 
-	if( host_video->modified || host_audio->modified )
+	if( host_video->modified || sound_restart )
 	{
 		if( host_video->modified ) CL_ForceVid();
-		if( host_audio->modified ) CL_ForceSnd();
+		if( sound_restart ) CL_ForceSnd();
 	}
 	else return;
 
@@ -225,10 +183,10 @@ void Host_CheckChanges( void )
 	{
 		// we're in game and want keep decals when renderer is changed
 		host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS );
-		host.numdecals = CL_CreateDecalList( host.decalList, false );
+		host.numdecals = Host_CreateDecalList( host.decalList, false );
 	}
 
-	if(( host_video->modified || host_audio->modified ) && CL_Active( ))
+	if(( host_video->modified || sound_restart ) && CL_Active( ))
 	{
 		host.soundList = (soundlist_t *)Z_Malloc( sizeof( soundlist_t ) * 128 );
 		host.numsounds = S_GetCurrentStaticSounds( host.soundList, 128, CHAN_STATIC );
@@ -262,24 +220,12 @@ void Host_CheckChanges( void )
 
 	num_changes = 0;
 
-	// restart or change sound engine
-	while( host_audio->modified )
+	// restart sound engine
+	if( sound_restart )
 	{
-		host_audio->modified = false;		// predict state
-
-		Host_FreeSound();			// release sound.dll
-		if( !Host_InitSound( ))		// load it again
-		{
-			if( num_changes > host.num_audio_dlls )
-			{
-				MsgDev( D_ERROR, "couldn't initialize sound system\n" );
-				return;
-			}
-			if( !com.strcmp( host.audio_dlls[num_changes], host_audio->string ))
-				num_changes++; // already trying - failed
-			Cvar_FullSet( "host_audio", host.audio_dlls[num_changes], CVAR_INIT|CVAR_ARCHIVE );
-			num_changes++;
-		}
+		S_Shutdown();
+		S_Init( host.hWnd );
+		sound_restart = false;
 	}
 }
 
@@ -326,7 +272,7 @@ Restart the audio subsystem
 */
 void Host_SndRestart_f( void )
 {
-	host_audio->modified = true;
+	sound_restart = true;
 }
 
 /*
@@ -744,7 +690,7 @@ static void Host_Crash_f( void )
 
 void Host_InitCommon( const int argc, const char **argv )
 {
-	dll_info_t	check_vid, check_snd;
+	dll_info_t	check_vid;
 	search_t		*dlls;
 	int		i;
 
@@ -767,16 +713,14 @@ void Host_InitCommon( const int argc, const char **argv )
 
 	IN_Init();
 
-	// initialize audio\video multi-dlls system
-	host.num_video_dlls = host.num_audio_dlls = 0;
+	// initialize video multi-dlls system
+	host.num_video_dlls = 0;
 
 	// make sure what global copy has no changed with any dll checking
 	Mem_Copy( &check_vid, &render_dll, sizeof( dll_info_t ));
-	Mem_Copy( &check_snd, &vsound_dll, sizeof( dll_info_t ));
 
 	// checking dlls don't invoke crash!
 	check_vid.crash = false;
-	check_snd.crash = false;
 
 	dlls = FS_Search( "*.dll", true );
 
@@ -795,17 +739,6 @@ void Host_InitCommon( const int argc, const char **argv )
 				host.video_dlls[host.num_video_dlls] = copystring( dlls->filenames[i] );
 				Sys_FreeLibrary( &check_vid );
 				host.num_video_dlls++;
-			}
-		}
-		else if( !com.strnicmp( "snd_", dlls->filenames[i], 4 ))
-		{
-			// make sure what found library is valid
-			if( Sys_LoadLibrary( dlls->filenames[i], &check_snd ))
-			{
-				MsgDev( D_NOTE, "Audio[%i]: %s\n", host.num_audio_dlls, dlls->filenames[i] );
-				host.audio_dlls[host.num_audio_dlls] = copystring( dlls->filenames[i] );
-				Sys_FreeLibrary( &check_snd );
-				host.num_audio_dlls++;
 			}
 		}
 	}
@@ -852,7 +785,6 @@ void Host_Init( const int argc, const char **argv )
           }
 
 	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_INIT|CVAR_ARCHIVE, "name of video rendering library");
-	host_audio = Cvar_Get( "host_audio", "snd_dx.dll", CVAR_INIT|CVAR_ARCHIVE, "name of sound rendering library");
 	host_cheats = Cvar_Get( "sv_cheats", "0", CVAR_LATCH, "allow cheat variables to enable" );
 	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
@@ -865,6 +797,8 @@ void Host_Init( const int argc, const char **argv )
 	Cvar_Get( "violence_agibs", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables alien gibs" );
 	Cvar_Get( "violence_hblood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human blood" );
 	Cvar_Get( "violence_ablood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables alien blood" );
+
+	sound_restart = true;	// initialize sound engine
 
 	if( host.type != HOST_DEDICATED )
 	{
@@ -942,7 +876,7 @@ void Host_Free( void )
 
 	CM_FreePhysics();
 	Host_FreeRender();
-	Host_FreeSound();
+	S_Shutdown();
 
 	SV_Shutdown( false );
 	CL_Shutdown();

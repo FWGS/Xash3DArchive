@@ -6,6 +6,24 @@
 #include "launch.h"
 #include "library.h"
 
+static const byte dosdata[0x100] =	// dos header (string 'This program cannot be run in DOS mode', etc)
+"\x0e\x1f\xba\x0e\x00\xb4\x09\xcd\x21\xb8\x01\x4c\xcd\x21\x54\x68"
+"\x69\x73\x20\x70\x72\x6f\x67\x72\x61\x6d\x20\x63\x61\x6e\x6e\x6f"
+"\x74\x20\x62\x65\x20\x72\x75\x6e\x20\x69\x6e\x20\x44\x4f\x53\x20"
+"\x6d\x6f\x64\x65\x2e\x0d\x0d\x0a\x24\x00\x00\x00\x00\x00\x00\x00"
+"\xdb\xd6\xcc\x61\x9f\xb7\xa2\x32\x9f\xb7\xa2\x32\x9f\xb7\xa2\x32"
+"\xe4\xab\xae\x32\x97\xb7\xa2\x32\xf0\xa8\xa9\x32\x90\xb7\xa2\x32"
+"\x1c\xab\xac\x32\xae\xb7\xa2\x32\xf0\xa8\xa8\x32\x31\xb7\xa2\x32"
+"\xc0\x95\xa8\x32\x9e\xb7\xa2\x32\x65\x93\xbb\x32\x9d\xb7\xa2\x32"
+"\xc0\x95\xa9\x32\xb1\xb7\xa2\x32\x18\xab\xa0\x32\xb9\xb7\xa2\x32"
+"\x70\x95\x92\x32\x9e\xb7\xa2\x32\x9f\xb7\xa3\x32\x6c\xb7\xa2\x32"
+"\xfd\xa8\xb1\x32\x8e\xb7\xa2\x32\xe1\x95\xbe\x32\x9c\xb7\xa2\x32"
+"\xac\x95\x87\x32\x9b\xb7\xa2\x32\xcb\x94\x93\x32\xab\xb7\xa2\x32"
+"\xcb\x94\x92\x32\xf2\xb7\xa2\x32\x58\xb1\xa4\x32\x9e\xb7\xa2\x32"
+"\x9f\xb7\xa2\x32\x80\xb7\xa2\x32\x60\x97\xa6\x32\x8c\xb7\xa2\x32"
+"\x52\x69\x63\x68\x9f\xb7\xa2\x32\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        
 /*
 ---------------------------------------------------------------
 
@@ -34,6 +52,15 @@ static int ProtectionFlags[2][2][2] =
 { PAGE_EXECUTE, PAGE_EXECUTE_WRITECOPY },	// executable
 { PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE },
 },
+};
+
+static FIXED_SECTIONS FixedSections[] =
+{
+{ ".text",  IMAGE_SCN_CNT_CODE|IMAGE_SCN_MEM_EXECUTE|IMAGE_SCN_MEM_READ },
+{ ".rdata", IMAGE_SCN_CNT_INITIALIZED_DATA|IMAGE_SCN_MEM_READ },
+{ ".data",  IMAGE_SCN_CNT_INITIALIZED_DATA|IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE },
+{ ".rsrc",  IMAGE_SCN_CNT_INITIALIZED_DATA|IMAGE_SCN_MEM_DISCARDABLE|IMAGE_SCN_MEM_READ },
+{ NULL,     0 }
 };
 
 typedef BOOL (WINAPI *DllEntryProc)( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved );
@@ -277,6 +304,7 @@ static int BuildImportTable( MEMORYMODULE *module )
 				thunkRef = (DWORD *)CALCULATE_ADDRESS( codeBase, importDesc->FirstThunk );
 				funcRef = (DWORD *)CALCULATE_ADDRESS( codeBase, importDesc->FirstThunk );
 			}
+
 			for( ; *thunkRef; thunkRef++, funcRef++ )
 			{
 				if( IMAGE_SNAP_BY_ORDINAL( *thunkRef ))
@@ -343,7 +371,253 @@ static void MemoryFreeLibrary( void *hInstance )
 	}
 }
 
-void *MemoryLoadLibrary( const char *name )
+static void ImageFindTables( byte *base, DWORD baseoff, DWORD imagebase, DWORD *impoff, DWORD *impsz, DWORD *expoff, DWORD *expsz, DWORD *iatoff, DWORD *iatsz )
+{
+	IMAGE_IMPORT_DESCRIPTOR	*iid;
+	IMAGE_THUNK_DATA		*itd;
+	IMAGE_EXPORT_DIRECTORY	*ied;
+	DWORD			off, maxiat, maxoff;
+	byte			*p;
+	int			i;
+
+	*iatoff = 0xffffffff;
+	maxiat = maxoff = 0;
+
+	for( iid = (IMAGE_IMPORT_DESCRIPTOR *)(base + ( *impoff - baseoff )); iid->Name; iid++ )
+	{
+		if( iid->Name > maxoff )
+			maxoff = iid->Name;
+
+		if( iid->FirstThunk < *iatoff )
+			*iatoff = iid->FirstThunk;
+
+		for( itd = (IMAGE_THUNK_DATA *)(base + iid->FirstThunk - ( baseoff - imagebase )); itd->u1.AddressOfData; itd++ )
+		{
+			off = (((byte *)( itd + 1 ) - base ) + ( baseoff - imagebase )) + 4;
+			if( off > maxiat ) maxiat = off;
+
+			if( !IMAGE_SNAP_BY_ORDINAL( itd->u1.Ordinal ))
+			{
+				off = itd->u1.Ordinal + 2;
+				if( off > maxoff ) maxoff = off;
+			}
+		}
+	}
+
+	iid++;
+	*impsz = (byte *)iid - ( base + ( *impoff - baseoff ));
+
+	*iatsz = maxiat - *iatoff;
+	*iatoff += imagebase;
+
+	for( p = base + maxoff - (baseoff - imagebase); *p; p++ );
+
+	for( p++; !*p; p++ );	// we get the timestamp value of the export directory
+	p -= ( p - base ) & 3;	// simple check of the alignment, enough
+	p -= 4;			// skip the characteristics for finding the export table
+	*expoff = (p - base) + baseoff;
+
+	ied = (IMAGE_EXPORT_DIRECTORY *)p;
+
+	for( itd = (IMAGE_THUNK_DATA *)( base + ied->AddressOfNames - ( baseoff - imagebase )), i = 0; i < ied->NumberOfNames; itd++, i++ )
+	{
+		if( !IMAGE_SNAP_BY_ORDINAL( itd->u1.Ordinal ))
+		{
+			off = itd->u1.Ordinal;
+			if( off > maxoff ) maxoff = off;
+		}
+	}
+
+	for( p = base + maxoff - ( baseoff - imagebase ); *p; p++ );
+	for( p++; ( p - base ) & 3; p++ );
+	*expsz = (( p - base ) + baseoff ) - *expoff;
+
+	// print some stats
+	MsgDev( D_NOTE, "DecryptImage: import table: %08x of %s\n", *impoff - baseoff, com_pretifymem( *impsz, 2 ));
+	MsgDev( D_NOTE, "DecryptImage: export table: %08x of %s\n", *expoff - baseoff, com_pretifymem( *expsz, 2 ));
+}
+
+static void *DecryptImage( byte *data, size_t size )
+{
+	SECTION_HEADER	section;
+	OPTIONAL_HEADER	optional;
+	VALVE_HEADER	*hlhdr;
+	VAVLE_SECTIONS	*hlsec;
+	DOS_HEADER	doshdr;
+	PE_HEADER		pehdr;
+	DWORD		i, tmp, len;
+	byte		buff[IMAGE_ALIGN];
+	DWORD		section_offset, import_rva, import_size;
+	DWORD		export_rva, export_size, iat_rva, iat_size;
+	byte		symbol, *newimage;
+	vfile_t		*f;
+
+	data += 68;	// skip all zeroes
+	size -= 68;
+
+	symbol = 'W';
+
+	// run XOR decryption
+	for( i = 0; i < size; i++ )
+	{
+		data[i] ^= symbol;
+		symbol += data[i] + 'W';
+	}
+
+	hlhdr = (void *)data;
+	hlsec = (void *)(data + sizeof( VALVE_HEADER ));
+	data -= 68;	// restore all zeroes
+	size += 68;
+
+	// FIXME: convert Ident to properly Magic
+	hlhdr->copywhat ^= 0x7a32bc85;
+	hlhdr->ImageBase ^= 0x49c042d1;
+	hlhdr->ImportTable ^= 0x872c3d47;
+	hlhdr->EntryPoint -= 12;
+	hlhdr->Sections++;
+
+	// when all the section have been placed in memory
+	// hl.exe calls hlhdr->EntryPoint and then hlhdr->copywhat
+	// copying a zone of the dll in the hl.exe process
+
+	Mem_Set( &optional, 0, sizeof( optional ));
+	optional.Magic = IMAGE_NT_OPTIONAL_HDR32_MAGIC;
+	optional.MajorLinkerVersion = 6;
+	optional.MinorLinkerVersion = 0;
+	optional.AddressOfEntryPoint = hlhdr->EntryPoint - hlhdr->ImageBase;
+	optional.BaseOfCode = hlsec[0].rva - hlhdr->ImageBase; // .text
+	optional.BaseOfData = hlsec[1].rva - hlhdr->ImageBase; // .rdata
+	optional.ImageBase = hlhdr->ImageBase;
+	optional.SectionAlignment = IMAGE_ALIGN;
+	optional.FileAlignment = IMAGE_ALIGN;
+	optional.MajorOperatingSystemVersion = 4;
+	optional.MinorOperatingSystemVersion = 0;
+	optional.MajorImageVersion = 0;
+	optional.MinorImageVersion = 0;
+	optional.MajorSubsystemVersion = 4;
+	optional.MinorSubsystemVersion = 0;
+	optional.Win32VersionValue = 0;
+	optional.SizeOfHeaders = IMAGE_ALIGN;    // it's ever less than the default alignment
+	optional.CheckSum = 0;
+	optional.Subsystem = IMAGE_SUBSYSTEM_WINDOWS_GUI;
+	optional.DllCharacteristics = 0;
+	optional.SizeOfStackReserve = IMAGE_ALIGN * 256;
+	optional.SizeOfStackCommit = IMAGE_ALIGN;
+	optional.SizeOfHeapReserve = IMAGE_ALIGN * 256;
+	optional.SizeOfHeapCommit = IMAGE_ALIGN;
+	optional.LoaderFlags = 0;
+	optional.NumberOfRvaAndSizes = IMAGE_NUMBEROF_DIRECTORY_ENTRIES;
+
+	for( i = 0; i < hlhdr->Sections; i++ )
+	{
+		tmp = ( i < 4 ) ? FixedSections[i].Characteristics : SECTION_DEF_CHARACTERISTIC;
+		optional.SizeOfImage += ALIGN( hlsec[i].rva_size );
+		if( tmp & IMAGE_SCN_CNT_CODE ) optional.SizeOfCode += ALIGN( hlsec[i].rva_size );
+		if( tmp & IMAGE_SCN_CNT_INITIALIZED_DATA ) optional.SizeOfInitializedData += ALIGN( hlsec[i].rva_size );
+		if( tmp & IMAGE_SCN_CNT_UNINITIALIZED_DATA ) optional.SizeOfUninitializedData += ALIGN( hlsec[i].rva_size );
+	}
+
+	optional.SizeOfImage += optional.SizeOfHeaders;
+	import_rva = hlhdr->ImportTable;
+
+	ImageFindTables( data + hlsec[1].file_offset, hlsec[1].rva, hlhdr->ImageBase, &import_rva, &import_size, &export_rva, &export_size, &iat_rva, &iat_size );
+
+	optional.DataDirectory[0].VirtualAddress  = export_rva - hlhdr->ImageBase;
+	optional.DataDirectory[0].Size = export_size;
+	optional.DataDirectory[1].VirtualAddress  = import_rva - hlhdr->ImageBase;
+	optional.DataDirectory[1].Size = import_size;
+
+	if( hlhdr->Sections > 3 )
+	{
+		optional.DataDirectory[2].VirtualAddress = hlsec[3].rva - hlhdr->ImageBase;
+		optional.DataDirectory[2].Size = hlsec[3].rva_size;
+	}
+
+	optional.DataDirectory[12].VirtualAddress = iat_rva - hlhdr->ImageBase;
+	optional.DataDirectory[12].Size = iat_size;
+
+	f = VFS_Open( NULL, "wb" );
+
+	Mem_Set( &doshdr, 0, sizeof( doshdr ));
+	doshdr.e_magic = IMAGE_DOS_SIGNATURE;
+	doshdr.e_cblp = 0x0090;
+	doshdr.e_cp = 0x0003;
+	doshdr.e_cparhdr = 0x0004;
+	doshdr.e_maxalloc = 0xffff;
+	doshdr.e_sp = 0x00b8;
+	doshdr.e_lfarlc = 0x0040;
+	doshdr.e_lfanew = sizeof( doshdr ) + sizeof( dosdata );
+
+	VFS_Write( f, &doshdr, sizeof( doshdr ));	// write DOS header
+	VFS_Write( f, &dosdata, sizeof( dosdata ));	// write default dos executable stub
+
+	tmp = NT_SIGNATURE;
+    	Mem_Set( &pehdr, 0, sizeof( pehdr ));
+    	pehdr.Machine = IMAGE_FILE_MACHINE_I386;
+	pehdr.NumberOfSections = hlhdr->Sections;
+	pehdr.TimeDateStamp = time( NULL );
+	pehdr.SizeOfOptionalHeader = sizeof( OPTIONAL_HEADER );
+	pehdr.Characteristics = (IMAGE_FILE_LOCAL_SYMS_STRIPPED|IMAGE_FILE_EXECUTABLE_IMAGE|IMAGE_FILE_LINE_NUMS_STRIPPED|IMAGE_FILE_32BIT_MACHINE|IMAGE_FILE_DLL);
+	VFS_Write( f, &tmp, sizeof( int ));		// write NT signature
+	VFS_Write( f, &pehdr, sizeof( pehdr ));		// write PE header
+
+	// write optional header
+	VFS_Write( f, &optional, sizeof( optional ));
+
+	section_offset = optional.SizeOfHeaders;
+
+	// write section headers
+	for( i = 0; i < hlhdr->Sections; i++ )
+	{
+		Mem_Set( &section, 0, sizeof( section ));
+
+		if( i < 4 ) com.strncpy( section.Name, FixedSections[i].Name, IMAGE_SIZEOF_SHORT_NAME );
+		else com.snprintf( section.Name, IMAGE_SIZEOF_SHORT_NAME, "sec%u", i );
+
+		section.Misc.VirtualSize = hlsec[i].rva_size;
+		section.VirtualAddress = hlsec[i].rva - hlhdr->ImageBase;
+		section.SizeOfRawData = ALIGN( hlsec[i].file_size );
+		section.PointerToRawData = section_offset;
+		section.PointerToRelocations = hlsec[i].reloc_addr;
+		section.Characteristics = ( i < 4 ) ? FixedSections[i].Characteristics : SECTION_DEF_CHARACTERISTIC;
+		VFS_Write( f, &section, sizeof( section ));
+		section_offset += ALIGN( hlsec[i].file_size );
+	}
+
+	// write sections
+	VFS_Seek( f, optional.SizeOfHeaders, SEEK_SET );
+
+	for( i = 0; i < hlhdr->Sections; i++ )
+	{
+		if(( hlsec[i].file_offset + hlsec[i].file_size ) > size )
+		{
+			MsgDev( D_WARN, "DecryptImage: section %d is larger than source (%u %d)\n", i, (hlsec[i].file_offset + hlsec[i].file_size), size );
+			VFS_Write( f, data + hlsec[i].file_offset, size - hlsec[i].file_offset );
+			VFS_Seek( f, (hlsec[i].file_offset + hlsec[i].file_size) - size, SEEK_CUR );
+		}
+		else VFS_Write( f, data + hlsec[i].file_offset, hlsec[i].file_size );
+
+		// write sections alignment
+		tmp = ALIGN( hlsec[i].file_size ) - hlsec[i].file_size;
+		for( len = sizeof( buff ); tmp > 0; tmp -= len )
+		{
+			if( len > tmp ) len = tmp;
+			VFS_Write( f, buff, len );
+		}
+	}
+
+	VFS_Seek( f, 0, SEEK_END );
+	size = VFS_Tell( f );
+
+	// realloc image size if needs
+	newimage = Mem_Realloc( Sys.basepool, data, size );
+	Mem_Copy( newimage, VFS_GetBuffer( f ), size );
+	VFS_Close( f );
+
+	return newimage;
+}
+
+void *MemoryLoadLibrary( const char *name, qboolean encrypted )
 {
 	MEMORYMODULE	*result;
 	PIMAGE_DOS_HEADER	dos_header;
@@ -354,13 +628,17 @@ void *MemoryLoadLibrary( const char *name )
 	string		errorstring;
 	qboolean		successfull;
 	void		*data = NULL;
+	size_t		size;
 
-	data = FS_LoadFile( name, NULL );
+	data = FS_LoadFile( name, &size );
 	if( !data )
 	{
 		com.sprintf( errorstring, "couldn't load %s", name );
 		goto library_error;
 	}
+
+	// if this image encrypted we need decrypting it first
+	if( encrypted ) data = DecryptImage( data, size );
 
 	dos_header = (PIMAGE_DOS_HEADER)data;
 	if( dos_header->e_magic != IMAGE_DOS_SIGNATURE )
@@ -755,12 +1033,12 @@ void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 	if( !hInst ) return NULL; // nothing to load
 		
 	if( hInst->custom_loader )
-		hInst->hInstance = MemoryLoadLibrary( hInst->fullPath );
+		hInst->hInstance = MemoryLoadLibrary( hInst->fullPath, hInst->encrypted );
 	else hInst->hInstance = LoadLibrary( hInst->fullPath );
 
 	if( !hInst->hInstance )
 	{
-		MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - failed. Error %i\n", dllname );
+		MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - failed\n", dllname );
 		Com_FreeLibrary( hInst );
 		return NULL;
 	}

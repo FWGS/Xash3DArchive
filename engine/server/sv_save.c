@@ -921,7 +921,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	FS_Write( pFile, &version, sizeof( int ));
 
 	decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_RENDER_DECALS );
-	decalCount = CL_CreateDecalList( decalList, svgame.globals->changelevel );
+	decalCount = Host_CreateDecalList( decalList, svgame.globals->changelevel );
 
 	FS_Write( pFile, &decalCount, sizeof( int ));
 

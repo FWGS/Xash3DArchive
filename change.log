@@ -1,8 +1,9 @@
 build ????
 
+Tools: move all tools into launch.dll
+Sound: moving snd_dx.dll into engine.dll
 Sound: implement CDAudio emulator with support mp3 tracks from original Half-Life
 Sound: implement mp3 support
-Tools: renamed xtools.dll into utils.dll
 GameUI: GameUI.dll renamed to MainUI.dll to avoid conflict with original valve's GameUI.dll
 Engine: support for StartupVids.txt
 Engine: get full compatibility with hl.dll

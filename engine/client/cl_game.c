@@ -3697,7 +3697,7 @@ qboolean CL_LoadProgs( const char *name )
 	
 	clgame.hInstance = FS_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
-
+Msg( "exports size %i\n", sizeof( HUD_FUNCTIONS )); 
 	// clear exports
 	for( func = cdll_exports; func && func->name; func++ )
 		*func->func = NULL;

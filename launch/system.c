@@ -15,11 +15,9 @@
 
 system_t		Sys;
 stdlib_api_t	com;
-launch_exp_t	*Host;	// callback to mainframe 
 sys_event_t	event_que[MAX_QUED_EVENTS];
 int		event_head, event_tail;
 
-dll_info_t utils_dll = { "utils.dll", NULL, "CreateAPI", NULL, NULL, 1, sizeof( launch_exp_t ), sizeof( stdlib_api_t ) };
 dll_info_t engine_dll = { "engine.dll", NULL, "CreateAPI", NULL, NULL, 1, sizeof( launch_exp_t ), sizeof( stdlib_api_t ) };
 
 static const char *show_credits = "\n\n\n\n\tCopyright XashXT Group %s ©\n\t\
@@ -382,28 +380,28 @@ void Sys_LookupInstance( void )
 	else if( !com.strcmp( Sys.progname, "bsplib" ))
 	{
 		Sys.app_name = HOST_BSPLIB;
-		Sys.linked_dll = &utils_dll;	// pointer to common.dll info
+		Sys.linked_dll = NULL; // no need to loading library
 		com.strcpy( Sys.log_path, "bsplib.log" ); // xash3d root directory
 		com.strcpy( Sys.caption, "Xash3D BSP Compiler");
 	}
 	else if( !com.strcmp( Sys.progname, "sprite" ))
 	{
 		Sys.app_name = HOST_SPRITE;
-		Sys.linked_dll = &utils_dll;	// pointer to common.dll info
+		Sys.linked_dll = NULL; // no need to loading library
 		com.sprintf( Sys.log_path, "%s/spritegen.log", sys_rootdir ); // same as .exe file
 		com.strcpy( Sys.caption, "Xash3D Sprite Compiler");
 	}
 	else if( !com.strcmp( Sys.progname, "studio" ))
 	{
 		Sys.app_name = HOST_STUDIO;
-		Sys.linked_dll = &utils_dll;	// pointer to common.dll info
+		Sys.linked_dll = NULL; // no need to loading library
 		com.sprintf( Sys.log_path, "%s/studiomdl.log", sys_rootdir ); // same as .exe file
 		com.strcpy( Sys.caption, "Xash3D Studio Models Compiler" );
 	}
 	else if( !com.strcmp( Sys.progname, "wadlib" ))
 	{
 		Sys.app_name = HOST_WADLIB;
-		Sys.linked_dll = &utils_dll;	// pointer to common.dll info
+		Sys.linked_dll = NULL; // no need to loading library
 		com.sprintf( Sys.log_path, "%s/wadlib.log", sys_rootdir ); // same as .exe file
 		com.strcpy( Sys.caption, "Xash3D Wad2\\Wad3 maker" );
 	}
@@ -412,7 +410,7 @@ void Sys_LookupInstance( void )
 		Sys.app_name = HOST_RIPPER;
 		Sys.con_readonly = true;
 		Sys.log_active = true;	// always create log
-		Sys.linked_dll = &utils_dll;	// pointer to wdclib.dll info
+		Sys.linked_dll = NULL; // no need to loading library
 		com.sprintf( Sys.log_path, "%s/decompile.log", sys_rootdir ); // default
 		com.strcpy( Sys.caption, va("Quake Recource Extractor ver.%g", XASH_VERSION ));
 	}
@@ -420,7 +418,7 @@ void Sys_LookupInstance( void )
 	{
 		Sys.app_name = HOST_XIMAGE;
 		Sys.con_readonly = true;
-		Sys.linked_dll = &utils_dll;	// pointer to dpvenc.dll info
+		Sys.linked_dll = NULL; // no need to loading library
 		com.sprintf( Sys.log_path, "%s/image.log", sys_rootdir ); // logs folder
 		com.strcpy( Sys.caption, "Image Processing Tool" );
 	}
@@ -437,7 +435,8 @@ Find needed library, setup and run it
 void Sys_CreateInstance( void )
 {
 	// export
-	launch_t	CreateHost;
+	launch_t		CreateHost;
+	launch_exp_t	*Host;			// callback to mainframe 
 
 	srand( time( NULL ));			// init random generator
 	Sys_LoadLibrary( NULL, Sys.linked_dll );	// loading library if need
@@ -447,12 +446,6 @@ void Sys_CreateInstance( void )
 	{
 	case HOST_NORMAL:
 	case HOST_DEDICATED:
-	case HOST_XIMAGE:		
-	case HOST_BSPLIB:
-	case HOST_SPRITE:
-	case HOST_STUDIO:
-	case HOST_WADLIB:
-	case HOST_RIPPER:
 		CreateHost = (void *)Sys.linked_dll->main;
 		Host = CreateHost( &com, NULL ); // second interface not allowed
 		Sys.Init = Host->Init;
@@ -461,6 +454,19 @@ void Sys_CreateInstance( void )
 		Sys.CPrint = Host->CPrint;
 		Sys.CmdFwd = Host->CmdForward;
 		Sys.CmdAuto = Host->CmdComplete;
+		break;
+	case HOST_XIMAGE:		
+	case HOST_BSPLIB:
+	case HOST_SPRITE:
+	case HOST_STUDIO:
+	case HOST_WADLIB:
+	case HOST_RIPPER:
+		Sys.Init = Init_Tools;
+		Sys.Main = Tools_Main;
+		Sys.Free = Free_Tools;
+		Sys.CPrint = Bsp_PrintLog;
+		Sys.CmdFwd = NULL;
+		Sys.CmdAuto = NULL;
 		break;
 	case HOST_CREDITS:
 		Sys_Break( show_credits, com.timestamp( TIME_YEAR_ONLY ));
@@ -1442,4 +1448,27 @@ qboolean REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *p
 		RegCloseKey(hKey);
 	}
 	return true;	
+}
+
+// main DLL entry point
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
+{
+	return TRUE;
+}
+
+/*
+=================
+Main Entry Point
+=================
+*/
+EXPORT int CreateAPI( const char *hostname, qboolean console )
+{
+	com_strncpy( Sys.progname, hostname, sizeof( Sys.progname ));
+	Sys.hooked_out = console;
+
+	Sys_Init();
+	Sys.Main();
+	Sys_Exit();
+
+	return 0;
 }

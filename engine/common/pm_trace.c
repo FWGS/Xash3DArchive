@@ -6,6 +6,7 @@
 #include "common.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
+#include "cm_local.h"
 #include "pm_local.h"
 
 static mplane_t	pm_boxplanes[6];
