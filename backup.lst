@@ -9,7 +9,6 @@ debug.bat
 backup.lst
 backup.bat
 release.bat
-launchers.bat
 change.log
 
 cl_dll\

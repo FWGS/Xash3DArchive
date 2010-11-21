@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "wadfile.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
-#include "byteorder.h"
 #include "bspfile.h"
 #include "cl_entity.h"
 
@@ -460,7 +459,7 @@ ref_model_t *Mod_ForName( const char *name, qboolean crash )
 	FS_FileBase( mod->name, cached.modelname );
 
 	// call the apropriate loader
-	switch( LittleLong( *(uint *)buf ))
+	switch( *(uint *)buf )
 	{
 	case IDSTUDIOHEADER:
 		Mod_StudioLoadModel( mod, buf );
@@ -1239,7 +1238,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 	}
 	
 	in = (void *)(mod_base + l->fileofs);
-	count = LittleLong( in->nummiptex );
+	count = in->nummiptex;
 
 	cached.textures = Mem_Alloc( cached_mempool, count * sizeof( *out ));
 
@@ -1251,7 +1250,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 	for( i = 0; i < count; i++, out++ )
 	{
-		in->dataofs[i] = LittleLong( in->dataofs[i] );
+		in->dataofs[i] = in->dataofs[i];
 
 		if( in->dataofs[i] == -1 )
 		{
@@ -1273,8 +1272,8 @@ static void Mod_LoadTextures( const dlump_t *l )
 		com.strncpy( out->name, mt->name, sizeof( out->name ));
 
 		// original dimensions for adjust lightmap on a face
-		out->width = LittleLong( mt->width );
-		out->height = LittleLong( mt->height );
+		out->width = mt->width;
+		out->height = mt->height;
 		out->base = mt;
 
 		// sky must be loading first
@@ -1463,7 +1462,7 @@ static void Mod_LoadVertexes( const dlump_t *l )
 	for( i = 0; i < count; i++, in++, out += 3 )
 	{
 		for( j = 0; j < 3; j++ )
-			out[j] = LittleFloat( in->point[j] );
+			out[j] = in->point[j];
 	}
 }
 
@@ -1498,16 +1497,16 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 
 		for( j = 0; j < 3; j++ )
 		{
-			out->mins[j] = LittleFloat( in->mins[j] );
-			out->maxs[j] = LittleFloat( in->maxs[j] );
-			out->origin[j] = LittleFloat( in->origin[j] );
+			out->mins[j] = in->mins[j];
+			out->maxs[j] = in->maxs[j];
+			out->origin[j] = in->origin[j];
 		}
 
 		out->radius = RadiusFromBounds( out->mins, out->maxs );
-		out->firstnode = LittleLong( in->headnode[0] );	// drawing hull #0
-		out->firstface = LittleLong( in->firstface );
-		out->numfaces = LittleLong( in->numfaces );
-		out->visleafs = LittleLong( in->visleafs );
+		out->firstnode = in->headnode[0];	// drawing hull #0
+		out->firstface = in->firstface;
+		out->numfaces = in->numfaces;
+		out->visleafs = in->visleafs;
 	}
 }
 
@@ -1537,9 +1536,9 @@ static void Mod_LoadTexInfo( const dlump_t *l )
 	for( i = 0; i < count; i++, in++, out++ )
 	{
 		for( j = 0; j < 8; j++ )
-			out->vecs[0][j] = LittleFloat( in->vecs[0][j] );
+			out->vecs[0][j] = in->vecs[0][j];
 
-		miptex = LittleLong( in->miptex );
+		miptex = in->miptex;
 		if( miptex < 0 || miptex > loadmodel->numshaders )
 			Host_Error( "Mod_LoadTexInfo: bad shader number in '%s'\n", loadmodel->name );
 		out->texturenum = miptex;
@@ -1576,12 +1575,12 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		out->firstedge = LittleLong( in->firstedge );
-		out->numedges = LittleLong( in->numedges );
+		out->firstedge = in->firstedge;
+		out->numedges = in->numedges;
 
-		if( LittleShort( in->side )) out->flags |= SURF_PLANEBACK;
-		out->plane = loadbmodel->planes + LittleLong( in->planenum );
-		out->texinfo = loadbmodel->texinfo + LittleLong( in->texinfo );
+		if( in->side ) out->flags |= SURF_PLANEBACK;
+		out->plane = loadbmodel->planes + in->planenum;
+		out->texinfo = loadbmodel->texinfo + in->texinfo;
 		texnum = out->texinfo->texturenum;
 
 		if( texnum < 0 || texnum > cached.numtextures )
@@ -1605,7 +1604,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		out->lmHeight = (out->extents[1] >> 4) + 1;
 
 		if( out->flags & SURF_DRAWTILED ) lightofs = -1;
-		else lightofs = LittleLong( in->lightofs );
+		else lightofs = in->lightofs;
 
 		if( loadbmodel->lightdata && lightofs != -1 )
 		{
@@ -1659,7 +1658,7 @@ static void Mod_LoadMarkFaces( const dlump_t *l )
 
 	for( i = 0; i < count; i++ )
 	{
-		j = LittleLong( in[i] );
+		j = in[i];
 		if( j < 0 ||  j >= loadbmodel->numsurfaces )
 			Host_Error( "Mod_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
 		loadbmodel->marksurfaces[i] = loadbmodel->surfaces + j;
@@ -1691,15 +1690,15 @@ static void Mod_LoadNodes( const dlump_t *l )
 	{
 		qboolean	badBounds = false;
 
-		out->plane = loadbmodel->planes + LittleLong( in->planenum );
-		out->firstface = loadbmodel->surfaces + LittleLong( in->firstface );
-		out->numfaces = LittleLong( in->numfaces );
+		out->plane = loadbmodel->planes + in->planenum;
+		out->firstface = loadbmodel->surfaces + in->firstface;
+		out->numfaces = in->numfaces;
 		out->contents = CONTENTS_NODE;
 
 		for( j = 0; j < 3; j++ )
 		{
-			out->mins[j] = (float)LittleShort( in->mins[j] );
-			out->maxs[j] = (float)LittleShort( in->maxs[j] );
+			out->mins[j] = (float)in->mins[j];
+			out->maxs[j] = (float)in->maxs[j];
 			if( out->mins[j] > out->maxs[j] ) badBounds = true;
 		}
 
@@ -1715,7 +1714,7 @@ static void Mod_LoadNodes( const dlump_t *l )
 
 		for( j = 0; j < 2; j++ )
 		{
-			p = LittleShort( in->children[j] );
+			p = in->children[j];
 			if( p >= 0 ) out->children[j] = loadbmodel->nodes + p;
 			else out->children[j] = (mnode_t *)(loadbmodel->leafs + ( -1 - p ));
 		}
@@ -1751,8 +1750,8 @@ static void Mod_LoadLeafs( const dlump_t *l )
 
 		for( j = 0; j < 3; j++ )
 		{
-			out->mins[j] = (float)LittleShort( in->mins[j] );
-			out->maxs[j] = (float)LittleShort( in->maxs[j] );
+			out->mins[j] = (float)in->mins[j];
+			out->maxs[j] = (float)in->maxs[j];
 			if( out->mins[j] > out->maxs[j] ) badBounds = true;
 		}
 
@@ -1767,13 +1766,13 @@ static void Mod_LoadLeafs( const dlump_t *l )
 		}
 
 		out->plane = NULL;	// to differentiate from nodes
-		out->contents = LittleLong( in->contents );
+		out->contents = in->contents;
 		
-		p = LittleLong( in->visofs );
+		p = in->visofs;
 		out->compressed_vis = (p == -1) ? NULL : loadbmodel->visdata + p;
 
-		out->firstMarkSurface = loadbmodel->marksurfaces + LittleShort( in->firstmarksurface );
-		out->numMarkSurfaces = LittleShort( in->nummarksurfaces );
+		out->firstMarkSurface = loadbmodel->marksurfaces + in->firstmarksurface;
+		out->numMarkSurfaces = in->nummarksurfaces;
 	}
 }
 
@@ -1797,8 +1796,8 @@ static void Mod_LoadEdges( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		out->v[0] = (word)LittleShort( in->v[0] );
-		out->v[1] = (word)LittleShort( in->v[1] );
+		out->v[0] = (word)in->v[0];
+		out->v[1] = (word)in->v[1];
 	}
 }
 
@@ -1810,7 +1809,7 @@ Mod_LoadSurfEdges
 static void Mod_LoadSurfEdges( const dlump_t *l )
 {
 	dsurfedge_t	*in, *out;
-	int		i, count;
+	int		count;
 
 	in = (void *)( mod_base + l->fileofs );	
 	if( l->filelen % sizeof( *in ))
@@ -1820,8 +1819,7 @@ static void Mod_LoadSurfEdges( const dlump_t *l )
 	cached.surfedges = out = Mem_Alloc( cached_mempool, count * sizeof( dsurfedge_t ));
 	cached.numsurfedges = count;
 
-	for( i = 0; i < count; i++ )
-		out[i] = LittleLong( in[i] );
+	Mem_Copy( out, in, count * sizeof( dsurfedge_t ));
 }
 
 /*
@@ -1847,12 +1845,10 @@ static void Mod_LoadPlanes( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		out->normal[0] = LittleFloat( in->normal[0] );
-		out->normal[1] = LittleFloat( in->normal[1] );
-		out->normal[2] = LittleFloat( in->normal[2] );
+		VectorCopy( in->normal, out->normal );
 		out->signbits = SignbitsForPlane( out->normal );
-		out->dist = LittleFloat( in->dist );
-		out->type = LittleLong( in->type );
+		out->dist = in->dist;
+		out->type = in->type;
 	}
 }
 
@@ -2582,7 +2578,7 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 	int	i, j;
 
 	header = (dheader_t *)buffer;
-	cached.version = LittleLong( header->version );
+	cached.version = header->version;
 
 	switch( cached.version )
 	{
@@ -2596,10 +2592,6 @@ void Mod_BrushLoadModel( ref_model_t *mod, const void *buffer )
 
 	mod->type = mod_brush;
 	mod_base = (byte *)header;
-
-	// swap all the lumps
-	for( i = 0; i < sizeof( dheader_t )/4; i++ )
-		((int *)header )[i] = LittleLong( ((int *)header )[i] );
 
 	// load into heap
 	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );

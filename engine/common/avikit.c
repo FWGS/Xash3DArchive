@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "byteorder.h"
 #include <vfw.h> // video for windows
 
 typedef struct movie_state_s

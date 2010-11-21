@@ -6,7 +6,6 @@
 #include "common.h"
 #include "sound.h"
 #include "client.h"
-#include "byteorder.h"
 
 portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
 static bg_track_t		s_bgTrack;

@@ -806,9 +806,9 @@ void Host_Init( const int argc, const char **argv )
 		if( host.developer > 1 ) Cvar_SetFloat( "sv_cheats", 1.0f );
 	}
 
+	Mod_Init();
 	NET_Init();
 	Netchan_Init();
-	CM_InitPhysics();
 
 	SV_Init();
 	CL_Init();
@@ -874,7 +874,7 @@ void Host_Free( void )
 	host.state = HOST_SHUTDOWN;	// prepare host to normal shutdown
 	com.strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
 
-	CM_FreePhysics();
+	Mod_Shutdown();
 	Host_FreeRender();
 	S_Shutdown();
 

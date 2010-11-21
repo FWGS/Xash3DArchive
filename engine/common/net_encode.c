@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "netchan.h"
-#include "byteorder.h"
 #include "mathlib.h"
 #include "net_encode.h"
 #include "event_api.h"

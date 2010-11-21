@@ -861,14 +861,14 @@ void S_Music_f( void )
 	else if( c == 2 )
 	{
 		string	intro, main, track;
-		char	*ext[] = { "wav", "mp3", "ogg" };
+		char	*ext[] = { "wav", "mp3" };
 		int	i;
 
 		com.strncpy( track, Cmd_Argv( 1 ), sizeof( track ));
 		com.snprintf( intro, sizeof( intro ), "%s_intro", Cmd_Argv( 1 ));
 		com.snprintf( main, sizeof( main ), "%s_main", Cmd_Argv( 1 ));
 
-		for( i = 0; i < 3; i++ )
+		for( i = 0; i < 2; i++ )
 		{
 			if( FS_FileExists( va( "media/%s.%s", intro, ext[i] ))
 				&& FS_FileExists( va( "media/%s.%s", main, ext[i] )))

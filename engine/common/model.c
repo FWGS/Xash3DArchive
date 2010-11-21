@@ -5,11 +5,11 @@
 
 #include "cm_local.h"
 #include "sprite.h"
-#include "byteorder.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "studio.h"
 #include "wadfile.h"
+#include "world.h"
 
 clipmap_t		cm;
 
@@ -23,7 +23,8 @@ model_t		*loadmodel;
 model_t		*worldmodel;
 
 // cvars
-convar_t		*cm_novis;
+convar_t		*sv_novis;		// disable server culling entities by vis
+convar_t		*gl_subdivide_size;
 
 // default hullmins
 static vec3_t cm_hullmins[4] =
@@ -104,6 +105,190 @@ static int CM_StudioBodyVariations( model_t *mod )
 }
 
 /*
+==================
+Mod_PointInLeaf
+
+==================
+*/
+mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node )
+{
+	mleaf_t	*leaf;
+
+	// find which leaf the point is in
+	while( node->contents >= 0 )
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p, node->plane->normal)) < node->plane->dist];
+	leaf = (mleaf_t *)node;
+
+	return leaf;
+}
+
+int Mod_PointLeafnum( const vec3_t p )
+{
+	// map not loaded
+	if ( !worldmodel ) return 0;
+	return Mod_PointInLeaf( p, worldmodel->nodes ) - worldmodel->leafs - 1;
+}
+
+/*
+======================================================================
+
+LEAF LISTING
+
+======================================================================
+*/
+static void Mod_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
+{
+	mplane_t	*plane;
+	int	s;
+
+	while( 1 )
+	{
+		if( node->contents == CONTENTS_SOLID )
+			return;
+
+		if( node->contents < 0 )
+		{
+			mleaf_t	*leaf = (mleaf_t *)node;
+
+			// it's a leaf!
+			if( ll->count >= ll->maxcount )
+			{
+				ll->overflowed = true;
+				return;
+			}
+
+			ll->list[ll->count++] = leaf - worldmodel->leafs - 1;
+			return;
+		}
+	
+		plane = node->plane;
+		s = BOX_ON_PLANE_SIDE( ll->mins, ll->maxs, plane );
+
+		if( s == 1 )
+		{
+			node = node->children[0];
+		}
+		else if( s == 2 )
+		{
+			node = node->children[1];
+		}
+		else
+		{
+			// go down both
+			if( ll->topnode == -1 )
+				ll->topnode = node - worldmodel->nodes;
+			Mod_BoxLeafnums_r( ll, node->children[0] );
+			node = node->children[1];
+		}
+	}
+}
+
+/*
+==================
+Mod_BoxLeafnums
+==================
+*/
+int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *topnode )
+{
+	leaflist_t	ll;
+
+	if( !worldmodel ) return 0;
+
+	cm.checkcount++;
+	VectorCopy( mins, ll.mins );
+	VectorCopy( maxs, ll.maxs );
+	ll.count = 0;
+	ll.maxcount = listsize;
+	ll.list = list;
+	ll.topnode = -1;
+	ll.overflowed = false;
+
+	Mod_BoxLeafnums_r( &ll, worldmodel->nodes );
+
+	if( topnode ) *topnode = ll.topnode;
+	return ll.count;
+}
+
+/*
+=============
+Mod_BoxVisible
+
+Returns true if any leaf in boxspace
+is potentially visible
+=============
+*/
+qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits )
+{
+	short	leafList[MAX_BOX_LEAFS];
+	int	i, count;
+
+	if( !visbits || !mins || !maxs )
+		return true;
+
+	// FIXME: Could save a loop here by traversing the tree in this routine like the code above
+	count = Mod_BoxLeafnums( mins, maxs, leafList, MAX_BOX_LEAFS, NULL );
+
+	for( i = 0; i < count; i++ )
+	{
+		int	leafnum = leafList[i];
+
+		if( visbits[leafnum>>3] & (1<<( leafnum & 7 )))
+			return true;
+	}
+	return false;
+}
+
+/*
+===============================================================================
+
+POINT TESTING IN HULLS
+
+===============================================================================
+*/
+/*
+==================
+Mod_HullPointContents
+
+==================
+*/
+int Mod_HullPointContents( hull_t *hull, int num, const vec3_t p )
+{
+	while( num >= 0 )
+		num = hull->clipnodes[num].children[(hull->planes[hull->clipnodes[num].planenum].type < 3 ? p[hull->planes[hull->clipnodes[num].planenum].type] : DotProduct (hull->planes[hull->clipnodes[num].planenum].normal, p)) < hull->planes[hull->clipnodes[num].planenum].dist];
+	return num;
+}
+
+/*
+==================
+Mod_PointContents
+
+==================
+*/
+int Mod_PointContents( const vec3_t p )
+{
+	if( !worldmodel ) return 0;
+	return Mod_HullPointContents( &worldmodel->hulls[0], 0, p );
+}
+
+/*
+==================
+Mod_AmbientLevels
+
+grab the ambient sound levels for current point
+==================
+*/
+void Mod_AmbientLevels( const vec3_t p, byte *pvolumes )
+{
+	mleaf_t	*leaf;
+
+	if( !worldmodel || !p || !pvolumes )
+		return;	
+
+	leaf = Mod_PointInLeaf( p, worldmodel->nodes );
+	*(int *)pvolumes = *(int *)leaf->ambient_sound_level;
+}
+
+/*
 ================
 CM_FreeModel
 ================
@@ -125,17 +310,16 @@ static void CM_FreeModel( model_t *mod )
 ===============================================================================
 */
 
-qboolean CM_InitPhysics( void )
+void Mod_Init( void )
 {
-	cm_novis = Cvar_Get( "cm_novis", "0", 0, "force to ignore server visibility" );
+	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
+	gl_subdivide_size = Cvar_Get( "gl_subdivide_size", "128", CVAR_ARCHIVE, "how large water polygons should be" );
 
 	cm.studiopool = Mem_AllocPool( "Studio Cache" );
-
 	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
-	return true;
 }
 
-void CM_FreePhysics( void )
+void Mod_Shutdown( void )
 {
 	int	i;
 
@@ -157,14 +341,14 @@ void CM_FreePhysics( void )
 BSP_LoadSubmodels
 =================
 */
-static void BSP_LoadSubmodels( dlump_t *l )
+static void Mod_LoadSubmodels( dlump_t *l )
 {
 	dmodel_t	*in;
 	dmodel_t	*out;
 	int	i, j, count;
 	
 	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "BSP_LoadModels: funny lump size\n" );
+	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadBModel: funny lump size\n" );
 	count = l->filelen / sizeof( *in );
 
 	if( count < 1 ) Host_Error( "Map %s without models\n", loadmodel->name );
@@ -180,17 +364,17 @@ static void BSP_LoadSubmodels( dlump_t *l )
 		for( j = 0; j < 3; j++ )
 		{
 			// spread the mins / maxs by a pixel
-			out->mins[j] = LittleFloat( in->mins[j] ) - 1;
-			out->maxs[j] = LittleFloat( in->maxs[j] ) + 1;
-			out->origin[j] = LittleFloat( in->origin[j] );
+			out->mins[j] = in->mins[j] - 1;
+			out->maxs[j] = in->maxs[j] + 1;
+			out->origin[j] = in->origin[j];
 		}
 
 		for( j = 0; j < MAX_MAP_HULLS; j++ )
-			out->headnode[j] = LittleLong( in->headnode[j] );
+			out->headnode[j] = in->headnode[j];
 
-		out->visleafs = LittleLong( in->visleafs );
-		out->firstface = LittleLong( in->firstface );
-		out->numfaces = LittleLong( in->numfaces );
+		out->visleafs = in->visleafs;
+		out->firstface = in->firstface;
+		out->numfaces = in->numfaces;
 	}
 }
 
@@ -202,7 +386,7 @@ BSP_LoadTextures
 static void BSP_LoadTextures( dlump_t *l )
 {
 	dmiptexlump_t	*in;
-	mtexture_t	*out;
+	texture_t		*out;
 	mip_t		*mt;
 	int 		i;
 
@@ -214,14 +398,12 @@ static void BSP_LoadTextures( dlump_t *l )
 	}
 
 	in = (void *)(mod_base + l->fileofs);
-	in->nummiptex = LittleLong( in->nummiptex );
 
 	loadmodel->numtextures = in->nummiptex;
-	loadmodel->textures = (mtexture_t **)Mem_Alloc( loadmodel->mempool, loadmodel->numtextures * sizeof( mtexture_t* ));
+	loadmodel->textures = (texture_t **)Mem_Alloc( loadmodel->mempool, loadmodel->numtextures * sizeof( texture_t* ));
 
 	for( i = 0; i < loadmodel->numtextures; i++ )
 	{
-		in->dataofs[i] = LittleLong( in->dataofs[i] );
 		if( in->dataofs[i] == -1 ) continue; // bad offset ?
 
 		mt = (mip_t *)((byte *)in + in->dataofs[i] );
@@ -259,9 +441,9 @@ static void BSP_LoadTexInfo( const dlump_t *l )
 	for( i = 0; i < count; i++, in++, out++ )
 	{
 		for( j = 0; j < 8; j++ )
-			out->vecs[0][j] = LittleFloat( in->vecs[0][j] );
+			out->vecs[0][j] = in->vecs[0][j];
 
-		miptex = LittleLong( in->miptex );
+		miptex = in->miptex;
 		if( miptex < 0 || miptex > loadmodel->numtextures )
 			Host_Error( "BSP_LoadTexInfo: bad miptex number in '%s'\n", loadmodel->name );
 		out->texture = loadmodel->textures[miptex];
@@ -275,7 +457,8 @@ BSP_LoadLighting
 */
 static void BSP_LoadLighting( const dlump_t *l )
 {
-	byte	d, *in, *out;
+	byte	d, *in;
+	color24	*out;
 	int	i;
 
 	if( !l->filelen ) return;
@@ -285,15 +468,15 @@ static void BSP_LoadLighting( const dlump_t *l )
 	{
 	case Q1BSP_VERSION:
 		// expand the white lighting data
-		loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, l->filelen * 3 );
+		loadmodel->lightdata = (color24 *)Mem_Alloc( loadmodel->mempool, l->filelen * sizeof( color24 ));
 		out = loadmodel->lightdata;
 
-		for( i = 0; i < l->filelen; i++ )
+		for( i = 0; i < l->filelen; i++, out++ )
 		{
 			d = *in++;
-			*out++ = d;
-			*out++ = d;
-			*out++ = d;
+			out->r = d;
+			out->g = d;
+			out->b = d;
 		}
 		break;
 	case HLBSP_VERSION:
@@ -375,12 +558,12 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		out->firstedge = LittleLong( in->firstedge );
-		out->numedges = LittleLong( in->numedges );
+		out->firstedge = in->firstedge;
+		out->numedges = in->numedges;
 
-		if( LittleShort( in->side )) out->flags |= SURF_PLANEBACK;
-		out->plane = loadmodel->planes + LittleLong( in->planenum );
-		out->texinfo = loadmodel->texinfo + LittleLong( in->texinfo );
+		if( in->side ) out->flags |= SURF_PLANEBACK;
+		out->plane = loadmodel->planes + in->planenum;
+		out->texinfo = loadmodel->texinfo + in->texinfo;
 
 		// some DMC maps have bad textures
 		if( out->texinfo->texture )
@@ -395,19 +578,13 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 		BSP_CalcSurfaceExtents( out );
 
 		if( out->flags & SURF_DRAWTILED ) lightofs = -1;
-		else lightofs = LittleLong( in->lightofs );
+		else lightofs = in->lightofs;
 
 		if( loadmodel->lightdata && lightofs != -1 )
 		{
 			if( cm.version == HLBSP_VERSION )
 				out->samples = loadmodel->lightdata + lightofs;
 			else out->samples = loadmodel->lightdata + (lightofs * 3);
-		}
-
-		while( out->numstyles < LM_STYLES && in->styles[out->numstyles] != 255 )
-		{
-			out->styles[out->numstyles] = in->styles[out->numstyles];
-			out->numstyles++;
 		}
 	}
 }
@@ -420,8 +597,8 @@ BSP_LoadVertexes
 static void BSP_LoadVertexes( const dlump_t *l )
 {
 	dvertex_t	*in;
-	float	*out;
-	int	i, j, count;
+	mvertex_t	*out;
+	int	i, count;
 
 	in = (void *)( mod_base + l->fileofs );
 	if( l->filelen % sizeof( *in ))
@@ -429,12 +606,11 @@ static void BSP_LoadVertexes( const dlump_t *l )
 	count = l->filelen / sizeof( *in );
 
 	loadmodel->numvertexes = count;
-	out = (float *)loadmodel->vertexes = Mem_Alloc( loadmodel->mempool, count * sizeof( vec3_t ));
+	out = loadmodel->vertexes = Mem_Alloc( loadmodel->mempool, count * sizeof( mvertex_t ));
 
-	for( i = 0; i < count; i++, in++, out += 3 )
+	for( i = 0; i < count; i++, in++, out++ )
 	{
-		for( j = 0; j < 3; j++ )
-			out[j] = LittleFloat( in->point[j] );
+		VectorCopy( in->point, out->position );
 	}
 }
 
@@ -445,21 +621,22 @@ BSP_LoadEdges
 */
 static void BSP_LoadEdges( const dlump_t *l )
 {
-	dedge_t	*in, *out;
+	dedge_t	*in;
+	medge_t	*out;
 	int	i, count;
 
 	in = (void *)( mod_base + l->fileofs );	
 	if( l->filelen % sizeof( *in ))
 		Host_Error( "BSP_LoadEdges: funny lump size in %s\n", loadmodel->name );
 
-	count = l->filelen / sizeof( dedge_t );
-	loadmodel->edges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( dedge_t ));
+	count = l->filelen / sizeof( *in );
+	loadmodel->edges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( medge_t ));
 	loadmodel->numedges = count;
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		out->v[0] = (word)LittleShort( in->v[0] );
-		out->v[1] = (word)LittleShort( in->v[1] );
+		out->v[0] = (word)in->v[0];
+		out->v[1] = (word)in->v[1];
 	}
 }
 
@@ -471,7 +648,7 @@ BSP_LoadSurfEdges
 static void BSP_LoadSurfEdges( const dlump_t *l )
 {
 	dsurfedge_t	*in, *out;
-	int		i, count;
+	int		count;
 
 	in = (void *)( mod_base + l->fileofs );	
 	if( l->filelen % sizeof( *in ))
@@ -481,8 +658,7 @@ static void BSP_LoadSurfEdges( const dlump_t *l )
 	loadmodel->surfedges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( dsurfedge_t ));
 	loadmodel->numsurfedges = count;
 
-	for( i = 0; i < count; i++ )
-		out[i] = LittleLong( in[i] );
+	Mem_Copy( out, in, count * sizeof( dsurfedge_t ));
 }
 
 /*
@@ -504,7 +680,7 @@ static void BSP_LoadMarkFaces( const dlump_t *l )
 
 	for( i = 0; i < count; i++ )
 	{
-		j = LittleLong( in[i] );
+		j = in[i];
 		if( j < 0 ||  j >= loadmodel->numsurfaces )
 			Host_Error( "BSP_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
 		loadmodel->marksurfaces[i] = loadmodel->surfaces + j;
@@ -545,15 +721,14 @@ static void BSP_LoadNodes( dlump_t *l )
 
 	for( i = 0; i < loadmodel->numnodes; i++, out++, in++ )
 	{
-		p = LittleLong( in->planenum );
+		p = in->planenum;
 		out->plane = loadmodel->planes + p;
-		out->contents = CONTENTS_NODE;
-		out->firstface = loadmodel->surfaces + LittleLong( in->firstface );
-		out->numfaces = LittleLong( in->numfaces );
+		out->firstsurface = in->firstface;
+		out->numsurfaces = in->numfaces;
 
 		for( j = 0; j < 2; j++ )
 		{
-			p = LittleShort( in->children[j] );
+			p = in->children[j];
 			if( p >= 0 ) out->children[j] = loadmodel->nodes + p;
 			else out->children[j] = (mnode_t *)(loadmodel->leafs + ( -1 - p ));
 		}
@@ -586,11 +761,10 @@ static void BSP_LoadLeafs( dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		p = LittleLong( in->contents );
+		p = in->contents;
 		out->contents = p;
-		out->plane = NULL;	// differentiate to nodes
 	
-		p = LittleLong( in->visofs );
+		p = in->visofs;
 
 		if( p == -1 ) out->visdata = NULL;
 		else out->visdata = cm.pvs + p;
@@ -601,8 +775,8 @@ static void BSP_LoadLeafs( dlump_t *l )
 		for( j = 0; j < 4; j++ )
 			out->ambient_sound_level[j] = in->ambient_level[j];
 
-		out->firstmarksurface = loadmodel->marksurfaces + LittleShort( in->firstmarksurface );
-		out->nummarksurfaces = LittleShort( in->nummarksurfaces );
+		out->firstmarksurface = loadmodel->marksurfaces + in->firstmarksurface;
+		out->nummarksurfaces = in->nummarksurfaces;
 	}
 
 	if( loadmodel->leafs[0].contents != CONTENTS_SOLID )
@@ -634,12 +808,12 @@ static void BSP_LoadPlanes( dlump_t *l )
 	{
 		for( j = 0; j < 3; j++ )
 		{
-			out->normal[j] = LittleFloat( in->normal[j] );
+			out->normal[j] = in->normal[j];
 			if( out->normal[j] < 0.0f ) out->signbits |= 1<<j;
 		}
 
-		out->dist = LittleFloat( in->dist );
-		out->type = LittleLong( in->type );
+		out->dist = in->dist;
+		out->type = in->type;
 	}
 }
 
@@ -726,9 +900,9 @@ static void BSP_LoadClipnodes( dlump_t *l )
 
 	for( i = 0; i < count; i++, out++, in++ )
 	{
-		out->planenum = LittleLong( in->planenum );
-		out->children[0] = LittleShort( in->children[0] );
-		out->children[1] = LittleShort( in->children[1] );
+		out->planenum = in->planenum;
+		out->children[0] = in->children[0];
+		out->children[1] = in->children[1];
 	}
 }
 
@@ -784,7 +958,7 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 	int	i, j;			
 	
 	header = (dheader_t *)buffer;
-	i = LittleLong( header->version );
+	i = header->version;
 
 	switch( i )
 	{
@@ -802,10 +976,6 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 
 	// swap all the lumps
 	mod_base = (byte *)header;
-
-	for( i = 0; i < sizeof( dheader_t ) / 4; i++ )
-		((int *)header)[i] = LittleLong((( int *)header)[i] );
-
 	loadmodel->mempool = Mem_AllocPool( va( "sv: ^2%s^7", loadmodel->name ));
 
 	// load into heap
@@ -834,7 +1004,7 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 	BSP_LoadLeafs( &header->lumps[LUMP_LEAFS] );
 	BSP_LoadNodes( &header->lumps[LUMP_NODES] );
 	BSP_LoadClipnodes( &header->lumps[LUMP_CLIPNODES] );
-	BSP_LoadSubmodels( &header->lumps[LUMP_MODELS] );
+	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );
 
 	CM_MakeHull0 ();
 	
@@ -893,8 +1063,8 @@ static void CM_StudioModel( model_t *mod, byte *buffer )
 	loadmodel->registration_sequence = cm.registration_sequence;
 
 	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
-	loadmodel->extradata = Mem_Alloc( loadmodel->mempool, LittleLong( phdr->length ));
-	Mem_Copy( loadmodel->extradata, buffer, LittleLong( phdr->length ));
+	loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
+	Mem_Copy( loadmodel->cache.data, buffer, phdr->length );
 
 	// setup bounding box
 	VectorCopy( phdr->bbmin, loadmodel->mins );
@@ -990,7 +1160,7 @@ model_t *CM_ModForName( const char *name, qboolean world )
 	loadmodel = mod;
 
 	// call the apropriate loader
-	switch( LittleLong( *(uint *)buf ))
+	switch( *(uint *)buf )
 	{
 	case IDSTUDIOHEADER:
 		CM_StudioModel( mod, buf );
@@ -1263,6 +1433,6 @@ Mod_Extradata
 void *Mod_Extradata( model_t *mod )
 {
 	if( mod && mod->type == mod_studio )
-		return mod->extradata;
+		return mod->cache.data;
 	return NULL;
 }

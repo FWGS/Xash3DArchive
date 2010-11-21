@@ -4,7 +4,6 @@
 //=======================================================================
 
 #include "r_local.h"
-#include "byteorder.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "cl_entity.h"
@@ -663,8 +662,8 @@ void Mod_StudioLoadModel( ref_model_t *mod, const void *buffer )
 	
 	if( !phdr ) return; // there were problems
 	mod->extradata = poutmodel = (mstudiodata_t *)Mod_Malloc( mod, sizeof( mstudiodata_t ));
-	poutmodel->phdr = (studiohdr_t *)Mod_Malloc( mod, LittleLong( phdr->length ));
-	Mem_Copy( poutmodel->phdr, buffer, LittleLong( phdr->length ));
+	poutmodel->phdr = (studiohdr_t *)Mod_Malloc( mod, phdr->length );
+	Mem_Copy( poutmodel->phdr, buffer, phdr->length );
 	
 	if( phdr->numtextures == 0 )
 	{
@@ -673,8 +672,8 @@ void Mod_StudioLoadModel( ref_model_t *mod, const void *buffer )
 		else MsgDev( D_ERROR, "StudioLoadModel: %s missing textures file\n", mod->name ); 
 
 		if( !thdr ) return; // there were problems
-		poutmodel->thdr = (studiohdr_t *)Mod_Malloc( mod, LittleLong( thdr->length ));
-          	Mem_Copy( poutmodel->thdr, texbuf, LittleLong( thdr->length ));
+		poutmodel->thdr = (studiohdr_t *)Mod_Malloc( mod, thdr->length );
+          	Mem_Copy( poutmodel->thdr, texbuf, thdr->length );
 		if( texbuf ) Mem_Free( texbuf );
 	}
 	else poutmodel->thdr = poutmodel->phdr; // just make link
@@ -1079,7 +1078,7 @@ mstudioanim_t *R_StudioGetAnim( ref_model_t *m_pRefModel, mstudioseqdesc_t *pseq
 
 		buf = FS_LoadFile( filepath, &filesize );
 		if( !buf || !filesize ) Host_Error( "R_StudioGetAnim: can't load %s\n", filepath );
-		if( IDSEQGRPHEADER != LittleLong(*(uint *)buf ))
+		if( IDSEQGRPHEADER != *(uint *)buf )
 			Host_Error( "R_StudioGetAnim: %s is corrupted\n", filepath );
 
 		MsgDev( D_NOTE, "R_StudioGetAnim: %s\n", filepath );

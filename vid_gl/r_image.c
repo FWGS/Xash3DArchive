@@ -4,7 +4,6 @@
 //=======================================================================
 
 #include "r_local.h"
-#include "byteorder.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
 #include "const.h"
@@ -2175,7 +2174,6 @@ static rgbdata_t *R_ParseStudioSkin( script_t *script, const byte *buf, size_t s
 		FS_Close( f );
 		return NULL;		
 	}
-	SwapBlock( (int *)&hdr, sizeof( hdr ));
 
 	if( hdr.numtextures == 0 )
 	{
@@ -2193,7 +2191,6 @@ static rgbdata_t *R_ParseStudioSkin( script_t *script, const byte *buf, size_t s
 			FS_Close( f );
 			return NULL;		
 		}
-		SwapBlock( (int *)&hdr, sizeof( hdr ));
 	}
 
 	if( hdr.textureindex > 0 && hdr.numtextures <= MAXSTUDIOSKINS )
@@ -3322,8 +3319,8 @@ static rgbdata_t *R_InitNoTexture( int *flags, int *samples )
 		for( x = 0; x < 16; x++ )
 		{
 			if(( y < 8 ) ^ ( x < 8 ))
-				((uint *)&data2D)[y*16+x] = LittleLong( 0xFFFF00FF );
-			else ((uint *)&data2D)[y*16+x] = LittleLong( 0xFF000000 );
+				((uint *)&data2D)[y*16+x] = 0xFFFF00FF;
+			else ((uint *)&data2D)[y*16+x] = 0xFF000000;
 		}
 	}
 #else
@@ -3333,8 +3330,8 @@ static rgbdata_t *R_InitNoTexture( int *flags, int *samples )
 		for( x = 0; x < 16; x++ )
 		{
 			if( x == 0 || x == 15 || y == 0 || y == 15 )
-				((uint *)&data2D)[y*16+x] = LittleLong( 0xFFFFFFFF );
-			else ((uint *)&data2D)[y*16+x] = LittleLong( 0xFF000000 );
+				((uint *)&data2D)[y*16+x] = 0xFFFFFFFF;
+			else ((uint *)&data2D)[y*16+x] = 0xFF000000;
 		}
 	}
 #endif
@@ -3611,7 +3608,7 @@ static rgbdata_t *R_InitSkyTexture( int *flags, int *samples )
 
 	// skybox texture
 	for( i = 0; i < 256; i++ )
-		((uint *)&data2D)[i] = LittleLong( 0xFFFFDEB5 );
+		((uint *)&data2D)[i] = 0xFFFFDEB5;
 
 	*flags = TF_NOPICMIP|TF_UNCOMPRESSED;
 	*samples = 3;

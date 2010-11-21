@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "byteorder.h"
 #include "matrix_lib.h"
 #include "const.h"
 #include "r_studioint.h"

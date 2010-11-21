@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "studio.h"
-#include "byteorder.h"
 #include "mathlib.h"
 #include "const.h"
 #include "client.h"

@@ -555,7 +555,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	VectorSubtract( center, last1, screen );
 
 	// Is that box in PVS && frustum?
-	if( !CM_BoxVisible( screen, tmp, re->GetCurrentVis( )) || re->CullBox( screen, tmp ))	
+	if( !Mod_BoxVisible( screen, tmp, re->GetCurrentVis( )) || re->CullBox( screen, tmp ))	
 	{
 		return;
 	}
@@ -1083,7 +1083,7 @@ qboolean CL_CullBeam( const vec3_t start, const vec3_t end, qboolean pvsOnly )
 	}
 
 	// check bbox
-	if( CM_BoxVisible( mins, maxs, re->GetCurrentVis( )))
+	if( Mod_BoxVisible( mins, maxs, re->GetCurrentVis( )))
 	{
 		if( pvsOnly || !re->CullBox( mins, maxs ))
 		{

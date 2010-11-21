@@ -13,6 +13,19 @@
 static dword	BitWriteMasks[32][33];
 static dword	ExtraMasks[32];
 
+short BF_BigShort( short swap )
+{
+	short *s = &swap;
+	
+	__asm {
+		mov ebx, s
+		mov al, [ebx+1]
+		mov ah, [ebx  ]
+		mov [ebx], ax
+	}
+	return *s;
+}
+
 void BF_InitMasks( void )
 {
 	uint	startbit, endbit;

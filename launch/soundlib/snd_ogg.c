@@ -353,7 +353,7 @@ qboolean Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize )
 	sound.wav = (byte *)Mem_Alloc( Sys.soundpool, sound.size );
 
 	// decompress ogg into pcm wav format
-	while(( ret = ov_read( &vf, &sound.wav[done], (int)(sound.size - done), big_endian, 2, 1, &dummy )) > 0 )
+	while(( ret = ov_read( &vf, &sound.wav[done], (int)(sound.size - done), false, 2, 1, &dummy )) > 0 )
 		done += ret;
 	sound.samples = done / ( vi->channels * 2 );
 	vc = ov_comment( &vf, -1 );
@@ -477,7 +477,7 @@ long Stream_ReadOGG( stream_t *stream, long bytes, void *buffer )
 	while( 1 )
 	{
 		// read some bytes from the OGG codec
-		c = ov_read(( vorbisfile_t *)stream->ptr, bufPtr, bytesLeft, big_endian, 2, 1, &dummy );
+		c = ov_read(( vorbisfile_t *)stream->ptr, bufPtr, bytesLeft, false, 2, 1, &dummy );
 		
 		// no more bytes are left
 		if( c <= 0 ) break;

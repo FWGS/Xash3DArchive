@@ -99,7 +99,6 @@ qboolean StreamFindNextChunk( file_t *file, const char *name, int *last_chunk )
 
 		FS_Seek( file, 4, SEEK_CUR );
 		FS_Read( file, &iff_chunk_len, sizeof( iff_chunk_len ));
-		iff_chunk_len = LittleLong( iff_chunk_len );
 		if( iff_chunk_len < 0 )
 			return false;	// didn't find the chunk
 
@@ -306,7 +305,7 @@ stream_t *Stream_OpenWAV( const char *filename )
 	FS_Read( file, chunkName, 4 );
 
 	FS_Read( file, &t, sizeof( t ));
-	if( LittleShort( t ) != 1 )
+	if( t != 1 )
 	{
 		MsgDev( D_ERROR, "Stream_OpenWAV: %s not a microsoft PCM format\n", filename );
 		FS_Close( file );
@@ -314,15 +313,14 @@ stream_t *Stream_OpenWAV( const char *filename )
 	}
 
 	FS_Read( file, &t, sizeof( t ));
-	sound.channels = LittleShort( t );
+	sound.channels = t;
 
 	FS_Read( file, &sound.rate, sizeof( int ));
-	sound.rate = LittleLong( sound.rate );
 
 	FS_Seek( file, 6, SEEK_CUR );
 
 	FS_Read( file, &t, sizeof( t ));
-	sound.width = LittleShort( t ) / 8;
+	sound.width = t / 8;
 
 	sound.loopstart = 0;
 
@@ -336,7 +334,7 @@ stream_t *Stream_OpenWAV( const char *filename )
 	}
 
 	FS_Read( file, &sound.samples, sizeof( int ));
-	sound.samples = ( LittleLong( sound.samples ) / sound.width ) / sound.channels;
+	sound.samples = ( sound.samples / sound.width ) / sound.channels;
 
 	// at this point we have valid stream
 	stream = Mem_Alloc( Sys.soundpool, sizeof( stream_t ));
@@ -370,7 +368,6 @@ long Stream_ReadWAV( stream_t *stream, long bytes, void *buffer )
 	stream->pos += bytes;
 	samples = ( bytes / stream->width ) / stream->channels;
 	FS_Read( stream->file, buffer, bytes );
-	Sound_ByteSwapRawSamples( samples, stream->width, stream->channels, buffer );
 
 	return bytes;
 }

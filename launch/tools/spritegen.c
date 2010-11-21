@@ -5,7 +5,6 @@
 
 #include "utils.h"
 #include "sprite.h"
-#include "byteorder.h"
 #include "mathlib.h"
 
 #define MAX_FRAMES		256
@@ -46,14 +45,10 @@ void WriteFrame( file_t *f, int framenum )
 	dspriteframe_t		*pframe;
 
 	pframe = (dspriteframe_t *)frames[framenum].pdata;
-	pframe->origin[0] = LittleLong( pframe->origin[0] );
-	pframe->origin[1] = LittleLong( pframe->origin[1] );
-	pframe->width = LittleLong (pframe->width);
-	pframe->height = LittleLong (pframe->height);
 
 	// write frame as 32-bit indexed image
-	FS_Write(f, pframe, sizeof(*pframe));
-	FS_Write(f, (byte *)(pframe + 1), pframe->height * pframe->width );
+	FS_Write( f, pframe, sizeof( *pframe ));
+	FS_Write( f, (byte *)(pframe + 1), pframe->height * pframe->width );
 }
 
 /*
@@ -73,11 +68,10 @@ void WriteSprite( file_t *f )
 		+ ((sprite.bounds[1]>>1) * (sprite.bounds[1]>>1)));
 
 	// write out the sprite header
-	SwapBlock((int *)&sprite, sizeof(dsprite_t));
-	FS_Write( f, &sprite, sizeof(sprite));
+	FS_Write( f, &sprite, sizeof( sprite ));
 
 	// write out palette (768 bytes)
-	FS_Write( f, (void *)&cnt, sizeof(cnt));
+	FS_Write( f, (void *)&cnt, sizeof( cnt ));
 	FS_Write( f, sprite_pal, cnt * 3 );
 
 	for (i = 0; i < sprite.numframes; i++)
@@ -100,8 +94,8 @@ void WriteSprite( file_t *f )
 			numframes = frames[groupframe].numgroupframes;
 
 			// set and write the group header
-			dsgroup.numframes = LittleLong( numframes );
-			FS_Write( f, &dsgroup, sizeof(dsgroup));
+			dsgroup.numframes = numframes;
+			FS_Write( f, &dsgroup, sizeof( dsgroup ));
 			totinterval = 0.0f; // write the interval array
 
 			for( j = 0; j < numframes; j++ )
@@ -109,7 +103,7 @@ void WriteSprite( file_t *f )
 				dspriteinterval_t	temp;
 
 				totinterval += frames[groupframe+1+j].interval;
-				temp.interval = LittleFloat( totinterval );
+				temp.interval = totinterval;
 				FS_Write( f, &temp, sizeof( temp ));
 			}
 			for( j = 0; j < numframes; j++ )

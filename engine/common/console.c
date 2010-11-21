@@ -7,7 +7,6 @@
 #include "client.h"
 #include "keydefs.h"
 #include "protocol.h"		// get the protocol version
-#include "byteorder.h"
 #include "con_nprint.h"
 #include "qfont.h"
 
@@ -354,16 +353,16 @@ static void Con_LoadConchars( void )
 			int	i;
 	
 			src = (qfont_t *)buffer;
-			con.charHeight = LittleLong( src->rowheight );
+			con.charHeight = src->rowheight;
 
 			// build rectangles
 			for( i = 0; i < 256; i++ )
 			{
-				con.chars.fontRc[i].left = LittleShort( (word)src->fontinfo[i].startoffset ) % fontWidth;
-				con.chars.fontRc[i].right = con.chars.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
-				con.chars.fontRc[i].top = LittleShort( (word)src->fontinfo[i].startoffset ) / fontWidth;
-				con.chars.fontRc[i].bottom = con.chars.fontRc[i].top + LittleLong( src->rowheight );
-				con.charWidths[i] = LittleLong( src->fontinfo[i].charwidth );
+				con.chars.fontRc[i].left = (word)src->fontinfo[i].startoffset % fontWidth;
+				con.chars.fontRc[i].right = con.chars.fontRc[i].left + src->fontinfo[i].charwidth;
+				con.chars.fontRc[i].top = (word)src->fontinfo[i].startoffset / fontWidth;
+				con.chars.fontRc[i].bottom = con.chars.fontRc[i].top + src->rowheight;
+				con.charWidths[i] = src->fontinfo[i].charwidth;
 			}
 			con.chars.valid = true;
 		}

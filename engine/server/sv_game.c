@@ -6,7 +6,6 @@
 #include "common.h"
 #include "server.h"
 #include "net_encode.h"
-#include "byteorder.h"
 #include "matrix_lib.h"
 #include "event_flags.h"
 #include "pm_defs.h"
@@ -238,7 +237,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 		// intentional fallthrough
 	case MSG_PAS:
 		if( origin == NULL ) return false;
-		leafnum = CM_PointLeafnum( origin );
+		leafnum = Mod_PointLeafnum( origin );
 		mask = CM_LeafPHS( leafnum );
 		break;
 	case MSG_PVS_R:
@@ -246,7 +245,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 		// intentional fallthrough
 	case MSG_PVS:
 		if( origin == NULL ) return false;
-		leafnum = CM_PointLeafnum( origin );
+		leafnum = Mod_PointLeafnum( origin );
 		mask = CM_LeafPVS( leafnum );
 		break;
 	case MSG_ONE:
@@ -288,7 +287,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 				viewOrg = cl->pViewEntity->v.origin;
 			else viewOrg = cl->edict->v.origin;
 
-			leafnum = CM_PointLeafnum( viewOrg );
+			leafnum = Mod_PointLeafnum( viewOrg );
 			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}
@@ -330,7 +329,7 @@ static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 	int	leafnum;
 	byte	*mask;
 
-	leafnum = CM_PointLeafnum( v1 );
+	leafnum = Mod_PointLeafnum( v1 );
 
 	switch( mode )
 	{
@@ -345,7 +344,7 @@ static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 		break;
 	}
 
-	leafnum = CM_PointLeafnum( v2 );
+	leafnum = Mod_PointLeafnum( v2 );
 
 	if( mask && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 		return false;
@@ -361,8 +360,8 @@ check brush boxes in fat pvs
 */
 static qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
-//	if( !CM_BoxVisible( absmin, absmax, CM_FatPVS( org, false )))
-	if( !CM_BoxVisible( absmin, absmax, CM_LeafPVS( CM_PointLeafnum( org ))))
+//	if( !Mod_BoxVisible( absmin, absmax, CM_FatPVS( org, false )))
+	if( !Mod_BoxVisible( absmin, absmax, CM_LeafPVS( Mod_PointLeafnum( org ))))
 		return false;
 	return true;
 }
@@ -380,22 +379,22 @@ void SV_WriteEntityPatch( const char *filename )
 
 	Mem_Set( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
-	ver = LittleLong(*(uint *)buf);
+	ver = *(uint *)buf;
                               
 	switch( ver )
 	{
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+		if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
 		{
-			lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
-			lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+			lumpofs = header->lumps[LUMP_PLANES].fileofs;
+			lumplen = header->lumps[LUMP_PLANES].filelen;
 		}
 		else
 		{
-			lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-			lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+			lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+			lumplen = header->lumps[LUMP_ENTITIES].filelen;
 		}
 		break;
 	default:
@@ -432,22 +431,22 @@ script_t *SV_GetEntityScript( const char *filename )
 
 	Mem_Set( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
-	ver = LittleLong(*(uint *)buf);
+	ver = *(uint *)buf;
                               
 	switch( ver )
 	{
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+		if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
 		{
-			lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
-			lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+			lumpofs = header->lumps[LUMP_PLANES].fileofs;
+			lumplen = header->lumps[LUMP_PLANES].filelen;
 		}
 		else
 		{
-			lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-			lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+			lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+			lumplen = header->lumps[LUMP_ENTITIES].filelen;
 		}
 		break;
 	default:
@@ -1918,7 +1917,7 @@ pfnBoxVisible
 */
 static int pfnBoxVisible( const float *mins, const float *maxs, const byte *pset )
 {
-	return CM_BoxVisible( mins, maxs, pset );
+	return Mod_BoxVisible( mins, maxs, pset );
 }
 
 /*
@@ -3494,7 +3493,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	if(!( flags & FEV_GLOBAL ))
 	{
 		// setup pvs cluster for invoker
-		leafnum = CM_PointLeafnum( pvspoint );
+		leafnum = Mod_PointLeafnum( pvspoint );
 		mask = CM_LeafPVS( leafnum );
 	}
 
@@ -3512,7 +3511,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 		if(!( flags & FEV_GLOBAL ))
 		{
-			leafnum = CM_PointLeafnum( cl->edict->v.origin );
+			leafnum = Mod_PointLeafnum( cl->edict->v.origin );
 			if( mask && (!(mask[leafnum>>3] & (1<<(leafnum & 7)))))
 				continue;
 		}
@@ -3645,7 +3644,7 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	// NOTE: uncommenat this if you want to get more accuracy culling on large brushes
 	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
 	{
-		if( !CM_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))
+		if( !Mod_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))
 			return 0;
 		result = 3;	// visible passed by BoxVisible
 	}

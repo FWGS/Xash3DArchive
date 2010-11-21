@@ -981,7 +981,7 @@ SV_RecursiveSurfCheck
 
 ==================
 */
-msurface_t *SV_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
+msurface_t *SV_RecursiveSurfCheck( model_t *model, mnode_t *node, vec3_t p1, vec3_t p2 )
 {
 	float		t1, t2, frac;
 	int		side, ds, dt;
@@ -1007,9 +1007,9 @@ msurface_t *SV_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
 	}
 
 	if( t1 >= 0 && t2 >= 0 )
-		return SV_RecursiveSurfCheck( node->children[0], p1, p2 );
+		return SV_RecursiveSurfCheck( model, node->children[0], p1, p2 );
 	if( t1 < 0 && t2 < 0 )
-		return SV_RecursiveSurfCheck( node->children[1], p1, p2 );
+		return SV_RecursiveSurfCheck( model, node->children[1], p1, p2 );
 
 	frac = t1 / ( t1 - t2 );
 
@@ -1021,16 +1021,16 @@ msurface_t *SV_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
 	side = (t1 < 0);
 
 	// now this is weird.
-	surf = SV_RecursiveSurfCheck( node->children[side], p1, mid );
+	surf = SV_RecursiveSurfCheck( model, node->children[side], p1, mid );
 
 	if( surf != NULL || ( t1 >= 0 && t2 >= 0 ) || ( t1 < 0 && t2 < 0 ))
 	{
 		return surf;
 	}
 
-	surf = node->firstface;
+	surf = model->surfaces + node->firstsurface;
 
-	for( i = 0; i < node->numfaces; i++, surf++ )
+	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
 		ds = (int)((float)DotProduct( mid, surf->texinfo->vecs[0] ) + surf->texinfo->vecs[0][3] );
 		dt = (int)((float)DotProduct( mid, surf->texinfo->vecs[1] ) + surf->texinfo->vecs[1][3] );
@@ -1045,7 +1045,7 @@ msurface_t *SV_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
 		}
 	}
 
-	return SV_RecursiveSurfCheck( node->children[side^1], mid, p2 );
+	return SV_RecursiveSurfCheck( model, node->children[side^1], mid, p2 );
 }
 
 /*
@@ -1096,7 +1096,7 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 #endif
 	}
 
-	surf = SV_RecursiveSurfCheck( &bmodel->nodes[hull->firstclipnode], start_l, end_l );
+	surf = SV_RecursiveSurfCheck( bmodel, &bmodel->nodes[hull->firstclipnode], start_l, end_l );
 
 	if( !surf || !surf->texinfo || !surf->texinfo->texture )
 		return NULL;
@@ -1390,7 +1390,7 @@ static float	sv_modulate;
 SV_RecursiveLightPoint
 =================
 */
-static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const vec3_t end )
+static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3_t start, const vec3_t end )
 {
 	int		side;
 	mplane_t		*plane;
@@ -1399,7 +1399,7 @@ static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const
 	vec3_t		mid, scale;
 	float		front, back, frac;
 	int		i, map, size, s, t;
-	byte		*lm;
+	color24		*lm;
 
 	// didn't hit anything
 	if( !node->plane ) return false;
@@ -1419,23 +1419,23 @@ static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const
 
 	side = front < 0;
 	if(( back < 0 ) == side )
-		return SV_RecursiveLightPoint( node->children[side], start, end );
+		return SV_RecursiveLightPoint( model, node->children[side], start, end );
 
 	frac = front / ( front - back );
 
 	VectorLerp( start, frac, end, mid );
 
 	// co down front side	
-	if( SV_RecursiveLightPoint( node->children[side], start, mid ))
+	if( SV_RecursiveLightPoint( model, node->children[side], start, mid ))
 		return true; // hit something
 
 	if(( back < 0 ) == side )
 		return false;// didn't hit anything
 
 	// check for impact on this node
-	surf = node->firstface;
+	surf = model->surfaces + node->firstsurface;
 
-	for( i = 0; i < node->numfaces; i++, surf++ )
+	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
 		tex = surf->texinfo;
 
@@ -1456,16 +1456,16 @@ static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const
 
 		VectorClear( sv_pointColor );
 
-		lm = surf->samples + 3 * (t * ((surf->extents[0] >> 4) + 1) + s);
-		size = ((surf->extents[0] >> 4) + 1) * ((surf->extents[1] >> 4) + 1) * 3;
+		lm = surf->samples + (t * ((surf->extents[0] >> 4) + 1) + s);
+		size = ((surf->extents[0] >> 4) + 1) * ((surf->extents[1] >> 4) + 1);
 
-		for( map = 0; map < surf->numstyles; map++ )
+		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
 			VectorScale( sv.lightstyles[surf->styles[map]].rgb, sv_modulate, scale );
 
-			sv_pointColor[0] += lm[0] * scale[0];
-			sv_pointColor[1] += lm[1] * scale[1];
-			sv_pointColor[2] += lm[2] * scale[2];
+			sv_pointColor[0] += lm->r * scale[0];
+			sv_pointColor[1] += lm->g * scale[1];
+			sv_pointColor[2] += lm->b * scale[2];
 
 			lm += size; // skip to next lightmap
 		}
@@ -1473,7 +1473,7 @@ static qboolean SV_RecursiveLightPoint( mnode_t *node, const vec3_t start, const
 	}
 
 	// go down back side
-	return SV_RecursiveLightPoint( node->children[!side], mid, end );
+	return SV_RecursiveLightPoint( model, node->children[!side], mid, end );
 }
 
 void SV_RunLightStyles( void )
@@ -1561,7 +1561,7 @@ int SV_LightForEntity( edict_t *pEdict )
 	VectorSet( sv_pointColor, 1.0f, 1.0f, 1.0f );
 
 	sv_modulate = sv_lighting_modulate->value * (1.0f / 255);
-	SV_RecursiveLightPoint( worldmodel->nodes, start, end );
+	SV_RecursiveLightPoint( worldmodel, worldmodel->nodes, start, end );
 
 	return VectorAvg( sv_pointColor );
 }

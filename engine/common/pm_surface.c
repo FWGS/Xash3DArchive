@@ -14,7 +14,7 @@ PM_RecursiveSurfCheck
 
 ==================
 */
-msurface_t *PM_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
+msurface_t *PM_RecursiveSurfCheck( model_t *model, mnode_t *node, vec3_t p1, vec3_t p2 )
 {
 	float		t1, t2, frac;
 	int		side, ds, dt;
@@ -40,9 +40,9 @@ msurface_t *PM_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
 	}
 
 	if( t1 >= 0 && t2 >= 0 )
-		return PM_RecursiveSurfCheck( node->children[0], p1, p2 );
+		return PM_RecursiveSurfCheck( model, node->children[0], p1, p2 );
 	if( t1 < 0 && t2 < 0 )
-		return PM_RecursiveSurfCheck( node->children[1], p1, p2 );
+		return PM_RecursiveSurfCheck( model, node->children[1], p1, p2 );
 
 	frac = t1 / ( t1 - t2 );
 
@@ -54,16 +54,16 @@ msurface_t *PM_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
 	side = (t1 < 0);
 
 	// now this is weird.
-	surf = PM_RecursiveSurfCheck( node->children[side], p1, mid );
+	surf = PM_RecursiveSurfCheck( model, node->children[side], p1, mid );
 
 	if( surf != NULL || ( t1 >= 0 && t2 >= 0 ) || ( t1 < 0 && t2 < 0 ))
 	{
 		return surf;
 	}
 
-	surf = node->firstface;
+	surf = model->surfaces + node->firstsurface;
 
-	for( i = 0; i < node->numfaces; i++, surf++ )
+	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
 		ds = (int)((float)DotProduct( mid, surf->texinfo->vecs[0] ) + surf->texinfo->vecs[0][3] );
 		dt = (int)((float)DotProduct( mid, surf->texinfo->vecs[1] ) + surf->texinfo->vecs[1][3] );
@@ -78,7 +78,7 @@ msurface_t *PM_RecursiveSurfCheck( mnode_t *node, vec3_t p1, vec3_t p2 )
 		}
 	}
 
-	return PM_RecursiveSurfCheck( node->children[side^1], mid, p2 );
+	return PM_RecursiveSurfCheck( model, node->children[side^1], mid, p2 );
 }
 
 /*
@@ -129,7 +129,7 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 #endif
 	}
 
-	surf = PM_RecursiveSurfCheck( &bmodel->nodes[hull->firstclipnode], start_l, end_l );
+	surf = PM_RecursiveSurfCheck( bmodel, &bmodel->nodes[hull->firstclipnode], start_l, end_l );
 
 	if( !surf || !surf->texinfo || !surf->texinfo->texture )
 		return NULL;

@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "byteorder.h"
 #include "net_encode.h"
 
 #define dem_cmd	0
@@ -26,7 +25,7 @@ void CL_WriteDemoCmd( usercmd_t *pcmd )
 	usercmd_t cmd;
 	byte	c;
 
-	fl = LittleFloat(( float )host.realtime );
+	fl = ( float )host.realtime;
 	FS_Write( cls.demofile, &fl, sizeof( fl ));
 
 	c = dem_cmd;
@@ -34,32 +33,11 @@ void CL_WriteDemoCmd( usercmd_t *pcmd )
 
 	// correct for byte order, bytes don't matter
 	cmd = *pcmd;
-
-	cmd.lerp_msec = LittleShort( cmd.lerp_msec );
-	cmd.msec = LittleLong( cmd.msec );
-
-	// byte order stuff
-	for( i = 0; i < 3; i++ )
-		cmd.viewangles[i] = LittleFloat( cmd.viewangles[i] );
-
-	cmd.forwardmove = LittleFloat( cmd.forwardmove );
-	cmd.sidemove = LittleFloat( cmd.sidemove );
-	cmd.upmove = LittleFloat( cmd.upmove );
-	cmd.lightlevel = LittleLong( cmd.lightlevel );
-	cmd.buttons = LittleLong( cmd.buttons );
-	cmd.impulse = LittleLong( cmd.impulse );
-	cmd.weaponselect = LittleLong( cmd.weaponselect );
-	cmd.impact_index = LittleLong( cmd.impact_index );
-
-	cmd.impact_position[0] = LittleFloat( cmd.impact_position[0] );
-	cmd.impact_position[1] = LittleFloat( cmd.impact_position[1] );
-	cmd.impact_position[2] = LittleFloat( cmd.impact_position[2] );	
-
 	FS_Write( cls.demofile, &cmd, sizeof( cmd ));
 
 	for( i = 0; i < 3; i++ )
 	{
-		fl = LittleFloat( cl.refdef.cl_viewangles[i] );
+		fl = cl.refdef.cl_viewangles[i];
 		FS_Write( cls.demofile, &fl, sizeof( fl ));
 	}
 }
@@ -73,19 +51,18 @@ Dumps the current net message, prefixed by the length
 */
 void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
 {
-	int len, swlen;
+	int	swlen;
 
 	if( !cls.demofile ) return;
 	if( cl.refdef.paused || cls.key_dest == key_menu )
 		return;
 
 	// the first eight bytes are just packet sequencing stuff
-	len = BF_GetNumBytesWritten( msg ) - head_size;
-	swlen = LittleLong( len );
+	swlen = BF_GetNumBytesWritten( msg ) - head_size;
 
 	if( !swlen ) return; // ignore null messages
 	FS_Write( cls.demofile, &swlen, 4 );
-	FS_Write( cls.demofile, BF_GetData( msg ) + head_size, len );
+	FS_Write( cls.demofile, BF_GetData( msg ) + head_size, swlen );
 }
 
 void CL_WriteDemoHeader( const char *name )
@@ -136,7 +113,7 @@ void CL_WriteDemoHeader( const char *name )
 			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 			{	
 				// write it out
-				len = LittleLong( BF_GetNumBytesWritten( &buf ));
+				len = BF_GetNumBytesWritten( &buf );
 				FS_Write( cls.demofile, &len, 4 );
 				FS_Write( cls.demofile, BF_GetData( &buf ), len );
 				BF_Clear( &buf );
@@ -157,7 +134,7 @@ void CL_WriteDemoHeader( const char *name )
 			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 			{	
 				// write it out
-				len = LittleLong( BF_GetNumBytesWritten( &buf ));
+				len = BF_GetNumBytesWritten( &buf );
 				FS_Write( cls.demofile, &len, 4 );
 				FS_Write( cls.demofile, BF_GetData( &buf ), len );
 				BF_Clear( &buf );
@@ -183,7 +160,7 @@ void CL_WriteDemoHeader( const char *name )
 		if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 		{	
 			// write it out
-			len = LittleLong( BF_GetNumBytesWritten( &buf ));
+			len = BF_GetNumBytesWritten( &buf );
 			FS_Write( cls.demofile, &len, 4 );
 			FS_Write( cls.demofile, BF_GetData( &buf ), len );
 			BF_Clear( &buf );
@@ -216,7 +193,7 @@ void CL_WriteDemoHeader( const char *name )
 	MSG_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
 
 	// write it to the demo file
-	len = LittleLong( BF_GetNumBytesWritten( &buf ));
+	len = BF_GetNumBytesWritten( &buf );
 	FS_Write( cls.demofile, &len, 4 );
 	FS_Write( cls.demofile, BF_GetData( &buf ), len );
 
@@ -336,7 +313,6 @@ void CL_ReadDemoMessage( void )
 		return;
 	}
 
-	curSize = LittleLong( curSize );
 	if( curSize == -1 )
 	{
 		CL_DemoCompleted();
@@ -436,8 +412,6 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 		com.strncpy( comment, "<corrupted>", MAX_STRING );
 		return false;
 	}
-
-	curSize = LittleLong( curSize );
 
 	if( curSize == -1 )
 	{

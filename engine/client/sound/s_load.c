@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "sound.h"
-#include "byteorder.h"
 
 // during registration it is possible to have more sounds
 // than could actually be referenced during gameplay,

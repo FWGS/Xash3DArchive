@@ -5,7 +5,6 @@
 
 #include "r_local.h"
 #include "mathlib.h"
-#include "byteorder.h"
 #include "const.h"
 #include "cl_entity.h"
 
@@ -54,7 +53,6 @@ static dframetype_t *R_SpriteLoadFrame( ref_model_t *mod, void *pin, mspritefram
 	com.snprintf( name, MAX_STRING, "Sprite( %s_%s_%i%i )", sp_name, frame_prefix, framenum/10, framenum%10 );
 	
 	pinframe = (dspriteframe_t *)pin;
-	SwapBlock((int *)pinframe, sizeof( dspriteframe_t ));
 
 	// setup frame description
 	pspriteframe = Mem_Alloc( mod->mempool, sizeof( mspriteframe_t ));
@@ -92,7 +90,6 @@ static dframetype_t *CL_LoadSpriteFrame( const char *szSpriteName, void *pin, in
 	com.snprintf( name, MAX_STRING, "Sprite( \"%s_%s_%i%i\" )", sp_name, frame_prefix, framenum/10, framenum%10 );
 
 	pinframe = (dspriteframe_t *)pin;	
-	SwapBlock((int *)pinframe, sizeof( dspriteframe_t ));
 
 	// NOTE: just loading all single frame into one shader
 	// we supported only single frames in this case
@@ -118,15 +115,14 @@ static dframetype_t *CL_SpriteSkipGroup( const char *szSpriteName, void *pin, in
 	pin_intervals = (dspriteinterval_t *)(pingroup + 1);
 
 	// skip intervals
-	for( i = 0; i < LittleLong( pingroup->numframes ); i++ )
+	for( i = 0; i < pingroup->numframes; i++ )
 		pin_intervals++;
 
 	// skip group frames
 	ptemp = (void *)pin_intervals;
-	for( i = 0; i < LittleLong( pingroup->numframes ); i++ )
+	for( i = 0; i < pingroup->numframes; i++ )
 	{
 		pinframe = (dspriteframe_t *)ptemp;
-		SwapBlock((int *)pinframe, sizeof( dspriteframe_t ));
 		ptemp = (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height );
 	}
 	return (dframetype_t *)ptemp;
@@ -144,7 +140,7 @@ static dframetype_t *R_SpriteLoadGroup( ref_model_t *mod, void * pin, mspritefra
 	void		*ptemp;
 
 	pingroup = (dspritegroup_t *)pin;
-	numframes = LittleLong( pingroup->numframes );
+	numframes = pingroup->numframes;
 
 	groupsize = sizeof(mspritegroup_t) + (numframes - 1) * sizeof( pspritegroup->frames[0] );
 	pspritegroup = Mem_Alloc( mod->mempool, groupsize );
@@ -157,7 +153,7 @@ static dframetype_t *R_SpriteLoadGroup( ref_model_t *mod, void * pin, mspritefra
 
 	for( i = 0; i < numframes; i++ )
 	{
-		*poutintervals = LittleFloat( pin_intervals->interval );
+		*poutintervals = pin_intervals->interval;
 		if( *poutintervals <= 0.0 ) *poutintervals = 1.0f; // set error value
 		if( frame_type == FRAME_GROUP ) R_ShaderAddStageIntervals( *poutintervals );
 		else if( frame_type == FRAME_ANGLED ) R_ShaderAddStageIntervals( -1.0f );
@@ -194,7 +190,7 @@ void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer )
 	qboolean		twoSided;
 
 	pin = (dsprite_t *)buffer;
-	i = LittleLong( pin->version );
+	i = pin->version;
 		
 	if( i != SPRITE_VERSION )
 	{
@@ -202,24 +198,24 @@ void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer )
 		return;
 	}
 
-	numframes = LittleLong( pin->numframes );
-	size = sizeof (msprite_t) + (numframes - 1) * sizeof( psprite->frames );
+	numframes = pin->numframes;
+	size = sizeof( msprite_t ) + ( numframes - 1 ) * sizeof( psprite->frames );
 
 	psprite = Mem_Alloc( mod->mempool, size );
 	mod->extradata = psprite;	// make link to extradata
 	mod->numshaders = 0;	// reset frames
 	
-	psprite->type = LittleLong( pin->type );
-	psprite->rendermode = LittleLong( pin->texFormat );
+	psprite->type = pin->type;
+	psprite->rendermode = pin->texFormat;
 	psprite->numframes = numframes;
-	twoSided = (LittleLong( pin->facetype == SPR_CULL_NONE )) ? true : false;
-	mod->mins[0] = mod->mins[1] = -LittleLong( pin->bounds[0] ) / 2;
-	mod->maxs[0] = mod->maxs[1] = LittleLong( pin->bounds[0] ) / 2;
-	mod->mins[2] = -LittleLong( pin->bounds[1] ) / 2;
-	mod->maxs[2] = LittleLong( pin->bounds[1] ) / 2;
+	twoSided = ( pin->facetype == SPR_CULL_NONE ) ? true : false;
+	mod->mins[0] = mod->mins[1] = -pin->bounds[0] / 2;
+	mod->maxs[0] = mod->maxs[1] = pin->bounds[0] / 2;
+	mod->mins[2] = -pin->bounds[1] / 2;
+	mod->maxs[2] = pin->bounds[1] / 2;
 	numi = (short *)(pin + 1);
 
-	if( LittleShort( *numi ) == 256 )
+	if( *numi == 256 )
 	{	
 		byte	*src = (byte *)(numi+1);
 		rgbdata_t	*pal;
@@ -271,7 +267,7 @@ void Mod_SpriteLoadModel( ref_model_t *mod, const void *buffer )
 
 	for( i = 0; i < numframes; i++ )
 	{
-		frametype_t frametype = LittleLong( pframetype->type );
+		frametype_t frametype = pframetype->type;
 		psprite->frames[i].type = frametype;
 		frame_type = frametype;
 			
@@ -329,31 +325,31 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 	pin = (dsprite_t *)buffer;
 
 	// make sure what is really sprite
-	if( LittleLong( pin->ident ) != IDSPRITEHEADER )
+	if( pin->ident != IDSPRITEHEADER )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: %s not a sprite\n", szSpriteName );
 		Mem_Free( buffer );
 		return NULL;
 	} 
 
-	if( LittleLong( pin->version ) != SPRITE_VERSION )
+	if( pin->version != SPRITE_VERSION )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: %s invalid sprite version\n", szSpriteName );
 		Mem_Free( buffer );
 		return NULL;
 	}
 
-	numframes = LittleLong( pin->numframes );
-	twoSided = (LittleLong( pin->facetype == SPR_CULL_NONE )) ? true : false;
+	numframes = pin->numframes;
+	twoSided = ( pin->facetype == SPR_CULL_NONE ) ? true : false;
 	numi = (short *)( pin + 1 );
 
-	if( LittleShort( *numi ) == 256 )
+	if( *numi == 256 )
 	{	
 		byte	*src = (byte *)(numi+1);
 		rgbdata_t	*pal;
 	
 		// install palette
-		switch( LittleLong( pin->texFormat ))
+		switch( pin->texFormat )
 		{
 		case SPR_ADDGLOW:
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
@@ -402,7 +398,7 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 
 	for( i = 0; i < numframes; i++ )
 	{
-		switch( LittleLong( pframetype->type ))
+		switch( pframetype->type )
 		{
 		case FRAME_SINGLE:
 			pframetype = CL_LoadSpriteFrame( szSpriteName, pframetype + 1, i );

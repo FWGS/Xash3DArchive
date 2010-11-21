@@ -1,6 +1,5 @@
 @echo off
 
-cd utils
 cd bsplib
 makefile.nmake
 

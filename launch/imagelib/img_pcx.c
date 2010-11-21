@@ -18,25 +18,16 @@ qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 	byte	*pix, *pbuf, *palette, *fin, *enddata;
 
 	fin = (byte *)buffer;
-	Mem_Copy(&pcx, fin, sizeof(pcx));
+	Mem_Copy( &pcx, fin, sizeof( pcx ));
 	fin += sizeof(pcx);
 
 	// probably it's not pcx file
 	if( pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 ) return false;
-	if( filesize < (int)sizeof(pcx) + 768)
+	if( filesize < (int)sizeof(pcx) + 768 )
 	{
 		MsgDev( D_ERROR, "Image_LoadPCX: file (%s) have invalid size\n", name );
 		return false;
 	}
-
-	pcx.xmax = LittleShort (pcx.xmax);
-	pcx.xmin = LittleShort (pcx.xmin);
-	pcx.ymax = LittleShort (pcx.ymax);
-	pcx.ymin = LittleShort (pcx.ymin);
-	pcx.hres = LittleShort (pcx.hres);
-	pcx.vres = LittleShort (pcx.vres);
-	pcx.bytes_per_line = LittleShort (pcx.bytes_per_line);
-	pcx.palette_type = LittleShort (pcx.palette_type);
 
 	image.width = pcx.xmax + 1 - pcx.xmin;
 	image.height = pcx.ymax + 1 - pcx.ymin;
@@ -46,7 +37,8 @@ qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 		MsgDev( D_ERROR, "Image_LoadPCX: (%s) have unknown version '%d'\n", name, pcx.version );
 		return false;
 	}
-	if(!Image_ValidSize( name )) return false;
+	if( !Image_ValidSize( name ))
+		return false;
 	palette = (byte *)buffer + filesize - 768;
 
 	image.depth = 1;
@@ -59,7 +51,7 @@ qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 	for( y = 0; y < image.height && fin < enddata; y++ )
 	{
 		pix = pbuf + y * image.width;
-		for (x = 0; x < image.width && fin < enddata;)
+		for( x = 0; x < image.width && fin < enddata; )
 		{
 			dataByte = *fin++;
 			if( dataByte >= 0xC0 )
@@ -74,7 +66,7 @@ qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 		}
 		// the number of bytes per line is always forced to an even number
 		fin += pcx.bytes_per_line - image.width;
-		while(x < image.width) pix[x++] = 0;
+		while( x < image.width ) pix[x++] = 0;
 	}
 
 	// NOTE: IL_HINT_Q2 does wrong result for sprite frames. use with caution
@@ -138,13 +130,13 @@ qboolean Image_SavePCX( const char *name, rgbdata_t *pix )
 	pcx.bits_per_pixel = 8;		// 256 color
 	pcx.xmin = 0;
 	pcx.ymin = 0;
-	pcx.xmax = LittleShort((short)(pix->width - 1));
-	pcx.ymax = LittleShort((short)(pix->height - 1));
-	pcx.hres = LittleShort((short)pix->width);
-	pcx.vres = LittleShort((short)pix->height);
+	pcx.xmax = (short)(pix->width - 1);
+	pcx.ymax = (short)(pix->height - 1);
+	pcx.hres = (short)pix->width;
+	pcx.vres = (short)pix->height;
 	pcx.color_planes = 1;		// chunky image
-	pcx.bytes_per_line = LittleShort((short)pix->width);
-	pcx.palette_type = LittleShort( 1 );	// not a grey scale
+	pcx.bytes_per_line = (short)pix->width;
+	pcx.palette_type = 1;		// not a grey scale
 
 	// pack the image
 	palette = pix->palette;

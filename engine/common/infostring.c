@@ -4,7 +4,6 @@
 //=======================================================================
 
 #include "common.h"
-#include "byteorder.h"
 
 #define MAX_INFO_KEY	64
 #define MAX_INFO_VALUE	64

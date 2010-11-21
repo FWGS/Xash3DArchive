@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "byteorder.h"
 #include "const.h"
 #include "bspfile.h"
 #include "../cl_dll/kbutton.h"
@@ -69,23 +68,23 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 
 			Mem_Set( buf, 0, MAX_SYSPATH );
 			FS_Read( f, buf, MAX_SYSPATH );
-			ver = LittleLong(*(uint *)buf);
+			ver = *(uint *)buf;
                               
 			switch( ver )
 			{
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+				if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
 				{
-					lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
-					lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+					lumpofs = header->lumps[LUMP_PLANES].fileofs;
+					lumplen = header->lumps[LUMP_PLANES].filelen;
 					gearbox = true;
 				}
 				else
 				{
-					lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-					lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+					lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+					lumplen = header->lumps[LUMP_ENTITIES].filelen;
 					gearbox = false;
 				}
 				break;
@@ -270,7 +269,7 @@ qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "mp3" ) || !com.stricmp( ext, "ogg" ));
+		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "mp3" ));
 		else continue;
 
 		FS_FileBase( t->filenames[i], matchbuf );
@@ -408,7 +407,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "mp3" ) || !com.stricmp( ext, "ogg" ));
+		if( !com.stricmp( ext, "wav" ) || !com.stricmp( ext, "mp3" ));
 		else continue;
 
 		com.strncpy( matchbuf, t->filenames[i] + com.strlen(snddir), MAX_STRING ); 
@@ -655,22 +654,22 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 
 			Mem_Set( buf, 0, MAX_SYSPATH );
 			FS_Read( f, buf, MAX_SYSPATH );
-			ver = LittleLong(*(uint *)buf);
+			ver = *(uint *)buf;
                               
 			switch( ver )
 			{
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				if( LittleLong( header->lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+				if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
 				{
-					lumpofs = LittleLong( header->lumps[LUMP_PLANES].fileofs );
-					lumplen = LittleLong( header->lumps[LUMP_PLANES].filelen );
+					lumpofs = header->lumps[LUMP_PLANES].fileofs;
+					lumplen = header->lumps[LUMP_PLANES].filelen;
 				}
 				else
 				{
-					lumpofs = LittleLong( header->lumps[LUMP_ENTITIES].fileofs );
-					lumplen = LittleLong( header->lumps[LUMP_ENTITIES].filelen );
+					lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+					lumplen = header->lumps[LUMP_ENTITIES].filelen;
 				}
 				break;
 			}

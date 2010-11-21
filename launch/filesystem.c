@@ -6,7 +6,6 @@
 #include "launch.h"
 #include "wadfile.h"
 #include "filesystem.h"
-#include "byteorder.h"
 #include "library.h"
 #include "mathlib.h"
 
@@ -471,9 +470,6 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 		return NULL;
 	}
 
-	header.dirofs = LittleLong( header.dirofs );
-	header.dirlen = LittleLong( header.dirlen );
-
 	if( header.dirlen % sizeof( dpackfile_t ))
 	{
 		MsgDev( D_ERROR, "%s has an invalid directory size. Ignored.\n", packfile );
@@ -518,9 +514,7 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 	// parse the directory
 	for( i = 0; i < numpackfiles; i++ )
 	{
-		fs_offset_t offset = LittleLong( info[i].filepos );
-		fs_offset_t size = LittleLong( info[i].filelen );
-		FS_AddFileToPack( info[i].name, pack, offset, size );
+		FS_AddFileToPack( info[i].name, pack, info[i].filepos, info[i].filelen );
 	}
 
 	Mem_Free( info );
@@ -3553,9 +3547,6 @@ static qboolean W_ReadLumpTable( wfile_t *wad )
 	// swap everything 
 	for( i = 0; i < numlumps; i++ )
 	{
-		int	filepos = LittleLong( srclumps[i].filepos );
-		int	realsize = LittleLong( srclumps[i].disksize );
-		int	size = LittleLong( srclumps[i].size );
 		char	name[16];
 
 		// cleanup lumpname
@@ -3565,7 +3556,7 @@ static qboolean W_ReadLumpTable( wfile_t *wad )
 		k = com.strlen( com.strrchr( name, '*' ));
 		if( k ) name[com.strlen( name ) - k] = '!'; // quake1 issues (can't save images that contain '*' symbol)
 
-		W_AddFileToWad( name, wad, filepos, size, realsize, srclumps[i].type, srclumps[i].compression );
+		W_AddFileToWad( name, wad, srclumps[i].filepos, srclumps[i].size, srclumps[i].disksize, srclumps[i].type, srclumps[i].compression );
 	}
 
 	// release source lumps
@@ -3662,7 +3653,7 @@ qboolean W_WriteLump( wfile_t *wad, dlumpinfo_t *lump, const void* data, size_t 
 		Mem_Free( outbuf );
 		return ( lump->disksize != 0 ) ? true : false;		
 	default:	// CMP_NONE method
-		lump->size = lump->disksize = LittleLong( datasize );
+		lump->size = lump->disksize = datasize;
 		lump->compression = CMP_NONE;
 		write( wad->handle, data, datasize ); // just write file
 		return true;
@@ -3680,8 +3671,6 @@ int W_Check( const char *filename )
 {
 	file_t		*testwad;
 	dwadinfo_t	header;
-	int		numlumps;
-	int		infotableofs;
 	
 	testwad = FS_Open( filename, "rb", false );
 	if( !testwad ) return 0; // just not exist
@@ -3704,15 +3693,14 @@ int W_Check( const char *filename )
 		return -2; // invalid id
 	}
 
-	numlumps = LittleLong( header.numlumps );
-	if( numlumps < 0 || numlumps > MAX_FILES_IN_WAD )
+	if( header.numlumps < 0 || header.numlumps > MAX_FILES_IN_WAD )
 	{
 		// invalid lump number
 		FS_Close( testwad );
 		return -3; // invalid lumpcount
 	}
-	infotableofs = LittleLong( header.infotableofs );
-	if( FS_Seek( testwad, infotableofs, SEEK_SET ))
+
+	if( FS_Seek( testwad, header.infotableofs, SEEK_SET ))
 	{
 		// corrupted or not wad
 		FS_Close( testwad );
@@ -3757,8 +3745,8 @@ wfile_t *W_Open( const char *filename, const char *mode )
 
 		// save space for header
 		hdr.ident = IDWAD3HEADER;
-		hdr.numlumps = LittleLong( wad->numlumps );
-		hdr.infotableofs = LittleLong(sizeof( dwadinfo_t ));
+		hdr.numlumps = wad->numlumps;
+		hdr.infotableofs = sizeof( dwadinfo_t );
 		write( wad->handle, &hdr, sizeof( hdr ));
 		write( wad->handle, comment, com.strlen( comment ) + 1 );
 		wad->infotableofs = tell( wad->handle );
@@ -3797,13 +3785,13 @@ wfile_t *W_Open( const char *filename, const char *mode )
 			return NULL;
 		}
 
-		wad->numlumps = LittleLong( header.numlumps );
+		wad->numlumps = header.numlumps;
 		if( wad->numlumps >= MAX_FILES_IN_WAD && wad->mode == O_APPEND )
 		{
 			MsgDev( D_WARN, "W_Open: %s is full (%i lumps)\n", wad->numlumps );
 			wad->mode = O_RDONLY; // set read-only mode
 		}
-		wad->infotableofs = LittleLong( header.infotableofs ); // save infotableofs position
+		wad->infotableofs = header.infotableofs; // save infotableofs position
 		if( lseek( wad->handle, wad->infotableofs, SEEK_SET ) == -1 )
 		{
 			MsgDev( D_ERROR, "W_Open: %s can't find lump allocation table\n", filename );
@@ -3867,8 +3855,8 @@ void W_Close( wfile_t *wad )
 		
 		// write the header
 		hdr.ident = IDWAD3HEADER;
-		hdr.numlumps = LittleLong( wad->numlumps );
-		hdr.infotableofs = LittleLong( ofs );
+		hdr.numlumps = wad->numlumps;
+		hdr.infotableofs = ofs;
 
 		lseek( wad->handle, 0, SEEK_SET );
 		write( wad->handle, &hdr, sizeof( hdr ));
@@ -3920,7 +3908,7 @@ fs_offset_t W_SaveLump( wfile_t *wad, const char *lump, const void* data, size_t
 
 	// write header
 	W_CleanupName( lump, info->name );
-	info->filepos = LittleLong( tell( wad->handle ));
+	info->filepos = tell( wad->handle );
 	info->compression = cmp;
 	info->type = type;
 

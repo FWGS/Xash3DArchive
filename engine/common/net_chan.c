@@ -6,7 +6,6 @@
 #include "common.h"
 #include "netchan.h"
 #include "mathlib.h"
-#include "byteorder.h"
 #include "net_encode.h"
 
 #define MAKE_FRAGID( id, count )	((( id & 0xffff ) << 16 ) | ( count & 0xffff ))

@@ -537,10 +537,10 @@ static qboolean PM_StudioSetupModel( physent_t *pe )
 {
 	model_t	*mod = pe->studiomodel;
 
-	if( !mod || !mod->extradata )
+	if( !mod || !mod->cache.data )
 		return false;
 
-	pm_studiohdr = (studiohdr_t *)mod->extradata;
+	pm_studiohdr = (studiohdr_t *)mod->cache.data;
 	PM_StudioSetUpTransform( pe );
 	PM_StudioSetupBones( pe );
 	return true;
@@ -553,10 +553,10 @@ qboolean PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *m
 
 	ASSERT( mod != NULL );
 
-	if( mod->type != mod_studio || !mod->extradata )
+	if( mod->type != mod_studio || !mod->cache.data )
 		return false;
 
-	phdr = (studiohdr_t *)mod->extradata;
+	phdr = (studiohdr_t *)mod->cache.data;
 	if( !phdr->numhitboxes ) return false;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);

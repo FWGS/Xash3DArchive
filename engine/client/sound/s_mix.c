@@ -6,7 +6,6 @@
 #include "common.h"
 #include "sound.h"
 #include "client.h"
-#include "byteorder.h"
 
 #define IPAINTBUFFER	0
 #define IROOMBUFFER		1

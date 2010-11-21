@@ -5,7 +5,6 @@
 
 #include "launch.h"
 #include "ripper.h"
-#include "byteorder.h"
 #include "sprite.h"
 
 // sprite_decompiler.c
@@ -154,8 +153,8 @@ void *SPR_ConvertFrame( const char *name, const char *ext, void *pin, int framen
 	int		i, pixels, width, height;
 
 	pinframe = (dspriteframe_t *)pin;
-	width = LittleLong( pinframe->width );
-	height = LittleLong( pinframe->height );
+	width = pinframe->width;
+	height = pinframe->height;
 	fin =  (byte *)(pinframe + 1);
 	if( width <= 0 || height <= 0 )
 	{
@@ -200,18 +199,18 @@ void *SPR_ConvertFrame( const char *name, const char *ext, void *pin, int framen
 	{
 		i = groupframenum - 1;
 		com.strncpy( spr.group[spr.numgroup].frame[i].name, framename, MAX_STRING );
-		spr.group[spr.numgroup].frame[i].origin[0] = -(float)LittleLong(pinframe->origin[0]);
-		spr.group[spr.numgroup].frame[i].origin[1] = (float)LittleLong(pinframe->origin[1]);
-		spr.group[spr.numgroup].frame[i].width = (float)LittleLong(pinframe->width);
-		spr.group[spr.numgroup].frame[i].height = (float)LittleLong(pinframe->height);
+		spr.group[spr.numgroup].frame[i].origin[0] = -(float)pinframe->origin[0];
+		spr.group[spr.numgroup].frame[i].origin[1] = (float)pinframe->origin[1];
+		spr.group[spr.numgroup].frame[i].width = (float)pinframe->width;
+		spr.group[spr.numgroup].frame[i].height = (float)pinframe->height;
 	}
 	else
 	{
 		com.strncpy( spr.frame[framenum].name, framename, MAX_STRING );
-		spr.frame[framenum].origin[0] = -(float)LittleLong(pinframe->origin[0]);
-		spr.frame[framenum].origin[1] = (float)LittleLong(pinframe->origin[1]);
-		spr.frame[framenum].width = (float)LittleLong(pinframe->width);
-		spr.frame[framenum].height = (float)LittleLong(pinframe->height);
+		spr.frame[framenum].origin[0] = -(float)pinframe->origin[0];
+		spr.frame[framenum].origin[1] = (float)pinframe->origin[1];
+		spr.frame[framenum].width = (float)pinframe->width;
+		spr.frame[framenum].height = (float)pinframe->height;
 	}
 
 	if( FS_CheckParm( "-force32" ) && spr.texFormat == SPR_INDEXALPHA )
@@ -256,12 +255,12 @@ void *SPR_ConvertGroup( const char *name, const char *ext, void *pin, int framen
 	void		*ptemp;
 
 	pingroup = (dspritegroup_t *)pin;
-	numframes = LittleLong( pingroup->numframes );
+	numframes = pingroup->numframes;
 	pin_intervals = (dspriteinterval_t *)(pingroup + 1);
 
-	for (i = 0; i < numframes; i++) 
+	for( i = 0; i < numframes; i++ ) 
 	{
-		spr.group[spr.numgroup].interval[i] = LittleLong( pin_intervals->interval );
+		spr.group[spr.numgroup].interval[i] = pin_intervals->interval;
 		pin_intervals++;
 	}
 
@@ -269,7 +268,7 @@ void *SPR_ConvertGroup( const char *name, const char *ext, void *pin, int framen
 	spr.group[spr.numgroup].numframes = numframes - 1;
 	ptemp = (void *)pin_intervals;
 
-	for (i = 0; i < numframes; i++ )
+	for( i = 0; i < numframes; i++ )
 	{
 		ptemp = SPR_ConvertFrame( name, ext, ptemp, framenum + i, i + 1 );
 	}
@@ -352,35 +351,35 @@ qboolean ConvSPR( const char *name, byte *buffer, size_t filesize, const char *e
 	pin = (dspriteq1_t *)buffer;
 	Mem_Set( &spr, 0, sizeof( spr ));
 
-	switch( LittleLong( pin->ident ))
+	switch( pin->ident )
 	{
 	case IDSPRQ1HEADER:
-		switch( LittleLong( pin->version ))
+		switch( pin->version )
 		{
 		case SPRITEQ1_VERSION:
-			spr.totalframes = LittleLong( pin->numframes );
+			spr.totalframes = pin->numframes;
 			spr.texFormat = SPR_ALPHTEST; // constant
-			spr.type = LittleLong( pin->type );
+			spr.type = pin->type;
 			pframetype = (dframetype_t *)(pin + 1);
 			spr.truecolor = false;
 			break;
 		case SPRITE32_VERSION:
-			spr.totalframes = LittleLong( pin->numframes );
+			spr.totalframes = pin->numframes;
 			spr.texFormat = SPR_ADDITIVE; // constant
-			spr.type = LittleLong( pin->type );
+			spr.type = pin->type;
 
 			pframetype = (dframetype_t *)(pin + 1);
 			spr.truecolor = true;
 			break;
 		case SPRITEHL_VERSION:
 			pinhl = (dspritehl_t *)buffer; // reorganize header
-			spr.totalframes = LittleLong( pinhl->numframes );
-			spr.texFormat = LittleLong( pinhl->texFormat );
-			spr.type = LittleLong( pinhl->type );
+			spr.totalframes = pinhl->numframes;
+			spr.texFormat = pinhl->texFormat;
+			spr.type = pinhl->type;
 			numi = (short *)(pinhl + 1);
 			spr.truecolor = false;
 
-			if( LittleShort( *numi ) == 256 )
+			if( *numi == 256 )
 			{
 				byte *src = (byte *)(numi + 1);	
 				rgbdata_t	*pal = NULL;
@@ -411,30 +410,30 @@ qboolean ConvSPR( const char *name, byte *buffer, size_t filesize, const char *e
 			}
 			break;
 		default:
-			Msg("\"%s.%s\" unknown version %i\n", name, "spr", LittleLong( pin->version ));
+			Msg("\"%s.%s\" unknown version %i\n", name, "spr", pin->version );
 			return false;
 		}
 		break;
 	case IDSPRQ2HEADER:
-		switch( LittleLong( pin->version ))
+		switch( pin->version )
 		{
 		case SPRITEQ2_VERSION:
 			pinq2 = (dspriteq2_t *)buffer;
-			spr.totalframes = LittleLong( pinq2->numframes );
+			spr.totalframes = pinq2->numframes;
 			spr.texFormat = SPR_ALPHTEST; // constants
 			spr.type = SPR_FWD_PARALLEL;
 			spr.truecolor = false;
 			for( i = 0; i < spr.totalframes; i++ )
 			{
-				spr.frame[i].width = LittleLong( pinq2->frames[i].width );
-				spr.frame[i].height = LittleLong( pinq2->frames[i].height );
-				spr.frame[i].origin[0] = LittleLong( pinq2->frames[i].origin_x );
-				spr.frame[i].origin[1] = LittleLong( pinq2->frames[i].origin_y );
+				spr.frame[i].width = pinq2->frames[i].width;
+				spr.frame[i].height = pinq2->frames[i].height;
+				spr.frame[i].origin[0] = pinq2->frames[i].origin_x;
+				spr.frame[i].origin[1] = pinq2->frames[i].origin_y;
 				SP2_ConvertFrame( pinq2->frames[i].name, ext, i );
 			}
 			break;
 		default:
-			Msg("\"%s.%s\" unknown version %i\n", name, "sp2", LittleLong( pin->version ));
+			Msg( "\"%s.%s\" unknown version %i\n", name, "sp2", pin->version );
 			return false;
 		}
 		break;
@@ -446,7 +445,7 @@ qboolean ConvSPR( const char *name, byte *buffer, size_t filesize, const char *e
 	// .SPR save frames as normal images
 	for( i = 0; pframetype && i < spr.totalframes; i++ )
 	{
-		frametype_t frametype = LittleLong( pframetype->type );
+		frametype_t frametype = pframetype->type;
 
 		if( frametype == FRAME_SINGLE )
 			pframetype = (dframetype_t *)SPR_ConvertFrame( name, ext, (pframetype + 1), i, 0 );

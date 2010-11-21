@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "byteorder.h"
 #include "matrix_lib.h"
 #include "const.h"
 #include "triangleapi.h"
@@ -2576,7 +2575,7 @@ pfnBoxVisible
 static qboolean pfnBoxVisible( const vec3_t mins, const vec3_t maxs )
 {
 	if( !re ) return false;
-	return CM_BoxVisible( mins, maxs, re->GetCurrentVis());
+	return Mod_BoxVisible( mins, maxs, re->GetCurrentVis());
 }
 
 /*
@@ -3697,7 +3696,7 @@ qboolean CL_LoadProgs( const char *name )
 	
 	clgame.hInstance = FS_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
-Msg( "exports size %i\n", sizeof( HUD_FUNCTIONS )); 
+
 	// clear exports
 	for( func = cdll_exports; func && func->name; func++ )
 		*func->func = NULL;

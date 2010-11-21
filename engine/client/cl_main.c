@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "byteorder.h"
 #include "net_encode.h"
 #include "cl_tent.h"
 #include "input.h"
@@ -583,7 +582,7 @@ void CL_SendConnectPacket( void )
 		return;
 	}
 
-	if( adr.port == 0 ) adr.port = BigShort( PORT_SERVER );
+	if( adr.port == 0 ) adr.port = BF_BigShort( PORT_SERVER );
 	port = Cvar_VariableValue( "net_qport" );
 
 	userinfo->modified = false;
@@ -625,7 +624,7 @@ void CL_CheckForResend( void )
 		return;
 	}
 
-	if( adr.port == 0 ) adr.port = BigShort( PORT_SERVER );
+	if( adr.port == 0 ) adr.port = BF_BigShort( PORT_SERVER );
 	cls.connect_time = host.realtime; // for retransmit requests
 
 	MsgDev( D_NOTE, "Connecting to %s...\n", cls.servername );
@@ -719,7 +718,7 @@ void CL_Rcon_f( void )
 		}
 
 		NET_StringToAdr( rcon_address->string, &to );
-		if( to.port == 0 ) to.port = BigShort( PORT_SERVER );
+		if( to.port == 0 ) to.port = BF_BigShort( PORT_SERVER );
 	}
 	
 	NET_SendPacket( NS_CLIENT, com.strlen( message ) + 1, message, to );
@@ -864,7 +863,7 @@ void CL_LocalServers_f( void )
 	
 	// send a broadcast packet
 	adr.type = NA_BROADCAST;
-	adr.port = BigShort( PORT_SERVER );
+	adr.port = BF_BigShort( PORT_SERVER );
 
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "info %i", PROTOCOL_VERSION );
 }
@@ -899,7 +898,7 @@ void CL_Packet_f( void )
 		return;
 	}
 
-	if( !adr.port ) adr.port = BigShort( PORT_SERVER );
+	if( !adr.port ) adr.port = BF_BigShort( PORT_SERVER );
 
 	in = Cmd_Argv( 2 );
 	out = send + 4;

@@ -73,16 +73,14 @@ typically params: 16x16 DXT1 but can be missing
 size_t Image_VTFCalcLowResSize( vtf_t *hdr )
 {
 	size_t	buffsize = 0;
-	int	w, h, format;
+	int	format;
 
-	format = Image_VTFFormat( LittleLong( hdr->lowResImageFormat ));
+	format = Image_VTFFormat( hdr->lowResImageFormat );
 
 	// missing lowRes image for -1 value
 	if( format != VTF_UNKNOWN )
 	{
-		w = LittleShort( hdr->lowResImageWidth );
-		h = LittleShort( hdr->lowResImageHeight );
-		buffsize = Image_DXTGetLinearSize( format, w, h, 1, 0 );
+		buffsize = Image_DXTGetLinearSize( format, hdr->lowResImageWidth, hdr->lowResImageHeight, 1, 0 );
 	}
 	return buffsize;
 }
@@ -100,8 +98,8 @@ size_t Image_VTFCalcMipmapSize( vtf_t *hdr, int mipNum )
 	size_t	buffsize = 0;
 	int	w, h, mipsize;
 
-	w = max( 1, LittleShort( hdr->width )>>mipNum );
-	h = max( 1, LittleShort( hdr->height )>>mipNum );
+	w = max( 1, hdr->width >> mipNum );
+	h = max( 1, hdr->height >> mipNum );
 	mipsize = Image_DXTGetLinearSize( image.type, w, h, 1, 0 );
 	return mipsize;
 }
@@ -215,50 +213,52 @@ qboolean Image_LoadVTF( const char *name, const byte *buffer, size_t filesize )
 	byte	*fin;
 	string	shortname;
 	qboolean	oldformat = false;
-	int	i, flags, vtfFormat;
 	uint	hdrSize, biasSize, resSize, lowResSize;
+	int	i, flags;
 
 	fin = (byte *)buffer;
 	Mem_Copy( &vtf, fin, sizeof( vtf ));
-	hdrSize = LittleLong( vtf.hdr_size );
+	hdrSize = vtf.hdr_size;
 	biasSize = 0;
 
-	if( LittleLong( vtf.ident ) != VTFHEADER )
+	if( vtf.ident != VTFHEADER )
 		return false; // it's not a vtf file, just skip it
 
 	FS_FileBase( name, shortname );
 
 	// bounds check
-	i = LittleLong( vtf.ver_major );
+	i = vtf.ver_major;
 	if( i != VTF_VERSION )
 	{
 		MsgDev( D_ERROR, "Image_LoadVTF: %s has wrong ver (%i should be %i)\n", shortname, i, VTF_VERSION );
 		return false;
 	}
 
-	i = LittleLong( vtf.ver_minor );
+	i = vtf.ver_minor;
 	if( i == VTF_SUBVERSION0 && vtf.hdr_size == 64 )
 		oldformat = true;		// 7.0 hasn't envmap for cubemap images
 	// all other subversions are valid
 
-	image.width = LittleShort( vtf.width );
-	image.height = LittleShort( vtf.height );
-	if(!Image_ValidSize( name )) return false;
+	image.width = vtf.width;
+	image.height = vtf.height;
+
+	if( !Image_ValidSize( name ))
+		return false;
 
 	// translate VF_flags into IMAGE_flags
-	flags = LittleLong( vtf.flags );
+	flags = vtf.flags;
+
 	if(( flags & VF_ONEBITALPHA ) || ( flags & VF_EIGHTBITALPHA ))
 		image.flags |= IMAGE_HAS_ALPHA;
 	if( flags & VF_ENVMAP ) image.flags |= IMAGE_CUBEMAP;
 
-	vtfFormat = LittleLong( vtf.imageFormat );
-	image.type = Image_VTFFormat( vtfFormat );
-	image.depth = LittleLong( vtf.num_frames );
-	image.num_mips = LittleLong( vtf.numMipLevels );
+	image.type = Image_VTFFormat( vtf.imageFormat );
+	image.depth = vtf.num_frames;
+	image.num_mips = vtf.numMipLevels;
 
 	if( image.type == PF_UNKNOWN )
 	{
-		MsgDev( D_ERROR, "Image_LoadVTF: file (%s) has unknown format %i\n", shortname, vtfFormat );
+		MsgDev( D_ERROR, "Image_LoadVTF: file (%s) has unknown format %i\n", shortname, vtf.imageFormat );
 		return false;		
 	}
 

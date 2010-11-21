@@ -18,7 +18,7 @@
 #define DVIS_PVS		0
 #define DVIS_PHS		1
 
-extern convar_t		*cm_novis;
+extern convar_t		*sv_novis;
 
 typedef struct leaflist_s
 {
@@ -57,13 +57,13 @@ extern model_t		*worldmodel;
 //
 byte *CM_LeafPVS( int leafnum );
 byte *CM_LeafPHS( int leafnum );
-int CM_PointLeafnum( const vec3_t p );
-mleaf_t *CM_PointInLeaf( const vec3_t p, mnode_t *node );
-int CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
-qboolean CM_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
-int CM_HullPointContents( hull_t *hull, int num, const vec3_t p );
-int CM_PointContents( const vec3_t p );
-void CM_AmbientLevels( const vec3_t p, byte *pvolumes );
+int Mod_PointLeafnum( const vec3_t p );
+mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
+int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
+qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
+int Mod_HullPointContents( hull_t *hull, int num, const vec3_t p );
+int Mod_PointContents( const vec3_t p );
+void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
 	
 //
 // cm_portals.c
@@ -73,10 +73,10 @@ byte *CM_FatPVS( const vec3_t org, qboolean portal );
 byte *CM_FatPHS( const vec3_t org, qboolean portal );
 
 //
-// cm_model.c
+// model.c
 //
-qboolean CM_InitPhysics( void );
-void CM_FreePhysics( void );
+void Mod_Init( void );
+void Mod_Shutdown( void );
 script_t *CM_GetEntityScript( void );
 void CM_SetupHulls( float mins[4][3], float maxs[4][3] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );

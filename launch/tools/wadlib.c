@@ -5,7 +5,6 @@
 
 #include "utils.h"
 #include "wadfile.h"
-#include "byteorder.h"
 #include "mathlib.h"
 
 string		wadoutname;
@@ -216,8 +215,8 @@ void Cmd_GrabMip( void )
 	plump_end = plump + plump_size; // sentinel
 
 	mip = (mip_t *)plump;
-	mip->width = LittleLong( w );
-	mip->height = LittleLong( h );
+	mip->width = w;
+	mip->height = h;
 	com.strncpy( mip->name, lumpname, sizeof(mip->name)); 
 	plump = (byte *)&mip->offsets[4];
 	
@@ -225,7 +224,7 @@ void Cmd_GrabMip( void )
 	linedelta = wadpic->width - w;
 
 	source = plump;
-	mip->offsets[0] = LittleLong( plump - (byte *)mip );
+	mip->offsets[0] = plump - (byte *)mip;
 
 	// apply scissor to source
 	for( y = yl; y < yh; y++ )
@@ -278,7 +277,7 @@ void Cmd_GrabMip( void )
 		int	pixTest;
 
 		VectorClear( d_color );				// no distortion yet
-		mip->offsets[miplevel] = LittleLong(plump - (byte *)mip);
+		mip->offsets[miplevel] = plump - (byte *)mip;
 		
 		mipstep = 1<<miplevel;
 		pixTest = (int)((float)(mipstep * mipstep) * 0.4 );	// 40% of pixels
@@ -381,8 +380,8 @@ void Cmd_GrabPic( void )
 	plump_size = (int)sizeof(*pic) + (xh * yh) + sizeof(short) + 768;
 	plump = lump = (byte *)Mem_Alloc( wadpool, plump_size );
 	pic = (lmp_t *)plump;
-	pic->width = LittleLong( xh - xl );
-	pic->height = LittleLong( yh - yl );
+	pic->width = xh - xl;
+	pic->height = yh - yl;
 
 	// apply scissor to source
 	plump = (byte *)(pic + 1);

@@ -5,7 +5,6 @@
 
 #include "launch.h"
 #include "wadfile.h"
-#include "byteorder.h"
 #include "filesystem.h"
 
 convar_t		*hpk_maxsize;
@@ -402,17 +401,17 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 	if( !quiet ) MsgDev( D_INFO, "Validating %s\n", pakname );
 
 	FS_Read( f, &hdr, sizeof( hdr ));
-	if( LittleLong( hdr.ident )!= IDCUSTOMHEADER || LittleLong( hdr.version ) != IDCUSTOM_VERSION )
+	if( hdr.ident != IDCUSTOMHEADER || hdr.version != IDCUSTOM_VERSION )
 	{
 		MsgDev( D_ERROR, "HPAK_ValidatePak: %s does not have a valid HPAK header.\n", pakname );
 		FS_Close( f );
 		return false;
 	}
 
-	FS_Seek( f, LittleLong( hdr.seek ), SEEK_SET );
+	FS_Seek( f, hdr.seek, SEEK_SET );
 	FS_Read( f, &num_lumps, sizeof( num_lumps ));
 
-	if( LittleLong( num_lumps ) < 1 || LittleLong( num_lumps ) > MAX_FILES_IN_WAD )
+	if( num_lumps < 1 || num_lumps > MAX_FILES_IN_WAD )
 	{
 		MsgDev( D_ERROR, "HPAK_ValidatePak: %s has too many lumps %u.\n", pakname, num_lumps );
 		FS_Close( f );
@@ -543,7 +542,7 @@ qboolean HPAK_ResourceForHash( const char *filename, char *inHash, resource_t *p
 
 	FS_Read( f, &hdr, sizeof( hdr ));
 
-	if( LittleLong( hdr.ident ) != IDCUSTOMHEADER )
+	if( hdr.ident != IDCUSTOMHEADER )
 	{
 		MsgDev( D_ERROR, "HPAK_ResourceForHash: %s it's not a HPK file.\n", pakname );
 		FS_Close( f );
@@ -560,9 +559,9 @@ qboolean HPAK_ResourceForHash( const char *filename, char *inHash, resource_t *p
 	FS_Seek( f, hdr.seek, SEEK_SET );
 	FS_Read( f, &hpakcontainer.count, sizeof( hpakcontainer.count ));
 
-	if( LittleLong( hpakcontainer.count ) < 1 || LittleLong( hpakcontainer.count ) > MAX_FILES_IN_WAD )
+	if( hpakcontainer.count < 1 || hpakcontainer.count > MAX_FILES_IN_WAD )
 	{
-		MsgDev( D_ERROR, "HPAK_ResourceForHash: %s has too many lumps %u.\n", pakname, LittleLong( hpakcontainer.count ));
+		MsgDev( D_ERROR, "HPAK_ResourceForHash: %s has too many lumps %u.\n", pakname, hpakcontainer.count );
 		FS_Close( f );
 		return false;
 	}
@@ -593,7 +592,7 @@ qboolean HPAK_ResourceForIndex( const char *filename, int index, resource_t *pRe
 	f = FS_Open( pakname, "rb", false );
 	FS_Read( f, &hdr, sizeof( hdr ));
 
-	if( LittleLong( hdr.ident ) != IDCUSTOMHEADER )
+	if( hdr.ident != IDCUSTOMHEADER )
 	{
 		MsgDev( D_ERROR, "HPAK_ResourceForIndex: %s it's not a HPK file.\n", pakname );
 		FS_Close( f );
@@ -610,9 +609,9 @@ qboolean HPAK_ResourceForIndex( const char *filename, int index, resource_t *pRe
 	FS_Seek( f, hdr.seek, SEEK_SET );
 	FS_Read( f, &hpakcontainer.count, sizeof( hpakcontainer.count ));
 
-	if( LittleLong( hpakcontainer.count ) < 1 || LittleLong( hpakcontainer.count ) > MAX_FILES_IN_WAD )
+	if( hpakcontainer.count < 1 || hpakcontainer.count > MAX_FILES_IN_WAD )
 	{
-		MsgDev( D_ERROR, "HPAK_ResourceForIndex: %s has too many lumps %u.\n", pakname, LittleLong( hpakcontainer.count ));
+		MsgDev( D_ERROR, "HPAK_ResourceForIndex: %s has too many lumps %u.\n", pakname, hpakcontainer.count );
 		FS_Close( f );
 		return false;
 	}
@@ -677,7 +676,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 
 	FS_Read( f, &hdr, sizeof( hdr ));
 
-	if( LittleLong( hdr.ident ) != IDCUSTOMHEADER )
+	if( hdr.ident != IDCUSTOMHEADER )
 	{
 		MsgDev( D_ERROR, "HPAK_GetDataPointer: %s it's not a HPK file.\n", pakname );
 		FS_Close( f );
@@ -694,7 +693,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 	FS_Seek( f, hdr.seek, SEEK_SET );
 	FS_Read( f, &num_lumps, sizeof( num_lumps ));
 
-	if( LittleLong( num_lumps ) < 1 || LittleLong( num_lumps ) > MAX_FILES_IN_WAD )
+	if( num_lumps < 1 || num_lumps > MAX_FILES_IN_WAD )
 	{
 		MsgDev( D_ERROR, "HPAK_GetDataPointer: %s has too many lumps %u.\n", filename, num_lumps );
 		FS_Close( f );
@@ -771,7 +770,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	FS_Read( f1, &hash_pack_header, sizeof( hpak_header_t ));
 	FS_Write( f2, &hash_pack_header, sizeof( hpak_header_t ));
 
-	if( LittleLong( hash_pack_header.ident )!= IDCUSTOMHEADER || LittleLong( hash_pack_header.version ) != IDCUSTOM_VERSION )
+	if( hash_pack_header.ident != IDCUSTOMHEADER || hash_pack_header.version != IDCUSTOM_VERSION )
 	{
 		MsgDev( D_ERROR, "HPAK_RemoveLump: %s has invalid header.\n", read_path );
 		FS_Close( f1 );
@@ -783,7 +782,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	FS_Seek( f1, hash_pack_header.seek, SEEK_SET );
 	FS_Read( f1, &hpak_read.count, sizeof( hpak_read.count ));
 
-	if( LittleLong( hpak_read.count ) < 1 || LittleLong( hpak_read.count ) > MAX_FILES_IN_WAD )
+	if( hpak_read.count < 1 || hpak_read.count > MAX_FILES_IN_WAD )
 	{
 		MsgDev( D_ERROR, "HPAK_RemoveLump: %s has invalid number of lumps.\n", read_path );
 		FS_Close( f1 );

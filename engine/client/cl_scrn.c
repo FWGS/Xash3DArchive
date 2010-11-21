@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "byteorder.h"
 #include "qfont.h"
 
 convar_t *scr_viewsize;
@@ -286,16 +285,16 @@ static void SCR_LoadCreditsFont( void )
 			int	i;
 	
 			src = (qfont_t *)buffer;
-			clgame.scrInfo.iCharHeight = LittleLong( src->rowheight );
+			clgame.scrInfo.iCharHeight = src->rowheight;
 
 			// build rectangles
 			for( i = 0; i < 256; i++ )
 			{
-				cls.creditsFont.fontRc[i].left = LittleShort( (word)src->fontinfo[i].startoffset ) % fontWidth;
-				cls.creditsFont.fontRc[i].right = cls.creditsFont.fontRc[i].left + LittleShort( src->fontinfo[i].charwidth );
-				cls.creditsFont.fontRc[i].top = LittleShort( (word)src->fontinfo[i].startoffset ) / fontWidth;
-				cls.creditsFont.fontRc[i].bottom = cls.creditsFont.fontRc[i].top + LittleLong( src->rowheight );
-				clgame.scrInfo.charWidths[i] = LittleLong( src->fontinfo[i].charwidth );
+				cls.creditsFont.fontRc[i].left = (word)src->fontinfo[i].startoffset % fontWidth;
+				cls.creditsFont.fontRc[i].right = cls.creditsFont.fontRc[i].left + src->fontinfo[i].charwidth;
+				cls.creditsFont.fontRc[i].top = (word)src->fontinfo[i].startoffset / fontWidth;
+				cls.creditsFont.fontRc[i].bottom = cls.creditsFont.fontRc[i].top + src->rowheight;
+				clgame.scrInfo.charWidths[i] = src->fontinfo[i].charwidth;
 			}
 			cls.creditsFont.valid = true;
 		}

@@ -498,51 +498,51 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 	case LUMP_DECAL:
 		for( i = 0; i < 256; i++ )
 		{
-			rgba[3] = pal[765];
-			rgba[2] = pal[766];
-			rgba[1] = pal[767];
-			rgba[0] = i;
-			d_table[i] = BuffBigLong( rgba );
+			rgba[0] = pal[765];
+			rgba[1] = pal[766];
+			rgba[2] = pal[767];
+			rgba[3] = i;
+			d_table[i] = *(uint *)rgba;
 		}
 		break;
 	case LUMP_TRANSPARENT:
 		for( i = 0; i < 256; i++ )
 		{
-			rgba[3] = pal[i*3+0];
-			rgba[2] = pal[i*3+1];
-			rgba[1] = pal[i*3+2];
-			rgba[0] = pal[i] == 255 ? pal[i] : 0xFF;
-			d_table[i] = BuffBigLong( rgba );
+			rgba[0] = pal[i*3+0];
+			rgba[1] = pal[i*3+1];
+			rgba[2] = pal[i*3+2];
+			rgba[3] = pal[i] == 255 ? pal[i] : 0xFF;
+			d_table[i] = *(uint *)rgba;
 		}
 		break;
 	case LUMP_QFONT:
-		for (i = 1; i < 256; i++)
+		for( i = 1; i < 256; i++ )
 		{
-			rgba[3] = pal[i*3+0];
-			rgba[2] = pal[i*3+1];
-			rgba[1] = pal[i*3+2];
-			rgba[0] = 0xFF;
-			d_table[i] = BuffBigLong( rgba );
+			rgba[0] = pal[i*3+0];
+			rgba[1] = pal[i*3+1];
+			rgba[2] = pal[i*3+2];
+			rgba[3] = 0xFF;
+			d_table[i] = *(uint *)rgba;
 		}
 		break;
 	case LUMP_NORMAL:
-		for (i = 0; i < 256; i++)
+		for( i = 0; i < 256; i++ )
 		{
-			rgba[3] = pal[i*3+0];
-			rgba[2] = pal[i*3+1];
-			rgba[1] = pal[i*3+2];
-			rgba[0] = 0xFF;
-			d_table[i] = BuffBigLong( rgba );
+			rgba[0] = pal[i*3+0];
+			rgba[1] = pal[i*3+1];
+			rgba[2] = pal[i*3+2];
+			rgba[3] = 0xFF;
+			d_table[i] = *(uint *)rgba;
 		}
 		break;
 	case LUMP_EXTENDED:
-		for (i = 0; i < 256; i++)
+		for( i = 0; i < 256; i++ )
 		{
-			rgba[3] = pal[i*4+0];
-			rgba[2] = pal[i*4+1];
-			rgba[1] = pal[i*4+2];
-			rgba[0] = pal[i*4+3];
-			d_table[i] = BuffBigLong( rgba );
+			rgba[0] = pal[i*4+0];
+			rgba[1] = pal[i*4+1];
+			rgba[2] = pal[i*4+2];
+			rgba[3] = pal[i*4+3];
+			d_table[i] = *(uint *)rgba;
 		}
 		break;	
 	}
@@ -588,7 +588,7 @@ void Image_GetPaletteQ2( void )
 	if(!q2palette_init)
 	{
 		Image_SetPalette( palette_q2, d_8toQ2table );
-		d_8toQ2table[255] &= LittleLong(0xffffff);
+		d_8toQ2table[255] &= 0xFFFFFF;
 		q2palette_init = true;
 	}
 	image.d_currentpal = d_8toQ2table;
@@ -614,7 +614,7 @@ void Image_GetPalettePCX( const byte *pal )
 	if( pal )
 	{
 		Image_SetPalette( pal, d_8to24table );
-		d_8to24table[255] &= LittleLong(0xffffff);
+		d_8to24table[255] &= 0xFFFFFF;
 		image.d_currentpal = d_8to24table;
 	}
 	else Image_GetPaletteQ2();          
@@ -638,7 +638,7 @@ void Image_GetPaletteLMP( const byte *pal, int rendermode )
 	if( pal )
 	{
 		Image_SetPalette( pal, d_8to24table );
-		d_8to24table[255] &= LittleLong(0xffffff);
+		d_8to24table[255] &= 0xFFFFFF;
 		image.d_currentpal = d_8to24table;
 	}
 	else if( rendermode == LUMP_QFONT )

@@ -28,7 +28,6 @@
 typedef unsigned char byte;
 typedef unsigned short word;
 typedef float vec_t;
-typedef vec_t vec4_t[4];
 typedef int (*pfnUserMsgHook)(const char *pszName, int iSize, void *pbuf);
 
 #include "util_vector.h"

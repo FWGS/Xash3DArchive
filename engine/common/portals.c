@@ -179,7 +179,7 @@ CM_LeafPVS
 */
 byte *CM_LeafPVS( int leafnum )
 {
-	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.pvs || cm_novis->integer )
+	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.pvs || sv_novis->integer )
 		return cm.nullrow;
 
 	return worldmodel->leafs[leafnum+1].visdata;
@@ -192,7 +192,7 @@ CM_LeafPHS
 */
 byte *CM_LeafPHS( int leafnum )
 {
-	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.phs || cm_novis->integer )
+	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.phs || sv_novis->integer )
 		return cm.nullrow;
 
 	return worldmodel->leafs[leafnum+1].pasdata;
@@ -261,7 +261,7 @@ so we can't use a single PVS point
 */
 byte *CM_FatPVS( const vec3_t org, qboolean portal )
 {
-	if( !cm.pvs || cm_novis->integer )
+	if( !cm.pvs || sv_novis->integer )
 		return cm.nullrow;
 
 	bitvector = fatpvs;
@@ -282,7 +282,7 @@ so we can't use a single PHS point
 */
 byte *CM_FatPHS( const vec3_t org, qboolean portal )
 {
-	if( !cm.pvs || cm_novis->integer )
+	if( !cm.pvs || sv_novis->integer )
 		return cm.nullrow;
 
 	bitvector = fatphs;

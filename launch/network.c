@@ -5,8 +5,6 @@
 
 #include <winsock.h>
 #include "launch.h"
-#include "engine_api.h"	// network message length
-#include "byteorder.h"
 
 // This is the packet payload without any header bytes (which are attached for actual sending)
 #define NET_MAX_PAYLOAD	80000

@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "server.h"
-#include "byteorder.h"
 
 sv_client_t *sv_client; // current client
 
@@ -127,7 +126,7 @@ void SV_SetMaster_f( void )
 			continue;
 		}
 
-		if( !master_adr[slot].port ) master_adr[slot].port = BigShort( PORT_MASTER );
+		if( !master_adr[slot].port ) master_adr[slot].port = BF_BigShort( PORT_MASTER );
 		Msg( "Master server at %s\n", NET_AdrToString( master_adr[slot] ));
 		Msg( "Sending a ping.\n" );
 		Netchan_OutOfBandPrint( NS_SERVER, master_adr[slot], "ping" );

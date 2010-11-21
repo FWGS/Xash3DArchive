@@ -6,7 +6,6 @@
 #define SOUNDLIB_H
 
 #include "launch.h"
-#include "byteorder.h"
 
 typedef struct loadwavformat_s
 {
@@ -104,10 +103,5 @@ void Stream_FreeMPG( stream_t *stream );
 // formats save
 //
 qboolean Sound_SaveWAV( const char *name, wavdata_t *pix );
-
-//
-// snd_utils.c
-//
-void Sound_ByteSwapRawSamples( int samples, int width, int s_channels, const byte *data );
 
 #endif//SOUNDLIB_H

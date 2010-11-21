@@ -186,15 +186,11 @@ SOURCE=.\client\cl_view.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\cm_model.c
+SOURCE=.\common\model.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\cm_portals.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\cm_test.c
+SOURCE=.\common\portals.c
 # End Source File
 # Begin Source File
 

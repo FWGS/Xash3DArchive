@@ -51,6 +51,7 @@ void BF_SeekToBit( sizebuf_t *bf, int bitPos );
 void BF_SeekToByte( sizebuf_t *bf, int bytePos );
 void BF_ExciseBits( sizebuf_t *bf, int startbit, int bitstoremove );
 qboolean BF_CheckOverflow( sizebuf_t *bf );
+short BF_BigShort( short swap );
 
 // init writing
 void BF_StartWriting( sizebuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits );

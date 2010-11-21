@@ -5,7 +5,6 @@
 
 #include "launch.h"
 #include "bspfile.h"
-#include "byteorder.h"
 
 #define NUM_BYTES		256
 #define CRC32_INIT_VALUE	0xFFFFFFFFUL
@@ -225,8 +224,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	file_t	*f;
 	dheader_t	header;
 	char	buffer[1024];
-	int	i, num_bytes;
-	int	lumpofs, lumplen;
+	int	i, num_bytes, lumplen;
 	qboolean	blue_shift = false;
 
 	f = FS_Open( filename, "rb", false );
@@ -241,10 +239,8 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 		return false;
 	}
 
-	i = LittleLong( header.version );
-
 	// invalid version ?
-	if( i != Q1BSP_VERSION && i != HLBSP_VERSION )
+	if( header.version != Q1BSP_VERSION && header.version != HLBSP_VERSION )
 	{
 		FS_Close( f );
 		return false;
@@ -254,7 +250,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	CRC32_Init( crcvalue );
 
 	// check for Blue-Shift maps
-	if( LittleLong( header.lumps[LUMP_PLANES].filelen ) % sizeof( dplane_t ))
+	if( header.lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
 		blue_shift = true;
 
 	for( i = 0; i < HEADER_LUMPS; i++ )
@@ -262,9 +258,8 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 		if( blue_shift && i == LUMP_PLANES ) continue;
 		else if( i == LUMP_ENTITIES ) continue;
 
-		lumpofs = LittleLong( header.lumps[i].fileofs );
-		lumplen = LittleLong( header.lumps[i].filelen );
-		FS_Seek( f, lumpofs, SEEK_SET );
+		lumplen = header.lumps[i].filelen;
+		FS_Seek( f, header.lumps[i].fileofs, SEEK_SET );
 
 		while( lumplen > 0 )
 		{

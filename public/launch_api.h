@@ -722,6 +722,26 @@ typedef struct stdilib_api_s
 	const char* (*timestamp)( int format );				// returns current time stamp
 } stdlib_api_t;
 
+/*
+==============================================================================
+
+ Generic LAUNCH.DLL INTERFACE
+==============================================================================
+*/
+typedef struct launch_exp_s
+{
+	// interface validator
+	size_t	api_size;		// must matched with sizeof(launch_api_t)
+	size_t	com_size;		// must matched with sizeof(stdlib_api_t)
+
+	void (*Init)( const int argc, const char **argv );	// init host
+	void (*Main)( void );				// host frame
+	void (*Free)( void );				// close host
+	void (*CPrint)( const char *msg );			// host print
+	void (*CmdForward)( void );				// cmd forward to server
+	void (*CmdComplete)( char *complete_string );		// cmd autocomplete for system console
+} launch_exp_t;
+
 // this is the only function actually exported at the linker level
 typedef void *(*launch_t)( stdlib_api_t*, void* );
 typedef struct { size_t api_size; size_t com_size; } generic_api_t;

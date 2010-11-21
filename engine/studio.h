@@ -194,10 +194,13 @@ typedef struct
 	vec3_t		bbmax;		
 } mstudiobbox_t;
 
+#ifndef CACHE_USER
+#define CACHE_USER
 typedef struct cache_user_s
 {
-	void		*data;
+	void		*data;		// extradata
 } cache_user_t;
+#endif
 
 // demand loaded sequence groups
 typedef struct

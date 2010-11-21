@@ -19,22 +19,14 @@ static const loadwavformat_t load_null[] =
 { NULL, NULL, NULL }
 };
 
-// version0 - using only ogg sounds
-static const loadwavformat_t load_stalker[] =
-{
-{ "sound/%s%s.%s", "ogg", Sound_LoadOGG },
-{ "%s%s.%s", "ogg", Sound_LoadOGG },
-{ NULL, NULL, NULL }
-};
-
-// version1 - using only Doom1 sounds
+// version0 - using only Doom1 sounds
 static const loadwavformat_t load_doom1[] =
 {
 { "%s%s.%s", "snd", Sound_LoadSND },
 { NULL, NULL, NULL }
 };
 
-// version2 - using only Quake1 sounds
+// version1 - using only Quake1 sounds
 static const loadwavformat_t load_quake1[] =
 {
 { "sound/%s%s.%s", "wav", Sound_LoadWAV },
@@ -42,15 +34,13 @@ static const loadwavformat_t load_quake1[] =
 { NULL, NULL, NULL }
 };
 
-// version3 - Xash3D default sound profile
+// version2 - Xash3D default sound profile
 static const loadwavformat_t load_xash[] =
 {
 { "sound/%s%s.%s", "wav", Sound_LoadWAV },
 { "%s%s.%s", "wav", Sound_LoadWAV },
 { "sound/%s%s.%s", "mp3", Sound_LoadMPG },
 { "%s%s.%s", "mp3", Sound_LoadMPG },
-{ "sound/%s%s.%s", "ogg", Sound_LoadOGG },
-{ "%s%s.%s", "ogg", Sound_LoadOGG },
 { NULL, NULL, NULL }
 };
 
@@ -67,25 +57,17 @@ static const streamformat_t stream_null[] =
 { NULL, NULL, NULL, NULL, NULL }
 };
 
-// version0 - using only ogg streams
-static const streamformat_t stream_stalker[] =
-{
-{ "%s%s.%s", "ogg", Stream_OpenOGG, Stream_ReadOGG, Stream_FreeOGG },
-{ NULL, NULL, NULL, NULL, NULL }
-};
-
-// version1 - using only wav streams
+// version0 - using only wav streams
 static const streamformat_t stream_quake3[] =
 {
 { "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_FreeWAV },
 { NULL, NULL, NULL, NULL, NULL }
 };
 
-// version3 - Xash3D default stream profile
+// version1 - Xash3D default stream profile
 static const streamformat_t stream_xash[] =
 {
 { "%s%s.%s", "mp3", Stream_OpenMPG, Stream_ReadMPG, Stream_FreeMPG },
-{ "%s%s.%s", "ogg", Stream_OpenOGG, Stream_ReadOGG, Stream_FreeOGG },
 { "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_FreeWAV },
 { NULL, NULL, NULL, NULL, NULL }
 };
@@ -151,11 +133,6 @@ void Sound_Setup( const char *formats, const uint flags )
 		sound.loadformats = load_xash;
 		sound.streamformat = stream_xash;
 	}
-	else if( !com.stricmp( formats, "stalker" ) || !com.stricmp( formats, "S.T.A.L.K.E.R" ))
-	{
-		sound.loadformats = load_stalker;
-		sound.streamformat = stream_stalker;
-	}
 	else if( !com.stricmp( formats, "Doom1" ) || !com.stricmp( formats, "Doom2" ))
 	{
 		sound.loadformats = load_doom1;
@@ -209,25 +186,6 @@ byte *Sound_Copy( size_t size )
 	out = Mem_Alloc( Sys.soundpool, size );
 	Mem_Copy( out, sound.tempbuffer, size );
 	return out; 
-}
-
-/*
-=================
-Sound_ByteSwapRawSamples
-=================
-*/
-void Sound_ByteSwapRawSamples( int samples, int width, int s_channels, const byte *data )
-{
-	int	i;
-
-	if( !big_endian ) return;
-	if( width != 2 ) return;
-
-	if( s_channels == 2 )
-		samples <<= 1;
-
-	for( i = 0; i < samples; i++ )
-		((short *)data)[i] = LittleShort((( short *)data)[i] );
 }
 
 /*
@@ -301,8 +259,8 @@ qboolean Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int out
 
 				if( inwidth == 2 )
 				{
-					sample = LittleShort(((short *)data)[srcsample*2+0] );
-					sample2 = LittleShort(((short *)data)[srcsample*2+1] );
+					sample = ((short *)data)[srcsample*2+0];
+					sample2 = ((short *)data)[srcsample*2+1];
 				}
 				else
 				{
@@ -329,7 +287,7 @@ qboolean Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int out
 				srcsample = samplefrac >> 8;
 				samplefrac += fracstep;
 
-				if( inwidth == 2 ) sample = LittleShort(((short *)data)[srcsample] );
+				if( inwidth == 2 ) sample = ((short *)data)[srcsample];
 				else sample = (int)( (char)(data[srcsample])) << 8;
 
 				if( outwidth == 2 ) ((short *)sound.tempbuffer)[i] = sample;

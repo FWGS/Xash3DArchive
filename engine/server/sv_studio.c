@@ -589,10 +589,10 @@ qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *m
 
 	ASSERT( mod != NULL );
 
-	if( mod->type != mod_studio || !mod->extradata )
+	if( mod->type != mod_studio || !mod->cache.data )
 		return false;
 
-	phdr = (studiohdr_t *)mod->extradata;
+	phdr = (studiohdr_t *)mod->cache.data;
 	if( !phdr->numhitboxes ) return false;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);

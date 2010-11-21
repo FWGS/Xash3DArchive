@@ -1703,15 +1703,14 @@ qboolean Image_DecompressDXT( uint target, int level, int intformat, uint width,
 				for( x = 0; x < w; x += 4 )
 				{
 					sColor0 = *((word*)fin);
-					sColor0 = LittleShort(sColor0);
+					sColor0 = sColor0;
 					sColor1 = *((word*)(fin + 2));
-					sColor1 = LittleShort(sColor1);
+					sColor1 = sColor1;
 
 					Image_DXTReadColor(sColor0, colours);
 					Image_DXTReadColor(sColor1, colours + 1);
 
 					bitmask = ((uint*)fin)[1];
-					bitmask = LittleLong( bitmask );
 					fin += 8;
 
 					if (sColor0 > sColor1)
@@ -1779,7 +1778,6 @@ qboolean Image_DecompressDXT( uint target, int level, int intformat, uint width,
 					fin += 8;
 					Image_DXTReadColors( fin, colours );
 					bitmask = ((uint*)fin)[1];
-					bitmask = LittleLong( bitmask );
 					fin += 8;
 
 					// four-color block: derive the other two colors.    
@@ -1846,7 +1844,6 @@ qboolean Image_DecompressDXT( uint target, int level, int intformat, uint width,
 
 					Image_DXTReadColors(fin, colours);
 					bitmask = ((uint*)fin)[1];
-					bitmask = LittleLong(bitmask);
 					fin += 8;
 
 					// four-color block: derive the other two colors.    
@@ -2098,10 +2095,10 @@ qboolean Image_DecompressARGB( uint target, int level, int intformat, uint width
 	else if( image.palette )
 	{
 		byte *pal = image.palette; //copy ptr
-		r_bitmask	= BuffLittleLong( pal ); pal += 4;
-		g_bitmask = BuffLittleLong( pal ); pal += 4;
-		b_bitmask = BuffLittleLong( pal ); pal += 4;
-		a_bitmask = BuffLittleLong( pal ); pal += 4;
+		r_bitmask	= *(long *)pal; pal += 4;
+		g_bitmask = *(long *)pal; pal += 4;
+		b_bitmask = *(long *)pal; pal += 4;
+		a_bitmask = *(long *)pal; pal += 4;
 	}
 	else return false; // rgba mask unset
 
@@ -2122,10 +2119,11 @@ qboolean Image_DecompressARGB( uint target, int level, int intformat, uint width
 		{
 			// less than 4 byte to write?
 			if( TempBpp == 1 ) ReadI = *((byte*) fin );
-			else if( TempBpp == 2 ) ReadI = BuffLittleShort( fin );
-			else if( TempBpp == 3 ) ReadI = BuffLittleLong( fin );
+			else if( TempBpp == 2 ) ReadI = *(short *)fin;
+			else if( TempBpp == 3 ) ReadI = *(short *)fin;
 		}
-		else ReadI = BuffLittleLong( fin );
+		else ReadI = *(long *)fin;
+
 		fin += TempBpp;
 		fout[i] = ((ReadI & r_bitmask)>> RedR) << RedL;
 
@@ -2385,7 +2383,6 @@ qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	Mem_Copy( &header, buffer, sizeof( dds_t ));
-	SwapBlock((int *)&header, sizeof( dds_t ));
 
 	if( header.dwIdent != DDSHEADER ) return false; // it's not a dds file, just skip it
 	if( header.dwSize != sizeof(dds_t) - sizeof( uint )) // size of the structure (minus MagicNum)

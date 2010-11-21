@@ -6,7 +6,6 @@
 #include "launch.h"
 #include "ripper.h"
 #include "wadfile.h"
-#include "byteorder.h"
 
 #define IDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'I')	// little-endian "IBSP" q2 bsp's
 #define VDBSPMODHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'V')	// little-endian "VBSP" hl2 bsp's
@@ -219,7 +218,6 @@ void Conv_BspTextures( const char *name, dlump_t *l, const char *ext )
 	FS_FileBase( name, genericname );
 
 	m = (dmiptexlump_t *)(bsp_base + l->fileofs);
-	m->nummiptex = LittleLong( m->nummiptex );
 	dofs = m->dataofs;
 
 	detail_txt = FS_Open( va( "%s/%s_detail.txt", gs_gamedir, name ), "wb", false );
@@ -230,7 +228,6 @@ void Conv_BspTextures( const char *name, dlump_t *l, const char *ext )
 	// first pass: store all names into linear array
 	for( i = 0; i < m->nummiptex; i++ )
 	{
-		dofs[i] = LittleLong( dofs[i] );
 		if( dofs[i] == -1 ) continue;
 
 		// needs to simulate directly loading
@@ -242,7 +239,7 @@ void Conv_BspTextures( const char *name, dlump_t *l, const char *ext )
 
 		// detailtexture detected
 		if( det_name ) FS_Printf( detail_txt, "%s detail/%s 10.0 10.0\n", mip->name, det_name );
-		if( !LittleLong( mip->offsets[0] )) continue;		// not in bsp, skipped
+		if( !mip->offsets[0] ) continue;		// not in bsp, skipped
 
 		// check for '*' symbol issues
 		k = com.strlen( com.strrchr( mip->name, '*' ));
@@ -256,12 +253,11 @@ void Conv_BspTextures( const char *name, dlump_t *l, const char *ext )
 	// second pass: convert lumps
 	for( i = 0; i < m->nummiptex; i++ )
 	{
-		dofs[i] = LittleLong( dofs[i] );
 		if( dofs[i] == -1 ) continue;
 
 		// needs to simulate direct loading
 		mip = (mip_t *)((byte *)m + dofs[i]);
-		if( !LittleLong( mip->offsets[0] )) continue;		// not in bsp
+		if( !mip->offsets[0] ) continue;		// not in bsp
 
 		buffer = ((byte *)m + dofs[i]);			// buffer
 		size = (int)sizeof(mip_t) + (((mip->width * mip->height) * 85)>>6);
@@ -282,10 +278,9 @@ ConvBSP
 */
 qboolean ConvBSP( const char *name, byte *buffer, size_t filesize, const char *ext )
 {
-	dbspheader_t *header = (dbspheader_t *)buffer;
-	int i = LittleLong( header->version );
+	dbspheader_t	*header = (dbspheader_t *)buffer;
 	
-	switch( i )
+	switch( header->version )
 	{
 	case 28:
 	case 29:
@@ -297,13 +292,8 @@ qboolean ConvBSP( const char *name, byte *buffer, size_t filesize, const char *e
 	default:
 		return false; // another bsp version
 	}
-	bsp_base = (byte*)buffer;
 
-	for( i = 0; i < 15; i++ )
-	{
-		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
-		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
-	}
+	bsp_base = (byte*)buffer;
 	Conv_BspTextures( name, &header->lumps[2], ext ); // LUMP_TEXTURES
 
 	return true;
@@ -323,7 +313,7 @@ qboolean Conv_CheckMap( const char *mapname )
 	}
 
 	// detect game type
-	switch( LittleLong( hdr.ident ))
+	switch( hdr.ident )
 	{
 	case 28:	// quake 1 beta
 	case 29:	// quake 1 release
@@ -335,7 +325,7 @@ qboolean Conv_CheckMap( const char *mapname )
 		FS_Close( f );
 		return true;
 	case IDBSPMODHEADER: // continue checking
-		if( LittleLong( hdr.version ) == 38 )
+		if( hdr.version == 38 )
 		{
 			game_family = GAME_QUAKE2;
 			FS_Close( f );
@@ -343,7 +333,7 @@ qboolean Conv_CheckMap( const char *mapname )
 		}
 		break;
 	case VDBSPMODHEADER: // continue checking
-		switch( LittleLong( hdr.version ))
+		switch( hdr.version )
 		{
 		case 18:
 			game_family = GAME_HALFLIFE2_BETA;

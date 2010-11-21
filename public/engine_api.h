@@ -53,24 +53,4 @@
 #error MAX_COORD_INTEGER does not match COORD_INTEGER_BITS
 #endif
 
-/*
-==============================================================================
-
- Generic LAUNCH.DLL INTERFACE
-==============================================================================
-*/
-typedef struct launch_exp_s
-{
-	// interface validator
-	size_t	api_size;		// must matched with sizeof(launch_api_t)
-	size_t	com_size;		// must matched with sizeof(stdlib_api_t)
-
-	void (*Init)( const int argc, const char **argv );	// init host
-	void (*Main)( void );				// host frame
-	void (*Free)( void );				// close host
-	void (*CPrint)( const char *msg );			// host print
-	void (*CmdForward)( void );				// cmd forward to server
-	void (*CmdComplete)( char *complete_string );		// cmd autocomplete for system console
-} launch_exp_t;
-
 #endif//ENGINE_API_H

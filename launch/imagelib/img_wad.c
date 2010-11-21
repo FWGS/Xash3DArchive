@@ -62,7 +62,7 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	qfont_t		font;
 	const byte	*pal, *fin;
 	size_t		size;
-	int		i, numcolors;
+	int		numcolors;
 
 	if( image.hint == IL_HINT_Q1 )
 		return false;	// Quake1 doesn't have qfonts
@@ -70,18 +70,6 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	if( filesize < sizeof( font ))
 		return false;
 	Mem_Copy( &font, buffer, sizeof( font ));
-
-	// swap header
-	font.width = LittleLong( font.width );
-	font.height = LittleLong( font.height );
-	font.rowcount = LittleLong( font.rowcount );
-	font.rowheight = LittleLong( font.rowheight );
-
-	for( i = 0; i < 256; i++ )
-	{
-		font.fontinfo[i].startoffset = LittleShort( font.fontinfo[i].startoffset ); 
-		font.fontinfo[i].charwidth = LittleShort( font.fontinfo[i].charwidth );
-	}
 	
 	// last sixty four bytes - what the hell ????
 	size = sizeof( qfont_t ) - 4 + ( 128 * font.width * QCHAR_WIDTH ) + sizeof( short ) + 768 + 64;
@@ -103,7 +91,7 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	fin = buffer + sizeof( font ) - 4;
 
 	pal = fin + (image.width * image.height);
-	numcolors = BuffLittleShort( pal ), pal += sizeof( short );
+	numcolors = *(short *)pal, pal += sizeof( short );
 	image.flags |= IMAGE_HAS_ALPHA; // fonts always have transparency
 
 	if( numcolors == 768 )
@@ -142,11 +130,10 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 	int		i, flags;
 
 	pin = (mstudiotexture_t *)buffer;
-	flags = LittleLong( pin->flags );
+	flags = pin->flags;
 
-	// Valve never used endian functions for studiomodels...
-	image.width = LittleLong( pin->width );
-	image.height = LittleLong( pin->height );
+	image.width = pin->width;
+	image.height = pin->height;
 	pixels = image.width * image.height;
 	fin = (byte *)pin->index;	// setup buffer
 
@@ -226,8 +213,8 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	else return false; // unknown mode rejected
 
 	pin = (dspriteframe_t *)buffer;
-	image.width = LittleLong( pin->width );
-	image.height = LittleLong( pin->height );
+	image.width = pin->width;
+	image.height = pin->height;
 
 	if( filesize < image.width * image.height )
 	{
@@ -266,13 +253,16 @@ qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize )
 	}
 	Mem_Copy( &wal, buffer, sizeof( wal ));
 
-	flags = LittleLong(wal.flags);
-	value = LittleLong(wal.value);
-	contents = LittleLong(wal.contents);
-	image.width = LittleLong(wal.width);
-	image.height = LittleLong(wal.height);
-	for(i = 0; i < 4; i++) ofs[i] = LittleLong(wal.offsets[i]);
-	if(!Image_LumpValidSize( name )) return false;
+	flags = wal.flags;
+	value = wal.value;
+	contents = wal.contents;
+	image.width = wal.width;
+	image.height = wal.height;
+
+	Mem_Copy( ofs, wal.offsets, sizeof( ofs ));
+
+	if( !Image_LumpValidSize( name ))
+		return false;
 
 	pixels = image.width * image.height;
 	mipsize = (int)sizeof(wal) + ofs[0] + pixels;
@@ -325,13 +315,14 @@ qboolean Image_LoadFLT( const char *name, const byte *buffer, size_t filesize )
 	// stupid copypaste from DevIL, but it works
 	f = VFS_Create( buffer, filesize );
 	first_pos = VFS_Tell( f );
-	VFS_Read(f, &flat, sizeof(flat));
+	VFS_Read(f, &flat, sizeof( flat ));
 
-	image.width  = LittleShort( flat.width );
-	image.height = LittleShort( flat.height );
-	flat.desc[0] = LittleShort( flat.desc[0] );
-	flat.desc[1] = LittleShort( flat.desc[1] );
-	if(!Image_LumpValidSize( name )) return false;
+	image.width  = flat.width;
+	image.height = flat.height;
+
+	if( !Image_LumpValidSize( name ))
+		return false;
+
 	Data = (byte *)Mem_Alloc( Sys.imagepool, image.width * image.height );
 	Mem_Set( Data, 247, image.width * image.height ); // set default transparency
 	image.depth = 1;
@@ -424,8 +415,8 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	{
 		fin = (byte *)buffer;
 		Mem_Copy( &lmp, fin, sizeof( lmp ));
-		image.width = LittleLong( lmp.width );
-		image.height = LittleLong( lmp.height );
+		image.width = lmp.width;
+		image.height = lmp.height;
 		rendermode = LUMP_NORMAL;
 		fin += sizeof(lmp);
 	}
@@ -437,7 +428,9 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	if(!Image_ValidSize( name )) return false;         
+	if( !Image_ValidSize( name ))
+		return false;         
+
 	image.depth = 1;
 
 	if( image.hint != IL_HINT_Q1 && filesize > (int)sizeof(lmp) + pixels )
@@ -445,7 +438,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 		int	numcolors;
 
 		pal = fin + pixels;
-		numcolors = BuffLittleShort( pal );
+		numcolors = *(short *)pal;
 		if( numcolors != 256 ) pal = NULL; // corrupted lump ?
 		else pal += sizeof( short );
 	}
@@ -477,10 +470,13 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	Mem_Copy( &mip, buffer, sizeof( mip ));
-	image.width = LittleLong( mip.width );
-	image.height = LittleLong( mip.height );
-	if(!Image_ValidSize( name )) return false;
-	for( i = 0; i < 4; i++ ) ofs[i] = LittleLong( mip.offsets[i] );
+	image.width = mip.width;
+	image.height = mip.height;
+
+	if( !Image_ValidSize( name ))
+		return false;
+
+	Mem_Copy( ofs, mip.offsets, sizeof( ofs ));
 	pixels = image.width * image.height;
 	image.depth = 1;
 
@@ -489,7 +485,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		// half-life 1.0.0.1 mip version with palette
 		fin = (byte *)buffer + mip.offsets[0];
 		pal = (byte *)buffer + mip.offsets[0] + (((image.width * image.height) * 85)>>6);
-		numcolors = BuffLittleShort( pal );
+		numcolors = *(short *)pal;
 		if( numcolors != 256 ) pal = NULL; // corrupted mip ?
 		else pal += sizeof( short ); // skip colorsize 
 
