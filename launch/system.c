@@ -204,6 +204,7 @@ void Sys_GetStdAPI( void )
 
 	// filesystem simply user interface
 	com.Com_LoadFile = FS_LoadFile;		// load file into heap
+	com.Com_FreeFile = FS_FreeFile;		// safe free file
 	com.Com_WriteFile = FS_WriteFile;		// write file into disk
 	com.Com_LoadLibrary = Sys_LoadLibrary;		// load library 
 	com.Com_FreeLibrary = Sys_FreeLibrary;		// free library

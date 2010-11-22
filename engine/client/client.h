@@ -560,6 +560,7 @@ void CL_Download_f( void );
 //
 // cl_scrn.c
 //
+void SCR_VidInit( void );
 void SCR_RegisterShaders( void );
 void SCR_MakeScreenShot( void );
 void SCR_MakeLevelShot( void );

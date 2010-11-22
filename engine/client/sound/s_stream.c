@@ -44,6 +44,7 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 
 	// open stream
 	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
+	s_bgTrack.source = cls.key_dest;
 
 	S_CheckLerpingState();
 }
@@ -86,6 +87,10 @@ void S_StreamBackgroundTrack( void )
 	if( !s_musicvolume->value || s_listener.paused || s_listener.stream_paused )
 		return;
 
+	// pause music by source type
+	if( s_bgTrack.source == key_game && cls.key_dest == key_menu ) return;
+	if( s_bgTrack.source == key_menu && cls.key_dest != key_menu ) return;
+
 	// see how many samples should be copied into the raw buffer
 	if( s_rawend < soundtime )
 		s_rawend = soundtime;
@@ -98,7 +103,7 @@ void S_StreamBackgroundTrack( void )
 
 		// decide how much data needs to be read from the file
 		fileSamples = bufferSamples * ((float)info->rate / SOUND_DMA_SPEED );
-		if( fileSamples <= 0 ) return; // no more samples need
+		if( fileSamples <= 1 ) return; // no more samples need
 
 		// our max buffer size
 		fileBytes = fileSamples * ( info->width * info->channels );
@@ -142,6 +147,7 @@ void S_StreamBackgroundTrack( void )
 		}
 
 	}
+	Msg( "End()\n" );
 }
 
 /*
@@ -196,7 +202,8 @@ void S_StreamSoundTrack( void )
 		bufferSamples = MAX_RAW_SAMPLES - (s_rawend - soundtime);
 
 		// decide how much data needs to be read from the file
-		fileSamples = bufferSamples * info->rate / SOUND_DMA_SPEED;
+		fileSamples = bufferSamples * ((float)info->rate / SOUND_DMA_SPEED );
+		if( fileSamples <= 1 ) return; // no more samples need
 
 		// our max buffer size
 		fileBytes = fileSamples * ( info->width * info->channels );

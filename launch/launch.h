@@ -333,6 +333,7 @@ void W_Close( wfile_t *wad );
 // simply files managment interface
 byte *FS_LoadFile (const char *path, fs_offset_t *filesizeptr );
 qboolean FS_WriteFile (const char *filename, const void *data, fs_offset_t len);
+void FS_FreeFile( void *buffer );
 
 // imagelib exports
 rgbdata_t *FS_LoadImage( const char *name, const byte *buffer, size_t size );

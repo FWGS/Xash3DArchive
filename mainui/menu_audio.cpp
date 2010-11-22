@@ -125,7 +125,7 @@ static void UI_Audio_SetConfig( void )
 	CVAR_SET_FLOAT( "s_lerping", uiAudio.lerping.enabled );
 	CVAR_SET_FLOAT( "dsp_off", uiAudio.noDSP.enabled );
 
-	CHANGE_AUDIO( uiAudio.audioList[(int)uiAudio.soundLibrary.curValue] );
+	CLIENT_COMMAND( TRUE, "snd_restart\n" );
 }
 
 /*

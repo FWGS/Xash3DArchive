@@ -155,6 +155,7 @@ typedef struct
 {
 	string		loopName;
 	stream_t		*stream;
+	int		source;		// may be game, menu, etc
 } bg_track_t;
 
 /*

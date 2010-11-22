@@ -513,7 +513,6 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 	// scale for screen sizes
 	SPR_AdjustSize( &x, &y, &width, &height );
 	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, clgame.ds.hSprite );
-	re->SetColor( NULL );
 }
 
 /*
@@ -1334,24 +1333,23 @@ void CL_FreeEdicts( void )
 
 ===============================================================================
 */
-static void CL_LoadHudSprite( const char *szPicName, model_t *m_pSprite, int shaderType )
+static qboolean CL_LoadHudSprite( const char *szPicName, model_t *m_pSprite, int shaderType )
 {
 	ASSERT( m_pSprite != NULL );
 
 	// register new sprite
 	com.strncpy( m_pSprite->name, szPicName, sizeof( m_pSprite->name ));
-	m_pSprite->numtexinfo = re->RegisterShader( m_pSprite->name, shaderType );
+	m_pSprite->firstmodelsurface = re->RegisterShader( m_pSprite->name, shaderType );
 
-	if( !m_pSprite->numtexinfo )
+	if( !m_pSprite->firstmodelsurface )
 	{
 		// can't loading or something
 		Mem_Set( m_pSprite, 0, sizeof( *m_pSprite ));
-		return;
+		return false;
 	}
 
-	m_pSprite->registration_sequence = -1;	// to differentiate from normal sprites
-	m_pSprite->type = mod_sprite;
-	re->GetParms( NULL, NULL, &m_pSprite->numframes, 0, m_pSprite->numtexinfo );
+	re->GetParms( NULL, NULL, &m_pSprite->numframes, 0, m_pSprite->firstmodelsurface );
+	return true;
 }
 
 static shader_t CL_GetHudSpriteShader( HSPRITE hSpr )
@@ -1359,7 +1357,7 @@ static shader_t CL_GetHudSpriteShader( HSPRITE hSpr )
 	if( hSpr <= 0 || hSpr > MAX_IMAGES )
 		return 0;	// bad image
 
-	return clgame.ds.images[hSpr].numtexinfo;	
+	return clgame.ds.images[hSpr].firstmodelsurface;	
 }
 
 /*
@@ -1385,8 +1383,9 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		if( !com.strcmp( clgame.ds.images[i].name, szPicName ))
 		{
 			// refresh shader
-			CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE );
-			return i;
+			if( CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE ))
+				return i;
+			return 0;
 		}
 	}
 
@@ -1397,8 +1396,9 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 	}
 
 	// load new shader
-	CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE );
-	return i;
+	if( CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE ))
+		return i;
+	return 0;
 }
 
 /*
@@ -1462,7 +1462,10 @@ static void pfnSPR_Set( HSPRITE hPic, int r, int g, int b )
 	if( !re ) return; // render not initialized
 
 	clgame.ds.hSprite = CL_GetHudSpriteShader( hPic );
-	MakeRGBA( color, r, g, b, 255 );
+	color[0] = bound( 0, r, 255 );
+	color[1] = bound( 0, g, 255 );
+	color[2] = bound( 0, b, 255 );
+	color[3] = 255;
 	re->SetColor( color );
 }
 
@@ -2091,7 +2094,29 @@ pfnGetViewModel
 */
 static cl_entity_t* pfnGetViewModel( void )
 {
+	clgame.viewent.index = cl.playernum + 1;
 	return &clgame.viewent;
+}
+
+/*
+=============
+pfnGetEntityByIndex
+
+Client.dll safe version
+=============
+*/
+static cl_entity_t *pfnGetEntityByIndex( int index )
+{
+	if( !clgame.entities )
+		return NULL;
+
+	if( index < 0 )
+		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
+
+	if( index > clgame.maxEntities )
+		return NULL;
+
+	return EDICT_NUM( index );
 }
 
 /*
@@ -2588,7 +2613,6 @@ const model_t *CL_GetSpritePointer( HSPRITE hSprite )
 {
 	if( hSprite <= 0 || hSprite > MAX_IMAGES )
 		return 0;	// bad image
-
 	return &clgame.ds.images[hSprite];
 }
 
@@ -2703,8 +2727,9 @@ model_t *pfnLoadMapSprite( const char *filename )
 		if( !com.strcmp( clgame.ds.images[i].name, filename ))
 		{
 			// refresh shader
-			CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC );
-			return clgame.ds.images + i;
+			if( CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC ))
+				return clgame.ds.images + i;
+			return 0;
 		}
 	}
 
@@ -2715,8 +2740,9 @@ model_t *pfnLoadMapSprite( const char *filename )
 	}
 
 	// load new shader
-	CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC );
-	return clgame.ds.images + i;
+	if( CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC ))
+		return clgame.ds.images + i;
+	return 0;
 }
 
 /*
@@ -3079,8 +3105,8 @@ int TriSpriteTexture( model_t *pSpriteModel, int frame )
 	if( !re || !pSpriteModel )
 		return 0;
 
-	if( pSpriteModel->registration_sequence == -1 )
-		shader = pSpriteModel->numtexinfo;
+	if( !pSpriteModel->mempool )
+		shader = pSpriteModel->firstmodelsurface;
 	else if( pSpriteModel->type == mod_sprite && pSpriteModel->numframes )
 		shader = re->GetSpriteTexture( CM_ClipModelToHandle( pSpriteModel ), frame );
 	else return 0;
@@ -3604,7 +3630,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnIsNoClipping,
 	CL_GetLocalPlayer,
 	pfnGetViewModel,
-	CL_GetEntityByIndex,
+	pfnGetEntityByIndex,
 	pfnGetClientTime,
 	pfnCalcShake,
 	pfnApplyShake,

@@ -8,6 +8,19 @@
 #include "matrix_lib.h"
 #include "triangleapi.h"
 
+#define MAX_TRIVERTS	1024
+#define MAX_TRIELEMS	MAX_TRIVERTS * 6
+#define MAX_TRIANGLES	MAX_TRIELEMS / 3
+
+static vec4_t	tri_vertex[MAX_TRIVERTS];
+static vec4_t	tri_normal[MAX_TRIVERTS];
+static vec2_t	tri_coords[MAX_TRIVERTS];
+static rgba_t	tri_colors[MAX_TRIVERTS];
+static elem_t	tri_elems[MAX_TRIELEMS];
+static mesh_t	tri_mesh;
+meshbuffer_t	tri_mbuffer;
+tristate_t	triState;
+
 static vec4_t	pic_xyz[4] = { {0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {0,0,0,1} };
 static vec2_t	pic_st[4];
 static rgba_t	pic_colors[4];
@@ -259,6 +272,16 @@ void R_DrawSetParms( shader_t handle, int rendermode, int frame )
 			R_RenderMeshBuffer( &pic_mbuffer );
 		}
 	}
+
+	if( triState.currentRenderMode != rendermode )
+	{
+		if( pic_mbuffer.shaderkey )
+		{
+			pic_mbuffer.infokey = -1;
+			R_RenderMeshBuffer( &pic_mbuffer );
+		}
+	}
+
 	glState.draw_rendermode = rendermode;
 
 	if( !shader->stages[0].num_textures )
@@ -279,19 +302,6 @@ void R_DrawSetParms( shader_t handle, int rendermode, int frame )
 
 =============================================================
 */
-#define MAX_TRIVERTS	1024
-#define MAX_TRIELEMS	MAX_TRIVERTS * 6
-#define MAX_TRIANGLES	MAX_TRIELEMS / 3
-
-static vec4_t		tri_vertex[MAX_TRIVERTS];
-static vec4_t		tri_normal[MAX_TRIVERTS];
-static vec2_t		tri_coords[MAX_TRIVERTS];
-static rgba_t		tri_colors[MAX_TRIVERTS];
-static elem_t		tri_elems[MAX_TRIELEMS];
-static mesh_t		tri_mesh;
-meshbuffer_t		tri_mbuffer;
-tristate_t		triState;
-
 static void Tri_ClearBounds( void )
 {
 	// clear bounds that uses for polygon lighting
@@ -410,6 +420,15 @@ void Tri_CullFace( int mode )
 
 void Tri_RenderMode( const int mode )
 {
+	if( triState.currentRenderMode != mode )
+	{
+		if( tri_mbuffer.shaderkey )
+		{
+			tri_mbuffer.infokey = -1;
+			R_RenderMeshBuffer( &tri_mbuffer );
+			Tri_ClearBounds();
+		}
+	}
 	triState.currentRenderMode = mode;
 }
 	

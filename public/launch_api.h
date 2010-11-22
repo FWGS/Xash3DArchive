@@ -644,6 +644,7 @@ typedef struct stdilib_api_s
 
 	// filesystem simple user interface
 	byte *(*Com_LoadFile)(const char *path, long *filesize );		// load file into heap
+	void (*Com_FreeFile)( void *buffer );				// free heap file
 	qboolean (*Com_WriteFile)(const char *path, const void *data, long len );	// write file into disk
 	qboolean (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
 	qboolean (*Com_FreeLibrary)( dll_info_t *dll );			// free library
@@ -834,6 +835,7 @@ filesystem manager
 #define FS_InitRootDir		com.Com_InitRootDir
 #define FS_AllowDirectPaths		com.Com_AllowDirectPaths
 #define FS_LoadFile			com.Com_LoadFile
+#define FS_FreeFile			com.Com_FreeFile
 #define FS_Search( str, casecmp )	com.Com_Search( str, casecmp, false )
 #define FS_SearchExt		com.Com_Search
 #define FS_WriteFile		com.Com_WriteFile

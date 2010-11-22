@@ -199,6 +199,7 @@ void CL_WriteDemoHeader( const char *name )
 
 	// force client.dll update
 	Cmd_ExecuteString( "cmd fullupdate\n" );
+	if( clgame.hInstance ) clgame.dllFuncs.pfnReset();
 }
 
 /*

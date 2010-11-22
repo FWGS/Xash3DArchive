@@ -2299,6 +2299,11 @@ byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr )
 	return buf;
 }
 
+void FS_FreeFile( void *buffer )
+{
+	if( buffer && _is_allocated( fs_mempool, buffer ))
+		Mem_Free( buffer ); 
+}
 
 /*
 ============

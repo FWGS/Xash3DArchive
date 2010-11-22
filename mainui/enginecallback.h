@@ -80,7 +80,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define GET_AUDIO_LIST	(*g_engfuncs.pfnGetAudioList)
 #define GET_VIDEO_LIST	(*g_engfuncs.pfnGetVideoList)
 #define GET_GAMES_LIST	(*g_engfuncs.pfnGetGamesList)
-#define CHANGE_AUDIO	(*g_engfuncs.pfnChangeAudio)
+#define BACKGROUND_TRACK	(*g_engfuncs.pfnPlayBackgroundTrack)
 #define CHANGE_VIDEO	(*g_engfuncs.pfnChangeVideo)
 #define SHELL_EXECUTE	(*g_engfuncs.pfnShellExecute)
 #define HOST_WRITECONFIG	(*g_engfuncs.pfnWriteServerConfig)

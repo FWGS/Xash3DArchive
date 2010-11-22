@@ -1250,8 +1250,6 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 	for( i = 0; i < count; i++, out++ )
 	{
-		in->dataofs[i] = in->dataofs[i];
-
 		if( in->dataofs[i] == -1 )
 		{
 			out->shader = tr.defaultShader;

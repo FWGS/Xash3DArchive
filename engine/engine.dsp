@@ -186,14 +186,6 @@ SOURCE=.\client\cl_view.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\model.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\portals.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\common\con_utils.c
 # End Source File
 # Begin Source File
@@ -203,6 +195,10 @@ SOURCE=.\common\console.c
 # Begin Source File
 
 SOURCE=.\common\engfuncs.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_rsurf.c
 # End Source File
 # Begin Source File
 
@@ -219,6 +215,10 @@ SOURCE=.\common\input.c
 # Begin Source File
 
 SOURCE=.\common\keys.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\model.c
 # End Source File
 # Begin Source File
 
@@ -247,6 +247,10 @@ SOURCE=.\common\pm_surface.c
 # Begin Source File
 
 SOURCE=.\common\pm_trace.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\portals.c
 # End Source File
 # Begin Source File
 
@@ -367,6 +371,10 @@ SOURCE=.\common\cm_local.h
 # Begin Source File
 
 SOURCE=.\common\common.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_local.h
 # End Source File
 # Begin Source File
 

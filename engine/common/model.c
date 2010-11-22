@@ -1,9 +1,10 @@
 //=======================================================================
 //			Copyright XashXT Group 2007 ©
-//			cm_model.c - collision model
+//			    model.c - modelloader
 //=======================================================================
 
 #include "cm_local.h"
+#include "gl_local.h"
 #include "sprite.h"
 #include "mathlib.h"
 #include "matrix_lib.h"
@@ -338,7 +339,7 @@ void Mod_Shutdown( void )
 */
 /*
 =================
-BSP_LoadSubmodels
+Mod_LoadSubmodels
 =================
 */
 static void Mod_LoadSubmodels( dlump_t *l )
@@ -380,13 +381,13 @@ static void Mod_LoadSubmodels( dlump_t *l )
 
 /*
 =================
-BSP_LoadTextures
+Mod_LoadTextures
 =================
 */
-static void BSP_LoadTextures( dlump_t *l )
+static void Mod_LoadTextures( dlump_t *l )
 {
 	dmiptexlump_t	*in;
-	texture_t		*out;
+	texture_t		*tx;
 	mip_t		*mt;
 	int 		i;
 
@@ -404,33 +405,35 @@ static void BSP_LoadTextures( dlump_t *l )
 
 	for( i = 0; i < loadmodel->numtextures; i++ )
 	{
-		if( in->dataofs[i] == -1 ) continue; // bad offset ?
+		if( in->dataofs[i] == -1 ) continue; // missed
 
 		mt = (mip_t *)((byte *)in + in->dataofs[i] );
-		out = Mem_Alloc( loadmodel->mempool, sizeof( *out ));
-		loadmodel->textures[i] = out;
+		tx = Mem_Alloc( loadmodel->mempool, sizeof( *tx ));
+		loadmodel->textures[i] = tx;
 
-		com.strnlwr( mt->name, out->name, sizeof( out->name ));
-//		out->contents = CM_ContentsFromShader( out->name );	// FIXME: implement
+		com.strnlwr( mt->name, tx->name, sizeof( tx->name ));
+		tx->width = mt->width;
+		tx->height = mt->height;
 	}
 }
 
 /*
 =================
-BSP_LoadTexInfo
+Mod_LoadTexInfo
 =================
 */
-static void BSP_LoadTexInfo( const dlump_t *l )
+static void Mod_LoadTexInfo( const dlump_t *l )
 {
 	dtexinfo_t	*in;
 	mtexinfo_t	*out;
 	int		miptex;
 	int		i, j, count;
 	uint		surfaceParm = 0;
-
+	float		len1, len2;
+	
 	in = (void *)(mod_base + l->fileofs);
 	if( l->filelen % sizeof( *in ))
-		Host_Error( "BSP_LoadTexInfo: funny lump size in %s\n", loadmodel->name );
+		Host_Error( "Mod_LoadTexInfo: funny lump size in %s\n", loadmodel->name );
 
 	count = l->filelen / sizeof( *in );
           out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
@@ -443,19 +446,30 @@ static void BSP_LoadTexInfo( const dlump_t *l )
 		for( j = 0; j < 8; j++ )
 			out->vecs[0][j] = in->vecs[0][j];
 
+		len1 = VectorLength( out->vecs[0] );
+		len2 = VectorLength( out->vecs[1] );
+		len1 = ( len1 + len2 ) / 2;
+
+		// g-cont: can use this info for GL_TEXTURE_LOAD_BIAS_EXT ?
+		if( len1 < 0.32f ) out->mipadjust = 4;
+		else if( len1 < 0.49f ) out->mipadjust = 3;
+		else if( len1 < 0.99f ) out->mipadjust = 2;
+		else out->mipadjust = 1;
+
 		miptex = in->miptex;
 		if( miptex < 0 || miptex > loadmodel->numtextures )
-			Host_Error( "BSP_LoadTexInfo: bad miptex number in '%s'\n", loadmodel->name );
+			Host_Error( "Mod_LoadTexInfo: bad miptex number in '%s'\n", loadmodel->name );
+
 		out->texture = loadmodel->textures[miptex];
 	}
 }
 
 /*
 =================
-BSP_LoadLighting
+Mod_LoadLighting
 =================
 */
-static void BSP_LoadLighting( const dlump_t *l )
+static void Mod_LoadLighting( const dlump_t *l )
 {
 	byte	d, *in;
 	color24	*out;
@@ -489,17 +503,18 @@ static void BSP_LoadLighting( const dlump_t *l )
 
 /*
 =================
-BSP_CalcSurfaceExtents
+Mod_CalcSurfaceExtents
 
-Fills in surf->textureMins and surf->extents
+Fills in surf->texturemins[] and surf->extents[]
 =================
 */
-static void BSP_CalcSurfaceExtents( msurface_t *surf )
+static void Mod_CalcSurfaceExtents( msurface_t *surf )
 {
-	float	mins[2], maxs[2], val;
-	int	bmins[2], bmaxs[2];
-	int	i, j, e;
-	float	*v;
+	float		mins[2], maxs[2], val;
+	int		bmins[2], bmaxs[2];
+	int		i, j, e;
+	mtexinfo_t	*tex;
+	mvertex_t		*v;
 
 	if( surf->flags & SURF_DRAWTURB )
 	{
@@ -508,18 +523,20 @@ static void BSP_CalcSurfaceExtents( msurface_t *surf )
 		return;
 	}
 
+	tex = surf->texinfo;
+
 	mins[0] = mins[1] = 999999;
 	maxs[0] = maxs[1] = -999999;
 
 	for( i = 0; i < surf->numedges; i++ )
 	{
 		e = loadmodel->surfedges[surf->firstedge + i];
-		if( e >= 0 ) v = (float *)&loadmodel->vertexes[loadmodel->edges[e].v[0]];
-		else v = (float *)&loadmodel->vertexes[loadmodel->edges[-e].v[1]];
+		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
+		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
 
 		for( j = 0; j < 2; j++ )
 		{
-			val = DotProduct( v, surf->texinfo->vecs[j] ) + surf->texinfo->vecs[j][3];
+			val = DotProduct( v->position, surf->texinfo->vecs[j] ) + surf->texinfo->vecs[j][3];
 			if( val < mins[j] ) mins[j] = val;
 			if( val > maxs[j] ) maxs[j] = val;
 		}
@@ -532,24 +549,27 @@ static void BSP_CalcSurfaceExtents( msurface_t *surf )
 
 		surf->texturemins[i] = bmins[i] * LM_SAMPLE_SIZE;
 		surf->extents[i] = (bmaxs[i] - bmins[i]) * LM_SAMPLE_SIZE;
+
+		if(!( tex->flags & TEX_SPECIAL ) && surf->extents[i] > 4096 )
+			MsgDev( D_ERROR, "Bad surface extents %i\n", surf->extents[i] );
 	}
 }
 
 /*
 =================
-BSP_LoadSurfaces
+Mod_LoadSurfaces
 =================
 */
-static void BSP_LoadSurfaces( const dlump_t *l )
+static void Mod_LoadSurfaces( const dlump_t *l )
 {
 	dface_t		*in;
 	msurface_t	*out;
-	int		i, count;
+	int		i, j, count;
 	int		lightofs;
 
 	in = (void *)(mod_base + l->fileofs);
 	if( l->filelen % sizeof( dface_t ))
-		Host_Error( "BSP_LoadFaces: funny lump size in '%s'\n", loadmodel->name );
+		Host_Error( "Mod_LoadSurfaces: funny lump size in '%s'\n", loadmodel->name );
 	count = l->filelen / sizeof( dface_t );
 
 	loadmodel->numsurfaces = count;
@@ -560,6 +580,12 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 	{
 		out->firstedge = in->firstedge;
 		out->numedges = in->numedges;
+
+		if(( out->firstedge + out->numedges ) > loadmodel->numsurfedges )
+		{
+			Msg( "Bad surface %i from %i\n", i, count );
+			continue;
+		} 
 
 		if( in->side ) out->flags |= SURF_PLANEBACK;
 		out->plane = loadmodel->planes + in->planenum;
@@ -575,26 +601,39 @@ static void BSP_LoadSurfaces( const dlump_t *l )
 				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 		}
 
-		BSP_CalcSurfaceExtents( out );
+		Mod_CalcSurfaceExtents( out );
 
 		if( out->flags & SURF_DRAWTILED ) lightofs = -1;
 		else lightofs = in->lightofs;
 
+		for( j = 0; j < MAXLIGHTMAPS; j++ )
+			out->styles[j] = in->styles[j];
+
 		if( loadmodel->lightdata && lightofs != -1 )
 		{
 			if( cm.version == HLBSP_VERSION )
-				out->samples = loadmodel->lightdata + lightofs;
-			else out->samples = loadmodel->lightdata + (lightofs * 3);
+				out->samples = loadmodel->lightdata + (lightofs / 3);
+			else out->samples = loadmodel->lightdata + lightofs;
 		}
+
+		if( out->flags & SURF_DRAWTURB )
+		{
+			GL_SubdivideSurface( out );	// cut up polygon for warps
+		}
+		else
+		{
+			GL_BuildPolygonFromSurface( out );
+		}
+
 	}
 }
 
 /*
 =================
-BSP_LoadVertexes
+Mod_LoadVertexes
 =================
 */
-static void BSP_LoadVertexes( const dlump_t *l )
+static void Mod_LoadVertexes( const dlump_t *l )
 {
 	dvertex_t	*in;
 	mvertex_t	*out;
@@ -602,7 +641,7 @@ static void BSP_LoadVertexes( const dlump_t *l )
 
 	in = (void *)( mod_base + l->fileofs );
 	if( l->filelen % sizeof( *in ))
-		Host_Error( "BSP_LoadVertexes: funny lump size in %s\n", loadmodel->name );
+		Host_Error( "Mod_LoadVertexes: funny lump size in %s\n", loadmodel->name );
 	count = l->filelen / sizeof( *in );
 
 	loadmodel->numvertexes = count;
@@ -616,10 +655,10 @@ static void BSP_LoadVertexes( const dlump_t *l )
 
 /*
 =================
-BSP_LoadEdges
+Mod_LoadEdges
 =================
 */
-static void BSP_LoadEdges( const dlump_t *l )
+static void Mod_LoadEdges( const dlump_t *l )
 {
 	dedge_t	*in;
 	medge_t	*out;
@@ -627,7 +666,7 @@ static void BSP_LoadEdges( const dlump_t *l )
 
 	in = (void *)( mod_base + l->fileofs );	
 	if( l->filelen % sizeof( *in ))
-		Host_Error( "BSP_LoadEdges: funny lump size in %s\n", loadmodel->name );
+		Host_Error( "Mod_LoadEdges: funny lump size in %s\n", loadmodel->name );
 
 	count = l->filelen / sizeof( *in );
 	loadmodel->edges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( medge_t ));
@@ -642,38 +681,38 @@ static void BSP_LoadEdges( const dlump_t *l )
 
 /*
 =================
-BSP_LoadSurfEdges
+Mod_LoadSurfEdges
 =================
 */
-static void BSP_LoadSurfEdges( const dlump_t *l )
+static void Mod_LoadSurfEdges( const dlump_t *l )
 {
-	dsurfedge_t	*in, *out;
+	dsurfedge_t	*in;
 	int		count;
 
 	in = (void *)( mod_base + l->fileofs );	
 	if( l->filelen % sizeof( *in ))
-		Host_Error( "BSP_LoadSurfEdges: funny lump size in %s\n", loadmodel->name );
+		Host_Error( "Mod_LoadSurfEdges: funny lump size in %s\n", loadmodel->name );
 
 	count = l->filelen / sizeof( dsurfedge_t );
-	loadmodel->surfedges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( dsurfedge_t ));
+	loadmodel->surfedges = Mem_Alloc( loadmodel->mempool, count * sizeof( dsurfedge_t ));
 	loadmodel->numsurfedges = count;
 
-	Mem_Copy( out, in, count * sizeof( dsurfedge_t ));
+	Mem_Copy( loadmodel->surfedges, in, count * sizeof( dsurfedge_t ));
 }
 
 /*
 =================
-BSP_LoadMarkFaces
+Mod_LoadMarkSurfaces
 =================
 */
-static void BSP_LoadMarkFaces( const dlump_t *l )
+static void Mod_LoadMarkSurfaces( const dlump_t *l )
 {
 	dmarkface_t	*in;
 	int		i, j, count;
 
 	in = (void *)( mod_base + l->fileofs );	
 	if( l->filelen % sizeof( *in ))
-		Host_Error( "BSP_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
+		Host_Error( "Mod_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
 
 	count = l->filelen / sizeof( *in );
 	loadmodel->marksurfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t* ));
@@ -682,38 +721,38 @@ static void BSP_LoadMarkFaces( const dlump_t *l )
 	{
 		j = in[i];
 		if( j < 0 ||  j >= loadmodel->numsurfaces )
-			Host_Error( "BSP_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
+			Host_Error( "Mod_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
 		loadmodel->marksurfaces[i] = loadmodel->surfaces + j;
 	}
 }
 
 /*
 =================
-CM_SetParent
+Mod_SetParent
 =================
 */
-static void CM_SetParent( mnode_t *node, mnode_t *parent )
+static void Mod_SetParent( mnode_t *node, mnode_t *parent )
 {
 	node->parent = parent;
 
 	if( node->contents < 0 ) return; // it's node
-	CM_SetParent( node->children[0], node );
-	CM_SetParent( node->children[1], node );
+	Mod_SetParent( node->children[0], node );
+	Mod_SetParent( node->children[1], node );
 }
 
 /*
 =================
-BSP_LoadNodes
+Mod_LoadNodes
 =================
 */
-static void BSP_LoadNodes( dlump_t *l )
+static void Mod_LoadNodes( dlump_t *l )
 {
 	dnode_t	*in;
 	mnode_t	*out;
 	int	i, j, p;
 	
 	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "BSP_LoadNodes: funny lump size\n" );
+	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadNodes: funny lump size\n" );
 	loadmodel->numnodes = l->filelen / sizeof( *in );
 
 	if( loadmodel->numnodes < 1 ) Host_Error( "Map %s has no nodes\n", loadmodel->name );
@@ -721,6 +760,12 @@ static void BSP_LoadNodes( dlump_t *l )
 
 	for( i = 0; i < loadmodel->numnodes; i++, out++, in++ )
 	{
+		for( j = 0; j < 3; j++ )
+		{
+			out->minmaxs[j] = in->mins[j];
+			out->minmaxs[3+j] = in->maxs[j];
+		}
+
 		p = in->planenum;
 		out->plane = loadmodel->planes + p;
 		out->firstsurface = in->firstface;
@@ -735,22 +780,22 @@ static void BSP_LoadNodes( dlump_t *l )
 	}
 
 	// sets nodes and leafs
-	CM_SetParent( loadmodel->nodes, NULL );
+	Mod_SetParent( loadmodel->nodes, NULL );
 }
 
 /*
 =================
-BSP_LoadLeafs
+Mod_LoadLeafs
 =================
 */
-static void BSP_LoadLeafs( dlump_t *l )
+static void Mod_LoadLeafs( dlump_t *l )
 {
 	dleaf_t 	*in;
 	mleaf_t	*out;
 	int	i, j, p, count;
 		
 	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "BSP_LoadLeafs: funny lump size\n" );
+	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadLeafs: funny lump size\n" );
 
 	count = l->filelen / sizeof( *in );
 	if( count < 1 ) Host_Error( "Map %s with no leafs\n", loadmodel->name );
@@ -761,13 +806,18 @@ static void BSP_LoadLeafs( dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		p = in->contents;
-		out->contents = p;
+		for( j = 0; j < 3; j++ )
+		{
+			out->minmaxs[j] = in->mins[j];
+			out->minmaxs[3+j] = in->maxs[j];
+		}
+
+		out->contents = in->contents;
 	
 		p = in->visofs;
 
 		if( p == -1 ) out->visdata = NULL;
-		else out->visdata = cm.pvs + p;
+		else out->visdata = loadmodel->visdata + p;
 
 		// will be initialized later
 		out->pasdata = NULL;
@@ -777,25 +827,32 @@ static void BSP_LoadLeafs( dlump_t *l )
 
 		out->firstmarksurface = loadmodel->marksurfaces + in->firstmarksurface;
 		out->nummarksurfaces = in->nummarksurfaces;
+
+		// gl underwater warp
+		if( out->contents != CONTENTS_EMPTY )
+		{
+			for( j = 0; j < out->nummarksurfaces; j++ )
+				out->firstmarksurface[j]->flags |= SURF_UNDERWATER;
+		}
 	}
 
 	if( loadmodel->leafs[0].contents != CONTENTS_SOLID )
-		Host_Error( "BSP_LoadLeafs: Map %s has leaf 0 is not CONTENTS_SOLID\n", loadmodel->name );
+		Host_Error( "Mod_LoadLeafs: Map %s has leaf 0 is not CONTENTS_SOLID\n", loadmodel->name );
 }
 
 /*
 =================
-BSP_LoadPlanes
+Mod_LoadPlanes
 =================
 */
-static void BSP_LoadPlanes( dlump_t *l )
+static void Mod_LoadPlanes( dlump_t *l )
 {
 	dplane_t	*in;
 	mplane_t	*out;
 	int	i, j, count;
 	
 	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "BSP_LoadPlanes: funny lump size\n" );
+	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadPlanes: funny lump size\n" );
 	count = l->filelen / sizeof( *in );
 
 	if( count < 1 ) Host_Error( "Map %s with no planes\n", loadmodel->name );
@@ -819,50 +876,50 @@ static void BSP_LoadPlanes( dlump_t *l )
 
 /*
 =================
-BSP_LoadVisibility
+Mod_LoadVisibility
 =================
 */
-static void BSP_LoadVisibility( dlump_t *l )
+static void Mod_LoadVisibility( dlump_t *l )
 {
 	if( !l->filelen )
 	{
 		MsgDev( D_WARN, "map ^2%s^7 has no visibility\n", loadmodel->name );
-		cm.pvs = cm.phs = NULL;
+		cm.pvs = cm.phs = loadmodel->visdata = NULL;
 		return;
 	}
 
-	cm.pvs = Mem_Alloc( loadmodel->mempool, l->filelen );
-	Mem_Copy( cm.pvs, (void *)(mod_base + l->fileofs), l->filelen );
+	loadmodel->visdata = cm.pvs = Mem_Alloc( loadmodel->mempool, l->filelen );
+	Mem_Copy( loadmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
 }
 
 /*
 =================
-BSP_LoadEntityString
+Mod_LoadEntities
 =================
 */
-static void BSP_LoadEntityString( dlump_t *l )
+static void Mod_LoadEntities( dlump_t *l )
 {
 	byte	*in;
 
 	in = (void *)(mod_base + l->fileofs);
-	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen + 1 );	
+	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen );	
 	Mem_Copy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
 	cm.entityscript = Com_OpenScript( "entities", in, l->filelen );
 }
 
 /*
 =================
-BSP_LoadClipnodes
+Mod_LoadClipnodes
 =================
 */
-static void BSP_LoadClipnodes( dlump_t *l )
+static void Mod_LoadClipnodes( dlump_t *l )
 {
 	dclipnode_t	*in, *out;
 	int		i, count;
 	hull_t		*hull;
 
 	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "BSP_LoadClipnodes: funny lump size\n" );
+	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
 	count = l->filelen / sizeof( *in );
 	out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));	
 
@@ -908,12 +965,12 @@ static void BSP_LoadClipnodes( dlump_t *l )
 
 /*
 =================
-CM_MakeHull0
+Mod_MakeHull0
 
 Duplicate the drawing hull structure as a clipping hull
 =================
 */
-static void CM_MakeHull0( void )
+static void Mod_MakeHull0( void )
 {
 	mnode_t		*in, *child;
 	dclipnode_t	*out;
@@ -982,31 +1039,31 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 	if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
 	{
 		// blue-shift swapped lumps
-		BSP_LoadEntityString( &header->lumps[LUMP_PLANES] );
-		BSP_LoadPlanes( &header->lumps[LUMP_ENTITIES] );
+		Mod_LoadEntities( &header->lumps[LUMP_PLANES] );
+		Mod_LoadPlanes( &header->lumps[LUMP_ENTITIES] );
 	}
 	else
 	{
 		// normal half-life lumps
-		BSP_LoadEntityString( &header->lumps[LUMP_ENTITIES] );
-		BSP_LoadPlanes( &header->lumps[LUMP_PLANES] );
+		Mod_LoadEntities( &header->lumps[LUMP_ENTITIES] );
+		Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
 	}
 
-	BSP_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
-	BSP_LoadEdges( &header->lumps[LUMP_EDGES] );
-	BSP_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
-	BSP_LoadTextures( &header->lumps[LUMP_TEXTURES] );
-	BSP_LoadLighting( &header->lumps[LUMP_LIGHTING] );
-	BSP_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
-	BSP_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
-	BSP_LoadSurfaces( &header->lumps[LUMP_FACES] );
-	BSP_LoadMarkFaces( &header->lumps[LUMP_MARKSURFACES] );
-	BSP_LoadLeafs( &header->lumps[LUMP_LEAFS] );
-	BSP_LoadNodes( &header->lumps[LUMP_NODES] );
-	BSP_LoadClipnodes( &header->lumps[LUMP_CLIPNODES] );
+	Mod_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
+	Mod_LoadEdges( &header->lumps[LUMP_EDGES] );
+	Mod_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
+	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES] );
+	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING] );
+	Mod_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
+	Mod_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
+	Mod_LoadSurfaces( &header->lumps[LUMP_FACES] );
+	Mod_LoadMarkSurfaces( &header->lumps[LUMP_MARKSURFACES] );
+	Mod_LoadLeafs( &header->lumps[LUMP_LEAFS] );
+	Mod_LoadNodes( &header->lumps[LUMP_NODES] );
+	Mod_LoadClipnodes( &header->lumps[LUMP_CLIPNODES] );
 	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );
 
-	CM_MakeHull0 ();
+	Mod_MakeHull0 ();
 	
 	loadmodel->numframes = 2;	// regular and alternate animation
 	cm.version = 0;

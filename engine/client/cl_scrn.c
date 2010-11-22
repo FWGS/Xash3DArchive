@@ -334,22 +334,30 @@ static void SCR_InstallParticlePalette( void )
 
 void SCR_RegisterShaders( void )
 {
-	if( re )
-	{
-		cls.fillShader = re->RegisterShader( "*white", SHADER_NOMIP ); // used for FillRGBA
-		cls.particleShader = re->RegisterShader( "*particle", SHADER_NOMIP );
+	if( !re ) return;
 
-		// register gfx.wad images
-		cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP );
-		cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP );
-		cls.creditsFont.hFontTexture = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
+	cls.fillShader = re->RegisterShader( "*white", SHADER_NOMIP ); // used for FillRGBA
+	cls.particleShader = re->RegisterShader( "*particle", SHADER_NOMIP );
 
-		// FIXME: register new type shader 'GLOWSHELL', allow to loading sprites with this type
-		// apply by default 'deformVertices' etc
-		cls.glowShell = re->RegisterShader( "renderfx/glowshell", SHADER_GENERIC );
-		cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
-	}
+	// register gfx.wad images
+	cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP );
+	cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP );
+	cls.creditsFont.hFontTexture = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
 
+	// FIXME: register new type shader 'GLOWSHELL', allow to loading sprites with this type
+	// apply by default 'deformVertices' etc
+	cls.glowShell = re->RegisterShader( "renderfx/glowshell", SHADER_GENERIC );
+	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
+}
+
+
+/*
+==================
+SCR_VidInit
+==================
+*/
+void SCR_VidInit( void )
+{
 	Mem_Set( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
 	Mem_Set( &menu.ds, 0, sizeof( menu.ds )); // reset a draw state
 	Mem_Set( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
@@ -400,9 +408,9 @@ void SCR_Init( void )
 
 	SCR_RegisterShaders ();
 	SCR_LoadCreditsFont ();
-
 	SCR_InstallParticlePalette ();
 	SCR_InitCinematic();
+	SCR_VidInit();
 
 	if( host.developer && FS_CheckParm( "-toconsole" ))
 		Cbuf_AddText( "toggleconsole\n" );

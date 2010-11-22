@@ -885,6 +885,13 @@ void SV_PutClientInServer( edict_t *ent )
 		}
 
 		client->pViewEntity = NULL; // reset pViewEntity
+
+		if( svgame.globals->cdAudioTrack )
+		{
+			BF_WriteByte( &client->netchan.message, svc_stufftext );
+			BF_WriteString( &client->netchan.message, va( "cd play %3d\n", svgame.globals->cdAudioTrack ));
+			svgame.globals->cdAudioTrack = 0;
+		}
 	}
 	else
 	{

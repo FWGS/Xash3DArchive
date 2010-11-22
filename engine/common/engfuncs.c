@@ -251,7 +251,7 @@ byte* pfnLoadFile( const char *filename, int *pLength )
 
 void pfnFreeFile( void *buffer )
 {
-	if( buffer ) Mem_Free( buffer );
+	FS_FreeFile( buffer );
 }
 
 /*

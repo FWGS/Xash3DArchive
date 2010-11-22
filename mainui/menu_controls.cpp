@@ -265,7 +265,7 @@ static void UI_Controls_ResetKeysList( void )
 
 		UI_UnbindCommand( token );
 
-		sprintf( cmd, "bind \"%s\" \"%s\"\n", key, token );		
+		sprintf( cmd, "bind \"%s\" \"%s\"\n", key, token );
 		CLIENT_COMMAND( TRUE, cmd );
 	}
 

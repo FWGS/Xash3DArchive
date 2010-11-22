@@ -276,8 +276,15 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	if( newent ) old = &ent->baseline;
 
-	if( unchanged ) *state = *old;
-	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
+	if( unchanged )
+	{
+		*state = *old;
+	}
+	else
+	{
+		result = MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
+		state->messagenum = cl.parsecountmod;
+	}
 
 	if( !result )
 	{

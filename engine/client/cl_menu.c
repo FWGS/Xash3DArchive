@@ -849,16 +849,6 @@ static void pfnChangeVideo( const char *dllName )
 
 /*
 =========
-pfnChangeAudio
-
-=========
-*/
-static void pfnChangeAudio( const char *dllName )
-{
-}
-
-/*
-=========
 pfnHostNewGame
 
 =========
@@ -961,7 +951,7 @@ static ui_enginefuncs_t gEngfuncs =
 	Host_WriteServerConfig,
 	pfnChangeInstance,
 	pfnChangeVideo,
-	pfnChangeAudio,
+	S_StartBackgroundTrack,
 	pfnHostEndGame,
 };
 

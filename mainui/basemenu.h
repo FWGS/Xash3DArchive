@@ -302,6 +302,7 @@ typedef struct
 	int		mouseInRect;
 	int		hideCursor;
 	int		visible;
+	int		framecount;	// how many frames menu visible
 	int		initialized;
 } uiStatic_t;
 

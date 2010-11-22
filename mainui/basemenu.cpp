@@ -829,6 +829,7 @@ void UI_UpdateMenu( float flTime )
 		return;
 
 	uiStatic.realTime = flTime * 1000;
+	uiStatic.framecount++;
 
 	if( uiStatic.firstDraw )
 	{
@@ -845,6 +846,13 @@ void UI_UpdateMenu( float flTime )
 	{
 		UI_MouseMove( 0, 0 );
 		uiStatic.firstDraw = false;
+		static int first = TRUE;
+                    
+		if( first )
+		{
+			BACKGROUND_TRACK( "gamestartup.mp3", NULL );
+			first = FALSE;
+		}
 	}
 
 	// draw cursor
@@ -1006,6 +1014,7 @@ void UI_SetActiveMenu( int fActive )
 
 	// don't continue firing if we leave game
 	KEY_ClearStates();
+	uiStatic.framecount = 0;
 
 	if( fActive )
 	{

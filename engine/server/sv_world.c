@@ -1402,7 +1402,8 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 	color24		*lm;
 
 	// didn't hit anything
-	if( !node->plane ) return false;
+	if( node->contents < 0 )
+		return false;
 
 	// calculate mid point
 	plane = node->plane;

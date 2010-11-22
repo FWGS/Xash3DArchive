@@ -314,13 +314,13 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 	short		*numi;
 
 	if( !szSpriteName || !szSpriteName[0] )
-		return NULL;
+		return r_shaders;
 
 	shader = R_FindShader( szSpriteName, SHADER_SPRITE, SHADER_INVALID );
 	if( shader ) return shader;	// already loaded
 
 	buffer = FS_LoadFile( szSpriteName, NULL );
-	if( !buffer ) return NULL;	// sprite is missed
+	if( !buffer ) return r_shaders;	// sprite is missed
 
 	pin = (dsprite_t *)buffer;
 
@@ -329,19 +329,21 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: %s not a sprite\n", szSpriteName );
 		Mem_Free( buffer );
-		return NULL;
+		return r_shaders;
 	} 
 
 	if( pin->version != SPRITE_VERSION )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: %s invalid sprite version\n", szSpriteName );
 		Mem_Free( buffer );
-		return NULL;
+		return r_shaders;
 	}
 
 	numframes = pin->numframes;
 	twoSided = ( pin->facetype == SPR_CULL_NONE ) ? true : false;
 	numi = (short *)( pin + 1 );
+
+	// NOTE: TriAPI and hud sprites not used auto-rendermode feature
 
 	if( *numi == 256 )
 	{	
@@ -353,19 +355,19 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 		{
 		case SPR_ADDGLOW:
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
-			R_ShaderSetRenderMode( kRenderGlow, twoSided );
+			R_ShaderSetRenderMode( kRenderNormal, twoSided );
 			break;
 		case SPR_ADDITIVE:
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
-			R_ShaderSetRenderMode( kRenderTransAdd, twoSided );
+			R_ShaderSetRenderMode( kRenderNormal, twoSided );
 			break;
                     case SPR_INDEXALPHA:
 			pal = FS_LoadImage( "#decal.pal", src, 768 );
-			R_ShaderSetRenderMode( kRenderTransTexture, twoSided );
+			R_ShaderSetRenderMode( kRenderNormal, twoSided );
 			break;
 		case SPR_ALPHTEST:		
 			pal = FS_LoadImage( "#transparent.pal", src, 768 );
-			R_ShaderSetRenderMode( kRenderTransAlpha, twoSided );
+			R_ShaderSetRenderMode( kRenderNormal, twoSided );
                               break;
 		case SPR_NORMAL:
 		default:
@@ -380,14 +382,14 @@ ref_shader_t *CL_LoadSprite( const char *szSpriteName )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: %s has invalid palette\n", szSpriteName );
 		Mem_Free( buffer );
-		return NULL;
+		return r_shaders;
 	}
 
 	if( numframes < 1 )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: %s has invalid # of frames: %d\n", szSpriteName, numframes );
 		Mem_Free( buffer );
-		return NULL;
+		return r_shaders;
 	}
 
 	com.strncpy( frame_prefix, "one", MAX_STRING );

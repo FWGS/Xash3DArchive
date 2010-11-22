@@ -77,6 +77,26 @@ static cl_entity_t *CL_GetBeamEntityByIndex( int index )
 	return ent;
 }
 
+void BeamNormalizeColor( BEAM *pBeam, float r, float g, float b, float brightness ) 
+{
+	float	max, scale;
+
+	max = max( max( r, g ), b );
+
+	if( max == 0 )
+	{
+		pBeam->r = pBeam->g = pBeam->b = 255.0f;
+		pBeam->brightness = brightness;
+	}
+
+	scale = 255.0f / max;
+
+	pBeam->r = r * scale;
+	pBeam->g = g * scale;
+	pBeam->b = b * scale;
+	pBeam->brightness = ( brightness > 1.0f ) ? brightness : brightness * 255.0f;
+}
+
 static qboolean ComputeBeamEntPosition( int beamEnt, vec3_t pt )
 {
 	cl_entity_t	*pEnt;
@@ -1584,6 +1604,8 @@ void CL_BeamKill( int deadEntity )
 	CL_KillDeadBeams( pDeadEntity );
 }
 
+
+
 /*
 ==============
 CL_BeamEnts
@@ -1623,12 +1645,10 @@ BEAM *CL_BeamEnts( int startEnt, int endEnt, int modelIndex, float life, float w
 	if( life == 0.0f ) pBeam->flags |= FBEAM_FOREVER;
 	pBeam->die += life;
 	pBeam->width = width;
-	pBeam->amplitude = amplitude;
+	pBeam->amplitude = amplitude * 10;
 	pBeam->brightness = brightness;
 	pBeam->speed = speed;
-	pBeam->r = r;
-	pBeam->g = g;
-	pBeam->b = b;
+	BeamNormalizeColor( pBeam, r, g, b, brightness );
 
 	CL_UpdateBeam( pBeam, 0.0f );
 
@@ -1637,7 +1657,7 @@ BEAM *CL_BeamEnts( int startEnt, int endEnt, int modelIndex, float life, float w
 
 /*
 ==============
-CL_BeamEnts
+CL_BeamPoints
 
 Create beam between two points
 ==============
@@ -1689,7 +1709,7 @@ BEAM *CL_BeamPoints( const vec3_t start, const vec3_t end, int modelIndex, float
 
 /*
 ==============
-CL_BeamEnts
+CL_BeamLighting
 
 Create beam between two points (simple version)
 ==============
@@ -1814,7 +1834,7 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 
 /*
 ==============
-CL_BeamEnts
+CL_BeamRing
 
 Create beam between two ents
 ==============
@@ -2004,7 +2024,7 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		frameRate = (float)(BF_ReadByte( msg ) * 0.1f);
 		life = (float)(BF_ReadByte( msg ) * 0.1f);
 		width = (float)(BF_ReadByte( msg ) * 0.1f);
-		noise = (float)(BF_ReadByte( msg ) * 0.1f);
+		noise = (float)(BF_ReadByte( msg ) * 0.01f);
 		r = (float)BF_ReadByte( msg );
 		g = (float)BF_ReadByte( msg );
 		b = (float)BF_ReadByte( msg );
