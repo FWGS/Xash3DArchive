@@ -216,7 +216,7 @@ stream_t *FS_OpenStream( const char *filename )
 
 	if( !sound.streamformat || sound.streamformat->ext == NULL )
 		MsgDev( D_NOTE, "FS_OpenStream: soundlib offline\n" );
-	else MsgDev( D_WARN, "FS_OpenStream: couldn't open \"%s\"\n", loadname );
+	else MsgDev( D_NOTE, "FS_OpenStream: couldn't open \"%s\"\n", loadname );
 
 	return NULL;
 }

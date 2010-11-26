@@ -485,7 +485,6 @@ void Sys_CreateInstance( void )
 	{
 	case HOST_NORMAL:
 		Con_ShowConsole( false );		// hide console
-		Cbuf_AddText( "exec opengl.cfg\n" );	// openGL configuration
 		Cbuf_AddText( "exec valve.rc\n" );	// execute startup config and cmdline
 	case HOST_DEDICATED:
 		Cbuf_Execute();

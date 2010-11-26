@@ -456,9 +456,9 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		break;
 	case WM_CREATE:
 		host.hWnd = hWnd;
-		scr_xpos = Cvar_Get( "r_xpos", "130", CVAR_ARCHIVE, "window position by horizontal" );
-		scr_ypos = Cvar_Get( "r_ypos", "48", CVAR_ARCHIVE, "window position by vertical" );
-		scr_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "toggle fullscreen" );
+		scr_xpos = Cvar_Get( "r_xpos", "130", CVAR_RENDERINFO, "window position by horizontal" );
+		scr_ypos = Cvar_Get( "r_ypos", "48", CVAR_RENDERINFO, "window position by vertical" );
+		scr_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "toggle fullscreen" );
 		GetWindowRect( host.hWnd, &real_rect );
 		break;
 	case WM_CLOSE:
@@ -474,7 +474,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		wnd_caption = GetSystemMetrics( SM_CYCAPTION ) + WND_BORDER;
 		S_Activate(( host.state == HOST_FRAME ) ? true : false, host.hWnd );
 		Key_ClearStates();	// FIXME!!!
-		clgame.dllFuncs.IN_ClearStates();
 
 		if( host.state == HOST_FRAME )
 		{

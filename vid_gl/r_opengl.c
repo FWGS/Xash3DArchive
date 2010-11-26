@@ -494,8 +494,8 @@ qboolean R_CreateWindow( int width, int height, qboolean fullscreen )
 
 	if( !fullscreen )
 	{
-		r_xpos = Cvar_Get( "r_xpos", "130", CVAR_ARCHIVE, "window position by horizontal" );
-		r_ypos = Cvar_Get( "r_ypos", "48", CVAR_ARCHIVE, "window position by vertical" );
+		r_xpos = Cvar_Get( "r_xpos", "130", CVAR_RENDERINFO, "window position by horizontal" );
+		r_ypos = Cvar_Get( "r_ypos", "48", CVAR_RENDERINFO, "window position by vertical" );
 		x = r_xpos->integer;
 		y = r_ypos->integer;
 

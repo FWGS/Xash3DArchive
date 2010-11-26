@@ -138,7 +138,7 @@ void S_UpdateSoundFade( void )
 	}
 
 	// spline it.
-	f = SimpleSpline( f );
+	f = S_SimpleSpline( f );
 	f = bound( 0.0f, f, 1.0f );
 
 	soundfade.percent = soundfade.initial_percent * f;
@@ -933,7 +933,7 @@ qboolean S_Init( void *hInst )
 
 	s_volume = Cvar_Get( "volume", "0.7", CVAR_ARCHIVE, "sound volume" );
 	s_musicvolume = Cvar_Get( "musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
-	s_mixahead = Cvar_Get( "s_mixahead", "0.1", 0, "how much sound to mix ahead of time" );
+	s_mixahead = Cvar_Get( "_snd_mixahead", "0.1", CVAR_ARCHIVE, "how much sound to mix ahead of time" );
 	s_show = Cvar_Get( "s_show", "0", 0, "show playing sounds" );
 	s_primary = Cvar_Get( "s_primary", "0", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "use direct primary buffer" ); 
 	s_check_errors = Cvar_Get( "s_check_errors", "1", CVAR_ARCHIVE, "ignore audio engine errors" );

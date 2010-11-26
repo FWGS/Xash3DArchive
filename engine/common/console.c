@@ -13,6 +13,7 @@
 convar_t	*con_notifytime;
 convar_t	*scr_conspeed;
 convar_t	*con_fontsize;
+convar_t	*con_gamemaps;
 
 #define CON_TIMES		5	// need for 4 lines
 #define COLOR_DEFAULT	'7'
@@ -518,6 +519,7 @@ void Con_Init( void )
 	scr_conspeed = Cvar_Get( "scr_conspeed", "600", 0, "console moving speed" );
 	con_notifytime = Cvar_Get( "con_notifytime", "3", 0, "notify time to live" );
 	con_fontsize = Cvar_Get( "con_fontsize", "1", CVAR_ARCHIVE|CVAR_LATCH, "console font number (0, 1 or 2)" );
+	con_gamemaps = Cvar_Get( "con_gamemaps", "1", CVAR_ARCHIVE, "when true show only maps in game folder, ignore maps in a base folder" );
 
 	Con_CheckResize();
 

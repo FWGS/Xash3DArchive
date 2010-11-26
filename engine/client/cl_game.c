@@ -88,7 +88,7 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	if( index < 0 )
 		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
 
-	if( index > clgame.numEntities )
+	if( index >= clgame.numEntities )
 		return NULL;
 
 	if( !EDICT_NUM( index )->index )
@@ -1286,6 +1286,7 @@ void CL_InitWorld( void )
 	ent->curstate.modelindex = 1;	// world model
 	ent->curstate.solid = SOLID_BSP;
 	ent->curstate.movetype = MOVETYPE_PUSH;
+	ent->model = worldmodel;
 	clgame.numEntities = 1;
 }
 
@@ -2113,7 +2114,7 @@ static cl_entity_t *pfnGetEntityByIndex( int index )
 	if( index < 0 )
 		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
 
-	if( index > clgame.maxEntities )
+	if( index >= clgame.maxEntities )
 		return NULL;
 
 	return EDICT_NUM( index );

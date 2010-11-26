@@ -1596,7 +1596,12 @@ void CL_Init( void )
 	Con_Init();	
 	CL_InitLocal();
 
+	// give initial openGL configuration
+	Cbuf_AddText( "exec opengl.cfg\n" );
 	Host_CheckChanges ();
+
+	if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
+		Host_Error( "CL_InitGame: can't initialize client.dll\n" );
 
 	cls.initialized = true;
 

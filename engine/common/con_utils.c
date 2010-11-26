@@ -9,6 +9,8 @@
 #include "bspfile.h"
 #include "../cl_dll/kbutton.h"
 
+extern convar_t	*con_gamemaps;
+
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
 {
@@ -42,7 +44,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	int		i, nummaps;
 
-	t = FS_Search( va( "maps/%s*.bsp", s ), true );
+	t = FS_SearchExt( va( "maps/%s*.bsp", s ), true, con_gamemaps->integer );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -60,7 +62,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			
 		if( com.stricmp( ext, "bsp" )) continue;
 		com.strncpy( message, "^1error^7", sizeof( message ));
-		f = FS_Open( t->filenames[i], "rb" );
+		f = FS_OpenEx( t->filenames[i], "rb", con_gamemaps->integer );
 	
 		if( f )
 		{
@@ -809,7 +811,6 @@ static void Cmd_WriteHelp(const char *name, const char *unused, const char *desc
 
 void Cmd_WriteVariables( file_t *f )
 {
-	FS_Printf( f, "unsetall\n" );
 	Cvar_LookupVars( CVAR_ARCHIVE, NULL, f, Cmd_WriteCvar ); 
 }
 

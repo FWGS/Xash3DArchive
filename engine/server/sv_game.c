@@ -2231,13 +2231,13 @@ void pfnMessageEnd( void )
 		if( svgame.msg_size_index != -1 )
 		{
 			// variable sized message
-			if( svgame.msg_realsize > 255 )
+			if( svgame.msg_realsize >= 255 )
 			{
 				MsgDev( D_ERROR, "SV_Message: %s too long (more than 255 bytes)\n", name );
 				BF_Clear( &sv.multicast );
 				return;
 			}
-			else if( svgame.msg_realsize <= 0 )
+			else if( svgame.msg_realsize < 0 )
 			{
 				MsgDev( D_ERROR, "SV_Message: %s writes NULL message\n", name );
 				BF_Clear( &sv.multicast );
@@ -2268,7 +2268,7 @@ void pfnMessageEnd( void )
 			BF_Clear( &sv.multicast );
 			return;
 		}
-		else if( svgame.msg_realsize <= 0 )
+		else if( svgame.msg_realsize < 0 )
 		{
 			MsgDev( D_ERROR, "SV_Message: %s writes NULL message\n", name );
 			BF_Clear( &sv.multicast );

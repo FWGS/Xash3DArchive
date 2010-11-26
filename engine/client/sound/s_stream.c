@@ -147,7 +147,6 @@ void S_StreamBackgroundTrack( void )
 		}
 
 	}
-	Msg( "End()\n" );
 }
 
 /*

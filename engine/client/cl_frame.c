@@ -31,6 +31,9 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
+
+	ent->model = CM_ClipHandleToModel( ent->curstate.modelindex );
+	ent->curstate.msg_time = cl.time;
 }
 
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
@@ -178,6 +181,7 @@ void CL_WeaponAnim( int iAnim, int body )
 		view->syncbase = -0.01f; // back up to get 0'th frame animations
 	}
 
+	view->model = CM_ClipHandleToModel( view->curstate.modelindex );
 	view->curstate.entityType = ET_VIEWENTITY;
 	view->curstate.animtime = cl_time();	// start immediately
 	view->curstate.framerate = 1.0f;
@@ -275,7 +279,6 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	state = &cls.packet_entities[cls.next_client_entities % cls.num_client_entities];
 
 	if( newent ) old = &ent->baseline;
-
 	if( unchanged )
 	{
 		*state = *old;
@@ -575,46 +578,6 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		// getting a valid frame message ends the connection process
 		VectorCopy( player->origin, cl.predicted_origin );
 		VectorCopy( player->angles, cl.predicted_angles );
-	}
-
-	CL_CheckPredictionError();
-}
-		
-/*
-================
-CL_ParseFrame
-================
-*/
-void CL_ParseFrame( sizebuf_t *msg )
-{
-	Mem_Set( &cl.frame, 0, sizeof( cl.frame ));
-
-	cl.mtime[1] = cl.mtime[0];
-	cl.mtime[0] = BF_ReadFloat( msg );
-	cl.surpressCount = BF_ReadByte( msg );
-
-	if( !cl.frame.valid ) return;
-
-	if( cls.state != ca_active )
-	{
-		cl_entity_t	*player;
-
-		// client entered the game
-		cls.state = ca_active;
-		cl.force_refdef = true;
-		cls.changelevel = false;	// changelevel is done
-
-		player = CL_GetLocalPlayer();
-		SCR_MakeLevelShot();	// make levelshot if needs
-
-		Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar	
-		// getting a valid frame message ends the connection process
-		VectorCopy( player->origin, cl.predicted_origin );
-		VectorCopy( player->angles, cl.predicted_angles );
-
-		// request new HUD values
-		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-		BF_WriteString( &cls.netchan.message, "fullupdate" );
 	}
 
 	CL_CheckPredictionError();

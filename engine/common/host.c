@@ -764,17 +764,6 @@ void Host_Init( const int argc, const char **argv )
 	Host_InitCommon( argc, argv );
 	Key_Init();
 
-	if( host.type != HOST_DEDICATED )
-	{
-		// NOTE: client.dll must be loaded first to get mlook state from config.cfg
-		if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
-			Host_Error( "CL_InitGame: can't initialize client.dll\n" );
-
-		// get the user configuration 
-		Cbuf_AddText( "exec config.cfg\n" );
-		Cbuf_Execute();
-	}
-
 	// init commands and vars
 	if( host.developer >= 3 )
 	{
@@ -830,6 +819,7 @@ void Host_Init( const int argc, const char **argv )
 		Cmd_AddCommand( "minimize", Host_Minimize_f, "minimize main window to tray" );
 		Cmd_AddCommand( "vid_restart", Host_VidRestart_f, "restarts video system" );
 		Cmd_AddCommand( "snd_restart", Host_SndRestart_f, "restarts audio system" );
+		Cbuf_AddText( "exec config.cfg\n" );
 	}
 
 	// allow to change game from the console

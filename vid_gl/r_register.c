@@ -480,7 +480,8 @@ void R_RenderInfo_f( void )
 
 void GL_InitCommands( void )
 {
-	Cmd_ExecuteString( "vidlatch\n" );
+	Cbuf_AddText( "vidlatch\n" );
+	Cbuf_Execute();
 
 	// system screen width and height (don't suppose for change from console at all)
 	r_width = Cvar_Get( "width", "640", CVAR_READ_ONLY, "screen width" );
@@ -498,10 +499,10 @@ void GL_InitCommands( void )
 	gl_wireframe = Cvar_Get( "gl_wireframe", "0", CVAR_CHEAT, "show mesh triangles" );
 	r_lockpvs = Cvar_Get( "r_lockpvs", "0", CVAR_CHEAT, "lockpvs area at current point (pvs test)" );
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
-	r_mode = Cvar_Get( "r_mode", VID_DEFAULTMODE, CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "display resolution mode" );
+	r_mode = Cvar_Get( "r_mode", VID_DEFAULTMODE, CVAR_RENDERINFO, "display resolution mode" );
 	r_nobind = Cvar_Get( "r_nobind", "0", 0, "disable all textures (perfomance test)" );
-	r_picmip = Cvar_Get( "r_picmip", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
-	r_skymip = Cvar_Get( "r_skymip", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
+	r_picmip = Cvar_Get( "r_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
+	r_skymip = Cvar_Get( "r_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
 	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
 	r_physbdebug = Cvar_Get( "cm_debugdraw", "0", CVAR_ARCHIVE, "draw physics hulls" );
 
@@ -575,7 +576,7 @@ void GL_InitCommands( void )
 	r_depthbits = Cvar_Get( "r_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "pixelformat depth bits (0 - auto)" );
 	r_texturebits = Cvar_Get( "r_texturebits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "no description" );
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
-	gl_texture_anisotropy = Cvar_Get( "r_anisotropy", "2.0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "textures anisotropic filter" );
+	gl_texture_anisotropy = Cvar_Get( "r_anisotropy", "2.0", CVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_texture_lodbias = Cvar_Get( "r_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_ARCHIVE|CVAR_LATCH, "compress textures in video memory" ); 
@@ -593,8 +594,8 @@ void GL_InitCommands( void )
 	r_frontbuffer = Cvar_Get( "r_frontbuffer", "0", 0, "use back or front buffer" );
 	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_RENDERINFO, "allow gl_extensions" );
 
-	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "fullscreen refresh rate" );
-	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "set in 1 to enable fullscreen mode" );
+	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "fullscreen refresh rate" );
+	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "set in 1 to enable fullscreen mode" );
 
 	Cmd_AddCommand( "texturelist", R_TextureList_f, "display loaded textures list" );
 	Cmd_AddCommand( "shaderlist", R_ShaderList_f, "display loaded shaders list" );

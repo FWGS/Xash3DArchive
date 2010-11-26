@@ -670,6 +670,11 @@ void Key_ClearStates( void )
 		keys[i].down = 0;
 		keys[i].repeats = 0;
 	}
+
+	if( clgame.hInstance )
+	{
+		clgame.dllFuncs.IN_ClearStates();
+	}
 }
 
 /*

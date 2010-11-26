@@ -370,10 +370,6 @@ int EntityInSolid( edict_t *ent )
 			return 0;
 	}
 
-	// never suppressing logical entities
-	if( !ent->v.modelindex )
-		return 0;
-
 	return SV_TestEntityPosition( ent );
 }
 

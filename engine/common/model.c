@@ -709,20 +709,21 @@ static void Mod_LoadMarkSurfaces( const dlump_t *l )
 {
 	dmarkface_t	*in;
 	int		i, j, count;
-
+	msurface_t	**out;
+	
 	in = (void *)( mod_base + l->fileofs );	
 	if( l->filelen % sizeof( *in ))
 		Host_Error( "Mod_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
 
 	count = l->filelen / sizeof( *in );
-	loadmodel->marksurfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t* ));
+	loadmodel->marksurfaces = out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 
 	for( i = 0; i < count; i++ )
 	{
 		j = in[i];
 		if( j < 0 ||  j >= loadmodel->numsurfaces )
 			Host_Error( "Mod_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
-		loadmodel->marksurfaces[i] = loadmodel->surfaces + j;
+		out[i] = loadmodel->surfaces + j;
 	}
 }
 
