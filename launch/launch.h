@@ -249,13 +249,7 @@ qboolean lzss_decompress( const byte *in, const byte *inend, byte *out, byte *ou
 //
 float sse_sqrt( float x );
 
-_inline float sqrtf( float x ) { return ((float)sqrt((double)x)); }
-_inline float sinf( float x ) { return ((float)sin((double)x)); }
-_inline float asinf( float x ) { return ((float)asin((double)x)); }
-_inline float cosf( float x ) { return ((float)cos((double)x)); }
-_inline float acosf( float x ) { return ((float)acos((double)x)); }
-_inline float tanf( float x ) { return ((float)tan((double)x)); }
-_inline float atan2f( float x, float y ) { return ((float)atan2((double)x,(double)y)); }
+_inline float sqrtf( float x ) { return sqrt( x ); }
 void SinCos( float radians, float *sine, float *cosine );
 
 //

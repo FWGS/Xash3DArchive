@@ -679,13 +679,13 @@ typedef struct stdilib_api_s
 
 	// mathlib.c funcs
 	void (*sincos)( float x, float *sin, float *cos );		// fast sincos
-	float (*atan2)( float x, float y );				// fast arctan
-	float (*acos)( float x );					// fast arccos
-	float (*asin)( float x );					// fast arcsin
+	double (*atan2)( double x, double y );				// fast arctan
+	double (*acos)( double x );					// fast arccos
+	double (*asin)( double x );					// fast arcsin
+	double (*sin)( double x );					// fast sine
+	double (*cos)( double x );					// fast cosine
+	double (*tan)( double x );					// fast tan
 	float (*sqrt)( float x );					// fast sqrt
-	float (*sin)( float x );					// fast sine
-	float (*cos)( float x );					// fast cosine
-	float (*tan)( float x );					// fast tan
 	
 	// stdlib.c funcs
 	void (*strnupr)(const char *in, char *out, size_t size_out);	// convert string to upper case

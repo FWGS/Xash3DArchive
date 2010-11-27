@@ -237,13 +237,13 @@ void Sys_GetStdAPI( void )
 
 	// changed after called Sys_InitCPU
 	com.sincos = SinCos;			// fast sincos
-	com.atan2 = atan2f;				// fast arctan
-	com.acos = acosf;				// fast arccos
-	com.asin = asinf;				// fast arcsin
+	com.atan2 = atan2;				// fast arctan
+	com.acos = acos;				// fast arccos
+	com.asin = asin;				// fast arcsin
 	com.sqrt = sqrtf;				// fast sqrt
-	com.sin = sinf;				// fast sine
-	com.cos = cosf;				// fast cosine
-	com.tan = tanf;				// fast tan
+	com.sin = sin;				// fast sine
+	com.cos = cos;				// fast cosine
+	com.tan = tan;				// fast tan
 
 	// stdlib.c funcs
 	com.strnupr = com_strnupr;
