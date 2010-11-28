@@ -295,8 +295,7 @@ pfnVecToAngles
 */
 void pfnVecToAngles( const float *rgflVectorIn, float *rgflVectorOut )
 {
-	float	forward;
-	float	yaw, pitch;
+	float	tmp, yaw, pitch;
 
 	if( !rgflVectorIn )
 	{
@@ -306,6 +305,7 @@ void pfnVecToAngles( const float *rgflVectorIn, float *rgflVectorOut )
 
 	if( rgflVectorIn[1] == 0 && rgflVectorIn[0] == 0 )
 	{
+		// fast case
 		yaw = 0;
 		if( rgflVectorIn[2] > 0 )
 			pitch = 90;
@@ -313,17 +313,11 @@ void pfnVecToAngles( const float *rgflVectorIn, float *rgflVectorOut )
 	}
 	else
 	{
-		if( rgflVectorIn[0] )
-		{
-			yaw = (int)( com.atan2( rgflVectorIn[1], rgflVectorIn[0] ) * 180 / M_PI );
-			if( yaw < 0 ) yaw += 360;
-		}
-		else if( rgflVectorIn[1] > 0 )
-			yaw = 90;
-		else yaw = 270;
+		yaw = ( com.atan2( rgflVectorIn[1], rgflVectorIn[0] ) * 180 / M_PI );
+		if( yaw < 0 ) yaw += 360;
 
-		forward = com.sqrt( rgflVectorIn[0] * rgflVectorIn[0] + rgflVectorIn[1] * rgflVectorIn[1] );
-		pitch = (int)( com.atan2( rgflVectorIn[2], forward ) * 180 / M_PI );
+		tmp = com.sqrt( rgflVectorIn[0] * rgflVectorIn[0] + rgflVectorIn[1] * rgflVectorIn[1] );
+		pitch = ( com.atan2( rgflVectorIn[2], tmp ) * 180 / M_PI );
 		if( pitch < 0 ) pitch += 360;
 	}
 

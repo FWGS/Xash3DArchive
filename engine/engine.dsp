@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /GB /Zp8 /MD /W3 /GX /O2 /I "./" /I "common" /I "server" /I "client" /I "client/sound" /I "../public" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "server" /I "client" /I "client/sound" /I "../public" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -198,7 +198,27 @@ SOURCE=.\common\engfuncs.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_backend.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_draw.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_image.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_rmain.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_rsurf.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_vidnt.c
 # End Source File
 # Begin Source File
 

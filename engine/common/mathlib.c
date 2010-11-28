@@ -73,52 +73,31 @@ void VectorVectors( vec3_t forward, vec3_t right, vec3_t up )
 
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up )
 {
-	float	angle, sr, sp, sy, cr, cp, cy;
+	float	sr, sp, sy, cr, cp, cy;
 
-	angle = angles[YAW] * (M_PI*2 / 360);
-	com.sincos( angle, &sy, &cy );
-	angle = angles[PITCH] * (M_PI*2 / 360);
-	com.sincos( angle, &sp, &cp );
+	com.sincos( DEG2RAD( angles[YAW] ), &sy, &cy );
+	com.sincos( DEG2RAD( angles[PITCH] ), &sp, &cp );
+	com.sincos( DEG2RAD( angles[ROLL] ), &sr, &cr );
+
 	if( forward )
 	{
-		forward[0] = cp*cy;
-		forward[1] = cp*sy;
+		forward[0] = cp * cy;
+		forward[1] = cp * sy;
 		forward[2] = -sp;
 	}
-	if( right || up )
+
+	if( right )
 	{
-		if( angles[ROLL] )
-		{
-			angle = angles[ROLL] * (M_PI*2 / 360);
-			com.sincos( angle, &sr, &cr );
-			if( right )
-			{
-				right[0] = -1*(sr*sp*cy+cr*-sy);
-				right[1] = -1*(sr*sp*sy+cr*cy);
-				right[2] = -1*(sr*cp);
-			}
-			if( up )
-			{
-				up[0] = (cr*sp*cy+-sr*-sy);
-				up[1] = (cr*sp*sy+-sr*cy);
-				up[2] = cr*cp;
-			}
-		}
-		else
-		{
-			if( right )
-			{
-				right[0] = sy;
-				right[1] = -cy;
-				right[2] = 0;
-			}
-			if( up )
-			{
-				up[0] = (sp*cy);
-				up[1] = (sp*sy);
-				up[2] = cp;
-			}
-		}
+		right[0] = (-1.0f * sr * sp * cy + -1.0f * cr * -sy );
+		right[1] = (-1.0f * sr * sp * sy + -1.0f * cr * cy );
+		right[2] = (-1.0f * sr * cp);
+	}
+
+	if( up )
+	{
+		up[0] = (cr * sp * cy + -sr * -sy );
+		up[1] = (cr * sp * sy + -sr * cy );
+		up[2] = (cr * cp);
 	}
 }
 

@@ -101,6 +101,7 @@ typedef struct host_redirect_s
 
 typedef struct host_parm_s
 {
+	HINSTANCE		hInst;
 	host_state	state;		// global host state
 	uint		type;		// running at
 	jmp_buf		abortframe;	// abort current frame

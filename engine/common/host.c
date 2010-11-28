@@ -702,6 +702,9 @@ void Host_InitCommon( const int argc, const char **argv )
 	// get developer mode
 	host.developer = SI->developer;
 
+	// get current hInstance
+	host.hInst = GetModuleHandle( NULL );
+
 	FS_LoadGameInfo( NULL );
 	Image_Init( GI->gameHint, -1 );
 	Sound_Init( GI->gameHint, -1 );

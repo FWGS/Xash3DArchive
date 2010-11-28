@@ -1908,7 +1908,7 @@ file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly )
 
 	if( FS_CheckNastyPath( filepath, false ))
 	{
-		MsgDev( D_NOTE, "FS_Open: (\"%s\", \"%s\"): nasty filename rejected\n", filepath, mode );
+		MsgDev( D_NOTE, "FS_Open: (\"%s\", \"%s\" ): nasty filename rejected\n", filepath, mode );
 		return NULL;
 	}
 

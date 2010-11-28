@@ -8,7 +8,7 @@
 #include "matrix_lib.h"
 #include "triangleapi.h"
 
-#define MAX_TRIVERTS	1024
+#define MAX_TRIVERTS	2048
 #define MAX_TRIELEMS	MAX_TRIVERTS * 6
 #define MAX_TRIANGLES	MAX_TRIELEMS / 3
 
