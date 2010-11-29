@@ -56,7 +56,6 @@ typedef enum
 	HOST_STUDIO,	// "studio"	"studiomdl"
 	HOST_WADLIB,	// "wadlib"	"xwad"
 	HOST_RIPPER,	// "ripper"	"extragen"
-	HOST_XIMAGE,	// "ximage"	"ximage"
 	HOST_MAXCOUNT,	// terminator
 } instance_t;
 
@@ -310,31 +309,9 @@ typedef enum
 	PF_INDEXED_32,	// deflated palette (1024 bytes)
 	PF_RGBA_32,	// normal rgba buffer
 	PF_BGRA_32,	// big endian RGBA (MacOS)
-	PF_ARGB_32,	// uncompressed dds image
-	PF_ABGR_64,	// uint image
 	PF_RGB_24,	// uncompressed dds or another 24-bit image 
 	PF_BGR_24,	// big-endian RGB (MacOS)
-	PF_RGB_16,	// 5-6-5 weighted image
-	PF_DXT1,		// nvidia DXT1 format
-	PF_DXT2,		// nvidia DXT2 format
-	PF_DXT3,		// nvidia DXT3 format
-	PF_DXT4,		// nvidia DXT5 format
-	PF_DXT5,		// nvidia DXT5 format
-	PF_RXGB,		// doom3 normal maps
-	PF_ATI1N,		// ati 1N texture
-	PF_ATI2N,		// ati 2N texture
-	PF_LUMINANCE,	// b&w dds image
-	PF_LUMINANCE_16,	// b&w hi-res image
-	PF_LUMINANCE_ALPHA, // b&w dds image with alpha channel
-	PF_UV_16,		// EMBM two signed 8bit components
-	PF_UV_32,		// EMBM two signed 16bit components
-	PF_R_16F,		// red channel half-float image
-	PF_R_32F,		// red channel float image
-	PF_GR_32F,	// Green-Red channels half-float image (dudv maps)
-	PF_GR_64F,	// Green-Red channels float image (dudv maps)
-	PF_ABGR_64F,	// ABGR half-float image
-	PF_ABGR_128F,	// ABGR float image
-	PF_RGBA_GN,	// internal generated texture
+	PF_RGBA_GN,	// internal generated texture (FIXME: remove)
 	PF_TOTALCOUNT,	// must be last
 } pixformat_t;
 
@@ -343,22 +320,15 @@ typedef struct bpc_desc_s
 	int	format;	// pixelformat
 	char	name[16];	// used for debug
 	uint	glFormat;	// RGBA format
-	uint	glType;	// pixel size (byte, short etc)
 	int	bpp;	// channels (e.g. rgb = 3, rgba = 4)
-	int	bpc;	// sizebytes (byte, short, float)
-	int	block;	// blocksize < 0 needs alternate calc
 } bpc_desc_t;
 
 // imagelib global settings
 typedef enum
 {
-	IL_DDS_HARDWARE	= BIT(0),	// instance have dds hardware support (disable software unpacker)
-	IL_ATI_FLOAT_EXT	= BIT(1),	// reinstall float images glmask for ati extensions
-	IL_NV_FLOAT_EXT	= BIT(2),	// reinstall float images glmask for nv extensions
-	IL_USE_LERPING	= BIT(3),	// lerping images during resample
-	IL_KEEP_8BIT	= BIT(4),	// don't expand paletted images
-	IL_ALLOW_OVERWRITE	= BIT(5),	// allow to overwrite stored images
-	IL_IGNORE_MIPS	= BIT(6),	// ignore mip-levels to loading
+	IL_USE_LERPING	= BIT(0),	// lerping images during resample
+	IL_KEEP_8BIT	= BIT(1),	// don't expand paletted images
+	IL_ALLOW_OVERWRITE	= BIT(2),	// allow to overwrite stored images
 } ilFlags_t;
 
 // rgbdata output flags
@@ -369,38 +339,34 @@ typedef enum
 	IMAGE_HAS_ALPHA	= BIT(1),		// image contain alpha-channel
 	IMAGE_HAS_COLOR	= BIT(2),		// image contain RGB-channel
 	IMAGE_COLORINDEX	= BIT(3),		// all colors in palette is gradients of last color (decals)
-	IMAGE_PREMULT	= BIT(4),		// need to premultiply alpha (DXT2, DXT4)
-	IMAGE_HAS_LUMA_Q1	= BIT(5),		// image has luma pixels (q1-style maps)
-	IMAGE_HAS_LUMA_Q2	= BIT(6),		// image has luma pixels (q2-style maps)
+	IMAGE_HAS_LUMA_Q1	= BIT(4),		// image has luma pixels (q1-style maps)
+	IMAGE_HAS_LUMA_Q2	= BIT(5),		// image has luma pixels (q2-style maps)
 	IMAGE_HAS_LUMA	= IMAGE_HAS_LUMA_Q1|IMAGE_HAS_LUMA_Q2,
-	IMAGE_SKYBOX	= BIT(7),		// only used by FS_SaveImage - for write right suffixes
+	IMAGE_SKYBOX	= BIT(6),		// only used by FS_SaveImage - for write right suffixes
 
 	// Image_Process manipulation flags
-	IMAGE_FLIP_X	= BIT(12),	// flip the image by width
-	IMAGE_FLIP_Y	= BIT(13),	// flip the image by height
-	IMAGE_ROT_90	= BIT(14),	// flip from upper left corner to down right corner
+	IMAGE_FLIP_X	= BIT(16),	// flip the image by width
+	IMAGE_FLIP_Y	= BIT(17),	// flip the image by height
+	IMAGE_ROT_90	= BIT(18),	// flip from upper left corner to down right corner
 	IMAGE_ROT180	= IMAGE_FLIP_X|IMAGE_FLIP_Y,
 	IMAGE_ROT270	= IMAGE_FLIP_X|IMAGE_FLIP_Y|IMAGE_ROT_90,	
-	IMAGE_ROUND	= BIT(15),	// round image to nearest Pow2
-	IMAGE_RESAMPLE	= BIT(16),	// resample image to specified dims
-	IMAGE_PALTO24	= BIT(17),	// turn 32-bit palette into 24-bit mode (only for indexed images)
-	IMAGE_COMP_DXT	= BIT(18),	// compress image to DXT format
-	IMAGE_ROUNDFILLER	= BIT(19),	// round image to nearest Pow2 and fill unused entries with single color	
-	IMAGE_FORCE_RGBA	= BIT(20),	// force image to RGBA buffer
-	IMAGE_MAKE_LUMA	= BIT(21),	// create luma texture from indexed
+	IMAGE_ROUND	= BIT(19),	// round image to nearest Pow2
+	IMAGE_RESAMPLE	= BIT(20),	// resample image to specified dims
+	IMAGE_PALTO24	= BIT(21),	// turn 32-bit palette into 24-bit mode (only for indexed images)
+	IMAGE_ROUNDFILLER	= BIT(22),	// round image to nearest Pow2 and fill unused entries with single color	
+	IMAGE_FORCE_RGBA	= BIT(23),	// force image to RGBA buffer
+	IMAGE_MAKE_LUMA	= BIT(24),	// create luma texture from indexed
 } imgFlags_t;
 
 typedef struct rgbdata_s
 {
 	word	width;		// image width
 	word	height;		// image height
-	word	depth;		// multi-layer volume
-	byte	numMips;		// mipmap count
-	byte	bitsCount;	// RGB bits count
 	uint	type;		// compression type
 	uint	flags;		// misc image flags
 	byte	*palette;		// palette if present
 	byte	*buffer;		// image buffer
+	rgba_t	fogParams;	// some water textures in hl1 has info about fog color and alpha
 	size_t	size;		// for bounds checking
 } rgbdata_t;
 

@@ -423,26 +423,6 @@ qboolean ConvPCX( const char *name, byte *buffer, size_t filesize, const char *e
 }
 
 /*
-=============
-ConvVTF
-=============
-*/
-qboolean ConvVTF( const char *name, byte *buffer, size_t filesize, const char *ext )
-{
-	rgbdata_t	*pic = FS_LoadImage( va( "#%s.vtf", name ), buffer, filesize );
-
-	if( pic )
-	{
-		FS_SaveImage( va("%s/%s.%s", gs_gamedir, name, ext ), pic );
-		Conv_WriteQCScript( name, pic );
-		Msg( "%s.vtf\n", name ); // echo to console
-		FS_FreeImage( pic );
-		return true;
-	}
-	return false;
-}
-
-/*
 ============
 ConvMIP
 ============

@@ -500,10 +500,7 @@ qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize )
 
 	jpeg_finish_decompress( &cinfo );
 	jpeg_destroy_decompress( &cinfo );
-
 	image.type = PF_RGBA_32;
-	image.depth = 1;
-	image.num_mips = 1;
 
 	return true;
 error_caught:

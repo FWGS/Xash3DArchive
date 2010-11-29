@@ -140,21 +140,14 @@ static const loadpixformat_t load_null[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version0 - using only dds images
-static const loadpixformat_t load_stalker[] =
-{
-{ "%s%s.%s", "dds", Image_LoadDDS, IL_HINT_NO },
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version1 - using only Doom1 images
+// version0 - using only Doom1 images
 static const loadpixformat_t load_doom1[] =
 {
 { "%s%s.%s", "flt", Image_LoadFLT, IL_HINT_NO },	// flat textures, sprites
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version2 - using only Quake1 images
+// version1 - using only Quake1 images
 // wad files not requires path
 static const loadpixformat_t load_quake1[] =
 {
@@ -165,7 +158,7 @@ static const loadpixformat_t load_quake1[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version3 - using only Quake2 images
+// version2 - using only Quake2 images
 static const loadpixformat_t load_quake2[] =
 {
 { "textures/%s%s.%s", "wal", Image_LoadWAL, IL_HINT_Q2 },	// map textures
@@ -175,7 +168,7 @@ static const loadpixformat_t load_quake2[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version4 - using only Quake3 images
+// version3 - using only Quake3 images
 // g-cont: probably q3 used only explicit paths
 static const loadpixformat_t load_quake3[] =
 {
@@ -184,16 +177,7 @@ static const loadpixformat_t load_quake3[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version5 - using only Quake4(Doom3) images
-// g-cont: probably q4 used only explicit paths
-static const loadpixformat_t load_quake4[] =
-{
-{ "%s%s.%s", "dds", Image_LoadDDS, IL_HINT_NO },	// textures or gfx
-{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// textures or gfx
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version6 - using only Half-Life images
+// version4 - using only Half-Life images
 // wad files not requires path
 static const loadpixformat_t load_hl1[] =
 {
@@ -208,24 +192,15 @@ static const loadpixformat_t load_hl1[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version7 - using only Half-Life 2 images
-static const loadpixformat_t load_hl2[] =
-{
-{ "%s%s.%s", "vtf", Image_LoadVTF, IL_HINT_NO },	// hl2 dds wrapper
-{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// for Vgui, saveshots etc
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version8 - studiomdl profile
+// version5 - studiomdl profile
 static const loadpixformat_t load_studiomdl[] =
 {
 { "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// classic studio textures
 { "%s%s.%s", "pcx", Image_LoadPCX, IL_HINT_NO },	// q2 skins or somewhat
-{ "%s%s.%s", "wal", Image_LoadWAL, IL_HINT_Q2 },	// q2 textures as skins ???
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version9 - spritegen profile
+// version6 - spritegen profile
 static const loadpixformat_t load_spritegen[] =
 {
 { "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// classic sprite frames
@@ -233,7 +208,7 @@ static const loadpixformat_t load_spritegen[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version10 - xwad profile
+// version7 - xwad profile
 static const loadpixformat_t load_wadlib[] =
 {
 { "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// there all wad package types
@@ -245,10 +220,9 @@ static const loadpixformat_t load_wadlib[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version11 - Xash3D default image profile
+// version8 - Xash3D default image profile
 static const loadpixformat_t load_xash[] =
 {
-{ "%s%s.%s", "dds", Image_LoadDDS, IL_HINT_NO },	// cubemaps, depthmaps, 2d textures
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// screenshots, etc
 { "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// 2d textures
 { "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures (WorldCraft support)
@@ -257,16 +231,6 @@ static const loadpixformat_t load_xash[] =
 { "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_NO },	// hl or q1 model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames
 { "%s%s.%s", "pal", Image_LoadPAL, IL_HINT_NO },	// install palettes
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-static const loadpixformat_t load_ximage[] =
-{
-{ "%s%s.%s", "dds", Image_LoadDDS, IL_HINT_NO },	// cubemaps, depthmaps, 2d textures
-{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// screenshots, etc
-{ "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// 2d textures
-{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// there all wad package types
-{ "%s%s.%s", "pcx", Image_LoadPCX, IL_HINT_NO }, 
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
@@ -288,7 +252,6 @@ static const savepixformat_t save_extragen[] =
 {
 { "%s%s.%s", "tga", Image_SaveTGA },		// tga screenshots
 { "%s%s.%s", "jpg", Image_SaveJPG },		// jpg screenshots
-{ "%s%s.%s", "dds", Image_SaveDDS },		// vtf use this
 { "%s%s.%s", "pcx", Image_SavePCX },		// just in case
 { "%s%s.%s", "bmp", Image_SaveBMP },		// all 8-bit images
 { NULL, NULL, NULL }
@@ -299,17 +262,6 @@ static const savepixformat_t save_xash[] =
 {
 { "%s%s.%s", "tga", Image_SaveTGA },		// tga screenshots
 { "%s%s.%s", "jpg", Image_SaveJPG },		// tga levelshots or screenshots
-{ "%s%s.%s", "dds", Image_SaveDDS },		// dds envshots
-{ NULL, NULL, NULL }
-};
-
-static const savepixformat_t save_ximage[] =
-{
-{ "%s%s.%s", "tga", Image_SaveTGA },
-{ "%s%s.%s", "jpg", Image_SaveJPG },
-{ "%s%s.%s", "dds", Image_SaveDDS },
-{ "%s%s.%s", "pcx", Image_SavePCX },
-{ "%s%s.%s", "bmp", Image_SaveBMP },
 { NULL, NULL, NULL }
 };
 
@@ -331,10 +283,6 @@ void Image_Init( void )
 		break;
 	case HOST_WADLIB:
 		image.loadformats = load_wadlib;
-		break;
-	case HOST_XIMAGE:
-		image.loadformats = load_ximage;
-		image.saveformats = save_ximage;
 		break;
 	case HOST_NORMAL:
 	case HOST_BSPLIB:
@@ -377,11 +325,6 @@ void Image_Setup( const char *formats, const uint flags )
 		image.loadformats = load_xash;
 		Image_SetPaths( "env", "jpg", "jpg", "jpg" );
 	}
-	else if( !com.stricmp( formats, "stalker" ) || !com.stricmp( formats, "S.T.A.L.K.E.R" ))
-	{
-		image.loadformats = load_stalker;
-		Image_SetPaths( "textures/sky", "jpg", "dds", "dds" );
-	}
 	else if( !com.stricmp( formats, "Doom1" ) || !com.stricmp( formats, "Doom2" ))
 	{
 		image.loadformats = load_doom1;
@@ -402,20 +345,10 @@ void Image_Setup( const char *formats, const uint flags )
 		image.loadformats = load_quake3;
 		Image_SetPaths( "env", "jpg", "jpg", "jpg" );
 	}
-	else if( !com.stricmp( formats, "Quake4" ) || !com.stricmp( formats, "Doom3" ))
-	{
-		image.loadformats = load_quake4;
-		Image_SetPaths( "env", "dds", "dds", "dds" );
-	}
 	else if( !com.stricmp( formats, "hl1" ) || !com.stricmp( formats, "Half-Life" ))
 	{
 		image.loadformats = load_hl1;
 		Image_SetPaths( "gfx/env", "jpg", "tga", "tga" );
-	}
-	else if( !com.stricmp( formats, "hl2" ) || !com.stricmp( formats, "Half-Life 2" ))
-	{
-		image.loadformats = load_hl2;
-		Image_SetPaths( "materials/skybox", "jpg", "tga", "tga" );
 	}
 	else
 	{
@@ -696,14 +629,12 @@ void Image_CopyParms( rgbdata_t *src )
 
 	image.width = src->width;
 	image.height = src->height;
-	image.depth = src->depth;
-	image.num_mips = src->numMips;
 	image.type = src->type;
 	image.flags = src->flags;
-	image.bits_count = src->bitsCount;
 	image.size = src->size;
 	image.rgba = src->buffer;
 	image.palette = src->palette;	// may be NULL
+	Mem_Copy( image.fogParams, src->fogParams, sizeof( image.fogParams ));
 }
 
 /*
@@ -716,7 +647,7 @@ NOTE: must call Image_GetPaletteXXX before used
 qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 {
 	int	*iout = (int *)out;
-	color32	*col;
+	rgba_t	*col;
 
 	if( !image.d_currentpal )
 	{
@@ -740,8 +671,8 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 		iout[6] = image.d_currentpal[in[6]];
 		iout[7] = image.d_currentpal[in[7]];
 
-		col = (color32 *)iout;
-		if( col->r != col->g || col->g != col->b )
+		col = (rgba_t *)iout;
+		if( col[0] != col[1] || col[1] != col[2] )
 			image.flags |= IMAGE_HAS_COLOR;
 
 		in += 8;
@@ -769,46 +700,6 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 
 	image.type = PF_RGBA_32;	// update image type;
 	return true;
-}
-
-/*
-====================
-Image_ShortToFloat
-====================
-*/
-uint Image_ShortToFloat( word y )
-{
-	int s = (y >> 15) & 0x00000001;
-	int e = (y >> 10) & 0x0000001f;
-	int m =  y & 0x000003ff;
-
-	// float: 1 sign bit, 8 exponent bits, 23 mantissa bits
-	// half: 1 sign bit, 5 exponent bits, 10 mantissa bits
-
-	if( e == 0 )
-	{
-		if( m == 0 ) return s << 31; // Plus or minus zero
-		else // denormalized number -- renormalize it
-		{
-			while(!(m & 0x00000400))
-			{
-				m <<= 1;
-				e -=  1;
-			}
-			e += 1;
-			m &= ~0x00000400;
-		}
-	}
-	else if( e == 31 )
-	{
-		if( m == 0 ) return (s << 31) | 0x7f800000; // positive or negative infinity
-		else return (s << 31) | 0x7f800000 | (m << 13); // NAN - preserve sign and significand bits
-	}
-
-	// normalized number
-	e = e + (127 - 15);
-	m = m << 13;
-	return (s << 31) | (e << 23) | m; // assemble s, e and m.
 }
 
 static void Image_Resample32LerpLine (const byte *in, byte *out, int inwidth, int outwidth)
@@ -1393,19 +1284,182 @@ byte *Image_CreateLumaInternal( const byte *fin, int width, int height, int type
 	return image.tempbuffer;
 }
 
+qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
+{
+	int	mipsize = width * height;
+	int	outsize = width * height;
+	qboolean	expand_to_rgba = true;
+
+	if( image.cmd_flags & IL_KEEP_8BIT )
+		expand_to_rgba = false;
+	else if( Sys.app_name == HOST_NORMAL && ( image.flags & IMAGE_HAS_LUMA ))
+		expand_to_rgba = false;
+
+	// check for inconsistency
+	if( !image.source_type ) image.source_type = image.type;
+	// trying to add 8 bit mimpap into 32-bit mippack or somewhat...
+	if( image.source_type != image.type ) return false;
+
+	if( expand_to_rgba ) outsize *= 4;
+	else Image_CopyPalette32bit(); 
+
+	// reallocate image buffer
+	image.rgba = Mem_Realloc( Sys.imagepool, image.rgba, image.size + outsize );	
+	if( expand_to_rgba == false ) Mem_Copy( image.rgba + image.ptr, in, outsize );
+	else if( !Image_Copy8bitRGBA( in, image.rgba + image.ptr, mipsize ))
+		return false; // probably pallette not installed
+
+	image.size += outsize;
+	image.ptr += outsize;
+
+	return true;
+}
+
+qboolean Image_AddRGBAImageToPack( uint target, uint imageSize, const void* data )
+{
+	// NOTE: just update bufer without checking for a type
+	image.rgba = Mem_Realloc( Sys.imagepool, image.rgba, image.ptr + imageSize );
+	Mem_Copy( image.rgba + image.ptr, data, imageSize ); // add mipmap or cubemapside
+
+	image.size += imageSize;	// update image size
+	image.ptr += imageSize;
+
+	return true;
+}
+
+/*
+=============
+Image_SetPixelFormat
+
+update pixel format for cubemap side
+=============
+*/
+void Image_SetPixelFormat( void )
+{
+	image.bpp = PFDesc[image.type].bpp;
+	image.SizeOfFile = PFDesc[image.type].bpp * image.width * image.height;
+}
+
+qboolean Image_DecompressPal8( uint target, int intformat, uint width, uint height, uint imageSize, const void* data )
+{
+	byte	*fin, *fout;
+	int	size; 
+
+	if( !data ) return false;
+	fin = (byte *)data;
+
+	size = width * height * 4;
+	image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, size );
+	fout = image.tempbuffer;
+
+	switch( PFDesc[intformat].format )
+	{
+	case PF_INDEXED_24:
+		if( image.flags & IMAGE_HAS_ALPHA )
+		{
+			if( image.flags & IMAGE_COLORINDEX )
+				Image_GetPaletteLMP( image.palette, LUMP_DECAL ); 
+			else Image_GetPaletteLMP( image.palette, LUMP_TRANSPARENT ); 
+		}
+		else Image_GetPaletteLMP( image.palette, LUMP_NORMAL );
+		// intentional falltrough
+	case PF_INDEXED_32:
+		if( !image.d_currentpal ) image.d_currentpal = ( uint *)image.palette;
+		if( !Image_Copy8bitRGBA( fin, fout, width * height )) return false;
+		break;
+	}
+
+	Image_AddRGBAImageToPack( target, size, fout );
+	return true;
+}
+
+qboolean Image_DecompressRGBA( uint target, int intformat, uint width, uint height, uint imageSize, const void* data )
+{
+	byte	*fin, *fout;
+	int	i, size; 
+
+	if( !data ) return false;
+	fin = (byte *)data;
+
+	size = width * height * 4;
+	image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, size );
+	fout = image.tempbuffer;
+
+	switch( PFDesc[intformat].format )
+	{
+	case PF_RGB_24:
+		for (i = 0; i < width * height; i++ )
+		{
+			fout[(i<<2)+0] = fin[i*3+0];
+			fout[(i<<2)+1] = fin[i*3+1];
+			fout[(i<<2)+2] = fin[i*3+2];
+			fout[(i<<2)+3] = 255;
+		}
+		break;
+	case PF_BGR_24:
+		for (i = 0; i < width * height; i++ )
+		{
+			fout[(i<<2)+0] = fin[i*3+2];
+			fout[(i<<2)+1] = fin[i*3+1];
+			fout[(i<<2)+2] = fin[i*3+0];
+			fout[(i<<2)+3] = 255;
+		}
+		break;
+	case PF_RGBA_GN:
+	case PF_RGBA_32:
+		Mem_Copy( fout, fin, size );
+		break;
+	case PF_BGRA_32:
+		for( i = 0; i < width * height; i++ )
+		{
+			fout[i*4+0] = fin[i*4+2];
+			fout[i*4+1] = fin[i*4+1];
+			fout[i*4+2] = fin[i*4+0];
+			fout[i*4+3] = fin[i*4+3];
+		}
+		break;
+	default: return false;
+	}
+
+	Image_AddRGBAImageToPack( target, size, fout );
+	return true;
+}
+
+void Image_Decompress( const byte *buffer, uint target )
+{
+	switch( image.type )
+	{
+	case PF_INDEXED_24:
+	case PF_INDEXED_32:
+		image.decompress = Image_DecompressPal8;
+		break;
+	case PF_RGBA_32: 
+	case PF_BGRA_32:
+	case PF_RGB_24:
+	case PF_BGR_24: 
+	case PF_RGBA_GN:
+		image.decompress = Image_DecompressRGBA;
+		break;
+	default:
+		Sys_Error( "Image_DecompressDDS: unknown image format\n" );
+		break;
+	}
+
+	Image_SetPixelFormat();
+	image.decompress( target, image.type, image.width, image.height, image.SizeOfFile, buffer );
+}
+
 rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 {
-	int	i, offset, numsides = 1;
+	int	i, numsides = 1;
 	uint	target = 1;
 	byte	*buf;
 
 	// quick case to reject unneeded conversions
 	switch( pic->type )
 	{
-	case PF_UV_32:
 	case PF_RGBA_GN:
 	case PF_RGBA_32:
-	case PF_ABGR_128F:
 		pic->type = PF_RGBA_32;
 		return pic; // just change type
 	}
@@ -1413,24 +1467,17 @@ rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 	Image_CopyParms( pic );
 
 	if( image.flags & IMAGE_CUBEMAP ) numsides = 6;
-	Image_SetPixelFormat( image.width, image.height, image.depth ); // setup
+	Image_SetPixelFormat(); // setup
 	image.size = image.ptr = 0;
-	if( image.cmd_flags & IL_IGNORE_MIPS ) image.cur_mips = 1;
-	else image.cur_mips = image.num_mips;
-	image.num_mips = 0; // clear mipcount
 	buf = image.rgba;
 
-	for( i = 0, offset = 0; i < numsides; i++ )
+	for( i = 0; i < numsides; i++ )
 	{
-		Image_SetPixelFormat( image.curwidth, image.curheight, image.curdepth );
-		offset = image.SizeOfFile; // move pointer
-
-		Image_DecompressDDS( buf, target + i );
-		buf += offset;
+		Image_Decompress( buf, target + i );
+		buf += image.SizeOfFile;
 	}
+
 	// now we can change type to RGBA
-	if( image.filter != CB_HINT_NO )
-		image.flags &= ~IMAGE_CUBEMAP; // side extracted
 	image.type = PF_RGBA_32;
 
 	FS_FreeImage( pic );	// free original

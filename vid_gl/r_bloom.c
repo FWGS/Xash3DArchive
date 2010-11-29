@@ -106,7 +106,6 @@ static void R_Bloom_InitBackUpTexture( int width, int height )
 	r_bloom.height = height;
 	r_bloom.type = PF_RGBA_GN;
 	r_bloom.size = width * height * 4;
-	r_bloom.depth = r_bloom.numMips = 1;
 	r_bloom.flags = 0;
 	r_bloom.palette = NULL;
 	r_bloom.buffer = Mem_Alloc( r_temppool, width * height * 4 );
@@ -146,7 +145,6 @@ static void R_Bloom_InitEffectTexture( void )
 	r_bloomfx.size = BLOOM_SIZE * BLOOM_SIZE * 4;
 	r_bloomfx.type = PF_RGBA_GN;
 	r_bloomfx.flags = 0;
-	r_bloomfx.numMips = r_bloomfx.depth = 1;
 	r_bloomfx.palette = NULL;
 	r_bloomfx.buffer = Mem_Alloc( r_temppool, BLOOM_SIZE * BLOOM_SIZE * 4 );
 
@@ -196,7 +194,6 @@ static void R_Bloom_InitTextures( void )
 	r_bloomscr.type = PF_RGBA_GN;
 	r_bloomscr.flags = 0;
 	r_bloomscr.palette = NULL;
-	r_bloomscr.numMips = r_bloomscr.depth = 1;
 	r_bloomscr.size = size;
 	r_bloomscr.buffer = Mem_Alloc( r_temppool, size );
 	Mem_Set( r_bloomscr.buffer, 255, size );
@@ -221,7 +218,6 @@ static void R_Bloom_InitTextures( void )
 		r_downsample.flags = 0;
 		r_downsample.palette = NULL;
 		r_downsample.buffer = Mem_Alloc( r_temppool, r_downsample.size );
-		r_downsample.numMips = r_downsample.depth = 1;
 
 		r_bloomdownsamplingtexture = R_LoadTexture( "***r_bloomdownsamplingtexture***", &r_downsample, 3, TF_STATIC|TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP|TF_NOMIPMAP );
 		Mem_Free( r_downsample.buffer );

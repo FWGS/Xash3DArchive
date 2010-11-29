@@ -8,61 +8,39 @@
 #include "gl_local.h"
 
 /*
-=================
-R_ResampleRaw
-=================
+===============
+R_DrawSetColor
+===============
 */
-static byte *R_ResampleRaw( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight )
+void R_DrawSetColor( const rgba_t color )
 {
-	uint		frac, fracStep;
-	uint		*in = (uint *)source;
-	uint		p1[0x1000], p2[0x1000];
-	byte		*pix1, *pix2, *pix3, *pix4;
-	uint		*inRow1, *inRow2, *out;
-	static byte	*resampled = NULL;
-	int		i, x, y;
+	if( color ) Vector4Copy( color, glState.draw_color );
+	else Vector4Set( glState.draw_color, 255, 255, 255, 255 );
+}
 
-	// clean frames doesn't contain raw buffer
-	if( !source ) return NULL;
+/*
+=============
+R_DrawStretchPic
+=============
+*/
+void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, int texnum )
+{
+	GL_Bind( GL_TEXTURE0, texnum );
+	pglColor4ubv( glState.draw_color ); 
 
-	resampled = Mem_Realloc( r_temppool, resampled, outWidth * outHeight * 4 );
-	out = (uint *)resampled;
+	pglBegin( GL_QUADS );
+		pglTexCoord2f( s1, t1 );
+		pglVertex2f( x, y );
 
-	fracStep = inWidth * 0x10000 / outWidth;
+		pglTexCoord2f( s2, t1 );
+		pglVertex2f( x + w, y );
 
-	frac = fracStep >> 2;
-	for( i = 0; i < outWidth; i++ )
-	{
-		p1[i] = 4 * (frac >> 16);
-		frac += fracStep;
-	}
+		pglTexCoord2f( s2, t2 );
+		pglVertex2f( x + w, y + h );
 
-	frac = (fracStep >> 2) * 3;
-	for( i = 0; i < outWidth; i++ )
-	{
-		p2[i] = 4 * (frac >> 16);
-		frac += fracStep;
-	}
-
-	for( y = 0; y < outHeight; y++, out += outWidth )
-	{
-		inRow1 = in + inWidth * (int)(((float)y + 0.25) * inHeight/outHeight);
-		inRow2 = in + inWidth * (int)(((float)y + 0.75) * inHeight/outHeight);
-
-		for( x = 0; x < outWidth; x++ )
-		{
-			pix1 = (byte *)inRow1 + p1[x];
-			pix2 = (byte *)inRow1 + p2[x];
-			pix3 = (byte *)inRow2 + p1[x];
-			pix4 = (byte *)inRow2 + p2[x];
-
-			((byte *)(out+x))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0]) >> 2;
-			((byte *)(out+x))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1]) >> 2;
-			((byte *)(out+x))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2]) >> 2;
-			((byte *)(out+x))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3]) >> 2;
-		}
-	}
-	return resampled;
+		pglTexCoord2f( s1, t2 );
+		pglVertex2f( x, y + h );
+	pglEnd();
 }
 
 /*
@@ -72,7 +50,8 @@ R_DrawStretchRaw
 */
 void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, qboolean dirty )
 {
-	byte	*raw;
+	byte		*raw;
+	gltexture_t	*tex;
 
 	if( !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
 	{
@@ -84,7 +63,7 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 
 		if( cols != width || rows != height )
 		{
-			raw = R_ResampleRaw( data, cols, rows, width, height );
+			raw = GL_ResampleTexture( data, cols, rows, width, height, false );
 			cols = width;
 			rows = height;
 		}
@@ -95,21 +74,28 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 	}
 
 	if( cols > glConfig.max_2d_texture_size )
-		Host_Error( "R_DrawStretchRaw: size exceeds hardware limits (%i > %i)\n", cols, glConfig.max_2d_texture_size ); 
+		Host_Error( "R_DrawStretchRaw: size %i exceeds hardware limits\n", cols );
 	if( rows > glConfig.max_2d_texture_size )
-		Host_Error( "R_DrawStretchRaw: size exceeds hardware limits (%i > %i)\n", rows, glConfig.max_2d_texture_size );
+		Host_Error( "R_DrawStretchRaw: size %i exceeds hardware limits\n", rows );
 
+	tex = R_GetTexture( tr.cinTexture );
 	GL_Bind( 0, tr.cinTexture );
 
-	if( cols == tr.cinTexture->width && rows == tr.cinTexture->height )
+	if( cols == tex->width && rows == tex->height )
 	{
-		if( dirty ) pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_BGRA, GL_UNSIGNED_BYTE, raw );
+		if( dirty )
+		{
+			pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_BGRA, GL_UNSIGNED_BYTE, raw );
+		}
 	}
 	else
 	{
-		tr.cinTexture->width = cols;
-		tr.cinTexture->height = rows;
-		if( dirty ) pglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, cols, rows, 0, GL_BGRA, GL_UNSIGNED_BYTE, raw );
+		tex->width = cols;
+		tex->height = rows;
+		if( dirty )
+		{
+			pglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, cols, rows, 0, GL_BGRA, GL_UNSIGNED_BYTE, raw );
+		}
 	}
 
 	GL_CheckForErrors();
@@ -124,4 +110,40 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 	pglTexCoord2f( 0, 1 );
 	pglVertex2f( x, y + h );
 	pglEnd();
+}
+
+/*
+===============
+R_Set2DMode
+===============
+*/
+void R_Set2DMode( qboolean enable )
+{
+	if( enable )
+	{
+		if( glState.in2DMode )
+			return;
+
+		// set 2D virtual screen size
+		pglScissor( 0, 0, glState.width, glState.height );
+		pglViewport( 0, 0, glState.width, glState.height );
+		pglMatrixMode( GL_PROJECTION );
+		pglLoadIdentity();
+		pglOrtho( 0, glState.width, glState.height, 0, -99999, 99999 );
+		pglMatrixMode( GL_MODELVIEW );
+		pglLoadIdentity();
+
+		GL_Cull( 0 );
+//		GL_SetState( GLSTATE_NO_DEPTH_TEST );
+
+		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+
+		glState.in2DMode = true;
+		RI.currententity = NULL;
+		RI.currentmodel = NULL;
+	}
+	else
+	{
+		glState.in2DMode = false;
+	}
 }

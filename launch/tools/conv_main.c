@@ -28,7 +28,6 @@ convformat_t convert_formats[] =
 {"%s.%s", "lmp", ConvLMP, "bmp" },	// Quake1/Half-Life gfx
 {"%s.%s", "fnt", ConvFNT, "bmp" },	// Quake1/Half-Life gfx
 {"%s.%s", "wal", ConvWAL, "bmp" },	// Quake2 textures
-{"%s.%s", "vtf", ConvVTF, "dds" },	// Half-Life 2 materials
 {"%s.%s", "skn", ConvSKN, "bmp" },	// doom1 sprite models
 {"%s.%s", "bsp", ConvBSP, "bmp" },	// Quake1\Half-Life map textures
 {NULL, NULL, NULL, NULL }		// list terminator
@@ -37,9 +36,9 @@ convformat_t convert_formats[] =
 convformat_t convert_formats32[] =
 {
 {"%s.%s", "spr", ConvSPR, "tga" },	// quake1/half-life sprite
-{"%s.%s","spr32",ConvSPR, "dds" },	// spr32 sprite
-{"%s.%s", "sp2", ConvSPR, "dds" },	// quake2 sprite
-{"%s.%s", "bmp", ConvBMP, "dds" },	// 8-bit maps with alpha-cnahnel	
+{"%s.%s","spr32",ConvSPR, "tga" },	// spr32 sprite
+{"%s.%s", "sp2", ConvSPR, "tga" },	// quake2 sprite
+{"%s.%s", "bmp", ConvBMP, "tga" },	// 8-bit maps with alpha-cnahnel	
 {"%s.%s", "pcx", ConvPCX, "tga" },	// quake2 pics
 {"%s.%s", "flt", ConvFLT, "tga" },	// doom1 textures
 {"%s.%s", "flp", ConvFLP, "tga" },	// doom1 menu pics
@@ -47,7 +46,6 @@ convformat_t convert_formats32[] =
 {"%s.%s", "lmp", ConvLMP, "tga" },	// Quake1/Half-Life gfx
 {"%s.%s", "fnt", ConvFNT, "tga" },	// Quake1/Half-Life gfx
 {"%s.%s", "wal", ConvWAL, "tga" },	// Quake2 textures
-{"%s.%s", "vtf", ConvVTF, "dds" },	// Half-Life 2 materials
 {"%s.%s", "skn", ConvSKN, "tga" },	// doom1 sprite models
 {"%s.%s", "bsp", ConvBSP, "tga" },	// Quake1\Half-Life map textures
 {NULL, NULL, NULL, NULL }		// list terminator
@@ -150,7 +148,7 @@ void Conv_DetectGameType( void )
 void Conv_RunSearch( void )
 {
 	search_t	*search;
-	int	i, j, k, imageflags;
+	int	i, imageflags;
 
 
 	// set directory to extract
@@ -243,46 +241,6 @@ void Conv_RunSearch( void )
 			write_qscsript = true;
 		}
 		Image_Init( "Quake2", imageflags );
-		break;
-	case GAME_HALFLIFE2:
-	case GAME_HALFLIFE2_BETA:
-		search = FS_Search("materials/*", true );
-
-		// hl2 like using multiple included sub-dirs
-		for( i = 0; search && i < search->numfilenames; i++ )
-		{
-			search_t	*search2;
-			if( com.strstr( search->filenames[i], "/." )) continue;
-			if( com.strstr( search->filenames[i], "/.." )) continue;
-			if( com.stricmp(FS_FileExtension( search->filenames[i] ), "" ))
-				continue;
-			search2 = FS_Search( va("%s/*", search->filenames[i] ), true );
-			AddMask(va("%s/*.vtf", search->filenames[i]));
-			for( j = 0; search2 && j < search2->numfilenames; j++ )
-			{
-				search_t	*search3;
-				if( com.strstr( search2->filenames[j], "/." )) continue;
-				if( com.strstr( search2->filenames[j], "/.." )) continue;
-				if( com.stricmp(FS_FileExtension( search2->filenames[j] ), "" ))
-					continue;
-				search3 = FS_Search( va("%s/*", search2->filenames[j] ), true );
-				AddMask(va("%s/*.vtf", search2->filenames[j]));
-				for( k = 0; search3 && k < search3->numfilenames; k++ )
-				{
-					if( com.strstr( search3->filenames[k], "/." )) continue;
-					if( com.strstr( search3->filenames[k], "/.." )) continue;
-					if( com.stricmp(FS_FileExtension( search3->filenames[k] ), "" ))
-						continue;
-					AddMask(va("%s/*.vtf", search3->filenames[k]));
-				}
-				if( search3 ) Mem_Free( search3 );
-			}
-			if( search2 ) Mem_Free( search2 );
-		}
-		if( search ) Mem_Free( search );
-		else AddMask( "*.vtf" );	// Quake3 textures
-		imageflags |= IL_DDS_HARDWARE; // because we want save textures into original DXT format
-		Image_Init( "Half-Life 2", imageflags );
 		break;
 	case GAME_HALFLIFE:
 		search = FS_Search( "*.wad", true );

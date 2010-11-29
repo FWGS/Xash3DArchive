@@ -33,7 +33,6 @@ qboolean Com_ValidScript( const char *token, qctype_t script_type );
 qboolean CompileStudioModel( byte *mempool, const char *name, byte parms );
 qboolean CompileSpriteModel( byte *mempool, const char *name, byte parms );
 qboolean CompileWad3Archive( byte *mempool, const char *name, byte parms );
-qboolean ConvertImages( byte *mempool, const char *name, byte parms );
 qboolean PrepareBSPModel( int argc, char **argv );
 qboolean CompileBSPModel( void );
 

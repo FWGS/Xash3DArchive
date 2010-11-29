@@ -164,10 +164,6 @@ SOURCE=.\imagelib\img_bmp.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\imagelib\img_dds.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\imagelib\img_jpg.c
 # End Source File
 # Begin Source File
@@ -185,10 +181,6 @@ SOURCE=.\imagelib\img_tga.c
 # Begin Source File
 
 SOURCE=.\imagelib\img_utils.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\imagelib\img_vtf.c
 # End Source File
 # Begin Source File
 
@@ -261,10 +253,6 @@ SOURCE=.\utils.c
 # Begin Source File
 
 SOURCE=.\tools\wadlib.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\ximage.c
 # End Source File
 # End Group
 # Begin Group "Header Files"

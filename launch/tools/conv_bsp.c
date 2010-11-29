@@ -332,19 +332,6 @@ qboolean Conv_CheckMap( const char *mapname )
 			return true;
 		}
 		break;
-	case VDBSPMODHEADER: // continue checking
-		switch( hdr.version )
-		{
-		case 18:
-			game_family = GAME_HALFLIFE2_BETA;
-			FS_Close( f );
-			return true;
-		case 19:
-		case 20:
-			game_family = GAME_HALFLIFE2;
-			FS_Close( f );
-			return true;
-		}
 	}
 
 	game_family = GAME_GENERIC;

@@ -18,7 +18,6 @@
 // "studio"	- launch the studiomdl
 // "wadlib"	- launch the xwad
 // "ripper"	- launch the extragen
-// "ximage"	- launch the image convertor
 //
 
 #define GAME_PATH	"$valve"	// '$' indicates a start of basefolder name

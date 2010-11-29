@@ -41,9 +41,6 @@ qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	palette = (byte *)buffer + filesize - 768;
 
-	image.depth = 1;
-	image.num_mips = 1;
-
 	s = image.width * image.height;
 	pbuf = (byte *)Mem_Alloc( Sys.imagepool, s );
 	enddata = palette;
@@ -82,8 +79,9 @@ qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize )
 			break;
 		}
 	}
+
 	image.type = PF_INDEXED_32; // 32 bit palette
-          result = FS_AddMipmapToPack( pbuf, image.width, image.height );
+          result = Image_AddIndexedImageToPack( pbuf, image.width, image.height );
 	Mem_Free( pbuf ); // free compressed image
 
 	return result;

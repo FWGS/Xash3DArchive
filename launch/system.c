@@ -298,7 +298,6 @@ NOTE: at this day we have ten instances
 6. "studio" - Half-Life style models creator (requires qc. script) 
 7. "wadlib" - wad-file maker
 8. "ripper" - resource EXTRActor GENeric
-9. "ximage" - ImageLib Processng
 ==================
 */
 void Sys_LookupInstance( void )
@@ -415,14 +414,6 @@ void Sys_LookupInstance( void )
 		com.sprintf( Sys.log_path, "%s/decompile.log", sys_rootdir ); // default
 		com.strcpy( Sys.caption, va("Quake Recource Extractor ver.%g", XASH_VERSION ));
 	}
-	else if( !com.strcmp( Sys.progname, "ximage" ))
-	{
-		Sys.app_name = HOST_XIMAGE;
-		Sys.con_readonly = true;
-		Sys.linked_dll = NULL; // no need to loading library
-		com.sprintf( Sys.log_path, "%s/image.log", sys_rootdir ); // logs folder
-		com.strcpy( Sys.caption, "Image Processing Tool" );
-	}
 
 	// share instance over all system
 	SI.instance = Sys.app_name;
@@ -456,7 +447,6 @@ void Sys_CreateInstance( void )
 		Sys.CmdFwd = Host->CmdForward;
 		Sys.CmdAuto = Host->CmdComplete;
 		break;
-	case HOST_XIMAGE:		
 	case HOST_BSPLIB:
 	case HOST_SPRITE:
 	case HOST_STUDIO:
@@ -491,7 +481,6 @@ void Sys_CreateInstance( void )
 		// if stuffcmds wasn't run, then init.rc is probably missing, use default
 		if( !Sys.stuffcmdsrun ) Cbuf_ExecuteText( EXEC_NOW, "stuffcmds\n" );
 		break;
-	case HOST_XIMAGE:
 	case HOST_BSPLIB:
 	case HOST_SPRITE:
 	case HOST_STUDIO:

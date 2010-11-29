@@ -41,8 +41,6 @@ qboolean Image_LoadTGA( const char *name, const byte *buffer, size_t filesize )
 	// check for tga file
 	if(!Image_ValidSize( name )) return false;
 
-	image.depth = 1;
-	image.num_mips = 1;
 	image.type = PF_RGBA_32; // always exctracted to 32-bit buffer
 
 	if( targa_header.image_type == 1 || targa_header.image_type == 9 )

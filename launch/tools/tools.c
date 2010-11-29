@@ -109,25 +109,6 @@ void Init_Tools( const int argc, const char **argv )
 		start = Sys_DoubleTime();
 		PrepareBSPModel( (int)argc, (char **)argv );
 		break;
-	case HOST_XIMAGE:
-		imageflags |= (IL_USE_LERPING|IL_ALLOW_OVERWRITE|IL_IGNORE_MIPS);
-		com_argv = (char **)argv;
-		if( !FS_GetParmFromCmdLine( "-to", gs_filename, sizeof( gs_filename )))
-		{
-			gs_filename[0] = '\0'; // will be set later
-		}
-		else
-		{
-			// if output an 8-bit formats so keep 8-bit textures with palette
-			if( !com.stricmp( gs_filename, "pcx" ) || !com.stricmp( gs_filename, "bmp" ))
-				imageflags |= IL_KEEP_8BIT;
-		}
-		Image_Setup( NULL, imageflags );
-		FS_InitRootDir(".");
-
-		start = Sys_DoubleTime();
-		Msg( "\n\n" ); // tabulation
-		break;
 	case HOST_SPRITE:
 	case HOST_STUDIO:
 	case HOST_WADLIB:
@@ -176,9 +157,6 @@ void Tools_Main( void )
 		CompileMod = CompileWad3Archive;
 		AddMask( "*.qc" );
 		break;
-	case HOST_XIMAGE:
-		CompileMod = ConvertImages;
-		break;
 	case HOST_RIPPER:
 		CompileMod = ConvertResource;
 		Conv_RunSearch();
@@ -193,14 +171,6 @@ void Tools_Main( void )
 	{
 		ClrMask(); // clear all previous masks
 		AddMask( gs_searchmask ); // custom mask
-
-		if( Sys.app_name == HOST_XIMAGE && !gs_filename[0] )
-		{
-			const char	*ext = FS_FileExtension( gs_searchmask );
-                              
-			if( !com.strcmp( ext, "" ) || !com.strcmp( ext, "*" )); // blend mode
-			else com.strncpy( gs_filename, ext, sizeof( gs_filename ));
-		}
 	}
 
 	Msg( "Converting ...\n\n" );

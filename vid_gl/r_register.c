@@ -989,7 +989,6 @@ void GL_InitExtensions( void )
 	// software mipmap generator does wrong result with NPOT textures ...
 	if( !GL_Support( R_SGIS_MIPMAPS_EXT )) GL_SetExtension( R_ARB_TEXTURE_NPOT_EXT, false );
 
-	if( GL_Support( R_TEXTURE_COMPRESSION_EXT )) flags |= IL_DDS_HARDWARE;
 	flags |= IL_USE_LERPING|IL_ALLOW_OVERWRITE;
 
 	Image_Init( NULL, flags );

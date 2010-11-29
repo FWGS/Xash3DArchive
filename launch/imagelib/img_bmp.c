@@ -15,7 +15,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	byte	*buf_p, *pixbuf;
 	byte	palette[256][4];
 	int	i, columns, column, rows, row, bpp = 1;
-	int	cbPalBytes = 0, padSize = 0;
+	int	cbPalBytes = 0, padSize = 0, bps = 0;
 	bmp_t	bhdr;
 
 	if( filesize < sizeof( bhdr )) return false; 
@@ -112,7 +112,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	buf_p += cbPalBytes;
 	image.size = image.width * image.height * bpp;
 	image.rgba = Mem_Alloc( Sys.imagepool, image.size );
-	image.bps = image.width * (bhdr.bitsPerPixel >> 3);
+	bps = image.width * (bhdr.bitsPerPixel >> 3);
 
 	switch( bhdr.bitsPerPixel )
 	{
@@ -127,7 +127,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		break;
 	case 8:
 	case 24:
-		padSize = ( 4 - ( image.bps % 4 )) % 4;
+		padSize = ( 4 - ( bps % 4 )) % 4;
 		break;
 	}
 
@@ -229,7 +229,6 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		buf_p += padSize;	// actual only for 4-bit bmps
 	}
 
-	image.depth = image.num_mips = 1;
 	if( image.palette ) Image_GetPaletteBMP( image.palette );
 
 	return true;

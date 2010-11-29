@@ -21,15 +21,23 @@ convar_t	*gl_extensions;
 convar_t	*gl_colorbits;
 convar_t	*gl_depthbits;
 convar_t	*gl_stencilbits;
+convar_t	*gl_texturebits;
 convar_t	*gl_ignorehwgamma;
 convar_t	*gl_texture_anisotropy;
+convar_t	*gl_compress_textures;
 convar_t	*gl_texture_lodbias;
+convar_t	*gl_showtextures;
 convar_t	*gl_swapInterval;
 convar_t	*gl_check_errors;
 convar_t	*gl_texturemode;
 convar_t	*gl_round_down;
 convar_t	*gl_picmip;
+convar_t	*gl_skymip;
 convar_t	*gl_nobind;
+convar_t	*gl_finish;
+convar_t	*gl_delayfinish;
+convar_t	*gl_frontbuffer;
+convar_t	*gl_clear;
 
 convar_t	*r_width;
 convar_t	*r_height;
@@ -899,7 +907,7 @@ qboolean GL_SetPixelformat( void )
 	return true;
 }
 
-void R_RestoreGamma( void )
+void VID_RestoreGamma( void )
 {
 	if( !glw_state.hDC ) return;
 	SetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
@@ -907,7 +915,7 @@ void R_RestoreGamma( void )
 
 void R_Free_OpenGL( void )
 {
-	R_RestoreGamma ();
+	VID_RestoreGamma ();
 
 	if( pwglMakeCurrent )
 		pwglMakeCurrent( NULL, NULL );
@@ -1298,7 +1306,7 @@ void R_RenderInfo_f( void )
 	if( GL_Support( GL_ARB_MULTITEXTURE ))
 		Msg( "GL_MAX_TEXTURE_UNITS_ARB: %i\n", glConfig.max_texture_units );
 	if( GL_Support( GL_TEXTURECUBEMAP_EXT ))
-		Msg( "GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB: %i\n", glConfig.max_cubemap_texture_size );
+		Msg( "GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB: %i\n", glConfig.max_cubemap_size );
 	if( GL_Support( GL_ANISOTROPY_EXT ))
 		Msg( "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT: %.1f\n", glConfig.max_texture_anisotropy );
 	if( glConfig.texRectangle )
@@ -1309,6 +1317,7 @@ void R_RenderInfo_f( void )
 	Msg( "GAMMA: %s\n", (glConfig.deviceSupportsGamma) ? "hardware" : "software" );
 	Msg( "\n" );
 	Msg( "PICMIP: %i\n", gl_picmip->integer );
+	Msg( "SKYMIP: %i\n", gl_skymip->integer );
 	Msg( "TEXTUREMODE: %s\n", gl_texturemode->string );
 	Msg( "VERTICAL SYNC: %s\n", gl_swapInterval->integer ? "enabled" : "disabled" );
 }
@@ -1325,11 +1334,13 @@ void GL_InitCommands( void )
 	r_height = Cvar_Get( "height", "480", CVAR_READ_ONLY, "screen height" );
 
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
+	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
 	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "ignore hardware gamma (e.g. not support)" );
 	gl_allow_software = Cvar_Get( "gl_allow_software", "0", CVAR_ARCHIVE, "allow OpenGL software emulation" );
 	gl_colorbits = Cvar_Get( "gl_colorbits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "pixelformat color bits (0 - auto)" );
 	gl_depthbits = Cvar_Get( "gl_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "pixelformat depth bits (0 - auto)" );
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
+	gl_texturebits = Cvar_Get( "gl_texturebits", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "set texture upload format (0 - auto)" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
 	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "pixelformat stencil bits (0 - auto)" );
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", CVAR_ARCHIVE, "ignore video engine errors" );
@@ -1338,6 +1349,12 @@ void GL_InitCommands( void )
 	gl_texture_anisotropy = Cvar_Get( "r_anisotropy", "2.0", CVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_nobind = Cvar_Get( "gl_nobind", "0", 0, "replace all textures with '*notexture' (perfomance test)" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
+	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "compress textures to safe video memory" ); 
+	gl_showtextures = Cvar_Get( "gl_showtextures", "0", CVAR_CHEAT, "show all uploaded textures" );
+	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
+	gl_delayfinish = Cvar_Get( "gl_delayfinish", "1", CVAR_ARCHIVE, "make delay before call of glFinish" );
+	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
+	gl_frontbuffer = Cvar_Get( "r_frontbuffer", "0", 0, "use back or front buffer" );
 
 	// make sure r_swapinterval is checked after vid_restart
 	gl_swapInterval->modified = true;
@@ -1347,7 +1364,7 @@ void GL_InitCommands( void )
 	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "set in 1 to enable fullscreen mode" );
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "fullscreen refresh rate" );
 
-	Cmd_AddCommand( "r_info", R_RenderInfo_f, "display openGL supported extensions" );
+	Cmd_AddCommand( "r_info", R_RenderInfo_f, "display renderer info" );
 }
 
 void GL_RemoveCommands( void )
@@ -1410,7 +1427,7 @@ void GL_InitExtensions( void )
 	GL_CheckExtension( "GL_ARB_texture_cube_map", NULL, "gl_texture_cubemap", GL_TEXTURECUBEMAP_EXT );
 
 	if( GL_Support( GL_TEXTURECUBEMAP_EXT ))
-		pglGetIntegerv( GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &glConfig.max_cubemap_texture_size );
+		pglGetIntegerv( GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &glConfig.max_cubemap_size );
 
 	// point particles extension
 	GL_CheckExtension( "GL_EXT_point_parameters", pointparametersfunc, NULL, GL_EXT_POINTPARAMETERS );
@@ -1498,9 +1515,6 @@ void GL_InitExtensions( void )
 
 	flags |= IL_USE_LERPING|IL_ALLOW_OVERWRITE;
 
-	if( GL_Support( GL_TEXTURE_COMPRESSION_EXT ))
-		flags |= IL_DDS_HARDWARE;
-
 	Image_Init( NULL, flags );
 	glw_state.initialized = true;
 }
@@ -1526,6 +1540,7 @@ qboolean R_Init( void )
 
 	GL_InitExtensions();
 	GL_SetDefaults();
+	R_InitImages();
 	R_ClearScene();
 
 	GL_CheckForErrors();
@@ -1541,6 +1556,7 @@ R_Shutdown
 void R_Shutdown( void )
 {
 	GL_RemoveCommands();
+	R_ShutdownImages();
 
 	Mem_FreePool( &r_temppool );
 

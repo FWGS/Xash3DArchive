@@ -86,6 +86,7 @@
 
 float rsqrt( float number );
 float anglemod( const float a );
+int NearestPOW( int value, qboolean roundDown );
 float VectorNormalizeLength2( const vec3_t v, vec3_t out );
 void VectorVectors( vec3_t forward, vec3_t right, vec3_t up );
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up );

@@ -16,9 +16,5 @@ cd studio
 makefile.nmake
 
 cd ..
-cd ximage
-makefile.nmake
-
-cd ..
 cd xwad
 makefile.nmake

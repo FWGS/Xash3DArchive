@@ -61,15 +61,8 @@ static struct
 	int		width;
 	int		height;
 	int		bpp;
-	int		bpc;
-	int		bps;
-	int		SizeOfPlane;
-	int		SizeOfData;
 	int		SizeOfFile;
-	int		depth;
 	int		numSides;
-	int		MipCount;
-	int		BitsCount;
 	GLuint		glFormat;
 	GLuint		glType;
 	GLuint		glTarget;
@@ -583,23 +576,18 @@ static void R_TextureFormat( texture_t *tex, qboolean compress )
 	}
 }
 
-void R_RoundImageDimensions( int *width, int *height, int *depth, qboolean force )
+void R_RoundImageDimensions( int *width, int *height, qboolean force )
 {
-	int	scaledWidth, scaledHeight, scaledDepth;
-
-	if( *depth > 1 && !GL_Support( R_TEXTURE_3D_EXT ))
-		return; // nothing to resample
+	int	scaledWidth, scaledHeight;
 
 	scaledWidth = *width;
 	scaledHeight = *height;
-	scaledDepth = *depth;
 
 	if( force || !GL_Support( R_ARB_TEXTURE_NPOT_EXT ))
 	{
 		// find nearest power of two, rounding down if desired
 		scaledWidth = NearestPOW( scaledWidth, gl_round_down->integer );
 		scaledHeight = NearestPOW( scaledHeight, gl_round_down->integer );
-		scaledDepth = NearestPOW( scaledDepth, gl_round_down->integer );
 	}
 
 	if( image_desc.tflags & TF_SKYSIDE )
@@ -607,33 +595,15 @@ void R_RoundImageDimensions( int *width, int *height, int *depth, qboolean force
 		// let people sample down the sky textures for speed
 		scaledWidth >>= r_skymip->integer;
 		scaledHeight >>= r_skymip->integer;
-		scaledDepth >>= r_skymip->integer;
 	}
 	else if(!( image_desc.tflags & TF_NOPICMIP ))
 	{
 		// let people sample down the world textures for speed
 		scaledWidth >>= r_picmip->integer;
 		scaledHeight >>= r_picmip->integer;
-		scaledDepth >>= r_picmip->integer;
 	}
 
-	// clamp to hardware limits
-	if( *depth > 1 )
-	{
-		while( scaledWidth > glConfig.max_3d_texture_size || scaledHeight > glConfig.max_3d_texture_size || scaledDepth > glConfig.max_3d_texture_size )
-		{
-			scaledWidth >>= 1;
-			scaledHeight >>= 1;
-			scaledDepth >>= 1;
-		}
-
-		// FIXME: probably Xash supported 3d-reasmpling. we needs to testing it
-		if( *width != scaledWidth || *height != scaledHeight || *depth != scaledDepth )
-			Host_Error( "R_RoundImageDimensions: bad texture_3D dimensions (not a power of 2)\n" );
-		if( scaledWidth > glConfig.max_3d_texture_size || scaledHeight > glConfig.max_3d_texture_size || scaledDepth > glConfig.max_3d_texture_size )
-			Host_Error( "R_RoundImageDimensions: texture_3D is too large (resizing is not supported)\n" );
-	}
-	else if( image_desc.tflags & TF_CUBEMAP )
+	if( image_desc.tflags & TF_CUBEMAP )
 	{
 		while( scaledWidth > glConfig.max_cubemap_texture_size || scaledHeight > glConfig.max_cubemap_texture_size )
 		{
@@ -652,11 +622,9 @@ void R_RoundImageDimensions( int *width, int *height, int *depth, qboolean force
 
 	if( scaledWidth < 1 ) scaledWidth = 1;
 	if( scaledHeight < 1 ) scaledHeight = 1;
-	if( scaledDepth < 1 ) scaledDepth = 1;
 
 	*width = scaledWidth;
 	*height = scaledHeight;
-	*depth = scaledDepth;
 }
 
 /*
@@ -800,50 +768,31 @@ filled additional info
 */
 qboolean R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 {
-	int	w, h, d, i, s, BlockSize;
-	size_t	mipsize, totalsize = 0;
+	int	w, h, s;
+	size_t	totalsize = 0;
 
 	if( !pic ) return false; // pass images with NULL buffer (e.g. shadowmaps, portalmaps )
 	Mem_EmptyPool( r_imagepool ); // flush buffers		
 	Mem_Set( &image_desc, 0, sizeof( image_desc ));
 
-	BlockSize = PFDesc( pic->type )->block;
 	image_desc.bpp = PFDesc( pic->type )->bpp;
-	image_desc.bpc = PFDesc( pic->type )->bpc;
 	image_desc.glFormat = PFDesc( pic->type )->glFormat;
-	image_desc.glType = PFDesc( pic->type )->glType;
 	image_desc.format = pic->type;
 	image_desc.numSides = 1;
 
 	image_desc.texTarget = image_desc.glTarget = GL_TEXTURE_2D;
-	image_desc.depth = d = pic->depth;
 	image_desc.width = w = pic->width;
 	image_desc.height = h = pic->height;
 	image_desc.flags = pic->flags;
 	image_desc.tflags = tex_flags;
-
-	image_desc.bps = image_desc.width * image_desc.bpp * image_desc.bpc;
-	image_desc.SizeOfPlane = image_desc.bps * image_desc.height;
-	image_desc.SizeOfData = image_desc.SizeOfPlane * image_desc.depth;
 	image_desc.glSamples = R_GetSamples( image_desc.flags );
-	image_desc.BitsCount = pic->bitsCount;
 
 	// now correct buffer size
-	for( i = 0; i < pic->numMips; i++, totalsize += mipsize )
-	{
-		mipsize = R_GetImageSize( BlockSize, w, h, d, image_desc.bpp, image_desc.BitsCount / 8 );
-		w = (w+1)>>1, h = (h+1)>>1, d = (d+1)>>1;
-	}
+	totalsize = w * h * image_desc.bpp;
 
 	if( image_desc.tflags & TF_DEPTHMAP )
 	{
 		image_desc.glFormat = GL_DEPTH_COMPONENT;
-	}
-	else if( image_desc.depth > 1 )
-	{
-		if( GL_Support( R_TEXTURE_3D_EXT ))
-			image_desc.texTarget = image_desc.glTarget = GL_TEXTURE_3D;
-		else MsgDev( D_ERROR, "R_GetPixelFormat: GL_TEXTURE_3D isn't supported\n" );
 	}
 	else if( image_desc.tflags & TF_CUBEMAP )
 	{
@@ -867,15 +816,7 @@ qboolean R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 			image_desc.tflags &= ~TF_CUBEMAP;
 		}
 	}
-
-	if( image_desc.tflags & TF_NOMIPMAP )
-	{
-		// don't build mips for sky and hud pics
-		image_desc.MipCount = 1; // and ignore it to load
-	} 
-	else image_desc.MipCount = pic->numMips;
 		
-	if( image_desc.MipCount < 1 ) image_desc.MipCount = 1;
 	image_desc.pal = pic->palette;
 
 	// check for permanent images
@@ -885,8 +826,7 @@ qboolean R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 	// restore temp dimensions
 	w = image_desc.width;
 	h = image_desc.height;
-	d = image_desc.depth;
-	s = w * h * d;
+	s = w * h;
 
 	// apply texture type (R_ShowTextures uses it)
 	if( image_desc.tflags & TF_LIGHTMAP )
@@ -902,10 +842,10 @@ qboolean R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 	else image_desc.texType = TEX_GENERIC;
 
 	// calc immediate buffers
-	R_RoundImageDimensions( &w, &h, &d, false );
+	R_RoundImageDimensions( &w, &h, false );
 
-	image_desc.source = Mem_Alloc( r_imagepool, s * 4 );		// source buffer
-	image_desc.scaled = Mem_Alloc( r_imagepool, w * h * d * 4 );	// scaled buffer
+	image_desc.source = Mem_Alloc( r_imagepool, s * 4 );	// source buffer
+	image_desc.scaled = Mem_Alloc( r_imagepool, w * h * 4 );	// scaled buffer
 	totalsize *= image_desc.numSides;
 
 	if( totalsize != pic->size ) // sanity check
@@ -928,29 +868,17 @@ R_SetPixelFormat
 prepare image to upload in video memory
 ===============
 */
-void R_SetPixelFormat( int width, int height, int depth )
+void R_SetPixelFormat( int width, int height )
 {
-	int	BlockSize;
-	
-	BlockSize = PFDesc( image_desc.format )->block;
 	image_desc.bpp = PFDesc( image_desc.format )->bpp;
-	image_desc.bpc = PFDesc( image_desc.format )->bpc;
-	image_desc.glType = PFDesc( image_desc.format )->glType;
 
 	if( image_desc.tflags & TF_DEPTHMAP )
 		image_desc.glFormat = GL_DEPTH_COMPONENT;
 	else image_desc.glFormat = PFDesc( image_desc.format )->glFormat;
 	
-	image_desc.depth = depth;
 	image_desc.width = width;
 	image_desc.height = height;
-
-	image_desc.bps = image_desc.width * image_desc.bpp * image_desc.bpc;
-	image_desc.SizeOfPlane = image_desc.bps * image_desc.height;
-	image_desc.SizeOfData = image_desc.SizeOfPlane * image_desc.depth;
-
-	// NOTE: size of current miplevel or cubemap side, not total (filesize - sizeof(header))
-	image_desc.SizeOfFile = R_GetImageSize( BlockSize, width, height, depth, image_desc.bpp, image_desc.BitsCount / 8);
+	image_desc.SizeOfFile = width * height * image_desc.bpp;
 }
 
 rgbdata_t *R_ForceImageToRGBA( rgbdata_t *pic )
@@ -2780,7 +2708,7 @@ void GL_GenerateMipmaps( byte *buffer, texture_t *tex, int side )
 	int	mipWidth, mipHeight;
 
 	// not needs
-	if( tex->flags & TF_NOMIPMAP || image_desc.MipCount > 1 )
+	if( tex->flags & TF_NOMIPMAP )
 		return;
 
 	if( GL_Support( R_SGIS_MIPMAPS_EXT ))
@@ -2807,13 +2735,13 @@ void GL_GenerateMipmaps( byte *buffer, texture_t *tex, int side )
 	while( mipWidth > 1 || mipHeight > 1 )
 	{
 		// build the mipmap
-		R_BuildMipMap( buffer, mipWidth, mipHeight, (tex->flags & TF_NORMALMAP));
+		R_BuildMipMap( buffer, mipWidth, mipHeight, ( tex->flags & TF_NORMALMAP ));
 
 		mipWidth = (mipWidth+1)>>1;
 		mipHeight = (mipHeight+1)>>1;
 		mipLevel++;
 
-		pglTexImage2D( image_desc.texTarget + side, mipLevel, tex->format, mipWidth, mipHeight, 0, image_desc.glFormat, image_desc.glType, buffer );
+		pglTexImage2D( image_desc.texTarget + side, mipLevel, tex->format, mipWidth, mipHeight, 0, image_desc.glFormat, GL_UNSIGNED_BYTE, buffer );
 	}
 }
 
@@ -2891,32 +2819,21 @@ void GL_TexFilter( texture_t *tex )
 
 static void R_UploadTexture( rgbdata_t *pic, texture_t *tex )
 {
-	uint		mipsize = 0, offset = 0;
-	qboolean		dxtformat = true;
+	uint		i, offset = 0;
 	qboolean		compress;
-	int		i, j, w, h, d;
 	byte		*buf, *data;
 	const byte	*bufend;
 
 	tex->width = tex->srcWidth;
 	tex->height = tex->srcHeight;
-	R_RoundImageDimensions( &tex->width, &tex->height, &tex->depth, false );
+	R_RoundImageDimensions( &tex->width, &tex->height, false );
 
 	// check if it should be compressed
-	if( !gl_compress_textures->integer || (tex->flags & TF_UNCOMPRESSED))
+	if( !gl_compress_textures->integer || ( tex->flags & TF_UNCOMPRESSED ))
 		compress = false;
 	else compress = GL_Support( R_TEXTURE_COMPRESSION_EXT );
 
 	R_TextureFormat( tex, compress );
-
-	// also check for compressed textures
-	switch( pic->type )
-	{
-	case PF_DXT1: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT; break;
-	case PF_DXT3: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT; break;
-	case PF_DXT5: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
-	default: dxtformat = false; break;
-	}
 
 	pglGenTextures( 1, &tex->texnum );
 	GL_Bind( GL_TEXTURE0, tex );
@@ -2927,43 +2844,31 @@ static void R_UploadTexture( rgbdata_t *pic, texture_t *tex )
 	// uploading texture into video memory
 	for( offset = i = 0; i < image_desc.numSides; i++ )
 	{
-		R_SetPixelFormat( tex->width, tex->height, tex->depth );
-		w = image_desc.width, h = image_desc.height, d = image_desc.depth;
+		R_SetPixelFormat( tex->width, tex->height );
 		offset = image_desc.SizeOfFile; // member side offset
-
+		tex->size += offset;
+			
 		if( buf >= bufend ) Host_Error( "R_UploadTexture: %s image buffer overflow\n", tex->name );
 
-		for( mipsize = j = 0; j < image_desc.MipCount; j++ )
+		// copy or resample the texture
+		if( tex->width == tex->srcWidth && tex->height == tex->srcHeight )
 		{
-			R_SetPixelFormat( w, h, d );
-			mipsize = image_desc.SizeOfFile; // member mipsize offset
-			tex->size += mipsize;
-
-			// copy or resample the texture
-			if( tex->width == tex->srcWidth && tex->height == tex->srcHeight )
-			{
-				data = buf;
-			}
-			else
-			{
-				R_ResampleTexture( buf, tex->srcWidth, tex->srcHeight, tex->width, tex->height, (tex->flags & TF_NORMALMAP));
-				data = image_desc.scaled;
-			}
-			if( j == 0 && GL_Support( R_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, tex, i );
-			if( dxtformat ) pglCompressedTexImage2DARB( image_desc.texTarget + i, j, tex->format, w, h, 0, mipsize, data );
-			else
-			{
-				if( image_desc.depth == 1 )
-					pglTexImage2D( image_desc.texTarget + i, j, tex->format, tex->width, tex->height, 0, image_desc.glFormat, image_desc.glType, data );
-				else pglTexImage3D( image_desc.texTarget, j, tex->format, tex->width, tex->height, tex->depth, 0, image_desc.glFormat, image_desc.glType, data );
-				if( j == 0 && !GL_Support( R_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, tex, i );
-			}                              
-			w = (w+1)>>1, h = (h+1)>>1, d = (d+1)>>1; // calc size of next mip
-			if( image_desc.MipCount > 1 ) buf += mipsize;
-
-			R_CheckForErrors();
+			data = buf;
 		}
-		if( image_desc.numSides > 1 ) buf += offset;
+		else
+		{
+			R_ResampleTexture( buf, tex->srcWidth, tex->srcHeight, tex->width, tex->height, (tex->flags & TF_NORMALMAP));
+			data = image_desc.scaled;
+		}
+		
+		if( GL_Support( R_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, tex, i );
+		pglTexImage2D( image_desc.texTarget + i, 0, tex->format, tex->width, tex->height, 0, image_desc.glFormat, GL_UNSIGNED_BYTE, data );
+		if( !GL_Support( R_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, tex, i );
+
+		R_CheckForErrors();
+
+		if( image_desc.numSides > 1 )
+			buf += offset;
 	}
 }
 
@@ -3001,7 +2906,6 @@ texture_t *R_LoadTexture( const char *name, rgbdata_t *pic, int samples, texFlag
 	texture->srcWidth = pic->width;
 	texture->srcHeight = pic->height;
 	texture->srcFlags = pic->flags;
-	texture->depth = pic->depth;
 	texture->touchFrame = tr.registration_sequence;
 	if( samples <= 0 )
 		texture->samples = R_GetSamples( pic->flags );
@@ -3012,7 +2916,6 @@ texture_t *R_LoadTexture( const char *name, rgbdata_t *pic, int samples, texFlag
 	texture->flags = image_desc.tflags;
 	texture->target = image_desc.glTarget;
 	texture->texType = image_desc.texType;
-	texture->type = image_desc.format;
 
 	R_UploadTexture( pic, texture );
 	GL_TexFilter( texture ); // update texture filter, wrap etc
@@ -3171,8 +3074,6 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	r_shot->type = PF_RGB_24;
 	r_shot->size = r_shot->width * r_shot->height * PFDesc( r_shot->type )->bpp;
 	r_shot->palette = NULL;
-	r_shot->depth = 1;
-	r_shot->numMips = 1;
 	r_shot->buffer = Mem_Alloc( r_temppool, glState.width * glState.height * 3 );
 
 	// get screen frame
@@ -3257,7 +3158,6 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 		r_side->width = r_side->height = size;
 		r_side->type = PF_RGB_24;
 		r_side->size = r_side->width * r_side->height * 3;
-		r_side->depth = r_side->numMips = 1;
 		r_side->buffer = temp;
 
 		if( flags ) Image_Process( &r_side, 0, 0, flags );
@@ -3273,8 +3173,6 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	r_shot->type = PF_RGB_24;
 	r_shot->size = r_shot->width * r_shot->height * 3 * 6;
 	r_shot->palette = NULL;
-	r_shot->depth = 1;
-	r_shot->numMips = 1;
 	r_shot->buffer = buffer;
 
 	// make sure what we have right extension
@@ -3302,7 +3200,6 @@ static rgbdata_t *R_InitNoTexture( int *flags, int *samples )
 
 	// also use this for bad textures, but without alpha
 	r_image.width = r_image.height = 16;
-	r_image.numMips = r_image.depth = 1;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_GN;
@@ -3346,26 +3243,17 @@ R_InitDynamicLightTexture
 static rgbdata_t *R_InitDynamicLightTexture( int *flags, int *samples )
 {
 	vec3_t	v = { 0, 0, 0 };
-	int	x, y, z, size, size2, halfsize;
+	int	x, y, size, size2, halfsize;
 	float	intensity;
 
 	// dynamic light texture
-	if( GL_Support( R_TEXTURE_3D_EXT ))
-	{
-		r_image.depth = size = 32;
-	}
-	else
-	{
-		size = 128;
-		r_image.depth = 1;
-	}
+	size = 128;
 
 	r_image.width = r_image.height = size;
-	r_image.numMips =  1;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_GN;
-	r_image.size = r_image.width * r_image.height * r_image.depth * 4;
+	r_image.size = r_image.width * r_image.height * 4;
 
 	halfsize = size / 2;
 	intensity = halfsize * halfsize;
@@ -3374,57 +3262,27 @@ static rgbdata_t *R_InitDynamicLightTexture( int *flags, int *samples )
 	*flags = TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP|TF_UNCOMPRESSED;
 	*samples = 3;
 
-	if( GL_Support( R_TEXTURE_3D_EXT ))
-	{		
-		for( x = 0; x < r_image.width; x++ )
-		{
-			for( y = 0; y < r_image.height; y++ )
-			{
-				for( z = 0; z < r_image.depth; z++ )
-				{
-					float	dist, att;
-
-					v[0] = (float)x - halfsize;
-					v[1] = (float)y - halfsize;
-					v[2] = (float)z - halfsize;
-
-					dist = VectorLength( v );
-					if( dist > halfsize ) dist = halfsize;
-
-					if( x == 0 || y == 0 || z == 0 || x == size - 1 || y == size - 1 || z == size - 1 )
-						att = 0;
-					else att = (((dist * dist) / intensity) -1 ) * -255;
-
-					data2D[(x * size2 + y * size + z) * 4 + 0] = (byte)(att);
-					data2D[(x * size2 + y * size + z) * 4 + 1] = (byte)(att);
-					data2D[(x * size2 + y * size + z) * 4 + 2] = (byte)(att);
-				}
-			}
-		}
-	}
-	else
+	for( x = 0; x < size; x++ )
 	{
-		for( x = 0; x < size; x++ )
+		for( y = 0; y < size; y++ )
 		{
-			for( y = 0; y < size; y++ )
-			{
-				float	result;
+			float	result;
 
-				if( x == size - 1 || x == 0 || y == size - 1 || y == 0 )
-					result = 255;
-				else
-				{
-					float	xf = ((float)x - 64 ) / 64.0f;
-					float	yf = ((float)y - 64 ) / 64.0f;
-					result = ((xf * xf) + (yf * yf)) * 255;
-					if( result > 255 ) result = 255;
-				}
-				data2D[(x*size+y)*4+0] = (byte)255 - result;
-				data2D[(x*size+y)*4+1] = (byte)255 - result;
-				data2D[(x*size+y)*4+2] = (byte)255 - result;
+			if( x == size - 1 || x == 0 || y == size - 1 || y == 0 )
+				result = 255;
+			else
+			{
+				float	xf = ((float)x - 64 ) / 64.0f;
+				float	yf = ((float)y - 64 ) / 64.0f;
+				result = ((xf * xf) + (yf * yf)) * 255;
+				if( result > 255 ) result = 255;
 			}
+			data2D[(x*size+y)*4+0] = (byte)255 - result;
+			data2D[(x*size+y)*4+1] = (byte)255 - result;
+			data2D[(x*size+y)*4+2] = (byte)255 - result;
 		}
 	}
+
 	return &r_image;
 }
 
@@ -3491,7 +3349,6 @@ static rgbdata_t *R_InitNormalizeCubemap( int *flags, int *samples )
 	*samples = 3;
 
 	r_image.width = r_image.height = size;
-	r_image.numMips = r_image.depth = 1;
 	r_image.size = r_image.width * r_image.height * 4 * 6;
 	r_image.flags |= (IMAGE_CUBEMAP|IMAGE_HAS_COLOR); // yes it's cubemap
 	r_image.buffer = data2D;
@@ -3509,7 +3366,6 @@ static rgbdata_t *R_InitSolidColorTexture( int *flags, int *samples, int color )
 {
 	// solid color texture
 	r_image.width = r_image.height = 1;
-	r_image.numMips = r_image.depth = 1;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGB_24;
@@ -3534,7 +3390,6 @@ static rgbdata_t *R_InitParticleTexture( int *flags, int *samples )
 
 	// particle texture
 	r_image.width = r_image.height = 16;
-	r_image.numMips = r_image.depth = 1;
 	r_image.buffer = data2D;
 	r_image.flags = (IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA);
 	r_image.type = PF_RGBA_GN;
@@ -3613,7 +3468,6 @@ static rgbdata_t *R_InitSkyTexture( int *flags, int *samples )
 	*flags = TF_NOPICMIP|TF_UNCOMPRESSED;
 	*samples = 3;
 
-	r_image.numMips = r_image.depth = 1;
 	r_image.buffer = data2D;
 	r_image.width = r_image.height = 16;
 	r_image.size = r_image.width * r_image.height * 4;
@@ -3638,7 +3492,6 @@ static rgbdata_t *R_InitFogTexture( int *flags, int *samples )
 	// fog texture
 	r_image.width = FOG_TEXTURE_WIDTH;
 	r_image.height = FOG_TEXTURE_HEIGHT;
-	r_image.numMips = r_image.depth = 1;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_GN;
@@ -3671,7 +3524,6 @@ static rgbdata_t *R_InitCoronaTexture( int *flags, int *samples )
 
 	// light corona texture
 	r_image.width = r_image.height = 32;
-	r_image.numMips = r_image.depth = 1;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_GN;
@@ -3725,9 +3577,8 @@ static void R_InitScreenTexture( texture_t **ptr, const char *name, int id, int 
 
 			r_screen.width = width;
 			r_screen.height = height;
-                              r_screen.type = (samples == 1) ? PF_LUMINANCE : PF_RGB_24;
+                              r_screen.type = PF_RGB_24;
 			r_screen.buffer = data;
-			r_screen.depth = r_screen.numMips = 1;
 			r_screen.size = width * height * samples;
 			*ptr = R_LoadTexture( uploadName, &r_screen, samples, flags );
 			return;
@@ -3736,7 +3587,7 @@ static void R_InitScreenTexture( texture_t **ptr, const char *name, int id, int 
 		GL_Bind( 0, *ptr );
 		(*ptr)->width = width;
 		(*ptr)->height = height;
-		R_RoundImageDimensions(&((*ptr)->width), &((*ptr)->height), &((*ptr)->depth), true );
+		R_RoundImageDimensions(&((*ptr)->width), &((*ptr)->height), true );
 		pglTexImage2D( GL_TEXTURE_2D, 0, (*ptr)->format, (*ptr)->width, (*ptr)->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL );
 		GL_TexFilter( *ptr );
 	}
@@ -3771,7 +3622,6 @@ static rgbdata_t *R_InitCinematicTexture( int *flags, int *samples )
 {
 	// light corona texture
 	r_image.width = r_image.height = 256;
-	r_image.numMips = r_image.depth = 1;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_GN;

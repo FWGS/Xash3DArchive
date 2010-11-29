@@ -73,13 +73,13 @@ typedef enum
 	TF_CUBEMAP	= BIT(3),		// it's cubemap texture
 	TF_NORMALMAP	= BIT(4),		// needs to be merged with depthmap
 	TF_DEPTHMAP	= BIT(5),		// custom texture filter used
-	TF_INTENSITY	= BIT(5),
-	TF_ALPHA		= BIT(6),
-	TF_SKYSIDE	= BIT(7),
-	TF_CLAMP		= BIT(8),
-	TF_NOMIPMAP	= BIT(9),
-	TF_NEAREST	= BIT(10),	// disable texfilter
-	TF_LIGHTMAP	= BIT(11),	// no resample etc
+	TF_INTENSITY	= BIT(6),
+	TF_ALPHA		= BIT(7),
+	TF_SKYSIDE	= BIT(8),
+	TF_CLAMP		= BIT(9),
+	TF_NOMIPMAP	= BIT(10),
+	TF_NEAREST	= BIT(11),	// disable texfilter
+	TF_LIGHTMAP	= BIT(12),	// no resample etc
 } texFlags_t;
 
 #define TF_PORTALMAP		( TF_NOMIPMAP|TF_UNCOMPRESSED|TF_NOPICMIP|TF_CLAMP )
@@ -94,11 +94,9 @@ typedef struct texture_s
 
 	int		width;		// upload width\height
 	int		height;
-	int		depth;		// upload framecount or depth
 
 	texType_t		texType;		// just for debug
 	texFlags_t	flags;
-	pixformat_t	type;		// PFDesc[type].glType
 	size_t		size;		// upload size for debug targets
 
 	GLint		format;		// PFDesc[type].glType

@@ -74,36 +74,14 @@ static const cubepack_t load_cubemap[] =
 // soul of ImageLib - table of image format constants 
 const bpc_desc_t PFDesc[] =
 {
-{PF_UNKNOWN,	"raw",	0x1908,	0x1401, 0,  0,  0 },
-{PF_INDEXED_24,	"pal 24",	0x1908,	0x1401, 1,  1,  0 },
-{PF_INDEXED_32,	"pal 32",	0x1908,	0x1401, 1,  1,  0 },
-{PF_RGBA_32,	"RGBA 32",0x1908,	0x1401, 4,  1, -4 },
-{PF_BGRA_32,	"BGRA 32",0x80E1,	0x1401, 4,  1, -4 },
-{PF_ARGB_32,	"ARGB 32",0x1908,	0x8366, 4,  1, -4 },
-{PF_ABGR_64,	"ABGR 64",0x80E1,	0x1401, 4,  2, -8 },
-{PF_RGB_24,	"RGB 24",	0x1908,	0x1401, 3,  1, -3 },
-{PF_BGR_24,	"BGR 24",	0x80E0,	0x1401, 3,  1, -3 },
-{PF_RGB_16,	"RGB 16",	0x8054,	0x8364, 3,  2, 16 },
-{PF_DXT1,		"DXT1",	0x1908,	0x1401, 4,  1,  8 },
-{PF_DXT2,		"DXT2",	0x1908,	0x1401, 4,  1, 16 },
-{PF_DXT3,		"DXT3",	0x1908,	0x1401, 4,  1, 16 },
-{PF_DXT4,		"DXT4",	0x1908,	0x1401, 4,  1, 16 },
-{PF_DXT5,		"DXT5",	0x1908,	0x1401, 4,  1, 16 },
-{PF_RXGB,		"RXGB",	0x1908,	0x1401, 3,  1, 16 },
-{PF_ATI1N,	"ATI1N",	0x1908,	0x1401, 1,  1,  8 },
-{PF_ATI2N,	"3DC",	0x1908,	0x1401, 4,  1, 16 },
-{PF_LUMINANCE,	"LUM 8",	0x1909,	0x1401, 1,  1, -1 },
-{PF_LUMINANCE_16,	"LUM 16", 0x1909,	0x1401, 2,  2, -2 },
-{PF_LUMINANCE_ALPHA,"LUM A",	0x190A,	0x1401, 2,  1, -2 },
-{PF_UV_16,	"UV 16",	0x190A,	0x1401, 2,  1, -2 },
-{PF_UV_16,	"UV 16",	0x190A,	0x1401, 2,  1, -4 },
-{PF_R_16F,	"R 16f",	0x8884,	0x1406, 1,  4, -2 }, // UNDONE: these NV extension, reinstall for ATI
-{PF_R_32F,	"R 32f",	0x8885,	0x1406, 1,  4, -4 },
-{PF_GR_32F,	"GR 32f",	0x8886,	0x1406, 2,  4, -4 },
-{PF_GR_64F,	"GR 64f",	0x8887,	0x1406, 2,  4, -8 },
-{PF_ABGR_64F,	"ABGR64f",0x888A,	0x1406, 4,  2, -8 },
-{PF_ABGR_128F,	"ABGR128",0x888B,	0x1406, 4,  4, -16},
-{PF_RGBA_GN,	"system",	0x1908,	0x1401, 4,  1, -4 },
+{PF_UNKNOWN,	"raw",	0x1908, 0 },
+{PF_INDEXED_24,	"pal 24",	0x1908, 1 },
+{PF_INDEXED_32,	"pal 32",	0x1908, 1 },
+{PF_RGBA_32,	"RGBA 32",0x1908, 4 },
+{PF_BGRA_32,	"BGRA 32",0x80E1, 4 },
+{PF_RGB_24,	"RGB 24",	0x1908, 3 },
+{PF_BGR_24,	"BGR 24",	0x80E0, 3 },
+{PF_RGBA_GN,	"system",	0x1908, 4 },
 };
 
 bpc_desc_t *Image_GetPixelFormat( pixformat_t type )
@@ -117,13 +95,10 @@ void Image_Reset( void )
 	// reset global variables
 	image.width = image.height = 0;
 	image.source_width = image.source_height = 0;
-	image.bits_count = image.flags = 0;
-	image.num_sides = 0;
-	image.depth = 1;
+	image.num_sides = image.flags = 0;
 	image.source_type = 0;
-	image.num_mips = 0;
-	image.filter = CB_HINT_NO;
 	image.type = PF_UNKNOWN;
+	Vector4Set( image.fogParams, 0, 0, 0, 0 );
 
 	// pointers will be saved with prevoius picture struct
 	// don't care about it
@@ -164,9 +139,6 @@ rgbdata_t *ImagePack( void )
 		pack->size = image.size;
 	}
 
-	pack->depth = image.depth;
-	pack->numMips = image.num_mips;
-	pack->bitsCount = image.bits_count;
 	pack->flags = image.flags;
 	pack->palette = image.palette;
 
@@ -219,31 +191,6 @@ qboolean FS_AddSideToPack( const char *name, int adjust_flags )
 	return true;
 }
 
-qboolean FS_AddMipmapToPack( const byte *in, int width, int height )
-{
-	int mipsize = width * height;
-	int outsize = width * height;
-
-	// check for inconsistency
-	if( !image.source_type ) image.source_type = image.type;
-	// trying to add 8 bit mimpap into 32-bit mippack or somewhat...
-	if( image.source_type != image.type ) return false;
-	if(!( image.cmd_flags & IL_KEEP_8BIT )) outsize *= 4;
-	else Image_CopyPalette32bit(); 
-
-	// reallocate image buffer
-	image.rgba = Mem_Realloc( Sys.imagepool, image.rgba, image.size + outsize );	
-	if( image.cmd_flags & IL_KEEP_8BIT ) Mem_Copy( image.rgba + image.ptr, in, outsize );
-	else if( !Image_Copy8bitRGBA( in, image.rgba + image.ptr, mipsize ))
-		return false; // probably pallette not installed
-
-	image.size += outsize;
-	image.ptr += outsize;
-	image.num_mips++;
-
-	return true;
-}
-
 /*
 ================
 FS_LoadImage
@@ -255,7 +202,6 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 {
           const char	*ext = FS_FileExtension( filename );
 	string		path, loadname, sidename;
-	qboolean		dds_installed = false; // current loadformats list supported dds
 	qboolean		anyformat = true;
 	int		i, filesize = 0;
 	const loadpixformat_t *format;
@@ -289,7 +235,6 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	// now try all the formats in the selected list
 	for( format = image.loadformats; format && format->formatstring; format++)
 	{
-		if( !com.stricmp( format->ext, "dds" )) dds_installed = true;
 		if( anyformat || !com.stricmp( ext, format->ext ))
 		{
 			com.sprintf( path, format->formatstring, loadname, "", format->ext );
@@ -306,43 +251,6 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 			}
 		}
 	}
-
-	// special case for extract cubemap side from dds image
-	if( dds_installed && (anyformat || !com.stricmp( ext, "dds" )))
-	{
-		// first, check for cubemap suffixes
-		for( cmap = load_cubemap; cmap && cmap->type; cmap++ )
-		{
-			for( i = 0; i < 6; i++ )
-			{
-				int	suflen = com.strlen( cmap->type[i].suf );
-				char	*suffix = &loadname[com.strlen(loadname)-suflen];
-
-				// suffixes may have difference length, need fine check
-				if( !com.strnicmp( suffix, cmap->type[i].suf, suflen ))
-				{
-					com.strncpy( path, loadname, com.strlen( loadname ) - suflen + 1 );
-					FS_DefaultExtension( path, ".dds" );
-					image.filter = cmap->type[i].hint;	// install side hint
-					f = FS_LoadFile( path, &filesize );
-					if( f && filesize > 0 )
-					{
-						// this name will be used only for tell user about problems 
-						if( Image_LoadDDS( path, f, filesize ))
-						{         
-							Mem_Free(f);	// release buffer
-							return ImagePack();	// loaded
-						}
-						else
-						{
-							Mem_Free(f);	// release buffer
-							goto load_internal;	// cubemap test failed
-						}
-					}
-				}
-			}
-		}
-	} 
 
 	// check all cubemap sides with package suffix
 	for( cmap = load_cubemap; cmap && cmap->type; cmap++ )

@@ -26,9 +26,6 @@ typedef enum
 	GAME_QUAKE1,
 	GAME_QUAKE2,
 	GAME_HALFLIFE,
-	GAME_HALFLIFE2,
-	GAME_HALFLIFE2_BETA,
-	GAME_HEXEN2,
 } game_family_t;
 
 static const char *game_names[] =
@@ -38,9 +35,6 @@ static const char *game_names[] =
 	"Quake1",
 	"Quake2",
 	"Half-Life",
-	"Half-Life 2",
-	"Half-Life 2 Beta",
-	"Nexen 2",
 };
 
 //=====================================
@@ -55,9 +49,7 @@ qboolean ConvMIP( const char *name, byte *buffer, size_t filesize, const char *e
 qboolean ConvLMP( const char *name, byte *buffer, size_t filesize, const char *ext );// Quake1, Half-Life lump images
 qboolean ConvFNT( const char *name, byte *buffer, size_t filesize, const char *ext );// Half-Life system fonts
 qboolean ConvWAL( const char *name, byte *buffer, size_t filesize, const char *ext );// Quake2 textures
-qboolean ConvVTF( const char *name, byte *buffer, size_t filesize, const char *ext );// Quake2 textures
 qboolean ConvSKN( const char *name, byte *buffer, size_t filesize, const char *ext );// Doom1 sprite models
 qboolean ConvBSP( const char *name, byte *buffer, size_t filesize, const char *ext );// Extract textures from bsp
-qboolean ConvMID( const char *name, byte *buffer, size_t filesize, const char *ext );// Doom1 music files (midi)
 
 #endif//BASECONVERTOR_H

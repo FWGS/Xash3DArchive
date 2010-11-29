@@ -46,7 +46,6 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 
 	image.rgba = NULL;	// only palette, not real image
 	image.size = 1024;	// expanded palette
-	image.num_mips = image.depth = 0;
 	image.width = image.height = 0;
 	
 	return true;
@@ -111,10 +110,9 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	image.depth = 1;
 	image.type = PF_INDEXED_32;	// 32-bit palette
 
-	return FS_AddMipmapToPack( fin, image.width, image.height );
+	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
 
 /*
@@ -183,10 +181,9 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 		return false; // unknown or unsupported mode rejected
 	} 
 
-	image.depth = 1;
 	image.type = PF_INDEXED_32;	// 32-bit palete
 
-	return FS_AddMipmapToPack( fin, image.width, image.height );
+	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
 
 /*
@@ -224,14 +221,13 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 
 	// sorry, can't validate palette rendermode
 	if(!Image_LumpValidSize( name )) return false;
-	image.depth = 1;
 	image.type = PF_INDEXED_32;	// 32-bit palete
 
 	// detect alpha-channel by palette type
 	if( image.d_rendermode == LUMP_DECAL || image.d_rendermode == LUMP_TRANSPARENT )
 		image.flags |= IMAGE_HAS_ALPHA;
 
-	return FS_AddMipmapToPack( (byte *)(pin + 1), image.width, image.height );
+	return Image_AddIndexedImageToPack( (byte *)(pin + 1), image.width, image.height );
 }
 
 /*
@@ -273,7 +269,6 @@ qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	image.depth = 1;
 	image.type = PF_INDEXED_32;	// 32-bit palete
 	fin = buffer + ofs[0];
 
@@ -288,7 +283,7 @@ qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	Image_GetPaletteQ2(); // hardcoded
-	return FS_AddMipmapToPack( fin, image.width, image.height );
+	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
 
 /*
@@ -325,7 +320,6 @@ qboolean Image_LoadFLT( const char *name, const byte *buffer, size_t filesize )
 
 	Data = (byte *)Mem_Alloc( Sys.imagepool, image.width * image.height );
 	Mem_Set( Data, 247, image.width * image.height ); // set default transparency
-	image.depth = 1;
 
 	for( column_loop = 0; column_loop < image.width; column_loop++ )
 	{
@@ -370,7 +364,7 @@ qboolean Image_LoadFLT( const char *name, const byte *buffer, size_t filesize )
 	image.type = PF_INDEXED_32;	// 32-bit palete
 	Image_GetPaletteD1();
 
-	result = FS_AddMipmapToPack( Data, image.width, image.height );
+	result = Image_AddIndexedImageToPack( Data, image.width, image.height );
 	if( Data ) Mem_Free( Data );
 	return result;
 img_trunc:
@@ -431,8 +425,6 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	if( !Image_ValidSize( name ))
 		return false;         
 
-	image.depth = 1;
-
 	if( image.hint != IL_HINT_Q1 && filesize > (int)sizeof(lmp) + pixels )
 	{
 		int	numcolors;
@@ -448,7 +440,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 
 	Image_GetPaletteLMP( pal, rendermode );
 	image.type = PF_INDEXED_32;	// 32-bit palete
-	return FS_AddMipmapToPack( fin, image.width, image.height );
+	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
 
 /*
@@ -478,7 +470,6 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 
 	Mem_Copy( ofs, mip.offsets, sizeof( ofs ));
 	pixels = image.width * image.height;
-	image.depth = 1;
 
 	if( image.hint != IL_HINT_Q1 && filesize >= (int)sizeof(mip) + ((pixels * 85)>>6) + sizeof(short) + 768)
 	{
@@ -581,5 +572,5 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 
 	Image_GetPaletteLMP( pal, rendermode );
 	image.type = PF_INDEXED_32;	// 32-bit palete
-	return FS_AddMipmapToPack( fin, image.width, image.height );
+	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
