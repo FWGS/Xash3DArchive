@@ -16,6 +16,12 @@
 #define SUBDIVIDE_SIZE	64
 //#define	SUBDIVIDE_SIZE	1024
 
+byte *Mod_GetCurrentVis( void )
+{
+//	return Mod_LeafPVS( r_viewleaf, r_worldmodel );
+	return NULL;
+}
+
 static void BoundPoly( int numverts, float *verts, vec3_t mins, vec3_t maxs )
 {
 	int	i, j;

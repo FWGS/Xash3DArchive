@@ -22,7 +22,7 @@
 #define MAX_DEMOS		32
 #define MAX_MOVIES		8
 #define MAX_CDTRACKS	32
-#define MAX_IMAGES		256	// HSPRITE pics
+#define MAX_IMAGES		256	// SpriteTextures
 
 #define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, cl_entity_t, area )
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
@@ -123,8 +123,8 @@ typedef struct
 	char		event_precache[MAX_EVENTS][CS_SIZE];
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 
-	sound_t		sound_index[MAX_SOUNDS];
-	shader_t		decal_index[MAX_DECALS];
+	int		sound_index[MAX_SOUNDS];
+	int		decal_index[MAX_DECALS];
 
 	model_t		*worldmodel;			// pointer to world
 } client_t;
@@ -200,17 +200,15 @@ typedef struct
 
 typedef struct
 {
-	shader_t		hFontTexture;		// handle to texture shader
+	int		hFontTexture;		// handle to texture
 	wrect_t		fontRc[256];		// rectangles
 	qboolean		valid;			// rectangles are valid
 } cl_font_t;
 
 typedef struct
 {
-	model_t		images[MAX_IMAGES];		// conatin handle to spriteshader etc
-
 	// temp handle
-	shader_t		hSprite;
+	const model_t	*pSprite;			// pointer to current SpriteTexture
 
 	// scissor test
 	int		scissor_x;
@@ -223,11 +221,26 @@ typedef struct
 	rgba_t		textColor;
 
 	// crosshair members
-	shader_t		hCrosshair;
+	const model_t	*pCrosshair;
 	wrect_t		rcCrosshair;
 	rgba_t		rgbaCrosshair;
 	byte		gammaTable[256];
-} draw_stuff_t;
+} client_draw_t;
+
+typedef struct
+{
+	int		gl_texturenum;		// this is a real texnum
+
+	// scissor test
+	int		scissor_x;
+	int		scissor_y;
+	int		scissor_width;
+	int		scissor_height;
+	qboolean		scissor_test;
+
+	// holds text color
+	rgba_t		textColor;
+} gameui_draw_t;
 
 typedef struct
 {
@@ -325,7 +338,9 @@ typedef struct
 
 	string		cdtracks[MAX_CDTRACKS];	// 32 cd-tracks read from cdaudio.txt
 
-	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
+	model_t		sprites[MAX_IMAGES];	// client spritetextures
+
+	client_draw_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	screenfade_t	fade;			// screen fade
 	screen_shake_t	shake;			// screen shake
 	center_print_t	centerPrint;		// centerprint variables
@@ -346,7 +361,7 @@ typedef struct
 
 	cl_entity_t	playermodel;		// uiPlayerSetup drawing model
 
-	draw_stuff_t	ds;			// draw2d stuff (hud, weaponmenu etc)
+	gameui_draw_t	ds;			// draw2d stuff (menu images)
 	GAMEINFO		gameInfo;			// current gameInfo
 	GAMEINFO		*modsInfo[MAX_MODS];	// simplified gameInfo for MainUI
 
@@ -384,13 +399,13 @@ typedef struct
 	float		nextcmdtime;		// when can we send the next command packet?                
 	int		lastoutgoingcommand;	// sequence number of last outgoing command
 
-	// internal shaders
-	shader_t		fillShader;		// used for emulate FillRGBA to avoid wrong draw-sort
-	shader_t		particleShader;		// built-in particle and sparks shader
-	shader_t		pauseIcon;		// draw 'paused' when game in-pause
-	shader_t		loadingBar;		// 'loading' progress bar
-	shader_t		glowShell;		// for renderFxGlowShell
-	HSPRITE		hChromeSprite;		// this is a really HudSprite handle, not shader_t!
+	// internal images
+	int		fillImage;		// used for emulate FillRGBA to avoid wrong draw-sort
+	int		particleImage;		// built-in particle and sparks image
+	int		pauseIcon;		// draw 'paused' when game in-pause
+	int		loadingBar;		// 'loading' progress bar
+	int		glowShell;		// for renderFxGlowShell
+	HSPRITE		hChromeSprite;		// this is a really HudSprite handle, not texnum!
 	cl_font_t		creditsFont;		// shared creditsfont
 
 	int		num_client_entities;	// cl.maxclients * CL_UPDATE_BACKUP * MAX_PACKET_ENTITIES
@@ -434,7 +449,6 @@ extern client_t		cl;
 extern client_static_t	cls;
 extern clgame_static_t	clgame;
 extern menu_static_t	menu;
-extern render_exp_t		*re;
 
 #ifdef __cplusplus
 }
@@ -612,7 +626,6 @@ int CL_AddEntity( int entityType, cl_entity_t *pEnt );
 void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
-void CL_LightForPoint( const vec3_t point, vec3_t ambientLight );
 void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
 void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
@@ -690,6 +703,11 @@ qboolean UI_CreditsActive( void );
 void UI_CharEvent( int key );
 qboolean UI_MouseInRect( void );
 qboolean UI_IsVisible( void );
+void pfnPIC_Set( HIMAGE hPic, int r, int g, int b, int a );
+void pfnPIC_Draw( int x, int y, int width, int height, const wrect_t *prc );
+void pfnPIC_DrawTrans( int x, int y, int width, int height, const wrect_t *prc );
+void pfnPIC_DrawHoles( int x, int y, int width, int height, const wrect_t *prc );
+void pfnPIC_DrawAdditive( int x, int y, int width, int height, const wrect_t *prc );
 
 //
 // cl_video.c

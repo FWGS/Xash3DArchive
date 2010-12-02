@@ -7,8 +7,37 @@
 #include "client.h"
 #include "gl_local.h"
 
+char		r_speeds_msg[MAX_SYSPATH];
 ref_params_t	r_lastRefdef;
 ref_instance_t	RI;
+
+/*
+===============
+R_SpeedsMessage
+===============
+*/
+qboolean R_SpeedsMessage( char *out, size_t size )
+{
+	if( r_speeds->integer <= 0 ) return false;
+	if( !out || !size ) return false;
+
+	com.strncpy( out, r_speeds_msg, size );
+	return true;
+}
+
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs )
+{
+	return false;
+}
+
+qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
+{
+	return false;
+}
+
+void R_ScreenToWorld( const vec3_t screen, vec3_t point )
+{
+}
 
 /*
 ===============
@@ -17,6 +46,16 @@ R_ClearScene
 */
 void R_ClearScene( void )
 {
+}
+
+/*
+===============
+R_AddEntity
+===============
+*/
+qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType, int customTexture )
+{
+	return false;
 }
 
 /*

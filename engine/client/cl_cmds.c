@@ -185,7 +185,7 @@ void CL_ScreenShot_f( void )
 	}
 
 	Con_ClearNotify();
-	re->ScrShot( checkname, VID_SCREENSHOT );
+	VID_ScreenShot( checkname, VID_SCREENSHOT );
 }
 
 void CL_EnvShot_f( void )
@@ -310,7 +310,8 @@ void CL_SetSky_f( void )
 		Msg( "Usage: skyname <shadername>\n" );
 		return;
 	}
-	re->RegisterShader( Cmd_Argv(1), SHADER_SKY );
+
+	R_SetupSky( Cmd_Argv( 1 ));
 }
 
 /*
@@ -334,13 +335,13 @@ void SCR_TimeRefresh_f( void )
 	if( Cmd_Argc() == 2 )
 	{	
 		// run without page flipping
-		re->BeginFrame( false );
+		R_BeginFrame( false );
 		for( i = 0; i < 128; i++ )
 		{
 			cl.refdef.viewangles[1] = i / 128.0 * 360.0f;
-			re->RenderFrame( &cl.refdef, true );
+			R_RenderFrame( &cl.refdef, true );
 		}
-		re->EndFrame();
+		R_EndFrame();
 	}
 	else
 	{
@@ -348,9 +349,9 @@ void SCR_TimeRefresh_f( void )
 		{
 			cl.refdef.viewangles[1] = i / 128.0 * 360.0f;
 
-			re->BeginFrame( true );
-			re->RenderFrame( &cl.refdef, true );
-			re->EndFrame();
+			R_BeginFrame( true );
+			R_RenderFrame( &cl.refdef, true );
+			R_EndFrame();
 		}
 	}
 

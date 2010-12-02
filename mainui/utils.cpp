@@ -1621,8 +1621,8 @@ void UI_Action_Init( menuAction_s *a )
 		if( a->background )
 		{
 			HIMAGE handle = PIC_Load( a->background );
-			a->generic.width = PIC_Width( handle, 0 );
-			a->generic.height = PIC_Height( handle, 0 );
+			a->generic.width = PIC_Width( handle );
+			a->generic.height = PIC_Height( handle );
 		}
 		else
 		{

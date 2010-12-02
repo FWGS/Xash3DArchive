@@ -400,7 +400,7 @@ void CL_ParseMovevars( sizebuf_t *msg )
 
 	// update sky if changed
 	if( com.strcmp( clgame.oldmovevars.skyName, clgame.movevars.skyName ) && cl.video_prepped )
-		re->RegisterShader( clgame.movevars.skyName, SHADER_SKY );
+		R_SetupSky( clgame.movevars.skyName );
 
 	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
 	clgame.entities->curstate.scale = clgame.movevars.waveHeight;
@@ -491,7 +491,7 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	flags = BF_ReadByte( msg );
 
 	if( !cl.decal_index[decalIndex] )
-		cl.decal_index[decalIndex] = re->RegisterShader( host.draw_decals[decalIndex], SHADER_DECAL );
+		cl.decal_index[decalIndex] = GL_LoadTexture( host.draw_decals[decalIndex], NULL, 0, TF_DECAL );
 
 	CL_DecalShoot( cl.decal_index[decalIndex], entityIndex, modelIndex, origin, flags );
 }
@@ -862,7 +862,6 @@ void CL_PrecacheModel( sizebuf_t *msg )
 	// when we loading map all resources is precached sequentially
 	if( !cl.video_prepped ) return;
 
-	re->RegisterModel( cl.model_precache[modelIndex], modelIndex );
 	CM_RegisterModel( cl.model_precache[modelIndex], modelIndex );
 }
 

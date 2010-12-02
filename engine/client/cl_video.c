@@ -170,7 +170,7 @@ qboolean SCR_DrawCinematic( void )
 	qboolean		redraw = false;
 	byte		*frame = NULL;
 
-	if( !re || cin_time <= 0.0f )
+	if( cin_time <= 0.0f )
 		return false;
 
 	if( cin_frame != last_frame )
@@ -180,7 +180,7 @@ qboolean SCR_DrawCinematic( void )
 		redraw = true;
 	}
 
-	re->DrawStretchRaw( 0, 0, scr_width->integer, scr_height->integer, xres, yres, frame, redraw );
+	R_DrawStretchRaw( 0, 0, scr_width->integer, scr_height->integer, xres, yres, frame, redraw );
 
 	return true;
 }

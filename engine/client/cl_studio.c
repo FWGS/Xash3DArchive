@@ -98,9 +98,9 @@ pfnGetChromeSprite
 */
 static model_t *pfnGetChromeSprite( void )
 {
-	if( cls.hChromeSprite <= 0 || cls.hChromeSprite > MAX_IMAGES )
+	if( cls.hChromeSprite <= 0 || cls.hChromeSprite > ( MAX_IMAGES - 1 ))
 		return NULL; // bad sprite
-	return &clgame.ds.images[cls.hChromeSprite];
+	return &clgame.sprites[cls.hChromeSprite];
 }
 
 /*

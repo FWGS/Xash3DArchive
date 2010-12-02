@@ -291,13 +291,22 @@ void Mod_AmbientLevels( const vec3_t p, byte *pvolumes )
 
 /*
 ================
-CM_FreeModel
+Mod_FreeModel
 ================
 */
-static void CM_FreeModel( model_t *mod )
+static void Mod_FreeModel( model_t *mod )
 {
 	if( !mod || !mod->mempool )
 		return;
+
+	switch( mod->type )
+	{
+	case mod_sprite:
+		Mod_UnloadSpriteModel( mod );
+		break;
+	case mod_studio:
+		break;
+	}
 
 	Mem_FreePool( &mod->mempool );
 	Mem_Set( mod, 0, sizeof( *mod ));
@@ -325,7 +334,7 @@ void Mod_Shutdown( void )
 	int	i;
 
 	for( i = 0; i < cm_nummodels; i++ )
-		CM_FreeModel( &cm_models[i] );
+		Mod_FreeModel( &cm_models[i] );
 
 	Mem_FreePool( &cm.studiopool );
 }
@@ -461,6 +470,7 @@ static void Mod_LoadTexInfo( const dlump_t *l )
 			Host_Error( "Mod_LoadTexInfo: bad miptex number in '%s'\n", loadmodel->name );
 
 		out->texture = loadmodel->textures[miptex];
+		out->flags = in->flags;
 	}
 }
 
@@ -594,10 +604,12 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		// some DMC maps have bad textures
 		if( out->texinfo->texture )
 		{
-			if( !com.strncmp( out->texinfo->texture->name, "sky", 3 ))
+			texture_t	*tex = out->texinfo->texture;
+
+			if( !com.strncmp( tex->name, "sky", 3 ))
 				out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
 
-			if( out->texinfo->texture->name[0] == '*' || out->texinfo->texture->name[0] == '!' )
+			if( tex->name[0] == '*' || tex->name[0] == '!' || !com.strnicmp( tex->name, "water", 5 ))
 				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 		}
 
@@ -867,7 +879,8 @@ static void Mod_LoadPlanes( dlump_t *l )
 		for( j = 0; j < 3; j++ )
 		{
 			out->normal[j] = in->normal[j];
-			if( out->normal[j] < 0.0f ) out->signbits |= 1<<j;
+			if( out->normal[j] < 0.0f )
+				out->signbits |= 1<<j;
 		}
 
 		out->dist = in->dist;
@@ -1235,7 +1248,7 @@ model_t *CM_ModForName( const char *name, qboolean world )
 
 	if( mod->type == mod_bad )
 	{
-		CM_FreeModel( mod );
+		Mod_FreeModel( mod );
 
 		// check for loading problems
 		if( world ) Host_Error( "Mod_ForName: %s unknown format\n", name );
@@ -1249,7 +1262,7 @@ model_t *CM_ModForName( const char *name, qboolean world )
 static void CM_FreeWorld( void )
 {
 	if( worldmodel )
-		CM_FreeModel( &cm_models[0] );
+		Mod_FreeModel( &cm_models[0] );
 
 	if( cm.entityscript )
 	{
@@ -1319,7 +1332,7 @@ void CM_EndRegistration( void )
 	{
 		if( !mod->name[0] ) continue;
 		if( mod->registration_sequence != cm.registration_sequence )
-			CM_FreeModel( mod );
+			Mod_FreeModel( mod );
 	}
 }
 
@@ -1336,23 +1349,6 @@ model_t *CM_ClipHandleToModel( int handle )
 		return NULL;
 	}
 	return sv_models[handle];
-}
-
-/*
-==================
-CM_ClipHandleToModel
-==================
-*/
-int CM_ClipModelToHandle( const model_t *pmodel )
-{
-	int	i;
-
-	if( !pmodel ) return 0;
-
-	for( i = 0; i < MAX_MODELS; i++ )
-		if( sv_models[i] == pmodel )
-			return i;
-	return 0;
 }
 
 /*

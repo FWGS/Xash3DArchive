@@ -422,7 +422,6 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int samples )
 	{
 		format = GL_DEPTH_COMPONENT;
 		tex->flags &= ~TF_INTENSITY;
-		tex->flags &= ~TF_ALPHA;
 	}
 	else if( compress )
 	{
@@ -436,10 +435,7 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int samples )
 
 		if( tex->flags & TF_INTENSITY )
 			format = GL_COMPRESSED_INTENSITY_ARB;
-		if( tex->flags & TF_ALPHA )
-			format = GL_COMPRESSED_ALPHA_ARB;
 		tex->flags &= ~TF_INTENSITY;
-		tex->flags &= ~TF_ALPHA;
 	}
 	else
 	{
@@ -470,10 +466,7 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int samples )
 
 		if( tex->flags & TF_INTENSITY )
 			format = GL_INTENSITY8;
-		if( tex->flags & TF_ALPHA )
-			format = GL_ALPHA8;
 		tex->flags &= ~TF_INTENSITY;
-		tex->flags &= ~TF_ALPHA;
 	}
 	return format;
 }
@@ -666,6 +659,36 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 }
 
 /*
+=================
+GL_MakeLuminance
+
+Converts the given image to luminance
+=================
+*/
+void GL_MakeLuminance( rgbdata_t *in )
+{
+	byte	luminance;
+	float	r, g, b;
+	int	x, y;
+
+	for( y = 0; y < in->height; y++ )
+	{
+		for( x = 0; x < in->width; x++ )
+		{
+			r = r_luminanceTable[in->buffer[4*(y*in->width+x)+0]][0];
+			g = r_luminanceTable[in->buffer[4*(y*in->width+x)+1]][1];
+			b = r_luminanceTable[in->buffer[4*(y*in->width+x)+2]][2];
+
+			luminance = (byte)(r + g + b);
+
+			in->buffer[4*(y*in->width+x)+0] = luminance;
+			in->buffer[4*(y*in->width+x)+1] = luminance;
+			in->buffer[4*(y*in->width+x)+2] = luminance;
+		}
+	}
+}
+
+/*
 ===============
 GL_UploadTexture
 
@@ -678,8 +701,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	const byte	*bufend;
 	GLenum		outFormat, inFormat, glTarget;
 	uint		i, s, numSides, offset = 0;
-	int		img_flags = IMAGE_FORCE_RGBA;
-	int		texsize = 0, samples;
+	int		texsize = 0, img_flags = 0, samples;
 
 	ASSERT( pic != NULL && tex != NULL );
 
@@ -706,8 +728,19 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		tex->flags &= ~TF_MAKELUMA;
 	}
 
+	// we need to expand image into RGBA buffer
+	if( pic->type == PF_INDEXED_24 || pic->type == PF_INDEXED_32 )
+		img_flags |= IMAGE_FORCE_RGBA;
+
 	// processing image before uploading (force to rgba, make luma etc)
 	Image_Process( &pic, 0, 0, img_flags );
+
+	if( tex->flags & TF_LUMINANCE )
+	{
+		GL_MakeLuminance( pic );
+		tex->flags &= ~TF_LUMINANCE;
+		pic->flags &= ~IMAGE_HAS_COLOR;
+	}
 
 	samples = GL_CalcTextureSamples( pic->flags );
 
@@ -866,6 +899,19 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name, sizeof( r_textures->name ));
 		return 0;
 	}
+
+	// see if already loaded
+	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+
+	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
+	{
+		if( tex->flags & TF_CUBEMAP )
+			continue;
+
+		if( !com.stricmp( tex->name, name ))
+			return tex->texnum;
+	}
+
 	if( !pic ) return 0; // couldn't loading image
 
 	// find a free texture slot

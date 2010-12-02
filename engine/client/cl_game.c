@@ -17,6 +17,8 @@
 #include "cl_tent.h"
 #include "input.h"
 #include "shake.h"
+#include "sprite.h"
+#include "gl_local.h"
 
 #define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channel)
 #define TEXT_MSGNAME	"TextMessage%i"
@@ -264,13 +266,13 @@ void CL_StudioEvent( struct mstudioevent_s *event, cl_entity_t *pEdict )
 CL_FadeAlpha
 ================
 */
-void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
+void CL_FadeAlpha( int starttime, int endtime, byte *alpha )
 {
 	int	time, fade_time;
 
 	if( starttime == 0 )
 	{
-		MakeRGBA( color, 255, 255, 255, 255 );
+		*alpha = 255;
 		return;
 	}
 
@@ -278,7 +280,7 @@ void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
 
 	if( time >= endtime )
 	{
-		MakeRGBA( color, 255, 255, 255, 0 );
+		*alpha = 0;
 		return;
 	}
 
@@ -286,12 +288,10 @@ void CL_FadeAlpha( int starttime, int endtime, rgba_t color )
 	fade_time = endtime / 4;
 	fade_time = bound( 300, fade_time, 10000 );
 
-	color[0] = color[1] = color[2] = 255;
-
 	// fade out
 	if(( endtime - time ) < fade_time )
-		color[3] = bound( 0, (( endtime - time ) * ( 1.0f / fade_time )) * 255, 255 );
-	else color[3] = 255;
+		*alpha = bound( 0, (( endtime - time ) * ( 1.0f / fade_time )) * 255, 255 );
+	else *alpha = 255;
 }
 
 /*
@@ -476,15 +476,14 @@ draw hudsprite routine
 static void SPR_DrawGeneric( int frame, float x, float y, float width, float height, const wrect_t *prc )
 {
 	float	s1, s2, t1, t2;
-
-	if( !re ) return;
+	int	texnum;
 
 	if( width == -1 && height == -1 )
 	{
 		int	w, h;
 
 		// assume we get sizes from image
-		re->GetParms( &w, &h, NULL, frame, clgame.ds.hSprite );
+		R_GetSpriteParms( &w, &h, NULL, frame, clgame.ds.pSprite );
 
 		width = w;
 		height = h;
@@ -512,7 +511,8 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 
 	// scale for screen sizes
 	SPR_AdjustSize( &x, &y, &width, &height );
-	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, clgame.ds.hSprite );
+	texnum = R_GetSpriteTexture( clgame.ds.pSprite, frame );
+	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, texnum );
 }
 
 /*
@@ -528,14 +528,14 @@ static void CL_DrawCenterPrint( void )
 	int	i, j, x, y;
 	int	width, lineLength;
 	byte	line[80];
-	rgba_t	color;
+	byte	alpha;
 
 	if( !clgame.centerPrint.time )
 		return;
 
-	CL_FadeAlpha( clgame.centerPrint.time, scr_centertime->value * 1000, color );
+	CL_FadeAlpha( clgame.centerPrint.time, scr_centertime->value * 1000, &alpha );
 
-	if( *(int *)color == 0x00FFFFFF ) 
+	if( !alpha ) 
 	{
 		// faded out
 		clgame.centerPrint.time = 0;
@@ -570,10 +570,8 @@ static void CL_DrawCenterPrint( void )
 
 			if( x >= 0 && y >= 0 && next <= clgame.scrInfo.iWidth )
 			{
-				re->SetColor( color );
-				clgame.ds.hSprite = cls.creditsFont.hFontTexture;
-				re->SetParms( clgame.ds.hSprite, kRenderTransAdd, 0 );
-				SPR_DrawGeneric( 0, x, y, -1, -1, &cls.creditsFont.fontRc[ch] );
+				pfnPIC_Set( cls.creditsFont.hFontTexture, 255, 255, 255, alpha );
+				pfnPIC_DrawAdditive( x, y, -1, -1, &cls.creditsFont.fontRc[ch] );
 			}
 			x = next;
 		}
@@ -623,14 +621,12 @@ void CL_DrawScreenFade( void )
 		iFadeAlpha = bound( 0, iFadeAlpha, sf->fadealpha );
 	}
 
-	if( !re ) return;
-
 	MakeRGBA( color, sf->fader, sf->fadeg, sf->fadeb, iFadeAlpha );
-	re->SetColor( color );
+	R_DrawSetColor( color );
 
-	re->SetParms( cls.fillShader, kRenderTransTexture, 0 );
-	re->DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, cls.fillShader );
-	re->SetColor( NULL );
+	GL_SetRenderMode( kRenderTransTexture );
+	R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, cls.fillImage );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -771,7 +767,7 @@ void CL_DrawCrosshair( void )
 	int		x, y, width, height;
 	cl_entity_t	*pPlayer;
 
-	if( !re || clgame.ds.hCrosshair <= 0 || cl.refdef.crosshairangle[2] || !cl_crosshair->integer )
+	if( !clgame.ds.pCrosshair || cl.refdef.crosshairangle[2] || !cl_crosshair->integer )
 		return;
 
 	pPlayer = CL_GetLocalPlayer();
@@ -801,15 +797,16 @@ void CL_DrawCrosshair( void )
 		VectorAdd( cl.refdef.viewangles, cl.refdef.crosshairangle, angles );
 		AngleVectors( angles, forward, NULL, NULL );
 		VectorAdd( cl.refdef.vieworg, forward, point );
-		re->WorldToScreen( point, screen );
+		R_WorldToScreen( point, screen );
 
 		x += 0.5f * screen[0] * scr_width->integer + 0.5f;
 		y += 0.5f * screen[1] * scr_height->integer + 0.5f;
 	}
 
-	clgame.ds.hSprite = clgame.ds.hCrosshair;
-	re->SetColor( clgame.ds.rgbaCrosshair );
-	re->SetParms( clgame.ds.hSprite, kRenderTransAlpha, 0 );
+	clgame.ds.pSprite = clgame.ds.pCrosshair;
+
+	GL_SetRenderMode( kRenderTransAlpha );
+	R_DrawSetColor( clgame.ds.rgbaCrosshair );
 	SPR_DrawGeneric( 0, x - 0.5f * width, y - 0.5f * height, -1, -1, &clgame.ds.rcCrosshair );
 }
 
@@ -826,7 +823,7 @@ static void CL_DrawLoading( float percent )
 	float	xscale, yscale, step, s2;
 	rgba_t	color;
 
-	re->GetParms( &width, &height, NULL, 0, cls.loadingBar );
+	R_GetTextureParms( &width, &height, cls.loadingBar );
 	x = ( 640 - width ) >> 1;
 	y = ( 480 - height) >> 1;
 
@@ -839,9 +836,9 @@ static void CL_DrawLoading( float percent )
 	height *= yscale;
 
 	MakeRGBA( color, 128, 128, 128, 255 );
-	re->SetColor( color );
-	re->SetParms( cls.loadingBar, kRenderTransTexture, 0 );
-	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
+	R_DrawSetColor( color );
+	GL_SetRenderMode( kRenderTransTexture );
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
 
 	step = (float)width / 100.0f;
 	right = (int)ceil( percent * step );
@@ -849,10 +846,10 @@ static void CL_DrawLoading( float percent )
 	width = right;
 	
 	MakeRGBA( color, 208, 152, 0, 255 );
-	re->SetColor( color );
-	re->SetParms( cls.loadingBar, kRenderTransTexture, 0 );
-	re->DrawStretchPic( x, y, width, height, 0, 0, s2, 1, cls.loadingBar );
-	re->SetColor( NULL );
+	R_DrawSetColor( color );
+	GL_SetRenderMode( kRenderTransTexture );
+	R_DrawStretchPic( x, y, width, height, 0, 0, s2, 1, cls.loadingBar );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -867,9 +864,7 @@ static void CL_DrawPause( void )
 	int	x, y, width, height;
 	float	xscale, yscale;
 
-	if( !re ) return;
-
-	re->GetParms( &width, &height, NULL, 0, cls.pauseIcon );
+	R_GetTextureParms( &width, &height, cls.pauseIcon );
 	x = ( 640 - width ) >> 1;
 	y = ( 480 - height) >> 1;
 
@@ -881,9 +876,9 @@ static void CL_DrawPause( void )
 	width *= xscale;
 	height *= yscale;
 
-	re->SetColor( NULL );
-	re->SetParms( cls.pauseIcon, kRenderTransTexture, 0 );
-	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.pauseIcon );
+	R_DrawSetColor( NULL );
+	GL_SetRenderMode( kRenderTransTexture );
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.pauseIcon );
 }
 
 void CL_DrawHUD( int state )
@@ -1334,31 +1329,30 @@ void CL_FreeEdicts( void )
 
 ===============================================================================
 */
-static qboolean CL_LoadHudSprite( const char *szPicName, model_t *m_pSprite, int shaderType )
+static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, qboolean mapSprite )
 {
+	byte	*buf;
+	size_t	size;
+
 	ASSERT( m_pSprite != NULL );
 
-	// register new sprite
-	com.strncpy( m_pSprite->name, szPicName, sizeof( m_pSprite->name ));
-	m_pSprite->firstmodelsurface = re->RegisterShader( m_pSprite->name, shaderType );
+	buf = FS_LoadFile( szSpriteName, &size );
+	if( !buf ) return false;
 
-	if( !m_pSprite->firstmodelsurface )
+	com.strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
+	m_pSprite->registration_sequence = cm.registration_sequence;
+
+	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
+	else Mod_LoadSpriteModel( m_pSprite, buf );		
+
+	Mem_Free( buf );
+
+	if( m_pSprite->type != mod_sprite )
 	{
-		// can't loading or something
 		Mem_Set( m_pSprite, 0, sizeof( *m_pSprite ));
 		return false;
 	}
-
-	re->GetParms( NULL, NULL, &m_pSprite->numframes, 0, m_pSprite->firstmodelsurface );
 	return true;
-}
-
-static shader_t CL_GetHudSpriteShader( HSPRITE hSpr )
-{
-	if( hSpr <= 0 || hSpr > MAX_IMAGES )
-		return 0;	// bad image
-
-	return clgame.ds.images[hSpr].firstmodelsurface;	
 }
 
 /*
@@ -1371,7 +1365,6 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 {
 	int	i;
 
-	if( !re ) return 0; // render not initialized
 	if( !szPicName || !*szPicName )
 	{
 		MsgDev( D_ERROR, "CL_LoadSprite: bad name!\n" );
@@ -1379,14 +1372,13 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 	}
 
 	// slot 0 isn't used
-	for( i = 1; i < MAX_IMAGES && clgame.ds.images[i].name[0]; i++ )
+	for( i = 1; i < MAX_IMAGES && clgame.sprites[i].name[0]; i++ )
 	{
-		if( !com.strcmp( clgame.ds.images[i].name, szPicName ))
+		if( !com.strcmp( clgame.sprites[i].name, szPicName ))
 		{
-			// refresh shader
-			if( CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE ))
-				return i;
-			return 0;
+			// prolonge registration
+			clgame.sprites[i].registration_sequence = cm.registration_sequence;
+			return i;
 		}
 	}
 
@@ -1396,10 +1388,23 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		return 0;
 	}
 
-	// load new shader
-	if( CL_LoadHudSprite( szPicName, &clgame.ds.images[i], SHADER_SPRITE ))
+	// load new model
+	if( CL_LoadHudSprite( szPicName, &clgame.sprites[i], false ))
 		return i;
 	return 0;
+}
+
+/*
+=============
+CL_GetSpritePointer
+
+=============
+*/
+const model_t *CL_GetSpritePointer( HSPRITE hSprite )
+{
+	if( hSprite <= 0 || hSprite > ( MAX_IMAGES - 1 ))
+		return 0;	// bad image
+	return &clgame.sprites[hSprite];
 }
 
 /*
@@ -1412,8 +1417,7 @@ static int pfnSPR_Frames( HSPRITE hPic )
 {
 	int	numFrames;
 
-	if( !re ) return 1;
-	re->GetParms( NULL, NULL, &numFrames, 0, CL_GetHudSpriteShader( hPic ));
+	R_GetSpriteParms( NULL, NULL, &numFrames, 0, CL_GetSpritePointer( hPic ));
 
 	return numFrames;
 }
@@ -1428,8 +1432,7 @@ static int pfnSPR_Height( HSPRITE hPic, int frame )
 {
 	int	sprHeight;
 
-	if( !re ) return 0;
-	re->GetParms( NULL, &sprHeight, NULL, frame, CL_GetHudSpriteShader( hPic ));
+	R_GetSpriteParms( NULL, &sprHeight, NULL, frame, CL_GetSpritePointer( hPic ));
 
 	return sprHeight;
 }
@@ -1444,8 +1447,7 @@ static int pfnSPR_Width( HSPRITE hPic, int frame )
 {
 	int	sprWidth;
 
-	if( !re ) return 0;
-	re->GetParms( &sprWidth, NULL, NULL, frame, CL_GetHudSpriteShader( hPic ));
+	R_GetSpriteParms( &sprWidth, NULL, NULL, frame, CL_GetSpritePointer( hPic ));
 
 	return sprWidth;
 }
@@ -1460,14 +1462,12 @@ static void pfnSPR_Set( HSPRITE hPic, int r, int g, int b )
 {
 	rgba_t	color;
 
-	if( !re ) return; // render not initialized
-
-	clgame.ds.hSprite = CL_GetHudSpriteShader( hPic );
+	clgame.ds.pSprite = CL_GetSpritePointer( hPic );
 	color[0] = bound( 0, r, 255 );
 	color[1] = bound( 0, g, 255 );
 	color[2] = bound( 0, b, 255 );
 	color[3] = 255;
-	re->SetColor( color );
+	R_DrawSetColor( color );
 }
 
 /*
@@ -1478,9 +1478,7 @@ pfnSPR_Draw
 */
 static void pfnSPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
-	if( !re ) return; // render not initialized
-
-	re->SetParms( clgame.ds.hSprite, kRenderNormal, frame );
+	GL_SetRenderMode( kRenderNormal );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 
@@ -1492,9 +1490,7 @@ pfnSPR_DrawHoles
 */
 static void pfnSPR_DrawHoles( int frame, int x, int y, const wrect_t *prc )
 {
-	if( !re ) return; // render not initialized
-
-	re->SetParms( clgame.ds.hSprite, kRenderTransAlpha, frame );
+	GL_SetRenderMode( kRenderTransAlpha );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 
@@ -1506,9 +1502,7 @@ pfnSPR_DrawAdditive
 */
 static void pfnSPR_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
 {
-	if( !re ) return; // render not initialized
-
-	re->SetParms( clgame.ds.hSprite, kRenderTransAdd, frame );
+	GL_SetRenderMode( kRenderTransAdd );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 
@@ -1625,16 +1619,14 @@ static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int 
 {
 	rgba_t	color;
 
-	if( !re ) return;
-
 	MakeRGBA( color, r, g, b, a );
-	re->SetColor( color );
+	R_DrawSetColor( color );
 
 	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
 
-	re->SetParms( cls.fillShader, kRenderTransTexture, 0 );
-	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillShader );
-	re->SetColor( NULL );
+	GL_SetRenderMode( kRenderTransTexture );
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -1696,7 +1688,7 @@ static void pfnSetCrosshair( HSPRITE hspr, wrect_t rc, int r, int g, int b )
 	clgame.ds.rgbaCrosshair[1] = (byte)g;
 	clgame.ds.rgbaCrosshair[2] = (byte)b;
 	clgame.ds.rgbaCrosshair[3] = (byte)0xFF;
-	clgame.ds.hCrosshair = CL_GetHudSpriteShader( hspr );
+	clgame.ds.pCrosshair = CL_GetSpritePointer( hspr );
 	clgame.ds.rcCrosshair = rc;
 }
 
@@ -1865,8 +1857,6 @@ returns drawed chachter width (in real screen pixels)
 */
 static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 {
-	rgba_t	color;
-
 	if( !cls.creditsFont.valid )
 		return 0;
 
@@ -1876,10 +1866,9 @@ static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 	if( y < -clgame.scrInfo.iCharHeight )
 		return 0;
 
-	MakeRGBA( color, r, g, b, 255 );
-	re->SetColor( color );
-	clgame.ds.hSprite = cls.creditsFont.hFontTexture;
-	pfnSPR_DrawAdditive( 0, x, y, &cls.creditsFont.fontRc[number] );
+	pfnPIC_Set( cls.creditsFont.hFontTexture, r, g, b, 255 );
+	pfnPIC_DrawAdditive( x, y, -1, -1, &cls.creditsFont.fontRc[number] );
+
 	return clgame.scrInfo.charWidths[number];
 }
 
@@ -2600,21 +2589,7 @@ pfnBoxVisible
 */
 static qboolean pfnBoxVisible( const vec3_t mins, const vec3_t maxs )
 {
-	if( !re ) return false;
-	return Mod_BoxVisible( mins, maxs, re->GetCurrentVis());
-}
-
-/*
-=============
-CL_GetSpritePointer
-
-=============
-*/
-const model_t *CL_GetSpritePointer( HSPRITE hSprite )
-{
-	if( hSprite <= 0 || hSprite > MAX_IMAGES )
-		return 0;	// bad image
-	return &clgame.ds.images[hSprite];
+	return Mod_BoxVisible( mins, maxs, Mod_GetCurrentVis( ));
 }
 
 /*
@@ -2636,7 +2611,7 @@ model_t *CL_LoadModel( const char *modelname, int *index )
 
 int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 {
-	if( !re || !pEnt || !pEnt->index )
+	if( !pEnt || !pEnt->index )
 		return false;
 
 	// let the render reject entity without model
@@ -2715,35 +2690,33 @@ model_t *pfnLoadMapSprite( const char *filename )
 {
 	int	i;
 
-	if( !re ) return NULL; // render not initialized
 	if( !filename || !*filename )
 	{
 		MsgDev( D_ERROR, "CL_LoadMapSprite: bad name!\n" );
-		return 0;
+		return NULL;
 	}
 
 	// slot 0 isn't used
-	for( i = 1; i < MAX_IMAGES && clgame.ds.images[i].name[0]; i++ )
+	for( i = 1; i < MAX_IMAGES && clgame.sprites[i].name[0]; i++ )
 	{
-		if( !com.strcmp( clgame.ds.images[i].name, filename ))
+		if( !com.strcmp( clgame.sprites[i].name, filename ))
 		{
-			// refresh shader
-			if( CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC ))
-				return clgame.ds.images + i;
-			return 0;
+			// prolonge registration
+			clgame.sprites[i].registration_sequence = cm.registration_sequence;
+			return &clgame.sprites[i];
 		}
 	}
 
 	if( i == MAX_IMAGES ) 
 	{
 		MsgDev( D_ERROR, "LoadMapSprite: can't load %s, MAX_HSPRITES limit exceeded\n", filename );
-		return 0;
+		return NULL;
 	}
 
-	// load new shader
-	if( CL_LoadHudSprite( filename, &clgame.ds.images[i], SHADER_GENERIC ))
-		return clgame.ds.images + i;
-	return 0;
+	// load new map sprite
+	if( CL_LoadHudSprite( filename, &clgame.sprites[i], true ))
+		return &clgame.sprites[i];
+	return NULL;
 }
 
 /*
@@ -2924,20 +2897,6 @@ static void pfnEnvShot( const float *vieworg, const char *name, int skyshot )
 
 /*
 =================
-pfnSkyCamera
-
-=================
-*/
-static void pfnSkyCamera( const float *vieworg, const float *viewangles, float scale, float fov )
-{
-	if( !re || !vieworg || !viewangles )
-		return;
-
-	re->SetSkyPortal( vieworg, viewangles, scale, fov );
-}
-
-/*
-=================
 TriApi implementation
 
 =================
@@ -2966,18 +2925,6 @@ void Tri_DrawTriangles( int fTrans )
 
 /*
 =============
-TriRenderMode
-
-=============
-*/
-void TriRenderMode( int mode )
-{
-	if( !re ) return;
-	re->RenderMode( mode );
-}
-
-/*
-=============
 TriBegin
 
 begin triangle sequence
@@ -2985,7 +2932,32 @@ begin triangle sequence
 */
 void TriBegin( int mode )
 {
-	if( re ) re->Begin( mode );
+	switch( mode )
+	{
+	case TRI_TRIANGLES:
+		mode = GL_TRIANGLES;
+		break;
+	case TRI_TRIANGLE_FAN:
+		mode = GL_TRIANGLE_FAN;
+		break;
+	case TRI_QUADS:
+		mode = GL_QUADS;
+		break;
+	case TRI_LINES:
+		mode = GL_LINES;
+		break;
+	case TRI_TRIANGLE_STRIP:
+		mode = GL_TRIANGLE_STRIP;
+		break;
+	case TRI_QUAD_STRIP:
+		mode = GL_QUAD_STRIP;
+		break;
+	case TRI_POLYGON:
+	default:	mode = GL_POLYGON;
+		break;
+	}
+
+	pglBegin( mode );
 }
 
 /*
@@ -2997,7 +2969,7 @@ draw triangle sequence
 */
 void TriEnd( void )
 {
-	if( re ) re->End();
+	pglEnd();
 }
 
 /*
@@ -3010,12 +2982,11 @@ void TriColor4f( float r, float g, float b, float a )
 {
 	rgba_t	rgba;
 
-	if( !re ) return;
 	rgba[0] = (byte)bound( 0, (r * 255.0f), 255 );
 	rgba[1] = (byte)bound( 0, (g * 255.0f), 255 );
 	rgba[2] = (byte)bound( 0, (b * 255.0f), 255 );
 	rgba[3] = (byte)bound( 0, (a * 255.0f), 255 );
-	re->Color4ub( rgba[0], rgba[1], rgba[2], rgba[3] );
+	pglColor4ub( rgba[0], rgba[1], rgba[2], rgba[3] );
 }
 
 /*
@@ -3026,8 +2997,7 @@ TriColor4ub
 */
 void TriColor4ub( byte r, byte g, byte b, byte a )
 {
-	if( !re ) return;
-	re->Color4ub( r, g, b, a );
+	pglColor4ub( r, g, b, a );
 }
 
 /*
@@ -3038,8 +3008,7 @@ TriTexCoord2f
 */
 void TriTexCoord2f( float u, float v )
 {
-	if( !re ) return;
-	re->TexCoord2f( u, v );
+	pglTexCoord2f( u, v );
 }
 
 /*
@@ -3050,8 +3019,7 @@ TriVertex3fv
 */
 void TriVertex3fv( const float *v )
 {
-	if( !re || !v ) return;
-	re->Vertex3f( v[0], v[1], v[2] );
+	pglVertex3fv( v );
 }
 
 /*
@@ -3062,8 +3030,7 @@ TriVertex3f
 */
 void TriVertex3f( float x, float y, float z )
 {
-	if( !re ) return;
-	re->Vertex3f( x, y, z );
+	pglVertex3f( x, y, z );
 }
 
 /*
@@ -3077,7 +3044,7 @@ void TriBrightness( float brightness )
 	int	color;
 
 	color = brightness * 255;
-	re->Color4ub( color, color, color, 255 );
+	pglColor4ub( color, color, color, 255 );
 }
 
 /*
@@ -3088,8 +3055,16 @@ TriCullFace
 */
 void TriCullFace( TRICULLSTYLE mode )
 {
-	if( !re ) return;
-	re->CullFace( mode );
+	switch( mode )
+	{
+	case TRI_FRONT:
+		mode = GL_FRONT;
+		break;
+	default:
+		mode = GL_NONE;
+		break;
+	}
+	GL_Cull( mode );
 }
 
 /*
@@ -3101,18 +3076,12 @@ bind current texture
 */
 int TriSpriteTexture( model_t *pSpriteModel, int frame )
 {
-	shader_t	shader;
+	int	gl_texturenum;
 
-	if( !re || !pSpriteModel )
+	if(( gl_texturenum = R_GetSpriteTexture( pSpriteModel, frame )) == 0 )
 		return 0;
 
-	if( !pSpriteModel->mempool )
-		shader = pSpriteModel->firstmodelsurface;
-	else if( pSpriteModel->type == mod_sprite && pSpriteModel->numframes )
-		shader = re->GetSpriteTexture( CM_ClipModelToHandle( pSpriteModel ), frame );
-	else return 0;
-
-	re->Bind( shader, frame );
+	GL_Bind( GL_TEXTURE0, gl_texturenum );
 
 	return 1;
 }
@@ -3126,12 +3095,12 @@ convert world coordinates (x,y,z) into screen (x, y)
 */
 int TriWorldToScreen( float *world, float *screen )
 {
-	int retval = 0;
+	int	retval = 0;
 
-	if( !re || !world || !screen )
+	if( !world || !screen )
 		return retval;
 
-	retval = re->WorldToScreen( world, screen );
+	retval = R_WorldToScreen( world, screen );
 
 	screen[0] =  0.5f * screen[0] * (float)cl.refdef.viewport[2];
 	screen[1] = -0.5f * screen[1] * (float)cl.refdef.viewport[3];
@@ -3150,7 +3119,7 @@ enables global fog on the level
 */
 void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 {
-	if( re ) re->Fog( flFogColor, flStart, flEnd, bOn );
+//	re->Fog( flFogColor, flStart, flEnd, bOn );
 }
 
 /*
@@ -3162,33 +3131,8 @@ convert screen coordinates (x,y) into world (x, y, z)
 */
 void TriScreenToWorld( float *screen, float *world )
 {
-	if( !re ) return;
-	re->ScreenToWorld( screen, world );
+	R_ScreenToWorld( screen, world );
 } 
-
-/*
-=============
-TriNormal3fv
-
-=============
-*/
-void TriNormal3fv( const float *v )
-{
-	if( !re || !v ) return;
-	re->Normal3f( v[0], v[1], v[2] );
-}
-
-/*
-=============
-TriNormal3f
-
-=============
-*/
-void TriNormal3f( float x, float y, float z )
-{
-	if( !re ) return;
-	re->Normal3f( x, y, z );
-}
 
 /*
 =================
@@ -3425,7 +3369,7 @@ float Voice_GetControlFloat( VoiceTweakControl iControl )
 static triangleapi_t gTriApi =
 {
 	TRI_API_VERSION,	
-	TriRenderMode,
+	GL_SetRenderMode,
 	TriBegin,
 	TriEnd,
 	TriColor4f,
@@ -3438,7 +3382,7 @@ static triangleapi_t gTriApi =
 	TriSpriteTexture,
 	TriWorldToScreen,
 	TriFog,
-	TriScreenToWorld,
+	R_ScreenToWorld,
 };
 
 static efx_api_t gEfxApi =

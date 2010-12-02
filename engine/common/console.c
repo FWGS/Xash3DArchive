@@ -8,6 +8,7 @@
 #include "keydefs.h"
 #include "protocol.h"		// get the protocol version
 #include "con_nprint.h"
+#include "gl_local.h"
 #include "qfont.h"
 
 convar_t	*con_notifytime;
@@ -210,7 +211,7 @@ void Con_CheckResize( void )
 	if( width == con.linewidth )
 		return;
 
-	if( re == NULL )
+	if( !glw_state.initialized )
 	{
 		// video hasn't been initialized yet
 		width = g_console_field_width;
@@ -330,14 +331,12 @@ static void Con_LoadConchars( void )
 	else if( scr_width->integer >= 1280 ) Cvar_SetFloat( "con_fontsize", 2 );
 	else Cvar_SetFloat( "con_fontsize", 1 );
 
-	if( !re ) return;
-
 	// loading conchars
-	con.chars.hFontTexture = re->RegisterShader( va( "fonts/font%i", con_fontsize->integer ), SHADER_NOMIP );
+	con.chars.hFontTexture = GL_LoadTexture( va( "fonts/font%i", con_fontsize->integer ), NULL, 0, TF_FONT );
 
 	if( !con_fontsize->modified ) return; // font not changed
 
-	re->GetParms( &fontWidth, &fontHeight, NULL, 0, con.chars.hFontTexture );
+	R_GetTextureParms( &fontWidth, &fontHeight, con.chars.hFontTexture );
 		
 	// setup creditsfont
 	if( FS_FileExists( va( "fonts/font%i.fnt", con_fontsize->integer ) ))
@@ -388,8 +387,8 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 
 	rc = &con.chars.fontRc[number];
 
-	re->SetColor( color );
-	re->GetParms( &width, &height, NULL, 0, con.chars.hFontTexture );
+	R_DrawSetColor( color );
+	R_GetTextureParms( &width, &height, con.chars.hFontTexture );
 
 	// calc rectangle
 	s1 = (float)rc->left / width;
@@ -399,15 +398,15 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 	width = rc->right - rc->left;
 	height = rc->bottom - rc->top;
 
-	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, con.chars.hFontTexture );		
-	re->SetColor( NULL ); // don't forget reset color
+	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, con.chars.hFontTexture );		
+	R_DrawSetColor( NULL ); // don't forget reset color
 
 	return con.charWidths[number];
 }
 
 static int Con_DrawCharacter( int x, int y, int number, rgba_t color )
 {
-	re->SetParms( con.chars.hFontTexture, kRenderTransTexture, 0 );
+	GL_SetRenderMode( kRenderTransTexture );
 	return Con_DrawGenericChar( x, y, number, color );
 }
 
@@ -495,7 +494,7 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qb
 		s++;
 	}
 
-	re->SetColor( NULL );
+	R_DrawSetColor( NULL );
 	return drawLen;
 }
 
@@ -1203,7 +1202,7 @@ void Con_DrawInput( void )
 	if( host.key_overstrike && cursorChar )
 	{
 		// overstrike cursor
-		re->SetParms( con.chars.hFontTexture, kRenderTransInverse, 0 );
+		GL_SetRenderMode( kRenderTransInverse );
 		Con_DrawGenericChar( x + curPos, y, cursorChar, colorDefault );
 	}
 	else Con_DrawCharacter( x + curPos, y, '_', colorDefault );
@@ -1226,7 +1225,7 @@ void Con_DrawNotify( void )
 	if( !host.developer ) return;
 
 	currentColor = 7;
-	re->SetColor( g_color_table[currentColor] );
+	R_DrawSetColor( g_color_table[currentColor] );
 
 	for( i = con.current - CON_TIMES + 1; i <= con.current; i++ )
 	{
@@ -1249,7 +1248,7 @@ void Con_DrawNotify( void )
 		}
 		v += con.charHeight;
 	}
-	re->SetColor( NULL );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -1279,8 +1278,8 @@ void Con_DrawSolidConsole( float frac )
 
 	if( y >= 1 )
 	{
-		re->SetParms( con.background, kRenderNormal, 0 );
-		re->DrawStretchPic( 0, y - scr_height->integer, scr_width->integer, scr_height->integer, 0, 0, 1, 1, con.background );
+		GL_SetRenderMode( kRenderNormal );
+		R_DrawStretchPic( 0, y - scr_height->integer, scr_width->integer, scr_height->integer, 0, 0, 1, 1, con.background );
 	}
 	else y = 0;
 
@@ -1320,7 +1319,7 @@ void Con_DrawSolidConsole( float frac )
 	if( con.x == 0 ) row--;
 
 	currentColor = 7;
-	re->SetColor( g_color_table[currentColor] );
+	R_DrawSetColor( g_color_table[currentColor] );
 
 	for( i = 0; i < rows; i++, y -= con.charHeight, row-- )
 	{
@@ -1344,7 +1343,7 @@ void Con_DrawSolidConsole( float frac )
 
 	// draw the input prompt, user text, and cursor if desired
 	Con_DrawInput();
-	re->SetColor( NULL );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -1480,22 +1479,20 @@ void Con_VidInit( void )
 	g_console_field_width = ( scr_width->integer / 8 ) - 2;
 	con.input.widthInChars = g_console_field_width;
 
-	if( !re ) return;
-
 	// loading console image
 	if( host.developer )
 	{
 		if( scr_width->integer < 640 )
 		{
 			if( FS_FileExists( "cached/conback400" ))
-				con.background = re->RegisterShader( "cached/conback400", SHADER_NOMIP );
-			else con.background = re->RegisterShader( "cached/conback", SHADER_NOMIP );
+				con.background = GL_LoadTexture( "cached/conback400", NULL, 0, TF_IMAGE );
+			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE );
 		}
 		else
 		{
 			if( FS_FileExists( "cached/conback640" ))
-				con.background = re->RegisterShader( "cached/conback640", SHADER_NOMIP );
-			else con.background = re->RegisterShader( "cached/conback", SHADER_NOMIP );
+				con.background = GL_LoadTexture( "cached/conback640", NULL, 0, TF_IMAGE );
+			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE );
 		}
 	}
 	else
@@ -1503,14 +1500,14 @@ void Con_VidInit( void )
 		if( scr_width->integer < 640 )
 		{
 			if( FS_FileExists( "cached/loading400" ))
-				con.background = re->RegisterShader( "cached/loading400", SHADER_NOMIP );
-			else con.background = re->RegisterShader( "cached/loading", SHADER_NOMIP );
+				con.background = GL_LoadTexture( "cached/loading400", NULL, 0, TF_IMAGE );
+			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE );
 		}
 		else
 		{
 			if( FS_FileExists( "cached/loading640" ))
-				con.background = re->RegisterShader( "cached/loading640", SHADER_NOMIP );
-			else con.background = re->RegisterShader( "cached/loading", SHADER_NOMIP );
+				con.background = GL_LoadTexture( "cached/loading640", NULL, 0, TF_IMAGE );
+			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE );
 		}
 	}
 

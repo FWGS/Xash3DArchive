@@ -41,6 +41,7 @@ convar_t	*gl_clear;
 
 convar_t	*r_width;
 convar_t	*r_height;
+convar_t	*r_speeds;
 
 convar_t	*vid_displayfrequency;
 convar_t	*vid_fullscreen;
@@ -628,7 +629,7 @@ static int GL_ChoosePFD( int colorBits, int depthBits, int stencilBits )
 	uint			flags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
 	int			i, numPFDs, pixelFormat = 0;
 
-	MsgDev( D_INFO, "GL_ChoosePFD( color %i, depth %i, stencil %i )\n", colorBits, depthBits, stencilBits );
+	MsgDev( D_NOTE, "GL_ChoosePFD( color %i, depth %i, stencil %i )\n", colorBits, depthBits, stencilBits );
 
 	// Count PFDs
 	if( glw_state.minidriver )
@@ -1181,16 +1182,6 @@ qboolean R_Init_OpenGL( void )
 	Sys_LoadLibrary( NULL, &opengl_dll );	// load opengl32.dll
 	if( !opengl_dll.link ) return false;
 
-	// initialize gl extensions
-	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, NULL, GL_OPENGL_110 );
-
-	// get our various GL strings
-	glConfig.vendor_string = pglGetString( GL_VENDOR );
-	glConfig.renderer_string = pglGetString( GL_RENDERER );
-	glConfig.version_string = pglGetString( GL_VERSION );
-	glConfig.extensions_string = pglGetString( GL_EXTENSIONS );
-	MsgDev( D_INFO, "Video: %s\n", glConfig.renderer_string );
-
 	if(( err = R_ChangeDisplaySettings( vid_mode->integer, fullscreen )) == rserr_ok )
 	{
 		glConfig.prev_mode = vid_mode->integer;
@@ -1275,10 +1266,10 @@ static void GL_SetDefaults( void )
 	GL_Cull( 0 );
 	GL_FrontFace( 0 );
 
-//	GL_SetState( GLSTATE_DEPTHWRITE );
+	GL_SetState( GLSTATE_DEPTHWRITE );
 	GL_TexEnv( GL_MODULATE );
 
-//	R_SetTextureParameters();
+	R_SetTextureParameters();
 
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
 	pglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -1332,6 +1323,7 @@ void GL_InitCommands( void )
 	// system screen width and height (don't suppose for change from console at all)
 	r_width = Cvar_Get( "width", "640", CVAR_READ_ONLY, "screen width" );
 	r_height = Cvar_Get( "height", "480", CVAR_READ_ONLY, "screen height" );
+	r_speeds = Cvar_Get( "r_speeds", "0", CVAR_ARCHIVE, "shows renderer speeds" );
 
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
@@ -1365,23 +1357,35 @@ void GL_InitCommands( void )
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "fullscreen refresh rate" );
 
 	Cmd_AddCommand( "r_info", R_RenderInfo_f, "display renderer info" );
+	Cmd_AddCommand( "texturelist", R_TextureList_f, "display loaded textures list" );
 }
 
 void GL_RemoveCommands( void )
 {
 	Cmd_RemoveCommand( "r_info");
+	Cmd_RemoveCommand( "texturelist" );
 }
 
 void GL_InitExtensions( void )
 {
 	int	flags = 0;
 
+	// initialize gl extensions
+	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, NULL, GL_OPENGL_110 );
+
+	// get our various GL strings
+	glConfig.vendor_string = pglGetString( GL_VENDOR );
+	glConfig.renderer_string = pglGetString( GL_RENDERER );
+	glConfig.version_string = pglGetString( GL_VERSION );
+	glConfig.extensions_string = pglGetString( GL_EXTENSIONS );
+	MsgDev( D_INFO, "Video: %s\n", glConfig.renderer_string );
+	
 	GL_CheckExtension( "WGL_3DFX_gamma_control", wgl3DFXgammacontrolfuncs, NULL, GL_WGL_3DFX_GAMMA_CONTROL );
 	GL_CheckExtension( "WGL_EXT_swap_control", wglswapintervalfuncs, NULL, GL_WGL_SWAPCONTROL );
 	GL_CheckExtension( "glDrawRangeElements", drawrangeelementsfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );
 
 	if( !GL_Support( GL_DRAW_RANGEELEMENTS_EXT ))
-		GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );
+		GL_CheckExtension( "GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );
 
 	// multitexture
 	glConfig.max_texture_units = 1;
@@ -1526,17 +1530,20 @@ R_Init
 */
 qboolean R_Init( void )
 {
-	r_temppool = Mem_AllocPool( "Render Zone" );
+	if( glw_state.initialized ) return true;
 
 	GL_InitCommands();
 	GL_SetDefaultState();
 
 	// create the window and set up the context
-	if( !R_Init_OpenGL())
+	if( !R_Init_OpenGL( ))
 	{
+		GL_RemoveCommands();
 		R_Free_OpenGL();
 		return false;
 	}
+
+	r_temppool = Mem_AllocPool( "Render Zone" );
 
 	GL_InitExtensions();
 	GL_SetDefaults();
@@ -1555,6 +1562,9 @@ R_Shutdown
 */
 void R_Shutdown( void )
 {
+	if( !glw_state.initialized )
+		return;
+
 	GL_RemoveCommands();
 	R_ShutdownImages();
 

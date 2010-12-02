@@ -270,7 +270,7 @@ void Image_Init( void )
 	// init pools
 	Sys.imagepool = Mem_AllocPool( "ImageLib Pool" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
-	image.baseformats = load_xash;
+	image.baseformats = load_hl1;
 
 	// install image formats (can be re-install later by Image_Setup)
 	switch( Sys.app_name )
@@ -1497,6 +1497,8 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 		MsgDev( D_WARN, "Image_Process: NULL image\n" );
 		return false;
 	}
+
+	if( !flags ) return false;	// no operation specfied
 
 	if( flags & IMAGE_MAKE_LUMA )
 	{

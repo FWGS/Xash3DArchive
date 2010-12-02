@@ -12,7 +12,6 @@
 #define FREE( x )		(*g_engfuncs.pfnMemFree)( x, __FILE__, __LINE__ )
 
 // screen handlers
-#define PIC_Frames		(*g_engfuncs.pfnPIC_Frames)
 #define PIC_Width		(*g_engfuncs.pfnPIC_Width)
 #define PIC_Height		(*g_engfuncs.pfnPIC_Height)
 #define PIC_EnableScissor	(*g_engfuncs.pfnPIC_EnableScissor)
@@ -81,7 +80,6 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define GET_VIDEO_LIST	(*g_engfuncs.pfnGetVideoList)
 #define GET_GAMES_LIST	(*g_engfuncs.pfnGetGamesList)
 #define BACKGROUND_TRACK	(*g_engfuncs.pfnPlayBackgroundTrack)
-#define CHANGE_VIDEO	(*g_engfuncs.pfnChangeVideo)
 #define SHELL_EXECUTE	(*g_engfuncs.pfnShellExecute)
 #define HOST_WRITECONFIG	(*g_engfuncs.pfnWriteServerConfig)
 #define HOST_CHANGEGAME	(*g_engfuncs.pfnChangeInstance)
@@ -105,44 +103,44 @@ inline void PIC_Set( HIMAGE hPic, int r, int g, int b, int a )
 	g_engfuncs.pfnPIC_Set( hPic, r, g, b, a );
 }
 
-inline void PIC_Draw( int frame, int x, int y, const wrect_t *prc )
+inline void PIC_Draw( int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnPIC_Draw( frame, x, y, -1, -1, prc );
+	g_engfuncs.pfnPIC_Draw( x, y, -1, -1, prc );
 }
 
-inline void PIC_Draw( int frame, int x, int y, int width, int height )
+inline void PIC_Draw( int x, int y, int width, int height )
 {
-	g_engfuncs.pfnPIC_Draw( frame, x, y, width, height, NULL );
+	g_engfuncs.pfnPIC_Draw( x, y, width, height, NULL );
 }
 
-inline void PIC_DrawTrans( int frame, int x, int y, const wrect_t *prc )
+inline void PIC_DrawTrans( int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, -1, -1, prc );
+	g_engfuncs.pfnPIC_DrawTrans( x, y, -1, -1, prc );
 }
 
-inline void PIC_DrawTrans( int frame, int x, int y, int width, int height )
+inline void PIC_DrawTrans( int x, int y, int width, int height )
 {
-	g_engfuncs.pfnPIC_DrawTrans( frame, x, y, width, height, NULL );
+	g_engfuncs.pfnPIC_DrawTrans( x, y, width, height, NULL );
 }
 
-inline void PIC_DrawHoles( int frame, int x, int y, const wrect_t *prc )
+inline void PIC_DrawHoles( int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnPIC_DrawHoles( frame, x, y, -1, -1, prc );
+	g_engfuncs.pfnPIC_DrawHoles( x, y, -1, -1, prc );
 }
 
-inline void SPR_DrawHoles( int frame, int x, int y, int width, int height )
+inline void SPR_DrawHoles( int x, int y, int width, int height )
 {
-	g_engfuncs.pfnPIC_DrawHoles( frame, x, y, width, height, NULL );
+	g_engfuncs.pfnPIC_DrawHoles( x, y, width, height, NULL );
 }
 
-inline void PIC_DrawAdditive( int frame, int x, int y, int width, int height )
+inline void PIC_DrawAdditive( int x, int y, int width, int height )
 {
-	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, width, height, NULL );
+	g_engfuncs.pfnPIC_DrawAdditive( x, y, width, height, NULL );
 }
 
-inline void PIC_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
+inline void PIC_DrawAdditive( int x, int y, const wrect_t *prc )
 {
-	g_engfuncs.pfnPIC_DrawAdditive( frame, x, y, -1, -1, prc );
+	g_engfuncs.pfnPIC_DrawAdditive( x, y, -1, -1, prc );
 }
 
 inline void TextMessageSetColor( int r, int g, int b, int alpha = 255 )

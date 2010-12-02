@@ -136,7 +136,7 @@ void SCR_RSpeeds( void )
 {
 	char	msg[MAX_SYSPATH];
 
-	if( re->RSpeedsMessage( msg, sizeof( msg )))
+	if( R_SpeedsMessage( msg, sizeof( msg )))
 	{
 		int	x, y, height;
 		char	*p, *start, *end;
@@ -176,23 +176,23 @@ void SCR_MakeScreenShot( void )
 {
 	qboolean	iRet = false;
 
-	if( !re && host.type == HOST_NORMAL )
+	if( host.type == HOST_NORMAL )
 		return;	// don't reset action - it will be wait until render initalization is done
 
 	switch( cls.scrshot_action )
 	{
 	case scrshot_plaque:
-		iRet = re->ScrShot( cls.shotname, VID_LEVELSHOT );
+		iRet = VID_ScreenShot( cls.shotname, VID_LEVELSHOT );
 		break;
 	case scrshot_savegame:
 	case scrshot_demoshot:
-		iRet = re->ScrShot( cls.shotname, VID_MINISHOT );
+		iRet = VID_ScreenShot( cls.shotname, VID_MINISHOT );
 		break;
 	case scrshot_envshot:
-		iRet = re->EnvShot( cls.shotname, cl_envshot_size->integer, cls.envshot_vieworg, false );
+		iRet = VID_CubemapShot( cls.shotname, cl_envshot_size->integer, cls.envshot_vieworg, false );
 		break;
 	case scrshot_skyshot:
-		iRet = re->EnvShot( cls.shotname, cl_envshot_size->integer, cls.envshot_vieworg, true );
+		iRet = VID_CubemapShot( cls.shotname, cl_envshot_size->integer, cls.envshot_vieworg, true );
 		break;
 	default: return; // does nothing
 	}
@@ -210,13 +210,11 @@ void SCR_DrawPlaque( void )
 {
 	shader_t	levelshot;
 
-	if( !re ) return;
-
 	if( cl_allow_levelshots->integer && !cls.changelevel )
 	{
-		levelshot = re->RegisterShader( cl_levelshot_name->string, SHADER_NOMIP );
-		re->SetParms( levelshot, kRenderNormal, 0 );
-		re->DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
+		levelshot = GL_LoadTexture( cl_levelshot_name->string, NULL, 0, TF_IMAGE );
+		GL_SetRenderMode( kRenderNormal );
+		R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
 
 		CL_DrawHUD( CL_LOADING );
 	}
@@ -266,8 +264,6 @@ void SCR_UpdateScreen( void )
 
 static void SCR_LoadCreditsFont( void )
 {
-	if( !re ) return;
-
 	// setup creditsfont
 	if( FS_FileExists( "gfx/creditsfont.fnt" ))
 	{
@@ -278,7 +274,7 @@ static void SCR_LoadCreditsFont( void )
 	
 		// half-life font with variable chars witdh
 		buffer = FS_LoadFile( "gfx/creditsfont.fnt", &length );
-		re->GetParms( &fontWidth, NULL, NULL, 0, cls.creditsFont.hFontTexture );
+		R_GetTextureParms( &fontWidth, NULL, cls.creditsFont.hFontTexture );
 	
 		if( buffer && length >= sizeof( qfont_t ))
 		{
@@ -334,19 +330,13 @@ static void SCR_InstallParticlePalette( void )
 
 void SCR_RegisterShaders( void )
 {
-	if( !re ) return;
-
-	cls.fillShader = re->RegisterShader( "*white", SHADER_NOMIP ); // used for FillRGBA
-	cls.particleShader = re->RegisterShader( "*particle", SHADER_NOMIP );
+	cls.fillImage = GL_LoadTexture( "*white", NULL, 0, TF_IMAGE ); // used for FillRGBA
+	cls.particleImage = GL_LoadTexture( "*particle", NULL, 0, TF_IMAGE );
 
 	// register gfx.wad images
-	cls.pauseIcon = re->RegisterShader( "gfx/paused", SHADER_NOMIP );
-	cls.loadingBar = re->RegisterShader( "gfx/lambda", SHADER_NOMIP );
-	cls.creditsFont.hFontTexture = re->RegisterShader( "gfx/creditsfont", SHADER_NOMIP );
-
-	// FIXME: register new type shader 'GLOWSHELL', allow to loading sprites with this type
-	// apply by default 'deformVertices' etc
-	cls.glowShell = re->RegisterShader( "renderfx/glowshell", SHADER_GENERIC );
+	cls.pauseIcon = GL_LoadTexture( "gfx.wad/paused", NULL, 0, TF_IMAGE );
+	cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda", NULL, 0, TF_IMAGE|TF_LUMINANCE );
+	cls.creditsFont.hFontTexture = GL_LoadTexture( "gfx.wad/creditsfont", NULL, 0, TF_IMAGE );
 	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
 }
 

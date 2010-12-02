@@ -11,11 +11,33 @@ extern "C" {
 
 // linked interfaces
 extern stdlib_api_t	com;
-extern render_exp_t	*re;
 
 #ifdef __cplusplus
 }
 #endif
+
+#define TF_FONT	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
+#define TF_IMAGE	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP)
+#define TF_DECAL	(TF_CLAMP|TF_UNCOMPRESSED)
+
+typedef enum
+{
+	TF_STATIC		= BIT(0),		// don't free until Shader_FreeUnused()
+	TF_NOPICMIP	= BIT(1),		// ignore r_picmip resample rules
+	TF_UNCOMPRESSED	= BIT(2),		// don't compress texture in video memory
+	TF_CUBEMAP	= BIT(3),		// it's cubemap texture
+	TF_DEPTHMAP	= BIT(4),		// custom texture filter used
+	TF_INTENSITY	= BIT(5),
+	TF_LUMINANCE	= BIT(6),		// force image to grayscale
+	TF_SKYSIDE	= BIT(7),
+	TF_CLAMP		= BIT(8),
+	TF_NOMIPMAP	= BIT(9),
+	TF_NEAREST	= BIT(10),	// disable texfilter
+	TF_LIGHTMAP	= BIT(11),	// no resample etc
+	TF_HAS_LUMA	= BIT(12),	// sets by GL_UploadTexture
+	TF_MAKELUMA	= BIT(13),	// create luma from quake texture
+	TF_NORMALMAP	= BIT(14),	// is a normalmap
+} texFlags_t;
 
 qboolean R_Init( void );
 void R_Shutdown( void );
@@ -28,11 +50,30 @@ void R_BeginFrame( qboolean clearScene );
 void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld );
 void R_EndFrame( void );
 void R_ClearScene( void );
+void R_GetTextureParms( int *w, int *h, int texnum );
+void R_GetSpriteParms( int *frameWidth, int *frameHeight, int *numFrames, int curFrame, const struct model_s *pSprite );
 void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, qboolean dirty );
 void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, int texnum );
 void R_DrawSetColor( const rgba_t color );
-
-		
+qboolean R_SpeedsMessage( char *out, size_t size );
+int R_CreateDecalList( decallist_t *pList, qboolean changelevel );
+void R_SetupSky( const char *skyboxname );
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs );
+qboolean R_WorldToScreen( const vec3_t point, vec3_t screen );
+void R_ScreenToWorld( const vec3_t screen, vec3_t point );
+qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType, int customTexture );
+void Mod_LoadSpriteModel( struct model_s *mod, const void *buffer );
+void Mod_LoadMapSprite( struct model_s *mod, const void *buffer, size_t size );
+void Mod_UnloadSpriteModel( struct model_s *mod );
+void GL_SetRenderMode( int mode );
+int R_GetSpriteTexture( const struct model_s *m_pSpriteModel, int frame );
+void R_LightForPoint( const vec3_t point, vec3_t ambientLight );
+qboolean R_AddDLight( vec3_t pos, color24 color, float radius, int flags );
+qboolean R_SetLightStyle( int stylenum, vec3_t color );
+qboolean R_DecalShoot( int texture, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
+void R_DecalRemoveAll( int texture );
+byte *Mod_GetCurrentVis( void );
+			
 typedef int	sound_t;
 
 typedef struct

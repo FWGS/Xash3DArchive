@@ -8,6 +8,48 @@
 #include "gl_local.h"
 
 /*
+=============
+R_GetImageParms
+=============
+*/
+void R_GetTextureParms( int *w, int *h, int texnum )
+{
+	gltexture_t	*glt;
+
+	glt = R_GetTexture( texnum );
+	if( w ) *w = glt->srcWidth;
+	if( h ) *h = glt->srcHeight;
+}
+
+/*
+=============
+R_GetSpriteParms
+
+same as GetImageParms but used
+for sprite models
+=============
+*/
+void R_GetSpriteParms( int *frameWidth, int *frameHeight, int *numFrames, int currentFrame, const model_t *pSprite )
+{
+	mspriteframe_t	*pFrame;
+
+	if( !pSprite || pSprite->type != mod_sprite ) return; // bad model ?
+	pFrame = R_GetSpriteFrame( pSprite, currentFrame, 0.0f );
+
+	if( frameWidth ) *frameWidth = pFrame->width;
+	if( frameHeight ) *frameHeight = pFrame->height;
+	if( numFrames ) *numFrames = pSprite->numframes;
+}
+
+int R_GetSpriteTexture( const model_t *m_pSpriteModel, int frame )
+{
+	if( !m_pSpriteModel || m_pSpriteModel->type != mod_sprite || !m_pSpriteModel->cache.data )
+		return 0;
+
+	return R_GetSpriteFrame( m_pSpriteModel, frame, 0.0f )->gl_texturenum;
+}
+
+/*
 ===============
 R_DrawSetColor
 ===============
@@ -134,7 +176,7 @@ void R_Set2DMode( qboolean enable )
 		pglLoadIdentity();
 
 		GL_Cull( 0 );
-//		GL_SetState( GLSTATE_NO_DEPTH_TEST );
+		GL_SetState( GLSTATE_NO_DEPTH_TEST );
 
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 

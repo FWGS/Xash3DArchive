@@ -9,6 +9,7 @@
 #include "gl_export.h"
 #include "com_model.h"
 #include "cl_entity.h"
+#include "ref_params.h"
 
 extern byte	*r_temppool;
 
@@ -32,24 +33,46 @@ typedef enum
 	TEX_CUBEMAP	// cubemap textures
 } texType_t;
 
-typedef enum
+enum
 {
-	TF_STATIC		= BIT(0),		// don't free until Shader_FreeUnused()
-	TF_NOPICMIP	= BIT(1),		// ignore r_picmip resample rules
-	TF_UNCOMPRESSED	= BIT(2),		// don't compress texture in video memory
-	TF_CUBEMAP	= BIT(3),		// it's cubemap texture
-	TF_DEPTHMAP	= BIT(4),		// custom texture filter used
-	TF_INTENSITY	= BIT(5),
-	TF_ALPHA		= BIT(6),
-	TF_SKYSIDE	= BIT(7),
-	TF_CLAMP		= BIT(8),
-	TF_NOMIPMAP	= BIT(9),
-	TF_NEAREST	= BIT(10),	// disable texfilter
-	TF_LIGHTMAP	= BIT(11),	// no resample etc
-	TF_HAS_LUMA	= BIT(12),	// sets by GL_UploadTexture
-	TF_MAKELUMA	= BIT(13),	// create luma from quake texture
-	TF_NORMALMAP	= BIT(14),	// is a normalmap
-} texFlags_t;
+	GLSTATE_NONE = 0,
+	GLSTATE_SRCBLEND_ZERO		= 1,
+	GLSTATE_SRCBLEND_ONE		= 2,
+	GLSTATE_SRCBLEND_DST_COLOR		= 1|2,
+	GLSTATE_SRCBLEND_ONE_MINUS_DST_COLOR	= 4,
+	GLSTATE_SRCBLEND_SRC_ALPHA		= 1|4,
+	GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA	= 2|4,
+	GLSTATE_SRCBLEND_DST_ALPHA		= 1|2|4,
+	GLSTATE_SRCBLEND_ONE_MINUS_DST_ALPHA	= 8,
+	GLSTATE_DSTBLEND_ZERO		= 16,
+	GLSTATE_DSTBLEND_ONE		= 32,
+	GLSTATE_DSTBLEND_SRC_COLOR		= 16|32,
+	GLSTATE_DSTBLEND_ONE_MINUS_SRC_COLOR	= 64,
+	GLSTATE_DSTBLEND_SRC_ALPHA		= 16|64,
+	GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA	= 32|64,
+	GLSTATE_DSTBLEND_DST_ALPHA		= 16|32|64,
+	GLSTATE_DSTBLEND_ONE_MINUS_DST_ALPHA	= 128,
+	GLSTATE_BLEND_MTEX			= 0x100,
+	GLSTATE_AFUNC_GT0			= 0x200,
+	GLSTATE_AFUNC_LT128			= 0x400,
+	GLSTATE_AFUNC_GE128			= 0x800,
+	GLSTATE_DEPTHWRITE			= 0x1000,
+	GLSTATE_DEPTHFUNC_EQ		= 0x2000,
+	GLSTATE_OFFSET_FILL			= 0x4000,
+	GLSTATE_NO_DEPTH_TEST		= 0x8000,
+	GLSTATE_MARK_END			= 0x10000 // SHADERPASS_MARK_BEGIN
+};
+
+#define GLSTATE_MASK		( GLSTATE_MARK_END-1 )
+
+// #define SHADERPASS_SRCBLEND_MASK (((GLSTATE_SRCBLEND_DST_ALPHA)<<1)-GLSTATE_SRCBLEND_ZERO)
+#define GLSTATE_SRCBLEND_MASK		0xF
+
+// #define SHADERPASS_DSTBLEND_MASK (((GLSTATE_DSTBLEND_DST_ALPHA)<<1)-GLSTATE_DSTBLEND_ZERO)
+#define GLSTATE_DSTBLEND_MASK		0xF0
+
+#define GLSTATE_BLENDFUNC		( GLSTATE_SRCBLEND_MASK|GLSTATE_DSTBLEND_MASK )
+#define GLSTATE_ALPHAFUNC		( GLSTATE_AFUNC_GT0|GLSTATE_AFUNC_LT128|GLSTATE_AFUNC_GE128 )
 
 typedef struct gltexture_s
 {
@@ -76,6 +99,8 @@ typedef struct
 	int		params;		// rendering parameters
 	qboolean		drawWorld;	// ignore world for drawing PlayerModel
 	qboolean		thirdPerson;	// thirdperson camera is enabled
+
+	ref_params_t	refdef;		// actual refdef
 
 	cl_entity_t	*currententity;
 	model_t		*currentmodel;
@@ -105,7 +130,9 @@ void GL_BuildPolygonFromSurface( msurface_t *fa );
 void GL_Bind( GLenum tmu, GLenum texnum );
 void GL_TexGen( GLenum coord, GLenum mode );
 void GL_SelectTexture( GLenum texture );
+void GL_SetRenderMode( int mode );
 void GL_FrontFace( GLenum front );
+void GL_SetState( int state );
 void GL_TexEnv( GLenum mode );
 void GL_Cull( GLenum cull );
 
@@ -124,6 +151,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight, qboolean isNormalMap );
 void GL_FreeTexture( GLenum texnum );
 void GL_FreeImage( const char *name );
+void R_TextureList_f( void );
 void R_InitImages( void );
 void R_ShutdownImages( void );
 
@@ -132,6 +160,12 @@ void R_ShutdownImages( void );
 //
 void R_ClearScene( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
+
+//
+// gl_sprite.c
+//
+void Mod_LoadSpriteModel( model_t *mod, const void *buffer );
+mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
 
 //
 // gl_vidnt.c
@@ -303,6 +337,7 @@ extern convar_t	*gl_clear;
 
 extern convar_t	*r_width;
 extern convar_t	*r_height;
+extern convar_t	*r_speeds;
 
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*vid_fullscreen;

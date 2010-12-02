@@ -222,8 +222,6 @@ int CL_TEntAddEntity( cl_entity_t *pEntity )
 	float	shellScale = 1.0f;
 	int	result;
 
-	if( !re ) return false;
-
 	ASSERT( pEntity != NULL );
 
 	if( pEntity->curstate.renderfx == kRenderFxGlowShell )
@@ -234,7 +232,7 @@ int CL_TEntAddEntity( cl_entity_t *pEntity )
 		pEntity->curstate.renderamt = 255; // clear amount
 	}
 
-	result = re->AddRefEntity( pEntity, ET_TEMPENTITY, -1 );
+	result = R_AddEntity( pEntity, ET_TEMPENTITY, -1 );
 
 	if( pEntity->curstate.renderfx == kRenderFxGlowShell )
 	{
@@ -243,7 +241,7 @@ int CL_TEntAddEntity( cl_entity_t *pEntity )
 		pEntity->curstate.renderamt = 128;
 
 		// render glowshell
-		result |= re->AddRefEntity( pEntity, ET_TEMPENTITY, cls.glowShell );
+		result |= R_AddEntity( pEntity, ET_TEMPENTITY, cls.glowShell );
 
 		// restore parms
 		pEntity->curstate.scale = oldScale;
@@ -2199,7 +2197,7 @@ void CL_AddLightStyles( void )
 	lightstyle_t	*ls;
 
 	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
-		re->AddLightStyle( i, ls->rgb );
+		R_SetLightStyle( i, ls->rgb );
 }
 
 /*
@@ -2297,7 +2295,7 @@ qboolean CL_AddDlight( dlight_t *dl )
 	if( dl->dark ) flags |= DLIGHT_DARK;
 	if( dl->elight ) flags |= DLIGHT_ONLYENTS;
 
-	add = re->AddDLight( dl->origin, dl->color, dl->radius, flags );
+	add = R_AddDLight( dl->origin, dl->color, dl->radius, flags );
 
 	return add;
 }
@@ -2450,7 +2448,7 @@ void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos,
 	rgba_t	color;
 
 	Vector4Set( color, 255, 255, 255, 255 ); // don't use custom colors
-	if( re ) re->DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, flags, color, 0.0f, 0.0f );
+	R_DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, flags, color );
 }
 
 /*
@@ -2470,7 +2468,7 @@ void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color )
 	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
 	if( !color ) color = _clr;
 
-	if( re ) re->DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, FDECAL_CUSTOM, color, 0.0f, 0.0f );
+	R_DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, FDECAL_CUSTOM, color );
 }
 
 /*
@@ -2508,9 +2506,8 @@ int CL_DecalIndex( int id )
 	id = bound( 0, id, MAX_DECALS - 1 );
 
 	if( !cl.decal_index[id] )
-	{
-		cl.decal_index[id] = re->RegisterShader( host.draw_decals[id], SHADER_DECAL );
-	}
+		cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL );
+
 	return cl.decal_index[id];
 }
 
@@ -2524,20 +2521,7 @@ remove all decals with specified shader
 void CL_DecalRemoveAll( int textureIndex )
 {
 	int id = bound( 0, textureIndex, MAX_DECALS - 1 );	
-	re->DecalRemoveAll( cl.decal_index[id] );
-}
-
-/*
-===============
-CL_LightForPoint
-
-get lighting color for specified point
-===============
-*/
-void CL_LightForPoint( const vec3_t point, vec3_t ambientLight )
-{
-	if( re ) re->LightForPoint( point, ambientLight );
-	else VectorClear( ambientLight );
+	R_DecalRemoveAll( cl.decal_index[id] );
 }
 
 /*

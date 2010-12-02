@@ -917,7 +917,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	FS_Write( pFile, &version, sizeof( int ));
 
 	decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_RENDER_DECALS );
-	decalCount = Host_CreateDecalList( decalList, svgame.globals->changelevel );
+	decalCount = R_CreateDecalList( decalList, svgame.globals->changelevel );
 
 	FS_Write( pFile, &decalCount, sizeof( int ));
 
@@ -1740,8 +1740,8 @@ void SV_SaveGame( const char *pName )
 	if( FS_FileExists( va( "save/%s.%s", savename, SI->savshot_ext )))
 		FS_Delete( va( "save/%s.%s", savename, SI->savshot_ext ));
 
-	// HACKHACK: unload previous shader from memory
-	if( re ) re->FreeShader( va( "save/%s.%s", savename, SI->savshot_ext ));
+	// HACKHACK: unload previous image from memory
+	GL_FreeImage( va( "save/%s.%s", savename, SI->savshot_ext ));
 
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );

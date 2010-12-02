@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "client.h"
+#include "gl_local.h"
 #include "r_efx.h"
 #include "event_flags.h"
 #include "entity_types.h"
@@ -406,24 +407,24 @@ void CL_UpdateParticle( particle_t *p, float ft )
 	p->color = bound( 0, p->color, 255 );
 	VectorSet( color, clgame.palette[p->color][0], clgame.palette[p->color][1], clgame.palette[p->color][2] );
 
-	re->RenderMode( kRenderTransTexture );
-	re->Color4ub( color[0], color[1], color[2], alpha );
+	GL_SetRenderMode( kRenderTransTexture );
+	pglColor4ub( color[0], color[1], color[2], alpha );
 
-	re->Bind( cls.particleShader, 0 );
+	GL_Bind( GL_TEXTURE0, cls.particleImage );
 
 	// add the 4 corner vertices.
-	re->Begin( TRI_QUADS );
+	pglBegin( GL_QUADS );
 
-	re->TexCoord2f( 0.0f, 1.0f );
-	re->Vertex3f( p->org[0] - right[0] + up[0], p->org[1] - right[1] + up[1], p->org[2] - right[2] + up[2] );
-	re->TexCoord2f( 0.0f, 0.0f );
-	re->Vertex3f( p->org[0] + right[0] + up[0], p->org[1] + right[1] + up[1], p->org[2] + right[2] + up[2] );
-	re->TexCoord2f( 1.0f, 0.0f );
-	re->Vertex3f( p->org[0] + right[0] - up[0], p->org[1] + right[1] - up[1], p->org[2] + right[2] - up[2] );
-	re->TexCoord2f( 1.0f, 1.0f );
-	re->Vertex3f( p->org[0] - right[0] - up[0], p->org[1] - right[1] - up[1], p->org[2] - right[2] - up[2] );
+	pglTexCoord2f( 0.0f, 1.0f );
+	pglVertex3f( p->org[0] - right[0] + up[0], p->org[1] - right[1] + up[1], p->org[2] - right[2] + up[2] );
+	pglTexCoord2f( 0.0f, 0.0f );
+	pglVertex3f( p->org[0] + right[0] + up[0], p->org[1] + right[1] + up[1], p->org[2] + right[2] + up[2] );
+	pglTexCoord2f( 1.0f, 0.0f );
+	pglVertex3f( p->org[0] + right[0] - up[0], p->org[1] + right[1] - up[1], p->org[2] + right[2] - up[2] );
+	pglTexCoord2f( 1.0f, 1.0f );
+	pglVertex3f( p->org[0] - right[0] - up[0], p->org[1] - right[1] - up[1], p->org[2] - right[2] - up[2] );
 
-	re->End();
+	pglEnd();
 
 	if( p->type != pt_clientcustom )
 	{
@@ -1159,8 +1160,6 @@ static qboolean CL_CullTracer( const vec3_t start, const vec3_t end )
 	vec3_t	mins, maxs;
 	int	i;
 
-	if( !re ) return true;	// culled
-
 	// compute the bounding box
 	for( i = 0; i < 3; i++ )
 	{
@@ -1183,7 +1182,7 @@ static qboolean CL_CullTracer( const vec3_t start, const vec3_t end )
 	}
 
 	// check bbox
-	return re->CullBox( mins, maxs );
+	return R_CullBox( mins, maxs );
 }
 
 /*
@@ -1247,26 +1246,26 @@ void CL_DrawTracer( vec3_t start, vec3_t delta, float width, rgb_t color, int al
 	// NOTE: Gotta get the winding right so it's not backface culled
 	// (we need to turn of backface culling for these bad boys)
 
-	re->RenderMode( kRenderTransTexture );
+	GL_SetRenderMode( kRenderTransTexture );
 
-	re->Color4ub( color[0], color[1], color[2], alpha );
+	pglColor4ub( color[0], color[1], color[2], alpha );
 
-	re->Bind( cls.particleShader, 0 );
-	re->Begin( TRI_QUADS );
+	GL_Bind( GL_TEXTURE0, cls.particleImage );
+	pglBegin( GL_QUADS );
 
-	re->TexCoord2f( 0.0f, endV );
-	TriVertex3fv( verts[2] );
+	pglTexCoord2f( 0.0f, endV );
+	pglVertex3fv( verts[2] );
 
-	re->TexCoord2f( 1.0f, endV );
-	TriVertex3fv( verts[3] );
+	pglTexCoord2f( 1.0f, endV );
+	pglVertex3fv( verts[3] );
 
-	re->TexCoord2f( 1.0f, startV );
-	TriVertex3fv( verts[1] );
+	pglTexCoord2f( 1.0f, startV );
+	pglVertex3fv( verts[1] );
 
-	re->TexCoord2f( 0.0f, startV );
-	TriVertex3fv( verts[0] );
+	pglTexCoord2f( 0.0f, startV );
+	pglVertex3fv( verts[0] );
 
-	re->End();
+	pglEnd();
 }
 
 /*

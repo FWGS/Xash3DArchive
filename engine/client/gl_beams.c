@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//			cl_beam.c - client-side beams
+//			gl_beams.c - beams rendering
 //=======================================================================
 
 #include "common.h"
@@ -12,6 +12,7 @@
 #include "customentity.h"
 #include "cl_tent.h"
 #include "pm_local.h"
+#include "gl_local.h"
 #include "studio.h"
 
 #define NOISE_DIVISIONS	64	// don't touch - many tripmines cause the crash when it equal 128
@@ -172,7 +173,7 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 	if( !cl_draw_beams->integer )
 		return;
 	
-	m_hSprite = re->GetSpriteTexture( modelIndex, frame );
+	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2  )
 		return;
@@ -239,9 +240,9 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 	segs_drawn = 0;
 	total_segs = segments;
 
-	re->RenderMode( rendermode );
-	re->Bind( m_hSprite, frame );		// GetSpriteTexture already set frame
-	re->Begin( TRI_TRIANGLE_STRIP );
+	GL_SetRenderMode( rendermode );
+	GL_Bind( GL_TEXTURE0, m_hSprite );
+	pglBegin( GL_TRIANGLE_STRIP );
 
 	// specify all the segments.
 	for( i = 0; i < segments; i++ )
@@ -332,15 +333,15 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 			VectorMA( curSeg.pos, ( curSeg.width * 0.5f ), vAveNormal, vPoint1 );
 			VectorMA( curSeg.pos, (-curSeg.width * 0.5f ), vAveNormal, vPoint2 );
 
-			TriColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
-			re->TexCoord2f( 0.0f, curSeg.texcoord );
-			TriNormal3fv( vAveNormal );
-			TriVertex3fv( vPoint1 );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglTexCoord2f( 0.0f, curSeg.texcoord );
+			pglNormal3fv( vAveNormal );
+			pglVertex3fv( vPoint1 );
 
-			TriColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
-			re->TexCoord2f( 1.0f, curSeg.texcoord );
-			TriNormal3fv( vAveNormal );
-			TriVertex3fv( vPoint2 );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglTexCoord2f( 1.0f, curSeg.texcoord );
+			pglNormal3fv( vAveNormal );
+			pglVertex3fv( vPoint2 );
 		}
 
 		curSeg = nextSeg;
@@ -353,22 +354,22 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 			VectorMA( curSeg.pos, (-curSeg.width * 0.5f ), vLastNormal, vPoint2 );
 
 			// specify the points.
-			TriColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
-			re->TexCoord2f( 0.0f, curSeg.texcoord );
-			TriNormal3fv( vLastNormal );
-			TriVertex3fv( vPoint1 );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglTexCoord2f( 0.0f, curSeg.texcoord );
+			pglNormal3fv( vLastNormal );
+			pglVertex3fv( vPoint1 );
 
-			TriColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
-			re->TexCoord2f( 1.0f, curSeg.texcoord );
-			TriNormal3fv( vLastNormal );
-			TriVertex3fv( vPoint2 );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglTexCoord2f( 1.0f, curSeg.texcoord );
+			pglNormal3fv( vLastNormal );
+			pglVertex3fv( vPoint2 );
 		}
 
 		vLast += vStep;	// Advance texture scroll (v axis only)
 		noiseIndex += noiseStep;
 	}
 
-	re->End();
+	pglEnd();
 }
 
 /*
@@ -383,9 +384,11 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 {
 	float	div, length, fraction;
 	float	w, vLast, vStep;
-	HSPRITE	m_hSprite = re->GetSpriteTexture( modelIndex, frame );
+	HSPRITE	m_hSprite;
 	vec3_t	point;
 	int	i;
+
+	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2 )
 		return;
@@ -408,10 +411,10 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 
 	w = freq * delta[2];
 
-	re->RenderMode( rendermode );
-	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	GL_SetRenderMode( rendermode );
+	GL_Bind( GL_TEXTURE0, m_hSprite );
 
-	re->Begin( TRI_TRIANGLE_STRIP );
+	pglBegin( GL_TRIANGLE_STRIP );
 
 	// NOTE: We must force the degenerate triangles to be on the edge
 	for( i = 0; i < segments; i++ )
@@ -421,23 +424,23 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 		fraction = i * div;
 		VectorCopy( source, point );
 
-		TriColor4f( color[0], color[1], color[2], 1.0f );
-		re->TexCoord2f( 1.0f, vLast );
-		TriVertex3fv( point );
+		pglColor4f( color[0], color[1], color[2], 1.0f );
+		pglTexCoord2f( 1.0f, vLast );
+		pglVertex3fv( point );
 
 		com.sincos( fraction * 2.0f * M_PI, &s, &c );
 		point[0] = s * w + source[0];
 		point[1] = c * w + source[1];
 		point[2] = source[2];
 
-		TriColor4f( color[0], color[1], color[2], 1.0f );
-		re->TexCoord2f( 0.0f, vLast );
-		TriVertex3fv( point );
+		pglColor4f( color[0], color[1], color[2], 1.0f );
+		pglTexCoord2f( 0.0f, vLast );
+		pglVertex3fv( point );
 
 		vLast += vStep;	// Advance texture scroll (v axis only)
 	}
 
-	re->End();
+	pglEnd();
 }
 
 /*
@@ -452,9 +455,11 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 {
 	float	length, fraction;
 	float	div, vLast, vStep;
-	HSPRITE	m_hSprite = re->GetSpriteTexture( modelIndex, frame );
+	HSPRITE	m_hSprite;
 	vec3_t	point;
 	int	i;
+
+	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2 )
 		return;
@@ -475,11 +480,11 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 	vLast = fmod( freq * speed, 1.0f );
 	scale = scale * length;
 	
-	re->CullFace( TRI_NONE );	// FIXME: get it to work properly with enabled culling
-	re->RenderMode( rendermode );
-	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	GL_Cull( GL_NONE );	// FIXME: get it to work properly with enabled culling
+	GL_SetRenderMode( rendermode );
+	GL_Bind( GL_TEXTURE0, m_hSprite );
 
-	re->Begin( TRI_TRIANGLE_STRIP );
+	pglBegin( GL_TRIANGLE_STRIP );
 
 	for( i = 0; i < segments; i++ )
 	{
@@ -492,23 +497,23 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 		point[1] = c * freq * delta[2] + source[1];
 		point[2] = source[2] + width;
 
-		TriColor4f( 0.0f, 0.0f, 0.0f, 1.0f );
-		re->TexCoord2f( 1.0f, vLast );
-		TriVertex3fv( point );
+		pglColor4f( 0.0f, 0.0f, 0.0f, 1.0f );
+		pglTexCoord2f( 1.0f, vLast );
+		pglVertex3fv( point );
 
 		point[0] = s * freq * (delta[2] + width) + source[0];
 		point[1] = c * freq * (delta[2] + width) + source[1];
 		point[2] = source[2] - width;
 
-		TriColor4f( color[0], color[1], color[2], 1.0f );
-		re->TexCoord2f( 0.0f, vLast );
-		TriVertex3fv( point );
+		pglColor4f( color[0], color[1], color[2], 1.0f );
+		pglTexCoord2f( 0.0f, vLast );
+		pglVertex3fv( point );
 
 		vLast += vStep;	// Advance texture scroll (v axis only)
 	}
 	
-	re->End();
-	re->CullFace( TRI_FRONT );
+	pglEnd();
+	GL_Cull( GL_FRONT );
 }
 
 /*
@@ -526,8 +531,10 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	vec3_t	last1, last2, point, screen, screenLast;
 	vec3_t	center, xaxis, yaxis, zaxis, tmp, normal;
 	float	radius, x, y, scale;
-	HSPRITE	m_hSprite = re->GetSpriteTexture( modelIndex, frame );
+	HSPRITE	m_hSprite;
 	vec3_t	d;
+
+	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2 )
 		return;
@@ -575,7 +582,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	VectorSubtract( center, last1, screen );
 
 	// Is that box in PVS && frustum?
-	if( !Mod_BoxVisible( screen, tmp, re->GetCurrentVis( )) || re->CullBox( screen, tmp ))	
+	if( !Mod_BoxVisible( screen, tmp, Mod_GetCurrentVis( )) || R_CullBox( screen, tmp ))	
 	{
 		return;
 	}
@@ -589,10 +596,10 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 
 	j = segments / 8;
 
-	re->RenderMode( rendermode );
-	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	GL_SetRenderMode( rendermode );
+	GL_Bind( GL_TEXTURE0, m_hSprite );
 
-	re->Begin( TRI_TRIANGLE_STRIP );
+	pglBegin( GL_TRIANGLE_STRIP );
 
 	for( i = 0; i < segments + 1; i++ )
 	{
@@ -631,13 +638,13 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 			VectorMA( point, -width, normal, last2 );
 
 			vLast += vStep;	// Advance texture scroll (v axis only)
-			TriColor4f( color[0], color[1], color[2], 1.0f );
-			re->TexCoord2f( 1.0f, vLast );
-			TriVertex3fv( last2 );
+			pglColor4f( color[0], color[1], color[2], 1.0f );
+			pglTexCoord2f( 1.0f, vLast );
+			pglVertex3fv( last2 );
 
-			TriColor4f( color[0], color[1], color[2], 1.0f );
-			re->TexCoord2f( 0.0f, vLast );
-			TriVertex3fv( last1 );
+			pglColor4f( color[0], color[1], color[2], 1.0f );
+			pglTexCoord2f( 0.0f, vLast );
+			pglVertex3fv( last1 );
 		}
 
 		VectorCopy( screen, screenLast );
@@ -651,7 +658,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 		}
 	}
 
-	re->End();
+	pglEnd();
 }
 
 /*
@@ -730,8 +737,10 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	float	vLast = 0.0;
 	float	vStep = 1.0;
 	vec3_t	last1, last2, tmp, normal, scaledColor;
-	HSPRITE	m_hSprite = re->GetSpriteTexture( modelIndex, frame );
+	HSPRITE	m_hSprite;
 	rgb_t	nColor;
+
+	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
 	
 	if( !m_hSprite )
 		return;
@@ -746,7 +755,7 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	VectorNormalize( tmp );
 
 	// Build point along noraml line (normal is -y, x)
-	VectorScale( cl.refdef.up, tmp[0], normal );	// Build point along noraml line (normal is -y, x)
+	VectorScale( cl.refdef.up, tmp[0], normal );	// Build point along normal line (normal is -y, x)
 	VectorMA( normal, tmp[1], cl.refdef.right, normal );
 
 	// make a wide line
@@ -761,20 +770,20 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	nColor[1] = (byte)bound( 0, (int)(scaledColor[1] * 255.0f), 255 );
 	nColor[2] = (byte)bound( 0, (int)(scaledColor[2] * 255.0f), 255 );
 
-	re->RenderMode( rendermode );
-	re->Bind( m_hSprite, 0 );	// GetSpriteTexture already set frame
+	GL_SetRenderMode( rendermode );
+	GL_Bind( GL_TEXTURE0, m_hSprite );
 
-	re->Begin( TRI_QUADS );
+	pglBegin( GL_QUADS );
 
 	while( pHead )
 	{
-		re->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		re->TexCoord2f( 1.0f, 1.0f );
-		TriVertex3fv( last2 );
+		pglColor4ub( nColor[0], nColor[1], nColor[2], 255 );
+		pglTexCoord2f( 1.0f, 1.0f );
+		pglVertex3fv( last2 );
 
-		re->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		re->TexCoord2f( 0.0f, 1.0f );
-		TriVertex3fv( last1 );
+		pglColor4ub( nColor[0], nColor[1], nColor[2], 255 );
+		pglTexCoord2f( 0.0f, 1.0f );
+		pglVertex3fv( last1 );
 
 		// Transform point into screen space
 		TriWorldToScreen( pHead->org, screen );
@@ -809,20 +818,20 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 			fraction = 0.0;
 		}
 	
-		re->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		re->TexCoord2f( 0.0f, 0.0f );
-		TriVertex3fv( last1 );
+		pglColor4ub( nColor[0], nColor[1], nColor[2], 255 );
+		pglTexCoord2f( 0.0f, 0.0f );
+		pglVertex3fv( last1 );
 
-		re->Color4ub( nColor[0], nColor[1], nColor[2], 255 );
-		re->TexCoord2f( 1.0f, 0.0f );
-		TriVertex3fv( last2 );
+		pglColor4ub( nColor[0], nColor[1], nColor[2], 255 );
+		pglTexCoord2f( 1.0f, 0.0f );
+		pglVertex3fv( last2 );
 		
 		VectorCopy( screen, screenLast );
 
 		pHead = pHead->next;
 	}
 
-	re->End();
+	pglEnd();
 }
 
 /*
@@ -1103,9 +1112,9 @@ qboolean CL_CullBeam( const vec3_t start, const vec3_t end, qboolean pvsOnly )
 	}
 
 	// check bbox
-	if( Mod_BoxVisible( mins, maxs, re->GetCurrentVis( )))
+	if( Mod_BoxVisible( mins, maxs, Mod_GetCurrentVis( )))
 	{
-		if( pvsOnly || !re->CullBox( mins, maxs ))
+		if( pvsOnly || !R_CullBox( mins, maxs ))
 		{
 			// beam is visible
 			return false;	

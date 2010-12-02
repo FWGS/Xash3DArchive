@@ -122,10 +122,6 @@ SOURCE=.\common\build.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_beam.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\cl_cmds.c
 # End Source File
 # Begin Source File
@@ -151,10 +147,6 @@ SOURCE=.\client\cl_menu.c
 # Begin Source File
 
 SOURCE=.\client\cl_parse.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\client\cl_part.c
 # End Source File
 # Begin Source File
 
@@ -202,6 +194,14 @@ SOURCE=.\client\gl_backend.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_beams.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_decals.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_draw.c
 # End Source File
 # Begin Source File
@@ -210,7 +210,15 @@ SOURCE=.\client\gl_image.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_rlight.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_rmain.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_rpart.c
 # End Source File
 # Begin Source File
 
@@ -218,7 +226,15 @@ SOURCE=.\client\gl_rsurf.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_sprite.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_vidnt.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_warp.c
 # End Source File
 # Begin Source File
 

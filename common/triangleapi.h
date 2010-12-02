@@ -28,7 +28,7 @@ typedef enum
 #define TRI_TRIANGLE_FAN	1
 #define TRI_QUADS		2
 #define TRI_POLYGON		3
-#define TRI_LINES		4	
+#define TRI_LINES		4
 #define TRI_TRIANGLE_STRIP	5
 #define TRI_QUAD_STRIP	6
 

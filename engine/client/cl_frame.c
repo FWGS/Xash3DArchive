@@ -65,7 +65,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		ent->curstate.renderamt = 255; // clear amount
 	}
 
-	result = re->AddRefEntity( ent, entityType, -1 );
+	result = R_AddEntity( ent, entityType, -1 );
 
 	if( ent->curstate.renderfx == kRenderFxGlowShell )
 	{
@@ -74,7 +74,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		ent->curstate.renderamt = 128;
 
 		// render glowshell
-		result |= re->AddRefEntity( ent, entityType, cls.glowShell ); // FIXME
+		result |= R_AddEntity( ent, entityType, cls.glowShell ); // FIXME
 
 		// restore parms
 		ent->curstate.scale = oldScale;

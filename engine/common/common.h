@@ -131,10 +131,6 @@ typedef struct host_parm_s
 	int		window_center_x;
 	int		window_center_y;
 
-	// renderers info
-	char		*video_dlls[MAX_RENDERS];
-	int		num_video_dlls;
-
 	decallist_t	*decalList;	// used for keep decals, when renderer is restarted or changed
 	int		numdecals;
 
@@ -159,7 +155,6 @@ void Host_SetServerState( int state );
 int Host_ServerState( void );
 int Host_CompareFileTime( long ft1, long ft2 );
 qboolean Host_NewGame( const char *mapName, qboolean loadGame );
-int Host_CreateDecalList( decallist_t *pList, qboolean changelevel );
 void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
 void Host_WriteServerConfig( const char *name );
@@ -285,6 +280,7 @@ void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appNam
 int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBufferSize );
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
+int R_CreateDecalList( decallist_t *pList, qboolean changelevel );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );

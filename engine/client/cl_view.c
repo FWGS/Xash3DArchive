@@ -7,6 +7,7 @@
 #include "client.h"
 #include "const.h"
 #include "entity_types.h"
+#include "gl_local.h"
 
 /*
 ====================
@@ -17,7 +18,7 @@ Specifies the model that will be used as the world
 */
 void V_ClearScene( void )
 {
-	if( re ) re->ClearScene();
+	R_ClearScene();
 }
 
 float V_CalcFov( float fov_x, float width, float height )
@@ -126,7 +127,7 @@ void V_CalcRefDef( void )
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
 		V_AddViewModel();
-		re->RenderFrame( &cl.refdef, true );
+		R_RenderFrame( &cl.refdef, true );
 	} while( cl.refdef.nextView );
 }
 
@@ -166,7 +167,8 @@ qboolean V_PreRender( void )
 	static qboolean	oldState;
 
 	// too early
-	if( !re ) return false;
+	if( !glw_state.initialized )
+		return false;
 
 	if( host.state == HOST_NOFOCUS )
 		return false;
@@ -176,13 +178,13 @@ qboolean V_PreRender( void )
 	if( cl.refdef.paused || cls.changelevel )
 		clearScene = false;
 
-	re->BeginFrame( clearScene );
+	R_BeginFrame( clearScene );
 
 	if( !oldState && cls.changelevel )
 	{
 		// fire once
 		CL_DrawHUD( CL_CHANGELEVEL );
-		re->EndFrame();
+		R_EndFrame();
 	}
 	oldState = cls.changelevel;
 
@@ -210,5 +212,5 @@ void V_PostRender( void )
 	}
 
 	SCR_MakeScreenShot();
-	re->EndFrame();
+	R_EndFrame();
 }

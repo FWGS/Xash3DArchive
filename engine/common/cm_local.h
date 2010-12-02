@@ -83,7 +83,6 @@ void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
 modtype_t CM_GetModelType( int handle );
 model_t *CM_ClipHandleToModel( int handle );
-int CM_ClipModelToHandle( const model_t *pmodel );
 void CM_BeginRegistration ( const char *name, qboolean clientload, uint *checksum );
 model_t *CM_ModForName( const char *name, qboolean world );
 qboolean CM_RegisterModel( const char *name, int index );

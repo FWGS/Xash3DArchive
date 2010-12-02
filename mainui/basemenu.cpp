@@ -37,7 +37,7 @@ const char	*uiSoundIn	= "media/launch_upmenu1.wav";
 const char	*uiSoundOut	= "media/launch_dnmenu1.wav";
 const char	*uiSoundLaunch	= "media/launch_select2.wav";
 const char	*uiSoundGlow	= "media/launch_glow1.wav";
-const char	*uiSoundBuzz	= "media/menu1.wav";
+const char	*uiSoundBuzz	= "media/launch_deny2.wav";
 const char	*uiSoundKey	= "media/launch_select1.wav";
 const char	*uiSoundRemoveKey	= "media/launch_deny1.wav";
 const char	*uiSoundMove	= "";		// Xash3D not use movesound
@@ -113,7 +113,7 @@ void UI_DrawPic( int x, int y, int width, int height, const int color, const cha
 	UnpackRGBA( r, g, b, a, color );
 
 	PIC_Set( hPic, r, g, b, a );
-	PIC_Draw( 0, x, y, width, height );
+	PIC_Draw( x, y, width, height );
 }
 
 /*
@@ -129,7 +129,7 @@ void UI_DrawPicAdditive( int x, int y, int width, int height, const int color, c
 	UnpackRGBA( r, g, b, a, color );
 
 	PIC_Set( hPic, r, g, b, a );
-	PIC_DrawAdditive( 0, x, y, width, height );
+	PIC_DrawAdditive( x, y, width, height );
 }
 
 /*
@@ -305,7 +305,7 @@ void UI_DrawMouseCursor( void )
 	if( hCursor == -1 ) hCursor = PIC_Load( UI_CURSOR_NORMAL, cursor_tga, sizeof( cursor_tga ));
 
 	PIC_Set( hCursor, 255, 255, 255 );
-	PIC_DrawTrans( 0, uiStatic.cursorX, uiStatic.cursorY, w, h );
+	PIC_DrawTrans( uiStatic.cursorX, uiStatic.cursorY, w, h );
 }
 
 /*

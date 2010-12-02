@@ -259,6 +259,7 @@ usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
 	static double	extramsec = 0;
+	vec3_t		color;
 	int		ms;
 
 	// send milliseconds of time to apply the move
@@ -290,13 +291,8 @@ usercmd_t CL_CreateCmd( void )
 
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
 
-	if( re )
-	{
-		vec3_t	color;
-	
-		re->LightForPoint( cl.frame.local.client.origin, color );
-		cmd.lightlevel = VectorAvg( color ) * 255;
-	}
+	R_LightForPoint( cl.frame.local.client.origin, color );
+	cmd.lightlevel = VectorAvg( color ) * 255;
 
 	// random seed for predictable random values
 	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
@@ -844,7 +840,7 @@ void CL_Crashed_f( void )
 	Host_WriteOpenGLConfig();
 	Host_WriteConfig();	// write config
 
-	if( re ) re->RestoreGamma();
+	VID_RestoreGamma();
 }
 
 /*
@@ -1053,7 +1049,6 @@ void CL_PrepVideo( void )
 	// let the render dll load the map
 	com.strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
 	CM_BeginRegistration( mapname, true, &map_checksum );
-	re->BeginRegistration( mapname );
 	cl.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 
 	SCR_RegisterShaders(); // update with new sequence
@@ -1071,7 +1066,6 @@ void CL_PrepVideo( void )
 	for( i = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
 	{
 		com.strncpy( name, cl.model_precache[i+1], MAX_STRING );
-		re->RegisterModel( name, i+1 );
 		CM_RegisterModel( name, i+1 );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 45.0f / mdlcount );
 		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
@@ -1081,9 +1075,17 @@ void CL_PrepVideo( void )
 	Mem_Set( cl.decal_index, 0, sizeof( cl.decal_index ));
 
 	// setup sky and free unneeded stuff
-	re->EndRegistration( cl.refdef.movevars->skyName );
+	R_SetupSky( cl.refdef.movevars->skyName );
 	CM_EndRegistration (); // free unused models
 	Cvar_SetFloat( "scr_loading", 100.0f );	// all done
+
+	// release unused SpriteTextures
+	for( i = 1; i < MAX_IMAGES; i++ )
+	{
+		if( !clgame.sprites[i].name[0] ) continue; // free slot
+		if( clgame.sprites[i].registration_sequence != cm.registration_sequence )
+			Mod_UnloadSpriteModel( &clgame.sprites[i] );
+	}
 
 	if( host.decalList )
 	{

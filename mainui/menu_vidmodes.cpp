@@ -129,7 +129,7 @@ static void UI_VidOptions_SetConfig( void )
 	CVAR_SET_FLOAT( "fullscreen", !uiVidModes.windowed.enabled );
 	CVAR_SET_FLOAT( "r_allow_software", uiVidModes.software.enabled );
 
-	CHANGE_VIDEO( uiVidModes.videoList[(int)uiVidModes.videoLibrary.curValue] );
+	CLIENT_COMMAND( TRUE, "vid_restart\n" );
 }
 
 /*

@@ -8,11 +8,8 @@
 #include "cm_local.h"
 #include "input.h"
 
-render_exp_t	*re;
 host_parm_t	host;	// host parms
-stdlib_api_t	com, newcom;
-
-dll_info_t render_dll = { "", NULL, "CreateAPI", NULL, NULL, 0, sizeof(render_exp_t), sizeof(stdlib_api_t) };
+stdlib_api_t	com;
 
 convar_t	*host_serverstate;
 convar_t	*host_gameloaded;
@@ -20,11 +17,14 @@ convar_t	*host_limitlocal;
 convar_t	*host_cheats;
 convar_t	*host_maxfps;
 convar_t	*host_framerate;
-convar_t	*host_video;
 qboolean	sound_restart;
+qboolean	video_restart;
 
 // these cvars will be duplicated on each client across network
-int Host_ServerState( void ) { return Cvar_VariableInteger( "host_serverstate" ); }
+int Host_ServerState( void )
+{
+	return Cvar_VariableInteger( "host_serverstate" );
+}
 
 int Host_CompareFileTime( long ft1, long ft2 )
 {
@@ -95,72 +95,8 @@ void Host_EndGame( const char *message, ... )
 	Host_AbortCurrentFrame ();
 }
 
-static void Host_DrawDebugCollision( cmdraw_t drawPoly ) 
-{ 
-	if( !drawPoly ) return;
-
-	// FIXME: get collision polys here
-}
-
-int Host_CreateDecalList( decallist_t *pList, qboolean changelevel )
-{
-	if( !re ) return 0;
-
-	return re->CreateDecalList( pList, changelevel );
-}
-
-void Host_FreeRender( void )
-{
-	if( render_dll.link )
-	{
-		SCR_Shutdown ();
-		re->Shutdown( true );
-		Mem_Set( &re, 0, sizeof( re ));
-	}
-	Sys_FreeLibrary( &render_dll );
-}
-
-qboolean Host_InitRender( void )
-{
-	static render_imp_t	ri;
-	launch_t		CreateRender;
-	qboolean		result = false;
-	
-	ri.api_size = sizeof( render_imp_t );
-
-          // studio callbacks
-	ri.UpdateScreen = SCR_UpdateScreen;
-	ri.StudioEvent = CL_StudioEvent;
-	ri.ShowCollision = Host_DrawDebugCollision;
-	ri.GetClientEdict = CL_GetEntityByIndex;
-	ri.GetPlayerInfo = CL_GetPlayerInfo;
-	ri.GetLocalPlayer = CL_GetLocalPlayer;
-	ri.GetMaxClients = CL_GetMaxClients;
-	ri.DrawTriangles = Tri_DrawTriangles;
-	ri.ExtraUpdate = CL_ExtraUpdate;
-	ri.GetLerpFrac = CL_GetLerpFrac;
-	ri.IsThirdPerson = CL_IsThirdPerson;
-	ri.WndProc = IN_WndProc;          
-
-	Sys_LoadLibrary( host_video->string, &render_dll );
-
-	if( render_dll.link )
-	{
-		CreateRender = (void *)render_dll.main;
-		re = CreateRender( &newcom, &ri );
-
-		if( re->Init( true )) result = true;
-	} 
-
-	// video system not started, shutdown refresh subsystem
-	if( !result ) Host_FreeRender();
-
-	return result;
-}
-
 void Host_CheckChanges( void )
 {
-	int	num_changes;
 	qboolean	audio_disabled = false;
 
 	if( FS_CheckParm( "-nosound" ))
@@ -170,23 +106,25 @@ void Host_CheckChanges( void )
 		sound_restart = false;
 	}
 
-	if( host_video->modified || sound_restart )
+	if( video_restart || sound_restart )
 	{
-		if( host_video->modified ) CL_ForceVid();
+		if( video_restart ) CL_ForceVid();
 		if( sound_restart ) CL_ForceSnd();
 	}
-	else return;
+	else
+	{
+		return;
+	}
 
-	num_changes = 0;
-
-	if( host_video->modified && CL_Active( ))
+	if( video_restart && CL_Active( ))
 	{
 		// we're in game and want keep decals when renderer is changed
 		host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS );
-		host.numdecals = Host_CreateDecalList( host.decalList, false );
+		host.numdecals = R_CreateDecalList( host.decalList, false );
+		Msg( "Total stored %i decals\n", host.numdecals );
 	}
 
-	if(( host_video->modified || sound_restart ) && CL_Active( ))
+	if(( video_restart || sound_restart ) && CL_Active( ))
 	{
 		host.soundList = (soundlist_t *)Z_Malloc( sizeof( soundlist_t ) * 128 );
 		host.numsounds = S_GetCurrentStaticSounds( host.soundList, 128, CHAN_STATIC );
@@ -195,30 +133,21 @@ void Host_CheckChanges( void )
 
 	S_StopAllSounds();	// don't let them loop during the restart
 
-	// restart or change renderer
-	while( host_video->modified )
+	// restart renderer
+	if( video_restart )
 	{
-		host_video->modified = false;		// predict state
+		R_Shutdown();
 
-		Host_FreeRender();			// release render.dll
-		if( !Host_InitRender( ))		// load it again
+		if( !R_Init( ))
 		{
-			if( num_changes > host.num_video_dlls )
-			{
-				Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
-				return;
-			}
-			if( !com.strcmp( host.video_dlls[num_changes], host_video->string ))
-				num_changes++; // already trying - failed
-			Cvar_FullSet( "host_video", host.video_dlls[num_changes], CVAR_INIT|CVAR_ARCHIVE );
-			num_changes++;
+			Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
+			return;
 		}
 		else SCR_Init ();
+		video_restart = false;
 	}
 
 	if( audio_disabled ) MsgDev( D_INFO, "Audio: Disabled\n" );
-
-	num_changes = 0;
 
 	// restart sound engine
 	if( sound_restart )
@@ -260,7 +189,7 @@ Restart the video subsystem
 */
 void Host_VidRestart_f( void )
 {
-	host_video->modified = true;
+	video_restart = true;
 }
 
 /*
@@ -690,15 +619,6 @@ static void Host_Crash_f( void )
 
 void Host_InitCommon( const int argc, const char **argv )
 {
-	dll_info_t	check_vid;
-	search_t		*dlls;
-	int		i;
-
-	newcom = com;
-
-	// overload some funcs
-	newcom.error = Host_Error;
-
 	// get developer mode
 	host.developer = SI->developer;
 
@@ -715,37 +635,6 @@ void Host_InitCommon( const int argc, const char **argv )
 	Host_InitDecals();
 
 	IN_Init();
-
-	// initialize video multi-dlls system
-	host.num_video_dlls = 0;
-
-	// make sure what global copy has no changed with any dll checking
-	Mem_Copy( &check_vid, &render_dll, sizeof( dll_info_t ));
-
-	// checking dlls don't invoke crash!
-	check_vid.crash = false;
-
-	dlls = FS_Search( "*.dll", true );
-
-	// couldn't find any dlls, render is missing (but i'm don't know how laucnher find engine :)
-	// probably this should never happen
-	if( !dlls ) Sys_NewInstance( "©", "" );
-
-	for( i = 0; i < dlls->numfilenames; i++ )
-	{
-		if( !com.strnicmp( "vid_", dlls->filenames[i], 4 ))
-		{
-			// make sure what found library is valid
-			if( Sys_LoadLibrary( dlls->filenames[i], &check_vid ))
-			{
-				MsgDev( D_NOTE, "Video[%i]: %s\n", host.num_video_dlls, dlls->filenames[i] );
-				host.video_dlls[host.num_video_dlls] = copystring( dlls->filenames[i] );
-				Sys_FreeLibrary( &check_vid );
-				host.num_video_dlls++;
-			}
-		}
-	}
-	Mem_Free( dlls );
 }
 
 void Host_FreeCommon( void )
@@ -776,7 +665,6 @@ void Host_Init( const int argc, const char **argv )
 		Cmd_AddCommand ( "net_error", Net_Error_f, "send network bad message from random place");
           }
 
-	host_video = Cvar_Get( "host_video", "vid_gl.dll", CVAR_INIT|CVAR_ARCHIVE, "name of video rendering library");
 	host_cheats = Cvar_Get( "sv_cheats", "0", CVAR_LATCH, "allow cheat variables to enable" );
 	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
@@ -790,6 +678,7 @@ void Host_Init( const int argc, const char **argv )
 	Cvar_Get( "violence_hblood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human blood" );
 	Cvar_Get( "violence_ablood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables alien blood" );
 
+	video_restart = true;	// initalize renderer
 	sound_restart = true;	// initialize sound engine
 
 	if( host.type != HOST_DEDICATED )
@@ -868,7 +757,7 @@ void Host_Free( void )
 	com.strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
 
 	Mod_Shutdown();
-	Host_FreeRender();
+	R_Shutdown();
 	S_Shutdown();
 
 	SV_Shutdown( false );

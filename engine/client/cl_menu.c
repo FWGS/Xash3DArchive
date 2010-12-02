@@ -158,7 +158,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		redraw = true;
 	}
 
-	re->DrawStretchRaw( x, y, width, height, menu.logo_xres, menu.logo_yres, cin_data, redraw );
+	R_DrawStretchRaw( x, y, width, height, menu.logo_xres, menu.logo_yres, cin_data, redraw );
 }
 
 static int UI_GetLogoWidth( void )
@@ -249,18 +249,16 @@ PIC_DrawGeneric
 draw hudsprite routine
 ====================
 */
-static void PIC_DrawGeneric( int frame, float x, float y, float width, float height, const wrect_t *prc )
+static void PIC_DrawGeneric( float x, float y, float width, float height, const wrect_t *prc )
 {
 	float	s1, s2, t1, t2;
-
-	if( !re ) return;
 
 	if( width == -1 && height == -1 )
 	{
 		int	w, h;
 
 		// assume we get sizes from image
-		re->GetParms( &w, &h, NULL, frame, menu.ds.hSprite );
+		R_GetTextureParms( &w, &h, menu.ds.gl_texturenum );
 
 		width = w;
 		height = h;
@@ -286,8 +284,8 @@ static void PIC_DrawGeneric( int frame, float x, float y, float width, float hei
 	if( menu.ds.scissor_test && !PIC_Scissor( &x, &y, &width, &height, &s1, &t1, &s2, &t2 ))
 		return;
 
-	re->DrawStretchPic( x, y, width, height, s1, t1, s2, t2, menu.ds.hSprite );
-	re->SetColor( NULL );
+	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, menu.ds.gl_texturenum );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -304,16 +302,12 @@ pfnPIC_Load
 */
 static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long image_size )
 {
-	if( !re ) return 0; // render not initialized
 	if( !szPicName || !*szPicName )
 	{
 		MsgDev( D_ERROR, "CL_LoadImage: bad name!\n" );
 		return 0;
 	}
-
-	if( image_buf && image_size > 0 )
-		return re->RegisterShaderInt( szPicName, image_buf, image_size );
-	return re->RegisterShader( szPicName, SHADER_NOMIP );
+	return GL_LoadTexture( szPicName, image_buf, image_size, TF_IMAGE );
 }
 
 /*
@@ -324,39 +318,7 @@ pfnPIC_Free
 */
 static void pfnPIC_Free( const char *szPicName )
 {
-	if( re ) re->FreeShader( szPicName );
-}
-
-/*
-=========
-pfnPIC_Frames
-
-=========
-*/
-static int pfnPIC_Frames( HIMAGE hPic )
-{
-	int	numFrames;
-
-	if( !re ) return 1;
-	re->GetParms( NULL, NULL, &numFrames, 0, hPic );
-
-	return numFrames;
-}
-
-/*
-=========
-pfnPIC_Height
-
-=========
-*/
-static int pfnPIC_Height( HIMAGE hPic, int frame )
-{
-	int	picHeight;
-
-	if( !re ) return 0;
-	re->GetParms( NULL, &picHeight, NULL, frame, hPic );
-
-	return picHeight;
+	GL_FreeImage( szPicName );
 }
 
 /*
@@ -365,14 +327,28 @@ pfnPIC_Width
 
 =========
 */
-static int pfnPIC_Width( HIMAGE hPic, int frame )
+static int pfnPIC_Width( HIMAGE hPic )
 {
 	int	picWidth;
 
-	if( !re ) return 0;
-	re->GetParms( &picWidth, NULL, NULL, frame, hPic );
+	R_GetTextureParms( &picWidth, NULL, hPic );
 
 	return picWidth;
+}
+
+/*
+=========
+pfnPIC_Height
+
+=========
+*/
+static int pfnPIC_Height( HIMAGE hPic )
+{
+	int	picHeight;
+
+	R_GetTextureParms( NULL, &picHeight, hPic );
+
+	return picHeight;
 }
 
 /*
@@ -381,15 +357,13 @@ pfnPIC_Set
 
 =========
 */
-static void pfnPIC_Set( HIMAGE hPic, int r, int g, int b, int a )
+void pfnPIC_Set( HIMAGE hPic, int r, int g, int b, int a )
 {
 	rgba_t	color;
 
-	if( !re ) return; // render not initialized
-
-	menu.ds.hSprite = hPic;
+	menu.ds.gl_texturenum = hPic;
 	MakeRGBA( color, r, g, b, a );
-	re->SetColor( color );
+	R_DrawSetColor( color );
 }
 
 /*
@@ -398,12 +372,10 @@ pfnPIC_Draw
 
 =========
 */
-static void pfnPIC_Draw( int frame, int x, int y, int width, int height, const wrect_t *prc )
+void pfnPIC_Draw( int x, int y, int width, int height, const wrect_t *prc )
 {
-	if( !re ) return; // render not initialized
-
-	re->SetParms( menu.ds.hSprite, kRenderNormal, frame );
-	PIC_DrawGeneric( frame, x, y, width, height, prc );
+	GL_SetRenderMode( kRenderNormal );
+	PIC_DrawGeneric( x, y, width, height, prc );
 }
 
 /*
@@ -412,12 +384,10 @@ pfnPIC_DrawTrans
 
 =========
 */
-static void pfnPIC_DrawTrans( int frame, int x, int y, int width, int height, const wrect_t *prc )
+void pfnPIC_DrawTrans( int x, int y, int width, int height, const wrect_t *prc )
 {
-	if( !re ) return; // render not initialized
-
-	re->SetParms( menu.ds.hSprite, kRenderTransTexture, frame );
-	PIC_DrawGeneric( frame, x, y, width, height, prc );
+	GL_SetRenderMode( kRenderTransTexture );
+	PIC_DrawGeneric( x, y, width, height, prc );
 }
 
 /*
@@ -426,12 +396,10 @@ pfnPIC_DrawHoles
 
 =========
 */
-static void pfnPIC_DrawHoles( int frame, int x, int y, int width, int height, const wrect_t *prc )
+void pfnPIC_DrawHoles( int x, int y, int width, int height, const wrect_t *prc )
 {
-	if( !re ) return; // render not initialized
-
-	re->SetParms( menu.ds.hSprite, kRenderTransAlpha, frame );
-	PIC_DrawGeneric( frame, x, y, width, height, prc );
+	GL_SetRenderMode( kRenderTransAlpha );
+	PIC_DrawGeneric( x, y, width, height, prc );
 }
 
 /*
@@ -440,12 +408,10 @@ pfnPIC_DrawAdditive
 
 =========
 */
-static void pfnPIC_DrawAdditive( int frame, int x, int y, int width, int height, const wrect_t *prc )
+void pfnPIC_DrawAdditive( int x, int y, int width, int height, const wrect_t *prc )
 {
-	if( !re ) return; // render not initialized
-
-	re->SetParms( menu.ds.hSprite, kRenderTransAdd, frame );
-	PIC_DrawGeneric( frame, x, y, width, height, prc );
+	GL_SetRenderMode( kRenderTransAdd );
+	PIC_DrawGeneric( x, y, width, height, prc );
 }
 
 /*
@@ -494,13 +460,11 @@ static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int 
 {
 	rgba_t	color;
 
-	if( !re ) return;
-
 	MakeRGBA( color, r, g, b, a );
-	re->SetColor( color );
-	re->SetParms( cls.fillShader, kRenderTransTexture, 0 );
-	re->DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillShader );
-	re->SetColor( NULL );
+	R_DrawSetColor( color );
+	GL_SetRenderMode( kRenderTransTexture );
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -547,22 +511,22 @@ static void pfnDrawCharacter( int x, int y, int width, int height, int ch, int u
 
 	ch &= 255;
 
-	if( ch == ' ') return;
+	if( ch == ' ' ) return;
 	if( y < -height ) return;
 
 	color[3] = (ulRGBA & 0xFF000000) >> 24;
 	color[0] = (ulRGBA & 0xFF0000) >> 16;
 	color[1] = (ulRGBA & 0xFF00) >> 8;
 	color[2] = (ulRGBA & 0xFF) >> 0;
-	re->SetColor( color );
+	R_DrawSetColor( color );
 
 	col = (ch & 15) * 0.0625 + (0.5f / 256.0f);
 	row = (ch >> 4) * 0.0625 + (0.5f / 256.0f);
 	size = 0.0625f - (1.0f / 256.0f);
 
-	re->SetParms( cls.creditsFont.hFontTexture, kRenderTransTexture, 0 );
-	re->DrawStretchPic( x, y, width, height, col, row, col + size, row + size, hFont );
-	re->SetColor( NULL );
+	GL_SetRenderMode( kRenderTransTexture );
+	R_DrawStretchPic( x, y, width, height, col, row, col + size, row + size, hFont );
+	R_DrawSetColor( NULL );
 }
 
 /*
@@ -620,7 +584,7 @@ for drawing playermodel previews
 */
 static void pfnSetPlayerModel( cl_entity_t *ent, const char *path )
 {
-	re->RegisterModel( path, MAX_MODELS - 1 );
+	CM_RegisterModel( path, MAX_MODELS - 1 );
 	ent->curstate.modelindex = MAX_MODELS - 1;
 }
 
@@ -633,9 +597,10 @@ for drawing playermodel previews
 */
 static void pfnRenderScene( const ref_params_t *fd )
 {
-	if( !re || !fd ) return;
-	if( fd->fov_x <= 0.0f || fd->fov_y <= 0.0f ) return;
-	re->RenderFrame( fd, false );
+	if( !fd || fd->fov_x <= 0.0f || fd->fov_y <= 0.0f )
+		return;
+
+	R_RenderFrame( fd, false );
 }
 
 /*
@@ -755,9 +720,10 @@ retuns list of valid video renderers
 */
 static char **pfnGetVideoList( int *numRenders )
 {
-	if( numRenders )
-		*numRenders = host.num_video_dlls;
-	return host.video_dlls;
+	static const char	*vidlib = "default";
+
+	if( numRenders ) *numRenders = 1;
+	return &(char *)vidlib;
 }
 
 /*
@@ -834,21 +800,6 @@ static void pfnChangeInstance( const char *newInstance, const char *szFinalMessa
 
 /*
 =========
-pfnChangeVideo
-
-=========
-*/
-static void pfnChangeVideo( const char *dllName )
-{
-	if( !dllName || !*dllName ) return;
-
-	// video subsystem will be automatically restarted on nextframe
-	Cvar_FullSet( "host_video", dllName, CVAR_INIT|CVAR_ARCHIVE );
-	Cbuf_ExecuteText( EXEC_APPEND, "vid_restart\n" );
-}
-
-/*
-=========
 pfnHostNewGame
 
 =========
@@ -876,9 +827,8 @@ static ui_enginefuncs_t gEngfuncs =
 {
 	pfnPIC_Load,
 	pfnPIC_Free,
-	pfnPIC_Frames,
-	pfnPIC_Height,
 	pfnPIC_Width,
+	pfnPIC_Height,
 	pfnPIC_Set,
 	pfnPIC_Draw,
 	pfnPIC_DrawHoles,
@@ -950,7 +900,6 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnShellExecute,
 	Host_WriteServerConfig,
 	pfnChangeInstance,
-	pfnChangeVideo,
 	S_StartBackgroundTrack,
 	pfnHostEndGame,
 };

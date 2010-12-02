@@ -33,14 +33,13 @@ typedef struct ui_enginefuncs_s
 	// image handlers
 	HIMAGE	(*pfnPIC_Load)( const char *szPicName, const byte *ucRawImage, long ulRawImageSize );
 	void	(*pfnPIC_Free)( const char *szPicName );
-	int	(*pfnPIC_Frames)( HIMAGE hPic );
-	int	(*pfnPIC_Height)( HIMAGE hPic, int frame );
-	int	(*pfnPIC_Width)( HIMAGE hPic, int frame );
+	int	(*pfnPIC_Width)( HIMAGE hPic );
+	int	(*pfnPIC_Height)( HIMAGE hPic );
 	void	(*pfnPIC_Set)( HIMAGE hPic, int r, int g, int b, int a );
-	void	(*pfnPIC_Draw)( int frame, int x, int y, int width, int height, const wrect_t *prc );
-	void	(*pfnPIC_DrawHoles)( int frame, int x, int y, int width, int height, const wrect_t *prc );
-	void	(*pfnPIC_DrawTrans)( int frame, int x, int y, int width, int height, const wrect_t *prc );
-	void	(*pfnPIC_DrawAdditive)( int frame, int x, int y, int width, int height, const wrect_t *prc );
+	void	(*pfnPIC_Draw)( int x, int y, int width, int height, const wrect_t *prc );
+	void	(*pfnPIC_DrawHoles)( int x, int y, int width, int height, const wrect_t *prc );
+	void	(*pfnPIC_DrawTrans)( int x, int y, int width, int height, const wrect_t *prc );
+	void	(*pfnPIC_DrawAdditive)( int x, int y, int width, int height, const wrect_t *prc );
 	void	(*pfnPIC_EnableScissor)( int x, int y, int width, int height );
 	void	(*pfnPIC_DisableScissor)( void );
 
@@ -139,7 +138,6 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnShellExecute)( const char *name, const char *args, int closeEngine );
 	void	(*pfnWriteServerConfig)( const char *name );
 	void	(*pfnChangeInstance)( const char *newInstance, const char *szFinalMessage );
-	void	(*pfnChangeVideo)( const char *dllName );
 	void	(*pfnPlayBackgroundTrack)( const char *introName, const char *loopName );
 	void	(*pfnHostEndGame)( const char *szFinalMessage );
 } ui_enginefuncs_t;

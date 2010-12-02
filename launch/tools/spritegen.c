@@ -404,8 +404,8 @@ void Cmd_Frame( void )
 	pframe->height = h;
 
 	// adjust maxsize
-	if(w > sprite.bounds[0]) sprite.bounds[0] = w;
-	if(h > sprite.bounds[1]) sprite.bounds[1] = h;
+	if( w > sprite.bounds[0] ) sprite.bounds[0] = w;
+	if( h > sprite.bounds[1] ) sprite.bounds[1] = h;
 
 	plump = (byte *)(pframe + 1); // move pointer
 	fin = frame->buffer + yl * frame->width + xl;
