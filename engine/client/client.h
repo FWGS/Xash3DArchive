@@ -484,7 +484,7 @@ void CL_SetLightstyle( int style, const char* s );
 void CL_RunLightStyles( void );
 
 void CL_AddEntities( void );
-void CL_AddDLights( void );
+void CL_DecayLights( void );
 void CL_AddLightStyles( void );
 
 //=================================================

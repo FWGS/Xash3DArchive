@@ -10,6 +10,7 @@
 #include "com_model.h"
 #include "cl_entity.h"
 #include "ref_params.h"
+#include "dlight.h"
 
 extern byte	*r_temppool;
 
@@ -115,14 +116,16 @@ typedef struct
 	int		defaultTexture;   	// use for bad textures
 	int		particleTexture;	// particle texture
 	int		lightmapTextures[MAX_LIGHTMAPS];
+	int		framecount;
 } ref_globals_t;
 
 extern ref_params_t		r_lastRefdef;
+extern lightstyle_t		r_lightstyles[MAX_LIGHTSTYLES];
 extern ref_instance_t	RI;
 extern ref_globals_t	tr;
 
-void GL_SubdivideSurface( msurface_t *fa );
-void GL_BuildPolygonFromSurface( msurface_t *fa );
+extern dlight_t		cl_dlights[MAX_DLIGHTS];
+extern int		r_numdlights;
 
 //
 // gl_backend.c
@@ -147,7 +150,7 @@ void R_Set2DMode( qboolean enable );
 void R_SetTextureParameters( void );
 gltexture_t *R_GetTexture( GLenum texnum );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
-int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean subImage );
+int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
 byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight, qboolean isNormalMap );
 void GL_FreeTexture( GLenum texnum );
 void GL_FreeImage( const char *name );
@@ -160,6 +163,13 @@ void R_ShutdownImages( void );
 //
 void R_ClearScene( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
+
+//
+// gl_rsurf.c
+//
+void GL_SubdivideSurface( msurface_t *fa );
+void GL_BuildPolygonFromSurface( msurface_t *fa );
+void GL_BuildLightmaps( void );
 
 //
 // gl_sprite.c
@@ -338,6 +348,7 @@ extern convar_t	*gl_clear;
 extern convar_t	*r_width;
 extern convar_t	*r_height;
 extern convar_t	*r_speeds;
+extern convar_t	*r_fullbright;
 
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*vid_fullscreen;

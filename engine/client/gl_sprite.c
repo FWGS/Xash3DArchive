@@ -347,6 +347,11 @@ void Mod_UnloadSpriteModel( model_t *mod )
 		if( psprite->frames[i].type == SPR_SINGLE )
 		{
 			pspriteframe = psprite->frames[i].frameptr;
+			if( pspriteframe == NULL )
+			{
+				Msg( "Sprite %s, frameptr[%i] == NULL!\n", mod->name, i );
+				continue;
+			}
 			GL_FreeTexture( pspriteframe->gl_texturenum );
 		}
 		else
@@ -356,6 +361,11 @@ void Mod_UnloadSpriteModel( model_t *mod )
 			for( j = 0; j < pspritegroup->numframes; j++ )
 			{
 				pspriteframe = pspritegroup->frames[i];
+				if( pspriteframe == NULL )
+				{
+					Msg( "Sprite %s, frameptr[%i] == NULL!\n", mod->name, i );
+					continue;
+				}
 				GL_FreeTexture( pspriteframe->gl_texturenum );
 			}
 		}

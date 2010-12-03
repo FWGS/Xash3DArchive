@@ -42,6 +42,7 @@ convar_t	*gl_clear;
 convar_t	*r_width;
 convar_t	*r_height;
 convar_t	*r_speeds;
+convar_t	*r_fullbright;
 
 convar_t	*vid_displayfrequency;
 convar_t	*vid_fullscreen;
@@ -1324,6 +1325,7 @@ void GL_InitCommands( void )
 	r_width = Cvar_Get( "width", "640", CVAR_READ_ONLY, "screen width" );
 	r_height = Cvar_Get( "height", "480", CVAR_READ_ONLY, "screen height" );
 	r_speeds = Cvar_Get( "r_speeds", "0", CVAR_ARCHIVE, "shows renderer speeds" );
+	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
 
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );

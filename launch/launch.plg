@@ -1,0 +1,25 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: launch - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\╠╚╪└\LOCALS~1\Temp\RSP343E.bat" with contents
+[
+@echo off
+copy \Xash3D\src_main\temp\launch\!release\launch.dll "D:\Xash3D\launch.dll"
+]
+Creating command line ""C:\DOCUME~1\╠╚╪└\LOCALS~1\Temp\RSP343E.bat""
+<h3>Output Window</h3>
+Performing Custom Build Step on \Xash3D\src_main\temp\launch\!release\launch.dll
+Скопировано файлов:         1.
+
+
+
+<h3>Results</h3>
+launch.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

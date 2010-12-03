@@ -19,6 +19,7 @@ extern stdlib_api_t	com;
 #define TF_FONT	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
 #define TF_IMAGE	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP)
 #define TF_DECAL	(TF_CLAMP|TF_UNCOMPRESSED)
+#define TF_LIGHTMAP	TF_FONT
 
 typedef enum
 {
@@ -33,10 +34,9 @@ typedef enum
 	TF_CLAMP		= BIT(8),
 	TF_NOMIPMAP	= BIT(9),
 	TF_NEAREST	= BIT(10),	// disable texfilter
-	TF_LIGHTMAP	= BIT(11),	// no resample etc
-	TF_HAS_LUMA	= BIT(12),	// sets by GL_UploadTexture
-	TF_MAKELUMA	= BIT(13),	// create luma from quake texture
-	TF_NORMALMAP	= BIT(14),	// is a normalmap
+	TF_HAS_LUMA	= BIT(11),	// sets by GL_UploadTexture
+	TF_MAKELUMA	= BIT(12),	// create luma from quake texture
+	TF_NORMALMAP	= BIT(13),	// is a normalmap
 } texFlags_t;
 
 qboolean R_Init( void );
@@ -68,11 +68,11 @@ void Mod_UnloadSpriteModel( struct model_s *mod );
 void GL_SetRenderMode( int mode );
 int R_GetSpriteTexture( const struct model_s *m_pSpriteModel, int frame );
 void R_LightForPoint( const vec3_t point, vec3_t ambientLight );
-qboolean R_AddDLight( vec3_t pos, color24 color, float radius, int flags );
 qboolean R_SetLightStyle( int stylenum, vec3_t color );
 qboolean R_DecalShoot( int texture, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
 void R_DecalRemoveAll( int texture );
 byte *Mod_GetCurrentVis( void );
+void R_NewMap( void );
 			
 typedef int	sound_t;
 

@@ -886,7 +886,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 GL_LoadTextureInternal
 ================
 */
-int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean subImage )
+int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update )
 {
 	gltexture_t	*tex;
 	uint		i, hash;
@@ -908,40 +908,54 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 		if( tex->flags & TF_CUBEMAP )
 			continue;
 
-		if( !com.stricmp( tex->name, name ))
+		if( !com.stricmp( tex->name, name ) && !update )
 			return tex->texnum;
 	}
 
 	if( !pic ) return 0; // couldn't loading image
+	if( update && !tex )
+	{
+		Host_Error( "Couldn't find texture %s for update\n", name );
+	}
 
 	// find a free texture slot
 	if( r_numTextures == MAX_TEXTURES )
 		Host_Error( "GL_LoadTexture: MAX_TEXTURES limit exceeds\n" );
 
-	// find a free texture_t slot
-	for( i = 0, tex = r_textures; i < r_numTextures; i++, tex++ )
-		if( !tex->name[0] ) break;
-
-	if( i == r_numTextures )
+	if( !update )
 	{
-		if( r_numTextures == MAX_TEXTURES )
-			Host_Error( "GL_LoadTexture: MAX_TEXTURES limit exceeds\n" );
-		r_numTextures++;
+		// find a free texture_t slot
+		for( i = 0, tex = r_textures; i < r_numTextures; i++, tex++ )
+			if( !tex->name[0] ) break;
+
+		if( i == r_numTextures )
+		{
+			if( r_numTextures == MAX_TEXTURES )
+				Host_Error( "GL_LoadTexture: MAX_TEXTURES limit exceeds\n" );
+			r_numTextures++;
+		}
+
+		tex = &r_textures[i];
+		hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+		com.strncpy( tex->name, name, sizeof( tex->name ));
+		tex->texnum = i;	// texnum is used for fast acess into r_textures array too
+		tex->flags = flags;
+	}
+	else
+	{
+		tex->flags |= flags;
 	}
 
-	tex = &r_textures[i];
-	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
-	com.strncpy( tex->name, name, sizeof( tex->name ));
-	tex->texnum = i;	// texnum is used for fast acess into r_textures array too
-	tex->flags = flags;
+	GL_UploadTexture( pic, tex, update );
+	GL_TexFilter( tex, update ); // update texture filter, wrap etc
 
-	GL_UploadTexture( pic, tex, subImage );
-	GL_TexFilter( tex, false ); // update texture filter, wrap etc
-
-	// add to hash table
-	hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
-	tex->nextHash = r_texturesHashTable[hash];
-	r_texturesHashTable[hash] = tex;
+	if( !update )
+          {
+		// add to hash table
+		hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
+		tex->nextHash = r_texturesHashTable[hash];
+		r_texturesHashTable[hash] = tex;
+	}
 
 	return tex->texnum;
 }

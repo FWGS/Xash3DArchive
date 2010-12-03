@@ -7,13 +7,11 @@
 #include "client.h"
 #include "gl_local.h"
 
+lightstyle_t	r_lightstyles[MAX_LIGHTSTYLES];
+int		r_numdlights;
+	
 void R_LightForPoint( const vec3_t point, vec3_t ambientLight )
 {
-}
-
-qboolean R_AddDLight( vec3_t pos, color24 color, float radius, int flags )
-{
-	return false;
 }
 
 qboolean R_SetLightStyle( int stylenum, vec3_t color )

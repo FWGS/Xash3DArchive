@@ -170,7 +170,7 @@ typedef struct msurface_s
 	int		lightmaptexturenum;
 	byte		styles[MAXLIGHTMAPS];
 	int		cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
-	struct msurface_s	*lightmapchain;	// for lightmap sort drawing
+	qboolean		cached_dlight;		// true if dynamic light in cache
 
 	color24		*samples;		// note: this is the actual lightmap data for this surface
 	decal_t		*pdecals;

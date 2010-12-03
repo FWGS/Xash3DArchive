@@ -2282,31 +2282,11 @@ dlight_t *CL_AllocElight( int key )
 
 /*
 ===============
-CL_AddDlight
-
-copy dlight to renderer
-===============
-*/
-qboolean CL_AddDlight( dlight_t *dl )
-{
-	int	flags = 0;
-	qboolean	add;
-
-	if( dl->dark ) flags |= DLIGHT_DARK;
-	if( dl->elight ) flags |= DLIGHT_ONLYENTS;
-
-	add = R_AddDLight( dl->origin, dl->color, dl->radius, flags );
-
-	return add;
-}
-
-/*
-===============
-CL_AddDLights
+CL_DecayLights
 
 ===============
 */
-void CL_AddDLights( void )
+void CL_DecayLights( void )
 {
 	dlight_t	*dl;
 	float	time;
@@ -2316,13 +2296,11 @@ void CL_AddDLights( void )
 
 	for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
 	{
-		if( dl->die < cl_time() || !dl->radius )
+		if( dl->die < cl.time || !dl->radius )
 			continue;
 		
 		dl->radius -= time * dl->decay;
 		if( dl->radius < 0 ) dl->radius = 0;
-
-		CL_AddDlight( dl );
 	}
 }
 
@@ -2405,27 +2383,24 @@ void CL_TestLights( void )
 {
 	int	i, j;
 	float	f, r;
-	dlight_t	dl;
+	dlight_t	*dl;
 
 	if( !cl_testlights->integer ) return;
-
-	Mem_Set( &dl, 0, sizeof( dlight_t ));
 	
 	for( i = 0; i < bound( 1, cl_testlights->integer, MAX_DLIGHTS ); i++ )
 	{
+		dl = &cl_dlights[i];
+
 		r = 64 * ((i % 4) - 1.5f );
 		f = 64 * ( i / 4) + 128;
 
 		for( j = 0; j < 3; j++ )
-			dl.origin[j] = cl.refdef.vieworg[j] + cl.refdef.forward[j] * f + cl.refdef.right[j] * r;
+			dl->origin[j] = cl.refdef.vieworg[j] + cl.refdef.forward[j] * f + cl.refdef.right[j] * r;
 
-		dl.color.r = ((((i % 6) + 1) & 1)>>0) * 255;
-		dl.color.g = ((((i % 6) + 1) & 2)>>1) * 255;
-		dl.color.b = ((((i % 6) + 1) & 4)>>2) * 255;
-		dl.radius = 200;
-
-		if( !CL_AddDlight( &dl ))
-			break; 
+		dl->color.r = ((((i % 6) + 1) & 1)>>0) * 255;
+		dl->color.g = ((((i % 6) + 1) & 2)>>1) * 255;
+		dl->color.b = ((((i % 6) + 1) & 4)>>2) * 255;
+		dl->radius = 200;
 	}
 }
 

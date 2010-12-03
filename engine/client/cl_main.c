@@ -1077,6 +1077,8 @@ void CL_PrepVideo( void )
 	// setup sky and free unneeded stuff
 	R_SetupSky( cl.refdef.movevars->skyName );
 	CM_EndRegistration (); // free unused models
+	R_NewMap(); // tell the render about new map
+
 	Cvar_SetFloat( "scr_loading", 100.0f );	// all done
 
 	// release unused SpriteTextures
@@ -1575,6 +1577,9 @@ void Host_ClientFrame( void )
 
 	// advance local effects for next frame
 	CL_RunLightStyles ();
+
+	// decay dynamic lights
+	CL_DecayLights ();
 
 	SCR_RunCinematic();
 	Con_RunConsole();

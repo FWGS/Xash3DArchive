@@ -218,6 +218,10 @@ SOURCE=.\client\gl_rmain.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_rmisc.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_rpart.c
 # End Source File
 # Begin Source File
