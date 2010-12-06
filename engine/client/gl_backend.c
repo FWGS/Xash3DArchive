@@ -6,6 +6,84 @@
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
+#include "matrix_lib.h"
+
+char		r_speeds_msg[MAX_SYSPATH];
+ref_speeds_t	r_stats;	// r_speeds counters
+
+/*
+===============
+R_SpeedsMessage
+===============
+*/
+qboolean R_SpeedsMessage( char *out, size_t size )
+{
+	if( r_speeds->integer <= 0 ) return false;
+	if( !out || !size ) return false;
+
+	com.strncpy( out, r_speeds_msg, size );
+	return true;
+}
+
+/*
+==============
+GL_BackendStartFrame
+==============
+*/
+void GL_BackendStartFrame( void )
+{
+	r_speeds_msg[0] = '\0';
+	Mem_Set( &r_stats, 0, sizeof( r_stats ));
+}
+
+/*
+==============
+GL_BackendEndFrame
+==============
+*/
+void GL_BackendEndFrame( void )
+{
+}
+
+/*
+=================
+GL_LoadTexMatrix
+=================
+*/
+void GL_LoadTexMatrix( const matrix4x4 m )
+{
+	pglMatrixMode( GL_TEXTURE );
+	GL_LoadMatrix( m );
+	glState.texIdentityMatrix[glState.activeTMU] = false;
+}
+
+/*
+=================
+GL_LoadMatrix
+=================
+*/
+void GL_LoadMatrix( const matrix4x4 source )
+{
+	GLfloat	dest[16];
+
+	Matrix4x4_ToArrayFloatGL( source, dest );
+	pglLoadMatrixf( dest );
+}
+
+/*
+=================
+GL_LoadIdentityTexMatrix
+=================
+*/
+void GL_LoadIdentityTexMatrix( void )
+{
+	if( glState.texIdentityMatrix[glState.activeTMU] )
+		return;
+
+	pglMatrixMode( GL_TEXTURE );
+	pglLoadIdentity();
+	glState.texIdentityMatrix[glState.activeTMU] = true;
+}
 
 /*
 =================
@@ -30,6 +108,53 @@ void GL_SelectTexture( GLenum texture )
 	else if( pglSelectTextureSGIS )
 	{
 		pglSelectTextureSGIS( texture + GL_TEXTURE0_SGIS );
+	}
+}
+
+/*
+==============
+GL_DisableAllTexGens
+==============
+*/
+void GL_DisableAllTexGens( void )
+{
+	GL_TexGen( GL_S, 0 );
+	GL_TexGen( GL_T, 0 );
+	GL_TexGen( GL_R, 0 );
+	GL_TexGen( GL_Q, 0 );
+}
+
+/*
+==============
+GL_CleanUpTextureUnits
+==============
+*/
+void GL_CleanUpTextureUnits( int last )
+{
+	int	i;
+
+	for( i = glState.activeTMU; i > last - 1; i-- )
+	{
+		GL_DisableAllTexGens();
+		pglDisable( GL_TEXTURE_2D );
+		GL_SelectTexture( i - 1 );
+	}
+}
+
+/*
+=================
+GL_MultiTexCoord2f
+=================
+*/
+void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t )
+{
+	if( pglMultiTexCoord2f )
+	{
+		pglMultiTexCoord2f( texture + GL_TEXTURE0_ARB, s, t );
+	}
+	else if( pglMTexCoord2fSGIS )
+	{
+		pglMTexCoord2fSGIS( texture + GL_TEXTURE0_SGIS, s, t );
 	}
 }
 

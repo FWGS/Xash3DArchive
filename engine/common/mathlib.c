@@ -6,6 +6,8 @@
 #include "common.h"
 #include "mathlib.h"
 
+vec3_t	vec3_origin = { 0, 0, 0 };
+
 /*
 =================
 anglemod
@@ -14,6 +16,22 @@ anglemod
 float anglemod( const float a )
 {
 	return (360.0f/65536) * ((int)(a*(65536/360.0f)) & 65535);
+}
+
+/*
+=================
+SignbitsForPlane
+
+fast box on planeside test
+=================
+*/
+int SignbitsForPlane( const vec3_t normal )
+{
+	int	bits, i;
+
+	for( bits = i = 0; i < 3; i++ )
+		if( normal[i] < 0.0f ) bits |= 1<<i;
+	return bits;
 }
 
 /*
@@ -181,6 +199,41 @@ qboolean BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const v
 	return true;
 }
 
+/*
+====================
+RotatePointAroundVector
+====================
+*/
+void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees )
+{
+	float	t0, t1;
+	float	angle, c, s;
+	vec3_t	vr, vu, vf;
+
+	angle = DEG2RAD( degrees );
+	com.sincos( angle, &s, &c );
+	VectorCopy( dir, vf );
+	VectorVectors( vf, vr, vu );
+
+	t0 = vr[0] *  c + vu[0] * -s;
+	t1 = vr[0] *  s + vu[0] *  c;
+	dst[0] = (t0 * vr[0] + t1 * vu[0] + vf[0] * vf[0]) * point[0]
+	       + (t0 * vr[1] + t1 * vu[1] + vf[0] * vf[1]) * point[1]
+	       + (t0 * vr[2] + t1 * vu[2] + vf[0] * vf[2]) * point[2];
+
+	t0 = vr[1] *  c + vu[1] * -s;
+	t1 = vr[1] *  s + vu[1] *  c;
+	dst[1] = (t0 * vr[0] + t1 * vu[0] + vf[1] * vf[0]) * point[0]
+	       + (t0 * vr[1] + t1 * vu[1] + vf[1] * vf[1]) * point[1]
+	       + (t0 * vr[2] + t1 * vu[2] + vf[1] * vf[2]) * point[2];
+
+	t0 = vr[2] *  c + vu[2] * -s;
+	t1 = vr[2] *  s + vu[2] *  c;
+	dst[2] = (t0 * vr[0] + t1 * vu[0] + vf[2] * vf[0]) * point[0]
+	       + (t0 * vr[1] + t1 * vu[1] + vf[2] * vf[1]) * point[1]
+	       + (t0 * vr[2] + t1 * vu[2] + vf[2] * vf[2]) * point[2];
+}
+
 //
 // studio utils
 //
@@ -270,5 +323,3 @@ void QuaternionSlerp( const vec4_t p, vec4_t q, float t, vec4_t qt )
 			qt[i] = sclp * p[i] + sclq * qt[i];
 	}
 }
-
-vec3_t	vec3_origin = { 0, 0, 0 };

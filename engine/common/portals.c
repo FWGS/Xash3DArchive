@@ -13,10 +13,10 @@ static int fatbytes;
 
 /*
 ===================
-CM_DecompressVis
+Mod_DecompressVis
 ===================
 */
-static byte *CM_DecompressVis( const byte *in )
+byte *Mod_DecompressVis( const byte *in )
 {
 	static byte	decompressed[MAX_MAP_LEAFS/8];
 	int		c, row;
@@ -24,7 +24,7 @@ static byte *CM_DecompressVis( const byte *in )
 
 	if( !worldmodel )
 	{
-		Host_Error( "CM_DecompressVis: no worldmodel\n" );
+		Host_Error( "Mod_DecompressVis: no worldmodel\n" );
 		return NULL;
 	}
 
@@ -79,11 +79,11 @@ void CM_CalcPHS( void )
 {
 	int	i, j, k, l, index, num;
 	int	rowbytes, rowwords;
-	byte	*scan, *visdata;
 	uint	*dest, *src;
 	int	hcount, vcount;
 	double	timestart;
 	int	bitbyte;
+	byte	*scan;
 
 	if( !worldmodel || !cm.pvs )
 		return;
@@ -95,10 +95,6 @@ void CM_CalcPHS( void )
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
 
-	// store off pointer to compressed visdata
-	// for right freeing after building pas
-	visdata = cm.pvs;
-
 	// allocate pvs and phs data single array
 	cm.pvs = Mem_Alloc( worldmodel->mempool, rowbytes * num * 2 );
 	cm.phs = cm.pvs + rowbytes * num;
@@ -109,11 +105,7 @@ void CM_CalcPHS( void )
 	// uncompress pvs first
 	for( i = 0; i < num; i++, scan += rowbytes )
 	{
-		byte	*visblock;
-
-		visblock = CM_DecompressVis( worldmodel->leafs[i].visdata );
-		Mem_Copy( scan, visblock, rowbytes );
-
+		Mem_Copy( scan, Mod_LeafPVS( worldmodel->leafs + i, worldmodel ), rowbytes );
 		if( i == 0 ) continue;
 
 		for( j = 0; j < num; j++ )
@@ -122,9 +114,6 @@ void CM_CalcPHS( void )
 				vcount++;
 		}
 	}
-
-	// free compressed pvsdata
-	Mem_Free( visdata );
 
 	scan = cm.pvs;
 	hcount = 0;
@@ -155,10 +144,6 @@ void CM_CalcPHS( void )
 			}
 		}
 
-		// store new leaf pointers for pvs and pas data
-		worldmodel->leafs[i].visdata = scan;
-		worldmodel->leafs[i].pasdata = (byte *)dest; 
-
 		if( i == 0 ) continue;
 
 		for( j = 0; j < num; j++ )
@@ -182,7 +167,7 @@ byte *CM_LeafPVS( int leafnum )
 	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.pvs || sv_novis->integer )
 		return cm.nullrow;
 
-	return worldmodel->leafs[leafnum+1].visdata;
+	return cm.pvs + leafnum * 4 * (( worldmodel->numleafs + 31 ) >> 5 );
 }
 
 /*
@@ -195,7 +180,7 @@ byte *CM_LeafPHS( int leafnum )
 	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !cm.phs || sv_novis->integer )
 		return cm.nullrow;
 
-	return worldmodel->leafs[leafnum+1].pasdata;
+	return cm.phs + leafnum * 4 * (( worldmodel->numleafs + 31 ) >> 5 );
 }
 
 /*
@@ -227,9 +212,9 @@ static void CM_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
 				leaf = (mleaf_t *)node;			
 
 				if( type == DVIS_PVS )
-					vis = leaf->visdata;
+					vis = CM_LeafPVS( leaf - worldmodel->leafs - 1 );
 				else if( type == DVIS_PHS )
-					vis = leaf->pasdata;
+					vis = CM_LeafPHS( leaf - worldmodel->leafs - 1 );
 				else vis = cm.nullrow;
 
 				for( i = 0; i < fatbytes; i++ )

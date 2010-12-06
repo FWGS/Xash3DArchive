@@ -39,9 +39,6 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 {
 	model_t	*mod;
-	float	oldScale, oldRenderAmt;
-	float	shellScale = 1.0f;
-	int	result = 0;
 
 	mod = CM_ClipHandleToModel( ent->curstate.modelindex );
 	if( !mod ) return false;
@@ -58,30 +55,8 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, mod->name ))
 		return false;
 
-	if( ent->curstate.renderfx == kRenderFxGlowShell )
-	{
-		oldRenderAmt = ent->curstate.renderamt;
-		oldScale = ent->curstate.scale ? ent->curstate.scale : 1.0f;
-		ent->curstate.renderamt = 255; // clear amount
-	}
-
-	result = R_AddEntity( ent, entityType, -1 );
-
-	if( ent->curstate.renderfx == kRenderFxGlowShell )
-	{
-		shellScale = ( oldRenderAmt * 0.00015f );	// shellOffset
-		ent->curstate.scale = oldScale + shellScale;	// sets new scale
-		ent->curstate.renderamt = 128;
-
-		// render glowshell
-		result |= R_AddEntity( ent, entityType, cls.glowShell ); // FIXME
-
-		// restore parms
-		ent->curstate.scale = oldScale;
-		ent->curstate.renderamt = oldRenderAmt;
-	}
-
-	if( !result ) return false;
+	if( !R_AddEntity( ent, entityType ))
+		return false;
 
 	// apply effects
 	if( ent->curstate.effects & EF_BRIGHTFIELD )
@@ -651,7 +626,6 @@ void CL_AddEntities( void )
 
 	CL_FireEvents();	// so tempents can be created immediately
 	CL_AddTempEnts();
-	CL_AddLightStyles();
 
 	// perfomance test
 	CL_TestLights();

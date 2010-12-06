@@ -15,12 +15,18 @@
 extern byte	*r_temppool;
 
 #define MAX_TEXTURES	1024
-#define MAX_LIGHTMAPS	128
+#define MAX_LIGHTMAPS	64
+#define SUBDIVIDE_SIZE	64
 
+// refparams
 #define RP_NONE		0
 #define RP_MIRRORVIEW	BIT( 0 )	// lock pvs at vieworg
 #define RP_PORTALVIEW	BIT( 1 )
 #define RP_ENVVIEW		BIT( 2 )	// used for cubemapshot
+#define RP_OLDVIEWLEAF	BIT( 3 )
+#define RP_CLIPPLANE	BIT( 4 )
+#define RP_FLIPFRONTFACE	BIT( 5 )	// e.g. for mirrors drawing
+#define RP_NOSKY		BIT( 6 )
 
 typedef enum
 {
@@ -31,6 +37,8 @@ typedef enum
 	TEX_SPRITE,	// sprite frames
 	TEX_STUDIO,	// studio skins
 	TEX_LIGHTMAP,	// lightmap textures
+	TEX_DECAL,	// decals
+	TEX_SKYBOX,	// skybox or sky layers
 	TEX_CUBEMAP	// cubemap textures
 } texType_t;
 
@@ -89,22 +97,58 @@ typedef struct gltexture_s
 	texFlags_t	flags;
 
 	// debug info
-	texType_t		texType;		// used for gl_showtextures
+	byte		texType;		// used for gl_showtextures
 	size_t		size;		// upload size for debug targets
 
 	struct gltexture_s	*nextHash;
 } gltexture_t;
 
+// surface extradata stored in cache.data for all brushmodels
+typedef struct mextrasurf_s
+{
+	float		minmaxs[6];
+	int		checkcount;	// for multi-check avoidance
+} mextrasurf_t;
+
 typedef struct
 {
 	int		params;		// rendering parameters
+	int		rdflags;		// actual rendering flags
+
 	qboolean		drawWorld;	// ignore world for drawing PlayerModel
 	qboolean		thirdPerson;	// thirdperson camera is enabled
+	float		lerpFrac;		// lerpfraction
 
 	ref_params_t	refdef;		// actual refdef
 
 	cl_entity_t	*currententity;
 	model_t		*currentmodel;
+
+	int		viewport[4];
+	int		scissor[4];
+	mplane_t		frustum[6];
+
+	vec3_t		pvsorigin;
+	vec3_t		vieworg;		// locked vieworigin
+	vec3_t		vforward;
+	vec3_t		vright;
+	vec3_t		vup;
+
+	float		farClip;
+	uint		clipFlags;
+
+	vec3_t		visMins, visMaxs;
+	float		skyMins[2][6];
+	float		skyMaxs[2][6];
+
+	matrix4x4		objectMatrix;
+	matrix4x4		worldviewMatrix;
+	matrix4x4		modelviewMatrix;		// worldviewMatrix * objectMatrix
+
+	matrix4x4		projectionMatrix;
+	matrix4x4		worldviewProjectionMatrix;	// worldviewMatrix * projectionMatrix
+
+	mplane_t		clipPlane;
 } ref_instance_t;
 
 typedef struct
@@ -115,29 +159,55 @@ typedef struct
 	int		blackTexture;
 	int		defaultTexture;   	// use for bad textures
 	int		particleTexture;	// particle texture
+	int		solidskyTexture;	// quake1 solid-sky layer
+	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
+
+	int		skytexturenum;	// this not a gl_texturenum!
+
+	int		visframecount;	// PVS frame
+	int		dlightframecount;	// dynamic light frame
 	int		framecount;
 } ref_globals_t;
 
+typedef struct
+{
+	uint		c_world_polys;
+	uint		c_brush_polys;
+	uint		c_studio_polys;
+	uint		c_sprite_polys;
+	uint		c_world_leafs;
+} ref_speeds_t;
+
+extern ref_speeds_t		r_stats;
 extern ref_params_t		r_lastRefdef;
-extern lightstyle_t		r_lightstyles[MAX_LIGHTSTYLES];
 extern ref_instance_t	RI;
 extern ref_globals_t	tr;
 
+extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
+extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
 extern int		r_numdlights;
 
 //
 // gl_backend.c
 //
+void GL_BackendStartFrame( void );
+void GL_BackendEndFrame( void );
+void GL_CleanUpTextureUnits( int last );
 void GL_Bind( GLenum tmu, GLenum texnum );
+void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t );
+void GL_LoadTexMatrix( const matrix4x4 m );
+void GL_LoadMatrix( const matrix4x4 source );
 void GL_TexGen( GLenum coord, GLenum mode );
 void GL_SelectTexture( GLenum texture );
+void GL_LoadIdentityTexMatrix( void );
 void GL_SetRenderMode( int mode );
 void GL_FrontFace( GLenum front );
 void GL_SetState( int state );
 void GL_TexEnv( GLenum mode );
 void GL_Cull( GLenum cull );
+void R_ShowTextures( void );
 
 //
 // gl_draw.c
@@ -149,6 +219,7 @@ void R_Set2DMode( qboolean enable );
 //
 void R_SetTextureParameters( void );
 gltexture_t *R_GetTexture( GLenum texnum );
+void GL_SetTextureType( GLenum texnum, GLenum type );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
 int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
 byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight, qboolean isNormalMap );
@@ -159,14 +230,32 @@ void R_InitImages( void );
 void R_ShutdownImages( void );
 
 //
+// gl_refrag.c
+//
+void R_StoreEfrags( efrag_t **ppefrag );
+
+//
+// gl_rlight.c
+//
+void R_PushDlights( void );
+
+//
 // gl_rmain.c
 //
 void R_ClearScene( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 
 //
+// gl_rmath.c
+//
+float V_CalcFov( float *fov_x, float width, float height );
+void V_AdjustFov( float *fov_x, float *fov_y, float width, float height, qboolean lock_x );
+
+//
 // gl_rsurf.c
 //
+void R_MarkLeaves( void );
+void R_DrawWorld( void );
 void GL_SubdivideSurface( msurface_t *fa );
 void GL_BuildPolygonFromSurface( msurface_t *fa );
 void GL_BuildLightmaps( void );
@@ -176,6 +265,17 @@ void GL_BuildLightmaps( void );
 //
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
+
+//
+// gl_warp.c
+//
+void R_InitSky( struct mip_s *mt, struct texture_s *tx );
+void R_ClearSkyBox( void );
+void R_DrawSkyBox( void );
+void EmitSkyLayers( msurface_t *fa );
+void EmitSkyPolys( msurface_t *fa );
+void EmitWaterPolys( msurface_t *fa );
+void R_DrawSkyChain( msurface_t *s );
 
 //
 // gl_vidnt.c
@@ -341,14 +441,24 @@ extern convar_t	*gl_picmip;
 extern convar_t	*gl_skymip;
 extern convar_t	*gl_nobind;
 extern convar_t	*gl_finish;
-extern convar_t	*gl_delayfinish;
-extern convar_t	*gl_frontbuffer;
 extern convar_t	*gl_clear;
+extern convar_t	*gl_texsort;
 
 extern convar_t	*r_width;
 extern convar_t	*r_height;
 extern convar_t	*r_speeds;
 extern convar_t	*r_fullbright;
+extern convar_t	*r_norefresh;
+extern convar_t	*r_lighting_modulate;
+extern convar_t	*r_adjust_fov;
+extern convar_t	*r_novis;
+extern convar_t	*r_nocull;
+extern convar_t	*r_lockpvs;
+extern convar_t	*r_wateralpha;
+extern convar_t	*r_dynamic;
+extern convar_t	*r_lightmap;
+extern convar_t	*r_shadows;
+extern convar_t	*r_fastsky;
 
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*vid_fullscreen;

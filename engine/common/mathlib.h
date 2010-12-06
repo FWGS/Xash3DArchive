@@ -86,10 +86,12 @@
 
 float rsqrt( float number );
 float anglemod( const float a );
+int SignbitsForPlane( const vec3_t normal );
 int NearestPOW( int value, qboolean roundDown );
 float VectorNormalizeLength2( const vec3_t v, vec3_t out );
 void VectorVectors( vec3_t forward, vec3_t right, vec3_t up );
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up );
+void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
 
 void ClearBounds( vec3_t mins, vec3_t maxs );
 void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );

@@ -14,9 +14,11 @@
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON	(1.0f / 32.0f)
 #define FRAC_EPSILON	(1.0f / 1024.0f)
+#define BACKFACE_EPSILON	0.01f
 #define MAX_BOX_LEAFS	256
 #define DVIS_PVS		0
 #define DVIS_PHS		1
+#define ANIM_CYCLE		2
 
 extern convar_t		*sv_novis;
 
@@ -33,7 +35,7 @@ typedef struct leaflist_s
 typedef struct clipmap_s
 {
 	uint		checksum;		// map checksum
-	int		registration_sequence;
+	int		load_sequence;	// increace each map change
 	int		checkcount;
 	int		version;		// current map version
 
@@ -58,6 +60,7 @@ extern model_t		*worldmodel;
 byte *CM_LeafPVS( int leafnum );
 byte *CM_LeafPHS( int leafnum );
 int Mod_PointLeafnum( const vec3_t p );
+byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model );
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
 int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
@@ -71,6 +74,7 @@ void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
 void CM_CalcPHS( void );
 byte *CM_FatPVS( const vec3_t org, qboolean portal );
 byte *CM_FatPHS( const vec3_t org, qboolean portal );
+byte *Mod_DecompressVis( const byte *in );
 
 //
 // model.c

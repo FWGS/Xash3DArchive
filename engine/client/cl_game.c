@@ -1268,13 +1268,15 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 	// already freed ?
 	if( !pEdict->index ) return;
 
+	R_RemoveEfrags( pEdict );
 	CL_KillDeadBeams( pEdict );
 	pEdict->index = 0;	// freed
 }
 
-void CL_InitWorld( void )
+void CL_ClearWorld( void )
 {
 	cl_entity_t	*ent;
+	int		i;
 
 	ent = EDICT_NUM( 0 );
 	ent->index = NUM_FOR_EDICT( ent );
@@ -1283,6 +1285,10 @@ void CL_InitWorld( void )
 	ent->curstate.movetype = MOVETYPE_PUSH;
 	ent->model = worldmodel;
 	clgame.numEntities = 1;
+
+	// clear the lightstyles
+	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
+		cl.lightstyles[i].value = 1.0f;
 }
 
 void CL_InitEdicts( void )
@@ -1340,7 +1346,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	if( !buf ) return false;
 
 	com.strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
-	m_pSprite->registration_sequence = cm.registration_sequence;
+	m_pSprite->needload = cm.load_sequence;
 
 	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
 	else Mod_LoadSpriteModel( m_pSprite, buf );		
@@ -1377,7 +1383,7 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		if( !com.strcmp( clgame.sprites[i].name, szPicName ))
 		{
 			// prolonge registration
-			clgame.sprites[i].registration_sequence = cm.registration_sequence;
+			clgame.sprites[i].needload = cm.load_sequence;
 			return i;
 		}
 	}
@@ -1568,7 +1574,8 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	Com_ReadUlong( script, SC_ALLOW_NEWLINES, &numSprites );
 
 	// name, res, pic, x, y, w, h
-	pList = Mem_Alloc( cls.mempool, sizeof( client_sprite_t ) * numSprites );
+	// NOTE: we must use cm.studiopool because it will be purge on next restart or change map
+	pList = Mem_Alloc( cm.studiopool, sizeof( client_sprite_t ) * numSprites );
 
 	for( index = 0; index < numSprites; index++ )
 	{
@@ -2702,7 +2709,7 @@ model_t *pfnLoadMapSprite( const char *filename )
 		if( !com.strcmp( clgame.sprites[i].name, filename ))
 		{
 			// prolonge registration
-			clgame.sprites[i].registration_sequence = cm.registration_sequence;
+			clgame.sprites[i].needload = cm.load_sequence;
 			return &clgame.sprites[i];
 		}
 	}

@@ -28,6 +28,7 @@ typedef int GLintptrARB;
 typedef int GLsizeiptrARB;
 typedef char GLcharARB;
 typedef uint GLhandleARB;
+typedef float GLmatrix[16];
 
 #define GL_MODELVIEW			0x1700
 #define GL_PROJECTION			0x1701
@@ -1055,11 +1056,8 @@ void ( APIENTRY *pglGetQueryObjectuivARB) (GLuint id, GLenum pname, GLuint *para
 void ( APIENTRY * pglSelectTextureSGIS) ( GLenum );
 void ( APIENTRY * pglMTexCoord2fSGIS) ( GLenum, GLfloat, GLfloat );
 void ( APIENTRY * pglSwapInterval) ( int interval );
-
 extern void *pglGetProcAddress( const GLubyte * );
 const char *(*pglGetGLWExtensionsString)( void );
-void pglPerspective( GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar );
-
 const char * ( WINAPI * pwglGetExtensionsStringEXT )( void );
 int   ( WINAPI * pwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
 int   ( WINAPI * pwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);

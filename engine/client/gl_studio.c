@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2010 ©
-//		        cl_studio.c - client studio utilities
+//		       gl_studio.c - studio model renderer
 //=======================================================================
 
 #include "common.h"
@@ -10,6 +10,7 @@
 #include "r_studioint.h"
 #include "studio.h"
 #include "pm_local.h"
+#include "gl_local.h"
 
 static r_studio_interface_t	*pStudioDraw;
 
@@ -442,15 +443,30 @@ static void pfnStudioDrawShadow( void )
 	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
 }
 
-/*
-===============
-pfnSetRenderMode
-
-===============
-*/
-static void pfnSetRenderMode( int mode )
+void Mod_UnloadStudioModel( model_t *mod )
 {
-	// FIXME: implement
+	studiohdr_t	*pstudio;
+	mstudiotexture_t	*ptexture;
+	int		i;
+
+	ASSERT( mod != NULL );
+
+	if( mod->type != mod_studio )
+		return; // not a studio
+
+	pstudio = mod->cache.data;
+	if( !pstudio ) return; // already freed
+
+	ptexture = (mstudiotexture_t *)(((byte *)pstudio) + pstudio->textureindex);
+
+	// release all textures
+	for( i = 0; i < pstudio->numtextures; i++ )
+	{
+//		GL_FreeTexture( ptexture[i].index );
+	}
+
+	Mem_FreePool( &mod->mempool );
+	Mem_Set( mod, 0, sizeof( *mod ));
 }
 		
 static engine_studio_api_t gStudioAPI =
@@ -497,7 +513,7 @@ static engine_studio_api_t gStudioAPI =
 	pfnSetChromeOrigin,
 	pfnIsHardware,
 	pfnStudioDrawShadow,
-	pfnSetRenderMode,
+	GL_SetRenderMode,
 
 };
 

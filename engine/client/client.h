@@ -23,6 +23,7 @@
 #define MAX_MOVIES		8
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
+#define MAX_EFRAGS		640
 
 #define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, cl_entity_t, area )
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
@@ -127,6 +128,7 @@ typedef struct
 	int		decal_index[MAX_DECALS];
 
 	model_t		*worldmodel;			// pointer to world
+	efrag_t		*free_efrags;
 } client_t;
 
 /*
@@ -485,7 +487,6 @@ void CL_RunLightStyles( void );
 
 void CL_AddEntities( void );
 void CL_DecayLights( void );
-void CL_AddLightStyles( void );
 
 //=================================================
 
@@ -544,7 +545,7 @@ void CL_ParseTextMessage( sizebuf_t *msg );
 void CL_DrawHUD( int state );
 void CL_InitEdicts( void );
 void CL_FreeEdicts( void );
-void CL_InitWorld( void );
+void CL_ClearWorld( void );
 void CL_InitEntity( cl_entity_t *pEdict );
 void CL_FreeEntity( cl_entity_t *pEdict );
 void CL_CenterPrint( const char *text, float y );

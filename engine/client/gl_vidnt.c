@@ -35,14 +35,24 @@ convar_t	*gl_picmip;
 convar_t	*gl_skymip;
 convar_t	*gl_nobind;
 convar_t	*gl_finish;
-convar_t	*gl_delayfinish;
-convar_t	*gl_frontbuffer;
 convar_t	*gl_clear;
+convar_t	*gl_texsort;
 
 convar_t	*r_width;
 convar_t	*r_height;
 convar_t	*r_speeds;
 convar_t	*r_fullbright;
+convar_t	*r_norefresh;
+convar_t	*r_lighting_modulate;
+convar_t	*r_adjust_fov;
+convar_t	*r_novis;
+convar_t	*r_nocull;
+convar_t	*r_lockpvs;
+convar_t	*r_wateralpha;
+convar_t	*r_dynamic;
+convar_t	*r_lightmap;
+convar_t	*r_shadows;
+convar_t	*r_fastsky;
 
 convar_t	*vid_displayfrequency;
 convar_t	*vid_fullscreen;
@@ -474,6 +484,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 
 	if( gl_extensions->integer == 0 && r_ext != GL_OPENGL_110 )
 	{
+		MsgDev( D_NOTE, "- disabled\n" );
 		GL_SetExtension( r_ext, 0 );	// update render info
 		return;
 	}
@@ -485,7 +496,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 		GL_SetExtension( r_ext, parm->integer );	// update render info
 		if( parm->integer == 0 )
 		{
-			MsgDev( D_NOTE, "- disabled\n");
+			MsgDev( D_NOTE, "- disabled\n" );
 			return; // nothing to process at
 		}
 	}
@@ -493,7 +504,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	if(( name[2] == '_' || name[3] == '_' ) && !com.strstr( glConfig.extensions_string, name ))
 	{
 		GL_SetExtension( r_ext, false );	// update render info
-		MsgDev( D_NOTE, "- failed\n");
+		MsgDev( D_NOTE, "- failed\n" );
 		return;
 	}
 
@@ -510,7 +521,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	}
 
 	if( GL_Support( r_ext ))
-		MsgDev( D_NOTE, "- enabled\n");
+		MsgDev( D_NOTE, "- enabled\n" );
 }
 
 /*
@@ -758,6 +769,9 @@ qboolean GL_SetPixelformat( void )
 	int			pixelFormat;
 	size_t			gamma_size;
 	byte			*savedGamma;
+
+	Sys_LoadLibrary( NULL, &opengl_dll );	// load opengl32.dll
+	if( !opengl_dll.link ) return false;
 
 	glw_state.minidriver = false;	// FIXME: allow 3dfx drivers too
 
@@ -1180,9 +1194,6 @@ qboolean R_Init_OpenGL( void )
 	vid_fullscreen->modified = false;
 	vid_mode->modified = false;
 
-	Sys_LoadLibrary( NULL, &opengl_dll );	// load opengl32.dll
-	if( !opengl_dll.link ) return false;
-
 	if(( err = R_ChangeDisplaySettings( vid_mode->integer, fullscreen )) == rserr_ok )
 	{
 		glConfig.prev_mode = vid_mode->integer;
@@ -1286,7 +1297,6 @@ R_RenderInfo_f
 */
 void R_RenderInfo_f( void )
 {
-
 	Msg( "\n" );
 	Msg( "GL_VENDOR: %s\n", glConfig.vendor_string );
 	Msg( "GL_RENDERER: %s\n", glConfig.renderer_string );
@@ -1326,6 +1336,17 @@ void GL_InitCommands( void )
 	r_height = Cvar_Get( "height", "480", CVAR_READ_ONLY, "screen height" );
 	r_speeds = Cvar_Get( "r_speeds", "0", CVAR_ARCHIVE, "shows renderer speeds" );
 	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
+	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable 3D rendering (use with caution)" );
+	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "1", CVAR_ARCHIVE, "lightstyles modulate scale" );
+	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", CVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
+	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
+	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
+	r_lockpvs = Cvar_Get( "r_lockpvs", "0", CVAR_CHEAT, "lockpvs area at current point (pvs test)" );
+	r_wateralpha = Cvar_Get( "r_wateralpha", "1", CVAR_ARCHIVE, "world water transparency factor" );
+	r_dynamic = Cvar_Get( "r_dynamic", "1", CVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
+	r_lightmap = Cvar_Get( "r_lightmap", "0", CVAR_CHEAT, "lightmap debugging tool" );
+	r_shadows = Cvar_Get( "r_shadows", "0", CVAR_ARCHIVE, "enable model shadows" );
+	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
 
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
@@ -1344,11 +1365,10 @@ void GL_InitCommands( void )
 	gl_nobind = Cvar_Get( "gl_nobind", "0", 0, "replace all textures with '*notexture' (perfomance test)" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "compress textures to safe video memory" ); 
-	gl_showtextures = Cvar_Get( "gl_showtextures", "0", CVAR_CHEAT, "show all uploaded textures" );
+	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 9)" );
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
-	gl_delayfinish = Cvar_Get( "gl_delayfinish", "1", CVAR_ARCHIVE, "make delay before call of glFinish" );
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
-	gl_frontbuffer = Cvar_Get( "r_frontbuffer", "0", 0, "use back or front buffer" );
+	gl_texsort = Cvar_Get( "gl_texsort", "1", CVAR_ARCHIVE, "enable or disable sorting by texture" );
 
 	// make sure r_swapinterval is checked after vid_restart
 	gl_swapInterval->modified = true;

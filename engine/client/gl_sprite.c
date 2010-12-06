@@ -45,6 +45,8 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	pspriteframe->gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, 0 );
 	*ppframe = pspriteframe;
 
+	GL_SetTextureType( pspriteframe->gl_texturenum, TEX_SPRITE );
+
 	return (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height );
 }
 
@@ -312,7 +314,8 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 		pspriteframe->down = ( h >> 1 ) - h;
 		pspriteframe->right = w + -( w >> 1 );
 		pspriteframe->gl_texturenum = GL_LoadTextureInternal( texname, &temp, TF_IMAGE, false );
-		
+		GL_SetTextureType( pspriteframe->gl_texturenum, TEX_NOMIP );
+			
 		xl += w;
 		if( xl >= pix->width )
 		{
@@ -347,11 +350,6 @@ void Mod_UnloadSpriteModel( model_t *mod )
 		if( psprite->frames[i].type == SPR_SINGLE )
 		{
 			pspriteframe = psprite->frames[i].frameptr;
-			if( pspriteframe == NULL )
-			{
-				Msg( "Sprite %s, frameptr[%i] == NULL!\n", mod->name, i );
-				continue;
-			}
 			GL_FreeTexture( pspriteframe->gl_texturenum );
 		}
 		else
@@ -361,16 +359,13 @@ void Mod_UnloadSpriteModel( model_t *mod )
 			for( j = 0; j < pspritegroup->numframes; j++ )
 			{
 				pspriteframe = pspritegroup->frames[i];
-				if( pspriteframe == NULL )
-				{
-					Msg( "Sprite %s, frameptr[%i] == NULL!\n", mod->name, i );
-					continue;
-				}
 				GL_FreeTexture( pspriteframe->gl_texturenum );
 			}
 		}
 	}
+
 	Mem_FreePool( &mod->mempool );
+	Mem_Set( mod, 0, sizeof( *mod ));
 }
 
 /*

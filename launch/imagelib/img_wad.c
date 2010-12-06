@@ -545,6 +545,8 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			}
 			rendermode = LUMP_NORMAL;
 		}
+
+		Image_GetPaletteLMP( pal, rendermode );
 	}
 	else if( image.hint != IL_HINT_HL && filesize >= (int)sizeof(mip) + ((pixels * 85)>>6))
 	{
@@ -562,6 +564,8 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 				break;
 			}
 		}
+
+		Image_GetPaletteQ1();
 	}
 	else
 	{
@@ -570,7 +574,13 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		return false; // unknown or unsupported mode rejected
 	} 
 
-	Image_GetPaletteLMP( pal, rendermode );
+	// check for quake-sky texture
+	if( !com.strncmp( mip.name, "sky", 3 ) && image.width == ( image.height * 2 ))
+	{
+		// FIXME: run additional checks for palette type and colors ?
+		image.flags |= IMAGE_QUAKESKY;
+	}
+
 	image.type = PF_INDEXED_32;	// 32-bit palete
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }

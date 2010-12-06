@@ -162,10 +162,6 @@ SOURCE=.\client\cl_scrn.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_studio.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\cl_tent.c
 # End Source File
 # Begin Source File
@@ -210,11 +206,19 @@ SOURCE=.\client\gl_image.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_refrag.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_rlight.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\client\gl_rmain.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_rmath.c
 # End Source File
 # Begin Source File
 
@@ -231,6 +235,10 @@ SOURCE=.\client\gl_rsurf.c
 # Begin Source File
 
 SOURCE=.\client\gl_sprite.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_studio.c
 # End Source File
 # Begin Source File
 

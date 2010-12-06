@@ -66,7 +66,8 @@ typedef struct texture_s
 	int		anim_min, anim_max;	// time for this frame min <=time< max
 	struct texture_s	*anim_next;	// in the animation sequence
 	struct texture_s	*alternate_anims;	// bmodels in frmae 1 use these
-	unsigned int	offsets[MIPLEVELS];	// four mip maps stored
+	int		fb_texturenum;	// auto-luma texturenum
+	unsigned int	unused[3];	// reserved 
 } texture_t;
 
 typedef struct
@@ -132,8 +133,8 @@ typedef struct mleaf_s
 
 	struct mnode_s	*parent;
 // leaf specific
-	byte		*visdata;		// decompressed visdata after loading
-	byte		*pasdata;		// decompressed pasdata after loading (was efrags)
+	byte		*compressed_vis;
+	struct efrag_s	*efrags;
 
 	msurface_t	**firstmarksurface;
 	int		nummarksurfaces;
@@ -197,7 +198,7 @@ typedef struct cache_user_s
 typedef struct model_s
 {
 	char		name[64];		// model name
-	int		registration_sequence;
+	qboolean		needload;		// bmodels and sprites don't cache normally
 
 	// shared modelinfo
 	modtype_t		type;		// model type

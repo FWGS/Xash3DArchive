@@ -343,6 +343,7 @@ typedef enum
 	IMAGE_HAS_LUMA_Q2	= BIT(5),		// image has luma pixels (q2-style maps)
 	IMAGE_HAS_LUMA	= IMAGE_HAS_LUMA_Q1|IMAGE_HAS_LUMA_Q2,
 	IMAGE_SKYBOX	= BIT(6),		// only used by FS_SaveImage - for write right suffixes
+	IMAGE_QUAKESKY	= BIT(7),		// it's a quake sky double layered clouds (so keep it as 8 bit)
 
 	// Image_Process manipulation flags
 	IMAGE_FLIP_X	= BIT(16),	// flip the image by width

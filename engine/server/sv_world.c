@@ -338,15 +338,14 @@ SV_ClearWorld
 */
 void SV_ClearWorld( void )
 {
-	lightstyle_t	*ls;
-	int		i;
+	int	i;
 
 	SV_InitBoxHull();		// for box testing
 	SV_InitStudioHull();	// for hitbox testing
 
 	// clear lightstyles
-	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
-		VectorSet( ls->rgb, 1.0f, 1.0f, 1.0f );
+	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
+		sv.lightstyles[i].value = 1.0f;
 	sv_lastofs = -1;
 
 	Mem_Set( sv_areanodes, 0, sizeof( sv_areanodes ));
@@ -1396,10 +1395,10 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 	mplane_t		*plane;
 	msurface_t	*surf;
 	mtexinfo_t	*tex;
-	vec3_t		mid, scale;
-	float		front, back, frac;
+	float		front, back, scale, frac;
 	int		i, map, size, s, t;
 	color24		*lm;
+	vec3_t		mid;
 
 	// didn't hit anything
 	if( node->contents < 0 )
@@ -1462,11 +1461,11 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
-			VectorScale( sv.lightstyles[surf->styles[map]].rgb, sv_modulate, scale );
+			scale = sv.lightstyles[surf->styles[map]].value * sv_modulate;
 
-			sv_pointColor[0] += lm->r * scale[0];
-			sv_pointColor[1] += lm->g * scale[1];
-			sv_pointColor[2] += lm->b * scale[2];
+			sv_pointColor[0] += lm->r * scale;
+			sv_pointColor[1] += lm->g * scale;
+			sv_pointColor[2] += lm->b * scale;
 
 			lm += size; // skip to next lightmap
 		}
@@ -1481,7 +1480,6 @@ void SV_RunLightStyles( void )
 {
 	int		i, ofs;
 	lightstyle_t	*ls;
-	float		l;
 
 	// run lightstyles animation
 	ofs = (sv.time * 10);
@@ -1491,11 +1489,9 @@ void SV_RunLightStyles( void )
 
 	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		if( ls->length == 0 ) l = 0.0f;
-		else if( ls->length == 1 ) l = ls->map[0];
-		else l = ls->map[ofs%ls->length];
-
-		VectorSet( ls->rgb, l, l, l );
+		if( ls->length == 0 ) ls->value = 0.0f;	// disable this light
+		else if( ls->length == 1 ) ls->value = ls->map[0];
+		else ls->value = ls->map[ofs%ls->length];
 	}
 }
 

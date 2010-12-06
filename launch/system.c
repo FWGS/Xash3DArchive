@@ -641,10 +641,10 @@ formatted message
 void Sys_Msg( const char *pMsg, ... )
 {
 	va_list	argptr;
-	char text[MAX_SYSPATH];
+	char	text[8192];
 	
 	va_start( argptr, pMsg );
-	com.vsprintf( text, pMsg, argptr );
+	com.vsnprintf( text, sizeof( text ), pMsg, argptr );
 	va_end( argptr );
 	Sys.printlevel = 0;
 
@@ -654,13 +654,13 @@ void Sys_Msg( const char *pMsg, ... )
 void Sys_MsgDev( int level, const char *pMsg, ... )
 {
 	va_list	argptr;
-	char	text[MAX_SYSPATH];
+	char	text[8192];
 
 	if( Sys.developer < level ) return;
 	Sys.printlevel = level;
 
 	va_start( argptr, pMsg );
-	com.vsprintf( text, pMsg, argptr );
+	com.vsnprintf( text, sizeof( text ), pMsg, argptr );
 	va_end( argptr );
 
 	switch( level )
@@ -843,6 +843,9 @@ void Sys_Break( const char *error, ... )
 {
 	va_list		argptr;
 	char		text[MAX_SYSPATH];
+
+	if( Sys.app_state == SYS_ERROR )
+		return; // don't multiple executes
          
 	va_start( argptr, error );
 	com.vsprintf( text, error, argptr );

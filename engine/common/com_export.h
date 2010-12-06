@@ -16,6 +16,7 @@ extern stdlib_api_t	com;
 }
 #endif
 
+#define TF_SKY	(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
 #define TF_FONT	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
 #define TF_IMAGE	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP)
 #define TF_DECAL	(TF_CLAMP|TF_UNCOMPRESSED)
@@ -61,15 +62,18 @@ void R_SetupSky( const char *skyboxname );
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs );
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen );
 void R_ScreenToWorld( const vec3_t screen, vec3_t point );
-qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType, int customTexture );
+qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType );
 void Mod_LoadSpriteModel( struct model_s *mod, const void *buffer );
 void Mod_LoadMapSprite( struct model_s *mod, const void *buffer, size_t size );
 void Mod_UnloadSpriteModel( struct model_s *mod );
+void Mod_UnloadStudioModel( struct model_s *mod );
+void Mod_UnloadBrushModel( struct model_s *mod );
 void GL_SetRenderMode( int mode );
 int R_GetSpriteTexture( const struct model_s *m_pSpriteModel, int frame );
 void R_LightForPoint( const vec3_t point, vec3_t ambientLight );
-qboolean R_SetLightStyle( int stylenum, vec3_t color );
 qboolean R_DecalShoot( int texture, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
+void R_RemoveEfrags( struct cl_entity_s *ent );
+void R_AddEfrags( struct cl_entity_s *ent );
 void R_DecalRemoveAll( int texture );
 byte *Mod_GetCurrentVis( void );
 void R_NewMap( void );

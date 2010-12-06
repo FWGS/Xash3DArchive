@@ -186,6 +186,9 @@ void R_Set2DMode( qboolean enable )
 	}
 	else
 	{
+
+		GL_CleanUpTextureUnits( 1 );
+		pglMatrixMode( GL_MODELVIEW );
 		glState.in2DMode = false;
 	}
 }

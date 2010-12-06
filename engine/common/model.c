@@ -113,16 +113,36 @@ Mod_PointInLeaf
 */
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node )
 {
-	mleaf_t	*leaf;
+	mplane_t	*plane;
 
-	// find which leaf the point is in
-	while( node->contents >= 0 )
-		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p, node->plane->normal)) < node->plane->dist];
-	leaf = (mleaf_t *)node;
+	do
+	{
+		plane = node->plane;
+		node = node->children[PlaneDiff( p, plane ) < 0];
+	} while( node->contents >= 0 );
 
-	return leaf;
+	return (mleaf_t *)node;
 }
 
+/*
+==================
+Mod_LeafPVS
+
+==================
+*/
+byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model )
+{
+	if( !model || !leaf || leaf == model->leafs || !model->visdata )
+		return cm.nullrow;
+	return Mod_DecompressVis( leaf->compressed_vis );
+}
+
+/*
+==================
+Mod_PointLeafnum
+
+==================
+*/
 int Mod_PointLeafnum( const vec3_t p )
 {
 	// map not loaded
@@ -299,17 +319,21 @@ static void Mod_FreeModel( model_t *mod )
 	if( !mod || !mod->mempool )
 		return;
 
+	MsgDev( D_INFO, "Mod_FreeModel: %s\n", mod->name );
+
+	// select the properly unloader
 	switch( mod->type )
 	{
 	case mod_sprite:
 		Mod_UnloadSpriteModel( mod );
 		break;
 	case mod_studio:
+		Mod_UnloadStudioModel( mod );
+		break;
+	case mod_brush:
+		Mod_UnloadBrushModel( mod );
 		break;
 	}
-
-	Mem_FreePool( &mod->mempool );
-	Mem_Set( mod, 0, sizeof( *mod ));
 }
 
 /*
@@ -396,9 +420,18 @@ Mod_LoadTextures
 static void Mod_LoadTextures( dlump_t *l )
 {
 	dmiptexlump_t	*in;
-	texture_t		*tx;
+	texture_t		*tx, *tx2;
+	texture_t		*anims[10];
+	texture_t		*altanims[10];
+	int		num, max, altmax;
+	char		texname[32];
 	mip_t		*mt;
-	int 		i;
+	int 		i, j; 
+
+	// release old sky layers first
+	GL_FreeTexture( tr.solidskyTexture );
+	GL_FreeTexture( tr.alphaskyTexture );
+	tr.solidskyTexture = tr.alphaskyTexture = 0;
 
 	if( !l->filelen )
 	{
@@ -417,12 +450,154 @@ static void Mod_LoadTextures( dlump_t *l )
 		if( in->dataofs[i] == -1 ) continue; // missed
 
 		mt = (mip_t *)((byte *)in + in->dataofs[i] );
+
+		if( !mt->name[0] )
+		{
+			MsgDev( D_WARN, "unnamed texture in %s\n", loadmodel->name );
+			com.snprintf( mt->name, sizeof( mt->name ), "miptex_%i", i );
+		}
+
 		tx = Mem_Alloc( loadmodel->mempool, sizeof( *tx ));
 		loadmodel->textures[i] = tx;
 
-		com.strnlwr( mt->name, tx->name, sizeof( tx->name ));
+		// convert to lowercase
+		com.strnlwr( mt->name, mt->name, sizeof( mt->name ));
+		com.strncpy( tx->name, mt->name, sizeof( tx->name ));
+		com.snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", mt->name );
+
+		Msg( "texname %s\n", texname );
+
 		tx->width = mt->width;
 		tx->height = mt->height;
+
+		// check for sky texture (quake1 only!)
+		if( cm.version == Q1BSP_VERSION && !com.strncmp( mt->name, "sky", 3 ))
+		{	
+			R_InitSky( mt, tx );
+		}
+		else if( mt->offsets[0] > 0 )
+		{
+			// NOTE: imagelib detect miptex version by size
+			// 770 additional bytes is indicated custom palette
+			int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
+			if( cm.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+
+			tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0 );
+		}
+		else
+		{
+			// okay, loading it from wad
+			tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0 );
+		}
+
+		// check for luma texture
+		if( R_GetTexture( tx->gl_texturenum )->flags & TF_HAS_LUMA )
+		{
+			com.snprintf( texname, sizeof( texname ), "%s%s_luma.mip", mt->offsets[0] > 0 ? "#" : "", mt->name );
+			if( mt->offsets[0] > 0 )
+			{
+				// NOTE: imagelib detect miptex version by size
+				// 770 additional bytes is indicated custom palette
+				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
+				if( cm.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+
+				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA );
+			}
+			else
+			{
+				// okay, loading it from wad
+				tx->fb_texturenum = GL_LoadTexture( texname, NULL, 0, TF_MAKELUMA );
+			}
+		}
+
+		// apply texture type (just for debug)
+		GL_SetTextureType( tx->gl_texturenum, TEX_BRUSH );
+		GL_SetTextureType( tx->fb_texturenum, TEX_BRUSH );
+	}
+
+	// sequence the animations
+	for( i = 0; i < loadmodel->numtextures; i++ )
+	{
+		tx = loadmodel->textures[i];
+
+		if( !tx || tx->name[0] != '+' )
+			continue;
+
+		if( tx->anim_next )
+			continue;	// allready sequenced
+
+		// find the number of frames in the animation
+		Mem_Set( anims, 0, sizeof( anims ));
+		Mem_Set( altanims, 0, sizeof( altanims ));
+
+		max = tx->name[1];
+		altmax = 0;
+
+		if( max >= '0' && max <= '9' )
+		{
+			max -= '0';
+			altmax = 0;
+			anims[max] = tx;
+			max++;
+		}
+		else if( max >= 'a' && max <= 'j' )
+		{
+			altmax = max - 'a';
+			max = 0;
+			altanims[altmax] = tx;
+			altmax++;
+		}
+		else Host_Error( "Mod_LoadTextures: bad animating texture %s\n", tx->name );
+
+		for( j = i + 1; j < loadmodel->numtextures; j++ )
+		{
+			tx2 = loadmodel->textures[j];
+			if( !tx2 || tx2->name[0] != '+' )
+				continue;
+
+			if( com.strcmp( tx2->name + 2, tx->name + 2 ))
+				continue;
+
+			num = tx2->name[1];
+			if( num >= '0' && num <= '9' )
+			{
+				num -= '0';
+				anims[num] = tx2;
+				if (num+1 > max)
+					max = num + 1;
+			}
+			else if( num >= 'a' && num <= 'j' )
+			{
+				num = num - 'a';
+				altanims[num] = tx2;
+				if( num + 1 > altmax )
+					altmax = num + 1;
+			}
+			else Host_Error( "Mod_LoadTextures: bad animating texture %s\n", tx->name );
+		}
+
+		// link them all together
+		for( j = 0; j < max; j++ )
+		{
+			tx2 = anims[j];
+			if( !tx2 ) Host_Error( "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+			tx2->anim_total = max * ANIM_CYCLE;
+			tx2->anim_min = j * ANIM_CYCLE;
+			tx2->anim_max = (j + 1) * ANIM_CYCLE;
+			tx2->anim_next = anims[(j + 1) % max];
+			if( altmax ) tx2->alternate_anims = altanims[0];
+		}
+
+		for( j = 0; j < altmax; j++ )
+		{
+			tx2 = altanims[j];
+			if( !tx2 ) Host_Error( "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+			tx2->anim_total = altmax * ANIM_CYCLE;
+			tx2->anim_min = j * ANIM_CYCLE;
+			tx2->anim_max = (j+1) * ANIM_CYCLE;
+			tx2->anim_next = altanims[(j + 1) % altmax];
+			if( max ) tx2->alternate_anims = anims[0];
+		}
 	}
 }
 
@@ -526,7 +701,7 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 	mtexinfo_t	*tex;
 	mvertex_t		*v;
 
-	if( surf->flags & SURF_DRAWTURB )
+	if( surf->flags & SURF_DRAWTILED )
 	{
 		surf->extents[0] = surf->extents[1] = 16384;
 		surf->texturemins[0] = surf->texturemins[1] = -8192;
@@ -628,15 +803,8 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			else out->samples = loadmodel->lightdata + lightofs;
 		}
 
-		if( out->flags & SURF_DRAWTURB )
-		{
-			GL_SubdivideSurface( out );	// cut up polygon for warps
-		}
-		else
-		{
-			GL_BuildPolygonFromSurface( out );
-		}
-
+		if( out->flags & SURF_DRAWTILED && lightofs == -1 )
+			GL_SubdivideSurface( out ); // cut up polygon for warps
 	}
 }
 
@@ -829,11 +997,8 @@ static void Mod_LoadLeafs( dlump_t *l )
 	
 		p = in->visofs;
 
-		if( p == -1 ) out->visdata = NULL;
-		else out->visdata = loadmodel->visdata + p;
-
-		// will be initialized later
-		out->pasdata = NULL;
+		if( p == -1 ) out->compressed_vis = NULL;
+		else out->compressed_vis = loadmodel->visdata + p;
 
 		for( j = 0; j < 4; j++ )
 			out->ambient_sound_level[j] = in->ambient_level[j];
@@ -902,7 +1067,7 @@ static void Mod_LoadVisibility( dlump_t *l )
 		return;
 	}
 
-	loadmodel->visdata = cm.pvs = Mem_Alloc( loadmodel->mempool, l->filelen );
+	loadmodel->visdata = Mem_Alloc( loadmodel->mempool, l->filelen );
 	Mem_Copy( loadmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
 }
 
@@ -1019,6 +1184,36 @@ static void Mod_MakeHull0( void )
 
 /*
 =================
+Mod_UnloadBrushModel
+
+Release all uploaded textures
+=================
+*/
+void Mod_UnloadBrushModel( model_t *mod )
+{
+	texture_t	*tx;
+	int	i;
+
+	ASSERT( mod != NULL );
+
+	if( mod->type != mod_brush )
+		return; // not a bmodel
+
+	for( i = 0; i < mod->numtextures; i++ )
+	{
+		tx = mod->textures[i];
+		if( !tx ) continue;	// free slot
+
+		GL_FreeTexture( tx->gl_texturenum );	// main texture
+		GL_FreeTexture( tx->fb_texturenum );	// luma texture
+	}
+
+	Mem_FreePool( &mod->mempool );
+	Mem_Set( mod, 0, sizeof( *mod ));
+}
+
+/*
+=================
 CM_BrushModel
 =================
 */
@@ -1033,6 +1228,9 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 
 	switch( i )
 	{
+	case 28:	// get support for quake1 beta
+		i = Q1BSP_VERSION;
+		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		break;
@@ -1103,8 +1301,8 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 		
 		starmod->firstmodelsurface = bm->firstface;
 		starmod->nummodelsurfaces = bm->numfaces;
-		starmod->numleafs = bm->visleafs + 1; // include solid leaf
-		
+		starmod->numleafs = bm->visleafs;
+	
 		VectorCopy( bm->maxs, starmod->maxs );
 		VectorCopy( bm->mins, starmod->mins );
 
@@ -1131,7 +1329,7 @@ static void CM_StudioModel( model_t *mod, byte *buffer )
 	loadmodel->type = mod_studio;
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	loadmodel->numframes = pseqdesc[0].numframes;
-	loadmodel->registration_sequence = cm.registration_sequence;
+	loadmodel->needload = cm.load_sequence;
 
 	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
 	loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
@@ -1156,7 +1354,7 @@ static void CM_SpriteModel( model_t *mod, byte *buffer )
           
 	loadmodel->type = mod_sprite;
 	loadmodel->numframes = phdr->numframes;
-	loadmodel->registration_sequence = cm.registration_sequence;
+	loadmodel->needload = cm.load_sequence;
 
 	// setup bounding box
 	loadmodel->mins[0] = loadmodel->mins[1] = -phdr->bounds[0] / 2;
@@ -1197,7 +1395,7 @@ model_t *CM_ModForName( const char *name, qboolean world )
 		if( !com.strcmp( name, mod->name ))
 		{
 			// prolonge registration
-			mod->registration_sequence = cm.registration_sequence;
+			mod->needload = cm.load_sequence;
 			return mod;
 		}
 	}
@@ -1226,7 +1424,7 @@ model_t *CM_ModForName( const char *name, qboolean world )
 
 	MsgDev( D_NOTE, "CM_LoadModel: %s\n", name );
 	com.strncpy( mod->name, name, sizeof( mod->name ));
-	mod->registration_sequence = cm.registration_sequence;	// register mod
+	mod->needload = cm.load_sequence;	// register mod
 	mod->type = mod_bad;
 	loadmodel = mod;
 
@@ -1270,9 +1468,6 @@ static void CM_FreeWorld( void )
 		cm.entityscript = NULL;
 	}
 	worldmodel = NULL;
-
-	// purge all submodels
-	Mem_EmptyPool( cm.studiopool );
 }
 
 /*
@@ -1286,6 +1481,9 @@ void CM_BeginRegistration( const char *name, qboolean clientload, uint *checksum
 {
 	// now replacement table is invalidate
 	Mem_Set( sv_models, 0, sizeof( sv_models ));
+
+	// purge all submodels
+	Mem_EmptyPool( cm.studiopool );
 
 	if( !com.strlen( name ))
 	{
@@ -1311,7 +1509,7 @@ void CM_BeginRegistration( const char *name, qboolean clientload, uint *checksum
 	}
 
 	CM_FreeWorld ();
-	cm.registration_sequence++;	// all models are invalid
+	cm.load_sequence++;	// now all models are invalid
 
 	// load the newmap
 	worldmodel = CM_ModForName( name, true );
@@ -1331,7 +1529,7 @@ void CM_EndRegistration( void )
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
 	{
 		if( !mod->name[0] ) continue;
-		if( mod->registration_sequence != cm.registration_sequence )
+		if( mod->needload != cm.load_sequence )
 			Mod_FreeModel( mod );
 	}
 }

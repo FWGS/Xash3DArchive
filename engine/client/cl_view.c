@@ -21,22 +21,6 @@ void V_ClearScene( void )
 	R_ClearScene();
 }
 
-float V_CalcFov( float fov_x, float width, float height )
-{
-	float	x, half_fov_y;
-
-	// check to avoid division by zero
-	if( fov_x < 1 || fov_x > 179 )
-	{
-		MsgDev( D_ERROR, "V_CalcFov: invalid fov %g!\n", fov_x );
-		fov_x = 90;
-	}
-
-	x = width / com.tan( DEG2RAD( fov_x ) * 0.5f );
-	half_fov_y = atan( height / x );
-	return RAD2DEG( half_fov_y ) * 2;
-}
-
 /*
 ===============
 V_SetupRefDef
@@ -75,7 +59,7 @@ void V_SetupRefDef( void )
 
 	// calc FOV
 	cl.refdef.fov_x = cl.data.fov; // this is a final fov value
-	cl.refdef.fov_y = V_CalcFov( cl.refdef.fov_x, cl.refdef.viewport[2], cl.refdef.viewport[3] );
+	cl.refdef.fov_y = V_CalcFov( &cl.refdef.fov_x, cl.refdef.viewport[2], cl.refdef.viewport[3] );
 
 	// calculate the origin
 	if( CL_IsPredicted( ) && !cl.refdef.demoplayback )

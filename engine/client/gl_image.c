@@ -57,6 +57,20 @@ gltexture_t *R_GetTexture( GLenum texnum )
 
 /*
 =================
+GL_SetTextureType
+
+Just for debug (r_showtextures uses it)
+=================
+*/
+void GL_SetTextureType( GLenum texnum, GLenum type )
+{
+	if( texnum <= 0 ) return;
+	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
+	r_textures[texnum].texType = type;
+}
+
+/*
+=================
 GL_TexFilter
 =================
 */
@@ -788,6 +802,14 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	// FIXME: probably this code relies when gl_compressed_textures is enabled
 	texsize = tex->width * tex->height * samples;
 
+	// determine some texTypes
+	if( tex->flags & TF_NOPICMIP )
+		tex->texType = TEX_NOMIP;
+	else if( tex->flags & TF_CUBEMAP )
+		tex->texType = TEX_CUBEMAP;
+	else if(( tex->flags & TF_DECAL ) == TF_DECAL )
+		tex->texType = TEX_DECAL;
+
 	// uploading texture into video memory
 	for( i = 0; i < numSides; i++ )
 	{
@@ -826,7 +848,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 	rgbdata_t		*pic;
 	uint		i, hash;
 
-	if( !name || !name[0] )
+	if( !name || !name[0] || !glw_state.initialized )
 		return 0;
 
 	if( com.strlen( name ) >= sizeof( r_textures->name ))
@@ -872,6 +894,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 
 	GL_UploadTexture( pic, tex, false );
 	GL_TexFilter( tex, false ); // update texture filter, wrap etc
+	FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
 	hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
@@ -891,7 +914,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	gltexture_t	*tex;
 	uint		i, hash;
 
-	if( !name || !name[0] )
+	if( !name || !name[0] || !glw_state.initialized )
 		return 0;
 
 	if( com.strlen( name ) >= sizeof( r_textures->name ))
@@ -972,7 +995,7 @@ void GL_FreeImage( const char *name )
 	gltexture_t	*tex;
 	uint		hash;
 
-	if( !name || !name[0] )
+	if( !name || !name[0] || !glw_state.initialized )
 		return;
 
 	if( com.strlen( name ) >= sizeof( r_textures->name ))
@@ -991,7 +1014,6 @@ void GL_FreeImage( const char *name )
 
 		if( !com.stricmp( tex->name, name ))
 		{
-			Msg( "Free image %s\n", name );
 			GL_FreeTexture( tex->texnum );
 			return;
 		}
@@ -1010,8 +1032,14 @@ void GL_FreeTexture( GLenum texnum )
 	gltexture_t	*cur;
 	gltexture_t	**prev;
 
-	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
+	// number 0 it's already freed
+	if( texnum <= 0 || !glw_state.initialized )
+		return;
+
+	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
+
+	Msg( "Free texture %s\n", image->name );
 
 	// remove from hash table
 	hash = Com_HashKey( image->name, TEXTURES_HASH_SIZE );
@@ -1224,6 +1252,8 @@ static void R_InitBuiltinTextures( void )
 		pic = textures[i].init( &flags );
 		if( pic == NULL ) continue;
 		*textures[i].texnum = GL_LoadTextureInternal( textures[i].name, pic, flags, false );
+
+		GL_SetTextureType( *textures[i].texnum, TEX_SYSTEM );
 	}
 }
 

@@ -59,7 +59,7 @@ typedef struct
 	char		pattern[CS_SIZE];
 	float		map[MAX_STRING];
 	int		length;
-	vec3_t		rgb;		// 0.0 - 2.0
+	float		value;
 } lightstyle_t;
 
 extern const char		*et_name[];

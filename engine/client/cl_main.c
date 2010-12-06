@@ -1074,10 +1074,10 @@ void CL_PrepVideo( void )
 	// invalidate all decal indexes
 	Mem_Set( cl.decal_index, 0, sizeof( cl.decal_index ));
 
-	// setup sky and free unneeded stuff
-	R_SetupSky( cl.refdef.movevars->skyName );
-	CM_EndRegistration (); // free unused models
-	R_NewMap(); // tell the render about new map
+	CM_EndRegistration ();	// free unused models
+	CL_ClearWorld ();
+
+	R_NewMap();		// tell the render about new map
 
 	Cvar_SetFloat( "scr_loading", 100.0f );	// all done
 
@@ -1085,7 +1085,7 @@ void CL_PrepVideo( void )
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
 		if( !clgame.sprites[i].name[0] ) continue; // free slot
-		if( clgame.sprites[i].registration_sequence != cm.registration_sequence )
+		if( clgame.sprites[i].needload != cm.load_sequence )
 			Mod_UnloadSpriteModel( &clgame.sprites[i] );
 	}
 
@@ -1131,10 +1131,6 @@ void CL_PrepVideo( void )
 		Con_ClearNotify(); // clear any lines of console text
 
 	SCR_UpdateScreen ();
-	CL_RunLightStyles ();
-
-	// initialize world and clients
-	CL_InitWorld ();
 
 	cl.video_prepped = true;
 	cl.force_refdef = true;
@@ -1574,9 +1570,6 @@ void Host_ClientFrame( void )
 
 	// update audio
 	S_RenderFrame( &cl.refdef );
-
-	// advance local effects for next frame
-	CL_RunLightStyles ();
 
 	// decay dynamic lights
 	CL_DecayLights ();

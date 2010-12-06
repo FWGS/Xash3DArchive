@@ -632,7 +632,6 @@ void Image_CopyParms( rgbdata_t *src )
 	image.type = src->type;
 	image.flags = src->flags;
 	image.size = src->size;
-	image.rgba = src->buffer;
 	image.palette = src->palette;	// may be NULL
 	Mem_Copy( image.fogParams, src->fogParams, sizeof( image.fogParams ));
 }
@@ -1287,72 +1286,47 @@ byte *Image_CreateLumaInternal( const byte *fin, int width, int height, int type
 qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 {
 	int	mipsize = width * height;
-	int	outsize = width * height;
 	qboolean	expand_to_rgba = true;
 
 	if( image.cmd_flags & IL_KEEP_8BIT )
 		expand_to_rgba = false;
-	else if( Sys.app_name == HOST_NORMAL && ( image.flags & IMAGE_HAS_LUMA ))
+	else if( Sys.app_name == HOST_NORMAL && ( image.flags & ( IMAGE_HAS_LUMA|IMAGE_QUAKESKY )))
 		expand_to_rgba = false;
 
-	// check for inconsistency
-	if( !image.source_type ) image.source_type = image.type;
-	// trying to add 8 bit mimpap into 32-bit mippack or somewhat...
-	if( image.source_type != image.type ) return false;
+	image.size = mipsize;
 
-	if( expand_to_rgba ) outsize *= 4;
+	if( expand_to_rgba ) image.size *= 4;
 	else Image_CopyPalette32bit(); 
 
 	// reallocate image buffer
-	image.rgba = Mem_Realloc( Sys.imagepool, image.rgba, image.size + outsize );	
-	if( expand_to_rgba == false ) Mem_Copy( image.rgba + image.ptr, in, outsize );
-	else if( !Image_Copy8bitRGBA( in, image.rgba + image.ptr, mipsize ))
+	image.rgba = Mem_Alloc( Sys.imagepool, image.size );	
+	if( expand_to_rgba == false ) Mem_Copy( image.rgba, in, image.size );
+	else if( !Image_Copy8bitRGBA( in, image.rgba, mipsize ))
 		return false; // probably pallette not installed
-
-	image.size += outsize;
-	image.ptr += outsize;
-
-	return true;
-}
-
-qboolean Image_AddRGBAImageToPack( uint target, uint imageSize, const void* data )
-{
-	// NOTE: just update bufer without checking for a type
-	image.rgba = Mem_Realloc( Sys.imagepool, image.rgba, image.ptr + imageSize );
-	Mem_Copy( image.rgba + image.ptr, data, imageSize ); // add mipmap or cubemapside
-
-	image.size += imageSize;	// update image size
-	image.ptr += imageSize;
 
 	return true;
 }
 
 /*
 =============
-Image_SetPixelFormat
+Image_Decompress
 
-update pixel format for cubemap side
+force to unpack any image to 32-bit buffer
 =============
 */
-void Image_SetPixelFormat( void )
-{
-	image.bpp = PFDesc[image.type].bpp;
-	image.SizeOfFile = PFDesc[image.type].bpp * image.width * image.height;
-}
-
-qboolean Image_DecompressPal8( uint target, int intformat, uint width, uint height, uint imageSize, const void* data )
+qboolean Image_Decompress( const byte *data )
 {
 	byte	*fin, *fout;
-	int	size; 
+	int	i, size; 
 
 	if( !data ) return false;
 	fin = (byte *)data;
 
-	size = width * height * 4;
+	size = image.width * image.height * 4;
 	image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, size );
 	fout = image.tempbuffer;
 
-	switch( PFDesc[intformat].format )
+	switch( PFDesc[image.type].format )
 	{
 	case PF_INDEXED_24:
 		if( image.flags & IMAGE_HAS_ALPHA )
@@ -1364,31 +1338,12 @@ qboolean Image_DecompressPal8( uint target, int intformat, uint width, uint heig
 		else Image_GetPaletteLMP( image.palette, LUMP_NORMAL );
 		// intentional falltrough
 	case PF_INDEXED_32:
-		if( !image.d_currentpal ) image.d_currentpal = ( uint *)image.palette;
-		if( !Image_Copy8bitRGBA( fin, fout, width * height )) return false;
+		if( !image.d_currentpal ) image.d_currentpal = (uint *)image.palette;
+		if( !Image_Copy8bitRGBA( fin, fout, image.width * image.height ))
+			return false;
 		break;
-	}
-
-	Image_AddRGBAImageToPack( target, size, fout );
-	return true;
-}
-
-qboolean Image_DecompressRGBA( uint target, int intformat, uint width, uint height, uint imageSize, const void* data )
-{
-	byte	*fin, *fout;
-	int	i, size; 
-
-	if( !data ) return false;
-	fin = (byte *)data;
-
-	size = width * height * 4;
-	image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, size );
-	fout = image.tempbuffer;
-
-	switch( PFDesc[intformat].format )
-	{
 	case PF_RGB_24:
-		for (i = 0; i < width * height; i++ )
+		for (i = 0; i < image.width * image.height; i++ )
 		{
 			fout[(i<<2)+0] = fin[i*3+0];
 			fout[(i<<2)+1] = fin[i*3+1];
@@ -1397,7 +1352,7 @@ qboolean Image_DecompressRGBA( uint target, int intformat, uint width, uint heig
 		}
 		break;
 	case PF_BGR_24:
-		for (i = 0; i < width * height; i++ )
+		for (i = 0; i < image.width * image.height; i++ )
 		{
 			fout[(i<<2)+0] = fin[i*3+2];
 			fout[(i<<2)+1] = fin[i*3+1];
@@ -1410,7 +1365,7 @@ qboolean Image_DecompressRGBA( uint target, int intformat, uint width, uint heig
 		Mem_Copy( fout, fin, size );
 		break;
 	case PF_BGRA_32:
-		for( i = 0; i < width * height; i++ )
+		for( i = 0; i < image.width * image.height; i++ )
 		{
 			fout[i*4+0] = fin[i*4+2];
 			fout[i*4+1] = fin[i*4+1];
@@ -1421,40 +1376,14 @@ qboolean Image_DecompressRGBA( uint target, int intformat, uint width, uint heig
 	default: return false;
 	}
 
-	Image_AddRGBAImageToPack( target, size, fout );
+	// set new size
+	image.size = size;
+
 	return true;
-}
-
-void Image_Decompress( const byte *buffer, uint target )
-{
-	switch( image.type )
-	{
-	case PF_INDEXED_24:
-	case PF_INDEXED_32:
-		image.decompress = Image_DecompressPal8;
-		break;
-	case PF_RGBA_32: 
-	case PF_BGRA_32:
-	case PF_RGB_24:
-	case PF_BGR_24: 
-	case PF_RGBA_GN:
-		image.decompress = Image_DecompressRGBA;
-		break;
-	default:
-		Sys_Error( "Image_DecompressDDS: unknown image format\n" );
-		break;
-	}
-
-	Image_SetPixelFormat();
-	image.decompress( target, image.type, image.width, image.height, image.SizeOfFile, buffer );
 }
 
 rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 {
-	int	i, numsides = 1;
-	uint	target = 1;
-	byte	*buf;
-
 	// quick case to reject unneeded conversions
 	switch( pic->type )
 	{
@@ -1465,24 +1394,20 @@ rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 	}
 
 	Image_CopyParms( pic );
-
-	if( image.flags & IMAGE_CUBEMAP ) numsides = 6;
-	Image_SetPixelFormat(); // setup
 	image.size = image.ptr = 0;
-	buf = image.rgba;
 
-	for( i = 0; i < numsides; i++ )
-	{
-		Image_Decompress( buf, target + i );
-		buf += image.SizeOfFile;
-	}
+	Image_Decompress( pic->buffer );
 
 	// now we can change type to RGBA
-	image.type = PF_RGBA_32;
+	pic->type = PF_RGBA_32;
 
-	FS_FreeImage( pic );	// free original
+	pic->buffer = Mem_Realloc( Sys.imagepool, pic->buffer, image.size );
+	Mem_Copy( pic->buffer, image.tempbuffer, image.size );
+	Mem_Free( pic->palette );
+	pic->flags = image.flags;
+	pic->palette = NULL;
 
-	return ImagePack();
+	return pic;
 }
 
 qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
@@ -1504,6 +1429,7 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 	{
 		out = Image_CreateLumaInternal( pic->buffer, pic->width, pic->height, pic->type, pic->flags );
 		if( pic->buffer != out ) Mem_Copy( pic->buffer, image.tempbuffer, pic->size );
+		pic->flags &= ~IMAGE_HAS_LUMA;
 	}
 
 	// update format to RGBA if any

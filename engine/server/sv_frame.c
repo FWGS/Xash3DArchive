@@ -8,8 +8,6 @@
 #include "const.h"
 #include "net_encode.h"
 
-#define MAX_VISIBLE_PACKET	512
-
 typedef struct
 {
 	int		num_entities;

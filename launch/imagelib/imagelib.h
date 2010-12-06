@@ -240,7 +240,7 @@ void Image_Save( const char *filename, rgbdata_t *pix );
 rgbdata_t *Image_Load(const char *filename, const byte *buffer, size_t buffsize );
 qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels );
 qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height );
-qboolean Image_AddRGBAImageToPack( uint target, uint imageSize, const void* data );
+qboolean Image_AddRGBAImageToPack( uint imageSize, const void* data );
 void Image_ConvertPalTo24bit( rgbdata_t *pic );
 void Image_GetPaletteLMP( const byte *pal, int rendermode );
 void Image_GetPalettePCX( const byte *pal );

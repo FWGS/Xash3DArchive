@@ -72,6 +72,8 @@
 #define clc_voicedata		8
 #define clc_random_seed		9	// [long] random seed	// FIXME: remove
 
+#define MAX_VISIBLE_PACKET		512	// 512 visible entities per frame (hl1 has 256)
+
 // additional protocol data
 #define MAX_CLIENT_BITS		5
 #define MAX_CLIENTS			(1<<MAX_CLIENT_BITS)// 5 bits == 32 clients ( int32 limit )

@@ -218,37 +218,9 @@ add entity to renderlist
 */
 int CL_TEntAddEntity( cl_entity_t *pEntity )
 {
-	float	oldScale, oldRenderAmt;
-	float	shellScale = 1.0f;
-	int	result;
-
 	ASSERT( pEntity != NULL );
 
-	if( pEntity->curstate.renderfx == kRenderFxGlowShell )
-	{
-		oldRenderAmt = pEntity->curstate.renderamt;
-		oldScale = pEntity->curstate.scale;
-		
-		pEntity->curstate.renderamt = 255; // clear amount
-	}
-
-	result = R_AddEntity( pEntity, ET_TEMPENTITY, -1 );
-
-	if( pEntity->curstate.renderfx == kRenderFxGlowShell )
-	{
-		shellScale = (oldRenderAmt * 0.0015f);		// shellOffset
-		pEntity->curstate.scale = oldScale + shellScale;	// sets new scale
-		pEntity->curstate.renderamt = 128;
-
-		// render glowshell
-		result |= R_AddEntity( pEntity, ET_TEMPENTITY, cls.glowShell );
-
-		// restore parms
-		pEntity->curstate.scale = oldScale;
-		pEntity->curstate.renderamt = oldRenderAmt;
-	}
-
-	return result;
+	return CL_AddVisibleEntity( pEntity, ET_TEMPENTITY );
 }
 
 /*
@@ -2152,7 +2124,6 @@ void CL_RunLightStyles( void )
 {
 	int		i, ofs;
 	lightstyle_t	*ls;		
-	float		l;
 
 	if( cls.state != ca_active ) return;
 
@@ -2162,11 +2133,9 @@ void CL_RunLightStyles( void )
 
 	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		if( ls->length == 0 ) l = 0.0f;
-		else if( ls->length == 1 ) l = ls->map[0];
-		else l = ls->map[ofs%ls->length];
-
-		VectorSet( ls->rgb, l, l, l );
+		if( ls->length == 0 ) ls->value = 0.0f;	// disable light
+		else if( ls->length == 1 ) ls->value = ls->map[0];
+		else ls->value = ls->map[ofs%ls->length];
 	}
 }
 
@@ -2184,20 +2153,6 @@ void CL_SetLightstyle( int style, const char *s )
 
 	for( k = 0; k < j; k++ )
 		cl.lightstyles[style].map[k] = (float)(s[k]-'a') / (float)('m'-'a');
-}
-
-/*
-================
-CL_AddLightStyles
-================
-*/
-void CL_AddLightStyles( void )
-{
-	int		i;
-	lightstyle_t	*ls;
-
-	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
-		R_SetLightStyle( i, ls->rgb );
 }
 
 /*
@@ -2400,6 +2355,7 @@ void CL_TestLights( void )
 		dl->color.r = ((((i % 6) + 1) & 1)>>0) * 255;
 		dl->color.g = ((((i % 6) + 1) & 2)>>1) * 255;
 		dl->color.b = ((((i % 6) + 1) & 4)>>2) * 255;
+		dl->die = cl.time + host.realtime;
 		dl->radius = 200;
 	}
 }
@@ -2500,12 +2456,40 @@ void CL_DecalRemoveAll( int textureIndex )
 }
 
 /*
+==============================================================
+
+EFRAGS MANAGEMENT
+
+==============================================================
+*/
+efrag_t	cl_efrags[MAX_EFRAGS];
+
+/*
+==============
+CL_ClearEfrags
+==============
+*/
+void CL_ClearEfrags( void )
+{
+	int	i;
+
+	Mem_Set( cl_efrags, 0, sizeof( cl_efrags ));
+
+	// allocate the efrags and chain together into a free list
+	cl.free_efrags = cl_efrags;
+	for( i = 0; i < MAX_EFRAGS - 1; i++ )
+		cl.free_efrags[i].entnext = &cl.free_efrags[i+1];
+	cl.free_efrags[i].entnext = NULL;
+}
+	
+/*
 ==============
 CL_ClearEffects
 ==============
 */
 void CL_ClearEffects( void )
 {
+	CL_ClearEfrags ();
 	CL_ClearDlights ();
 	CL_ClearTempEnts ();
 	CL_ClearViewBeams ();

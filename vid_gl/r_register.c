@@ -448,7 +448,7 @@ R_RenderInfo_f
 */
 void R_RenderInfo_f( void )
 {
-
+	glConfig.extensions_string = pglGetString( GL_EXTENSIONS );
 	Msg("\n");
 	Msg("GL_VENDOR: %s\n", glConfig.vendor_string);
 	Msg("GL_RENDERER: %s\n", glConfig.renderer_string);

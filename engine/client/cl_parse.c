@@ -465,6 +465,8 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 		ent.renderfx = BF_ReadByte( msg );
 	}
 
+//	R_AddEfrags( ent );
+
 	// FIXME: allocate client entity, add new static...
 	MsgDev( D_ERROR, "Static entities are not implemented\n" );
 }
