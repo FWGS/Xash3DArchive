@@ -1360,7 +1360,6 @@ qboolean Image_Decompress( const byte *data )
 			fout[(i<<2)+3] = 255;
 		}
 		break;
-	case PF_RGBA_GN:
 	case PF_RGBA_32:
 		Mem_Copy( fout, fin, size );
 		break;
@@ -1385,13 +1384,8 @@ qboolean Image_Decompress( const byte *data )
 rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 {
 	// quick case to reject unneeded conversions
-	switch( pic->type )
-	{
-	case PF_RGBA_GN:
-	case PF_RGBA_32:
-		pic->type = PF_RGBA_32;
-		return pic; // just change type
-	}
+	if( pic->type == PF_RGBA_32 )
+		return pic;
 
 	Image_CopyParms( pic );
 	image.size = image.ptr = 0;

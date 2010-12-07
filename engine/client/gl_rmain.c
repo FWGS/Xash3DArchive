@@ -202,7 +202,7 @@ static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
 	RI.farClip = R_GetFarClip();
 
 	zNear = 4.0f;
-	zFar = RI.farClip;
+	zFar = max( 256.0f, RI.farClip );
 
 	yMax = zNear * com.tan( fd->fov_y * M_PI / 360.0 );
 	yMin = -yMax;

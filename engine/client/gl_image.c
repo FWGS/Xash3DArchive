@@ -503,6 +503,8 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 	vec3_t		normal;
 	int		i, x, y;
 
+	if( !source ) return NULL;
+
 	scaledImage = Mem_Realloc( r_temppool, scaledImage, outWidth * outHeight * 4 );
 	fracStep = inWidth * 0x10000 / outWidth;
 	out = (uint *)scaledImage;
@@ -643,11 +645,11 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 	{
 		pglHint( GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST );
 		pglTexParameteri( glTarget, GL_GENERATE_MIPMAP_SGIS, GL_TRUE );
-		if( pglGetError()) MsgDev( D_WARN, "GL_GenerateMipmaps: %s can't create mip levels\n", tex->name );
-		else return; // falltrough to software mipmap generating
+		if( pglGetError( )) MsgDev( D_WARN, "GL_GenerateMipmaps: %s can't create mip levels\n", tex->name );
+		return; 
 	}
 
-	if( pic->type != PF_RGBA_32 && pic->type != PF_RGBA_GN )
+	if( !GL_Support( GL_SGIS_MIPMAPS_EXT ) && pic->type != PF_RGBA_32 )
 	{
 		MsgDev( D_ERROR, "GL_GenerateMipmaps: failed on %s\n", PFDesc( pic->type )->name );
 		return;

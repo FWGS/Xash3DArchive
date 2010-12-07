@@ -311,7 +311,6 @@ typedef enum
 	PF_BGRA_32,	// big endian RGBA (MacOS)
 	PF_RGB_24,	// uncompressed dds or another 24-bit image 
 	PF_BGR_24,	// big-endian RGB (MacOS)
-	PF_RGBA_GN,	// internal generated texture (FIXME: remove)
 	PF_TOTALCOUNT,	// must be last
 } pixformat_t;
 
@@ -344,6 +343,7 @@ typedef enum
 	IMAGE_HAS_LUMA	= IMAGE_HAS_LUMA_Q1|IMAGE_HAS_LUMA_Q2,
 	IMAGE_SKYBOX	= BIT(6),		// only used by FS_SaveImage - for write right suffixes
 	IMAGE_QUAKESKY	= BIT(7),		// it's a quake sky double layered clouds (so keep it as 8 bit)
+	IMAGE_STATIC	= BIT(8),		// never trying to free this image (static memory)
 
 	// Image_Process manipulation flags
 	IMAGE_FLIP_X	= BIT(16),	// flip the image by width

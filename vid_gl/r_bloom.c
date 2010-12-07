@@ -104,7 +104,7 @@ static void R_Bloom_InitBackUpTexture( int width, int height )
 
 	r_bloom.width = width;
 	r_bloom.height = height;
-	r_bloom.type = PF_RGBA_GN;
+	r_bloom.type = PF_RGBA_32;
 	r_bloom.size = width * height * 4;
 	r_bloom.flags = 0;
 	r_bloom.palette = NULL;
@@ -143,7 +143,7 @@ static void R_Bloom_InitEffectTexture( void )
 	r_bloomfx.width = BLOOM_SIZE;
 	r_bloomfx.height = BLOOM_SIZE;
 	r_bloomfx.size = BLOOM_SIZE * BLOOM_SIZE * 4;
-	r_bloomfx.type = PF_RGBA_GN;
+	r_bloomfx.type = PF_RGBA_32;
 	r_bloomfx.flags = 0;
 	r_bloomfx.palette = NULL;
 	r_bloomfx.buffer = Mem_Alloc( r_temppool, BLOOM_SIZE * BLOOM_SIZE * 4 );
@@ -191,7 +191,7 @@ static void R_Bloom_InitTextures( void )
 
 	r_bloomscr.width = screen_texture_width;
 	r_bloomscr.height = screen_texture_height;
-	r_bloomscr.type = PF_RGBA_GN;
+	r_bloomscr.type = PF_RGBA_32;
 	r_bloomscr.flags = 0;
 	r_bloomscr.palette = NULL;
 	r_bloomscr.size = size;
@@ -213,7 +213,7 @@ static void R_Bloom_InitTextures( void )
 		r_screendownsamplingtexture_size = (int)( BLOOM_SIZE * 2 );
 		r_downsample.width = r_screendownsamplingtexture_size;
 		r_downsample.height = r_screendownsamplingtexture_size;
-		r_downsample.type = PF_RGBA_GN;
+		r_downsample.type = PF_RGBA_32;
 		r_downsample.size = r_screendownsamplingtexture_size * r_screendownsamplingtexture_size * 4;
 		r_downsample.flags = 0;
 		r_downsample.palette = NULL;

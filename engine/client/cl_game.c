@@ -1575,7 +1575,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 
 	// name, res, pic, x, y, w, h
 	// NOTE: we must use cm.studiopool because it will be purge on next restart or change map
-	pList = Mem_Alloc( cm.studiopool, sizeof( client_sprite_t ) * numSprites );
+	pList = Mem_Alloc( cls.mempool, sizeof( client_sprite_t ) * numSprites );
 
 	for( index = 0; index < numSprites; index++ )
 	{

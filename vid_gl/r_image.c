@@ -820,8 +820,8 @@ qboolean R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 	image_desc.pal = pic->palette;
 
 	// check for permanent images
-	if( image_desc.format == PF_RGBA_GN ) image_desc.tflags |= TF_STATIC;
-	if( image_desc.tflags & TF_NOPICMIP ) image_desc.tflags |= TF_STATIC;
+	if( image_desc.tflags & TF_NOPICMIP )
+		image_desc.tflags |= TF_STATIC;
 
 	// restore temp dimensions
 	w = image_desc.width;
@@ -831,8 +831,6 @@ qboolean R_GetPixelFormat( const char *name, rgbdata_t *pic, uint tex_flags )
 	// apply texture type (R_ShowTextures uses it)
 	if( image_desc.tflags & TF_LIGHTMAP )
 		image_desc.texType = TEX_LIGHTMAP;
-	else if( image_desc.format == PF_RGBA_GN )
-		image_desc.texType = TEX_SYSTEM;
 	else if( image_desc.tflags & (TF_NOPICMIP|TF_NOMIPMAP))
 		image_desc.texType = TEX_NOMIP;
 	else if( image_desc.tflags & TF_SKYSIDE )
@@ -2719,7 +2717,7 @@ void GL_GenerateMipmaps( byte *buffer, texture_t *tex, int side )
 		else return; // falltrough to software mipmap generating
 	}
 
-	if( image_desc.format != PF_RGBA_32 && image_desc.format != PF_RGBA_GN )
+	if( image_desc.format != PF_RGBA_32 )
 	{
 		// g-cont. because i'm don't know how to generate miplevels for GL_FLOAT or GL_SHORT_REV_1_bla_bla
 		// ok, please show me videocard which don't supported GL_GENERATE_MIPMAP_SGIS ...
@@ -3202,7 +3200,7 @@ static rgbdata_t *R_InitNoTexture( int *flags, int *samples )
 	r_image.width = r_image.height = 16;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 
 	*flags = 0;
@@ -3252,7 +3250,7 @@ static rgbdata_t *R_InitDynamicLightTexture( int *flags, int *samples )
 	r_image.width = r_image.height = size;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 
 	halfsize = size / 2;
@@ -3352,7 +3350,7 @@ static rgbdata_t *R_InitNormalizeCubemap( int *flags, int *samples )
 	r_image.size = r_image.width * r_image.height * 4 * 6;
 	r_image.flags |= (IMAGE_CUBEMAP|IMAGE_HAS_COLOR); // yes it's cubemap
 	r_image.buffer = data2D;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 
 	return &r_image;
 }
@@ -3392,7 +3390,7 @@ static rgbdata_t *R_InitParticleTexture( int *flags, int *samples )
 	r_image.width = r_image.height = 16;
 	r_image.buffer = data2D;
 	r_image.flags = (IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA);
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 
 	*flags = TF_NOPICMIP|TF_NOMIPMAP;
@@ -3472,7 +3470,7 @@ static rgbdata_t *R_InitSkyTexture( int *flags, int *samples )
 	r_image.width = r_image.height = 16;
 	r_image.size = r_image.width * r_image.height * 4;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 
 	return &r_image;
 }
@@ -3494,7 +3492,7 @@ static rgbdata_t *R_InitFogTexture( int *flags, int *samples )
 	r_image.height = FOG_TEXTURE_HEIGHT;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 
 	*flags = TF_NOMIPMAP|TF_CLAMP;
@@ -3526,7 +3524,7 @@ static rgbdata_t *R_InitCoronaTexture( int *flags, int *samples )
 	r_image.width = r_image.height = 32;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 
 	*flags = TF_NOMIPMAP|TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP;
@@ -3624,7 +3622,7 @@ static rgbdata_t *R_InitCinematicTexture( int *flags, int *samples )
 	r_image.width = r_image.height = 256;
 	r_image.buffer = data2D;
 	r_image.flags = IMAGE_HAS_COLOR;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 
 	*flags = TF_STATIC|TF_NOMIPMAP|TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP;

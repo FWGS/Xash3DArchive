@@ -1035,7 +1035,7 @@ static void R_UploadLightmap( void )
 
 	r_image.width = LIGHTMAP_TEXTURE_WIDTH;
 	r_image.height = LIGHTMAP_TEXTURE_HEIGHT;
-	r_image.type = PF_RGBA_GN;
+	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 	r_image.flags = IMAGE_HAS_COLOR;	// FIXME: detecting grayscale lightmaps for quake1
 	r_image.buffer = r_lmState.buffer;

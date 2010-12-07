@@ -701,7 +701,7 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 	mtexinfo_t	*tex;
 	mvertex_t		*v;
 
-	if( surf->flags & SURF_DRAWTILED )
+	if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
 	{
 		surf->extents[0] = surf->extents[1] = 16384;
 		surf->texturemins[0] = surf->texturemins[1] = -8192;
@@ -749,8 +749,8 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 {
 	dface_t		*in;
 	msurface_t	*out;
-	int		i, j, count;
-	int		lightofs;
+	int		i, j;
+	int		count;
 
 	in = (void *)(mod_base + l->fileofs);
 	if( l->filelen % sizeof( dface_t ))
@@ -763,14 +763,15 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
-		out->firstedge = in->firstedge;
-		out->numedges = in->numedges;
-
-		if(( out->firstedge + out->numedges ) > loadmodel->numsurfedges )
+		if(( in->firstedge + in->numedges ) > loadmodel->numsurfedges )
 		{
-			Msg( "Bad surface %i from %i\n", i, count );
+			MsgDev( D_ERROR, "Bad surface %i from %i\n", i, count );
 			continue;
 		} 
+
+		out->firstedge = in->firstedge;
+		out->numedges = in->numedges;
+		out->flags = 0;
 
 		if( in->side ) out->flags |= SURF_PLANEBACK;
 		out->plane = loadmodel->planes + in->planenum;
@@ -781,7 +782,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		{
 			texture_t	*tex = out->texinfo->texture;
 
-			if( !com.strncmp( tex->name, "sky", 3 ))
+			if( !com.strncmp( tex->name, "sky", 3 ) && cm.version == Q1BSP_VERSION )
 				out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
 
 			if( tex->name[0] == '*' || tex->name[0] == '!' || !com.strnicmp( tex->name, "water", 5 ))
@@ -790,20 +791,17 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		Mod_CalcSurfaceExtents( out );
 
-		if( out->flags & SURF_DRAWTILED ) lightofs = -1;
-		else lightofs = in->lightofs;
+		if( loadmodel->lightdata && in->lightofs != -1 )
+		{
+			if( cm.version == HLBSP_VERSION )
+				out->samples = loadmodel->lightdata + (in->lightofs / 3);
+			else out->samples = loadmodel->lightdata + in->lightofs;
+		}
 
 		for( j = 0; j < MAXLIGHTMAPS; j++ )
 			out->styles[j] = in->styles[j];
 
-		if( loadmodel->lightdata && lightofs != -1 )
-		{
-			if( cm.version == HLBSP_VERSION )
-				out->samples = loadmodel->lightdata + (lightofs / 3);
-			else out->samples = loadmodel->lightdata + lightofs;
-		}
-
-		if( out->flags & SURF_DRAWTILED && lightofs == -1 )
+		if( out->flags & SURF_DRAWTILED )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
 	}
 }
@@ -1309,7 +1307,6 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 		// copy worldinfo back to cm_models[0]
 		if( i == 0 ) *loadmodel = *starmod;
 
-		starmod->numleafs = bm->visleafs;
 		com.sprintf( starmod->name, "*%i", i + 1 );
 	}
 }

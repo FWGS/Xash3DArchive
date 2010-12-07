@@ -81,7 +81,6 @@ const bpc_desc_t PFDesc[] =
 {PF_BGRA_32,	"BGRA 32",0x80E1, 4 },
 {PF_RGB_24,	"RGB 24",	0x1908, 3 },
 {PF_BGR_24,	"BGR 24",	0x80E0, 3 },
-{PF_RGBA_GN,	"system",	0x1908, 4 },
 };
 
 bpc_desc_t *Image_GetPixelFormat( pixformat_t type )

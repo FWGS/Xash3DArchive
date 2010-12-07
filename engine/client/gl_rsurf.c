@@ -197,7 +197,6 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 	float		*vec;
 	float		s, t;
 	glpoly_t		*poly;
-	vec3_t		total;
 
 	// already created
 	if( fa->polys ) return;
@@ -206,8 +205,6 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 	pedges = loadmodel->edges;
 	lnumverts = fa->numedges;
 	vertpage = 0;
-
-	VectorClear( total );
 
 	// draw texture
 	poly = Mem_Alloc( loadmodel->mempool, sizeof( glpoly_t ) + ( lnumverts - 4 ) * VERTEXSIZE * sizeof( float ));
@@ -237,7 +234,6 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 		t = DotProduct( vec, fa->texinfo->vecs[1] ) + fa->texinfo->vecs[1][3];
 		t /= fa->texinfo->texture->height;
 
-		VectorAdd( total, vec, total );
 		VectorCopy( vec, poly->verts[i] );
 		poly->verts[i][3] = s;
 		poly->verts[i][4] = t;
@@ -797,11 +793,10 @@ R_RecursiveWorldNode
 */
 void R_RecursiveWorldNode( mnode_t *node )
 {
-	mplane_t		*plane;
 	msurface_t	*surf, **mark;
 	mleaf_t		*pleaf;
-	int		c, side;
-	double		dot;
+	int		c, side, sidebit;
+	float		dot;
 
 	if( node->contents == CONTENTS_SOLID )
 		return; // hit a solid leaf
@@ -832,77 +827,54 @@ void R_RecursiveWorldNode( mnode_t *node )
 		// deal with model fragments in this leaf
 		if( pleaf->efrags )
 			R_StoreEfrags( &pleaf->efrags );
-
 		return;
 	}
 
 	// node is just a decision point, so go down the apropriate sides
 
 	// find which side of the node we are on
-	plane = node->plane;
+	dot = PlaneDiff( modelorg, node->plane );
 
-	switch( plane->type )
+	if( dot >= 0 )
 	{
-	case PLANE_X:
-		dot = modelorg[0] - plane->dist;
-		break;
-	case PLANE_Y:
-		dot = modelorg[1] - plane->dist;
-		break;
-	case PLANE_Z:
-		dot = modelorg[2] - plane->dist;
-		break;
-	default:
-		dot = DotProduct( modelorg, plane->normal ) - plane->dist;
-		break;
+		side = 0;
+		sidebit = 0;
 	}
-
-	if( dot >= 0 ) side = 0;
-	else side = 1;
+	else
+	{
+		side = 1;
+		sidebit = SURF_PLANEBACK;
+	}
 
 	// recurse down the children, front side first
 	R_RecursiveWorldNode( node->children[side] );
 
 	// draw stuff
-	c = node->numsurfaces;
-
-	if( c )
+	for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
 	{
-		surf = cl.worldmodel->surfaces + node->firstsurface;
+		if( surf->visframe != tr.framecount )
+			continue;
 
-		if( dot < -BACKFACE_EPSILON )
-			side = SURF_PLANEBACK;
-		else if( dot > BACKFACE_EPSILON )
-			side = 0;
+		if(( surf->flags & SURF_PLANEBACK ) != sidebit )
+			continue;	// wrong side
 
-		for( ; c; c--, surf++ )
+		// if sorting by texture, just store it out
+		if( gl_texsort->integer )
 		{
-			if( surf->visframe != tr.framecount )
-				continue;
-
-			// don't backface underwater surfaces, because they warp
-			if(!(surf->flags & SURF_UNDERWATER) && (( dot < 0 ) ^ !!(surf->flags & SURF_PLANEBACK)))
-				continue; // wrong side
-
-			// if sorting by texture, just store it out
-			if( gl_texsort->integer )
-			{
-				surf->texturechain = surf->texinfo->texture->texturechain;
-				surf->texinfo->texture->texturechain = surf;
-			}
-			else if( surf->flags & SURF_DRAWSKY )
-			{
-				surf->texturechain = skychain;
-				skychain = surf;
-			}
-			else if( surf->flags & SURF_DRAWTURB )
-			{
-				surf->texturechain = waterchain;
-				waterchain = surf;
-			}
-			else R_DrawSequentialPoly( surf );
-
+			surf->texturechain = surf->texinfo->texture->texturechain;
+			surf->texinfo->texture->texturechain = surf;
 		}
+		else if( surf->flags & SURF_DRAWSKY )
+		{
+			surf->texturechain = skychain;
+			skychain = surf;
+		}
+		else if( surf->flags & SURF_DRAWTURB )
+		{
+			surf->texturechain = waterchain;
+			waterchain = surf;
+		}
+		else R_DrawSequentialPoly( surf );
 	}
 
 	// recurse down the back side
@@ -944,7 +916,6 @@ Mark the leaves and nodes that are in the PVS for the current leaf
 void R_MarkLeaves( void )
 {
 	byte	*vis;
-	mleaf_t	*leaf;
 	mnode_t	*node;
 	int	i;
 
@@ -964,29 +935,27 @@ void R_MarkLeaves( void )
 			
 	if( r_novis->integer || r_viewleaf == NULL || !cl.worldmodel->visdata )
 	{
-		// mark everything
-		for( i = 0, leaf = cl.worldmodel->leafs; i < cl.worldmodel->numleafs; i++, leaf++ )
-			leaf->visframe = tr.visframecount;
-		for( i = 0, node = cl.worldmodel->nodes; i < cl.worldmodel->numnodes; i++, node++ )
-			node->visframe = tr.visframecount;
-		return;
+		// force to get full visibility
+		vis = Mod_LeafPVS( NULL, NULL );
 	}
-
-	// may have to combine two clusters
-	// because of solid water boundaries
-	vis = Mod_LeafPVS( r_viewleaf, cl.worldmodel );
-
-	if( r_viewleaf != r_viewleaf2 )
+	else
 	{
-		int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
+		// may have to combine two clusters
+		// because of solid water boundaries
+		vis = Mod_LeafPVS( r_viewleaf, cl.worldmodel );
 
-		Mem_Copy( fatpvs, vis, longs << 2 );
-		vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
+		if( r_viewleaf != r_viewleaf2 )
+		{
+			int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
 
-		for( i = 0; i < longs; i++ )
-			((int *)fatpvs)[i] |= ((int *)vis)[i];
+			Mem_Copy( fatpvs, vis, longs << 2 );
+			vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
 
-		vis = fatpvs;
+			for( i = 0; i < longs; i++ )
+				((int *)fatpvs)[i] |= ((int *)vis)[i];
+
+			vis = fatpvs;
+		}
 	}
 
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
@@ -1197,7 +1166,7 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	tmax = ( surf->extents[1] >> 4 ) + 1;
 
 	if( smax > BLOCK_WIDTH )
-		Host_Error( "GL_CreateSurfaceLightmap: lightmap width %d > %d\n", smax, BLOCK_WIDTH );
+		Host_Error( "GL_CreateSurfaceLightmap: lightmap width %d > %d, %s\n", smax, BLOCK_WIDTH, surf->texinfo->texture->name );
 	if( tmax > BLOCK_HEIGHT )
 		Host_Error( "GL_CreateSurfaceLightmap: lightmap height %d > %d\n", tmax, BLOCK_HEIGHT );
 	if( smax * tmax > BLOCK_WIDTH * BLOCK_HEIGHT )
@@ -1252,7 +1221,7 @@ void GL_BuildLightmaps( void )
 		{
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 
-			if ( m->surfaces[i].flags & SURF_DRAWTURB )
+			if ( m->surfaces[i].flags & SURF_DRAWTILED )
 				continue;
 
 			GL_BuildPolygonFromSurface( m->surfaces + j );

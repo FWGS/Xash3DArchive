@@ -16,9 +16,6 @@
 #define STUDIO_RENDER	1
 #define STUDIO_EVENTS	2
 
-// surface flags
-#define SURF_PLANEBACK	BIT( 0 )
-
 #define ZISCALE		((float)0x8000)
 
 #define MIPLEVELS		4
