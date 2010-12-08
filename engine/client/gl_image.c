@@ -649,12 +649,6 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 		return; 
 	}
 
-	if( !GL_Support( GL_SGIS_MIPMAPS_EXT ) && pic->type != PF_RGBA_32 )
-	{
-		MsgDev( D_ERROR, "GL_GenerateMipmaps: failed on %s\n", PFDesc( pic->type )->name );
-		return;
-	}
-	
 	mipLevel = 0;
 	w = tex->width;
 	h = tex->height;
@@ -1041,8 +1035,6 @@ void GL_FreeTexture( GLenum texnum )
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
 
-	Msg( "Free texture %s\n", image->name );
-
 	// remove from hash table
 	hash = Com_HashKey( image->name, TEXTURES_HASH_SIZE );
 	prev = &r_texturesHashTable[hash];
@@ -1236,15 +1228,15 @@ static void R_InitBuiltinTextures( void )
 	}
 	textures[] =
 	{
-		{ "*default", &tr.defaultTexture, R_InitDefaultTexture },
-		{ "*sky", &tr.skyTexture, R_InitSkyTexture },
-		{ "*white", &tr.whiteTexture, R_InitWhiteTexture },
-		{ "*black", &tr.blackTexture, R_InitBlackTexture },
-		{ "*particle", &tr.particleTexture, R_InitParticleTexture },
-		{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture },
-		{ NULL, NULL, NULL }
+	{ "*default", &tr.defaultTexture, R_InitDefaultTexture },
+	{ "*white", &tr.whiteTexture, R_InitWhiteTexture },
+	{ "*black", &tr.blackTexture, R_InitBlackTexture },
+	{ "*particle", &tr.particleTexture, R_InitParticleTexture },
+	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture },
+	{ "*sky", &tr.skyTexture, R_InitSkyTexture },
+	{ NULL, NULL, NULL }
 	};
-	size_t i, num_builtin_textures = sizeof( textures ) / sizeof( textures[0] ) - 1;
+	size_t	i, num_builtin_textures = sizeof( textures ) / sizeof( textures[0] ) - 1;
 
 	for( i = 0; i < num_builtin_textures; i++ )
 	{

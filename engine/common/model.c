@@ -12,13 +12,12 @@
 #include "world.h"
 #include "gl_local.h"
 
-clipmap_t		cm;
+world_static_t	ws;
 
 byte		*mod_base;
-static model_t	*sv_models[MAX_MODELS];	// server replacement modeltable
-static model_t	cm_inline[MAX_MAP_MODELS];	// inline bsp models
+static model_t	*com_models[MAX_MODELS];	// shared replacement modeltable
 static model_t	cm_models[MAX_MODELS];
-static int	cm_nummodels;
+static int	cm_nummodels = 0;
 
 model_t		*loadmodel;
 model_t		*worldmodel;
@@ -48,32 +47,16 @@ static vec3_t cm_hullmaxs[4] =
 /*
 ===============================================================================
 
-			CM COMMON UTILS
+			MOD COMMON UTILS
 
 ===============================================================================
 */
-script_t *CM_GetEntityScript( void )
-{
-	string	entfilename;
-	script_t	*ents;
-
-	if( !worldmodel )
-		return NULL;
-
-	// check for entfile too
-	com.strncpy( entfilename, worldmodel->name, sizeof( entfilename ));
-	FS_StripExtension( entfilename );
-	FS_DefaultExtension( entfilename, ".ent" );
-
-	if(( ents = Com_OpenScript( entfilename, NULL, 0 )))
-	{
-		MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
-		return ents;
-	}
-	return cm.entityscript;
-}
-
-void CM_SetupHulls( float mins[4][3], float maxs[4][3] )
+/*
+================
+Mod_SetupHulls
+================
+*/
+void Mod_SetupHulls( float mins[4][3], float maxs[4][3] )
 {
 	Mem_Copy( mins, cm_hullmins, sizeof( cm_hullmins ));
 	Mem_Copy( maxs, cm_hullmaxs, sizeof( cm_hullmaxs ));
@@ -81,10 +64,10 @@ void CM_SetupHulls( float mins[4][3], float maxs[4][3] )
 
 /*
 ================
-CM_StudioBodyVariations
+Mod_StudioBodyVariations
 ================
 */
-static int CM_StudioBodyVariations( model_t *mod )
+static int Mod_StudioBodyVariations( model_t *mod )
 {
 	studiohdr_t	*pstudiohdr;
 	mstudiobodyparts_t	*pbodypart;
@@ -99,10 +82,61 @@ static int CM_StudioBodyVariations( model_t *mod )
 	// each body part has nummodels variations so there are as many total variations as there
 	// are in a matrix of each part by each other part
 	for( i = 0; i < pstudiohdr->numbodyparts; i++ )
-	{
 		count = count * pbodypart[i].nummodels;
-	}
+
 	return count;
+}
+
+/*
+===================
+Mod_DecompressVis
+===================
+*/
+byte *Mod_DecompressVis( const byte *in )
+{
+	static byte	decompressed[MAX_MAP_LEAFS/8];
+	int		c, row;
+	byte		*out;
+
+	if( !worldmodel )
+	{
+		Host_Error( "Mod_DecompressVis: no worldmodel\n" );
+		return NULL;
+	}
+
+	row = (worldmodel->numleafs + 7)>>3;	
+	out = decompressed;
+
+	if( !in )
+	{	
+		// no vis info, so make all visible
+		while( row )
+		{
+			*out++ = 0xff;
+			row--;
+		}
+		return decompressed;
+	}
+
+	do
+	{
+		if( *in )
+		{
+			*out++ = *in++;
+			continue;
+		}
+
+		c = in[1];
+		in += 2;
+
+		while( c )
+		{
+			*out++ = 0;
+			c--;
+		}
+	} while( out - decompressed < row );
+
+	return decompressed;
 }
 
 /*
@@ -133,7 +167,7 @@ Mod_LeafPVS
 byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model )
 {
 	if( !model || !leaf || leaf == model->leafs || !model->visdata )
-		return cm.nullrow;
+		return ws.nullrow;
 	return Mod_DecompressVis( leaf->compressed_vis );
 }
 
@@ -215,7 +249,6 @@ int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int list
 
 	if( !worldmodel ) return 0;
 
-	cm.checkcount++;
 	VectorCopy( mins, ll.mins );
 	VectorCopy( maxs, ll.maxs );
 	ll.count = 0;
@@ -260,38 +293,6 @@ qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbi
 }
 
 /*
-===============================================================================
-
-POINT TESTING IN HULLS
-
-===============================================================================
-*/
-/*
-==================
-Mod_HullPointContents
-
-==================
-*/
-int Mod_HullPointContents( hull_t *hull, int num, const vec3_t p )
-{
-	while( num >= 0 )
-		num = hull->clipnodes[num].children[(hull->planes[hull->clipnodes[num].planenum].type < 3 ? p[hull->planes[hull->clipnodes[num].planenum].type] : DotProduct (hull->planes[hull->clipnodes[num].planenum].normal, p)) < hull->planes[hull->clipnodes[num].planenum].dist];
-	return num;
-}
-
-/*
-==================
-Mod_PointContents
-
-==================
-*/
-int Mod_PointContents( const vec3_t p )
-{
-	if( !worldmodel ) return 0;
-	return Mod_HullPointContents( &worldmodel->hulls[0], 0, p );
-}
-
-/*
 ==================
 Mod_AmbientLevels
 
@@ -319,8 +320,6 @@ static void Mod_FreeModel( model_t *mod )
 	if( !mod || !mod->mempool )
 		return;
 
-	MsgDev( D_INFO, "Mod_FreeModel: %s\n", mod->name );
-
 	// select the properly unloader
 	switch( mod->type )
 	{
@@ -339,7 +338,7 @@ static void Mod_FreeModel( model_t *mod )
 /*
 ===============================================================================
 
-			CM INITALIZE\SHUTDOWN
+			MODEL INITALIZE\SHUTDOWN
 
 ===============================================================================
 */
@@ -349,8 +348,8 @@ void Mod_Init( void )
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
 	gl_subdivide_size = Cvar_Get( "gl_subdivide_size", "128", CVAR_ARCHIVE, "how large water polygons should be" );
 
-	cm.studiopool = Mem_AllocPool( "Studio Cache" );
-	Mem_Set( cm.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
+	ws.studiopool = Mem_AllocPool( "Studio Cache" );
+	Mem_Set( ws.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
 }
 
 void Mod_Shutdown( void )
@@ -360,7 +359,7 @@ void Mod_Shutdown( void )
 	for( i = 0; i < cm_nummodels; i++ )
 		Mod_FreeModel( &cm_models[i] );
 
-	Mem_FreePool( &cm.studiopool );
+	Mem_FreePool( &ws.studiopool );
 }
 
 /*
@@ -375,7 +374,7 @@ void Mod_Shutdown( void )
 Mod_LoadSubmodels
 =================
 */
-static void Mod_LoadSubmodels( dlump_t *l )
+static void Mod_LoadSubmodels( const dlump_t *l )
 {
 	dmodel_t	*in;
 	dmodel_t	*out;
@@ -417,7 +416,7 @@ static void Mod_LoadSubmodels( dlump_t *l )
 Mod_LoadTextures
 =================
 */
-static void Mod_LoadTextures( dlump_t *l )
+static void Mod_LoadTextures( const dlump_t *l )
 {
 	dmiptexlump_t	*in;
 	texture_t		*tx, *tx2;
@@ -465,13 +464,11 @@ static void Mod_LoadTextures( dlump_t *l )
 		com.strncpy( tx->name, mt->name, sizeof( tx->name ));
 		com.snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", mt->name );
 
-		Msg( "texname %s\n", texname );
-
 		tx->width = mt->width;
 		tx->height = mt->height;
 
 		// check for sky texture (quake1 only!)
-		if( cm.version == Q1BSP_VERSION && !com.strncmp( mt->name, "sky", 3 ))
+		if( ws.version == Q1BSP_VERSION && !com.strncmp( mt->name, "sky", 3 ))
 		{	
 			R_InitSky( mt, tx );
 		}
@@ -480,7 +477,7 @@ static void Mod_LoadTextures( dlump_t *l )
 			// NOTE: imagelib detect miptex version by size
 			// 770 additional bytes is indicated custom palette
 			int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-			if( cm.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+			if( ws.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 			tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0 );
 		}
@@ -499,7 +496,7 @@ static void Mod_LoadTextures( dlump_t *l )
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-				if( cm.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+				if( ws.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA );
 			}
@@ -663,7 +660,7 @@ static void Mod_LoadLighting( const dlump_t *l )
 	if( !l->filelen ) return;
 	in = (void *)(mod_base + l->fileofs);
 
-	switch( cm.version )
+	switch( ws.version )
 	{
 	case Q1BSP_VERSION:
 		// expand the white lighting data
@@ -782,7 +779,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		{
 			texture_t	*tex = out->texinfo->texture;
 
-			if( !com.strncmp( tex->name, "sky", 3 ) && cm.version == Q1BSP_VERSION )
+			if( !com.strncmp( tex->name, "sky", 3 ) && ws.version == Q1BSP_VERSION )
 				out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
 
 			if( tex->name[0] == '*' || tex->name[0] == '!' || !com.strnicmp( tex->name, "water", 5 ))
@@ -793,7 +790,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		if( loadmodel->lightdata && in->lightofs != -1 )
 		{
-			if( cm.version == HLBSP_VERSION )
+			if( ws.version == HLBSP_VERSION )
 				out->samples = loadmodel->lightdata + (in->lightofs / 3);
 			else out->samples = loadmodel->lightdata + in->lightofs;
 		}
@@ -924,7 +921,7 @@ static void Mod_SetParent( mnode_t *node, mnode_t *parent )
 Mod_LoadNodes
 =================
 */
-static void Mod_LoadNodes( dlump_t *l )
+static void Mod_LoadNodes( const dlump_t *l )
 {
 	dnode_t	*in;
 	mnode_t	*out;
@@ -967,7 +964,7 @@ static void Mod_LoadNodes( dlump_t *l )
 Mod_LoadLeafs
 =================
 */
-static void Mod_LoadLeafs( dlump_t *l )
+static void Mod_LoadLeafs( const dlump_t *l )
 {
 	dleaf_t 	*in;
 	mleaf_t	*out;
@@ -1021,7 +1018,7 @@ static void Mod_LoadLeafs( dlump_t *l )
 Mod_LoadPlanes
 =================
 */
-static void Mod_LoadPlanes( dlump_t *l )
+static void Mod_LoadPlanes( const dlump_t *l )
 {
 	dplane_t	*in;
 	mplane_t	*out;
@@ -1056,12 +1053,12 @@ static void Mod_LoadPlanes( dlump_t *l )
 Mod_LoadVisibility
 =================
 */
-static void Mod_LoadVisibility( dlump_t *l )
+static void Mod_LoadVisibility( const dlump_t *l )
 {
 	if( !l->filelen )
 	{
 		MsgDev( D_WARN, "map ^2%s^7 has no visibility\n", loadmodel->name );
-		cm.pvs = cm.phs = loadmodel->visdata = NULL;
+		loadmodel->visdata = NULL;
 		return;
 	}
 
@@ -1074,14 +1071,13 @@ static void Mod_LoadVisibility( dlump_t *l )
 Mod_LoadEntities
 =================
 */
-static void Mod_LoadEntities( dlump_t *l )
+static void Mod_LoadEntities( const dlump_t *l )
 {
 	byte	*in;
 
 	in = (void *)(mod_base + l->fileofs);
 	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen );	
 	Mem_Copy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
-	cm.entityscript = Com_OpenScript( "entities", in, l->filelen );
 }
 
 /*
@@ -1089,7 +1085,7 @@ static void Mod_LoadEntities( dlump_t *l )
 Mod_LoadClipnodes
 =================
 */
-static void Mod_LoadClipnodes( dlump_t *l )
+static void Mod_LoadClipnodes( const dlump_t *l )
 {
 	dclipnode_t	*in, *out;
 	int		i, count;
@@ -1112,7 +1108,7 @@ static void Mod_LoadClipnodes( dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[1], hull->clip_mins ); // copy human hull
 	VectorCopy( GI->client_maxs[1], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, cm.hull_sizes[1] );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, ws.hull_sizes[1] );
 
 	hull = &loadmodel->hulls[2];
 	hull->clipnodes = out;
@@ -1121,7 +1117,7 @@ static void Mod_LoadClipnodes( dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[2], hull->clip_mins ); // copy large hull
 	VectorCopy( GI->client_maxs[2], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, cm.hull_sizes[2] );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, ws.hull_sizes[2] );
 
 	hull = &loadmodel->hulls[3];
 	hull->clipnodes = out;
@@ -1130,7 +1126,7 @@ static void Mod_LoadClipnodes( dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[3], hull->clip_mins ); // copy head hull
 	VectorCopy( GI->client_maxs[3], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, cm.hull_sizes[3] );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, ws.hull_sizes[3] );
 
 	for( i = 0; i < count; i++, out++, in++ )
 	{
@@ -1197,29 +1193,33 @@ void Mod_UnloadBrushModel( model_t *mod )
 	if( mod->type != mod_brush )
 		return; // not a bmodel
 
-	for( i = 0; i < mod->numtextures; i++ )
+	if( mod->name[0] != '*' )
 	{
-		tx = mod->textures[i];
-		if( !tx ) continue;	// free slot
+		for( i = 0; i < mod->numtextures; i++ )
+		{
+			tx = mod->textures[i];
+			if( !tx ) continue;	// free slot
 
-		GL_FreeTexture( tx->gl_texturenum );	// main texture
-		GL_FreeTexture( tx->fb_texturenum );	// luma texture
+			GL_FreeTexture( tx->gl_texturenum );	// main texture
+			GL_FreeTexture( tx->fb_texturenum );	// luma texture
+		}
+
+		Mem_FreePool( &mod->mempool );
 	}
 
-	Mem_FreePool( &mod->mempool );
 	Mem_Set( mod, 0, sizeof( *mod ));
 }
 
 /*
 =================
-CM_BrushModel
+Mod_LoadBrushModel
 =================
 */
-static void CM_BrushModel( model_t *mod, byte *buffer )
+static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 {
+	int	i, j;
 	dheader_t	*header;
 	dmodel_t 	*bm;
-	int	i, j;			
 	
 	header = (dheader_t *)buffer;
 	i = header->version;
@@ -1233,13 +1233,13 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 	case HLBSP_VERSION:
 		break;
 	default:
-		MsgDev( D_ERROR, "CM_BrushModel: %s has wrong version number (%i should be %i)", loadmodel->name, i, HLBSP_VERSION );
+		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)", loadmodel->name, i, HLBSP_VERSION );
 		return;
 	}
 
 	// will be merged later
 	loadmodel->type = mod_brush;
-	cm.version = i;
+	ws.version = i;
 
 	// swap all the lumps
 	mod_base = (byte *)header;
@@ -1276,57 +1276,67 @@ static void CM_BrushModel( model_t *mod, byte *buffer )
 	Mod_MakeHull0 ();
 	
 	loadmodel->numframes = 2;	// regular and alternate animation
-	cm.version = 0;
 	
 	// set up the submodels (FIXME: this is confusing)
 	for( i = 0; i < mod->numsubmodels; i++ )
 	{
-		model_t	*starmod;
-
 		bm = &mod->submodels[i];
-		starmod = &cm_inline[i];
 
-		*starmod = *loadmodel;
-
-		starmod->type = mod_brush;
-		starmod->hulls[0].firstclipnode = bm->headnode[0];
-
+		mod->hulls[0].firstclipnode = bm->headnode[0];
 		for( j = 1; j < MAX_MAP_HULLS; j++ )
 		{
-			starmod->hulls[j].firstclipnode = bm->headnode[j];
-			starmod->hulls[j].lastclipnode = mod->numclipnodes - 1;
+			mod->hulls[j].firstclipnode = bm->headnode[j];
+			mod->hulls[j].lastclipnode = mod->numclipnodes - 1;
 		}
 		
-		starmod->firstmodelsurface = bm->firstface;
-		starmod->nummodelsurfaces = bm->numfaces;
-		starmod->numleafs = bm->visleafs;
-	
-		VectorCopy( bm->maxs, starmod->maxs );
-		VectorCopy( bm->mins, starmod->mins );
+		mod->firstmodelsurface = bm->firstface;
+		mod->nummodelsurfaces = bm->numfaces;
+		
+		VectorCopy( bm->maxs, mod->maxs );
+		VectorCopy( bm->mins, mod->mins );
 
-		// copy worldinfo back to cm_models[0]
-		if( i == 0 ) *loadmodel = *starmod;
+		mod->radius = RadiusFromBounds( mod->mins, mod->maxs );
+		mod->numleafs = bm->visleafs;
 
-		com.sprintf( starmod->name, "*%i", i + 1 );
+		if( i < mod->numsubmodels - 1 )
+		{
+			char	name[8];
+
+			// duplicate the basic information
+			com.snprintf( name, sizeof( name ), "*%i", i + 1 );
+			loadmodel = Mod_FindName( name, true );
+			*loadmodel = *mod;
+			com.strncpy( loadmodel->name, name, sizeof( loadmodel->name ));
+			loadmodel->mempool = NULL;
+			mod = loadmodel;
+		}
 	}
 }
 
-static void CM_StudioModel( model_t *mod, byte *buffer )
+/*
+=================
+Mod_LoadStudioModel
+=================
+*/
+static void Mod_LoadStudioModel( model_t *mod, byte *buffer )
 {
 	studiohdr_t	*phdr;
 	mstudioseqdesc_t	*pseqdesc;
+	int		i;
 
 	phdr = (studiohdr_t *)buffer;
-	if( phdr->version != STUDIO_VERSION )
+	i = phdr->version;
+
+	if( i != STUDIO_VERSION )
 	{
-		MsgDev( D_ERROR, "CM_StudioModel: %s has wrong version number (%i should be %i)\n", loadmodel->name, phdr->version, STUDIO_VERSION );
+		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)\n", loadmodel->name, i, STUDIO_VERSION );
 		return;
 	}
 
 	loadmodel->type = mod_studio;
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	loadmodel->numframes = pseqdesc[0].numframes;
-	loadmodel->needload = cm.load_sequence;
+	loadmodel->needload = ws.load_sequence;
 
 	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
 	loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
@@ -1337,69 +1347,37 @@ static void CM_StudioModel( model_t *mod, byte *buffer )
 	VectorCopy( phdr->bbmax, loadmodel->maxs );
 }
 
-static void CM_SpriteModel( model_t *mod, byte *buffer )
+/*
+==================
+Mod_FindName
+
+==================
+*/
+model_t *Mod_FindName( const char *name, qboolean create )
 {
-	dsprite_t		*phdr;
-
-	phdr = (dsprite_t *)buffer;
-
-	if( phdr->version != SPRITE_VERSION )
-	{
-		MsgDev( D_ERROR, "CM_SpriteModel: %s has wrong version number (%i should be %i)\n", loadmodel->name, phdr->version, SPRITE_VERSION );
-		return;
-	}
-          
-	loadmodel->type = mod_sprite;
-	loadmodel->numframes = phdr->numframes;
-	loadmodel->needload = cm.load_sequence;
-
-	// setup bounding box
-	loadmodel->mins[0] = loadmodel->mins[1] = -phdr->bounds[0] / 2;
-	loadmodel->maxs[0] = loadmodel->maxs[1] = phdr->bounds[0] / 2;
-	loadmodel->mins[2] = -phdr->bounds[1] / 2;
-	loadmodel->maxs[2] = phdr->bounds[1] / 2;
-}
-
-model_t *CM_ModForName( const char *name, qboolean world )
-{
-	byte	*buf;
 	model_t	*mod;
-	int	i, size;
-
+	int	i;
+	
 	if( !name || !name[0] )
 		return NULL;
-
-	// fast check for worldmodel
-	if( !com.strcmp( name, cm_models[0].name ))
-		return &cm_models[0];
-
-	// check for submodel
-	if( name[0] == '*' ) 
-	{
-		i = com.atoi( name + 1 );
-		if( i < 1 || !worldmodel || i >= worldmodel->numsubmodels )
-		{
-			MsgDev( D_ERROR, "CM_InlineModel: bad submodel number %d\n", i );
-			return NULL;
-		}
-		return &cm_inline[i];
-	}
-
+		
 	// search the currently loaded models
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
-          {
+	{
 		if( !mod->name[0] ) continue;
-		if( !com.strcmp( name, mod->name ))
+		if( !com.strcmp( mod->name, name ))
 		{
 			// prolonge registration
-			mod->needload = cm.load_sequence;
+			mod->needload = ws.load_sequence;
 			return mod;
 		}
 	}
 
+	if( !create ) return NULL;			
+
 	// find a free model slot spot
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
-		if( !mod->name[0] ) break; // free spot
+		if( !mod->name[0] ) break; // this is a valid spot
 
 	if( i == cm_nummodels )
 	{
@@ -1407,21 +1385,49 @@ model_t *CM_ModForName( const char *name, qboolean world )
 			Host_Error( "Mod_ForName: MAX_MODELS limit exceeded\n" );
 		cm_nummodels++;
 	}
-	
-	buf = FS_LoadFile( name, &size );
+
+	// copy name, so model loader can find model file
+	com.strncpy( mod->name, name, sizeof( mod->name ));
+
+	return mod;
+}
+
+/*
+==================
+Mod_LoadModel
+
+Loads a model into the cache
+==================
+*/
+model_t *Mod_LoadModel( model_t *mod, qboolean world )
+{
+	byte	*buf;
+
+	if( !mod )
+	{
+		if( world ) Host_Error( "Mod_ForName: NULL model\n" );
+		else MsgDev( D_ERROR, "Mod_ForName: NULL model\n" );
+		return NULL;		
+	}
+
+	// check if already loaded (or inline bmodel)
+	if( mod->mempool || mod->name[0] == '*' )
+		return mod;
+
+	buf = FS_LoadFile( mod->name, NULL );
 	if( !buf )
 	{
-		if( world ) Host_Error( "Mod_ForName: %s couldn't load\n", name );
-		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", name );
+		if( world ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
+		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", mod->name );
+		Mem_Set( mod, 0, sizeof( model_t ));
 		return NULL;
 	}
 
 	// if it's world - calc the map checksum
-	if( world ) CRC32_MapFile( &cm.checksum, name );
+	if( world ) CRC32_MapFile( &ws.checksum, mod->name );
 
-	MsgDev( D_NOTE, "CM_LoadModel: %s\n", name );
-	com.strncpy( mod->name, name, sizeof( mod->name ));
-	mod->needload = cm.load_sequence;	// register mod
+	MsgDev( D_NOTE, "Mod_LoadModel: %s\n", mod->name );
+	mod->needload = ws.load_sequence; // register mod
 	mod->type = mod_bad;
 	loadmodel = mod;
 
@@ -1429,13 +1435,14 @@ model_t *CM_ModForName( const char *name, qboolean world )
 	switch( *(uint *)buf )
 	{
 	case IDSTUDIOHEADER:
-		CM_StudioModel( mod, buf );
+		Mod_LoadStudioModel( mod, buf );
 		break;
 	case IDSPRITEHEADER:
-		CM_SpriteModel( mod, buf );
+		Mod_LoadSpriteModel( mod, buf );
 		break;
-	default:
-		CM_BrushModel( mod, buf );
+	case Q1BSP_VERSION:
+	case HLBSP_VERSION:
+		Mod_LoadBrushModel( mod, buf );
 		break;
 	}
 
@@ -1446,79 +1453,69 @@ model_t *CM_ModForName( const char *name, qboolean world )
 		Mod_FreeModel( mod );
 
 		// check for loading problems
-		if( world ) Host_Error( "Mod_ForName: %s unknown format\n", name );
-		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", name );
+		if( world ) Host_Error( "Mod_ForName: %s unknown format\n", mod->name );
+		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", mod->name );
 		return NULL;
 	}
-
 	return mod;
-}
-
-static void CM_FreeWorld( void )
-{
-	if( worldmodel )
-		Mod_FreeModel( &cm_models[0] );
-
-	if( cm.entityscript )
-	{
-		Com_CloseScript( cm.entityscript );
-		cm.entityscript = NULL;
-	}
-	worldmodel = NULL;
 }
 
 /*
 ==================
-CM_BeginRegistration
+Mod_ForName
+
+Loads in a model for the given name
+==================
+*/
+model_t *Mod_ForName( const char *name, qboolean world )
+{
+	model_t	*mod;
+	
+	mod = Mod_FindName( name, true );
+	return Mod_LoadModel( mod, world );
+}
+
+/*
+==================
+Mod_LoadWorld
 
 Loads in the map and all submodels
 ==================
 */
-void CM_BeginRegistration( const char *name, qboolean clientload, uint *checksum )
+void Mod_LoadWorld( const char *name, uint *checksum )
 {
 	// now replacement table is invalidate
-	Mem_Set( sv_models, 0, sizeof( sv_models ));
-
-	// purge all submodels
-	Mem_EmptyPool( cm.studiopool );
-
-	if( !com.strlen( name ))
-	{
-		CM_FreeWorld ();
-		sv_models[1] = NULL; // no worldmodel
-		if( checksum ) *checksum = 0;
-		return;
-	}
+	Mem_Set( com_models, 0, sizeof( com_models ));
 
 	if( !com.strcmp( cm_models[0].name, name ))
 	{
 		// singleplayer mode: server already loading map
-		if( checksum ) *checksum = cm.checksum;
-		if( !clientload )
-		{
-			// reset the entity script
-			Com_ResetScript( cm.entityscript );
-		}
-		sv_models[1] = cm_models; // make link to world
+		com_models[1] = cm_models; // make link to world
+		if( checksum ) *checksum = ws.checksum;
 
 		// still have the right version
 		return;
 	}
 
-	CM_FreeWorld ();
-	cm.load_sequence++;	// now all models are invalid
+	// purge all submodels
+	Mem_EmptyPool( ws.studiopool );
+	Mod_FreeModel( &cm_models[0] );
+	ws.load_sequence++;	// now all models are invalid
 
 	// load the newmap
-	worldmodel = CM_ModForName( name, true );
-	if( !worldmodel ) Host_Error( "Couldn't load %s\n", name );
-	sv_models[1] = cm_models; // make link to world
-		
-	if( checksum ) *checksum = cm.checksum;
-
-	CM_CalcPHS ();
+	worldmodel = Mod_ForName( name, true );
+	com_models[1] = cm_models; // make link to world
+	if( checksum ) *checksum = ws.checksum;
 }
 
-void CM_EndRegistration( void )
+/*
+==================
+Mod_FreeUnused
+
+Purge all unused models
+==================
+*/
+void Mod_FreeUnused( void )
 {
 	model_t	*mod;
 	int	i;
@@ -1526,24 +1523,23 @@ void CM_EndRegistration( void )
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
 	{
 		if( !mod->name[0] ) continue;
-		if( mod->needload != cm.load_sequence )
+
+		if( mod->needload != ws.load_sequence )
 			Mod_FreeModel( mod );
 	}
 }
 
 /*
-==================
-CM_ClipHandleToModel
-==================
+===================
+Mod_GetType
+===================
 */
-model_t *CM_ClipHandleToModel( int handle )
+modtype_t Mod_GetType( int handle )
 {
-	if( handle < 0 || handle > MAX_MODELS )
-	{
-		Host_Error( "CM_ClipHandleToModel: bad handle #%i\n", handle );
-		return NULL;
-	}
-	return sv_models[handle];
+	model_t	*mod = CM_ClipHandleToModel( handle );
+
+	if( !mod ) return mod_bad;
+	return mod->type;
 }
 
 /*
@@ -1565,21 +1561,8 @@ void Mod_GetFrames( int handle, int *numFrames )
 	if( mod->type == mod_sprite )
 		*numFrames = mod->numframes;
 	else if( mod->type == mod_studio )
-		*numFrames = CM_StudioBodyVariations( mod );		
+		*numFrames = Mod_StudioBodyVariations( mod );		
 	if( *numFrames < 1 ) *numFrames = 1;
-}
-
-/*
-===================
-CM_GetModelType
-===================
-*/
-modtype_t CM_GetModelType( int handle )
-{
-	model_t	*mod = CM_ClipHandleToModel( handle );
-
-	if( !mod ) return mod_bad;
-	return mod->type;
 }
 
 /*
@@ -1604,20 +1587,6 @@ void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs )
 	}
 }
 
-qboolean CM_RegisterModel( const char *name, int index )
-{
-	model_t	*mod;
-
-	if( index < 0 || index > MAX_MODELS )
-		return false;
-
-	// this array used for acess to servermodels
-	mod = CM_ModForName( name, false );
-	sv_models[index] = mod;
-
-	return ( mod != NULL );
-}
-
 /*
 ===============
 Mod_Calloc
@@ -1627,7 +1596,7 @@ Mod_Calloc
 void *Mod_Calloc( int number, size_t size )
 {
 	if( number <= 0 || size <= 0 ) return NULL;
-	return Mem_Alloc( cm.studiopool, number * size );
+	return Mem_Alloc( ws.studiopool, number * size );
 }
 
 /*
@@ -1638,7 +1607,7 @@ Mod_CacheCheck
 */
 void *Mod_CacheCheck( cache_user_t *c )
 {
-	return Cache_Check( cm.studiopool, c );
+	return Cache_Check( ws.studiopool, c );
 }
 
 /*
@@ -1668,9 +1637,30 @@ void Mod_LoadCacheFile( const char *path, cache_user_t *cu )
 	filepath[size] = 0;
 
 	buf = FS_LoadFile( filepath, &size );
-	cu->data = Mem_Alloc( cm.studiopool, size );
+	cu->data = Mem_Alloc( ws.studiopool, size );
 	Mem_Copy( cu->data, buf, size );
 	Mem_Free( buf );
+}
+
+/*
+===================
+Mod_RegisterModel
+
+register model with shared index
+===================
+*/
+qboolean Mod_RegisterModel( const char *name, int index )
+{
+	model_t	*mod;
+
+	if( index < 0 || index > MAX_MODELS )
+		return false;
+
+	// this array used for acess to servermodels
+	mod = Mod_ForName( name, false );
+	com_models[index] = mod;
+
+	return ( mod != NULL );
 }
 
 /*
@@ -1684,4 +1674,21 @@ void *Mod_Extradata( model_t *mod )
 	if( mod && mod->type == mod_studio )
 		return mod->cache.data;
 	return NULL;
+}
+
+/*
+==================
+CM_ClipHandleToModel
+
+FIXME: rename to Mod_Handle
+==================
+*/
+model_t *CM_ClipHandleToModel( int handle )
+{
+	if( handle < 0 || handle > MAX_MODELS )
+	{
+		Host_Error( "CM_ClipHandleToModel: bad handle #%i\n", handle );
+		return NULL;
+	}
+	return com_models[handle];
 }

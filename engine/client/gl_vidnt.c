@@ -655,7 +655,7 @@ static int GL_ChoosePFD( int colorBits, int depthBits, int stencilBits )
 	}
 	else if( numPFDs < 1 )
 	{
-		MsgDev( D_ERROR, "R_ChoosePFD failed\n" );
+		MsgDev( D_ERROR, "GL_ChoosePFD failed\n" );
 		return 0;
 	}
 
@@ -739,18 +739,18 @@ static int GL_ChoosePFD( int colorBits, int depthBits, int stencilBits )
 	{
 		if( selected->dwFlags & PFD_GENERIC_ACCELERATED )
 		{
-			MsgDev( D_NOTE, "R_ChoosePFD: usign Generic MCD acceleration\n" );
+			MsgDev( D_NOTE, "GL_ChoosePFD: usign Generic MCD acceleration\n" );
 			glw_state.software = false;
 		}
 		else
 		{
-			MsgDev( D_NOTE, "R_ChoosePFD: using software emulation\n" );
+			MsgDev( D_NOTE, "GL_ChoosePFD: using software emulation\n" );
 			glw_state.software = true;
 		}
 	}
 	else
 	{
-		MsgDev( D_NOTE, "R_ChoosePFD: using hardware acceleration\n");
+		MsgDev( D_NOTE, "GL_ChoosePFD: using hardware acceleration\n");
 		glw_state.software = false;
 	}
 

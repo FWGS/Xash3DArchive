@@ -1048,7 +1048,7 @@ void CL_PrepVideo( void )
 
 	// let the render dll load the map
 	com.strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
-	CM_BeginRegistration( mapname, true, &map_checksum );
+	Mod_LoadWorld( mapname, &map_checksum );
 	cl.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
 
 	SCR_RegisterShaders(); // update with new sequence
@@ -1066,7 +1066,7 @@ void CL_PrepVideo( void )
 	for( i = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
 	{
 		com.strncpy( name, cl.model_precache[i+1], MAX_STRING );
-		CM_RegisterModel( name, i+1 );
+		Mod_RegisterModel( name, i+1 );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 45.0f / mdlcount );
 		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
 	}
@@ -1074,7 +1074,7 @@ void CL_PrepVideo( void )
 	// invalidate all decal indexes
 	Mem_Set( cl.decal_index, 0, sizeof( cl.decal_index ));
 
-	CM_EndRegistration ();	// free unused models
+	Mod_FreeUnused ();
 	CL_ClearWorld ();
 
 	R_NewMap();		// tell the render about new map
@@ -1085,7 +1085,7 @@ void CL_PrepVideo( void )
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
 		if( !clgame.sprites[i].name[0] ) continue; // free slot
-		if( clgame.sprites[i].needload != cm.load_sequence )
+		if( clgame.sprites[i].needload != ws.load_sequence )
 			Mod_UnloadSpriteModel( &clgame.sprites[i] );
 	}
 

@@ -739,5 +739,10 @@ void SV_Shutdown( qboolean reconnect )
 		svs.next_client_entities = 0;
 	}
 
+	// don't trying to release their memory
+	// it's will be automatiaclly freed
+	// until reload worldmodel
+	svs.pvs = svs.phs = NULL;
+
 	svs.initialized = false;
 }

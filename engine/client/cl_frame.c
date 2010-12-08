@@ -308,7 +308,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	}
 
 	// NOTE: always check modelindex for new state not current
-	if( CM_GetModelType( state->modelindex ) == mod_studio )
+	if( Mod_GetType( state->modelindex ) == mod_studio )
 		CL_UpdateStudioVars( ent, state );
 
 	// set right current state
@@ -659,7 +659,7 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity 
 		if( velocity ) VectorCopy( ent->baseline.velocity, velocity );
 
 		// if a brush model, offset the origin
-		if( origin && CM_GetModelType( ent->baseline.modelindex ) == mod_brush )
+		if( origin && Mod_GetType( ent->baseline.modelindex ) == mod_brush )
 		{
 			vec3_t	mins, maxs, midPoint;
 	
@@ -676,7 +676,7 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity 
 		if( velocity ) VectorCopy( ent->curstate.velocity, velocity );
 
 		// if a brush model, offset the origin
-		if( origin && CM_GetModelType( ent->curstate.modelindex ) == mod_brush )
+		if( origin && Mod_GetType( ent->curstate.modelindex ) == mod_brush )
 		{
 			vec3_t	mins, maxs, midPoint;
 	

@@ -145,6 +145,37 @@ int SV_GenericIndex( const char *name )
 
 /*
 ================
+SV_EntityScript
+
+get entity script for current map
+FIXME: merge with SV_GetEntityScript
+================
+*/
+script_t *SV_EntityScript( void )
+{
+	string	entfilename;
+	script_t	*ents;
+
+	if( !sv.worldmodel )
+		return NULL;
+
+	// check for entfile too
+	com.strncpy( entfilename, sv.worldmodel->name, sizeof( entfilename ));
+	FS_StripExtension( entfilename );
+	FS_DefaultExtension( entfilename, ".ent" );
+
+	if(( ents = Com_OpenScript( entfilename, NULL, 0 )))
+	{
+		MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
+		return ents;
+	}
+
+	// create script from internal entities
+	return Com_OpenScript( entfilename, sv.worldmodel->entities, com.strlen( sv.worldmodel->entities ));
+}
+
+/*
+================
 SV_CreateBaseline
 
 Entity baselines are used to compress the update messages
@@ -166,6 +197,102 @@ void SV_CreateBaseline( void )
 
 	// create the instanced baselines
 	svgame.dllFuncs.pfnCreateInstancedBaselines();
+}
+
+/*
+=================
+SV_CalcPHS
+=================
+*/
+void SV_CalcPHS( void )
+{
+	static char	worldname[64];
+	int		i, j, k, l, index, num;
+	int		rowbytes, rowwords;
+	uint		*dest, *src;
+	int		hcount, vcount;
+	double		timestart;
+	int		bitbyte;
+	byte		*scan;
+
+	// no worldmodel or already loaded
+	if( !worldmodel || !com.strcmp( worldname, sv.model_precache[1] ))
+		return;
+
+	if( !worldmodel->visdata )
+	{
+		svs.phs = svs.pvs = NULL;
+		return;
+	}
+
+	MsgDev( D_NOTE, "Building PAS...\n" );
+	com.strncpy( worldname, sv.model_precache[1], sizeof( worldname ));
+	timestart = Sys_DoubleTime();
+
+	num = worldmodel->numleafs;
+	rowwords = (num + 31)>>5;
+	rowbytes = rowwords * 4;
+
+	// allocate pvs and phs data single array
+	svs.pvs = Mem_Alloc( worldmodel->mempool, rowbytes * num * 2 );
+	svs.phs = svs.pvs + rowbytes * num;
+
+	scan = svs.pvs;
+	vcount = 0;
+
+	// uncompress pvs first
+	for( i = 0; i < num; i++, scan += rowbytes )
+	{
+		Mem_Copy( scan, Mod_LeafPVS( worldmodel->leafs + i, worldmodel ), rowbytes );
+		if( i == 0 ) continue;
+
+		for( j = 0; j < num; j++ )
+		{
+			if( scan[j>>3] & (1<<( j & 7 )))
+				vcount++;
+		}
+	}
+
+	scan = svs.pvs;
+	hcount = 0;
+
+	dest = (uint *)svs.phs;
+
+	for( i = 0; i < num; i++, dest += rowwords, scan += rowbytes )
+	{
+		Mem_Copy( dest, scan, rowbytes );
+
+		for( j = 0; j < rowbytes; j++ )
+		{
+			bitbyte = scan[j];
+			if( !bitbyte ) continue;
+
+			for( k = 0; k < 8; k++ )
+			{
+				if(!( bitbyte & ( 1<<k )))
+					continue;
+				// or this pvs row into the phs
+				// +1 because pvs is 1 based
+				index = ((j<<3) + k + 1);
+				if( index >= num ) continue;
+
+				src = (uint *)svs.pvs + index * rowwords;
+				for( l = 0; l < rowwords; l++ )
+					dest[l] |= src[l];
+			}
+		}
+
+		if( i == 0 ) continue;
+
+		for( j = 0; j < num; j++ )
+		{
+			if(((byte *)dest)[j>>3] & (1<<( j & 7 )))
+				hcount++;
+		}
+	}
+
+	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
+	MsgDev( D_NOTE, "PAS building time: %g secs\n", Sys_DoubleTime() - timestart );
 }
 
 /*
@@ -231,7 +358,7 @@ void SV_ActivateServer( void )
 		MsgDev( D_INFO, "Game started\n" );
 	}
 
-	CM_EndRegistration (); // free unused models
+	Mod_FreeUnused ();
 
 	sv.state = ss_active;
 	physinfo->modified = true;
@@ -290,7 +417,7 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 	{
 		if( !SV_LoadGameState( pMapName, 1 ))
 		{
-			SV_SpawnEntities( pMapName, CM_GetEntityScript( ));
+			SV_SpawnEntities( pMapName, SV_EntityScript( ));
 		}
 
 		if( pOldLevel )
@@ -308,7 +435,7 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 	{
 		svgame.dllFuncs.pfnResetGlobalState();
 
-		SV_SpawnEntities( pMapName, CM_GetEntityScript( ));
+		SV_SpawnEntities( pMapName, SV_EntityScript( ));
 	}
 
 	// call before sending baselines into the client
@@ -395,13 +522,14 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	else sv.startspot[0] = '\0';
 
 	com.snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
-	CM_BeginRegistration( sv.model_precache[1], false, &sv.checksum );
+	Mod_LoadWorld( sv.model_precache[1], &sv.checksum );
 	sv.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
+	SV_CalcPHS();
 
 	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )
 	{
 		com.sprintf( sv.model_precache[i+1], "*%i", i );
-		CM_RegisterModel( sv.model_precache[i+1], i+1 );
+		Mod_RegisterModel( sv.model_precache[i+1], i+1 );
 	}
 
 	// precache and static commands can be issued during map initialization

@@ -474,7 +474,7 @@ static engine_studio_api_t gStudioAPI =
 	Mod_Calloc,
 	Mod_CacheCheck,
 	Mod_LoadCacheFile,
-	CM_ModForName,
+	Mod_ForName,
 	Mod_Extradata,
 	CM_ClipHandleToModel,
 	pfnGetCurrentEntity,

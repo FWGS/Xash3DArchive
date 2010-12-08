@@ -302,10 +302,6 @@ SOURCE=.\common\pm_trace.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\portals.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\sound\s_backend.c
 # End Source File
 # Begin Source File

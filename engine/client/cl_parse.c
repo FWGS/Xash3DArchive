@@ -864,7 +864,7 @@ void CL_PrecacheModel( sizebuf_t *msg )
 	// when we loading map all resources is precached sequentially
 	if( !cl.video_prepped ) return;
 
-	CM_RegisterModel( cl.model_precache[modelIndex], modelIndex );
+	Mod_RegisterModel( cl.model_precache[modelIndex], modelIndex );
 }
 
 /*

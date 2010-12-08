@@ -81,24 +81,12 @@ PM_HullPointContents
 */
 int PM_HullPointContents( hull_t *hull, int num, const vec3_t p )
 {
-	float		d;
-	dclipnode_t	*node;
 	mplane_t		*plane;
 
 	while( num >= 0 )
 	{
-		if( num < hull->firstclipnode || num > hull->lastclipnode )
-			Host_Error( "PM_HullPointContents: bad node number\n" );
-	
-		node = hull->clipnodes + num;
-		plane = hull->planes + node->planenum;
-		
-		if( plane->type < 3 )
-			d = p[plane->type] - plane->dist;
-		else d = DotProduct( plane->normal, p ) - plane->dist;
-
-		if( d < 0 ) num = node->children[1];
-		else num = node->children[0];
+		plane = &hull->planes[hull->clipnodes[num].planenum];
+		num = hull->clipnodes[num].children[PlaneDiff( p, plane ) < 0];
 	}
 	return num;
 }

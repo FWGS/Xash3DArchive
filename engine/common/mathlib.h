@@ -97,6 +97,7 @@ void ClearBounds( vec3_t mins, vec3_t maxs );
 void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
 qboolean BoundsIntersect( const vec3_t mins1, const vec3_t maxs1, const vec3_t mins2, const vec3_t maxs2 );
 qboolean BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t origin, float radius );
+float RadiusFromBounds( const vec3_t mins, const vec3_t maxs );
 
 void AngleQuaternion( const vec3_t angles, vec4_t q );
 void QuaternionSlerp( const vec4_t p, vec4_t q, float t, vec4_t qt );

@@ -1543,7 +1543,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 			if( com.strlen( model ) && com.stricmp( model, "player" ))
 			{
 				const char *path = va( "models/player/%s/%s.mdl", model, model );
-				CM_RegisterModel( path, SV_ModelIndex( path )); // register model
+				Mod_RegisterModel( path, SV_ModelIndex( path )); // register model
 				SV_SetModel( ent, path );
 				cl->modelindex = ent->v.modelindex;
 			}

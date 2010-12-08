@@ -584,7 +584,7 @@ for drawing playermodel previews
 */
 static void pfnSetPlayerModel( cl_entity_t *ent, const char *path )
 {
-	CM_RegisterModel( path, MAX_MODELS - 1 );
+	Mod_RegisterModel( path, MAX_MODELS - 1 );
 	ent->curstate.modelindex = MAX_MODELS - 1;
 }
 

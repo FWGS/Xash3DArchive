@@ -409,7 +409,7 @@ void CL_FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 	float		xspeed, yspeed, zspeed;
 	vec3_t		origin, mins, maxs;
 
-	if( !pent || CM_GetModelType( modelIndex ) == mod_bad )
+	if( !pent || Mod_GetType( modelIndex ) == mod_bad )
 		return;
 
 	count = density + 1;
@@ -477,7 +477,7 @@ void CL_Bubbles( const vec3_t mins, const vec3_t maxs, float height, int modelIn
 	float		angle;
 	vec3_t		origin;
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 		return;
 
 	Mod_GetFrames( modelIndex, &frameCount );
@@ -524,7 +524,7 @@ void CL_BubbleTrail( const vec3_t start, const vec3_t end, float flWaterZ, int m
 	float		dist, angle, zspeed;
 	vec3_t		origin;
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 		return;
 
 	Mod_GetFrames( modelIndex, &frameCount );
@@ -579,7 +579,7 @@ void CL_AttachTentToPlayer( int client, int modelIndex, float zoffset, float lif
 		return;
 	}
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 	{
 		MsgDev( D_INFO, "No model %d!\n", modelIndex );
 		return;
@@ -608,7 +608,7 @@ void CL_AttachTentToPlayer( int client, int modelIndex, float zoffset, float lif
 	pTemp->flags |= FTENT_PLYRATTACHMENT|FTENT_PERSIST;
 
 	// is the model a sprite?
-	if( CM_GetModelType( pTemp->entity.curstate.modelindex ) == mod_sprite )
+	if( Mod_GetType( pTemp->entity.curstate.modelindex ) == mod_sprite )
 	{
 		pTemp->flags |= FTENT_SPRANIMATE|FTENT_SPRANIMATELOOP;
 		pTemp->entity.curstate.framerate = 10;
@@ -775,7 +775,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 {
 	TEMPENTITY	*pTemp;
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 		return;
 
 	// Large, single blood sprite is a high-priority tent
@@ -857,7 +857,7 @@ void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t dir, float
 	if( !modelIndex ) return;
 	type = flags & BREAK_TYPEMASK;
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 		return;
 
 	Mod_GetFrames( modelIndex, &frameCount );
@@ -886,9 +886,9 @@ void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t dir, float
 		// keep track of break_type, so we know how to play sound on collision
 		pTemp->hitSound = type;
 		
-		if( CM_GetModelType( modelIndex ) == mod_sprite )
+		if( Mod_GetType( modelIndex ) == mod_sprite )
 			pTemp->entity.curstate.frame = Com_RandomLong( 0, frameCount - 1 );
-		else if( CM_GetModelType( modelIndex ) == mod_studio )
+		else if( Mod_GetType( modelIndex ) == mod_studio )
 			pTemp->entity.curstate.body = Com_RandomLong( 0, frameCount - 1 );
 
 		pTemp->flags |= FTENT_COLLIDEWORLD | FTENT_FADEOUT | FTENT_SLOWGRAVITY;
@@ -977,7 +977,7 @@ TEMPENTITY *CL_DefaultSprite( const vec3_t pos, int spriteIndex, float framerate
 	TEMPENTITY	*pTemp;
 	int		frameCount;
 
-	if( !spriteIndex || CM_GetModelType( spriteIndex ) != mod_sprite )
+	if( !spriteIndex || Mod_GetType( spriteIndex ) != mod_sprite )
 	{
 		MsgDev( D_INFO, "No Sprite %d!\n", spriteIndex );
 		return NULL;
@@ -1015,7 +1015,7 @@ TEMPENTITY *CL_TempSprite( const vec3_t pos, const vec3_t dir, float scale, int 
 	if( !modelIndex ) 
 		return NULL;
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 	{
 		MsgDev( D_INFO, "No model %d!\n", modelIndex );
 		return NULL;
@@ -1134,7 +1134,7 @@ void CL_Spray( const vec3_t pos, const vec3_t dir, int modelIndex, int count, in
 	
 	if( znoise > 1 ) znoise = 1;
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 	{
 		MsgDev( D_INFO, "No model %d!\n", modelIndex );
 		return;
@@ -1193,7 +1193,7 @@ void CL_Sprite_Trail( int type, const vec3_t vecStart, const vec3_t vecEnd, int 
 	vec3_t		vecDelta, vecDir;
 	int		i, flFrameCount;
 
-	if( CM_GetModelType( modelIndex ) == mod_bad )
+	if( Mod_GetType( modelIndex ) == mod_bad )
 	{
 		MsgDev( D_INFO, "No model %d!\n", modelIndex );
 		return;

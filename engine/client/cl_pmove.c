@@ -422,7 +422,7 @@ void CL_InitClientMove( void )
 	clgame.pmove->movevars = &clgame.movevars;
 	clgame.pmove->runfuncs = false;
 
-	CM_SetupHulls( clgame.player_mins, clgame.player_maxs );
+	Mod_SetupHulls( clgame.player_mins, clgame.player_maxs );
 
 	// enumerate client hulls
 	for( i = 0; i < 4; i++ )

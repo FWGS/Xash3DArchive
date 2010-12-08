@@ -1346,7 +1346,6 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	if( !buf ) return false;
 
 	com.strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
-	m_pSprite->needload = cm.load_sequence;
 
 	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
 	else Mod_LoadSpriteModel( m_pSprite, buf );		
@@ -1383,7 +1382,7 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		if( !com.strcmp( clgame.sprites[i].name, szPicName ))
 		{
 			// prolonge registration
-			clgame.sprites[i].needload = cm.load_sequence;
+			clgame.sprites[i].needload = ws.load_sequence;
 			return i;
 		}
 	}
@@ -1574,7 +1573,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	Com_ReadUlong( script, SC_ALLOW_NEWLINES, &numSprites );
 
 	// name, res, pic, x, y, w, h
-	// NOTE: we must use cm.studiopool because it will be purge on next restart or change map
+	// NOTE: we must use ws.studiopool because it will be purge on next restart or change map
 	pList = Mem_Alloc( cls.mempool, sizeof( client_sprite_t ) * numSprites );
 
 	for( index = 0; index < numSprites; index++ )
@@ -2709,7 +2708,7 @@ model_t *pfnLoadMapSprite( const char *filename )
 		if( !com.strcmp( clgame.sprites[i].name, filename ))
 		{
 			// prolonge registration
-			clgame.sprites[i].needload = cm.load_sequence;
+			clgame.sprites[i].needload = ws.load_sequence;
 			return &clgame.sprites[i];
 		}
 	}

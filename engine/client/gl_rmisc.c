@@ -31,7 +31,7 @@ void R_NewMap( void )
 		if( !cl.worldmodel->textures[i] )
 			continue;
 
-		if( cm.version == Q1BSP_VERSION && !com.strncmp( cl.worldmodel->textures[i]->name, "sky", 3 ))
+		if( ws.version == Q1BSP_VERSION && !com.strncmp( cl.worldmodel->textures[i]->name, "sky", 3 ))
 			tr.skytexturenum = i;
 
  		cl.worldmodel->textures[i]->texturechain = NULL;

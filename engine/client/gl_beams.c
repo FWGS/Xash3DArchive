@@ -1218,7 +1218,7 @@ void CL_UpdateBeam( BEAM *pbeam, float frametime )
 {
 	pbeam->flags |= FBEAM_ISACTIVE;
 
-	if( CM_GetModelType( pbeam->modelIndex ) == mod_bad )
+	if( Mod_GetType( pbeam->modelIndex ) == mod_bad )
 	{
 		pbeam->flags &= ~FBEAM_ISACTIVE; // force to ignore
 		pbeam->die = cl.time;
@@ -1394,7 +1394,7 @@ void CL_DrawBeam( BEAM *pbeam )
 		return;
 	}
 
-	if( CM_GetModelType( pbeam->modelIndex ) == mod_bad )
+	if( Mod_GetType( pbeam->modelIndex ) == mod_bad )
 	{
 		// don't draw beams without models
 		pbeam->die = cl.time;
@@ -1479,7 +1479,7 @@ void CL_DrawCustomBeam( cl_entity_t *pbeam )
 	ASSERT( pbeam != NULL );
 
 	// bad texture ?
-	if( CM_GetModelType( pbeam->curstate.modelindex ) != mod_sprite )
+	if( Mod_GetType( pbeam->curstate.modelindex ) != mod_sprite )
 		return;
 
 	Mem_Set( &beam, 0, sizeof( beam ));
@@ -1629,7 +1629,7 @@ BEAM *CL_BeamEnts( int startEnt, int endEnt, int modelIndex, float life, float w
 	BEAM		*pBeam;
 
 	// need a valid model.
-	if( CM_GetModelType( modelIndex ) != mod_sprite )
+	if( Mod_GetType( modelIndex ) != mod_sprite )
 		return NULL;
 
 	pStart = CL_GetBeamEntityByIndex( startEnt );
@@ -1677,7 +1677,7 @@ BEAM *CL_BeamPoints( const vec3_t start, const vec3_t end, int modelIndex, float
 	BEAM	*pBeam;
 
 	// need a valid model.
-	if( CM_GetModelType( modelIndex ) != mod_sprite )
+	if( Mod_GetType( modelIndex ) != mod_sprite )
 		return NULL;
 
 	// don't start temporary beams out of the PVS
@@ -1743,7 +1743,7 @@ BEAM *CL_BeamCirclePoints( int type, const vec3_t start, const vec3_t end, int m
 	BEAM	*pBeam;
 
 	// need a valid model.
-	if( CM_GetModelType( modelIndex ) != mod_sprite )
+	if( Mod_GetType( modelIndex ) != mod_sprite )
 		return NULL;
 
 	pBeam = CL_AllocBeam();
@@ -1794,7 +1794,7 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 	float		scale;
 
 	// need a valid model.
-	if( CM_GetModelType( modelIndex ) != mod_sprite )
+	if( Mod_GetType( modelIndex ) != mod_sprite )
 		return NULL;
 
 	pStart = CL_GetBeamEntityByIndex( startEnt );
@@ -1855,7 +1855,7 @@ BEAM *CL_BeamRing( int startEnt, int endEnt, int modelIndex, float life, float w
 	BEAM		*pBeam;
 
 	// need a valid model.
-	if( CM_GetModelType( modelIndex ) != mod_sprite )
+	if( Mod_GetType( modelIndex ) != mod_sprite )
 		return NULL;
 
 	pStart = CL_GetBeamEntityByIndex( startEnt );
@@ -1905,7 +1905,7 @@ BEAM *CL_BeamFollow( int startEnt, int modelIndex, float life, float width, floa
 	BEAM		*pBeam;
 
 	// need a valid model.
-	if( CM_GetModelType( modelIndex ) != mod_sprite )
+	if( Mod_GetType( modelIndex ) != mod_sprite )
 		return NULL;
 
 	pStart = CL_GetBeamEntityByIndex( startEnt );

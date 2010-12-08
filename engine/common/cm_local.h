@@ -32,68 +32,48 @@ typedef struct leaflist_s
 	int		topnode;		// for overflows where each leaf can't be stored individually
 } leaflist_t;
 
-typedef struct clipmap_s
+typedef struct
 {
+	int		version;		// map version
 	uint		checksum;		// map checksum
 	int		load_sequence;	// increace each map change
-	int		checkcount;
-	int		version;		// current map version
-
-	byte		*pvs;		// fully uncompressed visdata alloced in cm.mempool;
-	byte		*phs;
-	byte		nullrow[MAX_MAP_LEAFS/8];
-
-	vec3_t		hull_sizes[4];	// hull sizes
+	vec3_t		hull_sizes[4];	// actual hull sizes
 
 	byte		*studiopool;	// cache for submodels
+	byte		nullrow[MAX_MAP_LEAFS/8];
+} world_static_t;
 
-	script_t		*entityscript;	// only actual for world
-} clipmap_t;
+extern world_static_t	ws;
 
-extern clipmap_t		cm;
 extern model_t		*loadmodel;
 extern model_t		*worldmodel;
-
-//
-// cm_test.c
-//
-byte *CM_LeafPVS( int leafnum );
-byte *CM_LeafPHS( int leafnum );
-int Mod_PointLeafnum( const vec3_t p );
-byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model );
-mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
-int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
-qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
-int Mod_HullPointContents( hull_t *hull, int num, const vec3_t p );
-int Mod_PointContents( const vec3_t p );
-void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
-	
-//
-// cm_portals.c
-//
-void CM_CalcPHS( void );
-byte *CM_FatPVS( const vec3_t org, qboolean portal );
-byte *CM_FatPHS( const vec3_t org, qboolean portal );
-byte *Mod_DecompressVis( const byte *in );
 
 //
 // model.c
 //
 void Mod_Init( void );
 void Mod_Shutdown( void );
-script_t *CM_GetEntityScript( void );
-void CM_SetupHulls( float mins[4][3], float maxs[4][3] );
+void Mod_SetupHulls( float mins[4][3], float maxs[4][3] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
-modtype_t CM_GetModelType( int handle );
-model_t *CM_ClipHandleToModel( int handle );
-void CM_BeginRegistration ( const char *name, qboolean clientload, uint *checksum );
-model_t *CM_ModForName( const char *name, qboolean world );
-qboolean CM_RegisterModel( const char *name, int index );
-void CM_EndRegistration( void );
+void Mod_LoadWorld( const char *name, uint *checksum );
+void Mod_FreeUnused( void );
 void *Mod_Calloc( int number, size_t size );
 void *Mod_CacheCheck( struct cache_user_s *c );
 void Mod_LoadCacheFile( const char *path, struct cache_user_s *cu );
 void *Mod_Extradata( model_t *mod );
+model_t *Mod_FindName( const char *name, qboolean create );
+model_t *Mod_LoadModel( model_t *mod, qboolean world );
+model_t *Mod_ForName( const char *name, qboolean world );
+qboolean Mod_RegisterModel( const char *name, int index );
+int Mod_PointLeafnum( const vec3_t p );
+byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model );
+mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
+int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
+qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
+void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
+byte *Mod_DecompressVis( const byte *in );
+modtype_t Mod_GetType( int handle );
+model_t *CM_ClipHandleToModel( int handle );
 
 #endif//CM_LOCAL_H

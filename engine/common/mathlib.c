@@ -200,6 +200,23 @@ qboolean BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const v
 }
 
 /*
+=================
+RadiusFromBounds
+=================
+*/
+float RadiusFromBounds( const vec3_t mins, const vec3_t maxs )
+{
+	vec3_t	corner;
+	int	i;
+
+	for( i = 0; i < 3; i++ )
+	{
+		corner[i] = fabs( mins[i] ) > fabs( maxs[i] ) ? fabs( mins[i] ) : fabs( maxs[i] );
+	}
+	return VectorLength( corner );
+}
+
+/*
 ====================
 RotatePointAroundVector
 ====================

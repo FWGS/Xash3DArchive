@@ -18,14 +18,14 @@ typedef struct
 	wrect_t		lightmap_rectchange[MAX_LIGHTMAPS];
 	int		allocated[MAX_LIGHTMAPS][BLOCK_WIDTH];
 	byte		lightmaps[MAX_LIGHTMAPS*BLOCK_WIDTH*BLOCK_HEIGHT*4];
-} gllightmapstate_t;
+} lightmap_state_t;
 
 static vec3_t		modelorg;       // relative to viewpoint
 static vec3_t		modelmins;
 static vec3_t		modelmaxs;
-static byte		fatpvs[MAX_MAP_LEAFS/8];
+static byte		visbytes[MAX_MAP_LEAFS/8];
 static vec3_t		r_blockLights[BLOCK_WIDTH*BLOCK_HEIGHT];
-static gllightmapstate_t	r_lmState;
+static lightmap_state_t	r_lmState;
 static msurface_t		*skychain = NULL;
 static msurface_t		*waterchain = NULL;
 
@@ -278,7 +278,7 @@ texture_t *R_TextureAnimation( texture_t *base )
 		return base;
 
 	// GoldSrc and Quake1 has different animating speed
-	if( cm.version == Q1BSP_VERSION )
+	if( ws.version == Q1BSP_VERSION )
 		speed = 10;
 	else speed = 20;
 
@@ -948,13 +948,13 @@ void R_MarkLeaves( void )
 		{
 			int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
 
-			Mem_Copy( fatpvs, vis, longs << 2 );
+			Mem_Copy( visbytes, vis, longs << 2 );
 			vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
 
 			for( i = 0; i < longs; i++ )
-				((int *)fatpvs)[i] |= ((int *)vis)[i];
+				((int *)visbytes)[i] |= ((int *)vis)[i];
 
-			vis = fatpvs;
+			vis = visbytes;
 		}
 	}
 
@@ -1203,14 +1203,17 @@ void GL_BuildLightmaps( void )
 	}
 
 	Mem_Set( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	Mem_Set( visbytes, 0x00, sizeof( visbytes ));
 	Mem_Set( &r_lmState, 0, sizeof( r_lmState ));
+
+	skychain = waterchain = NULL;
 
 	LM_InitBlock();	
 
 	for( i = 1; i < MAX_MODELS; i++ )
 	{
 		if(( m = CM_ClipHandleToModel( i )) == NULL )
-			break;
+			continue;
 
 		if( m->name[0] == '*' || m->type != mod_brush )
 			continue;

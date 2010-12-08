@@ -11,6 +11,12 @@
 #include "pm_defs.h"
 #include "const.h"
 
+// fatpvs stuff
+static byte fatpvs[MAX_MAP_LEAFS/8];
+static byte fatphs[MAX_MAP_LEAFS/8];
+static byte *bitvector;
+static int fatbytes;
+
 // exports
 typedef void (*LINK_ENTITY_FUNC)( entvars_t *pev );
 typedef void (__stdcall *GIVEFNPTRSTODLL)( enginefuncs_t* engfuncs, globalvars_t *pGlobals );
@@ -81,7 +87,7 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 	// FIXME: enable this when other server parts will be done and tested
 	if( e->v.scale > 0.0f && e->v.scale != 1.0f )
 	{
-		switch( CM_GetModelType( e->v.modelindex ))
+		switch( Mod_GetType( e->v.modelindex ))
 		{
 		case mod_sprite:
 		case mod_studio:
@@ -124,7 +130,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 	ent->v.model = MAKE_STRING( sv.model_precache[i] );
 	ent->v.modelindex = i;
 
-	mod_type = CM_GetModelType( ent->v.modelindex );
+	mod_type = Mod_GetType( ent->v.modelindex );
 
 	// studio models set to zero sizes as default
 	switch( mod_type )
@@ -194,6 +200,32 @@ void SV_ConvertTrace( TraceResult *dst, trace_t *src )
 
 /*
 =================
+SV_LeafPVS
+=================
+*/
+byte *SV_LeafPVS( int leafnum )
+{
+	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !svs.pvs || sv_novis->integer )
+		return ws.nullrow;
+
+	return svs.pvs + leafnum * 4 * (( worldmodel->numleafs + 31 ) >> 5 );
+}
+
+/*
+=================
+SV_LeafPHS
+=================
+*/
+byte *SV_LeafPHS( int leafnum )
+{
+	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !svs.phs || sv_novis->integer )
+		return ws.nullrow;
+
+	return svs.phs + leafnum * 4 * (( worldmodel->numleafs + 31 ) >> 5 );
+}
+
+/*
+=================
 SV_Send
 
 Sends the contents of sv.multicast to a subset of the clients,
@@ -238,7 +270,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 	case MSG_PAS:
 		if( origin == NULL ) return false;
 		leafnum = Mod_PointLeafnum( origin );
-		mask = CM_LeafPHS( leafnum );
+		mask = SV_LeafPHS( leafnum );
 		break;
 	case MSG_PVS_R:
 		reliable = true;
@@ -246,7 +278,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 	case MSG_PVS:
 		if( origin == NULL ) return false;
 		leafnum = Mod_PointLeafnum( origin );
-		mask = CM_LeafPVS( leafnum );
+		mask = SV_LeafPVS( leafnum );
 		break;
 	case MSG_ONE:
 		reliable = true;
@@ -334,10 +366,10 @@ static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 	switch( mode )
 	{
 	case DVIS_PVS:
-		mask = CM_LeafPVS( leafnum );
+		mask = SV_LeafPVS( leafnum );
 		break;
 	case DVIS_PHS:
-		mask = CM_LeafPHS( leafnum );
+		mask = SV_LeafPHS( leafnum );
 		break;
 	default:
 		mask = NULL; // skip any checks
@@ -352,6 +384,59 @@ static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 }
 
 /*
+=============================================================================
+
+The PVS must include a small area around the client to allow head bobbing
+or other small motion on the client side.  Otherwise, a bob might cause an
+entity that should be visible to not show up, especially when the bob
+crosses a waterline.
+
+=============================================================================
+*/
+static void SV_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
+{
+	byte	*vis;
+	mplane_t	*plane;
+	float	d;
+
+	while( 1 )
+	{
+		// if this is a leaf, accumulate the pvs bits
+		if( node->contents < 0 )
+		{
+			if( node->contents != CONTENTS_SOLID )
+			{
+				mleaf_t	*leaf;
+				int	i;
+
+				leaf = (mleaf_t *)node;			
+
+				if( type == DVIS_PVS )
+					vis = SV_LeafPVS( leaf - sv.worldmodel->leafs - 1 );
+				else if( type == DVIS_PHS )
+					vis = SV_LeafPHS( leaf - sv.worldmodel->leafs - 1 );
+				else vis = ws.nullrow;
+
+				for( i = 0; i < fatbytes; i++ )
+					bitvector[i] |= vis[i];
+			}
+			return;
+		}
+	
+		plane = node->plane;
+		d = DotProduct( org, plane->normal ) - plane->dist;
+		if( d > 8 ) node = node->children[0];
+		else if( d < -8 ) node = node->children[1];
+		else
+		{
+			// go down both
+			SV_AddToFatPVS( org, type, node->children[0] );
+			node = node->children[1];
+		}
+	}
+}
+
+/*
 ==============
 SV_BoxInPVS
 
@@ -360,8 +445,7 @@ check brush boxes in fat pvs
 */
 static qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
-//	if( !Mod_BoxVisible( absmin, absmax, CM_FatPVS( org, false )))
-	if( !Mod_BoxVisible( absmin, absmax, CM_LeafPVS( Mod_PointLeafnum( org ))))
+	if( !Mod_BoxVisible( absmin, absmax, SV_LeafPVS( Mod_PointLeafnum( org ))))
 		return false;
 	return true;
 }
@@ -800,7 +884,7 @@ int pfnPrecacheModel( const char *s )
 {
 	int modelIndex = SV_ModelIndex( s );
 
-	CM_RegisterModel( s, modelIndex );
+	Mod_RegisterModel( s, modelIndex );
 
 	return modelIndex;
 }
@@ -1217,7 +1301,7 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 
 		if( !SV_IsValidEdict( pEdict )) continue;
 
-		if( CM_GetModelType( pEdict->v.modelindex ) == mod_brush )
+		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
 			result = SV_BoxInPVS( pplayer->v.origin, pEdict->v.absmin, pEdict->v.absmax );
 		else result = SV_OriginIn( DVIS_PVS, pplayer->v.origin, pEdict->v.origin );
 
@@ -1251,7 +1335,7 @@ edict_t *pfnEntitiesInPHS( edict_t *pplayer )
 
 		if( !SV_IsValidEdict( pEdict )) continue;
 
-		if( CM_GetModelType( pEdict->v.modelindex ) == mod_brush )
+		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
 			VectorAverage( pEdict->v.absmin, pEdict->v.absmax, checkPos );
 		else VectorCopy( pEdict->v.origin, checkPos );
 
@@ -1609,7 +1693,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
-	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
+	if( Mod_GetType( ent->v.modelindex ) == mod_brush )
 	{
 		VectorAverage( ent->v.absmin, ent->v.absmax, origin );
 
@@ -1706,7 +1790,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( SV_IsValidEdict( ent ))
 	{
-		if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
+		if( Mod_GetType( ent->v.modelindex ) == mod_brush )
 		{
 			VectorAverage( ent->v.absmin, ent->v.absmax, origin );
 			number = ent->serialnumber;
@@ -3494,7 +3578,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	{
 		// setup pvs cluster for invoker
 		leafnum = Mod_PointLeafnum( pvspoint );
-		mask = CM_LeafPVS( leafnum );
+		mask = SV_LeafPVS( leafnum );
 	}
 
 	// process all the clients
@@ -3568,26 +3652,44 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 =============
 pfnSetFatPVS
 
-set fat PVS
+The client will interpolate the view position,
+so we can't use a single PVS point
 =============
 */
 byte *pfnSetFatPVS( const float *org )
 {
-	if( !org ) return NULL;
-	return CM_FatPVS( org, ( sv.hostflags & SVF_PORTALPASS ) ? true : false );
+	if( !svs.pvs || sv_novis->integer || !org )
+		return ws.nullrow;
+
+	bitvector = fatpvs;
+	fatbytes = (worldmodel->numleafs+31)>>3;
+	if(!( sv.hostflags & SVF_PORTALPASS ))
+		Mem_Set( bitvector, 0, fatbytes );
+	SV_AddToFatPVS( org, DVIS_PVS, worldmodel->nodes );
+
+	return bitvector;
 }
 
 /*
 =============
 pfnSetFatPHS
 
-set fat PHS
+The client will interpolate the hear position,
+so we can't use a single PHS point
 =============
 */
 byte *pfnSetFatPAS( const float *org )
 {
-	if( !org ) return NULL;
-	return CM_FatPHS( org, ( sv.hostflags & SVF_PORTALPASS ) ? true : false );
+	if( !svs.phs || sv_novis->integer || !org )
+		return ws.nullrow;
+
+	bitvector = fatphs;
+	fatbytes = (worldmodel->numleafs+31)>>3;
+	if(!( sv.hostflags & SVF_PORTALPASS ))
+		Mem_Set( bitvector, 0, fatbytes );
+	SV_AddToFatPVS( org, DVIS_PHS, worldmodel->nodes );
+
+	return bitvector;
 }
 
 /*
@@ -3642,7 +3744,7 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 
 #if 0
 	// NOTE: uncommenat this if you want to get more accuracy culling on large brushes
-	if( CM_GetModelType( ent->v.modelindex ) == mod_brush )
+	if( Mod_GetType( ent->v.modelindex ) == mod_brush )
 	{
 		if( !Mod_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))
 			return 0;
@@ -4314,6 +4416,7 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 
 	// spawn the rest of the entities on the map
 	SV_LoadFromFile( entities );
+	Com_CloseScript( entities );
 
 	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.numEntities );
 }

@@ -335,6 +335,9 @@ typedef struct
 	entity_state_t	*packet_entities;		// [num_client_entities]
 	entity_state_t	*baselines;		// [GI->max_edicts]
 
+	byte		*pvs;			// uncompressed PVS data
+	byte		*phs;			// uncompressed PAS data
+
 	double		last_heartbeat;
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 } server_static_t;
@@ -513,6 +516,8 @@ int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
 int pfnPrecacheModel( const char *s );
 int pfnDecalIndex( const char *m );
+byte *SV_LeafPVS( int leafnum );
+byte *SV_LeafPHS( int leafnum );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {
@@ -557,7 +562,6 @@ extern areanode_t	sv_areanodes[];
 void SV_ClearWorld( void );
 void SV_UnlinkEdict( edict_t *ent );
 qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits );
-int SV_HullPointContents( hull_t *hull, int num, const vec3_t p );
 trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
 trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int type, edict_t *e );

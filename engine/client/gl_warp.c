@@ -73,7 +73,7 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 		// NOTE: imagelib detect miptex version by size
 		// 770 additional bytes is indicated custom palette
 		int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-		if( cm.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+		if( ws.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 		r_sky = FS_LoadImage( tx->name, (byte *)mt, size );
 	}

@@ -157,7 +157,7 @@ void SV_AddLaddersToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3
 			continue;
 
 		// only brushes can have special contents
-		if( CM_GetModelType( check->v.modelindex ) != mod_brush )
+		if( Mod_GetType( check->v.modelindex ) != mod_brush )
 			continue;
 
 		if( !BoundsIntersect( pmove_mins, pmove_maxs, check->v.absmin, check->v.absmax ))
@@ -434,7 +434,7 @@ void SV_InitClientMove( void )
 	svgame.pmove->movevars = &svgame.movevars;
 	svgame.pmove->runfuncs = false;
 
-	CM_SetupHulls( svgame.player_mins, svgame.player_maxs );
+	Mod_SetupHulls( svgame.player_mins, svgame.player_maxs );
 	
 	// enumerate client hulls
 	for( i = 0; i < 4; i++ )

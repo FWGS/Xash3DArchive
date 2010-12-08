@@ -138,7 +138,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 			// select the hull automatically
 			for( i = 0; i < 4; i++ )
 			{
-				curdiff = floor( VectorAvg( size )) - floor( VectorAvg( cm.hull_sizes[i] ));
+				curdiff = floor( VectorAvg( size )) - floor( VectorAvg( ws.hull_sizes[i] ));
 				curdiff = fabs( curdiff );
 
 				if( curdiff < lastdiff )
@@ -180,7 +180,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 	else
 	{
 		// hullNumber is force to use hull from brushmodel (even if solid == SOLID_NOT)
-		if( hullNumber != -1 && CM_GetModelType( ent->v.modelindex ) == mod_brush )
+		if( hullNumber != -1 && Mod_GetType( ent->v.modelindex ) == mod_brush )
 		{
 			model = CM_ClipHandleToModel( ent->v.modelindex );
 			if( !model ) Host_Error( "SV_HullForEntity: using custom hull on bad bsp model\n" );
@@ -233,7 +233,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	// select the hull automatically
 	for( i = 0; i < 4; i++ )
 	{
-		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( cm.hull_sizes[i] ));
+		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( ws.hull_sizes[i] ));
 		curdiff = fabs( curdiff );
 
 		if( curdiff < lastdiff )
@@ -394,7 +394,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 			continue;
 
 		// check brush triggers accuracy
-		if( CM_GetModelType( touch->v.modelindex ) == mod_brush )
+		if( Mod_GetType( touch->v.modelindex ) == mod_brush )
 		{
 			// force to select bsp-hull
 			hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, test );
@@ -403,7 +403,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 			VectorSubtract( ent->v.origin, test, test );
 
 			// test hull for intersection with this model
-			if( SV_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
+			if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 				continue;
 		}
 
@@ -441,7 +441,7 @@ void SV_CheckForOutside( edict_t *ent )
 	if( ent->v.flags & FL_CLIENT ) return;
 	
 	// sprites and brushes can be stucks in the walls normally
-	if( CM_GetModelType( ent->v.modelindex ) != mod_studio )
+	if( Mod_GetType( ent->v.modelindex ) != mod_studio )
 		return;
 
 	org = ent->v.origin;
@@ -609,36 +609,6 @@ POINT TESTING IN HULLS
 ===============================================================================
 */
 /*
-==================
-SV_HullPointContents
-
-==================
-*/
-int SV_HullPointContents( hull_t *hull, int num, const vec3_t p )
-{
-	float		d;
-	dclipnode_t	*node;
-	mplane_t		*plane;
-
-	while( num >= 0 )
-	{
-		if( num < hull->firstclipnode || num > hull->lastclipnode )
-			Host_Error( "SV_HullPointContents: bad node number %i\n", num );
-	
-		node = hull->clipnodes + num;
-		plane = hull->planes + node->planenum;
-		
-		if( plane->type < 3 )
-			d = p[plane->type] - plane->dist;
-		else d = DotProduct( plane->normal, p ) - plane->dist;
-
-		if( d < 0 ) num = node->children[1];
-		else num = node->children[0];
-	}
-	return num;
-}
-
-/*
 ====================
 SV_WaterLinks
 ====================
@@ -660,7 +630,7 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 			continue;
 
 		// only brushes can have special contents
-		if( CM_GetModelType( touch->v.modelindex ) != mod_brush )
+		if( Mod_GetType( touch->v.modelindex ) != mod_brush )
 			continue;
 
 		if( !BoundsIntersect( origin, origin, touch->v.absmin, touch->v.absmax ))
@@ -673,7 +643,7 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 		VectorSubtract( origin, test, test );
 
 		// test hull for intersection with this model
-		if( SV_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
+		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 			continue;
 
 		// compare contents ranking
@@ -704,7 +674,7 @@ int SV_TruePointContents( const vec3_t p )
 	if( !p ) return CONTENTS_NONE;
 
 	// get base contents from world
-	cont = SV_HullPointContents( &sv.worldmodel->hulls[0], 0, p );
+	cont = PM_HullPointContents( &sv.worldmodel->hulls[0], 0, p );
 
 	// check all water entities
 	SV_WaterLinks( p, &cont, sv_areanodes );
@@ -842,7 +812,7 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 	if( !SV_RecursiveHullCheck( hull, node->children[side], p1f, midf, p1, mid, trace ))
 		return false;
 
-	if( SV_HullPointContents( hull, node->children[side^1], mid ) != CONTENTS_SOLID )
+	if( PM_HullPointContents( hull, node->children[side^1], mid ) != CONTENTS_SOLID )
 	{
 		// go past the node
 		return SV_RecursiveHullCheck (hull, node->children[side^1], midf, p2f, mid, p2, trace);
@@ -865,7 +835,7 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 		trace->plane.dist = -plane->dist;
 	}
 
-	while( SV_HullPointContents( hull, hull->firstclipnode, mid ) == CONTENTS_SOLID )
+	while( PM_HullPointContents( hull, hull->firstclipnode, mid ) == CONTENTS_SOLID )
 	{
 		// shouldn't really happen, but does occasionally
 		frac -= 0.1f;
@@ -1129,7 +1099,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( touch == clip->passedict || touch->v.solid == SOLID_NOT )
 			continue;
 
-		modType = CM_GetModelType( touch->v.modelindex );
+		modType = Mod_GetType( touch->v.modelindex );
 
 		if( touch->v.solid == SOLID_TRIGGER )
 			Host_Error( "trigger in clipping list\n" );
@@ -1188,7 +1158,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				continue;	// don't clip against owner
 			if( clip->passedict->v.solid == SOLID_BBOX && touch->v.solid != SOLID_BSP )
 			{
-				if( CM_GetModelType( clip->passedict->v.modelindex ) == mod_studio )
+				if( Mod_GetType( clip->passedict->v.modelindex ) == mod_studio )
 					traceHitbox = true;
 			}
 		}
