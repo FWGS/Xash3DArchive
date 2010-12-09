@@ -12,9 +12,10 @@
 #include "world.h"
 #include "gl_local.h"
 
-world_static_t	ws;
+world_static_t	world;
 
 byte		*mod_base;
+byte		*com_studiocache;		// cache for submodels
 static model_t	*com_models[MAX_MODELS];	// shared replacement modeltable
 static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels = 0;
@@ -23,8 +24,7 @@ model_t		*loadmodel;
 model_t		*worldmodel;
 
 // cvars
-convar_t		*sv_novis;		// disable server culling entities by vis
-convar_t		*gl_subdivide_size;
+
 
 // default hullmins
 static vec3_t cm_hullmins[4] =
@@ -167,7 +167,7 @@ Mod_LeafPVS
 byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model )
 {
 	if( !model || !leaf || leaf == model->leafs || !model->visdata )
-		return ws.nullrow;
+		return world.nullrow;
 	return Mod_DecompressVis( leaf->compressed_vis );
 }
 
@@ -181,7 +181,7 @@ int Mod_PointLeafnum( const vec3_t p )
 {
 	// map not loaded
 	if ( !worldmodel ) return 0;
-	return Mod_PointInLeaf( p, worldmodel->nodes ) - worldmodel->leafs - 1;
+	return Mod_PointInLeaf( p, worldmodel->nodes ) - worldmodel->leafs;
 }
 
 /*
@@ -212,7 +212,7 @@ static void Mod_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
 				return;
 			}
 
-			ll->list[ll->count++] = leaf - worldmodel->leafs - 1;
+			ll->list[ll->count++] = leaf - worldmodel->leafs;
 			return;
 		}
 	
@@ -345,11 +345,8 @@ static void Mod_FreeModel( model_t *mod )
 
 void Mod_Init( void )
 {
-	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
-	gl_subdivide_size = Cvar_Get( "gl_subdivide_size", "128", CVAR_ARCHIVE, "how large water polygons should be" );
-
-	ws.studiopool = Mem_AllocPool( "Studio Cache" );
-	Mem_Set( ws.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
+	com_studiocache = Mem_AllocPool( "Studio Cache" );
+	Mem_Set( world.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
 }
 
 void Mod_Shutdown( void )
@@ -359,7 +356,7 @@ void Mod_Shutdown( void )
 	for( i = 0; i < cm_nummodels; i++ )
 		Mod_FreeModel( &cm_models[i] );
 
-	Mem_FreePool( &ws.studiopool );
+	Mem_FreePool( &com_studiocache );
 }
 
 /*
@@ -468,7 +465,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		tx->height = mt->height;
 
 		// check for sky texture (quake1 only!)
-		if( ws.version == Q1BSP_VERSION && !com.strncmp( mt->name, "sky", 3 ))
+		if( world.version == Q1BSP_VERSION && !com.strncmp( mt->name, "sky", 3 ))
 		{	
 			R_InitSky( mt, tx );
 		}
@@ -477,7 +474,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 			// NOTE: imagelib detect miptex version by size
 			// 770 additional bytes is indicated custom palette
 			int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-			if( ws.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+			if( world.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 			tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0 );
 		}
@@ -496,7 +493,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-				if( ws.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+				if( world.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA );
 			}
@@ -660,7 +657,7 @@ static void Mod_LoadLighting( const dlump_t *l )
 	if( !l->filelen ) return;
 	in = (void *)(mod_base + l->fileofs);
 
-	switch( ws.version )
+	switch( world.version )
 	{
 	case Q1BSP_VERSION:
 		// expand the white lighting data
@@ -779,7 +776,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		{
 			texture_t	*tex = out->texinfo->texture;
 
-			if( !com.strncmp( tex->name, "sky", 3 ) && ws.version == Q1BSP_VERSION )
+			if( !com.strncmp( tex->name, "sky", 3 ) && world.version == Q1BSP_VERSION )
 				out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
 
 			if( tex->name[0] == '*' || tex->name[0] == '!' || !com.strnicmp( tex->name, "water", 5 ))
@@ -790,7 +787,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		if( loadmodel->lightdata && in->lightofs != -1 )
 		{
-			if( ws.version == HLBSP_VERSION )
+			if( world.version == HLBSP_VERSION )
 				out->samples = loadmodel->lightdata + (in->lightofs / 3);
 			else out->samples = loadmodel->lightdata + in->lightofs;
 		}
@@ -1108,7 +1105,7 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[1], hull->clip_mins ); // copy human hull
 	VectorCopy( GI->client_maxs[1], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, ws.hull_sizes[1] );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[1] );
 
 	hull = &loadmodel->hulls[2];
 	hull->clipnodes = out;
@@ -1117,7 +1114,7 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[2], hull->clip_mins ); // copy large hull
 	VectorCopy( GI->client_maxs[2], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, ws.hull_sizes[2] );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[2] );
 
 	hull = &loadmodel->hulls[3];
 	hull->clipnodes = out;
@@ -1126,7 +1123,7 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	hull->planes = loadmodel->planes;
 	VectorCopy( GI->client_mins[3], hull->clip_mins ); // copy head hull
 	VectorCopy( GI->client_maxs[3], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, ws.hull_sizes[3] );
+	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[3] );
 
 	for( i = 0; i < count; i++, out++, in++ )
 	{
@@ -1239,7 +1236,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 
 	// will be merged later
 	loadmodel->type = mod_brush;
-	ws.version = i;
+	world.version = i;
 
 	// swap all the lumps
 	mod_base = (byte *)header;
@@ -1291,9 +1288,9 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 		
 		mod->firstmodelsurface = bm->firstface;
 		mod->nummodelsurfaces = bm->numfaces;
-		
+
+		VectorCopy( bm->mins, mod->mins );		
 		VectorCopy( bm->maxs, mod->maxs );
-		VectorCopy( bm->mins, mod->mins );
 
 		mod->radius = RadiusFromBounds( mod->mins, mod->maxs );
 		mod->numleafs = bm->visleafs;
@@ -1336,7 +1333,7 @@ static void Mod_LoadStudioModel( model_t *mod, byte *buffer )
 	loadmodel->type = mod_studio;
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	loadmodel->numframes = pseqdesc[0].numframes;
-	loadmodel->needload = ws.load_sequence;
+	loadmodel->needload = world.load_sequence;
 
 	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
 	loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
@@ -1368,7 +1365,7 @@ model_t *Mod_FindName( const char *name, qboolean create )
 		if( !com.strcmp( mod->name, name ))
 		{
 			// prolonge registration
-			mod->needload = ws.load_sequence;
+			mod->needload = world.load_sequence;
 			return mod;
 		}
 	}
@@ -1399,13 +1396,13 @@ Mod_LoadModel
 Loads a model into the cache
 ==================
 */
-model_t *Mod_LoadModel( model_t *mod, qboolean world )
+model_t *Mod_LoadModel( model_t *mod, qboolean isWorld )
 {
 	byte	*buf;
 
 	if( !mod )
 	{
-		if( world ) Host_Error( "Mod_ForName: NULL model\n" );
+		if( isWorld ) Host_Error( "Mod_ForName: NULL model\n" );
 		else MsgDev( D_ERROR, "Mod_ForName: NULL model\n" );
 		return NULL;		
 	}
@@ -1417,17 +1414,17 @@ model_t *Mod_LoadModel( model_t *mod, qboolean world )
 	buf = FS_LoadFile( mod->name, NULL );
 	if( !buf )
 	{
-		if( world ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
+		if( isWorld ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
 		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", mod->name );
 		Mem_Set( mod, 0, sizeof( model_t ));
 		return NULL;
 	}
 
 	// if it's world - calc the map checksum
-	if( world ) CRC32_MapFile( &ws.checksum, mod->name );
+	if( isWorld ) CRC32_MapFile( &world.checksum, mod->name );
 
 	MsgDev( D_NOTE, "Mod_LoadModel: %s\n", mod->name );
-	mod->needload = ws.load_sequence; // register mod
+	mod->needload = world.load_sequence; // register mod
 	mod->type = mod_bad;
 	loadmodel = mod;
 
@@ -1453,7 +1450,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean world )
 		Mod_FreeModel( mod );
 
 		// check for loading problems
-		if( world ) Host_Error( "Mod_ForName: %s unknown format\n", mod->name );
+		if( isWorld ) Host_Error( "Mod_ForName: %s unknown format\n", mod->name );
 		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", mod->name );
 		return NULL;
 	}
@@ -1491,21 +1488,21 @@ void Mod_LoadWorld( const char *name, uint *checksum )
 	{
 		// singleplayer mode: server already loading map
 		com_models[1] = cm_models; // make link to world
-		if( checksum ) *checksum = ws.checksum;
+		if( checksum ) *checksum = world.checksum;
 
 		// still have the right version
 		return;
 	}
 
 	// purge all submodels
-	Mem_EmptyPool( ws.studiopool );
+	Mem_EmptyPool( com_studiocache );
 	Mod_FreeModel( &cm_models[0] );
-	ws.load_sequence++;	// now all models are invalid
+	world.load_sequence++;	// now all models are invalid
 
 	// load the newmap
 	worldmodel = Mod_ForName( name, true );
 	com_models[1] = cm_models; // make link to world
-	if( checksum ) *checksum = ws.checksum;
+	if( checksum ) *checksum = world.checksum;
 }
 
 /*
@@ -1524,7 +1521,7 @@ void Mod_FreeUnused( void )
 	{
 		if( !mod->name[0] ) continue;
 
-		if( mod->needload != ws.load_sequence )
+		if( mod->needload != world.load_sequence )
 			Mod_FreeModel( mod );
 	}
 }
@@ -1596,7 +1593,7 @@ Mod_Calloc
 void *Mod_Calloc( int number, size_t size )
 {
 	if( number <= 0 || size <= 0 ) return NULL;
-	return Mem_Alloc( ws.studiopool, number * size );
+	return Mem_Alloc( com_studiocache, number * size );
 }
 
 /*
@@ -1607,7 +1604,7 @@ Mod_CacheCheck
 */
 void *Mod_CacheCheck( cache_user_t *c )
 {
-	return Cache_Check( ws.studiopool, c );
+	return Cache_Check( com_studiocache, c );
 }
 
 /*
@@ -1637,7 +1634,7 @@ void Mod_LoadCacheFile( const char *path, cache_user_t *cu )
 	filepath[size] = 0;
 
 	buf = FS_LoadFile( filepath, &size );
-	cu->data = Mem_Alloc( ws.studiopool, size );
+	cu->data = Mem_Alloc( com_studiocache, size );
 	Mem_Copy( cu->data, buf, size );
 	Mem_Free( buf );
 }

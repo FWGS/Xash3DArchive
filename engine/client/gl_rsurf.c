@@ -278,7 +278,7 @@ texture_t *R_TextureAnimation( texture_t *base )
 		return base;
 
 	// GoldSrc and Quake1 has different animating speed
-	if( ws.version == Q1BSP_VERSION )
+	if( world.version == Q1BSP_VERSION )
 		speed = 10;
 	else speed = 20;
 
@@ -1053,30 +1053,17 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
 	if( !lm || r_fullbright->integer || !cl.worldmodel->lightdata )
 	{
 		// set to full bright if no light data
-		for( i = 0, bl = r_blockLights[0]; i < size; i++, bl += 3 )
-		{
-			bl[0] = 255;
-			bl[1] = 255;
-			bl[2] = 255;
-		}
+		Mem_Set( r_blockLights, 0xFF, sizeof( float ) * blocksize );
 	}
 	else
 	{
-		// add all the lightmaps
-		scale = cl.lightstyles[surf->styles[0]].value * r_lighting_modulate->value;
-		surf->cached_light[surf->styles[0]] = scale;
-			
-		for( i = 0, bl = r_blockLights[0]; i < size; i++, bl += 3, lm++ )
-		{
-			bl[0] = lm->r * scale;
-			bl[1] = lm->g * scale;
-			bl[2] = lm->b * scale;
-		}
+		Mem_Set( r_blockLights, 0, sizeof( float ) * blocksize );
 
-		for( map = 1; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
+		// add all the lightmaps
+		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
 			scale = cl.lightstyles[surf->styles[map]].value * r_lighting_modulate->value;
-			surf->cached_light[surf->styles[map]] = scale;
+			surf->cached_light[map] = scale;
 		
 			for( i = 0, bl = r_blockLights[0]; i < size; i++, bl += 3, lm++ )
 			{
@@ -1175,7 +1162,6 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	surf->lightmaptexturenum = LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t );
 	base = r_lmState.lightmaps + surf->lightmaptexturenum * BLOCK_WIDTH * BLOCK_HEIGHT * 4;
 	base += (surf->light_t * BLOCK_WIDTH + surf->light_s) * 4;
-	r_numdlights = 0;
 
 	R_BuildLightMap( surf, base, BLOCK_WIDTH * 4 );
 }

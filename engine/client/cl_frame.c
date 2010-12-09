@@ -550,6 +550,9 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 		Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar	
 
+		if( cls.disable_servercount != cl.servercount && cl.video_prepped )
+			SCR_EndLoadingPlaque(); // get rid of loading plaque
+
 		// getting a valid frame message ends the connection process
 		VectorCopy( player->origin, cl.predicted_origin );
 		VectorCopy( player->angles, cl.predicted_angles );

@@ -147,33 +147,29 @@ V_PreRender
 */
 qboolean V_PreRender( void )
 {
-	qboolean		clearScene = true;
-	static qboolean	oldState;
-
 	// too early
 	if( !glw_state.initialized )
 		return false;
 
 	if( host.state == HOST_NOFOCUS )
 		return false;
+
 	if( host.state == HOST_SLEEP )
 		return false;
 
-	if( cl.refdef.paused || cls.changelevel )
-		clearScene = false;
-
-	R_BeginFrame( clearScene );
-
-	if( !oldState && cls.changelevel )
+	// if the screen is disabled (loading plaque is up)
+	if( cls.disable_screen )
 	{
-		// fire once
-		CL_DrawHUD( CL_CHANGELEVEL );
-		R_EndFrame();
-	}
-	oldState = cls.changelevel;
-
-	if( cls.changelevel )
+		if(( host.realtime - cls.disable_screen ) > 60.0f )
+		{
+			MsgDev( D_NOTE, "V_PreRender: loading plaque timed out.\n" );
+			cls.disable_screen = 0.0f;
+		}
 		return false;
+	}
+
+	R_BeginFrame( !cl.refdef.paused );
+
 	return true;
 }
 
@@ -190,6 +186,7 @@ void V_PostRender( void )
 		SCR_RSpeeds();
 		SCR_NetSpeeds();
 		SCR_DrawFPS();
+		CL_DrawHUD( CL_CHANGELEVEL );
 		UI_UpdateMenu( host.realtime );
 		Con_DrawConsole();
 		S_ExtraUpdate();

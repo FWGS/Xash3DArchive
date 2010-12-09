@@ -34,6 +34,8 @@ void GL_BackendStartFrame( void )
 {
 	r_speeds_msg[0] = '\0';
 	Mem_Set( &r_stats, 0, sizeof( r_stats ));
+
+	com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "Num visible entities %i\n", r_numEntities );
 }
 
 /*
@@ -411,9 +413,6 @@ void GL_SetRenderMode( int mode )
 {
 	int	state, texEnv;
 
-	if( mode == glState.draw_rendermode )
-		return;
-
 	switch( mode )
 	{
 	case kRenderNormal:
@@ -449,8 +448,6 @@ void GL_SetRenderMode( int mode )
 
 	GL_TexEnv( texEnv );
 	GL_SetState( state );
-
-	glState.draw_rendermode = mode;
 }
 
 /*

@@ -25,6 +25,11 @@
 #define MAX_IMAGES		256	// SpriteTextures
 #define MAX_EFRAGS		640
 
+// screenshot types
+#define VID_SCREENSHOT	0
+#define VID_LEVELSHOT	1
+#define VID_MINISHOT	2
+
 #define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, cl_entity_t, area )
 #define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
 #define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
@@ -380,6 +385,15 @@ typedef struct
 	qboolean		initialized;
 	qboolean		changelevel;		// during changelevel
 
+	// screen rendering information
+	float		disable_screen;		// showing loading plaque between levels
+						// or changing rendering dlls
+						// if time gets > 30 seconds ahead, break it
+	int		disable_servercount;	// when we receive a frame and cl.servercount
+						// > cls.disable_servercount, clear disable_screen
+
+	qboolean		draw_changelevel;		// draw changelevel image 'Loading...'
+
 	keydest_t		key_dest;
 
 	byte		*mempool;			// client premamnent pool: edicts etc
@@ -576,6 +590,7 @@ void CL_Download_f( void );
 // cl_scrn.c
 //
 void SCR_VidInit( void );
+void SCR_EndLoadingPlaque( void );
 void SCR_RegisterShaders( void );
 void SCR_MakeScreenShot( void );
 void SCR_MakeLevelShot( void );

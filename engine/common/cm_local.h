@@ -20,8 +20,6 @@
 #define DVIS_PHS		1
 #define ANIM_CYCLE		2
 
-extern convar_t		*sv_novis;
-
 typedef struct leaflist_s
 {
 	int		count;
@@ -38,15 +36,12 @@ typedef struct
 	uint		checksum;		// map checksum
 	int		load_sequence;	// increace each map change
 	vec3_t		hull_sizes[4];	// actual hull sizes
-
-	byte		*studiopool;	// cache for submodels
 	byte		nullrow[MAX_MAP_LEAFS/8];
 } world_static_t;
 
-extern world_static_t	ws;
-
+extern world_static_t	world;
+extern byte		*com_studiocache;
 extern model_t		*loadmodel;
-extern model_t		*worldmodel;
 
 //
 // model.c

@@ -908,7 +908,11 @@ void CL_DrawHUD( int state )
 		CL_DrawLoading( scr_loading->value );
 		break;
 	case CL_CHANGELEVEL:
-		CL_DrawLoading( 100.0f );
+		if( cls.draw_changelevel )
+		{
+			CL_DrawLoading( 100.0f );
+			cls.draw_changelevel = false;
+		}
 		break;
 	}
 }
@@ -1283,7 +1287,7 @@ void CL_ClearWorld( void )
 	ent->curstate.modelindex = 1;	// world model
 	ent->curstate.solid = SOLID_BSP;
 	ent->curstate.movetype = MOVETYPE_PUSH;
-	ent->model = worldmodel;
+	ent->model = cl.worldmodel;
 	clgame.numEntities = 1;
 
 	// clear the lightstyles
@@ -1377,15 +1381,19 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 	}
 
 	// slot 0 isn't used
-	for( i = 1; i < MAX_IMAGES && clgame.sprites[i].name[0]; i++ )
+	for( i = 1; i < MAX_IMAGES; i++ )
 	{
 		if( !com.strcmp( clgame.sprites[i].name, szPicName ))
 		{
 			// prolonge registration
-			clgame.sprites[i].needload = ws.load_sequence;
+			clgame.sprites[i].needload = world.load_sequence;
 			return i;
 		}
 	}
+
+	// find a free model slot spot
+	for( i = 1; i < MAX_IMAGES; i++ )
+		if( !clgame.sprites[i].name[0] ) break; // this is a valid spot
 
 	if( i == MAX_IMAGES ) 
 	{
@@ -1573,8 +1581,8 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	Com_ReadUlong( script, SC_ALLOW_NEWLINES, &numSprites );
 
 	// name, res, pic, x, y, w, h
-	// NOTE: we must use ws.studiopool because it will be purge on next restart or change map
-	pList = Mem_Alloc( cls.mempool, sizeof( client_sprite_t ) * numSprites );
+	// NOTE: we must use com_studiocache because it will be purge on next restart or change map
+	pList = Mem_Alloc( com_studiocache, sizeof( client_sprite_t ) * numSprites );
 
 	for( index = 0; index < numSprites; index++ )
 	{
@@ -2703,15 +2711,19 @@ model_t *pfnLoadMapSprite( const char *filename )
 	}
 
 	// slot 0 isn't used
-	for( i = 1; i < MAX_IMAGES && clgame.sprites[i].name[0]; i++ )
+	for( i = 1; i < MAX_IMAGES; i++ )
 	{
 		if( !com.strcmp( clgame.sprites[i].name, filename ))
 		{
 			// prolonge registration
-			clgame.sprites[i].needload = ws.load_sequence;
+			clgame.sprites[i].needload = world.load_sequence;
 			return &clgame.sprites[i];
 		}
 	}
+
+	// find a free model slot spot
+	for( i = 1; i < MAX_IMAGES; i++ )
+		if( !clgame.sprites[i].name[0] ) break; // this is a valid spot
 
 	if( i == MAX_IMAGES ) 
 	{

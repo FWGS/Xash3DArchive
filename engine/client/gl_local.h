@@ -187,7 +187,7 @@ extern ref_globals_t	tr;
 extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
-extern int		r_numdlights;
+extern uint		r_numEntities;
 
 //
 // gl_backend.c
@@ -391,8 +391,6 @@ typedef struct
 	GLint		texCoordArrayMode[MAX_TEXTURE_UNITS];	// 0 - disabled, 1 - enabled, 2 - cubemap
 
 	rgba_t		draw_color;
-	int		draw_rendermode;			// rendermode for drawing
-	int		draw_frame;			// will be reset after each drawing
 
 	int		faceCull;
 	int		frontFace;

@@ -746,7 +746,8 @@ void S_UpdateChannels( void )
 		endtime -= ( endtime - paintedtime ) & 0x3;
 	}
 
-	MIX_PaintChannels( endtime );
+	if( cl.audio_prepped )
+		MIX_PaintChannels( endtime );
 
 	SNDDMA_Submit();
 }

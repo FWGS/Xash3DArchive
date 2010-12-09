@@ -12,6 +12,7 @@
 netadr_t	master_adr[MAX_MASTERS];		// address of group servers
 
 convar_t	*sv_zmax;
+convar_t	*sv_novis;			// disable server culling entities by vis
 convar_t	*sv_unlag;
 convar_t	*sv_maxunlag;
 convar_t	*sv_unlagpush;
@@ -641,6 +642,7 @@ void SV_Init( void )
 	sv_send_resources = Cvar_Get( "sv_send_resources", "1", 0, "send generic resources that specified in 'mapname.res'" );
 	mp_consistency = Cvar_Get( "mp_consistency", "1", CVAR_SERVERNOTIFY, "enbale consistency check in multiplayer" );
 	clockwindow = Cvar_Get( "clockwindow", "0.5", 0, "timewindow to execute client moves" );
+	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 	BF_Init( &net_message, "NetMessage", net_message_buffer, sizeof( net_message_buffer ));

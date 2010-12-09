@@ -138,7 +138,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 			// select the hull automatically
 			for( i = 0; i < 4; i++ )
 			{
-				curdiff = floor( VectorAvg( size )) - floor( VectorAvg( ws.hull_sizes[i] ));
+				curdiff = floor( VectorAvg( size )) - floor( VectorAvg( world.hull_sizes[i] ));
 				curdiff = fabs( curdiff );
 
 				if( curdiff < lastdiff )
@@ -233,7 +233,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	// select the hull automatically
 	for( i = 0; i < 4; i++ )
 	{
-		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( ws.hull_sizes[i] ));
+		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( world.hull_sizes[i] ));
 		curdiff = fabs( curdiff );
 
 		if( curdiff < lastdiff )
@@ -474,7 +474,7 @@ void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node )
 	{
 		// get headnode
 		if( ent->headnode == -1 )
-			ent->headnode = node - worldmodel->nodes;
+			ent->headnode = node - sv.worldmodel->nodes;
 
 		if( ent->num_leafs >= MAX_ENT_LEAFS )
 		{
@@ -485,7 +485,7 @@ void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node )
 		}
 
 		leaf = (mleaf_t *)node;
-		leafnum = leaf - sv.worldmodel->leafs - 1;
+		leafnum = leaf - sv.worldmodel->leafs;
 
 		ent->leafnums[ent->num_leafs] = leafnum;
 		ent->num_leafs++;			
@@ -500,7 +500,7 @@ void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node )
 	{
 		// get headnode
 		if( ent->headnode == -1 )
-			ent->headnode = node - worldmodel->nodes;
+			ent->headnode = node - sv.worldmodel->nodes;
 	}
 	
 	// recurse down the contacted sides
@@ -523,7 +523,7 @@ qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits )
 		if( node->contents != CONTENTS_SOLID )
 		{
 			leaf = (mleaf_t *)node;
-			leafnum = (leaf - worldmodel->leafs - 1);
+			leafnum = leaf - sv.worldmodel->leafs;
 
 			if( visbits[leafnum >> 3] & (1<<( leafnum & 7 )))
 				return true;
@@ -1528,7 +1528,7 @@ int SV_LightForEntity( edict_t *pEdict )
 	VectorSet( sv_pointColor, 1.0f, 1.0f, 1.0f );
 
 	sv_modulate = sv_lighting_modulate->value * (1.0f / 255);
-	SV_RecursiveLightPoint( worldmodel, worldmodel->nodes, start, end );
+	SV_RecursiveLightPoint( sv.worldmodel, sv.worldmodel->nodes, start, end );
 
 	return VectorAvg( sv_pointColor );
 }

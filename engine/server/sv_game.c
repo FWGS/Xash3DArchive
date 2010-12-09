@@ -205,10 +205,10 @@ SV_LeafPVS
 */
 byte *SV_LeafPVS( int leafnum )
 {
-	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !svs.pvs || sv_novis->integer )
-		return ws.nullrow;
+	if( !sv.worldmodel || leafnum <= 0 || leafnum >= sv.worldmodel->numleafs || !svs.pvs || sv_novis->integer )
+		return world.nullrow;
 
-	return svs.pvs + leafnum * 4 * (( worldmodel->numleafs + 31 ) >> 5 );
+	return svs.pvs + leafnum * 4 * (( sv.worldmodel->numleafs + 31 ) >> 5 );
 }
 
 /*
@@ -218,10 +218,10 @@ SV_LeafPHS
 */
 byte *SV_LeafPHS( int leafnum )
 {
-	if( !worldmodel || leafnum <= 0 || leafnum >= worldmodel->numleafs || !svs.phs || sv_novis->integer )
-		return ws.nullrow;
+	if( !sv.worldmodel || leafnum <= 0 || leafnum >= sv.worldmodel->numleafs || !svs.phs || sv_novis->integer )
+		return world.nullrow;
 
-	return svs.phs + leafnum * 4 * (( worldmodel->numleafs + 31 ) >> 5 );
+	return svs.phs + leafnum * 4 * (( sv.worldmodel->numleafs + 31 ) >> 5 );
 }
 
 /*
@@ -412,10 +412,10 @@ static void SV_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
 				leaf = (mleaf_t *)node;			
 
 				if( type == DVIS_PVS )
-					vis = SV_LeafPVS( leaf - sv.worldmodel->leafs - 1 );
+					vis = SV_LeafPVS( leaf - sv.worldmodel->leafs );
 				else if( type == DVIS_PHS )
-					vis = SV_LeafPHS( leaf - sv.worldmodel->leafs - 1 );
-				else vis = ws.nullrow;
+					vis = SV_LeafPHS( leaf - sv.worldmodel->leafs );
+				else vis = world.nullrow;
 
 				for( i = 0; i < fatbytes; i++ )
 					bitvector[i] |= vis[i];
@@ -3659,13 +3659,13 @@ so we can't use a single PVS point
 byte *pfnSetFatPVS( const float *org )
 {
 	if( !svs.pvs || sv_novis->integer || !org )
-		return ws.nullrow;
+		return world.nullrow;
 
 	bitvector = fatpvs;
-	fatbytes = (worldmodel->numleafs+31)>>3;
+	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 		Mem_Set( bitvector, 0, fatbytes );
-	SV_AddToFatPVS( org, DVIS_PVS, worldmodel->nodes );
+	SV_AddToFatPVS( org, DVIS_PVS, sv.worldmodel->nodes );
 
 	return bitvector;
 }
@@ -3681,13 +3681,13 @@ so we can't use a single PHS point
 byte *pfnSetFatPAS( const float *org )
 {
 	if( !svs.phs || sv_novis->integer || !org )
-		return ws.nullrow;
+		return world.nullrow;
 
 	bitvector = fatphs;
-	fatbytes = (worldmodel->numleafs+31)>>3;
+	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 		Mem_Set( bitvector, 0, fatbytes );
-	SV_AddToFatPVS( org, DVIS_PHS, worldmodel->nodes );
+	SV_AddToFatPVS( org, DVIS_PHS, sv.worldmodel->nodes );
 
 	return bitvector;
 }

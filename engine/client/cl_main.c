@@ -798,6 +798,8 @@ void CL_Disconnect( void )
 	CL_SendDisconnectMessage();
 	CL_ClearState ();
 
+	SCR_EndLoadingPlaque (); // get rid of loading plaque
+
 	// clear the network channel, too.
 	Netchan_Clear( &cls.netchan );
 
@@ -930,7 +932,6 @@ void CL_Reconnect_f( void )
 	S_StopAllSounds ();
 
 	cls.changelevel = true;
-	Cmd_ExecuteString( "hud_changelevel\n" );
 
 	if( cls.demoplayback ) return;
 
@@ -1050,6 +1051,7 @@ void CL_PrepVideo( void )
 	com.strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
 	Mod_LoadWorld( mapname, &map_checksum );
 	cl.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
+	Cvar_SetFloat( "scr_loading", 25.0f );
 
 	SCR_RegisterShaders(); // update with new sequence
 	SCR_VidInit();
@@ -1067,12 +1069,21 @@ void CL_PrepVideo( void )
 	{
 		com.strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		Mod_RegisterModel( name, i+1 );
-		Cvar_SetFloat( "scr_loading", scr_loading->value + 45.0f / mdlcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
+		Cvar_SetFloat( "scr_loading", scr_loading->value + 75.0f / mdlcount );
+		if( cl_allow_levelshots->integer || host.developer > 3 )
+			SCR_UpdateScreen();
 	}
 
 	// invalidate all decal indexes
 	Mem_Set( cl.decal_index, 0, sizeof( cl.decal_index ));
+
+	// release unused SpriteTextures
+	for( i = 1; i < MAX_IMAGES; i++ )
+	{
+		if( !clgame.sprites[i].name[0] ) continue; // free slot
+		if( clgame.sprites[i].needload != world.load_sequence )
+			Mod_UnloadSpriteModel( &clgame.sprites[i] );
+	}
 
 	Mod_FreeUnused ();
 	CL_ClearWorld ();
@@ -1080,14 +1091,6 @@ void CL_PrepVideo( void )
 	R_NewMap();		// tell the render about new map
 
 	Cvar_SetFloat( "scr_loading", 100.0f );	// all done
-
-	// release unused SpriteTextures
-	for( i = 1; i < MAX_IMAGES; i++ )
-	{
-		if( !clgame.sprites[i].name[0] ) continue; // free slot
-		if( clgame.sprites[i].needload != ws.load_sequence )
-			Mod_UnloadSpriteModel( &clgame.sprites[i] );
-	}
 
 	if( host.decalList )
 	{

@@ -233,6 +233,8 @@ void SV_Map_f( void )
 		return;
 	}
 
+	SCR_BeginLoadingPlaque();
+
 	sv.loadgame = false; // set right state
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 
@@ -406,6 +408,8 @@ void SV_ChangeLevel_f( void )
 		MsgDev( D_INFO, "SV_ChangeLevel: map %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
 		return;	
 	}
+
+	SCR_BeginLoadingPlaque();
 
 	if( sv.state != ss_active )
 	{

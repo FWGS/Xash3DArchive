@@ -169,15 +169,12 @@ void SCR_MakeLevelShot( void )
 		return;
 
 	// make levelshot at nextframe()
-	Cbuf_AddText( "wait 2\nlevelshot\n" );
+	Cbuf_AddText( "levelshot\n" );
 }
 
 void SCR_MakeScreenShot( void )
 {
 	qboolean	iRet = false;
-
-	if( host.type == HOST_NORMAL )
-		return;	// don't reset action - it will be wait until render initalization is done
 
 	switch( cls.scrshot_action )
 	{
@@ -218,6 +215,38 @@ void SCR_DrawPlaque( void )
 
 		CL_DrawHUD( CL_LOADING );
 	}
+}
+
+/*
+================
+SCR_BeginLoadingPlaque
+================
+*/
+void SCR_BeginLoadingPlaque( void )
+{
+	S_StopAllSounds();
+	cl.audio_prepped = false;	// don't play ambients
+
+	if( cls.disable_screen ) return;		// already set
+//	if( cl_allow_levelshots->integer ) return;	// we want to update screen
+	if( cls.state == ca_disconnected ) return;	// if at console, don't bring up the plaque
+	if( cls.key_dest == key_console ) return;
+
+	cls.draw_changelevel = true;
+	SCR_UpdateScreen();
+	cls.disable_screen = host.realtime;
+	cls.disable_servercount = cl.servercount;
+}
+
+/*
+================
+SCR_EndLoadingPlaque
+================
+*/
+void SCR_EndLoadingPlaque( void )
+{
+	cls.disable_screen = 0;
+	Con_ClearNotify();
 }
 
 /*
@@ -377,7 +406,7 @@ void SCR_Init( void )
 
 	scr_centertime = Cvar_Get( "scr_centertime", "2.5", 0, "centerprint hold time" );
 	scr_printspeed = Cvar_Get( "scr_printspeed", "8", 0, "centerprint speed of print" );
-	cl_levelshot_name = Cvar_Get( "cl_levelshot_name", MAP_DEFAULT_SHADER, 0, "contains path to current levelshot" );
+	cl_levelshot_name = Cvar_Get( "cl_levelshot_name", "*black", 0, "contains path to current levelshot" );
 	cl_allow_levelshots = Cvar_Get( "allow_levelshots", "0", CVAR_ARCHIVE, "allow engine to use indivdual levelshots instead of 'loading' image" );
 	scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
 	scr_download = Cvar_Get( "scr_download", "0", 0, "downloading bar progress" );

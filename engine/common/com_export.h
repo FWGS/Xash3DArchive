@@ -40,6 +40,20 @@ typedef enum
 	TF_NORMALMAP	= BIT(13),	// is a normalmap
 } texFlags_t;
 
+typedef struct
+{
+	vec3_t		position;
+	char		name[64];		// same as CS_SIZE
+	short		entityIndex;	// FIXME: replace with pointer to entity ?
+	byte		depth;
+	byte		flags;
+
+	// this is the surface plane that we hit so that
+	// we can move certain decals across
+	// transitions if they hit similar geometry
+	vec3_t		impactPlaneNormal;
+} decallist_t;
+
 qboolean R_Init( void );
 void R_Shutdown( void );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );

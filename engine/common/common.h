@@ -12,7 +12,7 @@
 
 #include "launch_api.h"
 #include "engine_api.h"
-#include "render_api.h"
+#include "ref_params.h"
 #include "com_export.h"
 #include "com_model.h"
 
@@ -48,8 +48,10 @@ void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile,
 
 extern convar_t	*scr_width;
 extern convar_t	*scr_height;
+extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
 extern convar_t	*allow_download;
+extern convar_t	*cl_allow_levelshots;
 extern convar_t	*host_limitlocal;
 extern convar_t	*host_maxfps;
 
@@ -303,6 +305,7 @@ void CL_ForceVid( void );
 void CL_ForceSnd( void );
 void SCR_Init( void );
 void SCR_UpdateScreen( void );
+void SCR_BeginLoadingPlaque( void );
 void SCR_CheckStartupVids( void );
 long SCR_GetAudioChunk( char *rawdata, long length );
 wavdata_t *SCR_GetMovieInfo( void );

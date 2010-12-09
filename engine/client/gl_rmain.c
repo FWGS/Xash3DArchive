@@ -92,6 +92,7 @@ R_ClearScene
 */
 void R_ClearScene( void )
 {
+	r_numEntities = 1;
 }
 
 /*
@@ -101,6 +102,7 @@ R_AddEntity
 */
 qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType )
 {
+	r_numEntities++;
 	return true;
 }
 

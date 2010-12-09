@@ -372,6 +372,7 @@ extern	convar_t		*sv_skyname;
 extern	convar_t		*serverinfo;
 extern	convar_t		*sv_failuretime;
 extern	convar_t		*sv_unlag;
+extern convar_t		*sv_novis;
 extern	convar_t		*sv_maxunlag;
 extern	convar_t		*sv_unlagpush;
 extern	convar_t		*sv_unlagsamples;

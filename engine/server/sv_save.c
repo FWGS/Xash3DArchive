@@ -1645,6 +1645,8 @@ qboolean SV_LoadGame( const char *pName )
 	if( !pName || !pName[0] )
 		return false;
 
+	SCR_BeginLoadingPlaque ();
+
 	com.snprintf( name, sizeof( name ), "save/%s.sav", pName );
 
 	MsgDev( D_INFO, "Loading game from %s...\n", name );

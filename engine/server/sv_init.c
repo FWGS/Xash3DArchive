@@ -216,10 +216,10 @@ void SV_CalcPHS( void )
 	byte		*scan;
 
 	// no worldmodel or already loaded
-	if( !worldmodel || !com.strcmp( worldname, sv.model_precache[1] ))
+	if( !sv.worldmodel || !com.strcmp( worldname, sv.model_precache[1] ))
 		return;
 
-	if( !worldmodel->visdata )
+	if( !sv.worldmodel->visdata )
 	{
 		svs.phs = svs.pvs = NULL;
 		return;
@@ -229,12 +229,12 @@ void SV_CalcPHS( void )
 	com.strncpy( worldname, sv.model_precache[1], sizeof( worldname ));
 	timestart = Sys_DoubleTime();
 
-	num = worldmodel->numleafs;
+	num = sv.worldmodel->numleafs;
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
 
 	// allocate pvs and phs data single array
-	svs.pvs = Mem_Alloc( worldmodel->mempool, rowbytes * num * 2 );
+	svs.pvs = Mem_Alloc( sv.worldmodel->mempool, rowbytes * num * 2 );
 	svs.phs = svs.pvs + rowbytes * num;
 
 	scan = svs.pvs;
@@ -243,7 +243,7 @@ void SV_CalcPHS( void )
 	// uncompress pvs first
 	for( i = 0; i < num; i++, scan += rowbytes )
 	{
-		Mem_Copy( scan, Mod_LeafPVS( worldmodel->leafs + i, worldmodel ), rowbytes );
+		Mem_Copy( scan, Mod_LeafPVS( sv.worldmodel->leafs + i, sv.worldmodel ), rowbytes );
 		if( i == 0 ) continue;
 
 		for( j = 0; j < num; j++ )

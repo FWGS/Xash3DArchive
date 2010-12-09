@@ -120,7 +120,7 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 	mod->mempool = Mem_AllocPool( va( "^2%s^7", mod->name ));
 	size = sizeof( msprite_t ) + ( pin->numframes - 1 ) * sizeof( psprite->frames );
 	psprite = Mem_Alloc( mod->mempool, size );
-	mod->needload = ws.load_sequence;
+	mod->needload = world.load_sequence;
 	mod->cache.data = psprite;	// make link to extradata
 	
 	psprite->type = pin->type;
@@ -255,7 +255,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	numframes = (pix->width * pix->height) / (w * h);
 	mod->mempool = Mem_AllocPool( va( "^2%s^7", mod->name ));
 	psprite = Mem_Alloc( mod->mempool, sizeof( msprite_t ) + ( numframes - 1 ) * sizeof( psprite->frames ));
-	mod->needload = ws.load_sequence;
+	mod->needload = world.load_sequence;
 	mod->cache.data = psprite;	// make link to extradata
 
 	psprite->type = SPR_FWD_PARALLEL_ORIENTED;
