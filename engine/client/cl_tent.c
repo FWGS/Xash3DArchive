@@ -2099,7 +2099,7 @@ LIGHT STYLE MANAGEMENT
 
 ==============================================================
 */
-static int	lastofs;
+#define STYLE_LERPING_THRESHOLD	3.0f // because we wan't interpolate fast sequences (e.g. on\off)
 		
 /*
 ================
@@ -2109,50 +2109,41 @@ CL_ClearLightStyles
 void CL_ClearLightStyles( void )
 {
 	Mem_Set( cl.lightstyles, 0, sizeof( cl.lightstyles ));
-	lastofs = -1;
-}
-
-/*
-================
-CL_RunLightStyles
-
-light animations
-'m' is normal light, 'a' is no light, 'z' is double bright
-================
-*/
-void CL_RunLightStyles( void )
-{
-	int		i, ofs;
-	lightstyle_t	*ls;		
-
-	if( cls.state != ca_active ) return;
-
-	ofs = (cl.time * 10);
-	if( ofs == lastofs ) return;
-	lastofs = ofs;
-
-	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
-	{
-		if( ls->length == 0 ) ls->value = 0.0f;	// disable light
-		else if( ls->length == 1 ) ls->value = ls->map[0];
-		else ls->value = ls->map[ofs%ls->length];
-	}
 }
 
 void CL_SetLightstyle( int style, const char *s )
 {
-	int	j, k;
+	int		i, k;
+	lightstyle_t	*ls;
+	float		val1, val2;
 
 	ASSERT( s );
 	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
 
-	com.strncpy( cl.lightstyles[style].pattern, s, sizeof( cl.lightstyles[0].pattern ));
+	ls = &cl.lightstyles[style];
 
-	j = com.strlen( s );
-	cl.lightstyles[style].length = j;
+	com.strncpy( ls->pattern, s, sizeof( ls->pattern ));
 
-	for( k = 0; k < j; k++ )
-		cl.lightstyles[style].map[k] = (float)(s[k]-'a') / (float)('m'-'a');
+	ls->length = com.strlen( s );
+
+	for( i = 0; i < ls->length; i++ )
+		ls->map[i] = (float)(s[i] - 'a');
+
+	ls->interp = true;
+
+	// check for allow interpolate
+	// NOTE: fast flickering styles looks ugly when interpolation is running
+	for( k = 0; k < ls->length; k++ )
+	{
+		val1 = ls->map[(k+0) % ls->length];
+		val2 = ls->map[(k+1) % ls->length];
+
+		if( fabs( val1 - val2 ) > STYLE_LERPING_THRESHOLD )
+		{
+			ls->interp = false;
+			break;
+		}
+	}
 }
 
 /*
@@ -2268,8 +2259,9 @@ update client flashlight
 */
 void CL_UpadteFlashlight( cl_entity_t *pEnt )
 {
-	vec3_t	vecSrc, vecEnd, vecPos;
+	vec3_t	vecSrc, vecEnd;
 	vec3_t	forward, view_ofs;
+	float	distLight;
 	pmtrace_t	trace;
 	dlight_t	*dl;
 
@@ -2312,19 +2304,16 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 	VectorMA( vecSrc, 512.0f, forward, vecEnd );
 
 	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, -1, NULL );
-
-	if( trace.fraction != 1.0f )
-		VectorMA( trace.endpos, -16.0f, trace.plane.normal, vecPos );
-	else VectorCopy( trace.endpos, vecPos );
+	distLight = (1.0f - trace.fraction);
 
 	// update flashlight endpos
 	dl = CL_AllocDlight( pEnt->index );
-	VectorCopy( vecPos, dl->origin );
+	VectorCopy( trace.endpos, dl->origin );
 	dl->die = cl.time + 0.001f;	// die on next frame
-	dl->color.r = 255;
-	dl->color.g = 255;
-	dl->color.b = 255;
-	dl->radius = 96;
+	dl->color.r = 255 * distLight;
+	dl->color.g = 255 * distLight;
+	dl->color.b = 255 * distLight;
+	dl->radius = 64;
 }
 
 /*

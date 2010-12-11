@@ -164,19 +164,28 @@ EmitWaterPolys
 Does a water warp on the pre-fragmented glpoly_t chain
 =============
 */
-void EmitWaterPolys( msurface_t *fa )
+void EmitWaterPolys( glpoly_t *polys )
 {
 	glpoly_t	*p;
-	float	*v;
-	int	i;
+	float	*v, nv, waveHeight;
 	float	s, t, os, ot;
+	int	i;
 
-	for( p = fa->polys; p; p = p->next )
+	if( RI.currententity == clgame.entities )
+		waveHeight = RI.refdef.movevars->waveHeight * 2.0f;
+	else waveHeight = RI.currententity->curstate.scale * 32.0f;
+
+	for( p = polys; p; p = p->next )
 	{
 		pglBegin( GL_POLYGON );
 
 		for( i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE )
 		{
+			if( waveHeight )
+				nv = v[2] + waveHeight + ( waveHeight * com.sin(v[0] * 0.02 + cl.time)
+					* com.sin(v[1] * 0.02 + cl.time) * com.sin(v[2] * 0.02 + cl.time));
+			else nv = v[2];
+
 			os = v[3];
 			ot = v[4];
 
@@ -187,9 +196,8 @@ void EmitWaterPolys( msurface_t *fa )
 			t *= ( 1.0f / SUBDIVIDE_SIZE );
 
 			pglTexCoord2f( s, t );
-			pglVertex3fv( v );
+			pglVertex3f( v[0], v[1], nv );
 		}
-
 		pglEnd();
 	}
 }
@@ -242,7 +250,6 @@ void R_DrawSkyChain( msurface_t *s )
 {
 	msurface_t	*fa;
 
-	// used when gl_texsort is on
 	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
 
 	speedscale = cl.time * 8;

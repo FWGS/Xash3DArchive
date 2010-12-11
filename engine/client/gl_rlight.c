@@ -14,6 +14,63 @@ DYNAMIC LIGHTS
 
 =============================================================================
 */
+/*
+==================
+R_AnimateLight
+
+==================
+*/
+void R_AnimateLight( void )
+{
+	int		i, k, flight, clight;
+	float		l, lerpfrac, backlerp;
+	lightstyle_t	*ls;
+
+	// light animations
+	// 'm' is normal light, 'a' is no light, 'z' is double bright
+	flight = (int)floor( cl.time * 10 );
+	clight = (int)ceil( cl.time * 10 );
+	lerpfrac = ( cl.time * 10 ) - flight;
+	backlerp = 1.0f - lerpfrac;
+
+	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
+	{
+		if( r_fullbright->integer || !cl.worldmodel->lightdata )
+		{
+			RI.lightstylevalue[i] = 256 * 256;
+			continue;
+		}
+
+		if( !ls->length )
+		{
+			// was 256, changed to 264 for consistency
+			RI.lightstylevalue[i] = 256 * r_lighting_modulate->value;
+			continue;
+		}
+		else if( ls->length == 1 )
+		{
+			// single length style so don't bother interpolating
+			RI.lightstylevalue[i] = ls->map[0] * 22 * r_lighting_modulate->value;
+			continue;
+		}
+		else if( !ls->interp || !cl_lightstyle_lerping->integer )
+		{
+			RI.lightstylevalue[i] = ls->map[flight%ls->length] * 22 * r_lighting_modulate->value;
+			continue;
+		}
+
+		// interpolate animating light
+		// frame just gone
+		k = ls->map[flight % ls->length];
+		l = (float)( k * 22 ) * backlerp;
+
+		// upcoming frame
+		k = ls->map[clight % ls->length];
+		l += (float)( k * 22 ) * lerpfrac;
+
+		RI.lightstylevalue[i] = (int)l * r_lighting_modulate->value;
+	}
+}
 
 /*
 =============
@@ -22,7 +79,6 @@ R_MarkLights
 */
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node )
 {
-	mplane_t		*splitplane;
 	float		dist;
 	msurface_t	*surf;
 	int		i;
@@ -30,9 +86,8 @@ void R_MarkLights( dlight_t *light, int bit, mnode_t *node )
 	if( node->contents < 0 )
 		return;
 
-	splitplane = node->plane;
-	dist = DotProduct( light->origin, splitplane->normal ) - splitplane->dist;
-	
+	dist = PlaneDiff( light->origin, node->plane );
+
 	if( dist > light->radius )
 	{
 		R_MarkLights( light, bit, node->children[0] );

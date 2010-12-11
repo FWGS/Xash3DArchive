@@ -19,6 +19,7 @@
 convar_t	*gl_allow_software;
 convar_t	*gl_extensions;
 convar_t	*gl_colorbits;
+convar_t	*gl_alphabits;
 convar_t	*gl_depthbits;
 convar_t	*gl_stencilbits;
 convar_t	*gl_texturebits;
@@ -36,7 +37,6 @@ convar_t	*gl_skymip;
 convar_t	*gl_nobind;
 convar_t	*gl_finish;
 convar_t	*gl_clear;
-convar_t	*gl_texsort;
 
 convar_t	*r_width;
 convar_t	*r_height;
@@ -44,6 +44,7 @@ convar_t	*r_speeds;
 convar_t	*r_fullbright;
 convar_t	*r_norefresh;
 convar_t	*r_lighting_modulate;
+convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
 convar_t	*r_novis;
 convar_t	*r_nocull;
@@ -635,13 +636,13 @@ qboolean GL_DeleteContext( void )
 GL_ChoosePFD
 =================
 */
-static int GL_ChoosePFD( int colorBits, int depthBits, int stencilBits )
+static int GL_ChoosePFD( int colorBits, int alphaBits, int depthBits, int stencilBits )
 {
 	PIXELFORMATDESCRIPTOR	PFDs[MAX_PFDS], *current, *selected;
 	uint			flags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
 	int			i, numPFDs, pixelFormat = 0;
 
-	MsgDev( D_NOTE, "GL_ChoosePFD( color %i, depth %i, stencil %i )\n", colorBits, depthBits, stencilBits );
+	MsgDev( D_NOTE, "GL_ChoosePFD( color %i, alpha %i, depth %i, stencil %i )\n", colorBits, alphaBits, depthBits, stencilBits );
 
 	// Count PFDs
 	if( glw_state.minidriver )
@@ -682,6 +683,10 @@ static int GL_ChoosePFD( int colorBits, int depthBits, int stencilBits )
 		if( current->cColorBits < colorBits )
 			continue;
 
+		// check alpha bits
+		if( current->cAlphaBits < alphaBits )
+			continue;
+
 		// check depth bits
 		if( current->cDepthBits < depthBits )
 			continue;
@@ -701,6 +706,16 @@ static int GL_ChoosePFD( int colorBits, int depthBits, int stencilBits )
 		if( colorBits != selected->cColorBits )
 		{
 			if( colorBits == current->cColorBits || current->cColorBits > selected->cColorBits )
+			{
+				selected = current;
+				pixelFormat = i;
+				continue;
+			}
+		}
+
+		if( alphaBits != selected->cAlphaBits )
+		{
+			if( alphaBits == current->cAlphaBits || current->cAlphaBits > selected->cAlphaBits )
 			{
 				selected = current;
 				pixelFormat = i;
@@ -765,7 +780,8 @@ GL_SetPixelformat
 qboolean GL_SetPixelformat( void )
 {
 	PIXELFORMATDESCRIPTOR	PFD;
-	int			colorBits, depthBits, stencilBits;
+	int			colorBits, alphaBits;
+	int			depthBits, stencilBits;
 	int			pixelFormat;
 	size_t			gamma_size;
 	byte			*savedGamma;
@@ -789,17 +805,18 @@ qboolean GL_SetPixelformat( void )
 	// set color/depth/stencil
 	colorBits = (gl_colorbits->integer) ? gl_colorbits->integer : 32;
 	depthBits = (gl_depthbits->integer) ? gl_depthbits->integer : 24;
+	alphaBits = (gl_alphabits->integer) ? gl_alphabits->integer : 8;
 	stencilBits = (gl_stencilbits->integer) ? gl_stencilbits->integer : 0;
 
 	// choose a pixel format
-	pixelFormat = GL_ChoosePFD( colorBits, depthBits, stencilBits );
+	pixelFormat = GL_ChoosePFD( colorBits, alphaBits, depthBits, stencilBits );
 
 	if( !pixelFormat )
 	{
 		// try again with default color/depth/stencil
-		if( colorBits > 16 || depthBits > 16 || stencilBits > 0 )
-			pixelFormat = GL_ChoosePFD( 16, 16, 0 );
-		else pixelFormat = GL_ChoosePFD( 32, 24, 0 );
+		if( colorBits > 16 || depthBits > 16 || alphaBits > 0 || stencilBits > 0 )
+			pixelFormat = GL_ChoosePFD( 16, 0, 16, 0 );
+		else pixelFormat = GL_ChoosePFD( 32, 0, 24, 0 );
 
 		if( !pixelFormat )
 		{
@@ -833,6 +850,7 @@ qboolean GL_SetPixelformat( void )
 	}
 
 	glConfig.color_bits = PFD.cColorBits;
+	glConfig.alpha_bits = PFD.cAlphaBits;
 	glConfig.depth_bits = PFD.cDepthBits;
 	glConfig.stencil_bits = PFD.cStencilBits;
 
@@ -846,7 +864,7 @@ qboolean GL_SetPixelformat( void )
 	else glState.stencilEnabled = false;
 
 	// print out PFD specifics 
-	MsgDev( D_NOTE, "GL PFD: color( %d-bits ) Z( %d-bit )\n", PFD.cColorBits, PFD.cDepthBits );
+	MsgDev( D_NOTE, "GL PFD: color( %d-bits ) alpha( %d-bits ) Z( %d-bit )\n", PFD.cColorBits, PFD.cAlphaBits, PFD.cDepthBits );
 
 	// init gamma ramp
 	Mem_Set( glState.stateRamp, 0, sizeof( glState.stateRamp ));
@@ -1322,6 +1340,8 @@ void R_RenderInfo_f( void )
 	Msg( "SKYMIP: %i\n", gl_skymip->integer );
 	Msg( "TEXTUREMODE: %s\n", gl_texturemode->string );
 	Msg( "VERTICAL SYNC: %s\n", gl_swapInterval->integer ? "enabled" : "disabled" );
+	Msg( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
+		glConfig.alpha_bits, glConfig.depth_bits, glConfig.stencil_bits );
 }
 
 //=======================================================================
@@ -1337,7 +1357,7 @@ void GL_InitCommands( void )
 	r_speeds = Cvar_Get( "r_speeds", "0", CVAR_ARCHIVE, "shows renderer speeds" );
 	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
 	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable 3D rendering (use with caution)" );
-	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "1", CVAR_ARCHIVE, "lightstyles modulate scale" );
+	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", CVAR_ARCHIVE, "lightstyles modulate scale" );
 	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", CVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
 	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
 	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
@@ -1347,12 +1367,14 @@ void GL_InitCommands( void )
 	r_lightmap = Cvar_Get( "r_lightmap", "0", CVAR_CHEAT, "lightmap debugging tool" );
 	r_shadows = Cvar_Get( "r_shadows", "0", CVAR_ARCHIVE, "enable model shadows" );
 	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
+	r_drawentities = Cvar_Get( "r_drawentities", "1", CVAR_CHEAT|CVAR_ARCHIVE, "render entities" );
 
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
 	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "ignore hardware gamma (e.g. not support)" );
 	gl_allow_software = Cvar_Get( "gl_allow_software", "0", CVAR_ARCHIVE, "allow OpenGL software emulation" );
 	gl_colorbits = Cvar_Get( "gl_colorbits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "pixelformat color bits (0 - auto)" );
+	gl_alphabits = Cvar_Get( "gl_alphabits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "pixelformat alpha bits (0 - auto)" );
 	gl_depthbits = Cvar_Get( "gl_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH_VIDEO, "pixelformat depth bits (0 - auto)" );
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
 	gl_texturebits = Cvar_Get( "gl_texturebits", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "set texture upload format (0 - auto)" );
@@ -1368,7 +1390,6 @@ void GL_InitCommands( void )
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 9)" );
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
-	gl_texsort = Cvar_Get( "gl_texsort", "1", CVAR_ARCHIVE, "enable or disable sorting by texture" );
 
 	// make sure r_swapinterval is checked after vid_restart
 	gl_swapInterval->modified = true;

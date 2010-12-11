@@ -20,7 +20,6 @@ extern stdlib_api_t	com;
 #define TF_FONT	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
 #define TF_IMAGE	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP)
 #define TF_DECAL	(TF_CLAMP|TF_UNCOMPRESSED)
-#define TF_LIGHTMAP	TF_FONT
 
 typedef enum
 {
@@ -38,6 +37,7 @@ typedef enum
 	TF_HAS_LUMA	= BIT(11),	// sets by GL_UploadTexture
 	TF_MAKELUMA	= BIT(12),	// create luma from quake texture
 	TF_NORMALMAP	= BIT(13),	// is a normalmap
+	TF_LIGHTMAP	= BIT(14),	// is a lightmap
 } texFlags_t;
 
 typedef struct

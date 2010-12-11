@@ -345,7 +345,7 @@ void SV_ClearWorld( void )
 
 	// clear lightstyles
 	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
-		sv.lightstyles[i].value = 1.0f;
+		sv.lightstyles[i].value = 256.0f;
 	sv_lastofs = -1;
 
 	Mem_Set( sv_areanodes, 0, sizeof( sv_areanodes ));
@@ -1352,7 +1352,6 @@ trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore )
 */
 
 static vec3_t	sv_pointColor;
-static float	sv_modulate;
 
 /*
 =================
@@ -1431,7 +1430,7 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
-			scale = sv.lightstyles[surf->styles[map]].value * sv_modulate;
+			scale = sv.lightstyles[surf->styles[map]].value;
 
 			sv_pointColor[0] += lm->r * scale;
 			sv_pointColor[1] += lm->g * scale;
@@ -1459,9 +1458,9 @@ void SV_RunLightStyles( void )
 
 	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		if( ls->length == 0 ) ls->value = 0.0f;	// disable this light
-		else if( ls->length == 1 ) ls->value = ls->map[0];
-		else ls->value = ls->map[ofs%ls->length];
+		if( ls->length == 0 ) ls->value = 256.0f * sv_lighting_modulate->value; // disable this light
+		else if( ls->length == 1 ) ls->value = ls->map[0] * 22.0f * sv_lighting_modulate->value;
+		else ls->value = ls->map[ofs%ls->length] * 22.0f * sv_lighting_modulate->value;
 	}
 }
 
@@ -1485,7 +1484,7 @@ void SV_SetLightStyle( int style, const char* s )
 	sv.lightstyles[style].length = j;
 
 	for( k = 0; k < j; k++ )
-		sv.lightstyles[style].map[k] = (float)( s[k]-'a' ) / (float)( 'm'-'a' );
+		sv.lightstyles[style].map[k] = (float)(s[k] - 'a');
 
 	if( sv.state != ss_active ) return;
 
@@ -1527,7 +1526,6 @@ int SV_LightForEntity( edict_t *pEdict )
 	else end[2] = start[2] - 8192;
 	VectorSet( sv_pointColor, 1.0f, 1.0f, 1.0f );
 
-	sv_modulate = sv_lighting_modulate->value * (1.0f / 255);
 	SV_RecursiveLightPoint( sv.worldmodel, sv.worldmodel->nodes, start, end );
 
 	return VectorAvg( sv_pointColor );

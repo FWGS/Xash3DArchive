@@ -646,7 +646,9 @@ NOTE: must call Image_GetPaletteXXX before used
 qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 {
 	int	*iout = (int *)out;
+	byte	*fin = (byte *)in;
 	rgba_t	*col;
+	int	i;
 
 	if( !image.d_currentpal )
 	{
@@ -657,6 +659,18 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 	{
 		MsgDev( D_ERROR, "Image_Copy8bitRGBA: no input image\n" );
 		return false;
+	}
+
+	// this is a base image with luma - clear luma pixels
+	if( image.flags & IMAGE_HAS_LUMA )
+	{
+		for( i = 0; i < image.width * image.height; i++ )
+		{
+			if( image.flags & IMAGE_HAS_LUMA_Q1 )
+				fin[i] = fin[i] < 224 ? fin[i] : 0;
+			else if( image.flags & IMAGE_HAS_LUMA_Q2 )
+				fin[i] = (fin[i] >= 208 && fin[i] <= 240 ) ? 0 : fin[i];
+ 	   	}
 	}
 
 	while( pixels >= 8 )
@@ -1270,9 +1284,9 @@ byte *Image_CreateLumaInternal( const byte *fin, int width, int height, int type
 		for( i = 0; i < width * height; i++ )
 		{
 			if( flags & IMAGE_HAS_LUMA_Q1 )
-				*out++ = fin[i] > 224 ? fin[i] : 0;
+				*out++ = fin[i] >= 224 ? fin[i] : 0;
 			else if( flags & IMAGE_HAS_LUMA_Q2 )
-				*out++ = (fin[i] > 208 && fin[i] < 240) ? fin[i] : 0;
+				*out++ = (fin[i] >= 208 && fin[i] <= 240) ? fin[i] : 0;
                     }
 		break;
 	default:

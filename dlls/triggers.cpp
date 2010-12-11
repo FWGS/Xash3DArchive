@@ -1407,7 +1407,7 @@ void CChangeLevel :: Spawn( void )
 		ALERT( at_console, "a trigger_changelevel doesn't have a map" );
 
 	if ( FStrEq( m_szLandmarkName, "" ) )
-		ALERT( at_console, "trigger_changelevel to %s doesn't have a landmark", m_szMapName );
+		ALERT( at_console, "trigger_changelevel to %s doesn't have a landmark\n", m_szMapName );
 
 	if (!FStringNull ( pev->targetname ) )
 	{

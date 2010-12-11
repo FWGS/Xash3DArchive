@@ -1280,7 +1280,6 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 void CL_ClearWorld( void )
 {
 	cl_entity_t	*ent;
-	int		i;
 
 	ent = EDICT_NUM( 0 );
 	ent->index = NUM_FOR_EDICT( ent );
@@ -1289,10 +1288,6 @@ void CL_ClearWorld( void )
 	ent->curstate.movetype = MOVETYPE_PUSH;
 	ent->model = cl.worldmodel;
 	clgame.numEntities = 1;
-
-	// clear the lightstyles
-	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
-		cl.lightstyles[i].value = 1.0f;
 }
 
 void CL_InitEdicts( void )
@@ -2930,13 +2925,19 @@ void Tri_DrawTriangles( int fTrans )
 {
 	if( fTrans )
 	{
-		CL_DrawBeams( true );
-		CL_DrawParticles();
+		if( !RI.refdef.onlyClientDraw )
+		{
+			CL_DrawBeams( true );
+			CL_DrawParticles();
+		}
 		clgame.dllFuncs.pfnDrawTransparentTriangles ();
 	}
 	else
 	{
-		CL_DrawBeams( false );
+		if( !RI.refdef.onlyClientDraw )
+		{
+			CL_DrawBeams( false );
+		}
 		clgame.dllFuncs.pfnDrawNormalTriangles ();
 	}
 }

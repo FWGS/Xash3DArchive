@@ -4342,6 +4342,7 @@ void SV_LoadFromFile( script_t *entities )
 	token_t	token;
 	int	inhibited, spawned, died;
 	int	current_skill = Cvar_VariableInteger( "skill" ); // lock skill level
+	qboolean	inhibits_ents = (world.version == Q1BSP_VERSION) ? true : false;
 	qboolean	deathmatch = Cvar_VariableInteger( "deathmatch" );
 	qboolean	create_world = true;
 	edict_t	*ent;
@@ -4366,12 +4367,41 @@ void SV_LoadFromFile( script_t *entities )
 		if( !SV_ParseEdict( entities, ent ))
 			continue;
 
+		// remove things from different skill levels or deathmatch
+		if( inhibits_ents && deathmatch )
+		{
+			if( ent->v.spawnflags & (1<<11))
+			{
+				SV_FreeEdict( ent );
+				inhibited++;
+				continue;
+			}
+		}
+		else if( inhibits_ents && current_skill == 0 && ent->v.spawnflags & (1<<8))
+		{
+			SV_FreeEdict( ent );
+			inhibited++;
+			continue;
+		}
+		else if( inhibits_ents && current_skill == 1 && ent->v.spawnflags & (1<<9))
+		{
+			SV_FreeEdict( ent );
+			inhibited++;
+			continue;
+		}
+		else if( inhibits_ents && current_skill >= 2 && ent->v.spawnflags & (1<<10))
+		{
+			SV_FreeEdict( ent );
+			inhibited++;
+			continue;
+		}
+
 		if( svgame.dllFuncs.pfnSpawn( ent ) == -1 )
 			died++;
 		else spawned++;
 	}
 
-	MsgDev( D_INFO, "%i entities inhibited\n", inhibited );
+	MsgDev( D_INFO, "\n%i entities inhibited\n", inhibited );
 }
 
 /*

@@ -495,12 +495,12 @@ static void Mod_LoadTextures( const dlump_t *l )
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 				if( world.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
-				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA );
+				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA|TF_NOMIPMAP );
 			}
 			else
 			{
 				// okay, loading it from wad
-				tx->fb_texturenum = GL_LoadTexture( texname, NULL, 0, TF_MAKELUMA );
+				tx->fb_texturenum = GL_LoadTexture( texname, NULL, 0, TF_MAKELUMA|TF_NOMIPMAP );
 			}
 		}
 

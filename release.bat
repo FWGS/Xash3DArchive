@@ -23,9 +23,6 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% launch/launch.dsp %CONFIG%"launch - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% vid_gl/vid_gl.dsp %CONFIG%"vid_gl - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 if "%BUILD_ERROR%"=="" goto build_ok
 
 echo *********************

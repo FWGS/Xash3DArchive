@@ -56,10 +56,11 @@ typedef struct area_s
 
 typedef struct
 {
-	char		pattern[CS_SIZE];
+	char		pattern[MAX_STRING];
 	float		map[MAX_STRING];
 	int		length;
 	float		value;
+	qboolean		interp;		// allow to interpolate this lightstyle
 } lightstyle_t;
 
 extern const char		*et_name[];

@@ -25,6 +25,7 @@ convar_t	*cl_nodelta;
 convar_t	*cl_crosshair;
 convar_t	*cl_cmdbackup;
 convar_t	*cl_draw_particles;
+convar_t	*cl_lightstyle_lerping;
 convar_t	*cl_idealpitchscale;
 convar_t	*cl_solid_players;
 convar_t	*cl_draw_beams;
@@ -1451,6 +1452,7 @@ void CL_InitLocal( void )
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
 	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", CVAR_ARCHIVE, "Disable any particle effects" );
 	cl_draw_beams = Cvar_Get( "cl_draw_beams", "1", CVAR_ARCHIVE, "Disable view beams" );
+	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", CVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
 
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar

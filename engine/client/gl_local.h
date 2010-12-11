@@ -15,7 +15,7 @@
 extern byte	*r_temppool;
 
 #define MAX_TEXTURES	1024
-#define MAX_LIGHTMAPS	64
+#define MAX_LIGHTMAPS	128
 #define SUBDIVIDE_SIZE	64
 
 // refparams
@@ -147,6 +147,7 @@ typedef struct
 
 	matrix4x4		projectionMatrix;
 	matrix4x4		worldviewProjectionMatrix;	// worldviewMatrix * projectionMatrix
+	int		lightstylevalue[MAX_LIGHTSTYLES];
 
 	mplane_t		clipPlane;
 } ref_instance_t;
@@ -164,7 +165,10 @@ typedef struct
 	int		lightmapTextures[MAX_LIGHTMAPS];
 
 	int		skytexturenum;	// this not a gl_texturenum!
-
+          
+	// OpenGL matrix states
+	qboolean		modelviewIdentity;
+	
 	int		visframecount;	// PVS frame
 	int		dlightframecount;	// dynamic light frame
 	int		framecount;
@@ -184,6 +188,7 @@ extern ref_params_t		r_lastRefdef;
 extern ref_instance_t	RI;
 extern ref_globals_t	tr;
 
+extern float		gldepthmin, gldepthmax;
 extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
@@ -238,12 +243,17 @@ void R_StoreEfrags( efrag_t **ppefrag );
 // gl_rlight.c
 //
 void R_PushDlights( void );
+void R_AnimateLight( void );
+void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 
 //
 // gl_rmain.c
 //
 void R_ClearScene( void );
+void R_LoadIdentity( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
+void R_TranslateForEntity( cl_entity_t *e );
+void R_RotateForEntity( cl_entity_t *e );
 
 //
 // gl_rmath.c
@@ -256,6 +266,8 @@ void V_AdjustFov( float *fov_x, float *fov_y, float width, float height, qboolea
 //
 void R_MarkLeaves( void );
 void R_DrawWorld( void );
+void R_DrawWaterSurfaces( void );
+void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );
 void GL_BuildPolygonFromSurface( msurface_t *fa );
 void GL_BuildLightmaps( void );
@@ -274,7 +286,7 @@ void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void EmitSkyLayers( msurface_t *fa );
 void EmitSkyPolys( msurface_t *fa );
-void EmitWaterPolys( msurface_t *fa );
+void EmitWaterPolys( glpoly_t *polys );
 void R_DrawSkyChain( msurface_t *s );
 
 //
@@ -363,6 +375,7 @@ typedef struct
 	GLfloat		max_texture_lodbias;
 
 	int		color_bits;
+	int		alpha_bits;
 	int		depth_bits;
 	int		stencil_bits;
 
@@ -440,7 +453,6 @@ extern convar_t	*gl_skymip;
 extern convar_t	*gl_nobind;
 extern convar_t	*gl_finish;
 extern convar_t	*gl_clear;
-extern convar_t	*gl_texsort;
 
 extern convar_t	*r_width;
 extern convar_t	*r_height;
@@ -448,6 +460,7 @@ extern convar_t	*r_speeds;
 extern convar_t	*r_fullbright;
 extern convar_t	*r_norefresh;
 extern convar_t	*r_lighting_modulate;
+extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
 extern convar_t	*r_novis;
 extern convar_t	*r_nocull;

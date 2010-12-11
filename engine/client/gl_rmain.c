@@ -18,9 +18,7 @@ mleaf_t		*r_viewleaf, *r_oldviewleaf;
 mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 
 uint		r_numEntities;
-cl_entity_t	*r_solid_entities[MAX_VISIBLE_PACKET];	// opaque edicts
-cl_entity_t	*r_alpha_entities[MAX_VISIBLE_PACKET];	// edicts with rendermode kRenderTransAlpha
-cl_entity_t	*r_trans_entities[MAX_VISIBLE_PACKET];	// edicts with rendermode kRenderTransTexture, Additive etc
+cl_entity_t	*r_entities[MAX_VISIBLE_PACKET];
 
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs )
 {
@@ -92,7 +90,8 @@ R_ClearScene
 */
 void R_ClearScene( void )
 {
-	r_numEntities = 1;
+	Mem_Set( r_entities, 0, sizeof( r_entities ));
+	r_numEntities = 0;
 }
 
 /*
@@ -102,7 +101,14 @@ R_AddEntity
 */
 qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType )
 {
+	if( r_numEntities >= MAX_VISIBLE_PACKET )
+		return false;
+
+	pRefEntity->curstate.entityType = entityType;
+
+	r_entities[r_numEntities] = pRefEntity;
 	r_numEntities++;
+
 	return true;
 }
 
@@ -236,6 +242,77 @@ static void R_SetupModelviewMatrix( const ref_params_t *fd, matrix4x4 m )
 }
 
 /*
+=============
+R_LoadIdentity
+=============
+*/
+void R_LoadIdentity( void )
+{
+	if( tr.modelviewIdentity ) return;
+
+	Matrix4x4_LoadIdentity( RI.objectMatrix );
+	Matrix4x4_Copy( RI.modelviewMatrix, RI.worldviewMatrix );
+	GL_LoadMatrix( RI.modelviewMatrix );
+	tr.modelviewIdentity = true;
+}
+
+/*
+=============
+R_RotateForEntity
+=============
+*/
+void R_RotateForEntity( cl_entity_t *e )
+{
+	float	*org, *ang;
+	float	scale = 1.0f;
+
+	if( e == clgame.entities )
+	{
+		R_LoadIdentity();
+		return;
+	}
+
+	org = e->origin;
+	ang = e->angles;
+
+	if( e->model->type != mod_brush && e->curstate.scale > 0.0f )
+		scale = e->curstate.scale;
+
+	Matrix4x4_CreateFromEntity( RI.objectMatrix, org[0], org[1], org[2], ang[0], ang[1], ang[2], scale );
+	Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, RI.objectMatrix );
+
+	GL_LoadMatrix( RI.modelviewMatrix );
+	tr.modelviewIdentity = false;
+}
+
+/*
+=============
+R_TranslateForEntity
+=============
+*/
+void R_TranslateForEntity( cl_entity_t *e )
+{
+	float	scale = 1.0f;
+
+	if( e == clgame.entities )
+	{
+		R_LoadIdentity();
+		return;
+	}
+
+	if( e->model->type != mod_brush && e->curstate.scale > 0.0f )
+		scale = e->curstate.scale;
+
+	Matrix4x4_LoadIdentity( RI.objectMatrix );
+	Matrix4x4_SetOrigin( RI.objectMatrix, e->origin[0], e->origin[1], e->origin[2] );
+	Matrix4x4_ConcatScale( RI.objectMatrix, scale );
+	Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, RI.objectMatrix );
+
+	GL_LoadMatrix( RI.modelviewMatrix );
+	tr.modelviewIdentity = false;
+}
+
+/*
 ===============
 R_SetupFrame
 ===============
@@ -246,7 +323,7 @@ static void R_SetupFrame( void )
 	VectorCopy( RI.refdef.vieworg, RI.vieworg );
 	AngleVectors( RI.refdef.viewangles, RI.vforward, RI.vright, RI.vup );
 
-	CL_RunLightStyles();
+	R_AnimateLight();
 
 	tr.framecount++;
 
@@ -296,6 +373,14 @@ R_SetupGL
 */
 static void R_SetupGL( void )
 {
+	if( RI.refdef.waterlevel >= 3 )
+	{
+		float	f;
+		f = com.sin( cl.time * 0.4f * ( M_PI * 2.7f ));
+		RI.refdef.fov_x += f;
+		RI.refdef.fov_y -= f;
+	}
+
 	R_SetupModelviewMatrix( &RI.refdef, RI.worldviewMatrix );
 	R_SetupProjectionMatrix( &RI.refdef, RI.projectionMatrix );
 	if( RI.params & RP_MIRRORVIEW ) RI.projectionMatrix[0][0] = -RI.projectionMatrix[0][0];
@@ -347,6 +432,41 @@ static void R_EndGL( void )
 }
 
 /*
+=============
+R_DrawEntitiesOnList
+=============
+*/
+void R_DrawEntitiesOnList( void )
+{
+	int	i;
+
+	if( !r_drawentities->integer )
+		return;
+
+	// first draw entities with rendermode 'normal'
+	for( i = 0; i < r_numEntities; i++ )
+	{
+		RI.currententity = r_entities[i];
+		ASSERT( RI.currententity != NULL );
+
+		if( RI.currententity->curstate.rendermode != kRenderNormal )
+			continue;
+
+		if( !RI.currententity->model )
+			continue;
+
+		switch( RI.currententity->model->type )
+		{
+		case mod_brush:
+			R_DrawBrushModel( RI.currententity );
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+/*
 ================
 R_RenderScene
 
@@ -371,10 +491,12 @@ void R_RenderScene( const ref_params_t *fd )
 	R_DrawWorld();
 
 	CL_ExtraUpdate ();	// don't let sound get messed up if going slow
+	Tri_DrawTriangles( false );
 
-//	R_DrawEntitiesOnList();
+	R_DrawEntitiesOnList();
 
-	CL_DrawParticles ();
+	R_DrawWaterSurfaces();
+	Tri_DrawTriangles( true );
 
 	R_EndGL();
 }
