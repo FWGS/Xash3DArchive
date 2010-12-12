@@ -200,32 +200,6 @@ void SV_ConvertTrace( TraceResult *dst, trace_t *src )
 
 /*
 =================
-SV_LeafPVS
-=================
-*/
-byte *SV_LeafPVS( int leafnum )
-{
-	if( !sv.worldmodel || leafnum <= 0 || leafnum >= sv.worldmodel->numleafs || !svs.pvs || sv_novis->integer )
-		return world.nullrow;
-
-	return svs.pvs + leafnum * 4 * (( sv.worldmodel->numleafs + 31 ) >> 5 );
-}
-
-/*
-=================
-SV_LeafPHS
-=================
-*/
-byte *SV_LeafPHS( int leafnum )
-{
-	if( !sv.worldmodel || leafnum <= 0 || leafnum >= sv.worldmodel->numleafs || !svs.phs || sv_novis->integer )
-		return world.nullrow;
-
-	return svs.phs + leafnum * 4 * (( sv.worldmodel->numleafs + 31 ) >> 5 );
-}
-
-/*
-=================
 SV_Send
 
 Sends the contents of sv.multicast to a subset of the clients,
@@ -240,12 +214,13 @@ MSG_PHS	send to clients potentially hearable from org
 qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 {
 	byte		*mask = NULL;
-	int		leafnum = 0, numsends = 0;
 	int		j, numclients = sv_maxclients->integer;
 	sv_client_t	*cl, *current = svs.clients;
 	qboolean		reliable = false;
 	qboolean		specproxy = false;
 	float		*viewOrg = NULL;
+	int		numsends = 0;
+	mleaf_t		*leaf;
 
 	switch( dest )
 	{
@@ -269,16 +244,16 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 		// intentional fallthrough
 	case MSG_PAS:
 		if( origin == NULL ) return false;
-		leafnum = Mod_PointLeafnum( origin );
-		mask = SV_LeafPHS( leafnum );
+		leaf = Mod_PointInLeaf( origin, sv.worldmodel->nodes );
+		mask = Mod_LeafPHS( leaf, sv.worldmodel );
 		break;
 	case MSG_PVS_R:
 		reliable = true;
 		// intentional fallthrough
 	case MSG_PVS:
 		if( origin == NULL ) return false;
-		leafnum = Mod_PointLeafnum( origin );
-		mask = SV_LeafPVS( leafnum );
+		leaf = Mod_PointInLeaf( origin, sv.worldmodel->nodes );
+		mask = Mod_LeafPVS( leaf, sv.worldmodel );
 		break;
 	case MSG_ONE:
 		reliable = true;
@@ -315,11 +290,14 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 
 		if( mask )
 		{
+			int	leafnum;
+
 			if( SV_IsValidEdict( cl->pViewEntity ))
 				viewOrg = cl->pViewEntity->v.origin;
 			else viewOrg = cl->edict->v.origin;
 
-			leafnum = Mod_PointLeafnum( viewOrg );
+			// -1 is because pvs rows are 1 based, not 0 based like leafs
+			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
 			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}
@@ -359,24 +337,26 @@ void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int m
 static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 {
 	int	leafnum;
+	mleaf_t	*leaf;
 	byte	*mask;
 
-	leafnum = Mod_PointLeafnum( v1 );
+	leaf = Mod_PointInLeaf( v1, sv.worldmodel->nodes );
 
 	switch( mode )
 	{
 	case DVIS_PVS:
-		mask = SV_LeafPVS( leafnum );
+		mask = Mod_LeafPVS( leaf, sv.worldmodel );
 		break;
 	case DVIS_PHS:
-		mask = SV_LeafPHS( leafnum );
+		mask = Mod_LeafPHS( leaf, sv.worldmodel );
 		break;
 	default:
-		mask = NULL; // skip any checks
-		break;
+		// skip any checks
+		return true;
 	}
 
-	leafnum = Mod_PointLeafnum( v2 );
+	// -1 is because pvs rows are 1 based, not 0 based like leafs
+	leafnum = Mod_PointLeafnum( v2 ) - 1;
 
 	if( mask && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 		return false;
@@ -396,7 +376,6 @@ crosses a waterline.
 static void SV_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
 {
 	byte	*vis;
-	mplane_t	*plane;
 	float	d;
 
 	while( 1 )
@@ -412,9 +391,9 @@ static void SV_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
 				leaf = (mleaf_t *)node;			
 
 				if( type == DVIS_PVS )
-					vis = SV_LeafPVS( leaf - sv.worldmodel->leafs );
+					vis = Mod_LeafPVS( leaf, sv.worldmodel );
 				else if( type == DVIS_PHS )
-					vis = SV_LeafPHS( leaf - sv.worldmodel->leafs );
+					vis = Mod_LeafPHS( leaf, sv.worldmodel );
 				else vis = world.nullrow;
 
 				for( i = 0; i < fatbytes; i++ )
@@ -423,8 +402,7 @@ static void SV_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
 			return;
 		}
 	
-		plane = node->plane;
-		d = DotProduct( org, plane->normal ) - plane->dist;
+		d = PlaneDiff( org, node->plane );
 		if( d > 8 ) node = node->children[0];
 		else if( d < -8 ) node = node->children[1];
 		else
@@ -445,7 +423,13 @@ check brush boxes in fat pvs
 */
 static qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
-	if( !Mod_BoxVisible( absmin, absmax, SV_LeafPVS( Mod_PointLeafnum( org ))))
+	mleaf_t	*leaf;
+	byte	*vis;
+
+	leaf = Mod_PointInLeaf( org, sv.worldmodel->nodes );
+	vis = Mod_LeafPVS( leaf, sv.worldmodel );
+
+	if( !Mod_BoxVisible( absmin, absmax, vis ))
 		return false;
 	return true;
 }
@@ -3576,9 +3560,11 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 	if(!( flags & FEV_GLOBAL ))
 	{
+		mleaf_t	*leaf;
+
 		// setup pvs cluster for invoker
-		leafnum = Mod_PointLeafnum( pvspoint );
-		mask = SV_LeafPVS( leafnum );
+		leaf = Mod_PointInLeaf( pvspoint, sv.worldmodel->nodes );
+		mask = Mod_LeafPVS( leaf, sv.worldmodel );
 	}
 
 	// process all the clients
@@ -3595,8 +3581,9 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 		if(!( flags & FEV_GLOBAL ))
 		{
-			leafnum = Mod_PointLeafnum( cl->edict->v.origin );
-			if( mask && (!(mask[leafnum>>3] & (1<<(leafnum & 7)))))
+			// -1 is because pvs rows are 1 based, not 0 based like leafs
+			leafnum = Mod_PointLeafnum( cl->edict->v.origin ) - 1;
+			if( mask && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}
 
@@ -3658,7 +3645,7 @@ so we can't use a single PVS point
 */
 byte *pfnSetFatPVS( const float *org )
 {
-	if( !svs.pvs || sv_novis->integer || !org )
+	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
 		return world.nullrow;
 
 	bitvector = fatpvs;
@@ -3680,7 +3667,7 @@ so we can't use a single PHS point
 */
 byte *pfnSetFatPAS( const float *org )
 {
-	if( !svs.phs || sv_novis->integer || !org )
+	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
 		return world.nullrow;
 
 	bitvector = fatphs;

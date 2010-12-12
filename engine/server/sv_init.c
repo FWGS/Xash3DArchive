@@ -207,37 +207,45 @@ SV_CalcPHS
 void SV_CalcPHS( void )
 {
 	static char	worldname[64];
+	int		hcount, vcount;
 	int		i, j, k, l, index, num;
 	int		rowbytes, rowwords;
+	int		bitbyte, rowsize;
+	int		*visofs, total_size = 0;
+	byte		*pasmap, *pasmap_p, *pasmap_end;
+	byte		*uncompressed_vis;
+	byte		*uncompressed_pas;
+	byte		*scan, *comp;
 	uint		*dest, *src;
-	int		hcount, vcount;
 	double		timestart;
-	int		bitbyte;
-	byte		*scan;
 
 	// no worldmodel or already loaded
 	if( !sv.worldmodel || !com.strcmp( worldname, sv.model_precache[1] ))
 		return;
 
 	if( !sv.worldmodel->visdata )
-	{
-		svs.phs = svs.pvs = NULL;
 		return;
-	}
 
 	MsgDev( D_NOTE, "Building PAS...\n" );
 	com.strncpy( worldname, sv.model_precache[1], sizeof( worldname ));
 	timestart = Sys_DoubleTime();
 
-	num = sv.worldmodel->numleafs;
+	// NOTE: first leaf is skipped becuase is a outside leaf. Now all leafs have shift up by 1.
+	// and last leaf (which equal worldmodel->numleafs) has no visdata! Add extra one leaf
+	// to avoid this situation. FIXME: this is need to be detail tested 
+	num = sv.worldmodel->numleafs + 1;
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
 
 	// allocate pvs and phs data single array
-	svs.pvs = Mem_Alloc( sv.worldmodel->mempool, rowbytes * num * 2 );
-	svs.phs = svs.pvs + rowbytes * num;
+	visofs = Mem_Alloc( sv.worldmodel->mempool, (sv.worldmodel->numleafs+1) * sizeof( int ));
+	pasmap = Mem_Alloc( sv.worldmodel->mempool, rowbytes * num ); // will be fit later
+	uncompressed_vis = Mem_Alloc( sv.worldmodel->mempool, rowbytes * num * 2 );
+	uncompressed_pas = uncompressed_vis + rowbytes * num;
 
-	scan = svs.pvs;
+	pasmap_p = pasmap;
+	pasmap_end = pasmap + rowbytes * num;
+	scan = uncompressed_vis;
 	vcount = 0;
 
 	// uncompress pvs first
@@ -253,10 +261,10 @@ void SV_CalcPHS( void )
 		}
 	}
 
-	scan = svs.pvs;
+	scan = uncompressed_vis;
 	hcount = 0;
 
-	dest = (uint *)svs.phs;
+	dest = (uint *)uncompressed_pas;
 
 	for( i = 0; i < num; i++, dest += rowwords, scan += rowbytes )
 	{
@@ -276,11 +284,22 @@ void SV_CalcPHS( void )
 				index = ((j<<3) + k + 1);
 				if( index >= num ) continue;
 
-				src = (uint *)svs.pvs + index * rowwords;
+				src = (uint *)uncompressed_vis + index * rowwords;
 				for( l = 0; l < rowwords; l++ )
 					dest[l] |= src[l];
 			}
 		}
+
+		// compress PHS data back
+		comp = Mod_CompressVis( (byte *)dest, &rowsize );
+		visofs[i] = pasmap_p - pasmap; // leaf 0 is a common solid 
+		total_size += rowsize;
+
+		if( pasmap_p + rowsize > pasmap_end )
+			Host_Error( "SV_CalcPHS: pasmap expansion overflow\n" );
+
+		Mem_Copy( pasmap_p, comp, rowsize );
+		pasmap_p += rowsize; // move pointer
 
 		if( i == 0 ) continue;
 
@@ -290,6 +309,21 @@ void SV_CalcPHS( void )
 				hcount++;
 		}
 	}
+
+	// adjust compressed pas data to fit the size
+	pasmap = Mem_Realloc( sv.worldmodel->mempool, pasmap, total_size );
+
+	// apply leaf pointers
+	for( i = 0; i < sv.worldmodel->numleafs; i++ )
+		sv.worldmodel->leafs[i].compressed_pas = pasmap + visofs[i];
+
+	// release uncompressed data
+	Mem_Free( uncompressed_vis );
+	Mem_Free( visofs );	// release vis offsets
+
+	// NOTE: we don't need to store off pointer to compressed pas-data
+	// because this is will be automatiaclly frees by mempool internal pointer
+	// and we not use this pointer any time after this point
 
 	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
 	MsgDev( D_NOTE, "PAS building time: %g secs\n", Sys_DoubleTime() - timestart );

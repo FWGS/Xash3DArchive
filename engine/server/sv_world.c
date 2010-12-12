@@ -485,7 +485,7 @@ void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node )
 		}
 
 		leaf = (mleaf_t *)node;
-		leafnum = leaf - sv.worldmodel->leafs;
+		leafnum = leaf - sv.worldmodel->leafs - 1;
 
 		ent->leafnums[ent->num_leafs] = leafnum;
 		ent->num_leafs++;			
@@ -523,7 +523,7 @@ qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits )
 		if( node->contents != CONTENTS_SOLID )
 		{
 			leaf = (mleaf_t *)node;
-			leafnum = leaf - sv.worldmodel->leafs;
+			leafnum = leaf - sv.worldmodel->leafs - 1;
 
 			if( visbits[leafnum >> 3] & (1<<( leafnum & 7 )))
 				return true;

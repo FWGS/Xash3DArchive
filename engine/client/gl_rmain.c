@@ -76,11 +76,154 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs )
 
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 {
-	return false;
+	matrix4x4	worldToScreen;
+	qboolean behind;
+	float w;
+
+	Matrix4x4_Copy( worldToScreen, RI.worldviewProjectionMatrix );
+	screen[0] = worldToScreen[0][0] * point[0] + worldToScreen[0][1] * point[1] + worldToScreen[0][2] * point[2] + worldToScreen[0][3];
+	screen[1] = worldToScreen[1][0] * point[0] + worldToScreen[1][1] * point[1] + worldToScreen[1][2] * point[2] + worldToScreen[1][3];
+//	z = worldToScreen[2][0] * point[0] + worldToScreen[2][1] * point[1] + worldToScreen[2][2] * point[2] + worldToScreen[2][3];
+	w = worldToScreen[3][0] * point[0] + worldToScreen[3][1] * point[1] + worldToScreen[3][2] * point[2] + worldToScreen[3][3];
+
+	// Just so we have something valid here
+	screen[2] = 0.0f;
+
+	if( w < 0.001f )
+	{
+		behind = true;
+		screen[0] *= 100000;
+		screen[1] *= 100000;
+	}
+	else
+	{
+		float invw = 1.0f / w;
+		behind = false;
+		screen[0] *= invw;
+		screen[1] *= invw;
+	}
+	return behind;
 }
 
 void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 {
+}
+
+/*
+===============
+R_ComputeFxBlend
+===============
+*/
+int R_ComputeFxBlend( cl_entity_t *e )
+{
+	int		blend = 0, renderAmt;
+	float		offset, dist;
+	vec3_t		tmp;
+
+	offset = ((int)e->index ) * 363.0f; // Use ent index to de-sync these fx
+	renderAmt = e->curstate.renderamt;
+
+	switch( e->curstate.renderfx ) 
+	{
+	case kRenderFxPulseSlowWide:
+		blend = renderAmt + 0x40 * com.sin( RI.refdef.time * 2 + offset );	
+		break;
+	case kRenderFxPulseFastWide:
+		blend = renderAmt + 0x40 * com.sin( RI.refdef.time * 8 + offset );
+		break;
+	case kRenderFxPulseSlow:
+		blend = renderAmt + 0x10 * com.sin( RI.refdef.time * 2 + offset );
+		break;
+	case kRenderFxPulseFast:
+		blend = renderAmt + 0x10 * com.sin( RI.refdef.time * 8 + offset );
+		break;
+	// JAY: HACK for now -- not time based
+	case kRenderFxFadeSlow:			
+		if( renderAmt > 0 ) 
+			renderAmt -= 1;
+		else renderAmt = 0;
+		blend = renderAmt;
+		break;
+	case kRenderFxFadeFast:
+		if( renderAmt > 3 ) 
+			renderAmt -= 4;
+		else renderAmt = 0;
+		blend = renderAmt;
+		break;
+	case kRenderFxSolidSlow:
+		if( renderAmt < 255 ) 
+			renderAmt += 1;
+		else renderAmt = 255;
+		blend = renderAmt;
+		break;
+	case kRenderFxSolidFast:
+		if( renderAmt < 252 ) 
+			renderAmt += 4;
+		else renderAmt = 255;
+		blend = renderAmt;
+		break;
+	case kRenderFxStrobeSlow:
+		blend = 20 * com.sin( RI.refdef.time * 4 + offset );
+		if( blend < 0 ) blend = 0;
+		else blend = renderAmt;
+		break;
+	case kRenderFxStrobeFast:
+		blend = 20 * com.sin( RI.refdef.time * 16 + offset );
+		if( blend < 0 ) blend = 0;
+		else blend = renderAmt;
+		break;
+	case kRenderFxStrobeFaster:
+		blend = 20 * com.sin( RI.refdef.time * 36 + offset );
+		if( blend < 0 ) blend = 0;
+		else blend = renderAmt;
+		break;
+	case kRenderFxFlickerSlow:
+		blend = 20 * (com.sin( RI.refdef.time * 2 ) + com.sin( RI.refdef.time * 17 + offset ));
+		if( blend < 0 ) blend = 0;
+		else blend = renderAmt;
+		break;
+	case kRenderFxFlickerFast:
+		blend = 20 * (com.sin( RI.refdef.time * 16 ) + com.sin( RI.refdef.time * 23 + offset ));
+		if( blend < 0 ) blend = 0;
+		else blend = renderAmt;
+		break;
+	case kRenderFxHologram:
+	case kRenderFxDistort:
+		VectorCopy( e->origin, tmp );
+		VectorSubtract( tmp, RI.refdef.vieworg, tmp );
+		dist = DotProduct( tmp, RI.refdef.forward );
+			
+		// Turn off distance fade
+		if( e->curstate.renderfx == kRenderFxDistort )
+			dist = 1;
+
+		if( dist <= 0 )
+		{
+			blend = 0;
+		}
+		else 
+		{
+			renderAmt = 180;
+			if( dist <= 100 ) blend = renderAmt;
+			else blend = (int) ((1.0f - ( dist - 100 ) * ( 1.0f / 400.0f )) * renderAmt );
+			blend += Com_RandomLong( -32, 31 );
+		}
+		break;
+	case kRenderFxNone:
+	case kRenderFxClampMinScale:
+	default:
+		if( e->curstate.rendermode == kRenderNormal )
+			blend = 255;
+		else blend = renderAmt;
+		break;	
+	}
+
+	// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
+	if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
+		e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
+	blend = bound( 0, blend, 255 );
+
+	return blend;
 }
 
 /*
@@ -104,7 +247,14 @@ qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType )
 	if( r_numEntities >= MAX_VISIBLE_PACKET )
 		return false;
 
+	if( !pRefEntity || pRefEntity->curstate.modelindex <= 0 || pRefEntity->curstate.modelindex >= MAX_MODELS )
+		return false; // if set to invisible, skip
+
+	if( pRefEntity->curstate.rendermode != kRenderNormal && pRefEntity->curstate.renderamt <= 0.0f )
+		return true; // done
+
 	pRefEntity->curstate.entityType = entityType;
+	pRefEntity->curstate.renderamt = R_ComputeFxBlend( pRefEntity );
 
 	r_entities[r_numEntities] = pRefEntity;
 	r_numEntities++;
@@ -330,11 +480,13 @@ static void R_SetupFrame( void )
 	// current viewleaf
 	if( RI.drawWorld )
 	{
+		float	height;
 		mleaf_t	*leaf;
 		vec3_t	tmp;
 
 		VectorCopy( cl.worldmodel->mins, RI.visMins );
 		VectorCopy( cl.worldmodel->maxs, RI.visMaxs );
+		RI.waveHeight = RI.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
 
 		if(!( RI.params & RP_OLDVIEWLEAF ))
 		{
@@ -342,13 +494,14 @@ static void R_SetupFrame( void )
 			r_oldviewleaf2 = r_viewleaf2;
 			leaf = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
 			r_viewleaf2 = r_viewleaf = leaf;
+			height = RI.waveHeight ? RI.waveHeight : 16;
 
 			// check above and below so crossing solid water doesn't draw wrong
 			if( leaf->contents == CONTENTS_EMPTY )
 			{
 				// look down a bit
 				VectorCopy( RI.pvsorigin, tmp );
-				tmp[2] -= 16;
+				tmp[2] -= height;
 				leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
 				if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
 					r_viewleaf2 = leaf;
@@ -357,7 +510,7 @@ static void R_SetupFrame( void )
 			{
 				// look up a bit
 				VectorCopy( RI.pvsorigin, tmp );
-				tmp[2] += 16;
+				tmp[2] += height;
 				leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
 				if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
 					r_viewleaf2 = leaf;
@@ -443,13 +596,35 @@ void R_DrawEntitiesOnList( void )
 	if( !r_drawentities->integer )
 		return;
 
-	// first draw entities with rendermode 'normal'
+	// first draw entities with rendermode == 'normal'
 	for( i = 0; i < r_numEntities; i++ )
 	{
 		RI.currententity = r_entities[i];
 		ASSERT( RI.currententity != NULL );
 
 		if( RI.currententity->curstate.rendermode != kRenderNormal )
+			continue;
+
+		if( !RI.currententity->model )
+			continue;
+
+		switch( RI.currententity->model->type )
+		{
+		case mod_brush:
+			R_DrawBrushModel( RI.currententity );
+			break;
+		default:
+			break;
+		}
+	}
+
+	// then draw entities with rendermode != 'normal'
+	for( i = 0; i < r_numEntities; i++ )
+	{
+		RI.currententity = r_entities[i];
+		ASSERT( RI.currententity != NULL );
+
+		if( RI.currententity->curstate.rendermode == kRenderNormal )
 			continue;
 
 		if( !RI.currententity->model )
@@ -563,8 +738,10 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	if( glState.wideScreen && r_adjust_fov->integer )
 		V_AdjustFov( &RI.refdef.fov_x, &RI.refdef.fov_y, glState.width, glState.height, false );
 
+	if( !r_lockcull->integer )
+		VectorCopy( fd->vieworg, RI.cullorigin );
 	VectorCopy( fd->vieworg, RI.pvsorigin );
-
+		
 	// setup scissor
 	RI.scissor[0] = fd->viewport[0];
 	RI.scissor[1] = glState.height - fd->viewport[3] - fd->viewport[1];
@@ -585,10 +762,6 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 //	R_BloomBlend( fd );
 
 	GL_BackendEndFrame();
-
-	R_Set2DMode( true );
-
-	R_ShowTextures();
 }
 
 /*

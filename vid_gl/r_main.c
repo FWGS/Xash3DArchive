@@ -2094,8 +2094,8 @@ transform world position into screen
 qboolean R_ScreenTransform( const vec3_t point, vec3_t pClip )
 {
 	matrix4x4	worldToScreen;
-	qboolean behind;
-	float w;
+	qboolean	behind;
+	float	w;
 
 	Matrix4x4_Copy( worldToScreen, RI.worldviewProjectionMatrix );
 	pClip[0] = worldToScreen[0][0] * point[0] + worldToScreen[0][1] * point[1] + worldToScreen[0][2] * point[2] + worldToScreen[0][3];
@@ -2114,7 +2114,7 @@ qboolean R_ScreenTransform( const vec3_t point, vec3_t pClip )
 	}
 	else
 	{
-		float invw = 1.0f / w;
+		float	invw = 1.0f / w;
 		behind = false;
 		pClip[0] *= invw;
 		pClip[1] *= invw;

@@ -20,6 +20,8 @@
 #define DVIS_PHS		1
 #define ANIM_CYCLE		2
 
+#define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
+
 typedef struct leaflist_s
 {
 	int		count;
@@ -63,10 +65,12 @@ model_t *Mod_ForName( const char *name, qboolean world );
 qboolean Mod_RegisterModel( const char *name, int index );
 int Mod_PointLeafnum( const vec3_t p );
 byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model );
+byte *Mod_LeafPHS( mleaf_t *leaf, model_t *model );
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
 int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
 void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
+byte *Mod_CompressVis( const byte *in, size_t *size );
 byte *Mod_DecompressVis( const byte *in );
 modtype_t Mod_GetType( int handle );
 model_t *CM_ClipHandleToModel( int handle );

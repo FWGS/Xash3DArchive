@@ -15,7 +15,7 @@
 extern byte	*r_temppool;
 
 #define MAX_TEXTURES	1024
-#define MAX_LIGHTMAPS	128
+#define MAX_LIGHTMAPS	64
 #define SUBDIVIDE_SIZE	64
 
 // refparams
@@ -129,6 +129,7 @@ typedef struct
 	mplane_t		frustum[6];
 
 	vec3_t		pvsorigin;
+	vec3_t		cullorigin;
 	vec3_t		vieworg;		// locked vieworigin
 	vec3_t		vforward;
 	vec3_t		vright;
@@ -136,6 +137,9 @@ typedef struct
 
 	float		farClip;
 	uint		clipFlags;
+
+	float		waveHeight;	// global waveHeight
+	float		currentWaveHeight;	// current entity waveHeight
 
 	vec3_t		visMins, visMaxs;
 	float		skyMins[2][6];
@@ -465,6 +469,7 @@ extern convar_t	*r_adjust_fov;
 extern convar_t	*r_novis;
 extern convar_t	*r_nocull;
 extern convar_t	*r_lockpvs;
+extern convar_t	*r_lockcull;
 extern convar_t	*r_wateralpha;
 extern convar_t	*r_dynamic;
 extern convar_t	*r_lightmap;

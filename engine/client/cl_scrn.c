@@ -271,8 +271,6 @@ void SCR_UpdateScreen( void )
 			break;
 		case ca_active:
 			V_RenderView();
-			CL_DrawHUD( CL_ACTIVE );
-			CL_DrawDemoRecording();
 			break;
 		case ca_cinematic:
 			SCR_DrawCinematic();

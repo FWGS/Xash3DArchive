@@ -49,6 +49,7 @@ convar_t	*r_adjust_fov;
 convar_t	*r_novis;
 convar_t	*r_nocull;
 convar_t	*r_lockpvs;
+convar_t	*r_lockcull;
 convar_t	*r_wateralpha;
 convar_t	*r_dynamic;
 convar_t	*r_lightmap;
@@ -1362,6 +1363,7 @@ void GL_InitCommands( void )
 	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
 	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
 	r_lockpvs = Cvar_Get( "r_lockpvs", "0", CVAR_CHEAT, "lockpvs area at current point (pvs test)" );
+	r_lockcull = Cvar_Get( "r_lockcull", "0", CVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 	r_wateralpha = Cvar_Get( "r_wateralpha", "1", CVAR_ARCHIVE, "world water transparency factor" );
 	r_dynamic = Cvar_Get( "r_dynamic", "1", CVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
 	r_lightmap = Cvar_Get( "r_lightmap", "0", CVAR_CHEAT, "lightmap debugging tool" );

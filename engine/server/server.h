@@ -335,9 +335,6 @@ typedef struct
 	entity_state_t	*packet_entities;		// [num_client_entities]
 	entity_state_t	*baselines;		// [GI->max_edicts]
 
-	byte		*pvs;			// uncompressed PVS data
-	byte		*phs;			// uncompressed PAS data
-
 	double		last_heartbeat;
 	challenge_t	challenges[MAX_CHALLENGES];	// to prevent invalid IPs from connecting
 } server_static_t;
@@ -517,8 +514,6 @@ int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
 int pfnPrecacheModel( const char *s );
 int pfnDecalIndex( const char *m );
-byte *SV_LeafPVS( int leafnum );
-byte *SV_LeafPHS( int leafnum );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {

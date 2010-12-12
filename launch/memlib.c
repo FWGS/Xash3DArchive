@@ -1081,7 +1081,7 @@ void *_mem_realloc( byte *poolptr, void *memptr, size_t size, const char *filena
 		// get size of old block
 		newsize = memhdr->size < size ? memhdr->size : size; // upper data can be trucnated!
 		com.memcpy( nb, memptr, newsize, filename, fileline );
-		_mem_free( memptr, filename, fileline); // free unused old block
+		_mem_free( memptr, filename, fileline ); // free unused old block
           }
 
 	return (void *)nb;

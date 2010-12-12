@@ -171,9 +171,8 @@ void EmitWaterPolys( glpoly_t *polys )
 	float	s, t, os, ot;
 	int	i;
 
-	if( RI.currententity == clgame.entities )
-		waveHeight = RI.refdef.movevars->waveHeight * 2.0f;
-	else waveHeight = RI.currententity->curstate.scale * 32.0f;
+	// set the current waveheight
+	waveHeight = RI.currentWaveHeight;
 
 	for( p = polys; p; p = p->next )
 	{
@@ -182,8 +181,11 @@ void EmitWaterPolys( glpoly_t *polys )
 		for( i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE )
 		{
 			if( waveHeight )
+			{
 				nv = v[2] + waveHeight + ( waveHeight * com.sin(v[0] * 0.02 + cl.time)
 					* com.sin(v[1] * 0.02 + cl.time) * com.sin(v[2] * 0.02 + cl.time));
+				nv -= waveHeight;
+			}
 			else nv = v[2];
 
 			os = v[3];

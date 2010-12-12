@@ -8,7 +8,7 @@
 #include "client.h"
 #include "ref_params.h"
 
-#define SND_CLIP_DISTANCE		1000.0f
+#define SND_CLIP_DISTANCE		1024.0f
 
 dma_t		dma;
 byte		*sndpool;
@@ -746,8 +746,7 @@ void S_UpdateChannels( void )
 		endtime -= ( endtime - paintedtime ) & 0x3;
 	}
 
-	if( cl.audio_prepped )
-		MIX_PaintChannels( endtime );
+	MIX_PaintChannels( endtime );
 
 	SNDDMA_Submit();
 }

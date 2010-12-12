@@ -16,7 +16,7 @@ typedef struct
 {
 	qboolean		lightmap_modified[MAX_LIGHTMAPS];
 	wrect_t		lightmap_rectchange[MAX_LIGHTMAPS];
-	int		allocated[MAX_LIGHTMAPS][BLOCK_WIDTH];
+	uint		allocated[MAX_LIGHTMAPS][BLOCK_WIDTH];
 	byte		lightmaps[MAX_LIGHTMAPS*BLOCK_WIDTH*BLOCK_HEIGHT*4];
 } lightmap_state_t;
 
@@ -348,15 +348,82 @@ DrawGLPoly
 */
 void DrawGLPoly( glpoly_t *p )
 {
-	float	*v;
-	int	i;
+	float		*v;
+	float		sOffset;
+	float		tOffset;
+	cl_entity_t	*e = RI.currententity;
+	int		i;
+
+	if( p->flags & SURF_CONVEYOR )
+	{
+		gltexture_t	*texture;
+		float		flConveyorSpeed;
+		float		flRate, flAngle;
+
+		flConveyorSpeed = (e->curstate.rendercolor.g<<8|e->curstate.rendercolor.b) / 16.0f;
+		if( e->curstate.rendercolor.r ) flConveyorSpeed = -flConveyorSpeed;
+		texture = R_GetTexture( glState.currentTextures[glState.activeTMU] );
+
+		flRate = abs( flConveyorSpeed ) / (float)texture->srcWidth;
+		flAngle = ( flConveyorSpeed >= 0 ) ? 180 : 0;
+
+		sOffset = RI.refdef.time * com.cos( flAngle * ( M_PI / 180.0f )) * flRate;
+		tOffset = RI.refdef.time * com.sin( flAngle * ( M_PI / 180.0f )) * flRate;
+	
+		// make sure that we are positive
+		if( sOffset < 0.0f ) sOffset += 1.0f + -(int)sOffset;
+		if( tOffset < 0.0f ) tOffset += 1.0f + -(int)tOffset;
+
+		// make sure that we are in a [0,1] range
+		sOffset = sOffset - (int)sOffset;
+		tOffset = tOffset - (int)tOffset;
+
+		// setup the color and alpha
+		switch( e->curstate.rendermode )
+		{
+		case kRenderGlow:
+		case kRenderTransAdd:
+		case kRenderTransColor:
+		case kRenderTransTexture:
+		case kRenderTransInverse:
+		case kRenderTransAlpha:
+			pglColor4ub( 255, 255, 255, e->curstate.renderamt );
+			break;
+		default:
+			pglColor4ub( 255, 255, 255, 255 );
+			break;
+		}
+	}
+	else
+	{
+		// setup the color and alpha
+		switch( e->curstate.rendermode )
+		{
+		case kRenderTransTexture:
+		case kRenderTransInverse:
+		case kRenderTransAlpha:
+			pglColor4ub( 255, 255, 255, e->curstate.renderamt );
+			break;
+		case kRenderGlow:
+		case kRenderTransAdd:
+		case kRenderTransColor:
+			pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g,
+				e->curstate.rendercolor.b, e->curstate.renderamt );
+			break;
+		default:
+			pglColor4ub( 255, 255, 255, 255 );
+			break;
+		}
+
+		sOffset = tOffset = 0.0f;
+	}
 
 	pglBegin( GL_POLYGON );
 
 	v = p->verts[0];
 	for( i = 0; i < p->numverts; i++, v += VERTEXSIZE )
 	{
-		pglTexCoord2f( v[3], v[4] );
+		pglTexCoord2f( v[3] + sOffset, v[4] + tOffset );
 		pglVertex3fv( v );
 	}
 
@@ -377,10 +444,23 @@ void R_BlendLightmaps( void )
 	if( r_fullbright->integer )
 		return;
 
+	if( RI.currententity )
+	{
+		// check for rendermode
+		switch( RI.currententity->curstate.rendermode )
+		{
+		case kRenderTransTexture:
+		case kRenderTransInverse:
+		case kRenderTransAdd:
+		case kRenderGlow:
+			return; // no lightmaps
+		}
+	}
+
 	if( !r_lightmap->integer )
 	{
 		GL_TexEnv( GL_MODULATE );
-		GL_SetState( GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR );
+		GL_SetState( GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR|GLSTATE_DEPTHFUNC_EQ );
 	}
 
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
@@ -419,7 +499,7 @@ void R_RenderFullbrights( void )
 {
 	glpoly_t	*p;
 	int	i;
-#if 0
+
 	if( !draw_fullbrights )
 		return;
 
@@ -431,19 +511,19 @@ void R_RenderFullbrights( void )
 		if( !fullbright_polys[i] )
 			continue;
 		GL_Bind( GL_TEXTURE0, i );
-
+#if 0
 		for( p = fullbright_polys[i]; p; p = p->fb_chain )
 		{
 			if( p->flags & SURF_DRAWTURB )
 				EmitWaterPolys( p );
 			else DrawGLPoly( p );
 		}
+#endif
 		fullbright_polys[i] = NULL;		
 	}
 
 	GL_SetState( GLSTATE_DEPTHWRITE );
 	draw_fullbrights = false;
-#endif
 }
 
 /*
@@ -796,6 +876,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	qboolean		rotated;
 
 	clmodel = e->model;
+	RI.currentWaveHeight = RI.currententity->curstate.scale * 32.0f;
 
 	if( !VectorIsNull( e->angles ))
 	{
@@ -819,11 +900,11 @@ void R_DrawBrushModel( cl_entity_t *e )
 	pglColor3f( 1.0f, 1.0f, 1.0f );
 	Mem_Set( lightmap_polys, 0, sizeof( lightmap_polys ));
 
-	VectorSubtract( RI.refdef.vieworg, e->origin, modelorg );
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
 
-	VectorSubtract( RI.refdef.vieworg, e->origin, modelorg );
+	VectorSubtract( RI.cullorigin, e->origin, modelorg );
+	e->visframe = tr.framecount; // visible
 
 	if( rotated )
 	{
@@ -855,22 +936,32 @@ void R_DrawBrushModel( cl_entity_t *e )
 		}
 	}
 
+	// setup the rendermode
+	GL_SetRenderMode( e->curstate.rendermode );
+
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		// find which side of the node we are on
-		dot = PlaneDiff( modelorg, psurf->plane );
+		// don't cull wave surfaces when waveHeight != 0
+		if( !(psurf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
+		{
+			// find which side of the node we are on
+			dot = PlaneDiff( modelorg, psurf->plane );
 
-		if( dot >= 0 ) sidebit = 0;
-		else sidebit = SURF_PLANEBACK;
+			if( dot >= 0 ) sidebit = 0;
+			else sidebit = SURF_PLANEBACK;
 
-		// draw the polygon
-		if(( psurf->flags & SURF_PLANEBACK ) != sidebit )
-			continue;	// wrong side
+			// draw the polygon
+			if(( psurf->flags & SURF_PLANEBACK ) != sidebit )
+				continue;	// wrong side
+		}
+
+		if( psurf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
+			continue;	// cull water backplane 
 
 		R_RenderBrushPoly( psurf );
 	}
 
-	R_BlendLightmaps ();
+	R_BlendLightmaps();
 	R_LoadIdentity();	// restore worldmatrix
 }
 
@@ -962,11 +1053,15 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	// draw stuff
 	for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
 	{
-		if( surf->visframe != tr.framecount )
-			continue;
+		// don't cull wave surfaces when waveHeight != 0
+		if( !(surf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
+		{
+			if( surf->visframe != tr.framecount )
+				continue;
 
-		if(( surf->flags & SURF_PLANEBACK ) != sidebit )
-			continue;	// wrong side
+			if(( surf->flags & SURF_PLANEBACK ) != sidebit )
+				continue;	// wrong side
+		}
 
 		surf->texturechain = surf->texinfo->texture->texturechain;
 		surf->texinfo->texture->texturechain = surf;
@@ -989,9 +1084,11 @@ void R_DrawWorld( void )
 	if( RI.refdef.onlyClientDraw )
 		return;
 
-	VectorCopy( RI.refdef.vieworg, modelorg );
+	VectorCopy( RI.cullorigin, modelorg );
 	Mem_Set( lightmap_polys, 0, sizeof( lightmap_polys ));
 	Mem_Set( fullbright_polys, 0, sizeof( fullbright_polys ));
+	RI.currentWaveHeight = RI.waveHeight;
+	GL_SetRenderMode( kRenderNormal );
 
 	ClearBounds( RI.visMins, RI.visMaxs );
 
@@ -1216,19 +1313,21 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 {
 	int	smax, tmax;
 	byte	*base;
+	texture_t	*tex;
 
 	if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
 		return;
 
 	smax = ( surf->extents[0] >> 4 ) + 1;
 	tmax = ( surf->extents[1] >> 4 ) + 1;
+	tex = surf->texinfo->texture;
 
 	if( smax > BLOCK_WIDTH )
-		Host_Error( "GL_CreateSurfaceLightmap: lightmap width %d > %d, %s\n", smax, BLOCK_WIDTH, surf->texinfo->texture->name );
+		Host_Error( "GL_CreateLightmap: lightmap width %d > %d, %s\n", smax, BLOCK_WIDTH, tex->name );
 	if( tmax > BLOCK_HEIGHT )
-		Host_Error( "GL_CreateSurfaceLightmap: lightmap height %d > %d\n", tmax, BLOCK_HEIGHT );
+		Host_Error( "GL_CreateLightmap: lightmap height %d > %d, %s\n", tmax, BLOCK_HEIGHT, tex->name );
 	if( smax * tmax > BLOCK_WIDTH * BLOCK_HEIGHT )
-		Host_Error( "GL_CreateSurfaceLightmap: lightmap size too big\n" );
+		Host_Error( "GL_CreateLightmap: lightmap size too big\n" );
 
 	surf->lightmaptexturenum = LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t );
 	base = r_lmState.lightmaps + surf->lightmaptexturenum * BLOCK_WIDTH * BLOCK_HEIGHT * 4;

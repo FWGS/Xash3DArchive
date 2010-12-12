@@ -19,7 +19,8 @@ byte		*com_studiocache;		// cache for submodels
 static model_t	*com_models[MAX_MODELS];	// shared replacement modeltable
 static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels = 0;
-
+static byte	visdata[MAX_MAP_LEAFS/8];	// intermediate buffer
+	
 model_t		*loadmodel;
 model_t		*worldmodel;
 
@@ -89,14 +90,54 @@ static int Mod_StudioBodyVariations( model_t *mod )
 
 /*
 ===================
+Mod_CompressVis
+===================
+*/
+byte *Mod_CompressVis( const byte *in, size_t *size )
+{
+	int	j, rep;
+	int	visrow;
+	byte	*dest_p;
+
+	if( !worldmodel )
+	{
+		Host_Error( "Mod_CompressVis: no worldmodel\n" );
+		return NULL;
+	}
+	
+	dest_p = visdata;
+	visrow = (worldmodel->numleafs + 7)>>3;
+	
+	for( j = 0; j < visrow; j++ )
+	{
+		*dest_p++ = in[j];
+		if( in[j] ) continue;
+
+		rep = 1;
+		for( j++; j < visrow; j++ )
+		{
+			if( in[j] || rep == 255 )
+				break;
+			else rep++;
+		}
+		*dest_p++ = rep;
+		j--;
+	}
+
+	if( size ) *size = dest_p - visdata;
+
+	return visdata;
+}
+
+/*
+===================
 Mod_DecompressVis
 ===================
 */
 byte *Mod_DecompressVis( const byte *in )
 {
-	static byte	decompressed[MAX_MAP_LEAFS/8];
-	int		c, row;
-	byte		*out;
+	int	c, row;
+	byte	*out;
 
 	if( !worldmodel )
 	{
@@ -105,7 +146,7 @@ byte *Mod_DecompressVis( const byte *in )
 	}
 
 	row = (worldmodel->numleafs + 7)>>3;	
-	out = decompressed;
+	out = visdata;
 
 	if( !in )
 	{	
@@ -115,7 +156,7 @@ byte *Mod_DecompressVis( const byte *in )
 			*out++ = 0xff;
 			row--;
 		}
-		return decompressed;
+		return visdata;
 	}
 
 	do
@@ -134,9 +175,9 @@ byte *Mod_DecompressVis( const byte *in )
 			*out++ = 0;
 			c--;
 		}
-	} while( out - decompressed < row );
+	} while( out - visdata < row );
 
-	return decompressed;
+	return visdata;
 }
 
 /*
@@ -147,15 +188,17 @@ Mod_PointInLeaf
 */
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node )
 {
-	mplane_t	*plane;
+	ASSERT( node != NULL );
 
-	do
+	while( 1 )
 	{
-		plane = node->plane;
-		node = node->children[PlaneDiff( p, plane ) < 0];
-	} while( node->contents >= 0 );
+		if( node->contents < 0 )
+			return (mleaf_t *)node;
+		node = node->children[PlaneDiff( p, node->plane ) < 0];
+	}
 
-	return (mleaf_t *)node;
+	// never reached
+	return NULL;
 }
 
 /*
@@ -169,6 +212,19 @@ byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model )
 	if( !model || !leaf || leaf == model->leafs || !model->visdata )
 		return world.nullrow;
 	return Mod_DecompressVis( leaf->compressed_vis );
+}
+
+/*
+==================
+Mod_LeafPHS
+
+==================
+*/
+byte *Mod_LeafPHS( mleaf_t *leaf, model_t *model )
+{
+	if( !model || !leaf || leaf == model->leafs || !model->visdata )
+		return world.nullrow;
+	return Mod_DecompressVis( leaf->compressed_pas );
 }
 
 /*
@@ -212,7 +268,7 @@ static void Mod_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
 				return;
 			}
 
-			ll->list[ll->count++] = leaf - worldmodel->leafs;
+			ll->list[ll->count++] = leaf - worldmodel->leafs - 1;
 			return;
 		}
 	
@@ -736,6 +792,29 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 
 /*
 =================
+Mod_CalcSurfaceBounds
+
+fills in surf->mins and surf->maxs
+=================
+*/
+static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
+{
+	int	i, e;
+	mvertex_t	*v;
+
+	ClearBounds( info->minmaxs, info->minmaxs + 3 );
+
+	for( i = 0; i < surf->numedges; i++ )
+	{
+		e = loadmodel->surfedges[surf->firstedge + i];
+		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
+		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
+		AddPointToBounds( v->position, info->minmaxs, info->minmaxs + 3 );
+	}
+}
+
+/*
+=================
 Mod_LoadSurfaces
 =================
 */
@@ -743,6 +822,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 {
 	dface_t		*in;
 	msurface_t	*out;
+	mextrasurf_t	*info;
 	int		i, j;
 	int		count;
 
@@ -753,9 +833,11 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 	loadmodel->numsurfaces = count;
 	loadmodel->surfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
+	loadmodel->cache.data =  Mem_Alloc( loadmodel->mempool, count * sizeof( mextrasurf_t ));
 	out = loadmodel->surfaces;
+	info = loadmodel->cache.data;
 
-	for( i = 0; i < count; i++, in++, out++ )
+	for( i = 0; i < count; i++, in++, out++, info++ )
 	{
 		if(( in->firstedge + in->numedges ) > loadmodel->numsurfedges )
 		{
@@ -776,13 +858,21 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		{
 			texture_t	*tex = out->texinfo->texture;
 
-			if( !com.strncmp( tex->name, "sky", 3 ) && world.version == Q1BSP_VERSION )
-				out->flags |= (SURF_DRAWSKY|SURF_DRAWTILED);
+			if( !com.strncmp( tex->name, "sky", 3 ))
+			{
+				if( world.version == Q1BSP_VERSION )
+					out->flags |= SURF_DRAWTILED;
+				out->flags |= SURF_DRAWSKY;
+			}
 
 			if( tex->name[0] == '*' || tex->name[0] == '!' || !com.strnicmp( tex->name, "water", 5 ))
 				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+
+			if( com.stristr( tex->name, "scroll" ))
+				out->flags |= SURF_CONVEYOR;
 		}
 
+		Mod_CalcSurfaceBounds( out, info );
 		Mod_CalcSurfaceExtents( out );
 
 		if( loadmodel->lightdata && in->lightofs != -1 )
@@ -1294,6 +1384,33 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 
 		mod->radius = RadiusFromBounds( mod->mins, mod->maxs );
 		mod->numleafs = bm->visleafs;
+
+		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
+		{
+			msurface_t	*surf = mod->surfaces + mod->firstmodelsurface + j;
+			mextrasurf_t	*info = SURF_INFO( surf, mod );
+			vec3_t		normal, vup = { 0, 0, 1 };
+
+			// kill water backplanes for submodels (half-life rules)
+			if( surf->flags & SURF_DRAWTURB )
+			{
+				if( surf->flags & SURF_PLANEBACK )
+					VectorNegate( surf->plane->normal, normal );
+				else VectorCopy( surf->plane->normal, normal );
+
+				if( surf->plane->type == PLANE_Z )
+				{
+					// kill bottom plane too
+					if( info->minmaxs[2] == bm->mins[2] + 1 )
+						surf->flags |= SURF_WATERCSG;
+				}
+				else
+				{
+					// kill side planes
+					surf->flags |= SURF_WATERCSG;
+				}
+			}
+		}
 
 		if( i < mod->numsubmodels - 1 )
 		{

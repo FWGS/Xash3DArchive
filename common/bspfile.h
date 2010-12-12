@@ -25,13 +25,14 @@ BRUSH MODELS
 // bmodel limits
 #define MAX_MAP_HULLS		4		// MAX_HULLS
 
-// in-game helper surface flags
-#define SURF_PLANEBACK		BIT( 1 )
+#define SURF_PLANEBACK		BIT( 1 )		// there
 #define SURF_DRAWSKY		BIT( 2 )		// sky surface
-#define SURF_DRAWTURB		BIT( 3 )		// warp surface
-#define SURF_DRAWTILED		BIT( 4 )		// face without lighmap
-#define SURF_UNDERWATER		BIT( 5 )		// caustics
-#define SURF_WATERCSG		BIT( 6 )		// culled by csg
+#define SURF_WATERCSG		BIT( 3 )		// culled by csg
+#define SURF_DRAWTURB		BIT( 4 )		// warp surface
+#define SURF_DRAWTILED		BIT( 5 )		// face without lighmap
+#define SURF_CONVEYOR		BIT( 6 )		// scrolled texture
+#define SURF_UNDERWATER		BIT( 7 )		// caustics
+#define SURF_DONTWARP		BIT( 8 )
 
 // lightstyle management
 #define LM_STYLES			4		// MAXLIGHTMAPS

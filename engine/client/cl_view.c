@@ -181,11 +181,20 @@ V_PostRender
 */
 void V_PostRender( void )
 {
+	R_Set2DMode( true );
+
+	if( cls.state == ca_active )
+	{
+		CL_DrawHUD( CL_ACTIVE );
+	}
+
 	if( cls.scrshot_action == scrshot_inactive )
 	{
 		SCR_RSpeeds();
 		SCR_NetSpeeds();
 		SCR_DrawFPS();
+		CL_DrawDemoRecording();
+		R_ShowTextures();
 		CL_DrawHUD( CL_CHANGELEVEL );
 		UI_UpdateMenu( host.realtime );
 		Con_DrawConsole();
