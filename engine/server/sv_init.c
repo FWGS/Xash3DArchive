@@ -211,7 +211,7 @@ void SV_CalcPHS( void )
 	int		i, j, k, l, index, num;
 	int		rowbytes, rowwords;
 	int		bitbyte, rowsize;
-	int		*visofs, total_size = 0;
+	int		*visofs, in_size, total_size = 0;
 	byte		*pasmap, *pasmap_p, *pasmap_end;
 	byte		*uncompressed_vis;
 	byte		*uncompressed_pas;
@@ -236,15 +236,16 @@ void SV_CalcPHS( void )
 	num = sv.worldmodel->numleafs + 1;
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
+	in_size = rowbytes * (num + 1);
 
 	// allocate pvs and phs data single array
 	visofs = Mem_Alloc( sv.worldmodel->mempool, (sv.worldmodel->numleafs+1) * sizeof( int ));
-	pasmap = Mem_Alloc( sv.worldmodel->mempool, rowbytes * num ); // will be fit later
+	pasmap = Mem_Alloc( sv.worldmodel->mempool, in_size ); // will be fit later
 	uncompressed_vis = Mem_Alloc( sv.worldmodel->mempool, rowbytes * num * 2 );
 	uncompressed_pas = uncompressed_vis + rowbytes * num;
 
 	pasmap_p = pasmap;
-	pasmap_end = pasmap + rowbytes * num;
+	pasmap_end = pasmap + in_size;
 	scan = uncompressed_vis;
 	vcount = 0;
 
@@ -326,6 +327,7 @@ void SV_CalcPHS( void )
 	// and we not use this pointer any time after this point
 
 	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
+	MsgDev( D_NOTE, "Uncompressed PAS: %s, Compressed PAS: %s\n", memprint( in_size ), memprint( total_size ));
 	MsgDev( D_NOTE, "PAS building time: %g secs\n", Sys_DoubleTime() - timestart );
 }
 

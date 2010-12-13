@@ -429,7 +429,7 @@ void GL_SetRenderMode( int mode )
 		texEnv = GL_MODULATE;
 		break;
 	case kRenderTransTexture:
-		state = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DEPTHWRITE;
+		state = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 		texEnv = GL_MODULATE;
 		break;
 	case kRenderGlow:
@@ -441,7 +441,7 @@ void GL_SetRenderMode( int mode )
 		texEnv = GL_MODULATE;
 		break;
 	case kRenderTransInverse:
-		state = GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DSTBLEND_SRC_ALPHA|GLSTATE_DEPTHWRITE;
+		state = GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DSTBLEND_SRC_ALPHA;
 		texEnv = GL_MODULATE;
 		break;
 	}

@@ -194,6 +194,10 @@ SOURCE=.\client\gl_beams.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_cull.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_decals.c
 # End Source File
 # Begin Source File

@@ -377,44 +377,9 @@ void DrawGLPoly( glpoly_t *p )
 		// make sure that we are in a [0,1] range
 		sOffset = sOffset - (int)sOffset;
 		tOffset = tOffset - (int)tOffset;
-
-		// setup the color and alpha
-		switch( e->curstate.rendermode )
-		{
-		case kRenderGlow:
-		case kRenderTransAdd:
-		case kRenderTransColor:
-		case kRenderTransTexture:
-		case kRenderTransInverse:
-		case kRenderTransAlpha:
-			pglColor4ub( 255, 255, 255, e->curstate.renderamt );
-			break;
-		default:
-			pglColor4ub( 255, 255, 255, 255 );
-			break;
-		}
 	}
 	else
 	{
-		// setup the color and alpha
-		switch( e->curstate.rendermode )
-		{
-		case kRenderTransTexture:
-		case kRenderTransInverse:
-		case kRenderTransAlpha:
-			pglColor4ub( 255, 255, 255, e->curstate.renderamt );
-			break;
-		case kRenderGlow:
-		case kRenderTransAdd:
-		case kRenderTransColor:
-			pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g,
-				e->curstate.rendercolor.b, e->curstate.renderamt );
-			break;
-		default:
-			pglColor4ub( 255, 255, 255, 255 );
-			break;
-		}
-
 		sOffset = tOffset = 0.0f;
 	}
 
@@ -862,12 +827,50 @@ void R_DrawWaterSurfaces( void )
 
 /*
 =================
+R_SurfaceCompare
+
+compare translucent surfaces
+=================
+*/
+static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
+{
+	msurface_t	*surf1, *surf2;
+	mextrasurf_t	*info1, *info2;
+	vec3_t		vecLength, org1, org2;
+	float		len1, len2;
+
+	surf1 = (msurface_t *)*a;
+	surf2 = (msurface_t *)*b;
+
+	info1 = SURF_INFO( surf1, RI.currentmodel );
+	info2 = SURF_INFO( surf2, RI.currentmodel );
+
+	VectorAdd( RI.currententity->origin, info1->origin, org1 );
+	VectorAdd( RI.currententity->origin, info2->origin, org2 );
+
+	VectorSubtract( RI.pvsorigin, org1, vecLength );
+	len1 = VectorLength( vecLength );
+	VectorSubtract( RI.pvsorigin, org2, vecLength );
+	len2 = VectorLength( vecLength );
+
+	if( len1 > len2 )
+		return -1;
+	if( len1 < len2 )
+		return 1;
+
+	return 0;
+}
+
+/*
+=================
 R_DrawBrushModel
 =================
 */
 void R_DrawBrushModel( cl_entity_t *e )
 {
 	int		i, k, sidebit;
+	int		num_sorted;
+	qboolean		need_sort = false;
 	vec3_t		mins, maxs;
 	msurface_t	*psurf;
 	float		dot;
@@ -939,6 +942,29 @@ void R_DrawBrushModel( cl_entity_t *e )
 	// setup the rendermode
 	GL_SetRenderMode( e->curstate.rendermode );
 
+	// setup the color and alpha
+	switch( e->curstate.rendermode )
+	{
+	case kRenderTransAdd:
+	case kRenderTransTexture:
+	case kRenderTransInverse:
+		need_sort = true;
+	case kRenderTransAlpha:
+	case kRenderGlow:
+		pglColor4ub( 255, 255, 255, e->curstate.renderamt );
+		break;
+	case kRenderTransColor:
+		pglDisable( GL_TEXTURE_2D );
+		pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g,
+			e->curstate.rendercolor.b, e->curstate.renderamt );
+		break;
+	default:
+		pglColor4ub( 255, 255, 255, 255 );
+		break;
+	}
+
+	num_sorted = 0;
+
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
 		// don't cull wave surfaces when waveHeight != 0
@@ -958,8 +984,28 @@ void R_DrawBrushModel( cl_entity_t *e )
 		if( psurf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
 			continue;	// cull water backplane 
 
-		R_RenderBrushPoly( psurf );
+		if( need_sort )
+		{
+			world.draw_surfaces[num_sorted] = psurf;
+			num_sorted++;
+			ASSERT( world.max_surfaces >= num_sorted );
+		}
+		else
+		{
+			// render unsorted (solid)
+			R_RenderBrushPoly( psurf );
+		}
 	}
+
+	if( need_sort )
+		qsort( world.draw_surfaces, num_sorted, sizeof( msurface_t* ), R_SurfaceCompare );
+
+	// draw sorted translucent surfaces
+	for( i = 0; i < num_sorted; i++ )
+		R_RenderBrushPoly( world.draw_surfaces[i] );
+
+	if( e->curstate.rendermode == kRenderTransColor )
+		pglEnable( GL_TEXTURE_2D );
 
 	R_BlendLightmaps();
 	R_LoadIdentity();	// restore worldmatrix

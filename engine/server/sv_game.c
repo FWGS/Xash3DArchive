@@ -394,7 +394,7 @@ static void SV_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
 					vis = Mod_LeafPVS( leaf, sv.worldmodel );
 				else if( type == DVIS_PHS )
 					vis = Mod_LeafPHS( leaf, sv.worldmodel );
-				else vis = world.nullrow;
+				else vis = Mod_DecompressVis( NULL ); // get full visibility
 
 				for( i = 0; i < fatbytes; i++ )
 					bitvector[i] |= vis[i];
@@ -3646,7 +3646,7 @@ so we can't use a single PVS point
 byte *pfnSetFatPVS( const float *org )
 {
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
-		return world.nullrow;
+		return Mod_DecompressVis( NULL );
 
 	bitvector = fatpvs;
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
@@ -3668,7 +3668,7 @@ so we can't use a single PHS point
 byte *pfnSetFatPAS( const float *org )
 {
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
-		return world.nullrow;
+		return Mod_DecompressVis( NULL );
 
 	bitvector = fatphs;
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;

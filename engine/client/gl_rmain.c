@@ -17,61 +17,67 @@ ref_instance_t	RI, prevRI;
 mleaf_t		*r_viewleaf, *r_oldviewleaf;
 mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 
-uint		r_numEntities;
-cl_entity_t	*r_entities[MAX_VISIBLE_PACKET];
+cl_entity_t	*r_solid_entities[MAX_VISIBLE_PACKET];
+cl_entity_t	*r_trans_entities[MAX_VISIBLE_PACKET];
+uint		r_num_solid_entities;
+uint		r_num_trans_entities;
 
-qboolean R_CullBox( const vec3_t mins, const vec3_t maxs )
+static int R_RankForRenderMode( cl_entity_t *ent )
 {
-	uint		i, bit;
-	const mplane_t	*p;
-
-	if( r_nocull->integer )
-		return false;
-
-	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
+	switch( ent->curstate.rendermode )
 	{
-		if( !( RI.clipFlags & bit ))
-			continue;
-
-		switch( p->signbits )
-		{
-		case 0:
-			if( p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist )
-				return true;
-			break;
-		case 1:
-			if( p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist )
-				return true;
-			break;
-		case 2:
-			if( p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist )
-				return true;
-			break;
-		case 3:
-			if( p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist )
-				return true;
-			break;
-		case 4:
-			if( p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist )
-				return true;
-			break;
-		case 5:
-			if( p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist )
-				return true;
-			break;
-		case 6:
-			if( p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist )
-				return true;
-			break;
-		case 7:
-			if( p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist )
-				return true;
-			break;
-		default:
-			return false;
-		}
+	case kRenderTransColor:
+	case kRenderTransTexture:
+	case kRenderTransInverse:
+		return 1;	// draw second
+	case kRenderTransAdd:
+		return 2;	// draw third
+	case kRenderGlow:
+		return 3;	// must be last!
 	}
-	return false;
+	return 0;
+}
+
+static int R_EntityCompare( const cl_entity_t **a, const cl_entity_t **b )
+{
+	cl_entity_t	*ent1, *ent2;
+	vec3_t		vecLen, org;
+	float		len1, len2;
+
+	ent1 = (cl_entity_t *)*a;
+	ent2 = (cl_entity_t *)*b;
+
+	// now sort by rendermode
+	if( R_RankForRenderMode( ent1 ) > R_RankForRenderMode( ent2 ))
+		return -1;
+	if( R_RankForRenderMode( ent1 ) < R_RankForRenderMode( ent2 ))
+		return 1;
+
+	// then by distance
+	if( ent1->model->type == mod_brush )
+	{
+		VectorAverage( ent1->model->mins, ent1->model->maxs, org );
+		VectorAdd( ent1->origin, org, org );
+		VectorSubtract( RI.pvsorigin, org, vecLen );
+	}
+	else VectorSubtract( RI.pvsorigin, ent1->origin, vecLen );
+	len1 = VectorLength( vecLen );
+
+	if( ent2->model->type == mod_brush )
+	{
+		VectorAverage( ent2->model->mins, ent2->model->maxs, org );
+		VectorAdd( ent2->origin, org, org );
+		VectorSubtract( RI.pvsorigin, org, vecLen );
+	}
+	else VectorSubtract( RI.pvsorigin, ent2->origin, vecLen );
+	len2 = VectorLength( vecLen );
+
+	if( len1 > len2 )
+		return -1;
+	if( len1 < len2 )
+		return 1;
+
+	return 0;
 }
 
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
@@ -233,8 +239,7 @@ R_ClearScene
 */
 void R_ClearScene( void )
 {
-	Mem_Set( r_entities, 0, sizeof( r_entities ));
-	r_numEntities = 0;
+	r_num_solid_entities = r_num_trans_entities = 0;
 }
 
 /*
@@ -242,23 +247,35 @@ void R_ClearScene( void )
 R_AddEntity
 ===============
 */
-qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType )
+qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 {
-	if( r_numEntities >= MAX_VISIBLE_PACKET )
-		return false;
-
-	if( !pRefEntity || pRefEntity->curstate.modelindex <= 0 || pRefEntity->curstate.modelindex >= MAX_MODELS )
+	if( !clent || !clent->model )
 		return false; // if set to invisible, skip
 
-	if( pRefEntity->curstate.rendermode != kRenderNormal && pRefEntity->curstate.renderamt <= 0.0f )
+	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
 		return true; // done
 
-	pRefEntity->curstate.entityType = entityType;
-	pRefEntity->curstate.renderamt = R_ComputeFxBlend( pRefEntity );
+	clent->curstate.entityType = entityType;
+	clent->curstate.renderamt = R_ComputeFxBlend( clent );
 
-	r_entities[r_numEntities] = pRefEntity;
-	r_numEntities++;
+	if( clent->curstate.rendermode == kRenderNormal || clent->curstate.rendermode == kRenderTransAlpha )
+	{
+		// opaque
+		if( r_num_solid_entities >= MAX_VISIBLE_PACKET )
+			return false;
 
+		r_solid_entities[r_num_solid_entities] = clent;
+		r_num_solid_entities++;
+	}
+	else
+	{
+		// translucent
+		if( r_num_trans_entities >= MAX_VISIBLE_PACKET )
+			return false;
+
+		r_trans_entities[r_num_trans_entities] = clent;
+		r_num_trans_entities++;
+	}
 	return true;
 }
 
@@ -477,6 +494,15 @@ static void R_SetupFrame( void )
 
 	tr.framecount++;
 
+	if( !r_drawentities->integer )
+	{
+		r_num_solid_entities = 0;
+		r_num_trans_entities = 0;
+	}
+
+	// sort translucents entities
+	qsort( r_trans_entities, r_num_trans_entities, sizeof( cl_entity_t* ), R_EntityCompare );
+
 	// current viewleaf
 	if( RI.drawWorld )
 	{
@@ -593,20 +619,13 @@ void R_DrawEntitiesOnList( void )
 {
 	int	i;
 
-	if( !r_drawentities->integer )
-		return;
-
-	// first draw entities with rendermode == 'normal'
-	for( i = 0; i < r_numEntities; i++ )
+	// first draw solid entities
+	for( i = 0; i < r_num_solid_entities; i++ )
 	{
-		RI.currententity = r_entities[i];
+		RI.currententity = r_solid_entities[i];
+
 		ASSERT( RI.currententity != NULL );
-
-		if( RI.currententity->curstate.rendermode != kRenderNormal )
-			continue;
-
-		if( !RI.currententity->model )
-			continue;
+		ASSERT( RI.currententity->model != NULL );
 
 		switch( RI.currententity->model->type )
 		{
@@ -618,17 +637,18 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
-	// then draw entities with rendermode != 'normal'
-	for( i = 0; i < r_numEntities; i++ )
+	Tri_DrawTriangles( false );
+
+	// don't fogging translucent surfaces
+	pglDisable( GL_FOG );
+
+	// then draw translicent entities
+	for( i = 0; i < r_num_trans_entities; i++ )
 	{
-		RI.currententity = r_entities[i];
+		RI.currententity = r_trans_entities[i];
+
 		ASSERT( RI.currententity != NULL );
-
-		if( RI.currententity->curstate.rendermode == kRenderNormal )
-			continue;
-
-		if( !RI.currententity->model )
-			continue;
+		ASSERT( RI.currententity->model != NULL );
 
 		switch( RI.currententity->model->type )
 		{
@@ -639,6 +659,8 @@ void R_DrawEntitiesOnList( void )
 			break;
 		}
 	}
+
+	Tri_DrawTriangles( true );
 }
 
 /*
@@ -666,12 +688,10 @@ void R_RenderScene( const ref_params_t *fd )
 	R_DrawWorld();
 
 	CL_ExtraUpdate ();	// don't let sound get messed up if going slow
-	Tri_DrawTriangles( false );
 
 	R_DrawEntitiesOnList();
 
 	R_DrawWaterSurfaces();
-	Tri_DrawTriangles( true );
 
 	R_EndGL();
 }

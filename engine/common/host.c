@@ -756,12 +756,12 @@ void Host_Free( void )
 	host.state = HOST_SHUTDOWN;	// prepare host to normal shutdown
 	com.strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
 
-	Mod_Shutdown();
-	R_Shutdown();
-	S_Shutdown();
-
 	SV_Shutdown( false );
 	CL_Shutdown();
+
+	Mod_Shutdown();
+	S_Shutdown();
+	R_Shutdown();
 	NET_Shutdown();
 	Host_FreeCommon();
 }

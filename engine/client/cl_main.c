@@ -1055,8 +1055,6 @@ void CL_PrepVideo( void )
 	Cvar_SetFloat( "scr_loading", 25.0f );
 
 	SCR_RegisterShaders(); // update with new sequence
-	SCR_VidInit();
-	
 	SCR_UpdateScreen();
 
 	// make sure what map is valid
@@ -1082,7 +1080,7 @@ void CL_PrepVideo( void )
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
 		if( !clgame.sprites[i].name[0] ) continue; // free slot
-		if( clgame.sprites[i].needload != world.load_sequence )
+		if( clgame.sprites[i].needload != clgame.load_sequence )
 			Mod_UnloadSpriteModel( &clgame.sprites[i] );
 	}
 

@@ -554,6 +554,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
 
+	clgame.load_sequence++; // now all hud sprites are invalid
+	clgame.dllFuncs.pfnVidInit();
+
 	// wipe the client_t struct
 	CL_ClearState();
 	UI_SetActiveMenu( false );

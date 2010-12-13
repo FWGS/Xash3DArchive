@@ -346,6 +346,7 @@ typedef struct
 	string		cdtracks[MAX_CDTRACKS];	// 32 cd-tracks read from cdaudio.txt
 
 	model_t		sprites[MAX_IMAGES];	// client spritetextures
+	int		load_sequence;		// for unloading unneeded sprites
 
 	client_draw_t	ds;			// draw2d stuff (hud, weaponmenu etc)
 	screenfade_t	fade;			// screen fade

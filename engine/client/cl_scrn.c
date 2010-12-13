@@ -386,7 +386,6 @@ void SCR_VidInit( void )
 	VGui_Startup ();
 
 	// vid_state has changed
-	if( clgame.hInstance ) clgame.dllFuncs.pfnVidInit();
 	if( menu.hInstance ) menu.dllFuncs.pfnVidInit();
 
 	// restart console size

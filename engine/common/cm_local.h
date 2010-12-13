@@ -38,7 +38,9 @@ typedef struct
 	uint		checksum;		// map checksum
 	int		load_sequence;	// increace each map change
 	vec3_t		hull_sizes[4];	// actual hull sizes
-	byte		nullrow[MAX_MAP_LEAFS/8];
+	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces
+	int		max_surfaces;	// max surfaces per submodel (for all models)
+	qboolean		loading;		// true is worldmodel is loading
 } world_static_t;
 
 extern world_static_t	world;

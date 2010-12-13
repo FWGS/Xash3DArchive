@@ -210,7 +210,7 @@ Mod_LeafPVS
 byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model )
 {
 	if( !model || !leaf || leaf == model->leafs || !model->visdata )
-		return world.nullrow;
+		return Mod_DecompressVis( NULL );
 	return Mod_DecompressVis( leaf->compressed_vis );
 }
 
@@ -223,7 +223,7 @@ Mod_LeafPHS
 byte *Mod_LeafPHS( mleaf_t *leaf, model_t *model )
 {
 	if( !model || !leaf || leaf == model->leafs || !model->visdata )
-		return world.nullrow;
+		return Mod_DecompressVis( NULL );
 	return Mod_DecompressVis( leaf->compressed_pas );
 }
 
@@ -402,7 +402,6 @@ static void Mod_FreeModel( model_t *mod )
 void Mod_Init( void )
 {
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
-	Mem_Set( world.nullrow, 0xFF, MAX_MAP_LEAFS / 8 );
 }
 
 void Mod_Shutdown( void )
@@ -444,6 +443,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 	out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 	loadmodel->submodels = out;
 	loadmodel->numsubmodels = count;
+	if( world.loading ) world.max_surfaces = 0;
 
 	for( i = 0; i < count; i++, in++, out++ )
 	{
@@ -461,7 +461,15 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		out->visleafs = in->visleafs;
 		out->firstface = in->firstface;
 		out->numfaces = in->numfaces;
+
+		if( i == 0 || !world.loading )
+			continue; // skip the world
+
+		world.max_surfaces = max( world.max_surfaces, out->numfaces ); 
 	}
+
+	if( world.loading )
+		world.draw_surfaces = Mem_Alloc( loadmodel->mempool, world.max_surfaces * sizeof( msurface_t* ));
 }
 
 /*
@@ -802,15 +810,16 @@ static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
 	int	i, e;
 	mvertex_t	*v;
 
-	ClearBounds( info->minmaxs, info->minmaxs + 3 );
+	ClearBounds( info->mins, info->maxs );
 
 	for( i = 0; i < surf->numedges; i++ )
 	{
 		e = loadmodel->surfedges[surf->firstedge + i];
 		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
 		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
-		AddPointToBounds( v->position, info->minmaxs, info->minmaxs + 3 );
+		AddPointToBounds( v->position, info->mins, info->maxs );
 	}
+	VectorAverage( info->mins, info->maxs, info->origin );
 }
 
 /*
@@ -1326,7 +1335,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 
 	// will be merged later
 	loadmodel->type = mod_brush;
-	world.version = i;
+	if( world.loading ) world.version = i;
 
 	// swap all the lumps
 	mod_base = (byte *)header;
@@ -1401,7 +1410,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 				if( surf->plane->type == PLANE_Z )
 				{
 					// kill bottom plane too
-					if( info->minmaxs[2] == bm->mins[2] + 1 )
+					if( info->mins[2] == bm->mins[2] + 1 )
 						surf->flags |= SURF_WATERCSG;
 				}
 				else
@@ -1450,7 +1459,6 @@ static void Mod_LoadStudioModel( model_t *mod, byte *buffer )
 	loadmodel->type = mod_studio;
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	loadmodel->numframes = pseqdesc[0].numframes;
-	loadmodel->needload = world.load_sequence;
 
 	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
 	loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
@@ -1539,6 +1547,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean isWorld )
 
 	// if it's world - calc the map checksum
 	if( isWorld ) CRC32_MapFile( &world.checksum, mod->name );
+	world.loading = isWorld;
 
 	MsgDev( D_NOTE, "Mod_LoadModel: %s\n", mod->name );
 	mod->needload = world.load_sequence; // register mod
@@ -1637,7 +1646,6 @@ void Mod_FreeUnused( void )
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
 	{
 		if( !mod->name[0] ) continue;
-
 		if( mod->needload != world.load_sequence )
 			Mod_FreeModel( mod );
 	}

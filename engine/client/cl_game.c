@@ -1381,7 +1381,7 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		if( !com.strcmp( clgame.sprites[i].name, szPicName ))
 		{
 			// prolonge registration
-			clgame.sprites[i].needload = world.load_sequence;
+			clgame.sprites[i].needload = clgame.load_sequence;
 			return i;
 		}
 	}
@@ -1398,7 +1398,10 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 
 	// load new model
 	if( CL_LoadHudSprite( szPicName, &clgame.sprites[i], false ))
+	{
+		clgame.sprites[i].needload = clgame.load_sequence;
 		return i;
+	}
 	return 0;
 }
 
@@ -1564,6 +1567,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	int		index, iTemp;
 	script_t		*script;
 	token_t		token;
+	byte		*pool;
 
 	if( piCount ) *piCount = 0;
 
@@ -1575,9 +1579,12 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
           
 	Com_ReadUlong( script, SC_ALLOW_NEWLINES, &numSprites );
 
+	if( !cl.video_prepped ) pool = cls.mempool;
+	else pool = com_studiocache; // temporary
+
 	// name, res, pic, x, y, w, h
 	// NOTE: we must use com_studiocache because it will be purge on next restart or change map
-	pList = Mem_Alloc( com_studiocache, sizeof( client_sprite_t ) * numSprites );
+	pList = Mem_Alloc( pool, sizeof( client_sprite_t ) * numSprites );
 
 	for( index = 0; index < numSprites; index++ )
 	{
@@ -2711,7 +2718,7 @@ model_t *pfnLoadMapSprite( const char *filename )
 		if( !com.strcmp( clgame.sprites[i].name, filename ))
 		{
 			// prolonge registration
-			clgame.sprites[i].needload = world.load_sequence;
+			clgame.sprites[i].needload = clgame.load_sequence;
 			return &clgame.sprites[i];
 		}
 	}
@@ -2728,7 +2735,10 @@ model_t *pfnLoadMapSprite( const char *filename )
 
 	// load new map sprite
 	if( CL_LoadHudSprite( filename, &clgame.sprites[i], true ))
+	{
+		clgame.sprites[i].needload = clgame.load_sequence;
 		return &clgame.sprites[i];
+	}
 	return NULL;
 }
 

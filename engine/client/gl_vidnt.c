@@ -37,6 +37,7 @@ convar_t	*gl_skymip;
 convar_t	*gl_nobind;
 convar_t	*gl_finish;
 convar_t	*gl_clear;
+convar_t	*gl_test;
 
 convar_t	*r_width;
 convar_t	*r_height;
@@ -1392,7 +1393,8 @@ void GL_InitCommands( void )
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 9)" );
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
-
+	gl_test = Cvar_Get( "gl_test", "0", 0, "engine developer cvar for quick testing new features" );
+ 
 	// make sure r_swapinterval is checked after vid_restart
 	gl_swapInterval->modified = true;
 

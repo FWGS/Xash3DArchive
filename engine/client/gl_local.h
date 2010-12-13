@@ -106,7 +106,8 @@ typedef struct gltexture_s
 // surface extradata stored in cache.data for all brushmodels
 typedef struct mextrasurf_s
 {
-	float		minmaxs[6];
+	vec3_t		mins, maxs;
+	vec3_t		origin;		// surface origin
 	int		checkcount;	// for multi-check avoidance
 } mextrasurf_t;
 
@@ -196,7 +197,9 @@ extern float		gldepthmin, gldepthmax;
 extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
-extern uint		r_numEntities;
+extern uint		r_num_solid_entities;
+extern uint		r_num_trans_entities;
+#define r_numEntities	(r_num_solid_entities + r_num_trans_entities)
 
 //
 // gl_backend.c
@@ -457,6 +460,7 @@ extern convar_t	*gl_skymip;
 extern convar_t	*gl_nobind;
 extern convar_t	*gl_finish;
 extern convar_t	*gl_clear;
+extern convar_t	*gl_test;		// cvar to testify new effects
 
 extern convar_t	*r_width;
 extern convar_t	*r_height;
