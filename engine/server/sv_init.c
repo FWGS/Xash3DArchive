@@ -236,7 +236,7 @@ void SV_CalcPHS( void )
 	num = sv.worldmodel->numleafs + 1;
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
-	in_size = rowbytes * (num + 1);
+	in_size = rowbytes * (num + 10);
 
 	// allocate pvs and phs data single array
 	visofs = Mem_Alloc( sv.worldmodel->mempool, (sv.worldmodel->numleafs+1) * sizeof( int ));

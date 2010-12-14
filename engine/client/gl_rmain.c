@@ -17,11 +17,6 @@ ref_instance_t	RI, prevRI;
 mleaf_t		*r_viewleaf, *r_oldviewleaf;
 mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 
-cl_entity_t	*r_solid_entities[MAX_VISIBLE_PACKET];
-cl_entity_t	*r_trans_entities[MAX_VISIBLE_PACKET];
-uint		r_num_solid_entities;
-uint		r_num_trans_entities;
-
 static int R_RankForRenderMode( cl_entity_t *ent )
 {
 	switch( ent->curstate.rendermode )
@@ -38,7 +33,35 @@ static int R_RankForRenderMode( cl_entity_t *ent )
 	return 0;
 }
 
-static int R_EntityCompare( const cl_entity_t **a, const cl_entity_t **b )
+/*
+===============
+R_StaticEntity
+
+Static entity is the brush which has no custom origin and not rotated
+typically is a func_wall, func_breakable, func_ladder etc
+===============
+*/
+static qboolean R_StaticEntity( cl_entity_t *ent )
+{
+	if( gl_test->integer )
+		return false;
+
+	if( ent->curstate.rendermode == kRenderNormal && ent->model->type == mod_brush )
+	{
+		if( VectorIsNull( ent->origin ) && VectorIsNull( ent->angles ))
+			return true;
+	}
+	return false;
+}
+
+/*
+===============
+R_TransEntityCompare
+
+Sorting translucent entities by rendermode then by distance
+===============
+*/
+static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 {
 	cl_entity_t	*ent1, *ent2;
 	vec3_t		vecLen, org;
@@ -113,6 +136,7 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 
 void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 {
+	// FIXME: implement
 }
 
 /*
@@ -239,7 +263,8 @@ R_ClearScene
 */
 void R_ClearScene( void )
 {
-	r_num_solid_entities = r_num_trans_entities = 0;
+	tr.num_solid_entities = tr.num_trans_entities = 0;
+	tr.num_static_entities = 0;
 }
 
 /*
@@ -249,6 +274,9 @@ R_AddEntity
 */
 qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 {
+	if( !r_drawentities->integer )
+		return false; // not allow to drawing
+
 	if( !clent || !clent->model )
 		return false; // if set to invisible, skip
 
@@ -260,21 +288,33 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 
 	if( clent->curstate.rendermode == kRenderNormal || clent->curstate.rendermode == kRenderTransAlpha )
 	{
-		// opaque
-		if( r_num_solid_entities >= MAX_VISIBLE_PACKET )
-			return false;
+		if( R_StaticEntity( clent ))
+		{
+			// opaque static
+			if( tr.num_static_entities >= MAX_VISIBLE_PACKET )
+				return false;
 
-		r_solid_entities[r_num_solid_entities] = clent;
-		r_num_solid_entities++;
+			tr.static_entities[tr.num_static_entities] = clent;
+			tr.num_static_entities++;
+		}
+		else
+		{
+			// opaque moving
+			if( tr.num_solid_entities >= MAX_VISIBLE_PACKET )
+				return false;
+
+			tr.solid_entities[tr.num_solid_entities] = clent;
+			tr.num_solid_entities++;
+		}
 	}
 	else
 	{
 		// translucent
-		if( r_num_trans_entities >= MAX_VISIBLE_PACKET )
+		if( tr.num_trans_entities >= MAX_VISIBLE_PACKET )
 			return false;
 
-		r_trans_entities[r_num_trans_entities] = clent;
-		r_num_trans_entities++;
+		tr.trans_entities[tr.num_trans_entities] = clent;
+		tr.num_trans_entities++;
 	}
 	return true;
 }
@@ -433,7 +473,7 @@ void R_RotateForEntity( cl_entity_t *e )
 	float	*org, *ang;
 	float	scale = 1.0f;
 
-	if( e == clgame.entities )
+	if( e == clgame.entities || R_StaticEntity( e ))
 	{
 		R_LoadIdentity();
 		return;
@@ -461,7 +501,7 @@ void R_TranslateForEntity( cl_entity_t *e )
 {
 	float	scale = 1.0f;
 
-	if( e == clgame.entities )
+	if( e == clgame.entities || R_StaticEntity( e ))
 	{
 		R_LoadIdentity();
 		return;
@@ -494,14 +534,8 @@ static void R_SetupFrame( void )
 
 	tr.framecount++;
 
-	if( !r_drawentities->integer )
-	{
-		r_num_solid_entities = 0;
-		r_num_trans_entities = 0;
-	}
-
-	// sort translucents entities
-	qsort( r_trans_entities, r_num_trans_entities, sizeof( cl_entity_t* ), R_EntityCompare );
+	// sort translucents entities by rendermode and distance
+	qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );
 
 	// current viewleaf
 	if( RI.drawWorld )
@@ -620,14 +654,18 @@ void R_DrawEntitiesOnList( void )
 	int	i;
 
 	// first draw solid entities
-	for( i = 0; i < r_num_solid_entities; i++ )
+	for( i = 0; i < tr.num_solid_entities; i++ )
 	{
-		RI.currententity = r_solid_entities[i];
+		if( RI.refdef.onlyClientDraw )
+			break;
 
+		RI.currententity = tr.solid_entities[i];
+		RI.currentmodel = RI.currententity->model;
+	
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );
 
-		switch( RI.currententity->model->type )
+		switch( RI.currentmodel->type )
 		{
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
@@ -637,20 +675,25 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
-	Tri_DrawTriangles( false );
+	CL_DrawBeams( false );
+	clgame.dllFuncs.pfnDrawNormalTriangles();
 
 	// don't fogging translucent surfaces
 	pglDisable( GL_FOG );
 
 	// then draw translicent entities
-	for( i = 0; i < r_num_trans_entities; i++ )
+	for( i = 0; i < tr.num_trans_entities; i++ )
 	{
-		RI.currententity = r_trans_entities[i];
+		if( RI.refdef.onlyClientDraw )
+			break;
 
+		RI.currententity = tr.trans_entities[i];
+		RI.currentmodel = RI.currententity->model;
+	
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );
 
-		switch( RI.currententity->model->type )
+		switch( RI.currentmodel->type )
 		{
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
@@ -660,7 +703,10 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
-	Tri_DrawTriangles( true );
+	CL_DrawBeams( true );
+	CL_DrawParticles();
+
+	clgame.dllFuncs.pfnDrawTransparentTriangles ();
 }
 
 /*

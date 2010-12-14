@@ -261,7 +261,6 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	else
 	{
 		result = MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
-		state->messagenum = cl.parsecountmod;
 	}
 
 	if( !result )
@@ -283,6 +282,9 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		// entity was delta removed
 		return;
 	}
+
+	// entity present in currentframe
+	state->messagenum = cl.parsecountmod;
 
 	cls.next_client_entities++;
 	frame->num_entities++;

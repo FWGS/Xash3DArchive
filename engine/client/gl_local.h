@@ -10,6 +10,7 @@
 #include "com_model.h"
 #include "cl_entity.h"
 #include "ref_params.h"
+#include "protocol.h"
 #include "dlight.h"
 
 extern byte	*r_temppool;
@@ -170,6 +171,14 @@ typedef struct
 	int		lightmapTextures[MAX_LIGHTMAPS];
 
 	int		skytexturenum;	// this not a gl_texturenum!
+
+	// entity lists
+	cl_entity_t	*static_entities[MAX_VISIBLE_PACKET];	// opaque non-moved brushes
+	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
+	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
+	uint		num_static_entities;
+	uint		num_solid_entities;
+	uint		num_trans_entities;
           
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
@@ -197,9 +206,8 @@ extern float		gldepthmin, gldepthmax;
 extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
-extern uint		r_num_solid_entities;
-extern uint		r_num_trans_entities;
-#define r_numEntities	(r_num_solid_entities + r_num_trans_entities)
+#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities)
+#define r_numStatics	(tr.num_static_entities)
 
 //
 // gl_backend.c
@@ -410,8 +418,6 @@ typedef struct
 	GLint		genSTEnabled[MAX_TEXTURE_UNITS];	// 0 - disabled, OR 1 - S, OR 2 - T, OR 4 - R
 	GLint		texCoordArrayMode[MAX_TEXTURE_UNITS];	// 0 - disabled, 1 - enabled, 2 - cubemap
 
-	rgba_t		draw_color;
-
 	int		faceCull;
 	int		frontFace;
 
@@ -468,6 +474,7 @@ extern convar_t	*r_speeds;
 extern convar_t	*r_fullbright;
 extern convar_t	*r_norefresh;
 extern convar_t	*r_lighting_modulate;
+extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
 extern convar_t	*r_novis;

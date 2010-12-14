@@ -6,6 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "const.h"
+#include "gl_local.h"
 
 menu_static_t	menu;
 
@@ -285,7 +286,7 @@ static void PIC_DrawGeneric( float x, float y, float width, float height, const 
 		return;
 
 	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, menu.ds.gl_texturenum );
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -359,11 +360,12 @@ pfnPIC_Set
 */
 void pfnPIC_Set( HIMAGE hPic, int r, int g, int b, int a )
 {
-	rgba_t	color;
-
 	menu.ds.gl_texturenum = hPic;
-	MakeRGBA( color, r, g, b, a );
-	R_DrawSetColor( color );
+	r = bound( 0, r, 255 );
+	g = bound( 0, g, 255 );
+	b = bound( 0, b, 255 );
+	a = bound( 0, a, 255 );
+	pglColor4ub( r, g, b, a );
 }
 
 /*
@@ -458,13 +460,14 @@ pfnFillRGBA
 */
 static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int b, int a )
 {
-	rgba_t	color;
-
-	MakeRGBA( color, r, g, b, a );
-	R_DrawSetColor( color );
+	r = bound( 0, r, 255 );
+	g = bound( 0, g, 255 );
+	b = bound( 0, b, 255 );
+	a = bound( 0, a, 255 );
+	pglColor4ub( r, g, b, a );
 	GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -518,7 +521,7 @@ static void pfnDrawCharacter( int x, int y, int width, int height, int ch, int u
 	color[0] = (ulRGBA & 0xFF0000) >> 16;
 	color[1] = (ulRGBA & 0xFF00) >> 8;
 	color[2] = (ulRGBA & 0xFF) >> 0;
-	R_DrawSetColor( color );
+	pglColor4ubv( color );
 
 	col = (ch & 15) * 0.0625 + (0.5f / 256.0f);
 	row = (ch >> 4) * 0.0625 + (0.5f / 256.0f);
@@ -526,7 +529,7 @@ static void pfnDrawCharacter( int x, int y, int width, int height, int ch, int u
 
 	GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( x, y, width, height, col, row, col + size, row + size, hFont );
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*

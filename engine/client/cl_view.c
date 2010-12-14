@@ -48,6 +48,7 @@ void V_SetupRefDef( void )
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
 	cl.refdef.waterlevel = cl.frame.local.client.waterlevel;		
+	cl.refdef.onlyClientDraw = 0;	// reset clientdraw
 	cl.refdef.viewsize = 120;	// FIXME if you can
 	cl.refdef.hardware = true;	// always true
 	cl.refdef.nextView = 0;
@@ -112,6 +113,7 @@ void V_CalcRefDef( void )
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
 		V_AddViewModel();
 		R_RenderFrame( &cl.refdef, true );
+		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );
 }
 

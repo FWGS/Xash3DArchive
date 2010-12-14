@@ -226,6 +226,7 @@ typedef struct
 
 	// holds text color
 	rgba_t		textColor;
+	rgba_t		spriteColor;
 
 	// crosshair members
 	const model_t	*pCrosshair;

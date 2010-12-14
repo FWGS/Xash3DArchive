@@ -988,6 +988,7 @@ static void Mod_LoadMarkSurfaces( const dlump_t *l )
 
 	count = l->filelen / sizeof( *in );
 	loadmodel->marksurfaces = out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
+	loadmodel->nummarksurfaces = count;
 
 	for( i = 0; i < count; i++ )
 	{

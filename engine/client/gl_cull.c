@@ -7,7 +7,7 @@
 #include "client.h"
 #include "gl_local.h"
 
-qboolean R_CullBox( const vec3_t mins, const vec3_t maxs )
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags )
 {
 	uint		i, bit;
 	const mplane_t	*p;
@@ -17,7 +17,7 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs )
 
 	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
 	{
-		if( !( RI.clipFlags & bit ))
+		if( !( clipflags & bit ))
 			continue;
 
 		switch( p->signbits )

@@ -45,6 +45,7 @@ convar_t	*r_speeds;
 convar_t	*r_fullbright;
 convar_t	*r_norefresh;
 convar_t	*r_lighting_modulate;
+convar_t	*r_faceplanecull;
 convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
 convar_t	*r_novis;
@@ -148,6 +149,7 @@ static dllfunc_t opengl_110funcs[] =
 { "glColor3fv"           , (void **)&pglColor3fv },
 { "glColor4f"            , (void **)&pglColor4f },
 { "glColor4fv"           , (void **)&pglColor4fv },
+{ "glColor3ub"           , (void **)&pglColor3ub },
 { "glColor4ub"           , (void **)&pglColor4ub },
 { "glColor4ubv"          , (void **)&pglColor4ubv },
 { "glTexCoord1f"         , (void **)&pglTexCoord1f },
@@ -210,7 +212,8 @@ static dllfunc_t opengl_110funcs[] =
 { "glCopyTexImage2D"     , (void **)&pglCopyTexImage2D },
 { "glCopyTexSubImage1D"  , (void **)&pglCopyTexSubImage1D },
 { "glCopyTexSubImage2D"  , (void **)&pglCopyTexSubImage2D },
-{ "glScissor"            , (void **) &pglScissor },
+{ "glScissor"            , (void **)&pglScissor },
+{ "glGetTexEnviv"        , (void **)&pglGetTexEnviv },
 { "glPolygonOffset"      , (void **)&pglPolygonOffset },
 { "glPolygonMode"        , (void **)&pglPolygonMode },
 { "glPolygonStipple"     , (void **)&pglPolygonStipple },
@@ -1363,6 +1366,7 @@ void GL_InitCommands( void )
 	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", CVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
 	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
 	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
+	r_faceplanecull = Cvar_Get( "r_faceplanecull", "1", 0, "ignore face plane culling (perfomance test)" );
 	r_lockpvs = Cvar_Get( "r_lockpvs", "0", CVAR_CHEAT, "lockpvs area at current point (pvs test)" );
 	r_lockcull = Cvar_Get( "r_lockcull", "0", CVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 	r_wateralpha = Cvar_Get( "r_wateralpha", "1", CVAR_ARCHIVE, "world water transparency factor" );

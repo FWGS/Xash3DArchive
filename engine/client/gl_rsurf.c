@@ -861,6 +861,65 @@ static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 	return 0;
 }
 
+static _inline qboolean R_CullSurface( msurface_t *surf, uint clipflags )
+{
+	mextrasurf_t	*info;
+
+	if( surf->flags & SURF_WATERCSG && !( RI.currententity->curstate.effects & EF_NOWATERCSG ))
+		return true;
+
+	if( r_nocull->integer )
+		return false;
+
+	// world surfaces can be culled by vis frame too
+	if( RI.currententity == clgame.entities && surf->visframe != tr.framecount )
+		return true;
+
+	if( r_faceplanecull->integer && glState.faceCull != 0 )
+	{
+		if(!(surf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
+		{
+			if( !VectorIsNull( surf->plane->normal ))
+			{
+				float	dist;
+
+				dist = PlaneDiff( modelorg, surf->plane );
+
+				if( glState.faceCull == GL_FRONT || ( RI.params & RP_MIRRORVIEW ))
+				{
+					if( surf->flags & SURF_PLANEBACK )
+					{
+						if( dist >= -BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+					else
+					{
+						if( dist <= BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+				}
+				else if( glState.faceCull == GL_BACK )
+				{
+					if( surf->flags & SURF_PLANEBACK )
+					{
+						if( dist <= BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+					else
+					{
+						if( dist >= -BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+				}
+			}
+		}
+	}
+
+	info = SURF_INFO( surf, RI.currentmodel );
+
+	return ( clipflags && R_CullBox( info->mins, info->maxs, clipflags ));
+}
+
 /*
 =================
 R_DrawBrushModel
@@ -868,15 +927,13 @@ R_DrawBrushModel
 */
 void R_DrawBrushModel( cl_entity_t *e )
 {
-	int		i, k, sidebit;
-	int		num_sorted;
+	int		i, k, num_sorted;
 	qboolean		need_sort = false;
 	vec3_t		mins, maxs;
 	msurface_t	*psurf;
-	float		dot;
-	dlight_t		*l;
 	model_t		*clmodel;
 	qboolean		rotated;
+	dlight_t		*l;
 
 	clmodel = e->model;
 	RI.currentWaveHeight = RI.currententity->curstate.scale * 32.0f;
@@ -897,7 +954,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		rotated = false;
 	}
 
-	if( R_CullBox( mins, maxs ))
+	if( R_CullBox( mins, maxs, RI.clipFlags ))
 		return;
 
 	pglColor3f( 1.0f, 1.0f, 1.0f );
@@ -915,8 +972,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 		VectorCopy( modelorg, temp );
 		Matrix4x4_VectorITransform( RI.objectMatrix, temp, modelorg );
 	}
-
-	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 
 	// calculate dynamic lighting for bmodel if it's not an
 	// instanced model
@@ -965,24 +1020,11 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 	num_sorted = 0;
 
+	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		// don't cull wave surfaces when waveHeight != 0
-		if( !(psurf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
-		{
-			// find which side of the node we are on
-			dot = PlaneDiff( modelorg, psurf->plane );
-
-			if( dot >= 0 ) sidebit = 0;
-			else sidebit = SURF_PLANEBACK;
-
-			// draw the polygon
-			if(( psurf->flags & SURF_PLANEBACK ) != sidebit )
-				continue;	// wrong side
-		}
-
-		if( psurf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
-			continue;	// cull water backplane 
+		if( R_CullSurface( psurf, RI.clipFlags ))
+			continue;
 
 		if( need_sort )
 		{
@@ -1012,6 +1054,82 @@ void R_DrawBrushModel( cl_entity_t *e )
 }
 
 /*
+=================
+R_DrawStaticModel
+
+Merge static model brushes with world surfaces
+=================
+*/
+void R_DrawStaticModel( cl_entity_t *e )
+{
+	int		i, k;
+	model_t		*clmodel;
+	msurface_t	*psurf;
+	dlight_t		*l;
+	
+	clmodel = e->model;
+	if( R_CullBox( clmodel->mins, clmodel->maxs, RI.clipFlags ))
+		return;
+
+	// calculate dynamic lighting for bmodel if it's not an
+	// instanced model
+	if( clmodel->firstmodelsurface != 0 )
+	{
+		for( k = 0, l = cl_dlights; k < MAX_DLIGHTS; k++, l++ )
+		{
+			if( l->die < cl.time || !l->radius )
+				continue;
+			R_MarkLights( l, 1<<k, clmodel->nodes + clmodel->hulls[0].firstclipnode );
+		}
+	}
+
+	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
+	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
+	{
+		if( R_CullSurface( psurf, RI.clipFlags ))
+			continue;
+
+		psurf->texturechain = psurf->texinfo->texture->texturechain;
+		psurf->texinfo->texture->texturechain = psurf;
+	}
+}
+
+/*
+=================
+R_DrawStaticBrushes
+
+Insert static brushes into world texture chains
+=================
+*/
+void R_DrawStaticBrushes( void )
+{
+	int	i;
+
+	// draw static entities
+	for( i = 0; i < tr.num_static_entities; i++ )
+	{
+		if( RI.refdef.onlyClientDraw )
+			break;
+
+		RI.currententity = tr.static_entities[i];
+		RI.currentmodel = RI.currententity->model;
+	
+		ASSERT( RI.currententity != NULL );
+		ASSERT( RI.currententity->model != NULL );
+
+		switch( RI.currententity->model->type )
+		{
+		case mod_brush:
+			R_DrawStaticModel( RI.currententity );
+			break;
+		default:
+			Host_Error( "R_DrawStatics: non bsp model in static list!\n" );
+			break;
+		}
+	}
+}
+
+/*
 =============================================================
 
 	WORLD MODEL
@@ -1030,7 +1148,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	int		i, clipped;
 	msurface_t	*surf, **mark;
 	mleaf_t		*pleaf;
-	int		c, side, sidebit;
+	int		c, side;
 	float		dot;
 
 	if( node->contents == CONTENTS_SOLID )
@@ -1081,17 +1199,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 
 	// find which side of the node we are on
 	dot = PlaneDiff( modelorg, node->plane );
-
-	if( dot >= 0 )
-	{
-		side = 0;
-		sidebit = 0;
-	}
-	else
-	{
-		side = 1;
-		sidebit = SURF_PLANEBACK;
-	}
+	side = (dot >= 0) ? 0 : 1;
 
 	// recurse down the children, front side first
 	R_RecursiveWorldNode( node->children[side], clipflags );
@@ -1099,15 +1207,8 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	// draw stuff
 	for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
 	{
-		// don't cull wave surfaces when waveHeight != 0
-		if( !(surf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
-		{
-			if( surf->visframe != tr.framecount )
-				continue;
-
-			if(( surf->flags & SURF_PLANEBACK ) != sidebit )
-				continue;	// wrong side
-		}
+		if( R_CullSurface( surf, RI.clipFlags ))
+			continue;
 
 		surf->texturechain = surf->texinfo->texture->texturechain;
 		surf->texinfo->texture->texturechain = surf;
@@ -1141,6 +1242,8 @@ void R_DrawWorld( void )
 	R_ClearSkyBox ();
 	R_RecursiveWorldNode( cl.worldmodel->nodes, RI.clipFlags );
 
+	R_DrawStaticBrushes();
+
 	R_DrawTextureChains();
 
 	R_BlendLightmaps();
@@ -1162,9 +1265,7 @@ void R_MarkLeaves( void )
 	mnode_t	*node;
 	int	i;
 
-	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
-		return;
-
+	if( !RI.drawWorld ) return;
 	if( r_viewleaf == r_oldviewleaf && r_viewleaf2 == r_oldviewleaf2 && !r_novis->integer && r_viewleaf != NULL )
 		return;
 

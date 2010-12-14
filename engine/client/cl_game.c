@@ -512,6 +512,7 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 	// scale for screen sizes
 	SPR_AdjustSize( &x, &y, &width, &height );
 	texnum = R_GetSpriteTexture( clgame.ds.pSprite, frame );
+	pglColor4ubv( clgame.ds.spriteColor );
 	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, texnum );
 }
 
@@ -589,7 +590,6 @@ can be modulated
 */
 void CL_DrawScreenFade( void )
 {
-	rgba_t		color;
 	screenfade_t	*sf = &clgame.fade;
 	int		iFadeAlpha;
 		
@@ -621,12 +621,11 @@ void CL_DrawScreenFade( void )
 		iFadeAlpha = bound( 0, iFadeAlpha, sf->fadealpha );
 	}
 
-	MakeRGBA( color, sf->fader, sf->fadeg, sf->fadeb, iFadeAlpha );
-	R_DrawSetColor( color );
+	pglColor4ub( sf->fader, sf->fadeg, sf->fadeb, iFadeAlpha );
 
 	GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, cls.fillImage );
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -806,7 +805,7 @@ void CL_DrawCrosshair( void )
 	clgame.ds.pSprite = clgame.ds.pCrosshair;
 
 	GL_SetRenderMode( kRenderTransAlpha );
-	R_DrawSetColor( clgame.ds.rgbaCrosshair );
+	*(int *)clgame.ds.spriteColor = *(int *)clgame.ds.rgbaCrosshair;
 	SPR_DrawGeneric( 0, x - 0.5f * width, y - 0.5f * height, -1, -1, &clgame.ds.rcCrosshair );
 }
 
@@ -821,7 +820,6 @@ static void CL_DrawLoading( float percent )
 {
 	int	x, y, width, height, right;
 	float	xscale, yscale, step, s2;
-	rgba_t	color;
 
 	R_GetTextureParms( &width, &height, cls.loadingBar );
 	x = ( 640 - width ) >> 1;
@@ -835,8 +833,7 @@ static void CL_DrawLoading( float percent )
 	width *= xscale;
 	height *= yscale;
 
-	MakeRGBA( color, 128, 128, 128, 255 );
-	R_DrawSetColor( color );
+	pglColor4ub( 128, 128, 128, 255 );
 	GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
 
@@ -845,11 +842,10 @@ static void CL_DrawLoading( float percent )
 	s2 = (float)right / width;
 	width = right;
 	
-	MakeRGBA( color, 208, 152, 0, 255 );
-	R_DrawSetColor( color );
+	pglColor4ub( 208, 152, 0, 255 );
 	GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( x, y, width, height, 0, 0, s2, 1, cls.loadingBar );
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -876,7 +872,7 @@ static void CL_DrawPause( void )
 	width *= xscale;
 	height *= yscale;
 
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 	GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.pauseIcon );
 }
@@ -1471,14 +1467,11 @@ pfnSPR_Set
 */
 static void pfnSPR_Set( HSPRITE hPic, int r, int g, int b )
 {
-	rgba_t	color;
-
 	clgame.ds.pSprite = CL_GetSpritePointer( hPic );
-	color[0] = bound( 0, r, 255 );
-	color[1] = bound( 0, g, 255 );
-	color[2] = bound( 0, b, 255 );
-	color[3] = 255;
-	R_DrawSetColor( color );
+	clgame.ds.spriteColor[0] = bound( 0, r, 255 );
+	clgame.ds.spriteColor[1] = bound( 0, g, 255 );
+	clgame.ds.spriteColor[2] = bound( 0, b, 255 );
+	clgame.ds.spriteColor[3] = 255;
 }
 
 /*
@@ -1633,16 +1626,17 @@ pfnFillRGBA
 */
 static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int b, int a )
 {
-	rgba_t	color;
-
-	MakeRGBA( color, r, g, b, a );
-	R_DrawSetColor( color );
+	r = bound( 0, r, 255 );
+	g = bound( 0, g, 255 );
+	b = bound( 0, b, 255 );
+	a = bound( 0, a, 255 );
+	pglColor4ub( r, g, b, a );
 
 	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
 
 	GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -2924,34 +2918,6 @@ TriApi implementation
 
 =================
 */
-/*
-=================
-Tri_DrawTriangles
-
-callback from renderer
-=================
-*/
-void Tri_DrawTriangles( int fTrans )
-{
-	if( fTrans )
-	{
-		if( !RI.refdef.onlyClientDraw )
-		{
-			CL_DrawBeams( true );
-			CL_DrawParticles();
-		}
-		clgame.dllFuncs.pfnDrawTransparentTriangles ();
-	}
-	else
-	{
-		if( !RI.refdef.onlyClientDraw )
-		{
-			CL_DrawBeams( false );
-		}
-		clgame.dllFuncs.pfnDrawNormalTriangles ();
-	}
-}
-
 /*
 =============
 TriBegin

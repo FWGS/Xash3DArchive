@@ -50,17 +50,6 @@ int R_GetSpriteTexture( const model_t *m_pSpriteModel, int frame )
 }
 
 /*
-===============
-R_DrawSetColor
-===============
-*/
-void R_DrawSetColor( const rgba_t color )
-{
-	if( color ) Vector4Copy( color, glState.draw_color );
-	else Vector4Set( glState.draw_color, 255, 255, 255, 255 );
-}
-
-/*
 =============
 R_DrawStretchPic
 =============
@@ -68,7 +57,6 @@ R_DrawStretchPic
 void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, int texnum )
 {
 	GL_Bind( GL_TEXTURE0, texnum );
-	pglColor4ubv( glState.draw_color ); 
 
 	pglBegin( GL_QUADS );
 		pglTexCoord2f( s1, t1 );

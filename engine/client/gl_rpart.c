@@ -229,6 +229,9 @@ particle_t *CL_AllocParticle( void (*callback)( particle_t*, float ))
 {
 	particle_t	*p;
 
+	if( !cl_draw_particles->integer )
+		return NULL;
+
 	// never alloc particles when we not in game
 	if( !CL_IsInGame( )) return NULL;
 
@@ -438,7 +441,7 @@ void CL_DrawParticles( void )
 	particle_t	*p, *kill;
 	float		frametime;
 
-	if( !cl_draw_particles->integer )
+	if( !cl_draw_particles->integer || RI.refdef.onlyClientDraw )
 		return;
 
 	frametime = cl.time - cl.oldtime;
@@ -1182,7 +1185,7 @@ static qboolean CL_CullTracer( const vec3_t start, const vec3_t end )
 	}
 
 	// check bbox
-	return R_CullBox( mins, maxs );
+	return R_CullBox( mins, maxs, RI.clipFlags );
 }
 
 /*

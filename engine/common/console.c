@@ -387,7 +387,7 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 
 	rc = &con.chars.fontRc[number];
 
-	R_DrawSetColor( color );
+	pglColor4ubv( color );
 	R_GetTextureParms( &width, &height, con.chars.hFontTexture );
 
 	// calc rectangle
@@ -399,7 +399,7 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 	height = rc->bottom - rc->top;
 
 	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, con.chars.hFontTexture );		
-	R_DrawSetColor( NULL ); // don't forget reset color
+	pglColor4ub( 255, 255, 255, 255 ); // don't forget reset color
 
 	return con.charWidths[number];
 }
@@ -493,8 +493,8 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qb
 		numDraws++;
 		s++;
 	}
-
-	R_DrawSetColor( NULL );
+          
+	pglColor4ub( 255, 255, 255, 255 );
 	return drawLen;
 }
 
@@ -1225,7 +1225,7 @@ void Con_DrawNotify( void )
 	if( !host.developer ) return;
 
 	currentColor = 7;
-	R_DrawSetColor( g_color_table[currentColor] );
+	pglColor4ubv( g_color_table[currentColor] );
 
 	for( i = con.current - CON_TIMES + 1; i <= con.current; i++ )
 	{
@@ -1248,7 +1248,7 @@ void Con_DrawNotify( void )
 		}
 		v += con.charHeight;
 	}
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -1319,7 +1319,7 @@ void Con_DrawSolidConsole( float frac )
 	if( con.x == 0 ) row--;
 
 	currentColor = 7;
-	R_DrawSetColor( g_color_table[currentColor] );
+	pglColor4ubv( g_color_table[currentColor] );
 
 	for( i = 0; i < rows; i++, y -= con.charHeight, row-- )
 	{
@@ -1343,7 +1343,7 @@ void Con_DrawSolidConsole( float frac )
 
 	// draw the input prompt, user text, and cursor if desired
 	Con_DrawInput();
-	R_DrawSetColor( NULL );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*

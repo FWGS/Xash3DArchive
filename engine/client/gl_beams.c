@@ -582,7 +582,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	VectorSubtract( center, last1, screen );
 
 	// Is that box in PVS && frustum?
-	if( !Mod_BoxVisible( screen, tmp, Mod_GetCurrentVis( )) || R_CullBox( screen, tmp ))	
+	if( !Mod_BoxVisible( screen, tmp, Mod_GetCurrentVis( )) || R_CullBox( screen, tmp, RI.clipFlags ))	
 	{
 		return;
 	}
@@ -1114,7 +1114,7 @@ qboolean CL_CullBeam( const vec3_t start, const vec3_t end, qboolean pvsOnly )
 	// check bbox
 	if( Mod_BoxVisible( mins, maxs, Mod_GetCurrentVis( )))
 	{
-		if( pvsOnly || !R_CullBox( mins, maxs ))
+		if( pvsOnly || !R_CullBox( mins, maxs, RI.clipFlags ))
 		{
 			// beam is visible
 			return false;	
@@ -1543,6 +1543,9 @@ void CL_DrawBeams( int fTrans )
 	BEAM	*pBeam, *pNext;
 	BEAM	*pPrev = NULL;
 	int	i;
+
+	if( RI.refdef.onlyClientDraw )
+		return;
 	
 	// server beams don't allocate beam chains
 	// all params are stored in cl_entity_t

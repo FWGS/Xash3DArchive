@@ -35,7 +35,8 @@ void GL_BackendStartFrame( void )
 	r_speeds_msg[0] = '\0';
 	Mem_Set( &r_stats, 0, sizeof( r_stats ));
 
-	com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "Num visible entities %i\n", r_numEntities );
+	com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
+	r_numStatics, r_numEntities );
 }
 
 /*

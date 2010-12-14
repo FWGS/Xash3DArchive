@@ -179,6 +179,10 @@ void SV_UpdateMovevars( void )
 {
 	if( !physinfo->modified ) return;
 
+	// check range
+	if( sv_zmax->value < 256.0f ) Cvar_SetFloat( "sv_zmax", 256.0f );
+	if( sv_zmax->value > 8192.0f ) Cvar_SetFloat( "sv_zmax", 8192.0f );
+
 	svgame.movevars.gravity = sv_gravity->value;
 	svgame.movevars.stopspeed = sv_stopspeed->value;
 	svgame.movevars.maxspeed = sv_maxspeed->value;
@@ -590,7 +594,7 @@ void SV_Init( void )
 	Cvar_Get ("suitvolume", "0.25", CVAR_ARCHIVE, "HEV suit volume" );
 	
 	// half-life shared variables
-	sv_zmax = Cvar_Get ("sv_zmax", "0", CVAR_PHYSICINFO, "zfar server value" );
+	sv_zmax = Cvar_Get ("sv_zmax", "4096", CVAR_PHYSICINFO, "zfar server value" );
 	sv_wateramp = Cvar_Get ("sv_wateramp", "0", CVAR_PHYSICINFO, "global water wave height" );
 	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "127", CVAR_PHYSICINFO, "skycolor red (hl1 compatibility)" );
 	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "127", CVAR_PHYSICINFO, "skycolor green (hl1 compatibility)" );
