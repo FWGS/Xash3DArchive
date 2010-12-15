@@ -1394,12 +1394,16 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 
 		mod->radius = RadiusFromBounds( mod->mins, mod->maxs );
 		mod->numleafs = bm->visleafs;
+		mod->flags = 0; // clear flags
 
 		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
 		{
 			msurface_t	*surf = mod->surfaces + mod->firstmodelsurface + j;
 			mextrasurf_t	*info = SURF_INFO( surf, mod );
 			vec3_t		normal, vup = { 0, 0, 1 };
+
+			if( surf->flags & SURF_CONVEYOR )
+				mod->flags |= MODEL_CONVEYOR;
 
 			// kill water backplanes for submodels (half-life rules)
 			if( surf->flags & SURF_DRAWTURB )

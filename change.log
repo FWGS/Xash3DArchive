@@ -9,6 +9,8 @@ Engine: support for StartupVids.txt
 Engine: get full compatibility with hl.dll
 FS: recode wad resource management (now support lumps from wads with same name)
 Engine: trigger_camera is now correctly saved and restored
+Render: add sorting for translucent surfaces
+Render: make support for 'static' models (any opaque non-moving brushes engine automatically make as part of world)
 
 build 1338
 

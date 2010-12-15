@@ -46,11 +46,39 @@ static qboolean R_StaticEntity( cl_entity_t *ent )
 	if( gl_test->integer )
 		return false;
 
-	if( ent->curstate.rendermode == kRenderNormal && ent->model->type == mod_brush )
-	{
-		if( VectorIsNull( ent->origin ) && VectorIsNull( ent->angles ))
-			return true;
-	}
+	if( ent->curstate.rendermode != kRenderNormal )
+		return false;
+
+	if( ent->model->type != mod_brush )
+		return false;
+
+	if( ent->curstate.frame || ent->model->flags & MODEL_CONVEYOR )
+		return false;
+
+	if( !VectorIsNull( ent->origin ) || !VectorIsNull( ent->angles ))
+		return false;
+
+	return true;
+}
+
+/*
+===============
+R_OpaqueEntity
+
+Opaque entity can be brush or studio model but sprite
+===============
+*/
+static qboolean R_OpaqueEntity( cl_entity_t *ent )
+{
+	if( ent->curstate.rendermode == kRenderNormal )
+		return true;
+
+	if( ent->model->type == mod_sprite )
+		return false;
+
+	if( ent->curstate.rendermode == kRenderTransAlpha )
+		return true;
+
 	return false;
 }
 
@@ -286,7 +314,7 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 	clent->curstate.entityType = entityType;
 	clent->curstate.renderamt = R_ComputeFxBlend( clent );
 
-	if( clent->curstate.rendermode == kRenderNormal || clent->curstate.rendermode == kRenderTransAlpha )
+	if( R_OpaqueEntity( clent ))
 	{
 		if( R_StaticEntity( clent ))
 		{
@@ -670,6 +698,9 @@ void R_DrawEntitiesOnList( void )
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
 			break;
+		case mod_sprite:
+			R_DrawSpriteModel( RI.currententity );
+			break;
 		default:
 			break;
 		}
@@ -697,6 +728,9 @@ void R_DrawEntitiesOnList( void )
 		{
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
+			break;
+		case mod_sprite:
+			R_DrawSpriteModel( RI.currententity );
 			break;
 		default:
 			break;

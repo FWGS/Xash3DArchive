@@ -227,6 +227,10 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	if( image.d_rendermode == LUMP_DECAL || image.d_rendermode == LUMP_TRANSPARENT )
 		image.flags |= IMAGE_HAS_ALPHA;
 
+	// make transparent color is black, blue color looks ugly
+	if( image.d_rendermode == LUMP_TRANSPARENT && Sys.app_name == HOST_NORMAL )
+		image.d_currentpal[255] = 0;
+
 	return Image_AddIndexedImageToPack( (byte *)(pin + 1), image.width, image.height );
 }
 

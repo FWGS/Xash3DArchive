@@ -645,7 +645,7 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 	{
 		pglHint( GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST );
 		pglTexParameteri( glTarget, GL_GENERATE_MIPMAP_SGIS, GL_TRUE );
-		if( pglGetError( )) MsgDev( D_WARN, "GL_GenerateMipmaps: %s can't create mip levels\n", tex->name );
+		pglGetError(); // clear error queue on mips generate
 		return; 
 	}
 
@@ -665,6 +665,7 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 
 		if( subImage ) pglTexSubImage2D( tex->target + side, mipLevel, 0, 0, w, h, inFormat, GL_UNSIGNED_BYTE, buffer );
 		else pglTexImage2D( tex->target + side, mipLevel, tex->format, w, h, 0, inFormat, GL_UNSIGNED_BYTE, buffer );
+		if( pglGetError( )) break; // can't create mip levels
 	}
 }
 

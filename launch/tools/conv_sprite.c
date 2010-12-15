@@ -18,7 +18,6 @@
 #define SPR_ADDITIVE		1
 #define SPR_INDEXALPHA		2
 #define SPR_ALPHTEST		3
-#define SPR_ADDGLOW			4	// same as additive, but without depthtest
 
 typedef struct frame_s
 {
@@ -122,7 +121,6 @@ _inline const char *SPR_RenderMode( void )
 {
 	switch( spr.texFormat )
 	{
-	case SPR_ADDGLOW: return "glow";
 	case SPR_ALPHTEST: return "alphatest";
 	case SPR_INDEXALPHA: return "indexalpha";
 	case SPR_ADDITIVE: return "additive";
@@ -389,9 +387,6 @@ qboolean ConvSPR( const char *name, byte *buffer, size_t filesize, const char *e
 				case SPR_ALPHTEST:		
 					pal = FS_LoadImage( "#transparent.pal", src, 768 );
 					break;
-				case SPR_NORMAL:
-				case SPR_ADDGLOW:
-				case SPR_ADDITIVE:
 				default:
 					pal = FS_LoadImage( "#normal.pal", src, 768 );
 					break;

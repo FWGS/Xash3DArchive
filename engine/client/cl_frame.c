@@ -31,6 +31,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
+	if( !ent->curstate.scale ) ent->curstate.scale = 1.0f;
 
 	ent->model = CM_ClipHandleToModel( ent->curstate.modelindex );
 	ent->curstate.msg_time = cl.time;
@@ -67,7 +68,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	{
 		vec3_t	pos;
 
-		if( entityType == ET_VIEWENTITY )
+		if( ent == &clgame.viewent )
 			ent->curstate.effects &= ~EF_MUZZLEFLASH;
 
 		VectorCopy( ent->attachment[0], pos );
@@ -157,8 +158,8 @@ void CL_WeaponAnim( int iAnim, int body )
 	}
 
 	view->model = CM_ClipHandleToModel( view->curstate.modelindex );
-	view->curstate.entityType = ET_VIEWENTITY;
-	view->curstate.animtime = cl_time();	// start immediately
+	view->curstate.entityType = ET_NORMAL;
+	view->curstate.animtime = cl.time;	// start immediately
 	view->curstate.framerate = 1.0f;
 	view->curstate.sequence = iAnim;
 	view->latched.prevframe = 0.0f;

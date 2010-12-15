@@ -47,7 +47,6 @@ typedef enum
 	SPR_ADDITIVE,
 	SPR_INDEXALPHA,
 	SPR_ALPHTEST,
-	SPR_ADDGLOW		// Xash3D ext
 } drawtype_t;
 
 typedef enum

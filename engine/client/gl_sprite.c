@@ -6,12 +6,29 @@
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
+#include "pm_local.h"
 #include "sprite.h"
+#include "studio.h"
+#include "entity_types.h"
+#include "cl_tent.h"
 
-#define MAPSPRITE_SIZE	128	// it's a Valve default value for LoadMapSprite (probably must be power of two)
+// it's a Valve default value for LoadMapSprite (probably must be power of two)
+#define MAPSPRITE_SIZE	128
 
+convar_t	*r_sprite_lerping;
 char	sprite_name[64];
 char	group_suffix[8];
+
+/*
+====================
+R_SpriteInit
+
+====================
+*/
+void R_SpriteInit( void )
+{
+	r_sprite_lerping = Cvar_Get( "r_sprite_lerping", "1", CVAR_ARCHIVE, "enables sprite animation lerping" );
+}
 
 /*
 ====================
@@ -94,6 +111,13 @@ static dframetype_t *R_SpriteLoadGroup( model_t *mod, void *pin, mspriteframe_t 
 	return (dframetype_t *)ptemp;
 }
 
+/*
+====================
+Mod_LoadSpriteModel
+
+load sprite model
+====================
+*/
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 {
 	dsprite_t		*pin;
@@ -143,9 +167,6 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 		// install palette
 		switch( psprite->texFormat )
 		{
-		case SPR_ADDGLOW:
-			pal = FS_LoadImage( "#normal.pal", src, 768 );
-			break;
 		case SPR_ADDITIVE:
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
 			break;
@@ -278,8 +299,6 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	// reset the sprite name
 	sprite_name[0] = '\0';
 
-	Msg( "%s %i frames\n", mod->name, numframes );
-
 	// chop the image and upload into video memory
 	for( i = xl = yl = 0; i < numframes; i++ )
 	{
@@ -327,6 +346,13 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	mod->type = mod_sprite; // done
 }
 
+/*
+====================
+Mod_UnloadSpriteModel
+
+release sprite model and frames
+====================
+*/
 void Mod_UnloadSpriteModel( model_t *mod )
 {
 	msprite_t		*psprite;
@@ -424,4 +450,455 @@ mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 		pspriteframe = pspritegroup->frames[angleframe];
 	}
 	return pspriteframe;
+}
+
+/*
+================
+R_GetSpriteFrameInterpolant
+
+NOTE: we using prevblending[0] and [1] for holds interval
+between frames where are we lerping
+================
+*/
+float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, mspriteframe_t **curframe )
+{
+	msprite_t		*psprite;
+	mspritegroup_t	*pspritegroup;
+	int		i, j, numframes, frame;
+	float		lerpFrac, time, jtime, jinterval;
+	float		*pintervals, fullinterval, targettime;
+	int		m_fDoInterp;
+
+	psprite = ent->model->cache.data;
+	frame = (int)ent->curstate.frame;
+	lerpFrac = 1.0f;
+
+	// misc info
+	if( r_sprite_lerping->integer )
+		m_fDoInterp = (ent->curstate.effects & EF_NOINTERP) ? false : true;
+	else m_fDoInterp = false;
+
+	if( frame < 0 )
+	{
+		frame = 0;
+	}          
+	else if( frame >= psprite->numframes )
+	{
+		MsgDev( D_WARN, "R_GetSpriteFrame: no such frame %d (%s)\n", frame, ent->model->name );
+		frame = psprite->numframes - 1;
+	}
+
+	if( psprite->frames[frame].type == FRAME_SINGLE )
+	{
+		if( m_fDoInterp )
+		{
+			if( ent->latched.prevblending[0] >= psprite->numframes || psprite->frames[ent->latched.prevblending[0]].type != FRAME_SINGLE )
+			{
+				// this can be happens when rendering switched between single and angled frames
+				// or change model on replace delta-entity
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 1.0f;
+			}
+                              
+			if( ent->latched.prevanimtime < RI.refdef.time )
+			{
+				if( frame != ent->latched.prevblending[1] )
+				{
+					ent->latched.prevblending[0] = ent->latched.prevblending[1];
+					ent->latched.prevblending[1] = frame;
+					ent->latched.prevanimtime = RI.refdef.time;
+					lerpFrac = 0.0f;
+				}
+				else lerpFrac = (RI.refdef.time - ent->latched.prevanimtime) * 10;
+			}
+			else
+			{
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 0.0f;
+			}
+		}
+		else
+		{
+			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+			lerpFrac = 1.0f;
+		}
+
+		if( ent->latched.prevblending[0] >= psprite->numframes )
+		{
+			// reset interpolation on change model
+			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+			ent->latched.prevanimtime = RI.refdef.time;
+			lerpFrac = 0.0f;
+		}
+
+		// get the interpolated frames
+		if( oldframe ) *oldframe = psprite->frames[ent->latched.prevblending[0]].frameptr;
+		if( curframe ) *curframe = psprite->frames[frame].frameptr;
+	}
+	else if( psprite->frames[frame].type == FRAME_GROUP ) 
+	{
+		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
+		pintervals = pspritegroup->intervals;
+		numframes = pspritegroup->numframes;
+		fullinterval = pintervals[numframes-1];
+		jinterval = pintervals[1] - pintervals[0];
+		time = RI.refdef.time;
+		jtime = 0.0f;
+
+		// when loading in Mod_LoadSpriteGroup, we guaranteed all interval values
+		// are positive, so we don't have to worry about division by zero
+		targettime = time - ((int)(time / fullinterval)) * fullinterval;
+
+		// LordHavoc: since I can't measure the time properly when it loops from numframes - 1 to 0,
+		// i instead measure the time of the first frame, hoping it is consistent
+		for( i = 0, j = numframes - 1; i < (numframes - 1); i++ )
+		{
+			if( pintervals[i] > targettime )
+				break;
+			j = i;
+			jinterval = pintervals[i] - jtime;
+			jtime = pintervals[i];
+		}
+
+		if( m_fDoInterp )
+			lerpFrac = (targettime - jtime) / jinterval;
+		else j = i; // no lerping
+
+		// get the interpolated frames
+		if( oldframe ) *oldframe = pspritegroup->frames[j];
+		if( curframe ) *curframe = pspritegroup->frames[i];
+	}
+	else if( psprite->frames[frame].type == FRAME_ANGLED )
+	{
+		// e.g. doom-style sprite monsters
+		float	yaw = ent->angles[YAW];
+		int	angleframe = (int)(( RI.refdef.viewangles[1] - yaw ) / 360 * 8 + 0.5 - 4) & 7;
+
+		if( m_fDoInterp )
+		{
+			if( ent->latched.prevblending[0] >= psprite->numframes || psprite->frames[ent->latched.prevblending[0]].type != FRAME_ANGLED )
+			{
+				// this can be happens when rendering switched between single and angled frames
+				// or change model on replace delta-entity
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 1.0f;
+			}
+
+			if( ent->latched.prevanimtime < RI.refdef.time )
+			{
+				if( frame != ent->latched.prevblending[1] )
+				{
+					ent->latched.prevblending[0] = ent->latched.prevblending[1];
+					ent->latched.prevblending[1] = frame;
+					ent->latched.prevanimtime = RI.refdef.time;
+					lerpFrac = 0.0f;
+				}
+				else lerpFrac = (RI.refdef.time - ent->latched.prevanimtime) * ent->curstate.framerate;
+			}
+			else
+			{
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 0.0f;
+			}
+		}
+		else
+		{
+			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+			lerpFrac = 1.0f;
+		}
+
+		pspritegroup = (mspritegroup_t *)psprite->frames[ent->latched.prevblending[0]].frameptr;
+		if( oldframe ) *oldframe = pspritegroup->frames[angleframe];
+
+		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
+		if( curframe ) *curframe = pspritegroup->frames[angleframe];
+	}
+	return lerpFrac;
+}
+
+/*
+================
+R_GlowSightDistance
+
+Calc sight distance for glow-sprites
+================
+*/
+static float R_GlowSightDistance( vec3_t glowOrigin )
+{
+	float	dist;
+	vec3_t	glowDist;
+	pmtrace_t	tr;
+
+	VectorSubtract( glowOrigin, RI.vieworg, glowDist );
+	dist = VectorLength( glowDist );
+
+	tr = PM_PlayerTrace( clgame.pmove, RI.vieworg, glowOrigin, PM_GLASS_IGNORE|PM_STUDIO_IGNORE, 2, -1, NULL );
+
+	if(( 1.0f - tr.fraction ) * dist > 8 )
+		return -1;
+	return dist;
+}
+
+/*
+================
+R_GlowSightDistance
+
+Set sprite brightness factor
+================
+*/
+static float R_SpriteGlowBlend( cl_entity_t *e, vec3_t origin )
+{
+	float	dist = R_GlowSightDistance( origin );
+	float	brightness;
+
+	if( dist <= 0 ) return 0.0f; // occluded
+
+	if( e->curstate.renderfx == kRenderFxNoDissipation )
+		return (float)e->curstate.renderamt * (1.0f / 255.0f);
+
+	// UNDONE: Tweak these magic numbers (19000 - falloff & 200 - sprite size)
+	brightness = 19000.0 / ( dist * dist );
+	brightness = bound( 0.05f, brightness, 1.0f );
+
+	// Make the glow fixed size in screen space, taking into consideration the scale setting.
+	if( e->curstate.scale == 0.0f ) e->curstate.scale = 1.0f;
+	e->curstate.scale *= dist * ( 1.0f / 200.0f );
+
+	return brightness;
+}
+
+/*
+================
+R_SpriteOccluded
+
+Do occlusion test for glow-sprites
+================
+*/
+qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin )
+{
+	if( e->curstate.rendermode == kRenderGlow )
+	{
+		float	blend = 1.0f;
+		vec3_t	v;
+
+		TriWorldToScreen( origin, v );
+
+		if( v[0] < RI.refdef.viewport[0] || v[0] > RI.refdef.viewport[0] + RI.refdef.viewport[2] )
+			return true; // do scissor
+		if( v[1] < RI.refdef.viewport[1] || v[1] > RI.refdef.viewport[1] + RI.refdef.viewport[3] )
+			return true; // do scissor
+
+		blend *= R_SpriteGlowBlend( e, origin );
+		e->curstate.renderamt *= blend;
+
+		if( blend <= 0.05f )
+			return true; // faded
+	}
+	else
+	{
+		vec3_t	mins, maxs;
+
+		VectorAdd( origin, e->model->mins, mins );
+		VectorAdd( origin, e->model->maxs, maxs );
+
+		if( R_CullBox( mins, maxs, RI.clipFlags ))
+			return true; // culled
+	}
+	return false;	
+}
+
+/*
+=================
+R_DrawSpriteQuad
+=================
+*/
+static void R_DrawSpriteQuad( mspriteframe_t *frame, vec3_t org, vec3_t v_right, vec3_t v_up, float scale )
+{
+	vec3_t	point;
+
+	GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
+
+	pglBegin( GL_QUADS );
+		pglTexCoord2f( 0.0f, 1.0f );
+		VectorMA( org, frame->down * scale, v_up, point );
+		VectorMA( point, frame->left * scale, v_right, point );
+		pglVertex3fv( point );
+		pglTexCoord2f( 0.0f, 0.0f );
+		VectorMA( org, frame->up * scale, v_up, point );
+		VectorMA( point, frame->left * scale, v_right, point );
+		pglVertex3fv( point );
+		pglTexCoord2f( 1.0f, 0.0f );
+		VectorMA( org, frame->up * scale, v_up, point );
+		VectorMA( point, frame->right * scale, v_right, point );
+		pglVertex3fv( point );
+ 	        	pglTexCoord2f( 1.0f, 1.0f );
+		VectorMA( org, frame->down * scale, v_up, point );
+		VectorMA( point, frame->right * scale, v_right, point );
+		pglVertex3fv( point );
+	pglEnd();
+}
+
+/*
+=================
+R_DrawSpriteModel
+=================
+*/
+void R_DrawSpriteModel( cl_entity_t *e )
+{
+	mspriteframe_t	*frame, *oldframe;
+	msprite_t		*psprite;
+	model_t		*model;
+	int		i, state = 0;
+	float		angle, sr, cr;
+	float		lerp = 1.0f, ilerp;
+	vec3_t		v_forward, v_right, v_up;
+	vec3_t		origin;
+	color24		color;
+
+	model = e->model;
+	psprite = (msprite_t * )model->cache.data;
+	color.r = color.g = color.b = 255;
+
+	VectorCopy( e->origin, origin );	// set render origin
+
+	// do movewith
+	if( e->curstate.aiment > 0 && e->curstate.movetype == MOVETYPE_FOLLOW )
+	{
+		cl_entity_t	*parent;
+	
+		parent = CL_GetEntityByIndex( e->curstate.aiment );
+
+		if( parent && parent->model && parent->model->type == mod_studio )
+		{
+			if( e->curstate.body > 0 )
+			{
+				int num = bound( 1, e->curstate.body, MAXSTUDIOATTACHMENTS );
+				VectorCopy( parent->attachment[num-1], origin );
+			}
+			else VectorCopy( parent->origin, origin );
+		}
+	}
+
+	if( R_SpriteOccluded( e, origin ))
+		return; // sprite culled
+
+	if( psprite->texFormat == SPR_ALPHTEST )
+		state |= GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
+
+	// select properly rendermode
+	switch( e->curstate.rendermode )
+	{
+	case kRenderTransAlpha:
+	case kRenderTransTexture:
+		state |= GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+		break;
+	case kRenderGlow:
+	case kRenderTransAdd:
+		state |= GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE;
+		break;
+	case kRenderNormal:
+	default:	state |= GLSTATE_DEPTHWRITE;
+		break;
+	}
+
+	if( e->curstate.rendermode == kRenderNormal )
+		GL_TexEnv( GL_REPLACE );
+	else GL_TexEnv( GL_MODULATE );
+
+	GL_SetState( state );
+
+	color.r = e->curstate.rendercolor.r;
+	color.g = e->curstate.rendercolor.g;
+	color.b = e->curstate.rendercolor.b;
+
+	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
+		frame = oldframe = R_GetSpriteFrame( model, e->curstate.frame, e->angles[YAW] );
+	else lerp = R_GetSpriteFrameInterpolant( e, &oldframe, &frame );
+
+	switch( psprite->type )
+	{
+	case SPR_ORIENTED:
+		AngleVectors( e->angles, v_forward, v_right, v_up );
+		VectorScale( v_forward, 0.01f, v_forward ); // to avoid z-fighting
+		VectorSubtract( origin, v_forward, origin );
+		break;
+	case SPR_FACING_UPRIGHT:
+		VectorSet( v_right, origin[1] - RI.vieworg[1], -(origin[0] - RI.vieworg[0]), 0.0f );
+		VectorSet( v_up, 0.0f, 0.0f, 1.0f );
+		VectorNormalize( v_right );
+		break;
+	case SPR_FWD_PARALLEL_UPRIGHT:
+		VectorSet( v_right, RI.vforward[1], -RI.vforward[0], 0.0f );
+		VectorSet( v_up, 0.0f, 0.0f, 1.0f );
+		break;
+	case SPR_FWD_PARALLEL_ORIENTED:
+		angle = e->angles[ROLL] * (M_PI * 2.0f / 360.0f);
+		com.sincos( angle, &sr, &cr );
+		for( i = 0; i < 3; i++ )
+		{
+			v_right[i] = (RI.vright[i] * cr + RI.vup[i] * sr);
+			v_up[i] = RI.vright[i] * -sr + RI.vup[i] * cr;
+		}
+		break;
+	case SPR_FWD_PARALLEL: // normal sprite
+	default:
+		if( e->curstate.entityType == ET_TEMPENTITY )
+			angle = e->angles[ROLL]; // for support rotating muzzleflashes
+		else angle = 0.0f;
+
+		if( angle != 0.0f )
+		{
+			RotatePointAroundVector( v_right, RI.vforward, RI.vright, angle );
+			CrossProduct( RI.vforward, v_right, v_up );
+		}
+		else
+		{
+			VectorCopy( RI.vright, v_right ); 
+			VectorCopy( RI.vup, v_up );
+		}
+		break;
+	}
+
+	if( e->curstate.rendermode == kRenderGlow )
+		pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
+
+	if( psprite->facecull == SPR_CULL_NONE )
+		GL_Cull( GL_NONE );
+		
+	if( oldframe == frame )
+	{
+		// draw the single non-lerped frame
+		pglColor4ub( color.r, color.g, color.b, e->curstate.renderamt );
+		R_DrawSpriteQuad( frame, origin, v_right, v_up, e->curstate.scale );
+	}
+	else
+	{
+		// draw two combined lerped frames
+		lerp = bound( 0.0f, lerp, 1.0f );
+		ilerp = 1.0f - lerp;
+
+		if( ilerp != 0 )
+		{
+			pglColor4ub( color.r, color.g, color.b, e->curstate.renderamt * ilerp );
+			R_DrawSpriteQuad( oldframe, origin, v_right, v_up, e->curstate.scale );
+		}
+
+		if( lerp != 0 )
+		{
+			pglColor4ub( color.r, color.g, color.b, e->curstate.renderamt * lerp );
+			R_DrawSpriteQuad( frame, origin, v_right, v_up, e->curstate.scale );
+		}
+	}
+
+	if( e->curstate.rendermode == kRenderGlow )
+		pglDepthRange( gldepthmin, gldepthmax );
+
+	if( psprite->facecull == SPR_CULL_NONE )
+		GL_Cull( GL_FRONT );
+
+	pglColor4ub( 255, 255, 255, 255 );
 }

@@ -119,6 +119,7 @@ void CL_PrepareTEnt( TEMPENTITY *pTemp, model_t *pmodel )
 	pTemp->entity.curstate.renderamt = 255;
 	pTemp->entity.curstate.body = 0;
 	pTemp->entity.curstate.skin = 0;
+	pTemp->entity.model = pmodel;
 	pTemp->fadeSpeed = 0.5f;
 	pTemp->hitSound = 0;
 	pTemp->clientIndex = 0;

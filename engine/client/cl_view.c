@@ -96,7 +96,7 @@ void V_AddViewModel( void )
 	if( cl.refdef.nextView ) return; // add viewmodel only at firstperson pass
 	if( !cl.frame.valid || cl.refdef.paused || cl.thirdperson ) return;
 
-	CL_AddVisibleEntity( &clgame.viewent, ET_VIEWENTITY );
+	CL_AddVisibleEntity( &clgame.viewent, ET_NORMAL );
 }
 
 /*

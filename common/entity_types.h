@@ -21,7 +21,5 @@
 #define ET_TEMPENTITY	2
 #define ET_BEAM		3
 #define ET_FRAGMENTED	4	// BMODEL or SPRITE that was split across BSP nodes
-#define ET_VIEWENTITY	5	// special case for firstperson viewmodel
-#define ET_PORTAL		6	// this is portal surface
 
 #endif//ENTITY_TYPES_H

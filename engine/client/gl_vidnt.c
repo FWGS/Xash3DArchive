@@ -1599,6 +1599,7 @@ qboolean R_Init( void )
 	GL_InitExtensions();
 	GL_SetDefaults();
 	R_InitImages();
+	R_SpriteInit();
 	R_ClearScene();
 
 	GL_CheckForErrors();

@@ -756,6 +756,9 @@ void R_DrawTextureChains( void )
 	msurface_t	*s;
 	texture_t		*t;
 
+	// make sure what color is reset
+	pglColor4ub( 255, 255, 255, 255 );
+
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{
 		t = cl.worldmodel->textures[i];
@@ -957,7 +960,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( R_CullBox( mins, maxs, RI.clipFlags ))
 		return;
 
-	pglColor3f( 1.0f, 1.0f, 1.0f );
 	Mem_Set( lightmap_polys, 0, sizeof( lightmap_polys ));
 
 	if( rotated ) R_RotateForEntity( e );
@@ -1023,7 +1025,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		if( R_CullSurface( psurf, RI.clipFlags ))
+		if( R_CullSurface( psurf, 0 ))
 			continue;
 
 		if( need_sort )
@@ -1086,7 +1088,7 @@ void R_DrawStaticModel( cl_entity_t *e )
 	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		if( R_CullSurface( psurf, RI.clipFlags ))
+		if( R_CullSurface( psurf, 0 ))
 			continue;
 
 		psurf->texturechain = psurf->texinfo->texture->texturechain;
@@ -1207,7 +1209,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	// draw stuff
 	for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
 	{
-		if( R_CullSurface( surf, RI.clipFlags ))
+		if( R_CullSurface( surf, clipflags ))
 			continue;
 
 		surf->texturechain = surf->texinfo->texture->texturechain;

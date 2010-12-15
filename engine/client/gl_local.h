@@ -267,6 +267,7 @@ void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 void R_ClearScene( void );
 void R_LoadIdentity( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
+qboolean R_WorldToScreen2( const vec3_t in, vec3_t out );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
 
@@ -290,8 +291,10 @@ void GL_BuildLightmaps( void );
 //
 // gl_sprite.c
 //
+void R_SpriteInit( void );
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
+void R_DrawSpriteModel( cl_entity_t *e );
 
 //
 // gl_warp.c

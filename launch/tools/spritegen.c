@@ -198,7 +198,6 @@ void Cmd_RenderMode( void )
 	else if( !com.stricmp( token.string, "normal")) sprite.texFormat = SPR_NORMAL;
 	else if( !com.stricmp( token.string, "indexalpha")) sprite.texFormat = SPR_INDEXALPHA;
 	else if( !com.stricmp( token.string, "alphatest")) sprite.texFormat = SPR_ALPHTEST;
-	else if( !com.stricmp( token.string, "glow")) sprite.texFormat = SPR_ADDGLOW;
 	else sprite.texFormat = SPR_ADDITIVE; // default
 }
 
