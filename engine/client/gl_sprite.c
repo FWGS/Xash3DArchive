@@ -811,9 +811,16 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	GL_SetState( state );
 
-	color.r = e->curstate.rendercolor.r;
-	color.g = e->curstate.rendercolor.g;
-	color.b = e->curstate.rendercolor.b;
+	if( !gl_test->integer && psprite->texFormat == SPR_ALPHTEST )
+	{
+		R_LightForPoint( origin, &color, false );
+	}
+	else
+	{
+		color.r = e->curstate.rendercolor.r;
+		color.g = e->curstate.rendercolor.g;
+		color.b = e->curstate.rendercolor.b;
+	}
 
 	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
 		frame = oldframe = R_GetSpriteFrame( model, e->curstate.frame, e->angles[YAW] );

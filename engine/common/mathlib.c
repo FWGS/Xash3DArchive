@@ -108,6 +108,12 @@ void VectorVectors( vec3_t forward, vec3_t right, vec3_t up )
 	CrossProduct(right, forward, up);
 }
 
+/*
+=================
+AngleVectors
+
+=================
+*/
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up )
 {
 	float	sr, sp, sy, cr, cp, cy;
@@ -136,6 +142,42 @@ void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up 
 		up[1] = (cr * sp * sy + -sr * cy );
 		up[2] = (cr * cp);
 	}
+}
+
+/*
+=================
+VectorAngles
+
+=================
+*/
+void VectorAngles( const float *forward, float *angles )
+{
+	float	tmp, yaw, pitch;
+
+	if( !forward || !angles )
+	{
+		if( angles ) VectorClear( angles );
+		return;
+	}
+
+	if( forward[1] == 0 && forward[0] == 0 )
+	{
+		// fast case
+		yaw = 0;
+		if( forward[2] > 0 )
+			pitch = 90.0f;
+		else pitch = 270.0f;
+	}
+	else
+	{
+		yaw = ( com.atan2( forward[1], forward[0] ) * 180 / M_PI );
+		if( yaw < 0 ) yaw += 360;
+
+		tmp = com.sqrt( forward[0] * forward[0] + forward[1] * forward[1] );
+		pitch = ( com.atan2( forward[2], tmp ) * 180 / M_PI );
+		if( pitch < 0 ) pitch += 360;
+	}
+	VectorSet( angles, pitch, yaw, 0 ); 
 }
 
 //

@@ -83,7 +83,7 @@ void Mod_UnloadStudioModel( struct model_s *mod );
 void Mod_UnloadBrushModel( struct model_s *mod );
 void GL_SetRenderMode( int mode );
 int R_GetSpriteTexture( const struct model_s *m_pSpriteModel, int frame );
-void R_LightForPoint( const vec3_t point, vec3_t ambientLight );
+void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight );
 qboolean R_DecalShoot( int texture, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
 void R_RemoveEfrags( struct cl_entity_s *ent );
 void R_AddEfrags( struct cl_entity_s *ent );

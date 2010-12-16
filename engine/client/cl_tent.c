@@ -1456,7 +1456,7 @@ void CL_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, 
 	pTemp = CL_TempEntAlloc( origin, CM_ClipHandleToModel( modelIndex ));
 	if( !pTemp ) return;
 
-	pfnVecToAngles( velocity, pTemp->entity.angles );
+	VectorAngles( velocity, pTemp->entity.angles );
 	VectorCopy( velocity, pTemp->entity.baseline.origin );
 
 	pTemp->entity.curstate.body = 0;

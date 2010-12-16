@@ -288,44 +288,6 @@ float pfnRandomFloat( float flLow, float flHigh )
 }
 
 /*
-=================
-pfnVecToAngles
-
-=================
-*/
-void pfnVecToAngles( const float *rgflVectorIn, float *rgflVectorOut )
-{
-	float	tmp, yaw, pitch;
-
-	if( !rgflVectorIn )
-	{
-		if( rgflVectorOut ) VectorClear( rgflVectorOut );
-		return;
-	}
-
-	if( rgflVectorIn[1] == 0 && rgflVectorIn[0] == 0 )
-	{
-		// fast case
-		yaw = 0;
-		if( rgflVectorIn[2] > 0 )
-			pitch = 90;
-		else pitch = 270;
-	}
-	else
-	{
-		yaw = ( com.atan2( rgflVectorIn[1], rgflVectorIn[0] ) * 180 / M_PI );
-		if( yaw < 0 ) yaw += 360;
-
-		tmp = com.sqrt( rgflVectorIn[0] * rgflVectorIn[0] + rgflVectorIn[1] * rgflVectorIn[1] );
-		pitch = ( com.atan2( rgflVectorIn[2], tmp ) * 180 / M_PI );
-		if( pitch < 0 ) pitch += 360;
-	}
-
-	if( rgflVectorOut ) VectorSet( rgflVectorOut, pitch, yaw, 0 ); 
-	else MsgDev( D_ERROR, "SV_VecToAngles: no output vector specified\n" );
-}
-
-/*
 =============
 pfnTime
 

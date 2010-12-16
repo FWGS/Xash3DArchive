@@ -260,7 +260,7 @@ usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
 	static double	extramsec = 0;
-	vec3_t		color;
+	color24		color;
 	int		ms;
 
 	// send milliseconds of time to apply the move
@@ -292,8 +292,8 @@ usercmd_t CL_CreateCmd( void )
 
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
 
-	R_LightForPoint( cl.frame.local.client.origin, color );
-	cmd.lightlevel = VectorAvg( color ) * 255;
+	R_LightForPoint( cl.frame.local.client.origin, &color, false );
+	cmd.lightlevel = (color.r + color.g + color.b) / 3;
 
 	// random seed for predictable random values
 	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range

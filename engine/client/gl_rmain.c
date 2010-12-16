@@ -43,9 +43,6 @@ typically is a func_wall, func_breakable, func_ladder etc
 */
 static qboolean R_StaticEntity( cl_entity_t *ent )
 {
-	if( gl_test->integer )
-		return false;
-
 	if( ent->curstate.rendermode != kRenderNormal )
 		return false;
 
@@ -698,6 +695,9 @@ void R_DrawEntitiesOnList( void )
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
 			break;
+		case mod_studio:
+			R_DrawStudioModel( RI.currententity );
+			break;
 		case mod_sprite:
 			R_DrawSpriteModel( RI.currententity );
 			break;
@@ -728,6 +728,9 @@ void R_DrawEntitiesOnList( void )
 		{
 		case mod_brush:
 			R_DrawBrushModel( RI.currententity );
+			break;
+		case mod_studio:
+			R_DrawStudioModel( RI.currententity );
 			break;
 		case mod_sprite:
 			R_DrawSpriteModel( RI.currententity );

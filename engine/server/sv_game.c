@@ -4083,7 +4083,7 @@ static enginefuncs_t gEngfuncs =
 	pfnGetSpawnParms,
 	pfnSaveSpawnParms,
 	pfnVecToYaw,
-	pfnVecToAngles,
+	VectorAngles,
 	pfnMoveToOrigin,
 	pfnChangeYaw,
 	pfnChangePitch,

@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "netchan.h"
+#include "protocol.h"
 #include "cm_local.h"
 #include "input.h"
 

@@ -39,6 +39,7 @@ typedef vec_t		quat_t[4];
 typedef byte		rgba_t[4];	// unsigned byte colorpack
 typedef byte		rgb_t[3];		// unsigned byte colorpack
 typedef vec_t		matrix3x3[3][3];
+typedef vec_t		matrix3x4[3][4];
 typedef vec_t		matrix4x4[4][4];
 typedef char		string[MAX_STRING];
 

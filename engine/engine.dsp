@@ -274,6 +274,10 @@ SOURCE=.\common\mathlib.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\matrixlib.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\model.c
 # End Source File
 # Begin Source File

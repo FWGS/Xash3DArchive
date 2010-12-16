@@ -926,7 +926,7 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang )
 {
 	mstudioattachment_t		*pAtt;
-	vec3_t			axis[3], bonepos;
+	vec3_t			forward, bonepos;
 	vec3_t			localOrg, localAng;
 	void			*hdr;
 
@@ -953,10 +953,9 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 	// compute pos and angles
 	Matrix4x4_VectorTransform( sv_studiobones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
 	Matrix4x4_OriginFromMatrix( sv_studiobones[pAtt[iAttachment].bone], bonepos );
-	VectorSubtract( localOrg, bonepos, axis[0] );	// make forward
-	VectorNormalizeFast( axis[0] );
-	VectorVectors( axis[0], axis[1], axis[2] );	// make right and up
-	Matrix3x3_ToAngles( axis, localAng, false );	// FIXME: dll's uses FLU ?
+	VectorSubtract( localOrg, bonepos, forward );	// make forward
+	VectorNormalizeFast( forward );
+	VectorAngles( forward, localAng );
 
 	if( org ) VectorCopy( localOrg, org );
 	if( ang ) VectorCopy( localAng, ang );

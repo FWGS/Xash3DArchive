@@ -6,7 +6,6 @@
 
 #include "launch.h"
 #include "library.h"
-#include "engine_api.h"
 #include "mathlib.h"
 
 #define MAX_QUED_EVENTS		256

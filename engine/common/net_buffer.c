@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "common.h"
+#include "protocol.h"
 #include "net_buffer.h"
 
 // precalculated bit masks for WriteUBitLong.

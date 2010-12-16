@@ -12,7 +12,32 @@
 #include "pm_local.h"
 #include "gl_local.h"
 
+convar_t			*r_studio_lerping;
 static r_studio_interface_t	*pStudioDraw;
+static float		aliasXscale, aliasYscale;
+static matrix3x4		g_rotationmatrix;
+
+/*
+====================
+R_StudioInit
+
+====================
+*/
+void R_StudioInit( void )
+{
+	float	pixelAspect;
+
+	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", CVAR_ARCHIVE, "enables studio animation lerping" );
+
+	// recalc software X and Y alias scale (this stuff is used only by HL software renderer but who knews...)
+	pixelAspect = ((float)scr_height->integer / (float)scr_width->integer);
+	if( scr_width->integer < 640 )
+		pixelAspect *= (320.0f / 240.0f);
+	else pixelAspect *= (640.0f / 480.0f);
+
+	aliasXscale = (float)scr_width->integer / RI.refdef.fov_y;
+	aliasYscale = aliasXscale * pixelAspect;
+}
 
 /*
 ===============
@@ -22,9 +47,7 @@ pfnGetCurrentEntity
 */
 static cl_entity_t *pfnGetCurrentEntity( void )
 {
-	// FIXME: implement
-	// this is will be needs is we called StudioDrawModel or StudioDrawPlayer
-	return NULL;
+	return RI.currententity;
 }
 
 /*
@@ -72,7 +95,7 @@ pfnGetEngineTimes
 */
 static void pfnGetEngineTimes( int *framecount, double *current, double *old )
 {
-	if( framecount ) *framecount = host.framecount;	// this is will not working properly with mirros etc
+	if( framecount ) *framecount = tr.framecount;
 	if( current ) *current = cl.time;
 	if( old ) *old = cl.oldtime;
 }
@@ -85,10 +108,10 @@ pfnGetViewInfo
 */
 static void pfnGetViewInfo( float *origin, float *upv, float *rightv, float *forwardv )
 {
-	if( origin ) VectorCopy( cl.refdef.vieworg, origin );
-	if( upv ) VectorCopy( cl.refdef.up, upv );
-	if( rightv ) VectorCopy( cl.refdef.right, rightv );
-	if( forwardv ) VectorCopy( cl.refdef.forward, forwardv );
+	if( origin ) VectorCopy( RI.vieworg, origin );
+	if( forwardv ) VectorCopy( RI.vforward, forwardv );
+	if( rightv ) VectorCopy( RI.vright, rightv );
+	if( upv ) VectorCopy( RI.vup, upv );
 }
 
 /*
@@ -123,13 +146,12 @@ static void pfnGetModelCounters( int **s, int **a )
 ===============
 pfnGetAliasScale
 
-Software scales not used in Xash3D
 ===============
 */
 static void pfnGetAliasScale( float *x, float *y )
 {
-	if( x ) *x = 0.0f;
-	if( y ) *y = 0.0f;
+	if( x ) *x = aliasXscale;
+	if( y ) *y = aliasYscale;
 }
 
 /*
@@ -176,8 +198,7 @@ pfnStudioGetRotationMatrix
 */
 static float ***pfnStudioGetRotationMatrix( void )
 {
-	// FIXME: implement
-	return NULL;
+	return (float ***)g_rotationmatrix;
 }
 
 /*
@@ -443,6 +464,51 @@ static void pfnStudioDrawShadow( void )
 	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
 }
 
+/*
+===============
+R_StudioDrawModel
+
+===============
+*/
+static int R_StudioDrawModel( int flags )
+{
+	return 0;
+}
+
+/*
+===============
+R_StudioDrawPlayer
+
+===============
+*/
+static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
+{
+	return 0;
+}
+
+/*
+=================
+R_DrawStudioModel
+=================
+*/
+void R_DrawStudioModel( cl_entity_t *e )
+{
+	int	flags, result;
+
+	ASSERT( pStudioDraw != NULL );
+
+	if( e == &clgame.viewent )
+		flags = STUDIO_EVENTS;	
+	else flags = STUDIO_RENDER|STUDIO_EVENTS;
+
+	// select the properly method
+	if( e->player )
+		result = pStudioDraw->StudioDrawPlayer( flags, &cl.frame.playerstate[e->index-1] );
+	else result = pStudioDraw->StudioDrawModel( flags );
+
+	if( result ) r_stats.c_studio_models++;
+}
+
 void Mod_UnloadStudioModel( model_t *mod )
 {
 	studiohdr_t	*pstudio;
@@ -514,7 +580,13 @@ static engine_studio_api_t gStudioAPI =
 	pfnIsHardware,
 	pfnStudioDrawShadow,
 	GL_SetRenderMode,
+};
 
+static r_studio_interface_t gStudioDraw =
+{
+	STUDIO_INTERFACE_VERSION,
+	R_StudioDrawModel,
+	R_StudioDrawPlayer,
 };
 
 /*
@@ -526,11 +598,19 @@ Initialize client studio
 */
 qboolean CL_InitStudioAPI( void )
 {
+	pStudioDraw = &gStudioDraw;
+
 	// Xash will be used internal StudioModelRenderer
 	if( !clgame.dllFuncs.pfnGetStudioModelInterface )
 		return true;
 
-	pStudioDraw = NULL;	// clear previous API
+	if( clgame.dllFuncs.pfnGetStudioModelInterface( STUDIO_INTERFACE_VERSION, &pStudioDraw, &gStudioAPI ))
+		return true;
 
-	return clgame.dllFuncs.pfnGetStudioModelInterface( STUDIO_INTERFACE_VERSION, &pStudioDraw, &gStudioAPI );
+	// NOTE: we always return true even if game interface was not correct
+	// because we need Draw our StudioModels
+	// just restore pointer to builtin function
+	pStudioDraw = &gStudioDraw;
+
+	return true;
 }

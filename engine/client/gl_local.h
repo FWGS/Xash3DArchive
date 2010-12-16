@@ -153,7 +153,8 @@ typedef struct
 
 	matrix4x4		projectionMatrix;
 	matrix4x4		worldviewProjectionMatrix;	// worldviewMatrix * projectionMatrix
-	int		lightstylevalue[MAX_LIGHTSTYLES];
+	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
+	float		lightstylecolor[MAX_LIGHTSTYLES];	// color 0 - 1.0
 
 	mplane_t		clipPlane;
 } ref_instance_t;
@@ -179,6 +180,12 @@ typedef struct
 	uint		num_static_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
+
+	uint		numColors;	// vertex array num colors
+	uint		numVertex;	// vertex array num vertex
+	rgb_t		colorsArray[4096];	// MAXSTUDIOVERTS
+	vec3_t		normalArray[4096];
+	vec3_t		vertexArray[4096];
           
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
@@ -195,6 +202,8 @@ typedef struct
 	uint		c_studio_polys;
 	uint		c_sprite_polys;
 	uint		c_world_leafs;
+
+	uint		c_studio_models;
 } ref_speeds_t;
 
 extern ref_speeds_t		r_stats;
@@ -242,7 +251,7 @@ gltexture_t *R_GetTexture( GLenum texnum );
 void GL_SetTextureType( GLenum texnum, GLenum type );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
 int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
-byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight, qboolean isNormalMap );
+byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int out_h, qboolean isNormalMap );
 void GL_FreeTexture( GLenum texnum );
 void GL_FreeImage( const char *name );
 void R_TextureList_f( void );
@@ -260,6 +269,8 @@ void R_StoreEfrags( efrag_t **ppefrag );
 void R_PushDlights( void );
 void R_AnimateLight( void );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
+void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight );
+void R_LightForOrigin( const vec3_t origin, vec3_t dir, color24 *ambient, color24 *diffuse, float radius );
 
 //
 // gl_rmain.c
@@ -274,8 +285,13 @@ void R_RotateForEntity( cl_entity_t *e );
 //
 // gl_rmath.c
 //
+void R_InitMathlib( void );
+void R_LatLongToNorm( const byte latlong[2], vec3_t normal );
+void R_NormToLatLong( const vec3_t normal, byte latlong[2] );
 float V_CalcFov( float *fov_x, float width, float height );
 void V_AdjustFov( float *fov_x, float *fov_y, float width, float height, qboolean lock_x );
+byte R_FloatToByte( float x );
+
 
 //
 // gl_rsurf.c
@@ -295,6 +311,12 @@ void R_SpriteInit( void );
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
 void R_DrawSpriteModel( cl_entity_t *e );
+
+//
+// gl_studio.c
+//
+void R_StudioInit( void );
+void R_DrawStudioModel( cl_entity_t *e );
 
 //
 // gl_warp.c
@@ -477,6 +499,8 @@ extern convar_t	*r_speeds;
 extern convar_t	*r_fullbright;
 extern convar_t	*r_norefresh;
 extern convar_t	*r_lighting_modulate;
+extern convar_t	*r_lighting_ambient;
+extern convar_t	*r_lighting_direct;
 extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;

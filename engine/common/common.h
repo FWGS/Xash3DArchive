@@ -11,7 +11,6 @@
 #include <windows.h>
 
 #include "launch_api.h"
-#include "engine_api.h"
 #include "ref_params.h"
 #include "com_export.h"
 #include "com_model.h"
@@ -33,11 +32,12 @@
 // config strings are a general means of communication from
 // the server to all connected clients.
 // each config string can be at most CS_SIZE characters.
-#define CS_SIZE			64	// size of one config string
-#define CS_TIME			16	// size of time string
+#define CS_SIZE		64	// size of one config string
+#define CS_TIME		16	// size of time string
 
-#define MAX_MSGLEN			32768	// max length of network message
-					// FIXME: replace with NET_MAX_PAYLOAD
+#define MAX_DECALS		512	// touching TE_DECAL messages, etc
+#define MAX_MSGLEN		32768	// max length of network message
+				// FIXME: replace with NET_MAX_PAYLOAD
 
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
@@ -208,7 +208,6 @@ void *pfnGetProcAddress( void *hInstance, const char *name );
 void pfnFreeLibrary( void *hInstance );
 long pfnRandomLong( long lLow, long lHigh );
 float pfnRandomFloat( float flLow, float flHigh );
-void pfnVecToAngles( const float *rgflVectorIn, float *rgflVectorOut );
 int pfnAddCommand( const char *cmd_name, xcommand_t func );
 void pfnDelCommand( const char *cmd_name );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );

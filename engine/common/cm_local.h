@@ -37,6 +37,14 @@ typedef struct leaflist_s
 
 typedef struct
 {
+	byte		ambient[LM_STYLES][3];
+	byte		diffuse[LM_STYLES][3];
+	byte		styles[LM_STYLES];
+	byte		direction[2];
+} mgridlight_t;
+
+typedef struct
+{
 	int		version;		// map version
 	uint		checksum;		// map checksum
 	int		load_sequence;	// increace each map change
@@ -44,6 +52,14 @@ typedef struct
 	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 	qboolean		loading;		// true is worldmodel is loading
+
+	// lightgrid stuff
+	mgridlight_t	*lightgrid;
+	int		numgridpoints;
+
+	vec3_t		gridSize;
+	vec3_t		gridMins;
+	int		gridBounds[4];
 } world_static_t;
 
 extern world_static_t	world;
