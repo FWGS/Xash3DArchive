@@ -158,6 +158,7 @@ void CL_WeaponAnim( int iAnim, int body )
 	}
 
 	view->model = CM_ClipHandleToModel( view->curstate.modelindex );
+	view->index = cl.playernum + 1;
 	view->curstate.entityType = ET_NORMAL;
 	view->curstate.animtime = cl.time;	// start immediately
 	view->curstate.framerate = 1.0f;
@@ -632,6 +633,7 @@ void CL_AddEntities( void )
 
 	CL_FireEvents();	// so tempents can be created immediately
 	CL_AddTempEnts();
+	R_RunViewmodelEvents();
 
 	// perfomance test
 	CL_TestLights();

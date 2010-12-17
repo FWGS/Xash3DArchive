@@ -50,6 +50,7 @@ convar_t	*r_lighting_direct;
 convar_t	*r_faceplanecull;
 convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
+convar_t	*r_lefthand;
 convar_t	*r_novis;
 convar_t	*r_nocull;
 convar_t	*r_lockpvs;
@@ -1379,7 +1380,8 @@ void GL_InitCommands( void )
 	r_shadows = Cvar_Get( "r_shadows", "0", CVAR_ARCHIVE, "enable model shadows" );
 	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
 	r_drawentities = Cvar_Get( "r_drawentities", "1", CVAR_CHEAT|CVAR_ARCHIVE, "render entities" );
-
+	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
+	
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
 	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "ignore hardware gamma (e.g. not support)" );

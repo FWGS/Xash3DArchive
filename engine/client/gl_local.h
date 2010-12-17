@@ -19,6 +19,10 @@ extern byte	*r_temppool;
 #define MAX_LIGHTMAPS	64
 #define SUBDIVIDE_SIZE	64
 
+// renderer flags
+#define RDF_PORTALINVIEW	BIT( 0 )	// draw portal pass
+#define RDF_SKYPORTALINVIEW	BIT( 1 )	// draw skyportal instead of regular sky
+
 // refparams
 #define RP_NONE		0
 #define RP_MIRRORVIEW	BIT( 0 )	// lock pvs at vieworg
@@ -27,7 +31,12 @@ extern byte	*r_temppool;
 #define RP_OLDVIEWLEAF	BIT( 3 )
 #define RP_CLIPPLANE	BIT( 4 )
 #define RP_FLIPFRONTFACE	BIT( 5 )	// e.g. for mirrors drawing
-#define RP_NOSKY		BIT( 6 )
+#define RP_SHADOWMAPVIEW	BIT( 6 )
+#define RP_SKYPORTALVIEW	BIT( 7 )
+#define RP_NOSKY		BIT( 8 )
+
+#define RP_NONVIEWERREF	(RP_PORTALVIEW|RP_MIRRORVIEW|RP_ENVVIEW|RP_SKYPORTALVIEW|RP_SHADOWMAPVIEW)
+#define RP_LOCALCLIENT( e )	(CL_GetLocalPlayer() && ((e)->index == CL_GetLocalPlayer()->index && e->player ))
 
 typedef enum
 {
@@ -203,7 +212,9 @@ typedef struct
 	uint		c_sprite_polys;
 	uint		c_world_leafs;
 
-	uint		c_studio_models;
+	uint		c_studio_models_count;
+	uint		c_studio_models_drawn;
+	uint		c_sprite_models_drawn;
 } ref_speeds_t;
 
 extern ref_speeds_t		r_stats;
@@ -237,6 +248,15 @@ void GL_SetState( int state );
 void GL_TexEnv( GLenum mode );
 void GL_Cull( GLenum cull );
 void R_ShowTextures( void );
+
+//
+// gl_cull.c
+//
+int R_CullModel( cl_entity_t *e, vec3_t mins, vec3_t maxs, float radius );
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
+qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
+qboolean R_VisCullBox( const vec3_t mins, const vec3_t maxs );
+qboolean R_VisCullSphere( const vec3_t origin, float radius );
 
 //
 // gl_draw.c
@@ -316,6 +336,7 @@ void R_DrawSpriteModel( cl_entity_t *e );
 // gl_studio.c
 //
 void R_StudioInit( void );
+void Mod_LoadStudioModel( model_t *mod, const void *buffer );
 void R_DrawStudioModel( cl_entity_t *e );
 
 //
@@ -504,6 +525,7 @@ extern convar_t	*r_lighting_direct;
 extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
+extern convar_t	*r_lefthand;
 extern convar_t	*r_novis;
 extern convar_t	*r_nocull;
 extern convar_t	*r_lockpvs;

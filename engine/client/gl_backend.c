@@ -34,9 +34,6 @@ void GL_BackendStartFrame( void )
 {
 	r_speeds_msg[0] = '\0';
 	Mem_Set( &r_stats, 0, sizeof( r_stats ));
-
-	com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
-	r_numStatics, r_numEntities );
 }
 
 /*
@@ -46,6 +43,20 @@ GL_BackendEndFrame
 */
 void GL_BackendEndFrame( void )
 {
+	if( r_speeds->integer <= 0 || !RI.drawWorld )
+		return;
+
+	switch( r_speeds->integer )
+	{
+	case 5:
+		com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i studio models drawn\n%3i sprites drawn",
+		r_stats.c_studio_models_drawn, r_stats.c_sprite_models_drawn );
+		break;
+	case 6:
+		com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
+		r_numStatics, r_numEntities );
+		break;
+	}
 }
 
 /*

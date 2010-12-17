@@ -437,7 +437,7 @@ static mstudioanim_t *PM_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 	}
 
 	// check for already loaded
-	if( !Cache_Check( m_pSubModel->mempool, ( cache_user_t *)&( paSequences[pseqdesc->seqgroup] )))
+	if( !Mod_CacheCheck(( cache_user_t *)&( paSequences[pseqdesc->seqgroup] )))
 	{
 		string	filepath, modelname, modelpath;
 
@@ -446,11 +446,13 @@ static mstudioanim_t *PM_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 		com.snprintf( filepath, sizeof( filepath ), "%s/%s%i%i.mdl", modelpath, modelname, pseqdesc->seqgroup / 10, pseqdesc->seqgroup % 10 );
 
 		buf = FS_LoadFile( filepath, &filesize );
-		if( !buf || !filesize ) Host_Error( "CM_StudioGetAnim: can't load %s\n", modelpath );
+		if( !buf || !filesize ) Host_Error( "StudioGetAnim: can't load %s\n", filepath );
 		if( IDSEQGRPHEADER != *(uint *)buf )
-			Host_Error( "PM_StudioGetAnim: %s is corrupted\n", modelpath );
+			Host_Error( "StudioGetAnim: %s is corrupted\n", filepath );
 
-		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( m_pSubModel->mempool, filesize );
+		MsgDev( D_INFO, "loading: %s\n", filepath );
+
+		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( com_studiocache, filesize );
 		Mem_Copy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
 		Mem_Free( buf );
 	}

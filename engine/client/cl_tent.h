@@ -95,6 +95,7 @@ void CL_BeamKill( int deadEntity );
 void TriVertex3fv( const float *v );
 void TriNormal3fv( const float *v );
 void TriColor4f( float r, float g, float b, float a );
+int TriSpriteTexture( model_t *pSpriteModel, int frame );
 int TriWorldToScreen( float *world, float *screen );
 
 #endif//CL_TENT_H

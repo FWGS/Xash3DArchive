@@ -15,9 +15,11 @@
 // it's a Valve default value for LoadMapSprite (probably must be power of two)
 #define MAPSPRITE_SIZE	128
 
-convar_t	*r_sprite_lerping;
-char	sprite_name[64];
-char	group_suffix[8];
+convar_t		*r_sprite_lerping;
+char		sprite_name[64];
+char		group_suffix[8];
+static vec3_t	sprite_mins, sprite_maxs;
+static float	sprite_radius;
 
 /*
 ====================
@@ -622,6 +624,62 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 
 /*
 ================
+R_StudioComputeBBox
+
+Compute a full bounding box for current sequence
+================
+*/
+qboolean R_SpriteComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
+{
+	float	scale = 1.0f;
+	vec3_t	p1;
+	int	i;
+
+	// copy original bbox (no rotation for sprites)
+	VectorCopy( e->model->mins, sprite_mins );
+	VectorCopy( e->model->maxs, sprite_maxs );
+
+	// compute a full bounding box
+	for( i = 0; bbox && i < 8; i++ )
+	{
+  		p1[0] = ( i & 1 ) ? sprite_mins[0] : sprite_maxs[0];
+  		p1[1] = ( i & 2 ) ? sprite_mins[1] : sprite_maxs[1];
+  		p1[2] = ( i & 4 ) ? sprite_mins[2] : sprite_maxs[2];
+
+		VectorCopy( p1, bbox[i] );
+	}
+
+	if( e->curstate.scale > 0.0f )
+		scale = e->curstate.scale;
+
+	sprite_radius = RadiusFromBounds( sprite_mins, sprite_maxs ) * scale;
+
+	return true;
+}
+
+/*
+================
+R_CullSpriteModel
+
+Cull sprite model by bbox
+================
+*/
+qboolean R_CullSpriteModel( cl_entity_t *e )
+{
+	if( !e->model->cache.data )
+		return true;
+
+	if( e == &clgame.viewent && r_lefthand->integer >= 2 )
+		return true;
+
+	if( !R_SpriteComputeBBox( e, NULL ))
+		return true; // invalid frame
+
+	return R_CullModel( e, sprite_mins, sprite_maxs, sprite_radius );
+}
+
+/*
+================
 R_GlowSightDistance
 
 Calc sight distance for glow-sprites
@@ -700,13 +758,8 @@ qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin )
 	}
 	else
 	{
-		vec3_t	mins, maxs;
-
-		VectorAdd( origin, e->model->mins, mins );
-		VectorAdd( origin, e->model->maxs, maxs );
-
-		if( R_CullBox( mins, maxs, RI.clipFlags ))
-			return true; // culled
+		if( R_CullSpriteModel( e ))
+			return true;
 	}
 	return false;	
 }
@@ -785,6 +838,8 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	if( R_SpriteOccluded( e, origin ))
 		return; // sprite culled
+
+	r_stats.c_sprite_models_drawn++;
 
 	if( psprite->texFormat == SPR_ALPHTEST )
 		state |= GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;

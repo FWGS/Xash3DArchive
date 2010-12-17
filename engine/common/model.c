@@ -64,31 +64,6 @@ void Mod_SetupHulls( float mins[4][3], float maxs[4][3] )
 }
 
 /*
-================
-Mod_StudioBodyVariations
-================
-*/
-static int Mod_StudioBodyVariations( model_t *mod )
-{
-	studiohdr_t	*pstudiohdr;
-	mstudiobodyparts_t	*pbodypart;
-	int		i, count;
-
-	pstudiohdr = (studiohdr_t *)Mod_Extradata( mod );
-	if( !pstudiohdr ) return 0;
-
-	count = 1;
-	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
-
-	// each body part has nummodels variations so there are as many total variations as there
-	// are in a matrix of each part by each other part
-	for( i = 0; i < pstudiohdr->numbodyparts; i++ )
-		count = count * pbodypart[i].nummodels;
-
-	return count;
-}
-
-/*
 ===================
 Mod_CompressVis
 ===================
@@ -1442,39 +1417,6 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 }
 
 /*
-=================
-Mod_LoadStudioModel
-=================
-*/
-static void Mod_LoadStudioModel( model_t *mod, byte *buffer )
-{
-	studiohdr_t	*phdr;
-	mstudioseqdesc_t	*pseqdesc;
-	int		i;
-
-	phdr = (studiohdr_t *)buffer;
-	i = phdr->version;
-
-	if( i != STUDIO_VERSION )
-	{
-		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)\n", loadmodel->name, i, STUDIO_VERSION );
-		return;
-	}
-
-	loadmodel->type = mod_studio;
-	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
-	loadmodel->numframes = pseqdesc[0].numframes;
-
-	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
-	loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
-	Mem_Copy( loadmodel->cache.data, buffer, phdr->length );
-
-	// setup bounding box
-	VectorCopy( phdr->bbmin, loadmodel->mins );
-	VectorCopy( phdr->bbmax, loadmodel->maxs );
-}
-
-/*
 ==================
 Mod_FindName
 
@@ -1685,10 +1627,7 @@ void Mod_GetFrames( int handle, int *numFrames )
 		return;
 	}
 
-	if( mod->type == mod_sprite )
-		*numFrames = mod->numframes;
-	else if( mod->type == mod_studio )
-		*numFrames = Mod_StudioBodyVariations( mod );		
+	*numFrames = mod->numframes;
 	if( *numFrames < 1 ) *numFrames = 1;
 }
 
