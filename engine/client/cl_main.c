@@ -1073,6 +1073,9 @@ void CL_PrepVideo( void )
 			SCR_UpdateScreen();
 	}
 
+	// update right muzzleflash indexes
+	CL_RegisterMuzzleFlashes ();
+
 	// invalidate all decal indexes
 	Mem_Set( cl.decal_index, 0, sizeof( cl.decal_index ));
 

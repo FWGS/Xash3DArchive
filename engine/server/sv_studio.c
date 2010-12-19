@@ -11,7 +11,7 @@
 #include "r_studioint.h"
 #include "matrix_lib.h"
 
-typedef int	(*STUDIOAPI)( int, sv_blending_interface_t*, server_studio_api_t*, matrix4x4, matrix4x4[MAXSTUDIOBONES] );
+typedef int (*STUDIOAPI)( int, sv_blending_interface_t*, server_studio_api_t*, matrix4x4, matrix4x4[MAXSTUDIOBONES] );
 
 static studiohdr_t			*sv_studiohdr;
 static mplane_t			sv_hitboxplanes[6];	// there a temp hitbox
@@ -436,7 +436,7 @@ static mstudioanim_t *SV_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 
 	if( paSequences == NULL )
 	{
-		paSequences = (cache_user_t *)Mem_Alloc( m_pSubModel->mempool, MAXSTUDIOGROUPS * sizeof( cache_user_t ));
+		paSequences = (cache_user_t *)Mem_Alloc( com_studiocache, MAXSTUDIOGROUPS * sizeof( cache_user_t ));
 		m_pSubModel->submodels = (void *)paSequences;
 	}
 

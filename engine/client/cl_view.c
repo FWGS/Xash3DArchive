@@ -36,6 +36,9 @@ void V_SetupRefDef( void )
 
 	VectorCopy( cl.frame.local.client.punchangle, cl.refdef.punchangle );
 	clgame.viewent.curstate.modelindex = cl.frame.local.client.viewmodel;
+	clgame.viewent.model = CM_ClipHandleToModel( clgame.viewent.curstate.modelindex );
+	clgame.viewent.curstate.entityType = ET_NORMAL;
+	clgame.viewent.index = cl.playernum + 1;
 
 	cl.refdef.movevars = &clgame.movevars;
 	cl.refdef.onground = ( cl.frame.local.client.flags & FL_ONGROUND ) ? 1 : 0;
@@ -93,8 +96,13 @@ apply pre-calculated values
 */
 void V_AddViewModel( void )
 {
-	if( cl.refdef.nextView ) return; // add viewmodel only at firstperson pass
-	if( !cl.frame.valid || cl.refdef.paused || cl.thirdperson ) return;
+	// add viewmodel only at firstperson pass when game not paused
+	if( cl.refdef.nextView || cl.refdef.paused || cl.thirdperson )
+		return;
+
+	// make sure what frame is valid and viewmodel is set
+	if( !cl.frame.valid || !clgame.viewent.model )
+		return;
 
 	CL_AddVisibleEntity( &clgame.viewent, ET_NORMAL );
 }
@@ -112,6 +120,7 @@ void V_CalcRefDef( void )
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
 		V_AddViewModel();
+		R_RunViewmodelEvents();
 		R_RenderFrame( &cl.refdef, true );
 		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );

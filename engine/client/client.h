@@ -668,6 +668,7 @@ void CL_DrawBeams( int fTrans );
 void CL_AddCustomBeam( cl_entity_t *pEnvBeam );
 void CL_KillDeadBeams( cl_entity_t *pDeadEntity );
 void CL_ParseViewBeam( sizebuf_t *msg, int beamType );
+void CL_RegisterMuzzleFlashes( void );
 
 //
 // console.c

@@ -2094,7 +2094,6 @@ pfnGetViewModel
 */
 static cl_entity_t* pfnGetViewModel( void )
 {
-	clgame.viewent.index = cl.playernum + 1;
 	return &clgame.viewent;
 }
 

@@ -212,7 +212,6 @@ typedef struct
 	uint		c_sprite_polys;
 	uint		c_world_leafs;
 
-	uint		c_studio_models_count;
 	uint		c_studio_models_drawn;
 	uint		c_sprite_models_drawn;
 } ref_speeds_t;
@@ -226,6 +225,7 @@ extern float		gldepthmin, gldepthmax;
 extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
+extern dlight_t		cl_elights[MAX_ELIGHTS];
 #define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities)
 #define r_numStatics	(tr.num_static_entities)
 

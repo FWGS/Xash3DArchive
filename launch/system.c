@@ -983,6 +983,9 @@ void Sys_Init( void )
 	Sound_Init();
 	HPAK_Init();
 
+	com.snprintf( dev_level, sizeof( dev_level ), "%i", Sys.developer );
+	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
+
 	Sys_CreateInstance();
 }
 

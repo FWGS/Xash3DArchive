@@ -31,10 +31,13 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
-	if( !ent->curstate.scale ) ent->curstate.scale = 1.0f;
 
 	ent->model = CM_ClipHandleToModel( ent->curstate.modelindex );
 	ent->curstate.msg_time = cl.time;
+
+	// apply scale to studiomodels and sprites only
+	if( ent->model && ent->model->type != mod_brush && !ent->curstate.scale )
+		ent->curstate.scale = 1.0f;
 }
 
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
@@ -52,12 +55,19 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		return true;
 	}
 
-	// check for adding this entity
-	if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, mod->name ))
-		return false;
+	// don't add himself on firstperson
+	if(( ent->index - 1 ) == cl.playernum &&  ent != &clgame.viewent && !cl.thirdperson )
+	{
+	}
+	else
+	{
+		// check for adding this entity
+		if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, mod->name ))
+			return false;
 
-	if( !R_AddEntity( ent, entityType ))
-		return false;
+		if( !R_AddEntity( ent, entityType ))
+			return false;
+	}
 
 	// apply effects
 	if( ent->curstate.effects & EF_BRIGHTFIELD )
@@ -157,9 +167,6 @@ void CL_WeaponAnim( int iAnim, int body )
 		view->syncbase = -0.01f; // back up to get 0'th frame animations
 	}
 
-	view->model = CM_ClipHandleToModel( view->curstate.modelindex );
-	view->index = cl.playernum + 1;
-	view->curstate.entityType = ET_NORMAL;
 	view->curstate.animtime = cl.time;	// start immediately
 	view->curstate.framerate = 1.0f;
 	view->curstate.sequence = iAnim;
@@ -286,7 +293,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	}
 
 	// entity present in currentframe
-	state->messagenum = cl.parsecountmod;
+	state->messagenum = cl.parsecount;
 
 	cls.next_client_entities++;
 	frame->num_entities++;
@@ -325,6 +332,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		// fill private structure for local client
 		if(( ent->index - 1 ) == cl.playernum )
 			cl.frame.local.playerstate = cl.frame.playerstate[ent->index-1];
+		cl.frame.playerstate[ent->index-1].number = ent->index;
 	}
 }
 
@@ -633,7 +641,6 @@ void CL_AddEntities( void )
 
 	CL_FireEvents();	// so tempents can be created immediately
 	CL_AddTempEnts();
-	R_RunViewmodelEvents();
 
 	// perfomance test
 	CL_TestLights();

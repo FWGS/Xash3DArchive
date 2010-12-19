@@ -62,7 +62,6 @@ typedef struct cl_entity_s cl_entity_t;
 
 #include "entity_state.h"
 #include "event_args.h"
-#include "playerinfo.h"
 
 struct cl_entity_s
 {

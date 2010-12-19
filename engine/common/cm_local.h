@@ -51,6 +51,7 @@ typedef struct
 	vec3_t		hull_sizes[4];	// actual hull sizes
 	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces
 	int		max_surfaces;	// max surfaces per submodel (for all models)
+	size_t		visdatasize;	// actual size of the visdata
 	qboolean		loading;		// true is worldmodel is loading
 
 	// lightgrid stuff

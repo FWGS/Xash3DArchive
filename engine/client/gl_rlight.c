@@ -46,7 +46,6 @@ void R_AnimateLight( void )
 
 		if( !ls->length )
 		{
-			// was 256, changed to 264 for consistency
 			RI.lightstylevalue[i] = 256 * r_lighting_modulate->value;
 			RI.lightstylecolor[i] = 1.0f * r_lighting_ambient->value;
 			continue;

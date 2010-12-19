@@ -406,7 +406,7 @@ void R_BlendLightmaps( void )
 	glpoly_t	*p;
 	float	*v;
 
-	if( r_fullbright->integer )
+	if( r_fullbright->integer || !cl.worldmodel->lightdata )
 		return;
 
 	if( RI.currententity )
@@ -591,6 +591,7 @@ void R_RenderDynamicLightmaps( msurface_t *fa )
 	qboolean	lightstyle_modified = false;
 	int	maps, smax, tmax;
 
+	if( !cl.worldmodel->lightdata ) return;
 	if( fa->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
 		return;
 		
@@ -700,7 +701,7 @@ void R_AddDynamicLights( msurface_t *surf )
 {
 	color24		color;
 	int		local[2];
-	int		i, sd, td, s, t;
+	int		i, sd, td, s, t, val;
 	int		irad, idist, iminlight;
 	int		smax, tmax, tmp;
 	gl_light_t	*light;
@@ -733,11 +734,18 @@ void R_AddDynamicLights( msurface_t *surf )
 				if( idist < iminlight )
 				{
 					if( cl_dlights[i].dark )
-						tmp = -(irad - idist) >> 7;
+						tmp = (idist - irad) >> 7;
 					else tmp = (irad - idist) >> 7;
-					bl[0] += tmp * color.r;
-					bl[1] += tmp * color.g;
-					bl[2] += tmp * color.b;
+
+					// catch negative lights (for dark mode)
+					val = bl[0] + tmp * color.r;
+					bl[0] = max( 0, val );
+
+					val = bl[1] + tmp * color.g;
+					bl[1] = max( 0, val );
+
+					val = bl[2] + tmp * color.b;
+					bl[2] = max( 0, val );
 				}
 				bl += 3;
 			}
@@ -1464,6 +1472,7 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	byte	*base;
 	texture_t	*tex;
 
+	if( !cl.worldmodel->lightdata ) return;
 	if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
 		return;
 

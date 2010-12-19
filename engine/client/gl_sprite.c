@@ -866,9 +866,18 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	GL_SetState( state );
 
-	if( !gl_test->integer && psprite->texFormat == SPR_ALPHTEST )
+	if( psprite->texFormat == SPR_ALPHTEST )
 	{
+		vec3_t	brightness;
+
 		R_LightForPoint( origin, &color, false );
+		brightness[0] = color.r * ( 1.0f / 255.0f );
+		brightness[1] = color.g * ( 1.0f / 255.0f );
+		brightness[2] = color.b * ( 1.0f / 255.0f );
+
+		color.r = e->curstate.rendercolor.r * brightness[0];
+		color.g = e->curstate.rendercolor.g * brightness[1];
+		color.b = e->curstate.rendercolor.b * brightness[2];
 	}
 	else
 	{
@@ -914,8 +923,8 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 		if( angle != 0.0f )
 		{
-			RotatePointAroundVector( v_right, RI.vforward, RI.vright, angle );
-			CrossProduct( RI.vforward, v_right, v_up );
+			RotatePointAroundVector( v_up, RI.vforward, RI.vright, angle );	// make up
+			CrossProduct( RI.vforward, v_up, v_right );			// make right
 		}
 		else
 		{

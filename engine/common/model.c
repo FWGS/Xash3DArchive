@@ -1131,11 +1131,13 @@ static void Mod_LoadVisibility( const dlump_t *l )
 	{
 		MsgDev( D_WARN, "map ^2%s^7 has no visibility\n", loadmodel->name );
 		loadmodel->visdata = NULL;
+		world.visdatasize = 0;
 		return;
 	}
 
 	loadmodel->visdata = Mem_Alloc( loadmodel->mempool, l->filelen );
 	Mem_Copy( loadmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
+	world.visdatasize = l->filelen; // save it for PHS allocation
 }
 
 /*
@@ -1246,6 +1248,134 @@ static void Mod_MakeHull0( void )
 			else out->children[j] = child - loadmodel->nodes;
 		}
 	}
+}
+
+/*
+=================
+Mod_CalcPHS
+=================
+*/
+void Mod_CalcPHS( void )
+{
+	int	hcount, vcount;
+	int	i, j, k, l, index, num;
+	int	rowbytes, rowwords;
+	int	bitbyte, rowsize;
+	int	*visofs, total_size = 0;
+	byte	*vismap, *vismap_p;
+	byte	*uncompressed_vis;
+	byte	*uncompressed_pas;
+	byte	*compressed_pas;
+	byte	*scan, *comp;
+	uint	*dest, *src;
+	double	timestart;
+	size_t	phsdatasize;
+
+	// no worldmodel or no visdata
+	if( !worldmodel || !worldmodel->visdata )
+		return;
+
+	MsgDev( D_NOTE, "Building PAS...\n" );
+	timestart = Sys_DoubleTime();
+
+	// NOTE: first leaf is skipped becuase is a outside leaf. Now all leafs have shift up by 1.
+	// and last leaf (which equal worldmodel->numleafs) has no visdata! Add extra one leaf
+	// to avoid this situation. FIXME: this is need to be detail tested 
+	num = worldmodel->numleafs + 1;
+	rowwords = (num + 31)>>5;
+	rowbytes = rowwords * 4;
+
+	// typycally PHS enough more room because RLE fails on multiple 1 not 0
+	phsdatasize = world.visdatasize * 4;
+
+	// allocate pvs and phs data single array
+	visofs = Mem_Alloc( worldmodel->mempool, num * sizeof( int ));
+	uncompressed_vis = Mem_Alloc( worldmodel->mempool, rowbytes * num * 2 );
+	uncompressed_pas = uncompressed_vis + rowbytes * num;
+	compressed_pas = Mem_Alloc( worldmodel->mempool, phsdatasize );
+	vismap = vismap_p = compressed_pas; // compressed PHS buffer
+	scan = uncompressed_vis;
+	vcount = 0;
+
+	// uncompress pvs first
+	for( i = 0; i < num; i++, scan += rowbytes )
+	{
+		Mem_Copy( scan, Mod_LeafPVS( worldmodel->leafs + i, worldmodel ), rowbytes );
+		if( i == 0 ) continue;
+
+		for( j = 0; j < num; j++ )
+		{
+			if( scan[j>>3] & (1<<( j & 7 )))
+				vcount++;
+		}
+	}
+
+	scan = uncompressed_vis;
+	hcount = 0;
+
+	dest = (uint *)uncompressed_pas;
+
+	for( i = 0; i < num; i++, dest += rowwords, scan += rowbytes )
+	{
+		Mem_Copy( dest, scan, rowbytes );
+
+		for( j = 0; j < rowbytes; j++ )
+		{
+			bitbyte = scan[j];
+			if( !bitbyte ) continue;
+
+			for( k = 0; k < 8; k++ )
+			{
+				if(!( bitbyte & ( 1<<k )))
+					continue;
+				// or this pvs row into the phs
+				// +1 because pvs is 1 based
+				index = ((j<<3) + k + 1);
+				if( index >= num ) continue;
+
+				src = (uint *)uncompressed_vis + index * rowwords;
+				for( l = 0; l < rowwords; l++ )
+					dest[l] |= src[l];
+			}
+		}
+
+		// compress PHS data back
+		comp = Mod_CompressVis( (byte *)dest, &rowsize );
+		visofs[i] = vismap_p - vismap; // leaf 0 is a common solid 
+		total_size += rowsize;
+
+		if( total_size > phsdatasize )
+			Host_Error( "CalcPHS: vismap expansion overflow %s > %s\n", memprint( total_size ), memprint( phsdatasize ));
+
+		Mem_Copy( vismap_p, comp, rowsize );
+		vismap_p += rowsize; // move pointer
+
+		if( i == 0 ) continue;
+
+		for( j = 0; j < num; j++ )
+		{
+			if(((byte *)dest)[j>>3] & (1<<( j & 7 )))
+				hcount++;
+		}
+	}
+
+	// adjust compressed pas data to fit the size
+	compressed_pas = Mem_Realloc( worldmodel->mempool, compressed_pas, total_size );
+	Msg( "VIS size %s, PAS size %s\n", memprint( world.visdatasize ), memprint( total_size ));
+
+	// apply leaf pointers
+	for( i = 0; i < worldmodel->numleafs; i++ )
+		worldmodel->leafs[i].compressed_pas = compressed_pas + visofs[i];
+
+	// release uncompressed data
+	Mem_Free( uncompressed_vis );
+	Mem_Free( visofs );	// release vis offsets
+
+	// NOTE: we don't need to store off pointer to compressed pas-data
+	// because this is will be automatiaclly frees by mempool internal pointer
+	// and we not use this pointer any time after this point
+	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
+	MsgDev( D_NOTE, "PAS building time: %g secs\n", Sys_DoubleTime() - timestart );
 }
 
 /*
@@ -1554,6 +1684,8 @@ Loads in the map and all submodels
 */
 void Mod_LoadWorld( const char *name, uint *checksum )
 {
+	int	i;
+
 	// now replacement table is invalidate
 	Mem_Set( com_models, 0, sizeof( com_models ));
 
@@ -1567,6 +1699,14 @@ void Mod_LoadWorld( const char *name, uint *checksum )
 		return;
 	}
 
+	// clear all studio submodels on restart
+	for( i = 0; i < cm_nummodels; i++ )
+	{
+		if( cm_models[i].type != mod_studio )
+			continue;
+		cm_models[i].submodels = NULL;
+	}
+
 	// purge all submodels
 	Mem_EmptyPool( com_studiocache );
 	Mod_FreeModel( &cm_models[0] );
@@ -1576,6 +1716,9 @@ void Mod_LoadWorld( const char *name, uint *checksum )
 	worldmodel = Mod_ForName( name, true );
 	com_models[1] = cm_models; // make link to world
 	if( checksum ) *checksum = world.checksum;
+
+	// calc Potentially Hearable Set and compress it
+	Mod_CalcPHS();
 }
 
 /*

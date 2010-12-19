@@ -43,6 +43,21 @@ void CL_InitTempEnts( void )
 
 /*
 ================
+CL_RegisterMuzzleFlashes
+
+================
+*/
+void CL_RegisterMuzzleFlashes( void )
+{
+	// update muzzleflash indexes
+	cl_muzzleflash[0] = CL_FindModelIndex( "sprites/muzzleflash1.spr" );
+	cl_muzzleflash[1] = CL_FindModelIndex( "sprites/muzzleflash2.spr" );
+	cl_muzzleflash[2] = CL_FindModelIndex( "sprites/muzzleflash3.spr" );
+	cl_muzzleflash[3] = CL_FindModelIndex( "sprites/muzzleflash.spr" );
+}
+
+/*
+================
 CL_ClearTempEnts
 
 ================
@@ -50,12 +65,6 @@ CL_ClearTempEnts
 void CL_ClearTempEnts( void )
 {
 	int	i;
-
-	// update muzzleflash indexes
-	cl_muzzleflash[0] = CL_FindModelIndex( "sprites/muzzleflash1.spr" );
-	cl_muzzleflash[1] = CL_FindModelIndex( "sprites/muzzleflash2.spr" );
-	cl_muzzleflash[2] = CL_FindModelIndex( "sprites/muzzleflash3.spr" );
-	cl_muzzleflash[3] = CL_FindModelIndex( "sprites/muzzleflash.spr" );
 
 	if( !cl_tempents ) return;
 
@@ -741,7 +750,6 @@ void CL_MuzzleFlash( const vec3_t pos, int type )
 	// must set position for right culling on render
 	pTemp = CL_TempEntAllocHigh( pos, CM_ClipHandleToModel( modelIndex ));
 	if( !pTemp ) return;
-	
 	pTemp->entity.curstate.rendermode = kRenderTransAdd;
 	pTemp->entity.curstate.renderamt = 255;
 	pTemp->entity.curstate.renderfx = 0;
@@ -1762,9 +1770,10 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 
 		if(( pTemp = CL_DefaultSprite( pos, modelIndex, 0 )) != NULL )
 		{
-			pTemp->entity.baseline.scale = scale;
+			pTemp->entity.curstate.scale = scale;
 			pTemp->entity.baseline.renderamt = brightness;
 			pTemp->entity.curstate.renderamt = brightness;
+			pTemp->entity.curstate.rendermode = kRenderTransAdd;
 		}
 		break;
 	case TE_GLOWSPRITE:
@@ -1776,8 +1785,10 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 
 		if(( pTemp = CL_DefaultSprite( pos, modelIndex, 0 )) != NULL )
 		{
+			pTemp->entity.curstate.scale = scale;
 			pTemp->entity.curstate.rendermode = kRenderGlow;
-			pTemp->entity.baseline.scale = scale;
+			pTemp->entity.baseline.renderamt = 255;
+			pTemp->entity.curstate.renderamt = 255;
 		}
 		break;
 	case TE_STREAK_SPLASH:
@@ -2155,6 +2166,7 @@ DLIGHT MANAGEMENT
 ==============================================================
 */
 dlight_t	cl_dlights[MAX_DLIGHTS];
+dlight_t	cl_elights[MAX_ELIGHTS];
 
 /*
 ================
@@ -2164,6 +2176,7 @@ CL_ClearDlights
 void CL_ClearDlights( void )
 {
 	Mem_Set( cl_dlights, 0, sizeof( cl_dlights ));
+	Mem_Set( cl_elights, 0, sizeof( cl_elights ));
 }
 
 /*
@@ -2220,9 +2233,38 @@ CL_AllocElight
 dlight_t *CL_AllocElight( int key )
 {
 	dlight_t	*dl;
+	int	i;
 
-	dl = CL_AllocDlight( key );
-	dl->elight = true;
+	// first look for an exact key match
+	if( key )
+	{
+		for( i = 0, dl = cl_elights; i < MAX_ELIGHTS; i++, dl++ )
+		{
+			if( dl->key == key )
+			{
+				// reuse this light
+				Mem_Set( dl, 0, sizeof( *dl ));
+				dl->key = key;
+				return dl;
+			}
+		}
+	}
+
+	// then look for anything else
+	for( i = 0, dl = cl_elights; i < MAX_ELIGHTS; i++, dl++ )
+	{
+		if( dl->die < cl.time )
+		{
+			Mem_Set( dl, 0, sizeof( *dl ));
+			dl->key = key;
+			return dl;
+		}
+	}
+
+	// otherwise grab first dlight
+	dl = &cl_elights[0];
+	Mem_Set( dl, 0, sizeof( *dl ));
+	dl->key = key;
 
 	return dl;
 }
@@ -2249,7 +2291,18 @@ void CL_DecayLights( void )
 		dl->radius -= time * dl->decay;
 		if( dl->radius < 0 ) dl->radius = 0;
 	}
+
+	for( i = 0, dl = cl_elights; i < MAX_ELIGHTS; i++, dl++ )
+	{
+		if( dl->die < cl.time || !dl->radius )
+			continue;
+		
+		dl->radius -= time * dl->decay;
+		if( dl->radius < 0 ) dl->radius = 0;
+	}
 }
+
+#define FLASHLIGHT_DISTANCE		500
 
 /*
 ================
@@ -2262,7 +2315,7 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 {
 	vec3_t	vecSrc, vecEnd;
 	vec3_t	forward, view_ofs;
-	float	distLight;
+	float	falloff;
 	pmtrace_t	trace;
 	dlight_t	*dl;
 
@@ -2302,18 +2355,23 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 	}
 
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
-	VectorMA( vecSrc, 512.0f, forward, vecEnd );
+	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
 
 	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, -1, NULL );
-	distLight = (1.0f - trace.fraction);
+	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
+
+	if( falloff < 250.0f ) falloff = 1.0f;
+	else falloff = 250.0f / falloff;
+
+		falloff *= falloff;
 
 	// update flashlight endpos
 	dl = CL_AllocDlight( pEnt->index );
 	VectorCopy( trace.endpos, dl->origin );
 	dl->die = cl.time + 0.001f;	// die on next frame
-	dl->color.r = 255 * distLight;
-	dl->color.g = 255 * distLight;
-	dl->color.b = 255 * distLight;
+	dl->color.r = 255 * falloff;
+	dl->color.g = 255 * falloff;
+	dl->color.b = 255 * falloff;
 	dl->radius = 64;
 }
 

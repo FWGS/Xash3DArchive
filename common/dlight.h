@@ -26,7 +26,6 @@ typedef struct dlight_s
 	float		minlight;	// don't add when contributing less
 	int		key;
 	qboolean		dark;	// subtracts light instead of adding
-	qboolean		elight;	// true when calls with CL_AllocElight
 } dlight_t;
 
 #endif//DLIGHT_H
