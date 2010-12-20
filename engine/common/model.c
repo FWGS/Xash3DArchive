@@ -843,17 +843,16 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			texture_t	*tex = out->texinfo->texture;
 
 			if( !com.strncmp( tex->name, "sky", 3 ))
-			{
-				if( world.version == Q1BSP_VERSION )
-					out->flags |= SURF_DRAWTILED;
-				out->flags |= SURF_DRAWSKY;
-			}
+				out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
 			if( tex->name[0] == '*' || tex->name[0] == '!' || !com.strnicmp( tex->name, "water", 5 ))
 				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
 			if( com.stristr( tex->name, "scroll" ))
 				out->flags |= SURF_CONVEYOR;
+
+			if( out->texinfo->flags & TEX_SPECIAL )
+				out->flags |= SURF_DRAWTILED;
 		}
 
 		Mod_CalcSurfaceBounds( out, info );
@@ -869,7 +868,10 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		for( j = 0; j < MAXLIGHTMAPS; j++ )
 			out->styles[j] = in->styles[j];
 
-		if( out->flags & SURF_DRAWTILED )
+		if( out->flags & SURF_DRAWSKY && world.version == Q1BSP_VERSION )
+			GL_SubdivideSurface( out ); // cut up polygon for warps
+
+		if( out->flags & SURF_DRAWTURB )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
 	}
 }

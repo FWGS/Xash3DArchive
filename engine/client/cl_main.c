@@ -292,7 +292,7 @@ usercmd_t CL_CreateCmd( void )
 
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
 
-	R_LightForPoint( cl.frame.local.client.origin, &color, false );
+	R_LightForPoint( cl.frame.local.client.origin, &color, false, 128.0f );
 	cmd.lightlevel = (color.r + color.g + color.b) / 3;
 
 	// random seed for predictable random values

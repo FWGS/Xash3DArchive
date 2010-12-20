@@ -430,7 +430,7 @@ void GL_SetRenderMode( int mode )
 	case kRenderNormal:
 	default:
 		state = GLSTATE_DEPTHWRITE;
-		texEnv = GL_REPLACE;
+		texEnv = GL_MODULATE;
 		break;
 	case kRenderTransColor:
 		state = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_SRC_COLOR|GLSTATE_DEPTHWRITE;

@@ -15,7 +15,7 @@
 
 extern byte	*r_temppool;
 
-#define MAX_TEXTURES	1024
+#define MAX_TEXTURES	2048
 #define MAX_LIGHTMAPS	64
 #define SUBDIVIDE_SIZE	64
 
@@ -179,6 +179,7 @@ typedef struct
 	int		solidskyTexture;	// quake1 solid-sky layer
 	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
+	int		skyboxTextures[6];	// skybox sides
 
 	int		skytexturenum;	// this not a gl_texturenum!
 
@@ -289,7 +290,8 @@ void R_StoreEfrags( efrag_t **ppefrag );
 void R_PushDlights( void );
 void R_AnimateLight( void );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
-void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight );
+void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius );
+void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius );
 void R_LightForOrigin( const vec3_t origin, vec3_t dir, color24 *ambient, color24 *diffuse, float radius );
 
 //
@@ -343,6 +345,7 @@ void R_DrawStudioModel( cl_entity_t *e );
 // gl_warp.c
 //
 void R_InitSky( struct mip_s *mt, struct texture_s *tx );
+void R_AddSkyBoxSurface( msurface_t *fa );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void EmitSkyLayers( msurface_t *fa );

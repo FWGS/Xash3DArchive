@@ -870,7 +870,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	{
 		vec3_t	brightness;
 
-		R_LightForPoint( origin, &color, false );
+		R_LightForPoint( origin, &color, false, sprite_radius );
 		brightness[0] = color.r * ( 1.0f / 255.0f );
 		brightness[1] = color.g * ( 1.0f / 255.0f );
 		brightness[2] = color.b * ( 1.0f / 255.0f );

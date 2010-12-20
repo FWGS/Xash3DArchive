@@ -592,7 +592,7 @@ void R_RenderDynamicLightmaps( msurface_t *fa )
 	int	maps, smax, tmax;
 
 	if( !cl.worldmodel->lightdata ) return;
-	if( fa->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
+	if( fa->flags & SURF_DRAWTILED )
 		return;
 		
 	fa->polys->chain = lightmap_polys[fa->lightmaptexturenum];
@@ -664,8 +664,11 @@ void R_RenderBrushPoly( msurface_t *fa )
 
 	if( fa->flags & SURF_DRAWSKY )
 	{	
-		// warp texture, no lightmaps
-		EmitSkyLayers( fa );
+		if( world.version == Q1BSP_VERSION )
+		{
+			// warp texture, no lightmaps
+			EmitSkyLayers( fa );
+		}
 		return;
 	}
 		
@@ -767,6 +770,10 @@ void R_DrawTextureChains( void )
 	// make sure what color is reset
 	pglColor4ub( 255, 255, 255, 255 );
 
+	// clip skybox surfaces
+	for( s = skychain; s != NULL; s = s->texturechain )
+		R_AddSkyBoxSurface( s );
+
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{
 		t = cl.worldmodel->textures[i];
@@ -777,7 +784,8 @@ void R_DrawTextureChains( void )
 
 		if( i == tr.skytexturenum )
 		{
-			R_DrawSkyChain( s );
+			if( world.version == Q1BSP_VERSION )
+				R_DrawSkyChain( s );
 		}
 		else
 		{
@@ -1220,8 +1228,17 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 		if( R_CullSurface( surf, clipflags ))
 			continue;
 
-		surf->texturechain = surf->texinfo->texture->texturechain;
-		surf->texinfo->texture->texturechain = surf;
+		if( surf->flags & SURF_DRAWSKY && world.version == HLBSP_VERSION )
+		{
+			// make sky chain to right clip the skybox
+			surf->texturechain = skychain;
+			skychain = surf;
+		}
+		else
+		{ 
+			surf->texturechain = surf->texinfo->texture->texturechain;
+			surf->texinfo->texture->texturechain = surf;
+		}
 	}
 
 	// recurse down the back side
@@ -1248,18 +1265,19 @@ void R_DrawWorld( void )
 	GL_SetRenderMode( kRenderNormal );
 
 	ClearBounds( RI.visMins, RI.visMaxs );
-
 	R_ClearSkyBox ();
+
 	R_RecursiveWorldNode( cl.worldmodel->nodes, RI.clipFlags );
 
 	R_DrawStaticBrushes();
-
 	R_DrawTextureChains();
 
 	R_BlendLightmaps();
 	R_RenderFullbrights();
 
-	R_DrawSkyBox ();
+	if( skychain )
+		R_DrawSkyBox();
+	skychain = NULL;
 }
 
 /*
@@ -1473,7 +1491,7 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	texture_t	*tex;
 
 	if( !cl.worldmodel->lightdata ) return;
-	if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
+	if( surf->flags & SURF_DRAWTILED )
 		return;
 
 	smax = ( surf->extents[0] >> 4 ) + 1;
@@ -1542,7 +1560,10 @@ void GL_BuildLightmaps( void )
 		{
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 
-			if ( m->surfaces[i].flags & SURF_DRAWTILED )
+			if( m->surfaces[i].flags & SURF_DRAWTURB )
+				continue;
+
+			if( m->surfaces[i].flags & SURF_DRAWSKY && world.version == Q1BSP_VERSION )
 				continue;
 
 			GL_BuildPolygonFromSurface( m->surfaces + j );

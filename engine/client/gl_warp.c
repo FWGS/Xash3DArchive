@@ -9,14 +9,261 @@
 #include "com_model.h"
 #include "wadfile.h"
 
+#define MAX_CLIP_VERTS	64 // skybox clip vertices
 #define TURBSCALE		( 256.0f / ( 2 * M_PI ))
 static float		speedscale;
+static const char*		r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" };
+static const int		r_skyTexOrder[6] = { 0, 2, 1, 3, 4, 5 };
+
+static const vec3_t skyclip[6] =
+{
+{  1,  1,  0 },
+{  1, -1,  0 },
+{  0, -1,  1 },
+{  0,  1,  1 },
+{  1,  0,  1 },
+{ -1,  0,  1 }
+};
+
+// 1 = s, 2 = t, 3 = 2048
+static const int st_to_vec[6][3] =
+{
+{  3, -1,  2 },
+{ -3,  1,  2 },
+{  1,  3,  2 },
+{ -1, -3,  2 },
+{ -2, -1,  3 },  // 0 degrees yaw, look straight up
+{  2, -1, -3 }   // look straight down
+};
+
+// s = [0]/[2], t = [1]/[2]
+static const int vec_to_st[6][3] =
+{
+{ -2,  3,  1 },
+{  2,  3, -1 },
+{  1,  3,  2 },
+{ -1,  3, -2 },
+{ -2, -1,  3 },
+{ -2,  1, -3 }
+};
 
 // speed up sin calculations
 float r_turbsin[] =
 {
 	#include "warpsin.h"
 };
+
+static qboolean CheckSkybox( const char *name )
+{
+	const char	*skybox_ext[3] = { "tga", "bmp", "jpg" };
+	int		i, j, num_checked_sides;
+	const char	*sidename;
+
+	// search for skybox images				
+	for( i = 0; i < 3; i++ )
+	{	
+		num_checked_sides = 0;
+		for( j = 0; j < 6; j++ )
+		{         
+			// build side name
+			sidename = va( "%s%s.%s", name, r_skyBoxSuffix[j], skybox_ext[i] );
+			if( FS_FileExists( sidename )) num_checked_sides++;
+
+		}
+
+		if( num_checked_sides == 6 )
+			return true; // image exists
+
+		for( j = 0; j < 6; j++ )
+		{         
+			// build side name
+			sidename = va( "%s_%s.%s", name, r_skyBoxSuffix[j], skybox_ext[i] );
+			if( FS_FileExists( sidename )) num_checked_sides++;
+		}
+
+		if( num_checked_sides == 6 )
+			return true; // images exists
+	}
+	return false;
+}
+
+void DrawSkyPolygon( int nump, vec3_t vecs )
+{
+	int	i, j, axis;
+	float	s, t, dv, *vp;
+	vec3_t	v, av;
+
+	// decide which face it maps to
+	VectorClear( v );
+
+	for( i = 0, vp = vecs; i < nump; i++, vp += 3 )
+		VectorAdd( vp, v, v );
+
+	av[0] = fabs( v[0] );
+	av[1] = fabs( v[1] );
+	av[2] = fabs( v[2] );
+
+	if( av[0] > av[1] && av[0] > av[2] )
+		axis = (v[0] < 0) ? 1 : 0;
+	else if( av[1] > av[2] && av[1] > av[0] )
+		axis = (v[1] < 0) ? 3 : 2;
+	else axis = (v[2] < 0) ? 5 : 4;
+
+	// project new texture coords
+	for( i = 0; i < nump; i++, vecs += 3 )
+	{
+		j = vec_to_st[axis][2];
+		dv = (j > 0) ? vecs[j-1] : -vecs[-j-1];
+
+		j = vec_to_st[axis][0];
+		s = (j < 0) ? -vecs[-j-1] / dv : vecs[j-1] / dv;
+
+		j = vec_to_st[axis][1];
+		t = (j < 0) ? -vecs[-j-1] / dv : vecs[j-1] / dv;
+
+		if( s < RI.skyMins[0][axis] ) RI.skyMins[0][axis] = s;
+		if( t < RI.skyMins[1][axis] ) RI.skyMins[1][axis] = t;
+		if( s > RI.skyMaxs[0][axis] ) RI.skyMaxs[0][axis] = s;
+		if( t > RI.skyMaxs[1][axis] ) RI.skyMaxs[1][axis] = t;
+	}
+}
+
+/*
+==============
+ClipSkyPolygon
+==============
+*/
+void ClipSkyPolygon( int nump, vec3_t vecs, int stage )
+{
+	const float	*norm;
+	float		*v, d, e;
+	qboolean		front, back;
+	float		dists[MAX_CLIP_VERTS + 1];
+	int		sides[MAX_CLIP_VERTS + 1];
+	vec3_t		newv[2][MAX_CLIP_VERTS + 1];
+	int		newc[2];
+	int		i, j;
+
+	if( nump > MAX_CLIP_VERTS )
+		Host_Error( "ClipSkyPolygon: MAX_CLIP_VERTS\n" );
+loc1:
+	if( stage == 6 )
+	{	
+		// fully clipped, so draw it
+		DrawSkyPolygon( nump, vecs );
+		return;
+	}
+
+	front = back = false;
+	norm = skyclip[stage];
+	for( i = 0, v = vecs; i < nump; i++, v += 3 )
+	{
+		d = DotProduct( v, norm );
+		if( d > ON_EPSILON )
+		{
+			front = true;
+			sides[i] = SIDE_FRONT;
+		}
+		else if( d < -ON_EPSILON )
+		{
+			back = true;
+			sides[i] = SIDE_BACK;
+		}
+		else
+		{
+			sides[i] = SIDE_ON;
+		}
+		dists[i] = d;
+	}
+
+	if( !front || !back )
+	{	
+		// not clipped
+		stage++;
+		goto loc1;
+	}
+
+	// clip it
+	sides[i] = sides[0];
+	dists[i] = dists[0];
+	VectorCopy( vecs, ( vecs + ( i * 3 )));
+	newc[0] = newc[1] = 0;
+
+	for( i = 0, v = vecs; i < nump; i++, v += 3 )
+	{
+		switch( sides[i] )
+		{
+		case SIDE_FRONT:
+			VectorCopy( v, newv[0][newc[0]] );
+			newc[0]++;
+			break;
+		case SIDE_BACK:
+			VectorCopy( v, newv[1][newc[1]] );
+			newc[1]++;
+			break;
+		case SIDE_ON:
+			VectorCopy( v, newv[0][newc[0]] );
+			newc[0]++;
+			VectorCopy( v, newv[1][newc[1]] );
+			newc[1]++;
+			break;
+		}
+
+		if( sides[i] == SIDE_ON || sides[i+1] == SIDE_ON || sides[i+1] == sides[i] )
+			continue;
+
+		d = dists[i] / ( dists[i] - dists[i+1] );
+		for( j = 0; j < 3; j++ )
+		{
+			e = v[j] + d * ( v[j+3] - v[j] );
+			newv[0][newc[0]][j] = e;
+			newv[1][newc[1]][j] = e;
+		}
+		newc[0]++;
+		newc[1]++;
+	}
+
+	// continue
+	ClipSkyPolygon( newc[0], newv[0][0], stage + 1 );
+	ClipSkyPolygon( newc[1], newv[1][0], stage + 1 );
+}
+
+void MakeSkyVec( float s, float t, int axis )
+{
+	int	j, k, farclip;
+	vec3_t	v, b;
+
+	farclip = RI.farClip;
+
+	b[0] = s * (farclip >> 1);
+	b[1] = t * (farclip >> 1);
+	b[2] = (farclip >> 1);
+
+	for( j = 0; j < 3; j++ )
+	{
+		k = st_to_vec[axis][j];
+		v[j] = (k < 0) ? -b[-k-1] : b[k-1];
+		v[j] += RI.cullorigin[j];
+	}
+
+	// avoid bilerp seam
+	s = (s + 1) * 0.5f;
+	t = (t + 1) * 0.5f;
+
+	if( s < 1.0f / 512.0f )
+		s = 1.0f / 512.0f;
+	else if( s > 511.0f / 512.0f )
+		s = 511.0f / 512.0f;
+	if( t < 1.0f / 512.0f )
+		t = 1.0f / 512.0f;
+	else if( t > 511.0f / 512.0f )
+		t = 511.0f / 512.0f;
+
+	t = 1.0f - t;
+
+	pglTexCoord2f( s, t );
+	pglVertex3fv( v );
+}
 
 /*
 ==============
@@ -36,12 +283,75 @@ void R_ClearSkyBox( void )
 }
 
 /*
+=================
+R_AddSkyBoxSurface
+=================
+*/
+void R_AddSkyBoxSurface( msurface_t *fa )
+{
+	vec3_t	verts[MAX_CLIP_VERTS];
+	glpoly_t	*p;
+	int	i;
+
+	if( r_fastsky->integer )
+		return;
+
+	// calculate vertex values for sky box
+	for( p = fa->polys; p; p = p->next )
+	{
+		for( i = 0; i < p->numverts; i++ )
+			VectorSubtract( p->verts[i], RI.cullorigin, verts[i] );
+		ClipSkyPolygon( p->numverts, verts[0], 0 );
+	}
+}
+
+/*
+==============
+R_UnloadSkybox
+
+Unload previous skybox
+==============
+*/
+void R_UnloadSkybox( void )
+{
+	int	i;
+
+	// release old skybox
+	for( i = 0; i < 6; i++ )
+	{
+		if( !tr.skyboxTextures[i] ) continue;
+		GL_FreeTexture( tr.skyboxTextures[i] );
+	}
+
+	Mem_Set( tr.skyboxTextures, 0, sizeof( tr.skyboxTextures ));
+}
+
+/*
 ==============
 R_DrawSkybox
 ==============
 */
 void R_DrawSkyBox( void )
 {
+	int	i;
+
+	GL_TexEnv( GL_REPLACE );
+	GL_SetState( 0 );
+
+	for( i = 0; i < 6; i++ )
+	{
+		if( RI.skyMins[0][i] >= RI.skyMaxs[0][i] || RI.skyMins[1][i] >= RI.skyMaxs[1][i] )
+			continue;
+
+		GL_Bind( GL_TEXTURE0, tr.skyboxTextures[r_skyTexOrder[i]] );
+
+		pglBegin( GL_QUADS );
+		MakeSkyVec( RI.skyMins[0][i], RI.skyMins[1][i], i );
+		MakeSkyVec( RI.skyMins[0][i], RI.skyMaxs[1][i], i );
+		MakeSkyVec( RI.skyMaxs[0][i], RI.skyMaxs[1][i], i );
+		MakeSkyVec( RI.skyMaxs[0][i], RI.skyMins[1][i], i );
+		pglEnd();
+	}
 }
 
 /*
@@ -51,6 +361,55 @@ R_SetupSky
 */
 void R_SetupSky( const char *skyboxname )
 {
+	string	loadname;
+	string	sidename;
+	int	i;
+
+	if( !skyboxname || !*skyboxname )
+	{
+		R_UnloadSkybox();
+		return; // clear old skybox
+	}
+
+	com.snprintf( loadname, sizeof( loadname ), "%s/%s", SI->envpath, skyboxname );
+	FS_StripExtension( loadname );
+
+	if( loadname[com.strlen( loadname ) - 1] == '_' )
+		loadname[com.strlen( loadname ) - 1] = '\0';
+
+	if( !CheckSkybox( loadname ))
+	{
+		MsgDev( D_ERROR, "R_SetupSky: missed or incomplete skybox '%s'\n", skyboxname );
+		return; 
+	}
+
+	R_UnloadSkybox();
+
+	for( i = 0; i < 6; i++ )
+	{
+		com.snprintf( sidename, sizeof( sidename ), "%s%s", loadname, r_skyBoxSuffix[i] );
+		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKYSIDE );
+		GL_SetTextureType( tr.skyboxTextures[i], TEX_SKYBOX );
+		if( !tr.skyboxTextures[i] ) break;
+	}
+
+	if( i == 6 ) return; // loaded
+
+	// clear previous and try again
+	R_UnloadSkybox();
+
+	for( i = 0; i < 6; i++ )
+	{
+		com.snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
+		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKYSIDE );
+		GL_SetTextureType( tr.skyboxTextures[i], TEX_SKYBOX );
+		if( !tr.skyboxTextures[i] ) break;
+	}
+	if( i == 6 ) return; // loaded
+
+	// completely couldn't load skybox (probably never happens)
+	MsgDev( D_ERROR, "R_SetupSky: couldn't load skybox '%s'\n", skyboxname );
+	R_UnloadSkybox();
 }
 
 /*

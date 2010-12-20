@@ -2357,7 +2357,7 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
 
-	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_TRACELINE_PHYSENTSONLY, 2, -1, NULL );
+	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_GLASS_IGNORE, 2, -1, NULL );
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 
 	if( falloff < 250.0f ) falloff = 1.0f;
@@ -2368,7 +2368,7 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 	// update flashlight endpos
 	dl = CL_AllocDlight( pEnt->index );
 	VectorCopy( trace.endpos, dl->origin );
-	dl->die = cl.time + 0.001f;	// die on next frame
+	dl->die = cl.time; // die on next frame
 	dl->color.r = 255 * falloff;
 	dl->color.g = 255 * falloff;
 	dl->color.b = 255 * falloff;
@@ -2403,7 +2403,7 @@ void CL_TestLights( void )
 		dl->color.r = ((((i % 6) + 1) & 1)>>0) * 255;
 		dl->color.g = ((((i % 6) + 1) & 2)>>1) * 255;
 		dl->color.b = ((((i % 6) + 1) & 4)>>2) * 255;
-		dl->die = cl.time + host.realtime;
+		dl->die = cl.time + host.frametime;
 		dl->radius = 200;
 	}
 }

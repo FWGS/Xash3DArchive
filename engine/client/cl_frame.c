@@ -83,11 +83,12 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 
 		VectorCopy( ent->attachment[0], pos );
 
-		if(!VectorCompare( pos, ent->origin ))
+		// make sure what attachment is valid
+		if( !VectorCompare( pos, ent->origin ))
                     {
-			dlight_t	*dl = CL_AllocDlight( 0 );
+			dlight_t	*dl = CL_AllocElight( 0 );
 
-			VectorCopy( ent->origin, dl->origin );
+			VectorCopy( pos, dl->origin );
 			dl->die = cl.time + 0.05f;
 			dl->color.r = 255;
 			dl->color.g = 180;

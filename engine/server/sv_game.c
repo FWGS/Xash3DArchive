@@ -705,12 +705,12 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	if( !SpawnEdict )
 	{
 		// attempt to create custom entity
-		if( svgame.dllFuncs2.pfnCreate && svgame.dllFuncs2.pfnCreate( ent, pszClassName ) == -1 )
-		{
-			ent->v.flags |= FL_KILLME;
-			MsgDev( D_ERROR, "No spawn function for %s\n", STRING( className ));
-			return ent; // this edict will be removed from map
-		}
+		if( svgame.dllFuncs2.pfnCreate && svgame.dllFuncs2.pfnCreate( ent, pszClassName ) != -1 )
+			return ent;
+
+		ent->v.flags |= FL_KILLME;
+		MsgDev( D_ERROR, "No spawn function for %s\n", STRING( className ));
+		return ent; // this edict will be removed from map
 	}
 	else SpawnEdict( &ent->v );
 

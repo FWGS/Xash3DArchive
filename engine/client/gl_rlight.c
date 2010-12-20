@@ -326,7 +326,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 R_LightForPoint
 =================
 */
-void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight )
+void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius )
 {
 	dlight_t	*dl;
 	vec3_t	end, dir;
@@ -355,7 +355,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	ambientLight->b = min((r_pointColor[2] >> 7), 255 );
 
 	// add dynamic lights
-	if( r_dynamic->integer )
+	if( radius && r_dynamic->integer )
 	{
 		for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 		{
@@ -365,7 +365,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 			VectorSubtract( dl->origin, point, dir );
 			dist = VectorLength( dir );
 
-			if( !dist || dist > dl->radius )
+			if( !dist || dist > dl->radius + radius )
 				continue;
 
 			add = (dl->radius - dist);
