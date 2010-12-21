@@ -71,6 +71,7 @@ extern model_t		*loadmodel;
 // model.c
 //
 void Mod_Init( void );
+void Mod_ClearAll( void );
 void Mod_Shutdown( void );
 void Mod_SetupHulls( float mins[4][3], float maxs[4][3] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );

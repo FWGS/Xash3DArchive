@@ -379,13 +379,20 @@ void Mod_Init( void )
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
 }
 
-void Mod_Shutdown( void )
+void Mod_ClearAll( void )
 {
 	int	i;
 
 	for( i = 0; i < cm_nummodels; i++ )
 		Mod_FreeModel( &cm_models[i] );
 
+	Mem_Set( cm_models, 0, sizeof( cm_models ));
+	cm_nummodels = 0;
+}
+
+void Mod_Shutdown( void )
+{
+	Mod_ClearAll();
 	Mem_FreePool( &com_studiocache );
 }
 

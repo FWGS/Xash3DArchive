@@ -70,17 +70,6 @@ qboolean CL_IsPlaybackDemo( void )
 	return cls.demoplayback;
 }
 
-void CL_ForceVid( void )
-{
-	cl.video_prepped = false;
-	host.state = HOST_RESTART;
-}
-
-void CL_ForceSnd( void )
-{
-	cl.audio_prepped = false;
-}
-
 /*
 ===============
 CL_LerpPoint
@@ -1562,7 +1551,7 @@ void Host_ClientFrame( void )
 	// predict all unacknowledged movements
 	CL_PredictMovement();
 
-	Host_CheckChanges();
+	VID_CheckChanges();
 
 	// allow sound and video DLL change
 	if( cls.state == ca_active )
@@ -1602,9 +1591,8 @@ void CL_Init( void )
 	Con_Init();	
 	CL_InitLocal();
 
-	// give initial openGL configuration
-	Cbuf_AddText( "exec opengl.cfg\n" );
-	Host_CheckChanges ();
+	R_Init();	// init renderer
+	S_Init();	// init sound
 
 	if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
 		Host_Error( "CL_InitGame: can't initialize client.dll\n" );

@@ -55,6 +55,14 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		return true;
 	}
 
+	if( entityType == ET_TEMPENTITY )
+	{
+		// copy actual origin and angles back to let StudioModelRenderer
+		// get actual value directly from curstate
+		VectorCopy( ent->origin, ent->curstate.origin );
+		VectorCopy( ent->angles, ent->curstate.angles );
+	}
+
 	// don't add himself on firstperson
 	if(( ent->index - 1 ) == cl.playernum &&  ent != &clgame.viewent && !cl.thirdperson )
 	{
@@ -328,12 +336,13 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	if( ent->player )
 	{
-		clgame.dllFuncs.pfnProcessPlayerState( &cl.frame.playerstate[ent->index-1], state );
+		clgame.dllFuncs.pfnProcessPlayerState( &frame->playerstate[ent->index-1], state );
+
+		frame->playerstate[ent->index-1].number = ent->index;
 
 		// fill private structure for local client
 		if(( ent->index - 1 ) == cl.playernum )
-			cl.frame.local.playerstate = cl.frame.playerstate[ent->index-1];
-		cl.frame.playerstate[ent->index-1].number = ent->index;
+			frame->local.playerstate = frame->playerstate[ent->index-1];
 	}
 }
 

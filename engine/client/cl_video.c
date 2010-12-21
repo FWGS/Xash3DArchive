@@ -290,5 +290,14 @@ SCR_FreeCinematic
 */
 void SCR_FreeCinematic( void )
 {
+	movie_state_t	*cin_state;
+
+	// release videos
+	cin_state = AVI_GetState( CIN_LOGO );
+	AVI_CloseVideo( cin_state );
+
+	cin_state = AVI_GetState( CIN_MAIN );
+	AVI_CloseVideo( cin_state );
+
 	AVIFileExit();
 }

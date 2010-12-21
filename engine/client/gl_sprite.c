@@ -708,23 +708,23 @@ R_GlowSightDistance
 Set sprite brightness factor
 ================
 */
-static float R_SpriteGlowBlend( cl_entity_t *e, vec3_t origin )
+static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int alpha, float *pscale )
 {
 	float	dist = R_GlowSightDistance( origin );
 	float	brightness;
 
 	if( dist <= 0 ) return 0.0f; // occluded
 
-	if( e->curstate.renderfx == kRenderFxNoDissipation )
-		return (float)e->curstate.renderamt * (1.0f / 255.0f);
+	if( renderfx == kRenderFxNoDissipation )
+		return (float)alpha * (1.0f / 255.0f);
 
 	// UNDONE: Tweak these magic numbers (19000 - falloff & 200 - sprite size)
 	brightness = 19000.0 / ( dist * dist );
-	brightness = bound( 0.05f, brightness, 1.0f );
+	brightness = bound( 0.01f, brightness, 1.0f );
 
 	// Make the glow fixed size in screen space, taking into consideration the scale setting.
-	if( e->curstate.scale == 0.0f ) e->curstate.scale = 1.0f;
-	e->curstate.scale *= dist * ( 1.0f / 200.0f );
+	if( *pscale == 0.0f ) *pscale = 1.0f;
+	*pscale *= dist * ( 1.0f / 200.0f );
 
 	return brightness;
 }
@@ -736,7 +736,7 @@ R_SpriteOccluded
 Do occlusion test for glow-sprites
 ================
 */
-qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin )
+qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *pscale )
 {
 	if( e->curstate.rendermode == kRenderGlow )
 	{
@@ -750,10 +750,10 @@ qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin )
 		if( v[1] < RI.refdef.viewport[1] || v[1] > RI.refdef.viewport[1] + RI.refdef.viewport[3] )
 			return true; // do scissor
 
-		blend *= R_SpriteGlowBlend( e, origin );
-		e->curstate.renderamt *= blend;
+		blend *= R_SpriteGlowBlend( origin, e->curstate.rendermode, e->curstate.renderfx, *alpha, pscale );
+		*alpha *= blend;
 
-		if( blend <= 0.05f )
+		if( blend <= 0.01f )
 			return true; // faded
 	}
 	else
@@ -805,9 +805,10 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	mspriteframe_t	*frame, *oldframe;
 	msprite_t		*psprite;
 	model_t		*model;
+	int		alpha;
 	int		i, state = 0;
 	float		angle, sr, cr;
-	float		lerp = 1.0f, ilerp;
+	float		lerp = 1.0f, ilerp, scale;
 	vec3_t		v_forward, v_right, v_up;
 	vec3_t		origin;
 	color24		color;
@@ -836,7 +837,10 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		}
 	}
 
-	if( R_SpriteOccluded( e, origin ))
+	alpha = e->curstate.renderamt;
+	scale = e->curstate.scale;
+
+	if( R_SpriteOccluded( e, origin, &alpha, &scale ))
 		return; // sprite culled
 
 	r_stats.c_sprite_models_drawn++;
@@ -943,8 +947,8 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( oldframe == frame )
 	{
 		// draw the single non-lerped frame
-		pglColor4ub( color.r, color.g, color.b, e->curstate.renderamt );
-		R_DrawSpriteQuad( frame, origin, v_right, v_up, e->curstate.scale );
+		pglColor4ub( color.r, color.g, color.b, alpha );
+		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 	}
 	else
 	{
@@ -954,14 +958,14 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 		if( ilerp != 0 )
 		{
-			pglColor4ub( color.r, color.g, color.b, e->curstate.renderamt * ilerp );
-			R_DrawSpriteQuad( oldframe, origin, v_right, v_up, e->curstate.scale );
+			pglColor4ub( color.r, color.g, color.b, alpha * ilerp );
+			R_DrawSpriteQuad( oldframe, origin, v_right, v_up, scale );
 		}
 
 		if( lerp != 0 )
 		{
-			pglColor4ub( color.r, color.g, color.b, e->curstate.renderamt * lerp );
-			R_DrawSpriteQuad( frame, origin, v_right, v_up, e->curstate.scale );
+			pglColor4ub( color.r, color.g, color.b, alpha * lerp );
+			R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 		}
 	}
 

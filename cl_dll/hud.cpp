@@ -460,14 +460,37 @@ void CHud :: VidInit( void )
 		// we have already have loaded the sprite reference from hud.txt, but
 		// we need to make sure all the sprites have been loaded (we've gone through a transition, or loaded a save game)
 		client_sprite_t *p = m_pSpriteList;
-		int index = 0;
+
+		// count the number of sprites of the appropriate res
+		m_iSpriteCount = 0;
 		for ( int j = 0; j < m_iSpriteCountAllRes; j++ )
+		{
+			if ( p->iRes == m_iRes )
+				m_iSpriteCount++;
+			p++;
+		}
+
+		delete [] m_rghSprites;
+		delete [] m_rgrcRects;
+		delete [] m_rgszSpriteNames;
+
+		// allocated memory for sprite handle arrays
+ 		m_rghSprites = new HSPRITE[m_iSpriteCount];
+		m_rgrcRects = new wrect_t[m_iSpriteCount];
+		m_rgszSpriteNames = new char[m_iSpriteCount * MAX_SPRITE_NAME_LENGTH];
+
+		p = m_pSpriteList;
+		int index = 0;
+		for ( j = 0; j < m_iSpriteCountAllRes; j++ )
 		{
 			if ( p->iRes == m_iRes )
 			{
 				char sz[256];
 				sprintf( sz, "sprites/%s.spr", p->szSprite );
 				m_rghSprites[index] = SPR_Load(sz);
+				m_rgrcRects[index] = p->rc;
+				strncpy( &m_rgszSpriteNames[index * MAX_SPRITE_NAME_LENGTH], p->szName, MAX_SPRITE_NAME_LENGTH );
+
 				index++;
 			}
 

@@ -39,8 +39,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static const char *uiVideoModes[] =
 {
-	"400 x 300",
-	"512 x 384",
 	"640 x 480",
 	"800 x 600",
 	"960 x 720",
@@ -109,7 +107,7 @@ static void UI_VidModes_GetConfig( void )
 	uiVidModes.videoModesPtr[i] = NULL;	// terminator
 
 	uiVidModes.vidList.itemNames = uiVidModes.videoModesPtr;
-	uiVidModes.vidList.curItem = CVAR_GET_FLOAT( "r_mode" );
+	uiVidModes.vidList.curItem = CVAR_GET_FLOAT( "vid_mode" );
 
 	if( !CVAR_GET_FLOAT( "fullscreen" ))
 		uiVidModes.windowed.enabled = 1;
@@ -125,7 +123,7 @@ UI_VidModes_SetConfig
 */
 static void UI_VidOptions_SetConfig( void )
 {
-	CVAR_SET_FLOAT( "r_mode", uiVidModes.vidList.curItem );
+	CVAR_SET_FLOAT( "vid_mode", uiVidModes.vidList.curItem );
 	CVAR_SET_FLOAT( "fullscreen", !uiVidModes.windowed.enabled );
 	CVAR_SET_FLOAT( "r_allow_software", uiVidModes.software.enabled );
 

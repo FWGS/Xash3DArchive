@@ -194,7 +194,6 @@ extern convar_t	*s_volume;
 extern convar_t	*s_musicvolume;
 extern convar_t	*s_show;
 extern convar_t	*s_mixahead;
-extern convar_t	*s_primary;
 extern convar_t	*s_lerping;
 extern convar_t	*dsp_off;
 
@@ -233,7 +232,7 @@ void DSP_Process( int idsp, portable_samplepair_t *pbfront, int sampleCount );
 float DSP_GetGain( int idsp );
 void DSP_ClearState( void );
 
-qboolean S_Init( void *hInst );
+qboolean S_Init( void );
 void S_Shutdown( void );
 void S_Activate( qboolean active, void *hInst );
 void S_SoundList_f( void );

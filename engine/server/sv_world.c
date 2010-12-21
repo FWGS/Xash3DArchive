@@ -175,6 +175,14 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 			}
 #endif
 		}
+		else
+		{
+			// TraceHull stuff
+			hull = &model->hulls[hullNumber];
+
+			// calculate an offset value to center the origin
+			VectorSubtract( hull->clip_mins, mins, offset );
+		}
 		VectorAdd( offset, ent->v.origin, offset );
 	}
 	else

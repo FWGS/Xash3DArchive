@@ -824,6 +824,8 @@ static qboolean SV_StudioIntersect( edict_t *ent, const vec3_t start, vec3_t min
 	vec3_t	anim_mins, anim_maxs;
 	model_t	*mod = CM_ClipHandleToModel( ent->v.modelindex );
 
+	if( !mod ) return false; // FIXME: Xash 0.45 crash at this point (model == NULL)
+
 	// create the bounding box of the entire move
 	World_MoveBounds( start, mins, maxs, end, trace_mins, trace_maxs );
 

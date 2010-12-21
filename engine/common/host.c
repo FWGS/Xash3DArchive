@@ -96,69 +96,6 @@ void Host_EndGame( const char *message, ... )
 	Host_AbortCurrentFrame ();
 }
 
-void Host_CheckChanges( void )
-{
-	qboolean	audio_disabled = false;
-
-	if( FS_CheckParm( "-nosound" ))
-	{
-		if( host.state == HOST_INIT )
-			audio_disabled = true;
-		sound_restart = false;
-	}
-
-	if( video_restart || sound_restart )
-	{
-		if( video_restart ) CL_ForceVid();
-		if( sound_restart ) CL_ForceSnd();
-	}
-	else
-	{
-		return;
-	}
-
-	if( video_restart && CL_Active( ))
-	{
-		// we're in game and want keep decals when renderer is changed
-		host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS );
-		host.numdecals = R_CreateDecalList( host.decalList, false );
-		Msg( "Total stored %i decals\n", host.numdecals );
-	}
-
-	if(( video_restart || sound_restart ) && CL_Active( ))
-	{
-		host.soundList = (soundlist_t *)Z_Malloc( sizeof( soundlist_t ) * 128 );
-		host.numsounds = S_GetCurrentStaticSounds( host.soundList, 128, CHAN_STATIC );
-		Msg( "Total stored %i sounds\n", host.numsounds );
-	}
-
-	S_StopAllSounds();	// don't let them loop during the restart
-
-	// restart renderer
-	if( video_restart )
-	{
-		R_Shutdown();
-
-		if( !R_Init( ))
-		{
-			Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
-			return;
-		}
-		else SCR_Init ();
-		video_restart = false;
-	}
-
-	if( audio_disabled ) MsgDev( D_INFO, "Audio: Disabled\n" );
-
-	// restart sound engine
-	if( sound_restart )
-	{
-		S_Shutdown();
-		S_Init( host.hWnd );
-		sound_restart = false;
-	}
-}
-
 /*
 ================
 Host_AbortCurrentFrame

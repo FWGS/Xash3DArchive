@@ -148,14 +148,12 @@ qboolean SV_SetPlayer( void )
 	sv_client_t	*cl;
 	int		i, idnum;
 
-	if( sv_maxclients->integer == 1 )
+	if( sv_maxclients->integer == 1 || Cmd_Argc() < 2 )
 	{
-		// sepcial case for singleplayer
+		// sepcial case for local client
 		sv_client = svs.clients;
 		return true;
 	}
-
-	if( Cmd_Argc() < 2 ) return false;
 
 	s = Cmd_Argv( 1 );
 

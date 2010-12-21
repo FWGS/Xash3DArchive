@@ -56,6 +56,7 @@ typedef struct
 
 qboolean R_Init( void );
 void R_Shutdown( void );
+void VID_CheckChanges( void );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
 void GL_FreeImage( const char *name );
 qboolean VID_ScreenShot( const char *filename, int shot_type );

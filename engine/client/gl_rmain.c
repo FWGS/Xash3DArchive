@@ -267,6 +267,9 @@ int R_ComputeFxBlend( cl_entity_t *e )
 			blend += Com_RandomLong( -32, 31 );
 		}
 		break;
+	case kRenderFxDeadPlayer:
+		blend = renderAmt;	// safe current renderamt because it's player index!
+		break;
 	case kRenderFxNone:
 	case kRenderFxClampMinScale:
 	default:

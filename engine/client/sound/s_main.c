@@ -924,10 +924,13 @@ void S_SoundInfo_f( void )
 S_Init
 ================
 */
-qboolean S_Init( void *hInst )
+qboolean S_Init( void )
 {
 	if( FS_CheckParm( "-nosound" ))
+	{
+		MsgDev( D_INFO, "Audio: Disabled\n" );
 		return false;
+	}
 
 	Cmd_ExecuteString( "sndlatch\n" );
 
@@ -935,7 +938,6 @@ qboolean S_Init( void *hInst )
 	s_musicvolume = Cvar_Get( "musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
 	s_mixahead = Cvar_Get( "_snd_mixahead", "0.1", CVAR_ARCHIVE, "how much sound to mix ahead of time" );
 	s_show = Cvar_Get( "s_show", "0", 0, "show playing sounds" );
-	s_primary = Cvar_Get( "s_primary", "0", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "use direct primary buffer" ); 
 	s_check_errors = Cvar_Get( "s_check_errors", "1", CVAR_ARCHIVE, "ignore audio engine errors" );
 	s_lerping = Cvar_Get( "s_lerping", "0", CVAR_ARCHIVE, "apply interpolation to sound output" );
 	dsp_off = Cvar_Get( "dsp_off", "0", CVAR_ARCHIVE, "set to 1 to disable all dsp processing" );
@@ -946,7 +948,7 @@ qboolean S_Init( void *hInst )
 	Cmd_AddCommand( "soundlist", S_SoundList_f, "display loaded sounds" );
 	Cmd_AddCommand( "s_info", S_SoundInfo_f, "print sound system information" );
 
-	if( !SNDDMA_Init( hInst ))
+	if( !SNDDMA_Init( host.hWnd ))
 	{
 		MsgDev( D_INFO, "S_Init: sound system can't be initialized\n" );
 		return false;

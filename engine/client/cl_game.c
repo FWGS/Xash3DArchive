@@ -1283,7 +1283,6 @@ void CL_ClearWorld( void )
 	ent->curstate.solid = SOLID_BSP;
 	ent->curstate.movetype = MOVETYPE_PUSH;
 	ent->model = cl.worldmodel;
-	clgame.numEntities = 1;
 }
 
 void CL_InitEdicts( void )
@@ -1294,6 +1293,7 @@ void CL_InitEdicts( void )
 	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
+	clgame.numEntities = 1;
 }
 
 void CL_FreeEdicts( void )

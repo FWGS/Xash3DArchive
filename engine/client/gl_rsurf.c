@@ -1255,7 +1255,7 @@ void R_DrawWorld( void )
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
 
-	if( RI.refdef.onlyClientDraw )
+	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
 		return;
 
 	VectorCopy( RI.cullorigin, modelorg );

@@ -164,7 +164,6 @@ void Host_WriteOpenGLConfig( void );
 void Host_WriteConfig( void );
 qboolean Host_IsLocalGame( void );
 void Host_ShutdownServer( void );
-void Host_CheckChanges( void );
 void Host_Print( const char *txt );
 void Host_Error( const char *error, ... );
 void Host_Credits( void );
@@ -299,8 +298,6 @@ void CL_SendCmd( void );
 void CL_Disconnect( void );
 qboolean CL_NextDemo( void );
 void CL_Drop( void );
-void CL_ForceVid( void );
-void CL_ForceSnd( void );
 void SCR_Init( void );
 void SCR_UpdateScreen( void );
 void SCR_BeginLoadingPlaque( void );
@@ -333,7 +330,7 @@ typedef struct autocomplete_list_s
 extern autocomplete_list_t cmd_list[];
 
 // soundlib shared exports
-qboolean S_Init( void *hInst );
+qboolean S_Init( void );
 void S_Shutdown( void );
 void S_Activate( qboolean active, void *hInst );
 void S_StopSound( int entnum, int channel, const char *soundname );

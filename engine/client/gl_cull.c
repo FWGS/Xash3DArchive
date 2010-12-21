@@ -26,7 +26,8 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags )
 	uint		i, bit;
 	const mplane_t	*p;
 
-	if( r_nocull->integer )
+	// client.dll may use additional passes for render custom mirrors etc
+	if( r_nocull->integer || RI.refdef.nextView != 0 )
 		return false;
 
 	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
@@ -87,7 +88,8 @@ qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipf
 	uint	i, bit;
 	const mplane_t *p;
 
-	if( r_nocull->integer )
+	// client.dll may use additional passes for render custom mirrors etc
+	if( r_nocull->integer || RI.refdef.nextView != 0 )
 		return false;
 
 	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )

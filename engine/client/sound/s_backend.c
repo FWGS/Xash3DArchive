@@ -7,7 +7,7 @@
 #include "common.h"
 #include "sound.h"
 
-#define	iDirectSoundCreate( a, b, c )	pDirectSoundCreate( a, b, c )
+#define iDirectSoundCreate( a, b, c )	pDirectSoundCreate( a, b, c )
 
 static HRESULT ( _stdcall *pDirectSoundCreate)(GUID* lpGUID, LPDIRECTSOUND* lplpDS, IUnknown* pUnkOuter );
 
@@ -20,11 +20,6 @@ static dllfunc_t dsound_funcs[] =
 dll_info_t dsound_dll = { "dsound.dll", dsound_funcs, NULL, NULL, NULL, false, 0, 0 };
 
 #define SAMPLE_16BIT_SHIFT		1
-
-// 64K is > 1 second at 16-bit, 22050 Hz
-#define WAV_BUFFERS			64
-#define WAV_MASK			0x3F
-#define WAV_BUFFER_SIZE		0x0400
 #define SECONDARY_BUFFER_SIZE		0x10000
 
 typedef enum
@@ -34,16 +29,11 @@ typedef enum
 	SIS_NOTAVAIL
 } si_state_t;
 
-convar_t		*s_wavonly;
+convar_t		*s_primary;
 
 static HWND	snd_hwnd;
-static qboolean	dsound_init;
-static qboolean	wav_init;
 static qboolean	snd_firsttime = true;
-static qboolean	snd_isdirect, snd_iswave;
 static qboolean	primary_format_set;
-static int	snd_buffer_count = 0;
-static int	snd_sent, snd_completed;
 
 /* 
 =======================================================================
@@ -52,19 +42,14 @@ so it can unlock and free the data block after it has been played.
 =======================================================================
 */ 
 DWORD		locksize;
-HANDLE		hData;
 HPSTR		lpData, lpData2;
-HGLOBAL		hWaveHdr;
 LPWAVEHDR		lpWaveHdr;
-HWAVEOUT		hWaveOut; 
-WAVEOUTCAPS	wavecaps;
 DWORD		gSndBufSize;
 MMTIME		mmstarttime;
 LPDIRECTSOUNDBUFFER pDSBuf, pDSPBuf;
 LPDIRECTSOUND	pDS;
 
 qboolean SNDDMA_InitDirect( void *hInst );
-qboolean SNDDMA_InitWav( void );
 void SNDDMA_FreeSound( void );
 
 static const char *DSoundError( int error )
@@ -272,8 +257,6 @@ SNDDMA_FreeSound
 */
 void SNDDMA_FreeSound( void )
 {
-	int	i;
-
 	if( pDS )
 	{
 		DS_DestroyBuffers();
@@ -281,42 +264,11 @@ void SNDDMA_FreeSound( void )
 		Sys_FreeLibrary( &dsound_dll );
 	}
 
-	if( hWaveOut )
-	{
-		waveOutReset( hWaveOut );
-
-		if( lpWaveHdr )
-		{
-			for( i = 0; i < WAV_BUFFERS; i++ )
-				waveOutUnprepareHeader( hWaveOut, lpWaveHdr + i, sizeof( WAVEHDR ));
-		}
-
-		waveOutClose( hWaveOut );
-
-		if( hWaveHdr )
-		{
-			GlobalUnlock( hWaveHdr );
-			GlobalFree( hWaveHdr );
-		}
-
-		if( hData )
-		{
-			GlobalUnlock( hData );
-			GlobalFree( hData );
-		}
-
-	}
-
 	pDS = NULL;
 	pDSBuf = NULL;
 	pDSPBuf = NULL;
-	hWaveOut = 0;
-	hData = 0;
-	hWaveHdr = 0;
 	lpData = NULL;
 	lpWaveHdr = NULL;
-	dsound_init = false;
-	wav_init = false;
 }
 
 /*
@@ -366,113 +318,6 @@ si_state_t SNDDMA_InitDirect( void *hInst )
 	if( !DS_CreateBuffers( hInst ))
 		return SIS_FAILURE;
 
-	dsound_init = true;
-
-	return SIS_SUCCESS;
-}
-
-
-/*
-==================
-SNDDM_InitWav
-
-Crappy windows multimedia base
-==================
-*/
-si_state_t SNDDMA_InitWav( void )
-{
-	WAVEFORMATEX	format; 
-	HRESULT		hr;
-	int		i;
-
-	snd_sent = 0;
-	snd_completed = 0;
-
-	Mem_Set( &format, 0, sizeof( format ));
-	format.wFormatTag = WAVE_FORMAT_PCM;
-	format.nChannels = 2;
-	format.wBitsPerSample = 16;
-	format.nSamplesPerSec = SOUND_DMA_SPEED;
-	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign; 
-	format.cbSize = 0;	
-
-	// open a waveform device for output using window callback. 
-	MsgDev( D_NOTE, "SNDDMA_InitWav: initializing wave sound " );
-	if(( hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER, &format, 0, 0, CALLBACK_NULL)) != MMSYSERR_NOERROR )
-	{
-		if( hr != MMSYSERR_ALLOCATED )
-		{
-			MsgDev( D_NOTE, "- failed\n" );
-			return SIS_FAILURE;
-		}
-
-		MsgDev( D_NOTE, "- failed, hardware already in use\n" );
-		return SIS_NOTAVAIL;
-	} 
-
-	MsgDev( D_NOTE, "- ok\n" );
-
-	// allocate and lock memory for the waveform data. The memory 
-	// for waveform data must be globally allocated with 
-	// GMEM_MOVEABLE and GMEM_SHARE flags. 
-
-	gSndBufSize = WAV_BUFFERS * WAV_BUFFER_SIZE;
-	hData = GlobalAlloc( GMEM_MOVEABLE|GMEM_SHARE, gSndBufSize ); 
-	if( !hData ) 
-	{ 
-		SNDDMA_FreeSound();
-		return SIS_FAILURE; 
-	}
-
-	lpData = GlobalLock( hData );
-	if( !lpData )
-	{ 
-		SNDDMA_FreeSound ();
-		return SIS_FAILURE; 
-	} 
-
-	Mem_Set( lpData, 0, gSndBufSize );
-
-	// Allocate and lock memory for the header. This memory must 
-	// also be globally allocated with GMEM_MOVEABLE and 
-	// GMEM_SHARE flags. 
-	hWaveHdr = GlobalAlloc( GMEM_MOVEABLE|GMEM_SHARE, (DWORD)sizeof( WAVEHDR ) * WAV_BUFFERS ); 
-
-	if( hWaveHdr == NULL )
-	{ 
-		SNDDMA_FreeSound ();
-		return SIS_FAILURE; 
-	} 
-
-	lpWaveHdr = (LPWAVEHDR)GlobalLock( hWaveHdr ); 
-
-	if( lpWaveHdr == NULL )
-	{ 
-		SNDDMA_FreeSound();
-		return SIS_FAILURE; 
-	}
-
-	Mem_Set( lpWaveHdr, 0, sizeof( WAVEHDR ) * WAV_BUFFERS );
-
-	// After allocation, set up and prepare headers.
-	for( i = 0; i < WAV_BUFFERS; i++ )
-	{
-		lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE; 
-		lpWaveHdr[i].lpData = lpData + i * WAV_BUFFER_SIZE;
-
-		if( waveOutPrepareHeader( hWaveOut, lpWaveHdr+i, sizeof( WAVEHDR )) != MMSYSERR_NOERROR )
-		{
-			SNDDMA_FreeSound();
-			return SIS_FAILURE;
-		}
-	}
-
-	dma.samplepos = 0;
-	dma.samples = gSndBufSize / 2;
-	dma.buffer = (byte *)lpData;
-	wav_init = true;
-
 	return SIS_SUCCESS;
 }
 
@@ -493,50 +338,17 @@ int SNDDMA_Init( void *hInst )
 
 	Mem_Set( &dma, 0, sizeof( dma ));
 
-	s_wavonly = Cvar_Get( "s_wavonly", "0", CVAR_LATCH_AUDIO|CVAR_ARCHIVE, "force to use WaveOutput only" );
-	dsound_init = wav_init = 0;
+	s_primary = Cvar_Get( "s_primary", "0", CVAR_INIT, "use direct primary buffer" ); 
 
 	// init DirectSound
-	if( !s_wavonly->integer )
+	stat = SNDDMA_InitDirect( hInst );
+
+	if( stat == SIS_SUCCESS )
 	{
-		if( snd_firsttime || snd_isdirect )
-		{
-			stat = SNDDMA_InitDirect( hInst );
-
-			if( stat == SIS_SUCCESS )
-			{
-				snd_isdirect = true;
-
-				if( snd_firsttime )
-					MsgDev( D_INFO, "Audio: DirectSound\n" );
-			}
-			else snd_isdirect = false;
-		}
+		if( snd_firsttime )
+			MsgDev( D_INFO, "Audio: DirectSound\n" );
 	}
-
-	// if DirectSound didn't succeed in initializing, try to initialize
-	// waveOut sound, unless DirectSound failed because the hardware is
-	// already allocated (in which case the user has already chosen not
-	// to have sound)
-	if( !dsound_init && ( stat != SIS_NOTAVAIL ))
-	{
-		if( snd_firsttime || snd_iswave )
-		{
-			stat = SNDDMA_InitWav();
-
-			if( stat == SIS_SUCCESS )
-			{
-				snd_iswave = true;
-				if( snd_firsttime )
-					MsgDev( D_INFO, "Audio: WaveOutput\n" );
-			}
-			else snd_iswave = false;
-		}
-	}
-
-	snd_buffer_count = 1;
-
-	if( !dsound_init && !wav_init )
+	else
 	{
 		if( snd_firsttime )
 			MsgDev( D_ERROR, "SNDDMA_Init: can't initialize sound device\n" );
@@ -560,21 +372,12 @@ how many sample are required to fill it up.
 int SNDDMA_GetDMAPos( void )
 {
 	int	s;
-
-	if( dsound_init ) 
-	{
-		MMTIME	mmtime;
-		DWORD	dwWrite;
+	MMTIME	mmtime;
+	DWORD	dwWrite;
 	
-		mmtime.wType = TIME_SAMPLES;
-		pDSBuf->lpVtbl->GetCurrentPosition( pDSBuf, &mmtime.u.sample, &dwWrite );
-		s = mmtime.u.sample - mmstarttime.u.sample;
-	}
-	else if( wav_init )
-	{        
-		s = snd_sent * WAV_BUFFER_SIZE;
-	}
-
+	mmtime.wType = TIME_SAMPLES;
+	pDSBuf->lpVtbl->GetCurrentPosition( pDSBuf, &mmtime.u.sample, &dwWrite );
+	s = mmtime.u.sample - mmstarttime.u.sample;
 
 	s >>= SAMPLE_16BIT_SHIFT;
 	s &= (dma.samples - 1);
@@ -674,49 +477,9 @@ Also unlocks the dsound buffer
 */
 void SNDDMA_Submit( void )
 {
-	LPWAVEHDR	h;
-	int wResult;
-
-	if( !dma.buffer )
-		return;
-
+	if( !dma.buffer ) return;
 	// unlock the dsound buffer
 	if( pDSBuf ) pDSBuf->lpVtbl->Unlock( pDSBuf, dma.buffer, locksize, NULL, 0 );
-
-	if( !wav_init ) return;
-
-	// find which sound blocks have completed
-	while( 1 )
-	{
-		if( snd_completed == snd_sent )
-			break;
-
-		if(!( lpWaveHdr[snd_completed & WAV_MASK].dwFlags & WHDR_DONE ))
-			break;
-		snd_completed++; // this buffer has been played
-	}
-
-	// submit a few new sound blocks
-	while((( snd_sent - snd_completed ) >> SAMPLE_16BIT_SHIFT ) < 8 )
-	{
-		h = lpWaveHdr + ( snd_sent & WAV_MASK );
-
-		if( paintedtime / 256 <= snd_sent )
-			break;
-		snd_sent++;
-
-		// Now the data block can be sent to the output device. The 
-		// waveOutWrite function returns immediately and waveform 
-		// data is sent to the output device in the background. 
-		wResult = waveOutWrite( hWaveOut, h, sizeof( WAVEHDR )); 
-
-		if( wResult != MMSYSERR_NOERROR )
-		{ 
-			MsgDev( D_ERROR, "SNDDMA_Submit: failed to write block to device\n" );
-			SNDDMA_FreeSound ();
-			return; 
-		} 
-	}
 }
 
 /*
@@ -740,8 +503,7 @@ S_PrintDeviceName
 */
 void S_PrintDeviceName( void )
 {
-	if( snd_isdirect ) Msg( "Audio: DirectSound\n" );
-	if( snd_iswave ) Msg( "Audio: WaveOutput\n" );
+	Msg( "Audio: DirectSound\n" );
 }
 
 /*
@@ -758,16 +520,10 @@ void S_Activate( qboolean active, void *hInst )
 	if( !dma.initialized ) return;
 	snd_hwnd = (HWND)hInst;
 
+	if( !pDS || !snd_hwnd )
+		return;
+
 	if( active )
-	{
-		if( pDS && snd_hwnd && snd_isdirect )
-			DS_CreateBuffers( snd_hwnd );
-	}
-	else
-	{
-		if( pDS && snd_hwnd && snd_isdirect )
-			DS_DestroyBuffers();
-		else if( snd_iswave )
-			waveOutReset( hWaveOut );
-	}
+		DS_CreateBuffers( snd_hwnd );
+	else DS_DestroyBuffers();
 }

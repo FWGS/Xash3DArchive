@@ -385,8 +385,11 @@ void SCR_VidInit( void )
 
 	VGui_Startup ();
 
+	clgame.load_sequence++; // now all hud sprites are invalid
+	
 	// vid_state has changed
 	if( menu.hInstance ) menu.dllFuncs.pfnVidInit();
+	if( clgame.hInstance ) clgame.dllFuncs.pfnVidInit();
 
 	// restart console size
 	Con_VidInit ();
@@ -416,7 +419,7 @@ void SCR_Init( void )
 	Cmd_AddCommand( "skyname", CL_SetSky_f, "set new skybox by basename" );
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
-	if( !UI_LoadProgs( va( "%s/MainUI.dll", GI->dll_path ) ))
+	if( host.state != HOST_RESTART && !UI_LoadProgs( va( "%s/MainUI.dll", GI->dll_path ) ))
 	{
 		Msg( "^1Error: ^7can't initialize MainUI.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
@@ -428,9 +431,12 @@ void SCR_Init( void )
 	SCR_InitCinematic();
 	SCR_VidInit();
 
-	if( host.developer && FS_CheckParm( "-toconsole" ))
-		Cbuf_AddText( "toggleconsole\n" );
-	else UI_SetActiveMenu( true );
+	if( host.state != HOST_RESTART )
+          {
+		if( host.developer && FS_CheckParm( "-toconsole" ))
+			Cbuf_AddText( "toggleconsole\n" );
+		else UI_SetActiveMenu( true );
+	}
 
 	scr_init = true;
 }
@@ -442,9 +448,11 @@ void SCR_Shutdown( void )
 	Cmd_RemoveCommand( "timerefresh" );
 	Cmd_RemoveCommand( "skyname" );
 	Cmd_RemoveCommand( "viewpos" );
-
 	UI_SetActiveMenu( false );
 	SCR_FreeCinematic();
-	UI_UnloadProgs();
+
+	if( host.state != HOST_RESTART )
+		UI_UnloadProgs();
+
 	scr_init = false;
 }

@@ -11,10 +11,10 @@
 
 static int	r_textureMinFilter = GL_LINEAR_MIPMAP_LINEAR;
 static int	r_textureMagFilter = GL_LINEAR;
-
 static gltexture_t	r_textures[MAX_TEXTURES];
 static gltexture_t	*r_texturesHashTable[TEXTURES_HASH_SIZE];
 static int	r_numTextures;
+static byte	*scaledImage = NULL;	// pointer to a scaled image
 static byte	data2D[256*256*4];		// intermediate texbuffer
 static rgbdata_t	r_image;			// generic pixelbuffer used for internal textures
 
@@ -494,7 +494,6 @@ Assume input buffer is RGBA
 */
 byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int outWidth, int outHeight, qboolean isNormalMap )
 {
-	static byte	*scaledImage = NULL;
 	uint		frac, fracStep;
 	uint		*in = (uint *)source;
 	uint		p1[0x1000], p2[0x1000];
@@ -1263,6 +1262,7 @@ void R_InitImages( void )
 	float	f;
 
 	r_numTextures = 0;
+	scaledImage = NULL;
 	Mem_Set( r_textures, 0, sizeof( r_textures ));
 	Mem_Set( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
 

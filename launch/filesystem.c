@@ -1165,7 +1165,9 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		}
 		else if( !com.stricmp( token.string, "gamedll" ))
 		{
-			PS_GetString( script, false, GameInfo->game_dll, sizeof( GameInfo->game_dll ));
+			PS_ReadToken( script, false, &token );
+			if( !com.strstr( token.string, ".." )) // don't use indirect paths (..\valve\dlls\hl.dll)
+				com.strncpy( GameInfo->game_dll, token.string, sizeof( GameInfo->game_dll ));
 		}
 		else if( !com.stricmp( token.string, "type" ))
 		{

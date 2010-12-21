@@ -12,8 +12,6 @@ void R_NewMap( void )
 {
 	int	i;
 
-	tr.framecount = tr.visframecount = 1;
-
 	GL_BuildLightmaps ();
 	R_SetupSky( cl.refdef.movevars->skyName );
 

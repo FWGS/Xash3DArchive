@@ -110,6 +110,10 @@ void CL_AddLinksToPmove( void )
 		if( !check || check == &clgame.entities[0] || check->player )
 			continue;
 
+		// can't collide with zeroed hull
+		if( VectorIsNull( check->curstate.mins ) && VectorIsNull( check->curstate.maxs ))
+			continue;
+
 		if( check->curstate.solid == SOLID_BSP || check->curstate.solid == SOLID_BBOX || check->curstate.solid == SOLID_SLIDEBOX )
 		{
 			if( clgame.pmove->numphysent == MAX_PHYSENTS )

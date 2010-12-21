@@ -10,7 +10,7 @@
 #include "input.h"
 
 #define MAX_PFDS		256
-#define VID_DEFAULTMODE	"3"
+#define VID_DEFAULTMODE	"1"
 #define num_vidmodes	((int)(sizeof(vidmode) / sizeof(vidmode[0])) - 1)
 #define WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
 #define WINDOW_EX_STYLE	(0)
@@ -91,26 +91,24 @@ typedef struct vidmode_s
 
 vidmode_t vidmode[] =
 {
-{ "Mode  0: 4x3",	400,	300,	false	},
-{ "Mode  1: 4x3",	512,	384,	false	},
-{ "Mode  2: 4x3",	640,	480,	false	},
-{ "Mode  3: 4x3",	800,	600,	false	},
-{ "Mode  4: 4x3",	960,	720,	false	},
-{ "Mode  5: 4x3",	1024,	768,	false	},
-{ "Mode  6: 4x3",	1152,	864,	false	},
-{ "Mode  7: 4x3",	1280,	800,	false	},
-{ "Mode  8: 4x3",	1280,	960,	false	},
-{ "Mode  9: 4x3",	1280,	1024,	false	},
-{ "Mode 10: 4x3",	1600,	1200,	false	},
-{ "Mode 11: 4x3",	2048,	1536,	false	},
-{ "Mode 12: 16x9",	856,	480,	true	},
-{ "Mode 13: 16x9",	1024,	576,	true	},
-{ "Mode 14: 16x9",	1280,	720,	true	},
-{ "Mode 15: 16x9",	1360,	768,	true	},
-{ "Mode 16: 16x9",	1440,	900,	true	},
-{ "Mode 17: 16x9",	1680,	1050,	true	},
-{ "Mode 18: 16x9",	1920,	1200,	true	},
-{ "Mode 19: 16x9",	2560,	1600,	true	},
+{ "Mode  0: 4x3",	640,	480,	false	},
+{ "Mode  1: 4x3",	800,	600,	false	},
+{ "Mode  2: 4x3",	960,	720,	false	},
+{ "Mode  3: 4x3",	1024,	768,	false	},
+{ "Mode  4: 4x3",	1152,	864,	false	},
+{ "Mode  5: 4x3",	1280,	800,	false	},
+{ "Mode  6: 4x3",	1280,	960,	false	},
+{ "Mode  7: 4x3",	1280,	1024,	false	},
+{ "Mode  8: 4x3",	1600,	1200,	false	},
+{ "Mode  9: 4x3",	2048,	1536,	false	},
+{ "Mode 10: 16x9",	856,	480,	true	},
+{ "Mode 11: 16x9",	1024,	576,	true	},
+{ "Mode 12: 16x9",	1280,	720,	true	},
+{ "Mode 13: 16x9",	1360,	768,	true	},
+{ "Mode 14: 16x9",	1440,	900,	true	},
+{ "Mode 15: 16x9",	1680,	1050,	true	},
+{ "Mode 16: 16x9",	1920,	1200,	true	},
+{ "Mode 17: 16x9",	2560,	1600,	true	},
 { NULL,		0,	0,	0	},
 };
 
@@ -619,14 +617,47 @@ static void GL_SetDefaultState( void )
 
 /*
 =================
+GL_CreateContext
+=================
+*/
+qboolean GL_CreateContext( void )
+{
+	if(!( glw_state.hGLRC = pwglCreateContext( glw_state.hDC )))
+		return GL_DeleteContext();
+
+	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
+		return GL_DeleteContext();
+
+	return true;
+}
+
+/*
+=================
+GL_UpdateContext
+=================
+*/
+qboolean GL_UpdateContext( void )
+{
+	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
+		return GL_DeleteContext();
+
+	return true;
+}
+
+/*
+=================
 GL_DeleteContext
 =================
 */
 qboolean GL_DeleteContext( void )
 {
+	if( pwglMakeCurrent )
+		pwglMakeCurrent( NULL, NULL );
+
 	if( glw_state.hGLRC )
 	{
-		pwglDeleteContext( glw_state.hGLRC );
+		if( pwglDeleteContext )
+			pwglDeleteContext( glw_state.hGLRC );
 		glw_state.hGLRC = NULL;
 	}
 
@@ -641,16 +672,16 @@ qboolean GL_DeleteContext( void )
 
 /*
 =================
-GL_ChoosePFD
+VID_ChoosePFD
 =================
 */
-static int GL_ChoosePFD( int colorBits, int alphaBits, int depthBits, int stencilBits )
+static int VID_ChoosePFD( int colorBits, int alphaBits, int depthBits, int stencilBits )
 {
 	PIXELFORMATDESCRIPTOR	PFDs[MAX_PFDS], *current, *selected;
 	uint			flags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
 	int			i, numPFDs, pixelFormat = 0;
 
-	MsgDev( D_NOTE, "GL_ChoosePFD( color %i, alpha %i, depth %i, stencil %i )\n", colorBits, alphaBits, depthBits, stencilBits );
+	MsgDev( D_NOTE, "VID_ChoosePFD( color %i, alpha %i, depth %i, stencil %i )\n", colorBits, alphaBits, depthBits, stencilBits );
 
 	// Count PFDs
 	if( glw_state.minidriver )
@@ -664,7 +695,7 @@ static int GL_ChoosePFD( int colorBits, int alphaBits, int depthBits, int stenci
 	}
 	else if( numPFDs < 1 )
 	{
-		MsgDev( D_ERROR, "GL_ChoosePFD failed\n" );
+		MsgDev( D_ERROR, "VID_ChoosePFD failed\n" );
 		return 0;
 	}
 
@@ -754,7 +785,7 @@ static int GL_ChoosePFD( int colorBits, int alphaBits, int depthBits, int stenci
 
 	if( !pixelFormat )
 	{
-		MsgDev( D_ERROR, "GL_ChoosePFD: no hardware acceleration found\n" );
+		MsgDev( D_ERROR, "VID_ChoosePFD: no hardware acceleration found\n" );
 		return 0;
 	}
 
@@ -762,22 +793,107 @@ static int GL_ChoosePFD( int colorBits, int alphaBits, int depthBits, int stenci
 	{
 		if( selected->dwFlags & PFD_GENERIC_ACCELERATED )
 		{
-			MsgDev( D_NOTE, "GL_ChoosePFD: usign Generic MCD acceleration\n" );
+			MsgDev( D_NOTE, "VID_ChoosePFD: usign Generic MCD acceleration\n" );
 			glw_state.software = false;
 		}
 		else
 		{
-			MsgDev( D_NOTE, "GL_ChoosePFD: using software emulation\n" );
+			MsgDev( D_NOTE, "VID_ChoosePFD: using software emulation\n" );
 			glw_state.software = true;
 		}
 	}
 	else
 	{
-		MsgDev( D_NOTE, "GL_ChoosePFD: using hardware acceleration\n");
+		MsgDev( D_NOTE, "VID_ChoosePFD: using hardware acceleration\n");
 		glw_state.software = false;
 	}
 
 	return pixelFormat;
+}
+
+void VID_StartupGamma( void )
+{
+	size_t	gamma_size;
+	byte	*savedGamma;
+
+	// init gamma ramp
+	Mem_Set( glState.stateRamp, 0, sizeof( glState.stateRamp ));
+
+	if( pwglGetDeviceGammaRamp3DFX )
+		glConfig.deviceSupportsGamma = pwglGetDeviceGammaRamp3DFX( glw_state.hDC, glState.stateRamp );
+	else glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
+
+	// share this extension so engine can grab them
+	GL_SetExtension( GL_HARDWARE_GAMMA_CONTROL, glConfig.deviceSupportsGamma );
+
+	savedGamma = FS_LoadFile( "gamma.dat", &gamma_size );
+
+	if( !savedGamma || gamma_size != sizeof( glState.stateRamp ))
+	{
+		// saved gamma not found or corrupted file
+		FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof( glState.stateRamp ));
+		MsgDev( D_NOTE, "VID_StartupGamma: gamma.dat initialized\n" );
+		if( savedGamma ) Mem_Free( savedGamma );
+	}
+	else
+	{
+		GL_BuildGammaTable();
+
+		// validate base gamma
+		if( !memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
+		{
+			// all ok, previous gamma is valid
+			MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - ok\n" );
+		}
+		else if( !memcmp( glState.gammaRamp, glState.stateRamp, sizeof( glState.stateRamp )))
+		{
+			// screen gamma is equal to render gamma (probably previous instance crashed)
+			// run additional check to make sure for it
+			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
+			{
+				// yes, current gamma it's totally wrong, restore it from gamma.dat
+				MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
+				Mem_Copy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));
+			}
+			else
+			{
+				// oops, savedGamma == glState.stateRamp == glState.gammaRamp
+				// probably r_gamma set as default
+				MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - disabled\n" ); 
+			}
+		}
+		else if( !memcmp( glState.gammaRamp, savedGamma, sizeof( glState.stateRamp )))
+		{
+			// saved gamma is equal render gamma, probably gamma.dat wroted after crash
+			// run additional check to make sure it
+			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
+			{
+				// yes, saved gamma it's totally wrong, get origianl gamma from screen
+				MsgDev( D_NOTE, "VID_StartupGamma: merge gamma.dat after crash\n" );
+				FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof( glState.stateRamp ));
+			}
+			else
+			{
+				// oops, savedGamma == glState.stateRamp == glState.gammaRamp
+				// probably r_gamma set as default
+				MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - disabled\n" ); 
+			}
+		}
+		else
+		{
+			// current gamma unset by other application, so we can restore it here
+			MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
+			Mem_Copy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));			
+		}
+		Mem_Free( savedGamma );
+	}
+	vid_gamma->modified = true;
+}
+
+void VID_RestoreGamma( void )
+{
+	if( !glw_state.hDC ) return;
+	SetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
 }
 
 /*
@@ -791,13 +907,6 @@ qboolean GL_SetPixelformat( void )
 	int			colorBits, alphaBits;
 	int			depthBits, stencilBits;
 	int			pixelFormat;
-	size_t			gamma_size;
-	byte			*savedGamma;
-
-	Sys_LoadLibrary( NULL, &opengl_dll );	// load opengl32.dll
-	if( !opengl_dll.link ) return false;
-
-	glw_state.minidriver = false;	// FIXME: allow 3dfx drivers too
 
 	if( glw_state.minidriver )
 	{
@@ -817,20 +926,18 @@ qboolean GL_SetPixelformat( void )
 	stencilBits = (gl_stencilbits->integer) ? gl_stencilbits->integer : 0;
 
 	// choose a pixel format
-	pixelFormat = GL_ChoosePFD( colorBits, alphaBits, depthBits, stencilBits );
+	pixelFormat = VID_ChoosePFD( colorBits, alphaBits, depthBits, stencilBits );
 
 	if( !pixelFormat )
 	{
 		// try again with default color/depth/stencil
 		if( colorBits > 16 || depthBits > 16 || alphaBits > 0 || stencilBits > 0 )
-			pixelFormat = GL_ChoosePFD( 16, 0, 16, 0 );
-		else pixelFormat = GL_ChoosePFD( 32, 0, 24, 0 );
+			pixelFormat = VID_ChoosePFD( 16, 0, 16, 0 );
+		else pixelFormat = VID_ChoosePFD( 32, 0, 24, 0 );
 
 		if( !pixelFormat )
 		{
 			MsgDev( D_ERROR, "GL_SetPixelformat: failed to find an appropriate PIXELFORMAT\n" );
-			ReleaseDC( host.hWnd, glw_state.hDC );
-			glw_state.hDC = NULL;
 			return false;
 		}
 	}
@@ -843,7 +950,7 @@ qboolean GL_SetPixelformat( void )
 		if( !pwglSetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
 		{
 			MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
-			return GL_DeleteContext();
+			return false;
 		}
 	}
 	else
@@ -853,7 +960,7 @@ qboolean GL_SetPixelformat( void )
 		if( !SetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
 		{
 			MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
-			return GL_DeleteContext();
+			return false;
 		}
 	}
 
@@ -862,11 +969,6 @@ qboolean GL_SetPixelformat( void )
 	glConfig.depth_bits = PFD.cDepthBits;
 	glConfig.stencil_bits = PFD.cStencilBits;
 
-	if(!( glw_state.hGLRC = pwglCreateContext( glw_state.hDC )))
-		return GL_DeleteContext();
-	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
-		return GL_DeleteContext();
-
 	if( PFD.cStencilBits != 0 )
 		glState.stencilEnabled = true;
 	else glState.stencilEnabled = false;
@@ -874,125 +976,7 @@ qboolean GL_SetPixelformat( void )
 	// print out PFD specifics 
 	MsgDev( D_NOTE, "GL PFD: color( %d-bits ) alpha( %d-bits ) Z( %d-bit )\n", PFD.cColorBits, PFD.cAlphaBits, PFD.cDepthBits );
 
-	// init gamma ramp
-	Mem_Set( glState.stateRamp, 0, sizeof( glState.stateRamp ));
-
-	if( pwglGetDeviceGammaRamp3DFX )
-		glConfig.deviceSupportsGamma = pwglGetDeviceGammaRamp3DFX( glw_state.hDC, glState.stateRamp );
-	else glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
-
-	// share this extension so engine can grab them
-	GL_SetExtension( GL_HARDWARE_GAMMA_CONTROL, glConfig.deviceSupportsGamma );
-
-	savedGamma = FS_LoadFile( "gamma.dat", &gamma_size );
-	if( !savedGamma || gamma_size != sizeof( glState.stateRamp ))
-	{
-		// saved gamma not found or corrupted file
-		FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof(glState.stateRamp));
-		MsgDev( D_NOTE, "gamma.dat initialized\n" );
-		if( savedGamma ) Mem_Free( savedGamma );
-	}
-	else
-	{
-		GL_BuildGammaTable();
-
-		// validate base gamma
-		if( !memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
-		{
-			// all ok, previous gamma is valid
-			MsgDev( D_NOTE, "GL_SetPixelformat: validate screen gamma - ok\n" );
-		}
-		else if( !memcmp( glState.gammaRamp, glState.stateRamp, sizeof( glState.stateRamp )))
-		{
-			// screen gamma is equal to render gamma (probably previous instance crashed)
-			// run additional check to make sure it
-			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
-			{
-				// yes, current gamma it's totally wrong, restore it from gamma.dat
-				MsgDev( D_NOTE, "GL_SetPixelformat: restore original gamma after crash\n" );
-				Mem_Copy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));
-			}
-			else
-			{
-				// oops, savedGamma == glState.stateRamp == glState.gammaRamp
-				// probably r_gamma set as default
-				MsgDev( D_NOTE, "GL_SetPixelformat: validate screen gamma - disabled\n" ); 
-			}
-		}
-		else if( !memcmp( glState.gammaRamp, savedGamma, sizeof( glState.stateRamp )))
-		{
-			// saved gamma is equal render gamma, probably gamma.dat writed after crash
-			// run additional check to make sure it
-			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
-			{
-				// yes, saved gamma it's totally wrong, get origianl gamma from screen
-				MsgDev( D_NOTE, "GL_SetPixelformat: merge gamma.dat after crash\n" );
-				FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof( glState.stateRamp ));
-			}
-			else
-			{
-				// oops, savedGamma == glState.stateRamp == glState.gammaRamp
-				// probably r_gamma set as default
-				MsgDev( D_NOTE, "GL_SetPixelformat: validate screen gamma - disabled\n" ); 
-			}
-		}
-		else
-		{
-			// current gamma unset by other application, we can restore it here
-			MsgDev( D_NOTE, "GL_SetPixelformat: restore original gamma after crash\n" );
-			Mem_Copy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));			
-		}
-		Mem_Free( savedGamma );
-	}
-	vid_gamma->modified = true;
-
 	return true;
-}
-
-void VID_RestoreGamma( void )
-{
-	if( !glw_state.hDC ) return;
-	SetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
-}
-
-void R_Free_OpenGL( void )
-{
-	VID_RestoreGamma ();
-
-	if( pwglMakeCurrent )
-		pwglMakeCurrent( NULL, NULL );
-
-	if( glw_state.hGLRC )
-	{
-		if( pwglDeleteContext ) pwglDeleteContext( glw_state.hGLRC );
-		glw_state.hGLRC = NULL;
-	}
-
-	if( glw_state.hDC )
-	{
-		ReleaseDC( host.hWnd, glw_state.hDC );
-		glw_state.hDC   = NULL;
-	}
-
-	if( host.hWnd )
-	{
-		DestroyWindow ( host.hWnd );
-		host.hWnd = NULL;
-	}
-
-	UnregisterClass( "Xash Window", host.hInst );
-
-	if( glState.fullScreen )
-	{
-		ChangeDisplaySettings( 0, 0 );
-		glState.fullScreen = false;
-	}
-
-	Sys_FreeLibrary( &opengl_dll );
-
-	// now all extensions are disabled
-	Mem_Set( glConfig.extension, 0, sizeof( glConfig.extension[0] ) * GL_EXTCOUNT );
-	glw_state.initialized = false;
 }
 
 void R_SaveVideoMode( int vid_mode )
@@ -1005,7 +989,7 @@ void R_SaveVideoMode( int vid_mode )
 
 	Cvar_FullSet( "width", va( "%i", vidmode[mode].width ), CVAR_READ_ONLY );
 	Cvar_FullSet( "height", va( "%i", vidmode[mode].height ), CVAR_READ_ONLY );
-	Cvar_SetFloat( "r_mode", mode ); // merge if it out of bounds
+	Cvar_SetFloat( "vid_mode", mode ); // merge if it out of bounds
 
 	MsgDev( D_NOTE, "Set: %s [%dx%d]\n", vidmode[mode].desc, vidmode[mode].width, vidmode[mode].height );
 }
@@ -1040,6 +1024,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 		com.snprintf( localPath, sizeof( localPath ), "%s/game.ico", GI->gamedir );
 		wc.hIcon = LoadImage( NULL, localPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE );
+
 		if( !wc.hIcon )
 		{
 			MsgDev( D_INFO, "Extract game.ico from pak if you want to see it.\n" );
@@ -1083,6 +1068,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 		if( Cvar_VariableInteger( "vid_mode" ) != glConfig.prev_mode )
 		{
+			// adjust window in the screen size
 			if(( x + w > glw_state.desktopWidth ) || ( y + h > glw_state.desktopHeight ))
 			{
 				x = ( glw_state.desktopWidth - w ) / 2;
@@ -1116,10 +1102,49 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 		return false;
 	}
 
+	if( !glw_state.initialized )
+	{
+		if( !GL_CreateContext( ))
+			return false;
+
+		VID_StartupGamma();
+	}
+	else
+	{
+		if( !GL_UpdateContext( ))
+			return false;		
+	}
+
 	SetForegroundWindow( host.hWnd );
 	SetFocus( host.hWnd );
 
 	return true;
+}
+
+void VID_DestroyWindow( void )
+{
+	if( pwglMakeCurrent )
+		pwglMakeCurrent( NULL, NULL );
+
+	if( glw_state.hDC )
+	{
+		ReleaseDC( host.hWnd, glw_state.hDC );
+		glw_state.hDC = NULL;
+	}
+
+	if( host.hWnd )
+	{
+		DestroyWindow ( host.hWnd );
+		host.hWnd = NULL;
+	}
+
+	UnregisterClass( "Xash Window", host.hInst );
+
+	if( glState.fullScreen )
+	{
+		ChangeDisplaySettings( 0, 0 );
+		glState.fullScreen = false;
+	}
 }
 
 rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
@@ -1140,7 +1165,7 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 	ReleaseDC( GetDesktopWindow(), hDC );
 
 	// destroy the existing window
-	if( host.hWnd ) R_Free_OpenGL();
+	if( host.hWnd ) VID_DestroyWindow();
 
 	// do a CDS if needed
 	if( fullscreen )
@@ -1208,10 +1233,12 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 
 /*
 ==================
-R_Init_OpenGL
+VID_SetMode
+
+Set the described video mode
 ==================
 */
-qboolean R_Init_OpenGL( void )
+qboolean VID_SetMode( void )
 {
 	rserr_t	err;
 	qboolean	fullscreen;
@@ -1230,25 +1257,83 @@ qboolean R_Init_OpenGL( void )
 		{
 			Cvar_SetFloat( "fullscreen", 0 );
 			vid_fullscreen->modified = false;
-			MsgDev( D_ERROR, "R_SetMode: fullscreen unavailable in this mode\n" );
+			MsgDev( D_ERROR, "VID_SetMode: fullscreen unavailable in this mode\n" );
 			if(( err = R_ChangeDisplaySettings( vid_mode->integer, false )) == rserr_ok )
 				return true;
 		}
 		else if( err == rserr_invalid_mode )
 		{
 			Cvar_SetFloat( "vid_mode", glConfig.prev_mode );
+			MsgDev( D_ERROR, "VID_SetMode: invalid mode\n" );
 			vid_mode->modified = false;
-			MsgDev( D_ERROR, "R_SetMode: invalid mode\n" );
 		}
 
 		// try setting it back to something safe
 		if(( err = R_ChangeDisplaySettings( glConfig.prev_mode, false )) != rserr_ok )
 		{
-			MsgDev( D_ERROR, "R_SetMode: could not revert to safe mode\n" );
+			MsgDev( D_ERROR, "VID_SetMode: could not revert to safe mode\n" );
 			return false;
 		}
 	}
 	return true;
+}
+
+/*
+==================
+VID_CheckChanges
+
+check vid modes and fullscreen
+==================
+*/
+void VID_CheckChanges( void )
+{
+	if( vid_fullscreen->modified || vid_mode->modified )
+	{
+		if( !VID_SetMode())
+		{
+			// can't initialize video subsystem
+			Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
+		}
+		else
+		{
+			vid_fullscreen->modified = false;
+			vid_mode->modified = false;
+			SCR_VidInit(); // tell the client.dll what vid_mode has changed
+		}
+	}
+}
+
+/*
+==================
+R_Init_OpenGL
+==================
+*/
+qboolean R_Init_OpenGL( void )
+{
+	Sys_LoadLibrary( NULL, &opengl_dll );	// load opengl32.dll
+	if( !opengl_dll.link ) return false;
+
+	glw_state.minidriver = false;	// FIXME: allow 3dfx drivers too
+
+	return VID_SetMode();
+}
+
+/*
+==================
+R_Free_OpenGL
+==================
+*/
+void R_Free_OpenGL( void )
+{
+	VID_RestoreGamma ();
+
+	VID_DestroyWindow ();
+
+	Sys_FreeLibrary( &opengl_dll );
+
+	// now all extensions are disabled
+	Mem_Set( glConfig.extension, 0, sizeof( glConfig.extension[0] ) * GL_EXTCOUNT );
+	glw_state.initialized = false;
 }
 
 /*
@@ -1409,8 +1494,8 @@ void GL_InitCommands( void )
 	gl_swapInterval->modified = true;
 
 	vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
-	vid_mode = Cvar_Get( "vid_mode", VID_DEFAULTMODE, CVAR_RENDERINFO, "display resolution mode" );
-	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "set in 1 to enable fullscreen mode" );
+	vid_mode = Cvar_Get( "vid_mode", VID_DEFAULTMODE, CVAR_ARCHIVE, "display resolution mode" );
+	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "fullscreen refresh rate" );
 
 	Cmd_AddCommand( "r_info", R_RenderInfo_f, "display renderer info" );
@@ -1578,6 +1663,8 @@ void GL_InitExtensions( void )
 
 	Image_Init( NULL, flags );
 	glw_state.initialized = true;
+
+	tr.framecount = tr.visframecount = 1;
 }
 
 /*
@@ -1587,7 +1674,11 @@ R_Init
 */
 qboolean R_Init( void )
 {
-	if( glw_state.initialized ) return true;
+	if( glw_state.initialized )
+		return true;
+
+	// give initial openGL configuration
+	Cbuf_AddText( "exec opengl.cfg\n" );
 
 	GL_InitCommands();
 	GL_SetDefaultState();
@@ -1597,6 +1688,9 @@ qboolean R_Init( void )
 	{
 		GL_RemoveCommands();
 		R_Free_OpenGL();
+
+		// can't initialize video subsystem
+		Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
 		return false;
 	}
 
@@ -1610,6 +1704,9 @@ qboolean R_Init( void )
 	R_StudioInit();
 	R_ClearScene();
 
+	// initialize screen
+	SCR_Init();
+
 	GL_CheckForErrors();
 
 	return true;
@@ -1622,8 +1719,20 @@ R_Shutdown
 */
 void R_Shutdown( void )
 {
+	int	i;
+
 	if( !glw_state.initialized )
 		return;
+
+	// release SpriteTextures
+	for( i = 1; i < MAX_IMAGES; i++ )
+	{
+		if( !clgame.sprites[i].name[0] ) continue;
+		Mod_UnloadSpriteModel( &clgame.sprites[i] );
+	}
+
+	Mem_Set( clgame.sprites, 0, sizeof( clgame.sprites ));
+	Mod_ClearAll();
 
 	GL_RemoveCommands();
 	R_ShutdownImages();
@@ -1633,7 +1742,6 @@ void R_Shutdown( void )
 	// shut down OS specific OpenGL stuff like contexts, etc.
 	R_Free_OpenGL();
 }
-
 
 /*
 =================

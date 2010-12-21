@@ -360,7 +360,9 @@ void R_DrawSkyChain( msurface_t *s );
 void GL_CheckForErrors_( const char *filename, const int fileline );
 void GL_UpdateSwapInterval( void );
 void GL_UpdateGammaRamp( void );
+qboolean GL_DeleteContext( void );
 qboolean GL_Support( int r_ext );
+void VID_CheckChanges( void );
 qboolean R_Init( void );
 void R_Shutdown( void );
 

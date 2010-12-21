@@ -431,6 +431,7 @@ main window procedure
 long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 {
 	int	i, temp = 0;
+	qboolean	fActivate;
 
 	if( uMsg == in_mouse_wheel )
 		uMsg = WM_MOUSEWHEEL;
@@ -465,14 +466,19 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		Cbuf_ExecuteText( EXEC_APPEND, "quit" );
 		break;
 	case WM_ACTIVATE:
-		if( HIWORD( wParam ))
-			host.state = HOST_SLEEP;
-		else if( LOWORD( wParam ) == WA_INACTIVE )
-			host.state = HOST_NOFOCUS;
-		else host.state = HOST_FRAME;
+		if( host.state != HOST_RESTART )
+		{
+			if( HIWORD( wParam ))
+				host.state = HOST_SLEEP;
+			else if( LOWORD( wParam ) == WA_INACTIVE )
+				host.state = HOST_NOFOCUS;
+			else host.state = HOST_FRAME;
+			fActivate = (host.state == HOST_FRAME) ? true : false;
+		}
+		else fActivate = true; // video sucessfully restarted
 
 		wnd_caption = GetSystemMetrics( SM_CYCAPTION ) + WND_BORDER;
-		S_Activate(( host.state == HOST_FRAME ) ? true : false, host.hWnd );
+		S_Activate( fActivate, host.hWnd );
 		Key_ClearStates();	// FIXME!!!
 
 		if( host.state == HOST_FRAME )
@@ -480,7 +486,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			SetForegroundWindow( hWnd );
 			ShowWindow( hWnd, SW_RESTORE );
 		}
-		else if( scr_fullscreen->integer )
+		else if( scr_fullscreen->integer && host.state != HOST_RESTART )
 		{
 			ShowWindow( hWnd, SW_MINIMIZE );
 		}
