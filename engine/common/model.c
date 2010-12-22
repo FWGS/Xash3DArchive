@@ -6,7 +6,6 @@
 #include "cm_local.h"
 #include "sprite.h"
 #include "mathlib.h"
-#include "matrix_lib.h"
 #include "studio.h"
 #include "wadfile.h"
 #include "world.h"

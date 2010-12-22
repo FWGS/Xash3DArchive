@@ -6,7 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
-#include "matrix_lib.h"
+#include "mathlib.h"
 
 char		r_speeds_msg[MAX_SYSPATH];
 ref_speeds_t	r_stats;	// r_speeds counters

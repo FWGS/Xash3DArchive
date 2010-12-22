@@ -7,7 +7,6 @@
 #include "server.h"
 #include "const.h"
 #include "pm_local.h"
-#include "matrix_lib.h"
 
 // more precision but doesn't matched with HL gameplay
 // g-cont. this is pretty generic solution for maps with different hull sizes
@@ -899,12 +898,8 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 	if( ent->v.solid == SOLID_BSP && !VectorIsNull( ent->v.angles ))
 	{
 		matrix4x4		imatrix;
-		const float	*org, *ang;
-
-		org = offset;
-		ang = ent->v.angles;
 	
-		Matrix4x4_CreateFromEntity( matrix, org[0], org[1], org[2], ang[0], ang[1], ang[2], 1.0f );
+		Matrix4x4_CreateFromEntity( matrix, ent->v.angles, offset, 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
@@ -1055,10 +1050,8 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 	if( !VectorIsNull( ent->v.angles ))
 	{
 		matrix4x4	imatrix;
-		float	*org = ent->v.origin;
-		float	*ang = ent->v.angles;
-	
-		Matrix4x4_CreateFromEntity( matrix, org[0], org[1], org[2], ang[PITCH], ang[YAW], ang[ROLL], 1.0f );
+
+		Matrix4x4_CreateFromEntity( matrix, ent->v.angles, ent->v.origin, 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );

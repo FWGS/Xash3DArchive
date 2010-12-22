@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "matrix_lib.h"
 #include "const.h"
 #include "pm_local.h"
 #include "net_encode.h"

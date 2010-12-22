@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "client.h"
-#include "matrix_lib.h"
+#include "mathlib.h"
 #include "const.h"
 #include "r_studioint.h"
 #include "studio.h"
@@ -286,7 +286,7 @@ pfnGetEngineTimes
 static void pfnGetEngineTimes( int *framecount, double *current, double *old )
 {
 	if( framecount ) *framecount = tr.framecount;
-	if( current ) *current = cl.time;
+	if( current ) *current = RI.refdef.time;
 	if( old ) *old = cl.oldtime;
 }
 
@@ -459,10 +459,10 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 		// don't do it if the goalstarttime hasn't updated in a while.
 		// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
 		// was increased to 1.0 s., which is 2x the max lag we are accounting for.
-		if( m_fDoInterp && ( cl.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
+		if( m_fDoInterp && ( RI.refdef.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
 		{
-			f = ( cl.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
-			// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, cl.time );
+			f = ( RI.refdef.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
+			// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, RI.refdef.time );
 		}
 
 		if( m_fDoInterp )
@@ -553,8 +553,8 @@ float R_StudioEstimateFrame( cl_entity_t *e, mstudioseqdesc_t *pseqdesc )
 	
 	if( m_fDoInterp )
 	{
-		if( cl.time < e->curstate.animtime ) dfdt = 0;
-		else dfdt = (cl.time - e->curstate.animtime) * e->curstate.framerate * pseqdesc->fps;
+		if( RI.refdef.time < e->curstate.animtime ) dfdt = 0;
+		else dfdt = (RI.refdef.time - e->curstate.animtime) * e->curstate.framerate * pseqdesc->fps;
 	}
 	else dfdt = 0;
 
@@ -590,7 +590,7 @@ float R_StudioEstimateInterpolant( cl_entity_t *e )
 
 	if( m_fDoInterp && ( e->curstate.animtime >= e->latched.prevanimtime + 0.01f ))
 	{
-		dadt = ( cl.time - e->curstate.animtime ) / 0.1f;
+		dadt = ( RI.refdef.time - e->curstate.animtime ) / 0.1f;
 		if( dadt > 2.0f ) dadt = 2.0f;
 	}
 	return dadt;
@@ -678,7 +678,7 @@ void R_StudioFxTransform( cl_entity_t *ent, matrix3x4 transform )
 		{
 			float	scale;
 
-			scale = 1.0f + ( cl.time - ent->curstate.animtime ) * 10.0f;
+			scale = 1.0f + ( RI.refdef.time - ent->curstate.animtime ) * 10.0f;
 			if( scale > 2 ) scale = 2; // don't blow up more than 200%
 
 			transform[0][1] *= scale;
@@ -1106,7 +1106,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 		}
 	}
 
-	if( m_fDoInterp && e->latched.sequencetime && ( e->latched.sequencetime + 0.2f > cl.time) && ( e->latched.prevsequence < m_pStudioHeader->numseq ))
+	if( m_fDoInterp && e->latched.sequencetime && ( e->latched.sequencetime + 0.2f > RI.refdef.time) && ( e->latched.prevsequence < m_pStudioHeader->numseq ))
 	{
 		// blend from last sequence
 		static vec3_t	pos1b[MAXSTUDIOBONES];
@@ -1143,7 +1143,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 			}
 		}
 
-		s = 1.0f - ( cl.time - e->latched.sequencetime ) / 0.2f;
+		s = 1.0f - ( RI.refdef.time - e->latched.sequencetime ) / 0.2f;
 		R_StudioSlerpBones( q, pos, q1b, pos1b, s );
 	}
 	else
@@ -1243,7 +1243,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 
 		if( g_nFaceFlags & STUDIO_NF_CHROME )
 		{
-			float	angle = anglemod( cl.time * 40 );
+			float	angle = anglemod( RI.refdef.time * 40 );
 			RotatePointAroundVector( chromeupvec, tmp, RI.vright, angle - 180 );
 			RotatePointAroundVector( chromerightvec, chromeupvec, RI.vright, 180 + angle );
 		}
@@ -1370,7 +1370,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 
 	for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 	{
-		if( dl->die < cl.time || !dl->radius )
+		if( dl->die < RI.refdef.time || !dl->radius )
 			continue;
 
 		VectorSubtract( dl->origin, ent->origin, direction );
@@ -1436,7 +1436,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 
 	for( lnum = 0, el = cl_elights; lnum < MAX_ELIGHTS; lnum++, el++ )
 	{
-		if( el->die < cl.time || !el->radius )
+		if( el->die < RI.refdef.time || !el->radius )
 			continue;
 
 		VectorSubtract( el->origin, ent->origin, direction );
@@ -1527,6 +1527,12 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 	float		ambient;
 	vec3_t		illum;
 	studiolight_t	*plight;
+
+	if( !RI.drawWorld || RI.currententity->curstate.effects & EF_FULLBRIGHT )
+	{
+		VectorSet( lv, 1.0f, 1.0f, 1.0f );
+		return;
+	}
 
 	plight = &g_studiolight; 
 
@@ -1910,7 +1916,7 @@ static void R_StudioClientEvents( void )
 	if( flEventFrame == e->syncbase )
 		return;
 
-	//Msg( "(seq %d cycle %.3f ) evframe %.3f prevevframe %.3f (time %.3f)\n", e->curstate.sequence, e->latched.prevframe, flEventFrame, e->syncbase, cl.time );
+	//Msg( "(seq %d cycle %.3f ) evframe %.3f prevevframe %.3f (time %.3f)\n", e->curstate.sequence, e->latched.prevframe, flEventFrame, e->syncbase, RI.refdef.time );
 
 	// check for looping
 	if( flEventFrame <= e->syncbase )
@@ -1938,7 +1944,7 @@ static void R_StudioClientEvents( void )
 		{
 			if(( pevent[i].frame > e->syncbase || pevent[i].frame <= flEventFrame ))
 			{
-				//Msg( "FE %i Looped frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->syncbase, flEventFrame, cl.time );
+				//Msg( "FE %i Looped frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->syncbase, flEventFrame, RI.refdef.time );
 				clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
 			}
 		}
@@ -1946,7 +1952,7 @@ static void R_StudioClientEvents( void )
 		{
 			if(( pevent[i].frame > e->syncbase && pevent[i].frame <= flEventFrame ))
 			{
-				//Msg( "FE %i Normal frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->syncbase, flEventFrame, cl.time );
+				//Msg( "FE %i Normal frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->syncbase, flEventFrame, RI.refdef.time );
 				clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
 			}
 		}
@@ -2180,7 +2186,7 @@ void R_StudioEstimateGait( entity_state_t *pplayer )
 	vec3_t	est_velocity;
 	float	dt;
 
-	dt = bound( 0.0f, (cl.time - cl.oldtime), 1.0f );
+	dt = bound( 0.0f, (RI.refdef.time - cl.oldtime), 1.0f );
 
 	if( dt == 0 || m_pPlayerInfo->renderframe == tr.framecount )
 	{
@@ -2249,7 +2255,7 @@ void R_StudioProcessGait( entity_state_t *pplayer )
 	RI.currententity->latched.prevblending[0] = RI.currententity->curstate.blending[0];
 	RI.currententity->latched.prevseqblending[0] = RI.currententity->curstate.blending[0];
 
-	dt = bound( 0.0f, (cl.time - cl.oldtime), 1.0f );
+	dt = bound( 0.0f, (RI.refdef.time - cl.oldtime), 1.0f );
 	R_StudioEstimateGait( pplayer );
 
 	// calc side to side turning
@@ -2584,7 +2590,7 @@ void R_RunViewmodelEvents( void )
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
 
-	R_StudioDrawModel( STUDIO_EVENTS );
+	pStudioDraw->StudioDrawModel( STUDIO_EVENTS );
 
 	RI.currententity = NULL;
 	RI.currentmodel = NULL;

@@ -592,6 +592,7 @@ static void pfnSetPlayerModel( cl_entity_t *ent, const char *path )
 {
 	Mod_RegisterModel( path, MAX_MODELS - 1 );
 	ent->curstate.modelindex = MAX_MODELS - 1;
+	ent->model = CM_ClipHandleToModel( MAX_MODELS - 1 );
 }
 
 /*

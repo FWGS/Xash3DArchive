@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "server.h"
-#include "matrix_lib.h"
 #include "const.h"
 
 /*
@@ -752,7 +751,6 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	vec3_t		lmove, amove;
 	sv_pushed_t	*p, *pushed_p;
 	vec3_t		org, org2, temp;
-	float		*p_org, *p_ang;
 	edict_t		*check;
 
 	if( VectorIsNull( pusher->v.avelocity ))
@@ -764,11 +762,8 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	for( i = 0; i < 3; i++ )
 		amove[i] = pusher->v.avelocity[i] * movetime;
 
-	p_org = pusher->v.origin;
-	p_ang = pusher->v.angles;
-
 	// create pusher initial position
-	Matrix4x4_CreateFromEntity( temp_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+	Matrix4x4_CreateFromEntity( temp_l, pusher->v.angles, pusher->v.origin, 1.0f );
 	Matrix4x4_Invert_Simple( start_l, temp_l );
 
 	pushed_p = svgame.pushed;
@@ -786,7 +781,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	oldsolid = pusher->v.solid;
 
 	// create pusher final position
-	Matrix4x4_CreateFromEntity( end_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+	Matrix4x4_CreateFromEntity( end_l, pusher->v.angles, pusher->v.origin, 1.0f );
 
 	// see if any solid entities are inside the final position
 	for( e = 1; e < svgame.numEntities; e++ )
@@ -977,7 +972,6 @@ a glue two entities together
 void SV_Physics_Compound( edict_t *ent )
 {
 	edict_t	*parent;
-	float	*p_org, *p_ang;
 	matrix4x4	start_l, end_l, temp_l;
 	vec3_t	temp, org, org2, amove, lmove;
 	float	movetime;
@@ -1010,19 +1004,12 @@ void SV_Physics_Compound( edict_t *ent )
 	VectorScale( parent->v.velocity, movetime, lmove );
 	VectorScale( parent->v.avelocity, movetime, amove );
 
-	// restore old position
-	p_org = ent->v.oldorigin;
-	p_ang = ent->v.avelocity;
-
 	// create parent old position
-	Matrix4x4_CreateFromEntity( temp_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+	Matrix4x4_CreateFromEntity( temp_l, ent->v.avelocity, ent->v.oldorigin, 1.0f );
 	Matrix4x4_Invert_Simple( start_l, temp_l );
 
-	p_org = parent->v.origin;
-	p_ang = parent->v.angles;
-
 	// create parent actual position
-	Matrix4x4_CreateFromEntity( end_l, p_org[0], p_org[1], p_org[2], p_ang[0], p_ang[1], p_ang[2], 1.0f );
+	Matrix4x4_CreateFromEntity( end_l, parent->v.angles, parent->v.origin, 1.0f );
 
 	VectorCopy( ent->v.origin, org );
 	Matrix4x4_VectorTransform( start_l, org, temp );

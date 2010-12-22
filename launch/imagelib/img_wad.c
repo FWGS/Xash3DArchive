@@ -564,7 +564,13 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		{
 			if( fin[i] > 224 )
 			{
-				image.flags |= IMAGE_HAS_LUMA_Q1;
+				// don't apply luma to water surfaces because
+				// we use glpoly->next for store luma chain each frame
+				// and can't modify glpoly_t because many-many HL mods
+				// expected unmodified glpoly_t and can crashes on changed struct
+				// water surfaces uses glpoly->next as pointer to subdivided surfaces (as q1)
+				if( mip.name[0] != '*' && mip.name[0] != '!' )
+					image.flags |= IMAGE_HAS_LUMA_Q1;
 				break;
 			}
 		}

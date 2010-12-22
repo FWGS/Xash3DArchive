@@ -1347,7 +1347,7 @@ static void GL_SetDefaults( void )
 
 	pglFinish();
 
-	pglClearColor( 1, 0, 0.5, 0.5 );
+	pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 
 	pglEnable( GL_DEPTH_TEST );
 	pglDisable( GL_CULL_FACE );
@@ -1730,9 +1730,7 @@ void R_Shutdown( void )
 		if( !clgame.sprites[i].name[0] ) continue;
 		Mod_UnloadSpriteModel( &clgame.sprites[i] );
 	}
-
 	Mem_Set( clgame.sprites, 0, sizeof( clgame.sprites ));
-	Mod_ClearAll();
 
 	GL_RemoveCommands();
 	R_ShutdownImages();

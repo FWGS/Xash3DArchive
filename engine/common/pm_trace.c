@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "mathlib.h"
-#include "matrix_lib.h"
 #include "cm_local.h"
 #include "pm_local.h"
 
@@ -356,7 +355,7 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 	{
 		matrix4x4	imatrix;
 
-		Matrix4x4_CreateFromEntity( matrix, pe->origin[0], pe->origin[1], pe->origin[2], pe->angles[PITCH], pe->angles[YAW], pe->angles[ROLL], 1.0f );
+		Matrix4x4_CreateFromEntity( matrix, pe->angles, pe->origin, 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );

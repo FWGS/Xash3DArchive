@@ -738,8 +738,8 @@ void CL_MuzzleFlash( const vec3_t pos, int type )
 	int		index, modelIndex, frameCount;
 	float		scale;
 
-	index = bound( 0, type % 10, MAX_MUZZLEFLASH - 1 );
-	scale = (type / 10) * 0.1f;
+	index = bound( 0, type % 5, MAX_MUZZLEFLASH - 1 );
+	scale = (type / 5) * 0.1f;
 	if( scale == 0.0f ) scale = 0.5f;
 
 	modelIndex = cl_muzzleflash[index];

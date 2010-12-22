@@ -6,7 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
-#include "matrix_lib.h"
+#include "mathlib.h"
 
 msurface_t	*r_debug_surface;
 const char	*r_debug_hitbox;
@@ -501,7 +501,6 @@ R_RotateForEntity
 */
 void R_RotateForEntity( cl_entity_t *e )
 {
-	float	*org, *ang;
 	float	scale = 1.0f;
 
 	if( e == clgame.entities || R_StaticEntity( e ))
@@ -510,13 +509,10 @@ void R_RotateForEntity( cl_entity_t *e )
 		return;
 	}
 
-	org = e->origin;
-	ang = e->angles;
-
 	if( e->model->type != mod_brush && e->curstate.scale > 0.0f )
 		scale = e->curstate.scale;
 
-	Matrix4x4_CreateFromEntity( RI.objectMatrix, org[0], org[1], org[2], ang[0], ang[1], ang[2], scale );
+	Matrix4x4_CreateFromEntity( RI.objectMatrix, e->angles, e->origin, scale );
 	Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, RI.objectMatrix );
 
 	GL_LoadMatrix( RI.modelviewMatrix );
@@ -541,9 +537,7 @@ void R_TranslateForEntity( cl_entity_t *e )
 	if( e->model->type != mod_brush && e->curstate.scale > 0.0f )
 		scale = e->curstate.scale;
 
-	Matrix4x4_LoadIdentity( RI.objectMatrix );
-	Matrix4x4_SetOrigin( RI.objectMatrix, e->origin[0], e->origin[1], e->origin[2] );
-	Matrix4x4_ConcatScale( RI.objectMatrix, scale );
+	Matrix4x4_CreateFromEntity( RI.objectMatrix, vec3_origin, e->origin, scale );
 	Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, RI.objectMatrix );
 
 	GL_LoadMatrix( RI.modelviewMatrix );
@@ -562,7 +556,8 @@ static void R_SetupFrame( void )
 	AngleVectors( RI.refdef.viewangles, RI.vforward, RI.vright, RI.vup );
 
 	R_AnimateLight();
-
+	R_RunViewmodelEvents();
+		
 	tr.framecount++;
 
 	// sort translucents entities by rendermode and distance
@@ -871,6 +866,9 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 //	R_BloomBlend( fd );
 
 	GL_BackendEndFrame();
+
+	// go into 2D mode (in case we draw PlayerSetup between two 2d calls)
+	R_Set2DMode( true );
 }
 
 /*

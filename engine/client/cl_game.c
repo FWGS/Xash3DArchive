@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "client.h"
-#include "matrix_lib.h"
 #include "const.h"
 #include "triangleapi.h"
 #include "r_efx.h"
@@ -2620,8 +2619,7 @@ model_t *CL_LoadModel( const char *modelname, int *index )
 
 int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 {
-	if( !pEnt || !pEnt->index )
-		return false;
+	if( !pEnt ) return false;
 
 	// let the render reject entity without model
 	return CL_AddVisibleEntity( pEnt, entityType );
@@ -3698,14 +3696,6 @@ qboolean CL_LoadProgs( const char *name )
 		return false;
 	}
 
-	if( !CL_InitStudioAPI( ))
-	{
-		FS_FreeLibrary( clgame.hInstance );
-		MsgDev( D_NOTE, "CL_LoadProgs: can't init studio API\n" );
-		clgame.hInstance = NULL;
-		return false;
-	}
-
 	Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 
 	clgame.maxEntities = GI->max_edicts; // merge during loading
@@ -3717,6 +3707,14 @@ qboolean CL_LoadProgs( const char *name )
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();
+
+	if( !CL_InitStudioAPI( ))
+	{
+		FS_FreeLibrary( clgame.hInstance );
+		MsgDev( D_NOTE, "CL_LoadProgs: can't init studio API\n" );
+		clgame.hInstance = NULL;
+		return false;
+	}
 
 	// initialize pm_shared
 	CL_InitClientMove();

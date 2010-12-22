@@ -6,7 +6,6 @@
 #include "common.h"
 #include "server.h"
 #include "net_encode.h"
-#include "matrix_lib.h"
 #include "event_flags.h"
 #include "pm_defs.h"
 #include "const.h"
@@ -1481,17 +1480,18 @@ int pfnDropToFloor( edict_t* e )
 
 	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
 
-	if( trace.fraction == 1.0f || trace.allsolid )
-	{
-		return false;
-	}
+	if( trace.allsolid )
+		return -1;
+
+	if( trace.fraction == 1.0f )
+		return 0;
 
 	VectorCopy( trace.endpos, e->v.origin );
 	SV_LinkEdict( e, false );
 	e->v.flags |= FL_ONGROUND;
 	e->v.groundentity = trace.ent;
 
-	return true;
+	return 1;
 }
 
 /*

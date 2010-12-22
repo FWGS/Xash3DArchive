@@ -120,7 +120,6 @@ void V_CalcRefDef( void )
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
 		V_AddViewModel();
-		R_RunViewmodelEvents();
 		R_RenderFrame( &cl.refdef, true );
 		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );

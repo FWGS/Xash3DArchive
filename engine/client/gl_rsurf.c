@@ -7,7 +7,7 @@
 #include "client.h"
 #include "gl_local.h"
 #include "cm_local.h"
-#include "matrix_lib.h"
+#include "mathlib.h"
 
 #define BLOCK_WIDTH		128
 #define BLOCK_HEIGHT	128
@@ -476,14 +476,14 @@ void R_RenderFullbrights( void )
 		if( !fullbright_polys[i] )
 			continue;
 		GL_Bind( GL_TEXTURE0, i );
-#if 0
-		for( p = fullbright_polys[i]; p; p = p->fb_chain )
+
+		for( p = fullbright_polys[i]; p; p = p->next )
 		{
 			if( p->flags & SURF_DRAWTURB )
 				EmitWaterPolys( p );
 			else DrawGLPoly( p );
 		}
-#endif
+
 		fullbright_polys[i] = NULL;		
 	}
 
@@ -674,19 +674,20 @@ void R_RenderBrushPoly( msurface_t *fa )
 		
 	t = R_TextureAnimation( fa->texinfo->texture );
 	GL_Bind( GL_TEXTURE0, t->gl_texturenum );
-#if 0
-	if( t->fb_texturenum )
-	{
-		fa->polys->fb_chain = fullbright_polys[t->fb_texturenum];
-		fullbright_polys[t->fb_texturenum] = fa->polys;
-		draw_fullbrights = true;
-	}
-#endif
+
 	if( fa->flags & SURF_DRAWTURB )
 	{	
 		// warp texture, no lightmaps
 		EmitWaterPolys( fa->polys );
 		return;
+	}
+
+	if( t->fb_texturenum )
+	{
+		// HACKHACK: store fullbrights in poly->next (only for non-water surfaces)
+		fa->polys->next = fullbright_polys[t->fb_texturenum];
+		fullbright_polys[t->fb_texturenum] = fa->polys;
+		draw_fullbrights = true;
 	}
 
 	DrawGLPoly( fa->polys );
@@ -806,6 +807,9 @@ void R_DrawWaterSurfaces( void )
 	int		i;
 	msurface_t	*s;
 	texture_t		*t;
+
+	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
+		return;
 
 	// non-transparent water is already drawed
 	if( r_wateralpha->value >= 1.0f )
@@ -1252,11 +1256,11 @@ R_DrawWorld
 */
 void R_DrawWorld( void )
 {
-	RI.currententity = clgame.entities;
-	RI.currentmodel = RI.currententity->model;
-
 	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
 		return;
+
+	RI.currententity = clgame.entities;
+	RI.currentmodel = RI.currententity->model;
 
 	VectorCopy( RI.cullorigin, modelorg );
 	Mem_Set( lightmap_polys, 0, sizeof( lightmap_polys ));

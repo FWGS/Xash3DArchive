@@ -9,14 +9,13 @@
 #include "server.h"
 #include "studio.h"
 #include "r_studioint.h"
-#include "matrix_lib.h"
 
-typedef int (*STUDIOAPI)( int, sv_blending_interface_t*, server_studio_api_t*, matrix4x4, matrix4x4[MAXSTUDIOBONES] );
+typedef int (*STUDIOAPI)( int, sv_blending_interface_t*, server_studio_api_t*, matrix3x4, matrix3x4[MAXSTUDIOBONES] );
 
 static studiohdr_t			*sv_studiohdr;
 static mplane_t			sv_hitboxplanes[6];	// there a temp hitbox
-static matrix4x4			sv_studiomatrix;
-static matrix4x4			sv_studiobones[MAXSTUDIOBONES];
+static matrix3x4			sv_studiomatrix;
+static matrix3x4			sv_studiobones[MAXSTUDIOBONES];
 typedef qboolean 			(*pfnHitboxTrace)( trace_t *trace );
 static vec3_t			trace_startmins, trace_endmins;
 static vec3_t			trace_startmaxs, trace_endmaxs;
@@ -86,14 +85,14 @@ StudioSetUpTransform
 */
 static void SV_StudioSetUpTransform( edict_t *ent )
 {
-	float	*ang, *org;
+	vec3_t	ang;
 	float	scale = 1.0f;
 
-	org = ent->v.origin;
-	ang = ent->v.angles;
+	VectorCopy( ent->v.angles, ang );
+	ang[PITCH] = -ang[PITCH]; // stupid Half-Life bug
 
 	if( ent->v.scale != 0.0f ) scale = ent->v.scale;
-	Matrix4x4_CreateFromEntity( sv_studiomatrix, org[0], org[1], org[2], -ang[PITCH], ang[YAW], ang[ROLL], scale );
+	Matrix3x4_CreateFromEntity( sv_studiomatrix, ang, ent->v.origin, scale );
 }
 
 /*
@@ -483,7 +482,7 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 
 	static float	pos[MAXSTUDIOBONES][3];
 	static vec4_t	q[MAXSTUDIOBONES];
-	matrix4x4		bonematrix;
+	matrix3x4		bonematrix;
 
 	static float	pos2[MAXSTUDIOBONES][3];
 	static vec4_t	q2[MAXSTUDIOBONES];
@@ -556,10 +555,10 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 	for( j = numbones - 1; j >= 0; j-- )
 	{
 		i = boneused[j];
-		Matrix4x4_FromOriginQuat( bonematrix, pos[i][0], pos[i][1], pos[i][2], q[i][0], q[i][1], q[i][2], q[i][3] );
+		Matrix3x4_FromOriginQuat( bonematrix, q[i], pos[i] );
 		if( pbones[i].parent == -1 ) 
-			Matrix4x4_ConcatTransforms( sv_studiobones[i], sv_studiomatrix, bonematrix );
-		else Matrix4x4_ConcatTransforms( sv_studiobones[i], sv_studiobones[pbones[i].parent], bonematrix );
+			Matrix3x4_ConcatTransforms( sv_studiobones[i], sv_studiomatrix, bonematrix );
+		else Matrix3x4_ConcatTransforms( sv_studiobones[i], sv_studiobones[pbones[i].parent], bonematrix );
 	}
 }
 
@@ -889,12 +888,12 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 	for( i = 0; i < sv_studiohdr->numhitboxes; i++ )
 	{
 		mstudiobbox_t	*phitbox = (mstudiobbox_t *)((byte*)sv_studiohdr + sv_studiohdr->hitboxindex) + i;
-		matrix4x4		bonemat;
+		matrix3x4		bonemat;
 
 		// transform traceline into local bone space
-		Matrix4x4_Invert_Simple( bonemat, sv_studiobones[phitbox->bone] );
-		Matrix4x4_VectorTransform( bonemat, start, start_l );
-		Matrix4x4_VectorTransform( bonemat, end, end_l );
+		Matrix3x4_Invert_Simple( bonemat, sv_studiobones[phitbox->bone] );
+		Matrix3x4_VectorTransform( bonemat, start, start_l );
+		Matrix3x4_VectorTransform( bonemat, end, end_l );
 
 		SV_HullForHitbox( phitbox->bbmin, phitbox->bbmax );
 
@@ -922,7 +921,7 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 		VectorCopy( trace.plane.normal, temp );
 		trace.fraction = bound( 0, trace.fraction, 1.0f );
 		VectorLerp( start, trace.fraction, end, trace.endpos );
-		Matrix4x4_TransformPositivePlane( sv_studiobones[outBone], temp, trace.plane.dist, trace.plane.normal, &trace.plane.dist );
+		Matrix3x4_TransformPositivePlane( sv_studiobones[outBone], temp, trace.plane.dist, trace.plane.normal, &trace.plane.dist );
 	}
 	return trace;
 }
@@ -955,8 +954,8 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 	SV_StudioSetupModel( e, pAtt[iAttachment].bone );
 
 	// compute pos and angles
-	Matrix4x4_VectorTransform( sv_studiobones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
-	Matrix4x4_OriginFromMatrix( sv_studiobones[pAtt[iAttachment].bone], bonepos );
+	Matrix3x4_VectorTransform( sv_studiobones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
+	Matrix3x4_OriginFromMatrix( sv_studiobones[pAtt[iAttachment].bone], bonepos );
 	VectorSubtract( localOrg, bonepos, forward );	// make forward
 	VectorNormalizeFast( forward );
 	VectorAngles( forward, localAng );
@@ -967,15 +966,12 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 {
-	matrix3x3	axis;
-
 	if( !SV_StudioSetupModel( e, iBone ) || sv_studiohdr->numbones <= 0 )
 		return;
 
 	iBone = bound( 0, iBone, sv_studiohdr->numbones );
-	Matrix3x3_FromMatrix4x4( axis, sv_studiobones[iBone] );
-	if( org ) Matrix4x4_OriginFromMatrix( sv_studiobones[iBone], org );
-	if( ang ) Matrix3x3_ToAngles( axis, ang, true );
+	if( org ) Matrix3x4_OriginFromMatrix( sv_studiobones[iBone], org );
+	if( ang ) VectorAngles( sv_studiobones[iBone][0], ang ); // bone forward to angles
 }
 
 static sv_blending_interface_t gBlendAPI =

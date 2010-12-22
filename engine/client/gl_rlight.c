@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "client.h"
-#include "matrix_lib.h"
+#include "mathlib.h"
 #include "gl_local.h"
 #include "studio.h"
 
@@ -27,6 +27,9 @@ void R_AnimateLight( void )
 	int		i, k, flight, clight;
 	float		l, c, lerpfrac, backlerp;
 	lightstyle_t	*ls;
+
+	if( !RI.drawWorld || !cl.worldmodel )
+		return;
 
 	// light animations
 	// 'm' is normal light, 'a' is no light, 'z' is double bright
@@ -162,10 +165,13 @@ static void R_ReadLightGrid( const vec3_t origin, vec3_t lightDir )
 
 	if( !world.lightgrid )
 	{
-		// pre-defined light vector
-		lightDir[0] = RI.refdef.movevars->skyvec_x;
-		lightDir[1] = RI.refdef.movevars->skyvec_y;
-		lightDir[2] = RI.refdef.movevars->skyvec_z;
+		if( RI.refdef.movevars )
+		{
+			// pre-defined light vector
+			lightDir[0] = RI.refdef.movevars->skyvec_x;
+			lightDir[1] = RI.refdef.movevars->skyvec_y;
+			lightDir[2] = RI.refdef.movevars->skyvec_z;
+		}
 		return;
 	}
 
@@ -661,7 +667,7 @@ void R_LightForEntity( cl_entity_t *e, byte *bArray )
 		scale = e->curstate.scale;
 	
 	// compute lighting at each vertex
-	Matrix4x4_CreateFromEntity( matrix, 0.0f, 0.0f, 0.0f, e->angles[0], e->angles[1], e->angles[2], scale );
+	Matrix4x4_CreateFromEntity( matrix, e->angles, vec3_origin, scale );
 	Matrix4x4_Invert_Simple( imatrix, matrix );
 			
 	// rotate direction

@@ -6,15 +6,14 @@
 #include "common.h"
 #include "studio.h"
 #include "mathlib.h"
-#include "matrix_lib.h"
 #include "cm_local.h"
 #include "pm_local.h"
 #include "world.h"
 
 static studiohdr_t	*pm_studiohdr;
 static mplane_t	pm_hitboxplanes[6];	// there a temp hitbox
-static matrix4x4	pm_studiomatrix;
-static matrix4x4	pm_studiobones[MAXSTUDIOBONES];
+static matrix3x4	pm_studiomatrix;
+static matrix3x4	pm_studiobones[MAXSTUDIOBONES];
 typedef qboolean 	(*pfnTrace)( pmtrace_t *trace );
 static float	trace_realfraction;
 static vec3_t	trace_startmins, trace_endmins;
@@ -83,14 +82,14 @@ StudioSetUpTransform
 */
 static void PM_StudioSetUpTransform( physent_t *pe )
 {
-	float	*ang, *org;
+	vec3_t	ang;
 	float	scale = 1.0f;
 
-	org = pe->origin;
-	ang = pe->angles;
+	VectorCopy( pe->angles, ang );
+	ang[PITCH] = -ang[PITCH]; // stupid Half-Life bug
 
 	// FIXME: apply scale to studiomodels
-	Matrix4x4_CreateFromEntity( pm_studiomatrix, org[0], org[1], org[2], -ang[PITCH], ang[YAW], ang[ROLL], scale );
+	Matrix3x4_CreateFromEntity( pm_studiomatrix, ang, pe->origin, scale );
 }
 
 /*
@@ -475,7 +474,7 @@ static void PM_StudioSetupBones( physent_t *pe )
 
 	static float	pos[MAXSTUDIOBONES][3];
 	static vec4_t	q[MAXSTUDIOBONES];
-	matrix4x4		bonematrix;
+	matrix3x4		bonematrix;
 
 	static float	pos2[MAXSTUDIOBONES][3];
 	static vec4_t	q2[MAXSTUDIOBONES];
@@ -526,10 +525,10 @@ static void PM_StudioSetupBones( physent_t *pe )
 
 	for( i = 0; i < pm_studiohdr->numbones; i++ ) 
 	{
-		Matrix4x4_FromOriginQuat( bonematrix, pos[i][0], pos[i][1], pos[i][2], q[i][0], q[i][1], q[i][2], q[i][3] );
+		Matrix3x4_FromOriginQuat( bonematrix, q[i], pos[i] );
 		if( pbones[i].parent == -1 ) 
-			Matrix4x4_ConcatTransforms( pm_studiobones[i], pm_studiomatrix, bonematrix );
-		else Matrix4x4_ConcatTransforms( pm_studiobones[i], pm_studiobones[pbones[i].parent], bonematrix );
+			Matrix3x4_ConcatTransforms( pm_studiobones[i], pm_studiomatrix, bonematrix );
+		else Matrix3x4_ConcatTransforms( pm_studiobones[i], pm_studiobones[pbones[i].parent], bonematrix );
 	}
 
 	pe->sequence = oldseq; // restore original value
@@ -850,12 +849,12 @@ qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t 
 	for( i = 0; i < pm_studiohdr->numhitboxes; i++ )
 	{
 		mstudiobbox_t	*phitbox = (mstudiobbox_t *)((byte*)pm_studiohdr + pm_studiohdr->hitboxindex) + i;
-		matrix4x4		bonemat;
+		matrix3x4		bonemat;
 
 		// transform traceline into local bone space
-		Matrix4x4_Invert_Simple( bonemat, pm_studiobones[phitbox->bone] );
-		Matrix4x4_VectorTransform( bonemat, start, start_l );
-		Matrix4x4_VectorTransform( bonemat, end, end_l );
+		Matrix3x4_Invert_Simple( bonemat, pm_studiobones[phitbox->bone] );
+		Matrix3x4_VectorTransform( bonemat, start, start_l );
+		Matrix3x4_VectorTransform( bonemat, end, end_l );
 
 		PM_HullForHitbox( phitbox->bbmin, phitbox->bbmax );
 
@@ -882,7 +881,7 @@ qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t 
 		VectorCopy( ptr->plane.normal, temp );
 		ptr->fraction = bound( 0, ptr->fraction, 1.0f );
 		VectorLerp( start, ptr->fraction, end, ptr->endpos );
-		Matrix4x4_TransformPositivePlane( pm_studiobones[outBone], temp, ptr->plane.dist, ptr->plane.normal, &ptr->plane.dist );
+		Matrix3x4_TransformPositivePlane( pm_studiobones[outBone], temp, ptr->plane.dist, ptr->plane.normal, &ptr->plane.dist );
 		return true;
 	}
 	return false;

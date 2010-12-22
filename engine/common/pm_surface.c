@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "mathlib.h"
-#include "matrix_lib.h"
 #include "pm_local.h"
 
 /*
@@ -111,10 +110,8 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 	if( !VectorIsNull( pe->angles ))
 	{
 		matrix4x4	imatrix;
-		float	*org = pe->origin;
-		float	*ang = pe->angles;
-	
-		Matrix4x4_CreateFromEntity( matrix, org[0], org[1], org[2], ang[PITCH], ang[YAW], ang[ROLL], 1.0f );
+
+		Matrix4x4_CreateFromEntity( matrix, pe->angles, pe->origin, 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
