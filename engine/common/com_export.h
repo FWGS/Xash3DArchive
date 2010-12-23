@@ -71,7 +71,6 @@ void R_GetSpriteParms( int *frameWidth, int *frameHeight, int *numFrames, int cu
 void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, qboolean dirty );
 void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, int texnum );
 qboolean R_SpeedsMessage( char *out, size_t size );
-int R_CreateDecalList( decallist_t *pList, qboolean changelevel );
 void R_SetupSky( const char *skyboxname );
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen );
@@ -86,7 +85,7 @@ void GL_SetRenderMode( int mode );
 void R_RunViewmodelEvents( void );
 int R_GetSpriteTexture( const struct model_s *m_pSpriteModel, int frame );
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius );
-qboolean R_DecalShoot( int texture, int ent, int model, vec3_t pos, vec3_t saxis, int flags, rgba_t color );
+void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos, int flags, vec3_t saxis );
 void R_RemoveEfrags( struct cl_entity_s *ent );
 void R_AddEfrags( struct cl_entity_s *ent );
 void R_DecalRemoveAll( int texture );

@@ -645,8 +645,8 @@ int CL_AddEntity( int entityType, cl_entity_t *pEnt );
 void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
-void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
-void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color );
+void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
+void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos );
 void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
 void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );

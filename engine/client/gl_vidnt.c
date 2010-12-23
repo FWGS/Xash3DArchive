@@ -51,6 +51,7 @@ convar_t	*r_faceplanecull;
 convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
 convar_t	*r_lefthand;
+convar_t	*r_decals;
 convar_t	*r_novis;
 convar_t	*r_nocull;
 convar_t	*r_lockpvs;
@@ -1466,6 +1467,7 @@ void GL_InitCommands( void )
 	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
 	r_drawentities = Cvar_Get( "r_drawentities", "1", CVAR_CHEAT|CVAR_ARCHIVE, "render entities" );
 	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
+	r_decals = Cvar_Get( "r_decals", "4096", CVAR_ARCHIVE, "sets the maximum number of decals" );
 	
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "reduces resolution of skybox textures by powers of 2" );
@@ -1702,6 +1704,7 @@ qboolean R_Init( void )
 	R_InitImages();
 	R_SpriteInit();
 	R_StudioInit();
+	R_InitDecals();
 	R_ClearScene();
 
 	// initialize screen
@@ -1734,6 +1737,7 @@ void R_Shutdown( void )
 
 	GL_RemoveCommands();
 	R_ShutdownImages();
+	R_ShutdownDecals();
 
 	Mem_FreePool( &r_temppool );
 

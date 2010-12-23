@@ -71,11 +71,12 @@ void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, in
 void CL_FireField( float *org, int radius, int modelIndex, int count, int flags, float life );
 void CL_PlayerSprites( int client, int modelIndex, int count, int size );
 void CL_Sprite_WallPuff( struct tempent_s *pTemp, float scale );
+void CL_DebugParticle( const vec3_t pos, byte r, byte g, byte b );
 void CL_RicochetSound( const vec3_t pos );
 struct dlight_s *CL_AllocDlight( int key );
 struct dlight_s *CL_AllocElight( int key );
 void CL_UpadteFlashlight( cl_entity_t *pEnt );
-void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags );
+void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_DecalRemoveAll( int textureIndex );
 int CL_DecalIndexFromName( const char *name );
 int CL_DecalIndex( int id );

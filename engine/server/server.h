@@ -170,7 +170,7 @@ typedef struct sv_client_s
 	customization_t	customization;		// player customization linked list
 	resource_t	resource1;
 	resource_t	resource2;		// <mapname.res> from client (server downloading)
-   
+
 	qboolean		sendmovevars;
 	qboolean		sendinfo;
 

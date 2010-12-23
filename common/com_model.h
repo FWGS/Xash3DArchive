@@ -106,6 +106,7 @@ typedef struct mnode_s
 typedef struct msurface_s	msurface_t;
 typedef struct decal_s	decal_t;
 
+#if 0	// Original decal struct is temporare disabled
 // JAY: Compress this as much as possible
 struct decal_s
 {
@@ -119,6 +120,22 @@ struct decal_s
 
 	short		entityIndex;	// Entity this is attached to
 };
+#else
+struct decal_s
+{
+	struct decal_s	*pnext;		// linked list for each surface
+	struct msurface_s	*psurface;	// surface id for persistence / unlinking
+	short		texture;		// decal image
+
+	vec3_t		position;		// location of the decal center in world space.
+	vec3_t		worldPos;		// untransformed position, keep for serialization
+	vec3_t		saxis;		// direction of the s axis in world space
+	float		dx, dy;		// Offsets into surface texture
+	float		scale;		// pixel scale
+	short		flags;		// decal flags  FDECAL_*
+	short		entityIndex;	// entity this is attached to
+};
+#endif
 
 typedef struct mleaf_s
 {

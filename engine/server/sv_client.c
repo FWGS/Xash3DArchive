@@ -920,7 +920,7 @@ void SV_PutClientInServer( edict_t *ent )
 	{
 		int	viewEnt;
 
-		// copy signon buffer
+		// resend the signon
 		BF_WriteBits( &client->netchan.message, BF_GetData( &sv.signon ), BF_GetNumBitsWritten( &sv.signon ));
 
 		if( client->pViewEntity )

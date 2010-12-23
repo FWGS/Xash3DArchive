@@ -43,9 +43,6 @@ typically is a func_wall, func_breakable, func_ladder etc
 */
 static qboolean R_StaticEntity( cl_entity_t *ent )
 {
-	if( gl_test->integer )
-		return false;
-
 	if( ent->curstate.rendermode != kRenderNormal )
 		return false;
 
@@ -503,7 +500,7 @@ void R_RotateForEntity( cl_entity_t *e )
 {
 	float	scale = 1.0f;
 
-	if( e == clgame.entities || R_StaticEntity( e ))
+	if( e == clgame.entities || R_StaticEntity( e ) || gl_test->integer )
 	{
 		R_LoadIdentity();
 		return;
@@ -528,7 +525,7 @@ void R_TranslateForEntity( cl_entity_t *e )
 {
 	float	scale = 1.0f;
 
-	if( e == clgame.entities || R_StaticEntity( e ))
+	if( e == clgame.entities || R_StaticEntity( e ) || gl_test->integer )
 	{
 		R_LoadIdentity();
 		return;

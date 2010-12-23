@@ -1634,6 +1634,8 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 	cl_entity_t	*pEnt;
 	dlight_t		*dl;
 
+	decalIndex = modelIndex = entityIndex = 0;
+
 	// parse user message into buffer
 	BF_ReadBytes( msg, pbuf, iSize );
 
@@ -1895,8 +1897,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		if( type == TE_DECALHIGH || type == TE_WORLDDECALHIGH )
 			decalIndex += 256;
 		pEnt = CL_GetEntityByIndex( entityIndex );
-		modelIndex = (pEnt) ? pEnt->curstate.modelindex : 0;
-		CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, pos, 0 );
+		CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, 0, pos, 0 );
 		break;
 	case TE_FIZZ:
 		entityIndex = BF_ReadShort( &buf );
@@ -1952,8 +1953,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		entityIndex = BF_ReadShort( &buf );
 		decalIndex = BF_ReadByte( &buf );
 		pEnt = CL_GetEntityByIndex( entityIndex );
-		modelIndex = (pEnt) ? pEnt->curstate.modelindex : 0;
-		CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, pos, 0 );
+		CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, 0, pos, 0 );
 		CL_RicochetSound( pos );
 		break;
 	case TE_SPRAY:
@@ -1991,7 +1991,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[2] = BF_ReadCoord( &buf );
 		entityIndex = BF_ReadShort( &buf );
 		decalIndex = BF_ReadByte( &buf );
-		CL_PlayerDecal( CL_DecalIndex( decalIndex ), entityIndex, pos, NULL );
+		CL_PlayerDecal( CL_DecalIndex( decalIndex ), entityIndex, pos );
 		break;
 	case TE_BUBBLES:
 	case TE_BUBBLETRAIL:
@@ -2422,12 +2422,9 @@ CL_DecalShoot
 normal temporary decal
 ===============
 */
-void CL_DecalShoot( HSPRITE hDecal, int entityIndex, int modelIndex, float *pos, int flags )
+void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags )
 {
-	rgba_t	color;
-
-	Vector4Set( color, 255, 255, 255, 255 ); // don't use custom colors
-	R_DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, flags, color );
+	R_DecalShoot( textureIndex, entityIndex, modelIndex, pos, flags, NULL );
 }
 
 /*
@@ -2437,17 +2434,9 @@ CL_PlayerDecal
 spray custom colored decal (clan logo etc)
 ===============
 */
-void CL_PlayerDecal( HSPRITE hDecal, int entityIndex, float *pos, byte *color )
+void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos )
 {
-	cl_entity_t	*pEnt;
-	int		modelIndex = 0;
-	rgb_t		_clr = { 255, 255, 255 };
-
-	pEnt = CL_GetEntityByIndex( entityIndex );
-	if( pEnt ) modelIndex = pEnt->curstate.modelindex;
-	if( !color ) color = _clr;
-
-	R_DecalShoot( hDecal, entityIndex, modelIndex, pos, NULL, FDECAL_CUSTOM, color );
+	R_DecalShoot( textureIndex, entityIndex, 0, pos, FDECAL_CUSTOM, NULL );
 }
 
 /*

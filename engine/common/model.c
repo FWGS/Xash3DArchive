@@ -1369,7 +1369,6 @@ void Mod_CalcPHS( void )
 
 	// adjust compressed pas data to fit the size
 	compressed_pas = Mem_Realloc( worldmodel->mempool, compressed_pas, total_size );
-	Msg( "VIS size %s, PAS size %s\n", memprint( world.visdatasize ), memprint( total_size ));
 
 	// apply leaf pointers
 	for( i = 0; i < worldmodel->numleafs; i++ )

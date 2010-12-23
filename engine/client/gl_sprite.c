@@ -845,7 +845,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	r_stats.c_sprite_models_drawn++;
 
-	if( psprite->texFormat == SPR_ALPHTEST )
+	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode == kRenderTransAlpha )
 		state |= GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
 
 	// select properly rendermode

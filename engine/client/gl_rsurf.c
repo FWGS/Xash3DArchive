@@ -9,9 +9,6 @@
 #include "cm_local.h"
 #include "mathlib.h"
 
-#define BLOCK_WIDTH		128
-#define BLOCK_HEIGHT	128
-
 typedef struct
 {
 	qboolean		lightmap_modified[MAX_LIGHTMAPS];
@@ -691,6 +688,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	}
 
 	DrawGLPoly( fa->polys );
+	DrawSurfaceDecals( fa );
 
 	// add the poly to the proper lightmap chain
 	R_RenderDynamicLightmaps( fa );
@@ -1562,6 +1560,9 @@ void GL_BuildLightmaps( void )
 
 		for( j = 0; j < m->numsurfaces; j++ )
 		{
+			// clearing all decal chains
+			m->surfaces[j].pdecals = NULL;
+
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 
 			if( m->surfaces[i].flags & SURF_DRAWTURB )

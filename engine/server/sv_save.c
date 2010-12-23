@@ -362,6 +362,7 @@ void LandmarkOrigin( SAVERESTOREDATA *pSaveData, vec3_t output, const char *pLan
 int EntityInSolid( edict_t *ent )
 {
 	edict_t	*pParent = ent->v.aiment;
+	vec3_t	point;
 
 	// if you're attached to a client, always go through
 	if( SV_IsValidEdict( pParent ))
@@ -370,7 +371,8 @@ int EntityInSolid( edict_t *ent )
 			return 0;
 	}
 
-	return SV_TestEntityPosition( ent );
+	VectorAverage( ent->v.absmin, ent->v.absmax, point );
+	return (SV_PointContents( point ) == CONTENTS_SOLID);
 }
 
 void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adjacent )

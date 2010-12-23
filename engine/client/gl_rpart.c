@@ -1145,6 +1145,25 @@ void CL_FlickerParticles( const vec3_t org )
 }
 
 /*
+===============
+CL_DebugParticle
+
+just for debug purposes
+===============
+*/
+void CL_DebugParticle( const vec3_t pos, byte r, byte g, byte b )
+{
+	particle_t	*p;
+
+	p = CL_AllocParticle( NULL );
+	if( !p ) return;
+
+	VectorCopy( pos, p->org );
+	p->die += 10.0f;
+	p->color = CL_LookupColor( r, g, b );
+}
+
+/*
 ==============================================================
 
 TRACERS MANAGEMENT (particle extension)

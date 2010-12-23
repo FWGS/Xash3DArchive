@@ -12,6 +12,8 @@ void R_NewMap( void )
 {
 	int	i;
 
+	R_ClearDecals(); // clear all level decals
+
 	GL_BuildLightmaps ();
 	R_SetupSky( cl.refdef.movevars->skyName );
 

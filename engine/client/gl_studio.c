@@ -1699,6 +1699,7 @@ static void R_StudioDrawPoints( void )
 		{
 			GL_SetRenderMode( g_iRenderMode );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
+			if( g_iRenderMode == kRenderNormal ) GL_TexEnv( GL_MODULATE );
 		}
 
 		if(!( g_nFaceFlags & STUDIO_NF_CHROME ))

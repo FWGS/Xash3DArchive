@@ -15,6 +15,9 @@
 
 extern byte	*r_temppool;
 
+#define BLOCK_WIDTH		128	// lightmap block width
+#define BLOCK_HEIGHT	128	// lightmap block height
+
 #define MAX_TEXTURES	2048
 #define MAX_LIGHTMAPS	64
 #define SUBDIVIDE_SIZE	64
@@ -258,6 +261,14 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
 qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
 qboolean R_VisCullBox( const vec3_t mins, const vec3_t maxs );
 qboolean R_VisCullSphere( const vec3_t origin, float radius );
+
+//
+// gl_decals.c
+//
+void R_InitDecals( void );
+void R_ShutdownDecals( void );
+void DrawSurfaceDecals( msurface_t *fa );
+void R_ClearDecals( void );
 
 //
 // gl_draw.c
@@ -540,6 +551,7 @@ extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
 extern convar_t	*r_lefthand;
+extern convar_t	*r_decals;
 extern convar_t	*r_novis;
 extern convar_t	*r_nocull;
 extern convar_t	*r_lockpvs;
