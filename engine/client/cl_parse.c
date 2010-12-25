@@ -380,7 +380,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 
 	if( is_ambient )
 	{
-		S_AmbientSound( pos, entnum, chan, handle, volume, attn, pitch, flags );
+		S_AmbientSound( pos, entnum, handle, volume, attn, pitch, flags );
 	}
 	else
 	{
@@ -721,12 +721,9 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
 	if( newnum > clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
 
-	// increase edicts
-	while( newnum >= clgame.numEntities )
-		clgame.numEntities++;
-
 	ent = EDICT_NUM( newnum );
 	Mem_Set( &ent->prevstate, 0, sizeof( ent->prevstate ));
+	ent->index = newnum;
 
 	if( cls.state == ca_active )
 		timebase = sv_time();

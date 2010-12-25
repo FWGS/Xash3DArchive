@@ -97,11 +97,11 @@ apply pre-calculated values
 void V_AddViewModel( void )
 {
 	// add viewmodel only at firstperson pass when game not paused
-	if( cl.refdef.nextView || cl.refdef.paused || cl.thirdperson )
+	if( cl.refdef.nextView || cl.refdef.paused || cl.thirdperson || cl.refdef.health <= 0 )
 		return;
 
 	// make sure what frame is valid and viewmodel is set
-	if( !cl.frame.valid || !clgame.viewent.model )
+	if( !cl.frame.valid || !clgame.viewent.model || cl.refdef.viewentity != ( cl.playernum + 1 ))
 		return;
 
 	CL_AddVisibleEntity( &clgame.viewent, ET_NORMAL );

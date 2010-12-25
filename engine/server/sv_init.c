@@ -241,9 +241,14 @@ void SV_ActivateServer( void )
 		}
 	}
 
-	// run two frames to allow everything to settle
-	for( i = 0; !sv.loadgame && i < 2; i++ )
-		SV_Physics();
+	// FIXME: test this for correct
+//	sv.frametime = 0.1f;
+			
+	if( !sv.loadgame || svgame.globals->changelevel )
+	{
+		// run two frames to allow everything to settle
+		for( i = 0; i < 2; i++ ) SV_Physics();
+	}
 
 	// invoke to refresh all movevars
 	Mem_Set( &svgame.oldmovevars, 0, sizeof( movevars_t ));

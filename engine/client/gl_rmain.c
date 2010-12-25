@@ -500,7 +500,7 @@ void R_RotateForEntity( cl_entity_t *e )
 {
 	float	scale = 1.0f;
 
-	if( e == clgame.entities || R_StaticEntity( e ) || gl_test->integer )
+	if( e == clgame.entities || R_StaticEntity( e ))
 	{
 		R_LoadIdentity();
 		return;
@@ -525,7 +525,7 @@ void R_TranslateForEntity( cl_entity_t *e )
 {
 	float	scale = 1.0f;
 
-	if( e == clgame.entities || R_StaticEntity( e ) || gl_test->integer )
+	if( e == clgame.entities || R_StaticEntity( e ))
 	{
 		R_LoadIdentity();
 		return;

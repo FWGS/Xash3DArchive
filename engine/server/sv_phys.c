@@ -917,7 +917,7 @@ void SV_Physics_Pusher( edict_t *ent )
 	// otherwise, just stay in place until the obstacle is gone
 	if( pBlocker )
 	{
-		Msg( "%s is blocked by %s\n", SV_ClassName( ent ), SV_ClassName( pBlocker ));
+		MsgDev( D_INFO, "%s is blocked by %s\n", SV_ClassName( ent ), SV_ClassName( pBlocker ));
 		svgame.dllFuncs.pfnBlocked( ent, pBlocker );
 	}
 
@@ -928,7 +928,7 @@ void SV_Physics_Pusher( edict_t *ent )
 		svgame.dllFuncs.pfnThink( ent );
 		if( ent->free ) return;
 	}
-	else if( ent->v.flags & FL_ALWAYSTHINK || ( sv.state == ss_loading && !sv.loadgame ))
+	else if( ent->v.flags & FL_ALWAYSTHINK )
 	{
 		ent->v.nextthink = 0.0f;
 		svgame.globals->time = sv.time;

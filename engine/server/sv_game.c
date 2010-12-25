@@ -319,9 +319,7 @@ void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int m
 
 	// this can happens if serialized map contain 4096 static decals...
 	if(( BF_GetNumBytesWritten( &sv.signon ) + 20 ) >= BF_GetMaxBytes( &sv.signon ))
-	{
 		return;
-	} 
 
 	// static decals are posters, it's always reliable
 	BF_WriteByte( &sv.signon, svc_bspdecal );
@@ -1120,6 +1118,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 		ed = EDICT_NUM( e );
 
 		if( !SV_IsValidEdict( ed )) continue;
+		if( ed->v.flags & FL_KILLME ) continue;
 
 		switch( desc->fieldType )
 		{
@@ -1176,7 +1175,7 @@ edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 	{
 		ent = EDICT_NUM( e );
 		if( !SV_IsValidEdict( ent )) continue;
-		if( !ent->pvPrivateData ) continue;
+		if( ent->v.flags & FL_KILLME ) continue;
 
 		distSquared = 0;
 		for( j = 0; j < 3 && distSquared <= flRadius; j++ )
@@ -1283,7 +1282,8 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 		pEdict = EDICT_NUM( i );
 
 		if( !SV_IsValidEdict( pEdict )) continue;
-
+		if( pEdict->v.flags & FL_KILLME ) continue;
+		
 		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
 			result = SV_BoxInPVS( pplayer->v.origin, pEdict->v.absmin, pEdict->v.absmax );
 		else result = SV_OriginIn( DVIS_PVS, pplayer->v.origin, pEdict->v.origin );
@@ -1317,6 +1317,7 @@ edict_t *pfnEntitiesInPHS( edict_t *pplayer )
 		pEdict = EDICT_NUM( i );
 
 		if( !SV_IsValidEdict( pEdict )) continue;
+		if( pEdict->v.flags & FL_KILLME ) continue;
 
 		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
 			VectorAverage( pEdict->v.absmin, pEdict->v.absmax, checkPos );
@@ -1339,6 +1340,7 @@ pfnMakeVectors
 */
 void pfnMakeVectors( const float *rgflVector )
 {
+	ASSERT( rgflVector != NULL );
 	AngleVectors( rgflVector, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
 }
 
@@ -1670,10 +1672,11 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( vol != VOL_NORM ) flags |= SND_VOLUME;
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
+	if( sv.state == ss_loading ) flags |= SND_SPAWNING;
 
 	// can't track this entity on the client.
 	// write static sound
-	if( !ent->v.modelindex || !ent->v.model )
+//	if( !ent->v.modelindex || !ent->v.model )
 		flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
@@ -1684,6 +1687,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		if( flags & SND_SPAWNING )
 		{
 			msg_dest = MSG_INIT;
+			flags |= SND_FIXED_ORIGIN;	// first-time spatialize
 		}
 		else
 		{
@@ -1698,7 +1702,10 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		VectorAdd( origin, ent->v.origin, origin );
 
 		if( flags & SND_SPAWNING )
+		{
 			msg_dest = MSG_INIT;
+			flags |= SND_FIXED_ORIGIN;	// first-time spatialize
+		}
 		else msg_dest = MSG_PAS_R;
 	}
 
@@ -1717,9 +1724,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( !ent->v.modelindex || !ent->v.model )
-		entityIndex = 0;
-	else if( SV_IsValidEdict( ent->v.aiment ))
+	if( SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = ent->v.aiment->serialnumber;
 	else entityIndex = ent->serialnumber;
 
@@ -4272,7 +4277,8 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 
 		// keynames with a leading underscore are used for utility comments,
 		// and are immediately discarded by engine
-		if( keyname[0] == '_' ) continue;
+		if( world.version == Q1BSP_VERSION && keyname[0] == '_' )
+			continue;
 
 		if( anglehack )
 		{

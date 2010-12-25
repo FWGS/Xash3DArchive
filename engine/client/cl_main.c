@@ -1005,7 +1005,7 @@ void CL_PrepSound( void )
 			if( entry->looping && entry->entnum != -1 )
 			{
 				MsgDev( D_NOTE, "Restarting sound %s...\n", entry->name );
-				S_AmbientSound( entry->origin, entry->entnum, entry->entchannel,
+				S_AmbientSound( entry->origin, entry->entnum,
 				S_RegisterSound( entry->name ), entry->volume, entry->attenuation,
 				entry->pitch, 0 );
 			}
@@ -1111,7 +1111,7 @@ void CL_PrepVideo( void )
 			if( entry->looping && entry->entnum != -1 )
 			{
 				MsgDev( D_NOTE, "Restarting sound %s...\n", entry->name );
-				S_AmbientSound( entry->origin, entry->entnum, entry->entchannel,
+				S_AmbientSound( entry->origin, entry->entnum,
 				S_RegisterSound( entry->name ), entry->volume, entry->attenuation,
 				entry->pitch, 0 );
 			}

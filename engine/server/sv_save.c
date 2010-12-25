@@ -409,8 +409,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 			if( dot >= 0.95f )
 			{
 				entityIndex = pfnIndexOfEdict( tr.ent );
-				if( entityIndex > 0 )
-					modelIndex = tr.ent->v.modelindex;
+				if( entityIndex > 0 ) modelIndex = tr.ent->v.modelindex;
 
 				// FIXME: probably some rotating or moving objects can't receive decal properly
 				SV_CreateDecal( tr.endpos, decalIndex, entityIndex, modelIndex, flags );
@@ -419,9 +418,8 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	}
 	else
 	{
-		edict_t	*pEdict = pfnPEntityOfEntIndex( entry->entityIndex );
-		if( pEdict != NULL )
-			modelIndex = pEdict->v.modelindex;
+		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
+		if( pEdict != NULL ) modelIndex = pEdict->v.modelindex;
 
 		SV_CreateDecal( entry->position, decalIndex, entry->entityIndex, modelIndex, flags );
 	}
@@ -918,7 +916,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	FS_Write( pFile, &id, sizeof( int ));
 	FS_Write( pFile, &version, sizeof( int ));
 
-	decalList = (decallist_t *)Z_Malloc(sizeof( decallist_t ) * MAX_RENDER_DECALS );
+	decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS );
 	decalCount = R_CreateDecalList( decalList, svgame.globals->changelevel );
 
 	FS_Write( pFile, &decalCount, sizeof( int ));

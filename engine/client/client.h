@@ -327,7 +327,6 @@ typedef struct
 
 	cl_entity_t	*entities;		// dynamically allocated entity array
 
-	int		numEntities;		// actual ents count
 	int		maxEntities;
 
 	// movement values from server
@@ -563,12 +562,12 @@ void CL_DrawHUD( int state );
 void CL_InitEdicts( void );
 void CL_FreeEdicts( void );
 void CL_ClearWorld( void );
-void CL_InitEntity( cl_entity_t *pEdict );
 void CL_FreeEntity( cl_entity_t *pEdict );
 void CL_CenterPrint( const char *text, float y );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
 int pfnDecalIndexFromName( const char *szDecalName );
+int pfnIndexFromTrace( struct pmtrace_s *pTrace );
 int CL_FindModelIndex( const char *m );
 HSPRITE pfnSPR_Load( const char *szPicName );
 
@@ -634,7 +633,6 @@ qboolean CL_InitStudioAPI( void );
 //
 void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
-void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate );
 qboolean CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 qboolean CL_IsPlayerIndex( int idx );
 
@@ -700,7 +698,7 @@ void S_BeginRegistration( void );
 sound_t S_RegisterSound( const char *sample );
 void S_EndRegistration( void );
 void S_StartSound( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, float attn, int pitch, int flags );
-void S_AmbientSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags );
+void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, float attn, int pitch, int flags );
 void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
 void S_StartLocalSound( const char *name );
 void S_RenderFrame( struct ref_params_s *fd );

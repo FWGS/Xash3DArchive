@@ -450,10 +450,9 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 	VectorCopy( e->angles, angles );
 
 	// interpolate monsters position
-	if( e->curstate.movetype == MOVETYPE_STEP || e->curstate.movetype == MOVETYPE_FLY ) 
+	if( e->curstate.movetype == MOVETYPE_STEP ) 
 	{
 		float		d, f = 0.0f;
-		cl_entity_t	*m_pGroundEntity;
 		int		i;
 
 		// don't do it if the goalstarttime hasn't updated in a while.
@@ -472,35 +471,9 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 			f = f - 1.0f;
 		}
 
-		m_pGroundEntity = CL_GetEntityByIndex( e->curstate.onground );
-
-		if( m_pGroundEntity && m_pGroundEntity->curstate.movetype == MOVETYPE_PUSH && !VectorIsNull( m_pGroundEntity->curstate.velocity ))
-		{
-			mstudioseqdesc_t		*pseqdesc;
-		
-			pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->curstate.sequence;
-			d = RI.lerpFrac;
-
-			origin[0] += ( e->origin[0] - e->prevstate.origin[0] ) * d;
-			origin[1] += ( e->origin[1] - e->prevstate.origin[1] ) * d;
-			origin[2] += ( e->origin[2] - e->prevstate.origin[2] ) * d;
-
-			d = f - d;
-
-			// monster walking on moving platform
-			if( pseqdesc->motiontype & STUDIO_LX )
-			{
-				origin[0] += ( e->curstate.origin[0] - e->latched.prevorigin[0] ) * d;
-				origin[1] += ( e->curstate.origin[1] - e->latched.prevorigin[1] ) * d;
-				origin[2] += ( e->curstate.origin[2] - e->latched.prevorigin[2] ) * d;
-			}
-		}
-		else
-		{
-			origin[0] += ( e->curstate.origin[0] - e->latched.prevorigin[0] ) * f;
-			origin[1] += ( e->curstate.origin[1] - e->latched.prevorigin[1] ) * f;
-			origin[2] += ( e->curstate.origin[2] - e->latched.prevorigin[2] ) * f;
-		}
+		origin[0] += ( e->curstate.origin[0] - e->latched.prevorigin[0] ) * f;
+		origin[1] += ( e->curstate.origin[1] - e->latched.prevorigin[1] ) * f;
+		origin[2] += ( e->curstate.origin[2] - e->latched.prevorigin[2] ) * f;
 
 		for( i = 0; i < 3; i++ )
 		{
@@ -516,9 +489,6 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 
 			angles[i] += d * f;
 		}
-
-		// update it so attachments always have right pos
-		if( !RI.refdef.paused ) VectorCopy( origin, e->origin );
 	}
 
 	// stupid Half-Life bug

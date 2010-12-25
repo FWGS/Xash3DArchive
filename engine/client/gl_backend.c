@@ -433,8 +433,8 @@ void GL_SetRenderMode( int mode )
 		texEnv = GL_REPLACE;
 		break;
 	case kRenderTransColor:
-		state = GLSTATE_SRCBLEND_DST_COLOR|GLSTATE_DSTBLEND_SRC_COLOR|GLSTATE_DEPTHWRITE;
-		texEnv = GL_MODULATE;
+		state = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR|GLSTATE_DEPTHWRITE;
+		texEnv = GL_DECAL;
 		break;
 	case kRenderTransAlpha:
 		state = GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;

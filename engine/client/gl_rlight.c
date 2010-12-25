@@ -7,6 +7,7 @@
 #include "client.h"
 #include "mathlib.h"
 #include "gl_local.h"
+#include "pm_local.h"
 #include "studio.h"
 
 /*
@@ -290,7 +291,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 	{
 		tex = surf->texinfo;
 
-		if( surf->flags & SURF_DRAWTILED )
+		if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
 			continue;	// no lightmaps
 
 		s = DotProduct( mid, tex->vecs[0] ) + tex->vecs[0][3] - surf->texturemins[0];
@@ -334,17 +335,29 @@ R_LightForPoint
 */
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius )
 {
-	dlight_t	*dl;
-	vec3_t	end, dir;
-	float	dist, add;
-	int	lnum;
+	dlight_t		*dl;
+	pmtrace_t		trace;
+	cl_entity_t	*m_pGround;
+	vec3_t		end, dir;
+	float		dist, add;
+	model_t		*pmodel;
+	mnode_t		*pnodes;
+	int		lnum;
 
-	// set to full bright if no light data
-	if( !cl.worldmodel || !cl.worldmodel->lightdata )
+	if( !RI.refdef.movevars )
 	{
 		ambientLight->r = 255;
 		ambientLight->g = 255;
 		ambientLight->b = 255;
+		return;
+	}
+
+	// set to full bright if no light data
+	if( !cl.worldmodel || !cl.worldmodel->lightdata )
+	{
+		ambientLight->r = RI.refdef.movevars->skycolor_r;
+		ambientLight->g = RI.refdef.movevars->skycolor_g;
+		ambientLight->b = RI.refdef.movevars->skycolor_b;
 		return;
 	}
 
@@ -353,12 +366,39 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	if( invLight ) end[2] = point[2] + 8192;
 	else end[2] = point[2] - 8192;
 
-	VectorSet( r_pointColor, 255, 255, 255 );
-	R_RecursiveLightPoint( cl.worldmodel, cl.worldmodel->nodes, point, end );
+	// always have valid model
+	pmodel = cl.worldmodel;
+	pnodes = pmodel->nodes;
+	m_pGround = NULL;
 
-	ambientLight->r = min((r_pointColor[0] >> 7), 255 );
-	ambientLight->g = min((r_pointColor[1] >> 7), 255 );
-	ambientLight->b = min((r_pointColor[2] >> 7), 255 );
+	if( gl_test->integer )
+	{
+		trace = PM_PlayerTrace( clgame.pmove, (float *)point, end, PM_STUDIO_IGNORE, 0, -1, NULL );
+		m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
+	}
+
+	if( m_pGround && m_pGround->model && VectorIsNull( m_pGround->origin ) && VectorIsNull( m_pGround->angles ))
+	{
+		pmodel = m_pGround->model;
+		pnodes = &pmodel->nodes[pmodel->hulls[0].firstclipnode];
+	}
+
+	r_pointColor[0] = RI.refdef.movevars->skycolor_r;
+	r_pointColor[1] = RI.refdef.movevars->skycolor_g;
+	r_pointColor[2] = RI.refdef.movevars->skycolor_b;
+
+	if( R_RecursiveLightPoint( pmodel, pnodes, point, end ))
+	{
+		ambientLight->r = min((r_pointColor[0] >> 7), 255 );
+		ambientLight->g = min((r_pointColor[1] >> 7), 255 );
+		ambientLight->b = min((r_pointColor[2] >> 7), 255 );
+	}
+	else
+	{
+		ambientLight->r = RI.refdef.movevars->skycolor_r;
+		ambientLight->g = RI.refdef.movevars->skycolor_g;
+		ambientLight->b = RI.refdef.movevars->skycolor_b;
+	}
 
 	// add dynamic lights
 	if( radius && r_dynamic->integer )

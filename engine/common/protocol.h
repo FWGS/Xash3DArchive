@@ -115,12 +115,10 @@
 // decal flags
 #define FDECAL_PERMANENT		0x01	// This decal should not be removed in favor of any new decals
 #define FDECAL_CUSTOM		0x02	// This is a custom clan logo and should not be saved/restored
-#define FDECAL_DYNAMIC		0x04	// Indicates the decal is dynamic
-#define FDECAL_DONTSAVE		0x08	// Decal was loaded from adjacent level, don't save it for this level
-#define FDECAL_CLIPTEST		0x10	// Decal needs to be clip-tested
-#define FDECAL_NOCLIP		0x20	// Decal is not clipped by containing polygon
-#define FDECAL_USESAXIS		0x40	// Uses the s axis field to determine orientation (footprints)
-#define FDECAL_ANIMATED		0x80	// this is decal has multiple frames
+#define FDECAL_DONTSAVE		0x04	// Decal was loaded from adjacent level, don't save it for this level
+#define FDECAL_CLIPTEST		0x08	// Decal needs to be clip-tested
+#define FDECAL_NOCLIP		0x10	// Decal is not clipped by containing polygon
+#define FDECAL_USESAXIS		0x20	// Uses the s axis field to determine orientation (footprints)
 
 // Max number of history commands to send ( 2 by default ) in case of dropped packets
 #define NUM_BACKUP_COMMAND_BITS	3

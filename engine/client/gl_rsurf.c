@@ -212,6 +212,9 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 	// already created
 	if( fa->polys ) return;
 
+	if( !fa->texinfo || !fa->texinfo->texture )
+		return; // bad polygon ?
+
 	// reconstruct the polygon
 	pedges = loadmodel->edges;
 	lnumverts = fa->numedges;

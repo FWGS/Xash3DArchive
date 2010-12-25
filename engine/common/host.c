@@ -354,13 +354,13 @@ void Host_RestartAmbientSounds( void )
 
 	if( !SV_Active( )) return;
 
-	nSounds = S_GetCurrentStaticSounds( soundInfo, 100, CHAN_STATIC );
+	nSounds = S_GetCurrentStaticSounds( soundInfo, 100 );
 	
 	for( i = 0; i < nSounds; i++)
 	{
 		if( soundInfo[i].looping && soundInfo[i].entnum != -1 )
 		{
-			S_StopSound( soundInfo[i].entnum, soundInfo[i].entchannel, soundInfo[i].name );
+			S_StopSound( soundInfo[i].entnum, CHAN_STATIC, soundInfo[i].name );
 
 			// FIXME: replace with SV_StartAmbientSound
 			SV_StartSound( pfnPEntityOfEntIndex( soundInfo[i].entnum ), CHAN_STATIC,

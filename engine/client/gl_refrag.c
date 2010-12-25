@@ -165,7 +165,6 @@ void R_StoreEfrags( efrag_t **ppefrag )
 	cl_entity_t	*pent;
 	model_t		*clmodel;
 	efrag_t		*pefrag;
-	int		entityType;
 
 	while(( pefrag = *ppefrag ) != NULL )
 	{
@@ -182,12 +181,7 @@ void R_StoreEfrags( efrag_t **ppefrag )
 
 			if( pent->visframe != tr.framecount )
 			{
-				if( pent->player ) entityType = ET_PLAYER;
-				else if( pent->curstate.entityType == ENTITY_BEAM )
-					entityType = ET_BEAM;
-				else entityType = ET_NORMAL;
-				
-				if( R_AddEntity( pent, entityType ))
+				if( R_AddEntity( pent, ET_FRAGMENTED ))
 				{
 					// mark that we've recorded this entity for this frame
 					pent->visframe = tr.framecount;

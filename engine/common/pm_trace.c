@@ -414,7 +414,7 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 	ptr->ent = -1;
 
 	// completely ignore studiomodels (same as MOVE_NOMONSTERS)
-	if( pe->studiomodel && flags & PM_STUDIO_IGNORE )
+	if( pe->studiomodel && ( flags & PM_STUDIO_IGNORE ))
 		return hitEnt;
 
 	if( pe->movetype == MOVETYPE_PUSH || pe->solid == SOLID_BSP )

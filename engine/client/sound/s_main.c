@@ -430,7 +430,9 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	if( !pos ) pos = vec3_origin;
 
 	// pick a channel to play on
-	target_chan = SND_PickDynamicChannel( ent, chan, sfx );
+	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx );
+	else target_chan = SND_PickDynamicChannel( ent, chan, sfx );
+
 	if( !target_chan )
 	{
 		MsgDev( D_ERROR, "dropped sound \"sound/%s\"\n", sfx->name );
@@ -529,7 +531,7 @@ Pitch changes playback pitch of wave by % above or below 100.  Ignored if pitch 
 NOTE: volume is 0.0 - 1.0 and attenuation is 0.0 - 1.0 when passed in.
 =================
 */
-void S_AmbientSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags )
+void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, float attn, int pitch, int flags )
 {
 	channel_t	*ch;
 	wavdata_t	*pSource = NULL;
@@ -546,7 +548,7 @@ void S_AmbientSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 
 	if( flags & (SND_STOP|SND_CHANGE_VOL|SND_CHANGE_PITCH))
 	{
-		if( S_AlterChannel( ent, chan, sfx, vol, pitch, flags ))
+		if( S_AlterChannel( ent, CHAN_STATIC, sfx, vol, pitch, flags ))
 			return;
 		if( flags & SND_STOP ) return;
 	}
@@ -562,7 +564,7 @@ void S_AmbientSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	if( ent != 0 ) CL_GetEntitySpatialization( ent, origin, NULL );
 
 	// pick a channel to play on from the static area
-	ch = SND_PickStaticChannel( ent, sfx );	// autolooping sounds are always fixed origin(?)
+	ch = SND_PickStaticChannel( ent, sfx );
 	if( !ch ) return;
 
 	if( S_TestSoundChar( sfx->name, '!' ))
@@ -600,9 +602,9 @@ void S_AmbientSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	ch->localsound = (flags & SND_LOCALSOUND) ? true : false;
 	ch->master_vol = vol;
 	ch->dist_mult = (attn / SND_CLIP_DISTANCE);
+	ch->entchannel = CHAN_STATIC;
 	ch->basePitch = pitch;
 	ch->entnum = ent;
-	ch->entchannel = chan;
 
 	SND_Spatialize( ch );
 }
@@ -629,7 +631,7 @@ S_GetCurrentStaticSounds
 grab all static sounds playing at current channel
 ==================
 */
-int S_GetCurrentStaticSounds( soundlist_t *pout, int size, int entchannel )
+int S_GetCurrentStaticSounds( soundlist_t *pout, int size )
 {
 	int	sounds_left = size;
 	int	i;
@@ -639,11 +641,10 @@ int S_GetCurrentStaticSounds( soundlist_t *pout, int size, int entchannel )
 
 	for( i = MAX_DYNAMIC_CHANNELS; i < total_channels && sounds_left; i++ )
 	{
-		if(( !entchannel || channels[i].entchannel == entchannel ) && channels[i].sfx )
+		if( channels[i].entchannel == CHAN_STATIC && channels[i].sfx )
 		{
 			com.strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
 			pout->entnum = channels[i].entnum;
-			pout->entchannel = channels[i].entchannel;
 			VectorCopy( channels[i].origin, pout->origin );
 			pout->volume = (float)channels[i].master_vol / 255.0f;
 			pout->attenuation = channels[i].dist_mult * SND_CLIP_DISTANCE;

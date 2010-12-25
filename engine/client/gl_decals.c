@@ -58,7 +58,6 @@ static void Intersect( decal_clip_t clipFunc, decalvert_t *one, decalvert_t *two
 typedef struct
 {
 	vec3_t		m_Position;	// world coordinates of the decal center
-	vec3_t		m_BasePosition;	// untransformed world pos for right serialize
 	vec3_t		m_SAxis;		// the s axis for the decal in world coordinates
 	model_t*		m_pModel;		// the model the decal is going to be applied in
 	int		m_iTexture;	// The decal material
@@ -235,8 +234,8 @@ void R_SetupDecalTextureSpaceBasis( decal_t *pDecal, msurface_t *surf, int textu
 	// world height of decal = ptexture->height / pDecal->scale
 	// scale is inverse, scales world space to decal u/v space [0,1]
 	// OPTIMIZE: Get rid of these divides
-	decalWorldScale[0] = pDecal->scale / width;
-	decalWorldScale[1] = pDecal->scale / height;
+	decalWorldScale[0] = (float)pDecal->scale / width;
+	decalWorldScale[1] = (float)pDecal->scale / height;
 	
 	VectorScale( textureSpaceBasis[0], decalWorldScale[0], textureSpaceBasis[0] );
 	VectorScale( textureSpaceBasis[1], decalWorldScale[1], textureSpaceBasis[1] );
@@ -562,7 +561,6 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 	pdecal->flags = decalinfo->m_Flags;
 
 	VectorCopy( decalinfo->m_Position, pdecal->position );
-	VectorCopy( decalinfo->m_BasePosition, pdecal->worldPos );
 
 	if( pdecal->flags & FDECAL_USESAXIS )
 		VectorCopy( decalinfo->m_SAxis, pdecal->saxis );
@@ -718,7 +716,6 @@ static void R_DecalNode( model_t *model, mnode_t *node, decalinfo_t *decalinfo )
 void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos, int flags, vec3_t saxis )
 {
 	decalinfo_t	decalInfo;
-	vec3_t		pos_l;
 	hull_t		*hull;
 	cl_entity_t	*ent = NULL;
 	model_t		*model = NULL;
@@ -734,8 +731,8 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	{
 		ent = CL_GetEntityByIndex( entityIndex );
 
-		if( ent != NULL ) model = CM_ClipHandleToModel( ent->curstate.modelindex );
-		else if( modelIndex > 0 ) model = CM_ClipHandleToModel( modelIndex );	
+		if( modelIndex > 0 ) model = CM_ClipHandleToModel( modelIndex );
+		else if( ent != NULL ) model = CM_ClipHandleToModel( ent->curstate.modelindex );
 		else
 		{
 			Msg( "ent = NULL, model = NULL on entity %i, model %i\n", entityIndex, modelIndex );
@@ -755,10 +752,10 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	decalInfo.m_pModel = model;
 	hull = &model->hulls[0];	// always use #0 hull
 
-	VectorCopy( pos, decalInfo.m_BasePosition );
-
 	if( ent )
 	{
+		vec3_t	pos_l;
+	
 		// transform decal position in local bmodel space
 		if( !VectorIsNull( ent->angles ))
 		{
@@ -857,17 +854,21 @@ void DrawSingleDecal( decal_t *pDecal, msurface_t *fa )
 void DrawSurfaceDecals( msurface_t *fa )
 {
 	decal_t	*p;
+	int	oldState;
+	int	oldTexEnv;
 
 	if( !fa->pdecals ) return;
 
+	oldState = glState.flags;
+	oldTexEnv = glState.currentEnvModes[glState.activeTMU];
 	GL_SetState( GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_OFFSET_FILL );
 	GL_TexEnv( GL_REPLACE );
 
 	for( p = fa->pdecals; p; p = p->pnext )
 		DrawSingleDecal( p, fa );
 
-	GL_TexEnv( GL_REPLACE );
-	GL_SetState( GLSTATE_DEPTHWRITE );
+	GL_SetState( oldState );
+	GL_TexEnv( oldTexEnv );
 }
 
 /*
@@ -877,7 +878,7 @@ void DrawSurfaceDecals( msurface_t *fa )
 
 =============================================================
 */
-static qboolean R_DecalUnProject( decal_t *pdecal, decallist_t *entry, qboolean changelevel )
+static qboolean R_DecalUnProject( decal_t *pdecal, decallist_t *entry )
 {
 	cl_entity_t	*ent;
 		
@@ -886,7 +887,7 @@ static qboolean R_DecalUnProject( decal_t *pdecal, decallist_t *entry, qboolean 
 
 	ent = CL_GetEntityByIndex( pdecal->entityIndex );
 
-	if( ent && (!VectorIsNull( ent->origin ) || !VectorIsNull( ent->angles )))
+	if( ent && !VectorIsNull( ent->angles ))
 	{
 		// transform decal position back into world space
 		matrix4x4	decalMatrix, entityMatrix, world;
@@ -910,9 +911,6 @@ static qboolean R_DecalUnProject( decal_t *pdecal, decallist_t *entry, qboolean 
 		VectorCopy( pdecal->position, entry->position );
 	}
 
-
-	// NOTE: return original decal position for world or bmodel
-//	if( changelevel ) VectorCopy( pdecal->worldPos, entry->position );
 	entry->entityIndex = pdecal->entityIndex;
 
 	// Grab surface plane equation
@@ -1008,7 +1006,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 			pList[total].depth = depth;
 			pList[total].flags = decal->flags;
 			
-			R_DecalUnProject( decal, &pList[total], changelevel );
+			R_DecalUnProject( decal, &pList[total] );
 			com.strncpy( pList[total].name, R_GetTexture( decal->texture )->name, sizeof( pList[total].name ));
 
 			// check to see if the decal should be added

@@ -7,7 +7,9 @@
 #include "client.h"
 #include "net_encode.h"
 #include "entity_types.h"
+#include "pm_local.h"
 #include "cl_tent.h"
+#include "studio.h"
 #include "dlight.h"
 #include "input.h"
 
@@ -38,6 +40,90 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	// apply scale to studiomodels and sprites only
 	if( ent->model && ent->model->type != mod_brush && !ent->curstate.scale )
 		ent->curstate.scale = 1.0f;
+
+	// make me lerp
+	if( ent->curstate.eflags & EFLAG_SLERP )
+	{
+		float		d, f = 0.0f;
+		cl_entity_t	*m_pGround;
+		int		i;
+
+		// don't do it if the goalstarttime hasn't updated in a while.
+		// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
+		// was increased to 1.0 s., which is 2x the max lag we are accounting for.
+		if(( cl.time < ent->curstate.animtime + 1.0f ) && ( ent->curstate.animtime != ent->latched.prevanimtime ))
+			f = ( cl.time - ent->curstate.animtime ) / ( ent->curstate.animtime - ent->latched.prevanimtime );
+
+		f = f - 1.0f;
+
+		if( ent->curstate.movetype == MOVETYPE_FLY )
+		{
+			ent->origin[0] += ( ent->curstate.origin[0] - ent->latched.prevorigin[0] ) * f;
+			ent->origin[1] += ( ent->curstate.origin[1] - ent->latched.prevorigin[1] ) * f;
+			ent->origin[2] += ( ent->curstate.origin[2] - ent->latched.prevorigin[2] ) * f;
+
+			for( i = 0; i < 3; i++ )
+			{
+				float	ang1, ang2;
+
+				ang1 = ent->curstate.angles[i];
+				ang2 = ent->latched.prevangles[i];
+				d = ang1 - ang2;
+				if( d > 180 ) d -= 360;
+				else if( d < -180 ) d += 360;
+				ent->angles[i] += d * f;
+			}
+		}
+		else if( ent->curstate.movetype == MOVETYPE_STEP )
+		{
+			vec3_t	vecSrc, vecEnd;
+			pmtrace_t	trace;
+
+			VectorSet( vecSrc, ent->origin[0], ent->origin[1], ent->origin[2] + ent->model->maxs[2] );
+			VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] );		
+			trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_STUDIO_IGNORE, 0, -1, NULL );
+			m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
+
+			if( m_pGround && m_pGround->curstate.movetype == MOVETYPE_PUSH )
+			{
+				studiohdr_t	*phdr;
+				mstudioseqdesc_t	*pseqdesc;
+				qboolean		applyVel, applyAvel;
+
+				d = 1.0f - cl.lerpFrac; // use backlerp to interpolate pusher position
+				phdr = (studiohdr_t *)Mod_Extradata( ent->model );		
+				ASSERT( phdr != NULL );
+				pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex) + ent->curstate.sequence;
+
+				d = d - 1.0f;
+
+				applyVel = !VectorCompare( m_pGround->curstate.origin, m_pGround->prevstate.origin );
+				applyAvel = !VectorCompare( m_pGround->curstate.angles, m_pGround->prevstate.angles );
+
+				if( applyVel || applyAvel )
+				{
+					ent->origin[0] += ( m_pGround->curstate.origin[0] - m_pGround->latched.prevorigin[0] ) * d;
+					ent->origin[1] += ( m_pGround->curstate.origin[1] - m_pGround->latched.prevorigin[1] ) * d;
+					ent->origin[2] += ( m_pGround->curstate.origin[2] - m_pGround->latched.prevorigin[2] ) * d;
+				}
+
+				if( applyAvel )
+				{
+					for( i = 0; i < 3; i++ )
+					{
+						float	ang1, ang2;
+
+						ang1 = m_pGround->curstate.angles[i];
+						ang2 = m_pGround->latched.prevangles[i];
+						f = ang1 - ang2;
+						if( d > 180 ) f -= 360;
+						else if( d < -180 ) f += 360;
+						ent->curstate.angles[i] += d * f;
+					}
+				}
+			}
+		}
+	} 
 }
 
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
@@ -192,11 +278,11 @@ CL_UpdateStudioVars
 Update studio latched vars so interpolation work properly
 ==================
 */
-void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate )
+void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean noInterp )
 {
 	int	i;
 
-	if( newstate->effects & EF_NOINTERP )
+	if( newstate->effects & EF_NOINTERP || noInterp )
 	{
 		ent->latched.sequencetime = 0.0f; // no lerping between sequences
 		ent->latched.prevsequence = newstate->sequence; // keep an actual
@@ -212,8 +298,6 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate )
 		// copy blends
 		for( i = 0; i < 4; i++ )
 			ent->latched.prevblending[i] = newstate->blending[i];
-
-		newstate->effects &= ~EF_NOINTERP;
 		return;
 	}
 
@@ -265,58 +349,42 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	cl_entity_t	*ent;
 	entity_state_t	*state;
 	qboolean		newent = (old) ? false : true;
-	qboolean		noInterp = false;
-	int		result = 1;
+	qboolean		result = true;
 
 	ent = EDICT_NUM( newnum );
 	state = &cls.packet_entities[cls.next_client_entities % cls.num_client_entities];
+	ent->index = newnum;
 
 	if( newent ) old = &ent->baseline;
-	if( unchanged )
-	{
-		*state = *old;
-	}
-	else
-	{
-		result = MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
-	}
+
+	if( unchanged ) *state = *old;
+	else result = MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), cl.mtime[0] );
 
 	if( !result )
 	{
 		if( newent ) Host_Error( "Cl_DeltaEntity: tried to release new entity\n" );
-			
-		if( state->number == -1 )
-		{
-//			Msg( "Entity %s was removed from server\n", ent->curstate.classname );
-			CL_FreeEntity( ent );
-		}
-		else
-		{
-//			Msg( "Entity %s was removed from delta-message\n", ent->curstate.classname );
-			ent->curstate.effects |= EF_NODRAW; // don't rendering
-			CL_KillDeadBeams( ent ); // release dead beams
-		}
+
+		CL_KillDeadBeams( ent ); // release dead beams
+
+// FIXME: waiting for static entity implimentation			
+//		if( state->number == -1 )
+//			R_RemoveEfrags( ent );
 
 		// entity was delta removed
 		return;
 	}
 
-	// entity present in currentframe
+	// entity is present in newframe
 	state->messagenum = cl.parsecount;
-
+	state->msg_time = cl.mtime[0];
+	
 	cls.next_client_entities++;
 	frame->num_entities++;
-
-	if( !ent->index )
-	{
-		CL_InitEntity( ent );
-		noInterp = true;
-	}
 
 	// set player state
 	ent->player = CL_IsPlayerIndex( ent->index );
 
-	if( state->effects & EF_NOINTERP || noInterp )
+	if( state->effects & EF_NOINTERP || newent )
 	{	
 		// duplicate the current state so lerping doesn't hurt anything
 		ent->prevstate = *state;
@@ -329,7 +397,16 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	// NOTE: always check modelindex for new state not current
 	if( Mod_GetType( state->modelindex ) == mod_studio )
-		CL_UpdateStudioVars( ent, state );
+	{
+		CL_UpdateStudioVars( ent, state, newent );
+	}
+	else if( Mod_GetType( state->modelindex ) == mod_brush )
+	{
+		if( !VectorCompare( state->origin, ent->curstate.origin ))
+			VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
+		if( !VectorCompare( state->angles, ent->curstate.angles ))
+			VectorCopy( ent->curstate.angles, ent->latched.prevangles );
+	}
 
 	// set right current state
 	ent->curstate = *state;
@@ -370,9 +447,6 @@ void CL_FlushEntityPacket( sizebuf_t *msg )
 
 		if( BF_CheckOverflow( msg ))
 			Host_Error( "CL_FlushEntityPacket: read overflow\n" );
-
-		while( newnum >= clgame.numEntities )
-			clgame.numEntities++;
 
 		MSG_ReadDeltaEntity( msg, &from, &to, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
 	}
@@ -490,9 +564,6 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		if( BF_CheckOverflow( msg ))
 			Host_Error( "CL_ParsePacketEntities: read overflow\n" );
 
-		while( newnum >= clgame.numEntities )
-			clgame.numEntities++;
-
 		while( oldnum < newnum )
 		{	
 			// one or more entities from the old packet are unchanged
@@ -599,10 +670,7 @@ CL_AddPacketEntities
 void CL_AddPacketEntities( frame_t *frame )
 {
 	cl_entity_t	*ent, *clent;
-	int		e, entityType;
-
-	// now recalc actual entcount
-	for( ; !EDICT_NUM( clgame.numEntities - 1 )->index; clgame.numEntities-- );
+	int		i, e, entityType;
 
 	clent = CL_GetLocalPlayer();
 	if( !clent ) return;
@@ -610,13 +678,11 @@ void CL_AddPacketEntities( frame_t *frame )
 	// update client vars
 	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.local.client );
 
-	for( e = 1; e < clgame.numEntities; e++ )
+	for( i = 0; i < cl.frame.num_entities; i++ )
 	{
+		e = cls.packet_entities[(cl.frame.first_entity + i) % cls.num_client_entities].number;
 		ent = CL_GetEntityByIndex( e );
-		if( !ent || !ent->index ) continue;
-
-		// entity not visible for this client
-		if( ent->curstate.effects & EF_NODRAW )
+		if( !ent || ent == clgame.entities )
 			continue;
 
 		CL_UpdateEntityFields( ent );
@@ -662,53 +728,24 @@ void CL_AddEntities( void )
 qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
 {
 	cl_entity_t	*ent;
-	qboolean		from_baseline = false;
+	qboolean		valid_origin;
 
-	if( entnum < 0 || entnum > clgame.numEntities )
-		return false;
+	valid_origin = VectorIsNull( origin ) ? false : true;          
+	ent = CL_GetEntityByIndex( entnum );
+	if( !ent || !ent->index ) return valid_origin;
 
-	ent = EDICT_NUM( entnum );
+	// setup origin and velocity
+	if( origin ) VectorCopy( ent->curstate.origin, origin );
+	if( velocity ) VectorCopy( ent->curstate.velocity, velocity );
 
-	if( !ent->index || ent->curstate.number != entnum )
+	// if a brush model, offset the origin
+	if( origin && Mod_GetType( ent->curstate.modelindex ) == mod_brush )
 	{
-		// this entity isn't visible but maybe it have baseline ?
-		if( ent->baseline.number != entnum )
-			return false;
-		from_baseline = true;
-	}
+		vec3_t	mins, maxs, midPoint;
 
-	if( from_baseline )
-	{
-		// setup origin and velocity
-		if( origin ) VectorCopy( ent->baseline.origin, origin );
-		if( velocity ) VectorCopy( ent->baseline.velocity, velocity );
-
-		// if a brush model, offset the origin
-		if( origin && Mod_GetType( ent->baseline.modelindex ) == mod_brush )
-		{
-			vec3_t	mins, maxs, midPoint;
-	
-			Mod_GetBounds( ent->baseline.modelindex, mins, maxs );
-			VectorAverage( mins, maxs, midPoint );
-			VectorAdd( origin, midPoint, origin );
-		}
-	}
-	else
-	{
-
-		// setup origin and velocity
-		if( origin ) VectorCopy( ent->origin, origin );
-		if( velocity ) VectorCopy( ent->curstate.velocity, velocity );
-
-		// if a brush model, offset the origin
-		if( origin && Mod_GetType( ent->curstate.modelindex ) == mod_brush )
-		{
-			vec3_t	mins, maxs, midPoint;
-	
-			Mod_GetBounds( ent->curstate.modelindex, mins, maxs );
-			VectorAverage( mins, maxs, midPoint );
-			VectorAdd( origin, midPoint, origin );
-		}
+		Mod_GetBounds( ent->curstate.modelindex, mins, maxs );
+		VectorAverage( mins, maxs, midPoint );
+		VectorAdd( origin, midPoint, origin );
 	}
 	return true;
 }

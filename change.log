@@ -1,4 +1,4 @@
-build ????
+build 1418
 
 Tools: move all tools into launch.dll
 Sound: moving snd_dx.dll into engine.dll
@@ -11,6 +11,7 @@ FS: recode wad resource management (now support lumps from wads with same name)
 Engine: trigger_camera is now correctly saved and restored
 Render: add sorting for translucent surfaces
 Render: make support for 'static' models (any opaque non-moving brushes engine automatically make as part of world)
+Render: correct serialization for decals on bmodels
 
 build 1338
 

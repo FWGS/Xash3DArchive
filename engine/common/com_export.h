@@ -98,7 +98,6 @@ typedef struct
 {
 	string	name;
 	int	entnum;
-	int	entchannel;
 	vec3_t	origin;
 	float	volume;
 	float	attenuation;

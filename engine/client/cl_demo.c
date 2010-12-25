@@ -146,7 +146,6 @@ void CL_WriteDemoHeader( const char *name )
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 	Mem_Set( &nullmovevars, 0, sizeof( nullmovevars ));
 
-	// FIXME: use clgame.numEntities instead ?
 	for( i = 0; i < clgame.maxEntities; i++ )
 	{
 		state = &clgame.entities[i].baseline;

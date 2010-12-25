@@ -89,11 +89,9 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	if( index < 0 )
 		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
 
-	if( index >= clgame.numEntities )
+	if( index >= clgame.maxEntities )
 		return NULL;
 
-	if( !EDICT_NUM( index )->index )
-		return NULL;
 	return EDICT_NUM( index );
 }
 
@@ -1253,23 +1251,11 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	CL_QueueEvent( flags, eventindex, delay, &args );
 }
 
-void CL_InitEntity( cl_entity_t *pEdict )
-{
-	ASSERT( pEdict );
-
-	pEdict->index = NUM_FOR_EDICT( pEdict );
-}
-
 void CL_FreeEntity( cl_entity_t *pEdict )
 {
 	ASSERT( pEdict );
-
-	// already freed ?
-	if( !pEdict->index ) return;
-
 	R_RemoveEfrags( pEdict );
 	CL_KillDeadBeams( pEdict );
-	pEdict->index = 0;	// freed
 }
 
 void CL_ClearWorld( void )
@@ -1292,35 +1278,19 @@ void CL_InitEdicts( void )
 	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
-	clgame.numEntities = 1;
 }
 
 void CL_FreeEdicts( void )
 {
-	int	i;
-	cl_entity_t	*ent;
-
 	if( clgame.entities )
-	{
-		for( i = 0; i < clgame.maxEntities; i++ )
-		{
-			ent = EDICT_NUM( i );
-			if( ent->index <= 0 ) continue;
-			CL_FreeEntity( ent );
-		}
 		Mem_Free( clgame.entities );
-	}
+	clgame.entities = NULL;
 
 	if( cls.packet_entities )
-	{
 		Z_Free( cls.packet_entities );
-		cls.packet_entities = NULL;
-		cls.num_client_entities = 0;
-		cls.next_client_entities = 0;
-	}
-
-	clgame.numEntities = 0;
-	clgame.entities = NULL;
+	cls.packet_entities = NULL;
+	cls.num_client_entities = 0;
+	cls.next_client_entities = 0;
 }
 
 /*
@@ -1481,7 +1451,9 @@ pfnSPR_Draw
 */
 static void pfnSPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
-	GL_SetRenderMode( kRenderNormal );
+	GL_SetState( GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+	GL_TexEnv( GL_MODULATE );
+
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 
