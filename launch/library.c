@@ -619,16 +619,23 @@ static void *DecryptImage( byte *data, size_t size )
 
 void *MemoryLoadLibrary( const char *name, qboolean encrypted )
 {
-	MEMORYMODULE	*result;
 	PIMAGE_DOS_HEADER	dos_header;
 	PIMAGE_NT_HEADERS	old_header;
+	MEMORYMODULE	*result = NULL;
 	byte		*code, *headers;
 	DWORD		locationDelta;
 	DllEntryProc	DllEntry;
 	string		errorstring;
 	qboolean		successfull;
 	void		*data = NULL;
-	size_t		size;
+	size_t		size = 0;
+
+	if( encrypted )
+	{
+		// encypted dll support is disabled for now (doesn't working properly)
+		com.sprintf( errorstring, "couldn't load encrypted library %s", name );
+		goto library_error;
+	}
 
 	data = FS_LoadFile( name, &size );
 	if( !data )
@@ -732,7 +739,7 @@ library_error:
 	// cleanup
 	if( data ) Mem_Free( data );
 	MemoryFreeLibrary( result );
-	MsgDev( D_ERROR, "LoadLibrary: %s\n", errorstring );
+	MsgDev( D_ERROR, "%s\n", errorstring );
 
 	return NULL;
 }

@@ -562,7 +562,11 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else type = MOVE_NORMAL;
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
+	// prevent items and ammo to stuck at spawnpoint
+	if( ent->v.solid == SOLID_TRIGGER || ent->v.solid == SOLID_NOT )
+		trace = SV_Move( ent->v.origin, vec3_origin, vec3_origin, end, type, ent );
+	else trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
+
 	if( !trace.allsolid && !trace.startsolid )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
@@ -618,6 +622,99 @@ static qboolean SV_CanBlock( edict_t *ent )
 		return false;
 
 	return true;
+}
+
+static qboolean SV_AllowToPush( edict_t *check, edict_t *pusher, const vec3_t mins, const vec3_t maxs )
+{
+	int	oldsolid, block;
+
+	if( !SV_IsValidEdict( check ) || check->v.flags & FL_KILLME )
+		return false;
+
+	// filter movetypes to collide with
+	if( !SV_CanPushed( check ))
+		return false;
+
+	oldsolid = pusher->v.solid;
+	pusher->v.solid = SOLID_NOT;
+	block = SV_TestEntityPosition( check );
+	pusher->v.solid = oldsolid;
+	if( block ) return false;
+
+	// if the entity is standing on the pusher, it will definately be moved
+	if( !(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == pusher ))
+	{
+		if( check->v.absmin[0] >= maxs[0]
+		 || check->v.absmin[1] >= maxs[1]
+		 || check->v.absmin[2] >= maxs[2]
+		 || check->v.absmax[0] <= mins[0]
+		 || check->v.absmax[1] <= mins[1]
+		 || check->v.absmax[2] <= mins[2] )
+			return false;
+
+		// see if the ent's bbox is inside the pusher's final position
+		if( !SV_TestEntityPosition( check ))
+			return false;
+	}
+
+	// all tests are passed
+	return true;
+}
+
+/*
+============
+SV_BuildPushList
+
+build the list of all entities which contacted with pusher
+============
+*/
+sv_pushed_t *SV_BuildPushList( edict_t *pusher, int *numpushed, const vec3_t mins, const vec3_t maxs )
+{
+	sv_pushed_t	*pushed_p;
+	edict_t		*check;
+	int		e;
+
+	// first entry always reseved by pusher
+	pushed_p = svgame.pushed + 1;
+
+	// now add all non-player entities
+	for( e = svgame.globals->maxClients + 1; e < svgame.numEntities; e++ )
+	{
+		check = EDICT_NUM( e );
+
+		if( !SV_AllowToPush( check, pusher, mins, maxs ))
+			continue;
+
+		// remove the onground flag for non-players
+		if( check->v.movetype != MOVETYPE_WALK )
+			check->v.flags &= ~FL_ONGROUND;
+
+		// save original position of contacted entity
+		pushed_p->ent = check;
+		VectorCopy( check->v.origin, pushed_p->origin );
+		VectorCopy( check->v.angles, pushed_p->angles );
+		pushed_p++;
+	}
+
+	// add all player entities (must be last)
+	// now add all non-player entities
+	for( e = 1; e < svgame.globals->maxClients + 1; e++ )
+	{
+		check = EDICT_NUM( e );
+
+		if( !SV_AllowToPush( check, pusher, mins, maxs ))
+			continue;
+
+		// save original position of contacted entity
+		pushed_p->ent = check;
+		VectorCopy( check->v.origin, pushed_p->origin );
+		VectorCopy( check->v.angles, pushed_p->angles );
+		pushed_p++;
+	}
+
+	if( numpushed ) *numpushed = pushed_p - svgame.pushed;
+
+	return svgame.pushed;
 }
 
 /*

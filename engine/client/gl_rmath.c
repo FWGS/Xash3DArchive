@@ -77,7 +77,7 @@ float V_CalcFov( float *fov_x, float width, float height )
 {
 	float	x, half_fov_y;
 
-	if( *fov_x < 1 || *fov_x > 179 )
+	if( *fov_x < 1 || *fov_x > 170 )
 	{
 		MsgDev( D_ERROR, "V_CalcFov: bad fov %g!\n", *fov_x );
 		*fov_x = 90;

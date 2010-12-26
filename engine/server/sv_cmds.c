@@ -493,7 +493,9 @@ SV_Kill_f
 */
 void SV_Kill_f( void )
 {
+	if( !Cvar_VariableInteger( "sv_cheats" )) return;
 	if( !SV_SetPlayer()) return;
+
 	if( sv_client->edict->v.health <= 0.0f )
 	{
 		SV_ClientPrintf( sv_client, PRINT_HIGH, "Can't suicide -- allready dead!\n");

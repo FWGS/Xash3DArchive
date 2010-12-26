@@ -1595,7 +1595,7 @@ void CL_Init( void )
 	S_Init();	// init sound
 
 	if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
-		Host_Error( "CL_InitGame: can't initialize client.dll\n" );
+		Host_Error( "can't initialize client.dll\n" );
 
 	cls.initialized = true;
 

@@ -1653,6 +1653,8 @@ ucmd_t ucmds[] =
 { "download", SV_BeginDownload_f },
 { "userinfo", SV_UpdateUserinfo_f },
 { "lightstyles", SV_WriteLightstyles_f },
+{ "lightgamma", NULL },	// FIXME: make cvars
+{ "direct", NULL },
 { NULL, NULL }
 };
 
@@ -1671,7 +1673,7 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 		if( !com.strcmp( Cmd_Argv( 0 ), u->name ))
 		{
 			MsgDev( D_NOTE, "ucmd->%s()\n", u->name );
-			u->func( cl );
+			if( u->func ) u->func( cl );
 			break;
 		}
 	}

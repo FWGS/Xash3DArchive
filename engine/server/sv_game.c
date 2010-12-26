@@ -1480,7 +1480,13 @@ int pfnDropToFloor( edict_t* e )
 	VectorCopy( e->v.origin, end );
 	end[2] -= 256;
 
+#if 1
+	if( e->v.solid == SOLID_TRIGGER || e->v.solid == SOLID_NOT )
+		trace = SV_Move( e->v.origin, vec3_origin, vec3_origin, end, MOVE_NOMONSTERS, e );
+	else trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
+#else
 	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
+#endif
 
 	if( trace.allsolid )
 		return -1;
