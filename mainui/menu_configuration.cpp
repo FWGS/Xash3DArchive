@@ -151,6 +151,7 @@ static void UI_Options_Init( void )
 {
 	memset( &uiOptions, 0, sizeof( uiOptions_t ));
 
+	uiOptions.menu.vidInitFunc = UI_Options_Init;
 	uiOptions.menu.keyFunc = UI_Options_KeyFunc;
 
 	uiOptions.background.generic.id = ID_BACKGROUND;

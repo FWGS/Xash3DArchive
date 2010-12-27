@@ -122,8 +122,8 @@ typedef enum
 	CVAR_LATCH	= BIT(14),// save changes until server restart
 	CVAR_READ_ONLY	= BIT(15),// display only, cannot be set by user at all
 	CVAR_LATCH_VIDEO	= BIT(16),// save changes until render restart
-	CVAR_LATCH_AUDIO	= BIT(17),// save changes until vsound restart
-	CVAR_USER_CREATED	= BIT(18),// created by a set command (dll's used)
+	CVAR_USER_CREATED	= BIT(17),// created by a set command (dll's used)
+	CVAR_GLCONFIG	= BIT(18),// set to cause it to be saved to opengl.cfg
 } cvar_flags_t;
 
 #include "cvardef.h"

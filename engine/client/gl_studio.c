@@ -43,6 +43,7 @@ typedef struct studiolight_s
 
 convar_t			*r_studio_lerping;
 convar_t			*r_studio_lambert;
+convar_t			*r_drawviewmodel;
 convar_t			*cl_himodels;
 char			model_name[64];
 static r_studio_interface_t	*pStudioDraw;
@@ -90,6 +91,7 @@ void R_StudioInit( void )
 
 	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", CVAR_ARCHIVE, "bonelighting lambert value" );
 	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", CVAR_ARCHIVE, "enables studio animation lerping" );
+	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
 
 	// recalc software X and Y alias scale (this stuff is used only by HL software renderer but who knews...)
@@ -1994,6 +1996,7 @@ static void R_StudioSetupRenderer( int rendermode )
           }
 
 	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse + 1 );
+	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
 }
 
 /*
@@ -2016,6 +2019,7 @@ static void R_StudioRestoreRenderer( void )
 	GL_SetRenderMode( kRenderNormal );
 	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 	pglScalef( 1.0f, 1.0f, 1.0f );
+	pglShadeModel( GL_FLAT );
 }
 
 /*
@@ -2562,6 +2566,30 @@ void R_RunViewmodelEvents( void )
 	if( !RI.currentmodel ) return;
 
 	pStudioDraw->StudioDrawModel( STUDIO_EVENTS );
+
+	RI.currententity = NULL;
+	RI.currentmodel = NULL;
+}
+
+/*
+=================
+R_DrawViewModel
+=================
+*/
+void R_DrawViewModel( void )
+{
+	if( RI.refdef.onlyClientDraw || r_drawviewmodel->integer == 0 )
+		return;
+
+	// ignore in thirdperson, camera view or client is died
+	if( cl.thirdperson || cl.refdef.health <= 0 || cl.refdef.viewentity != ( cl.playernum + 1 ))
+		return;
+
+	RI.currententity = &clgame.viewent;
+	RI.currentmodel = RI.currententity->model;
+	if( !RI.currentmodel ) return;
+
+	pStudioDraw->StudioDrawModel( STUDIO_RENDER );
 
 	RI.currententity = NULL;
 	RI.currentmodel = NULL;

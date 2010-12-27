@@ -425,6 +425,10 @@ void GL_SetRenderMode( int mode )
 {
 	int	state, texEnv;
 
+	// GoldSrc in 2D mode uses default mode as TransTexture
+	if( glState.in2DMode && mode == kRenderNormal )
+		mode = kRenderTransTexture;
+
 	switch( mode )
 	{
 	case kRenderNormal:
@@ -434,7 +438,7 @@ void GL_SetRenderMode( int mode )
 		break;
 	case kRenderTransColor:
 		state = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR|GLSTATE_DEPTHWRITE;
-		texEnv = GL_DECAL;
+		texEnv = GL_REPLACE;
 		break;
 	case kRenderTransAlpha:
 		state = GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;

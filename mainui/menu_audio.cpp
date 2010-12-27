@@ -124,8 +124,6 @@ static void UI_Audio_SetConfig( void )
 	CVAR_SET_FLOAT( "musicvolume", uiAudio.musicVolume.curValue );
 	CVAR_SET_FLOAT( "s_lerping", uiAudio.lerping.enabled );
 	CVAR_SET_FLOAT( "dsp_off", uiAudio.noDSP.enabled );
-
-	CLIENT_COMMAND( TRUE, "snd_restart\n" );
 }
 
 /*
@@ -202,6 +200,8 @@ static void UI_Audio_Init( void )
 {
 	memset( &uiAudio, 0, sizeof( uiAudio_t ));
 
+	uiAudio.menu.vidInitFunc = UI_Audio_Init;
+	
 	strcat( uiAudio.hintText, "Change Xash3D sound engine to get more compatibility\n" );
 	strcat( uiAudio.hintText, "or enable new features (EAX, Filters etc)" );
 

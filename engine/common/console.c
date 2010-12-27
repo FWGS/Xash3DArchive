@@ -185,12 +185,12 @@ void Con_ToggleConsole_f( void )
 	if( cls.key_dest == key_console )
 	{
 		UI_SetActiveMenu( false );
-		cls.key_dest = key_game;
+		Key_SetKeyDest( key_game );
 	}
 	else
 	{
 		UI_SetActiveMenu( false );
-		cls.key_dest = key_console;	
+		Key_SetKeyDest( key_console );
 	}
 }
 
@@ -406,7 +406,7 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 
 static int Con_DrawCharacter( int x, int y, int number, rgba_t color )
 {
-	GL_SetRenderMode( kRenderTransTexture );
+	GL_SetRenderMode( kRenderNormal );
 	return Con_DrawGenericChar( x, y, number, color );
 }
 
@@ -1409,7 +1409,7 @@ void Con_DrawConsole( void )
 		if( cls.key_dest != key_menu && host.developer )
 		{
 			Con_DrawSolidConsole( 1.0f );
-			cls.key_dest = key_console;
+			Key_SetKeyDest( key_console );
 		}
 		break;
 	case ca_connected:

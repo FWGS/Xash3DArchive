@@ -296,6 +296,7 @@ static void UI_PlayDemo_Init( void )
 {
 	memset( &uiPlayDemo, 0, sizeof( uiPlayDemo_t ));
 
+	uiPlayDemo.menu.vidInitFunc = UI_PlayDemo_Init;
 	uiPlayDemo.menu.keyFunc = UI_PlayDemo_KeyFunc;
 
 	StringConcat( uiPlayDemo.hintText, "Title", TITLE_LENGTH );

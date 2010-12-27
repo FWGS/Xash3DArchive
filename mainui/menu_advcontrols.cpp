@@ -182,6 +182,8 @@ static void UI_AdvControls_Init( void )
 {
 	memset( &uiAdvControls, 0, sizeof( uiAdvControls_t ));
 
+	uiAdvControls.menu.vidInitFunc = UI_AdvControls_Init;
+
 	uiAdvControls.background.generic.id = ID_BACKGROUND;
 	uiAdvControls.background.generic.type = QMTYPE_BITMAP;
 	uiAdvControls.background.generic.flags = QMF_INACTIVE;

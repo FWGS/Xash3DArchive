@@ -33,6 +33,8 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 			rendermode = LUMP_TRANSPARENT;
 		else if( com.stristr( name, "decal" ))
 			rendermode = LUMP_DECAL;
+		else if( com.stristr( name, "indexalpha" ))
+			rendermode = LUMP_INDEXALPHA;
 		else if( com.stristr( name, "qfont" ))
 			rendermode = LUMP_QFONT;
 		else if( com.stristr( name, "valve" ))
@@ -224,7 +226,7 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	image.type = PF_INDEXED_32;	// 32-bit palete
 
 	// detect alpha-channel by palette type
-	if( image.d_rendermode == LUMP_DECAL || image.d_rendermode == LUMP_TRANSPARENT )
+	if( image.d_rendermode == LUMP_INDEXALPHA || image.d_rendermode == LUMP_TRANSPARENT )
 		image.flags |= IMAGE_HAS_ALPHA;
 
 	// make transparent color is black, blue color looks ugly

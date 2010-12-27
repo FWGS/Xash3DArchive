@@ -85,6 +85,8 @@ static void UI_SaveLoad_Init( void )
 {
 	memset( &uiSaveLoad, 0, sizeof( uiSaveLoad_t ));
 
+	uiSaveLoad.menu.vidInitFunc = UI_SaveLoad_Init;
+
 	strcat( uiSaveLoad.hintText, "During play, you can quickly save your game by pressing " );
 	strcat( uiSaveLoad.hintText, KEY_KeynumToString( KEY_GetKey( "savequick" )));
 	strcat( uiSaveLoad.hintText, ".\nLoad this game again by pressing " );

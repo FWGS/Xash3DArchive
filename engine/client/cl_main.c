@@ -831,6 +831,8 @@ void CL_Crashed_f( void )
 
 	Host_WriteOpenGLConfig();
 	Host_WriteConfig();	// write config
+	// never write video.cfg here because reason to crash may be provoked
+	// with some renderer variables
 
 	VID_RestoreGamma();
 }
@@ -1620,6 +1622,7 @@ void CL_Shutdown( void )
 	if( !cls.initialized ) return;
 
 	Host_WriteOpenGLConfig ();
+	Host_WriteVideoConfig ();
 	Host_WriteConfig (); 
 
 	IN_Shutdown ();

@@ -85,6 +85,8 @@ static void UI_PlayRec_Init( void )
 {
 	memset( &uiPlayRec, 0, sizeof( uiPlayRec_t ));
 
+	uiPlayRec.menu.vidInitFunc = UI_PlayRec_Init;
+
 	strcat( uiPlayRec.hintText, "During play or record demo, you can quickly stop\n" );
 	strcat( uiPlayRec.hintText, "playing/recording demo by pressing " );
 	strcat( uiPlayRec.hintText, KEY_KeynumToString( KEY_GetKey( "stop" )));

@@ -421,7 +421,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
 		if( pEdict != NULL ) modelIndex = pEdict->v.modelindex;
 
-		SV_CreateDecal( entry->position, decalIndex, entry->entityIndex, modelIndex, flags );
+		SV_CreateDecal( entry->position, decalIndex, pEdict->serialnumber, modelIndex, flags );
 	}
 }
 

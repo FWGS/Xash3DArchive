@@ -89,26 +89,6 @@ void V_SetupRefDef( void )
 
 /*
 ===============
-V_ApplyRefDef
-
-apply pre-calculated values
-===============
-*/
-void V_AddViewModel( void )
-{
-	// add viewmodel only at firstperson pass when game not paused
-	if( cl.refdef.nextView || cl.refdef.paused || cl.thirdperson || cl.refdef.health <= 0 )
-		return;
-
-	// make sure what frame is valid and viewmodel is set
-	if( !cl.frame.valid || !clgame.viewent.model || cl.refdef.viewentity != ( cl.playernum + 1 ))
-		return;
-
-	CL_AddVisibleEntity( &clgame.viewent, ET_NORMAL );
-}
-
-/*
-===============
 V_CalcRefDef
 
 sets cl.refdef view values
@@ -119,7 +99,6 @@ void V_CalcRefDef( void )
 	do
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
-		V_AddViewModel();
 		R_RenderFrame( &cl.refdef, true );
 		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );
@@ -206,8 +185,8 @@ void V_PostRender( void )
 		CL_DrawDemoRecording();
 		R_ShowTextures();
 		CL_DrawHUD( CL_CHANGELEVEL );
-		UI_UpdateMenu( host.realtime );
 		Con_DrawConsole();
+		UI_UpdateMenu( host.realtime );
 		S_ExtraUpdate();
 	}
 

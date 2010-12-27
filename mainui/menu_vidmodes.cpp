@@ -26,8 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define ID_BACKGROUND	0
 #define ID_BANNER		1
-#define ID_OK		2
-#define ID_CANCEL		3
+#define ID_APPLY		2
+#define ID_DONE		3
 #define ID_RENDERLIBRARY	4
 #define ID_VIDMODELIST	5
 #define ID_FULLSCREEN	6
@@ -126,8 +126,6 @@ static void UI_VidOptions_SetConfig( void )
 	CVAR_SET_FLOAT( "vid_mode", uiVidModes.vidList.curItem );
 	CVAR_SET_FLOAT( "fullscreen", !uiVidModes.windowed.enabled );
 	CVAR_SET_FLOAT( "r_allow_software", uiVidModes.software.enabled );
-
-	CLIENT_COMMAND( TRUE, "vid_restart\n" );
 }
 
 /*
@@ -171,10 +169,10 @@ static void UI_VidModes_Callback( void *self, int event )
 
 	switch( item->id )
 	{
-	case ID_CANCEL:
+	case ID_DONE:
 		UI_PopMenu();
 		break;
-	case ID_OK:
+	case ID_APPLY:
 		UI_VidOptions_SetConfig ();
 		break;
 	}
@@ -188,6 +186,8 @@ UI_VidModes_Init
 static void UI_VidModes_Init( void )
 {
 	memset( &uiVidModes, 0, sizeof( uiVidModes_t ));
+
+	uiVidModes.menu.vidInitFunc = UI_VidModes_Init;
 
 	strcat( uiVidModes.hintText, "Change Xash3D rendering engine\n" );
 	strcat( uiVidModes.hintText, "to get more compatibility and\n" );
@@ -213,21 +213,21 @@ static void UI_VidModes_Init( void )
 	uiVidModes.banner.generic.height = UI_BANNER_HEIGHT;
 	uiVidModes.banner.pic = ART_BANNER;
 
-	uiVidModes.ok.generic.id = ID_OK;
+	uiVidModes.ok.generic.id = ID_APPLY;
 	uiVidModes.ok.generic.type = QMTYPE_ACTION;
 	uiVidModes.ok.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiVidModes.ok.generic.x = 72;
 	uiVidModes.ok.generic.y = 230;
-	uiVidModes.ok.generic.name = "Ok";
-	uiVidModes.ok.generic.statusText = "Apply changes and return to the Main Menu";
+	uiVidModes.ok.generic.name = "Apply";
+	uiVidModes.ok.generic.statusText = "Apply changes";
 	uiVidModes.ok.generic.callback = UI_VidModes_Callback;
 
-	uiVidModes.cancel.generic.id = ID_CANCEL;
+	uiVidModes.cancel.generic.id = ID_DONE;
 	uiVidModes.cancel.generic.type = QMTYPE_ACTION;
 	uiVidModes.cancel.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiVidModes.cancel.generic.x = 72;
 	uiVidModes.cancel.generic.y = 280;
-	uiVidModes.cancel.generic.name = "Cancel";
+	uiVidModes.cancel.generic.name = "Done";
 	uiVidModes.cancel.generic.statusText = "Return back to previous menu";
 	uiVidModes.cancel.generic.callback = UI_VidModes_Callback;
 

@@ -83,6 +83,7 @@ void Mod_UnloadStudioModel( struct model_s *mod );
 void Mod_UnloadBrushModel( struct model_s *mod );
 void GL_SetRenderMode( int mode );
 void R_RunViewmodelEvents( void );
+void R_DrawViewModel( void );
 int R_GetSpriteTexture( const struct model_s *m_pSpriteModel, int frame );
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius );
 void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos, int flags, vec3_t saxis );

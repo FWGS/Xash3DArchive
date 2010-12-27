@@ -161,6 +161,7 @@ void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
 void Host_WriteServerConfig( const char *name );
 void Host_WriteOpenGLConfig( void );
+void Host_WriteVideoConfig( void );
 void Host_WriteConfig( void );
 qboolean Host_IsLocalGame( void );
 void Host_ShutdownServer( void );

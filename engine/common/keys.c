@@ -538,7 +538,7 @@ void Key_Event( int key, qboolean down )
 		case key_console:
 			if( cls.state == ca_active )
 			{
-				cls.key_dest = key_game;
+				Key_SetKeyDest( key_game );
 			}
 			else
 			{

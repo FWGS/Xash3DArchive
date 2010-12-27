@@ -9,6 +9,7 @@
 #include "cm_local.h"
 #include "input.h"
 
+#define MAX_PFDS		600
 #define VID_DEFAULTMODE	"1"
 #define num_vidmodes	((int)(sizeof(vidmode) / sizeof(vidmode[0])) - 1)
 #define WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
@@ -18,7 +19,9 @@
 convar_t	*renderinfo;
 convar_t	*gl_allow_software;
 convar_t	*gl_extensions;
+convar_t	*gl_colorbits;
 convar_t	*gl_alphabits;
+convar_t	*gl_depthbits;
 convar_t	*gl_stencilbits;
 convar_t	*gl_texturebits;
 convar_t	*gl_ignorehwgamma;
@@ -671,55 +674,171 @@ qboolean GL_DeleteContext( void )
 VID_ChoosePFD
 =================
 */
-static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBits, int depthBits, int stencilBits )
+static int VID_ChoosePFD( int colorBits, int alphaBits, int depthBits, int stencilBits )
 {
-	int	pixelFormat = 0;
+	PIXELFORMATDESCRIPTOR	PFD, PFDs[MAX_PFDS], *current, *selected;
+	uint			flags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
+	int			i, numPFDs, pixelFormat = 0;
 
 	MsgDev( D_NOTE, "VID_ChoosePFD( color %i, alpha %i, depth %i, stencil %i )\n", colorBits, alphaBits, depthBits, stencilBits );
 
 	// Fill out the PFD
-	pfd->nSize = sizeof (PIXELFORMATDESCRIPTOR);
-	pfd->nVersion = 1;
-	pfd->dwFlags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
-	pfd->iPixelType = PFD_TYPE_RGBA;
+	PFD.nSize	= sizeof (PIXELFORMATDESCRIPTOR);
+	PFD.nVersion = 1;
+	PFD.dwFlags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
+	PFD.iPixelType = PFD_TYPE_RGBA;
 
-	pfd->cColorBits = colorBits;
-	pfd->cRedBits = 0;
-	pfd->cRedShift = 0;
-	pfd->cGreenBits = 0;
-	pfd->cGreenShift = 0;
-	pfd->cBlueBits = 0;
-	pfd->cBlueShift = 0;	// wow! Blue Shift %)
+	PFD.cColorBits = colorBits;
+	PFD.cRedBits = 0;
+	PFD.cRedShift = 0;
+	PFD.cGreenBits = 0;
+	PFD.cGreenShift = 0;
+	PFD.cBlueBits = 0;
+	PFD.cBlueShift = 0;	// wow! Blue Shift %)
 
-	pfd->cAlphaBits = alphaBits;
-	pfd->cAlphaShift = 0;
+	PFD.cAlphaBits = alphaBits;
+	PFD.cAlphaShift = 0;
 
-	pfd->cAccumBits = 0;
-	pfd->cAccumRedBits = 0;
-	pfd->cAccumGreenBits = 0;
-	pfd->cAccumBlueBits = 0;
-	pfd->cAccumAlphaBits= 0;
+	PFD.cAccumBits = 0;
+	PFD.cAccumRedBits = 0;
+	PFD.cAccumGreenBits = 0;
+	PFD.cAccumBlueBits = 0;
+	PFD.cAccumAlphaBits= 0;
 
-	pfd->cDepthBits = depthBits;
-	pfd->cStencilBits = stencilBits;
+	PFD.cDepthBits = depthBits;
+	PFD.cStencilBits = stencilBits;
 
-	pfd->cAuxBuffers = 0;
-	pfd->iLayerType = PFD_MAIN_PLANE;
-	pfd->bReserved = 0;
+	PFD.cAuxBuffers = 0;
+	PFD.iLayerType = PFD_MAIN_PLANE;
+	PFD.bReserved = 0;
 
-	pfd->dwLayerMask = 0;
-	pfd->dwVisibleMask = 0;
-	pfd->dwDamageMask = 0;
+	PFD.dwLayerMask = 0;
+	PFD.dwVisibleMask = 0;
+	PFD.dwDamageMask = 0;
 
 	// Count PFDs
 	if( glw_state.minidriver )
-		pixelFormat = pwglChoosePixelFormat( glw_state.hDC, pfd );
-	else pixelFormat = ChoosePixelFormat( glw_state.hDC, pfd );
+		numPFDs = pwglDescribePixelFormat( glw_state.hDC, 0, 0, NULL );
+	else numPFDs = DescribePixelFormat( glw_state.hDC, 0, 0, NULL );
 
-	if( !pixelFormat )
+	if( numPFDs > MAX_PFDS )
+	{
+		MsgDev( D_NOTE, "too many PFDs returned (%i > %i), reduce it\n", numPFDs, MAX_PFDS );
+		numPFDs = MAX_PFDS;
+	}
+	else if( numPFDs < 1 )
 	{
 		MsgDev( D_ERROR, "VID_ChoosePFD failed\n" );
 		return 0;
+	}
+
+	// run through all the PFDs, looking for the best match
+	for( i = 1, current = PFDs; i <= numPFDs; i++, current++ )
+	{
+		if( glw_state.minidriver )
+			pwglDescribePixelFormat( glw_state.hDC, i, sizeof( PIXELFORMATDESCRIPTOR ), current );
+		else DescribePixelFormat( glw_state.hDC, i, sizeof( PIXELFORMATDESCRIPTOR ), current );
+
+		// check acceleration
+		if(( current->dwFlags & PFD_GENERIC_FORMAT ) && !gl_allow_software->integer )
+			continue;
+
+		// check flags
+		if(( current->dwFlags & flags ) != flags )
+			continue;
+
+		// check pixel type
+		if( current->iPixelType != PFD_TYPE_RGBA )
+			continue;
+
+		// check color bits
+		if( current->cColorBits < colorBits )
+			continue;
+
+		// check alpha bits
+		if( current->cAlphaBits < alphaBits )
+			continue;
+
+		// check depth bits
+		if( current->cDepthBits < depthBits )
+			continue;
+
+		// check stencil bits
+		if( current->cStencilBits < stencilBits )
+			continue;
+
+		// if we don't have a selected PFD yet, then use it
+		if( !pixelFormat )
+		{
+			selected = current;
+			pixelFormat = i;
+			continue;
+		}
+
+		if( colorBits != selected->cColorBits )
+		{
+			if( colorBits == current->cColorBits || current->cColorBits > selected->cColorBits )
+			{
+				selected = current;
+				pixelFormat = i;
+				continue;
+			}
+		}
+
+		if( alphaBits != selected->cAlphaBits )
+		{
+			if( alphaBits == current->cAlphaBits || current->cAlphaBits > selected->cAlphaBits )
+			{
+				selected = current;
+				pixelFormat = i;
+				continue;
+			}
+		}
+
+		if( depthBits != selected->cDepthBits )
+		{
+			if( depthBits == current->cDepthBits || current->cDepthBits > selected->cDepthBits )
+			{
+				selected = current;
+				pixelFormat = i;
+				continue;
+			}
+		}
+
+		if( stencilBits != selected->cStencilBits )
+		{
+			if( stencilBits == current->cStencilBits || current->cStencilBits > selected->cStencilBits )
+			{
+				selected = current;
+				pixelFormat = i;
+				continue;
+			}
+		}
+	}
+
+	if( !pixelFormat )
+	{
+		MsgDev( D_ERROR, "VID_ChoosePFD: no hardware acceleration found\n" );
+		return 0;
+	}
+
+	if( selected->dwFlags & PFD_GENERIC_FORMAT )
+	{
+		if( selected->dwFlags & PFD_GENERIC_ACCELERATED )
+		{
+			MsgDev( D_NOTE, "VID_ChoosePFD: usign Generic MCD acceleration\n" );
+			glw_state.software = false;
+		}
+		else
+		{
+			MsgDev( D_NOTE, "VID_ChoosePFD: using software emulation\n" );
+			glw_state.software = true;
+		}
+	}
+	else
+	{
+		MsgDev( D_NOTE, "VID_ChoosePFD: using hardware acceleration\n");
+		glw_state.software = false;
 	}
 
 	return pixelFormat;
@@ -818,8 +937,8 @@ GL_SetPixelformat
 qboolean GL_SetPixelformat( void )
 {
 	PIXELFORMATDESCRIPTOR	PFD;
-	int			alphaBits;
-	int			stencilBits;
+	int			colorBits, alphaBits;
+	int			depthBits, stencilBits;
 	int			pixelFormat;
 
 	if( glw_state.minidriver )
@@ -833,17 +952,21 @@ qboolean GL_SetPixelformat( void )
 			return false;
 	}
 
-	// set alpha/stencil
-	alphaBits = bound( 0, gl_alphabits->integer, 8 );
-	stencilBits = bound( 0, gl_stencilbits->integer, 8 );
+	// set color/depth/stencil
+	colorBits = (gl_colorbits->integer) ? gl_colorbits->integer : 32;
+	depthBits = (gl_depthbits->integer) ? gl_depthbits->integer : 24;
+	alphaBits = (gl_alphabits->integer) ? gl_alphabits->integer : 8;
+	stencilBits = (gl_stencilbits->integer) ? gl_stencilbits->integer : 8;
 
 	// choose a pixel format
-	pixelFormat = VID_ChoosePFD( &PFD, 32, alphaBits, 24, stencilBits );
+	pixelFormat = VID_ChoosePFD( colorBits, alphaBits, depthBits, stencilBits );
 
 	if( !pixelFormat )
 	{
 		// try again with default color/depth/stencil
-		pixelFormat = VID_ChoosePFD( &PFD, 32, 0, 24, 0 );
+		if( colorBits > 16 || depthBits > 16 || alphaBits > 0 || stencilBits > 0 )
+			pixelFormat = VID_ChoosePFD( 16, 0, 16, 0 );
+		else pixelFormat = VID_ChoosePFD( 32, 0, 24, 0 );
 
 		if( !pixelFormat )
 		{
@@ -855,47 +978,23 @@ qboolean GL_SetPixelformat( void )
 	// set the pixel format
 	if( glw_state.minidriver )
 	{
+		pwglDescribePixelFormat( glw_state.hDC, pixelFormat, sizeof( PIXELFORMATDESCRIPTOR ), &PFD );
+
 		if( !pwglSetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
 		{
 			MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
 			return false;
 		}
-
-		pwglDescribePixelFormat( glw_state.hDC, pixelFormat, sizeof( PIXELFORMATDESCRIPTOR ), &PFD );
 	}
 	else
 	{
+		DescribePixelFormat( glw_state.hDC, pixelFormat, sizeof( PIXELFORMATDESCRIPTOR ), &PFD );
+
 		if( !SetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
 		{
 			MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
 			return false;
 		}
-
-		DescribePixelFormat( glw_state.hDC, pixelFormat, sizeof( PIXELFORMATDESCRIPTOR ), &PFD );
-	}
-
-	if( PFD.dwFlags & PFD_GENERIC_FORMAT )
-	{
-		if( PFD.dwFlags & PFD_GENERIC_ACCELERATED )
-		{
-			MsgDev( D_NOTE, "VID_ChoosePFD: usign Generic MCD acceleration\n" );
-			glw_state.software = false;
-		}
-		else if( gl_allow_software->integer )
-		{
-			MsgDev( D_NOTE, "VID_ChoosePFD: using software emulation\n" );
-			glw_state.software = true;
-		}
-		else
-		{
-			MsgDev( D_ERROR, "GL_SetPixelformat: no hardware acceleration found\n" );
-			return false;
-		}
-	}
-	else
-	{
-		MsgDev( D_NOTE, "VID_ChoosePFD: using hardware acceleration\n");
-		glw_state.software = false;
 	}
 
 	glConfig.color_bits = PFD.cColorBits;
@@ -1111,9 +1210,6 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 
 		if( vid_displayfrequency->integer > 0 )
 		{
-			if( vid_displayfrequency->integer < 60 ) Cvar_SetFloat( "vid_displayfrequency", 60 );
-			if( vid_displayfrequency->integer > 100 ) Cvar_SetFloat( "vid_displayfrequency", 100 );
-
 			dm.dmFields |= DM_DISPLAYFREQUENCY;
 			dm.dmDisplayFrequency = vid_displayfrequency->integer;
 		}
@@ -1131,8 +1227,11 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 			dm.dmPelsWidth = width * 2;
 			dm.dmPelsHeight = height;
 			dm.dmFields = DM_PELSWIDTH|DM_PELSHEIGHT;
-			dm.dmBitsPerPel = 24;
-			dm.dmFields |= DM_BITSPERPEL;
+			if( gl_depthbits->integer != 0 )
+			{
+				dm.dmBitsPerPel = gl_depthbits->integer;
+				dm.dmFields |= DM_BITSPERPEL;
+			}
 
 			// our first CDS failed, so maybe we're running on some weird dual monitor system 
 			if( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) != DISP_CHANGE_SUCCESSFUL )
@@ -1291,6 +1390,9 @@ static void GL_SetDefaults( void )
 		pglStencilOp( GL_KEEP, GL_KEEP, GL_INCR );
 	}
 
+	// enable gouraud shading
+	pglShadeModel( GL_SMOOTH );
+
 	pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	pglPolygonOffset( -1, -2 );
 
@@ -1398,11 +1500,13 @@ void GL_InitCommands( void )
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );
 	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "ignore hardware gamma (e.g. not support)" );
 	gl_allow_software = Cvar_Get( "gl_allow_software", "0", CVAR_ARCHIVE, "allow OpenGL software emulation" );
-	gl_alphabits = Cvar_Get( "gl_alphabits", "8", CVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
+	gl_colorbits = Cvar_Get( "gl_colorbits", "0", CVAR_RENDERINFO, "pixelformat color bits (0 - auto)" );
+	gl_alphabits = Cvar_Get( "gl_alphabits", "0", CVAR_RENDERINFO, "pixelformat alpha bits (0 - auto)" );
+	gl_depthbits = Cvar_Get( "gl_depthbits", "0", CVAR_RENDERINFO, "pixelformat depth bits (0 - auto)" );
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
 	gl_texturebits = Cvar_Get( "gl_texturebits", "0", CVAR_GLCONFIG, "set texture upload format (0 - auto)" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_GLCONFIG, "down size non-power of two textures" );
-	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", CVAR_GLCONFIG, "pixelformat stencil bits (0 - auto)" );
+	gl_stencilbits = Cvar_Get( "gl_stencilbits", "0", CVAR_RENDERINFO, "pixelformat stencil bits (0 - auto)" );
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", CVAR_ARCHIVE, "ignore video engine errors" );
 	gl_swapInterval = Cvar_Get( "gl_swapInterval", "0", CVAR_ARCHIVE,  "time beetween frames (in msec)" );
 	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_GLCONFIG, "allow gl_extensions" );

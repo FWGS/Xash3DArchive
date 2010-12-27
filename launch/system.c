@@ -491,6 +491,7 @@ void Sys_CreateInstance( void )
 	}
 
 	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
+	Cmd_RemoveCommand( "setgl" );
 	Sys.app_state = SYS_FRAME;	// system is now active
 }
 

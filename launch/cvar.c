@@ -6,7 +6,7 @@
 #include "launch.h"
 
 convar_t	*cvar_vars;	// head of list
-convar_t	*userinfo, *physinfo, *serverinfo;
+convar_t	*userinfo, *physinfo, *serverinfo, *renderinfo;
 
 /*
 ============
@@ -345,7 +345,7 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 
 	if( !force )
 	{
-		if( var->flags & CVAR_READ_ONLY )
+		if( var->flags & ( CVAR_READ_ONLY|CVAR_GLCONFIG ))
 		{
 			MsgDev( D_INFO, "%s is read only.\n", var_name );
 			return var;
@@ -357,13 +357,7 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 			return var;
 		}
 
-		if( var->flags & CVAR_RENDERINFO )
-		{
-			MsgDev( D_INFO, "%s is a renderer config variable.\n", var_name );
-			return var;
-		}
-
-		if( var->flags & ( CVAR_LATCH|CVAR_LATCH_VIDEO|CVAR_LATCH_AUDIO ))
+		if( var->flags & ( CVAR_LATCH|CVAR_LATCH_VIDEO ))
 		{
 			if( var->latched_string )
 			{
@@ -385,11 +379,6 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 			else if( var->flags & CVAR_LATCH_VIDEO )
 			{
 				MsgDev( D_INFO, "%s will be changed upon restarting video.\n", var->name );
-				var->latched_string = copystring( value );
-			}
-			else if( var->flags & CVAR_LATCH_AUDIO )
-			{
-				MsgDev( D_INFO, "%s will be changed upon restarting audio.\n", var->name );
 				var->latched_string = copystring( value );
 			}
 			else
@@ -472,6 +461,8 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 	if( var->flags & CVAR_SERVERINFO )
 		serverinfo->modified = true;	// transmit at next oportunity
 
+	if( var->flags & CVAR_RENDERINFO )
+		renderinfo->modified = true;	// transmit at next oportunity
 	
 	// free the old value string
 	Mem_Free( var->string );
@@ -550,6 +541,12 @@ void Cvar_FullSet( const char *var_name, const char *value, int flags )
 		serverinfo->modified = true;
 	}
 
+	if( var->flags & CVAR_RENDERINFO )
+	{
+		// transmit at next oportunity
+		renderinfo->modified = true;
+	}
+
 	Mem_Free( var->string ); // free the old value string
 	var->string = copystring( value );
 	var->value = com.atof( var->string );
@@ -586,7 +583,7 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 
 	if( !value ) value = "0";
 
-	if( var->flags & ( CVAR_READ_ONLY|CVAR_INIT|CVAR_RENDERINFO|CVAR_LATCH|CVAR_LATCH_VIDEO|CVAR_LATCH_AUDIO ))
+	if( var->flags & ( CVAR_READ_ONLY|CVAR_GLCONFIG|CVAR_INIT|CVAR_RENDERINFO|CVAR_LATCH|CVAR_LATCH_VIDEO ))
 	{
 		// Cvar_DirectSet cannot change these cvars at all
 		return;
@@ -649,6 +646,9 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 
 	if( var->flags & CVAR_SERVERINFO )
 		serverinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_RENDERINFO )
+		renderinfo->modified = true;	// transmit at next oportunity
 
 	// free the old value string
 	Mem_Free( var->string );
@@ -910,6 +910,23 @@ void Cvar_SetR_f( void )
 	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_RENDERINFO );
 }
 
+/*
+============
+Cvar_SetGL_f
+
+As Cvar_Set, but also flags it as glconfig
+============
+*/
+void Cvar_SetGL_f( void )
+{
+	if( Cmd_Argc() != 3 )
+	{
+		Msg( "Usage: setgl <variable> <value>\n" );
+		return;
+	}
+
+	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_GLCONFIG );
+}
 
 /*
 ============
@@ -945,34 +962,34 @@ void Cvar_List_f( void )
 		if( match && !com.stricmpext( match, var->name ))
 			continue;
 
-		if( var->flags & CVAR_SERVERINFO ) Msg( "SV   " );
+		if( var->flags & CVAR_SERVERINFO ) Msg( "SV    " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_USERINFO ) Msg( "USER " );
+		if( var->flags & CVAR_USERINFO ) Msg( "USER  " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_PHYSICINFO ) Msg( "PHYS " );
+		if( var->flags & CVAR_PHYSICINFO ) Msg( "PHYS  " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_READ_ONLY ) Msg( "READ " );
+		if( var->flags & CVAR_READ_ONLY ) Msg( "READ  " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_INIT ) Msg( "INIT " );
+		if( var->flags & CVAR_INIT ) Msg( "INIT  " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_ARCHIVE ) Msg( "ARCH " );
+		if( var->flags & CVAR_ARCHIVE ) Msg( "ARCH  " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_LATCH ) Msg( "LATCH" );
+		if( var->flags & CVAR_LATCH ) Msg( "LATCH " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_LATCH_VIDEO ) Msg( "VIDEO" );
+		if( var->flags & CVAR_LATCH_VIDEO ) Msg( "VIDEO " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_LATCH_AUDIO ) Msg( "AUDIO" );
+		if( var->flags & CVAR_GLCONFIG ) Msg( "OPENGL" );
 		else Msg( " " );
 
-		if( var->flags & CVAR_CHEAT ) Msg( "CHEAT" );
+		if( var->flags & CVAR_CHEAT ) Msg( "CHEAT " );
 		else Msg( " " );
 		Msg(" %s \"%s\"\n", var->name, var->string );
 		j++;
@@ -1003,7 +1020,7 @@ void Cvar_Restart_f( void )
 
 		// don't mess with rom values, or some inter-module
 		// communication will get broken (cl.active, etc)
-		if( var->flags & ( CVAR_READ_ONLY|CVAR_INIT|CVAR_RENDERINFO|CVAR_EXTDLL ))
+		if( var->flags & ( CVAR_READ_ONLY|CVAR_GLCONFIG|CVAR_INIT|CVAR_RENDERINFO|CVAR_EXTDLL ))
 		{
 			prev = &var->next;
 			continue;
@@ -1100,41 +1117,6 @@ void Cvar_LatchedVideo_f( void )
 
 /*
 ============
-Cvar_Latched_f
-
-Now all latched audio strings is valid
-============
-*/
-void Cvar_LatchedAudio_f( void )
-{
-	convar_t	*var;
-	convar_t	**prev;
-
-	prev = &cvar_vars;
-
-	while ( 1 )
-	{
-		var = *prev;
-		if( !var ) break;
-
-		if( var->flags & CVAR_EXTDLL )
-		{
-			prev = &var->next;
-			continue;
-		}
-
-		if( var->flags & CVAR_LATCH_AUDIO && var->latched_string )
-		{
-			Cvar_FullSet( var->name, var->latched_string, var->flags );
-			Mem_Free( var->latched_string );
-			var->latched_string = NULL;
-		}
-		prev = &var->next;
-	}
-}
-
-/*
-============
 Cvar_Unlink_f
 
 unlink all cvars with flag CVAR_EXTDLL
@@ -1186,6 +1168,7 @@ void Cvar_Init( void )
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	physinfo = Cvar_Get( "@physinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	serverinfo = Cvar_Get( "@serverinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
+	renderinfo = Cvar_Get( "@renderinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 
 	Cmd_AddCommand ("toggle", Cvar_Toggle_f, "toggles a console variable's values (use for more info)" );
 	Cmd_AddCommand ("set", Cvar_Set_f, "create or change the value of a console variable" );
@@ -1193,11 +1176,11 @@ void Cvar_Init( void )
 	Cmd_AddCommand ("setu", Cvar_SetU_f, "create or change the value of a userinfo variable" );
 	Cmd_AddCommand ("setp", Cvar_SetP_f, "create or change the value of a physicinfo variable" );
 	Cmd_AddCommand ("setr", Cvar_SetR_f, "create or change the value of a renderinfo variable" );
+	Cmd_AddCommand ("setgl", Cvar_SetGL_f, "create or change the value of a opengl variable" );
 	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg" );
 	Cmd_AddCommand ("reset", Cvar_Reset_f, "reset any type variable to initial value" );
 	Cmd_AddCommand ("latch", Cvar_Latched_f, "apply latched values" );
 	Cmd_AddCommand ("vidlatch", Cvar_LatchedVideo_f, "apply latched values for video subsystem" );
-	Cmd_AddCommand ("sndlatch", Cvar_LatchedAudio_f, "apply latched values for audio subsytem" );
 	Cmd_AddCommand ("cvarlist", Cvar_List_f, "display all console variables beginning with the specified prefix" );
 	Cmd_AddCommand ("unsetall", Cvar_Restart_f, "reset all console variables to their default values" );
 	Cmd_AddCommand ("@unlink", Cvar_Unlink_f, "unlink static cvars defined in gamedll" );

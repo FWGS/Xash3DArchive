@@ -658,7 +658,7 @@ static void R_DecalNodeSurfaces( model_t *model, mnode_t *node, decalinfo_t *dec
 	for( i = 0; i < node->numsurfaces; i++, surf++ ) 
 	{
 		// never apply decals on the water or sky surfaces
-		if( surf->flags & (SURF_DRAWTURB|SURF_DRAWSKY))
+		if( surf->flags & (SURF_DRAWTURB|SURF_DRAWSKY|SURF_TRANSPARENT|SURF_CONVEYOR))
 			continue;
 
 		R_DecalSurface( surf, decalinfo );
@@ -862,7 +862,7 @@ void DrawSurfaceDecals( msurface_t *fa )
 	oldState = glState.flags;
 	oldTexEnv = glState.currentEnvModes[glState.activeTMU];
 	GL_SetState( GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_OFFSET_FILL );
-	GL_TexEnv( GL_REPLACE );
+	GL_TexEnv( GL_MODULATE ); // receive renderamt from bmodels
 
 	for( p = fa->pdecals; p; p = p->pnext )
 		DrawSingleDecal( p, fa );

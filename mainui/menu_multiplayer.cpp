@@ -93,6 +93,8 @@ static void UI_MultiPlayer_Init( void )
 {
 	memset( &uiMultiPlayer, 0, sizeof( uiMultiPlayer_t ));
 
+	uiMultiPlayer.menu.vidInitFunc = UI_MultiPlayer_Init;
+
 	uiMultiPlayer.background.generic.id = ID_BACKGROUND;
 	uiMultiPlayer.background.generic.type = QMTYPE_BITMAP;
 	uiMultiPlayer.background.generic.flags = QMF_INACTIVE;

@@ -179,6 +179,7 @@ static void UI_GameOptions_Init( void )
 	memset( &uiGameInitial, 0, sizeof( uiGameValues_t ));
 	memset( &uiGameOptions, 0, sizeof( uiGameOptions_t ));
 
+	uiGameOptions.menu.vidInitFunc = UI_GameOptions_Init;
 	uiGameOptions.menu.keyFunc = UI_GameOptions_KeyFunc;
 
 	uiGameOptions.background.generic.id = ID_BACKGROUND;

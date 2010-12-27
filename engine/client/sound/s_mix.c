@@ -838,16 +838,10 @@ void MIX_MixPaintbuffers( int ibuf1, int ibuf2, int ibuf3, int count, float fgai
 	// mix front channels
 	for( i = 0; i < count; i++ )
 	{
-		pbuf3[i].left  = pbuf1[i].left  + pbuf2[i].left;
-		pbuf3[i].right = pbuf1[i].right + pbuf2[i].right;
-	}
-
-	if( gain == 256 ) return;
-
-	for( i = 0; i < count; i++ )
-	{
-		pbuf3[i].left  = (pbuf3[i].left * gain) >> 8;
-		pbuf3[i].right = (pbuf3[i].right * gain) >> 8;
+		pbuf3[i].left = pbuf1[i].left;
+		pbuf3[i].right = pbuf1[i].right;
+		pbuf3[i].left += (pbuf2[i].left * gain) >> 8;
+		pbuf3[i].right += (pbuf2[i].right * gain) >> 8;
 	}
 }
 

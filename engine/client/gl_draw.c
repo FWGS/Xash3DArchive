@@ -88,8 +88,8 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 		int	width = 1, height = 1;
 	
 		// check the dimensions
-		while( width < cols ) width <<= 1;
-		while( height < rows ) height <<= 1;
+		width = NearestPOW( cols, true );
+		height = NearestPOW( rows, false );
 
 		if( cols != width || rows != height )
 		{
@@ -109,7 +109,7 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 		Host_Error( "R_DrawStretchRaw: size %i exceeds hardware limits\n", rows );
 
 	tex = R_GetTexture( tr.cinTexture );
-	GL_Bind( 0, tr.cinTexture );
+	GL_Bind( GL_TEXTURE0, tr.cinTexture );
 
 	if( cols == tex->width && rows == tex->height )
 	{

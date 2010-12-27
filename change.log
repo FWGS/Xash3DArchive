@@ -1,3 +1,11 @@
+build ????
+
+Render: fix decals serialization bug
+Engine: fix movie plaback bug (black screen)
+Engine: fix crash on loading encrypted client.dll
+GameUI: now recalc resolution when vid_mode is changed
+Sound: fix musicvolume bug
+
 build 1418
 
 Tools: move all tools into launch.dll

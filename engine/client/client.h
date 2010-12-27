@@ -593,6 +593,7 @@ void CL_Download_f( void );
 //
 void SCR_VidInit( void );
 void SCR_EndLoadingPlaque( void );
+void SCR_RebuildGammaTable( void );
 void SCR_RegisterShaders( void );
 void SCR_MakeScreenShot( void );
 void SCR_MakeLevelShot( void );

@@ -32,10 +32,6 @@ RECT	window_rect, real_rect;
 uint	in_mouse_wheel;
 int	wnd_caption;
 
-convar_t	*scr_xpos;		// X coordinate of window position
-convar_t	*scr_ypos;		// Y coordinate of window position
-convar_t	*scr_fullscreen;
-
 static byte scan_to_key[128] = 
 { 
 	0,27,'1','2','3','4','5','6','7','8','9','0','-','=',K_BACKSPACE,9,
@@ -188,7 +184,7 @@ void IN_ActivateMouse( void )
 	if( !in_mouseinitialized )
 		return;
 
-	if( cls.key_dest == key_menu && !scr_fullscreen->integer )
+	if( cls.key_dest == key_menu && !Cvar_VariableInteger( "fullscreen" ))
 	{
 		// check for mouse leave-entering
 		if( !in_mouse_suspended && !UI_MouseInRect( ))
@@ -439,7 +435,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 	switch( uMsg )
 	{
 	case WM_KILLFOCUS:
-		if( scr_fullscreen && scr_fullscreen->integer )
+		if( Cvar_VariableInteger( "fullscreen" ))
 			ShowWindow( host.hWnd, SW_SHOWMINNOACTIVE );
 		break;
 	case WM_MOUSEWHEEL:
@@ -457,9 +453,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		break;
 	case WM_CREATE:
 		host.hWnd = hWnd;
-		scr_xpos = Cvar_Get( "r_xpos", "130", CVAR_RENDERINFO, "window position by horizontal" );
-		scr_ypos = Cvar_Get( "r_ypos", "48", CVAR_RENDERINFO, "window position by vertical" );
-		scr_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO|CVAR_LATCH_VIDEO, "toggle fullscreen" );
 		GetWindowRect( host.hWnd, &real_rect );
 		break;
 	case WM_CLOSE:
@@ -486,13 +479,13 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			SetForegroundWindow( hWnd );
 			ShowWindow( hWnd, SW_RESTORE );
 		}
-		else if( scr_fullscreen->integer && host.state != HOST_RESTART )
+		else if( Cvar_VariableInteger( "fullscreen" ) && host.state != HOST_RESTART )
 		{
 			ShowWindow( hWnd, SW_MINIMIZE );
 		}
 		break;
 	case WM_MOVE:
-		if( !scr_fullscreen->integer )
+		if( !Cvar_VariableInteger( "fullscreen" ))
 		{
 			RECT	rect;
 			int	xPos, yPos, style;
@@ -507,8 +500,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 
 			Cvar_SetFloat( "r_xpos", xPos + rect.left );
 			Cvar_SetFloat( "r_ypos", yPos + rect.top );
-			scr_xpos->modified = false;
-			scr_ypos->modified = false;
 			GetWindowRect( host.hWnd, &real_rect );
 		}
 		break;

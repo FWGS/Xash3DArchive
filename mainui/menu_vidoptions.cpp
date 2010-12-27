@@ -142,6 +142,8 @@ static void UI_VidOptions_Init( void )
 {
 	memset( &uiVidOptions, 0, sizeof( uiVidOptions_t ));
 
+	uiVidOptions.menu.vidInitFunc = UI_VidOptions_Init;
+
 	uiVidOptions.background.generic.id = ID_BACKGROUND;
 	uiVidOptions.background.generic.type = QMTYPE_BITMAP;
 	uiVidOptions.background.generic.flags = QMF_INACTIVE;

@@ -259,6 +259,7 @@ static void UI_LanGame_Init( void )
 {
 	memset( &uiLanGame, 0, sizeof( uiLanGame_t ));
 
+	uiLanGame.menu.vidInitFunc = UI_LanGame_Init;
 	uiLanGame.menu.keyFunc = UI_LanGame_KeyFunc;
 
 	StringConcat( uiLanGame.hintText, "Game", GAME_LENGTH );

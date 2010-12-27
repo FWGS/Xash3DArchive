@@ -227,6 +227,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	int	i, num_bytes, lumplen;
 	qboolean	blue_shift = false;
 
+	if( !crcvalue ) return false;
 	f = FS_Open( filename, "rb", false );
 	if( !f ) return false;
 

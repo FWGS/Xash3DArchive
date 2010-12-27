@@ -413,7 +413,7 @@ qboolean Delta_AddField( const char *pStructName, const char *pName, int flags, 
 	{
 		if( !com.strcmp( pField->name, pName ))
 		{
-			MsgDev( D_ERROR, "Delta_Add: %s->%s already existing\n", pStructName, pName );
+			MsgDev( D_NOTE, "Delta_Add: %s->%s already existing\n", pStructName, pName );
 			return false; // field already exist		
 		}
 	}
@@ -743,6 +743,9 @@ void Delta_InitFields( void )
 
 	// adding some requrid fields fields that use may forget or don't know how to specified
 	Delta_AddField( "event_t", "flags", DT_INTEGER, 8, 1.0f, 1.0f );
+	Delta_AddField( "event_t", "velocity[0]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
+	Delta_AddField( "event_t", "velocity[1]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
+	Delta_AddField( "event_t", "velocity[2]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );	
 }
 
 void Delta_Init( void )

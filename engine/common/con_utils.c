@@ -798,6 +798,12 @@ static void Cmd_WriteServerCvar(const char *name, const char *string, const char
 static void Cmd_WriteOpenGLCvar( const char *name, const char *string, const char *desc, void *f )
 {
 	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
+	FS_Printf( f, "setgl %s \"%s\"\n", name, string );
+}
+
+static void Cmd_WriteRenderCvar( const char *name, const char *string, const char *desc, void *f )
+{
+	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
 	FS_Printf( f, "setr %s \"%s\"\n", name, string );
 }
 
@@ -821,7 +827,12 @@ void Cmd_WriteServerVariables( file_t *f )
 
 void Cmd_WriteOpenGLVariables( file_t *f )
 {
-	Cvar_LookupVars( CVAR_RENDERINFO, NULL, f, Cmd_WriteOpenGLCvar ); 
+	Cvar_LookupVars( CVAR_GLCONFIG, NULL, f, Cmd_WriteOpenGLCvar ); 
+}
+
+void Cmd_WriteRenderVariables( file_t *f )
+{
+	Cvar_LookupVars( CVAR_RENDERINFO, NULL, f, Cmd_WriteRenderCvar ); 
 }
 
 /*
@@ -892,7 +903,7 @@ void Host_WriteServerConfig( const char *name )
 ===============
 Host_WriteOpenGLConfig
 
-save renderinfo variables into opengl.cfg
+save opengl variables into opengl.cfg
 ===============
 */
 void Host_WriteOpenGLConfig( void )
@@ -910,6 +921,30 @@ void Host_WriteOpenGLConfig( void )
 		FS_Close( f );	
 	}                                                
 	else MsgDev( D_ERROR, "can't update opengl.cfg.\n" );
+}
+
+/*
+===============
+Host_WriteVideoConfig
+
+save render variables into video.cfg
+===============
+*/
+void Host_WriteVideoConfig( void )
+{
+	file_t	*f;
+
+	f = FS_Open( "video.cfg", "w" );
+	if( f )
+	{
+		FS_Printf( f, "//=======================================================================\n" );
+		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
+		FS_Printf( f, "//\t\tvideo.cfg - archive of renderer variables\n");
+		FS_Printf( f, "//=======================================================================\n" );
+		Cmd_WriteRenderVariables( f );
+		FS_Close( f );	
+	}                                                
+	else MsgDev( D_ERROR, "can't update video.cfg.\n" );
 }
 
 void Key_EnumCmds_f( void )

@@ -80,6 +80,8 @@ static void UI_Video_Init( void )
 {
 	memset( &uiVideo, 0, sizeof( uiVideo_t ));
 
+	uiVideo.menu.vidInitFunc = UI_Video_Init;
+
 	uiVideo.background.generic.id = ID_BACKGROUND;
 	uiVideo.background.generic.type = QMTYPE_BITMAP;
 	uiVideo.background.generic.flags = QMF_INACTIVE;

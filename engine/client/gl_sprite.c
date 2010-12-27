@@ -173,7 +173,7 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
 			break;
                     case SPR_INDEXALPHA:
-			pal = FS_LoadImage( "#decal.pal", src, 768 );
+			pal = FS_LoadImage( "#indexalpha.pal", src, 768 );
 			break;
 		case SPR_ALPHTEST:		
 			pal = FS_LoadImage( "#transparent.pal", src, 768 );
@@ -938,9 +938,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	}
 
-	if( e->curstate.rendermode == kRenderGlow )
-		pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
-
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_NONE );
 		
@@ -968,9 +965,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 			R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 		}
 	}
-
-	if( e->curstate.rendermode == kRenderGlow )
-		pglDepthRange( gldepthmin, gldepthmax );
 
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_FRONT );

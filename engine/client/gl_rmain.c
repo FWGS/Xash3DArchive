@@ -368,11 +368,6 @@ static void R_Clear( int bitMask )
 	if( bits & GL_STENCIL_BUFFER_BIT )
 		pglClearStencil( 128 );
 
-	if( bits & GL_COLOR_BUFFER_BIT )
-	{
-		pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-	}
-
 	pglClear( bits );
 
 	gldepthmin = 0.0f;
@@ -742,6 +737,9 @@ void R_DrawEntitiesOnList( void )
 	CL_DrawParticles();
 
 	clgame.dllFuncs.pfnDrawTransparentTriangles ();
+
+	// FIXME: allow to brush and sprite viewmodel ?
+	R_DrawViewModel();
 }
 
 /*
@@ -784,9 +782,8 @@ R_BeginFrame
 */
 void R_BeginFrame( qboolean clearScene )
 {
-	if( gl_clear->integer && clearScene )
+	if( gl_clear->integer && clearScene && cls.state != ca_cinematic )
 	{
-		pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 		pglClear( GL_COLOR_BUFFER_BIT );
 	}
 

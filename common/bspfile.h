@@ -32,7 +32,7 @@ BRUSH MODELS
 #define SURF_DRAWTILED		BIT( 5 )		// face without lighmap
 #define SURF_CONVEYOR		BIT( 6 )		// scrolled texture
 #define SURF_UNDERWATER		BIT( 7 )		// caustics
-#define SURF_DONTWARP		BIT( 8 )
+#define SURF_TRANSPARENT		BIT( 8 )		// it's a transparent texture
 
 // lightstyle management
 #define LM_STYLES			4		// MAXLIGHTMAPS

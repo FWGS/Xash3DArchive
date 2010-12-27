@@ -266,6 +266,8 @@ static void UI_PlayerSetup_Init( void )
 {
 	memset( &uiPlayerSetup, 0, sizeof( uiPlayerSetup_t ));
 
+	uiPlayerSetup.menu.vidInitFunc = UI_PlayerSetup_Init;
+
 	uiPlayerSetup.background.generic.id = ID_BACKGROUND;
 	uiPlayerSetup.background.generic.type = QMTYPE_BITMAP;
 	uiPlayerSetup.background.generic.flags = QMF_INACTIVE;

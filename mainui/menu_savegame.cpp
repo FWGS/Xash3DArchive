@@ -314,6 +314,7 @@ static void UI_SaveGame_Init( void )
 {
 	memset( &uiSaveGame, 0, sizeof( uiSaveGame_t ));
 
+	uiSaveGame.menu.vidInitFunc = UI_SaveGame_Init;
 	uiSaveGame.menu.keyFunc = UI_SaveGame_KeyFunc;
 
 	StringConcat( uiSaveGame.hintText, "Time", TIME_LENGTH );

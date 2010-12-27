@@ -322,6 +322,7 @@ static void UI_RecDemo_Init( void )
 {
 	memset( &uiRecDemo, 0, sizeof( uiRecDemo_t ));
 
+	uiRecDemo.menu.vidInitFunc = UI_RecDemo_Init;
 	uiRecDemo.menu.keyFunc = UI_RecDemo_KeyFunc;
 
 	StringConcat( uiRecDemo.hintText, "Title", TITLE_LENGTH );

@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "client.h"
+#include "gl_local.h"
 #include <vfw.h> // video for windows
 
 /*
@@ -15,7 +16,6 @@ AVI PLAYING
 =================================================================
 */
 
-convar_t			*vid_gamma;
 static long		xres, yres;
 static float		video_duration;
 static float		cin_time;
@@ -133,13 +133,22 @@ SCR_RunCinematic
 */
 void SCR_RunCinematic( void )
 {
+	if( cls.state != ca_cinematic )
+		return;
+
 	if( !AVI_IsActive( cin_state ))
 		return;
 
-	if( vid_gamma->modified )
+	if( UI_IsVisible( ))
 	{
-		SCR_RebuildGammaTable();
-		vid_gamma->modified = false;
+		// these can happens when user set +menu_ option to cmdline
+		AVI_CloseVideo( cin_state );
+		cls.state = ca_disconnected;
+		Key_SetKeyDest( key_menu );
+		S_StopStreaming();
+		cls.movienum = -1;
+		cin_time = 0.0f;
+		return;
 	}
 
 	// advances cinematic time (ignores maxfps and host_framerate settings)	
@@ -170,7 +179,7 @@ qboolean SCR_DrawCinematic( void )
 	qboolean		redraw = false;
 	byte		*frame = NULL;
 
-	if( cin_time <= 0.0f )
+	if( !glw_state.initialized || cin_time <= 0.0f )
 		return false;
 
 	if( cin_frame != last_frame )
@@ -275,9 +284,6 @@ SCR_InitCinematic
 void SCR_InitCinematic( void )
 {
 	AVIFileInit();
-
-	// used for movie gamma correction
-	vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
 	cin_state = AVI_GetState( CIN_MAIN );
 
 	SCR_RebuildGammaTable();

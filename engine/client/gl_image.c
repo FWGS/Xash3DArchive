@@ -1159,10 +1159,10 @@ R_InitCinematicTexture
 */
 static rgbdata_t *R_InitCinematicTexture( texFlags_t *flags )
 {
-	r_image.width = r_image.height = 256;
 	r_image.buffer = data2D;
 	r_image.type = PF_RGBA_32;
-	r_image.flags = IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.width = r_image.height = 256;
 	r_image.size = r_image.width * r_image.height * 4;
 
 	*flags = TF_NOMIPMAP|TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP;

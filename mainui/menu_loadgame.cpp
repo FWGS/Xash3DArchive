@@ -292,6 +292,7 @@ static void UI_LoadGame_Init( void )
 {
 	memset( &uiLoadGame, 0, sizeof( uiLoadGame_t ));
 
+	uiLoadGame.menu.vidInitFunc = UI_LoadGame_Init;
 	uiLoadGame.menu.keyFunc = UI_LoadGame_KeyFunc;
 
 	StringConcat( uiLoadGame.hintText, "Time", TIME_LENGTH );

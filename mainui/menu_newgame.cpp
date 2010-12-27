@@ -178,6 +178,7 @@ static void UI_NewGame_Init( void )
 {
 	memset( &uiNewGame, 0, sizeof( uiNewGame_t ));
 
+	uiNewGame.menu.vidInitFunc = UI_NewGame_Init;
 	uiNewGame.menu.keyFunc = UI_NewGame_KeyFunc;
 	
 	uiNewGame.background.generic.id = ID_BACKGROUND;

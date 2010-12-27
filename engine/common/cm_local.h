@@ -46,7 +46,7 @@ typedef struct
 typedef struct
 {
 	int		version;		// map version
-	uint		checksum;		// map checksum
+	uint		checksum;		// current map checksum
 	int		load_sequence;	// increace each map change
 	vec3_t		hull_sizes[4];	// actual hull sizes
 	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces

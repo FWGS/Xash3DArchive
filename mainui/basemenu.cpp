@@ -807,7 +807,16 @@ void UI_PopMenu( void )
 		uiStatic.menuActive = uiStatic.menuStack[uiStatic.menuDepth-1];
 		uiStatic.firstDraw = true;
 	}
-	else UI_CloseMenu();
+	else if ( CL_IsActive( ))
+	{
+		UI_CloseMenu();
+	}
+	else
+	{
+		// never trying the close menu when client isn't connected
+		KEY_SetDest( KEY_MENU );
+		UI_Main_Menu();
+	}
 }
 
 // =====================================================================
@@ -1243,6 +1252,16 @@ int UI_VidInit( void )
 
 	// register ui font
 	uiStatic.hFont = PIC_Load( "menufont", font_tga, sizeof( font_tga ));
+
+	// now recalc all the menus in stack
+	for( int i = 0; i < uiStatic.menuDepth; i++ )
+	{
+		menuFramework_s *item = uiStatic.menuStack[i];
+
+		// do vid restart for all pushed elements
+		if( item && item->vidInitFunc )
+			item->vidInitFunc();
+	}
 
 	return 1;
 }

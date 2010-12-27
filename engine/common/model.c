@@ -857,6 +857,9 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			if( com.stristr( tex->name, "scroll" ))
 				out->flags |= SURF_CONVEYOR;
 
+			if( tex->name[0] == '{' )
+				out->flags |= SURF_TRANSPARENT;
+
 			if( out->texinfo->flags & TEX_SPECIAL )
 				out->flags |= SURF_DRAWTILED;
 		}
@@ -1605,13 +1608,13 @@ Mod_LoadModel
 Loads a model into the cache
 ==================
 */
-model_t *Mod_LoadModel( model_t *mod, qboolean isWorld )
+model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 {
 	byte	*buf;
 
 	if( !mod )
 	{
-		if( isWorld ) Host_Error( "Mod_ForName: NULL model\n" );
+		if( crash ) Host_Error( "Mod_ForName: NULL model\n" );
 		else MsgDev( D_ERROR, "Mod_ForName: NULL model\n" );
 		return NULL;		
 	}
@@ -1623,15 +1626,11 @@ model_t *Mod_LoadModel( model_t *mod, qboolean isWorld )
 	buf = FS_LoadFile( mod->name, NULL );
 	if( !buf )
 	{
-		if( isWorld ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
+		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
 		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", mod->name );
 		Mem_Set( mod, 0, sizeof( model_t ));
 		return NULL;
 	}
-
-	// if it's world - calc the map checksum
-	if( isWorld ) CRC32_MapFile( &world.checksum, mod->name );
-	world.loading = isWorld;
 
 	MsgDev( D_NOTE, "Mod_LoadModel: %s\n", mod->name );
 	mod->needload = world.load_sequence; // register mod
@@ -1660,7 +1659,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean isWorld )
 		Mod_FreeModel( mod );
 
 		// check for loading problems
-		if( isWorld ) Host_Error( "Mod_ForName: %s unknown format\n", mod->name );
+		if( crash ) Host_Error( "Mod_ForName: %s unknown format\n", mod->name );
 		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", mod->name );
 		return NULL;
 	}
@@ -1674,12 +1673,12 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-model_t *Mod_ForName( const char *name, qboolean world )
+model_t *Mod_ForName( const char *name, qboolean crash )
 {
 	model_t	*mod;
 	
 	mod = Mod_FindName( name, true );
-	return Mod_LoadModel( mod, world );
+	return Mod_LoadModel( mod, crash );
 }
 
 /*
@@ -1720,10 +1719,14 @@ void Mod_LoadWorld( const char *name, uint *checksum )
 	world.load_sequence++;	// now all models are invalid
 
 	// load the newmap
+	world.loading = true;
 	worldmodel = Mod_ForName( name, true );
 	com_models[1] = cm_models; // make link to world
-	if( checksum ) *checksum = world.checksum;
+	CRC32_MapFile( &world.checksum, worldmodel->name );
+	world.loading = false;
 
+	if( checksum ) *checksum = world.checksum;
+		
 	// calc Potentially Hearable Set and compress it
 	Mod_CalcPHS();
 }

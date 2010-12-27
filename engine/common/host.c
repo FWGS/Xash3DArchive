@@ -18,8 +18,6 @@ convar_t	*host_limitlocal;
 convar_t	*host_cheats;
 convar_t	*host_maxfps;
 convar_t	*host_framerate;
-qboolean	sound_restart;
-qboolean	video_restart;
 
 // these cvars will be duplicated on each client across network
 int Host_ServerState( void )
@@ -116,30 +114,6 @@ Host_SetServerState
 void Host_SetServerState( int state )
 {
 	Cvar_FullSet( "host_serverstate", va( "%i", state ), CVAR_INIT );
-}
-
-/*
-=================
-Host_VidRestart_f
-
-Restart the video subsystem
-=================
-*/
-void Host_VidRestart_f( void )
-{
-	video_restart = true;
-}
-
-/*
-=================
-Host_SndRestart_f
-
-Restart the audio subsystem
-=================
-*/
-void Host_SndRestart_f( void )
-{
-	sound_restart = true;
 }
 
 /*
@@ -611,18 +585,16 @@ void Host_Init( const int argc, const char **argv )
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
 
 	// content control
-	Cvar_Get( "violence_hgibs", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human gibs" );
-	Cvar_Get( "violence_agibs", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables alien gibs" );
-	Cvar_Get( "violence_hblood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables human blood" );
-	Cvar_Get( "violence_ablood", "1", CVAR_INIT|CVAR_ARCHIVE, "content control disables alien blood" );
-
-	video_restart = true;	// initalize renderer
-	sound_restart = true;	// initialize sound engine
+	Cvar_Get( "violence_hgibs", "1", CVAR_ARCHIVE, "show human gib entities" );
+	Cvar_Get( "violence_agibs", "1", CVAR_ARCHIVE, "show alien gib entities" );
+	Cvar_Get( "violence_hblood", "1", CVAR_ARCHIVE, "draw human blood" );
+	Cvar_Get( "violence_ablood", "1", CVAR_ARCHIVE, "draw alien blood" );
 
 	if( host.type != HOST_DEDICATED )
 	{
 		// when we in developer-mode automatically turn cheats on
 		if( host.developer > 1 ) Cvar_SetFloat( "sv_cheats", 1.0f );
+		Cbuf_AddText( "exec video.cfg\n" );
 	}
 
 	Mod_Init();
@@ -647,8 +619,6 @@ void Host_Init( const int argc, const char **argv )
 	else
 	{
 		Cmd_AddCommand( "minimize", Host_Minimize_f, "minimize main window to tray" );
-		Cmd_AddCommand( "vid_restart", Host_VidRestart_f, "restarts video system" );
-		Cmd_AddCommand( "snd_restart", Host_SndRestart_f, "restarts audio system" );
 		Cbuf_AddText( "exec config.cfg\n" );
 	}
 

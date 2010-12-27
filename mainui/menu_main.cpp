@@ -322,6 +322,10 @@ static void UI_Main_Init( void )
 {
 	memset( &uiMain, 0, sizeof( uiMain_t ));
 
+	// precache .avi file and get logo width and height
+	PRECACHE_LOGO( "logo.avi" );
+
+	uiMain.menu.vidInitFunc = UI_Main_Init;
 	uiMain.menu.keyFunc = UI_Main_KeyFunc;
 	uiMain.menu.activateFunc = UI_Main_ActivateFunc;
 

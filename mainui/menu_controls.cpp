@@ -393,6 +393,7 @@ static void UI_Controls_Init( void )
 {
 	memset( &uiControls, 0, sizeof( uiControls_t ));
 
+	uiControls.menu.vidInitFunc = UI_Controls_Init;
 	uiControls.menu.keyFunc = UI_Controls_KeyFunc;
 
 	StringConcat( uiControls.hintText, "Action", CMD_LENGTH );

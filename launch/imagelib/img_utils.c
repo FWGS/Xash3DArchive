@@ -438,6 +438,16 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 			d_table[i] = *(uint *)rgba;
 		}
 		break;
+	case LUMP_INDEXALPHA:
+		for( i = 0; i < 256; i++ )
+		{
+			rgba[0] = pal[i*3+0];
+			rgba[1] = pal[i*3+1];
+			rgba[2] = pal[i*3+2];
+			rgba[3] = i;
+			d_table[i] = *(uint *)rgba;
+		}
+		break;	
 	case LUMP_TRANSPARENT:
 		for( i = 0; i < 256; i++ )
 		{

@@ -221,6 +221,7 @@ static void UI_CustomGame_Init( void )
 {
 	memset( &uiCustomGame, 0, sizeof( uiCustomGame_t ));
 
+	uiCustomGame.menu.vidInitFunc = UI_CustomGame_Init;
 	uiCustomGame.menu.keyFunc = UI_CustomGame_KeyFunc;
 
 	StringConcat( uiCustomGame.hintText, "Type", TYPE_LENGTH );

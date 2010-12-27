@@ -520,8 +520,6 @@ extern glwstate_t		glw_state;
 extern convar_t	*gl_allow_software;
 extern convar_t	*gl_texture_anisotropy;
 extern convar_t	*gl_extensions;
-extern convar_t	*gl_colorbits;
-extern convar_t	*gl_depthbits;
 extern convar_t	*gl_stencilbits;
 extern convar_t	*gl_texturebits;
 extern convar_t	*gl_ignorehwgamma;
