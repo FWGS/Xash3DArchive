@@ -876,7 +876,7 @@ void SV_PutClientInServer( edict_t *ent )
 		else
 		{
 			if( sv_maxclients->integer > 1 )
-				ent->v.netname = MAKE_STRING(Info_ValueForKey( client->userinfo, "name" ));
+				ent->v.netname = MAKE_STRING( Info_ValueForKey( client->userinfo, "name" ));
 			else ent->v.netname = MAKE_STRING( "player" );
 
 			// fisrt entering

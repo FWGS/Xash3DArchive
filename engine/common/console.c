@@ -1353,24 +1353,6 @@ Con_DrawConsole
 */
 void Con_DrawConsole( void )
 {
-	if( cls.key_dest == key_menu )
-	{
-		// draws the current build
-		byte	*color = g_color_table[7];
-		int	i, stringLen, width = 0, charH;
-		int	start, height = scr_height->integer;
-		string	curbuild;
-
-		com.snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
-		Con_DrawStringLen( curbuild, &stringLen, &charH );
-		start = scr_width->integer - stringLen * 1.05f;
-		stringLen = com.cstrlen( curbuild );
-		height -= charH * 1.5f;
-
-		for( i = 0; i < stringLen; i++ )
-			width += Con_DrawCharacter( start + width, height, curbuild[i], color );
-	}
-
 	// never draw console whel changelevel in-progress
 	if( cls.changelevel ) return;
 
@@ -1424,6 +1406,33 @@ void Con_DrawConsole( void )
 			Con_DrawNotify(); // draw notify lines
 		break;
 	}
+}
+
+/*
+==================
+Con_DrawVersion
+
+Used by menu
+==================
+*/
+void Con_DrawVersion( void )
+{
+	// draws the current build
+	byte	*color = g_color_table[7];
+	int	i, stringLen, width = 0, charH;
+	int	start, height = scr_height->integer;
+	string	curbuild;
+
+	if( cls.key_dest != key_menu ) return;
+
+	com.snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
+	Con_DrawStringLen( curbuild, &stringLen, &charH );
+	start = scr_width->integer - stringLen * 1.05f;
+	stringLen = com.cstrlen( curbuild );
+	height -= charH * 1.5f;
+
+	for( i = 0; i < stringLen; i++ )
+		width += Con_DrawCharacter( start + width, height, curbuild[i], color );
 }
 
 /*

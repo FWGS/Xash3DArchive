@@ -356,9 +356,12 @@ void FS_Path_f( void )
 
 	for( s = fs_searchpaths; s; s = s->next )
 	{
-		if( s->pack ) Msg( "%s (%i files)\n", s->pack->filename, s->pack->numfiles );
-		else if( s->wad ) Msg( "%s (%i files)\n", s->wad->filename, s->wad->numlumps );
-		else Msg( "%s\n", s->filename );
+		if( s->pack ) Msg( "%s (%i files)", s->pack->filename, s->pack->numfiles );
+		else if( s->wad ) Msg( "%s (%i files)", s->wad->filename, s->wad->numlumps );
+		else Msg( "%s", s->filename );
+
+		if( s->flags & FS_GAMEDIR_PATH ) Msg( " ^2gamedir^7\n" );
+		else Msg( "\n" );
 	}
 }
 
@@ -907,7 +910,8 @@ void FS_Rescan( void )
 	MsgDev( D_NOTE, "FS_Rescan( %s )\n", SI.GameInfo->title );
 	FS_ClearSearchPath();
 
-	FS_AddGameHierarchy( SI.GameInfo->basedir, 0 );
+	if( com.stricmp( SI.GameInfo->basedir, SI.GameInfo->gamedir ))
+		FS_AddGameHierarchy( SI.GameInfo->basedir, 0 );
 	FS_AddGameHierarchy( SI.GameInfo->gamedir, FS_GAMEDIR_PATH );
 }
 

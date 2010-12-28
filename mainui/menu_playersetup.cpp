@@ -99,12 +99,14 @@ static void UI_PlayerSetup_FindModels( void )
 	uiPlayerSetup.num_models = 0;
 
 	// Get file list
-	filenames = FS_SEARCH(  "models/player/*", &numFiles, FALSE );
+	filenames = FS_SEARCH(  "models/player/*", &numFiles, TRUE );
+	if( !numFiles ) filenames = FS_SEARCH(  "models/player/*", &numFiles, FALSE ); 
 
+#if 0
 	// add default singleplayer model
 	strcpy( uiPlayerSetup.models[uiPlayerSetup.num_models], "player" );
 	uiPlayerSetup.num_models++;
-
+#endif
 	// build the model list
 	for( i = 0; i < numFiles; i++ )
 	{

@@ -1,10 +1,12 @@
-build ????
+build 1422
 
 Render: fix decals serialization bug
 Engine: fix movie plaback bug (black screen)
 Engine: fix crash on loading encrypted client.dll
 GameUI: now recalc resolution when vid_mode is changed
 Sound: fix musicvolume bug
+Image: fix indexalpha palette bug
+Physic: fix stuck on some items (weapons, ammo)
 
 build 1418
 

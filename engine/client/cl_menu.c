@@ -14,6 +14,8 @@ void UI_UpdateMenu( float realtime )
 {
 	if( !menu.hInstance ) return;
 	menu.dllFuncs.pfnRedraw( realtime );
+
+	Con_DrawVersion();
 }
 
 void UI_KeyEvent( int key, qboolean down )

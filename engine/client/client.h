@@ -679,6 +679,7 @@ void Con_ToggleConsole_f( void );
 void Con_ClearNotify( void );
 void Con_RunConsole( void );
 void Con_DrawConsole( void );
+void Con_DrawVersion( void );
 void Con_DrawStringLen( const char *pText, int *length, int *height );
 int Con_DrawString( int x, int y, const char *string, rgba_t setColor );
 void Con_DefaultColor( int r, int g, int b );
