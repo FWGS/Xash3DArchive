@@ -176,17 +176,12 @@ void SV_Impact( edict_t *e1, trace_t *trace )
 	}
 
 	svgame.globals->time = sv.time;
-	SV_CopyTraceToGlobal( trace );
 
 	if( !e1->free && !e2->free && e1->v.solid != SOLID_NOT )
-	{
 		svgame.dllFuncs.pfnTouch( e1, e2 );
-          }
 
 	if( !e1->free && !e2->free && e2->v.solid != SOLID_NOT )
-	{
 		svgame.dllFuncs.pfnTouch( e2, e1 );
-	}
 }
 
 /*

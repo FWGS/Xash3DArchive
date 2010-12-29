@@ -1845,7 +1845,6 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 
 	trace = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
 	SV_ConvertTrace( ptr, &trace );
-	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -1868,7 +1867,6 @@ static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr
 
 	trace = SV_MoveToss( pent, pentToIgnore );
 	SV_ConvertTrace( ptr, &trace );
-	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -1889,7 +1887,6 @@ static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int
 
 	trace = SV_MoveHull( v1, hullNumber, v2, fNoMonsters, pentToSkip );
 	SV_ConvertTrace( ptr, &trace );
-	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -1913,11 +1910,7 @@ static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v
 	svgame.globals->trace_flags = 0;
 
 	trace = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip );
-	if( ptr )
-	{
-		SV_ConvertTrace( ptr, &trace );
-		SV_CopyTraceToGlobal( &trace );
-	}
+	if( ptr ) SV_ConvertTrace( ptr, &trace );
 
 	if( trace.allsolid || trace.fraction != 1.0f )
 		return true;
@@ -1949,7 +1942,6 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 
 	trace = SV_TraceHull( pent, hullNumber, v1, mins, maxs, v2 );
 	SV_ConvertTrace( ptr, &trace );
-	SV_CopyTraceToGlobal( &trace );
 }
 
 /*
@@ -3088,6 +3080,10 @@ int pfnCompareFileTime( const char *filename1, const char *filename2, int *iComp
 	{
 		long ft1 = FS_FileTime( filename1 );
 		long ft2 = FS_FileTime( filename2 );
+
+		// one of files is missing
+		if( ft1 == -1 || ft2 == -1 )
+			return bRet;
 
 		*iCompare = Host_CompareFileTime( ft1,  ft2 );
 		bRet = 1;

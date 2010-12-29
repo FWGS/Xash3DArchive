@@ -378,7 +378,7 @@ int EntityInSolid( edict_t *ent )
 void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adjacent )
 {
 	int	flags = entry->flags;
-	int	decalIndex, entityIndex;
+	int	decalIndex, entityIndex = 0;
 	int	modelIndex = 0;
 
 	if( adjacent ) flags |= FDECAL_DONTSAVE;
@@ -419,9 +419,10 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	else
 	{
 		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
-		if( pEdict != NULL ) modelIndex = pEdict->v.modelindex;
+		if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
+		if( SV_IsValidEdict( pEdict )) entityIndex = pEdict->serialnumber;
 
-		SV_CreateDecal( entry->position, decalIndex, pEdict->serialnumber, modelIndex, flags );
+		SV_CreateDecal( entry->position, decalIndex, entityIndex, modelIndex, flags );
 	}
 }
 

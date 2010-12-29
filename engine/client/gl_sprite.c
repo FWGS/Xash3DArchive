@@ -856,6 +856,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		state |= GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 		break;
 	case kRenderGlow:
+		state |= GLSTATE_NO_DEPTH_TEST;
 	case kRenderTransAdd:
 		state |= GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE;
 		break;

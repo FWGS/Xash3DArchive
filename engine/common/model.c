@@ -1791,7 +1791,10 @@ Mod_GetBounds
 */
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs )
 {
-	model_t	*cmod = CM_ClipHandleToModel( handle );
+	model_t	*cmod;
+
+	if( handle <= 0 ) return;
+	cmod = CM_ClipHandleToModel( handle );
 
 	if( cmod )
 	{

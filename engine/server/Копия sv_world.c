@@ -1097,13 +1097,6 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		touch = EDICT_FROM_AREA( l );
 
-		if( touch->v.groupinfo != 0 && clip->passedict != NULL && clip->passedict->v.groupinfo != 0 )
-		{
-			if(( svs.groupop == 0 && ( touch->v.groupinfo & clip->passedict->v.groupinfo ) == 0) ||
-			( svs.groupop == 1 && (touch->v.groupinfo & clip->passedict->v.groupinfo ) != 0 ))
-				continue;
-		}
-
 		if( touch == clip->passedict || touch->v.solid == SOLID_NOT )
 			continue;
 
@@ -1148,7 +1141,8 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( clip->flags & FMOVE_IGNORE_GLASS && modType == mod_brush )
 		{
 			// we ignore brushes with rendermode != kRenderNormal and without FL_WORLDBRUSH set
-			if( touch->v.rendermode != kRenderNormal && ( touch->v.flags & FL_WORLDBRUSH ) == 0 )
+			if( touch->v.flags & FL_WORLDBRUSH );
+			else if( touch->v.rendermode != kRenderNormal )
 				continue;
 		}
 
