@@ -1141,8 +1141,6 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	Cvar_SetFloat( "sv_skyvec_y", header.skyVec_y );
 	Cvar_SetFloat( "sv_skyvec_z", header.skyVec_z );
 
-	sv.viewentity = ( header.viewentity == 1 ) ? 0 : (word)header.viewentity;
-
 	// re-base the savedata since we re-ordered the entity/table / restore fields
 	SaveRestore_Rebase( pSaveData );
 
@@ -1221,6 +1219,14 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 			}
 		}
 	}
+
+	// restore camera view here
+	pent = pSaveData->pTable[bound( 0, (word)header.viewentity, pSaveData->tableCount )].pent;
+	if( SV_IsValidEdict( pent )) sv.viewentity = pent->serialnumber;
+	else sv.viewentity = 0;
+
+	// just use normal client view
+	if( sv.viewentity == 1 ) sv.viewentity = 0;
 
 	SV_LoadClientState( pSaveData, level, false );
 
