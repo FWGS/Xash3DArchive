@@ -202,7 +202,7 @@ int CL_TruePointContents( const vec3_t p )
 			continue;
 
 		// only brushes can have special contents
-		if( pe->model->type != mod_brush )
+		if( !pe->model || pe->model->type != mod_brush )
 			continue;
 
 		// check water brushes accuracy

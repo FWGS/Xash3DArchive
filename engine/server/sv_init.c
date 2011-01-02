@@ -208,7 +208,7 @@ activate server on changed map, run physics
 */
 void SV_ActivateServer( void )
 {
-	int	i;
+	int	i, numFrames;
 
 	if( !svs.initialized )
 		return;
@@ -242,13 +242,12 @@ void SV_ActivateServer( void )
 	}
 
 	// FIXME: test this for correct
-//	sv.frametime = 0.1f;
+	sv.frametime = (sv.loadgame) ? host.frametime : 0.0f;
+	numFrames = (sv.loadgame) ? 1 : 2;
 			
-	if( !sv.loadgame || svgame.globals->changelevel )
-	{
-		// run two frames to allow everything to settle
-		for( i = 0; i < 2; i++ ) SV_Physics();
-	}
+	// run some frames to allow everything to settle
+	for( i = 0; i < numFrames; i++ )
+		SV_Physics();
 
 	// invoke to refresh all movevars
 	Mem_Set( &svgame.oldmovevars, 0, sizeof( movevars_t ));
@@ -333,18 +332,17 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 		{
 			SV_LoadAdjacentEnts( pOldLevel, pLandmarkName );
 		}
-
-		if( sv_newunit->integer )
-		{
-			Cvar_SetFloat( "sv_newunit", 0 );
-			SV_ClearSaveDir();
-		}
 	}
 	else
 	{
 		svgame.dllFuncs.pfnResetGlobalState();
-
 		SV_SpawnEntities( pMapName, SV_EntityScript( ));
+	}
+
+	if( sv_newunit->integer )
+	{
+		Cvar_SetFloat( "sv_newunit", 0 );
+		SV_ClearSaveDir();
 	}
 
 	// call before sending baselines into the client

@@ -753,6 +753,9 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;
 
+	// this is non-solid pusher (e.g. water)
+	if( oldsolid == SOLID_NOT ) return NULL;
+
 	// see if any solid entities are inside the final position
 	num_moved = 0;
 	for( e = 1; e < svgame.numEntities; e++ )
@@ -801,8 +804,10 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( block )//|| SV_TestEntityPosition( check ))
+		if( SV_TestEntityPosition( check ))
 		{	
+			if( !block ) continue;
+
 			if( !SV_CanBlock( check ))
 				continue;
 
@@ -872,6 +877,9 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;
 
+	// this is non-solid pusher (e.g. water)
+	if( oldsolid == SOLID_NOT ) return NULL;
+
 	// create pusher final position
 	Matrix4x4_CreateFromEntity( end_l, pusher->v.angles, pusher->v.origin, 1.0f );
 
@@ -924,8 +932,10 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( block )//|| SV_TestEntityPosition( check ))
+		if( SV_TestEntityPosition( check ))
 		{	
+			if( !block ) continue;
+
 			if( !SV_CanBlock( check ))
 				continue;
 
@@ -1258,14 +1268,22 @@ void SV_Physics_Toss( edict_t *ent )
 	// make sure what we don't collide with like entity (e.g. gib with gib)
 	if( trace.allsolid && SV_IsValidEdict( trace.ent ) && trace.ent->v.movetype != ent->v.movetype )
 	{
-		// entity is trapped in another solid
-		if( trace.plane.normal[2] > 0.7f )
+		if( trace.ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
 		{
-			ent->v.groundentity = trace.ent;
-			ent->v.flags |= FL_ONGROUND;
+			Msg( "%s stuck in the %s\n", SV_ClassName( ent ), SV_ClassName( trace.ent ));
+//			ent->v.solid = SOLID_NOT;
 		}
-		VectorClear( ent->v.velocity );
-		return;
+		else
+		{
+			// entity is trapped in another solid
+			if( trace.plane.normal[2] > 0.7f )
+			{
+				ent->v.groundentity = trace.ent;
+				ent->v.flags |= FL_ONGROUND;
+			}
+			VectorClear( ent->v.velocity );
+			return;
+		}
 	}
 
 	if( trace.fraction == 1.0f )

@@ -23,6 +23,8 @@
 #define MAXLIGHTMAPS	4
 #define NUM_AMBIENTS	4		// automatic ambient sounds
 
+#define SPRITE_HUD		256		// goes into model_t->flags
+
 // model types
 typedef enum
 {

@@ -725,7 +725,7 @@ qboolean SV_TestEntityPosition( edict_t *ent )
 		else SV_SetMinMaxSize( ent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );
 	}
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent );
 
 	return trace.startsolid;
 }
@@ -851,7 +851,7 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 		{
 			trace->fraction = midf;
 			VectorCopy( mid, trace->endpos );
-			MsgDev( D_WARN, "trace backed up 0.0\n" );
+			MsgDev( D_WARN, "trace backed up past 0.0\n" );
 			return false;
 		}
 
@@ -1163,10 +1163,13 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				continue;	// don't clip against own missiles
 			if( clip->passedict->v.owner == touch )
 				continue;	// don't clip against owner
-			if( clip->passedict->v.solid == SOLID_BBOX && touch->v.solid != SOLID_BSP )
+			if( clip->passedict->v.solid == SOLID_BBOX )
 			{
-				if( Mod_GetType( clip->passedict->v.modelindex ) == mod_studio )
-					traceHitbox = true;
+				if( touch->v.solid != SOLID_BSP && touch->v.movetype != MOVETYPE_PUSHSTEP )
+				{
+					if( Mod_GetType( clip->passedict->v.modelindex ) == mod_studio )
+						traceHitbox = true;
+				}
 			}
 		}
 

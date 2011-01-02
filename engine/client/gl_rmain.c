@@ -384,7 +384,7 @@ R_GetFarClip
 static float R_GetFarClip( void )
 {
 	if( cl.worldmodel && RI.drawWorld )
-		return RI.refdef.movevars->zmax;
+		return RI.refdef.movevars->zmax + 1024.0f;
 	return 2048.0f;
 }
 

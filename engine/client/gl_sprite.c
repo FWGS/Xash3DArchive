@@ -173,7 +173,9 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
 			break;
                     case SPR_INDEXALPHA:
-			pal = FS_LoadImage( "#indexalpha.pal", src, 768 );
+			if( mod->flags & SPRITE_HUD )
+				pal = FS_LoadImage( "#indexalpha.pal", src, 768 );
+			else pal = FS_LoadImage( "#decal.pal", src, 768 ); 
 			break;
 		case SPR_ALPHTEST:		
 			pal = FS_LoadImage( "#transparent.pal", src, 768 );
@@ -845,7 +847,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	r_stats.c_sprite_models_drawn++;
 
-	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode == kRenderTransAlpha )
+	if( psprite->texFormat == SPR_ALPHTEST )
 		state |= GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
 
 	// select properly rendermode

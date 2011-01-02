@@ -2690,6 +2690,8 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 		byte		*in, *out;
 		void		*buffer2 = NULL;
 		size_t		size1, size2;
+
+		Msg( "loading textures for %s\n", loadmodel->name );
 	
 		buffer2 = FS_LoadFile( R_StudioTexName( mod ), NULL );
 		thdr = R_StudioLoadHeader( mod, buffer2 );

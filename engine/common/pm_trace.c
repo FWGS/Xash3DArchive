@@ -305,7 +305,7 @@ loc0:
 		{
 			trace->fraction = midf;
 			VectorCopy( mid, trace->endpos );
-			MsgDev( D_WARN, "trace backed up 0.0\n" );
+			MsgDev( D_WARN, "trace backed up past 0.0\n" );
 			return false;
 		}
 
@@ -511,7 +511,8 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 			trace.ent = i;
 		}
 
-		if( trace.allsolid || trace.startsolid || trace.fraction < total.fraction )
+		// g-cont. needs for global test!!!
+		if( trace.allsolid || /*trace.startsolid ||*/ trace.fraction < total.fraction )
 		{
 			trace.ent = i;
 

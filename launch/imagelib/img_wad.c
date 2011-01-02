@@ -226,8 +226,14 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	image.type = PF_INDEXED_32;	// 32-bit palete
 
 	// detect alpha-channel by palette type
-	if( image.d_rendermode == LUMP_INDEXALPHA || image.d_rendermode == LUMP_TRANSPARENT )
+	switch( image.d_rendermode )
+	{
+	case LUMP_DECAL:
+	case LUMP_INDEXALPHA:
+	case LUMP_TRANSPARENT:
 		image.flags |= IMAGE_HAS_ALPHA;
+		break;
+	}
 
 	// make transparent color is black, blue color looks ugly
 	if( image.d_rendermode == LUMP_TRANSPARENT && Sys.app_name == HOST_NORMAL )

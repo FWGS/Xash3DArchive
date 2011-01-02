@@ -1310,6 +1310,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	if( !buf ) return false;
 
 	com.strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
+	m_pSprite->flags |= SPRITE_HUD;
 
 	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
 	else Mod_LoadSpriteModel( m_pSprite, buf );		
@@ -2228,7 +2229,7 @@ static int pfnWaterEntity( const float *rgflPos )
 			continue;
 
 		// only brushes can have special contents
-		if( pe->model->type != mod_brush )
+		if( !pe->model || pe->model->type != mod_brush )
 			continue;
 
 		// check water brushes accuracy

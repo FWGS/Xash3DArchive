@@ -1035,6 +1035,12 @@ void GL_FreeTexture( GLenum texnum )
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
 
+	if( !image->name[0] )
+	{
+		Msg( "Trying to free unnamed texture with texnum %i\n", image->texnum );
+		return;
+	}
+
 	// remove from hash table
 	hash = Com_HashKey( image->name, TEXTURES_HASH_SIZE );
 	prev = &r_texturesHashTable[hash];
