@@ -228,6 +228,14 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	qboolean	blue_shift = false;
 
 	if( !crcvalue ) return false;
+
+	// always calc same checksum for singleplayer
+	if( Cvar_VariableInteger( "maxplayers" ) == 1 )
+	{
+		*crcvalue = (('H'<<24)+('S'<<16)+('A'<<8)+'X');
+		return true;
+	}
+
 	f = FS_Open( filename, "rb", false );
 	if( !f ) return false;
 

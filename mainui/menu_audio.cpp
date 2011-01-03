@@ -28,66 +28,39 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_BACKGROUND		0
 #define ID_BANNER			1
 #define ID_DONE			2
-#define ID_APPLY			3
-#define ID_SOUNDLIBRARY		4
-#define ID_SOUNDVOLUME		5
-#define ID_MUSICVOLUME		6
-#define ID_INTERP			7
-#define ID_NODSP			8
-#define ID_MSGHINT			9
+#define ID_SUITVOLUME		3
+#define ID_SOUNDVOLUME		4
+#define ID_MUSICVOLUME		5
+#define ID_INTERP			6
+#define ID_NODSP			7
+#define ID_MSGHINT			8
 
 typedef struct
 {
-	int		soundLibrary;
 	float		soundVolume;
 	float		musicVolume;
+	float		suitVolume;
 } uiAudioValues_t;
 
 static uiAudioValues_t	uiAudioInitial;
 
 typedef struct
 {
-	char		**audioList;
-	int		numSoundDlls;
-
 	menuFramework_s	menu;
 
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
 	menuAction_s	done;
-	menuAction_s	apply;
 
-	menuSpinControl_s	soundLibrary;
 	menuSlider_s	soundVolume;
 	menuSlider_s	musicVolume;
+	menuSlider_s	suitVolume;
 	menuCheckBox_s	lerping;
 	menuCheckBox_s	noDSP;
-
-	menuAction_s	hintMessage;
-	char		hintText[MAX_HINT_TEXT];
 } uiAudio_t;
 
 static uiAudio_t		uiAudio;
-
-
-/*
-=================
-UI_Audio_GetDeviceList
-=================
-*/
-static void UI_Audio_GetDeviceList( void )
-{
-	uiAudio.audioList = GET_AUDIO_LIST( &uiAudio.numSoundDlls ); 
-
-	for( int i = 0; i < uiAudio.numSoundDlls; i++ )
-	{
-		if( !stricmp( uiAudio.audioList[i], CVAR_GET_STRING( "host_audio" )))
-			uiAudio.soundLibrary.curValue = i;
-	}
-
-	uiAudio.soundLibrary.maxValue = uiAudio.numSoundDlls - 1;
-}
 
 /*
 =================
@@ -96,10 +69,9 @@ UI_Audio_GetConfig
 */
 static void UI_Audio_GetConfig( void )
 {
-	UI_Audio_GetDeviceList();
-
 	uiAudio.soundVolume.curValue = CVAR_GET_FLOAT( "volume" );
 	uiAudio.musicVolume.curValue = CVAR_GET_FLOAT( "musicvolume" );
+	uiAudio.suitVolume.curValue = CVAR_GET_FLOAT( "suitvolume" );
 
 	if( CVAR_GET_FLOAT( "s_lerping" ))
 		uiAudio.lerping.enabled = 1;
@@ -108,9 +80,9 @@ static void UI_Audio_GetConfig( void )
 		uiAudio.noDSP.enabled = 1;
 
 	// save initial values
-	uiAudioInitial.soundLibrary = uiAudio.soundLibrary.curValue;
 	uiAudioInitial.soundVolume = uiAudio.soundVolume.curValue;
 	uiAudioInitial.musicVolume = uiAudio.musicVolume.curValue;
+	uiAudioInitial.suitVolume = uiAudio.suitVolume.curValue;
 }
 
 /*
@@ -122,6 +94,7 @@ static void UI_Audio_SetConfig( void )
 {
 	CVAR_SET_FLOAT( "volume", uiAudio.soundVolume.curValue );
 	CVAR_SET_FLOAT( "musicvolume", uiAudio.musicVolume.curValue );
+	CVAR_SET_FLOAT( "suitvolume", uiAudio.suitVolume.curValue );
 	CVAR_SET_FLOAT( "s_lerping", uiAudio.lerping.enabled );
 	CVAR_SET_FLOAT( "dsp_off", uiAudio.noDSP.enabled );
 }
@@ -133,21 +106,11 @@ UI_Audio_UpdateConfig
 */
 static void UI_Audio_UpdateConfig( void )
 {
-	uiAudio.soundLibrary.generic.name = uiAudio.audioList[(int)uiAudio.soundLibrary.curValue];
-
 	CVAR_SET_FLOAT( "volume", uiAudio.soundVolume.curValue );
 	CVAR_SET_FLOAT( "musicvolume", uiAudio.musicVolume.curValue );
+	CVAR_SET_FLOAT( "suitvolume", uiAudio.suitVolume.curValue );
 	CVAR_SET_FLOAT( "s_lerping", uiAudio.lerping.enabled );
 	CVAR_SET_FLOAT( "dsp_off", uiAudio.noDSP.enabled );
-
-	// See if the apply button should be enabled or disabled
-	uiAudio.apply.generic.flags |= QMF_GRAYED;
-
-	if( uiAudioInitial.soundLibrary != uiAudio.soundLibrary.curValue )
-	{
-		uiAudio.apply.generic.flags &= ~QMF_GRAYED;
-		return;
-	}
 }
 
 /*
@@ -183,11 +146,6 @@ static void UI_Audio_Callback( void *self, int event )
 	case ID_DONE:
 		UI_PopMenu();
 		break;
-	case ID_APPLY:
-		UI_Audio_SetConfig();
-		UI_Audio_GetConfig();
-		UI_Audio_UpdateConfig();
-		break;
 	}
 }
 
@@ -202,9 +160,6 @@ static void UI_Audio_Init( void )
 
 	uiAudio.menu.vidInitFunc = UI_Audio_Init;
 	
-	strcat( uiAudio.hintText, "Change Xash3D sound engine to get more compatibility\n" );
-	strcat( uiAudio.hintText, "or enable new features (EAX, Filters etc)" );
-
 	uiAudio.background.generic.id	= ID_BACKGROUND;
 	uiAudio.background.generic.type = QMTYPE_BITMAP;
 	uiAudio.background.generic.flags = QMF_INACTIVE;
@@ -223,44 +178,14 @@ static void UI_Audio_Init( void )
 	uiAudio.banner.generic.height	= UI_BANNER_HEIGHT;
 	uiAudio.banner.pic = ART_BANNER;
 
-	uiAudio.hintMessage.generic.id = ID_MSGHINT;
-	uiAudio.hintMessage.generic.type = QMTYPE_ACTION;
-	uiAudio.hintMessage.generic.flags = QMF_INACTIVE|QMF_SMALLFONT;
-	uiAudio.hintMessage.generic.color = uiColorHelp;
-	uiAudio.hintMessage.generic.name = uiAudio.hintText;
-	uiAudio.hintMessage.generic.x = 320;
-	uiAudio.hintMessage.generic.y = 490;
-
-	uiAudio.apply.generic.id = ID_APPLY;
-	uiAudio.apply.generic.type = QMTYPE_ACTION;
-	uiAudio.apply.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
-	uiAudio.apply.generic.x = 72;
-	uiAudio.apply.generic.y = 230;
-	uiAudio.apply.generic.name = "Apply";
-	uiAudio.apply.generic.statusText = "Apply changes";
-	uiAudio.apply.generic.callback = UI_Audio_Callback;
-
 	uiAudio.done.generic.id = ID_DONE;
 	uiAudio.done.generic.type = QMTYPE_ACTION;
 	uiAudio.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiAudio.done.generic.x = 72;
-	uiAudio.done.generic.y = 280;
+	uiAudio.done.generic.y = 230;
 	uiAudio.done.generic.name = "Done";
 	uiAudio.done.generic.statusText = "Go back to the Configuration Menu";
 	uiAudio.done.generic.callback = UI_Audio_Callback;
-
-	uiAudio.soundLibrary.generic.id = ID_SOUNDLIBRARY;
-	uiAudio.soundLibrary.generic.type = QMTYPE_SPINCONTROL;
-	uiAudio.soundLibrary.generic.flags = QMF_CENTER_JUSTIFY|QMF_SMALLFONT|QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
-	uiAudio.soundLibrary.generic.x = 360;
-	uiAudio.soundLibrary.generic.y = 550;
-	uiAudio.soundLibrary.generic.width = 168;
-	uiAudio.soundLibrary.generic.height = 26;
-	uiAudio.soundLibrary.generic.callback = UI_Audio_Callback;
-	uiAudio.soundLibrary.generic.statusText = "Select audio engine";
-	uiAudio.soundLibrary.minValue = 0;
-	uiAudio.soundLibrary.maxValue = 0;
-	uiAudio.soundLibrary.range = 1;
 
 	uiAudio.soundVolume.generic.id = ID_SOUNDVOLUME;
 	uiAudio.soundVolume.generic.type = QMTYPE_SLIDER;
@@ -286,12 +211,24 @@ static void UI_Audio_Init( void )
 	uiAudio.musicVolume.maxValue = 1.0;
 	uiAudio.musicVolume.range = 0.05f;
 
+	uiAudio.suitVolume.generic.id = ID_SUITVOLUME;
+	uiAudio.suitVolume.generic.type = QMTYPE_SLIDER;
+	uiAudio.suitVolume.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
+	uiAudio.suitVolume.generic.name = "Suit volume";
+	uiAudio.suitVolume.generic.x = 320;
+	uiAudio.suitVolume.generic.y = 400;
+	uiAudio.suitVolume.generic.callback = UI_Audio_Callback;
+	uiAudio.suitVolume.generic.statusText = "Singleplayer suit volume";
+	uiAudio.suitVolume.minValue = 0.0;
+	uiAudio.suitVolume.maxValue = 1.0;
+	uiAudio.suitVolume.range = 0.05f;
+
 	uiAudio.lerping.generic.id = ID_INTERP;
 	uiAudio.lerping.generic.type = QMTYPE_CHECKBOX;
 	uiAudio.lerping.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
 	uiAudio.lerping.generic.name = "Enable sound interpolation";
 	uiAudio.lerping.generic.x = 320;
-	uiAudio.lerping.generic.y = 370;
+	uiAudio.lerping.generic.y = 470;
 	uiAudio.lerping.generic.callback = UI_Audio_Callback;
 	uiAudio.lerping.generic.statusText = "enable/disable interpolation on sound output";
 
@@ -300,7 +237,7 @@ static void UI_Audio_Init( void )
 	uiAudio.noDSP.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
 	uiAudio.noDSP.generic.name = "Disable DSP effects";
 	uiAudio.noDSP.generic.x = 320;
-	uiAudio.noDSP.generic.y = 420;
+	uiAudio.noDSP.generic.y = 520;
 	uiAudio.noDSP.generic.callback = UI_Audio_Callback;
 	uiAudio.noDSP.generic.statusText = "this disables sound processing (like echo, flanger etc)";
 
@@ -309,11 +246,9 @@ static void UI_Audio_Init( void )
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.background );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.banner );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.done );
-	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.apply );
-	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.hintMessage );
-	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.soundLibrary );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.soundVolume );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.musicVolume );
+	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.suitVolume );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.lerping );
 	UI_AddItem( &uiAudio.menu, (void *)&uiAudio.noDSP );
 }

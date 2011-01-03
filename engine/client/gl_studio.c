@@ -1844,11 +1844,19 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	player_info_t	*info;
 	string		modelpath;
 
-	if( index < 0 || index > cl.maxclients )
-		return NULL; // bad client ?
+	if( cls.key_dest == key_menu && !index )
+	{
+		// we are in menu.
+		info = &menu.playerinfo;
+	}
+	else
+	{
+		if( index < 0 || index > cl.maxclients )
+			return NULL; // bad client ?
+		info = &cl.players[index];
+	}
 
-	info = &cl.players[index];
-
+	if( !info->model[0] ) return NULL;
 	if( !stricmp( info->model, "player" )) com.strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
 	else com.snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
 
@@ -2661,11 +2669,14 @@ studiohdr_t *R_StudioLoadHeader( model_t *mod, const void *buffer )
 
 	model_name[0] = '\0';
 
-	ptexture = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
-	if( phdr->textureindex > 0 && phdr->numtextures <= MAXSTUDIOSKINS )
+	if( host.type != HOST_DEDICATED )
 	{
-		for( i = 0; i < phdr->numtextures; i++ )
-			R_StudioLoadTexture( mod, phdr, &ptexture[i] );
+		ptexture = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
+		if( phdr->textureindex > 0 && phdr->numtextures <= MAXSTUDIOSKINS )
+		{
+			for( i = 0; i < phdr->numtextures; i++ )
+				R_StudioLoadTexture( mod, phdr, &ptexture[i] );
+		}
 	}
 	return (studiohdr_t *)buffer;
 }
@@ -2691,8 +2702,6 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 		void		*buffer2 = NULL;
 		size_t		size1, size2;
 
-		Msg( "loading textures for %s\n", loadmodel->name );
-	
 		buffer2 = FS_LoadFile( R_StudioTexName( mod ), NULL );
 		thdr = R_StudioLoadHeader( mod, buffer2 );
 

@@ -1,6 +1,16 @@
-build ????
+build 1428
 
 Engine: fix trigger_camera serialization bug
+Engine: many-many physics bugs fixed
+Engine: reworking monster's movement and path finding
+Engine: hlfx 0.6 is now working
+FS: fix bug with game and base directory dectecting when they matches
+FS: watch for changes in liblist.gam and update gameinfo.txt (feature)
+Engine: fix some rendering bugs
+GameUI: added 'suitvolume' control
+GameUI: rewrite playeyrmodel drawing, so you can shows changes when hi\low resolution button is toggled
+GameUI: remove choosing audio and video library (interface changed!)
+Engine: fix train startup sound on new level 
 
 build 1422
 

@@ -603,13 +603,23 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	if( scr_dark->integer )
 	{
-		screenfade_t	*sf = &clgame.fade;
+		screenfade_t		*sf = &clgame.fade;
+		client_textmessage_t	*title;
+
+		title = CL_TextMessageGet( "GAMETITLE" );
+
+		if( title )
+		{
+			// get settings from titles.txt
+			sf->fadeEnd = title->holdtime + title->fadeout;
+			sf->fadeReset = title->fadeout;
+		}
+		else sf->fadeEnd = sf->fadeReset = 4.0f;
 	
 		sf->fadeFlags = FFADE_IN;
 		sf->fader = sf->fadeg = sf->fadeb = 0;
-		sf->fadeEnd = sf->fadeReset = 4.0f;
 		sf->fadealpha = 255;
-		sf->fadeSpeed = (float)sf->fadealpha / sf->fadeEnd;
+		sf->fadeSpeed = (float)sf->fadealpha / sf->fadeReset;
 		sf->fadeReset += cl.time;
 		sf->fadeEnd += sf->fadeReset;
 		
@@ -839,6 +849,7 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 		com.strncpy( player->userinfo, BF_ReadString( msg ), sizeof( player->userinfo ));
 		com.strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
 		com.strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
+		if( slot == cl.playernum ) Mem_Copy( &menu.playerinfo, player, sizeof( player_info_t ));
 	}
 	else Mem_Set( player, 0, sizeof( *player ));
 }

@@ -492,7 +492,7 @@ void SV_AgeSaveList( const char *pName, int count )
 
 	// delete last quick/autosave (e.g. quick05.sav)
 	com.snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
-	com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.%s", pName, count, SI->savshot_ext );
+	com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.tga", pName, count );
 
 	// only delete from game directory, basedir is read-only
 	FS_Delete( newName );
@@ -504,17 +504,17 @@ void SV_AgeSaveList( const char *pName, int count )
 		{	
 			// quick.sav
 			com.snprintf( oldName, sizeof( oldName ), "save/%s.sav", pName );
-			com.snprintf( oldImage, sizeof( oldImage ), "save/%s.%s", pName, SI->savshot_ext );
+			com.snprintf( oldImage, sizeof( oldImage ), "save/%s.tga", pName );
 		}
 		else
 		{	
 			// quick04.sav, etc.
 			com.snprintf( oldName, sizeof( oldName ), "save/%s%02d.sav", pName, count - 1 );
-			com.snprintf( oldImage, sizeof( oldImage ), "save/%s%02d.%s", pName, count - 1, SI->savshot_ext );
+			com.snprintf( oldImage, sizeof( oldImage ), "save/%s%02d.tga", pName, count - 1 );
 		}
 
 		com.snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
-		com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.%s", pName, count, SI->savshot_ext );
+		com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.tga", pName, count );
 
 		// Scroll the name list down (rename quick04.sav to quick05.sav)
 		FS_Rename( oldName, newName );
@@ -1652,9 +1652,13 @@ qboolean SV_LoadGame( const char *pName )
 	if( !pName || !pName[0] )
 		return false;
 
-	SCR_BeginLoadingPlaque ();
-
 	com.snprintf( name, sizeof( name ), "save/%s.sav", pName );
+
+	// silently ignore if missed
+	if( !FS_FileExistsEx( name, true ))
+		return false;
+
+	SCR_BeginLoadingPlaque ();
 
 	MsgDev( D_INFO, "Loading game from %s...\n", name );
 	SV_ClearSaveDir();
@@ -1746,11 +1750,11 @@ void SV_SaveGame( const char *pName )
 	// make sure what oldsave is removed
 	if( FS_FileExists( va( "save/%s.sav", savename )))
 		FS_Delete( va( "save/%s.sav", savename ));
-	if( FS_FileExists( va( "save/%s.%s", savename, SI->savshot_ext )))
-		FS_Delete( va( "save/%s.%s", savename, SI->savshot_ext ));
+	if( FS_FileExists( va( "save/%s.tga", savename )))
+		FS_Delete( va( "save/%s.tga", savename ));
 
 	// HACKHACK: unload previous image from memory
-	GL_FreeImage( va( "save/%s.%s", savename, SI->savshot_ext ));
+	GL_FreeImage( va( "save/%s.tga", savename ));
 
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );

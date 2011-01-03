@@ -30,6 +30,7 @@ convar_t	*gl_swapInterval;
 convar_t	*gl_check_errors;
 convar_t	*gl_texturemode;
 convar_t	*gl_round_down;
+convar_t	*gl_max_size;
 convar_t	*gl_picmip;
 convar_t	*gl_skymip;
 convar_t	*gl_nobind;
@@ -1402,6 +1403,7 @@ void GL_InitCommands( void )
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
 	gl_texturebits = Cvar_Get( "gl_texturebits", "0", CVAR_GLCONFIG, "set texture upload format (0 - auto)" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_GLCONFIG, "down size non-power of two textures" );
+	gl_max_size = Cvar_Get( "gl_max_size", "512", CVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
 	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", CVAR_GLCONFIG, "pixelformat stencil bits (0 - auto)" );
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", CVAR_ARCHIVE, "ignore video engine errors" );
 	gl_swapInterval = Cvar_Get( "gl_swapInterval", "0", CVAR_ARCHIVE,  "time beetween frames (in msec)" );

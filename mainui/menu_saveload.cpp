@@ -88,9 +88,9 @@ static void UI_SaveLoad_Init( void )
 	uiSaveLoad.menu.vidInitFunc = UI_SaveLoad_Init;
 
 	strcat( uiSaveLoad.hintText, "During play, you can quickly save your game by pressing " );
-	strcat( uiSaveLoad.hintText, KEY_KeynumToString( KEY_GetKey( "savequick" )));
+	strcat( uiSaveLoad.hintText, KEY_KeynumToString( KEY_GetKey( "save quick" )));
 	strcat( uiSaveLoad.hintText, ".\nLoad this game again by pressing " );
-	strcat( uiSaveLoad.hintText, KEY_KeynumToString( KEY_GetKey( "loadquick" )));
+	strcat( uiSaveLoad.hintText, KEY_KeynumToString( KEY_GetKey( "load quick" )));
 	strcat( uiSaveLoad.hintText, ".\n" );
 
 	uiSaveLoad.background.generic.id = ID_BACKGROUND;

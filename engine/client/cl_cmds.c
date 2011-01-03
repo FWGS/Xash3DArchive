@@ -8,8 +8,6 @@
 
 #define SCRSHOT_TYPE	SI->scrshot_ext
 #define LEVELSHOT_TYPE	SI->levshot_ext
-#define SAVESHOT_TYPE	SI->savshot_ext
-#define DEMOSHOT_TYPE	SI->savshot_ext
 
 /*
 ====================
@@ -248,7 +246,7 @@ void CL_SaveShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "save/%s.%s", Cmd_Argv( 1 ), SAVESHOT_TYPE );
+	com.sprintf( cls.shotname, "save/%s.tga", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_savegame;	// build new frame for saveshot
 }
 
@@ -267,7 +265,7 @@ void CL_DemoShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "demos/%s.%s", Cmd_Argv( 1 ), DEMOSHOT_TYPE );
+	com.sprintf( cls.shotname, "demos/%s.tga", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_demoshot; // build new frame for demoshot
 }
 
@@ -293,7 +291,7 @@ void CL_DeleteDemo_f( void )
 
 	// delete save and saveshot
 	FS_Delete( va( "demos/%s.dem", Cmd_Argv( 1 )));
-	FS_Delete( va( "demos/%s.%s", Cmd_Argv( 1 ), DEMOSHOT_TYPE ));
+	FS_Delete( va( "demos/%s.tga", Cmd_Argv( 1 )));
 }
 
 /*

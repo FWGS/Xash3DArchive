@@ -25,7 +25,6 @@ typedef struct ui_globalvars_s
 	int		demorecording;
 	char		demoname[64];	// name of currently playing demo
 	char		maptitle[64];	// title of active map
-	char		shotExt[8];	// thumbnail image type
 } ui_globalvars_t;
 
 typedef struct ui_enginefuncs_s
@@ -127,8 +126,6 @@ typedef struct ui_enginefuncs_s
 	int	(*pfnGetGameInfo)( GAMEINFO *pgameinfo );
 	GAMEINFO	**(*pfnGetGamesList)( int *numGames );			// collect info about all mods
 	char 	**(*pfnGetFilesList)( const char *pattern, int *numFiles, int gamedironly );	// find in files
-	char 	**(*pfnGetVideoList)( int *numRenders );
-	char 	**(*pfnGetAudioList)( int *numRenders );
 	int 	(*pfnGetSaveComment)( const char *savename, char *comment );
 	int	(*pfnGetDemoComment)( const char *demoname, char *comment );
 	int	(*pfnCheckGameDll)( void );				// returns false if hl.dll is missed

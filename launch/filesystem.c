@@ -1247,7 +1247,8 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	com.snprintf( filepath, sizeof( filepath ), "%s/gameinfo.txt", gamedir );
 	com.snprintf( liblist, sizeof( liblist ), "%s/liblist.gam", gamedir );
 
-	if( !FS_FileExists( filepath, false ) && FS_FileExists( liblist, false ))
+	// if user change liblist.gam update the gameinfo.txt
+	if( FS_FileTime( liblist, false ) > FS_FileTime( filepath, false ))
 		FS_ConvertGameInfo( gamedir, filepath, liblist );
 
 	// force to create gameinfo for specified game if missing

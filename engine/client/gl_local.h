@@ -216,6 +216,8 @@ typedef struct
 	uint		c_sprite_polys;
 	uint		c_world_leafs;
 
+	uint		c_view_beams_count;
+	uint		c_active_tents_count;
 	uint		c_studio_models_drawn;
 	uint		c_sprite_models_drawn;
 } ref_speeds_t;

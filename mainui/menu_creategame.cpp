@@ -89,7 +89,7 @@ static void UI_CreateGame_Begin( void )
 		CLIENT_COMMAND( TRUE, "killserver\n" );
 
 	CVAR_SET_FLOAT( "deathmatch", 1.0f );	// FIXME
-	CVAR_SET_FLOAT( "sv_maxclients", atoi( uiCreateGame.maxClients.buffer ));
+	CVAR_SET_FLOAT( "maxplayers", atoi( uiCreateGame.maxClients.buffer ));
 	CVAR_SET_STRING( "hostname", uiCreateGame.hostName.buffer );
 	CVAR_SET_STRING( "defaultmap", uiCreateGame.mapName[uiCreateGame.mapsList.curItem] );
 
@@ -362,9 +362,9 @@ static void UI_CreateGame_Init( void )
 	uiCreateGame.maxClients.generic.height = 32;
 	uiCreateGame.maxClients.maxLength = 3;
 
-	if( CVAR_GET_FLOAT( "sv_maxclients" ) <= 1 )
+	if( CVAR_GET_FLOAT( "maxplayers" ) <= 1 )
 		strcpy( uiCreateGame.maxClients.buffer, "8" );
-	else sprintf( uiCreateGame.maxClients.buffer, "%i", (int)CVAR_GET_FLOAT( "sv_maxclients" ));
+	else sprintf( uiCreateGame.maxClients.buffer, "%i", (int)CVAR_GET_FLOAT( "maxplayers" ));
 
 	uiCreateGame.password.generic.id = ID_PASSWORD;
 	uiCreateGame.password.generic.type = QMTYPE_FIELD;

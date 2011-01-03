@@ -241,10 +241,9 @@ void SV_ActivateServer( void )
 		}
 	}
 
-	// FIXME: test this for correct
-	sv.frametime = (sv.loadgame) ? host.frametime : 0.0f;
 	numFrames = (sv.loadgame) ? 1 : 2;
-			
+	host.frametime = (svgame.globals->changelevel) ? 0.0f : 0.1f;			
+
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )
 		SV_Physics();
@@ -332,18 +331,21 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 		{
 			SV_LoadAdjacentEnts( pOldLevel, pLandmarkName );
 		}
+
+		if( sv_newunit->integer )
+		{
+			SV_ClearSaveDir();
+		}
 	}
 	else
 	{
 		svgame.dllFuncs.pfnResetGlobalState();
 		SV_SpawnEntities( pMapName, SV_EntityScript( ));
+		svgame.globals->frametime = 0.0f;
 	}
 
-	if( sv_newunit->integer )
-	{
-		Cvar_SetFloat( "sv_newunit", 0 );
-		SV_ClearSaveDir();
-	}
+	// always clearing newunit variable
+	Cvar_SetFloat( "sv_newunit", 0 );
 
 	// call before sending baselines into the client
 	svgame.dllFuncs.pfnCreateInstancedBaselines();
@@ -506,19 +508,19 @@ void SV_InitGame( void )
 	if( Cvar_VariableValue( "deathmatch" ) || Cvar_VariableValue( "teamplay" ))
 	{
 		if( sv_maxclients->integer <= 1 )
-			Cvar_FullSet( "sv_maxclients", "8", CVAR_LATCH );
+			Cvar_FullSet( "maxplayers", "8", CVAR_LATCH );
 		else if( sv_maxclients->integer > MAX_CLIENTS )
-			Cvar_FullSet( "sv_maxclients", "32", CVAR_LATCH );
+			Cvar_FullSet( "maxplayers", "32", CVAR_LATCH );
 	}
 	else if( Cvar_VariableValue( "coop" ))
 	{
 		if( sv_maxclients->integer <= 1 || sv_maxclients->integer > 4 )
-			Cvar_FullSet( "sv_maxclients", "4", CVAR_LATCH );
+			Cvar_FullSet( "maxplayers", "4", CVAR_LATCH );
 	}
 	else	
 	{
 		// non-deathmatch, non-coop is one player
-		Cvar_FullSet( "sv_maxclients", "1", CVAR_LATCH );
+		Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
 	}
 
 	svgame.globals->maxClients = sv_maxclients->integer;

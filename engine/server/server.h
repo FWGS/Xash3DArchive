@@ -47,7 +47,6 @@ extern int SV_UPDATE_BACKUP;
 
 // convert msecs to float time properly
 #define sv_time()		( sv.time )
-#define sv_frametime()	( sv.frametime )
 #define SV_IsValidEdict( e )	( e && !e->free )
 
 typedef enum
@@ -88,8 +87,7 @@ typedef struct server_s
 	int		viewentity;	// applied on client restore. this is temporare place
 					// until client connected
 
-	double		time;		// sv.time += sv.frametime
-	float		frametime;
+	double		time;		// sv.time += host.frametime
 	int		net_framenum;	// to avoid send edicts twice through portals
 
 	int		hostflags;	// misc server flags: predicting etc

@@ -216,7 +216,7 @@ UI_Main_HazardCourse
 */
 static void UI_Main_HazardCourse( void )
 {
-	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "sv_maxclients" ) > 1 )
+	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "maxplayers" ) > 1 )
 		CLIENT_COMMAND( TRUE, "killserver\n" );
 
 	CVAR_SET_FLOAT( "skill", 0.0f );

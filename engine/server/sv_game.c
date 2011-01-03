@@ -1672,12 +1672,9 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( vol != VOL_NORM ) flags |= SND_VOLUME;
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
-	if( sv.state == ss_loading ) flags |= SND_SPAWNING;
 
-	// can't track this entity on the client.
-	// write static sound
-//	if( !ent->v.modelindex || !ent->v.model )
-		flags |= SND_FIXED_ORIGIN;
+	// send origin for first spatialize
+	flags |= SND_FIXED_ORIGIN;
 
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( Mod_GetType( ent->v.modelindex ) == mod_brush )

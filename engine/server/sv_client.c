@@ -712,7 +712,7 @@ void SV_EstablishTimeBase( sv_client_t *cl, usercmd_t *ucmd, int numdrops, int n
 	int	i;
 
 	start = 0;
-	end = sv.time + sv.frametime;
+	end = sv.time + host.frametime;
 
 	if( numdrops < 24 )
 	{
@@ -1913,8 +1913,8 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	frame->latency -= cl->lastcmd.msec * 0.5f / 1000.0f;
 	frame->latency = max( 0.0f, frame->latency );
 
-	if( player->v.animtime > sv.time + sv.frametime )
-		player->v.animtime = sv.time + sv.frametime;
+	if( player->v.animtime > sv.time + host.frametime )
+		player->v.animtime = sv.time + host.frametime;
 }
 
 /*

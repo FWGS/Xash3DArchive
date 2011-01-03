@@ -143,11 +143,11 @@ qboolean SV_RunThink( edict_t *ent )
 	float	thinktime;
 
 	thinktime = ent->v.nextthink;
-	if( thinktime <= 0.0f || thinktime > sv_time() + sv_frametime( ))
+	if( thinktime <= 0.0f || thinktime > sv.time + host.frametime )
 		return true;
 		
-	if( thinktime < sv_time( ))
-		thinktime = sv_time();	// don't let things stay in the past.
+	if( thinktime < sv.time )
+		thinktime = sv.time;	// don't let things stay in the past.
 					// it is possible to start that way
 					// by a trigger with a local time.
 	ent->v.nextthink = 0;
@@ -504,8 +504,8 @@ void SV_AddGravity( edict_t *ent )
 	else ent_gravity = 1.0;
 
 	// add gravity incorrectly
-	ent->v.velocity[2] -= (ent_gravity * sv_gravity->value * sv_frametime( ));
-	ent->v.velocity[2] += ent->v.basevelocity[2] * sv_frametime();
+	ent->v.velocity[2] -= (ent_gravity * sv_gravity->value * host.frametime );
+	ent->v.velocity[2] += ent->v.basevelocity[2] * host.frametime;
 	ent->v.basevelocity[2] = 0.0f;
 
 	SV_CheckVelocity( ent );
@@ -521,7 +521,7 @@ void SV_AddHalfGravity( edict_t *ent, float timestep )
 
 	// Add 1/2 of the total gravitational effects over this timestep
 	ent->v.velocity[2] -= ( 0.5f * ent_gravity * sv_gravity->value * timestep );
-	ent->v.velocity[2] += ent->v.basevelocity[2] * sv_frametime();
+	ent->v.velocity[2] += ent->v.basevelocity[2] * host.frametime;
 	ent->v.basevelocity[2] = 0.0f;
 	
 	// bound velocity
@@ -562,7 +562,8 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		trace = SV_Move( ent->v.origin, vec3_origin, vec3_origin, end, type, ent );
 	else trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
-	if( !trace.allsolid && !trace.startsolid )
+	// g-cont. needs for global test!!!
+	if( !trace.allsolid )//&& !trace.startsolid )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 		SV_LinkEdict( ent, true );
@@ -978,12 +979,12 @@ void SV_Physics_Pusher( edict_t *ent )
 	oldtime = ent->v.ltime;
 	thinktime = ent->v.nextthink;
 
-	if( thinktime < ent->v.ltime + sv_frametime( ))
+	if( thinktime < ent->v.ltime + host.frametime )
 	{
 		movetime = thinktime - ent->v.ltime;
 		if( movetime < 0.0f ) movetime = 0.0f;
 	}
-	else movetime = sv_frametime();
+	else movetime = host.frametime;
 
 	if( movetime )
 	{
@@ -1023,14 +1024,7 @@ void SV_Physics_Pusher( edict_t *ent )
 		svgame.dllFuncs.pfnBlocked( ent, pBlocker );
 	}
 
-	if( thinktime > oldtime && thinktime <= ent->v.ltime )
-	{
-		ent->v.nextthink = 0.0f;
-		svgame.globals->time = sv.time;
-		svgame.dllFuncs.pfnThink( ent );
-		if( ent->free ) return;
-	}
-	else if( ent->v.flags & FL_ALWAYSTHINK )
+	if( thinktime > oldtime && thinktime <= ent->v.ltime || ( ent->v.flags & FL_ALWAYSTHINK ))
 	{
 		ent->v.nextthink = 0.0f;
 		svgame.globals->time = sv.time;
@@ -1098,7 +1092,7 @@ void SV_Physics_Compound( edict_t *ent )
 		// not initialized ?
 		VectorCopy( parent->v.origin, ent->v.oldorigin );
 		VectorCopy( parent->v.angles, ent->v.avelocity );
-		ent->v.ltime = parent->v.ltime ? parent->v.ltime : sv_frametime();
+		ent->v.ltime = parent->v.ltime ? parent->v.ltime : host.frametime;
 		return;
 	}
 
@@ -1129,7 +1123,7 @@ void SV_Physics_Compound( edict_t *ent )
 	// shuffle states
 	VectorCopy( parent->v.origin, ent->v.oldorigin );
 	VectorCopy( parent->v.angles, ent->v.avelocity );
-	ent->v.ltime = parent->v.ltime ? parent->v.ltime : sv_frametime();
+	ent->v.ltime = parent->v.ltime ? parent->v.ltime : host.frametime;
 }
 
 /*
@@ -1146,8 +1140,8 @@ void SV_Physics_Noclip( edict_t *ent )
 
 	SV_CheckWater( ent );	
 
-	VectorMA( ent->v.origin, sv_frametime(), ent->v.velocity,  ent->v.origin );
-	VectorMA( ent->v.angles, sv_frametime(), ent->v.avelocity, ent->v.angles );
+	VectorMA( ent->v.origin, host.frametime, ent->v.velocity,  ent->v.origin );
+	VectorMA( ent->v.angles, host.frametime, ent->v.avelocity, ent->v.angles );
 
 	// noclip ents never touch triggers
 	SV_LinkEdict( ent, false );
@@ -1244,10 +1238,10 @@ void SV_Physics_Toss( edict_t *ent )
 	{
 	case MOVETYPE_TOSS:
 	case MOVETYPE_BOUNCE:
-		SV_AngularMove( ent, sv_frametime(), ent->v.friction );
+		SV_AngularMove( ent, host.frametime, ent->v.friction );
 		break;         
 	default:
-		SV_AngularMove( ent, sv_frametime(), 0.0f );
+		SV_AngularMove( ent, host.frametime, 0.0f );
 		break;
 	}
 
@@ -1257,7 +1251,7 @@ void SV_Physics_Toss( edict_t *ent )
 	VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 
 	SV_CheckVelocity( ent );
-	VectorScale( ent->v.velocity, sv_frametime(), move );
+	VectorScale( ent->v.velocity, host.frametime, move );
 	VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 
 	trace = SV_PushEntity( ent, move, vec3_origin, NULL );
@@ -1306,7 +1300,7 @@ void SV_Physics_Toss( edict_t *ent )
 		float	vel;
 
 		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
-		if( ent->v.velocity[2] < sv_gravity->value * sv_frametime( ))
+		if( ent->v.velocity[2] < sv_gravity->value * host.frametime )
 		{
 			// we're rolling on the ground, add static friction.
 			ent->v.groundentity = trace.ent;
@@ -1324,7 +1318,7 @@ void SV_Physics_Toss( edict_t *ent )
 		}
 		else
 		{
-			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * sv_frametime() * 0.9f, move );
+			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * host.frametime * 0.9f, move );
 			trace = SV_PushEntity( ent, move, vec3_origin, NULL );
 			if( ent->free ) return;
 		}
@@ -1387,15 +1381,15 @@ void SV_Physics_Step( edict_t *ent )
 			// floating pushables
 			if( ent->v.waterlevel >= 2 )
 			{
-				VectorScale( ent->v.velocity, 1.0f - (sv_frametime( ) * 0.5f), ent->v.velocity );
-				ent->v.velocity[2] += (ent->v.skin * sv_frametime( ));
+				VectorScale( ent->v.velocity, 1.0f - (host.frametime * 0.5f), ent->v.velocity );
+				ent->v.velocity[2] += (ent->v.skin * host.frametime );
 			}
 			else if( ent->v.waterlevel == 0 )
 			{
 			}
 			else
 			{
-				ent->v.velocity[2] -= (ent->v.skin * sv_frametime( ));
+				ent->v.velocity[2] -= (ent->v.skin * host.frametime);
 			}
 		}
 		else if( !wasonground )
@@ -1415,7 +1409,7 @@ void SV_Physics_Step( edict_t *ent )
 				{
 					if( !inwater )
 					{
-						SV_AddHalfGravity( ent, sv_frametime( ));
+						SV_AddHalfGravity( ent, host.frametime );
 						isfalling = true;
 					}
 				}
@@ -1453,7 +1447,7 @@ void SV_Physics_Step( edict_t *ent )
 			if( speed )
 			{
 				control = speed < sv_stopspeed->value ? sv_stopspeed->value : speed;
-				newspeed = speed - sv_frametime() * control * friction;
+				newspeed = speed - host.frametime * control * friction;
 
 				if( newspeed < 0.0f )
 					newspeed = 0.0f;
@@ -1465,7 +1459,7 @@ void SV_Physics_Step( edict_t *ent )
 		}
 
 		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
-		SV_FlyMove( ent, sv_frametime(), NULL );
+		SV_FlyMove( ent, host.frametime, NULL );
 		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 
 		SV_CheckVelocity( ent );
@@ -1502,7 +1496,7 @@ void SV_Physics_Step( edict_t *ent )
 
 	if(!( ent->v.flags & FL_ONGROUND ) && isfalling )
 	{
-		SV_AddHalfGravity( ent, sv_frametime( ));
+		SV_AddHalfGravity( ent, host.frametime );
 	}
 
 	if( ent->v.movetype == MOVETYPE_STEP )
@@ -1569,7 +1563,7 @@ static void SV_Physics_Entity( edict_t *ent )
 	if(!( ent->v.flags & FL_BASEVELOCITY ) && !VectorIsNull( ent->v.basevelocity ))
 	{
 		// Apply momentum (add in half of the previous frame of velocity first)
-		VectorMA( ent->v.velocity, 1.0f + (sv_frametime() * 0.5f), ent->v.basevelocity, ent->v.velocity );
+		VectorMA( ent->v.velocity, 1.0f + (host.frametime * 0.5f), ent->v.basevelocity, ent->v.velocity );
 		VectorClear( ent->v.basevelocity );
 	}
 	ent->v.flags &= ~FL_BASEVELOCITY;
@@ -1648,11 +1642,8 @@ SV_Physics
 */
 void SV_Physics( void )
 {
-	int    	i;
 	edict_t	*ent;
-
-	svgame.globals->time = sv_time();
-	svgame.globals->frametime = sv_frametime();
+	int    	i;
 
 	// let the progs know that a new frame has started
 	svgame.dllFuncs.pfnStartFrame();
@@ -1666,6 +1657,7 @@ void SV_Physics( void )
 		{
 			ent = EDICT_NUM( i );
 			if( !SV_IsValidEdict( ent )) continue;
+			if( ent->v.flags & FL_KILLME ) continue;
 
 			if( i > 0 && i <= svgame.globals->maxClients )
                     		SV_Physics_Client( ent );

@@ -301,15 +301,11 @@ void Image_Init( void )
 	image.tempbuffer = NULL;
 }
 
-void Image_SetPaths( const char *envpath, const char *scrshot_ext, const char *levshot_ext, const char *savshot_ext )
+void Image_SetPaths( const char *envpath, const char *scrshot_ext, const char *levshot_ext )
 {
 	if( envpath ) com.strncpy( SI.envpath, envpath, sizeof( SI.envpath ));
 	if( scrshot_ext ) com.strncpy( SI.scrshot_ext, scrshot_ext, sizeof( SI.scrshot_ext ));
 	if( levshot_ext ) com.strncpy( SI.levshot_ext, levshot_ext, sizeof( SI.levshot_ext ));
-	if( savshot_ext ) com.strncpy( SI.savshot_ext, savshot_ext, sizeof( SI.savshot_ext ));
-
-	// use saveshot extension for envshots too
-	if( savshot_ext ) com.strncpy( SI.envshot_ext, savshot_ext, sizeof( SI.envshot_ext ));
 }
 
 void Image_Setup( const char *formats, const uint flags )
@@ -323,37 +319,37 @@ void Image_Setup( const char *formats, const uint flags )
 	if( !com.stricmp( formats, "Xash3D" ) || !com.stricmp( formats, "Xash" ))
 	{
 		image.loadformats = load_xash;
-		Image_SetPaths( "env", "jpg", "jpg", "jpg" );
+		Image_SetPaths( "gfx/env", "jpg", "jpg" );
 	}
 	else if( !com.stricmp( formats, "Doom1" ) || !com.stricmp( formats, "Doom2" ))
 	{
 		image.loadformats = load_doom1;
-		Image_SetPaths( "gfx/env", "tga", "tga", "tga" );
+		Image_SetPaths( "gfx/env", "tga", "tga" );
 	}
 	else if( !com.stricmp( formats, "Quake1" ))
 	{
 		image.loadformats = load_quake1; 
-		Image_SetPaths( "gfx/env", "tga", "tga", "tga" );
+		Image_SetPaths( "gfx/env", "tga", "tga" );
 	}
 	else if( !com.stricmp( formats, "Quake2" ))
 	{
 		image.loadformats = load_quake2;
-		Image_SetPaths( "env", "tga", "tga", "tga" );
+		Image_SetPaths( "env", "tga", "tga" );
 	}
 	else if( !com.stricmp( formats, "Quake3" ))
 	{
 		image.loadformats = load_quake3;
-		Image_SetPaths( "env", "jpg", "jpg", "jpg" );
+		Image_SetPaths( "env", "jpg", "jpg" );
 	}
 	else if( !com.stricmp( formats, "hl1" ) || !com.stricmp( formats, "Half-Life" ))
 	{
 		image.loadformats = load_hl1;
-		Image_SetPaths( "gfx/env", "jpg", "tga", "tga" );
+		Image_SetPaths( "gfx/env", "jpg", "tga" );
 	}
 	else
 	{
 		image.loadformats = load_xash; // unrecognized version, use default
-		Image_SetPaths( "env", "jpg", "jpg", "jpg" );
+		Image_SetPaths( "env", "jpg", "jpg" );
 	}
 
 	if( Sys.app_name == HOST_RIPPER )

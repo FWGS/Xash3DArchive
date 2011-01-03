@@ -35,9 +35,11 @@ utils\
 utils\vgui\
 utils\vgui\include\
 utils\vgui\lib\win32_vc6\
+utils\common\
 utils\xwad\
 utils\bsplib
 utils\sprite\
 utils\studio\
+utils\studiomdl\
 utils\ximage\
 utils\extragen\

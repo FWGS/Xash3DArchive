@@ -150,7 +150,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	}
 
 	// don't add himself on firstperson
-	if(( ent->index - 1 ) == cl.playernum &&  ent != &clgame.viewent && !cl.thirdperson )
+	if(( ent->index - 1 ) == cl.playernum && ent != &clgame.viewent && !cl.thirdperson && cls.key_dest != key_menu )
 	{
 	}
 	else

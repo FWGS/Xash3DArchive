@@ -11,6 +11,7 @@
 #include "triangleapi.h"
 #include "cl_tent.h"
 #include "pm_local.h"
+#include "gl_local.h"
 #include "studio.h"
 
 /*
@@ -229,6 +230,8 @@ add entity to renderlist
 int CL_TEntAddEntity( cl_entity_t *pEntity )
 {
 	ASSERT( pEntity != NULL );
+
+	r_stats.c_active_tents_count++;
 
 	return CL_AddVisibleEntity( pEntity, ET_TEMPENTITY );
 }

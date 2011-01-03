@@ -952,6 +952,6 @@ void SV_PostRunCmd( sv_client_t *cl )
 	else svgame.dllFuncs.pfnPlayerPostThink( clent );
 
 	// restore frametime
-	svgame.globals->frametime = sv_frametime();
+	svgame.globals->frametime = host.frametime;
 	svgame.dllFuncs.pfnCmdEnd( cl->edict );
 }                                                                   

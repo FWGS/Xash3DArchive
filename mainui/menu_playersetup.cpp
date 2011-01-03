@@ -101,8 +101,7 @@ static void UI_PlayerSetup_FindModels( void )
 	// Get file list
 	filenames = FS_SEARCH(  "models/player/*", &numFiles, TRUE );
 	if( !numFiles ) filenames = FS_SEARCH(  "models/player/*", &numFiles, FALSE ); 
-
-#if 0
+#if 1
 	// add default singleplayer model
 	strcpy( uiPlayerSetup.models[uiPlayerSetup.num_models], "player" );
 	uiPlayerSetup.num_models++;
@@ -189,8 +188,13 @@ static void UI_PlayerSetup_UpdateConfig( void )
 		strcpy( path, "models/player.mdl" );
 	else sprintf( path, "models/player/%s/%s.mdl", name, name );
 
+	CVAR_SET_STRING( "model", uiPlayerSetup.currentModel );
+	CVAR_SET_FLOAT( "cl_himodels", uiPlayerSetup.hiModels.enabled );
+
+	// IMPORTANT: always set default model becuase we need to have something valid here
+	// if you wish draw your playermodel as normal studiomodel please change "models/player.mdl" to path
 	if( uiPlayerSetup.ent )
-		ENGINE_SET_MODEL( uiPlayerSetup.ent, path );
+		ENGINE_SET_MODEL( uiPlayerSetup.ent, "models/player.mdl" );
 }
 
 /*
@@ -253,6 +257,7 @@ static void UI_PlayerSetup_Ownerdraw( void *self )
 	// update renderer timings
 	uiPlayerSetup.refdef.time = gpGlobals->time;
 	uiPlayerSetup.refdef.frametime = gpGlobals->frametime;
+	uiPlayerSetup.ent->curstate.body = 0; // clearing body each frame
 
 	// draw the player model
 	R_AddEntity( ET_NORMAL, uiPlayerSetup.ent );
@@ -401,6 +406,7 @@ static void UI_PlayerSetup_Init( void )
 		return;
 
 	// adjust entity params
+	uiPlayerSetup.ent->curstate.number = 1;	// IMPORTANT: always set playerindex to 1
 	uiPlayerSetup.ent->curstate.animtime = gpGlobals->time;	// start animation
 	uiPlayerSetup.ent->curstate.sequence = 1;
 	uiPlayerSetup.ent->curstate.scale = 1.0f;
@@ -418,6 +424,7 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.ent->origin[0] = uiPlayerSetup.ent->curstate.origin[0] = 92;
 	uiPlayerSetup.ent->origin[2] = uiPlayerSetup.ent->curstate.origin[2] = 2;
 	uiPlayerSetup.ent->angles[1] = uiPlayerSetup.ent->curstate.angles[1] = 180;
+	uiPlayerSetup.ent->player = true; // yes, draw me as playermodel
 }
 
 /*

@@ -13,7 +13,7 @@
 #define DECAL_CACHEENTRY		256	// MUST BE POWER OF 2 or code below needs to change!
 
 // empirically determined constants for minimizing overalpping decals
-#define MAX_OVERLAP_DECALS		4
+#define MAX_OVERLAP_DECALS		6
 #define DECAL_OVERLAP_DIST		8
 
 typedef struct

@@ -56,7 +56,7 @@ float Cvar_VariableValue( const char *var_name )
 
 /*
 ============
-Cvar_VariableIntegerValue
+Cvar_VariableInteger
 ============
 */
 int Cvar_VariableInteger( const char *var_name )

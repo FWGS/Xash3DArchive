@@ -328,8 +328,8 @@ void Cmd_Frame( void )
 	Com_ReadLong( spriteqc, false, &h );
 
 	// merge bounds
-	if( xl <= 0 || xl > frame->width ) xl = 0;
-	if( yl <= 0 || yl > frame->width ) yl = 0;
+	if( xl < 0 || xl > frame->width ) xl = 0;
+	if( yl < 0 || yl > frame->height ) yl = 0;
 	if( w <= 0 || w > frame->width ) w = frame->width;
 	if( h <= 0 || h > frame->height ) h = frame->height;
 

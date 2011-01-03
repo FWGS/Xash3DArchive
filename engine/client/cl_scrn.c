@@ -285,8 +285,10 @@ void SCR_UpdateScreen( void )
 	if( !clgame.hInstance ) return;
 
 	clgame.dllFuncs.pfnFrame( cl.time );
-
 	VGui_Paint ();
+
+	// make sure what menu and CL_WritePacket catch changes
+	userinfo->modified = false;
 }
 
 static void SCR_LoadCreditsFont( void )

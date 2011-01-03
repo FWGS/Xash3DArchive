@@ -28,12 +28,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_BANNER		1
 #define ID_APPLY		2
 #define ID_DONE		3
-#define ID_RENDERLIBRARY	4
-#define ID_VIDMODELIST	5
-#define ID_FULLSCREEN	6
-#define ID_SOFTWARE		7
-#define ID_TABLEHINT	8
-#define ID_MSGHINT		9
+#define ID_VIDMODELIST	4
+#define ID_FULLSCREEN	5
+#define ID_SOFTWARE		6
+#define ID_TABLEHINT	7
 
 #define MAX_VIDMODES	(sizeof( uiVideoModes ) / sizeof( uiVideoModes[0] )) + 1
 
@@ -62,8 +60,6 @@ static const char *uiVideoModes[] =
 typedef struct
 {
 	const char	*videoModesPtr[MAX_VIDMODES];
-	char		**videoList;
-	int		numVideoDlls;
 
 	menuFramework_s	menu;
 
@@ -74,12 +70,8 @@ typedef struct
 	menuCheckBox_s	windowed;
 	menuCheckBox_s	software;
 
-	menuSpinControl_s	videoLibrary;
 	menuScrollList_s	vidList;
 	menuAction_s	listCaption;
-	menuAction_s	vidlibCaption;
-	menuAction_s	hintMessage;
-	char		hintText[MAX_HINT_TEXT];
 } uiVidModes_t;
 
 static uiVidModes_t	uiVidModes;
@@ -91,18 +83,7 @@ UI_VidModes_GetModesList
 */
 static void UI_VidModes_GetConfig( void )
 {
-	uiVidModes.videoList = GET_VIDEO_LIST( &uiVidModes.numVideoDlls ); 
-	
-	for( int i = 0; i < uiVidModes.numVideoDlls; i++ )
-	{
-		if( !stricmp( uiVidModes.videoList[i], CVAR_GET_STRING( "host_video" )))
-			uiVidModes.videoLibrary.curValue = i;
-	}
-
-	uiVidModes.videoLibrary.maxValue = uiVidModes.numVideoDlls - 1;
-	uiVidModes.videoLibrary.generic.name = uiVidModes.videoList[(int)uiVidModes.videoLibrary.curValue];
-
-	for( i = 0; i < MAX_VIDMODES-1; i++ )
+	for( int i = 0; i < MAX_VIDMODES-1; i++ )
 		uiVidModes.videoModesPtr[i] = uiVideoModes[i];
 	uiVidModes.videoModesPtr[i] = NULL;	// terminator
 
@@ -136,7 +117,6 @@ UI_VidModes_UpdateConfig
 static void UI_VidOptions_UpdateConfig( void )
 {
 	CVAR_SET_FLOAT( "r_allow_software", uiVidModes.software.enabled );
-	uiVidModes.videoLibrary.generic.name = uiVidModes.videoList[(int)uiVidModes.videoLibrary.curValue];
 }
 
 /*
@@ -188,12 +168,6 @@ static void UI_VidModes_Init( void )
 	memset( &uiVidModes, 0, sizeof( uiVidModes_t ));
 
 	uiVidModes.menu.vidInitFunc = UI_VidModes_Init;
-
-	strcat( uiVidModes.hintText, "Change Xash3D rendering engine\n" );
-	strcat( uiVidModes.hintText, "to get more compatibility and\n" );
-	strcat( uiVidModes.hintText, "optimize FPS.\n" );
-	strcat( uiVidModes.hintText, "Also enables more hardware\n" );
-	strcat( uiVidModes.hintText, "features on top-computers." );
 	
 	uiVidModes.background.generic.id = ID_BACKGROUND;
 	uiVidModes.background.generic.type = QMTYPE_BITMAP;
@@ -230,35 +204,6 @@ static void UI_VidModes_Init( void )
 	uiVidModes.cancel.generic.name = "Done";
 	uiVidModes.cancel.generic.statusText = "Return back to previous menu";
 	uiVidModes.cancel.generic.callback = UI_VidModes_Callback;
-
-	uiVidModes.videoLibrary.generic.id = ID_RENDERLIBRARY;
-	uiVidModes.videoLibrary.generic.type = QMTYPE_SPINCONTROL;
-	uiVidModes.videoLibrary.generic.flags = QMF_CENTER_JUSTIFY|QMF_SMALLFONT|QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
-	uiVidModes.videoLibrary.generic.x = 112;
-	uiVidModes.videoLibrary.generic.y = 390;
-	uiVidModes.videoLibrary.generic.width = 168;
-	uiVidModes.videoLibrary.generic.height = 26;
-	uiVidModes.videoLibrary.generic.callback = UI_VidModes_Callback;
-	uiVidModes.videoLibrary.generic.statusText = "Select renderer";
-	uiVidModes.videoLibrary.minValue = 0;
-	uiVidModes.videoLibrary.maxValue = 0;
-	uiVidModes.videoLibrary.range = 1;
-
-	uiVidModes.vidlibCaption.generic.id = ID_TABLEHINT;
-	uiVidModes.vidlibCaption.generic.type = QMTYPE_ACTION;
-	uiVidModes.vidlibCaption.generic.flags = QMF_INACTIVE|QMF_SMALLFONT;
-	uiVidModes.vidlibCaption.generic.color = uiColorHelp;
-	uiVidModes.vidlibCaption.generic.name = "Rendering module";
-	uiVidModes.vidlibCaption.generic.x = 72;
-	uiVidModes.vidlibCaption.generic.y = 350;
-
-	uiVidModes.hintMessage.generic.id = ID_TABLEHINT;
-	uiVidModes.hintMessage.generic.type = QMTYPE_ACTION;
-	uiVidModes.hintMessage.generic.flags = QMF_INACTIVE|QMF_SMALLFONT;
-	uiVidModes.hintMessage.generic.color = uiColorHelp;
-	uiVidModes.hintMessage.generic.name = uiVidModes.hintText;
-	uiVidModes.hintMessage.generic.x = 72;
-	uiVidModes.hintMessage.generic.y = 450;
 
 	uiVidModes.listCaption.generic.id = ID_TABLEHINT;
 	uiVidModes.listCaption.generic.type = QMTYPE_ACTION;
@@ -304,9 +249,6 @@ static void UI_VidModes_Init( void )
 	UI_AddItem( &uiVidModes.menu, (void *)&uiVidModes.windowed );
 	UI_AddItem( &uiVidModes.menu, (void *)&uiVidModes.software );
 	UI_AddItem( &uiVidModes.menu, (void *)&uiVidModes.listCaption );
-	UI_AddItem( &uiVidModes.menu, (void *)&uiVidModes.vidlibCaption );
-	UI_AddItem( &uiVidModes.menu, (void *)&uiVidModes.hintMessage );
-	UI_AddItem( &uiVidModes.menu, (void *)&uiVidModes.videoLibrary );
 	UI_AddItem( &uiVidModes.menu, (void *)&uiVidModes.vidList );
 }
 

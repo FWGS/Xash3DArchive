@@ -33,7 +33,6 @@ GL_BackendStartFrame
 void GL_BackendStartFrame( void )
 {
 	r_speeds_msg[0] = '\0';
-	Mem_Set( &r_stats, 0, sizeof( r_stats ));
 }
 
 /*
@@ -56,7 +55,12 @@ void GL_BackendEndFrame( void )
 		com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
 		r_numStatics, r_numEntities );
 		break;
+	case 7:
+		com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i temp entities\n%3i view beams",
+		r_stats.c_active_tents_count, r_stats.c_view_beams_count );
 	}
+
+	Mem_Set( &r_stats, 0, sizeof( r_stats ));
 }
 
 /*
@@ -437,7 +441,7 @@ void GL_SetRenderMode( int mode )
 		texEnv = GL_REPLACE;
 		break;
 	case kRenderTransColor:
-		state = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR|GLSTATE_DEPTHWRITE;
+		state = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR;
 		texEnv = GL_REPLACE;
 		break;
 	case kRenderTransAlpha:
@@ -646,7 +650,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	// make sure what we have right extension
 	com.strncpy( basename, base, MAX_STRING );
 	FS_StripExtension( basename );
-	FS_DefaultExtension( basename, va( ".%s", SI->envshot_ext ));
+	FS_DefaultExtension( basename, ".tga" );
 
 	// write image as dds packet
 	result = FS_SaveImage( basename, r_shot );

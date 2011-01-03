@@ -1032,6 +1032,8 @@ void GL_FreeTexture( GLenum texnum )
 	if( texnum <= 0 || !glw_state.initialized )
 		return;
 
+	if( texnum > MAX_TEXTURES ) Msg( "texnum %i\n" );
+
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
 

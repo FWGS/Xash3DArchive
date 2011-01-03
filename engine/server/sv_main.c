@@ -437,7 +437,7 @@ void SV_PrepWorldFrame( void )
 			ent->v.effects &= ~EF_NOINTERP;
 	}
 }
-
+qboolean runFrame = false;
 /*
 =================
 SV_RunGameFrame
@@ -446,7 +446,7 @@ SV_RunGameFrame
 void SV_RunGameFrame( void )
 {
 	if( !SV_HasActivePlayers()) return;
-	if( sv.frametime ) SV_Physics();
+	if( runFrame ) SV_Physics();
 }
 
 /*
@@ -465,10 +465,15 @@ void Host_ServerFrame( void )
 	{
 		if(!( sv.hostflags & SVF_PLAYERSONLY ))
 			sv.time += host.frametime;
-		sv.frametime = host.frametime;
+		svgame.globals->frametime = host.frametime;
+		svgame.globals->time = sv.time;
+		runFrame = true;
 	}
-	else sv.frametime = 0.0f;
-
+	else
+	{
+		svgame.globals->frametime = 0.0f;
+		runFrame = false;
+	}
 	// check timeouts
 	SV_CheckTimeouts ();
 
@@ -628,7 +633,7 @@ void SV_Init( void )
 	sv_friction = Cvar_Get( "sv_friction", "4", CVAR_PHYSICINFO, "how fast you slow down" );
 	sv_edgefriction = Cvar_Get( "sv_edgefriction", "1", CVAR_PHYSICINFO, "how much you slow down when nearing a ledge you might fall off" );
 	sv_stopspeed = Cvar_Get( "sv_stopspeed", "100", CVAR_PHYSICINFO, "how fast you come to a complete stop" );
-	sv_maxclients = Cvar_Get( "sv_maxclients", "1", CVAR_LATCH|CVAR_SERVERNOTIFY, "server clients limit" );
+	sv_maxclients = Cvar_Get( "maxplayers", "1", CVAR_LATCH|CVAR_SERVERNOTIFY, "server clients limit" );
 	sv_check_errors = Cvar_Get( "sv_check_errors", "0", CVAR_ARCHIVE, "ignore physic engine errors" );
 	sv_synchthink = Cvar_Get( "sv_fast_think", "0", CVAR_ARCHIVE, "allows entities to think more often than the server framerate" );
 	physinfo = Cvar_Get( "@physinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only

@@ -8,13 +8,14 @@
 #include "const.h"
 #include "gl_local.h"
 
+static void UI_UpdateUserinfo( void );
 menu_static_t	menu;
 
 void UI_UpdateMenu( float realtime )
 {
 	if( !menu.hInstance ) return;
 	menu.dllFuncs.pfnRedraw( realtime );
-
+	UI_UpdateUserinfo();
 	Con_DrawVersion();
 }
 
@@ -177,6 +178,18 @@ static int UI_GetLogoWidth( void )
 static int UI_GetLogoHeight( void )
 {
 	return menu.logo_yres;
+}
+
+static void UI_UpdateUserinfo( void )
+{
+	player_info_t	*player;
+
+	if( !userinfo->modified ) return;
+	player = &menu.playerinfo;
+
+	com.strncpy( player->userinfo, Cvar_Userinfo(), sizeof( player->userinfo ));
+	com.strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
+	com.strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
 }
 	
 void Host_Credits( void )
@@ -610,7 +623,6 @@ static void pfnRenderScene( const ref_params_t *fd )
 {
 	if( !fd || fd->fov_x <= 0.0f || fd->fov_y <= 0.0f )
 		return;
-
 	R_RenderFrame( fd, false );
 }
 
@@ -720,36 +732,6 @@ static char **pfnGetFilesList( const char *pattern, int *numFiles, int gamediron
 
 	if( numFiles ) *numFiles = t->numfilenames;
 	return t->filenames;
-}
-
-/*
-=========
-pfnGetVideoList
-
-retuns list of valid video renderers
-=========
-*/
-static char **pfnGetVideoList( int *numRenders )
-{
-	static const char	*vidlib = "default";
-
-	if( numRenders ) *numRenders = 1;
-	return &(char *)vidlib;
-}
-
-/*
-=========
-pfnGetAudioList
-
-retuns list of valid audio renderers
-=========
-*/
-static char **pfnGetAudioList( int *numRenders )
-{
-	static const char	*sndlib = "default";
-
-	if( numRenders ) *numRenders = 1;
-	return &(char *)sndlib;
 }
 
 /*
@@ -902,8 +884,6 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnGetGameInfo,
 	pfnGetGamesList,
 	pfnGetFilesList,
-	pfnGetVideoList,
-	pfnGetAudioList,
 	SV_GetComment,
 	CL_GetComment,
 	pfnCheckGameDll,
@@ -971,7 +951,6 @@ qboolean UI_LoadProgs( const char *name )
 
 	// setup globals
 	menu.globals->developer = host.developer;
-	com.strncpy( menu.globals->shotExt, SI->savshot_ext, sizeof( menu.globals->shotExt ));
 
 	// initialize game
 	menu.dllFuncs.pfnInit();

@@ -258,9 +258,6 @@ typedef struct sysinfo_s
 	char		envpath[32];	// path to skybox and cubemaps images.
 	char		scrshot_ext[8];	// screen shot write type.
 	char		levshot_ext[8];	// level shot write type.
-	char		savshot_ext[8];	// save shot write type.
-	char		envshot_ext[8];	// sky or envshot write type
-
 	int		developer;	// developer level ( 1 - 7 )
 
 	gameinfo_t	*GameInfo;	// current GameInfo

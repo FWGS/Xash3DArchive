@@ -1563,6 +1563,7 @@ void CL_DrawBeams( int fTrans )
 			continue;
 
 		CL_DrawCustomBeam( pBeam );
+		r_stats.c_view_beams_count++;
 	}
 
 	if( !cl_active_beams )
@@ -1595,6 +1596,7 @@ void CL_DrawBeams( int fTrans )
 
 		// update beam state
 		CL_UpdateBeam( pBeam, cl.time - cl.oldtime );
+		r_stats.c_view_beams_count++;
 		CL_DrawBeam( pBeam );
 
 		pPrev = pBeam;

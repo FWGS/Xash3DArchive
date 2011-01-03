@@ -405,7 +405,6 @@ void CL_WritePacket( void )
 	// send a userinfo update if needed
 	if( userinfo->modified )
 	{
-		userinfo->modified = false;
 		BF_WriteByte( &cls.netchan.message, clc_userinfo );
 		BF_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
 	}
@@ -735,6 +734,7 @@ void CL_ClearState( void )
 	Mem_Set( &clgame.fade, 0, sizeof( clgame.fade ));
 	Mem_Set( &clgame.shake, 0, sizeof( clgame.shake ));
 	cl.refdef.movevars = &clgame.movevars;
+	cl.maxclients = 1; // allow to drawing player in menu
 
 	Cvar_SetFloat( "scr_download", 0.0f );
 	Cvar_SetFloat( "scr_loading", 0.0f );
@@ -1600,6 +1600,7 @@ void CL_Init( void )
 		Host_Error( "can't initialize client.dll\n" );
 
 	cls.initialized = true;
+	cl.maxclients = 1; // allow to drawing player in menu
 
 	// g-cont. disable for now
 	Cvar_SetFloat( "cl_lw", 0 );

@@ -368,6 +368,7 @@ typedef struct
 	byte		*mempool;			// client edicts pool
 
 	cl_entity_t	playermodel;		// uiPlayerSetup drawing model
+	player_info_t	playerinfo;		// local playerinfo
 
 	gameui_draw_t	ds;			// draw2d stuff (menu images)
 	GAMEINFO		gameInfo;			// current gameInfo
@@ -566,6 +567,7 @@ void CL_FreeEntity( cl_entity_t *pEdict );
 void CL_CenterPrint( const char *text, float y );
 void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
+client_textmessage_t *CL_TextMessageGet( const char *pName );
 int pfnDecalIndexFromName( const char *szDecalName );
 int pfnIndexFromTrace( struct pmtrace_s *pTrace );
 int CL_FindModelIndex( const char *m );

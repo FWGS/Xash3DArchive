@@ -2655,7 +2655,7 @@ qboolean CompileCurrentModel( const char *name )
 		return true;
 	}
 
-	Msg("%s not found\n", gs_filename );
+	Msg( "%s not found\n", gs_filename );
 	return false;
 }
 

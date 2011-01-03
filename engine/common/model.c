@@ -1574,7 +1574,7 @@ model_t *Mod_FindName( const char *name, qboolean create )
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
 	{
 		if( !mod->name[0] ) continue;
-		if( !com.strcmp( mod->name, name ))
+		if( !com.stricmp( mod->name, name ))
 		{
 			// prolonge registration
 			mod->needload = world.load_sequence;
@@ -1695,7 +1695,7 @@ void Mod_LoadWorld( const char *name, uint *checksum )
 	// now replacement table is invalidate
 	Mem_Set( com_models, 0, sizeof( com_models ));
 
-	if( !com.strcmp( cm_models[0].name, name ))
+	if( !com.stricmp( cm_models[0].name, name ))
 	{
 		// singleplayer mode: server already loading map
 		com_models[1] = cm_models; // make link to world

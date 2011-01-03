@@ -488,13 +488,23 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 
 	if( prc )
 	{
+		wrect_t	rc;
+
+		rc = *prc;
+
+		// Sigh! some stupid modmakers set wrong rectangels in hud.txt 
+		if( rc.left <= 0 || rc.left > width ) rc.left = 0;
+		if( rc.top <= 0 || rc.top > height ) rc.top = 0;
+		if( rc.right <= 0 || rc.right > width ) rc.right = width;
+		if( rc.bottom <= 0 || rc.bottom > height ) rc.bottom = height;
+
 		// calc user-defined rectangle
-		s1 = (float)prc->left / width;
-		t1 = (float)prc->top / height;
-		s2 = (float)prc->right / width;
-		t2 = (float)prc->bottom / height;
-		width = prc->right - prc->left;
-		height = prc->bottom - prc->top;
+		s1 = (float)rc.left / width;
+		t1 = (float)rc.top / height;
+		s2 = (float)rc.right / width;
+		t2 = (float)rc.bottom / height;
+		width = rc.right - rc.left;
+		height = rc.bottom - rc.top;
 	}
 	else
 	{
@@ -1808,7 +1818,7 @@ pfnTextMessageGet
 returns specified message from titles.txt
 =============
 */
-static client_textmessage_t *pfnTextMessageGet( const char *pName )
+client_textmessage_t *CL_TextMessageGet( const char *pName )
 {
 	int	i;
 
@@ -3510,7 +3520,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnPlaySoundByName,
 	pfnPlaySoundByIndex,
 	AngleVectors,
-	pfnTextMessageGet,
+	CL_TextMessageGet,
 	pfnDrawCharacter,
 	pfnDrawConsoleString,
 	pfnDrawSetTextColor,
@@ -3675,6 +3685,7 @@ qboolean CL_LoadProgs( const char *name )
 	CL_InitParticles ();
 	CL_InitViewBeams ();
 	CL_InitTempEnts ();
+	CL_InitClientMove(); // initialize pm_shared
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();
@@ -3686,9 +3697,6 @@ qboolean CL_LoadProgs( const char *name )
 		clgame.hInstance = NULL;
 		return false;
 	}
-
-	// initialize pm_shared
-	CL_InitClientMove();
 
 	return true;
 }
