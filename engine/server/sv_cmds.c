@@ -219,6 +219,12 @@ void SV_Map_f( void )
 
 	flags = SV_MapIsValid( mapname, spawn_entity, NULL );
 
+	if( flags & MAP_INVALID_VERSION )
+	{
+		Msg( "SV_NewMap: map %s is invalid or not supported\n", mapname );
+		return;
+	}
+	
 	if(!( flags & MAP_IS_EXIST ))
 	{
 		Msg( "SV_NewMap: map %s doesn't exist\n", mapname );
@@ -380,6 +386,12 @@ void SV_ChangeLevel_f( void )
 
 	flags = SV_MapIsValid( mapname, spawn_entity, Cmd_Argv( 2 ));
 
+	if( flags & MAP_INVALID_VERSION )
+	{
+		Msg( "SV_ChangeLevel: map %s is invalid or not supported\n", mapname );
+		return;
+	}
+	
 	if(!( flags & MAP_IS_EXIST ))
 	{
 		Msg( "SV_ChangeLevel: map %s doesn't exist\n", mapname );

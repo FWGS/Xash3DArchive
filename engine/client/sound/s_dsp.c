@@ -711,8 +711,8 @@ void FLT_Design_Cheb( int Nmax, float cutoff, float ftype, float qwidth, int *pM
 	Wstop = tan( M_PI * fstop / fs );
 	Wstop = pow( Wstop, s );
 
-	epass = com.sqrt( pow( 10, Apass/10 ) - 1 );
-	estop = com.sqrt( pow( 10, Astop/10 ) - 1 );
+	epass = com.sqrt( pow( (float)10.0f, (float)Apass/10.0f ) - 1 );
+	estop = com.sqrt( pow( (float)10.0f, (float)Astop/10.0f ) - 1 );
 
 	// calculate filter order N
 
@@ -4361,7 +4361,7 @@ pset_t psettemplates[] =
 
 // number of presets currently defined above
 
-#define CPSETTEMPLATES	(sizeof( psets ) / sizeof( pset_t ))
+#define CPSETTEMPLATES	60	//(sizeof( psets ) / sizeof( pset_t ))
 
 // init a preset - just clear state array
 void PSET_Init( pset_t *ppset ) 
@@ -4892,11 +4892,6 @@ void DSP_InitAll( void )
 
 	for( idsp = 0; idsp < CDSPS; idsp++ ) 
 		DSP_Init( idsp );
-
-	// initialize DSP cvars
-	dsp_room = Cvar_Get( "dsp_room", "0", 0, "room dsp preset - sounds more distant from player (1ch)" );
-	dsp_room_type = Cvar_Get( "room_type", "0", 0, "duplicate for dsp_room cvar for backward compatibility" );
-	dsp_stereo = Cvar_Get( "dsp_stereo", "0", 0, "set to 1 for true stereo processing.  2x perf hits" );
 }
 
 // free all resources associated with dsp - called once, during engine shutdown
@@ -5391,6 +5386,11 @@ qboolean AllocDsps( void )
 	DSP_InitAll();
 
 	idsp_room = -1.0;
+
+	// initialize DSP cvars
+	dsp_room = Cvar_Get( "dsp_room", "0", 0, "room dsp preset - sounds more distant from player (1ch)" );
+	dsp_room_type = Cvar_Get( "room_type", "0", 0, "duplicate for dsp_room cvar for backward compatibility" );
+	dsp_stereo = Cvar_Get( "dsp_stereo", "0", 0, "set to 1 for true stereo processing.  2x perf hits" );
 
 	// alloc dsp room channel (mono, stereo if dsp_stereo is 1)
 

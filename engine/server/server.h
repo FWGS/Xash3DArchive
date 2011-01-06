@@ -34,6 +34,7 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_IS_EXIST	BIT( 0 )
 #define MAP_HAS_SPAWNPOINT	BIT( 1 )
 #define MAP_HAS_LANDMARK	BIT( 2 )
+#define MAP_INVALID_VERSION	BIT( 3 )
 
 #define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, edict_t, area )
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - svgame.edicts))

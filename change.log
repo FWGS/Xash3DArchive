@@ -1,3 +1,7 @@
+build 1430
+Engine: fix crash with invalid room_type set (more than 60)
+Engine: fix stuck on elevators or tracktrains for clients
+
 build 1428
 
 Engine: fix trigger_camera serialization bug

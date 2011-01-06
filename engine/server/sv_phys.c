@@ -511,6 +511,12 @@ void SV_AddGravity( edict_t *ent )
 	SV_CheckVelocity( ent );
 }
 
+/*
+============
+SV_AddHalfGravity
+
+============
+*/
 void SV_AddHalfGravity( edict_t *ent, float timestep )
 {
 	float	ent_gravity;
@@ -562,8 +568,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		trace = SV_Move( ent->v.origin, vec3_origin, vec3_origin, end, type, ent );
 	else trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
-	// g-cont. needs for global test!!!
-	if( !trace.allsolid )//&& !trace.startsolid )
+	if( !trace.allsolid )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 		SV_LinkEdict( ent, true );
@@ -805,10 +810,8 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( SV_TestEntityPosition( check ))
+		if( SV_TestEntityPosition( check ) && block )
 		{	
-			if( !block ) continue;
-
 			if( !SV_CanBlock( check ))
 				continue;
 
@@ -829,7 +832,6 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		{
 			if( check->v.movetype == MOVETYPE_WALK && lmove[2] < 0.0f )
 				check->v.groundentity = NULL;
-			pushed_p--;
 			continue;
 		}
 	}
@@ -923,8 +925,17 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 
 		// calculate destination position
 		VectorCopy( check->v.origin, org );
-		Matrix4x4_VectorTransform( start_l, org, temp );
-		Matrix4x4_VectorTransform( end_l, temp, org2 );
+
+		if( check->v.movetype == MOVETYPE_PUSHSTEP )
+		{
+			Matrix4x4_VectorITransform( start_l, org, temp );
+			Matrix4x4_VectorITransform( end_l, temp, org2 );
+		}
+		else
+		{
+			Matrix4x4_VectorTransform( start_l, org, temp );
+			Matrix4x4_VectorTransform( end_l, temp, org2 );
+		}
 		VectorSubtract( org2, org, lmove );
 
 		// try moving the contacted entity 
@@ -933,10 +944,8 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( SV_TestEntityPosition( check ))
+		if( SV_TestEntityPosition( check ) && block )
 		{	
-			if( !block ) continue;
-
 			if( !SV_CanBlock( check ))
 				continue;
 
@@ -957,7 +966,6 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		else
 		{
 			SV_AngularMove( check, movetime, pusher->v.friction );
-			pushed_p--; // moved ok
 		}
 	}
 	return NULL;
@@ -1018,11 +1026,7 @@ void SV_Physics_Pusher( edict_t *ent )
 
 	// if the pusher has a "blocked" function, call it
 	// otherwise, just stay in place until the obstacle is gone
-	if( pBlocker )
-	{
-		MsgDev( D_INFO, "%s is blocked by %s\n", SV_ClassName( ent ), SV_ClassName( pBlocker ));
-		svgame.dllFuncs.pfnBlocked( ent, pBlocker );
-	}
+	if( pBlocker ) svgame.dllFuncs.pfnBlocked( ent, pBlocker );
 
 	if( thinktime > oldtime && thinktime <= ent->v.ltime || ( ent->v.flags & FL_ALWAYSTHINK ))
 	{
@@ -1206,7 +1210,7 @@ void SV_Physics_Toss( edict_t *ent )
 	SV_CheckWaterTransition( ent );
 	SV_CheckWater( ent );
 
-	if( ent->v.velocity[2] > DIST_EPSILON )
+	if( ent->v.velocity[2] > DIST_EPSILON || svgame.globals->changelevel )
 	{
 		ent->v.flags &= ~FL_ONGROUND;
 		ent->v.groundentity = NULL;
@@ -1260,6 +1264,7 @@ void SV_Physics_Toss( edict_t *ent )
 	SV_CheckVelocity( ent );
 
 	// make sure what we don't collide with like entity (e.g. gib with gib)
+#if 0
 	if( trace.allsolid && SV_IsValidEdict( trace.ent ) && trace.ent->v.movetype != ent->v.movetype )
 	{
 		if( trace.ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
@@ -1279,7 +1284,7 @@ void SV_Physics_Toss( edict_t *ent )
 			return;
 		}
 	}
-
+#endif
 	if( trace.fraction == 1.0f )
 	{
 		SV_CheckWater( ent );
@@ -1370,9 +1375,7 @@ void SV_Physics_Step( edict_t *ent )
 	if( ent->v.movetype == MOVETYPE_PUSHSTEP )
 	{
 		if( wasinwater && !inwater )
-		{
 			ent->v.velocity[2] = 0.0f;
-		}
 
 		if( inwater && ( ent->v.flags & FL_FLOAT ))
 		{
@@ -1526,7 +1529,6 @@ void SV_Physics_None( edict_t *ent )
 	SV_RunThink( ent );
 }
 
-
 //============================================================================
 static void SV_Physics_Client( edict_t *ent )
 {
@@ -1645,10 +1647,10 @@ void SV_Physics( void )
 	edict_t	*ent;
 	int    	i;
 
+	SV_CheckAllEnts ();
+
 	// let the progs know that a new frame has started
 	svgame.dllFuncs.pfnStartFrame();
-
-	SV_CheckAllEnts ();
 
 	// treat each object in turn
 	if( !( sv.hostflags & SVF_PLAYERSONLY ))

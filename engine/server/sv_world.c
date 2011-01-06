@@ -256,7 +256,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	// calculate an offset value to center the origin
 	// NOTE: never get offset of drawing hull
 	if( !hullNumber ) VectorCopy( hull->clip_mins, offset );
-	else  VectorSubtract( hull->clip_mins, mins, offset );
+	else VectorSubtract( hull->clip_mins, mins, offset );
 #else
 	if( size[0] <= 8.0f )
 	{

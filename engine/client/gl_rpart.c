@@ -1099,7 +1099,7 @@ void CL_BulletImpactParticles( const vec3_t org )
 		CL_SparkleTracer( pos, dir );
 	}
 
-	for( i = 0; i < 25; i++ )
+	for( i = 0; i < 12; i++ )
 	{
 		p = CL_AllocParticle( NULL );
 		if( !p ) return;
@@ -1107,14 +1107,11 @@ void CL_BulletImpactParticles( const vec3_t org )
 		p->die += 2.0f;
 		p->color = 0; // black
 
-		if( i & 1 )
+		p->type = pt_grav;
+		for( j = 0; j < 3; j++ )
 		{
-			p->type = pt_grav;
-			for( j = 0; j < 3; j++ )
-			{
-				p->org[j] = org[j] + Com_RandomFloat( -2.0f, 3.0f );
-				p->vel[j] = Com_RandomFloat( -70.0f, 70.0f );
-			}
+			p->org[j] = org[j] + Com_RandomFloat( -2.0f, 3.0f );
+			p->vel[j] = Com_RandomFloat( -70.0f, 70.0f );
 		}
 	}
 }

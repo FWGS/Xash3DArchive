@@ -705,6 +705,9 @@ void R_DrawEntitiesOnList( void )
 	// don't fogging translucent surfaces
 	pglDisable( GL_FOG );
 
+	CL_DrawBeams( true );
+	CL_DrawParticles();
+
 	// then draw translicent entities
 	for( i = 0; i < tr.num_trans_entities; i++ )
 	{
@@ -732,9 +735,6 @@ void R_DrawEntitiesOnList( void )
 			break;
 		}
 	}
-
-	CL_DrawBeams( true );
-	CL_DrawParticles();
 
 	clgame.dllFuncs.pfnDrawTransparentTriangles ();
 

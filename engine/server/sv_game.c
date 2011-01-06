@@ -481,7 +481,7 @@ void SV_WriteEntityPatch( const char *filename )
 	FS_Close( f );
 }
 
-script_t *SV_GetEntityScript( const char *filename )
+script_t *SV_GetEntityScript( const char *filename, int *flags )
 {
 	file_t		*f;
 	dheader_t		*header;
@@ -490,9 +490,13 @@ script_t *SV_GetEntityScript( const char *filename )
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	qboolean		result = false;
+
+	ASSERT( flags != NULL );
 			
 	f = FS_Open( va( "maps/%s.bsp", filename ), "rb" );
 	if( !f ) return NULL;
+
+	*flags |= MAP_IS_EXIST;
 
 	Mem_Set( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
@@ -515,6 +519,7 @@ script_t *SV_GetEntityScript( const char *filename )
 		}
 		break;
 	default:
+		*flags |= MAP_INVALID_VERSION;
 		FS_Close( f );
 		return NULL;
 	}
@@ -543,7 +548,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 	script_t	*ents = NULL;
 	int	flags = 0;
 
-	ents = SV_GetEntityScript( filename );
+	ents = SV_GetEntityScript( filename, &flags );
 
 	if( ents )
 	{
@@ -559,10 +564,8 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 			Com_CloseScript( ents );
 
 			// skip spawnpoint checks in devmode
-			return (MAP_IS_EXIST|MAP_HAS_SPAWNPOINT);
+			return (flags|MAP_HAS_SPAWNPOINT);
 		}
-
-		flags |= MAP_IS_EXIST; // map is exist
 
 		while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 		{
