@@ -71,6 +71,7 @@ void RemoveLink( link_t *l );
 void ClearLink( link_t *l );
 
 // trace common
+qboolean World_UseSimpleBox( qboolean simpleBox, int solid, qboolean isPointTrace, model_t *mod );
 void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, vec3_t boxmins, vec3_t boxmaxs );
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch );
 int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p );

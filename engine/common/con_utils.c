@@ -898,7 +898,6 @@ void Host_WriteServerConfig( const char *name )
 	else MsgDev( D_ERROR, "Couldn't write %s.\n", name );
 }
 
-
 /*
 ===============
 Host_WriteOpenGLConfig

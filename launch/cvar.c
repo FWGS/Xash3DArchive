@@ -104,7 +104,8 @@ void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback 
 		else
 		{
 			// NOTE: dlls cvars doesn't have description
-			if( cvar->flags & CVAR_EXTDLL ) callback( cvar->name, cvar->string, "game cvar", ptr );
+			if( cvar->flags & ( CVAR_EXTDLL|CVAR_CLIENTDLL ))
+				callback( cvar->name, cvar->string, "game cvar", ptr );
 			else callback( cvar->name, cvar->string, cvar->description, ptr );
 		}
 	}

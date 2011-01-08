@@ -392,6 +392,9 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 		// so we'll use the saved plane and do a traceline instead
 		vec3_t	testspot, testend;
 		trace_t	tr;
+
+		// never transition permanent decals
+		if( flags & FDECAL_PERMANENT ) return;
 	
 		VectorCopy( entry->position, testspot );
 		VectorMA( testspot, 5.0f, entry->impactPlaneNormal, testspot );

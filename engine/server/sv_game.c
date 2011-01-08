@@ -4234,7 +4234,6 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 	KeyValueData	pkvd[256]; // per one entity
 	int		i, numpairs = 0;
 	const char	*classname = NULL;
-	qboolean		anglehack;
 	token_t		token;
 
 	// go through all the dictionary pairs
@@ -4246,15 +4245,6 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 		if( !Com_ReadToken( script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
 			Host_Error( "ED_ParseEdict: EOF without closing brace\n" );
 		if( token.string[0] == '}' ) break; // end of desc
-
-		// anglehack is to allow QuakeEd to write single scalar angles
-		// and allow them to be turned into vectors.
-		if( !com.strcmp( token.string, "angle" ))
-		{
-			com.strncpy( token.string, "angles", sizeof( token.string ));
-			anglehack = true;
-		}
-		else anglehack = false;
 
 		com.strncpy( keyname, token.string, sizeof( keyname ));
 
@@ -4277,13 +4267,6 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 		if( world.version == Q1BSP_VERSION && keyname[0] == '_' )
 			continue;
 
-		if( anglehack )
-		{
-			string	temp;
-			com.strncpy( temp, token.string, sizeof( temp ));
-			com.snprintf( token.string, sizeof( token.string ), "0 %s 0", temp );
-		}
-
 		// create keyvalue strings
 		pkvd[numpairs].szClassName = (char *)classname;	// unknown at this moment
 		pkvd[numpairs].szKeyName = copystring( keyname );
@@ -4302,6 +4285,29 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 
 	for( i = 0; i < numpairs; i++ )
 	{
+		if( !com.strcmp( pkvd[i].szKeyName, "angle" ))
+		{
+			float	flYawAngle = com.atof( pkvd[i].szValue );
+
+			Mem_Free( pkvd[i].szKeyName ); // will be replace with 'angles'
+			Mem_Free( pkvd[i].szValue );	// release old value, so we don't need these
+			pkvd[i].szKeyName = copystring( "angles" );
+
+			if( flYawAngle >= 0.0f )
+				pkvd[i].szValue = copystring( va( "%g %g %g", ent->v.angles[0], flYawAngle, ent->v.angles[2] ));
+			else if( flYawAngle == -1.0f )
+				pkvd[i].szValue = copystring( "-90 0 0" );
+			else if( flYawAngle == -2.0f )
+				pkvd[i].szValue = copystring( "90 0 0" );
+			else pkvd[i].szValue = copystring( "0 0 0" ); // technically an error
+		}
+
+		if( !com.strcmp( pkvd[i].szKeyName, "light" ))
+		{
+			Mem_Free( pkvd[i].szKeyName );
+			pkvd[i].szKeyName = copystring( "light_level" );
+		}
+
 		if( !pkvd[i].fHandled )
 		{
 			pkvd[i].szClassName = (char *)classname;

@@ -407,7 +407,12 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 		if( trace.plane.normal[2] > 0.7f )
 		{
 			blocked |= 1; // floor
+#if 1
+         			if( trace.ent->v.solid == SOLID_BSP || trace.ent->v.solid == SOLID_SLIDEBOX ||
+			trace.ent->v.movetype == MOVETYPE_PUSHSTEP || (trace.ent->v.flags & FL_CLIENT))
+#else
 			if( trace.ent->v.solid == SOLID_BSP )
+#endif
 			{
 				ent->v.flags |= FL_ONGROUND;
 				ent->v.groundentity = trace.ent;

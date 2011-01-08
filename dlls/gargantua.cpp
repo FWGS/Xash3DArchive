@@ -38,12 +38,12 @@ const float GARG_ATTACKDIST = 80.0;
 
 // Garg animation events
 #define GARG_AE_SLASH_LEFT			1
-//#define GARG_AE_BEAM_ATTACK_RIGHT	2		// No longer used
+//#define GARG_AE_BEAM_ATTACK_RIGHT		2	// No longer used
 #define GARG_AE_LEFT_FOOT			3
 #define GARG_AE_RIGHT_FOOT			4
-#define GARG_AE_STOMP				5
-#define GARG_AE_BREATHE				6
-
+#define GARG_AE_STOMP			5
+#define GARG_AE_BREATHE			6
+#define STOMP_FRAMETIME			0.015	// gpGlobals->frametime
 
 // Gargantua is immune to any damage but this
 #define GARG_DAMAGE					(DMG_ENERGYBEAM|DMG_CRUSH|DMG_MORTAR|DMG_BLAST)
@@ -128,7 +128,7 @@ void CStomp::Think( void )
 	// Do damage for this frame
 	Vector vecStart = pev->origin;
 	vecStart.z += 30;
-	Vector vecEnd = vecStart + (pev->movedir * pev->speed * gpGlobals->frametime);
+	Vector vecEnd = vecStart + (pev->movedir * pev->speed * STOMP_FRAMETIME);
 
 	UTIL_TraceHull( vecStart, vecEnd, dont_ignore_monsters, head_hull, ENT(pev), &tr );
 	
@@ -144,8 +144,8 @@ void CStomp::Think( void )
 	}
 	
 	// Accelerate the effect
-	pev->speed = pev->speed + (gpGlobals->frametime) * pev->framerate;
-	pev->framerate = pev->framerate + (gpGlobals->frametime) * 1500;
+	pev->speed = pev->speed + (STOMP_FRAMETIME) * pev->framerate;
+	pev->framerate = pev->framerate + (STOMP_FRAMETIME) * 1500;
 	
 	// Move and spawn trails
 	while ( gpGlobals->time - pev->dmgtime > STOMP_INTERVAL )

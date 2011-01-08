@@ -985,13 +985,8 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 			decal_t	*pdecals;
 			
 			// decal is in use and is not a custom decal
-			if( decal->psurface == NULL || ( decal->flags & FDECAL_CUSTOM ))	
+			if( decal->psurface == NULL || ( decal->flags & FDECAL_DONTSAVE ))	
 				 continue;
-
-			// another transition - ignore moved decals
-			// also permanent decals can't moving across transition
-			if( changelevel && decal->flags & ( FDECAL_DONTSAVE|FDECAL_PERMANENT ))
-				continue;
 
 			// compute depth
 			depth = 0;

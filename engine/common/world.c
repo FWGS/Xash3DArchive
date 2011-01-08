@@ -6,7 +6,9 @@
 #include "common.h"
 #include "world.h"
 #include "pm_defs.h"
+#include "cm_local.h"
 #include "mathlib.h"
+#include "studio.h"
 
 const char *et_name[] =
 {
@@ -108,6 +110,20 @@ trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch 
 		cliptrace->startsolid = true;
 
 	return *cliptrace;
+}
+
+qboolean World_UseSimpleBox( qboolean simpleBox, int solid, qboolean isPointTrace, model_t *mod )
+{
+	if( !mod || mod->type != mod_studio || simpleBox )
+		return true; // force to simplebox
+
+	if( solid == SOLID_SLIDEBOX && isPointTrace )
+		return false;
+
+	if( solid == SOLID_BBOX && ( mod->flags & STUDIO_TRACE_HITBOX || isPointTrace ))
+		return false;
+
+	return true;
 }
 
 /*

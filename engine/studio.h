@@ -53,6 +53,9 @@ Studio models are position independent, so the cache manager can move them.
 #define STUDIO_RAGDOLL		0x0002	// ragdoll animation pose
 #define STUDIO_HAS_CHROME		0x0008	// if any of the textures have chrome on them
 
+#define STUDIO_DYNAMIC_LIGHT		0x0100	// dynamically get lighting from floor or ceil (flying monsters)
+#define STUDIO_TRACE_HITBOX		0x0200	// always use hitbox trace instead of bbox
+
 // lighting & rendermode options
 #define STUDIO_NF_FLATSHADE		0x0001
 #define STUDIO_NF_CHROME		0x0002

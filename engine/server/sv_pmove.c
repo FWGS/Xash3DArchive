@@ -16,13 +16,17 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trac
 	if( !mod || mod->type == mod_bad || mod->type == mod_sprite )
 		return false;
 
+	// this is monsterclip brush, player ignore it
+	if( player_trace && mod->type == mod_brush && ed->v.flags & FL_MONSTERCLIP )
+		return false;
+
 	pe->player = false;
 
 	if( ed->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
 	{
 		// client or bot
 		com.strncpy( pe->name, "player", sizeof( pe->name ));
-		pe->player = true;
+		pe->player = NUM_FOR_EDICT( ed );
 	}
 	else
 	{
@@ -36,11 +40,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trac
 		pe->model = NULL;
 	}
 	else
-	{	
-		// this is monsterclip brush, player ignore it
-		if( player_trace && ed->v.flags & FL_MONSTERCLIP )
-			return false;
-
+	{
 		pe->studiomodel = NULL;
 		pe->model = mod;
 	}

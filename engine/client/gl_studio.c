@@ -2745,6 +2745,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 
 	loadmodel->numframes = R_StudioBodyVariations( loadmodel );
 	loadmodel->radius = RadiusFromBounds( loadmodel->mins, loadmodel->maxs );
+	loadmodel->flags = phdr->flags; // copy header flags
 }
 
 /*

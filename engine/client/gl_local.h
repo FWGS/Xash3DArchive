@@ -532,6 +532,7 @@ extern convar_t	*gl_texturemode;
 extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_showtextures;
 extern convar_t	*gl_compress_textures;
+extern convar_t	*gl_allow_static;
 extern convar_t	*gl_picmip;
 extern convar_t	*gl_skymip;
 extern convar_t	*gl_nobind;

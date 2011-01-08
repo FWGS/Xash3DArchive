@@ -25,6 +25,7 @@ typedef struct moveclip_s
 	int		type;		// move type
 	int		flags;		// trace flags
 	int		hull;		// -1 to let entity select hull
+	qboolean		isPoint;		// true is indicates pointtrace
 } moveclip_t;
 
 static int		sv_lastofs;	// lightstyles code use this
@@ -636,6 +637,13 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 		if( touch->v.solid != SOLID_NOT ) // disabled ?
 			continue;
 
+		if( touch->v.groupinfo != 0 )
+		{
+			if(( svs.groupop == 0 && (touch->v.groupinfo & svs.groupmask) == 0 ) ||
+			(svs.groupop == 1 && (touch->v.groupinfo & svs.groupmask) != 0))
+				continue;
+		}
+
 		// only brushes can have special contents
 		if( Mod_GetType( touch->v.modelindex ) != mod_brush )
 			continue;
@@ -653,9 +661,7 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 			continue;
 
-		// compare contents ranking
-		if( RankForContents( touch->v.skin ) > RankForContents( *pCont ))
-			*pCont = touch->v.skin; // new content has more priority
+		*pCont = touch->v.skin;
 	}
 	
 	// recurse down both sides
@@ -1085,8 +1091,9 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 {
 	link_t	*l, *next;
 	edict_t	*touch;
+	model_t	*model;
 	trace_t	trace;
-	qboolean	traceHitbox;
+	qboolean	bSimpleBox;
 	float	*mins, *maxs;
 	int	modType;
 
@@ -1155,35 +1162,18 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		// might intersect, so do an exact clip
 		if( clip->trace.allsolid ) return;
 
-		traceHitbox = false;
-
 		if( clip->passedict )
 		{
 		 	if( touch->v.owner == clip->passedict )
 				continue;	// don't clip against own missiles
 			if( clip->passedict->v.owner == touch )
 				continue;	// don't clip against owner
-			if( clip->passedict->v.solid == SOLID_BBOX )
-			{
-				if( touch->v.solid != SOLID_BSP && touch->v.movetype != MOVETYPE_PUSHSTEP )
-				{
-					if( Mod_GetType( clip->passedict->v.modelindex ) == mod_studio )
-						traceHitbox = true;
-				}
-			}
 		}
 
-		// select a properly trace method
-		if( modType == mod_studio && !( clip->flags & FMOVE_SIMPLEBOX ))
-		{
-			// always do hitbox trace for bbox solidity
-			if( touch->v.solid == SOLID_BBOX )
-				traceHitbox = true;
+		model = CM_ClipHandleToModel( touch->v.modelindex );
 
-			// do tracing hitbox only for pointtrace (bullets)
-			if( touch->v.solid == SOLID_SLIDEBOX && VectorCompare( clip->mins2, clip->maxs2 ))
-				traceHitbox = true;
-		}
+		bSimpleBox = (clip->flags & FMOVE_SIMPLEBOX) ? true : false;
+		bSimpleBox = World_UseSimpleBox( bSimpleBox, touch->v.solid, clip->isPoint, model );
 
 		if( touch->v.flags & FL_MONSTER )
 		{
@@ -1200,9 +1190,9 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( touch->v.deadflag == DEAD_DEAD && !VectorCompare( mins, maxs ))
 			continue;
 
-		if( traceHitbox )
-			trace = SV_TraceHitbox( touch, clip->start, mins, maxs, clip->end );
-		else trace = SV_TraceHull( touch, clip->hull, clip->start, mins, maxs, clip->end );
+		if( bSimpleBox )
+			trace = SV_TraceHull( touch, clip->hull, clip->start, mins, maxs, clip->end );
+		else trace = SV_TraceHitbox( touch, clip->start, mins, maxs, clip->end );
 
 		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );
 	}
@@ -1254,6 +1244,8 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 		VectorCopy( maxs, clip.maxs2 );
 	}
 
+	clip.isPoint = VectorCompare( clip.mins2, clip.maxs2 );
+
 	// create the bounding box of the entire move
 	World_MoveBounds( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
 
@@ -1302,6 +1294,8 @@ trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int t
 		VectorCopy( clip.mins, clip.mins2 );
 		VectorCopy( clip.maxs, clip.maxs2 );
 	}
+
+	clip.isPoint = VectorCompare( clip.mins2, clip.maxs2 );
 
 	// create the bounding box of the entire move
 	World_MoveBounds( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );

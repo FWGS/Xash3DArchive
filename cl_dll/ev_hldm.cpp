@@ -281,7 +281,7 @@ void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType )
 
 	pe = gEngfuncs.pEventAPI->EV_GetPhysent( pTrace->ent );
 
-	if ( pe && pe->solid == SOLID_BSP )
+	if ( pe && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ))
 	{
 		switch( iBulletType )
 		{

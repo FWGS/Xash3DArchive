@@ -401,7 +401,37 @@ void ClientCommand( edict_t *pEntity )
 			GetClassPtr((CBasePlayer *)pev)->GiveNamedItem( STRING(iszItem) );
 		}
 	}
+	else if ( FStrEq(pcmd, "fire") )
+	{
+		if ( g_flWeaponCheat != 0.0)
+		{
+			CBaseEntity *pPlayer = CBaseEntity::Instance(pEntity);
+			if (CMD_ARGC() > 1)
+			{
+				FireTargets(CMD_ARGV(1), pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else
+			{
+				TraceResult tr;
+				UTIL_MakeVectors(pev->v_angle);
+				UTIL_TraceLine(
+					pev->origin + pev->view_ofs,
+					pev->origin + pev->view_ofs + gpGlobals->v_forward * 1000,
+					dont_ignore_monsters, pEntity, &tr
+				);
 
+				if (tr.pHit)
+				{
+					CBaseEntity *pHitEnt = CBaseEntity::Instance(tr.pHit);
+					if (pHitEnt)
+					{
+						pHitEnt->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+						ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, UTIL_VarArgs( "Fired %s \"%s\"\n", STRING(pHitEnt->pev->classname), STRING(pHitEnt->pev->targetname) ) );
+					}
+				}
+			}
+		}
+	}
 	else if ( FStrEq(pcmd, "drop" ) )
 	{
 		// player is dropping an item. 

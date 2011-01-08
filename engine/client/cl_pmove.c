@@ -44,7 +44,7 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 		pe->model = NULL;
 	}
 	else
-	{	
+	{
 		pe->studiomodel = NULL;
 		pe->model = mod;
 	}
@@ -215,9 +215,7 @@ int CL_TruePointContents( const vec3_t p )
 		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 			continue;
 
-		// compare contents ranking
-		if( RankForContents( pe->skin ) > RankForContents( contents ))
-			contents = pe->skin; // new content has more priority
+		contents = pe->skin;
 	}
 
 	return contents;

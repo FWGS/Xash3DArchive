@@ -28,6 +28,7 @@ convar_t	*gl_texture_lodbias;
 convar_t	*gl_showtextures;
 convar_t	*gl_swapInterval;
 convar_t	*gl_check_errors;
+convar_t	*gl_allow_static;
 convar_t	*gl_texturemode;
 convar_t	*gl_round_down;
 convar_t	*gl_max_size;
@@ -1412,6 +1413,7 @@ void GL_InitCommands( void )
 	gl_nobind = Cvar_Get( "gl_nobind", "0", 0, "replace all textures with '*notexture' (perfomance test)" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "compress textures to safe video memory" ); 
+	gl_allow_static = Cvar_Get( "gl_allow_static", "1", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 9)" );
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );

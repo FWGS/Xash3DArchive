@@ -740,7 +740,7 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 		if( !p ) return;
 
 		p->die += Com_RandomFloat( 0.2f, 0.8f );
-		p->type = pt_slowgrav;
+		p->type = pt_vox_grav;
 		p->color = pcolor;
 
 		for( j = 0; j < 3; j++ )

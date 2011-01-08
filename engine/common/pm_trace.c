@@ -7,6 +7,8 @@
 #include "mathlib.h"
 #include "cm_local.h"
 #include "pm_local.h"
+#include "studio.h"
+#include "world.h"
 
 static mplane_t	pm_boxplanes[6];
 static dclipnode_t	pm_boxclipnodes[6];
@@ -360,13 +362,14 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
 		Matrix4x4_VectorTransform( imatrix, end, end_l );
-
+#if 0
 		// calc hull offsets (collide monster with rotating bmodel)
 		VectorCopy( start_l, temp );
 		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, start_l );
 
 		VectorCopy( end_l, temp );
 		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, end_l );
+#endif
 	}
 
 	// do trace
@@ -377,8 +380,6 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 	{
 		if( ptr->fraction != 1.0f )
 		{
-			vec3_t	temp;
-
 			// compute endpos
 			VectorCopy( ptr->plane.normal, temp );
 			VectorLerp( start, ptr->fraction, end, ptr->endpos );
@@ -405,6 +406,7 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, int flags )
 {
 	qboolean	hitEnt = false;
+	qboolean	bSimpleBox = false;
 
 	// assume we didn't hit anything
 	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
@@ -440,31 +442,37 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 
 		hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
 	}
+#if 1
+	else
+	{
+		bSimpleBox = ( flags & PM_STUDIO_BOX ) ? true : false;
+		bSimpleBox = World_UseSimpleBox( bSimpleBox, pe->solid, VectorCompare( mins, maxs ), pe->studiomodel );
+
+		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
+		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
+	}
+#else
 	else if( pe->solid == SOLID_SLIDEBOX )
 	{
-		qboolean	bSimpleBox;
-
-		// NOTE: SOLID_SLIDEBOX force to tracing as simplebox like FTRACE_SIMPLEBOX for trace hull.
-		// otherwise it's using hitbox tracing e.g. for bullet damage
-		// and it completely ignoring FTRACE_SIMPLEBOX
-		bSimpleBox = VectorCompare( mins, maxs ) ? false : true;
-		if( !pe->studiomodel ) bSimpleBox = true; // ???
+		if( flags & PM_STUDIO_BOX || !VectorCompare( mins, maxs ) || !pe->studiomodel )
+			bSimpleBox = true;
 
 		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
 		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
 	}
 	else if( pe->solid == SOLID_BBOX )
 	{
-		qboolean	bSimpleBox;
+		if( flags & PM_STUDIO_BOX || !pe->studiomodel || !(pe->studiomodel->flags & STUDIO_TRACE_HITBOX))
+			bSimpleBox = true;
 
-		// NOTE: this is similar SOLID_SLIDEBOX but trace type switched with trace flags
-		// not min\max. Used for static models (furniture, vehicle etc) for more realistic collisions
-		bSimpleBox = ( flags & PM_STUDIO_BOX ) ? true : false;
-		if( !pe->studiomodel ) bSimpleBox = true; // pushables
+		// but pointtrace is always traces hull
+		if( VectorCompare( mins, maxs ) && pe->studiomodel && !( flags & PM_STUDIO_BOX ))
+			bSimpleBox = false;
 
 		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
 		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
 	}
+#endif
 	return hitEnt;
 }
 

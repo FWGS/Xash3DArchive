@@ -43,6 +43,9 @@ typically is a func_wall, func_breakable, func_ladder etc
 */
 static qboolean R_StaticEntity( cl_entity_t *ent )
 {
+	if( !gl_allow_static->integer )
+		return false;
+
 	if( ent->curstate.rendermode != kRenderNormal )
 		return false;
 
