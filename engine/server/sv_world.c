@@ -394,7 +394,14 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 	{
 		next = l->next;
 		touch = EDICT_FROM_AREA( l );
-
+#if 0
+		if( touch->v.solid >= SOLID_BBOX )
+		{
+			// did you forget call SV_LinkEdict ?
+			SV_LinkEdict( touch, false );
+			continue;			
+		}
+#endif
 		if( touch == ent || touch->v.solid != SOLID_TRIGGER ) // disabled ?
 			continue;
 
@@ -616,11 +623,6 @@ POINT TESTING IN HULLS
 
 ===============================================================================
 */
-/*
-====================
-SV_WaterLinks
-====================
-*/
 void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 {
 	link_t	*l, *next;
@@ -636,13 +638,6 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 
 		if( touch->v.solid != SOLID_NOT ) // disabled ?
 			continue;
-
-		if( touch->v.groupinfo != 0 )
-		{
-			if(( svs.groupop == 0 && (touch->v.groupinfo & svs.groupmask) == 0 ) ||
-			(svs.groupop == 1 && (touch->v.groupinfo & svs.groupmask) != 0))
-				continue;
-		}
 
 		// only brushes can have special contents
 		if( Mod_GetType( touch->v.modelindex ) != mod_brush )
@@ -661,7 +656,9 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 			continue;
 
-		*pCont = touch->v.skin;
+		// compare contents ranking
+		if( RankForContents( touch->v.skin ) > RankForContents( *pCont ))
+			*pCont = touch->v.skin; // new content has more priority
 	}
 	
 	// recurse down both sides

@@ -663,6 +663,20 @@ static void pfnKeySetOverstrikeMode( int fActive )
 }
 
 /*
+====================
+pfnKeyGetState
+
+returns kbutton struct if found
+====================
+*/
+static void *pfnKeyGetState( const char *name )
+{
+	if( clgame.dllFuncs.KB_Find )
+		return clgame.dllFuncs.KB_Find( name );
+	return NULL;
+}
+
+/*
 =========
 pfnMemAlloc
 
@@ -879,6 +893,7 @@ static ui_enginefuncs_t gEngfuncs =
 	Key_IsDown,
 	pfnKeyGetOverstrikeMode,
 	pfnKeySetOverstrikeMode,
+	pfnKeyGetState,
 	pfnMemAlloc,
 	pfnMemFree,
 	pfnGetGameInfo,
@@ -910,6 +925,7 @@ void UI_UnloadProgs( void )
 qboolean UI_LoadProgs( const char *name )
 {
 	static MENUAPI		GetMenuAPI;
+	static ui_enginefuncs_t	gpEngfuncs;
 	static ui_globalvars_t	gpGlobals;
 	int			i;
 
@@ -932,7 +948,10 @@ qboolean UI_LoadProgs( const char *name )
 		return false;
 	}
 
-	if( !GetMenuAPI( &menu.dllFuncs, &gEngfuncs, menu.globals ))
+	// make local copy of engfuncs to prevent overwrite it with user dll
+	Mem_Copy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
+
+	if( !GetMenuAPI( &menu.dllFuncs, &gpEngfuncs, menu.globals ))
 	{
 		FS_FreeLibrary( menu.hInstance );
 		MsgDev( D_NOTE, "UI_LoadProgs: can't init client API\n" );

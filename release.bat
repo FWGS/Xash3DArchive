@@ -23,6 +23,9 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% launch/launch.dsp %CONFIG%"launch - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
+%MSDEV% room/room.dsp %CONFIG%"room - Win32 Release" %build_target%
+if errorlevel 1 set BUILD_ERROR=1
+
 if "%BUILD_ERROR%"=="" goto build_ok
 
 echo *********************
@@ -47,7 +50,7 @@ if exist cl_dll\cl_dll.plg del /f /q cl_dll\cl_dll.plg
 if exist engine\engine.plg del /f /q engine\engine.plg
 if exist mainui\mainui.plg del /f /q mainui\mainui.plg
 if exist launch\launch.plg del /f /q launch\launch.plg
-if exist vid_gl\vid_gl.plg del /f /q vid_gl\vid_gl.plg
+if exist room\room.plg del /f /q room\room.plg
 
 echo
 echo 	     Build succeeded!

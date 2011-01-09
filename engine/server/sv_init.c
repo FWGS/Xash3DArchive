@@ -242,11 +242,14 @@ void SV_ActivateServer( void )
 	}
 
 	numFrames = (sv.loadgame) ? 1 : 2;
-	host.frametime = (svgame.globals->changelevel) ? 0.0f : 0.1f;			
+	svgame.globals->force_retouch++;	// g-cont. this is correct ?
+	host.frametime = 0.1f;			
 
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )
+	{
 		SV_Physics();
+	}
 
 	// invoke to refresh all movevars
 	Mem_Set( &svgame.oldmovevars, 0, sizeof( movevars_t ));
@@ -400,7 +403,6 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	sv.paused = paused;
 	sv.loadgame = loadgame;
 	sv.time = 1.0f;			// server spawn time it's always 1.0 second
-	svgame.globals->time = sv_time();
 	
 	// initialize buffers
 	BF_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));

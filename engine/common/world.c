@@ -95,7 +95,8 @@ void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_
 
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch )
 {
-	if( trace->allsolid || trace->fraction < cliptrace->fraction )
+	// g-cont. needs for global test!!!
+	if( trace->allsolid || trace->startsolid || trace->fraction < cliptrace->fraction )
 	{
 		trace->ent = touch;
 		
@@ -150,8 +151,8 @@ int RankForContents( int contents )
 	case CONTENTS_LAVA:		return 10;
 	case CONTENTS_SKY:		return 11;
 	case CONTENTS_SOLID:	return 12;
+	default:			return 13; // any user contents has more priority than default
 	}
-	return -1;
 }
 
 /*

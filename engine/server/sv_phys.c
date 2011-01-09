@@ -737,7 +737,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	sv_pushed_t	*p, *pushed_p;
 	edict_t		*check;	
 
-	if( VectorIsNull( pusher->v.velocity ))
+	if( sv.state == ss_loading || VectorIsNull( pusher->v.velocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -858,7 +858,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	vec3_t		org, org2, temp;
 	edict_t		*check;
 
-	if( VectorIsNull( pusher->v.avelocity ))
+	if( sv.state == ss_loading || VectorIsNull( pusher->v.avelocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -1363,7 +1363,6 @@ void SV_Physics_Step( edict_t *ent )
 	qboolean	wasinwater;
 	qboolean	inwater;
 	qboolean	isfalling = false;
-	edict_t	*pHit;
 	trace_t	trace;
 
 	SV_CheckVelocity( ent );
@@ -1501,20 +1500,19 @@ void SV_Physics_Step( edict_t *ent )
 		}
 		SV_LinkEdict( ent, true );
 	}
+	else
+	{
+		if( svgame.force_retouch > 0 )
+		{
+			trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
+				SV_Impact( ent, &trace );
+		}
+	}
 
 	if(!( ent->v.flags & FL_ONGROUND ) && isfalling )
 	{
 		SV_AddHalfGravity( ent, host.frametime );
-	}
-
-	if( ent->v.movetype == MOVETYPE_STEP )
-	{
-		// check monster with another monster intersect (e.g. tentacle damage)
-		trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
-		pHit = trace.ent;
-
-		if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
-			SV_Impact( ent, &trace );
 	}
 
 	if( !SV_RunThink( ent )) return;
@@ -1538,7 +1536,6 @@ void SV_Physics_None( edict_t *ent )
 static void SV_Physics_Client( edict_t *ent )
 {
 	trace_t	trace;
-	edict_t	*pHit;
 
 	switch( ent->v.movetype )
 	{
@@ -1549,18 +1546,16 @@ static void SV_Physics_Client( edict_t *ent )
 	default: return;
 	}
 
-	if( svgame.globals->force_retouch )
+	if( svgame.force_retouch > 0 )
 	{
 		// force retouch even for stationary
 		SV_LinkEdict( ent, true );
+
+		// check for huge monster tap (e.g. tentacle)
+		trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+		if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
+			SV_Impact( ent, &trace );
 	}
-
-	// check client colliding with monster (e.g. tentacle damage)
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
-	pHit = trace.ent;
-
-	if( SV_IsValidEdict( pHit ) && pHit->v.flags & FL_MONSTER && pHit->v.deadflag == DEAD_NO )
-		SV_Impact( ent, &trace );
 }
 
 static void SV_Physics_Entity( edict_t *ent )
@@ -1575,7 +1570,7 @@ static void SV_Physics_Entity( edict_t *ent )
 	}
 	ent->v.flags &= ~FL_BASEVELOCITY;
 
-	if( svgame.globals->force_retouch )
+	if( svgame.force_retouch > 0 )
 	{
 		// force retouch even for stationary
 		SV_LinkEdict( ent, true );
@@ -1651,25 +1646,25 @@ void SV_Physics( void )
 {
 	edict_t	*ent;
 	int    	i;
-
+	
 	SV_CheckAllEnts ();
+
+	svgame.globals->time = sv.time;
+	svgame.force_retouch = svgame.globals->force_retouch;
 
 	// let the progs know that a new frame has started
 	svgame.dllFuncs.pfnStartFrame();
 
 	// treat each object in turn
-	if( !( sv.hostflags & SVF_PLAYERSONLY ))
+	for( i = 0; i < svgame.numEntities; i++ )
 	{
-		for( i = 0; i < svgame.numEntities; i++ )
-		{
-			ent = EDICT_NUM( i );
-			if( !SV_IsValidEdict( ent )) continue;
-			if( ent->v.flags & FL_KILLME ) continue;
+		ent = EDICT_NUM( i );
+		if( !SV_IsValidEdict( ent )) continue;
+		if( ent->v.flags & FL_KILLME ) continue;
 
-			if( i > 0 && i <= svgame.globals->maxClients )
-                    		SV_Physics_Client( ent );
-			else SV_Physics_Entity( ent );
-		}
+		if( i > 0 && i <= svgame.globals->maxClients )
+                   		SV_Physics_Client( ent );
+		else SV_Physics_Entity( ent );
 	}
 
 	// animate lightstyles (used for GetEntityIllum)
@@ -1678,6 +1673,6 @@ void SV_Physics( void )
 	// at end of frame kill all entities which supposed to it 
 	SV_FreeOldEntities();
 
-	if( svgame.globals->force_retouch > 0 )
-		svgame.globals->force_retouch = max( 0, svgame.globals->force_retouch - 1 );
+	if( svgame.force_retouch > 0 )
+		svgame.globals->force_retouch = max( 0.0f, svgame.globals->force_retouch - 1.0f );
 }

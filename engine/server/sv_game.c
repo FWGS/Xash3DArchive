@@ -451,7 +451,7 @@ void SV_WriteEntityPatch( const char *filename )
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
+		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 		{
 			lumpofs = header->lumps[LUMP_PLANES].fileofs;
 			lumplen = header->lumps[LUMP_PLANES].filelen;
@@ -507,7 +507,7 @@ script_t *SV_GetEntityScript( const char *filename, int *flags )
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 		header = (dheader_t *)buf;
-		if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
+		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 		{
 			lumpofs = header->lumps[LUMP_PLANES].fileofs;
 			lumplen = header->lumps[LUMP_PLANES].filelen;
@@ -635,11 +635,9 @@ void SV_FreeEdict( edict_t *pEdict )
 
 	if( pEdict->pvPrivateData )
 	{
+		// NOTE: new interface can be missing
 		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
-		{
-			// NOTE: new interface can be missing
 			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
-		}
 		Mem_Free( pEdict->pvPrivateData );
 	}
 	Mem_Set( pEdict, 0, sizeof( *pEdict ));
@@ -4267,6 +4265,9 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 		if( world.version == Q1BSP_VERSION && keyname[0] == '_' )
 			continue;
 
+		// ignore attempts to set value ""
+		if( !token.string[0] ) continue;
+
 		// create keyvalue strings
 		pkvd[numpairs].szClassName = (char *)classname;	// unknown at this moment
 		pkvd[numpairs].szKeyName = copystring( keyname );
@@ -4342,6 +4343,8 @@ void SV_LoadFromFile( script_t *entities )
 	qboolean	deathmatch = Cvar_VariableInteger( "deathmatch" );
 	qboolean	create_world = true;
 	edict_t	*ent;
+
+	ASSERT( entities != NULL );
 
 	inhibited = 0;
 	spawned = 0;
@@ -4564,6 +4567,7 @@ qboolean SV_LoadProgs( const char *name )
 	}
 
 	svgame.globals->pStringBase = ""; // setup string base
+	svgame.force_retouch = 0.0f;
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = sv_maxclients->integer;

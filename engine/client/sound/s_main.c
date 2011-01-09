@@ -709,6 +709,8 @@ void S_StopAllSounds( void )
 		S_FreeChannel( &channels[i] );
 	}
 
+	DSP_ClearState();
+
 	// clear all the channels
 	Mem_Set( channels, 0, sizeof( channels ));
 

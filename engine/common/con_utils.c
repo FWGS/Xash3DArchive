@@ -77,7 +77,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
+				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 				{
 					lumpofs = header->lumps[LUMP_PLANES].fileofs;
 					lumplen = header->lumps[LUMP_PLANES].filelen;
@@ -663,7 +663,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
+				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 				{
 					lumpofs = header->lumps[LUMP_PLANES].fileofs;
 					lumplen = header->lumps[LUMP_PLANES].filelen;

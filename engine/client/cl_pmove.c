@@ -175,12 +175,6 @@ void CL_SetSolidPlayers( int playernum )
 	}
 }
 
-/*
-=============
-CL_TruePointContents
-
-=============
-*/
 int CL_TruePointContents( const vec3_t p )
 {
 	int	i, contents;
@@ -202,7 +196,7 @@ int CL_TruePointContents( const vec3_t p )
 			continue;
 
 		// only brushes can have special contents
-		if( !pe->model || pe->model->type != mod_brush )
+		if( pe->model->type != mod_brush )
 			continue;
 
 		// check water brushes accuracy
@@ -215,7 +209,9 @@ int CL_TruePointContents( const vec3_t p )
 		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
 			continue;
 
-		contents = pe->skin;
+		// compare contents ranking
+		if( RankForContents( pe->skin ) > RankForContents( contents ))
+			contents = pe->skin; // new content has more priority
 	}
 
 	return contents;

@@ -496,9 +496,11 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	vec3_t	absmin, absmax;
 	int	i;
 
+	svgame.globals->frametime = (ucmd->msec * 0.001f);
+
 	pmove->player_index = NUM_FOR_EDICT( clent ) - 1;
 	pmove->multiplayer = (sv_maxclients->integer > 1) ? true : false;
-	pmove->time = sv_time(); // probably never used
+	pmove->time = sv.time; // probably never used
 	VectorCopy( clent->v.origin, pmove->origin );
 	VectorCopy( clent->v.v_angle, pmove->angles );
 	VectorCopy( clent->v.v_angle, pmove->oldangles );
@@ -883,6 +885,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 
 	if(!( clent->v.flags & FL_SPECTATOR ))
 	{
+		svgame.globals->time = sv.time + host.frametime;
 		svgame.dllFuncs.pfnPlayerPreThink( clent );
 		SV_RunThink( clent ); // clients cannot be deleted from map
 
@@ -952,6 +955,7 @@ void SV_PostRunCmd( sv_client_t *cl )
 	else svgame.dllFuncs.pfnPlayerPostThink( clent );
 
 	// restore frametime
+	svgame.globals->time = sv.time + host.frametime;
 	svgame.globals->frametime = host.frametime;
 	svgame.dllFuncs.pfnCmdEnd( cl->edict );
 }                                                                   

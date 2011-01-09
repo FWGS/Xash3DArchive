@@ -69,6 +69,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define KEY_IsDown		(*g_engfuncs.pfnKeyIsDown)
 #define KEY_GetOverstrike	(*g_engfuncs.pfnKeyGetOverstrikeMode)
 #define KEY_SetOverstrike	(*g_engfuncs.pfnKeySetOverstrikeMode)
+#define Key_GetState	(*g_engfuncs.pfnKeyGetState)
 	
 #define Cmd_AddCommand	(*g_engfuncs.pfnAddCommand)
 #define Cmd_RemoveCommand	(*g_engfuncs.pfnDelCommand)

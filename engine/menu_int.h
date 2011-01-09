@@ -117,6 +117,7 @@ typedef struct ui_enginefuncs_s
 	int	(*pfnKeyIsDown)( int keynum );
 	int	(*pfnKeyGetOverstrikeMode)( void );
 	void	(*pfnKeySetOverstrikeMode)( int fActive );
+	void	*(*pfnKeyGetState)( const char *name );			// for mlook, klook etc
 
 	// engine memory manager
 	void*	(*pfnMemAlloc)( size_t cb, const char *filename, const int fileline );

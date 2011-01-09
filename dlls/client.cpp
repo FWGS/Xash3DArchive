@@ -556,6 +556,8 @@ static int g_serveractive = 0;
 
 void ServerDeactivate( void )
 {
+//	ALERT( at_console, "ServerDeactivate()\n" );
+
 	// It's possible that the engine will call this function more times than is necessary
 	//  Therefore, only run it one time for each call to ServerActivate 
 	if ( g_serveractive != 1 )
@@ -573,6 +575,8 @@ void ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
 {
 	int				i;
 	CBaseEntity		*pClass;
+
+//	ALERT( at_console, "ServerActivate()\n" );
 
 	// Every call to ServerActivate should be matched by a call to ServerDeactivate
 	g_serveractive = 1;
@@ -613,6 +617,8 @@ Called every frame before physics are run
 */
 void PlayerPreThink( edict_t *pEntity )
 {
+//	ALERT( at_console, "PreThink( %g, frametime %g )\n", gpGlobals->time, gpGlobals->frametime );
+
 	entvars_t *pev = &pEntity->v;
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE(pEntity);
 
@@ -629,6 +635,8 @@ Called every frame after physics are run
 */
 void PlayerPostThink( edict_t *pEntity )
 {
+//	ALERT( at_console, "PostThink( %g, frametime %g )\n", gpGlobals->time, gpGlobals->frametime );
+
 	entvars_t *pev = &pEntity->v;
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE(pEntity);
 

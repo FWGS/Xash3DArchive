@@ -437,7 +437,23 @@ void SV_PrepWorldFrame( void )
 			ent->v.effects &= ~EF_NOINTERP;
 	}
 }
-qboolean runFrame = false;
+
+/*
+=================
+SV_IsSimulating
+=================
+*/
+qboolean SV_IsSimulating( void )
+{
+	if( sv.hostflags & SVF_PLAYERSONLY )
+		return false;
+	if( !SV_HasActivePlayers())
+		return false;
+	if( !sv.paused && CL_IsInGame( ))
+		return true;
+	return false;
+}
+
 /*
 =================
 SV_RunGameFrame
@@ -445,8 +461,11 @@ SV_RunGameFrame
 */
 void SV_RunGameFrame( void )
 {
-	if( !SV_HasActivePlayers()) return;
-	if( runFrame ) SV_Physics();
+	if( !SV_IsSimulating( )) return;
+
+	SV_Physics();
+
+	sv.time += host.frametime;
 }
 
 /*
@@ -460,20 +479,8 @@ void Host_ServerFrame( void )
 	// if server is not active, do nothing
 	if( !svs.initialized ) return;
 
-	// advances servertime
-	if( !sv.paused && CL_IsInGame( ) && !sv.loadgame )
-	{
-		if(!( sv.hostflags & SVF_PLAYERSONLY ))
-			sv.time += host.frametime;
-		svgame.globals->frametime = host.frametime;
-		svgame.globals->time = sv.time;
-		runFrame = true;
-	}
-	else
-	{
-		svgame.globals->frametime = 0.0f;
-		runFrame = false;
-	}
+	svgame.globals->frametime = host.frametime;
+
 	// check timeouts
 	SV_CheckTimeouts ();
 
@@ -494,7 +501,7 @@ void Host_ServerFrame( void )
 
 	// let everything in the world think and move
 	SV_RunGameFrame ();
-
+		
 	// send messages back to the clients that had packets read this frame
 	SV_SendClientMessages ();
 

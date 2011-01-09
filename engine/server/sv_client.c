@@ -905,6 +905,11 @@ void SV_PutClientInServer( edict_t *ent )
 		}
 		ent->v.effects |= EF_NOINTERP;
 
+		// reset weaponanim
+		BF_WriteByte( &client->netchan.message, svc_weaponanim );
+		BF_WriteByte( &client->netchan.message, 0 );
+		BF_WriteByte( &client->netchan.message, 0 );
+
 		// trigger_camera restored here
 		if( sv.viewentity > 0 && sv.viewentity < GI->max_edicts )
 			client->pViewEntity = EDICT_NUM( sv.viewentity );

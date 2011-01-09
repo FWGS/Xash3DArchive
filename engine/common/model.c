@@ -1458,7 +1458,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 	loadmodel->mempool = Mem_AllocPool( va( "sv: ^2%s^7", loadmodel->name ));
 
 	// load into heap
-	if( header->lumps[LUMP_PLANES].filelen % sizeof( dplane_t ))
+	if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 	{
 		// blue-shift swapped lumps
 		Mod_LoadEntities( &header->lumps[LUMP_PLANES] );

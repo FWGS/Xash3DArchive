@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "../cl_dll/kbutton.h"
 
 #define ART_BANNER			"gfx/shell/head_advanced"
 
@@ -71,7 +72,6 @@ static void UI_AdvControls_UpdateConfig( void )
 		CVAR_SET_FLOAT( "m_pitch", fabs( CVAR_GET_FLOAT( "m_pitch" )));
 
 	CVAR_SET_FLOAT( "crosshair", uiAdvControls.crosshair.enabled );
-	CVAR_SET_FLOAT( "freelook", uiAdvControls.mouseLook.enabled );
 	CVAR_SET_FLOAT( "lookspring", uiAdvControls.lookSpring.enabled );
 	CVAR_SET_FLOAT( "lookstrafe", uiAdvControls.lookStrafe.enabled );
 	CVAR_SET_FLOAT( "m_filter", uiAdvControls.mouseFilter.enabled );
@@ -82,11 +82,13 @@ static void UI_AdvControls_UpdateConfig( void )
 	{
 		uiAdvControls.lookSpring.generic.flags |= QMF_GRAYED;
 		uiAdvControls.lookStrafe.generic.flags |= QMF_GRAYED;
+		CLIENT_COMMAND( TRUE, "+mlook" );
 	}
 	else
 	{
 		uiAdvControls.lookSpring.generic.flags &= ~QMF_GRAYED;
 		uiAdvControls.lookStrafe.generic.flags &= ~QMF_GRAYED;
+		CLIENT_COMMAND( TRUE, "-mlook" );
 	}
 }
 
@@ -97,13 +99,16 @@ UI_AdvControls_GetConfig
 */
 static void UI_AdvControls_GetConfig( void )
 {
+	kbutton_t	*mlook;
+
 	if( CVAR_GET_FLOAT( "m_pitch" ) < 0 )
 		uiAdvControls.invertMouse.enabled = true;
 
 	if( CVAR_GET_FLOAT( "crosshair" ))
 		uiAdvControls.crosshair.enabled = 1;
 
-	if( CVAR_GET_FLOAT( "freelook" ))
+	mlook = (kbutton_s *)Key_GetState( "in_mlook" );
+	if( mlook && mlook->state & 1 )
 		uiAdvControls.mouseLook.enabled = 1;
 
 	if( CVAR_GET_FLOAT( "lookspring" ))
