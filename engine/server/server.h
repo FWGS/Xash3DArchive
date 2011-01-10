@@ -360,7 +360,7 @@ extern	convar_t		*sv_reconnect_limit;
 extern	convar_t		*sv_lighting_modulate;
 extern	convar_t		*rcon_password;
 extern	convar_t		*hostname;
-extern	convar_t		*sv_stepheight;
+extern	convar_t		*sv_stepsize;
 extern	convar_t		*sv_rollangle;
 extern	convar_t		*sv_rollspeed;
 extern	convar_t		*sv_maxspeed;

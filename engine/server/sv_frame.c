@@ -98,13 +98,6 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		ent = EDICT_NUM( e );
 		if( ent->free ) continue;
 
-		if( ent->serialnumber != e )
-		{
-			// this should never happens
-			MsgDev( D_NOTE, "fixing ent->serialnumber from %i to %i\n", ent->serialnumber, e );
-			ent->serialnumber = e;
-		}
-
 		// don't double add an entity through portals (already added)
 		if( ent->v.pushmsec == sv.net_framenum )
 			continue;

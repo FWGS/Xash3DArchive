@@ -1007,7 +1007,6 @@ void SV_New_f( sv_client_t *cl )
 	{
 		// set up the entity for the client
 		ent = EDICT_NUM( playernum + 1 );
-		ent->serialnumber = playernum + 1;
 		cl->edict = ent;
 		Mem_Set( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 

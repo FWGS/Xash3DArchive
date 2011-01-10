@@ -248,47 +248,7 @@ static int pfnHullPointContents( struct hull_s *hull, int num, float *p )
 
 static pmtrace_t pfnPlayerTrace( float *start, float *end, int traceFlags, int ignore_pe )
 {
-#if 1
 	return PM_PlayerTrace( svgame.pmove, start, end, traceFlags, svgame.pmove->usehull, ignore_pe, NULL );
-#else
-	float		*mins;
-	float		*maxs;
-	trace_t		result;
-	edict_t		*clent = EDICT_NUM( svgame.pmove->player_index + 1 );
-	pmtrace_t		out;
-	int		i;
-
-	if( VectorIsNAN( start ) || VectorIsNAN( end ))
-		Host_Error( "PlayerTrace: NAN errors detected ('%f %f %f', '%f %f %f'\n", start[0], start[1], start[2], end[0], end[1], end[2] );
-
-	svgame.pmove->usehull = bound( 0, svgame.pmove->usehull, 3 );
-	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
-	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
-
-	result = SV_Move( start, mins, maxs, end, MOVE_NORMAL, clent );
-
-	VectorCopy( result.vecEndPos, out.endpos );
-	VectorCopy( result.vecPlaneNormal, out.plane.normal );
-	out.plane.dist = result.flPlaneDist;
-	out.allsolid = result.fAllSolid;
-	out.startsolid = result.fStartSolid;
-	out.hitgroup = result.iHitgroup;
-	out.inopen = result.fInOpen;
-	out.inwater = result.fInWater;
-	out.fraction = result.flFraction;
-	out.ent = -1;
-
-	for( i = 0; result.pHit != NULL && i < svgame.pmove->numphysent; i++ )
-	{
-		if( svgame.pmove->physents[i].info == result.pHit->serialnumber )
-		{
-			out.ent = i;
-			break;
-		}
-	}
-
-	return out;
-#endif
 }
 
 static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull, int ignore_pe )

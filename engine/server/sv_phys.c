@@ -40,32 +40,46 @@ SV_CheckAllEnts
 */
 void SV_CheckAllEnts( void )
 {
-	int	i;
 	edict_t	*e;
+	vec3_t	point;
+	int	i;
 
-	if( !sv_check_errors->integer ) return;
+	if( !sv_check_errors->integer || sv.state != ss_active )
+		return;
 
 	// see if any solid entities are inside the final position
 	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
 
-		if( !SV_IsValidEdict( e )) continue;
-
-		switch( e->v.movetype )
+		if( e->free && e->pvPrivateData != NULL )
 		{
-		case MOVETYPE_PUSH:
-		case MOVETYPE_NONE:
-		case MOVETYPE_FOLLOW:
-		case MOVETYPE_NOCLIP:
-		case MOVETYPE_COMPOUND:
+			MsgDev( D_ERROR, "Freed entity %s (%i) has private data.\n", SV_ClassName( e ), i );
 			continue;
-		default:
-			break;
 		}
 
-		if( SV_TestEntityPosition( e ))
-			MsgDev( D_INFO, "Stuck entity %s\n", SV_ClassName( e ));
+		if( !SV_IsValidEdict( e ))
+			continue;
+
+		if( e->v.flags & FL_KILLME )
+		{
+			MsgDev( D_ERROR, "Fantom entity %s (%i) detected.\n", SV_ClassName( e ), i );
+			continue;
+		}
+
+		if( !e->v.pContainingEntity || e->v.pContainingEntity != e )
+		{
+			MsgDev( D_ERROR, "Entity %s (%i) has invalid container, fixed.\n", SV_ClassName( e ), i );
+			e->v.pContainingEntity = e;
+			continue;
+		}
+
+		if( !e->pvPrivateData || !Mem_IsAllocated( svgame.mempool, e->pvPrivateData ))
+		{
+			MsgDev( D_ERROR, "Entity %s (%i) trashed private data.\n", SV_ClassName( e ), i );
+			e->pvPrivateData = NULL;
+			continue;
+		}
 	}
 }
 
@@ -737,7 +751,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	sv_pushed_t	*p, *pushed_p;
 	edict_t		*check;	
 
-	if( sv.state == ss_loading || VectorIsNull( pusher->v.velocity ))
+	if( VectorIsNull( pusher->v.velocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -858,7 +872,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	vec3_t		org, org2, temp;
 	edict_t		*check;
 
-	if( sv.state == ss_loading || VectorIsNull( pusher->v.avelocity ))
+	if( VectorIsNull( pusher->v.avelocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -1033,7 +1047,7 @@ void SV_Physics_Pusher( edict_t *ent )
 	// otherwise, just stay in place until the obstacle is gone
 	if( pBlocker ) svgame.dllFuncs.pfnBlocked( ent, pBlocker );
 
-	if( thinktime > oldtime && thinktime <= ent->v.ltime || ( ent->v.flags & FL_ALWAYSTHINK ))
+	if( thinktime > oldtime && (( ent->v.flags & FL_ALWAYSTHINK ) || thinktime <= ent->v.ltime ))
 	{
 		ent->v.nextthink = 0.0f;
 		svgame.globals->time = sv.time;
@@ -1502,7 +1516,7 @@ void SV_Physics_Step( edict_t *ent )
 	}
 	else
 	{
-		if( svgame.force_retouch > 0 )
+		if( svgame.force_retouch != 0.0f )
 		{
 			trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
 			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
@@ -1546,7 +1560,7 @@ static void SV_Physics_Client( edict_t *ent )
 	default: return;
 	}
 
-	if( svgame.force_retouch > 0 )
+	if( svgame.force_retouch != 0.0f )
 	{
 		// force retouch even for stationary
 		SV_LinkEdict( ent, true );
@@ -1570,7 +1584,7 @@ static void SV_Physics_Entity( edict_t *ent )
 	}
 	ent->v.flags &= ~FL_BASEVELOCITY;
 
-	if( svgame.force_retouch > 0 )
+	if( svgame.force_retouch != 0.0f )
 	{
 		// force retouch even for stationary
 		SV_LinkEdict( ent, true );
@@ -1651,6 +1665,8 @@ void SV_Physics( void )
 
 	svgame.globals->time = sv.time;
 	svgame.force_retouch = svgame.globals->force_retouch;
+	if( svgame.force_retouch != 0.0f )
+		svgame.globals->force_retouch = max( 0.0f, svgame.globals->force_retouch - 1.0f );
 
 	// let the progs know that a new frame has started
 	svgame.dllFuncs.pfnStartFrame();
@@ -1672,7 +1688,4 @@ void SV_Physics( void )
 
 	// at end of frame kill all entities which supposed to it 
 	SV_FreeOldEntities();
-
-	if( svgame.force_retouch > 0 )
-		svgame.globals->force_retouch = max( 0.0f, svgame.globals->force_retouch - 1.0f );
 }

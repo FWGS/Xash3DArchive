@@ -658,7 +658,7 @@ edict_t *SV_AllocEdict( void )
 		pEdict = EDICT_NUM( i );
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if( pEdict->free && ( pEdict->freetime < 2.0 || sv_time() - pEdict->freetime > 0.5 ))
+		if( pEdict->free && ( pEdict->freetime < 2.0 || sv.time - pEdict->freetime > 0.5 ))
 		{
 			SV_InitEdict( pEdict );
 			return pEdict;
@@ -778,13 +778,6 @@ sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only )
 		if( svs.clients[i].state != cs_spawned )
 			return NULL;
 	}
-#if 0
-	else
-	{
-		if( svs.clients[i].state < cs_connected )
-			return NULL;
-	}
-#endif
 	client = svs.clients + i;
 
 	return client;
@@ -1273,10 +1266,13 @@ pfnEntitiesInPVS
 edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 {
 	edict_t	*pEdict, *chain;
+	vec3_t	point, viewpoint;
 	int	i, result;
 
 	if( !SV_IsValidEdict( pplayer ))
 		return NULL;
+
+	VectorAdd( pplayer->v.origin, pplayer->v.view_ofs, viewpoint );
 
 	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
@@ -1286,8 +1282,16 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 		if( pEdict->v.flags & FL_KILLME ) continue;
 		
 		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
-			result = SV_BoxInPVS( pplayer->v.origin, pEdict->v.absmin, pEdict->v.absmax );
-		else result = SV_OriginIn( DVIS_PVS, pplayer->v.origin, pEdict->v.origin );
+		{
+			result = SV_BoxInPVS( viewpoint, pEdict->v.absmin, pEdict->v.absmax );
+		}
+		else
+		{
+			point[0] = pEdict->v.origin[0] + (pEdict->v.mins[0] + pEdict->v.maxs[0]) * 0.5f;
+			point[1] = pEdict->v.origin[1] + (pEdict->v.mins[1] + pEdict->v.maxs[1]) * 0.5f;
+			point[2] = pEdict->v.origin[2] + pEdict->v.mins[2] + 1;	
+			result = SV_OriginIn( DVIS_PVS, viewpoint, point );
+		}
 
 		if( result )
 		{
@@ -1307,11 +1311,13 @@ pfnEntitiesInPHS
 edict_t *pfnEntitiesInPHS( edict_t *pplayer )
 {
 	edict_t	*pEdict, *chain;
-	vec3_t	checkPos;
+	vec3_t	checkPos, hearpoint;
 	int	i;
 
 	if( !SV_IsValidEdict( pplayer ))
 		return NULL;
+
+	VectorAdd( pplayer->v.origin, pplayer->v.view_ofs, hearpoint );
 
 	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
@@ -1320,11 +1326,24 @@ edict_t *pfnEntitiesInPHS( edict_t *pplayer )
 		if( !SV_IsValidEdict( pEdict )) continue;
 		if( pEdict->v.flags & FL_KILLME ) continue;
 
-		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
-			VectorAverage( pEdict->v.absmin, pEdict->v.absmax, checkPos );
-		else VectorCopy( pEdict->v.origin, checkPos );
+      		if( pEdict->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pEdict->v.aiment ))
+      		{
+			if(!( pEdict->v.aiment->v.flags & FL_KILLME ))
+				pEdict = pEdict->v.aiment;
+		}
 
-		if( SV_OriginIn( DVIS_PHS, pplayer->v.origin, checkPos ))
+		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
+		{
+			VectorAverage( pEdict->v.absmin, pEdict->v.absmax, checkPos );
+		}
+		else
+		{
+			checkPos[0] = pEdict->v.origin[0] + (pEdict->v.mins[0] + pEdict->v.maxs[0]) * 0.5f;
+			checkPos[1] = pEdict->v.origin[1] + (pEdict->v.mins[1] + pEdict->v.maxs[1]) * 0.5f;
+			checkPos[2] = pEdict->v.origin[2] + pEdict->v.mins[2] + 1;
+		}
+
+		if( SV_OriginIn( DVIS_PHS, hearpoint, checkPos ))
 		{
 			pEdict->v.chain = chain;
 			chain = pEdict;
@@ -2700,7 +2719,7 @@ pfnIndexOfEdict
 */
 int pfnIndexOfEdict( const edict_t *pEdict )
 {
-	if( !SV_IsValidEdict( pEdict ))
+	if( !SV_IsValidEdict( pEdict ) || !pEdict->pvPrivateData || ( pEdict->v.flags & FL_KILLME ))
 		return 0;
 	return NUM_FOR_EDICT( pEdict );
 }
@@ -2713,12 +2732,16 @@ pfnPEntityOfEntIndex
 */
 edict_t* pfnPEntityOfEntIndex( int iEntIndex )
 {
+	edict_t	*pEdict;
+
 	if( iEntIndex < 0 || iEntIndex >= svgame.numEntities )
 		return NULL; // out of range
 
-	if( EDICT_NUM( iEntIndex )->free )
+	pEdict = EDICT_NUM( iEntIndex );
+
+	if( !SV_IsValidEdict( pEdict ) || !pEdict->pvPrivateData || ( pEdict->v.flags & FL_KILLME ))
 		return NULL;
-	return EDICT_NUM( iEntIndex );
+	return pEdict;
 }
 
 /*
@@ -2739,8 +2762,20 @@ edict_t* pfnFindEntityByVars( entvars_t *pvars )
 	for( i = 0; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
+
+		// g-cont. should we ignore invalid ents ?
+		if( e->free || !e->pvPrivateData || e->v.flags & FL_KILLME )
+			continue;
+
 		if( &e->v == pvars )
+		{
+			if( e->v.pContainingEntity != e )
+			{
+				MsgDev( D_NOTE, "fixing pContainingEntity for %s\n", SV_ClassName( e ));
+				e->v.pContainingEntity = e;
+			}
 			return e;	// found it
+		}
 	}
 	return NULL;
 }
@@ -2752,12 +2787,13 @@ pfnGetModelPtr
 returns pointer to a studiomodel
 =============
 */
-static void *pfnGetModelPtr( edict_t* pEdict )
+static void *pfnGetModelPtr( edict_t *pEdict )
 {
 	model_t	*mod;
 
-	if( !pEdict || pEdict->free )
+	if( !SV_IsValidEdict( pEdict ) || !pEdict->pvPrivateData || pEdict->v.flags & FL_KILLME )
 		return NULL;
+
 	mod = CM_ClipHandleToModel( pEdict->v.modelindex );
 	return Mod_Extradata( mod );
 }
@@ -3046,7 +3082,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 		return;
 	}
 
-	if( pViewent == NULL || pViewent->free )
+	if( !pViewent || pViewent->free || !pViewent->pvPrivateData || pViewent->v.flags & FL_KILLME )
 	{
 		MsgDev( D_ERROR, "PF_SetView: invalid viewent!\n" );
 		return;
@@ -3168,7 +3204,6 @@ int pfnIsMapValid( char *filename )
 	char	*spawn_entity;
 	int	flags;
 
-	// determine spawn entity classname
 	// determine spawn entity classname
 	if( sv_maxclients->integer == 1 )
 		spawn_entity = GI->sp_entity;
@@ -3293,8 +3328,9 @@ int pfnNumberOfEntities( void )
 
 	for( i = 0; i < svgame.numEntities; i++ )
 	{
-		if( !svgame.edicts[i].free )
-			total++;
+		if( svgame.edicts[i].free || ( svgame.edicts[i].v.flags & FL_KILLME ))
+			continue;
+		total++;
 	}
 
 	return total;
@@ -3730,7 +3766,7 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	}
 
 #if 0
-	// NOTE: uncommenat this if you want to get more accuracy culling on large brushes
+	// NOTE: uncomment this if you want to get more accuracy culling on large brushes
 	if( Mod_GetType( ent->v.modelindex ) == mod_brush )
 	{
 		if( !Mod_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))

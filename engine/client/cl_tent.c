@@ -557,7 +557,7 @@ void CL_BubbleTrail( const vec3_t start, const vec3_t end, float flWaterZ, int m
 
 		zspeed = Com_RandomLong( 80, 140 );
 		VectorSet( pTemp->entity.baseline.origin, speed * com.cos( angle ), speed * com.sin( angle ), zspeed );
-		pTemp->die = cl.time + (( flWaterZ - origin[2]) / zspeed ) - 0.1f;
+		pTemp->die = cl.time + ((flWaterZ - (origin[2] - start[2])) / zspeed) - 0.1f;
 		pTemp->entity.curstate.frame = Com_RandomLong( 0, frameCount - 1 );
 		// Set sprite scale
 		pTemp->entity.curstate.scale = 1.0 / Com_RandomFloat( 4, 8 );
