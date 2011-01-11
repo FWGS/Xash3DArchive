@@ -423,7 +423,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	{
 		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
 		if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
-		if( SV_IsValidEdict( pEdict )) entityIndex = pEdict->serialnumber;
+		if( SV_IsValidEdict( pEdict )) entityIndex = NUM_FOR_EDICT( pEdict );
 
 		SV_CreateDecal( entry->position, decalIndex, entityIndex, modelIndex, flags );
 	}
@@ -1061,7 +1061,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 			pTable->flags |= FENTTABLE_PLAYER;
 
 		if( pTable->classname && pTable->size )
-			pTable->id = pent->serialnumber;
+			pTable->id = NUM_FOR_EDICT( pent );
 
 		pSaveData->currentIndex++; // move pointer
 	}
@@ -1225,7 +1225,7 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 
 	// restore camera view here
 	pent = pSaveData->pTable[bound( 0, (word)header.viewentity, pSaveData->tableCount )].pent;
-	if( SV_IsValidEdict( pent )) sv.viewentity = pent->serialnumber;
+	if( SV_IsValidEdict( pent )) sv.viewentity = NUM_FOR_EDICT( pent );
 	else sv.viewentity = 0;
 
 	// just use normal client view
@@ -1318,7 +1318,7 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 			}
 			else 
 			{
-				MsgDev( D_INFO, "Transferring %s (%d)\n", STRING( pEntInfo->classname ), pent->serialnumber );
+				MsgDev( D_INFO, "Transferring %s (%d)\n", STRING( pEntInfo->classname ), NUM_FOR_EDICT( pent ));
 
 				if( svgame.dllFuncs.pfnRestore( pent, pSaveData, false ) < 0 )
 				{

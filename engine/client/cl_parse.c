@@ -205,6 +205,18 @@ void CL_WriteMessageHistory( void )
 
 /*
 ===============
+CL_UserMsgStub
+
+Default stub for missed callbacks
+===============
+*/
+int CL_UserMsgStub( const char *pszName, int iSize, void *pbuf )
+{
+	return 1;
+}
+
+/*
+===============
 CL_CheckOrDownloadFile
 
 Returns true if the file exists, otherwise it attempts
@@ -1078,9 +1090,15 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf )
 		return false;
 	}
 
-	if( clgame.msg[i].func ) clgame.msg[i].func( pszName, iSize, pbuf );
-	else MsgDev( D_ERROR, "CL_DispatchUserMessage: %s not hooked\n", pszName );
-
+	if( clgame.msg[i].func )
+	{
+		clgame.msg[i].func( pszName, iSize, pbuf );
+	}
+	else
+	{
+		MsgDev( D_ERROR, "CL_DispatchUserMessage: %s not hooked\n", pszName );
+		clgame.msg[i].func = CL_UserMsgStub; // throw warning only once
+	}
 	return true;
 }
 
@@ -1134,8 +1152,15 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	// parse user message into buffer
 	BF_ReadBytes( msg, pbuf, iSize );
 
-	if( clgame.msg[i].func ) clgame.msg[i].func( clgame.msg[i].name, iSize, pbuf );
-	else MsgDev( D_ERROR, "CL_ParseUserMessage: %s not hooked\n", clgame.msg[i].name );
+	if( clgame.msg[i].func )
+	{
+		clgame.msg[i].func( clgame.msg[i].name, iSize, pbuf );
+	}
+	else
+	{
+		MsgDev( D_ERROR, "CL_ParseUserMessage: %s not hooked\n", clgame.msg[i].name );
+		clgame.msg[i].func = CL_UserMsgStub; // throw warning only once
+	}
 }
 
 /*

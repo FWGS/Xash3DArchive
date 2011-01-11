@@ -609,7 +609,6 @@ void SV_InitEdict( edict_t *pEdict )
 
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
 	pEdict->pvPrivateData = NULL;	// will be alloced later by pfnAllocPrivateData
-	pEdict->serialnumber = NUM_FOR_EDICT( pEdict );
 	pEdict->free = false;
 }
 
@@ -639,11 +638,14 @@ void SV_FreeEdict( edict_t *pEdict )
 		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
 			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
 		Mem_Free( pEdict->pvPrivateData );
+		pEdict->pvPrivateData = NULL;
 	}
-	Mem_Set( pEdict, 0, sizeof( *pEdict ));
+
+	Mem_Set( &pEdict->v, 0, sizeof( entvars_t ));
 
 	// mark edict as freed
 	pEdict->freetime = sv_time();
+	pEdict->serialnumber++; // now EHANDLE is invalidate
 	pEdict->v.nextthink = -1;
 	pEdict->free = true;
 }
@@ -822,7 +824,7 @@ void SV_BaselineForEntity( edict_t *pEdict )
 
 	// take current state as baseline
 	Mem_Set( &baseline, 0, sizeof( baseline )); 
-	baseline.number = pEdict->serialnumber;
+	baseline.number = NUM_FOR_EDICT( pEdict );
 	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
 
 	// set entity type
@@ -830,7 +832,7 @@ void SV_BaselineForEntity( edict_t *pEdict )
 		baseline.entityType = ENTITY_BEAM;
 	else baseline.entityType = ENTITY_NORMAL;
 
-	svs.baselines[pEdict->serialnumber] = baseline;
+	svs.baselines[baseline.number] = baseline;
 }
 
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed )
@@ -1110,9 +1112,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 	for( e++; e < svgame.numEntities; e++ )
 	{
 		ed = EDICT_NUM( e );
-
 		if( !SV_IsValidEdict( ed )) continue;
-		if( ed->v.flags & FL_KILLME ) continue;
 
 		switch( desc->fieldType )
 		{
@@ -1169,7 +1169,6 @@ edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 	{
 		ent = EDICT_NUM( e );
 		if( !SV_IsValidEdict( ent )) continue;
-		if( ent->v.flags & FL_KILLME ) continue;
 
 		distSquared = 0;
 		for( j = 0; j < 3 && distSquared <= flRadius; j++ )
@@ -1266,8 +1265,8 @@ pfnEntitiesInPVS
 edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 {
 	edict_t	*pEdict, *chain;
-	vec3_t	point, viewpoint;
-	int	i, result;
+	vec3_t	viewpoint;
+	int	i;
 
 	if( !SV_IsValidEdict( pplayer ))
 		return NULL;
@@ -1279,71 +1278,8 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 		pEdict = EDICT_NUM( i );
 
 		if( !SV_IsValidEdict( pEdict )) continue;
-		if( pEdict->v.flags & FL_KILLME ) continue;
-		
-		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
-		{
-			result = SV_BoxInPVS( viewpoint, pEdict->v.absmin, pEdict->v.absmax );
-		}
-		else
-		{
-			point[0] = pEdict->v.origin[0] + (pEdict->v.mins[0] + pEdict->v.maxs[0]) * 0.5f;
-			point[1] = pEdict->v.origin[1] + (pEdict->v.mins[1] + pEdict->v.maxs[1]) * 0.5f;
-			point[2] = pEdict->v.origin[2] + pEdict->v.mins[2] + 1;	
-			result = SV_OriginIn( DVIS_PVS, viewpoint, point );
-		}
 
-		if( result )
-		{
-			pEdict->v.chain = chain;
-			chain = pEdict;
-		}
-	}
-	return chain;
-}
-
-/*
-=================
-pfnEntitiesInPHS
-
-=================
-*/
-edict_t *pfnEntitiesInPHS( edict_t *pplayer )
-{
-	edict_t	*pEdict, *chain;
-	vec3_t	checkPos, hearpoint;
-	int	i;
-
-	if( !SV_IsValidEdict( pplayer ))
-		return NULL;
-
-	VectorAdd( pplayer->v.origin, pplayer->v.view_ofs, hearpoint );
-
-	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
-	{
-		pEdict = EDICT_NUM( i );
-
-		if( !SV_IsValidEdict( pEdict )) continue;
-		if( pEdict->v.flags & FL_KILLME ) continue;
-
-      		if( pEdict->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pEdict->v.aiment ))
-      		{
-			if(!( pEdict->v.aiment->v.flags & FL_KILLME ))
-				pEdict = pEdict->v.aiment;
-		}
-
-		if( Mod_GetType( pEdict->v.modelindex ) == mod_brush )
-		{
-			VectorAverage( pEdict->v.absmin, pEdict->v.absmax, checkPos );
-		}
-		else
-		{
-			checkPos[0] = pEdict->v.origin[0] + (pEdict->v.mins[0] + pEdict->v.maxs[0]) * 0.5f;
-			checkPos[1] = pEdict->v.origin[1] + (pEdict->v.mins[1] + pEdict->v.maxs[1]) * 0.5f;
-			checkPos[2] = pEdict->v.origin[2] + pEdict->v.mins[2] + 1;
-		}
-
-		if( SV_OriginIn( DVIS_PHS, hearpoint, checkPos ))
+		if( SV_BoxInPVS( viewpoint, pEdict->v.absmin, pEdict->v.absmax ))
 		{
 			pEdict->v.chain = chain;
 			chain = pEdict;
@@ -1392,7 +1328,7 @@ void pfnRemoveEntity( edict_t* e )
 	}
 
 	// never free client or world entity
-	if( e->serialnumber < ( svgame.globals->maxClients + 1 ))
+	if( NUM_FOR_EDICT( e ) < ( svgame.globals->maxClients + 1 ))
 	{
 		MsgDev( D_ERROR, "SV_RemoveEntity: can't delete %s\n", (e == EDICT_NUM( 0 )) ? "world" : "client" );
 		return;
@@ -1636,8 +1572,8 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 	if( !ent->v.modelindex || !ent->v.model )
 		entityIndex = 0;
 	else if( SV_IsValidEdict( ent->v.aiment ))
-		entityIndex = ent->v.aiment->serialnumber;
-	else entityIndex = ent->serialnumber;
+		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
+	else entityIndex = NUM_FOR_EDICT( ent );
 
 	if( vol != 255 ) flags |= SND_VOLUME;
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
@@ -1742,8 +1678,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	}
 
 	if( SV_IsValidEdict( ent->v.aiment ))
-		entityIndex = ent->v.aiment->serialnumber;
-	else entityIndex = ent->serialnumber;
+		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
+	else entityIndex = NUM_FOR_EDICT( ent );
 
 	BF_WriteByte( &sv.multicast, svc_sound );
 	BF_WriteWord( &sv.multicast, flags );
@@ -1799,7 +1735,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 		if( Mod_GetType( ent->v.modelindex ) == mod_brush )
 		{
 			VectorAverage( ent->v.absmin, ent->v.absmax, origin );
-			number = ent->serialnumber;
+			number = NUM_FOR_EDICT( ent );
 		}
 		else
 		{
@@ -1861,6 +1797,10 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 	svgame.globals->trace_flags = 0;
 
 	trace = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
+
+	// traceline in GoldSrc always have something valid in trace->pHit, many mods expected it
+	if( !SV_IsValidEdict( trace.ent )) svgame.globals->trace_ent = trace.ent = svgame.edicts;
+
 	SV_ConvertTrace( ptr, &trace );
 }
 
@@ -2719,9 +2659,12 @@ pfnIndexOfEdict
 */
 int pfnIndexOfEdict( const edict_t *pEdict )
 {
-	if( !SV_IsValidEdict( pEdict ) || !pEdict->pvPrivateData || ( pEdict->v.flags & FL_KILLME ))
-		return 0;
-	return NUM_FOR_EDICT( pEdict );
+	int	number;
+
+	number = NUM_FOR_EDICT( pEdict );
+	if( number < 0 || number >= svgame.numEntities )
+		return 0;	// out of range
+	return number;
 }
 
 /*
@@ -2732,16 +2675,10 @@ pfnPEntityOfEntIndex
 */
 edict_t* pfnPEntityOfEntIndex( int iEntIndex )
 {
-	edict_t	*pEdict;
-
 	if( iEntIndex < 0 || iEntIndex >= svgame.numEntities )
 		return NULL; // out of range
 
-	pEdict = EDICT_NUM( iEntIndex );
-
-	if( !SV_IsValidEdict( pEdict ) || !pEdict->pvPrivateData || ( pEdict->v.flags & FL_KILLME ))
-		return NULL;
-	return pEdict;
+	return EDICT_NUM( iEntIndex );
 }
 
 /*
@@ -2762,10 +2699,6 @@ edict_t* pfnFindEntityByVars( entvars_t *pvars )
 	for( i = 0; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
-
-		// g-cont. should we ignore invalid ents ?
-		if( e->free || !e->pvPrivateData || e->v.flags & FL_KILLME )
-			continue;
 
 		if( &e->v == pvars )
 		{
@@ -2791,7 +2724,7 @@ static void *pfnGetModelPtr( edict_t *pEdict )
 {
 	model_t	*mod;
 
-	if( !SV_IsValidEdict( pEdict ) || !pEdict->pvPrivateData || pEdict->v.flags & FL_KILLME )
+	if( !SV_IsValidEdict( pEdict ))
 		return NULL;
 
 	mod = CM_ClipHandleToModel( pEdict->v.modelindex );
@@ -3082,7 +3015,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 		return;
 	}
 
-	if( !pViewent || pViewent->free || !pViewent->pvPrivateData || pViewent->v.flags & FL_KILLME )
+	if( !SV_IsValidEdict( pViewent ))
 	{
 		MsgDev( D_ERROR, "PF_SetView: invalid viewent!\n" );
 		return;
@@ -3328,7 +3261,7 @@ int pfnNumberOfEntities( void )
 
 	for( i = 0; i < svgame.numEntities; i++ )
 	{
-		if( svgame.edicts[i].free || ( svgame.edicts[i].v.flags & FL_KILLME ))
+		if( svgame.edicts[i].free )
 			continue;
 		total++;
 	}
@@ -3396,16 +3329,15 @@ pfnSetClientKeyValue
 */
 void pfnSetClientKeyValue( int clientIndex, char *infobuffer, char *key, char *value )
 {
-	sv_client_t	*cl;
+	clientIndex -= 1;
 
 	if( clientIndex < 0 || clientIndex >= sv_maxclients->integer )
 		return;
-	if( svs.clients[clientIndex].state < cs_spawned )
+	if( svs.clients[clientIndex].state < cs_spawned || infobuffer == NULL )
 		return;
 
-	cl = svs.clients + clientIndex;
-	Info_SetValueForKey( cl->userinfo, key, value );
-	cl->sendinfo = true;
+	Info_SetValueForKey( infobuffer, key, value );
+	svs.clients[clientIndex].sendinfo = true;
 }
 
 /*
@@ -4318,7 +4250,15 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 	ent = SV_AllocPrivateData( ent, MAKE_STRING( classname ));
 
 	if( ent->v.flags & FL_KILLME )
+	{
+		// release allocated strings
+		for( i = 0; i < numpairs; i++ )
+		{
+			Mem_Free( pkvd[i].szKeyName );
+			Mem_Free( pkvd[i].szValue );
+		}
 		return false;
+	}
 
 	for( i = 0; i < numpairs; i++ )
 	{

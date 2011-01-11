@@ -41,13 +41,12 @@ SV_CheckAllEnts
 void SV_CheckAllEnts( void )
 {
 	edict_t	*e;
-	vec3_t	point;
 	int	i;
 
 	if( !sv_check_errors->integer || sv.state != ss_active )
 		return;
 
-	// see if any solid entities are inside the final position
+	// check edicts errors
 	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
@@ -60,12 +59,6 @@ void SV_CheckAllEnts( void )
 
 		if( !SV_IsValidEdict( e ))
 			continue;
-
-		if( e->v.flags & FL_KILLME )
-		{
-			MsgDev( D_ERROR, "Fantom entity %s (%i) detected.\n", SV_ClassName( e ), i );
-			continue;
-		}
 
 		if( !e->v.pContainingEntity || e->v.pContainingEntity != e )
 		{
@@ -583,7 +576,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	else type = MOVE_NORMAL;
 
 	// prevent items and ammo to stuck at spawnpoint
-	if( ent->v.solid == SOLID_TRIGGER || ent->v.solid == SOLID_NOT )
+	if( ent->v.solid == SOLID_TRIGGER )
 		trace = SV_Move( ent->v.origin, vec3_origin, vec3_origin, end, type, ent );
 	else trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
@@ -647,9 +640,6 @@ static qboolean SV_CanBlock( edict_t *ent )
 static qboolean SV_AllowToPush( edict_t *check, edict_t *pusher, const vec3_t mins, const vec3_t maxs )
 {
 	int	oldsolid, block;
-
-	if( !SV_IsValidEdict( check ) || check->v.flags & FL_KILLME )
-		return false;
 
 	// filter movetypes to collide with
 	if( !SV_CanPushed( check ))
@@ -1547,31 +1537,6 @@ void SV_Physics_None( edict_t *ent )
 }
 
 //============================================================================
-static void SV_Physics_Client( edict_t *ent )
-{
-	trace_t	trace;
-
-	switch( ent->v.movetype )
-	{
-	case MOVETYPE_FLY:
-	case MOVETYPE_WALK:
-	case MOVETYPE_NOCLIP:
-		break;
-	default: return;
-	}
-
-	if( svgame.force_retouch != 0.0f )
-	{
-		// force retouch even for stationary
-		SV_LinkEdict( ent, true );
-
-		// check for huge monster tap (e.g. tentacle)
-		trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
-		if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
-			SV_Impact( ent, &trace );
-	}
-}
-
 static void SV_Physics_Entity( edict_t *ent )
 {
 	SV_UpdateBaseVelocity( ent );
@@ -1594,7 +1559,11 @@ static void SV_Physics_Entity( edict_t *ent )
 	if( svgame.dllFuncs2.pfnPhysicsEntity )
 	{
 		if( svgame.dllFuncs2.pfnPhysicsEntity( ent ))
-			return;	// overrided
+		{
+			if( ent->v.flags & FL_KILLME )
+				SV_FreeEdict( ent );
+			return; // overrided
+		}
 	}
 
 	switch( ent->v.movetype )
@@ -1629,25 +1598,9 @@ static void SV_Physics_Entity( edict_t *ent )
 		Host_Error( "SV_Physics: bad movetype %i\n", ent->v.movetype );
 		break;
 	}
-}
 
-void SV_FreeOldEntities( void )
-{
-	edict_t	*ent;
-	int	i;
-
-	// at end of frame kill all entities which supposed to it 
-	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
-	{
-		ent = EDICT_NUM( i );
-		if( ent->free ) continue;
-
-		if( ent->v.flags & FL_KILLME )
-			SV_FreeEdict( ent );
-	}
-
-	// decrement svgame.numEntities if the highest number entities died
-	for( ; EDICT_NUM( svgame.numEntities - 1)->free; svgame.numEntities-- );
+	if( ent->v.flags & FL_KILLME )
+		SV_FreeEdict( ent );
 }
 
 /*
@@ -1676,16 +1629,13 @@ void SV_Physics( void )
 	{
 		ent = EDICT_NUM( i );
 		if( !SV_IsValidEdict( ent )) continue;
-		if( ent->v.flags & FL_KILLME ) continue;
 
 		if( i > 0 && i <= svgame.globals->maxClients )
-                   		SV_Physics_Client( ent );
-		else SV_Physics_Entity( ent );
+                   		continue;
+
+		SV_Physics_Entity( ent );
 	}
 
 	// animate lightstyles (used for GetEntityIllum)
 	SV_RunLightStyles ();
-
-	// at end of frame kill all entities which supposed to it 
-	SV_FreeOldEntities();
 }

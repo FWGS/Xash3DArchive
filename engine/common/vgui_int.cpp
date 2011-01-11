@@ -265,7 +265,7 @@ void VGui_ViewportPaintBackground( int extents[4] )
 {
 	if( !rootpanel ) return;
 
-//	Msg( "ViewportPaintBackground()\n" );
+	Msg( "ViewportPaintBackground()\n" );
 	Panel *pVPanel = surface->getPanel();
 	if( !pVPanel ) return;
 

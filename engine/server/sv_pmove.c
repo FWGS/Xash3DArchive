@@ -8,6 +8,21 @@
 #include "const.h"
 #include "pm_local.h"
 
+void SV_CopyPmtraceToGlobal( pmtrace_t *trace )
+{
+	svgame.globals->trace_allsolid = trace->allsolid;
+	svgame.globals->trace_startsolid = trace->startsolid;
+	svgame.globals->trace_fraction = trace->fraction;
+	svgame.globals->trace_plane_dist = trace->plane.dist;
+	svgame.globals->trace_ent = EDICT_NUM( svgame.pmove->physents[trace->ent].info );
+	svgame.globals->trace_flags = 0;
+	svgame.globals->trace_inopen = trace->inopen;
+	svgame.globals->trace_inwater = trace->inwater;
+	VectorCopy( trace->endpos, svgame.globals->trace_endpos );
+	VectorCopy( trace->plane.normal, svgame.globals->trace_plane_normal );
+	svgame.globals->trace_hitgroup = trace->hitgroup;
+}
+
 qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trace )
 {
 	model_t	*mod = CM_ClipHandleToModel( ed->v.modelindex );
@@ -218,10 +233,37 @@ static double Sys_FloatTime( void )
 	return Sys_DoubleTime();
 }
 
-static void pfnStuckTouch( int hitent, pmtrace_t *ptraceresult )
+static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 {
-	// empty for now
-	// FIXME: write some code
+	physent_t	*pe;
+	float	*mins, *maxs;
+	int	i;
+
+	ASSERT( hitent >= 0 && hitent < svgame.pmove->numphysent );
+	pe = &svgame.pmove->physents[hitent];
+	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
+	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
+
+	if( !PM_TraceModel( pe, svgame.pmove->origin, mins, maxs, svgame.pmove->origin, tr, 0 ))
+		return;	// not stuck
+
+	tr->ent = hitent;
+
+	for( i = 0; i < svgame.pmove->numtouch; i++ )
+	{
+		if( svgame.pmove->touchindex[i].ent == tr->ent )
+			break;
+	}
+
+	if( i != svgame.pmove->numtouch ) return;
+	VectorCopy( svgame.pmove->velocity, tr->deltavelocity );
+
+	if( svgame.pmove->numtouch >= MAX_PHYSENTS )
+	{
+		MsgDev( D_ERROR, "PM_StuckTouch: MAX_TOUCHENTS limit exceeded\n" );
+		return;
+	}
+	svgame.pmove->touchindex[svgame.pmove->numtouch++] = *tr;
 }
 
 static int pfnPointContents( float *p, int *truecontents )
@@ -875,6 +917,8 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 		SV_LinkEdict( clent, true );
 		VectorCopy( clent->v.velocity, oldvel ); // save velocity
 
+		svgame.globals->time = sv.time + host.frametime;
+
 		// touch other objects
 		for( i = 0; i < svgame.pmove->numtouch; i++ )
 		{
@@ -883,6 +927,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 			if( touch == clent ) continue;
 
 			VectorCopy( svgame.pmove->touchindex[i].deltavelocity, clent->v.velocity );
+			SV_CopyPmtraceToGlobal( &svgame.pmove->touchindex[i] );
 			svgame.dllFuncs.pfnTouch( touch, clent );
 		}
 

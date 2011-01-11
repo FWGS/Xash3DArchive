@@ -366,6 +366,15 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 		CL_KillDeadBeams( ent ); // release dead beams
 
+		if( state->number == -1 )
+		{
+			Msg( "Entity %i was removed from server\n", newnum );
+		}
+		else
+		{
+			Msg( "Entity %i was removed from delta-message\n", newnum );
+		}
+
 // FIXME: waiting for static entity implimentation			
 //		if( state->number == -1 )
 //			R_RemoveEfrags( ent );

@@ -201,6 +201,32 @@ void SV_CreateBaseline( void )
 
 /*
 ================
+SV_FreeOldEntities
+
+remove immediate entities
+================
+*/
+void SV_FreeOldEntities( void )
+{
+	edict_t	*ent;
+	int	i;
+
+	// at end of frame kill all entities which supposed to it 
+	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
+	{
+		ent = EDICT_NUM( i );
+		if( ent->free ) continue;
+
+		if( ent->v.flags & FL_KILLME )
+			SV_FreeEdict( ent );
+	}
+
+	// decrement svgame.numEntities if the highest number entities died
+	for( ; EDICT_NUM( svgame.numEntities - 1)->free; svgame.numEntities-- );
+}
+
+/*
+================
 SV_ActivateServer
 
 activate server on changed map, run physics

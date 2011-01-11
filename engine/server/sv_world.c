@@ -453,7 +453,7 @@ void SV_CheckForOutside( edict_t *ent )
 	if( ent->v.movetype != MOVETYPE_NONE ) return;
 
 	// clients can flying outside
-	if( ent->v.flags & FL_CLIENT ) return;
+	if( ent->v.flags & ( FL_CLIENT|FL_FAKECLIENT )) return;
 	
 	// sprites and brushes can be stucks in the walls normally
 	if( Mod_GetType( ent->v.modelindex ) != mod_studio )
