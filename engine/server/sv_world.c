@@ -567,26 +567,35 @@ void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 	// set the abs box
 	svgame.dllFuncs.pfnSetAbsBox( ent );
 
-	// link to PVS leafs
-	ent->num_leafs = 0;
-
-	if( ent->v.modelindex )
+	if( ent->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( ent->v.aiment ))
 	{
-		ent->headnode = -1;
-		SV_FindTouchedLeafs( ent, sv.worldmodel->nodes );
+		ent->headnode = ent->v.aiment->headnode;
+		ent->num_leafs = ent->v.aiment->num_leafs;
+		Mem_Copy( ent->leafnums, ent->v.aiment->leafnums, sizeof( ent->leafnums ));
+	}
+	else
+	{
+		// link to PVS leafs
+		ent->num_leafs = 0;
 
-		// if none of the leafs were inside the map, the
-		// entity is outside the world and can be considered unlinked
-		if( !ent->num_leafs )
+		if( ent->v.modelindex )
 		{
-			SV_CheckForOutside( ent );
 			ent->headnode = -1;
-			return;
-		}
+			SV_FindTouchedLeafs( ent, sv.worldmodel->nodes );
 
-		if( ent->num_leafs > MAX_ENT_LEAFS )
-			ent->num_leafs = 0;		// so we use headnode instead
-		else ent->headnode = -1;		// use normal leafs check
+			// if none of the leafs were inside the map, the
+			// entity is outside the world and can be considered unlinked
+			if( !ent->num_leafs )
+			{
+				SV_CheckForOutside( ent );
+				ent->headnode = -1;
+				return;
+			}
+
+			if( ent->num_leafs > MAX_ENT_LEAFS )
+				ent->num_leafs = 0;		// so we use headnode instead
+			else ent->headnode = -1;		// use normal leafs check
+		}
 	}
 
 	// ignore not solid bodies

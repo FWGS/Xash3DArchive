@@ -1,0 +1,208 @@
+//=======================================================================
+//			Copyright XashXT Group 2010 ©
+//		        vgi_int.c - vgui dll interaction
+//=======================================================================
+
+#include "common.h"
+#include "client.h"
+#include "const.h"
+
+#include<VGUI.h>
+#include<VGUI_App.h>
+#include<VGUI_Panel.h>
+#include<VGUI_SurfaceGL.h>
+#include<VGUI_ActionSignal.h>
+#include<VGUI_BorderLayout.h>
+
+using namespace vgui;
+
+SurfaceGL::SurfaceGL( Panel* embeddedPanel ):Surface( embeddedPanel )
+{
+	_embeddedPanel = embeddedPanel;
+}
+
+bool SurfaceGL::recreateContext( void )
+{
+	Msg( "recreate context\n" );
+	return Surface::recreateContext();
+}
+
+void SurfaceGL::createPopup(Panel* embeddedPanel)
+{
+}
+	
+void SurfaceGL::pushMakeCurrent( Panel* panel, bool useInsets )
+{
+	Surface::pushMakeCurrent( panel, useInsets );
+}
+
+void SurfaceGL::popMakeCurrent( Panel* panel )
+{
+	Surface::popMakeCurrent( panel );
+}
+
+void SurfaceGL::makeCurrent( void )
+{
+	Msg( "make current\n" );
+}
+
+void SurfaceGL::swapBuffers( void )
+{
+	Surface::swapBuffers();
+}
+
+void SurfaceGL::setColor( int r, int g, int b )
+{
+}
+
+void SurfaceGL::filledRect( int x0, int y0, int x1, int y1 )
+{
+}
+
+void SurfaceGL::outlinedRect( int x0, int y0, int x1, int y1 )
+{
+}
+
+void SurfaceGL::setTextFont( Font* font )
+{
+}
+
+void SurfaceGL::setTextColor( int r, int g, int b )
+{
+}
+
+void SurfaceGL::setDrawPos( int x, int y )
+{
+}
+
+void SurfaceGL::printText( const char *str, int strlen )
+{
+	Msg( "Con_Printf( %s )\n", str );
+}
+
+void SurfaceGL::setTextureRGBA( int id, const char *rgba, int wide, int tall )
+{
+	Msg( "SetTexture( %i )\n", id );
+}
+
+void SurfaceGL::setTexture( int id )
+{
+	Msg( "SetTexture( %i )\n", id );
+}
+
+void SurfaceGL::texturedRect( int x0, int y0, int x1, int y1 )
+{
+}
+
+class CEngineApp : public App
+{
+public:
+	CEngineApp( bool externalMain ):App( externalMain )
+	{
+	}
+
+	virtual void main( int argc, char* argv[] )
+	{
+		Msg( "App main()\n" );
+	}
+
+	virtual void setCursorPos( int x, int y )
+	{
+		App::setCursorPos( x, y );
+		Msg( "setCursorPos: %i %i\n", x, y );
+	}
+	
+	virtual void getCursorPos( int &x,int &y )
+	{
+		App::getCursorPos( x, y );
+		Msg( "getCursorPos: %i %i\n", x, y );
+	}
+	virtual App* getApp( void )
+	{
+		return this;
+	}
+};
+
+RECT		window_rect;
+SurfaceGL		*surface = NULL;
+CEngineApp	*pApp = NULL;
+Panel		*rootpanel = NULL;
+#define WND_BORDER		3
+
+void VGui_SetBounds( void )
+{
+	int head = GetSystemMetrics( SM_CYCAPTION ) + WND_BORDER;
+
+	GetWindowRect( host.hWnd, &window_rect );
+	if( !rootpanel ) return;
+
+	rootpanel->setBounds( window_rect.left+3, window_rect.top+head, window_rect.right-3, window_rect.bottom-3 );
+}
+
+void VGui_Startup( void )
+{
+	if( rootpanel )
+	{
+//		rootpanel->reset();
+//		rootpanel->setSize( menu.globals->scrWidth, menu.globals->scrHeight );
+		return;
+	}
+	Scheme *pScheme = new Scheme();
+
+	pApp = new CEngineApp( true );
+	pApp->setScheme( pScheme );
+        
+	rootpanel = new Panel();
+	rootpanel->setPaintEnabled( true );
+	rootpanel->setPaintBorderEnabled( false );
+	rootpanel->setPaintBackgroundEnabled( true );
+	rootpanel->setVisible( true );
+	rootpanel->setEnabled( true );
+	rootpanel->setCursor( new Cursor( Cursor::dc_none ));
+
+	VGui_SetBounds();
+
+	surface = new SurfaceGL( rootpanel );
+
+	ASSERT( rootpanel->getApp() != NULL );
+	ASSERT( rootpanel->getSurfaceBase() != NULL );
+}
+
+void VGui_Shutdown( void )
+{
+	delete rootpanel;
+	delete surface;
+	delete pApp;
+
+	rootpanel = NULL;
+	surface = NULL;
+	pApp = NULL;
+}
+
+void VGui_Paint( void )
+{
+	if( !rootpanel ) return;
+
+	pApp->externalTick();
+//	rootpanel->paintBackground();
+}
+
+void VGui_ViewportPaintBackground( int extents[4] )
+{
+	if( !rootpanel ) return;
+
+	Msg( "ViewportPaintBackground()\n" );
+	Panel *pVPanel = surface->getPanel();
+	if( !pVPanel ) return;
+
+	rootpanel->setBounds( extents[0], extents[1], extents[2], extents[3] );
+//	rootpanel->repaint();
+
+	// paint everything 
+	rootpanel->paintTraverse();
+}
+
+void *VGui_GetPanel( void )
+{
+	return (void *)rootpanel;
+}

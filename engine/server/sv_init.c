@@ -164,7 +164,7 @@ script_t *SV_EntityScript( void )
 	FS_StripExtension( entfilename );
 	FS_DefaultExtension( entfilename, ".ent" );
 
-	if(( ents = Com_OpenScript( entfilename, NULL, 0 )))
+	if(( ents = Com_OpenScriptExt( entfilename, NULL, 0, true )))
 	{
 		MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
 		return ents;
@@ -269,7 +269,8 @@ void SV_ActivateServer( void )
 
 	numFrames = (sv.loadgame) ? 1 : 2;
 	svgame.globals->force_retouch++;	// g-cont. this is correct ?
-	host.frametime = 0.1f;			
+	if( !sv.loadgame || svgame.globals->changelevel )
+		host.frametime = 0.1f;			
 
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )
@@ -429,6 +430,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	sv.paused = paused;
 	sv.loadgame = loadgame;
 	sv.time = 1.0f;			// server spawn time it's always 1.0 second
+	svgame.globals->time = sv.time;
 	
 	// initialize buffers
 	BF_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));

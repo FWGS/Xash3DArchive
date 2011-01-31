@@ -114,7 +114,7 @@ void Sys_GetStdAPI( void )
 	com.FunctionFromName = Com_FunctionFromName;
 	com.FreeLibrary = Com_FreeLibrary;
 
-	com.Com_OpenScript = PS_LoadScript;		// loading script into buffer
+	com.Com_LoadScript = PS_LoadScript;		// loading script into buffer
 	com.Com_CloseScript = PS_FreeScript;		// release current script
 	com.Com_ResetScript = PS_ResetScript;		// jump to start of scriptfile 
 	com.Com_EndOfScript = PS_EndOfScript;		// returns true if end of script reached

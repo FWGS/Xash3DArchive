@@ -520,7 +520,7 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 		}
 
 		// g-cont. needs for global test!!!
-		if( trace.allsolid || trace.startsolid || trace.fraction < total.fraction )
+		if( trace.allsolid || /*trace.startsolid ||*/ trace.fraction < total.fraction )
 		{
 			trace.ent = i;
 
@@ -532,7 +532,10 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 			else total = trace;
 		}
 		else if( trace.startsolid )
+		{
 			total.startsolid = true;
+			total.ent = i;
+		}
 
 		if( i == 0 && ( flags & PM_WORLD_ONLY ))
 			break; // done

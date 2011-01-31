@@ -351,15 +351,6 @@ void CL_WritePacket( void )
 	if( cls.state == ca_disconnected || cls.state == ca_connecting )
 		return;
 
-/*
-	if( cls.state == ca_connected )
-	{
-		// just update reliable
-		if( cls.netchan.message.iCurBit || host.realtime - cls.netchan.last_sent > 1.0f )
-			Netchan_Transmit( &cls.netchan, 0, NULL );
-		return;
-	}
-*/
 	CL_ComputePacketLoss ();
 
 	if( cl_cmdrate->value < MIN_CMD_RATE )
@@ -371,7 +362,6 @@ void CL_WritePacket( void )
 
 	// Determine number of backup commands to send along
 	numbackup = bound( 0, cl_cmdbackup->integer, MAX_BACKUP_COMMANDS );
-	if( cls.state == ca_connected ) numbackup = 0;
 
 	// Check to see if we can actually send this command
 
@@ -497,7 +487,7 @@ void CL_WritePacket( void )
 	}
 	else
 	{
-		// Increment sequence number so we can detect that we've held back packets.
+		// increment sequence number so we can detect that we've held back packets.
 		cls.netchan.outgoing_sequence++;
 	}
 
@@ -1440,7 +1430,7 @@ void CL_InitLocal( void )
 	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_smooth = Cvar_Get ("cl_smooth", "0", CVAR_ARCHIVE, "smooth up stair climbing and interpolate position in multiplayer" );
-	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "2", CVAR_ARCHIVE, "how many additional history commands are sent" );
+	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", CVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
 	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", CVAR_ARCHIVE, "Disable any particle effects" );
 	cl_draw_beams = Cvar_Get( "cl_draw_beams", "1", CVAR_ARCHIVE, "Disable view beams" );

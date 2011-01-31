@@ -121,7 +121,7 @@
 #define FDECAL_USESAXIS		0x20	// Uses the s axis field to determine orientation (footprints)
 
 // Max number of history commands to send ( 2 by default ) in case of dropped packets
-#define NUM_BACKUP_COMMAND_BITS	3
+#define NUM_BACKUP_COMMAND_BITS	4
 #define MAX_BACKUP_COMMANDS		(1 << NUM_BACKUP_COMMAND_BITS)
 
 // world size

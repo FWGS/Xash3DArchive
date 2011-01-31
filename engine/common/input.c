@@ -474,6 +474,8 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		S_Activate( fActivate, host.hWnd );
 		Key_ClearStates();	// FIXME!!!
 
+		VGui_SetBounds();
+
 		if( host.state == HOST_FRAME )
 		{
 			SetForegroundWindow( hWnd );
@@ -501,6 +503,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			Cvar_SetFloat( "r_xpos", xPos + rect.left );
 			Cvar_SetFloat( "r_ypos", yPos + rect.top );
 			GetWindowRect( host.hWnd, &real_rect );
+			VGui_SetBounds();
 		}
 		break;
 	case WM_LBUTTONDOWN:

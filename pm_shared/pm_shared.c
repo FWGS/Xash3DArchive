@@ -3281,6 +3281,8 @@ void PM_Move ( struct playermove_s *ppmove, int server )
 	assert( pm_shared_initialized );
 
 	pmove = ppmove;
+
+//	pmove->Con_Printf( "PM_Move: %g, frametime %g, onground %i\n", pmove->time, pmove->frametime, pmove->onground );
 	
 	PM_PlayerMove( ( server != 0 ) ? true : false );
 

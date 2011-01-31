@@ -150,7 +150,8 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	}
 
 	// don't add himself on firstperson
-	if(( ent->index - 1 ) == cl.playernum && ent != &clgame.viewent && !cl.thirdperson && cls.key_dest != key_menu )
+	if(( ent->index - 1 ) == cl.playernum && ent != &clgame.viewent &&
+		cl.thirdperson == false && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
 	{
 	}
 	else
@@ -194,9 +195,9 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	// add light effect
 	if( ent->curstate.effects & EF_LIGHT )
 	{
-		dlight_t	*dl = CL_AllocDlight( 0 );
+		dlight_t	*dl = CL_AllocDlight( ent->curstate.number );
 		VectorCopy( ent->origin, dl->origin );
-		dl->die = cl.time + 0.001f;	// die at next frame
+		dl->die = cl.time;	// die at next frame
 		dl->color.r = 100;
 		dl->color.g = 100;
 		dl->color.b = 100;
@@ -213,9 +214,9 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		}
 		else
 		{
-			dlight_t	*dl = CL_AllocDlight( 0 );
+			dlight_t	*dl = CL_AllocDlight( ent->curstate.number );
 			VectorCopy( ent->origin, dl->origin );
-			dl->die = cl.time + 0.001f;	// die at next frame
+			dl->die = cl.time;	// die at next frame
 			dl->color.r = 255;
 			dl->color.g = 255;
 			dl->color.b = 255;
@@ -225,13 +226,13 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 
 	if( ent->curstate.effects & EF_BRIGHTLIGHT )
 	{			
-		dlight_t	*dl = CL_AllocDlight( 0 );
+		dlight_t	*dl = CL_AllocDlight( ent->curstate.number );
 		VectorSet( dl->origin, ent->origin[0], ent->origin[1], ent->origin[2] + 16 );
-		dl->die = cl.time + 0.001f;	// die at next frame
+		dl->die = cl.time;	// die at next frame
 		dl->color.r = 255;
 		dl->color.g = 255;
 		dl->color.b = 255;
-		dl->radius = Com_RandomLong( 400, 430 );
+		dl->radius = 400;
 	}
 	return true;
 }
@@ -365,7 +366,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		if( newent ) Host_Error( "Cl_DeltaEntity: tried to release new entity\n" );
 
 		CL_KillDeadBeams( ent ); // release dead beams
-
+/*
 		if( state->number == -1 )
 		{
 			Msg( "Entity %i was removed from server\n", newnum );
@@ -374,7 +375,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		{
 			Msg( "Entity %i was removed from delta-message\n", newnum );
 		}
-
+*/
 // FIXME: waiting for static entity implimentation			
 //		if( state->number == -1 )
 //			R_RemoveEfrags( ent );

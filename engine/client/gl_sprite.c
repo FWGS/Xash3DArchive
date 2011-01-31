@@ -809,7 +809,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	model_t		*model;
 	int		alpha;
 	int		i, state = 0;
-	float		angle, sr, cr;
+	float		angle, dot, sr, cr;
 	float		lerp = 1.0f, ilerp, scale;
 	vec3_t		v_forward, v_right, v_up;
 	vec3_t		origin;
@@ -910,8 +910,12 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		VectorNormalize( v_right );
 		break;
 	case SPR_FWD_PARALLEL_UPRIGHT:
-		VectorSet( v_right, RI.vforward[1], -RI.vforward[0], 0.0f );
+		dot = RI.vforward[2];
+		if(( dot > 0.999848f ) || ( dot < -0.999848f ))	// cos(1 degree) = 0.999848
+			return; // invisible
 		VectorSet( v_up, 0.0f, 0.0f, 1.0f );
+		VectorSet( v_right, RI.vforward[1], -RI.vforward[0], 0.0f );
+		VectorNormalize( v_right );
 		break;
 	case SPR_FWD_PARALLEL_ORIENTED:
 		angle = e->angles[ROLL] * (M_PI * 2.0f / 360.0f);
@@ -923,14 +927,12 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		}
 		break;
 	case SPR_FWD_PARALLEL: // normal sprite
-	default:
-		if( e->curstate.entityType == ET_TEMPENTITY )
-			angle = e->angles[ROLL]; // for support rotating muzzleflashes
-		else angle = 0.0f;
+	default:	// gold src support rotating sprites
+		angle = e->angles[ROLL];
 
 		if( angle != 0.0f )
 		{
-			RotatePointAroundVector( v_up, RI.vforward, RI.vright, angle );	// make up
+			RotatePointAroundVector( v_up, RI.vforward, RI.vright, angle-90.0f );	// make up
 			CrossProduct( RI.vforward, v_up, v_right );			// make right
 		}
 		else

@@ -1162,13 +1162,6 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 
 				SV_InitEdict( pent );
 				pent = SV_AllocPrivateData( pent, pEntInfo->classname );
-				SaveRestore_Seek( pSaveData, pEntInfo->location );
-
-				if( svgame.dllFuncs.pfnRestore( pent, pSaveData, false ) < 0 )
-				{
-					pEntInfo->pent = NULL;
-					pent->v.flags |= FL_KILLME;
-				}
 			}
 			else if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))
 			{
@@ -1207,18 +1200,15 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	{
 		pEntInfo = &pSaveData->pTable[i];
 
-		if( pEntInfo->id != 0 )
-		{
-			pent = pEntInfo->pent;
-			SaveRestore_Seek( pSaveData, pEntInfo->location );
+		pent = pEntInfo->pent;
+		SaveRestore_Seek( pSaveData, pEntInfo->location );
 
-			if( pent )
+		if( pent )
+		{
+			if( svgame.dllFuncs.pfnRestore( pent, pSaveData, false ) < 0 )
 			{
-				if( svgame.dllFuncs.pfnRestore( pent, pSaveData, false ) < 0 )
-				{
-					pEntInfo->pent = NULL;
-					pent->v.flags |= FL_KILLME;
-				}
+				pEntInfo->pent = NULL;
+				pent->v.flags |= FL_KILLME;
 			}
 		}
 	}

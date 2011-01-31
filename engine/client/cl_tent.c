@@ -430,7 +430,7 @@ void CL_FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 
 	Mod_GetBounds( pent->curstate.modelindex, mins, maxs );
 
-	maxHeight = maxs[2] - mins[2];
+	maxHeight = ( maxs[2] - mins[2] ) * 0.5f;
 	width = maxs[0] - mins[0];
 	depth = maxs[1] - mins[1];
 	speed = ( pent->curstate.rendercolor.r<<8 | pent->curstate.rendercolor.g );
@@ -838,7 +838,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			pTemp->entity.curstate.rendercolor.g = clgame.palette[colorIndex][1];
 			pTemp->entity.curstate.rendercolor.b = clgame.palette[colorIndex][2];
 			pTemp->entity.curstate.framerate = frameCount * 4; // Finish in 0.250 seconds
-			pTemp->die = cl.time + Com_RandomFloat( 4.0f, 16.0f );
+			pTemp->die = cl.time + Com_RandomFloat( 3.0f, 6.0f );
 
 			pTemp->entity.angles[2] = Com_RandomLong( 0, 360 );
 			pTemp->bounceFactor = 0;

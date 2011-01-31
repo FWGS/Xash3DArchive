@@ -325,6 +325,7 @@ int W_Check( const char *filename );
 void W_Close( wfile_t *wad );
 
 // simply files managment interface
+file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
 byte *FS_LoadFile (const char *path, fs_offset_t *filesizeptr );
 qboolean FS_WriteFile (const char *filename, const void *data, fs_offset_t len);
 void FS_FreeFile( void *buffer );
@@ -512,7 +513,7 @@ void PS_SetPunctuationsTable( script_t *script, punctuation_t *punctuationsTable
 void PS_ResetScript( script_t *script );
 qboolean PS_EndOfScript( script_t *script );
 
-script_t	*PS_LoadScript( const char *filename, const char *buf, size_t size );
+script_t	*PS_LoadScript( const char *filename, const char *buf, size_t size, qboolean gamedironly );
 void	PS_FreeScript( script_t *script );
 
 //

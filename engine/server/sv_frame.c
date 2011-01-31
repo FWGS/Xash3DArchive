@@ -110,6 +110,9 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		netclient = SV_ClientFromEdict( ent, true );
 		player = ( netclient != NULL );
 
+		// clear modelindex if model is not set
+		if( !ent->v.model ) ent->v.modelindex = 0; 
+
 		// add entity to the net packet
 		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, player, pset ))
 		{

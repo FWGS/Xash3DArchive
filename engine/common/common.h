@@ -140,7 +140,15 @@ typedef struct host_parm_s
 	int		numsounds;
 } host_parm_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern host_parm_t	host;
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 // build.c

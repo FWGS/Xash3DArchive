@@ -96,7 +96,7 @@ void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch )
 {
 	// g-cont. needs for global test!!!
-	if( trace->allsolid || trace->startsolid || trace->fraction < cliptrace->fraction )
+	if( trace->allsolid || /*trace->startsolid ||*/ trace->fraction < cliptrace->fraction )
 	{
 		trace->ent = touch;
 		
@@ -108,8 +108,10 @@ trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch 
 		else *cliptrace = *trace;
 	}
 	else if( trace->startsolid )
+	{
 		cliptrace->startsolid = true;
-
+		cliptrace->ent = touch;
+	}
 	return *cliptrace;
 }
 

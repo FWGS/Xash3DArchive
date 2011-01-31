@@ -530,7 +530,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	pmove->deadflag = clent->v.deadflag;
 	pmove->spectator = 0;	// FIXME: implement
 	pmove->movetype = clent->v.movetype;
-	pmove->onground = -1; // will be set later
+	if( pmove->multiplayer ) pmove->onground = -1;
 	pmove->waterlevel = clent->v.waterlevel;
 	pmove->watertype = clent->v.watertype;
 	pmove->maxspeed = svgame.movevars.maxspeed;
@@ -567,16 +567,6 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 
 	SV_AddLinksToPmove( sv_areanodes, absmin, absmax );
 	SV_AddLaddersToPmove( sv_areanodes, absmin, absmax );
-
-	// setup ground entity
-	for( i = 0; clent->v.groundentity && i < svgame.pmove->numphysent; i++ )
-	{
-		if( NUM_FOR_EDICT( clent->v.groundentity ) == svgame.pmove->physents[i].info )
-		{
-			pmove->onground = i;
-			break;
-		}
-	}
 }
 
 static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
@@ -615,10 +605,21 @@ static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
 	VectorCopy( pmove->vuser2, clent->v.vuser2 );
 	VectorCopy( pmove->vuser3, clent->v.vuser3 );
 	VectorCopy( pmove->vuser4, clent->v.vuser4 );
-
+#if 1
+	if( svgame.pmove->onground == -1 )
+	{
+		clent->v.flags &= ~FL_ONGROUND;
+	}
+	else if( pmove->onground >= 0 && pmove->onground < pmove->numphysent )
+	{
+		clent->v.flags |= FL_ONGROUND;
+		clent->v.groundentity = EDICT_NUM( svgame.pmove->physents[svgame.pmove->onground].info );
+	}
+#else
 	if( pmove->onground >= 0 && pmove->onground < pmove->numphysent )
 		clent->v.groundentity = EDICT_NUM( pmove->physents[pmove->onground].info );
 	else clent->v.groundentity = NULL;
+#endif
 }
 
 int nofind = 0;

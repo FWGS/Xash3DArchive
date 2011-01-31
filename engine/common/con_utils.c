@@ -95,7 +95,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			com.strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
 			FS_DefaultExtension( entfilename, ".ent" );
-			ents = Com_OpenScript( entfilename, NULL, 0 );
+			ents = Com_OpenScriptExt( entfilename, NULL, 0, true );
 
 			if( !ents && lumplen >= 10 )
 			{
@@ -679,7 +679,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			com.strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
 			FS_DefaultExtension( entfilename, ".ent" );
-			ents = Com_OpenScript( entfilename, NULL, 0 );
+			ents = Com_OpenScriptExt( entfilename, NULL, 0, true );
 
 			if( !ents && lumplen >= 10 )
 			{

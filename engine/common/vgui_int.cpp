@@ -219,6 +219,10 @@ friend class Image;
 
 CEnginePanel	*rootpanel = NULL;
 
+void VGui_SetBounds( void )
+{
+}
+
 void VGui_Startup( void )
 {
 	if( rootpanel )

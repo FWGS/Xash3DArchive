@@ -1107,7 +1107,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	token_t	token;
 
 	if( !GameInfo ) return false;	
-	script = PS_LoadScript( filename, NULL, 0 );
+	script = PS_LoadScript( filename, NULL, 0, false );
 	if( !script ) return false;
 
 	// setup default values
@@ -1257,7 +1257,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 
 	if( !GameInfo ) return false;	// no dest
 
-	script = PS_LoadScript( filepath, NULL, 0 );
+	script = PS_LoadScript( filepath, NULL, 0, false );
 	if( !script ) return false;
 
 	// setup default values
@@ -2304,6 +2304,25 @@ byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr )
 
 	if( filesizeptr ) *filesizeptr = filesize;
 	return buf;
+}
+
+/*
+============
+FS_OpenFile
+
+Simply version of FS_Open
+============
+*/
+file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly )
+{
+	file_t	*file = FS_Open( path, "rb", gamedironly );
+
+	if( filesizeptr )
+	{
+		if( file ) *filesizeptr = file->real_length;
+		else *filesizeptr = 0;
+	}
+	return file;
 }
 
 void FS_FreeFile( void *buffer )

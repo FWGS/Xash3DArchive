@@ -414,9 +414,12 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 		if( trace.plane.normal[2] > 0.7f )
 		{
 			blocked |= 1; // floor
-
+#if 1
          			if( trace.ent->v.solid == SOLID_BSP || trace.ent->v.solid == SOLID_SLIDEBOX ||
 			trace.ent->v.movetype == MOVETYPE_PUSHSTEP || (trace.ent->v.flags & FL_CLIENT))
+#else
+			if( trace.ent->v.solid == SOLID_BSP )
+#endif
 			{
 				ent->v.flags |= FL_ONGROUND;
 				ent->v.groundentity = trace.ent;
@@ -572,11 +575,15 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else type = MOVE_NORMAL;
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
+	// prevent items and ammo to stuck at spawnpoint
+	if( ent->v.solid == SOLID_TRIGGER )
+		trace = SV_Move( ent->v.origin, vec3_origin, vec3_origin, end, type, ent );
+	else trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
-	if( trace.fraction != 0.0f )
+	if( !trace.allsolid )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
+		SV_LinkEdict( ent, true );
 
 		if( apush[YAW] && ent->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( ent, true )) != NULL )
 		{
@@ -586,10 +593,10 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 
 		// don't rotate pushables!
 		if( ent->v.movetype != MOVETYPE_PUSHSTEP )
+		{
 			ent->v.angles[YAW] += trace.fraction * apush[YAW];
+		}
 	}
-
-	SV_LinkEdict( ent, true );
 
 	if( blocked ) *blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
 
@@ -734,7 +741,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	sv_pushed_t	*p, *pushed_p;
 	edict_t		*check;	
 
-	if( sv.state == ss_loading || VectorIsNull( pusher->v.velocity ))
+	if( VectorIsNull( pusher->v.velocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -846,7 +853,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	vec3_t		org, org2, temp;
 	edict_t		*check;
 
-	if( sv.state == ss_loading || VectorIsNull( pusher->v.avelocity ))
+	if( VectorIsNull( pusher->v.avelocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -952,6 +959,10 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 				p->ent->v.fixangle = 0; // save old fixangle state into pushed array ?
 			}
 			return check;
+		}
+		else
+		{
+			SV_AngularMove( check, movetime, pusher->v.friction );
 		}
 	}
 	return NULL;

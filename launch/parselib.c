@@ -1445,16 +1445,38 @@ static script_t *PS_NewScript( const char *filename, const char *buffer, size_t 
 PS_LoadScriptFile
 =================
 */
-script_t *PS_LoadScript( const char *filename, const char *buf, size_t size )
+script_t *PS_LoadScript( const char *filename, const char *buf, size_t size, qboolean gamedironly )
 {
 	script_t	*script;
 
 	if( !buf || size <= 0 )
 	{
-		// trying to get script from disk
-		buf = FS_LoadFile( filename, &size );
-		script = PS_NewScript( filename, buf, size );
-		if( buf ) Mem_Free((char *)buf );
+		file_t	*f;
+
+		f = FS_OpenFile( filename, &size, gamedironly );
+		if( !f || size <= 0 ) return NULL;
+
+		// allocate the script_t
+		script = Mem_Alloc( Sys.scriptpool, sizeof( script_t ));
+		com.strncpy( script->name, filename, sizeof( script->name ));
+		script->buffer = Mem_Alloc( Sys.scriptpool, size + 1 );	// escape char
+
+		FS_Read( f, script->buffer, size );	
+		script->text = script->buffer;
+		script->allocated = true;
+		script->size = size;
+		script->line = 1;
+
+		script->punctuations = ps_punctuationsTable;
+		script->tokenAvailable = false;
+		script->token.type = TT_EMPTY;
+		script->token.subType = 0;
+		script->token.line = 1;
+		script->token.string[0] = 0;
+		script->token.length = 0;
+		script->token.floatValue = 0.0;
+		script->token.integerValue = 0;
+		FS_Close( f );
 	}
 	else script = PS_NewScript( filename, buf, size ); // from memory
 

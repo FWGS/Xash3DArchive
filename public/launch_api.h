@@ -520,7 +520,7 @@ typedef struct stdilib_api_s
 	void (*FreeLibrary)( void *hInstance );
 
 	// script machine base functions
-	script_t *(*Com_OpenScript)( const char *filename, const char *buf, size_t size );
+	script_t *(*Com_LoadScript)( const char *filename, const char *buf, size_t size, qboolean gamedironly );
 	void (*Com_CloseScript)( script_t *script );		// release current script
 	void (*Com_ResetScript)( script_t *script );		// jump to start of scriptfile 
 	qboolean (*Com_EndOfScript)( script_t *script );		// returns true if end of script reached
@@ -772,7 +772,8 @@ struct convar_s
 	parsing manager funcs
 ==========================================
 */
-#define Com_OpenScript		com.Com_OpenScript
+#define Com_OpenScript( fn, buf, siz )	com.Com_LoadScript( fn, buf, siz, false )
+#define Com_OpenScriptExt		com.Com_LoadScript
 #define Com_CloseScript		com.Com_CloseScript
 #define Com_ResetScript		com.Com_ResetScript
 #define Com_SkipBracedSection		com.Com_SkipBracedSection

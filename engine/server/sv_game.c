@@ -126,7 +126,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 	i = SV_ModelIndex( name );
 	if( i == 0 ) return;
 
-	ent->v.model = MAKE_STRING( sv.model_precache[i] );
+	ent->v.model = sv.model_precache[i] - svgame.globals->pStringBase;
 	ent->v.modelindex = i;
 
 	mod_type = Mod_GetType( ent->v.modelindex );
@@ -526,7 +526,7 @@ script_t *SV_GetEntityScript( const char *filename, int *flags )
 
 	// check for entfile too
 	com.strncpy( entfilename, va( "maps/%s.ent", filename ), sizeof( entfilename ));
-	ents = Com_OpenScript( entfilename, NULL, 0 );
+	ents = Com_OpenScriptExt( entfilename, NULL, 0, true ); // grab .ent files only from gamedir
 
 	if( !ents && lumplen >= 10 )
 	{
@@ -607,6 +607,8 @@ void SV_InitEdict( edict_t *pEdict )
 	ASSERT( pEdict );
 	ASSERT( pEdict->pvPrivateData == NULL );
 
+	Mem_Set( &pEdict->v, 0, sizeof( entvars_t ));
+
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
 	pEdict->pvPrivateData = NULL;	// will be alloced later by pfnAllocPrivateData
 	pEdict->free = false;
@@ -641,11 +643,16 @@ void SV_FreeEdict( edict_t *pEdict )
 		pEdict->pvPrivateData = NULL;
 	}
 
-	Mem_Set( &pEdict->v, 0, sizeof( entvars_t ));
+//	Mem_Set( &pEdict->v, 0, sizeof( entvars_t ));
 
 	// mark edict as freed
-	pEdict->freetime = sv_time();
+	pEdict->freetime = sv.time;
 	pEdict->serialnumber++; // now EHANDLE is invalidate
+	pEdict->v.solid = SOLID_NOT;
+	pEdict->v.flags = 0;
+	pEdict->v.model = 0;
+	pEdict->v.takedamage = 0;
+	pEdict->v.modelindex = 0;
 	pEdict->v.nextthink = -1;
 	pEdict->free = true;
 }
@@ -1120,9 +1127,11 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 		case FIELD_MODELNAME:
 		case FIELD_SOUNDNAME:
 			t = STRING( *(string_t *)&((byte *)&ed->v)[desc->fieldOffset] );
-			if( !t ) t = "";
-			if( !com.strcmp( t, pszValue ))
-				return ed;
+			if( t != NULL && t != svgame.globals->pStringBase )
+			{
+				if( !com.strcmp( t, pszValue ))
+					return ed;
+			}
 			break;
 		}
 	}
@@ -1264,7 +1273,8 @@ pfnEntitiesInPVS
 */
 edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 {
-	edict_t	*pEdict, *chain;
+	edict_t	*chain;
+	edict_t	*pEdict, *pEdict2;
 	vec3_t	viewpoint;
 	int	i;
 
@@ -1273,13 +1283,30 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 
 	VectorAdd( pplayer->v.origin, pplayer->v.view_ofs, viewpoint );
 
-	for( chain = NULL, i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
+	for( chain = EDICT_NUM( 0 ), i = 1; i < svgame.numEntities; i++ )
 	{
 		pEdict = EDICT_NUM( i );
 
 		if( !SV_IsValidEdict( pEdict )) continue;
 
-		if( SV_BoxInPVS( viewpoint, pEdict->v.absmin, pEdict->v.absmax ))
+		if( pEdict->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pEdict->v.aiment ))
+		{
+			// HACKHACK to transfer weapons across the levels
+			if( pEdict->v.aiment == EDICT_NUM( 1 ))
+			{
+				pEdict->v.chain = chain;
+				chain = pEdict;
+				continue;
+			}
+
+			pEdict2 = pEdict->v.aiment;
+		}
+		else
+		{
+			pEdict2 = pEdict;
+		}
+
+		if( SV_BoxInPVS( viewpoint, pEdict2->v.absmin, pEdict2->v.absmax ))
 		{
 			pEdict->v.chain = chain;
 			chain = pEdict;
