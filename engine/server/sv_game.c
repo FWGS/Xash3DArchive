@@ -82,19 +82,13 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 			return;
 		}
 	}
-#if 0
-	// FIXME: enable this when other server parts will be done and tested
-	if( e->v.scale > 0.0f && e->v.scale != 1.0f )
+
+	if( sv_allow_studio_scaling->integer && e->v.scale != 0.0f )
 	{
-		switch( Mod_GetType( e->v.modelindex ))
-		{
-		case mod_sprite:
-		case mod_studio:
+		if( Mod_GetType( e->v.modelindex ) == mod_studio )
 			scale = e->v.scale;
-			break;
-		}
 	}
-#endif
+
 	VectorScale( min, scale, e->v.mins );
 	VectorScale( max, scale, e->v.maxs );
 	VectorSubtract( max, min, e->v.size );

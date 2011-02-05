@@ -103,13 +103,14 @@ static void UI_Background_Ownerdraw( void *self )
 
 	UI_DrawPic( item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic );
 
+	if( GetLogoLength() <= 0.1 || GetLogoWidth() <= 32 )
+		return;	// don't draw stub logo (GoldSrc rules)
+
 	float	logoWidth, logoHeight, logoPosY;
 	float	scaleX, scaleY;
 
 	scaleX = ScreenWidth / 640.0f;
 	scaleY = ScreenHeight / 480.0f;
-
-	if( GetLogoWidth() <= 32 ) return;	// don't draw stub logo
 
 	logoWidth = GetLogoWidth() * scaleX;
 	logoHeight = GetLogoHeight() * scaleY;

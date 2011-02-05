@@ -25,6 +25,7 @@
 #define PRECACHE_LOGO( x )	(*g_engfuncs.pfnDrawLogo)( x, 0, 0, 0, 0 )
 #define GetLogoWidth	(*g_engfuncs.pfnGetLogoWidth)
 #define GetLogoHeight	(*g_engfuncs.pfnGetLogoHeight)
+#define GetLogoLength	(*g_engfuncs.pfnGetLogoLength)
 
 inline HIMAGE PIC_Load( const char *szPicName )
 {

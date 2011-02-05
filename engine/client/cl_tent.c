@@ -1814,16 +1814,12 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		dl->origin[0] = BF_ReadCoord( &buf );
 		dl->origin[1] = BF_ReadCoord( &buf );
 		dl->origin[2] = BF_ReadCoord( &buf );
-		dl->radius = (float)(BF_ReadByte( &buf ) * 0.1f);
+		dl->radius = (float)(BF_ReadByte( &buf ) * 10.0f);
 		dl->color.r = BF_ReadByte( &buf );
 		dl->color.g = BF_ReadByte( &buf );
 		dl->color.b = BF_ReadByte( &buf );
-		brightness = (float)BF_ReadByte( &buf );
-		dl->color.r *= brightness;
-		dl->color.g *= brightness;
-		dl->color.b *= brightness;
 		dl->die = cl.time + (float)(BF_ReadByte( &buf ) * 0.1f);
-		dl->decay = (float)(BF_ReadByte( &buf ) * 0.1f);
+		dl->decay = (float)(BF_ReadByte( &buf ) * 10.0f);
 		break;
 	case TE_ELIGHT:
 		dl = CL_AllocElight( 0 );
@@ -2288,20 +2284,24 @@ void CL_DecayLights( void )
 
 	for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
 	{
-		if( dl->die < cl.time || !dl->radius )
-			continue;
-		
+		if( !dl->radius ) continue;
+
 		dl->radius -= time * dl->decay;
 		if( dl->radius < 0 ) dl->radius = 0;
+
+		if( dl->die < cl.time || !dl->radius ) 
+			Mem_Set( dl, 0, sizeof( *dl ));
 	}
 
 	for( i = 0, dl = cl_elights; i < MAX_ELIGHTS; i++, dl++ )
 	{
-		if( dl->die < cl.time || !dl->radius )
-			continue;
-		
+		if( !dl->radius ) continue;
+
 		dl->radius -= time * dl->decay;
 		if( dl->radius < 0 ) dl->radius = 0;
+
+		if( dl->die < cl.time || !dl->radius ) 
+			Mem_Set( dl, 0, sizeof( *dl ));
 	}
 }
 

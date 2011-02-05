@@ -379,6 +379,7 @@ typedef struct
 	qboolean		drawLogo;			// set to TRUE if logo.avi missed or corrupted
 	long		logo_xres;
 	long		logo_yres;
+	float		logo_length;
 } menu_static_t;
 
 typedef struct

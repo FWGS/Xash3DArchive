@@ -10,89 +10,152 @@
 #include<VGUI.h>
 #include<VGUI_App.h>
 #include<VGUI_Panel.h>
-#include<VGUI_SurfaceGL.h>
+#include<VGUI_SurfaceBase.h>
 #include<VGUI_ActionSignal.h>
 #include<VGUI_BorderLayout.h>
 
 using namespace vgui;
 
-SurfaceGL::SurfaceGL( Panel* embeddedPanel ):Surface( embeddedPanel )
+class CEngineSurface : public SurfaceBase
 {
-	_embeddedPanel = embeddedPanel;
-}
+public:
+	CEngineSurface( Panel *embeddedPanel ):SurfaceBase( embeddedPanel )
+	{
+		_embeddedPanel = embeddedPanel;
+	}
+public:
+	virtual void setTitle( const char *title )
+	{
+		Msg( "SetTitle: %s\n", title );
+	}
 
-bool SurfaceGL::recreateContext( void )
-{
-	Msg( "recreate context\n" );
-	return Surface::recreateContext();
-}
-
-void SurfaceGL::createPopup(Panel* embeddedPanel)
-{
-}
+	virtual bool setFullscreenMode( int wide, int tall, int bpp )
+	{
+		return false;
+	}
 	
-void SurfaceGL::pushMakeCurrent( Panel* panel, bool useInsets )
-{
-	Surface::pushMakeCurrent( panel, useInsets );
-}
+	virtual void setWindowedMode( void )
+	{
+	}
 
-void SurfaceGL::popMakeCurrent( Panel* panel )
-{
-	Surface::popMakeCurrent( panel );
-}
+	virtual void setAsTopMost( bool state )
+	{
+	}
 
-void SurfaceGL::makeCurrent( void )
-{
-	Msg( "make current\n" );
-}
+	virtual int  getModeInfoCount( void )
+	{
+		Msg( "getModeInfoCount()\n" );		
+		return 0;
+	}
 
-void SurfaceGL::swapBuffers( void )
-{
-	Surface::swapBuffers();
-}
+	virtual void createPopup( Panel* embeddedPanel )
+	{
+	}
 
-void SurfaceGL::setColor( int r, int g, int b )
-{
-}
+	virtual bool hasFocus( void )
+	{
+//		Msg( "hasFocus()\n" );
+		return false;
+	}
 
-void SurfaceGL::filledRect( int x0, int y0, int x1, int y1 )
-{
-}
+	virtual bool isWithin( int x, int y )
+	{
+//		Msg( "isWithin()\n" );
+		return false;
+	}
+protected:
+	virtual int createNewTextureID( void )
+	{
+		Msg( "createNewTextureID()\n" );
+		return 0;
+	}
 
-void SurfaceGL::outlinedRect( int x0, int y0, int x1, int y1 )
-{
-}
+	virtual void drawSetColor( int r, int g, int b, int a )
+	{
+	}
 
-void SurfaceGL::setTextFont( Font* font )
-{
-}
+	virtual void drawFilledRect( int x0, int y0, int x1, int y1 )
+	{
+	}
 
-void SurfaceGL::setTextColor( int r, int g, int b )
-{
-}
+	virtual void drawOutlinedRect( int x0,int y0,int x1,int y1 )
+	{
+	}
+	
+	virtual void drawSetTextFont( Font *font )
+	{
+	}
 
-void SurfaceGL::setDrawPos( int x, int y )
-{
-}
+	virtual void drawSetTextColor( int r, int g, int b, int a )
+	{
+	}
 
-void SurfaceGL::printText( const char *str, int strlen )
-{
-	Msg( "Con_Printf( %s )\n", str );
-}
+	virtual void drawSetTextPos( int x, int y )
+	{
+	}
 
-void SurfaceGL::setTextureRGBA( int id, const char *rgba, int wide, int tall )
-{
-	Msg( "SetTexture( %i )\n", id );
-}
+	virtual void drawPrintText( const char* text, int textLen )
+	{
+	}
 
-void SurfaceGL::setTexture( int id )
-{
-	Msg( "SetTexture( %i )\n", id );
-}
+	virtual void drawSetTextureRGBA( int id, const char* rgba, int wide, int tall )
+	{
+		Msg( "drawSetTextureRGBA()\n" );
+	}
+	
+	virtual void drawSetTexture( int id )
+	{
+		Msg( "drawSetTexture()\n" );
+	}
+	
+	virtual void drawTexturedRect( int x0, int y0, int x1, int y1 )
+	{
+	}
 
-void SurfaceGL::texturedRect( int x0, int y0, int x1, int y1 )
-{
-}
+	virtual void invalidate( Panel *panel )
+	{
+	}
+	
+	virtual bool createPlat()
+	{
+		Msg( "createPlat()\n" );
+		return false;
+	}
+
+	virtual bool recreateContext()
+	{
+		Msg( "recreateContext()\n" );
+		return false;
+	}
+
+	virtual void enableMouseCapture(bool state)
+	{
+	}
+	
+	virtual void setCursor(Cursor* cursor)
+	{
+	}
+	
+	virtual void swapBuffers()
+	{
+		Msg( "swapBuffers()\n" );
+	}
+	
+	virtual void pushMakeCurrent(Panel* panel,bool useInsets)
+	{
+	}
+	
+	virtual void popMakeCurrent(Panel* panel)
+	{
+	}
+	
+	virtual void applyChanges( void )
+	{
+	}
+protected:
+	friend class App;
+	friend class Panel;
+};
 
 class CEngineApp : public App
 {
@@ -109,13 +172,11 @@ public:
 	virtual void setCursorPos( int x, int y )
 	{
 		App::setCursorPos( x, y );
-		Msg( "setCursorPos: %i %i\n", x, y );
 	}
 	
 	virtual void getCursorPos( int &x,int &y )
 	{
 		App::getCursorPos( x, y );
-		Msg( "getCursorPos: %i %i\n", x, y );
 	}
 	virtual App* getApp( void )
 	{
@@ -124,7 +185,7 @@ public:
 };
 
 RECT		window_rect;
-SurfaceGL		*surface = NULL;
+CEngineSurface	*surface = NULL;
 CEngineApp	*pApp = NULL;
 Panel		*rootpanel = NULL;
 #define WND_BORDER		3
@@ -144,25 +205,23 @@ void VGui_Startup( void )
 	if( rootpanel )
 	{
 //		rootpanel->reset();
-//		rootpanel->setSize( menu.globals->scrWidth, menu.globals->scrHeight );
+		rootpanel->setSize( menu.globals->scrWidth, menu.globals->scrHeight );
 		return;
 	}
-	Scheme *pScheme = new Scheme();
 
 	pApp = new CEngineApp( true );
-	pApp->setScheme( pScheme );
-        
+      
 	rootpanel = new Panel();
-	rootpanel->setPaintEnabled( true );
+	rootpanel->setPaintEnabled( false );
 	rootpanel->setPaintBorderEnabled( false );
 	rootpanel->setPaintBackgroundEnabled( true );
 	rootpanel->setVisible( true );
-	rootpanel->setEnabled( true );
+	rootpanel->setEnabled( false );
 	rootpanel->setCursor( new Cursor( Cursor::dc_none ));
 
 	VGui_SetBounds();
 
-	surface = new SurfaceGL( rootpanel );
+	surface = new CEngineSurface( rootpanel );
 
 	ASSERT( rootpanel->getApp() != NULL );
 	ASSERT( rootpanel->getSurfaceBase() != NULL );
@@ -184,7 +243,7 @@ void VGui_Paint( void )
 	if( !rootpanel ) return;
 
 	pApp->externalTick();
-//	rootpanel->paintBackground();
+//	rootpanel->repaint();
 }
 
 void VGui_ViewportPaintBackground( int extents[4] )
@@ -195,11 +254,8 @@ void VGui_ViewportPaintBackground( int extents[4] )
 	Panel *pVPanel = surface->getPanel();
 	if( !pVPanel ) return;
 
-	rootpanel->setBounds( extents[0], extents[1], extents[2], extents[3] );
+	rootpanel->setBounds( extents[0], extents[1], menu.globals->scrWidth, menu.globals->scrHeight );
 //	rootpanel->repaint();
-
-	// paint everything 
-	rootpanel->paintTraverse();
 }
 
 void *VGui_GetPanel( void )

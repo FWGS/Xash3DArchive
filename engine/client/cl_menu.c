@@ -100,7 +100,6 @@ qboolean UI_IsVisible( void )
 
 static void UI_DrawLogo( const char *filename, float x, float y, float width, float height )
 {
-	static float	video_duration;
 	static float	cin_time;
 	static int	last_frame = -1;
 	byte		*cin_data = NULL;
@@ -129,7 +128,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		}
 
 		AVI_OpenVideo( cin_state, fullpath, false, false, true );
-		if( !( AVI_GetVideoInfo( cin_state, &menu.logo_xres, &menu.logo_yres, &video_duration )))
+		if( !( AVI_GetVideoInfo( cin_state, &menu.logo_xres, &menu.logo_yres, &menu.logo_length )))
 		{
 			AVI_CloseVideo( cin_state );
 			menu.drawLogo = false;
@@ -152,7 +151,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 	cin_time += host.realframetime;
 
 	// restarts the cinematic
-	if( cin_time > video_duration )
+	if( cin_time > menu.logo_length )
 		cin_time = 0.0f;
 
 	// read the next frame
@@ -178,6 +177,11 @@ static int UI_GetLogoWidth( void )
 static int UI_GetLogoHeight( void )
 {
 	return menu.logo_yres;
+}
+
+static float UI_GetLogoLength( void )
+{
+	return menu.logo_length;
 }
 
 static void UI_UpdateUserinfo( void )
@@ -861,6 +865,7 @@ static ui_enginefuncs_t gEngfuncs =
 	UI_DrawLogo,
 	UI_GetLogoWidth,
 	UI_GetLogoHeight,
+	UI_GetLogoLength,
 	pfnDrawCharacter,
 	pfnDrawConsoleString,
 	pfnDrawSetTextColor,

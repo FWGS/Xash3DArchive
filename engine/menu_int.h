@@ -71,6 +71,7 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnDrawLogo)( const char *filename, float x, float y, float width, float height );
 	int	(*pfnGetLogoWidth)( void );
 	int	(*pfnGetLogoHeight)( void );
+	float	(*pfnGetLogoLength)( void );
 
 	// text message system
 	void	(*pfnDrawCharacter)( int x, int y, int width, int height, int ch, int ulRGBA, HIMAGE hFont );

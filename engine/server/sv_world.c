@@ -112,16 +112,16 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 	vec3_t	hullmins, hullmaxs;
 	vec3_t	size;
 
+	model = CM_ClipHandleToModel( ent->v.modelindex );
+
 	// decide which clipping hull to use, based on the size
-	if( ent->v.solid == SOLID_BSP || ent->v.skin == CONTENTS_LADDER )
+	if( model && ( ent->v.solid == SOLID_BSP || ent->v.skin == CONTENTS_LADDER ))
 	{
 		// explicit hulls in the BSP model
 		if( ent->v.movetype != MOVETYPE_PUSH )
 			Host_Error( "SOLID_BSP without MOVETYPE_PUSH\n" );
 
-		model = CM_ClipHandleToModel( ent->v.modelindex );
-
-		if( !model || model->type != mod_brush )
+		if( model->type != mod_brush )
 			Host_Error( "MOVETYPE_PUSH with a non bsp model\n" );
 
 		VectorSubtract( maxs, mins, size );

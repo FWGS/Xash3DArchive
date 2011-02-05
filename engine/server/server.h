@@ -375,6 +375,8 @@ extern	convar_t		*sv_unlagpush;
 extern	convar_t		*sv_unlagsamples;
 extern	convar_t		*sv_allow_upload;
 extern	convar_t		*sv_allow_download;
+extern	convar_t		*sv_allow_studio_scaling;
+extern	convar_t		*sv_allow_studio_attachment_angles;
 extern	convar_t		*sv_send_resources;
 extern	convar_t		*sv_send_logos;
 extern	convar_t		*sv_sendvelocity;

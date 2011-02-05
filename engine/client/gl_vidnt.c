@@ -14,6 +14,7 @@
 #define WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
 #define WINDOW_EX_STYLE	(0)
 #define GL_DRIVER_OPENGL	"OpenGL32"
+#define WINDOW_NAME		"Xash Window" // Half-Life
 
 convar_t	*renderinfo;
 convar_t	*gl_allow_software;
@@ -949,7 +950,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	wc.hInstance     = host.hInst;
 	wc.hCursor       = LoadCursor( NULL, IDC_ARROW );
 	wc.hbrBackground = (void *)COLOR_3DSHADOW;
-	wc.lpszClassName = "Xash Window";
+	wc.lpszClassName = WINDOW_NAME;
 	wc.lpszMenuName  = 0;
 
 	// find the icon file in the filesystem
@@ -970,7 +971,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 	if( !RegisterClass( &wc ))
 	{ 
-		MsgDev( D_ERROR, "VID_CreateWindow: couldn't register window class %s\n" "Xash Window" );
+		MsgDev( D_ERROR, "VID_CreateWindow: couldn't register window class %s\n" WINDOW_NAME );
 		return false;
 	}
 
@@ -1010,7 +1011,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 		}
 	}
 
-	CreateWindowEx( exstyle, "Xash Window", wndname, stylebits, x, y, w, h, NULL, NULL, host.hInst, NULL );
+	CreateWindowEx( exstyle, WINDOW_NAME, wndname, stylebits, x, y, w, h, NULL, NULL, host.hInst, NULL );
 
 	// host.hWnd will be filled in IN_WndProc
 
@@ -1030,7 +1031,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 		DestroyWindow( host.hWnd );
 		host.hWnd = NULL;
 
-		UnregisterClass( "Xash Window", host.hInst );
+		UnregisterClass( WINDOW_NAME, host.hInst );
 		MsgDev( D_ERROR, "OpenGL driver not installed\n" );
 		return false;
 	}
@@ -1071,7 +1072,7 @@ void VID_DestroyWindow( void )
 		host.hWnd = NULL;
 	}
 
-	UnregisterClass( "Xash Window", host.hInst );
+	UnregisterClass( WINDOW_NAME, host.hInst );
 
 	if( glState.fullScreen )
 	{

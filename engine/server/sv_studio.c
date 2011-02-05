@@ -91,7 +91,7 @@ static void SV_StudioSetUpTransform( edict_t *ent )
 	VectorCopy( ent->v.angles, ang );
 	ang[PITCH] = -ang[PITCH]; // stupid Half-Life bug
 
-	if( ent->v.scale != 0.0f ) scale = ent->v.scale;
+	if( ent->v.scale != 0.0f && sv_allow_studio_scaling->integer ) scale = ent->v.scale;
 	Matrix3x4_CreateFromEntity( sv_studiomatrix, ang, ent->v.origin, scale );
 }
 
@@ -955,13 +955,17 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 
 	// compute pos and angles
 	Matrix3x4_VectorTransform( sv_studiobones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
-	Matrix3x4_OriginFromMatrix( sv_studiobones[pAtt[iAttachment].bone], bonepos );
-	VectorSubtract( localOrg, bonepos, forward );	// make forward
-	VectorNormalizeFast( forward );
-	VectorAngles( forward, localAng );
-
 	if( org ) VectorCopy( localOrg, org );
-	if( ang ) VectorCopy( localAng, ang );
+
+	if( sv_allow_studio_attachment_angles->integer )
+	{
+		Matrix3x4_OriginFromMatrix( sv_studiobones[pAtt[iAttachment].bone], bonepos );
+		VectorSubtract( localOrg, bonepos, forward );	// make forward
+		VectorNormalizeFast( forward );
+		VectorAngles( forward, localAng );
+
+		if( ang ) VectorCopy( localAng, ang );
+	}
 }
 
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )

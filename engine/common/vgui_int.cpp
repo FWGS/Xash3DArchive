@@ -54,13 +54,11 @@ public:
 
 	virtual bool hasFocus( void )
 	{
-		Msg( "hasFocus()\n" );
 		return false;
 	}
 
 	virtual bool isWithin( int x, int y )
 	{
-		Msg( "isWithin()\n" );
 		return false;
 	}
 protected:
@@ -155,9 +153,8 @@ protected:
 class CEngineApp : public App
 {
 public:
-	CEngineApp( void )
+	CEngineApp( bool externalMain = true ):App( externalMain )
 	{
-		App::reset();
 	}
 
 	virtual void main( int argc, char* argv[] )
@@ -167,13 +164,12 @@ public:
 
 	virtual void setCursorPos( int x, int y )
 	{
-		Msg( "setCursorPos: %i %i\n", x, y );
+		App::setCursorPos( x, y );
 	}
 	
 	virtual void getCursorPos( int &x,int &y )
 	{
 		App::getCursorPos( x, y );
-		Msg( "getCursorPos: %i %i\n", x, y );
 	}
 	virtual App* getApp( void )
 	{
@@ -262,7 +258,7 @@ void VGui_Paint( void )
 {
 	if( !rootpanel ) return;
 
-	rootpanel->paintBackground();
+//	pApp->externalTick();
 }
 
 void VGui_ViewportPaintBackground( int extents[4] )

@@ -325,7 +325,7 @@
 // byte (color)
 // short (count)
 // short (base speed)
-// short (ramdon velocity)
+// short (random velocity)
 
 #define TE_BEAMHOSE			26	// obsolete
 
@@ -333,7 +333,6 @@
 // coord, coord, coord (pos) 
 // byte (radius in 10's) 
 // byte byte byte (color)
-// byte (brightness)
 // byte (life in 10's)
 // byte (decay rate in 10's)
 

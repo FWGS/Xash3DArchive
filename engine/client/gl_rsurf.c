@@ -771,6 +771,7 @@ void R_DrawTextureChains( void )
 
 	// make sure what color is reset
 	pglColor4ub( 255, 255, 255, 255 );
+	R_LoadIdentity();	// set identity matrix
 
 	// clip skybox surfaces
 	for( s = skychain; s != NULL; s = s->texturechain )
@@ -1241,8 +1242,11 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 		}
 		else
 		{ 
-			surf->texturechain = surf->texinfo->texture->texturechain;
-			surf->texinfo->texture->texturechain = surf;
+			if( surf->texinfo && surf->texinfo->texture )
+			{
+				surf->texturechain = surf->texinfo->texture->texturechain;
+				surf->texinfo->texture->texturechain = surf;
+			}
 		}
 	}
 
