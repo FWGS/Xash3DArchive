@@ -4,7 +4,6 @@
 //=======================================================================
 
 #include "launch.h"
-#include "mathlib.h"
 
 void com_strnupr( const char *in, char *out, size_t size_out )
 {

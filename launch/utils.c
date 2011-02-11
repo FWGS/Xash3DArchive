@@ -5,7 +5,6 @@
 
 #include "launch.h"
 #include "wadfile.h"
-#include "mathlib.h"
 #include "const.h"
 
 static long idum = 0;
@@ -147,6 +146,25 @@ float sse_sqrt( float x )
 		movss	root, xmm0
 	}
 	return root;
+}
+
+/*
+=================
+NearestPOW
+=================
+*/
+int NearestPOW( int value, qboolean roundDown )
+{
+	int	n = 1;
+
+	if( value <= 0 ) return 1;
+	while( n < value ) n <<= 1;
+
+	if( roundDown )
+	{
+		if( n > value ) n >>= 1;
+	}
+	return n;
 }
 
 /*

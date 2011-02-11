@@ -4,7 +4,6 @@
 //=======================================================================
 
 #include "soundlib.h"
-#include "mathlib.h"
 
 // global sound variables
 sndlib_t	sound;
@@ -116,35 +115,6 @@ load_internal:
 		MsgDev( D_WARN, "FS_LoadSound: couldn't load \"%s\"\n", loadname );
 
 	return NULL;
-}
-
-/*
-================
-Sound_Save
-
-writes image as any known format
-================
-*/
-qboolean FS_SaveSound( const char *filename, wavdata_t *wav )
-{
-          const char	*ext = FS_FileExtension( filename );
-	qboolean		anyformat = !com.stricmp( ext, "" ) ? true : false;
-	string		path, savename;
-	const savewavformat_t *format;
-
-	if( !wav || !wav->buffer || anyformat ) return false;
-	com.strncpy( savename, filename, sizeof( savename ));
-	FS_StripExtension( savename ); // remove extension if needed
-
-	for( format = sound.saveformats; format && format->formatstring; format++ )
-	{
-		if( !com.stricmp( ext, format->ext ))
-		{
-			com.sprintf( path, format->formatstring, savename, "", format->ext );
-			if( format->savefunc( path, wav )) return true; // saved
-		}
-	}
-	return false;	
 }
 
 /*

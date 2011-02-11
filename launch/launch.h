@@ -46,14 +46,12 @@ typedef struct system_s
 	int			app_state;
 
 	int			developer;
-	int			printlevel;
 
 	// log stuff
 	qboolean			log_active;
 	char			log_path[MAX_SYSPATH];
 	FILE			*logfile;
 	
-	qboolean			hooked_out;
 	qboolean			stuffcmdsrun;
 	char			ModuleName[4096];		// exe.filename
 
@@ -162,21 +160,9 @@ void Sys_Msg( const char *pMsg, ... );
 void Sys_MsgDev( int level, const char *pMsg, ... );
 sys_event_t Sys_GetEvent( void );
 void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr );
-int Sys_GetThreadWork( void );
-void Sys_ThreadWorkerFunction( int threadnum );
-void Sys_ThreadSetDefault( void );
-void Sys_ThreadLock( void );
-void Sys_ThreadUnlock( void );
-int Sys_GetNumThreads( void );
-void Sys_RunThreadsOnIndividual( int workcnt, qboolean showpacifier, void(*func)(int));
-void Sys_RunThreadsOn( int workcnt, qboolean showpacifier, void(*func)(int));
 
 #define Msg Sys_Msg
 #define MsgDev Sys_MsgDev
-
-// registry common tools
-qboolean REG_GetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer);
-qboolean REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer);
 
 //
 // network.c
@@ -251,6 +237,10 @@ float sse_sqrt( float x );
 
 _inline float sqrtf( float x ) { return sqrt( x ); }
 void SinCos( float radians, float *sine, float *cosine );
+int NearestPOW( int value, qboolean roundDown );
+
+#define VectorSet(v, x, y, z) ((v)[0]=(x),(v)[1]=(y),(v)[2]=(z))
+#define VectorIsNull( v ) ((v)[0] == 0.0f && (v)[1] == 0.0f && (v)[2] == 0.0f)
 
 //
 // memlib.c
@@ -311,7 +301,6 @@ void FS_DefaultExtension( char *path, const char *extension );
 qboolean FS_GetParmFromCmdLine( char *parm, char *out, size_t size );
 void FS_ExtractFilePath( const char* const path, char* dest );
 const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
-void FS_UpdateEnvironmentVariables( void );
 const char *FS_FileWithoutPath( const char *in );
 extern char sys_rootdir[];
 extern char *fs_argv[];
@@ -340,7 +329,6 @@ void FS_FreeImage( rgbdata_t *pack );
 // soundlib exports
 wavdata_t *FS_LoadSound( const char *name, const byte *buffer, size_t size );
 qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
-qboolean FS_SaveSound( const char *name, wavdata_t *sound );
 void FS_FreeSound( wavdata_t *pack );
 
 stream_t *FS_OpenStream( const char *filename );
@@ -439,20 +427,6 @@ void Cmd_TokenizeString( const char *text );
 void Cmd_ExecuteString( const char *text );
 void Cmd_ForwardToServer( void );
 
-// virtual files managment
-vfile_t *VFS_Create( const byte *buffer, size_t buffsize );
-vfile_t *VFS_Open( file_t *handle, const char* mode );
-fs_offset_t VFS_Write( vfile_t *file, const void *buf, size_t size );
-fs_offset_t VFS_Read( vfile_t* file, void* buffer, size_t buffersize );
-int VFS_Print( vfile_t* file, const char *msg );
-int VFS_Printf( vfile_t* file, const char* format, ... );
-int VFS_Seek( vfile_t *file, fs_offset_t offset, int whence );
-int VFS_Gets( vfile_t *file, byte *string, size_t bufsize );
-byte *VFS_GetBuffer( vfile_t *file );
-fs_offset_t VFS_Tell (vfile_t *file );
-file_t *VFS_Close( vfile_t *file );
-qboolean VFS_Eof( vfile_t *file );
-
 //
 // crclib.c
 //
@@ -529,13 +503,5 @@ void Image_Shutdown( void );
 void Sound_Init( void );
 void Sound_Setup( const char *formats, const uint flags );
 void Sound_Shutdown( void );
-
-//
-// tools.c
-//
-void Init_Tools( const int argc, const char **argv );
-void Tools_Main( void );
-void Free_Tools( void );
-void Bsp_PrintLog( const char *pMsg );
 
 #endif//LAUNCHER_H

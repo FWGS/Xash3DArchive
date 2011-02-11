@@ -1082,7 +1082,7 @@ void CL_PrepVideo( void )
 		{
 			decallist_t *entry = &host.decalList[i];
 			cl_entity_t *pEdict = CL_GetEntityByIndex( entry->entityIndex );
-			shader_t decalIndex = CL_DecalIndex( CL_DecalIndexFromName( entry->name ));
+			int decalIndex = CL_DecalIndex( CL_DecalIndexFromName( entry->name ));
 			int modelIndex = 0;
 
 			if( pEdict ) modelIndex = pEdict->curstate.modelindex;

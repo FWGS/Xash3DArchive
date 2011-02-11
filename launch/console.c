@@ -48,9 +48,7 @@ static WinConData s_wcd;
 
 void Con_ShowConsole( qboolean show )
 {
-	if( !s_wcd.hWnd || Sys.hooked_out )
-		return;
-	if ( show == s_wcd.status )
+	if( !s_wcd.hWnd || show == s_wcd.status )
 		return;
 
 	s_wcd.status = show;
@@ -269,12 +267,6 @@ void Con_CreateConsole( void )
 
 	Sys_InitLog();
 
-	if( Sys.hooked_out ) 
-	{
-		// just init log
-		Sys.Con_Print = Con_PrintA;
-		return;
-	}
 	Sys.Con_Print = Con_PrintW;
 
 	Mem_Set( &wc, 0, sizeof( wc ));
@@ -398,7 +390,6 @@ void Con_DestroyConsole( void )
 	MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading launch.dll\n" );
 
 	Sys_CloseLog();
-	if( Sys.hooked_out ) return;
 
 	if( s_wcd.hWnd )
 	{
@@ -409,6 +400,7 @@ void Con_DestroyConsole( void )
 		DestroyWindow( s_wcd.hWnd );
 		s_wcd.hWnd = 0;
 	}
+
 	UnregisterClass( SYSCONSOLE, Sys.hInstance );
 
 	// place it here in case Sys_Crash working properly
@@ -442,8 +434,6 @@ change focus to console hwnd
 */
 void Con_RegisterHotkeys( void )
 {
-	if( Sys.hooked_out ) return;
-
 	SetFocus( s_wcd.hWnd );
 
 	// user can hit escape for quit

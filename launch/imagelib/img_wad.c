@@ -170,8 +170,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 		{
 			if( fin[i] > 224 )
 			{
-				Msg( "%s has luma-pixels\n", name );
-				image.flags |= IMAGE_HAS_LUMA_Q1;
+				image.flags |= IMAGE_HAS_LUMA;
 				break;
 			}
 		}
@@ -240,150 +239,6 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 		image.d_currentpal[255] = 0;
 
 	return Image_AddIndexedImageToPack( (byte *)(pin + 1), image.width, image.height );
-}
-
-/*
-==============
-Image_LoadWAL
-==============
-*/
-qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize )
-{
-	wal_t 	wal;
-	int	pixels, ofs[4], mipsize;
-	int	i, flags, value, contents; // wal additional parms
-	const byte *fin;
-
-	if( filesize < (int)sizeof( wal ))
-	{
-		MsgDev( D_ERROR, "Image_LoadWAL: file (%s) have invalid size\n", name );
-		return false;
-	}
-	Mem_Copy( &wal, buffer, sizeof( wal ));
-
-	flags = wal.flags;
-	value = wal.value;
-	contents = wal.contents;
-	image.width = wal.width;
-	image.height = wal.height;
-
-	Mem_Copy( ofs, wal.offsets, sizeof( ofs ));
-
-	if( !Image_LumpValidSize( name ))
-		return false;
-
-	pixels = image.width * image.height;
-	mipsize = (int)sizeof(wal) + ofs[0] + pixels;
-	if( pixels > 256 && filesize < mipsize )
-	{
-		// NOTE: wal's with dimensions < 32 have invalid sizes.
-		MsgDev( D_ERROR, "Image_LoadWAL: file (%s) have invalid size\n", name );
-		return false;
-	}
-
-	image.type = PF_INDEXED_32;	// 32-bit palete
-	fin = buffer + ofs[0];
-
-	// check for luma pixels
-	for( i = 0; i < image.width * image.height; i++ )
-	{
-		if( fin[i] > 208 && fin[i] < 240 )
-		{
-			image.flags |= IMAGE_HAS_LUMA_Q2;
-			break;
-		}
-	}
-
-	Image_GetPaletteQ2(); // hardcoded
-	return Image_AddIndexedImageToPack( fin, image.width, image.height );
-}
-
-/*
-============
-Image_LoadFLT
-============
-*/
-qboolean Image_LoadFLT( const char *name, const byte *buffer, size_t filesize )
-{
-	flat_t	flat;
-	vfile_t	*f;
-	qboolean	result = false;
-	int	trans_pixels = 0;
-	word	column_loop, row_loop;
-	int	i, column_offset, pointer_position, first_pos;
-	byte	*Data, post, topdelta, length;
-
-	if( filesize < (int)sizeof( flat ))
-	{
-		MsgDev( D_ERROR, "Image_LoadFLAT: file (%s) have invalid size\n", name );
-		return false;
-	}
-
-	// stupid copypaste from DevIL, but it works
-	f = VFS_Create( buffer, filesize );
-	first_pos = VFS_Tell( f );
-	VFS_Read(f, &flat, sizeof( flat ));
-
-	image.width  = flat.width;
-	image.height = flat.height;
-
-	if( !Image_LumpValidSize( name ))
-		return false;
-
-	Data = (byte *)Mem_Alloc( Sys.imagepool, image.width * image.height );
-	Mem_Set( Data, 247, image.width * image.height ); // set default transparency
-
-	for( column_loop = 0; column_loop < image.width; column_loop++ )
-	{
-		VFS_Read(f, &column_offset, sizeof(int));
-		pointer_position = VFS_Tell( f );
-		VFS_Seek( f, first_pos + column_offset, SEEK_SET );
-
-		while( 1 )
-		{
-			if(VFS_Read(f, &topdelta, 1) != 1) goto img_trunc;
-			if( topdelta == 255 ) break;
-			if(VFS_Read(f, &length, 1) != 1) goto img_trunc;
-			if(VFS_Read(f, &post, 1) != 1) goto img_trunc;
-
-			for( row_loop = 0; row_loop < length; row_loop++ )
-			{
-				if(VFS_Read(f, &post, 1) != 1) goto img_trunc;
-				if(row_loop + topdelta < image.height)
-					Data[(row_loop + topdelta) * image.width + column_loop] = post;
-			}
-			VFS_Read( f, &post, 1 );
-		}
-		VFS_Seek( f, pointer_position, SEEK_SET );
-	}
-	VFS_Close( f );
-
-	// swap colors in image, and check for transparency
-	for( i = 0; i < image.width * image.height; i++ )
-	{
-		if( Data[i] == 247 )
-		{
-			Data[i] = 255;
-			trans_pixels++;
-		}
-		else if( Data[i] == 255 ) Data[i] = 247;
-	}
-
-	// yes it's really transparent texture
-	// otherwise transparency it's a product of lazy designers (or painters ?)
-	if( trans_pixels > TRANS_THRESHOLD ) image.flags |= IMAGE_HAS_ALPHA;
-
-	image.type = PF_INDEXED_32;	// 32-bit palete
-	Image_GetPaletteD1();
-
-	result = Image_AddIndexedImageToPack( Data, image.width, image.height );
-	if( Data ) Mem_Free( Data );
-	return result;
-img_trunc:
-	VFS_Close( f );
-	Mem_Free( Data );
-	MsgDev( D_NOTE, "Image_LoadFLAT: probably it's not a .flat image)\n" );	
-	return false;
 }
 
 /*
@@ -532,28 +387,16 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			pal_type = Image_ComparePalette( pal );
 
 			// check for luma pixels
-			switch( pal_type )
+			if( pal_type == PAL_QUAKE1 )
 			{
-			case PAL_QUAKE1:
 				for( i = 0; i < image.width * image.height; i++ )
 				{
 					if( fin[i] > 224 )
 					{
-						image.flags |= IMAGE_HAS_LUMA_Q1;
+						image.flags |= IMAGE_HAS_LUMA;
 						break;
 					}
 				}
-				break;
-			case PAL_QUAKE2:
-				for( i = 0; i < image.width * image.height; i++ )
-				{
-					if( fin[i] > 208 && fin[i] < 240 )
-					{
-						image.flags |= IMAGE_HAS_LUMA_Q2;
-						break;
-					}
-				}
-				break;
 			}
 			rendermode = LUMP_NORMAL;
 		}
@@ -578,7 +421,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 				// expected unmodified glpoly_t and can crashes on changed struct
 				// water surfaces uses glpoly->next as pointer to subdivided surfaces (as q1)
 				if( mip.name[0] != '*' && mip.name[0] != '!' )
-					image.flags |= IMAGE_HAS_LUMA_Q1;
+					image.flags |= IMAGE_HAS_LUMA;
 				break;
 			}
 		}
@@ -595,7 +438,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 	// check for quake-sky texture
 	if( !com.strncmp( mip.name, "sky", 3 ) && image.width == ( image.height * 2 ))
 	{
-		// FIXME: run additional checks for palette type and colors ?
+		// g-cont: we need to run additional checks for palette type and colors ?
 		image.flags |= IMAGE_QUAKESKY;
 	}
 

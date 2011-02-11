@@ -48,8 +48,6 @@ file_n:	byte[dwadinfo_t[num]->disksize]
 infotable	dlumpinfo_t[dwadinfo_t->numlumps]
 ========================================================================
 */
-#define IDIWADHEADER	(('D'<<24)+('A'<<16)+('W'<<8)+'I')	// little-endian "IWAD" doom1 game wad
-#define IDPWADHEADER	(('D'<<24)+('A'<<16)+('W'<<8)+'P')	// little-endian "PWAD" doom1 game wad
 #define IDWAD2HEADER	(('2'<<24)+('D'<<16)+('A'<<8)+'W')	// little-endian "WAD2" quake1 gfx.wad
 #define IDWAD3HEADER	(('3'<<24)+('D'<<16)+('A'<<8)+'W')	// little-endian "WAD3" half-life wads
 
@@ -59,12 +57,6 @@ infotable	dlumpinfo_t[dwadinfo_t->numlumps]
 // hidden virtual lump types
 #define TYP_ANY		-1	// any type can be accepted
 #define TYP_NONE		0	// unknown lump type
-#define TYP_FLMP		1	// doom1 hud picture (doom1 mapped lump)
-#define TYP_SND		2	// doom1 wav sound (doom1 mapped lump)
-#define TYP_MUS		3	// doom1 music file (doom1 mapped lump)
-#define TYP_SKIN		4	// doom1 sprite model (doom1 mapped lump)
-#define TYP_FLAT		5	// doom1 wall texture (doom1 mapped lump)
-#define TYP_MAXHIDDEN	63	// after this number started typeing letters ( 'a', 'b' etc )
 
 #include "const.h"
 
@@ -74,14 +66,6 @@ typedef struct
 	int		numlumps;		// num files
 	int		infotableofs;
 } dwadinfo_t;
-
-// doom1 and doom2 lump header
-typedef struct
-{
-	int		filepos;
-	int		size;
-	char		name[8];		// null not included
-} dlumpfile_t;
 
 typedef struct
 {

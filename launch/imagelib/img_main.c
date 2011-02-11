@@ -4,7 +4,6 @@
 //=======================================================================
 
 #include "imagelib.h"
-#include "mathlib.h"
 
 // global image variables
 imglib_t	image;
@@ -97,7 +96,10 @@ void Image_Reset( void )
 	image.num_sides = image.flags = 0;
 	image.source_type = 0;
 	image.type = PF_UNKNOWN;
-	Vector4Set( image.fogParams, 0, 0, 0, 0 );
+	image.fogParams[0] = 0;
+	image.fogParams[1] = 0;
+	image.fogParams[2] = 0;
+	image.fogParams[3] = 0;
 
 	// pointers will be saved with prevoius picture struct
 	// don't care about it

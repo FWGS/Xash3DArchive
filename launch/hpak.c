@@ -865,7 +865,7 @@ void HPAK_Extract_f( void )
 
 void HPAK_Remove_f( void )
 {
-	// FIMXE: implement
+	// FIXME: implement
 }
 
 void HPAK_Validate_f( void )

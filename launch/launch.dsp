@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "LAUNCH_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "imagelib" /I "./tools" /I "../public" /I "../common" /I "../engine" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "imagelib" /I "./sndlib" /I "../common" /I "../engine" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -79,7 +79,7 @@ SOURCE="$(InputPath)"
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "LAUNCH_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "imagelib" /I "./tools" /I "../public" /I "../common" /I "../engine" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "imagelib" /I "./sndlib" /I "../common" /I "../engine" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -112,31 +112,11 @@ SOURCE="$(InputPath)"
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\tools\bsplib.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\cmd.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\console.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\conv_bsp.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\conv_image.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\conv_main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\conv_sprite.c
 # End Source File
 # Begin Source File
 
@@ -169,10 +149,6 @@ SOURCE=.\imagelib\img_jpg.c
 # Begin Source File
 
 SOURCE=.\imagelib\img_main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\imagelib\img_pcx.c
 # End Source File
 # Begin Source File
 
@@ -212,10 +188,6 @@ SOURCE=.\soundlib\snd_mp3.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\soundlib\snd_raw.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\soundlib\snd_utils.c
 # End Source File
 # Begin Source File
@@ -224,19 +196,7 @@ SOURCE=.\soundlib\snd_wav.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\tools\spritegen.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\stdlib.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\studio.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\studio_utils.c
 # End Source File
 # Begin Source File
 
@@ -244,15 +204,7 @@ SOURCE=.\system.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\tools\tools.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\utils.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\wadlib.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -260,11 +212,11 @@ SOURCE=.\tools\wadlib.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\tools\badimage.h
+SOURCE=.\filesystem.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\filesystem.h
+SOURCE=.\imagelib\imagelib.h
 # End Source File
 # Begin Source File
 
@@ -273,14 +225,6 @@ SOURCE=.\launch.h
 # Begin Source File
 
 SOURCE=.\library.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\mdllib.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\ripper.h
 # End Source File
 # Begin Source File
 

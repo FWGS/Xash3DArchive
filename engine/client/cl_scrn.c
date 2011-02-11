@@ -205,7 +205,7 @@ void SCR_MakeScreenShot( void )
 
 void SCR_DrawPlaque( void )
 {
-	shader_t	levelshot;
+	int	levelshot;
 
 	if( cl_allow_levelshots->integer && !cls.changelevel )
 	{

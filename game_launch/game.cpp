@@ -11,14 +11,6 @@
 // for dedicated servers rename 'YourExeName.exe' to '#YourExeName.exe'
 // Keyword "normal" it's a reserved word which switch engine to game mode, other reserved words run Xash Tools.
 //
-// reserved words list:
-//
-// "bsplib"	- launch bsp compilers
-// "sprite"	- launch the spritegen
-// "studio"	- launch the studiomdl
-// "wadlib"	- launch the xwad
-// "ripper"	- launch the extragen
-//
 
 #define GAME_PATH	"$valve"	// '$' indicates a start of basefolder name
 

@@ -6,7 +6,6 @@
 
 #include "launch.h"
 #include "library.h"
-#include "mathlib.h"
 
 #define MAX_QUED_EVENTS		256
 #define MASK_QUED_EVENTS		(MAX_QUED_EVENTS - 1)
@@ -84,8 +83,6 @@ void Sys_GetStdAPI( void )
 	com.NET_GetPacket = NET_GetPacket;
 	com.NET_SendPacket = NET_SendPacket;
 
-	// common functions
-	com.Com_InitRootDir = FS_InitRootDir;		// init custom rootdir 
 	com.Com_LoadGameInfo = FS_LoadGameInfo;		// gate game info from script file
 	com.Com_AddGameHierarchy = FS_AddGameHierarchy;	// add base directory in search list
 	com.Com_AddGameDirectory = FS_AddGameDirectory;	// add game directory in search list
@@ -103,10 +100,6 @@ void Sys_GetStdAPI( void )
 	com.Com_StripFilePath = FS_ExtractFilePath;	// get file path without filename.ext
 	com.Com_DefaultExtension = FS_DefaultExtension;	// append extension if not present
 	com.Com_ClearSearchPath = FS_ClearSearchPath;	// delete all search pathes
-	com.Com_CreateThread = Sys_RunThreadsOnIndividual;// run individual thread
-	com.Com_ThreadLock = Sys_ThreadLock;		// lock current thread
-	com.Com_ThreadUnlock = Sys_ThreadUnlock;	// unlock numthreads
-	com.Com_NumThreads = Sys_GetNumThreads;		// returns count of active threads
 
 	com.LoadLibrary = Com_LoadLibrary;
 	com.GetProcAddress = Com_GetProcAddress;
@@ -172,20 +165,6 @@ void Sys_GetStdAPI( void )
 	com.fremove = FS_Delete;		// like remove
 	com.frename = FS_Rename;		// like rename
 
-	// virtual filesystem
-	com.vfcreate = VFS_Create;		// create virtual stream
-	com.vfopen = VFS_Open;		// virtual fopen
-	com.vfclose = VFS_Close;		// free buffer or write dump
-	com.vfwrite = VFS_Write;		// write into buffer
-	com.vfread = VFS_Read;		// read from buffer
-	com.vfgets = VFS_Gets;		// read text line 
-	com.vfprint = VFS_Print;		// write message
-	com.vfprintf = VFS_Printf;		// write formatted message
-	com.vfseek = VFS_Seek;		// fseek, can seek in packfiles too
-	com.vfbuffer = VFS_GetBuffer;		// get pointer at start vfile buffer
-	com.vftell = VFS_Tell;		// like a ftell
-	com.vfeof = VFS_Eof;		// like a feof
-
 	// wadstorage filesystem
 	com.wfcheck = W_Check;		// validate container
 	com.wfopen = W_Open;		// open wad file or create new
@@ -221,7 +200,6 @@ void Sys_GetStdAPI( void )
 
 	// built-in soundlib functions
 	com.SoundLoad = FS_LoadSound;			// load sound from disk or wad-file
-	com.SoundSave = FS_SaveSound;			// save sound into specified format 
 	com.SoundFree = FS_FreeSound;			// release sound buffer
 	com.SndlibSetup = Sound_Setup;		// set soundlib global features
 	com.SoundConvert = Sound_Process;		// resample, change resolution etc
@@ -292,11 +270,6 @@ NOTE: at this day we have ten instances
 1. "credits" - show engine credits
 2. "dedicated" - dedicated server
 3. "normal" - normal or dedicated game launch
-4. "bsplib" - four BSP compilers in one
-5. "sprite" - sprite creator (requires qc. script)
-6. "studio" - Half-Life style models creator (requires qc. script) 
-7. "wadlib" - wad-file maker
-8. "ripper" - resource EXTRActor GENeric
 ==================
 */
 void Sys_LookupInstance( void )
@@ -376,43 +349,6 @@ void Sys_LookupInstance( void )
 		Sys.linked_dll = &engine_dll;	// pointer to engine.dll info
 		com.strcpy( Sys.caption, va( "Xash3D ver.%g", XASH_VERSION ));
 	}
-	else if( !com.strcmp( Sys.progname, "bsplib" ))
-	{
-		Sys.app_name = HOST_BSPLIB;
-		Sys.linked_dll = NULL; // no need to loading library
-		com.strcpy( Sys.log_path, "bsplib.log" ); // xash3d root directory
-		com.strcpy( Sys.caption, "Xash3D BSP Compiler");
-	}
-	else if( !com.strcmp( Sys.progname, "sprite" ))
-	{
-		Sys.app_name = HOST_SPRITE;
-		Sys.linked_dll = NULL; // no need to loading library
-		com.sprintf( Sys.log_path, "%s/spritegen.log", sys_rootdir ); // same as .exe file
-		com.strcpy( Sys.caption, "Xash3D Sprite Compiler");
-	}
-	else if( !com.strcmp( Sys.progname, "studio" ))
-	{
-		Sys.app_name = HOST_STUDIO;
-		Sys.linked_dll = NULL; // no need to loading library
-		com.sprintf( Sys.log_path, "%s/studiomdl.log", sys_rootdir ); // same as .exe file
-		com.strcpy( Sys.caption, "Xash3D Studio Models Compiler" );
-	}
-	else if( !com.strcmp( Sys.progname, "wadlib" ))
-	{
-		Sys.app_name = HOST_WADLIB;
-		Sys.linked_dll = NULL; // no need to loading library
-		com.sprintf( Sys.log_path, "%s/wadlib.log", sys_rootdir ); // same as .exe file
-		com.strcpy( Sys.caption, "Xash3D Wad2\\Wad3 maker" );
-	}
-	else if( !com.strcmp( Sys.progname, "ripper" ))
-	{
-		Sys.app_name = HOST_RIPPER;
-		Sys.con_readonly = true;
-		Sys.log_active = true;	// always create log
-		Sys.linked_dll = NULL; // no need to loading library
-		com.sprintf( Sys.log_path, "%s/decompile.log", sys_rootdir ); // default
-		com.strcpy( Sys.caption, va("Quake Recource Extractor ver.%g", XASH_VERSION ));
-	}
 
 	// share instance over all system
 	SI.instance = Sys.app_name;
@@ -446,18 +382,6 @@ void Sys_CreateInstance( void )
 		Sys.CmdFwd = Host->CmdForward;
 		Sys.CmdAuto = Host->CmdComplete;
 		break;
-	case HOST_BSPLIB:
-	case HOST_SPRITE:
-	case HOST_STUDIO:
-	case HOST_WADLIB:
-	case HOST_RIPPER:
-		Sys.Init = Init_Tools;
-		Sys.Main = Tools_Main;
-		Sys.Free = Free_Tools;
-		Sys.CPrint = Bsp_PrintLog;
-		Sys.CmdFwd = NULL;
-		Sys.CmdAuto = NULL;
-		break;
 	case HOST_CREDITS:
 		Sys_Break( show_credits, com.timestamp( TIME_YEAR_ONLY ));
 		break;
@@ -480,14 +404,6 @@ void Sys_CreateInstance( void )
 		// if stuffcmds wasn't run, then init.rc is probably missing, use default
 		if( !Sys.stuffcmdsrun ) Cbuf_ExecuteText( EXEC_NOW, "stuffcmds\n" );
 		break;
-	case HOST_BSPLIB:
-	case HOST_SPRITE:
-	case HOST_STUDIO:
-	case HOST_WADLIB:
-	case HOST_RIPPER:
-		// always run stuffcmds for current instances
-		Cbuf_ExecuteText( EXEC_NOW, "stuffcmds\n" );
-		break;
 	}
 
 	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
@@ -506,26 +422,29 @@ void Sys_ParseCommandLine( LPSTR lpCmdLine )
 	fs_argc = 1;
 	fs_argv[0] = "exe";
 
-	while( *lpCmdLine && (fs_argc < MAX_NUM_ARGVS))
+	while( *lpCmdLine && ( fs_argc < MAX_NUM_ARGVS ))
 	{
 		while( *lpCmdLine && *lpCmdLine <= ' ' ) lpCmdLine++;
-		if (!*lpCmdLine) break;
+		if( !*lpCmdLine ) break;
 
-		if (*lpCmdLine == '\"')
+		if( *lpCmdLine == '\"' )
 		{
 			// quoted string
 			lpCmdLine++;
 			fs_argv[fs_argc] = lpCmdLine;
 			fs_argc++;
-			while( *lpCmdLine && (*lpCmdLine != '\"')) lpCmdLine++;
+			while( *lpCmdLine && ( *lpCmdLine != '\"' ))
+				lpCmdLine++;
 		}
 		else
 		{
 			// unquoted word
 			fs_argv[fs_argc] = lpCmdLine;
 			fs_argc++;
-			while( *lpCmdLine && *lpCmdLine > ' ') lpCmdLine++;
+			while( *lpCmdLine && *lpCmdLine > ' ')
+				lpCmdLine++;
 		}
+
 		if( *lpCmdLine )
 		{
 			*lpCmdLine = 0;
@@ -535,6 +454,12 @@ void Sys_ParseCommandLine( LPSTR lpCmdLine )
 
 }
 
+/*
+==================
+Sys_MergeCommandLine
+
+==================
+*/
 void Sys_MergeCommandLine( LPSTR lpCmdLine )
 {
 	const char	*blank = "censored";
@@ -580,12 +505,12 @@ void Sys_Print( const char *pMsg )
 		Sys.CPrint( pMsg );
 
 	// if the message is REALLY long, use just the last portion of it
-	if ( com.strlen( pMsg ) > sizeof( buffer ) - 1 )
+	if( com.strlen( pMsg ) > sizeof( buffer ) - 1 )
 		msg = pMsg + com.strlen( pMsg ) - sizeof( buffer ) + 1;
 	else msg = pMsg;
 
 	// copy into an intermediate buffer
-	while ( msg[i] && (( b - buffer ) < sizeof( buffer ) - 1 ))
+	while( msg[i] && (( b - buffer ) < sizeof( buffer ) - 1 ))
 	{
 		if( msg[i] == '\n' && msg[i+1] == '\r' )
 		{
@@ -610,7 +535,10 @@ void Sys_Print( const char *pMsg )
 		{
 			i++; // skip console pseudo graph
 		}
-		else if(IsColorString( &msg[i])) i++; // skip color prefix
+		else if( IsColorString( &msg[i] ))
+		{
+			i++; // skip color prefix
+		}
 		else
 		{
 			*b = *c = msg[i];
@@ -618,6 +546,7 @@ void Sys_Print( const char *pMsg )
 		}
 		i++;
 	}
+
 	*b = *c = 0; // cutoff garbage
 
 	// because we needs to kill any psedo graph symbols
@@ -628,7 +557,6 @@ void Sys_Print( const char *pMsg )
 	Sys_PrintLog( logbuf );
 
 	Sys.Con_Print( buffer );
-	Sys.printlevel = 0; // reset before next message
 }
 
 /*
@@ -646,7 +574,6 @@ void Sys_Msg( const char *pMsg, ... )
 	va_start( argptr, pMsg );
 	com.vsnprintf( text, sizeof( text ), pMsg, argptr );
 	va_end( argptr );
-	Sys.printlevel = 0;
 
 	Sys_Print( text );
 }
@@ -657,7 +584,6 @@ void Sys_MsgDev( int level, const char *pMsg, ... )
 	char	text[8192];
 
 	if( Sys.developer < level ) return;
-	Sys.printlevel = level;
 
 	va_start( argptr, pMsg );
 	com.vsnprintf( text, sizeof( text ), pMsg, argptr );
@@ -739,12 +665,10 @@ returns username for current profile
 */
 char *Sys_GetCurrentUser( void )
 {
-	static string s_userName;
-	dword size = sizeof( s_userName );
+	static string	s_userName;
+	dword		size = sizeof( s_userName );
 
-	if( !GetUserName( s_userName, &size ))
-		com.strcpy( s_userName, "player" );
-	if( !s_userName[0] )
+	if( !GetUserName( s_userName, &size ) || !s_userName[0] )
 		com.strcpy( s_userName, "player" );
 
 	return s_userName;
@@ -767,30 +691,18 @@ void Sys_WaitForQuit( void )
 {
 	MSG	msg;
 
-	if( Sys.hooked_out )
-	{
-		// in-pipeline mode we don't want to wait for press any key
-		if( abs((int)GetStdHandle(STD_OUTPUT_HANDLE)) <= 100 )
-		{
-			Sys_Print( "press any key to quit\n" );
-			system( "@pause>nul\n" ); // wait for quit
-		}
-	}
-	else
-	{
-		Con_RegisterHotkeys();		
-		Mem_Set( &msg, 0, sizeof( msg ));
+	Con_RegisterHotkeys();		
+	Mem_Set( &msg, 0, sizeof( msg ));
 
-		// wait for the user to quit
-		while( msg.message != WM_QUIT )
+	// wait for the user to quit
+	while( msg.message != WM_QUIT )
+	{
+		if( PeekMessage( &msg, 0, 0, 0, PM_REMOVE ))
 		{
-			if( PeekMessage( &msg, 0, 0, 0, PM_REMOVE ))
-        			{
-				TranslateMessage( &msg );
-				DispatchMessage( &msg );
-			} 
-			else Sys_Sleep( 20 );
-		}
+			TranslateMessage( &msg );
+			DispatchMessage( &msg );
+		} 
+		else Sys_Sleep( 20 );
 	}
 }
 
@@ -952,14 +864,12 @@ void Sys_Init( void )
 	if( Sys.log_active && !Sys.developer ) Sys.log_active = false;	// nothing to logging :)
           
 	SetErrorMode( SEM_FAILCRITICALERRORS );	// no abort/retry/fail errors
-	if( Sys.hooked_out ) atexit( Sys_Abort );
 
 	// set default state 
 	Sys.con_showalways = Sys.con_readonly = true;
 	Sys.con_showcredits = Sys.con_silentmode = Sys.stuffcmdsrun = false;
 
 	Sys_LookupInstance();		// init launcher
-	FS_UpdateEnvironmentVariables();	// set working directory
 	Con_CreateConsole();
 
 	// second pass (known state)
@@ -1159,138 +1069,6 @@ void Sys_ShellExecute( const char *path, const char *parms, qboolean exit )
 	if( exit ) Sys_Exit();
 }
 
-//=======================================================================
-//			MULTITHREAD SYSTEM
-//=======================================================================
-#define MAX_THREADS		64
-
-int	dispatch;
-int	workcount;
-int	oldf;
-qboolean	pacifier;
-qboolean	threaded;
-void (*workfunction) (int);
-int numthreads = -1;
-CRITICAL_SECTION crit;
-static int enter;
-
-int Sys_GetNumThreads( void )
-{
-	return numthreads;
-}
-
-void Sys_ThreadLock( void )
-{
-	if( !threaded ) return;
-	EnterCriticalSection( &crit );
-	if( enter ) Sys_Error( "Recursive Sys_ThreadLock\n" ); 
-	enter = true;
-}
-
-void Sys_ThreadUnlock( void )
-{
-	if( !threaded ) return;
-	if( !enter ) Sys_Error( "Sys_ThreadUnlock without lock\n" ); 
-	enter = false;
-	LeaveCriticalSection( &crit );
-}
-
-int Sys_GetThreadWork( void )
-{
-	int	r, f;
-
-	Sys_ThreadLock();
-
-	if( dispatch == workcount )
-	{
-		Sys_ThreadUnlock();
-		return -1;
-	}
-
-	f = 10 * dispatch / workcount;
-	if( f != oldf )
-	{
-		oldf = f;
-		if( pacifier ) Msg( "%i...", f );
-	}
-
-	r = dispatch;
-	dispatch++;
-	Sys_ThreadUnlock ();
-
-	return r;
-}
-
-void Sys_ThreadWorkerFunction( int threadnum )
-{
-	int		work;
-
-	while( 1 )
-	{
-		work = Sys_GetThreadWork();
-		if( work == -1 ) break;
-		workfunction( work );
-	}
-}
-
-void Sys_ThreadSetDefault( void )
-{
-	if( numthreads == -1 ) // not set manually
-	{
-		// NOTE: we must init Plat_InitCPU() first
-		numthreads = SI.cpunum;
-		if( numthreads < 1 || numthreads > MAX_THREADS )
-			numthreads = 1;
-	}
-}
-
-void Sys_RunThreadsOnIndividual( int workcnt, qboolean showpacifier, void(*func)(int))
-{
-	if (numthreads == -1) Sys_ThreadSetDefault();
-	workfunction = func;
-	Sys_RunThreadsOn (workcnt, showpacifier, Sys_ThreadWorkerFunction);
-}
-
-/*
-=============
-Sys_RunThreadsOn
-=============
-*/
-void Sys_RunThreadsOn( int workcnt, qboolean showpacifier, void(*func)(int))
-{
-	int	i, threadid[MAX_THREADS];
-	HANDLE	threadhandle[MAX_THREADS];
-	double	start, end;
-
-	start = Sys_DoubleTime();
-	dispatch = 0;
-	workcount = workcnt;
-	oldf = -1;
-	pacifier = showpacifier;
-	threaded = true;
-
-	// run threads in parallel
-	InitializeCriticalSection(&crit);
-
-	if (numthreads == 1) func(0); // use same thread
-	else
-	{
-		for (i = 0; i < numthreads; i++)
-		{
-			threadhandle[i] = CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)func, (LPVOID)i, 0, &threadid[i]);
-		}
-		for (i = 0; i < numthreads; i++)
-		{
-			WaitForSingleObject(threadhandle[i], INFINITE);
-		}
-	}
-	DeleteCriticalSection(&crit);
-
-	threaded = false;
-	end = Sys_DoubleTime();
-	if( pacifier ) Msg(" Done [%.2f sec]\n", end - start);
-}
-
 /*
 ================
 Sys_QueEvent
@@ -1410,41 +1188,6 @@ void Sys_NewInstance( const char *name, const char *fmsg )
 	Sys_Exit();
 }
 
-//=======================================================================
-//			REGISTRY COMMON TOOLS
-//=======================================================================
-qboolean REG_GetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer)
-{
-	dword dwBufLen = 4096;
-	long lRet;
-
-	if(lRet = RegOpenKeyEx( hKey, SubKey, 0, KEY_READ, &hKey) != ERROR_SUCCESS )
-  		return false;
-	else
-	{
-		lRet = RegQueryValueEx( hKey, Value, NULL, NULL, (byte *)pBuffer, &dwBufLen);
-		if(lRet != ERROR_SUCCESS) return false;
-		RegCloseKey( hKey );
-	}
-	return true;
-}
-
-qboolean REG_SetValue( HKEY hKey, const char *SubKey, const char *Value, char *pBuffer )
-{
-	dword dwBufLen = 4096;
-	long lRet;
-	
-	if(lRet = RegOpenKeyEx(hKey, SubKey, 0, KEY_WRITE, &hKey) != ERROR_SUCCESS)
-		return false;
-	else
-	{
-		lRet = RegSetValueEx(hKey, Value, 0, REG_SZ, (byte *)pBuffer, dwBufLen );
-		if(lRet != ERROR_SUCCESS) return false;
-		RegCloseKey(hKey);
-	}
-	return true;	
-}
-
 // main DLL entry point
 BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 {
@@ -1459,7 +1202,6 @@ Main Entry Point
 EXPORT int CreateAPI( const char *hostname, qboolean console )
 {
 	com_strncpy( Sys.progname, hostname, sizeof( Sys.progname ));
-	Sys.hooked_out = console;
 
 	Sys_Init();
 	Sys.Main();

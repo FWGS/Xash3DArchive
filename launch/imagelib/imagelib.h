@@ -29,7 +29,6 @@ typedef enum
 {
 	IL_HINT_NO = 0,
 	IL_HINT_Q1,	// palette choosing
-	IL_HINT_Q2,
 	IL_HINT_HL,
 } image_hint_t;
 
@@ -86,61 +85,6 @@ typedef struct imglib_s
 	byte		*tempbuffer;	// for convert operations
 	int		cmd_flags;
 } imglib_t;
-
-/*
-========================================================================
-
-.PCX image format	(ZSoft Paintbrush)
-
-========================================================================
-*/
-typedef struct
-{
-	char	manufacturer;
-	char	version;
-	char	encoding;
-	char	bits_per_pixel;
-	word	xmin,ymin,xmax,ymax;
-	word	hres,vres;
-	byte	palette[48];
-	char	reserved;
-	char	color_planes;
-	word	bytes_per_line;
-	word	palette_type;
-	char	filler[58];
-} pcx_t;
-
-/*
-========================================================================
-
-.WAL image format	(Wally textures)
-
-========================================================================
-*/
-typedef struct wal_s
-{
-	char	name[32];
-	uint	width, height;
-	uint	offsets[4];	// four mip maps stored
-	char	animname[32];	// next frame in animation chain
-	int	flags;
-	int	contents;
-	int	value;
-} wal_t;
-
-/*
-========================================================================
-
-.LMP image format	(Quake1 gfx lumps)
-
-========================================================================
-*/
-typedef struct flat_s
-{
-	short	width;
-	short	height;
-	short	desc[2];		// probably not used
-} flat_t;
 
 /*
 ========================================================================
@@ -208,7 +152,6 @@ typedef struct tga_s
 #define LUMP_MAXWIDTH	1024	// WorldCraft limits
 #define LUMP_MAXHEIGHT	1024
 
-#define TRANS_THRESHOLD	10	// in pixels
 enum
 {
 	LUMP_NORMAL = 0,
@@ -223,9 +166,7 @@ enum
 {
 	PAL_INVALID = -1,
 	PAL_CUSTOM = 0,
-	PAL_DOOM1,
 	PAL_QUAKE1,
-	PAL_QUAKE2,
 	PAL_HALFLIFE
 };
 
@@ -244,15 +185,12 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height );
 qboolean Image_AddRGBAImageToPack( uint imageSize, const void* data );
 void Image_ConvertPalTo24bit( rgbdata_t *pic );
 void Image_GetPaletteLMP( const byte *pal, int rendermode );
-void Image_GetPalettePCX( const byte *pal );
 void Image_GetPaletteBMP( const byte *pal );
 int Image_ComparePalette( const byte *pal );
 void Image_CopyPalette24bit( void );
 void Image_CopyPalette32bit( void );
 void Image_SetPixelFormat( void );
-void Image_GetPaletteQ2( void );
 void Image_GetPaletteQ1( void );
-void Image_GetPaletteD1( void );	// doom 2 on TNT :)
 void Image_GetPaletteHL( void );
 
 //
@@ -265,10 +203,7 @@ qboolean Image_LoadTGA( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize );
-qboolean Image_LoadPCX( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize );
-qboolean Image_LoadWAL( const char *name, const byte *buffer, size_t filesize );
-qboolean Image_LoadFLT( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
 
 //
@@ -277,7 +212,6 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_SaveTGA( const char *name, rgbdata_t *pix );
 qboolean Image_SaveBMP( const char *name, rgbdata_t *pix );
 qboolean Image_SaveJPG( const char *name, rgbdata_t *pix );
-qboolean Image_SavePCX( const char *name, rgbdata_t *pix );
 
 //
 // img_utils.c

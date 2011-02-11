@@ -4,7 +4,6 @@
 //=======================================================================
 
 #include "soundlib.h"
-#include "mathlib.h"
 
 /*
 =============================================================================
@@ -16,13 +15,6 @@
 // stub
 static const loadwavformat_t load_null[] =
 {
-{ NULL, NULL, NULL }
-};
-
-// version0 - using only Doom1 sounds
-static const loadwavformat_t load_doom1[] =
-{
-{ "%s%s.%s", "snd", Sound_LoadSND },
 { NULL, NULL, NULL }
 };
 
@@ -57,39 +49,12 @@ static const streamformat_t stream_null[] =
 { NULL, NULL, NULL, NULL, NULL }
 };
 
-// version0 - using only wav streams
-static const streamformat_t stream_quake3[] =
-{
-{ "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_FreeWAV },
-{ NULL, NULL, NULL, NULL, NULL }
-};
-
 // version1 - Xash3D default stream profile
 static const streamformat_t stream_xash[] =
 {
 { "%s%s.%s", "mp3", Stream_OpenMPG, Stream_ReadMPG, Stream_FreeMPG },
 { "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_FreeWAV },
 { NULL, NULL, NULL, NULL, NULL }
-};
-
-/*
-=============================================================================
-
-	XASH3D SAVE SOUND FORMATS
-
-=============================================================================
-*/
-// stub
-static const savewavformat_t save_null[] =
-{
-{ NULL, NULL, NULL }
-};
-
-// version1 - extract all sounds into pcm wav
-static const savewavformat_t save_extragen[] =
-{
-{ "%s%s.%s", "wav", Sound_SaveWAV },
-{ NULL, NULL, NULL }
 };
 
 void Sound_Init( void )
@@ -104,17 +69,10 @@ void Sound_Init( void )
 	{
 	case HOST_NORMAL:
 		Sound_Setup( "default", 0 ); // re-initialized later		
-		sound.saveformats = save_null;
-		break;
-	case HOST_RIPPER:
-		sound.loadformats = load_null;
-		sound.streamformat = stream_null;
-		sound.saveformats = save_extragen;
 		break;
 	default:	// all other instances not using soundlib or will be reinstalling later
 		sound.loadformats = load_null;
 		sound.streamformat = stream_null;
-		sound.saveformats = save_null;
 		break;
 	}
 	sound.tempbuffer = NULL;
@@ -133,44 +91,21 @@ void Sound_Setup( const char *formats, const uint flags )
 		sound.loadformats = load_xash;
 		sound.streamformat = stream_xash;
 	}
-	else if( !com.stricmp( formats, "Doom1" ) || !com.stricmp( formats, "Doom2" ))
-	{
-		sound.loadformats = load_doom1;
-	}
 	else if( !com.stricmp( formats, "Quake1" ))
 	{
 		sound.loadformats = load_quake1; 
-	}
-	else if( !com.stricmp( formats, "Quake2" ))
-	{
-		sound.loadformats = load_quake1;
-	}
-	else if( !com.stricmp( formats, "Quake3" ))
-	{
-		sound.loadformats = load_quake1;
-		sound.streamformat = stream_quake3;
-	}
-	else if( !com.stricmp( formats, "Quake4" ) || !com.stricmp( formats, "Doom3" ))
-	{
-		sound.loadformats = load_quake1;
+		sound.streamformat = stream_null;
 	}
 	else if( !com.stricmp( formats, "hl1" ) || !com.stricmp( formats, "Half-Life" ))
 	{
 		sound.loadformats = load_quake1;
 		sound.streamformat = stream_xash;
 	}
-	else if( !com.stricmp( formats, "hl2" ) || !com.stricmp( formats, "Half-Life 2" ))
-	{
-		sound.loadformats = load_quake1;
-	}
 	else
 	{
 		sound.loadformats = load_xash; // unrecognized version, use default
 		sound.streamformat = stream_xash;
 	}
-
-	if( Sys.app_name == HOST_RIPPER )
-		sound.baseformats = sound.loadformats;
 }
 
 void Sound_Shutdown( void )

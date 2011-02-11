@@ -385,14 +385,3 @@ void Stream_FreeWAV( stream_t *stream )
 		FS_Close( stream->file );
 	Mem_Free( stream );
 }
-
-/*
-=============
-Sound_SaveWAV
-=============
-*/
-qboolean Sound_SaveWAV( const char *name, wavdata_t *pix )
-{
-	// FIXME: implement
-	return false;
-}

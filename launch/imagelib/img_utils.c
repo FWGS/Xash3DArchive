@@ -4,49 +4,17 @@
 //=======================================================================
 
 #include "imagelib.h"
-#include "mathlib.h"
 
 convar_t *gl_round_down;
 
 #define LERPBYTE( i )	r = resamplerow1[i]; out[i] = (byte)(((( resamplerow2[i] - r ) * lerp)>>16 ) + r )
 
-uint d_8toD1table[256];
 uint d_8toQ1table[256];
-uint d_8toQ2table[256];
 uint d_8toHLtable[256];
 uint d_8to24table[256];
 
-qboolean d1palette_init = false;
 qboolean q1palette_init = false;
-qboolean q2palette_init = false;
 qboolean hlpalette_init = false;
-
-static byte palette_d1[768] = 
-{
-0,0,0,31,23,11,23,15,7,75,75,75,255,255,255,27,27,27,19,19,19,11,11,11,7,7,7,47,55,31,35,43,15,23,31,7,15,23,0,79,
-59,43,71,51,35,63,43,27,255,183,183,247,171,171,243,163,163,235,151,151,231,143,143,223,135,135,219,123,123,211,115,
-115,203,107,107,199,99,99,191,91,91,187,87,87,179,79,79,175,71,71,167,63,63,163,59,59,155,51,51,151,47,47,143,43,43,
-139,35,35,131,31,31,127,27,27,119,23,23,115,19,19,107,15,15,103,11,11,95,7,7,91,7,7,83,7,7,79,0,0,71,0,0,67,0,0,255,
-235,223,255,227,211,255,219,199,255,211,187,255,207,179,255,199,167,255,191,155,255,187,147,255,179,131,247,171,123,
-239,163,115,231,155,107,223,147,99,215,139,91,207,131,83,203,127,79,191,123,75,179,115,71,171,111,67,163,107,63,155,
-99,59,143,95,55,135,87,51,127,83,47,119,79,43,107,71,39,95,67,35,83,63,31,75,55,27,63,47,23,51,43,19,43,35,15,239,
-239,239,231,231,231,223,223,223,219,219,219,211,211,211,203,203,203,199,199,199,191,191,191,183,183,183,179,179,179,
-171,171,171,167,167,167,159,159,159,151,151,151,147,147,147,139,139,139,131,131,131,127,127,127,119,119,119,111,111,
-111,107,107,107,99,99,99,91,91,91,87,87,87,79,79,79,71,71,71,67,67,67,59,59,59,55,55,55,47,47,47,39,39,39,35,35,35,
-119,255,111,111,239,103,103,223,95,95,207,87,91,191,79,83,175,71,75,159,63,67,147,55,63,131,47,55,115,43,47,99,35,39,
-83,27,31,67,23,23,51,15,19,35,11,11,23,7,191,167,143,183,159,135,175,151,127,167,143,119,159,135,111,155,127,107,147,
-123,99,139,115,91,131,107,87,123,99,79,119,95,75,111,87,67,103,83,63,95,75,55,87,67,51,83,63,47,159,131,99,143,119,83,
-131,107,75,119,95,63,103,83,51,91,71,43,79,59,35,67,51,27,123,127,99,111,115,87,103,107,79,91,99,71,83,87,59,71,79,51,
-63,71,43,55,63,39,255,255,115,235,219,87,215,187,67,195,155,47,175,123,31,155,91,19,135,67,7,115,43,0,255,255,255,255,
-219,219,255,187,187,255,155,155,255,123,123,255,95,95,255,63,63,255,31,31,255,0,0,239,0,0,227,0,0,215,0,0,203,0,0,191,
-0,0,179,0,0,167,0,0,155,0,0,139,0,0,127,0,0,115,0,0,103,0,0,91,0,0,79,0,0,67,0,0,231,231,255,199,199,255,171,171,255,
-143,143,255,115,115,255,83,83,255,55,55,255,27,27,255,0,0,255,0,0,227,0,0,203,0,0,179,0,0,155,0,0,131,0,0,107,0,0,83,
-255,255,255,255,235,219,255,215,187,255,199,155,255,179,123,255,163,91,255,143,59,255,127,27,243,115,23,235,111,15,
-223,103,15,215,95,11,203,87,7,195,79,0,183,71,0,175,67,0,255,255,255,255,255,215,255,255,179,255,255,143,255,255,107,
-255,255,71,255,255,35,255,255,0,167,63,0,159,55,0,147,47,0,135,35,0,79,59,39,67,47,27,55,35,19,47,27,11,0,0,83,0,0,71,
-0,0,59,0,0,47,0,0,35,0,0,23,0,0,11,0,255,255,255,159,67,255,231,75,255,123,255,255,0,255,207,0,207,159,0,155,111,0,107,
-167,107,107
-};
 
 static byte palette_q1[768] =
 {
@@ -72,32 +40,6 @@ static byte palette_q1[768] =
 7,147,31,7,163,39,11,183,51,15,195,75,27,207,99,43,219,127,59,227,151,79,231,171,95,239,191,119,247,211,139,167,123,
 59,183,155,55,199,195,55,231,227,87,127,191,255,171,231,255,215,255,255,103,0,0,139,0,0,179,0,0,215,0,0,255,0,0,255,
 243,147,255,247,199,255,255,255,159,91,83
-};
-
-static byte palette_q2[768] =
-{
-0,0,0,15,15,15,31,31,31,47,47,47,63,63,63,75,75,75,91,91,91,107,107,107,123,123,123,139,139,139,155,155,155,171,171,
-171,187,187,187,203,203,203,219,219,219,235,235,235,99,75,35,91,67,31,83,63,31,79,59,27,71,55,27,63,47,23,59,43,23,
-51,39,19,47,35,19,43,31,19,39,27,15,35,23,15,27,19,11,23,15,11,19,15,7,15,11,7,95,95,111,91,91,103,91,83,95,87,79,91,
-83,75,83,79,71,75,71,63,67,63,59,59,59,55,55,51,47,47,47,43,43,39,39,39,35,35,35,27,27,27,23,23,23,19,19,19,143,119,
-83,123,99,67,115,91,59,103,79,47,207,151,75,167,123,59,139,103,47,111,83,39,235,159,39,203,139,35,175,119,31,147,99,
-27,119,79,23,91,59,15,63,39,11,35,23,7,167,59,43,159,47,35,151,43,27,139,39,19,127,31,15,115,23,11,103,23,7,87,19,0,
-75,15,0,67,15,0,59,15,0,51,11,0,43,11,0,35,11,0,27,7,0,19,7,0,123,95,75,115,87,67,107,83,63,103,79,59,95,71,55,87,67,
-51,83,63,47,75,55,43,67,51,39,63,47,35,55,39,27,47,35,23,39,27,19,31,23,15,23,15,11,15,11,7,111,59,23,95,55,23,83,47,
-23,67,43,23,55,35,19,39,27,15,27,19,11,15,11,7,179,91,79,191,123,111,203,155,147,215,187,183,203,215,223,179,199,211,
-159,183,195,135,167,183,115,151,167,91,135,155,71,119,139,47,103,127,23,83,111,19,75,103,15,67,91,11,63,83,7,55,75,7,
-47,63,7,39,51,0,31,43,0,23,31,0,15,19,0,7,11,0,0,0,139,87,87,131,79,79,123,71,71,115,67,67,107,59,59,99,51,51,91,47,
-47,87,43,43,75,35,35,63,31,31,51,27,27,43,19,19,31,15,15,19,11,11,11,7,7,0,0,0,151,159,123,143,151,115,135,139,107,
-127,131,99,119,123,95,115,115,87,107,107,79,99,99,71,91,91,67,79,79,59,67,67,51,55,55,43,47,47,35,35,35,27,23,23,19,
-15,15,11,159,75,63,147,67,55,139,59,47,127,55,39,119,47,35,107,43,27,99,35,23,87,31,19,79,27,15,67,23,11,55,19,11,43,
-15,7,31,11,7,23,7,0,11,0,0,0,0,0,119,123,207,111,115,195,103,107,183,99,99,167,91,91,155,83,87,143,75,79,127,71,71,
-115,63,63,103,55,55,87,47,47,75,39,39,63,35,31,47,27,23,35,19,15,23,11,7,7,155,171,123,143,159,111,135,151,99,123,
-139,87,115,131,75,103,119,67,95,111,59,87,103,51,75,91,39,63,79,27,55,67,19,47,59,11,35,47,7,27,35,0,19,23,0,11,15,
-0,0,255,0,35,231,15,63,211,27,83,187,39,95,167,47,95,143,51,95,123,51,255,255,255,255,255,211,255,255,167,255,255,
-127,255,255,83,255,255,39,255,235,31,255,215,23,255,191,15,255,171,7,255,147,0,239,127,0,227,107,0,211,87,0,199,71,
-0,183,59,0,171,43,0,155,31,0,143,23,0,127,15,0,115,7,0,95,0,0,71,0,0,47,0,0,27,0,0,239,0,0,55,55,255,255,0,0,0,0,255,
-43,43,35,27,27,23,19,19,15,235,151,127,195,115,83,159,87,51,123,63,27,235,211,199,199,171,155,167,139,119,135,107,87,
-159,91,83	
 };
 
 // this is used only for particle colors
@@ -140,13 +82,6 @@ static const loadpixformat_t load_null[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version0 - using only Doom1 images
-static const loadpixformat_t load_doom1[] =
-{
-{ "%s%s.%s", "flt", Image_LoadFLT, IL_HINT_NO },	// flat textures, sprites
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
 // version1 - using only Quake1 images
 // wad files not requires path
 static const loadpixformat_t load_quake1[] =
@@ -158,26 +93,7 @@ static const loadpixformat_t load_quake1[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version2 - using only Quake2 images
-static const loadpixformat_t load_quake2[] =
-{
-{ "textures/%s%s.%s", "wal", Image_LoadWAL, IL_HINT_Q2 },	// map textures
-{ "%s%s.%s", "wal", Image_LoadWAL, IL_HINT_Q2 },	// map textures
-{ "%s%s.%s", "pcx", Image_LoadPCX, IL_HINT_NO },	// pics, skins, skies (q2 palette does wrong result for some images)
-{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// skies (indexed TGA's? never see in Q2)
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version3 - using only Quake3 images
-// g-cont: probably q3 used only explicit paths
-static const loadpixformat_t load_quake3[] =
-{
-{ "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// textures or gfx
-{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// textures or gfx
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version4 - using only Half-Life images
+// version2 - using only Half-Life images
 // wad files not requires path
 static const loadpixformat_t load_hl1[] =
 {
@@ -192,45 +108,18 @@ static const loadpixformat_t load_hl1[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version5 - studiomdl profile
-static const loadpixformat_t load_studiomdl[] =
-{
-{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// classic studio textures
-{ "%s%s.%s", "pcx", Image_LoadPCX, IL_HINT_NO },	// q2 skins or somewhat
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version6 - spritegen profile
-static const loadpixformat_t load_spritegen[] =
-{
-{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// classic sprite frames
-{ "%s%s.%s", "pcx", Image_LoadPCX, IL_HINT_NO },	// q2 sprite frames
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version7 - xwad profile
-static const loadpixformat_t load_wadlib[] =
-{
-{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// there all wad package types
-{ "%s%s.%s", "pcx", Image_LoadPCX, IL_HINT_NO }, 
-{ "%s%s.%s", "wal", Image_LoadWAL, IL_HINT_NO },
-{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// from another wads
-{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_NO },
-{ "%s%s.%s", "flt", Image_LoadFLT, IL_HINT_NO },
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version8 - Xash3D default image profile
+// version3 - Xash3D default image profile
 static const loadpixformat_t load_xash[] =
 {
-{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// screenshots, etc
-{ "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// 2d textures
-{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures (WorldCraft support)
-{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_NO },	// hl pictures
-{ "%s%s.%s", "fnt", Image_LoadFNT, IL_HINT_HL },	// qfonts (console, titles etc)
-{ "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_NO },	// hl or q1 model skins
+{ "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// HD textures
+{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// hl vgui menus
+{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// hl skyboxes
+{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures from wad or buffer
+{ "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_HL },	// hl studio model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames
-{ "%s%s.%s", "pal", Image_LoadPAL, IL_HINT_NO },	// install palettes
+{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_HL },	// hl menu images (cached.wad etc)
+{ "%s%s.%s", "fnt", Image_LoadFNT, IL_HINT_HL },	// hl menu images (cached.wad etc)
+{ "%s%s.%s", "pal", Image_LoadPAL, IL_HINT_NO },	// install studio palette
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
@@ -244,16 +133,6 @@ static const loadpixformat_t load_xash[] =
 // stub
 static const savepixformat_t save_null[] =
 {
-{ NULL, NULL, NULL }
-};
-
-// version0 - extragen save formats
-static const savepixformat_t save_extragen[] =
-{
-{ "%s%s.%s", "tga", Image_SaveTGA },		// tga screenshots
-{ "%s%s.%s", "jpg", Image_SaveJPG },		// jpg screenshots
-{ "%s%s.%s", "pcx", Image_SavePCX },		// just in case
-{ "%s%s.%s", "bmp", Image_SaveBMP },		// all 8-bit images
 { NULL, NULL, NULL }
 };
 
@@ -275,23 +154,9 @@ void Image_Init( void )
 	// install image formats (can be re-install later by Image_Setup)
 	switch( Sys.app_name )
 	{
-	case HOST_SPRITE:
-		image.loadformats = load_spritegen;
-		break;
-	case HOST_STUDIO:
-		image.loadformats = load_studiomdl;
-		break;
-	case HOST_WADLIB:
-		image.loadformats = load_wadlib;
-		break;
 	case HOST_NORMAL:
-	case HOST_BSPLIB:
 		Image_Setup( "default", 0 ); // re-initialized later		
 		image.saveformats = save_xash;
-		break;
-	case HOST_RIPPER:
-		image.loadformats = load_null;
-		image.saveformats = save_extragen;
 		break;
 	default:	// all other instances not using imagelib or will be reinstalling later
 		image.loadformats = load_null;
@@ -321,25 +186,10 @@ void Image_Setup( const char *formats, const uint flags )
 		image.loadformats = load_xash;
 		Image_SetPaths( "gfx/env", "jpg", "jpg" );
 	}
-	else if( !com.stricmp( formats, "Doom1" ) || !com.stricmp( formats, "Doom2" ))
-	{
-		image.loadformats = load_doom1;
-		Image_SetPaths( "gfx/env", "tga", "tga" );
-	}
 	else if( !com.stricmp( formats, "Quake1" ))
 	{
 		image.loadformats = load_quake1; 
 		Image_SetPaths( "gfx/env", "tga", "tga" );
-	}
-	else if( !com.stricmp( formats, "Quake2" ))
-	{
-		image.loadformats = load_quake2;
-		Image_SetPaths( "env", "tga", "tga" );
-	}
-	else if( !com.stricmp( formats, "Quake3" ))
-	{
-		image.loadformats = load_quake3;
-		Image_SetPaths( "env", "jpg", "jpg" );
 	}
 	else if( !com.stricmp( formats, "hl1" ) || !com.stricmp( formats, "Half-Life" ))
 	{
@@ -351,9 +201,6 @@ void Image_Setup( const char *formats, const uint flags )
 		image.loadformats = load_xash; // unrecognized version, use default
 		Image_SetPaths( "env", "jpg", "jpg" );
 	}
-
-	if( Sys.app_name == HOST_RIPPER )
-		image.baseformats = image.loadformats;
 }
 
 void Image_Shutdown( void )
@@ -405,12 +252,8 @@ int Image_ComparePalette( const byte *pal )
 {
 	if( pal == NULL )
 		return PAL_INVALID;
-	else if( !memcmp( palette_d1, pal, 768 ))
-		return PAL_DOOM1;
 	else if( !memcmp( palette_q1, pal, 768 ))
 		return PAL_QUAKE1;
-	else if( !memcmp( palette_q2, pal, 768 ))
-		return PAL_QUAKE2;
 	else if( !memcmp( palette_hl, pal, 768 ))
 		return PAL_HALFLIFE;
 	return PAL_CUSTOM;		
@@ -487,26 +330,6 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 	}
 }
 
-void Image_GetPaletteD1( void )
-{
-	image.d_rendermode = LUMP_NORMAL;
-
-	if( !d1palette_init )
-	{
-		byte	temp[4];
-
-		Image_SetPalette( palette_d1, d_8toD1table );
-		d_8toD1table[247] = 0; // Image_LoadFLT will be convert transparency from 247 into 255 color
-		d1palette_init = true;
-
-		// also swap palette colors: from 247 to 255
-		Mem_Copy( temp, &d_8toD1table[255], 4 );
-		Mem_Copy( &d_8toD1table[255], &d_8toD1table[247], 4 );		
-		Mem_Copy( &d_8toD1table[247], temp, 4 );
-	}
-	image.d_currentpal = d_8toD1table;
-}
-
 void Image_GetPaletteQ1( void )
 {
 	image.d_rendermode = LUMP_NORMAL;
@@ -520,19 +343,6 @@ void Image_GetPaletteQ1( void )
 	image.d_currentpal = d_8toQ1table;
 }
 
-void Image_GetPaletteQ2( void )
-{
-	image.d_rendermode = LUMP_NORMAL;
-
-	if(!q2palette_init)
-	{
-		Image_SetPalette( palette_q2, d_8toQ2table );
-		d_8toQ2table[255] &= 0xFFFFFF;
-		q2palette_init = true;
-	}
-	image.d_currentpal = d_8toQ2table;
-}
-
 void Image_GetPaletteHL( void )
 {
 	image.d_rendermode = LUMP_NORMAL;
@@ -544,19 +354,6 @@ void Image_GetPaletteHL( void )
 		hlpalette_init = true;
 	}
 	image.d_currentpal = d_8toHLtable;
-}
-
-void Image_GetPalettePCX( const byte *pal )
-{
-	image.d_rendermode = LUMP_NORMAL;
-
-	if( pal )
-	{
-		Image_SetPalette( pal, d_8to24table );
-		d_8to24table[255] &= 0xFFFFFF;
-		image.d_currentpal = d_8to24table;
-	}
-	else Image_GetPaletteQ2();          
 }
 
 void Image_GetPaletteBMP( const byte *pal )
@@ -671,12 +468,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 	if( image.flags & IMAGE_HAS_LUMA )
 	{
 		for( i = 0; i < image.width * image.height; i++ )
-		{
-			if( image.flags & IMAGE_HAS_LUMA_Q1 )
-				fin[i] = fin[i] < 224 ? fin[i] : 0;
-			else if( image.flags & IMAGE_HAS_LUMA_Q2 )
-				fin[i] = (fin[i] >= 208 && fin[i] <= 240 ) ? 0 : fin[i];
- 	   	}
+			fin[i] = fin[i] < 224 ? fin[i] : 0;
 	}
 
 	while( pixels >= 8 )
@@ -1288,12 +1080,7 @@ byte *Image_CreateLumaInternal( const byte *fin, int width, int height, int type
 	case PF_INDEXED_32:
 		out = image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, width * height );
 		for( i = 0; i < width * height; i++ )
-		{
-			if( flags & IMAGE_HAS_LUMA_Q1 )
-				*out++ = fin[i] >= 224 ? fin[i] : 0;
-			else if( flags & IMAGE_HAS_LUMA_Q2 )
-				*out++ = (fin[i] >= 208 && fin[i] <= 240) ? fin[i] : 0;
-                    }
+			*out++ = fin[i] >= 224 ? fin[i] : 0;
 		break;
 	default:
 		// another formats does ugly result :(

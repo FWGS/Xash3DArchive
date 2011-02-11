@@ -14,13 +14,6 @@ typedef struct loadwavformat_s
 	qboolean (*loadfunc)( const char *name, const byte *buffer, size_t filesize );
 } loadwavformat_t;
 
-typedef struct savewavformat_s
-{
-	const char *formatstring;
-	const char *ext;
-	qboolean (*savefunc)( const char *name, wavdata_t *pix );
-} savewavformat_t;
-
 typedef struct streamformat_s
 {
 	const char *formatstring;
@@ -35,7 +28,6 @@ typedef struct sndlib_s
 {
 	const loadwavformat_t	*baseformats;	// used for loading internal images
 	const loadwavformat_t	*loadformats;
-	const savewavformat_t	*saveformats;
 	const streamformat_t	*streamformat;	// music stream
 
 	// current sound state
@@ -68,23 +60,12 @@ typedef struct stream_s
 	void			*ptr;
 };
 
-/*
-========================================================================
-
-.OGG sound format	(OGG Vorbis)
-
-========================================================================
-*/
-// defined in sound_ogg.c
-
 extern sndlib_t sound;
 //
 // formats load
 //
 qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize );
-qboolean Sound_LoadOGG( const char *name, const byte *buffer, size_t filesize );
 qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize );
-qboolean Sound_LoadSND( const char *name, const byte *buffer, size_t filesize );	// snd - doom1 sounds
 
 //
 // stream operate
@@ -92,16 +73,8 @@ qboolean Sound_LoadSND( const char *name, const byte *buffer, size_t filesize );
 stream_t *Stream_OpenWAV( const char *filename );
 long Stream_ReadWAV( stream_t *stream, long bytes, void *buffer );
 void Stream_FreeWAV( stream_t *stream );
-stream_t *Stream_OpenOGG( const char *filename );
-long Stream_ReadOGG( stream_t *stream, long bytes, void *buffer );
-void Stream_FreeOGG( stream_t *stream );
 stream_t *Stream_OpenMPG( const char *filename );
 long Stream_ReadMPG( stream_t *stream, long bytes, void *buffer );
 void Stream_FreeMPG( stream_t *stream );
-
-//
-// formats save
-//
-qboolean Sound_SaveWAV( const char *name, wavdata_t *pix );
 
 #endif//SOUNDLIB_H

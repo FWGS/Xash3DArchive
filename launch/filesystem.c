@@ -7,7 +7,6 @@
 #include "wadfile.h"
 #include "filesystem.h"
 #include "library.h"
-#include "mathlib.h"
 
 #define FILE_BUFF_SIZE		2048
 
@@ -36,17 +35,6 @@ typedef struct file_s
 						// Contents buffer
 	fs_offset_t	buff_ind, buff_len;		// buffer current index and length
 	byte		buff[FILE_BUFF_SIZE];	// intermediate buffer
-};
-
-typedef struct vfile_s
-{
-	byte		*buff;
-	file_t		*handle;
-	int		mode;
-
-	fs_offset_t	buffsize;
-	fs_offset_t	length;
-	fs_offset_t	offset;
 };
 
 typedef struct wfile_s
@@ -111,7 +99,6 @@ char gs_basedir[MAX_SYSPATH]; // initial dir before loading gameinfo.txt (used f
 int fs_argc;
 char *fs_argv[MAX_NUM_ARGVS];
 qboolean fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
-convar_t *fs_defaultdir;
 sysinfo_t SI;
 
 /*
@@ -384,7 +371,7 @@ FS_FileBase
 Extracts the base name of a file (no path, no extension, assumes '/' as path separator)
 ============
 */
-void _FS_FileBase( const char *in, char *out, qboolean kill_backwardslash )
+void FS_FileBase( const char *in, char *out )
 {
 	int	len, start, end;
 
@@ -405,26 +392,12 @@ void _FS_FileBase( const char *in, char *out, qboolean kill_backwardslash )
 	// scan backward for '/'
 	start = len - 1;
 
-	if( kill_backwardslash )
-	{
-		while( start >= 0 && in[start] != '/' && in[start] != '\\' )
-			start--;
+	while( start >= 0 && in[start] != '/' && in[start] != '\\' )
+		start--;
 
-		if( start < 0 || ( in[start] != '/' && in[start] != '\\' ))
-			start = 0;
-		else start++;
-	}
-	else
-	{
-		// NOTE: some doomwads using backward slash as part of animation name
-		// e.g. vile\1, so ignore backward slash for wads
-		while ( start >= 0 && in[start] != '/' )
-			start--;
-
-		if ( start < 0 || in[start] != '/' )
-			start = 0;
-		else start++;
-	}
+	if( start < 0 || ( in[start] != '/' && in[start] != '\\' ))
+		start = 0;
+	else start++;
 
 	// length of new sting
 	len = end - start + 1;
@@ -432,16 +405,6 @@ void _FS_FileBase( const char *in, char *out, qboolean kill_backwardslash )
 	// Copy partial string
 	com.strncpy( out, &in[start], len + 1 );
 	out[len] = 0;
-}
-
-void FS_FileBase( const char *in, char *out )
-{
-	_FS_FileBase( in, out, true );
-}
-
-void W_FileBase( const char *in, char *out )
-{
-	_FS_FileBase( in, out, false );
 }
 
 /*
@@ -1081,7 +1044,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	com.strncpy( defGI.gameHint, "Half-Life", sizeof( defGI.gameHint ));
 	com.strncpy( defGI.title, "New Game", sizeof( defGI.title ));
 	com.strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
-	com.strncpy( defGI.basedir, fs_defaultdir->string, sizeof( defGI.basedir ));
+	com.strncpy( defGI.basedir, "valve", sizeof( defGI.basedir ));
 	com.strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
 	com.strncpy( defGI.mp_entity, "info_player_deathmatch", sizeof( defGI.mp_entity ));
 	com.strncpy( defGI.dll_path, "cl_dlls", sizeof( defGI.dll_path ));
@@ -1344,10 +1307,6 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		{
 			PS_GetString( script, false, GameInfo->update_url, sizeof( GameInfo->update_url ));
 		}
-		else if( !com.stricmp( token.string, "textures_path" ))
-		{
-			PS_GetString( script, false, GameInfo->texpath, sizeof( GameInfo->texpath ));
-		}
 		else if( !com.stricmp( token.string, "date" ))
 		{
 			PS_GetString( script, false, GameInfo->date, sizeof( GameInfo->date ));
@@ -1466,10 +1425,9 @@ void FS_Init( void )
 	Cmd_AddCommand( "fs_rescan", FS_Rescan_f, "rescan filesystem search pathes" );
 	Cmd_AddCommand( "fs_path", FS_Path_f, "show filesystem search pathes" );
 	Cmd_AddCommand( "fs_clearpaths", FS_ClearPaths_f, "clear filesystem search pathes" );
-	fs_defaultdir = Cvar_Get( "fs_defaultdir", "valve", CVAR_INIT, "game default directory" );
 
 	// ignore commandlineoption "-game" for other stuff
-	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED || Sys.app_name == HOST_BSPLIB )
+	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
 	{
 		stringlistinit( &dirs );
 		listdirectory( &dirs, "./" );
@@ -1478,22 +1436,20 @@ void FS_Init( void )
 	
 		if( !FS_GetParmFromCmdLine( "-game", gs_basedir, sizeof( gs_basedir )))
 		{
-			if( Sys.app_name == HOST_BSPLIB )
-				com.strcpy( gs_basedir, fs_defaultdir->string );
-			else if( Sys_GetModuleName( gs_basedir, MAX_SYSPATH ));
-			else com.strcpy( gs_basedir, fs_defaultdir->string ); // default dir
+			if( Sys_GetModuleName( gs_basedir, MAX_SYSPATH ));
+			else com.strcpy( gs_basedir, "valve" ); // default dir
 		}
 
 		if( FS_CheckNastyPath( gs_basedir, true ))
 		{
 			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", gs_basedir );		
-			com.strcpy( gs_basedir, fs_defaultdir->string ); // default dir
+			com.strcpy( gs_basedir, "valve" ); // default dir
 		}
 
 		// validate directories
 		for( i = 0; i < dirs.numstrings; i++ )
 		{
-			if( !com.stricmp( fs_defaultdir->string, dirs.strings[i] ))
+			if( !com.stricmp( "valve", dirs.strings[i] ))
 				hasDefaultDir = true;
 
 			if( !com.stricmp( gs_basedir, dirs.strings[i] ))
@@ -1503,7 +1459,7 @@ void FS_Init( void )
 		if( i == dirs.numstrings )
 		{ 
 			MsgDev( D_INFO, "FS_Init: game directory \"%s\" not exist\n", gs_basedir );		
-			if( hasDefaultDir ) com.strcpy( gs_basedir, fs_defaultdir->string ); // default dir
+			if( hasDefaultDir ) com.strcpy( gs_basedir, "valve" ); // default dir
 		}
 
 		// build list of game directories here
@@ -1527,24 +1483,6 @@ void FS_Init( void )
 
 	MsgDev( D_NOTE, "FS_Root: %s\n", sys_rootdir );
 	MsgDev( D_NOTE, "FS_Init: done\n" );
-}
-
-void FS_InitRootDir( char *path )
-{
-	char	szTemp[4096];
-
-	FS_InitMemory();
-
-	// just set cwd
-	GetModuleFileName( NULL, szTemp, MAX_SYSPATH );
-	FS_ExtractFilePath( szTemp, szTemp );	
-	SetCurrentDirectory( szTemp );
-
-	// use extended pathname
-	fs_ext_path = true;
-
-	FS_ClearSearchPath();
-	FS_AddGameHierarchy( path, FS_STATIC_PATH );
 }
 
 qboolean FS_GetParmFromCmdLine( char *parm, char *out, size_t size )
@@ -1580,7 +1518,6 @@ void FS_Shutdown( void )
 	Mem_Set( &SI, 0, sizeof( SI ));
 
 	FS_ClearSearchPath();		// release all wad files too
-	FS_UpdateEnvironmentVariables(); 	// merge working directory
 	Mem_FreePool( &fs_mempool );
 }
 
@@ -1806,7 +1743,7 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 
 			// NOTE: we can't using long names for wad,
 			// because we using original wad names[16];
-			W_FileBase( name, shortname );
+			FS_FileBase( name, shortname );
 
 			lump = W_FindLump( search->wad, shortname, type );
 			if( lump )
@@ -1907,7 +1844,7 @@ Open a file. The syntax is the same as fopen
 */
 file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly )
 {
-	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED || Sys.app_name == HOST_BSPLIB )
+	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
           {
 		// some stupid mappers used leading '/' or '\' in path to models or sounds
 		if( filepath[0] == '/' || filepath[0] == '\\' ) filepath++;
@@ -2163,6 +2100,13 @@ int FS_UnGetc( file_t *file, byte c )
 	return c;
 }
 
+/*
+====================
+FS_Gets
+
+Same as fgets
+====================
+*/
 int FS_Gets( file_t *file, byte *string, size_t bufsize )
 {
 	int	c, end = 0;
@@ -2449,7 +2393,7 @@ const char *FS_GetDiskPath( const char *name, qboolean gamedironly )
 ==================
 FS_CheckForCrypt
 
-return true is library is crypted
+return true if library is crypted
 ==================
 */
 qboolean FS_CheckForCrypt( const char *dllname )
@@ -2901,394 +2845,6 @@ int FS_CheckParm( const char *parm )
 	return 0;
 }
 
-void FS_GetBaseDir( char *pszBuffer, char *out )
-{
-	char	basedir[MAX_SYSPATH];
-	char	szBuffer[MAX_SYSPATH];
-	char	*pBuffer = NULL;
-	int	j;
-
-	com.strcpy( szBuffer, pszBuffer );
-
-	pBuffer = com.strrchr( szBuffer,'\\' );
-	if ( pBuffer ) *(pBuffer + 1) = '\0';
-
-	com.strcpy( basedir, szBuffer );
-
-	j = com.strlen( basedir );
-	if( j > 0 )
-	{
-		if(( basedir[j-1] == '\\' ) || ( basedir[j-1] == '/' ))
-			basedir[j-1] = 0;
-	}
-	com.strcpy( out, basedir );
-}
-
-void FS_ReadEnvironmentVariables( char *pPath )
-{
-	// get basepath from registry
-	REG_GetValue( HKEY_LOCAL_MACHINE, "System\\CurrentControlSet\\Control\\Session Manager\\Environment", "Xash3D", pPath );
-}
-
-void FS_SaveEnvironmentVariables( char *pPath )
-{
-	// save new path
-	REG_SetValue( HKEY_LOCAL_MACHINE, "System\\CurrentControlSet\\Control\\Session Manager\\Environment", "Xash3D", pPath );
-	SendMessageTimeout( HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0, SMTO_NORMAL, 10, NULL ); // system update message
-}
-
-static void FS_BuildPath( char *pPath, char *pOut )
-{
-	// set working directory
-	SetCurrentDirectory ( pPath );
-	com.sprintf( pOut, "%s\\launch.dll", pPath );
-}
-
-void FS_UpdateEnvironmentVariables( void )
-{
-	char	szTemp[4096];
-	char	szPath[MAX_SYSPATH]; // test path
-
-	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
-	{
-		// just update environment path
-		FS_SaveEnvironmentVariables( sys_rootdir );
-		return;
-	}
-
-          // get variable from registry and current directory
-	FS_ReadEnvironmentVariables( szTemp );
-	
-	// if both values is math - no run additional tests		
-	if( com.stricmp( sys_rootdir, szTemp ))
-	{
-		// Step1: path from registry have higher priority than current working directory
-		// because user can execute launcher from random place or from a bat-file
-                    // so, set current working directory as path from registry and test it
-
-		FS_BuildPath( szTemp, szPath );
-		if( !FS_SysFileExists( szPath )) // Step2: engine root dir has been moved to other place?
-		{
-			FS_BuildPath( sys_rootdir, szPath );
-			if( !FS_SysFileExists( szPath )) // Step3: directly execute from bin directory?
-			{
-				// Step4: create last test for bin directory
-			          FS_GetBaseDir( sys_rootdir, szTemp );
-				FS_BuildPath( szTemp, szPath );
-				if( !FS_SysFileExists( szPath ))
-				{
-					// big bada-boom: engine was moved and launcher was running from other place
-					// step5: so, path form registry is invalid, current path is no valid
-					Sys_Break( "Invalid root directory!\n\rPlease re-install Xash3D\n" );
-				}
-				else FS_SaveEnvironmentVariables( szTemp ); // update registry
-			}
-			else FS_SaveEnvironmentVariables( sys_rootdir );
-		}
-	}
-}
-
-/*
-=============================================================================
-
-VIRTUAL FILE SYSTEM - WRITE DATA INTO MEMORY
-
-=============================================================================
-*/
-vfile_t *VFS_Create( const byte *buffer, size_t buffsize)
-{
-	vfile_t *file = (vfile_t *)Mem_Alloc( fs_mempool, sizeof (*file));
-
-	file->length = file->buffsize = buffsize;
-	file->buff = Mem_Alloc(fs_mempool, (file->buffsize));	
-	file->offset = 0;
-	file->mode = O_RDONLY;
-	Mem_Copy( file->buff, buffer, buffsize );
-
-	return file;
-}
-
-vfile_t *VFS_Open( file_t *handle, const char *mode )
-{
-	vfile_t	*file = (vfile_t *)Mem_Alloc (fs_mempool, sizeof (vfile_t));
-
-	// If the file is opened in "write", "append", or "read/write" mode
-	if( mode[0] == 'w' )
-	{
-		file->handle = handle;
-		file->buffsize = (64 * 1024); // will be resized if need
-		file->buff = Mem_Alloc( fs_mempool, file->buffsize );
-		file->length = 0;
-		file->offset = 0;
-		file->mode = O_WRONLY;
-	}
-	else if( mode[0] == 'r' )
-	{
-		int	curpos, endpos;
-
-		file->handle = handle;
-		curpos = FS_Tell( file->handle );
-		FS_Seek( file->handle, 0, SEEK_END );
-		endpos = FS_Tell( file->handle );
-		FS_Seek( file->handle, curpos, SEEK_SET );
-
-		file->buffsize = endpos - curpos;
-		file->buff = Mem_Alloc( fs_mempool, file->buffsize );
-
-		FS_Read( file->handle, file->buff, file->buffsize );		
-		file->length = file->buffsize;
-		file->offset = 0;
-		file->mode = O_RDONLY;
-	}
-	else
-	{
-		Mem_Free( file );
-		MsgDev( D_ERROR, "VFS_Open: unsupported mode %s\n", mode );
-		return NULL;
-	}
-	return file;
-}
-
-fs_offset_t VFS_Read( vfile_t* file, void* buffer, size_t buffersize)
-{
-	fs_offset_t	read_size = 0;
-
-	if( buffersize == 0 ) return 1;
-	if( !file ) return 0;
-
-	// check for enough room
-	if( file->offset >= file->length )
-	{
-		return 0; // hit EOF
-	}
-
-	if( file->offset + buffersize <= file->length )
-	{
-		Mem_Copy( buffer, file->buff + file->offset, buffersize );
-		file->offset += buffersize;
-		read_size = buffersize;
-	}
-	else
-	{
-		int reduced_size = file->length - file->offset;
-		Mem_Copy( buffer, file->buff + file->offset, reduced_size );
-		file->offset += reduced_size;
-		read_size = reduced_size;
-		MsgDev( D_NOTE, "VFS_Read: vfs buffer is out\n");
-	}
-
-	return read_size;
-}
-
-fs_offset_t VFS_Write( vfile_t *file, const void *buf, size_t size )
-{
-	if( !file ) return -1;
-
-	if( file->offset + size >= file->buffsize )
-	{
-		int	newsize = file->offset + size + (64 * 1024);
-
-		if( file->buffsize < newsize )
-		{
-			// reallocate buffer now
-			file->buff = Mem_Realloc( fs_mempool, file->buff, newsize );
-			file->buffsize = newsize; // merge buffsize
-		}
-	}
-
-	// write into buffer
-	Mem_Copy( file->buff + file->offset, (byte *)buf, size );
-	file->offset += size;
-
-	if( file->offset > file->length ) 
-		file->length = file->offset;
-
-	return file->length;
-}
-
-byte *VFS_GetBuffer( vfile_t *file )
-{
-	if( !file ) return NULL;
-	return file->buff;
-}
-
-/*
-====================
-VFS_Print
-
-Print a string into a file
-====================
-*/
-int VFS_Print( vfile_t* file, const char *msg )
-{
-	return (int)VFS_Write( file, msg, com.strlen( msg ));
-}
-
-/*
-====================
-VFS_VPrintf
-
-Print a string into a buffer
-====================
-*/
-int VFS_VPrintf( vfile_t* file, const char* format, va_list ap )
-{
-	int		len;
-	fs_offset_t	buff_size = MAX_SYSPATH;
-	char		*tempbuff;
-
-	while( 1 )
-	{
-		tempbuff = (char *)Mem_Alloc( fs_mempool, buff_size );
-		len = com.vsprintf( tempbuff, format, ap );
-		if( len >= 0 && len < buff_size ) break;
-		Mem_Free( tempbuff );
-		buff_size *= 2;
-	}
-
-	len = VFS_Write( file, tempbuff, len );
-	Mem_Free( tempbuff );
-
-	return len;
-}
-
-/*
-====================
-VFS_Printf
-
-Print a string into a buffer
-====================
-*/
-int VFS_Printf( vfile_t* file, const char* format, ... )
-{
-	int	result;
-	va_list	args;
-
-	va_start( args, format );
-	result = VFS_VPrintf( file, format, args );
-	va_end( args );
-
-	return result;
-}
-
-fs_offset_t VFS_Tell( vfile_t *file )
-{
-	if( !file ) return -1;
-	return file->offset;
-}
-
-qboolean VFS_Eof( vfile_t *file )
-{
-	if( !file ) return true;
-	return (file->offset == file->length) ? true : false;
-}
-
-/*
-====================
-VFS_Getc
-
-Get the next character of a file
-====================
-*/
-int VFS_Getc( vfile_t *file )
-{
-	char c;
-
-	if(!VFS_Read( file, &c, 1 ))
-		return EOF;
-	return c;
-}
-
-int VFS_Gets( vfile_t* file, byte *string, size_t bufsize )
-{
-	int	c, end = 0;
-
-	while( 1 )
-	{
-		c = VFS_Getc( file );
-		if( c == '\r' || c == '\n' || c < 0 )
-			break;
-
-		if( end < bufsize - 1 )
-			string[end++] = c;
-	}
-	string[end] = 0;
-
-	// remove \n following \r
-	if( c == '\r' )
-	{
-		c = VFS_Getc( file );
-		if( c != '\n' ) VFS_Seek( file, -1, SEEK_CUR ); // rewind
-	}
-
-	return c;
-}
-
-int VFS_Seek( vfile_t *file, fs_offset_t offset, int whence )
-{
-	if( !file ) return -1;
-
-	// Compute the file offset
-	switch( whence )
-	{
-	case SEEK_CUR:
-		offset += file->offset;
-		break;
-	case SEEK_SET:
-		break;
-	case SEEK_END:
-		offset += file->length;
-		break;
-	default: 
-		return -1;
-	}
-
-	if( offset < 0 ) return -1;
-
-	if( offset > (long)file->length )
-	{
-		if( file->mode == O_WRONLY )
-		{
-			int	newsize = offset + (64 * 1024);
-
-			if( file->buffsize < newsize )
-			{
-				// reallocate buffer now
-				file->buff = Mem_Realloc( fs_mempool, file->buff, newsize );
-				file->buffsize = newsize; // merge buffsize
-			}
-		}
-		else
-		{
-			return -1;
-		}
-	}
-
-	file->offset = offset;
-	return 0;
-}
-
-file_t *VFS_Close( vfile_t *file )
-{
-	file_t	*handle;
-	
-	if( !file ) return NULL;
-
-	if( file->mode == O_WRONLY )
-	{
-		if( file->handle )
-			FS_Write(file->handle, file->buff, (file->length + 3) & ~3); // align
-	}
-
-	handle = file->handle; // keep real handle
-
-	if( file->buff ) Mem_Free( file->buff );
-	Mem_Free( file ); // himself
-
-	return handle;
-}
-
-
 /*
 =============================================================================
 
@@ -3299,11 +2855,6 @@ WADSYSTEM PRIVATE COMMON FUNCTIONS
 // associate extension with wad type
 static const wadtype_t wad_types[] =
 {
-{ "flp", TYP_FLMP	}, // doom1 menu picture
-{ "snd", TYP_SND	}, // doom1 sound
-{ "mus", TYP_MUS	}, // doom1 .mus format
-{ "skn", TYP_SKIN	}, // doom1 sprite model
-{ "flt", TYP_FLAT	}, // doom1 wall texture
 { "pal", TYP_QPAL	}, // palette
 { "lmp", TYP_QPIC	}, // quake1, hl pic
 { "fnt", TYP_QFONT	}, // hl qfonts
@@ -3446,111 +2997,6 @@ static dlumpinfo_t *W_AddFileToWad( const char *name, wfile_t *wad, int filepos,
 		plump->type = TYP_QPIC; 
 
 	return plump;
-}
-
-static qboolean W_ConvertIWADLumps( wfile_t *wad )
-{
-	dlumpfile_t	*doomlumps;
-	qboolean		flat_images = false;	// doom1 wall texture marker
-	qboolean		skin_images = false;	// doom1 skin image ( sprite model ) marker
-	qboolean		flmp_images = false;	// doom1 menu image marker
-	size_t		lat_size;			// LAT - LumpAllocationTable		
-	int		i, k, numlumps;
-
-	// nothing to convert ?
-	if( !wad ) return false;
-
-	lat_size = wad->numlumps * sizeof( dlumpfile_t );
-	doomlumps = (dlumpfile_t *)Mem_Alloc( wad->mempool, lat_size );
-	numlumps = wad->numlumps;
-	wad->numlumps = 0;	// reset it
-
-	if( read( wad->handle, doomlumps, lat_size ) != lat_size )
-	{
-		MsgDev( D_ERROR, "W_ConvertIWADLumps: %s has corrupted lump allocation table\n", wad->filename );
-		Mem_Free( doomlumps );
-		W_Close( wad );
-		return false;
-	}
-
-	// convert doom1 format into WAD3 lump format
-	for( i = 0; i < numlumps; i++ )
-	{
-		// W_Open will be swap lump later
-		int	filepos = doomlumps[i].filepos;
-		int	size = doomlumps[i].size;
-		char	type = TYP_NONE;
-		char	name[16];
-
-		com.strnlwr( doomlumps[i].name, name, 9 );
-
-		// check for backslash issues
-		k = com.strlen( com.strchr( name, '\\' ));
-		if( k ) name[com.strlen( name )-k] = '#'; // vile1.spr issues
-	
-		// textures begin
-		if( !com.stricmp( "S_START", name ))
-		{
-			skin_images = true;
-			continue; // skip identifier
-		}
-		else if( !com.stricmp( "P_START", name ))
-		{
-			flat_images = true;
-			continue; // skip identifier
-		}
-		else if( !com.stricmp( "P1_START", name ))
-		{
-			flat_images = true;
-			continue; // skip identifier
-		}
-		else if( !com.stricmp( "P2_START", name ))
-		{
-			flat_images = true;
-			continue; // skip identifier
-		}
-		else if( !com.stricmp( "P3_START", name ))
-		{
-			// only doom2 uses this name
-			flat_images = true;
-			continue; // skip identifier
-		}
-		else if( !com.strnicmp( "WI", name, 2 )) flmp_images = true;
-		else if( !com.strnicmp( "ST", name, 2 )) flmp_images = true;
-		else if( !com.strnicmp( "M_", name, 2 )) flmp_images = true;
-		else if( !com.strnicmp( "END", name, 3 )) flmp_images = true;
-		else if( !com.strnicmp( "HELP", name, 4 )) flmp_images = true;
-		else if( !com.strnicmp( "CREDIT", name, 6 )) flmp_images = true;
-		else if( !com.strnicmp( "TITLEPIC", name, 8 )) flmp_images = true;
-		else if( !com.strnicmp( "VICTORY", name, 7 )) flmp_images = true;
-		else if( !com.strnicmp( "PFUB", name, 4 )) flmp_images = true;
-		else if( !com.stricmp( "P_END", name )) flat_images = false;
-		else if( !com.stricmp( "P1_END", name )) flat_images = false;
-		else if( !com.stricmp( "P2_END", name )) flat_images = false;
-		else if( !com.stricmp("P3_END", name )) flat_images = false;
-		else if( !com.stricmp( "S_END", name )) skin_images = false;
-		else flmp_images = false;
-
-		// setup lumptypes for doomwads
-		if( flmp_images ) type = TYP_FLMP; // mark as menu pic
-		if( flat_images ) type = TYP_FLAT; // mark as texture
-		if( skin_images ) type = TYP_SKIN; // mark as skin (sprite model)
-		if(!com.strnicmp( name, "D_", 2 )) wad->lumps[i].type = TYP_MUS;
-		if(!com.strnicmp( name, "DS", 2 )) wad->lumps[i].type = TYP_SND;
-
-		// remove invalid resources
-		if( !com.strnicmp( name, "ENDOOM", 6 )) type = TYP_NONE;
-		if( !com.strnicmp( name, "STEP1", 5 )) type = TYP_NONE;
-		if( !com.strnicmp( name, "STEP2", 5 )) type = TYP_NONE;
-
-		if( type == TYP_NONE ) continue;	// invalid resource
-
-		// add wad file
-		W_AddFileToWad( name, wad, filepos, size, size, type, CMP_NONE );
-	}
-
-	Mem_Free( doomlumps ); // no need anymore
-	return true;
 }
 
 static qboolean W_ReadLumpTable( wfile_t *wad )
@@ -3715,10 +3161,9 @@ int W_Check( const char *filename )
 
 	switch( header.ident )
 	{
-	case IDIWADHEADER:
-	case IDPWADHEADER:
 	case IDWAD2HEADER:
-	case IDWAD3HEADER: break;
+	case IDWAD3HEADER:
+		break;
 	default:
 		FS_Close( testwad );
 		return -2; // invalid id
@@ -3799,17 +3244,9 @@ wfile_t *W_Open( const char *filename, const char *mode )
 
 		switch( header.ident )
 		{
-		case IDIWADHEADER:
-		case IDPWADHEADER:
 		case IDWAD2HEADER:
-			if( wad->mode == O_APPEND )
-			{
-				MsgDev( D_WARN, "W_Open: %s is readonly\n", filename, mode );
-				wad->mode = O_RDONLY; // set read-only mode
-			}
-			break; 
 		case IDWAD3HEADER:
-			break; // WAD3 allow r\w mode
+			break; // WAD2, WAD3 allow r\w mode
 		default:
 			MsgDev( D_ERROR, "W_Open: %s unknown wadtype\n", filename );
 			W_Close( wad );
@@ -3853,11 +3290,6 @@ wfile_t *W_Open( const char *filename, const char *mode )
 			// setup lump allocation table
 			switch( header.ident )
 			{
-			case IDIWADHEADER:
-			case IDPWADHEADER:
-				if(!W_ConvertIWADLumps( wad ))
-					return NULL;
-				break;		
 			case IDWAD2HEADER:
 			case IDWAD3HEADER: 
 				if(!W_ReadLumpTable( wad ))

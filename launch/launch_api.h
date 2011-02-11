@@ -16,7 +16,6 @@
 #define MAX_SYSPATH		1024	// system filepath
 #define bound(min, num, max)	((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 #define MAX_MODS		512	// environment games that engine can keep visible
-#define MAX_STRING_TABLES	8	// seperately stringsystems
 #define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
 
@@ -30,7 +29,6 @@
 typedef unsigned long	dword;
 typedef unsigned int	uint;
 typedef int		sound_t;
-typedef int		shader_t;
 typedef float		vec_t;
 typedef vec_t		vec2_t[2];
 typedef vec_t		vec3_t[3];
@@ -38,7 +36,6 @@ typedef vec_t		vec4_t[4];
 typedef vec_t		quat_t[4];
 typedef byte		rgba_t[4];	// unsigned byte colorpack
 typedef byte		rgb_t[3];		// unsigned byte colorpack
-typedef vec_t		matrix3x3[3][3];
 typedef vec_t		matrix3x4[3][4];
 typedef vec_t		matrix4x4[4][4];
 typedef char		string[MAX_STRING];
@@ -52,11 +49,6 @@ typedef enum
 	HOST_CREDITS,	// "splash"	"©anyname"	(easter egg)
 	HOST_DEDICATED,	// "normal"	"#gamename"
 	HOST_NORMAL,	// "normal"	"gamename"
-	HOST_BSPLIB,	// "bsplib"	"bsplib"
-	HOST_SPRITE,	// "sprite"	"spritegen"
-	HOST_STUDIO,	// "studio"	"studiomdl"
-	HOST_WADLIB,	// "wadlib"	"xwad"
-	HOST_RIPPER,	// "ripper"	"extragen"
 	HOST_MAXCOUNT,	// terminator
 } instance_t;
 
@@ -71,14 +63,12 @@ enum dev_level
 
 typedef long fs_offset_t;
 typedef struct file_s file_t;		// normal file
-typedef struct vfile_s vfile_t;	// virtual file
 typedef struct wfile_s wfile_t;	// wad file
 typedef struct convar_s convar_t;	// console variable
 typedef struct script_s script_t;	// script machine
 typedef struct stream_s stream_t;	// sound stream for background music playing
 typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
 typedef struct { int numfilenames; char **filenames; char *filenamesbuffer; } search_t;
-typedef void ( *cmdraw_t )( int color, int numpoints, const float *points );
 typedef void ( *setpair_t )( const char *key, const char *value, void *buffer, void *numpairs );
 typedef enum { NS_CLIENT, NS_SERVER } netsrc_t;
 typedef void ( *xcommand_t )( void );
@@ -222,9 +212,6 @@ typedef struct gameinfo_s
 	char		dll_path[64];	// e.g. "bin" or "cl_dlls"
 	char		game_dll[64];	// custom path for game.dll
 
-	// path info
-	string		texpath;		// implicit texpath (apply in shaderpath)
-
 	// about mod info
 	string		game_url;		// link to a developer's site
 	string		update_url;	// link to updates page
@@ -336,12 +323,10 @@ typedef enum
 	IMAGE_HAS_ALPHA	= BIT(1),		// image contain alpha-channel
 	IMAGE_HAS_COLOR	= BIT(2),		// image contain RGB-channel
 	IMAGE_COLORINDEX	= BIT(3),		// all colors in palette is gradients of last color (decals)
-	IMAGE_HAS_LUMA_Q1	= BIT(4),		// image has luma pixels (q1-style maps)
-	IMAGE_HAS_LUMA_Q2	= BIT(5),		// image has luma pixels (q2-style maps)
-	IMAGE_HAS_LUMA	= IMAGE_HAS_LUMA_Q1|IMAGE_HAS_LUMA_Q2,
-	IMAGE_SKYBOX	= BIT(6),		// only used by FS_SaveImage - for write right suffixes
-	IMAGE_QUAKESKY	= BIT(7),		// it's a quake sky double layered clouds (so keep it as 8 bit)
-	IMAGE_STATIC	= BIT(8),		// never trying to free this image (static memory)
+	IMAGE_HAS_LUMA	= BIT(4),		// image has luma pixels (q1-style maps)
+	IMAGE_SKYBOX	= BIT(5),		// only used by FS_SaveImage - for write right suffixes
+	IMAGE_QUAKESKY	= BIT(6),		// it's a quake sky double layered clouds (so keep it as 8 bit)
+	IMAGE_STATIC	= BIT(7),		// never trying to free this image (static memory)
 
 	// Image_Process manipulation flags
 	IMAGE_FLIP_X	= BIT(16),	// flip the image by width
@@ -381,7 +366,6 @@ typedef enum
 {
 	WF_UNKNOWN = 0,
 	WF_PCMDATA,
-	WF_OGGDATA,
 	WF_MPGDATA,
 	WF_TOTALCOUNT,	// must be last
 } sndformat_t;
@@ -489,7 +473,6 @@ typedef struct stdilib_api_s
 	void (*NET_SendPacket)( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 	// common functions
-	void (*Com_InitRootDir)( char *path );				// init custom rootdir 
 	void (*Com_LoadGameInfo)( const char *rootfolder );		// initialize gamedir
 	void (*Com_AddGameHierarchy)( const char *dir, int flags );		// add base directory in search list
 	void (*Com_AddGameDirectory)( const char *dir, int flags );		// add game directory in search list
@@ -507,10 +490,6 @@ typedef struct stdilib_api_s
 	void (*Com_StripFilePath)(const char* const src, char* dst);	// get file path without filename.ext
 	void (*Com_DefaultExtension)(char *path, const char *ext );		// append extension if not present
 	void (*Com_ClearSearchPath)( void );				// delete all search pathes
-	void (*Com_CreateThread)(int, qboolean, void(*fn)(int));		// run individual thread
-	void (*Com_ThreadLock)( void );				// lock current thread
-	void (*Com_ThreadUnlock)( void );				// unlock numthreads
-	int (*Com_NumThreads)( void );				// returns count of active threads
 
 	// user dlls interface
 	void *(*LoadLibrary)( const char *dllname, int build_ordinals_table );
@@ -578,20 +557,6 @@ typedef struct stdilib_api_s
 	qboolean (*fremove)( const char *path );				// remove specified file
 	qboolean (*frename)( const char *oldname, const char *newname );		// rename specified file
 
-	// virtual filesystem
-	vfile_t *(*vfcreate)( const byte *buffer, size_t buffsize );	// create virtual stream
-	vfile_t *(*vfopen)(file_t *handle, const char* mode);		// virtual fopen
-	file_t *(*vfclose)(vfile_t* file);				// free buffer or write dump
-	long (*vfwrite)(vfile_t* file, const void* buf, size_t datasize);	// write into buffer
-	long (*vfread)(vfile_t* file, void* buffer, size_t buffersize);	// read from buffer
-	int  (*vfgets)(vfile_t* file, byte *string, size_t bufsize );	// read text line 
-	int  (*vfprint)(vfile_t* file, const char *msg);			// write message
-	int  (*vfprintf)(vfile_t* file, const char* format, ...);		// write formatted message
-	int (*vfseek)(vfile_t* file, fs_offset_t offset, int whence);	// fseek, can seek in packfiles too
-	byte *(*vfbuffer)( vfile_t *file );				// get pointer to virtual filebuff
-	long (*vftell)(vfile_t* file);				// like a ftell
-	qboolean (*vfeof)( vfile_t* file);				// like a feof
-
 	// wadstorage filesystem
 	int (*wfcheck)( const char *filename );				// validate container
 	wfile_t *(*wfopen)( const char *filename, const char *mode );	// open wad file or create new
@@ -628,7 +593,6 @@ typedef struct stdilib_api_s
 	// built-in soundlib functions
 	void (*SndlibSetup)( const char *formats, const uint flags );	// set main attributes
 	wavdata_t *(*SoundLoad)( const char *, const byte *, size_t );	// load sound from disk or buffer
-	qboolean (*SoundSave)( const char *name, wavdata_t *image );	// save sound into specified format
 	qboolean (*SoundConvert)( wavdata_t **pix, int rt, int wdth, uint flags );// sound manipulations
  	void (*SoundFree)( wavdata_t *pack );				// release sound buffer
 
@@ -898,24 +862,6 @@ console commands
 
 /*
 ===========================================
-virtual filesystem manager
-===========================================
-*/
-#define VFS_Create			com.vfcreate
-#define VFS_GetBuffer		com.vfbuffer
-#define VFS_Open			com.vfopen
-#define VFS_Write			com.vfwrite
-#define VFS_Read			com.vfread
-#define VFS_Print			com.vfprint
-#define VFS_Printf			com.vfprintf
-#define VFS_Gets			com.vfgets
-#define VFS_Seek			com.vfseek
-#define VFS_Tell			com.vftell
-#define VFS_Eof			com.vfeof
-#define VFS_Close			com.vfclose
-
-/*
-===========================================
 wadstorage filesystem manager
 ===========================================
 */
@@ -968,7 +914,6 @@ sndlib manager
 ===========================================
 */
 #define FS_LoadSound		com.SoundLoad
-#define FS_SaveSound		com.SoundSave
 #define FS_FreeSound		com.SoundFree
 #define Sound_Init			com.SndlibSetup
 #define Sound_Process		com.SoundConvert
@@ -1000,10 +945,6 @@ misc utils
 #define Sys_Quit			com.exit
 #define Sys_Break			com.abort
 #define Sys_DoubleTime		com.Com_DoubleTime
-#define GetNumThreads		com.Com_NumThreads
-#define ThreadLock			com.Com_ThreadLock
-#define ThreadUnlock		com.Com_ThreadUnlock
-#define RunThreadsOnIndividual	com.Com_CreateThread
 #define Com_RandomLong		com.Com_RandomLong
 #define Com_RandomFloat		com.Com_RandomFloat
 

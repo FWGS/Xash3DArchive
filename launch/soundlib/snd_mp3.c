@@ -375,7 +375,7 @@ stream_t *Stream_OpenMPG( const char *filename )
 	stream->ptr = mpegFile;
 	stream->type = WF_MPGDATA;
 
-	// FIXME: there is a stupid way...
+	// g-cont: there is a stupid way...
 	if( stream->rate > 44100 )
 	{
 		mpegFile->stream.options = 0x0002;
