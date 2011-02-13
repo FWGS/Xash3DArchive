@@ -74,9 +74,6 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 	// HACKHACK: skip any checks, load file from buffer
 	if( filename[0] == '#' && buffer && size ) goto load_internal;
 
-	// engine notify
-	if( !anyformat ) MsgDev( D_NOTE, "Note: %s will be loading only with ext .%s\n", loadname, ext );
-	
 	// now try all the formats in the selected list
 	for( format = sound.loadformats; format && format->formatstring; format++)
 	{
@@ -167,9 +164,6 @@ stream_t *FS_OpenStream( const char *filename )
 		}
 	}
 
-	// engine notify
-	if( !anyformat ) MsgDev( D_NOTE, "Note: %s will be loading only with ext .%s\n", loadname, ext );
-	
 	// now try all the formats in the selected list
 	for( format = sound.streamformat; format && format->formatstring; format++)
 	{

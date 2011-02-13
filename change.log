@@ -1,4 +1,10 @@
+build ????
+
+Engine: fixed critical bug
+Launch: remove all built-in tools
+
 build 1433
+
 Engine: rework hitbox trace
 Engine: implement new check for blue-shift map format
 Engine: fix PointContents for custom contents checking (spirit)
@@ -6,6 +12,7 @@ Engine: fix "angle" field on maps (typically for gearbox)
 GameUI: implement 'mouse look' checkbox
 
 build 1430
+
 Engine: fix crash with invalid room_type set (more than 60)
 Engine: fix stuck on elevators or tracktrains for clients
 

@@ -1109,7 +1109,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 		MsgDev( D_ERROR, "SV_FindEntityByString: field %s not a string\n", pszField );
 		return svgame.edicts;
 	}
-
+	
 	for( e++; e < svgame.numEntities; e++ )
 	{
 		ed = EDICT_NUM( e );
@@ -1129,6 +1129,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 			break;
 		}
 	}
+
 	return svgame.edicts;
 }
 
@@ -1188,7 +1189,7 @@ edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 			continue;
 		return ent;
 	}
-	return svgame.edicts;
+	return NULL;
 }
 
 /*

@@ -70,7 +70,7 @@ int SV_SoundIndex( const char *name )
 	if( sv.state != ss_loading )
 	{	
 		// send the update to everyone
-		BF_WriteByte( &sv.reliable_datagram, svc_modelindex );
+		BF_WriteByte( &sv.reliable_datagram, svc_soundindex );
 		BF_WriteUBitLong( &sv.reliable_datagram, i, MAX_SOUND_BITS );
 		BF_WriteString( &sv.reliable_datagram, name );
 	}
