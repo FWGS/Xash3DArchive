@@ -546,7 +546,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	r_shot->type = PF_RGB_24;
 	r_shot->size = r_shot->width * r_shot->height * PFDesc( r_shot->type )->bpp;
 	r_shot->palette = NULL;
-	r_shot->buffer = Mem_Alloc( r_temppool, glState.width * glState.height * 3 );
+	r_shot->buffer = Mem_Alloc( r_temppool, r_shot->size );
 
 	// get screen frame
 	pglReadPixels( 0, 0, glState.width, glState.height, GL_RGB, GL_UNSIGNED_BYTE, r_shot->buffer );

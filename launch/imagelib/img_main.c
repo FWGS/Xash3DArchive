@@ -140,9 +140,15 @@ rgbdata_t *ImagePack( void )
 		pack->size = image.size;
 	}
 
+	// copy fog params
+	pack->fogParams[0] = image.fogParams[0];
+	pack->fogParams[1] = image.fogParams[1];
+	pack->fogParams[2] = image.fogParams[2];
+	pack->fogParams[3] = image.fogParams[3];
+
 	pack->flags = image.flags;
 	pack->palette = image.palette;
-
+	
 	return pack;
 }
 
@@ -255,7 +261,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	{
 		for( i = 0; i < 6; i++ )
 		{
-			// for support mixed cubemaps e.g. sky_ft.jpg, sky_rt.tga, sky_bk.bmp
+			// for support mixed cubemaps e.g. sky_ft.bmp, sky_rt.tga
 			// NOTE: all loaders must keep sides in one format for all
 			for( format = image.loadformats; format && format->formatstring; format++ )
 			{
@@ -310,7 +316,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 		return ImagePack(); // all done
 
 load_internal:
-	for( format = image.baseformats; format && format->formatstring; format++ )
+	for( format = image.loadformats; format && format->formatstring; format++ )
 	{
 		if( anyformat || !com.stricmp( ext, format->ext ))
 		{

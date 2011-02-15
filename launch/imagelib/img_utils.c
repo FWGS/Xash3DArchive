@@ -82,36 +82,8 @@ static const loadpixformat_t load_null[] =
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
-// version1 - using only Quake1 images
-// wad files not requires path
-static const loadpixformat_t load_quake1[] =
+static const loadpixformat_t load_game[] =
 {
-{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_Q1 },	// q1 textures from wad or buffer
-{ "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_Q1 },	// q1 alias model skins
-{ "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_Q1 },	// q1 sprite frames
-{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_Q1 },	// q1 menu images
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version2 - using only Half-Life images
-// wad files not requires path
-static const loadpixformat_t load_hl1[] =
-{
-{ "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// hl vgui menus
-{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// hl skyboxes
-{ "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures from wad or buffer
-{ "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_HL },	// hl studio model skins
-{ "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames
-{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_HL },	// hl menu images (cached.wad etc)
-{ "%s%s.%s", "fnt", Image_LoadFNT, IL_HINT_HL },	// hl menu images (cached.wad etc)
-{ "%s%s.%s", "pal", Image_LoadPAL, IL_HINT_NO },	// install studio palette
-{ NULL, NULL, NULL, IL_HINT_NO }
-};
-
-// version3 - Xash3D default image profile
-static const loadpixformat_t load_xash[] =
-{
-{ "%s%s.%s", "jpg", Image_LoadJPG, IL_HINT_NO },	// HD textures
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// hl vgui menus
 { "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// hl skyboxes
 { "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures from wad or buffer
@@ -137,10 +109,10 @@ static const savepixformat_t save_null[] =
 };
 
 // Xash3D normal instance
-static const savepixformat_t save_xash[] =
+static const savepixformat_t save_game[] =
 {
 { "%s%s.%s", "tga", Image_SaveTGA },		// tga screenshots
-{ "%s%s.%s", "jpg", Image_SaveJPG },		// tga levelshots or screenshots
+{ "%s%s.%s", "bmp", Image_SaveBMP },		// bmp levelshots or screenshots
 { NULL, NULL, NULL }
 };
 
@@ -149,14 +121,14 @@ void Image_Init( void )
 	// init pools
 	Sys.imagepool = Mem_AllocPool( "ImageLib Pool" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
-	image.baseformats = load_hl1;
 
 	// install image formats (can be re-install later by Image_Setup)
 	switch( Sys.app_name )
 	{
 	case HOST_NORMAL:
-		Image_Setup( "default", 0 ); // re-initialized later		
-		image.saveformats = save_xash;
+		image.cmd_flags = IL_USE_LERPING|IL_ALLOW_OVERWRITE;		
+		image.loadformats = load_game;
+		image.saveformats = save_game;
 		break;
 	default:	// all other instances not using imagelib or will be reinstalling later
 		image.loadformats = load_null;
@@ -164,43 +136,6 @@ void Image_Init( void )
 		break;
 	}
 	image.tempbuffer = NULL;
-}
-
-void Image_SetPaths( const char *envpath, const char *scrshot_ext, const char *levshot_ext )
-{
-	if( envpath ) com.strncpy( SI.envpath, envpath, sizeof( SI.envpath ));
-	if( scrshot_ext ) com.strncpy( SI.scrshot_ext, scrshot_ext, sizeof( SI.scrshot_ext ));
-	if( levshot_ext ) com.strncpy( SI.levshot_ext, levshot_ext, sizeof( SI.levshot_ext ));
-}
-
-void Image_Setup( const char *formats, const uint flags )
-{
-	if( flags != -1 ) image.cmd_flags = flags;
-	if( formats == NULL ) return;	// used for change flags only
-
-	MsgDev( D_NOTE, "Image_Init( %s )\n", formats );
-
-	// reinstall loadformats by magic keyword :)
-	if( !com.stricmp( formats, "Xash3D" ) || !com.stricmp( formats, "Xash" ))
-	{
-		image.loadformats = load_xash;
-		Image_SetPaths( "gfx/env", "jpg", "jpg" );
-	}
-	else if( !com.stricmp( formats, "Quake1" ))
-	{
-		image.loadformats = load_quake1; 
-		Image_SetPaths( "gfx/env", "tga", "tga" );
-	}
-	else if( !com.stricmp( formats, "hl1" ) || !com.stricmp( formats, "Half-Life" ))
-	{
-		image.loadformats = load_hl1;
-		Image_SetPaths( "gfx/env", "jpg", "tga" );
-	}
-	else
-	{
-		image.loadformats = load_xash; // unrecognized version, use default
-		Image_SetPaths( "env", "jpg", "jpg" );
-	}
 }
 
 void Image_Shutdown( void )

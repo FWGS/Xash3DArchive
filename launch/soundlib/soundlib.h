@@ -26,7 +26,6 @@ typedef struct streamformat_s
 
 typedef struct sndlib_s
 {
-	const loadwavformat_t	*baseformats;	// used for loading internal images
 	const loadwavformat_t	*loadformats;
 	const streamformat_t	*streamformat;	// music stream
 

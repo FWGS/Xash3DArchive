@@ -2218,48 +2218,6 @@ static int pfnPointContents( const float *p, int *truecontents )
 
 /*
 =============
-pfnWaterEntity
-
-=============
-*/
-static int pfnWaterEntity( const float *rgflPos )
-{
-	physent_t		*pe;
-	hull_t		*hull;
-	vec3_t		test;
-	int		i;
-
-	if( !rgflPos ) return -1;
-
-	for( i = 0; i < clgame.pmove->nummoveent; i++ )
-	{
-		pe = &clgame.pmove->moveents[i];
-
-		if( pe->solid != SOLID_NOT ) // disabled ?
-			continue;
-
-		// only brushes can have special contents
-		if( !pe->model || pe->model->type != mod_brush )
-			continue;
-
-		// check water brushes accuracy
-		hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, test );
-
-		// offset the test point appropriately for this hull.
-		VectorSubtract( rgflPos, test, test );
-
-		// test hull for intersection with this model
-		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
-			continue;
-
-		// found water entity
-		return pe->info;
-	}
-	return -1;
-}
-
-/*
-=============
 pfnTraceLine
 
 =============
@@ -3553,7 +3511,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnCalcShake,
 	pfnApplyShake,
 	pfnPointContents,
-	pfnWaterEntity,
+	CL_WaterEntity,
 	pfnTraceLine,
 	CL_LoadModel,
 	CL_AddEntity,

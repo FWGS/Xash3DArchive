@@ -7,13 +7,8 @@
 
 #define DOS_SIGNATURE		0x5A4D		// MZ
 #define NT_SIGNATURE		0x00004550	// PE00
-#define NT_OPTIONAL_HDR32_MAGIC	0x10b
-#define FILE_MACHINE_I386		0x014c
 #define NUMBER_OF_DIRECTORY_ENTRIES	16
 #define MAX_LIBRARY_EXPORTS		4096
-#define IMAGE_ALIGN			4096
-#define ALIGN( x )			(( x + ( IMAGE_ALIGN - 1 )) & (~( IMAGE_ALIGN - 1 )))
-#define SECTION_DEF_CHARACTERISTIC	(IMAGE_SCN_MEM_READ|IMAGE_SCN_CNT_INITIALIZED_DATA|IMAGE_SCN_MEM_WRITE)
 
 typedef struct
 {	
@@ -127,31 +122,6 @@ typedef struct
 	dword	AddressOfNames;		// RVA from base of image
 	dword	AddressOfNameOrdinals;	// RVA from base of image
 } EXPORT_DIRECTORY;
-
-typedef struct
-{
-	char	*Name;
-	DWORD	Characteristics;
-} FIXED_SECTIONS;
-
-typedef struct
-{
-	dword	Ident;
-	dword	Sections;
-	dword	copywhat;
-	dword	ImageBase;
-	dword	EntryPoint;
-	dword	ImportTable;
-} VALVE_HEADER;
-
-typedef struct
-{
-	dword	rva;
-	dword	rva_size;
-	dword	file_size;
-	dword	file_offset;
-	dword	reloc_addr;
-} VAVLE_SECTIONS;
 
 typedef struct dll_user_s
 {

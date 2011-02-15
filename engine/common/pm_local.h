@@ -24,7 +24,7 @@ int PM_HullPointContents( hull_t *hull, int num, const vec3_t p );
 //
 void PM_InitStudioHull( void );
 qboolean PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
-qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr );
+qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, qboolean allow_scale );
 
 //
 // pm_surface.c

@@ -86,7 +86,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trac
 	pe->iuser2 = ed->v.iuser2;
 	pe->iuser3 = ed->v.iuser3;
 	pe->iuser4 = ed->v.iuser4;
-	pe->fuser1 = ed->v.fuser1;
+	pe->fuser1 = (svgame.movevars.studio_scale) ? ed->v.scale : ed->v.fuser1;
 	pe->fuser2 = ed->v.fuser2;
 	pe->fuser3 = ed->v.fuser3;
 	pe->fuser4 = ed->v.fuser4;

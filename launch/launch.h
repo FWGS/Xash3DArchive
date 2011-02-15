@@ -494,14 +494,12 @@ void	PS_FreeScript( script_t *script );
 // imglib.c
 //
 void Image_Init( void );
-void Image_Setup( const char *formats, const uint flags );
 void Image_Shutdown( void );
 
 //
 // sndlib.c
 //
 void Sound_Init( void );
-void Sound_Setup( const char *formats, const uint flags );
 void Sound_Shutdown( void );
 
 #endif//LAUNCHER_H

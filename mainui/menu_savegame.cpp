@@ -234,7 +234,7 @@ static void UI_SaveGame_Callback( void *self, int event )
 		{
 			char	cmd[128];
 
-			sprintf( cmd, "save/%s.tga", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
+			sprintf( cmd, "save/%s.bmp", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
 			PIC_Free( cmd );
 
 			sprintf( cmd, "save \"%s\"\n", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
@@ -254,7 +254,7 @@ static void UI_SaveGame_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			sprintf( cmd, "save/%s.tga", uiSaveGame.delName[uiSaveGame.savesList.curItem] );
+			sprintf( cmd, "save/%s.bmp", uiSaveGame.delName[uiSaveGame.savesList.curItem] );
 			PIC_Free( cmd );
 
 			// restarts the menu
@@ -292,7 +292,7 @@ static void UI_SaveGame_Ownerdraw( void *self )
 		{
 			char	saveshot[128];
 
-			sprintf( saveshot, "save/%s.tga", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
+			sprintf( saveshot, "save/%s.bmp", uiSaveGame.saveName[uiSaveGame.savesList.curItem] );
 
 			if( !FILE_EXISTS( saveshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

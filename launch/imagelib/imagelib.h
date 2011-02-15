@@ -49,7 +49,6 @@ typedef struct saveformat_s
 
 typedef struct imglib_s
 {
-	const loadpixformat_t	*baseformats;	// used for loading internal images
 	const loadpixformat_t	*loadformats;
 	const savepixformat_t	*saveformats;
 
@@ -137,15 +136,6 @@ typedef struct tga_s
 	byte	attributes;
 } tga_t;
 
-/*
-========================================================================
-
-.JPG image format
-
-========================================================================
-*/
-// defined in img_jpg.c
-
 // imagelib definitions
 #define IMAGE_MAXWIDTH	4096
 #define IMAGE_MAXHEIGHT	4096
@@ -202,7 +192,6 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadTGA( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize );
-qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
 
@@ -211,7 +200,6 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
 //
 qboolean Image_SaveTGA( const char *name, rgbdata_t *pix );
 qboolean Image_SaveBMP( const char *name, rgbdata_t *pix );
-qboolean Image_SaveJPG( const char *name, rgbdata_t *pix );
 
 //
 // img_utils.c

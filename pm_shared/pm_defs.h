@@ -26,6 +26,8 @@
 #define PM_GLASS_IGNORE	0x00000004	// Ignore entities with non-normal rendermode
 #define PM_WORLD_ONLY	0x00000008	// Only trace against the world
 
+#define PM_STUDIO_SCALE	0x10000000	// engine flag. don't set it manually
+
 // Values for flags parameter of PM_TraceLine
 #define PM_TRACELINE_PHYSENTSONLY	0
 #define PM_TRACELINE_ANYVISIBLE	1
@@ -71,7 +73,7 @@ typedef struct physent_s
 	int		iuser2;
 	int		iuser3;
 	int		iuser4;
-	float		fuser1;
+	float		fuser1;		// also contains pev->scale when "sv_allow_studio_scaling" is "1"
 	float		fuser2;
 	float		fuser3;
 	float		fuser4;

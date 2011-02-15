@@ -2,6 +2,9 @@ build ????
 
 Engine: fixed critical bug
 Launch: remove all built-in tools
+Engine: add underwater fog
+Engine: add cvar to control studio model scaling (enable or disable)
+Engine: fixed bug with mouse in multiplayer (not work in menu)
 
 build 1433
 

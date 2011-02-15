@@ -236,7 +236,7 @@ static void UI_PlayDemo_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			sprintf( cmd, "demos/%s.tga", uiPlayDemo.delName[uiPlayDemo.demosList.curItem] );
+			sprintf( cmd, "demos/%s.bmp", uiPlayDemo.delName[uiPlayDemo.demosList.curItem] );
 			PIC_Free( cmd );
 
 			// restarts the menu
@@ -274,7 +274,7 @@ static void UI_PlayDemo_Ownerdraw( void *self )
 		{
 			char	demoshot[128];
 
-			sprintf( demoshot, "demos/%s.tga", uiPlayDemo.demoName[uiPlayDemo.demosList.curItem] );
+			sprintf( demoshot, "demos/%s.bmp", uiPlayDemo.demoName[uiPlayDemo.demosList.curItem] );
 
 			if( !FILE_EXISTS( demoshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

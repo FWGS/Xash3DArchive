@@ -539,9 +539,6 @@ void Host_InitCommon( const int argc, const char **argv )
 	host.hInst = GetModuleHandle( NULL );
 
 	FS_LoadGameInfo( NULL );
-	Image_Init( GI->gameHint, -1 );
-	Sound_Init( GI->gameHint, -1 );
-
 	host.mempool = Mem_AllocPool( "Zone Engine" );
 
 	Host_InitEvents();

@@ -959,9 +959,6 @@ static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( com.strlen( GameInfo->trainmap ))
 		FS_Printf( f, "trainmap\t\t\"%s\"\n", GameInfo->trainmap );
 
-	if( com.strlen( GameInfo->gameHint ))
-		FS_Printf( f, "gameHint\t\t\"%s\"\n", GameInfo->gameHint );
-
 	if( GameInfo->version != 0.0f )
 		FS_Printf( f, "version\t\t%g\n", GameInfo->version );
 
@@ -1041,10 +1038,9 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	defGI.max_particles = 4096;
 	defGI.version = 1.0;
 
-	com.strncpy( defGI.gameHint, "Half-Life", sizeof( defGI.gameHint ));
 	com.strncpy( defGI.title, "New Game", sizeof( defGI.title ));
 	com.strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
-	com.strncpy( defGI.basedir, "valve", sizeof( defGI.basedir ));
+	com.strncpy( defGI.basedir, Sys.ModuleName, sizeof( defGI.basedir ));
 	com.strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
 	com.strncpy( defGI.mp_entity, "info_player_deathmatch", sizeof( defGI.mp_entity ));
 	com.strncpy( defGI.dll_path, "cl_dlls", sizeof( defGI.dll_path ));
@@ -1080,10 +1076,9 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
 	
-	com.strncpy( GameInfo->gameHint, "Half-Life", sizeof( GameInfo->gameHint ));
 	com.strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	com.strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
-	com.strncpy( GameInfo->basedir, "valve", sizeof( GameInfo->basedir )); // all liblist.gam have 'valve' as basedir
+	com.strncpy( GameInfo->basedir, Sys.ModuleName, sizeof( GameInfo->basedir ));
 	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
 	com.strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
 	com.strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
@@ -1231,7 +1226,6 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
 	
-	com.strncpy( GameInfo->gameHint, "Half-Life", sizeof( GameInfo->gameHint ));
 	com.strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
 	com.strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
@@ -1268,10 +1262,6 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		else if( !com.stricmp( token.string, "title" ))
 		{
 			PS_GetString( script, false, GameInfo->title, sizeof( GameInfo->title ));
-		}
-		else if( !com.stricmp( token.string, "gameHint" ))
-		{
-			PS_GetString( script, false, GameInfo->gameHint, sizeof( GameInfo->gameHint ));
 		}
 		else if( !com.stricmp( token.string, "sp_entity" ))
 		{
@@ -1437,19 +1427,19 @@ void FS_Init( void )
 		if( !FS_GetParmFromCmdLine( "-game", gs_basedir, sizeof( gs_basedir )))
 		{
 			if( Sys_GetModuleName( gs_basedir, MAX_SYSPATH ));
-			else com.strcpy( gs_basedir, "valve" ); // default dir
+			else com.strcpy( gs_basedir, Sys.ModuleName ); // default dir
 		}
 
 		if( FS_CheckNastyPath( gs_basedir, true ))
 		{
 			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", gs_basedir );		
-			com.strcpy( gs_basedir, "valve" ); // default dir
+			com.strcpy( gs_basedir, Sys.ModuleName ); // default dir
 		}
 
 		// validate directories
 		for( i = 0; i < dirs.numstrings; i++ )
 		{
-			if( !com.stricmp( "valve", dirs.strings[i] ))
+			if( !com.stricmp( Sys.ModuleName, dirs.strings[i] ))
 				hasDefaultDir = true;
 
 			if( !com.stricmp( gs_basedir, dirs.strings[i] ))
@@ -1459,7 +1449,7 @@ void FS_Init( void )
 		if( i == dirs.numstrings )
 		{ 
 			MsgDev( D_INFO, "FS_Init: game directory \"%s\" not exist\n", gs_basedir );		
-			if( hasDefaultDir ) com.strcpy( gs_basedir, "valve" ); // default dir
+			if( hasDefaultDir ) com.strncpy( gs_basedir, Sys.ModuleName, sizeof( gs_basedir )); // default dir
 		}
 
 		// build list of game directories here

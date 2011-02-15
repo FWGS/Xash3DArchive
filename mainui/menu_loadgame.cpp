@@ -232,7 +232,7 @@ static void UI_LoadGame_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			sprintf( cmd, "save/%s.tga", uiLoadGame.delName[uiLoadGame.savesList.curItem] );
+			sprintf( cmd, "save/%s.bmp", uiLoadGame.delName[uiLoadGame.savesList.curItem] );
 			PIC_Free( cmd );
 
 			// restarts the menu
@@ -270,7 +270,7 @@ static void UI_LoadGame_Ownerdraw( void *self )
 		{
 			char	saveshot[128];
 
-			sprintf( saveshot, "save/%s.tga", uiLoadGame.saveName[uiLoadGame.savesList.curItem] );
+			sprintf( saveshot, "save/%s.bmp", uiLoadGame.saveName[uiLoadGame.savesList.curItem] );
 
 			if( !FILE_EXISTS( saveshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

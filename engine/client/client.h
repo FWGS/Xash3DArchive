@@ -626,6 +626,8 @@ void CL_CheckPredictionError( void );
 qboolean CL_IsPredicted( void );
 int CL_TruePointContents( const vec3_t p );
 int CL_PointContents( const vec3_t p );
+int CL_WaterEntity( const float *rgflPos );
+model_t *CL_GetWaterModel( const float *rgflPos );
 
 //
 // cl_studio.c

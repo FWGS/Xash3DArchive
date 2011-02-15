@@ -499,7 +499,7 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 	// don't rotate clients, only aim
 	if( e->player ) angles[PITCH] = 0;
 
-	if( e->curstate.scale > 0.0f )
+	if( clgame.movevars.studio_scale && e->curstate.scale > 0.0f )
 		scale = e->curstate.scale;
 
 	Matrix3x4_CreateFromEntity( g_rotationmatrix, angles, origin, scale );

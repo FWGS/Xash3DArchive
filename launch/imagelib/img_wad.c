@@ -318,6 +318,7 @@ Image_LoadMIP
 qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 {
 	mip_t	mip;
+	qboolean	hl_texture;
 	byte	*fin, *pal;
 	int	ofs[4], rendermode;
 	int	i, pixels, numcolors;
@@ -346,6 +347,8 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		numcolors = *(short *)pal;
 		if( numcolors != 256 ) pal = NULL; // corrupted mip ?
 		else pal += sizeof( short ); // skip colorsize 
+
+		hl_texture = true;
 
 		// detect rendermode
 		if( com.strrchr( name, '{' ))
@@ -410,6 +413,8 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		pal = NULL; // clear palette
 		rendermode = LUMP_NORMAL;
 
+		hl_texture = false;
+
 		// check for luma pixels
 		for( i = 0; i < image.width * image.height; i++ )
 		{
@@ -442,6 +447,18 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		image.flags |= IMAGE_QUAKESKY;
 	}
 
+	// check for half-life water texture
+	if( hl_texture && ( mip.name[0] == '!' || !com.strnicmp( mip.name, "water", 5 )))
+          {
+		// grab the fog color
+		image.fogParams[0] = pal[3*3+0];
+		image.fogParams[1] = pal[3*3+1];
+		image.fogParams[2] = pal[3*3+2];
+
+		// grab the fog density
+		image.fogParams[3] = pal[4*3+0];
+          }
+ 
 	image.type = PF_INDEXED_32;	// 32-bit palete
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }

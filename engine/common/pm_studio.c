@@ -80,13 +80,16 @@ static void PM_HullForHitbox( const vec3_t mins, const vec3_t maxs )
 StudioSetUpTransform
 ====================
 */
-static void PM_StudioSetUpTransform( physent_t *pe )
+static void PM_StudioSetUpTransform( physent_t *pe, qboolean allow_scale )
 {
 	vec3_t	ang;
 	float	scale = 1.0f;
 
 	VectorCopy( pe->angles, ang );
 	ang[PITCH] = -ang[PITCH]; // stupid Half-Life bug
+
+	if( allow_scale && pe->fuser1 > 0.0f )
+		scale = pe->fuser1;
 
 	// FIXME: apply scale to studiomodels
 	Matrix3x4_CreateFromEntity( pm_studiomatrix, ang, pe->origin, scale );
@@ -534,7 +537,7 @@ static void PM_StudioSetupBones( physent_t *pe )
 	pe->sequence = oldseq; // restore original value
 }
 
-static qboolean PM_StudioSetupModel( physent_t *pe )
+static qboolean PM_StudioSetupModel( physent_t *pe, qboolean allow_scale )
 {
 	model_t	*mod = pe->studiomodel;
 
@@ -542,7 +545,7 @@ static qboolean PM_StudioSetupModel( physent_t *pe )
 		return false;
 
 	pm_studiohdr = (studiohdr_t *)mod->cache.data;
-	PM_StudioSetUpTransform( pe );
+	PM_StudioSetUpTransform( pe, allow_scale );
 	PM_StudioSetupBones( pe );
 	return true;
 }
@@ -822,7 +825,7 @@ static qboolean PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mi
 	return BoundsIntersect( trace_mins, trace_maxs, anim_mins, anim_maxs );
 }
 
-qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr )
+qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, qboolean allow_scale )
 {
 	vec3_t	start_l, end_l;
 	int	i, outBone = -1;
@@ -838,7 +841,7 @@ qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t 
 	if( !PM_StudioIntersect( pe, start, mins, maxs, end ))
 		return false;
 
-	if( !PM_StudioSetupModel( pe ))
+	if( !PM_StudioSetupModel( pe, allow_scale ))
 		return false;
 
 	if( VectorCompare( start, end ))

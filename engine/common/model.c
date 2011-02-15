@@ -851,10 +851,13 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			if( !com.strncmp( tex->name, "sky", 3 ))
 				out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
-			if( tex->name[0] == '*' || tex->name[0] == '!' || !com.strnicmp( tex->name, "water", 5 ))
+			if( tex->name[0] == '*' || tex->name[0] == '!' )
 				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
-			if( com.stristr( tex->name, "scroll" ))
+			if( !com.strnicmp( tex->name, "water", 5 ))
+				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
+
+			if( !com.strnicmp( tex->name, "scroll", 6 ))
 				out->flags |= SURF_CONVEYOR;
 
 			if( tex->name[0] == '{' )

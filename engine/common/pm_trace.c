@@ -7,6 +7,7 @@
 #include "mathlib.h"
 #include "cm_local.h"
 #include "pm_local.h"
+#include "pm_movevars.h"
 #include "studio.h"
 #include "world.h"
 
@@ -407,6 +408,7 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 {
 	qboolean	hitEnt = false;
 	qboolean	bSimpleBox = false;
+	qboolean	bAllowScale = false;
 
 	// assume we didn't hit anything
 	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
@@ -418,6 +420,10 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 	// completely ignore studiomodels (same as MOVE_NOMONSTERS)
 	if( pe->studiomodel && ( flags & PM_STUDIO_IGNORE ))
 		return hitEnt;
+
+	// apply scale to studio models
+	if( pe->studiomodel && ( flags & PM_STUDIO_SCALE ))
+		bAllowScale = true;
 
 	if( pe->movetype == MOVETYPE_PUSH || pe->solid == SOLID_BSP )
 	{
@@ -449,7 +455,7 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 		bSimpleBox = World_UseSimpleBox( bSimpleBox, pe->solid, VectorCompare( mins, maxs ), pe->studiomodel );
 
 		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
+		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr, bAllowScale );
 	}
 #else
 	else if( pe->solid == SOLID_SLIDEBOX )
@@ -458,7 +464,7 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 			bSimpleBox = true;
 
 		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
+		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr, bAllowScale );
 	}
 	else if( pe->solid == SOLID_BBOX )
 	{
@@ -470,7 +476,7 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 			bSimpleBox = false;
 
 		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr );
+		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr, bAllowScale );
 	}
 #endif
 	return hitEnt;
@@ -495,6 +501,10 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 	total.fraction = 1.0f;
 	total.hitgroup = -1;
 	total.ent = -1;
+
+	// apply scale to studiomodels
+	if( pmove->movevars->studio_scale )
+		flags |= PM_STUDIO_SCALE;
 
 	for( i = 0; i < pmove->numphysent; i++ )
 	{

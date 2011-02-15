@@ -6,9 +6,6 @@
 #include "common.h"
 #include "client.h"
 
-#define SCRSHOT_TYPE	SI->scrshot_ext
-#define LEVELSHOT_TYPE	SI->levshot_ext
-
 /*
 ====================
 CL_PlayVideo_f
@@ -141,7 +138,7 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 	if( lastnum < 0 || lastnum > 9999 )
 	{
 		// bound
-		com.sprintf( filename, "scrshots/%s/!error.%s", clgame.mapname, SCRSHOT_TYPE );
+		com.sprintf( filename, "scrshots/%s/!error.bmp", clgame.mapname );
 		return;
 	}
 
@@ -153,7 +150,7 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 	lastnum -= c * 10;
 	d = lastnum;
 
-	com.sprintf( filename, "scrshots/%s/shot%i%i%i%i.%s", clgame.mapname, a, b, c, d, SCRSHOT_TYPE );
+	com.sprintf( filename, "scrshots/%s/shot%i%i%i%i.bmp", clgame.mapname, a, b, c, d );
 }
 
 /* 
@@ -194,7 +191,7 @@ void CL_EnvShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "%s/%s", SI->envpath, Cmd_Argv( 1 ));
+	com.sprintf( cls.shotname, "gfx/env/%s", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_envshot;	// build new frame for envshot
 	cls.envshot_vieworg = NULL; // no custom view
 }
@@ -207,7 +204,7 @@ void CL_SkyShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "%s/%s", SI->envpath, Cmd_Argv( 1 ));
+	com.sprintf( cls.shotname, "gfx/env/%s", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_skyshot;	// build new frame for skyshot
 	cls.envshot_vieworg = NULL; // no custom view
 }
@@ -225,7 +222,7 @@ void CL_LevelShot_f( void )
 	cls.scrshot_request = scrshot_inactive;
 
 	// check for exist
-	com.sprintf( cls.shotname, "levelshots/%s.%s", clgame.mapname, LEVELSHOT_TYPE );
+	com.sprintf( cls.shotname, "levelshots/%s.bmp", clgame.mapname );
 	if( !FS_FileExistsEx( cls.shotname, true ))
 		cls.scrshot_action = scrshot_plaque;	// build new frame for levelshot
 	else cls.scrshot_action = scrshot_inactive;	// disable - not needs
@@ -246,7 +243,7 @@ void CL_SaveShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "save/%s.tga", Cmd_Argv( 1 ));
+	com.sprintf( cls.shotname, "save/%s.bmp", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_savegame;	// build new frame for saveshot
 }
 
@@ -265,7 +262,7 @@ void CL_DemoShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "demos/%s.tga", Cmd_Argv( 1 ));
+	com.sprintf( cls.shotname, "demos/%s.bmp", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_demoshot; // build new frame for demoshot
 }
 
@@ -291,7 +288,7 @@ void CL_DeleteDemo_f( void )
 
 	// delete save and saveshot
 	FS_Delete( va( "demos/%s.dem", Cmd_Argv( 1 )));
-	FS_Delete( va( "demos/%s.tga", Cmd_Argv( 1 )));
+	FS_Delete( va( "demos/%s.bmp", Cmd_Argv( 1 )));
 }
 
 /*

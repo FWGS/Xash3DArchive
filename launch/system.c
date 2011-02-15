@@ -194,14 +194,12 @@ void Sys_GetStdAPI( void )
 	com.ImageLoad = FS_LoadImage;			// load image from disk or wad-file
 	com.ImageSave = FS_SaveImage;			// save image into specified format 
 	com.ImageFree = FS_FreeImage;			// release image buffer
-	com.ImglibSetup = Image_Setup;		// set imagelib global features
 	com.ImagePFDesc = Image_GetPixelFormat;		// get some info about current fmt
 	com.ImageConvert = Image_Process;		// flip, rotate, resample etc
 
 	// built-in soundlib functions
 	com.SoundLoad = FS_LoadSound;			// load sound from disk or wad-file
 	com.SoundFree = FS_FreeSound;			// release sound buffer
-	com.SndlibSetup = Sound_Setup;		// set soundlib global features
 	com.SoundConvert = Sound_Process;		// resample, change resolution etc
 
 	com.OpenStream = FS_OpenStream;		// open music stream
@@ -397,8 +395,8 @@ void Sys_CreateInstance( void )
 	switch( Sys.app_name )
 	{
 	case HOST_NORMAL:
-		Con_ShowConsole( false );		// hide console
-		Cbuf_AddText( "exec valve.rc\n" );	// execute startup config and cmdline
+		Con_ShowConsole( false );				// hide console
+		Cbuf_AddText( va( "exec %s.rc\n", Sys.ModuleName ));	// execute startup config and cmdline
 	case HOST_DEDICATED:
 		Cbuf_Execute();
 		// if stuffcmds wasn't run, then init.rc is probably missing, use default

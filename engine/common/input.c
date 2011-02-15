@@ -229,7 +229,7 @@ void IN_ActivateMouse( void )
 	if( in_mouseactive ) return;
 	in_mouseactive = true;
 
-	if( CL_IsInGame( ))
+	if( cls.key_dest == key_game )
 	{
 		clgame.dllFuncs.IN_ActivateMouse();
 	}
@@ -266,7 +266,7 @@ void IN_DeactivateMouse( void )
 	if( !in_mouseinitialized || !in_mouseactive )
 		return;
 
-	if( CL_IsInGame( ))
+	if( cls.key_dest == key_game )
 	{
 		clgame.dllFuncs.IN_DeactivateMouse();
 	}
@@ -289,7 +289,7 @@ void IN_MouseMove( void )
 	POINT	current_pos;
 	int	mx, my;
 	
-	if( !in_mouseinitialized || !in_mouseactive || in_mouse_suspended || CL_IsInGame( ))
+	if( !in_mouseinitialized || !in_mouseactive || in_mouse_suspended || cls.key_dest == key_game )
 		return;
 
 	// find mouse movement
@@ -316,7 +316,7 @@ void IN_MouseEvent( int mstate )
 	if( !in_mouseinitialized || !in_mouseactive )
 		return;
 
-	if( CL_IsInGame( ))
+	if( cls.key_dest == key_game )
 	{
 		clgame.dllFuncs.IN_MouseEvent( mstate );
 		return;

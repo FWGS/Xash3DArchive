@@ -211,6 +211,7 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skyvec_x = sv_skyvec_x->value;
 	svgame.movevars.skyvec_y = sv_skyvec_y->value;
 	svgame.movevars.skyvec_z = sv_skyvec_z->value;
+	svgame.movevars.studio_scale = sv_allow_studio_scaling->integer;
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
 		Mem_Copy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
@@ -628,7 +629,7 @@ void SV_Init( void )
 	zombietime = Cvar_Get( "zombietime", "2", CVAR_SERVERNOTIFY, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", CVAR_SERVERNOTIFY, "allow players to pause or not" );
 	allow_download = Cvar_Get( "allow_download", "0", CVAR_ARCHIVE, "allow download resources" );
-	sv_allow_studio_scaling = Cvar_Get( "sv_allow_studio_scaling", "0", CVAR_ARCHIVE, "allow to scale physics hull for studio models (visible hull scaled on the client-side)" );
+	sv_allow_studio_scaling = Cvar_Get( "sv_allow_studio_scaling", "0", CVAR_ARCHIVE|CVAR_PHYSICINFO, "allow to apply scale for studio models" );
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", CVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );

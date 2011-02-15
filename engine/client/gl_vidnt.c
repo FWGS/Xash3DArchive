@@ -1440,8 +1440,6 @@ void GL_RemoveCommands( void )
 
 void GL_InitExtensions( void )
 {
-	int	flags = 0;
-
 	// initialize gl extensions
 	GL_CheckExtension( "OpenGL 1.1.0", opengl_110funcs, NULL, GL_OPENGL_110 );
 
@@ -1589,9 +1587,6 @@ void GL_InitExtensions( void )
 	if( !GL_Support( GL_SGIS_MIPMAPS_EXT ))
 		GL_SetExtension( GL_ARB_TEXTURE_NPOT_EXT, false );
 
-	flags |= IL_USE_LERPING|IL_ALLOW_OVERWRITE;
-
-	Image_Init( NULL, flags );
 	glw_state.initialized = true;
 
 	tr.framecount = tr.visframecount = 1;

@@ -719,6 +719,11 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	tex->srcHeight = tex->height = pic->height;
 	s = tex->srcWidth * tex->srcHeight;
 
+	tex->fogParams[0] = pic->fogParams[0];
+	tex->fogParams[1] = pic->fogParams[1];
+	tex->fogParams[2] = pic->fogParams[2];
+	tex->fogParams[3] = pic->fogParams[3];
+
 	GL_RoundImageDimensions( &tex->width, &tex->height, tex->flags, false );
 
 	if( s&3 )

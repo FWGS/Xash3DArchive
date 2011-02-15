@@ -205,7 +205,6 @@ typedef struct gameinfo_s
 	char		startmap[64];	// map to start singleplayer game
 	char		trainmap[64];	// map to start hazard course (if specified)
 	char		title[64];	// Game Main Title
-	char		gameHint[32];	// hint to configure ImageLib and SoundLib
 	float		version;		// game version (optional)
 
 	// .dll pathes
@@ -241,10 +240,6 @@ typedef struct sysinfo_s
 	float		cpufreq;		// cpu frequency in MHz
 	char		instance;		// global engine instance
 
-	// these following four strings sets by imagelib
-	char		envpath[32];	// path to skybox and cubemaps images.
-	char		scrshot_ext[8];	// screen shot write type.
-	char		levshot_ext[8];	// level shot write type.
 	int		developer;	// developer level ( 1 - 7 )
 
 	gameinfo_t	*GameInfo;	// current GameInfo
@@ -583,7 +578,6 @@ typedef struct stdilib_api_s
 	void (*Com_ShellExecute)( const char *p1, const char *p2, qboolean exit );// execute shell programs
 
 	// built-in imagelib functions
-	void (*ImglibSetup)( const char *formats, const uint flags );	// set main attributes
 	rgbdata_t *(*ImageLoad)( const char *, const byte *, size_t );	// load image from disk or buffer
 	qboolean (*ImageSave)( const char *name, rgbdata_t *image );	// save image into specified format
 	qboolean (*ImageConvert)( rgbdata_t **pix, int w, int h, uint flags );// image manipulations
@@ -591,7 +585,6 @@ typedef struct stdilib_api_s
  	void (*ImageFree)( rgbdata_t *pack );				// release image buffer
 
 	// built-in soundlib functions
-	void (*SndlibSetup)( const char *formats, const uint flags );	// set main attributes
 	wavdata_t *(*SoundLoad)( const char *, const byte *, size_t );	// load sound from disk or buffer
 	qboolean (*SoundConvert)( wavdata_t **pix, int rt, int wdth, uint flags );// sound manipulations
  	void (*SoundFree)( wavdata_t *pack );				// release sound buffer
@@ -904,7 +897,6 @@ imglib manager
 #define FS_LoadImage		com.ImageLoad
 #define FS_SaveImage		com.ImageSave
 #define FS_FreeImage		com.ImageFree
-#define Image_Init			com.ImglibSetup
 #define PFDesc( x )			com.ImagePFDesc( x )
 #define Image_Process		com.ImageConvert
 
@@ -915,7 +907,6 @@ sndlib manager
 */
 #define FS_LoadSound		com.SoundLoad
 #define FS_FreeSound		com.SoundFree
-#define Sound_Init			com.SndlibSetup
 #define Sound_Process		com.SoundConvert
 
 #define FS_OpenStream		com.OpenStream

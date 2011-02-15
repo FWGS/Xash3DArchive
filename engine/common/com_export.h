@@ -43,8 +43,8 @@ typedef enum
 typedef struct
 {
 	vec3_t		position;
-	char		name[64];		// same as CS_SIZE
-	short		entityIndex;	// FIXME: replace with pointer to entity ?
+	char		name[64];
+	short		entityIndex;
 	byte		depth;
 	byte		flags;
 

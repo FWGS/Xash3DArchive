@@ -75,7 +75,7 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	pe->iuser2 = ent->curstate.iuser2;
 	pe->iuser3 = ent->curstate.iuser3;
 	pe->iuser4 = ent->curstate.iuser4;
-	pe->fuser1 = ent->curstate.fuser1;
+	pe->fuser1 = (clgame.movevars.studio_scale) ? ent->curstate.scale : ent->curstate.fuser1;
 	pe->fuser2 = ent->curstate.fuser2;
 	pe->fuser3 = ent->curstate.fuser3;
 	pe->fuser4 = ent->curstate.fuser4;
@@ -215,6 +215,68 @@ int CL_TruePointContents( const vec3_t p )
 	}
 
 	return contents;
+}
+
+/*
+=============
+CL_WaterEntity
+
+=============
+*/
+int CL_WaterEntity( const float *rgflPos )
+{
+	physent_t		*pe;
+	hull_t		*hull;
+	vec3_t		test;
+	int		i;
+
+	if( !rgflPos ) return -1;
+
+	for( i = 0; i < clgame.pmove->nummoveent; i++ )
+	{
+		pe = &clgame.pmove->moveents[i];
+
+		if( pe->solid != SOLID_NOT ) // disabled ?
+			continue;
+
+		// only brushes can have special contents
+		if( !pe->model || pe->model->type != mod_brush )
+			continue;
+
+		// check water brushes accuracy
+		hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, test );
+
+		// offset the test point appropriately for this hull.
+		VectorSubtract( rgflPos, test, test );
+
+		// test hull for intersection with this model
+		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
+			continue;
+
+		// found water entity
+		return pe->info;
+	}
+	return -1;
+}
+
+/*
+=============
+CL_GetWaterModel
+
+returns water brush where inside pos
+=============
+*/
+model_t *CL_GetWaterModel( const float *rgflPos )
+{
+	int		entnum;
+	cl_entity_t	*clent;
+
+	entnum = CL_WaterEntity( rgflPos );
+	if( entnum <= 0 ) return NULL; // world or not water
+
+	if(( clent = CL_GetEntityByIndex( entnum )) != NULL )
+		return clent->model;
+	return NULL;
 }
 
 static void pfnParticle( float *origin, int color, float life, int zpos, int zvel )

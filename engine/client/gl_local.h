@@ -109,6 +109,8 @@ typedef struct gltexture_s
 	GLint		format;		// uploaded format
 	texFlags_t	flags;
 
+	rgba_t		fogParams;	// some water textures
+					// contain info about underwater fog
 	// debug info
 	byte		texType;		// used for gl_showtextures
 	size_t		size;		// upload size for debug targets
@@ -316,6 +318,7 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 qboolean R_WorldToScreen2( const vec3_t in, vec3_t out );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
+void R_DrawFog( void );
 
 //
 // gl_rmath.c
@@ -372,7 +375,7 @@ void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void EmitSkyLayers( msurface_t *fa );
 void EmitSkyPolys( msurface_t *fa );
-void EmitWaterPolys( glpoly_t *polys );
+void EmitWaterPolys( glpoly_t *polys, qboolean noCull );
 void R_DrawSkyChain( msurface_t *s );
 
 //

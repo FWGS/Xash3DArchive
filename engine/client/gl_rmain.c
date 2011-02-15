@@ -11,6 +11,9 @@
 msurface_t	*r_debug_surface;
 const char	*r_debug_hitbox;
 float		gldepthmin, gldepthmax;
+qboolean		fogEnabled = false;
+vec3_t		fogColor;
+float		fogDensity;
 ref_params_t	r_lastRefdef;
 ref_instance_t	RI, prevRI;
 
@@ -665,6 +668,91 @@ static void R_EndGL( void )
 		pglDisable( GL_CLIP_PLANE0 );
 }
 
+
+/*
+=============
+R_CheckFog
+
+check for underwater fog
+FIXME: allow TriAPI fog for override
+=============
+*/
+static void R_CheckFog( void )
+{
+	model_t		*model;
+	gltexture_t	*tex;
+	int		i, count;
+
+	fogEnabled = false;
+
+	if( RI.refdef.waterlevel < 3 || !RI.drawWorld || !r_viewleaf )
+		return;
+
+	model = CL_GetWaterModel( cl.refdef.vieworg );
+	tex = NULL;
+
+	// check for water texture
+	if( model && model->type == mod_brush )
+	{
+		msurface_t	*surf;
+	
+		count = model->nummodelsurfaces;
+
+		for( i = 0, surf = &model->surfaces[model->firstmodelsurface]; i < count; i++, surf++ )
+		{
+			if( surf->flags & SURF_DRAWTURB && surf->texinfo && surf->texinfo->texture )
+			{
+				tex = R_GetTexture( surf->texinfo->texture->gl_texturenum );
+				break;
+			}
+		}
+	}
+	else
+	{
+		msurface_t	**surf;
+
+		count = r_viewleaf->nummarksurfaces;	
+
+		for( i = 0, surf = r_viewleaf->firstmarksurface; i < count; i++, surf++ )
+		{
+			if((*surf)->flags & SURF_DRAWTURB && (*surf)->texinfo && (*surf)->texinfo->texture )
+			{
+				tex = R_GetTexture( (*surf)->texinfo->texture->gl_texturenum );
+				break;
+			}
+		}
+	}
+
+	if( i == count || !tex )
+		return;	// no valid fogs
+
+	// copy fog params
+	fogColor[0] = tex->fogParams[0] / 255.0f;
+	fogColor[1] = tex->fogParams[1] / 255.0f;
+	fogColor[2] = tex->fogParams[2] / 255.0f;
+	fogDensity = tex->fogParams[3] * 0.000025f;
+
+	fogEnabled = true;
+}
+
+/*
+=============
+R_DrawFog
+
+=============
+*/
+void R_DrawFog( void )
+{
+	if( !fogEnabled || RI.refdef.onlyClientDraw )
+		return;
+
+	pglEnable( GL_FOG );
+	pglFogi( GL_FOG_MODE, GL_EXP );
+	pglFogf( GL_FOG_DENSITY, fogDensity );
+	pglFogfv( GL_FOG_COLOR, fogColor );
+	pglHint( GL_FOG_HINT, GL_NICEST );
+}
+
 /*
 =============
 R_DrawEntitiesOnList
@@ -673,6 +761,9 @@ R_DrawEntitiesOnList
 void R_DrawEntitiesOnList( void )
 {
 	int	i;
+
+	// draw the solid submodels fog
+	R_DrawFog ();
 
 	// first draw solid entities
 	for( i = 0; i < tr.num_solid_entities; i++ )
@@ -767,6 +858,7 @@ void R_RenderScene( const ref_params_t *fd )
 	R_Clear( ~0 );
 
 	R_MarkLeaves();
+	R_CheckFog();
 	R_DrawWorld();
 
 	CL_ExtraUpdate ();	// don't let sound get messed up if going slow

@@ -351,7 +351,7 @@ void SV_DeleteSave_f( void )
 
 	// delete save and saveshot
 	FS_Delete( va( "save/%s.sav", Cmd_Argv( 1 )));
-	FS_Delete( va( "save/%s.tga", Cmd_Argv( 1 )));
+	FS_Delete( va( "save/%s.bmp", Cmd_Argv( 1 )));
 }
 
 /*

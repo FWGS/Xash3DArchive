@@ -34,6 +34,8 @@ BRUSH MODELS
 #define SURF_UNDERWATER		BIT( 7 )		// caustics
 #define SURF_TRANSPARENT		BIT( 8 )		// it's a transparent texture
 
+#define SURF_NOCULL			BIT( 31 )		// two-sided polygon (e.g. 'water4b')
+
 // lightstyle management
 #define LM_STYLES			4		// MAXLIGHTMAPS
 #define LM_SAMPLE_SIZE		16		// lightmap resoultion

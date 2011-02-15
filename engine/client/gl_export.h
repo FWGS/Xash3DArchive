@@ -280,6 +280,8 @@ typedef float GLmatrix[16];
 #define GL_FOG_END				0x0B64
 #define GL_FOG_MODE				0x0B65
 #define GL_FOG_COLOR			0x0B66
+#define GL_EXP				0x0800
+#define GL_EXP2				0x0801
 
 #define GL_POLYGON_OFFSET_FACTOR		0x8038
 #define GL_POLYGON_OFFSET_UNITS		0x2A00

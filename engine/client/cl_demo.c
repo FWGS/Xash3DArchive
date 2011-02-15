@@ -549,7 +549,7 @@ void CL_Record_f( void )
 
 	// open the demo file
 	com.sprintf( demopath, "demos/%s.dem", demoname );
-	com.sprintf( demoshot, "demos/%s.tga", demoname );
+	com.sprintf( demoshot, "demos/%s.bmp", demoname );
 
 	// make sure what old demo is removed
 	if( FS_FileExists( demopath )) FS_Delete( demopath );

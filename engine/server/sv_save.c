@@ -495,7 +495,7 @@ void SV_AgeSaveList( const char *pName, int count )
 
 	// delete last quick/autosave (e.g. quick05.sav)
 	com.snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
-	com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.tga", pName, count );
+	com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
 
 	// only delete from game directory, basedir is read-only
 	FS_Delete( newName );
@@ -507,17 +507,17 @@ void SV_AgeSaveList( const char *pName, int count )
 		{	
 			// quick.sav
 			com.snprintf( oldName, sizeof( oldName ), "save/%s.sav", pName );
-			com.snprintf( oldImage, sizeof( oldImage ), "save/%s.tga", pName );
+			com.snprintf( oldImage, sizeof( oldImage ), "save/%s.bmp", pName );
 		}
 		else
 		{	
 			// quick04.sav, etc.
 			com.snprintf( oldName, sizeof( oldName ), "save/%s%02d.sav", pName, count - 1 );
-			com.snprintf( oldImage, sizeof( oldImage ), "save/%s%02d.tga", pName, count - 1 );
+			com.snprintf( oldImage, sizeof( oldImage ), "save/%s%02d.bmp", pName, count - 1 );
 		}
 
 		com.snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
-		com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.tga", pName, count );
+		com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
 
 		// Scroll the name list down (rename quick04.sav to quick05.sav)
 		FS_Rename( oldName, newName );
@@ -1743,11 +1743,11 @@ void SV_SaveGame( const char *pName )
 	// make sure what oldsave is removed
 	if( FS_FileExists( va( "save/%s.sav", savename )))
 		FS_Delete( va( "save/%s.sav", savename ));
-	if( FS_FileExists( va( "save/%s.tga", savename )))
-		FS_Delete( va( "save/%s.tga", savename ));
+	if( FS_FileExists( va( "save/%s.bmp", savename )))
+		FS_Delete( va( "save/%s.bmp", savename ));
 
 	// HACKHACK: unload previous image from memory
-	GL_FreeImage( va( "save/%s.tga", savename ));
+	GL_FreeImage( va( "save/%s.bmp", savename ));
 
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );

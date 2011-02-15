@@ -242,7 +242,7 @@ static void UI_RecDemo_Callback( void *self, int event )
 		{
 			char	cmd[128];
 
-			sprintf( cmd, "demos/%s.tga", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
+			sprintf( cmd, "demos/%s.bmp", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
 			PIC_Free( cmd );
 
 			sprintf( cmd, "record \"%s\"\n", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
@@ -262,7 +262,7 @@ static void UI_RecDemo_Callback( void *self, int event )
 
 			CLIENT_COMMAND( TRUE, cmd );
 
-			sprintf( cmd, "demos/%s.tga", uiRecDemo.delName[uiRecDemo.demosList.curItem] );
+			sprintf( cmd, "demos/%s.bmp", uiRecDemo.delName[uiRecDemo.demosList.curItem] );
 			PIC_Free( cmd );
 
 			// restarts the menu
@@ -300,7 +300,7 @@ static void UI_RecDemo_Ownerdraw( void *self )
 		{
 			char	demoshot[128];
 
-			sprintf( demoshot, "demos/%s.tga", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
+			sprintf( demoshot, "demos/%s.bmp", uiRecDemo.demoName[uiRecDemo.demosList.curItem] );
 
 			if( !FILE_EXISTS( demoshot ))
 				UI_DrawPicAdditive( x, y, w, h, uiColorWhite, "{GRAF001" );

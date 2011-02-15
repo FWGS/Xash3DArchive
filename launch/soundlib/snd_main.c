@@ -94,7 +94,7 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 	}
 
 load_internal:
-	for( format = sound.baseformats; format && format->formatstring; format++ )
+	for( format = sound.loadformats; format && format->formatstring; format++ )
 	{
 		if( anyformat || !com.stricmp( ext, format->ext ))
 		{

@@ -34,7 +34,6 @@ static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
 static lightmap_state_t	r_lmState;
 static msurface_t		*skychain = NULL;
-static msurface_t		*waterchain = NULL;
 
 static gl_light_t	r_dlights[MAX_DLIGHTS];
 static int	r_numdlights;
@@ -480,7 +479,7 @@ void R_RenderFullbrights( void )
 		for( p = fullbright_polys[i]; p; p = p->next )
 		{
 			if( p->flags & SURF_DRAWTURB )
-				EmitWaterPolys( p );
+				EmitWaterPolys( p, ( p->flags & SURF_NOCULL ));
 			else DrawGLPoly( p );
 		}
 
@@ -678,7 +677,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	if( fa->flags & SURF_DRAWTURB )
 	{	
 		// warp texture, no lightmaps
-		EmitWaterPolys( fa->polys );
+		EmitWaterPolys( fa->polys, ( fa->flags & SURF_NOCULL ));
 		return;
 	}
 
@@ -840,7 +839,7 @@ void R_DrawWaterSurfaces( void )
 		GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
 		for( ; s; s = s->texturechain )
-			EmitWaterPolys( s->polys );
+			EmitWaterPolys( s->polys, ( s->flags & SURF_NOCULL ));
 			
 		t->texturechain = NULL;
 	}
@@ -892,6 +891,9 @@ static _inline qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 
 	if( surf->flags & SURF_WATERCSG && !( RI.currententity->curstate.effects & EF_NOWATERCSG ))
 		return true;
+
+	if( surf->flags & SURF_NOCULL )
+		return false;
 
 	if( r_nocull->integer )
 		return false;
@@ -1276,6 +1278,9 @@ void R_DrawWorld( void )
 	ClearBounds( RI.visMins, RI.visMaxs );
 	R_ClearSkyBox ();
 
+	// draw the world fog
+	R_DrawFog ();
+
 	R_RecursiveWorldNode( cl.worldmodel->nodes, RI.clipFlags );
 
 	R_DrawStaticBrushes();
@@ -1548,7 +1553,7 @@ void GL_BuildLightmaps( void )
 	Mem_Set( visbytes, 0x00, sizeof( visbytes ));
 	Mem_Set( &r_lmState, 0, sizeof( r_lmState ));
 
-	skychain = waterchain = NULL;
+	skychain = NULL;
 
 	// setup all the lightstyles
 	R_AnimateLight();

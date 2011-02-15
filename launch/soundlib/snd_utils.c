@@ -18,16 +18,7 @@ static const loadwavformat_t load_null[] =
 { NULL, NULL, NULL }
 };
 
-// version1 - using only Quake1 sounds
-static const loadwavformat_t load_quake1[] =
-{
-{ "sound/%s%s.%s", "wav", Sound_LoadWAV },
-{ "%s%s.%s", "wav", Sound_LoadWAV },
-{ NULL, NULL, NULL }
-};
-
-// version2 - Xash3D default sound profile
-static const loadwavformat_t load_xash[] =
+static const loadwavformat_t load_game[] =
 {
 { "sound/%s%s.%s", "wav", Sound_LoadWAV },
 { "%s%s.%s", "wav", Sound_LoadWAV },
@@ -49,8 +40,7 @@ static const streamformat_t stream_null[] =
 { NULL, NULL, NULL, NULL, NULL }
 };
 
-// version1 - Xash3D default stream profile
-static const streamformat_t stream_xash[] =
+static const streamformat_t stream_game[] =
 {
 { "%s%s.%s", "mp3", Stream_OpenMPG, Stream_ReadMPG, Stream_FreeMPG },
 { "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_FreeWAV },
@@ -62,13 +52,12 @@ void Sound_Init( void )
 	// init pools
 	Sys.soundpool = Mem_AllocPool( "SoundLib Pool" );
 
-	sound.baseformats = load_xash;
-
 	// install image formats (can be re-install later by Sound_Setup)
 	switch( Sys.app_name )
 	{
 	case HOST_NORMAL:
-		Sound_Setup( "default", 0 ); // re-initialized later		
+		sound.loadformats = load_game;
+		sound.streamformat = stream_game;		
 		break;
 	default:	// all other instances not using soundlib or will be reinstalling later
 		sound.loadformats = load_null;
@@ -76,36 +65,6 @@ void Sound_Init( void )
 		break;
 	}
 	sound.tempbuffer = NULL;
-}
-
-void Sound_Setup( const char *formats, const uint flags )
-{
-	if( flags != -1 ) sound.cmd_flags = flags;
-	if( formats == NULL ) return;	// used for change flags only
-
-	MsgDev( D_NOTE, "Sound_Init( %s )\n", formats );
-
-	// reinstall loadformats by magic keyword :)
-	if( !com.stricmp( formats, "Xash3D" ) || !com.stricmp( formats, "Xash" ))
-	{
-		sound.loadformats = load_xash;
-		sound.streamformat = stream_xash;
-	}
-	else if( !com.stricmp( formats, "Quake1" ))
-	{
-		sound.loadformats = load_quake1; 
-		sound.streamformat = stream_null;
-	}
-	else if( !com.stricmp( formats, "hl1" ) || !com.stricmp( formats, "Half-Life" ))
-	{
-		sound.loadformats = load_quake1;
-		sound.streamformat = stream_xash;
-	}
-	else
-	{
-		sound.loadformats = load_xash; // unrecognized version, use default
-		sound.streamformat = stream_xash;
-	}
 }
 
 void Sound_Shutdown( void )
