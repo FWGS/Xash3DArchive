@@ -16,7 +16,7 @@ typedef struct
 {
 	char	*filename;
 	int	num_items;
-	wfile_t	*file;
+	file_t	*file;	// pointer to wadfile
 } cachewad_t;
 
 int CustomDecal_Init( cachewad_t *wad, byte *data, int size, int playernum )
@@ -107,7 +107,7 @@ int SV_CreateCustomization( customization_t *pListHead, resource_t *pResource, i
 						if( flags & FCUST_WIPEDATA )
 						{
 							Mem_Free( pldecal->filename );
-							WAD_Close( pldecal->file );
+							FS_Close( pldecal->file );
 							Mem_Free( pldecal );
 							pRes->pInfo = NULL;
 						}
@@ -198,7 +198,7 @@ void SV_ClearCustomizationList( customization_t *pHead )
 			{
 				wad = (cachewad_t *)pCur->pInfo; 
 				Mem_Free( wad->filename );
-				WAD_Close( wad->file );
+				FS_Close( wad->file );
 			}
 
 			Mem_Free( pCur->pInfo );

@@ -75,12 +75,32 @@ float rsqrt( float number )
 	return y;
 }
 
+/*
+=================
+SinCos
+=================
+*/
+void SinCos( float radians, float *sine, float *cosine )
+{
+	_asm
+	{
+		fld	dword ptr [radians]
+		fsincos
+
+		mov edx, dword ptr [cosine]
+		mov eax, dword ptr [sine]
+
+		fstp dword ptr [edx]
+		fstp dword ptr [eax]
+	}
+}
+
 float VectorNormalizeLength2( const vec3_t v, vec3_t out )
 {
 	float	length, ilength;
 
 	length = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-	length = com.sqrt( length );
+	length = sqrt( length );
 
 	if( length )
 	{
@@ -118,9 +138,9 @@ void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up 
 {
 	float	sr, sp, sy, cr, cp, cy;
 
-	com.sincos( DEG2RAD( angles[YAW] ), &sy, &cy );
-	com.sincos( DEG2RAD( angles[PITCH] ), &sp, &cp );
-	com.sincos( DEG2RAD( angles[ROLL] ), &sr, &cr );
+	SinCos( DEG2RAD( angles[YAW] ), &sy, &cy );
+	SinCos( DEG2RAD( angles[PITCH] ), &sp, &cp );
+	SinCos( DEG2RAD( angles[ROLL] ), &sr, &cr );
 
 	if( forward )
 	{
@@ -170,11 +190,11 @@ void VectorAngles( const float *forward, float *angles )
 	}
 	else
 	{
-		yaw = ( com.atan2( forward[1], forward[0] ) * 180 / M_PI );
+		yaw = ( atan2( forward[1], forward[0] ) * 180 / M_PI );
 		if( yaw < 0 ) yaw += 360;
 
-		tmp = com.sqrt( forward[0] * forward[0] + forward[1] * forward[1] );
-		pitch = ( com.atan2( forward[2], tmp ) * 180 / M_PI );
+		tmp = sqrt( forward[0] * forward[0] + forward[1] * forward[1] );
+		pitch = ( atan2( forward[2], tmp ) * 180 / M_PI );
 		if( pitch < 0 ) pitch += 360;
 	}
 	VectorSet( angles, pitch, yaw, 0 ); 
@@ -270,7 +290,7 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 	vec3_t	vr, vu, vf;
 
 	angle = DEG2RAD( degrees );
-	com.sincos( angle, &s, &c );
+	SinCos( angle, &s, &c );
 	VectorCopy( dir, vf );
 	VectorVectors( vf, vr, vu );
 
@@ -308,11 +328,11 @@ void AngleQuaternion( const vec3_t angles, vec4_t q )
 	float	sr, sp, sy, cr, cp, cy;
 
 	angle = angles[2] * 0.5f;
-	com.sincos( angle, &sy, &cy );
+	SinCos( angle, &sy, &cy );
 	angle = angles[1] * 0.5f;
-	com.sincos( angle, &sp, &cp );
+	SinCos( angle, &sp, &cp );
 	angle = angles[0] * 0.5f;
-	com.sincos( angle, &sr, &cr );
+	SinCos( angle, &sr, &cr );
 
 	q[0] = sr * cp * cy - cr * sp * sy; // X
 	q[1] = cr * sp * cy + sr * cp * sy; // Y
@@ -355,10 +375,10 @@ void QuaternionSlerp( const vec4_t p, vec4_t q, float t, vec4_t qt )
 	{
 		if(( 1.0 - cosom ) > 0.000001f )
 		{
-			omega = com.acos( cosom );
-			sinom = com.sin( omega );
-			sclp = com.sin(( 1.0f - t ) * omega ) / sinom;
-			sclq = com.sin( t * omega ) / sinom;
+			omega = acos( cosom );
+			sinom = sin( omega );
+			sclp = sin(( 1.0f - t ) * omega ) / sinom;
+			sclq = sin( t * omega ) / sinom;
 		}
 		else
 		{
@@ -375,8 +395,8 @@ void QuaternionSlerp( const vec4_t p, vec4_t q, float t, vec4_t qt )
 		qt[1] = q[0];
 		qt[2] = -q[3];
 		qt[3] = q[2];
-		sclp = com.sin(( 1.0f - t ) * ( 0.5f * M_PI ));
-		sclq = com.sin( t * ( 0.5f * M_PI ));
+		sclp = sin(( 1.0f - t ) * ( 0.5f * M_PI ));
+		sclq = sin( t * ( 0.5f * M_PI ));
 
 		for( i = 0; i < 3; i++ )
 			qt[i] = sclp * p[i] + sclq * qt[i];

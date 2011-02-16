@@ -1657,8 +1657,6 @@ ucmd_t ucmds[] =
 { "download", SV_BeginDownload_f },
 { "userinfo", SV_UpdateUserinfo_f },
 { "lightstyles", SV_WriteLightstyles_f },
-{ "lightgamma", NULL },	// FIXME: make cvars
-{ "direct", NULL },
 { NULL, NULL }
 };
 

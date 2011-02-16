@@ -60,9 +60,9 @@
 #define VectorDivide( in, d, out ) VectorScale( in, (1.0f / (d)), out )
 #define VectorMax(a) ( max((a)[0], max((a)[1], (a)[2])) )
 #define VectorAvg(a) ( ((a)[0] + (a)[1] + (a)[2]) / 3 )
-#define VectorLength(a) (com.sqrt( DotProduct( a, a )))
+#define VectorLength(a) ( sqrt( DotProduct( a, a )))
 #define VectorLength2(a) (DotProduct( a, a ))
-#define VectorDistance(a, b) (com.sqrt( VectorDistance2( a, b )))
+#define VectorDistance(a, b) (sqrt( VectorDistance2( a, b )))
 #define VectorDistance2(a, b) (((a)[0] - (b)[0]) * ((a)[0] - (b)[0]) + ((a)[1] - (b)[1]) * ((a)[1] - (b)[1]) + ((a)[2] - (b)[2]) * ((a)[2] - (b)[2]))
 #define VectorAverage(a,b,o)	((o)[0]=((a)[0]+(b)[0])*0.5,(o)[1]=((a)[1]+(b)[1])*0.5,(o)[2]=((a)[2]+(b)[2])*0.5)
 #define Vector2Set(v, x, y) ((v)[0]=(x),(v)[1]=(y))
@@ -71,8 +71,8 @@
 #define VectorClear(x) ((x)[0]=(x)[1]=(x)[2]=0)
 #define Vector2Lerp( v1, lerp, v2, c ) ((c)[0] = (v1)[0] + (lerp) * ((v2)[0] - (v1)[0]), (c)[1] = (v1)[1] + (lerp) * ((v2)[1] - (v1)[1]))
 #define VectorLerp( v1, lerp, v2, c ) ((c)[0] = (v1)[0] + (lerp) * ((v2)[0] - (v1)[0]), (c)[1] = (v1)[1] + (lerp) * ((v2)[1] - (v1)[1]), (c)[2] = (v1)[2] + (lerp) * ((v2)[2] - (v1)[2]))
-#define VectorNormalize( v ) { float ilength = (float)com.sqrt(DotProduct(v, v));if (ilength) ilength = 1.0f / ilength;v[0] *= ilength;v[1] *= ilength;v[2] *= ilength; }
-#define VectorNormalize2( v, dest ) {float ilength = (float)com.sqrt(DotProduct(v,v));if (ilength) ilength = 1.0f / ilength;dest[0] = v[0] * ilength;dest[1] = v[1] * ilength;dest[2] = v[2] * ilength; }
+#define VectorNormalize( v ) { float ilength = (float)sqrt(DotProduct(v, v));if (ilength) ilength = 1.0f / ilength;v[0] *= ilength;v[1] *= ilength;v[2] *= ilength; }
+#define VectorNormalize2( v, dest ) {float ilength = (float)sqrt(DotProduct(v,v));if (ilength) ilength = 1.0f / ilength;dest[0] = v[0] * ilength;dest[1] = v[1] * ilength;dest[2] = v[2] * ilength; }
 #define VectorNormalizeFast( v ) {float	ilength = (float)rsqrt(DotProduct(v,v)); v[0] *= ilength; v[1] *= ilength; v[2] *= ilength; }
 #define VectorNormalizeLength( v ) VectorNormalizeLength2((v), (v))
 #define VectorNegate(x, y) ((y)[0] = -(x)[0], (y)[1] = -(x)[1], (y)[2] = -(x)[2])
@@ -89,6 +89,7 @@ float rsqrt( float number );
 float anglemod( const float a );
 int SignbitsForPlane( const vec3_t normal );
 int NearestPOW( int value, qboolean roundDown );
+void SinCos( float radians, float *sine, float *cosine );
 float VectorNormalizeLength2( const vec3_t v, vec3_t out );
 void VectorVectors( vec3_t forward, vec3_t right, vec3_t up );
 void VectorAngles( const float *forward, float *angles );

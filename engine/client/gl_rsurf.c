@@ -309,47 +309,14 @@ texture_t *R_TextureAnimation( texture_t *base )
 
 /*
 ================
-DrawGLWaterPoly
-
-Warp the vertex coordinates
-================
-*/
-void DrawGLWaterPoly( glpoly_t *p, qboolean lightmap )
-{
-	float	*v;
-	vec3_t	nv;
-	int	i;
-
-	GL_CleanUpTextureUnits( 1 );
-	pglBegin( GL_TRIANGLE_FAN );
-
-	v = p->verts[0];
-	for( i = 0; i < p->numverts; i++, v += VERTEXSIZE )
-	{
-		if( lightmap )
-			pglTexCoord2f( v[5], v[6] );
-		else pglTexCoord2f( v[3], v[4] );
-
-		nv[0] = v[0] + 8 * com.sin( v[1] * 0.05f + cl.time ) * com.sin( v[2] * 0.05f + cl.time );
-		nv[1] = v[1] + 8 * com.sin( v[0] * 0.05f + cl.time ) * com.sin( v[2] * 0.05f + cl.time );
-		nv[2] = v[2];
-
-		pglVertex3fv( nv );
-	}
-
-	pglEnd();
-}
-
-/*
-================
 DrawGLPoly
 ================
 */
 void DrawGLPoly( glpoly_t *p )
 {
 	float		*v;
-	float		sOffset;
-	float		tOffset;
+	float		sOffset, sy;
+	float		tOffset, cy;
 	cl_entity_t	*e = RI.currententity;
 	int		i;
 
@@ -366,8 +333,9 @@ void DrawGLPoly( glpoly_t *p )
 		flRate = abs( flConveyorSpeed ) / (float)texture->srcWidth;
 		flAngle = ( flConveyorSpeed >= 0 ) ? 180 : 0;
 
-		sOffset = RI.refdef.time * com.cos( flAngle * ( M_PI / 180.0f )) * flRate;
-		tOffset = RI.refdef.time * com.sin( flAngle * ( M_PI / 180.0f )) * flRate;
+		SinCos( flAngle * ( M_PI / 180.0f ), &sy, &cy );
+		sOffset = RI.refdef.time * cy * flRate;
+		tOffset = RI.refdef.time * sy * flRate;
 	
 		// make sure that we are positive
 		if( sOffset < 0.0f ) sOffset += 1.0f + -(int)sOffset;

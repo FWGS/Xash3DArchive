@@ -229,13 +229,6 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 
 	if( !crcvalue ) return false;
 
-	// always calc same checksum for singleplayer
-	if( Cvar_VariableInteger( "maxplayers" ) == 1 )
-	{
-		*crcvalue = (('H'<<24)+('S'<<16)+('A'<<8)+'X');
-		return true;
-	}
-
 	f = FS_Open( filename, "rb", false );
 	if( !f ) return false;
 
@@ -511,4 +504,21 @@ void MD5Transform( uint buf[4], const uint in[16] )
 	buf[1] += b;
 	buf[2] += c;
 	buf[3] += d;
+}
+
+/*
+=================
+Com_HashKey
+
+returns hash key for string
+=================
+*/
+uint Com_HashKey( const char *string, uint hashSize )
+{
+	uint	i, hashKey = 0;
+
+	for( i = 0; string[i]; i++ )
+		hashKey = (hashKey + i) * 37 + com.tolower( string[i] );
+
+	return (hashKey % hashSize);
 }

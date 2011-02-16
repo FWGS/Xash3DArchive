@@ -153,11 +153,30 @@ byte *Image_Copy( size_t size )
 	return out; 
 }
 
+/*
+=================
+Image_NearestPOW
+=================
+*/
+int Image_NearestPOW( int value, qboolean roundDown )
+{
+	int	n = 1;
+
+	if( value <= 0 ) return 1;
+	while( n < value ) n <<= 1;
+
+	if( roundDown )
+	{
+		if( n > value ) n >>= 1;
+	}
+	return n;
+}
+
 void Image_RoundDimensions( int *width, int *height )
 {
 	// find nearest power of two, rounding down if desired
-	*width = NearestPOW( *width, gl_round_down->integer );
-	*height = NearestPOW( *height, gl_round_down->integer );
+	*width = Image_NearestPOW( *width, gl_round_down->integer );
+	*height = Image_NearestPOW( *height, gl_round_down->integer );
 }
 
 qboolean Image_ValidSize( const char *name )
@@ -1191,8 +1210,8 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 			if( flags & IMAGE_ROUNDFILLER )
 			{
 				// roundfiller always must roundup
-				w = NearestPOW( w, false );
-				h = NearestPOW( h, false );
+				w = Image_NearestPOW( w, false );
+				h = Image_NearestPOW( h, false );
 			}
 			else Image_RoundDimensions( &w, &h );
 

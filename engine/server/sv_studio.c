@@ -974,16 +974,8 @@ void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 		return;
 
 	iBone = bound( 0, iBone, sv_studiohdr->numbones );
-	if( org )
-	{
-		Matrix3x4_OriginFromMatrix( sv_studiobones[iBone], org );
-		VectorSubtract( org, e->v.origin, org );
-	}
-
-	if( ang )
-	{
-		VectorAngles( sv_studiobones[iBone][0], ang ); // bone forward to angles
-	}
+	if( org ) Matrix3x4_OriginFromMatrix( sv_studiobones[iBone], org );
+	if( ang ) VectorAngles( sv_studiobones[iBone][0], ang ); // bone forward to angles
 }
 
 static sv_blending_interface_t gBlendAPI =

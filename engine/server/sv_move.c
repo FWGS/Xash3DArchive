@@ -102,7 +102,7 @@ float SV_VecToYaw( const vec3_t src )
 	}
 	else
 	{
-		yaw = (int)( com.atan2( src[1], src[0] ) * 180 / M_PI );
+		yaw = (int)( atan2( src[1], src[0] ) * 180 / M_PI );
 		if( yaw < 0 ) yaw += 360;
 	}
 	return yaw;
@@ -320,7 +320,7 @@ qboolean SV_StepDirection( edict_t *ent, float yaw, float dist )
 	vec3_t	move;
 
 	yaw = yaw * M_PI * 2 / 360;
-	VectorSet( move, com.cos( yaw ) * dist, com.sin( yaw ) * dist, 0.0f );
+	VectorSet( move, cos( yaw ) * dist, sin( yaw ) * dist, 0.0f );
 
 	ret = SV_MoveStep( ent, move, 0 );
 	SV_LinkEdict( ent, true );

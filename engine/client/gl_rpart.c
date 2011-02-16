@@ -506,11 +506,11 @@ void CL_EntityParticles( cl_entity_t *ent )
 		if( !p ) return;
 
 		angle = cl.time * cl_avelocities[i][0];
-		com.sincos( angle, &sy, &cy );
+		SinCos( angle, &sy, &cy );
 		angle = cl.time * cl_avelocities[i][1];
-		com.sincos( angle, &sp, &cp );
+		SinCos( angle, &sp, &cp );
 		angle = cl.time * cl_avelocities[i][2];
-		com.sincos( angle, &sr, &cr );
+		SinCos( angle, &sr, &cr );
 	
 		VectorSet( forward, cp * cy, cp * sy, -sp ); 
 

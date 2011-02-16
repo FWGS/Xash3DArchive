@@ -1134,7 +1134,7 @@ static rgbdata_t *R_InitParticleTexture( texFlags_t *flags )
 		for( y = 0; y < 16; y++ )
 		{
 			dy = y - 8;
-			d = 255 - 35 * com.sqrt( dx2 + dy * dy );
+			d = 255 - 35 * sqrt( dx2 + dy * dy );
 			data2D[( y*16 + x ) * 4 + 3] = bound( 0, d, 255 );
 		}
 	}

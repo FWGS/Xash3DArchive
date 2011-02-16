@@ -165,13 +165,6 @@ void Sys_GetStdAPI( void )
 	com.fremove = FS_Delete;		// like remove
 	com.frename = FS_Rename;		// like rename
 
-	// wadstorage filesystem
-	com.wfcheck = W_Check;		// validate container
-	com.wfopen = W_Open;		// open wad file or create new
-	com.wfclose = W_Close;		// close wadfile
-	com.wfwrite = W_SaveLump;		// dump lump into disk
-	com.wfread = W_LoadLump;		// load lump into memory
-
 	// custom HPAK storage system
 	com.hpk_getdataptr = HPAK_GetDataPointer;	// find resource lump and return pointer
 	com.hpk_findres = HPAK_ResourceForHash;		// find resource by hash	
@@ -209,16 +202,6 @@ void Sys_GetStdAPI( void )
 
 	com.Com_RandomLong = Com_RandomLong;
 	com.Com_RandomFloat = Com_RandomFloat;
-
-	// changed after called Sys_InitCPU
-	com.sincos = SinCos;			// fast sincos
-	com.atan2 = atan2;				// fast arctan
-	com.acos = acos;				// fast arccos
-	com.asin = asin;				// fast arcsin
-	com.sqrt = sqrtf;				// fast sqrt
-	com.sin = sin;				// fast sine
-	com.cos = cos;				// fast cosine
-	com.tan = tan;				// fast tan
 
 	// stdlib.c funcs
 	com.strnupr = com_strnupr;
@@ -422,7 +405,8 @@ void Sys_ParseCommandLine( LPSTR lpCmdLine )
 
 	while( *lpCmdLine && ( fs_argc < MAX_NUM_ARGVS ))
 	{
-		while( *lpCmdLine && *lpCmdLine <= ' ' ) lpCmdLine++;
+		while( *lpCmdLine && *lpCmdLine <= ' ' )
+			lpCmdLine++;
 		if( !*lpCmdLine ) break;
 
 		if( *lpCmdLine == '\"' )
@@ -685,6 +669,13 @@ void Sys_Sleep( int msec )
 	Sleep( msec );
 }
 
+/*
+================
+Sys_WaitForQuit
+
+wait for 'Esc' key will be hit
+================
+*/
 void Sys_WaitForQuit( void )
 {
 	MSG	msg;
@@ -859,7 +850,9 @@ void Sys_Init( void )
 		}
 		else Sys.developer++; // -dev == 1, -dev -console == 2
 	}
-	if( Sys.log_active && !Sys.developer ) Sys.log_active = false;	// nothing to logging :)
+
+	if( Sys.log_active && !Sys.developer )
+		Sys.log_active = false;	// nothing to logging :)
           
 	SetErrorMode( SEM_FAILCRITICALERRORS );	// no abort/retry/fail errors
 
@@ -984,7 +977,7 @@ qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll )
 		// Get the function adresses
 		for( func = dll->fcts; func && func->name != NULL; func++ )
 		{
-			if (!( *func->func = Sys_GetProcAddress( dll, func->name )))
+			if( !( *func->func = Sys_GetProcAddress( dll, func->name )))
 			{
 				com.sprintf( errorstring, "Sys_LoadLibrary: %s missing or invalid function (%s)\n", dll->name, func->name );
 				goto error;

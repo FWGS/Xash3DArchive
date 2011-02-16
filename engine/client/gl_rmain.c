@@ -187,16 +187,16 @@ int R_ComputeFxBlend( cl_entity_t *e )
 	switch( e->curstate.renderfx ) 
 	{
 	case kRenderFxPulseSlowWide:
-		blend = renderAmt + 0x40 * com.sin( RI.refdef.time * 2 + offset );	
+		blend = renderAmt + 0x40 * sin( RI.refdef.time * 2 + offset );	
 		break;
 	case kRenderFxPulseFastWide:
-		blend = renderAmt + 0x40 * com.sin( RI.refdef.time * 8 + offset );
+		blend = renderAmt + 0x40 * sin( RI.refdef.time * 8 + offset );
 		break;
 	case kRenderFxPulseSlow:
-		blend = renderAmt + 0x10 * com.sin( RI.refdef.time * 2 + offset );
+		blend = renderAmt + 0x10 * sin( RI.refdef.time * 2 + offset );
 		break;
 	case kRenderFxPulseFast:
-		blend = renderAmt + 0x10 * com.sin( RI.refdef.time * 8 + offset );
+		blend = renderAmt + 0x10 * sin( RI.refdef.time * 8 + offset );
 		break;
 	// JAY: HACK for now -- not time based
 	case kRenderFxFadeSlow:			
@@ -224,27 +224,27 @@ int R_ComputeFxBlend( cl_entity_t *e )
 		blend = renderAmt;
 		break;
 	case kRenderFxStrobeSlow:
-		blend = 20 * com.sin( RI.refdef.time * 4 + offset );
+		blend = 20 * sin( RI.refdef.time * 4 + offset );
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxStrobeFast:
-		blend = 20 * com.sin( RI.refdef.time * 16 + offset );
+		blend = 20 * sin( RI.refdef.time * 16 + offset );
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxStrobeFaster:
-		blend = 20 * com.sin( RI.refdef.time * 36 + offset );
+		blend = 20 * sin( RI.refdef.time * 36 + offset );
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxFlickerSlow:
-		blend = 20 * (com.sin( RI.refdef.time * 2 ) + com.sin( RI.refdef.time * 17 + offset ));
+		blend = 20 * (sin( RI.refdef.time * 2 ) + sin( RI.refdef.time * 17 + offset ));
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxFlickerFast:
-		blend = 20 * (com.sin( RI.refdef.time * 16 ) + com.sin( RI.refdef.time * 23 + offset ));
+		blend = 20 * (sin( RI.refdef.time * 16 ) + sin( RI.refdef.time * 23 + offset ));
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
@@ -448,10 +448,10 @@ static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
 	zNear = 4.0f;
 	zFar = max( 256.0f, RI.farClip );
 
-	yMax = zNear * com.tan( fd->fov_y * M_PI / 360.0 );
+	yMax = zNear * tan( fd->fov_y * M_PI / 360.0 );
 	yMin = -yMax;
 
-	xMax = zNear * com.tan( fd->fov_x * M_PI / 360.0 );
+	xMax = zNear * tan( fd->fov_x * M_PI / 360.0 );
 	xMin = -xMax;
 
 	Matrix4x4_CreateProjection( m, xMax, xMin, yMax, yMin, zNear, zFar );
@@ -613,7 +613,7 @@ static void R_SetupGL( void )
 	if( RI.refdef.waterlevel >= 3 )
 	{
 		float	f;
-		f = com.sin( cl.time * 0.4f * ( M_PI * 2.7f ));
+		f = sin( cl.time * 0.4f * ( M_PI * 2.7f ));
 		RI.refdef.fov_x += f;
 		RI.refdef.fov_y -= f;
 	}

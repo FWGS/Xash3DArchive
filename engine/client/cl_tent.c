@@ -508,8 +508,8 @@ void CL_Bubbles( const vec3_t mins, const vec3_t maxs, float height, int modelIn
 		pTemp->x = origin[0];
 		pTemp->y = origin[1];
 		angle = Com_RandomLong( -M_PI, M_PI );
-		sine = com.sin( angle );
-		cosine = com.cos( angle );
+		sine = sin( angle );
+		cosine = cos( angle );
 		
 		zspeed = Com_RandomLong( 80, 140 );
 		VectorSet( pTemp->entity.baseline.origin, speed * cosine, speed * sine, zspeed );
@@ -556,7 +556,7 @@ void CL_BubbleTrail( const vec3_t start, const vec3_t end, float flWaterZ, int m
 		angle = Com_RandomLong( -M_PI, M_PI );
 
 		zspeed = Com_RandomLong( 80, 140 );
-		VectorSet( pTemp->entity.baseline.origin, speed * com.cos( angle ), speed * com.sin( angle ), zspeed );
+		VectorSet( pTemp->entity.baseline.origin, speed * cos( angle ), speed * sin( angle ), zspeed );
 		pTemp->die = cl.time + ((flWaterZ - (origin[2] - start[2])) / zspeed) - 0.1f;
 		pTemp->entity.curstate.frame = Com_RandomLong( 0, frameCount - 1 );
 		// Set sprite scale

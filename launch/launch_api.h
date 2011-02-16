@@ -552,13 +552,6 @@ typedef struct stdilib_api_s
 	qboolean (*fremove)( const char *path );				// remove specified file
 	qboolean (*frename)( const char *oldname, const char *newname );		// rename specified file
 
-	// wadstorage filesystem
-	int (*wfcheck)( const char *filename );				// validate container
-	wfile_t *(*wfopen)( const char *filename, const char *mode );	// open wad file or create new
-	void (*wfclose)( wfile_t *wad );				// close wadfile
-	long (*wfwrite)( wfile_t *wad, const char *lump, const void* data, size_t size, char type, char cmp );
-	byte *(*wfread)( wfile_t *wad, const char *lump, size_t *lumpsizeptr, const char type );
-
 	// custom hpk filesystem
 	qboolean (*hpk_getdataptr)( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
 	qboolean (*hpk_findres)( const char *filename, char *hash, struct resource_s *pRes );
@@ -599,16 +592,6 @@ typedef struct stdilib_api_s
 	long (*Com_RandomLong)( long lMin, long lMax );			// returns random integer
 	float (*Com_RandomFloat)( float fMin, float fMax );		// returns random float
 
-	// mathlib.c funcs
-	void (*sincos)( float x, float *sin, float *cos );		// fast sincos
-	double (*atan2)( double x, double y );				// fast arctan
-	double (*acos)( double x );					// fast arccos
-	double (*asin)( double x );					// fast arcsin
-	double (*sin)( double x );					// fast sine
-	double (*cos)( double x );					// fast cosine
-	double (*tan)( double x );					// fast tan
-	float (*sqrt)( float x );					// fast sqrt
-	
 	// stdlib.c funcs
 	void (*strnupr)(const char *in, char *out, size_t size_out);	// convert string to upper case
 	void (*strnlwr)(const char *in, char *out, size_t size_out);	// convert string to lower case
@@ -852,17 +835,6 @@ console commands
 #define Cmd_AddCommand		com.Cmd_AddCommand
 #define Cmd_AddGameCommand		com.Cmd_AddGameCommand
 #define Cmd_RemoveCommand		com.Cmd_DelCommand
-
-/*
-===========================================
-wadstorage filesystem manager
-===========================================
-*/
-#define WAD_Open			com.wfopen
-#define WAD_Check			com.wfcheck
-#define WAD_Close			com.wfclose
-#define WAD_Write			com.wfwrite
-#define WAD_Read			com.wfread
 
 /*
 ===========================================

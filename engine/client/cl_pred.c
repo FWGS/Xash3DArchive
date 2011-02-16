@@ -113,7 +113,7 @@ void CL_SetIdealPitch( cl_entity_t *ent )
 		return;
 		
 	angleval = ent->angles[YAW] * M_PI * 2 / 360;
-	com.sincos( angleval, &sinval, &cosval );
+	SinCos( angleval, &sinval, &cosval );
 
 	for( i = 0; i < MAX_FORWARD; i++ )
 	{

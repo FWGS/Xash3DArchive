@@ -110,11 +110,11 @@ void Matrix3x4_CreateFromEntity( matrix3x4 out, const vec3_t angles, const vec3_
 	if( angles[ROLL] )
 	{
 		angle = angles[YAW] * (M_PI*2 / 360);
-		com.sincos( angle, &sy, &cy );
+		SinCos( angle, &sy, &cy );
 		angle = angles[PITCH] * (M_PI*2 / 360);
-		com.sincos( angle, &sp, &cp );
+		SinCos( angle, &sp, &cp );
 		angle = angles[ROLL] * (M_PI*2 / 360);
-		com.sincos( angle, &sr, &cr );
+		SinCos( angle, &sr, &cr );
 
 		out[0][0] = (cp*cy) * scale;
 		out[0][1] = (sr*sp*cy+cr*-sy) * scale;
@@ -132,9 +132,9 @@ void Matrix3x4_CreateFromEntity( matrix3x4 out, const vec3_t angles, const vec3_
 	else if( angles[PITCH] )
 	{
 		angle = angles[YAW] * (M_PI*2 / 360);
-		com.sincos( angle, &sy, &cy );
+		SinCos( angle, &sy, &cy );
 		angle = angles[PITCH] * (M_PI*2 / 360);
-		com.sincos( angle, &sp, &cp );
+		SinCos( angle, &sp, &cp );
 
 		out[0][0] = (cp*cy) * scale;
 		out[0][1] = (-sy) * scale;
@@ -152,7 +152,7 @@ void Matrix3x4_CreateFromEntity( matrix3x4 out, const vec3_t angles, const vec3_
 	else if( angles[YAW] )
 	{
 		angle = angles[YAW] * (M_PI*2 / 360);
-		com.sincos( angle, &sy, &cy );
+		SinCos( angle, &sy, &cy );
 
 		out[0][0] = (cy) * scale;
 		out[0][1] = (-sy) * scale;
@@ -186,7 +186,7 @@ void Matrix3x4_CreateFromEntity( matrix3x4 out, const vec3_t angles, const vec3_
 
 void Matrix3x4_TransformPositivePlane( const matrix3x4 in, const vec3_t normal, float d, vec3_t out, float *dist )
 {
-	float	scale = com.sqrt( in[0][0] * in[0][0] + in[0][1] * in[0][1] + in[0][2] * in[0][2] );
+	float	scale = sqrt( in[0][0] * in[0][0] + in[0][1] * in[0][1] + in[0][2] * in[0][2] );
 	float	iscale = 1.0f / scale;
 
 	out[0] = (normal[0] * in[0][0] + normal[1] * in[0][1] + normal[2] * in[0][2]) * iscale;
@@ -321,11 +321,11 @@ void Matrix4x4_CreateFromEntity( matrix4x4 out, const vec3_t angles, const vec3_
 	if( angles[ROLL] )
 	{
 		angle = angles[YAW] * (M_PI*2 / 360);
-		com.sincos( angle, &sy, &cy );
+		SinCos( angle, &sy, &cy );
 		angle = angles[PITCH] * (M_PI*2 / 360);
-		com.sincos( angle, &sp, &cp );
+		SinCos( angle, &sp, &cp );
 		angle = angles[ROLL] * (M_PI*2 / 360);
-		com.sincos( angle, &sr, &cr );
+		SinCos( angle, &sr, &cr );
 
 		out[0][0] = (cp*cy) * scale;
 		out[0][1] = (sr*sp*cy+cr*-sy) * scale;
@@ -347,9 +347,9 @@ void Matrix4x4_CreateFromEntity( matrix4x4 out, const vec3_t angles, const vec3_
 	else if( angles[PITCH] )
 	{
 		angle = angles[YAW] * (M_PI*2 / 360);
-		com.sincos( angle, &sy, &cy );
+		SinCos( angle, &sy, &cy );
 		angle = angles[PITCH] * (M_PI*2 / 360);
-		com.sincos( angle, &sp, &cp );
+		SinCos( angle, &sp, &cp );
 
 		out[0][0] = (cp*cy) * scale;
 		out[0][1] = (-sy) * scale;
@@ -371,7 +371,7 @@ void Matrix4x4_CreateFromEntity( matrix4x4 out, const vec3_t angles, const vec3_
 	else if( angles[YAW] )
 	{
 		angle = angles[YAW] * (M_PI*2 / 360);
-		com.sincos( angle, &sy, &cy );
+		SinCos( angle, &sy, &cy );
 
 		out[0][0] = (cy) * scale;
 		out[0][1] = (-sy) * scale;
@@ -413,7 +413,7 @@ void Matrix4x4_CreateFromEntity( matrix4x4 out, const vec3_t angles, const vec3_
 
 void Matrix4x4_TransformPositivePlane( const matrix4x4 in, const vec3_t normal, float d, vec3_t out, float *dist )
 {
-	float	scale = com.sqrt( in[0][0] * in[0][0] + in[0][1] * in[0][1] + in[0][2] * in[0][2] );
+	float	scale = sqrt( in[0][0] * in[0][0] + in[0][1] * in[0][1] + in[0][2] * in[0][2] );
 	float	iscale = 1.0f / scale;
 
 	out[0] = (normal[0] * in[0][0] + normal[1] * in[0][1] + normal[2] * in[0][2]) * iscale;

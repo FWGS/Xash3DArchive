@@ -79,7 +79,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trac
 	pe->takedamage = ed->v.takedamage;
 	pe->team = ed->v.team;
 	pe->classnumber = ed->v.playerclass;
-	pe->blooddecal = 0;	// FIXME: what i'm do write here ???
+	pe->blooddecal = 0;	// unused in GoldSrc
 
 	// for mods
 	pe->iuser1 = ed->v.iuser1;
@@ -212,11 +212,9 @@ static void pfnParticle( float *origin, int color, float life, int zpos, int zve
 	BF_WriteChar( &sv.reliable_datagram, 0 ); // no y-vel
 	v = bound( -128, (zpos * zvel) * 16, 127 );
 	BF_WriteChar( &sv.reliable_datagram, v ); // write z-vel
-
-	// FIXME: send lifetime too
-
 	BF_WriteByte( &sv.reliable_datagram, 1 );
 	BF_WriteByte( &sv.reliable_datagram, color );
+	BF_WriteByte( &sv.reliable_datagram, bound( 0, life * 8, 255 ));
 }
 
 static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )

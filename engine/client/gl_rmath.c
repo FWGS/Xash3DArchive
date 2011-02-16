@@ -44,7 +44,7 @@ void R_InitMathlib( void )
 	{
 		t = (float)i / (float)FTABLE_SIZE;
 
-		r_sintable[i] = com.sin( t * M_PI2 );
+		r_sintable[i] = sin( t * M_PI2 );
 
 		if( t < 0.25f ) r_triangletable[i] = t * 4.0f;
 		else if( t < 0.75f ) r_triangletable[i] = 2.0f - 4.0f * t;
@@ -58,7 +58,7 @@ void R_InitMathlib( void )
 	}
 
 	for( i = 0; i < 256; i++ )
-		r_sintableByte[i] = com.sin((float)i / 255.0f * M_PI2 );
+		r_sintableByte[i] = sin((float)i / 255.0f * M_PI2 );
 
 	// init the noise table
 	for( i = 0; i < NOISE_SIZE; i++ )
@@ -83,7 +83,7 @@ float V_CalcFov( float *fov_x, float width, float height )
 		*fov_x = 90;
 	}
 
-	x = width / com.tan( DEG2RAD( *fov_x ) * 0.5f );
+	x = width / tan( DEG2RAD( *fov_x ) * 0.5f );
 	half_fov_y = atan( height / x );
 
 	return RAD2DEG( half_fov_y ) * 2;
@@ -106,7 +106,7 @@ void V_AdjustFov( float *fov_x, float *fov_y, float width, float height, qboolea
 
 	if( lock_x )
 	{
-		*fov_y = 2 * atan((width * 3) / (height * 4) * com.tan( *fov_y * M_PI / 360.0 * 0.5 )) * 360 / M_PI;
+		*fov_y = 2 * atan((width * 3) / (height * 4) * tan( *fov_y * M_PI / 360.0 * 0.5 )) * 360 / M_PI;
 		return;
 	}
 
@@ -143,9 +143,9 @@ void R_NormToLatLong( const vec3_t normal, byte latlong[2] )
 	{
 		int	angle;
 
-		angle = (int)(com.acos( normal[2]) * 255.0 / M_PI2 ) & 255;
+		angle = (int)(acos( normal[2]) * 255.0 / M_PI2 ) & 255;
 		latlong[0] = angle;
-		angle = (int)(com.atan2( normal[1], normal[0] ) * 255.0 / M_PI2 ) & 255;
+		angle = (int)(atan2( normal[1], normal[0] ) * 255.0 / M_PI2 ) & 255;
 		latlong[1] = angle;
 	}
 }
@@ -315,14 +315,13 @@ void Matrix4x4_CreateRotate( matrix4x4 out, float angle, float x, float y, float
 	float	len, c, s;
 
 	len = x * x + y * y + z * z;
-	if( len != 0.0f ) len = 1.0f / com.sqrt( len );
+	if( len != 0.0f ) len = 1.0f / sqrt( len );
 	x *= len;
 	y *= len;
 	z *= len;
 
 	angle *= (-M_PI / 180.0f);
-	c = com.cos( angle );
-	s = com.sin( angle );
+	SinCos( angle, &s, &c );
 
 	out[0][0]=x * x + c * (1 - x * x);
 	out[0][1]=x * y * (1 - c) + z * s;

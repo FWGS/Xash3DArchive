@@ -1364,7 +1364,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 			dist = DotProduct( vec, vec );
 			atten = (dist / radius2 - 1) * -1;
 			if( atten < 0 ) atten = 0;
-			dist = com.sqrt( dist );
+			dist = sqrt( dist );
 
 			if( dist )
 			{
@@ -1430,7 +1430,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 			dist = DotProduct( vec, vec );
 			atten = (dist / radius2 - 1) * -1;
 			if( atten < 0 ) atten = 0;
-			dist = com.sqrt( dist );
+			dist = sqrt( dist );
 
 			if( dist )
 			{
@@ -2207,7 +2207,7 @@ void R_StudioEstimateGait( entity_state_t *pplayer )
 	}
 	else
 	{
-		m_pPlayerInfo->gaityaw = ( com.atan2( est_velocity[1], est_velocity[0] ) * 180 / M_PI );
+		m_pPlayerInfo->gaityaw = ( atan2( est_velocity[1], est_velocity[0] ) * 180 / M_PI );
 		if( m_pPlayerInfo->gaityaw > 180 ) m_pPlayerInfo->gaityaw = 180;
 		if( m_pPlayerInfo->gaityaw < -180 ) m_pPlayerInfo->gaityaw = -180;
 	}

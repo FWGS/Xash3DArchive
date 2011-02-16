@@ -2158,7 +2158,7 @@ void pfnCalcShake( void )
 	fraction *= fraction;
 
 	// Sine wave that slowly settles to zero
-	fraction = fraction * com.sin( cl.time * freq );
+	fraction = fraction * sin( cl.time * freq );
 	
 	// add to view origin
 	VectorScale( clgame.shake.offset, fraction, clgame.shake.applied_offset );

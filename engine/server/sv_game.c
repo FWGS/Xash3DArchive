@@ -1494,7 +1494,7 @@ int pfnWalkMove( edict_t *ent, float yaw, float dist, int iMode )
 		return false;
 
 	yaw = yaw * M_PI * 2 / 360;
-	VectorSet( move, com.cos( yaw ) * dist, com.sin( yaw ) * dist, 0.0f );
+	VectorSet( move, cos( yaw ) * dist, sin( yaw ) * dist, 0.0f );
 
 	switch( iMode )
 	{
@@ -2135,6 +2135,7 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 
 	BF_WriteByte( &sv.datagram, count );
 	BF_WriteByte( &sv.datagram, color );
+	BF_WriteByte( &sv.datagram, 0 );
 }
 
 /*

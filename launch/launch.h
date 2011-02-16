@@ -16,10 +16,10 @@
 #include <winreg.h>
 #include <math.h>
 
-#define LAUNCH_DLL			// ignore alias names
+#define LAUNCH_DLL				// ignore alias names
 #include "launch_api.h"
 
-#define XASH_VERSION		0.74f	// current version will be shared across gameinfo struct
+#define XASH_VERSION		0.75f	// current version will be shared across gameinfo struct
 
 #define MAX_NUM_ARGVS		128
 #define MAX_CMD_TOKENS		80
@@ -121,7 +121,6 @@ extern stdlib_api_t	com;
 // console.c
 //
 void Con_ShowConsole( qboolean show );
-void Con_PrintA(const char *pMsg);
 void Con_PrintW(const char *pMsg);
 void Con_CreateConsole( void );
 void Con_DestroyConsole( void );
@@ -226,19 +225,9 @@ long Com_RandomLong( long lMin, long lMax );
 float Com_RandomFloat( float fMin, float fMax );
 uint Com_HashKey( const char *string, uint hashSize );
 
-// lzss compression
-uint lzss_compress( const byte *in, const byte *inend, byte *out, byte *outend );
-qboolean lzss_decompress( const byte *in, const byte *inend, byte *out, byte *outend );
-
 //
 // math.c
 //
-float sse_sqrt( float x );
-
-_inline float sqrtf( float x ) { return sqrt( x ); }
-void SinCos( float radians, float *sine, float *cosine );
-int NearestPOW( int value, qboolean roundDown );
-
 #define VectorSet(v, x, y, z) ((v)[0]=(x),(v)[1]=(y),(v)[2]=(z))
 #define VectorIsNull( v ) ((v)[0] == 0.0f && (v)[1] == 0.0f && (v)[2] == 0.0f)
 
@@ -309,8 +298,6 @@ extern int fs_argc;
 // wadsystem.c
 wfile_t *W_Open( const char *filename, const char *mode );
 byte *W_LoadLump( wfile_t *wad, const char *lumpname, size_t *lumpsizeptr, const char type );
-fs_offset_t W_SaveLump( wfile_t *wad, const char *lump, const void* data, size_t datasize, char type, char cmp );
-int W_Check( const char *filename );
 void W_Close( wfile_t *wad );
 
 // simply files managment interface

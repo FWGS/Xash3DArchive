@@ -1422,7 +1422,7 @@ void SV_Physics_Step( edict_t *ent )
 			float	*vel, control;
 
 			vel = ent->v.velocity;
-			speed = com.sqrt( vel[0] * vel[0] + vel[1] * vel[1] );	
+			speed = sqrt( vel[0] * vel[0] + vel[1] * vel[1] );	
 
 			// add ground speed
 			if( ent->v.groundentity )

@@ -362,6 +362,7 @@ void CL_WritePacket( void )
 
 	// Determine number of backup commands to send along
 	numbackup = bound( 0, cl_cmdbackup->integer, MAX_BACKUP_COMMANDS );
+	if( cls.state == ca_connected ) numbackup = 0;
 
 	// Check to see if we can actually send this command
 
@@ -1504,7 +1505,7 @@ CL_SendCommand
 void CL_SendCommand( void )
 {
 	// send intentions now
-	CL_SendCmd ();
+	if( !SV_Active()) CL_SendCmd ();
 
 	// resend a connection request if necessary
 	CL_CheckForResend ();

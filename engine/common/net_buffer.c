@@ -6,6 +6,7 @@
 #include "common.h"
 #include "protocol.h"
 #include "net_buffer.h"
+#include "mathlib.h"
 
 // precalculated bit masks for WriteUBitLong.
 // Using these tables instead of doing the calculations
@@ -684,7 +685,7 @@ void BF_ReadBitVec3Normal( sizebuf_t *bf, vec3_t fa )
 	fafafbfb = fa[0] * fa[0] + fa[1] * fa[1];
 
 	if( fafafbfb < 1.0f )
-		fa[2] = com.sqrt( 1.0f - fafafbfb );
+		fa[2] = sqrt( 1.0f - fafafbfb );
 	else fa[2] = 0.0f;
 
 	if( znegative ) fa[2] = -fa[2];

@@ -7,6 +7,7 @@
 #include "client.h"
 #include "net_encode.h"
 #include "event_flags.h"
+#include "particledef.h"
 #include "cl_tent.h"
 #include "shake.h"
 
@@ -428,6 +429,7 @@ void CL_ParseParticles( sizebuf_t *msg )
 {
 	vec3_t		org, dir;
 	int		i, count, color;
+	float		life;
 	
 	BF_ReadBitVec3Coord( msg, org );	
 
@@ -437,8 +439,23 @@ void CL_ParseParticles( sizebuf_t *msg )
 	count = BF_ReadByte( msg );
 	color = BF_ReadByte( msg );
 	if( count == 255 ) count = 1024;
+	life = BF_ReadByte( msg ) * 0.125f;
 
-	CL_RunParticleEffect( org, dir, color, count );
+	if( life != 0.0f && count == 1 )
+	{
+		particle_t	*p;
+
+		p = CL_AllocParticle( NULL );
+		if( !p ) return;
+
+		p->die += life;
+		p->color = color;
+		p->type = pt_static;
+
+		VectorCopy( org, p->org );
+		VectorCopy( dir, p->vel );
+	}
+	else CL_RunParticleEffect( org, dir, color, count );
 }
 
 /*

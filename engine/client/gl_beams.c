@@ -63,7 +63,7 @@ static void SineNoise( float *noise, int divs )
 
 	for( i = 0; i < divs; i++ )
 	{
-		noise[i] = com.sin( freq );
+		noise[i] = sin( freq );
 		freq += step;
 	}
 }
@@ -289,7 +289,7 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 			if( flags & FBEAM_SINENOISE )
 			{
 				float	s, c;
-				com.sincos( fraction * M_PI * length + freq, &s, &c );
+				SinCos( fraction * M_PI * length + freq, &s, &c );
 
 				VectorMA( nextSeg.pos, (factor * s), cl.refdef.up, nextSeg.pos );
 
@@ -428,7 +428,7 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 		pglTexCoord2f( 1.0f, vLast );
 		pglVertex3fv( point );
 
-		com.sincos( fraction * 2.0f * M_PI, &s, &c );
+		SinCos( fraction * 2.0f * M_PI, &s, &c );
 		point[0] = s * w + source[0];
 		point[1] = c * w + source[1];
 		point[2] = source[2];
@@ -491,7 +491,7 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 		float	s, c;
 
 		fraction = i * div;
-		com.sincos( fraction * 2.0f * M_PI, &s, &c );
+		SinCos( fraction * 2.0f * M_PI, &s, &c );
 
 		point[0] = s * freq * delta[2] + source[0];
 		point[1] = c * freq * delta[2] + source[1];
@@ -604,7 +604,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	for( i = 0; i < segments + 1; i++ )
 	{
 		fraction = i * div;
-		com.sincos( fraction * 2.0f * M_PI, &x, &y );
+		SinCos( fraction * 2.0f * M_PI, &x, &y );
 
 		VectorMAMAM( x, xaxis, y, yaxis, 1.0f, center, point ); 
 
@@ -614,7 +614,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 
 		// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
 		factor = rgNoise[(noiseIndex>>16) & (NOISE_DIVISIONS - 1)] * scale;
-		factor *= com.cos( fraction * M_PI * 24 + freq );
+		factor *= cos( fraction * M_PI * 24 + freq );
 		VectorMA( point, factor, cl.refdef.right, point );
 
 		// Transform point into screen space

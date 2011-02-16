@@ -74,9 +74,20 @@ typedef struct searchpath_s
 	struct searchpath_s *next;
 } searchpath_t;
 
-byte *fs_mempool;
-searchpath_t *fs_searchpaths = NULL;
-searchpath_t fs_directpath; // static direct path
+byte		*fs_mempool;
+searchpath_t	*fs_searchpaths = NULL;
+searchpath_t	fs_directpath; // static direct path
+char		sys_rootdir[MAX_SYSPATH];// system root
+char		fs_rootdir[MAX_SYSPATH]; // engine root directory
+char		fs_basedir[MAX_SYSPATH]; // base directory of game
+char		fs_gamedir[MAX_SYSPATH]; // game current directory
+char		gs_basedir[MAX_SYSPATH]; // initial dir before loading gameinfo.txt (used for compilers too)
+
+// command ilne parms
+int		fs_argc;
+char		*fs_argv[MAX_NUM_ARGVS];
+qboolean		fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
+sysinfo_t		SI;
 
 static void FS_InitMemory( void );
 const char *FS_FileExtension( const char *in );
@@ -88,18 +99,6 @@ static qboolean FS_SysFileExists( const char *path );
 static long FS_SysFileTime( const char *filename );
 static char W_TypeFromExt( const char *lumpname );
 static const char *W_ExtFromType( char lumptype );
-
-char sys_rootdir[MAX_SYSPATH];// system root
-char fs_rootdir[MAX_SYSPATH]; // engine root directory
-char fs_basedir[MAX_SYSPATH]; // base directory of game
-char fs_gamedir[MAX_SYSPATH]; // game current directory
-char gs_basedir[MAX_SYSPATH]; // initial dir before loading gameinfo.txt (used for compilers too)
-
-// command ilne parms
-int fs_argc;
-char *fs_argv[MAX_NUM_ARGVS];
-qboolean fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
-sysinfo_t SI;
 
 /*
 =============================================================================
@@ -165,7 +164,7 @@ void stringlistinit( stringlist_t *list )
 	Mem_Set( list, 0, sizeof( *list ));
 }
 
-void stringlistfreecontents(stringlist_t *list)
+void stringlistfreecontents( stringlist_t *list )
 {
 	int	i;
 
@@ -718,7 +717,6 @@ void FS_AddGameHierarchy( const char *dir, int flags )
 	if( dir && *dir ) FS_AddGameDirectory( va( "%s%s/", fs_basedir, dir ), flags );
 }
 
-
 /*
 ============
 FS_FileExtension
@@ -739,7 +737,6 @@ const char *FS_FileExtension( const char *in )
 		return "";
 	return dot + 1;
 }
-
 
 /*
 ============
@@ -871,6 +868,7 @@ FS_Rescan
 void FS_Rescan( void )
 {
 	MsgDev( D_NOTE, "FS_Rescan( %s )\n", SI.GameInfo->title );
+
 	FS_ClearSearchPath();
 
 	if( com.stricmp( SI.GameInfo->basedir, SI.GameInfo->gamedir ))
@@ -1477,11 +1475,11 @@ void FS_Init( void )
 
 qboolean FS_GetParmFromCmdLine( char *parm, char *out, size_t size )
 {
-	int argc = FS_CheckParm( parm );
+	int	argc = FS_CheckParm( parm );
 
-	if(!argc) return false;
-	if(!out) return false;	
-	if(!fs_argv[argc + 1]) return false;
+	if( !argc ) return false;
+	if( !out ) return false;	
+	if( !fs_argv[argc + 1] ) return false;
 
 	com.strncpy( out, fs_argv[argc+1], size );
 	return true;
@@ -1877,7 +1875,6 @@ int FS_Close( file_t *file )
 	return 0;
 }
 
-
 /*
 ====================
 FS_Write
@@ -1908,7 +1905,6 @@ fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize )
 		return 0;
 	return result;
 }
-
 
 /*
 ====================
@@ -1992,7 +1988,6 @@ fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
 	return done;
 }
 
-
 /*
 ====================
 FS_Print
@@ -2023,7 +2018,6 @@ int FS_Printf( file_t *file, const char* format, ... )
 
 	return result;
 }
-
 
 /*
 ====================
@@ -2071,7 +2065,6 @@ int FS_Getc( file_t *file )
 
 	return c;
 }
-
 
 /*
 ====================
@@ -2164,7 +2157,6 @@ int FS_Seek( file_t *file, fs_offset_t offset, int whence )
 	return 0;
 }
 
-
 /*
 ====================
 FS_Tell
@@ -2205,7 +2197,6 @@ void FS_Purge( file_t* file )
 	file->ungetc = EOF;
 }
 
-
 /*
 ============
 FS_LoadFile
@@ -2216,10 +2207,10 @@ Always appends a 0 byte.
 */
 byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr )
 {
-	file_t	*file;
-	byte	*buf = NULL;
-	fs_offset_t filesize = 0;
-	const char *ext = FS_FileExtension( path );
+	file_t		*file;
+	byte		*buf = NULL;
+	fs_offset_t	filesize = 0;
+	const char	*ext = FS_FileExtension( path );
 
 	file = FS_Open( path, "rb", false );
 
@@ -2236,7 +2227,9 @@ byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr )
 		buf = W_LoadFile( path, &filesize );
 	}
 
-	if( filesizeptr ) *filesizeptr = filesize;
+	if( filesizeptr )
+		*filesizeptr = filesize;
+
 	return buf;
 }
 
@@ -2314,7 +2307,6 @@ void FS_StripExtension( char *path )
 	}
 	if( length ) path[length] = 0;
 }
-
 
 /*
 ==================
@@ -2401,7 +2393,6 @@ qboolean FS_CheckForCrypt( const char *dllname )
 	return ( key == 0x12345678 ) ? true : false;
 }
 
-
 /*
 ==================
 FS_FindLibrary
@@ -2435,9 +2426,10 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	}
 	dllpath[i] = '\0';
 
-	FS_DefaultExtension( dllpath, ".dll" );	// trying to apply if forget
+	FS_DefaultExtension( dllpath, ".dll" );	// apply ext if forget
 
 	search = FS_FindFile( dllpath, &index, false );
+
 	if( !search )
 	{
 		fs_ext_path = false;
@@ -2805,7 +2797,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 
 void FS_InitMemory( void )
 {
-	fs_mempool = Mem_AllocPool( "Filesystem Pool" );	
+	fs_mempool = Mem_AllocPool( "FileSystem Pool" );	
 
 	// add a path separator to the end of the basedir if it lacks one
 	if( fs_basedir[0] && fs_basedir[com.strlen(fs_basedir) - 1] != '/' && fs_basedir[com.strlen(fs_basedir) - 1] != '\\' )
@@ -3034,7 +3026,7 @@ static qboolean W_ReadLumpTable( wfile_t *wad )
 
 byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, size_t *lumpsizeptr )
 {
-	byte	*buf, *cbuf;
+	byte	*buf;
 	size_t	size = 0;
 
 	// assume error
@@ -3049,82 +3041,17 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, size_t *lumpsizeptr )
 		return NULL;
 	}
 
-	switch( lump->compression )
+	buf = (byte *)Mem_Alloc( wad->mempool, lump->disksize );
+	size = read( wad->handle, buf, lump->disksize );
+	if( size < lump->disksize )
 	{
-	case CMP_LZSS:
-		cbuf = (byte *)Mem_Alloc( wad->mempool, lump->disksize );
-		size = read( wad->handle, cbuf, lump->disksize );
-		buf = (byte *)Mem_Alloc( wad->mempool, lump->size );
-
-		if( size < lump->disksize )
-		{
-			MsgDev( D_WARN, "W_ReadLump: %s is probably corrupted\n", lump->name );
-			Mem_Free( cbuf );
-			Mem_Free( buf );
-			return NULL;
-		}
-
-		if( lzss_decompress( cbuf, cbuf + lump->disksize, buf, buf + lump->size ))
-		{
-			MsgDev( D_WARN, "W_ReadLump: can't unpack %s\n", lump->name );
-			Mem_Free( cbuf );
-			Mem_Free( buf );
-			return NULL;
-		}
-
-		Mem_Free( cbuf ); // no reason to keep this data
-		break;
-	default:
-		buf = (byte *)Mem_Alloc( wad->mempool, lump->disksize );
-		size = read( wad->handle, buf, lump->disksize );
-		if( size < lump->disksize )
-		{
-			MsgDev( D_WARN, "W_ReadLump: %s is probably corrupted\n", lump->name );
-			Mem_Free( buf );
-			return NULL;
-		}
-		break;
-	}					
+		MsgDev( D_WARN, "W_ReadLump: %s is probably corrupted\n", lump->name );
+		Mem_Free( buf );
+		return NULL;
+	}
 
 	if( lumpsizeptr ) *lumpsizeptr = lump->size;
 	return buf;
-}
-
-qboolean W_WriteLump( wfile_t *wad, dlumpinfo_t *lump, const void* data, size_t datasize, char cmp )
-{
-	byte	*inbuf, *outbuf;
-
-	if( !wad || !lump ) return false;
-
-	if( !data || !datasize )
-	{
-		MsgDev( D_WARN, "W_WriteLump: ignore blank lump %s - nothing to save\n", lump->name );
-		return false;
-	}
-
-	switch( cmp )
-	{
-	case CMP_LZSS:
-		inbuf = (byte *)data;
-
-		// NOTE: abort compression if it matches or exceeds the original file's size
-		outbuf = Mem_Alloc( fs_mempool, datasize - 1 );
-		lump->disksize = lzss_compress( inbuf, inbuf + datasize, outbuf, outbuf + datasize - 1 );
-		lump->size = datasize; // realsize
-		lump->compression = CMP_LZSS;
-
-		if( lump->disksize > 0 )
-		{
-			write( wad->handle, outbuf, lump->disksize ); // write compressed file
-		}
-		Mem_Free( outbuf );
-		return ( lump->disksize != 0 ) ? true : false;		
-	default:	// CMP_NONE method
-		lump->size = lump->disksize = datasize;
-		lump->compression = CMP_NONE;
-		write( wad->handle, data, datasize ); // just write file
-		return true;
-	}
 }
 
 /*
@@ -3134,50 +3061,6 @@ WADSYSTEM PUBLIC BASE FUNCTIONS
 
 =============================================================================
 */
-int W_Check( const char *filename )
-{
-	file_t		*testwad;
-	dwadinfo_t	header;
-	
-	testwad = FS_Open( filename, "rb", false );
-	if( !testwad ) return 0; // just not exist
-
-	if( FS_Read( testwad, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
-	{
-		// corrupted or not wad
-		FS_Close( testwad );
-		return -1; // too small file
-	}	
-
-	switch( header.ident )
-	{
-	case IDWAD2HEADER:
-	case IDWAD3HEADER:
-		break;
-	default:
-		FS_Close( testwad );
-		return -2; // invalid id
-	}
-
-	if( header.numlumps < 0 || header.numlumps > MAX_FILES_IN_WAD )
-	{
-		// invalid lump number
-		FS_Close( testwad );
-		return -3; // invalid lumpcount
-	}
-
-	if( FS_Seek( testwad, header.infotableofs, SEEK_SET ))
-	{
-		// corrupted or not wad
-		FS_Close( testwad );
-		return -4; // invalid lumptable
-	}
-
-	// all check is done
-	FS_Close( testwad );
-	return 1; // valid
-}
-
 wfile_t *W_Open( const char *filename, const char *mode )
 {
 	dwadinfo_t	header;
@@ -3318,80 +3201,6 @@ void W_Close( wfile_t *wad )
 	Mem_FreePool( &wad->mempool );
 	if( wad->handle >= 0 ) close( wad->handle );	
 	Mem_Free( wad ); // free himself
-}
-
-fs_offset_t W_SaveLump( wfile_t *wad, const char *lump, const void* data, size_t datasize, char type, char cmp )
-{
-	size_t		lat_size;
-	dlumpinfo_t	*info;
-	int		i;
-
-	if( !wad || !lump ) return -1;
-
-	if( !data || !datasize )
-	{
-		MsgDev( D_WARN, "W_SaveLump: ignore blank lump %s - nothing to save\n", lump );
-		return -1;
-	}
-
-	if( wad->mode == O_RDONLY )
-	{
-		MsgDev( D_ERROR, "W_SaveLump: %s opened in readonly mode\n", wad->filename ); 
-		return -1;
-	}
-
-	if( wad->numlumps >= MAX_FILES_IN_WAD )
-	{
-		MsgDev( D_ERROR, "W_SaveLump: %s is full\n", wad->filename ); 
-		return -1;
-	}
-
-	if( W_FindLump( wad, lump, type ))
-	{
-		// don't make mirror lumps
-		MsgDev( D_ERROR, "W_SaveLump: %s already exist\n", lump ); 
-		return -1;
-	}
-
-	lat_size = sizeof( dlumpinfo_t ) * (wad->numlumps + 1);
-
-	// reallocate lumptable
-	wad->lumps = Mem_Realloc( wad->mempool, wad->lumps, lat_size );
-	info = wad->lumps + wad->numlumps;
-
-	// write header
-	W_CleanupName( lump, info->name );
-	info->filepos = tell( wad->handle );
-	info->compression = cmp;
-	info->type = type;
-
-	i = tell( wad->handle );
-	if( !W_WriteLump( wad, info, data, datasize, cmp ))
-	{
-		if( cmp == CMP_LZSS )
-		{
-			MsgDev( D_NOTE, "W_SaveLump: %s failed to compress\n", info->name );
-			// in case we fail compress this lump, store it as non-compressed
-			if( !W_WriteLump( wad, info, data, datasize, CMP_NONE ))
-				return -1;
-		}
-		else return -1;
-	}
-
-	MsgDev( D_NOTE, "W_SaveLump: %s, size %d\n", info->name, info->disksize );
-	return wad->numlumps++;
-}
-
-byte *W_LoadLump( wfile_t *wad, const char *lumpname, size_t *lumpsizeptr, const char type )
-{
-	dlumpinfo_t	*lump;
-
-	// assume error
-	if( lumpsizeptr ) *lumpsizeptr = 0;
-
-	if( !wad ) return NULL;
-	lump = W_FindLump( wad, lumpname, type );
-	return W_ReadLump( wad, lump, lumpsizeptr );
 }
 
 /*

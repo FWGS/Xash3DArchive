@@ -284,7 +284,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	psprite->type = SPR_FWD_PARALLEL_ORIENTED;
 	psprite->texFormat = SPR_ALPHTEST;
 	psprite->numframes = mod->numframes = numframes;
-	psprite->radius = com.sqrt((( w >> 1) * (w >> 1)) + ((h >> 1) * (h >> 1)));
+	psprite->radius = sqrt((( w >> 1) * (w >> 1)) + ((h >> 1) * (h >> 1)));
 
 	mod->mins[0] = mod->mins[1] = -w / 2;
 	mod->maxs[0] = mod->maxs[1] = w / 2;
@@ -919,7 +919,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	case SPR_FWD_PARALLEL_ORIENTED:
 		angle = e->angles[ROLL] * (M_PI * 2.0f / 360.0f);
-		com.sincos( angle, &sr, &cr );
+		SinCos( angle, &sr, &cr );
 		for( i = 0; i < 3; i++ )
 		{
 			v_right[i] = (RI.vright[i] * cr + RI.vup[i] * sr);

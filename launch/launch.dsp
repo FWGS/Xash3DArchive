@@ -176,6 +176,10 @@ SOURCE=.\parselib.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\random.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\soundlib\snd_main.c
 # End Source File
 # Begin Source File
@@ -197,10 +201,6 @@ SOURCE=.\stdlib.c
 # Begin Source File
 
 SOURCE=.\system.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\utils.c
 # End Source File
 # End Group
 # Begin Group "Header Files"

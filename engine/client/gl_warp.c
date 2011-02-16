@@ -545,8 +545,8 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 		{
 			if( waveHeight )
 			{
-				nv = v[2] + waveHeight + ( waveHeight * com.sin(v[0] * 0.02 + cl.time)
-					* com.sin(v[1] * 0.02 + cl.time) * com.sin(v[2] * 0.02 + cl.time));
+				nv = v[2] + waveHeight + ( waveHeight * sin(v[0] * 0.02 + cl.time)
+					* sin(v[1] * 0.02 + cl.time) * sin(v[2] * 0.02 + cl.time));
 				nv -= waveHeight;
 			}
 			else nv = v[2];
