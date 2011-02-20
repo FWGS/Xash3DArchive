@@ -96,6 +96,6 @@ void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
 byte *Mod_CompressVis( const byte *in, size_t *size );
 byte *Mod_DecompressVis( const byte *in );
 modtype_t Mod_GetType( int handle );
-model_t *CM_ClipHandleToModel( int handle );
+model_t *Mod_Handle( int handle );
 
 #endif//CM_LOCAL_H

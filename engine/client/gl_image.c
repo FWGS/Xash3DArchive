@@ -800,7 +800,8 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	buf = pic->buffer;
 	bufend = pic->buffer + pic->size;
 	offset = pic->width * pic->height * PFDesc( pic->type )->bpp;
-	// FIXME: probably this code relies when gl_compressed_textures is enabled
+
+	// NOTE: probably this code relies when gl_compressed_textures is enabled
 	texsize = tex->width * tex->height * samples;
 
 	// determine some texTypes

@@ -998,7 +998,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 	case kRenderTransTexture:
 	case kRenderTransInverse:
 		need_sort = true;
-	case kRenderTransAlpha:
 	case kRenderGlow:
 		pglColor4ub( 255, 255, 255, e->curstate.renderamt );
 		break;
@@ -1007,7 +1006,8 @@ void R_DrawBrushModel( cl_entity_t *e )
 		pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g,
 			e->curstate.rendercolor.b, e->curstate.renderamt );
 		break;
-	default:
+	case kRenderTransAlpha:
+	default:	
 		pglColor4ub( 255, 255, 255, 255 );
 		break;
 	}
@@ -1530,7 +1530,7 @@ void GL_BuildLightmaps( void )
 
 	for( i = 1; i < MAX_MODELS; i++ )
 	{
-		if(( m = CM_ClipHandleToModel( i )) == NULL )
+		if(( m = Mod_Handle( i )) == NULL )
 			continue;
 
 		if( m->name[0] == '*' || m->type != mod_brush )
@@ -1574,7 +1574,7 @@ void GL_BuildLightmaps( void )
 		r_lightmap.height = BLOCK_HEIGHT;
 		r_lightmap.type = PF_RGBA_32;
 		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
-		r_lightmap.flags = IMAGE_HAS_COLOR; // FIXME: detecting grayscale lightmaps for quake1
+		r_lightmap.flags = ( world.version == Q1BSP_VERSION ) ? 0 : IMAGE_HAS_COLOR;
 		r_lightmap.buffer = (byte *)&r_lmState.lightmaps[r_lightmap.size*i];
 		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT|TF_LIGHTMAP, false );
 		GL_SetTextureType( tr.lightmapTextures[i], TEX_LIGHTMAP );

@@ -148,7 +148,6 @@ int SV_GenericIndex( const char *name )
 SV_EntityScript
 
 get entity script for current map
-FIXME: merge with SV_GetEntityScript
 ================
 */
 script_t *SV_EntityScript( void )
@@ -462,7 +461,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	com.snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
 	Mod_LoadWorld( sv.model_precache[1], &sv.checksum );
-	sv.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
+	sv.worldmodel = Mod_Handle( 1 ); // get world pointer
 
 	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )
 	{

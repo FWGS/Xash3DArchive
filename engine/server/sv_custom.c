@@ -21,13 +21,13 @@ typedef struct
 
 int CustomDecal_Init( cachewad_t *wad, byte *data, int size, int playernum )
 {
-	// FIXME: implement
+	// TODO: implement
 	return 0;
 }
 
 void *CustomDecal_Validate( byte *data, int size )
 {
-	// FIXME: implement
+	// TODO: implement
 	return NULL;
 }
 

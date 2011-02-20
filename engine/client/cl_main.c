@@ -248,15 +248,10 @@ CL_CreateCmd
 usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
-	static double	extramsec = 0;
 	color24		color;
 	int		ms;
 
-	// send milliseconds of time to apply the move
-//	extramsec += ( cl.time - cl.oldtime ) * 1000;
-	extramsec += ( host.frametime * 1000 );
-	ms = extramsec;
-	extramsec -= ms;		// fractional part is left for next frame
+	ms = host.frametime * 1000;
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
@@ -283,9 +278,6 @@ usercmd_t CL_CreateCmd( void )
 
 	R_LightForPoint( cl.frame.local.client.origin, &color, false, 128.0f );
 	cmd.lightlevel = (color.r + color.g + color.b) / 3;
-
-	// random seed for predictable random values
-	cl.random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
 
 	// never let client.dll calc frametime for player
 	// because is potential backdoor for cheating
@@ -392,14 +384,14 @@ void CL_WritePacket( void )
 	{
 		cl.validsequence = 0;
 	}
-
+	
 	// send a userinfo update if needed
 	if( userinfo->modified )
 	{
 		BF_WriteByte( &cls.netchan.message, clc_userinfo );
 		BF_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
 	}
-
+		
 	if( send_command )
 	{
 		int	outgoing_sequence;
@@ -442,16 +434,14 @@ void CL_WritePacket( void )
 
 		for( i = numcmds - 1; i >= 0; i-- )
 		{
-			cmdnumber = ( cls.netchan.outgoing_sequence - i ) & CL_UPDATE_MASK;
+			cmdnumber = ( outgoing_sequence - i ) & CL_UPDATE_MASK;
 
 			to = cmdnumber;
 			CL_WriteUsercmd( &buf, from, to );
 			from = to;
 
 			if( BF_CheckOverflow( &buf ))
-			{
 				Host_Error( "CL_Move, overflowed command buffer (%i bytes)\n", MAX_CMD_BUFFER );
-			}
 		}
 
 		// calculate a checksum over the move commands
@@ -1033,7 +1023,7 @@ void CL_PrepVideo( void )
 	// let the render dll load the map
 	com.strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
 	Mod_LoadWorld( mapname, &map_checksum );
-	cl.worldmodel = CM_ClipHandleToModel( 1 ); // get world pointer
+	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
 	Cvar_SetFloat( "scr_loading", 25.0f );
 
 	SCR_RegisterShaders(); // update with new sequence
@@ -1341,6 +1331,7 @@ void CL_Userinfo_f( void )
 {
 	Msg( "User info settings:\n" );
 	Info_Print( Cvar_Userinfo( ));
+	Msg( "Total %i symbols\n", com.strlen( Cvar_Userinfo( )));
 }
 
 /*
@@ -1439,6 +1430,7 @@ void CL_InitLocal( void )
 
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
+	Cvar_Get( "spectator", "0", CVAR_USERINFO|CVAR_ARCHIVE, "1 is enable spectator mode" );
 
 	// server commands
 	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );
@@ -1447,7 +1439,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("give", NULL, "give specified item or weapon" );
 	Cmd_AddCommand ("drop", NULL, "drop current/specified item or weapon" );
 	Cmd_AddCommand ("intermission", NULL, "go to intermission" );
-	Cmd_AddCommand ("spectate", NULL, "enable spectator mode" );
 	Cmd_AddCommand ("gametitle", NULL, "show game logo" );
 	Cmd_AddCommand ("god", NULL, "enable godmode" );
 	Cmd_AddCommand ("fov", NULL, "set client field of view" );
@@ -1592,10 +1583,6 @@ void CL_Init( void )
 
 	cls.initialized = true;
 	cl.maxclients = 1; // allow to drawing player in menu
-
-	// g-cont. disable for now
-	Cvar_SetFloat( "cl_lw", 0 );
-	Cvar_SetFloat( "cl_predict", 0 );
 }
 
 
@@ -1603,8 +1590,6 @@ void CL_Init( void )
 ===============
 CL_Shutdown
 
-FIXME: this is a callback from Sys_Quit and Host_Error. It would be better
-to run quit through here before the final handoff to the sys code.
 ===============
 */
 void CL_Shutdown( void )

@@ -733,7 +733,7 @@ void UI_CloseMenu( void )
 	memset( uiStatic.serverAddresses, 0, sizeof( uiStatic.serverAddresses ));
 	memset( uiStatic.serverNames, 0, sizeof( uiStatic.serverNames ));
 
-	KEY_ClearStates ();
+//	KEY_ClearStates ();
 	KEY_SetDest ( KEY_GAME );
 }
 

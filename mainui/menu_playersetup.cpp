@@ -40,6 +40,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_TOPCOLOR		7
 #define ID_BOTTOMCOLOR	8
 #define ID_HIMODELS		9
+#define ID_SPECTATOR	10
 
 #define MAX_PLAYERMODELS	100
 
@@ -64,6 +65,7 @@ typedef struct
 	menuCheckBox_s	hiModels;
 	menuSlider_s	topColor;
 	menuSlider_s	bottomColor;
+	menuCheckBox_s	spectator;
 
 	menuField_s	name;
 	menuSpinControl_s	model;
@@ -150,6 +152,9 @@ static void UI_PlayerSetup_GetConfig( void )
 
 	if( CVAR_GET_FLOAT( "cl_himodels" ))
 		uiPlayerSetup.hiModels.enabled = 1;
+
+	if( CVAR_GET_FLOAT( "spectator" ))
+		uiPlayerSetup.spectator.enabled = 1;
 }
 
 /*
@@ -164,6 +169,7 @@ static void UI_PlayerSetup_SetConfig( void )
 	CVAR_SET_FLOAT( "topcolor", uiPlayerSetup.topColor.curValue * 255 );
 	CVAR_SET_FLOAT( "bottomcolor", uiPlayerSetup.bottomColor.curValue * 255 );
 	CVAR_SET_FLOAT( "cl_himodels", uiPlayerSetup.hiModels.enabled );
+	CVAR_SET_FLOAT( "spectator", uiPlayerSetup.spectator.enabled );
 }
 
 /*
@@ -190,6 +196,7 @@ static void UI_PlayerSetup_UpdateConfig( void )
 
 	CVAR_SET_STRING( "model", uiPlayerSetup.currentModel );
 	CVAR_SET_FLOAT( "cl_himodels", uiPlayerSetup.hiModels.enabled );
+	CVAR_SET_FLOAT( "spectator", uiPlayerSetup.spectator.enabled );
 
 	// IMPORTANT: always set default model becuase we need to have something valid here
 	// if you wish draw your playermodel as normal studiomodel please change "models/player.mdl" to path
@@ -209,6 +216,7 @@ static void UI_PlayerSetup_Callback( void *self, int event )
 	switch( item->id )
 	{
 	case ID_HIMODELS:
+	case ID_SPECTATOR:
 		if( event == QM_PRESSED )
 			((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_PRESSED;
 		else ((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_FOCUS;
@@ -349,7 +357,7 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.topColor.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
 	uiPlayerSetup.topColor.generic.name = "Top color";
 	uiPlayerSetup.topColor.generic.x = 350;
-	uiPlayerSetup.topColor.generic.y = 500;
+	uiPlayerSetup.topColor.generic.y = 550;
 	uiPlayerSetup.topColor.generic.callback = UI_PlayerSetup_Callback;
 	uiPlayerSetup.topColor.generic.statusText = "Set a player model top color";
 	uiPlayerSetup.topColor.minValue = 0.0;
@@ -361,7 +369,7 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.bottomColor.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
 	uiPlayerSetup.bottomColor.generic.name = "Bottom color";
 	uiPlayerSetup.bottomColor.generic.x = 350;
-	uiPlayerSetup.bottomColor.generic.y = 570;
+	uiPlayerSetup.bottomColor.generic.y = 620;
 	uiPlayerSetup.bottomColor.generic.callback = UI_PlayerSetup_Callback;
 	uiPlayerSetup.bottomColor.generic.statusText = "Set a player model bottom color";
 	uiPlayerSetup.bottomColor.minValue = 0.0;
@@ -377,6 +385,15 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.hiModels.generic.callback = UI_PlayerSetup_Callback;
 	uiPlayerSetup.hiModels.generic.statusText = "show hi-res models in multiplayer";
 
+	uiPlayerSetup.spectator.generic.id = ID_SPECTATOR;
+	uiPlayerSetup.spectator.generic.type = QMTYPE_CHECKBOX;
+	uiPlayerSetup.spectator.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
+	uiPlayerSetup.spectator.generic.name = "Play as a spectator";
+	uiPlayerSetup.spectator.generic.x = 72;
+	uiPlayerSetup.spectator.generic.y = 430;
+	uiPlayerSetup.spectator.generic.callback = UI_PlayerSetup_Callback;
+	uiPlayerSetup.spectator.generic.statusText = "enable spectator mode in multiplayer";
+
 	UI_PlayerSetup_GetConfig();
 
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.background );
@@ -389,6 +406,7 @@ static void UI_PlayerSetup_Init( void )
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.topColor );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.bottomColor );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.hiModels );
+	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.spectator );
 
 	// setup render and actor
 	uiPlayerSetup.refdef.fov_x = 40;

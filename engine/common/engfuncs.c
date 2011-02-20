@@ -377,7 +377,7 @@ int pfnAddCommand( const char *cmd_name, xcommand_t func )
 		return 0;
 
 	// NOTE: if( func == NULL ) cmd will be forwarded to a server
-	Cmd_AddCommand( cmd_name, func, "" );
+	Cmd_AddCommand( cmd_name, func, "game command" );
 
 	return 1;
 }

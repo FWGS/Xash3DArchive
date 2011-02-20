@@ -413,8 +413,6 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 			{
 				entityIndex = pfnIndexOfEdict( tr.ent );
 				if( entityIndex > 0 ) modelIndex = tr.ent->v.modelindex;
-
-				// FIXME: probably some rotating or moving objects can't receive decal properly
 				SV_CreateDecal( tr.endpos, decalIndex, entityIndex, modelIndex, flags );
 			}
 		}

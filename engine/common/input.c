@@ -471,9 +471,9 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		else fActivate = true; // video sucessfully restarted
 
 		wnd_caption = GetSystemMetrics( SM_CYCAPTION ) + WND_BORDER;
-		S_Activate( fActivate, host.hWnd );
-		Key_ClearStates();	// FIXME!!!
 
+		S_Activate( fActivate, host.hWnd );
+		Key_ClearStates();
 		VGui_SetBounds();
 
 		if( host.state == HOST_FRAME )

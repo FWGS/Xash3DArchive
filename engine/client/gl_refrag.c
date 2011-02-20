@@ -157,7 +157,6 @@ void R_AddEfrags( cl_entity_t *ent )
 ================
 R_StoreEfrags
 
-FIXME: a lot of this goes away with edge-based
 ================
 */
 void R_StoreEfrags( efrag_t **ppefrag )

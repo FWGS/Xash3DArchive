@@ -67,10 +67,9 @@
 #define clc_stringcmd		3	// [string] message
 #define clc_delta			4	// [byte] sequence number, requests delta compression of message
 #define clc_resourcelist		5
-#define clc_userinfo		6	// [[userinfo string]	// FIXME: remove
+#define clc_userinfo		6	// [[userinfo string]
 #define clc_fileconsistency		7
 #define clc_voicedata		8
-#define clc_random_seed		9	// [long] random seed	// FIXME: remove
 
 #define MAX_VISIBLE_PACKET		512	// 512 visible entities per frame (hl1 has 256)
 
@@ -93,7 +92,6 @@
 #define MAX_CUSTOM			1024	// max custom resources per level
 
 #define MAX_USER_MESSAGES		191	// another 63 messages reserved for engine routines
-					// FIXME: tune this
 
 #define MAX_DLIGHTS			32	// dynamic lights (rendered per one frame)
 #define MAX_ELIGHTS			64	// entity only point lights

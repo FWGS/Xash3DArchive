@@ -644,12 +644,12 @@ void Con_Print( const char *txt )
 
 void Con_NPrintf( int idx, char *fmt, ... )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 {
-	// FIXME: imeplemnt
+	// TODO: imeplemnt
 }
 
 /*

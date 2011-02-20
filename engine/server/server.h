@@ -156,6 +156,7 @@ typedef struct sv_client_s
 	qboolean		local_weapons;		// enable weapon predicting
 	qboolean		lag_compensation;		// enable lag compensation
 	qboolean		hltv_proxy;		// this is spectator proxy (hltv)		
+	qboolean		spectator;		// this is spectator (not a real client)
 
 	netchan_t		netchan;
 	int		chokecount;         	// number of messages rate supressed
@@ -175,7 +176,6 @@ typedef struct sv_client_s
 
 	qboolean		fakeclient;		// This client is a fake player controlled by the game DLL
 
-	int		random_seed;		// fpr predictable random values
 	usercmd_t		lastcmd;			// for filling in big drops
 
 	double		last_cmdtime;
@@ -502,7 +502,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info );
 void SV_BaselineForEntity( edict_t *pEdict );
 void SV_WriteEntityPatch( const char *filename );
-script_t *SV_GetEntityScript( const char *filename, int *flags );
+script_t *SV_ReadEntityScript( const char *filename, int *flags );
 float SV_AngleMod( float ideal, float current, float speed );
 void SV_SpawnEntities( const char *mapname, script_t *entities );
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className );
@@ -546,11 +546,6 @@ qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *m
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
 trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );
-
-//
-// sv_pmove.c
-//
-qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trace );
 
 //
 // sv_world.c

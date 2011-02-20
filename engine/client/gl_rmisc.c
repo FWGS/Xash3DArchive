@@ -18,7 +18,6 @@ void R_NewMap( void )
 	R_SetupSky( cl.refdef.movevars->skyName );
 
 	// clear out efrags in case the level hasn't been reloaded
-	// FIXME: is this one short?
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
 		cl.worldmodel->leafs[i].efrags = NULL;
 

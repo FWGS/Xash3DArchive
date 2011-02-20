@@ -475,7 +475,7 @@ void SV_WriteEntityPatch( const char *filename )
 	FS_Close( f );
 }
 
-script_t *SV_GetEntityScript( const char *filename, int *flags )
+script_t *SV_ReadEntityScript( const char *filename, int *flags )
 {
 	file_t		*f;
 	dheader_t		*header;
@@ -542,7 +542,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 	script_t	*ents = NULL;
 	int	flags = 0;
 
-	ents = SV_GetEntityScript( filename, &flags );
+	ents = SV_ReadEntityScript( filename, &flags );
 
 	if( ents )
 	{
@@ -742,7 +742,7 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 
 	BF_WriteWord( msg, info->index );			// send event index
 	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
-	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// FIXME: zero-compressing
+	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// TODO: delta-compressing
 }
 
 const char *SV_ClassName( const edict_t *e )
@@ -1950,7 +1950,7 @@ trace sphere instead of bbox
 */
 void pfnTraceSphere( const float *v1, const float *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr )
 {
-	// FIXME: implement
+	// never was implemented in GoldSrc
 }
 
 /*
@@ -1968,7 +1968,7 @@ static int pfnBoxVisible( const float *mins, const float *maxs, const byte *pset
 =============
 pfnGetAimVector
 
-FIXME: use speed for reduce aiming accuracy
+NOTE: speed is unused
 =============
 */
 void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
@@ -2750,7 +2750,7 @@ static void *pfnGetModelPtr( edict_t *pEdict )
 	if( !SV_IsValidEdict( pEdict ))
 		return NULL;
 
-	mod = CM_ClipHandleToModel( pEdict->v.modelindex );
+	mod = Mod_Handle( pEdict->v.modelindex );
 	return Mod_Extradata( mod );
 }
 
@@ -3240,6 +3240,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 {
 	sv_client_t	*cl;
 	usercmd_t		cmd;
+	uint		seed;
 
 	if( sv.paused ) return;
 
@@ -3261,10 +3262,10 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 	cmd.impulse = impulse;
 	cmd.msec = msec;
 
-	cl->random_seed = Com_RandomLong( 0, 0x7fffffff ); // full range
+	seed = Com_RandomLong( 0, 0x7fffffff ); // full range
 
-	SV_PreRunCmd( cl, &cmd, cl->random_seed );
-	SV_RunCmd( cl, &cmd, cl->random_seed );
+	SV_PreRunCmd( cl, &cmd, seed );
+	SV_RunCmd( cl, &cmd, seed );
 	SV_PostRunCmd( cl );
 
 	cl->lastcmd = cmd;

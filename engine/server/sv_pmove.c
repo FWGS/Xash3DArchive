@@ -23,17 +23,11 @@ void SV_CopyPmtraceToGlobal( pmtrace_t *trace )
 	svgame.globals->trace_hitgroup = trace->hitgroup;
 }
 
-qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed, qboolean player_trace )
+qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 {
-	model_t	*mod = CM_ClipHandleToModel( ed->v.modelindex );
+	model_t	*mod = Mod_Handle( ed->v.modelindex );
 
-	// NOTE: player never collide with sprites (even with solid sprites)
-	if( !mod || mod->type == mod_bad || mod->type == mod_sprite )
-		return false;
-
-	// this is monsterclip brush, player ignore it
-	if( player_trace && mod->type == mod_brush && ed->v.flags & FL_MONSTERCLIP )
-		return false;
+	if( !mod ) return false;
 
 	pe->player = false;
 
@@ -121,23 +115,48 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 		next = l->next;
 		check = EDICT_FROM_AREA( l );
 
-		if( check == pl || check->v.owner == pl )
+		if( check->v.groupinfo != 0 )
+		{
+			if(( !svs.groupop && (check->v.groupinfo & pl->v.groupinfo ) == 0) ||
+			( svs.groupop == 1 && ( check->v.groupinfo & pl->v.groupinfo ) != 0 ))
+				continue;
+		}
+
+		if( check->v.owner == pl || check->v.solid == SOLID_TRIGGER )
 			continue; // player or player's own missile
 
-		if( check->v.deadflag == DEAD_DEAD )
-			continue;
-		
-		if( check->v.solid == SOLID_BSP || check->v.solid == SOLID_BBOX || check->v.solid == SOLID_SLIDEBOX )
+		if( svgame.pmove->numvisent < MAX_PHYSENTS )
 		{
-			if( !BoundsIntersect( pmove_mins, pmove_maxs, check->v.absmin, check->v.absmax ))
-				continue;
+			pe = &svgame.pmove->visents[svgame.pmove->numvisent];
+			if( SV_CopyEdictToPhysEnt( pe, check ))
+				svgame.pmove->numvisent++;
+		}
 
-			if( svgame.pmove->numphysent == MAX_PHYSENTS )
-				return;
+		if( check->v.solid == SOLID_NOT && ( check->v.skin == 0 || check->v.modelindex == 0 ))
+			continue;
 
+		// ignore monsterclip brushes
+		if(( check->v.flags & FL_MONSTERCLIP ) && check->v.solid == SOLID_BSP )
+			continue;
+
+		if( check == pl ) continue;	// himself
+
+		if((( check->v.flags & FL_CLIENT ) && check->v.health <= 0 ) || check->v.deadflag == DEAD_DEAD )
+			continue;	// dead body
+
+		if( check->v.mins[2] == 0 && check->v.maxs[2] == 1 )
+			continue;
+
+		if( VectorIsNull( check->v.size )) continue;
+
+		if( !BoundsIntersect( pmove_mins, pmove_maxs, check->v.absmin, check->v.absmax ))
+			continue;
+
+		if( svgame.pmove->numphysent < MAX_PHYSENTS )
+		{
 			pe = &svgame.pmove->physents[svgame.pmove->numphysent];
 
-			if( SV_CopyEdictToPhysEnt( pe, check, true ))
+			if( SV_CopyEdictToPhysEnt( pe, check ))
 				svgame.pmove->numphysent++;
 		}
 	}
@@ -182,8 +201,7 @@ void SV_AddLaddersToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3
 			return;
 
 		pe = &svgame.pmove->moveents[svgame.pmove->nummoveent];
-
-		if( SV_CopyEdictToPhysEnt( pe, check, true ))
+		if( SV_CopyEdictToPhysEnt( pe, check ))
 			svgame.pmove->nummoveent++;
 	}
 	
@@ -368,7 +386,7 @@ static byte *pfnCOM_LoadFile( const char *path, int usehunk, int *pLength )
 
 static void pfnCOM_FreeFile( void *buffer )
 {
-	Mem_Free( buffer );
+	if( buffer ) Mem_Free( buffer );
 }
 
 static void pfnPlaySound( int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch )
@@ -491,7 +509,7 @@ static void PM_CheckMovingGround( edict_t *ent, float frametime )
 	ent->v.flags &= ~FL_BASEVELOCITY;
 }
 
-static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
+static void SV_SetupPMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, const char *physinfo )
 {
 	vec3_t	absmin, absmax;
 	int	i;
@@ -526,7 +544,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	pmove->waterjumptime = clent->v.teleport_time;
 	pmove->dead = (clent->v.health <= 0.0f ) ? true : false;
 	pmove->deadflag = clent->v.deadflag;
-	pmove->spectator = 0;	// FIXME: implement
+	pmove->spectator = 0; // spectator physic all execute on client
 	pmove->movetype = clent->v.movetype;
 	if( pmove->multiplayer ) pmove->onground = -1;
 	pmove->waterlevel = clent->v.waterlevel;
@@ -550,7 +568,7 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 	com.strncpy( pmove->physinfo, physinfo, MAX_INFO_STRING );
 
 	// setup physents
-	pmove->numvisent = 0; // FIXME: add visents for debugging
+	pmove->numvisent = 0;
 	pmove->numphysent = 0;
 	pmove->nummoveent = 0;
 
@@ -560,14 +578,16 @@ static void PM_SetupMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd, 
 		absmax[i] = clent->v.origin[i] + 256;
 	}
 
-	SV_CopyEdictToPhysEnt( &svgame.pmove->physents[0], &svgame.edicts[0], true );
+	SV_CopyEdictToPhysEnt( &svgame.pmove->physents[0], &svgame.edicts[0] );
+	svgame.pmove->visents[0] = svgame.pmove->physents[0];
 	svgame.pmove->numphysent = 1;	// always have world
+	svgame.pmove->numvisent = 1;
 
 	SV_AddLinksToPmove( sv_areanodes, absmin, absmax );
 	SV_AddLaddersToPmove( sv_areanodes, absmin, absmax );
 }
 
-static void PM_FinishMove( playermove_t *pmove, edict_t *clent )
+static void SV_FinishPMove( playermove_t *pmove, edict_t *clent )
 {
 	clent->v.teleport_time = pmove->waterjumptime;
 	VectorCopy( pmove->angles, clent->v.v_angle );
@@ -818,7 +838,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 
 void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 {
-	svgame.pmove->runfuncs = true; // FIXME: check cl_lc ?
+	svgame.pmove->runfuncs = true;
 	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, random_seed );
 }
 
@@ -884,7 +904,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 		SV_SetMinMaxSize( clent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
 	else SV_SetMinMaxSize( clent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );
 
-	if(!( clent->v.flags & FL_SPECTATOR ))
+	if( !cl->spectator )
 	{
 		svgame.globals->time = sv.time + host.frametime;
 		svgame.dllFuncs.pfnPlayerPreThink( clent );
@@ -899,15 +919,15 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 		ucmd->msec = 0; // pause
 
 	// setup playermove state
-	PM_SetupMove( svgame.pmove, clent, ucmd, cl->physinfo );
+	SV_SetupPMove( svgame.pmove, clent, ucmd, cl->physinfo );
 
 	// motor!
 	svgame.dllFuncs.pfnPM_Move( svgame.pmove, true );
 
 	// copy results back to client
-	PM_FinishMove( svgame.pmove, clent );
+	SV_FinishPMove( svgame.pmove, clent );
 
-	if(!( clent->v.flags & FL_SPECTATOR ))
+	if( !cl->spectator )
 	{
 		int	i;
 		edict_t	*touch;
@@ -954,7 +974,7 @@ void SV_PostRunCmd( sv_client_t *cl )
 	svgame.pmove->runfuncs = false;	// all next calls ignore footstep sounds
 		
 	// run post-think
-	if( clent->v.flags & FL_SPECTATOR )
+	if( cl->spectator )
 		svgame.dllFuncs.pfnSpectatorThink( clent );
 	else svgame.dllFuncs.pfnPlayerPostThink( clent );
 

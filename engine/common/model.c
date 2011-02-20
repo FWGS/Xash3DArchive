@@ -309,7 +309,6 @@ qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbi
 	if( !visbits || !mins || !maxs )
 		return true;
 
-	// FIXME: Could save a loop here by traversing the tree in this routine like the code above
 	count = Mod_BoxLeafnums( mins, maxs, leafList, MAX_BOX_LEAFS, NULL );
 
 	for( i = 0; i < count; i++ )
@@ -1294,7 +1293,7 @@ void Mod_CalcPHS( void )
 
 	// NOTE: first leaf is skipped becuase is a outside leaf. Now all leafs have shift up by 1.
 	// and last leaf (which equal worldmodel->numleafs) has no visdata! Add extra one leaf
-	// to avoid this situation. FIXME: this is need to be detail tested 
+	// to avoid this situation.
 	num = worldmodel->numleafs + 1;
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
@@ -1492,7 +1491,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 	
 	loadmodel->numframes = 2;	// regular and alternate animation
 	
-	// set up the submodels (FIXME: this is confusing)
+	// set up the submodels
 	for( i = 0; i < mod->numsubmodels; i++ )
 	{
 		bm = &mod->submodels[i];
@@ -1761,7 +1760,7 @@ Mod_GetType
 */
 modtype_t Mod_GetType( int handle )
 {
-	model_t	*mod = CM_ClipHandleToModel( handle );
+	model_t	*mod = Mod_Handle( handle );
 
 	if( !mod ) return mod_bad;
 	return mod->type;
@@ -1774,7 +1773,7 @@ Mod_GetFrames
 */
 void Mod_GetFrames( int handle, int *numFrames )
 {
-	model_t	*mod = CM_ClipHandleToModel( handle );
+	model_t	*mod = Mod_Handle( handle );
 
 	if( !numFrames ) return;
 	if( !mod )
@@ -1797,7 +1796,7 @@ void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs )
 	model_t	*cmod;
 
 	if( handle <= 0 ) return;
-	cmod = CM_ClipHandleToModel( handle );
+	cmod = Mod_Handle( handle );
 
 	if( cmod )
 	{
@@ -1903,16 +1902,15 @@ void *Mod_Extradata( model_t *mod )
 
 /*
 ==================
-CM_ClipHandleToModel
+Mod_Handle
 
-FIXME: rename to Mod_Handle
 ==================
 */
-model_t *CM_ClipHandleToModel( int handle )
+model_t *Mod_Handle( int handle )
 {
 	if( handle < 0 || handle > MAX_MODELS )
 	{
-		Host_Error( "CM_ClipHandleToModel: bad handle #%i\n", handle );
+		Host_Error( "Mod_Handle: bad handle #%i\n", handle );
 		return NULL;
 	}
 	return com_models[handle];

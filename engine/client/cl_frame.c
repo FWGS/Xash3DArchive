@@ -29,12 +29,10 @@ FRAME PARSING
 */
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
-	// FIXME: this very-very temporary stuffffffff
-	// make me lerping
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
 
-	ent->model = CM_ClipHandleToModel( ent->curstate.modelindex );
+	ent->model = Mod_Handle( ent->curstate.modelindex );
 	ent->curstate.msg_time = cl.time;
 
 	// apply scale to studiomodels and sprites only
@@ -130,7 +128,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 {
 	model_t	*mod;
 
-	mod = CM_ClipHandleToModel( ent->curstate.modelindex );
+	mod = Mod_Handle( ent->curstate.modelindex );
 	if( !mod ) return false;
 
 	// if entity is beam add it here
@@ -366,20 +364,18 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		if( newent ) Host_Error( "Cl_DeltaEntity: tried to release new entity\n" );
 
 		CL_KillDeadBeams( ent ); // release dead beams
-/*
+#if 0
+		// this is for reference
 		if( state->number == -1 )
-		{
 			Msg( "Entity %i was removed from server\n", newnum );
-		}
-		else
-		{
-			Msg( "Entity %i was removed from delta-message\n", newnum );
-		}
-*/
-// FIXME: waiting for static entity implimentation			
-//		if( state->number == -1 )
-//			R_RemoveEfrags( ent );
+		else Msg( "Entity %i was removed from delta-message\n", newnum );
+#endif
 
+#if 0
+		// waiting for static entity implimentation			
+		if( state->number == -1 )
+			R_RemoveEfrags( ent );
+#endif
 		// entity was delta removed
 		return;
 	}

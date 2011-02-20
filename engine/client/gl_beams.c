@@ -173,7 +173,7 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 	if( !cl_draw_beams->integer )
 		return;
 	
-	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
+	m_hSprite = R_GetSpriteTexture( Mod_Handle( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2  )
 		return;
@@ -388,7 +388,7 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 	vec3_t	point;
 	int	i;
 
-	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
+	m_hSprite = R_GetSpriteTexture( Mod_Handle( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2 )
 		return;
@@ -459,7 +459,7 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 	vec3_t	point;
 	int	i;
 
-	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
+	m_hSprite = R_GetSpriteTexture( Mod_Handle( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2 )
 		return;
@@ -534,7 +534,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	HSPRITE	m_hSprite;
 	vec3_t	d;
 
-	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
+	m_hSprite = R_GetSpriteTexture( Mod_Handle( modelIndex ), frame );
 
 	if( !m_hSprite || segments < 2 )
 		return;
@@ -740,7 +740,7 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	HSPRITE	m_hSprite;
 	rgb_t	nColor;
 
-	m_hSprite = R_GetSpriteTexture( CM_ClipHandleToModel( modelIndex ), frame );
+	m_hSprite = R_GetSpriteTexture( Mod_Handle( modelIndex ), frame );
 	
 	if( !m_hSprite )
 		return;

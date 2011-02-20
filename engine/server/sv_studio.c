@@ -3,8 +3,6 @@
 //		      sv_studio.c - server studio utilities
 //=======================================================================
 
-// FIXME: these code needs to be some cleanup from lerping code
-
 #include "common.h"
 #include "server.h"
 #include "studio.h"
@@ -101,7 +99,7 @@ StudioCalcBoneAdj
 
 ====================
 */
-static void SV_StudioCalcBoneAdj( float dadt, float *adj, const byte *pcontroller1, const byte *pcontroller2 )
+static void SV_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
 {
 	int			i, j;
 	float			value;
@@ -119,22 +117,11 @@ static void SV_StudioCalcBoneAdj( float dadt, float *adj, const byte *pcontrolle
 			// check for 360% wrapping
 			if( pbonecontroller[j].type & STUDIO_RLOOP )
 			{
-				if( abs( pcontroller1[i] - pcontroller2[i] ) > 128 )
-				{
-					int	a, b;
-
-					a = (pcontroller1[j] + 128) % 256;
-					b = (pcontroller2[j] + 128) % 256;
-					value = ((a * dadt) + (b * (1.0f - dadt)) - 128) * (360.0f / 256.0f) + pbonecontroller[j].start;
-				}
-				else 
-				{
-					value = ((pcontroller1[i] * dadt + (pcontroller2[i]) * (1.0 - dadt))) * (360.0/256.0) + pbonecontroller[j].start;
-				}
+				value = pcontroller[i] * (360.0/256.0) + pbonecontroller[j].start;
 			}
 			else 
 			{
-				value = (pcontroller1[i] * dadt + pcontroller2[i] * (1.0f - dadt)) / 255.0f;
+				value = pcontroller[i] / 255.0f;
 				if( value < 0.0f ) value = 0.0f;
 				if( value > 1.0f ) value = 1.0f;
 				value = (1.0f - value) * pbonecontroller[j].start + value * pbonecontroller[j].end;
@@ -337,7 +324,7 @@ static void SV_StudioCalcRotations( const edict_t *ent, int boneused[], int numb
 	// add in programtic controllers
 	pbone = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
 
-	SV_StudioCalcBoneAdj( 1.0f, adj, pcontroller, pcontroller );
+	SV_StudioCalcBoneAdj( adj, pcontroller );
 
 	for( j = numbones - 1; j >= 0; j-- )
 	{
@@ -527,7 +514,6 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 	if( pseqdesc->numblends > 1 )
 	{
 		float	s;
-		float	dadt = 1.0f;
 
 		panim += sv_studiohdr->numbones;
 		SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos2, q2, pseqdesc, panim, f );
@@ -570,7 +556,7 @@ StudioSetupModel
 */
 static qboolean SV_StudioSetupModel( edict_t *ent, int iBone )
 {
-	model_t	*mod = CM_ClipHandleToModel( ent->v.modelindex );
+	model_t	*mod = Mod_Handle( ent->v.modelindex );
 	void	*hdr = Mod_Extradata( mod );
 
 	if( !hdr ) return false;
@@ -821,9 +807,7 @@ static qboolean SV_StudioIntersect( edict_t *ent, const vec3_t start, vec3_t min
 {
 	vec3_t	trace_mins, trace_maxs;
 	vec3_t	anim_mins, anim_maxs;
-	model_t	*mod = CM_ClipHandleToModel( ent->v.modelindex );
-
-	if( !mod ) return false; // FIXME: Xash 0.45 crash at this point (model == NULL)
+	model_t	*mod = Mod_Handle( ent->v.modelindex );
 
 	// create the bounding box of the entire move
 	World_MoveBounds( start, mins, maxs, end, trace_mins, trace_maxs );
@@ -933,7 +917,7 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 	vec3_t			localOrg, localAng;
 	void			*hdr;
 
-	hdr = Mod_Extradata( CM_ClipHandleToModel( e->v.modelindex ));
+	hdr = Mod_Extradata( Mod_Handle( e->v.modelindex ));
 	if( !hdr ) return;
 
 	sv_studiohdr = (studiohdr_t *)hdr;

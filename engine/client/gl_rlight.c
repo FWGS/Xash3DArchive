@@ -454,7 +454,7 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 		}
 	}
 
-	// FIXME: should we normalize final direction ?
+	// normalize final direction
 //	VectorNormalize( lightDir );
 }
 

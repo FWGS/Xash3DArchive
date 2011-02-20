@@ -23,7 +23,6 @@ typedef struct
 	vec2_t	m_LMCoords;	// lightmap texcoords for the decal.
 } decalvert_t;
 
-// FIXME: move this out to the r_math.c ?
 typedef struct
 {
 	qboolean	(*pfnInside)( decalvert_t *pVert );
@@ -731,8 +730,8 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	{
 		ent = CL_GetEntityByIndex( entityIndex );
 
-		if( modelIndex > 0 ) model = CM_ClipHandleToModel( modelIndex );
-		else if( ent != NULL ) model = CM_ClipHandleToModel( ent->curstate.modelindex );
+		if( modelIndex > 0 ) model = Mod_Handle( modelIndex );
+		else if( ent != NULL ) model = Mod_Handle( ent->curstate.modelindex );
 		else
 		{
 			Msg( "ent = NULL, model = NULL on entity %i, model %i\n", entityIndex, modelIndex );
@@ -740,7 +739,7 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 		}
 	}
 	else if( modelIndex > 0 )
-		model = CM_ClipHandleToModel( modelIndex );
+		model = Mod_Handle( modelIndex );
 	else model = cl.worldmodel;
 
 	if( !model || model->type != mod_brush )
@@ -800,7 +799,6 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	if(( height >> 1 ) > decalInfo.m_Size )
 		decalInfo.m_Size = height >> 1;
 
-	// FIXME: grab scale from shader ?
 	decalInfo.m_scale = 1.0f;
 
 	// compute the decal dimensions in world space

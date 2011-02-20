@@ -375,12 +375,6 @@ void BF_WriteBitVec3Normal( sizebuf_t *bf, const float *fa )
 	BF_WriteOneBit( bf, signbit );
 }
 
-void BF_WriteBitAngles( sizebuf_t *bf, const float *fa )
-{
-	// FIXME: uses WriteBitAngle instead ?
-	BF_WriteBitVec3Coord( bf, fa );
-}
-
 void BF_WriteChar( sizebuf_t *bf, int val )
 {
 	BF_WriteSBitLong( bf, val, sizeof( char ) << 3 );

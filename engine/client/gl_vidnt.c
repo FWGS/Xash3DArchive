@@ -714,7 +714,7 @@ static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBi
 	pfd->dwVisibleMask = 0;
 	pfd->dwDamageMask = 0;
 
-	// Count PFDs
+	// count PFDs
 	if( glw_state.minidriver )
 		pixelFormat = pwglChoosePixelFormat( glw_state.hDC, pfd );
 	else pixelFormat = ChoosePixelFormat( glw_state.hDC, pfd );
@@ -1242,7 +1242,8 @@ qboolean R_Init_OpenGL( void )
 	Sys_LoadLibrary( NULL, &opengl_dll );	// load opengl32.dll
 	if( !opengl_dll.link ) return false;
 
-	glw_state.minidriver = false;	// FIXME: allow 3dfx drivers too
+	// TODO: allow 3dfx drivers too
+	glw_state.minidriver = false;
 
 	return VID_SetMode();
 }

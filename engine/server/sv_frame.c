@@ -782,7 +782,7 @@ void SV_InactivateClients( void )
 	{
 		if( !cl->state || !cl->edict ) continue;
 			
-		if( !cl->edict || (cl->edict->v.flags & ( FL_FAKECLIENT|FL_SPECTATOR )))
+		if( !cl->edict || (cl->edict->v.flags & FL_FAKECLIENT))
 			continue;
 
 		if( svs.clients[i].state > cs_connected )

@@ -6,7 +6,6 @@
 #include "common.h"
 #include "client.h"
 #include "r_efx.h"
-#include "event_flags.h"
 #include "entity_types.h"
 #include "triangleapi.h"
 #include "cl_tent.h"
@@ -430,7 +429,7 @@ void CL_FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 
 	Mod_GetBounds( pent->curstate.modelindex, mins, maxs );
 
-	maxHeight = ( maxs[2] - mins[2] ) * 0.5f;
+	maxHeight = maxs[2] - mins[2];
 	width = maxs[0] - mins[0];
 	depth = maxs[1] - mins[1];
 	speed = ( pent->curstate.rendercolor.r<<8 | pent->curstate.rendercolor.g );
@@ -455,7 +454,7 @@ void CL_FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 		origin[0] = mins[0] + Com_RandomLong( 0, width - 1 );
 		origin[1] = mins[1] + Com_RandomLong( 0, depth - 1 );
 		origin[2] = mins[2];
-		pTemp = CL_TempEntAlloc( origin, CM_ClipHandleToModel( modelIndex ));
+		pTemp = CL_TempEntAlloc( origin, Mod_Handle( modelIndex ));
 
 		if ( !pTemp ) return;
 
@@ -500,7 +499,7 @@ void CL_Bubbles( const vec3_t mins, const vec3_t maxs, float height, int modelIn
 		origin[0] = Com_RandomLong( mins[0], maxs[0] );
 		origin[1] = Com_RandomLong( mins[1], maxs[1] );
 		origin[2] = Com_RandomLong( mins[2], maxs[2] );
-		pTemp = CL_TempEntAlloc( origin, CM_ClipHandleToModel( modelIndex ));
+		pTemp = CL_TempEntAlloc( origin, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
 		pTemp->flags |= FTENT_SINEWAVE;
@@ -546,7 +545,7 @@ void CL_BubbleTrail( const vec3_t start, const vec3_t end, float flWaterZ, int m
 	{
 		dist = Com_RandomFloat( 0, 1.0 );
 		VectorLerp( start, dist, end, origin );
-		pTemp = CL_TempEntAlloc( origin, CM_ClipHandleToModel( modelIndex ));
+		pTemp = CL_TempEntAlloc( origin, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
 		pTemp->flags |= FTENT_SINEWAVE;
@@ -601,7 +600,7 @@ void CL_AttachTentToPlayer( int client, int modelIndex, float zoffset, float lif
 	VectorCopy( pClient->origin, position );
 	position[2] += zoffset;
 
-	pTemp = CL_TempEntAllocHigh( position, CM_ClipHandleToModel( modelIndex ));
+	pTemp = CL_TempEntAllocHigh( position, Mod_Handle( modelIndex ));
 
 	if( !pTemp )
 	{
@@ -709,7 +708,7 @@ void CL_RocketFlare( const vec3_t pos )
 	int		nframeCount;
 
 	modelIndex = CL_FindModelIndex( "sprites/animglow01.spr" );
-	pmodel = CM_ClipHandleToModel( modelIndex );
+	pmodel = Mod_Handle( modelIndex );
 	if( !pmodel ) return;
 
 	Mod_GetFrames( modelIndex, &nframeCount );
@@ -751,7 +750,7 @@ void CL_MuzzleFlash( const vec3_t pos, int type )
 	Mod_GetFrames( modelIndex, &frameCount );
 
 	// must set position for right culling on render
-	pTemp = CL_TempEntAllocHigh( pos, CM_ClipHandleToModel( modelIndex ));
+	pTemp = CL_TempEntAllocHigh( pos, Mod_Handle( modelIndex ));
 	if( !pTemp ) return;
 	pTemp->entity.curstate.rendermode = kRenderTransAdd;
 	pTemp->entity.curstate.renderamt = 255;
@@ -791,7 +790,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 		return;
 
 	// Large, single blood sprite is a high-priority tent
-	if(( pTemp = CL_TempEntAllocHigh( org, CM_ClipHandleToModel( modelIndex ))) != NULL )
+	if(( pTemp = CL_TempEntAllocHigh( org, Mod_Handle( modelIndex ))) != NULL )
 	{
 		int	i, frameCount;
 		vec3_t	offset, dir;
@@ -826,7 +825,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			VectorMA( offset, Com_RandomFloat( -0.5f, 0.5f ) * size, right, offset ); 
 			VectorMA( offset, Com_RandomFloat( -0.5f, 0.5f ) * size, up, offset ); 
 
-			pTemp = CL_TempEntAllocHigh( org, CM_ClipHandleToModel( modelIndex2 ));
+			pTemp = CL_TempEntAllocHigh( org, Mod_Handle( modelIndex2 ));
 			if( !pTemp ) return;
 
 			pTemp->flags = FTENT_SPRANIMATELOOP|FTENT_COLLIDEWORLD|FTENT_SLOWGRAVITY;
@@ -892,7 +891,7 @@ void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t dir, float
 		vecSpot[1] = pos[1] + Com_RandomFloat( -0.5f, 0.5f ) * size[1];
 		vecSpot[2] = pos[2] + Com_RandomFloat( -0.5f, 0.5f ) * size[2];
 
-		pTemp = CL_TempEntAlloc( vecSpot, CM_ClipHandleToModel( modelIndex ));
+		pTemp = CL_TempEntAlloc( vecSpot, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
 		// keep track of break_type, so we know how to play sound on collision
@@ -947,7 +946,7 @@ TEMPENTITY *CL_TempModel( const vec3_t pos, const vec3_t dir, const vec3_t angle
 	// alloc a new tempent
 	TEMPENTITY	*pTemp;
 
-	pTemp = CL_TempEntAlloc( pos, CM_ClipHandleToModel( modelIndex ));
+	pTemp = CL_TempEntAlloc( pos, Mod_Handle( modelIndex ));
 	if( !pTemp ) return NULL;
 
 	// keep track of shell type
@@ -997,7 +996,7 @@ TEMPENTITY *CL_DefaultSprite( const vec3_t pos, int spriteIndex, float framerate
 
 	Mod_GetFrames( spriteIndex, &frameCount );
 
-	pTemp = CL_TempEntAlloc( pos, CM_ClipHandleToModel( spriteIndex ));
+	pTemp = CL_TempEntAlloc( pos, Mod_Handle( spriteIndex ));
 	if( !pTemp ) return NULL;
 
 	pTemp->frameMax = frameCount - 1;
@@ -1035,7 +1034,7 @@ TEMPENTITY *CL_TempSprite( const vec3_t pos, const vec3_t dir, float scale, int 
 
 	Mod_GetFrames( modelIndex, &frameCount );
 
-	pTemp = CL_TempEntAlloc( pos, CM_ClipHandleToModel( modelIndex ));
+	pTemp = CL_TempEntAlloc( pos, Mod_Handle( modelIndex ));
 	if( !pTemp ) return NULL;
 
 	pTemp->frameMax = frameCount - 1;
@@ -1159,7 +1158,7 @@ void CL_Spray( const vec3_t pos, const vec3_t dir, int modelIndex, int count, in
 		vec3_t	velocity;
 		float	scale;
 
-		pTemp = CL_TempEntAlloc( pos, CM_ClipHandleToModel( modelIndex ));
+		pTemp = CL_TempEntAlloc( pos, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
 		pTemp->entity.curstate.rendermode = renderMode;
@@ -1226,7 +1225,7 @@ void CL_Sprite_Trail( int type, const vec3_t vecStart, const vec3_t vecEnd, int 
 		if( i == 0 ) VectorCopy( vecStart, vecPos );
 		else VectorMA( vecStart, ( i / ( nCount - 1.0f )), vecDelta, vecPos );
 
-		pTemp = CL_TempEntAlloc( vecPos, CM_ClipHandleToModel( modelIndex ));
+		pTemp = CL_TempEntAlloc( vecPos, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
 		pTemp->flags |= FTENT_COLLIDEWORLD | FTENT_SPRCYCLE | FTENT_FADEOUT | FTENT_SLOWGRAVITY;
@@ -1290,7 +1289,7 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 			}
 			else
 			{
-				pTemp = CL_TempEntAlloc( pos, CM_ClipHandleToModel( spriteIndex ));
+				pTemp = CL_TempEntAlloc( pos, Mod_Handle( spriteIndex ));
 				pPart = NULL;
 			}
 
@@ -1366,7 +1365,7 @@ void CL_SparkEffect( const vec3_t pos, int count, int velocityMin, int velocityM
 	model_t	*pmodel;
 	int	i;
 
-	pmodel = CM_ClipHandleToModel( CL_FindModelIndex( "sprites/richo1.spr" ));
+	pmodel = Mod_Handle( CL_FindModelIndex( "sprites/richo1.spr" ));
 	CL_RicochetSprite( pos, pmodel, 0.0f, Com_RandomFloat( 0.4f, 0.6f ));
 
 	for( i = 0; i < Com_RandomLong( 1, count ); i++ )
@@ -1464,7 +1463,7 @@ void CL_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, 
 	// alloc a new tempent
 	TEMPENTITY	*pTemp;
 
-	pTemp = CL_TempEntAlloc( origin, CM_ClipHandleToModel( modelIndex ));
+	pTemp = CL_TempEntAlloc( origin, Mod_Handle( modelIndex ));
 	if( !pTemp ) return;
 
 	VectorAngles( velocity, pTemp->entity.angles );
@@ -1497,7 +1496,7 @@ void CL_TempSphereModel( const vec3_t pos, float speed, float life, int count, i
 	// create temp models
 	for( i = 0; i < count; i++ )
 	{
-		pTemp = CL_TempEntAlloc( pos, CM_ClipHandleToModel( modelIndex ));
+		pTemp = CL_TempEntAlloc( pos, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
 		dir[0] = forward[0] + Com_RandomFloat( -0.3f, 0.3f );
@@ -1577,7 +1576,7 @@ Client version of shotgun shot
 */
 void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, int count, int decalCount, int *decalIndices )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -1589,7 +1588,7 @@ Makes a field of fire
 */
 void CL_FireField( float *org, int radius, int modelIndex, int count, int flags, float life )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -1601,7 +1600,7 @@ Create a wallpuff
 */
 void CL_Sprite_WallPuff( TEMPENTITY *pTemp, float scale )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -1613,7 +1612,16 @@ Unknown effect
 */
 void CL_PlayerSprites( int client, int modelIndex, int count, int size )
 {
-	// in GoldSrc any trying to create this effect will invoke immediately crash
+#if 0
+	// TODO: implement
+	MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, g_vecZero, pev );
+		WRITE_BYTE( TE_PLAYERSPRITES );
+		WRITE_SHORT( ENTINDEX( ENT( pev ) ) );
+		WRITE_SHORT( g_sModelIndexFire );
+		WRITE_BYTE( 20 );
+		WRITE_BYTE( 10 );
+	MESSAGE_END( );
+#endif
 }
 
 /*
@@ -1980,7 +1988,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[2] = BF_ReadCoord( &buf );
 		scale = (float)(BF_ReadByte( &buf ) * 0.1f);
 		modelIndex = CL_FindModelIndex( "sprites/richo1.spr" );
-		CL_RicochetSprite( pos, CM_ClipHandleToModel( modelIndex ), 0.0f, scale );
+		CL_RicochetSprite( pos, Mod_Handle( modelIndex ), 0.0f, scale );
 		CL_RicochetSound( pos );
 		break;
 	case TE_PLAYERDECAL:
@@ -2341,21 +2349,8 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 
 	VectorClear( view_ofs );
 
-	// FIXME: grab viewheight from other place
-	view_ofs[2] = 28.0f;
-
-	if( pEnt->player )
-	{
-		if(( pEnt->index - 1 ) == cl.playernum )
-		{
-			VectorCopy( cl.predicted_viewofs, view_ofs );
-		}
-		else if( pEnt->curstate.usehull == 1 )
-		{
-			// FIXME: grab ducked viewheight from other place
-			view_ofs[2] = 12.0f;
-		}
-	}
+	if(( pEnt->index - 1 ) == cl.playernum )
+		VectorCopy( cl.predicted_viewofs, view_ofs );
 
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
@@ -2366,7 +2361,7 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 	if( falloff < 250.0f ) falloff = 1.0f;
 	else falloff = 250.0f / falloff;
 
-		falloff *= falloff;
+	falloff *= falloff;
 
 	// update flashlight endpos
 	dl = CL_AllocDlight( cl.playernum + 1 );

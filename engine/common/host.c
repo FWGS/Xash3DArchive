@@ -317,35 +317,6 @@ void Host_EventLoop( void )
 
 /*
 ===================
-Host_RestartAmbientSounds
-
-Restarts the sounds to let demo writing them
-===================
-*/
-void Host_RestartAmbientSounds( void )
-{
-	soundlist_t	soundInfo[100];
-	int		i, nSounds;
-
-	if( !SV_Active( )) return;
-
-	nSounds = S_GetCurrentStaticSounds( soundInfo, 100 );
-	
-	for( i = 0; i < nSounds; i++)
-	{
-		if( soundInfo[i].looping && soundInfo[i].entnum != -1 )
-		{
-			S_StopSound( soundInfo[i].entnum, CHAN_STATIC, soundInfo[i].name );
-
-			// FIXME: replace with SV_StartAmbientSound
-			SV_StartSound( pfnPEntityOfEntIndex( soundInfo[i].entnum ), CHAN_STATIC,
-			soundInfo[i].name, soundInfo[i].volume, soundInfo[i].attenuation, 0, soundInfo[i].pitch );
-		}
-	}
-}
-
-/*
-===================
 Host_FilterTime
 
 Returns false if the time is too short to run a frame

@@ -23,7 +23,7 @@ PARTICLES MANAGEMENT
 
 #define NUMVERTEXNORMALS	162
 #define SPARK_COLORCOUNT	9
-#define TRACER_WIDTH	0.5f	// FIXME: tune this
+#define TRACER_WIDTH	0.5f
 #define SIMSHIFT		10
 
 // particle velocities
@@ -1421,7 +1421,7 @@ void CL_SparkShower( const vec3_t org )
 	pos[1] = org[1] + Com_RandomFloat( -2.0f, 2.0f );
 	pos[2] = org[2] + Com_RandomFloat( -2.0f, 2.0f );
 
-	pmodel = CM_ClipHandleToModel( CL_FindModelIndex( "sprites/richo1.spr" ));
+	pmodel = Mod_Handle( CL_FindModelIndex( "sprites/richo1.spr" ));
 	CL_RicochetSprite( pos, pmodel, 0.0f, Com_RandomFloat( 0.4, 0.6f ));
 
 	// create a 8 random spakle tracers

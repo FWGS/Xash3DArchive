@@ -36,7 +36,7 @@ void V_SetupRefDef( void )
 
 	VectorCopy( cl.frame.local.client.punchangle, cl.refdef.punchangle );
 	clgame.viewent.curstate.modelindex = cl.frame.local.client.viewmodel;
-	clgame.viewent.model = CM_ClipHandleToModel( clgame.viewent.curstate.modelindex );
+	clgame.viewent.model = Mod_Handle( clgame.viewent.curstate.modelindex );
 	clgame.viewent.curstate.entityType = ET_NORMAL;
 	clgame.viewent.index = cl.playernum + 1;
 
@@ -52,8 +52,9 @@ void V_SetupRefDef( void )
 	cl.refdef.smoothing = cl_smooth->integer;
 	cl.refdef.waterlevel = cl.frame.local.client.waterlevel;		
 	cl.refdef.onlyClientDraw = 0;	// reset clientdraw
-	cl.refdef.viewsize = 120;	// FIXME if you can
+	cl.refdef.viewsize = 120;	// probably was 'scr_viewsize' or somewhat
 	cl.refdef.hardware = true;	// always true
+	cl.refdef.spectator = cl.spectator;
 	cl.refdef.nextView = 0;
 
 	// setup default viewport

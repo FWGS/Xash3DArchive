@@ -167,7 +167,7 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 
 void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -832,7 +832,6 @@ void R_DrawEntitiesOnList( void )
 
 	clgame.dllFuncs.pfnDrawTransparentTriangles ();
 
-	// FIXME: allow to brush and sprite viewmodel ?
 	R_DrawViewModel();
 }
 

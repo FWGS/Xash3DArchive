@@ -306,7 +306,7 @@ void CL_ParseDownload( sizebuf_t *msg )
 
 		if( !cls.download )
 		{
-			msg->iCurBit += size << 3;	// FIXME!!!
+			msg->iCurBit += size << 3;
 			MsgDev( D_ERROR, "failed to open %s\n", cls.downloadtempname );
 			CL_RequestNextDownload();
 			return;
@@ -496,7 +496,7 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 
 //	R_AddEfrags( ent );
 
-	// FIXME: allocate client entity, add new static...
+	// TODO: allocate client entity, add new static...
 	MsgDev( D_ERROR, "Static entities are not implemented\n" );
 }
 
@@ -549,7 +549,7 @@ void CL_ParseReliableEvent( sizebuf_t *msg, int flags )
 	Mem_Set( &nullargs, 0, sizeof( nullargs ));
 	event_index = BF_ReadWord( msg );		// read event index
 	delay = BF_ReadWord( msg ) / 100.0f;		// read event delay
-	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// FIXME: zero-compressing
+	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// TODO: delta-compressing
 
 	CL_QueueEvent( flags, event_index, delay, &args );
 }
@@ -605,6 +605,14 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.maxEntities = BF_ReadWord( msg );
 	com.strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
+
+	if( cl.playernum & 128 )
+	{
+		cl.spectator = true;
+		cl.playernum &= ~128;
+	}
+	else cl.spectator = false;
+
 	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 
 	menu.globals->maxClients = cl.maxclients;
@@ -694,7 +702,6 @@ void CL_ParseClientData( sizebuf_t *msg )
 		}
 	}
 
-
 	cl.parsecount = i;					// ack'd incoming messages.  
 	cl.parsecountmod = cl.parsecount & CL_UPDATE_MASK;	// index into window.     
 	frame = &cl.frames[cl.parsecountmod];			// frame at index.
@@ -702,7 +709,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 	frame->time = cl.mtime[0];				// mark network received time
 	frame->receivedtime = host.realtime;			// time now that we are parsing.  
 
-	// Fixme, do this after all packets read for this frame?
+	// do this after all packets read for this frame?
 	cl.last_incoming_sequence = cls.netchan.incoming_sequence;
 	
 	to_cd = &frame->local.client;
@@ -1263,7 +1270,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_print:
 			i = BF_ReadByte( msg );
 			if( i == PRINT_CHAT ) // chat
-				S_StartLocalSound( "common/menu2.wav" );	// FIXME: INTRESOURCE
+				S_StartLocalSound( "common/menu2.wav" );
 			MsgDev( D_INFO, "^6%s\n", BF_ReadString( msg ));
 			break;
 		case svc_stufftext:

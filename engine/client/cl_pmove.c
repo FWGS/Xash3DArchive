@@ -8,6 +8,7 @@
 #include "const.h"
 #include "cl_tent.h"
 #include "pm_local.h"
+#include "particledef.h"
 
 void CL_ClearPhysEnts( void )
 {
@@ -19,12 +20,10 @@ void CL_ClearPhysEnts( void )
 
 qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 {
-	model_t	*mod = CM_ClipHandleToModel( ent->curstate.modelindex );
+	model_t	*mod = Mod_Handle( ent->curstate.modelindex );
 
-	// NOTE: player never collide with sprites (even with solid sprites)
-	if( !mod || mod->type == mod_bad || mod->type == mod_sprite )
-		return false;
-		
+	if( !mod ) return false;
+	
 	pe->player = ent->player;
 
 	if( pe->player )
@@ -65,10 +64,10 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	Mem_Copy( &pe->blending[0], &ent->curstate.blending[0], 2 * sizeof( byte ));
 
 	pe->movetype = ent->curstate.movetype;
-	pe->takedamage = ( pe->player ) ? DAMAGE_AIM : DAMAGE_YES; // FIXME: this right
+	pe->takedamage = ( pe->player ) ? DAMAGE_AIM : DAMAGE_YES;
 	pe->team = ent->curstate.team;
 	pe->classnumber = ent->curstate.playerclass;
-	pe->blooddecal = 0;	// FIXME: what i'm do write here ???
+	pe->blooddecal = 0;	// unused in GoldSrc
 
 	// for mods
 	pe->iuser1 = ent->curstate.iuser1;
@@ -107,7 +106,17 @@ void CL_AddLinksToPmove( void )
 		check = CL_GetEntityByIndex( idx );
 
 		// don't add the world and clients here
-		if( !check || check == &clgame.entities[0] || check->player )
+		if( !check || check == &clgame.entities[0] )
+			continue;
+
+		if( clgame.pmove->numvisent < MAX_PHYSENTS )
+		{
+			pe = &clgame.pmove->visents[clgame.pmove->numvisent];
+			if( CL_CopyEntityToPhysEnt( pe, check ))
+				clgame.pmove->numvisent++;
+		}
+
+		if( check->player )
 			continue;
 
 		// can't collide with zeroed hull
@@ -116,23 +125,22 @@ void CL_AddLinksToPmove( void )
 
 		if( check->curstate.solid == SOLID_BSP || check->curstate.solid == SOLID_BBOX || check->curstate.solid == SOLID_SLIDEBOX )
 		{
-			if( clgame.pmove->numphysent == MAX_PHYSENTS )
-				return;
-
-			pe = &clgame.pmove->physents[clgame.pmove->numphysent];
-
-			if( CL_CopyEntityToPhysEnt( pe, check ))
-				clgame.pmove->numphysent++;
+			// reserve slots for all the clients
+			if( clgame.pmove->numphysent < ( MAX_PHYSENTS - cl.maxclients ))
+			{
+				pe = &clgame.pmove->physents[clgame.pmove->numphysent];
+				if( CL_CopyEntityToPhysEnt( pe, check ))
+					clgame.pmove->numphysent++;
+			}
 		}
 		else if( check->curstate.solid == SOLID_NOT && check->curstate.skin != CONTENTS_NONE )
 		{
-			if( clgame.pmove->nummoveent >= MAX_MOVEENTS )
-				continue;
-
-			pe = &clgame.pmove->moveents[clgame.pmove->nummoveent];
-
-			if( CL_CopyEntityToPhysEnt( pe, check ))
-				clgame.pmove->nummoveent++;
+			if( clgame.pmove->nummoveent < MAX_MOVEENTS )
+			{
+				pe = &clgame.pmove->moveents[clgame.pmove->nummoveent];
+				if( CL_CopyEntityToPhysEnt( pe, check ))
+					clgame.pmove->nummoveent++;
+			}
 		}
 	}
 }
@@ -158,7 +166,6 @@ void CL_SetSolidPlayers( int playernum )
 	if( !cl_solid_players->integer )
 		return;
 
-	// FIXME: create predicted_players array
 	for( j = 0; j < cl.maxclients; j++ )
 	{
 		// the player object never gets added
@@ -175,6 +182,12 @@ void CL_SetSolidPlayers( int playernum )
 	}
 }
 
+/*
+=============
+CL_TruePointContents
+
+=============
+*/
 int CL_TruePointContents( const vec3_t p )
 {
 	int	i, contents;
@@ -281,18 +294,23 @@ model_t *CL_GetWaterModel( const float *rgflPos )
 
 static void pfnParticle( float *origin, int color, float life, int zpos, int zvel )
 {
-	vec3_t	dir;
-
+	particle_t	*p;
+		
 	if( !origin )
 	{
 		MsgDev( D_ERROR, "CL_StartParticle: NULL origin. Ignored\n" );
 		return;
 	}
 
-	// FIXME: send lifetime too
+	p = CL_AllocParticle( NULL );
+	if( !p ) return;
 
-	VectorSet( dir, 0.0f, 0.0f, ( zpos * zvel ));
-	CL_RunParticleEffect( origin, dir, color, 1 );
+	p->die += life;
+	p->color = color;
+	p->type = pt_static;
+
+	VectorCopy( origin, p->org );
+	VectorSet( p->vel, 0.0f, 0.0f, ( zpos * zvel ));
 }
 
 static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
@@ -309,10 +327,37 @@ static double Sys_FloatTime( void )
 	return Sys_DoubleTime();
 }
 
-static void pfnStuckTouch( int hitent, pmtrace_t *ptraceresult )
+static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 {
-	// empty for now
-	// FIXME: write some code
+	physent_t	*pe;
+	float	*mins, *maxs;
+	int	i;
+
+	ASSERT( hitent >= 0 && hitent < clgame.pmove->numphysent );
+	pe = &clgame.pmove->physents[hitent];
+	mins = clgame.pmove->player_mins[clgame.pmove->usehull];
+	maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
+
+	if( !PM_TraceModel( pe, clgame.pmove->origin, mins, maxs, clgame.pmove->origin, tr, 0 ))
+		return;	// not stuck
+
+	tr->ent = hitent;
+
+	for( i = 0; i < clgame.pmove->numtouch; i++ )
+	{
+		if( clgame.pmove->touchindex[i].ent == tr->ent )
+			break;
+	}
+
+	if( i != clgame.pmove->numtouch ) return;
+	VectorCopy( clgame.pmove->velocity, tr->deltavelocity );
+
+	if( clgame.pmove->numtouch >= MAX_PHYSENTS )
+	{
+		MsgDev( D_ERROR, "PM_StuckTouch: MAX_TOUCHENTS limit exceeded\n" );
+		return;
+	}
+	clgame.pmove->touchindex[clgame.pmove->numtouch++] = *tr;
 }
 
 static int pfnPointContents( float *p, int *truecontents )
@@ -419,7 +464,7 @@ static byte *pfnCOM_LoadFile( const char *path, int usehunk, int *pLength )
 
 static void pfnCOM_FreeFile( void *buffer )
 {
-	Mem_Free( buffer );
+	if( buffer ) Mem_Free( buffer );
 }
 
 static void pfnPlaySound( int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch )
@@ -543,21 +588,23 @@ void CL_SetSolidEntities( void )
 	if( !cl.frame.valid ) return;
 
 	// setup physents
-	clgame.pmove->numvisent = 0; // FIXME: add visents for debugging
+	clgame.pmove->numvisent = 0;
 	clgame.pmove->numphysent = 0;
 	clgame.pmove->nummoveent = 0;
 
 	CL_CopyEntityToPhysEnt( &clgame.pmove->physents[0], &clgame.entities[0] );
+	clgame.pmove->visents[0] = clgame.pmove->physents[0];
 	clgame.pmove->numphysent = 1;	// always have world
+	clgame.pmove->numvisent = 1;	
 
 	CL_AddLinksToPmove();
 }
 
-static void PM_SetupMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd )
+void CL_SetupPMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd )
 {
 	pmove->player_index = cl.playernum;
 	pmove->multiplayer = (cl.maxclients > 1) ? true : false;
-	pmove->time = cl_time(); // probably never used
+	pmove->time = cl.time; // probably never used
 	VectorCopy( cd->origin, pmove->origin );
 	VectorCopy( cl.refdef.cl_viewangles, pmove->angles );
 	VectorCopy( cl.refdef.cl_viewangles, pmove->oldangles );
@@ -583,7 +630,7 @@ static void PM_SetupMove( playermove_t *pmove, clientdata_t *cd, entity_state_t 
 	pmove->waterjumptime = cd->waterjumptime;
 	pmove->dead = (cd->health <= 0.0f ) ? true : false;
 	pmove->deadflag = cd->deadflag;
-	pmove->spectator = 0;	// FIXME: implement
+	pmove->spectator = cl.spectator;
 	pmove->movetype = state->movetype;
 	pmove->onground = -1; // will be set by PM_ code
 	pmove->waterlevel = cd->waterlevel;
@@ -605,10 +652,4 @@ static void PM_SetupMove( playermove_t *pmove, clientdata_t *cd, entity_state_t 
 	pmove->cmd = *ucmd;	// setup current cmds	
 
 	com.strncpy( pmove->physinfo, cd->physinfo, MAX_INFO_STRING );
-}
-
-static void PM_FinishMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state )
-{
-	cd->waterjumptime = pmove->waterjumptime;
-	state->onground = pmove->onground;
 }

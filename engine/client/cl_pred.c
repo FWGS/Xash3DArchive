@@ -29,11 +29,6 @@ qboolean CL_IsPredicted( void )
 	return true;
 }
 
-void CL_PreRunCmd( cl_entity_t *clent, usercmd_t *ucmd )
-{
-	clgame.pmove->runfuncs = (( clent->index - 1 ) == cl.playernum ) ? true : false;
-}
-
 /*
 ===========
 CL_PostRunCmd
@@ -41,16 +36,14 @@ CL_PostRunCmd
 Done after running a player command.
 ===========
 */
-void CL_PostRunCmd( cl_entity_t *clent, usercmd_t *ucmd )
+void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
 {
 	local_state_t	*from, *to;
-
-	if( !clent ) return;
 
 	from = &cl.frames[cl.delta_sequence & CL_UPDATE_MASK].local;
 	to = &cl.frame.local;
 
-	clgame.dllFuncs.pfnPostRunCmd( from, to, ucmd, clgame.pmove->runfuncs, cl.time, cl.random_seed );
+	clgame.dllFuncs.pfnPostRunCmd( from, to, ucmd, clgame.pmove->runfuncs, cl.time, random_seed );
 }
 
 /*
@@ -60,22 +53,18 @@ CL_CheckPredictionError
 */
 void CL_CheckPredictionError( void )
 {
-	int		frame;
-	vec3_t		delta;
-	cl_entity_t	*player;
-	float		flen;
+	int	frame;
+	vec3_t	delta;
+	float	flen;
 
 	if( !CL_IsPredicted( )) return;
-
-	player = CL_GetLocalPlayer();
-	if( !player ) return;
 
 	// calculate the last usercmd_t we sent that the server has processed
 	frame = cls.netchan.incoming_acknowledged;
 	frame &= CL_UPDATE_MASK;
 
 	// compare what the server returned with what we had predicted it to be
-	VectorSubtract( player->curstate.origin, cl.predicted_origins[frame], delta );
+	VectorSubtract( cl.frame.local.client.origin, cl.predicted_origins[frame], delta );
 
 	// save the prediction error for interpolation
 	flen = fabs( delta[0] ) + fabs( delta[1] ) + fabs( delta[2] );
@@ -88,7 +77,7 @@ void CL_CheckPredictionError( void )
 	else
 	{
 		if( cl_showmiss->integer && flen > 0.1f ) Msg( "prediction miss: %g\n", flen );
-		VectorCopy( player->curstate.origin, cl.predicted_origins[frame] );
+		VectorCopy( cl.frame.local.client.origin, cl.predicted_origins[frame] );
 
 		// save for error itnerpolation
 		VectorCopy( delta, cl.prediction_error );
@@ -169,11 +158,12 @@ Sets cl.predicted_origin and cl.predicted_angles
 */
 void CL_PredictMovement( void )
 {
-	int		frame = 0;
-	int		ack, current;
+	int		frame = 1;
+	int		ack, outgoing_command;
+	int		current_command;
+	int		current_command_mod;
 	cl_entity_t	*player, *viewent;
 	clientdata_t	*cd;
-	usercmd_t		*cmd;
 
 	if( cls.state != ca_active ) return;
 	if( cl.refdef.paused || cls.key_dest == key_menu ) return;
@@ -195,59 +185,58 @@ void CL_PredictMovement( void )
 	// unpredicted pure angled values converted into axis
 	AngleVectors( cl.refdef.cl_viewangles, cl.refdef.forward, cl.refdef.right, cl.refdef.up );
 
-	if( 1 )//// disabled for now!!!!!!!!!!!!!!!!!!!!!!!!! ///////!CL_IsPredicted( ))
+	if( !CL_IsPredicted( ))
 	{	
-		cmd = cl.refdef.cmd; // use current command
-
 		// run commands even if client predicting is disabled - client expected it
-		CL_PreRunCmd( player, cmd );
+		clgame.pmove->runfuncs = true;
 
 		VectorCopy( cl.refdef.cl_viewangles, cl.predicted_angles );
 		VectorCopy( cd->view_ofs, cl.predicted_viewofs );
 
-		CL_PostRunCmd( player, cmd );
+		CL_PostRunCmd( cl.refdef.cmd, cls.netchan.outgoing_sequence );
 		return;
 	}
 
 	ack = cls.netchan.incoming_acknowledged;
-	current = cls.netchan.outgoing_sequence;
+	outgoing_command = cls.netchan.outgoing_sequence;
 
-	// if we are too far out of date, just freeze
-	if( current - ack >= CMD_BACKUP )
-	{
-		if( cl_showmiss->value )
-			MsgDev( D_ERROR, "CL_Predict: exceeded CMD_BACKUP\n" );
-		return;	
-	}
-#if 0
+	ASSERT( cl.refdef.cmd != NULL );
+
 	// setup initial pmove state
-// FIXME!!!!...
-//	VectorCopy( player->v.movedir, clgame.pmove->movedir );
-	VectorCopy( cd->origin, clgame.pmove->origin );
-	VectorCopy( cd->velocity, clgame.pmove->velocity );
-	VectorCopy( player->curstate.basevelocity, clgame.pmove->basevelocity );
-	clgame.pmove->flWaterJumpTime = cd->waterjumptime;
-	clgame.pmove->onground = (edict_t *)CL_GetEntityByIndex( player->curstate.onground );
-	clgame.pmove->usehull = (player->curstate.flags & FL_DUCKING) ? 1 : 0; // reset hull
-	
-	// run frames
-	while( ++ack < current )
-	{
-		frame = ack & CL_UPDATE_MASK;
-		cmd = &cl.cmds[frame];
+	CL_SetupPMove( clgame.pmove, cd, &player->curstate, cl.refdef.cmd );
+	clgame.pmove->runfuncs = false;
 
-		CL_PreRunCmd( player, cmd );
-		CL_RunCmd( player, cmd );
-		CL_PostRunCmd( player, cmd );
+	while( 1 )
+	{
+		// we've run too far forward
+		if( frame >= CL_UPDATE_BACKUP - 1 )
+			break;
+
+		// Incoming_acknowledged is the last usercmd the server acknowledged having acted upon
+		current_command = ack + frame;
+		current_command_mod = current_command & CL_UPDATE_MASK;
+
+		// we've caught up to the current command.
+		if( current_command > outgoing_command )
+			break;
+
+		clgame.pmove->cmd = cl.cmds[frame];
+
+		// motor!
+		clgame.dllFuncs.pfnPlayerMove( clgame.pmove, false );	// run frames
 
 		// save for debug checking
-		VectorCopy( clgame.pmove->origin, cl.predicted_origins[frame] );
+		VectorCopy( clgame.pmove->origin, cl.predicted_origins[frame-1] );
+		clgame.pmove->runfuncs = true;
+
+		frame++;
 	}
 
+	CL_PostRunCmd( cl.refdef.cmd, frame );
+		
 	// copy results out for rendering
-	VectorCopy( player->v.view_ofs, cl.predicted_viewofs );
+	VectorCopy( clgame.pmove->view_ofs, cl.predicted_viewofs );
 	VectorCopy( clgame.pmove->origin, cl.predicted_origin );
 	VectorCopy( clgame.pmove->angles, cl.predicted_angles );
 	VectorCopy( clgame.pmove->velocity, cl.predicted_velocity );
-#endif
 }

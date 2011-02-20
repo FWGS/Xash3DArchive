@@ -91,7 +91,6 @@ static void PM_StudioSetUpTransform( physent_t *pe, qboolean allow_scale )
 	if( allow_scale && pe->fuser1 > 0.0f )
 		scale = pe->fuser1;
 
-	// FIXME: apply scale to studiomodels
 	Matrix3x4_CreateFromEntity( pm_studiomatrix, ang, pe->origin, scale );
 }
 
@@ -101,7 +100,7 @@ StudioCalcBoneAdj
 
 ====================
 */
-static void PM_StudioCalcBoneAdj( float dadt, float *adj, const byte *pcontroller1, const byte *pcontroller2 )
+static void PM_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
 {
 	int			i, j;
 	float			value;
@@ -119,25 +118,14 @@ static void PM_StudioCalcBoneAdj( float dadt, float *adj, const byte *pcontrolle
 			// check for 360% wrapping
 			if( pbonecontroller[j].type & STUDIO_RLOOP )
 			{
-				if( abs( pcontroller1[i] - pcontroller2[i] ) > 128 )
-				{
-					int	a, b;
-
-					a = (pcontroller1[j] + 128) % 256;
-					b = (pcontroller2[j] + 128) % 256;
-					value = ((a * dadt) + (b * (1 - dadt)) - 128) * (360.0/256.0) + pbonecontroller[j].start;
-				}
-				else 
-				{
-					value = ((pcontroller1[i] * dadt + (pcontroller2[i]) * (1.0 - dadt))) * (360.0/256.0) + pbonecontroller[j].start;
-				}
+				value = pcontroller[i] * (360.0/256.0) + pbonecontroller[j].start;
 			}
 			else 
 			{
-				value = (pcontroller1[i] * dadt + pcontroller2[i] * (1.0 - dadt)) / 255.0;
-				if( value < 0 ) value = 0;
-				if( value > 1.0 ) value = 1.0;
-				value = (1.0 - value) * pbonecontroller[j].start + value * pbonecontroller[j].end;
+				value = pcontroller[i] / 255.0f;
+				if( value < 0.0f ) value = 0.0f;
+				if( value > 1.0f ) value = 1.0f;
+				value = (1.0f - value) * pbonecontroller[j].start + value * pbonecontroller[j].end;
 			}
 		}
 
@@ -324,7 +312,7 @@ static void PM_StudioCalcRotations( physent_t *pe, float pos[][3], vec4_t *q, ms
 	int		i, frame;
 	mstudiobone_t	*pbone;
 	float		adj[MAXSTUDIOCONTROLLERS];
-	float		s, dadt = 1.0f; // noInterp
+	float		s;
 
 	if( f > pseqdesc->numframes - 1 )
 		f = 0;
@@ -337,7 +325,7 @@ static void PM_StudioCalcRotations( physent_t *pe, float pos[][3], vec4_t *q, ms
 	// add in programtic controllers
 	pbone = (mstudiobone_t *)((byte *)pm_studiohdr + pm_studiohdr->boneindex);
 
-	PM_StudioCalcBoneAdj( dadt, adj, pe->controller, pe->controller );
+	PM_StudioCalcBoneAdj( adj, pe->controller );
 
 	for( i = 0; i < pm_studiohdr->numbones; i++, pbone++, panim++ ) 
 	{
@@ -499,12 +487,11 @@ static void PM_StudioSetupBones( physent_t *pe )
 	if( pseqdesc->numblends > 1 )
 	{
 		float	s;
-		float	dadt = 1.0f;
 
 		panim += pm_studiohdr->numbones;
 		PM_StudioCalcRotations( pe, pos2, q2, pseqdesc, panim, f );
 
-		s = (pe->blending[0] * dadt + pe->blending[0] * ( 1.0f - dadt )) / 255.0f;
+		s = (float)pe->blending[0] / 255.0f;
 
 		PM_StudioSlerpBones( q, pos, q2, pos2, s );
 
@@ -516,10 +503,10 @@ static void PM_StudioSetupBones( physent_t *pe )
 			panim += pm_studiohdr->numbones;
 			PM_StudioCalcRotations( pe, pos4, q4, pseqdesc, panim, f );
 
-			s = ( pe->blending[0] * dadt + pe->blending[0] * ( 1.0f - dadt )) / 255.0f;
+			s = (float)pe->blending[0] / 255.0f;
 			PM_StudioSlerpBones( q3, pos3, q4, pos4, s );
 
-			s = ( pe->blending[1] * dadt + pe->blending[1] * ( 1.0f - dadt )) / 255.0f;
+			s = (float)pe->blending[1] / 255.0f;
 			PM_StudioSlerpBones( q, pos, q3, pos3, s );
 		}
 	}

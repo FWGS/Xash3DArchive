@@ -69,7 +69,6 @@ void BF_WriteBitFloat( sizebuf_t *bf, float val );
 void BF_WriteBitVec3Coord( sizebuf_t *bf, const float *fa );
 void BF_WriteBitNormal( sizebuf_t *bf, float f );
 void BF_WriteBitVec3Normal( sizebuf_t *bf, const float *fa );
-void BF_WriteBitAngles( sizebuf_t *bf, const float *fa );
 
 // Byte-write functions
 void BF_WriteChar( sizebuf_t *bf, int val );

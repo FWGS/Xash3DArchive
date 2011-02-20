@@ -949,7 +949,6 @@ void R_StudioCalcRotations( cl_entity_t *e, float pos[][3], vec4_t *q, mstudiose
 	if( pseqdesc->motiontype & STUDIO_Y ) pos[pseqdesc->motionbone][1] = 0.0f;
 	if( pseqdesc->motiontype & STUDIO_Z ) pos[pseqdesc->motionbone][2] = 0.0f;
 
-	// FIXME: enable this ? Half-Life 2 get rid of this code
 	s = 0 * ((1.0f - (f - (int)(f))) / (pseqdesc->numframes)) * e->curstate.framerate;
 
 	if( pseqdesc->motiontype & STUDIO_LX ) pos[pseqdesc->motionbone][0] += s * pseqdesc->linearmovement[0];
@@ -1278,8 +1277,6 @@ static void R_StudioCalcAttachments( void )
 		VectorSubtract( localOrg, bonepos, forward );	// make forward
 		VectorNormalizeFast( forward );
 		VectorAngles( forward, localAng );
-
-		// FIXME: store attachment angles
 	}
 }
 
@@ -1561,7 +1558,6 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 ===============
 R_StudioSetupSkin
 
-FIXME: this is correct ?
 ===============
 */
 static void R_StudioSetupSkin( mstudiotexture_t *ptexture, int index )
@@ -1626,7 +1622,6 @@ static void R_StudioDrawPoints( void )
 		{
 			R_StudioLighting( lv, *pnormbone, flags, (float *)pstudionorms );
 
-			// FIXME: move this check out of the inner loop
 			if(( flags & STUDIO_NF_CHROME ) || ( g_nFaceFlags & STUDIO_NF_CHROME ))
 				R_StudioSetupChrome( g_chrome[(float (*)[3])lv - g_lightvalues], *pnormbone, (float *)pstudionorms );
 		}
@@ -1719,7 +1714,7 @@ R_StudioDrawHulls
 */
 static void R_StudioDrawHulls( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -1774,7 +1769,7 @@ R_StudioDrawBones
 */
 static void R_StudioDrawBones( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 static void R_StudioDrawAttachments( void )
@@ -1830,7 +1825,7 @@ R_StudioSetRemapColors
 */
 void R_StudioSetRemapColors( int top, int bottom )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -2038,7 +2033,7 @@ R_StudioSetChromeOrigin
 */
 void R_StudioSetChromeOrigin( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -2066,7 +2061,7 @@ static void GL_StudioDrawShadow( void )
 	// this code is for HL compatibility.
 	return;
 
-	// FIXME: implement
+	// TODO: implement
 	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
 }
 
@@ -2417,7 +2412,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		if( pplayer->weaponmodel )
 		{
 			cl_entity_t	saveent = *RI.currententity;
-			model_t		*pweaponmodel = CM_ClipHandleToModel( pplayer->weaponmodel );
+			model_t		*pweaponmodel = Mod_Handle( pplayer->weaponmodel );
 
 			m_pStudioHeader = (studiohdr_t *)Mod_Extradata( pweaponmodel );
 
@@ -2788,7 +2783,7 @@ static engine_studio_api_t gStudioAPI =
 	Mod_LoadCacheFile,
 	Mod_ForName,
 	Mod_Extradata,
-	CM_ClipHandleToModel,
+	Mod_Handle,
 	pfnGetCurrentEntity,
 	pfnPlayerInfo,
 	R_StudioGetPlayerState,

@@ -267,13 +267,13 @@ void CL_FadeAlpha( int starttime, int endtime, byte *alpha )
 {
 	int	time, fade_time;
 
-	if( starttime == 0 )
+	if( !starttime )
 	{
 		*alpha = 255;
 		return;
 	}
 
-	time = (host.realtime * 1000) - starttime;	// FIXME; convert it to float properly
+	time = (cl.time * 1000) - starttime;
 
 	if( time >= endtime )
 	{
@@ -2191,11 +2191,8 @@ pfnIsSpectateOnly
 */
 static int pfnIsSpectateOnly( void )
 {
-	cl_entity_t *pl = CL_GetLocalPlayer();
-
-	if( !pl ) return false;
-
-	return pl->curstate.spectator;
+	// FIXME: check for proxie and dev_overview 2
+	return 0;
 }
 
 /*
@@ -2451,7 +2448,7 @@ pfnSetUpPlayerPrediction
 */
 void pfnSetUpPlayerPrediction( int dopred, int bIncludeLocalClient )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -2553,7 +2550,7 @@ model_t *CL_LoadModel( const char *modelname, int *index )
 	if( !idx ) return NULL;
 	if( index ) *index = idx;
 	
-	return CM_ClipHandleToModel( idx );
+	return Mod_Handle( idx );
 }
 
 int CL_AddEntity( int entityType, cl_entity_t *pEnt )
@@ -2698,7 +2695,7 @@ PlayerInfo_SetValueForKey
 */
 void PlayerInfo_SetValueForKey( const char *key, const char *value )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -2709,7 +2706,7 @@ pfnGetPlayerUniqueID
 */
 qboolean pfnGetPlayerUniqueID( int iPlayer, char playerID[16] )
 {
-	// FIXME: implement
+	// TODO: implement
 	return false;
 }
 
@@ -3112,7 +3109,7 @@ Demo_WriteBuffer
 */
 static void Demo_WriteBuffer( int size, byte *buffer )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3129,7 +3126,7 @@ NetAPI_InitNetworking
 */
 void NetAPI_InitNetworking( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3140,7 +3137,7 @@ NetAPI_InitNetworking
 */
 void NetAPI_Status( net_status_t *status )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3151,7 +3148,7 @@ NetAPI_SendRequest
 */
 void NetAPI_SendRequest( int context, int request, int flags, double timeout, netadr_t *remote_address, net_api_response_func_t response )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3162,7 +3159,7 @@ NetAPI_CancelRequest
 */
 void NetAPI_CancelRequest( int context )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3173,7 +3170,7 @@ NetAPI_CancelAllRequests
 */
 void NetAPI_CancelAllRequests( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3271,7 +3268,7 @@ Voice_EndVoiceTweakMode
 */
 void Voice_EndVoiceTweakMode( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3282,7 +3279,7 @@ Voice_SetControlFloat
 */	
 void Voice_SetControlFloat( VoiceTweakControl iControl, float value )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*
@@ -3293,7 +3290,7 @@ Voice_GetControlFloat
 */
 float Voice_GetControlFloat( VoiceTweakControl iControl )
 {
-	// FIXME: implement
+	// TODO: implement
 	return 1.0f;
 }
 			

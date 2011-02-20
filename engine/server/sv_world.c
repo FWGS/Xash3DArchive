@@ -112,7 +112,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 	vec3_t	hullmins, hullmaxs;
 	vec3_t	size;
 
-	model = CM_ClipHandleToModel( ent->v.modelindex );
+	model = Mod_Handle( ent->v.modelindex );
 
 	// decide which clipping hull to use, based on the size
 	if( model && ( ent->v.solid == SOLID_BSP || ent->v.skin == CONTENTS_LADDER ))
@@ -190,7 +190,7 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 		// hullNumber is force to use hull from brushmodel (even if solid == SOLID_NOT)
 		if( hullNumber != -1 && Mod_GetType( ent->v.modelindex ) == mod_brush )
 		{
-			model = CM_ClipHandleToModel( ent->v.modelindex );
+			model = Mod_Handle( ent->v.modelindex );
 			if( !model ) Host_Error( "SV_HullForEntity: using custom hull on bad bsp model\n" );
 
 			// TraceHull stuff
@@ -229,7 +229,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	int		i = 0, hullNumber = 0;
 			
 	// decide which clipping hull to use, based on the size
-	model = CM_ClipHandleToModel( ent->v.modelindex );
+	model = Mod_Handle( ent->v.modelindex );
 
 	if( !model || model->type != mod_brush )
 		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", NUM_FOR_EDICT( ent ), model->type );
@@ -1049,7 +1049,7 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 	vec3_t		start_l, end_l;
 	vec3_t		temp, offset;
 
-	bmodel = CM_ClipHandleToModel( ent->v.modelindex );
+	bmodel = Mod_Handle( ent->v.modelindex );
 	if( !bmodel || bmodel->type != mod_brush )
 		return NULL;
 
@@ -1176,7 +1176,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				continue;	// don't clip against owner
 		}
 
-		model = CM_ClipHandleToModel( touch->v.modelindex );
+		model = Mod_Handle( touch->v.modelindex );
 
 		bSimpleBox = (clip->flags & FMOVE_SIMPLEBOX) ? true : false;
 		bSimpleBox = World_UseSimpleBox( bSimpleBox, touch->v.solid, clip->isPoint, model );

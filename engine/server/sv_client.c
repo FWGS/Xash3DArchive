@@ -8,7 +8,7 @@
 #include "server.h"
 #include "net_encode.h"
 
-const char *clc_strings[10] =
+const char *clc_strings[9] =
 {
 	"clc_bad",
 	"clc_nop",
@@ -19,7 +19,6 @@ const char *clc_strings[10] =
 	"clc_userinfo",
 	"clc_fileconsistency",
 	"clc_voicedata",
-	"clc_random_seed",
 };
 
 typedef struct ucmd_s
@@ -82,10 +81,11 @@ A connection request that did not come from the master
 */
 void SV_DirectConnect( netadr_t from )
 {
-	char		physinfo[512];
+	char		*s, physinfo[512];
 	char		userinfo[MAX_INFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
 	edict_t		*ent;
+	qboolean		spectator = false;
 	int		i, edictnum;
 	int		qport, version;
 	int		count = 0;
@@ -147,6 +147,15 @@ void SV_DirectConnect( netadr_t from )
 	newcl = &temp;
 	Mem_Set( newcl, 0, sizeof( sv_client_t ));
 
+	// check for spectators          
+	s = Info_ValueForKey( userinfo, "spectator" );
+
+	if( s && com.strcmp( s, "0" ) && sv_maxclients->integer > 1 )
+	{
+		// FXIME: we can create listen server with spectator instead of client ?
+		spectator = true;
+          }
+
 	// if there is already a slot for this ip, reuse it
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -177,9 +186,9 @@ void SV_DirectConnect( netadr_t from )
 		return;
 	}
 
-gotnewcl:	
 	// build a new connection
 	// accept the new client
+gotnewcl:	
 	// this is the only place a sv_client_t is ever initialized
 	if( sv_maxclients->integer == 1 )	// save physinfo for singleplayer
 		com.strncpy( physinfo, newcl->physinfo, sizeof( physinfo ));
@@ -197,6 +206,7 @@ gotnewcl:
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
 	newcl->userid = g_userid++;	// create unique userid
+	newcl->spectator = spectator;
 		
 	// get the game a chance to reject this connection or modify the userinfo
 	if( !( SV_ClientConnect( ent, userinfo )))
@@ -361,7 +371,7 @@ void SV_DropClient( sv_client_t *drop )
 	}
 
 	// let the game known about client state
-	if( drop->edict->v.flags & FL_SPECTATOR )
+	if( drop->spectator )
 		svgame.dllFuncs.pfnSpectatorDisconnect( drop->edict );
 	else svgame.dllFuncs.pfnClientDisconnect( drop->edict );
 
@@ -868,7 +878,7 @@ void SV_PutClientInServer( edict_t *ent )
 
 	if( !sv.loadgame )
 	{	
-		if( ent->v.flags & FL_SPECTATOR )
+		if( client->spectator )
 		{
       			svgame.globals->time = sv.time;
 			svgame.dllFuncs.pfnSpectatorConnect( ent );
@@ -993,7 +1003,7 @@ void SV_New_f( sv_client_t *cl )
 	BF_WriteLong( &cl->netchan.message, PROTOCOL_VERSION );
 	BF_WriteLong( &cl->netchan.message, svs.spawncount );
 	BF_WriteLong( &cl->netchan.message, sv.checksum );
-	BF_WriteByte( &cl->netchan.message, playernum );
+	BF_WriteByte( &cl->netchan.message, playernum|( cl->spectator ? 128 : 0 ));
 	BF_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
 	BF_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
 	BF_WriteString( &cl->netchan.message, sv.name );
@@ -1490,7 +1500,7 @@ void SV_Pause_f( sv_client_t *cl )
 		return;
 	}
 
-	if( cl->edict->v.flags & FL_SPECTATOR )
+	if( cl->spectator )
 	{
 		SV_ClientPrintf( cl, PRINT_HIGH, "Spectators can not pause.\n" );
 		return;
@@ -1729,7 +1739,7 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 
 /*
 ==================
-SV_ReadClientMove
+SV_ParseClientMove
 
 The message usually contains all the movement commands 
 that were in the last three packets, so that the information
@@ -1739,61 +1749,6 @@ On very fast clients, there may be multiple usercmd packed into
 each of the backup packets.
 ==================
 */
-static void SV_ReadClientMove( sv_client_t *cl, sizebuf_t *msg )
-{
-	int	key, size;
-	int	checksum1, checksum2;
-	usercmd_t	oldest, oldcmd, newcmd, nulcmd;
-
-	key = BF_GetNumBytesRead( msg );
-	checksum1 = BF_ReadByte( msg );
-
-	cl->packet_loss = SV_CalcPacketLoss( cl );
-
-	Mem_Set( &nulcmd, 0, sizeof( nulcmd ));
-	MSG_ReadDeltaUsercmd( msg, &nulcmd, &oldest );
-	MSG_ReadDeltaUsercmd( msg, &oldest, &oldcmd );
-	MSG_ReadDeltaUsercmd( msg, &oldcmd, &newcmd );
-
-	if( cl->state != cs_spawned )
-	{
-		cl->delta_sequence = -1;
-		return;
-	}
-
-	// if the checksum fails, ignore the rest of the packet
-	size = BF_GetNumBytesRead( msg ) - key - 1;
-	checksum2 = CRC32_Sequence( BF_GetData( msg ) + key + 1, size, cl->netchan.incoming_sequence );
-	if( checksum2 != checksum1 )
-	{
-		MsgDev( D_ERROR, "SV_UserMove: failed command checksum for %s (%d != %d)\n", cl->name, checksum2, checksum1 );
-		return;
-	}
-
-	if( !sv.paused )
-	{
-		SV_PreRunCmd( cl, &newcmd, cl->random_seed );	// get random_seed from newcmd
-
-		if( net_drop < 20 )
-		{
-			while( net_drop > 2 )
-			{
-				SV_RunCmd( cl, &cl->lastcmd, cl->random_seed );
-				net_drop--;
-			}
-
-			if( net_drop > 1 ) SV_RunCmd( cl, &oldest, cl->random_seed );
-			if( net_drop > 0 ) SV_RunCmd( cl, &oldcmd, cl->random_seed );
-
-		}
-		SV_RunCmd( cl, &newcmd, cl->random_seed );
-		SV_PostRunCmd( cl );
-	}
-
-	cl->lastcmd = newcmd;
-	cl->lastcmd.buttons = 0; // avoid multiple fires on lag
-}
-
 static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 {
 	client_frame_t	*frame;
@@ -1984,7 +1939,6 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 		case clc_move:
 			if( move_issued ) return; // someone is trying to cheat...
 			move_issued = true;
-//			SV_ReadClientMove( cl, msg );
 			SV_ParseClientMove( cl, msg );
 			break;
 		case clc_stringcmd:	
@@ -1992,9 +1946,6 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			// malicious users may try using too many string commands
 			if( ++stringCmdCount < 8 ) SV_ExecuteClientCommand( cl, s );
 			if( cl->state == cs_zombie ) return; // disconnect command
-			break;
-		case clc_random_seed:
-			cl->random_seed = BF_ReadUBitLong( msg, 32 );
 			break;
 		default:
 			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );
