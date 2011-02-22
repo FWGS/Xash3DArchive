@@ -87,9 +87,14 @@ void S_StreamBackgroundTrack( void )
 	if( !s_musicvolume->value || s_listener.paused || s_listener.stream_paused )
 		return;
 
-	// pause music by source type
-	if( s_bgTrack.source == key_game && cls.key_dest == key_menu ) return;
-	if( s_bgTrack.source == key_menu && cls.key_dest != key_menu ) return;
+	if( !cl.background )
+	{
+		// pause music by source type
+		if( s_bgTrack.source == key_game && cls.key_dest == key_menu ) return;
+		if( s_bgTrack.source == key_menu && cls.key_dest != key_menu ) return;
+	}
+	else if( cls.key_dest == key_console )
+		return;
 
 	// see how many samples should be copied into the raw buffer
 	if( s_rawend < soundtime )

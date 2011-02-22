@@ -87,6 +87,7 @@ typedef struct
 	qboolean		force_send_usercmd;
 	qboolean		thirdperson;
 	qboolean		spectator;		// true for spectators
+	qboolean		background;		// not real game, just a background
 
 	uint		checksum;			// for catching cheater maps
 

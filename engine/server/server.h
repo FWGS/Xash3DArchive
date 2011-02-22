@@ -84,6 +84,7 @@ typedef struct server_s
 {
 	sv_state_t	state;		// precache commands are only valid during load
 
+	qboolean		background;	// this is background map
 	qboolean		loadgame;		// client begins should reuse existing entity
 	int		viewentity;	// applied on client restore. this is temporare place
 					// until client connected

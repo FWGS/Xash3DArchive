@@ -448,6 +448,12 @@ SV_IsSimulating
 */
 qboolean SV_IsSimulating( void )
 {
+	if( sv.background )
+	{
+		if( CL_IsInConsole( ))
+			return false;
+		return true; // force simulating for background map
+	}
 	if( sv.hostflags & SVF_PLAYERSONLY )
 		return false;
 	if( !SV_HasActivePlayers())
@@ -608,6 +614,7 @@ void SV_Init( void )
 	Cvar_Get ("motdfile", "motd.txt", 0, "name of 'message of the day' file" );
 	Cvar_Get ("sv_language", "0", 0, "game language (currently unused)" );
 	Cvar_Get ("suitvolume", "0.25", CVAR_ARCHIVE, "HEV suit volume" );
+	Cvar_Get ("sv_background", "0", CVAR_READ_ONLY, "indicate what background map is running" );
 	
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "4096", CVAR_PHYSICINFO, "zfar server value" );

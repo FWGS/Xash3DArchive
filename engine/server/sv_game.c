@@ -969,7 +969,8 @@ void pfnChangeLevel( const char* s1, const char* s2 )
 {
 	static uint	last_spawncount = 0;
 
-	if( !s1 || s1[0] <= ' ' ) return;
+	if( !s1 || s1[0] <= ' ' || sv.background )
+		return;
 
 	// make sure we don't issue two changelevels
 	if( svs.spawncount == last_spawncount )
@@ -4582,6 +4583,9 @@ qboolean SV_LoadProgs( const char *name )
 	Cvar_FullSet( "host_gameloaded", "1", CVAR_INIT );
 	svgame.stringspool = Mem_AllocPool( "Server Strings" );
 
+	// fire once
+	MsgDev( D_INFO, "Dll loaded for mod %s\n", svgame.dllFuncs.pfnGetGameDescription() );
+
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();
 
@@ -4592,9 +4596,6 @@ qboolean SV_LoadProgs( const char *name )
 
 	// register custom encoders
 	svgame.dllFuncs.pfnRegisterEncoders();
-
-	// fire once
-	MsgDev( D_INFO, "Dll loaded for mod %s\n", svgame.dllFuncs.pfnGetGameDescription() );
 
 	return true;
 }

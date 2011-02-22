@@ -544,16 +544,22 @@ void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate )
 	{
 		if( !ch->sfx ) continue;
 
-		if(( s_listener.inmenu || s_listener.paused ) && !ch->localsound )
+		// NOTE: background map is allow both type sounds: menu and game
+		if( !cl.background )
 		{
-			// play only local sounds, keep pause for other
-			continue;
+			if(( s_listener.inmenu || s_listener.paused ) && !ch->localsound )
+			{
+				// play only local sounds, keep pause for other
+				continue;
+			}
+			else if( !s_listener.inmenu && !s_listener.active && !ch->staticsound )
+			{
+				// play only ambient sounds, keep pause for other
+				continue;
+			}
 		}
-		else if( !s_listener.inmenu && !s_listener.active && !ch->staticsound )
-		{
-			// play only ambient sounds, keep pause for other
-			continue;
-		}
+		else if( cls.key_dest == key_console )
+			continue;	// silent mode in console
 
 		pSource = S_LoadSound( ch->sfx );
 

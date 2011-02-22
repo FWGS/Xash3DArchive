@@ -605,6 +605,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.maxEntities = BF_ReadWord( msg );
 	com.strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
+	cl.background = BF_ReadOneBit( msg );
 
 	if( cl.playernum & 128 )
 	{

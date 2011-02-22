@@ -65,6 +65,11 @@ qboolean CL_IsInMenu( void )
 	return ( cls.key_dest == key_menu );
 }
 
+qboolean CL_IsInConsole( void )
+{
+	return ( cls.key_dest == key_console );
+}
+
 qboolean CL_IsPlaybackDemo( void )
 {
 	return cls.demoplayback;
@@ -271,7 +276,7 @@ usercmd_t CL_CreateCmd( void )
 	// allways dump the first ten messages,
 	// because it may contain leftover inputs
 	// from the last level
-	if( ++cl.movemessages <= 10 )
+	if( cl.background || ++cl.movemessages <= 10 )
 		return cmd;
 
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
@@ -1525,6 +1530,8 @@ void Host_ClientFrame( void )
 
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
+
+	clgame.dllFuncs.pfnFrame( cl.time );
 
 	// fetch results from server
 	CL_ReadPackets();

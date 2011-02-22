@@ -445,7 +445,7 @@ void SV_ClearSaveDir( void )
 
 int SV_IsValidSave( void )
 {
-	if( !svs.initialized || sv.state != ss_active )
+	if( !svs.initialized || sv.state != ss_active || sv.background )
 	{
 		Msg( "Not playing a local game.\n" );
 		return 0;
@@ -1451,6 +1451,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 
 	com.strncpy( level, mapname, MAX_STRING );
 	com.strncpy( oldlevel, sv.name, MAX_STRING );
+	sv.background = false;
 
 	if( loadfromsavedgame )
 	{
@@ -1644,6 +1645,7 @@ qboolean SV_LoadGame( const char *pName )
 		return false;
 
 	com.snprintf( name, sizeof( name ), "save/%s.sav", pName );
+	sv.background = false;
 
 	// silently ignore if missed
 	if( !FS_FileExistsEx( name, true ))

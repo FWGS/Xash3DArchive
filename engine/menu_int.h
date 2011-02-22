@@ -139,6 +139,11 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnChangeInstance)( const char *newInstance, const char *szFinalMessage );
 	void	(*pfnPlayBackgroundTrack)( const char *introName, const char *loopName );
 	void	(*pfnHostEndGame)( const char *szFinalMessage );
+
+	// menu interface is freezed at version 0.75
+	// new functions starts here 
+	float	(*pfnRandomFloat)( float flLow, float flHigh );	
+	long	(*pfnRandomLong)( long lLow, long lHigh );
 } ui_enginefuncs_t;
 
 typedef struct

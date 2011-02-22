@@ -507,8 +507,7 @@ void CL_Bubbles( const vec3_t mins, const vec3_t maxs, float height, int modelIn
 		pTemp->x = origin[0];
 		pTemp->y = origin[1];
 		angle = Com_RandomLong( -M_PI, M_PI );
-		sine = sin( angle );
-		cosine = cos( angle );
+		SinCos( angle, &sine, &cosine );
 		
 		zspeed = Com_RandomLong( 80, 140 );
 		VectorSet( pTemp->entity.baseline.origin, speed * cosine, speed * sine, zspeed );

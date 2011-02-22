@@ -758,6 +758,7 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 autocomplete_list_t cmd_list[] =
 {
 { "gl_texturemode", Cmd_GetTexturemodes },
+{ "map_background", Cmd_GetMapList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
 { "hpkval", Cmd_GetCustomList },

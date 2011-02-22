@@ -1220,7 +1220,8 @@ void Con_DrawNotify( void )
 	short	*text;
 	float	time;
 
-	if( !host.developer ) return;
+	if( !host.developer || Cvar_VariableInteger( "sv_background" ))
+		return;
 
 	currentColor = 7;
 	pglColor4ubv( g_color_table[currentColor] );
@@ -1359,7 +1360,7 @@ void Con_DrawConsole( void )
 
 	if( cls.state == ca_connecting || cls.state == ca_connected )
 	{
-		if( !cl_allow_levelshots->integer )
+		if( !cl_allow_levelshots->integer && !Cvar_VariableInteger( "sv_background" ))
 		{
 			con.displayFrac = con.finalFrac = 1.0f;
 		}
@@ -1399,9 +1400,17 @@ void Con_DrawConsole( void )
 		break;
 	case ca_active:
 	case ca_cinematic: 
-		if( con.displayFrac ) Con_DrawSolidConsole( con.displayFrac );
-		else if( cls.state == ca_active && cls.key_dest == key_game )
-			Con_DrawNotify(); // draw notify lines
+		if( Cvar_VariableInteger( "sv_background" ))
+		{
+			if( cls.key_dest == key_console ) 
+				Con_DrawSolidConsole( 1.0f );
+		}
+		else
+		{
+			if( con.displayFrac ) Con_DrawSolidConsole( con.displayFrac );
+			else if( cls.state == ca_active && cls.key_dest == key_game )
+				Con_DrawNotify(); // draw notify lines
+		}
 		break;
 	}
 }

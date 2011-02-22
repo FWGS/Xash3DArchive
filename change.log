@@ -6,6 +6,9 @@ Engine: add underwater fog
 Engine: add cvar to control studio model scaling (enable or disable)
 Engine: fixed bug with mouse in multiplayer (not work in menu)
 Engine: fixed lag on rpg laserspot
+Engine: added weapon and movement prediction (may be bugly, use with caution)
+GameUI: added pfnRandomLong and pfnRandomFloat built-ins (and keep compatibility with old versions)
+Engine: added map_background (special command for loading background maps like in Source Engine)
 
 build 1433
 

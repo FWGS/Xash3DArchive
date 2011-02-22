@@ -158,6 +158,8 @@ qboolean V_PreRender( void )
 		return false;
 	}
 
+	clgame.dllFuncs.CAM_Think();
+	
 	R_BeginFrame( !cl.refdef.paused );
 
 	return true;

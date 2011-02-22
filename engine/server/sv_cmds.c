@@ -239,10 +239,61 @@ void SV_Map_f( void )
 
 	SCR_BeginLoadingPlaque();
 
+	sv.background = false;
 	sv.loadgame = false; // set right state
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 
 	SV_DeactivateServer();
+	SV_SpawnServer( mapname, NULL );
+	SV_LevelInit( mapname, NULL, NULL, false );
+	SV_ActivateServer ();
+}
+
+/*
+==================
+SV_MapBackground_f
+
+Set background map (enable physics in menu)
+==================
+*/
+void SV_MapBackground_f( void )
+{
+	string	mapname;
+	int	flags;
+
+	if( Cmd_Argc() != 2 )
+	{
+		Msg( "Usage: map_background <mapname>\n" );
+		return;
+	}
+
+	// hold mapname to other place
+	com.strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
+	flags = SV_MapIsValid( mapname, GI->sp_entity, NULL );
+
+	if(!( flags & MAP_IS_EXIST ))
+	{
+		Msg( "SV_NewMap: map %s doesn't exist\n", mapname );
+		return;
+	}
+
+	// background maps allow without spawnpoints (just throw warning)
+	if(!( flags & MAP_HAS_SPAWNPOINT ))
+		MsgDev( D_WARN, "SV_NewMap: map %s doesn't have a valid spawnpoint\n", mapname );
+		
+	com.strncpy( host.finalmsg, "", MAX_STRING );
+	SV_Shutdown( true );
+	NET_Config ( false ); // close network sockets
+
+	sv.background = true;
+	sv.loadgame = false; // set right state
+
+	// reset all multiplayer cvars
+	Cvar_FullSet( "coop", "0",  CVAR_LATCH );
+	Cvar_FullSet( "teamplay", "0",  CVAR_LATCH );
+	Cvar_FullSet( "deathmatch", "0",  CVAR_LATCH );
+	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
+
 	SV_SpawnServer( mapname, NULL );
 	SV_LevelInit( mapname, NULL, NULL, false );
 	SV_ActivateServer ();
@@ -421,7 +472,7 @@ void SV_ChangeLevel_f( void )
 
 	SCR_BeginLoadingPlaque();
 
-	if( sv.state != ss_active )
+	if( sv.state != ss_active || sv.background )
 	{
 		// just load map
 		Cbuf_AddText( va( "map %s\n", mapname ));
@@ -448,7 +499,14 @@ void SV_Restart_f( void )
 	if( sv.state != ss_active ) return;
 
 	// just sending console command
-	Cbuf_AddText( va( "map %s\n", sv.name ));
+	if( sv.background )
+	{
+		Cbuf_AddText( va( "map_background %s\n", sv.name ));
+	}
+	else
+	{
+		Cbuf_AddText( va( "map %s\n", sv.name ));
+	}
 }
 
 void SV_Reload_f( void )
@@ -456,7 +514,7 @@ void SV_Reload_f( void )
 	const char	*save;
 	string		loadname;
 	
-	if( sv.state != ss_active )
+	if( sv.state != ss_active || sv.background )
 		return;
 
 	save = SV_GetLatestSave();
@@ -483,11 +541,12 @@ void SV_Kick_f( void )
 		return;
 	}
 
-	if( !svs.clients )
+	if( !svs.clients || sv.background )
 	{
 		Msg( "^3no server running.\n" );
 		return;
 	}
+
 	if( !SV_SetPlayer( )) return;
 
 	SV_BroadcastPrintf( PRINT_HIGH, "%s was kicked\n", sv_client->name );
@@ -506,7 +565,7 @@ SV_Kill_f
 void SV_Kill_f( void )
 {
 	if( !Cvar_VariableInteger( "sv_cheats" )) return;
-	if( !SV_SetPlayer()) return;
+	if( !SV_SetPlayer() || sv.background ) return;
 
 	if( sv_client->edict->v.health <= 0.0f )
 	{
@@ -553,7 +612,7 @@ void SV_Status_f( void )
 	int		i;
 	sv_client_t	*cl;
 
-	if( !svs.clients )
+	if( !svs.clients || sv.background )
 	{
 		Msg ( "^3no server running.\n" );
 		return;
@@ -606,7 +665,7 @@ void SV_ConSay_f( void )
 	sv_client_t	*client;
 	int		i;
 
-	if(Cmd_Argc() < 2) return;
+	if( Cmd_Argc() < 2 ) return;
 
 	com.strncpy( text, "console: ", MAX_SYSPATH );
 	p = Cmd_Args();
@@ -725,6 +784,7 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "restart", SV_Restart_f, "restarting current level" );
 	Cmd_AddCommand( "reload", SV_Reload_f, "continue from latest save or restart level" );
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
+	Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
 
 	if( host.type == HOST_DEDICATED )
 	{
@@ -760,6 +820,7 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "restart" );
 	Cmd_RemoveCommand( "reload" );
 	Cmd_RemoveCommand( "entpatch" );
+	Cmd_RemoveCommand( "map_background" );
 
 	if( host.type == HOST_DEDICATED )
 	{

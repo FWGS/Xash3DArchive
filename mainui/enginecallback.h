@@ -153,4 +153,7 @@ inline void TextMessageSetColor( int r, int g, int b, int alpha = 255 )
 #define GetConsoleStringSize	(*g_engfuncs.pfnDrawConsoleStringLen)
 #define ConsoleSetColor	(*g_engfuncs.pfnSetConsoleDefaultColor)
 
+#define RANDOM_LONG		(*g_engfuncs.pfnRandomLong)
+#define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)
+
 #endif//ENGINECALLBACKS_H

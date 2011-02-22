@@ -271,6 +271,9 @@ void SV_ActivateServer( void )
 	if( !sv.loadgame || svgame.globals->changelevel )
 		host.frametime = 0.1f;			
 
+	// GoldSrc rules
+	numFrames *= sv_maxclients->integer;
+
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )
 	{
@@ -395,8 +398,14 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 {
 	int	i, current_skill;
 	qboolean	loadgame, paused;
+	qboolean	background;
 
 	Cmd_ExecuteString( "latch\n" );
+
+	// save state
+	loadgame = sv.loadgame;
+	background = sv.background;
+	paused = sv.paused;
 
 	if( sv.state == ss_dead )
 		SV_InitGame(); // the game is just starting
@@ -417,10 +426,6 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 		MsgDev( D_INFO, "Spawn Server: %s\n", mapname );
 	}
 
-	// save state
-	loadgame = sv.loadgame;
-	paused = sv.paused;
-
 	sv.state = ss_dead;
 	Host_SetServerState( sv.state );
 	Mem_Set( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
@@ -428,6 +433,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	// restore state
 	sv.paused = paused;
 	sv.loadgame = loadgame;
+	sv.background = background;
 	sv.time = 1.0f;			// server spawn time it's always 1.0 second
 	svgame.globals->time = sv.time;
 	
@@ -451,6 +457,10 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	current_skill = bound( 0, current_skill, 3 );
 
 	Cvar_SetFloat( "skill", (float)current_skill );
+
+	if( sv.background )
+		Cvar_FullSet( "sv_background", "1", CVAR_READ_ONLY );
+	else Cvar_FullSet( "sv_background", "0", CVAR_READ_ONLY );
 
 	// make sure what server name doesn't contain path and extension
 	FS_FileBase( mapname, sv.name );
@@ -604,7 +614,7 @@ void SV_ForceError( void )
 
 void SV_InitGameProgs( void )
 {
-	if( svgame.hInstance ) return; // not needs
+	if( svgame.hInstance ) return; // already loaded
 
 	// just try to initialize
 	SV_LoadProgs( GI->game_dll );

@@ -913,6 +913,8 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnChangeInstance,
 	S_StartBackgroundTrack,
 	pfnHostEndGame,
+	pfnRandomFloat,
+	pfnRandomLong,
 };
 
 void UI_UnloadProgs( void )

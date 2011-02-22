@@ -274,6 +274,7 @@ movie_state_t *AVI_GetState( int num );
 // shared calls
 qboolean CL_IsInGame( void );
 qboolean CL_IsInMenu( void );
+qboolean CL_IsInConsole( void );
 qboolean CL_IsThirdPerson( void );
 float CL_GetServerTime( void );
 float CL_GetLerpFrac( void );

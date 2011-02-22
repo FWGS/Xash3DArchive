@@ -6,6 +6,7 @@
 #include "common.h"
 #include "sound.h"
 #include "room_int.h"
+#include "client.h"
 
 convar_t			*dsp_room;	// room dsp preset - sounds more distant from player (1ch)
 convar_t			*dsp_room_type;
@@ -136,7 +137,7 @@ void CheckNewDspPresets( void )
 
 	if( s_listener.waterlevel > 2 )
 		iroom = 15;
-	else if( s_listener.inmenu )
+	else if( s_listener.inmenu && !cl.background )
 		iroom = 0;
 	else iroom = dsp_room->integer;
 

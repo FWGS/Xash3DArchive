@@ -892,6 +892,9 @@ void SV_PutClientInServer( edict_t *ent )
 			// fisrt entering
       			svgame.globals->time = sv.time;
 			svgame.dllFuncs.pfnClientPutInServer( ent );
+
+			if( sv.background )	// don't attack player in background mode
+				ent->v.flags |= (FL_GODMODE|FL_NOTARGET);
 		}
 
 		client->pViewEntity = NULL; // reset pViewEntity
@@ -961,6 +964,8 @@ SV_TogglePause
 */
 void SV_TogglePause( const char *msg )
 {
+	if( sv.background ) return;
+
 	sv.paused ^= 1;
 
 	if( msg ) SV_BroadcastPrintf( PRINT_HIGH, "%s", msg );
@@ -1007,7 +1012,8 @@ void SV_New_f( sv_client_t *cl )
 	BF_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
 	BF_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
 	BF_WriteString( &cl->netchan.message, sv.name );
-	BF_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message ));	// Map Message
+	BF_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message )); // Map Message
+	BF_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map
 
 	// refresh userinfo on spawn
 	SV_RefreshUserinfo();
@@ -1597,7 +1603,8 @@ static void SV_Noclip_f( sv_client_t *cl )
 {
 	edict_t	*pEntity = cl->edict;
 
-	if( !Cvar_VariableInteger( "sv_cheats" )) return;
+	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
+		return;
 
 	if( pEntity->v.movetype != MOVETYPE_NOCLIP )
 	{
@@ -1620,7 +1627,8 @@ static void SV_Godmode_f( sv_client_t *cl )
 {
 	edict_t	*pEntity = cl->edict;
 
-	if( !Cvar_VariableInteger( "sv_cheats" )) return;
+	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
+		return;
 
 	pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
 
@@ -1638,7 +1646,8 @@ static void SV_Notarget_f( sv_client_t *cl )
 {
 	edict_t	*pEntity = cl->edict;
 
-	if( !Cvar_VariableInteger( "sv_cheats" )) return;
+	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
+		return;
 
 	pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
 
@@ -1807,7 +1816,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	}
 
 	// check for pause or frozen
-	if( sv.paused || sv.loadgame || !CL_IsInGame() || ( player->v.flags & FL_FROZEN ))
+	if( sv.paused || sv.loadgame || sv.background || !CL_IsInGame() || ( player->v.flags & FL_FROZEN ))
 	{
 		for( i = 0; i < newcmds; i++ )
 		{
@@ -1817,7 +1826,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 			cmds[i].upmove = 0;
 			cmds[i].buttons = 0;
 
-			if( player->v.flags & FL_FROZEN )
+			if( player->v.flags & FL_FROZEN || sv.background )
 				cmds[i].impulse = 0;
 
 			VectorCopy( cmds[i].viewangles, player->v.v_angle );

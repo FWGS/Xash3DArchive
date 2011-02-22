@@ -716,8 +716,6 @@ void CL_AddEntities( void )
 
 	cl.num_custombeams = 0;
 
-	clgame.dllFuncs.CAM_Think();
-
 	CL_AddPacketEntities( &cl.frame );
 	clgame.dllFuncs.pfnCreateEntities();
 
