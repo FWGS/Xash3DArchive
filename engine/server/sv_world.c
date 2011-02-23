@@ -1151,6 +1151,13 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( clip->passedict && !VectorIsNull( clip->passedict->v.size ) && VectorIsNull( touch->v.size ))
 			continue;	// points never interact
 
+		// custom user filter
+		if( svgame.dllFuncs2.pfnShouldCollide )
+		{
+			if( !svgame.dllFuncs2.pfnShouldCollide( touch, clip->passedict ))
+				continue;
+		}
+
 		// monsterclip filter
 		if( modType == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
 		{

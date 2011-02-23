@@ -39,6 +39,9 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	if( ent->model && ent->model->type != mod_brush && !ent->curstate.scale )
 		ent->curstate.scale = 1.0f;
 
+	if( ent->player ) // stupid Half-Life bug
+		ent->angles[PITCH] = -ent->angles[PITCH];
+
 	// make me lerp
 	if( ent->curstate.eflags & EFLAG_SLERP )
 	{

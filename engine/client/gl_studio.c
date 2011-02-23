@@ -1883,10 +1883,7 @@ static void R_StudioClientEvents( void )
 		return;
 
 	if( e->syncbase == -0.01f )
-	{
 		flEventFrame = 0.0f;
-		//Msg( "Sequence changed\n" );
-	}
 
 	// stalled?
 	if( flEventFrame == e->syncbase )
@@ -1919,18 +1916,12 @@ static void R_StudioClientEvents( void )
 		if( bLooped )
 		{
 			if(( pevent[i].frame > e->syncbase || pevent[i].frame <= flEventFrame ))
-			{
-				//Msg( "FE %i Looped frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->syncbase, flEventFrame, RI.refdef.time );
 				clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
-			}
 		}
 		else
 		{
 			if(( pevent[i].frame > e->syncbase && pevent[i].frame <= flEventFrame ))
-			{
-				//Msg( "FE %i Normal frame %i, prev %f ev %f (time %.3f)\n", pevent[i].event, pevent[i].frame, e->syncbase, flEventFrame, RI.refdef.time );
 				clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
-			}
 		}
 	}
 
@@ -1992,7 +1983,7 @@ static void R_StudioSetupRenderer( int rendermode )
 	if( RI.currententity == &clgame.viewent )
 	{
 		// hack the depth range to prevent view model from poking into walls
-		pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ) );
+		pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
 
 		// backface culling for left-handed weapons
 		if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );

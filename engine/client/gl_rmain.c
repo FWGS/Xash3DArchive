@@ -833,6 +833,8 @@ void R_DrawEntitiesOnList( void )
 	clgame.dllFuncs.pfnDrawTransparentTriangles ();
 
 	R_DrawViewModel();
+
+	CL_ExtraUpdate();
 }
 
 /*
@@ -901,6 +903,8 @@ void R_BeginFrame( qboolean clearScene )
 
 	// swapinterval stuff
 	GL_UpdateSwapInterval();
+
+	CL_ExtraUpdate ();
 }
 
 /*

@@ -383,10 +383,6 @@ void Host_Frame( float time )
 	if( !Host_FilterTime( time ))
 		return;
 
-	// if running the server locally, make intentions now
-	// (this is prevent lag on rpg laserspot in singleplayer)
-	if( SV_Active()) CL_SendCmd ();
-
 	Host_ServerFrame (); // server frame
 	Host_ClientFrame (); // client frame
 

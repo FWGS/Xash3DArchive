@@ -1447,9 +1447,6 @@ int pfnDropToFloor( edict_t* e )
 	vec3_t	end;
 	trace_t	trace;
 
-	if( sv.loadgame )
-		return 0;
-
 	if( !SV_IsValidEdict( e ))
 	{
 		MsgDev( D_ERROR, "SV_DropToFloor: invalid entity %s\n", SV_ClassName( e ));

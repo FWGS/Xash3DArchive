@@ -424,6 +424,7 @@ qboolean SV_RunThink( edict_t *ent );
 void SV_FreeOldEntities( void );
 qboolean SV_TestEntityPosition( edict_t *ent );	// for EntityInSolid checks
 qboolean SV_TestPlayerPosition( edict_t *ent );	// for PlayerInSolid checks
+void SV_Impact( edict_t *e1, trace_t *trace );
 
 //
 // sv_move.c

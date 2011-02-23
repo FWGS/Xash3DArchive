@@ -590,7 +590,6 @@ static void SV_SetupPMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd,
 static void SV_FinishPMove( playermove_t *pmove, edict_t *clent )
 {
 	clent->v.teleport_time = pmove->waterjumptime;
-	VectorCopy( pmove->angles, clent->v.v_angle );
 	VectorCopy( pmove->origin, clent->v.origin );
 	VectorCopy( pmove->view_ofs, clent->v.view_ofs );
 	VectorCopy( pmove->velocity, clent->v.velocity );
@@ -638,6 +637,15 @@ static void SV_FinishPMove( playermove_t *pmove, edict_t *clent )
 		clent->v.groundentity = EDICT_NUM( pmove->physents[pmove->onground].info );
 	else clent->v.groundentity = NULL;
 #endif
+	// angles
+	// show 1/3 the pitch angle and all the roll angle	
+	if( !clent->v.fixangle )
+	{
+		VectorCopy( pmove->angles, clent->v.v_angle );
+		clent->v.angles[PITCH] = -clent->v.v_angle[PITCH] / 3;
+		clent->v.angles[ROLL] = clent->v.v_angle[ROLL];
+		clent->v.angles[YAW] = clent->v.v_angle[YAW];
+	}
 }
 
 int nofind = 0;
@@ -879,7 +887,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 		return;
 	}
 
-
 	PM_CheckMovingGround( clent, ucmd->msec * 0.001f );
 
 	VectorCopy( clent->v.v_angle, svgame.pmove->oldangles ); // save oldangles
@@ -888,17 +895,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	// copy player buttons
 	clent->v.button = ucmd->buttons;
 	if( ucmd->impulse ) clent->v.impulse = ucmd->impulse;
-
-	// angles
-	// show 1/3 the pitch angle and all the roll angle	
-	if( clent->v.deadflag < DEAD_DEAD )
-	{
-		if( !clent->v.fixangle )
-		{
-			clent->v.angles[PITCH] = -clent->v.v_angle[PITCH] / 3;
-			clent->v.angles[YAW] = clent->v.v_angle[YAW];
-		}
-	}
 
 	if( clent->v.flags & FL_DUCKING ) 
 		SV_SetMinMaxSize( clent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
@@ -911,7 +907,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 		SV_RunThink( clent ); // clients cannot be deleted from map
 
 		// If conveyor, or think, set basevelocity, then send to client asap too.
-		if( VectorLength( clent->v.basevelocity ) > 0.0f )
+		if( !VectorIsNull( clent->v.basevelocity ))
 			VectorCopy( clent->v.basevelocity, clent->v.clbasevelocity );
 	}
 
@@ -946,8 +942,25 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 			if( touch == clent ) continue;
 
 			VectorCopy( svgame.pmove->touchindex[i].deltavelocity, clent->v.velocity );
-			SV_CopyPmtraceToGlobal( &svgame.pmove->touchindex[i] );
-			svgame.dllFuncs.pfnTouch( touch, clent );
+
+			if( touch->v.groupinfo && clent->v.groupinfo )
+			{
+				if(( svs.groupop == 0 && ( touch->v.groupinfo & clent->v.groupinfo )) == 0 ||
+				(svs.groupop == 1 && (touch->v.groupinfo & clent->v.groupinfo) != 0 ))
+					continue;
+			}
+
+			if( touch->v.solid != SOLID_NOT )
+			{
+				SV_CopyPmtraceToGlobal( &svgame.pmove->touchindex[i] );
+				svgame.dllFuncs.pfnTouch( touch, clent );
+			}
+
+			if( clent->v.solid != SOLID_NOT )
+			{
+				SV_CopyPmtraceToGlobal( &svgame.pmove->touchindex[i] );
+				svgame.dllFuncs.pfnTouch( clent, touch );
+			}
 		}
 
 		// restore velocity

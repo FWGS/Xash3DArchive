@@ -254,6 +254,7 @@ usercmd_t CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
 	color24		color;
+	vec3_t		angles;
 	int		ms;
 
 	ms = host.frametime * 1000;
@@ -261,6 +262,7 @@ usercmd_t CL_CreateCmd( void )
 
 	Mem_Set( &cmd, 0, sizeof( cmd ));
 
+	VectorCopy( cl.refdef.cl_viewangles, angles );
 	VectorCopy( cl.frame.local.client.origin, cl.data.origin );
 	VectorCopy( cl.refdef.cl_viewangles, cl.data.viewangles );
 	cl.data.iWeaponBits = cl.frame.local.client.weapons;
@@ -276,7 +278,7 @@ usercmd_t CL_CreateCmd( void )
 	// allways dump the first ten messages,
 	// because it may contain leftover inputs
 	// from the last level
-	if( cl.background || ++cl.movemessages <= 10 )
+	if( ++cl.movemessages <= 10 )
 		return cmd;
 
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
@@ -288,6 +290,12 @@ usercmd_t CL_CreateCmd( void )
 	// because is potential backdoor for cheating
 	cmd.msec = ms;
 
+	if( cl.background )
+	{
+		VectorCopy( angles, cl.refdef.cl_viewangles );
+		VectorCopy( angles, cmd.viewangles );
+		cmd.msec = 0;
+	}
 	return cmd;
 }
 
@@ -1501,7 +1509,7 @@ CL_SendCommand
 void CL_SendCommand( void )
 {
 	// send intentions now
-	if( !SV_Active()) CL_SendCmd ();
+	CL_SendCmd ();
 
 	// resend a connection request if necessary
 	CL_CheckForResend ();
@@ -1536,12 +1544,6 @@ void Host_ClientFrame( void )
 	// fetch results from server
 	CL_ReadPackets();
 
-	// send a new command message to the server
-	CL_SendCommand();
-
-	// predict all unacknowledged movements
-	CL_PredictMovement();
-
 	VID_CheckChanges();
 
 	// allow sound and video DLL change
@@ -1556,6 +1558,12 @@ void Host_ClientFrame( void )
 
 	// update audio
 	S_RenderFrame( &cl.refdef );
+
+	// send a new command message to the server
+	CL_SendCommand();
+
+	// predict all unacknowledged movements
+	CL_PredictMovement();
 
 	// decay dynamic lights
 	CL_DecayLights ();

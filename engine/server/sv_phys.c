@@ -175,20 +175,29 @@ void SV_Impact( edict_t *e1, trace_t *trace )
 {
 	edict_t	*e2 = trace->ent;
 
-	// custom user filter
-	if( svgame.dllFuncs2.pfnShouldCollide )
+	if(( e1->v.flags|e2->v.flags ) & FL_SPECTATOR )
+		return;
+
+	if( e1->v.groupinfo && e2->v.groupinfo )
 	{
-		if( !svgame.dllFuncs2.pfnShouldCollide( e1, e2 ))
+		if(( svs.groupop == 0 && ( e1->v.groupinfo & e2->v.groupinfo )) == 0 ||
+		(svs.groupop == 1 && (e1->v.groupinfo & e2->v.groupinfo) != 0 ))
 			return;
 	}
 
 	svgame.globals->time = sv.time;
 
-	if( !e1->free && !e2->free && e1->v.solid != SOLID_NOT )
+	if( e1->v.solid != SOLID_NOT )
+	{
+		SV_CopyTraceToGlobal( trace );
 		svgame.dllFuncs.pfnTouch( e1, e2 );
+	}
 
-	if( !e1->free && !e2->free && e2->v.solid != SOLID_NOT )
+	if( e2->v.solid != SOLID_NOT )
+	{
+		SV_CopyTraceToGlobal( trace );
 		svgame.dllFuncs.pfnTouch( e2, e1 );
+	}
 }
 
 /*
