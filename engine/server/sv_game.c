@@ -698,8 +698,6 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 
 	ent->v.classname = className;
 	ent->v.pContainingEntity = ent; // re-link
-
-	VectorSet( ent->v.rendercolor, 255, 255, 255 ); // assume default color
 	
 	// allocate edict private memory (passed by dlls)
 	SpawnEdict = (LINK_ENTITY_FUNC)FS_GetProcAddress( svgame.hInstance, pszClassName );

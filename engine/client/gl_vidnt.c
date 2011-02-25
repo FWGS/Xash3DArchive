@@ -47,6 +47,7 @@ convar_t	*r_height;
 convar_t	*r_speeds;
 convar_t	*r_fullbright;
 convar_t	*r_norefresh;
+convar_t	*r_lighting_extended;
 convar_t	*r_lighting_modulate;
 convar_t	*r_lighting_ambient;
 convar_t	*r_lighting_direct;
@@ -595,7 +596,6 @@ GL_SetDefaultTexState
 static void GL_SetDefaultTexState( void )
 {
 	Mem_Set( glState.currentTextures, -1, MAX_TEXTURE_UNITS * sizeof( *glState.currentTextures ));
-	Mem_Set( glState.currentEnvModes, -1, MAX_TEXTURE_UNITS * sizeof( *glState.currentEnvModes ));
 	Mem_Set( glState.texIdentityMatrix, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texIdentityMatrix ));
 	Mem_Set( glState.genSTEnabled, 0, MAX_TEXTURE_UNITS * sizeof( *glState.genSTEnabled ));
 	Mem_Set( glState.texCoordArrayMode, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texCoordArrayMode ));
@@ -1279,7 +1279,7 @@ static void GL_SetDefaults( void )
 
 	pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 
-	pglEnable( GL_DEPTH_TEST );
+	pglDisable( GL_DEPTH_TEST );
 	pglDisable( GL_CULL_FACE );
 	pglEnable( GL_SCISSOR_TEST );
 	pglDepthFunc( GL_LEQUAL );
@@ -1302,7 +1302,7 @@ static void GL_SetDefaults( void )
 	for( i = glConfig.max_texture_units - 1; i > 0; i-- )
 	{
 		GL_SelectTexture( i );
-		GL_TexEnv( GL_MODULATE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		pglDisable( GL_BLEND );
 		pglDisable( GL_TEXTURE_2D );
 	}
@@ -1311,13 +1311,12 @@ static void GL_SetDefaults( void )
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );
 	pglDisable( GL_POLYGON_OFFSET_FILL );
+	pglAlphaFunc( GL_GEQUAL, 0.666f );
 	pglEnable( GL_TEXTURE_2D );
+	pglShadeModel( GL_FLAT );
 
 	GL_Cull( 0 );
 	GL_FrontFace( 0 );
-
-	GL_SetState( GLSTATE_DEPTHWRITE );
-	GL_TexEnv( GL_MODULATE );
 
 	R_SetTextureParameters();
 
@@ -1378,6 +1377,7 @@ void GL_InitCommands( void )
 	r_speeds = Cvar_Get( "r_speeds", "0", CVAR_ARCHIVE, "shows renderer speeds" );
 	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
 	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable 3D rendering (use with caution)" );
+	r_lighting_extended = Cvar_Get( "r_lighting_extended", "1", CVAR_ARCHIVE, "allow to get lighting from bmodels" );
 	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", CVAR_ARCHIVE, "lightstyles modulate scale" );
 	r_lighting_ambient = Cvar_Get( "r_lighting_ambient", "0.6", 0, "map ambient lighting scale" );
 	r_lighting_direct = Cvar_Get( "r_lighting_direct", "1", 0, "map directed lighting scale" );

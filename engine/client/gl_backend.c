@@ -130,6 +130,36 @@ void GL_SelectTexture( GLenum texture )
 }
 
 /*
+=================
+GL_SelectTexture
+=================
+*/
+void GL_DisableMultitexture( void ) 
+{
+	if( glState.mtexEnabled )
+	{
+		pglDisable( GL_TEXTURE_2D );
+		GL_SelectTexture( GL_TEXTURE0 );
+		glState.mtexEnabled = false;
+	}
+}
+
+/*
+=================
+GL_SelectTexture
+=================
+*/
+void GL_EnableMultitexture(void) 
+{
+	if( GL_Support( GL_ARB_MULTITEXTURE ))
+	{
+		GL_SelectTexture( GL_TEXTURE1 );
+		pglEnable( GL_TEXTURE_2D );
+		glState.mtexEnabled = true;
+	}
+}
+
+/*
 ==============
 GL_DisableAllTexGens
 ==============
@@ -174,20 +204,6 @@ void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t )
 	{
 		pglMTexCoord2fSGIS( texture + GL_TEXTURE0_SGIS, s, t );
 	}
-}
-
-/*
-=================
-GL_TexEnv
-=================
-*/
-void GL_TexEnv( GLenum mode )
-{
-	if( glState.currentEnvModes[glState.activeTMU] == mode )
-		return;
-
-	glState.currentEnvModes[glState.activeTMU] = mode;
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode );
 }
 
 /*
@@ -274,161 +290,65 @@ void GL_FrontFace( GLenum front )
 	glState.frontFace = front;
 }
 
-/*
-=================
-GL_SetState
-=================
-*/
-void GL_SetState( int state )
-{
-	int diff;
-
-	if( glState.in2DMode )
-		state |= GLSTATE_NO_DEPTH_TEST;
-
-	if( state & GLSTATE_NO_DEPTH_TEST )
-		state &= ~( GLSTATE_DEPTHWRITE|GLSTATE_DEPTHFUNC_EQ );
-
-	diff = glState.flags ^ state;
-	if( !diff ) return;
-
-	if( diff & ( GLSTATE_BLEND_MTEX|GLSTATE_SRCBLEND_MASK|GLSTATE_DSTBLEND_MASK ))
-	{
-		if( state & ( GLSTATE_SRCBLEND_MASK|GLSTATE_DSTBLEND_MASK ))
-		{
-			int	blendsrc, blenddst;
-
-			switch( state & GLSTATE_SRCBLEND_MASK )
-			{
-			case GLSTATE_SRCBLEND_ZERO:
-				blendsrc = GL_ZERO;
-				break;
-			case GLSTATE_SRCBLEND_DST_COLOR:
-				blendsrc = GL_DST_COLOR;
-				break;
-			case GLSTATE_SRCBLEND_ONE_MINUS_DST_COLOR:
-				blendsrc = GL_ONE_MINUS_DST_COLOR;
-				break;
-			case GLSTATE_SRCBLEND_SRC_ALPHA:
-				blendsrc = GL_SRC_ALPHA;
-				break;
-			case GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA:
-				blendsrc = GL_ONE_MINUS_SRC_ALPHA;
-				break;
-			case GLSTATE_SRCBLEND_DST_ALPHA:
-				blendsrc = GL_DST_ALPHA;
-				break;
-			case GLSTATE_SRCBLEND_ONE_MINUS_DST_ALPHA:
-				blendsrc = GL_ONE_MINUS_DST_ALPHA;
-				break;
-			case GLSTATE_SRCBLEND_ONE:
-			default:
-				blendsrc = GL_ONE;
-				break;
-			}
-
-			switch( state & GLSTATE_DSTBLEND_MASK )
-			{
-			case GLSTATE_DSTBLEND_ONE:
-				blenddst = GL_ONE;
-				break;
-			case GLSTATE_DSTBLEND_SRC_COLOR:
-				blenddst = GL_SRC_COLOR;
-				break;
-			case GLSTATE_DSTBLEND_ONE_MINUS_SRC_COLOR:
-				blenddst = GL_ONE_MINUS_SRC_COLOR;
-				break;
-			case GLSTATE_DSTBLEND_SRC_ALPHA:
-				blenddst = GL_SRC_ALPHA;
-				break;
-			case GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA:
-				blenddst = GL_ONE_MINUS_SRC_ALPHA;
-				break;
-			case GLSTATE_DSTBLEND_DST_ALPHA:
-				blenddst = GL_DST_ALPHA;
-				break;
-			case GLSTATE_DSTBLEND_ONE_MINUS_DST_ALPHA:
-				blenddst = GL_ONE_MINUS_DST_ALPHA;
-				break;
-			case GLSTATE_DSTBLEND_ZERO:
-			default:
-				blenddst = GL_ZERO;
-				break;
-			}
-
-			if( state & GLSTATE_BLEND_MTEX )
-			{
-				if( glState.currentEnvModes[glState.activeTMU] != GL_REPLACE )
-					pglEnable( GL_BLEND );
-				else pglDisable( GL_BLEND );
-			}
-			else
-			{
-				pglEnable( GL_BLEND );
-			}
-
-			pglBlendFunc( blendsrc, blenddst );
-		}
-		else
-		{
-			pglDisable( GL_BLEND );
-		}
-	}
-
-	if( diff & GLSTATE_ALPHAFUNC )
-	{
-		if( state & GLSTATE_ALPHAFUNC )
-		{
-			if(!( glState.flags & GLSTATE_ALPHAFUNC ))
-				pglEnable( GL_ALPHA_TEST );
-
-			if( state & GLSTATE_AFUNC_GT0 )
-				pglAlphaFunc( GL_GREATER, 0 );
-			else if( state & GLSTATE_AFUNC_LT128 )
-				pglAlphaFunc( GL_LESS, 0.5f );
-			else pglAlphaFunc( GL_GEQUAL, 0.5f );
-		}
-		else
-		{
-			pglDisable( GL_ALPHA_TEST );
-		}
-	}
-
-	if( diff & GLSTATE_DEPTHFUNC_EQ )
-	{
-		if( state & GLSTATE_DEPTHFUNC_EQ )
-			pglDepthFunc( GL_EQUAL );
-		else pglDepthFunc( GL_LEQUAL );
-	}
-
-	if( diff & GLSTATE_DEPTHWRITE )
-	{
-		if( state & GLSTATE_DEPTHWRITE )
-			pglDepthMask( GL_TRUE );
-		else pglDepthMask( GL_FALSE );
-	}
-
-	if( diff & GLSTATE_NO_DEPTH_TEST )
-	{
-		if( state & GLSTATE_NO_DEPTH_TEST )
-			pglDisable( GL_DEPTH_TEST );
-		else pglEnable( GL_DEPTH_TEST );
-	}
-
-	if( diff & GLSTATE_OFFSET_FILL )
-	{
-		if( state & GLSTATE_OFFSET_FILL )
-			pglEnable( GL_POLYGON_OFFSET_FILL );
-		else pglDisable( GL_POLYGON_OFFSET_FILL );
-	}
-
-	glState.flags = state;
-}
-
 void GL_SetRenderMode( int mode )
 {
-	int	state, texEnv;
+	// GoldSrc in 2D mode uses default mode as TransTexture
+	if( glState.in2DMode && mode == kRenderNormal )
+		mode = kRenderTransTexture;
+ 
+	switch( mode )
+	{
+	case kRenderNormal:
+	default:
+		pglDisable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		pglDisable( GL_ALPHA_TEST );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+		break;
+	case kRenderTransColor:
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransAlpha:
+		pglDisable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		pglEnable( GL_ALPHA_TEST );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransTexture:
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderGlow:
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransAdd:
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransInverse:
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	}
+}
 
+void GL_SetSpriteRenderMode( int mode )
+{
 	// GoldSrc in 2D mode uses default mode as TransTexture
 	if( glState.in2DMode && mode == kRenderNormal )
 		mode = kRenderTransTexture;
@@ -437,37 +357,47 @@ void GL_SetRenderMode( int mode )
 	{
 	case kRenderNormal:
 	default:
-		state = GLSTATE_DEPTHWRITE;
-		texEnv = GL_REPLACE;
+		pglDisable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		pglDisable( GL_ALPHA_TEST );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 		break;
 	case kRenderTransColor:
-		state = GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR;
-		texEnv = GL_REPLACE;
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 		break;
 	case kRenderTransAlpha:
-		state = GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
-		texEnv = GL_MODULATE;
-		break;
 	case kRenderTransTexture:
-		state = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-		texEnv = GL_MODULATE;
+		// NOTE: TriAPI doesn't have 'solid' mode
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderGlow:
-		state = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE|GLSTATE_NO_DEPTH_TEST;
-		texEnv = GL_MODULATE;
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransAdd:
-		state = GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE;
-		texEnv = GL_MODULATE;
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransInverse:
-		state = GLSTATE_SRCBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_DSTBLEND_SRC_ALPHA;
-		texEnv = GL_MODULATE;
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	}
-
-	GL_TexEnv( texEnv );
-	GL_SetState( state );
 }
 
 /*

@@ -164,8 +164,11 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		redraw = true;
 	}
 
-	GL_SetState( 0 );
-	GL_TexEnv( GL_REPLACE );
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_FALSE );
+	pglDisable( GL_ALPHA_TEST );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+
 	R_DrawStretchRaw( x, y, width, height, menu.logo_xres, menu.logo_yres, cin_data, redraw );
 }
 

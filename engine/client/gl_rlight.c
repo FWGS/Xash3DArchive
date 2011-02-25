@@ -371,7 +371,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	pnodes = pmodel->nodes;
 	m_pGround = NULL;
 
-	if( gl_test->integer )
+	if( r_lighting_extended->integer )
 	{
 		trace = PM_PlayerTrace( clgame.pmove, (float *)point, end, PM_STUDIO_IGNORE, 0, -1, NULL );
 		m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));

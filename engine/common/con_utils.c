@@ -850,6 +850,7 @@ void Host_WriteConfig( void )
 
 	if( !cls.initialized ) return;
 
+	MsgDev( D_NOTE, "Host_WriteConfig()\n" );
 	f = FS_Open( "config.cfg", "w" );
 	if( f )
 	{
@@ -910,6 +911,7 @@ void Host_WriteOpenGLConfig( void )
 {
 	file_t	*f;
 
+	MsgDev( D_NOTE, "Host_WriteGLConfig()\n" );
 	f = FS_Open( "opengl.cfg", "w" );
 	if( f )
 	{
@@ -934,6 +936,7 @@ void Host_WriteVideoConfig( void )
 {
 	file_t	*f;
 
+	MsgDev( D_NOTE, "Host_WriteVideoConfig()\n" );
 	f = FS_Open( "video.cfg", "w" );
 	if( f )
 	{

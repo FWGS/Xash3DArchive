@@ -3297,7 +3297,7 @@ float Voice_GetControlFloat( VoiceTweakControl iControl )
 static triangleapi_t gTriApi =
 {
 	TRI_API_VERSION,	
-	GL_SetRenderMode,
+	GL_SetSpriteRenderMode,
 	TriBegin,
 	TriEnd,
 	TriColor4f,

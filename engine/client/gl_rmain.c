@@ -24,7 +24,6 @@ static int R_RankForRenderMode( cl_entity_t *ent )
 {
 	switch( ent->curstate.rendermode )
 	{
-	case kRenderTransColor:
 	case kRenderTransTexture:
 	case kRenderTransInverse:
 		return 1;	// draw second
@@ -281,10 +280,6 @@ int R_ComputeFxBlend( cl_entity_t *e )
 		else blend = renderAmt;
 		break;	
 	}
-
-	// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
-	if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
-		e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
 	blend = bound( 0, blend, 255 );
 
 	return blend;
@@ -651,7 +646,11 @@ static void R_SetupGL( void )
 		GL_FrontFace( !glState.frontFace );
 
 	GL_Cull( GL_FRONT );
-	GL_SetState( GLSTATE_DEPTHWRITE );
+
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
+	pglDisable( GL_ALPHA_TEST );
+	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 }
 
 /*
@@ -760,7 +759,7 @@ R_DrawEntitiesOnList
 */
 void R_DrawEntitiesOnList( void )
 {
-	int	i;
+	int	i, numErrors;
 
 	// draw the solid submodels fog
 	R_DrawFog ();
@@ -795,6 +794,13 @@ void R_DrawEntitiesOnList( void )
 
 	CL_DrawBeams( false );
 	clgame.dllFuncs.pfnDrawNormalTriangles();
+
+	numErrors = 0;
+	while( pglGetError() != GL_NO_ERROR )
+		numErrors++;
+
+	if( numErrors )
+		MsgDev( D_ERROR, "invalid gl operation in HUD_DrawNormalTriangles( %i errors )\n", numErrors );
 
 	// don't fogging translucent surfaces
 	pglDisable( GL_FOG );
@@ -831,6 +837,13 @@ void R_DrawEntitiesOnList( void )
 	}
 
 	clgame.dllFuncs.pfnDrawTransparentTriangles ();
+
+	numErrors = 0;
+	while( pglGetError() != GL_NO_ERROR )
+		numErrors++;
+
+	if( numErrors )
+		MsgDev( D_ERROR, "invalid gl operation in HUD_DrawTransparentTriangles( %i errors )\n", numErrors );
 
 	R_DrawViewModel();
 

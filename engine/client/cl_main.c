@@ -1530,11 +1530,14 @@ void Host_ClientFrame( void )
 	cl.oldtime = cl.time;
 	cl.time += host.frametime;
 
-	// menu time (not paused, not clamped)
-	menu.globals->time = host.realtime;
-	menu.globals->frametime = host.realframetime;
-	menu.globals->demoplayback = cls.demoplayback;
-	menu.globals->demorecording = cls.demorecording;
+	if( menu.hInstance )
+	{
+		// menu time (not paused, not clamped)
+		menu.globals->time = host.realtime;
+		menu.globals->frametime = host.realframetime;
+		menu.globals->demoplayback = cls.demoplayback;
+		menu.globals->demorecording = cls.demorecording;
+	}
 
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
@@ -1612,6 +1615,8 @@ void CL_Shutdown( void )
 	// already freed
 	if( host.state == HOST_ERROR ) return;
 	if( !cls.initialized ) return;
+
+	MsgDev( D_NOTE, "CL_Shutdown()\n" );
 
 	Host_WriteOpenGLConfig ();
 	Host_WriteVideoConfig ();

@@ -164,8 +164,9 @@ void R_Set2DMode( qboolean enable )
 		pglLoadIdentity();
 
 		GL_Cull( 0 );
-		GL_SetState( GLSTATE_NO_DEPTH_TEST );
 
+		pglDepthMask( GL_FALSE );
+		pglDisable( GL_DEPTH_TEST );
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 		glState.in2DMode = true;
@@ -174,8 +175,7 @@ void R_Set2DMode( qboolean enable )
 	}
 	else
 	{
-
-		GL_CleanUpTextureUnits( 1 );
+		pglEnable( GL_DEPTH_TEST );
 		pglMatrixMode( GL_MODELVIEW );
 		glState.in2DMode = false;
 	}

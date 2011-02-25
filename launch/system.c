@@ -923,6 +923,7 @@ void Sys_Exit( void )
 {
 	if( Sys.shutdown_issued ) return;
 	Sys.shutdown_issued = true;
+	Sys.app_state = SYS_SHUTDOWN;
 
 	Sys_Shutdown();
 	exit( Sys.error );

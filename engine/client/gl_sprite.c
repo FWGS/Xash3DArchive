@@ -807,17 +807,16 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	mspriteframe_t	*frame, *oldframe;
 	msprite_t		*psprite;
 	model_t		*model;
-	int		alpha;
-	int		i, state = 0;
-	float		angle, dot, sr, cr;
+	int		i, alpha;
+	float		angle, dot, sr, cr, flAlpha;
 	float		lerp = 1.0f, ilerp, scale;
 	vec3_t		v_forward, v_right, v_up;
 	vec3_t		origin;
-	color24		color;
+	vec3_t		color;
 
 	model = e->model;
 	psprite = (msprite_t * )model->cache.data;
-	color.r = color.g = color.b = 255;
+	VectorSet( color, 255.0f, 255.0f, 255.0f );
 
 	VectorCopy( e->origin, origin );	// set render origin
 
@@ -848,49 +847,72 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	r_stats.c_sprite_models_drawn++;
 
 	if( psprite->texFormat == SPR_ALPHTEST )
-		state |= GLSTATE_AFUNC_GE128|GLSTATE_DEPTHWRITE;
+	{
+		pglDepthMask( GL_TRUE );
+		pglEnable( GL_ALPHA_TEST );
+	}
+	else pglDepthMask( GL_FALSE );
+
+	if( e->curstate.rendermode == kRenderGlow )
+		pglDisable( GL_DEPTH_TEST );
 
 	// select properly rendermode
 	switch( e->curstate.rendermode )
 	{
 	case kRenderTransAlpha:
 	case kRenderTransTexture:
-		state |= GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+		pglEnable( GL_BLEND );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		break;
+	case kRenderTransInverse:
+		pglEnable( GL_BLEND );
+		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
 		break;
 	case kRenderGlow:
-		state |= GLSTATE_NO_DEPTH_TEST;
 	case kRenderTransAdd:
-		state |= GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE;
+		pglEnable( GL_BLEND );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		break;
 	case kRenderNormal:
-	default:	state |= GLSTATE_DEPTHWRITE;
+	default:
+		pglDisable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
 		break;
 	}
 
-	if( e->curstate.rendermode == kRenderNormal )
-		GL_TexEnv( GL_REPLACE );
-	else GL_TexEnv( GL_MODULATE );
-
-	GL_SetState( state );
-
+	// all sprites can have color
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+          
 	if( psprite->texFormat == SPR_ALPHTEST )
 	{
-		vec3_t	brightness;
+		color24	lightColor;
+		qboolean	invLight;
+		float	f;
 
-		R_LightForPoint( origin, &color, false, sprite_radius );
-		brightness[0] = color.r * ( 1.0f / 255.0f );
-		brightness[1] = color.g * ( 1.0f / 255.0f );
-		brightness[2] = color.b * ( 1.0f / 255.0f );
+		invLight = (e->curstate.effects & EF_INVLIGHT) ? true : false;
+		R_LightForPoint( origin, &lightColor, invLight, sprite_radius );
+		color[0] = (float)lightColor.r * ( 1.0f / 255.0f );
+		color[1] = (float)lightColor.g * ( 1.0f / 255.0f );
+		color[2] = (float)lightColor.b * ( 1.0f / 255.0f );
 
-		color.r = e->curstate.rendercolor.r * brightness[0];
-		color.g = e->curstate.rendercolor.g * brightness[1];
-		color.b = e->curstate.rendercolor.b * brightness[2];
+		// add basecolor
+		color[0] += (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
+		color[1] += (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
+		color[2] += (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
+
+		// renormalize color
+		f = max( max( color[0], color[1] ), color[2] );
+		if( f > 1.0f ) VectorScale( color, ( 1.0f / f ), color );
 	}
 	else
 	{
-		color.r = e->curstate.rendercolor.r;
-		color.g = e->curstate.rendercolor.g;
-		color.b = e->curstate.rendercolor.b;
+		// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
+		if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
+			e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
+
+		color[0] = (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
+		color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
+		color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
 	}
 
 	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
@@ -943,13 +965,15 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	}
 
+	flAlpha = (float)alpha * ( 1.0f / 255.0f );
+
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_NONE );
 		
 	if( oldframe == frame )
 	{
 		// draw the single non-lerped frame
-		pglColor4ub( color.r, color.g, color.b, alpha );
+		pglColor4f( color[0], color[1], color[2], flAlpha );
 		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 	}
 	else
@@ -960,13 +984,13 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 		if( ilerp != 0 )
 		{
-			pglColor4ub( color.r, color.g, color.b, alpha * ilerp );
+			pglColor4f( color[0], color[1], color[2], flAlpha * ilerp );
 			R_DrawSpriteQuad( oldframe, origin, v_right, v_up, scale );
 		}
 
 		if( lerp != 0 )
 		{
-			pglColor4ub( color.r, color.g, color.b, alpha * lerp );
+			pglColor4f( color[0], color[1], color[2], flAlpha * lerp );
 			R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 		}
 	}
@@ -974,5 +998,12 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_FRONT );
 
+	if( e->curstate.rendermode == kRenderGlow )
+		pglEnable( GL_DEPTH_TEST );
+
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
+	pglDisable( GL_ALPHA_TEST );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglColor4ub( 255, 255, 255, 255 );
 }

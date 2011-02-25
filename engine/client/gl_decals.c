@@ -852,21 +852,24 @@ void DrawSingleDecal( decal_t *pDecal, msurface_t *fa )
 void DrawSurfaceDecals( msurface_t *fa )
 {
 	decal_t	*p;
-	int	oldState;
-	int	oldTexEnv;
 
 	if( !fa->pdecals ) return;
 
-	oldState = glState.flags;
-	oldTexEnv = glState.currentEnvModes[glState.activeTMU];
-	GL_SetState( GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA|GLSTATE_OFFSET_FILL );
-	GL_TexEnv( GL_MODULATE ); // receive renderamt from bmodels
+	pglEnable( GL_BLEND );
+	pglDepthMask( GL_FALSE );
+	pglDisable( GL_ALPHA_TEST );
+	pglEnable( GL_POLYGON_OFFSET_FILL );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 	for( p = fa->pdecals; p; p = p->pnext )
 		DrawSingleDecal( p, fa );
 
-	GL_SetState( oldState );
-	GL_TexEnv( oldTexEnv );
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
+	pglDisable( GL_ALPHA_TEST );
+	pglDisable( GL_POLYGON_OFFSET_FILL );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 }
 
 /*

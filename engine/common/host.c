@@ -434,7 +434,7 @@ void Host_Error( const char *error, ... )
 
 	CL_WriteMessageHistory (); // before com.error call
 
-	if( host.framecount < 3 || host.state == HOST_SHUTDOWN )
+	if( host.framecount < 3 )
 	{
 		SV_SysError( hosterror1 );
 		com.error( "Host_InitError: %s", hosterror1 );
@@ -445,12 +445,18 @@ void Host_Error( const char *error, ... )
 		com.error( "Host_MultiError: %s", hosterror2 );
 		return;
 	}
-	else Msg( "Host_Error: %s", hosterror1 );
+	else
+	{
+		Msg( "Host_Error: %s", hosterror1 );
+		SV_SysError( hosterror1 );
+	}
+
+	// host is shutting down. don't invoke infinite loop
+	if( host.state == HOST_SHUTDOWN ) return;
 
 	if( recursive )
 	{ 
 		Msg( "Host_RecursiveError: %s", hosterror2 );
-		SV_SysError( hosterror1 );
 		com.error( hosterror1 );
 		return; // don't multiple executes
 	}

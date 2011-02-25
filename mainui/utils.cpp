@@ -569,8 +569,8 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 	{
 		if((menuCommon_s *)sl != (menuCommon_s *)UI_ItemAtCursor(sl->generic.parent))
 		{
-			UI_DrawPic( upX, upY, arrowWidth, arrowHeight, sl->generic.color, sl->upArrow );
-			UI_DrawPic( downX, downY, arrowWidth, arrowHeight, sl->generic.color, sl->downArrow );
+			UI_DrawPic( upX, upY, arrowWidth, arrowHeight, uiColorWhite, sl->upArrow );
+			UI_DrawPic( downX, downY, arrowWidth, arrowHeight, uiColorWhite, sl->downArrow );
 		}
 		else
 		{
@@ -580,14 +580,14 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 
 			if(!( sl->generic.flags & QMF_FOCUSBEHIND ))
 			{
-				UI_DrawPic( upX, upY, arrowWidth, arrowHeight, sl->generic.color, sl->upArrow );
-				UI_DrawPic( downX, downY, arrowWidth, arrowHeight, sl->generic.color, sl->downArrow );
+				UI_DrawPic( upX, upY, arrowWidth, arrowHeight, uiColorWhite, sl->upArrow );
+				UI_DrawPic( downX, downY, arrowWidth, arrowHeight, uiColorWhite, sl->downArrow );
 			}
 
 			if( sl->generic.flags & QMF_HIGHLIGHTIFFOCUS )
 			{
-				UI_DrawPic( upX, upY, arrowWidth, arrowHeight, (upFocus) ? sl->generic.focusColor : sl->generic.color, (upFocus) ? sl->upArrowFocus : sl->upArrow );
-				UI_DrawPic( downX, downY, arrowWidth, arrowHeight, (downFocus) ? sl->generic.focusColor : sl->generic.color, (downFocus) ? sl->downArrowFocus : sl->downArrow );
+				UI_DrawPic( upX, upY, arrowWidth, arrowHeight, uiColorWhite, (upFocus) ? sl->upArrowFocus : sl->upArrow );
+				UI_DrawPic( downX, downY, arrowWidth, arrowHeight, uiColorWhite, (downFocus) ? sl->downArrowFocus : sl->downArrow );
 			}
 			else if( sl->generic.flags & QMF_PULSEIFFOCUS )
 			{

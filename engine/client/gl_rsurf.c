@@ -383,6 +383,7 @@ void R_BlendLightmaps( void )
 		{
 		case kRenderTransTexture:
 		case kRenderTransInverse:
+		case kRenderTransColor:
 		case kRenderTransAdd:
 		case kRenderGlow:
 			return; // no lightmaps
@@ -391,8 +392,12 @@ void R_BlendLightmaps( void )
 
 	if( !r_lightmap->integer )
 	{
-		GL_TexEnv( GL_MODULATE );
-		GL_SetState( GLSTATE_SRCBLEND_ZERO|GLSTATE_DSTBLEND_SRC_COLOR|GLSTATE_DEPTHFUNC_EQ );
+		pglEnable( GL_BLEND );
+		pglDepthMask( GL_FALSE );
+		pglDepthFunc( GL_EQUAL );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	}
 
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
@@ -418,8 +423,11 @@ void R_BlendLightmaps( void )
 		}
 	}
 
-	GL_TexEnv( GL_REPLACE );
-	GL_SetState( GLSTATE_DEPTHWRITE );
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
+	pglDepthFunc( GL_LEQUAL );
+	pglDisable( GL_ALPHA_TEST );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 }
 
 /*
@@ -435,8 +443,11 @@ void R_RenderFullbrights( void )
 	if( !draw_fullbrights )
 		return;
 
-	GL_SetState( GLSTATE_SRCBLEND_ONE|GLSTATE_DSTBLEND_ONE );
-	GL_TexEnv( GL_MODULATE );
+	pglEnable( GL_BLEND );
+	pglDepthMask( GL_FALSE );
+	pglDisable( GL_ALPHA_TEST );
+	pglBlendFunc( GL_ONE, GL_ONE );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 	for( i = 1; i < MAX_TEXTURES; i++ )
 	{
@@ -454,7 +465,11 @@ void R_RenderFullbrights( void )
 		fullbright_polys[i] = NULL;		
 	}
 
-	GL_SetState( GLSTATE_DEPTHWRITE );
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
+	pglDisable( GL_ALPHA_TEST );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+
 	draw_fullbrights = false;
 }
 
@@ -788,9 +803,12 @@ void R_DrawWaterSurfaces( void )
 	pglMatrixMode( GL_MODELVIEW );
 	GL_LoadMatrix( RI.worldviewMatrix );
 
-	GL_SetState( GLSTATE_SRCBLEND_SRC_ALPHA|GLSTATE_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+	pglEnable( GL_BLEND );
+	pglDepthMask( GL_FALSE );
+	pglDisable( GL_ALPHA_TEST );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	pglColor4f( 1.0f, 1.0f, 1.0f, r_wateralpha->value );
-	GL_TexEnv( GL_MODULATE );
 
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{
@@ -812,9 +830,11 @@ void R_DrawWaterSurfaces( void )
 		t->texturechain = NULL;
 	}
 
-	GL_SetState( GLSTATE_DEPTHWRITE );
-	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-	GL_TexEnv( GL_REPLACE );
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
+	pglDisable( GL_ALPHA_TEST );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -1044,6 +1064,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		pglEnable( GL_TEXTURE_2D );
 
 	R_BlendLightmaps();
+	R_RenderFullbrights();
 	R_LoadIdentity();	// restore worldmatrix
 }
 

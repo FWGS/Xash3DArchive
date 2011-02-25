@@ -22,7 +22,8 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 {
 	model_t	*mod = Mod_Handle( ent->curstate.modelindex );
 
-	if( !mod ) return false;
+	if( !mod || mod->type == mod_sprite )
+		return false;
 	
 	pe->player = ent->player;
 

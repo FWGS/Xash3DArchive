@@ -1666,7 +1666,8 @@ static void R_StudioDrawPoints( void )
 		{
 			GL_SetRenderMode( g_iRenderMode );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
-			if( g_iRenderMode == kRenderNormal ) GL_TexEnv( GL_MODULATE );
+			if( g_iRenderMode == kRenderNormal )
+				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		}
 
 		if(!( g_nFaceFlags & STUDIO_NF_CHROME ))
@@ -1989,7 +1990,7 @@ static void R_StudioSetupRenderer( int rendermode )
 		if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
           }
 
-	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse + 1 );
+	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse );
 	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
 }
 

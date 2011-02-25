@@ -27,7 +27,8 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 {
 	model_t	*mod = Mod_Handle( ed->v.modelindex );
 
-	if( !mod ) return false;
+	if( !mod || mod->type == mod_sprite )
+		return false;
 
 	pe->player = false;
 

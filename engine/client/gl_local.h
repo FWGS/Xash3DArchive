@@ -249,11 +249,12 @@ void GL_LoadTexMatrix( const matrix4x4 m );
 void GL_LoadMatrix( const matrix4x4 source );
 void GL_TexGen( GLenum coord, GLenum mode );
 void GL_SelectTexture( GLenum texture );
+void GL_DisableMultitexture( void );
+void GL_EnableMultitexture( void );
 void GL_LoadIdentityTexMatrix( void );
 void GL_SetRenderMode( int mode );
+void GL_SetSpriteRenderMode( int mode );
 void GL_FrontFace( GLenum front );
-void GL_SetState( int state );
-void GL_TexEnv( GLenum mode );
 void GL_Cull( GLenum cull );
 void R_ShowTextures( void );
 
@@ -476,8 +477,6 @@ typedef struct
 
 typedef struct
 {
-	int		flags;
-
 	word		gammaRamp[768];		// current gamma ramp
 	word		stateRamp[768];		// original gamma ramp
 
@@ -489,7 +488,6 @@ typedef struct
 
 	int		activeTMU;
 	GLuint		currentTextures[MAX_TEXTURE_UNITS];
-	GLenum		currentEnvModes[MAX_TEXTURE_UNITS];
 	GLboolean		texIdentityMatrix[MAX_TEXTURE_UNITS];
 	GLint		genSTEnabled[MAX_TEXTURE_UNITS];	// 0 - disabled, OR 1 - S, OR 2 - T, OR 4 - R
 	GLint		texCoordArrayMode[MAX_TEXTURE_UNITS];	// 0 - disabled, 1 - enabled, 2 - cubemap
@@ -497,6 +495,7 @@ typedef struct
 	int		faceCull;
 	int		frontFace;
 
+	qboolean		mtexEnabled;	// classic Quake multi-texturing (2 units)
 	qboolean		stencilEnabled;
 	qboolean		in2DMode;
 } glstate_t;
@@ -548,6 +547,7 @@ extern convar_t	*r_height;
 extern convar_t	*r_speeds;
 extern convar_t	*r_fullbright;
 extern convar_t	*r_norefresh;
+extern convar_t	*r_lighting_extended;
 extern convar_t	*r_lighting_modulate;
 extern convar_t	*r_lighting_ambient;
 extern convar_t	*r_lighting_direct;

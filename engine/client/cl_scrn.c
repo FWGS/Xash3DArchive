@@ -406,6 +406,7 @@ void SCR_Init( void )
 {
 	if( scr_init ) return;
 
+	MsgDev( D_NOTE, "SCR_Init()\n" );
 	scr_centertime = Cvar_Get( "scr_centertime", "2.5", 0, "centerprint hold time" );
 	scr_printspeed = Cvar_Get( "scr_printspeed", "8", 0, "centerprint speed of print" );
 	cl_levelshot_name = Cvar_Get( "cl_levelshot_name", "*black", 0, "contains path to current levelshot" );
@@ -447,6 +448,7 @@ void SCR_Shutdown( void )
 {
 	if( !scr_init ) return;
 
+	MsgDev( D_NOTE, "SCR_Shutdown()\n" );
 	Cmd_RemoveCommand( "timerefresh" );
 	Cmd_RemoveCommand( "skyname" );
 	Cmd_RemoveCommand( "viewpos" );
