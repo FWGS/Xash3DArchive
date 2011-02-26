@@ -120,7 +120,7 @@ static void UI_Credits_DrawFunc( void )
 	int	color = 0;
 
 	// draw the background first
-	if( !uiCredits.finalCredits )
+	if( !uiCredits.finalCredits && !CVAR_GET_FLOAT( "sv_background" ))
 		UI_DrawPic( 0, 0, 1024 * uiStatic.scaleX, 768 * uiStatic.scaleY, uiColorWhite, ART_BACKGROUND );
 	// otherwise running on cutscene
 

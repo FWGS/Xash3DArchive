@@ -165,7 +165,6 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 	}
 
 	pglDisable( GL_BLEND );
-	pglDepthMask( GL_FALSE );
 	pglDisable( GL_ALPHA_TEST );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 
@@ -403,7 +402,7 @@ pfnPIC_Draw
 */
 void pfnPIC_Draw( int x, int y, int width, int height, const wrect_t *prc )
 {
-	GL_SetRenderMode( kRenderNormal );
+	GL_SetRenderMode( kRenderTransTexture );
 	PIC_DrawGeneric( x, y, width, height, prc );
 }
 

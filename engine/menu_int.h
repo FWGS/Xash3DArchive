@@ -92,7 +92,7 @@ typedef struct ui_enginefuncs_s
 	void*	(*pfnGetProcAddress)( void *hInstance, const char *name );
 	void	(*pfnFreeLibrary)( void *hInstance );
 	void	(*pfnHostError)( const char *szFmt, ... );
-	int	(*pfnFileExists)( const char *filename );
+	int	(*pfnFileExists)( const char *filename, int gamedironly );
 	void	(*pfnGetGameDir)( char *szGetGameDir );
 
 	// vgui handlers

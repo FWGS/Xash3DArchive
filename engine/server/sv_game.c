@@ -4460,6 +4460,7 @@ void SV_UnloadProgs( void )
 
 	// now we can unload cvars
 	Cvar_FullSet( "host_gameloaded", "0", CVAR_INIT );
+	Cvar_FullSet( "sv_background", "0", CVAR_READ_ONLY );
 
 	// must unlink all game cvars,
 	// before pointers on them will be lost...

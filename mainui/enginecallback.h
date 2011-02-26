@@ -54,7 +54,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define R_RenderFrame	(*g_engfuncs.pfnRenderScene)
 
 #define LOAD_FILE		(*g_engfuncs.COM_LoadFile)
-#define FILE_EXISTS		(*g_engfuncs.pfnFileExists)
+#define FILE_EXISTS( file )	(*g_engfuncs.pfnFileExists)( file, FALSE )
 #define FREE_FILE		(*g_engfuncs.COM_FreeFile)
 #define GET_GAME_DIR	(*g_engfuncs.pfnGetGameDir)
 #define LOAD_LIBRARY	(*g_engfuncs.pfnLoadLibrary)
@@ -91,7 +91,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define GET_SAVE_COMMENT	(*g_engfuncs.pfnGetSaveComment)
 #define GET_DEMO_COMMENT	(*g_engfuncs.pfnGetDemoComment)
 
-#define CL_IsActive		(*g_engfuncs.pfnClientInGame)
+#define CL_IsActive()	(g_engfuncs.pfnClientInGame() && !CVAR_GET_FLOAT( "sv_background" ))
 
 inline void PIC_Set( HIMAGE hPic, int r, int g, int b )
 {

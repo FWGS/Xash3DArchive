@@ -67,6 +67,7 @@
 
 #define UI_MAXGAMES			100	// slots for savegame/demos
 #define UI_MAX_SERVERS		32
+#define UI_MAX_BGMAPS		32
 
 #define MAX_HINT_TEXT		512
 
@@ -287,6 +288,9 @@ typedef struct
 	char		serverNames[UI_MAX_SERVERS][80];
 	int		numServers;
 	int		updateServers;	// true is receive new info about servers
+
+	char		bgmaps[UI_MAX_BGMAPS][80];
+	int		bgmapcount;
 
 	HIMAGE		hFont;		// mainfont
 

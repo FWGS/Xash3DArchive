@@ -292,55 +292,44 @@ void GL_FrontFace( GLenum front )
 
 void GL_SetRenderMode( int mode )
 {
-	// GoldSrc in 2D mode uses default mode as TransTexture
-	if( glState.in2DMode && mode == kRenderNormal )
-		mode = kRenderTransTexture;
- 
 	switch( mode )
 	{
 	case kRenderNormal:
 	default:
 		pglDisable( GL_BLEND );
-		pglDepthMask( GL_TRUE );
 		pglDisable( GL_ALPHA_TEST );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 		break;
 	case kRenderTransColor:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_TRUE );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransAlpha:
 		pglDisable( GL_BLEND );
-		pglDepthMask( GL_TRUE );
 		pglEnable( GL_ALPHA_TEST );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransTexture:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderGlow:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransInverse:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
@@ -349,22 +338,16 @@ void GL_SetRenderMode( int mode )
 
 void GL_SetSpriteRenderMode( int mode )
 {
-	// GoldSrc in 2D mode uses default mode as TransTexture
-	if( glState.in2DMode && mode == kRenderNormal )
-		mode = kRenderTransTexture;
-
 	switch( mode )
 	{
 	case kRenderNormal:
 	default:
 		pglDisable( GL_BLEND );
-		pglDepthMask( GL_TRUE );
 		pglDisable( GL_ALPHA_TEST );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 		break;
 	case kRenderTransColor:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_TRUE );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
@@ -373,27 +356,23 @@ void GL_SetSpriteRenderMode( int mode )
 	case kRenderTransTexture:
 		// NOTE: TriAPI doesn't have 'solid' mode
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderGlow:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransInverse:
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
 		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;

@@ -40,7 +40,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 		ent->curstate.scale = 1.0f;
 
 	if( ent->player ) // stupid Half-Life bug
-		ent->angles[PITCH] = -ent->angles[PITCH];
+		ent->angles[PITCH] = -ent->angles[PITCH] / 3;
 
 	// make me lerp
 	if( ent->curstate.eflags & EFLAG_SLERP )
@@ -658,7 +658,6 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		// getting a valid frame message ends the connection process
 		VectorCopy( player->origin, cl.predicted_origin );
 		VectorCopy( player->angles, cl.predicted_angles );
-		Cbuf_AddText( "exec config.cfg\n" );	// GoldSrc rules
 	}
 
 	CL_CheckPredictionError();

@@ -267,6 +267,12 @@ void SV_MapBackground_f( void )
 		return;
 	}
 
+	if( sv.state == ss_active && !sv.background )
+	{
+		Msg( "SV_NewMap: can't set background map while game is active\n" );
+		return;
+	}
+
 	// hold mapname to other place
 	com.strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
 	flags = SV_MapIsValid( mapname, GI->sp_entity, NULL );

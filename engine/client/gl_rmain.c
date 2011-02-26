@@ -648,7 +648,6 @@ static void R_SetupGL( void )
 	GL_Cull( GL_FRONT );
 
 	pglDisable( GL_BLEND );
-	pglDepthMask( GL_TRUE );
 	pglDisable( GL_ALPHA_TEST );
 	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 }
@@ -761,6 +760,8 @@ void R_DrawEntitiesOnList( void )
 {
 	int	i, numErrors;
 
+	glState.drawTrans = false;
+
 	// draw the solid submodels fog
 	R_DrawFog ();
 
@@ -804,6 +805,8 @@ void R_DrawEntitiesOnList( void )
 
 	// don't fogging translucent surfaces
 	pglDisable( GL_FOG );
+	pglDepthMask( GL_FALSE );
+	glState.drawTrans = true;
 
 	CL_DrawBeams( true );
 	CL_DrawParticles();
@@ -845,6 +848,8 @@ void R_DrawEntitiesOnList( void )
 	if( numErrors )
 		MsgDev( D_ERROR, "invalid gl operation in HUD_DrawTransparentTriangles( %i errors )\n", numErrors );
 
+	glState.drawTrans = false;
+	pglDepthMask( GL_TRUE );
 	R_DrawViewModel();
 
 	CL_ExtraUpdate();

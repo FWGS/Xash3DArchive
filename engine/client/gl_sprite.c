@@ -851,7 +851,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglDepthMask( GL_TRUE );
 		pglEnable( GL_ALPHA_TEST );
 	}
-	else pglDepthMask( GL_FALSE );
 
 	if( e->curstate.rendermode == kRenderGlow )
 		pglDisable( GL_DEPTH_TEST );
@@ -876,7 +875,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	case kRenderNormal:
 	default:
 		pglDisable( GL_BLEND );
-		pglDepthMask( GL_TRUE );
 		break;
 	}
 
@@ -1001,9 +999,13 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderGlow )
 		pglEnable( GL_DEPTH_TEST );
 
+	if( psprite->texFormat == SPR_ALPHTEST )
+	{
+		pglDepthMask( GL_FALSE );
+		pglDisable( GL_ALPHA_TEST );
+	}
+
 	pglDisable( GL_BLEND );
-	pglDepthMask( GL_TRUE );
-	pglDisable( GL_ALPHA_TEST );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglColor4ub( 255, 255, 255, 255 );
 }

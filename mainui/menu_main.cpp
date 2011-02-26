@@ -101,6 +101,9 @@ static void UI_Background_Ownerdraw( void *self )
 {
 	menuCommon_s	*item = (menuCommon_s *)self;
 
+	// map has background
+	if( CVAR_GET_FLOAT( "sv_background" )) return;
+
 	UI_DrawPic( item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic );
 
 	if( GetLogoLength() <= 0.1 || GetLogoWidth() <= 32 )

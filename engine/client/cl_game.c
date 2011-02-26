@@ -1462,7 +1462,7 @@ pfnSPR_Draw
 */
 static void pfnSPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
-	GL_SetRenderMode( kRenderNormal );
+	GL_SetRenderMode( kRenderTransAdd );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 

@@ -714,6 +714,23 @@ void UI_RefreshServerList( void )
 	CLIENT_COMMAND( FALSE, "localservers\n" );
 }
 
+/*
+=================
+UI_StartBackGroundMap
+=================
+*/
+void UI_StartBackGroundMap( void )
+{
+	if( !uiStatic.bgmapcount || CVAR_GET_FLOAT( "sv_background" ))
+		return;
+
+	int bgmapid = RANDOM_LONG( 0, uiStatic.bgmapcount - 1 );
+
+	char cmd[128];
+	sprintf( cmd, "map_background %s\n", uiStatic.bgmaps[bgmapid] );
+
+	CLIENT_COMMAND( FALSE, cmd );
+}
 
 // =====================================================================
 
@@ -859,6 +876,7 @@ void UI_UpdateMenu( float flTime )
                     
 		if( first )
 		{
+			UI_StartBackGroundMap ();
 			BACKGROUND_TRACK( "gamestartup.mp3", NULL );
 			first = FALSE;
 		}
@@ -1223,6 +1241,36 @@ void UI_ApplyCustomColors( void )
 	FREE_FILE( afile );
 }
 
+static void UI_LoadBackgroundMapList( void )
+{
+	if( !g_engfuncs.pfnFileExists( "scripts/chapterbackgrounds.txt", TRUE ))
+		return;
+
+	char *afile = (char *)LOAD_FILE( "scripts/chapterbackgrounds.txt", NULL );
+	char *pfile = afile;
+	char token[1024];
+
+	uiStatic.bgmapcount = 0;
+
+	if( !afile )
+	{
+		Con_Printf( "UI_LoadBackgroundMapList: chapterbackgrounds.txt not found\n" );
+		return;
+	}
+
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
+	{
+		// skip the numbers (old format list)
+		if( isdigit( token[0] )) continue;
+
+		strncpy( uiStatic.bgmaps[uiStatic.bgmapcount], token, sizeof( uiStatic.bgmaps[0] ));
+		if( ++uiStatic.bgmapcount > UI_MAX_BGMAPS )
+			break; // list is full
+	}
+
+	FREE_FILE( afile );
+}
+
 /*
 =================
 UI_VidInit
@@ -1249,6 +1297,9 @@ int UI_VidInit( void )
 
 	// trying to load colors.lst
 	UI_ApplyCustomColors ();
+
+	// trying to load chapterbackgrounds.txt
+	UI_LoadBackgroundMapList ();
 
 	// register ui font
 	uiStatic.hFont = PIC_Load( "menufont", font_tga, sizeof( font_tga ));

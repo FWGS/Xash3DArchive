@@ -175,6 +175,7 @@ void R_Set2DMode( qboolean enable )
 	}
 	else
 	{
+		pglDepthMask( GL_TRUE );
 		pglEnable( GL_DEPTH_TEST );
 		pglMatrixMode( GL_MODELVIEW );
 		glState.in2DMode = false;

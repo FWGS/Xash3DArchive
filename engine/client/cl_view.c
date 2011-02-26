@@ -34,6 +34,7 @@ void V_SetupRefDef( void )
 
 	clent = CL_GetLocalPlayer ();
 
+	clgame.entities->curstate.scale = clgame.movevars.waveHeight;
 	VectorCopy( cl.frame.local.client.punchangle, cl.refdef.punchangle );
 	clgame.viewent.curstate.modelindex = cl.frame.local.client.viewmodel;
 	clgame.viewent.model = Mod_Handle( clgame.viewent.curstate.modelindex );

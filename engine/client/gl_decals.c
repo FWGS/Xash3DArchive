@@ -851,25 +851,33 @@ void DrawSingleDecal( decal_t *pDecal, msurface_t *fa )
 
 void DrawSurfaceDecals( msurface_t *fa )
 {
-	decal_t	*p;
+	decal_t		*p;
+	cl_entity_t	*e;
 
 	if( !fa->pdecals ) return;
 
-	pglEnable( GL_BLEND );
-	pglDepthMask( GL_FALSE );
-	pglDisable( GL_ALPHA_TEST );
+	e = RI.currententity;
+	ASSERT( e != NULL );
+
+	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
+	{
+		pglDepthMask( GL_FALSE );
+		pglEnable( GL_BLEND );
+	}
+
 	pglEnable( GL_POLYGON_OFFSET_FILL );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 	for( p = fa->pdecals; p; p = p->pnext )
 		DrawSingleDecal( p, fa );
 
-	pglDisable( GL_BLEND );
-	pglDepthMask( GL_TRUE );
-	pglDisable( GL_ALPHA_TEST );
+	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
+	{
+		pglDepthMask( GL_TRUE );
+		pglDisable( GL_BLEND );
+	}
+
 	pglDisable( GL_POLYGON_OFFSET_FILL );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 }
 
 /*

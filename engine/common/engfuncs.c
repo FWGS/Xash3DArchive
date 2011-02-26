@@ -260,9 +260,9 @@ pfnFileExists
 
 =============
 */
-int pfnFileExists( const char *filename )
+int pfnFileExists( const char *filename, int gamedironly )
 {
-	return FS_FileExists( filename );
+	return FS_FileExistsEx( filename, gamedironly );
 }
 
 /*

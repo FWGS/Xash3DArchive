@@ -632,6 +632,7 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 	SV_DeactivateServer ();
 
 	sv.loadgame = loadGame;
+	sv.background = false;
 
 	if( !SV_SpawnServer( mapName, NULL ))
 		return false;

@@ -649,7 +649,7 @@ static qboolean SV_AllowToPush( edict_t *check, edict_t *pusher, const vec3_t mi
 
 	oldsolid = pusher->v.solid;
 	pusher->v.solid = SOLID_NOT;
-	block = SV_TestEntityPosition( check );
+	block = SV_TestEntityPosition( check, pusher );
 	pusher->v.solid = oldsolid;
 	if( block ) return false;
 
@@ -665,7 +665,7 @@ static qboolean SV_AllowToPush( edict_t *check, edict_t *pusher, const vec3_t mi
 			return false;
 
 		// see if the ent's bbox is inside the pusher's final position
-		if( !SV_TestEntityPosition( check ))
+		if( !SV_TestEntityPosition( check, NULL ))
 			return false;
 	}
 
@@ -782,7 +782,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 			continue;
 
 		pusher->v.solid = SOLID_NOT;
-		block = SV_TestEntityPosition( check );
+		block = SV_TestEntityPosition( check, pusher );
 		pusher->v.solid = oldsolid;
 		if( block ) continue;
 
@@ -798,7 +798,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 				continue;
 
 			// see if the ent's bbox is inside the pusher's final position
-			if( !SV_TestEntityPosition( check ))
+			if( !SV_TestEntityPosition( check, NULL ))
 				continue;
 		}
 
@@ -818,7 +818,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( SV_TestEntityPosition( check ) && block )
+		if( SV_TestEntityPosition( check, NULL ) && block )
 		{	
 			if( !SV_CanBlock( check ))
 				continue;
@@ -896,7 +896,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 			continue;
 
 		pusher->v.solid = SOLID_NOT;
-		block = SV_TestEntityPosition( check );
+		block = SV_TestEntityPosition( check, pusher );
 		pusher->v.solid = oldsolid;
 		if( block ) continue;
 
@@ -912,7 +912,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 				continue;
 
 			// see if the ent's bbox is inside the pusher's final position
-			if( !SV_TestEntityPosition( check ))
+			if( !SV_TestEntityPosition( check, NULL ))
 				continue;
 		}
 		
@@ -943,7 +943,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
-		if( SV_TestEntityPosition( check ) && block )
+		if( SV_TestEntityPosition( check, NULL ) && block )
 		{	
 			if( !SV_CanBlock( check ))
 				continue;

@@ -1645,11 +1645,13 @@ static void R_StudioDrawPoints( void )
 		if( flags & STUDIO_NF_TRANSPARENT )
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
+			pglDepthMask( GL_TRUE );
 			alpha = 1.0f;
 		}
 		else if(( flags & STUDIO_NF_ADDITIVE ) || ( g_nFaceFlags & STUDIO_NF_CHROME ))
 		{
 			GL_SetRenderMode( kRenderTransAdd );
+			pglDepthMask( GL_FALSE );
 			alpha = 0.5f;
 
 			if( g_nFaceFlags & STUDIO_NF_CHROME )
@@ -1668,6 +1670,9 @@ static void R_StudioDrawPoints( void )
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 			if( g_iRenderMode == kRenderNormal )
 				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+			if( !glState.drawTrans )
+				pglDepthMask( GL_TRUE );
+			else pglDepthMask( GL_FALSE );
 		}
 
 		if(!( g_nFaceFlags & STUDIO_NF_CHROME ))
@@ -2011,10 +2016,12 @@ static void R_StudioRestoreRenderer( void )
 		if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
 	}
 
-	GL_SetRenderMode( kRenderNormal );
-	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-	pglScalef( 1.0f, 1.0f, 1.0f );
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglShadeModel( GL_FLAT );
+
+	if( !glState.drawTrans )
+		pglDepthMask( GL_TRUE );
+	else pglDepthMask( GL_FALSE );
 }
 
 /*

@@ -416,7 +416,6 @@ void CL_ParseMovevars( sizebuf_t *msg )
 		R_SetupSky( clgame.movevars.skyName );
 
 	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
-	clgame.entities->curstate.scale = clgame.movevars.waveHeight;
 }
 
 /*
@@ -588,7 +587,6 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	// wipe the client_t struct
 	CL_ClearState();
-	UI_SetActiveMenu( false );
 	cls.state = ca_connected;
 
 	// parse protocol version number
@@ -606,6 +604,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	com.strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 	cl.background = BF_ReadOneBit( msg );
+
+	UI_SetActiveMenu( cl.background );
 
 	if( cl.playernum & 128 )
 	{

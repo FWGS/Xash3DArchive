@@ -1,4 +1,4 @@
-build ????
+build 1482
 
 Engine: fixed critical bug
 Launch: remove all built-in tools
@@ -9,6 +9,8 @@ Engine: fixed lag on rpg laserspot
 Engine: added weapon and movement prediction (may be bugly, use with caution)
 GameUI: added pfnRandomLong and pfnRandomFloat built-ins (and keep compatibility with old versions)
 Engine: added map_background (special command for loading background maps like in Source Engine)
+GameUI: added support for chaptermapbackground.txt script-file (random choose background maps)
+Render: fix some rendering bugs for mods with custom renderer (Paranoia, HLFX etc)
 
 build 1433
 

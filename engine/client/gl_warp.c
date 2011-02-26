@@ -338,7 +338,6 @@ void R_DrawSkyBox( void )
 	// don't fogging skybox (this fix old Half-Life bug)
 	pglDisable( GL_FOG );
 	pglDisable( GL_BLEND );
-	pglDepthMask( GL_TRUE );
 	pglDisable( GL_ALPHA_TEST );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 

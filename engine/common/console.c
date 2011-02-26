@@ -183,8 +183,9 @@ void Con_ToggleConsole_f( void )
 
 	if( cls.key_dest == key_console )
 	{
-		UI_SetActiveMenu( false );
-		Key_SetKeyDest( key_game );
+		if( Cvar_VariableInteger( "sv_background" ))
+			UI_SetActiveMenu( true );
+		else UI_SetActiveMenu( false );
 	}
 	else
 	{
@@ -405,7 +406,7 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 
 static int Con_DrawCharacter( int x, int y, int number, rgba_t color )
 {
-	GL_SetRenderMode( kRenderNormal );
+	GL_SetRenderMode( kRenderTransTexture );
 	return Con_DrawGenericChar( x, y, number, color );
 }
 
@@ -1360,9 +1361,11 @@ void Con_DrawConsole( void )
 
 	if( cls.state == ca_connecting || cls.state == ca_connected )
 	{
-		if( !cl_allow_levelshots->integer && !Cvar_VariableInteger( "sv_background" ))
+		if( !cl_allow_levelshots->integer )
 		{
-			con.displayFrac = con.finalFrac = 1.0f;
+			if( Cvar_VariableInteger( "sv_background" ) && cls.key_dest != key_console )
+				con.displayFrac = con.finalFrac = 0.0f;
+			else con.displayFrac = con.finalFrac = 1.0f;
 		}
 		else
 		{

@@ -423,11 +423,14 @@ void R_BlendLightmaps( void )
 		}
 	}
 
-	pglDisable( GL_BLEND );
-	pglDepthMask( GL_TRUE );
-	pglDepthFunc( GL_LEQUAL );
-	pglDisable( GL_ALPHA_TEST );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	if( !r_lightmap->integer )
+	{
+		pglDisable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		pglDepthFunc( GL_LEQUAL );
+		pglDisable( GL_ALPHA_TEST );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	}
 }
 
 /*

@@ -210,7 +210,7 @@ float pfnCVarGetValue( const char *szName );
 char* pfnCVarGetString( const char *szName );
 cvar_t *pfnCVarGetPointer( const char *szVarName );
 void pfnFreeFile( void *buffer );
-int pfnFileExists( const char *filename );
+int pfnFileExists( const char *filename, int gamedironly );
 void *pfnLoadLibrary( const char *name );
 void *pfnGetProcAddress( void *hInstance, const char *name );
 void pfnFreeLibrary( void *hInstance );

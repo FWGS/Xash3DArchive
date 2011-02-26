@@ -367,16 +367,17 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 				rendermode = LUMP_TRANSPARENT;
 
 				// make transparent color is black, blue color looks ugly
-				if( Sys.app_name == HOST_NORMAL )
-					pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
+				pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
 			}
 			else
 			{
+				// clear blue color for 'transparent' decals
+				if( pal[255*3+0] == 0 && pal[255*3+1] == 0 && pal[255*3+2] == 255 )
+					pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
+
 				// apply decal palette immediately
 				image.flags |= IMAGE_COLORINDEX;
-				if( Sys.app_name == HOST_NORMAL )
-					rendermode = LUMP_DECAL;
-				else rendermode = LUMP_TRANSPARENT;
+				rendermode = LUMP_DECAL;
 			}
 			image.flags |= IMAGE_HAS_ALPHA;
 		}

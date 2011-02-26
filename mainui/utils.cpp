@@ -1827,6 +1827,9 @@ UI_Bitmap_Draw
 */
 void UI_Bitmap_Draw( menuBitmap_s *b )
 {
+	if( CVAR_GET_FLOAT( "sv_background" ) && b->generic.id == 0 )
+		return;	// has background map disable images
+
 	if( b->generic.flags & QMF_GRAYED )
 	{
 		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, uiColorDkGrey, b->pic );

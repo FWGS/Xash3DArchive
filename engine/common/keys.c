@@ -536,15 +536,9 @@ void Key_Event( int key, qboolean down )
 		case key_game:
 			break;	// handled in client.dll
 		case key_console:
-			if( cls.state == ca_active )
-			{
+			if( cls.state == ca_active && !cl.background )
 				Key_SetKeyDest( key_game );
-			}
-			else
-			{
-				UI_SetActiveMenu( true );
-				return; // don't pass Esc into menu
-			}
+			else UI_SetActiveMenu( true );
 			return;
 		case key_menu:
 			UI_KeyEvent( key, true );

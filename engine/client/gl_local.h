@@ -495,6 +495,7 @@ typedef struct
 	int		faceCull;
 	int		frontFace;
 
+	qboolean		drawTrans;
 	qboolean		mtexEnabled;	// classic Quake multi-texturing (2 units)
 	qboolean		stencilEnabled;
 	qboolean		in2DMode;

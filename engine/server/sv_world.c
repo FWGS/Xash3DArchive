@@ -725,7 +725,7 @@ SV_TestEntityPosition
 returns true if the entity is in solid currently
 ============
 */
-qboolean SV_TestEntityPosition( edict_t *ent )
+qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 {
 	trace_t	trace;
 
@@ -738,7 +738,15 @@ qboolean SV_TestEntityPosition( edict_t *ent )
 	}
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent );
-
+#if 1
+	// FIXME: this is need to be detail testing
+	if( SV_IsValidEdict( blocker ) && SV_IsValidEdict( trace.ent ))
+	{
+		if( trace.ent->v.movetype == MOVETYPE_PUSH || trace.ent == blocker )
+			return trace.startsolid;
+		return false;
+	}
+#endif
 	return trace.startsolid;
 }
 
@@ -752,7 +760,7 @@ same as SV_TestEntityPosition but check only players
 qboolean SV_TestPlayerPosition( edict_t *ent )
 {
 	if( ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
-		return SV_TestEntityPosition( ent );
+		return SV_TestEntityPosition( ent, NULL );
 	return false;
 }
 

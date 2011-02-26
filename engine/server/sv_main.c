@@ -448,7 +448,7 @@ SV_IsSimulating
 */
 qboolean SV_IsSimulating( void )
 {
-	if( sv.background )
+	if( sv.background && CL_Active( ))
 	{
 		if( CL_IsInConsole( ))
 			return false;
