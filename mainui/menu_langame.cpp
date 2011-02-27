@@ -182,7 +182,8 @@ static void UI_Background_Ownerdraw( void *self )
 {
 	menuCommon_s	*item = (menuCommon_s *)self;
 
-	UI_DrawPic(item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic);
+	if( !CVAR_GET_FLOAT( "sv_background" ))
+		UI_DrawPic(item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic);
 
 	if( uiStatic.realTime > uiLanGame.refreshTime )
 	{

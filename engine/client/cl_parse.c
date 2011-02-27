@@ -629,7 +629,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", clgame.mapname ));
 	Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar
 
-	if( cl_allow_levelshots->integer && !cls.changelevel )
+	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )
 	{
 		if( !FS_FileExistsEx( va( "%s.bmp", cl_levelshot_name->string ), true )) 
 		{

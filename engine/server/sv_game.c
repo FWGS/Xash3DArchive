@@ -2266,6 +2266,13 @@ void pfnMessageEnd( void )
 	if( !svgame.msg_started ) Host_Error( "MessageEnd: called with no active message\n" );
 	svgame.msg_started = false;
 
+	// HACKHACK: clearing HudText in background mode
+	if( sv.background && svgame.msg[svgame.msg_index].number == svgame.gmsgHudText )
+	{
+		BF_Clear( &sv.multicast );
+		return;
+	}
+
 	// check for system message
 	if( svgame.msg_index == -1 )
 	{

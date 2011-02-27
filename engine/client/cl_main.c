@@ -987,7 +987,8 @@ void CL_PrepSound( void )
 	{
 		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 5.0f / sndcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 ) SCR_UpdateScreen();
+		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
+			SCR_UpdateScreen();
 	}
 
 	S_EndRegistration();
@@ -1054,7 +1055,7 @@ void CL_PrepVideo( void )
 		com.strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		Mod_RegisterModel( name, i+1 );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 75.0f / mdlcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 )
+		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
 			SCR_UpdateScreen();
 	}
 

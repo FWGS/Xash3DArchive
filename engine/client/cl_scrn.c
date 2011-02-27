@@ -38,7 +38,7 @@ void SCR_DrawFPS( void )
 	char		fpsstring[32];
 
 	if( cls.state != ca_active ) return; 
-	if( !cl_showfps->integer ) return;
+	if( !cl_showfps->integer || cl.background ) return;
 	if( cls.scrshot_action != scrshot_inactive )
 		return;
 	
@@ -207,7 +207,7 @@ void SCR_DrawPlaque( void )
 {
 	int	levelshot;
 
-	if( cl_allow_levelshots->integer && !cls.changelevel )
+	if(( cl_allow_levelshots->integer && !cls.changelevel ) || Cvar_VariableInteger( "sv_background" ))
 	{
 		levelshot = GL_LoadTexture( cl_levelshot_name->string, NULL, 0, TF_IMAGE );
 		GL_SetRenderMode( kRenderNormal );

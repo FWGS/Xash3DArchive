@@ -719,17 +719,27 @@ void UI_RefreshServerList( void )
 UI_StartBackGroundMap
 =================
 */
-void UI_StartBackGroundMap( void )
+bool UI_StartBackGroundMap( void )
 {
+	static bool	first = TRUE;
+
+	if( !first ) return FALSE;
+
+	first = FALSE;
+
 	if( !uiStatic.bgmapcount || CVAR_GET_FLOAT( "sv_background" ))
-		return;
+		return FALSE;
 
 	int bgmapid = RANDOM_LONG( 0, uiStatic.bgmapcount - 1 );
 
 	char cmd[128];
-	sprintf( cmd, "map_background %s\n", uiStatic.bgmaps[bgmapid] );
+	sprintf( cmd, "maps/%s.bsp", uiStatic.bgmaps[bgmapid] );
+	if( !FILE_EXISTS( cmd )) return FALSE; 
 
+	sprintf( cmd, "map_background %s\n", uiStatic.bgmaps[bgmapid] );
 	CLIENT_COMMAND( FALSE, cmd );
+
+	return TRUE;
 }
 
 // =====================================================================
@@ -857,8 +867,14 @@ void UI_UpdateMenu( float flTime )
 	uiStatic.realTime = flTime * 1000;
 	uiStatic.framecount++;
 
+	if( CVAR_GET_FLOAT( "sv_background" ) && !g_engfuncs.pfnClientInGame())
+		return;	// don't draw menu while level is loading
+
 	if( uiStatic.firstDraw )
 	{
+		// we loading background so skip SCR_Update
+		if( UI_StartBackGroundMap( )) return;
+
 		if( uiStatic.menuActive->activateFunc )
 			uiStatic.menuActive->activateFunc();
 	}
@@ -876,7 +892,6 @@ void UI_UpdateMenu( float flTime )
                     
 		if( first )
 		{
-			UI_StartBackGroundMap ();
 			BACKGROUND_TRACK( "gamestartup.mp3", NULL );
 			first = FALSE;
 		}

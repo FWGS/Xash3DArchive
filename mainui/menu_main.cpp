@@ -426,6 +426,7 @@ static void UI_Main_Init( void )
 		// server.dll needs for reading savefiles or startup newgame
 		if( !CheckGameDll( ))
 		{
+			uiMain.hazardCourse.generic.flags |= QMF_GRAYED;
 			uiMain.saveRestore.generic.flags |= QMF_GRAYED;
 			uiMain.newGame.generic.flags |= QMF_GRAYED;
 		}

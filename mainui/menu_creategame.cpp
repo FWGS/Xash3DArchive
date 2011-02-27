@@ -118,7 +118,7 @@ static void UI_CreateGame_Begin( void )
 
 static void UI_PromptDialog( void )
 {
-	if( !CVAR_GET_FLOAT( "host_serverstate" ))
+	if( !CVAR_GET_FLOAT( "host_serverstate" ) || CVAR_GET_FLOAT( "sv_background" ))
 	{
 		UI_CreateGame_Begin();
 		return;

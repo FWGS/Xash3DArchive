@@ -300,6 +300,8 @@ void SV_MapBackground_f( void )
 	Cvar_FullSet( "deathmatch", "0",  CVAR_LATCH );
 	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
 
+	SCR_BeginLoadingPlaque();
+
 	SV_SpawnServer( mapname, NULL );
 	SV_LevelInit( mapname, NULL, NULL, false );
 	SV_ActivateServer ();
