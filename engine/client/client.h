@@ -36,6 +36,8 @@
 #define cl_time()		( cl.time )
 #define sv_time()		( cl.mtime[0] )
 
+typedef int		sound_t;
+
 //=============================================================================
 typedef struct frame_s
 {

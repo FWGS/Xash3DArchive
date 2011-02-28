@@ -89,7 +89,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	if( image.cmd_flags & IL_KEEP_8BIT && bhdr.bitsPerPixel == 8 )
 	{
-		pixbuf = image.palette = Mem_Alloc( Sys.imagepool, 1024 );
+		pixbuf = image.palette = Mem_Alloc( host.imagepool, 1024 );
 		image.flags |= IMAGE_HAS_COLOR;
  
 		// bmp have a reversed palette colors
@@ -111,7 +111,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	buf_p += cbPalBytes;
 	image.size = image.width * image.height * bpp;
-	image.rgba = Mem_Alloc( Sys.imagepool, image.size );
+	image.rgba = Mem_Alloc( host.imagepool, image.size );
 	bps = image.width * (bhdr.bitsPerPixel >> 3);
 
 	switch( bhdr.bitsPerPixel )
@@ -245,7 +245,7 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	int		pixel_size;
 	int		i, x, y;
 
-	if( FS_FileExists( name, false ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
 		return false; // already existed
 
 	// bogus parameter check
@@ -266,7 +266,7 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 		return false;
 	}
 
-	pfile = FS_Open( name, "wb", false );
+	pfile = FS_Open( name, "wb" );
 	if( !pfile ) return false;
 
 	// NOTE: align transparency column will sucessfully removed
@@ -300,7 +300,7 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	// Write info header
 	FS_Write( pfile, &bmih, sizeof(bmih));
 
-	pbBmpBits = Mem_Alloc( Sys.imagepool, cbBmpBits );
+	pbBmpBits = Mem_Alloc( host.imagepool, cbBmpBits );
 
 	pb = pix->buffer;
 

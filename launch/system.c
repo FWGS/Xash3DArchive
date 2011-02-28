@@ -45,15 +45,6 @@ void Sys_GetStdAPI( void )
 	com.queevent = Sys_QueEvent;			// add event to queue
 	com.getevent = Sys_GetEvent;			// get system events
 
-	// crclib.c funcs
-	com.crc32_init = CRC32_Init;
-	com.crc32_block = CRC32_ProcessBuffer;
-	com.crc32_process = CRC32_ProcessByte;
-	com.crc32_file = CRC32_File;
-	com.crc32_mapfile = CRC32_MapFile;
-	com.crc32_sequence = CRC32_BlockSequence;
-	com.crc32_final = CRC32_Final;
-
 	// memlib.c
 	com.memcpy = _crt_mem_copy;			// first time using
 	com.memset = _crt_mem_set;			// first time using
@@ -123,7 +114,6 @@ void Sys_GetStdAPI( void )
 	com.Com_ReadLong = PS_GetInteger;		// signed integer
 
 	com.Com_Search = FS_Search;			// returned list of founded files
-	com.Com_HashKey = Com_HashKey;		// returns hash key for a string (generic fucntion)
 
 	// console variables
 	com.Cvar_Get = Cvar_Get;
@@ -164,14 +154,7 @@ void Sys_GetStdAPI( void )
 	com.feof = FS_Eof;			// like a feof
 	com.fremove = FS_Delete;		// like remove
 	com.frename = FS_Rename;		// like rename
-
-	// custom HPAK storage system
-	com.hpk_getdataptr = HPAK_GetDataPointer;	// find resource lump and return pointer
-	com.hpk_findres = HPAK_ResourceForHash;		// find resource by hash	
-	com.hpk_addlump = HPAK_AddLump;		// add lump to specified wad	
-	com.hpk_check_integrity = HPAK_CheckIntegrity;	// check hpk for integrity	
-	com.hpk_check_size = HPAK_CheckSize;		// check hpk for maxsize	
-	com.hpk_flush_queue = HPAK_FlushHostQueue;	// flush all added lumps into specified hpk
+	com.flength = FS_FileLength;		// return length for current file
 
 	// filesystem simply user interface
 	com.Com_LoadFile = FS_LoadFile;		// load file into heap
@@ -182,26 +165,6 @@ void Sys_GetStdAPI( void )
 	com.Com_GetProcAddress = Sys_GetProcAddress;	// gpa
 	com.Com_ShellExecute = Sys_ShellExecute;	// shell execute
 	com.Com_DoubleTime = Sys_DoubleTime;		// hi-res timer
-
-	// built-in imagelib functions
-	com.ImageLoad = FS_LoadImage;			// load image from disk or wad-file
-	com.ImageSave = FS_SaveImage;			// save image into specified format 
-	com.ImageFree = FS_FreeImage;			// release image buffer
-	com.ImagePFDesc = Image_GetPixelFormat;		// get some info about current fmt
-	com.ImageConvert = Image_Process;		// flip, rotate, resample etc
-
-	// built-in soundlib functions
-	com.SoundLoad = FS_LoadSound;			// load sound from disk or wad-file
-	com.SoundFree = FS_FreeSound;			// release sound buffer
-	com.SoundConvert = Sound_Process;		// resample, change resolution etc
-
-	com.OpenStream = FS_OpenStream;		// open music stream
-	com.GetStreamInfo = FS_StreamInfo;		// get basic stream info
-	com.ReadStream = FS_ReadStream;		// returns num of readed bytes
-	com.FreeStream = FS_FreeStream;		// release stream
-
-	com.Com_RandomLong = Com_RandomLong;
-	com.Com_RandomFloat = Com_RandomFloat;
 
 	// stdlib.c funcs
 	com.strnupr = com_strnupr;
@@ -881,9 +844,6 @@ void Sys_Init( void )
 	Cmd_Init();
 	Cvar_Init();
 	FS_Init();
-	Image_Init();
-	Sound_Init();
-	HPAK_Init();
 
 	com.snprintf( dev_level, sizeof( dev_level ), "%i", Sys.developer );
 	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
@@ -899,8 +859,6 @@ void Sys_Shutdown( void )
 	Sys.CPrint = NullPrint;
 
 	FS_Shutdown();
-	Image_Shutdown();
-	Sound_Shutdown();
 	Memory_Shutdown();
 	Con_DestroyConsole();
 

@@ -3,8 +3,9 @@
 //			crclib.c - generate crc stuff
 //=======================================================================
 
-#include "launch.h"
+#include "common.h"
 #include "bspfile.h"
+#include "client.h"
 
 #define NUM_BYTES		256
 #define CRC32_INIT_VALUE	0xFFFFFFFFUL
@@ -199,7 +200,7 @@ qboolean CRC32_File( dword *crcvalue, const char *filename )
 	char	buffer[1024];
 	int	num_bytes;
 
-	f = FS_Open( filename, "rb", false );
+	f = FS_Open( filename, "rb" );
 	if( !f ) return false;
 
 	ASSERT( crcvalue != NULL );
@@ -229,7 +230,14 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 
 	if( !crcvalue ) return false;
 
-	f = FS_Open( filename, "rb", false );
+	// always calc same checksum for singleplayer
+	if( cls.state >= ca_connected && SV_Active() && CL_GetMaxClients() == 1 )
+	{
+		*crcvalue = (('H'<<24)+('S'<<16)+('A'<<8)+'X');
+		return true;
+	}
+
+	f = FS_Open( filename, "rb" );
 	if( !f ) return false;
 
 	num_bytes = FS_Read( f, &header, sizeof( header ));

@@ -56,7 +56,7 @@ void S_StopBackgroundTrack( void )
 	if( !dma.initialized ) return;
 	if( !s_bgTrack.stream ) return;
 
-	FS_CloseStream( s_bgTrack.stream );
+	FS_FreeStream( s_bgTrack.stream );
 	Mem_Set( &s_bgTrack, 0, sizeof( bg_track_t ));
 	s_listener.lerping = false;
 	s_rawend = 0;
@@ -138,7 +138,7 @@ void S_StreamBackgroundTrack( void )
 			// loop
 			if( s_bgTrack.loopName[0] )
 			{
-				FS_CloseStream( s_bgTrack.stream );
+				FS_FreeStream( s_bgTrack.stream );
 				s_bgTrack.stream = FS_OpenStream( va( "media/%s", s_bgTrack.loopName ));
 
 				if( !s_bgTrack.stream ) return;

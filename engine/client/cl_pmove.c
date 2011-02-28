@@ -551,8 +551,8 @@ void CL_InitClientMove( void )
 	clgame.pmove->PM_HullPointContents = pfnHullPointContents; 
 	clgame.pmove->PM_PlayerTrace = pfnPlayerTrace;
 	clgame.pmove->PM_TraceLine = pfnTraceLine;
-	clgame.pmove->RandomLong = pfnRandomLong;
-	clgame.pmove->RandomFloat = pfnRandomFloat;
+	clgame.pmove->RandomLong = Com_RandomLong;
+	clgame.pmove->RandomFloat = Com_RandomFloat;
 	clgame.pmove->PM_GetModelType = pfnGetModelType;
 	clgame.pmove->PM_GetModelBounds = pfnGetModelBounds;	
 	clgame.pmove->PM_HullForBsp = pfnHullForBsp;

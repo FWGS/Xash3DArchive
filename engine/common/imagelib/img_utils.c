@@ -119,11 +119,11 @@ static const savepixformat_t save_game[] =
 void Image_Init( void )
 {
 	// init pools
-	Sys.imagepool = Mem_AllocPool( "ImageLib Pool" );
+	host.imagepool = Mem_AllocPool( "ImageLib Pool" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
 
 	// install image formats (can be re-install later by Image_Setup)
-	switch( Sys.app_name )
+	switch( host.type )
 	{
 	case HOST_NORMAL:
 		image.cmd_flags = IL_USE_LERPING|IL_ALLOW_OVERWRITE;		
@@ -141,14 +141,14 @@ void Image_Init( void )
 void Image_Shutdown( void )
 {
 	Mem_Check(); // check for leaks
-	Mem_FreePool( &Sys.imagepool );
+	Mem_FreePool( &host.imagepool );
 }
 
 byte *Image_Copy( size_t size )
 {
 	byte	*out;
 
-	out = Mem_Alloc( Sys.imagepool, size );
+	out = Mem_Alloc( host.imagepool, size );
 	Mem_Copy( out, image.tempbuffer, size );
 	return out; 
 }
@@ -359,7 +359,7 @@ void Image_ConvertPalTo24bit( rgbdata_t *pic )
 		return;
 	}
 
-	pal24 = converted = Mem_Alloc( Sys.imagepool, 768 );
+	pal24 = converted = Mem_Alloc( host.imagepool, 768 );
 	pal32 = pic->palette;
 
 	for( i = 0; i < 256; i++, pal24 += 3, pal32 += 4 )
@@ -376,7 +376,7 @@ void Image_ConvertPalTo24bit( rgbdata_t *pic )
 void Image_CopyPalette32bit( void )
 {
 	if( image.palette ) return; // already created ?
-	image.palette = Mem_Alloc( Sys.imagepool, 1024 );
+	image.palette = Mem_Alloc( host.imagepool, 1024 );
 	Mem_Copy( image.palette, image.d_currentpal, 1024 );
 }
 
@@ -544,7 +544,7 @@ void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *o
 	out = (byte *)outdata;
 	fstep = (int)(inheight * 65536.0f/outheight);
 
-	resamplerow1 = (byte *)Mem_Alloc( Sys.imagepool, outwidth * 4 * 2);
+	resamplerow1 = (byte *)Mem_Alloc( host.imagepool, outwidth * 4 * 2);
 	resamplerow2 = resamplerow1 + outwidth * 4;
 
 	inrow = (const byte *)indata;
@@ -685,7 +685,7 @@ void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *
 	
 	fstep = (int)(inheight * 65536.0f / outheight);
 
-	resamplerow1 = (byte *)Mem_Alloc(Sys.imagepool, outwidth * 3 * 2);
+	resamplerow1 = (byte *)Mem_Alloc( host.imagepool, outwidth * 3 * 2 );
 	resamplerow2 = resamplerow1 + outwidth*3;
 
 	inrow = (const byte *)indata;
@@ -875,16 +875,16 @@ byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int
 	{
 	case PF_INDEXED_24:
 	case PF_INDEXED_32:
-		image.tempbuffer = (byte *)Mem_Realloc( Sys.imagepool, image.tempbuffer, outwidth * outheight );
+		image.tempbuffer = (byte *)Mem_Realloc( host.imagepool, image.tempbuffer, outwidth * outheight );
 		Image_Resample8Nolerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		break;		
 	case PF_RGB_24:
-		image.tempbuffer = (byte *)Mem_Realloc( Sys.imagepool, image.tempbuffer, outwidth * outheight * 3 );
+		image.tempbuffer = (byte *)Mem_Realloc( host.imagepool, image.tempbuffer, outwidth * outheight * 3 );
 		if( quality ) Image_Resample24Lerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		else Image_Resample24Nolerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		break;
 	case PF_RGBA_32:
-		image.tempbuffer = (byte *)Mem_Realloc( Sys.imagepool, image.tempbuffer, outwidth * outheight * 4 );
+		image.tempbuffer = (byte *)Mem_Realloc( host.imagepool, image.tempbuffer, outwidth * outheight * 4 );
 		if( quality ) Image_Resample32Lerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		else Image_Resample32Nolerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		break;
@@ -928,7 +928,7 @@ byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int ou
 	case PF_RGBA_32:
 		in = ( byte *)indata;
 		newsize = outwidth * outheight * samples;
-		out = image.tempbuffer = (byte *)Mem_Realloc( Sys.imagepool, image.tempbuffer, newsize );
+		out = image.tempbuffer = (byte *)Mem_Realloc( host.imagepool, image.tempbuffer, newsize );
 		break;
 	default:
 		MsgDev( D_WARN, "Image_Flood: unsupported format %s\n", PFDesc[type].name );
@@ -979,7 +979,7 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 	case PF_INDEXED_32:
 	case PF_RGB_24:
 	case PF_RGBA_32:
-		image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, width * height * samples );
+		image.tempbuffer = Mem_Realloc( host.imagepool, image.tempbuffer, width * height * samples );
 		break;
 	default:
 		// we can flip DXT without expanding to RGBA ? hmmm...
@@ -1032,7 +1032,7 @@ byte *Image_CreateLumaInternal( const byte *fin, int width, int height, int type
 	{
 	case PF_INDEXED_24:
 	case PF_INDEXED_32:
-		out = image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, width * height );
+		out = image.tempbuffer = Mem_Realloc( host.imagepool, image.tempbuffer, width * height );
 		for( i = 0; i < width * height; i++ )
 			*out++ = fin[i] >= 224 ? fin[i] : 0;
 		break;
@@ -1051,7 +1051,7 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 
 	if( image.cmd_flags & IL_KEEP_8BIT )
 		expand_to_rgba = false;
-	else if( Sys.app_name == HOST_NORMAL && ( image.flags & ( IMAGE_HAS_LUMA|IMAGE_QUAKESKY )))
+	else if( host.type == HOST_NORMAL && ( image.flags & ( IMAGE_HAS_LUMA|IMAGE_QUAKESKY )))
 		expand_to_rgba = false;
 
 	image.size = mipsize;
@@ -1060,7 +1060,7 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 	else Image_CopyPalette32bit(); 
 
 	// reallocate image buffer
-	image.rgba = Mem_Alloc( Sys.imagepool, image.size );	
+	image.rgba = Mem_Alloc( host.imagepool, image.size );	
 	if( expand_to_rgba == false ) Mem_Copy( image.rgba, in, image.size );
 	else if( !Image_Copy8bitRGBA( in, image.rgba, mipsize ))
 		return false; // probably pallette not installed
@@ -1084,7 +1084,7 @@ qboolean Image_Decompress( const byte *data )
 	fin = (byte *)data;
 
 	size = image.width * image.height * 4;
-	image.tempbuffer = Mem_Realloc( Sys.imagepool, image.tempbuffer, size );
+	image.tempbuffer = Mem_Realloc( host.imagepool, image.tempbuffer, size );
 	fout = image.tempbuffer;
 
 	switch( PFDesc[image.type].format )
@@ -1156,7 +1156,7 @@ rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 	// now we can change type to RGBA
 	pic->type = PF_RGBA_32;
 
-	pic->buffer = Mem_Realloc( Sys.imagepool, pic->buffer, image.size );
+	pic->buffer = Mem_Realloc( host.imagepool, pic->buffer, image.size );
 	Mem_Copy( pic->buffer, image.tempbuffer, image.size );
 	Mem_Free( pic->palette );
 	pic->flags = image.flags;

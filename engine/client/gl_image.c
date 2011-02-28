@@ -760,7 +760,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	samples = GL_CalcTextureSamples( pic->flags );
 
 	// determine format
-	inFormat = PFDesc( pic->type )->glFormat;
+	inFormat = PFDesc[pic->type].glFormat;
 	outFormat = GL_TextureFormat( tex, samples );
 	tex->format = outFormat;
 
@@ -799,7 +799,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 
 	buf = pic->buffer;
 	bufend = pic->buffer + pic->size;
-	offset = pic->width * pic->height * PFDesc( pic->type )->bpp;
+	offset = pic->width * pic->height * PFDesc[pic->type].bpp;
 
 	// NOTE: probably this code relies when gl_compressed_textures is enabled
 	texsize = tex->width * tex->height * samples;

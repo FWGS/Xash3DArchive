@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386 /opt:nowin98
-# ADD LINK32 mpeg.lib user32.lib gdi32.lib shell32.lib advapi32.lib winmm.lib /nologo /dll /pdb:none /machine:I386 /nodefaultlib:"libc" /nodefaultlib:"libcmt" /libpath:"./imagelib" /libpath:"./soundlib" /opt:nowin98
+# ADD LINK32 user32.lib gdi32.lib shell32.lib advapi32.lib winmm.lib /nologo /dll /pdb:none /machine:I386 /nodefaultlib:"libc" /opt:nowin98
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\launch\!release
 InputPath=\Xash3D\src_main\temp\launch\!release\launch.dll
@@ -79,7 +79,7 @@ SOURCE="$(InputPath)"
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "LAUNCH_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "imagelib" /I "./sndlib" /I "../common" /I "../engine" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "../common" /I "../engine" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -90,7 +90,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 mpeg.lib user32.lib gdi32.lib shell32.lib advapi32.lib winmm.lib /nologo /dll /debug /machine:I386 /nodefaultlib:"libcmt" /nodefaultlib:"libc" /pdbtype:sept /libpath:"./imagelib" /libpath:"./soundlib"
+# ADD LINK32 user32.lib gdi32.lib shell32.lib advapi32.lib winmm.lib /nologo /dll /debug /machine:I386 /nodefaultlib:"libc" /pdbtype:sept
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\launch\!debug
 InputPath=\Xash3D\src_main\temp\launch\!debug\launch.dll
@@ -124,39 +124,11 @@ SOURCE=.\cpuinfo.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\crclib.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\cvar.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\filesystem.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\hpak.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\imagelib\img_bmp.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\imagelib\img_main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\imagelib\img_tga.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\imagelib\img_utils.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\imagelib\img_wad.c
 # End Source File
 # Begin Source File
 
@@ -176,26 +148,6 @@ SOURCE=.\parselib.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\random.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\soundlib\snd_main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\soundlib\snd_mp3.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\soundlib\snd_utils.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\soundlib\snd_wav.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\stdlib.c
 # End Source File
 # Begin Source File
@@ -212,19 +164,11 @@ SOURCE=.\filesystem.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\imagelib\imagelib.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\launch.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\library.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\soundlib\soundlib.h
 # End Source File
 # Begin Source File
 

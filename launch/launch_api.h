@@ -10,7 +10,6 @@
 #pragma warning(disable : 4018)	// signed/unsigned mismatch
 #pragma warning(disable : 4305)	// truncation from const double to float
 
-#define QCHAR_WIDTH		16	// font width
 #define MAX_STRING		256	// generic string
 #define MAX_INFO_STRING	256	// infostrings are transmitted across network
 #define MAX_SYSPATH		1024	// system filepath
@@ -273,132 +272,6 @@ typedef struct dll_info_s
 	size_t		com_size;	// main interface size == sizeof( stdilib_api_t )
 } dll_info_t;
 
-/*
-========================================================================
-
-internal image format
-
-typically expanded to rgba buffer
-NOTE: number at end of pixelformat name it's a total bitscount e.g. PF_RGB_24 == PF_RGB_888
-========================================================================
-*/
-typedef enum
-{
-	PF_UNKNOWN = 0,
-	PF_INDEXED_24,	// inflated palette (768 bytes)
-	PF_INDEXED_32,	// deflated palette (1024 bytes)
-	PF_RGBA_32,	// normal rgba buffer
-	PF_BGRA_32,	// big endian RGBA (MacOS)
-	PF_RGB_24,	// uncompressed dds or another 24-bit image 
-	PF_BGR_24,	// big-endian RGB (MacOS)
-	PF_TOTALCOUNT,	// must be last
-} pixformat_t;
-
-typedef struct bpc_desc_s
-{
-	int	format;	// pixelformat
-	char	name[16];	// used for debug
-	uint	glFormat;	// RGBA format
-	int	bpp;	// channels (e.g. rgb = 3, rgba = 4)
-} bpc_desc_t;
-
-// imagelib global settings
-typedef enum
-{
-	IL_USE_LERPING	= BIT(0),	// lerping images during resample
-	IL_KEEP_8BIT	= BIT(1),	// don't expand paletted images
-	IL_ALLOW_OVERWRITE	= BIT(2),	// allow to overwrite stored images
-} ilFlags_t;
-
-// rgbdata output flags
-typedef enum
-{
-	// rgbdata->flags
-	IMAGE_CUBEMAP	= BIT(0),		// it's 6-sides cubemap buffer
-	IMAGE_HAS_ALPHA	= BIT(1),		// image contain alpha-channel
-	IMAGE_HAS_COLOR	= BIT(2),		// image contain RGB-channel
-	IMAGE_COLORINDEX	= BIT(3),		// all colors in palette is gradients of last color (decals)
-	IMAGE_HAS_LUMA	= BIT(4),		// image has luma pixels (q1-style maps)
-	IMAGE_SKYBOX	= BIT(5),		// only used by FS_SaveImage - for write right suffixes
-	IMAGE_QUAKESKY	= BIT(6),		// it's a quake sky double layered clouds (so keep it as 8 bit)
-	IMAGE_STATIC	= BIT(7),		// never trying to free this image (static memory)
-
-	// Image_Process manipulation flags
-	IMAGE_FLIP_X	= BIT(16),	// flip the image by width
-	IMAGE_FLIP_Y	= BIT(17),	// flip the image by height
-	IMAGE_ROT_90	= BIT(18),	// flip from upper left corner to down right corner
-	IMAGE_ROT180	= IMAGE_FLIP_X|IMAGE_FLIP_Y,
-	IMAGE_ROT270	= IMAGE_FLIP_X|IMAGE_FLIP_Y|IMAGE_ROT_90,	
-	IMAGE_ROUND	= BIT(19),	// round image to nearest Pow2
-	IMAGE_RESAMPLE	= BIT(20),	// resample image to specified dims
-	IMAGE_PALTO24	= BIT(21),	// turn 32-bit palette into 24-bit mode (only for indexed images)
-	IMAGE_ROUNDFILLER	= BIT(22),	// round image to nearest Pow2 and fill unused entries with single color	
-	IMAGE_FORCE_RGBA	= BIT(23),	// force image to RGBA buffer
-	IMAGE_MAKE_LUMA	= BIT(24),	// create luma texture from indexed
-} imgFlags_t;
-
-typedef struct rgbdata_s
-{
-	word	width;		// image width
-	word	height;		// image height
-	uint	type;		// compression type
-	uint	flags;		// misc image flags
-	byte	*palette;		// palette if present
-	byte	*buffer;		// image buffer
-	rgba_t	fogParams;	// some water textures in hl1 has info about fog color and alpha
-	size_t	size;		// for bounds checking
-} rgbdata_t;
-
-/*
-========================================================================
-
-internal sound format
-
-typically expanded to wav buffer
-========================================================================
-*/
-typedef enum
-{
-	WF_UNKNOWN = 0,
-	WF_PCMDATA,
-	WF_MPGDATA,
-	WF_TOTALCOUNT,	// must be last
-} sndformat_t;
-
-// imagelib global settings
-typedef enum
-{
-	SL_USE_LERPING	= BIT(0),		// lerping sounds during resample
-	SL_KEEP_8BIT	= BIT(1),		// don't expand 8bit sounds automatically up to 16 bit
-	SL_ALLOW_OVERWRITE	= BIT(2),		// allow to overwrite stored sounds
-} slFlags_t;
-
-// wavdata output flags
-typedef enum
-{
-	// wavdata->flags
-	SOUND_LOOPED	= BIT( 0 ),	// this is looped sound (contain cue markers)
-	SOUND_STREAM	= BIT( 1 ),	// this is a streaminfo, not a real sound
-
-	// Sound_Process manipulation flags
-	SOUND_RESAMPLE	= BIT(12),	// resample sound to specified rate
-	SOUND_CONVERT16BIT	= BIT(13),	// change sound resolution from 8 bit to 16
-} sndFlags_t;
-
-typedef struct
-{
-	word	rate;		// num samples per second (e.g. 11025 - 11 khz)
-	byte	width;		// resolution - bum bits divided by 8 (8 bit is 1, 16 bit is 2)
-	byte	channels;		// num channels (1 - mono, 2 - stereo)
-	int	loopStart;	// offset (in samples) at this point sound will be looping while playing more than only once
-	int	samples;		// total samplecount in wav
-	uint	type;		// compression type
-	uint	flags;		// misc sound flags
-	byte	*buffer;		// sound buffer
-	size_t	size;		// for bounds checking
-} wavdata_t;
-
-
 // filesystem flags
 #define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path
 #define FS_NOWRITE_PATH	2	// default behavior - last added gamedir set as writedir. This flag disables it
@@ -430,15 +303,6 @@ typedef struct stdilib_api_s
 	char *(*clipboard)( void );				// get clipboard data
 	void (*queevent)( ev_type_t type, int value, int value2, int length, void *ptr );
 	sys_event_t (*getevent)( void );			// get system events
-
-	// crclib.c funcs
-	void (*crc32_init)( dword *pulCRC );
-	void (*crc32_process)( dword *crcvalue, byte data );	// process crc32 byte
-	void (*crc32_block)( dword *pulCRC, const void *pBuffer, int nBuffer );
-	byte (*crc32_sequence)( byte *base, int len, int sequence );// calculate crc for sequence
-	qboolean (*crc32_file)( dword *crcvalue, const char *filename );
-	qboolean (*crc32_mapfile)( dword *crcvalue, const char *filename );
-	void (*crc32_final)( dword *pulCRC );
 
 	// memlib.c funcs
 	void (*memcpy)(void *dest, const void *src, size_t size, const char *file, int line);
@@ -510,7 +374,6 @@ typedef struct stdilib_api_s
 	qboolean (*Com_ReadLong)( script_t *script, int flags, int *value );			// signed integer
 
 	search_t *(*Com_Search)( const char *pattern, int casecmp, int gamedironly ); // returned list of found files
-	uint (*Com_HashKey)( const char *string, uint hashSize );	// returns hash key for a string
 
 	// console variables
 	convar_t *(*Cvar_Get)( const char *name, const char *value, int flags, const char *desc );
@@ -551,14 +414,7 @@ typedef struct stdilib_api_s
 	qboolean (*feof)( file_t *file );					// like a feof
 	qboolean (*fremove)( const char *path );				// remove specified file
 	qboolean (*frename)( const char *oldname, const char *newname );		// rename specified file
-
-	// custom hpk filesystem
-	qboolean (*hpk_getdataptr)( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
-	qboolean (*hpk_findres)( const char *filename, char *hash, struct resource_s *pRes );
-	void (*hpk_addlump)( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, file_t *f );
-	void (*hpk_check_integrity)( const char *filename );
-	void (*hpk_check_size)( const char *filename );
-	void (*hpk_flush_queue)( void );
+	fs_offset_t (*flength)( file_t *f );					// return length for current file
 
 	// filesystem simple user interface
 	byte *(*Com_LoadFile)(const char *path, long *filesize );		// load file into heap
@@ -569,28 +425,6 @@ typedef struct stdilib_api_s
 	void*(*Com_GetProcAddress)( dll_info_t *dll, const char* name );	// gpa
 	double (*Com_DoubleTime)( void );				// hi-res timer
 	void (*Com_ShellExecute)( const char *p1, const char *p2, qboolean exit );// execute shell programs
-
-	// built-in imagelib functions
-	rgbdata_t *(*ImageLoad)( const char *, const byte *, size_t );	// load image from disk or buffer
-	qboolean (*ImageSave)( const char *name, rgbdata_t *image );	// save image into specified format
-	qboolean (*ImageConvert)( rgbdata_t **pix, int w, int h, uint flags );// image manipulations
-	bpc_desc_t *(*ImagePFDesc)( pixformat_t imagetype );		// get const info about specified fmt
- 	void (*ImageFree)( rgbdata_t *pack );				// release image buffer
-
-	// built-in soundlib functions
-	wavdata_t *(*SoundLoad)( const char *, const byte *, size_t );	// load sound from disk or buffer
-	qboolean (*SoundConvert)( wavdata_t **pix, int rt, int wdth, uint flags );// sound manipulations
- 	void (*SoundFree)( wavdata_t *pack );				// release sound buffer
-
-	// music stream reading funcs
-	stream_t *(*OpenStream)( const char *filename );			// open music stream
-	wavdata_t *(*GetStreamInfo)( stream_t *stream );			// get stream info
-	long (*ReadStream)( stream_t *stream, int bytes, void *buffer );	// returns num of readed bytes
-	void (*FreeStream)( stream_t *stream );				// release stream
- 
-	// random generator
-	long (*Com_RandomLong)( long lMin, long lMax );			// returns random integer
-	float (*Com_RandomFloat)( float fMin, float fMax );		// returns random float
 
 	// stdlib.c funcs
 	void (*strnupr)(const char *in, char *out, size_t size_out);	// convert string to upper case
@@ -728,8 +562,6 @@ struct convar_s
 #define Com_ReadUlong		com.Com_ReadDword
 #define Com_ReadLong		com.Com_ReadLong
 
-#define Com_HashKey			com.Com_HashKey
-
 /*
 ===========================================
 filesystem manager
@@ -772,6 +604,7 @@ filesystem manager
 #define FS_Gets			(*com.fgets)
 #define FS_Delete			(*com.fremove)
 #define FS_Rename			(*com.frename)
+#define FS_FileLength		(*com.flength)
 #define FS_Gamedir()		com.SysInfo->GameInfo->gamedir
 #define FS_Title()			com.SysInfo->GameInfo->title
 #define g_Instance()		com.SysInfo->instance
@@ -838,56 +671,6 @@ console commands
 
 /*
 ===========================================
-HPAK custom data storage
-===========================================
-*/
-#define HPAK_GetDataPointer		com.hpk_getdataptr
-#define HPAK_ResourceForHash		com.hpk_findres
-#define HPAK_AddLump		com.hpk_addlump
-#define HPAK_CheckIntegrity		com.hpk_check_integrity
-#define HPAK_CheckSize		com.hpk_check_size
-#define HPAK_FlushHostQueue		com.hpk_flush_queue
-
-/*
-===========================================
-crclib manager
-===========================================
-*/
-#define CRC32_Init			com.crc32_init
-#define CRC32_ProcessBuffer		com.crc32_block
-#define CRC32_ProcessByte		com.crc32_process
-#define CRC32_Final			com.crc32_final
-#define CRC32_Sequence		com.crc32_sequence
-#define CRC32_File			com.crc32_file
-#define CRC32_MapFile		com.crc32_mapfile
-
-/*
-===========================================
-imglib manager
-===========================================
-*/
-#define FS_LoadImage		com.ImageLoad
-#define FS_SaveImage		com.ImageSave
-#define FS_FreeImage		com.ImageFree
-#define PFDesc( x )			com.ImagePFDesc( x )
-#define Image_Process		com.ImageConvert
-
-/*
-===========================================
-sndlib manager
-===========================================
-*/
-#define FS_LoadSound		com.SoundLoad
-#define FS_FreeSound		com.SoundFree
-#define Sound_Process		com.SoundConvert
-
-#define FS_OpenStream		com.OpenStream
-#define FS_StreamInfo		com.GetStreamInfo
-#define FS_ReadStream		com.ReadStream
-#define FS_CloseStream		com.FreeStream
-
-/*
-===========================================
 misc utils
 ===========================================
 */
@@ -908,8 +691,6 @@ misc utils
 #define Sys_Quit			com.exit
 #define Sys_Break			com.abort
 #define Sys_DoubleTime		com.Com_DoubleTime
-#define Com_RandomLong		com.Com_RandomLong
-#define Com_RandomFloat		com.Com_RandomFloat
 
 #define FS_LoadLibrary		com.LoadLibrary
 #define FS_GetProcAddress		com.GetProcAddress

@@ -149,8 +149,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 			byte	*pal = fin + pixels;
 
 			// make transparent color is black, blue color looks ugly
-			if( Sys.app_name == HOST_NORMAL )
-				pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
+			pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
 
 			Image_GetPaletteLMP( pal, LUMP_TRANSPARENT );
 			image.flags |= IMAGE_HAS_ALPHA;
@@ -235,7 +234,7 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	// make transparent color is black, blue color looks ugly
-	if( image.d_rendermode == LUMP_TRANSPARENT && Sys.app_name == HOST_NORMAL )
+	if( image.d_rendermode == LUMP_TRANSPARENT )
 		image.d_currentpal[255] = 0;
 
 	return Image_AddIndexedImageToPack( (byte *)(pin + 1), image.width, image.height );

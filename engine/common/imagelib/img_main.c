@@ -82,12 +82,6 @@ const bpc_desc_t PFDesc[] =
 {PF_BGR_24,	"BGR 24",	0x80E0, 3 },
 };
 
-bpc_desc_t *Image_GetPixelFormat( pixformat_t type )
-{
-	type = bound( PF_UNKNOWN, type, PF_TOTALCOUNT - 1 );
-	return (bpc_desc_t *)&PFDesc[type];
-}
-
 void Image_Reset( void )
 {
 	// reset global variables
@@ -112,7 +106,7 @@ void Image_Reset( void )
 
 rgbdata_t *ImagePack( void )
 {
-	rgbdata_t	*pack = Mem_Alloc( Sys.imagepool, sizeof( rgbdata_t ));
+	rgbdata_t	*pack = Mem_Alloc( host.imagepool, sizeof( rgbdata_t ));
 
 	if( image.cubemap && image.num_sides != 6 )
 	{
@@ -188,7 +182,7 @@ qboolean FS_AddSideToPack( const char *name, int adjust_flags )
 	if( !out ) return false; // try to reasmple dxt?
 	if( resampled ) image.rgba = Image_Copy( image.size );
 
-	image.cubemap = Mem_Realloc( Sys.imagepool, image.cubemap, image.ptr + image.size );
+	image.cubemap = Mem_Realloc( host.imagepool, image.cubemap, image.ptr + image.size );
 	Mem_Copy( image.cubemap + image.ptr, image.rgba, image.size ); // add new side
 
 	Mem_Free( image.rgba );	// release source buffer
@@ -296,7 +290,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 				MsgDev( D_ERROR, "FS_LoadImage: couldn't load (%s%s.%s), create black image\n", loadname, cmap->type[i].suf );
 
 				// Mem_Alloc already filled memblock with 0x00, no need to do it again
-				image.cubemap = Mem_Realloc( Sys.imagepool, image.cubemap, image.ptr + image.size );
+				image.cubemap = Mem_Realloc( host.imagepool, image.cubemap, image.ptr + image.size );
 				image.ptr += image.size; // move to next
 				image.num_sides++; // merge counter
 			}

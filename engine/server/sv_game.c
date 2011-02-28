@@ -4158,8 +4158,8 @@ static enginefuncs_t gEngfuncs =
 	pfnCRC32_ProcessBuffer,
 	pfnCRC32_ProcessByte,
 	pfnCRC32_Final,
-	pfnRandomLong,
-	pfnRandomFloat,
+	Com_RandomLong,
+	Com_RandomFloat,
 	pfnSetView,
 	pfnTime,
 	pfnCrosshairAngle,
@@ -4418,7 +4418,7 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 {
 	edict_t	*ent;
 
-	MsgDev( D_NOTE, "SV_SpawnEntities()\n" );
+	MsgDev( D_NOTE, "SV_SpawnEntities( %s )\n", sv.name );
 
 	// reset misc parms
 	Cvar_Reset( "sv_zmax" );

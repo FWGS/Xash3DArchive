@@ -295,7 +295,7 @@ qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	sound.type = WF_PCMDATA;
-	sound.wav = (byte *)Mem_Alloc( Sys.soundpool, sound.size );
+	sound.wav = (byte *)Mem_Alloc( host.soundpool, sound.size );
 
 	// decompress mpg into pcm wav format
 	while( bytesWrite < sound.size )
@@ -344,14 +344,14 @@ stream_t *Stream_OpenMPG( const char *filename )
 	stream_t		*stream;
 	file_t		*file;
 
-	file = FS_Open( filename, "rb", false );
+	file = FS_Open( filename, "rb" );
 	if( !file ) return NULL;
 
 	// at this point we have valid stream
-	stream = Mem_Alloc( Sys.soundpool, sizeof( stream_t ));
+	stream = Mem_Alloc( host.soundpool, sizeof( stream_t ));
 	stream->file = file;
 
-	mpegFile = Mem_Alloc( Sys.soundpool, sizeof( mpegfile_t ));
+	mpegFile = Mem_Alloc( host.soundpool, sizeof( mpegfile_t ));
 
 	mad_synth_init( &mpegFile->synth );
 	mad_stream_init( &mpegFile->stream );

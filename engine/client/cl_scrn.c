@@ -362,9 +362,9 @@ void SCR_RegisterShaders( void )
 	cls.particleImage = GL_LoadTexture( "*particle", NULL, 0, TF_IMAGE );
 
 	// register gfx.wad images
-	cls.pauseIcon = GL_LoadTexture( "gfx.wad/paused", NULL, 0, TF_IMAGE );
-	cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda", NULL, 0, TF_IMAGE|TF_LUMINANCE );
-	cls.creditsFont.hFontTexture = GL_LoadTexture( "gfx.wad/creditsfont", NULL, 0, TF_IMAGE );
+	cls.pauseIcon = GL_LoadTexture( "gfx.wad/paused.lmp", NULL, 0, TF_IMAGE );
+	cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE );
+	cls.creditsFont.hFontTexture = GL_LoadTexture( "gfx.wad/creditsfont.fnt", NULL, 0, TF_IMAGE );
 	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
 }
 

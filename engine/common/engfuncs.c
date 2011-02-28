@@ -267,28 +267,6 @@ int pfnFileExists( const char *filename, int gamedironly )
 
 /*
 =============
-pfnRandomLong
-
-=============
-*/
-long pfnRandomLong( long lLow, long lHigh )
-{
-	return Com_RandomLong( lLow, lHigh );
-}
-
-/*
-=============
-pfnRandomFloat
-
-=============
-*/
-float pfnRandomFloat( float flLow, float flHigh )
-{
-	return Com_RandomFloat( flLow, flHigh );
-}
-
-/*
-=============
 pfnTime
 
 =============

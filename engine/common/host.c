@@ -515,8 +515,13 @@ void Host_InitCommon( const int argc, const char **argv )
 	// get current hInstance
 	host.hInst = GetModuleHandle( NULL );
 
+	Image_Init();
+	Sound_Init();
+
 	FS_LoadGameInfo( NULL );
 	host.mempool = Mem_AllocPool( "Zone Engine" );
+
+	HPAK_Init();
 
 	Host_InitEvents();
 	Host_InitDecals();
@@ -526,6 +531,8 @@ void Host_InitCommon( const int argc, const char **argv )
 
 void Host_FreeCommon( void )
 {
+	Image_Shutdown();
+	Sound_Shutdown();
 	Netchan_Shutdown();
 	Mem_FreePool( &host.mempool );
 }

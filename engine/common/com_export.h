@@ -16,6 +16,14 @@ extern stdlib_api_t	com;
 }
 #endif
 
+// MD5 Hash
+typedef struct
+{
+	uint	buf[4];
+	uint	bits[2];
+	byte	in[64];
+} MD5Context_t;
+
 #define TF_SKY	(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
 #define TF_FONT	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
 #define TF_IMAGE	(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP)
@@ -53,6 +61,17 @@ typedef struct
 	// transitions if they hit similar geometry
 	vec3_t		impactPlaneNormal;
 } decallist_t;
+
+typedef struct
+{
+	string	name;
+	int	entnum;
+	vec3_t	origin;
+	float	volume;
+	float	attenuation;
+	qboolean	looping;
+	int	pitch;
+} soundlist_t;
 
 qboolean R_Init( void );
 void R_Shutdown( void );
@@ -92,18 +111,5 @@ void R_AddEfrags( struct cl_entity_s *ent );
 void R_DecalRemoveAll( int texture );
 byte *Mod_GetCurrentVis( void );
 void R_NewMap( void );
-			
-typedef int	sound_t;
-
-typedef struct
-{
-	string	name;
-	int	entnum;
-	vec3_t	origin;
-	float	volume;
-	float	attenuation;
-	qboolean	looping;
-	int	pitch;
-} soundlist_t;
 
 #endif//COM_EXPORT_H

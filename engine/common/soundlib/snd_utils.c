@@ -50,10 +50,10 @@ static const streamformat_t stream_game[] =
 void Sound_Init( void )
 {
 	// init pools
-	Sys.soundpool = Mem_AllocPool( "SoundLib Pool" );
+	host.soundpool = Mem_AllocPool( "SoundLib Pool" );
 
 	// install image formats (can be re-install later by Sound_Setup)
-	switch( Sys.app_name )
+	switch( host.type )
 	{
 	case HOST_NORMAL:
 		sound.loadformats = load_game;
@@ -70,14 +70,14 @@ void Sound_Init( void )
 void Sound_Shutdown( void )
 {
 	Mem_Check(); // check for leaks
-	Mem_FreePool( &Sys.soundpool );
+	Mem_FreePool( &host.soundpool );
 }
 
 byte *Sound_Copy( size_t size )
 {
 	byte	*out;
 
-	out = Mem_Alloc( Sys.soundpool, size );
+	out = Mem_Alloc( host.soundpool, size );
 	Mem_Copy( out, sound.tempbuffer, size );
 	return out; 
 }
@@ -127,7 +127,7 @@ qboolean Sound_ResampleInternal( wavdata_t *sc, int inrate, int inwidth, int out
 	outcount = sc->samples / stepscale;
 	sc->size = outcount * outwidth * sc->channels;
 
-	sound.tempbuffer = (byte *)Mem_Realloc( Sys.soundpool, sound.tempbuffer, sc->size );
+	sound.tempbuffer = (byte *)Mem_Realloc( host.soundpool, sound.tempbuffer, sc->size );
 
 	sc->samples = outcount;
 	if( sc->loopStart != -1 )

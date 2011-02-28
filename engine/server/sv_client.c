@@ -1807,7 +1807,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 	// if the checksum fails, ignore the rest of the packet
 	size = BF_GetRealBytesRead( msg ) - key - 1;
-	checksum2 = CRC32_Sequence( msg->pData + key + 1, size, cl->netchan.incoming_sequence );
+	checksum2 = CRC32_BlockSequence( msg->pData + key + 1, size, cl->netchan.incoming_sequence );
 
 	if( checksum2 != checksum1 )
 	{

@@ -402,7 +402,7 @@ void AVI_CloseVideo( movie_state_t *Avi )
 	Mem_Set( Avi, 0, sizeof( movie_state_t ));
 }
 
-void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, qboolean quiet )
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, int quiet )
 {
 	AVISTREAMINFO	stream_info;
 	BITMAPINFOHEADER	bmih;

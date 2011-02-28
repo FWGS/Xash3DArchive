@@ -66,8 +66,6 @@ typedef struct system_s
 	qboolean			con_showcredits;
 	qboolean			con_silentmode;
 	byte			*basepool;
-	byte			*imagepool;
-	byte			*soundpool;
 	byte			*scriptpool;
 	byte			*stringpool;
 	qboolean			shutdown_issued;
@@ -104,14 +102,6 @@ typedef struct convar_s
 	char		*latched_string;	// for CVAR_LATCH vars
 	char		*description;	// variable descrition info
 };
-
-// MD5 Hash
-typedef struct
-{
-	uint	buf[4];
-	uint	bits[2];
-	byte	in[64];
-} MD5Context_t;
 
 extern system_t Sys;
 extern sysinfo_t SI;
@@ -219,13 +209,6 @@ char *va(const char *format, ...);
 #define copystring2( pool, str ) com_stralloc( pool, str, __FILE__, __LINE__)
 
 //
-// utils.c
-//
-long Com_RandomLong( long lMin, long lMax );
-float Com_RandomFloat( float fMin, float fMax );
-uint Com_HashKey( const char *string, uint hashSize );
-
-//
 // math.c
 //
 #define VectorSet(v, x, y, z) ((v)[0]=(x),(v)[1]=(y),(v)[2]=(z))
@@ -306,23 +289,6 @@ byte *FS_LoadFile (const char *path, fs_offset_t *filesizeptr );
 qboolean FS_WriteFile (const char *filename, const void *data, fs_offset_t len);
 void FS_FreeFile( void *buffer );
 
-// imagelib exports
-rgbdata_t *FS_LoadImage( const char *name, const byte *buffer, size_t size );
-qboolean Image_Process( rgbdata_t **pix, int w, int h, uint flags );
-qboolean FS_SaveImage( const char *name, rgbdata_t *image );
-bpc_desc_t *Image_GetPixelFormat( pixformat_t type );
-void FS_FreeImage( rgbdata_t *pack );
-
-// soundlib exports
-wavdata_t *FS_LoadSound( const char *name, const byte *buffer, size_t size );
-qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
-void FS_FreeSound( wavdata_t *pack );
-
-stream_t *FS_OpenStream( const char *filename );
-wavdata_t *FS_StreamInfo( stream_t *stream );
-long FS_ReadStream( stream_t *stream, int bytes, void *buffer );
-void FS_FreeStream( stream_t *stream );
-
 search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
 
 // files managment (like fopen, fread etc)
@@ -348,17 +314,6 @@ int FS_Close( file_t *file );
 int FS_Getc( file_t *file );
 qboolean FS_Eof( file_t *file );
 fs_offset_t FS_FileLength( file_t *f );
-
-//
-// hpak.c
-//
-void HPAK_Init( void );
-qboolean HPAK_GetDataPointer( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
-qboolean HPAK_ResourceForHash( const char *filename, char *hash, struct resource_s *pRes );
-void HPAK_AddLump( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, file_t *f );
-void HPAK_CheckIntegrity( const char *filename );
-void HPAK_CheckSize( const char *filename );
-void HPAK_FlushHostQueue( void );
 
 //
 // cvar.c
@@ -415,20 +370,6 @@ void Cmd_ExecuteString( const char *text );
 void Cmd_ForwardToServer( void );
 
 //
-// crclib.c
-//
-void CRC32_Init( dword *pulCRC );
-byte CRC32_BlockSequence( byte *base, int length, int sequence );
-void CRC32_ProcessBuffer( dword *pulCRC, const void *pBuffer, int nBuffer );
-void CRC32_ProcessByte( dword *pulCRC, byte ch );
-void CRC32_Final( dword *pulCRC );
-qboolean CRC32_File( dword *crcvalue, const char *filename );
-qboolean CRC32_MapFile( dword *crcvalue, const char *filename );
-void MD5Init( MD5Context_t *ctx );
-void MD5Update( MD5Context_t *ctx, const byte *buf, uint len );
-void MD5Final( byte digest[16], MD5Context_t *ctx );
-
-//
 // parselib.c
 //
 typedef struct
@@ -476,17 +417,5 @@ qboolean PS_EndOfScript( script_t *script );
 
 script_t	*PS_LoadScript( const char *filename, const char *buf, size_t size, qboolean gamedironly );
 void	PS_FreeScript( script_t *script );
-
-//
-// imglib.c
-//
-void Image_Init( void );
-void Image_Shutdown( void );
-
-//
-// sndlib.c
-//
-void Sound_Init( void );
-void Sound_Shutdown( void );
 
 #endif//LAUNCHER_H

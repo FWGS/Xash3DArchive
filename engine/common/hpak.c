@@ -3,8 +3,7 @@
 //		hpak.c - custom user package to send other clients
 //=======================================================================
 
-#include "launch.h"
-#include "wadfile.h"
+#include "common.h"
 #include "filesystem.h"
 
 convar_t		*hpk_maxsize;
@@ -49,15 +48,15 @@ void HPAK_AddToQueue( const char *name, resource_t *DirEnt, byte *data, file_t *
 {
 	hpak_t	*ptr;
 
-	ptr = Malloc( sizeof( hpak_t ));
+	ptr = Z_Malloc( sizeof( hpak_t ));
 	ptr->name = copystring( name );
 	ptr->HpakResource = *DirEnt;
 	ptr->size = DirEnt->nDownloadSize;
-	ptr->data = Malloc( ptr->size );
+	ptr->data = Z_Malloc( ptr->size );
 
 	if( data ) Mem_Copy( ptr->data, data, ptr->size );
 	else if( f ) FS_Read( f, ptr->data, ptr->size );
-	else Sys_Error( "HPAK_AddToQueue: data == NULL.\n" );
+	else Host_Error( "HPAK_AddToQueue: data == NULL.\n" );
 
 	ptr->next = hpak_queue;
 	hpak_queue = ptr;
@@ -89,7 +88,7 @@ void HPAK_CreatePak( const char *filename, resource_t *DirEnt, byte *data, file_
 	FS_DefaultExtension( pakname, ".hpk" );
 
 	MsgDev( D_INFO, "creating HPAK %s.\n", pakname );
-	fout = FS_Open( pakname, "wb", false );
+	fout = FS_Open( pakname, "wb" );
 	if( !fout )
 	{
 		MsgDev( D_ERROR, "HPAK_CreatePak: can't write %s.\n", pakname );
@@ -104,7 +103,7 @@ void HPAK_CreatePak( const char *filename, resource_t *DirEnt, byte *data, file_
 	{
 		// there are better ways
 		filelocation = FS_Tell( f );
-		temp = Malloc( DirEnt->nDownloadSize );
+		temp = Z_Malloc( DirEnt->nDownloadSize );
 		FS_Read( f, temp, DirEnt->nDownloadSize );
 		FS_Seek( f, filelocation, SEEK_SET );
 
@@ -131,7 +130,7 @@ void HPAK_CreatePak( const char *filename, resource_t *DirEnt, byte *data, file_
 	FS_Write( fout, &hash_pack_header, sizeof( hash_pack_header ));
 
 	hash_pack_dir.count = 1;
-	hash_pack_dir.dirs = Malloc( sizeof( hpak_dir_t ));
+	hash_pack_dir.dirs = Z_Malloc( sizeof( hpak_dir_t ));
 	hash_pack_dir.dirs[0].DirectoryResource = *DirEnt;
 	hash_pack_dir.dirs[0].seek = FS_Tell( fout );
 	hash_pack_dir.dirs[0].size = DirEnt->nDownloadSize;
@@ -217,7 +216,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	{
 		// there are better ways
 		position = FS_Tell( f );
-		temp = Malloc( DirEnt->nDownloadSize );
+		temp = Z_Malloc( DirEnt->nDownloadSize );
 		FS_Read( f, temp, DirEnt->nDownloadSize );
 		FS_Seek( f, position, SEEK_SET );
 
@@ -247,7 +246,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	FS_StripExtension( pakname1 );
 	FS_DefaultExtension( pakname1, ".hpk" );
 
-	f1 = FS_Open( pakname1, "rb", false );
+	f1 = FS_Open( pakname1, "rb" );
 
 	if( !f1 )
 	{
@@ -260,7 +259,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	FS_StripExtension( pakname2 );
 	FS_DefaultExtension( pakname2, ".hp2" );
 
-	f2 = FS_Open( pakname2, "w+b", false );
+	f2 = FS_Open( pakname2, "w+b" );
 
 	if( !f2 )
 	{
@@ -295,7 +294,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	}
 
 	// load the data
-	hpak1.dirs = Malloc( sizeof( hpak_dir_t ) * hpak1.count );
+	hpak1.dirs = Z_Malloc( sizeof( hpak_dir_t ) * hpak1.count );
 	FS_Read( f1, hpak1.dirs, sizeof( hpak_dir_t ) * hpak1.count );
 	FS_Close( f1 );
 
@@ -307,7 +306,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 
 	// make a new container
 	hpak2.count = hpak1.count;
-	hpak2.dirs = Malloc( sizeof( hpak_dir_t ) * hpak2.count );
+	hpak2.dirs = Z_Malloc( sizeof( hpak_dir_t ) * hpak2.count );
 	Mem_Copy( hpak2.dirs, hpak1.dirs, hpak1.count );
 
 	for( i = 0, dirs = NULL; i < hpak1.count; i++ )
@@ -391,7 +390,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb", false );
+	f = FS_Open( pakname, "rb" );
 	if( !f )
 	{
 		MsgDev( D_INFO, "Couldn't find %s.\n", pakname );
@@ -420,7 +419,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 
 	if( !quiet ) MsgDev( D_INFO, "# of Entries:  %i\n", num_lumps );
 
-	dataDir = Malloc( sizeof( hpak_dir_t ) * num_lumps );
+	dataDir = Z_Malloc( sizeof( hpak_dir_t ) * num_lumps );
 	FS_Read( f, dataDir, sizeof( hpak_dir_t ) * num_lumps );
 
 	if( !quiet ) MsgDev( D_INFO, "# Type Size FileName : MD5 Hash\n" );
@@ -436,7 +435,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 			return false;
 		}
 
-		dataPak = Malloc( dataDir[i].size );
+		dataPak = Z_Malloc( dataDir[i].size );
 		FS_Seek( f, dataDir[i].seek, SEEK_SET );
 		FS_Read( f, dataPak, dataDir[i].size );
 
@@ -506,10 +505,8 @@ void HPAK_CheckSize( const char *filename )
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	if( FS_FileSize( pakname, false ) > ( maxsize * 1000000 ))
-	{
+	if( FS_FileSize( pakname ) > ( maxsize * 1000000 ))
 		MsgDev( D_ERROR, "HPAK_CheckSize: %s is too large.\n", filename );
-	}
 }
 
 qboolean HPAK_ResourceForHash( const char *filename, char *inHash, resource_t *pRes )
@@ -537,7 +534,7 @@ qboolean HPAK_ResourceForHash( const char *filename, char *inHash, resource_t *p
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb", false );
+	f = FS_Open( pakname, "rb" );
 	if( !f ) return false;
 
 	FS_Read( f, &hdr, sizeof( hdr ));
@@ -566,7 +563,7 @@ qboolean HPAK_ResourceForHash( const char *filename, char *inHash, resource_t *p
 		return false;
 	}
 
-	hpakcontainer.dirs = Malloc( sizeof( hpak_dir_t ) * hpakcontainer.count );
+	hpakcontainer.dirs = Z_Malloc( sizeof( hpak_dir_t ) * hpakcontainer.count );
 	FS_Read( f, hpakcontainer.dirs, sizeof( hpak_dir_t ) * hpakcontainer.count );
 	ret = HPAK_FindResource( &hpakcontainer, inHash, pRes );
 
@@ -589,7 +586,7 @@ qboolean HPAK_ResourceForIndex( const char *filename, int index, resource_t *pRe
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb", false );
+	f = FS_Open( pakname, "rb" );
 	FS_Read( f, &hdr, sizeof( hdr ));
 
 	if( hdr.ident != IDCUSTOMHEADER )
@@ -623,7 +620,7 @@ qboolean HPAK_ResourceForIndex( const char *filename, int index, resource_t *pRe
 		return false;
 	}
 
-	hpakcontainer.dirs = Malloc( sizeof( hpak_dir_t ) * hpakcontainer.count );
+	hpakcontainer.dirs = Z_Malloc( sizeof( hpak_dir_t ) * hpakcontainer.count );
 
 	// we could just seek the right data...
 	FS_Read( f, hpakcontainer.dirs, sizeof( hpak_dir_t ) * hpakcontainer.count );
@@ -656,7 +653,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 		{
 			if( buffer )
 			{
-				tmpbuf = Malloc( queue->size );
+				tmpbuf = Z_Malloc( queue->size );
 				Mem_Copy( tmpbuf, queue->data, queue->size );
 				*buffer = tmpbuf;
 			}
@@ -671,7 +668,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb", false );
+	f = FS_Open( pakname, "rb" );
 	if( !f ) return false;
 
 	FS_Read( f, &hdr, sizeof( hdr ));
@@ -700,7 +697,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 		return false;
 	}
 
-	direntries = Malloc( sizeof( hpak_dir_t ) * num_lumps );
+	direntries = Z_Malloc( sizeof( hpak_dir_t ) * num_lumps );
 	FS_Read( f, direntries, sizeof( hpak_dir_t ) * num_lumps );
 
 	for( i = 0; i < num_lumps; i++ )
@@ -711,7 +708,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 
 			if( buffer && direntries[i].size > 0 )
 			{
-				tmpbuf = Malloc( direntries[i].size );
+				tmpbuf = Z_Malloc( direntries[i].size );
 				FS_Read( f, tmpbuf, direntries[i].size );
 				*buffer = tmpbuf;
 			}
@@ -745,7 +742,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	FS_StripExtension( read_path );
 	FS_DefaultExtension( read_path, ".hpk" );
 
-	f1 = FS_Open( read_path, "rb", false );
+	f1 = FS_Open( read_path, "rb" );
 	if( !f1 )
 	{
 		MsgDev( D_ERROR, "HPAK_RemoveLump: %s couldn't open.\n", read_path );
@@ -755,7 +752,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	com.strncpy( save_path, read_path, sizeof( save_path ));
 	FS_StripExtension( save_path );
 	FS_DefaultExtension( save_path, ".hp2" );
-	f2 = FS_Open( save_path, "w+b", false );
+	f2 = FS_Open( save_path, "w+b" );
 	if( !f2 )
 	{
 		MsgDev( D_ERROR, "HPAK_RemoveLump: %s couldn't open.\n", save_path );
@@ -766,7 +763,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	FS_Seek( f1, 0, SEEK_SET );
 	FS_Seek( f2, 0, SEEK_SET );
 
-	//header copy
+	// header copy
 	FS_Read( f1, &hash_pack_header, sizeof( hpak_header_t ));
 	FS_Write( f2, &hash_pack_header, sizeof( hpak_header_t ));
 
@@ -802,8 +799,8 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	}
 
 	hpak_save.count = hpak_read.count - 1;
-	hpak_read.dirs = Malloc( sizeof( hpak_dir_t ) * hpak_read.count );
-	hpak_save.dirs = Malloc( sizeof( hpak_dir_t ) * hpak_save.count );
+	hpak_read.dirs = Z_Malloc( sizeof( hpak_dir_t ) * hpak_read.count );
+	hpak_save.dirs = Z_Malloc( sizeof( hpak_dir_t ) * hpak_save.count );
 
 	FS_Read( f1, hpak_read.dirs, sizeof( hpak_dir_t ) * hpak_read.count );
 

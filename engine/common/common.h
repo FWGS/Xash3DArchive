@@ -25,6 +25,7 @@
 #define MAX_RENDERS		8		// max libraries to keep tracking
 #define MAX_ENTNUMBER	99999		// for server and client parsing
 #define MAX_HEARTBEAT	-99999		// connection time
+#define QCHAR_WIDTH		16		// font width
 
 #define CIN_MAIN		0
 #define CIN_LOGO		1
@@ -129,6 +130,9 @@ typedef struct host_parm_s
 	int		developer;	// show all developer's message
 	qboolean		key_overstrike;	// key overstrike mode
 
+	byte		*imagepool;	// imagelib mempool
+	byte		*soundpool;	// soundlib mempool
+
 	// for IN_MouseMove() easy access
 	int		window_center_x;
 	int		window_center_y;
@@ -149,6 +153,155 @@ extern host_parm_t	host;
 #ifdef __cplusplus
 }
 #endif
+
+/*
+========================================================================
+
+internal image format
+
+typically expanded to rgba buffer
+NOTE: number at end of pixelformat name it's a total bitscount e.g. PF_RGB_24 == PF_RGB_888
+========================================================================
+*/
+typedef enum
+{
+	PF_UNKNOWN = 0,
+	PF_INDEXED_24,	// inflated palette (768 bytes)
+	PF_INDEXED_32,	// deflated palette (1024 bytes)
+	PF_RGBA_32,	// normal rgba buffer
+	PF_BGRA_32,	// big endian RGBA (MacOS)
+	PF_RGB_24,	// uncompressed dds or another 24-bit image 
+	PF_BGR_24,	// big-endian RGB (MacOS)
+	PF_TOTALCOUNT,	// must be last
+} pixformat_t;
+
+typedef struct bpc_desc_s
+{
+	int	format;	// pixelformat
+	char	name[16];	// used for debug
+	uint	glFormat;	// RGBA format
+	int	bpp;	// channels (e.g. rgb = 3, rgba = 4)
+} bpc_desc_t;
+
+// imagelib global settings
+typedef enum
+{
+	IL_USE_LERPING	= BIT(0),	// lerping images during resample
+	IL_KEEP_8BIT	= BIT(1),	// don't expand paletted images
+	IL_ALLOW_OVERWRITE	= BIT(2),	// allow to overwrite stored images
+} ilFlags_t;
+
+// rgbdata output flags
+typedef enum
+{
+	// rgbdata->flags
+	IMAGE_CUBEMAP	= BIT(0),		// it's 6-sides cubemap buffer
+	IMAGE_HAS_ALPHA	= BIT(1),		// image contain alpha-channel
+	IMAGE_HAS_COLOR	= BIT(2),		// image contain RGB-channel
+	IMAGE_COLORINDEX	= BIT(3),		// all colors in palette is gradients of last color (decals)
+	IMAGE_HAS_LUMA	= BIT(4),		// image has luma pixels (q1-style maps)
+	IMAGE_SKYBOX	= BIT(5),		// only used by FS_SaveImage - for write right suffixes
+	IMAGE_QUAKESKY	= BIT(6),		// it's a quake sky double layered clouds (so keep it as 8 bit)
+	IMAGE_STATIC	= BIT(7),		// never trying to free this image (static memory)
+
+	// Image_Process manipulation flags
+	IMAGE_FLIP_X	= BIT(16),	// flip the image by width
+	IMAGE_FLIP_Y	= BIT(17),	// flip the image by height
+	IMAGE_ROT_90	= BIT(18),	// flip from upper left corner to down right corner
+	IMAGE_ROT180	= IMAGE_FLIP_X|IMAGE_FLIP_Y,
+	IMAGE_ROT270	= IMAGE_FLIP_X|IMAGE_FLIP_Y|IMAGE_ROT_90,	
+	IMAGE_ROUND	= BIT(19),	// round image to nearest Pow2
+	IMAGE_RESAMPLE	= BIT(20),	// resample image to specified dims
+	IMAGE_PALTO24	= BIT(21),	// turn 32-bit palette into 24-bit mode (only for indexed images)
+	IMAGE_ROUNDFILLER	= BIT(22),	// round image to Pow2 and fill unused entries with single color	
+	IMAGE_FORCE_RGBA	= BIT(23),	// force image to RGBA buffer
+	IMAGE_MAKE_LUMA	= BIT(24),	// create luma texture from indexed
+} imgFlags_t;
+
+typedef struct rgbdata_s
+{
+	word	width;		// image width
+	word	height;		// image height
+	uint	type;		// compression type
+	uint	flags;		// misc image flags
+	byte	*palette;		// palette if present
+	byte	*buffer;		// image buffer
+	rgba_t	fogParams;	// some water textures in hl1 has info about fog color and alpha
+	size_t	size;		// for bounds checking
+} rgbdata_t;
+
+//
+// imagelib
+//
+void Image_Init( void );
+void Image_Shutdown( void );
+rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size );
+qboolean FS_SaveImage( const char *filename, rgbdata_t *pix );
+void FS_FreeImage( rgbdata_t *pack );
+extern const bpc_desc_t PFDesc[];	// image get pixelformat
+qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags );
+
+/*
+========================================================================
+
+internal sound format
+
+typically expanded to wav buffer
+========================================================================
+*/
+typedef enum
+{
+	WF_UNKNOWN = 0,
+	WF_PCMDATA,
+	WF_MPGDATA,
+	WF_TOTALCOUNT,	// must be last
+} sndformat_t;
+
+// imagelib global settings
+typedef enum
+{
+	SL_USE_LERPING	= BIT(0),		// lerping sounds during resample
+	SL_KEEP_8BIT	= BIT(1),		// don't expand 8bit sounds automatically up to 16 bit
+	SL_ALLOW_OVERWRITE	= BIT(2),		// allow to overwrite stored sounds
+} slFlags_t;
+
+// wavdata output flags
+typedef enum
+{
+	// wavdata->flags
+	SOUND_LOOPED	= BIT( 0 ),	// this is looped sound (contain cue markers)
+	SOUND_STREAM	= BIT( 1 ),	// this is a streaminfo, not a real sound
+
+	// Sound_Process manipulation flags
+	SOUND_RESAMPLE	= BIT(12),	// resample sound to specified rate
+	SOUND_CONVERT16BIT	= BIT(13),	// change sound resolution from 8 bit to 16
+} sndFlags_t;
+
+typedef struct
+{
+	word	rate;		// num samples per second (e.g. 11025 - 11 khz)
+	byte	width;		// resolution - bum bits divided by 8 (8 bit is 1, 16 bit is 2)
+	byte	channels;		// num channels (1 - mono, 2 - stereo)
+	int	loopStart;	// offset at this point sound will be looping while playing more than only once
+	int	samples;		// total samplecount in wav
+	uint	type;		// compression type
+	uint	flags;		// misc sound flags
+	byte	*buffer;		// sound buffer
+	size_t	size;		// for bounds checking
+} wavdata_t;
+
+//
+// soundlib
+//
+void Sound_Init( void );
+void Sound_Shutdown( void );
+wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size );
+void FS_FreeSound( wavdata_t *pack );
+stream_t *FS_OpenStream( const char *filename );
+wavdata_t *FS_StreamInfo( stream_t *stream );
+long FS_ReadStream( stream_t *stream, int bytes, void *buffer );
+void FS_FreeStream( stream_t *stream );
+qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
 
 //
 // build.c
@@ -214,8 +367,6 @@ int pfnFileExists( const char *filename, int gamedironly );
 void *pfnLoadLibrary( const char *name );
 void *pfnGetProcAddress( void *hInstance, const char *name );
 void pfnFreeLibrary( void *hInstance );
-long pfnRandomLong( long lLow, long lHigh );
-float pfnRandomFloat( float flLow, float flHigh );
 int pfnAddCommand( const char *cmd_name, xcommand_t func );
 void pfnDelCommand( const char *cmd_name );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );
@@ -239,6 +390,32 @@ float pfnTime( void );
 #define Z_Malloc( size )		Mem_Alloc( host.mempool, size )
 #define Z_Realloc( ptr, size )	Mem_Realloc( host.mempool, ptr, size )
 #define Z_Free( ptr )		if( ptr ) Mem_Free( ptr )
+
+//
+// crclib.c
+//
+void CRC32_Init( dword *pulCRC );
+byte CRC32_BlockSequence( byte *base, int length, int sequence );
+void CRC32_ProcessBuffer( dword *pulCRC, const void *pBuffer, int nBuffer );
+void CRC32_ProcessByte( dword *pulCRC, byte ch );
+void CRC32_Final( dword *pulCRC );
+qboolean CRC32_File( dword *crcvalue, const char *filename );
+qboolean CRC32_MapFile( dword *crcvalue, const char *filename );
+void MD5Init( MD5Context_t *ctx );
+void MD5Update( MD5Context_t *ctx, const byte *buf, uint len );
+void MD5Final( byte digest[16], MD5Context_t *ctx );
+uint Com_HashKey( const char *string, uint hashSize );
+
+//
+// hpak.c
+//
+void HPAK_Init( void );
+qboolean HPAK_GetDataPointer( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
+qboolean HPAK_ResourceForHash( const char *filename, char *hash, struct resource_s *pRes );
+void HPAK_AddLump( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, file_t *f );
+void HPAK_CheckIntegrity( const char *filename );
+void HPAK_CheckSize( const char *filename );
+void HPAK_FlushHostQueue( void );
 
 //
 // keys.c
@@ -266,7 +443,7 @@ byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame );
 qboolean AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration );
 qboolean AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info );
 fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length );
-void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, qboolean quiet );
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, int quiet );
 void AVI_CloseVideo( movie_state_t *Avi );
 qboolean AVI_IsActive( movie_state_t *Avi );
 movie_state_t *AVI_GetState( int num );
@@ -330,6 +507,8 @@ void Cmd_WriteVariables( file_t *f );
 qboolean Cmd_CheckMapsList( qboolean fRefresh );
 void Cmd_ForwardToServer( void );
 void Cmd_AutoComplete( char *complete_string );
+long Com_RandomLong( long lMin, long lMax );
+float Com_RandomFloat( float fMin, float fMax );
 
 typedef struct autocomplete_list_s
 {

@@ -476,8 +476,8 @@ void SV_InitClientMove( void )
 	svgame.pmove->PM_HullPointContents = pfnHullPointContents; 
 	svgame.pmove->PM_PlayerTrace = pfnPlayerTrace;
 	svgame.pmove->PM_TraceLine = pfnTraceLine;
-	svgame.pmove->RandomLong = pfnRandomLong;
-	svgame.pmove->RandomFloat = pfnRandomFloat;
+	svgame.pmove->RandomLong = Com_RandomLong;
+	svgame.pmove->RandomFloat = Com_RandomFloat;
 	svgame.pmove->PM_GetModelType = pfnGetModelType;
 	svgame.pmove->PM_GetModelBounds = pfnGetModelBounds;	
 	svgame.pmove->PM_HullForBsp = pfnHullForBsp;

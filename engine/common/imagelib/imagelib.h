@@ -5,7 +5,7 @@
 #ifndef IMAGELIB_H
 #define IMAGELIB_H
 
-#include "launch.h"
+#include "common.h"
 
 // skyorder_q2[6] = { 2, 3, 1, 0, 4, 5, }; // Quake, Half-Life skybox ordering
 // skyorder_ms[6] = { 4, 5, 1, 0, 2, 3  }; // Microsoft DDS ordering (reverse)
@@ -162,7 +162,6 @@ enum
 
 extern imglib_t image;
 extern byte *fs_mempool;
-extern const bpc_desc_t PFDesc[];
 
 void Image_RoundDimensions( int *scaled_width, int *scaled_height );
 byte *Image_ResampleInternal( const void *indata, int in_w, int in_h, int out_w, int out_h, int intype, qboolean *done );

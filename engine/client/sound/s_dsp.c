@@ -20,8 +20,8 @@ static dll_info_t		room_dll = { "room.dll", NULL, NULL, NULL, NULL, false };
 // engine callbacks
 static dsp_enginefuncs_t gEngfuncs = 
 {
-	pfnRandomFloat,
-	pfnRandomLong,
+	Com_RandomFloat,
+	Com_RandomLong,
 	Con_Printf,
 	Con_DPrintf,
 };

@@ -453,7 +453,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	r_shot->height = glState.height;
 	r_shot->flags = IMAGE_HAS_COLOR;
 	r_shot->type = PF_RGB_24;
-	r_shot->size = r_shot->width * r_shot->height * PFDesc( r_shot->type )->bpp;
+	r_shot->size = r_shot->width * r_shot->height * PFDesc[r_shot->type].bpp;
 	r_shot->palette = NULL;
 	r_shot->buffer = Mem_Alloc( r_temppool, r_shot->size );
 

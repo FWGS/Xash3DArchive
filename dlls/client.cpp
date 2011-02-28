@@ -471,6 +471,11 @@ void ClientCommand( edict_t *pEntity )
 	{
 		// MenuSelect returns true only if the command is properly handled,  so don't print a warning
 	}
+	else if ( FStrEq(pcmd, "VModEnable") )
+	{
+		// clear 'Unknown command: VModEnable' in singleplayer
+		return;
+	}
 	else
 	{
 		// tell the user they entered an unknown command

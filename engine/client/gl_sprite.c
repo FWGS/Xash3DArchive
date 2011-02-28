@@ -296,7 +296,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	temp.height = h;
 	temp.type = pix->type;
 	temp.flags = pix->flags;	
-	temp.size = w * h * PFDesc( temp.type )->bpp;
+	temp.size = w * h * PFDesc[temp.type].bpp;
 	temp.buffer = Mem_Alloc( r_temppool, temp.size );
 	temp.palette = NULL;
 

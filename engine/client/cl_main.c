@@ -459,7 +459,7 @@ void CL_WritePacket( void )
 
 		// calculate a checksum over the move commands
 		size = BF_GetRealBytesWritten( &buf ) - key - 1;
-		buf.pData[key] = CRC32_Sequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
+		buf.pData[key] = CRC32_BlockSequence( buf.pData + key + 1, size, cls.netchan.outgoing_sequence );
 
 		// message we are constructing.
 		i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;

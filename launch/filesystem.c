@@ -1839,10 +1839,7 @@ file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly )
           }
 
 	if( FS_CheckNastyPath( filepath, false ))
-	{
-		MsgDev( D_NOTE, "FS_Open: (\"%s\", \"%s\" ): nasty filename rejected\n", filepath, mode );
 		return NULL;
-	}
 
 	// if the file is opened in "write", "append", or "read/write" mode
 	if( mode[0] == 'w' || mode[0] == 'a' || com.strchr( mode, '+' ))

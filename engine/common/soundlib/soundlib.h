@@ -5,7 +5,7 @@
 #ifndef SOUNDLIB_H
 #define SOUNDLIB_H
 
-#include "launch.h"
+#include "common.h"
 
 typedef struct loadwavformat_s
 {
