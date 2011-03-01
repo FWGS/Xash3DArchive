@@ -519,14 +519,14 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 			// is too old, so we can't reconstruct it properly.
 			MsgDev( D_INFO, "CL_ParsePacketEntities: delta frame too old\n" );
 		}
-		else if( cls.next_client_entities - oldframe->first_entity > cls.num_client_entities - 128 )
+		else if(( cls.next_client_entities - oldframe->first_entity ) > ( cls.num_client_entities - 128 ))
 		{
 			MsgDev( D_INFO, "CL_ParsePacketEntities: delta parse_entities too old\n" );
 		}
 		else newframe->valid = true;	// valid delta parse
 
 		if(( cl.delta_sequence & CL_UPDATE_MASK ) != ( delta_sequence & CL_UPDATE_MASK ))
-			MsgDev( D_WARN, "CL_ParsePacketEntities: mismatch delta_sequence %i != %i\n", cl.delta_sequence, delta );
+			MsgDev( D_WARN, "CL_ParsePacketEntities: mismatch delta_sequence %i != %i\n", cl.delta_sequence, ( delta_sequence & CL_UPDATE_MASK ));
 
 		// keep sequence an actual
 		newframe->delta_sequence = delta_sequence;

@@ -154,22 +154,6 @@ void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr 
 #define MsgDev Sys_MsgDev
 
 //
-// network.c
-//
-void NET_Init( void );
-void NET_Shutdown( void );
-void NET_Sleep( int msec );
-void NET_Config( qboolean net_enable );
-qboolean NET_IsLocalAddress( netadr_t adr );
-char *NET_AdrToString( const netadr_t a );
-char *NET_BaseAdrToString( const netadr_t a );
-qboolean NET_StringToAdr( const char *string, netadr_t *adr );
-qboolean NET_CompareAdr( const netadr_t a, const netadr_t b );
-qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b );
-qboolean NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
-void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to );
-
-//
 // stdlib.c
 //
 void com_strnupr(const char *in, char *out, size_t size_out);

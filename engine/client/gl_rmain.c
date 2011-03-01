@@ -280,6 +280,11 @@ int R_ComputeFxBlend( cl_entity_t *e )
 		else blend = renderAmt;
 		break;	
 	}
+
+	// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
+	if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
+		e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
+
 	blend = bound( 0, blend, 255 );
 
 	return blend;

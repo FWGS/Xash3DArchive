@@ -58,22 +58,6 @@ void Sys_GetStdAPI( void )
 	com.clearpool = _mem_emptypool;
 	com.memcheck = _mem_check;
 
-	// network.c funcs
-	com.NET_Init = NET_Init;
-	com.NET_Shutdown = NET_Shutdown;
-	com.NET_Sleep = NET_Sleep;
-	com.NET_Config = NET_Config;
-	com.NET_AdrToString = NET_AdrToString;
-	com.NET_StringToAdr = NET_StringToAdr;
-	com.NET_SendPacket = NET_SendPacket;
-	com.NET_IsLocalAddress = NET_IsLocalAddress;
-	com.NET_BaseAdrToString = NET_BaseAdrToString;
-	com.NET_StringToAdr = NET_StringToAdr;
-	com.NET_CompareAdr = NET_CompareAdr;
-	com.NET_CompareBaseAdr = NET_CompareBaseAdr;
-	com.NET_GetPacket = NET_GetPacket;
-	com.NET_SendPacket = NET_SendPacket;
-
 	com.Com_LoadGameInfo = FS_LoadGameInfo;		// gate game info from script file
 	com.Com_AddGameHierarchy = FS_AddGameHierarchy;	// add base directory in search list
 	com.Com_AddGameDirectory = FS_AddGameDirectory;	// add game directory in search list
@@ -277,7 +261,7 @@ void Sys_LookupInstance( void )
 			CloseHandle( Sys.hMutex );
 			Sys.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
 			if( !Sys.developer ) Sys.developer = 3;	// otherwise we see empty console
-			com.sprintf( Sys.log_path, "engine.log", com.timestamp( TIME_FILENAME )); // logs folder
+			com.sprintf( Sys.log_path, "dedicated.log", com.timestamp( TIME_FILENAME )); // logs folder
 		}
 		else
 		{

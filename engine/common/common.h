@@ -40,6 +40,8 @@
 #define MAX_MSGLEN		32768	// max length of network message
 				// FIXME: replace with NET_MAX_PAYLOAD
 
+typedef struct stream_s stream_t;	// sound stream for background music playing
+
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
 #define Assert( f )		DBG_AssertFunction( f, #f, __FILE__, __LINE__, NULL )
@@ -92,6 +94,14 @@ typedef enum
 	PRINT_HIGH,	// critical messages
 	PRINT_CHAT,	// chat messages
 } messagelevel_t;
+
+typedef enum
+{
+	NS_CLIENT,
+	NS_SERVER
+} netsrc_t;
+
+#include "netadr.h"
 
 typedef struct host_redirect_s
 {
@@ -153,6 +163,22 @@ extern host_parm_t	host;
 #ifdef __cplusplus
 }
 #endif
+
+//
+// network.c
+//
+void NET_Init( void );
+void NET_Shutdown( void );
+void NET_Sleep( int msec );
+void NET_Config( qboolean net_enable );
+qboolean NET_IsLocalAddress( netadr_t adr );
+char *NET_AdrToString( const netadr_t a );
+char *NET_BaseAdrToString( const netadr_t a );
+qboolean NET_StringToAdr( const char *string, netadr_t *adr );
+qboolean NET_CompareAdr( const netadr_t a, const netadr_t b );
+qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b );
+qboolean NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
+void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 /*
 ========================================================================

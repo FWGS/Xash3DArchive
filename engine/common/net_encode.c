@@ -521,36 +521,37 @@ void Delta_ParseTableField( sizebuf_t *msg )
 	Delta_AddField( dt->pName, pName, flags, bits, mul, post_mul );
 }
 
-qboolean Delta_ParseField( script_t *delta_script, const delta_field_t *pInfo, delta_t *pField, qboolean bPost )
+qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delta_t *pField, qboolean bPost )
 {
-	token_t		token;
+	string		token;
 	delta_field_t	*pFieldInfo;
+	char		*oldpos;
 
-	Com_ReadToken( delta_script, 0, &token );
-	if( com.strcmp( token.string, "(" ))
+	*delta_script = COM_ParseFile( *delta_script, token );
+	if( com.strcmp( token, "(" ))
 	{
-		MsgDev( D_ERROR, "Delta_ParseField: expected '(', found '%s' instead\n", token.string );
+		MsgDev( D_ERROR, "Delta_ParseField: expected '(', found '%s' instead\n", token );
 		return false;
 	}
 
 	// read the variable name
-	if( !Com_ReadToken( delta_script, SC_ALLOW_PATHNAMES2, &token ))
+	if(( *delta_script = COM_ParseFile( *delta_script, token )) == NULL )
 	{
 		MsgDev( D_ERROR, "Delta_ParseField: missing field name\n" );
 		return false;
 	}
 
-	pFieldInfo = Delta_FindFieldInfo( pInfo, token.string );
+	pFieldInfo = Delta_FindFieldInfo( pInfo, token );
 	if( !pFieldInfo )
 	{
-		MsgDev( D_ERROR, "Delta_ParseField: unable to find field %s\n", token.string );
+		MsgDev( D_ERROR, "Delta_ParseField: unable to find field %s\n", token );
 		return false;
 	}
 
-	Com_ReadToken( delta_script, 0, &token );
-	if( com.strcmp( token.string, "," ))
+	*delta_script = COM_ParseFile( *delta_script, token );
+	if( com.strcmp( token, "," ))
 	{
-		MsgDev( D_ERROR, "Delta_ParseField: expected ',', found '%s' instead\n", token.string );
+		MsgDev( D_ERROR, "Delta_ParseField: expected ',', found '%s' instead\n", token );
 		return false;
 	}
 
@@ -561,74 +562,81 @@ qboolean Delta_ParseField( script_t *delta_script, const delta_field_t *pInfo, d
 	pField->flags = 0;
 
 	// read delta-flags
-	while( Com_ReadToken( delta_script, false, &token ))
+	while(( *delta_script = COM_ParseFile( *delta_script, token )) != NULL )
 	{
-		if( !com.strcmp( token.string, "," ))
+		if( !com.strcmp( token, "," ))
 			break;	// end of flags argument
 
-		if( !com.strcmp( token.string, "|" ))
+		if( !com.strcmp( token, "|" ))
 			continue;
 
-		if( !com.strcmp( token.string, "DT_BYTE" ))
+		if( !com.strcmp( token, "DT_BYTE" ))
 			pField->flags |= DT_BYTE;
-		else if( !com.strcmp( token.string, "DT_SHORT" ))
+		else if( !com.strcmp( token, "DT_SHORT" ))
 			pField->flags |= DT_SHORT;
-		else if( !com.strcmp( token.string, "DT_FLOAT" ))
+		else if( !com.strcmp( token, "DT_FLOAT" ))
 			pField->flags |= DT_FLOAT;
-		else if( !com.strcmp( token.string, "DT_INTEGER" ))
+		else if( !com.strcmp( token, "DT_INTEGER" ))
 			pField->flags |= DT_INTEGER;
-		else if( !com.strcmp( token.string, "DT_ANGLE" ))
+		else if( !com.strcmp( token, "DT_ANGLE" ))
 			pField->flags |= DT_ANGLE;
-		else if( !com.strncmp( token.string, "DT_TIMEWINDOW", 13 ))
+		else if( !com.strncmp( token, "DT_TIMEWINDOW", 13 ))
 			pField->flags |= DT_TIMEWINDOW;
-		else if( !com.strcmp( token.string, "DT_STRING" ))
+		else if( !com.strcmp( token, "DT_STRING" ))
 			pField->flags |= DT_STRING;
-		else if( !com.strcmp( token.string, "DT_SIGNED" ))
+		else if( !com.strcmp( token, "DT_SIGNED" ))
 			pField->flags |= DT_SIGNED;
 	}
 
-	if( com.strcmp( token.string, "," ))
+	if( com.strcmp( token, "," ))
 	{
-		MsgDev( D_ERROR, "Delta_ParseField: expected ',', found '%s' instead\n", token.string );
+		MsgDev( D_ERROR, "Delta_ParseField: expected ',', found '%s' instead\n", token );
 		return false;
 	}
 
 	// read delta-bits
-	if( !Com_ReadLong( delta_script, false, &pField->bits ))
+
+	if(( *delta_script = COM_ParseFile( *delta_script, token )) == NULL )
 	{
 		MsgDev( D_ERROR, "Delta_ReadField: %s field bits argument is missing\n", pField->name );
 		return false;
 	}
 
-	Com_ReadToken( delta_script, 0, &token );
-	if( com.strcmp( token.string, "," ))
+	pField->bits = com.atoi( token );
+
+	*delta_script = COM_ParseFile( *delta_script, token ); 
+	if( com.strcmp( token, "," ))
 	{
-		MsgDev( D_ERROR, "Delta_ReadField: expected ',', found '%s' instead\n", token.string );
+		MsgDev( D_ERROR, "Delta_ReadField: expected ',', found '%s' instead\n", token );
 		return false;
 	}
 
 	// read delta-multiplier
-	if( !Com_ReadFloat( delta_script, false, &pField->multiplier ))
+	if(( *delta_script = COM_ParseFile( *delta_script, token )) == NULL )
 	{
 		MsgDev( D_ERROR, "Delta_ReadField: %s missing 'multiplier' argument\n", pField->name );
 		return false;
 	}
 
+	pField->multiplier = com.atof( token );
+
 	if( bPost )
 	{
-		Com_ReadToken( delta_script, 0, &token );
-		if( com.strcmp( token.string, "," ))
+		*delta_script = COM_ParseFile( *delta_script, token );
+		if( com.strcmp( token, "," ))
 		{
-			MsgDev( D_ERROR, "Delta_ReadField: expected ',', found '%s' instead\n", token.string );
+			MsgDev( D_ERROR, "Delta_ReadField: expected ',', found '%s' instead\n", token );
 			return false;
 		}
 
 		// read delta-postmultiplier
-		if( !Com_ReadFloat( delta_script, false, &pField->post_multiplier ))
+		if(( *delta_script = COM_ParseFile( *delta_script, token )) == NULL )
 		{
 			MsgDev( D_ERROR, "Delta_ReadField: %s missing 'post_multiply' argument\n", pField->name );
 			return false;
 		}
+
+		pField->post_multiplier = com.atof( token );
 	}
 	else
 	{
@@ -637,22 +645,24 @@ qboolean Delta_ParseField( script_t *delta_script, const delta_field_t *pInfo, d
 	}
 
 	// closing brace...
-	Com_ReadToken( delta_script, 0, &token );
-	if( com.strcmp( token.string, ")" ))
+	*delta_script = COM_ParseFile( *delta_script, token );
+	if( com.strcmp( token, ")" ))
 	{
-		MsgDev( D_ERROR, "Delta_ParseField: expected ')', found '%s' instead\n", token.string );
+		MsgDev( D_ERROR, "Delta_ParseField: expected ')', found '%s' instead\n", token );
 		return false;
 	}
 
 	// ... and trying to parse optional ',' post-symbol
-	Com_ReadToken( delta_script, 0, &token );
+	oldpos = *delta_script;
+	*delta_script = COM_ParseFile( *delta_script, token );
+	if( token[0] != ',' ) *delta_script = oldpos; // not a ','
 
 	return true;
 }
 
-void Delta_ParseTable( script_t *delta_script, delta_info_t *dt, const char *encodeDll, const char *encodeFunc )
+void Delta_ParseTable( char **delta_script, delta_info_t *dt, const char *encodeDll, const char *encodeFunc )
 {
-	token_t		token;
+	string		token;
 	delta_t		*pField;
 	const delta_field_t	*pInfo;
 
@@ -664,23 +674,21 @@ void Delta_ParseTable( script_t *delta_script, delta_info_t *dt, const char *enc
 	dt->numFields = 0;
 
 	// assume we have handled '{'
-	while( Com_ReadToken( delta_script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
+	while(( *delta_script = COM_ParseFile( *delta_script, token )) != NULL )
 	{
 		ASSERT( dt->numFields <= dt->maxFields );
 
-		if( !com.strcmp( token.string, "DEFINE_DELTA" ))
+		if( !com.strcmp( token, "DEFINE_DELTA" ))
 		{
 			if( Delta_ParseField( delta_script, pInfo, &pField[dt->numFields], false ))
 				dt->numFields++;
-			else Com_SkipRestOfLine( delta_script );
 		}
-		else if( !com.strcmp( token.string, "DEFINE_DELTA_POST" ))
+		else if( !com.strcmp( token, "DEFINE_DELTA_POST" ))
 		{
 			if( Delta_ParseField( delta_script, pInfo, &pField[dt->numFields], true ))
 				dt->numFields++;
-			else Com_SkipRestOfLine( delta_script );
 		}
-		else if( token.string[0] == '}' )
+		else if( token[0] == '}' )
 		{
 			// end of the section
 			break;
@@ -708,13 +716,12 @@ void Delta_ParseTable( script_t *delta_script, delta_info_t *dt, const char *enc
 
 void Delta_InitFields( void )
 {
-	script_t		*delta_script;
+	char		*afile, *pfile;
+	string		encodeDll, encodeFunc, token;	
 	delta_info_t	*dt;
-	string		encodeDll, encodeFunc;	
-	token_t		token;
-		
-	delta_script = Com_OpenScript( DELTA_PATH, NULL, 0 );
-	if( !delta_script )
+
+	afile = FS_LoadFile( DELTA_PATH, NULL );
+	if( !afile )
 	{
 		static string	errormsg;
 
@@ -723,24 +730,32 @@ void Delta_InitFields( void )
 		com.error( errormsg );
 	}
 
-	while( Com_ReadToken( delta_script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
-	{
-		dt = Delta_FindStruct( token.string );
+	pfile = afile;
 
-		Com_ReadString( delta_script, false, encodeDll );
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
+	{
+		dt = Delta_FindStruct( token );
+		if( dt == NULL )
+		{
+			Sys_Break( "delta.lst: unknown struct %s\n", token );
+		}
+
+		pfile = COM_ParseFile( pfile, encodeDll );
 
 		if( !com.stricmp( encodeDll, "none" ))
 			com.strcpy( encodeFunc, "null" );
-		else Com_ReadString( delta_script, false, encodeFunc );
+		else pfile = COM_ParseFile( pfile, encodeFunc );
 
 		// jump to '{'
-		Com_ReadToken( delta_script, SC_ALLOW_NEWLINES, &token );
-		ASSERT( token.string[0] == '{' );
-			
-		if( dt ) Delta_ParseTable( delta_script, dt, encodeDll, encodeFunc );
-		else Com_SkipBracedSection( delta_script, 1 );
+		pfile = COM_ParseFile( pfile, token );
+		if( token[0] != '{' )
+		{
+			Sys_Break( "delta.lst: missing '{' in section %s\n", dt->pName );
+		}			
+
+		Delta_ParseTable( &pfile, dt, encodeDll, encodeFunc );
 	}
-	Com_CloseScript( delta_script );
+	Mem_Free( afile );
 
 	// adding some requrid fields fields that use may forget or don't know how to specified
 	Delta_AddField( "event_t", "flags", DT_INTEGER, 8, 1.0f, 1.0f );

@@ -1126,8 +1126,8 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		else if( !com.stricmp( token.string, "gamedll" ))
 		{
 			PS_ReadToken( script, false, &token );
-			if( !com.strstr( token.string, ".." )) // don't use indirect paths (..\valve\dlls\hl.dll)
-				com.strncpy( GameInfo->game_dll, token.string, sizeof( GameInfo->game_dll ));
+//			if( !com.strstr( token.string, ".." )) // don't use indirect paths (..\valve\dlls\hl.dll)
+			com.strncpy( GameInfo->game_dll, token.string, sizeof( GameInfo->game_dll ));
 		}
 		else if( !com.stricmp( token.string, "type" ))
 		{
@@ -2418,6 +2418,7 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	// replace all backward slashes
 	for( i = 0; i < com.strlen( dllname ); i++ )
 	{
+		if( dllname[i] == '.' ) continue;
 		if( dllname[i] == '\\' ) dllpath[i] = '/';
 		else dllpath[i] = com.tolower( dllname[i] );
 	}

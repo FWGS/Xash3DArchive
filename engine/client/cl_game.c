@@ -1877,7 +1877,7 @@ static int pfnDrawConsoleString( int x, int y, char *string )
 	drawLen = Con_DrawString( x, y, string, clgame.ds.textColor );
 	MakeRGBA( clgame.ds.textColor, 255, 255, 255, 255 );
 
-	return drawLen; // exclude color prexfixes
+	return (x + drawLen); // exclude color prexfixes
 }
 
 /*

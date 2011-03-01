@@ -1448,7 +1448,7 @@ int pfnDropToFloor( edict_t* e )
 	if( !SV_IsValidEdict( e ))
 	{
 		MsgDev( D_ERROR, "SV_DropToFloor: invalid entity %s\n", SV_ClassName( e ));
-		return false;
+		return 0;
 	}
 
 	VectorCopy( e->v.origin, end );

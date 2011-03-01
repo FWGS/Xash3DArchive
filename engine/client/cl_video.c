@@ -86,7 +86,7 @@ void SCR_CreateStartupVids( void )
 void SCR_CheckStartupVids( void )
 {
 	int	c = 0;
-	script_t	*vidlist = NULL;
+	char	*afile, *pfile;
 	string	token;
 		
 	if( host.developer >= 2 )
@@ -97,14 +97,14 @@ void SCR_CheckStartupVids( void )
 	}
 
 	if( !FS_FileExists( "media/StartupVids.txt" ))
-	{
 		SCR_CreateStartupVids();
-	}
 
-	vidlist = Com_OpenScript( "media/StartupVids.txt", NULL, 0 );
-	if( !vidlist ) return; // something bad happens
+	afile = FS_LoadFile( "media/StartupVids.txt", NULL );
+	if( !afile ) return; // something bad happens
 
-	while( Com_ReadString( vidlist, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, token ))
+	pfile = afile;
+
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		com.strncpy( cls.movies[c], token, sizeof( cls.movies[0] ));
 
@@ -115,7 +115,7 @@ void SCR_CheckStartupVids( void )
 		}
 	}
 
-	Com_CloseScript( vidlist );
+	Mem_Free( afile );
 
 	// run cinematic
 	if( !SV_Active() && cls.movienum != -1 && cls.state != ca_cinematic )

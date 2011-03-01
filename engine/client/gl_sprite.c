@@ -161,6 +161,14 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 	mod->maxs[2] = pin->bounds[1] / 2;
 	numi = (short *)(pin + 1);
 
+	if( host.type == HOST_DEDICATED )
+	{
+		// skip frames loading
+		mod->type = mod_sprite;
+		psprite->numframes = 0;
+		return;
+	}
+
 	if( *numi == 256 )
 	{	
 		byte	*src = (byte *)(numi+1);
@@ -375,6 +383,9 @@ void Mod_UnloadSpriteModel( model_t *mod )
 	// release all textures
 	for( i = 0; i < psprite->numframes; i++ )
 	{
+		if( host.type == HOST_DEDICATED )
+			break; // nothing to release
+
 		if( psprite->frames[i].type == SPR_SINGLE )
 		{
 			pspriteframe = psprite->frames[i].frameptr;
@@ -775,8 +786,6 @@ static void R_DrawSpriteQuad( mspriteframe_t *frame, vec3_t org, vec3_t v_right,
 {
 	vec3_t	point;
 
-	GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
-
 	pglBegin( GL_QUADS );
 		pglTexCoord2f( 0.0f, 1.0f );
 		VectorMA( org, frame->down * scale, v_up, point );
@@ -811,8 +820,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	float		angle, dot, sr, cr, flAlpha;
 	float		lerp = 1.0f, ilerp, scale;
 	vec3_t		v_forward, v_right, v_up;
-	vec3_t		origin;
-	vec3_t		color;
+	vec3_t		origin, color, color2;
 
 	model = e->model;
 	psprite = (msprite_t * )model->cache.data;
@@ -880,37 +888,22 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	// all sprites can have color
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+	// add basecolor
+	color[0] = (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
+	color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
+	color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
           
-	if( psprite->texFormat == SPR_ALPHTEST )
+	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer )
 	{
 		color24	lightColor;
 		qboolean	invLight;
-		float	f;
 
 		invLight = (e->curstate.effects & EF_INVLIGHT) ? true : false;
 		R_LightForPoint( origin, &lightColor, invLight, sprite_radius );
-		color[0] = (float)lightColor.r * ( 1.0f / 255.0f );
-		color[1] = (float)lightColor.g * ( 1.0f / 255.0f );
-		color[2] = (float)lightColor.b * ( 1.0f / 255.0f );
-
-		// add basecolor
-		color[0] += (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
-		color[1] += (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
-		color[2] += (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
-
-		// renormalize color
-		f = max( max( color[0], color[1] ), color[2] );
-		if( f > 1.0f ) VectorScale( color, ( 1.0f / f ), color );
-	}
-	else
-	{
-		// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
-		if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
-			e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
-
-		color[0] = (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
-		color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
-		color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
+		color2[0] = (float)lightColor.r * ( 1.0f / 255.0f );
+		color2[1] = (float)lightColor.g * ( 1.0f / 255.0f );
+		color2[2] = (float)lightColor.b * ( 1.0f / 255.0f );
 	}
 
 	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
@@ -972,6 +965,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	{
 		// draw the single non-lerped frame
 		pglColor4f( color[0], color[1], color[2], flAlpha );
+		GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
 		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 	}
 	else
@@ -983,14 +977,30 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		if( ilerp != 0 )
 		{
 			pglColor4f( color[0], color[1], color[2], flAlpha * ilerp );
+			GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
 			R_DrawSpriteQuad( oldframe, origin, v_right, v_up, scale );
 		}
 
 		if( lerp != 0 )
 		{
 			pglColor4f( color[0], color[1], color[2], flAlpha * lerp );
+			GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
 			R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 		}
+	}
+
+	// draw the sprite 'lightmap' :-)
+	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer )
+	{
+		pglEnable( GL_BLEND );
+		pglDepthFunc( GL_EQUAL );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+		pglColor4f( color2[0], color2[1], color2[2], flAlpha );
+		GL_Bind( GL_TEXTURE0, tr.whiteTexture );
+		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 	}
 
 	if( psprite->facecull == SPR_CULL_NONE )
@@ -1006,6 +1016,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	}
 
 	pglDisable( GL_BLEND );
+	pglDepthFunc( GL_LEQUAL );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglColor4ub( 255, 255, 255, 255 );
 }

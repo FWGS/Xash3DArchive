@@ -140,10 +140,6 @@ SOURCE=.\memlib.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\network.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\parselib.c
 # End Source File
 # Begin Source File

@@ -326,6 +326,10 @@ SOURCE=.\common\net_huff.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\network.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\pm_studio.c
 # End Source File
 # Begin Source File

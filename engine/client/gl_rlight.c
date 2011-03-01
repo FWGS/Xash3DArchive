@@ -342,7 +342,6 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	float		dist, add;
 	model_t		*pmodel;
 	mnode_t		*pnodes;
-	int		lnum;
 
 	if( !RI.refdef.movevars )
 	{
@@ -403,7 +402,12 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	// add dynamic lights
 	if( radius && r_dynamic->integer )
 	{
-		for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
+		int	lnum, total; 
+		float	f;
+
+		VectorClear( r_pointColor );
+
+		for( total = lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 		{
 			if( dl->die < cl.time || !dl->radius )
 				continue;
@@ -414,10 +418,25 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 			if( !dist || dist > dl->radius + radius )
 				continue;
 
-			add = (dl->radius - dist);
-			ambientLight->r = ambientLight->r + (dl->color.r * add);
-			ambientLight->g = ambientLight->g + (dl->color.g * add);
-			ambientLight->b = ambientLight->b + (dl->color.b * add);
+			add = 1.0f - (dist / ( dl->radius + radius ));
+			r_pointColor[0] += dl->color.r * add;
+			r_pointColor[1] += dl->color.g * add;
+			r_pointColor[2] += dl->color.b * add;
+			total++;
+		}
+
+		if( total != 0 )
+		{
+			r_pointColor[0] += ambientLight->r;
+			r_pointColor[1] += ambientLight->g;
+			r_pointColor[2] += ambientLight->b;
+
+			f = max( max( r_pointColor[0], r_pointColor[1] ), r_pointColor[2] );
+			if( f > 1.0f ) VectorScale( r_pointColor, ( 255.0f / f ), r_pointColor );
+
+			ambientLight->r = r_pointColor[0];
+			ambientLight->g = r_pointColor[1];
+			ambientLight->b = r_pointColor[2];
 		}
 	}
 }

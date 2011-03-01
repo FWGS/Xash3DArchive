@@ -727,7 +727,8 @@ bool UI_StartBackGroundMap( void )
 
 	first = FALSE;
 
-	if( !uiStatic.bgmapcount || CVAR_GET_FLOAT( "sv_background" ))
+	// some map is already running
+	if( !uiStatic.bgmapcount || CVAR_GET_FLOAT( "host_serverstate" ))
 		return FALSE;
 
 	int bgmapid = RANDOM_LONG( 0, uiStatic.bgmapcount - 1 );

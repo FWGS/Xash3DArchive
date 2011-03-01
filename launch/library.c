@@ -304,8 +304,8 @@ void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 	if( hInst->custom_loader )
 	{
           	if( hInst->encrypted )
-			MsgDev( D_NOTE, "Sys_LoadLibrary: couldn't load encrypted library %s\n", dllname );
-		else MsgDev( D_NOTE, "Sys_LoadLibrary: couldn't load library %s from packfile\n", dllname );
+			MsgDev( D_ERROR, "Sys_LoadLibrary: couldn't load encrypted library %s\n", dllname );
+		else MsgDev( D_ERROR, "Sys_LoadLibrary: couldn't load library %s from packfile\n", dllname );
 		return NULL;
 	}
 	else hInst->hInstance = LoadLibrary( hInst->fullPath );

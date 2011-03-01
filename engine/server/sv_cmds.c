@@ -642,6 +642,7 @@ void SV_Status_f( void )
 
 		if( cl->state == cs_connected ) Msg( "Connect" );
 		else if( cl->state == cs_zombie ) Msg( "Zombie " );
+		else if( cl->fakeclient ) Msg( "Bot   " );
 		else
 		{
 			ping = cl->ping < 9999 ? cl->ping : 9999;

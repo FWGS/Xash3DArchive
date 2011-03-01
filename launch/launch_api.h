@@ -65,11 +65,9 @@ typedef struct file_s file_t;		// normal file
 typedef struct wfile_s wfile_t;	// wad file
 typedef struct convar_s convar_t;	// console variable
 typedef struct script_s script_t;	// script machine
-typedef struct stream_s stream_t;	// sound stream for background music playing
 typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
 typedef struct { int numfilenames; char **filenames; char *filenamesbuffer; } search_t;
 typedef void ( *setpair_t )( const char *key, const char *value, void *buffer, void *numpairs );
-typedef enum { NS_CLIENT, NS_SERVER } netsrc_t;
 typedef void ( *xcommand_t )( void );
 
 // command buffer modes
@@ -116,7 +114,6 @@ typedef enum
 } cvar_flags_t;
 
 #include "cvardef.h"
-#include "netadr.h"
 
 /*
 ========================================================================
@@ -316,20 +313,6 @@ typedef struct stdilib_api_s
 	void (*clearpool)(byte *poolptr, const char *file, int line);
 	void (*memcheck)(const char *file, int line);		// check memory pools for consistensy
 	qboolean (*is_allocated)( byte *poolptr, void *data );	// return true is memory is allocated
-
-	// network.c funcs
-	void (*NET_Init)( void );
-	void (*NET_Shutdown)( void );
-	void (*NET_Sleep)( int msec );
-	void (*NET_Config)( qboolean net_enable );
-	char *(*NET_AdrToString)( netadr_t a );
-	qboolean (*NET_IsLocalAddress)( netadr_t adr );
-	char *(*NET_BaseAdrToString)( const netadr_t a );
-	qboolean (*NET_StringToAdr)( const char *s, netadr_t *a );
-	qboolean (*NET_CompareAdr)( const netadr_t a, const netadr_t b );
-	qboolean (*NET_CompareBaseAdr)( const netadr_t a, const netadr_t b );
-	qboolean (*NET_GetPacket)( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
-	void (*NET_SendPacket)( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 	// common functions
 	void (*Com_LoadGameInfo)( const char *rootfolder );		// initialize gamedir
@@ -611,24 +594,6 @@ filesystem manager
 #define FS_ClearSearchPath		com.Com_ClearSearchPath
 #define FS_CheckParm		com.Com_CheckParm
 #define FS_GetParmFromCmdLine( a, b )	com.Com_GetParm( a, b, sizeof( b ))
-
-/*
-===========================================
-network messages
-===========================================
-*/
-#define NET_Init			com.NET_Init
-#define NET_Shutdown		com.NET_Shutdown
-#define NET_Sleep			com.NET_Sleep
-#define NET_Config			com.NET_Config
-#define NET_AdrToString		com.NET_AdrToString
-#define NET_BaseAdrToString		com.NET_BaseAdrToString
-#define NET_IsLocalAddress		com.NET_IsLocalAddress
-#define NET_StringToAdr		com.NET_StringToAdr
-#define NET_SendPacket		com.NET_SendPacket
-#define NET_GetPacket		com.NET_GetPacket
-#define NET_CompareAdr		com.NET_CompareAdr
-#define NET_CompareBaseAdr		com.NET_CompareBaseAdr
 
 /*
 ===========================================

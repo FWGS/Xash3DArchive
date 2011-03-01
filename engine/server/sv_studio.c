@@ -117,7 +117,7 @@ static void SV_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
 			// check for 360% wrapping
 			if( pbonecontroller[j].type & STUDIO_RLOOP )
 			{
-				value = pcontroller[i] * (360.0/256.0) + pbonecontroller[j].start;
+				value = pcontroller[i] * (360.0f / 256.0f) + pbonecontroller[j].start;
 			}
 			else 
 			{

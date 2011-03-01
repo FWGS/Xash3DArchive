@@ -81,7 +81,7 @@ skipwhite:
 	}
 
 	// parse single characters
-	if( c == '{' || c == '}'|| c == ')'|| c == '(' || c == '\'' || c == ',' )
+	if( c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ',' )
 	{
 		token[len] = c;
 		len++;

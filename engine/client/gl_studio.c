@@ -1467,7 +1467,7 @@ void R_StudioSetupLighting( alight_t *lightinfo )
 
 	// setup ambient lighting
 	invLight = (RI.currententity->curstate.effects & EF_INVLIGHT) ? true : false;
-	R_LightForPoint( ent->origin, &ambient, invLight, 0.0f ); // we already handle dynamic lights
+	R_LightForPoint( ent->origin, &ambient, invLight, 0.0f ); // ignore dlights
 
 	plight->lightcolor[0] = ambient.r * (1.0f / 255.0f);
 	plight->lightcolor[1] = ambient.g * (1.0f / 255.0f);

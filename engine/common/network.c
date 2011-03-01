@@ -4,10 +4,8 @@
 //=======================================================================
 
 #include <winsock.h>
-#include "launch.h"
-
-// This is the packet payload without any header bytes (which are attached for actual sending)
-#define NET_MAX_PAYLOAD	80000
+#include "common.h"
+#include "netchan.h"
 
 #define PORT_ANY		-1
 #define PORT_CLIENT		27901
@@ -458,7 +456,7 @@ void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to
 		return;
 
 	if( to.type != NA_BROADCAST && to.type != NA_IP )
-		Sys_Error( "NET_SendPacket: bad address type %i\n", to.type );
+		Host_Error( "NET_SendPacket: bad address type %i\n", to.type );
 
 	net_socket = ip_sockets[sock];
 	if( !net_socket ) return;
@@ -554,12 +552,12 @@ static void NET_OpenIP( void )
 		if( !port ) port = Cvar_Get( "port", va( "%i", PORT_SERVER ), CVAR_INIT, "network default port" )->integer;
 
 		ip_sockets[NS_SERVER] = NET_IPSocket( net_ip->string, port );
-		if( !ip_sockets[NS_SERVER] && Sys.app_name == HOST_DEDICATED )
-			Sys_Error( "couldn't allocate dedicated server IP port\n" );
+		if( !ip_sockets[NS_SERVER] && host.type == HOST_DEDICATED )
+			Host_Error( "couldn't allocate dedicated server IP port\n" );
 	}
 
 	// dedicated servers don't need client ports
-	if( Sys.app_name == HOST_DEDICATED ) return;
+	if( host.type == HOST_DEDICATED ) return;
 
 	if( !ip_sockets[NS_CLIENT] )
 	{
@@ -618,7 +616,7 @@ void NET_Sleep( int msec )
 	fd_set		fdset;
 	int		i = 0;
 
-	if( Sys.app_name == HOST_NORMAL )
+	if( host.type == HOST_NORMAL )
 		return; // we're not a server, just run full speed
 
 	FD_ZERO( &fdset );

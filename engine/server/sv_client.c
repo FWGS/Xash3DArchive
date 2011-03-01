@@ -228,7 +228,7 @@ gotnewcl:
 	BF_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
 
 	newcl->state = cs_connected;
-	newcl->cl_updaterate = 0.05;
+	newcl->cl_updaterate = 0.05;	// 20 fps as default
 	newcl->lastmessage = host.realtime;
 	newcl->lastconnect = host.realtime;
 	newcl->next_messagetime = host.realtime + newcl->cl_updaterate;
@@ -312,6 +312,8 @@ edict_t *SV_FakeConnect( const char *netname )
 
 	// parse some info from the info strings
 	SV_UserinfoChanged( newcl, userinfo );
+
+	MsgDev( D_INFO, "Bot %i connecting with challenge %p\n", i, -1 );
 
 	newcl->state = cs_spawned;
 	newcl->lastmessage = host.realtime;	// don't timeout
@@ -481,10 +483,10 @@ char *SV_StatusString( void )
 {
 	char		player[1024];
 	static char	status[MAX_MSGLEN - 16];
-	int		i;
-	sv_client_t	*cl;
 	int		statusLength;
 	int		playerLength;
+	sv_client_t	*cl;
+	int		i;
 
 	com.strcpy( status, Cvar_Serverinfo( ));
 	com.strcat( status, "\n" );
@@ -497,7 +499,7 @@ char *SV_StatusString( void )
 		{
 			com.sprintf( player, "%i %i \"%s\"\n", (int)cl->edict->v.frags, cl->ping, cl->name );
 			playerLength = com.strlen( player );
-			if( statusLength + playerLength >= sizeof(status))
+			if( statusLength + playerLength >= sizeof( status ))
 				break; // can't hold any more
 			com.strcpy( status + statusLength, player );
 			statusLength += playerLength;
