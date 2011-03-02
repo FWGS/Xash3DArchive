@@ -282,7 +282,7 @@ void Cmd_Exec_f( void )
 	com.strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
 	FS_DefaultExtension( cfgpath, ".cfg" ); // append as default
 
-	f = FS_LoadFile( cfgpath, &len );
+	f = FS_LoadFile( cfgpath, &len, false );
 	if( !f )
 	{
 		MsgDev( D_NOTE, "couldn't exec %s\n", Cmd_Argv( 1 ));

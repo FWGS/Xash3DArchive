@@ -150,10 +150,10 @@ SV_EntityScript
 get entity script for current map
 ================
 */
-script_t *SV_EntityScript( void )
+char *SV_EntityScript( void )
 {
 	string	entfilename;
-	script_t	*ents;
+	char	*ents;
 
 	if( !sv.worldmodel )
 		return NULL;
@@ -163,14 +163,14 @@ script_t *SV_EntityScript( void )
 	FS_StripExtension( entfilename );
 	FS_DefaultExtension( entfilename, ".ent" );
 
-	if(( ents = Com_OpenScriptExt( entfilename, NULL, 0, true )))
+	if(( ents = FS_LoadFileEx( entfilename, NULL, true )))
 	{
 		MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
 		return ents;
 	}
 
-	// create script from internal entities
-	return Com_OpenScript( entfilename, sv.worldmodel->entities, com.strlen( sv.worldmodel->entities ));
+	// use internal entities
+	return sv.worldmodel->entities;
 }
 
 /*

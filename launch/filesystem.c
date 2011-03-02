@@ -94,7 +94,7 @@ const char *FS_FileExtension( const char *in );
 static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedironly );
 static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char matchtype );
 static packfile_t* FS_AddFileToPack( const char* name, pack_t *pack, fs_offset_t offset, fs_offset_t size );
-static byte *W_LoadFile( const char *path, fs_offset_t *filesizeptr );
+static byte *W_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
 static qboolean FS_SysFileExists( const char *path );
 static long FS_SysFileTime( const char *filename );
 static char W_TypeFromExt( const char *lumpname );
@@ -2202,14 +2202,14 @@ Filename are relative to the xash directory.
 Always appends a 0 byte.
 ============
 */
-byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr )
+byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly )
 {
 	file_t		*file;
 	byte		*buf = NULL;
 	fs_offset_t	filesize = 0;
 	const char	*ext = FS_FileExtension( path );
 
-	file = FS_Open( path, "rb", false );
+	file = FS_Open( path, "rb", gamedironly );
 
 	if( file )
 	{
@@ -2221,7 +2221,7 @@ byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr )
 	}
 	else
 	{
-		buf = W_LoadFile( path, &filesize );
+		buf = W_LoadFile( path, &filesize, gamedironly );
 	}
 
 	if( filesizeptr )
@@ -3208,12 +3208,12 @@ FILESYSTEM IMPLEMENTATION
 
 =============================================================================
 */
-static byte *W_LoadFile( const char *path, fs_offset_t *lumpsizeptr )
+static byte *W_LoadFile( const char *path, fs_offset_t *lumpsizeptr, qboolean gamedironly )
 {
 	searchpath_t	*search;
 	int		index;
 
-	search = FS_FindFile( path, &index, false );
+	search = FS_FindFile( path, &index, gamedironly );
 	if( search && search->wad )
 		return W_ReadLump( search->wad, &search->wad->lumps[index], lumpsizeptr ); 
 	return NULL;

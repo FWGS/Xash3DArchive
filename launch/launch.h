@@ -269,8 +269,8 @@ void W_Close( wfile_t *wad );
 
 // simply files managment interface
 file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
-byte *FS_LoadFile (const char *path, fs_offset_t *filesizeptr );
-qboolean FS_WriteFile (const char *filename, const void *data, fs_offset_t len);
+byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
+qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len );
 void FS_FreeFile( void *buffer );
 
 search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
@@ -356,6 +356,49 @@ void Cmd_ForwardToServer( void );
 //
 // parselib.c
 //
+/*
+========================================================================
+
+TEXT PARSER
+
+========================================================================
+*/
+typedef enum
+{
+	TT_EMPTY = 0,		// empty (invalid or whitespace)
+	TT_GENERIC,		// generic string separated by spaces
+	TT_STRING,		// string (enclosed with double quotes)
+	TT_LITERAL,		// literal (enclosed with single quotes)
+	TT_NUMBER,		// number
+	TT_NAME,			// name
+	TT_PUNCTUATION		// punctuation
+} tokenType_t;
+
+typedef enum
+{
+	SC_ALLOW_NEWLINES	 	= BIT(0),	// same as 'true'
+	SC_ALLOW_STRINGCONCAT	= BIT(1),
+	SC_ALLOW_ESCAPECHARS 	= BIT(2),
+	SC_ALLOW_PATHNAMES		= BIT(3),
+	SC_ALLOW_PATHNAMES2		= BIT(4),	// allow pathnames with quake symbols (!, %, $, +, -, { )
+	SC_PARSE_GENERIC		= BIT(5),
+	SC_PRINT_ERRORS		= BIT(6),
+	SC_PRINT_WARNINGS	 	= BIT(7),
+	SC_PARSE_LINE		= BIT(8),	// read line, ignore whitespaces
+	SC_COMMENT_SEMICOLON	= BIT(9),	// using semicolon as mark or begin comment (q2 oldstyle)
+} scFlags_t;
+
+typedef struct
+{
+	tokenType_t	type;
+	uint		subType;
+	int		line;
+	char		string[MAX_SYSPATH];
+	int		length;
+	double		floatValue;
+	uint		integerValue;
+} token_t;
+
 typedef struct
 {
 	const char	*name;
@@ -377,7 +420,7 @@ typedef struct script_s
 	punctuation_t	*punctuations;
 	qboolean		tokenAvailable;
 	token_t		token;
-};
+} script_t;
 
 qboolean PS_ReadToken( script_t *script, scFlags_t flags, token_t *token );
 void PS_SaveToken( script_t *script, token_t *token );

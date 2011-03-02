@@ -57,7 +57,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 		char		entfilename[CS_SIZE];
 		int		ver = -1, lumpofs = 0, lumplen = 0;
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
-		script_t		*ents = NULL;
+		char		*ents = NULL, *pfile;
 		qboolean		gearbox;
 			
 		if( com.stricmp( ext, "bsp" )) continue;
@@ -95,37 +95,35 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			com.strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
 			FS_DefaultExtension( entfilename, ".ent" );
-			ents = Com_OpenScriptExt( entfilename, NULL, 0, true );
+			ents = FS_LoadFileEx( entfilename, NULL, true );
 
 			if( !ents && lumplen >= 10 )
 			{
-				char *entities = NULL;
-		
 				FS_Seek( f, lumpofs, SEEK_SET );
-				entities = (char *)Mem_Alloc( host.mempool, lumplen + 1 );
-				FS_Read( f, entities, lumplen );
-				ents = Com_OpenScript( "ents", entities, lumplen + 1 );
-				Mem_Free( entities ); // no reason to keep it
+				ents = (char *)Mem_Alloc( host.mempool, lumplen + 1 );
+				FS_Read( f, ents, lumplen );
 			}
 
 			if( ents )
 			{
 				// if there are entities to parse, a missing message key just
 				// means there is no title, so clear the message string now
-				token_t	token;
+				char	token[1024];
 
 				message[0] = 0;
-				while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
+				pfile = ents;
+
+				while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 				{
-					if( !com.strcmp( token.string, "{" )) continue;
-					else if(!com.strcmp( token.string, "}" )) break;
-					else if(!com.strcmp( token.string, "message" ))
+					if( !com.strcmp( token, "{" )) continue;
+					else if(!com.strcmp( token, "}" )) break;
+					else if(!com.strcmp( token, "message" ))
 					{
 						// get the message contents
-						Com_ReadString( ents, SC_ALLOW_PATHNAMES2, message );
+						pfile = COM_ParseFile( pfile, message );
 					}
 				}
-				Com_CloseScript( ents );
+				Mem_Free( ents );
 			}
 		}
 
@@ -640,7 +638,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 	buffer = Mem_Alloc( host.mempool, t->numfilenames * 2 * sizeof( result ));
 	for( i = 0; i < t->numfilenames; i++ )
 	{
-		script_t		*ents = NULL;
+		char		*ents = NULL, *pfile;
 		int		ver = -1, lumpofs = 0, lumplen = 0;
 		string		mapname, message, entfilename;
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
@@ -679,47 +677,43 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			com.strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
 			FS_DefaultExtension( entfilename, ".ent" );
-			ents = Com_OpenScriptExt( entfilename, NULL, 0, true );
+			ents = FS_LoadFileEx( entfilename, NULL, true );
 
 			if( !ents && lumplen >= 10 )
 			{
-				char *entities = NULL;
-		
 				FS_Seek( f, lumpofs, SEEK_SET );
-				entities = (char *)Mem_Alloc( host.mempool, lumplen + 1 );
-				FS_Read( f, entities, lumplen );
-				ents = Com_OpenScript( "ents", entities, lumplen + 1 );
-				Mem_Free( entities ); // no reason to keep it
+				ents = (char *)Mem_Alloc( host.mempool, lumplen + 1 );
+				FS_Read( f, ents, lumplen );
 			}
 
 			if( ents )
 			{
 				// if there are entities to parse, a missing message key just
 				// means there is no title, so clear the message string now
-				token_t	token;
+				char	token[1024];
 				qboolean	worldspawn = true;
 
-				message[0] = 0;
 				com.strncpy( message, "No Title", MAX_STRING );
+				pfile = ents;
 
-				while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
+				while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 				{
-					if( token.string[0] == '}' && worldspawn )
+					if( token[0] == '}' && worldspawn )
 						worldspawn = false;
-					else if( !com.strcmp( token.string, "message" ) && worldspawn )
+					else if( !com.strcmp( token, "message" ) && worldspawn )
 					{
 						// get the message contents
-						Com_ReadString( ents, SC_ALLOW_PATHNAMES2, message );
+						pfile = COM_ParseFile( pfile, message );
 					}
-					else if( !com.strcmp( token.string, "classname" ))
+					else if( !com.strcmp( token, "classname" ))
 					{
-						Com_ReadToken( ents, SC_ALLOW_PATHNAMES2, &token );
-						if( !com.strcmp( token.string, GI->mp_entity ))
+						pfile = COM_ParseFile( pfile, token );
+						if( !com.strcmp( token, GI->mp_entity ))
 							num_spawnpoints++;
 					}
 					if( num_spawnpoints ) break; // valid map
 				}
-				Com_CloseScript( ents );
+				Mem_Free( ents );
 			}
 
 			if( f ) FS_Close( f );

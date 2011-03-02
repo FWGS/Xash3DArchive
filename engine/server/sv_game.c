@@ -475,12 +475,12 @@ void SV_WriteEntityPatch( const char *filename )
 	FS_Close( f );
 }
 
-script_t *SV_ReadEntityScript( const char *filename, int *flags )
+char *SV_ReadEntityScript( const char *filename, int *flags )
 {
 	file_t		*f;
 	dheader_t		*header;
 	string		entfilename;
-	script_t		*ents = NULL;
+	char		*ents = NULL;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	qboolean		result = false;
@@ -520,17 +520,13 @@ script_t *SV_ReadEntityScript( const char *filename, int *flags )
 
 	// check for entfile too
 	com.strncpy( entfilename, va( "maps/%s.ent", filename ), sizeof( entfilename ));
-	ents = Com_OpenScriptExt( entfilename, NULL, 0, true ); // grab .ent files only from gamedir
+	ents = FS_LoadFileEx( entfilename, NULL, true ); // grab .ent files only from gamedir
 
 	if( !ents && lumplen >= 10 )
 	{
-		char	*entities = NULL;
-		
 		FS_Seek( f, lumpofs, SEEK_SET );
-		entities = (char *)Z_Malloc( lumplen + 1 );
-		FS_Read( f, entities, lumplen );
-		ents = Com_OpenScript( "ents", entities, lumplen + 1 );
-		Mem_Free( entities ); // no reason to keep it
+		ents = (char *)Z_Malloc( lumplen + 1 );
+		FS_Read( f, ents, lumplen );
 	}
 	FS_Close( f ); // all done
 
@@ -539,7 +535,8 @@ script_t *SV_ReadEntityScript( const char *filename, int *flags )
 
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name )
 {
-	script_t	*ents = NULL;
+	char	*ents = NULL;
+	char	*pfile;
 	int	flags = 0;
 
 	ents = SV_ReadEntityScript( filename, &flags );
@@ -548,25 +545,27 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 	{
 		// if there are entities to parse, a missing message key just
 		// means there is no title, so clear the message string now
-		token_t	token;
+		char	token[1024];
 		string	check_name;
 		qboolean	need_landmark = com.strlen( landmark_name ) > 0 ? true : false;
 
 		if( !need_landmark && host.developer >= 2 )
 		{
 			// not transition, 
-			Com_CloseScript( ents );
+			Mem_Free( ents );
 
 			// skip spawnpoint checks in devmode
 			return (flags|MAP_HAS_SPAWNPOINT);
 		}
 
-		while( Com_ReadToken( ents, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
+		pfile = ents;
+
+		while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 		{
-			if( !com.strcmp( token.string, "classname" ))
+			if( !com.strcmp( token, "classname" ))
 			{
 				// check classname for spawn entity
-				Com_ReadString( ents, SC_ALLOW_PATHNAMES2, check_name );
+				pfile = COM_ParseFile( pfile, check_name );
 				if( !com.strcmp( spawn_entity, check_name ))
 				{
 					flags |= MAP_HAS_SPAWNPOINT;
@@ -576,10 +575,10 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 						break;
 				}
 			}
-			else if( need_landmark && !com.strcmp( token.string, "targetname" ))
+			else if( need_landmark && !com.strcmp( token, "targetname" ))
 			{
 				// check targetname for landmark entity
-				Com_ReadString( ents, SC_ALLOW_PATHNAMES2, check_name );
+				pfile = COM_ParseFile( pfile, check_name );
 
 				if( !com.strcmp( landmark_name, check_name ))
 				{
@@ -591,7 +590,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 				}
 			}
 		}
-		Com_CloseScript( ents );
+		Mem_Free( ents );
 	}
 	return flags;
 }
@@ -4222,12 +4221,12 @@ Parses an edict out of the given string, returning the new position
 ed should be a properly initialized empty edict.
 ====================
 */
-qboolean SV_ParseEdict( script_t *script, edict_t *ent )
+qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 {
 	KeyValueData	pkvd[256]; // per one entity
 	int		i, numpairs = 0;
 	const char	*classname = NULL;
-	token_t		token;
+	char		token[1024];
 
 	// go through all the dictionary pairs
 	while( 1 )
@@ -4235,17 +4234,17 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 		string	keyname;
 
 		// parse key
-		if( !Com_ReadToken( script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
+		if(( *pfile = COM_ParseFile( *pfile, token )) == NULL )
 			Host_Error( "ED_ParseEdict: EOF without closing brace\n" );
-		if( token.string[0] == '}' ) break; // end of desc
+		if( token[0] == '}' ) break; // end of desc
 
-		com.strncpy( keyname, token.string, sizeof( keyname ));
+		com.strncpy( keyname, token, sizeof( keyname ));
 
 		// parse value	
-		if( !Com_ReadToken( script, SC_ALLOW_PATHNAMES2, &token ))
+		if(( *pfile = COM_ParseFile( *pfile, token )) == NULL ) 
 			Host_Error( "ED_ParseEdict: EOF without closing brace\n" );
 
-		if( token.string[0] == '}' )
+		if( token[0] == '}' )
 			Host_Error( "ED_ParseEdict: closing brace without data\n" );
 
 		// ignore attempts to set key ""
@@ -4261,12 +4260,12 @@ qboolean SV_ParseEdict( script_t *script, edict_t *ent )
 			continue;
 
 		// ignore attempts to set value ""
-		if( !token.string[0] ) continue;
+		if( !token[0] ) continue;
 
 		// create keyvalue strings
 		pkvd[numpairs].szClassName = (char *)classname;	// unknown at this moment
 		pkvd[numpairs].szKeyName = copystring( keyname );
-		pkvd[numpairs].szValue = copystring( token.string );
+		pkvd[numpairs].szValue = copystring( token );
 		pkvd[numpairs].fHandled = false;		
 
 		if( !com.strcmp( keyname, "classname" ) && classname == NULL )
@@ -4337,9 +4336,9 @@ Creates a server's entity / program execution context by
 parsing textual entity definitions out of an ent file.
 ================
 */
-void SV_LoadFromFile( script_t *entities )
+void SV_LoadFromFile( char *entities )
 {
-	token_t	token;
+	string	token;
 	int	inhibited, spawned, died;
 	int	current_skill = Cvar_VariableInteger( "skill" ); // lock skill level
 	qboolean	inhibits_ents = (world.version == Q1BSP_VERSION) ? true : false;
@@ -4354,10 +4353,10 @@ void SV_LoadFromFile( script_t *entities )
 	died = 0;
 
 	// parse ents
-	while( Com_ReadToken( entities, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, &token ))
+	while(( entities = COM_ParseFile( entities, token )) != NULL )
 	{
-		if( token.string[0] != '{' )
-			Host_Error( "ED_LoadFromFile: found %s when expecting {\n", token.string );
+		if( token[0] != '{' )
+			Host_Error( "ED_LoadFromFile: found %s when expecting {\n", token );
 
 		if( create_world )
 		{
@@ -4366,7 +4365,7 @@ void SV_LoadFromFile( script_t *entities )
 		}
 		else ent = SV_AllocEdict();
 
-		if( !SV_ParseEdict( entities, ent ))
+		if( !SV_ParseEdict( &entities, ent ))
 			continue;
 
 		// remove things from different skill levels or deathmatch
@@ -4414,7 +4413,7 @@ Creates a server's entity / program execution context by
 parsing textual entity definitions out of an ent file.
 ==============
 */
-void SV_SpawnEntities( const char *mapname, script_t *entities )
+void SV_SpawnEntities( const char *mapname, char *entities )
 {
 	edict_t	*ent;
 
@@ -4448,7 +4447,8 @@ void SV_SpawnEntities( const char *mapname, script_t *entities )
 
 	// spawn the rest of the entities on the map
 	SV_LoadFromFile( entities );
-	Com_CloseScript( entities );
+	if( !Mem_IsAllocated( sv.worldmodel->mempool, entities ))
+		Mem_Free( entities ); // only free memory that allocated by entpatch
 
 	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.numEntities );
 }

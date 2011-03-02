@@ -201,7 +201,7 @@ Initialize CD playlist
 */
 void CL_InitCDAudio( const char *filename )
 {
-	script_t	*script;
+	char	*afile, *pfile;
 	string	token;
 	int	c = 0;
 
@@ -211,11 +211,13 @@ void CL_InitCDAudio( const char *filename )
 		CL_CreatePlaylist( filename );
 	}
 
-	script = Com_OpenScript( filename, NULL, 0 );
-	if( !script ) return;
+	afile = FS_LoadFile( filename, NULL );
+	if( !afile ) return;
+
+	pfile = afile;
 
 	// format: trackname\n [num]
-	while( Com_ReadString( script, SC_ALLOW_NEWLINES|SC_ALLOW_PATHNAMES2, token ))
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		if( !com.stricmp( token, "blank" )) token[0] = '\0';
 		com.strncpy( clgame.cdtracks[c], token, sizeof( clgame.cdtracks[0] ));
@@ -227,7 +229,7 @@ void CL_InitCDAudio( const char *filename )
 		}
 	}
 
-	Com_CloseScript( script );
+	Mem_Free( afile );
 }
 
 /*
@@ -1536,10 +1538,9 @@ for parsing half-life scripts - hud.txt etc
 static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 {
 	client_sprite_t	*pList;
-	int		numSprites = 0;
-	int		index, iTemp;
-	script_t		*script;
-	token_t		token;
+	int		index, numSprites = 0;
+	char		*afile, *pfile;
+	string		token;
 	byte		*pool;
 
 	if( piCount ) *piCount = 0;
@@ -1547,10 +1548,12 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	if( !clgame.itemspath[0] )
 		FS_ExtractFilePath( psz, clgame.itemspath );
 
-	script = Com_OpenScript( psz, NULL, 0 );
-	if( !script ) return NULL;
-          
-	Com_ReadUlong( script, SC_ALLOW_NEWLINES, &numSprites );
+	afile = FS_LoadFile( psz, NULL );
+	if( !afile ) return NULL;
+
+	pfile = afile;
+	pfile = COM_ParseFile( pfile, token );          
+	numSprites = com.atoi( token );
 
 	if( !cl.video_prepped ) pool = cls.mempool;
 	else pool = com_studiocache; // temporary
@@ -1561,31 +1564,31 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 
 	for( index = 0; index < numSprites; index++ )
 	{
-		if( !Com_ReadToken( script, SC_ALLOW_NEWLINES|SC_PARSE_GENERIC, &token ))
+		if(( pfile = COM_ParseFile( pfile, token )) == NULL )
 			break;
 
-		com.strncpy( pList[index].szName, token.string, sizeof( pList[index].szName ));
+		com.strncpy( pList[index].szName, token, sizeof( pList[index].szName ));
 
 		// read resolution
-		Com_ReadUlong( script, false, &iTemp );
-		pList[index].iRes = iTemp;
+		pfile = COM_ParseFile( pfile, token );
+		pList[index].iRes = com.atoi( token );
 
 		// read spritename
-		Com_ReadToken( script, SC_PARSE_GENERIC, &token );
-		com.strncpy( pList[index].szSprite, token.string, sizeof( pList[index].szSprite ));
+		pfile = COM_ParseFile( pfile, token );
+		com.strncpy( pList[index].szSprite, token, sizeof( pList[index].szSprite ));
 
 		// parse rectangle
-		Com_ReadUlong( script, false, &iTemp );
-		pList[index].rc.left = iTemp;
+		pfile = COM_ParseFile( pfile, token );
+		pList[index].rc.left = com.atoi( token );
 
-		Com_ReadUlong( script, false, &iTemp );
-		pList[index].rc.top = iTemp;
+		pfile = COM_ParseFile( pfile, token );
+		pList[index].rc.top = com.atoi( token );
 
-		Com_ReadUlong( script, false, &iTemp );
-		pList[index].rc.right = pList[index].rc.left + iTemp;
+		pfile = COM_ParseFile( pfile, token );
+		pList[index].rc.right = pList[index].rc.left + com.atoi( token );
 
-		Com_ReadUlong( script, false, &iTemp );
-		pList[index].rc.bottom = pList[index].rc.top + iTemp;
+		pfile = COM_ParseFile( pfile, token );
+		pList[index].rc.bottom = pList[index].rc.top + com.atoi( token );
 
 		if( piCount ) (*piCount)++;
 	}
@@ -1593,7 +1596,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	if( index < numSprites )
 		MsgDev( D_WARN, "SPR_GetList: unexpected end of %s (%i should be %i)\n", psz, numSprites, index );
 
-	Com_CloseScript( script );
+	Mem_Free( afile );
 
 	return pList;
 }

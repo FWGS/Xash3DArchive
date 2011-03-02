@@ -319,6 +319,7 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 qboolean R_WorldToScreen2( const vec3_t in, vec3_t out );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
+int R_ComputeFxBlend( cl_entity_t *e );
 void R_DrawFog( void );
 
 //

@@ -3,7 +3,7 @@
 //			 random.c - random generator
 //=======================================================================
 
-#include "launch.h"
+#include "common.h"
 
 static long idum = 0;
 

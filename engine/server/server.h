@@ -504,9 +504,9 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info );
 void SV_BaselineForEntity( edict_t *pEdict );
 void SV_WriteEntityPatch( const char *filename );
-script_t *SV_ReadEntityScript( const char *filename, int *flags );
+char *SV_ReadEntityScript( const char *filename, int *flags );
 float SV_AngleMod( float ideal, float current, float speed );
-void SV_SpawnEntities( const char *mapname, script_t *entities );
+void SV_SpawnEntities( const char *mapname, char *entities );
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className );
 string_t SV_AllocString( const char *szValue );
 sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only );

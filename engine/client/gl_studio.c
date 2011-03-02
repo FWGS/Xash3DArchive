@@ -1986,15 +1986,6 @@ R_StudioSetupRenderer
 */
 static void R_StudioSetupRenderer( int rendermode )
 {
-	if( RI.currententity == &clgame.viewent )
-	{
-		// hack the depth range to prevent view model from poking into walls
-		pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
-
-		// backface culling for left-handed weapons
-		if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
-          }
-
 	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse );
 	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
 }
@@ -2007,15 +1998,6 @@ R_StudioRestoreRenderer
 */
 static void R_StudioRestoreRenderer( void )
 {
-	if( RI.currententity == &clgame.viewent )
-	{
-		// restore depth range
-		pglDepthRange( gldepthmin, gldepthmax );
-
-		// backface culling for left-handed weapons
-		if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
-	}
-
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglShadeModel( GL_FLAT );
 
@@ -2591,7 +2573,21 @@ void R_DrawViewModel( void )
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
 
+	RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
+
+	// hack the depth range to prevent view model from poking into walls
+	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
+
+	// backface culling for left-handed weapons
+	if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
+
 	pStudioDraw->StudioDrawModel( STUDIO_RENDER );
+
+	// restore depth range
+	pglDepthRange( gldepthmin, gldepthmax );
+
+	// backface culling for left-handed weapons
+	if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
 
 	RI.currententity = NULL;
 	RI.currentmodel = NULL;

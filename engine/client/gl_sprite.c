@@ -858,6 +858,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	{
 		pglDepthMask( GL_TRUE );
 		pglEnable( GL_ALPHA_TEST );
+		pglAlphaFunc( GL_GEQUAL, 0.5f );
 	}
 
 	if( e->curstate.rendermode == kRenderGlow )

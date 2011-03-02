@@ -82,21 +82,6 @@ void Sys_GetStdAPI( void )
 	com.FunctionFromName = Com_FunctionFromName;
 	com.FreeLibrary = Com_FreeLibrary;
 
-	com.Com_LoadScript = PS_LoadScript;		// loading script into buffer
-	com.Com_CloseScript = PS_FreeScript;		// release current script
-	com.Com_ResetScript = PS_ResetScript;		// jump to start of scriptfile 
-	com.Com_EndOfScript = PS_EndOfScript;		// returns true if end of script reached
-	com.Com_SkipBracedSection = PS_SkipBracedSection;	// skip braced section with specified depth
-	com.Com_SkipRestOfLine = PS_SkipRestOfLine;	// skip all tokene the rest of line
-	com.Com_ReadToken = PS_ReadToken;		// generic reading
-	com.Com_SaveToken = PS_SaveToken;		// save current token to get it again
-
-	// script machine simple user interface
-	com.Com_ReadString = PS_GetString;		// string
-	com.Com_ReadFloat = PS_GetFloat;		// float value
-	com.Com_ReadDword = PS_GetUnsigned;		// unsigned integer
-	com.Com_ReadLong = PS_GetInteger;		// signed integer
-
 	com.Com_Search = FS_Search;			// returned list of founded files
 
 	// console variables

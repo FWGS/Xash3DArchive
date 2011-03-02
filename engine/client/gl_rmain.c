@@ -285,6 +285,10 @@ int R_ComputeFxBlend( cl_entity_t *e )
 	if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
 		e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
 
+	// apply scale to studiomodels and sprites only
+	if( e->model && e->model->type != mod_brush && !e->curstate.scale )
+		e->curstate.scale = 1.0f;
+
 	blend = bound( 0, blend, 255 );
 
 	return blend;
@@ -318,7 +322,6 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 		return true; // done
 
 	clent->curstate.entityType = entityType;
-	clent->curstate.renderamt = R_ComputeFxBlend( clent );
 
 	if( R_OpaqueEntity( clent ))
 	{
@@ -782,6 +785,8 @@ void R_DrawEntitiesOnList( void )
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );
 
+		RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
+
 		switch( RI.currentmodel->type )
 		{
 		case mod_brush:
@@ -827,6 +832,8 @@ void R_DrawEntitiesOnList( void )
 	
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );
+
+		RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
 
 		switch( RI.currentmodel->type )
 		{

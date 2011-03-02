@@ -1,3 +1,8 @@
+build ????
+
+Render: fix invisible sprites when game is paused
+Render: implement new better sprites lighting
+
 build 1482
 
 Engine: fixed critical bug

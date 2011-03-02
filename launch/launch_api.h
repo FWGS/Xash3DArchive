@@ -64,7 +64,6 @@ typedef long fs_offset_t;
 typedef struct file_s file_t;		// normal file
 typedef struct wfile_s wfile_t;	// wad file
 typedef struct convar_s convar_t;	// console variable
-typedef struct script_s script_t;	// script machine
 typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
 typedef struct { int numfilenames; char **filenames; char *filenamesbuffer; } search_t;
 typedef void ( *setpair_t )( const char *key, const char *value, void *buffer, void *numpairs );
@@ -114,50 +113,6 @@ typedef enum
 } cvar_flags_t;
 
 #include "cvardef.h"
-
-/*
-========================================================================
-
-TEXT PARSER
-
-all engine parts using it
-========================================================================
-*/
-typedef enum
-{
-	TT_EMPTY = 0,		// empty (invalid or whitespace)
-	TT_GENERIC,		// generic string separated by spaces
-	TT_STRING,		// string (enclosed with double quotes)
-	TT_LITERAL,		// literal (enclosed with single quotes)
-	TT_NUMBER,		// number
-	TT_NAME,			// name
-	TT_PUNCTUATION		// punctuation
-} tokenType_t;
-
-typedef enum
-{
-	SC_ALLOW_NEWLINES	 	= BIT(0),	// same as 'true'
-	SC_ALLOW_STRINGCONCAT	= BIT(1),
-	SC_ALLOW_ESCAPECHARS 	= BIT(2),
-	SC_ALLOW_PATHNAMES		= BIT(3),
-	SC_ALLOW_PATHNAMES2		= BIT(4),	// allow pathnames with quake symbols (!, %, $, +, -, { )
-	SC_PARSE_GENERIC		= BIT(5),
-	SC_PRINT_ERRORS		= BIT(6),
-	SC_PRINT_WARNINGS	 	= BIT(7),
-	SC_PARSE_LINE		= BIT(8),	// read line, ignore whitespaces
-	SC_COMMENT_SEMICOLON	= BIT(9),	// using semicolon as mark or begin comment (q2 oldstyle)
-} scFlags_t;
-
-typedef struct
-{
-	tokenType_t	type;
-	uint		subType;
-	int		line;
-	char		string[MAX_SYSPATH];
-	int		length;
-	double		floatValue;
-	uint		integerValue;
-} token_t;
 
 /*
 ========================================================================
@@ -340,22 +295,6 @@ typedef struct stdilib_api_s
 	dword (*FunctionFromName)( void *hInstance, const char *pName );
 	void (*FreeLibrary)( void *hInstance );
 
-	// script machine base functions
-	script_t *(*Com_LoadScript)( const char *filename, const char *buf, size_t size, qboolean gamedironly );
-	void (*Com_CloseScript)( script_t *script );		// release current script
-	void (*Com_ResetScript)( script_t *script );		// jump to start of scriptfile 
-	qboolean (*Com_EndOfScript)( script_t *script );		// returns true if end of script reached
-	void (*Com_SkipBracedSection)(script_t *script, int depth);	// skip braced section with specified depth
-	void (*Com_SkipRestOfLine)( script_t *script );		// skip all tokene the rest of line
-	qboolean (*Com_ReadToken)( script_t *script, scFlags_t flags, token_t *token ); // generic reading
-	void (*Com_SaveToken)( script_t *script, token_t *token );	// save current token to get it again
-
-	// script machine simple user interface
-	qboolean (*Com_ReadString)( script_t *script, int flags, char *value, size_t size );	// string
-	qboolean (*Com_ReadFloat)( script_t *script, int flags, float *value );		// float value
-	qboolean (*Com_ReadDword)( script_t *script, int flags, uint *value );		// unsigned integer
-	qboolean (*Com_ReadLong)( script_t *script, int flags, int *value );			// signed integer
-
 	search_t *(*Com_Search)( const char *pattern, int casecmp, int gamedironly ); // returned list of found files
 
 	// console variables
@@ -400,7 +339,7 @@ typedef struct stdilib_api_s
 	fs_offset_t (*flength)( file_t *f );					// return length for current file
 
 	// filesystem simple user interface
-	byte *(*Com_LoadFile)(const char *path, long *filesize );		// load file into heap
+	byte *(*Com_LoadFile)(const char *path, long *filesize, qboolean gamedir );	// load file into heap
 	void (*Com_FreeFile)( void *buffer );				// free heap file
 	qboolean (*Com_WriteFile)(const char *path, const void *data, long len );	// write file into disk
 	qboolean (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
@@ -479,20 +418,6 @@ typedef struct { size_t api_size; size_t com_size; } generic_api_t;
 don't add aliases for launch.dll because it may be conflicted with real names
 ==============================================================================
 */
-/*
-========================================================================
-script shared declaration
-external and internal script_t struct have some differences
-========================================================================
-*/
-struct script_s
-{
-	char	*buffer;
-	char	*text;
-	size_t	size;
-	char	TXcommand;	// contain QuArK 'TX' command in the map file descriptions
-};
-
 struct convar_s
 {
 	// this part shared with cvar_t
@@ -525,27 +450,6 @@ struct convar_s
 #define Mem_IsAllocated( pool, ptr )	com.is_allocated( pool, ptr )
 
 /*
-==========================================
-	parsing manager funcs
-==========================================
-*/
-#define Com_OpenScript( fn, buf, siz )	com.Com_LoadScript( fn, buf, siz, false )
-#define Com_OpenScriptExt		com.Com_LoadScript
-#define Com_CloseScript		com.Com_CloseScript
-#define Com_ResetScript		com.Com_ResetScript
-#define Com_SkipBracedSection		com.Com_SkipBracedSection
-#define Com_SkipRestOfLine		com.Com_SkipRestOfLine
-#define Com_EndOfScript		com.Com_EndOfScript
-#define Com_ReadToken		com.Com_ReadToken
-#define Com_SaveToken		com.Com_SaveToken
-#define Com_FreeToken		com.Com_FreeToken
-
-#define Com_ReadString( x, y, z )	com.Com_ReadString( x, y, z, sizeof( z ))
-#define Com_ReadFloat		com.Com_ReadFloat
-#define Com_ReadUlong		com.Com_ReadDword
-#define Com_ReadLong		com.Com_ReadLong
-
-/*
 ===========================================
 filesystem manager
 ===========================================
@@ -555,7 +459,8 @@ filesystem manager
 #define FS_LoadGameInfo		com.Com_LoadGameInfo
 #define FS_InitRootDir		com.Com_InitRootDir
 #define FS_AllowDirectPaths		com.Com_AllowDirectPaths
-#define FS_LoadFile			com.Com_LoadFile
+#define FS_LoadFile( file, size )	com.Com_LoadFile( file, size, false )
+#define FS_LoadFileEx		com.Com_LoadFile
 #define FS_FreeFile			com.Com_FreeFile
 #define FS_Search( str, casecmp )	com.Com_Search( str, casecmp, false )
 #define FS_SearchExt		com.Com_Search
