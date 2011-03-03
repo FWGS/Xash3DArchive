@@ -1493,7 +1493,6 @@ R_StudioLighting
 void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 {
 	float		max;
-	float		ambient;
 	vec3_t		illum;
 	studiolight_t	*plight;
 
@@ -1504,9 +1503,7 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 	}
 
 	plight = &g_studiolight; 
-
-	ambient = max( 0.1f, r_lighting_ambient->value ); // to avoid divison by zero
-	VectorScale( plight->lightcolor, ambient, illum );
+	VectorCopy( plight->lightcolor, illum );
 
 	if( flags & STUDIO_NF_FLATSHADE )
 	{

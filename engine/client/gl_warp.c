@@ -335,6 +335,8 @@ void R_DrawSkyBox( void )
 {
 	int	i;
 
+	RI.isSkyVisible = true;
+
 	// don't fogging skybox (this fix old Half-Life bug)
 	pglDisable( GL_FOG );
 	pglDisable( GL_BLEND );

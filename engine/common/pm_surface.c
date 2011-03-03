@@ -95,7 +95,7 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 	model_t		*bmodel;
 	hull_t		*hull;
 	vec3_t		start_l, end_l;
-	vec3_t		temp, offset;
+	vec3_t		offset;
 
 	bmodel = pe->model;
 	if( !bmodel || bmodel->type != mod_brush )
@@ -116,14 +116,6 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
 		Matrix4x4_VectorTransform( imatrix, end, end_l );
-#if 1
-		// calc hull offsets (monsters use this)
-		VectorCopy( start_l, temp );
-		VectorMAMAM( 1, temp, 1, vec3_origin, -1, hull->clip_mins, start_l );
-
-		VectorCopy( end_l, temp );
-		VectorMAMAM( 1, temp, 1, vec3_origin, -1, hull->clip_mins, end_l );
-#endif
 	}
 
 	surf = PM_RecursiveSurfCheck( bmodel, &bmodel->nodes[hull->firstclipnode], start_l, end_l );

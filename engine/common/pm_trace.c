@@ -363,14 +363,6 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
 		Matrix4x4_VectorTransform( imatrix, end, end_l );
-#if 0
-		// calc hull offsets (collide monster with rotating bmodel)
-		VectorCopy( start_l, temp );
-		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, start_l );
-
-		VectorCopy( end_l, temp );
-		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, end_l );
-#endif
 	}
 
 	// do trace

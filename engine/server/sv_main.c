@@ -619,12 +619,12 @@ void SV_Init( void )
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "4096", CVAR_PHYSICINFO, "zfar server value" );
 	sv_wateramp = Cvar_Get ("sv_wateramp", "0", CVAR_PHYSICINFO, "global water wave height" );
-	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "127", CVAR_PHYSICINFO, "skycolor red (hl1 compatibility)" );
-	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "127", CVAR_PHYSICINFO, "skycolor green (hl1 compatibility)" );
-	sv_skycolor_b = Cvar_Get ("sv_skycolor_b", "127", CVAR_PHYSICINFO, "skycolor blue (hl1 compatibility)" );
-	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "1", CVAR_PHYSICINFO, "sky direction x (hl1 compatibility)" );
+	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "255", CVAR_PHYSICINFO, "skycolor red (hl1 compatibility)" );
+	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "255", CVAR_PHYSICINFO, "skycolor green (hl1 compatibility)" );
+	sv_skycolor_b = Cvar_Get ("sv_skycolor_b", "255", CVAR_PHYSICINFO, "skycolor blue (hl1 compatibility)" );
+	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "0", CVAR_PHYSICINFO, "sky direction x (hl1 compatibility)" );
 	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", CVAR_PHYSICINFO, "sky direction y (hl1 compatibility)" );
-	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "-1", CVAR_PHYSICINFO, "sky direction z (hl1 compatibility)" );
+	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "0", CVAR_PHYSICINFO, "sky direction z (hl1 compatibility)" );
 	sv_skyname = Cvar_Get ("sv_skyname", "2desert", CVAR_PHYSICINFO, "skybox name (can be dynamically changed in-game)" );
 	sv_footsteps = Cvar_Get ("mp_footsteps", "1", CVAR_PHYSICINFO, "can hear footsteps from other players" );
 

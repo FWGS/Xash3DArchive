@@ -924,14 +924,6 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
 		Matrix4x4_VectorTransform( imatrix, end, end_l );
-#if 0
-		// calc hull offsets (monsters use this)
-		VectorCopy( start_l, temp );
-		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, start_l );
-
-		VectorCopy( end_l, temp );
-		VectorMAMAM( 1, temp, 1, mins, -1, hull->clip_mins, end_l );
-#endif
 	}
 
 	// trace a line through the apropriate clipping hull
@@ -1055,7 +1047,7 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 	model_t		*bmodel;
 	hull_t		*hull;
 	vec3_t		start_l, end_l;
-	vec3_t		temp, offset;
+	vec3_t		offset;
 
 	bmodel = Mod_Handle( ent->v.modelindex );
 	if( !bmodel || bmodel->type != mod_brush )
@@ -1076,14 +1068,6 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
 		Matrix4x4_VectorTransform( imatrix, end, end_l );
-#if 1
-		// calc hull offsets (monsters use this)
-		VectorCopy( start_l, temp );
-		VectorMAMAM( 1, temp, 1, vec3_origin, -1, hull->clip_mins, start_l );
-
-		VectorCopy( end_l, temp );
-		VectorMAMAM( 1, temp, 1, vec3_origin, -1, hull->clip_mins, end_l );
-#endif
 	}
 
 	surf = SV_RecursiveSurfCheck( bmodel, &bmodel->nodes[hull->firstclipnode], start_l, end_l );

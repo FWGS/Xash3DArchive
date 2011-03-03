@@ -517,6 +517,9 @@ void SV_AddGravity( edict_t *ent )
 {
 	float	ent_gravity;
 
+	if( ent->v.flags & FL_ONGROUND )
+		return; // already onground
+
 	if( ent->v.gravity )
 		ent_gravity = ent->v.gravity;
 	else ent_gravity = 1.0;
@@ -603,7 +606,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	if( blocked ) *blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
 
 	// so we can run impact function afterwards.
-	if( trace.ent ) SV_Impact( ent, &trace );
+	if( SV_IsValidEdict( trace.ent )) SV_Impact( ent, &trace );
 
 	return trace;
 }
@@ -1257,27 +1260,14 @@ void SV_Physics_Toss( edict_t *ent )
 	if( ent->free ) return;
 
 	SV_CheckVelocity( ent );
-
-	// make sure what we don't collide with like entity (e.g. gib with gib)
 #if 0
-	if( trace.allsolid && SV_IsValidEdict( trace.ent ) && trace.ent->v.movetype != ent->v.movetype )
+	if( trace.allsolid )
 	{
-		if( trace.ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
-		{
-			Msg( "%s stuck in the %s\n", SV_ClassName( ent ), SV_ClassName( trace.ent ));
-//			ent->v.solid = SOLID_NOT;
-		}
-		else
-		{
-			// entity is trapped in another solid
-			if( trace.plane.normal[2] > 0.7f )
-			{
-				ent->v.groundentity = trace.ent;
-				ent->v.flags |= FL_ONGROUND;
-			}
-			VectorClear( ent->v.velocity );
-			return;
-		}
+		// entity is trapped in another solid
+		ent->v.groundentity = trace.ent;
+		ent->v.flags |= FL_ONGROUND;
+		VectorClear( ent->v.velocity );
+		return;
 	}
 #endif
 	if( trace.fraction == 1.0f )

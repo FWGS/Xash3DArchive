@@ -624,7 +624,7 @@ void Host_Main( void )
 	static double	oldtime, newtime;
 
 	// we need to execute it again here
-	Cbuf_AddText( "exec config.cfg\n" );
+	Cmd_ExecuteString( "exec config.cfg\n" );
 	oldtime = Sys_DoubleTime();
 
 	// main window message loop

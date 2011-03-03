@@ -574,6 +574,7 @@ static void R_SetupFrame( void )
 		VectorCopy( cl.worldmodel->mins, RI.visMins );
 		VectorCopy( cl.worldmodel->maxs, RI.visMaxs );
 		RI.waveHeight = RI.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
+		RI.isSkyVisible = false; // unknown at this moment
 
 		if(!( RI.params & RP_OLDVIEWLEAF ))
 		{

@@ -133,6 +133,7 @@ typedef struct
 
 	qboolean		drawWorld;	// ignore world for drawing PlayerModel
 	qboolean		thirdPerson;	// thirdperson camera is enabled
+	qboolean		isSkyVisible;	// sky is visible
 	float		lerpFrac;		// lerpfraction
 
 	ref_params_t	refdef;		// actual refdef
@@ -168,7 +169,6 @@ typedef struct
 	matrix4x4		projectionMatrix;
 	matrix4x4		worldviewProjectionMatrix;	// worldviewMatrix * projectionMatrix
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
-	float		lightstylecolor[MAX_LIGHTSTYLES];	// color 0 - 1.0
 
 	mplane_t		clipPlane;
 } ref_instance_t;
@@ -308,7 +308,6 @@ void R_AnimateLight( void );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius );
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius );
-void R_LightForOrigin( const vec3_t origin, vec3_t dir, color24 *ambient, color24 *diffuse, float radius );
 
 //
 // gl_rmain.c
@@ -552,7 +551,6 @@ extern convar_t	*r_norefresh;
 extern convar_t	*r_lighting_extended;
 extern convar_t	*r_lighting_modulate;
 extern convar_t	*r_lighting_ambient;
-extern convar_t	*r_lighting_direct;
 extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
