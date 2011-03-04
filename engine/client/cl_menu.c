@@ -279,32 +279,35 @@ draw hudsprite routine
 static void PIC_DrawGeneric( float x, float y, float width, float height, const wrect_t *prc )
 {
 	float	s1, s2, t1, t2;
+	int	w, h;
 
-	if( width == -1 && height == -1 )
-	{
-		int	w, h;
-
-		// assume we get sizes from image
-		R_GetTextureParms( &w, &h, menu.ds.gl_texturenum );
-
-		width = w;
-		height = h;
-	}
+	// assume we get sizes from image
+	R_GetTextureParms( &w, &h, menu.ds.gl_texturenum );
 
 	if( prc )
 	{
 		// calc user-defined rectangle
-		s1 = (float)prc->left / width;
-		t1 = (float)prc->top / height;
-		s2 = (float)prc->right / width;
-		t2 = (float)prc->bottom / height;
-		width = prc->right - prc->left;
-		height = prc->bottom - prc->top;
+		s1 = (float)prc->left / (float)w;
+		t1 = (float)prc->top / (float)h;
+		s2 = (float)prc->right / (float)w;
+		t2 = (float)prc->bottom / (float)h;
+
+		if( width == -1 && height == -1 )
+		{
+			width = prc->right - prc->left;
+			height = prc->bottom - prc->top;
+		}
 	}
 	else
 	{
 		s1 = t1 = 0.0f;
 		s2 = t2 = 1.0f;
+	}
+
+	if( width == -1 && height == -1 )
+	{
+		width = w;
+		height = h;
 	}
 
 	// pass scissor test if supposed

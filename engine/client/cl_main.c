@@ -255,6 +255,7 @@ usercmd_t CL_CreateCmd( void )
 	usercmd_t		cmd;
 	color24		color;
 	vec3_t		angles;
+	qboolean		active;
 	int		ms;
 
 	ms = host.frametime * 1000;
@@ -281,7 +282,8 @@ usercmd_t CL_CreateCmd( void )
 	if( ++cl.movemessages <= 10 )
 		return cmd;
 
-	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, ( cls.state == ca_active && !cl.refdef.paused ));
+	active = ( cls.state == ca_active && !cl.refdef.paused && !cl.refdef.intermission );
+	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, active );
 
 	R_LightForPoint( cl.frame.local.client.origin, &color, false, 128.0f );
 	cmd.lightlevel = (color.r + color.g + color.b) / 3;
@@ -290,7 +292,7 @@ usercmd_t CL_CreateCmd( void )
 	// because is potential backdoor for cheating
 	cmd.msec = ms;
 
-	if( cl.background )
+	if( cl.background || cl.refdef.intermission )
 	{
 		VectorCopy( angles, cl.refdef.cl_viewangles );
 		VectorCopy( angles, cmd.viewangles );

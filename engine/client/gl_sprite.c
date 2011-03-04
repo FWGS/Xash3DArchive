@@ -895,7 +895,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
 	color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
           
-	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer )
+	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer && e->curstate.rendermode != kRenderTransAdd )
 	{
 		color24	lightColor;
 		qboolean	invLight;
@@ -991,7 +991,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	}
 
 	// draw the sprite 'lightmap' :-)
-	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer )
+	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer && e->curstate.rendermode != kRenderTransAdd )
 	{
 		pglEnable( GL_BLEND );
 		pglDepthFunc( GL_EQUAL );

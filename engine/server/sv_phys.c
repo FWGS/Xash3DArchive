@@ -517,8 +517,10 @@ void SV_AddGravity( edict_t *ent )
 {
 	float	ent_gravity;
 
+#if 0
 	if( ent->v.flags & FL_ONGROUND )
 		return; // already onground
+#endif
 
 	if( ent->v.gravity )
 		ent_gravity = ent->v.gravity;

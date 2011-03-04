@@ -2312,7 +2312,7 @@ void CL_DecayLights( void )
 	}
 }
 
-#define FLASHLIGHT_DISTANCE		500
+#define FLASHLIGHT_DISTANCE		1024	// ~4.5 meter
 
 /*
 ================

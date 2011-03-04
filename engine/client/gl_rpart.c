@@ -281,18 +281,33 @@ static void CL_SparkTracerDraw( particle_t *p, float frametime )
 	VectorMA( p->org, frametime, p->vel, p->org );
 }
 
-static void CL_BulletTracerDraw( particle_t *p, float frametime )
+static void CL_TracerImplosion( particle_t *p, float frametime )
 {
-	int	alpha = (int)(traceralpha->value * 255);
-	float	length, width;
+	float	lifePerc = p->die - cl.time;
+	float	grav = frametime * clgame.movevars.gravity * 0.05f;
+	float	length;
+	int	alpha = 255;
 	vec3_t	delta;
 
 	VectorScale( p->vel, p->ramp, delta );
 	length = VectorLength( delta );
-	width = ( length < TRACER_WIDTH ) ? length : TRACER_WIDTH;
+	if( lifePerc < 0.5f ) alpha = (lifePerc * 2) * 255;
+
+	p->vel[2] -= grav; // use slow gravity
+	CL_DrawTracer( p->org, delta, 1.5f, clgame.palette[p->color], alpha, 0.0f, 0.8f );
+
+	VectorMA( p->org, frametime, p->vel, p->org );
+}
+
+static void CL_BulletTracerDraw( particle_t *p, float frametime )
+{
+	int	alpha = (int)(traceralpha->value * 255);
+	vec3_t	delta;
+
+	VectorScale( p->vel, p->ramp, delta );
 
 	// bullet tracers used particle palette
-	CL_DrawTracer( p->org, delta, width, clgame.palette[p->color], alpha, 0.0f, 0.8f );
+	CL_DrawTracer( p->org, delta, 3.5f, clgame.palette[p->color], alpha, 0.0f, 0.8f );
 
 	VectorMA( p->org, frametime, p->vel, p->org );
 }
@@ -327,6 +342,8 @@ void CL_UpdateParticle( particle_t *p, float ft )
 			if( p->callback == CL_BulletTracerDraw )
 				return;	// already drawed
 			else if( p->callback == CL_SparkTracerDraw )
+				return;	// already drawed
+			else if( p->callback == CL_TracerImplosion )
 				return;	// already drawed
 		}
 		break;
@@ -1354,8 +1371,8 @@ void CL_TracerEffect( const vec3_t start, const vec3_t end )
 	VectorScale( dir, tracerspeed->value, p->vel );
 	VectorMA( start, traceroffset->value, dir, p->org ); // make some offset
 	p->color = CL_LookupColor( color[0], color[1], color[2] );
-	p->die += ( length / tracerspeed->value );
-	p->ramp = tracerlength->value; // ramp used as length
+	p->die += ( length / min( 100.0f, tracerspeed->value ));
+	p->ramp = tracerlength->value * 0.1f; // ramp used as length
 }
 
 /*
@@ -1444,46 +1461,34 @@ CL_Implosion
 void CL_Implosion( const vec3_t end, float radius, int count, float life )
 {
 	particle_t	*p;
-	vec3_t		dir, dest;
-	vec3_t		m_vecPos;
-	float		flDist, vel;
-	int		i, j, colorIndex;
-	int		step;
+	float		vel;
+	vec3_t		dir, m_vecPos;
+	int		i, colorIndex;
 
 	colorIndex = CL_LookupColor( gTracerColors[5][0], gTracerColors[5][1], gTracerColors[5][2] );
-	step = count / 4;
 
-	for( i = -radius; i <= radius; i += step )
+	for( i = 0; i < count; i++ )
 	{
-		for( j = -radius; j <= radius; j += step )
-		{
-			p = CL_AllocParticle( CL_SparkTracerDraw );
-			if( !p ) return;
+		p = CL_AllocParticle( CL_TracerImplosion );
+		if( !p ) return;
 
-			VectorCopy( end, m_vecPos );
+		dir[0] = Com_RandomFloat( -1.0f, 1.0f );
+		dir[1] = Com_RandomFloat( -1.0f, 1.0f );
+		dir[2] = Com_RandomFloat( -1.0f, 1.0f );
 
-			dest[0] = end[0] + i;
-			dest[1] = end[1] + j;
-			dest[2] = end[2] + Com_RandomFloat( 100, 800 );
+		VectorNormalize( dir );
+		VectorMA( end, -radius, dir, m_vecPos );
 
-			// send particle heading to dest at a random speed
-			VectorSubtract( dest, m_vecPos, dir );
+		// velocity based on how far particle has to travel away from org
+		vel = Com_RandomFloat( radius * 0.5f, radius * 1.5f );
 
-			vel = dest[2] / 8;// velocity based on how far particle has to travel away from org
+		VectorCopy( m_vecPos, p->org );
+		p->color = colorIndex;
+		p->ramp = 0.15f; // length based on velocity
 
-			flDist = VectorNormalizeLength( dir );	// save the distance
-			if( vel < 64 ) vel = 64;
-				
-			vel += Com_RandomFloat( 64, 128  );
-			life += ( flDist / vel );
+		VectorScale( dir, vel, p->vel );
 
-			VectorCopy( m_vecPos, p->org );
-			p->color = colorIndex;
-			p->ramp = 1.0f; // length based on velocity
-
-			VectorScale( dir, vel, p->vel );
-			// die right when you get there
-			p->die += life;
-		}
+		// die right when you get there
+		p->die += ( life != 0.0f ) ? life : ( radius / vel );
 	}
 }

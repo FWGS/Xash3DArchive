@@ -867,6 +867,7 @@ void DrawSurfaceDecals( msurface_t *fa )
 
 	pglEnable( GL_POLYGON_OFFSET_FILL );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE ); // FIXME: testing
 
 	for( p = fa->pdecals; p; p = p->pnext )
 		DrawSingleDecal( p, fa );
@@ -878,6 +879,10 @@ void DrawSurfaceDecals( msurface_t *fa )
 	}
 
 	pglDisable( GL_POLYGON_OFFSET_FILL );
+
+	// restore blendfunc here
+	if( e->curstate.rendermode == kRenderTransAdd || e->curstate.rendermode == kRenderGlow )
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 }
 
 /*
