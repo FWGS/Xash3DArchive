@@ -26,9 +26,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "keydefs.h"
 #include "images.h"		// built-in resources
 #include "utils.h"
+#include "menu_btnsbmp_table.h"
 
-cvar_t	*ui_precache;
-cvar_t	*ui_sensitivity;
+cvar_t		*ui_precache;
+cvar_t		*ui_sensitivity;
 
 uiStatic_t	uiStatic;
 
@@ -361,6 +362,9 @@ void UI_AddItem( menuFramework_s *menu, void *item )
 	case QMTYPE_BITMAP:
 		UI_Bitmap_Init((menuBitmap_s *)item );
 		break;
+	case QMTYPE_BM_BUTTON:
+		UI_PicButton_Init((menuPicButton_s *)item );
+		break;
 	default:
 		HOST_ERROR( "UI_AddItem: unknown item type (%i)\n", generic->type );
 	}
@@ -414,9 +418,7 @@ UI_SetCursorToItem
 */
 void UI_SetCursorToItem( menuFramework_s *menu, void *item )
 {
-	int	i;
-
-	for( i = 0; i < menu->numItems; i++ )
+	for( int i = 0; i < menu->numItems; i++ )
 	{
 		if( menu->items[i] == item )
 		{
@@ -545,6 +547,9 @@ void UI_DrawMenu( menuFramework_s *menu )
 		case QMTYPE_BITMAP:
 			UI_Bitmap_Draw((menuBitmap_s *)item );
 			break;
+		case QMTYPE_BM_BUTTON:
+			UI_PicButton_Draw((menuPicButton_s *)item );
+			break;
 		}
 	}
 
@@ -552,6 +557,8 @@ void UI_DrawMenu( menuFramework_s *menu )
 	item = (menuCommon_s *)UI_ItemAtCursor( menu );
 	if( item != lastItem )
 	{
+		// flash on selected button (like in GoldSrc)
+		if( item ) item->lastFocusTime = uiStatic.realTime;
 		statusFadeTime = uiStatic.realTime;
 		lastItem = item;
 	}
@@ -619,6 +626,9 @@ const char *UI_DefaultKey( menuFramework_s *menu, int key, int down )
 			break;
 		case QMTYPE_BITMAP:
 			sound = UI_Bitmap_Key((menuBitmap_s *)item, key, down );
+			break;
+		case QMTYPE_BM_BUTTON:
+			sound = UI_PicButton_Key((menuPicButton_s *)item, key, down );
 			break;
 		}
 		if( sound ) return sound; // key was handled
@@ -1012,10 +1022,21 @@ void UI_MouseMove( int x, int y )
 		item = (menuCommon_s *)uiStatic.menuActive->items[i];
 
 		if( item->flags & (QMF_GRAYED|QMF_INACTIVE|QMF_HIDDEN))
+		{
+			if( item->flags & QMF_HASMOUSEFOCUS )
+			{
+				if( !UI_CursorInRect( item->x, item->y, item->width, item->height ))
+					item->flags &= ~QMF_HASMOUSEFOCUS;
+				else item->lastFocusTime = uiStatic.realTime;
+			}
 			continue;
+		}
 
 		if( !UI_CursorInRect( item->x, item->y, item->width, item->height ))
+		{
+			item->bPressed = false;
 			continue;
+		}
 
 		// set focus to item at cursor
 		if( uiStatic.menuActive->cursor != i )
@@ -1028,6 +1049,7 @@ void UI_MouseMove( int x, int y )
 		}
 
 		((menuCommon_s *)(uiStatic.menuActive->items[uiStatic.menuActive->cursor]))->flags |= QMF_HASMOUSEFOCUS;
+		((menuCommon_s *)(uiStatic.menuActive->items[uiStatic.menuActive->cursor]))->lastFocusTime = uiStatic.realTime;
 		return;
 	}
 
@@ -1035,6 +1057,7 @@ void UI_MouseMove( int x, int y )
 	if( uiStatic.menuActive->numItems )
 	{
 		((menuCommon_s *)(uiStatic.menuActive->items[uiStatic.menuActive->cursor]))->flags &= ~QMF_HASMOUSEFOCUS;
+		((menuCommon_s *)(uiStatic.menuActive->items[uiStatic.menuActive->cursor]))->bPressed = false;
 
 		// a mouse only item restores focus to the previous item
 		if(((menuCommon_s *)(uiStatic.menuActive->items[uiStatic.menuActive->cursor]))->flags & QMF_MOUSEONLY )
@@ -1176,9 +1199,6 @@ void UI_Precache( void )
 	UI_AdvControls_Precache();
 	UI_GameOptions_Precache();
 	UI_CreateGame_Precache();
-	UI_PlayDemo_Precache();
-	UI_RecDemo_Precache();
-	UI_PlayRec_Precache();
 	UI_Audio_Precache();
 	UI_Video_Precache();
 	UI_VidOptions_Precache();
@@ -1308,8 +1328,13 @@ int UI_VidInit( void )
 	uiStatic.outlineWidth = 4;
 	uiStatic.sliderWidth = 6;
 
+	// all menu buttons have the same view sizes
+	uiStatic.buttons_draw_width = UI_BUTTONS_WIDTH;
+	uiStatic.buttons_draw_height = UI_BUTTONS_HEIGHT;
+
 	UI_ScaleCoords( NULL, NULL, &uiStatic.outlineWidth, NULL );
 	UI_ScaleCoords( NULL, NULL, &uiStatic.sliderWidth, NULL );
+	UI_ScaleCoords( NULL, NULL, &uiStatic.buttons_draw_width, &uiStatic.buttons_draw_height );
 
 	// trying to load colors.lst
 	UI_ApplyCustomColors ();
@@ -1319,6 +1344,9 @@ int UI_VidInit( void )
 
 	// register ui font
 	uiStatic.hFont = PIC_Load( "menufont", font_tga, sizeof( font_tga ));
+
+	// reload all menu buttons
+	UI_LoadBmpButtons ();
 
 	// now recalc all the menus in stack
 	for( int i = 0; i < uiStatic.menuDepth; i++ )
@@ -1349,9 +1377,6 @@ void UI_Init( void )
 	Cmd_AddCommand( "menu_loadgame", UI_LoadGame_Menu );
 	Cmd_AddCommand( "menu_savegame", UI_SaveGame_Menu );
 	Cmd_AddCommand( "menu_saveload", UI_SaveLoad_Menu );
-	Cmd_AddCommand( "menu_record", UI_RecDemo_Menu );
-	Cmd_AddCommand( "menu_playback", UI_PlayDemo_Menu );
-	Cmd_AddCommand( "menu_playrec", UI_PlayRec_Menu );
 	Cmd_AddCommand( "menu_multiplayer", UI_MultiPlayer_Menu );
 	Cmd_AddCommand( "menu_options", UI_Options_Menu );
 	Cmd_AddCommand( "menu_langame", UI_LanGame_Menu );
@@ -1387,9 +1412,6 @@ void UI_Shutdown( void )
 	Cmd_RemoveCommand( "menu_loadgame" );
 	Cmd_RemoveCommand( "menu_savegame" );
 	Cmd_RemoveCommand( "menu_saveload" );
-	Cmd_RemoveCommand( "menu_record" );
-	Cmd_RemoveCommand( "menu_playback" );
-	Cmd_RemoveCommand( "menu_playrec" );
 	Cmd_RemoveCommand( "menu_multiplayer" );
 	Cmd_RemoveCommand( "menu_options" );
 	Cmd_RemoveCommand( "menu_langame" );

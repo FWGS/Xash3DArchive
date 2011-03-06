@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
-
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER			"gfx/shell/head_audio"
 
@@ -51,7 +51,7 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	done;
+	menuPicButton_s	done;
 
 	menuSlider_s	soundVolume;
 	menuSlider_s	musicVolume;
@@ -179,13 +179,15 @@ static void UI_Audio_Init( void )
 	uiAudio.banner.pic = ART_BANNER;
 
 	uiAudio.done.generic.id = ID_DONE;
-	uiAudio.done.generic.type = QMTYPE_ACTION;
+	uiAudio.done.generic.type = QMTYPE_BM_BUTTON;
 	uiAudio.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiAudio.done.generic.x = 72;
 	uiAudio.done.generic.y = 230;
 	uiAudio.done.generic.name = "Done";
 	uiAudio.done.generic.statusText = "Go back to the Configuration Menu";
 	uiAudio.done.generic.callback = UI_Audio_Callback;
+
+	UI_UtilSetupPicButton( &uiAudio.done, PC_DONE );
 
 	uiAudio.soundVolume.generic.id = ID_SOUNDVOLUME;
 	uiAudio.soundVolume.generic.type = QMTYPE_SLIDER;

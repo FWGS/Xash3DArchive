@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER			"gfx/shell/head_advoptions"
 
@@ -51,8 +52,8 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	done;
-	menuAction_s	cancel;
+	menuPicButton_s	done;
+	menuPicButton_s	cancel;
 
 	menuSpinControl_s	maxFPS;
 	menuAction_s	maxFPSmessage;
@@ -201,7 +202,7 @@ static void UI_GameOptions_Init( void )
 	uiGameOptions.banner.pic = ART_BANNER;
 
 	uiGameOptions.done.generic.id	= ID_DONE;
-	uiGameOptions.done.generic.type = QMTYPE_ACTION;
+	uiGameOptions.done.generic.type = QMTYPE_BM_BUTTON;
 	uiGameOptions.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW; 
 	uiGameOptions.done.generic.x = 72;
 	uiGameOptions.done.generic.y = 230;
@@ -209,14 +210,18 @@ static void UI_GameOptions_Init( void )
 	uiGameOptions.done.generic.statusText = "Save changes and go back to the Customize Menu";
 	uiGameOptions.done.generic.callback = UI_GameOptions_Callback;
 
+	UI_UtilSetupPicButton( &uiGameOptions.done, PC_DONE );
+
 	uiGameOptions.cancel.generic.id = ID_CANCEL;
-	uiGameOptions.cancel.generic.type = QMTYPE_ACTION;
+	uiGameOptions.cancel.generic.type = QMTYPE_BM_BUTTON;
 	uiGameOptions.cancel.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiGameOptions.cancel.generic.x = 72;
 	uiGameOptions.cancel.generic.y = 280;
 	uiGameOptions.cancel.generic.name = "Cancel";
 	uiGameOptions.cancel.generic.statusText = "Go back to the Customize Menu";
 	uiGameOptions.cancel.generic.callback = UI_GameOptions_Callback;
+
+	UI_UtilSetupPicButton( &uiGameOptions.cancel, PC_CANCEL );
 
 	uiGameOptions.maxFPS.generic.id = ID_MAXFPS;
 	uiGameOptions.maxFPS.generic.type = QMTYPE_SPINCONTROL;

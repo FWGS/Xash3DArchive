@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_video"
 
@@ -38,9 +39,9 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	vidOptions;
-	menuAction_s	vidModes;
-	menuAction_s	done;
+	menuPicButton_s	vidOptions;
+	menuPicButton_s	vidModes;
+	menuPicButton_s	done;
 } uiVideo_t;
 
 static uiVideo_t	uiVideo;
@@ -101,7 +102,7 @@ static void UI_Video_Init( void )
 	uiVideo.banner.pic = ART_BANNER;
 
 	uiVideo.vidOptions.generic.id = ID_VIDOPTIONS;
-	uiVideo.vidOptions.generic.type = QMTYPE_ACTION;
+	uiVideo.vidOptions.generic.type = QMTYPE_BM_BUTTON;
 	uiVideo.vidOptions.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiVideo.vidOptions.generic.name = "Video options";
 	uiVideo.vidOptions.generic.statusText = "Set video options such as screen size, gamma and image quality.";
@@ -109,8 +110,10 @@ static void UI_Video_Init( void )
 	uiVideo.vidOptions.generic.y = 230;
 	uiVideo.vidOptions.generic.callback = UI_Video_Callback;
 
+	UI_UtilSetupPicButton( &uiVideo.vidOptions, PC_VID_OPT );
+
 	uiVideo.vidModes.generic.id = ID_VIDMODES;
-	uiVideo.vidModes.generic.type = QMTYPE_ACTION;
+	uiVideo.vidModes.generic.type = QMTYPE_BM_BUTTON;
 	uiVideo.vidModes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiVideo.vidModes.generic.name = "Video modes";
 	uiVideo.vidModes.generic.statusText = "Set video modes and configure 3D accelerators.";
@@ -118,14 +121,18 @@ static void UI_Video_Init( void )
 	uiVideo.vidModes.generic.y = 280;
 	uiVideo.vidModes.generic.callback = UI_Video_Callback;
 
+	UI_UtilSetupPicButton( &uiVideo.vidModes, PC_VID_MODES );
+
 	uiVideo.done.generic.id = ID_DONE;
-	uiVideo.done.generic.type = QMTYPE_ACTION;
+	uiVideo.done.generic.type = QMTYPE_BM_BUTTON;
 	uiVideo.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiVideo.done.generic.name = "Done";
 	uiVideo.done.generic.statusText = "Go back to the previous menu";
 	uiVideo.done.generic.x = 72;
 	uiVideo.done.generic.y = 330;
 	uiVideo.done.generic.callback = UI_Video_Callback;
+
+	UI_UtilSetupPicButton( &uiVideo.done, PC_DONE );
 
 	UI_AddItem( &uiVideo.menu, (void *)&uiVideo.background );
 	UI_AddItem( &uiVideo.menu, (void *)&uiVideo.banner );

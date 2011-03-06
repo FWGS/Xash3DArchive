@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ref_params.h"
 #include "cl_entity.h"
 #include "entity_types.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_customize"
 
@@ -58,8 +59,8 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	done;
-	menuAction_s	AdvOptions;
+	menuPicButton_s	done;
+	menuPicButton_s	AdvOptions;
 	menuBitmap_s	view;
 
 	menuCheckBox_s	hiModels;
@@ -302,7 +303,7 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.banner.pic = ART_BANNER;
 
 	uiPlayerSetup.done.generic.id = ID_DONE;
-	uiPlayerSetup.done.generic.type = QMTYPE_ACTION;
+	uiPlayerSetup.done.generic.type = QMTYPE_BM_BUTTON;
 	uiPlayerSetup.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiPlayerSetup.done.generic.x = 72;
 	uiPlayerSetup.done.generic.y = 230;
@@ -310,14 +311,18 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.done.generic.statusText = "Go back to the Multiplayer Menu";
 	uiPlayerSetup.done.generic.callback = UI_PlayerSetup_Callback;
 
+	UI_UtilSetupPicButton( &uiPlayerSetup.done, PC_DONE );
+
 	uiPlayerSetup.AdvOptions.generic.id = ID_ADVOPTIONS;
-	uiPlayerSetup.AdvOptions.generic.type = QMTYPE_ACTION;
+	uiPlayerSetup.AdvOptions.generic.type = QMTYPE_BM_BUTTON;
 	uiPlayerSetup.AdvOptions.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiPlayerSetup.AdvOptions.generic.x = 72;
 	uiPlayerSetup.AdvOptions.generic.y = 280;
 	uiPlayerSetup.AdvOptions.generic.name = "Adv. Options";
 	uiPlayerSetup.AdvOptions.generic.statusText = "Configure handness, fov and other advanced options";
 	uiPlayerSetup.AdvOptions.generic.callback = UI_PlayerSetup_Callback;
+
+	UI_UtilSetupPicButton( &uiPlayerSetup.AdvOptions, PC_ADV_OPT );
 
 	uiPlayerSetup.view.generic.id = ID_VIEW;
 	uiPlayerSetup.view.generic.type = QMTYPE_BITMAP;

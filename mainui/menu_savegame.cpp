@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER	     	"gfx/shell/head_save"
 
@@ -58,9 +59,9 @@ typedef struct
 
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
-	menuAction_s	save;
-	menuAction_s	remove;
-	menuAction_s	cancel;
+	menuPicButton_s	save;
+	menuPicButton_s	remove;
+	menuPicButton_s	cancel;
 
 	menuScrollList_s	savesList;
 
@@ -71,8 +72,8 @@ typedef struct
 	// prompt dialog
 	menuAction_s	msgBox;
 	menuAction_s	promptMessage;
-	menuAction_s	yes;
-	menuAction_s	no;
+	menuPicButton_s	yes;
+	menuPicButton_s	no;
 } uiSaveGame_t;
 
 static uiSaveGame_t		uiSaveGame;
@@ -343,7 +344,7 @@ static void UI_SaveGame_Init( void )
 	uiSaveGame.banner.pic = ART_BANNER;
 
 	uiSaveGame.save.generic.id = ID_SAVE;
-	uiSaveGame.save.generic.type = QMTYPE_ACTION;
+	uiSaveGame.save.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveGame.save.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiSaveGame.save.generic.x = 72;
 	uiSaveGame.save.generic.y = 230;
@@ -351,8 +352,10 @@ static void UI_SaveGame_Init( void )
 	uiSaveGame.save.generic.statusText = "Save current game";
 	uiSaveGame.save.generic.callback = UI_SaveGame_Callback;
 
+	UI_UtilSetupPicButton( &uiSaveGame.save, PC_SAVE_GAME );
+
 	uiSaveGame.remove.generic.id = ID_DELETE;
-	uiSaveGame.remove.generic.type = QMTYPE_ACTION;
+	uiSaveGame.remove.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveGame.remove.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiSaveGame.remove.generic.x = 72;
 	uiSaveGame.remove.generic.y = 280;
@@ -360,14 +363,18 @@ static void UI_SaveGame_Init( void )
 	uiSaveGame.remove.generic.statusText = "Delete saved game";
 	uiSaveGame.remove.generic.callback = UI_SaveGame_Callback;
 
+	UI_UtilSetupPicButton( &uiSaveGame.remove, PC_DELETE );
+
 	uiSaveGame.cancel.generic.id = ID_CANCEL;
-	uiSaveGame.cancel.generic.type = QMTYPE_ACTION;
+	uiSaveGame.cancel.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveGame.cancel.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiSaveGame.cancel.generic.x = 72;
 	uiSaveGame.cancel.generic.y = 330;
 	uiSaveGame.cancel.generic.name = "Cancel";
 	uiSaveGame.cancel.generic.statusText = "Return back to main menu";
 	uiSaveGame.cancel.generic.callback = UI_SaveGame_Callback;
+
+	UI_UtilSetupPicButton( &uiSaveGame.cancel, PC_CANCEL );
 
 	uiSaveGame.hintMessage.generic.id = ID_TABLEHINT;
 	uiSaveGame.hintMessage.generic.type = QMTYPE_ACTION;
@@ -412,20 +419,24 @@ static void UI_SaveGame_Init( void )
 	uiSaveGame.promptMessage.generic.y = 280;
 
 	uiSaveGame.yes.generic.id = ID_YES;
-	uiSaveGame.yes.generic.type = QMTYPE_ACTION;
+	uiSaveGame.yes.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiSaveGame.yes.generic.name = "Ok";
 	uiSaveGame.yes.generic.x = 380;
 	uiSaveGame.yes.generic.y = 460;
 	uiSaveGame.yes.generic.callback = UI_SaveGame_Callback;
 
+	UI_UtilSetupPicButton( &uiSaveGame.yes, PC_OK );
+
 	uiSaveGame.no.generic.id = ID_NO;
-	uiSaveGame.no.generic.type = QMTYPE_ACTION;
+	uiSaveGame.no.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiSaveGame.no.generic.name = "Cancel";
 	uiSaveGame.no.generic.x = 530;
 	uiSaveGame.no.generic.y = 460;
 	uiSaveGame.no.generic.callback = UI_SaveGame_Callback;
+
+	UI_UtilSetupPicButton( &uiSaveGame.no, PC_CANCEL );
 
 	UI_SaveGame_GetGameList();
 
@@ -464,7 +475,6 @@ void UI_SaveGame_Menu( void )
 	if( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY )
 	{
 		// completely ignore save\load menus for multiplayer_only
-		UI_RecDemo_Menu();
 		return;
 	}
 

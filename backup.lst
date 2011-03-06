@@ -30,6 +30,7 @@ engine\common\soundlib\
 launch\
 pm_shared\
 mainui\
+mainui\legacy
 utils\
 utils\vgui\
 utils\vgui\include\

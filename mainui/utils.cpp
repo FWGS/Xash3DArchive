@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #ifdef _DEBUG
 void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
@@ -241,6 +242,25 @@ int UI_FadeAlpha( int starttime, int endtime )
 	else alpha = 255;
 
 	return PackRGBA( 255, 255, 255, alpha );
+}
+
+void UI_UtilSetupPicButton( menuPicButton_s *pic, int ID )
+{
+	if( ID < 0 || ID > PC_BUTTONCOUNT )
+		return; // bad id
+
+#if 0	// too different results on various games. disabled
+	pic->generic.width = PicButtonWidth( ID ) * UI_BUTTON_CHARWIDTH;
+#else
+	pic->generic.width = UI_BUTTONS_WIDTH;
+#endif
+	pic->generic.height = UI_BUTTONS_HEIGHT;
+
+	pic->pic = uiStatic.buttonsPics[ID];
+	pic->button_id = ID;
+
+	if( pic->pic ) // text buttons not use it
+		pic->generic.flags|= QMF_ACT_ONRELEASE;
 }
 
 /*
@@ -1118,7 +1138,11 @@ const char *UI_CheckBox_Key( menuCheckBox_s *cb, int key, int down )
 		{
 			int	event;
 
-			if( down ) event = QM_PRESSED;
+			if( down )
+			{
+				event = QM_PRESSED;
+				cb->generic.bPressed = true;
+			}
 			else event = QM_CHANGED;
 			if( !down ) cb->enabled = !cb->enabled;	// apply on release
 			cb->generic.callback( cb, event );
@@ -1671,7 +1695,11 @@ const char *UI_Action_Key( menuAction_s *a, int key, int down )
 		{
 			int	event;
 
-			if( down ) event = QM_PRESSED;
+			if( down )
+			{
+				event = QM_PRESSED;
+				a->generic.bPressed = true;
+			}
 			else event = QM_ACTIVATED;
 			a->generic.callback( a, event );
 		}
@@ -1806,7 +1834,11 @@ const char *UI_Bitmap_Key( menuBitmap_s *b, int key, int down )
 		{
 			int	event;
 
-			if( down ) event = QM_PRESSED;
+			if( down )
+			{
+				event = QM_PRESSED;
+				b->generic.bPressed = true;
+			}
 			else event = QM_ACTIVATED;
 			b->generic.callback( b, event );
 		}
@@ -1865,4 +1897,205 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 
 	if( b->generic.flags & QMF_FOCUSBEHIND )
 		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.color, b->pic );
+}
+
+/*
+=================
+UI_PicButton_Init
+=================
+*/
+void UI_PicButton_Init( menuPicButton_s *pb )
+{
+	if( !pb->generic.name ) pb->generic.name = "";
+
+	if( pb->generic.flags & QMF_BIGFONT )
+	{
+		pb->generic.charWidth = UI_BIG_CHAR_WIDTH;
+		pb->generic.charHeight = UI_BIG_CHAR_HEIGHT;
+	}
+	else if( pb->generic.flags & QMF_SMALLFONT )
+	{
+		pb->generic.charWidth = UI_SMALL_CHAR_WIDTH;
+		pb->generic.charHeight = UI_SMALL_CHAR_HEIGHT;
+	}
+	else
+	{
+		if( pb->generic.charWidth < 1 ) pb->generic.charWidth = UI_MED_CHAR_WIDTH;
+		if( pb->generic.charHeight < 1 ) pb->generic.charHeight = UI_MED_CHAR_HEIGHT;
+	}
+
+	if(!( pb->generic.flags & ( QMF_LEFT_JUSTIFY|QMF_CENTER_JUSTIFY|QMF_RIGHT_JUSTIFY )))
+		pb->generic.flags |= QMF_LEFT_JUSTIFY;
+
+	if( !pb->generic.color ) pb->generic.color = uiPromptTextColor;
+	if( !pb->generic.focusColor ) pb->generic.focusColor = uiPromptFocusColor;
+
+	if( pb->generic.width < 1 || pb->generic.height < 1 )
+	{
+		if( pb->generic.width < 1 )
+			pb->generic.width = pb->generic.charWidth * strlen( pb->generic.name );
+
+		if( pb->generic.height < 1 )
+			pb->generic.height = pb->generic.charHeight * 1.5;
+	}
+
+	UI_ScaleCoords( &pb->generic.x, &pb->generic.y, &pb->generic.width, &pb->generic.height );
+	UI_ScaleCoords( NULL, NULL, &pb->generic.charWidth, &pb->generic.charHeight );
+}
+
+/*
+=================
+UI_PicButton_Key
+=================
+*/
+const char *UI_PicButton_Key( menuPicButton_s *b, int key, int down )
+{
+	const char	*sound = 0;
+
+	switch( key )
+	{
+	case K_MOUSE1:
+		if(!( b->generic.flags & QMF_HASMOUSEFOCUS ))
+			break;
+		sound = uiSoundLaunch;
+		break;
+	case K_ENTER:
+	case K_KP_ENTER:
+		if( b->generic.flags & QMF_MOUSEONLY )
+			break;
+		sound = uiSoundLaunch;
+		break;
+	}
+	if( sound && ( b->generic.flags & QMF_SILENT ))
+		sound = uiSoundNull;
+
+	if( b->generic.flags & QMF_ACT_ONRELEASE )
+	{
+		if( sound && b->generic.callback )
+		{
+			int	event;
+			
+			if( down ) 
+			{
+				event = QM_PRESSED;
+				b->generic.bPressed = true;
+			}
+			else event = QM_ACTIVATED;
+			b->generic.callback( b, event );
+		}
+	}
+	else if( down )
+	{
+		if( sound && b->generic.callback )
+			b->generic.callback( b, QM_ACTIVATED );
+          }
+
+	return sound;
+}
+
+/*
+=================
+UI_PicButton_Draw
+=================
+*/
+void UI_PicButton_Draw( menuPicButton_s *item )
+{
+	int state = BUTTON_NOFOCUS;
+
+	if( item->generic.flags & QMF_HASMOUSEFOCUS )
+		state = BUTTON_FOCUS;
+
+	// make sure what cursor in rect
+ 	if( item->generic.bPressed )
+ 		state = BUTTON_PRESSED;
+
+	if( item->generic.statusText && item->generic.flags & QMF_NOTIFY )
+	{
+		int	charW, charH;
+		int	x, w;
+		
+		charW = UI_SMALL_CHAR_WIDTH;
+		charH = UI_SMALL_CHAR_HEIGHT;
+		
+		UI_ScaleCoords( NULL, NULL, &charW, &charH );
+		
+		x = 290;
+		w = UI_SMALL_CHAR_WIDTH * strlen( item->generic.statusText );
+		UI_ScaleCoords( &x, NULL, &w, NULL );
+		x += item->generic.x;
+		
+		int	r, g, b;
+		
+		UnpackRGB( r, g, b, uiColorHelp );
+		TextMessageSetColor( r, g, b );
+		DrawConsoleString( x, item->generic.y, item->generic.statusText );
+	}
+
+	if( item->pic )
+	{
+		int r, g, b, a;
+
+		UnpackRGB( r, g, b, item->generic.flags & QMF_GRAYED ? uiColorDkGrey : uiColorWhite );
+
+		wrect_t rects[]=
+		{
+		{ 0, uiStatic.buttons_width, 1, 25 },
+		{ 0, uiStatic.buttons_width, 26, 51 },
+		{ 0, uiStatic.buttons_width, 52, 77 }
+		};
+
+		PIC_Set( item->pic, r, g, b, 255 );
+		PIC_DrawAdditive( item->generic.x, item->generic.y, uiStatic.buttons_draw_width, uiStatic.buttons_draw_height, &rects[state] );
+
+		a = (512 - (uiStatic.realTime - item->generic.lastFocusTime)) >> 1;
+
+		if( state == BUTTON_NOFOCUS && a > 0 )
+		{	
+			PIC_Set( item->pic, r, g, b, a );
+			PIC_DrawAdditive( item->generic.x, item->generic.y, uiStatic.buttons_draw_width, uiStatic.buttons_draw_height, &rects[BUTTON_FOCUS] );
+		}
+	}
+	else
+	{
+		int	justify;
+		int	shadow;
+		
+		if( item->generic.flags & QMF_LEFT_JUSTIFY )
+			justify = 0;
+		else if( item->generic.flags & QMF_CENTER_JUSTIFY )
+			justify = 1;
+		else if( item->generic.flags & QMF_RIGHT_JUSTIFY )
+			justify = 2;
+		
+		shadow = (item->generic.flags & QMF_DROPSHADOW);
+
+		if( item->generic.flags & QMF_GRAYED )
+		{
+			UI_DrawString( item->generic.x, item->generic.y, item->generic.width, item->generic.height, item->generic.name, uiColorDkGrey, true, item->generic.charWidth, item->generic.charHeight, justify, shadow );
+			return; // grayed
+		}
+		
+		if((menuCommon_s *)item != (menuCommon_s *)UI_ItemAtCursor( item->generic.parent ))
+		{
+			UI_DrawString( item->generic.x, item->generic.y, item->generic.width, item->generic.height, item->generic.name, item->generic.color, false, item->generic.charWidth, item->generic.charHeight, justify, shadow );
+			return; // no focus
+		}
+		
+		if(!( item->generic.flags & QMF_FOCUSBEHIND ))
+			UI_DrawString( item->generic.x, item->generic.y, item->generic.width, item->generic.height, item->generic.name, item->generic.color, false, item->generic.charWidth, item->generic.charHeight, justify, shadow );
+		
+		if( item->generic.flags & QMF_HIGHLIGHTIFFOCUS )
+			UI_DrawString( item->generic.x, item->generic.y, item->generic.width, item->generic.height, item->generic.name, item->generic.focusColor, false, item->generic.charWidth, item->generic.charHeight, justify, shadow );
+		else if( item->generic.flags & QMF_PULSEIFFOCUS )
+		{
+			int	color;
+			
+			color = PackAlpha( item->generic.color, 255 * (0.5 + 0.5 * sin( uiStatic.realTime / UI_PULSE_DIVISOR )));
+			
+			UI_DrawString( item->generic.x, item->generic.y, item->generic.width, item->generic.height, item->generic.name, color, false, item->generic.charWidth, item->generic.charHeight, justify, shadow );
+		}
+		
+		if( item->generic.flags & QMF_FOCUSBEHIND )
+			UI_DrawString( item->generic.x, item->generic.y, item->generic.width, item->generic.height, item->generic.name, item->generic.color, false, item->generic.charWidth, item->generic.charHeight, justify, shadow );
+	}
 }

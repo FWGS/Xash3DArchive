@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_lan"
 
@@ -54,18 +55,18 @@ typedef struct
 
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
-	menuAction_s	joinGame;
-	menuAction_s	createGame;
-	menuAction_s	gameInfo;
-	menuAction_s	refresh;
-	menuAction_s	done;
+	menuPicButton_s	joinGame;
+	menuPicButton_s	createGame;
+	menuPicButton_s	gameInfo;
+	menuPicButton_s	refresh;
+	menuPicButton_s	done;
 
 	// joingame prompt dialog
 	menuAction_s	msgBox;
 	menuAction_s	dlgMessage1;
 	menuAction_s	dlgMessage2;
-	menuAction_s	yes;
-	menuAction_s	no;
+	menuPicButton_s	yes;
+	menuPicButton_s	no;
 
 	menuScrollList_s	gameList;
 	menuAction_s	hintMessage;
@@ -292,7 +293,7 @@ static void UI_LanGame_Init( void )
 	uiLanGame.banner.pic = ART_BANNER;
 
 	uiLanGame.joinGame.generic.id = ID_JOINGAME;
-	uiLanGame.joinGame.generic.type = QMTYPE_ACTION;
+	uiLanGame.joinGame.generic.type = QMTYPE_BM_BUTTON;
 	uiLanGame.joinGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiLanGame.joinGame.generic.x = 72;
 	uiLanGame.joinGame.generic.y = 230;
@@ -300,8 +301,10 @@ static void UI_LanGame_Init( void )
 	uiLanGame.joinGame.generic.statusText = "Join to selected game";
 	uiLanGame.joinGame.generic.callback = UI_LanGame_Callback;
 
+	UI_UtilSetupPicButton( &uiLanGame.joinGame, PC_JOIN_GAME );
+
 	uiLanGame.createGame.generic.id = ID_CREATEGAME;
-	uiLanGame.createGame.generic.type = QMTYPE_ACTION;
+	uiLanGame.createGame.generic.type = QMTYPE_BM_BUTTON;
 	uiLanGame.createGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiLanGame.createGame.generic.x = 72;
 	uiLanGame.createGame.generic.y = 280;
@@ -309,8 +312,10 @@ static void UI_LanGame_Init( void )
 	uiLanGame.createGame.generic.statusText = "Create new LAN game";
 	uiLanGame.createGame.generic.callback = UI_LanGame_Callback;
 
+	UI_UtilSetupPicButton( &uiLanGame.createGame, PC_CREATE_GAME );
+
 	uiLanGame.gameInfo.generic.id = ID_GAMEINFO;
-	uiLanGame.gameInfo.generic.type = QMTYPE_ACTION;
+	uiLanGame.gameInfo.generic.type = QMTYPE_BM_BUTTON;
 	uiLanGame.gameInfo.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_GRAYED;
 	uiLanGame.gameInfo.generic.x = 72;
 	uiLanGame.gameInfo.generic.y = 330;
@@ -318,8 +323,10 @@ static void UI_LanGame_Init( void )
 	uiLanGame.gameInfo.generic.statusText = "Get detail game info";
 	uiLanGame.gameInfo.generic.callback = UI_LanGame_Callback;
 
+	UI_UtilSetupPicButton( &uiLanGame.gameInfo, PC_VIEW_GAME_INFO );
+
 	uiLanGame.refresh.generic.id = ID_REFRESH;
-	uiLanGame.refresh.generic.type = QMTYPE_ACTION;
+	uiLanGame.refresh.generic.type = QMTYPE_BM_BUTTON;
 	uiLanGame.refresh.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiLanGame.refresh.generic.x = 72;
 	uiLanGame.refresh.generic.y = 380;
@@ -327,14 +334,18 @@ static void UI_LanGame_Init( void )
 	uiLanGame.refresh.generic.statusText = "Refresh servers list";
 	uiLanGame.refresh.generic.callback = UI_LanGame_Callback;
 
+	UI_UtilSetupPicButton( &uiLanGame.refresh, PC_REFRESH );
+
 	uiLanGame.done.generic.id = ID_DONE;
-	uiLanGame.done.generic.type = QMTYPE_ACTION;
+	uiLanGame.done.generic.type = QMTYPE_BM_BUTTON;
 	uiLanGame.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiLanGame.done.generic.x = 72;
 	uiLanGame.done.generic.y = 430;
 	uiLanGame.done.generic.name = "Done";
 	uiLanGame.done.generic.statusText = "Return to main menu";
 	uiLanGame.done.generic.callback = UI_LanGame_Callback;
+
+	UI_UtilSetupPicButton( &uiLanGame.done, PC_DONE );
 
 	uiLanGame.msgBox.generic.id = ID_MSGBOX;
 	uiLanGame.msgBox.generic.type = QMTYPE_ACTION;
@@ -360,20 +371,24 @@ static void UI_LanGame_Init( void )
 	uiLanGame.dlgMessage2.generic.y = 310;
 
 	uiLanGame.yes.generic.id = ID_YES;
-	uiLanGame.yes.generic.type = QMTYPE_ACTION;
+	uiLanGame.yes.generic.type = QMTYPE_BM_BUTTON;
 	uiLanGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiLanGame.yes.generic.name = "Ok";
 	uiLanGame.yes.generic.x = 380;
 	uiLanGame.yes.generic.y = 460;
 	uiLanGame.yes.generic.callback = UI_LanGame_Callback;
 
+	UI_UtilSetupPicButton( &uiLanGame.yes, PC_OK );
+
 	uiLanGame.no.generic.id = ID_NO;
-	uiLanGame.no.generic.type = QMTYPE_ACTION;
+	uiLanGame.no.generic.type = QMTYPE_BM_BUTTON;
 	uiLanGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiLanGame.no.generic.name = "Cancel";
 	uiLanGame.no.generic.x = 530;
 	uiLanGame.no.generic.y = 460;
 	uiLanGame.no.generic.callback = UI_LanGame_Callback;
+
+	UI_UtilSetupPicButton( &uiLanGame.no, PC_CANCEL );
 
 	uiLanGame.hintMessage.generic.id = ID_TABLEHINT;
 	uiLanGame.hintMessage.generic.type = QMTYPE_ACTION;
@@ -398,19 +413,19 @@ static void UI_LanGame_Init( void )
 		uiLanGame.createGame.generic.flags |= QMF_GRAYED;	// server.dll is missed - remote servers only
 
 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.background );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.banner );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.joinGame );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.createGame );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.gameInfo );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.refresh );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.done );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.hintMessage );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.gameList );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.msgBox );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.dlgMessage1 );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.dlgMessage2 );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.no );
-	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.yes );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.banner );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.joinGame );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.createGame );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.gameInfo );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.refresh );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.done );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.hintMessage );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.gameList );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.msgBox );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.dlgMessage1 );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.dlgMessage2 );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.no );
+ 	UI_AddItem( &uiLanGame.menu, (void *)&uiLanGame.yes );
 
 	uiLanGame.refreshTime = uiStatic.realTime + 500; // delay before update 0.5 sec
 }

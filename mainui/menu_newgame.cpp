@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_newgame"
 
@@ -45,17 +46,17 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	easy;
-	menuAction_s	medium;
-	menuAction_s	hard;
-	menuAction_s	cancel;
+	menuPicButton_s	easy;
+	menuPicButton_s	medium;
+	menuPicButton_s	hard;
+	menuPicButton_s	cancel;
 
 	// newgame prompt dialog
 	menuAction_s	msgBox;
 	menuAction_s	dlgMessage1;
 	menuAction_s	dlgMessage2;
-	menuAction_s	yes;
-	menuAction_s	no;
+	menuPicButton_s	yes;
+	menuPicButton_s	no;
 
 	float		skill;
 
@@ -200,7 +201,7 @@ static void UI_NewGame_Init( void )
 	uiNewGame.banner.pic = ART_BANNER;
 
 	uiNewGame.easy.generic.id = ID_EASY;
-	uiNewGame.easy.generic.type = QMTYPE_ACTION;
+	uiNewGame.easy.generic.type = QMTYPE_BM_BUTTON;
 	uiNewGame.easy.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiNewGame.easy.generic.name = "Easy";
 	uiNewGame.easy.generic.statusText = "Play the game on the 'easy' skill setting";
@@ -208,17 +209,21 @@ static void UI_NewGame_Init( void )
 	uiNewGame.easy.generic.y = 230;
 	uiNewGame.easy.generic.callback = UI_NewGame_Callback;
 
+	UI_UtilSetupPicButton( &uiNewGame.easy, PC_EASY );
+
 	uiNewGame.medium.generic.id = ID_MEDIUM;
-	uiNewGame.medium.generic.type = QMTYPE_ACTION;
+	uiNewGame.medium.generic.type = QMTYPE_BM_BUTTON;
 	uiNewGame.medium.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiNewGame.medium.generic.name = "Medium";
 	uiNewGame.medium.generic.statusText = "Play the game on the 'medium' skill setting";
 	uiNewGame.medium.generic.x = 72;
 	uiNewGame.medium.generic.y = 280;
 	uiNewGame.medium.generic.callback = UI_NewGame_Callback;
+	
+	UI_UtilSetupPicButton( &uiNewGame.medium, PC_MEDIUM );
 
 	uiNewGame.hard.generic.id = ID_DIFFICULT;
-	uiNewGame.hard.generic.type = QMTYPE_ACTION;
+	uiNewGame.hard.generic.type = QMTYPE_BM_BUTTON;
 	uiNewGame.hard.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiNewGame.hard.generic.name = "Difficult";
 	uiNewGame.hard.generic.statusText = "Play the game on the 'difficult' skill setting";
@@ -226,14 +231,18 @@ static void UI_NewGame_Init( void )
 	uiNewGame.hard.generic.y = 330;
 	uiNewGame.hard.generic.callback = UI_NewGame_Callback;
 
+	UI_UtilSetupPicButton( &uiNewGame.hard, PC_DIFFICULT );
+
 	uiNewGame.cancel.generic.id = ID_CANCEL;
-	uiNewGame.cancel.generic.type = QMTYPE_ACTION;
+	uiNewGame.cancel.generic.type = QMTYPE_BM_BUTTON;
 	uiNewGame.cancel.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiNewGame.cancel.generic.name = "Cancel";
 	uiNewGame.cancel.generic.statusText = "Go back to the main Menu";
 	uiNewGame.cancel.generic.x = 72;
 	uiNewGame.cancel.generic.y = 380;
 	uiNewGame.cancel.generic.callback = UI_NewGame_Callback;
+
+	UI_UtilSetupPicButton( &uiNewGame.cancel, PC_CANCEL );
 
 	uiNewGame.msgBox.generic.id = ID_MSGBOX;
 	uiNewGame.msgBox.generic.type = QMTYPE_ACTION;
@@ -259,20 +268,24 @@ static void UI_NewGame_Init( void )
 	uiNewGame.dlgMessage2.generic.y = 310;
 
 	uiNewGame.yes.generic.id = ID_YES;
-	uiNewGame.yes.generic.type = QMTYPE_ACTION;
+	uiNewGame.yes.generic.type = QMTYPE_BM_BUTTON;
 	uiNewGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiNewGame.yes.generic.name = "Ok";
 	uiNewGame.yes.generic.x = 380;
 	uiNewGame.yes.generic.y = 460;
 	uiNewGame.yes.generic.callback = UI_NewGame_Callback;
 
+	UI_UtilSetupPicButton( &uiNewGame.yes, PC_OK );
+
 	uiNewGame.no.generic.id = ID_NO;
-	uiNewGame.no.generic.type = QMTYPE_ACTION;
+	uiNewGame.no.generic.type = QMTYPE_BM_BUTTON;
 	uiNewGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiNewGame.no.generic.name = "Cancel";
 	uiNewGame.no.generic.x = 530;
 	uiNewGame.no.generic.y = 460;
 	uiNewGame.no.generic.callback = UI_NewGame_Callback;
+
+	UI_UtilSetupPicButton( &uiNewGame.no, PC_CANCEL );
 
 	UI_AddItem( &uiNewGame.menu, (void *)&uiNewGame.background );
 	UI_AddItem( &uiNewGame.menu, (void *)&uiNewGame.banner );

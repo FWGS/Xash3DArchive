@@ -126,6 +126,10 @@ SOURCE=.\menu_audio.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\menu_btns.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\menu_configuration.cpp
 # End Source File
 # Begin Source File
@@ -170,19 +174,7 @@ SOURCE=.\menu_newgame.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\menu_playdemo.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\menu_playersetup.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\menu_playrec.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\menu_recdemo.cpp
 # End Source File
 # Begin Source File
 
@@ -222,7 +214,19 @@ SOURCE=.\basemenu.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\enginecallback.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\extdll.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\images.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\menu_btnsbmp_table.h
 # End Source File
 # Begin Source File
 

@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_creategame"
 
@@ -55,9 +56,9 @@ typedef struct
 
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
-	menuAction_s	advOptions;
-	menuAction_s	done;
-	menuAction_s	cancel;
+	menuPicButton_s	advOptions;
+	menuPicButton_s	done;
+	menuPicButton_s	cancel;
 
 	menuField_s	maxClients;
 	menuField_s	hostName;
@@ -68,8 +69,8 @@ typedef struct
 	menuAction_s	msgBox;
 	menuAction_s	dlgMessage1;
 	menuAction_s	dlgMessage2;
-	menuAction_s	yes;
-	menuAction_s	no;
+	menuPicButton_s	yes;
+	menuPicButton_s	no;
 
 	menuScrollList_s	mapsList;
 	menuAction_s	hintMessage;
@@ -288,7 +289,7 @@ static void UI_CreateGame_Init( void )
 	uiCreateGame.banner.pic = ART_BANNER;
 
 	uiCreateGame.advOptions.generic.id = ID_ADVOPTIONS;
-	uiCreateGame.advOptions.generic.type = QMTYPE_ACTION;
+	uiCreateGame.advOptions.generic.type = QMTYPE_BM_BUTTON;
 	uiCreateGame.advOptions.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_GRAYED;
 	uiCreateGame.advOptions.generic.x = 72;
 	uiCreateGame.advOptions.generic.y = 230;
@@ -296,8 +297,10 @@ static void UI_CreateGame_Init( void )
 	uiCreateGame.advOptions.generic.statusText = "Open the LAN game advanced options menu";
 	uiCreateGame.advOptions.generic.callback = UI_CreateGame_Callback;
 
+	UI_UtilSetupPicButton( &uiCreateGame.advOptions, PC_ADV_OPT );
+
 	uiCreateGame.done.generic.id = ID_DONE;
-	uiCreateGame.done.generic.type = QMTYPE_ACTION;
+	uiCreateGame.done.generic.type = QMTYPE_BM_BUTTON;
 	uiCreateGame.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiCreateGame.done.generic.x = 72;
 	uiCreateGame.done.generic.y = 280;
@@ -305,14 +308,18 @@ static void UI_CreateGame_Init( void )
 	uiCreateGame.done.generic.statusText = "Start the multiplayer game";
 	uiCreateGame.done.generic.callback = UI_CreateGame_Callback;
 
+	UI_UtilSetupPicButton( &uiCreateGame.done, PC_OK );
+
 	uiCreateGame.cancel.generic.id = ID_CANCEL;
-	uiCreateGame.cancel.generic.type = QMTYPE_ACTION;
+	uiCreateGame.cancel.generic.type = QMTYPE_BM_BUTTON;
 	uiCreateGame.cancel.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiCreateGame.cancel.generic.x = 72;
 	uiCreateGame.cancel.generic.y = 330;
 	uiCreateGame.cancel.generic.name = "Cancel";
 	uiCreateGame.cancel.generic.statusText = "Return to LAN game menu";
 	uiCreateGame.cancel.generic.callback = UI_CreateGame_Callback;
+
+	UI_UtilSetupPicButton( &uiCreateGame.cancel, PC_CANCEL );
 
 	uiCreateGame.dedicatedServer.generic.id = ID_DEDICATED;
 	uiCreateGame.dedicatedServer.generic.type = QMTYPE_CHECKBOX;
@@ -401,20 +408,24 @@ static void UI_CreateGame_Init( void )
 	uiCreateGame.dlgMessage2.generic.y = 310;
 
 	uiCreateGame.yes.generic.id = ID_YES;
-	uiCreateGame.yes.generic.type = QMTYPE_ACTION;
+	uiCreateGame.yes.generic.type = QMTYPE_BM_BUTTON;
 	uiCreateGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiCreateGame.yes.generic.name = "Ok";
 	uiCreateGame.yes.generic.x = 380;
 	uiCreateGame.yes.generic.y = 460;
 	uiCreateGame.yes.generic.callback = UI_CreateGame_Callback;
 
+	UI_UtilSetupPicButton( &uiCreateGame.yes, PC_OK );
+
 	uiCreateGame.no.generic.id = ID_NO;
-	uiCreateGame.no.generic.type = QMTYPE_ACTION;
+	uiCreateGame.no.generic.type = QMTYPE_BM_BUTTON;
 	uiCreateGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_HIDDEN|QMF_DROPSHADOW;
 	uiCreateGame.no.generic.name = "Cancel";
 	uiCreateGame.no.generic.x = 530;
 	uiCreateGame.no.generic.y = 460;
 	uiCreateGame.no.generic.callback = UI_CreateGame_Callback;
+
+	UI_UtilSetupPicButton( &uiCreateGame.no, PC_CANCEL );
 
 	UI_CreateGame_GetMapsList();
 

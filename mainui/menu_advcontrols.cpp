@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "../cl_dll/kbutton.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER			"gfx/shell/head_advanced"
 
@@ -45,7 +46,7 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	done;
+	menuPicButton_s	done;
 
 	menuCheckBox_s	crosshair;
 	menuCheckBox_s	invertMouse;
@@ -208,13 +209,15 @@ static void UI_AdvControls_Init( void )
 	uiAdvControls.banner.pic = ART_BANNER;
 
 	uiAdvControls.done.generic.id	= ID_DONE;
-	uiAdvControls.done.generic.type = QMTYPE_ACTION;
+	uiAdvControls.done.generic.type = QMTYPE_BM_BUTTON;
 	uiAdvControls.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW; 
 	uiAdvControls.done.generic.x = 72;
 	uiAdvControls.done.generic.y = 680;
 	uiAdvControls.done.generic.name = "Done";
 	uiAdvControls.done.generic.statusText = "Save changes and go back to the Customize Menu";
 	uiAdvControls.done.generic.callback = UI_AdvControls_Callback;
+
+	UI_UtilSetupPicButton( &uiAdvControls.done, PC_DONE );
 
 	uiAdvControls.crosshair.generic.id = ID_CROSSHAIR;
 	uiAdvControls.crosshair.generic.type = QMTYPE_CHECKBOX;

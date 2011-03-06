@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER	  	"gfx/shell/head_vidoptions"
 #define ART_GAMMA		"gfx/shell/gamma"
@@ -42,7 +43,7 @@ typedef struct
 	menuBitmap_s	banner;
 	menuBitmap_s	testImage;
 
-	menuAction_s	done;
+	menuPicButton_s	done;
 
 	menuSlider_s	bloomIntensity;
 	menuSlider_s	gammaIntensity;
@@ -173,13 +174,15 @@ static void UI_VidOptions_Init( void )
 	uiVidOptions.testImage.generic.ownerdraw = UI_VidOptions_Ownerdraw;
 
 	uiVidOptions.done.generic.id = ID_DONE;
-	uiVidOptions.done.generic.type = QMTYPE_ACTION;
+	uiVidOptions.done.generic.type = QMTYPE_BM_BUTTON;
 	uiVidOptions.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiVidOptions.done.generic.x = 72;
 	uiVidOptions.done.generic.y = 435;
 	uiVidOptions.done.generic.name = "Done";
 	uiVidOptions.done.generic.statusText = "Go back to the Video Menu";
 	uiVidOptions.done.generic.callback = UI_VidOptions_Callback;
+
+	UI_UtilSetupPicButton( &uiVidOptions.done, PC_DONE );
 
 	uiVidOptions.bloomIntensity.generic.id = ID_BLOOM_INTENSITY;
 	uiVidOptions.bloomIntensity.generic.type = QMTYPE_SLIDER;

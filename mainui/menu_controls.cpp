@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_controls"
 
@@ -53,10 +54,10 @@ typedef struct
 
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
-	menuAction_s	defaults;
-	menuAction_s	advanced;
-	menuAction_s	done;
-	menuAction_s	cancel;
+	menuPicButton_s	defaults;
+	menuPicButton_s	advanced;
+	menuPicButton_s	done;
+	menuPicButton_s	cancel;
 
 	// redefine key wait dialog
 	menuAction_s	msgBox;
@@ -422,7 +423,7 @@ static void UI_Controls_Init( void )
 	uiControls.banner.pic = ART_BANNER;
 
 	uiControls.defaults.generic.id = ID_DEFAULTS;
-	uiControls.defaults.generic.type = QMTYPE_ACTION;
+	uiControls.defaults.generic.type = QMTYPE_BM_BUTTON;
 	uiControls.defaults.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiControls.defaults.generic.x = 72;
 	uiControls.defaults.generic.y = 230;
@@ -430,8 +431,10 @@ static void UI_Controls_Init( void )
 	uiControls.defaults.generic.statusText = "Reset all buttons binding to their default values";
 	uiControls.defaults.generic.callback = UI_Controls_Callback;
 
+	UI_UtilSetupPicButton( &uiControls.defaults, PC_USE_DEFAULTS );
+
 	uiControls.advanced.generic.id = ID_ADVANCED;
-	uiControls.advanced.generic.type = QMTYPE_ACTION;
+	uiControls.advanced.generic.type = QMTYPE_BM_BUTTON;
 	uiControls.advanced.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiControls.advanced.generic.x = 72;
 	uiControls.advanced.generic.y = 280;
@@ -439,8 +442,10 @@ static void UI_Controls_Init( void )
 	uiControls.advanced.generic.statusText = "Change mouse sensitivity, enable autoaim, mouselook and crosshair";
 	uiControls.advanced.generic.callback = UI_Controls_Callback;
 
+	UI_UtilSetupPicButton( &uiControls.advanced, PC_ADV_CONTROLS );
+
 	uiControls.done.generic.id = ID_DONE;
-	uiControls.done.generic.type = QMTYPE_ACTION;
+	uiControls.done.generic.type = QMTYPE_BM_BUTTON;
 	uiControls.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiControls.done.generic.x = 72;
 	uiControls.done.generic.y = 330;
@@ -448,14 +453,18 @@ static void UI_Controls_Init( void )
 	uiControls.done.generic.statusText = "Save changes and return to configuration menu";
 	uiControls.done.generic.callback = UI_Controls_Callback;
 
+	UI_UtilSetupPicButton( &uiControls.done, PC_DONE );
+
 	uiControls.cancel.generic.id = ID_CANCEL;
-	uiControls.cancel.generic.type = QMTYPE_ACTION;
+	uiControls.cancel.generic.type = QMTYPE_BM_BUTTON;
 	uiControls.cancel.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiControls.cancel.generic.x = 72;
 	uiControls.cancel.generic.y = 380;
 	uiControls.cancel.generic.name = "Cancel";
 	uiControls.cancel.generic.statusText = "Discard changes and return to configuration menu";
 	uiControls.cancel.generic.callback = UI_Controls_Callback;
+
+	UI_UtilSetupPicButton( &uiControls.cancel, PC_CANCEL );
 
 	uiControls.hintMessage.generic.id = ID_TABLEHINT;
 	uiControls.hintMessage.generic.type = QMTYPE_ACTION;

@@ -15,6 +15,7 @@ xash_sdk\game_launch\
 xash_sdk\engine\
 xash_sdk\pm_shared\
 xash_sdk\mainui\
+xash_dsk\mainui\legacy
 xash_sdk\utils\
 xash_sdk\utils\vgui\
 xash_sdk\utils\vgui\include\

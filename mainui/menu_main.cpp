@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_MINIMIZE_N	"gfx/shell/min_n"
 #define ART_MINIMIZE_F	"gfx/shell/min_f"
@@ -37,34 +38,32 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_HAZARDCOURSE	4
 #define ID_CONFIGURATION	5
 #define ID_SAVERESTORE	6	
-#define ID_PLAYRECORD	7
-#define ID_MULTIPLAYER	8
-#define ID_CUSTOMGAME	9
-#define ID_CREDITS		10
-#define ID_QUIT		11
-#define ID_QUIT_BUTTON	12
-#define ID_MINIMIZE		13
-#define ID_MSGBOX	 	14
-#define ID_MSGTEXT	 	15
-#define ID_YES	 	16
-#define ID_NO	 	17
+#define ID_MULTIPLAYER	7
+#define ID_CUSTOMGAME	8
+#define ID_CREDITS		9
+#define ID_QUIT		10
+#define ID_QUIT_BUTTON	11
+#define ID_MINIMIZE		12
+#define ID_MSGBOX	 	13
+#define ID_MSGTEXT	 	14
+#define ID_YES	 	15
+#define ID_NO	 	16
 
 typedef struct
 {
 	menuFramework_s	menu;
 
 	menuBitmap_s	background;
-	menuAction_s	console;
-	menuAction_s	resumeGame;
-	menuAction_s	newGame;
-	menuAction_s	hazardCourse;
-	menuAction_s	configuration;
-	menuAction_s	saveRestore;
-	menuAction_s	playRecord;
-	menuAction_s	multiPlayer;
-	menuAction_s	customGame;
-	menuAction_s	credits;
-	menuAction_s	quit;
+	menuPicButton_s	console;
+	menuPicButton_s	resumeGame;
+	menuPicButton_s	newGame;
+	menuPicButton_s	hazardCourse;
+	menuPicButton_s	configuration;
+	menuPicButton_s	saveRestore;
+	menuPicButton_s	multiPlayer;
+	menuPicButton_s	customGame;
+	menuPicButton_s	credits;
+	menuPicButton_s	quit;
 
 	menuBitmap_s	minimizeBtn;
 	menuBitmap_s	quitButton;
@@ -74,8 +73,8 @@ typedef struct
 	menuAction_s	quitMessage;
 	menuAction_s	dlgMessage1;
 	menuAction_s	dlgMessage2;
-	menuAction_s	yes;
-	menuAction_s	no;
+	menuPicButton_s	yes;
+	menuPicButton_s	no;
 } uiMain_t;
 
 static uiMain_t		uiMain;
@@ -131,7 +130,6 @@ static void UI_QuitDialog( void )
 	uiMain.newGame.generic.flags ^= QMF_INACTIVE;
 	uiMain.hazardCourse.generic.flags ^= QMF_INACTIVE;
 	uiMain.saveRestore.generic.flags ^= QMF_INACTIVE;
-	uiMain.playRecord.generic.flags ^= QMF_INACTIVE;
 	uiMain.configuration.generic.flags ^= QMF_INACTIVE;
 	uiMain.multiPlayer.generic.flags ^= QMF_INACTIVE;
 	uiMain.customGame.generic.flags ^= QMF_INACTIVE;
@@ -156,7 +154,6 @@ static void UI_PromptDialog( void )
 	uiMain.newGame.generic.flags ^= QMF_INACTIVE;
 	uiMain.hazardCourse.generic.flags ^= QMF_INACTIVE;
 	uiMain.saveRestore.generic.flags ^= QMF_INACTIVE;
-	uiMain.playRecord.generic.flags ^= QMF_INACTIVE;
 	uiMain.configuration.generic.flags ^= QMF_INACTIVE;
 	uiMain.multiPlayer.generic.flags ^= QMF_INACTIVE;
 	uiMain.customGame.generic.flags ^= QMF_INACTIVE;
@@ -286,11 +283,6 @@ static void UI_Main_Callback( void *self, int event )
 			UI_SaveLoad_Menu();
 		else UI_LoadGame_Menu();
 		break;
-	case ID_PLAYRECORD:
-		if( CL_IsActive( ) && !gpGlobals->demoplayback )
-			UI_PlayRec_Menu();
-		else UI_PlayDemo_Menu();
-		break;
 	case ID_CUSTOMGAME:
 		UI_CustomGame_Menu();
 		break;
@@ -344,15 +336,17 @@ static void UI_Main_Init( void )
 	uiMain.background.generic.ownerdraw = UI_Background_Ownerdraw;
 
 	uiMain.console.generic.id = ID_CONSOLE;
-	uiMain.console.generic.type = QMTYPE_ACTION;
+	uiMain.console.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.console.generic.name = "Console";
 	uiMain.console.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiMain.console.generic.x = 72;
 	uiMain.console.generic.y = CL_IsActive() ? 130 : 180;
 	uiMain.console.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.console, PC_CONSOLE );
+
 	uiMain.resumeGame.generic.id = ID_RESUME;
-	uiMain.resumeGame.generic.type = QMTYPE_ACTION;
+	uiMain.resumeGame.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.resumeGame.generic.name = "Resume game";
 	uiMain.resumeGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.resumeGame.generic.statusText = "Return to game.";
@@ -360,8 +354,10 @@ static void UI_Main_Init( void )
 	uiMain.resumeGame.generic.y = 180;
 	uiMain.resumeGame.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.resumeGame, PC_RESUME_GAME );
+
 	uiMain.newGame.generic.id = ID_NEWGAME;
-	uiMain.newGame.generic.type = QMTYPE_ACTION;
+	uiMain.newGame.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.newGame.generic.name = "New game";
 	uiMain.newGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.newGame.generic.statusText = "Start a new game.";
@@ -369,87 +365,53 @@ static void UI_Main_Init( void )
 	uiMain.newGame.generic.y = 230;
 	uiMain.newGame.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.newGame, PC_NEW_GAME );
+
 	if ( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY || !strlen( gMenu.m_gameinfo.startmap ))
 		uiMain.newGame.generic.flags |= QMF_GRAYED;
 
 	uiMain.hazardCourse.generic.id = ID_HAZARDCOURSE;
-	uiMain.hazardCourse.generic.type = QMTYPE_ACTION;
+	uiMain.hazardCourse.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.hazardCourse.generic.name = "Hazard course";
 	uiMain.hazardCourse.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.hazardCourse.generic.statusText = "Learn how to play the game";
 	uiMain.hazardCourse.generic.x = 72;
 	uiMain.hazardCourse.generic.y = 280;
 	uiMain.hazardCourse.generic.callback = UI_Main_Callback;
+	
+	UI_UtilSetupPicButton( &uiMain.hazardCourse, PC_HAZARD_COURSE );
 
-	if ( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY )
+	uiMain.saveRestore.generic.id = ID_SAVERESTORE;
+	uiMain.saveRestore.generic.type = QMTYPE_BM_BUTTON;
+	uiMain.saveRestore.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
+
+	// server.dll needs for reading savefiles or startup newgame
+	if( !CheckGameDll( ))
 	{
-		uiMain.playRecord.generic.id = ID_PLAYRECORD;
-		uiMain.playRecord.generic.type = QMTYPE_ACTION;
-		uiMain.playRecord.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
+		uiMain.saveRestore.generic.flags |= QMF_GRAYED;
+		uiMain.newGame.generic.flags |= QMF_GRAYED;
+	}
 
-		if ( CL_IsActive( ))
-		{
-			if ( !gpGlobals->demoplayback )
-			{
-				uiMain.playRecord.generic.name = "Play\\Rec Demo";
-				uiMain.playRecord.generic.statusText = "Play a demo, record the new demo.";
-				uiMain.resumeGame.generic.name = "Resume Game";
-				uiMain.resumeGame.generic.statusText = "Return to game.";
-			}
-			else
-			{
-				uiMain.playRecord.generic.name = "Play Demo";
-				uiMain.playRecord.generic.statusText = "Play a game demo.";
-				uiMain.resumeGame.generic.name = "Resume Demo";
-				uiMain.resumeGame.generic.statusText = "Return to demo.";
-			}
-		}
-		else
-		{
-			uiMain.playRecord.generic.name = "Play Demo";
-			uiMain.playRecord.generic.statusText = "Play a recorded game movie.";
-			uiMain.resumeGame.generic.name = "Resume Game";
-			uiMain.resumeGame.generic.statusText = "Return to game.";
-			uiMain.resumeGame.generic.flags |= QMF_HIDDEN;
-		}
-
-		uiMain.playRecord.generic.x = 72;
-		uiMain.playRecord.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 330 : 280;
-		uiMain.playRecord.generic.callback = UI_Main_Callback;
+	if( CL_IsActive( ))
+	{
+		uiMain.saveRestore.generic.name = "Save\\Load Game";
+		uiMain.saveRestore.generic.statusText = "Load a saved game, save the current game.";
+		UI_UtilSetupPicButton(&uiMain.saveRestore,PC_SAVE_LOAD_GAME);
 	}
 	else
 	{
-		uiMain.saveRestore.generic.id = ID_SAVERESTORE;
-		uiMain.saveRestore.generic.type = QMTYPE_ACTION;
-		uiMain.saveRestore.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
-
-		// server.dll needs for reading savefiles or startup newgame
-		if( !CheckGameDll( ))
-		{
-			uiMain.hazardCourse.generic.flags |= QMF_GRAYED;
-			uiMain.saveRestore.generic.flags |= QMF_GRAYED;
-			uiMain.newGame.generic.flags |= QMF_GRAYED;
-		}
-
-		if ( CL_IsActive( ))
-		{
-			uiMain.saveRestore.generic.name = "Save\\Load Game";
-			uiMain.saveRestore.generic.statusText = "Load a saved game, save the current game.";
-		}
-		else
-		{
-			uiMain.saveRestore.generic.name = "Load Game";
-			uiMain.saveRestore.generic.statusText = "Load a previously saved game.";
-			uiMain.resumeGame.generic.flags |= QMF_HIDDEN;
-		}
-
-		uiMain.saveRestore.generic.x = 72;
-		uiMain.saveRestore.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 330 : 280;
-		uiMain.saveRestore.generic.callback = UI_Main_Callback;
+		uiMain.saveRestore.generic.name = "Load Game";
+		uiMain.saveRestore.generic.statusText = "Load a previously saved game.";
+		uiMain.resumeGame.generic.flags |= QMF_HIDDEN;
+		UI_UtilSetupPicButton( &uiMain.saveRestore, PC_LOAD_GAME );
 	}
 
+	uiMain.saveRestore.generic.x = 72;
+	uiMain.saveRestore.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 330 : 280;
+	uiMain.saveRestore.generic.callback = UI_Main_Callback;
+
 	uiMain.configuration.generic.id = ID_CONFIGURATION;
-	uiMain.configuration.generic.type = QMTYPE_ACTION;
+	uiMain.configuration.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.configuration.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.configuration.generic.name = "Configuration";
 	uiMain.configuration.generic.statusText = "Change game settings, configure controls";
@@ -457,8 +419,10 @@ static void UI_Main_Init( void )
 	uiMain.configuration.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 380 : 330;
 	uiMain.configuration.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.configuration, PC_CONFIG );
+
 	uiMain.multiPlayer.generic.id = ID_MULTIPLAYER;
-	uiMain.multiPlayer.generic.type = QMTYPE_ACTION;
+	uiMain.multiPlayer.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.multiPlayer.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.multiPlayer.generic.name = "Multiplayer";
 	uiMain.multiPlayer.generic.statusText = "Search for internet servers, configure character";
@@ -466,11 +430,16 @@ static void UI_Main_Init( void )
 	uiMain.multiPlayer.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 430 : 380;
 	uiMain.multiPlayer.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.multiPlayer, PC_MULTIPLAYER );
+
 	if ( gMenu.m_gameinfo.gamemode == GAME_SINGLEPLAYER_ONLY )
 		uiMain.multiPlayer.generic.flags |= QMF_GRAYED;
 
+	if ( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY )
+		uiMain.saveRestore.generic.flags |= QMF_GRAYED;
+
 	uiMain.customGame.generic.id = ID_CUSTOMGAME;
-	uiMain.customGame.generic.type = QMTYPE_ACTION;
+	uiMain.customGame.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.customGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.customGame.generic.name = "Custom Game";
 	uiMain.customGame.generic.statusText = "Select a custom game";
@@ -478,8 +447,10 @@ static void UI_Main_Init( void )
 	uiMain.customGame.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 480 : 430;
 	uiMain.customGame.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.customGame, PC_CUSTOM_GAME );
+
 	uiMain.credits.generic.id = ID_CREDITS;
-	uiMain.credits.generic.type = QMTYPE_ACTION;
+	uiMain.credits.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.credits.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.credits.generic.name = "About";
 	uiMain.credits.generic.statusText = "Game credits";
@@ -487,14 +458,18 @@ static void UI_Main_Init( void )
 	uiMain.credits.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 530 : 480;
 	uiMain.credits.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.credits, PC_VIEW_README );
+
 	uiMain.quit.generic.id = ID_QUIT;
-	uiMain.quit.generic.type = QMTYPE_ACTION;
+	uiMain.quit.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.quit.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.quit.generic.name = "Quit";
 	uiMain.quit.generic.statusText = "Quit from game";
 	uiMain.quit.generic.x = 72;
 	uiMain.quit.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 580 : 530;
 	uiMain.quit.generic.callback = UI_Main_Callback;
+
+	UI_UtilSetupPicButton( &uiMain.quit, PC_QUIT );
 
 	uiMain.minimizeBtn.generic.id = ID_MINIMIZE;
 	uiMain.minimizeBtn.generic.type = QMTYPE_BITMAP;
@@ -549,20 +524,24 @@ static void UI_Main_Init( void )
 	uiMain.dlgMessage2.generic.y = 310;
 
 	uiMain.yes.generic.id = ID_YES;
-	uiMain.yes.generic.type = QMTYPE_ACTION;
+	uiMain.yes.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiMain.yes.generic.name = "Ok";
 	uiMain.yes.generic.x = 380;
 	uiMain.yes.generic.y = 460;
 	uiMain.yes.generic.callback = UI_Main_Callback;
 
+	UI_UtilSetupPicButton( &uiMain.yes, PC_OK );
+
 	uiMain.no.generic.id = ID_NO;
-	uiMain.no.generic.type = QMTYPE_ACTION;
+	uiMain.no.generic.type = QMTYPE_BM_BUTTON;
 	uiMain.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiMain.no.generic.name = "Cancel";
 	uiMain.no.generic.x = 530;
 	uiMain.no.generic.y = 460;
 	uiMain.no.generic.callback = UI_Main_Callback;
+	
+	UI_UtilSetupPicButton( &uiMain.no, PC_CANCEL );
 
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.background );
 
@@ -574,10 +553,8 @@ static void UI_Main_Init( void )
 
 	if ( strlen( gMenu.m_gameinfo.trainmap ))
 		UI_AddItem( &uiMain.menu, (void *)&uiMain.hazardCourse );
-	if ( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY )
-		UI_AddItem( &uiMain.menu, (void *)&uiMain.playRecord );
-	else UI_AddItem( &uiMain.menu, (void *)&uiMain.saveRestore );
 
+	UI_AddItem( &uiMain.menu, (void *)&uiMain.saveRestore );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.configuration );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.multiPlayer );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.customGame );

@@ -77,6 +77,11 @@
 #define UI_BANNER_WIDTH		736
 #define UI_BANNER_HEIGHT		128
 
+// menu buttons dims
+#define UI_BUTTONS_WIDTH		240
+#define UI_BUTTONS_HEIGHT		40
+#define UI_BUTTON_CHARWIDTH		14	// empirically determined value
+
 // Generic types
 typedef enum
 {
@@ -86,7 +91,9 @@ typedef enum
 	QMTYPE_SLIDER,
 	QMTYPE_FIELD,
 	QMTYPE_ACTION,
-	QMTYPE_BITMAP
+	QMTYPE_BITMAP,
+	// CR: новый тип кнопки
+	QMTYPE_BM_BUTTON
 } menuType_t;
 
 // Generic flags
@@ -158,12 +165,16 @@ typedef struct
 	int		charWidth;
 	int		charHeight;
 
+	int		lastFocusTime;
+	bool		bPressed;
+
 	const char	*statusText;
 
 	menuFramework_s	*parent;
 
 	void		(*callback) (void *self, int event);
 	void		(*ownerdraw) (void *self);
+
 } menuCommon_s;
 
 typedef struct
@@ -211,6 +222,13 @@ typedef struct
 	menuCommon_s	generic;
 	const char	*background;
 } menuAction_s;
+
+typedef struct  
+{
+	menuCommon_s	generic;
+	HIMAGE		pic;
+	int		button_id;
+} menuPicButton_s;
 
 typedef struct
 {
@@ -270,6 +288,10 @@ void UI_Bitmap_Init( menuBitmap_s *b );
 const char *UI_Bitmap_Key( menuBitmap_s *b, int key, int down );
 void UI_Bitmap_Draw( menuBitmap_s *b );
 
+void UI_PicButton_Init( menuPicButton_s *b );
+const char *UI_PicButton_Key( menuPicButton_s *b, int key, int down );
+void UI_PicButton_Draw( menuPicButton_s *item );
+
 // =====================================================================
 // Main menu interface
 
@@ -309,6 +331,15 @@ typedef struct
 	int		visible;
 	int		framecount;	// how many frames menu visible
 	int		initialized;
+
+	// btns_main.bmp stuff
+	HIMAGE		buttonsPics[71];	// FIXME: replace with PC_BUTTONCOUNT
+
+	int		buttons_width;	// btns_main.bmp global width
+	int		buttons_height;	// per one button with all states (inactive, focus, pressed) 
+
+	int		buttons_draw_width;	// scaled image what we drawing
+	int		buttons_draw_height;
 } uiStatic_t;
 
 extern uiStatic_t		uiStatic;
@@ -338,6 +369,7 @@ extern int	uiColorBlack;
 
 void UI_ScaleCoords( int *x, int *y, int *w, int *h );
 int UI_CursorInRect( int x, int y, int w, int h );
+void UI_UtilSetupPicButton( menuPicButton_s *pic, int ID );
 void UI_DrawPic( int x, int y, int w, int h, const int color, const char *pic );
 void UI_DrawPicAdditive( int x, int y, int w, int h, const int color, const char *pic );
 void UI_FillRect( int x, int y, int w, int h, const int color );
@@ -345,6 +377,7 @@ void UI_FillRect( int x, int y, int w, int h, const int color );
 void UI_DrawRectangleExt( int in_x, int in_y, int in_w, int in_h, const int color, int outlineWidth );
 void UI_DrawString( int x, int y, int w, int h, const char *str, const int col, int forceCol, int charW, int charH, int justify, int shadow );
 void UI_StartSound( const char *sound );
+void UI_LoadBmpButtons( void );
 
 void UI_AddItem ( menuFramework_s *menu, void *item );
 void UI_CursorMoved( menuFramework_s *menu );
@@ -376,9 +409,6 @@ void UI_Controls_Precache( void );
 void UI_AdvControls_Precache( void );
 void UI_GameOptions_Precache( void );
 void UI_CreateGame_Precache( void );
-void UI_RecDemo_Precache( void );
-void UI_PlayDemo_Precache( void );
-void UI_PlayRec_Precache( void );
 void UI_Audio_Precache( void );
 void UI_Video_Precache( void );
 void UI_VidOptions_Precache( void );
@@ -401,9 +431,6 @@ void UI_Controls_Menu( void );
 void UI_AdvControls_Menu( void );
 void UI_GameOptions_Menu( void );
 void UI_CreateGame_Menu( void );
-void UI_RecDemo_Menu( void );
-void UI_PlayDemo_Menu( void );
-void UI_PlayRec_Menu( void );
 void UI_Audio_Menu( void );
 void UI_Video_Menu( void );
 void UI_VidOptions_Menu( void );

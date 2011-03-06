@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "keydefs.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_custom"
 
@@ -55,15 +56,15 @@ typedef struct
 
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
-	menuAction_s	load;
-	menuAction_s	go2url;
-	menuAction_s	done;
+	menuPicButton_s	load;
+	menuPicButton_s	go2url;
+	menuPicButton_s	done;
 
 	// prompt dialog
 	menuAction_s	msgBox;
 	menuAction_s	promptMessage;
-	menuAction_s	yes;
-	menuAction_s	no;
+	menuPicButton_s	yes;
+	menuPicButton_s	no;
 
 	menuScrollList_s	modList;
 	menuAction_s	hintMessage;
@@ -252,7 +253,7 @@ static void UI_CustomGame_Init( void )
 	uiCustomGame.banner.pic = ART_BANNER;
 
 	uiCustomGame.load.generic.id = ID_ACTIVATE;
-	uiCustomGame.load.generic.type = QMTYPE_ACTION;
+	uiCustomGame.load.generic.type = QMTYPE_BM_BUTTON;
 	uiCustomGame.load.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiCustomGame.load.generic.x = 72;
 	uiCustomGame.load.generic.y = 230;
@@ -260,8 +261,10 @@ static void UI_CustomGame_Init( void )
 	uiCustomGame.load.generic.statusText = "Activate selected custom game";
 	uiCustomGame.load.generic.callback = UI_CustomGame_Callback;
 
+	UI_UtilSetupPicButton( &uiCustomGame.load, PC_ACTIVATE );
+
 	uiCustomGame.go2url.generic.id = ID_GOTOSITE;
-	uiCustomGame.go2url.generic.type = QMTYPE_ACTION;
+	uiCustomGame.go2url.generic.type = QMTYPE_BM_BUTTON;
 	uiCustomGame.go2url.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiCustomGame.go2url.generic.x = 72;
 	uiCustomGame.go2url.generic.y = 280;
@@ -269,14 +272,18 @@ static void UI_CustomGame_Init( void )
 	uiCustomGame.go2url.generic.statusText = "Visit the web site of game developrs";
 	uiCustomGame.go2url.generic.callback = UI_CustomGame_Callback;
 
+	UI_UtilSetupPicButton( &uiCustomGame.go2url, PC_VISIT_WEB_SITE );
+
 	uiCustomGame.done.generic.id = ID_DONE;
-	uiCustomGame.done.generic.type = QMTYPE_ACTION;
+	uiCustomGame.done.generic.type = QMTYPE_BM_BUTTON;
 	uiCustomGame.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiCustomGame.done.generic.x = 72;
 	uiCustomGame.done.generic.y = 330;
 	uiCustomGame.done.generic.name = "Done";
 	uiCustomGame.done.generic.statusText = "Return to main menu";
 	uiCustomGame.done.generic.callback = UI_CustomGame_Callback;
+
+	UI_UtilSetupPicButton( &uiCustomGame.done, PC_DONE );
 
 	uiCustomGame.hintMessage.generic.id = ID_TABLEHINT;
 	uiCustomGame.hintMessage.generic.type = QMTYPE_ACTION;
@@ -312,20 +319,24 @@ static void UI_CustomGame_Init( void )
 	uiCustomGame.promptMessage.generic.y = 280;
 
 	uiCustomGame.yes.generic.id = ID_YES;
-	uiCustomGame.yes.generic.type = QMTYPE_ACTION;
+	uiCustomGame.yes.generic.type = QMTYPE_BM_BUTTON;
 	uiCustomGame.yes.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiCustomGame.yes.generic.name = "Ok";
 	uiCustomGame.yes.generic.x = 380;
 	uiCustomGame.yes.generic.y = 460;
 	uiCustomGame.yes.generic.callback = UI_CustomGame_Callback;
 
+	UI_UtilSetupPicButton( &uiCustomGame.yes, PC_OK );
+
 	uiCustomGame.no.generic.id = ID_NO;
-	uiCustomGame.no.generic.type = QMTYPE_ACTION;
+	uiCustomGame.no.generic.type = QMTYPE_BM_BUTTON;
 	uiCustomGame.no.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDDEN;
 	uiCustomGame.no.generic.name = "Cancel";
 	uiCustomGame.no.generic.x = 530;
 	uiCustomGame.no.generic.y = 460;
 	uiCustomGame.no.generic.callback = UI_CustomGame_Callback;
+
+	UI_UtilSetupPicButton( &uiCustomGame.no, PC_CANCEL );
 
 	UI_CustomGame_GetModList();
 

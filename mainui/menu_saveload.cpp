@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_saveload"
 
@@ -40,9 +41,9 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	save;
-	menuAction_s	load;
-	menuAction_s	done;
+	menuPicButton_s	save;
+	menuPicButton_s	load;
+	menuPicButton_s	done;
 
 	menuAction_s	hintMessage;
 	char		hintText[MAX_HINT_TEXT];
@@ -112,7 +113,7 @@ static void UI_SaveLoad_Init( void )
 	uiSaveLoad.banner.pic = ART_BANNER;
 
 	uiSaveLoad.load.generic.id = ID_LOAD;
-	uiSaveLoad.load.generic.type = QMTYPE_ACTION;
+	uiSaveLoad.load.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveLoad.load.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiSaveLoad.load.generic.name = "Load game";
 	uiSaveLoad.load.generic.statusText = "Load a previously saved game";
@@ -120,8 +121,10 @@ static void UI_SaveLoad_Init( void )
 	uiSaveLoad.load.generic.y = 230;
 	uiSaveLoad.load.generic.callback = UI_SaveLoad_Callback;
 
+	UI_UtilSetupPicButton( &uiSaveLoad.load, PC_LOAD_GAME );
+
 	uiSaveLoad.save.generic.id = ID_SAVE;
-	uiSaveLoad.save.generic.type = QMTYPE_ACTION;
+	uiSaveLoad.save.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveLoad.save.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiSaveLoad.save.generic.name = "Save game";
 	uiSaveLoad.save.generic.statusText = "Save current game";
@@ -129,14 +132,18 @@ static void UI_SaveLoad_Init( void )
 	uiSaveLoad.save.generic.y = 280;
 	uiSaveLoad.save.generic.callback = UI_SaveLoad_Callback;
 
+	UI_UtilSetupPicButton( &uiSaveLoad.save, PC_SAVE_GAME );
+
 	uiSaveLoad.done.generic.id = ID_DONE;
-	uiSaveLoad.done.generic.type = QMTYPE_ACTION;
+	uiSaveLoad.done.generic.type = QMTYPE_BM_BUTTON;
 	uiSaveLoad.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiSaveLoad.done.generic.name = "Done";
 	uiSaveLoad.done.generic.statusText = "Go back to the Main Menu";
 	uiSaveLoad.done.generic.x = 72;
 	uiSaveLoad.done.generic.y = 330;
 	uiSaveLoad.done.generic.callback = UI_SaveLoad_Callback;
+
+	UI_UtilSetupPicButton( &uiSaveLoad.done, PC_DONE );
 
 	uiSaveLoad.hintMessage.generic.id = ID_MSGHINT;
 	uiSaveLoad.hintMessage.generic.type = QMTYPE_ACTION;
@@ -175,7 +182,6 @@ void UI_SaveLoad_Menu( void )
 	if( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY )
 	{
 		// completely ignore save\load menus for multiplayer_only
-		UI_PlayRec_Menu();
 		return;
 	}
 

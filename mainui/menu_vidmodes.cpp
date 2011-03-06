@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER		"gfx/shell/head_vidmodes"
 
@@ -65,8 +66,8 @@ typedef struct
 
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
-	menuAction_s	ok;
-	menuAction_s	cancel;
+	menuPicButton_s	ok;
+	menuPicButton_s	cancel;
 	menuCheckBox_s	windowed;
 	menuCheckBox_s	software;
 
@@ -188,7 +189,7 @@ static void UI_VidModes_Init( void )
 	uiVidModes.banner.pic = ART_BANNER;
 
 	uiVidModes.ok.generic.id = ID_APPLY;
-	uiVidModes.ok.generic.type = QMTYPE_ACTION;
+	uiVidModes.ok.generic.type = QMTYPE_BM_BUTTON;
 	uiVidModes.ok.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiVidModes.ok.generic.x = 72;
 	uiVidModes.ok.generic.y = 230;
@@ -196,8 +197,10 @@ static void UI_VidModes_Init( void )
 	uiVidModes.ok.generic.statusText = "Apply changes";
 	uiVidModes.ok.generic.callback = UI_VidModes_Callback;
 
+	UI_UtilSetupPicButton( &uiVidModes.ok, PC_OK );
+
 	uiVidModes.cancel.generic.id = ID_DONE;
-	uiVidModes.cancel.generic.type = QMTYPE_ACTION;
+	uiVidModes.cancel.generic.type = QMTYPE_BM_BUTTON;
 	uiVidModes.cancel.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiVidModes.cancel.generic.x = 72;
 	uiVidModes.cancel.generic.y = 280;
@@ -205,8 +208,10 @@ static void UI_VidModes_Init( void )
 	uiVidModes.cancel.generic.statusText = "Return back to previous menu";
 	uiVidModes.cancel.generic.callback = UI_VidModes_Callback;
 
+	UI_UtilSetupPicButton( &uiVidModes.cancel, PC_CANCEL );
+
 	uiVidModes.listCaption.generic.id = ID_TABLEHINT;
-	uiVidModes.listCaption.generic.type = QMTYPE_ACTION;
+	uiVidModes.listCaption.generic.type = QMTYPE_BM_BUTTON;
 	uiVidModes.listCaption.generic.flags = QMF_INACTIVE|QMF_SMALLFONT;
 	uiVidModes.listCaption.generic.color = uiColorHelp;
 	uiVidModes.listCaption.generic.name = "Display mode";

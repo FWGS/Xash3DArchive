@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "utils.h"
+#include "menu_btnsbmp_table.h"
 
 #define ART_BANNER			"gfx/shell/head_multi"
 
@@ -41,12 +42,12 @@ typedef struct
 	menuBitmap_s	background;
 	menuBitmap_s	banner;
 
-	menuAction_s	internetGames;
-	menuAction_s	spectateGames;
-	menuAction_s	LANGame;
-	menuAction_s	Customize;	// playersetup
-	menuAction_s	Controls;
-	menuAction_s	done;
+	menuPicButton_s	internetGames;
+	menuPicButton_s	spectateGames;
+	menuPicButton_s	LANGame;
+	menuPicButton_s	Customize;	// playersetup
+	menuPicButton_s	Controls;
+	menuPicButton_s	done;
 } uiMultiPlayer_t;
 
 static uiMultiPlayer_t	uiMultiPlayer;
@@ -114,7 +115,7 @@ static void UI_MultiPlayer_Init( void )
 	uiMultiPlayer.banner.pic = ART_BANNER;
 
 	uiMultiPlayer.internetGames.generic.id = ID_INTERNETGAMES;
-	uiMultiPlayer.internetGames.generic.type = QMTYPE_ACTION;
+	uiMultiPlayer.internetGames.generic.type = QMTYPE_BM_BUTTON;
 	uiMultiPlayer.internetGames.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY|QMF_GRAYED;
 	uiMultiPlayer.internetGames.generic.x = 72;
 	uiMultiPlayer.internetGames.generic.y = 230;
@@ -122,8 +123,10 @@ static void UI_MultiPlayer_Init( void )
 	uiMultiPlayer.internetGames.generic.statusText = "View list of a game internet servers and join the one of your choise";
 	uiMultiPlayer.internetGames.generic.callback = UI_MultiPlayer_Callback;
 
+	UI_UtilSetupPicButton( &uiMultiPlayer.internetGames, PC_INET_GAME );
+
 	uiMultiPlayer.spectateGames.generic.id = ID_SPECTATEGAMES;
-	uiMultiPlayer.spectateGames.generic.type = QMTYPE_ACTION;
+	uiMultiPlayer.spectateGames.generic.type = QMTYPE_BM_BUTTON;
 	uiMultiPlayer.spectateGames.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY|QMF_GRAYED;
 	uiMultiPlayer.spectateGames.generic.x = 72;
 	uiMultiPlayer.spectateGames.generic.y = 280;
@@ -131,8 +134,10 @@ static void UI_MultiPlayer_Init( void )
 	uiMultiPlayer.spectateGames.generic.statusText = "Spectate internet games";
 	uiMultiPlayer.spectateGames.generic.callback = UI_MultiPlayer_Callback;
 
+	UI_UtilSetupPicButton( &uiMultiPlayer.spectateGames, PC_SPECTATE_GAMES );
+
 	uiMultiPlayer.LANGame.generic.id = ID_LANGAME;
-	uiMultiPlayer.LANGame.generic.type = QMTYPE_ACTION;
+	uiMultiPlayer.LANGame.generic.type = QMTYPE_BM_BUTTON;
 	uiMultiPlayer.LANGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMultiPlayer.LANGame.generic.x = 72;
 	uiMultiPlayer.LANGame.generic.y = 330;
@@ -140,8 +145,10 @@ static void UI_MultiPlayer_Init( void )
 	uiMultiPlayer.LANGame.generic.statusText = "Set up the game on the local area network";
 	uiMultiPlayer.LANGame.generic.callback = UI_MultiPlayer_Callback;
 
+	UI_UtilSetupPicButton( &uiMultiPlayer.LANGame, PC_LAN_GAME );
+
 	uiMultiPlayer.Customize.generic.id = ID_CUSTOMIZE;
-	uiMultiPlayer.Customize.generic.type = QMTYPE_ACTION;
+	uiMultiPlayer.Customize.generic.type = QMTYPE_BM_BUTTON;
 	uiMultiPlayer.Customize.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMultiPlayer.Customize.generic.x = 72;
 	uiMultiPlayer.Customize.generic.y = 380;
@@ -149,23 +156,29 @@ static void UI_MultiPlayer_Init( void )
 	uiMultiPlayer.Customize.generic.statusText = "Choose your player name, and select visual options for your character";
 	uiMultiPlayer.Customize.generic.callback = UI_MultiPlayer_Callback;
 
+	UI_UtilSetupPicButton( &uiMultiPlayer.Customize, PC_CUSTOMIZE );
+
 	uiMultiPlayer.Controls.generic.id = ID_CONTROLS;
-	uiMultiPlayer.Controls.generic.type = QMTYPE_ACTION;
+	uiMultiPlayer.Controls.generic.type = QMTYPE_BM_BUTTON;
 	uiMultiPlayer.Controls.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMultiPlayer.Controls.generic.x = 72;
 	uiMultiPlayer.Controls.generic.y = 430;
 	uiMultiPlayer.Controls.generic.name = "Controls";
 	uiMultiPlayer.Controls.generic.statusText = "Change keyboard and mouse settings";
 	uiMultiPlayer.Controls.generic.callback = UI_MultiPlayer_Callback;
+	
+	UI_UtilSetupPicButton( &uiMultiPlayer.Controls, PC_CONTROLS );
 
 	uiMultiPlayer.done.generic.id = ID_DONE;
-	uiMultiPlayer.done.generic.type = QMTYPE_ACTION;
+	uiMultiPlayer.done.generic.type = QMTYPE_BM_BUTTON;
 	uiMultiPlayer.done.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMultiPlayer.done.generic.x = 72;
 	uiMultiPlayer.done.generic.y = 480;
 	uiMultiPlayer.done.generic.name = "Done";
 	uiMultiPlayer.done.generic.statusText = "Go back to the Main Menu";
 	uiMultiPlayer.done.generic.callback = UI_MultiPlayer_Callback;
+
+	UI_UtilSetupPicButton( &uiMultiPlayer.done, PC_DONE );
 
 	UI_AddItem( &uiMultiPlayer.menu, (void *)&uiMultiPlayer.background );
 	UI_AddItem( &uiMultiPlayer.menu, (void *)&uiMultiPlayer.banner );
