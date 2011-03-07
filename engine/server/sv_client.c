@@ -137,12 +137,12 @@ void SV_DirectConnect( netadr_t from )
 			return;
 		}
 
-		// force the IP key/value pair so the game can filter based on ip
-		Info_SetValueForKey( userinfo, "ip", NET_AdrToString( from ));
 		svs.challenges[i].connected = true;
-		MsgDev( D_INFO, "Client %i connecting with challenge %p\n", i, challenge );
+		MsgDev( D_NOTE, "Client %i connecting with challenge %p\n", i, challenge );
 	}
-	else Info_SetValueForKey( userinfo, "ip", "127.0.0.1" ); // force the "ip" info key to "localhost"
+
+	// force the IP key/value pair so the game can filter based on ip
+	Info_SetValueForKey( userinfo, "ip", NET_AdrToString( from ));
 
 	newcl = &temp;
 	Mem_Set( newcl, 0, sizeof( sv_client_t ));
@@ -313,7 +313,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	// parse some info from the info strings
 	SV_UserinfoChanged( newcl, userinfo );
 
-	MsgDev( D_INFO, "Bot %i connecting with challenge %p\n", i, -1 );
+	MsgDev( D_NOTE, "Bot %i connecting with challenge %p\n", i, -1 );
 
 	newcl->state = cs_spawned;
 	newcl->lastmessage = host.realtime;	// don't timeout

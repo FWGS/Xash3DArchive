@@ -18,6 +18,7 @@ convar_t	*con_fontsize;
 #define CON_TIMES		5	// need for 4 lines
 #define COLOR_DEFAULT	'7'
 #define CON_HISTORY		32
+#define MAX_DBG_NOTIFY	128
 #define ColorIndex( c )	((( c ) - '0' ) & 7 )
 
 #define CON_TEXTSIZE	131072	// 128 kb buffer
@@ -42,6 +43,13 @@ typedef struct
 	int		scroll;
 	int		widthInChars;
 } field_t;
+
+typedef struct
+{
+	string		szNotify;
+	float		expire;
+	rgba_t		color;
+} notify_t;
 
 typedef struct
 {
@@ -77,6 +85,9 @@ typedef struct
 	field_t		historyLines[CON_HISTORY];
 	int		historyLine;	// the line being displayed from history buffer will be <= nextHistoryLine
 	int		nextHistoryLine;	// the last line in the history buffer, not masked
+
+	notify_t		notify[MAX_DBG_NOTIFY]; // for Con_NXPrintf
+	qboolean		draw_notify;	// true if we have NXPrint message
 
 	// console auto-complete
 	field_t		*completionField;
@@ -581,7 +592,7 @@ void Con_Print( const char *txt )
 	if( host.type == HOST_DEDICATED ) return;
           if( !con.initialized ) return;
 
-	if(!com.strncmp( txt, "[skipnotify]", 12 ))
+	if( !com.strncmp( txt, "[skipnotify]", 12 ))
 	{
 		skipnotify = true;
 		txt += 12;
@@ -645,12 +656,44 @@ void Con_Print( const char *txt )
 
 void Con_NPrintf( int idx, char *fmt, ... )
 {
-	// TODO: implement
+	char	buffer[2048];	// must support > 1k messages
+	va_list	args;
+
+	if( idx < 0 || idx >= MAX_DBG_NOTIFY )
+		return;
+
+	va_start( args, fmt );
+	com.vsnprintf( buffer, 2048, fmt, args );
+	va_end( args );
+
+	com.snprintf( con.notify[idx].szNotify, sizeof( con.notify[idx].szNotify ), buffer );
+
+	// reset values
+	con.notify[idx].expire = host.realtime + 4.0f;
+	MakeRGBA( con.notify[idx].color, 255, 255, 255, 255 );
+	con.draw_notify = true;
 }
 
 void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 {
-	// TODO: imeplemnt
+	char	buffer[2048];	// must support > 1k messages
+	va_list	args;
+
+	if( !info ) return;
+
+	if( info->index < 0 || info->index >= MAX_DBG_NOTIFY )
+		return;
+
+	va_start( args, fmt );
+	com.vsnprintf( buffer, 2048, fmt, args );
+	va_end( args );
+
+	com.snprintf( con.notify[info->index].szNotify, sizeof( con.notify[info->index].szNotify ), buffer );
+
+	// setup values
+	con.notify[info->index].expire = host.realtime + info->time_to_live;
+	MakeRGBA( con.notify[info->index].color, info->color[0] * 255, info->color[1] * 255, info->color[2] * 255, 255 );
+	con.draw_notify = true;
 }
 
 /*
@@ -1209,6 +1252,40 @@ void Con_DrawInput( void )
 
 /*
 ================
+Con_DrawDebugLines
+
+Custom debug messages
+================
+*/
+int Con_DrawDebugLines( void )
+{
+	int	i, count = 0;
+	int	y = 20;
+	
+	for( i = 0; i < MAX_DBG_NOTIFY; i++ )
+	{
+		if( host.realtime < con.notify[i].expire )
+		{
+			int	x, len;
+			int	fontTall;
+
+			Con_DrawStringLen( con.notify[i].szNotify, &len, &fontTall );
+			x = scr_width->integer - 10 - len;
+			fontTall += 1;
+
+			if( y + fontTall > (int)scr_height->integer - 20 )
+				return count;
+
+			count++;
+			y = 20 + fontTall * i;
+			Con_DrawString( x, y, con.notify[i].szNotify, con.notify[i].color );
+		}
+	}
+	return count;
+}
+
+/*
+================
 Con_DrawNotify
 
 Draws the last few lines of output transparently over the game top
@@ -1223,6 +1300,12 @@ void Con_DrawNotify( void )
 
 	if( !host.developer || Cvar_VariableInteger( "sv_background" ))
 		return;
+
+	if( con.draw_notify )
+	{
+		if( Con_DrawDebugLines () == 0 )
+			con.draw_notify = false;
+	}
 
 	currentColor = 7;
 	pglColor4ubv( g_color_table[currentColor] );

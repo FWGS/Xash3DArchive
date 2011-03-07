@@ -255,13 +255,14 @@ void GL_LoadIdentityTexMatrix( void );
 void GL_SetRenderMode( int mode );
 void GL_SetSpriteRenderMode( int mode );
 void GL_FrontFace( GLenum front );
+void GL_MBind( GLenum texnum );
 void GL_Cull( GLenum cull );
 void R_ShowTextures( void );
 
 //
 // gl_cull.c
 //
-int R_CullModel( cl_entity_t *e, vec3_t mins, vec3_t maxs, float radius );
+int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float radius );
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
 qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
 qboolean R_VisCullBox( const vec3_t mins, const vec3_t maxs );
@@ -538,7 +539,6 @@ extern convar_t	*gl_compress_textures;
 extern convar_t	*gl_allow_static;
 extern convar_t	*gl_picmip;
 extern convar_t	*gl_skymip;
-extern convar_t	*gl_nobind;
 extern convar_t	*gl_finish;
 extern convar_t	*gl_clear;
 extern convar_t	*gl_test;		// cvar to testify new effects

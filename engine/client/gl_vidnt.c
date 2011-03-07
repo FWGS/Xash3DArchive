@@ -35,7 +35,6 @@ convar_t	*gl_round_down;
 convar_t	*gl_max_size;
 convar_t	*gl_picmip;
 convar_t	*gl_skymip;
-convar_t	*gl_nobind;
 convar_t	*gl_finish;
 convar_t	*gl_clear;
 convar_t	*gl_test;
@@ -180,6 +179,8 @@ static dllfunc_t opengl_110funcs[] =
 { "glViewport"           , (void **)&pglViewport },
 { "glPushMatrix"         , (void **)&pglPushMatrix },
 { "glPopMatrix"          , (void **)&pglPopMatrix },
+{ "glPushAttrib"         , (void **)&pglPushAttrib },
+{ "glPopAttrib"          , (void **)&pglPopAttrib },
 { "glLoadIdentity"       , (void **)&pglLoadIdentity },
 { "glLoadMatrixd"        , (void **)&pglLoadMatrixd },
 { "glLoadMatrixf"        , (void **)&pglLoadMatrixf },
@@ -1410,7 +1411,6 @@ void GL_InitCommands( void )
 	gl_swapInterval = Cvar_Get( "gl_swapInterval", "0", CVAR_ARCHIVE,  "time beetween frames (in msec)" );
 	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_GLCONFIG, "allow gl_extensions" );
 	gl_texture_anisotropy = Cvar_Get( "r_anisotropy", "2.0", CVAR_ARCHIVE, "textures anisotropic filter" );
-	gl_nobind = Cvar_Get( "gl_nobind", "0", 0, "replace all textures with '*notexture' (perfomance test)" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "compress textures to safe video memory" ); 
 	gl_allow_static = Cvar_Get( "gl_allow_static", "1", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );

@@ -131,7 +131,7 @@ void GL_SelectTexture( GLenum texture )
 
 /*
 =================
-GL_SelectTexture
+GL_DisableMultitexture
 =================
 */
 void GL_DisableMultitexture( void ) 
@@ -146,10 +146,10 @@ void GL_DisableMultitexture( void )
 
 /*
 =================
-GL_SelectTexture
+GL_EnableMultitexture
 =================
 */
-void GL_EnableMultitexture(void) 
+void GL_EnableMultitexture( void ) 
 {
 	if( GL_Support( GL_ARB_MULTITEXTURE ))
 	{

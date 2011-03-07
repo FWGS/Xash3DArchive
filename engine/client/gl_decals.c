@@ -859,30 +859,20 @@ void DrawSurfaceDecals( msurface_t *fa )
 	e = RI.currententity;
 	ASSERT( e != NULL );
 
-	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
-	{
-		pglDepthMask( GL_FALSE );
-		pglEnable( GL_BLEND );
-	}
+	// save last state
+	pglPushAttrib( GL_ALL_ATTRIB_BITS );
 
+	pglEnable( GL_BLEND );
+	pglDepthMask( GL_FALSE );
 	pglEnable( GL_POLYGON_OFFSET_FILL );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE ); // FIXME: testing
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 
 	for( p = fa->pdecals; p; p = p->pnext )
 		DrawSingleDecal( p, fa );
 
-	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
-	{
-		pglDepthMask( GL_TRUE );
-		pglDisable( GL_BLEND );
-	}
-
-	pglDisable( GL_POLYGON_OFFSET_FILL );
-
-	// restore blendfunc here
-	if( e->curstate.rendermode == kRenderTransAdd || e->curstate.rendermode == kRenderGlow )
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+	// restore last state
+	pglPopAttrib();
 }
 
 /*

@@ -395,6 +395,8 @@ CullStudioModel
 */
 qboolean R_CullStudioModel( cl_entity_t *e )
 {
+	vec3_t	origin;
+
 	if( !e->model->cache.data )
 		return true;
 
@@ -404,7 +406,10 @@ qboolean R_CullStudioModel( cl_entity_t *e )
 	if( !R_StudioComputeBBox( e, NULL ))
 		return true; // invalid sequence
 
-	return R_CullModel( e, studio_mins, studio_maxs, studio_radius );
+	// NOTE: extract real drawing origin from rotation matrix
+	Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+
+	return R_CullModel( e, origin, studio_mins, studio_maxs, studio_radius );
 }
 
 /*
@@ -2526,10 +2531,14 @@ void R_DrawStudioModel( cl_entity_t *e )
 		m_fDoInterp = (e->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
+	pglPushAttrib( GL_ALL_ATTRIB_BITS );
+
 	// select the properly method
 	if( e->player )
 		result = pStudioDraw->StudioDrawPlayer( flags, &e->curstate );
 	else result = pStudioDraw->StudioDrawModel( flags );
+
+	pglPopAttrib();
 }
 
 /*
@@ -2572,6 +2581,8 @@ void R_DrawViewModel( void )
 
 	RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
 
+	pglPushAttrib( GL_ALL_ATTRIB_BITS );
+
 	// hack the depth range to prevent view model from poking into walls
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
 
@@ -2585,6 +2596,8 @@ void R_DrawViewModel( void )
 
 	// backface culling for left-handed weapons
 	if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
+
+	pglPopAttrib();
 
 	RI.currententity = NULL;
 	RI.currentmodel = NULL;

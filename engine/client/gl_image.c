@@ -32,8 +32,29 @@ void GL_Bind( GLenum tmu, GLenum texnum )
 
 	GL_SelectTexture( tmu );
 
-	// performance evaluation option
-	if( gl_nobind->integer ) texnum = tr.defaultTexture;
+	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
+	texture = &r_textures[texnum];
+	if( glState.currentTextures[tmu] == texture->texnum )
+		return;
+
+	glState.currentTextures[tmu] = texture->texnum;
+	pglBindTexture( texture->target, texture->texnum );
+}
+
+/*
+=================
+GL_MBind
+
+version for two units
+=================
+*/
+void GL_MBind( GLenum texnum )
+{
+	gltexture_t	*texture;
+	int		tmu = 0;
+
+	if( glState.mtexEnabled )
+		tmu = 1;
 
 	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
 	texture = &r_textures[texnum];

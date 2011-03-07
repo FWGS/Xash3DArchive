@@ -677,7 +677,7 @@ R_CullSpriteModel
 Cull sprite model by bbox
 ================
 */
-qboolean R_CullSpriteModel( cl_entity_t *e )
+qboolean R_CullSpriteModel( cl_entity_t *e, vec3_t origin )
 {
 	if( !e->model->cache.data )
 		return true;
@@ -688,7 +688,7 @@ qboolean R_CullSpriteModel( cl_entity_t *e )
 	if( !R_SpriteComputeBBox( e, NULL ))
 		return true; // invalid frame
 
-	return R_CullModel( e, sprite_mins, sprite_maxs, sprite_radius );
+	return R_CullModel( e, origin, sprite_mins, sprite_maxs, sprite_radius );
 }
 
 /*
@@ -771,7 +771,7 @@ qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *psc
 	}
 	else
 	{
-		if( R_CullSpriteModel( e ))
+		if( R_CullSpriteModel( e, origin ))
 			return true;
 	}
 	return false;	
@@ -849,6 +849,12 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	alpha = e->curstate.renderamt;
 	scale = e->curstate.scale;
 
+	if( scale == 0.0f )
+	{
+		// we will test it!
+		Msg( "Sprite: %i %s has null scale\n", e->index, e->model->name );
+		scale = 1.0f;
+	}
 	if( R_SpriteOccluded( e, origin, &alpha, &scale ))
 		return; // sprite culled
 

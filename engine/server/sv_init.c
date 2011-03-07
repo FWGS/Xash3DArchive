@@ -272,6 +272,8 @@ void SV_ActivateServer( void )
 		host.frametime = 0.1f;			
 
 	// GoldSrc rules
+	// NOTE: this stuff is break sound from func_rotating in multiplayer
+	// e.g. ambience\boomer.wav on snark_pit.bsp
 	numFrames *= sv_maxclients->integer;
 
 	// run some frames to allow everything to settle

@@ -1,7 +1,13 @@
 build ????
 
+Console: implement Con_NPrintf and Con_NXPrintf
+
+build 1488
+
 Render: fix invisible sprites when game is paused
 Render: implement new better sprites lighting
+GameUI: HL-style buttons (old good menu form WON version)
+Render: fix some rendering bugs
 
 build 1482
 

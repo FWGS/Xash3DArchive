@@ -8,6 +8,7 @@ if not exist D:\Xash3D\src_main\xash_sdk/ mkdir D:\Xash3D\src_main\xash_sdk\
 if not exist D:\Xash3D\src_main\xash_sdk\engine/ mkdir D:\Xash3D\src_main\xash_sdk\engine\
 if not exist D:\Xash3D\src_main\xash_sdk\common/ mkdir D:\Xash3D\src_main\xash_sdk\common\
 if not exist D:\Xash3D\src_main\xash_sdk\mainui/ mkdir D:\Xash3D\src_main\xash_sdk\mainui\
+if not exist D:\Xash3D\src_main\xash_sdk\mainui\legacy/ mkdir D:\Xash3D\src_main\xash_sdk\mainui\legacy
 if not exist D:\Xash3D\src_main\xash_sdk\utils/ mkdir D:\Xash3D\src_main\xash_sdk\utils\
 if not exist D:\Xash3D\src_main\xash_sdk\utils\vgui/ mkdir D:\Xash3D\src_main\xash_sdk\utils\vgui
 if not exist D:\Xash3D\src_main\xash_sdk\utils\vgui\include/ mkdir D:\Xash3D\src_main\xash_sdk\utils\vgui\include
@@ -24,6 +25,7 @@ if not exist D:\Xash3D\src_main\xash_sdk\room/ mkdir D:\Xash3D\src_main\xash_sdk
 @copy /Y engine\*.h xash_sdk\engine\*.h
 @copy /Y game_launch\*.* xash_sdk\game_launch\*.*
 @copy /Y mainui\*.* xash_sdk\mainui\*.*
+@copy /Y mainui\legacy\*.* xash_sdk\mainui\legacy\*.*
 @copy /Y common\*.* xash_sdk\common\*.*
 @copy /Y cl_dll\*.* xash_sdk\cl_dll\*.*
 @copy /Y cl_dll\hl\*.* xash_sdk\cl_dll\hl\*.*

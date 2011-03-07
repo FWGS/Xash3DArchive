@@ -767,7 +767,7 @@ R_DrawEntitiesOnList
 */
 void R_DrawEntitiesOnList( void )
 {
-	int	i, numErrors;
+	int	i;
 
 	glState.drawTrans = false;
 
@@ -807,12 +807,9 @@ void R_DrawEntitiesOnList( void )
 	CL_DrawBeams( false );
 	clgame.dllFuncs.pfnDrawNormalTriangles();
 
-	numErrors = 0;
-	while( pglGetError() != GL_NO_ERROR )
-		numErrors++;
-
-	if( numErrors )
-		MsgDev( D_ERROR, "invalid gl operation in HUD_DrawNormalTriangles( %i errors )\n", numErrors );
+	// NOTE: some mods with custom renderer may generate glErrors
+	// so we clear it here
+	while( pglGetError() != GL_NO_ERROR );
 
 	// don't fogging translucent surfaces
 	pglDisable( GL_FOG );
@@ -854,12 +851,9 @@ void R_DrawEntitiesOnList( void )
 
 	clgame.dllFuncs.pfnDrawTransparentTriangles ();
 
-	numErrors = 0;
-	while( pglGetError() != GL_NO_ERROR )
-		numErrors++;
-
-	if( numErrors )
-		MsgDev( D_ERROR, "invalid gl operation in HUD_DrawTransparentTriangles( %i errors )\n", numErrors );
+	// NOTE: some mods with custom renderer may generate glErrors
+	// so we clear it here
+	while( pglGetError() != GL_NO_ERROR );
 
 	glState.drawTrans = false;
 	pglDepthMask( GL_TRUE );

@@ -616,7 +616,7 @@ void Cmd_ExecuteString( const char *text )
 	else if( text[0] != '@' )
 	{
 		// commands with leading '@' are hidden system commands
-		Msg( "Unknown command \"%s\"\n", text );
+		MsgDev( D_INFO, "Unknown command \"%s\"\n", text );
 	}
 }
 

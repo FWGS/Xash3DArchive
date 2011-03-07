@@ -205,7 +205,7 @@ static void UI_Main_ActivateFunc( void )
 
 	if( gpGlobals->developer )
 	{
-		uiMain.console.generic.y = CL_IsActive() ? 130 : 180;
+		uiMain.console.generic.y = CL_IsActive() ? 180 : 230;
 		UI_ScaleCoords( NULL, &uiMain.console.generic.y, NULL, NULL );
 	}
 }
@@ -340,7 +340,7 @@ static void UI_Main_Init( void )
 	uiMain.console.generic.name = "Console";
 	uiMain.console.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
 	uiMain.console.generic.x = 72;
-	uiMain.console.generic.y = CL_IsActive() ? 130 : 180;
+	uiMain.console.generic.y = CL_IsActive() ? 180 : 230;
 	uiMain.console.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.console, PC_CONSOLE );
@@ -351,7 +351,7 @@ static void UI_Main_Init( void )
 	uiMain.resumeGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.resumeGame.generic.statusText = "Return to game.";
 	uiMain.resumeGame.generic.x = 72;
-	uiMain.resumeGame.generic.y = 180;
+	uiMain.resumeGame.generic.y = 230;
 	uiMain.resumeGame.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.resumeGame, PC_RESUME_GAME );
@@ -362,7 +362,7 @@ static void UI_Main_Init( void )
 	uiMain.newGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.newGame.generic.statusText = "Start a new game.";
 	uiMain.newGame.generic.x = 72;
-	uiMain.newGame.generic.y = 230;
+	uiMain.newGame.generic.y = 280;
 	uiMain.newGame.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.newGame, PC_NEW_GAME );
@@ -376,7 +376,7 @@ static void UI_Main_Init( void )
 	uiMain.hazardCourse.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMain.hazardCourse.generic.statusText = "Learn how to play the game";
 	uiMain.hazardCourse.generic.x = 72;
-	uiMain.hazardCourse.generic.y = 280;
+	uiMain.hazardCourse.generic.y = 330;
 	uiMain.hazardCourse.generic.callback = UI_Main_Callback;
 	
 	UI_UtilSetupPicButton( &uiMain.hazardCourse, PC_HAZARD_COURSE );
@@ -407,7 +407,7 @@ static void UI_Main_Init( void )
 	}
 
 	uiMain.saveRestore.generic.x = 72;
-	uiMain.saveRestore.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 330 : 280;
+	uiMain.saveRestore.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 380 : 330;
 	uiMain.saveRestore.generic.callback = UI_Main_Callback;
 
 	uiMain.configuration.generic.id = ID_CONFIGURATION;
@@ -416,7 +416,7 @@ static void UI_Main_Init( void )
 	uiMain.configuration.generic.name = "Configuration";
 	uiMain.configuration.generic.statusText = "Change game settings, configure controls";
 	uiMain.configuration.generic.x = 72;
-	uiMain.configuration.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 380 : 330;
+	uiMain.configuration.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 430 : 380;
 	uiMain.configuration.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.configuration, PC_CONFIG );
@@ -427,7 +427,7 @@ static void UI_Main_Init( void )
 	uiMain.multiPlayer.generic.name = "Multiplayer";
 	uiMain.multiPlayer.generic.statusText = "Search for internet servers, configure character";
 	uiMain.multiPlayer.generic.x = 72;
-	uiMain.multiPlayer.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 430 : 380;
+	uiMain.multiPlayer.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 480 : 430;
 	uiMain.multiPlayer.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.multiPlayer, PC_MULTIPLAYER );
@@ -444,7 +444,7 @@ static void UI_Main_Init( void )
 	uiMain.customGame.generic.name = "Custom Game";
 	uiMain.customGame.generic.statusText = "Select a custom game";
 	uiMain.customGame.generic.x = 72;
-	uiMain.customGame.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 480 : 430;
+	uiMain.customGame.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 530 : 480;
 	uiMain.customGame.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.customGame, PC_CUSTOM_GAME );
@@ -455,7 +455,7 @@ static void UI_Main_Init( void )
 	uiMain.credits.generic.name = "About";
 	uiMain.credits.generic.statusText = "Game credits";
 	uiMain.credits.generic.x = 72;
-	uiMain.credits.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 530 : 480;
+	uiMain.credits.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 580 : 530;
 	uiMain.credits.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.credits, PC_VIEW_README );
@@ -466,7 +466,7 @@ static void UI_Main_Init( void )
 	uiMain.quit.generic.name = "Quit";
 	uiMain.quit.generic.statusText = "Quit from game";
 	uiMain.quit.generic.x = 72;
-	uiMain.quit.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 580 : 530;
+	uiMain.quit.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 630 : 580;
 	uiMain.quit.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.quit, PC_QUIT );

@@ -4443,7 +4443,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	svgame.globals->maxClients = sv_maxclients->integer;
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 	svgame.globals->startspot = MAKE_STRING( sv.startspot );
-	svgame.globals->time = sv_time();
+	svgame.globals->time = sv.time;
 
 	// spawn the rest of the entities on the map
 	SV_LoadFromFile( entities );

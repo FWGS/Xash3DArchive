@@ -1910,7 +1910,7 @@ static void pfnConsolePrint( const char *string )
 {
 	if( !string || !*string ) return;
 	if( *string != 1 ) Msg( string ); // show notify
-	else Msg( "[skipnotify]%s", string + 1 ); // skip notify
+	else Msg( string + 1 ); // skip notify
 }
 
 /*
@@ -2901,6 +2901,7 @@ draw triangle sequence
 void TriEnd( void )
 {
 	pglEnd();
+	pglDisable( GL_ALPHA_TEST );
 }
 
 /*
@@ -3008,9 +3009,17 @@ bind current texture
 int TriSpriteTexture( model_t *pSpriteModel, int frame )
 {
 	int	gl_texturenum;
+	msprite_t	*psprite;
 
 	if(( gl_texturenum = R_GetSpriteTexture( pSpriteModel, frame )) == 0 )
 		return 0;
+
+	psprite = pSpriteModel->cache.data;
+	if( psprite->texFormat == SPR_ALPHTEST )
+	{
+		pglEnable( GL_ALPHA_TEST );
+		pglAlphaFunc( GL_GEQUAL, 0.5f );
+	}
 
 	GL_Bind( GL_TEXTURE0, gl_texturenum );
 

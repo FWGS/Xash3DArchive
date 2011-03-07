@@ -1756,7 +1756,7 @@ void SV_SaveGame( const char *pName )
 	if( com.stricmp( pName, "autosave" ) && svgame.gmsgHudText != -1 )
 	{
 		const char *pMsg = "GAMESAVED"; // defined in titles.txt
-		sv_client_t *cl;;
+		sv_client_t *cl;
 
 		if(( cl = SV_ClientFromEdict( EDICT_NUM( 1 ), true )) != NULL )
 		{

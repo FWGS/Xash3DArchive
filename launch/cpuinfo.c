@@ -462,8 +462,9 @@ void Sys_InitCPU( void )
 		string	buffer;
 
 		if( cpu.m_usNumPhysCore != cpu.m_usNumLogicCore )
-			com.sprintf( buffer, " (%i physical)", (int) cpu.m_usNumPhysCore );
-		MsgDev( D_INFO, "CPU: %s [%i core's %s]. Frequency: %.01f %s\n ", cpu.m_szCPUID, (int)cpu.m_usNumLogicCore, buffer, fFrequency, szFrequencyDenomination );
+			com.snprintf( buffer, sizeof( buffer ), " (%i physical)", (int) cpu.m_usNumPhysCore );
+		else buffer[0] = '\0';
+		MsgDev( D_INFO, "CPU: %s [%i core's%s]. Frequency: %.01f %s\n ", cpu.m_szCPUID, (int)cpu.m_usNumLogicCore, buffer, fFrequency, szFrequencyDenomination );
 	}
 	MsgDev( D_NOTE, "CPU Features: %s\n", szFeatureString );
 

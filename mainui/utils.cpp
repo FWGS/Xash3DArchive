@@ -893,8 +893,8 @@ void UI_SpinControl_Draw( menuSpinControl_s *sc )
 	if( sc->generic.flags & QMF_HIGHLIGHTIFFOCUS )
 	{
 		UI_DrawString( x, y, w, h, sc->generic.name, sc->generic.focusColor, false, sc->generic.charWidth, sc->generic.charHeight, justify, shadow );
-		UI_DrawPic( leftX, leftY, arrowWidth, arrowHeight, (leftFocus) ? sc->generic.focusColor : sc->generic.color, (leftFocus) ? sc->leftArrowFocus : sc->leftArrow );
-		UI_DrawPic( rightX, rightY, arrowWidth, arrowHeight, (rightFocus) ? sc->generic.focusColor : sc->generic.color, (rightFocus) ? sc->rightArrowFocus : sc->rightArrow );
+		UI_DrawPic( leftX, leftY, arrowWidth, arrowHeight, (leftFocus) ? sc->generic.color : sc->generic.color, (leftFocus) ? sc->leftArrowFocus : sc->leftArrow );
+		UI_DrawPic( rightX, rightY, arrowWidth, arrowHeight, (rightFocus) ? sc->generic.color : sc->generic.color, (rightFocus) ? sc->rightArrowFocus : sc->rightArrow );
 	}
 	else if( sc->generic.flags & QMF_PULSEIFFOCUS )
 	{
@@ -1797,7 +1797,6 @@ void UI_Bitmap_Init( menuBitmap_s *b )
 	if( !b->generic.name ) b->generic.name = "";
 	if( !b->focusPic ) b->focusPic = b->pic;
 	if( !b->generic.color ) b->generic.color = uiColorWhite;
-	if( !b->generic.focusColor ) b->generic.focusColor = uiColorHelp;
 
 	UI_ScaleCoords( &b->generic.x, &b->generic.y, &b->generic.width, &b->generic.height );
 }
@@ -1886,7 +1885,7 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 	if(!( b->generic.flags & QMF_FOCUSBEHIND ))
 		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.color, b->pic );
 	if( b->generic.flags & QMF_HIGHLIGHTIFFOCUS )
-		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.focusColor, b->focusPic );
+		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, b->generic.color, b->focusPic );
 	else if( b->generic.flags & QMF_PULSEIFFOCUS )
 	{
 		int	color;

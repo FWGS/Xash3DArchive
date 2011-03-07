@@ -35,10 +35,6 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	ent->model = Mod_Handle( ent->curstate.modelindex );
 	ent->curstate.msg_time = cl.time;
 
-	// apply scale to studiomodels and sprites only
-	if( ent->model && ent->model->type != mod_brush && !ent->curstate.scale )
-		ent->curstate.scale = 1.0f;
-
 	if( ent->player ) // stupid Half-Life bug
 		ent->angles[PITCH] = -ent->angles[PITCH] / 3;
 

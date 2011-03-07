@@ -27,7 +27,7 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags )
 	const mplane_t	*p;
 
 	// client.dll may use additional passes for render custom mirrors etc
-	if( r_nocull->integer || RI.refdef.nextView != 0 )
+	if( r_nocull->integer )
 		return false;
 
 	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
@@ -89,7 +89,7 @@ qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipf
 	const mplane_t *p;
 
 	// client.dll may use additional passes for render custom mirrors etc
-	if( r_nocull->integer || RI.refdef.nextView != 0 )
+	if( r_nocull->integer )
 		return false;
 
 	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
@@ -209,7 +209,7 @@ qboolean R_VisCullSphere( const vec3_t origin, float radius )
 R_CullModel
 =============
 */
-int R_CullModel( cl_entity_t *e, vec3_t mins, vec3_t maxs, float radius )
+int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float radius )
 {
 	if( e == &clgame.viewent )
 	{
@@ -232,12 +232,12 @@ int R_CullModel( cl_entity_t *e, vec3_t mins, vec3_t maxs, float radius )
 			return 1;
 	}
 
-	if( R_CullSphere( e->origin, radius, RI.clipFlags ))
+	if( R_CullSphere( origin, radius, RI.clipFlags ))
 		return 1;
 
 	if( RI.rdflags & ( RDF_PORTALINVIEW|RDF_SKYPORTALINVIEW ) || ( RI.params & RP_SKYPORTALVIEW ))
 	{
-		if( R_VisCullSphere( e->origin, radius ))
+		if( R_VisCullSphere( origin, radius ))
 			return 2;
 	}
 
