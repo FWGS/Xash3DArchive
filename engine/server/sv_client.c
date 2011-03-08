@@ -1450,7 +1450,7 @@ void SV_BeginDownload_f( sv_client_t *cl )
 
 	name = Cmd_Argv( 1 );
 	if(Cmd_Argc() > 2 ) offset = com.atoi(Cmd_Argv(2)); // continue download from
-	cl->download = FS_LoadFile( name, &cl->downloadsize );
+	cl->download = FS_LoadFile( name, &cl->downloadsize, false );
 	cl->downloadcount = offset;
 	if( offset > cl->downloadsize ) cl->downloadcount = cl->downloadsize;
 

@@ -720,7 +720,7 @@ void Delta_InitFields( void )
 	string		encodeDll, encodeFunc, token;	
 	delta_info_t	*dt;
 
-	afile = FS_LoadFile( DELTA_PATH, NULL );
+	afile = FS_LoadFile( DELTA_PATH, NULL, false );
 	if( !afile )
 	{
 		static string	errormsg;

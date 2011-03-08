@@ -128,19 +128,7 @@ SOURCE=.\cvar.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\filesystem.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\library.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\memlib.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\parselib.c
 # End Source File
 # Begin Source File
 
@@ -156,19 +144,7 @@ SOURCE=.\system.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\filesystem.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\launch.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\library.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\tools\utils.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"

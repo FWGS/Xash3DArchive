@@ -7,6 +7,7 @@
 #include "client.h"
 #include "const.h"
 #include "gl_local.h"
+#include "library.h"
 
 static void UI_UpdateUserinfo( void );
 menu_static_t	menu;
@@ -118,9 +119,9 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		// run cinematic if not
 		com.snprintf( path, sizeof( path ), "media/%s", filename );
 		FS_DefaultExtension( path, ".avi" );
-		fullpath = FS_GetDiskPath( path );
+		fullpath = FS_GetDiskPath( path, false );
 
-		if( FS_FileExists( path ) && !fullpath )
+		if( FS_FileExists( path, false ) && !fullpath )
 		{
 			MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
 			menu.drawLogo = false;
@@ -746,7 +747,7 @@ static char **pfnGetFilesList( const char *pattern, int *numFiles, int gamediron
 
 	if( t ) Mem_Free( t ); // release prev search
 
-	t = FS_SearchExt( pattern, true, gamedironly );
+	t = FS_Search( pattern, true, gamedironly );
 	if( !t )
 	{
 		if( numFiles ) *numFiles = 0;
@@ -781,9 +782,9 @@ int pfnCheckGameDll( void )
 
 	if( SV_Active( )) return true;
 
-	if(( hInst = FS_LoadLibrary( GI->game_dll, true )) != NULL )
+	if(( hInst = Com_LoadLibrary( GI->game_dll, true )) != NULL )
 	{
-		FS_FreeLibrary( hInst );
+		Com_FreeLibrary( hInst );
 		return true;
 	}
 	return false;
@@ -929,7 +930,7 @@ void UI_UnloadProgs( void )
 	// deinitialize game
 	menu.dllFuncs.pfnShutdown();
 
-	FS_FreeLibrary( menu.hInstance );
+	Com_FreeLibrary( menu.hInstance );
 	Mem_FreePool( &menu.mempool );
 	Mem_Set( &menu, 0, sizeof( menu ));
 }
@@ -947,14 +948,14 @@ qboolean UI_LoadProgs( const char *name )
 	menu.globals = &gpGlobals;
 
 	menu.mempool = Mem_AllocPool( "Menu Pool" );
-	menu.hInstance = FS_LoadLibrary( name, false );
+	menu.hInstance = Com_LoadLibrary( name, false );
 	if( !menu.hInstance ) return false;
 
-	GetMenuAPI = (MENUAPI)FS_GetProcAddress( menu.hInstance, "GetMenuAPI" );
+	GetMenuAPI = (MENUAPI)Com_GetProcAddress( menu.hInstance, "GetMenuAPI" );
 
 	if( !GetMenuAPI )
 	{
-		FS_FreeLibrary( menu.hInstance );
+		Com_FreeLibrary( menu.hInstance );
           	MsgDev( D_NOTE, "UI_LoadProgs: failed to get address of GetMenuAPI proc\n" );
 		menu.hInstance = NULL;
 		return false;
@@ -965,7 +966,7 @@ qboolean UI_LoadProgs( const char *name )
 
 	if( !GetMenuAPI( &menu.dllFuncs, &gpEngfuncs, menu.globals ))
 	{
-		FS_FreeLibrary( menu.hInstance );
+		Com_FreeLibrary( menu.hInstance );
 		MsgDev( D_NOTE, "UI_LoadProgs: can't init client API\n" );
 		menu.hInstance = NULL;
 		return false;

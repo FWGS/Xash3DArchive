@@ -791,7 +791,7 @@ int Netchan_CreateFileFragments( qboolean server, netchan_t *chan, const char *f
 	fragbuf_t		*buf;
 	
 	chunksize = bound( 16, net_blocksize->integer, 512 );
-	filesize = FS_FileSize( filename );
+	filesize = FS_FileSize( filename, false );
 
 	if( filesize <= 0 )
 	{
@@ -973,7 +973,7 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 
 	com.strncpy( chan->incomingfilename, filename, sizeof( chan->incomingfilename ));
 
-	if( FS_FileExists( filename ))
+	if( FS_FileExists( filename, false ))
 	{
 		MsgDev( D_ERROR, "Can't download %s, already exists\n", filename );
 		
@@ -1288,7 +1288,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 					byte	filebuffer[2048];
 					file_t	*hfile;
 
-					hfile = FS_Open( pbuf->filename, "rb" );
+					hfile = FS_Open( pbuf->filename, "rb", false );
 					FS_Seek( hfile, pbuf->foffset, SEEK_SET );
 					FS_Read( hfile, filebuffer, pbuf->size );
 

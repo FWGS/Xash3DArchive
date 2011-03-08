@@ -44,7 +44,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	int		i, nummaps;
 
-	t = FS_SearchExt( va( "maps/%s*.bsp", s ), true, con_gamemaps->integer );
+	t = FS_Search( va( "maps/%s*.bsp", s ), true, con_gamemaps->integer );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -62,7 +62,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			
 		if( com.stricmp( ext, "bsp" )) continue;
 		com.strncpy( message, "^1error^7", sizeof( message ));
-		f = FS_OpenEx( t->filenames[i], "rb", con_gamemaps->integer );
+		f = FS_Open( t->filenames[i], "rb", con_gamemaps->integer );
 	
 		if( f )
 		{
@@ -95,7 +95,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			com.strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
 			FS_DefaultExtension( entfilename, ".ent" );
-			ents = FS_LoadFileEx( entfilename, NULL, true );
+			ents = FS_LoadFile( entfilename, NULL, true );
 
 			if( !ents && lumplen >= 10 )
 			{
@@ -169,7 +169,7 @@ qboolean Cmd_GetDemoList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numdems;
 
-	t = FS_SearchExt( va( "demos/%s*.dem", s ), true, true );	// lookup only in gamedir
+	t = FS_Search( va( "demos/%s*.dem", s ), true, true );	// lookup only in gamedir
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -213,7 +213,7 @@ qboolean Cmd_GetMovieList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, nummovies;
 
-	t = FS_Search( va( "media/%s*.avi", s ), true );
+	t = FS_Search( va( "media/%s*.avi", s ), true, false );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -258,7 +258,7 @@ qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numtracks;
 
-	t = FS_Search( va( "media/%s*.*", s ), true );
+	t = FS_Search( va( "media/%s*.*", s ), true, false );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -304,7 +304,7 @@ qboolean Cmd_GetSavesList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numsaves;
 
-	t = FS_SearchExt( va( "save/%s*.sav", s ), true, true );	// lookup only in gamedir
+	t = FS_Search( va( "save/%s*.sav", s ), true, true );	// lookup only in gamedir
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -349,7 +349,7 @@ qboolean Cmd_GetConfigList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numconfigs;
 
-	t = FS_Search( va( "%s*.cfg", s ), true );
+	t = FS_Search( va( "%s*.cfg", s ), true, false );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -395,7 +395,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 	int		i, numsounds;
 	const char	*snddir = "sound/"; // constant
 
-	t = FS_Search( va( "%s%s*.*", snddir, s ), true );
+	t = FS_Search( va( "%s%s*.*", snddir, s ), true, false );
 	if( !t ) return false;
 
 	com.strncpy( matchbuf, t->filenames[0] + com.strlen( snddir ), MAX_STRING ); 
@@ -445,7 +445,7 @@ qboolean Cmd_GetItemsList( const char *s, char *completedname, int length )
 	int		i, numitems;
 
 	if( !clgame.itemspath[0] ) return false; // not in game yet
-	t = FS_Search( va( "%s/%s*.txt", clgame.itemspath, s ), true );
+	t = FS_Search( va( "%s/%s*.txt", clgame.itemspath, s ), true, false );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -490,7 +490,7 @@ qboolean Cmd_GetCustomList( const char *s, char *completedname, int length )
 	int		i, numitems;
 
 	if( !clgame.itemspath[0] ) return false; // not in game yet
-	t = FS_Search( va( "%s*.hpk", s ), true );
+	t = FS_Search( va( "%s*.hpk", s ), true, false );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -629,10 +629,10 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 	search_t	*t;
 	file_t	*f;
 
-	if( FS_FileSizeEx( "maps.lst", onlyingamedir ) > 0 && !fRefresh )
+	if( FS_FileSize( "maps.lst", onlyingamedir ) > 0 && !fRefresh )
 		return true; // exist 
 
-	t = FS_SearchExt( "maps/*.bsp", false, onlyingamedir );
+	t = FS_Search( "maps/*.bsp", false, onlyingamedir );
 	if( !t ) return false;
 
 	buffer = Mem_Alloc( host.mempool, t->numfilenames * 2 * sizeof( result ));
@@ -644,7 +644,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 
 		if( com.stricmp( ext, "bsp" )) continue;
-		f = FS_OpenEx( t->filenames[i], "rb", onlyingamedir );
+		f = FS_Open( t->filenames[i], "rb", onlyingamedir );
 		FS_FileBase( t->filenames[i], mapname );
 
 		if( f )
@@ -677,7 +677,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			com.strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
 			FS_DefaultExtension( entfilename, ".ent" );
-			ents = FS_LoadFileEx( entfilename, NULL, true );
+			ents = FS_LoadFile( entfilename, NULL, true );
 
 			if( !ents && lumplen >= 10 )
 			{
@@ -845,7 +845,7 @@ void Host_WriteConfig( void )
 	if( !cls.initialized ) return;
 
 	MsgDev( D_NOTE, "Host_WriteConfig()\n" );
-	f = FS_Open( "config.cfg", "w" );
+	f = FS_Open( "config.cfg", "w", false );
 	if( f )
 	{
 		FS_Printf( f, "//=======================================================================\n");
@@ -882,7 +882,7 @@ void Host_WriteServerConfig( const char *name )
 
 	SV_InitGameProgs();	// collect user variables
 	
-	if(( f = FS_Open( name, "w" )) != NULL )
+	if(( f = FS_Open( name, "w", false )) != NULL )
 	{
 		FS_Printf( f, "//=======================================================================\n" );
 		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", timestamp( TIME_YEAR_ONLY ));
@@ -906,7 +906,7 @@ void Host_WriteOpenGLConfig( void )
 	file_t	*f;
 
 	MsgDev( D_NOTE, "Host_WriteGLConfig()\n" );
-	f = FS_Open( "opengl.cfg", "w" );
+	f = FS_Open( "opengl.cfg", "w", false );
 	if( f )
 	{
 		FS_Printf( f, "//=======================================================================\n" );
@@ -931,7 +931,7 @@ void Host_WriteVideoConfig( void )
 	file_t	*f;
 
 	MsgDev( D_NOTE, "Host_WriteVideoConfig()\n" );
-	f = FS_Open( "video.cfg", "w" );
+	f = FS_Open( "video.cfg", "w", false );
 	if( f )
 	{
 		FS_Printf( f, "//=======================================================================\n" );
@@ -949,14 +949,14 @@ void Key_EnumCmds_f( void )
 	file_t	*f;
 
 	FS_AllowDirectPaths( true );
-	if( FS_FileExists( "../help.txt" ))
+	if( FS_FileExists( "../help.txt", false ))
 	{
 		Msg( "help.txt already exist\n" );
 		FS_AllowDirectPaths( false );
 		return;
 	}
 
-	f = FS_Open( "../help.txt", "w" );
+	f = FS_Open( "../help.txt", "w", false );
 	if( f )
 	{
 		FS_Printf( f, "//=======================================================================\n");

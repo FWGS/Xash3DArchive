@@ -1625,7 +1625,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	if( mod->mempool || mod->name[0] == '*' )
 		return mod;
 
-	buf = FS_LoadFile( mod->name, NULL );
+	buf = FS_LoadFile( mod->name, NULL, false );
 	if( !buf )
 	{
 		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
@@ -1860,7 +1860,7 @@ void Mod_LoadCacheFile( const char *path, cache_user_t *cu )
 	if( !size ) return;
 	filepath[size] = 0;
 
-	buf = FS_LoadFile( filepath, &size );
+	buf = FS_LoadFile( filepath, &size, false );
 	cu->data = Mem_Alloc( com_studiocache, size );
 	Mem_Copy( cu->data, buf, size );
 	Mem_Free( buf );

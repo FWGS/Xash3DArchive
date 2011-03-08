@@ -165,6 +165,54 @@ extern host_parm_t	host;
 #endif
 
 //
+// filesystem.c
+//
+void FS_Init( void );
+void FS_Path( void );
+void FS_Shutdown( void );
+void FS_ClearSearchPath( void );
+void FS_AllowDirectPaths( qboolean enable );
+void FS_AddGameDirectory( const char *dir, int flags );
+void FS_AddGameHierarchy( const char *dir, int flags );
+void FS_LoadGameInfo( const char *rootfolder );
+void FS_FileBase( const char *in, char *out );
+const char *FS_FileExtension( const char *in );
+void FS_DefaultExtension( char *path, const char *extension );
+void FS_ExtractFilePath( const char* const path, char* dest );
+const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
+const char *FS_FileWithoutPath( const char *in );
+wfile_t *W_Open( const char *filename, const char *mode );
+byte *W_LoadLump( wfile_t *wad, const char *lumpname, size_t *lumpsizeptr, const char type );
+void W_Close( wfile_t *wad );
+file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
+byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
+qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len );
+void FS_FreeFile( void *buffer );
+search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
+file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
+fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize );
+fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize );
+int FS_VPrintf( file_t *file, const char *format, va_list ap );
+int FS_Seek( file_t *file, fs_offset_t offset, int whence );
+int FS_Gets( file_t *file, byte *string, size_t bufsize );
+int FS_Printf( file_t *file, const char *format, ... );
+fs_offset_t FS_FileSize( const char *filename, qboolean gamedironly );
+fs_offset_t FS_FileTime( const char *filename, qboolean gamedironly );
+int FS_Print( file_t *file, const char *msg );
+qboolean FS_Rename( const char *oldname, const char *newname );
+qboolean FS_FileExists( const char *filename, qboolean gamedironly );
+qboolean FS_Delete( const char *path );
+int FS_UnGetc( file_t *file, byte c );
+void FS_StripExtension( char *path );
+fs_offset_t FS_Tell( file_t *file );
+qboolean FS_Eof( file_t *file );
+void FS_Purge( file_t *file );
+int FS_Close( file_t *file );
+int FS_Getc( file_t *file );
+qboolean FS_Eof( file_t *file );
+fs_offset_t FS_FileLength( file_t *f );
+
+//
 // network.c
 //
 void NET_Init( void );

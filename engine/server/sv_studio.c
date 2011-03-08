@@ -7,6 +7,7 @@
 #include "server.h"
 #include "studio.h"
 #include "r_studioint.h"
+#include "library.h"
 
 typedef int (*STUDIOAPI)( int, sv_blending_interface_t*, server_studio_api_t*, matrix3x4, matrix3x4[MAXSTUDIOBONES] );
 
@@ -435,7 +436,7 @@ static mstudioanim_t *SV_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 		FS_ExtractFilePath( m_pSubModel->name, modelpath );
 		com.snprintf( filepath, sizeof( filepath ), "%s/%s%i%i.mdl", modelpath, modelname, pseqdesc->seqgroup / 10, pseqdesc->seqgroup % 10 );
 
-		buf = FS_LoadFile( filepath, &filesize );
+		buf = FS_LoadFile( filepath, &filesize, false );
 		if( !buf || !filesize ) Host_Error( "StudioGetAnim: can't load %s\n", filepath );
 		if( IDSEQGRPHEADER != *(uint *)buf )
 			Host_Error( "StudioGetAnim: %s is corrupted\n", filepath );
@@ -989,7 +990,7 @@ qboolean SV_InitStudioAPI( void )
 
 	pBlendAPI = &gBlendAPI;
 
-	pBlendIface = (STUDIOAPI)FS_GetProcAddress( svgame.hInstance, "Server_GetBlendingInterface" );
+	pBlendIface = (STUDIOAPI)Com_GetProcAddress( svgame.hInstance, "Server_GetBlendingInterface" );
 	if( pBlendIface && pBlendIface( SV_BLENDING_INTERFACE_VERSION, pBlendAPI, &gStudioAPI, sv_studiomatrix, sv_studiobones ))
 		return true;
 

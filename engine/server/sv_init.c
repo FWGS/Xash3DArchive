@@ -163,7 +163,7 @@ char *SV_EntityScript( void )
 	FS_StripExtension( entfilename );
 	FS_DefaultExtension( entfilename, ".ent" );
 
-	if(( ents = FS_LoadFileEx( entfilename, NULL, true )))
+	if(( ents = FS_LoadFile( entfilename, NULL, true )))
 	{
 		MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
 		return ents;

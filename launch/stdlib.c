@@ -759,3 +759,46 @@ char *va( const char *format, ... )
 
 	return s;
 }
+
+/*
+============
+Com_FileBase
+
+TEMPORARY PLACE. dont forget to remove it
+============
+*/
+void Com_FileBase( const char *in, char *out )
+{
+	int	len, start, end;
+
+	len = com.strlen( in );
+	if( !len ) return;
+	
+	// scan backward for '.'
+	end = len - 1;
+
+	while( end && in[end] != '.' && in[end] != '/' && in[end] != '\\' )
+		end--;
+	
+	if( in[end] != '.' )
+		end = len-1; // no '.', copy to end
+	else end--; // found ',', copy to left of '.'
+
+
+	// scan backward for '/'
+	start = len - 1;
+
+	while( start >= 0 && in[start] != '/' && in[start] != '\\' )
+		start--;
+
+	if( start < 0 || ( in[start] != '/' && in[start] != '\\' ))
+		start = 0;
+	else start++;
+
+	// length of new sting
+	len = end - start + 1;
+
+	// Copy partial string
+	com.strncpy( out, &in[start], len + 1 );
+	out[len] = 0;
+}

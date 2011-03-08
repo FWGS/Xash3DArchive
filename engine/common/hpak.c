@@ -88,7 +88,7 @@ void HPAK_CreatePak( const char *filename, resource_t *DirEnt, byte *data, file_
 	FS_DefaultExtension( pakname, ".hpk" );
 
 	MsgDev( D_INFO, "creating HPAK %s.\n", pakname );
-	fout = FS_Open( pakname, "wb" );
+	fout = FS_Open( pakname, "wb", false );
 	if( !fout )
 	{
 		MsgDev( D_ERROR, "HPAK_CreatePak: can't write %s.\n", pakname );
@@ -246,7 +246,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	FS_StripExtension( pakname1 );
 	FS_DefaultExtension( pakname1, ".hpk" );
 
-	f1 = FS_Open( pakname1, "rb" );
+	f1 = FS_Open( pakname1, "rb", false );
 
 	if( !f1 )
 	{
@@ -259,7 +259,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	FS_StripExtension( pakname2 );
 	FS_DefaultExtension( pakname2, ".hp2" );
 
-	f2 = FS_Open( pakname2, "w+b" );
+	f2 = FS_Open( pakname2, "w+b", false );
 
 	if( !f2 )
 	{
@@ -390,7 +390,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb" );
+	f = FS_Open( pakname, "rb", false );
 	if( !f )
 	{
 		MsgDev( D_INFO, "Couldn't find %s.\n", pakname );
@@ -505,7 +505,7 @@ void HPAK_CheckSize( const char *filename )
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	if( FS_FileSize( pakname ) > ( maxsize * 1000000 ))
+	if( FS_FileSize( pakname, false ) > ( maxsize * 1000000 ))
 		MsgDev( D_ERROR, "HPAK_CheckSize: %s is too large.\n", filename );
 }
 
@@ -534,7 +534,7 @@ qboolean HPAK_ResourceForHash( const char *filename, char *inHash, resource_t *p
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb" );
+	f = FS_Open( pakname, "rb", false );
 	if( !f ) return false;
 
 	FS_Read( f, &hdr, sizeof( hdr ));
@@ -586,7 +586,7 @@ qboolean HPAK_ResourceForIndex( const char *filename, int index, resource_t *pRe
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb" );
+	f = FS_Open( pakname, "rb", false );
 	FS_Read( f, &hdr, sizeof( hdr ));
 
 	if( hdr.ident != IDCUSTOMHEADER )
@@ -668,7 +668,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
-	f = FS_Open( pakname, "rb" );
+	f = FS_Open( pakname, "rb", false );
 	if( !f ) return false;
 
 	FS_Read( f, &hdr, sizeof( hdr ));
@@ -742,7 +742,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	FS_StripExtension( read_path );
 	FS_DefaultExtension( read_path, ".hpk" );
 
-	f1 = FS_Open( read_path, "rb" );
+	f1 = FS_Open( read_path, "rb", false );
 	if( !f1 )
 	{
 		MsgDev( D_ERROR, "HPAK_RemoveLump: %s couldn't open.\n", read_path );
@@ -752,7 +752,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 	com.strncpy( save_path, read_path, sizeof( save_path ));
 	FS_StripExtension( save_path );
 	FS_DefaultExtension( save_path, ".hp2" );
-	f2 = FS_Open( save_path, "w+b" );
+	f2 = FS_Open( save_path, "w+b", false );
 	if( !f2 )
 	{
 		MsgDev( D_ERROR, "HPAK_RemoveLump: %s couldn't open.\n", save_path );

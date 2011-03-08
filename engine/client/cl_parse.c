@@ -147,7 +147,7 @@ void CL_WriteErrorMessage( int current_count, sizebuf_t *msg )
 	file_t		*fp;
 	const char	*buffer_file = "buffer.dat";
 	
-	fp = FS_Open( buffer_file, "wb" );
+	fp = FS_Open( buffer_file, "wb", false );
 	if( !fp ) return;
 
 	FS_Write( fp, &starting_count, sizeof( int ));
@@ -229,7 +229,7 @@ qboolean CL_CheckOrDownloadFile( const char *filename )
 	string	name;
 	file_t	*f;
 
-	if( FS_FileExists( filename ))
+	if( FS_FileExists( filename, false ))
 	{
 		// it exists, no need to download
 		return true;
@@ -244,7 +244,7 @@ qboolean CL_CheckOrDownloadFile( const char *filename )
 	FS_DefaultExtension( cls.downloadtempname, ".tmp" );
 	com.strncpy( name, cls.downloadtempname, MAX_STRING );
 
-	f = FS_Open( name, "a+b" );
+	f = FS_Open( name, "a+b", false );
 	if( f )
 	{
 		// it exists
@@ -302,7 +302,7 @@ void CL_ParseDownload( sizebuf_t *msg )
 	if( !cls.download )
 	{
 		com.strncpy( name, cls.downloadtempname, MAX_STRING );
-		cls.download = FS_Open ( name, "wb" );
+		cls.download = FS_Open ( name, "wb", false );
 
 		if( !cls.download )
 		{
@@ -631,7 +631,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )
 	{
-		if( !FS_FileExistsEx( va( "%s.bmp", cl_levelshot_name->string ), true )) 
+		if( !FS_FileExists( va( "%s.bmp", cl_levelshot_name->string ), true )) 
 		{
 			Cvar_Set( "cl_levelshot_name", "*black" );	// render a black screen
 			cls.scrshot_request = scrshot_plaque;		// make levelshot

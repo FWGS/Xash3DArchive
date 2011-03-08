@@ -7,6 +7,7 @@
 #include "server.h"
 #include "net_encode.h"
 #include "event_flags.h"
+#include "library.h"
 #include "pm_defs.h"
 #include "const.h"
 
@@ -433,7 +434,7 @@ void SV_WriteEntityPatch( const char *filename )
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	qboolean		result = false;
 			
-	f = FS_Open( va( "maps/%s.bsp", filename ), "rb" );
+	f = FS_Open( va( "maps/%s.bsp", filename ), "rb", false );
 	if( !f ) return;
 
 	Mem_Set( buf, 0, MAX_SYSPATH );
@@ -487,7 +488,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 
 	ASSERT( flags != NULL );
 			
-	f = FS_Open( va( "maps/%s.bsp", filename ), "rb" );
+	f = FS_Open( va( "maps/%s.bsp", filename ), "rb", false );
 	if( !f ) return NULL;
 
 	*flags |= MAP_IS_EXIST;
@@ -520,7 +521,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 
 	// check for entfile too
 	com.strncpy( entfilename, va( "maps/%s.ent", filename ), sizeof( entfilename ));
-	ents = FS_LoadFileEx( entfilename, NULL, true ); // grab .ent files only from gamedir
+	ents = FS_LoadFile( entfilename, NULL, true ); // grab .ent files only from gamedir
 
 	if( !ents && lumplen >= 10 )
 	{
@@ -699,7 +700,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	ent->v.pContainingEntity = ent; // re-link
 	
 	// allocate edict private memory (passed by dlls)
-	SpawnEdict = (LINK_ENTITY_FUNC)FS_GetProcAddress( svgame.hInstance, pszClassName );
+	SpawnEdict = (LINK_ENTITY_FUNC)Com_GetProcAddress( svgame.hInstance, pszClassName );
 	if( !SpawnEdict )
 	{
 		// attempt to create custom entity
@@ -2856,7 +2857,7 @@ pfnFunctionFromName
 */
 dword pfnFunctionFromName( const char *pName )
 {
-	return FS_FunctionFromName( svgame.hInstance, pName );
+	return Com_FunctionFromName( svgame.hInstance, pName );
 }
 
 /*
@@ -2867,7 +2868,7 @@ pfnNameForFunction
 */
 const char *pfnNameForFunction( dword function )
 {
-	return FS_NameForFunction( svgame.hInstance, function );
+	return Com_NameForFunction( svgame.hInstance, function );
 }
 
 /*
@@ -3070,8 +3071,8 @@ int pfnCompareFileTime( const char *filename1, const char *filename2, int *iComp
 
 	if( filename1 && filename2 )
 	{
-		long ft1 = FS_FileTime( filename1 );
-		long ft2 = FS_FileTime( filename2 );
+		long ft1 = FS_FileTime( filename1, false );
+		long ft2 = FS_FileTime( filename2, false );
 
 		// one of files is missing
 		if( ft1 == -1 || ft2 == -1 )
@@ -4473,7 +4474,7 @@ void SV_UnloadProgs( void )
 	// before pointers on them will be lost...
 	Cmd_ExecuteString( "@unlink\n" );
 
-	FS_FreeLibrary( svgame.hInstance );
+	Com_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );
 	Mem_Set( &svgame, 0, sizeof( svgame ));
 }
@@ -4496,7 +4497,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.pmove = &gpMove;
 	svgame.globals = &gpGlobals;
 	svgame.mempool = Mem_AllocPool( "Server Edicts Zone" );
-	svgame.hInstance = FS_LoadLibrary( name, true );
+	svgame.hInstance = Com_LoadLibrary( name, true );
 	if( !svgame.hInstance ) return false;
 
 	// make sure what new dll functions is cleared
@@ -4505,23 +4506,23 @@ qboolean SV_LoadProgs( const char *name )
 	// make local copy of engfuncs to prevent overwrite it with bots.dll
 	Mem_Copy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
-	GetEntityAPI = (APIFUNCTION)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
-	GetEntityAPI2 = (APIFUNCTION2)FS_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
-	GiveNewDllFuncs = (NEW_DLL_FUNCTIONS_FN)FS_GetProcAddress( svgame.hInstance, "GetNewDLLFunctions" );
+	GetEntityAPI = (APIFUNCTION)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
+	GetEntityAPI2 = (APIFUNCTION2)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
+	GiveNewDllFuncs = (NEW_DLL_FUNCTIONS_FN)Com_GetProcAddress( svgame.hInstance, "GetNewDLLFunctions" );
 
 	if( !GetEntityAPI )
 	{
-		FS_FreeLibrary( svgame.hInstance );
+		Com_FreeLibrary( svgame.hInstance );
          		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of GetEntityAPI proc\n" );
 		svgame.hInstance = NULL;
 		return false;
 	}
 
-	GiveFnptrsToDll = (GIVEFNPTRSTODLL)FS_GetProcAddress( svgame.hInstance, "GiveFnptrsToDll" );
+	GiveFnptrsToDll = (GIVEFNPTRSTODLL)Com_GetProcAddress( svgame.hInstance, "GiveFnptrsToDll" );
 
 	if( !GiveFnptrsToDll )
 	{
-		FS_FreeLibrary( svgame.hInstance );
+		Com_FreeLibrary( svgame.hInstance );
 		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of GiveFnptrsToDll proc\n" );
 		svgame.hInstance = NULL;
 		return false;
@@ -4548,14 +4549,14 @@ qboolean SV_LoadProgs( const char *name )
 	{
 		if( !GetEntityAPI2 )
 		{
-			FS_FreeLibrary( svgame.hInstance );
+			Com_FreeLibrary( svgame.hInstance );
 			MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
 			svgame.hInstance = NULL;
 			return false;
 		}
 		else if( !GetEntityAPI2( &svgame.dllFuncs, &version ))
 		{
-			FS_FreeLibrary( svgame.hInstance );
+			Com_FreeLibrary( svgame.hInstance );
 			MsgDev( D_ERROR, "SV_LoadProgs: interface version %i should be %i\n", INTERFACE_VERSION, version );
 			svgame.hInstance = NULL;
 			return false;
@@ -4564,7 +4565,7 @@ qboolean SV_LoadProgs( const char *name )
 
 	if( !SV_InitStudioAPI( ))
 	{
-		FS_FreeLibrary( svgame.hInstance );
+		Com_FreeLibrary( svgame.hInstance );
 		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get studio API\n" );
 		svgame.hInstance = NULL;
 		return false;

@@ -67,7 +67,7 @@ static qboolean CheckSkybox( const char *name )
 		{         
 			// build side name
 			sidename = va( "%s%s.%s", name, r_skyBoxSuffix[j], skybox_ext[i] );
-			if( FS_FileExists( sidename )) num_checked_sides++;
+			if( FS_FileExists( sidename, false )) num_checked_sides++;
 
 		}
 
@@ -78,7 +78,7 @@ static qboolean CheckSkybox( const char *name )
 		{         
 			// build side name
 			sidename = va( "%s_%s.%s", name, r_skyBoxSuffix[j], skybox_ext[i] );
-			if( FS_FileExists( sidename )) num_checked_sides++;
+			if( FS_FileExists( sidename, false )) num_checked_sides++;
 		}
 
 		if( num_checked_sides == 6 )

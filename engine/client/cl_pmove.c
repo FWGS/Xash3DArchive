@@ -455,12 +455,12 @@ static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
 
 static int pfnCOM_FileSize( const char *filename )
 {
-	return FS_FileSize( filename );
+	return FS_FileSize( filename, false );
 }
 
 static byte *pfnCOM_LoadFile( const char *path, int usehunk, int *pLength )
 {
-	return FS_LoadFile( path, pLength );
+	return FS_LoadFile( path, pLength, false );
 }
 
 static void pfnCOM_FreeFile( void *buffer )

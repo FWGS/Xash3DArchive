@@ -321,7 +321,7 @@ int SV_MapCount( const char *pPath )
 	search_t	*t;
 	int	count = 0;
 	
-	t = FS_Search( pPath, true );
+	t = FS_Search( pPath, true, false );
 	if( !t ) return count; // empty
 
 	count = t->numfilenames;
@@ -433,7 +433,7 @@ void SV_ClearSaveDir( void )
 	int	i;
 
 	// just delete all HL? files
-	t = FS_SearchExt( "save/*.HL?", true, true );	// lookup only in gamedir
+	t = FS_Search( "save/*.HL?", true, true );	// lookup only in gamedir
 	if( !t ) return; // already empty
 
 	for( i = 0; i < t->numfilenames; i++ )
@@ -550,16 +550,16 @@ void SV_DirectoryCopy( const char *pPath, file_t *pFile )
 	file_t		*pCopy;
 	char		szName[SAVENAME_LENGTH];
 
-	t = FS_Search( pPath, true );
+	t = FS_Search( pPath, true, false );
 	if( !t ) return;
 
 	for( i = 0; i < t->numfilenames; i++ )
 	{
-		fileSize = FS_FileSize( t->filenames[i] );
-		pCopy = FS_Open( t->filenames[i], "rb" );
+		fileSize = FS_FileSize( t->filenames[i], false );
+		pCopy = FS_Open( t->filenames[i], "rb", false );
 
 		// filename can only be as long as a map name + extension
-		com.strncpy( szName, FS_RemovePath( t->filenames[i] ), SAVENAME_LENGTH );		
+		com.strncpy( szName, FS_FileWithoutPath( t->filenames[i] ), SAVENAME_LENGTH );		
 		FS_Write( pFile, szName, SAVENAME_LENGTH );
 		FS_Write( pFile, &fileSize, sizeof( int ));
 		SV_FileCopy( pFile, pCopy, fileSize );
@@ -581,7 +581,7 @@ void SV_DirectoryExtract( file_t *pFile, int fileCount )
 		FS_Read( pFile, &fileSize, sizeof( int ));
 		com.snprintf( szName, sizeof( szName ), "save/%s", fileName );
 
-		pCopy = FS_Open( szName, "wb" );
+		pCopy = FS_Open( szName, "wb", false );
 		SV_FileCopy( pCopy, pFile, fileSize );
 		FS_Close( pCopy );
 	}
@@ -708,7 +708,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	com.snprintf( name, sizeof( name ), "save/%s.HL1", level );
 	MsgDev( D_INFO, "Loading game from %s...\n", name );
 
-	pFile = FS_OpenEx( name, "rb", true );
+	pFile = FS_Open( name, "rb", true );
 	if( !pFile )
 	{
 		MsgDev( D_INFO, "ERROR: couldn't open.\n" );
@@ -839,7 +839,7 @@ void SV_EntityPatchWrite( SAVERESTOREDATA *pSaveData, const char *level )
 
 	com.snprintf( name, sizeof( name ), "save/%s.HL3", level );
 
-	pFile = FS_Open( name, "wb" );
+	pFile = FS_Open( name, "wb", false );
 	if( !pFile ) return;
 
 	for( i = size = 0; i < pSaveData->tableCount; i++ )
@@ -876,7 +876,7 @@ void SV_EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 
 	com.snprintf( name, sizeof( name ), "save/%s.HL3", level );
 
-	pFile = FS_OpenEx( name, "rb", true );
+	pFile = FS_Open( name, "rb", true );
 	if( !pFile ) return;
 
 	// patch count
@@ -908,7 +908,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 	com.snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
-	pFile = FS_Open( name, "wb" );
+	pFile = FS_Open( name, "wb", false );
 	if( !pFile ) return;
 
 	id = SAVEFILE_HEADER;
@@ -967,7 +967,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 	
 	com.snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
-	pFile = FS_OpenEx( name, "rb", true );
+	pFile = FS_Open( name, "rb", true );
 	if( !pFile ) return;
 
 	FS_Read( pFile, &tag, sizeof( int ));
@@ -1091,7 +1091,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 	version = SAVEGAME_VERSION;
 
 	// output to disk
-	pFile = FS_Open( va( "save/%s.HL1", sv.name ), "wb" );
+	pFile = FS_Open( va( "save/%s.HL1", sv.name ), "wb", false );
 	if( !pFile ) return NULL;
 
 	// write the header
@@ -1537,7 +1537,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	if( com.stricmp( pSaveName, "quick" ) || com.stricmp( pSaveName, "autosave" ))
 		SV_AgeSaveList( pSaveName, SAVE_AGED_COUNT );
 
-	pFile = FS_Open( name, "wb" );
+	pFile = FS_Open( name, "wb", false );
 
 	tag = SAVEGAME_HEADER;
 	FS_Write( pFile, &tag, sizeof( int ));
@@ -1648,7 +1648,7 @@ qboolean SV_LoadGame( const char *pName )
 	sv.background = false;
 
 	// silently ignore if missed
-	if( !FS_FileExistsEx( name, true ))
+	if( !FS_FileExists( name, true ))
 		return false;
 
 	SCR_BeginLoadingPlaque ();
@@ -1658,7 +1658,7 @@ qboolean SV_LoadGame( const char *pName )
 
 	if( !svs.initialized ) SV_InitGame ();
 
-	pFile = FS_OpenEx( name, "rb", true );
+	pFile = FS_Open( name, "rb", true );
 
 	if( pFile )
 	{
@@ -1729,7 +1729,7 @@ void SV_SaveGame( const char *pName )
 		for( n = 0; n < 999; n++ )
 		{
 			SV_SaveGetName( n, savename );
-			if( !FS_FileExists( va( "save/%s.sav", savename )))
+			if( !FS_FileExists( va( "save/%s.sav", savename ), false ))
 				break;
 		}
 		if( n == 1000 )
@@ -1741,9 +1741,9 @@ void SV_SaveGame( const char *pName )
 	else com.strncpy( savename, pName, sizeof( savename ));
 
 	// make sure what oldsave is removed
-	if( FS_FileExists( va( "save/%s.sav", savename )))
+	if( FS_FileExists( va( "save/%s.sav", savename ), false ))
 		FS_Delete( va( "save/%s.sav", savename ));
-	if( FS_FileExists( va( "save/%s.bmp", savename )))
+	if( FS_FileExists( va( "save/%s.bmp", savename ), false ))
 		FS_Delete( va( "save/%s.bmp", savename ));
 
 	// HACKHACK: unload previous image from memory
@@ -1776,7 +1776,7 @@ used for reload game after player death
 */
 const char *SV_GetLatestSave( void )
 {
-	search_t	*f = FS_SearchExt( "save/*.sav", true, true );	// lookup only in gamedir
+	search_t	*f = FS_Search( "save/*.sav", true, true );	// lookup only in gamedir
 	int	i, found = 0;
 	long	newest = 0, ft;
 	string	savename;	
@@ -1785,7 +1785,7 @@ const char *SV_GetLatestSave( void )
 
 	for( i = 0; i < f->numfilenames; i++ )
 	{
-		ft = FS_FileTime( f->filenames[i] );
+		ft = FS_FileTime( f->filenames[i], false );
 		
 		// found a match?
 		if( ft > 0 )
@@ -1813,7 +1813,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 	string	name, description;
 	file_t	*f;
 
-	f = FS_Open( savename, "rb" );
+	f = FS_Open( savename, "rb", false );
 	if( !f )
 	{
 		// just not exist - clear comment
@@ -1950,7 +1950,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 		const struct tm	*file_tm;
 		string		timestring;
 	
-		fileTime = FS_FileTime( savename );
+		fileTime = FS_FileTime( savename, false );
 		file_tm = localtime( &fileTime );
 
 		// split comment to sections

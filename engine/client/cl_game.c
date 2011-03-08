@@ -18,6 +18,7 @@
 #include "shake.h"
 #include "sprite.h"
 #include "gl_local.h"
+#include "library.h"
 
 #define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channel)
 #define TEXT_MSGNAME	"TextMessage%i"
@@ -157,7 +158,7 @@ void CL_CreatePlaylist( const char *filename )
 {
 	file_t	*f;
 
-	f = FS_Open( filename, "w" );
+	f = FS_Open( filename, "w", false );
 	if( !f ) return;
 
 	// make standard cdaudio playlist
@@ -205,13 +206,13 @@ void CL_InitCDAudio( const char *filename )
 	string	token;
 	int	c = 0;
 
-	if( !FS_FileExists( filename ))
+	if( !FS_FileExists( filename, false ))
 	{
 		// create a default playlist
 		CL_CreatePlaylist( filename );
 	}
 
-	afile = FS_LoadFile( filename, NULL );
+	afile = FS_LoadFile( filename, NULL, false );
 	if( !afile ) return;
 
 	pfile = afile;
@@ -664,7 +665,7 @@ static void CL_InitTitles( const char *filename )
 	clgame.titles = NULL;
 	clgame.numTitles = 0;
 
-	pMemFile = FS_LoadFile( filename, &fileSize );
+	pMemFile = FS_LoadFile( filename, &fileSize, false );
 	if( !pMemFile ) return;
 
 	CL_TextMessageParse( pMemFile, fileSize );
@@ -1318,7 +1319,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 
 	ASSERT( m_pSprite != NULL );
 
-	buf = FS_LoadFile( szSpriteName, &size );
+	buf = FS_LoadFile( szSpriteName, &size, false );
 	if( !buf ) return false;
 
 	com.strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
@@ -1548,7 +1549,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	if( !clgame.itemspath[0] )
 		FS_ExtractFilePath( psz, clgame.itemspath );
 
-	afile = FS_LoadFile( psz, NULL );
+	afile = FS_LoadFile( psz, NULL, false );
 	if( !afile ) return NULL;
 
 	pfile = afile;
@@ -2017,7 +2018,7 @@ static int pfnCheckParm( char *parm, char **ppnext )
 {
 	static char	str[64];
 
-	if( FS_GetParmFromCmdLine( parm, str ))
+	if( Sys_GetParmFromCmdLine( parm, str ))
 	{
 		// get the pointer on cmdline param
 		if( ppnext ) *ppnext = str;
@@ -3577,7 +3578,7 @@ void CL_UnloadProgs( void )
 
 	clgame.dllFuncs.pfnShutdown();
 
-	FS_FreeLibrary( clgame.hInstance );
+	Com_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
 	Mem_Set( &clgame, 0, sizeof( clgame ));
@@ -3605,7 +3606,7 @@ qboolean CL_LoadProgs( const char *name )
 	// during LoadLibrary
 	VGui_Startup ();
 	
-	clgame.hInstance = FS_LoadLibrary( name, false );
+	clgame.hInstance = Com_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
 
 	// clear exports
@@ -3615,10 +3616,10 @@ qboolean CL_LoadProgs( const char *name )
 	for( func = cdll_exports; func && func->name != NULL; func++ )
 	{
 		// functions are cleared before all the extensions are evaluated
-		if(!( *func->func = (void *)FS_GetProcAddress( clgame.hInstance, func->name )))
+		if(!( *func->func = (void *)Com_GetProcAddress( clgame.hInstance, func->name )))
 		{
           		MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
-			FS_FreeLibrary( clgame.hInstance );
+			Com_FreeLibrary( clgame.hInstance );
 			clgame.hInstance = NULL;
 			return false;
 		}
@@ -3632,13 +3633,13 @@ qboolean CL_LoadProgs( const char *name )
 	{
 		// functions are cleared before all the extensions are evaluated
 		// NOTE: new exports can be missed without stop the engine
-		if(!( *func->func = (void *)FS_GetProcAddress( clgame.hInstance, func->name )))
+		if(!( *func->func = (void *)Com_GetProcAddress( clgame.hInstance, func->name )))
           		MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
 	}
 
 	if( !clgame.dllFuncs.pfnInitialize( &gEngfuncs, CLDLL_INTERFACE_VERSION ))
 	{
-		FS_FreeLibrary( clgame.hInstance );
+		Com_FreeLibrary( clgame.hInstance );
 		MsgDev( D_NOTE, "CL_LoadProgs: can't init client API\n" );
 		clgame.hInstance = NULL;
 		return false;
@@ -3659,7 +3660,7 @@ qboolean CL_LoadProgs( const char *name )
 
 	if( !CL_InitStudioAPI( ))
 	{
-		FS_FreeLibrary( clgame.hInstance );
+		Com_FreeLibrary( clgame.hInstance );
 		MsgDev( D_NOTE, "CL_LoadProgs: can't init studio API\n" );
 		clgame.hInstance = NULL;
 		return false;

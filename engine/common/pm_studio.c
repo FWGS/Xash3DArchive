@@ -435,7 +435,7 @@ static mstudioanim_t *PM_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 		FS_ExtractFilePath( m_pSubModel->name, modelpath );
 		com.snprintf( filepath, sizeof( filepath ), "%s/%s%i%i.mdl", modelpath, modelname, pseqdesc->seqgroup / 10, pseqdesc->seqgroup % 10 );
 
-		buf = FS_LoadFile( filepath, &filesize );
+		buf = FS_LoadFile( filepath, &filesize, false );
 		if( !buf || !filesize ) Host_Error( "StudioGetAnim: can't load %s\n", filepath );
 		if( IDSEQGRPHEADER != *(uint *)buf )
 			Host_Error( "StudioGetAnim: %s is corrupted\n", filepath );

@@ -293,7 +293,7 @@ void SCR_UpdateScreen( void )
 static void SCR_LoadCreditsFont( void )
 {
 	// setup creditsfont
-	if( FS_FileExists( "gfx/creditsfont.fnt" ))
+	if( FS_FileExists( "gfx/creditsfont.fnt", false ))
 	{
 		byte	*buffer;
 		size_t	length;
@@ -301,7 +301,7 @@ static void SCR_LoadCreditsFont( void )
 		qfont_t	*src;
 	
 		// half-life font with variable chars witdh
-		buffer = FS_LoadFile( "gfx/creditsfont.fnt", &length );
+		buffer = FS_LoadFile( "gfx/creditsfont.fnt", &length, false );
 		R_GetTextureParms( &fontWidth, NULL, cls.creditsFont.hFontTexture );
 	
 		if( buffer && length >= sizeof( qfont_t ))
@@ -436,7 +436,7 @@ void SCR_Init( void )
 
 	if( host.state != HOST_RESTART )
           {
-		if( host.developer && FS_CheckParm( "-toconsole" ))
+		if( host.developer && Sys_CheckParm( "-toconsole" ))
 			Cbuf_AddText( "toggleconsole\n" );
 		else UI_SetActiveMenu( true );
 	}

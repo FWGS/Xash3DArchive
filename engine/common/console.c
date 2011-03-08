@@ -350,14 +350,14 @@ static void Con_LoadConchars( void )
 	R_GetTextureParms( &fontWidth, &fontHeight, con.chars.hFontTexture );
 		
 	// setup creditsfont
-	if( FS_FileExists( va( "fonts/font%i.fnt", con_fontsize->integer ) ))
+	if( FS_FileExists( va( "fonts/font%i.fnt", con_fontsize->integer ), false ))
 	{
 		byte	*buffer;
 		size_t	length;
 		qfont_t	*src;
 	
 		// half-life font with variable chars witdh
-		buffer = FS_LoadFile( va( "fonts/font%i", con_fontsize->integer ), &length );
+		buffer = FS_LoadFile( va( "fonts/font%i", con_fontsize->integer ), &length, false );
 
 		if( buffer && length >= sizeof( qfont_t ))
 		{
@@ -1586,13 +1586,13 @@ void Con_VidInit( void )
 	{
 		if( scr_width->integer < 640 )
 		{
-			if( FS_FileExists( "cached/conback400" ))
+			if( FS_FileExists( "cached/conback400", false ))
 				con.background = GL_LoadTexture( "cached/conback400", NULL, 0, TF_IMAGE );
 			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE );
 		}
 		else
 		{
-			if( FS_FileExists( "cached/conback640" ))
+			if( FS_FileExists( "cached/conback640", false ))
 				con.background = GL_LoadTexture( "cached/conback640", NULL, 0, TF_IMAGE );
 			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE );
 		}
@@ -1601,13 +1601,13 @@ void Con_VidInit( void )
 	{
 		if( scr_width->integer < 640 )
 		{
-			if( FS_FileExists( "cached/loading400" ))
+			if( FS_FileExists( "cached/loading400", false ))
 				con.background = GL_LoadTexture( "cached/loading400", NULL, 0, TF_IMAGE );
 			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE );
 		}
 		else
 		{
-			if( FS_FileExists( "cached/loading640" ))
+			if( FS_FileExists( "cached/loading640", false ))
 				con.background = GL_LoadTexture( "cached/loading640", NULL, 0, TF_IMAGE );
 			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE );
 		}

@@ -117,7 +117,7 @@ IN_StartupMouse
 void IN_StartupMouse( void )
 {
 	if( host.type == HOST_DEDICATED ) return;
-	if( FS_CheckParm( "-nomouse" )) return; 
+	if( Sys_CheckParm( "-nomouse" )) return; 
 
 	in_mouse_buttons = 8;
 	in_mouseparmsvalid = SystemParametersInfo( SPI_GETMOUSE, 0, in_originalmouseparms, 0 );

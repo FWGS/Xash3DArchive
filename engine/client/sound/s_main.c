@@ -873,14 +873,14 @@ void S_Music_f( void )
 
 		for( i = 0; i < 2; i++ )
 		{
-			if( FS_FileExists( va( "media/%s.%s", intro, ext[i] ))
-				&& FS_FileExists( va( "media/%s.%s", main, ext[i] )))
+			if( FS_FileExists( va( "media/%s.%s", intro, ext[i] ), false )
+				&& FS_FileExists( va( "media/%s.%s", main, ext[i] ), false ))
 			{
 				// combined track with introduction and main loop theme
 				S_StartBackgroundTrack( intro, main );
 				break;
 			}
-			else if( FS_FileExists( va( "media/%s.%s", track, ext[i] )))
+			else if( FS_FileExists( va( "media/%s.%s", track, ext[i] ), false ))
 			{
 				// single looped theme
 				S_StartBackgroundTrack( track, NULL );
@@ -929,7 +929,7 @@ S_Init
 */
 qboolean S_Init( void )
 {
-	if( FS_CheckParm( "-nosound" ))
+	if( Sys_CheckParm( "-nosound" ))
 	{
 		MsgDev( D_INFO, "Audio: Disabled\n" );
 		return false;

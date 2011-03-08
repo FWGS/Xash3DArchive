@@ -743,7 +743,7 @@ void VID_StartupGamma( void )
 	// share this extension so engine can grab them
 	GL_SetExtension( GL_HARDWARE_GAMMA_CONTROL, glConfig.deviceSupportsGamma );
 
-	savedGamma = FS_LoadFile( "gamma.dat", &gamma_size );
+	savedGamma = FS_LoadFile( "gamma.dat", &gamma_size, false );
 
 	if( !savedGamma || gamma_size != sizeof( glState.stateRamp ))
 	{
@@ -954,7 +954,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	wc.lpszMenuName  = 0;
 
 	// find the icon file in the filesystem
-	if( FS_FileExistsEx( "game.ico", true ))
+	if( FS_FileExists( "game.ico", true ))
 	{
 		char	localPath[MAX_PATH];
 

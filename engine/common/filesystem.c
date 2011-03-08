@@ -3,10 +3,16 @@
 //		  filesystem.c - game filesystem based on DP fs
 //=======================================================================
 
-#include "launch.h"
+#include <fcntl.h>
+#include <direct.h>
+#include <sys/stat.h>
+#include <io.h>
+#include <time.h>
+#include "common.h"
 #include "wadfile.h"
 #include "filesystem.h"
 #include "library.h"
+#include "mathlib.h"
 
 #define FILE_BUFF_SIZE		2048
 
@@ -77,13 +83,11 @@ typedef struct searchpath_s
 byte		*fs_mempool;
 searchpath_t	*fs_searchpaths = NULL;
 searchpath_t	fs_directpath; // static direct path
-char		sys_rootdir[MAX_SYSPATH];// system root
 char		fs_rootdir[MAX_SYSPATH]; // engine root directory
 char		fs_basedir[MAX_SYSPATH]; // base directory of game
 char		fs_gamedir[MAX_SYSPATH]; // game current directory
 char		gs_basedir[MAX_SYSPATH]; // initial dir before loading gameinfo.txt (used for compilers too)
 qboolean		fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
-sysinfo_t		SI;
 
 static void FS_InitMemory( void );
 const char *FS_FileExtension( const char *in );
@@ -863,25 +867,18 @@ FS_Rescan
 */
 void FS_Rescan( void )
 {
-	MsgDev( D_NOTE, "FS_Rescan( %s )\n", SI.GameInfo->title );
+	MsgDev( D_NOTE, "FS_Rescan( %s )\n", GI->title );
 
 	FS_ClearSearchPath();
 
-	if( com.stricmp( SI.GameInfo->basedir, SI.GameInfo->gamedir ))
-		FS_AddGameHierarchy( SI.GameInfo->basedir, 0 );
-	FS_AddGameHierarchy( SI.GameInfo->gamedir, FS_GAMEDIR_PATH );
+	if( com.stricmp( GI->basedir, GI->gamedir ))
+		FS_AddGameHierarchy( GI->basedir, 0 );
+	FS_AddGameHierarchy( GI->gamedir, FS_GAMEDIR_PATH );
 }
 
 void FS_Rescan_f( void )
 {
 	FS_Rescan();
-}
-
-void FS_UpdateSysInfo( void )
-{
-	com.strcpy( SI.username, Sys_GetCurrentUser());
-	SI.developer = Sys.developer;
-	SI.version = XASH_VERSION;
 }
 
 static qboolean FS_ParseVector( char **pfile, float *v, size_t size )
@@ -1042,7 +1039,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 
 	com.strncpy( defGI.title, "New Game", sizeof( defGI.title ));
 	com.strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
-	com.strncpy( defGI.basedir, Sys.ModuleName, sizeof( defGI.basedir ));
+	com.strncpy( defGI.basedir, SI->ModuleName, sizeof( defGI.basedir ));
 	com.strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
 	com.strncpy( defGI.mp_entity, "info_player_deathmatch", sizeof( defGI.mp_entity ));
 	com.strncpy( defGI.dll_path, "cl_dlls", sizeof( defGI.dll_path ));
@@ -1080,7 +1077,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	
 	com.strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	com.strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
-	com.strncpy( GameInfo->basedir, Sys.ModuleName, sizeof( GameInfo->basedir ));
+	com.strncpy( GameInfo->basedir, SI->ModuleName, sizeof( GameInfo->basedir ));
 	com.strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
 	com.strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
 	com.strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
@@ -1381,16 +1378,16 @@ void FS_LoadGameInfo( const char *rootfolder )
 	FS_ClearSearchPath();
 
 	// validate gamedir
-	for( i = 0; i < SI.numgames; i++ )
+	for( i = 0; i < SI->numgames; i++ )
 	{
-		if( !com.stricmp( SI.games[i]->gamefolder, gs_basedir ))
+		if( !com.stricmp( SI->games[i]->gamefolder, gs_basedir ))
 			break;
 	}
 
-	if( i == SI.numgames )
+	if( i == SI->numgames )
 		Sys_Break( "Couldn't find game directory '%s'\n", gs_basedir );
 
-	SI.GameInfo = SI.games[i];
+	SI->GameInfo = SI->games[i];
 	FS_Rescan(); // create new filesystem
 }
 
@@ -1414,29 +1411,26 @@ void FS_Init( void )
 	Cmd_AddCommand( "fs_clearpaths", FS_ClearPaths_f, "clear filesystem search pathes" );
 
 	// ignore commandlineoption "-game" for other stuff
-	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
+	if( host.type == HOST_NORMAL || host.type == HOST_DEDICATED )
 	{
 		stringlistinit( &dirs );
 		listdirectory( &dirs, "./" );
 		stringlistsort( &dirs );
-		SI.numgames = 0;
+		SI->numgames = 0;
 	
-		if( !Sys_GetParmFromCmdLine( "-game", gs_basedir, sizeof( gs_basedir )))
-		{
-			if( Sys_GetModuleName( gs_basedir, MAX_SYSPATH ));
-			else com.strcpy( gs_basedir, Sys.ModuleName ); // default dir
-		}
+		if( !Sys_GetParmFromCmdLine( "-game", gs_basedir ))
+			com.strcpy( gs_basedir, SI->ModuleName ); // default dir
 
 		if( FS_CheckNastyPath( gs_basedir, true ))
 		{
 			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", gs_basedir );		
-			com.strcpy( gs_basedir, Sys.ModuleName ); // default dir
+			com.strcpy( gs_basedir, SI->ModuleName ); // default dir
 		}
 
 		// validate directories
 		for( i = 0; i < dirs.numstrings; i++ )
 		{
-			if( !com.stricmp( Sys.ModuleName, dirs.strings[i] ))
+			if( !com.stricmp( SI->ModuleName, dirs.strings[i] ))
 				hasDefaultDir = true;
 
 			if( !com.stricmp( gs_basedir, dirs.strings[i] ))
@@ -1446,7 +1440,7 @@ void FS_Init( void )
 		if( i == dirs.numstrings )
 		{ 
 			MsgDev( D_INFO, "FS_Init: game directory \"%s\" not exist\n", gs_basedir );		
-			if( hasDefaultDir ) com.strncpy( gs_basedir, Sys.ModuleName, sizeof( gs_basedir )); // default dir
+			if( hasDefaultDir ) com.strncpy( gs_basedir, SI->ModuleName, sizeof( gs_basedir )); // default dir
 		}
 
 		// build list of game directories here
@@ -1458,17 +1452,13 @@ void FS_Init( void )
 			if( com.stricmp( ext, "" ) || (!com.stricmp( dirs.strings[i], ".." ) && !fs_ext_path ))
 				continue;
 
-			if( !SI.games[SI.numgames] )
-				SI.games[SI.numgames] = (gameinfo_t *)Mem_Alloc( fs_mempool, sizeof( gameinfo_t ));
-			if( FS_ParseGameInfo( dirs.strings[i], SI.games[SI.numgames] ))
-				SI.numgames++; // added
+			if( !SI->games[SI->numgames] )
+				SI->games[SI->numgames] = (gameinfo_t *)Mem_Alloc( fs_mempool, sizeof( gameinfo_t ));
+			if( FS_ParseGameInfo( dirs.strings[i], SI->games[SI->numgames] ))
+				SI->numgames++; // added
 		}
 		stringlistfreecontents( &dirs );
 	}	
-
-	FS_UpdateSysInfo();
-
-	MsgDev( D_NOTE, "FS_Root: %s\n", sys_rootdir );
 	MsgDev( D_NOTE, "FS_Init: done\n" );
 }
 
@@ -1487,12 +1477,12 @@ void FS_Shutdown( void )
 	int	i;
 
 	// release gamedirs
-	for( i = 0; i < SI.numgames; i++ )
-		if( SI.games[i] ) Mem_Free( SI.games[i] );
+	for( i = 0; i < SI->numgames; i++ )
+		if( SI->games[i] ) Mem_Free( SI->games[i] );
 
-	Mem_Set( &SI, 0, sizeof( SI ));
+	Mem_Set( SI, 0, sizeof( sysinfo_t ));
 
-	FS_ClearSearchPath();		// release all wad files too
+	FS_ClearSearchPath(); // release all wad files too
 	Mem_FreePool( &fs_mempool );
 }
 
@@ -1819,7 +1809,7 @@ Open a file. The syntax is the same as fopen
 */
 file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly )
 {
-	if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
+	if( host.type == HOST_NORMAL || host.type == HOST_DEDICATED )
           {
 		// some stupid mappers used leading '/' or '\' in path to models or sounds
 		if( filepath[0] == '/' || filepath[0] == '\\' ) filepath++;
@@ -2238,7 +2228,7 @@ file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedi
 
 void FS_FreeFile( void *buffer )
 {
-	if( buffer && _is_allocated( fs_mempool, buffer ))
+	if( buffer && Mem_IsAllocated( fs_mempool, buffer ))
 		Mem_Free( buffer ); 
 }
 
@@ -2427,7 +2417,7 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	}
 
 	// all done, create dll_user_t struct
-	hInst = Mem_Alloc( Sys.basepool, sizeof( dll_user_t ));	
+	hInst = Mem_Alloc( host.mempool, sizeof( dll_user_t ));	
 
 	// save dllname for debug purposes
 	com.strncpy( hInst->dllName, dllname, sizeof( hInst->dllName ));

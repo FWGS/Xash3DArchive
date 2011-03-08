@@ -176,7 +176,8 @@ void CL_ScreenShot_f( void )
 	for( i = 0; i <= 9999; i++ )
 	{
 		CL_ScreenshotGetName( i, checkname );
-		if( !FS_FileExists( checkname )) break;
+		if( !FS_FileExists( checkname, false ))
+			break;
 	}
 
 	Con_ClearNotify();
@@ -223,7 +224,7 @@ void CL_LevelShot_f( void )
 
 	// check for exist
 	com.sprintf( cls.shotname, "levelshots/%s.bmp", clgame.mapname );
-	if( !FS_FileExistsEx( cls.shotname, true ))
+	if( !FS_FileExists( cls.shotname, true ))
 		cls.scrshot_action = scrshot_plaque;	// build new frame for levelshot
 	else cls.scrshot_action = scrshot_inactive;	// disable - not needs
 }

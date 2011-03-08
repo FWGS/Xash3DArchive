@@ -75,7 +75,7 @@ void CL_WriteDemoHeader( const char *name )
 	delta_info_t	*dt;
 
 	MsgDev( D_INFO, "recording to %s.\n", name );
-	cls.demofile = FS_Open( name, "wb" );
+	cls.demofile = FS_Open( name, "wb", false );
 	if( !cls.demofile )
 	{
 		MsgDev(D_ERROR, "CL_Record: unable to create %s\n", name );
@@ -396,7 +396,7 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 	
 	if( !comment ) return false;
 
-	demfile = FS_Open( demoname, "rb" );
+	demfile = FS_Open( demoname, "rb", false );
 	if( !demfile )
 	{
 		com.strncpy( comment, "", MAX_STRING );
@@ -536,7 +536,7 @@ void CL_Record_f( void )
 		for( n = 0; n < 100; n++ )
 		{
 			CL_DemoGetName( n, demoname );
-			if( !FS_FileExists( va( "demos/%s.dem", demoname )))
+			if( !FS_FileExists( va( "demos/%s.dem", demoname ), false ))
 				break;
 		}
 		if( n == 100 )
@@ -552,8 +552,8 @@ void CL_Record_f( void )
 	com.sprintf( demoshot, "demos/%s.bmp", demoname );
 
 	// make sure what old demo is removed
-	if( FS_FileExists( demopath )) FS_Delete( demopath );
-	if( FS_FileExists( demoshot )) FS_Delete( demoshot );
+	if( FS_FileExists( demopath, false )) FS_Delete( demopath );
+	if( FS_FileExists( demoshot, false )) FS_Delete( demoshot );
 
 	// write demoshot for preview
 	Cbuf_AddText( va( "demoshot \"%s\"\n", demoname ));
@@ -585,14 +585,14 @@ void CL_PlayDemo_f( void )
 	Host_ShutdownServer();
 
 	com.snprintf( filename, sizeof( filename ), "demos/%s.dem", Cmd_Argv( 1 ));
-	if( !FS_FileExistsEx( filename, true ))
+	if( !FS_FileExists( filename, true ))
 	{
 		MsgDev( D_ERROR, "couldn't open %s\n", filename );
 		cls.demonum = -1; // stop demo loop
 		return;
 	}
 
-	cls.demofile = FS_OpenEx( filename, "rb", true );
+	cls.demofile = FS_Open( filename, "rb", true );
 	com.strncpy( cls.demoname, Cmd_Argv( 1 ), sizeof( cls.demoname ));
 	com.strncpy( menu.globals->demoname, Cmd_Argv( 1 ), sizeof( menu.globals->demoname ));
 

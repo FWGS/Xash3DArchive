@@ -8,6 +8,7 @@
 #include "mathlib.h"
 #include "const.h"
 #include "client.h"
+#include "library.h"
 
 /*
 =============
@@ -23,7 +24,7 @@ byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
 		return NULL;
 	}
 
-	return FS_LoadFile( filename, pLength );
+	return FS_LoadFile( filename, pLength, false );
 }
 
 /*
@@ -146,7 +147,7 @@ int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBu
 	// filename examples:
 	// media\sierra.avi - D:\Xash3D\valve\media\sierra.avi
 	// models\barney.mdl - D:\Xash3D\bshift\models\barney.mdl
-	if(( path = FS_GetDiskPath( fileName )) != NULL )
+	if(( path = FS_GetDiskPath( fileName, false )) != NULL )
 	{
 		GetCurrentDirectory( MAX_SYSPATH, rootdir );
 		com.sprintf( result, "%s/%s", rootdir, path );		
@@ -246,7 +247,7 @@ byte* pfnLoadFile( const char *filename, int *pLength )
 		return NULL;
 	}
 
-	return FS_LoadFile( filename, pLength );
+	return FS_LoadFile( filename, pLength, false );
 }
 
 void pfnFreeFile( void *buffer )
@@ -262,7 +263,7 @@ pfnFileExists
 */
 int pfnFileExists( const char *filename, int gamedironly )
 {
-	return FS_FileExistsEx( filename, gamedironly );
+	return FS_FileExists( filename, gamedironly );
 }
 
 /*
@@ -458,7 +459,7 @@ pfnLoadLibrary
 */
 void *pfnLoadLibrary( const char *name )
 {
-	return FS_LoadLibrary( name, false );
+	return Com_LoadLibrary( name, false );
 }
 
 /*
@@ -469,7 +470,7 @@ pfnGetProcAddress
 */
 void *pfnGetProcAddress( void *hInstance, const char *name )
 {
-	return FS_GetProcAddress( hInstance, name );
+	return Com_GetProcAddress( hInstance, name );
 }
 
 /*
@@ -480,7 +481,7 @@ pfnFreeLibrary
 */
 void pfnFreeLibrary( void *hInstance )
 {
-	FS_FreeLibrary( hInstance );
+	Com_FreeLibrary( hInstance );
 }
 
 /*

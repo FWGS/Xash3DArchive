@@ -6,6 +6,7 @@
 #include "launch.h"
 
 typedef signed __int64	int64;
+sysinfo_t			SI;
 
 // Processor Information:
 typedef struct cpuinfo_s

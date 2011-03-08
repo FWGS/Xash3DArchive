@@ -5,7 +5,6 @@
 //=======================================================================
 
 #include "launch.h"
-#include "library.h"
 
 #define MAX_QUED_EVENTS		256
 #define MASK_QUED_EVENTS		(MAX_QUED_EVENTS - 1)
@@ -44,6 +43,8 @@ void Sys_GetStdAPI( void )
 	com.clipboard = Sys_GetClipboardData;
 	com.queevent = Sys_QueEvent;			// add event to queue
 	com.getevent = Sys_GetEvent;			// get system events
+	com.Com_CheckParm = Sys_CheckParm;		// get parm from cmdline
+	com.Com_GetParm = Sys_GetParmFromCmdLine;	// get argument for specified parm
 
 	// memlib.c
 	com.memcpy = _crt_mem_copy;			// first time using
@@ -57,32 +58,6 @@ void Sys_GetStdAPI( void )
 	com.freepool = _mem_freepool;
 	com.clearpool = _mem_emptypool;
 	com.memcheck = _mem_check;
-
-	com.Com_LoadGameInfo = FS_LoadGameInfo;		// gate game info from script file
-	com.Com_AddGameHierarchy = FS_AddGameHierarchy;	// add base directory in search list
-	com.Com_AddGameDirectory = FS_AddGameDirectory;	// add game directory in search list
-	com.Com_AllowDirectPaths = FS_AllowDirectPaths;	// allow direct paths e.g. C:\windows
-	com.Com_CheckParm = FS_CheckParm;		// get parm from cmdline
-	com.Com_GetParm = FS_GetParmFromCmdLine;	// get filename without path & ext
-	com.Com_FileBase = FS_FileBase;		// get filename without path & ext
-	com.Com_FileExists = FS_FileExists;		// return true if file exist
-	com.Com_FileSize = FS_FileSize;		// same as Com_FileExists but return filesize
-	com.Com_FileTime = FS_FileTime;		// same as Com_FileExists but return filetime
-	com.Com_FileExtension = FS_FileExtension;	// return extension of file
-	com.Com_RemovePath = FS_FileWithoutPath;	// return file without path
-	com.Com_DiskPath = FS_GetDiskPath;		// build fullpath for disk files
-	com.Com_StripExtension = FS_StripExtension;	// remove extension if present
-	com.Com_StripFilePath = FS_ExtractFilePath;	// get file path without filename.ext
-	com.Com_DefaultExtension = FS_DefaultExtension;	// append extension if not present
-	com.Com_ClearSearchPath = FS_ClearSearchPath;	// delete all search pathes
-
-	com.LoadLibrary = Com_LoadLibrary;
-	com.GetProcAddress = Com_GetProcAddress;
-	com.NameForFunction = Com_NameForFunction;
-	com.FunctionFromName = Com_FunctionFromName;
-	com.FreeLibrary = Com_FreeLibrary;
-
-	com.Com_Search = FS_Search;			// returned list of founded files
 
 	// console variables
 	com.Cvar_Get = Cvar_Get;
@@ -109,26 +84,6 @@ void Sys_GetStdAPI( void )
 	com.Cmd_DelCommand = Cmd_RemoveCommand;
 	com.Cmd_TokenizeString = Cmd_TokenizeString;
 
-	// real filesystem
-	com.fopen = FS_Open;		// same as fopen
-	com.fclose = FS_Close;		// same as fclose
-	com.fwrite = FS_Write;		// same as fwrite
-	com.fread = FS_Read;		// same as fread, can see trough pakfile
-	com.fprint = FS_Print;		// printed message into file		
-	com.fprintf = FS_Printf;		// same as fprintf
-	com.fgetc = FS_Getc;		// same as fgetc
-	com.fgets = FS_Gets;		// like a fgets, but can return EOF
-	com.fseek = FS_Seek;		// fseek, can seek in packfiles too
-	com.ftell = FS_Tell;		// like a ftell
-	com.feof = FS_Eof;			// like a feof
-	com.fremove = FS_Delete;		// like remove
-	com.frename = FS_Rename;		// like rename
-	com.flength = FS_FileLength;		// return length for current file
-
-	// filesystem simply user interface
-	com.Com_LoadFile = FS_LoadFile;		// load file into heap
-	com.Com_FreeFile = FS_FreeFile;		// safe free file
-	com.Com_WriteFile = FS_WriteFile;		// write file into disk
 	com.Com_LoadLibrary = Sys_LoadLibrary;		// load library 
 	com.Com_FreeLibrary = Sys_FreeLibrary;		// free library
 	com.Com_GetProcAddress = Sys_GetProcAddress;	// gpa
@@ -190,31 +145,26 @@ void Sys_LookupInstance( void )
 	char	szTemp[4096];
 	qboolean	dedicated = false;
 
-	// NOTE: we want set "real" work directory
-	// defined in environment variables, but in some reasons
-	// we need make some additional checks before set current dir
-	GetCurrentDirectory( MAX_SYSPATH, sys_rootdir );
-
 	Sys.app_name = HOST_OFFLINE;
 	// we can specified custom name, from Sys_NewInstance
 	if( GetModuleFileName( NULL, szTemp, MAX_SYSPATH ) && Sys.app_state != SYS_RESTART )
-		FS_FileBase( szTemp, Sys.ModuleName );
+		Com_FileBase( szTemp, SI.ModuleName );
 
 	// determine host type
-	if( Sys.ModuleName[0] == '#' || Sys.ModuleName[0] == '©' )
+	if( SI.ModuleName[0] == '#' || SI.ModuleName[0] == '©' )
 	{
-		if( Sys.ModuleName[0] == '#' ) dedicated = true;
-		if( Sys.ModuleName[0] == '©' ) com.strcpy( Sys.progname, "credits" );
+		if( SI.ModuleName[0] == '#' ) dedicated = true;
+		if( SI.ModuleName[0] == '©' ) com.strcpy( Sys.progname, "credits" );
 
 		// cutoff hidden symbols
-		com.strncpy( szTemp, Sys.ModuleName + 1, MAX_SYSPATH );
-		com.strncpy( Sys.ModuleName, szTemp, MAX_SYSPATH );			
+		com.strncpy( szTemp, SI.ModuleName + 1, MAX_SYSPATH );
+		com.strncpy( SI.ModuleName, szTemp, MAX_SYSPATH );			
 	}
 
 	if( Sys.progname[0] == '$' )
 	{
 		// custom path came from executable, otherwise can't be modified 
-		com.strncpy( Sys.ModuleName, Sys.progname + 1, MAX_SYSPATH );
+		com.strncpy( SI.ModuleName, Sys.progname + 1, MAX_SYSPATH );
 		com.strncpy( Sys.progname, "normal", MAX_SYSPATH ); // set as "normal"		
 	}
 
@@ -304,14 +254,14 @@ void Sys_CreateInstance( void )
 	}
 
 	// init our host now!
-	Sys.Init( fs_argc, fs_argv );
+	Sys.Init( Sys.argc, Sys.argv );
 
 	// post initializations
 	switch( Sys.app_name )
 	{
 	case HOST_NORMAL:
 		Con_ShowConsole( false );				// hide console
-		Cbuf_AddText( va( "exec %s.rc\n", Sys.ModuleName ));	// execute startup config and cmdline
+		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));	// execute startup config and cmdline
 	case HOST_DEDICATED:
 		Cbuf_Execute();
 		// if stuffcmds wasn't run, then init.rc is probably missing, use default
@@ -332,10 +282,10 @@ Sys_ParseCommandLine
 */
 void Sys_ParseCommandLine( LPSTR lpCmdLine )
 {
-	fs_argc = 1;
-	fs_argv[0] = "exe";
+	Sys.argc = 1;
+	Sys.argv[0] = "exe";
 
-	while( *lpCmdLine && ( fs_argc < MAX_NUM_ARGVS ))
+	while( *lpCmdLine && ( Sys.argc < MAX_NUM_ARGVS ))
 	{
 		while( *lpCmdLine && *lpCmdLine <= ' ' )
 			lpCmdLine++;
@@ -345,16 +295,16 @@ void Sys_ParseCommandLine( LPSTR lpCmdLine )
 		{
 			// quoted string
 			lpCmdLine++;
-			fs_argv[fs_argc] = lpCmdLine;
-			fs_argc++;
+			Sys.argv[Sys.argc] = lpCmdLine;
+			Sys.argc++;
 			while( *lpCmdLine && ( *lpCmdLine != '\"' ))
 				lpCmdLine++;
 		}
 		else
 		{
 			// unquoted word
-			fs_argv[fs_argc] = lpCmdLine;
-			fs_argc++;
+			Sys.argv[Sys.argc] = lpCmdLine;
+			Sys.argc++;
 			while( *lpCmdLine && *lpCmdLine > ' ')
 				lpCmdLine++;
 		}
@@ -379,22 +329,22 @@ void Sys_MergeCommandLine( LPSTR lpCmdLine )
 	const char	*blank = "censored";
 	int		i;
 	
-	for( i = 0; i < fs_argc; i++ )
+	for( i = 0; i < Sys.argc; i++ )
 	{
 		// we wan't return to first game
-		if( !com.stricmp( "-game", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "-game", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// probably it's timewaster, because engine rejected second change
-		if( !com.stricmp( "+game", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+game", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// you sure what is map exists in new game?
-		if( !com.stricmp( "+map", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+map", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// just stupid action
-		if( !com.stricmp( "+load", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+load", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// changelevel beetwen games? wow it's great idea!
-		if( !com.stricmp( "+changelevel", fs_argv[i] )) fs_argv[i] = (char *)blank;
+		if( !com.stricmp( "+changelevel", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 
 		// second call
-		if( Sys.app_name == HOST_DEDICATED && !com.strnicmp( "+menu_", fs_argv[i], 6 ))
-			fs_argv[i] = (char *)blank;
+		if( Sys.app_name == HOST_DEDICATED && !com.strnicmp( "+menu_", Sys.argv[i], 6 ))
+			Sys.argv[i] = (char *)blank;
 	}
 }
 
@@ -590,6 +540,46 @@ char *Sys_GetCurrentUser( void )
 
 /*
 ================
+Sys_CheckParm
+
+Returns the position (1 to argc-1) in the program's argument list
+where the given parameter apears, or 0 if not present
+================
+*/
+int Sys_CheckParm( const char *parm )
+{
+	int	i;
+
+	for( i = 1; i < Sys.argc; i++ )
+	{
+		// NEXTSTEP sometimes clears appkit vars.
+		if( !Sys.argv[i] ) continue;
+		if( !com.stricmp( parm, Sys.argv[i] )) return i;
+	}
+	return 0;
+}
+
+/*
+================
+Sys_GetParmFromCmdLine
+
+Returns the argument for specified parm
+================
+*/
+qboolean Sys_GetParmFromCmdLine( char *parm, char *out, size_t size )
+{
+	int	argc = Sys_CheckParm( parm );
+
+	if( !argc ) return false;
+	if( !out ) return false;	
+	if( !Sys.argv[argc + 1] ) return false;
+
+	com.strncpy( out, Sys.argv[argc+1], size );
+	return true;
+}
+
+/*
+================
 Sys_Sleep
 
 freeze application for some time
@@ -770,11 +760,11 @@ void Sys_Init( void )
 	else Sys_MergeCommandLine( GetCommandLine());
 
 	// parse and copy args into local array
-	if( FS_CheckParm( "-log" )) Sys.log_active = true;
-	if( FS_CheckParm( "-console" )) Sys.developer = 1;
-	if( FS_CheckParm( "-dev" ))
+	if( Sys_CheckParm( "-log" )) Sys.log_active = true;
+	if( Sys_CheckParm( "-console" )) Sys.developer = 1;
+	if( Sys_CheckParm( "-dev" ))
 	{
-		if( FS_GetParmFromCmdLine( "-dev", dev_level, sizeof( dev_level )))
+		if( Sys_GetParmFromCmdLine( "-dev", dev_level, sizeof( dev_level )))
 		{
 			if( com.is_digit( dev_level ))
 				Sys.developer = abs( com.atoi( dev_level ));
@@ -812,10 +802,12 @@ void Sys_Init( void )
 	Sys_InitCPU();
 	Cmd_Init();
 	Cvar_Init();
-	FS_Init();
 
 	com.snprintf( dev_level, sizeof( dev_level ), "%i", Sys.developer );
 	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
+	com.strcpy( SI.username, Sys_GetCurrentUser( ));
+	SI.developer = Sys.developer;
+	SI.version = XASH_VERSION;
 
 	Sys_CreateInstance();
 }
@@ -827,7 +819,6 @@ void Sys_Shutdown( void )
 	Sys_FreeLibrary( Sys.linked_dll );
 	Sys.CPrint = NullPrint;
 
-	FS_Shutdown();
 	Memory_Shutdown();
 	Con_DestroyConsole();
 
@@ -1075,15 +1066,6 @@ sys_event_t Sys_GetEvent( void )
 	return ev;
 }
 
-qboolean Sys_GetModuleName( char *buffer, size_t length )
-{
-	if( Sys.ModuleName[0] == '\0' )
-		return false;
-
-	com.strncpy( buffer, Sys.ModuleName, length + 1 );
-	return true;
-}
-
 /*
 ================
 Sys_NewInstance
@@ -1094,11 +1076,16 @@ e.g. for change game or fallback to dedicated mode
 */
 void Sys_NewInstance( const char *name, const char *fmsg )
 {
+	string	tmp;
+
 	// save parms
-	com.strncpy( Sys.ModuleName, name, sizeof( Sys.ModuleName ));
+	com.strncpy( tmp, name, sizeof( tmp ));
 	com.strncpy( Sys.fmessage, fmsg, sizeof( Sys.fmessage ));
 	Sys.app_state = SYS_RESTART;	// set right state
 	Sys_Shutdown();		// shutdown current instance
+
+	// restore parms here
+	com.strncpy( SI.ModuleName, tmp, sizeof( SI.ModuleName ));
 
 	// NOTE: we never return to old instance,
 	// because Sys_Exit call exit(0); and terminate program

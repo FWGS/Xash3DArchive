@@ -200,7 +200,7 @@ qboolean CRC32_File( dword *crcvalue, const char *filename )
 	char	buffer[1024];
 	int	num_bytes;
 
-	f = FS_Open( filename, "rb" );
+	f = FS_Open( filename, "rb", false );
 	if( !f ) return false;
 
 	ASSERT( crcvalue != NULL );
@@ -237,7 +237,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 		return true;
 	}
 
-	f = FS_Open( filename, "rb" );
+	f = FS_Open( filename, "rb", false );
 	if( !f ) return false;
 
 	num_bytes = FS_Read( f, &header, sizeof( header ));

@@ -62,7 +62,7 @@ int SV_CreateCustomization( customization_t *pListHead, resource_t *pResource, i
 		}
 		else
 		{
-			pRes->pBuffer = FS_LoadFile( pResource->szFileName, NULL );
+			pRes->pBuffer = FS_LoadFile( pResource->szFileName, NULL, false );
 
 			if(!( pRes->resource.ucFlags & RES_CUSTOM ) || pRes->resource.type != t_decal )
 			{

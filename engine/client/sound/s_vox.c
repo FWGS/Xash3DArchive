@@ -591,7 +591,7 @@ void VOX_ReadSentenceFile( const char *psentenceFileName )
 	int	fileSize;
 
 	// load file
-	pFileData = (char *)FS_LoadFile( psentenceFileName, &fileSize );
+	pFileData = (char *)FS_LoadFile( psentenceFileName, &fileSize, false );
 
 	if( !pFileData )
 	{

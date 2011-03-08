@@ -190,6 +190,10 @@ SOURCE=.\common\engfuncs.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\filesystem.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_backend.c
 # End Source File
 # Begin Source File
@@ -295,6 +299,10 @@ SOURCE=.\common\input.c
 # Begin Source File
 
 SOURCE=.\common\keys.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\library.c
 # End Source File
 # Begin Source File
 
@@ -482,11 +490,19 @@ SOURCE=.\common\common.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\filesystem.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_local.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\common\imagelib\imagelib.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\common\library.h
 # End Source File
 # Begin Source File
 

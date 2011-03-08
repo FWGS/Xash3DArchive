@@ -47,13 +47,16 @@ typedef struct system_s
 
 	int			developer;
 
+	// command line parms
+	int			argc;
+	char			*argv[MAX_NUM_ARGVS];
+
 	// log stuff
 	qboolean			log_active;
 	char			log_path[MAX_SYSPATH];
 	FILE			*logfile;
 	
 	qboolean			stuffcmdsrun;
-	char			ModuleName[4096];		// exe.filename
 
 	HANDLE			hMutex;
 	HINSTANCE			hInstance;
@@ -123,7 +126,7 @@ void Con_DisableInput( void );
 //
 void Sys_InitCPU( void );
 gameinfo_t Sys_GameInfo( void );
-void Sys_ParseCommandLine (LPSTR lpCmdLine);
+void Sys_ParseCommandLine( LPSTR lpCmdLine );
 void Sys_LookupInstance( void );
 void Sys_NewInstance( const char *name, const char *fmsg );
 double Sys_DoubleTime( void );
@@ -134,6 +137,8 @@ void Sys_Sleep( int msec );
 void Sys_Init( void );
 void Sys_Exit( void );
 void Sys_Abort( void );
+int Sys_CheckParm( const char *parm );
+qboolean Sys_GetParmFromCmdLine( char *parm, char *out, size_t size );
 qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll );
 void* Sys_GetProcAddress ( dll_info_t *dll, const char* name );
 void Sys_ShellExecute( const char *path, const char *parms, qboolean exit );
@@ -193,12 +198,6 @@ char *va(const char *format, ...);
 #define copystring2( pool, str ) com_stralloc( pool, str, __FILE__, __LINE__)
 
 //
-// math.c
-//
-#define VectorSet(v, x, y, z) ((v)[0]=(x),(v)[1]=(y),(v)[2]=(z))
-#define VectorIsNull( v ) ((v)[0] == 0.0f && (v)[1] == 0.0f && (v)[2] == 0.0f)
-
-//
 // memlib.c
 //
 void Memory_Init( void );
@@ -236,68 +235,6 @@ qboolean _is_allocated( byte *poolptr, void *data );
 #define Mem_Check() _mem_check(__FILE__, __LINE__)
 #define Mem_Pretify( x ) com_pretifymem(x, 3)
 #define Malloc( size ) Mem_Alloc( Sys.basepool, size )
-
-//
-// filesystem.c
-//
-void FS_Init( void );
-void FS_Path( void );
-void FS_Shutdown( void );
-void FS_InitEditor( void );
-void FS_InitRootDir( char *path );
-void FS_ClearSearchPath( void );
-void FS_AllowDirectPaths( qboolean enable );
-void FS_AddGameDirectory( const char *dir, int flags );
-void FS_AddGameHierarchy( const char *dir, int flags );
-int FS_CheckParm( const char *parm );
-void FS_LoadGameInfo( const char *rootfolder );
-void FS_FileBase( const char *in, char *out );
-const char *FS_FileExtension( const char *in );
-void FS_DefaultExtension( char *path, const char *extension );
-qboolean FS_GetParmFromCmdLine( char *parm, char *out, size_t size );
-void FS_ExtractFilePath( const char* const path, char* dest );
-const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
-const char *FS_FileWithoutPath( const char *in );
-extern char sys_rootdir[];
-extern char *fs_argv[];
-extern int fs_argc;
-
-// wadsystem.c
-wfile_t *W_Open( const char *filename, const char *mode );
-byte *W_LoadLump( wfile_t *wad, const char *lumpname, size_t *lumpsizeptr, const char type );
-void W_Close( wfile_t *wad );
-
-// simply files managment interface
-file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
-byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
-qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len );
-void FS_FreeFile( void *buffer );
-
-search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
-
-// files managment (like fopen, fread etc)
-file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
-fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize );
-fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize );
-int FS_VPrintf( file_t *file, const char *format, va_list ap );
-int FS_Seek( file_t *file, fs_offset_t offset, int whence );
-int FS_Gets( file_t *file, byte *string, size_t bufsize );
-int FS_Printf( file_t *file, const char *format, ... );
-fs_offset_t FS_FileSize( const char *filename, qboolean gamedironly );
-fs_offset_t FS_FileTime( const char *filename, qboolean gamedironly );
-int FS_Print( file_t *file, const char *msg );
-qboolean FS_Rename( const char *oldname, const char *newname );
-qboolean FS_FileExists( const char *filename, qboolean gamedironly );
-qboolean FS_Delete( const char *path );
-int FS_UnGetc( file_t *file, byte c );
-void FS_StripExtension( char *path );
-fs_offset_t FS_Tell( file_t *file );
-qboolean FS_Eof( file_t *file );
-void FS_Purge( file_t *file );
-int FS_Close( file_t *file );
-int FS_Getc( file_t *file );
-qboolean FS_Eof( file_t *file );
-fs_offset_t FS_FileLength( file_t *f );
 
 //
 // cvar.c
@@ -356,93 +293,6 @@ void Cmd_ForwardToServer( void );
 //
 // parselib.c
 //
-/*
-========================================================================
-
-TEXT PARSER
-
-========================================================================
-*/
-typedef enum
-{
-	TT_EMPTY = 0,		// empty (invalid or whitespace)
-	TT_GENERIC,		// generic string separated by spaces
-	TT_STRING,		// string (enclosed with double quotes)
-	TT_LITERAL,		// literal (enclosed with single quotes)
-	TT_NUMBER,		// number
-	TT_NAME,			// name
-	TT_PUNCTUATION		// punctuation
-} tokenType_t;
-
-typedef enum
-{
-	SC_ALLOW_NEWLINES	 	= BIT(0),	// same as 'true'
-	SC_ALLOW_STRINGCONCAT	= BIT(1),
-	SC_ALLOW_ESCAPECHARS 	= BIT(2),
-	SC_ALLOW_PATHNAMES		= BIT(3),
-	SC_ALLOW_PATHNAMES2		= BIT(4),	// allow pathnames with quake symbols (!, %, $, +, -, { )
-	SC_PARSE_GENERIC		= BIT(5),
-	SC_PRINT_ERRORS		= BIT(6),
-	SC_PRINT_WARNINGS	 	= BIT(7),
-	SC_PARSE_LINE		= BIT(8),	// read line, ignore whitespaces
-	SC_COMMENT_SEMICOLON	= BIT(9),	// using semicolon as mark or begin comment (q2 oldstyle)
-} scFlags_t;
-
-typedef struct
-{
-	tokenType_t	type;
-	uint		subType;
-	int		line;
-	char		string[MAX_SYSPATH];
-	int		length;
-	double		floatValue;
-	uint		integerValue;
-} token_t;
-
-typedef struct
-{
-	const char	*name;
-	uint		type;
-} punctuation_t;
-
-typedef struct script_s
-{
-	// shared part of script
-	char		*buffer;
-	char		*text;
-	size_t		size;
-	char		TXcommand;	// (quark .map comment)
-
-	// private part of script
-	string		name;
-	int		line;
-	qboolean		allocated;
-	punctuation_t	*punctuations;
-	qboolean		tokenAvailable;
-	token_t		token;
-} script_t;
-
-qboolean PS_ReadToken( script_t *script, scFlags_t flags, token_t *token );
-void PS_SaveToken( script_t *script, token_t *token );
-qboolean PS_GetString( script_t *script, int flags, char *value, size_t size );
-qboolean PS_GetDouble( script_t *script, int flags, double *value );
-qboolean PS_GetFloat( script_t *script, int flags, float *value );
-qboolean PS_GetUnsigned( script_t *script, int flags, uint *value );
-qboolean PS_GetInteger( script_t *script, int flags, int *value );
-
-void PS_SkipWhiteSpace( script_t *script );
-void PS_SkipRestOfLine( script_t *script );
-void PS_SkipBracedSection( script_t *script, int depth );
-
-void PS_ScriptError( script_t *script, scFlags_t flags, const char *fmt, ... );
-void PS_ScriptWarning( script_t *script, scFlags_t flags, const char *fmt, ... );
-
-qboolean PS_MatchToken( token_t *token, const char *keyword );
-void PS_SetPunctuationsTable( script_t *script, punctuation_t *punctuationsTable );
-void PS_ResetScript( script_t *script );
-qboolean PS_EndOfScript( script_t *script );
-
-script_t	*PS_LoadScript( const char *filename, const char *buf, size_t size, qboolean gamedironly );
-void	PS_FreeScript( script_t *script );
+void Com_FileBase( const char *in, char *out );
 
 #endif//LAUNCHER_H

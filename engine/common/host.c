@@ -147,6 +147,38 @@ void Host_ChangeGame_f( void )
 	else Sys_NewInstance( Cmd_Argv( 1 ), "Host_ChangeGame\n" );
 }
 
+/*
+===============
+Host_Exec_f
+===============
+*/
+void Host_Exec_f( void )
+{
+	string	cfgpath;
+	size_t	len;
+	char	*f; 
+
+	if( Cmd_Argc() != 2 )
+	{
+		Msg( "Usage: exec <filename>\n" );
+		return;
+	}
+
+	com.strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
+	FS_DefaultExtension( cfgpath, ".cfg" ); // append as default
+
+	f = FS_LoadFile( cfgpath, &len, false );
+	if( !f )
+	{
+		MsgDev( D_NOTE, "couldn't exec %s\n", Cmd_Argv( 1 ));
+		return;
+	}
+
+	MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
+	Cbuf_InsertText( f );
+	Mem_Free( f );
+}
+
 void Host_Minimize_f( void )
 {
 	if( host.hWnd ) ShowWindow( host.hWnd, SW_MINIMIZE );
@@ -209,7 +241,7 @@ void Host_InitDecals( void )
 	num_decals = 0;
 
 	// lookup all decals in decals.wad
-	t = FS_Search( "decals.wad/*.*", true );
+	t = FS_Search( "decals.wad/*.*", true, false );
 
 	for( i = 0; t && i < t->numfilenames; i++ )
 	{
@@ -515,6 +547,9 @@ void Host_InitCommon( const int argc, const char **argv )
 	// get current hInstance
 	host.hInst = GetModuleHandle( NULL );
 
+	Cmd_AddCommand( "exec", Host_Exec_f, "execute a script file" );
+
+	FS_Init();
 	Image_Init();
 	Sound_Init();
 
@@ -535,6 +570,7 @@ void Host_FreeCommon( void )
 	Sound_Shutdown();
 	Netchan_Shutdown();
 	Mem_FreePool( &host.mempool );
+	FS_Shutdown();
 }
 
 /*

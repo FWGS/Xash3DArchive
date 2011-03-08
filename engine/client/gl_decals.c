@@ -854,7 +854,8 @@ void DrawSurfaceDecals( msurface_t *fa )
 	decal_t		*p;
 	cl_entity_t	*e;
 
-	if( !fa->pdecals ) return;
+//	if( !fa->pdecals )
+		return;
 
 	e = RI.currententity;
 	ASSERT( e != NULL );

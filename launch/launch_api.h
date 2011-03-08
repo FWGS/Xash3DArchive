@@ -192,7 +192,8 @@ typedef struct sysinfo_s
 	char		instance;		// global engine instance
 
 	int		developer;	// developer level ( 1 - 7 )
-
+	string		ModuleName;	// exe.filename
+	
 	gameinfo_t	*GameInfo;	// current GameInfo
 	gameinfo_t	*games[MAX_MODS];	// environment games (founded at each engine start)
 	int		numgames;
@@ -255,6 +256,8 @@ typedef struct stdilib_api_s
 	char *(*clipboard)( void );				// get clipboard data
 	void (*queevent)( ev_type_t type, int value, int value2, int length, void *ptr );
 	sys_event_t (*getevent)( void );			// get system events
+	int  (*Com_CheckParm)( const char *parm );		// check parm in cmdline  
+	qboolean (*Com_GetParm)( char *parm, char *out, size_t size );// get parm from cmdline
 
 	// memlib.c funcs
 	void (*memcpy)(void *dest, const void *src, size_t size, const char *file, int line);
@@ -268,32 +271,6 @@ typedef struct stdilib_api_s
 	void (*clearpool)(byte *poolptr, const char *file, int line);
 	void (*memcheck)(const char *file, int line);		// check memory pools for consistensy
 	qboolean (*is_allocated)( byte *poolptr, void *data );	// return true is memory is allocated
-
-	// common functions
-	void (*Com_LoadGameInfo)( const char *rootfolder );		// initialize gamedir
-	void (*Com_AddGameHierarchy)( const char *dir, int flags );		// add base directory in search list
-	void (*Com_AddGameDirectory)( const char *dir, int flags );		// add game directory in search list
-	void (*Com_AllowDirectPaths)( qboolean enable );			// allow direct paths e.g. C:\windows
-	int  (*Com_CheckParm)( const char *parm );			// check parm in cmdline  
-	qboolean (*Com_GetParm)( char *parm, char *out, size_t size );	// get parm from cmdline
-	void (*Com_FileBase)(const char *in, char *out);			// get filename without path & ext
-	qboolean (*Com_FileExists)( const char *filename, qboolean gamedir );	// return true if file exist
-	long (*Com_FileSize)( const char *filename, qboolean gamedir );	// same as Com_FileExists but return filesize
-	long (*Com_FileTime)( const char *filename, qboolean gamedir );	// same as Com_FileExists but return filetime
-	const char *(*Com_FileExtension)( const char *in );		// return extension of file
-	const char *(*Com_RemovePath)( const char *in );			// return filename without path
-	const char *(*Com_DiskPath)( const char *in, qboolean gamedir );	// return disk path for unpacked files
-	void (*Com_StripExtension)(char *path);				// remove extension if present
-	void (*Com_StripFilePath)(const char* const src, char* dst);	// get file path without filename.ext
-	void (*Com_DefaultExtension)(char *path, const char *ext );		// append extension if not present
-	void (*Com_ClearSearchPath)( void );				// delete all search pathes
-
-	// user dlls interface
-	void *(*LoadLibrary)( const char *dllname, int build_ordinals_table );
-	void *(*GetProcAddress)( void *hInstance, const char *name );
-	const char *(*NameForFunction)( void *hInstance, dword function );
-	dword (*FunctionFromName)( void *hInstance, const char *pName );
-	void (*FreeLibrary)( void *hInstance );
 
 	search_t *(*Com_Search)( const char *pattern, int casecmp, int gamedironly ); // returned list of found files
 
@@ -322,26 +299,6 @@ typedef struct stdilib_api_s
 	void (*Cmd_TokenizeString)( const char *text_in );
 	void (*Cmd_DelCommand)( const char *name );
 
-	// real filesystem
-	file_t *(*fopen)( const char* path, const char* mode, qboolean gamedir );	// same as fopen
-	int (*fclose)(file_t* file);						// same as fclose
-	long (*fwrite)(file_t* file, const void* data, size_t datasize);		// same as fwrite
-	long (*fread)(file_t* file, void* buffer, size_t buffersize);		// same as fread, can see through pakfile
-	int (*fprint)(file_t* file, const char *msg);				// printed message into file		
-	int (*fprintf)(file_t* file, const char* format, ...);			// same as fprintf
-	int (*fgetc)( file_t* file );						// same as fgetc
-	int (*fgets)(file_t* file, byte *string, size_t bufsize );			// like a fgets, but can return EOF
-	int (*fseek)(file_t* file, fs_offset_t offset, int whence);			// fseek, can seek in packfiles too
-	long (*ftell)( file_t *file );					// like a ftell
-	qboolean (*feof)( file_t *file );					// like a feof
-	qboolean (*fremove)( const char *path );				// remove specified file
-	qboolean (*frename)( const char *oldname, const char *newname );		// rename specified file
-	fs_offset_t (*flength)( file_t *f );					// return length for current file
-
-	// filesystem simple user interface
-	byte *(*Com_LoadFile)(const char *path, long *filesize, qboolean gamedir );	// load file into heap
-	void (*Com_FreeFile)( void *buffer );				// free heap file
-	qboolean (*Com_WriteFile)(const char *path, const void *data, long len );	// write file into disk
 	qboolean (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
 	qboolean (*Com_FreeLibrary)( dll_info_t *dll );			// free library
 	void*(*Com_GetProcAddress)( dll_info_t *dll, const char* name );	// gpa
@@ -454,51 +411,9 @@ struct convar_s
 filesystem manager
 ===========================================
 */
-#define FS_AddGameHierarchy		com.Com_AddGameHierarchy
-#define FS_AddGameDirectory		com.Com_AddGameDirectory
-#define FS_LoadGameInfo		com.Com_LoadGameInfo
-#define FS_InitRootDir		com.Com_InitRootDir
-#define FS_AllowDirectPaths		com.Com_AllowDirectPaths
-#define FS_LoadFile( file, size )	com.Com_LoadFile( file, size, false )
-#define FS_LoadFileEx		com.Com_LoadFile
-#define FS_FreeFile			com.Com_FreeFile
-#define FS_Search( str, casecmp )	com.Com_Search( str, casecmp, false )
-#define FS_SearchExt		com.Com_Search
-#define FS_WriteFile		com.Com_WriteFile
-#define FS_Open( path, mode )		com.fopen( path, mode, false )
-#define FS_OpenEx			com.fopen
-#define FS_Read( file, buffer, size )	com.fread( file, buffer, size )
-#define FS_Write( file, buffer, size )	com.fwrite( file, buffer, size )
-#define FS_StripExtension( path )	com.Com_StripExtension( path )
-#define FS_ExtractFilePath( src, dest)	com.Com_StripFilePath( src, dest )
-#define FS_DefaultExtension		com.Com_DefaultExtension
-#define FS_FileExtension( ext )	com.Com_FileExtension( ext )
-#define FS_FileExists( file )		com.Com_FileExists( file, false )
-#define FS_FileSize( file )		com.Com_FileSize( file, false )
-#define FS_FileTime( file )		com.Com_FileTime( file, false )
-#define FS_GetDiskPath( file )	com.Com_DiskPath( file, false )
-#define FS_FileExistsEx		com.Com_FileExists
-#define FS_FileSizeEx		com.Com_FileSize
-#define FS_FileTimeEx		com.Com_FileTime
-#define FS_Close( file )		com.fclose( file )
-#define FS_FileBase( x, y )		com.Com_FileBase( x, y )
-#define FS_RemovePath( x )		com.Com_RemovePath( x )
-#define FS_Printf			(*com.fprintf)
-#define FS_Print			(*com.fprint)
-#define FS_Seek			(*com.fseek)
-#define FS_Tell			(*com.ftell)
-#define FS_Eof			(*com.feof)
-#define FS_Getc			(*com.fgetc)
-#define FS_Gets			(*com.fgets)
-#define FS_Delete			(*com.fremove)
-#define FS_Rename			(*com.frename)
-#define FS_FileLength		(*com.flength)
 #define FS_Gamedir()		com.SysInfo->GameInfo->gamedir
 #define FS_Title()			com.SysInfo->GameInfo->title
 #define g_Instance()		com.SysInfo->instance
-#define FS_ClearSearchPath		com.Com_ClearSearchPath
-#define FS_CheckParm		com.Com_CheckParm
-#define FS_GetParmFromCmdLine( a, b )	com.Com_GetParm( a, b, sizeof( b ))
 
 /*
 ===========================================
@@ -561,12 +476,8 @@ misc utils
 #define Sys_Quit			com.exit
 #define Sys_Break			com.abort
 #define Sys_DoubleTime		com.Com_DoubleTime
-
-#define FS_LoadLibrary		com.LoadLibrary
-#define FS_GetProcAddress		com.GetProcAddress
-#define FS_NameForFunction		com.NameForFunction
-#define FS_FunctionFromName		com.FunctionFromName
-#define FS_FreeLibrary		com.FreeLibrary
+#define Sys_CheckParm		com.Com_CheckParm
+#define Sys_GetParmFromCmdLine( a, b )	com.Com_GetParm( a, b, sizeof( b ))
 
 /*
 ===========================================

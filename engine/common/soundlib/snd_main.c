@@ -80,7 +80,7 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 		if( anyformat || !com.stricmp( ext, format->ext ))
 		{
 			com.sprintf( path, format->formatstring, loadname, "", format->ext );
-			f = FS_LoadFile( path, &filesize );
+			f = FS_LoadFile( path, &filesize, false );
 			if( f && filesize > 0 )
 			{
 				if( format->loadfunc( path, f, filesize ))

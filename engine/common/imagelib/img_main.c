@@ -237,7 +237,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 		{
 			com.sprintf( path, format->formatstring, loadname, "", format->ext );
 			image.hint = format->hint;
-			f = FS_LoadFile( path, &filesize );
+			f = FS_LoadFile( path, &filesize, false );
 			if( f && filesize > 0 )
 			{
 				if( format->loadfunc( path, f, filesize ))
@@ -264,7 +264,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 					com.sprintf( path, format->formatstring, loadname, cmap->type[i].suf, format->ext );
 					image.hint = cmap->type[i].hint; // side hint
 
-					f = FS_LoadFile( path, &filesize );
+					f = FS_LoadFile( path, &filesize, false );
 					if( f && filesize > 0 )
 					{
 						// this name will be used only for tell user about problems 

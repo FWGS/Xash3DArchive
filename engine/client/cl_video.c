@@ -74,7 +74,7 @@ void SCR_CreateStartupVids( void )
 {
 	file_t	*f;
 
-	f = FS_Open( "media/StartupVids.txt", "w" );
+	f = FS_Open( "media/StartupVids.txt", "w", false );
 	if( !f ) return;
 
 	// make standard video playlist: sierra, valve
@@ -96,10 +96,10 @@ void SCR_CheckStartupVids( void )
 		return;
 	}
 
-	if( !FS_FileExists( "media/StartupVids.txt" ))
+	if( !FS_FileExists( "media/StartupVids.txt", false ))
 		SCR_CreateStartupVids();
 
-	afile = FS_LoadFile( "media/StartupVids.txt", NULL );
+	afile = FS_LoadFile( "media/StartupVids.txt", NULL, false );
 	if( !afile ) return; // something bad happens
 
 	pfile = afile;
@@ -204,9 +204,9 @@ qboolean SCR_PlayCinematic( const char *arg )
 	string		path;
 	const char	*fullpath;
 
-	fullpath = FS_GetDiskPath( arg );
+	fullpath = FS_GetDiskPath( arg, false );
 
-	if( FS_FileExists( arg ) && !fullpath )
+	if( FS_FileExists( arg, false ) && !fullpath )
 	{
 		MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
 		return false;

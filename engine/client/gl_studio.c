@@ -609,7 +609,7 @@ mstudioanim_t *R_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc
 		FS_ExtractFilePath( m_pSubModel->name, modelpath );
 		com.snprintf( filepath, sizeof( filepath ), "%s/%s%i%i.mdl", modelpath, modelname, pseqdesc->seqgroup / 10, pseqdesc->seqgroup % 10 );
 
-		buf = FS_LoadFile( filepath, &filesize );
+		buf = FS_LoadFile( filepath, &filesize, false );
 		if( !buf || !filesize ) Host_Error( "StudioGetAnim: can't load %s\n", filepath );
 		if( IDSEQGRPHEADER != *(uint *)buf )
 			Host_Error( "StudioGetAnim: %s is corrupted\n", filepath );
@@ -2531,7 +2531,7 @@ void R_DrawStudioModel( cl_entity_t *e )
 		m_fDoInterp = (e->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
-	pglPushAttrib( GL_ALL_ATTRIB_BITS );
+	pglPushAttrib( GL_TEXTURE_BIT );
 
 	// select the properly method
 	if( e->player )
@@ -2581,7 +2581,7 @@ void R_DrawViewModel( void )
 
 	RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
 
-	pglPushAttrib( GL_ALL_ATTRIB_BITS );
+	pglPushAttrib( GL_TEXTURE_BIT );
 
 	// hack the depth range to prevent view model from poking into walls
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
@@ -2702,7 +2702,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 		void		*buffer2 = NULL;
 		size_t		size1, size2;
 
-		buffer2 = FS_LoadFile( R_StudioTexName( mod ), NULL );
+		buffer2 = FS_LoadFile( R_StudioTexName( mod ), NULL, false );
 		thdr = R_StudioLoadHeader( mod, buffer2 );
 
 		if( !thdr )

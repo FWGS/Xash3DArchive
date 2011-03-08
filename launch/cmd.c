@@ -208,31 +208,31 @@ void Cmd_StuffCmds_f( void )
 	Sys.stuffcmdsrun = true;
 	build[0] = 0;
 
-	for( i = 0; i < fs_argc; i++ )
+	for( i = 0; i < Sys.argc; i++ )
 	{
-		if( fs_argv[i] && fs_argv[i][0] == '+' && ( fs_argv[i][1] < '0' || fs_argv[i][1] > '9' ) && l + com.strlen( fs_argv[i] ) - 1 <= sizeof( build ) - 1 )
+		if( Sys.argv[i] && Sys.argv[i][0] == '+' && ( Sys.argv[i][1] < '0' || Sys.argv[i][1] > '9' ) && l + com.strlen( Sys.argv[i] ) - 1 <= sizeof( build ) - 1 )
 		{
 			j = 1;
 
-			while( fs_argv[i][j] )
-				build[l++] = fs_argv[i][j++];
+			while( Sys.argv[i][j] )
+				build[l++] = Sys.argv[i][j++];
 
-			for( i++; i < fs_argc; i++ )
+			for( i++; i < Sys.argc; i++ )
 			{
-				if( !fs_argv[i] ) continue;
-				if(( fs_argv[i][0] == '+' || fs_argv[i][0] == '-' ) && ( fs_argv[i][1] < '0' || fs_argv[i][1] > '9' ))
+				if( !Sys.argv[i] ) continue;
+				if(( Sys.argv[i][0] == '+' || Sys.argv[i][0] == '-' ) && ( Sys.argv[i][1] < '0' || Sys.argv[i][1] > '9' ))
 					break;
-				if( l + com.strlen( fs_argv[i]) + 4 > sizeof( build ) - 1 )
+				if( l + com.strlen( Sys.argv[i]) + 4 > sizeof( build ) - 1 )
 					break;
 				build[l++] = ' ';
 	
-				if( com.strchr( fs_argv[i], ' ' ))
+				if( com.strchr( Sys.argv[i], ' ' ))
 					build[l++] = '\"';
 	
-				for( j = 0; fs_argv[i][j]; j++ )
-					build[l++] = fs_argv[i][j];
+				for( j = 0; Sys.argv[i][j]; j++ )
+					build[l++] = Sys.argv[i][j];
 	
-				if( com.strchr( fs_argv[i], ' ' ))
+				if( com.strchr( Sys.argv[i], ' ' ))
 					build[l++] = '\"';
 			}
 			build[l++] = '\n';
@@ -260,38 +260,6 @@ void Cmd_Wait_f( void )
 	if( Cmd_Argc() == 1 ) cmd_wait = 1;
 	else cmd_wait = com.atoi( Cmd_Argv( 1 ));
 	
-}
-
-/*
-===============
-Cmd_Exec_f
-===============
-*/
-void Cmd_Exec_f( void )
-{
-	string	cfgpath;
-	size_t	len;
-	char	*f; 
-
-	if( Cmd_Argc() != 2 )
-	{
-		Msg( "Usage: exec <filename>\n" );
-		return;
-	}
-
-	com.strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
-	FS_DefaultExtension( cfgpath, ".cfg" ); // append as default
-
-	f = FS_LoadFile( cfgpath, &len, false );
-	if( !f )
-	{
-		MsgDev( D_NOTE, "couldn't exec %s\n", Cmd_Argv( 1 ));
-		return;
-	}
-
-	MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
-	Cbuf_InsertText( f );
-	Mem_Free( f );
 }
 
 /*
@@ -697,11 +665,10 @@ void Cmd_Init( void )
 	cmd_functions = NULL;
 
 	// register our commands
-	Cmd_AddCommand ("exec", Cmd_Exec_f, "execute a script file" );
 	Cmd_AddCommand ("echo", Cmd_Echo_f, "print a message to the console (useful in scripts)" );
 	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for some rendered frames" );
 	Cmd_AddCommand ("cmdlist", Cmd_List_f, "display all console commands beginning with the specified prefix" );
-	Cmd_AddCommand ("stuffcmds", Cmd_StuffCmds_f, va( "execute commandline parameters (must be present in %s.rc script)", Sys.ModuleName ));
+	Cmd_AddCommand ("stuffcmds", Cmd_StuffCmds_f, va( "execute commandline parameters (must be present in %s.rc script)", SI.ModuleName ));
 
 	Memory_Init_Commands(); // memlib stats
 }
