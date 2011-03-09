@@ -1297,24 +1297,6 @@ void _mem_printlist( size_t minallocationsize )
 	}
 }
 
-void MemList_f( void )
-{
-	switch( Cmd_Argc( ))
-	{
-	case 1:
-		_mem_printlist( 1<<30 );
-		_mem_printstats();
-		break;
-	case 2:
-		_mem_printlist( com.atoi( Cmd_Argv( 1 )) * 1024 );
-		_mem_printstats();
-		break;
-	default:
-		Msg( "Usage: memlist <all>\n" );
-		break;
-	}
-}
-
 /*
 ========================
 Memory_Init
@@ -1324,18 +1306,9 @@ void Memory_Init( void )
 {
 	poolchain = NULL; // init mem chain
 	Sys.basepool = Mem_AllocPool( "Main pool" );
-	Sys.stringpool = Mem_AllocPool( "New string" );
-	Sys.scriptpool = Mem_AllocPool( "Parse Lib" );
 }
 
 void Memory_Shutdown( void )
 {
 	Mem_FreePool( &Sys.basepool );
-	Mem_FreePool( &Sys.stringpool );
-	Mem_FreePool( &Sys.scriptpool );
-}
-
-void Memory_Init_Commands( void )
-{
-	Cmd_AddCommand( "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
 }

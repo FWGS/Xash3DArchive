@@ -44,14 +44,14 @@ void S_SoundList_f( void )
 
 			if( sc->loopStart >= 0 ) Msg( "L" );
 			else Msg( " " );
-			Msg( " (%2db) %s : sound/%s\n", sc->width * 8, memprint( sc->size ), sfx->name );
+			Msg( " (%2db) %s : sound/%s\n", sc->width * 8, Q_memprint( sc->size ), sfx->name );
 			totalSfx++;
 		}
 	}
 
 	Msg( "-------------------------------------------\n" );
 	Msg( "%i total sounds\n", totalSfx );
-	Msg( "%s total memory\n", memprint( totalSize ));
+	Msg( "%s total memory\n", Q_memprint( totalSize ));
 	Msg( "\n" );
 }
 
@@ -145,7 +145,7 @@ sfx_t *S_FindName( const char *name, int *pfInCache )
 	if( !name || !name[0] || !dma.initialized )
 		return NULL;
 
-	if( com.strlen( name ) >= MAX_STRING )
+	if( Q_strlen( name ) >= MAX_STRING )
 	{
 		MsgDev( D_ERROR, "S_FindSound: sound name too long: %s", name );
 		return NULL;
@@ -155,7 +155,7 @@ sfx_t *S_FindName( const char *name, int *pfInCache )
 	hash = Com_HashKey( name, MAX_SFX_HASH );
 	for( sfx = s_sfxHashList[hash]; sfx; sfx = sfx->hashNext )
 	{
-		if( !com.strcmp( sfx->name, name ))
+		if( !Q_strcmp( sfx->name, name ))
 		{
 			if( pfInCache )
 			{
@@ -186,7 +186,7 @@ sfx_t *S_FindName( const char *name, int *pfInCache )
 	sfx = &s_knownSfx[i];
 	Mem_Set( sfx, 0, sizeof( *sfx ));
 	if( pfInCache ) *pfInCache = false;
-	com.strncpy( sfx->name, name, MAX_STRING );
+	Q_strncpy( sfx->name, name, MAX_STRING );
 	sfx->touchFrame = s_registration_sequence;
 	sfx->hashValue = Com_HashKey( sfx->name, MAX_SFX_HASH );
 
@@ -285,7 +285,7 @@ sound_t S_RegisterSound( const char *name )
 
 	if( S_TestSoundChar( name, '!' ))
 	{
-		com.strncpy( s_sentenceImmediateName, name, sizeof( s_sentenceImmediateName ));
+		Q_strncpy( s_sentenceImmediateName, name, sizeof( s_sentenceImmediateName ));
 		return SENTENCE_INDEX;
 	}
 

@@ -22,18 +22,15 @@
 #define XASH_VERSION		0.75f	// current version will be shared across gameinfo struct
 
 #define MAX_NUM_ARGVS		128
-#define MAX_CMD_TOKENS		80
-#define LOG_QUEUE_SIZE		131072	// 128 kb intermediate buffer
 
 // just for last chanse to view message (debug only)
-#define MSGBOX(x)			MessageBox(NULL, x, "Xash Error", MB_OK|MB_SETFOREGROUND|MB_ICONSTOP );
+#define MSGBOX( x )			MessageBox(NULL, x, "Xash Error", MB_OK|MB_SETFOREGROUND|MB_ICONSTOP );
 
 enum state_e
 {
 	SYS_SHUTDOWN = 0,
 	SYS_RESTART,
 	SYS_CRASH,
-	SYS_ABORT,
 	SYS_ERROR,
 	SYS_FRAME,
 };
@@ -55,8 +52,6 @@ typedef struct system_s
 	qboolean			log_active;
 	char			log_path[MAX_SYSPATH];
 	FILE			*logfile;
-	
-	qboolean			stuffcmdsrun;
 
 	HANDLE			hMutex;
 	HINSTANCE			hInstance;
@@ -69,42 +64,16 @@ typedef struct system_s
 	qboolean			con_showcredits;
 	qboolean			con_silentmode;
 	byte			*basepool;
-	byte			*scriptpool;
-	byte			*stringpool;
 	qboolean			shutdown_issued;
 	qboolean			error;
 
-	// simply profiling
-	double			start, end;
-
-	void (*Con_Print)( const char *msg );
 	void ( *Init ) ( int argc, char **argv );
 	void ( *Main ) ( void ); // host frame
 	void ( *Free ) ( void ); // close host
 	void (*CPrint)( const char *msg ); // console print
-	void (*CmdFwd)( void ); // forward to server
 	void (*CmdAuto)( char *complete_string );
+	void (*Crashed)( void );
 } system_t;
-
-// NOTE: if this is changed, it must be changed in cvardef.h too
-typedef struct convar_s
-{
-	// this part shared with convar_t
-	char		*name;
-	char		*string;
-	int		flags;
-	float		value;
-	struct convar_s	*next;
-
-	// this part unique for convar_t
-	int		integer;		// atoi( string )
-	qboolean		modified;		// set each time the cvar is changed
-
-	// this part are private to launch.dll
-	char		*reset_string;	// cvar_restart will reset to this value
-	char		*latched_string;	// for CVAR_LATCH vars
-	char		*description;	// variable descrition info
-};
 
 extern system_t Sys;
 extern sysinfo_t SI;
@@ -114,7 +83,7 @@ extern stdlib_api_t	com;
 // console.c
 //
 void Con_ShowConsole( qboolean show );
-void Con_PrintW(const char *pMsg);
+void Con_Print( const char *pMsg );
 void Con_CreateConsole( void );
 void Con_DestroyConsole( void );
 char *Sys_Input( void );
@@ -132,11 +101,9 @@ void Sys_NewInstance( const char *name, const char *fmsg );
 double Sys_DoubleTime( void );
 char *Sys_GetClipboardData( void );
 char *Sys_GetCurrentUser( void );
-qboolean Sys_GetModuleName( char *buffer, size_t length );
 void Sys_Sleep( int msec );
 void Sys_Init( void );
 void Sys_Exit( void );
-void Sys_Abort( void );
 int Sys_CheckParm( const char *parm );
 qboolean Sys_GetParmFromCmdLine( char *parm, char *out, size_t size );
 qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll );
@@ -149,7 +116,7 @@ void Sys_CloseLog( void );
 void Sys_Error(const char *error, ...);
 void Sys_Break(const char *error, ...);
 void Sys_PrintLog( const char *pMsg );
-void Sys_Print(const char *pMsg);
+void Sys_Print( const char *pMsg );
 void Sys_Msg( const char *pMsg, ... );
 void Sys_MsgDev( int level, const char *pMsg, ... );
 sys_event_t Sys_GetEvent( void );
@@ -202,7 +169,6 @@ char *va(const char *format, ...);
 //
 void Memory_Init( void );
 void Memory_Shutdown( void );
-void Memory_Init_Commands( void );
 void _mem_move(byte *poolptr, void **dest, void *src, size_t size, const char *filename, int fileline);
 void *_mem_realloc(byte *poolptr, void *memptr, size_t size, const char *filename, int fileline);
 void _com_mem_copy(void *dest, const void *src, size_t size, const char *filename, int fileline);
@@ -220,7 +186,9 @@ void _mem_freepool(byte **poolptr, const char *filename, int fileline);
 void _mem_emptypool(byte *poolptr, const char *filename, int fileline);
 void _mem_free(void *data, const char *filename, int fileline);
 void _mem_check(const char *filename, int fileline);
-qboolean _is_allocated( byte *poolptr, void *data );
+qboolean _is_allocated( byte *poolptr, void *data);
+void _mem_printlist(size_t minallocationsize);
+void _mem_printstats(void);
 
 #define Mem_Alloc(pool, size) _mem_alloc(pool, size, __FILE__, __LINE__)
 #define Mem_Realloc(pool, ptr, size) _mem_realloc(pool, ptr, size, __FILE__, __LINE__)
@@ -235,60 +203,6 @@ qboolean _is_allocated( byte *poolptr, void *data );
 #define Mem_Check() _mem_check(__FILE__, __LINE__)
 #define Mem_Pretify( x ) com_pretifymem(x, 3)
 #define Malloc( size ) Mem_Alloc( Sys.basepool, size )
-
-//
-// cvar.c
-//
-convar_t *Cvar_FindVar( const char *var_name );
-void Cvar_RegisterVariable( cvar_t *variable );
-convar_t *Cvar_Get( const char *var_name, const char *value, int flags, const char *description );
-void Cvar_Set( const char *var_name, const char *value );
-convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force );
-void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback );
-void Cvar_FullSet( const char *var_name, const char *value, int flags );
-void Cvar_SetLatched( const char *var_name, const char *value );
-void Cvar_SetFloat( const char *var_name, float value );
-float Cvar_VariableValue( const char *var_name );
-int Cvar_VariableInteger( const char *var_name );
-char *Cvar_VariableString( const char *var_name );
-void Cvar_DirectSet( cvar_t *var, const char *value );
-qboolean Cvar_Command( void );
-void Cvar_WriteVariables( file_t *f );
-void Cvar_Init( void );
-char *Cvar_Userinfo( void );
-char *Cvar_Serverinfo( void );
-extern qboolean userinfo_modified;
-char *Info_ValueForKey( char *s, char *key );
-void Info_RemoveKey( char *s, char *key );
-void Info_SetValueForKey( char *s, char *key, char *value );
-qboolean Info_Validate( char *s );
-void Info_Print( char *s );
-extern convar_t *cvar_vars;
-
-//
-// cmd.c
-//
-void Cbuf_Init( void );
-void Cbuf_AddText( const char *text );
-void Cbuf_InsertText( const char *text );
-void Cbuf_ExecuteText( int exec_when, const char *text );
-void Cbuf_Execute (void);
-uint Cmd_Argc( void );
-char *Cmd_Args( void );
-char *Cmd_Argv( uint arg );
-void Cmd_Init( void );
-void Cmd_Unlink( void );
-void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_desc );
-void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function );
-void Cmd_RemoveCommand( const char *cmd_name );
-qboolean Cmd_Exists( const char *cmd_name );
-void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback );
-qboolean Cmd_GetMapList( const char *s, char *completedname, int length );
-qboolean Cmd_GetDemoList( const char *s, char *completedname, int length );
-qboolean Cmd_GetMovieList( const char *s, char *completedname, int length );
-void Cmd_TokenizeString( const char *text );
-void Cmd_ExecuteString( const char *text );
-void Cmd_ForwardToServer( void );
 
 //
 // parselib.c

@@ -459,6 +459,8 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		Cbuf_ExecuteText( EXEC_APPEND, "quit" );
 		break;
 	case WM_ACTIVATE:
+		if( host.state == HOST_SHUTDOWN )
+			break; // no need to activate
 		if( host.state != HOST_RESTART )
 		{
 			if( HIWORD( wParam ))

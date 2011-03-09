@@ -212,14 +212,14 @@ qboolean Image_SaveTGA( const char *name, rgbdata_t *pix )
 		return false; // already existed
 
 	if( pix->flags & IMAGE_HAS_ALPHA )
-		outsize = pix->width * pix->height * 4 + 18 + com.strlen( comment );
-	else outsize = pix->width * pix->height * 3 + 18 + com.strlen( comment );
+		outsize = pix->width * pix->height * 4 + 18 + Q_strlen( comment );
+	else outsize = pix->width * pix->height * 3 + 18 + Q_strlen( comment );
 
 	buffer = (byte *)Mem_Alloc( host.imagepool, outsize );
 	Mem_Set( buffer, 0, 18 );
 
 	// prepare header
-	buffer[0] = com.strlen( comment ); // tga comment length
+	buffer[0] = Q_strlen( comment ); // tga comment length
 	buffer[2] = 2; // uncompressed type
 	buffer[12] = (pix->width >> 0) & 0xFF;
 	buffer[13] = (pix->width >> 8) & 0xFF;
@@ -227,8 +227,8 @@ qboolean Image_SaveTGA( const char *name, rgbdata_t *pix )
 	buffer[15] = (pix->height >> 8) & 0xFF;
 	buffer[16] = ( pix->flags & IMAGE_HAS_ALPHA ) ? 32 : 24;
 	buffer[17] = ( pix->flags & IMAGE_HAS_ALPHA ) ? 8 : 0; // 8 bits of alpha
-	com.strncpy( buffer + 18, comment, com.strlen( comment )); 
-	out = buffer + 18 + com.strlen( comment );
+	Q_strncpy( buffer + 18, comment, Q_strlen( comment )); 
+	out = buffer + 18 + Q_strlen( comment );
 
 	// get image description
 	switch( pix->type )

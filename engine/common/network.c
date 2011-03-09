@@ -211,7 +211,7 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 	((struct sockaddr_in *)sadr)->sin_family = AF_INET;
 	((struct sockaddr_in *)sadr)->sin_port = 0;
 
-	com.strncpy( copy, s, sizeof( copy ));
+	Q_strncpy( copy, s, sizeof( copy ));
 
 	// strip off a trailing :port if present
 	for( colon = copy; *colon; colon++ )
@@ -219,7 +219,7 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 		if( *colon == ':' )
 		{
 			*colon = 0;
-			((struct sockaddr_in *)sadr)->sin_port = pHtons((short)com.atoi( colon + 1 ));	
+			((struct sockaddr_in *)sadr)->sin_port = pHtons((short)Q_atoi( colon + 1 ));	
 		}
 	}
 		
@@ -312,7 +312,7 @@ qboolean NET_StringToAdr( const char *string, netadr_t *adr )
 {
 	struct sockaddr s;
 
-	if( !com.stricmp( string, "localhost" ))
+	if( !Q_stricmp( string, "localhost" ))
 	{
 		Mem_Set( adr, 0, sizeof( netadr_t ));
 		adr->type = NA_LOOPBACK;
@@ -516,7 +516,7 @@ static int NET_IPSocket( const char *netInterface, int port )
 		return 0;
 	}
 
-	if( !netInterface[0] || !com.stricmp( netInterface, "localhost" ))
+	if( !netInterface[0] || !Q_stricmp( netInterface, "localhost" ))
 		addr.sin_addr.s_addr = INADDR_ANY;
 	else NET_StringToSockaddr( netInterface, (struct sockaddr *)&addr );
 

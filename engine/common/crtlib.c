@@ -1,11 +1,12 @@
 //=======================================================================
-//			Copyright XashXT Group 2007 ©
-//		        stdlib.c - std lib portable utils
+//			Copyright XashXT Group 2011 ©
+//			 stdlib.c - internal stdlib
 //=======================================================================
 
-#include "launch.h"
+#include <math.h>
+#include "common.h"
 
-void com_strnupr( const char *in, char *out, size_t size_out )
+void Q_strnupr( const char *in, char *out, size_t size_out )
 {
 	if( size_out == 0 ) return;
 
@@ -19,12 +20,7 @@ void com_strnupr( const char *in, char *out, size_t size_out )
 	*out = '\0';
 }
 
-void com_strupr( const char *in, char *out )
-{
-	com_strnupr( in, out, 99999 );
-}
-
-void com_strnlwr( const char *in, char *out, size_t size_out )
+void Q_strnlwr( const char *in, char *out, size_t size_out )
 {
 	if( size_out == 0 ) return;
 
@@ -38,17 +34,7 @@ void com_strnlwr( const char *in, char *out, size_t size_out )
 	*out = '\0';
 }
 
-void com_strlwr( const char *in, char *out )
-{
-	com_strnlwr(in, out, 99999 );
-}
-
-/*
-==============
-isdigit
-==============
-*/
-qboolean com_isdigit( const char *str )
+qboolean Q_isdigit( const char *str )
 {
 	if( str && *str )
 	{
@@ -58,14 +44,7 @@ qboolean com_isdigit( const char *str )
 	return false;
 }
 
-/*
-============
-strlen
-
-returned string length
-============
-*/
-int com_strlen( const char *string )
+int Q_strlen( const char *string )
 {
 	int		len;
 	const char	*p;
@@ -82,36 +61,7 @@ int com_strlen( const char *string )
 	return len;
 }
 
-/*
-============
-cstrlen
-
-skipped color prefixes
-============
-*/
-int com_cstrlen( const char *string )
-{
-	int		len;
-	const char	*p;
-
-	if( !string ) return 0;
-
-	len = 0;
-	p = string;
-	while( *p )
-	{
-		if( IsColorString( p ))
-		{
-			p += 2;
-			continue;
-		}
-		p++;
-		len++;
-	}
-	return len;
-}
-
-char com_toupper( const char in )
+char Q_toupper( const char in )
 {
 	char	out;
 
@@ -122,7 +72,7 @@ char com_toupper( const char in )
 	return out;
 }
 
-char com_tolower( const char in )
+char Q_tolower( const char in )
 {
 	char	out;
 
@@ -133,7 +83,7 @@ char com_tolower( const char in )
 	return out;
 }
 
-size_t com_strncat( char *dst, const char *src, size_t size )
+size_t Q_strncat( char *dst, const char *src, size_t size )
 {
 	register char	*d = dst;
 	register const char	*s = src;
@@ -148,7 +98,7 @@ size_t com_strncat( char *dst, const char *src, size_t size )
 	dlen = d - dst;
 	n = size - dlen;
 
-	if( n == 0 ) return( dlen + com_strlen( s ));
+	if( n == 0 ) return( dlen + Q_strlen( s ));
 
 	while( *s != '\0' )
 	{
@@ -164,12 +114,7 @@ size_t com_strncat( char *dst, const char *src, size_t size )
 	return( dlen + ( s - src )); // count does not include NULL
 }
 
-size_t com_strcat( char *dst, const char *src )
-{
-	return com_strncat( dst, src, 99999 );
-}
-
-size_t com_strncpy( char *dst, const char *src, size_t size )
+size_t Q_strncpy( char *dst, const char *src, size_t size )
 {
 	register char	*d = dst;
 	register const char	*s = src;
@@ -198,12 +143,20 @@ size_t com_strncpy( char *dst, const char *src, size_t size )
 	return ( s - src - 1 ); // count does not include NULL
 }
 
-size_t com_strcpy( char *dst, const char *src )
+char *_copystring( byte *mempool, const char *s, const char *filename, int fileline )
 {
-	return com_strncpy( dst, src, 99999 );
+	char	*b;
+
+	if( !s ) return NULL;
+	if( !mempool ) mempool = host.mempool;
+
+	b = com.malloc( mempool, Q_strlen( s ) + 1, filename, fileline );
+	Q_strcpy( b, s );
+
+	return b;
 }
 
-int com_atoi( const char *str )
+int Q_atoi( const char *str )
 {
 	int       val = 0;
 	int	c, sign;
@@ -211,7 +164,8 @@ int com_atoi( const char *str )
 	if( !str ) return 0;
 
 	// check for empty charachters in string
-	while( *str == ' ' && str ) str++;
+	while( *str == ' ' && str )
+		str++;
 	
 	if( *str == '-' )
 	{
@@ -249,7 +203,7 @@ int com_atoi( const char *str )
 	return 0;
 }
 
-float com_atof( const char *str )
+float Q_atof( const char *str )
 {
 	double	val = 0;
 	int	c, sign, decimal, total;
@@ -257,7 +211,8 @@ float com_atof( const char *str )
 	if( !str ) return 0.0f;
 
 	// check for empty charachters in string
-	while( *str == ' ' && str ) str++;
+	while( *str == ' ' && str )
+		str++;
 	
 	if( *str == '-' )
 	{
@@ -313,19 +268,19 @@ float com_atof( const char *str )
 	return val * sign;
 }
 
-void com_atov( float *vec, const char *str, size_t siz )
+void Q_atov( float *vec, const char *str, size_t siz )
 {
 	string	buffer;
 	char	*pstr, *pfront;
 	int	j;
 
-	com_strncpy( buffer, str, sizeof( buffer ));
+	Q_strncpy( buffer, str, sizeof( buffer ));
 	Mem_Set( vec, 0, sizeof( vec_t ) * siz );
 	pstr = pfront = buffer;
 
 	for( j = 0; j < siz; j++ )
 	{
-		vec[j] = com.atof( pfront );
+		vec[j] = Q_atof( pfront );
 
 		// valid separator is space
 		while( *pstr && *pstr != ' ' )
@@ -337,16 +292,9 @@ void com_atov( float *vec, const char *str, size_t siz )
 	}
 }
 
-/*
-============
-strchr
-
-find one charcster in string
-============
-*/
-char *com_strchr( const char *s, char c )
+char *Q_strchr( const char *s, char c )
 {
-	int	len = com_strlen( s );
+	int	len = Q_strlen( s );
 
 	while( len-- )
 	{
@@ -356,16 +304,9 @@ char *com_strchr( const char *s, char c )
 	return 0;
 }
 
-/*
-============
-strrchr
-
-find one charcster in string
-============
-*/
-char *com_strrchr( const char *s, char c )
+char *Q_strrchr( const char *s, char c )
 {
-	int	len = com_strlen( s );
+	int	len = Q_strlen( s );
 
 	s += len;
 
@@ -377,7 +318,7 @@ char *com_strrchr( const char *s, char c )
 	return 0;
 }
 
-int com_strnicmp( const char *s1, const char *s2, int n )
+int Q_strnicmp( const char *s1, const char *s2, int n )
 {
 	int	c1, c2;
 
@@ -406,7 +347,7 @@ int com_strnicmp( const char *s1, const char *s2, int n )
 	return 0;
 }
 
-int com_strncmp( const char *s1, const char *s2, int n )
+int Q_strncmp( const char *s1, const char *s2, int n )
 {
 	int		c1, c2;
 
@@ -431,22 +372,7 @@ int com_strncmp( const char *s1, const char *s2, int n )
 	return 0;
 }
 
-int com_stricmp( const char *s1, const char *s2 )
-{
-	return com_strnicmp( s1, s2, 99999 );
-}
-
-int com_strcmp( const char *s1, const char *s2 )
-{
-	return com_strncmp( s1, s2, 99999 );
-}
-
-/*
-==============
-Q_WildCmpAfterStar
-==============
-*/
-static qboolean com_starcmp( const char *pattern, const char *text )
+static qboolean Q_starcmp( const char *pattern, const char *text )
 {
 	char		c, c1;
 	const char	*p = pattern, *t = text;
@@ -461,18 +387,13 @@ static qboolean com_starcmp( const char *pattern, const char *text )
 
 	for( c1 = (( c == '\\' ) ? *p : c ); ; )
 	{
-		if( com_tolower( *t ) == c1 && com_stricmpext( p - 1, t ))
+		if( Q_tolower( *t ) == c1 && Q_stricmpext( p - 1, t ))
 			return true;
 		if( *t++ == '\0' ) return false;
 	}
 }
 
-/*
-==============
-stricmpext
-==============
-*/
-qboolean com_stricmpext( const char *pattern, const char *text )
+qboolean Q_stricmpext( const char *pattern, const char *text )
 {
 	char	c;
 
@@ -485,25 +406,20 @@ qboolean com_stricmpext( const char *pattern, const char *text )
 				return false;
 			break;
 		case '\\':
-			if( com_tolower( *pattern++ ) != com_tolower( *text++ ))
+			if( Q_tolower( *pattern++ ) != Q_tolower( *text++ ))
 				return false;
 			break;
 		case '*':
-			return com_starcmp( pattern, text );
+			return Q_starcmp( pattern, text );
 		default:
-			if( com_tolower( c ) != com_tolower( *text++ ))
+			if( Q_tolower( c ) != Q_tolower( *text++ ))
 				return false;
 		}
 	}
 	return ( *text == '\0' );
 }
 
-/*
-====================
-timestamp
-====================
-*/
-const char* com_timestamp( int format )
+const char* Q_timestamp( int format )
 {
 	static string	timestamp;
 	time_t		crt_time;
@@ -517,50 +433,43 @@ const char* com_timestamp( int format )
 	{
 	case TIME_FULL:
 		// Build the full timestamp (ex: "Apr03 2007 [23:31.55]");
-		strftime( timestring, sizeof (timestring), "%b%d %Y [%H:%M.%S]", crt_tm );
+		strftime( timestring, sizeof( timestring ), "%b%d %Y [%H:%M.%S]", crt_tm );
 		break;
 	case TIME_DATE_ONLY:
 		// Build the date stamp only (ex: "Apr03 2007");
-		strftime( timestring, sizeof (timestring), "%b%d %Y", crt_tm );
+		strftime( timestring, sizeof( timestring ), "%b%d %Y", crt_tm );
 		break;
 	case TIME_TIME_ONLY:
 		// Build the time stamp only (ex: "23:31.55");
-		strftime( timestring, sizeof (timestring), "%H:%M.%S", crt_tm );
+		strftime( timestring, sizeof( timestring ), "%H:%M.%S", crt_tm );
 		break;
 	case TIME_NO_SECONDS:
 		// Build the time stamp exclude seconds (ex: "13:46");
-		strftime( timestring, sizeof (timestring), "%H:%M", crt_tm );
+		strftime( timestring, sizeof( timestring ), "%H:%M", crt_tm );
 		break;
 	case TIME_YEAR_ONLY:
 		// Build the date stamp year only (ex: "2006");
-		strftime( timestring, sizeof (timestring), "%Y", crt_tm );
+		strftime( timestring, sizeof( timestring ), "%Y", crt_tm );
 		break;
 	case TIME_FILENAME:
 		// Build a timestamp that can use for filename (ex: "Nov2006-26 (19.14.28)");
-		strftime( timestring, sizeof (timestring), "%b%Y-%d_%H.%M.%S", crt_tm );
+		strftime( timestring, sizeof( timestring ), "%b%Y-%d_%H.%M.%S", crt_tm );
 		break;
 	default: return NULL;
 	}
 
-	com_strncpy( timestamp, timestring, sizeof( timestamp ));
+	Q_strncpy( timestamp, timestring, sizeof( timestamp ));
 	return timestamp;
 }
 
-/*
-============
-strstr
-
-search case - sensitive for string2 in string
-============
-*/
-char *com_strstr( const char *string, const char *string2 )
+char *Q_strstr( const char *string, const char *string2 )
 {
 	int	c, len;
 
 	if( !string || !string2 ) return NULL;
 
 	c = *string2;
-	len = com_strlen( string2 );
+	len = Q_strlen( string2 );
 
 	while( string )
 	{
@@ -568,7 +477,7 @@ char *com_strstr( const char *string, const char *string2 )
 
 		if( *string )
 		{
-			if( !com_strncmp( string, string2, len ))
+			if( !Q_strncmp( string, string2, len ))
 				break;
 			string++;
 		}
@@ -577,29 +486,22 @@ char *com_strstr( const char *string, const char *string2 )
 	return (char *)string;
 }
 
-/*
-============
-stristr
-
-search case - insensitive for string2 in string
-============
-*/
-char *com_stristr( const char *string, const char *string2 )
+char *Q_stristr( const char *string, const char *string2 )
 {
 	int	c, len;
 
 	if( !string || !string2 ) return NULL;
 
-	c = com_tolower( *string2 );
-	len = com_strlen( string2 );
+	c = Q_tolower( *string2 );
+	len = Q_strlen( string2 );
 
 	while( string )
 	{
-		for( ; *string && com_tolower( *string ) != c; string++ );
+		for( ; *string && Q_tolower( *string ) != c; string++ );
 
 		if( *string )
 		{
-			if( !com_strnicmp( string, string2, len ))
+			if( !Q_strnicmp( string, string2, len ))
 				break;
 			string++;
 		}
@@ -608,7 +510,7 @@ char *com_stristr( const char *string, const char *string2 )
 	return (char *)string;
 }
 
-int com_vsnprintf( char *buffer, size_t buffersize, const char *format, va_list args )
+int Q_vsnprintf( char *buffer, size_t buffersize, const char *format, va_list args )
 {
 	size_t	result;
 
@@ -622,36 +524,31 @@ int com_vsnprintf( char *buffer, size_t buffersize, const char *format, va_list 
 	return result;
 }
 
-int com_vsprintf( char *buffer, const char *format, va_list args )
-{
-	return com_vsnprintf( buffer, 99999, format, args );
-}
-
-int com_snprintf( char *buffer, size_t buffersize, const char *format, ... )
+int Q_snprintf( char *buffer, size_t buffersize, const char *format, ... )
 {
 	va_list	args;
 	int	result;
 
 	va_start( args, format );
-	result = com_vsnprintf( buffer, buffersize, format, args );
+	result = Q_vsnprintf( buffer, buffersize, format, args );
 	va_end( args );
 
 	return result;
 }
 
-int com_sprintf( char *buffer, const char *format, ... )
+int Q_sprintf( char *buffer, const char *format, ... )
 {
 	va_list	args;
 	int	result;
 
 	va_start( args, format );
-	result = com_vsnprintf( buffer, 99999, format, args );
+	result = Q_vsnprintf( buffer, 99999, format, args );
 	va_end( args );
 
 	return result;
 }
 
-char *com_pretifymem( float value, int digitsafterdecimal )
+char *Q_pretifymem( float value, int digitsafterdecimal )
 {
 	static char	output[8][32];
 	static int	current;
@@ -668,14 +565,14 @@ char *com_pretifymem( float value, int digitsafterdecimal )
 	if( value > onemb )
 	{
 		value /= onemb;
-		com_sprintf( suffix, " Mb" );
+		Q_sprintf( suffix, " Mb" );
 	}
 	else if( value > onekb )
 	{
 		value /= onekb;
-		com_sprintf( suffix, " Kb" );
+		Q_sprintf( suffix, " Kb" );
 	}
-	else com_sprintf( suffix, " bytes" );
+	else Q_sprintf( suffix, " bytes" );
 
 	// clamp to >= 0
 	digitsafterdecimal = max( digitsafterdecimal, 0 );
@@ -683,15 +580,15 @@ char *com_pretifymem( float value, int digitsafterdecimal )
 	// if it's basically integral, don't do any decimals
 	if( fabs( value - (int)value ) < 0.00001 )
 	{
-		com_sprintf( val, "%i%s", (int)value, suffix );
+		Q_sprintf( val, "%i%s", (int)value, suffix );
 	}
 	else
 	{
 		char fmt[32];
 
 		// otherwise, create a format string for the decimals
-		com_sprintf( fmt, "%%.%if%s", digitsafterdecimal, suffix );
-		com_sprintf( val, fmt, value );
+		Q_sprintf( fmt, "%%.%if%s", digitsafterdecimal, suffix );
+		Q_sprintf( val, fmt, value );
 	}
 
 	// copy from in to out
@@ -699,8 +596,8 @@ char *com_pretifymem( float value, int digitsafterdecimal )
 	o = out;
 
 	// search for decimal or if it was integral, find the space after the raw number
-	dot = com_strstr( i, "." );
-	if( !dot ) dot = com_strstr( i, " " );
+	dot = Q_strstr( i, "." );
+	if( !dot ) dot = Q_strstr( i, " " );
 
 	pos = dot - i;	// compute position of dot
 	pos -= 3;		// don't put a comma if it's <= 3 long
@@ -735,57 +632,14 @@ of all text functions.
 char *va( const char *format, ... )
 {
 	va_list		argptr;
-	static char	string[256][1024], *s;	// g-cont. 256 temporary strings should be enough...
+	static char	string[256][1024], *s;
 	static int	stringindex = 0;
 
 	s = string[stringindex];
 	stringindex = (stringindex + 1) & 255;
 	va_start( argptr, format );
-	com_vsnprintf( s, sizeof( string[0] ), format, argptr );
+	Q_vsnprintf( s, sizeof( string[0] ), format, argptr );
 	va_end( argptr );
 
 	return s;
-}
-
-/*
-============
-Com_FileBase
-
-TEMPORARY PLACE. dont forget to remove it
-============
-*/
-void Com_FileBase( const char *in, char *out )
-{
-	int	len, start, end;
-
-	len = com.strlen( in );
-	if( !len ) return;
-	
-	// scan backward for '.'
-	end = len - 1;
-
-	while( end && in[end] != '.' && in[end] != '/' && in[end] != '\\' )
-		end--;
-	
-	if( in[end] != '.' )
-		end = len-1; // no '.', copy to end
-	else end--; // found ',', copy to left of '.'
-
-
-	// scan backward for '/'
-	start = len - 1;
-
-	while( start >= 0 && in[start] != '/' && in[start] != '\\' )
-		start--;
-
-	if( start < 0 || ( in[start] != '/' && in[start] != '\\' ))
-		start = 0;
-	else start++;
-
-	// length of new sting
-	len = end - start + 1;
-
-	// Copy partial string
-	com.strncpy( out, &in[start], len + 1 );
-	out[len] = 0;
 }

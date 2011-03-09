@@ -56,12 +56,12 @@ void SCR_DrawFPS( void )
 
 	if( calc < 1.0f )
 	{
-		com.snprintf( fpsstring, sizeof( fpsstring ), "%4i spf", (int)(1.0f / calc + 0.5));
+		Q_snprintf( fpsstring, sizeof( fpsstring ), "%4i spf", (int)(1.0f / calc + 0.5));
 		MakeRGBA( color, 255, 0, 0, 255 );
 	}
 	else
 	{
-		com.snprintf( fpsstring, sizeof( fpsstring ), "%4i fps", (int)(calc + 0.5));
+		Q_snprintf( fpsstring, sizeof( fpsstring ), "%4i fps", (int)(calc + 0.5));
 		MakeRGBA( color, 255, 255, 255, 255 );
           }
 	Con_DrawString( scr_width->integer - 68, 4, fpsstring, color );
@@ -83,25 +83,25 @@ void SCR_NetSpeeds( void )
 	case 1:
 		if( cls.netchan.compress )
 		{
-			com.snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal received from server:\n Huffman %s\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), memprint( cls.netchan.total_received ), memprint( cls.netchan.total_received_uncompressed ));
+			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal received from server:\n Huffman %s\nUncompressed %s\n",
+			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_received ), Q_memprint( cls.netchan.total_received_uncompressed ));
 		}
 		else
 		{
-			com.snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal received from server:\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), memprint( cls.netchan.total_received_uncompressed ));
+			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal received from server:\nUncompressed %s\n",
+			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_received_uncompressed ));
 		}
 		break;
 	case 2:
 		if( cls.netchan.compress )
 		{
-			com.snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal sended to server:\nHuffman %s\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), memprint( cls.netchan.total_sended ), memprint( cls.netchan.total_sended_uncompressed ));
+			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal sended to server:\nHuffman %s\nUncompressed %s\n",
+			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_sended_uncompressed ));
 		}
 		else
 		{
-			com.snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal sended to server:\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), memprint( cls.netchan.total_sended_uncompressed ));
+			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal sended to server:\nUncompressed %s\n",
+			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended_uncompressed ));
 		}
 		break;
 	default: return;
@@ -116,7 +116,7 @@ void SCR_NetSpeeds( void )
 	p = start = msg;
 	do
 	{
-		end = com.strchr( p, '\n' );
+		end = Q_strchr( p, '\n' );
 		if( end ) msg[end-start] = '\0';
 
 		Con_DrawString( x, y, p, color );
@@ -151,7 +151,7 @@ void SCR_RSpeeds( void )
 		p = start = msg;
 		do
 		{
-			end = com.strchr( p, '\n' );
+			end = Q_strchr( p, '\n' );
 			if( end ) msg[end-start] = '\0';
 
 			Con_DrawString( x, y, p, color );

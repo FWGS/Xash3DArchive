@@ -27,6 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "images.h"		// built-in resources
 #include "utils.h"
 #include "menu_btnsbmp_table.h"
+//CR
+#include "ui_title_anim.h"
 
 cvar_t		*ui_precache;
 cvar_t		*ui_sensitivity;
@@ -840,6 +842,8 @@ void UI_PopMenu( void )
 	if( uiStatic.menuDepth < 0 )
 		HOST_ERROR( "UI_PopMenu: menu stack underflow\n" );
 
+	UI_PopPButtonStack();
+
 	if( uiStatic.menuDepth )
 	{
 		uiStatic.menuActive = uiStatic.menuStack[uiStatic.menuDepth-1];
@@ -907,6 +911,10 @@ void UI_UpdateMenu( float flTime )
 			first = FALSE;
 		}
 	}
+
+	//CR
+	UI_DrawTitleAnim();
+	//
 
 	// draw cursor
 	UI_DrawMouseCursor();
@@ -1395,6 +1403,9 @@ void UI_Init( void )
 
 	memset( uiEmptyString, ' ', sizeof( uiEmptyString ));	// HACKHACK
 	uiStatic.initialized = true;
+
+	//CR
+	UI_InitTitleAnim();
 }
 
 /*

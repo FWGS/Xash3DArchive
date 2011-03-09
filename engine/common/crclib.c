@@ -526,7 +526,7 @@ uint Com_HashKey( const char *string, uint hashSize )
 	uint	i, hashKey = 0;
 
 	for( i = 0; string[i]; i++ )
-		hashKey = (hashKey + i) * 37 + com.tolower( string[i] );
+		hashKey = (hashKey + i) * 37 + Q_tolower( string[i] );
 
 	return (hashKey % hashSize);
 }

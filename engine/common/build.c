@@ -19,12 +19,12 @@ int com_buildnum( void )
 
 	for( m = 0; m < 11; m++ )
 	{
-		if( !com.strnicmp( &date[0], mon[m], 3 ))
+		if( !Q_strnicmp( &date[0], mon[m], 3 ))
 			break;
 		d += mond[m];
 	}
-	d += com.atoi( &date[4] ) - 1;
-	y = com.atoi( &date[7] ) - 1900;
+	d += Q_atoi( &date[4] ) - 1;
+	y = Q_atoi( &date[7] ) - 1900;
 	b = d + (int)((y - 1) * 365.25f );
 
 	if((( y % 4 ) == 0 ) && m > 1 )

@@ -63,19 +63,9 @@ enum dev_level
 typedef long fs_offset_t;
 typedef struct file_s file_t;		// normal file
 typedef struct wfile_s wfile_t;	// wad file
-typedef struct convar_s convar_t;	// console variable
-typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
 typedef struct { int numfilenames; char **filenames; char *filenamesbuffer; } search_t;
-typedef void ( *setpair_t )( const char *key, const char *value, void *buffer, void *numpairs );
-typedef void ( *xcommand_t )( void );
-
-// command buffer modes
-enum
-{
-	EXEC_NOW	= 0,
-	EXEC_INSERT,
-	EXEC_APPEND,
-};
+typedef struct stream_s stream_t;	// sound stream for background music playing
+typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
 
 // timestamp modes
 enum
@@ -87,32 +77,6 @@ enum
 	TIME_YEAR_ONLY,
 	TIME_FILENAME,
 };
-
-// cvar flags
-typedef enum
-{
-	CVAR_ARCHIVE	= BIT(0),	// set to cause it to be saved to config.cfg
-	CVAR_USERINFO	= BIT(1),	// added to userinfo  when changed
-	CVAR_SERVERNOTIFY	= BIT(2),	// notifies players when changed
-	CVAR_EXTDLL	= BIT(3),	// defined by external DLL
-	CVAR_CLIENTDLL	= BIT(4),	// defined by the client dll
-	CVAR_PROTECTED	= BIT(5),	// it's a server cvar, but we don't send the data since it's a password, etc.
-	CVAR_SPONLY	= BIT(6),	// this cvar cannot be changed by clients connected to a multiplayer server.
-	CVAR_PRINTABLEONLY	= BIT(7),	// this cvar's string cannot contain unprintable characters ( player name )
-	CVAR_UNLOGGED	= BIT(8),	// if this is a FCVAR_SERVER, don't log changes to the log file / console
-	CVAR_SERVERINFO	= BIT(9),	// added to serverinfo when changed
-	CVAR_PHYSICINFO	= BIT(10),// added to physinfo when changed
-	CVAR_RENDERINFO	= BIT(11),// save to a seperate config called opengl.cfg
-	CVAR_CHEAT	= BIT(12),// can not be changed if cheats are disabled
-	CVAR_INIT		= BIT(13),// don't allow change from console at all, but can be set from the command line
-	CVAR_LATCH	= BIT(14),// save changes until server restart
-	CVAR_READ_ONLY	= BIT(15),// display only, cannot be set by user at all
-	CVAR_LATCH_VIDEO	= BIT(16),// save changes until render restart
-	CVAR_USER_CREATED	= BIT(17),// created by a set command (dll's used)
-	CVAR_GLCONFIG	= BIT(18),// set to cause it to be saved to opengl.cfg
-} cvar_flags_t;
-
-#include "cvardef.h"
 
 /*
 ========================================================================
@@ -225,11 +189,6 @@ typedef struct dll_info_s
 	size_t		com_size;	// main interface size == sizeof( stdilib_api_t )
 } dll_info_t;
 
-// filesystem flags
-#define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path
-#define FS_NOWRITE_PATH	2	// default behavior - last added gamedir set as writedir. This flag disables it
-#define FS_GAMEDIR_PATH	4	// just a marker for gamedir path
-
 /*
 ==============================================================================
 
@@ -271,33 +230,8 @@ typedef struct stdilib_api_s
 	void (*clearpool)(byte *poolptr, const char *file, int line);
 	void (*memcheck)(const char *file, int line);		// check memory pools for consistensy
 	qboolean (*is_allocated)( byte *poolptr, void *data );	// return true is memory is allocated
-
-	search_t *(*Com_Search)( const char *pattern, int casecmp, int gamedironly ); // returned list of found files
-
-	// console variables
-	convar_t *(*Cvar_Get)( const char *name, const char *value, int flags, const char *desc );
-	void (*Cvar_LookupVars)( int checkbit, void *buffer, void *ptr, setpair_t callback );
-	void (*Cvar_SetString)( const char *name, const char *value );
-	void (*Cvar_SetLatched)( const char *name, const char *value );
-	void (*Cvar_FullSet)( const char *name, const char *value, int flags );
-	void (*Cvar_SetFloat)( const char *name, float value );
-	long (*Cvar_GetInteger)(const char *name );
-	float (*Cvar_GetValue)(const char *name );
-	char *(*Cvar_GetString)(const char *name );
-	convar_t *(*Cvar_FindVar)(const char *name );
-	void (*Cvar_DirectSet)( cvar_t *var, const char *value );
-	void (*Cvar_Register)( cvar_t *variable );		// register game.dll variables
-
-	// console commands
-	void (*Cmd_Exec)(int exec_when, const char *text);	// process cmd buffer
-	uint  (*Cmd_Argc)( void );
-	char *(*Cmd_Args)( void );
-	char *(*Cmd_Argv)( uint arg ); 
-	void (*Cmd_LookupCmds)( char *buffer, void *ptr, setpair_t callback );
-	void (*Cmd_AddCommand)( const char *name, xcommand_t function, const char *desc );
-	void (*Cmd_AddGameCommand)( const char *cmd_name, xcommand_t function );
-	void (*Cmd_TokenizeString)( const char *text_in );
-	void (*Cmd_DelCommand)( const char *name );
+	void (*memlist)( size_t minallocationsize );
+	void (*memstats)( void );
 
 	qboolean (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
 	qboolean (*Com_FreeLibrary)( dll_info_t *dll );			// free library
@@ -318,7 +252,6 @@ typedef struct stdilib_api_s
 	size_t (*strcat)(char *dst, const char *src);			// add new string at end of buffer
 	size_t (*strncpy)(char *dst, const char *src, size_t n);		// copy string to existing buffer
 	size_t (*strcpy)(char *dst, const char *src);			// copy string to existing buffer
-	char *(*stralloc)(byte *mp,const char *in,const char *file,int line);	// create buffer and copy string here
 	qboolean (*is_digit)( const char *str );			// check string for digits
 	int (*atoi)(const char *str);					// convert string to integer
 	float (*atof)(const char *str);				// convert string to float
@@ -357,8 +290,8 @@ typedef struct launch_exp_s
 	void (*Main)( void );				// host frame
 	void (*Free)( void );				// close host
 	void (*CPrint)( const char *msg );			// host print
-	void (*CmdForward)( void );				// cmd forward to server
 	void (*CmdComplete)( char *complete_string );		// cmd autocomplete for system console
+	void (*Crashed)( void );				// tell host about crash
 } launch_exp_t;
 
 // this is the only function actually exported at the linker level
@@ -369,25 +302,6 @@ typedef struct { size_t api_size; size_t com_size; } generic_api_t;
 #define ASSERT( exp )	if(!( exp )) com.abort( "assert failed at %s:%i\n", __FILE__, __LINE__ );
 
 #ifndef LAUNCH_DLL
-/*
-==============================================================================
-		STDLIB GENERIC ALIAS NAMES
-don't add aliases for launch.dll because it may be conflicted with real names
-==============================================================================
-*/
-struct convar_s
-{
-	// this part shared with cvar_t
-	char		*name;
-	char		*string;
-	int		flags;
-	float		value;
-	struct convar_s	*next;
-
-	// this part unique for convar_t
-	int		integer;
-	qboolean		modified;
-};
 
 /*
 ==========================================
@@ -405,6 +319,8 @@ struct convar_s
 #define Mem_Set(dest, val, size )	com.memset(dest, val, size, __FILE__, __LINE__)
 #define Mem_Check()			com.memcheck(__FILE__, __LINE__)
 #define Mem_IsAllocated( pool, ptr )	com.is_allocated( pool, ptr )
+#define Mem_PrintList( size )		com.memlist( size );
+#define Mem_PrintStats()		com.memstats()
 
 /*
 ===========================================
@@ -414,45 +330,6 @@ filesystem manager
 #define FS_Gamedir()		com.SysInfo->GameInfo->gamedir
 #define FS_Title()			com.SysInfo->GameInfo->title
 #define g_Instance()		com.SysInfo->instance
-
-/*
-===========================================
-console variables
-===========================================
-*/
-#define Cvar_Get			com.Cvar_Get
-#define Cvar_LookupVars		com.Cvar_LookupVars
-#define Cvar_Set			com.Cvar_SetString
-#define Cvar_FullSet		com.Cvar_FullSet
-#define Cvar_SetLatched		com.Cvar_SetLatched
-#define Cvar_Reset( name )		Cvar_SetLatched( name, NULL )
-#define Cvar_SetFloat		com.Cvar_SetFloat
-#define Cvar_VariableValue		com.Cvar_GetValue
-#define Cvar_VariableInteger		com.Cvar_GetInteger
-#define Cvar_VariableString		com.Cvar_GetString
-#define Cvar_FindVar		com.Cvar_FindVar
-#define Cvar_DirectSet		com.Cvar_DirectSet
-#define Cvar_Register		com.Cvar_Register
-
-/*
-===========================================
-console commands
-===========================================
-*/
-#define Cbuf_ExecuteText		com.Cmd_Exec
-#define Cbuf_AddText( text )		com.Cmd_Exec( EXEC_APPEND, text )
-#define Cmd_ExecuteString( text )	com.Cmd_Exec( EXEC_NOW, text )
-#define Cbuf_InsertText( text ) 	com.Cmd_Exec( EXEC_INSERT, text )
-#define Cbuf_Execute()		com.Cmd_Exec( EXEC_NOW, NULL )
-
-#define Cmd_Argc()			com.Cmd_Argc()
-#define Cmd_Args()			com.Cmd_Args()
-#define Cmd_Argv( x )		com.Cmd_Argv( x )
-#define Cmd_TokenizeString		com.Cmd_TokenizeString
-#define Cmd_LookupCmds		com.Cmd_LookupCmds
-#define Cmd_AddCommand		com.Cmd_AddCommand
-#define Cmd_AddGameCommand		com.Cmd_AddGameCommand
-#define Cmd_RemoveCommand		com.Cmd_DelCommand
 
 /*
 ===========================================
@@ -478,16 +355,6 @@ misc utils
 #define Sys_DoubleTime		com.Com_DoubleTime
 #define Sys_CheckParm		com.Com_CheckParm
 #define Sys_GetParmFromCmdLine( a, b )	com.Com_GetParm( a, b, sizeof( b ))
-
-/*
-===========================================
-stdlib function names that not across with windows stdlib
-===========================================
-*/
-#define timestamp			com.timestamp
-#define copystring( str )		com.stralloc( NULL, str, __FILE__, __LINE__ )
-#define memprint( x )		com.pretifymem( x, 2 )
-#define va			com.va
 
 #endif//LAUNCH_DLL
 #endif//LAUNCH_APH_H

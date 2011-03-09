@@ -30,12 +30,12 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	if( pe->player )
 	{
 		// client or bot
-		com.strncpy( pe->name, "player", sizeof( pe->name ));
+		Q_strncpy( pe->name, "player", sizeof( pe->name ));
 	}
 	else
 	{
 		// otherwise copy the modelname
-		com.strncpy( pe->name, mod->name, sizeof( pe->name ));
+		Q_strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
 	if( mod->type == mod_studio )
@@ -652,5 +652,5 @@ void CL_SetupPMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state
 	VectorCopy( cd->vuser4, pmove->vuser4 );
 	pmove->cmd = *ucmd;	// setup current cmds	
 
-	com.strncpy( pmove->physinfo, cd->physinfo, MAX_INFO_STRING );
+	Q_strncpy( pmove->physinfo, cd->physinfo, MAX_INFO_STRING );
 }

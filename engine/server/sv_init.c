@@ -21,7 +21,7 @@ int SV_ModelIndex( const char *name )
 
 	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 	{
-		if( !com.stricmp( sv.model_precache[i], name ))
+		if( !Q_stricmp( sv.model_precache[i], name ))
 			return i;
 	}
 
@@ -32,7 +32,7 @@ int SV_ModelIndex( const char *name )
 	}
 
 	// register new model
-	com.strncpy( sv.model_precache[i], name, sizeof( sv.model_precache[i] ));
+	Q_strncpy( sv.model_precache[i], name, sizeof( sv.model_precache[i] ));
 
 	if( sv.state != ss_loading )
 	{	
@@ -54,7 +54,7 @@ int SV_SoundIndex( const char *name )
 
 	for( i = 1; i < MAX_SOUNDS && sv.sound_precache[i][0]; i++ )
 	{
-		if( !com.stricmp( sv.sound_precache[i], name ))
+		if( !Q_stricmp( sv.sound_precache[i], name ))
 			return i;
 	}
 
@@ -65,7 +65,7 @@ int SV_SoundIndex( const char *name )
 	}
 
 	// register new sound
-	com.strncpy( sv.sound_precache[i], name, sizeof( sv.sound_precache[i] ));
+	Q_strncpy( sv.sound_precache[i], name, sizeof( sv.sound_precache[i] ));
 
 	if( sv.state != ss_loading )
 	{	
@@ -87,7 +87,7 @@ int SV_EventIndex( const char *name )
 
 	for( i = 1; i < MAX_EVENTS && sv.event_precache[i][0]; i++ )
 	{
-		if( !com.stricmp( sv.event_precache[i], name ))
+		if( !Q_stricmp( sv.event_precache[i], name ))
 			return i;
 	}
 
@@ -98,7 +98,7 @@ int SV_EventIndex( const char *name )
 	}
 
 	// register new event
-	com.strncpy( sv.event_precache[i], name, sizeof( sv.event_precache[i] ));
+	Q_strncpy( sv.event_precache[i], name, sizeof( sv.event_precache[i] ));
 
 	if( sv.state != ss_loading )
 	{
@@ -120,7 +120,7 @@ int SV_GenericIndex( const char *name )
 
 	for( i = 1; i < MAX_CUSTOM && sv.files_precache[i][0]; i++ )
 	{
-		if( !com.stricmp( sv.files_precache[i], name ))
+		if( !Q_stricmp( sv.files_precache[i], name ))
 			return i;
 	}
 
@@ -138,7 +138,7 @@ int SV_GenericIndex( const char *name )
 	}
 
 	// register new generic resource
-	com.strncpy( sv.files_precache[i], name, sizeof( sv.files_precache[i] ));
+	Q_strncpy( sv.files_precache[i], name, sizeof( sv.files_precache[i] ));
 
 	return i;
 }
@@ -159,7 +159,7 @@ char *SV_EntityScript( void )
 		return NULL;
 
 	// check for entfile too
-	com.strncpy( entfilename, sv.worldmodel->name, sizeof( entfilename ));
+	Q_strncpy( entfilename, sv.worldmodel->name, sizeof( entfilename ));
 	FS_StripExtension( entfilename );
 	FS_DefaultExtension( entfilename, ".ent" );
 
@@ -468,16 +468,16 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	FS_FileBase( mapname, sv.name );
 
 	if( startspot )
-		com.strncpy( sv.startspot, startspot, sizeof( sv.startspot ));
+		Q_strncpy( sv.startspot, startspot, sizeof( sv.startspot ));
 	else sv.startspot[0] = '\0';
 
-	com.snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
+	Q_snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
 	Mod_LoadWorld( sv.model_precache[1], &sv.checksum );
 	sv.worldmodel = Mod_Handle( 1 ); // get world pointer
 
 	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )
 	{
-		com.sprintf( sv.model_precache[i+1], "*%i", i );
+		Q_sprintf( sv.model_precache[i+1], "*%i", i );
 		Mod_RegisterModel( sv.model_precache[i+1], i+1 );
 	}
 
@@ -511,7 +511,7 @@ void SV_InitGame( void )
 	if( svs.initialized )
 	{
 		// cause any connected clients to reconnect
-		com.strncpy( host.finalmsg, "Server restarted\n", MAX_STRING );
+		Q_strncpy( host.finalmsg, "Server restarted\n", MAX_STRING );
 		SV_Shutdown( true );
 	}
 	else
@@ -586,7 +586,7 @@ void SV_InitGame( void )
 
 	// heartbeats will always be sent to the id master
 	svs.last_heartbeat = MAX_HEARTBEAT; // send immediately
-	com.sprintf( idmaster, "192.246.40.37:%i", PORT_MASTER );
+	Q_sprintf( idmaster, "192.246.40.37:%i", PORT_MASTER );
 	NET_StringToAdr( idmaster, &master_adr[0] );
 
 	// set client fields on player ents

@@ -54,15 +54,15 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 	byte		*f;
 
 	Sound_Reset(); // clear old sounddata
-	com.strncpy( loadname, filename, sizeof( loadname ));
+	Q_strncpy( loadname, filename, sizeof( loadname ));
 
-	if( com.stricmp( ext, "" ))
+	if( Q_stricmp( ext, "" ))
 	{
 		// we needs to compare file extension with list of supported formats
 		// and be sure what is real extension, not a filename with dot
 		for( format = sound.loadformats; format && format->formatstring; format++ )
 		{
-			if( !com.stricmp( format->ext, ext ))
+			if( !Q_stricmp( format->ext, ext ))
 			{
 				FS_StripExtension( loadname );
 				anyformat = false;
@@ -77,9 +77,9 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 	// now try all the formats in the selected list
 	for( format = sound.loadformats; format && format->formatstring; format++)
 	{
-		if( anyformat || !com.stricmp( ext, format->ext ))
+		if( anyformat || !Q_stricmp( ext, format->ext ))
 		{
-			com.sprintf( path, format->formatstring, loadname, "", format->ext );
+			Q_sprintf( path, format->formatstring, loadname, "", format->ext );
 			f = FS_LoadFile( path, &filesize, false );
 			if( f && filesize > 0 )
 			{
@@ -96,7 +96,7 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 load_internal:
 	for( format = sound.loadformats; format && format->formatstring; format++ )
 	{
-		if( anyformat || !com.stricmp( ext, format->ext ))
+		if( anyformat || !Q_stricmp( ext, format->ext ))
 		{
 			if( buffer && size > 0  )
 			{
@@ -147,15 +147,15 @@ stream_t *FS_OpenStream( const char *filename )
 	stream_t		*stream;
 
 	Sound_Reset(); // clear old streaminfo
-	com.strncpy( loadname, filename, sizeof( loadname ));
+	Q_strncpy( loadname, filename, sizeof( loadname ));
 
-	if( com.stricmp( ext, "" ))
+	if( Q_stricmp( ext, "" ))
 	{
 		// we needs to compare file extension with list of supported formats
 		// and be sure what is real extension, not a filename with dot
 		for( format = sound.streamformat; format && format->formatstring; format++ )
 		{
-			if( !com.stricmp( format->ext, ext ))
+			if( !Q_stricmp( format->ext, ext ))
 			{
 				FS_StripExtension( loadname );
 				anyformat = false;
@@ -167,9 +167,9 @@ stream_t *FS_OpenStream( const char *filename )
 	// now try all the formats in the selected list
 	for( format = sound.streamformat; format && format->formatstring; format++)
 	{
-		if( anyformat || !com.stricmp( ext, format->ext ))
+		if( anyformat || !Q_stricmp( ext, format->ext ))
 		{
-			com.sprintf( path, format->formatstring, loadname, "", format->ext );
+			Q_sprintf( path, format->formatstring, loadname, "", format->ext );
 			if(( stream = format->openfunc( path )) != NULL )
 			{
 				stream->format = format;

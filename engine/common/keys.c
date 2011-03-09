@@ -134,7 +134,7 @@ int Key_StringToKeynum( const char *str )
 	if( !str[1] ) return str[0];
 
 	// check for hex code
-	if( str[0] == '0' && str[1] == 'x' && com.strlen( str ) == 4 )
+	if( str[0] == '0' && str[1] == 'x' && Q_strlen( str ) == 4 )
 	{
 		int	n1, n2;
 		
@@ -166,7 +166,7 @@ int Key_StringToKeynum( const char *str )
 	// scan for a text match
 	for( kn = keynames; kn->name; kn++ )
 	{
-		if( !com.stricmp( str, kn->name ))
+		if( !Q_stricmp( str, kn->name ))
 			return kn->keynum;
 	}
 	return -1;
@@ -262,7 +262,7 @@ int Key_GetKey( const char *binding )
 
 	for( i = 0; i < 256; i++ )
 	{
-		if( keys[i].binding && !com.stricmp( binding, keys[i].binding ))
+		if( keys[i].binding && !Q_stricmp( binding, keys[i].binding ))
 			return i;
 	}
 	return -1;
@@ -367,8 +367,8 @@ void Key_Bind_f( void )
 	cmd[0] = 0; // start out with a null string
 	for( i = 2; i < c; i++ )
 	{
-		com.strcat( cmd, Cmd_Argv( i ));
-		if( i != ( c - 1 )) com.strcat( cmd, " " );
+		Q_strcat( cmd, Cmd_Argv( i ));
+		if( i != ( c - 1 )) Q_strcat( cmd, " " );
 	}
 	Key_SetBinding( b, cmd );
 }
@@ -464,7 +464,7 @@ void Key_AddKeyUpCommands( int key, const char *kb )
 			if( button[0] == '+' )
 			{
 				// button commands add keynum as a parm
-				com.sprintf( cmd, "-%s %i\n", button+1, key );
+				Q_sprintf( cmd, "-%s %i\n", button+1, key );
 				Cbuf_AddText( cmd );
 				keyevent = true;
 			}
@@ -590,7 +590,7 @@ void Key_Event( int key, qboolean down )
 					*buttonPtr = '\0';
 					if( button[0] == '+' )
 					{
-						com.sprintf( cmd, "%s %i\n", button, key );
+						Q_sprintf( cmd, "%s %i\n", button, key );
 						Cbuf_AddText( cmd );
 					}
 					else

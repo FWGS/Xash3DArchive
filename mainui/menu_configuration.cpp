@@ -36,8 +36,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_DONE	     	6
 #define ID_MSGBOX	 	7
 #define ID_MSGTEXT	 	8
-#define ID_YES	 	9
-#define ID_NO	 	10
+#define ID_YES	 	130
+#define ID_NO	 	131
 
 typedef struct
 {

@@ -217,7 +217,7 @@ void CL_DrawDemoRecording( void )
 		return;
 
 	pos = FS_Tell( cls.demofile );
-	com.snprintf( string, sizeof( string ), "RECORDING %s: %ik", cls.demoname, pos / 1024 );
+	Q_snprintf( string, sizeof( string ), "RECORDING %s: %ik", cls.demoname, pos / 1024 );
 
 	Con_DrawStringLen( string, &len, NULL );
 	Con_DrawString(( scr_width->integer - len) >> 1, scr_height->integer >> 2, string, color );
@@ -258,7 +258,7 @@ qboolean CL_NextDemo( void )
 		}
 	}
 
-	com.snprintf( str, MAX_STRING, "playdemo %s\n", cls.demos[cls.demonum] );
+	Q_snprintf( str, MAX_STRING, "playdemo %s\n", cls.demos[cls.demonum] );
 
 	Cbuf_InsertText( str );
 	cls.demonum++;
@@ -399,7 +399,7 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 	demfile = FS_Open( demoname, "rb", false );
 	if( !demfile )
 	{
-		com.strncpy( comment, "", MAX_STRING );
+		Q_strncpy( comment, "", MAX_STRING );
 		return false;
           }
 
@@ -409,21 +409,21 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 	if( r != 4 )
 	{
 		FS_Close( demfile );
-		com.strncpy( comment, "<corrupted>", MAX_STRING );
+		Q_strncpy( comment, "<corrupted>", MAX_STRING );
 		return false;
 	}
 
 	if( curSize == -1 )
 	{
 		FS_Close( demfile );
-		com.strncpy( comment, "<corrupted>", MAX_STRING );
+		Q_strncpy( comment, "<corrupted>", MAX_STRING );
 		return false;
 	}
 
 	if( curSize > sizeof( buf_data ))
 	{
 		FS_Close( demfile );
-		com.strncpy( comment, "<not compatible>", MAX_STRING );
+		Q_strncpy( comment, "<not compatible>", MAX_STRING );
 		return false;
 	}
 
@@ -434,7 +434,7 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 	if( r != curSize )
 	{
 		FS_Close( demfile );
-		com.strncpy( comment, "<truncated file>", MAX_STRING );
+		Q_strncpy( comment, "<truncated file>", MAX_STRING );
 		return false;
 	}
 
@@ -444,7 +444,7 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 	if( PROTOCOL_VERSION != BF_ReadLong( &buf ))
 	{
 		FS_Close( demfile );
-		com.strncpy( comment, "<invalid protocol>", MAX_STRING );
+		Q_strncpy( comment, "<invalid protocol>", MAX_STRING );
 		return false;
 	}
 
@@ -454,16 +454,16 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 	if( BF_ReadWord( &buf ) > GI->max_edicts )
 	{
 		FS_Close( demfile );
-		com.strncpy( comment, "<too many edicts>", MAX_STRING );
+		Q_strncpy( comment, "<too many edicts>", MAX_STRING );
 		return false;
 	}
 
 	// split comment to sections
-	com.strncpy( comment, BF_ReadString( &buf ), CS_SIZE );	// mapname
-	com.strncpy( maptitle, BF_ReadString( &buf ), MAX_STRING );	// maptitle
-	if( !com.strlen( maptitle )) com.strncpy( maptitle, "<no title>", MAX_STRING );
-	com.strncpy( comment + CS_SIZE, maptitle, CS_SIZE );
-	com.strncpy( comment + CS_SIZE * 2, va( "%i", maxClients ), CS_TIME );
+	Q_strncpy( comment, BF_ReadString( &buf ), CS_SIZE );	// mapname
+	Q_strncpy( maptitle, BF_ReadString( &buf ), MAX_STRING );	// maptitle
+	if( !Q_strlen( maptitle )) Q_strncpy( maptitle, "<no title>", MAX_STRING );
+	Q_strncpy( comment + CS_SIZE, maptitle, CS_SIZE );
+	Q_strncpy( comment + CS_SIZE * 2, va( "%i", maxClients ), CS_TIME );
 
 	// all done
 	FS_Close( demfile );
@@ -484,14 +484,14 @@ void CL_DemoGetName( int lastnum, char *filename )
 	if( lastnum < 0 || lastnum > 99 )
 	{
 		// bound
-		com.strcpy( filename, "demo99" );
+		Q_strcpy( filename, "demo99" );
 		return;
 	}
 
 	a = lastnum / 10;
 	b = lastnum % 10;
 
-	com.sprintf( filename, "demo%i%i", a, b );
+	Q_sprintf( filename, "demo%i%i", a, b );
 }
 
 /*
@@ -530,7 +530,7 @@ void CL_Record_f( void )
 		return;
 	}
 
-	if( !com.stricmp( name, "new" ))
+	if( !Q_stricmp( name, "new" ))
 	{
 		// scan for a free filename
 		for( n = 0; n < 100; n++ )
@@ -545,11 +545,11 @@ void CL_Record_f( void )
 			return;
 		}
 	}
-	else com.strncpy( demoname, name, sizeof( demoname ));
+	else Q_strncpy( demoname, name, sizeof( demoname ));
 
 	// open the demo file
-	com.sprintf( demopath, "demos/%s.dem", demoname );
-	com.sprintf( demoshot, "demos/%s.bmp", demoname );
+	Q_sprintf( demopath, "demos/%s.dem", demoname );
+	Q_sprintf( demoshot, "demos/%s.bmp", demoname );
 
 	// make sure what old demo is removed
 	if( FS_FileExists( demopath, false )) FS_Delete( demopath );
@@ -557,8 +557,8 @@ void CL_Record_f( void )
 
 	// write demoshot for preview
 	Cbuf_AddText( va( "demoshot \"%s\"\n", demoname ));
-	com.strncpy( cls.demoname, demoname, sizeof( cls.demoname ));
-	com.strncpy( menu.globals->demoname, demoname, sizeof( menu.globals->demoname ));
+	Q_strncpy( cls.demoname, demoname, sizeof( cls.demoname ));
+	Q_strncpy( menu.globals->demoname, demoname, sizeof( menu.globals->demoname ));
 	
 	CL_WriteDemoHeader( demopath );
 }
@@ -584,7 +584,7 @@ void CL_PlayDemo_f( void )
 	CL_Disconnect();
 	Host_ShutdownServer();
 
-	com.snprintf( filename, sizeof( filename ), "demos/%s.dem", Cmd_Argv( 1 ));
+	Q_snprintf( filename, sizeof( filename ), "demos/%s.dem", Cmd_Argv( 1 ));
 	if( !FS_FileExists( filename, true ))
 	{
 		MsgDev( D_ERROR, "couldn't open %s\n", filename );
@@ -593,15 +593,15 @@ void CL_PlayDemo_f( void )
 	}
 
 	cls.demofile = FS_Open( filename, "rb", true );
-	com.strncpy( cls.demoname, Cmd_Argv( 1 ), sizeof( cls.demoname ));
-	com.strncpy( menu.globals->demoname, Cmd_Argv( 1 ), sizeof( menu.globals->demoname ));
+	Q_strncpy( cls.demoname, Cmd_Argv( 1 ), sizeof( cls.demoname ));
+	Q_strncpy( menu.globals->demoname, Cmd_Argv( 1 ), sizeof( menu.globals->demoname ));
 
 	Con_Close();
 	UI_SetActiveMenu( false );
 
 	cls.demoplayback = true;
 	cls.state = ca_connected;
-	com.strncpy( cls.servername, Cmd_Argv( 1 ), sizeof( cls.servername ));
+	Q_strncpy( cls.servername, Cmd_Argv( 1 ), sizeof( cls.servername ));
 
 	// begin a playback demo
 }
@@ -625,7 +625,7 @@ void CL_StartDemos_f( void )
 	MsgDev( D_INFO, "%i demo%s in loop\n", c, (c > 1) ? "s" : "" );
 
 	for( i = 1; i < c + 1; i++ )
-		com.strncpy( cls.demos[i-1], Cmd_Argv( i ), sizeof( cls.demos[0] ));
+		Q_strncpy( cls.demos[i-1], Cmd_Argv( i ), sizeof( cls.demos[0] ));
 
 	if( !SV_Active() && cls.demonum != -1 && !cls.demoplayback )
 	{

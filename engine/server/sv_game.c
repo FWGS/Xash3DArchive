@@ -520,7 +520,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 	}
 
 	// check for entfile too
-	com.strncpy( entfilename, va( "maps/%s.ent", filename ), sizeof( entfilename ));
+	Q_strncpy( entfilename, va( "maps/%s.ent", filename ), sizeof( entfilename ));
 	ents = FS_LoadFile( entfilename, NULL, true ); // grab .ent files only from gamedir
 
 	if( !ents && lumplen >= 10 )
@@ -548,7 +548,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 		// means there is no title, so clear the message string now
 		char	token[1024];
 		string	check_name;
-		qboolean	need_landmark = com.strlen( landmark_name ) > 0 ? true : false;
+		qboolean	need_landmark = Q_strlen( landmark_name ) > 0 ? true : false;
 
 		if( !need_landmark && host.developer >= 2 )
 		{
@@ -563,11 +563,11 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 
 		while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 		{
-			if( !com.strcmp( token, "classname" ))
+			if( !Q_strcmp( token, "classname" ))
 			{
 				// check classname for spawn entity
 				pfile = COM_ParseFile( pfile, check_name );
-				if( !com.strcmp( spawn_entity, check_name ))
+				if( !Q_strcmp( spawn_entity, check_name ))
 				{
 					flags |= MAP_HAS_SPAWNPOINT;
 
@@ -576,12 +576,12 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 						break;
 				}
 			}
-			else if( need_landmark && !com.strcmp( token, "targetname" ))
+			else if( need_landmark && !Q_strcmp( token, "targetname" ))
 			{
 				// check targetname for landmark entity
 				pfile = COM_ParseFile( pfile, check_name );
 
-				if( !com.strcmp( landmark_name, check_name ))
+				if( !Q_strcmp( landmark_name, check_name ))
 				{
 					flags |= MAP_HAS_LANDMARK;
 
@@ -754,7 +754,7 @@ static qboolean SV_IsValidCmd( const char *pCmd )
 {
 	size_t	len;
                               	
-	len = com.strlen( pCmd );
+	len = Q_strlen( pCmd );
 
 	// valid commands all have a ';' or newline '\n' as their last character
 	if( len && ( pCmd[len-1] == '\n' || pCmd[len-1] == ';' ))
@@ -913,7 +913,7 @@ int pfnModelIndex( const char *m )
 
 	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 	{
-		if( !com.strcmp( sv.model_precache[i], m ))
+		if( !Q_strcmp( sv.model_precache[i], m ))
 			return i;
 	}
 	MsgDev( D_ERROR, "SV_ModelIndex: %s not precached\n", m );
@@ -1099,7 +1099,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 
 	while(( desc = SV_GetEntvarsDescirption( index++ )) != NULL )
 	{
-		if( !com.strcmp( pszField, desc->fieldName ))
+		if( !Q_strcmp( pszField, desc->fieldName ))
 			break;
 	}
 
@@ -1122,7 +1122,7 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 			t = STRING( *(string_t *)&((byte *)&ed->v)[desc->fieldOffset] );
 			if( t != NULL && t != svgame.globals->pStringBase )
 			{
-				if( !com.strcmp( t, pszValue ))
+				if( !Q_strcmp( t, pszValue ))
 					return ed;
 			}
 			break;
@@ -1566,10 +1566,10 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 		return 0;
 	}
 
-	if( samp[0] == '!' && com.is_digit( samp + 1 ))
+	if( samp[0] == '!' && Q_isdigit( samp + 1 ))
 	{
 		flags |= SND_SENTENCE;
-		sound_idx = com.atoi( samp + 1 );
+		sound_idx = Q_atoi( samp + 1 );
 
 		if( sound_idx >= 1536 )
 		{
@@ -1577,10 +1577,10 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 			return 0;
 		}
 	}
-	else if( samp[0] == '#' && com.is_digit( samp + 1 ))
+	else if( samp[0] == '#' && Q_isdigit( samp + 1 ))
 	{
 		flags |= SND_SENTENCE;
-		sound_idx = com.atoi( samp + 1 ) + 1536;
+		sound_idx = Q_atoi( samp + 1 ) + 1536;
 	}
 	else
 	{
@@ -1683,10 +1683,10 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
 
-	if( sample[0] == '!' && com.is_digit( sample + 1 ))
+	if( sample[0] == '!' && Q_isdigit( sample + 1 ))
 	{
 		flags |= SND_SENTENCE;
-		sound_idx = com.atoi( sample + 1 );
+		sound_idx = Q_atoi( sample + 1 );
 	}
 	else
 	{
@@ -1770,10 +1770,10 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
 	flags |= SND_FIXED_ORIGIN;
 
-	if( sample[0] == '!' && com.is_digit( sample + 1 ))
+	if( sample[0] == '!' && Q_isdigit( sample + 1 ))
 	{
 		flags |= SND_SENTENCE;
-		sound_idx = com.atoi( sample + 1 );
+		sound_idx = Q_atoi( sample + 1 );
 	}
 	else
 	{
@@ -2091,7 +2091,7 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 		return;
 
 	va_start( args, szFmt );
-	com.vsnprintf( buffer, MAX_STRING, szFmt, args );
+	Q_vsnprintf( buffer, MAX_STRING, szFmt, args );
 	va_end( args );
 
 	if( SV_IsValidCmd( buffer ))
@@ -2165,7 +2165,7 @@ int pfnDecalIndex( const char *m )
 
 	for( i = 1; i < MAX_DECALS && host.draw_decals[i][0]; i++ )
 	{
-		if( !com.stricmp( host.draw_decals[i], m ))
+		if( !Q_stricmp( host.draw_decals[i], m ))
 			return i;
 	}
 
@@ -2423,7 +2423,7 @@ pfnWriteString
 void pfnWriteString( const char *src )
 {
 	char	*dst, string[MAX_SYSPATH];
-	int	len = com.strlen( src ) + 1;
+	int	len = Q_strlen( src ) + 1;
 
 	if( len >= MAX_SYSPATH )
 	{
@@ -2490,7 +2490,7 @@ pfnCVarRegister
 */
 void pfnCVarRegister( cvar_t *pCvar )
 {
-	Cvar_Register( pCvar );
+	Cvar_RegisterVariable( pCvar );
 }
 
 /*
@@ -2516,7 +2516,7 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	va_list	args;
 
 	va_start( args, szFmt );
-	com.vsnprintf( buffer, 2048, szFmt, args );
+	Q_vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
 	if( level == at_notice )
@@ -2554,7 +2554,7 @@ static void pfnEngineFprintf( FILE *pfile, char *szFmt, ... )
 	va_list	args;
 
 	va_start( args, szFmt );
-	com.vsnprintf( buffer, 2048, szFmt, args );
+	Q_vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
 	fprintf( pfile, buffer );
@@ -2627,7 +2627,7 @@ string_t SV_AllocString( const char *szValue )
 {
 	const char	*newString;
 
-	newString = com.stralloc( svgame.stringspool, szValue, __FILE__, __LINE__ );
+	newString = _copystring( svgame.stringspool, szValue, __FILE__, __LINE__ );
 	return newString - svgame.globals->pStringBase;
 }		
 
@@ -2770,7 +2770,7 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	if( !pszName || !pszName[0] )
 		return svc_bad;
 
-	if( com.strlen( pszName ) >= sizeof( svgame.msg[0].name ))
+	if( Q_strlen( pszName ) >= sizeof( svgame.msg[0].name ))
 	{
 		MsgDev( D_ERROR, "REG_USER_MSG: too long name %s\n", pszName );
 		return svc_bad; // force error
@@ -2789,7 +2789,7 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	for( i = 0; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
 	{
 		// see if already registered
-		if( !com.strcmp( svgame.msg[i].name, pszName ))
+		if( !Q_strcmp( svgame.msg[i].name, pszName ))
 			return svc_lastmsg + i; // offset
 	}
 
@@ -2800,12 +2800,12 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	}
 
 	// register new message
-	com.strncpy( svgame.msg[i].name, pszName, sizeof( svgame.msg[i].name ));
+	Q_strncpy( svgame.msg[i].name, pszName, sizeof( svgame.msg[i].name ));
 	svgame.msg[i].number = svc_lastmsg + i;
 	svgame.msg[i].size = iSize;
 
 	// catch some user messages
-	if( !com.strcmp( pszName, "HudText" ))
+	if( !Q_strcmp( pszName, "HudText" ))
 		svgame.gmsgHudText = svc_lastmsg + i;
 
 	if( sv.state == ss_active )
@@ -3811,7 +3811,7 @@ pfnEndSection
 */
 void pfnEndSection( const char *pszSection )
 {
-	if( !com.stricmp( "credits", pszSection ))
+	if( !Q_stricmp( "credits", pszSection ))
 		Host_Credits ();
 	else Host_EndGame( pszSection );
 }
@@ -3938,7 +3938,7 @@ void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *
 				if( maxs ) VectorCopy( maxs, pData->maxs );
 				return;
 			}
-			else if( !com.strcmp( filename, pData->name ))
+			else if( !Q_strcmp( filename, pData->name ))
 			{
 				return;
 			}
@@ -3949,7 +3949,7 @@ void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *
 	{
 		for( i = 0, pData = sv.consistency_files; i < MAX_MODELS; i++, pData++ )
 		{
-			if( !pData->name || com.strcmp( filename, pData->name ))
+			if( !pData->name || Q_strcmp( filename, pData->name ))
 				continue;
 
 			// if we are here' we found a match.
@@ -4047,15 +4047,15 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 		{
 			if( cl->fakeclient )
 			{
-				com.strncat( result, "BOT", sizeof( result ));
+				Q_strncat( result, "BOT", sizeof( result ));
 			}
 			else if( cl->authentication_method == 0 )
 			{
-				com.snprintf( result, sizeof( result ), "%u", (uint)cl->WonID );
+				Q_snprintf( result, sizeof( result ), "%u", (uint)cl->WonID );
 			}
 			else
 			{
-				com.snprintf( result, sizeof( result ), "%s", SV_GetClientIDString( cl ));
+				Q_snprintf( result, sizeof( result ), "%s", SV_GetClientIDString( cl ));
 			}
 			return result;
 		}
@@ -4239,7 +4239,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 			Host_Error( "ED_ParseEdict: EOF without closing brace\n" );
 		if( token[0] == '}' ) break; // end of desc
 
-		com.strncpy( keyname, token, sizeof( keyname ));
+		Q_strncpy( keyname, token, sizeof( keyname ));
 
 		// parse value	
 		if(( *pfile = COM_ParseFile( *pfile, token )) == NULL ) 
@@ -4252,7 +4252,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 		if( !keyname[0] ) continue;
 
 		// "wad" field is completely ignored
-		if( !com.strcmp( keyname, "wad" ))
+		if( !Q_strcmp( keyname, "wad" ))
 			continue;
 
 		// keynames with a leading underscore are used for utility comments,
@@ -4269,7 +4269,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 		pkvd[numpairs].szValue = copystring( token );
 		pkvd[numpairs].fHandled = false;		
 
-		if( !com.strcmp( keyname, "classname" ) && classname == NULL )
+		if( !Q_strcmp( keyname, "classname" ) && classname == NULL )
 			classname = pkvd[numpairs].szValue;
 		if( ++numpairs >= 256 ) break;
 	}
@@ -4289,9 +4289,9 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 
 	for( i = 0; i < numpairs; i++ )
 	{
-		if( !com.strcmp( pkvd[i].szKeyName, "angle" ))
+		if( !Q_strcmp( pkvd[i].szKeyName, "angle" ))
 		{
-			float	flYawAngle = com.atof( pkvd[i].szValue );
+			float	flYawAngle = Q_atof( pkvd[i].szValue );
 
 			Mem_Free( pkvd[i].szKeyName ); // will be replace with 'angles'
 			Mem_Free( pkvd[i].szValue );	// release old value, so we don't need these
@@ -4306,7 +4306,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 			else pkvd[i].szValue = copystring( "0 0 0" ); // technically an error
 		}
 
-		if( !com.strcmp( pkvd[i].szKeyName, "light" ))
+		if( !Q_strcmp( pkvd[i].szKeyName, "light" ))
 		{
 			Mem_Free( pkvd[i].szKeyName );
 			pkvd[i].szKeyName = copystring( "light_level" );

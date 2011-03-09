@@ -179,32 +179,32 @@ void R_SetTextureParameters( void )
 	gltexture_t	*texture;
 	int		i;
 
-	if( !com.stricmp( gl_texturemode->string, "GL_NEAREST" ))
+	if( !Q_stricmp( gl_texturemode->string, "GL_NEAREST" ))
 	{
 		r_textureMinFilter = GL_NEAREST;
 		r_textureMagFilter = GL_NEAREST;
 	}
-	else if( !com.stricmp( gl_texturemode->string, "GL_LINEAR" ))
+	else if( !Q_stricmp( gl_texturemode->string, "GL_LINEAR" ))
 	{
 		r_textureMinFilter = GL_LINEAR;
 		r_textureMagFilter = GL_LINEAR;
 	}
-	else if( !com.stricmp( gl_texturemode->string, "GL_NEAREST_MIPMAP_NEAREST" ))
+	else if( !Q_stricmp( gl_texturemode->string, "GL_NEAREST_MIPMAP_NEAREST" ))
 	{
 		r_textureMinFilter = GL_NEAREST_MIPMAP_NEAREST;
 		r_textureMagFilter = GL_NEAREST;
 	}
-	else if( !com.stricmp( gl_texturemode->string, "GL_LINEAR_MIPMAP_NEAREST" ))
+	else if( !Q_stricmp( gl_texturemode->string, "GL_LINEAR_MIPMAP_NEAREST" ))
 	{
 		r_textureMinFilter = GL_LINEAR_MIPMAP_NEAREST;
 		r_textureMagFilter = GL_LINEAR;
 	}
-	else if( !com.stricmp( gl_texturemode->string, "GL_NEAREST_MIPMAP_LINEAR" ))
+	else if( !Q_stricmp( gl_texturemode->string, "GL_NEAREST_MIPMAP_LINEAR" ))
 	{
 		r_textureMinFilter = GL_NEAREST_MIPMAP_LINEAR;
 		r_textureMagFilter = GL_NEAREST;
 	}
-	else if( !com.stricmp( gl_texturemode->string, "GL_LINEAR_MIPMAP_LINEAR" ))
+	else if( !Q_stricmp( gl_texturemode->string, "GL_LINEAR_MIPMAP_LINEAR" ))
 	{
 		r_textureMinFilter = GL_LINEAR_MIPMAP_LINEAR;
 		r_textureMagFilter = GL_LINEAR;
@@ -365,7 +365,7 @@ void R_TextureList_f( void )
 
 	Msg( "---------------------------------------------------------\n" );
 	Msg( "%i total textures\n", texCount );
-	Msg( "%s total memory used\n", memprint( bytes ));
+	Msg( "%s total memory used\n", Q_memprint( bytes ));
 	Msg( "\n" );
 }
 
@@ -874,7 +874,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 	if( !name || !name[0] || !glw_state.initialized )
 		return 0;
 
-	if( com.strlen( name ) >= sizeof( r_textures->name ))
+	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
 		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name, sizeof( r_textures->name ));
 		return 0;
@@ -888,7 +888,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 		if( tex->flags & TF_CUBEMAP )
 			continue;
 
-		if( !com.stricmp( tex->name, name ))
+		if( !Q_stricmp( tex->name, name ))
 			return tex->texnum;
 	}
 
@@ -911,7 +911,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 	}
 
 	tex = &r_textures[i];
-	com.strncpy( tex->name, name, sizeof( tex->name ));
+	Q_strncpy( tex->name, name, sizeof( tex->name ));
 	tex->texnum = i;	// texnum is used for fast acess into r_textures array too
 	tex->flags = flags;
 
@@ -940,7 +940,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	if( !name || !name[0] || !glw_state.initialized )
 		return 0;
 
-	if( com.strlen( name ) >= sizeof( r_textures->name ))
+	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
 		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name, sizeof( r_textures->name ));
 		return 0;
@@ -954,7 +954,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 		if( tex->flags & TF_CUBEMAP )
 			continue;
 
-		if( !com.stricmp( tex->name, name ) && !update )
+		if( !Q_stricmp( tex->name, name ) && !update )
 			return tex->texnum;
 	}
 
@@ -983,7 +983,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 
 		tex = &r_textures[i];
 		hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
-		com.strncpy( tex->name, name, sizeof( tex->name ));
+		Q_strncpy( tex->name, name, sizeof( tex->name ));
 		tex->texnum = i;	// texnum is used for fast acess into r_textures array too
 		tex->flags = flags;
 	}
@@ -1021,7 +1021,7 @@ void GL_FreeImage( const char *name )
 	if( !name || !name[0] || !glw_state.initialized )
 		return;
 
-	if( com.strlen( name ) >= sizeof( r_textures->name ))
+	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
 		MsgDev( D_ERROR, "GL_FreeImage: too long name %s\n", name, sizeof( r_textures->name ));
 		return;
@@ -1035,7 +1035,7 @@ void GL_FreeImage( const char *name )
 		if( tex->flags & TF_CUBEMAP )
 			continue;
 
-		if( !com.stricmp( tex->name, name ))
+		if( !Q_stricmp( tex->name, name ))
 		{
 			GL_FreeTexture( tex->texnum );
 			return;
@@ -1302,7 +1302,7 @@ void R_InitImages( void )
 	Mem_Set( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
 
 	// create unused 0-entry
-	com.strncpy( r_textures->name, "*unused*", sizeof( r_textures->name ));
+	Q_strncpy( r_textures->name, "*unused*", sizeof( r_textures->name ));
 	hash = Com_HashKey( r_textures->name, TEXTURES_HASH_SIZE );
 	r_textures->nextHash = r_texturesHashTable[hash];
 	r_texturesHashTable[hash] = r_textures;

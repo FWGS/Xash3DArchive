@@ -300,7 +300,7 @@ delta_info_t *Delta_FindStruct( const char *name )
 
 	for( i = 0; i < NUM_FIELDS( dt_info ); i++ )
 	{
-		if( !com.stricmp( dt_info[i].pName, name ))
+		if( !Q_stricmp( dt_info[i].pName, name ))
 			return &dt_info[i];
 	}
 
@@ -332,7 +332,7 @@ delta_info_t *Delta_FindStructByEncoder( const char *encoderName )
 
 	for( i = 0; i < NUM_FIELDS( dt_info ); i++ )
 	{
-		if( !com.stricmp( dt_info[i].funcName, encoderName ))
+		if( !Q_stricmp( dt_info[i].funcName, encoderName ))
 			return &dt_info[i];
 	}
 	// found nothing
@@ -377,7 +377,7 @@ delta_field_t *Delta_FindFieldInfo( const delta_field_t *pInfo, const char *fiel
 
 	for( ; pInfo->name; pInfo++ )
 	{
-		if( !com.strcmp( pInfo->name, fieldName ))
+		if( !Q_strcmp( pInfo->name, fieldName ))
 			return (delta_field_t *)pInfo;
 	}
 	return NULL;
@@ -392,7 +392,7 @@ int Delta_IndexForFieldInfo( const delta_field_t *pInfo, const char *fieldName )
 
 	for( i = 0; pInfo->name; i++, pInfo++ )
 	{
-		if( !com.strcmp( pInfo->name, fieldName ))
+		if( !Q_strcmp( pInfo->name, fieldName ))
 			return i;
 	}
 	return -1;
@@ -412,7 +412,7 @@ qboolean Delta_AddField( const char *pStructName, const char *pName, int flags, 
 	// check for coexisting field
 	for( i = 0, pField = dt->pFields; i < dt->numFields; i++, pField++ )
 	{
-		if( !com.strcmp( pField->name, pName ))
+		if( !Q_strcmp( pField->name, pName ))
 		{
 			MsgDev( D_NOTE, "Delta_Add: %s->%s already existing\n", pStructName, pName );
 			return false; // field already exist		
@@ -528,7 +528,7 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 	char		*oldpos;
 
 	*delta_script = COM_ParseFile( *delta_script, token );
-	if( com.strcmp( token, "(" ))
+	if( Q_strcmp( token, "(" ))
 	{
 		MsgDev( D_ERROR, "Delta_ParseField: expected '(', found '%s' instead\n", token );
 		return false;
@@ -549,7 +549,7 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 	}
 
 	*delta_script = COM_ParseFile( *delta_script, token );
-	if( com.strcmp( token, "," ))
+	if( Q_strcmp( token, "," ))
 	{
 		MsgDev( D_ERROR, "Delta_ParseField: expected ',', found '%s' instead\n", token );
 		return false;
@@ -564,31 +564,31 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 	// read delta-flags
 	while(( *delta_script = COM_ParseFile( *delta_script, token )) != NULL )
 	{
-		if( !com.strcmp( token, "," ))
+		if( !Q_strcmp( token, "," ))
 			break;	// end of flags argument
 
-		if( !com.strcmp( token, "|" ))
+		if( !Q_strcmp( token, "|" ))
 			continue;
 
-		if( !com.strcmp( token, "DT_BYTE" ))
+		if( !Q_strcmp( token, "DT_BYTE" ))
 			pField->flags |= DT_BYTE;
-		else if( !com.strcmp( token, "DT_SHORT" ))
+		else if( !Q_strcmp( token, "DT_SHORT" ))
 			pField->flags |= DT_SHORT;
-		else if( !com.strcmp( token, "DT_FLOAT" ))
+		else if( !Q_strcmp( token, "DT_FLOAT" ))
 			pField->flags |= DT_FLOAT;
-		else if( !com.strcmp( token, "DT_INTEGER" ))
+		else if( !Q_strcmp( token, "DT_INTEGER" ))
 			pField->flags |= DT_INTEGER;
-		else if( !com.strcmp( token, "DT_ANGLE" ))
+		else if( !Q_strcmp( token, "DT_ANGLE" ))
 			pField->flags |= DT_ANGLE;
-		else if( !com.strncmp( token, "DT_TIMEWINDOW", 13 ))
+		else if( !Q_strncmp( token, "DT_TIMEWINDOW", 13 ))
 			pField->flags |= DT_TIMEWINDOW;
-		else if( !com.strcmp( token, "DT_STRING" ))
+		else if( !Q_strcmp( token, "DT_STRING" ))
 			pField->flags |= DT_STRING;
-		else if( !com.strcmp( token, "DT_SIGNED" ))
+		else if( !Q_strcmp( token, "DT_SIGNED" ))
 			pField->flags |= DT_SIGNED;
 	}
 
-	if( com.strcmp( token, "," ))
+	if( Q_strcmp( token, "," ))
 	{
 		MsgDev( D_ERROR, "Delta_ParseField: expected ',', found '%s' instead\n", token );
 		return false;
@@ -602,10 +602,10 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 		return false;
 	}
 
-	pField->bits = com.atoi( token );
+	pField->bits = Q_atoi( token );
 
 	*delta_script = COM_ParseFile( *delta_script, token ); 
-	if( com.strcmp( token, "," ))
+	if( Q_strcmp( token, "," ))
 	{
 		MsgDev( D_ERROR, "Delta_ReadField: expected ',', found '%s' instead\n", token );
 		return false;
@@ -618,12 +618,12 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 		return false;
 	}
 
-	pField->multiplier = com.atof( token );
+	pField->multiplier = Q_atof( token );
 
 	if( bPost )
 	{
 		*delta_script = COM_ParseFile( *delta_script, token );
-		if( com.strcmp( token, "," ))
+		if( Q_strcmp( token, "," ))
 		{
 			MsgDev( D_ERROR, "Delta_ReadField: expected ',', found '%s' instead\n", token );
 			return false;
@@ -636,7 +636,7 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 			return false;
 		}
 
-		pField->post_multiplier = com.atof( token );
+		pField->post_multiplier = Q_atof( token );
 	}
 	else
 	{
@@ -646,7 +646,7 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 
 	// closing brace...
 	*delta_script = COM_ParseFile( *delta_script, token );
-	if( com.strcmp( token, ")" ))
+	if( Q_strcmp( token, ")" ))
 	{
 		MsgDev( D_ERROR, "Delta_ParseField: expected ')', found '%s' instead\n", token );
 		return false;
@@ -678,12 +678,12 @@ void Delta_ParseTable( char **delta_script, delta_info_t *dt, const char *encode
 	{
 		ASSERT( dt->numFields <= dt->maxFields );
 
-		if( !com.strcmp( token, "DEFINE_DELTA" ))
+		if( !Q_strcmp( token, "DEFINE_DELTA" ))
 		{
 			if( Delta_ParseField( delta_script, pInfo, &pField[dt->numFields], false ))
 				dt->numFields++;
 		}
-		else if( !com.strcmp( token, "DEFINE_DELTA_POST" ))
+		else if( !Q_strcmp( token, "DEFINE_DELTA_POST" ))
 		{
 			if( Delta_ParseField( delta_script, pInfo, &pField[dt->numFields], true ))
 				dt->numFields++;
@@ -696,13 +696,13 @@ void Delta_ParseTable( char **delta_script, delta_info_t *dt, const char *encode
 	}
 
 	// copy function name
-	com.strncpy( dt->funcName, encodeFunc, sizeof( dt->funcName ));
+	Q_strncpy( dt->funcName, encodeFunc, sizeof( dt->funcName ));
 
-	if( !com.stricmp( encodeDll, "none" ))
+	if( !Q_stricmp( encodeDll, "none" ))
 		dt->customEncode = CUSTOM_NONE;
-	else if( !com.stricmp( encodeDll, "gamedll" ))
+	else if( !Q_stricmp( encodeDll, "gamedll" ))
 		dt->customEncode = CUSTOM_SERVER_ENCODE;
-	else if( !com.stricmp( encodeDll, "clientdll" ))
+	else if( !Q_stricmp( encodeDll, "clientdll" ))
 		dt->customEncode = CUSTOM_CLIENT_ENCODE;
 
 	// adjust to fit memory size
@@ -725,7 +725,7 @@ void Delta_InitFields( void )
 	{
 		static string	errormsg;
 
-		com.snprintf( errormsg, sizeof( errormsg ), "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
+		Q_snprintf( errormsg, sizeof( errormsg ), "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
 		SV_SysError( errormsg );
 		com.error( errormsg );
 	}
@@ -742,8 +742,8 @@ void Delta_InitFields( void )
 
 		pfile = COM_ParseFile( pfile, encodeDll );
 
-		if( !com.stricmp( encodeDll, "none" ))
-			com.strcpy( encodeFunc, "null" );
+		if( !Q_stricmp( encodeDll, "none" ))
+			Q_strcpy( encodeFunc, "null" );
 		else pfile = COM_ParseFile( pfile, encodeFunc );
 
 		// jump to '{'
@@ -928,7 +928,7 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 		char	*s2 = (char *)((byte *)to + pField->offset );
 
 		// 0 is equal, otherwise not equal
-		toF = com.strcmp( s1, s2 );
+		toF = Q_strcmp( s1, s2 );
 	}
 
 	return ( fromF == toF ) ? true : false;
@@ -1117,7 +1117,7 @@ qboolean Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to,
 		}
 
 		pOut = (char *)((byte *)to + pField->offset );
-		com.strncpy( pOut, pStr, pField->size );
+		Q_strncpy( pOut, pStr, pField->size );
 	}
 	return bChanged;
 }
@@ -1654,7 +1654,7 @@ int Delta_FindField( delta_t *pFields, const char *fieldname )
 
 	for( i = 0, pField = dt->pFields; i < dt->numFields; i++, pField++ )
 	{
-		if( !com.strcmp( pField->name, fieldname ))
+		if( !Q_strcmp( pField->name, fieldname ))
 			return i;
 	}
 	return -1;
@@ -1672,7 +1672,7 @@ void Delta_SetField( delta_t *pFields, const char *fieldname )
 
 	for( i = 0, pField = dt->pFields; i < dt->numFields; i++, pField++ )
 	{
-		if( !com.strcmp( pField->name, fieldname ))
+		if( !Q_strcmp( pField->name, fieldname ))
 		{
 			pField->bInactive = false;
 			return;
@@ -1692,7 +1692,7 @@ void Delta_UnsetField( delta_t *pFields, const char *fieldname )
 
 	for( i = 0, pField = dt->pFields; i < dt->numFields; i++, pField++ )
 	{
-		if( !com.strcmp( pField->name, fieldname ))
+		if( !Q_strcmp( pField->name, fieldname ))
 		{
 			pField->bInactive = true;
 			return;

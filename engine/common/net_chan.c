@@ -126,8 +126,8 @@ void Netchan_ReportFlow( netchan_t *chan )
 
 	ASSERT( chan != NULL );
 
-	com.strcpy( incoming, com.pretifymem((float)chan->flow[FLOW_INCOMING].totalbytes, 3 ));
-	com.strcpy( outgoing, com.pretifymem((float)chan->flow[FLOW_OUTGOING].totalbytes, 3 ));
+	Q_strcpy( incoming, Q_pretifymem((float)chan->flow[FLOW_INCOMING].totalbytes, 3 ));
+	Q_strcpy( outgoing, Q_pretifymem((float)chan->flow[FLOW_OUTGOING].totalbytes, 3 ));
 
 	MsgDev( D_INFO, "Signon network traffic:  %s from server, %s to server\n", incoming, outgoing );
 }
@@ -358,10 +358,10 @@ void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... )
 	char	string[MAX_SYSPATH];
 
 	va_start( argptr, format );
-	com.vsprintf( string, format, argptr );
+	Q_vsprintf( string, format, argptr );
 	va_end( argptr );
 
-	Netchan_OutOfBand( net_socket, adr, com.strlen( string ), string );
+	Netchan_OutOfBand( net_socket, adr, Q_strlen( string ), string );
 }
 
 /*
@@ -827,7 +827,7 @@ int Netchan_CreateFileFragments( qboolean server, netchan_t *chan, const char *f
 		buf->isfile = true;
 		buf->size = send;
 		buf->foffset = pos;
-		com.strncpy( buf->filename, filename, sizeof( buf->filename ));
+		Q_strncpy( buf->filename, filename, sizeof( buf->filename ));
 
 		pos += send;
 		remaining -= send;
@@ -952,9 +952,9 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 	BF_WriteBits( msg, BF_GetData( &p->frag_message ), BF_GetNumBitsWritten( &p->frag_message ));
 	BF_SeekToBit( msg, 0 ); // rewind buffer
 
-	com.strncpy( filename, BF_ReadString( msg ), sizeof( filename ));
+	Q_strncpy( filename, BF_ReadString( msg ), sizeof( filename ));
 
-	if( com.strlen( filename ) <= 0 )
+	if( Q_strlen( filename ) <= 0 )
 	{
 		MsgDev( D_ERROR, "File fragment received with no filename\nFlushing input queue\n" );
 		
@@ -962,7 +962,7 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 		Netchan_FlushIncoming( chan, FRAG_FILE_STREAM );
 		return false;
 	}
-	else if( com.strstr( filename, ".." ))
+	else if( Q_strstr( filename, ".." ))
 	{
 		MsgDev( D_ERROR, "File fragment received with relative path, ignoring\n" );
 		
@@ -971,7 +971,7 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 		return false;
 	}
 
-	com.strncpy( chan->incomingfilename, filename, sizeof( chan->incomingfilename ));
+	Q_strncpy( chan->incomingfilename, filename, sizeof( chan->incomingfilename ));
 
 	if( FS_FileExists( filename, false ))
 	{

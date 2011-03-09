@@ -18,7 +18,7 @@ static int IsComment( const char *pText )
 {
 	if( pText )
 	{
-		int length = com.strlen( pText );
+		int length = Q_strlen( pText );
 
 		if( length >= 2 && pText[0] == '/' && pText[1] == '/' )
 			return 1;
@@ -104,7 +104,7 @@ static int ParseFloats( const char *pText, float *pFloat, int count )
 		if( pTemp )
 		{
 			// parse a float
-			pFloat[index] = com.atof( pTemp );
+			pFloat[index] = Q_atof( pTemp );
 			count--;
 			index++;
 		}
@@ -121,7 +121,7 @@ static void TrimSpace( const char *source, char *dest )
 	int start, end, length;
 
 	start = 0;
-	end = com.strlen( source );
+	end = Q_strlen( source );
 
 	while( source[start] && IsWhiteSpace( source[start] ))
 		start++;
@@ -147,7 +147,7 @@ static int IsToken( const char *pText, const char *pTokenName )
 	if( !pText || !pTokenName )
 		return 0;
 
-	if( !com.strnicmp( pText+1, pTokenName, com.strlen( pTokenName )))
+	if( !Q_strnicmp( pText+1, pTokenName, Q_strlen( pTokenName )))
 		return 1;
 
 	return 0;
@@ -273,12 +273,12 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 				MsgDev( D_ERROR, "TextMessage: unexpected '}' found, line %d\n", lineNumber );
 				return;
 			}
-			com.strcpy( currentName, trim );
+			Q_strcpy( currentName, trim );
 			break;
 		case MSGFILE_TEXT:
 			if( IsEndOfText( trim ))
 			{
-				int length = com.strlen( currentName );
+				int length = Q_strlen( currentName );
 
 				// save name on name heap
 				if( lastNamePos + length > 8192 )
@@ -287,7 +287,7 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 					return;
 				}
 
-				com.strcpy( nameHeap + lastNamePos, currentName );
+				Q_strcpy( nameHeap + lastNamePos, currentName );
 
 				// terminate text in-place in the memory file
 				// (it's temporary memory that will be deleted)
@@ -296,7 +296,7 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 				// Save name/text on heap
 				textMessages[messageCount] = gMessageParms;
 				textMessages[messageCount].pName = nameHeap + lastNamePos;
-				lastNamePos += com.strlen( currentName ) + 1;
+				lastNamePos += Q_strlen( currentName ) + 1;
 				textMessages[messageCount].pMessage = pCurrentText;
 				messageCount++;
 
@@ -327,7 +327,7 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 	textHeapSize = 0;
 
 	for( i = 0; i < messageCount; i++ )
-		textHeapSize += com.strlen( textMessages[i].pMessage ) + 1;
+		textHeapSize += Q_strlen( textMessages[i].pMessage ) + 1;
 	messageSize = ( messageCount * sizeof( client_textmessage_t ));
 
 	// must malloc because we need to be able to clear it after initialization
@@ -347,9 +347,9 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 	for( i = 0; i < messageCount; i++ )
 	{
 		clgame.titles[i].pName += nameOffset;			// adjust name pointer (parallel buffer)
-		com.strcpy( pCurrentText, clgame.titles[i].pMessage );	// copy text over
+		Q_strcpy( pCurrentText, clgame.titles[i].pMessage );	// copy text over
 		clgame.titles[i].pMessage = pCurrentText;
-		pCurrentText += com.strlen( pCurrentText ) + 1;
+		pCurrentText += Q_strlen( pCurrentText ) + 1;
 	}
 
 #if _DEBUG

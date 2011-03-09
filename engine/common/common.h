@@ -14,6 +14,7 @@
 #include "ref_params.h"
 #include "com_export.h"
 #include "com_model.h"
+#include "crtlib.h"
 
 // PERFORMANCE INFO
 #define MIN_FPS         	0.1		// host minimum fps value for maxfps.
@@ -22,7 +23,7 @@
 #define MAX_FRAMETIME	0.1
 #define MIN_FRAMETIME	0.001
 
-#define MAX_RENDERS		8		// max libraries to keep tracking
+#define MAX_CMD_TOKENS	80		// cmd tokens
 #define MAX_ENTNUMBER	99999		// for server and client parsing
 #define MAX_HEARTBEAT	-99999		// connection time
 #define QCHAR_WIDTH		16		// font width
@@ -40,7 +41,10 @@
 #define MAX_MSGLEN		32768	// max length of network message
 				// FIXME: replace with NET_MAX_PAYLOAD
 
-typedef struct stream_s stream_t;	// sound stream for background music playing
+// filesystem flags
+#define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path
+#define FS_NOWRITE_PATH	2	// default behavior - last added gamedir set as writedir. This flag disables it
+#define FS_GAMEDIR_PATH	4	// just a marker for gamedir path
 
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
@@ -123,6 +127,10 @@ typedef struct host_parm_s
 	string		finalmsg;		// server shutdown final message
 	host_redirect_t	rd;		// remote console
 
+	// command line parms
+	int		argc;
+	const char	**argv;
+
 	double		realtime;		// host.curtime
 	double		frametime;	// time between engine frames
 	double		realframetime;	// for some system events, e.g. console animations
@@ -139,6 +147,7 @@ typedef struct host_parm_s
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
 	qboolean		key_overstrike;	// key overstrike mode
+	qboolean		stuffcmdsrun;	// execute stuff commands
 
 	byte		*imagepool;	// imagelib mempool
 	byte		*soundpool;	// soundlib mempool
@@ -521,6 +530,8 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audi
 void AVI_CloseVideo( movie_state_t *Avi );
 qboolean AVI_IsActive( movie_state_t *Avi );
 movie_state_t *AVI_GetState( int num );
+qboolean AVI_Initailize( void );
+void AVI_Shutdown( void );
 
 // shared calls
 qboolean CL_IsInGame( void );
@@ -557,6 +568,7 @@ void CL_WriteMessageHistory( void );
 void CL_MouseEvent( int mx, int my );
 void CL_SendCmd( void );
 void CL_Disconnect( void );
+void CL_Crashed( void );
 qboolean CL_NextDemo( void );
 void CL_Drop( void );
 void SCR_Init( void );

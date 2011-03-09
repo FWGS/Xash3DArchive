@@ -27,7 +27,7 @@ void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
 		return;
 	
 	va_start( argptr, fmt );
-	com.vsprintf( string, fmt, argptr );
+	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 	
 	BF_WriteByte( &cl->netchan.message, svc_print );
@@ -52,7 +52,7 @@ void SV_BroadcastPrintf( int level, char *fmt, ... )
 	if( !sv.state ) return;
 
 	va_start( argptr, fmt );
-	com.vsprintf( string, fmt, argptr );
+	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 	
 	// echo to console
@@ -83,7 +83,7 @@ void SV_BroadcastCommand( char *fmt, ... )
 	
 	if( !sv.state ) return;
 	va_start( argptr, fmt );
-	com.vsprintf( string, fmt, argptr );
+	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 
 	BF_WriteByte( &sv.reliable_datagram, svc_stufftext );
@@ -160,7 +160,7 @@ qboolean SV_SetPlayer( void )
 	// numeric values are just slot numbers
 	if( s[0] >= '0' && s[0] <= '9' )
 	{
-		idnum = com.atoi( Cmd_Argv( 1 ));
+		idnum = Q_atoi( Cmd_Argv( 1 ));
 		if( idnum < 0 || idnum >= sv_maxclients->integer )
 		{
 			Msg( "Bad client slot: %i\n", idnum );
@@ -179,7 +179,7 @@ qboolean SV_SetPlayer( void )
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( !cl->state ) continue;
-		if( !com.strcmp( cl->name, s ))
+		if( !Q_strcmp( cl->name, s ))
 		{
 			sv_client = cl;
 			return true;
@@ -210,7 +210,7 @@ void SV_Map_f( void )
 	}
 
 	// hold mapname to other place
-	com.strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
+	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
 	
 	// determine spawn entity classname
 	if( sv_maxclients->integer == 1 )
@@ -274,7 +274,7 @@ void SV_MapBackground_f( void )
 	}
 
 	// hold mapname to other place
-	com.strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
+	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
 	flags = SV_MapIsValid( mapname, GI->sp_entity, NULL );
 
 	if(!( flags & MAP_IS_EXIST ))
@@ -287,7 +287,7 @@ void SV_MapBackground_f( void )
 	if(!( flags & MAP_HAS_SPAWNPOINT ))
 		MsgDev( D_WARN, "SV_NewMap: map %s doesn't have a valid spawnpoint\n", mapname );
 		
-	com.strncpy( host.finalmsg, "", MAX_STRING );
+	Q_strncpy( host.finalmsg, "", MAX_STRING );
 	SV_Shutdown( true );
 	NET_Config ( false ); // close network sockets
 
@@ -466,7 +466,7 @@ void SV_ChangeLevel_f( void )
 		c = 2; // reduce args
 	}
 
-	if( c == 3 && !com.stricmp( sv.name, Cmd_Argv( 1 )))
+	if( c == 3 && !Q_stricmp( sv.name, Cmd_Argv( 1 )))
 	{
 		MsgDev( D_INFO, "SV_ChangeLevel: can't changelevel with same map. Ignored.\n" );
 		return;	
@@ -650,12 +650,12 @@ void SV_Status_f( void )
 		}
 
 		Msg( "%s", cl->name );
-		l = 24 - com.strlen( cl->name );
+		l = 24 - Q_strlen( cl->name );
 		for( j = 0; j < l; j++ ) Msg( " " );
 		Msg( "%g ", ( host.realtime - cl->lastmessage ));
 		s = NET_BaseAdrToString( cl->netchan.remote_address );
 		Msg( "%s", s );
-		l = 22 - com.strlen( s );
+		l = 22 - Q_strlen( s );
 		for( j = 0; j < l; j++ ) Msg( " " );
 		Msg( "%5i", cl->netchan.qport );
 		Msg( "\n" );
@@ -676,15 +676,15 @@ void SV_ConSay_f( void )
 
 	if( Cmd_Argc() < 2 ) return;
 
-	com.strncpy( text, "console: ", MAX_SYSPATH );
+	Q_strncpy( text, "console: ", MAX_SYSPATH );
 	p = Cmd_Args();
 
 	if( *p == '"' )
 	{
 		p++;
-		p[com.strlen(p) - 1] = 0;
+		p[Q_strlen(p) - 1] = 0;
 	}
-	com.strncat( text, p, MAX_SYSPATH );
+	Q_strncat( text, p, MAX_SYSPATH );
 
 	for( i = 0, client = svs.clients; i < sv_maxclients->integer; i++, client++ )
 	{
@@ -748,7 +748,7 @@ Kick everyone off, possibly in preparation for a new game
 void SV_KillServer_f( void )
 {
 	if( !svs.initialized ) return;
-	com.strncpy( host.finalmsg, "Server was killed\n", MAX_STRING );
+	Q_strncpy( host.finalmsg, "Server was killed\n", MAX_STRING );
 	SV_Shutdown( false );
 	NET_Config ( false ); // close network sockets
 }

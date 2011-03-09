@@ -1489,9 +1489,9 @@ void SV_SetLightStyle( int style, const char* s )
 	ASSERT( s );
 	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
 
-	com.strncpy( sv.lightstyles[style].pattern, s, sizeof( sv.lightstyles[0].pattern ));
+	Q_strncpy( sv.lightstyles[style].pattern, s, sizeof( sv.lightstyles[0].pattern ));
 
-	j = com.strlen( s );
+	j = Q_strlen( s );
 	sv.lightstyles[style].length = j;
 
 	for( k = 0; k < j; k++ )

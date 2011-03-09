@@ -131,7 +131,7 @@ void Con_SetColor_f( void )
 		break;
 	case 2:
 		VectorSet( color, g_color_table[7][0], g_color_table[7][1], g_color_table[7][2] );
-		com.atov( color, Cmd_Argv( 1 ), 3 );
+		Q_atov( color, Cmd_Argv( 1 ), 3 );
 		Con_DefaultColor( color[0], color[1], color[2] );
 		break;
 	default:
@@ -174,6 +174,35 @@ void Con_ClearTyping( void )
 {
 	Con_ClearField( &con.input );
 	con.input.widthInChars = g_console_field_width;
+}
+
+/*
+============
+Con_StringLength
+
+skipped color prefixes
+============
+*/
+int Con_StringLength( const char *string )
+{
+	int		len;
+	const char	*p;
+
+	if( !string ) return 0;
+
+	len = 0;
+	p = string;
+	while( *p )
+	{
+		if( IsColorString( p ))
+		{
+			p += 2;
+			continue;
+		}
+		p++;
+		len++;
+	}
+	return len;
 }
 
 /*
@@ -592,7 +621,7 @@ void Con_Print( const char *txt )
 	if( host.type == HOST_DEDICATED ) return;
           if( !con.initialized ) return;
 
-	if( !com.strncmp( txt, "[skipnotify]", 12 ))
+	if( !Q_strncmp( txt, "[skipnotify]", 12 ))
 	{
 		skipnotify = true;
 		txt += 12;
@@ -663,10 +692,10 @@ void Con_NPrintf( int idx, char *fmt, ... )
 		return;
 
 	va_start( args, fmt );
-	com.vsnprintf( buffer, 2048, fmt, args );
+	Q_vsnprintf( buffer, 2048, fmt, args );
 	va_end( args );
 
-	com.snprintf( con.notify[idx].szNotify, sizeof( con.notify[idx].szNotify ), buffer );
+	Q_snprintf( con.notify[idx].szNotify, sizeof( con.notify[idx].szNotify ), buffer );
 
 	// reset values
 	con.notify[idx].expire = host.realtime + 4.0f;
@@ -685,10 +714,10 @@ void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 		return;
 
 	va_start( args, fmt );
-	com.vsnprintf( buffer, 2048, fmt, args );
+	Q_vsnprintf( buffer, 2048, fmt, args );
 	va_end( args );
 
-	com.snprintf( con.notify[info->index].szNotify, sizeof( con.notify[info->index].szNotify ), buffer );
+	Q_snprintf( con.notify[info->index].szNotify, sizeof( con.notify[info->index].szNotify ), buffer );
 
 	// setup values
 	con.notify[info->index].expire = host.realtime + info->time_to_live;
@@ -712,9 +741,9 @@ compare first argument with string
 */
 static qboolean Cmd_CheckName( const char *name )
 {
-	if( !com.stricmp( Cmd_Argv( 0 ), name ))
+	if( !Q_stricmp( Cmd_Argv( 0 ), name ))
 		return true;
-	if( !com.stricmp( Cmd_Argv( 0 ), va( "\\%s", name )))
+	if( !Q_stricmp( Cmd_Argv( 0 ), va( "\\%s", name )))
 		return true;
 	return false;
 }
@@ -730,21 +759,21 @@ static void pfnFindMatches( const char *s, const char *unused1, const char *unus
 	int		i;
 
 	if( *s == '@' ) return; // never show system cvars or cmds
-	if( com.strnicmp( s, con.completionString, com.strlen( con.completionString )))
+	if( Q_strnicmp( s, con.completionString, Q_strlen( con.completionString )))
 		return;
 
 	con.matchCount++;
 
 	if( con.matchCount == 1 )
 	{
-		com.strncpy( con.shortestMatch, s, sizeof( con.shortestMatch ));
+		Q_strncpy( con.shortestMatch, s, sizeof( con.shortestMatch ));
 		return;
 	}
 
 	// cut shortestMatch to the amount common with s
 	for( i = 0; s[i]; i++ )
 	{
-		if( com.tolower( con.shortestMatch[i] ) != com.tolower( s[i] ))
+		if( Q_tolower( con.shortestMatch[i] ) != Q_tolower( s[i] ))
 			con.shortestMatch[i] = 0;
 	}
 }
@@ -756,7 +785,7 @@ pfnPrintMatches
 */
 static void pfnPrintMatches( const char *s, const char *unused1, const char *m, void *unused2 )
 {
-	if( !com.strnicmp( s, con.shortestMatch, com.strlen( con.shortestMatch )))
+	if( !Q_strnicmp( s, con.shortestMatch, Q_strlen( con.shortestMatch )))
 	{
 		if( m && *m ) Msg( "    %s ^3\"%s\"\n", s, m );
 		else Msg( "    %s\n", s ); // variable or command without description
@@ -768,32 +797,32 @@ static void ConcatRemaining( const char *src, const char *start )
 	char	*arg;
 	int	i;
 
-	arg = com.strstr( src, start );
+	arg = Q_strstr( src, start );
 
 	if( !arg )
 	{
 		for( i = 1; i < Cmd_Argc(); i++ )
 		{
-			com.strncat( con.completionField->buffer, " ", sizeof( con.completionField->buffer ));
+			Q_strncat( con.completionField->buffer, " ", sizeof( con.completionField->buffer ));
 			arg = Cmd_Argv( i );
 			while( *arg )
 			{
 				if( *arg == ' ' )
 				{
-					com.strncat( con.completionField->buffer, "\"", sizeof( con.completionField->buffer ));
+					Q_strncat( con.completionField->buffer, "\"", sizeof( con.completionField->buffer ));
 					break;
 				}
 				arg++;
 			}
 
-			com.strncat( con.completionField->buffer, Cmd_Argv( i ), sizeof( con.completionField->buffer ));
-			if( *arg == ' ' ) com.strncat( con.completionField->buffer, "\"", sizeof( con.completionField->buffer ));
+			Q_strncat( con.completionField->buffer, Cmd_Argv( i ), sizeof( con.completionField->buffer ));
+			if( *arg == ' ' ) Q_strncat( con.completionField->buffer, "\"", sizeof( con.completionField->buffer ));
 		}
 		return;
 	}
 
-	arg += com.strlen( start );
-	com.strncat( con.completionField->buffer, arg, sizeof( con.completionField->buffer ));
+	arg += Q_strlen( start );
+	Q_strncat( con.completionField->buffer, arg, sizeof( con.completionField->buffer ));
 }
 
 /*
@@ -821,7 +850,7 @@ void Con_CompleteCommand( field_t *field )
 	con.matchCount = 0;
 	con.shortestMatch[0] = 0;
 
-	if( !com.strlen( con.completionString ))
+	if( !Q_strlen( con.completionString ))
 		return;
 
 	Cmd_LookupCmds( NULL, NULL, pfnFindMatches );
@@ -846,25 +875,25 @@ void Con_CompleteCommand( field_t *field )
 
 		if( result )
 		{         
-			com.sprintf( con.completionField->buffer, "%s %s", Cmd_Argv( 0 ), filename ); 
-			con.completionField->cursor = com.strlen( con.completionField->buffer );
+			Q_sprintf( con.completionField->buffer, "%s %s", Cmd_Argv( 0 ), filename ); 
+			con.completionField->cursor = Q_strlen( con.completionField->buffer );
 			return;
 		}
 	}  
 
 	if( con.matchCount == 1 )
 	{
-		com.sprintf( con.completionField->buffer, "\\%s", con.shortestMatch );
+		Q_sprintf( con.completionField->buffer, "\\%s", con.shortestMatch );
 		if( Cmd_Argc() == 1 )
-			com.strncat( con.completionField->buffer, " ", sizeof( con.completionField->buffer ));
+			Q_strncat( con.completionField->buffer, " ", sizeof( con.completionField->buffer ));
 		else ConcatRemaining( temp.buffer, con.completionString );
-		con.completionField->cursor = com.strlen( con.completionField->buffer );
+		con.completionField->cursor = Q_strlen( con.completionField->buffer );
 		return;
 	}
 
 	// multiple matches, complete to shortest
-	com.sprintf( con.completionField->buffer, "\\%s", con.shortestMatch );
-	con.completionField->cursor = com.strlen( con.completionField->buffer );
+	Q_sprintf( con.completionField->buffer, "\\%s", con.shortestMatch );
+	con.completionField->cursor = Q_strlen( con.completionField->buffer );
 	ConcatRemaining( temp.buffer, con.completionString );
 
 	Msg( "]%s\n", con.completionField->buffer );
@@ -888,7 +917,7 @@ void Field_Paste( field_t *edit )
 	if( !cbd ) return;
 
 	// send as if typed, so insert / overstrike works properly
-	pasteLen = com.strlen( cbd );
+	pasteLen = Q_strlen( cbd );
 	for( i = 0; i < pasteLen; i++ )
 		Field_CharEvent( edit, cbd[i] );
 	Mem_Free( cbd );
@@ -915,7 +944,7 @@ void Field_KeyDownEvent( field_t *edit, int key )
 		return;
 	}
 
-	len = com.strlen( edit->buffer );
+	len = Q_strlen( edit->buffer );
 
 	if ( key == K_DEL )
 	{
@@ -948,12 +977,12 @@ void Field_KeyDownEvent( field_t *edit, int key )
 		if ( edit->cursor < edit->scroll ) edit->scroll--;
 		return;
 	}
-	if ( key == K_HOME || ( com.tolower(key) == 'a' && Key_IsDown( K_CTRL )))
+	if ( key == K_HOME || ( Q_tolower(key) == 'a' && Key_IsDown( K_CTRL )))
 	{
 		edit->cursor = 0;
 		return;
 	}
-	if ( key == K_END || ( com.tolower(key) == 'e' && Key_IsDown( K_CTRL )))
+	if ( key == K_END || ( Q_tolower(key) == 'e' && Key_IsDown( K_CTRL )))
 	{
 		edit->cursor = len;
 		return;
@@ -987,7 +1016,7 @@ void Field_CharEvent( field_t *edit, int ch )
 		return;
 	}
 
-	len = com.strlen( edit->buffer );
+	len = Q_strlen( edit->buffer );
 
 	if( ch == 'a' - 'a' + 1 )
 	{
@@ -1058,8 +1087,8 @@ void Key_Console( int key )
 		{
 			char	temp[MAX_SYSPATH];
 
-			com.strncpy( temp, con.input.buffer, sizeof( temp ));
-			com.sprintf( con.input.buffer, "\\%s", temp );
+			Q_strncpy( temp, con.input.buffer, sizeof( temp ));
+			Q_sprintf( con.input.buffer, "\\%s", temp );
 			con.input.cursor++;
 		}
 
@@ -1096,7 +1125,7 @@ void Key_Console( int key )
 	}
 
 	// command history (ctrl-p ctrl-n for unix style)
-	if(( key == K_MWHEELUP && Key_IsDown( K_SHIFT )) || ( key == K_UPARROW ) || (( com.tolower(key) == 'p' ) && Key_IsDown( K_CTRL )))
+	if(( key == K_MWHEELUP && Key_IsDown( K_SHIFT )) || ( key == K_UPARROW ) || (( Q_tolower(key) == 'p' ) && Key_IsDown( K_CTRL )))
 	{
 		if( con.nextHistoryLine - con.historyLine < CON_HISTORY && con.historyLine > 0 )
 		{
@@ -1106,7 +1135,7 @@ void Key_Console( int key )
 		return;
 	}
 
-	if(( key == K_MWHEELDOWN && Key_IsDown( K_SHIFT )) || ( key == K_DOWNARROW ) || (( com.tolower(key) == 'n' ) && Key_IsDown( K_CTRL )))
+	if(( key == K_MWHEELDOWN && Key_IsDown( K_SHIFT )) || ( key == K_DOWNARROW ) || (( Q_tolower(key) == 'n' ) && Key_IsDown( K_CTRL )))
 	{
 		if( con.historyLine == con.nextHistoryLine ) return;
 		con.historyLine++;
@@ -1196,7 +1225,7 @@ void Con_DrawInput( void )
 	x = QCHAR_WIDTH; // room for ']'
 	y = con.vislines - ( con.charHeight * 2 );
 	drawLen = con.input.widthInChars;
-	len = com.strlen( con.input.buffer ) + 1;
+	len = Q_strlen( con.input.buffer ) + 1;
 	colorDefault = g_color_table[ColorIndex( COLOR_DEFAULT )];
 
 	// guarantee that cursor will be visible
@@ -1372,10 +1401,10 @@ void Con_DrawSolidConsole( float frac )
 		byte	*color = g_color_table[7];
 		int	stringLen, width = 0, charH;
 
-		com.snprintf( curbuild, MAX_STRING, "Xash3D %i/%g (hw build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
+		Q_snprintf( curbuild, MAX_STRING, "Xash3D %i/%g (hw build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
 		Con_DrawStringLen( curbuild, &stringLen, &charH );
 		start = scr_width->integer - stringLen;
-		stringLen = com.cstrlen( curbuild );
+		stringLen = Con_StringLength( curbuild );
 
 		for( i = 0; i < stringLen; i++ )
 			width += Con_DrawCharacter( start + width, 0, curbuild[i], color );
@@ -1518,10 +1547,10 @@ void Con_DrawVersion( void )
 
 	if( cls.key_dest != key_menu ) return;
 
-	com.snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
+	Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
 	Con_DrawStringLen( curbuild, &stringLen, &charH );
 	start = scr_width->integer - stringLen * 1.05f;
-	stringLen = com.cstrlen( curbuild );
+	stringLen = Con_StringLength( curbuild );
 	height -= charH * 1.5f;
 
 	for( i = 0; i < stringLen; i++ )
@@ -1635,15 +1664,15 @@ void Cmd_AutoComplete( char *complete_string )
 		return;
 
 	// setup input
-	com.strncpy( input.buffer, complete_string, sizeof( input.buffer ));
+	Q_strncpy( input.buffer, complete_string, sizeof( input.buffer ));
 	input.cursor = input.scroll = 0;
 
 	Con_CompleteCommand( &input );
 
 	// setup output
 	if( input.buffer[0] == '\\' || input.buffer[0] == '/' )
-		com.strncpy( complete_string, input.buffer + 1, sizeof( input.buffer ));
-	else com.strncpy( complete_string, input.buffer, sizeof( input.buffer ));
+		Q_strncpy( complete_string, input.buffer + 1, sizeof( input.buffer ));
+	else Q_strncpy( complete_string, input.buffer, sizeof( input.buffer ));
 }
 
 void Con_Close( void )

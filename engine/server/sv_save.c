@@ -313,7 +313,7 @@ void SV_BuildSaveComment( char *text, int maxlength )
 		// or use mapname
 		pName = STRING( svgame.globals->mapname );
 	}
-	com.snprintf( text, maxlength, "%-64.64s %02d:%02d", pName, (int)(time / 60.0f ), (int)fmod( time, 60.0f ));
+	Q_snprintf( text, maxlength, "%-64.64s %02d:%02d", pName, (int)(time / 60.0f ), (int)fmod( time, 60.0f ));
 }
 
 int SV_MapCount( const char *pPath )
@@ -338,7 +338,7 @@ int EntryInTable( SAVERESTOREDATA *pSaveData, const char *pMapName, int index )
 
 	for( i = index; i < pSaveData->connectionCount; i++ )
 	{
-		if ( !com.strcmp( pSaveData->levelList[i].mapName, pMapName ) )
+		if ( !Q_strcmp( pSaveData->levelList[i].mapName, pMapName ) )
 			return i;
 	}
 	return -1;
@@ -350,7 +350,7 @@ void LandmarkOrigin( SAVERESTOREDATA *pSaveData, vec3_t output, const char *pLan
 
 	for( i = 0; i < pSaveData->connectionCount; i++ )
 	{
-		if( !com.strcmp( pSaveData->levelList[i].landmarkName, pLandmarkName ))
+		if( !Q_strcmp( pSaveData->levelList[i].landmarkName, pLandmarkName ))
 		{
 			VectorCopy( pSaveData->levelList[i].vecLandmarkOrigin, output );
 			return;
@@ -492,8 +492,8 @@ void SV_AgeSaveList( const char *pName, int count )
 	string	newName, oldName, newImage, oldImage;
 
 	// delete last quick/autosave (e.g. quick05.sav)
-	com.snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
-	com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
+	Q_snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
+	Q_snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
 
 	// only delete from game directory, basedir is read-only
 	FS_Delete( newName );
@@ -504,18 +504,18 @@ void SV_AgeSaveList( const char *pName, int count )
 		if( count == 1 )
 		{	
 			// quick.sav
-			com.snprintf( oldName, sizeof( oldName ), "save/%s.sav", pName );
-			com.snprintf( oldImage, sizeof( oldImage ), "save/%s.bmp", pName );
+			Q_snprintf( oldName, sizeof( oldName ), "save/%s.sav", pName );
+			Q_snprintf( oldImage, sizeof( oldImage ), "save/%s.bmp", pName );
 		}
 		else
 		{	
 			// quick04.sav, etc.
-			com.snprintf( oldName, sizeof( oldName ), "save/%s%02d.sav", pName, count - 1 );
-			com.snprintf( oldImage, sizeof( oldImage ), "save/%s%02d.bmp", pName, count - 1 );
+			Q_snprintf( oldName, sizeof( oldName ), "save/%s%02d.sav", pName, count - 1 );
+			Q_snprintf( oldImage, sizeof( oldImage ), "save/%s%02d.bmp", pName, count - 1 );
 		}
 
-		com.snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
-		com.snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
+		Q_snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
+		Q_snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
 
 		// Scroll the name list down (rename quick04.sav to quick05.sav)
 		FS_Rename( oldName, newName );
@@ -559,7 +559,7 @@ void SV_DirectoryCopy( const char *pPath, file_t *pFile )
 		pCopy = FS_Open( t->filenames[i], "rb", false );
 
 		// filename can only be as long as a map name + extension
-		com.strncpy( szName, FS_FileWithoutPath( t->filenames[i] ), SAVENAME_LENGTH );		
+		Q_strncpy( szName, FS_FileWithoutPath( t->filenames[i] ), SAVENAME_LENGTH );		
 		FS_Write( pFile, szName, SAVENAME_LENGTH );
 		FS_Write( pFile, &fileSize, sizeof( int ));
 		SV_FileCopy( pFile, pCopy, fileSize );
@@ -579,7 +579,7 @@ void SV_DirectoryExtract( file_t *pFile, int fileCount )
 		// filename can only be as long as a map name + extension
 		FS_Read( pFile, fileName, SAVENAME_LENGTH );
 		FS_Read( pFile, &fileSize, sizeof( int ));
-		com.snprintf( szName, sizeof( szName ), "save/%s", fileName );
+		Q_snprintf( szName, sizeof( szName ), "save/%s", fileName );
 
 		pCopy = FS_Open( szName, "wb", false );
 		SV_FileCopy( pCopy, pFile, fileSize );
@@ -640,10 +640,10 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 	header.time = svgame.globals->time;
 
 	if( sv_skyname->string[0] )
-		com.strncpy( header.skyName, sv_skyname->string, sizeof( header.skyName ));
-	else com.strncpy( header.skyName, "", sizeof( header.skyName ));
+		Q_strncpy( header.skyName, sv_skyname->string, sizeof( header.skyName ));
+	else Q_strncpy( header.skyName, "", sizeof( header.skyName ));
 
-	com.strncpy( header.mapName, sv.name, sizeof( header.mapName ));
+	Q_strncpy( header.mapName, sv.name, sizeof( header.mapName ));
 	header.lightStyleCount = 0;
 	header.entityCount = svgame.numEntities;
 
@@ -690,7 +690,7 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 		if( sv.lightstyles[i].pattern[0] )
 		{
 			light.index = i;
-			com.strncpy( light.style, sv.lightstyles[i].pattern, sizeof( light.style ));
+			Q_strncpy( light.style, sv.lightstyles[i].pattern, sizeof( light.style ));
 			svgame.dllFuncs.pfnSaveWriteFields( pSaveData, "LIGHTSTYLE", &light, gLightStyle, ARRAYSIZE( gLightStyle ));
 		}
 	}
@@ -705,7 +705,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	char			*pszTokenList;
 	int			i, id, size, version;
 	
-	com.snprintf( name, sizeof( name ), "save/%s.HL1", level );
+	Q_snprintf( name, sizeof( name ), "save/%s.HL1", level );
 	MsgDev( D_INFO, "Loading game from %s...\n", name );
 
 	pFile = FS_Open( name, "rb", true );
@@ -730,7 +730,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	FS_Read( pFile, &sectionsInfo, sizeof( sectionsInfo ));
 
 	pSaveData = Mem_Alloc( host.mempool, sizeof(SAVERESTOREDATA) + SumBytes( &sectionsInfo ));
-	com.strncpy( pSaveData->szCurrentMapName, level, sizeof( pSaveData->szCurrentMapName ));
+	Q_strncpy( pSaveData->szCurrentMapName, level, sizeof( pSaveData->szCurrentMapName ));
 	
 	FS_Read( pFile, (char *)(pSaveData + 1), SumBytes( &sectionsInfo ));
 	FS_Close( pFile );
@@ -837,7 +837,7 @@ void SV_EntityPatchWrite( SAVERESTOREDATA *pSaveData, const char *level )
 	file_t		*pFile;
 	int		i, size;
 
-	com.snprintf( name, sizeof( name ), "save/%s.HL3", level );
+	Q_snprintf( name, sizeof( name ), "save/%s.HL3", level );
 
 	pFile = FS_Open( name, "wb", false );
 	if( !pFile ) return;
@@ -874,7 +874,7 @@ void SV_EntityPatchRead( SAVERESTOREDATA *pSaveData, const char *level )
 	file_t	*pFile;
 	int	i, size, entityId;
 
-	com.snprintf( name, sizeof( name ), "save/%s.HL3", level );
+	Q_snprintf( name, sizeof( name ), "save/%s.HL3", level );
 
 	pFile = FS_Open( name, "rb", true );
 	if( !pFile ) return;
@@ -906,7 +906,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	int		i, decalCount;
 	int		id, version;
 
-	com.snprintf( name, sizeof( name ), "save/%s.HL2", level );
+	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
 	pFile = FS_Open( name, "wb", false );
 	if( !pFile ) return;
@@ -936,7 +936,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 			VectorSubtract( entry->position, pSaveData->vecLandmarkOffset, localPos );
 		else VectorCopy( entry->position, localPos );
 
-		nameSize = com.strlen( entry->name ) + 1;
+		nameSize = Q_strlen( entry->name ) + 1;
 
 		FS_Write( pFile, localPos, sizeof( localPos ));
 		FS_Write( pFile, &nameSize, sizeof( nameSize ));
@@ -965,7 +965,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 	decallist_t	*decalList;
 	int		decalCount;
 	
-	com.snprintf( name, sizeof( name ), "save/%s.HL2", level );
+	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
 	pFile = FS_Open( name, "rb", true );
 	if( !pFile ) return;
@@ -1080,7 +1080,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 		const char *pszToken = (SaveRestore_StringFromSymbol( pSaveData, i ));
 		if( !pszToken ) pszToken = "";
 
-		if( !SaveRestore_Write( pSaveData, pszToken, com.strlen( pszToken ) + 1 ))
+		if( !SaveRestore_Write( pSaveData, pszToken, Q_strlen( pszToken ) + 1 ))
 			break;
 	}	
 
@@ -1129,7 +1129,7 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	SV_EntityPatchRead( pSaveData, level );
 
 	Cvar_SetFloat( "skill", header.skillLevel );
-	com.strncpy( sv.name, header.mapName, sizeof( sv.name ));
+	Q_strncpy( sv.name, header.mapName, sizeof( sv.name ));
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 
 	Cvar_Set( "sv_skyname", header.skyName );
@@ -1355,7 +1355,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 	{
 		// make sure the previous level is in the connection list so we can
 		// bring over the player.
-		if( !com.stricmp( currentLevelData.levelList[i].mapName, pOldLevel ))
+		if( !Q_stricmp( currentLevelData.levelList[i].mapName, pOldLevel ))
 		{
 			foundprevious = true;
 		}
@@ -1363,7 +1363,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 		for( test = 0; test < i; test++ )
 		{
 			// only do maps once
-			if( !com.strcmp( currentLevelData.levelList[i].mapName, currentLevelData.levelList[test].mapName ))
+			if( !Q_strcmp( currentLevelData.levelList[i].mapName, currentLevelData.levelList[test].mapName ))
 				break;
 		}
 
@@ -1389,7 +1389,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 
 			flags = 0;
                               
-			if( !com.strcmp( currentLevelData.levelList[i].mapName, pOldLevel ))
+			if( !Q_strcmp( currentLevelData.levelList[i].mapName, pOldLevel ))
 				flags |= FENTTABLE_PLAYER;
 			index = -1;
 
@@ -1445,12 +1445,12 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	}
 	else
 	{
-		com.strncpy( _startspot, start, MAX_STRING );
+		Q_strncpy( _startspot, start, MAX_STRING );
 		startspot = _startspot;
 	}
 
-	com.strncpy( level, mapname, MAX_STRING );
-	com.strncpy( oldlevel, sv.name, MAX_STRING );
+	Q_strncpy( level, mapname, MAX_STRING );
+	Q_strncpy( oldlevel, sv.name, MAX_STRING );
 	sv.background = false;
 
 	if( loadfromsavedgame )
@@ -1503,10 +1503,10 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 
 	pSaveData = SV_SaveInit( 0 );
 
-	com.strncpy( hlPath, "save/*.HL?", sizeof( hlPath ));
+	Q_strncpy( hlPath, "save/*.HL?", sizeof( hlPath ));
 	gameHeader.mapCount = SV_MapCount( hlPath );
-	com.strncpy( gameHeader.mapName, sv.name, sizeof( gameHeader.mapName ));
-	com.strncpy( gameHeader.comment, pSaveComment, sizeof( gameHeader.comment ));
+	Q_strncpy( gameHeader.mapName, sv.name, sizeof( gameHeader.mapName ));
+	Q_strncpy( gameHeader.comment, pSaveComment, sizeof( gameHeader.comment ));
 
 	svgame.dllFuncs.pfnSaveWriteFields( pSaveData, "GameHeader", &gameHeader, gGameHeader, ARRAYSIZE( gGameHeader ));
 	svgame.dllFuncs.pfnSaveGlobalState( pSaveData );
@@ -1518,7 +1518,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 		const char *pszToken = (SaveRestore_StringFromSymbol( pSaveData, i ));
 		if( !pszToken ) pszToken = "";
 
-		if( !SaveRestore_Write( pSaveData, pszToken, com.strlen( pszToken ) + 1 ))
+		if( !SaveRestore_Write( pSaveData, pszToken, Q_strlen( pszToken ) + 1 ))
 		{
 			MsgDev( D_ERROR, "Token Table Save/Restore overflow!\n" );
 			break;
@@ -1528,13 +1528,13 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	tokenSize = SaveRestore_AccessCurPos( pSaveData ) - pTokenData;
 	SaveRestore_Rewind( pSaveData, tokenSize );
 
-	com.snprintf( name, sizeof( name ), "save/%s.sav", pSaveName );
+	Q_snprintf( name, sizeof( name ), "save/%s.sav", pSaveName );
 	MsgDev( D_INFO, "Saving game to %s...\n", name );
 
 	Cbuf_AddText( va( "saveshot \"%s\"\n", pSaveName ));
 
 	// output to disk
-	if( com.stricmp( pSaveName, "quick" ) || com.stricmp( pSaveName, "autosave" ))
+	if( Q_stricmp( pSaveName, "quick" ) || Q_stricmp( pSaveName, "autosave" ))
 		SV_AgeSaveList( pSaveName, SAVE_AGED_COUNT );
 
 	pFile = FS_Open( name, "wb", false );
@@ -1644,7 +1644,7 @@ qboolean SV_LoadGame( const char *pName )
 	if( !pName || !pName[0] )
 		return false;
 
-	com.snprintf( name, sizeof( name ), "save/%s.sav", pName );
+	Q_snprintf( name, sizeof( name ), "save/%s.sav", pName );
 	sv.background = false;
 
 	// silently ignore if missed
@@ -1673,7 +1673,7 @@ qboolean SV_LoadGame( const char *pName )
 
 	if( !validload )
 	{
-		com.snprintf( host.finalmsg, MAX_STRING, "Couldn't load %s.sav\n", pName );
+		Q_snprintf( host.finalmsg, MAX_STRING, "Couldn't load %s.sav\n", pName );
 		SV_Shutdown( false );
 		return false;
 	}
@@ -1698,7 +1698,7 @@ void SV_SaveGetName( int lastnum, char *filename )
 	if( lastnum < 0 || lastnum > 999 )
 	{
 		// bound
-		com.strcpy( filename, "error" );
+		Q_strcpy( filename, "error" );
 		return;
 	}
 
@@ -1707,7 +1707,7 @@ void SV_SaveGetName( int lastnum, char *filename )
 	b = lastnum / 10;
 	c = lastnum % 10;
 
-	com.sprintf( filename, "save%i%i%i", a, b, c );
+	Q_sprintf( filename, "save%i%i%i", a, b, c );
 }
 
 void SV_SaveGame( const char *pName )
@@ -1723,7 +1723,7 @@ void SV_SaveGame( const char *pName )
 	if( !SV_IsValidSave( ))
 		return;
 
-	if( !com.stricmp( pName, "new" ))
+	if( !Q_stricmp( pName, "new" ))
 	{
 		// scan for a free filename
 		for( n = 0; n < 999; n++ )
@@ -1738,7 +1738,7 @@ void SV_SaveGame( const char *pName )
 			return;
 		}
 	}
-	else com.strncpy( savename, pName, sizeof( savename ));
+	else Q_strncpy( savename, pName, sizeof( savename ));
 
 	// make sure what oldsave is removed
 	if( FS_FileExists( va( "save/%s.sav", savename ), false ))
@@ -1753,7 +1753,7 @@ void SV_SaveGame( const char *pName )
 	SV_SaveGameSlot( savename, comment );
 
 	// HACKHACK: send usermessage from engine
-	if( com.stricmp( pName, "autosave" ) && svgame.gmsgHudText != -1 )
+	if( Q_stricmp( pName, "autosave" ) && svgame.gmsgHudText != -1 )
 	{
 		const char *pMsg = "GAMESAVED"; // defined in titles.txt
 		sv_client_t *cl;
@@ -1761,7 +1761,7 @@ void SV_SaveGame( const char *pName )
 		if(( cl = SV_ClientFromEdict( EDICT_NUM( 1 ), true )) != NULL )
 		{
 			BF_WriteByte( &cl->netchan.message, svgame.gmsgHudText );
-			BF_WriteByte( &cl->netchan.message, com.strlen( pMsg ) + 1 );
+			BF_WriteByte( &cl->netchan.message, Q_strlen( pMsg ) + 1 );
 			BF_WriteString( &cl->netchan.message, pMsg );
 		}
 	}
@@ -1794,7 +1794,7 @@ const char *SV_GetLatestSave( void )
 			if( !found || Host_CompareFileTime( newest, ft ) < 0 )
 			{
 				newest = ft;
-				com.strncpy( savename, f->filenames[i], MAX_STRING );
+				Q_strncpy( savename, f->filenames[i], MAX_STRING );
 				found = 1;
 			}
 		}
@@ -1817,7 +1817,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 	if( !f )
 	{
 		// just not exist - clear comment
-		com.strncpy( comment, "", MAX_STRING );
+		Q_strncpy( comment, "", MAX_STRING );
 		return 0;
 	}
 
@@ -1825,7 +1825,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 	if( tag != SAVEGAME_HEADER )
 	{
 		// invalid header
-		com.strncpy( comment, "<corrupted>", MAX_STRING );
+		Q_strncpy( comment, "<corrupted>", MAX_STRING );
 		FS_Close( f );
 		return 0;
 	}
@@ -1834,20 +1834,20 @@ qboolean SV_GetComment( const char *savename, char *comment )
 
 	if( tag == 0x0071 )
 	{
-		com.strncpy( comment, "Gold Source <unsupported>", MAX_STRING );
+		Q_strncpy( comment, "Gold Source <unsupported>", MAX_STRING );
 		FS_Close( f );
 		return 0;
 	}
 	if( tag < SAVEGAME_VERSION )
 	{
-		com.strncpy( comment, "<old version>", MAX_STRING );
+		Q_strncpy( comment, "<old version>", MAX_STRING );
 		FS_Close( f );
 		return 0;
 	}
 	if( tag > SAVEGAME_VERSION )
 	{
 		// old xash version ?
-		com.strncpy( comment, "<unknown version>", MAX_STRING );
+		Q_strncpy( comment, "<unknown version>", MAX_STRING );
 		FS_Close( f );
 		return 0;
 	}
@@ -1863,14 +1863,14 @@ qboolean SV_GetComment( const char *savename, char *comment )
 	// sanity check.
 	if( tokenCount < 0 || tokenCount > ( 1024 * 1024 * 32 ))
 	{
-		com.strncpy( comment, "<corrupted>", MAX_STRING );
+		Q_strncpy( comment, "<corrupted>", MAX_STRING );
 		FS_Close( f );
 		return 0;
 	}
 
 	if( tokenSize < 0 || tokenSize > ( 1024 * 1024 * 32 ))
 	{
-		com.strncpy( comment, "<corrupted>", MAX_STRING );
+		Q_strncpy( comment, "<corrupted>", MAX_STRING );
 		FS_Close( f );
 		return 0;
 	}
@@ -1899,9 +1899,9 @@ qboolean SV_GetComment( const char *savename, char *comment )
 
 	pFieldName = pTokenList[*(short *)pData];
 
-	if( com.stricmp( pFieldName, "GameHeader" ))
+	if( Q_stricmp( pFieldName, "GameHeader" ))
 	{
-		com.strncpy( comment, "<missing GameHeader>", MAX_STRING );
+		Q_strncpy( comment, "<missing GameHeader>", MAX_STRING );
 		if( pTokenList ) Mem_Free( pTokenList );
 		if( pSaveData ) Mem_Free( pSaveData );
 		FS_Close( f );
@@ -1926,13 +1926,13 @@ qboolean SV_GetComment( const char *savename, char *comment )
 		pFieldName = pTokenList[*(short *)pData];
 		pData += sizeof( short );
 
-		if( !com.stricmp( pFieldName, "comment" ))
+		if( !Q_stricmp( pFieldName, "comment" ))
 		{
-			com.strncpy( description, pData, nFieldSize );
+			Q_strncpy( description, pData, nFieldSize );
 		}
-		else if( !com.stricmp( pFieldName, "mapName" ))
+		else if( !Q_stricmp( pFieldName, "mapName" ))
 		{
-			com.strncpy( name, pData, nFieldSize );
+			Q_strncpy( name, pData, nFieldSize );
 		}
 
 		// move to start of next field.
@@ -1944,7 +1944,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 	if( pSaveData ) Mem_Free( pSaveData );
 	FS_Close( f );	
 
-	if( com.strlen( name ) > 0 && com.strlen( description ) > 0 )
+	if( Q_strlen( name ) > 0 && Q_strlen( description ) > 0 )
 	{
 		time_t		fileTime;
 		const struct tm	*file_tm;
@@ -1954,19 +1954,19 @@ qboolean SV_GetComment( const char *savename, char *comment )
 		file_tm = localtime( &fileTime );
 
 		// split comment to sections
-		if( com.strstr( savename, "quick" ))
-			com.strncat( comment, "[quick]", CS_SIZE );
-		else if( com.strstr( savename, "autosave" ))
-			com.strncat( comment, "[autosave]", CS_SIZE );
-		com.strncat( comment, description, CS_SIZE );
+		if( Q_strstr( savename, "quick" ))
+			Q_strncat( comment, "[quick]", CS_SIZE );
+		else if( Q_strstr( savename, "autosave" ))
+			Q_strncat( comment, "[autosave]", CS_SIZE );
+		Q_strncat( comment, description, CS_SIZE );
 		strftime( timestring, sizeof ( timestring ), "%b%d %Y", file_tm );
-		com.strncpy( comment + CS_SIZE, timestring, CS_TIME );
+		Q_strncpy( comment + CS_SIZE, timestring, CS_TIME );
 		strftime( timestring, sizeof( timestring ), "%H:%M", file_tm );
-		com.strncpy( comment + CS_SIZE + CS_TIME, timestring, CS_TIME );
-		com.strncpy( comment + CS_SIZE + (CS_TIME * 2), description + CS_SIZE, CS_SIZE );
+		Q_strncpy( comment + CS_SIZE + CS_TIME, timestring, CS_TIME );
+		Q_strncpy( comment + CS_SIZE + (CS_TIME * 2), description + CS_SIZE, CS_SIZE );
 		return 1;
 	}	
 
-	com.strncpy( comment, "<unknown version>", MAX_STRING );
+	Q_strncpy( comment, "<unknown version>", MAX_STRING );
 	return 0;
 }

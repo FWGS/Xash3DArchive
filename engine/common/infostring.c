@@ -102,7 +102,7 @@ char *Info_ValueForKey( const char *s, const char *key )
 		}
 		*o = 0;
 
-		if( !com.strcmp( key, pkey ))
+		if( !Q_strcmp( key, pkey ))
 			return value[valueindex];
 		if( !*s ) return "";
 		s++;
@@ -116,7 +116,7 @@ qboolean Info_RemoveKey( char *s, const char *key )
 	char	value[MAX_INFO_STRING];
 	char	*o;
 
-	if( com.strstr( key, "\\" ))
+	if( Q_strstr( key, "\\" ))
 		return false;
 
 	while( 1 )
@@ -141,9 +141,9 @@ qboolean Info_RemoveKey( char *s, const char *key )
 		}
 		*o = 0;
 
-		if( !com.strcmp( key, pkey ))
+		if( !Q_strcmp( key, pkey ))
 		{
-			com.strcpy( start, s ); // remove this part
+			Q_strcpy( start, s ); // remove this part
 			return true;
 		}
 		if( !*s ) return false;
@@ -199,8 +199,8 @@ can mess up the server's parsing
 */
 qboolean Info_Validate( const char *s )
 {
-	if( com.strstr( s, "\"" )) return false;
-	if( com.strstr( s, ";" )) return false;
+	if( Q_strstr( s, "\"" )) return false;
+	if( Q_strstr( s, ";" )) return false;
 	return true;
 }
 
@@ -209,43 +209,43 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
 	char	newi[MAX_INFO_STRING], *v;
 	int	c, maxsize = MAX_INFO_STRING;
 
-	if( com.strstr( key, "\\" ) || com.strstr( value, "\\" ))
+	if( Q_strstr( key, "\\" ) || Q_strstr( value, "\\" ))
 	{
 		MsgDev( D_ERROR, "SetValueForKey: can't use keys or values with a \\\n" );
 		return false;
 	}
 
-	if( com.strstr( key, ";" ))
+	if( Q_strstr( key, ";" ))
 	{
 		MsgDev( D_ERROR, "SetValueForKey: can't use keys or values with a semicolon\n" );
 		return false;
 	}
 
-	if( com.strstr( key, "\"" ) || com.strstr( value, "\"" ))
+	if( Q_strstr( key, "\"" ) || Q_strstr( value, "\"" ))
 	{
 		MsgDev( D_ERROR, "SetValueForKey: can't use keys or values with a \"\n" );
 		return false;
 	}
 
-	if( com.strlen( key ) > MAX_INFO_KEY - 1 || com.strlen( value ) > MAX_INFO_KEY - 1 )
+	if( Q_strlen( key ) > MAX_INFO_KEY - 1 || Q_strlen( value ) > MAX_INFO_KEY - 1 )
 	{
 		MsgDev( D_ERROR, "SetValueForKey: keys and values must be < %i characters.\n", MAX_INFO_KEY );
 		return false;
 	}
 
 	Info_RemoveKey( s, key );
-	if( !value || !com.strlen( value ))
+	if( !value || !Q_strlen( value ))
 		return true;	// just clear variable
 
-	com.sprintf( newi, "\\%s\\%s", key, value );
-	if( com.strlen( newi ) + com.strlen( s ) > maxsize )
+	Q_sprintf( newi, "\\%s\\%s", key, value );
+	if( Q_strlen( newi ) + Q_strlen( s ) > maxsize )
 	{
 		MsgDev( D_ERROR, "SetValueForKey: info string length exceeded\n" );
 		return true; // info changed, new value can't saved
 	}
 
 	// only copy ascii values
-	s += com.strlen( s );
+	s += Q_strlen( s );
 	v = newi;
 
 	while( *v )

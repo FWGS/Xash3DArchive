@@ -123,7 +123,7 @@ void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appNam
 		return;
 	}
 
-	com.snprintf( dir, sizeof( dir ), "%s/%s", pszBaseDir, appName );
+	Q_snprintf( dir, sizeof( dir ), "%s/%s", pszBaseDir, appName );
 	FS_AddGameDirectory( dir, FS_GAMEDIR_PATH );
 }
 
@@ -150,13 +150,13 @@ int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBu
 	if(( path = FS_GetDiskPath( fileName, false )) != NULL )
 	{
 		GetCurrentDirectory( MAX_SYSPATH, rootdir );
-		com.sprintf( result, "%s/%s", rootdir, path );		
+		Q_sprintf( result, "%s/%s", rootdir, path );		
 
 		// check for enough room
-		if( com.strlen( result ) > nameOutBufferSize )
+		if( Q_strlen( result ) > nameOutBufferSize )
 			return 0;
 
-		com.strncpy( nameOutBuffer, result, nameOutBufferSize );
+		Q_strncpy( nameOutBuffer, result, nameOutBufferSize );
 		return 1;
 	}
 	return 0;
@@ -424,7 +424,7 @@ void Con_Printf( char *szFmt, ... )
 		return;
 
 	va_start( args, szFmt );
-	com.vsnprintf( buffer, 2048, szFmt, args );
+	Q_vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
 	com.print( buffer );
@@ -445,7 +445,7 @@ void Con_DPrintf( char *szFmt, ... )
 		return;
 
 	va_start( args, szFmt );
-	com.vsnprintf( buffer, 2048, szFmt, args );
+	Q_vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
 	com.print( buffer );
@@ -496,5 +496,5 @@ void pfnGetGameDir( char *szGetGameDir )
 
 	if( !szGetGameDir ) return;
 	GetCurrentDirectory( MAX_SYSPATH, rootdir );
-	com.sprintf( szGetGameDir, "%s/%s", rootdir, GI->gamedir );
+	Q_sprintf( szGetGameDir, "%s/%s", rootdir, GI->gamedir );
 }

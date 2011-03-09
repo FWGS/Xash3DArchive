@@ -181,7 +181,7 @@ void CL_ForwardToServer_f( void )
 
 	if( cls.demoplayback )
 	{
-		if( !com.stricmp( Cmd_Argv( 1 ), "pause" ))
+		if( !Q_stricmp( Cmd_Argv( 1 ), "pause" ))
 			cl.refdef.paused ^= 1;
 		return;
 	}
@@ -219,7 +219,7 @@ void Cmd_ForwardToServer( void )
 
 	if( cls.demoplayback )
 	{
-		if( !com.stricmp( Cmd_Argv( 1 ), "pause" ))
+		if( !Q_stricmp( Cmd_Argv( 1 ), "pause" ))
 			cl.refdef.paused ^= 1;
 		return;
 	}
@@ -585,7 +585,7 @@ void CL_CheckForResend( void )
 	if( cls.state == ca_disconnected && SV_Active( ))
 	{
 		cls.state = ca_connecting;
-		com.strncpy( cls.servername, "localhost", sizeof( cls.servername ));
+		Q_strncpy( cls.servername, "localhost", sizeof( cls.servername ));
 		// we don't need a challenge on the localhost
 		CL_SendConnectPacket();
 		return;
@@ -632,7 +632,7 @@ void CL_Connect_f( void )
 	if( Host_ServerState())
 	{	
 		// if running a local server, kill it and reissue
-		com.strncpy( host.finalmsg, "Server quit\n", MAX_STRING );
+		Q_strncpy( host.finalmsg, "Server quit\n", MAX_STRING );
 		SV_Shutdown( false );
 	}
 
@@ -643,7 +643,7 @@ void CL_Connect_f( void )
 	CL_Disconnect();
 
 	cls.state = ca_connecting;
-	com.strncpy( cls.servername, server, sizeof( cls.servername ));
+	Q_strncpy( cls.servername, server, sizeof( cls.servername ));
 	cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 }
 
@@ -676,14 +676,14 @@ void CL_Rcon_f( void )
 
 	NET_Config( true );	// allow remote
 
-	com.strcat( message, "rcon " );
-	com.strcat( message, rcon_client_password->string );
-	com.strcat( message, " " );
+	Q_strcat( message, "rcon " );
+	Q_strcat( message, rcon_client_password->string );
+	Q_strcat( message, " " );
 
 	for( i = 1; i < Cmd_Argc(); i++ )
 	{
-		com.strcat( message, Cmd_Argv( i ));
-		com.strcat( message, " " );
+		Q_strcat( message, Cmd_Argv( i ));
+		Q_strcat( message, " " );
 	}
 
 	if( cls.state >= ca_connected )
@@ -692,7 +692,7 @@ void CL_Rcon_f( void )
 	}
 	else
 	{
-		if( !com.strlen( rcon_address->string ))
+		if( !Q_strlen( rcon_address->string ))
 		{
 			Msg( "You must either be connected,\n" "or set the 'rcon_address' cvar\n" "to issue rcon commands\n" );
 			return;
@@ -702,7 +702,7 @@ void CL_Rcon_f( void )
 		if( to.port == 0 ) to.port = BF_BigShort( PORT_SERVER );
 	}
 	
-	NET_SendPacket( NS_CLIENT, com.strlen( message ) + 1, message, to );
+	NET_SendPacket( NS_CLIENT, Q_strlen( message ) + 1, message, to );
 }
 
 
@@ -808,7 +808,7 @@ void CL_Disconnect_f( void )
 	Host_Error( "Disconnected from server\n" );
 }
 
-void CL_Crashed_f( void )
+void CL_Crashed( void )
 {
 	// already freed
 	if( host.state == HOST_CRASHED ) return;
@@ -888,7 +888,7 @@ void CL_Packet_f( void )
 	out = send + 4;
 	send[0] = send[1] = send[2] = send[3] = (char)0xff;
 
-	l = com.strlen (in);
+	l = Q_strlen (in);
 	for (i=0 ; i<l ; i++)
 	{
 		if (in[i] == '\\' && in[i+1] == 'n')
@@ -1037,7 +1037,7 @@ void CL_PrepVideo( void )
 	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", clgame.mapname );
 
 	// let the render dll load the map
-	com.strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
+	Q_strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
 	Mod_LoadWorld( mapname, &map_checksum );
 	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
 	Cvar_SetFloat( "scr_loading", 25.0f );
@@ -1054,7 +1054,7 @@ void CL_PrepVideo( void )
 
 	for( i = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
 	{
-		com.strncpy( name, cl.model_precache[i+1], MAX_STRING );
+		Q_strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		Mod_RegisterModel( name, i+1 );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 75.0f / mdlcount );
 		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
@@ -1151,7 +1151,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	MsgDev( D_NOTE, "CL_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), c );
 
 	// server connection
-	if( !com.strcmp( c, "client_connect" ))
+	if( !Q_strcmp( c, "client_connect" ))
 	{
 		if( cls.state == ca_connected )
 		{
@@ -1171,12 +1171,12 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 
 		UI_SetActiveMenu( false );
 	}
-	else if( !com.strcmp( c, "info" ))
+	else if( !Q_strcmp( c, "info" ))
 	{
 		// server responding to a status broadcast
 		CL_ParseStatusMessage( from, msg );
 	}
-	else if( !com.strcmp( c, "cmd" ))
+	else if( !Q_strcmp( c, "cmd" ))
 	{
 		// remote command from gui front end
 		if( !NET_IsLocalAddress( from ))
@@ -1191,30 +1191,30 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		Cbuf_AddText( s );
 		Cbuf_AddText( "\n" );
 	}
-	else if( !com.strcmp( c, "print" ))
+	else if( !Q_strcmp( c, "print" ))
 	{
 		// print command from somewhere
 		s = BF_ReadString( msg );
 		Msg( s );
 	}
-	else if( !com.strcmp( c, "ping" ))
+	else if( !Q_strcmp( c, "ping" ))
 	{
 		// ping from somewhere
 		Netchan_OutOfBandPrint( NS_CLIENT, from, "ack" );
 	}
-	else if( !com.strcmp( c, "challenge" ))
+	else if( !Q_strcmp( c, "challenge" ))
 	{
 		// challenge from the server we are connecting to
-		cls.challenge = com.atoi( Cmd_Argv( 1 ));
+		cls.challenge = Q_atoi( Cmd_Argv( 1 ));
 		CL_SendConnectPacket();
 		return;
 	}
-	else if( !com.strcmp( c, "echo" ))
+	else if( !Q_strcmp( c, "echo" ))
 	{
 		// echo request from server
 		Netchan_OutOfBandPrint( NS_CLIENT, from, "%s", Cmd_Argv( 1 ));
 	}
-	else if( !com.strcmp( c, "disconnect" ))
+	else if( !Q_strcmp( c, "disconnect" ))
 	{
 		// a disconnect message from the server, which will happen if the server
 		// dropped the connection but it is still getting packets from us
@@ -1347,7 +1347,7 @@ void CL_Userinfo_f( void )
 {
 	Msg( "User info settings:\n" );
 	Info_Print( Cvar_Userinfo( ));
-	Msg( "Total %i symbols\n", com.strlen( Cvar_Userinfo( )));
+	Msg( "Total %i symbols\n", Q_strlen( Cvar_Userinfo( )));
 }
 
 /*
@@ -1378,7 +1378,7 @@ void CL_Precache_f( void )
 {
 	int	spawncount;
 
-	spawncount = com.atoi( Cmd_Argv( 1 ));
+	spawncount = Q_atoi( Cmd_Argv( 1 ));
 
 	CL_PrepSound();
 	CL_PrepVideo();
@@ -1465,7 +1465,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("localservers", CL_LocalServers_f, "collect info about local servers" );
 	Cmd_AddCommand ("cd", CL_PlayCDTrack_f, "Play cd-track (not real cd-player of course)" );
 
-	Cmd_AddCommand ("@crashed",  CL_Crashed_f, "" );	// internal system command
 	Cmd_AddCommand ("userinfo", CL_Userinfo_f, "print current client userinfo" );
 	Cmd_AddCommand ("physinfo", CL_Physinfo_f, "print current client physinfo" );
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server" );

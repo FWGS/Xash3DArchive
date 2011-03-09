@@ -205,26 +205,12 @@ WIN32 IO
 */
 /*
 ================
-Con_PrintA
-
-print into cmd32 console
-================
-*/
-void Con_PrintA( const char *pMsg )
-{
-	DWORD	cbWritten;
-
-	WriteFile( GetStdHandle( STD_OUTPUT_HANDLE ), pMsg, com.strlen( pMsg ), &cbWritten, 0 );
-}
-
-/*
-================
-Con_PrintW
+Con_Print
 
 print into window console
 ================
 */
-void Con_PrintW( const char *pMsg )
+void Con_Print( const char *pMsg )
 {
 	size_t	len = com.strlen( pMsg );
 
@@ -267,9 +253,6 @@ void Con_CreateConsole( void )
 
 	Sys_InitLog();
 
-	Sys.Con_Print = Con_PrintW;
-
-	Mem_Set( &wc, 0, sizeof( wc ));
 	wc.style         = 0;
 	wc.lpfnWndProc   = (WNDPROC)Con_WndProc;
 	wc.cbClsExtra    = 0;
@@ -475,7 +458,6 @@ void Sys_CloseLog( void )
 	switch( Sys.app_state )
 	{
 	case SYS_CRASH: com.strncpy( event_name, "crashed", sizeof( event_name )); break;
-	case SYS_ABORT: com.strncpy( event_name, "aborted by user", sizeof( event_name )); break;
 	case SYS_ERROR: com.strncpy( event_name, "stopped with error", sizeof( event_name )); break;
 	case SYS_RESTART: com.strncpy( event_name, "restarted", sizeof( event_name )); break;
 	default: com.strncpy( event_name, "stopped", sizeof( event_name )); break;

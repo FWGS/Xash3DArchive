@@ -21,7 +21,7 @@ qboolean R_SpeedsMessage( char *out, size_t size )
 	if( r_speeds->integer <= 0 ) return false;
 	if( !out || !size ) return false;
 
-	com.strncpy( out, r_speeds_msg, size );
+	Q_strncpy( out, r_speeds_msg, size );
 	return true;
 }
 
@@ -48,15 +48,15 @@ void GL_BackendEndFrame( void )
 	switch( r_speeds->integer )
 	{
 	case 5:
-		com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i studio models drawn\n%3i sprites drawn",
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i studio models drawn\n%3i sprites drawn",
 		r_stats.c_studio_models_drawn, r_stats.c_sprite_models_drawn );
 		break;
 	case 6:
-		com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
 		r_numStatics, r_numEntities );
 		break;
 	case 7:
-		com.snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i temp entities\n%3i view beams",
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i temp entities\n%3i view beams",
 		r_stats.c_active_tents_count, r_stats.c_view_beams_count );
 	}
 
@@ -557,7 +557,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	r_shot->buffer = buffer;
 
 	// make sure what we have right extension
-	com.strncpy( basename, base, MAX_STRING );
+	Q_strncpy( basename, base, MAX_STRING );
 	FS_StripExtension( basename );
 	FS_DefaultExtension( basename, ".tga" );
 

@@ -155,30 +155,30 @@ void CL_TEntPlaySound( TEMPENTITY *pTemp, float damp )
 	switch( pTemp->hitSound )
 	{
 	case BOUNCE_GLASS:
-		com.snprintf( soundname, sizeof( soundname ), "debris/glass%i.wav", Com_RandomLong( 1, 4 ));
+		Q_snprintf( soundname, sizeof( soundname ), "debris/glass%i.wav", Com_RandomLong( 1, 4 ));
 		break;
 	case BOUNCE_METAL:
-		com.snprintf( soundname, sizeof( soundname ), "debris/metal%i.wav", Com_RandomLong( 1, 6 ));
+		Q_snprintf( soundname, sizeof( soundname ), "debris/metal%i.wav", Com_RandomLong( 1, 6 ));
 		break;
 	case BOUNCE_FLESH:
-		com.snprintf( soundname, sizeof( soundname ), "debris/flesh%i.wav", Com_RandomLong( 1, 7 ));
+		Q_snprintf( soundname, sizeof( soundname ), "debris/flesh%i.wav", Com_RandomLong( 1, 7 ));
 		break;
 	case BOUNCE_WOOD:
-		com.snprintf( soundname, sizeof( soundname ), "debris/wood%i.wav", Com_RandomLong( 1, 4 ));
+		Q_snprintf( soundname, sizeof( soundname ), "debris/wood%i.wav", Com_RandomLong( 1, 4 ));
 		break;
 	case BOUNCE_SHRAP:
-		com.snprintf( soundname, sizeof( soundname ), "weapons/ric%i.wav", Com_RandomLong( 1, 5 ));
+		Q_snprintf( soundname, sizeof( soundname ), "weapons/ric%i.wav", Com_RandomLong( 1, 5 ));
 		break;
 	case BOUNCE_SHOTSHELL:
-		com.snprintf( soundname, sizeof( soundname ), "weapons/sshell%i.wav", Com_RandomLong( 1, 3 ));
+		Q_snprintf( soundname, sizeof( soundname ), "weapons/sshell%i.wav", Com_RandomLong( 1, 3 ));
 		isshellcasing = true; // shell casings have different playback parameters
 		break;
 	case BOUNCE_SHELL:
-		com.snprintf( soundname, sizeof( soundname ), "player/pl_shell%i.wav", Com_RandomLong( 1, 3 ));
+		Q_snprintf( soundname, sizeof( soundname ), "player/pl_shell%i.wav", Com_RandomLong( 1, 3 ));
 		isshellcasing = true; // shell casings have different playback parameters
 		break;
 	case BOUNCE_CONCRETE:
-		com.snprintf( soundname, sizeof( soundname ), "debris/concrete%i.wav", Com_RandomLong( 1, 3 ));
+		Q_snprintf( soundname, sizeof( soundname ), "debris/concrete%i.wav", Com_RandomLong( 1, 3 ));
 		break;
 	default:	// null sound
 		return;
@@ -1444,7 +1444,7 @@ void CL_RicochetSound( const vec3_t pos )
 	float	fvol = Com_RandomFloat( 0.7f, 0.9f );
 	sound_t	handle;
 
-	com.snprintf( soundpath, sizeof( soundpath ), "weapons/ric%i.wav", Com_RandomLong( 1, 5 ));
+	Q_snprintf( soundpath, sizeof( soundpath ), "weapons/ric%i.wav", Com_RandomLong( 1, 5 ));
 	handle = S_RegisterSound( soundpath );
 
 	S_StartSound( pos, 0, CHAN_AUTO, handle, fvol, ATTN_NORM, iPitch, 0 );
@@ -2140,9 +2140,9 @@ void CL_SetLightstyle( int style, const char *s )
 
 	ls = &cl.lightstyles[style];
 
-	com.strncpy( ls->pattern, s, sizeof( ls->pattern ));
+	Q_strncpy( ls->pattern, s, sizeof( ls->pattern ));
 
-	ls->length = com.strlen( s );
+	ls->length = Q_strlen( s );
 
 	for( i = 0; i < ls->length; i++ )
 		ls->map[i] = (float)(s[i] - 'a');
@@ -2453,7 +2453,7 @@ int CL_DecalIndexFromName( const char *name )
 	// look through the loaded sprite name list for SpriteName
 	for( i = 0; i < MAX_DECALS && host.draw_decals[i+1][0]; i++ )
 	{
-		if( !com.stricmp( name, host.draw_decals[i+1] ))
+		if( !Q_stricmp( name, host.draw_decals[i+1] ))
 			return i+1;
 	}
 	return 0; // invalid decal

@@ -210,15 +210,15 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	byte		*f;
 
 	Image_Reset(); // clear old image
-	com.strncpy( loadname, filename, sizeof( loadname ));
+	Q_strncpy( loadname, filename, sizeof( loadname ));
 
-	if( com.stricmp( ext, "" ))
+	if( Q_stricmp( ext, "" ))
 	{
 		// we needs to compare file extension with list of supported formats
 		// and be sure what is real extension, not a filename with dot
 		for( format = image.loadformats; format && format->formatstring; format++ )
 		{
-			if( !com.stricmp( format->ext, ext ))
+			if( !Q_stricmp( format->ext, ext ))
 			{
 				FS_StripExtension( loadname );
 				anyformat = false;
@@ -233,9 +233,9 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	// now try all the formats in the selected list
 	for( format = image.loadformats; format && format->formatstring; format++)
 	{
-		if( anyformat || !com.stricmp( ext, format->ext ))
+		if( anyformat || !Q_stricmp( ext, format->ext ))
 		{
-			com.sprintf( path, format->formatstring, loadname, "", format->ext );
+			Q_sprintf( path, format->formatstring, loadname, "", format->ext );
 			image.hint = format->hint;
 			f = FS_LoadFile( path, &filesize, false );
 			if( f && filesize > 0 )
@@ -259,9 +259,9 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 			// NOTE: all loaders must keep sides in one format for all
 			for( format = image.loadformats; format && format->formatstring; format++ )
 			{
-				if( anyformat || !com.stricmp( ext, format->ext ))
+				if( anyformat || !Q_stricmp( ext, format->ext ))
 				{
-					com.sprintf( path, format->formatstring, loadname, cmap->type[i].suf, format->ext );
+					Q_sprintf( path, format->formatstring, loadname, cmap->type[i].suf, format->ext );
 					image.hint = cmap->type[i].hint; // side hint
 
 					f = FS_LoadFile( path, &filesize, false );
@@ -270,7 +270,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 						// this name will be used only for tell user about problems 
 						if( format->loadfunc( path, f, filesize ))
 						{         
-							com.snprintf( sidename, sizeof( sidename ), "%s%s.%s", loadname, cmap->type[i].suf, format->ext );
+							Q_snprintf( sidename, sizeof( sidename ), "%s%s.%s", loadname, cmap->type[i].suf, format->ext );
 							if( FS_AddSideToPack( sidename, cmap->type[i].flags )) // process flags to flip some sides
 							{
 								Mem_Free( f );
@@ -312,7 +312,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 load_internal:
 	for( format = image.loadformats; format && format->formatstring; format++ )
 	{
-		if( anyformat || !com.stricmp( ext, format->ext ))
+		if( anyformat || !Q_stricmp( ext, format->ext ))
 		{
 			image.hint = format->hint;
 			if( buffer && size > 0  )
@@ -341,15 +341,15 @@ writes image as any known format
 qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 {
           const char	*ext = FS_FileExtension( filename );
-	qboolean		anyformat = !com.stricmp( ext, "" ) ? true : false;
+	qboolean		anyformat = !Q_stricmp( ext, "" ) ? true : false;
 	string		path, savename;
 	const savepixformat_t *format;
 
 	if( !pix || !pix->buffer || anyformat ) return false;
-	com.strncpy( savename, filename, sizeof( savename ));
+	Q_strncpy( savename, filename, sizeof( savename ));
 	FS_StripExtension( savename ); // remove extension if needed
 
-	if( pix->flags & (IMAGE_CUBEMAP|IMAGE_SKYBOX) && com.stricmp( ext, "dds" ))
+	if( pix->flags & (IMAGE_CUBEMAP|IMAGE_SKYBOX) && Q_stricmp( ext, "dds" ))
 	{
 		size_t		realSize = pix->size; // keep real pic size
 		byte		*picBuffer; // to avoid corrupt memory on free data
@@ -368,11 +368,11 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 		// save all sides seperately
 		for( format = image.saveformats; format && format->formatstring; format++ )
 		{
-			if( !com.stricmp( ext, format->ext ))
+			if( !Q_stricmp( ext, format->ext ))
 			{
 				for( i = 0; i < 6; i++ )
 				{
-					com.sprintf( path, format->formatstring, savename, box[i].suf, format->ext );
+					Q_sprintf( path, format->formatstring, savename, box[i].suf, format->ext );
 					if( !format->savefunc( path, pix )) break; // there were errors
 					pix->buffer += pix->size; // move pointer
 				}
@@ -389,9 +389,9 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 	{
 		for( format = image.saveformats; format && format->formatstring; format++ )
 		{
-			if( !com.stricmp( ext, format->ext ))
+			if( !Q_stricmp( ext, format->ext ))
 			{
-				com.sprintf( path, format->formatstring, savename, "", format->ext );
+				Q_sprintf( path, format->formatstring, savename, "", format->ext );
 				if( format->savefunc( path, pix )) return true; // saved
 			}
 		}

@@ -38,8 +38,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define ID_MSGBOX	 	9
 #define ID_MSGTEXT	 	10
-#define ID_YES	 	11
-#define ID_NO	 	12
+#define ID_YES	 	130
+#define ID_NO	 	131
 
 #define GAME_LENGTH		18
 #define MAPNAME_LENGTH	20+GAME_LENGTH

@@ -117,7 +117,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		const char	*fullpath;
 	
 		// run cinematic if not
-		com.snprintf( path, sizeof( path ), "media/%s", filename );
+		Q_snprintf( path, sizeof( path ), "media/%s", filename );
 		FS_DefaultExtension( path, ".avi" );
 		fullpath = FS_GetDiskPath( path, false );
 
@@ -194,9 +194,9 @@ static void UI_UpdateUserinfo( void )
 	if( !userinfo->modified ) return;
 	player = &menu.playerinfo;
 
-	com.strncpy( player->userinfo, Cvar_Userinfo(), sizeof( player->userinfo ));
-	com.strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
-	com.strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
+	Q_strncpy( player->userinfo, Cvar_Userinfo(), sizeof( player->userinfo ));
+	Q_strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
+	Q_strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
 }
 	
 void Host_Credits( void )
@@ -207,17 +207,17 @@ void Host_Credits( void )
 
 static void UI_ConvertGameInfo( GAMEINFO *out, gameinfo_t *in )
 {
-	com.strncpy( out->gamefolder, in->gamefolder, sizeof( out->gamefolder ));
-	com.strncpy( out->startmap, in->startmap, sizeof( out->startmap ));
-	com.strncpy( out->trainmap, in->trainmap, sizeof( out->trainmap ));
-	com.strncpy( out->title, in->title, sizeof( out->title ));
-	com.strncpy( out->version, va( "%g", in->version ), sizeof( out->version ));
+	Q_strncpy( out->gamefolder, in->gamefolder, sizeof( out->gamefolder ));
+	Q_strncpy( out->startmap, in->startmap, sizeof( out->startmap ));
+	Q_strncpy( out->trainmap, in->trainmap, sizeof( out->trainmap ));
+	Q_strncpy( out->title, in->title, sizeof( out->title ));
+	Q_strncpy( out->version, va( "%g", in->version ), sizeof( out->version ));
 
-	com.strncpy( out->game_url, in->game_url, sizeof( out->game_url ));
-	com.strncpy( out->update_url, in->update_url, sizeof( out->update_url ));
-	com.strncpy( out->size, com.pretifymem( in->size, 0 ), sizeof( out->size ));
-	com.strncpy( out->type, in->type, sizeof( out->type ));
-	com.strncpy( out->date, in->date, sizeof( out->date ));
+	Q_strncpy( out->game_url, in->game_url, sizeof( out->game_url ));
+	Q_strncpy( out->update_url, in->update_url, sizeof( out->update_url ));
+	Q_strncpy( out->size, Q_pretifymem( in->size, 0 ), sizeof( out->size ));
+	Q_strncpy( out->type, in->type, sizeof( out->type ));
+	Q_strncpy( out->date, in->date, sizeof( out->date ));
 
 	out->gamemode = in->gamemode;
 }

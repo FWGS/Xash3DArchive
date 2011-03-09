@@ -47,7 +47,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 
 	// build uinque frame name
 	if( !sprite_name[0] ) FS_FileBase( mod->name, sprite_name );
-	com.snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", sprite_name, group_suffix, num / 10, num % 10 );
+	Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", sprite_name, group_suffix, num / 10, num % 10 );
 	
 	pinframe = (dspriteframe_t *)pin;
 
@@ -222,15 +222,15 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 		switch( frametype )
 		{
 		case FRAME_SINGLE:
-			com.strncpy( group_suffix, "one", sizeof( group_suffix ));
+			Q_strncpy( group_suffix, "one", sizeof( group_suffix ));
 			pframetype = R_SpriteLoadFrame( mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		case FRAME_GROUP:
-			com.strncpy( group_suffix, "grp", sizeof( group_suffix ));
+			Q_strncpy( group_suffix, "grp", sizeof( group_suffix ));
 			pframetype = R_SpriteLoadGroup( mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		case FRAME_ANGLED:
-			com.strncpy( group_suffix, "ang", sizeof( group_suffix ));
+			Q_strncpy( group_suffix, "ang", sizeof( group_suffix ));
 			pframetype = R_SpriteLoadGroup( mod, pframetype + 1, &psprite->frames[i].frameptr, i );
 			break;
 		}
@@ -259,7 +259,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	mspriteframe_t	*pspriteframe;
 	msprite_t		*psprite;
 
-	com.snprintf( texname, sizeof( texname ), "#%s", mod->name );
+	Q_snprintf( texname, sizeof( texname ), "#%s", mod->name );
 	pix = FS_LoadImage( texname, buffer, size );
 	if( !pix ) return;	// bad image or something else
 
@@ -332,7 +332,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 
 		// build uinque frame name
 		if( !sprite_name[0] ) FS_FileBase( mod->name, sprite_name );
-		com.snprintf( texname, sizeof( texname ), "#%s_%i%i.spr", sprite_name, i / 10, i % 10 );
+		Q_snprintf( texname, sizeof( texname ), "#%s_%i%i.spr", sprite_name, i / 10, i % 10 );
 
 		psprite->frames[i].frameptr = Mem_Alloc( mod->mempool, sizeof( mspriteframe_t ));
 		pspriteframe = psprite->frames[i].frameptr;

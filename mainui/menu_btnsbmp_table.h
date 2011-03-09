@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2011 ©
-//		menu_btnsbmp_table.h - btns_main layout (by Crazy Russian)
+//		menu_btnsbmp_table.h - btns_main layout (by CrazyRussian)
 //=======================================================================
 
 #ifndef MENU_BTNSBMP_TABLE_H

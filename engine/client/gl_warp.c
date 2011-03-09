@@ -376,11 +376,11 @@ void R_SetupSky( const char *skyboxname )
 		return; // clear old skybox
 	}
 
-	com.snprintf( loadname, sizeof( loadname ), "gfx/env/%s", skyboxname );
+	Q_snprintf( loadname, sizeof( loadname ), "gfx/env/%s", skyboxname );
 	FS_StripExtension( loadname );
 
-	if( loadname[com.strlen( loadname ) - 1] == '_' )
-		loadname[com.strlen( loadname ) - 1] = '\0';
+	if( loadname[Q_strlen( loadname ) - 1] == '_' )
+		loadname[Q_strlen( loadname ) - 1] = '\0';
 
 	if( !CheckSkybox( loadname ))
 	{
@@ -392,7 +392,7 @@ void R_SetupSky( const char *skyboxname )
 
 	for( i = 0; i < 6; i++ )
 	{
-		com.snprintf( sidename, sizeof( sidename ), "%s%s", loadname, r_skyBoxSuffix[i] );
+		Q_snprintf( sidename, sizeof( sidename ), "%s%s", loadname, r_skyBoxSuffix[i] );
 		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKYSIDE );
 		GL_SetTextureType( tr.skyboxTextures[i], TEX_SKYBOX );
 		if( !tr.skyboxTextures[i] ) break;
@@ -405,7 +405,7 @@ void R_SetupSky( const char *skyboxname )
 
 	for( i = 0; i < 6; i++ )
 	{
-		com.snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
+		Q_snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
 		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKYSIDE );
 		GL_SetTextureType( tr.skyboxTextures[i], TEX_SKYBOX );
 		if( !tr.skyboxTextures[i] ) break;

@@ -494,22 +494,22 @@ static void Mod_LoadTextures( const dlump_t *l )
 		if( !mt->name[0] )
 		{
 			MsgDev( D_WARN, "unnamed texture in %s\n", loadmodel->name );
-			com.snprintf( mt->name, sizeof( mt->name ), "miptex_%i", i );
+			Q_snprintf( mt->name, sizeof( mt->name ), "miptex_%i", i );
 		}
 
 		tx = Mem_Alloc( loadmodel->mempool, sizeof( *tx ));
 		loadmodel->textures[i] = tx;
 
 		// convert to lowercase
-		com.strnlwr( mt->name, mt->name, sizeof( mt->name ));
-		com.strncpy( tx->name, mt->name, sizeof( tx->name ));
-		com.snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", mt->name );
+		Q_strnlwr( mt->name, mt->name, sizeof( mt->name ));
+		Q_strncpy( tx->name, mt->name, sizeof( tx->name ));
+		Q_snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", mt->name );
 
 		tx->width = mt->width;
 		tx->height = mt->height;
 
 		// check for sky texture (quake1 only!)
-		if( world.version == Q1BSP_VERSION && !com.strncmp( mt->name, "sky", 3 ))
+		if( world.version == Q1BSP_VERSION && !Q_strncmp( mt->name, "sky", 3 ))
 		{	
 			R_InitSky( mt, tx );
 		}
@@ -531,7 +531,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		// check for luma texture
 		if( R_GetTexture( tx->gl_texturenum )->flags & TF_HAS_LUMA )
 		{
-			com.snprintf( texname, sizeof( texname ), "%s%s_luma.mip", mt->offsets[0] > 0 ? "#" : "", mt->name );
+			Q_snprintf( texname, sizeof( texname ), "%s%s_luma.mip", mt->offsets[0] > 0 ? "#" : "", mt->name );
 			if( mt->offsets[0] > 0 )
 			{
 				// NOTE: imagelib detect miptex version by size
@@ -593,7 +593,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 			if( !tx2 || tx2->name[0] != '+' )
 				continue;
 
-			if( com.strcmp( tx2->name + 2, tx->name + 2 ))
+			if( Q_strcmp( tx2->name + 2, tx->name + 2 ))
 				continue;
 
 			num = tx2->name[1];
@@ -847,16 +847,16 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		{
 			texture_t	*tex = out->texinfo->texture;
 
-			if( !com.strncmp( tex->name, "sky", 3 ))
+			if( !Q_strncmp( tex->name, "sky", 3 ))
 				out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
 			if( tex->name[0] == '*' || tex->name[0] == '!' )
 				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
-			if( !com.strnicmp( tex->name, "water", 5 ))
+			if( !Q_strnicmp( tex->name, "water", 5 ))
 				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
 
-			if( !com.strnicmp( tex->name, "scroll", 6 ))
+			if( !Q_strnicmp( tex->name, "scroll", 6 ))
 				out->flags |= SURF_CONVEYOR;
 
 			if( tex->name[0] == '{' )
@@ -1358,7 +1358,10 @@ void Mod_CalcPHS( void )
 		total_size += rowsize;
 
 		if( total_size > phsdatasize )
-			Host_Error( "CalcPHS: vismap expansion overflow %s > %s\n", memprint( total_size ), memprint( phsdatasize ));
+		{
+			Host_Error( "CalcPHS: vismap expansion overflow %s > %s\n",
+				Q_memprint( total_size ), Q_memprint( phsdatasize ));
+		}
 
 		Mem_Copy( vismap_p, comp, rowsize );
 		vismap_p += rowsize; // move pointer
@@ -1548,10 +1551,10 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 			char	name[8];
 
 			// duplicate the basic information
-			com.snprintf( name, sizeof( name ), "*%i", i + 1 );
+			Q_snprintf( name, sizeof( name ), "*%i", i + 1 );
 			loadmodel = Mod_FindName( name, true );
 			*loadmodel = *mod;
-			com.strncpy( loadmodel->name, name, sizeof( loadmodel->name ));
+			Q_strncpy( loadmodel->name, name, sizeof( loadmodel->name ));
 			loadmodel->mempool = NULL;
 			mod = loadmodel;
 		}
@@ -1576,7 +1579,7 @@ model_t *Mod_FindName( const char *name, qboolean create )
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
 	{
 		if( !mod->name[0] ) continue;
-		if( !com.stricmp( mod->name, name ))
+		if( !Q_stricmp( mod->name, name ))
 		{
 			// prolonge registration
 			mod->needload = world.load_sequence;
@@ -1598,7 +1601,7 @@ model_t *Mod_FindName( const char *name, qboolean create )
 	}
 
 	// copy name, so model loader can find model file
-	com.strncpy( mod->name, name, sizeof( mod->name ));
+	Q_strncpy( mod->name, name, sizeof( mod->name ));
 
 	return mod;
 }
@@ -1697,7 +1700,7 @@ void Mod_LoadWorld( const char *name, uint *checksum )
 	// now replacement table is invalidate
 	Mem_Set( com_models, 0, sizeof( com_models ));
 
-	if( !com.stricmp( cm_models[0].name, name ))
+	if( !Q_stricmp( cm_models[0].name, name ))
 	{
 		// singleplayer mode: server already loading map
 		com_models[1] = cm_models; // make link to world

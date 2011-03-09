@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "utils.h"
 #include "keydefs.h"
 #include "menu_btnsbmp_table.h"
+//CR
+#include "ui_title_anim.h"
 
 #ifdef _DEBUG
 void DBG_AssertFunction( BOOL fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
@@ -1861,6 +1863,13 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 	if( CVAR_GET_FLOAT( "sv_background" ) && b->generic.id == 0 )
 		return;	// has background map disable images
 
+	//CR
+	if (b->generic.id==1)
+	{
+		// don't draw banners until transition is done
+		if (UI_GetTitleTransFraction()!=1) return;
+	}
+
 	if( b->generic.flags & QMF_GRAYED )
 	{
 		UI_DrawPic( b->generic.x, b->generic.y, b->generic.width, b->generic.height, uiColorDkGrey, b->pic );
@@ -1980,7 +1989,10 @@ const char *UI_PicButton_Key( menuPicButton_s *b, int key, int down )
 				b->generic.bPressed = true;
 			}
 			else event = QM_ACTIVATED;
+			//CR
+			UI_TACheckMenuDepth();
 			b->generic.callback( b, event );
+			UI_SetTitleAnim(AS_TO_TITLE,b);
 		}
 	}
 	else if( down )

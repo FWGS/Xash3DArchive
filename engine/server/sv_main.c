@@ -201,7 +201,7 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.maxvelocity = sv_maxvelocity->value;
 	svgame.movevars.zmax = sv_zmax->value;
 	svgame.movevars.waveHeight = sv_wateramp->value;
-	com.strncpy( svgame.movevars.skyName, sv_skyname->string, sizeof( svgame.movevars.skyName ));
+	Q_strncpy( svgame.movevars.skyName, sv_skyname->string, sizeof( svgame.movevars.skyName ));
 	svgame.movevars.footsteps = sv_footsteps->integer;
 	svgame.movevars.rollangle = sv_rollangle->value;
 	svgame.movevars.rollspeed = sv_rollspeed->value;

@@ -220,8 +220,8 @@ void CL_InitCDAudio( const char *filename )
 	// format: trackname\n [num]
 	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
-		if( !com.stricmp( token, "blank" )) token[0] = '\0';
-		com.strncpy( clgame.cdtracks[c], token, sizeof( clgame.cdtracks[0] ));
+		if( !Q_stricmp( token, "blank" )) token[0] = '\0';
+		Q_strncpy( clgame.cdtracks[c], token, sizeof( clgame.cdtracks[0] ));
 
 		if( ++c > MAX_CDTRACKS - 1 )
 		{
@@ -373,7 +373,7 @@ void CL_CenterPrint( const char *text, float y )
 	clgame.centerPrint.lines = 1;
 	clgame.centerPrint.totalWidth = 0;
 	clgame.centerPrint.time = cl.mtime[0] * 1000; // allow pause for centerprint
-	com.strncpy( clgame.centerPrint.message, text, sizeof( clgame.centerPrint.message ));
+	Q_strncpy( clgame.centerPrint.message, text, sizeof( clgame.centerPrint.message ));
 	s = clgame.centerPrint.message;
 
 	// count the number of lines for centering
@@ -655,7 +655,7 @@ static void CL_InitTitles( const char *filename )
 	// initialize text messages (game_text)
 	for( i = 0; i < MAX_TEXTCHANNELS; i++ )
 	{
-		cl_textmessage[i].pName = com.stralloc( clgame.mempool, va( TEXT_MSGNAME, i ), __FILE__, __LINE__ );
+		cl_textmessage[i].pName = _copystring( clgame.mempool, va( TEXT_MSGNAME, i ), __FILE__, __LINE__ );
 		cl_textmessage[i].pMessage = cl_textbuffer[i];
 	}
 
@@ -719,11 +719,11 @@ void CL_ParseTextMessage( sizebuf_t *msg )
 	else text->fxtime = 0.0f;
 
 	// to prevent grab too long messages
-	com.strncpy( (char *)text->pMessage, BF_ReadString( msg ), 512 ); 		
+	Q_strncpy( (char *)text->pMessage, BF_ReadString( msg ), 512 ); 		
 
 	// NOTE: a "HudText" message contain only 'string' with message name, so we
 	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
-	CL_DispatchUserMessage( "HudText", com.strlen( text->pName ) + 1, (void *)text->pName );
+	CL_DispatchUserMessage( "HudText", Q_strlen( text->pName ) + 1, (void *)text->pName );
 }
 
 /*
@@ -937,7 +937,7 @@ void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
 		// NOTE: no check for DispatchFunc, check only name
-		if( !com.strcmp( clgame.msg[i].name, pszName ))
+		if( !Q_strcmp( clgame.msg[i].name, pszName ))
 		{
 			clgame.msg[i].number = svc_num;
 			clgame.msg[i].size = iSize;
@@ -952,7 +952,7 @@ void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 	}
 
 	// register new message without DispatchFunc, so we should parse it properly
-	com.strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
+	Q_strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
 	clgame.msg[i].number = svc_num;
 	clgame.msg[i].size = iSize;
 }
@@ -973,7 +973,7 @@ static void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook fu
 	if( ev ) Mem_Set( ev, 0, sizeof( *ev ));
 	else ev = clgame.events[lastnum] = Mem_Alloc( cls.mempool, sizeof( *ev ));
 
-	com.strncpy( ev->name, szEvName, CS_SIZE );
+	Q_strncpy( ev->name, szEvName, CS_SIZE );
 	ev->func = func;
 	// ev->index will be set later
 }
@@ -991,7 +991,7 @@ void CL_SetEventIndex( const char *szEvName, int ev_index )
 		ev = clgame.events[i];
 		if( !ev ) break;
 
-		if( !com.strcmp( ev->name, szEvName ))
+		if( !Q_strcmp( ev->name, szEvName ))
 		{
 			ev->index = ev_index;
 			return;
@@ -1024,7 +1024,7 @@ word CL_EventIndex( const char *name )
 		return 0;
 
 	for( i = 1; i < MAX_EVENTS && cl.event_precache[i][0]; i++ )
-		if( !com.stricmp( cl.event_precache[i], name ))
+		if( !Q_stricmp( cl.event_precache[i], name ))
 			return i;
 	return 0;
 }
@@ -1322,7 +1322,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	buf = FS_LoadFile( szSpriteName, &size, false );
 	if( !buf ) return false;
 
-	com.strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
+	Q_strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
 	m_pSprite->flags |= SPRITE_HUD;
 
 	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
@@ -1357,7 +1357,7 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 	// slot 0 isn't used
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
-		if( !com.strcmp( clgame.sprites[i].name, szPicName ))
+		if( !Q_strcmp( clgame.sprites[i].name, szPicName ))
 		{
 			// prolonge registration
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -1554,7 +1554,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 
 	pfile = afile;
 	pfile = COM_ParseFile( pfile, token );          
-	numSprites = com.atoi( token );
+	numSprites = Q_atoi( token );
 
 	if( !cl.video_prepped ) pool = cls.mempool;
 	else pool = com_studiocache; // temporary
@@ -1568,28 +1568,28 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 		if(( pfile = COM_ParseFile( pfile, token )) == NULL )
 			break;
 
-		com.strncpy( pList[index].szName, token, sizeof( pList[index].szName ));
+		Q_strncpy( pList[index].szName, token, sizeof( pList[index].szName ));
 
 		// read resolution
 		pfile = COM_ParseFile( pfile, token );
-		pList[index].iRes = com.atoi( token );
+		pList[index].iRes = Q_atoi( token );
 
 		// read spritename
 		pfile = COM_ParseFile( pfile, token );
-		com.strncpy( pList[index].szSprite, token, sizeof( pList[index].szSprite ));
+		Q_strncpy( pList[index].szSprite, token, sizeof( pList[index].szSprite ));
 
 		// parse rectangle
 		pfile = COM_ParseFile( pfile, token );
-		pList[index].rc.left = com.atoi( token );
+		pList[index].rc.left = Q_atoi( token );
 
 		pfile = COM_ParseFile( pfile, token );
-		pList[index].rc.top = com.atoi( token );
+		pList[index].rc.top = Q_atoi( token );
 
 		pfile = COM_ParseFile( pfile, token );
-		pList[index].rc.right = pList[index].rc.left + com.atoi( token );
+		pList[index].rc.right = pList[index].rc.left + Q_atoi( token );
 
 		pfile = COM_ParseFile( pfile, token );
-		pList[index].rc.bottom = pList[index].rc.top + com.atoi( token );
+		pList[index].rc.bottom = pList[index].rc.top + Q_atoi( token );
 
 		if( piCount ) (*piCount)++;
 	}
@@ -1703,7 +1703,7 @@ static int pfnHookUserMsg( const char *pszName, pfnUserMsgHook pfn )
 	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
 		// see if already hooked
-		if( !com.strcmp( clgame.msg[i].name, pszName ))
+		if( !Q_strcmp( clgame.msg[i].name, pszName ))
 			return 1;
 	}
 
@@ -1714,7 +1714,7 @@ static int pfnHookUserMsg( const char *pszName, pfnUserMsgHook pfn )
 	}
 
 	// hook new message
-	com.strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
+	Q_strncpy( clgame.msg[i].name, pszName, sizeof( clgame.msg[i].name ));
 	clgame.msg[i].func = pfn;
 
 	return 1;
@@ -1777,8 +1777,8 @@ static void pfnGetPlayerInfo( int ent_num, hud_player_info_t *pinfo )
 	pinfo->spectator = spec;		
 	pinfo->ping = player->ping;
 	pinfo->packetloss = player->packet_loss;
-	pinfo->topcolor = com.atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
-	pinfo->bottomcolor = com.atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
+	pinfo->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
+	pinfo->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
 }
 
 /*
@@ -1829,14 +1829,14 @@ client_textmessage_t *CL_TextMessageGet( const char *pName )
 	// first check internal messages
 	for( i = 0; i < MAX_TEXTCHANNELS; i++ )
 	{
-		if( !com.strcmp( pName, va( TEXT_MSGNAME, i )))
+		if( !Q_strcmp( pName, va( TEXT_MSGNAME, i )))
 			return cl_textmessage + i;
 	}
 
 	// find desired message
 	for( i = 0; i < clgame.numTitles; i++ )
 	{
-		if( !com.strcmp( pName, clgame.titles[i].pName ))
+		if( !Q_strcmp( pName, clgame.titles[i].pName ))
 			return clgame.titles + i;
 	}
 	return NULL; // found nothing
@@ -2269,7 +2269,7 @@ static void pfnHookEvent( const char *name, pfnEventHook pfn )
 		ev = clgame.events[i];		
 		if( !ev ) break;
 
-		if( !com.strcmp( name, ev->name ))
+		if( !Q_strcmp( name, ev->name ))
 		{
 			if( ev->func != pfn )
 				ev->func = pfn;
@@ -2349,7 +2349,7 @@ int CL_FindModelIndex( const char *m )
 
 	for( i = 1; i < MAX_MODELS && cl.model_precache[i][0]; i++ )
 	{
-		if( !com.strcmp( cl.model_precache[i], m ))
+		if( !Q_strcmp( cl.model_precache[i], m ))
 			return i;
 	}
 
@@ -2599,7 +2599,7 @@ static const char *pfnGetLevelName( void )
 	static char	mapname[64];
 
 	if( cls.state >= ca_connected )
-		com.snprintf( mapname, sizeof( mapname ), "maps/%s.bsp", clgame.mapname );
+		Q_snprintf( mapname, sizeof( mapname ), "maps/%s.bsp", clgame.mapname );
 	else mapname[0] = '\0'; // not in game
 
 	return mapname;
@@ -2646,7 +2646,7 @@ model_t *pfnLoadMapSprite( const char *filename )
 	// slot 0 isn't used
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
-		if( !com.strcmp( clgame.sprites[i].name, filename ))
+		if( !Q_strcmp( clgame.sprites[i].name, filename ))
 		{
 			// prolonge registration
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -2726,7 +2726,7 @@ int pfnGetTrackerIDForPlayer( int playerSlot )
 
 	if( !cl.players[playerSlot].userinfo[0] || !cl.players[playerSlot].name[0] )
 			return 0;
-	return com.atoi( Info_ValueForKey( cl.players[playerSlot].userinfo, "*tracker" ));
+	return Q_atoi( Info_ValueForKey( cl.players[playerSlot].userinfo, "*tracker" ));
 }
 
 /*
@@ -2744,7 +2744,7 @@ int pfnGetPlayerForTrackerID( int trackerID )
 		if( !cl.players[i].userinfo[0] || !cl.players[i].name[0] )
 			continue;
 
-		if( com.atoi( Info_ValueForKey( cl.players[i].userinfo, "*tracker" )) == trackerID )
+		if( Q_atoi( Info_ValueForKey( cl.players[i].userinfo, "*tracker" )) == trackerID )
 		{
 			// make into a player slot
 			return (i+1);
@@ -2835,7 +2835,7 @@ static void pfnEnvShot( const float *vieworg, const char *name, int skyshot )
 	}
 
 	cls.envshot_vieworg = NULL; // use client view
-	com.strncpy( cls.shotname, name, sizeof( cls.shotname ));
+	Q_strncpy( cls.shotname, name, sizeof( cls.shotname ));
 
 	if( vieworg )
 	{

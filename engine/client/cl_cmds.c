@@ -32,7 +32,7 @@ void CL_PlayVideo_f( void )
 	switch( Cmd_Argc( ))
 	{
 	case 2:	// simple user version
-		com.snprintf( path, sizeof( path ), "media/%s.avi", Cmd_Argv( 1 ));
+		Q_snprintf( path, sizeof( path ), "media/%s.avi", Cmd_Argv( 1 ));
 		SCR_PlayCinematic( path );
 		break;
 	case 3:	// sequenced cinematics used this
@@ -58,43 +58,43 @@ void CL_PlayCDTrack_f( void )
 	if( Cmd_Argc() < 2 ) return;
 	command = Cmd_Argv( 1 );
 
-	if( !com.stricmp( command, "play" ))
+	if( !Q_stricmp( command, "play" ))
 	{
-		track = bound( 1, com.atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
+		track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
 		S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL );
 		paused = false;
 		looped = false;
 	}
-	else if( !com.stricmp( command, "loop" ))
+	else if( !Q_stricmp( command, "loop" ))
 	{
-		track = bound( 1, com.atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
+		track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
 		S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1] );
 		paused = false;
 		looped = true;
 	}
-	else if( !com.stricmp( command, "pause" ))
+	else if( !Q_stricmp( command, "pause" ))
 	{
 		S_StreamSetPause( true );
 		paused = true;
 	}
-	else if( !com.stricmp( command, "resume" ))
+	else if( !Q_stricmp( command, "resume" ))
 	{
 		S_StreamSetPause( false );
 		paused = false;
 	}
-	else if( !com.stricmp( command, "stop" ))
+	else if( !Q_stricmp( command, "stop" ))
 	{
 		S_StopBackgroundTrack();
 		paused = false;
 		looped = false;
 		track = 0;
 	}
-	else if( !com.stricmp( command, "info" ))
+	else if( !Q_stricmp( command, "info" ))
 	{
 		int	i, maxTrack;
 
 		for( maxTrack = i = 0; i < MAX_CDTRACKS; i++ )
-			if( com.strlen( clgame.cdtracks[i] )) maxTrack++;
+			if( Q_strlen( clgame.cdtracks[i] )) maxTrack++;
 			
 		Msg( "%u tracks\n", maxTrack );
 		if( track )
@@ -138,7 +138,7 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 	if( lastnum < 0 || lastnum > 9999 )
 	{
 		// bound
-		com.sprintf( filename, "scrshots/%s/!error.bmp", clgame.mapname );
+		Q_sprintf( filename, "scrshots/%s/!error.bmp", clgame.mapname );
 		return;
 	}
 
@@ -150,7 +150,7 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 	lastnum -= c * 10;
 	d = lastnum;
 
-	com.sprintf( filename, "scrshots/%s/shot%i%i%i%i.bmp", clgame.mapname, a, b, c, d );
+	Q_sprintf( filename, "scrshots/%s/shot%i%i%i%i.bmp", clgame.mapname, a, b, c, d );
 }
 
 /* 
@@ -192,7 +192,7 @@ void CL_EnvShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "gfx/env/%s", Cmd_Argv( 1 ));
+	Q_sprintf( cls.shotname, "gfx/env/%s", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_envshot;	// build new frame for envshot
 	cls.envshot_vieworg = NULL; // no custom view
 }
@@ -205,7 +205,7 @@ void CL_SkyShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "gfx/env/%s", Cmd_Argv( 1 ));
+	Q_sprintf( cls.shotname, "gfx/env/%s", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_skyshot;	// build new frame for skyshot
 	cls.envshot_vieworg = NULL; // no custom view
 }
@@ -223,7 +223,7 @@ void CL_LevelShot_f( void )
 	cls.scrshot_request = scrshot_inactive;
 
 	// check for exist
-	com.sprintf( cls.shotname, "levelshots/%s.bmp", clgame.mapname );
+	Q_sprintf( cls.shotname, "levelshots/%s.bmp", clgame.mapname );
 	if( !FS_FileExists( cls.shotname, true ))
 		cls.scrshot_action = scrshot_plaque;	// build new frame for levelshot
 	else cls.scrshot_action = scrshot_inactive;	// disable - not needs
@@ -244,7 +244,7 @@ void CL_SaveShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "save/%s.bmp", Cmd_Argv( 1 ));
+	Q_sprintf( cls.shotname, "save/%s.bmp", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_savegame;	// build new frame for saveshot
 }
 
@@ -263,7 +263,7 @@ void CL_DemoShot_f( void )
 		return;
 	}
 
-	com.sprintf( cls.shotname, "demos/%s.bmp", Cmd_Argv( 1 ));
+	Q_sprintf( cls.shotname, "demos/%s.bmp", Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_demoshot; // build new frame for demoshot
 }
 
@@ -281,7 +281,7 @@ void CL_DeleteDemo_f( void )
 		return;
 	}
 
-	if( cls.demorecording && !com.stricmp( cls.demoname, Cmd_Argv( 1 )))
+	if( cls.demorecording && !Q_stricmp( cls.demoname, Cmd_Argv( 1 )))
 	{
 		Msg( "Can't delete %s - recording\n", Cmd_Argv( 1 ));
 		return;

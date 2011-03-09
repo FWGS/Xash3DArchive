@@ -1593,7 +1593,7 @@ void GL_BuildLightmaps( void )
 
 		Mem_Set( &r_lightmap, 0, sizeof( r_lightmap ));
 
-		com.snprintf( lmName, sizeof( lmName ), "*lightmap%i", i );
+		Q_snprintf( lmName, sizeof( lmName ), "*lightmap%i", i );
 		r_lightmap.width = BLOCK_WIDTH;
 		r_lightmap.height = BLOCK_HEIGHT;
 		r_lightmap.type = PF_RGBA_32;

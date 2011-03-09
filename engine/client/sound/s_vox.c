@@ -66,7 +66,7 @@ static char *VOX_GetDirectory( char *szpath, char *psz )
 {
 	char	c;
 	int	cb = 0;
-	char	*p = psz + com.strlen( psz ) - 1;
+	char	*p = psz + Q_strlen( psz ) - 1;
 
 	// scan backwards until first '/' or start of string
 	c = *p;
@@ -79,11 +79,11 @@ static char *VOX_GetDirectory( char *szpath, char *psz )
 	if( c != '/' )
 	{
 		// didn't find '/', return default directory
-		com.strcpy( szpath, "vox/" );
+		Q_strcpy( szpath, "vox/" );
 		return psz;
 	}
 
-	cb = com.strlen( psz ) - cb;
+	cb = Q_strlen( psz ) - cb;
 	Mem_Copy( szpath, psz, cb );
 	szpath[cb] = 0;
 
@@ -98,19 +98,19 @@ char *VOX_LookupString( const char *pSentenceName, int *psentencenum )
 {
 	int	i;
 
-	if( com.is_digit( pSentenceName ) && (i = com.atoi( pSentenceName )) < g_numSentences )
+	if( Q_isdigit( pSentenceName ) && (i = Q_atoi( pSentenceName )) < g_numSentences )
 	{
 		if( psentencenum ) *psentencenum = i;
-		return (g_Sentences[i].pName + com.strlen( g_Sentences[i].pName ) + 1 );		
+		return (g_Sentences[i].pName + Q_strlen( g_Sentences[i].pName ) + 1 );		
 	}
 
 
 	for( i = 0; i < g_numSentences; i++ )
 	{
-		if( !com.stricmp( pSentenceName, g_Sentences[i].pName ))
+		if( !Q_stricmp( pSentenceName, g_Sentences[i].pName ))
 		{
 			if( psentencenum ) *psentencenum = i;
-			return (g_Sentences[i].pName + com.strlen( g_Sentences[i].pName ) + 1 );
+			return (g_Sentences[i].pName + Q_strlen( g_Sentences[i].pName ) + 1 );
 		}
 	}
 	return NULL;
@@ -261,7 +261,7 @@ int VOX_ParseWordParams( char *psz, voxword_t *pvoxword, int fFirst )
 
 	// look at next to last char to see if we have a 
 	// valid format:
-	c = *( psz + com.strlen( psz ) - 1 );
+	c = *( psz + Q_strlen( psz ) - 1 );
 
 	// no formatting, return
 	if( c != ')' ) return 1; 
@@ -303,7 +303,7 @@ int VOX_ParseWordParams( char *psz, voxword_t *pvoxword, int fFirst )
 		}
 
 		// get value of number
-		i = com.atoi( sznum );
+		i = Q_atoi( sznum );
 
 		switch( ct )
 		{
@@ -320,7 +320,7 @@ int VOX_ParseWordParams( char *psz, voxword_t *pvoxword, int fFirst )
 	// if the string has zero length, this was an isolated
 	// parameter block.  Set default voxword to these
 	// values
-	if( com.strlen( pszsave ) == 0 )
+	if( Q_strlen( pszsave ) == 0 )
 	{
 		voxwordDefault = *pvoxword;
 		return 0;
@@ -458,14 +458,14 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 	// get directory from string, advance psz
 	psz = VOX_GetDirectory( szpath, psz );
 
-	if( com.strlen( psz ) > sizeof( buffer ) - 1 )
+	if( Q_strlen( psz ) > sizeof( buffer ) - 1 )
 	{
 		MsgDev( D_ERROR, "VOX_LoadSound: sentence is too long %s\n", psz );
 		return;
 	}
 
 	// copy into buffer
-	com.strcpy( buffer, psz );
+	Q_strcpy( buffer, psz );
 	psz = buffer;
 
 	// parse sentence (also inserts null terminators between words)
@@ -482,9 +482,9 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 		if( VOX_ParseWordParams( rgpparseword[i], &rgvoxword[cword], i == 0 ))
 		{
 			// this is a valid word (as opposed to a parameter block)
-			com.strcpy( pathbuffer, szpath );
-			com.strncat( pathbuffer, rgpparseword[i], sizeof( pathbuffer ));
-			com.strncat( pathbuffer, ".wav", sizeof( pathbuffer ));
+			Q_strcpy( pathbuffer, szpath );
+			Q_strncat( pathbuffer, rgpparseword[i], sizeof( pathbuffer ));
+			Q_strncat( pathbuffer, ".wav", sizeof( pathbuffer ));
 
 			// find name, if already in cache, mark voxword
 			// so we don't discard when word is done playing
@@ -547,13 +547,13 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 			pSentenceData++;
 
 		// simple comparison of string commands:
-		switch( com.tolower( *pSentenceData ))
+		switch( Q_tolower( *pSentenceData ))
 		{
 		case 'l':
 			// all commands starting with the letter 'l' here
-			if( !com.strnicmp( pSentenceData, "len", 3 ))
+			if( !Q_strnicmp( pSentenceData, "len", 3 ))
 			{
-				g_Sentences[sentenceIndex].length = com.atof( pSentenceData + 3 );
+				g_Sentences[sentenceIndex].length = Q_atof( pSentenceData + 3 );
 			}
 			break;
 		case 0:
@@ -577,7 +577,7 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 		tempBuffer[tempBufferPos] = 0;
 		
 		// copy it over the original data
-		com.strcpy( pStart, tempBuffer );
+		Q_strcpy( pStart, tempBuffer );
 	}
 }
 

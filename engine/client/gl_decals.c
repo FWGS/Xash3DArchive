@@ -854,8 +854,7 @@ void DrawSurfaceDecals( msurface_t *fa )
 	decal_t		*p;
 	cl_entity_t	*e;
 
-//	if( !fa->pdecals )
-		return;
+	if( !fa->pdecals ) return;
 
 	e = RI.currententity;
 	ASSERT( e != NULL );
@@ -942,7 +941,7 @@ static int DecalListAdd( decallist_t *pList, int count )
 
 	for( i = 0; i < count; i++ )
 	{
-		if( !com.strcmp( pdecal->name, pList[i].name ) &&  pdecal->entityIndex == pList[i].entityIndex )
+		if( !Q_strcmp( pdecal->name, pList[i].name ) &&  pdecal->entityIndex == pList[i].entityIndex )
 		{
 			VectorSubtract( pdecal->position, pList[i].position, tmp );	// Merge
 			if( VectorLength( tmp ) < 2 )
@@ -1007,7 +1006,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 			pList[total].flags = decal->flags;
 			
 			R_DecalUnProject( decal, &pList[total] );
-			com.strncpy( pList[total].name, R_GetTexture( decal->texture )->name, sizeof( pList[total].name ));
+			Q_strncpy( pList[total].name, R_GetTexture( decal->texture )->name, sizeof( pList[total].name ));
 
 			// check to see if the decal should be added
 			total = DecalListAdd( pList, total );

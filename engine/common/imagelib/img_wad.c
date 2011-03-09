@@ -27,17 +27,17 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 	if( name[0] == '#' )
 	{
 		// using palette name as rendermode
-		if( com.stristr( name, "normal" ))
+		if( Q_stristr( name, "normal" ))
 			rendermode = LUMP_NORMAL;
-		else if( com.stristr( name, "transparent" ))
+		else if( Q_stristr( name, "transparent" ))
 			rendermode = LUMP_TRANSPARENT;
-		else if( com.stristr( name, "decal" ))
+		else if( Q_stristr( name, "decal" ))
 			rendermode = LUMP_DECAL;
-		else if( com.stristr( name, "indexalpha" ))
+		else if( Q_stristr( name, "indexalpha" ))
 			rendermode = LUMP_INDEXALPHA;
-		else if( com.stristr( name, "qfont" ))
+		else if( Q_stristr( name, "qfont" ))
 			rendermode = LUMP_QFONT;
-		else if( com.stristr( name, "valve" ))
+		else if( Q_stristr( name, "valve" ))
 			buffer = NULL; // force to get HL palette
 	}
 
@@ -259,11 +259,11 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	// greatest hack from valve software (particle palette)
-	if( com.stristr( name, "palette.lmp" ))
+	if( Q_stristr( name, "palette.lmp" ))
 		return Image_LoadPAL( name, buffer, filesize );
 
 	// greatest hack from id software
-	if( image.hint != IL_HINT_HL && com.stristr( name, "conchars" ))
+	if( image.hint != IL_HINT_HL && Q_stristr( name, "conchars" ))
 	{
 		image.width = image.height = 128;
 		image.flags |= IMAGE_HAS_ALPHA;
@@ -350,7 +350,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		hl_texture = true;
 
 		// detect rendermode
-		if( com.strrchr( name, '{' ))
+		if( Q_strrchr( name, '{' ))
 		{
 			color24	*col = (color24 *)pal;
 
@@ -441,14 +441,14 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 	} 
 
 	// check for quake-sky texture
-	if( !com.strncmp( mip.name, "sky", 3 ) && image.width == ( image.height * 2 ))
+	if( !Q_strncmp( mip.name, "sky", 3 ) && image.width == ( image.height * 2 ))
 	{
 		// g-cont: we need to run additional checks for palette type and colors ?
 		image.flags |= IMAGE_QUAKESKY;
 	}
 
 	// check for half-life water texture
-	if( hl_texture && ( mip.name[0] == '!' || !com.strnicmp( mip.name, "water", 5 )))
+	if( hl_texture && ( mip.name[0] == '!' || !Q_strnicmp( mip.name, "water", 5 )))
           {
 		// grab the fog color
 		image.fogParams[0] = pal[3*3+0];

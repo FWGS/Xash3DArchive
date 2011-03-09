@@ -35,13 +35,13 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	if( ed->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
 	{
 		// client or bot
-		com.strncpy( pe->name, "player", sizeof( pe->name ));
+		Q_strncpy( pe->name, "player", sizeof( pe->name ));
 		pe->player = NUM_FOR_EDICT( ed );
 	}
 	else
 	{
 		// otherwise copy the modelname
-		com.strncpy( pe->name, mod->name, sizeof( pe->name ));
+		Q_strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
 	if( mod->type == mod_studio )
@@ -566,7 +566,7 @@ static void SV_SetupPMove( playermove_t *pmove, edict_t *clent, usercmd_t *ucmd,
 	VectorCopy( clent->v.vuser4, pmove->vuser4 );
 	pmove->cmd = *ucmd;	// setup current cmds	
 
-	com.strncpy( pmove->physinfo, physinfo, MAX_INFO_STRING );
+	Q_strncpy( pmove->physinfo, physinfo, MAX_INFO_STRING );
 
 	// setup physents
 	pmove->numvisent = 0;

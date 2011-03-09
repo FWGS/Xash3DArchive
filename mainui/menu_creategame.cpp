@@ -40,8 +40,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define ID_MSGBOX	 	11
 #define ID_MSGTEXT	 	12
-#define ID_YES	 	13
-#define ID_NO	 	14
+#define ID_YES	 	130
+#define ID_NO	 	131
 
 #define MAPNAME_LENGTH	20
 #define TITLE_LENGTH	20+MAPNAME_LENGTH

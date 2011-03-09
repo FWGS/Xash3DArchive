@@ -8,7 +8,6 @@
 
 #define MAX_QUED_EVENTS		256
 #define MASK_QUED_EVENTS		(MAX_QUED_EVENTS - 1)
-#define LOG_BUFSIZE			131072	// 128 kb
 
 system_t		Sys;
 stdlib_api_t	com;
@@ -58,31 +57,8 @@ void Sys_GetStdAPI( void )
 	com.freepool = _mem_freepool;
 	com.clearpool = _mem_emptypool;
 	com.memcheck = _mem_check;
-
-	// console variables
-	com.Cvar_Get = Cvar_Get;
-	com.Cvar_FullSet = Cvar_FullSet;
-	com.Cvar_SetLatched = Cvar_SetLatched;
-	com.Cvar_SetFloat = Cvar_SetFloat;
-	com.Cvar_SetString = Cvar_Set;
-	com.Cvar_GetInteger = Cvar_VariableInteger;
-	com.Cvar_GetValue = Cvar_VariableValue;
-	com.Cvar_GetString = Cvar_VariableString;
-	com.Cvar_LookupVars = Cvar_LookupVars;
-	com.Cvar_FindVar = Cvar_FindVar;
-	com.Cvar_DirectSet = Cvar_DirectSet;
-	com.Cvar_Register = Cvar_RegisterVariable;
-
-	// console commands
-	com.Cmd_Exec = Cbuf_ExecuteText;		// process cmd buffer
-	com.Cmd_Argc = Cmd_Argc;
-	com.Cmd_Args = Cmd_Args;
-	com.Cmd_Argv = Cmd_Argv; 
-	com.Cmd_LookupCmds = Cmd_LookupCmds;
-	com.Cmd_AddCommand = Cmd_AddCommand;
-	com.Cmd_AddGameCommand = Cmd_AddGameCommand;
-	com.Cmd_DelCommand = Cmd_RemoveCommand;
-	com.Cmd_TokenizeString = Cmd_TokenizeString;
+	com.memlist = _mem_printlist;
+	com.memstats = _mem_printstats;
 
 	com.Com_LoadLibrary = Sys_LoadLibrary;		// load library 
 	com.Com_FreeLibrary = Sys_FreeLibrary;		// free library
@@ -103,7 +79,6 @@ void Sys_GetStdAPI( void )
 	com.strcat = com_strcat;
 	com.strncpy = com_strncpy;
 	com.strcpy = com_strcpy;
-	com.stralloc = com_stralloc;
 	com.is_digit = com_isdigit;
 	com.atoi = com_atoi;
 	com.atof = com_atof;
@@ -242,8 +217,8 @@ void Sys_CreateInstance( void )
 		Sys.Main = Host->Main;
 		Sys.Free = Host->Free;
 		Sys.CPrint = Host->CPrint;
-		Sys.CmdFwd = Host->CmdForward;
 		Sys.CmdAuto = Host->CmdComplete;
+		Sys.Crashed = Host->Crashed;
 		break;
 	case HOST_CREDITS:
 		Sys_Break( show_credits, com.timestamp( TIME_YEAR_ONLY ));
@@ -257,20 +232,7 @@ void Sys_CreateInstance( void )
 	Sys.Init( Sys.argc, Sys.argv );
 
 	// post initializations
-	switch( Sys.app_name )
-	{
-	case HOST_NORMAL:
-		Con_ShowConsole( false );				// hide console
-		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));	// execute startup config and cmdline
-	case HOST_DEDICATED:
-		Cbuf_Execute();
-		// if stuffcmds wasn't run, then init.rc is probably missing, use default
-		if( !Sys.stuffcmdsrun ) Cbuf_ExecuteText( EXEC_NOW, "stuffcmds\n" );
-		break;
-	}
-
-	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
-	Cmd_RemoveCommand( "setgl" );
+	if( Sys.app_name == HOST_NORMAL ) Con_ShowConsole( false ); // hide console
 	Sys.app_state = SYS_FRAME;	// system is now active
 }
 
@@ -419,8 +381,7 @@ void Sys_Print( const char *pMsg )
 		Sys.CPrint( logbuf );
 
 	Sys_PrintLog( logbuf );
-
-	Sys.Con_Print( buffer );
+	Con_Print( buffer );
 }
 
 /*
@@ -694,13 +655,6 @@ void Sys_Break( const char *error, ... )
 	Sys_Exit();
 }
 
-void Sys_Abort( void )
-{
-	// aborting by user, run normal shutdown procedure
-	Sys.app_state = SYS_ABORT;
-	Sys_Exit();
-}
-
 long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 {
 	// save config
@@ -710,8 +664,7 @@ long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 		Sys.error = true;
 		Sys.app_state = SYS_CRASH;
 
-		if( Sys.app_name == HOST_NORMAL || Sys.app_name == HOST_DEDICATED )
-			Cmd_ExecuteString( "@crashed\n" ); // tell server about crash
+		if( Sys.app_name == HOST_NORMAL && Sys.Crashed ) Sys.Crashed(); // tell client about crash
 		Msg( "Sys_Crash: call %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
 
 		if( Sys.developer <= 0 )
@@ -748,7 +701,6 @@ void Sys_Init( void )
 	Sys.Main = NullFunc;
 	Sys.Free = NullFunc;
 	Sys.CPrint = NullPrint;
-	Sys.Con_Print = NullPrint;
 
 	Sys.oldFilter = SetUnhandledExceptionFilter( Sys_Crash );
 
@@ -780,7 +732,7 @@ void Sys_Init( void )
 
 	// set default state 
 	Sys.con_showalways = Sys.con_readonly = true;
-	Sys.con_showcredits = Sys.con_silentmode = Sys.stuffcmdsrun = false;
+	Sys.con_showcredits = Sys.con_silentmode = false;
 
 	Sys_LookupInstance();		// init launcher
 	Con_CreateConsole();
@@ -800,11 +752,7 @@ void Sys_Init( void )
 
 	Memory_Init();
 	Sys_InitCPU();
-	Cmd_Init();
-	Cvar_Init();
 
-	com.snprintf( dev_level, sizeof( dev_level ), "%i", Sys.developer );
-	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
 	com.strcpy( SI.username, Sys_GetCurrentUser( ));
 	SI.developer = Sys.developer;
 	SI.version = XASH_VERSION;
@@ -841,7 +789,9 @@ void Sys_Exit( void )
 {
 	if( Sys.shutdown_issued ) return;
 	Sys.shutdown_issued = true;
-	Sys.app_state = SYS_SHUTDOWN;
+
+	if( Sys.app_state != SYS_ERROR )
+		Sys.app_state = SYS_SHUTDOWN;
 
 	Sys_Shutdown();
 	exit( Sys.error );

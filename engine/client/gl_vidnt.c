@@ -508,7 +508,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 		GL_SetExtension( r_ext, 1 );
 	}
 
-	if(( name[2] == '_' || name[3] == '_' ) && !com.strstr( glConfig.extensions_string, name ))
+	if(( name[2] == '_' || name[3] == '_' ) && !Q_strstr( glConfig.extensions_string, name ))
 	{
 		GL_SetExtension( r_ext, false );	// update render info
 		MsgDev( D_NOTE, "- failed\n" );
@@ -940,7 +940,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	int		exstyle = WINDOW_EX_STYLE;
 	static string	wndname;
 	
-	com.snprintf( wndname, sizeof( wndname ), "%s", GI->title );
+	Q_snprintf( wndname, sizeof( wndname ), "%s", GI->title );
 
 	// register the frame class
 	wc.style         = CS_OWNDC|CS_NOCLOSE;
@@ -958,7 +958,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	{
 		char	localPath[MAX_PATH];
 
-		com.snprintf( localPath, sizeof( localPath ), "%s/game.ico", GI->gamedir );
+		Q_snprintf( localPath, sizeof( localPath ), "%s/game.ico", GI->gamedir );
 		wc.hIcon = LoadImage( NULL, localPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE );
 
 		if( !wc.hIcon )
@@ -1557,12 +1557,12 @@ void GL_InitExtensions( void )
 	GL_CheckExtension( "GL_ARB_occlusion_query", occlusionfunc, "gl_occlusion_queries", GL_OCCLUSION_QUERIES_EXT );
 
 	// rectangle textures support
-	if( com.strstr( glConfig.extensions_string, "GL_NV_texture_rectangle" ))
+	if( Q_strstr( glConfig.extensions_string, "GL_NV_texture_rectangle" ))
 	{
 		glConfig.texRectangle = GL_TEXTURE_RECTANGLE_NV;
 		pglGetIntegerv( GL_MAX_RECTANGLE_TEXTURE_SIZE_NV, &glConfig.max_2d_rectangle_size );
 	}
-	else if( com.strstr( glConfig.extensions_string, "GL_EXT_texture_rectangle" ))
+	else if( Q_strstr( glConfig.extensions_string, "GL_EXT_texture_rectangle" ))
 	{
 		glConfig.texRectangle = GL_TEXTURE_RECTANGLE_EXT;
 		pglGetIntegerv( GL_MAX_RECTANGLE_TEXTURE_SIZE_EXT, &glConfig.max_2d_rectangle_size );
@@ -1577,7 +1577,7 @@ void GL_InitExtensions( void )
 	Cvar_Set( "gl_max_texture_size", va( "%i", glConfig.max_2d_texture_size ));
 
 	// MCD has buffering issues
-	if(com.strstr( glConfig.renderer_string, "gdi" ))
+	if(Q_strstr( glConfig.renderer_string, "gdi" ))
 		Cvar_SetFloat( "gl_finish", 1 );
 
 	Cvar_Set( "gl_anisotropy", va( "%f", bound( 0, gl_texture_anisotropy->value, glConfig.max_texture_anisotropy )));

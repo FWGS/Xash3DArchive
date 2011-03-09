@@ -93,12 +93,12 @@ const char *CL_MsgInfo( int cmd )
 {
 	static string	sz;
 
-	com.strcpy( sz, "???" );
+	Q_strcpy( sz, "???" );
 
 	if( cmd >= 0 && cmd < svc_lastmsg )
 	{
 		// get engine message name
-		com.strncpy( sz, svc_strings[cmd], sizeof( sz ));
+		Q_strncpy( sz, svc_strings[cmd], sizeof( sz ));
 	}
 	else if( cmd >= svc_lastmsg && cmd < ( svc_lastmsg + MAX_USER_MESSAGES ))
 	{
@@ -108,7 +108,7 @@ const char *CL_MsgInfo( int cmd )
 		{
 			if( clgame.msg[i].number == cmd )
 			{
-				com.strncpy( sz, clgame.msg[i].name, sizeof( sz ));
+				Q_strncpy( sz, clgame.msg[i].name, sizeof( sz ));
 				break;
 			}
 		}
@@ -235,14 +235,14 @@ qboolean CL_CheckOrDownloadFile( const char *filename )
 		return true;
 	}
 
-	com.strncpy( cls.downloadname, filename, MAX_STRING );
-	com.strncpy( cls.downloadtempname, filename, MAX_STRING );
+	Q_strncpy( cls.downloadname, filename, MAX_STRING );
+	Q_strncpy( cls.downloadtempname, filename, MAX_STRING );
 
 	// download to a temp name, and only rename to the real name when done,
 	// so if interrupted a runt file won't be left
 	FS_StripExtension( cls.downloadtempname );
 	FS_DefaultExtension( cls.downloadtempname, ".tmp" );
-	com.strncpy( name, cls.downloadtempname, MAX_STRING );
+	Q_strncpy( name, cls.downloadtempname, MAX_STRING );
 
 	f = FS_Open( name, "a+b", false );
 	if( f )
@@ -301,7 +301,7 @@ void CL_ParseDownload( sizebuf_t *msg )
 	// open the file if not opened yet
 	if( !cls.download )
 	{
-		com.strncpy( name, cls.downloadtempname, MAX_STRING );
+		Q_strncpy( name, cls.downloadtempname, MAX_STRING );
 		cls.download = FS_Open ( name, "wb", false );
 
 		if( !cls.download )
@@ -386,7 +386,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 	{
 		char	sentenceName[32];
 
-		com.snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
+		Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
 		handle = S_RegisterSound( sentenceName );
 	}
 	else handle = cl.sound_index[sound];	// see precached sound
@@ -412,7 +412,7 @@ void CL_ParseMovevars( sizebuf_t *msg )
 	MSG_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
 
 	// update sky if changed
-	if( com.strcmp( clgame.oldmovevars.skyName, clgame.movevars.skyName ) && cl.video_prepped )
+	if( Q_strcmp( clgame.oldmovevars.skyName, clgame.movevars.skyName ) && cl.video_prepped )
 		R_SetupSky( clgame.movevars.skyName );
 
 	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
@@ -601,8 +601,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.playernum = BF_ReadByte( msg );
 	cl.maxclients = BF_ReadByte( msg );
 	clgame.maxEntities = BF_ReadWord( msg );
-	com.strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
-	com.strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
+	Q_strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
+	Q_strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 	cl.background = BF_ReadOneBit( msg );
 
 	UI_SetActiveMenu( cl.background );
@@ -617,7 +617,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 
 	menu.globals->maxClients = cl.maxclients;
-	com.strncpy( menu.globals->maptitle, clgame.maptitle, sizeof( menu.globals->maptitle ));
+	Q_strncpy( menu.globals->maptitle, clgame.maptitle, sizeof( menu.globals->maptitle ));
 
 	// no effect for local client
 	// merge entcount only for remote clients 
@@ -882,9 +882,9 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 
 	if( active )
 	{
-		com.strncpy( player->userinfo, BF_ReadString( msg ), sizeof( player->userinfo ));
-		com.strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
-		com.strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
+		Q_strncpy( player->userinfo, BF_ReadString( msg ), sizeof( player->userinfo ));
+		Q_strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
+		Q_strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
 		if( slot == cl.playernum ) Mem_Copy( &menu.playerinfo, player, sizeof( player_info_t ));
 	}
 	else Mem_Set( player, 0, sizeof( *player ));
@@ -906,7 +906,7 @@ void CL_PrecacheModel( sizebuf_t *msg )
 	if( modelIndex < 0 || modelIndex >= MAX_MODELS )
 		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", modelIndex );
 
-	com.strncpy( cl.model_precache[modelIndex], BF_ReadString( msg ), sizeof( cl.model_precache[0] ));
+	Q_strncpy( cl.model_precache[modelIndex], BF_ReadString( msg ), sizeof( cl.model_precache[0] ));
 
 	// when we loading map all resources is precached sequentially
 	if( !cl.video_prepped ) return;
@@ -930,7 +930,7 @@ void CL_PrecacheSound( sizebuf_t *msg )
 	if( soundIndex < 0 || soundIndex >= MAX_SOUNDS )
 		Host_Error( "CL_PrecacheSound: bad soundindex %i\n", soundIndex );
 
-	com.strncpy( cl.sound_precache[soundIndex], BF_ReadString( msg ), sizeof( cl.sound_precache[0] ));
+	Q_strncpy( cl.sound_precache[soundIndex], BF_ReadString( msg ), sizeof( cl.sound_precache[0] ));
 
 	// when we loading map all resources is precached sequentially
 	if( !cl.audio_prepped ) return;
@@ -954,7 +954,7 @@ void CL_PrecacheEvent( sizebuf_t *msg )
 	if( eventIndex < 0 || eventIndex >= MAX_EVENTS )
 		Host_Error( "CL_PrecacheEvent: bad eventindex %i\n", eventIndex );
 
-	com.strncpy( cl.event_precache[eventIndex], BF_ReadString( msg ), sizeof( cl.event_precache[0] ));
+	Q_strncpy( cl.event_precache[eventIndex], BF_ReadString( msg ), sizeof( cl.event_precache[0] ));
 
 	// can be set now
 	CL_SetEventIndex( cl.event_precache[eventIndex], eventIndex );
@@ -999,8 +999,8 @@ void CL_ServerInfo( sizebuf_t *msg )
 	char	key[MAX_MSGLEN];
 	char	value[MAX_MSGLEN];
 
-	com.strncpy( key, BF_ReadString( msg ), sizeof( key ));
-	com.strncpy( value, BF_ReadString( msg ), sizeof( value ));
+	Q_strncpy( key, BF_ReadString( msg ), sizeof( key ));
+	Q_strncpy( value, BF_ReadString( msg ), sizeof( value ));
 	Info_SetValueForKey( cl.serverinfo, key, value );
 }
 
@@ -1104,7 +1104,7 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf )
 	for( i = 0; i < MAX_USER_MESSAGES; i++ )
 	{
 		// search for user message
-		if( !com.strcmp( clgame.msg[i].name, pszName ))
+		if( !Q_strcmp( clgame.msg[i].name, pszName ))
 			break;
 	}
 
@@ -1157,12 +1157,12 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
 
 	// NOTE: some user messages handled into engine
-	if( !com.strcmp( clgame.msg[i].name, "ScreenShake" ))
+	if( !Q_strcmp( clgame.msg[i].name, "ScreenShake" ))
 	{
 		CL_ParseScreenShake( msg );
 		return;
 	}
-	else if( !com.strcmp( clgame.msg[i].name, "ScreenFade" ))
+	else if( !Q_strcmp( clgame.msg[i].name, "ScreenFade" ))
 	{
 		CL_ParseScreenFade( msg );
 		return;

@@ -83,7 +83,7 @@ void HPAK_CreatePak( const char *filename, resource_t *DirEnt, byte *data, file_
 		return;
 	}
 
-	com.strncpy( pakname, filename, sizeof( pakname ));
+	Q_strncpy( pakname, filename, sizeof( pakname ));
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
@@ -204,7 +204,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 
 	if( DirEnt->nDownloadSize < 1024 || DirEnt->nDownloadSize > 131072 )
 	{
-		MsgDev( D_ERROR, "HPAK_AddLump: invalid size %s\n", com.pretifymem( DirEnt->nDownloadSize, 2 ));
+		MsgDev( D_ERROR, "HPAK_AddLump: invalid size %s\n", Q_pretifymem( DirEnt->nDownloadSize, 2 ));
 		return;
 	}
 
@@ -242,7 +242,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 		return;
 	}
 
-	com.strncpy( pakname1, name, sizeof( pakname1 ));
+	Q_strncpy( pakname1, name, sizeof( pakname1 ));
 	FS_StripExtension( pakname1 );
 	FS_DefaultExtension( pakname1, ".hpk" );
 
@@ -255,7 +255,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 		return;
 	}
 
-	com.strncpy( pakname2, pakname1, sizeof( pakname2 ));
+	Q_strncpy( pakname2, pakname1, sizeof( pakname2 ));
 	FS_StripExtension( pakname2 );
 	FS_DefaultExtension( pakname2, ".hp2" );
 
@@ -386,7 +386,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 	if( !filename || !*filename )
 		return true;
 
-	com.strncpy( pakname, filename, sizeof( pakname ));
+	Q_strncpy( pakname, filename, sizeof( pakname ));
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
@@ -429,7 +429,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 		if( dataDir[i].size < 1 || dataDir[i].size > 131071 )
 		{
 			// odd max size
-			MsgDev( D_ERROR, "HPAK_ValidatePak: lump %i has invalid size %s\n", i, com.pretifymem( dataDir[i].size, 2 ));
+			MsgDev( D_ERROR, "HPAK_ValidatePak: lump %i has invalid size %s\n", i, Q_pretifymem( dataDir[i].size, 2 ));
 			Mem_Free( dataDir );
 			FS_Close(f);
 			return false;
@@ -447,7 +447,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 		pRes = &dataDir[i].DirectoryResource;
 
 		MsgDev( D_INFO, "%i:      %s %s %s:   ", i, HPAK_TypeFromIndex( pRes->type ),
-		com.pretifymem( pRes->nDownloadSize, 2 ), pRes->szFileName );  
+		Q_pretifymem( pRes->nDownloadSize, 2 ), pRes->szFileName );  
 
 		if( memcmp( md5, pRes->rgucMD5_hash, 0x10 ))
 		{
@@ -485,7 +485,7 @@ void HPAK_CheckIntegrity( const char *filename )
 	string	pakname;
 
 	if( !filename || !filename[0] ) return;
-	com.strncpy( pakname, filename, sizeof( pakname ));
+	Q_strncpy( pakname, filename, sizeof( pakname ));
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
@@ -501,7 +501,7 @@ void HPAK_CheckSize( const char *filename )
 	if( maxsize <= 0 ) return;
 
 	if( !filename || !filename[0] ) return;
-	com.strncpy( pakname, filename, sizeof( pakname ));
+	Q_strncpy( pakname, filename, sizeof( pakname ));
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
@@ -523,14 +523,14 @@ qboolean HPAK_ResourceForHash( const char *filename, char *inHash, resource_t *p
 	
 	for( hpak = hpak_queue; hpak != NULL; hpak = hpak->next )
 	{
-		if( !com.stricmp( hpak->name, filename ) && !memcmp( hpak->HpakResource.rgucMD5_hash, inHash, 0x10 ))
+		if( !Q_stricmp( hpak->name, filename ) && !memcmp( hpak->HpakResource.rgucMD5_hash, inHash, 0x10 ))
 		{
 			if( pRes != NULL ) *pRes = hpak->HpakResource;
 			return true;
 		}
 	}
 
-	com.strncpy( pakname, filename, sizeof( pakname ));
+	Q_strncpy( pakname, filename, sizeof( pakname ));
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
@@ -582,7 +582,7 @@ qboolean HPAK_ResourceForIndex( const char *filename, int index, resource_t *pRe
 	if( !filename || !filename[0] )
 		return false;
 
-	com.strncpy( pakname, filename, sizeof( pakname ));
+	Q_strncpy( pakname, filename, sizeof( pakname ));
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
@@ -649,7 +649,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 
 	for( queue = hpak_queue; queue != NULL; queue = queue->next )
 	{
-		if( !com.stricmp(queue->name, filename ) && !memcmp( queue->HpakResource.rgucMD5_hash, pResource->rgucMD5_hash, 16 ))
+		if( !Q_stricmp(queue->name, filename ) && !memcmp( queue->HpakResource.rgucMD5_hash, pResource->rgucMD5_hash, 16 ))
 		{
 			if( buffer )
 			{
@@ -664,7 +664,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 		}
 	}
 
-	com.strncpy( pakname, filename, sizeof( pakname ));
+	Q_strncpy( pakname, filename, sizeof( pakname ));
 	FS_StripExtension( pakname );
 	FS_DefaultExtension( pakname, ".hpk" );
 
@@ -738,7 +738,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 
 	HPAK_FlushHostQueue();
 
-	com.strncpy( read_path, name, sizeof( read_path ));
+	Q_strncpy( read_path, name, sizeof( read_path ));
 	FS_StripExtension( read_path );
 	FS_DefaultExtension( read_path, ".hpk" );
 
@@ -749,7 +749,7 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 		return;
 	}
 
-	com.strncpy( save_path, read_path, sizeof( save_path ));
+	Q_strncpy( save_path, read_path, sizeof( save_path ));
 	FS_StripExtension( save_path );
 	FS_DefaultExtension( save_path, ".hp2" );
 	f2 = FS_Open( save_path, "w+b", false );

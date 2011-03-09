@@ -57,8 +57,8 @@ LINK32=link.exe
 # ADD LINK32 msvcrt.lib /nologo /dll /pdb:none /machine:I386 /nodefaultlib:"libc.lib" /def:".\mainui.def" /opt:nowin98
 # SUBTRACT LINK32 /profile /nodefaultlib
 # Begin Custom Build
-TargetDir=\Xash3D\src_main\temp\mainui\!release
-InputPath=\Xash3D\src_main\temp\mainui\!release\mainui.dll
+TargetDir=\Xash3d\xash_sdk0.75\xash_sdk\temp\mainui\!release
+InputPath=\Xash3d\xash_sdk0.75\xash_sdk\temp\mainui\!release\mainui.dll
 SOURCE="$(InputPath)"
 
 "D:\Xash3D\valve\cl_dlls\MainUI.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -94,8 +94,8 @@ LINK32=link.exe
 # ADD LINK32 msvcrtd.lib /nologo /dll /debug /machine:I386 /nodefaultlib:"msvcrt.lib" /def:".\mainui.def" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no /nodefaultlib
 # Begin Custom Build
-TargetDir=\Xash3D\src_main\temp\mainui\!debug
-InputPath=\Xash3D\src_main\temp\mainui\!debug\mainui.dll
+TargetDir=\Xash3d\xash_sdk0.75\xash_sdk\temp\mainui\!debug
+InputPath=\Xash3d\xash_sdk0.75\xash_sdk\temp\mainui\!debug\mainui.dll
 SOURCE="$(InputPath)"
 
 "D:\Xash3D\valve\cl_dlls\MainUI.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -202,6 +202,10 @@ SOURCE=.\udll_int.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ui_title_anim.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\utils.cpp
 # End Source File
 # End Group
@@ -227,6 +231,10 @@ SOURCE=.\images.h
 # Begin Source File
 
 SOURCE=.\menu_btnsbmp_table.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\ui_title_anim.h
 # End Source File
 # Begin Source File
 

@@ -190,8 +190,7 @@ qboolean Image_LumpValidSize( const char *name )
 {
 	if( image.width > LUMP_MAXWIDTH || image.height > LUMP_MAXHEIGHT || image.width <= 0 || image.height <= 0 )
 	{
-		if(!com.stristr( name, "#internal" )) // internal errors are silent
-			MsgDev(D_WARN, "Image_LumpValidSize: (%s) dims out of range[%dx%d]\n", name, image.width,image.height );
+		MsgDev(D_WARN, "Image_LumpValidSize: (%s) dims out of range[%dx%d]\n", name, image.width,image.height );
 		return false;
 	}
 	return true;

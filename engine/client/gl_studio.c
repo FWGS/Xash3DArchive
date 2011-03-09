@@ -120,9 +120,9 @@ const char *R_StudioTexName( model_t *mod )
 {
 	static char	texname[64];
 
-	com.strncpy( texname, mod->name, sizeof( texname ));
+	Q_strncpy( texname, mod->name, sizeof( texname ));
 	FS_StripExtension( texname );
-	com.strncat( texname, "T.mdl", sizeof( texname ));
+	Q_strncat( texname, "T.mdl", sizeof( texname ));
 
 	return texname;
 }
@@ -607,7 +607,7 @@ mstudioanim_t *R_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc
 
 		FS_FileBase( m_pSubModel->name, modelname );
 		FS_ExtractFilePath( m_pSubModel->name, modelpath );
-		com.snprintf( filepath, sizeof( filepath ), "%s/%s%i%i.mdl", modelpath, modelname, pseqdesc->seqgroup / 10, pseqdesc->seqgroup % 10 );
+		Q_snprintf( filepath, sizeof( filepath ), "%s/%s%i%i.mdl", modelpath, modelname, pseqdesc->seqgroup / 10, pseqdesc->seqgroup % 10 );
 
 		buf = FS_LoadFile( filepath, &filesize, false );
 		if( !buf || !filesize ) Host_Error( "StudioGetAnim: can't load %s\n", filepath );
@@ -993,7 +993,7 @@ void R_StudioMergeBones( cl_entity_t *e, model_t *m_pSubModel )
 	{
 		for( j = 0; j < g_nCachedBones; j++ )
 		{
-			if( !com.stricmp( pbones[i].name, g_nCachedBoneNames[j] ))
+			if( !Q_stricmp( pbones[i].name, g_nCachedBoneNames[j] ))
 			{
 				Matrix3x4_Copy( g_bonestransform[i], g_rgCachedBonesTransform[j] );
 				Matrix3x4_Copy( g_lighttransform[i], g_rgCachedLightTransform[j] );
@@ -1143,7 +1143,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 
 		for( i = 0; i < m_pStudioHeader->numbones; i++ )
 		{
-			if( !com.strcmp( pbones[i].name, "Bip01 Spine" ))
+			if( !Q_strcmp( pbones[i].name, "Bip01 Spine" ))
 				break;
 			VectorCopy( pos2[i], pos[i] );
 			Vector4Copy( q2[i], q[i] );
@@ -1860,8 +1860,8 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	}
 
 	if( !info->model[0] ) return NULL;
-	if( !stricmp( info->model, "player" )) com.strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
-	else com.snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
+	if( !stricmp( info->model, "player" )) Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
+	else Q_snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
 
 	return Mod_ForName( modelpath, false );
 }
@@ -2629,7 +2629,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	FS_FileBase( ptexture->name, name );
 
 	// build the texname
-	com.snprintf( texname, sizeof( texname ), "%s/%s.mdl", model_name, name );
+	Q_snprintf( texname, sizeof( texname ), "%s/%s.mdl", model_name, name );
 	ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags );
 
 	if( !ptexture->index )

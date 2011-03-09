@@ -91,7 +91,7 @@ void SV_DirectConnect( netadr_t from )
 	int		count = 0;
 	int		challenge;
 
-	version = com.atoi( Cmd_Argv( 1 ));
+	version = Q_atoi( Cmd_Argv( 1 ));
 	if( version != PROTOCOL_VERSION )
 	{
 		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer uses protocol version %i.\n", PROTOCOL_VERSION );
@@ -99,9 +99,9 @@ void SV_DirectConnect( netadr_t from )
 		return;
 	}
 
-	qport = com.atoi( Cmd_Argv( 2 ));
-	challenge = com.atoi( Cmd_Argv( 3 ));
-	com.strncpy( userinfo, Cmd_Argv( 4 ), sizeof( userinfo ) - 1 );
+	qport = Q_atoi( Cmd_Argv( 2 ));
+	challenge = Q_atoi( Cmd_Argv( 3 ));
+	Q_strncpy( userinfo, Cmd_Argv( 4 ), sizeof( userinfo ) - 1 );
 	userinfo[sizeof(userinfo) - 1] = 0;
 
 	// quick reject
@@ -150,7 +150,7 @@ void SV_DirectConnect( netadr_t from )
 	// check for spectators          
 	s = Info_ValueForKey( userinfo, "spectator" );
 
-	if( s && com.strcmp( s, "0" ) && sv_maxclients->integer > 1 )
+	if( s && Q_strcmp( s, "0" ) && sv_maxclients->integer > 1 )
 	{
 		// FXIME: we can create listen server with spectator instead of client ?
 		spectator = true;
@@ -191,12 +191,12 @@ void SV_DirectConnect( netadr_t from )
 gotnewcl:	
 	// this is the only place a sv_client_t is ever initialized
 	if( sv_maxclients->integer == 1 )	// save physinfo for singleplayer
-		com.strncpy( physinfo, newcl->physinfo, sizeof( physinfo ));
+		Q_strncpy( physinfo, newcl->physinfo, sizeof( physinfo ));
 
 	*newcl = temp;
 
 	if( sv_maxclients->integer == 1 )	// restore physinfo for singleplayer
-		com.strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
+		Q_strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
 
 	sv_client = newcl;
 	edictnum = (newcl - svs.clients) + 1;
@@ -488,20 +488,20 @@ char *SV_StatusString( void )
 	sv_client_t	*cl;
 	int		i;
 
-	com.strcpy( status, Cvar_Serverinfo( ));
-	com.strcat( status, "\n" );
-	statusLength = com.strlen( status );
+	Q_strcpy( status, Cvar_Serverinfo( ));
+	Q_strcat( status, "\n" );
+	statusLength = Q_strlen( status );
 
 	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
 		cl = &svs.clients[i];
 		if( cl->state == cs_connected || cl->state == cs_spawned )
 		{
-			com.sprintf( player, "%i %i \"%s\"\n", (int)cl->edict->v.frags, cl->ping, cl->name );
-			playerLength = com.strlen( player );
+			Q_sprintf( player, "%i %i \"%s\"\n", (int)cl->edict->v.frags, cl->ping, cl->name );
+			playerLength = Q_strlen( player );
 			if( statusLength + playerLength >= sizeof( status ))
 				break; // can't hold any more
-			com.strcpy( status + statusLength, player );
+			Q_strcpy( status + statusLength, player );
 			statusLength += playerLength;
 		}
 	}
@@ -530,24 +530,24 @@ const char *SV_GetClientIDString( sv_client_t *cl )
 	if( cl->authentication_method == 0 )
 	{
 		// probably some old compatibility code.
-		com.snprintf( result, sizeof( result ), "%010lu", cl->WonID );
+		Q_snprintf( result, sizeof( result ), "%010lu", cl->WonID );
 	}
 	else if( cl->authentication_method == 2 )
 	{
 		if( NET_IsLocalAddress( cl->netchan.remote_address ))
 		{
-			com.strncpy( result, "VALVE_ID_LOOPBACK", sizeof( result ));
+			Q_strncpy( result, "VALVE_ID_LOOPBACK", sizeof( result ));
 		}
 		else if( cl->WonID == 0 )
 		{
-			com.strncpy( result, "VALVE_ID_PENDING", sizeof( result ));
+			Q_strncpy( result, "VALVE_ID_PENDING", sizeof( result ));
 		}
 		else
 		{
-			com.snprintf( result, sizeof( result ), "VALVE_%010lu", cl->WonID );
+			Q_snprintf( result, sizeof( result ), "VALVE_%010lu", cl->WonID );
 		}
 	}
-	else com.strncpy( result, "UNKNOWN", sizeof( result ));
+	else Q_strncpy( result, "UNKNOWN", sizeof( result ));
 
 	return result;
 }
@@ -593,12 +593,12 @@ void SV_Info( netadr_t from )
 	if( sv_maxclients->integer == 1 )
 		return;
 
-	version = com.atoi( Cmd_Argv( 1 ));
+	version = Q_atoi( Cmd_Argv( 1 ));
 	string[0] = '\0';
 
 	if( version != PROTOCOL_VERSION )
 	{
-		com.snprintf( string, sizeof( string ), "%s: wrong version\n", hostname->string );
+		Q_snprintf( string, sizeof( string ), "%s: wrong version\n", hostname->string );
 	}
 	else
 	{
@@ -631,9 +631,9 @@ void SV_Ping( netadr_t from )
 
 qboolean Rcon_Validate( void )
 {
-	if( !com.strlen( rcon_password->string ))
+	if( !Q_strlen( rcon_password->string ))
 		return false;
-	if( !com.strcmp( Cmd_Argv( 1 ), rcon_password->string ))
+	if( !Q_strcmp( Cmd_Argv( 1 ), rcon_password->string ))
 		return false;
 	return true;
 }
@@ -666,8 +666,8 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 		remaining[0] = 0;
 		for( i = 2; i < Cmd_Argc(); i++ )
 		{
-			com.strcat( remaining, Cmd_Argv( i ));
-			com.strcat( remaining, " " );
+			Q_strcat( remaining, Cmd_Argv( i ));
+			Q_strcat( remaining, " " );
 		}
 		Cmd_ExecuteString( remaining );
 	}
@@ -770,7 +770,7 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 	{
 		BF_WriteOneBit( msg, 1 );
 
-		com.strncpy( info, cl->userinfo, sizeof( info ));
+		Q_strncpy( info, cl->userinfo, sizeof( info ));
 
 		// remove server passwords, etc.
 		Info_RemovePrefixedKeys( info, '_' );
@@ -1051,14 +1051,14 @@ void SV_WriteModels_f( sv_client_t *cl )
 	}
 
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		MsgDev( D_INFO, "modellist from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 	
-	start = com.atoi( Cmd_Argv( 2 ));
+	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_MODELS )
@@ -1072,8 +1072,8 @@ void SV_WriteModels_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_MODELS ) com.snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, 0 );
-	else com.snprintf( cmd, MAX_STRING, "cmd modellist %i %i\n", svs.spawncount, start );
+	if( start == MAX_MODELS ) Q_snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, 0 );
+	else Q_snprintf( cmd, MAX_STRING, "cmd modellist %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1097,14 +1097,14 @@ void SV_WriteSounds_f( sv_client_t *cl )
 	}
 
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		MsgDev( D_INFO, "soundlist from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 	
-	start = com.atoi( Cmd_Argv( 2 ));
+	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_SOUNDS )
@@ -1118,8 +1118,8 @@ void SV_WriteSounds_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_SOUNDS ) com.snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, 0 );
-	else com.snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, start );
+	if( start == MAX_SOUNDS ) Q_snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, 0 );
+	else Q_snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1143,14 +1143,14 @@ void SV_WriteEvents_f( sv_client_t *cl )
 	}
 
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		MsgDev( D_INFO, "eventlist from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 	
-	start = com.atoi( Cmd_Argv( 2 ));
+	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_EVENTS )
@@ -1164,8 +1164,8 @@ void SV_WriteEvents_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_EVENTS ) com.snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, 0 );
-	else com.snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, start );
+	if( start == MAX_EVENTS ) Q_snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, 0 );
+	else Q_snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1189,14 +1189,14 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 	}
 
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		MsgDev( D_INFO, "lightstyles from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 	
-	start = com.atoi( Cmd_Argv( 2 ));
+	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_LIGHTSTYLES )
@@ -1210,8 +1210,8 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_LIGHTSTYLES ) com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, 0 );
-	else com.snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, start );
+	if( start == MAX_LIGHTSTYLES ) Q_snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, 0 );
+	else Q_snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1236,14 +1236,14 @@ void SV_UserMessages_f( sv_client_t *cl )
 	}
 	
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		MsgDev( D_INFO, "usermessages from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 	
-	start = com.atoi( Cmd_Argv( 2 ));
+	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < MAX_USER_MESSAGES )
@@ -1259,8 +1259,8 @@ void SV_UserMessages_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == MAX_USER_MESSAGES ) com.snprintf( cmd, MAX_STRING, "cmd deltainfo %i 0 0\n", svs.spawncount );
-	else com.snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
+	if( start == MAX_USER_MESSAGES ) Q_snprintf( cmd, MAX_STRING, "cmd deltainfo %i 0 0\n", svs.spawncount );
+	else Q_snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1287,15 +1287,15 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 	}
 	
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		MsgDev( D_INFO, "deltainfo from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 	
-	tableIndex = com.atoi( Cmd_Argv( 2 ));
-	fieldIndex = com.atoi( Cmd_Argv( 2 ));
+	tableIndex = Q_atoi( Cmd_Argv( 2 ));
+	fieldIndex = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && tableIndex < Delta_NumTables( ))
@@ -1319,8 +1319,8 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 		}
 	}
 
-	if( tableIndex == Delta_NumTables() ) com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
-	else com.snprintf( cmd, MAX_STRING, "cmd deltainfo %i %i %i\n", svs.spawncount, tableIndex, fieldIndex );
+	if( tableIndex == Delta_NumTables() ) Q_snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
+	else Q_snprintf( cmd, MAX_STRING, "cmd deltainfo %i %i %i\n", svs.spawncount, tableIndex, fieldIndex );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1345,14 +1345,14 @@ void SV_Baselines_f( sv_client_t *cl )
 	}
 	
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		MsgDev( D_INFO, "baselines from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 	
-	start = com.atoi( Cmd_Argv( 2 ));
+	start = Q_atoi( Cmd_Argv( 2 ));
 
 	Mem_Set( &nullstate, 0, sizeof( nullstate ));
 
@@ -1368,8 +1368,8 @@ void SV_Baselines_f( sv_client_t *cl )
 		start++;
 	}
 
-	if( start == svgame.numEntities ) com.snprintf( cmd, MAX_STRING, "precache %i\n", svs.spawncount );
-	else com.snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, start );
+	if( start == svgame.numEntities ) Q_snprintf( cmd, MAX_STRING, "precache %i\n", svs.spawncount );
+	else Q_snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, start );
 
 	// send next command
 	BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1390,7 +1390,7 @@ void SV_Begin_f( sv_client_t *cl )
 	}
 
 	// handle the case of a level changing while a client was connecting
-	if( com.atoi( Cmd_Argv( 1 )) != svs.spawncount )
+	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
 		Msg( "begin from different level\n" );
 		SV_New_f( cl );
@@ -1449,7 +1449,7 @@ void SV_BeginDownload_f( sv_client_t *cl )
 	int	offset = 0;
 
 	name = Cmd_Argv( 1 );
-	if(Cmd_Argc() > 2 ) offset = com.atoi(Cmd_Argv(2)); // continue download from
+	if(Cmd_Argc() > 2 ) offset = Q_atoi(Cmd_Argv(2)); // continue download from
 	cl->download = FS_LoadFile( name, &cl->downloadsize, false );
 	cl->downloadcount = offset;
 	if( offset > cl->downloadsize ) cl->downloadcount = cl->downloadsize;
@@ -1514,8 +1514,8 @@ void SV_Pause_f( sv_client_t *cl )
 		return;
 	}
 
-	if( !sv.paused ) com.snprintf( message, MAX_STRING, "%s paused the game\n", cl->name );
-	else com.snprintf( message, MAX_STRING, "%s unpaused the game\n", cl->name );
+	if( !sv.paused ) Q_snprintf( message, MAX_STRING, "%s paused the game\n", cl->name );
+	else Q_snprintf( message, MAX_STRING, "%s unpaused the game\n", cl->name );
 
 	SV_TogglePause( message );
 }
@@ -1536,24 +1536,24 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 
 	if( !userinfo || !userinfo[0] ) return; // ignored
 
-	com.strncpy( cl->userinfo, userinfo, sizeof( cl->userinfo ));
+	Q_strncpy( cl->userinfo, userinfo, sizeof( cl->userinfo ));
 
 	// name for C code (make colored string)
-	com.snprintf( cl->name, sizeof( cl->name ), "^2%s^7", Info_ValueForKey( cl->userinfo, "name" ));
+	Q_snprintf( cl->name, sizeof( cl->name ), "^2%s^7", Info_ValueForKey( cl->userinfo, "name" ));
 
 	// rate command
 	val = Info_ValueForKey( cl->userinfo, "rate" );
-	if( com.strlen( val ))
-		cl->netchan.rate = bound( MIN_RATE, com.atoi( val ), MAX_RATE );
+	if( Q_strlen( val ))
+		cl->netchan.rate = bound( MIN_RATE, Q_atoi( val ), MAX_RATE );
 	else cl->netchan.rate = DEFAULT_RATE;
 	
 	// msg command
 	val = Info_ValueForKey( cl->userinfo, "msg" );
-	if( com.strlen( val ))
-		cl->messagelevel = com.atoi( val );
+	if( Q_strlen( val ))
+		cl->messagelevel = Q_atoi( val );
 
-	cl->local_weapons = com.atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) ? true : false;
-	cl->lag_compensation = com.atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )) ? true : false;
+	cl->local_weapons = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) ? true : false;
+	cl->lag_compensation = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )) ? true : false;
 
 	if( SV_IsValidEdict( ent ))
 	{
@@ -1562,7 +1562,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 			const char *model = Info_ValueForKey( cl->userinfo, "model" );
 
 			// apply custom playermodel
-			if( com.strlen( model ) && com.stricmp( model, "player" ))
+			if( Q_strlen( model ) && Q_stricmp( model, "player" ))
 			{
 				const char *path = va( "models/player/%s/%s.mdl", model, model );
 				Mod_RegisterModel( path, SV_ModelIndex( path )); // register model
@@ -1693,7 +1693,7 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 	Cmd_TokenizeString( s );
 	for( u = ucmds; u->name; u++ )
 	{
-		if( !com.strcmp( Cmd_Argv( 0 ), u->name ))
+		if( !Q_strcmp( Cmd_Argv( 0 ), u->name ))
 		{
 			MsgDev( D_NOTE, "ucmd->%s()\n", u->name );
 			if( u->func ) u->func( cl );
@@ -1733,13 +1733,13 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	c = Cmd_Argv( 0 );
 	MsgDev( D_NOTE, "SV_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), c );
 
-	if( !com.strcmp( c, "ping" )) SV_Ping( from );
-	else if( !com.strcmp( c, "ack" )) SV_Ack( from );
-	else if( !com.strcmp( c, "status" )) SV_Status( from );
-	else if( !com.strcmp( c, "info" )) SV_Info( from );
-	else if( !com.strcmp( c, "getchallenge" )) SV_GetChallenge( from );
-	else if( !com.strcmp( c, "connect" )) SV_DirectConnect( from );
-	else if( !com.strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
+	if( !Q_strcmp( c, "ping" )) SV_Ping( from );
+	else if( !Q_strcmp( c, "ack" )) SV_Ack( from );
+	else if( !Q_strcmp( c, "status" )) SV_Status( from );
+	else if( !Q_strcmp( c, "info" )) SV_Info( from );
+	else if( !Q_strcmp( c, "getchallenge" )) SV_GetChallenge( from );
+	else if( !Q_strcmp( c, "connect" )) SV_DirectConnect( from );
+	else if( !Q_strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
 	else if( svgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
 	{
 		// user out of band message (must be handled in CL_ConnectionlessPacket)

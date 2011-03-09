@@ -42,7 +42,7 @@ int Host_CompareFileTime( long ft1, long ft2 )
 void Host_ShutdownServer( void )
 {
 	if( !SV_Active()) return;
-	com.strncpy( host.finalmsg, "Server was killed\n", MAX_STRING );
+	Q_strncpy( host.finalmsg, "Server was killed\n", MAX_STRING );
 	SV_Shutdown( false );
 }
 
@@ -75,14 +75,14 @@ void Host_EndGame( const char *message, ... )
 	static char	string[MAX_SYSPATH];
 	
 	va_start( argptr, message );
-	com.vsprintf( string, message, argptr );
+	Q_vsprintf( string, message, argptr );
 	va_end( argptr );
 
 	MsgDev( D_INFO, "Host_EndGame: %s\n", string );
 	
 	if( SV_Active())
 	{
-		com.snprintf( host.finalmsg, sizeof( host.finalmsg ), "Host_EndGame: %s\n", string );
+		Q_snprintf( host.finalmsg, sizeof( host.finalmsg ), "Host_EndGame: %s\n", string );
 		SV_Shutdown( false );
 	}
 	
@@ -137,14 +137,14 @@ void Host_ChangeGame_f( void )
 	// validate gamedir
 	for( i = 0; i < SI->numgames; i++ )
 	{
-		if( !com.stricmp( SI->games[i]->gamefolder, Cmd_Argv( 1 )))
+		if( !Q_stricmp( SI->games[i]->gamefolder, Cmd_Argv( 1 )))
 			break;
 	}
 
 	if( i == SI->numgames ) Msg( "%s not exist\n", Cmd_Argv( 1 ));
-	else if( !com.stricmp( GI->gamefolder, Cmd_Argv( 1 )))
+	else if( !Q_stricmp( GI->gamefolder, Cmd_Argv( 1 )))
 		Msg( "%s already active\n", Cmd_Argv( 1 ));	
-	else Sys_NewInstance( Cmd_Argv( 1 ), "Host_ChangeGame\n" );
+	else Sys_NewInstance( Cmd_Argv( 1 ), va( "Host_ChangeGame: %s\n", SI->games[i]->title ));
 }
 
 /*
@@ -164,7 +164,7 @@ void Host_Exec_f( void )
 		return;
 	}
 
-	com.strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
+	Q_strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
 	FS_DefaultExtension( cfgpath, ".cfg" ); // append as default
 
 	f = FS_LoadFile( cfgpath, &len, false );
@@ -177,6 +177,29 @@ void Host_Exec_f( void )
 	MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
 	Cbuf_InsertText( f );
 	Mem_Free( f );
+}
+
+/*
+===============
+Host_MemStats_f
+===============
+*/
+void Host_MemStats_f( void )
+{
+	switch( Cmd_Argc( ))
+	{
+	case 1:
+		Mem_PrintList( 1<<30 );
+		Mem_PrintStats();
+		break;
+	case 2:
+		Mem_PrintList( Q_atoi( Cmd_Argv( 1 )) * 1024 );
+		Mem_PrintStats();
+		break;
+	default:
+		Msg( "Usage: memlist <all>\n" );
+		break;
+	}
 }
 
 void Host_Minimize_f( void )
@@ -210,7 +233,7 @@ qboolean Host_RegisterDecal( const char *name )
 
 	for( i = 1; i < MAX_DECALS && host.draw_decals[i][0]; i++ )
 	{
-		if( !com.stricmp( host.draw_decals[i], shortname ))
+		if( !Q_stricmp( host.draw_decals[i], shortname ))
 			return true;
 	}
 
@@ -221,7 +244,7 @@ qboolean Host_RegisterDecal( const char *name )
 	}
 
 	// register new decal
-	com.strncpy( host.draw_decals[i], shortname, sizeof( host.draw_decals[i] ));
+	Q_strncpy( host.draw_decals[i], shortname, sizeof( host.draw_decals[i] ));
 	num_decals++;
 
 	return true;
@@ -434,7 +457,7 @@ void Host_Print( const char *txt )
 {
 	if( host.rd.target )
 	{
-		if(( com.strlen( txt ) + com.strlen( host.rd.buffer )) > ( host.rd.buffersize - 1 ))
+		if(( Q_strlen( txt ) + Q_strlen( host.rd.buffer )) > ( host.rd.buffersize - 1 ))
 		{
 			if( host.rd.flush )
 			{
@@ -442,7 +465,7 @@ void Host_Print( const char *txt )
 				*host.rd.buffer = 0;
 			}
 		}
-		com.strcat( host.rd.buffer, txt );
+		Q_strcat( host.rd.buffer, txt );
 		return;
 	}
 	Con_Print( txt ); // echo to client console
@@ -461,10 +484,10 @@ void Host_Error( const char *error, ... )
 	va_list		argptr;
 
 	va_start( argptr, error );
-	com.vsprintf( hosterror1, error, argptr );
+	Q_vsprintf( hosterror1, error, argptr );
 	va_end( argptr );
 
-	CL_WriteMessageHistory (); // before com.error call
+	CL_WriteMessageHistory (); // before Q_error call
 
 	if( host.framecount < 3 )
 	{
@@ -494,9 +517,9 @@ void Host_Error( const char *error, ... )
 	}
 
 	recursive = true;
-	com.strncpy( hosterror2, hosterror1, MAX_SYSPATH );
+	Q_strncpy( hosterror2, hosterror1, MAX_SYSPATH );
 	host.errorframe = host.framecount; // to avoid multply calls per frame
-	com.sprintf( host.finalmsg, "Server crashed: %s\n", hosterror1 );
+	Q_sprintf( host.finalmsg, "Server crashed: %s\n", hosterror1 );
 
 	SV_Shutdown( false );
 	CL_Drop(); // drop clients
@@ -525,7 +548,7 @@ void Sys_Error_f( void )
 
 void Net_Error_f( void )
 {
-	com.strncpy( host.finalmsg, Cmd_Argv( 1 ), sizeof( host.finalmsg ));
+	Q_strncpy( host.finalmsg, Cmd_Argv( 1 ), sizeof( host.finalmsg ));
 	SV_ForceError();
 }
 
@@ -541,21 +564,31 @@ static void Host_Crash_f( void )
 
 void Host_InitCommon( const int argc, const char **argv )
 {
+	char	dev_level[4];
+
 	// get developer mode
 	host.developer = SI->developer;
+	host.argc = argc;
+	host.argv = argv;
 
 	// get current hInstance
 	host.hInst = GetModuleHandle( NULL );
+	host.mempool = Mem_AllocPool( "Zone Engine" );
 
+	// startup cmds and cvars subsystem
+	Cmd_Init();
+	Cvar_Init();
+
+	// share developer level across all dlls
+	com.snprintf( dev_level, sizeof( dev_level ), "%i", host.developer );
+	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
 	Cmd_AddCommand( "exec", Host_Exec_f, "execute a script file" );
-
+	Cmd_AddCommand( "memlist", Host_MemStats_f, "prints memory pool information" );
 	FS_Init();
 	Image_Init();
 	Sound_Init();
 
 	FS_LoadGameInfo( NULL );
-	host.mempool = Mem_AllocPool( "Zone Engine" );
-
 	HPAK_Init();
 
 	Host_InitEvents();
@@ -569,8 +602,9 @@ void Host_FreeCommon( void )
 	Image_Shutdown();
 	Sound_Shutdown();
 	Netchan_Shutdown();
-	Mem_FreePool( &host.mempool );
 	FS_Shutdown();
+
+	Mem_FreePool( &host.mempool );
 }
 
 /*
@@ -601,7 +635,7 @@ void Host_Init( const int argc, const char **argv )
 	host_serverstate = Cvar_Get( "host_serverstate", "0", CVAR_INIT, "displays current server state" );
 	host_gameloaded = Cvar_Get( "host_gameloaded", "0", CVAR_INIT, "inidcates a loaded game.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
-	con_gamemaps = Cvar_Get( "con_gamemaps", "1", CVAR_ARCHIVE, "when true show only maps in game folder, ignore maps in a base folder" );
+	con_gamemaps = Cvar_Get( "con_gamemaps", "1", CVAR_ARCHIVE, "when true show only maps in game folder" );
 
 	// content control
 	Cvar_Get( "violence_hgibs", "1", CVAR_ARCHIVE, "show human gib entities" );
@@ -648,6 +682,22 @@ void Host_Init( const int argc, const char **argv )
 	Cbuf_Execute();
 
 	SCR_CheckStartupVids();	// must be last
+
+	// post initializations
+	switch( host.type )
+	{
+	case HOST_NORMAL:
+		// execute startup config and cmdline
+		Cbuf_AddText( va( "exec %s.rc\n", SI->ModuleName ));
+	case HOST_DEDICATED:
+		Cbuf_Execute();
+		// if stuffcmds wasn't run, then init.rc is probably missing, use default
+		if( !host.stuffcmdsrun ) Cbuf_ExecuteText( EXEC_NOW, "stuffcmds\n" );
+		break;
+	}
+
+	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
+	Cmd_RemoveCommand( "setgl" );
 }
 
 /*
@@ -683,7 +733,7 @@ void Host_Free( void )
 		return;
 
 	host.state = HOST_SHUTDOWN;	// prepare host to normal shutdown
-	com.strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
+	Q_strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
 
 	SV_Shutdown( false );
 	CL_Shutdown();
@@ -718,7 +768,7 @@ launch_exp_t EXPORT *CreateAPI( stdlib_api_t *input, void *unused )
 	Host.Main = Host_Main;
 	Host.Free = Host_Free;
 	Host.CPrint = Host_Print;
-	Host.CmdForward = Cmd_ForwardToServer;
+	Host.Crashed = CL_Crashed;
 	Host.CmdComplete = Cmd_AutoComplete;
 
 	return &Host;

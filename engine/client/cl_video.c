@@ -6,7 +6,6 @@
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
-#include <vfw.h> // video for windows
 
 /*
 =================================================================
@@ -62,7 +61,7 @@ qboolean SCR_NextMovie( void )
 		return false;
 	}
 
-	com.snprintf( str, MAX_STRING, "movie %s full\n", cls.movies[cls.movienum] );
+	Q_snprintf( str, MAX_STRING, "movie %s full\n", cls.movies[cls.movienum] );
 
 	Cbuf_InsertText( str );
 	cls.movienum++;
@@ -106,7 +105,7 @@ void SCR_CheckStartupVids( void )
 
 	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
-		com.strncpy( cls.movies[c], token, sizeof( cls.movies[0] ));
+		Q_strncpy( cls.movies[c], token, sizeof( cls.movies[0] ));
 
 		if( ++c > MAX_MOVIES - 1 )
 		{
@@ -283,7 +282,7 @@ SCR_InitCinematic
 */
 void SCR_InitCinematic( void )
 {
-	AVIFileInit();
+	AVI_Initailize ();
 	cin_state = AVI_GetState( CIN_MAIN );
 
 	SCR_RebuildGammaTable();
@@ -305,5 +304,5 @@ void SCR_FreeCinematic( void )
 	cin_state = AVI_GetState( CIN_MAIN );
 	AVI_CloseVideo( cin_state );
 
-	AVIFileExit();
+	AVI_Shutdown();
 }

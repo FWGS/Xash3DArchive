@@ -40,7 +40,7 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 	if( !*introTrack ) return;
 
 	if( !mainTrack || !*mainTrack ) s_bgTrack.loopName[0] = '\0';
-	else com.strncpy( s_bgTrack.loopName, mainTrack, sizeof( s_bgTrack.loopName ));
+	else Q_strncpy( s_bgTrack.loopName, mainTrack, sizeof( s_bgTrack.loopName ));
 
 	// open stream
 	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));

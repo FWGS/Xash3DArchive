@@ -643,7 +643,7 @@ int S_GetCurrentStaticSounds( soundlist_t *pout, int size )
 	{
 		if( channels[i].entchannel == CHAN_STATIC && channels[i].sfx )
 		{
-			com.strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
+			Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
 			pout->entnum = channels[i].entnum;
 			VectorCopy( channels[i].origin, pout->origin );
 			pout->volume = (float)channels[i].master_vol / 255.0f;
@@ -867,9 +867,9 @@ void S_Music_f( void )
 		char	*ext[] = { "wav", "mp3" };
 		int	i;
 
-		com.strncpy( track, Cmd_Argv( 1 ), sizeof( track ));
-		com.snprintf( intro, sizeof( intro ), "%s_intro", Cmd_Argv( 1 ));
-		com.snprintf( main, sizeof( main ), "%s_main", Cmd_Argv( 1 ));
+		Q_strncpy( track, Cmd_Argv( 1 ), sizeof( track ));
+		Q_snprintf( intro, sizeof( intro ), "%s_intro", Cmd_Argv( 1 ));
+		Q_snprintf( main, sizeof( main ), "%s_main", Cmd_Argv( 1 ));
 
 		for( i = 0; i < 2; i++ )
 		{

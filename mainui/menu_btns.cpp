@@ -150,6 +150,13 @@ void UI_LoadBmpButtons( void )
 	int CuttedBmpSize = sizeof( bmphdr_t ) + pInfoHdr->biSize + pallete_sz + cutted_img_sz;
 	byte *img_data = &bmp_buffer[bmp_len_holder-cutted_img_sz];
 
+	if (pInfoHdr->biBitCount==8)
+	{
+		byte*pallete=&bmp_buffer[sizeof( bmphdr_t ) + pInfoHdr->biSize];
+		byte*firstpixel_col=&pallete[img_data[0]*4];
+		firstpixel_col[0]=firstpixel_col[1]=firstpixel_col[2]=0;
+	}
+
 	CuttedDibHdr.biHeight = uiStatic.buttons_height;
 	CuttedHdr.filesz = CuttedBmpSize;
 	CuttedDibHdr.biSizeImage = CuttedBmpSize - CuttedHdr.bmp_offset;
@@ -159,7 +166,7 @@ void UI_LoadBmpButtons( void )
 
 	// determine buttons count by image height...
 	int pic_count = (pInfoHdr->biHeight == 5538) ? PC_BUTTONCOUNT : PC_BUTTONCOUNT - 2;
-
+	
 	for( int i = 0; i < pic_count; i++ )
 	{
 		sprintf( fname, "#btns_%d.bmp", i );
