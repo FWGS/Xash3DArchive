@@ -617,7 +617,7 @@ mstudioanim_t *R_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc
 		MsgDev( D_INFO, "loading: %s\n", filepath );
 			
 		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( com_studiocache, filesize );
-		Mem_Copy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
+		Q_memcpy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
 		Mem_Free( buf );
 	}
 	return (mstudioanim_t *)((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);
@@ -2351,7 +2351,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		if( RI.currententity->index > 0 )
 		{
 			cl_entity_t *ent = CL_GetEntityByIndex( RI.currententity->index );
-			Mem_Copy( ent->attachment, RI.currententity->attachment, sizeof( vec3_t ) * 4 );
+			Q_memcpy( ent->attachment, RI.currententity->attachment, sizeof( vec3_t ) * 4 );
 		}
 	}
 
@@ -2484,7 +2484,7 @@ static int R_StudioDrawModel( int flags )
 		if( RI.currententity->index > 0 )
 		{
 			cl_entity_t *ent = CL_GetEntityByIndex( RI.currententity->index );
-			Mem_Copy( ent->attachment, RI.currententity->attachment, sizeof( vec3_t ) * 4 );
+			Q_memcpy( ent->attachment, RI.currententity->attachment, sizeof( vec3_t ) * 4 );
 		}
 	}
 
@@ -2716,7 +2716,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 		size1 = thdr->numtextures * sizeof( mstudiotexture_t );
 		size2 = thdr->numskinfamilies * thdr->numskinref * sizeof( short );
 		mod->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length + size1 + size2 );
-		Mem_Copy( loadmodel->cache.data, buffer, phdr->length ); // copy main mdl buffer
+		Q_memcpy( loadmodel->cache.data, buffer, phdr->length ); // copy main mdl buffer
 		phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
 		phdr->numskinfamilies = thdr->numskinfamilies;
 		phdr->numtextures = thdr->numtextures;
@@ -2726,7 +2726,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 
 		in = (byte *)thdr + thdr->textureindex;
 		out = (byte *)phdr + phdr->textureindex;
-		Mem_Copy( out, in, size1 + size2 );	// copy textures + skinrefs
+		Q_memcpy( out, in, size1 + size2 );	// copy textures + skinrefs
 		phdr->length += size1 + size2;
 		Mem_Free( buffer2 ); // release T.mdl
 	}
@@ -2734,7 +2734,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 	{
 		// NOTE: we wan't keep raw textures in memory. just cutoff model pointer above texture base
 		loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->texturedataindex );
-		Mem_Copy( loadmodel->cache.data, buffer, phdr->texturedataindex );
+		Q_memcpy( loadmodel->cache.data, buffer, phdr->texturedataindex );
 		phdr->length = phdr->texturedataindex;	// update model size
 	}
 
@@ -2778,7 +2778,7 @@ void Mod_UnloadStudioModel( model_t *mod )
 	}
 
 	Mem_FreePool( &mod->mempool );
-	Mem_Set( mod, 0, sizeof( *mod ));
+	Q_memset( mod, 0, sizeof( *mod ));
 }
 		
 static engine_studio_api_t gStudioAPI =

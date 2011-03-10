@@ -356,7 +356,7 @@ void SV_ClearWorld( void )
 		sv.lightstyles[i].value = 256.0f;
 	sv_lastofs = -1;
 
-	Mem_Set( sv_areanodes, 0, sizeof( sv_areanodes ));
+	Q_memset( sv_areanodes, 0, sizeof( sv_areanodes ));
 	sv_numareanodes = 0;
 
 	SV_CreateAreaNode( 0, sv.worldmodel->mins, sv.worldmodel->maxs );
@@ -571,7 +571,7 @@ void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 	{
 		ent->headnode = ent->v.aiment->headnode;
 		ent->num_leafs = ent->v.aiment->num_leafs;
-		Mem_Copy( ent->leafnums, ent->v.aiment->leafnums, sizeof( ent->leafnums ));
+		Q_memcpy( ent->leafnums, ent->v.aiment->leafnums, sizeof( ent->leafnums ));
 	}
 	else
 	{
@@ -902,7 +902,7 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 	hull_t	*hull;
 
 	// fill in a default trace
-	Mem_Set( &trace, 0, sizeof( trace_t ));
+	Q_memset( &trace, 0, sizeof( trace_t ));
 	VectorCopy( end, trace.endpos );
 	trace.fraction = 1.0f;
 	trace.allsolid = true;
@@ -1221,7 +1221,7 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 	moveclip_t	clip;
 	int		i;
 
-	Mem_Set( &clip, 0, sizeof( moveclip_t ));
+	Q_memset( &clip, 0, sizeof( moveclip_t ));
 
 	clip.start = start;
 	clip.end = end;
@@ -1271,7 +1271,7 @@ trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int t
 	moveclip_t	clip;
 	int		i;
 
-	Mem_Set( &clip, 0, sizeof( moveclip_t ));
+	Q_memset( &clip, 0, sizeof( moveclip_t ));
 
 	clip.start = start;
 	clip.end = end;

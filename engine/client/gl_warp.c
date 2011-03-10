@@ -323,7 +323,7 @@ void R_UnloadSkybox( void )
 		GL_FreeTexture( tr.skyboxTextures[i] );
 	}
 
-	Mem_Set( tr.skyboxTextures, 0, sizeof( tr.skyboxTextures ));
+	Q_memset( tr.skyboxTextures, 0, sizeof( tr.skyboxTextures ));
 }
 
 /*

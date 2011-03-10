@@ -113,7 +113,7 @@ void SV_SetMaster_f( void )
 
 	for( i = 1; i < MAX_MASTERS; i++ )
 	{ 
-		Mem_Set( &master_adr[i], 0, sizeof( master_adr[i] ));
+		Q_memset( &master_adr[i], 0, sizeof( master_adr[i] ));
 	}
 
 	// slot 0 will always contain the id master

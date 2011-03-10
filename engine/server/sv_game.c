@@ -437,7 +437,7 @@ void SV_WriteEntityPatch( const char *filename )
 	f = FS_Open( va( "maps/%s.bsp", filename ), "rb", false );
 	if( !f ) return;
 
-	Mem_Set( buf, 0, MAX_SYSPATH );
+	Q_memset( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
 	ver = *(uint *)buf;
                               
@@ -493,7 +493,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 
 	*flags |= MAP_IS_EXIST;
 
-	Mem_Set( buf, 0, MAX_SYSPATH );
+	Q_memset( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
 	ver = *(uint *)buf;
                               
@@ -601,7 +601,7 @@ void SV_InitEdict( edict_t *pEdict )
 	ASSERT( pEdict );
 	ASSERT( pEdict->pvPrivateData == NULL );
 
-	Mem_Set( &pEdict->v, 0, sizeof( entvars_t ));
+	Q_memset( &pEdict->v, 0, sizeof( entvars_t ));
 
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
 	pEdict->pvPrivateData = NULL;	// will be alloced later by pfnAllocPrivateData
@@ -637,7 +637,7 @@ void SV_FreeEdict( edict_t *pEdict )
 		pEdict->pvPrivateData = NULL;
 	}
 
-//	Mem_Set( &pEdict->v, 0, sizeof( entvars_t ));
+//	Q_memset( &pEdict->v, 0, sizeof( entvars_t ));
 
 	// mark edict as freed
 	pEdict->freetime = sv.time;
@@ -736,7 +736,7 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 	ASSERT( msg );
 	ASSERT( info );
 
-	Mem_Set( &nullargs, 0, sizeof( nullargs ));
+	Q_memset( &nullargs, 0, sizeof( nullargs ));
 
 	BF_WriteWord( msg, info->index );			// send event index
 	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
@@ -822,7 +822,7 @@ void SV_BaselineForEntity( edict_t *pEdict )
 	}
 
 	// take current state as baseline
-	Mem_Set( &baseline, 0, sizeof( baseline )); 
+	Q_memset( &baseline, 0, sizeof( baseline )); 
 	baseline.number = NUM_FOR_EDICT( pEdict );
 	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
 
@@ -3256,7 +3256,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 	if( !cl->fakeclient )
 		return;	// only fakeclients allows
 
-	Mem_Set( &cmd, 0, sizeof( cmd ));
+	Q_memset( &cmd, 0, sizeof( cmd ));
 	if( v_angle ) VectorCopy( v_angle, cmd.viewangles );
 	cmd.forwardmove = fmove;
 	cmd.sidemove = smove;
@@ -3646,7 +3646,7 @@ byte *pfnSetFatPVS( const float *org )
 	bitvector = fatpvs;
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
-		Mem_Set( bitvector, 0, fatbytes );
+		Q_memset( bitvector, 0, fatbytes );
 	SV_AddToFatPVS( org, DVIS_PVS, sv.worldmodel->nodes );
 
 	return bitvector;
@@ -3668,7 +3668,7 @@ byte *pfnSetFatPAS( const float *org )
 	bitvector = fatphs;
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
-		Mem_Set( bitvector, 0, fatbytes );
+		Q_memset( bitvector, 0, fatbytes );
 	SV_AddToFatPVS( org, DVIS_PHS, sv.worldmodel->nodes );
 
 	return bitvector;
@@ -4476,7 +4476,7 @@ void SV_UnloadProgs( void )
 
 	Com_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );
-	Mem_Set( &svgame, 0, sizeof( svgame ));
+	Q_memset( &svgame, 0, sizeof( svgame ));
 }
 
 qboolean SV_LoadProgs( const char *name )
@@ -4501,10 +4501,10 @@ qboolean SV_LoadProgs( const char *name )
 	if( !svgame.hInstance ) return false;
 
 	// make sure what new dll functions is cleared
-	Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
+	Q_memset( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 
 	// make local copy of engfuncs to prevent overwrite it with bots.dll
-	Mem_Copy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
+	Q_memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
 	GetEntityAPI = (APIFUNCTION)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
 	GetEntityAPI2 = (APIFUNCTION2)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
@@ -4539,7 +4539,7 @@ qboolean SV_LoadProgs( const char *name )
 		{
 			if( version != NEW_DLL_FUNCTIONS_VERSION )
 				MsgDev( D_WARN, "SV_LoadProgs: new interface version %i should be %i\n", NEW_DLL_FUNCTIONS_VERSION, version );
-			Mem_Set( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
+			Q_memset( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 		}
 	}
 

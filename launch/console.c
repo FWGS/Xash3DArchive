@@ -392,12 +392,12 @@ void Con_DestroyConsole( void )
 
 /*
 ================
-Sys_Input
+Con_Input
 
 returned input text 
 ================
 */
-char *Sys_Input( void )
+char *Con_Input( void )
 {
 	if( s_wcd.consoleText[0] == 0 )
 		return NULL;

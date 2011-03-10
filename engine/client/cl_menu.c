@@ -932,7 +932,7 @@ void UI_UnloadProgs( void )
 
 	Com_FreeLibrary( menu.hInstance );
 	Mem_FreePool( &menu.mempool );
-	Mem_Set( &menu, 0, sizeof( menu ));
+	Q_memset( &menu, 0, sizeof( menu ));
 }
 
 qboolean UI_LoadProgs( const char *name )
@@ -962,7 +962,7 @@ qboolean UI_LoadProgs( const char *name )
 	}
 
 	// make local copy of engfuncs to prevent overwrite it with user dll
-	Mem_Copy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
+	Q_memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
 	if( !GetMenuAPI( &menu.dllFuncs, &gpEngfuncs, menu.globals ))
 	{

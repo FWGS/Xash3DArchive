@@ -6,13 +6,9 @@
 
 #include "launch.h"
 
-#define MAX_QUED_EVENTS		256
-#define MASK_QUED_EVENTS		(MAX_QUED_EVENTS - 1)
 
 system_t		Sys;
 stdlib_api_t	com;
-sys_event_t	event_que[MAX_QUED_EVENTS];
-int		event_head, event_tail;
 
 dll_info_t engine_dll = { "engine.dll", NULL, "CreateAPI", NULL, NULL, 1, sizeof( launch_exp_t ), sizeof( stdlib_api_t ) };
 
@@ -38,12 +34,9 @@ void Sys_GetStdAPI( void )
 	com.abort = Sys_Break;
 	com.exit = Sys_Exit;
 	com.print = Sys_Print;
-	com.sleep = Sys_Sleep;
-	com.clipboard = Sys_GetClipboardData;
-	com.queevent = Sys_QueEvent;			// add event to queue
-	com.getevent = Sys_GetEvent;			// get system events
 	com.Com_CheckParm = Sys_CheckParm;		// get parm from cmdline
 	com.Com_GetParm = Sys_GetParmFromCmdLine;	// get argument for specified parm
+	com.input = Con_Input;
 
 	// memlib.c
 	com.memcpy = _crt_mem_copy;			// first time using
@@ -63,8 +56,6 @@ void Sys_GetStdAPI( void )
 	com.Com_LoadLibrary = Sys_LoadLibrary;		// load library 
 	com.Com_FreeLibrary = Sys_FreeLibrary;		// free library
 	com.Com_GetProcAddress = Sys_GetProcAddress;	// gpa
-	com.Com_ShellExecute = Sys_ShellExecute;	// shell execute
-	com.Com_DoubleTime = Sys_DoubleTime;		// hi-res timer
 
 	// stdlib.c funcs
 	com.strnupr = com_strnupr;
@@ -185,7 +176,7 @@ void Sys_LookupInstance( void )
 		}
 
 		Sys.linked_dll = &engine_dll;	// pointer to engine.dll info
-		com.strcpy( Sys.caption, va( "Xash3D ver.%g", XASH_VERSION ));
+		com.strcpy( Sys.caption, "Xash3D" );
 	}
 
 	// share instance over all system
@@ -453,54 +444,6 @@ double Sys_DoubleTime( void )
 
 /*
 ================
-Sys_GetClipboardData
-
-create buffer, that contain clipboard
-================
-*/
-char *Sys_GetClipboardData( void )
-{
-	char	*data = NULL;
-	char	*cliptext;
-
-	if( OpenClipboard( NULL ) != 0 )
-	{
-		HANDLE hClipboardData;
-
-		if(( hClipboardData = GetClipboardData( CF_TEXT )) != 0 )
-		{
-			if(( cliptext = GlobalLock( hClipboardData )) != 0 ) 
-			{
-				data = Malloc( GlobalSize( hClipboardData ) + 1 );
-				com.strcpy( data, cliptext );
-				GlobalUnlock( hClipboardData );
-			}
-		}
-		CloseClipboard();
-	}
-	return data;
-}
-
-/*
-================
-Sys_GetCurrentUser
-
-returns username for current profile
-================
-*/
-char *Sys_GetCurrentUser( void )
-{
-	static string	s_userName;
-	dword		size = sizeof( s_userName );
-
-	if( !GetUserName( s_userName, &size ) || !s_userName[0] )
-		com.strcpy( s_userName, "player" );
-
-	return s_userName;
-}
-
-/*
-================
 Sys_CheckParm
 
 Returns the position (1 to argc-1) in the program's argument list
@@ -753,10 +696,7 @@ void Sys_Init( void )
 	Memory_Init();
 	Sys_InitCPU();
 
-	com.strcpy( SI.username, Sys_GetCurrentUser( ));
 	SI.developer = Sys.developer;
-	SI.version = XASH_VERSION;
-
 	Sys_CreateInstance();
 }
 
@@ -915,105 +855,6 @@ qboolean Sys_FreeLibrary( dll_info_t *dll )
 	dll->link = NULL;
 
 	return true;
-}
-
-/*
-=================
-Sys_ShellExecute
-=================
-*/
-void Sys_ShellExecute( const char *path, const char *parms, qboolean exit )
-{
-	ShellExecute( NULL, "open", path, parms, NULL, SW_SHOW );
-
-	if( exit ) Sys_Exit();
-}
-
-/*
-================
-Sys_QueEvent
-
-A time of 0 will get the current time
-Ptr should either be null, or point to a block of data that can
-be freed by the game later.
-================
-*/
-void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr )
-{
-	sys_event_t	*ev;
-
-	ev = &event_que[event_head & MASK_QUED_EVENTS];
-	if( event_head - event_tail >= MAX_QUED_EVENTS )
-	{
-		MsgDev( D_ERROR, "Sys_QueEvent: overflow\n");
-		// make sure what memory is allocated by engine
-		if( Mem_IsAllocated( ev->data )) Mem_Free( ev->data );
-		event_tail++;
-	}
-	event_head++;
-
-	ev->type = type;
-	ev->value[0] = value;
-	ev->value[1] = value2;
-	ev->length = length;
-	ev->data = ptr;
-}
-
-/*
-================
-Sys_GetEvent
-
-================
-*/
-sys_event_t Sys_GetEvent( void )
-{
-	MSG		msg;
-	sys_event_t	ev;
-	char		*s;
-	
-	// return if we have data
-	if( event_head > event_tail )
-	{
-		event_tail++;
-		return event_que[(event_tail - 1) & MASK_QUED_EVENTS];
-	}
-
-	// pump the message loop
-	while( PeekMessage( &msg, NULL, 0, 0, PM_NOREMOVE ))
-	{
-		if( !GetMessage( &msg, NULL, 0, 0 ))
-		{
-			Sys.error = true;
-			Sys_Exit();
-		}
-		TranslateMessage(&msg );
-      		DispatchMessage( &msg );
-	}
-
-	// check for console commands
-	s = Sys_Input();
-	if( s )
-	{
-		char	*b;
-		int	len;
-
-		len = com.strlen( s ) + 1;
-		b = Malloc( len );
-		com.strncpy( b, s, len - 1 );
-		Sys_QueEvent( SE_CONSOLE, 0, 0, len, b );
-	}
-
-	// return if we have data
-	if( event_head > event_tail )
-	{
-		event_tail++;
-		return event_que[(event_tail - 1) & MASK_QUED_EVENTS];
-	}
-
-	// create an empty event to return
-	Mem_Set( &ev, 0, sizeof( ev ));
-
-	return ev;
 }
 
 /*

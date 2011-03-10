@@ -161,7 +161,7 @@ char *NET_ErrorString( void )
 
 static void NET_NetadrToSockadr( netadr_t *a, struct sockaddr *s )
 {
-	Mem_Set( s, 0, sizeof( *s ));
+	Q_memset( s, 0, sizeof( *s ));
 
 	if( a->type == NA_BROADCAST )
 	{
@@ -206,7 +206,7 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 	char		*colon;
 	char		copy[MAX_SYSPATH];
 	
-	Mem_Set( sadr, 0, sizeof( *sadr ) );
+	Q_memset( sadr, 0, sizeof( *sadr ) );
 
 	((struct sockaddr_in *)sadr)->sin_family = AF_INET;
 	((struct sockaddr_in *)sadr)->sin_port = 0;
@@ -314,7 +314,7 @@ qboolean NET_StringToAdr( const char *string, netadr_t *adr )
 
 	if( !Q_stricmp( string, "localhost" ))
 	{
-		Mem_Set( adr, 0, sizeof( netadr_t ));
+		Q_memset( adr, 0, sizeof( netadr_t ));
 		adr->type = NA_LOOPBACK;
 		return true;
 	}
@@ -351,10 +351,10 @@ static qboolean NET_GetLoopPacket( netsrc_t sock, netadr_t *from, byte *data, si
 	i = loop->get & MASK_LOOPBACK;
 	loop->get++;
 
-	Mem_Copy( data, loop->msgs[i].data, loop->msgs[i].datalen );
+	Q_memcpy( data, loop->msgs[i].data, loop->msgs[i].datalen );
 	*length = loop->msgs[i].datalen;
 
-	Mem_Set( from, 0, sizeof( *from ));
+	Q_memset( from, 0, sizeof( *from ));
 	from->type = NA_LOOPBACK;
 
 	return true;
@@ -374,7 +374,7 @@ static qboolean NET_SendLoopPacket( netsrc_t sock, size_t length, const void *da
 	i = loop->send & MASK_LOOPBACK;
 	loop->send++;
 
-	Mem_Copy( loop->msgs[i].data, data, length );
+	Q_memcpy( loop->msgs[i].data, data, length );
 	loop->msgs[i].datalen = length;
 
 	return true;

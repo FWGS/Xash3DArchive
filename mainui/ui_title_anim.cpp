@@ -77,7 +77,11 @@ void UI_DrawTitleAnim()
 
 	float frac=UI_GetTitleTransFraction();/*(sin(gpGlobals->time*4)+1)/2*/;
 
+#ifdef TA_ALT_MODE
+	if (frac==1 && transition_state==AS_TO_BUTTON) return;
+#else
 	if (frac==1) return;
+#endif
 
 	quad_t c;
 	

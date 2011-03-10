@@ -57,7 +57,7 @@ void S_StopBackgroundTrack( void )
 	if( !s_bgTrack.stream ) return;
 
 	FS_FreeStream( s_bgTrack.stream );
-	Mem_Set( &s_bgTrack, 0, sizeof( bg_track_t ));
+	Q_memset( &s_bgTrack, 0, sizeof( bg_track_t ));
 	s_listener.lerping = false;
 	s_rawend = 0;
 }

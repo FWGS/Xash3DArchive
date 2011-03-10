@@ -60,7 +60,7 @@ void GL_BackendEndFrame( void )
 		r_stats.c_active_tents_count, r_stats.c_view_beams_count );
 	}
 
-	Mem_Set( &r_stats, 0, sizeof( r_stats ));
+	Q_memset( &r_stats, 0, sizeof( r_stats ));
 }
 
 /*
@@ -542,7 +542,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 		r_side->buffer = temp;
 
 		if( flags ) Image_Process( &r_side, 0, 0, flags );
-		Mem_Copy( buffer + (size * size * 3 * i), r_side->buffer, size * size * 3 );
+		Q_memcpy( buffer + (size * size * 3 * i), r_side->buffer, size * size * 3 );
 	}
 
 	RI.params &= ~RP_ENVVIEW;

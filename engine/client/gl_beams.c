@@ -994,7 +994,7 @@ BEAM *CL_AllocBeam( void )
 	pBeam = cl_free_beams;
 	cl_free_beams = pBeam->next;
 
-	Mem_Set( pBeam, 0, sizeof( *pBeam ));
+	Q_memset( pBeam, 0, sizeof( *pBeam ));
 
 	pBeam->next = cl_active_beams;
 	cl_active_beams = pBeam;
@@ -1485,7 +1485,7 @@ void CL_DrawCustomBeam( cl_entity_t *pbeam )
 	if( Mod_GetType( pbeam->curstate.modelindex ) != mod_sprite )
 		return;
 
-	Mem_Set( &beam, 0, sizeof( beam ));
+	Q_memset( &beam, 0, sizeof( beam ));
 
 	beamType = ( pbeam->curstate.rendermode & 0x0F );
 	beamFlags = ( pbeam->curstate.rendermode & 0xF0 );

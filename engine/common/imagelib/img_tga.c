@@ -216,7 +216,7 @@ qboolean Image_SaveTGA( const char *name, rgbdata_t *pix )
 	else outsize = pix->width * pix->height * 3 + 18 + Q_strlen( comment );
 
 	buffer = (byte *)Mem_Alloc( host.imagepool, outsize );
-	Mem_Set( buffer, 0, 18 );
+	Q_memset( buffer, 0, 18 );
 
 	// prepare header
 	buffer[0] = Q_strlen( comment ); // tga comment length

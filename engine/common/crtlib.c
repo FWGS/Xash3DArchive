@@ -275,7 +275,7 @@ void Q_atov( float *vec, const char *str, size_t siz )
 	int	j;
 
 	Q_strncpy( buffer, str, sizeof( buffer ));
-	Mem_Set( vec, 0, sizeof( vec_t ) * siz );
+	Q_memset( vec, 0, sizeof( vec_t ) * siz );
 	pstr = pfront = buffer;
 
 	for( j = 0; j < siz; j++ )
@@ -642,4 +642,325 @@ char *va( const char *format, ... )
 	va_end( argptr );
 
 	return s;
+}
+
+// crt safe version
+void crt_memcpy( void *dest, const void *src, size_t count, const char *filename, int fileline )
+{
+	if( src == NULL || count <= 0 ) return; // nothing to copy
+	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+	memcpy( dest, src, count );
+}
+
+void mmx_memcpy8B( void *dest, const void *src, size_t count, const char *filename, int fileline )
+{
+	if( src == NULL || count <= 0 ) return; // nothing to copy
+	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+
+	_asm
+	{
+		mov esi, src
+		mov edi, dest
+		mov ecx, count
+		shr ecx, 3	// 8 bytes per iteration
+loop1:
+		movq mm1, [ESI]	// read in source data
+		movntq [EDI], mm1	// non-temporal stores
+
+		add esi, 8
+		add edi, 8
+		dec ecx
+		jnz loop1
+		emms
+	}
+}
+
+void mmx_memcpy64B( void *dest, const void *src, size_t count, const char *filename, int fileline )
+{
+	if( src == NULL || count <= 0 ) return; // nothing to copy
+	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+
+	_asm
+	{
+		mov esi, src
+		mov edi, dest
+		mov ecx, count
+		shr ecx, 6		// 64 bytes per iteration 
+loop1:
+		prefetchnta 64[ESI]		// prefetch next loop, non-temporal 
+		prefetchnta 96[ESI]
+
+		movq mm1, [ESI]		// read in source data 
+		movq mm2, 8[ESI]
+		movq mm3, 16[ESI]
+		movq mm4, 24[ESI]
+		movq mm5, 32[ESI]
+		movq mm6, 40[ESI]
+		movq mm7, 48[ESI]
+		movq mm0, 56[ESI]
+
+		movntq [EDI], mm1		// non-temporal stores 
+		movntq 8[EDI], mm2
+		movntq 16[EDI], mm3
+		movntq 24[EDI], mm4
+		movntq 32[EDI], mm5
+		movntq 40[EDI], mm6
+		movntq 48[EDI], mm7
+		movntq 56[EDI], mm0
+
+		add esi, 64
+		add edi, 64
+		dec ecx
+		jnz loop1
+		emms
+	}
+}
+
+void mmx_memcpy2kB( void *dest, const void *src, size_t count, const char *filename, int fileline )
+{
+	byte	buf[2048];
+	byte	*tbuf = &buf[0];
+
+	if( src == NULL || count <= 0 ) return; // nothing to copy
+	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+
+	__asm
+	{
+		push ebx
+		mov esi, src
+		mov ebx, count
+		shr ebx, 11		// 2048 bytes at a time 
+		mov edi, dest
+loop2k:
+		push edi			// copy 2k into temporary buffer 
+		mov edi, tbuf
+		mov ecx, 32
+loopMemToL1:
+		prefetchnta 64[ESI]		// prefetch next loop, non-temporal 
+		prefetchnta 96[ESI]
+
+		movq mm1, [ESI]		// read in source data 
+		movq mm2, 8[ESI]
+		movq mm3, 16[ESI]
+		movq mm4, 24[ESI]
+		movq mm5, 32[ESI]
+		movq mm6, 40[ESI]
+		movq mm7, 48[ESI]
+		movq mm0, 56[ESI]
+
+		movq [EDI], mm1		// store into L1 
+		movq 8[EDI], mm2
+		movq 16[EDI], mm3
+		movq 24[EDI], mm4
+		movq 32[EDI], mm5
+		movq 40[EDI], mm6
+		movq 48[EDI], mm7
+		movq 56[EDI], mm0
+		add esi, 64
+		add edi, 64
+		dec ecx
+		jnz loopMemToL1
+
+		pop edi			// now copy from L1 to system memory 
+		push esi
+		mov esi, tbuf
+		mov ecx, 32
+loopL1ToMem:
+		movq mm1, [ESI]		// read in source data from L1 
+		movq mm2, 8[ESI]
+		movq mm3, 16[ESI]
+		movq mm4, 24[ESI]
+		movq mm5, 32[ESI]
+		movq mm6, 40[ESI]
+		movq mm7, 48[ESI]
+		movq mm0, 56[ESI]
+
+		movntq [EDI], mm1		// Non-temporal stores 
+		movntq 8[EDI], mm2
+		movntq 16[EDI], mm3
+		movntq 24[EDI], mm4
+		movntq 32[EDI], mm5
+		movntq 40[EDI], mm6
+		movntq 48[EDI], mm7
+		movntq 56[EDI], mm0
+
+		add esi, 64
+		add edi, 64
+		dec ecx
+		jnz loopL1ToMem
+
+		pop esi			// do next 2k block 
+		dec ebx
+		jnz loop2k
+		pop ebx
+		emms
+	}
+}
+
+void mmx_memcpy( void *dest, const void *src, size_t size, const char *filename, int fileline )
+{
+	if( src == NULL || size <= 0 ) return; // nothing to copy
+	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+
+	// if copying more than 16 bytes and we can copy 8 byte aligned
+	if( size > 16 && !(((int)dest ^ (int)src) & 7 ))
+	{
+		byte	*dest_p = (byte *)dest;
+		byte	*src_p = (byte *)src;
+		int	count = ((int)dest_p) & 7;
+
+		// copy up to the first 8 byte aligned boundary
+		crt_memcpy( dest_p, src_p, count, filename, fileline );
+		dest_p += count;
+		src_p += count;
+		count = size - count;
+
+		// if there are multiple blocks of 2kB
+		if( count & ~4095 )
+		{
+			mmx_memcpy2kB( dest_p, src_p, count, filename, fileline );
+			src_p += (count & ~2047);
+			dest_p += (count & ~2047);
+			count &= 2047;
+		}
+		// if there are blocks of 64 bytes
+		if( count & ~63 )
+		{
+			mmx_memcpy64B( dest_p, src_p, count, filename, fileline );
+			src_p += (count & ~63);
+			dest_p += (count & ~63);
+			count &= 63;
+		}
+
+		// if there are blocks of 8 bytes
+		if( count & ~7 )
+		{
+			mmx_memcpy8B( dest_p, src_p, count, filename, fileline );
+			src_p += (count & ~7);
+			dest_p += (count & ~7);
+			count &= 7;
+		}
+		// copy any remaining bytes
+		crt_memcpy( dest_p, src_p, count, filename, fileline );
+	}
+	else
+	{
+		// use the regular one if we cannot copy 8 byte aligned
+		crt_memcpy( dest, src, size, filename, fileline );
+	}
+}
+
+void crt_memset( void *dest, int set, size_t count, const char *filename, int fileline )
+{
+	if( dest == NULL ) com.error( "memset: dest == NULL (called at %s:%i)\n", filename, fileline );
+	memset( dest, set, count );
+}
+
+void mmx_memset( void *dest, int set, size_t size, const char *filename, int fileline )
+{
+	union
+	{
+		byte	bytes[8];
+		WORD	words[4];
+		DWORD	dwords[2];
+	} dat;
+
+	byte	*dst = (byte *)dest;
+	int	count = size;
+
+	if( dest == NULL ) com.error( "memset: dest == NULL (called at %s:%i)\n", filename, fileline );
+
+	while( count > 0 && (((int)dst) & 7) )
+	{
+		*dst = set;
+		dst++;
+		count--;
+	}
+
+	if( !count ) return;
+
+	dat.bytes[0] = set;
+	dat.bytes[1] = set;
+	dat.words[1] = dat.words[0];
+	dat.dwords[1] = dat.dwords[0];
+
+	if( count >= 64 )
+	{
+		__asm
+		{
+			mov edi, dst
+			mov ecx, count
+			shr ecx, 6		// 64 bytes per iteration
+			movq mm1, dat	// Read in source data
+			movq mm2, mm1
+			movq mm3, mm1
+			movq mm4, mm1
+			movq mm5, mm1
+			movq mm6, mm1
+			movq mm7, mm1
+			movq mm0, mm1
+loop1:
+			movntq 0[EDI], mm1	// Non-temporal stores
+			movntq 8[EDI], mm2
+			movntq 16[EDI], mm3
+			movntq 24[EDI], mm4
+			movntq 32[EDI], mm5
+			movntq 40[EDI], mm6
+			movntq 48[EDI], mm7
+			movntq 56[EDI], mm0
+
+			add edi, 64
+			dec ecx
+			jnz loop1
+		}
+		dst += ( count & ~63 );
+		count &= 63;
+	}
+
+	if ( count >= 8 )
+	{
+		__asm
+		{
+			mov edi, dst
+			mov ecx, count
+			shr ecx, 3		// 8 bytes per iteration
+			movq mm1, dat	// Read in source data
+			loop2:
+			movntq 0[EDI], mm1	// Non-temporal stores
+
+			add edi, 8
+			dec ecx
+			jnz loop2
+		}
+		dst += (count & ~7);
+		count &= 7;
+	}
+
+	while( count > 0 )
+	{
+		*dst = set;
+		dst++;
+		count--;
+	}
+
+	__asm
+	{
+		emms
+	}
+}
+
+void CRT_Init( void )
+{
+	if( Sys_CheckMMX( ))
+	{
+		// use fast MMX version
+		_Q_memcpy = mmx_memcpy;
+		_Q_memset = mmx_memset;
+	}
+	else
+	{
+		// default crt version
+		_Q_memcpy = crt_memcpy;
+		_Q_memset = crt_memset;
+	}
 }

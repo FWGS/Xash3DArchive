@@ -214,7 +214,7 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.studio_scale = sv_allow_studio_scaling->integer;
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
-		Mem_Copy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
+		Q_memcpy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
 
 	physinfo->modified = false;
 }
@@ -747,7 +747,7 @@ void SV_Shutdown( qboolean reconnect )
 	else SV_DeactivateServer ();
 
 	// free current level
-	Mem_Set( &sv, 0, sizeof( sv ));
+	Q_memset( &sv, 0, sizeof( sv ));
 	Host_SetServerState( sv.state );
 
 	// free server static data

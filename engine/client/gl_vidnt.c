@@ -544,7 +544,7 @@ void GL_BuildGammaTable( void )
 	invGamma = 1.0 / bound( 0.5, vid_gamma->value, 3.0 );
 	div = (double) 1.0 / 255.5;
 
-	Mem_Copy( glState.gammaRamp, glState.stateRamp, sizeof( glState.gammaRamp ));
+	Q_memcpy( glState.gammaRamp, glState.stateRamp, sizeof( glState.gammaRamp ));
 	
 	for( i = 0; i < 256; i++ )
 	{
@@ -595,10 +595,10 @@ GL_SetDefaultTexState
 */
 static void GL_SetDefaultTexState( void )
 {
-	Mem_Set( glState.currentTextures, -1, MAX_TEXTURE_UNITS * sizeof( *glState.currentTextures ));
-	Mem_Set( glState.texIdentityMatrix, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texIdentityMatrix ));
-	Mem_Set( glState.genSTEnabled, 0, MAX_TEXTURE_UNITS * sizeof( *glState.genSTEnabled ));
-	Mem_Set( glState.texCoordArrayMode, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texCoordArrayMode ));
+	Q_memset( glState.currentTextures, -1, MAX_TEXTURE_UNITS * sizeof( *glState.currentTextures ));
+	Q_memset( glState.texIdentityMatrix, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texIdentityMatrix ));
+	Q_memset( glState.genSTEnabled, 0, MAX_TEXTURE_UNITS * sizeof( *glState.genSTEnabled ));
+	Q_memset( glState.texCoordArrayMode, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texCoordArrayMode ));
 }
 
 /*
@@ -608,7 +608,7 @@ GL_SetDefaultState
 */
 static void GL_SetDefaultState( void )
 {
-	Mem_Set( &glState, 0, sizeof( glState ));
+	Q_memset( &glState, 0, sizeof( glState ));
 	GL_SetDefaultTexState ();
 
 	glState.initializedMedia = false;
@@ -734,7 +734,7 @@ void VID_StartupGamma( void )
 	byte	*savedGamma;
 
 	// init gamma ramp
-	Mem_Set( glState.stateRamp, 0, sizeof( glState.stateRamp ));
+	Q_memset( glState.stateRamp, 0, sizeof( glState.stateRamp ));
 
 	if( pwglGetDeviceGammaRamp3DFX )
 		glConfig.deviceSupportsGamma = pwglGetDeviceGammaRamp3DFX( glw_state.hDC, glState.stateRamp );
@@ -770,7 +770,7 @@ void VID_StartupGamma( void )
 			{
 				// yes, current gamma it's totally wrong, restore it from gamma.dat
 				MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
-				Mem_Copy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));
+				Q_memcpy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));
 			}
 			else
 			{
@@ -800,7 +800,7 @@ void VID_StartupGamma( void )
 		{
 			// current gamma unset by other application, so we can restore it here
 			MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
-			Mem_Copy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));			
+			Q_memcpy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));			
 		}
 		Mem_Free( savedGamma );
 	}
@@ -1106,7 +1106,7 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 	{
 		DEVMODE	dm;
 
-		Mem_Set( &dm, 0, sizeof( dm ));
+		Q_memset( &dm, 0, sizeof( dm ));
 		dm.dmSize = sizeof( dm );
 		dm.dmPelsWidth = width;
 		dm.dmPelsHeight = height;
@@ -1262,7 +1262,7 @@ void R_Free_OpenGL( void )
 	Sys_FreeLibrary( &opengl_dll );
 
 	// now all extensions are disabled
-	Mem_Set( glConfig.extension, 0, sizeof( glConfig.extension[0] ) * GL_EXTCOUNT );
+	Q_memset( glConfig.extension, 0, sizeof( glConfig.extension[0] ) * GL_EXTCOUNT );
 	glw_state.initialized = false;
 }
 
@@ -1656,7 +1656,7 @@ void R_Shutdown( void )
 		if( !clgame.sprites[i].name[0] ) continue;
 		Mod_UnloadSpriteModel( &clgame.sprites[i] );
 	}
-	Mem_Set( clgame.sprites, 0, sizeof( clgame.sprites ));
+	Q_memset( clgame.sprites, 0, sizeof( clgame.sprites ));
 
 	GL_RemoveCommands();
 	R_ShutdownImages();

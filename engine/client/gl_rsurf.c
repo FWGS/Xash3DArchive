@@ -159,7 +159,7 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 	poly->verts[0][4] = total_t / numverts;
 
 	// copy first vertex to last
-	Mem_Copy( poly->verts[i+1], poly->verts[1], sizeof( poly->verts[0] ));
+	Q_memcpy( poly->verts[i+1], poly->verts[1], sizeof( poly->verts[0] ));
 }
 
 /*
@@ -975,7 +975,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( R_CullBox( mins, maxs, RI.clipFlags ))
 		return;
 
-	Mem_Set( lightmap_polys, 0, sizeof( lightmap_polys ));
+	Q_memset( lightmap_polys, 0, sizeof( lightmap_polys ));
 
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
@@ -1262,8 +1262,8 @@ void R_DrawWorld( void )
 	RI.currentmodel = RI.currententity->model;
 
 	VectorCopy( RI.cullorigin, modelorg );
-	Mem_Set( lightmap_polys, 0, sizeof( lightmap_polys ));
-	Mem_Set( fullbright_polys, 0, sizeof( fullbright_polys ));
+	Q_memset( lightmap_polys, 0, sizeof( lightmap_polys ));
+	Q_memset( fullbright_polys, 0, sizeof( fullbright_polys ));
 	RI.currentWaveHeight = RI.waveHeight;
 	GL_SetRenderMode( kRenderNormal );
 
@@ -1327,7 +1327,7 @@ void R_MarkLeaves( void )
 		{
 			int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
 
-			Mem_Copy( visbytes, vis, longs << 2 );
+			Q_memcpy( visbytes, vis, longs << 2 );
 			vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
 
 			for( i = 0; i < longs; i++ )
@@ -1362,7 +1362,7 @@ void R_MarkLeaves( void )
 */
 static void LM_InitBlock( void )
 {
-	Mem_Set( r_lmState.allocated, 0, sizeof( r_lmState.allocated ));
+	Q_memset( r_lmState.allocated, 0, sizeof( r_lmState.allocated ));
 }
 
 static int LM_AllocBlock( int w, int h, int *x, int *y )
@@ -1429,7 +1429,7 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
 	blocksize = size * 3;
 	lm = surf->samples;
 
-	Mem_Set( r_blockLights, 0, sizeof( uint ) * blocksize );
+	Q_memset( r_blockLights, 0, sizeof( uint ) * blocksize );
 
 	// add all the lightmaps
 	for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255 && lm; map++ )
@@ -1541,9 +1541,9 @@ void GL_BuildLightmaps( void )
 		GL_FreeTexture( tr.lightmapTextures[i] );
 	}
 
-	Mem_Set( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
-	Mem_Set( visbytes, 0x00, sizeof( visbytes ));
-	Mem_Set( &r_lmState, 0, sizeof( r_lmState ));
+	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	Q_memset( visbytes, 0x00, sizeof( visbytes ));
+	Q_memset( &r_lmState, 0, sizeof( r_lmState ));
 
 	skychain = NULL;
 
@@ -1591,7 +1591,7 @@ void GL_BuildLightmaps( void )
 		r_lmState.lightmap_rectchange[i].top = 0;
 		r_lmState.lightmap_rectchange[i].bottom = 0;
 
-		Mem_Set( &r_lightmap, 0, sizeof( r_lightmap ));
+		Q_memset( &r_lightmap, 0, sizeof( r_lightmap ));
 
 		Q_snprintf( lmName, sizeof( lmName ), "*lightmap%i", i );
 		r_lightmap.width = BLOCK_WIDTH;

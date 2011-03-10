@@ -64,7 +64,7 @@ void FreeDsps( void )
 	gDspFuncs.pfnShutdown();
 
 	Sys_FreeLibrary( &room_dll );
-	Mem_Set( &gDspFuncs, 0, sizeof( gDspFuncs ));
+	Q_memset( &gDspFuncs, 0, sizeof( gDspFuncs ));
 }
 
 // alloc dsp processors
@@ -89,7 +89,7 @@ qboolean AllocDsps( void )
 	}
 
 	// make local copy of engfuncs to prevent overwrite it with user dll
-	Mem_Copy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
+	Q_memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
 	if( !InitDSP( &gDspFuncs, &gpEngfuncs, DSP_VERSION ))
 	{

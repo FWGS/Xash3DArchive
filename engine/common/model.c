@@ -58,8 +58,8 @@ Mod_SetupHulls
 */
 void Mod_SetupHulls( float mins[4][3], float maxs[4][3] )
 {
-	Mem_Copy( mins, cm_hullmins, sizeof( cm_hullmins ));
-	Mem_Copy( maxs, cm_hullmaxs, sizeof( cm_hullmaxs ));
+	Q_memcpy( mins, cm_hullmins, sizeof( cm_hullmins ));
+	Q_memcpy( maxs, cm_hullmaxs, sizeof( cm_hullmaxs ));
 }
 
 /*
@@ -384,7 +384,7 @@ void Mod_ClearAll( void )
 	for( i = 0; i < cm_nummodels; i++ )
 		Mod_FreeModel( &cm_models[i] );
 
-	Mem_Set( cm_models, 0, sizeof( cm_models ));
+	Q_memset( cm_models, 0, sizeof( cm_models ));
 	cm_nummodels = 0;
 }
 
@@ -565,8 +565,8 @@ static void Mod_LoadTextures( const dlump_t *l )
 			continue;	// allready sequenced
 
 		// find the number of frames in the animation
-		Mem_Set( anims, 0, sizeof( anims ));
-		Mem_Set( altanims, 0, sizeof( altanims ));
+		Q_memset( anims, 0, sizeof( anims ));
+		Q_memset( altanims, 0, sizeof( altanims ));
 
 		max = tx->name[1];
 		altmax = 0;
@@ -719,7 +719,7 @@ static void Mod_LoadLighting( const dlump_t *l )
 	case HLBSP_VERSION:
 		// load colored lighting
 		loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, l->filelen );
-		Mem_Copy( loadmodel->lightdata, in, l->filelen );
+		Q_memcpy( loadmodel->lightdata, in, l->filelen );
 		break;
 	}
 }
@@ -956,7 +956,7 @@ static void Mod_LoadSurfEdges( const dlump_t *l )
 	loadmodel->surfedges = Mem_Alloc( loadmodel->mempool, count * sizeof( dsurfedge_t ));
 	loadmodel->numsurfedges = count;
 
-	Mem_Copy( loadmodel->surfedges, in, count * sizeof( dsurfedge_t ));
+	Q_memcpy( loadmodel->surfedges, in, count * sizeof( dsurfedge_t ));
 }
 
 /*
@@ -1149,7 +1149,7 @@ static void Mod_LoadVisibility( const dlump_t *l )
 	}
 
 	loadmodel->visdata = Mem_Alloc( loadmodel->mempool, l->filelen );
-	Mem_Copy( loadmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
+	Q_memcpy( loadmodel->visdata, (void *)(mod_base + l->fileofs), l->filelen );
 	world.visdatasize = l->filelen; // save it for PHS allocation
 }
 
@@ -1164,7 +1164,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 
 	in = (void *)(mod_base + l->fileofs);
 	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen );	
-	Mem_Copy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
+	Q_memcpy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
 }
 
 /*
@@ -1313,7 +1313,7 @@ void Mod_CalcPHS( void )
 	// uncompress pvs first
 	for( i = 0; i < num; i++, scan += rowbytes )
 	{
-		Mem_Copy( scan, Mod_LeafPVS( worldmodel->leafs + i, worldmodel ), rowbytes );
+		Q_memcpy( scan, Mod_LeafPVS( worldmodel->leafs + i, worldmodel ), rowbytes );
 		if( i == 0 ) continue;
 
 		for( j = 0; j < num; j++ )
@@ -1330,7 +1330,7 @@ void Mod_CalcPHS( void )
 
 	for( i = 0; i < num; i++, dest += rowwords, scan += rowbytes )
 	{
-		Mem_Copy( dest, scan, rowbytes );
+		Q_memcpy( dest, scan, rowbytes );
 
 		for( j = 0; j < rowbytes; j++ )
 		{
@@ -1363,7 +1363,7 @@ void Mod_CalcPHS( void )
 				Q_memprint( total_size ), Q_memprint( phsdatasize ));
 		}
 
-		Mem_Copy( vismap_p, comp, rowsize );
+		Q_memcpy( vismap_p, comp, rowsize );
 		vismap_p += rowsize; // move pointer
 
 		if( i == 0 ) continue;
@@ -1424,7 +1424,7 @@ void Mod_UnloadBrushModel( model_t *mod )
 		Mem_FreePool( &mod->mempool );
 	}
 
-	Mem_Set( mod, 0, sizeof( *mod ));
+	Q_memset( mod, 0, sizeof( *mod ));
 }
 
 /*
@@ -1633,7 +1633,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	{
 		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
 		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", mod->name );
-		Mem_Set( mod, 0, sizeof( model_t ));
+		Q_memset( mod, 0, sizeof( model_t ));
 		return NULL;
 	}
 
@@ -1698,7 +1698,7 @@ void Mod_LoadWorld( const char *name, uint *checksum )
 	int	i;
 
 	// now replacement table is invalidate
-	Mem_Set( com_models, 0, sizeof( com_models ));
+	Q_memset( com_models, 0, sizeof( com_models ));
 
 	if( !Q_stricmp( cm_models[0].name, name ))
 	{
@@ -1865,7 +1865,7 @@ void Mod_LoadCacheFile( const char *path, cache_user_t *cu )
 
 	buf = FS_LoadFile( filepath, &size, false );
 	cu->data = Mem_Alloc( com_studiocache, size );
-	Mem_Copy( cu->data, buf, size );
+	Q_memcpy( cu->data, buf, size );
 	Mem_Free( buf );
 }
 

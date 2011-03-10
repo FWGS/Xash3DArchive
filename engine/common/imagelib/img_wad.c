@@ -70,7 +70,7 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 
 	if( filesize < sizeof( font ))
 		return false;
-	Mem_Copy( &font, buffer, sizeof( font ));
+	Q_memcpy( &font, buffer, sizeof( font ));
 	
 	// last sixty four bytes - what the hell ????
 	size = sizeof( qfont_t ) - 4 + ( 128 * font.width * QCHAR_WIDTH ) + sizeof( short ) + 768 + 64;
@@ -274,7 +274,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	else
 	{
 		fin = (byte *)buffer;
-		Mem_Copy( &lmp, fin, sizeof( lmp ));
+		Q_memcpy( &lmp, fin, sizeof( lmp ));
 		image.width = lmp.width;
 		image.height = lmp.height;
 		rendermode = LUMP_NORMAL;
@@ -328,14 +328,14 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	Mem_Copy( &mip, buffer, sizeof( mip ));
+	Q_memcpy( &mip, buffer, sizeof( mip ));
 	image.width = mip.width;
 	image.height = mip.height;
 
 	if( !Image_ValidSize( name ))
 		return false;
 
-	Mem_Copy( ofs, mip.offsets, sizeof( ofs ));
+	Q_memcpy( ofs, mip.offsets, sizeof( ofs ));
 	pixels = image.width * image.height;
 
 	if( image.hint != IL_HINT_Q1 && filesize >= (int)sizeof(mip) + ((pixels * 85)>>6) + sizeof(short) + 768)

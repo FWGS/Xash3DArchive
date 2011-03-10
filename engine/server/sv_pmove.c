@@ -67,8 +67,8 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	pe->frame = ed->v.frame;
 	pe->sequence = ed->v.sequence;
 
-	Mem_Copy( &pe->controller[0], &ed->v.controller[0], 4 * sizeof( byte ));
-	Mem_Copy( &pe->blending[0], &ed->v.blending[0], 2 * sizeof( byte ));
+	Q_memcpy( &pe->controller[0], &ed->v.controller[0], 4 * sizeof( byte ));
+	Q_memcpy( &pe->blending[0], &ed->v.blending[0], 2 * sizeof( byte ));
 
 	pe->movetype = ed->v.movetype;
 	pe->takedamage = ed->v.takedamage;
@@ -356,7 +356,7 @@ static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *
 	if( trace )
 	{
 		// NOTE: if pmtrace.h is changed is must be changed too
-		Mem_Copy( trace, &pmtrace, sizeof( *trace ));
+		Q_memcpy( trace, &pmtrace, sizeof( *trace ));
 		trace->hitgroup = pmtrace.hitgroup;
 		trace->ent = NULL;
 	}
@@ -459,8 +459,8 @@ void SV_InitClientMove( void )
 	for( i = 0; i < 4; i++ )
 		svgame.dllFuncs.pfnGetHullBounds( i, svgame.player_mins[i], svgame.player_maxs[i] );
 
-	Mem_Copy( svgame.pmove->player_mins, svgame.player_mins, sizeof( svgame.player_mins ));
-	Mem_Copy( svgame.pmove->player_maxs, svgame.player_maxs, sizeof( svgame.player_maxs ));
+	Q_memcpy( svgame.pmove->player_mins, svgame.player_mins, sizeof( svgame.player_mins ));
+	Q_memcpy( svgame.pmove->player_maxs, svgame.player_maxs, sizeof( svgame.player_maxs ));
 
 	// common utilities
 	svgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
@@ -688,7 +688,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 	sv_interp_t	*lerp;
 	vec3_t		tempvec, tempvec2;
 
-	Mem_Set( svgame.interp, 0, sizeof( svgame.interp ));
+	Q_memset( svgame.interp, 0, sizeof( svgame.interp ));
 	nofind = 1;
 
 	// don't allow unlag in singleplayer
@@ -775,7 +775,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 
 	if( i == SV_UPDATE_BACKUP || finalpush - frame->senttime > 1.0 )
 	{
-		Mem_Set( svgame.interp, 0, sizeof( svgame.interp ));
+		Q_memset( svgame.interp, 0, sizeof( svgame.interp ));
 		nofind = 1;
 		return;
 	}

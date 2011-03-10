@@ -134,7 +134,7 @@ static void TrimSpace( const char *source, char *dest )
 
 	length = end - start;
 	if( length > 0 )
-		Mem_Copy( dest, source + start, length );
+		Q_memcpy( dest, source + start, length );
 	else length = 0;
 
 	// terminate the dest string
@@ -334,11 +334,11 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 	clgame.titles = (client_textmessage_t *)Mem_Alloc( cls.mempool, textHeapSize + nameHeapSize + messageSize );
 	
 	// copy table over
-	Mem_Copy( clgame.titles, textMessages, messageSize );
+	Q_memcpy( clgame.titles, textMessages, messageSize );
 	
 	// copy Name heap
 	pNameHeap = ((char *)clgame.titles) + messageSize;
-	Mem_Copy( pNameHeap, nameHeap, nameHeapSize );
+	Q_memcpy( pNameHeap, nameHeap, nameHeapSize );
 	nameOffset = pNameHeap - clgame.titles[0].pName;
 
 	// copy text & fixup pointers

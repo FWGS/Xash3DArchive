@@ -283,7 +283,7 @@ void SV_ActivateServer( void )
 	}
 
 	// invoke to refresh all movevars
-	Mem_Set( &svgame.oldmovevars, 0, sizeof( movevars_t ));
+	Q_memset( &svgame.oldmovevars, 0, sizeof( movevars_t ));
 	svgame.globals->changelevel = false;	// changelevel ends here
 
 	// setup hostflags
@@ -430,7 +430,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	sv.state = ss_dead;
 	Host_SetServerState( sv.state );
-	Mem_Set( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
+	Q_memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
 
 	// restore state
 	sv.paused = paused;

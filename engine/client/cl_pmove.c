@@ -61,8 +61,8 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	pe->frame = ent->curstate.frame;
 	pe->sequence = ent->curstate.sequence;
 
-	Mem_Copy( &pe->controller[0], &ent->curstate.controller[0], 4 * sizeof( byte ));
-	Mem_Copy( &pe->blending[0], &ent->curstate.blending[0], 2 * sizeof( byte ));
+	Q_memcpy( &pe->controller[0], &ent->curstate.controller[0], 4 * sizeof( byte ));
+	Q_memcpy( &pe->blending[0], &ent->curstate.blending[0], 2 * sizeof( byte ));
 
 	pe->movetype = ent->curstate.movetype;
 	pe->takedamage = ( pe->player ) ? DAMAGE_AIM : DAMAGE_YES;
@@ -434,7 +434,7 @@ static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *
 	if( trace )
 	{
 		// NOTE: if pmtrace.h is changed is must be changed too
-		Mem_Copy( trace, &pmtrace, sizeof( *trace ));
+		Q_memcpy( trace, &pmtrace, sizeof( *trace ));
 		trace->hitgroup = pmtrace.hitgroup;
 		trace->ent = NULL;
 	}
@@ -534,8 +534,8 @@ void CL_InitClientMove( void )
 	for( i = 0; i < 4; i++ )
 		clgame.dllFuncs.pfnGetHullBounds( i, clgame.player_mins[i], clgame.player_maxs[i] );
 
-	Mem_Copy( clgame.pmove->player_mins, clgame.player_mins, sizeof( clgame.player_mins ));
-	Mem_Copy( clgame.pmove->player_maxs, clgame.player_maxs, sizeof( clgame.player_maxs ));
+	Q_memcpy( clgame.pmove->player_mins, clgame.player_mins, sizeof( clgame.player_mins ));
+	Q_memcpy( clgame.pmove->player_maxs, clgame.player_maxs, sizeof( clgame.player_maxs ));
 
 	// common utilities
 	clgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;

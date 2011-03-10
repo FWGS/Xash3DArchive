@@ -404,7 +404,7 @@ void Mod_UnloadSpriteModel( model_t *mod )
 	}
 
 	Mem_FreePool( &mod->mempool );
-	Mem_Set( mod, 0, sizeof( *mod ));
+	Q_memset( mod, 0, sizeof( *mod ));
 }
 
 /*

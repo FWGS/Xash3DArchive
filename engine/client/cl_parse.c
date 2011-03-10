@@ -415,7 +415,7 @@ void CL_ParseMovevars( sizebuf_t *msg )
 	if( Q_strcmp( clgame.oldmovevars.skyName, clgame.movevars.skyName ) && cl.video_prepped )
 		R_SetupSky( clgame.movevars.skyName );
 
-	Mem_Copy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
+	Q_memcpy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
 }
 
 /*
@@ -468,7 +468,7 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	entity_state_t	ent;
 	int		i;
 
-	Mem_Set( &ent, 0, sizeof( ent ));
+	Q_memset( &ent, 0, sizeof( ent ));
 
 	ent.modelindex = BF_ReadShort( msg );
 	ent.sequence = BF_ReadByte( msg );
@@ -545,7 +545,7 @@ void CL_ParseReliableEvent( sizebuf_t *msg, int flags )
 	event_args_t	nullargs, args;
 	float		delay;
 
-	Mem_Set( &nullargs, 0, sizeof( nullargs ));
+	Q_memset( &nullargs, 0, sizeof( nullargs ));
 	event_index = BF_ReadWord( msg );		// read event index
 	delay = BF_ReadWord( msg ) / 100.0f;		// read event delay
 	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// TODO: delta-compressing
@@ -667,8 +667,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.video_prepped = false;
 	cl.audio_prepped = false;
 
-	Mem_Set( &clgame.movevars, 0, sizeof( clgame.movevars ));
-	Mem_Set( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
+	Q_memset( &clgame.movevars, 0, sizeof( clgame.movevars ));
+	Q_memset( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
 }
 
 /*
@@ -719,8 +719,8 @@ void CL_ParseClientData( sizebuf_t *msg )
 	// clear to old value before delta parsing
 	if( !BF_ReadOneBit( msg ))
 	{
-		Mem_Set( &nullcd, 0, sizeof( nullcd ));
-		Mem_Set( nullwd, 0, sizeof( nullwd ));
+		Q_memset( &nullcd, 0, sizeof( nullcd ));
+		Q_memset( nullwd, 0, sizeof( nullwd ));
 		from_cd = &nullcd;
 		from_wd = nullwd;
 	}
@@ -768,7 +768,7 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	if( newnum > clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
 
 	ent = EDICT_NUM( newnum );
-	Mem_Set( &ent->prevstate, 0, sizeof( ent->prevstate ));
+	Q_memset( &ent->prevstate, 0, sizeof( ent->prevstate ));
 	ent->index = newnum;
 
 	if( cls.state == ca_active )
@@ -885,9 +885,9 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 		Q_strncpy( player->userinfo, BF_ReadString( msg ), sizeof( player->userinfo ));
 		Q_strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
 		Q_strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
-		if( slot == cl.playernum ) Mem_Copy( &menu.playerinfo, player, sizeof( player_info_t ));
+		if( slot == cl.playernum ) Q_memcpy( &menu.playerinfo, player, sizeof( player_info_t ));
 	}
-	else Mem_Set( player, 0, sizeof( *player ));
+	else Q_memset( player, 0, sizeof( *player ));
 }
 
 /*

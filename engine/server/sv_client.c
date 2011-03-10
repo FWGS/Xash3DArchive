@@ -145,7 +145,7 @@ void SV_DirectConnect( netadr_t from )
 	Info_SetValueForKey( userinfo, "ip", NET_AdrToString( from ));
 
 	newcl = &temp;
-	Mem_Set( newcl, 0, sizeof( sv_client_t ));
+	Q_memset( newcl, 0, sizeof( sv_client_t ));
 
 	// check for spectators          
 	s = Info_ValueForKey( userinfo, "spectator" );
@@ -270,7 +270,7 @@ edict_t *SV_FakeConnect( const char *netname )
 
 	// find a client slot
 	newcl = &temp;
-	Mem_Set( newcl, 0, sizeof( sv_client_t ));
+	Q_memset( newcl, 0, sizeof( sv_client_t ));
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->state == cs_free )
@@ -800,7 +800,7 @@ void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg )
 {
 	movevars_t	nullmovevars;
 
-	Mem_Set( &nullmovevars, 0, sizeof( nullmovevars ));
+	Q_memset( &nullmovevars, 0, sizeof( nullmovevars ));
 	MSG_WriteDeltaMovevars( msg, &nullmovevars, &svgame.movevars );
 }
 
@@ -1026,7 +1026,7 @@ void SV_New_f( sv_client_t *cl )
 		// set up the entity for the client
 		ent = EDICT_NUM( playernum + 1 );
 		cl->edict = ent;
-		Mem_Set( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
+		Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
 		// begin fetching modellist
 		BF_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1354,7 +1354,7 @@ void SV_Baselines_f( sv_client_t *cl )
 	
 	start = Q_atoi( Cmd_Argv( 2 ));
 
-	Mem_Set( &nullstate, 0, sizeof( nullstate ));
+	Q_memset( &nullstate, 0, sizeof( nullstate ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && start < svgame.numEntities )
@@ -1773,7 +1773,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	player = cl->edict;
 
 	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];
-	Mem_Set( &nullcmd, 0, sizeof( usercmd_t ));
+	Q_memset( &nullcmd, 0, sizeof( usercmd_t ));
 
 	key = BF_GetRealBytesRead( msg );
 	checksum1 = BF_ReadByte( msg );

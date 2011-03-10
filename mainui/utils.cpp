@@ -1867,7 +1867,11 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 	if (b->generic.id==1)
 	{
 		// don't draw banners until transition is done
-		if (UI_GetTitleTransFraction()!=1) return;
+#ifdef TA_ALT_MODE
+		if (UI_GetTitleTransFraction()!=10) return;
+#else
+		if (UI_GetTitleTransFraction()<0.9) return;
+#endif
 	}
 
 	if( b->generic.flags & QMF_GRAYED )

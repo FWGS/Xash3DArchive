@@ -338,7 +338,7 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 	hull_t	*hull;
 
 	// assume we didn't hit anything
-	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
+	Q_memset( ptr, 0, sizeof( pmtrace_t ));
 	VectorCopy( end, ptr->endpos );
 	ptr->allsolid = true;
 	ptr->fraction = 1.0f;
@@ -403,7 +403,7 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 	qboolean	bAllowScale = false;
 
 	// assume we didn't hit anything
-	Mem_Set( ptr, 0, sizeof( pmtrace_t ));
+	Q_memset( ptr, 0, sizeof( pmtrace_t ));
 	VectorCopy( end, ptr->endpos );
 	ptr->fraction = 1.0f;
 	ptr->hitgroup = -1;
@@ -488,7 +488,7 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 	int	i;
 
 	// assume we didn't hit anything
-	Mem_Set( &total, 0, sizeof( pmtrace_t ));
+	Q_memset( &total, 0, sizeof( pmtrace_t ));
 	VectorCopy( end, total.endpos );
 	total.fraction = 1.0f;
 	total.hitgroup = -1;

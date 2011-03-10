@@ -160,7 +160,7 @@ Con_ClearField
 */
 void Con_ClearField( field_t *edit )
 {
-	Mem_Set( edit->buffer, 0, MAX_STRING );
+	Q_memset( edit->buffer, 0, MAX_STRING );
 	edit->cursor = 0;
 	edit->scroll = 0;
 }
@@ -276,7 +276,7 @@ void Con_CheckResize( void )
 		if( con.linewidth < numchars )
 			numchars = con.linewidth;
 
-		Mem_Copy( tbuf, con.text, CON_TEXTSIZE * sizeof( short ));
+		Q_memcpy( tbuf, con.text, CON_TEXTSIZE * sizeof( short ));
 		for( i = 0; i < CON_TEXTSIZE; i++ )
 			con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 
@@ -516,7 +516,7 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qb
 		{
 			if( !forceColor )
 			{
-				Mem_Copy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ));
+				Q_memcpy( color, g_color_table[ColorIndex(*(s+1))], sizeof( color ));
 				color[3] = setColor[3];
 			}
 
@@ -857,7 +857,7 @@ void Con_CompleteCommand( field_t *field )
 	Cvar_LookupVars( 0, NULL, NULL, pfnFindMatches );
 
 	if( con.matchCount == 0 ) return; // no matches
-	Mem_Copy( &temp, con.completionField, sizeof( field_t ));
+	Q_memcpy( &temp, con.completionField, sizeof( field_t ));
 
 	if( Cmd_Argc() == 2 )
 	{
@@ -1250,7 +1250,7 @@ void Con_DrawInput( void )
 	// extract <drawLen> characters from the field at <prestep>
 	if( drawLen >= MAX_SYSPATH ) Host_Error("drawLen >= MAX_SYSPATH\n" );
 
-	Mem_Copy( str, con.input.buffer + prestep, drawLen );
+	Q_memcpy( str, con.input.buffer + prestep, drawLen );
 	str[drawLen] = 0;
 
 	// save char for overstrike
@@ -1401,7 +1401,7 @@ void Con_DrawSolidConsole( float frac )
 		byte	*color = g_color_table[7];
 		int	stringLen, width = 0, charH;
 
-		Q_snprintf( curbuild, MAX_STRING, "Xash3D %i/%g (hw build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
+		Q_snprintf( curbuild, MAX_STRING, "Xash3D %i/%g (hw build %i)", PROTOCOL_VERSION, XASH_VERSION, com_buildnum( ));
 		Con_DrawStringLen( curbuild, &stringLen, &charH );
 		start = scr_width->integer - stringLen;
 		stringLen = Con_StringLength( curbuild );
@@ -1547,7 +1547,7 @@ void Con_DrawVersion( void )
 
 	if( cls.key_dest != key_menu ) return;
 
-	Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, SI->version, com_buildnum( ));
+	Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, com_buildnum( ));
 	Con_DrawStringLen( curbuild, &stringLen, &charH );
 	start = scr_width->integer - stringLen * 1.05f;
 	stringLen = Con_StringLength( curbuild );

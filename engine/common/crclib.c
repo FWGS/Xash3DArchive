@@ -178,7 +178,7 @@ byte CRC32_BlockSequence( byte *base, int length, int sequence )
 	ptr = (char *)crc32table + (sequence % 0x3FC);
 
 	if( length > 60 ) length = 60;
-	Mem_Copy( buffer, base, length );
+	Q_memcpy( buffer, base, length );
 
 	buffer[length+0] = ptr[0];
 	buffer[length+1] = ptr[1];
@@ -340,11 +340,11 @@ void MD5Update( MD5Context_t *ctx, const byte *buf, uint len )
 		t = 64 - t;
 		if( len < t )
 		{
-			Mem_Copy( p, buf, len );
+			Q_memcpy( p, buf, len );
 			return;
 		}
 
-		Mem_Copy( p, buf, t );
+		Q_memcpy( p, buf, t );
 		MD5Transform( ctx->buf, (uint *)ctx->in );
 		buf += t;
 		len -= t;
@@ -353,14 +353,14 @@ void MD5Update( MD5Context_t *ctx, const byte *buf, uint len )
 	// process data in 64-byte chunks
 	while( len >= 64 )
 	{
-		Mem_Copy( ctx->in, buf, 64 );
+		Q_memcpy( ctx->in, buf, 64 );
 		MD5Transform( ctx->buf, (uint *)ctx->in );
 		buf += 64;
 		len -= 64;
 	}
 
 	// handle any remaining bytes of data.
-	Mem_Copy( ctx->in, buf, len );
+	Q_memcpy( ctx->in, buf, len );
 }
 
 /*
@@ -392,16 +392,16 @@ void MD5Final( byte digest[16], MD5Context_t *ctx )
 	{
 
 		// two lots of padding: pad the first block to 64 bytes
-		Mem_Set( p, 0, count );
+		Q_memset( p, 0, count );
 		MD5Transform( ctx->buf, (uint *)ctx->in );
 
 		// now fill the next block with 56 bytes
-		Mem_Set( ctx->in, 0, 56 );
+		Q_memset( ctx->in, 0, 56 );
 	}
 	else
 	{
 		// pad block to 56 bytes
-		Mem_Set( p, 0, count - 8 );
+		Q_memset( p, 0, count - 8 );
 	}
 
 	// append length in bits and transform
@@ -409,8 +409,8 @@ void MD5Final( byte digest[16], MD5Context_t *ctx )
 	((uint *)ctx->in)[15] = ctx->bits[1];
 
 	MD5Transform( ctx->buf, (uint *)ctx->in );
-	Mem_Copy( digest, ctx->buf, 16 );
-	Mem_Set( ctx, 0, sizeof( ctx ));	// in case it's sensitive
+	Q_memcpy( digest, ctx->buf, 16 );
+	Q_memset( ctx, 0, sizeof( ctx ));	// in case it's sensitive
 }
 
 // The four core functions

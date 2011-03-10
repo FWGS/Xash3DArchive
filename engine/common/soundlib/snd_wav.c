@@ -236,7 +236,7 @@ qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 	sound.size = sound.samples * sound.width * sound.channels;
 	sound.wav = Mem_Alloc( host.soundpool, sound.size );
 
-	Mem_Copy( sound.wav, buffer + (iff_dataPtr - buffer), sound.size );
+	Q_memcpy( sound.wav, buffer + (iff_dataPtr - buffer), sound.size );
 
 	// now convert 8-bit sounds to signed
 	if( sound.width == 1 )

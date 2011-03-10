@@ -5,16 +5,14 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <setjmp.h>
-#include <stdio.h>
-#include <time.h>
-#include <windows.h>
-
+#include "system.h"
 #include "launch_api.h"
 #include "ref_params.h"
 #include "com_export.h"
 #include "com_model.h"
 #include "crtlib.h"
+
+#define XASH_VERSION	0.8f		// engine current version
 
 // PERFORMANCE INFO
 #define MIN_FPS         	0.1		// host minimum fps value for maxfps.

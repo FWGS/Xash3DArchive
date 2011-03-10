@@ -320,7 +320,7 @@ void com_atov( float *vec, const char *str, size_t siz )
 	int	j;
 
 	com_strncpy( buffer, str, sizeof( buffer ));
-	Mem_Set( vec, 0, sizeof( vec_t ) * siz );
+	Mem_Set( vec, 0, sizeof( float ) * siz );
 	pstr = pfront = buffer;
 
 	for( j = 0; j < siz; j++ )

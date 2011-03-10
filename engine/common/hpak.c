@@ -54,7 +54,7 @@ void HPAK_AddToQueue( const char *name, resource_t *DirEnt, byte *data, file_t *
 	ptr->size = DirEnt->nDownloadSize;
 	ptr->data = Z_Malloc( ptr->size );
 
-	if( data ) Mem_Copy( ptr->data, data, ptr->size );
+	if( data ) Q_memcpy( ptr->data, data, ptr->size );
 	else if( f ) FS_Read( f, ptr->data, ptr->size );
 	else Host_Error( "HPAK_AddToQueue: data == NULL.\n" );
 
@@ -96,7 +96,7 @@ void HPAK_CreatePak( const char *filename, resource_t *DirEnt, byte *data, file_
 	}
 
 	// let's hash it.
-	Mem_Set( &MD5_Hash, 0, sizeof( MD5Context_t ));
+	Q_memset( &MD5_Hash, 0, sizeof( MD5Context_t ));
 	MD5Init( &MD5_Hash );
 
 	if( data == NULL )
@@ -149,7 +149,7 @@ void HPAK_CreatePak( const char *filename, resource_t *DirEnt, byte *data, file_
 	FS_Write( fout, &hash_pack_dir.dirs[0], sizeof( hpak_dir_t ));
 
 	Mem_Free( hash_pack_dir.dirs );
-	Mem_Set( &hash_pack_dir, 0, sizeof( hpak_container_t ));
+	Q_memset( &hash_pack_dir, 0, sizeof( hpak_container_t ));
 
 	hash_pack_header.seek = filelocation;
 	FS_Seek( fout, 0, SEEK_SET );
@@ -209,7 +209,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	}
 
 	// hash it
-	Mem_Set( &MD5_Hash, 0, sizeof( MD5Context_t ));
+	Q_memset( &MD5_Hash, 0, sizeof( MD5Context_t ));
 	MD5Init( &MD5_Hash );
 
 	if( data == NULL )
@@ -307,7 +307,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 	// make a new container
 	hpak2.count = hpak1.count;
 	hpak2.dirs = Z_Malloc( sizeof( hpak_dir_t ) * hpak2.count );
-	Mem_Copy( hpak2.dirs, hpak1.dirs, hpak1.count );
+	Q_memcpy( hpak2.dirs, hpak1.dirs, hpak1.count );
 
 	for( i = 0, dirs = NULL; i < hpak1.count; i++ )
 	{
@@ -325,7 +325,7 @@ void HPAK_AddLump( qboolean add_to_queue, const char *name, resource_t *DirEnt, 
 
 	if( dirs == NULL ) dirs = &hpak2.dirs[hpak2.count-1];
 
-	Mem_Set( dirs, 0, sizeof( hpak_dir_t ));
+	Q_memset( dirs, 0, sizeof( hpak_dir_t ));
 	FS_Seek( f2, hash_pack_header.seek, SEEK_SET );
 	dirs->DirectoryResource = *DirEnt;
 	dirs->seek = FS_Tell( f2 );
@@ -439,7 +439,7 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 		FS_Seek( f, dataDir[i].seek, SEEK_SET );
 		FS_Read( f, dataPak, dataDir[i].size );
 
-		Mem_Set( &MD5_Hash, 0, sizeof( MD5Context_t ));
+		Q_memset( &MD5_Hash, 0, sizeof( MD5Context_t ));
 		MD5Init( &MD5_Hash );
 		MD5Update( &MD5_Hash, dataPak, dataDir[i].size );
 		MD5Final( md5, &MD5_Hash );
@@ -654,7 +654,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 			if( buffer )
 			{
 				tmpbuf = Z_Malloc( queue->size );
-				Mem_Copy( tmpbuf, queue->data, queue->size );
+				Q_memcpy( tmpbuf, queue->data, queue->size );
 				*buffer = tmpbuf;
 			}
 

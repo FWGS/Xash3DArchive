@@ -527,7 +527,7 @@ void Huff_CompressPacket( sizebuf_t *msg, int offset )
 	
 	outLen = (huffBitPos >> 3) + 1;
 	msg->iCurBit = (offset + outLen) << 3;
-	Mem_Copy( data, buffer, outLen );
+	Q_memcpy( data, buffer, outLen );
 }
 
 /*
@@ -583,7 +583,7 @@ void Huff_DecompressPacket( sizebuf_t *msg, int offset )
 	}
 
 	msg->nDataBits = ( offset + outLen ) << 3;
-	Mem_Copy( data, buffer, outLen );
+	Q_memcpy( data, buffer, outLen );
 }
 
 /*

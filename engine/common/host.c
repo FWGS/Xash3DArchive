@@ -260,7 +260,7 @@ void Host_InitDecals( void )
 	search_t	*t;
 	int	i;
 
-	Mem_Set( host.draw_decals, 0, sizeof( host.draw_decals ));
+	Q_memset( host.draw_decals, 0, sizeof( host.draw_decals ));
 	num_decals = 0;
 
 	// lookup all decals in decals.wad
@@ -283,7 +283,7 @@ Host_InitEvents
 */
 void Host_InitEvents( void )
 {
-	Mem_Set( host.events, 0, sizeof( host.events ));
+	Q_memset( host.events, 0, sizeof( host.events ));
 	host.events_head = 0;
 	host.events_tail = 0;
 }
@@ -616,6 +616,8 @@ void Host_Init( const int argc, const char **argv )
 {
 	host.state = HOST_INIT;	// initialzation started
 	host.type = g_Instance();
+
+	CRT_Init(); // init some CRT functions
 
 	Host_InitCommon( argc, argv );
 	Key_Init();

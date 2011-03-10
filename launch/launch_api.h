@@ -27,19 +27,15 @@
 
 typedef unsigned long	dword;
 typedef unsigned int	uint;
-typedef int		sound_t;
-typedef float		vec_t;
-typedef vec_t		vec2_t[2];
-typedef vec_t		vec3_t[3];
-typedef vec_t		vec4_t[4];
-typedef vec_t		quat_t[4];
-typedef byte		rgba_t[4];	// unsigned byte colorpack
-typedef byte		rgb_t[3];		// unsigned byte colorpack
-typedef vec_t		matrix3x4[3][4];
-typedef vec_t		matrix4x4[4][4];
 typedef char		string[MAX_STRING];
 
-#include "const.h"
+#ifdef LAUNCH_DLL
+#ifndef __cplusplus
+typedef enum { false, true }	qboolean;
+#else 
+typedef int qboolean;
+#endif
+#endif
 
 // platform instances
 typedef enum
@@ -81,31 +77,6 @@ enum
 /*
 ========================================================================
 
-SYS EVENT
-
-keep console cmds, network messages, mouse reletives and key buttons
-========================================================================
-*/
-typedef enum
-{
-	SE_NONE = 0,	// end of events queue
-	SE_KEY,		// ev.value[0] is a key code, ev.value[1] is the down flag
-	SE_CHAR,		// ev.value[0] is an ascii char
-	SE_CONSOLE,	// ev.data is a char*
-	SE_MOUSE,		// ev.value[0] and ev.value[1] are reletive signed x / y moves
-} ev_type_t;
-
-typedef struct
-{
-	ev_type_t		type;
-	int		value[2];
-	void		*data;
-	size_t		length;
-} sys_event_t;
-
-/*
-========================================================================
-
 GAMEINFO stuff
 
 internal shared gameinfo structure (readonly for engine parts)
@@ -138,8 +109,8 @@ typedef struct gameinfo_s
 	char		sp_entity[32];	// e.g. info_player_start
 	char		mp_entity[32];	// e.g. info_player_deathmatch
 
-	vec3_t		client_mins[4];	// 4 hulls allowed
-	vec3_t		client_maxs[4];	// 4 hulls allowed
+	float		client_mins[4][3];	// 4 hulls allowed
+	float		client_maxs[4][3];	// 4 hulls allowed
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
 	int		max_tents;	// min temp ents is 300, max is 2048
@@ -149,10 +120,6 @@ typedef struct gameinfo_s
 
 typedef struct sysinfo_s
 {
-	string		username;		// OS current username
-	float		version;		// engine version
-	int		cpunum;		// count of cpu's
-	float		cpufreq;		// cpu frequency in MHz
 	char		instance;		// global engine instance
 
 	int		developer;	// developer level ( 1 - 7 )
@@ -211,10 +178,7 @@ typedef struct stdilib_api_s
 	void (*error)( const char *msg, ... );			// abnormal termination with message
 	void (*abort)( const char *msg, ... );			// normal tremination with message
 	void (*exit)( void );				// normal silent termination
-	void (*sleep)( int msec );				// sleep for some msec
-	char *(*clipboard)( void );				// get clipboard data
-	void (*queevent)( ev_type_t type, int value, int value2, int length, void *ptr );
-	sys_event_t (*getevent)( void );			// get system events
+	char *(*input)( void );				// win32 console input (dedicated server)
 	int  (*Com_CheckParm)( const char *parm );		// check parm in cmdline  
 	qboolean (*Com_GetParm)( char *parm, char *out, size_t size );// get parm from cmdline
 
@@ -236,8 +200,6 @@ typedef struct stdilib_api_s
 	qboolean (*Com_LoadLibrary)( const char *name, dll_info_t *dll );	// load library 
 	qboolean (*Com_FreeLibrary)( dll_info_t *dll );			// free library
 	void*(*Com_GetProcAddress)( dll_info_t *dll, const char* name );	// gpa
-	double (*Com_DoubleTime)( void );				// hi-res timer
-	void (*Com_ShellExecute)( const char *p1, const char *p2, qboolean exit );// execute shell programs
 
 	// stdlib.c funcs
 	void (*strnupr)(const char *in, char *out, size_t size_out);	// convert string to upper case
@@ -343,18 +305,13 @@ misc utils
 #define Sys_LoadLibrary		com.Com_LoadLibrary
 #define Sys_FreeLibrary		com.Com_FreeLibrary
 #define Sys_GetProcAddress		com.Com_GetProcAddress
-#define Sys_ShellExecute		com.Com_ShellExecute
 #define Sys_NewInstance		com.instance
-#define Sys_Sleep			com.sleep
 #define Sys_Print			com.print
-#define Sys_GetEvent		com.getevent
-#define Sys_QueEvent		com.queevent
-#define Sys_GetClipboardData		com.clipboard
 #define Sys_Quit			com.exit
 #define Sys_Break			com.abort
-#define Sys_DoubleTime		com.Com_DoubleTime
 #define Sys_CheckParm		com.Com_CheckParm
 #define Sys_GetParmFromCmdLine( a, b )	com.Com_GetParm( a, b, sizeof( b ))
+#define Sys_Input			com.input
 
 #endif//LAUNCH_DLL
 #endif//LAUNCH_APH_H

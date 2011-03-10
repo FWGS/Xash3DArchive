@@ -203,7 +203,7 @@ static int mpeg_read_mem( const byte *buffer, int *pos, size_t filesize, mpegfil
 
 		if(( *pos + readSize ) > filesize )
 			readSize = ( filesize - *pos );
-		Mem_Copy( &mpeg->buffer[mpeg->buffer_length], buffer + *pos, readSize );
+		Q_memcpy( &mpeg->buffer[mpeg->buffer_length], buffer + *pos, readSize );
 
 		// no more bytes are left
 		if( readSize <= 0 ) break;
@@ -266,7 +266,7 @@ qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize )
 	if( !buffer || filesize <= 0 )
 		return false;
 
-	Mem_Set( &mpeg, 0, sizeof( mpeg ));
+	Q_memset( &mpeg, 0, sizeof( mpeg ));
 	mad_synth_init( &mpeg.synth );
 	mad_stream_init( &mpeg.stream );
 	mad_frame_init( &mpeg.frame );

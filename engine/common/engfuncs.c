@@ -203,7 +203,7 @@ char *pfnMemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, in
 		int	size = i - *filePos;
 
 		// copy it out
-		Mem_Copy( pBuffer, pMemFile + *filePos, size );
+		Q_memcpy( pBuffer, pMemFile + *filePos, size );
 		
 		// If the buffer isn't full, terminate (this is always true)
 		if( size < bufferSize ) pBuffer[size] = 0;

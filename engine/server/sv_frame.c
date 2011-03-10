@@ -365,7 +365,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	edict_t		*clent;
 	int		i;
 
-	Mem_Set( &nullcd, 0, sizeof( nullcd ));
+	Q_memset( &nullcd, 0, sizeof( nullcd ));
 
 	clent = cl->edict;
 	frame = &( cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK] );
@@ -399,7 +399,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	clent->v.fixangle = 0; // reset fixangle
 	clent->v.pushmsec = 0; // reset pushmsec
 
-	Mem_Set( &frame->clientdata, 0, sizeof( frame->clientdata ));
+	Q_memset( &frame->clientdata, 0, sizeof( frame->clientdata ));
 
 	// update clientdata_t
 	svgame.dllFuncs.pfnUpdateClientData( clent, cl->local_weapons, &frame->clientdata );
@@ -426,7 +426,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	if( cl->local_weapons && svgame.dllFuncs.pfnGetWeaponData( clent, frame->weapondata ))
 	{
-		Mem_Set( &nullwd, 0, sizeof( nullwd ));
+		Q_memset( &nullwd, 0, sizeof( nullwd ));
 
 		for( i = 0; i < 32; i++ )
 		{

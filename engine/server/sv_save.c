@@ -188,7 +188,7 @@ qboolean SaveRestore_Write( SAVERESTOREDATA *pSaveData, const void *pData, int n
 		return false;
 	}
 
-	Mem_Copy( pSaveData->pCurrentData, pData, nBytes );
+	Q_memcpy( pSaveData->pCurrentData, pData, nBytes );
 	SaveRestore_MoveCurPos( pSaveData, nBytes );
 
 	return true;
@@ -205,7 +205,7 @@ qboolean SaveRestore_Read( SAVERESTOREDATA *pSaveData, void *pOutput, int nBytes
 		return false;
 	}
 
-	if( pOutput ) Mem_Copy( pOutput, pSaveData->pCurrentData, nBytes );
+	if( pOutput ) Q_memcpy( pOutput, pSaveData->pCurrentData, nBytes );
 	SaveRestore_MoveCurPos( pSaveData, nBytes );
 
 	return true;
@@ -813,7 +813,7 @@ void SV_ParseSaveTables( SAVERESTOREDATA *pSaveData, SAVE_HEADER *pHeader, int u
 
 	if( updateGlobals )	// g-cont. maybe this rename to 'clearLightstyles' ?
 	{
-		Mem_Set( sv.lightstyles, 0, sizeof( sv.lightstyles ));
+		Q_memset( sv.lightstyles, 0, sizeof( sv.lightstyles ));
 	}
 
 	for( i = 0; i < pHeader->lightStyleCount; i++ )
@@ -1345,7 +1345,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 	vec3_t		landmarkOrigin;
 	qboolean		foundprevious = false;
 	
-	Mem_Set( &currentLevelData, 0, sizeof( SAVERESTOREDATA ));
+	Q_memset( &currentLevelData, 0, sizeof( SAVERESTOREDATA ));
 	svgame.globals->pSaveData = &currentLevelData;
 
 	// build the adjacent map list

@@ -376,9 +376,9 @@ SCR_VidInit
 */
 void SCR_VidInit( void )
 {
-	Mem_Set( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
-	Mem_Set( &menu.ds, 0, sizeof( menu.ds )); // reset a draw state
-	Mem_Set( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
+	Q_memset( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
+	Q_memset( &menu.ds, 0, sizeof( menu.ds )); // reset a draw state
+	Q_memset( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
 
 	// update screen sizes for menu
 	menu.globals->scrWidth = scr_width->integer;

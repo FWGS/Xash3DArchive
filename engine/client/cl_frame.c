@@ -439,7 +439,7 @@ void CL_FlushEntityPacket( sizebuf_t *msg )
 	entity_state_t	from, to;
 
 	MsgDev( D_INFO, "FlushEntityPacket()\n" );
-	Mem_Set( &from, 0, sizeof( from ));
+	Q_memset( &from, 0, sizeof( from ));
 
 	cl.frames[cl.parsecountmod].valid = false;
 	cl.validsequence = 0; // can't render a frame

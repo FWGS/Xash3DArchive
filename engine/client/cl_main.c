@@ -261,7 +261,7 @@ usercmd_t CL_CreateCmd( void )
 	ms = host.frametime * 1000;
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 
-	Mem_Set( &cmd, 0, sizeof( cmd ));
+	Q_memset( &cmd, 0, sizeof( cmd ));
 
 	VectorCopy( cl.refdef.cl_viewangles, angles );
 	VectorCopy( cl.frame.local.client.origin, cl.data.origin );
@@ -311,7 +311,7 @@ void CL_WriteUsercmd( sizebuf_t *msg, int from, int to )
 
 	if( from == -1 )
 	{
-		Mem_Set( &nullcmd, 0, sizeof( nullcmd ));
+		Q_memset( &nullcmd, 0, sizeof( nullcmd ));
 		f = &nullcmd;
 	}
 	else
@@ -725,10 +725,10 @@ void CL_ClearState( void )
 	CL_FreeEdicts ();
 
 	// wipe the entire cl structure
-	Mem_Set( &cl, 0, sizeof( cl ));
+	Q_memset( &cl, 0, sizeof( cl ));
 	BF_Clear( &cls.netchan.message );
-	Mem_Set( &clgame.fade, 0, sizeof( clgame.fade ));
-	Mem_Set( &clgame.shake, 0, sizeof( clgame.shake ));
+	Q_memset( &clgame.fade, 0, sizeof( clgame.fade ));
+	Q_memset( &clgame.shake, 0, sizeof( clgame.shake ));
 	cl.refdef.movevars = &clgame.movevars;
 	cl.maxclients = 1; // allow to drawing player in menu
 
@@ -1065,7 +1065,7 @@ void CL_PrepVideo( void )
 	CL_RegisterMuzzleFlashes ();
 
 	// invalidate all decal indexes
-	Mem_Set( cl.decal_index, 0, sizeof( cl.decal_index ));
+	Q_memset( cl.decal_index, 0, sizeof( cl.decal_index ));
 
 	// release unused SpriteTextures
 	for( i = 1; i < MAX_IMAGES; i++ )
@@ -1430,7 +1430,7 @@ void CL_InitLocal( void )
 
 	// userinfo
 	Cvar_Get( "password", "", CVAR_USERINFO, "player password" );
-	name = Cvar_Get( "name", SI->username, CVAR_USERINFO|CVAR_ARCHIVE|CVAR_PRINTABLEONLY, "player name" );
+	name = Cvar_Get( "name", Sys_GetCurrentUser(), CVAR_USERINFO|CVAR_ARCHIVE|CVAR_PRINTABLEONLY, "player name" );
 	model = Cvar_Get( "model", "player", CVAR_USERINFO|CVAR_ARCHIVE, "player model ('player' it's a single player model)" );
 	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player top color" );
 	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player bottom color" );

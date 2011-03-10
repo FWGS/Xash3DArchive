@@ -615,7 +615,7 @@ void CL_DrawScreenFade( void )
 	// all done?
 	if(( cl.time > sf->fadeReset ) && ( cl.time > sf->fadeEnd ))
 	{
-		Mem_Set( &clgame.fade, 0, sizeof( clgame.fade ));
+		Q_memset( &clgame.fade, 0, sizeof( clgame.fade ));
 		return;
 	}
 
@@ -970,7 +970,7 @@ static void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook fu
 	ev = clgame.events[lastnum];
 
 	// clear existing or allocate new one
-	if( ev ) Mem_Set( ev, 0, sizeof( *ev ));
+	if( ev ) Q_memset( ev, 0, sizeof( *ev ));
 	else ev = clgame.events[lastnum] = Mem_Alloc( cls.mempool, sizeof( *ev ));
 
 	Q_strncpy( ev->name, szEvName, CS_SIZE );
@@ -1007,7 +1007,7 @@ CL_ResetEvent
 */
 void CL_ResetEvent( event_info_t *ei )
 {
-	Mem_Set( ei, 0, sizeof( *ei ));
+	Q_memset( ei, 0, sizeof( *ei ));
 }
 
 /*
@@ -1199,7 +1199,7 @@ void CL_QueueEvent( int flags, int index, float delay, event_args_t *args )
 	ei->flags	= flags;
 	
 	// copy in args event data
-	Mem_Copy( &ei->args, args, sizeof( ei->args ));
+	Q_memcpy( &ei->args, args, sizeof( ei->args ));
 }
 
 /*
@@ -1332,7 +1332,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 
 	if( m_pSprite->type != mod_sprite )
 	{
-		Mem_Set( m_pSprite, 0, sizeof( *m_pSprite ));
+		Q_memset( m_pSprite, 0, sizeof( *m_pSprite ));
 		return false;
 	}
 	return true;
@@ -1664,7 +1664,7 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 		clgame.scrInfo.iSize = pscrinfo->iSize;
 
 	// copy screeninfo out
-	Mem_Copy( pscrinfo, &clgame.scrInfo, clgame.scrInfo.iSize );
+	Q_memcpy( pscrinfo, &clgame.scrInfo, clgame.scrInfo.iSize );
 
 	return 1;
 }
@@ -1763,7 +1763,7 @@ static void pfnGetPlayerInfo( int ent_num, hud_player_info_t *pinfo )
 
 	if( ent_num >= cl.maxclients || ent_num < 0 || !cl.players[ent_num].name[0] )
 	{
-		Mem_Set( pinfo, 0, sizeof( *pinfo ));
+		Q_memset( pinfo, 0, sizeof( *pinfo ));
 		return;
 	}
 
@@ -2130,7 +2130,7 @@ void pfnCalcShake( void )
 
 	if(( cl.time > clgame.shake.time ) || clgame.shake.amplitude <= 0 || clgame.shake.frequency <= 0 )
 	{
-		Mem_Set( &clgame.shake, 0, sizeof( clgame.shake ));
+		Q_memset( &clgame.shake, 0, sizeof( clgame.shake ));
 		return;
 	}
 
@@ -3581,7 +3581,7 @@ void CL_UnloadProgs( void )
 	Com_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
-	Mem_Set( &clgame, 0, sizeof( clgame ));
+	Q_memset( &clgame, 0, sizeof( clgame ));
 }
 
 qboolean CL_LoadProgs( const char *name )

@@ -55,7 +55,7 @@ void Cbuf_AddText( const char *text )
 		MsgDev( D_WARN, "Cbuf_AddText: overflow\n" );
 		return;
 	}
-	Mem_Copy( &cmd_text.data[cmd_text.cursize], text, l );
+	Q_memcpy( &cmd_text.data[cmd_text.cursize], text, l );
 	cmd_text.cursize += l;
 }
 
@@ -86,7 +86,7 @@ void Cbuf_InsertText( const char *text )
 	}
 
 	// copy the new text in
-	Mem_Copy( cmd_text.data, (char *)text, len - 1 );
+	Q_memcpy( cmd_text.data, (char *)text, len - 1 );
 	cmd_text.data[len - 1] = '\n'; // add a \n
 	cmd_text.cursize += len;
 }
@@ -152,7 +152,7 @@ void Cbuf_Execute( void )
 		if( i >= MAX_CMD_LINE - 1 )
 			com.error( "Cbuf_Execute: command string owerflow\n" );
 
-		Mem_Copy( line, text, i );
+		Q_memcpy( line, text, i );
 		line[i] = 0;
 
 		// delete the text from the command buffer and move remaining commands down

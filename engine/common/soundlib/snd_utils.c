@@ -78,7 +78,7 @@ byte *Sound_Copy( size_t size )
 	byte	*out;
 
 	out = Mem_Alloc( host.soundpool, size );
-	Mem_Copy( out, sound.tempbuffer, size );
+	Q_memcpy( out, sound.tempbuffer, size );
 	return out; 
 }
 

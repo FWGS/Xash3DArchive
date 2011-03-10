@@ -183,7 +183,7 @@ qboolean FS_AddSideToPack( const char *name, int adjust_flags )
 	if( resampled ) image.rgba = Image_Copy( image.size );
 
 	image.cubemap = Mem_Realloc( host.imagepool, image.cubemap, image.ptr + image.size );
-	Mem_Copy( image.cubemap + image.ptr, image.rgba, image.size ); // add new side
+	Q_memcpy( image.cubemap + image.ptr, image.rgba, image.size ); // add new side
 
 	Mem_Free( image.rgba );	// release source buffer
 	image.ptr += image.size; 	// move to next

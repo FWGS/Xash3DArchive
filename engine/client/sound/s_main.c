@@ -93,7 +93,7 @@ void S_FreeChannel( channel_t *ch )
 	ch->isSentence = false;
 
 	// clear mixer
-	Mem_Set( &ch->pMixer, 0, sizeof( ch->pMixer ));
+	Q_memset( &ch->pMixer, 0, sizeof( ch->pMixer ));
 
 	SND_CloseMouth( ch );
 }
@@ -440,7 +440,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	}
 
 	// spatialize
-	Mem_Set( target_chan, 0, sizeof( *target_chan ));
+	Q_memset( target_chan, 0, sizeof( *target_chan ));
 
 	VectorCopy( pos, target_chan->origin );
 	target_chan->staticsound = ( ent == 0 ) ? true : false;
@@ -669,7 +669,7 @@ void S_ClearBuffer( void )
 	s_rawend = 0;
 
 	SNDDMA_BeginPainting ();
-	if( dma.buffer ) Mem_Set( dma.buffer, 0, dma.samples * 2 );
+	if( dma.buffer ) Q_memset( dma.buffer, 0, dma.samples * 2 );
 	SNDDMA_Submit ();
 
 	MIX_ClearAllPaintBuffers( PAINTBUFFER_SIZE, true );
@@ -712,12 +712,12 @@ void S_StopAllSounds( void )
 	DSP_ClearState();
 
 	// clear all the channels
-	Mem_Set( channels, 0, sizeof( channels ));
+	Q_memset( channels, 0, sizeof( channels ));
 
 	S_ClearBuffer ();
 
 	// clear any remaining soundfade
-	Mem_Set( &soundfade, 0, sizeof( soundfade ));
+	Q_memset( &soundfade, 0, sizeof( soundfade ));
 }
 
 //=============================================================================

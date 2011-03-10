@@ -81,7 +81,7 @@ static int	gDecalCount;
 void R_ClearDecals( void )
 {
 	Mem_EmptyPool( r_decalPool );
-	Mem_Set( gDecalPool, 0, sizeof( gDecalPool ));
+	Q_memset( gDecalPool, 0, sizeof( gDecalPool ));
 	gDecalCount = 0;
 }
 
@@ -288,7 +288,7 @@ static int SHClip( decalvert_t *g_DecalClipVerts, int vertCount, decalvert_t *ou
 		{
 			if( clipFunc.pfnInside( s )) 
 			{
-				Mem_Copy( out, p, sizeof( *out ));
+				Q_memcpy( out, p, sizeof( *out ));
 				outCount++;
 				out++;
 			}
@@ -298,7 +298,7 @@ static int SHClip( decalvert_t *g_DecalClipVerts, int vertCount, decalvert_t *ou
 				out++;
 				outCount++;
 
-				Mem_Copy( out, p, sizeof( *out ));
+				Q_memcpy( out, p, sizeof( *out ));
 				outCount++;
 				out++;
 			}

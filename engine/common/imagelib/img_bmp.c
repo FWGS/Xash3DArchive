@@ -85,7 +85,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		else cbPalBytes = bhdr.colors * sizeof( RGBQUAD );
 	}
 
-	Mem_Copy( palette, buf_p, cbPalBytes );
+	Q_memcpy( palette, buf_p, cbPalBytes );
 
 	if( image.cmd_flags & IL_KEEP_8BIT && bhdr.bitsPerPixel == 8 )
 	{

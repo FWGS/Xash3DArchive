@@ -13,3 +13,6 @@ typedef struct
 }quad_t;
 
 void UI_PopPButtonStack();
+
+// Использовать кусок из btns_main.bmp заместо head_%s.bmp
+//#define TA_ALT_MODE 1

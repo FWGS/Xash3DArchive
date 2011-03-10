@@ -444,7 +444,7 @@ static mstudioanim_t *SV_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 		MsgDev( D_INFO, "loading: %s\n", filepath );
 
 		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( com_studiocache, filesize );
-		Mem_Copy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
+		Q_memcpy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
 		Mem_Free( buf );
 	}
 	return (mstudioanim_t *)((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);
@@ -854,7 +854,7 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 	trace_t		trace;
 
 	// assume we didn't hit anything
-	Mem_Set( &trace, 0, sizeof( trace_t ));
+	Q_memset( &trace, 0, sizeof( trace_t ));
 	VectorCopy( end, trace.endpos );
 	trace.fraction = trace_realfraction = 1.0f;
 	trace.hitgroup = -1;

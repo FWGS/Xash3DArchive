@@ -1568,7 +1568,7 @@ qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state
 	if( fRemoveType )
 	{
 		// check for a remove
-		Mem_Set( to, 0, sizeof( *to ));
+		Q_memset( to, 0, sizeof( *to ));
 
 		if( fRemoveType & 1 )
 		{

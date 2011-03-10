@@ -143,7 +143,7 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 {
 	Netchan_Clear( chan );
 
-	Mem_Set( chan, 0, sizeof( *chan ));
+	Q_memset( chan, 0, sizeof( *chan ));
 	
 	chan->sock = sock;
 	chan->remote_address = adr;
@@ -320,7 +320,7 @@ void Netchan_Clear( netchan_t *chan )
 		chan->incomingready[i] = false;
 	}
 
-	Mem_Set( chan->flow, 0, sizeof( chan->flow ));
+	Q_memset( chan->flow, 0, sizeof( chan->flow ));
 }
 
 /*
@@ -1012,11 +1012,11 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 		{
 			// copy it in
 			cursize -= BF_GetNumBytesRead( msg );
-			Mem_Copy( &buffer[pos], &p->frag_message.pData[BF_GetNumBytesRead( msg )], cursize );
+			Q_memcpy( &buffer[pos], &p->frag_message.pData[BF_GetNumBytesRead( msg )], cursize );
 		}
 		else
 		{
-			Mem_Copy( &buffer[pos], p->frag_message.pData, cursize );
+			Q_memcpy( &buffer[pos], p->frag_message.pData, cursize );
 		}
 
 		pos += cursize;
@@ -1241,7 +1241,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 
 		if( send_from_regular )
 		{
-			Mem_Copy( chan->reliable_buf, chan->message_buf, BF_GetNumBytesWritten( &chan->message ));
+			Q_memcpy( chan->reliable_buf, chan->message_buf, BF_GetNumBytesWritten( &chan->message ));
 			chan->reliable_length = BF_GetNumBitsWritten( &chan->message );
 			BF_Clear( &chan->message );
 

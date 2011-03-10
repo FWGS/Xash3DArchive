@@ -183,14 +183,14 @@ _inline paintbuffer_t *MIX_GetPPaintFromIPaint( int ipaint )
 void MIX_FreeAllPaintbuffers( void )
 {
 	// clear paintbuffer structs
-	Mem_Set( paintbuffers, 0, CPAINTBUFFERS * sizeof( paintbuffer_t ));
+	Q_memset( paintbuffers, 0, CPAINTBUFFERS * sizeof( paintbuffer_t ));
 }
 
 // Initialize paintbuffers array, set current paint buffer to main output buffer IPAINTBUFFER
 void MIX_InitAllPaintbuffers( void )
 {
 	// clear paintbuffer structs
-	Mem_Set( paintbuffers, 0, CPAINTBUFFERS * sizeof( paintbuffer_t ));
+	Q_memset( paintbuffers, 0, CPAINTBUFFERS * sizeof( paintbuffer_t ));
 
 	paintbuffers[IPAINTBUFFER].pbuf = paintbuffer;
 	paintbuffers[IROOMBUFFER].pbuf = roombuffer;
@@ -801,11 +801,11 @@ void MIX_ClearAllPaintBuffers( int SampleCount, qboolean clearFilters )
 	for( i = 0; i < CPAINTBUFFERS; i++ )
 	{
 		if( paintbuffers[i].pbuf != NULL )
-			Mem_Set( paintbuffers[i].pbuf, 0, (count+1) * sizeof( portable_samplepair_t ));
+			Q_memset( paintbuffers[i].pbuf, 0, (count+1) * sizeof( portable_samplepair_t ));
 
 		if( clearFilters )
 		{
-			Mem_Set( paintbuffers[i].fltmem, 0, sizeof( paintbuffers[i].fltmem ));
+			Q_memset( paintbuffers[i].fltmem, 0, sizeof( paintbuffers[i].fltmem ));
 		}
 	}
 
@@ -933,7 +933,7 @@ void MIX_MixStreamBuffer( int end )
 	// clear the paint buffer
 	if( s_listener.paused || s_rawend < paintedtime )
 	{
-		Mem_Set( pbuf, 0, (end - paintedtime) * sizeof( portable_samplepair_t ));
+		Q_memset( pbuf, 0, (end - paintedtime) * sizeof( portable_samplepair_t ));
 	}
 	else
 	{	

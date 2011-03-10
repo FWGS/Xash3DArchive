@@ -432,7 +432,7 @@ fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset,
 				blockread = length;
 
 			// copy the data
-			Mem_Copy( audiodata + result, (void *)( Avi->cpa_dstbuffer + Avi->cpa_blockpos ), blockread );
+			Q_memcpy( audiodata + result, (void *)( Avi->cpa_dstbuffer + Avi->cpa_blockpos ), blockread );
 
 			Avi->cpa_blockpos += blockread;
 			result += blockread;
@@ -471,7 +471,7 @@ void AVI_CloseVideo( movie_state_t *Avi )
 		DeleteDC( Avi->hDC );
 	}
 
-	Mem_Set( Avi, 0, sizeof( movie_state_t ));
+	Q_memset( Avi, 0, sizeof( movie_state_t ));
 }
 
 void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, int quiet )

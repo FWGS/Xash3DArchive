@@ -102,7 +102,7 @@ void CL_PrepareTEnt( TEMPENTITY *pTemp, model_t *pmodel )
 	int	frameCount = 0;
 	int	modelIndex = 0;
 
-	Mem_Set( pTemp, 0, sizeof( *pTemp ));
+	Q_memset( pTemp, 0, sizeof( *pTemp ));
 
 	// Use these to set per-frame and termination conditions / actions
 	pTemp->flags = FTENT_NONE;		
@@ -2126,7 +2126,7 @@ CL_ClearLightStyles
 */
 void CL_ClearLightStyles( void )
 {
-	Mem_Set( cl.lightstyles, 0, sizeof( cl.lightstyles ));
+	Q_memset( cl.lightstyles, 0, sizeof( cl.lightstyles ));
 }
 
 void CL_SetLightstyle( int style, const char *s )
@@ -2181,8 +2181,8 @@ CL_ClearDlights
 */
 void CL_ClearDlights( void )
 {
-	Mem_Set( cl_dlights, 0, sizeof( cl_dlights ));
-	Mem_Set( cl_elights, 0, sizeof( cl_elights ));
+	Q_memset( cl_dlights, 0, sizeof( cl_dlights ));
+	Q_memset( cl_elights, 0, sizeof( cl_elights ));
 }
 
 /*
@@ -2204,7 +2204,7 @@ dlight_t *CL_AllocDlight( int key )
 			if( dl->key == key )
 			{
 				// reuse this light
-				Mem_Set( dl, 0, sizeof( *dl ));
+				Q_memset( dl, 0, sizeof( *dl ));
 				dl->key = key;
 				return dl;
 			}
@@ -2216,7 +2216,7 @@ dlight_t *CL_AllocDlight( int key )
 	{
 		if( dl->die < cl.time )
 		{
-			Mem_Set( dl, 0, sizeof( *dl ));
+			Q_memset( dl, 0, sizeof( *dl ));
 			dl->key = key;
 			return dl;
 		}
@@ -2224,7 +2224,7 @@ dlight_t *CL_AllocDlight( int key )
 
 	// otherwise grab first dlight
 	dl = &cl_dlights[0];
-	Mem_Set( dl, 0, sizeof( *dl ));
+	Q_memset( dl, 0, sizeof( *dl ));
 	dl->key = key;
 
 	return dl;
@@ -2249,7 +2249,7 @@ dlight_t *CL_AllocElight( int key )
 			if( dl->key == key )
 			{
 				// reuse this light
-				Mem_Set( dl, 0, sizeof( *dl ));
+				Q_memset( dl, 0, sizeof( *dl ));
 				dl->key = key;
 				return dl;
 			}
@@ -2261,7 +2261,7 @@ dlight_t *CL_AllocElight( int key )
 	{
 		if( dl->die < cl.time )
 		{
-			Mem_Set( dl, 0, sizeof( *dl ));
+			Q_memset( dl, 0, sizeof( *dl ));
 			dl->key = key;
 			return dl;
 		}
@@ -2269,7 +2269,7 @@ dlight_t *CL_AllocElight( int key )
 
 	// otherwise grab first dlight
 	dl = &cl_elights[0];
-	Mem_Set( dl, 0, sizeof( *dl ));
+	Q_memset( dl, 0, sizeof( *dl ));
 	dl->key = key;
 
 	return dl;
@@ -2297,7 +2297,7 @@ void CL_DecayLights( void )
 		if( dl->radius < 0 ) dl->radius = 0;
 
 		if( dl->die < cl.time || !dl->radius ) 
-			Mem_Set( dl, 0, sizeof( *dl ));
+			Q_memset( dl, 0, sizeof( *dl ));
 	}
 
 	for( i = 0, dl = cl_elights; i < MAX_ELIGHTS; i++, dl++ )
@@ -2308,7 +2308,7 @@ void CL_DecayLights( void )
 		if( dl->radius < 0 ) dl->radius = 0;
 
 		if( dl->die < cl.time || !dl->radius ) 
-			Mem_Set( dl, 0, sizeof( *dl ));
+			Q_memset( dl, 0, sizeof( *dl ));
 	}
 }
 
@@ -2507,7 +2507,7 @@ void CL_ClearEfrags( void )
 {
 	int	i;
 
-	Mem_Set( cl_efrags, 0, sizeof( cl_efrags ));
+	Q_memset( cl_efrags, 0, sizeof( cl_efrags ));
 
 	// allocate the efrags and chain together into a free list
 	cl.free_efrags = cl_efrags;

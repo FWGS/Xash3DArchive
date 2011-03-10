@@ -19,8 +19,6 @@
 #define LAUNCH_DLL				// ignore alias names
 #include "launch_api.h"
 
-#define XASH_VERSION		0.75f	// current version will be shared across gameinfo struct
-
 #define MAX_NUM_ARGVS		128
 
 // just for last chanse to view message (debug only)
@@ -86,21 +84,18 @@ void Con_ShowConsole( qboolean show );
 void Con_Print( const char *pMsg );
 void Con_CreateConsole( void );
 void Con_DestroyConsole( void );
-char *Sys_Input( void );
 void Con_RegisterHotkeys( void );
 void Con_DisableInput( void );
+char *Con_Input( void );
 
 //
 // system.c
 //
 void Sys_InitCPU( void );
-gameinfo_t Sys_GameInfo( void );
 void Sys_ParseCommandLine( LPSTR lpCmdLine );
 void Sys_LookupInstance( void );
 void Sys_NewInstance( const char *name, const char *fmsg );
 double Sys_DoubleTime( void );
-char *Sys_GetClipboardData( void );
-char *Sys_GetCurrentUser( void );
 void Sys_Sleep( int msec );
 void Sys_Init( void );
 void Sys_Exit( void );
@@ -108,7 +103,6 @@ int Sys_CheckParm( const char *parm );
 qboolean Sys_GetParmFromCmdLine( char *parm, char *out, size_t size );
 qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll );
 void* Sys_GetProcAddress ( dll_info_t *dll, const char* name );
-void Sys_ShellExecute( const char *path, const char *parms, qboolean exit );
 qboolean Sys_FreeLibrary ( dll_info_t *dll );
 void Sys_WaitForQuit( void );
 void Sys_InitLog( void );
@@ -119,8 +113,6 @@ void Sys_PrintLog( const char *pMsg );
 void Sys_Print( const char *pMsg );
 void Sys_Msg( const char *pMsg, ... );
 void Sys_MsgDev( int level, const char *pMsg, ... );
-sys_event_t Sys_GetEvent( void );
-void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr );
 
 #define Msg Sys_Msg
 #define MsgDev Sys_MsgDev

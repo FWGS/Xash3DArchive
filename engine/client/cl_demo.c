@@ -143,8 +143,8 @@ void CL_WriteDemoHeader( const char *name )
 	}
 
 	// baselines
-	Mem_Set( &nullstate, 0, sizeof( nullstate ));
-	Mem_Set( &nullmovevars, 0, sizeof( nullmovevars ));
+	Q_memset( &nullstate, 0, sizeof( nullstate ));
+	Q_memset( &nullmovevars, 0, sizeof( nullmovevars ));
 
 	for( i = 0; i < clgame.maxEntities; i++ )
 	{
