@@ -17,7 +17,7 @@ static dllfunc_t dsound_funcs[] =
 { NULL, NULL }
 };
 
-dll_info_t dsound_dll = { "dsound.dll", dsound_funcs, NULL, NULL, NULL, false, 0, 0 };
+dll_info_t dsound_dll = { "dsound.dll", dsound_funcs, false };
 
 #define SAMPLE_16BIT_SHIFT		1
 #define SECONDARY_BUFFER_SIZE		0x10000
@@ -285,7 +285,7 @@ si_state_t SNDDMA_InitDirect( void *hInst )
 
 	if( !dsound_dll.link )
 	{
-		if( !Sys_LoadLibrary( NULL, &dsound_dll ))
+		if( !Sys_LoadLibrary( &dsound_dll ))
 			return SIS_FAILURE;
 	}
 

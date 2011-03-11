@@ -33,6 +33,33 @@ enum state_e
 	SYS_FRAME,
 };
 
+/*
+========================================================================
+internal dll's loader
+
+two main types - native dlls and other win32 libraries will be recognized automatically
+NOTE: never change this structure because all dll descriptions in xash code
+writes into struct by offsets not names
+========================================================================
+*/
+typedef struct { const char *name; void **func; } dllfunc_t; // Sys_LoadLibrary stuff
+typedef struct dll_info_s
+{
+	const char	*name;	// name of library
+
+	// generic interface
+	const dllfunc_t	*fcts;	// list of dll exports	
+	const char	*entry;	// entrypoint name (internal libs only)
+	void		*link;	// hinstance of loading library
+
+	// xash interface
+	void		*(*main)( void*, void* );
+	qboolean		crash;	// crash if dll not found
+
+	size_t		api_size;	// interface size
+	size_t		com_size;	// main interface size == sizeof( stdilib_api_t )
+} dll_info_t;
+
 typedef struct system_s
 {
 	char			progname[64];		// instance keyword
@@ -61,7 +88,6 @@ typedef struct system_s
 	qboolean			con_showalways;
 	qboolean			con_showcredits;
 	qboolean			con_silentmode;
-	byte			*basepool;
 	qboolean			shutdown_issued;
 	qboolean			error;
 
@@ -91,7 +117,6 @@ char *Con_Input( void );
 //
 // system.c
 //
-void Sys_InitCPU( void );
 void Sys_ParseCommandLine( LPSTR lpCmdLine );
 void Sys_LookupInstance( void );
 void Sys_NewInstance( const char *name, const char *fmsg );
@@ -120,85 +145,8 @@ void Sys_MsgDev( int level, const char *pMsg, ... );
 //
 // stdlib.c
 //
-void com_strnupr(const char *in, char *out, size_t size_out);
-void com_strupr(const char *in, char *out);
-void com_strnlwr(const char *in, char *out, size_t size_out);
-void com_strlwr(const char *in, char *out);
-int com_strlen( const char *string );
-int com_cstrlen( const char *string );
-char com_toupper(const char in );
-char com_tolower(const char in );
-size_t com_strncat(char *dst, const char *src, size_t siz);
-size_t com_strcat(char *dst, const char *src );
-size_t com_strncpy(char *dst, const char *src, size_t siz);
-size_t com_strcpy(char *dst, const char *src );
-char *com_stralloc(byte *mempool, const char *s, const char *filename, int fileline);
-qboolean com_isdigit( const char *str );
-int com_atoi(const char *str);
-float com_atof(const char *str);
-void com_atov( float *vec, const char *str, size_t siz );
-char *com_strchr(const char *s, char c);
-char *com_strrchr(const char *s, char c);
-int com_strnicmp(const char *s1, const char *s2, int n);
-int com_stricmp(const char *s1, const char *s2);
-int com_strncmp (const char *s1, const char *s2, int n);
-int com_strcmp (const char *s1, const char *s2);
-qboolean com_stricmpext( const char *s1, const char *s2 );
-const char* com_timestamp( int format );
-char *com_stristr( const char *string, const char *string2 );
-char *com_strstr( const char *string, const char *string2 );
-int com_vsnprintf(char *buffer, size_t buffersize, const char *format, va_list args);
-int com_vsprintf(char *buffer, const char *format, va_list args);
-int com_snprintf(char *buffer, size_t buffersize, const char *format, ...);
-int com_sprintf(char *buffer, const char *format, ...);
-char *com_pretifymem( float value, int digitsafterdecimal );
-char *va(const char *format, ...);
-#define copystring( str ) com_stralloc( NULL, str, __FILE__, __LINE__)
-#define copystring2( pool, str ) com_stralloc( pool, str, __FILE__, __LINE__)
-
-//
-// memlib.c
-//
-void Memory_Init( void );
-void Memory_Shutdown( void );
-void _mem_move(byte *poolptr, void **dest, void *src, size_t size, const char *filename, int fileline);
-void *_mem_realloc(byte *poolptr, void *memptr, size_t size, const char *filename, int fileline);
-void _com_mem_copy(void *dest, const void *src, size_t size, const char *filename, int fileline);
-void _crt_mem_copy(void *dest, const void *src, size_t size, const char *filename, int fileline);
-void _asm_mem_copy(void *dest, const void *src, size_t size, const char *filename, int fileline);
-void _mmx_mem_copy(void *dest, const void *src, size_t size, const char *filename, int fileline);
-void _amd_mem_copy(void *dest, const void *src, size_t size, const char *filename, int fileline);
-void _com_mem_set(void *dest, int set, size_t size, const char *filename, int fileline);
-void _crt_mem_set(void *dest, int set, size_t size, const char *filename, int fileline);
-void _asm_mem_set(void* dest, int set, size_t size, const char *filename, int fileline);
-void _mmx_mem_set(void* dest, int set, size_t size, const char *filename, int fileline);
-void *_mem_alloc(byte *poolptr, size_t size, const char *filename, int fileline);
-byte *_mem_allocpool(const char *name, const char *filename, int fileline);
-void _mem_freepool(byte **poolptr, const char *filename, int fileline);
-void _mem_emptypool(byte *poolptr, const char *filename, int fileline);
-void _mem_free(void *data, const char *filename, int fileline);
-void _mem_check(const char *filename, int fileline);
-qboolean _is_allocated( byte *poolptr, void *data);
-void _mem_printlist(size_t minallocationsize);
-void _mem_printstats(void);
-
-#define Mem_Alloc(pool, size) _mem_alloc(pool, size, __FILE__, __LINE__)
-#define Mem_Realloc(pool, ptr, size) _mem_realloc(pool, ptr, size, __FILE__, __LINE__)
-#define Mem_Free(mem) _mem_free(mem, __FILE__, __LINE__)
-#define Mem_AllocPool(name) _mem_allocpool(name, __FILE__, __LINE__)
-#define Mem_FreePool(pool) _mem_freepool(pool, __FILE__, __LINE__)
-#define Mem_EmptyPool(pool) _mem_emptypool(pool, __FILE__, __LINE__)
-#define Mem_Move(pool, dest, src, size ) _mem_move(pool, dest, src, size, __FILE__, __LINE__)
-#define Mem_Copy(dest, src, size ) com.memcpy(dest, src, size, __FILE__, __LINE__)
-#define Mem_Set(dest, val, size ) com.memset(dest, val, size, __FILE__, __LINE__)
-#define Mem_IsAllocated( mem ) _is_allocated( NULL, mem )
-#define Mem_Check() _mem_check(__FILE__, __LINE__)
-#define Mem_Pretify( x ) com_pretifymem(x, 3)
-#define Malloc( size ) Mem_Alloc( Sys.basepool, size )
-
-//
-// parselib.c
-//
+char *va( const char *format, ... );
+const char* timestamp( int format );
 void Com_FileBase( const char *in, char *out );
 
 #endif//LAUNCHER_H

@@ -694,7 +694,7 @@ pfnMemAlloc
 */
 static void *pfnMemAlloc( size_t cb, const char *filename, const int fileline )
 {
-	return com.malloc( menu.mempool, cb, filename, fileline );
+	return _Mem_Alloc( menu.mempool, cb, filename, fileline );
 }
 
 /*
@@ -705,7 +705,7 @@ pfnMemFree
 */
 static void pfnMemFree( void *mem, const char *filename, const int fileline )
 {
-	com.free( mem, filename, fileline );
+	_Mem_Free( mem, filename, fileline );
 }
 
 /*

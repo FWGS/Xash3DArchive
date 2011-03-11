@@ -116,14 +116,6 @@ SOURCE=.\console.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\cpuinfo.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\memlib.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\stdlib.c
 # End Source File
 # Begin Source File

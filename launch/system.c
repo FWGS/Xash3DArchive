@@ -8,6 +8,7 @@
 
 
 system_t		Sys;
+sysinfo_t		SI;
 stdlib_api_t	com;
 
 dll_info_t engine_dll = { "engine.dll", NULL, "CreateAPI", NULL, NULL, 1, sizeof( launch_exp_t ), sizeof( stdlib_api_t ) };
@@ -38,59 +39,6 @@ void Sys_GetStdAPI( void )
 	com.Com_GetParm = Sys_GetParmFromCmdLine;	// get argument for specified parm
 	com.input = Con_Input;
 
-	// memlib.c
-	com.memcpy = _crt_mem_copy;			// first time using
-	com.memset = _crt_mem_set;			// first time using
-	com.realloc = _mem_realloc;
-	com.move = _mem_move;
-	com.malloc = _mem_alloc;
-	com.free = _mem_free;
-	com.is_allocated = _is_allocated;
-	com.mallocpool = _mem_allocpool;
-	com.freepool = _mem_freepool;
-	com.clearpool = _mem_emptypool;
-	com.memcheck = _mem_check;
-	com.memlist = _mem_printlist;
-	com.memstats = _mem_printstats;
-
-	com.Com_LoadLibrary = Sys_LoadLibrary;		// load library 
-	com.Com_FreeLibrary = Sys_FreeLibrary;		// free library
-	com.Com_GetProcAddress = Sys_GetProcAddress;	// gpa
-
-	// stdlib.c funcs
-	com.strnupr = com_strnupr;
-	com.strnlwr = com_strnlwr;
-	com.strupr = com_strupr;
-	com.strlwr = com_strlwr;
-	com.strlen = com_strlen;
-	com.cstrlen = com_cstrlen;
-	com.toupper = com_toupper;
-	com.tolower = com_tolower;
-	com.strncat = com_strncat;
-	com.strcat = com_strcat;
-	com.strncpy = com_strncpy;
-	com.strcpy = com_strcpy;
-	com.is_digit = com_isdigit;
-	com.atoi = com_atoi;
-	com.atof = com_atof;
-	com.atov = com_atov;
-	com.strchr = com_strchr;
-	com.strrchr = com_strrchr;
-	com.strnicmp = com_strnicmp;
-	com.stricmp = com_stricmp;
-	com.strncmp = com_strncmp;
-	com.strcmp = com_strcmp;
-	com.stristr = com_stristr;
-	com.strstr = com_strstr;
-	com.vsprintf = com_vsprintf;
-	com.sprintf = com_sprintf;
-	com.stricmpext = com_stricmpext;
-	com.va = va;
-	com.vsnprintf = com_vsnprintf;
-	com.snprintf = com_snprintf;
-	com.pretifymem = com_pretifymem;
-	com.timestamp = com_timestamp;
-
 	com.SysInfo = &SI;
 }
 
@@ -108,42 +56,42 @@ NOTE: at this day we have ten instances
 */
 void Sys_LookupInstance( void )
 {
-	char	szTemp[4096];
+	char	szTemp[128];
 	qboolean	dedicated = false;
 
 	Sys.app_name = HOST_OFFLINE;
 	// we can specified custom name, from Sys_NewInstance
-	if( GetModuleFileName( NULL, szTemp, MAX_SYSPATH ) && Sys.app_state != SYS_RESTART )
+	if( GetModuleFileName( NULL, szTemp, sizeof( szTemp )) && Sys.app_state != SYS_RESTART )
 		Com_FileBase( szTemp, SI.ModuleName );
 
 	// determine host type
 	if( SI.ModuleName[0] == '#' || SI.ModuleName[0] == '©' )
 	{
 		if( SI.ModuleName[0] == '#' ) dedicated = true;
-		if( SI.ModuleName[0] == '©' ) com.strcpy( Sys.progname, "credits" );
+		if( SI.ModuleName[0] == '©' ) strcpy( Sys.progname, "credits" );
 
 		// cutoff hidden symbols
-		com.strncpy( szTemp, SI.ModuleName + 1, MAX_SYSPATH );
-		com.strncpy( SI.ModuleName, szTemp, MAX_SYSPATH );			
+		strncpy( szTemp, SI.ModuleName + 1, sizeof( szTemp ));
+		strncpy( SI.ModuleName, szTemp, sizeof( SI.ModuleName ));			
 	}
 
 	if( Sys.progname[0] == '$' )
 	{
 		// custom path came from executable, otherwise can't be modified 
-		com.strncpy( SI.ModuleName, Sys.progname + 1, MAX_SYSPATH );
-		com.strncpy( Sys.progname, "normal", MAX_SYSPATH ); // set as "normal"		
+		strncpy( SI.ModuleName, Sys.progname + 1, sizeof( SI.ModuleName ));
+		strncpy( Sys.progname, "normal", sizeof( Sys.progname )); // set as "normal"		
 	}
 
 	// lookup all instances
-	if( !com.strcmp( Sys.progname, "credits" ))
+	if( !strcmp( Sys.progname, "credits" ))
 	{
 		Sys.app_name = HOST_CREDITS;		// easter egg
 		Sys.linked_dll = NULL;		// no need to loading library
 		Sys.log_active = Sys.developer = 0;	// clear all dbg states
-		com.strcpy( Sys.caption, "About" );
+		strcpy( Sys.caption, "About" );
 		Sys.con_showcredits = true;
 	}
-	else if( !com.strcmp( Sys.progname, "normal" ))
+	else if( !strcmp( Sys.progname, "normal" ))
 	{
 		if( dedicated )
 		{
@@ -162,21 +110,19 @@ void Sys_LookupInstance( void )
 			CloseHandle( Sys.hMutex );
 			Sys.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
 			if( !Sys.developer ) Sys.developer = 3;	// otherwise we see empty console
-			com.sprintf( Sys.log_path, "dedicated.log", com.timestamp( TIME_FILENAME )); // logs folder
+			strcpy( Sys.log_path, "dedicated.log" );
 		}
 		else
 		{
 			Sys.app_name = HOST_NORMAL;
 			Sys.con_readonly = true;
 			// don't show console as default
-			if( Sys.developer < D_WARN )
-				Sys.con_showalways = false;
-
-			com.sprintf( Sys.log_path, "engine.log", com.timestamp( TIME_FILENAME )); // logs folder
+			if( Sys.developer < D_WARN ) Sys.con_showalways = false;
+			strcpy( Sys.log_path, "engine.log" );
 		}
 
 		Sys.linked_dll = &engine_dll;	// pointer to engine.dll info
-		com.strcpy( Sys.caption, "Xash3D" );
+		strcpy( Sys.caption, "Xash3D" );
 	}
 
 	// share instance over all system
@@ -212,7 +158,7 @@ void Sys_CreateInstance( void )
 		Sys.Crashed = Host->Crashed;
 		break;
 	case HOST_CREDITS:
-		Sys_Break( show_credits, com.timestamp( TIME_YEAR_ONLY ));
+		Sys_Break( show_credits, timestamp( TIME_YEAR_ONLY ));
 		break;
 	case HOST_OFFLINE:
 		Sys_Break( "Host offline\n" );		
@@ -285,18 +231,18 @@ void Sys_MergeCommandLine( LPSTR lpCmdLine )
 	for( i = 0; i < Sys.argc; i++ )
 	{
 		// we wan't return to first game
-		if( !com.stricmp( "-game", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
+		if( !stricmp( "-game", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// probably it's timewaster, because engine rejected second change
-		if( !com.stricmp( "+game", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
+		if( !stricmp( "+game", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// you sure what is map exists in new game?
-		if( !com.stricmp( "+map", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
+		if( !stricmp( "+map", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// just stupid action
-		if( !com.stricmp( "+load", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
+		if( !stricmp( "+load", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 		// changelevel beetwen games? wow it's great idea!
-		if( !com.stricmp( "+changelevel", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
+		if( !stricmp( "+changelevel", Sys.argv[i] )) Sys.argv[i] = (char *)blank;
 
 		// second call
-		if( Sys.app_name == HOST_DEDICATED && !com.strnicmp( "+menu_", Sys.argv[i], 6 ))
+		if( Sys.app_name == HOST_DEDICATED && !strnicmp( "+menu_", Sys.argv[i], 6 ))
 			Sys.argv[i] = (char *)blank;
 	}
 }
@@ -322,8 +268,8 @@ void Sys_Print( const char *pMsg )
 		Sys.CPrint( pMsg );
 
 	// if the message is REALLY long, use just the last portion of it
-	if( com.strlen( pMsg ) > sizeof( buffer ) - 1 )
-		msg = pMsg + com.strlen( pMsg ) - sizeof( buffer ) + 1;
+	if( strlen( pMsg ) > sizeof( buffer ) - 1 )
+		msg = pMsg + strlen( pMsg ) - sizeof( buffer ) + 1;
 	else msg = pMsg;
 
 	// copy into an intermediate buffer
@@ -388,7 +334,7 @@ void Sys_Msg( const char *pMsg, ... )
 	char	text[8192];
 	
 	va_start( argptr, pMsg );
-	com.vsnprintf( text, sizeof( text ), pMsg, argptr );
+	_vsnprintf( text, sizeof( text ), pMsg, argptr );
 	va_end( argptr );
 
 	Sys_Print( text );
@@ -402,7 +348,7 @@ void Sys_MsgDev( int level, const char *pMsg, ... )
 	if( Sys.developer < level ) return;
 
 	va_start( argptr, pMsg );
-	com.vsnprintf( text, sizeof( text ), pMsg, argptr );
+	_vsnprintf( text, sizeof( text ), pMsg, argptr );
 	va_end( argptr );
 
 	switch( level )
@@ -458,7 +404,7 @@ int Sys_CheckParm( const char *parm )
 	{
 		// NEXTSTEP sometimes clears appkit vars.
 		if( !Sys.argv[i] ) continue;
-		if( !com.stricmp( parm, Sys.argv[i] )) return i;
+		if( !stricmp( parm, Sys.argv[i] )) return i;
 	}
 	return 0;
 }
@@ -478,7 +424,7 @@ qboolean Sys_GetParmFromCmdLine( char *parm, char *out, size_t size )
 	if( !out ) return false;	
 	if( !Sys.argv[argc + 1] ) return false;
 
-	com.strncpy( out, Sys.argv[argc+1], size );
+	strncpy( out, Sys.argv[argc+1], size );
 	return true;
 }
 
@@ -507,7 +453,8 @@ void Sys_WaitForQuit( void )
 	MSG	msg;
 
 	Con_RegisterHotkeys();		
-	Mem_Set( &msg, 0, sizeof( msg ));
+
+	msg.message = 0;
 
 	// wait for the user to quit
 	while( msg.message != WM_QUIT )
@@ -545,7 +492,7 @@ void Sys_Error( const char *error, ... )
 	Sys.error = true;
 	Sys.app_state = SYS_ERROR;	
 	va_start( argptr, error );
-	com.vsprintf( text, error, argptr );
+	vsprintf( text, error, argptr );
 	va_end( argptr );
 
 	if( Sys.app_name == HOST_NORMAL )
@@ -575,7 +522,7 @@ void Sys_Break( const char *error, ... )
 		return; // don't multiple executes
          
 	va_start( argptr, error );
-	com.vsprintf( text, error, argptr );
+	vsprintf( text, error, argptr );
 	va_end( argptr );
 
 	Sys.error = true;	
@@ -661,8 +608,8 @@ void Sys_Init( void )
 	{
 		if( Sys_GetParmFromCmdLine( "-dev", dev_level, sizeof( dev_level )))
 		{
-			if( com.is_digit( dev_level ))
-				Sys.developer = abs( com.atoi( dev_level ));
+			if( isdigit( dev_level[0] ))
+				Sys.developer = abs( atoi( dev_level ));
 			else Sys.developer++; // -dev == 1, -dev -console == 2
 		}
 		else Sys.developer++; // -dev == 1, -dev -console == 2
@@ -687,14 +634,11 @@ void Sys_Init( void )
 	// first text message into console or log 
 	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading launch.dll - ok\n" );
 
-	if( com.strlen( Sys.fmessage ) && !Sys.con_showcredits )
+	if( strlen( Sys.fmessage ) && !Sys.con_showcredits )
 	{
 		Sys_Print( Sys.fmessage );
 		Sys.fmessage[0] = '\0';
 	}
-
-	Memory_Init();
-	Sys_InitCPU();
 
 	SI.developer = Sys.developer;
 	Sys_CreateInstance();
@@ -707,7 +651,6 @@ void Sys_Shutdown( void )
 	Sys_FreeLibrary( Sys.linked_dll );
 	Sys.CPrint = NullPrint;
 
-	Memory_Shutdown();
 	Con_DestroyConsole();
 
 	// restore filter	
@@ -769,7 +712,7 @@ qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll )
 	// no DLL found
 	if( !dll->link ) 
 	{
-		com.sprintf( errorstring, "Sys_LoadLibrary: couldn't load %s\n", dll->name );
+		sprintf( errorstring, "Sys_LoadLibrary: couldn't load %s\n", dll->name );
 		goto error;
 	}
 
@@ -777,7 +720,7 @@ qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll )
 	{
 		if(( dll->main = Sys_GetProcAddress( dll, dll->entry )) == 0 )
 		{
-			com.sprintf( errorstring, "Sys_LoadLibrary: %s has no valid entry point\n", dll->name );
+			sprintf( errorstring, "Sys_LoadLibrary: %s has no valid entry point\n", dll->name );
 			goto error;
 		}
 	}
@@ -788,7 +731,7 @@ qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll )
 		{
 			if( !( *func->func = Sys_GetProcAddress( dll, func->name )))
 			{
-				com.sprintf( errorstring, "Sys_LoadLibrary: %s missing or invalid function (%s)\n", dll->name, func->name );
+				sprintf( errorstring, "Sys_LoadLibrary: %s missing or invalid function (%s)\n", dll->name, func->name );
 				goto error;
 			}
 		}
@@ -804,17 +747,17 @@ qboolean Sys_LoadLibrary( const char *dll_name, dll_info_t *dll )
 
 		if( !check ) 
 		{
-			com.sprintf( errorstring, "Sys_LoadLibrary: \"%s\" have no export\n", dll->name );
+			sprintf( errorstring, "Sys_LoadLibrary: \"%s\" have no export\n", dll->name );
 			goto error;
 		}
 		if( check->api_size != dll->api_size )
 		{
-			com.sprintf( errorstring, "Sys_LoadLibrary: \"%s\" mismatch interface size (%i should be %i)\n", dll->name, check->api_size, dll->api_size );
+			sprintf( errorstring, "Sys_LoadLibrary: \"%s\" mismatch interface size (%i should be %i)\n", dll->name, check->api_size, dll->api_size );
 			goto error;
 		}	
 		if( check->com_size != dll->com_size )
 		{
-			com.sprintf( errorstring, "Sys_LoadLibrary: \"%s\" mismatch stdlib api size (%i should be %i)\n", dll->name, check->com_size, dll->com_size);
+			sprintf( errorstring, "Sys_LoadLibrary: \"%s\" mismatch stdlib api size (%i should be %i)\n", dll->name, check->com_size, dll->com_size);
 			goto error;
 		}
 	}
@@ -870,13 +813,13 @@ void Sys_NewInstance( const char *name, const char *fmsg )
 	string	tmp;
 
 	// save parms
-	com.strncpy( tmp, name, sizeof( tmp ));
-	com.strncpy( Sys.fmessage, fmsg, sizeof( Sys.fmessage ));
+	strncpy( tmp, name, sizeof( tmp ));
+	strncpy( Sys.fmessage, fmsg, sizeof( Sys.fmessage ));
 	Sys.app_state = SYS_RESTART;	// set right state
 	Sys_Shutdown();		// shutdown current instance
 
 	// restore parms here
-	com.strncpy( SI.ModuleName, tmp, sizeof( SI.ModuleName ));
+	strncpy( SI.ModuleName, tmp, sizeof( SI.ModuleName ));
 
 	// NOTE: we never return to old instance,
 	// because Sys_Exit call exit(0); and terminate program
@@ -898,7 +841,7 @@ Main Entry Point
 */
 EXPORT int CreateAPI( const char *hostname, qboolean console )
 {
-	com_strncpy( Sys.progname, hostname, sizeof( Sys.progname ));
+	strncpy( Sys.progname, hostname, sizeof( Sys.progname ));
 
 	Sys_Init();
 	Sys.Main();

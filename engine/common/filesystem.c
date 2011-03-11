@@ -2228,7 +2228,7 @@ file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedi
 
 void FS_FreeFile( void *buffer )
 {
-	if( buffer && Mem_IsAllocated( fs_mempool, buffer ))
+	if( buffer && Mem_IsAllocatedExt( fs_mempool, buffer ))
 		Mem_Free( buffer ); 
 }
 

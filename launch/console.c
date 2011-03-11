@@ -72,7 +72,7 @@ void Con_SetInputText( const char *inputText )
 	if( Sys.con_readonly ) return;
 
 	SetWindowText( s_wcd.hwndInputLine, inputText );
-	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, com.strlen( inputText ), -1 );
+	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, strlen( inputText ), -1 );
 }
 
 static int Con_KeyEvent( int key, qboolean down )
@@ -179,13 +179,13 @@ long _stdcall Con_InputLineProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		if( wParam == 13 && Sys.app_state != SYS_ERROR )
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ));
-			com.strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - com.strlen( s_wcd.consoleText ) - 5 );
-			com.strcat( s_wcd.consoleText, "\n" );
+			strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - strlen( s_wcd.consoleText ) - 5 );
+			strcat( s_wcd.consoleText, "\n" );
 			SetWindowText( s_wcd.hwndInputLine, "" );
 			Msg( ">%s\n", inputBuffer );
 
 			// copy line to history buffer
-			com.strncpy( s_wcd.historyLines[s_wcd.nextHistoryLine % COMMAND_HISTORY], inputBuffer, MAX_STRING );
+			strncpy( s_wcd.historyLines[s_wcd.nextHistoryLine % COMMAND_HISTORY], inputBuffer, MAX_STRING );
 			s_wcd.nextHistoryLine++;
 			s_wcd.historyLine = s_wcd.nextHistoryLine;
 			return 0;
@@ -212,7 +212,7 @@ print into window console
 */
 void Con_Print( const char *pMsg )
 {
-	size_t	len = com.strlen( pMsg );
+	size_t	len = strlen( pMsg );
 
 	// replace selection instead of appending if we're overflowing
 	s_wcd.outLen += len;
@@ -278,7 +278,7 @@ void Con_CreateConsole( void )
 		rect.right = 536;
 		rect.top = 0;
 		rect.bottom = 280;
-		com.strncpy( FontName, "Arial", sizeof( FontName ));
+		strncpy( FontName, "Arial", sizeof( FontName ));
 		fontsize = 16;
 	}
 	else if( Sys.con_readonly )
@@ -287,7 +287,7 @@ void Con_CreateConsole( void )
 		rect.right = 536;
 		rect.top = 0;
 		rect.bottom = 364;
-		com.strncpy( FontName, "Fixedsys", sizeof( FontName ));
+		strncpy( FontName, "Fixedsys", sizeof( FontName ));
 		fontsize = 8;
 	}
 	else // dedicated console
@@ -296,11 +296,11 @@ void Con_CreateConsole( void )
 		rect.right = 640;
 		rect.top = 0;
 		rect.bottom = 392;
-		com.strncpy( FontName, "System", sizeof( FontName ));
+		strncpy( FontName, "System", sizeof( FontName ));
 		fontsize = 14;
 	}
 
-	com.strncpy( Title, Sys.caption, sizeof( Title ));
+	strncpy( Title, Sys.caption, sizeof( Title ));
 	AdjustWindowRect( &rect, DEDSTYLE, FALSE );
 
 	hDC = GetDC( GetDesktopWindow() );
@@ -402,7 +402,7 @@ char *Con_Input( void )
 	if( s_wcd.consoleText[0] == 0 )
 		return NULL;
 		
-	com.strncpy( s_wcd.returnedText, s_wcd.consoleText, sizeof( s_wcd.returnedText ));
+	strncpy( s_wcd.returnedText, s_wcd.consoleText, sizeof( s_wcd.returnedText ));
 	s_wcd.consoleText[0] = 0;
 	
 	return s_wcd.returnedText;
@@ -445,29 +445,29 @@ void Sys_InitLog( void )
 		if(!Sys.logfile) MsgDev( D_ERROR, "Sys_InitLog: can't create log file %s\n", Sys.log_path );
 
 		fprintf( Sys.logfile, "=======================================================================\n" );
-		fprintf( Sys.logfile, "\t%s started at %s\n", Sys.caption, com.timestamp( TIME_FULL ));
+		fprintf( Sys.logfile, "\t%s started at %s\n", Sys.caption, timestamp( TIME_FULL ));
 		fprintf( Sys.logfile, "=======================================================================\n");
 	}
 }
 
 void Sys_CloseLog( void )
 {
-	string	event_name;
+	char	event_name[32];
 
 	// continue logged
 	switch( Sys.app_state )
 	{
-	case SYS_CRASH: com.strncpy( event_name, "crashed", sizeof( event_name )); break;
-	case SYS_ERROR: com.strncpy( event_name, "stopped with error", sizeof( event_name )); break;
-	case SYS_RESTART: com.strncpy( event_name, "restarted", sizeof( event_name )); break;
-	default: com.strncpy( event_name, "stopped", sizeof( event_name )); break;
+	case SYS_CRASH: strncpy( event_name, "crashed", sizeof( event_name )); break;
+	case SYS_ERROR: strncpy( event_name, "stopped with error", sizeof( event_name )); break;
+	case SYS_RESTART: strncpy( event_name, "restarted", sizeof( event_name )); break;
+	default: strncpy( event_name, "stopped", sizeof( event_name )); break;
 	}
 
 	if( Sys.logfile )
 	{
 		fprintf( Sys.logfile, "\n");
 		fprintf( Sys.logfile, "=======================================================================");
-		fprintf( Sys.logfile, "\n\t%s %s at %s\n", Sys.caption, event_name, com.timestamp(TIME_FULL));
+		fprintf( Sys.logfile, "\n\t%s %s at %s\n", Sys.caption, event_name, timestamp( TIME_FULL ));
 		fprintf( Sys.logfile, "=======================================================================\n");
 		if( Sys.app_state == SYS_RESTART ) fprintf( Sys.logfile, "\n" ); // just for tabulate
 

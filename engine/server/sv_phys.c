@@ -67,7 +67,7 @@ void SV_CheckAllEnts( void )
 			continue;
 		}
 
-		if( !e->pvPrivateData || !Mem_IsAllocated( svgame.mempool, e->pvPrivateData ))
+		if( !e->pvPrivateData || !Mem_IsAllocatedExt( svgame.mempool, e->pvPrivateData ))
 		{
 			MsgDev( D_ERROR, "Entity %s (%i) trashed private data.\n", SV_ClassName( e ), i );
 			e->pvPrivateData = NULL;

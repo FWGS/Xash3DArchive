@@ -484,6 +484,10 @@ SOURCE=.\common\vgui_int.cpp
 
 SOURCE=.\common\world.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\common\zone.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 

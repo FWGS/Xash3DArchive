@@ -20,7 +20,7 @@ static dllfunc_t msvfw_funcs[] =
 { NULL, NULL }
 };
 
-dll_info_t msvfw_dll = { "msvfw32.dll", msvfw_funcs, NULL, NULL, NULL, false };
+dll_info_t msvfw_dll = { "msvfw32.dll", msvfw_funcs, false };
 
 // msacm32.dll exports
 static MMRESULT (_stdcall *pacmStreamOpen)( LPHACMSTREAM, HACMDRIVER, LPWAVEFORMATEX, LPWAVEFORMATEX, LPWAVEFILTER, DWORD, DWORD, DWORD );
@@ -41,7 +41,7 @@ static dllfunc_t msacm_funcs[] =
 { NULL, NULL }
 };
 
-dll_info_t msacm_dll = { "msacm32.dll", msacm_funcs, NULL, NULL, NULL, false };
+dll_info_t msacm_dll = { "msacm32.dll", msacm_funcs, false };
 
 // avifil32.dll exports
 static int (_stdcall *pAVIStreamInfo)( PAVISTREAM pavi, AVISTREAMINFO *psi, LONG lSize );
@@ -76,7 +76,7 @@ static dllfunc_t avifile_funcs[] =
 { NULL, NULL }
 };
 
-dll_info_t avifile_dll = { "avifil32.dll", avifile_funcs, NULL, NULL, NULL, false };
+dll_info_t avifile_dll = { "avifil32.dll", avifile_funcs, false };
 			  
 typedef struct movie_state_s
 {
@@ -625,20 +625,20 @@ movie_state_t *AVI_GetState( int num )
 
 qboolean AVI_Initailize( void )
 {
-	if( !Sys_LoadLibrary( NULL, &avifile_dll ))
+	if( !Sys_LoadLibrary( &avifile_dll ))
 	{
 		MsgDev( D_ERROR, "AVI_Initailize: failed\n" );
 		return false;
 	}
 
-	if( !Sys_LoadLibrary( NULL, &msvfw_dll ))
+	if( !Sys_LoadLibrary( &msvfw_dll ))
 	{
 		MsgDev( D_ERROR, "AVI_Initailize: failed\n" );
 		Sys_FreeLibrary( &avifile_dll );
 		return false;
 	}
 
-	if( !Sys_LoadLibrary( NULL, &msacm_dll ))
+	if( !Sys_LoadLibrary( &msacm_dll ))
 	{
 		MsgDev( D_ERROR, "AVI_Initailize: failed\n" );
 		Sys_FreeLibrary( &avifile_dll );

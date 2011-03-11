@@ -580,7 +580,7 @@ void Host_InitCommon( const int argc, const char **argv )
 	Cvar_Init();
 
 	// share developer level across all dlls
-	com.snprintf( dev_level, sizeof( dev_level ), "%i", host.developer );
+	Q_snprintf( dev_level, sizeof( dev_level ), "%i", host.developer );
 	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
 	Cmd_AddCommand( "exec", Host_Exec_f, "execute a script file" );
 	Cmd_AddCommand( "memlist", Host_MemStats_f, "prints memory pool information" );

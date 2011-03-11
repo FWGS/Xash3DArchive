@@ -180,7 +180,7 @@ void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr 
 		MsgDev( D_ERROR, "Sys_QueEvent: overflow\n");
 
 		// make sure what memory is allocated by engine
-		if( Mem_IsAllocated( host.mempool, ev->data ))
+		if( Mem_IsAllocatedExt( host.mempool, ev->data ))
 			Mem_Free( ev->data );
 		event_tail++;
 	}
@@ -248,4 +248,85 @@ sys_event_t Sys_GetEvent( void )
 	Q_memset( &ev, 0, sizeof( ev ));
 
 	return ev;
+}
+
+//=======================================================================
+//			DLL'S MANAGER SYSTEM
+//=======================================================================
+qboolean Sys_LoadLibrary( dll_info_t *dll )
+{
+	const dllfunc_t	*func;
+	string		errorstring;
+
+	// check errors
+	if( !dll ) return false;	// invalid desc
+	if( dll->link ) return true;	// already loaded
+
+	if( !dll->name || !*dll->name )
+		return false; // nothing to load
+
+	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s", dll->name );
+
+	if( dll->fcts ) 
+	{
+		// lookup export table
+		for( func = dll->fcts; func && func->name != NULL; func++ )
+			*func->func = NULL;
+	}
+
+	if( !dll->link ) dll->link = LoadLibrary ( dll->name ); // environment pathes
+
+	// no DLL found
+	if( !dll->link ) 
+	{
+		Q_snprintf( errorstring, sizeof( errorstring ), "Sys_LoadLibrary: couldn't load %s\n", dll->name );
+		goto error;
+	}
+
+	// Get the function adresses
+	for( func = dll->fcts; func && func->name != NULL; func++ )
+	{
+		if( !( *func->func = Sys_GetProcAddress( dll, func->name )))
+		{
+			Q_snprintf( errorstring, sizeof( errorstring ), "Sys_LoadLibrary: %s missing or invalid function (%s)\n", dll->name, func->name );
+			goto error;
+		}
+	}
+          MsgDev( D_NOTE, " - ok\n" );
+
+	return true;
+error:
+	MsgDev( D_NOTE, " - failed\n" );
+	Sys_FreeLibrary( dll ); // trying to free 
+	if( dll->crash ) com.error( errorstring );
+	else MsgDev( D_ERROR, errorstring );			
+
+	return false;
+}
+
+void* Sys_GetProcAddress( dll_info_t *dll, const char* name )
+{
+	if( !dll || !dll->link ) // invalid desc
+		return NULL;
+
+	return (void *)GetProcAddress( dll->link, name );
+}
+
+qboolean Sys_FreeLibrary( dll_info_t *dll )
+{
+	// invalid desc or alredy freed
+	if( !dll || !dll->link )
+		return false;
+
+	if( host.state == HOST_CRASHED )
+	{
+		// we need to hold down all modules, while MSVC can find error
+		MsgDev( D_NOTE, "Sys_FreeLibrary: hold %s for debugging\n", dll->name );
+		return false;
+	}
+	else MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading %s\n", dll->name );
+	FreeLibrary( dll->link );
+	dll->link = NULL;
+
+	return true;
 }

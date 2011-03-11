@@ -439,7 +439,7 @@ static dllfunc_t wgl3DFXgammacontrolfuncs[] =
 { NULL, NULL }
 };
 
-dll_info_t opengl_dll = { "opengl32.dll", wgl_funcs, NULL, NULL, NULL, true };
+dll_info_t opengl_dll = { "opengl32.dll", wgl_funcs, true };
 
 /*
 =================
@@ -1239,7 +1239,7 @@ R_Init_OpenGL
 */
 qboolean R_Init_OpenGL( void )
 {
-	Sys_LoadLibrary( NULL, &opengl_dll );	// load opengl32.dll
+	Sys_LoadLibrary( &opengl_dll );	// load opengl32.dll
 	if( !opengl_dll.link ) return false;
 
 	// TODO: allow 3dfx drivers too

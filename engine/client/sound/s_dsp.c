@@ -15,7 +15,7 @@ int			ipset_room_prev;
 int			ipset_room_typeprev;
 int			idsp_room;
 static DSP_FUNCTIONS	gDspFuncs;
-static dll_info_t		room_dll = { "room.dll", NULL, NULL, NULL, NULL, false };
+static dll_info_t		room_dll = { "room.dll", NULL, false };
 
 // engine callbacks
 static dsp_enginefuncs_t gEngfuncs = 
@@ -73,7 +73,7 @@ qboolean AllocDsps( void )
 	static ROOMAPI		InitDSP;
 	static dsp_enginefuncs_t	gpEngfuncs;
 
-	if( !Sys_LoadLibrary( NULL, &room_dll ))
+	if( !Sys_LoadLibrary( &room_dll ))
 	{
           	MsgDev( D_INFO, "DSP: disabled\n" );
 		return false;

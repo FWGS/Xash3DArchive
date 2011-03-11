@@ -16,10 +16,10 @@ Cvar_InfoValidate
 static qboolean Cvar_ValidateString( const char *s, qboolean isvalue )
 {
 	if( !s ) return false;
-	if( com.strstr( s, "\\" ) && !isvalue )
+	if( Q_strstr( s, "\\" ) && !isvalue )
 		return false;
-	if( com.strstr( s, "\"" )) return false;
-	if( com.strstr( s, ";" )) return false;
+	if( Q_strstr( s, "\"" )) return false;
+	if( Q_strstr( s, ";" )) return false;
 	return true;
 }
 
@@ -34,7 +34,7 @@ convar_t *Cvar_FindVar( const char *var_name )
 
 	for( var = cvar_vars; var; var = var->next )
 	{
-		if( !com.stricmp( var_name, var->name ))
+		if( !Q_stricmp( var_name, var->name ))
 			return var;
 	}
 	return NULL;
@@ -210,8 +210,8 @@ convar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, cons
 	var->string = copystring( var_value );
 	var->reset_string = copystring( var_value );
 	if( var_desc ) var->description = copystring( var_desc );
-	var->value = com.atof( var->string );
-	var->integer = com.atoi( var->string );
+	var->value = Q_atof( var->string );
+	var->integer = Q_atoi( var->string );
 	var->modified = true;
 	var->flags = flags;
 
@@ -277,7 +277,7 @@ void Cvar_RegisterVariable( cvar_t *var )
 		}
 
 		var->string = cur->string;	// we already have right string
-		var->value = com.atof( var->string );
+		var->value = Q_atof( var->string );
 		var->flags |= CVAR_EXTDLL;	// all cvars passed this function are game cvars
 		var->next = (cvar_t *)cur->next;
 
@@ -292,7 +292,7 @@ void Cvar_RegisterVariable( cvar_t *var )
 	{
 		// copy the value off, because future sets will Z_Free it
 		var->string = copystring( var->string );
-		var->value = com.atof( var->string );
+		var->value = Q_atof( var->string );
 		var->flags |= CVAR_EXTDLL;		// all cvars passed this function are game cvars
 	
 		// link the variable in
@@ -338,7 +338,7 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 		else value = var->reset_string;
 	}
 
-	if( !com.strcmp( value, var->string ))
+	if( !Q_strcmp( value, var->string ))
 		return var;
 
 	// any latched values not allowed for game cvars
@@ -362,13 +362,13 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 		{
 			if( var->latched_string )
 			{
-				if(!com.strcmp( value, var->latched_string ))
+				if(!Q_strcmp( value, var->latched_string ))
 					return var;
 				Mem_Free( var->latched_string );
 			}
 			else
 			{
-				if( !com.strcmp( value, var->string ))
+				if( !Q_strcmp( value, var->string ))
 					return var;
 			}
 
@@ -386,8 +386,8 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 			{
 				Mem_Free( var->string );		// free the old value string
 				var->string = copystring( value );
-				var->value = com.atof( var->string );
-				var->integer = com.atoi( var->string );
+				var->value = Q_atof( var->string );
+				var->integer = Q_atoi( var->string );
 			}
 
 			var->modified = true;
@@ -440,9 +440,9 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 		*pD = '\0';
 
 		// if it's empty, then insert a marker string
-		if( !com.strlen( szNew ))
+		if( !Q_strlen( szNew ))
 		{
-			com.strcpy( szNew, "default" );
+			Q_strcpy( szNew, "default" );
 		}
 
 		// point the value here.
@@ -450,7 +450,7 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 	}
 
  	// nothing to change
-	if( !com.strcmp( pszValue, var->string ))
+	if( !Q_strcmp( pszValue, var->string ))
 		return var;
 
 	if( var->flags & CVAR_USERINFO )
@@ -468,11 +468,11 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 	// free the old value string
 	Mem_Free( var->string );
 	var->string = copystring( pszValue );
-	var->value = com.atof( var->string );
+	var->value = Q_atof( var->string );
 
 	if( !dll_variable )
 	{
-		var->integer = com.atoi( var->string );
+		var->integer = Q_atoi( var->string );
 		var->modified = true;
 	}
 
@@ -550,12 +550,12 @@ void Cvar_FullSet( const char *var_name, const char *value, int flags )
 
 	Mem_Free( var->string ); // free the old value string
 	var->string = copystring( value );
-	var->value = com.atof( var->string );
+	var->value = Q_atof( var->string );
 	var->flags = flags;
 
 	if( dll_variable ) return;	// below field doesn't exist in cvar_t
 
-	var->integer = com.atoi( var->string );
+	var->integer = Q_atoi( var->string );
 	var->modified = true;
 }
 
@@ -627,16 +627,16 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 		*pD = '\0';
 
 		// if it's empty, then insert a marker string
-		if( !com.strlen( szNew ))
+		if( !Q_strlen( szNew ))
 		{
-			com.strcpy( szNew, "default" );
+			Q_strcpy( szNew, "default" );
 		}
 
 		// point the value here.
 		pszValue = szNew;
 	}
 
-	if( !com.strcmp( pszValue, var->string ))
+	if( !Q_strcmp( pszValue, var->string ))
 		return;
 
 	if( var->flags & CVAR_USERINFO )
@@ -654,7 +654,7 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 	// free the old value string
 	Mem_Free( var->string );
 	var->string = copystring( pszValue );
-	var->value = com.atof( var->string );
+	var->value = Q_atof( var->string );
 }
 
 /*
@@ -667,8 +667,8 @@ void Cvar_SetFloat( const char *var_name, float value )
 	char	val[32];
 
 	if( value == (int)value )
-		com.sprintf( val, "%i", (int)value );
-	else com.sprintf( val, "%f", value );
+		Q_sprintf( val, "%i", (int)value );
+	else Q_sprintf( val, "%f", value );
 	Cvar_Set( var_name, val );
 }
 
@@ -705,7 +705,7 @@ void Cvar_SetCheatState( void )
 				Mem_Free( var->latched_string );
 				var->latched_string = NULL;
 			}
-			if( com.strcmp( var->reset_string, var->string ))
+			if( Q_strcmp( var->reset_string, var->string ))
 			{
 				Cvar_Set( var->name, var->reset_string );
 			}
@@ -787,11 +787,11 @@ void Cvar_Set_f( void )
 
 	for( i = 2; i < c; i++ )
 	{
-		len = com.strlen( Cmd_Argv(i) + 1 );
+		len = Q_strlen( Cmd_Argv(i) + 1 );
 		if ( l + len >= MAX_CMD_TOKENS - 2 )
 			break;
-		com.strcat( combined, Cmd_Argv(i));
-		if ( i != c-1 ) com.strcat( combined, " " );
+		Q_strcat( combined, Cmd_Argv(i));
+		if ( i != c-1 ) Q_strcat( combined, " " );
 		l += len;
 	}
 
@@ -960,7 +960,7 @@ void Cvar_List_f( void )
 
 	for( var = cvar_vars; var; var = var->next, i++ )
 	{
-		if( match && !com.stricmpext( match, var->name ))
+		if( match && !Q_stricmpext( match, var->name ))
 			continue;
 
 		if( var->flags & CVAR_SERVERINFO ) Msg( "SV    " );

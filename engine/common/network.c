@@ -62,7 +62,7 @@ static dllfunc_t winsock_funcs[] =
 { NULL, NULL }
 };
 
-dll_info_t winsock_dll = { "wsock32.dll", winsock_funcs, NULL, NULL, NULL, false };
+dll_info_t winsock_dll = { "wsock32.dll", winsock_funcs, false };
 
 typedef struct
 {
@@ -92,7 +92,7 @@ qboolean NET_OpenWinSock( void )
 {
 	// initialize the Winsock function vectors (we do this instead of statically linking
 	// so we can run on Win 3.1, where there isn't necessarily Winsock)
-	if( Sys_LoadLibrary( NULL, &winsock_dll ))
+	if( Sys_LoadLibrary( &winsock_dll ))
 		return true;
 	return false;
 }

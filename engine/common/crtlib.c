@@ -150,7 +150,7 @@ char *_copystring( byte *mempool, const char *s, const char *filename, int filel
 	if( !s ) return NULL;
 	if( !mempool ) mempool = host.mempool;
 
-	b = com.malloc( mempool, Q_strlen( s ) + 1, filename, fileline );
+	b = _Mem_Alloc( mempool, Q_strlen( s ) + 1, filename, fileline );
 	Q_strcpy( b, s );
 
 	return b;
@@ -963,4 +963,6 @@ void CRT_Init( void )
 		_Q_memcpy = crt_memcpy;
 		_Q_memset = crt_memset;
 	}
+
+	Memory_Init();
 }

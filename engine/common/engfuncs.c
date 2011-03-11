@@ -227,7 +227,7 @@ void *Cache_Check( byte *mempool, cache_user_t *c )
 	if( !c->data )
 		return NULL;
 
-	if( !Mem_IsAllocated( mempool, c->data ))
+	if( !Mem_IsAllocatedExt( mempool, c->data ))
 		return NULL;
 
 	return c->data;

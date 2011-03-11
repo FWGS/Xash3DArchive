@@ -50,10 +50,36 @@ typedef struct
 	size_t	length;
 } sys_event_t;
 
+/*
+========================================================================
+internal dll's loader
+
+two main types - native dlls and other win32 libraries will be recognized automatically
+NOTE: never change this structure because all dll descriptions in xash code
+writes into struct by offsets not names
+========================================================================
+*/
+typedef struct dllfunc_s
+{
+	const char	*name;
+	void		**func;
+} dllfunc_t;
+
+typedef struct dll_info_s
+{
+	const char	*name;	// name of library
+	const dllfunc_t	*fcts;	// list of dll exports	
+	qboolean		crash;	// crash if dll not found
+	void		*link;	// hinstance of loading library
+} dll_info_t;
+
 void Sys_Sleep( int msec );
 double Sys_DoubleTime( void );
 char *Sys_GetClipboardData( void );
 char *Sys_GetCurrentUser( void );
+qboolean Sys_LoadLibrary( dll_info_t *dll );
+void* Sys_GetProcAddress( dll_info_t *dll, const char* name );
+qboolean Sys_FreeLibrary( dll_info_t *dll );
 void Sys_ShellExecute( const char *path, const char *parms, qboolean exit );
 void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr );
 sys_event_t Sys_GetEvent( void );
