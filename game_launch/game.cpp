@@ -5,16 +5,16 @@
 
 #include <windows.h>
 
-// NOTE: engine has a two methods to detect basedir:
-// first method: by filename, e.g. spirit.exe will be use basedir 'spirit', hostname must be "normal"
-// second method: by hostname with leading symbol '$'. e.g. hl.exe with hostname '$valve' set the basedir to 'valve'
-// for dedicated servers rename 'YourExeName.exe' to '#YourExeName.exe'
-// Keyword "normal" it's a reserved word which switch engine to game mode, other reserved words run Xash Tools.
-//
+#define GAME_PATH	"valve"	// default dir to start from
 
-#define GAME_PATH	"$valve"	// '$' indicates a start of basefolder name
+typedef void (*pfnChangeGame)( const char *progname );
+typedef int (*pfnInit)( const char *progname, int bChangeGame, pfnChangeGame func );
+typedef void (*pfnShutdown)( void );
 
-typedef int (*pfnExecute)( const char *hostname, int console );	// engine entry point format
+pfnInit Host_Main;
+pfnShutdown Host_Shutdown;
+char szGameDir[128]; // safe place to keep gamedir
+HINSTANCE	hEngine;
 
 void Sys_Error( const char *errorstring )
 {
@@ -22,21 +22,43 @@ void Sys_Error( const char *errorstring )
 	exit( 1 );
 }
 
-int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
+void Sys_LoadEngine( void )
 {
-	HINSTANCE	hmain;
-
-	if(( hmain = LoadLibrary( "launch.dll" )) == NULL )
+	if(( hEngine = LoadLibrary( "xash.dll" )) == NULL )
 	{
-		Sys_Error( "Unable to load the launch.dll" );
+		Sys_Error( "Unable to load the xash.dll" );
 	}
 
-	pfnExecute mainFunc;
-
-	if(( mainFunc = (pfnExecute)GetProcAddress( hmain, "CreateAPI" )) == NULL )
+	if(( Host_Main = (pfnInit)GetProcAddress( hEngine, "Host_Main" )) == NULL )
 	{
-		Sys_Error( "Unable to find entry point in the launch.dll" );
-	}	
+		Sys_Error( "xash.dll missed 'Host_Main' export" );
+	}
 
-	return mainFunc( GAME_PATH, false );
+	// this is non-fatal for us but change game will not working
+	Host_Shutdown = (pfnShutdown)GetProcAddress( hEngine, "Host_Shutdown" );
+}
+
+void Sys_UnloadEngine( void )
+{
+	if( Host_Shutdown ) Host_Shutdown( );
+	if( hEngine ) FreeLibrary( hEngine );
+}
+
+void Sys_ChangeGame( const char *progname )
+{
+	if( !progname || !progname[0] ) Sys_Error( "Sys_ChangeGame: NULL gamedir" );
+	if( Host_Shutdown == NULL ) Sys_Error( "Sys_ChangeGame: missed 'Host_Shutdown' export\n" );
+	strncpy( szGameDir, progname, sizeof( szGameDir ) - 1 );
+
+	Sys_UnloadEngine ();
+	Sys_LoadEngine ();
+	
+	Host_Main( szGameDir, TRUE, ( Host_Shutdown != NULL ) ? Sys_ChangeGame : NULL );
+}
+
+int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
+{
+	Sys_LoadEngine();
+
+	return Host_Main( GAME_PATH, FALSE, ( Host_Shutdown != NULL ) ? Sys_ChangeGame : NULL );
 }

@@ -1222,7 +1222,7 @@ void VID_CheckChanges( void )
 		if( !VID_SetMode())
 		{
 			// can't initialize video subsystem
-			Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
+			Host_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
 		}
 		else
 		{
@@ -1614,7 +1614,7 @@ qboolean R_Init( void )
 		R_Free_OpenGL();
 
 		// can't initialize video subsystem
-		Sys_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
+		Host_NewInstance( va("#%s", GI->gamefolder ), "fallback to dedicated mode\n" );
 		return false;
 	}
 

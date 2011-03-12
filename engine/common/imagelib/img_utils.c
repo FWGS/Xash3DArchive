@@ -4,6 +4,7 @@
 //=======================================================================
 
 #include "imagelib.h"
+#include "mathlib.h"
 
 convar_t *gl_round_down;
 

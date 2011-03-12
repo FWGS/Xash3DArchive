@@ -5,17 +5,6 @@
 #ifndef COM_EXPORT_H
 #define COM_EXPORT_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// linked interfaces
-extern stdlib_api_t	com;
-
-#ifdef __cplusplus
-}
-#endif
-
 // MD5 Hash
 typedef struct
 {

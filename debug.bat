@@ -20,9 +20,6 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% mainui/mainui.dsp %CONFIG%"mainui - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% launch/launch.dsp %CONFIG%"launch - Win32 Debug" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 %MSDEV% room/room.dsp %CONFIG%"room - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 

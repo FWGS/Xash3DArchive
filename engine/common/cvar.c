@@ -125,7 +125,7 @@ convar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, cons
 	
 	if( !var_name )
 	{
-		com.error( "Cvar_Get: passed NULL name\n" );
+		Sys_Error( "Cvar_Get: passed NULL name\n" );
 		return NULL;
 	}
 

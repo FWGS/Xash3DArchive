@@ -165,8 +165,6 @@ typedef struct
 
 ====================================================================
 */
-#define Host_Error		com.error
-
 // initializes cycling through a DMA buffer and returns information on it
 qboolean SNDDMA_Init( void *hInst );
 int SNDDMA_GetSoundtime( void );

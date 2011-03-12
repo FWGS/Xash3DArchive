@@ -7,10 +7,18 @@
 #include "netchan.h"
 #include "protocol.h"
 #include "cm_local.h"
+#include "mathlib.h"
 #include "input.h"
 
+static const char *show_credits = "\n\n\n\n\tCopyright XashXT Group %s ©\n\t\
+          All Rights Reserved\n\n\t           Visit www.xash.ru\n";
+
+typedef void (*pfnChangeGame)( const char *progname );
+
+pfnChangeGame	pChangeGame = NULL;
+HINSTANCE		hCurrent;	// hinstance of current .dll
 host_parm_t	host;	// host parms
-stdlib_api_t	com;
+sysinfo_t		SI;
 
 convar_t	*host_serverstate;
 convar_t	*host_gameloaded;
@@ -19,6 +27,8 @@ convar_t	*host_cheats;
 convar_t	*host_maxfps;
 convar_t	*host_framerate;
 convar_t	*con_gamemaps;
+
+static int num_decals;
 
 // these cvars will be duplicated on each client across network
 int Host_ServerState( void )
@@ -44,11 +54,6 @@ void Host_ShutdownServer( void )
 	if( !SV_Active()) return;
 	Q_strncpy( host.finalmsg, "Server was killed\n", MAX_STRING );
 	SV_Shutdown( false );
-}
-
-void Host_Null( void )
-{
-	// just a stub for some commands in dedicated-mode
 }
 
 /*
@@ -117,6 +122,15 @@ void Host_SetServerState( int state )
 	Cvar_FullSet( "host_serverstate", va( "%i", state ), CVAR_INIT );
 }
 
+void Host_NewInstance( const char *name, const char *finalmsg )
+{
+	if( !pChangeGame ) return;
+
+	host.change_game = true;
+	Q_strncpy( host.finalmsg, finalmsg, sizeof( host.finalmsg ));
+	pChangeGame( name );
+}
+
 /*
 =================
 Host_ChangeGame_f
@@ -135,16 +149,24 @@ void Host_ChangeGame_f( void )
 	}
 
 	// validate gamedir
-	for( i = 0; i < SI->numgames; i++ )
+	for( i = 0; i < SI.numgames; i++ )
 	{
-		if( !Q_stricmp( SI->games[i]->gamefolder, Cmd_Argv( 1 )))
+		if( !Q_stricmp( SI.games[i]->gamefolder, Cmd_Argv( 1 )))
 			break;
 	}
 
-	if( i == SI->numgames ) Msg( "%s not exist\n", Cmd_Argv( 1 ));
+	if( i == SI.numgames )
+	{
+		Msg( "%s not exist\n", Cmd_Argv( 1 ));
+	}
 	else if( !Q_stricmp( GI->gamefolder, Cmd_Argv( 1 )))
+	{
 		Msg( "%s already active\n", Cmd_Argv( 1 ));	
-	else Sys_NewInstance( Cmd_Argv( 1 ), va( "Host_ChangeGame: %s\n", SI->games[i]->title ));
+	}
+	else
+	{
+		Host_NewInstance( Cmd_Argv( 1 ), va( "change game to '%s'", SI.games[i]->title ));
+	}
 }
 
 /*
@@ -213,8 +235,6 @@ qboolean Host_IsLocalGame( void )
 		return true;
 	return false;
 }
-
-static int num_decals;
 
 /*
 =================
@@ -492,12 +512,12 @@ void Host_Error( const char *error, ... )
 	if( host.framecount < 3 )
 	{
 		SV_SysError( hosterror1 );
-		com.error( "Host_InitError: %s", hosterror1 );
+		Sys_Error( "Host_InitError: %s", hosterror1 );
 	}
 	else if( host.framecount == host.errorframe )
 	{
 		SV_SysError( hosterror2 );
-		com.error( "Host_MultiError: %s", hosterror2 );
+		Sys_Error( "Host_MultiError: %s", hosterror2 );
 		return;
 	}
 	else
@@ -512,7 +532,7 @@ void Host_Error( const char *error, ... )
 	if( recursive )
 	{ 
 		Msg( "Host_RecursiveError: %s", hosterror2 );
-		com.error( hosterror1 );
+		Sys_Error( hosterror1 );
 		return; // don't multiple executes
 	}
 
@@ -543,7 +563,7 @@ void Sys_Error_f( void )
 
 	if( !*error ) error = "Invoked sys error";
 	SV_SysError( error );
-	com.error( "%s\n", error );
+	Sys_Error( "%s\n", error );
 }
 
 void Net_Error_f( void )
@@ -562,18 +582,98 @@ static void Host_Crash_f( void )
 	*(int *)0 = 0xffffffff;
 }
 
-void Host_InitCommon( const int argc, const char **argv )
+void Host_InitCommon( const char *progname, qboolean bChangeGame )
 {
-	char	dev_level[4];
+	MEMORYSTATUS	lpBuffer;
+	char		dev_level[4];
+	char		szTemp[MAX_SYSPATH];
 
-	// get developer mode
-	host.developer = SI->developer;
-	host.argc = argc;
-	host.argv = argv;
+	lpBuffer.dwLength = sizeof( MEMORYSTATUS );
+	GlobalMemoryStatus( &lpBuffer );
 
-	// get current hInstance
+	host.oldFilter = SetUnhandledExceptionFilter( Sys_Crash );
 	host.hInst = GetModuleHandle( NULL );
+	host.change_game = bChangeGame;
+	host.state = HOST_INIT; // initialzation started
+	host.developer = 0;
+
+	CRT_Init(); // init some CRT functions
+
+	// some commands may turn engine into infinity loop,
+	// e.g. xash.exe +game xash -game xash
+	// so we clearing all cmd_args, but leave dbg states as well
+	Sys_ParseCommandLine( GetCommandLine( ));
+	SetErrorMode( SEM_FAILCRITICALERRORS );	// no abort/retry/fail errors
+
 	host.mempool = Mem_AllocPool( "Zone Engine" );
+
+	if( Sys_CheckParm( "-console" )) host.developer = 1;
+	if( Sys_CheckParm( "-dev" ))
+	{
+		if( Sys_GetParmFromCmdLine( "-dev", dev_level ))
+		{
+			if( Q_isdigit( dev_level ))
+				host.developer = abs( Q_atoi( dev_level ));
+			else host.developer++; // -dev == 1, -dev -console == 2
+		}
+		else host.developer++; // -dev == 1, -dev -console == 2
+	}
+
+	host.type = HOST_NORMAL; // predict state
+	host.con_showalways = true;
+
+	// we can specified custom name, from Sys_NewInstance
+	if( GetModuleFileName( NULL, szTemp, sizeof( szTemp )) && !host.change_game )
+		FS_FileBase( szTemp, SI.ModuleName );
+
+	if( SI.ModuleName[0] == '#' ) host.type = HOST_DEDICATED; 
+
+	// determine host type
+	if( progname[0] == '#' )
+	{
+		Q_strncpy( SI.ModuleName, progname + 1, sizeof( SI.ModuleName ));
+		host.type = HOST_DEDICATED;
+	}
+	else Q_strncpy( SI.ModuleName, progname, sizeof( SI.ModuleName )); 
+
+	if( host.type == HOST_DEDICATED )
+	{
+		// check for duplicate dedicated server
+		host.hMutex = CreateMutex( NULL, 0, "Xash Dedicated Server" );
+		if( !host.hMutex )
+		{
+			MSGBOX( "Dedicated server already running" );
+			Sys_Quit();
+			return;
+		}
+
+		CloseHandle( host.hMutex );
+		host.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
+		if( host.developer < 3 ) host.developer = 3; // otherwise we see empty console
+		host.change_game = false;
+	}
+	else
+	{
+		// don't show console as default
+		if( host.developer < D_WARN ) host.con_showalways = false;
+	}
+
+	if( GetModuleFileName( hCurrent, szTemp, sizeof( szTemp )))
+		FS_FileBase( szTemp, szTemp );
+
+	if( Q_stricmp( szTemp, "xash" ))
+	{
+		host.type = HOST_CREDITS;
+		host.con_showalways = true;
+		Con_CreateConsole();
+		Sys_Break( show_credits, szTemp );
+	}
+
+	Con_CreateConsole();
+
+	// first text message into console or log 
+	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading xash.dll - ok\n" );
+	Sys_MergeCommandLine( GetCommandLine( ));
 
 	// startup cmds and cvars subsystem
 	Cmd_Init();
@@ -584,6 +684,7 @@ void Host_InitCommon( const int argc, const char **argv )
 	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
 	Cmd_AddCommand( "exec", Host_Exec_f, "execute a script file" );
 	Cmd_AddCommand( "memlist", Host_MemStats_f, "prints memory pool information" );
+
 	FS_Init();
 	Image_Init();
 	Sound_Init();
@@ -595,6 +696,7 @@ void Host_InitCommon( const int argc, const char **argv )
 	Host_InitDecals();
 
 	IN_Init();
+	Key_Init();
 }
 
 void Host_FreeCommon( void )
@@ -609,18 +711,16 @@ void Host_FreeCommon( void )
 
 /*
 =================
-Host_Init
+Host_Main
 =================
 */
-void Host_Init( const int argc, const char **argv )
+int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func )
 {
-	host.state = HOST_INIT;	// initialzation started
-	host.type = g_Instance();
+	static double	oldtime, newtime;
 
-	CRT_Init(); // init some CRT functions
+	pChangeGame = func;
 
-	Host_InitCommon( argc, argv );
-	Key_Init();
+	Host_InitCommon( progname, bChangeGame );
 
 	// init commands and vars
 	if( host.developer >= 3 )
@@ -663,7 +763,6 @@ void Host_Init( const int argc, const char **argv )
 	{
 		Cmd_AddCommand( "quit", Sys_Quit, "quit the game" );
 		Cmd_AddCommand( "exit", Sys_Quit, "quit the game" );
-		Cmd_AddCommand( "@crashed", Host_Null, "" );
 
 		// dedicated servers using settings from server.cfg file
 		Cbuf_AddText( va( "exec %s\n", Cvar_VariableString( "servercfgfile" )));
@@ -678,7 +777,7 @@ void Host_Init( const int argc, const char **argv )
 	}
 
 	// allow to change game from the console
-	Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
+	if( pChangeGame != NULL ) Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
 
 	host.errorframe = 0;
 	Cbuf_Execute();
@@ -689,8 +788,9 @@ void Host_Init( const int argc, const char **argv )
 	switch( host.type )
 	{
 	case HOST_NORMAL:
+		Con_ShowConsole( false ); // hide console
 		// execute startup config and cmdline
-		Cbuf_AddText( va( "exec %s.rc\n", SI->ModuleName ));
+		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));
 	case HOST_DEDICATED:
 		Cbuf_Execute();
 		// if stuffcmds wasn't run, then init.rc is probably missing, use default
@@ -698,30 +798,24 @@ void Host_Init( const int argc, const char **argv )
 		break;
 	}
 
+	host.change_game = false;	// done
 	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
 	Cmd_RemoveCommand( "setgl" );
-}
-
-/*
-=================
-Host_Main
-=================
-*/
-void Host_Main( void )
-{
-	static double	oldtime, newtime;
 
 	// we need to execute it again here
 	Cmd_ExecuteString( "exec config.cfg\n" );
 	oldtime = Sys_DoubleTime();
 
 	// main window message loop
-	while( host.type != HOST_OFFLINE )
+	while( 1 )
 	{
 		newtime = Sys_DoubleTime ();
 		Host_Frame( newtime - oldtime );
 		oldtime = newtime;
 	}
+
+	// never reached
+	return 0;
 }
 
 /*
@@ -729,13 +823,13 @@ void Host_Main( void )
 Host_Shutdown
 =================
 */
-void Host_Free( void )
+void EXPORT Host_Shutdown( void )
 {
-	if( host.state == HOST_SHUTDOWN )
-		return;
+	if( host.shutdown_issued ) return;
+	host.shutdown_issued = true;
 
-	host.state = HOST_SHUTDOWN;	// prepare host to normal shutdown
-	Q_strncpy( host.finalmsg, "Server shutdown\n", MAX_STRING );
+	if( host.state != HOST_ERR_FATAL ) host.state = HOST_SHUTDOWN; // prepare host to normal shutdown
+	if( !host.change_game ) Q_strncpy( host.finalmsg, "Server shutdown\n", sizeof( host.finalmsg ));
 
 	SV_Shutdown( false );
 	CL_Shutdown();
@@ -745,33 +839,15 @@ void Host_Free( void )
 	R_Shutdown();
 	NET_Shutdown();
 	Host_FreeCommon();
+	Con_DestroyConsole();
+
+	// restore filter	
+	if( host.oldFilter ) SetUnhandledExceptionFilter( host.oldFilter );
 }
 
 // main DLL entry point
 BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved )
 {
+	hCurrent = hinstDLL;
 	return TRUE;
-}
-
-/*
-=================
-Engine entry point
-=================
-*/
-launch_exp_t EXPORT *CreateAPI( stdlib_api_t *input, void *unused )
-{
-         	static launch_exp_t Host;
-
-	com = *input;
-	Host.api_size = sizeof( launch_exp_t );
-	Host.com_size = sizeof( stdlib_api_t );
-
-	Host.Init = Host_Init;
-	Host.Main = Host_Main;
-	Host.Free = Host_Free;
-	Host.CPrint = Host_Print;
-	Host.Crashed = CL_Crashed;
-	Host.CmdComplete = Cmd_AutoComplete;
-
-	return &Host;
 }

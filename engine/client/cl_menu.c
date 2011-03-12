@@ -730,7 +730,7 @@ pfnGetGamesList
 */
 static GAMEINFO **pfnGetGamesList( int *numGames )
 {
-	if( numGames ) *numGames = SI->numgames;
+	if( numGames ) *numGames = SI.numgames;
 	return menu.modsInfo;
 }
 
@@ -812,7 +812,7 @@ static void pfnChangeInstance( const char *newInstance, const char *szFinalMessa
 	if( !szFinalMessage ) szFinalMessage = "";
 	if( !newInstance || !*newInstance ) return;
 
-	Sys_NewInstance( newInstance, szFinalMessage );
+	Host_NewInstance( newInstance, szFinalMessage );
 }
 
 /*
@@ -973,13 +973,13 @@ qboolean UI_LoadProgs( const char *name )
 	}
 
 	// setup gameinfo
-	for( i = 0; i < SI->numgames; i++ )
+	for( i = 0; i < SI.numgames; i++ )
 	{
 		menu.modsInfo[i] = Mem_Alloc( menu.mempool, sizeof( GAMEINFO ));
-		UI_ConvertGameInfo( menu.modsInfo[i], SI->games[i] );
+		UI_ConvertGameInfo( menu.modsInfo[i], SI.games[i] );
 	}
 
-	UI_ConvertGameInfo( &menu.gameInfo, SI->GameInfo ); // current gameinfo
+	UI_ConvertGameInfo( &menu.gameInfo, SI.GameInfo ); // current gameinfo
 
 	// setup globals
 	menu.globals->developer = host.developer;

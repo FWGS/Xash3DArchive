@@ -727,7 +727,7 @@ void Delta_InitFields( void )
 
 		Q_snprintf( errormsg, sizeof( errormsg ), "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
 		SV_SysError( errormsg );
-		com.error( errormsg );
+		Sys_Error( errormsg );
 	}
 
 	pfile = afile;
@@ -737,7 +737,7 @@ void Delta_InitFields( void )
 		dt = Delta_FindStruct( token );
 		if( dt == NULL )
 		{
-			Sys_Break( "delta.lst: unknown struct %s\n", token );
+			Sys_Error( "delta.lst: unknown struct %s\n", token );
 		}
 
 		pfile = COM_ParseFile( pfile, encodeDll );
@@ -750,7 +750,7 @@ void Delta_InitFields( void )
 		pfile = COM_ParseFile( pfile, token );
 		if( token[0] != '{' )
 		{
-			Sys_Break( "delta.lst: missing '{' in section %s\n", dt->pName );
+			Sys_Error( "delta.lst: missing '{' in section %s\n", dt->pName );
 		}			
 
 		Delta_ParseTable( &pfile, dt, encodeDll, encodeFunc );

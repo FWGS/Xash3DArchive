@@ -150,7 +150,7 @@ void Cbuf_Execute( void )
 		}
 
 		if( i >= MAX_CMD_LINE - 1 )
-			com.error( "Cbuf_Execute: command string owerflow\n" );
+			Sys_Error( "Cbuf_Execute: command string owerflow\n" );
 
 		Q_memcpy( line, text, i );
 		line[i] = 0;
@@ -171,7 +171,7 @@ void Cbuf_Execute( void )
 		}
 
 		// execute the command line
-		Cmd_ExecuteString( line );		
+		Cmd_ExecuteString( line );
 	}
 }
 /*
@@ -222,7 +222,7 @@ void Cmd_StuffCmds_f( void )
 				if( !host.argv[i] ) continue;
 				if(( host.argv[i][0] == '+' || host.argv[i][0] == '-' ) && ( host.argv[i][1] < '0' || host.argv[i][1] > '9' ))
 					break;
-				if( l + Q_strlen( host.argv[i]) + 4 > sizeof( build ) - 1 )
+				if( l + Q_strlen( host.argv[i] ) + 4 > sizeof( build ) - 1 )
 					break;
 				build[l++] = ' ';
 	
@@ -668,5 +668,5 @@ void Cmd_Init( void )
 	Cmd_AddCommand ("echo", Cmd_Echo_f, "print a message to the console (useful in scripts)" );
 	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for some rendered frames" );
 	Cmd_AddCommand ("cmdlist", Cmd_List_f, "display all console commands beginning with the specified prefix" );
-	Cmd_AddCommand ("stuffcmds", Cmd_StuffCmds_f, va( "execute commandline parameters (must be present in %s.rc script)", SI->ModuleName ));
+	Cmd_AddCommand ("stuffcmds", Cmd_StuffCmds_f, va( "execute commandline parameters (must be present in %s.rc script)", SI.ModuleName ));
 }

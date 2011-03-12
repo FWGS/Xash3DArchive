@@ -4,10 +4,12 @@
 //=======================================================================
 
 #include "common.h"
+#include "mathlib.h"
 
 #define MAX_QUED_EVENTS	256
 #define MASK_QUED_EVENTS	(MAX_QUED_EVENTS - 1)
 
+qboolean		error_on_exit = false;	// arg for exit();
 sys_event_t	event_que[MAX_QUED_EVENTS];
 int		event_head, event_tail;
 
@@ -162,6 +164,129 @@ void Sys_ShellExecute( const char *path, const char *parms, qboolean exit )
 }
 
 /*
+==================
+Sys_ParseCommandLine
+
+==================
+*/
+void Sys_ParseCommandLine( LPSTR lpCmdLine )
+{
+	const char	*blank = "censored";
+	int		i;
+
+	host.argc = 1;
+	host.argv[0] = "exe";
+
+	while( *lpCmdLine && ( host.argc < MAX_NUM_ARGVS ))
+	{
+		while( *lpCmdLine && *lpCmdLine <= ' ' )
+			lpCmdLine++;
+		if( !*lpCmdLine ) break;
+
+		if( *lpCmdLine == '\"' )
+		{
+			// quoted string
+			lpCmdLine++;
+			host.argv[host.argc] = lpCmdLine;
+			host.argc++;
+			while( *lpCmdLine && ( *lpCmdLine != '\"' ))
+				lpCmdLine++;
+		}
+		else
+		{
+			// unquoted word
+			host.argv[host.argc] = lpCmdLine;
+			host.argc++;
+			while( *lpCmdLine && *lpCmdLine > ' ')
+				lpCmdLine++;
+		}
+
+		if( *lpCmdLine )
+		{
+			*lpCmdLine = 0;
+			lpCmdLine++;
+		}
+	}
+
+	if( !host.change_game ) return;
+
+	for( i = 0; i < host.argc; i++ )
+	{
+		// we wan't return to first game
+		if( !Q_stricmp( "-game", host.argv[i] )) host.argv[i] = (char *)blank;
+		// probably it's timewaster, because engine rejected second change
+		if( !Q_stricmp( "+game", host.argv[i] )) host.argv[i] = (char *)blank;
+		// you sure what is map exists in new game?
+		if( !Q_stricmp( "+map", host.argv[i] )) host.argv[i] = (char *)blank;
+		// just stupid action
+		if( !Q_stricmp( "+load", host.argv[i] )) host.argv[i] = (char *)blank;
+		// changelevel beetwen games? wow it's great idea!
+		if( !Q_stricmp( "+changelevel", host.argv[i] )) host.argv[i] = (char *)blank;
+	}
+}
+
+/*
+==================
+Sys_MergeCommandLine
+
+==================
+*/
+void Sys_MergeCommandLine( LPSTR lpCmdLine )
+{
+	const char	*blank = "censored";
+	int		i;
+
+	if( !host.change_game ) return;
+
+	for( i = 0; i < host.argc; i++ )
+	{
+		// second call
+		if( host.type == HOST_DEDICATED && !Q_strnicmp( "+menu_", host.argv[i], 6 ))
+			host.argv[i] = (char *)blank;
+	}
+}
+
+/*
+================
+Sys_CheckParm
+
+Returns the position (1 to argc-1) in the program's argument list
+where the given parameter apears, or 0 if not present
+================
+*/
+int Sys_CheckParm( const char *parm )
+{
+	int	i;
+
+	for( i = 1; i < host.argc; i++ )
+	{
+		if( !host.argv[i] ) continue;
+		if( !Q_stricmp( parm, host.argv[i] ))
+			return i;
+	}
+	return 0;
+}
+
+/*
+================
+Sys_GetParmFromCmdLine
+
+Returns the argument for specified parm
+================
+*/
+qboolean _Sys_GetParmFromCmdLine( char *parm, char *out, size_t size )
+{
+	int	argc = Sys_CheckParm( parm );
+
+	if( !argc ) return false;
+	if( !out ) return false;	
+	if( !host.argv[argc + 1] ) return false;
+	Q_strncpy( out, host.argv[argc+1], size );
+
+	return true;
+}
+
+/*
 ================
 Sys_QueEvent
 
@@ -225,7 +350,7 @@ sys_event_t Sys_GetEvent( void )
 	}
 
 	// check for console commands
-	s = Sys_Input();
+	s = Con_Input();
 	if( s )
 	{
 		char	*b;
@@ -298,7 +423,7 @@ qboolean Sys_LoadLibrary( dll_info_t *dll )
 error:
 	MsgDev( D_NOTE, " - failed\n" );
 	Sys_FreeLibrary( dll ); // trying to free 
-	if( dll->crash ) com.error( errorstring );
+	if( dll->crash ) Sys_Error( errorstring );
 	else MsgDev( D_ERROR, errorstring );			
 
 	return false;
@@ -329,4 +454,273 @@ qboolean Sys_FreeLibrary( dll_info_t *dll )
 	dll->link = NULL;
 
 	return true;
+}
+
+/*
+================
+Sys_WaitForQuit
+
+wait for 'Esc' key will be hit
+================
+*/
+void Sys_WaitForQuit( void )
+{
+	MSG	msg;
+
+	Con_RegisterHotkeys();		
+
+	msg.message = 0;
+
+	// wait for the user to quit
+	while( msg.message != WM_QUIT )
+	{
+		if( PeekMessage( &msg, 0, 0, 0, PM_REMOVE ))
+		{
+			TranslateMessage( &msg );
+			DispatchMessage( &msg );
+		} 
+		else Sys_Sleep( 20 );
+	}
+}
+
+long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
+{
+	// save config
+	if( host.state != HOST_CRASHED )
+	{
+		// check to avoid recursive call
+		error_on_exit = true;
+		host.state = HOST_CRASHED;
+
+		if( host.type == HOST_NORMAL ) CL_Crashed(); // tell client about crash
+		Msg( "Sys_Crash: call %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
+
+		if( host.developer <= 0 )
+		{
+			// no reason to call debugger in release build - just exit
+			Sys_Quit();
+			return EXCEPTION_CONTINUE_EXECUTION;
+		}
+
+		// all other states keep unchanged to let debugger find bug
+		Con_DestroyConsole();
+          }
+
+	if( host.oldFilter )
+		return host.oldFilter( pInfo );
+	return EXCEPTION_CONTINUE_EXECUTION;
+}
+
+/*
+================
+Sys_Error
+
+NOTE: we must prepare engine to shutdown
+before call this
+================
+*/
+void Sys_Error( const char *error, ... )
+{
+	va_list	argptr;
+	char	text[MAX_SYSPATH];
+         
+	if( host.state == HOST_ERR_FATAL )
+		return; // don't multiple executes
+
+	// make sure what console received last message
+	if( host.change_game ) Sys_Sleep( 200 );
+
+	error_on_exit = true;
+	host.state = HOST_ERR_FATAL;	
+	va_start( argptr, error );
+	Q_vsprintf( text, error, argptr );
+	va_end( argptr );
+
+	if( host.type = HOST_NORMAL )
+		CL_Shutdown(); // kill video
+
+	if( host.developer > 0 )
+	{
+		Con_ShowConsole( true );
+		Con_DisableInput();	// disable input line for dedicated server
+		Sys_Print( text );	// print error message
+		Sys_WaitForQuit();
+	}
+	else
+	{
+		Con_ShowConsole( false );
+		MSGBOX( text );
+	}
+	Sys_Quit();
+}
+
+/*
+================
+Sys_Break
+
+same as Error
+================
+*/
+void Sys_Break( const char *error, ... )
+{
+	va_list		argptr;
+	char		text[MAX_SYSPATH];
+
+	if( host.state == HOST_ERR_FATAL )
+		return; // don't multiple executes
+         
+	va_start( argptr, error );
+	Q_vsprintf( text, error, argptr );
+	va_end( argptr );
+
+	error_on_exit = true;	
+	host.state = HOST_ERR_FATAL;
+
+	if( host.type == HOST_NORMAL )
+		CL_Shutdown(); // kill video
+
+	if( host.type != HOST_NORMAL || host.developer > 0 )
+	{
+		Con_ShowConsole( true );
+		Sys_Print( text );
+		Sys_WaitForQuit();
+	}
+	else
+	{
+		Con_ShowConsole( false );
+		MSGBOX( text );
+	}
+	Sys_Quit();
+}
+
+/*
+================
+Sys_Quit
+================
+*/
+void Sys_Quit( void )
+{
+	Host_Shutdown();
+	exit( error_on_exit );
+}
+
+/*
+================
+Sys_Print
+
+print into window console
+================
+*/
+void Sys_Print( const char *pMsg )
+{
+	const char	*msg;
+	char		buffer[32768];
+	char		logbuf[32768];
+	char		*b = buffer;
+	char		*c = logbuf;	
+	int		i = 0;
+
+	if( host.type == HOST_NORMAL )
+		Con_Print( pMsg );
+
+	// if the message is REALLY long, use just the last portion of it
+	if( Q_strlen( pMsg ) > sizeof( buffer ) - 1 )
+		msg = pMsg + Q_strlen( pMsg ) - sizeof( buffer ) + 1;
+	else msg = pMsg;
+
+	// copy into an intermediate buffer
+	while( msg[i] && (( b - buffer ) < sizeof( buffer ) - 1 ))
+	{
+		if( msg[i] == '\n' && msg[i+1] == '\r' )
+		{
+			b[0] = '\r';
+			b[1] = c[0] = '\n';
+			b += 2, c++;
+			i++;
+		}
+		else if( msg[i] == '\r' )
+		{
+			b[0] = c[0] = '\r';
+			b[1] = '\n';
+			b += 2, c++;
+		}
+		else if( msg[i] == '\n' )
+		{
+			b[0] = '\r';
+			b[1] = c[0] = '\n';
+			b += 2, c++;
+		}
+		else if( msg[i] == '\35' || msg[i] == '\36' || msg[i] == '\37' )
+		{
+			i++; // skip console pseudo graph
+		}
+		else if( IsColorString( &msg[i] ))
+		{
+			i++; // skip color prefix
+		}
+		else
+		{
+			*b = *c = msg[i];
+			b++, c++;
+		}
+		i++;
+	}
+
+	*b = *c = 0; // cutoff garbage
+
+	Sys_PrintLog( logbuf );
+	Con_WinPrint( buffer );
+}
+
+/*
+================
+Msg
+
+formatted message
+================
+*/
+void Msg( const char *pMsg, ... )
+{
+	va_list	argptr;
+	char	text[8192];
+	
+	va_start( argptr, pMsg );
+	Q_vsnprintf( text, sizeof( text ), pMsg, argptr );
+	va_end( argptr );
+
+	Sys_Print( text );
+}
+
+/*
+================
+MsgDev
+
+formatted developer message
+================
+*/
+void MsgDev( int level, const char *pMsg, ... )
+{
+	va_list	argptr;
+	char	text[8192];
+
+	if( host.developer < level ) return;
+
+	va_start( argptr, pMsg );
+	Q_vsnprintf( text, sizeof( text ), pMsg, argptr );
+	va_end( argptr );
+
+	switch( level )
+	{
+	case D_WARN:
+		Sys_Print( va( "^3Warning:^7 %s", text ));
+		break;
+	case D_ERROR:
+		Sys_Print( va( "^1Error:^7 %s", text ));
+		break;
+	case D_INFO:
+	case D_NOTE:
+	case D_AICONSOLE:
+		Sys_Print( text );
+		break;
+	}
 }

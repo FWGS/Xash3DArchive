@@ -590,10 +590,10 @@ qboolean Cmd_GetGamesList( const char *s, char *completedname, int length )
 	string	matchbuf;
 
 	// compare gamelist with current keyword
-	for( i = 0, numgamedirs = 0; i < SI->numgames; i++ )
+	for( i = 0, numgamedirs = 0; i < SI.numgames; i++ )
 	{
-		if(( *s == '*' ) || !Q_strnicmp( SI->games[i]->gamefolder, s, Q_strlen( s )))
-			Q_strcpy( gamedirs[numgamedirs++], SI->games[i]->gamefolder ); 
+		if(( *s == '*' ) || !Q_strnicmp( SI.games[i]->gamefolder, s, Q_strlen( s )))
+			Q_strcpy( gamedirs[numgamedirs++], SI.games[i]->gamefolder ); 
 	}
 
 	if( !numgamedirs ) return false;

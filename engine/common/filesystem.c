@@ -1039,7 +1039,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 
 	Q_strncpy( defGI.title, "New Game", sizeof( defGI.title ));
 	Q_strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
-	Q_strncpy( defGI.basedir, SI->ModuleName, sizeof( defGI.basedir ));
+	Q_strncpy( defGI.basedir, SI.ModuleName, sizeof( defGI.basedir ));
 	Q_strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
 	Q_strncpy( defGI.mp_entity, "info_player_deathmatch", sizeof( defGI.mp_entity ));
 	Q_strncpy( defGI.dll_path, "cl_dlls", sizeof( defGI.dll_path ));
@@ -1077,7 +1077,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	
 	Q_strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	Q_strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
-	Q_strncpy( GameInfo->basedir, SI->ModuleName, sizeof( GameInfo->basedir ));
+	Q_strncpy( GameInfo->basedir, SI.ModuleName, sizeof( GameInfo->basedir ));
 	Q_strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
 	Q_strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
 	Q_strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
@@ -1378,16 +1378,16 @@ void FS_LoadGameInfo( const char *rootfolder )
 	FS_ClearSearchPath();
 
 	// validate gamedir
-	for( i = 0; i < SI->numgames; i++ )
+	for( i = 0; i < SI.numgames; i++ )
 	{
-		if( !Q_stricmp( SI->games[i]->gamefolder, gs_basedir ))
+		if( !Q_stricmp( SI.games[i]->gamefolder, gs_basedir ))
 			break;
 	}
 
-	if( i == SI->numgames )
-		Sys_Break( "Couldn't find game directory '%s'\n", gs_basedir );
+	if( i == SI.numgames )
+		Sys_Error( "Couldn't find game directory '%s'\n", gs_basedir );
 
-	SI->GameInfo = SI->games[i];
+	SI.GameInfo = SI.games[i];
 	FS_Rescan(); // create new filesystem
 }
 
@@ -1416,21 +1416,21 @@ void FS_Init( void )
 		stringlistinit( &dirs );
 		listdirectory( &dirs, "./" );
 		stringlistsort( &dirs );
-		SI->numgames = 0;
+		SI.numgames = 0;
 	
 		if( !Sys_GetParmFromCmdLine( "-game", gs_basedir ))
-			Q_strcpy( gs_basedir, SI->ModuleName ); // default dir
+			Q_strcpy( gs_basedir, SI.ModuleName ); // default dir
 
 		if( FS_CheckNastyPath( gs_basedir, true ))
 		{
 			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", gs_basedir );		
-			Q_strcpy( gs_basedir, SI->ModuleName ); // default dir
+			Q_strcpy( gs_basedir, SI.ModuleName ); // default dir
 		}
 
 		// validate directories
 		for( i = 0; i < dirs.numstrings; i++ )
 		{
-			if( !Q_stricmp( SI->ModuleName, dirs.strings[i] ))
+			if( !Q_stricmp( SI.ModuleName, dirs.strings[i] ))
 				hasDefaultDir = true;
 
 			if( !Q_stricmp( gs_basedir, dirs.strings[i] ))
@@ -1440,7 +1440,7 @@ void FS_Init( void )
 		if( i == dirs.numstrings )
 		{ 
 			MsgDev( D_INFO, "FS_Init: game directory \"%s\" not exist\n", gs_basedir );		
-			if( hasDefaultDir ) Q_strncpy( gs_basedir, SI->ModuleName, sizeof( gs_basedir )); // default dir
+			if( hasDefaultDir ) Q_strncpy( gs_basedir, SI.ModuleName, sizeof( gs_basedir )); // default dir
 		}
 
 		// build list of game directories here
@@ -1452,10 +1452,10 @@ void FS_Init( void )
 			if( Q_stricmp( ext, "" ) || (!Q_stricmp( dirs.strings[i], ".." ) && !fs_ext_path ))
 				continue;
 
-			if( !SI->games[SI->numgames] )
-				SI->games[SI->numgames] = (gameinfo_t *)Mem_Alloc( fs_mempool, sizeof( gameinfo_t ));
-			if( FS_ParseGameInfo( dirs.strings[i], SI->games[SI->numgames] ))
-				SI->numgames++; // added
+			if( !SI.games[SI.numgames] )
+				SI.games[SI.numgames] = (gameinfo_t *)Mem_Alloc( fs_mempool, sizeof( gameinfo_t ));
+			if( FS_ParseGameInfo( dirs.strings[i], SI.games[SI.numgames] ))
+				SI.numgames++; // added
 		}
 		stringlistfreecontents( &dirs );
 	}	
@@ -1477,10 +1477,10 @@ void FS_Shutdown( void )
 	int	i;
 
 	// release gamedirs
-	for( i = 0; i < SI->numgames; i++ )
-		if( SI->games[i] ) Mem_Free( SI->games[i] );
+	for( i = 0; i < SI.numgames; i++ )
+		if( SI.games[i] ) Mem_Free( SI.games[i] );
 
-	Q_memset( SI, 0, sizeof( sysinfo_t ));
+	Q_memset( &SI, 0, sizeof( sysinfo_t ));
 
 	FS_ClearSearchPath(); // release all wad files too
 	Mem_FreePool( &fs_mempool );

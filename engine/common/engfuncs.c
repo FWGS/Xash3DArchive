@@ -427,7 +427,7 @@ void Con_Printf( char *szFmt, ... )
 	Q_vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
-	com.print( buffer );
+	Sys_Print( buffer );
 }
 
 /*
@@ -448,7 +448,7 @@ void Con_DPrintf( char *szFmt, ... )
 	Q_vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
-	com.print( buffer );
+	Sys_Print( buffer );
 }
 
 /*

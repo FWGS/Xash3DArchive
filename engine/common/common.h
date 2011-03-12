@@ -5,8 +5,61 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// disable some warnings
+#pragma warning(disable : 4244)	// MIPS
+#pragma warning(disable : 4018)	// signed/unsigned mismatch
+#pragma warning(disable : 4305)	// truncation from const double to float
+
+#define MAX_STRING		256	// generic string
+#define MAX_INFO_STRING	256	// infostrings are transmitted across network
+#define MAX_SYSPATH		1024	// system filepath
+#define MAX_MODS		512	// environment games that engine can keep visible
+#define EXPORT		__declspec( dllexport )
+#define BIT( n )		(1<<( n ))
+
+#ifndef __cplusplus
+#define NULL		((void *)0)
+#endif
+
+// color strings
+#define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
+
+typedef unsigned long	dword;
+typedef unsigned int	uint;
+typedef char		string[MAX_STRING];
+typedef long		fs_offset_t;
+typedef struct file_s	file_t;		// normal file
+typedef struct wfile_s	wfile_t;	// wad file
+typedef struct stream_s	stream_t;	// sound stream for background music playing
+
+typedef struct
+{
+	int	numfilenames;
+	char	**filenames;
+	char	*filenamesbuffer;
+} search_t;
+
+enum
+{
+	D_INFO = 1,	// "-dev 1", shows various system messages
+	D_WARN,		// "-dev 2", shows not critical system warnings
+	D_ERROR,		// "-dev 3", shows critical warnings 
+	D_AICONSOLE,	// "-dev 4", special case for game aiconsole
+	D_NOTE		// "-dev 5", show system notifications for engine developers
+};
+
+typedef enum
+{	
+	HOST_NORMAL,	// listen server, singleplayer
+	HOST_DEDICATED,
+	HOST_CREDITS	// easter egg
+} instance_t;
+
 #include "system.h"
-#include "launch_api.h"
 #include "ref_params.h"
 #include "com_export.h"
 #include "com_model.h"
@@ -29,6 +82,8 @@
 #define CIN_MAIN		0
 #define CIN_LOGO		1
 
+#define MAX_NUM_ARGVS	128
+
 // config strings are a general means of communication from
 // the server to all connected clients.
 // each config string can be at most CS_SIZE characters.
@@ -43,6 +98,10 @@
 #define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path
 #define FS_NOWRITE_PATH	2	// default behavior - last added gamedir set as writedir. This flag disables it
 #define FS_GAMEDIR_PATH	4	// just a marker for gamedir path
+
+#define GI		SI.GameInfo
+#define FS_Gamedir()	SI.GameInfo->gamedir
+#define FS_Title()		SI.GameInfo->title
 
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
@@ -69,12 +128,65 @@ HOST INTERFACE
 */
 #define MAX_SYSEVENTS	1024
 
+/*
+========================================================================
+
+GAMEINFO stuff
+
+internal shared gameinfo structure (readonly for engine parts)
+========================================================================
+*/
+typedef struct gameinfo_s
+{
+	// filesystem info
+	char		gamefolder[64];	// used for change game '-game x'
+	char		basedir[64];	// main game directory (like 'id1' for Quake or 'valve' for Half-Life)
+	char		gamedir[64];	// game directory (can be match with basedir, used as primary dir and as write path
+	char		startmap[64];	// map to start singleplayer game
+	char		trainmap[64];	// map to start hazard course (if specified)
+	char		title[64];	// Game Main Title
+	float		version;		// game version (optional)
+
+	// .dll pathes
+	char		dll_path[64];	// e.g. "bin" or "cl_dlls"
+	char		game_dll[64];	// custom path for game.dll
+
+	// about mod info
+	string		game_url;		// link to a developer's site
+	string		update_url;	// link to updates page
+	char		type[64];		// single, toolkit, multiplayer etc
+	char		date[64];
+	size_t		size;
+
+	int		gamemode;
+
+	char		sp_entity[32];	// e.g. info_player_start
+	char		mp_entity[32];	// e.g. info_player_deathmatch
+
+	float		client_mins[4][3];	// 4 hulls allowed
+	float		client_maxs[4][3];	// 4 hulls allowed
+
+	int		max_edicts;	// min edicts is 600, max edicts is 4096
+	int		max_tents;	// min temp ents is 300, max is 2048
+	int		max_beams;	// min beams is 64, max beams is 512
+	int		max_particles;	// min particles is 512, max particles is 8192
+} gameinfo_t;
+
+typedef struct sysinfo_s
+{
+	string		ModuleName;	// exe.filename
+	gameinfo_t	*GameInfo;	// current GameInfo
+	gameinfo_t	*games[MAX_MODS];	// environment games (founded at each engine start)
+	int		numgames;
+} sysinfo_t;
+
 typedef enum
 {
 	HOST_INIT = 0,	// initalize operations
 	HOST_FRAME,	// host running
 	HOST_SHUTDOWN,	// shutdown operations	
 	HOST_ERROR,	// host stopped by error
+	HOST_ERR_FATAL,	// sys error
 	HOST_SLEEP,	// sleeped by different reason, e.g. minimize window
 	HOST_NOFOCUS,	// same as HOST_FRAME, but disable mouse
 	HOST_RESTART,	// during the changes video mode
@@ -116,7 +228,10 @@ typedef struct host_redirect_s
 
 typedef struct host_parm_s
 {
-	HINSTANCE		hInst;
+	HINSTANCE			hInst;
+	HANDLE			hMutex;
+	LPTOP_LEVEL_EXCEPTION_FILTER	oldFilter;
+
 	host_state	state;		// global host state
 	uint		type;		// running at
 	jmp_buf		abortframe;	// abort current frame
@@ -127,7 +242,7 @@ typedef struct host_parm_s
 
 	// command line parms
 	int		argc;
-	const char	**argv;
+	const char	*argv[MAX_NUM_ARGVS];
 
 	double		realtime;		// host.curtime
 	double		frametime;	// time between engine frames
@@ -146,7 +261,10 @@ typedef struct host_parm_s
 	int		developer;	// show all developer's message
 	qboolean		key_overstrike;	// key overstrike mode
 	qboolean		stuffcmdsrun;	// execute stuff commands
-
+	qboolean		con_showalways;	// show console always (developer and dedicated)
+	qboolean		change_game;	// initialize when game is changed
+	qboolean		shutdown_issued;	// engine is shutting down
+	
 	byte		*imagepool;	// imagelib mempool
 	byte		*soundpool;	// soundlib mempool
 
@@ -161,15 +279,8 @@ typedef struct host_parm_s
 	int		numsounds;
 } host_parm_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 extern host_parm_t	host;
-
-#ifdef __cplusplus
-}
-#endif
+extern sysinfo_t	SI;
 
 //
 // filesystem.c
@@ -392,12 +503,11 @@ int com_buildnum( void );
 //
 // host.c
 //
-void Host_Init( const int argc, const char **argv );
-void Host_Main( void );
-void Host_Free( void );
+void EXPORT Host_Shutdown( void );
 void Host_SetServerState( int state );
 int Host_ServerState( void );
 int Host_CompareFileTime( long ft1, long ft2 );
+void Host_NewInstance( const char *name, const char *finalmsg );
 qboolean Host_NewGame( const char *mapName, qboolean loadGame );
 void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
@@ -610,4 +720,7 @@ void S_StopSound( int entnum, int channel, const char *soundname );
 int S_GetCurrentStaticSounds( soundlist_t *pout, int size );
 void S_StopAllSounds( void );
 
+#ifdef __cplusplus
+}
+#endif
 #endif//COMMON_H

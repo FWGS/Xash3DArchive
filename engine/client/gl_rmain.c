@@ -1002,7 +1002,7 @@ void R_EndFrame( void )
 	GL_CheckForErrors ();
 
 	if( !pwglSwapBuffers( glw_state.hDC ))
-		Sys_Break( "wglSwapBuffers() failed!\n" );
+		Sys_Error( "wglSwapBuffers() failed!\n" );
 }
 
 /*

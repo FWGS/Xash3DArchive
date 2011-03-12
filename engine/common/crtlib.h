@@ -13,6 +13,17 @@ enum
 	EXEC_APPEND,
 };
 
+// timestamp modes
+enum
+{
+	TIME_FULL = 0,
+	TIME_DATE_ONLY,
+	TIME_TIME_ONLY,
+	TIME_NO_SECONDS,
+	TIME_YEAR_ONLY,
+	TIME_FILENAME,
+};
+
 typedef void (*setpair_t)( const char *key, const char *value, void *buffer, void *numpairs );
 typedef void (*xcommand_t)( void );
 

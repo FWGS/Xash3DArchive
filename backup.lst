@@ -27,7 +27,6 @@ engine\server\
 engine\common\
 engine\common\imagelib\
 engine\common\soundlib\
-launch\
 pm_shared\
 mainui\
 mainui\legacy

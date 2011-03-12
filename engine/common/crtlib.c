@@ -648,14 +648,14 @@ char *va( const char *format, ... )
 void crt_memcpy( void *dest, const void *src, size_t count, const char *filename, int fileline )
 {
 	if( src == NULL || count <= 0 ) return; // nothing to copy
-	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+	if( dest == NULL ) Sys_Error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
 	memcpy( dest, src, count );
 }
 
 void mmx_memcpy8B( void *dest, const void *src, size_t count, const char *filename, int fileline )
 {
 	if( src == NULL || count <= 0 ) return; // nothing to copy
-	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+	if( dest == NULL ) Sys_Error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
 
 	_asm
 	{
@@ -678,7 +678,7 @@ loop1:
 void mmx_memcpy64B( void *dest, const void *src, size_t count, const char *filename, int fileline )
 {
 	if( src == NULL || count <= 0 ) return; // nothing to copy
-	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+	if( dest == NULL ) Sys_Error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
 
 	_asm
 	{
@@ -722,7 +722,7 @@ void mmx_memcpy2kB( void *dest, const void *src, size_t count, const char *filen
 	byte	*tbuf = &buf[0];
 
 	if( src == NULL || count <= 0 ) return; // nothing to copy
-	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+	if( dest == NULL ) Sys_Error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
 
 	__asm
 	{
@@ -800,7 +800,7 @@ loopL1ToMem:
 void mmx_memcpy( void *dest, const void *src, size_t size, const char *filename, int fileline )
 {
 	if( src == NULL || size <= 0 ) return; // nothing to copy
-	if( dest == NULL ) com.error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
+	if( dest == NULL ) Sys_Error( "memcpy: dest == NULL (called at %s:%i)\n", filename, fileline );
 
 	// if copying more than 16 bytes and we can copy 8 byte aligned
 	if( size > 16 && !(((int)dest ^ (int)src) & 7 ))
@@ -852,7 +852,7 @@ void mmx_memcpy( void *dest, const void *src, size_t size, const char *filename,
 
 void crt_memset( void *dest, int set, size_t count, const char *filename, int fileline )
 {
-	if( dest == NULL ) com.error( "memset: dest == NULL (called at %s:%i)\n", filename, fileline );
+	if( dest == NULL ) Sys_Error( "memset: dest == NULL (called at %s:%i)\n", filename, fileline );
 	memset( dest, set, count );
 }
 
@@ -868,7 +868,7 @@ void mmx_memset( void *dest, int set, size_t size, const char *filename, int fil
 	byte	*dst = (byte *)dest;
 	int	count = size;
 
-	if( dest == NULL ) com.error( "memset: dest == NULL (called at %s:%i)\n", filename, fileline );
+	if( dest == NULL ) Sys_Error( "memset: dest == NULL (called at %s:%i)\n", filename, fileline );
 
 	while( count > 0 && (((int)dst) & 7) )
 	{

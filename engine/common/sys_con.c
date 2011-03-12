@@ -1,11 +1,9 @@
 //=======================================================================
 //			Copyright XashXT Group 2007 ©
-//			console.c - win and dos console
+//		        sys_con.c - win32 dediacted console
 //=======================================================================
 
-#include "launch.h"
-
-HINSTANCE	base_hInstance;
+#include "common.h"
 
 /*
 ===============================================================================
@@ -27,6 +25,7 @@ WIN32 CONSOLE
 
 typedef struct
 {
+	char		title[64];
 	HWND		hWnd;
 	HWND		hwndBuffer;
 	HWND		hwndButtonSubmit;
@@ -43,8 +42,14 @@ typedef struct
 	int		windowWidth, windowHeight;
 	WNDPROC		SysInputLineWndProc;
 	size_t		outLen;
+
+	// log stuff
+	qboolean		log_active;
+	char		log_path[MAX_SYSPATH];
+	FILE		*logfile;
 } WinConData;
-static WinConData s_wcd;
+
+static WinConData	s_wcd;
 
 void Con_ShowConsole( qboolean show )
 {
@@ -62,17 +67,16 @@ void Con_ShowConsole( qboolean show )
 
 void Con_DisableInput( void )
 {
-	if( Sys.con_readonly ) return;
+	if( host.type != HOST_DEDICATED ) return;
 	SendMessage( s_wcd.hwndButtonSubmit, WM_ENABLE, 0, 0 );
 	SendMessage( s_wcd.hwndInputLine, WM_ENABLE, 0, 0 );
 }
 
 void Con_SetInputText( const char *inputText )
 {
-	if( Sys.con_readonly ) return;
-
+	if( host.type != HOST_DEDICATED ) return;
 	SetWindowText( s_wcd.hwndInputLine, inputText );
-	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, strlen( inputText ), -1 );
+	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, Q_strlen( inputText ), -1 );
 }
 
 static int Con_KeyEvent( int key, qboolean down )
@@ -86,7 +90,7 @@ static int Con_KeyEvent( int key, qboolean down )
 	{
 	case VK_TAB:
 		GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ));
-		if( Sys.CmdAuto ) Sys.CmdAuto( inputBuffer );
+		Cmd_AutoComplete( inputBuffer );
 		Con_SetInputText( inputBuffer );
 		return 1;
 	case VK_DOWN:
@@ -113,18 +117,18 @@ static long _stdcall Con_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 			SetFocus( s_wcd.hwndInputLine );
 		break;
 	case WM_CLOSE:
-		if( Sys.app_state == SYS_ERROR )
+		if( host.state == HOST_ERR_FATAL )
 		{
 			// send windows message
 			PostQuitMessage( 0 );
 		}
-		else Sys_Exit(); // otherwise
+		else Sys_Quit(); // otherwise
 		return 0;
 	case WM_CTLCOLORSTATIC:
-		if( (HWND)lParam == s_wcd.hwndBuffer )
+		if((HWND)lParam == s_wcd.hwndBuffer )
 		{
-			SetBkColor( (HDC)wParam, RGB( 0x90, 0x90, 0x90 ));
-			SetTextColor( (HDC)wParam, RGB( 0xff, 0xff, 0xff ));
+			SetBkColor((HDC)wParam, RGB( 0x90, 0x90, 0x90 ));
+			SetTextColor((HDC)wParam, RGB( 0xff, 0xff, 0xff ));
 			return (long)s_wcd.hbrEditBackground;
 		}
 		break;
@@ -176,16 +180,16 @@ long _stdcall Con_InputLineProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	case WM_CHAR:
 		if( Con_KeyEvent( wParam, true ))
 			return 0;
-		if( wParam == 13 && Sys.app_state != SYS_ERROR )
+		if( wParam == 13 && host.state != HOST_ERR_FATAL )
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ));
-			strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - strlen( s_wcd.consoleText ) - 5 );
-			strcat( s_wcd.consoleText, "\n" );
+			Q_strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - Q_strlen( s_wcd.consoleText ) - 5 );
+			Q_strcat( s_wcd.consoleText, "\n" );
 			SetWindowText( s_wcd.hwndInputLine, "" );
 			Msg( ">%s\n", inputBuffer );
 
 			// copy line to history buffer
-			strncpy( s_wcd.historyLines[s_wcd.nextHistoryLine % COMMAND_HISTORY], inputBuffer, MAX_STRING );
+			Q_strncpy( s_wcd.historyLines[s_wcd.nextHistoryLine % COMMAND_HISTORY], inputBuffer, MAX_STRING );
 			s_wcd.nextHistoryLine++;
 			s_wcd.historyLine = s_wcd.nextHistoryLine;
 			return 0;
@@ -205,14 +209,14 @@ WIN32 IO
 */
 /*
 ================
-Con_Print
+Con_WinPrint
 
 print into window console
 ================
 */
-void Con_Print( const char *pMsg )
+void Con_WinPrint( const char *pMsg )
 {
-	size_t	len = strlen( pMsg );
+	size_t	len = Q_strlen( pMsg );
 
 	// replace selection instead of appending if we're overflowing
 	s_wcd.outLen += len;
@@ -244,50 +248,45 @@ void Con_CreateConsole( void )
 	RECT	rect;
 	int	nHeight;
 	int	swidth, sheight, fontsize;
-	string	Title, FontName;
 	int	DEDSTYLE = WS_POPUPWINDOW | WS_CAPTION;
 	int	CONSTYLE = WS_CHILD|WS_VISIBLE|WS_VSCROLL|WS_BORDER|WS_EX_CLIENTEDGE|ES_LEFT|ES_MULTILINE|ES_AUTOVSCROLL|ES_READONLY;
-
-	if( Sys.con_silentmode )
-		return;
-
-	Sys_InitLog();
+	string	FontName;
 
 	wc.style         = 0;
 	wc.lpfnWndProc   = (WNDPROC)Con_WndProc;
 	wc.cbClsExtra    = 0;
 	wc.cbWndExtra    = 0;
-	wc.hInstance     = Sys.hInstance;
-	wc.hIcon         = LoadIcon( Sys.hInstance, MAKEINTRESOURCE( IDI_ICON1 ));
+	wc.hInstance     = host.hInst;
+	wc.hIcon         = LoadIcon( host.hInst, MAKEINTRESOURCE( IDI_ICON1 ));
 	wc.hCursor       = LoadCursor( NULL, IDC_ARROW );
 	wc.hbrBackground = (void *)COLOR_3DSHADOW;
 	wc.lpszClassName = SYSCONSOLE;
 	wc.lpszMenuName  = 0;
 
-	if(!RegisterClass( &wc ))
-	{
-		// print into log
-		MsgDev( D_WARN, "Can't register window class '%s'\n", SYSCONSOLE );
-		return;
-	} 
+	if( Sys_CheckParm( "-log" ) && host.developer != 0 )
+		s_wcd.log_active = true;
 
-	if( Sys.con_showcredits )
+	if( host.type == HOST_CREDITS )
 	{
 		CONSTYLE &= ~WS_VSCROLL;
 		rect.left = 0;
 		rect.right = 536;
 		rect.top = 0;
 		rect.bottom = 280;
-		strncpy( FontName, "Arial", sizeof( FontName ));
+		Q_strncpy( FontName, "Arial", sizeof( FontName ));
+		Q_strncpy( s_wcd.title, "About", sizeof( s_wcd.title ));
+		s_wcd.log_active = false;
 		fontsize = 16;
 	}
-	else if( Sys.con_readonly )
+	else if( host.type != HOST_DEDICATED )
 	{
 		rect.left = 0;
 		rect.right = 536;
 		rect.top = 0;
 		rect.bottom = 364;
-		strncpy( FontName, "Fixedsys", sizeof( FontName ));
+		Q_strncpy( FontName, "Fixedsys", sizeof( FontName ));
+		Q_strncpy( s_wcd.title, va( "Xash3D %g", XASH_VERSION ), sizeof( s_wcd.title ));
+		Q_strncpy( s_wcd.log_path, "engine.log", sizeof( s_wcd.log_path ));
 		fontsize = 8;
 	}
 	else // dedicated console
@@ -296,11 +295,21 @@ void Con_CreateConsole( void )
 		rect.right = 640;
 		rect.top = 0;
 		rect.bottom = 392;
-		strncpy( FontName, "System", sizeof( FontName ));
+		Q_strncpy( FontName, "System", sizeof( FontName ));
+		Q_strncpy( s_wcd.title, "Xash Dedicated Server", sizeof( s_wcd.title ));
+		Q_strncpy( s_wcd.log_path, "dedicated.log", sizeof( s_wcd.log_path ));
 		fontsize = 14;
 	}
 
-	strncpy( Title, Sys.caption, sizeof( Title ));
+	Sys_InitLog();
+
+	if( !RegisterClass( &wc ))
+	{
+		// print into log
+		MsgDev( D_ERROR, "Can't register window class '%s'\n", SYSCONSOLE );
+		return;
+	} 
+
 	AdjustWindowRect( &rect, DEDSTYLE, FALSE );
 
 	hDC = GetDC( GetDesktopWindow() );
@@ -311,49 +320,50 @@ void Con_CreateConsole( void )
 	s_wcd.windowWidth = rect.right - rect.left;
 	s_wcd.windowHeight = rect.bottom - rect.top;
 
-	s_wcd.hWnd = CreateWindowEx( WS_EX_DLGMODALFRAME, SYSCONSOLE, Title, DEDSTYLE, ( swidth - 600 ) / 2, ( sheight - 450 ) / 2 , rect.right - rect.left + 1, rect.bottom - rect.top + 1, NULL, NULL, base_hInstance, NULL );
+	s_wcd.hWnd = CreateWindowEx( WS_EX_DLGMODALFRAME, SYSCONSOLE, s_wcd.title, DEDSTYLE, ( swidth - 600 ) / 2, ( sheight - 450 ) / 2 , rect.right - rect.left + 1, rect.bottom - rect.top + 1, NULL, NULL, host.hInst, NULL );
 	if( s_wcd.hWnd == NULL )
 	{
-		Msg( "Can't create window '%s'\n", Title );
+		MsgDev( D_ERROR, "Can't create window '%s'\n", s_wcd.title );
 		return;
 	}
 
 	// create fonts
 	hDC = GetDC( s_wcd.hWnd );
 	nHeight = -MulDiv( fontsize, GetDeviceCaps( hDC, LOGPIXELSY ), 72 );
-	s_wcd.hfBufferFont = CreateFont( nHeight, 0, 0, 0, FW_LIGHT, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN | FIXED_PITCH, FontName );
+	s_wcd.hfBufferFont = CreateFont( nHeight, 0, 0, 0, FW_LIGHT, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN|FIXED_PITCH, FontName );
 	ReleaseDC( s_wcd.hWnd, hDC );
 
-	if( !Sys.con_readonly )
+	if( host.type == HOST_DEDICATED )
 	{
 		// create the input line
-		s_wcd.hwndInputLine = CreateWindowEx( WS_EX_CLIENTEDGE, "edit", NULL, WS_CHILD|WS_VISIBLE|WS_BORDER|ES_LEFT|ES_AUTOHSCROLL, 0, 366, 550, 25, s_wcd.hWnd, ( HMENU )INPUT_ID, base_hInstance, NULL );
+		s_wcd.hwndInputLine = CreateWindowEx( WS_EX_CLIENTEDGE, "edit", NULL, WS_CHILD|WS_VISIBLE|WS_BORDER|ES_LEFT|ES_AUTOHSCROLL, 0, 366, 550, 25, s_wcd.hWnd, (HMENU)INPUT_ID, host.hInst, NULL );
 
-		s_wcd.hwndButtonSubmit = CreateWindow( "button", NULL, BS_PUSHBUTTON|WS_VISIBLE|WS_CHILD|BS_DEFPUSHBUTTON, 552, 367, 87, 25, s_wcd.hWnd, ( HMENU )SUBMIT_ID, base_hInstance, NULL );
+		s_wcd.hwndButtonSubmit = CreateWindow( "button", NULL, BS_PUSHBUTTON|WS_VISIBLE|WS_CHILD|BS_DEFPUSHBUTTON, 552, 367, 87, 25, s_wcd.hWnd, (HMENU)SUBMIT_ID, host.hInst, NULL );
 		SendMessage( s_wcd.hwndButtonSubmit, WM_SETTEXT, 0, ( LPARAM ) "submit" );
           }
           
 	// create the scrollbuffer
 	GetClientRect( s_wcd.hWnd, &rect );
 
-	s_wcd.hwndBuffer = CreateWindowEx( WS_EX_DLGMODALFRAME|WS_EX_CLIENTEDGE, "edit", NULL, CONSTYLE, 0, 0, rect.right - rect.left, min(365, rect.bottom), s_wcd.hWnd, ( HMENU )EDIT_ID, base_hInstance, NULL );
-	SendMessage( s_wcd.hwndBuffer, WM_SETFONT, ( WPARAM )s_wcd.hfBufferFont, 0 );
+	s_wcd.hwndBuffer = CreateWindowEx( WS_EX_DLGMODALFRAME|WS_EX_CLIENTEDGE, "edit", NULL, CONSTYLE, 0, 0, rect.right - rect.left, min(365, rect.bottom), s_wcd.hWnd, (HMENU)EDIT_ID, host.hInst, NULL );
+	SendMessage( s_wcd.hwndBuffer, WM_SETFONT, (WPARAM)s_wcd.hfBufferFont, 0 );
 
-	if( !Sys.con_readonly )
+	if( host.type == HOST_DEDICATED )
 	{
-		s_wcd.SysInputLineWndProc = ( WNDPROC )SetWindowLong( s_wcd.hwndInputLine, GWL_WNDPROC, ( long )Con_InputLineProc );
+		s_wcd.SysInputLineWndProc = (WNDPROC)SetWindowLong( s_wcd.hwndInputLine, GWL_WNDPROC, (long)Con_InputLineProc );
 		SendMessage( s_wcd.hwndInputLine, WM_SETFONT, ( WPARAM )s_wcd.hfBufferFont, 0 );
           }
 
 	// show console if needed
-	if( Sys.con_showalways )
+	if( host.con_showalways )
 	{          
 		// make console visible
-		ShowWindow( s_wcd.hWnd, SW_SHOWDEFAULT);
+		ShowWindow( s_wcd.hWnd, SW_SHOWDEFAULT );
 		UpdateWindow( s_wcd.hWnd );
 		SetForegroundWindow( s_wcd.hWnd );
 
-		if( Sys.con_readonly ) SetFocus( s_wcd.hWnd );
+		if( host.type != HOST_DEDICATED )
+			SetFocus( s_wcd.hWnd );
 		else SetFocus( s_wcd.hwndInputLine );
 		s_wcd.status = true;
           }
@@ -370,7 +380,7 @@ destroy win32 console
 void Con_DestroyConsole( void )
 {
 	// last text message into console or log 
-	MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading launch.dll\n" );
+	MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading xash.dll\n" );
 
 	Sys_CloseLog();
 
@@ -384,10 +394,10 @@ void Con_DestroyConsole( void )
 		s_wcd.hWnd = 0;
 	}
 
-	UnregisterClass( SYSCONSOLE, Sys.hInstance );
+	UnregisterClass( SYSCONSOLE, host.hInst );
 
 	// place it here in case Sys_Crash working properly
-	if( Sys.hMutex ) CloseHandle( Sys.hMutex );
+	if( host.hMutex ) CloseHandle( host.hMutex );
 }
 
 /*
@@ -402,7 +412,7 @@ char *Con_Input( void )
 	if( s_wcd.consoleText[0] == 0 )
 		return NULL;
 		
-	strncpy( s_wcd.returnedText, s_wcd.consoleText, sizeof( s_wcd.returnedText ));
+	Q_strncpy( s_wcd.returnedText, s_wcd.consoleText, sizeof( s_wcd.returnedText ));
 	s_wcd.consoleText[0] = 0;
 	
 	return s_wcd.returnedText;
@@ -434,51 +444,57 @@ void Sys_InitLog( void )
 {
 	const char	*mode;
 
-	if( Sys.app_state == SYS_RESTART )
+	if( host.change_game )
 		mode = "a";
 	else mode = "w";
 
 	// create log if needed
-	if( Sys.log_active && !Sys.con_silentmode )
+	if( s_wcd.log_active )
 	{
-		Sys.logfile = fopen( Sys.log_path, mode );
-		if(!Sys.logfile) MsgDev( D_ERROR, "Sys_InitLog: can't create log file %s\n", Sys.log_path );
+		s_wcd.logfile = fopen( s_wcd.log_path, mode );
+		if( !s_wcd.logfile ) MsgDev( D_ERROR, "Sys_InitLog: can't create log file %s\n", s_wcd.log_path );
 
-		fprintf( Sys.logfile, "=======================================================================\n" );
-		fprintf( Sys.logfile, "\t%s started at %s\n", Sys.caption, timestamp( TIME_FULL ));
-		fprintf( Sys.logfile, "=======================================================================\n");
+		fprintf( s_wcd.logfile, "=======================================================================\n" );
+		fprintf( s_wcd.logfile, "\t%s started at %s\n", s_wcd.title, Q_timestamp( TIME_FULL ));
+		fprintf( s_wcd.logfile, "=======================================================================\n");
 	}
 }
 
 void Sys_CloseLog( void )
 {
-	char	event_name[32];
+	char	event_name[64];
 
 	// continue logged
-	switch( Sys.app_state )
+	switch( host.state )
 	{
-	case SYS_CRASH: strncpy( event_name, "crashed", sizeof( event_name )); break;
-	case SYS_ERROR: strncpy( event_name, "stopped with error", sizeof( event_name )); break;
-	case SYS_RESTART: strncpy( event_name, "restarted", sizeof( event_name )); break;
-	default: strncpy( event_name, "stopped", sizeof( event_name )); break;
+	case HOST_CRASHED:
+		Q_strncpy( event_name, "crashed", sizeof( event_name ));
+		break;
+	case HOST_ERR_FATAL:
+		Q_strncpy( event_name, "stopped with error", sizeof( event_name ));
+		break;
+	default:
+		if( !host.change_game ) Q_strncpy( event_name, "stopped", sizeof( event_name ));
+		else Q_strncpy( event_name, host.finalmsg, sizeof( event_name ));
+		break;
 	}
 
-	if( Sys.logfile )
+	if( s_wcd.logfile )
 	{
-		fprintf( Sys.logfile, "\n");
-		fprintf( Sys.logfile, "=======================================================================");
-		fprintf( Sys.logfile, "\n\t%s %s at %s\n", Sys.caption, event_name, timestamp( TIME_FULL ));
-		fprintf( Sys.logfile, "=======================================================================\n");
-		if( Sys.app_state == SYS_RESTART ) fprintf( Sys.logfile, "\n" ); // just for tabulate
+		fprintf( s_wcd.logfile, "\n");
+		fprintf( s_wcd.logfile, "=======================================================================");
+		fprintf( s_wcd.logfile, "\n\t%s %s at %s\n", s_wcd.title, event_name, Q_timestamp( TIME_FULL ));
+		fprintf( s_wcd.logfile, "=======================================================================\n");
+		if( host.change_game ) fprintf( s_wcd.logfile, "\n" ); // just for tabulate
 
-		fclose( Sys.logfile );
-		Sys.logfile = NULL;
+		fclose( s_wcd.logfile );
+		s_wcd.logfile = NULL;
 	}
 }
 
 void Sys_PrintLog( const char *pMsg )
 {
-	if( !Sys.logfile ) return;
-	fprintf( Sys.logfile, pMsg );
-	fflush( Sys.logfile );
+	if( !s_wcd.logfile ) return;
+	fprintf( s_wcd.logfile, pMsg );
+	fflush( s_wcd.logfile );
 }

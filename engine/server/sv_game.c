@@ -2521,23 +2521,23 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 
 	if( level == at_notice )
 	{
-		com.print( buffer ); // notice printing always
+		Sys_Print( buffer ); // notice printing always
 	}
 	else if( level == at_console && host.developer >= D_INFO )
 	{
-		com.print( buffer );
+		Sys_Print( buffer );
 	}
 	else if( level == at_aiconsole && host.developer >= D_AICONSOLE )
 	{
-		com.print( buffer );
+		Sys_Print( buffer );
 	}
 	else if( level == at_warning && host.developer >= D_WARN )
 	{
-		com.print( va( "^3Warning:^7 %s", buffer ));
+		Sys_Print( va( "^3Warning:^7 %s", buffer ));
 	}
 	else if( level == at_error && host.developer >= D_ERROR )
 	{
-		com.print( va( "^1Error:^7 %s", buffer ));
+		Sys_Print( va( "^1Error:^7 %s", buffer ));
 	} 
 }
 
