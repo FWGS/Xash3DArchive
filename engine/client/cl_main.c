@@ -1627,5 +1627,9 @@ void CL_Shutdown( void )
 	IN_Shutdown ();
 	SCR_Shutdown ();
 	CL_UnloadProgs ();
+
+	S_Shutdown ();
+	R_Shutdown ();
+
 	cls.initialized = false;
 }

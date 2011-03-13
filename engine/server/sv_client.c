@@ -613,6 +613,7 @@ void SV_Info( netadr_t from )
 		Info_SetValueForKey( string, "coop", va( "%i", svgame.globals->coop ));
 		Info_SetValueForKey( string, "numcl", va( "%i", count ));
 		Info_SetValueForKey( string, "maxcl", va( "%i", sv_maxclients->integer ));
+		Info_SetValueForKey( string, "gamedir", GI->gamefolder );
 	}
 	Netchan_OutOfBandPrint( NS_SERVER, from, "info\n%s", string );
 }
@@ -1016,6 +1017,7 @@ void SV_New_f( sv_client_t *cl )
 	BF_WriteString( &cl->netchan.message, sv.name );
 	BF_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message )); // Map Message
 	BF_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map
+	BF_WriteString( &cl->netchan.message, GI->gamefolder );
 
 	// refresh userinfo on spawn
 	SV_RefreshUserinfo();

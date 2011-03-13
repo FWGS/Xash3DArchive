@@ -124,6 +124,9 @@ static void UI_LanGame_GetGamesList( void )
 	{
 		if( i >= UI_MAX_SERVERS ) break;
 		info = uiStatic.serverNames[i];
+
+//		if( stricmp( gMenu.m_gameinfo.gamefolder, Info_ValueForKey( info, "gamedir" )))
+//			continue;	// filter by game
  
 		StringConcat( uiLanGame.gameDescription[i], Info_ValueForKey( info, "host" ), GAME_LENGTH );
 		StringConcat( uiLanGame.gameDescription[i], uiEmptyString, GAME_LENGTH );

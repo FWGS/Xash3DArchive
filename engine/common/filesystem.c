@@ -1389,6 +1389,8 @@ void FS_LoadGameInfo( const char *rootfolder )
 
 	SI.GameInfo = SI.games[i];
 	FS_Rescan(); // create new filesystem
+
+	Host_InitDecals ();	// reload decals
 }
 
 /*

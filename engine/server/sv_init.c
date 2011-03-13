@@ -516,6 +516,10 @@ void SV_InitGame( void )
 	}
 	else
 	{
+		// restore gamefolder here (in case client was connected to another game)
+		if( Q_stricmp( host.gamefolder, GI->gamefolder ))
+			FS_LoadGameInfo( host.gamefolder );
+
 		// init game after host error
 		if( !svgame.hInstance )
 		{
@@ -620,6 +624,14 @@ void SV_InitGameProgs( void )
 
 	// just try to initialize
 	SV_LoadProgs( GI->game_dll );
+}
+
+void SV_FreeGameProgs( void )
+{
+	if( svs.initialized ) return;	// server is active
+
+	// unload progs (and free cvars and commands)
+	SV_UnloadProgs();
 }
 
 qboolean SV_NewGame( const char *mapName, qboolean loadGame )

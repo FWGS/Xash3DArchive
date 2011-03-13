@@ -578,12 +578,12 @@ CL_ParseServerData
 */
 void CL_ParseServerData( sizebuf_t *msg )
 {
+	string	gamefolder;
 	int	i;
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
 
 	clgame.load_sequence++; // now all hud sprites are invalid
-	clgame.dllFuncs.pfnVidInit();
 
 	// wipe the client_t struct
 	CL_ClearState();
@@ -604,6 +604,22 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Q_strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 	cl.background = BF_ReadOneBit( msg );
+	Q_strncpy( gamefolder, BF_ReadString( msg ), MAX_STRING );
+
+	if( Q_stricmp( host.gamefolder, gamefolder ))
+	{
+		// so reload all images (remote connect)
+		Mod_ClearAll();
+		R_ShutdownImages();
+		FS_LoadGameInfo( gamefolder );
+		R_InitImages();
+		SCR_VidInit();
+		SCR_RegisterShaders();
+	}
+	else
+	{
+		clgame.dllFuncs.pfnVidInit();
+	}
 
 	UI_SetActiveMenu( cl.background );
 

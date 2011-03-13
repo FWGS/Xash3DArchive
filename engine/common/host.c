@@ -511,19 +511,16 @@ void Host_Error( const char *error, ... )
 
 	if( host.framecount < 3 )
 	{
-		SV_SysError( hosterror1 );
 		Sys_Error( "Host_InitError: %s", hosterror1 );
 	}
 	else if( host.framecount == host.errorframe )
 	{
-		SV_SysError( hosterror2 );
 		Sys_Error( "Host_MultiError: %s", hosterror2 );
 		return;
 	}
 	else
 	{
 		Msg( "Host_Error: %s", hosterror1 );
-		SV_SysError( hosterror1 );
 	}
 
 	// host is shutting down. don't invoke infinite loop
@@ -562,7 +559,6 @@ void Sys_Error_f( void )
 	const char *error = Cmd_Argv( 1 );
 
 	if( !*error ) error = "Invoked sys error";
-	SV_SysError( error );
 	Sys_Error( "%s\n", error );
 }
 
@@ -647,6 +643,8 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 			return;
 		}
 
+		Sys_MergeCommandLine( GetCommandLine( ));
+
 		CloseHandle( host.hMutex );
 		host.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
 		if( host.developer < 3 ) host.developer = 3; // otherwise we see empty console
@@ -661,7 +659,8 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	if( GetModuleFileName( hCurrent, szTemp, sizeof( szTemp )))
 		FS_FileBase( szTemp, szTemp );
 
-	if( Q_stricmp( szTemp, "xash" ))
+	// protect to rename xash.dll
+	if( Q_stricmp( szTemp, "xash" ) && Com_RandomLong( 0, 1 ))
 	{
 		host.type = HOST_CREDITS;
 		host.con_showalways = true;
@@ -673,7 +672,6 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 
 	// first text message into console or log 
 	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading xash.dll - ok\n" );
-	Sys_MergeCommandLine( GetCommandLine( ));
 
 	// startup cmds and cvars subsystem
 	Cmd_Init();
@@ -690,10 +688,10 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	Sound_Init();
 
 	FS_LoadGameInfo( NULL );
-	HPAK_Init();
+	Q_strncpy( host.gamefolder, GI->gamefolder, sizeof( host.gamefolder ));
 
 	Host_InitEvents();
-	Host_InitDecals();
+	HPAK_Init();
 
 	IN_Init();
 	Key_Init();
@@ -835,8 +833,6 @@ void EXPORT Host_Shutdown( void )
 	CL_Shutdown();
 
 	Mod_Shutdown();
-	S_Shutdown();
-	R_Shutdown();
 	NET_Shutdown();
 	Host_FreeCommon();
 	Con_DestroyConsole();

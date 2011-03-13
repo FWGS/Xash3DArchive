@@ -172,10 +172,14 @@ Sys_ParseCommandLine
 void Sys_ParseCommandLine( LPSTR lpCmdLine )
 {
 	const char	*blank = "censored";
+	static char	commandline[1024];
 	int		i;
 
 	host.argc = 1;
 	host.argv[0] = "exe";
+
+	Q_strncpy( commandline, lpCmdLine, Q_strlen( lpCmdLine ) + 1 );
+	lpCmdLine = commandline; // prevent to modify original commandline
 
 	while( *lpCmdLine && ( host.argc < MAX_NUM_ARGVS ))
 	{
@@ -490,10 +494,10 @@ long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 	{
 		// check to avoid recursive call
 		error_on_exit = true;
-		host.state = HOST_CRASHED;
 
 		if( host.type == HOST_NORMAL ) CL_Crashed(); // tell client about crash
 		Msg( "Sys_Crash: call %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
+		host.state = HOST_CRASHED;
 
 		if( host.developer <= 0 )
 		{
@@ -536,7 +540,9 @@ void Sys_Error( const char *error, ... )
 	Q_vsprintf( text, error, argptr );
 	va_end( argptr );
 
-	if( host.type = HOST_NORMAL )
+	SV_SysError( text );
+
+	if( host.type == HOST_NORMAL )
 		CL_Shutdown(); // kill video
 
 	if( host.developer > 0 )
@@ -568,13 +574,12 @@ void Sys_Break( const char *error, ... )
 
 	if( host.state == HOST_ERR_FATAL )
 		return; // don't multiple executes
-         
+
+	error_on_exit = true;	
+	host.state = HOST_ERR_FATAL;         
 	va_start( argptr, error );
 	Q_vsprintf( text, error, argptr );
 	va_end( argptr );
-
-	error_on_exit = true;	
-	host.state = HOST_ERR_FATAL;
 
 	if( host.type == HOST_NORMAL )
 		CL_Shutdown(); // kill video
@@ -582,6 +587,7 @@ void Sys_Break( const char *error, ... )
 	if( host.type != HOST_NORMAL || host.developer > 0 )
 	{
 		Con_ShowConsole( true );
+		Con_DisableInput();	// disable input line for dedicated server
 		Sys_Print( text );
 		Sys_WaitForQuit();
 	}

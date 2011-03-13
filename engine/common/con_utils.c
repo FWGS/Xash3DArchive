@@ -892,6 +892,8 @@ void Host_WriteServerConfig( const char *name )
 		FS_Close( f );
 	}
 	else MsgDev( D_ERROR, "Couldn't write %s.\n", name );
+
+	SV_FreeGameProgs();	// release progs with all variables
 }
 
 /*

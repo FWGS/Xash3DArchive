@@ -5,7 +5,7 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define PROTOCOL_VERSION		40
+#define PROTOCOL_VERSION		41
 
 // server to client
 #define svc_bad			0	// immediately crash client when received

@@ -726,7 +726,6 @@ void Delta_InitFields( void )
 		static string	errormsg;
 
 		Q_snprintf( errormsg, sizeof( errormsg ), "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
-		SV_SysError( errormsg );
 		Sys_Error( errormsg );
 	}
 

@@ -264,7 +264,8 @@ typedef struct host_parm_s
 	qboolean		con_showalways;	// show console always (developer and dedicated)
 	qboolean		change_game;	// initialize when game is changed
 	qboolean		shutdown_issued;	// engine is shutting down
-	
+
+	char		gamefolder[64];	// it's a default gamefolder	
 	byte		*imagepool;	// imagelib mempool
 	byte		*soundpool;	// soundlib mempool
 
@@ -519,6 +520,7 @@ qboolean Host_IsLocalGame( void );
 void Host_ShutdownServer( void );
 void Host_Print( const char *txt );
 void Host_Error( const char *error, ... );
+void Host_InitDecals( void );
 void Host_Credits( void );
 
 /*
@@ -671,6 +673,7 @@ qboolean SV_GetComment( const char *savename, char *comment );
 qboolean SV_NewGame( const char *mapName, qboolean loadGame );
 void SV_SysError( const char *error_string );
 void SV_InitGameProgs( void );
+void SV_FreeGameProgs( void );
 void SV_ForceError( void );
 void CL_WriteMessageHistory( void );
 void CL_MouseEvent( int mx, int my );
