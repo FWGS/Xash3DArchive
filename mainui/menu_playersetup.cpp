@@ -280,7 +280,13 @@ UI_PlayerSetup_Init
 */
 static void UI_PlayerSetup_Init( void )
 {
+	bool game_hlRally = FALSE;
+
 	memset( &uiPlayerSetup, 0, sizeof( uiPlayerSetup_t ));
+
+	// disable playermodel preview for HLRally to prevent crash
+	if( !stricmp( gMenu.m_gameinfo.gamefolder, "hlrally" ))
+		game_hlRally = TRUE;
 
 	uiPlayerSetup.menu.vidInitFunc = UI_PlayerSetup_Init;
 
@@ -347,10 +353,10 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.model.generic.id = ID_MODEL;
 	uiPlayerSetup.model.generic.type = QMTYPE_SPINCONTROL;
 	uiPlayerSetup.model.generic.flags = QMF_CENTER_JUSTIFY|QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
-	uiPlayerSetup.model.generic.x = 702;
-	uiPlayerSetup.model.generic.y = 590;
-	uiPlayerSetup.model.generic.width = 176;
-	uiPlayerSetup.model.generic.height = 32;
+	uiPlayerSetup.model.generic.x = game_hlRally ? 320 : 702;
+	uiPlayerSetup.model.generic.y = game_hlRally ? 320 : 590;
+	uiPlayerSetup.model.generic.width = game_hlRally ? 256 : 176;
+	uiPlayerSetup.model.generic.height = game_hlRally ? 36 : 32;
 	uiPlayerSetup.model.generic.callback = UI_PlayerSetup_Callback;
 	uiPlayerSetup.model.generic.statusText = "Select a model for representation in multiplayer";
 	uiPlayerSetup.model.minValue = 0;
@@ -405,7 +411,9 @@ static void UI_PlayerSetup_Init( void )
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.banner );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.done );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.AdvOptions );
-	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.view );
+	// disable playermodel preview for HLRally to prevent crash
+	if( game_hlRally == FALSE )
+		UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.view );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.name );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.model );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.topColor );

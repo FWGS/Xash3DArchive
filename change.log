@@ -1,6 +1,7 @@
 build ????
 
 Console: implement Con_NPrintf and Con_NXPrintf
+Render:  adding better lighting for studiomodels (right lighting for long sequences e.g. forklift.mdl)
 
 build 1488
 

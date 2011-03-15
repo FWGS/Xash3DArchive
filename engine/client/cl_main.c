@@ -7,7 +7,9 @@
 #include "client.h"
 #include "net_encode.h"
 #include "cl_tent.h"
+#include "gl_local.h"
 #include "input.h"
+#include "../cl_dll/kbutton.h"
 
 #define MAX_TOTAL_CMDS		16
 #define MIN_CMD_RATE		10.0
@@ -73,6 +75,52 @@ qboolean CL_IsInConsole( void )
 qboolean CL_IsPlaybackDemo( void )
 {
 	return cls.demoplayback;
+}
+
+qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
+{
+	if( host.type == HOST_DEDICATED )
+		return false;
+
+	if( Q_stricmp( host.gamefolder, gamefolder ))
+	{
+		kbutton_t	*mlook, *jlook;
+		qboolean	mlook_active = false, jlook_active = false;
+
+		mlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_mlook" );
+		jlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_jlook" );
+
+		if( mlook && ( mlook->state & 1 )) 
+			mlook_active = true;
+
+		if( jlook && ( jlook->state & 1 ))
+			jlook_active = true;
+	
+		// so reload all images (remote connect)
+		Mod_ClearAll();
+		R_ShutdownImages();
+		FS_LoadGameInfo( (bReset) ? host.gamefolder : gamefolder );
+		R_InitImages();
+		if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
+			Host_Error( "can't initialize client.dll\n" );
+		if( !UI_LoadProgs( va( "%s/MainUI.dll", GI->dll_path ) ))
+		{
+			Msg( "^1Error: ^7can't initialize MainUI.dll\n" ); // there is non fatal for us
+			if( !host.developer ) host.developer = 1; // we need console, because menu is missing
+		}
+
+		SCR_RegisterShaders();
+		SCR_VidInit();
+
+		if( cls.key_dest == key_game ) // restore mouse state
+			clgame.dllFuncs.IN_ActivateMouse();
+
+		// restore mlook state
+		if( mlook_active ) Cmd_ExecuteString( "+mlook\n" );
+		if( jlook_active ) Cmd_ExecuteString( "+jlook\n" );
+		return true;
+	}
+	return false;
 }
 
 /*
@@ -798,6 +846,9 @@ void CL_Disconnect( void )
 
 	cls.state = ca_disconnected;
 
+	// restore gamefolder here (in case client was connected to another game)
+	CL_ChangeGame( GI->gamefolder, true );
+
 	// back to menu if developer mode set to "player" or "mapper"
 	if( host.developer > 2 ) return;
 	UI_SetActiveMenu( true );
@@ -1042,7 +1093,6 @@ void CL_PrepVideo( void )
 	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
 	Cvar_SetFloat( "scr_loading", 25.0f );
 
-	SCR_RegisterShaders(); // update with new sequence
 	SCR_UpdateScreen();
 
 	// make sure what map is valid
@@ -1622,7 +1672,6 @@ void CL_Shutdown( void )
 
 	Host_WriteOpenGLConfig ();
 	Host_WriteVideoConfig ();
-	Host_WriteConfig (); 
 
 	IN_Shutdown ();
 	SCR_Shutdown ();

@@ -344,7 +344,7 @@ void GL_SetSpriteRenderMode( int mode )
 	default:
 		pglDisable( GL_BLEND );
 		pglDisable( GL_ALPHA_TEST );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransColor:
 		pglEnable( GL_BLEND );

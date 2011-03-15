@@ -470,6 +470,7 @@ void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function )
 	// use a small malloc to avoid zone fragmentation
 	cmd = Z_Malloc( sizeof( cmd_function_t ));
 	cmd->name = copystring( cmd_name );
+	cmd->desc = copystring( "game command" );
 	cmd->function = function;
 	cmd->flags = CMD_EXTDLL;
 	cmd->next = cmd_functions;
@@ -630,9 +631,6 @@ void Cmd_Unlink( void )
 		Msg( "can't unlink cvars while game is loaded\n" );
 		return;
 	}
-
-	// unlink commands first
-	Cmd_Unlink ();
 
 	prev = &cmd_functions;
 	while( 1 )

@@ -382,9 +382,10 @@ void R_SetupSky( const char *skyboxname )
 	if( loadname[Q_strlen( loadname ) - 1] == '_' )
 		loadname[Q_strlen( loadname ) - 1] = '\0';
 
-	if( !CheckSkybox( loadname ))
+	if( !CheckSkybox( loadname ) && Q_stricmp( loadname, "2desert" ))
 	{
 		MsgDev( D_ERROR, "R_SetupSky: missed or incomplete skybox '%s'\n", skyboxname );
+		R_SetupSky( "desert" ); // force to default
 		return; 
 	}
 

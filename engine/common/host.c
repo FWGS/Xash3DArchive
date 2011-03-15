@@ -829,6 +829,9 @@ void EXPORT Host_Shutdown( void )
 	if( host.state != HOST_ERR_FATAL ) host.state = HOST_SHUTDOWN; // prepare host to normal shutdown
 	if( !host.change_game ) Q_strncpy( host.finalmsg, "Server shutdown\n", sizeof( host.finalmsg ));
 
+	if( host.type == HOST_NORMAL )
+		Host_WriteConfig();
+
 	SV_Shutdown( false );
 	CL_Shutdown();
 

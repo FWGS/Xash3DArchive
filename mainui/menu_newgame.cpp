@@ -72,7 +72,7 @@ UI_NewGame_StartGame
 static void UI_NewGame_StartGame( float skill )
 {
 	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "maxplayers" ) > 1 )
-		CLIENT_COMMAND( TRUE, "killserver\n" );
+		HOST_ENDGAME( "end of the game" );
 
 	CVAR_SET_FLOAT( "skill", skill );
 	CVAR_SET_FLOAT( "deathmatch", 0.0f );
@@ -318,6 +318,14 @@ UI_NewGame_Menu
 */
 void UI_NewGame_Menu( void )
 {
+	if( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY )
+	{
+		// completely ignore save\load menus for multiplayer_only
+		return;
+	}
+
+	if( !CheckGameDll( )) return;
+
 	UI_NewGame_Precache();
 	UI_NewGame_Init();
 

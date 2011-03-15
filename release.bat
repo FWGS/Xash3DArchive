@@ -8,19 +8,10 @@ set build_type=release
 set BUILD_ERROR=
 call vcvars32
 
-%MSDEV% dlls/hl.dsp %CONFIG%"hl - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
-%MSDEV% cl_dll/cl_dll.dsp %CONFIG%"cl_dll - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 %MSDEV% engine/engine.dsp %CONFIG%"engine - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 %MSDEV% mainui/mainui.dsp %CONFIG%"mainui - Win32 Release" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
-%MSDEV% room/room.dsp %CONFIG%"room - Win32 Release" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
 if "%BUILD_ERROR%"=="" goto build_ok
@@ -42,12 +33,8 @@ goto done
 :build_ok
 
 rem //delete log files
-if exist dlls\hl.plg del /f /q dlls\hl.plg
-if exist cl_dll\cl_dll.plg del /f /q cl_dll\cl_dll.plg
 if exist engine\engine.plg del /f /q engine\engine.plg
 if exist mainui\mainui.plg del /f /q mainui\mainui.plg
-if exist launch\launch.plg del /f /q launch\launch.plg
-if exist room\room.plg del /f /q room\room.plg
 
 echo
 echo 	     Build succeeded!

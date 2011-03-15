@@ -223,13 +223,13 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 
 	if( ent->curstate.effects & EF_BRIGHTLIGHT )
 	{			
-		dlight_t	*dl = CL_AllocDlight( ent->curstate.number );
+		dlight_t	*dl = CL_AllocDlight( 0 );
 		VectorSet( dl->origin, ent->origin[0], ent->origin[1], ent->origin[2] + 16 );
-		dl->die = cl.time;	// die at next frame
+		dl->die = cl.time + 0.001f; // die at next frame
 		dl->color.r = 255;
 		dl->color.g = 255;
 		dl->color.b = 255;
-		dl->radius = 400;
+		dl->radius = Com_RandomLong( 400, 430 );
 	}
 	return true;
 }

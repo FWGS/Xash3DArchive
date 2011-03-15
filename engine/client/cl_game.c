@@ -602,15 +602,13 @@ void CL_DrawScreenFade( void )
 {
 	screenfade_t	*sf = &clgame.fade;
 	int		iFadeAlpha;
-		
-	if( sf->fadeReset == 0.0f && sf->fadeEnd == 0.0f )
-		return;	// inactive
 
 	// keep pushing reset time out indefinitely
 	if( sf->fadeFlags & FFADE_STAYOUT )
-	{
 		sf->fadeReset = cl.time + 0.1f;
-	}
+		
+	if( sf->fadeReset == 0.0f && sf->fadeEnd == 0.0f )
+		return;	// inactive
 
 	// all done?
 	if(( cl.time > sf->fadeReset ) && ( cl.time > sf->fadeEnd ))
@@ -2353,9 +2351,9 @@ int CL_FindModelIndex( const char *m )
 			return i;
 	}
 
-	if( cls.state == ca_active )
+	if( cls.state == ca_active && Q_strnicmp( m, "models/player/", 14 ))
 	{
-		// tell user about problem
+		// tell user about problem (but don't spam console about playermodel)
 		MsgDev( D_ERROR, "CL_ModelIndex: %s not precached\n", m );
 	}
 	return 0;
@@ -3480,7 +3478,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnCvar_RegisterVariable,
 	pfnCVarGetValue,
 	pfnCVarGetString,
-	pfnAddCommand,
+	pfnAddClientCommand,
 	pfnHookUserMsg,
 	pfnServerCmd,
 	pfnClientCmd,
@@ -3582,6 +3580,9 @@ void CL_UnloadProgs( void )
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
 	Q_memset( &clgame, 0, sizeof( clgame ));
+
+	Cvar_Unlink();
+	Cmd_Unlink();
 }
 
 qboolean CL_LoadProgs( const char *name )

@@ -534,7 +534,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		{
 			// alt+enter fullscreen switch
 			Cvar_SetFloat( "fullscreen", !Cvar_VariableValue( "fullscreen" ));
-			Cbuf_AddText( "vid_restart\n" );
 			return 0;
 		}
 		// intentional fallthrough

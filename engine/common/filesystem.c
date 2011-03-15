@@ -1110,7 +1110,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 			pfile = COM_ParseFile( pfile, GameInfo->startmap );
 			FS_StripExtension( GameInfo->startmap ); // HQ2:Amen has extension .bsp
 		}
-		else if( !Q_stricmp( token, "trainmap" ))
+		else if( !Q_stricmp( token, "trainmap" ) || !Q_stricmp( token, "trainingmap" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->trainmap );
 			FS_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
@@ -2383,35 +2383,32 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	searchpath_t	*search;
 	dll_user_t	*hInst;
 	int		i, index;
+	int		start = 0;
 
 	// check for bad exports
 	if( !dllname || !*dllname )
 		return NULL;
 
-	// some mods used direct path to dlls
-	if( Q_strstr( dllname, ".." ))
-		directpath = true;
-
 	fs_ext_path = directpath;
+
+	// HACKHACK: remove absoulte path to valve folder
+	if( !Q_strnicmp( dllname, "..\\valve\\", 9 ) || !Q_strnicmp( dllname, "../valve/", 9 ))
+		start += 9;
 
 	// replace all backward slashes
 	for( i = 0; i < Q_strlen( dllname ); i++ )
 	{
-		if( dllname[i] == '.' ) continue;
-		if( dllname[i] == '\\' ) dllpath[i] = '/';
-		else dllpath[i] = Q_tolower( dllname[i] );
+		if( dllname[i+start] == '\\' ) dllpath[i] = '/';
+		else dllpath[i] = Q_tolower( dllname[i+start] );
 	}
 	dllpath[i] = '\0';
-
 	FS_DefaultExtension( dllpath, ".dll" );	// apply ext if forget
-
 	search = FS_FindFile( dllpath, &index, false );
 
 	if( !search )
 	{
 		fs_ext_path = false;
 		if( directpath ) return NULL;	// direct paths fails here
-
 		// trying check also 'bin' folder for indirect paths
 		Q_strncpy( dllpath, dllname, sizeof( dllpath ));
 		search = FS_FindFile( dllpath, &index, false );

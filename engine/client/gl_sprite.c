@@ -849,20 +849,15 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	alpha = e->curstate.renderamt;
 	scale = e->curstate.scale;
 
-	if( scale == 0.0f )
-	{
-		// we will test it!
-		Msg( "Sprite: %i %s has null scale\n", e->index, e->model->name );
-		scale = 1.0f;
-	}
 	if( R_SpriteOccluded( e, origin, &alpha, &scale ))
 		return; // sprite culled
 
 	r_stats.c_sprite_models_drawn++;
 
-	if( psprite->texFormat == SPR_ALPHTEST )
+	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
 	{
-		pglDepthMask( GL_TRUE );
+		if( glState.drawTrans )
+			pglDepthMask( GL_TRUE );
 		pglEnable( GL_ALPHA_TEST );
 		pglAlphaFunc( GL_GEQUAL, 0.5f );
 	}
@@ -1016,9 +1011,10 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderGlow )
 		pglEnable( GL_DEPTH_TEST );
 
-	if( psprite->texFormat == SPR_ALPHTEST )
+	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
 	{
-		pglDepthMask( GL_FALSE );
+		if( glState.drawTrans ) 
+			pglDepthMask( GL_FALSE );
 		pglDisable( GL_ALPHA_TEST );
 	}
 

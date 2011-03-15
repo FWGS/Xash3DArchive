@@ -606,17 +606,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.background = BF_ReadOneBit( msg );
 	Q_strncpy( gamefolder, BF_ReadString( msg ), MAX_STRING );
 
-	if( Q_stricmp( host.gamefolder, gamefolder ))
-	{
-		// so reload all images (remote connect)
-		Mod_ClearAll();
-		R_ShutdownImages();
-		FS_LoadGameInfo( gamefolder );
-		R_InitImages();
-		SCR_VidInit();
-		SCR_RegisterShaders();
-	}
-	else
+	if( !CL_ChangeGame( gamefolder, false ))
 	{
 		clgame.dllFuncs.pfnVidInit();
 	}

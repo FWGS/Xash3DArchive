@@ -935,6 +935,57 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 
 /*
 =====================
+Delta_ClampIntegerField
+
+prevent data to out of range
+=====================
+*/
+int Delta_ClampIntegerField( int iValue, qboolean bSigned, int bits )
+{
+	switch( bits )
+	{
+	case 8:
+		if( bSigned ) iValue = bound( -127, iValue, 128 );
+		else iValue = bound( 0, iValue, 255 );
+		break;
+	case 9:
+		if( bSigned ) iValue = bound( -255, iValue, 256 );
+		else iValue = bound( 0, iValue, 511 );
+		break;
+	case 10:
+		if( bSigned ) iValue = bound( -511, iValue, 511 );
+		else iValue = bound( 0, iValue, 1023 );
+		break;
+	case 11:
+		if( bSigned ) iValue = bound( -1023, iValue, 1023 );
+		else iValue = bound( 0, iValue, 2047 );
+		break;
+	case 12:
+		if( bSigned ) iValue = bound( -2047, iValue, 2047 );
+		else iValue = bound( 0, iValue, 4095 );
+		break;
+	case 13:
+		if( bSigned ) iValue = bound( -4095, iValue, 4095 );
+		else iValue = bound( 0, iValue, 8191 );
+		break;
+	case 14:
+		if( bSigned ) iValue = bound( -8191, iValue, 8191 );
+		else iValue = bound( 0, iValue, 16383 );
+		break;
+	case 15:
+		if( bSigned ) iValue = bound( -16383, iValue, 16383 );
+		else iValue = bound( 0, iValue, 32767 );
+		break;
+	case 16:
+		if( bSigned ) iValue = bound( -32767, iValue, 32767 );
+		else iValue = bound( 0, iValue, 65535 );
+		break;
+	}
+	return iValue; // clamped;
+} 
+
+/*
+=====================
 Delta_WriteField
 
 write fields by offsets
@@ -959,18 +1010,21 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 	if( pField->flags & DT_BYTE )
 	{
 		iValue = *(byte *)((byte *)to + pField->offset );
+		iValue = Delta_ClampIntegerField( iValue, bSigned, pField->bits );
 		iValue *= pField->multiplier;
 		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
 	else if( pField->flags & DT_SHORT )
 	{
 		iValue = *(word *)((byte *)to + pField->offset );
+		iValue = Delta_ClampIntegerField( iValue, bSigned, pField->bits );
 		iValue *= pField->multiplier;
 		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
 	else if( pField->flags & DT_INTEGER )
 	{
 		iValue = *(uint *)((byte *)to + pField->offset );
+		iValue = Delta_ClampIntegerField( iValue, bSigned, pField->bits );
 		iValue *= pField->multiplier;
 		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}

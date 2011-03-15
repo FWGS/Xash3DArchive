@@ -752,7 +752,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		// will be resample, just tell me for debug targets
 		MsgDev( D_NOTE, "GL_Upload: %s s&3 [%d x %d]\n", tex->name, tex->srcWidth, tex->srcHeight );
 	}
-	
+			
 	// copy flag about luma pixels
 	if( pic->flags & IMAGE_HAS_LUMA )
 		tex->flags |= TF_HAS_LUMA;
@@ -856,7 +856,8 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		if( numSides > 1 ) buf += offset;
 		tex->size += texsize;
 
-		GL_CheckForErrors();
+		// clear gl error
+		while( pglGetError() != GL_NO_ERROR );
 	}
 }
 

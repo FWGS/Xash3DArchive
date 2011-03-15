@@ -363,6 +363,23 @@ int pfnAddCommand( const char *cmd_name, xcommand_t func )
 
 /*
 =============
+pfnAddClientCommand
+
+=============
+*/
+int pfnAddClientCommand( const char *cmd_name, xcommand_t func )
+{
+	if( !cmd_name || !*cmd_name )
+		return 0;
+
+	// NOTE: if( func == NULL ) cmd will be forwarded to a server
+	Cmd_AddGameCommand( cmd_name, func );
+
+	return 1;
+}
+
+/*
+=============
 pfnDelCommand
 
 =============

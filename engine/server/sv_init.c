@@ -516,10 +516,6 @@ void SV_InitGame( void )
 	}
 	else
 	{
-		// restore gamefolder here (in case client was connected to another game)
-		if( Q_stricmp( host.gamefolder, GI->gamefolder ))
-			FS_LoadGameInfo( host.gamefolder );
-
 		// init game after host error
 		if( !svgame.hInstance )
 		{

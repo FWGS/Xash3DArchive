@@ -366,8 +366,10 @@ void SCR_RegisterShaders( void )
 	cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE );
 	cls.creditsFont.hFontTexture = GL_LoadTexture( "gfx.wad/creditsfont.fnt", NULL, 0, TF_IMAGE );
 	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
-}
 
+	SCR_LoadCreditsFont ();
+	SCR_InstallParticlePalette ();
+}
 
 /*
 ==================
@@ -429,8 +431,6 @@ void SCR_Init( void )
 	}
 
 	SCR_RegisterShaders ();
-	SCR_LoadCreditsFont ();
-	SCR_InstallParticlePalette ();
 	SCR_InitCinematic();
 	SCR_VidInit();
 

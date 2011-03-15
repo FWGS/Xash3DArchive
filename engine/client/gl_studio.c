@@ -1333,7 +1333,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	uint		lnum, i;
 	studiolight_t	*plight;
 	float		dist, radius2;
-	vec3_t		direction;
+	vec3_t		direction, origin;
 	dlight_t		*dl;
 
 	if( !ent || !ent->model || !r_dynamic->integer )
@@ -1342,12 +1342,16 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	plight = &g_studiolight;
 	plight->numdlights = 0;	// clear previous dlights
 
+	if( r_lighting_extended->integer )
+		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
+	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+
 	for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 	{
 		if( dl->die < RI.refdef.time || !dl->radius )
 			continue;
 
-		VectorSubtract( dl->origin, ent->origin, direction );
+		VectorSubtract( dl->origin, origin, direction );
 		dist = VectorLength( direction );
 
 		if( !dist || dist > dl->radius + ent->model->radius )
@@ -1396,7 +1400,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 	uint		lnum, i;
 	studiolight_t	*plight;
 	float		dist, radius2;
-	vec3_t		direction;
+	vec3_t		direction, origin;
 	cl_entity_t	*ent;
 	dlight_t		*el;
 
@@ -1408,12 +1412,16 @@ void R_StudioEntityLight( alight_t *lightinfo )
 	plight = &g_studiolight;
 	plight->numelights = 0;	// clear previous elights
 
+	if( r_lighting_extended->integer )
+		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
+	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+
 	for( lnum = 0, el = cl_elights; lnum < MAX_ELIGHTS; lnum++, el++ )
 	{
 		if( el->die < RI.refdef.time || !el->radius )
 			continue;
 
-		VectorSubtract( el->origin, ent->origin, direction );
+		VectorSubtract( el->origin, origin, direction );
 		dist = VectorLength( direction );
 
 		if( !dist || dist > el->radius + ent->model->radius )
@@ -1427,7 +1435,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 			float	dist, atten;
 				
 			Matrix3x4_OriginFromMatrix( g_lighttransform[i], org );
-			VectorSubtract( org, el->origin, vec );
+			VectorSubtract( org, origin, vec );
 			
 			dist = DotProduct( vec, vec );
 			atten = (dist / radius2 - 1) * -1;
@@ -1462,6 +1470,7 @@ void R_StudioSetupLighting( alight_t *lightinfo )
 	studiolight_t	*plight;
 	qboolean		invLight;
 	color24		ambient;
+	vec3_t		origin;
 	cl_entity_t	*ent;
 	int		i;
 
@@ -1470,9 +1479,13 @@ void R_StudioSetupLighting( alight_t *lightinfo )
 	ent = RI.currententity;
 	if( !ent ) return;
 
+	if( r_lighting_extended->integer )
+		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
+	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+
 	// setup ambient lighting
 	invLight = (RI.currententity->curstate.effects & EF_INVLIGHT) ? true : false;
-	R_LightForPoint( ent->origin, &ambient, invLight, 0.0f ); // ignore dlights
+	R_LightForPoint( origin, &ambient, invLight, 0.0f ); // ignore dlights
 
 	plight->lightcolor[0] = ambient.r * (1.0f / 255.0f);
 	plight->lightcolor[1] = ambient.g * (1.0f / 255.0f);
@@ -1482,7 +1495,7 @@ void R_StudioSetupLighting( alight_t *lightinfo )
 	lightinfo->ambientlight = (ambient.r + ambient.g + ambient.b) / 3;
 
 	// setup light dir
-	R_LightDir( ent->origin, plight->lightvec, ent->model->radius );
+	R_LightDir( origin, plight->lightvec, ent->model->radius );
 	VectorCopy( plight->lightvec, lightinfo->plightvec );
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
@@ -1497,7 +1510,7 @@ R_StudioLighting
 */
 void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 {
-	float		max;
+	float		max, ambient;
 	vec3_t		illum;
 	studiolight_t	*plight;
 
@@ -1508,7 +1521,8 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 	}
 
 	plight = &g_studiolight; 
-	VectorCopy( plight->lightcolor, illum );
+	ambient = max( 0.1f, r_lighting_ambient->value ); // to avoid divison by zero
+	VectorScale( plight->lightcolor, ambient, illum );
 
 	if( flags & STUDIO_NF_FLATSHADE )
 	{
@@ -1647,14 +1661,14 @@ static void R_StudioDrawPoints( void )
 		if( flags & STUDIO_NF_TRANSPARENT )
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
-			pglDepthMask( GL_TRUE );
+			if( glState.drawTrans ) pglDepthMask( GL_TRUE );
 			alpha = 1.0f;
 		}
 		else if(( flags & STUDIO_NF_ADDITIVE ) || ( g_nFaceFlags & STUDIO_NF_CHROME ))
 		{
 			GL_SetRenderMode( kRenderTransAdd );
-			pglDepthMask( GL_FALSE );
-			alpha = 0.5f;
+			if( !glState.drawTrans ) pglDepthMask( GL_FALSE );
+			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 
 			if( g_nFaceFlags & STUDIO_NF_CHROME )
 			{
@@ -1671,7 +1685,10 @@ static void R_StudioDrawPoints( void )
 			GL_SetRenderMode( g_iRenderMode );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 			if( g_iRenderMode == kRenderNormal )
+			{
 				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+				alpha = 1.0f;
+			}
 			if( !glState.drawTrans )
 				pglDepthMask( GL_TRUE );
 			else pglDepthMask( GL_FALSE );
@@ -1702,9 +1719,22 @@ static void R_StudioDrawPoints( void )
 
 				if(!( g_nFaceFlags & STUDIO_NF_CHROME ))
                                         {
-					lv = (float *)g_lightvalues[ptricmds[1]];
-					pglColor4f( lv[0], lv[1], lv[2], alpha );
-                                        }
+					if( g_iRenderMode == kRenderTransAdd )
+					{
+						pglColor4f( 1.0f, 1.0f, 1.0f, alpha );
+					}
+					else if( g_iRenderMode == kRenderTransColor )
+					{
+						color24	*clr;
+						clr = &RI.currententity->curstate.rendercolor;
+						pglColor4ub( clr->r, clr->g, clr->b, alpha * 255 );
+					}
+					else
+					{
+						lv = (float *)g_lightvalues[ptricmds[1]];
+						pglColor4f( lv[0], lv[1], lv[2], alpha );
+					}
+				}
 
 				av = g_xformverts[ptricmds[0]];
 				pglVertex3f( av[0], av[1], av[2] );
@@ -2531,14 +2561,10 @@ void R_DrawStudioModel( cl_entity_t *e )
 		m_fDoInterp = (e->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
-	pglPushAttrib( GL_TEXTURE_BIT );
-
 	// select the properly method
 	if( e->player )
 		result = pStudioDraw->StudioDrawPlayer( flags, &e->curstate );
 	else result = pStudioDraw->StudioDrawModel( flags );
-
-	pglPopAttrib();
 }
 
 /*
@@ -2581,8 +2607,6 @@ void R_DrawViewModel( void )
 
 	RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
 
-	pglPushAttrib( GL_TEXTURE_BIT );
-
 	// hack the depth range to prevent view model from poking into walls
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
 
@@ -2596,8 +2620,6 @@ void R_DrawViewModel( void )
 
 	// backface culling for left-handed weapons
 	if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
-
-	pglPopAttrib();
 
 	RI.currententity = NULL;
 	RI.currentmodel = NULL;

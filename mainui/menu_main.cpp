@@ -218,7 +218,7 @@ UI_Main_HazardCourse
 static void UI_Main_HazardCourse( void )
 {
 	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "maxplayers" ) > 1 )
-		CLIENT_COMMAND( TRUE, "killserver\n" );
+		HOST_ENDGAME( "end of the game" );
 
 	CVAR_SET_FLOAT( "skill", 0.0f );
 	CVAR_SET_FLOAT( "deathmatch", 0.0f );
@@ -389,6 +389,7 @@ static void UI_Main_Init( void )
 	if( !CheckGameDll( ))
 	{
 		uiMain.saveRestore.generic.flags |= QMF_GRAYED;
+		uiMain.hazardCourse.generic.flags |= QMF_GRAYED;
 		uiMain.newGame.generic.flags |= QMF_GRAYED;
 	}
 
@@ -436,7 +437,10 @@ static void UI_Main_Init( void )
 		uiMain.multiPlayer.generic.flags |= QMF_GRAYED;
 
 	if ( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY )
+	{
 		uiMain.saveRestore.generic.flags |= QMF_GRAYED;
+		uiMain.hazardCourse.generic.flags |= QMF_GRAYED;
+	}
 
 	uiMain.customGame.generic.id = ID_CUSTOMGAME;
 	uiMain.customGame.generic.type = QMTYPE_BM_BUTTON;

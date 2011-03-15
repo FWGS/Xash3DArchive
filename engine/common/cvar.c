@@ -262,7 +262,15 @@ void Cvar_RegisterVariable( cvar_t *var )
 		while( 1 )
 		{
 			find = *prev;
+
 			ASSERT( find != NULL );
+
+			if( cur == cvar_vars )
+			{
+				// relink at tail
+				cvar_vars = (convar_t *)var;
+				break;
+			}
 
 			// search for previous cvar
 			if( cur != find->next )
@@ -324,7 +332,7 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 	{
 		// create it
 		if( !force ) return Cvar_Get( var_name, value, CVAR_USER_CREATED, NULL );
-		else return Cvar_Get (var_name, value, 0, NULL );
+		else return Cvar_Get( var_name, value, 0, NULL );
 	}
 
 	// use this check to prevent acessing for unexisting fields
@@ -788,10 +796,10 @@ void Cvar_Set_f( void )
 	for( i = 2; i < c; i++ )
 	{
 		len = Q_strlen( Cmd_Argv(i) + 1 );
-		if ( l + len >= MAX_CMD_TOKENS - 2 )
+		if( l + len >= MAX_CMD_TOKENS - 2 )
 			break;
-		Q_strcat( combined, Cmd_Argv(i));
-		if ( i != c-1 ) Q_strcat( combined, " " );
+		Q_strcat( combined, Cmd_Argv( i ));
+		if( i != c-1 ) Q_strcat( combined, " " );
 		l += len;
 	}
 
@@ -1144,6 +1152,40 @@ void Cvar_Unlink_f( void )
 
 		// ignore all non-game cvars
 		if(!( var->flags & CVAR_EXTDLL ))
+		{
+			prev = &var->next;
+			continue;
+		}
+
+		// throw out any variables the game created
+		*prev = var->next;
+		if( var->string ) Mem_Free( var->string );
+		count++;
+	}
+}
+
+/*
+============
+Cvar_Unlink
+
+unlink all cvars with flag CVAR_CLIENTDLL
+============
+*/
+void Cvar_Unlink( void )
+{
+	convar_t	*var;
+	convar_t	**prev;
+	int	count = 0;
+
+	prev = &cvar_vars;
+
+	while( 1 )
+	{
+		var = *prev;
+		if( !var ) break;
+
+		// ignore all non-client cvars
+		if(!( var->flags & CVAR_CLIENTDLL ))
 		{
 			prev = &var->next;
 			continue;
