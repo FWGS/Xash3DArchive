@@ -22,7 +22,7 @@ game_shared\
 game_launch\
 engine\
 engine\client\
-engine\client\sound\
+engine\client\vgui\
 engine\server\
 engine\common\
 engine\common\imagelib\

@@ -6,6 +6,9 @@
 #include <math.h>
 #include "common.h"
 
+void (*_Q_memcpy)( void *dest, const void *src, size_t size, const char *filename, int fileline );
+void (*_Q_memset)( void *dest, int set, size_t size, const char *filename, int fileline );
+
 void Q_strnupr( const char *in, char *out, size_t size_out )
 {
 	if( size_out == 0 ) return;

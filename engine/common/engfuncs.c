@@ -18,13 +18,24 @@ COM_LoadFile
 */
 byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
 {
+	string	name;
+	int	i;
+
 	if( !filename || !*filename )
 	{
 		if( pLength ) *pLength = 0;
 		return NULL;
 	}
 
-	return FS_LoadFile( filename, pLength, false );
+	// replace all backward slashes (VGUI issues)
+	for( i = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '\\' ) name[i] = '/';
+		else name[i] = Q_tolower( filename[i] );
+	}
+	name[i] = '\0';
+
+	return FS_LoadFile( name, pLength, false );
 }
 
 /*

@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/sound" /I "../launch" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/vgui" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -80,7 +80,7 @@ SOURCE="$(InputPath)"
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/sound" /I "../launch" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
+# ADD CPP /nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/vgui" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -366,39 +366,39 @@ SOURCE=.\common\random.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_backend.c
+SOURCE=.\client\s_backend.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_dsp.c
+SOURCE=.\client\s_dsp.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_load.c
+SOURCE=.\client\s_load.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_main.c
+SOURCE=.\client\s_main.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_mix.c
+SOURCE=.\client\s_mix.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_mouth.c
+SOURCE=.\client\s_mouth.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_stream.c
+SOURCE=.\client\s_stream.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_utils.c
+SOURCE=.\client\s_utils.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\s_vox.c
+SOURCE=.\client\s_vox.c
 # End Source File
 # Begin Source File
 
@@ -482,7 +482,19 @@ SOURCE=.\common\titles.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\vgui_int.cpp
+SOURCE=.\client\vgui\vgui_clip.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\vgui\vgui_draw.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\vgui\vgui_font.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\vgui\vgui_int.cpp
 # End Source File
 # Begin Source File
 
@@ -522,6 +534,14 @@ SOURCE=.\common\filesystem.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\vgui\font_cache.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_export.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_local.h
 # End Source File
 # Begin Source File
@@ -558,7 +578,7 @@ SOURCE=.\server\server.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\sound.h
+SOURCE=.\client\sound.h
 # End Source File
 # Begin Source File
 
@@ -566,7 +586,11 @@ SOURCE=.\common\soundlib\soundlib.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\sound\vox.h
+SOURCE=.\client\vgui\vgui_draw.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\vox.h
 # End Source File
 # Begin Source File
 

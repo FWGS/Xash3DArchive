@@ -368,11 +368,13 @@ void GL_SetSpriteRenderMode( int mode )
 		break;
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransInverse:
 		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
@@ -601,6 +603,12 @@ void R_ShowTextures( void )
 		// draw lightmaps as big images
 		base_w = 5;
 		base_h = 4;
+	}
+	else if( gl_showtextures->integer == TEX_VGUI )
+	{
+		// draw lightmaps as big images
+		base_w = 4;
+		base_h = 3;
 	}
 	else
 	{

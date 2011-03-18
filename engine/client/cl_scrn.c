@@ -284,8 +284,6 @@ void SCR_UpdateScreen( void )
 
 	if( !clgame.hInstance ) return;
 
-	VGui_Paint ();
-
 	// make sure what menu and CL_WritePacket catch changes
 	userinfo->modified = false;
 }

@@ -57,7 +57,7 @@ typedef struct wfile_s
 
 typedef struct packfile_s
 {
-	char		name[128];
+	char		name[56];
 	fs_offset_t	offset;
 	fs_offset_t	realsize;	// real file size (uncompressed)
 } packfile_t;

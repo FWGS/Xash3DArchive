@@ -159,8 +159,8 @@ char *Q_pretifymem( float value, int digitsafterdecimal );
 char *va( const char *format, ... );
 #define Q_memcpy( dest, src, size ) _Q_memcpy( dest, src, size, __FILE__, __LINE__ )
 #define Q_memset( dest, val, size ) _Q_memset( dest, val, size, __FILE__, __LINE__ )
-void (*_Q_memcpy)( void *dest, const void *src, size_t size, const char *filename, int fileline );
-void (*_Q_memset)( void *dest, int set, size_t size, const char *filename, int fileline );
+extern void (*_Q_memcpy)( void *dest, const void *src, size_t size, const char *filename, int fileline );
+extern void (*_Q_memset)( void *dest, int set, size_t size, const char *filename, int fileline );
 
 //
 // zone.c

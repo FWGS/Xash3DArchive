@@ -769,7 +769,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		img_flags |= IMAGE_FORCE_RGBA;
 
 	// processing image before uploading (force to rgba, make luma etc)
-	Image_Process( &pic, 0, 0, img_flags );
+	if( pic->buffer ) Image_Process( &pic, 0, 0, img_flags );
 
 	if( tex->flags & TF_LUMINANCE )
 	{
@@ -1059,8 +1059,6 @@ void GL_FreeTexture( GLenum texnum )
 	// number 0 it's already freed
 	if( texnum <= 0 || !glw_state.initialized )
 		return;
-
-	if( texnum > MAX_TEXTURES ) Msg( "texnum %i\n" );
 
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];

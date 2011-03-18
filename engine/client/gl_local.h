@@ -18,7 +18,7 @@ extern byte	*r_temppool;
 #define BLOCK_WIDTH		128	// lightmap block width
 #define BLOCK_HEIGHT	128	// lightmap block height
 
-#define MAX_TEXTURES	2048
+#define MAX_TEXTURES	4096
 #define MAX_LIGHTMAPS	64
 #define SUBDIVIDE_SIZE	64
 
@@ -51,8 +51,8 @@ typedef enum
 	TEX_STUDIO,	// studio skins
 	TEX_LIGHTMAP,	// lightmap textures
 	TEX_DECAL,	// decals
-	TEX_SKYBOX,	// skybox or sky layers
-	TEX_CUBEMAP	// cubemap textures
+	TEX_VGUI,		// vgui fonts or images
+	TEX_CUBEMAP	// cubemap textures (sky)
 } texType_t;
 
 enum
