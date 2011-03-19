@@ -23,17 +23,19 @@ typedef struct
 //
 
 void VGUI_DrawInit( void );
-void VGUI_SetupDrawingText( byte *pColor );
-void VGUI_SetupDrawingRect( byte *pColor );
-void VGUI_SetupDrawingImage( void );
+void VGUI_SetupDrawingText( int *pColor );
+void VGUI_SetupDrawingRect( int *pColor );
+void VGUI_SetupDrawingImage( int *pColor );
 void VGUI_BindTexture( int id );
 void VGUI_EnableTexture( qboolean enable );
 void VGUI_CreateTexture( int id, int width, int height );
 void VGUI_UploadTexture( int id, const char *buffer, int width, int height );
 void VGUI_UploadTextureBlock( int id, int drawX, int drawY, const byte *rgba, int blockWidth, int blockHeight );
+long VGUI_SurfaceWndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 void VGUI_DrawQuad( const vpoint_t *ul, const vpoint_t *lr );
 void VGUI_GetTextureSizes( int *width, int *height );
 int VGUI_GenerateTexture( void );
+void *VGui_GetPanel( void );
 
 #ifdef __cplusplus
 void EnableScissor( qboolean enable );

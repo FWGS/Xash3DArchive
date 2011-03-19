@@ -6,15 +6,7 @@
 #include "common.h"
 #include "input.h"
 #include "client.h"
-
-#define WM_MOUSEWHEEL	( WM_MOUSELAST + 1 )	// message that will be supported by the OS
-#define MK_XBUTTON1		0x0020
-#define MK_XBUTTON2		0x0040
-#define MK_XBUTTON3		0x0080
-#define MK_XBUTTON4		0x0100
-#define MK_XBUTTON5		0x0200
-#define WM_XBUTTONUP	0x020C
-#define WM_XBUTTONDOWN	0x020B
+#include "vgui_draw.h"
 
 #define WND_HEADSIZE	wnd_caption		// some offset
 #define WND_BORDER		3			// sentinel border in pixels
@@ -184,6 +176,9 @@ void IN_ActivateMouse( void )
 	if( !in_mouseinitialized )
 		return;
 
+	if( CL_Active() && host.mouse_visible )
+		return;	// VGUI controls  
+
 	if( cls.key_dest == key_menu && !Cvar_VariableInteger( "fullscreen" ))
 	{
 		// check for mouse leave-entering
@@ -234,7 +229,9 @@ void IN_ActivateMouse( void )
 		clgame.dllFuncs.IN_ActivateMouse();
 	}
 	else if( in_mouseparmsvalid )
+	{
 		in_restore_spi = SystemParametersInfo( SPI_SETMOUSE, 0, in_newmouseparms, 0 );
+	}
 
 	width = GetSystemMetrics( SM_CXSCREEN );
 	height = GetSystemMetrics( SM_CYSCREEN );
@@ -251,7 +248,7 @@ void IN_ActivateMouse( void )
 
 	SetCapture( host.hWnd );
 	ClipCursor( &window_rect );
-	while( ShowCursor(false) >= 0 );
+	while( ShowCursor( false ) >= 0 );
 }
 
 /*
@@ -431,6 +428,8 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 
 	if( uMsg == in_mouse_wheel )
 		uMsg = WM_MOUSEWHEEL;
+
+	VGUI_SurfaceWndProc( hWnd, uMsg, wParam, lParam );
 
 	switch( uMsg )
 	{

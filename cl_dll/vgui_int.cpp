@@ -108,10 +108,9 @@ void VGui_Startup()
 		gViewPort = new TeamFortressViewport(0,0,root->getWide(),root->getTall());
 		gViewPort->setParent(root);
 	}
-	/*
+
 	TexturePanel* texturePanel=new TexturePanel();
 	texturePanel->setParent(gViewPort);
-	*/
 }
 
 void VGui_Shutdown()

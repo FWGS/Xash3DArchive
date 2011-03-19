@@ -494,7 +494,15 @@ SOURCE=.\client\vgui\vgui_font.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\vgui\vgui_input.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\vgui\vgui_int.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\vgui\vgui_surf.cpp
 # End Source File
 # Begin Source File
 
@@ -531,10 +539,6 @@ SOURCE=.\common\crtlib.h
 # Begin Source File
 
 SOURCE=.\common\filesystem.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\client\vgui\font_cache.h
 # End Source File
 # Begin Source File
 
@@ -587,6 +591,10 @@ SOURCE=.\common\soundlib\soundlib.h
 # Begin Source File
 
 SOURCE=.\client\vgui\vgui_draw.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\vgui\vgui_main.h
 # End Source File
 # Begin Source File
 

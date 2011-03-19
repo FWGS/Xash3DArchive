@@ -661,7 +661,7 @@ edict_t *SV_AllocEdict( void )
 		pEdict = EDICT_NUM( i );
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if( pEdict->free && ( pEdict->freetime < 2.0 || sv.time - pEdict->freetime > 0.5 ))
+		if( pEdict->free && ( pEdict->freetime < 2.0f || sv.time - pEdict->freetime > 0.5f ))
 		{
 			SV_InitEdict( pEdict );
 			return pEdict;
@@ -1206,7 +1206,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	int		i;
 
 	if( !SV_IsValidEdict( pEdict ))
-		return NULL;
+		return svgame.edicts;
 
 	for( i = 0; i < svgame.globals->maxClients; i++ )
 	{
@@ -1222,7 +1222,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 		if( SV_OriginIn( DVIS_PVS, pEdict->v.origin, org ))
 			return pClient;
 	}
-	return NULL;
+	return svgame.edicts;
 }
 
 /*
@@ -1240,7 +1240,7 @@ edict_t* pfnFindClientInPHS( edict_t *pEdict )
 	int		i;
 
 	if( !SV_IsValidEdict( pEdict ))
-		return NULL;
+		return svgame.edicts;
 
 	for( i = 0; i < svgame.globals->maxClients; i++ )
 	{
@@ -1256,7 +1256,7 @@ edict_t* pfnFindClientInPHS( edict_t *pEdict )
 		if( SV_OriginIn( DVIS_PHS, pEdict->v.origin, org ))
 			return pClient;
 	}
-	return NULL;
+	return svgame.edicts;
 }
 
 /*

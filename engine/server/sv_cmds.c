@@ -770,6 +770,16 @@ void SV_PlayersOnly_f( void )
 	else SV_BroadcastPrintf( D_INFO, "Freeze server physic" );
 }
 
+void SV_EdictsInfo_f( void )
+{
+	int	active;
+
+	active = pfnNumberOfEntities(); 
+	Msg( "%5i edicts is used\n", active );
+	Msg( "%5i edicts is free\n", svgame.globals->maxEntities - active );
+	Msg( "%5i total\n", svgame.globals->maxEntities );
+}
+
 /*
 ==================
 SV_InitOperatorCommands
@@ -794,6 +804,7 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "reload", SV_Reload_f, "continue from latest save or restart level" );
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
 	Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
+	Cmd_AddCommand( "edicts_info", SV_EdictsInfo_f, "show info about edicts" );
 
 	if( host.type == HOST_DEDICATED )
 	{
@@ -830,6 +841,7 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "reload" );
 	Cmd_RemoveCommand( "entpatch" );
 	Cmd_RemoveCommand( "map_background" );
+	Cmd_RemoveCommand( "edicts_info" );
 
 	if( host.type == HOST_DEDICATED )
 	{

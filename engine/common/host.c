@@ -503,6 +503,13 @@ void Host_Error( const char *error, ... )
 	static qboolean	recursive = false;
 	va_list		argptr;
 
+	if( host.mouse_visible )
+	{
+		// hide mouse
+		while( ShowCursor( false ) >= 0 );
+		host.mouse_visible = false;
+	}
+
 	va_start( argptr, error );
 	Q_vsprintf( hosterror1, error, argptr );
 	va_end( argptr );

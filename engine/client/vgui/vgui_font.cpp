@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "vgui_draw.h"
-#include "font_cache.h"
+#include "vgui_main.h"
 
 int FontCache::s_pFontPageSize[FONT_PAGE_SIZE_COUNT] = { 16, 32, 64, 128 };
 

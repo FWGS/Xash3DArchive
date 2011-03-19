@@ -263,6 +263,8 @@ typedef struct host_parm_s
 	qboolean		stuffcmdsrun;	// execute stuff commands
 	qboolean		con_showalways;	// show console always (developer and dedicated)
 	qboolean		change_game;	// initialize when game is changed
+	qboolean		mouse_visible;	// vgui override cursor control
+	qboolean		input_enabled;	// vgui override mouse & keyboard input
 	qboolean		shutdown_issued;	// engine is shutting down
 
 	char		gamefolder[64];	// it's a default gamefolder	

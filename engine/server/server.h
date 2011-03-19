@@ -519,6 +519,7 @@ int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
 int pfnPrecacheModel( const char *s );
 int pfnDecalIndex( const char *m );
+int pfnNumberOfEntities( void );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {

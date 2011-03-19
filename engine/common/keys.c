@@ -578,6 +578,10 @@ void Key_Event( int key, qboolean down )
 			if( key >= 200 )
 				Msg( "%s is unbound, use controls menu to set.\n", Key_KeynumToString( key ));
 		}
+		else if( !clgame.dllFuncs.pfnKey_Event( down, key, keys[key].binding ))
+		{
+			// handled in client.dll
+		}
 		else if( kb[0] == '+' )
 		{	
 			int	i;
