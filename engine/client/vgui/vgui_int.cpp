@@ -91,51 +91,38 @@ void VGui_Shutdown( void )
 	pApp = NULL;
 }
 
-void Vgui_Paint( int x, int y, int right, int bottom )
-{
-	if( !rootpanel ) return;
-
-	// setup the base panel to cover the screen
-	Panel *pVPanel = surface->getEmbeddedPanel();
-	if( !pVPanel ) return;
-
-	if( cls.key_dest == key_game )
-		pApp->externalTick();
-
-	pVPanel->setBounds( 0, 0, right, bottom );
-	pVPanel->repaintAll();
-
-	// paint everything 
-	pVPanel->paintTraverse();
-}
-
 void VGui_Paint( void )
 {
-	POINT	pnt = { 0, 0 };
 	RECT	rect;
 
 	if( cls.state != ca_active || !rootpanel )
 		return;
 
+	// setup the base panel to cover the screen
+	Panel *pVPanel = surface->getEmbeddedPanel();
+	if( !pVPanel ) return;
+
 	host.input_enabled = rootpanel->isVisible();
-	ClientToScreen( host.hWnd, &pnt );
 	GetClientRect( host.hWnd, &rect );
 	EnableScissor( true );
 
-	Vgui_Paint( pnt.x, pnt.y, rect.right, rect.bottom );
+	if( cls.key_dest == key_game )
+	{
+		pApp->externalTick();
+	}
+
+	pVPanel->setBounds( 0, 0, rect.right, rect.bottom );
+	pVPanel->repaint();
+
+	// paint everything 
+	pVPanel->paintTraverse();
 
 	EnableScissor( false );
 }
 
 void VGui_ViewportPaintBackground( int extents[4] )
 {
-	if( !rootpanel ) return;
-
 //	Msg( "Vgui_ViewportPaintBackground( %i, %i, %i, %i )\n", extents[0], extents[1], extents[2], extents[3] );
-	Panel *pVPanel = surface->getPanel();
-	if( !pVPanel ) return;
-
-//	rootpanel->paintBackground();
 }
 
 void *VGui_GetPanel( void )

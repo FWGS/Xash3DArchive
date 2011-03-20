@@ -27,6 +27,23 @@ void VGUI_DrawInit( void )
 
 /*
 ================
+VGUI_DrawShutdown
+
+Release all textures
+================
+*/
+void VGUI_DrawShutdown( void )
+{
+	int	i;
+
+	for( i = 1; i < g_textureId; i++ )
+	{
+		GL_FreeImage( va(  "*vgui%i", i ));
+	}
+}
+
+/*
+================
 VGUI_GenerateTexture
 
 generate unique texture number
@@ -149,8 +166,9 @@ void VGUI_BindTexture( int id )
 	}
 	else
 	{
-		GL_Bind( GL_TEXTURE0, tr.defaultTexture );
-		g_iBoundTexture = 0;
+		// NOTE: same as bogus index 2700 in GoldSrc
+		id = g_iBoundTexture = 1;
+		GL_Bind( GL_TEXTURE0, g_textures[id] );
 	}
 }
 

@@ -166,7 +166,7 @@ IN_ActivateMouse
 Called when the window gains focus or changes in some way
 ===========
 */
-void IN_ActivateMouse( void )
+void IN_ActivateMouse( qboolean force )
 {
 	int		width, height;
 	static int	oldstate;
@@ -176,7 +176,7 @@ void IN_ActivateMouse( void )
 	if( !in_mouseinitialized )
 		return;
 
-	if( CL_Active() && host.mouse_visible )
+	if( CL_Active() && host.mouse_visible && !force )
 		return;	// VGUI controls  
 
 	if( cls.key_dest == key_menu && !Cvar_VariableInteger( "fullscreen" ))
@@ -410,7 +410,7 @@ void Host_InputFrame( void )
 		return;
 	}
 
-	IN_ActivateMouse();
+	IN_ActivateMouse( false );
 	IN_MouseMove();
 }
 
@@ -474,6 +474,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		wnd_caption = GetSystemMetrics( SM_CYCAPTION ) + WND_BORDER;
 
 		S_Activate( fActivate, host.hWnd );
+		IN_ActivateMouse( fActivate );
 		Key_ClearStates();
 		VGui_SetBounds();
 

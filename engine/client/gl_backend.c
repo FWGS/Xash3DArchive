@@ -625,7 +625,6 @@ void R_ShowTextures( void )
 
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 		GL_Bind( GL_TEXTURE0, image->texnum );
-		GL_CheckForErrors();
 
 		pglBegin( GL_QUADS );
 		pglTexCoord2f( 0, 0 );
@@ -640,8 +639,6 @@ void R_ShowTextures( void )
 		j++;
 	}
 	pglFinish();
-
-	GL_CheckForErrors ();
 }
 
 //=======================================================

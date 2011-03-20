@@ -8,7 +8,7 @@
 #include "client.h"
 #include "ref_params.h"
 
-#define SND_CLIP_DISTANCE		1024.0f
+#define SND_CLIP_DISTANCE		1534.0f
 
 dma_t		dma;
 byte		*sndpool;

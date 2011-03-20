@@ -399,8 +399,21 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 				continue;
 			VectorAdd( lightDir, dir, lightDir );
 		}
+
+		for( lnum = 0, dl = cl_elights; lnum < MAX_ELIGHTS; lnum++, dl++ )
+		{
+			if( dl->die < cl.time || !dl->radius )
+				continue;
+
+			VectorSubtract( dl->origin, origin, dir );
+			dist = VectorLength( dir );
+
+			if( !dist || dist > dl->radius + radius )
+				continue;
+			VectorAdd( lightDir, dir, lightDir );
+		}
 	}
 
 	// normalize final direction
-//	VectorNormalize( lightDir );
+	VectorNormalize( lightDir );
 }

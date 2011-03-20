@@ -352,6 +352,9 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		// detect rendermode
 		if( Q_strrchr( name, '{' ))
 		{
+#if 0
+			// auto-detect decals and transparent textures
+			// working fine in 98%
 			color24	*col = (color24 *)pal;
 
 			// check for grayscale palette
@@ -362,6 +365,9 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			}
 
 			if( i != 255 )
+#else
+			if( !host.decal_loading )
+#endif
 			{
 				rendermode = LUMP_TRANSPARENT;
 

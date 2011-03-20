@@ -120,6 +120,7 @@ typedef struct
 
 ========================================================================
 */
+#pragma pack( 1 )
 typedef struct tga_s
 {
 	byte	id_length;
@@ -135,6 +136,7 @@ typedef struct tga_s
 	byte	pixel_size;
 	byte	attributes;
 } tga_t;
+#pragma pack( )
 
 // imagelib definitions
 #define IMAGE_MAXWIDTH	4096

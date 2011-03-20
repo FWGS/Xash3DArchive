@@ -71,6 +71,7 @@ typedef struct
 } uiControls_t;
 
 static uiControls_t		uiControls;
+extern bool		hold_button_stack;
 
 /*
 =================
@@ -225,9 +226,14 @@ static void UI_Controls_RestartMenu( void )
 	int lastSelectedKey = uiControls.keysList.curItem;
 	int lastTopItem = uiControls.keysList.topItem;
 
+	// HACK to prevent mismatch anim stack
+	hold_button_stack = true;
+
 	// restarts the menu
 	UI_PopMenu();
 	UI_Controls_Menu();
+
+	hold_button_stack = false;
 
 	// restore last key and top item
 	uiControls.keysList.curItem = lastSelectedKey;

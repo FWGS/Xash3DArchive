@@ -9,6 +9,16 @@
 #include "gl_local.h"
 #include "library.h"
 
+static MENUAPI	GetMenuAPI;
+
+static dllfunc_t menu_funcs[] =
+{
+{ "GetMenuAPI", (void **) &GetMenuAPI },
+{ NULL, NULL }
+};
+
+dll_info_t menu_dll = { "menu.dll", menu_funcs, false };
+
 static void UI_UpdateUserinfo( void );
 menu_static_t	menu;
 
@@ -333,12 +343,19 @@ pfnPIC_Load
 */
 static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long image_size )
 {
+	HIMAGE	tx;
+
 	if( !szPicName || !*szPicName )
 	{
 		MsgDev( D_ERROR, "CL_LoadImage: bad name!\n" );
 		return 0;
 	}
-	return GL_LoadTexture( szPicName, image_buf, image_size, TF_IMAGE );
+
+	host.decal_loading = true;
+	tx = GL_LoadTexture( szPicName, image_buf, image_size, TF_IMAGE );
+	host.decal_loading = false;
+
+	return tx;
 }
 
 /*
@@ -930,14 +947,13 @@ void UI_UnloadProgs( void )
 	// deinitialize game
 	menu.dllFuncs.pfnShutdown();
 
-	Com_FreeLibrary( menu.hInstance );
+	Sys_FreeLibrary( &menu_dll );
 	Mem_FreePool( &menu.mempool );
 	Q_memset( &menu, 0, sizeof( menu ));
 }
 
-qboolean UI_LoadProgs( const char *name )
+qboolean UI_LoadProgs( void )
 {
-	static MENUAPI		GetMenuAPI;
 	static ui_enginefuncs_t	gpEngfuncs;
 	static ui_globalvars_t	gpGlobals;
 	int			i;
@@ -947,19 +963,9 @@ qboolean UI_LoadProgs( const char *name )
 	// setup globals
 	menu.globals = &gpGlobals;
 
+	if( !Sys_LoadLibrary( &menu_dll )) return false;
 	menu.mempool = Mem_AllocPool( "Menu Pool" );
-	menu.hInstance = Com_LoadLibrary( name, false );
-	if( !menu.hInstance ) return false;
-
-	GetMenuAPI = (MENUAPI)Com_GetProcAddress( menu.hInstance, "GetMenuAPI" );
-
-	if( !GetMenuAPI )
-	{
-		Com_FreeLibrary( menu.hInstance );
-          	MsgDev( D_NOTE, "UI_LoadProgs: failed to get address of GetMenuAPI proc\n" );
-		menu.hInstance = NULL;
-		return false;
-	}
+	menu.hInstance = menu_dll.link;
 
 	// make local copy of engfuncs to prevent overwrite it with user dll
 	Q_memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
@@ -967,7 +973,7 @@ qboolean UI_LoadProgs( const char *name )
 	if( !GetMenuAPI( &menu.dllFuncs, &gpEngfuncs, menu.globals ))
 	{
 		Com_FreeLibrary( menu.hInstance );
-		MsgDev( D_NOTE, "UI_LoadProgs: can't init client API\n" );
+		MsgDev( D_NOTE, "UI_LoadProgs: can't init menu API\n" );
 		menu.hInstance = NULL;
 		return false;
 	}

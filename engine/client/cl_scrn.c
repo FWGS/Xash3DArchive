@@ -422,7 +422,7 @@ void SCR_Init( void )
 	Cmd_AddCommand( "skyname", CL_SetSky_f, "set new skybox by basename" );
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
 
-	if( host.state != HOST_RESTART && !UI_LoadProgs( va( "%s/MainUI.dll", GI->dll_path ) ))
+	if( host.state != HOST_RESTART && !UI_LoadProgs( ))
 	{
 		Msg( "^1Error: ^7can't initialize MainUI.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing

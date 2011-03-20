@@ -2799,7 +2799,7 @@ pfnSetMouseEnable
 */
 void pfnSetMouseEnable( qboolean fEnable )
 {
-	if( fEnable ) IN_ActivateMouse();
+	if( fEnable ) IN_ActivateMouse( false );
 	else IN_DeactivateMouse();
 }
 
@@ -3058,7 +3058,35 @@ enables global fog on the level
 */
 void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 {
-//	re->Fog( flFogColor, flStart, flEnd, bOn );
+	if( RI.fogEnabled ) return;
+	RI.fogCustom = true;
+
+	if( !bOn )
+	{
+		pglDisable( GL_FOG );
+		return;
+	}
+
+	// copy fog params
+	RI.fogColor[0] = flFogColor[0] / 255.0f;
+	RI.fogColor[1] = flFogColor[1] / 255.0f;
+	RI.fogColor[2] = flFogColor[2] / 255.0f;
+	RI.fogStart = flStart;
+	RI.fogDensity = 0.0f;
+	RI.fogEnd = flEnd;
+
+	if( VectorIsNull( RI.fogColor ))
+	{
+		pglDisable( GL_FOG );
+		return;	
+	}
+
+	pglEnable( GL_FOG );
+	pglFogi( GL_FOG_MODE, GL_LINEAR );
+	pglFogf( GL_FOG_START, RI.fogStart );
+	pglFogf( GL_FOG_END, RI.fogEnd );
+	pglFogfv( GL_FOG_COLOR, RI.fogColor );
+	pglHint( GL_FOG_HINT, GL_NICEST );
 }
 
 /*

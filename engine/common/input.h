@@ -36,7 +36,7 @@ void IN_Init( void );
 void Host_InputFrame( void );
 void IN_Shutdown( void );
 void IN_MouseEvent( int mstate );
-void IN_ActivateMouse( void );
+void IN_ActivateMouse( qboolean force );
 void IN_DeactivateMouse( void );
 void IN_ToggleClientMouse( int newstate, int oldstate );
 long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam );

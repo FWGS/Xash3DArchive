@@ -719,7 +719,7 @@ void S_ExtraUpdate( void );
 // cl_menu.c
 //
 void UI_UnloadProgs( void );
-qboolean UI_LoadProgs( const char *name );
+qboolean UI_LoadProgs( void );
 void UI_UpdateMenu( float realtime );
 void UI_KeyEvent( int key, qboolean down );
 void UI_MouseMove( int x, int y );

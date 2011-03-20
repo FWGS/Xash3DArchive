@@ -23,6 +23,7 @@ typedef struct
 //
 
 void VGUI_DrawInit( void );
+void VGUI_DrawShutdown( void );
 void VGUI_SetupDrawingText( int *pColor );
 void VGUI_SetupDrawingRect( int *pColor );
 void VGUI_SetupDrawingImage( int *pColor );
@@ -42,6 +43,11 @@ void EnableScissor( qboolean enable );
 void SetScissorRect( int left, int top, int right, int bottom );
 qboolean ClipRect( const vpoint_t &inUL, const vpoint_t &inLR, vpoint_t *pOutUL, vpoint_t *pOutLR );
 #endif
+
+//
+// gl_vidnt.c
+//
+qboolean R_DescribeVIDMode( int width, int height );
 
 #ifdef __cplusplus
 }

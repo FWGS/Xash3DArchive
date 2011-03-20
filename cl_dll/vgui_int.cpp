@@ -109,8 +109,10 @@ void VGui_Startup()
 		gViewPort->setParent(root);
 	}
 
+	/*
 	TexturePanel* texturePanel=new TexturePanel();
 	texturePanel->setParent(gViewPort);
+	*/
 }
 
 void VGui_Shutdown()

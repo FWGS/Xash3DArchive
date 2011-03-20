@@ -1441,6 +1441,7 @@ void CL_DrawBeam( BEAM *pbeam )
 		CL_DrawDisk( pbeam->modelIndex, frame, rendermode, pbeam->source, pbeam->delta, pbeam->width,
 			pbeam->amplitude, pbeam->freq, pbeam->speed, pbeam->segments, color );
 		break;
+	case TE_BEAMTORUS:
 	case TE_BEAMCYLINDER:
 		CL_DrawCylinder( pbeam->modelIndex, frame, rendermode, pbeam->source, pbeam->delta, pbeam->width,
 			pbeam->amplitude, pbeam->freq, pbeam->speed, pbeam->segments, color );

@@ -1996,7 +1996,7 @@ const char *UI_PicButton_Key( menuPicButton_s *b, int key, int down )
 			//CR
 			UI_TACheckMenuDepth();
 			b->generic.callback( b, event );
-			UI_SetTitleAnim(AS_TO_TITLE,b);
+			UI_SetTitleAnim( AS_TO_TITLE, b );
 		}
 	}
 	else if( down )

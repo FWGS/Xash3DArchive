@@ -316,7 +316,14 @@ UI_Main_Init
 */
 static void UI_Main_Init( void )
 {
+	bool bTrainMap;
+
 	memset( &uiMain, 0, sizeof( uiMain_t ));
+
+	// training map is present and not equal to startmap
+	if( strlen( gMenu.m_gameinfo.trainmap ) && stricmp( gMenu.m_gameinfo.trainmap, gMenu.m_gameinfo.startmap ))
+		bTrainMap = true;
+	else bTrainMap = false;
 
 	// precache .avi file and get logo width and height
 	PRECACHE_LOGO( "logo.avi" );
@@ -408,7 +415,7 @@ static void UI_Main_Init( void )
 	}
 
 	uiMain.saveRestore.generic.x = 72;
-	uiMain.saveRestore.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 380 : 330;
+	uiMain.saveRestore.generic.y = bTrainMap ? 380 : 330;
 	uiMain.saveRestore.generic.callback = UI_Main_Callback;
 
 	uiMain.configuration.generic.id = ID_CONFIGURATION;
@@ -417,7 +424,7 @@ static void UI_Main_Init( void )
 	uiMain.configuration.generic.name = "Configuration";
 	uiMain.configuration.generic.statusText = "Change game settings, configure controls";
 	uiMain.configuration.generic.x = 72;
-	uiMain.configuration.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 430 : 380;
+	uiMain.configuration.generic.y = bTrainMap ? 430 : 380;
 	uiMain.configuration.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.configuration, PC_CONFIG );
@@ -428,7 +435,7 @@ static void UI_Main_Init( void )
 	uiMain.multiPlayer.generic.name = "Multiplayer";
 	uiMain.multiPlayer.generic.statusText = "Search for internet servers, configure character";
 	uiMain.multiPlayer.generic.x = 72;
-	uiMain.multiPlayer.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 480 : 430;
+	uiMain.multiPlayer.generic.y = bTrainMap ? 480 : 430;
 	uiMain.multiPlayer.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.multiPlayer, PC_MULTIPLAYER );
@@ -448,7 +455,7 @@ static void UI_Main_Init( void )
 	uiMain.customGame.generic.name = "Custom Game";
 	uiMain.customGame.generic.statusText = "Select a custom game";
 	uiMain.customGame.generic.x = 72;
-	uiMain.customGame.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 530 : 480;
+	uiMain.customGame.generic.y = bTrainMap ? 530 : 480;
 	uiMain.customGame.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.customGame, PC_CUSTOM_GAME );
@@ -459,7 +466,7 @@ static void UI_Main_Init( void )
 	uiMain.credits.generic.name = "About";
 	uiMain.credits.generic.statusText = "Game credits";
 	uiMain.credits.generic.x = 72;
-	uiMain.credits.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 580 : 530;
+	uiMain.credits.generic.y = bTrainMap ? 580 : 530;
 	uiMain.credits.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.credits, PC_VIEW_README );
@@ -470,7 +477,7 @@ static void UI_Main_Init( void )
 	uiMain.quit.generic.name = "Quit";
 	uiMain.quit.generic.statusText = "Quit from game";
 	uiMain.quit.generic.x = 72;
-	uiMain.quit.generic.y = strlen( gMenu.m_gameinfo.trainmap ) ? 630 : 580;
+	uiMain.quit.generic.y = bTrainMap ? 630 : 580;
 	uiMain.quit.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.quit, PC_QUIT );
@@ -555,7 +562,7 @@ static void UI_Main_Init( void )
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.resumeGame );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.newGame );
 
-	if ( strlen( gMenu.m_gameinfo.trainmap ))
+	if ( bTrainMap )
 		UI_AddItem( &uiMain.menu, (void *)&uiMain.hazardCourse );
 
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.saveRestore );

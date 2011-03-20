@@ -276,11 +276,12 @@ long VGUI_SurfaceWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 	case WM_SYSKEYDOWN:
 		if(!( lParam & ( 1 << 30 )))
 			pApp->internalKeyPressed( VGUI_MapKey( wParam ), surface );
-		else pApp->internalKeyTyped( VGUI_MapKey( wParam ), surface );
-		break;
-	case WM_SYSCHAR:
-	case WM_CHAR:
 		pApp->internalKeyTyped( VGUI_MapKey( wParam ), surface );
+		break;
+	case WM_CHAR:
+	case WM_SYSCHAR:
+// FIXME
+//		pApp->internalKeyTyped( VGUI_MapKey( wParam ), surface );
 		break;
 	case WM_KEYUP:
 	case WM_SYSKEYUP:

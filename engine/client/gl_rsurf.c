@@ -880,6 +880,9 @@ static _inline qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 {
 	mextrasurf_t	*info;
 
+	if( !surf || !surf->texinfo || !surf->texinfo->texture )
+		return true;
+
 	if( surf->flags & SURF_WATERCSG && !( RI.currententity->curstate.effects & EF_NOWATERCSG ))
 		return true;
 

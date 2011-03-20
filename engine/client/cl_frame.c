@@ -721,6 +721,8 @@ void CL_AddEntities( void )
 	CL_FireEvents();	// so tempents can be created immediately
 	CL_AddTempEnts();
 
+	clgame.dllFuncs.CAM_Think();
+
 	// perfomance test
 	CL_TestLights();
 }

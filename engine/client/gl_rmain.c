@@ -11,9 +11,6 @@
 msurface_t	*r_debug_surface;
 const char	*r_debug_hitbox;
 float		gldepthmin, gldepthmax;
-qboolean		fogEnabled = false;
-vec3_t		fogColor;
-float		fogDensity;
 ref_params_t	r_lastRefdef;
 ref_instance_t	RI, prevRI;
 
@@ -678,13 +675,11 @@ static void R_EndGL( void )
 		pglDisable( GL_CLIP_PLANE0 );
 }
 
-
 /*
 =============
 R_CheckFog
 
 check for underwater fog
-FIXME: allow TriAPI fog for override
 =============
 */
 static void R_CheckFog( void )
@@ -693,7 +688,7 @@ static void R_CheckFog( void )
 	gltexture_t	*tex;
 	int		i, count;
 
-	fogEnabled = false;
+	RI.fogEnabled = false;
 
 	if( RI.refdef.waterlevel < 3 || !RI.drawWorld || !r_viewleaf )
 		return;
@@ -737,12 +732,13 @@ static void R_CheckFog( void )
 		return;	// no valid fogs
 
 	// copy fog params
-	fogColor[0] = tex->fogParams[0] / 255.0f;
-	fogColor[1] = tex->fogParams[1] / 255.0f;
-	fogColor[2] = tex->fogParams[2] / 255.0f;
-	fogDensity = tex->fogParams[3] * 0.000025f;
-
-	fogEnabled = true;
+	RI.fogColor[0] = tex->fogParams[0] / 255.0f;
+	RI.fogColor[1] = tex->fogParams[1] / 255.0f;
+	RI.fogColor[2] = tex->fogParams[2] / 255.0f;
+	RI.fogDensity = tex->fogParams[3] * 0.000025f;
+	RI.fogStart = RI.fogEnd = 0.0f;
+	RI.fogCustom = false;
+	RI.fogEnabled = true;
 }
 
 /*
@@ -753,13 +749,13 @@ R_DrawFog
 */
 void R_DrawFog( void )
 {
-	if( !fogEnabled || RI.refdef.onlyClientDraw )
+	if( !RI.fogEnabled || RI.refdef.onlyClientDraw )
 		return;
 
 	pglEnable( GL_FOG );
 	pglFogi( GL_FOG_MODE, GL_EXP );
-	pglFogf( GL_FOG_DENSITY, fogDensity );
-	pglFogfv( GL_FOG_COLOR, fogColor );
+	pglFogf( GL_FOG_DENSITY, RI.fogDensity );
+	pglFogfv( GL_FOG_COLOR, RI.fogColor );
 	pglHint( GL_FOG_HINT, GL_NICEST );
 }
 
@@ -815,12 +811,10 @@ void R_DrawEntitiesOnList( void )
 	while( pglGetError() != GL_NO_ERROR );
 
 	// don't fogging translucent surfaces
-	pglDisable( GL_FOG );
+	if( !RI.fogCustom ) 
+		pglDisable( GL_FOG );
 	pglDepthMask( GL_FALSE );
 	glState.drawTrans = true;
-
-	CL_DrawBeams( true );
-	CL_DrawParticles();
 
 	// then draw translicent entities
 	for( i = 0; i < tr.num_trans_entities; i++ )
@@ -853,6 +847,9 @@ void R_DrawEntitiesOnList( void )
 	}
 
 	clgame.dllFuncs.pfnDrawTransparentTriangles ();
+
+	CL_DrawBeams( true );
+	CL_DrawParticles();
 
 	// NOTE: some mods with custom renderer may generate glErrors
 	// so we clear it here
@@ -1000,9 +997,6 @@ void R_EndFrame( void )
 {
 	// flush any remaining 2D bits
 	R_Set2DMode( false );
-
-	// check errors
-	GL_CheckForErrors ();
 
 	if( !pwglSwapBuffers( glw_state.hDC ))
 		Sys_Error( "wglSwapBuffers() failed!\n" );

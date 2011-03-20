@@ -282,6 +282,20 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 		if( !cl->edict || cl->fakeclient )
 			continue;
 
+		// simple PAS checking in singleplayer (QW legacy)
+		if( sv_maxclients->integer == 1 && ( dest == MSG_PAS_R || dest == MSG_PAS ))
+		{
+			vec3_t	delta;
+
+			if( SV_IsValidEdict( cl->pViewEntity ))
+				viewOrg = cl->pViewEntity->v.origin;
+			else viewOrg = cl->edict->v.origin;
+
+			VectorSubtract( origin, viewOrg, delta );
+			if( VectorLength( delta ) <= 1534.0f )
+				goto inrange;
+		}
+
 		if( mask )
 		{
 			int	leafnum;
@@ -295,7 +309,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}
-
+inrange:
 		if( reliable ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		else BF_WriteBits( &cl->datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		numsends++;

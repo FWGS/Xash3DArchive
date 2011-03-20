@@ -3,6 +3,8 @@ build ????
 Console: implement Con_NPrintf and Con_NXPrintf
 Render:  adding better lighting for studiomodels (right lighting for long sequences e.g. forklift.mdl)
 Network: clamp all integer values to prevent them out of range
+Client: VGUI implementation
+Render: fix decals loading
 
 build 1488
 

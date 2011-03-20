@@ -1210,7 +1210,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		vec3_t	chromerightvec;	// g_chrome s vector in world reference frame
 		vec3_t	tmp;		// vector pointing at bone in world reference frame
 
-		VectorScale( RI.currententity->origin, -1, tmp );
+		VectorScale( RI.currententity->origin, -1.0f, tmp );
 		tmp[0] += g_bonestransform[bone][0][3];
 		tmp[1] += g_bonestransform[bone][1][3];
 		tmp[2] += g_bonestransform[bone][2][3];
@@ -1225,7 +1225,9 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		}
 		else
 		{
-			CrossProduct( tmp, RI.vright, chromeupvec );
+			if( RI.currententity == &clgame.viewent )
+				CrossProduct( tmp, RI.vright, chromeupvec );
+			else CrossProduct( tmp, RI.vieworg, chromeupvec );
 			VectorNormalize( chromeupvec );
 			CrossProduct( tmp, chromeupvec, chromerightvec );
 			VectorNormalize( chromerightvec );
@@ -1332,12 +1334,13 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 {
 	uint		lnum, i;
 	studiolight_t	*plight;
+	qboolean		invLight;
+	color24		ambient;
 	float		dist, radius2;
 	vec3_t		direction, origin;
 	dlight_t		*dl;
 
-	if( !ent || !ent->model || !r_dynamic->integer )
-		return;
+	if( !lightinfo ) return;
 
 	plight = &g_studiolight;
 	plight->numdlights = 0;	// clear previous dlights
@@ -1345,6 +1348,25 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	if( r_lighting_extended->integer )
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+
+	// setup light dir
+	R_LightDir( origin, plight->lightvec, ent->model->radius );
+	VectorCopy( plight->lightvec, lightinfo->plightvec );
+
+	// setup ambient lighting
+	invLight = (ent->curstate.effects & EF_INVLIGHT) ? true : false;
+	R_LightForPoint( origin, &ambient, invLight, 0.0f ); // ignore dlights
+
+	plight->lightcolor[0] = ambient.r * (1.0f / 255.0f);
+	plight->lightcolor[1] = ambient.g * (1.0f / 255.0f);
+	plight->lightcolor[2] = ambient.b * (1.0f / 255.0f);
+
+	VectorCopy( plight->lightcolor, lightinfo->color );
+	lightinfo->ambientlight = (ambient.r + ambient.g + ambient.b) / 3;
+	lightinfo->shadelight = (ambient.r + ambient.g + ambient.b);
+
+	if( !ent || !ent->model || !r_dynamic->integer )
+		return;
 
 	for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 	{
@@ -1468,38 +1490,12 @@ R_StudioSetupLighting
 void R_StudioSetupLighting( alight_t *lightinfo )
 {
 	studiolight_t	*plight;
-	qboolean		invLight;
-	color24		ambient;
-	vec3_t		origin;
-	cl_entity_t	*ent;
 	int		i;
 
 	plight = &g_studiolight; 
 
-	ent = RI.currententity;
-	if( !ent ) return;
-
-	if( r_lighting_extended->integer )
-		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
-	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
-
-	// setup ambient lighting
-	invLight = (RI.currententity->curstate.effects & EF_INVLIGHT) ? true : false;
-	R_LightForPoint( origin, &ambient, invLight, 0.0f ); // ignore dlights
-
-	plight->lightcolor[0] = ambient.r * (1.0f / 255.0f);
-	plight->lightcolor[1] = ambient.g * (1.0f / 255.0f);
-	plight->lightcolor[2] = ambient.b * (1.0f / 255.0f);
-
-	VectorCopy( plight->lightcolor, lightinfo->color );
-	lightinfo->ambientlight = (ambient.r + ambient.g + ambient.b) / 3;
-
-	// setup light dir
-	R_LightDir( origin, plight->lightvec, ent->model->radius );
-	VectorCopy( plight->lightvec, lightinfo->plightvec );
-
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
-		Matrix3x4_VectorIRotate( g_lighttransform[i], plight->lightvec, plight->blightvec[i] );
+		Matrix3x4_VectorIRotate( g_lighttransform[i], lightinfo->plightvec, plight->blightvec[i] );
 }
 
 /*

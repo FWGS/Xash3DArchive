@@ -103,12 +103,6 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 		R_InitImages();
 		if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
 			Host_Error( "can't initialize client.dll\n" );
-		if( !UI_LoadProgs( va( "%s/MainUI.dll", GI->dll_path ) ))
-		{
-			Msg( "^1Error: ^7can't initialize MainUI.dll\n" ); // there is non fatal for us
-			if( !host.developer ) host.developer = 1; // we need console, because menu is missing
-		}
-
 		SCR_RegisterShaders();
 		SCR_VidInit();
 
@@ -1188,14 +1182,16 @@ Responses to broadcasts, etc
 */
 void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 {
-	char	*s, *c;
+	char	*args;
+	char	*c, buf[MAX_SYSPATH];
+	int	len = sizeof( buf );
 	
 	BF_Clear( msg );
 	BF_ReadLong( msg ); // skip the -1
 
-	s = BF_ReadStringLine( msg );
+	args = BF_ReadStringLine( msg );
 
-	Cmd_TokenizeString( s );
+	Cmd_TokenizeString( args );
 	c = Cmd_Argv( 0 );
 
 	MsgDev( D_NOTE, "CL_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), c );
@@ -1237,15 +1233,15 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 
 		ShowWindow( host.hWnd, SW_RESTORE );
 		SetForegroundWindow ( host.hWnd );
-		s = BF_ReadString( msg );
-		Cbuf_AddText( s );
+		args = BF_ReadString( msg );
+		Cbuf_AddText( args );
 		Cbuf_AddText( "\n" );
 	}
 	else if( !Q_strcmp( c, "print" ))
 	{
 		// print command from somewhere
-		s = BF_ReadString( msg );
-		Msg( s );
+		args = BF_ReadString( msg );
+		Msg( args );
 	}
 	else if( !Q_strcmp( c, "ping" ))
 	{
@@ -1270,7 +1266,12 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		// dropped the connection but it is still getting packets from us
 		CL_Disconnect();
 	}
-	else MsgDev( D_ERROR, "bad connectionless packet from %s:\n%s\n", NET_AdrToString( from ), s );
+	else if( clgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
+	{
+		// user out of band message (must be handled in CL_ConnectionlessPacket)
+		if( len > 0 ) Netchan_OutOfBand( NS_SERVER, from, len, buf );
+	}
+	else MsgDev( D_ERROR, "bad connectionless packet from %s:\n%s\n", NET_AdrToString( from ), args );
 }
 
 /*

@@ -28,7 +28,7 @@ CEngineSurface :: CEngineSurface( Panel *embeddedPanel ):SurfaceBase( embeddedPa
 
 CEngineSurface :: ~CEngineSurface( void )
 {
-	// TODO: release all vgui textures here
+	VGUI_DrawShutdown ();
 }
 
 Panel *CEngineSurface :: getEmbeddedPanel( void )
@@ -38,18 +38,19 @@ Panel *CEngineSurface :: getEmbeddedPanel( void )
 
 void CEngineSurface :: setTitle( const char *title )
 {
+	// TODO: implement
 	Msg( "SetTitle: %s\n", title );
 }
 
 void CEngineSurface :: createPopup( Panel* embeddedPanel )
 {
-	Msg( "Create Popup\n" );
+	// TODO: implement
+	Msg( "CreatePopup()\n" );
 }
 
 bool CEngineSurface :: hasFocus( void )
 {
-	// FIXME: check for HOST_NOFOUCS ?
-	return true;
+	return host.state != HOST_NOFOCUS;
 }
 	
 void CEngineSurface :: setCursor( Cursor *cursor )
@@ -100,6 +101,8 @@ void CEngineSurface :: drawFilledRect( int x0, int y0, int x1, int y1 )
 	vpoint_t rect[2];
 	vpoint_t clippedRect[2];
 
+	if( _drawColor[3] >= 255 ) return;
+
 	InitVertex( rect[0], x0, y0, 0, 0 );
 	InitVertex( rect[1], x1, y1, 0, 0 );
 
@@ -115,6 +118,8 @@ void CEngineSurface :: drawFilledRect( int x0, int y0, int x1, int y1 )
 
 void CEngineSurface :: drawOutlinedRect( int x0, int y0, int x1, int y1 )
 {
+	if( _drawColor[3] >= 255 ) return;
+
 	drawFilledRect( x0, y0, x1, y0 + 1 );		// top
 	drawFilledRect( x0, y1 - 1, x1, y1 );		// bottom
 	drawFilledRect( x0, y0 + 1, x0 + 1, y1 - 1 );	// left
@@ -134,7 +139,7 @@ void CEngineSurface :: drawSetTextPos( int x, int y )
 
 void CEngineSurface :: drawPrintText( const char* text, int textLen )
 {
-	if( !text || !_hCurrentFont )
+	if( !text || !_hCurrentFont || _drawTextColor[3] >= 255 )
 		return;
 
 	int x = _drawTextPos[0] + _translateX;
@@ -267,11 +272,16 @@ void CEngineSurface :: popMakeCurrent( Panel *panel )
 
 bool CEngineSurface :: setFullscreenMode( int wide, int tall, int bpp )
 {
-	Msg( "setFullscreenMode( %i x %i %i bpp)\n", wide, tall, bpp );
+	// NOTE: Xash3D always working in 32-bit mode
+	if( R_DescribeVIDMode( wide, tall ))
+	{
+		Cvar_SetFloat( "fullscreen", 1.0f );
+		return true;
+	}
 	return false;
 }
 	
 void CEngineSurface :: setWindowedMode( void )
 {
-	Msg( "setWindowedMode()\n" );
+	Cvar_SetFloat( "fullscreen", 0.0f );
 }

@@ -931,6 +931,22 @@ void R_SaveVideoMode( int vid_mode )
 	MsgDev( D_NOTE, "Set: %s [%dx%d]\n", vidmode[mode].desc, vidmode[mode].width, vidmode[mode].height );
 }
 
+qboolean R_DescribeVIDMode( int width, int height )
+{
+	int	i;
+
+	for( i = 0; i < sizeof( vidmode ) / sizeof( vidmode[0] ); i++ )
+	{
+		if( vidmode[i].width == width && vidmode[i].height == height )
+		{
+			// found specified mode
+			Cvar_SetFloat( "vid_mode", i );
+			return true;
+		}
+	}
+	return false;
+}
+
 qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 {
 	WNDCLASS		wc;
@@ -1632,8 +1648,6 @@ qboolean R_Init( void )
 
 	// initialize screen
 	SCR_Init();
-
-	GL_CheckForErrors();
 
 	return true;
 }

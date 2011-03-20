@@ -266,6 +266,7 @@ typedef struct host_parm_s
 	qboolean		mouse_visible;	// vgui override cursor control
 	qboolean		input_enabled;	// vgui override mouse & keyboard input
 	qboolean		shutdown_issued;	// engine is shutting down
+	qboolean		decal_loading;	// nasty hack to tell imagelib about decal
 
 	char		gamefolder[64];	// it's a default gamefolder	
 	byte		*imagepool;	// imagelib mempool

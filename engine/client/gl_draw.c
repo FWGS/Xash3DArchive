@@ -128,8 +128,6 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 		}
 	}
 
-	GL_CheckForErrors();
-
 	pglBegin( GL_QUADS );
 	pglTexCoord2f( 0, 0 );
 	pglVertex2f( x, y );

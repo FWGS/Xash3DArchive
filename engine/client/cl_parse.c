@@ -520,8 +520,10 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	else modelIndex = 0;
 	flags = BF_ReadByte( msg );
 
+	host.decal_loading = true;
 	if( !cl.decal_index[decalIndex] )
 		cl.decal_index[decalIndex] = GL_LoadTexture( host.draw_decals[decalIndex], NULL, 0, TF_DECAL );
+	host.decal_loading = false;
 
 	CL_DecalShoot( cl.decal_index[decalIndex], entityIndex, modelIndex, origin, flags );
 }

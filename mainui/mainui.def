@@ -1,4 +1,4 @@
-LIBRARY mainui
+LIBRARY menu
 EXPORTS
 	GetMenuAPI			@1
 SECTIONS

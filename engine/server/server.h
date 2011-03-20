@@ -370,7 +370,7 @@ extern	convar_t		*sv_skyname;
 extern	convar_t		*serverinfo;
 extern	convar_t		*sv_failuretime;
 extern	convar_t		*sv_unlag;
-extern convar_t		*sv_novis;
+extern	convar_t		*sv_novis;
 extern	convar_t		*sv_maxunlag;
 extern	convar_t		*sv_unlagpush;
 extern	convar_t		*sv_unlagsamples;
@@ -517,6 +517,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
+byte *pfnSetFatPVS( const float *org );
+byte *pfnSetFatPAS( const float *org );
 int pfnPrecacheModel( const char *s );
 int pfnDecalIndex( const char *m );
 int pfnNumberOfEntities( void );

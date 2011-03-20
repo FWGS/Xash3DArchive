@@ -14,6 +14,7 @@ int transition_initial_time;
 int transition_state;
 HIMAGE TransPic = 0;
 int PreClickDepth;
+bool hold_button_stack = false;
 
 void UI_TACheckMenuDepth( void )
 {
@@ -25,6 +26,8 @@ int ButtonStackDepth;
 
 void UI_PopPButtonStack()
 {
+	if( hold_button_stack ) return;
+
 	UI_SetTitleAnim( AS_TO_BUTTON, ButtonStack[ButtonStackDepth] );
 	ButtonStackDepth--;
 }
