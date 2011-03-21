@@ -27,6 +27,7 @@ extern "C" {
 
 // color strings
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
+#define ColorIndex( c )	((( c ) - '0' ) & 7 )
 
 typedef unsigned long	dword;
 typedef unsigned int	uint;

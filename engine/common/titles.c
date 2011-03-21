@@ -233,7 +233,7 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 {
 	char			buf[512], trim[512];
 	char			*pCurrentText = NULL, *pNameHeap;
-	char			currentName[512], nameHeap[16384];
+	char			currentName[512], nameHeap[32768];
 	int			mode = MSGFILE_NAME; // searching for a message name	
 	int			lineNumber, filePos, lastLinePos;
 	client_textmessage_t	textMessages[MAX_MESSAGES];
@@ -281,7 +281,7 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 				int length = Q_strlen( currentName );
 
 				// save name on name heap
-				if( lastNamePos + length > 8192 )
+				if( lastNamePos + length > 16384 )
 				{
 					MsgDev( D_ERROR, "TextMessage: error while parsing!\n" );
 					return;

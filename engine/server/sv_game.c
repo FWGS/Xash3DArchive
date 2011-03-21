@@ -3825,7 +3825,7 @@ pfnEndSection
 */
 void pfnEndSection( const char *pszSection )
 {
-	if( !Q_stricmp( "credits", pszSection ))
+	if( !Q_stricmp( "oem_end_credits", pszSection ))
 		Host_Credits ();
 	else Host_EndGame( pszSection );
 }

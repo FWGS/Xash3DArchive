@@ -371,6 +371,10 @@ UI_CustomGame_Menu
 */
 void UI_CustomGame_Menu( void )
 {
+	// current instance is not support game change
+	if( !CVAR_GET_FLOAT( "host_allow_changegame" ))
+		return;
+	
 	UI_CustomGame_Precache();
 	UI_CustomGame_Init();
 

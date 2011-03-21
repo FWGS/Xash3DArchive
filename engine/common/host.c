@@ -782,7 +782,15 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	}
 
 	// allow to change game from the console
-	if( pChangeGame != NULL ) Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
+	if( pChangeGame != NULL )
+	{
+		Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
+		Cvar_Get( "host_allow_changegame", "1", CVAR_READ_ONLY, "allows to change games" );
+	}
+	else
+	{
+		Cvar_Get( "host_allow_changegame", "0", CVAR_READ_ONLY, "allows to change games" );
+	}
 
 	host.errorframe = 0;
 	Cbuf_Execute();

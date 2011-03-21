@@ -11,6 +11,9 @@ extern "C" {
 
 #define VGUI_MAX_TEXTURES	2048	// a half of total textures count
 
+extern rgba_t g_color_table[8];	// for colored strings support
+extern convar_t *vgui_colorstrings;
+
 // VGUI generic vertex
 typedef struct
 {

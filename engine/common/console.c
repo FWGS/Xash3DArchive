@@ -19,7 +19,6 @@ convar_t	*con_fontsize;
 #define COLOR_DEFAULT	'7'
 #define CON_HISTORY		64
 #define MAX_DBG_NOTIFY	128
-#define ColorIndex( c )	((( c ) - '0' ) & 7 )
 
 #define CON_TEXTSIZE	131072	// 128 kb buffer
 

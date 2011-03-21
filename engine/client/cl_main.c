@@ -432,7 +432,7 @@ void CL_WritePacket( void )
 	{
 		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME && !cls.demoplayback )
 		{
-			MsgDev( D_WARN, "^1 Connection Problem^7\n" );
+			Con_NPrintf( 1, "^3Warning:^1 Connection Problem^7\n" );
 			cl.validsequence = 0;
 		}
 	}

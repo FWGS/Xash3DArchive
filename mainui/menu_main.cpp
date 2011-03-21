@@ -317,6 +317,7 @@ UI_Main_Init
 static void UI_Main_Init( void )
 {
 	bool bTrainMap;
+	bool bCustomGame;
 
 	memset( &uiMain, 0, sizeof( uiMain_t ));
 
@@ -324,6 +325,10 @@ static void UI_Main_Init( void )
 	if( strlen( gMenu.m_gameinfo.trainmap ) && stricmp( gMenu.m_gameinfo.trainmap, gMenu.m_gameinfo.startmap ))
 		bTrainMap = true;
 	else bTrainMap = false;
+
+	if( CVAR_GET_FLOAT( "host_allow_changegame" ))
+		bCustomGame = true;
+	else bCustomGame = false;
 
 	// precache .avi file and get logo width and height
 	PRECACHE_LOGO( "logo.avi" );
@@ -466,7 +471,7 @@ static void UI_Main_Init( void )
 	uiMain.credits.generic.name = "About";
 	uiMain.credits.generic.statusText = "Game credits";
 	uiMain.credits.generic.x = 72;
-	uiMain.credits.generic.y = bTrainMap ? 580 : 530;
+	uiMain.credits.generic.y = (bCustomGame) ? (bTrainMap ? 580 : 530) : (bTrainMap ? 530 : 480);
 	uiMain.credits.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.credits, PC_VIEW_README );
@@ -477,7 +482,7 @@ static void UI_Main_Init( void )
 	uiMain.quit.generic.name = "Quit";
 	uiMain.quit.generic.statusText = "Quit from game";
 	uiMain.quit.generic.x = 72;
-	uiMain.quit.generic.y = bTrainMap ? 630 : 580;
+	uiMain.quit.generic.y = (bCustomGame) ? (bTrainMap ? 630 : 580) : (bTrainMap ? 580 : 530);
 	uiMain.quit.generic.callback = UI_Main_Callback;
 
 	UI_UtilSetupPicButton( &uiMain.quit, PC_QUIT );
@@ -568,7 +573,10 @@ static void UI_Main_Init( void )
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.saveRestore );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.configuration );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.multiPlayer );
-	UI_AddItem( &uiMain.menu, (void *)&uiMain.customGame );
+
+	if ( bCustomGame )
+		UI_AddItem( &uiMain.menu, (void *)&uiMain.customGame );
+
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.credits );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.quit );
 	UI_AddItem( &uiMain.menu, (void *)&uiMain.minimizeBtn );

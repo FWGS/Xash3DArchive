@@ -8,6 +8,7 @@
 #include "gl_local.h"
 #include "vgui_draw.h"
 
+convar_t	*vgui_colorstrings;
 int	g_textures[VGUI_MAX_TEXTURES];
 int	g_textureId = 0;
 int	g_iBoundTexture;
@@ -23,6 +24,8 @@ void VGUI_DrawInit( void )
 {
 	Q_memset( g_textures, 0, sizeof( g_textures ));
 	g_textureId = g_iBoundTexture = 0;
+
+	vgui_colorstrings = Cvar_Get( "vgui_colorstrings", "0", CVAR_ARCHIVE, "allow colorstrings in VGUI texts" );
 }
 
 /*

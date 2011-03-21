@@ -139,6 +139,9 @@ void CEngineSurface :: drawSetTextPos( int x, int y )
 
 void CEngineSurface :: drawPrintText( const char* text, int textLen )
 {
+	static bool hasColor = 0;
+	static int numColor = 7;
+
 	if( !text || !_hCurrentFont || _drawTextColor[3] >= 255 )
 		return;
 
@@ -147,7 +150,38 @@ void CEngineSurface :: drawPrintText( const char* text, int textLen )
 
 	int iTall = _hCurrentFont->getTall();
 
-	int iTotalWidth = 0;
+	int j, iTotalWidth = 0;
+	int curTextColor[4];
+
+	//  HACKHACK: allow color strings in VGUI
+	if( numColor != 7 && vgui_colorstrings->integer )
+	{
+		for( j = 0; j < 3; j++ ) // grab predefined color
+			curTextColor[j] = g_color_table[numColor][j];
+          }
+          else
+          {
+		for( j = 0; j < 3; j++ ) // revert default color
+			curTextColor[j] = _drawTextColor[j];
+	}
+	curTextColor[3] = _drawTextColor[3]; // copy alpha
+
+	if( textLen == 1 && vgui_colorstrings->integer )
+	{
+		if( *text == '^' )
+		{
+			hasColor = true;
+			return; // skip '^'
+		}
+		else if( hasColor && isdigit( *text ))
+		{
+			numColor = ColorIndex( *text );
+			hasColor = false; // handled
+			return; // skip colornum
+		}
+		else hasColor = false;
+	}
+
 	for( int i = 0; i < textLen; i++ )
 	{
 		char ch = text[i];
@@ -188,7 +222,7 @@ void CEngineSurface :: drawPrintText( const char* text, int textLen )
 				continue;
                                         
 			drawSetTexture( iTexId );
-			VGUI_SetupDrawingText( _drawTextColor );
+			VGUI_SetupDrawingText( curTextColor );
 			VGUI_DrawQuad(  &clippedRect[0], &clippedRect[1] ); // draw the letter
 		}
 

@@ -12,7 +12,7 @@ typedef int (*pfnInit)( const char *progname, int bChangeGame, pfnChangeGame fun
 typedef void (*pfnShutdown)( void );
 
 pfnInit Host_Main;
-pfnShutdown Host_Shutdown;
+pfnShutdown Host_Shutdown = NULL;
 char szGameDir[128]; // safe place to keep gamedir
 HINSTANCE	hEngine;
 
