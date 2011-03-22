@@ -32,8 +32,8 @@ public:
 
 //-------------------------------------
 
-inline bool StringLessThan( const char * const &lhs, const char * const &rhs) { return ( strcmp( lhs, rhs) < 0 );  }
-inline bool CaselessStringLessThan( const char * const &lhs, const char * const &rhs ) { return ( stricmp( lhs, rhs) < 0 ); }
+inline bool StringLessThan( const char * const &lhs, const char * const &rhs) { return ( Q_strcmp( lhs, rhs) < 0 );  }
+inline bool CaselessStringLessThan( const char * const &lhs, const char * const &rhs ) { return ( Q_stricmp( lhs, rhs) < 0 ); }
 
 //-------------------------------------
 // inline these two templates to stop multiple definitions of the same code

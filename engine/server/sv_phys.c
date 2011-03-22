@@ -73,6 +73,8 @@ void SV_CheckAllEnts( void )
 			e->pvPrivateData = NULL;
 			continue;
 		}
+
+		SV_CheckVelocity( e );
 	}
 }
 

@@ -2576,7 +2576,7 @@ static void pfnEngineFprintf( FILE *pfile, char *szFmt, ... )
 	
 /*
 =============
-pfnPvAllocEntPrivateData
+pfnBuildSoundMsg
 
 =============
 */

@@ -487,7 +487,17 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 	for( i = 0; i < loadmodel->numtextures; i++ )
 	{
-		if( in->dataofs[i] == -1 ) continue; // missed
+		if( in->dataofs[i] == -1 )
+		{
+			// create default texture (some mods requires this)
+			tx = Mem_Alloc( loadmodel->mempool, sizeof( *tx ));
+			loadmodel->textures[i] = tx;
+		
+			Q_strncpy( tx->name, "*default", sizeof( tx->name ));
+			tx->gl_texturenum = tr.defaultTexture;
+			tx->width = tx->height = 16;
+			continue; // missed
+		}
 
 		mt = (mip_t *)((byte *)in + in->dataofs[i] );
 
@@ -828,6 +838,8 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 	for( i = 0; i < count; i++, in++, out++, info++ )
 	{
+		texture_t	*tex;
+
 		if(( in->firstedge + in->numedges ) > loadmodel->numsurfedges )
 		{
 			MsgDev( D_ERROR, "Bad surface %i from %i\n", i, count );
@@ -842,29 +854,25 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		out->plane = loadmodel->planes + in->planenum;
 		out->texinfo = loadmodel->texinfo + in->texinfo;
 
-		// some DMC maps have bad textures
-		if( out->texinfo->texture )
-		{
-			texture_t	*tex = out->texinfo->texture;
+		tex = out->texinfo->texture;
 
-			if( !Q_strncmp( tex->name, "sky", 3 ))
-				out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
+		if( !Q_strncmp( tex->name, "sky", 3 ))
+			out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
-			if( tex->name[0] == '*' || tex->name[0] == '!' )
-				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+		if( tex->name[0] == '*' || tex->name[0] == '!' )
+			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
-			if( !Q_strnicmp( tex->name, "water", 5 ))
-				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
+		if( !Q_strnicmp( tex->name, "water", 5 ))
+			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
 
-			if( !Q_strnicmp( tex->name, "scroll", 6 ))
-				out->flags |= SURF_CONVEYOR;
+		if( !Q_strnicmp( tex->name, "scroll", 6 ))
+			out->flags |= SURF_CONVEYOR;
 
-			if( tex->name[0] == '{' )
-				out->flags |= SURF_TRANSPARENT;
+		if( tex->name[0] == '{' )
+			out->flags |= SURF_TRANSPARENT;
 
-			if( out->texinfo->flags & TEX_SPECIAL )
-				out->flags |= SURF_DRAWTILED;
-		}
+		if( out->texinfo->flags & TEX_SPECIAL )
+			out->flags |= SURF_DRAWTILED;
 
 		Mod_CalcSurfaceBounds( out, info );
 		Mod_CalcSurfaceExtents( out );

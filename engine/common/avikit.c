@@ -625,6 +625,12 @@ movie_state_t *AVI_GetState( int num )
 
 qboolean AVI_Initailize( void )
 {
+	if( Sys_CheckParm( "-noavi" ))
+	{
+		MsgDev( D_INFO, "AVI: Disabled\n" );
+		return false;
+	}
+
 	if( !Sys_LoadLibrary( &avifile_dll ))
 	{
 		MsgDev( D_ERROR, "AVI_Initailize: failed\n" );

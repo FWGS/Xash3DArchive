@@ -1187,7 +1187,7 @@ static void R_StudioSaveBones( void )
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ ) 
 	{
-		strcpy( g_nCachedBoneNames[i], pbones[i].name );
+		Q_strcpy( g_nCachedBoneNames[i], pbones[i].name );
 		Matrix3x4_Copy( g_rgCachedBonesTransform[i], g_bonestransform[i] );
 		Matrix3x4_Copy( g_rgCachedLightTransform[i], g_lighttransform[i] );
 	}
@@ -1886,7 +1886,7 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	}
 
 	if( !info->model[0] ) return NULL;
-	if( !stricmp( info->model, "player" )) Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
+	if( !Q_stricmp( info->model, "player" )) Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
 	else Q_snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
 
 	return Mod_ForName( modelpath, false );

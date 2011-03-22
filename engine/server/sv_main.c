@@ -643,7 +643,7 @@ void SV_Init( void )
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );
 	sv_waterfriction = Cvar_Get( "sv_waterfriction", "1", CVAR_PHYSICINFO, "how fast you slow down in water" );
 	sv_wateraccelerate = Cvar_Get( "sv_wateraccelerate", "10", CVAR_PHYSICINFO, "rate at which a player accelerates to sv_maxspeed while in the water" );
-	sv_rollangle = Cvar_Get( "sv_rollangle", "2", CVAR_PHYSICINFO, "how much to tilt the view when strafing" );
+	sv_rollangle = Cvar_Get( "sv_rollangle", "0", CVAR_PHYSICINFO, "how much to tilt the view when strafing" );
 	sv_rollspeed = Cvar_Get( "sv_rollspeed", "200", CVAR_PHYSICINFO, "how much strafing is necessary to tilt the view" );
 	sv_airaccelerate = Cvar_Get("sv_airaccelerate", "10", CVAR_PHYSICINFO, "player accellerate in air" );
 	sv_maxvelocity = Cvar_Get( "sv_maxvelocity", "2000", CVAR_PHYSICINFO, "max world velocity" );

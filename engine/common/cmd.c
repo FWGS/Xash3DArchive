@@ -491,7 +491,7 @@ void Cmd_RemoveCommand (const char *cmd_name)
 	{
 		cmd = *back;
 		if (!cmd ) return;
-		if (!strcmp( cmd_name, cmd->name ))
+		if (!Q_strcmp( cmd_name, cmd->name ))
 		{
 			*back = cmd->next;
 			if(cmd->name) Mem_Free(cmd->name);

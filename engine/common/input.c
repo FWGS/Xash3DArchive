@@ -268,7 +268,9 @@ void IN_DeactivateMouse( void )
 		clgame.dllFuncs.IN_DeactivateMouse();
 	}
 	else if( in_restore_spi )
+	{
 		SystemParametersInfo( SPI_SETMOUSE, 0, in_originalmouseparms, 0 );
+	}
 
 	in_mouseactive = false;
 	ClipCursor( NULL );

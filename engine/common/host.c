@@ -761,6 +761,17 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	NET_Init();
 	Netchan_Init();
 
+	// allow to change game from the console
+	if( pChangeGame != NULL )
+	{
+		Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
+		Cvar_Get( "host_allow_changegame", "1", CVAR_READ_ONLY, "allows to change games" );
+	}
+	else
+	{
+		Cvar_Get( "host_allow_changegame", "0", CVAR_READ_ONLY, "allows to change games" );
+	}
+
 	SV_Init();
 	CL_Init();
 
@@ -779,17 +790,6 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	{
 		Cmd_AddCommand( "minimize", Host_Minimize_f, "minimize main window to tray" );
 		Cbuf_AddText( "exec config.cfg\n" );
-	}
-
-	// allow to change game from the console
-	if( pChangeGame != NULL )
-	{
-		Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
-		Cvar_Get( "host_allow_changegame", "1", CVAR_READ_ONLY, "allows to change games" );
-	}
-	else
-	{
-		Cvar_Get( "host_allow_changegame", "0", CVAR_READ_ONLY, "allows to change games" );
 	}
 
 	host.errorframe = 0;

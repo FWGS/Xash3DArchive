@@ -9,7 +9,7 @@
 
 #define iDirectSoundCreate( a, b, c )	pDirectSoundCreate( a, b, c )
 
-static HRESULT ( _stdcall *pDirectSoundCreate)(GUID* lpGUID, LPDIRECTSOUND* lplpDS, IUnknown* pUnkOuter );
+static HRESULT ( _stdcall *pDirectSoundCreate)(GUID* lpGUID, LPDIRECTSOUND* lpDS, IUnknown* pUnkOuter );
 
 static dllfunc_t dsound_funcs[] =
 {
