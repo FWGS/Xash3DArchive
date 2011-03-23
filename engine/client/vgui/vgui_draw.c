@@ -154,7 +154,7 @@ void VGUI_SetupDrawingImage( int *pColor )
 {
 	pglEnable( GL_BLEND );
 	pglEnable( GL_ALPHA_TEST );
-	pglAlphaFunc( GL_GEQUAL, 0.5f );
+	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	pglColor4ub( pColor[0], pColor[1], pColor[2], 255 - pColor[3] );

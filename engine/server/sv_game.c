@@ -2223,7 +2223,10 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 		svgame.msg_index = -1; // this is a system message
 
 		if( msg_num == svc_temp_entity )
+		{
+			svgame.msg_name = "TempEntity";
 			iSize = -1; // temp entity have variable size
+		}
 		else iSize = 0;
 	}
 	else

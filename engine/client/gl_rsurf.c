@@ -1033,6 +1033,8 @@ void R_DrawBrushModel( cl_entity_t *e )
 			e->curstate.rendercolor.b, e->curstate.renderamt );
 		break;
 	case kRenderTransAlpha:
+		// NOTE: brushes can't change renderamt for 'Solid' mode
+		pglAlphaFunc( GL_GEQUAL, 0.5f );
 	default:	
 		pglColor4ub( 255, 255, 255, 255 );
 		break;

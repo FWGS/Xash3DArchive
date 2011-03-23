@@ -281,11 +281,6 @@ void SCR_UpdateScreen( void )
 		}
 		V_PostRender();
           }
-
-	if( !clgame.hInstance ) return;
-
-	// make sure what menu and CL_WritePacket catch changes
-	userinfo->modified = false;
 }
 
 static void SCR_LoadCreditsFont( void )

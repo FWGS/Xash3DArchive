@@ -806,6 +806,30 @@ static void R_DrawSpriteQuad( mspriteframe_t *frame, vec3_t org, vec3_t v_right,
 	pglEnd();
 }
 
+static _inline qboolean R_SpriteHasLightmap( cl_entity_t *e, int texFormat )
+{
+	if( !r_lighting_extended->integer )
+		return false;
+	
+	if( texFormat != SPR_ALPHTEST )
+		return false;
+
+	if( e->curstate.renderamt != 255 )
+		return false;
+
+	switch( e->curstate.rendermode )
+	{
+	case kRenderNormal:
+	case kRenderTransAlpha:
+	case kRenderTransTexture:
+		break;
+	default:
+		return false;
+	}
+
+	return true;
+}
+
 /*
 =================
 R_DrawSpriteModel
@@ -856,10 +880,9 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
 	{
-		if( glState.drawTrans )
-			pglDepthMask( GL_TRUE );
 		pglEnable( GL_ALPHA_TEST );
-		pglAlphaFunc( GL_GEQUAL, 0.5f );
+		if( alpha != 1.0f ) pglAlphaFunc( GL_GREATER, 0.0f );
+		else pglAlphaFunc( GL_GEQUAL, 0.5f );
 	}
 
 	if( e->curstate.rendermode == kRenderGlow )
@@ -896,7 +919,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
 	color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
           
-	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer && e->curstate.rendermode != kRenderTransAdd )
+	if( R_SpriteHasLightmap( e, psprite->texFormat ))
 	{
 		color24	lightColor;
 		qboolean	invLight;
@@ -992,7 +1015,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	}
 
 	// draw the sprite 'lightmap' :-)
-	if( psprite->texFormat == SPR_ALPHTEST && r_lighting_extended->integer && e->curstate.rendermode != kRenderTransAdd )
+	if( R_SpriteHasLightmap( e, psprite->texFormat ))
 	{
 		pglEnable( GL_BLEND );
 		pglDepthFunc( GL_EQUAL );
@@ -1012,11 +1035,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglEnable( GL_DEPTH_TEST );
 
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
-	{
-		if( glState.drawTrans ) 
-			pglDepthMask( GL_FALSE );
 		pglDisable( GL_ALPHA_TEST );
-	}
 
 	pglDisable( GL_BLEND );
 	pglDepthFunc( GL_LEQUAL );

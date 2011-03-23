@@ -282,8 +282,7 @@ void CL_AddTempEnts( void )
 	double	ft = cl.time - cl.oldtime;
 	float	gravity = clgame.movevars.gravity;
 
-	clgame.dllFuncs.pfnTempEntUpdate( ft, cl.time, gravity, &cl_free_tents, &cl_active_tents,
-		CL_TEntAddEntity, CL_TEntPlaySound );	// callbacks
+	clgame.dllFuncs.pfnTempEntUpdate( ft, cl.time, gravity, &cl_free_tents, &cl_active_tents, CL_TEntAddEntity, CL_TEntPlaySound );	// callbacks
 }
 
 /*

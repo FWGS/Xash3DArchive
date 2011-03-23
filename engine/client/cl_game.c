@@ -3017,7 +3017,7 @@ int TriSpriteTexture( model_t *pSpriteModel, int frame )
 	if( psprite->texFormat == SPR_ALPHTEST )
 	{
 		pglEnable( GL_ALPHA_TEST );
-		pglAlphaFunc( GL_GEQUAL, 0.5f );
+		pglAlphaFunc( GL_GREATER, 0.0f );
 	}
 
 	GL_Bind( GL_TEXTURE0, gl_texturenum );

@@ -44,6 +44,7 @@ typedef struct studiolight_s
 convar_t			*r_studio_lerping;
 convar_t			*r_studio_lambert;
 convar_t			*r_drawviewmodel;
+convar_t			*r_customdraw_playermodel;
 convar_t			*cl_himodels;
 char			model_name[64];
 static r_studio_interface_t	*pStudioDraw;
@@ -93,6 +94,7 @@ void R_StudioInit( void )
 	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", CVAR_ARCHIVE, "enables studio animation lerping" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
+	r_customdraw_playermodel = Cvar_Get( "r_customdraw_playermodel", "0", CVAR_ARCHIVE, "allow to drawing playermodel in menu with client renderer" );
 
 	// recalc software X and Y alias scale (this stuff is used only by HL software renderer but who knews...)
 	pixelAspect = ((float)scr_height->integer / (float)scr_width->integer);
@@ -1362,8 +1364,8 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	plight->lightcolor[2] = ambient.b * (1.0f / 255.0f);
 
 	VectorCopy( plight->lightcolor, lightinfo->color );
-	lightinfo->ambientlight = (ambient.r + ambient.g + ambient.b) / 3;
-	lightinfo->shadelight = (ambient.r + ambient.g + ambient.b);
+	lightinfo->shadelight = (ambient.r + ambient.g + ambient.b) / 3;
+	lightinfo->ambientlight = lightinfo->shadelight * 0.1f;
 
 	if( !ent || !ent->model || !r_dynamic->integer )
 		return;
@@ -2016,6 +2018,10 @@ static void R_StudioSetupRenderer( int rendermode )
 {
 	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse );
 	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
+	pglDisable( GL_BLEND );
+	pglDepthFunc( GL_LEQUAL );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -2557,10 +2563,20 @@ void R_DrawStudioModel( cl_entity_t *e )
 		m_fDoInterp = (e->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
-	// select the properly method
-	if( e->player )
-		result = pStudioDraw->StudioDrawPlayer( flags, &e->curstate );
-	else result = pStudioDraw->StudioDrawModel( flags );
+	// prevent to crash some mods like HLFX in menu Customize
+	if( !RI.drawWorld && !r_customdraw_playermodel->integer )
+	{
+		if( e->player )
+			result = R_StudioDrawPlayer( flags, &e->curstate );
+		else result = R_StudioDrawModel( flags );
+	}
+	else
+	{
+		// select the properly method
+		if( e->player )
+			result = pStudioDraw->StudioDrawPlayer( flags, &e->curstate );
+		else result = pStudioDraw->StudioDrawModel( flags );
+	}
 }
 
 /*

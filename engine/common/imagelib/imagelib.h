@@ -138,6 +138,63 @@ typedef struct tga_s
 } tga_t;
 #pragma pack( )
 
+/*
+========================================================================
+
+.JPG image format
+
+========================================================================
+*/
+typedef struct huffman_table_s
+{
+	// Huffman coding tables
+	byte	bits[16];
+	byte	hval[256];
+	byte	size[256];
+	word	code[256];
+} huffman_table_t;
+
+typedef struct jpg_s
+{
+	// not a real header
+	file_t	*file;		// file
+	byte	*buffer;		// jpg buffer
+	
+	int	width;		// width image
+	int	height;		// height image
+	byte	*data;		// image
+	int	data_precision;	// bit per component
+	int	num_components;	// number component
+	int	restart_interval;	// restart interval
+	qboolean	progressive_mode;	// progressive format
+
+	struct
+	{
+		int     id;	// identifier
+		int     h;	// horizontal sampling factor
+		int     v;	// vertical sampling factor
+		int     t;	// quantization table selector
+		int     td;	// DC table selector
+		int     ta;	// AC table selector
+	} component_info[3];	// RGB (alpha not supported)
+    
+	huffman_table_t hac[4];	// AC table
+	huffman_table_t hdc[4];	// DC table
+
+	int	qtable[4][64];	// quantization table
+
+	struct
+	{
+		int     ss,se;	// progressive jpeg spectral selection
+		int     ah,al;	// progressive jpeg successive approx
+	} scan;
+
+	int	dc[3];
+	int	curbit;
+	byte	curbyte;
+
+} jpg_t;
+
 // imagelib definitions
 #define IMAGE_MAXWIDTH	4096
 #define IMAGE_MAXHEIGHT	4096
@@ -195,6 +252,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
+qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize );
 
 //
 // formats save

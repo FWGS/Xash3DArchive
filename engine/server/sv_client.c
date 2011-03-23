@@ -888,9 +888,7 @@ void SV_PutClientInServer( edict_t *ent )
 		}
 		else
 		{
-			if( sv_maxclients->integer > 1 )
-				ent->v.netname = MAKE_STRING( Info_ValueForKey( client->userinfo, "name" ));
-			else ent->v.netname = MAKE_STRING( "player" );
+			ent->v.netname = MAKE_STRING( Info_ValueForKey( client->userinfo, "name" ));
 
 			// fisrt entering
       			svgame.globals->time = sv.time;
@@ -1551,40 +1549,40 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	
 	// msg command
 	val = Info_ValueForKey( cl->userinfo, "msg" );
-	if( Q_strlen( val ))
-		cl->messagelevel = Q_atoi( val );
+	if( Q_strlen( val )) cl->messagelevel = Q_atoi( val );
 
 	cl->local_weapons = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) ? true : false;
 	cl->lag_compensation = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )) ? true : false;
 
-	if( SV_IsValidEdict( ent ))
-	{
-		if( sv_maxclients->integer > 1 )
-		{
-			const char *model = Info_ValueForKey( cl->userinfo, "model" );
+	val = Info_ValueForKey( cl->userinfo, "cl_updaterate" );
 
-			// apply custom playermodel
-			if( Q_strlen( model ) && Q_stricmp( model, "player" ))
-			{
-				const char *path = va( "models/player/%s/%s.mdl", model, model );
-				Mod_RegisterModel( path, SV_ModelIndex( path )); // register model
-				SV_SetModel( ent, path );
-				cl->modelindex = ent->v.modelindex;
-			}
-			else cl->modelindex = 0;
+	if( Q_strlen( val ))
+	{
+		int i = bound( 10, Q_atoi( val ), 300 );
+		cl->cl_updaterate = 1.0f / i;
+	}
+
+	if( sv_maxclients->integer > 1 )
+	{
+		const char *model = Info_ValueForKey( cl->userinfo, "model" );
+
+		// apply custom playermodel
+		if( Q_strlen( model ) && Q_stricmp( model, "player" ))
+		{
+			const char *path = va( "models/player/%s/%s.mdl", model, model );
+			Mod_RegisterModel( path, SV_ModelIndex( path )); // register model
+			SV_SetModel( ent, path );
+			cl->modelindex = ent->v.modelindex;
 		}
 		else cl->modelindex = 0;
 	}
+	else cl->modelindex = 0;
 
 	// call prog code to allow overrides
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
 
-	if( SV_IsValidEdict( ent ))
-	{
-		if( sv_maxclients->integer > 1 )
-			ent->v.netname = MAKE_STRING(Info_ValueForKey( cl->userinfo, "name" ));
-		else ent->v.netname = 0;
-	}
+	ent->v.netname = MAKE_STRING( Info_ValueForKey( cl->userinfo, "name" ));
+
 	if( cl->state >= cs_connected ) cl->sendinfo = true; // needs for update client info 
 }
 

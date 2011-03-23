@@ -33,7 +33,6 @@ convar_t	*cl_solid_players;
 convar_t	*cl_draw_beams;
 convar_t	*cl_showmiss;
 convar_t	*cl_cmdrate;
-convar_t	*userinfo;
 
 //
 // userinfo
@@ -541,6 +540,9 @@ void CL_WritePacket( void )
 
 	// update download/upload slider.
 	Netchan_UpdateProgress( &cls.netchan );
+
+	// make sure what menu and CL_WritePacket catch changes
+	userinfo->modified = false;
 }
 
 /*
@@ -1486,7 +1488,6 @@ void CL_InitLocal( void )
 	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player top color" );
 	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player bottom color" );
 	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO|CVAR_ARCHIVE, "player network rate" );
-	userinfo = Cvar_Get( "@userinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_smooth = Cvar_Get ("cl_smooth", "0", CVAR_ARCHIVE, "smooth up stair climbing and interpolate position in multiplayer" );
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", CVAR_ARCHIVE, "how many additional history commands are sent" );
@@ -1498,6 +1499,7 @@ void CL_InitLocal( void )
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
 	Cvar_Get( "spectator", "0", CVAR_USERINFO|CVAR_ARCHIVE, "1 is enable spectator mode" );
+	Cvar_Get( "cl_updaterate", "60", CVAR_USERINFO|CVAR_ARCHIVE, "refresh rate of server messages" );
 
 	// server commands
 	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );

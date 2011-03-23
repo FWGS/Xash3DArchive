@@ -46,9 +46,12 @@ void UI_SetActiveMenu( qboolean fActive )
 {
 	movie_state_t	*cin_state;
 
-	// don't touch menu state when video is restarted
-	if( !menu.hInstance )//|| host.state == HOST_RESTART )
+	if( !menu.hInstance )
+	{
+		if( !fActive )
+			Key_SetKeyDest( key_game );
 		return;
+	}
 
 	menu.drawLogo = fActive;
 	menu.dllFuncs.pfnSetActiveMenu( fActive );

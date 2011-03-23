@@ -532,7 +532,12 @@ void CL_InitClientMove( void )
 
 	// enumerate client hulls
 	for( i = 0; i < 4; i++ )
-		clgame.dllFuncs.pfnGetHullBounds( i, clgame.player_mins[i], clgame.player_maxs[i] );
+	{
+		if( clgame.dllFuncs.pfnGetHullBounds( i, clgame.player_mins[i], clgame.player_maxs[i] ))
+			MsgDev( D_INFO, "CL: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
+			clgame.player_mins[i][0], clgame.player_mins[i][1], clgame.player_mins[i][2],
+			clgame.player_maxs[i][0], clgame.player_maxs[i][1], clgame.player_maxs[i][2] );
+	}
 
 	Q_memcpy( clgame.pmove->player_mins, clgame.player_mins, sizeof( clgame.player_mins ));
 	Q_memcpy( clgame.pmove->player_maxs, clgame.player_maxs, sizeof( clgame.player_maxs ));

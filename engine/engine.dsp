@@ -286,6 +286,10 @@ SOURCE=.\common\imagelib\img_bmp.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\imagelib\img_jpg.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\imagelib\img_main.c
 # End Source File
 # Begin Source File

@@ -1327,7 +1327,7 @@ static void GL_SetDefaults( void )
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );
 	pglDisable( GL_POLYGON_OFFSET_FILL );
-	pglAlphaFunc( GL_GEQUAL, 0.5f );
+	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglEnable( GL_TEXTURE_2D );
 	pglShadeModel( GL_FLAT );
 

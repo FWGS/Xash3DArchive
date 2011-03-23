@@ -28,8 +28,8 @@ void UI_PopPButtonStack()
 {
 	if( hold_button_stack ) return;
 
-	UI_SetTitleAnim( AS_TO_BUTTON, ButtonStack[ButtonStackDepth] );
-	ButtonStackDepth--;
+	if ( ButtonStack[ButtonStackDepth] ) UI_SetTitleAnim( AS_TO_BUTTON, ButtonStack[ButtonStackDepth] );
+	if ( ButtonStackDepth ) ButtonStackDepth--;
 }
 
 void UI_PushPButtonStack( menuPicButton_s *button )
@@ -103,8 +103,14 @@ void UI_SetTitleAnim( int anim_state, menuPicButton_s *button )
 
 	// replace cancel\done button with button which called this menu 
 	if( PreClickDepth > uiStatic.menuDepth && anim_state == AS_TO_TITLE ) 
+	{
 		anim_state = AS_TO_BUTTON;
-	
+
+		// HACK HACK HACK
+		if ( ButtonStack[ButtonStackDepth + 1] )
+			button = ButtonStack[ButtonStackDepth+1];
+	}	
+
 	// don't reset anim if dialog buttons pressed
 	if( button->generic.id == 130 || button->generic.id == 131 )
 		return;

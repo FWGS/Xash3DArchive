@@ -804,7 +804,9 @@ void R_DrawEntitiesOnList( void )
 	}
 
 	CL_DrawBeams( false );
-	clgame.dllFuncs.pfnDrawNormalTriangles();
+
+	if( RI.drawWorld )
+		clgame.dllFuncs.pfnDrawNormalTriangles();
 
 	// NOTE: some mods with custom renderer may generate glErrors
 	// so we clear it here
@@ -846,7 +848,8 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
-	clgame.dllFuncs.pfnDrawTransparentTriangles ();
+	if( RI.drawWorld )
+		clgame.dllFuncs.pfnDrawTransparentTriangles ();
 
 	CL_DrawBeams( true );
 	CL_DrawParticles();

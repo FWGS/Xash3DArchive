@@ -457,7 +457,12 @@ void SV_InitClientMove( void )
 	
 	// enumerate client hulls
 	for( i = 0; i < 4; i++ )
-		svgame.dllFuncs.pfnGetHullBounds( i, svgame.player_mins[i], svgame.player_maxs[i] );
+	{
+		if( svgame.dllFuncs.pfnGetHullBounds( i, svgame.player_mins[i], svgame.player_maxs[i] ))
+			MsgDev( D_INFO, "SV: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
+			svgame.player_mins[i][0], svgame.player_mins[i][1], svgame.player_mins[i][2],
+			svgame.player_maxs[i][0], svgame.player_maxs[i][1], svgame.player_maxs[i][2] );
+	}
 
 	Q_memcpy( svgame.pmove->player_mins, svgame.player_mins, sizeof( svgame.player_mins ));
 	Q_memcpy( svgame.pmove->player_maxs, svgame.player_maxs, sizeof( svgame.player_maxs ));

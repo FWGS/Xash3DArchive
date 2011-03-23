@@ -1126,6 +1126,7 @@ const char *UI_CheckBox_Key( menuCheckBox_s *cb, int key, int down )
 		break;
 	case K_ENTER:
 	case K_KP_ENTER:
+		if( !down ) return sound;
 		if( cb->generic.flags & QMF_MOUSEONLY )
 			break;
 		sound = uiSoundGlow;
@@ -1682,6 +1683,7 @@ const char *UI_Action_Key( menuAction_s *a, int key, int down )
 		break;
 	case K_ENTER:
 	case K_KP_ENTER:
+		if( !down ) return sound;
 		if( a->generic.flags & QMF_MOUSEONLY )
 			break;
 		sound = uiSoundLaunch;
@@ -1821,6 +1823,7 @@ const char *UI_Bitmap_Key( menuBitmap_s *b, int key, int down )
 		break;
 	case K_ENTER:
 	case K_KP_ENTER:
+		if( !down ) return sound;
 		if( b->generic.flags & QMF_MOUSEONLY )
 			break;
 		sound = uiSoundLaunch;
@@ -1868,9 +1871,9 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 	{
 		// don't draw banners until transition is done
 #ifdef TA_ALT_MODE
-		if (UI_GetTitleTransFraction()!=10) return;
+		if ( UI_GetTitleTransFraction() != 10 ) return;
 #else
-		if (UI_GetTitleTransFraction()<0.9) return;
+		if ( UI_GetTitleTransFraction() < 1.0f ) return;
 #endif
 	}
 
@@ -1973,6 +1976,7 @@ const char *UI_PicButton_Key( menuPicButton_s *b, int key, int down )
 		break;
 	case K_ENTER:
 	case K_KP_ENTER:
+		if( !down ) return sound;
 		if( b->generic.flags & QMF_MOUSEONLY )
 			break;
 		sound = uiSoundLaunch;
