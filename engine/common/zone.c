@@ -272,43 +272,13 @@ void *_Mem_Realloc( byte *poolptr, void *memptr, size_t size, const char *filena
 	return (void *)nb;
 }
 
-void _Mem_Move( byte *poolptr, void **dest, void *src, size_t size, const char *filename, int fileline )
-{
-	memheader_t	*mem;
-	void		*memptr = *dest;
-
-	if( !memptr ) Sys_Error( "Mem_Move: dest == NULL (called at %s:%i)\n", filename, fileline );
-	if( !src ) Sys_Error( "Mem_Move: src == NULL (called at %s:%i)\n", filename, fileline );
-
-	if( size <= 0 )
-	{
-		// just free memory 
-		_Mem_Free( memptr, filename, fileline );
-		*dest = src; // swap blocks		
-		return;
-	}
-
-	mem = (memheader_t *)((byte *) memptr - sizeof(memheader_t));	// get size of old block
-	if( mem->size != size ) 
-	{
-		_Mem_Free( memptr, filename, fileline );		// release old buffer
-		memptr = _Mem_Alloc( poolptr, size, filename, fileline );	// alloc new size
-	}
-	else _Q_memset( memptr, 0x00, size, filename, fileline );		// no need to reallocate buffer
-	
-	_Q_memcpy( memptr, src, size, filename, fileline );		// move memory...
-	_Mem_Free( src, filename, fileline );				// ...and free old pointer
-
-	*dest = memptr;
-}
-
 byte *_Mem_AllocPool( const char *name, const char *filename, int fileline )
 {
 	mempool_t *pool;
 
-	pool = (mempool_t *)malloc(sizeof(mempool_t));
+	pool = (mempool_t *)malloc( sizeof( mempool_t ));
 	if( pool == NULL ) Sys_Error( "Mem_AllocPool: out of memory (allocpool at %s:%i)\n", filename, fileline );
-	_Q_memset( pool, 0, sizeof(mempool_t), filename, fileline );
+	_Q_memset( pool, 0, sizeof( mempool_t ), filename, fileline );
 
 	// fill header
 	pool->sentinel1 = MEMHEADER_SENTINEL1;
@@ -317,8 +287,8 @@ byte *_Mem_AllocPool( const char *name, const char *filename, int fileline )
 	pool->fileline = fileline;
 	pool->chain = NULL;
 	pool->totalsize = 0;
-	pool->realsize = sizeof(mempool_t);
-	Q_strncpy(pool->name, name, sizeof (pool->name));
+	pool->realsize = sizeof( mempool_t );
+	Q_strncpy( pool->name, name, sizeof( pool->name ));
 	pool->next = poolchain;
 	poolchain = pool;
 

@@ -418,6 +418,8 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	if( ent->player )
 	{
+		// update client vars
+		clgame.dllFuncs.pfnTxferLocalOverrides( state, &cl.frame.local.client );
 		clgame.dllFuncs.pfnProcessPlayerState( &frame->playerstate[ent->index-1], state );
 
 		frame->playerstate[ent->index-1].number = ent->index;
@@ -679,9 +681,6 @@ void CL_AddPacketEntities( frame_t *frame )
 
 	clent = CL_GetLocalPlayer();
 	if( !clent ) return;
-
-	// update client vars
-	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.local.client );
 
 	for( i = 0; i < cl.frame.num_entities; i++ )
 	{

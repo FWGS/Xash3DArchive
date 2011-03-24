@@ -159,17 +159,13 @@ char *Q_pretifymem( float value, int digitsafterdecimal );
 char *va( const char *format, ... );
 #define Q_memcpy( dest, src, size ) _Q_memcpy( dest, src, size, __FILE__, __LINE__ )
 #define Q_memset( dest, val, size ) _Q_memset( dest, val, size, __FILE__, __LINE__ )
-extern void (*_Q_memcpy)( void *dest, const void *src, size_t size, const char *filename, int fileline );
-extern void (*_Q_memset)( void *dest, int set, size_t size, const char *filename, int fileline );
+void _Q_memset( void *dest, int set, size_t count, const char *filename, int fileline );
+void _Q_memcpy( void *dest, const void *src, size_t count, const char *filename, int fileline );
 
 //
 // zone.c
 //
-//
-// memlib.c
-//
 void Memory_Init( void );
-void _Mem_Move( byte *poolptr, void **dest, void *src, size_t size, const char *filename, int fileline );
 void *_Mem_Realloc( byte *poolptr, void *memptr, size_t size, const char *filename, int fileline );
 void *_Mem_Alloc( byte *poolptr, size_t size, const char *filename, int fileline );
 byte *_Mem_AllocPool( const char *name, const char *filename, int fileline );
@@ -187,7 +183,6 @@ void Mem_PrintStats( void );
 #define Mem_AllocPool( name ) _Mem_AllocPool( name, __FILE__, __LINE__ )
 #define Mem_FreePool( pool ) _Mem_FreePool( pool, __FILE__, __LINE__ )
 #define Mem_EmptyPool( pool ) _Mem_EmptyPool( pool, __FILE__, __LINE__ )
-#define Mem_Move( pool, dest, src, size ) _Mem_Move( pool, dest, src, size, __FILE__, __LINE__ )
 #define Mem_IsAllocated( mem ) Mem_IsAllocatedExt( NULL, mem )
 #define Mem_Check() _Mem_Check( __FILE__, __LINE__ )
 

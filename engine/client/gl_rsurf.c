@@ -723,7 +723,8 @@ void R_AddDynamicLights( msurface_t *surf )
 
 				if( idist < iminlight )
 				{
-					if( cl_dlights[i].dark )
+					// g-cont. probably GoldSrc not used 'dark' mode
+					if( 0 )//cl_dlights[i].dark )
 						tmp = (idist - irad) >> 7;
 					else tmp = (irad - idist) >> 7;
 

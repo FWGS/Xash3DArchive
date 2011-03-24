@@ -108,15 +108,12 @@ hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset
 	vec3_t	hullmins, hullmaxs;
 
 	// decide which clipping hull to use, based on the size
-	if( pe->solid == SOLID_BSP || pe->skin == CONTENTS_LADDER )
+	if( pe->model && ( pe->solid == SOLID_BSP || pe->skin == CONTENTS_LADDER ) && pe->model->type == mod_brush )
 	{
 		vec3_t	size;
 
 		if( pe->movetype != MOVETYPE_PUSH )
-			Host_Error( "SOLID_BSP without MOVETYPE_PUSH\n" );
-
-		if( !pe->model || pe->model->type != mod_brush )
-			Host_Error( "Entity %s has MOVETYPE_PUSH with a non bsp model\n", pe->name );
+			MsgDev( D_ERROR, "SOLID_BSP without MOVETYPE_PUSH\n" );
 
 		VectorSubtract( maxs, mins, size );
 
@@ -162,16 +159,27 @@ assume physent is valid
 */
 hull_t *PM_HullForBsp( physent_t *pe, const vec3_t mins, const vec3_t maxs, float *offset )
 {
-	hull_t		*hull;
-	model_t		*model;
-	vec3_t		size;
+	hull_t	*hull;
+	model_t	*model;
+	vec3_t	hullmins, hullmaxs;
+	vec3_t	size;
 
 	// decide which clipping hull to use, based on the size
 	model = pe->model;
 
 	if( !model || model->type != mod_brush )
-		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", pe->info, model->type );
+	{
+		// studiomodel or pushable
+		// create a temp hull from bounding box sizes
+		VectorSubtract( pe->mins, maxs, hullmins );
+		VectorSubtract( pe->maxs, mins, hullmaxs );
+		hull = PM_HullForBox( hullmins, hullmaxs );
+		VectorCopy( pe->origin, offset );
 
+		MsgDev( D_ERROR, "Entity %i SOLID_BSP with a non bsp model %i\n", pe->info, model->type );
+
+		return hull;
+	}
 	VectorSubtract( maxs, mins, size );
 
 	if( size[0] <= 8.0f )
@@ -436,8 +444,10 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 		if( pe->solid == SOLID_BSP && pe->movetype != MOVETYPE_PUSH )
 			Host_Error( "Entity #%i [%s] SOLID_BSP without MOVETYPE_PUSH\n", pe->info, pe->name );
 		if( !pe->model )
-			Host_Error( "Entity #%i [%s] SOLID_BSP with a non bsp model\n", pe->info, pe->name );
-
+		{
+			MsgDev( D_ERROR, "Entity #%i [%s] SOLID_BSP with a non bsp model\n", pe->info, pe->name );
+			return hitEnt;
+		}
 		hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
 	}
 #if 1

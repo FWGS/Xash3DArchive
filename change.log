@@ -1,10 +1,11 @@
-build ????
+build 1507
 
 Console: implement Con_NPrintf and Con_NXPrintf
 Render:  adding better lighting for studiomodels (right lighting for long sequences e.g. forklift.mdl)
 Network: clamp all integer values to prevent them out of range
 Client: VGUI implementation
 Render: fix decals loading
+Server: fix NAN error on a crossbow launch
 
 build 1488
 

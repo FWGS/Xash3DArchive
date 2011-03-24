@@ -1331,8 +1331,22 @@ pfnMakeVectors
 */
 void pfnMakeVectors( const float *rgflVector )
 {
+	int	i;
+	vec3_t	inVec;
+
 	ASSERT( rgflVector != NULL );
-	AngleVectors( rgflVector, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
+	VectorCopy( rgflVector, inVec );
+
+	for( i = 0; i < 3; i++ )
+	{
+		if( IS_NAN( rgflVector[i] ))
+		{
+			MsgDev( D_INFO, "SV_MakeVectors: got a NaN angle\n" );
+			inVec[i] = 0.0f;
+		}
+	}
+
+	AngleVectors( inVec, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
 }
 
 /*

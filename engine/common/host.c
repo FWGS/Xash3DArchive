@@ -545,8 +545,8 @@ void Host_Error( const char *error, ... )
 	host.errorframe = host.framecount; // to avoid multply calls per frame
 	Q_sprintf( host.finalmsg, "Server crashed: %s\n", hosterror1 );
 
-	SV_Shutdown( false );
 	CL_Drop(); // drop clients
+	SV_Shutdown( false );
 
 	recursive = false;
 	Host_AbortCurrentFrame();

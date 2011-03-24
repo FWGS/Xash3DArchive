@@ -27,9 +27,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 {
 	model_t	*mod = Mod_Handle( ed->v.modelindex );
 
-	if( !mod || mod->type == mod_sprite )
-		return false;
-
+	if( !mod ) return false;
 	pe->player = false;
 
 	if( ed->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
@@ -459,7 +457,7 @@ void SV_InitClientMove( void )
 	for( i = 0; i < 4; i++ )
 	{
 		if( svgame.dllFuncs.pfnGetHullBounds( i, svgame.player_mins[i], svgame.player_maxs[i] ))
-			MsgDev( D_INFO, "SV: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
+			MsgDev( D_NOTE, "SV: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
 			svgame.player_mins[i][0], svgame.player_mins[i][1], svgame.player_mins[i][2],
 			svgame.player_maxs[i][0], svgame.player_maxs[i][1], svgame.player_maxs[i][2] );
 	}

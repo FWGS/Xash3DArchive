@@ -534,7 +534,9 @@ void Key_Event( int key, qboolean down )
 		switch( cls.key_dest )
 		{
 		case key_game:
-			break;	// handled in client.dll
+			if( host.mouse_visible && cls.state != ca_cinematic )
+				return; // handled in client.dll
+			break;
 		case key_console:
 			if( cls.state == ca_active && !cl.background )
 				Key_SetKeyDest( key_game );

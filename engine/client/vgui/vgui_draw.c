@@ -113,10 +113,10 @@ void VGUI_CreateTexture( int id, int width, int height )
 	r_image.height = height;
 	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
-	r_image.flags = IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA;
+	r_image.flags = IMAGE_HAS_ALPHA;
 	r_image.buffer = NULL;
 
-	g_textures[id] = GL_LoadTextureInternal( texName, &r_image, TF_IMAGE, false );
+	g_textures[id] = GL_LoadTextureInternal( texName, &r_image, TF_IMAGE|TF_NEAREST, false );
 	GL_SetTextureType( g_textures[id], TEX_VGUI );
 	g_iBoundTexture = id;
 }
@@ -144,7 +144,8 @@ void VGUI_SetupDrawingRect( int *pColor )
 void VGUI_SetupDrawingText( int *pColor )
 {
 	pglEnable( GL_BLEND );
-	pglDisable( GL_ALPHA_TEST );
+	pglEnable( GL_ALPHA_TEST );
+	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	pglColor4ub( pColor[0], pColor[1], pColor[2], 255 - pColor[3] );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );

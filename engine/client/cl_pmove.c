@@ -22,9 +22,7 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 {
 	model_t	*mod = Mod_Handle( ent->curstate.modelindex );
 
-	if( !mod || mod->type == mod_sprite )
-		return false;
-	
+	if( !mod ) return false;
 	pe->player = ent->player;
 
 	if( pe->player )
@@ -534,7 +532,7 @@ void CL_InitClientMove( void )
 	for( i = 0; i < 4; i++ )
 	{
 		if( clgame.dllFuncs.pfnGetHullBounds( i, clgame.player_mins[i], clgame.player_maxs[i] ))
-			MsgDev( D_INFO, "CL: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
+			MsgDev( D_NOTE, "CL: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
 			clgame.player_mins[i][0], clgame.player_mins[i][1], clgame.player_mins[i][2],
 			clgame.player_maxs[i][0], clgame.player_maxs[i][1], clgame.player_maxs[i][2] );
 	}

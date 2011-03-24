@@ -598,11 +598,17 @@ void R_ShowTextures( void )
 	pglClear( GL_COLOR_BUFFER_BIT );
 	pglFinish();
 
-	if( gl_showtextures->integer == TEX_LIGHTMAP || gl_showtextures->integer == TEX_VGUI )
+	if( gl_showtextures->integer == TEX_LIGHTMAP )
 	{
 		// draw lightmaps as big images
 		base_w = 5;
 		base_h = 4;
+	}
+	else if( gl_showtextures->integer == TEX_VGUI )
+	{
+		// draw lightmaps as big images
+		base_w = 2;
+		base_h = 1;
 	}
 	else
 	{

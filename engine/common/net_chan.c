@@ -151,7 +151,7 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
 	chan->rate = DEFAULT_RATE;
-	chan->compress = false;
+	chan->compress = true;
 	chan->qport = qport;
 
 	BF_Init( &chan->message, "NetData", chan->message_buf, sizeof( chan->message_buf ));
@@ -1152,7 +1152,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	qboolean	send_resending = false;
 	qboolean	send_reliable;
 	size_t	size1, size2;
-	uint	w1, w2;
+	uint	w1, w2, hdr_size;
 	int	i, j;
 	float	fRate;
 
@@ -1370,6 +1370,8 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		}
 	}
 
+	hdr_size = BF_GetNumBytesWritten( &send );
+
 	// copy the reliable message to the packet first
 	if( send_reliable )
 	{
@@ -1408,7 +1410,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	Netchan_UpdateFlow( chan );
 
 	size1 = BF_GetNumBytesWritten( &send );
-	if( chan->compress ) Huff_CompressPacket( &send, UDP_HEADER_SIZE + ( chan->sock == NS_CLIENT ) ? 2 : 0 );
+	if( chan->compress ) Huff_CompressPacket( &send, hdr_size );
 	size2 = BF_GetNumBytesWritten( &send );
 
 	chan->total_sended += size2;
@@ -1468,7 +1470,7 @@ modifies net_message so that it points to the packet payload
 */
 qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 {
-	uint	sequence, sequence_ack;
+	uint	sequence, sequence_ack, hdr_size;
 	uint	reliable_ack, reliable_message;
 	uint	fragid[MAX_STREAMS] = { 0, 0 };
 	qboolean	frag_message[MAX_STREAMS] = { false, false };
@@ -1599,9 +1601,10 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	chan->flow[FLOW_INCOMING].current++;
 
 	Netchan_UpdateFlow( chan );
+	hdr_size = BF_GetNumBytesRead( msg );
 
 	size1 = BF_GetMaxBytes( msg );
-	if( chan->compress ) Huff_DecompressPacket( msg, UDP_HEADER_SIZE + ( chan->sock == NS_SERVER) ? 2 : 0 );
+	if( chan->compress ) Huff_DecompressPacket( msg, hdr_size );
 	size2 = BF_GetMaxBytes( msg );
 
 	chan->total_received += size1;

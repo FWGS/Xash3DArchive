@@ -55,7 +55,6 @@ void VGui_Startup( void )
 {
 	if( rootpanel )
 	{
-//		rootpanel->reset();
 		rootpanel->setSize( menu.globals->scrWidth, menu.globals->scrHeight );
 		return;
 	}

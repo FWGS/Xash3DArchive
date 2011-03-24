@@ -881,8 +881,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
 	{
 		pglEnable( GL_ALPHA_TEST );
-		if( alpha != 1.0f ) pglAlphaFunc( GL_GREATER, 0.0f );
-		else pglAlphaFunc( GL_GEQUAL, 0.5f );
+		pglAlphaFunc( GL_GREATER, 0.0f );
 	}
 
 	if( e->curstate.rendermode == kRenderGlow )
@@ -929,6 +928,10 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		color2[0] = (float)lightColor.r * ( 1.0f / 255.0f );
 		color2[1] = (float)lightColor.g * ( 1.0f / 255.0f );
 		color2[2] = (float)lightColor.b * ( 1.0f / 255.0f );
+
+		if( glState.drawTrans )
+			pglDepthMask( GL_TRUE );
+		pglAlphaFunc( GL_GEQUAL, 0.5f );
 	}
 
 	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
@@ -1026,6 +1029,9 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglColor4f( color2[0], color2[1], color2[2], flAlpha );
 		GL_Bind( GL_TEXTURE0, tr.whiteTexture );
 		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
+
+		if( glState.drawTrans ) 
+			pglDepthMask( GL_FALSE );
 	}
 
 	if( psprite->facecull == SPR_CULL_NONE )

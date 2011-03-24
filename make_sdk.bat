@@ -21,7 +21,6 @@ if not exist D:\Xash3D\src_main\xash_sdk\dlls/ mkdir D:\Xash3D\src_main\xash_sdk
 if not exist D:\Xash3D\src_main\xash_sdk\dlls\wpn_shared/ mkdir D:\Xash3D\src_main\xash_sdk\dlls\wpn_shared\
 if not exist D:\Xash3D\src_main\xash_sdk\game_shared/ mkdir D:\Xash3D\src_main\xash_sdk\game_shared\
 if not exist D:\Xash3D\src_main\xash_sdk\pm_shared/ mkdir D:\Xash3D\src_main\xash_sdk\pm_shared\
-if not exist D:\Xash3D\src_main\xash_sdk\room/ mkdir D:\Xash3D\src_main\xash_sdk\room\
 @copy /Y engine\*.h xash_sdk\engine\*.h
 @copy /Y game_launch\*.* xash_sdk\game_launch\*.*
 @copy /Y mainui\*.* xash_sdk\mainui\*.*
@@ -35,7 +34,6 @@ if not exist D:\Xash3D\src_main\xash_sdk\room/ mkdir D:\Xash3D\src_main\xash_sdk
 @copy /Y utils\vgui\lib\win32_vc6\*.* xash_sdk\utils\vgui\lib\win32_vc6\*.*
 @copy /Y game_shared\*.* xash_sdk\game_shared\*.*
 @copy /Y pm_shared\*.* xash_sdk\pm_shared\*.*
-@copy /Y room\*.* xash_sdk\room\*.*
 @copy /Y xash_sdk.dsw xash_sdk\xash_sdk.dsw
 echo 			     Prepare OK!
 echo 		     Please wait: creating SDK in progress

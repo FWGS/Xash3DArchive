@@ -1468,7 +1468,7 @@ void CL_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, 
 	VectorCopy( velocity, pTemp->entity.baseline.origin );
 
 	pTemp->entity.curstate.body = 0;
-	pTemp->flags = FTENT_COLLIDEALL;
+	pTemp->flags = FTENT_COLLIDEALL|FTENT_COLLIDEKILL;
 	pTemp->entity.curstate.rendermode = kRenderNormal;
 	pTemp->entity.baseline.renderamt = 255;
 	pTemp->hitcallback = hitcallback;
