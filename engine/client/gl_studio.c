@@ -2018,10 +2018,6 @@ static void R_StudioSetupRenderer( int rendermode )
 {
 	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse );
 	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
-	pglDisable( GL_BLEND );
-	pglDepthFunc( GL_LEQUAL );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*

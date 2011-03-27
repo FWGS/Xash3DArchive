@@ -372,7 +372,7 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 	float	dist;
 	int	lnum;
 
-	if( RI.refdef.movevars && RI.isSkyVisible )
+	if( RI.refdef.movevars )
 	{
 		// pre-defined light vector
 		lightDir[0] = RI.refdef.movevars->skyvec_x;
@@ -381,7 +381,7 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 	}
 	else
 	{
-		VectorClear( lightDir );
+		VectorSet( lightDir, 0.0f, 0.0f, -1.0f );
 	}
 
 	// add dynamic lights

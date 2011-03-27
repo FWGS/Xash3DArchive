@@ -590,7 +590,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
-	if( trace.fraction != 0.0f )
+	if( !trace.allsolid && trace.fraction != 0.0f )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 
