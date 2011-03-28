@@ -627,10 +627,6 @@ void CL_ParseServerData( sizebuf_t *msg )
 	menu.globals->maxClients = cl.maxclients;
 	Q_strncpy( menu.globals->maptitle, clgame.maptitle, sizeof( menu.globals->maptitle ));
 
-	// no effect for local client
-	// merge entcount only for remote clients 
-	GI->max_edicts = clgame.maxEntities;
-
 	CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
@@ -705,8 +701,8 @@ void CL_ParseClientData( sizebuf_t *msg )
 		{
 			if( cl.frames[j & CL_UPDATE_MASK].receivedtime >= 0.0 )
 			{
-				cl.frames[j & CL_UPDATE_MASK ].receivedtime = -1;
-				cl.frames[j & CL_UPDATE_MASK ].latency = 0;
+				cl.frames[j & CL_UPDATE_MASK].receivedtime = -1;
+				cl.frames[j & CL_UPDATE_MASK].latency = 0;
 			}
 		}
 	}
@@ -738,9 +734,6 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 		from_cd = &cl.frames[delta_sequence & CL_UPDATE_MASK].local.client;
 		from_wd = cl.frames[delta_sequence & CL_UPDATE_MASK].local.weapondata;
-
-		if(( delta_sequence & CL_UPDATE_MASK ) != ( cl.delta_sequence & CL_UPDATE_MASK ))
-			MsgDev( D_WARN, "CL_ParseClientData: mismatch delta_sequence\n" );
 	}
 
 	MSG_ReadClientData( msg, from_cd, to_cd, sv_time( ));

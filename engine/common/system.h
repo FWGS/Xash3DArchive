@@ -35,31 +35,6 @@ typedef vec_t		matrix4x4[4][4];
 
 /*
 ========================================================================
-
-SYS EVENT
-
-keep console cmds, network messages, mouse reletives and key buttons
-========================================================================
-*/
-typedef enum
-{
-	SE_NONE = 0,	// end of events queue
-	SE_KEY,		// ev.value[0] is a key code, ev.value[1] is the down flag
-	SE_CHAR,		// ev.value[0] is an ascii char
-	SE_CONSOLE,	// ev.data is a char*
-	SE_MOUSE,		// ev.value[0] and ev.value[1] are reletive signed x / y moves
-} ev_type_t;
-
-typedef struct
-{
-	ev_type_t	type;
-	int	value[2];
-	void	*data;
-	size_t	length;
-} sys_event_t;
-
-/*
-========================================================================
 internal dll's loader
 
 two main types - native dlls and other win32 libraries will be recognized automatically
@@ -97,8 +72,7 @@ long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo );
 #define Sys_GetParmFromCmdLine( parm, out ) _Sys_GetParmFromCmdLine( parm, out, sizeof( out ))
 qboolean _Sys_GetParmFromCmdLine( char *parm, char *out, size_t size );
 void Sys_ShellExecute( const char *path, const char *parms, qboolean exit );
-void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr );
-sys_event_t Sys_GetEvent( void );
+void Sys_SendKeyEvents( void );
 qboolean Sys_CheckMMX( void );
 qboolean Sys_CheckSSE( void );
 void Sys_Print( const char *pMsg );

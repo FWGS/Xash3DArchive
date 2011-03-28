@@ -2027,19 +2027,6 @@ static int pfnCheckParm( char *parm, char **ppnext )
 
 /*
 =============
-pfnKey_Event
-
-=============
-*/
-static void pfnKey_Event( int key, int down )
-{
-	// add event to queue
-	Sys_QueEvent( SE_KEY, key, down, 0, NULL );
-}
-
-
-/*
-=============
 pfnGetMousePosition
 
 =============
@@ -2776,7 +2763,11 @@ pfnGetMousePos
 */
 void pfnGetMousePos( struct tagPOINT *ppt )
 {
+	ASSERT( ppt != NULL );
+
+	// find mouse movement
 	GetCursorPos( ppt );
+	ScreenToClient( host.hWnd, ppt );
 }
 
 /*
@@ -2787,8 +2778,13 @@ pfnSetMousePos
 */
 void pfnSetMousePos( int mx, int my )
 {
-	if( !mx && !my ) return;
-	Sys_QueEvent( SE_MOUSE, mx, my, 0, NULL );
+	POINT pt;
+
+	pt.x = mx;
+	pt.y = my;
+
+	ClientToScreen( host.hWnd, &pt );
+	SetCursorPos( pt.x, pt.y );
 }
 
 /*
@@ -3537,7 +3533,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnServerInfo_ValueForKey,
 	pfnGetClientMaxspeed,
 	pfnCheckParm,
-	pfnKey_Event,
+	Key_Event,
 	pfnGetMousePosition,
 	pfnIsNoClipping,
 	CL_GetLocalPlayer,

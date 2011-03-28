@@ -6,68 +6,7 @@
 #include "common.h"
 #include "mathlib.h"
 
-#define MAX_QUED_EVENTS	256
-#define MASK_QUED_EVENTS	(MAX_QUED_EVENTS - 1)
-
-qboolean		error_on_exit = false;	// arg for exit();
-sys_event_t	event_que[MAX_QUED_EVENTS];
-int		event_head, event_tail;
-
-typedef struct register_s
-{
-	dword	eax;
-	dword	ebx;
-	dword	ecx;
-	dword	edx;
-	qboolean	retval;
-} register_t;
-
-static register_t Sys_CpuId( uint function )
-{
-	register_t	local;
-          
-          local.retval = true;
-
-	_asm pushad;
-
-	__try
-	{
-		_asm
-		{
-			xor edx, edx	// Clue the compiler that EDX is about to be used.
-			mov eax, function   // set up CPUID to return processor version and features
-					// 0 = vendor string, 1 = version info, 2 = cache info
-			cpuid		// code bytes = 0fh,  0a2h
-			mov local.eax, eax	// features returned in eax
-			mov local.ebx, ebx	// features returned in ebx
-			mov local.ecx, ecx	// features returned in ecx
-			mov local.edx, edx	// features returned in edx
-		}
-	} 
-
-	__except( EXCEPTION_EXECUTE_HANDLER ) 
-	{ 
-		local.retval = false; 
-	}
-
-	_asm popad
-
-	return local;
-}
-
-qboolean Sys_CheckMMX( void )
-{
-	register_t mmx = Sys_CpuId( 1 );
-	if( !mmx.retval ) return false;
-	return ( mmx.edx & 0x800000 ) != 0;
-}
-
-qboolean Sys_CheckSSE( void )
-{
-	register_t sse = Sys_CpuId( 1 );
-	if( !sse.retval ) return false;
-	return ( sse.edx & 0x2000000L ) != 0;
-}
+qboolean	error_on_exit = false;	// arg for exit();
 
 /*
 ================
@@ -290,93 +229,18 @@ qboolean _Sys_GetParmFromCmdLine( char *parm, char *out, size_t size )
 	return true;
 }
 
-/*
-================
-Sys_QueEvent
-
-A time of 0 will get the current time
-Ptr should either be null, or point to a block of data that can
-be freed by the game later.
-================
-*/
-void Sys_QueEvent( ev_type_t type, int value, int value2, int length, void *ptr )
+void Sys_SendKeyEvents( void )
 {
-	sys_event_t	*ev;
+	MSG	msg;
 
-	ev = &event_que[event_head & MASK_QUED_EVENTS];
-	if( event_head - event_tail >= MAX_QUED_EVENTS )
-	{
-		MsgDev( D_ERROR, "Sys_QueEvent: overflow\n");
-
-		// make sure what memory is allocated by engine
-		if( Mem_IsAllocatedExt( host.mempool, ev->data ))
-			Mem_Free( ev->data );
-		event_tail++;
-	}
-	event_head++;
-
-	ev->type = type;
-	ev->value[0] = value;
-	ev->value[1] = value2;
-	ev->length = length;
-	ev->data = ptr;
-}
-
-/*
-================
-Sys_GetEvent
-
-================
-*/
-sys_event_t Sys_GetEvent( void )
-{
-	MSG		msg;
-	sys_event_t	ev;
-	char		*s;
-	
-	// return if we have data
-	if( event_head > event_tail )
-	{
-		event_tail++;
-		return event_que[(event_tail - 1) & MASK_QUED_EVENTS];
-	}
-
-	// pump the message loop
 	while( PeekMessage( &msg, NULL, 0, 0, PM_NOREMOVE ))
 	{
 		if( !GetMessage( &msg, NULL, 0, 0 ))
-		{
-			// FIXME: set reason to quit
-			Sys_Quit();
-		}
-		TranslateMessage(&msg );
+			Sys_Quit ();
+
+      		TranslateMessage( &msg );
       		DispatchMessage( &msg );
 	}
-
-	// check for console commands
-	s = Con_Input();
-	if( s )
-	{
-		char	*b;
-		int	len;
-
-		len = Q_strlen( s );
-		b = Z_Malloc( len + 1 );
-		Q_strcpy( b, s );
-		Sys_QueEvent( SE_CONSOLE, 0, 0, len, b );
-	}
-
-	// return if we have data
-	if( event_head > event_tail )
-	{
-		event_tail++;
-		return event_que[(event_tail - 1) & MASK_QUED_EVENTS];
-	}
-
-	// create an empty event to return
-	Q_memset( &ev, 0, sizeof( ev ));
-
-	return ev;
 }
 
 //=======================================================================

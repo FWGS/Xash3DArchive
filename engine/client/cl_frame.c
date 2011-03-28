@@ -472,24 +472,27 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 {
 	frame_t		*newframe, *oldframe;
 	int		oldindex, newnum, oldnum;
+	int		oldpacket, newpacket;
 	entity_state_t	*oldent;
 	int		count;
 
 	// first, allocate packet for new frame
 	count = BF_ReadWord( msg );
 
-	newframe = &cl.frames[cl.parsecountmod];
+	newpacket = cl.parsecountmod;
+	newframe = &cl.frames[newpacket];
 
 	// allocate parse entities
 	newframe->first_entity = cls.next_client_entities;
 	newframe->num_entities = 0;
+	newframe->valid = true; // assume valid
 
 	if( delta )
 	{
-		int	subtracted, delta_sequence;
+		int	subtracted;
 
-		delta_sequence = BF_ReadByte( msg );
-		subtracted = ((( cls.netchan.incoming_sequence & 0xFF ) - delta_sequence ) & 0xFF );
+		oldpacket = BF_ReadByte( msg );
+		subtracted = ((( cls.netchan.incoming_sequence & 0xFF ) - oldpacket ) & 0xFF );
 
 		if( subtracted == 0 )
 		{
@@ -500,43 +503,26 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		if( subtracted >= CL_UPDATE_MASK )
 		{	
 			// we can't use this, it is too old
+			Con_NPrintf( 2, "^3Warning:^1 delta frame is too old^7\n" );
 			CL_FlushEntityPacket( msg );
 			return;
 		}
 
-		oldframe = &cl.frames[delta_sequence & CL_UPDATE_MASK];
+		oldframe = &cl.frames[oldpacket & CL_UPDATE_MASK];
 
-		if( !oldframe->valid )
-		{	
-			// should never happen
-			MsgDev( D_INFO, "delta from invalid frame (not supposed to happen!)\n" );
-		}
-
-		if(( oldframe->delta_sequence & 0xFF ) != (( delta_sequence - 1 ) & 0xFF ))
-		{	
-			// The frame that the server did the delta from
-			// is too old, so we can't reconstruct it properly.
-			MsgDev( D_INFO, "CL_ParsePacketEntities: delta frame too old\n" );
-		}
-		else if(( cls.next_client_entities - oldframe->first_entity ) > ( cls.num_client_entities - 128 ))
+		if(( cls.next_client_entities - oldframe->first_entity ) > ( cls.num_client_entities - 128 ))
 		{
-			MsgDev( D_INFO, "CL_ParsePacketEntities: delta parse_entities too old\n" );
+			Con_NPrintf( 2, "^3Warning:^1 delta frame is too old^7\n" );
+			CL_FlushEntityPacket( msg );
+			return;
 		}
-		else newframe->valid = true;	// valid delta parse
-
-		if(( cl.delta_sequence & CL_UPDATE_MASK ) != ( delta_sequence & CL_UPDATE_MASK ))
-			MsgDev( D_WARN, "CL_ParsePacketEntities: mismatch delta_sequence %i != %i\n", cl.delta_sequence, ( delta_sequence & CL_UPDATE_MASK ));
-
-		// keep sequence an actual
-		newframe->delta_sequence = delta_sequence;
 	}
 	else
 	{
 		// this is a full update that we can start delta compressing from now
-		newframe->delta_sequence = ( cls.netchan.incoming_sequence - 1 ) & 0xFF;
-		newframe->valid = true;
 		oldframe = NULL;
 
+		oldpacket = -1;  // delta too old or is initial message
 		cl.force_send_usercmd = true;	// send reply
 		cls.demowaiting = false;	// we can start recording now
 	}

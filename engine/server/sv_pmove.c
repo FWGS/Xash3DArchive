@@ -900,6 +900,12 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	clent->v.button = ucmd->buttons;
 	if( ucmd->impulse ) clent->v.impulse = ucmd->impulse;
 
+	if( ucmd->impulse == 204 )
+	{
+		// force client.dll update
+		SV_RefreshUserinfo();
+	}
+
 	if( clent->v.flags & FL_DUCKING ) 
 		SV_SetMinMaxSize( clent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
 	else SV_SetMinMaxSize( clent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );

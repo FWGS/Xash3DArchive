@@ -323,7 +323,19 @@ usercmd_t CL_CreateCmd( void )
 	if( ++cl.movemessages <= 10 )
 		return cmd;
 
-	active = ( cls.state == ca_active && !cl.refdef.paused && !cl.refdef.intermission );
+	switch( cls.state )
+	{
+	case ca_connected:
+		active = 1;
+		break;
+	case ca_active:
+		active = 2;
+		break;
+	default:
+		active = 0;
+		break;
+	}
+
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, active );
 
 	R_LightForPoint( cl.frame.local.client.origin, &color, false, 128.0f );
@@ -401,10 +413,12 @@ void CL_WritePacket( void )
 
 	CL_ComputePacketLoss ();
 
+#ifndef _DEBUG
 	if( cl_cmdrate->value < MIN_CMD_RATE )
 	{
 		Cvar_SetFloat( "cl_cmdrate", MIN_CMD_RATE );
 	}
+#endif
 
 	BF_Init( &buf, "ClientData", data, sizeof( data ));
 
@@ -490,7 +504,7 @@ void CL_WritePacket( void )
 
 		for( i = numcmds - 1; i >= 0; i-- )
 		{
-			cmdnumber = ( outgoing_sequence - i ) & CL_UPDATE_MASK;
+			cmdnumber = ( cls.netchan.outgoing_sequence - i ) & CL_UPDATE_MASK;
 
 			to = cmdnumber;
 			CL_WriteUsercmd( &buf, from, to );
@@ -508,7 +522,7 @@ void CL_WritePacket( void )
 		i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;
 	
 		// determine if we need to ask for a new set of delta's.
-		if( cl.validsequence && !( cls.demorecording && cls.demowaiting ))
+		if( cl.validsequence && (cls.state == ca_active) && !( cls.demorecording && cls.demowaiting ))
 		{
 			cl.delta_sequence = cl.validsequence;
 

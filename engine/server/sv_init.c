@@ -565,7 +565,6 @@ void SV_InitGame( void )
 	}
 
 	svgame.globals->maxClients = sv_maxclients->integer;
-
 	SV_UPDATE_BACKUP = ( svgame.globals->maxClients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 
 	svs.spawncount = Com_RandomLong( 0, 65535 );

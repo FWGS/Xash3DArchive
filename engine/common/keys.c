@@ -699,17 +699,3 @@ void CL_CharEvent( int key )
 		UI_CharEvent( key );
 	}
 }
-
-/*
-=================
-CL_MouseEvent
-=================
-*/
-void CL_MouseEvent( int mx, int my )
-{
-	if( UI_IsVisible( ))
-	{
-		// if the menu is visible, move the menu cursor
-		UI_MouseMove( mx, my );
-	}
-}

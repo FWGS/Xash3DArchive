@@ -51,7 +51,6 @@ typedef struct frame_s
 	int		num_entities;
 	int		first_entity;	// into the circular cl_packet_entities[]
 
-	int		delta_sequence;	// last valid sequence
 	qboolean		valid;		// cleared if delta parsing was invalid
 } frame_t;
 

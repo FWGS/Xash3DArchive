@@ -127,8 +127,6 @@ HOST INTERFACE
 
 ==============================================================
 */
-#define MAX_SYSEVENTS	1024
-
 /*
 ========================================================================
 
@@ -250,10 +248,6 @@ typedef struct host_parm_s
 	double		realframetime;	// for some system events, e.g. console animations
 
 	uint		framecount;	// global framecount
-
-	int		events_head;
-	int		events_tail;
-	sys_event_t	events[MAX_SYSEVENTS];
 
 	// list of unique decal indexes
 	char		draw_decals[MAX_DECALS][CS_SIZE];
@@ -682,7 +676,6 @@ void SV_InitGameProgs( void );
 void SV_FreeGameProgs( void );
 void SV_ForceError( void );
 void CL_WriteMessageHistory( void );
-void CL_MouseEvent( int mx, int my );
 void CL_SendCmd( void );
 void CL_Disconnect( void );
 void CL_Crashed( void );

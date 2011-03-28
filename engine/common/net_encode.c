@@ -14,6 +14,7 @@
 #include "weaponinfo.h"
 #include "event_args.h"
 #include "protocol.h"
+#include "client.h"
 
 #define DELTA_PATH		"delta.lst"
 static qboolean		delta_init = false;
@@ -1611,7 +1612,7 @@ qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state
 	delta_t		*pField;
 	int		i, fRemoveType;
 
-	if( number < 0 || number >= GI->max_edicts )
+	if( number < 0 || number >= clgame.maxEntities )
 		Host_Error( "MSG_ReadDeltaEntity: bad delta entity number: %i\n", number );
 
 	*to = *from;

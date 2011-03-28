@@ -215,6 +215,7 @@ gotnewcl:
 			Netchan_OutOfBandPrint( NS_SERVER, from, "print\n%s\nConnection refused.\n", Info_ValueForKey( userinfo, "rejmsg" ));
 		else Netchan_OutOfBandPrint( NS_SERVER, from, "print\nConnection refused.\n" );
 		MsgDev( D_ERROR, "SV_DirectConnect: game rejected a connection.\n");
+		SV_DropClient( newcl );
 		return;
 	}
 
@@ -1295,7 +1296,7 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 	}
 	
 	tableIndex = Q_atoi( Cmd_Argv( 2 ));
-	fieldIndex = Q_atoi( Cmd_Argv( 2 ));
+	fieldIndex = Q_atoi( Cmd_Argv( 3 ));
 
 	// write a packet full of data
 	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( MAX_MSGLEN / 2 ) && tableIndex < Delta_NumTables( ))

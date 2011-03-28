@@ -297,96 +297,20 @@ void Host_InitDecals( void )
 }
 
 /*
-=================
-Host_InitEvents
-=================
+===================
+Host_GetConsoleCommands
+
+Add them exactly as if they had been typed at the console
+===================
 */
-void Host_InitEvents( void )
+void Host_GetConsoleCommands( void )
 {
-	Q_memset( host.events, 0, sizeof( host.events ));
-	host.events_head = 0;
-	host.events_tail = 0;
-}
+	char	*cmd;
 
-/*
-=================
-Host_PushEvent
-=================
-*/
-void Host_PushEvent( sys_event_t *event )
-{
-	sys_event_t	*ev;
-	static qboolean	overflow = false;
-
-	ev = &host.events[host.events_head & (MAX_SYSEVENTS-1)];
-
-	if( host.events_head - host.events_tail >= MAX_SYSEVENTS )
+	if( host.type == HOST_DEDICATED )
 	{
-		if( !overflow )
-		{
-			MsgDev( D_WARN, "Host_PushEvent overflow\n" );
-			overflow = true;
-		}
-		if( ev->data ) Mem_Free( ev->data );
-		host.events_tail++;
-	}
-	else overflow = false;
-
-	*ev = *event;
-	host.events_head++;
-}
-
-/*
-=================
-Host_GetEvent
-=================
-*/
-sys_event_t Host_GetEvent( void )
-{
-	if( host.events_head > host.events_tail )
-	{
-		host.events_tail++;
-		return host.events[(host.events_tail - 1) & (MAX_SYSEVENTS-1)];
-	}
-	return Sys_GetEvent();
-}
-
-/*
-=================
-Host_EventLoop
-
-Returns false while events is out
-=================
-*/
-void Host_EventLoop( void )
-{
-	sys_event_t	ev;
-
-	while( 1 )
-	{
-		ev = Sys_GetEvent();
-		switch( ev.type )
-		{
-		case SE_NONE:
-			Cbuf_Execute();
-			return;
-		case SE_KEY:
-			Key_Event( ev.value[0], ev.value[1] );
-			break;
-		case SE_CHAR:
-			CL_CharEvent( ev.value[0] );
-			break;
-		case SE_MOUSE:
-			CL_MouseEvent( ev.value[0], ev.value[1] );
-			break;
-		case SE_CONSOLE:
-			Cbuf_AddText( va( "%s\n", ev.data ));
-			break;
-		default:
-			MsgDev( D_ERROR, "Host_EventLoop: bad event type %i", ev.type );
-			return;
-		}
-		if( ev.data ) Mem_Free( ev.data );
+		cmd = Con_Input();
+		if( cmd ) Cbuf_AddText( cmd );
 	}
 }
 
@@ -452,11 +376,12 @@ void Host_Frame( float time )
 		return;
 
 	Host_InputFrame ();	// input frame
-	Host_EventLoop();
 
 	// decide the simulation time
 	if( !Host_FilterTime( time ))
 		return;
+
+	Host_GetConsoleCommands ();
 
 	Host_ServerFrame (); // server frame
 	Host_ClientFrame (); // client frame
@@ -697,7 +622,6 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	FS_LoadGameInfo( NULL );
 	Q_strncpy( host.gamefolder, GI->gamefolder, sizeof( host.gamefolder ));
 
-	Host_InitEvents();
 	HPAK_Init();
 
 	IN_Init();

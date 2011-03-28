@@ -299,8 +299,10 @@ void IN_MouseMove( void )
 	mx = current_pos.x - host.window_center_x;
 	my = current_pos.y - host.window_center_y;
 
-	if( !mx && !my ) return;
-	Sys_QueEvent( SE_MOUSE, mx, my, 0, NULL );
+	if(( !mx && !my ) || !UI_IsVisible( )) return;
+
+	// if the menu is visible, move the menu cursor
+	UI_MouseMove( mx, my );
 }
 
 /*
@@ -326,11 +328,11 @@ void IN_MouseEvent( int mstate )
 	{
 		if(( mstate & ( 1<<i )) && !( in_mouse_oldbuttonstate & ( 1<<i )))
 		{
-			Sys_QueEvent( SE_KEY, K_MOUSE1 + i, true, 0, NULL );
+			Key_Event( K_MOUSE1 + i, true );
 		}
 		if(!( mstate & ( 1<<i )) && ( in_mouse_oldbuttonstate & ( 1<<i )))
 		{
-			Sys_QueEvent( SE_KEY, K_MOUSE1 + i, false, 0, NULL );
+			Key_Event( K_MOUSE1 + i, false );
 		}
 	}	
 
@@ -371,6 +373,10 @@ void Host_InputFrame( void )
 
 	rand (); // keep the random time dependent
 
+	Sys_SendKeyEvents ();
+
+	Cbuf_Execute ();
+
 	if( host.state == HOST_RESTART )
 		host.state = HOST_FRAME; // restart is finished
 
@@ -384,7 +390,7 @@ void Host_InputFrame( void )
 		if( host.state == HOST_NOFOCUS )
 		{
 			if( Host_ServerState() && CL_IsInGame( ))
-				Sys_Sleep( 5 ); // listenserver
+				Sys_Sleep( 1 ); // listenserver
 			else Sys_Sleep( 20 ); // sleep 20 ms otherwise
 		}
 		else if( host.state == HOST_SLEEP )
@@ -443,13 +449,13 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		if( !in_mouseactive ) break;
 		if(( short )HIWORD( wParam ) > 0 )
 		{
-			Sys_QueEvent( SE_KEY, K_MWHEELUP, true, 0, NULL );
-			Sys_QueEvent( SE_KEY, K_MWHEELUP, false, 0, NULL );
+			Key_Event( K_MWHEELUP, true );
+			Key_Event( K_MWHEELUP, false );
 		}
 		else
 		{
-			Sys_QueEvent( SE_KEY, K_MWHEELDOWN, true, 0, NULL );
-			Sys_QueEvent( SE_KEY, K_MWHEELDOWN, false, 0, NULL );
+			Key_Event( K_MWHEELDOWN, true );
+			Key_Event( K_MWHEELDOWN, false );
 		}
 		break;
 	case WM_CREATE:
@@ -540,14 +546,14 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		}
 		// intentional fallthrough
 	case WM_KEYDOWN:
-		Sys_QueEvent( SE_KEY, Host_MapKey( lParam ), true, 0, NULL );
+		Key_Event( Host_MapKey( lParam ), true );
 		break;
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
-		Sys_QueEvent( SE_KEY, Host_MapKey( lParam ), false, 0, NULL );
+		Key_Event( Host_MapKey( lParam ), false );
 		break;
 	case WM_CHAR:
-		Sys_QueEvent( SE_CHAR, wParam, false, 0, NULL );
+		CL_CharEvent( wParam );
 		break;
 	}
 	return DefWindowProc( hWnd, uMsg, wParam, lParam );
