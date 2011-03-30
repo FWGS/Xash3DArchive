@@ -1112,10 +1112,24 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( touch == clip->passedict || touch->v.solid == SOLID_NOT )
 			continue;
 
-		modType = Mod_GetType( touch->v.modelindex );
-
 		if( touch->v.solid == SOLID_TRIGGER )
 			Host_Error( "trigger in clipping list\n" );
+
+		// custom user filter
+		if( svgame.dllFuncs2.pfnShouldCollide )
+		{
+			if( !svgame.dllFuncs2.pfnShouldCollide( touch, clip->passedict ))
+				return;
+		}
+
+		modType = Mod_GetType( touch->v.modelindex );
+
+		// monsterclip filter
+		if( modType == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
+		{
+			if( clip->passedict && clip->passedict->v.flags & FL_MONSTERCLIP );
+			else continue;
+		}
 
 		// completely ignore all edicts but brushes
 		if( clip->type == MOVE_NOMONSTERS && modType != mod_brush )
@@ -1143,24 +1157,10 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( clip->passedict && !VectorIsNull( clip->passedict->v.size ) && VectorIsNull( touch->v.size ))
 			continue;	// points never interact
 
-		// custom user filter
-		if( svgame.dllFuncs2.pfnShouldCollide )
-		{
-			if( !svgame.dllFuncs2.pfnShouldCollide( touch, clip->passedict ))
-				continue;
-		}
-
-		// monsterclip filter
-		if( modType == mod_brush && ( touch->v.flags & FL_MONSTERCLIP ))
-		{
-			if( clip->passedict && clip->passedict->v.flags & FL_MONSTERCLIP );
-			else continue;
-		}
-
 		if( clip->flags & FMOVE_IGNORE_GLASS && modType == mod_brush )
 		{
 			// we ignore brushes with rendermode != kRenderNormal and without FL_WORLDBRUSH set
-			if( touch->v.rendermode != kRenderNormal && ( touch->v.flags & FL_WORLDBRUSH ) == 0 )
+			if( touch->v.rendermode != kRenderNormal && !(touch->v.flags & FL_WORLDBRUSH))
 				continue;
 		}
 

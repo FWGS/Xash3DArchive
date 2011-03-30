@@ -383,7 +383,7 @@ void Host_InputFrame( void )
 	if( host.type == HOST_DEDICATED )
 	{
 		// let the dedicated server some sleep
-		Sys_Sleep( 5 );
+		Sys_Sleep( 1 );
 	}
 	else
 	{
@@ -484,7 +484,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		S_Activate( fActivate, host.hWnd );
 		IN_ActivateMouse( fActivate );
 		Key_ClearStates();
-		VGui_SetBounds();
 
 		if( host.state == HOST_FRAME )
 		{
@@ -513,7 +512,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 			Cvar_SetFloat( "r_xpos", xPos + rect.left );
 			Cvar_SetFloat( "r_ypos", yPos + rect.top );
 			GetWindowRect( host.hWnd, &real_rect );
-			VGui_SetBounds();
 		}
 		break;
 	case WM_LBUTTONDOWN:

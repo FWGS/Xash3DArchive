@@ -8,8 +8,6 @@
 #include "netchan.h"
 
 #define PORT_ANY		-1
-#define PORT_CLIENT		27901
-#define PORT_SERVER		27910
 #define MAX_LOOPBACK	4
 #define MASK_LOOPBACK	(MAX_LOOPBACK - 1)
 

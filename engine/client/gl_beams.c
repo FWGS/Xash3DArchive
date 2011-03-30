@@ -1664,7 +1664,6 @@ BEAM *CL_BeamEnts( int startEnt, int endEnt, int modelIndex, float life, float w
 	pBeam->die += life;
 	pBeam->width = width;
 	pBeam->amplitude = amplitude * 10;
-	pBeam->brightness = brightness;
 	pBeam->speed = speed;
 	BeamNormalizeColor( pBeam, r, g, b, brightness );
 
@@ -1708,11 +1707,8 @@ BEAM *CL_BeamPoints( const vec3_t start, const vec3_t end, int modelIndex, float
 	pBeam->die += life;
 	pBeam->width = width;
 	pBeam->amplitude = amplitude;
-	pBeam->brightness = brightness;
 	pBeam->speed = speed;
-	pBeam->r = r;
-	pBeam->g = g;
-	pBeam->b = b;
+	BeamNormalizeColor( pBeam, r, g, b, brightness );
 
 	VectorSubtract( pBeam->target, pBeam->source, pBeam->delta );
 
@@ -1770,11 +1766,8 @@ BEAM *CL_BeamCirclePoints( int type, const vec3_t start, const vec3_t end, int m
 	pBeam->die += life;
 	pBeam->width = width;
 	pBeam->amplitude = amplitude;
-	pBeam->brightness = brightness;
 	pBeam->speed = speed;
-	pBeam->r = r;
-	pBeam->g = g;
-	pBeam->b = b;
+	BeamNormalizeColor( pBeam, r, g, b, brightness );
 
 	VectorSubtract( pBeam->target, pBeam->source, pBeam->delta );
 
@@ -1800,7 +1793,6 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 {
 	cl_entity_t	*pStart;
 	BEAM		*pBeam;
-	float		scale;
 
 	// need a valid model.
 	if( Mod_GetType( modelIndex ) != mod_sprite )
@@ -1815,11 +1807,6 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 	pBeam = CL_AllocBeam();
 	if( !pBeam ) return NULL;
 
-	scale = max( max( r, g ), b );
-	if( scale <= 1.0f )
-		scale = 255.0f;
-	else scale = 1.0f;
-
 	pBeam->type = TE_BEAMPOINTS;
 	pBeam->flags = FBEAM_STARTENTITY;
 	pBeam->modelIndex = modelIndex;
@@ -1833,11 +1820,8 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 	pBeam->die += life;
 	pBeam->width = width;
 	pBeam->amplitude = amplitude * 10;
-	pBeam->brightness = brightness * scale;
 	pBeam->speed = speed;
-	pBeam->r = r * scale;
-	pBeam->g = g * scale;
-	pBeam->b = b * scale;
+	BeamNormalizeColor( pBeam, r, g, b, brightness );
 
 	VectorSubtract( pBeam->target, pBeam->source, pBeam->delta );
 
@@ -1890,11 +1874,8 @@ BEAM *CL_BeamRing( int startEnt, int endEnt, int modelIndex, float life, float w
 	pBeam->die += life;
 	pBeam->width = width;
 	pBeam->amplitude = amplitude;
-	pBeam->brightness = brightness;
 	pBeam->speed = speed;
-	pBeam->r = r;
-	pBeam->g = g;
-	pBeam->b = b;
+	BeamNormalizeColor( pBeam, r, g, b, brightness );
 
 	CL_UpdateBeam( pBeam, 0.0f );
 
@@ -1938,11 +1919,8 @@ BEAM *CL_BeamFollow( int startEnt, int modelIndex, float life, float width, floa
 	pBeam->die += life;
 	pBeam->width = width;
 	pBeam->amplitude = life;	// partilces lifetime
-	pBeam->brightness = bright;
 	pBeam->speed = 1.0f;
-	pBeam->r = r;
-	pBeam->g = g;
-	pBeam->b = b;
+	BeamNormalizeColor( pBeam, r, g, b, bright );
 
 	CL_UpdateBeam( pBeam, 0.0f );
 

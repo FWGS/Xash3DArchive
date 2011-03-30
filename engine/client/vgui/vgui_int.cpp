@@ -47,7 +47,7 @@ void CEngineApp :: getCursorPos( int &x,int &y )
 	y = pt.y;
 }
 
-void VGui_SetBounds( void )
+void VGui_RunFrame( void )
 {
 }
 
@@ -70,6 +70,7 @@ void VGui_Startup( void )
 	pApp->setMinimumTickMillisInterval( 0 );
 
 	surface = new CEngineSurface( rootpanel );
+	rootpanel->setSurfaceBaseTraverse( surface );
 
 	ASSERT( rootpanel->getApp() != NULL );
 	ASSERT( rootpanel->getSurfaceBase() != NULL );
@@ -107,7 +108,7 @@ void VGui_Paint( void )
 
 	if( cls.key_dest == key_game )
 	{
-		pApp->externalTick();
+		pApp->externalTick ();
 	}
 
 	pVPanel->setBounds( 0, 0, rect.right, rect.bottom );

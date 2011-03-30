@@ -246,7 +246,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	dlight_t		*dl;
 	pmtrace_t		trace;
 	cl_entity_t	*m_pGround;
-	vec3_t		end, dir;
+	vec3_t		start, end, dir;
 	float		dist, add;
 	model_t		*pmodel;
 	mnode_t		*pnodes;
@@ -269,9 +269,18 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	}
 
 	// Get lighting at this point
+	VectorCopy( point, start );
 	VectorCopy( point, end );
-	if( invLight ) end[2] = point[2] + 8192;
-	else end[2] = point[2] - 8192;
+	if( invLight )
+	{
+		start[2] = point[2] - 64;
+		end[2] = point[2] + 8192;
+	}
+	else
+	{
+		start[2] = point[2] + 64;
+		end[2] = point[2] - 8192;
+	}
 
 	// always have valid model
 	pmodel = cl.worldmodel;
@@ -280,11 +289,11 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 
 	if( r_lighting_extended->integer )
 	{
-		trace = PM_PlayerTrace( clgame.pmove, (float *)point, end, PM_STUDIO_IGNORE, 0, -1, NULL );
+		trace = PM_PlayerTrace( clgame.pmove, start, end, PM_STUDIO_IGNORE, 0, -1, NULL );
 		m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
 	}
 
-	if( m_pGround && m_pGround->model && VectorIsNull( m_pGround->origin ) && VectorIsNull( m_pGround->angles ))
+	if( m_pGround && m_pGround->model )
 	{
 		pmodel = m_pGround->model;
 		pnodes = &pmodel->nodes[pmodel->hulls[0].firstclipnode];
@@ -301,7 +310,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 		VectorClear( r_pointColor );
 	}
 
-	if( R_RecursiveLightPoint( pmodel, pnodes, point, end ))
+	if( R_RecursiveLightPoint( pmodel, pnodes, start, end ))
 	{
 		ambientLight->r = min((r_pointColor[0] >> 7), 255 );
 		ambientLight->g = min((r_pointColor[1] >> 7), 255 );

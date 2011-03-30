@@ -1611,6 +1611,8 @@ void Host_ClientFrame( void )
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
 
+	VGui_RunFrame ();
+
 	clgame.dllFuncs.pfnFrame( cl.time );
 
 	// fetch results from server

@@ -116,7 +116,7 @@ static int ParseFloats( const char *pText, float *pFloat, int count )
 }
 
 // trims all whitespace from the front and end of a string
-static void TrimSpace( const char *source, char *dest )
+void TrimSpace( const char *source, char *dest )
 {
 	int start, end, length;
 

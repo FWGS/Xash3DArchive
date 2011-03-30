@@ -98,7 +98,7 @@ typedef struct
 	int		surpressCount;		// number of messages rate supressed
 	frame_t		frames[MULTIPLAYER_BACKUP];	// alloced on svc_serverdata
 	usercmd_t		cmds[MULTIPLAYER_BACKUP];	// each mesage will send several old cmds
-
+	local_state_t	predict[MULTIPLAYER_BACKUP];	// local client state
 	double		time;			// this is the time value that the client
 						// is rendering at.  always <= cls.realtime
 						// a lerp point for other data
@@ -759,7 +759,7 @@ void VGui_Startup( void );
 void VGui_Shutdown( void );
 void *VGui_GetPanel( void );
 void VGui_Paint( void );
-void VGui_SetBounds( void );
+void VGui_RunFrame( void );
 void VGui_ViewportPaintBackground( int extents[4] );
 
 #ifdef __cplusplus

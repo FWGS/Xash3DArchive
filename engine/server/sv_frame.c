@@ -368,7 +368,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	Q_memset( &nullcd, 0, sizeof( nullcd ));
 
 	clent = cl->edict;
-	frame = &( cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK] );
+	frame = &cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK];
 
 	frame->senttime = host.realtime;
 	frame->raw_ping = -1.0f;

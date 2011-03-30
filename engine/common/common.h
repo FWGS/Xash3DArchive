@@ -705,6 +705,7 @@ void Cmd_ForwardToServer( void );
 void Cmd_AutoComplete( char *complete_string );
 long Com_RandomLong( long lMin, long lMax );
 float Com_RandomFloat( float fMin, float fMax );
+void TrimSpace( const char *source, char *dest );
 
 typedef struct autocomplete_list_s
 {

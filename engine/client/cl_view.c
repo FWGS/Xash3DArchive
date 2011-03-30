@@ -83,7 +83,7 @@ void V_SetupRefDef( void )
 	}
 	else
 	{
-		VectorCopy( clent->origin, cl.refdef.simorg );
+		VectorCopy( cl.frame.local.client.origin, cl.refdef.simorg );
 		VectorCopy( cl.frame.local.client.view_ofs, cl.refdef.viewheight );
 		VectorCopy( cl.frame.local.client.velocity, cl.refdef.simvel );
 	}

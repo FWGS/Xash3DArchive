@@ -1727,7 +1727,7 @@ pfnServerCmd
 static int pfnServerCmd( const char *szCmdString )
 {
 	// server command adding in cmds queue
-	Cbuf_AddText( va( "cmd %s", szCmdString ));
+	Cbuf_AddText( va( "cmd %s\n", szCmdString ));
 	return 1;
 }
 
@@ -1740,7 +1740,7 @@ pfnClientCmd
 static int pfnClientCmd( const char *szCmdString )
 {
 	// client command executes immediately
-	Cbuf_AddText( szCmdString );
+	Cmd_ExecuteString( szCmdString );
 	return 1;
 }
 

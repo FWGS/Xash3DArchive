@@ -40,8 +40,8 @@ void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
 {
 	local_state_t	*from, *to;
 
-	from = &cl.frames[cl.delta_sequence & CL_UPDATE_MASK].local;
-	to = &cl.frame.local;
+	from = &cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK];
+	to = &cl.predict[cls.netchan.outgoing_sequence & CL_UPDATE_MASK];
 
 	clgame.dllFuncs.pfnPostRunCmd( from, to, ucmd, clgame.pmove->runfuncs, cl.time, random_seed );
 }
@@ -193,7 +193,7 @@ void CL_PredictMovement( void )
 		VectorCopy( cl.refdef.cl_viewangles, cl.predicted_angles );
 		VectorCopy( cd->view_ofs, cl.predicted_viewofs );
 
-		CL_PostRunCmd( cl.refdef.cmd, cls.netchan.outgoing_sequence );
+		CL_PostRunCmd( cl.refdef.cmd, cls.lastoutgoingcommand );
 		return;
 	}
 

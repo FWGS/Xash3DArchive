@@ -83,6 +83,8 @@ typedef struct mextrasurf_s
 	vec3_t		mins, maxs;
 	vec3_t		origin;		// surface origin
 	int		checkcount;	// for multi-check avoidance
+
+	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
 } mextrasurf_t;
 
 typedef struct

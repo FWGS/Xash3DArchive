@@ -420,9 +420,24 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	{
 		// update client vars
 		if(( ent->index - 1 ) == cl.playernum )
-			clgame.dllFuncs.pfnTxferLocalOverrides( state, &cl.frame.local.client );
-		clgame.dllFuncs.pfnProcessPlayerState( &frame->playerstate[ent->index-1], state );
+		{
+			entity_state_t *ps, *pps;
+			clientdata_t *pcd, *ppcd;
+			weapon_data_t *wd, *pwd;
 
+			pps = state;
+			ppcd = &cl.frame.local.client;
+			pwd = cl.frame.local.weapondata;
+
+			ps = &cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK].playerstate;
+			pcd = &cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK].client;
+			wd = cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK].weapondata;
+		
+			clgame.dllFuncs.pfnTxferPredictionData( ps, pps, pcd, ppcd, wd, pwd ); 
+			clgame.dllFuncs.pfnTxferLocalOverrides( &ent->curstate, &cl.frame.local.client );
+		}
+
+		clgame.dllFuncs.pfnProcessPlayerState( &frame->playerstate[ent->index-1], &ent->curstate );
 		frame->playerstate[ent->index-1].number = ent->index;
 
 		// fill private structure for local client
@@ -668,9 +683,6 @@ void CL_AddPacketEntities( frame_t *frame )
 
 	clent = CL_GetLocalPlayer();
 	if( !clent ) return;
-
-	// update client vars
-	clgame.dllFuncs.pfnTxferLocalOverrides( &clent->curstate, &cl.frame.local.client );
 
 	for( i = 0; i < cl.frame.num_entities; i++ )
 	{

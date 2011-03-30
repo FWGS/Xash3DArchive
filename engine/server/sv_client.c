@@ -1515,8 +1515,8 @@ void SV_Pause_f( sv_client_t *cl )
 		return;
 	}
 
-	if( !sv.paused ) Q_snprintf( message, MAX_STRING, "%s paused the game\n", cl->name );
-	else Q_snprintf( message, MAX_STRING, "%s unpaused the game\n", cl->name );
+	if( !sv.paused ) Q_snprintf( message, MAX_STRING, "^2%s^7 paused the game", cl->name );
+	else Q_snprintf( message, MAX_STRING, "^2%s^7 unpaused the game", cl->name );
 
 	SV_TogglePause( message );
 }
@@ -1532,15 +1532,57 @@ into a more C freindly form.
 */
 void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 {
-	edict_t	*ent = cl->edict;
-	char	*val;
+	int		i, dupc = 1;
+	edict_t		*ent = cl->edict;
+	string		temp1, temp2;	
+	sv_client_t	*current;
+	char		*val;
 
 	if( !userinfo || !userinfo[0] ) return; // ignored
 
 	Q_strncpy( cl->userinfo, userinfo, sizeof( cl->userinfo ));
 
-	// name for C code (make colored string)
-	Q_snprintf( cl->name, sizeof( cl->name ), "^2%s^7", Info_ValueForKey( cl->userinfo, "name" ));
+	val = Info_ValueForKey( cl->userinfo, "name" );
+	Q_strncpy( temp2, val, sizeof( temp2 ));
+	TrimSpace( temp2, temp1 );
+
+	if( !Q_stricmp( temp1, "console" )) // keyword came from OSHLDS
+	{
+		Info_SetValueForKey( cl->userinfo, "name", "unnamed" );
+		val = Info_ValueForKey( cl->userinfo, "name" );
+	}
+	else if( Q_strcmp( temp1, val ))
+	{
+		Info_SetValueForKey( cl->userinfo, "name", temp1 );
+		val = Info_ValueForKey( cl->userinfo, "name" );
+	}
+
+	// check to see if another user by the same name exists
+	while( 1 )
+	{
+		for( i = 0, current = svs.clients; i < sv_maxclients->integer; i++, current++ )
+		{
+			if( current == cl || current->state != cs_spawned )
+				continue;
+			if( !Q_stricmp( current->name, val ))
+				break;
+		}
+
+		if( i != sv_maxclients->integer )
+		{
+			// dup name
+			Q_snprintf( temp2, sizeof( temp2 ), "%s (%u)", temp1, dupc++ );
+			Info_SetValueForKey( cl->userinfo, "name", temp2 );
+			val = Info_ValueForKey( cl->userinfo, "name" );
+			Q_strcpy( cl->name, temp2 );
+		}
+		else
+		{
+			if( dupc == 1 ) // unchanged
+				Q_strcpy( cl->name, temp1 );
+			break;
+		}
+	}
 
 	// rate command
 	val = Info_ValueForKey( cl->userinfo, "rate" );
