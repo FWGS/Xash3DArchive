@@ -40,10 +40,15 @@ void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
 {
 	local_state_t	*from, *to;
 
-	from = &cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK];
-	to = &cl.predict[cls.netchan.outgoing_sequence & CL_UPDATE_MASK];
+	// FIXME: write real predicting code
+
+	from = &cl.predict[cl.predictcount & CL_UPDATE_MASK];
+	to = &cl.predict[(cl.predictcount + 1) & CL_UPDATE_MASK];
+
+	*to = *from;
 
 	clgame.dllFuncs.pfnPostRunCmd( from, to, ucmd, clgame.pmove->runfuncs, cl.time, random_seed );
+	cl.predictcount++;
 }
 
 /*

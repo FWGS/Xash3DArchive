@@ -170,7 +170,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 	vec3_t		mid;
 
 	// didn't hit anything
-	if( node->contents < 0 )
+	if( !node || node->contents < 0 )
 		return false;
 
 	// calculate mid point

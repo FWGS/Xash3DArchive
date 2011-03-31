@@ -1575,13 +1575,24 @@ Mod_FindName
 
 ==================
 */
-model_t *Mod_FindName( const char *name, qboolean create )
+model_t *Mod_FindName( const char *filename, qboolean create )
 {
 	model_t	*mod;
-	int	i;
+	char	name[64];
+	int	i, j;
 	
-	if( !name || !name[0] )
+	if( !filename || !filename[0] )
 		return NULL;
+
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '!' ) continue;
+		else if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = Q_tolower( filename[i] );
+		j++;
+	}
+	name[j] = '\0';
 		
 	// search the currently loaded models
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
@@ -1636,7 +1647,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	if( mod->mempool || mod->name[0] == '*' )
 		return mod;
 
-	buf = FS_LoadFile( mod->name, NULL, false );
+	buf = COM_LoadFile( mod->name, 0, NULL );
 	if( !buf )
 	{
 		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );

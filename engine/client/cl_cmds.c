@@ -180,8 +180,9 @@ void CL_ScreenShot_f( void )
 			break;
 	}
 
-	Con_ClearNotify();
-	VID_ScreenShot( checkname, VID_SCREENSHOT );
+	Q_strncpy( cls.shotname, checkname, sizeof( cls.shotname ));
+	cls.scrshot_action = scrshot_normal; // build new frame for screenshot
+	cls.envshot_vieworg = NULL; // no custom view
 }
 
 void CL_EnvShot_f( void )

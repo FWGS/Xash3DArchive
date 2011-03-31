@@ -99,7 +99,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( ent->free ) continue;
 
 		// don't double add an entity through portals (already added)
-		if( ent->v.pushmsec == sv.net_framenum )
+		if( ent->v.gamestate == sv.net_framenum )
 			continue;
 
 		if( ent->v.effects & EF_REQUEST_PHS )
@@ -117,7 +117,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, player, pset ))
 		{
 			// to prevent adds it twice through portals
-			ent->v.pushmsec = sv.net_framenum;
+			ent->v.gamestate = sv.net_framenum;
 
 			if( netclient && netclient->modelindex ) // apply custom model if present
 				state->modelindex = netclient->modelindex;
@@ -397,8 +397,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	}
 
 	clent->v.fixangle = 0; // reset fixangle
-	clent->v.pushmsec = 0; // reset pushmsec
-
+	clent->v.gamestate = 0; // reset gamestate
 	Q_memset( &frame->clientdata, 0, sizeof( frame->clientdata ));
 
 	// update clientdata_t

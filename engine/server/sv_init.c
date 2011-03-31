@@ -299,7 +299,8 @@ void SV_ActivateServer( void )
 		MsgDev( D_INFO, "Game started\n" );
 	}
 
-	Mod_FreeUnused ();
+	if( host.type == HOST_DEDICATED )
+		Mod_FreeUnused ();
 
 	sv.state = ss_active;
 	physinfo->modified = true;

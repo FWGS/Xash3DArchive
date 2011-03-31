@@ -113,8 +113,8 @@ struct decal_s
 {
 	decal_t		*pnext;		// linked list for each surface
 	msurface_t	*psurface;	// Surface id for persistence / unlinking
-	float		dx;		// Offsets into surface texture 
-	float		dy;		// (in world coordinates. FIXME: make shorts ?)
+	short		dx;		// Offsets into surface texture 
+	short		dy;		// (in texture coordinates, so we don't need floats)
 	short		texture;		// Decal texture
 	byte		scale;		// Pixel scale
 	byte		flags;		// Decal flags  FDECAL_*

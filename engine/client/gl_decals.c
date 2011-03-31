@@ -15,6 +15,8 @@
 // empirically determined constants for minimizing overalpping decals
 #define MAX_OVERLAP_DECALS		6
 #define DECAL_OVERLAP_DIST		8
+#define FLOAT_TO_SHORT( x )		(short)(x * 32)
+#define SHORT_TO_FLOAT( x )		((float)x * (1.0f/32.0f))
 
 typedef struct
 {
@@ -125,11 +127,7 @@ static void R_DecalUnlink( decal_t *pdecal )
 		}
 	}
 
-//	if( pdecal->mesh )
-//		Mem_Free( pdecal->mesh );
-
 	pdecal->psurface = NULL;
-//	pdecal->mesh = NULL;
 }
 
 
@@ -250,8 +248,8 @@ void R_SetupDecalVertsForMSurface( decal_t *pDecal, msurface_t *surf,	vec3_t tex
 	for( j = 0; j < surf->polys->numverts; j++, v += VERTEXSIZE )
 	{
 		VectorCopy( v, pVerts[j].m_vPos ); // copy model space coordinates
-		pVerts[j].m_tCoords[0] = DotProduct( pVerts[j].m_vPos, textureSpaceBasis[0] ) - pDecal->dx + 0.5f;
-		pVerts[j].m_tCoords[1] = DotProduct( pVerts[j].m_vPos, textureSpaceBasis[1] ) - pDecal->dy + 0.5f;
+		pVerts[j].m_tCoords[0] = DotProduct( pVerts[j].m_vPos, textureSpaceBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f;
+		pVerts[j].m_tCoords[1] = DotProduct( pVerts[j].m_vPos, textureSpaceBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f;
 		pVerts[j].m_LMCoords[0] = pVerts[j].m_LMCoords[1] = 0.0f;
 	}
 }
@@ -267,8 +265,8 @@ void R_SetupDecalClip( decalvert_t *pOutVerts, decal_t *pDecal, msurface_t *surf
 	// Generate texture coordinates for each vertex in decal s,t space
 	// probably should pre-generate this, store it and use it for decal-decal collisions
 	// as in R_DecalsIntersect()
-	pDecal->dx = DotProduct( pDecal->position, textureSpaceBasis[0] );
-	pDecal->dy = DotProduct( pDecal->position, textureSpaceBasis[1] );
+	pDecal->dx = FLOAT_TO_SHORT( DotProduct( pDecal->position, textureSpaceBasis[0] ));
+	pDecal->dy = FLOAT_TO_SHORT( DotProduct( pDecal->position, textureSpaceBasis[1] ));
 }
 
 static int SHClip( decalvert_t *g_DecalClipVerts, int vertCount, decalvert_t *out, decal_clip_t clipFunc )
@@ -478,15 +476,16 @@ static decal_t *R_DecalIntersect( decalinfo_t *decalinfo, msurface_t *surf, int 
 			// Here, we project the min and max extents of the decal that got passed in into
 			// this decal's (pDecal's) [0,0,1,1] clip space, just like we would if we were
 			// clipping a triangle into pDecal's clip space.
-			Vector2Set( vDecalMin, DotProduct( testPosition[0], testBasis[0] ) - pDecal->dx + 0.5f,
-				DotProduct( testPosition[1], testBasis[1] ) - pDecal->dy + 0.5f );
+			Vector2Set( vDecalMin,
+				DotProduct( testPosition[0], testBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f,
+				DotProduct( testPosition[1], testBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f );
 
 			VectorAdd( decalinfo->m_Position, decalExtents[0], testPosition[0] );
 			VectorAdd( decalinfo->m_Position, decalExtents[1], testPosition[1] );
 
 			Vector2Set( vDecalMax,
-				DotProduct( testPosition[0], testBasis[0] ) - pDecal->dx + 0.5f,
-				DotProduct( testPosition[1], testBasis[1] ) - pDecal->dy + 0.5f );	
+				DotProduct( testPosition[0], testBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f,
+				DotProduct( testPosition[1], testBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f );	
 
 			// Now figure out the part of the projection that intersects pDecal's
 			// clip box [0,0,1,1].
@@ -564,8 +563,8 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 	if( pdecal->flags & FDECAL_USESAXIS )
 		VectorCopy( decalinfo->m_SAxis, pdecal->saxis );
 
-	pdecal->dx = x;
-	pdecal->dy = y;
+	pdecal->dx = FLOAT_TO_SHORT( x );
+	pdecal->dy = FLOAT_TO_SHORT( y );
 	pdecal->texture = decalinfo->m_iTexture;
 
 	// set scaling
@@ -974,9 +973,9 @@ static int DecalDepthCompare( const void *a, const void *b )
 	elem2 = (const decallist_t *)b;
 
 	if( elem1->depth > elem2->depth )
-		return -1;
-	if( elem1->depth < elem2->depth )
 		return 1;
+	if( elem1->depth < elem2->depth )
+		return -1;
 
 	return 0;
 }

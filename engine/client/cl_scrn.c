@@ -178,6 +178,9 @@ void SCR_MakeScreenShot( void )
 
 	switch( cls.scrshot_action )
 	{
+	case scrshot_normal:
+		iRet = VID_ScreenShot( cls.shotname, VID_SCREENSHOT );
+		break;
 	case scrshot_plaque:
 		iRet = VID_ScreenShot( cls.shotname, VID_LEVELSHOT );
 		break;

@@ -76,10 +76,13 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 			vec3_t	vecSrc, vecEnd;
 			pmtrace_t	trace;
 
-			VectorSet( vecSrc, ent->origin[0], ent->origin[1], ent->origin[2] + ent->model->maxs[2] );
-			VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] );		
-			trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_STUDIO_IGNORE, 0, -1, NULL );
-			m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
+			if( ent->model )
+			{
+				VectorSet( vecSrc, ent->origin[0], ent->origin[1], ent->origin[2] + ent->model->maxs[2] );
+				VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] );		
+				trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_STUDIO_IGNORE, 0, -1, NULL );
+				m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
+			}
 
 			if( m_pGround && m_pGround->curstate.movetype == MOVETYPE_PUSH )
 			{
@@ -434,7 +437,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 			wd = cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK].weapondata;
 		
 			clgame.dllFuncs.pfnTxferPredictionData( ps, pps, pcd, ppcd, wd, pwd ); 
-			clgame.dllFuncs.pfnTxferLocalOverrides( &ent->curstate, &cl.frame.local.client );
+			clgame.dllFuncs.pfnTxferLocalOverrides( &ent->curstate, pcd );
 		}
 
 		clgame.dllFuncs.pfnProcessPlayerState( &frame->playerstate[ent->index-1], &ent->curstate );
@@ -488,8 +491,9 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	frame_t		*newframe, *oldframe;
 	int		oldindex, newnum, oldnum;
 	int		oldpacket, newpacket;
+	cl_entity_t	*player;
 	entity_state_t	*oldent;
-	int		count;
+	int		i, count;
 
 	// first, allocate packet for new frame
 	count = BF_ReadWord( msg );
@@ -636,18 +640,18 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	}
 
 	cl.frame = *newframe;
+
 	if( !cl.frame.valid ) return;
+
+	player = CL_GetLocalPlayer();
 		
 	if( cls.state != ca_active )
 	{
-		cl_entity_t	*player;
-
 		// client entered the game
 		cls.state = ca_active;
 		cl.force_refdef = true;
 		cls.changelevel = false;	// changelevel is done
 
-		player = CL_GetLocalPlayer();
 		SCR_MakeLevelShot();	// make levelshot if needs
 
 		Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar	
@@ -659,6 +663,37 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		VectorCopy( player->origin, cl.predicted_origin );
 		VectorCopy( player->angles, cl.predicted_angles );
 	}
+
+	// update local player states
+	if( player != NULL )
+	{
+		entity_state_t	*ps, *pps;
+		clientdata_t	*pcd, *ppcd;
+		weapon_data_t	*wd, *pwd;
+
+		pps = &player->curstate;
+		ppcd = &newframe->local.client;
+		pwd = newframe->local.weapondata;
+
+		ps = &cl.predict[cl.predictcount & CL_UPDATE_MASK].playerstate;
+		pcd = &cl.predict[cl.predictcount & CL_UPDATE_MASK].client;
+		wd = cl.predict[cl.predictcount & CL_UPDATE_MASK].weapondata;
+		
+		clgame.dllFuncs.pfnTxferPredictionData( ps, pps, pcd, ppcd, wd, pwd ); 
+		clgame.dllFuncs.pfnTxferLocalOverrides( &player->curstate, pcd );
+	}
+
+	// update state for all players
+	for( i = 0; i < cl.maxclients; i++ )
+	{
+		cl_entity_t *ent = CL_GetEntityByIndex( i + 1 );
+		if( !ent ) continue;
+		clgame.dllFuncs.pfnProcessPlayerState( &newframe->playerstate[i], &ent->curstate );
+		newframe->playerstate[i].number = ent->index;
+	}
+
+	cl.frame = *newframe;
+	cl.predict[cl.predictcount & CL_UPDATE_MASK] = cl.frame.local;
 
 	CL_CheckPredictionError();
 }

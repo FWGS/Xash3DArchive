@@ -39,12 +39,12 @@ static int ramp3[6] = { 0x6d, 0x6b, 6, 5, 4, 3 };
 
 static int boxpnt[6][4] =
 {
-	{ 0, 4, 6, 2 }, // +X
-	{ 0, 1, 5, 4 }, // +Y
-	{ 0, 2, 3, 1 }, // +Z
-	{ 7, 5, 1, 3 }, // -X
-	{ 7, 3, 2, 6 }, // -Y
-	{ 7, 6, 4, 5 }, // -Z
+{ 0, 4, 6, 2 }, // +X
+{ 0, 1, 5, 4 }, // +Y
+{ 0, 2, 3, 1 }, // +Z
+{ 7, 5, 1, 3 }, // -X
+{ 7, 3, 2, 6 }, // -Y
+{ 7, 6, 4, 5 }, // -Z
 };
 
 static rgb_t gTracerColors[] =
@@ -1340,11 +1340,19 @@ void CL_StreakTracer( const vec3_t pos, const vec3_t velocity, int colorIndex )
 	p = CL_AllocParticle( CL_SparkTracerDraw );
 	if( !p ) return;
 
-	color = gTracerColors[colorIndex];
+	if( colorIndex > ( sizeof( gTracerColors ) / sizeof( gTracerColors[0] )))
+	{
+		p->color = bound( 0, colorIndex, 255 );
+	}
+	else
+	{ 
+		color = gTracerColors[colorIndex];
+		p->color = CL_LookupColor( color[0], color[1], color[2] );
+	}
+
 	p->die += Com_RandomFloat( 0.5f, 1.0f );
 	VectorCopy( velocity, p->vel );
 	VectorCopy( pos, p->org );
-	p->color = CL_LookupColor( color[0], color[1], color[2] );
 	p->ramp = Com_RandomFloat( 0.05f, 0.08f );
 }
 
@@ -1390,8 +1398,16 @@ void CL_UserTracerParticle( float *org, float *vel, float life, int colorIndex, 
 	p = CL_AllocParticle( CL_BulletTracerDraw );
 	if( !p ) return;
 
-	color = gTracerColors[colorIndex];
-	p->color = CL_LookupColor( color[0], color[1], color[2] );
+	if( colorIndex > ( sizeof( gTracerColors ) / sizeof( gTracerColors[0] )))
+	{
+		p->color = bound( 0, colorIndex, 255 );
+	}
+	else
+	{ 
+		color = gTracerColors[colorIndex];
+		p->color = CL_LookupColor( color[0], color[1], color[2] );
+	}
+
 	p->ramp = length; // ramp used as length
 	VectorCopy( org, p->org );
 	VectorCopy( vel, p->vel );

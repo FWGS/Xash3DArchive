@@ -152,6 +152,7 @@ typedef struct
 	int		solidskyTexture;	// quake1 solid-sky layer
 	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
+	int		dlightTexture;	// custom dlight texture
 	int		skyboxTextures[6];	// skybox sides
 
 	int		skytexturenum;	// this not a gl_texturenum!

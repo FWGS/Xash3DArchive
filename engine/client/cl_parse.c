@@ -748,8 +748,6 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], sv_time( ));
 	}
-
-	cl.predict[(cls.lastoutgoingcommand + 1) & CL_UPDATE_MASK] = frame->local;
 }
 
 /*

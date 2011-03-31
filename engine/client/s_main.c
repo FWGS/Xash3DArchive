@@ -435,7 +435,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 
 	if( !target_chan )
 	{
-		MsgDev( D_ERROR, "dropped sound \"sound/%s\"\n", sfx->name );
+		MsgDev( D_NOTE, "^1Error: ^7dropped sound \"sound/%s\"\n", sfx->name );
 		return;
 	}
 

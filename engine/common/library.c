@@ -71,12 +71,12 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 	LONG		nt_signature;
 	PE_HEADER		pe_header;
 	SECTION_HEADER	section_header;
-	qboolean		edata_found;
+	qboolean		rdata_found;
 	OPTIONAL_HEADER	optional_header;
-	long		edata_offset;
-	long		edata_delta;
+	long		edata_delta = 0;
 	EXPORT_DIRECTORY	export_directory;
 	long		name_offset;
+	long		exports_offset;
 	long		ordinal_offset;
 	long		function_offset;
 	string		function_name;
@@ -144,36 +144,39 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 		goto table_error;
 	}
 
-	edata_found = false;
+	rdata_found = false;
 
 	for( i = 0; i < pe_header.NumberOfSections; i++ )
 	{
-
 		if( FS_Read( f, &section_header, sizeof( section_header )) != sizeof( section_header ))
 		{
 			Q_sprintf( errorstring, "%s error during reading section header", hInst->shortPath );
 			goto table_error;
 		}
 
-		if( !Q_strcmp((char *)section_header.Name, ".edata" ))
+		if( !Q_strcmp( section_header.Name, ".rdata" ))
 		{
-			edata_found = true;
+			rdata_found = true;
 			break;
 		}
+#if 0
+		if((( optional_header.DataDirectory[0].VirtualAddress >= section_header.VirtualAddress ) && 
+			(optional_header.DataDirectory[0].VirtualAddress < (section_header.VirtualAddress + section_header.Misc.VirtualSize))))
+		{
+			rdata_found = true;
+			break;
+		}
+#endif
 	}
 
-	if( edata_found )
+	if( rdata_found )
 	{
-		edata_offset = section_header.PointerToRawData;
 		edata_delta = section_header.VirtualAddress - section_header.PointerToRawData; 
 	}
-	else
-	{
-		edata_offset = optional_header.DataDirectory[0].VirtualAddress;
-		edata_delta = 0;
-	}
 
-	if( FS_Seek( f, edata_offset, SEEK_SET ) == -1 )
+	exports_offset = optional_header.DataDirectory[0].VirtualAddress - edata_delta;
+
+	if( FS_Seek( f, exports_offset, SEEK_SET ) == -1 )
 	{
 		Q_sprintf( errorstring, "%s does not have a valid exports section", hInst->shortPath );
 		goto table_error;
@@ -189,7 +192,8 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 
 	if( hInst->num_ordinals > MAX_LIBRARY_EXPORTS )
 	{
-		Q_sprintf( errorstring, "%s too many exports", hInst->shortPath );
+		Q_sprintf( errorstring, "%s too many exports %i", hInst->shortPath, hInst->num_ordinals );
+		hInst->num_ordinals = 0;
 		goto table_error;
 	}
 
@@ -210,6 +214,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 	}
 
 	function_offset = export_directory.AddressOfFunctions - edata_delta;
+
 	if( FS_Seek( f, function_offset, SEEK_SET ) == -1 )
 	{
 		Q_sprintf( errorstring, "%s does not have a valid export address section", hInst->shortPath );

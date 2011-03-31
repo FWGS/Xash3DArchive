@@ -30,9 +30,10 @@ void GL_Bind( GLenum tmu, GLenum texnum )
 {
 	gltexture_t	*texture;
 
+	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
+
 	GL_SelectTexture( tmu );
 
-	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
 	texture = &r_textures[texnum];
 	if( glState.currentTextures[tmu] == texture->texnum )
 		return;
@@ -53,10 +54,11 @@ void GL_MBind( GLenum texnum )
 	gltexture_t	*texture;
 	int		tmu = 0;
 
+	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
+
 	if( glState.mtexEnabled )
 		tmu = 1;
 
-	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
 	texture = &r_textures[texnum];
 	if( glState.currentTextures[tmu] == texture->texnum )
 		return;
@@ -85,7 +87,6 @@ Just for debug (r_showtextures uses it)
 */
 void GL_SetTextureType( GLenum texnum, GLenum type )
 {
-	if( texnum <= 0 ) return;
 	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
 	r_textures[texnum].texType = type;
 }
@@ -1244,6 +1245,21 @@ static rgbdata_t *R_InitBlackTexture( texFlags_t *flags )
 	return R_InitSolidColorTexture( flags, 0 );
 }
 
+static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
+{
+	// solid color texture
+	r_image.width = BLOCK_WIDTH; 
+	r_image.height = BLOCK_HEIGHT;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * 4;
+	r_image.buffer = NULL; // empty for now
+
+	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
+
+	return &r_image;
+}
+
 /*
 ==================
 R_InitBuiltinTextures
@@ -1267,6 +1283,7 @@ static void R_InitBuiltinTextures( void )
 	{ "*black", &tr.blackTexture, R_InitBlackTexture },
 	{ "*particle", &tr.particleTexture, R_InitParticleTexture },
 	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture },
+	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture },
 	{ "*sky", &tr.skyTexture, R_InitSkyTexture },
 	{ NULL, NULL, NULL }
 	};
@@ -1298,6 +1315,7 @@ void R_InitImages( void )
 	r_numTextures = 0;
 	scaledImage = NULL;
 	Q_memset( r_textures, 0, sizeof( r_textures ));
+	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	Q_memset( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
 
 	// create unused 0-entry
@@ -1305,6 +1323,7 @@ void R_InitImages( void )
 	hash = Com_HashKey( r_textures->name, TEXTURES_HASH_SIZE );
 	r_textures->nextHash = r_texturesHashTable[hash];
 	r_texturesHashTable[hash] = r_textures;
+	r_numTextures = 1;
 
 	// build luminance table
 	for( i = 0; i < 256; i++ )

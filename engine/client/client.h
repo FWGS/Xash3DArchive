@@ -95,10 +95,11 @@ typedef struct
 	client_data_t	data;			// some clientdata holds
 
 	frame_t		frame;			// received from server
-	int		surpressCount;		// number of messages rate supressed
 	frame_t		frames[MULTIPLAYER_BACKUP];	// alloced on svc_serverdata
 	usercmd_t		cmds[MULTIPLAYER_BACKUP];	// each mesage will send several old cmds
 	local_state_t	predict[MULTIPLAYER_BACKUP];	// local client state
+	int		predictcount;		// advances with next clientdata
+
 	double		time;			// this is the time value that the client
 						// is rendering at.  always <= cls.realtime
 						// a lerp point for other data
@@ -174,6 +175,7 @@ typedef enum
 typedef enum
 {
 	scrshot_inactive,
+	scrshot_normal,	// in-game screenshot
 	scrshot_plaque,  	// levelshot
 	scrshot_savegame,	// saveshot
 	scrshot_demoshot,	// for demos preview

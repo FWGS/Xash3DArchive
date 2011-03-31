@@ -1,3 +1,7 @@
+build 1515
+
+Engine: fix some bugs
+
 build 1507
 
 Console: implement Con_NPrintf and Con_NXPrintf

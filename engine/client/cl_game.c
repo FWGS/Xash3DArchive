@@ -1344,7 +1344,8 @@ pfnSPR_Load
 */
 HSPRITE pfnSPR_Load( const char *szPicName )
 {
-	int	i;
+	int	i, j;
+	char	name[64];
 
 	if( !szPicName || !*szPicName )
 	{
@@ -1352,10 +1353,20 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		return 0;
 	}
 
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( szPicName ); i++ )
+	{
+		if( szPicName[i] == '!' ) continue;
+		else if( szPicName[i] == '\\' ) name[j] = '/';
+		else name[j] = Q_tolower( szPicName[i] );
+		j++;
+	}
+	name[j] = '\0';
+
 	// slot 0 isn't used
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
-		if( !Q_strcmp( clgame.sprites[i].name, szPicName ))
+		if( !Q_strcmp( clgame.sprites[i].name, name ))
 		{
 			// prolonge registration
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -1374,7 +1385,7 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 	}
 
 	// load new model
-	if( CL_LoadHudSprite( szPicName, &clgame.sprites[i], false ))
+	if( CL_LoadHudSprite( name, &clgame.sprites[i], false ))
 	{
 		clgame.sprites[i].needload = clgame.load_sequence;
 		return i;
@@ -2341,7 +2352,7 @@ int CL_FindModelIndex( const char *m )
 	if( cls.state == ca_active && Q_strnicmp( m, "models/player/", 14 ))
 	{
 		// tell user about problem (but don't spam console about playermodel)
-		MsgDev( D_ERROR, "CL_ModelIndex: %s not precached\n", m );
+		MsgDev( D_NOTE, "CL_ModelIndex: %s not precached\n", m );
 	}
 	return 0;
 }
@@ -2620,7 +2631,8 @@ pfnLoadMapSprite
 */
 model_t *pfnLoadMapSprite( const char *filename )
 {
-	int	i;
+	int	i, j;
+	char	name[64];
 
 	if( !filename || !*filename )
 	{
@@ -2628,10 +2640,20 @@ model_t *pfnLoadMapSprite( const char *filename )
 		return NULL;
 	}
 
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '!' ) continue;
+		else if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = Q_tolower( filename[i] );
+		j++;
+	}
+	name[j] = '\0';
+
 	// slot 0 isn't used
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
-		if( !Q_strcmp( clgame.sprites[i].name, filename ))
+		if( !Q_strcmp( clgame.sprites[i].name, name ))
 		{
 			// prolonge registration
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -2650,7 +2672,7 @@ model_t *pfnLoadMapSprite( const char *filename )
 	}
 
 	// load new map sprite
-	if( CL_LoadHudSprite( filename, &clgame.sprites[i], true ))
+	if( CL_LoadHudSprite( name, &clgame.sprites[i], true ))
 	{
 		clgame.sprites[i].needload = clgame.load_sequence;
 		return &clgame.sprites[i];

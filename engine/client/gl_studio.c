@@ -13,6 +13,10 @@
 #include "gl_local.h"
 #include "cl_tent.h"
 
+// NOTE: enable this if you want merge both 'model' and 'modelT' files into one model slot.
+// otherwise it's uses two slots in models[] array for models with external textures
+// #define STUDIO_MERGE_TEXTURES
+
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
 
 static vec3_t hullcolor[8] = 
@@ -76,6 +80,7 @@ mstudiomodel_t		*m_pSubModel;
 mstudiobodyparts_t		*m_pBodyPart;
 player_info_t		*m_pPlayerInfo;
 studiohdr_t		*m_pStudioHeader;
+studiohdr_t		*m_pTextureHeader;
 float			m_flGaitMovement;
 int			g_nTopColor, g_nBottomColor;	// remap colors
 int			g_nFaceFlags;
@@ -1227,9 +1232,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		}
 		else
 		{
-			if( RI.currententity == &clgame.viewent )
-				CrossProduct( tmp, RI.vright, chromeupvec );
-			else CrossProduct( tmp, RI.vieworg, chromeupvec );
+			CrossProduct( tmp, RI.vright, chromeupvec );
 			VectorNormalize( chromeupvec );
 			CrossProduct( tmp, chromeupvec, chromerightvec );
 			VectorNormalize( chromerightvec );
@@ -1579,10 +1582,12 @@ static void R_StudioSetupSkin( mstudiotexture_t *ptexture, int index )
 	short	*pskinref;
 	int	m_skinnum;
 
+	if( !m_pTextureHeader ) return;
+
 	m_skinnum = RI.currententity->curstate.skin;
-	pskinref = (short *)((byte *)m_pStudioHeader + m_pStudioHeader->skinindex);
-	if( m_skinnum != 0 && m_skinnum < m_pStudioHeader->numskinfamilies )
-		pskinref += (m_skinnum * m_pStudioHeader->numskinref);
+	pskinref = (short *)((byte *)m_pTextureHeader + m_pTextureHeader->skinindex);
+	if( m_skinnum != 0 && m_skinnum < m_pTextureHeader->numskinfamilies )
+		pskinref += (m_skinnum * m_pTextureHeader->numskinref);
 
 	GL_Bind( GL_TEXTURE0, ptexture[pskinref[index]].index );
 }
@@ -1605,21 +1610,22 @@ static void R_StudioDrawPoints( void )
 	short		*pskinref;
 	float		*av, *lv;
 
+	if( !m_pTextureHeader ) return;
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
 		g_nStudioCount++;
 
 	m_skinnum = RI.currententity->curstate.skin;	    
 	pvertbone = ((byte *)m_pStudioHeader + m_pSubModel->vertinfoindex);
 	pnormbone = ((byte *)m_pStudioHeader + m_pSubModel->norminfoindex);
-	ptexture = (mstudiotexture_t *)((byte *)m_pStudioHeader + m_pStudioHeader->textureindex);
+	ptexture = (mstudiotexture_t *)((byte *)m_pTextureHeader + m_pTextureHeader->textureindex);
 
 	pmesh = (mstudiomesh_t *)((byte *)m_pStudioHeader + m_pSubModel->meshindex);
 	pstudioverts = (vec3_t *)((byte *)m_pStudioHeader + m_pSubModel->vertindex);
 	pstudionorms = (vec3_t *)((byte *)m_pStudioHeader + m_pSubModel->normindex);
 
-	pskinref = (short *)((byte *)m_pStudioHeader + m_pStudioHeader->skinindex);
-	if( m_skinnum != 0 && m_skinnum < m_pStudioHeader->numskinfamilies )
-		pskinref += (m_skinnum * m_pStudioHeader->numskinref);
+	pskinref = (short *)((byte *)m_pTextureHeader + m_pTextureHeader->skinindex);
+	if( m_skinnum != 0 && m_skinnum < m_pTextureHeader->numskinfamilies )
+		pskinref += (m_skinnum * m_pTextureHeader->numskinref);
 
 	for( i = 0; i < m_pSubModel->numverts; i++ )
 		Matrix3x4_VectorTransform( g_bonestransform[pvertbone[i]], pstudioverts[i], g_xformverts[i] );
@@ -1988,6 +1994,38 @@ void R_StudioSetForceFaceFlags( int flags )
 
 /*
 ===============
+R_StudioSetupTextureHeader
+
+===============
+*/
+void R_StudioSetupTextureHeader( void )
+{
+#ifndef STUDIO_MERGE_TEXTURES
+	if( !m_pStudioHeader->numtextures || !m_pStudioHeader->textureindex )
+	{
+		string	texturename;		
+		model_t	*textures;
+
+		Q_strncpy( texturename, R_StudioTexName( RI.currentmodel ), sizeof( texturename ));
+		textures = Mod_ForName( texturename, false );
+
+		if( !textures )
+		{
+			m_pTextureHeader = NULL;
+			return;
+		}
+
+		m_pTextureHeader = (studiohdr_t *)Mod_Extradata( textures );
+	}
+	else
+#endif
+	{
+		m_pTextureHeader = m_pStudioHeader;
+	}
+}
+
+/*
+===============
 pfnStudioSetHeader
 
 ===============
@@ -1995,6 +2033,8 @@ pfnStudioSetHeader
 void R_StudioSetHeader( studiohdr_t *pheader )
 {
 	m_pStudioHeader = pheader;
+
+	R_StudioSetupTextureHeader ();
 }
 
 /*
@@ -2724,7 +2764,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 	if( !phdr ) return;	// bad model
 
 	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
-
+#ifdef STUDIO_MERGE_TEXTURES
 	if( phdr->numtextures == 0 )
 	{
 		studiohdr_t	*thdr;
@@ -2767,7 +2807,11 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 		Q_memcpy( loadmodel->cache.data, buffer, phdr->texturedataindex );
 		phdr->length = phdr->texturedataindex;	// update model size
 	}
-
+#else
+	// just copy model into memory
+	loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
+	Q_memcpy( loadmodel->cache.data, buffer, phdr->length );
+#endif
 	// setup bounding box
 	VectorCopy( phdr->bbmin, loadmodel->mins );
 	VectorCopy( phdr->bbmax, loadmodel->maxs );

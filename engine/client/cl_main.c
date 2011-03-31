@@ -1127,6 +1127,8 @@ void CL_PrepVideo( void )
 	// invalidate all decal indexes
 	Q_memset( cl.decal_index, 0, sizeof( cl.decal_index ));
 
+	R_NewMap(); // tell the render about new map
+
 	// release unused SpriteTextures
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
@@ -1137,8 +1139,6 @@ void CL_PrepVideo( void )
 
 	Mod_FreeUnused ();
 	CL_ClearWorld ();
-
-	R_NewMap();		// tell the render about new map
 
 	Cvar_SetFloat( "scr_loading", 100.0f );	// all done
 

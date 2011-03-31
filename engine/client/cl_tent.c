@@ -963,7 +963,7 @@ TEMPENTITY *CL_TempModel( const vec3_t pos, const vec3_t dir, const vec3_t angle
 	VectorCopy( dir, pTemp->entity.baseline.origin );
 
 	pTemp->entity.curstate.body = 0;
-	pTemp->flags = (FTENT_COLLIDEWORLD|FTENT_FADEOUT|FTENT_GRAVITY|FTENT_ROTATE);
+	pTemp->flags = (FTENT_COLLIDEWORLD|FTENT_GRAVITY|FTENT_ROTATE);
 	pTemp->entity.baseline.angles[0] = Com_RandomFloat( -255, 255 );
 	pTemp->entity.baseline.angles[1] = Com_RandomFloat( -255, 255 );
 	pTemp->entity.baseline.angles[2] = Com_RandomFloat( -255, 255 );

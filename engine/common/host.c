@@ -597,7 +597,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 		host.type = HOST_CREDITS;
 		host.con_showalways = true;
 		Con_CreateConsole();
-		Sys_Break( show_credits, szTemp );
+		Sys_Break( show_credits, Q_timestamp( TIME_YEAR_ONLY ));
 	}
 
 	Con_CreateConsole();
