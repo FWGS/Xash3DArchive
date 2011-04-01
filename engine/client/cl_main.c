@@ -772,12 +772,6 @@ CL_ClearState
 */
 void CL_ClearState( void )
 {
-	if( !cls.changelevel ) 
-	{
-		// continue playing if we are changing level
-		S_StopBackgroundTrack ();
-	}
-
 	S_StopAllSounds ();
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
@@ -842,6 +836,7 @@ void CL_Disconnect( void )
 	CL_SendDisconnectMessage();
 	CL_ClearState ();
 
+	S_StopBackgroundTrack ();
 	SCR_EndLoadingPlaque (); // get rid of loading plaque
 
 	// clear the network channel, too.
@@ -1468,6 +1463,9 @@ void CL_Escape_f( void )
 	if( cls.key_dest == key_menu )
 		return;
 
+	// the final credits is running
+	if( UI_CreditsActive( )) return;
+
 	if( cls.state == ca_cinematic )
 		SCR_StopCinematic();
 	else UI_SetActiveMenu( true );
@@ -1665,13 +1663,10 @@ void CL_Init( void )
 	CL_InitLocal();
 
 	R_Init();	// init renderer
+	S_Init();	// init sound
 
 	if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
 		Host_Error( "can't initialize client.dll\n" );
-
-	// NOTE: hlfx has nasty hack with SetWindowHook which do mouse lag
-	// we must initialize sound after loading client.dll to avoid it
-	S_Init();	// init sound
 
 	cls.initialized = true;
 	cl.maxclients = 1; // allow to drawing player in menu

@@ -164,6 +164,9 @@ static void UI_LanGame_GetGamesList( void )
 	// calculate number of visible rows
 	uiLanGame.gameList.numRows = (uiLanGame.gameList.generic.height2 / uiLanGame.gameList.generic.charHeight) - 2;
 	if( uiLanGame.gameList.numRows > uiLanGame.gameList.numItems ) uiLanGame.gameList.numRows = uiLanGame.gameList.numItems;
+
+	if( uiStatic.numServers )
+		uiLanGame.joinGame.generic.flags &= ~QMF_GRAYED;
 }
 
 /*
@@ -299,7 +302,7 @@ static void UI_LanGame_Init( void )
 
 	uiLanGame.joinGame.generic.id = ID_JOINGAME;
 	uiLanGame.joinGame.generic.type = QMTYPE_BM_BUTTON;
-	uiLanGame.joinGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
+	uiLanGame.joinGame.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_GRAYED;
 	uiLanGame.joinGame.generic.x = 72;
 	uiLanGame.joinGame.generic.y = 230;
 	uiLanGame.joinGame.generic.name = "Join game";
@@ -453,6 +456,9 @@ UI_LanGame_Menu
 */
 void UI_LanGame_Menu( void )
 {
+	if ( gMenu.m_gameinfo.gamemode == GAME_SINGLEPLAYER_ONLY )
+		return;
+
 	UI_LanGame_Precache();
 	UI_LanGame_Init();
 

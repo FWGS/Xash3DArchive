@@ -11,14 +11,12 @@
 #define WND_HEADSIZE	wnd_caption		// some offset
 #define WND_BORDER		3			// sentinel border in pixels
 
+HICON	in_mousecursor;
 qboolean	in_mouseactive;		// false when not focus app
 qboolean	in_restore_spi;
 qboolean	in_mouseinitialized;
-int	in_originalmouseparms[3];
 int	in_mouse_oldbuttonstate;
-int	in_newmouseparms[3] = { 0, 0, 1 };
 qboolean	in_mouse_suspended;
-qboolean	in_mouseparmsvalid;
 int	in_mouse_buttons;
 RECT	window_rect, real_rect;
 uint	in_mouse_wheel;
@@ -112,7 +110,6 @@ void IN_StartupMouse( void )
 	if( Sys_CheckParm( "-nomouse" )) return; 
 
 	in_mouse_buttons = 8;
-	in_mouseparmsvalid = SystemParametersInfo( SPI_GETMOUSE, 0, in_originalmouseparms, 0 );
 	in_mouseinitialized = true;
 	in_mouse_wheel = RegisterWindowMessage( "MSWHEEL_ROLLMSG" );
 }
@@ -138,6 +135,22 @@ static qboolean IN_CursorInRect( void )
 	return true;
 }
 
+static void IN_ActivateCursor( void )
+{
+	if( cls.key_dest == key_menu )
+	{
+		while( ShowCursor( true ) < 0 );
+		SetCursor( in_mousecursor );
+	}
+}
+
+void IN_SetCursor( HICON hCursor )
+{
+	in_mousecursor = hCursor;
+
+	IN_ActivateCursor();
+}
+
 /*
 ===========
 IN_ToggleClientMouse
@@ -157,6 +170,14 @@ void IN_ToggleClientMouse( int newstate, int oldstate )
 	{
 		clgame.dllFuncs.IN_ActivateMouse();
 	}
+
+	if( newstate == key_menu )
+	{
+		in_mouseactive = false;
+		ClipCursor( NULL );
+		ReleaseCapture();
+		while( ShowCursor( true ) < 0 );
+	}
 }
 
 /*
@@ -170,8 +191,6 @@ void IN_ActivateMouse( qboolean force )
 {
 	int		width, height;
 	static int	oldstate;
-	POINT		global_pos;
-	int		x, y;
 			
 	if( !in_mouseinitialized )
 		return;
@@ -189,18 +208,10 @@ void IN_ActivateMouse( qboolean force )
 		{
 			if( in_mouse_suspended )
 			{
-				UI_GetCursorPos( &global_pos.x, &global_pos.y );
-			
 				ClipCursor( NULL );
 				ReleaseCapture();
 				while( ShowCursor( true ) < 0 );
 				UI_ShowCursor( false );
-
-				x = real_rect.left + global_pos.x;
-				y = real_rect.top + global_pos.y + WND_HEADSIZE;
-
-				// set system cursor position
-				SetCursorPos( x, y );
 			}
 		}
 
@@ -208,15 +219,8 @@ void IN_ActivateMouse( qboolean force )
 
 		if( in_mouse_suspended && IN_CursorInRect( ))
 		{
-			GetCursorPos( &global_pos );
 			in_mouse_suspended = false;
 			in_mouseactive = false; // re-initialize mouse
-
-			x = global_pos.x - real_rect.left;
-			y = global_pos.y - real_rect.top - WND_HEADSIZE;
-
-			// set menu cursor position
-			UI_SetCursorPos( x, y );
 			UI_ShowCursor( true );
 		}
 	}
@@ -224,13 +228,11 @@ void IN_ActivateMouse( qboolean force )
 	if( in_mouseactive ) return;
 	in_mouseactive = true;
 
+	if( UI_IsVisible( )) return;
+
 	if( cls.key_dest == key_game )
 	{
 		clgame.dllFuncs.IN_ActivateMouse();
-	}
-	else if( in_mouseparmsvalid )
-	{
-		in_restore_spi = SystemParametersInfo( SPI_SETMOUSE, 0, in_newmouseparms, 0 );
 	}
 
 	width = GetSystemMetrics( SM_CXSCREEN );
@@ -267,10 +269,6 @@ void IN_DeactivateMouse( void )
 	{
 		clgame.dllFuncs.IN_DeactivateMouse();
 	}
-	else if( in_restore_spi )
-	{
-		SystemParametersInfo( SPI_SETMOUSE, 0, in_originalmouseparms, 0 );
-	}
 
 	in_mouseactive = false;
 	ClipCursor( NULL );
@@ -286,23 +284,18 @@ IN_Mouse
 void IN_MouseMove( void )
 {
 	POINT	current_pos;
-	int	mx, my;
 	
-	if( !in_mouseinitialized || !in_mouseactive || in_mouse_suspended || cls.key_dest == key_game )
+	if( !in_mouseinitialized || !in_mouseactive || !UI_IsVisible( ))
 		return;
 
 	// find mouse movement
 	GetCursorPos( &current_pos );
-
-	// force the mouse to the center, so there's room to move
-	SetCursorPos( host.window_center_x, host.window_center_y );
-	mx = current_pos.x - host.window_center_x;
-	my = current_pos.y - host.window_center_y;
-
-	if(( !mx && !my ) || !UI_IsVisible( )) return;
+	ScreenToClient( host.hWnd, &current_pos );
 
 	// if the menu is visible, move the menu cursor
-	UI_MouseMove( mx, my );
+	UI_MouseMove( current_pos.x, current_pos.y );
+
+	IN_ActivateCursor();
 }
 
 /*
@@ -409,8 +402,8 @@ void Host_InputFrame( void )
 		return;
 	}
 
-	if( cl.refdef.paused && cls.key_dest == key_game )
-		shutdownMouse = true; // release mouse during pause
+	if(( cl.refdef.paused && cls.key_dest == key_game ) || cls.key_dest == key_console )
+		shutdownMouse = true; // release mouse during pause or console typeing
 	
 	if( shutdownMouse && !Cvar_VariableInteger( "fullscreen" ))
 	{
@@ -444,6 +437,9 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 	case WM_KILLFOCUS:
 		if( Cvar_VariableInteger( "fullscreen" ))
 			ShowWindow( host.hWnd, SW_SHOWMINNOACTIVE );
+		break;
+	case WM_SETCURSOR:
+		IN_ActivateCursor();
 		break;
 	case WM_MOUSEWHEEL:
 		if( !in_mouseactive ) break;

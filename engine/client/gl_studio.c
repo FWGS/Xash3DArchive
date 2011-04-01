@@ -2356,7 +2356,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	if( RI.currentmodel == NULL )
 		return 0;
 
-	m_pStudioHeader = (studiohdr_t *)Mod_Extradata( RI.currentmodel );
+	R_StudioSetHeader((studiohdr_t *)Mod_Extradata( RI.currentmodel ));
 
 	if( pplayer->gaitsequence )
 	{
@@ -2520,7 +2520,7 @@ static int R_StudioDrawModel( int flags )
 		return result;
 	}
 
-	m_pStudioHeader = (studiohdr_t *)Mod_Extradata( RI.currentmodel );
+	R_StudioSetHeader((studiohdr_t *)Mod_Extradata( RI.currentmodel ));
 
 	R_StudioSetUpTransform( RI.currententity );
 

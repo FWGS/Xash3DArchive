@@ -608,6 +608,12 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.background = BF_ReadOneBit( msg );
 	Q_strncpy( gamefolder, BF_ReadString( msg ), MAX_STRING );
 
+	if( !cls.changelevel ) 
+	{
+		// continue playing if we are changing level
+		S_StopBackgroundTrack ();
+	}
+
 	if( !CL_ChangeGame( gamefolder, false ))
 	{
 		clgame.dllFuncs.pfnVidInit();
@@ -1180,6 +1186,15 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	if( clgame.msg[i].func )
 	{
 		clgame.msg[i].func( clgame.msg[i].name, iSize, pbuf );
+
+		// HACKHACK: run final credits for Half-Life
+		// because hl1 doesn't have call END_SECTION
+		if( !Q_stricmp( clgame.msg[i].name, "HudText" ) && !Q_stricmp( GI->gamefolder, "valve" ))
+		{
+			// it's a end, so we should run credits
+			if( !Q_strcmp( (char *)pbuf, "END3" ))
+				Host_Credits();
+		}
 	}
 	else
 	{

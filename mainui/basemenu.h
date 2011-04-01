@@ -390,6 +390,7 @@ const char *UI_DefaultKey( menuFramework_s *menu, int key, int down );
 const char *UI_ActivateItem( menuFramework_s *menu, menuCommon_s *item );
 void UI_RefreshServerList( void );
 int UI_CreditsActive( void );
+void UI_DrawFinalCredits( void );
 
 void UI_CloseMenu( void );
 void UI_PushMenu( menuFramework_s *menu );

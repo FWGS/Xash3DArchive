@@ -86,6 +86,9 @@ UI_CreateGame_Begin
 */
 static void UI_CreateGame_Begin( void )
 {
+	if( !MAP_IS_VALID( uiCreateGame.mapName[uiCreateGame.mapsList.curItem] ))
+		return;	// bad map
+
 	if( CVAR_GET_FLOAT( "host_serverstate" ))
 		CLIENT_COMMAND( TRUE, "killserver\n" );
 
@@ -465,6 +468,9 @@ UI_CreateGame_Menu
 */
 void UI_CreateGame_Menu( void )
 {
+	if ( gMenu.m_gameinfo.gamemode == GAME_SINGLEPLAYER_ONLY )
+		return;
+
 	UI_CreateGame_Precache();
 	UI_CreateGame_Init();
 

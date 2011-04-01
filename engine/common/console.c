@@ -213,6 +213,8 @@ void Con_ToggleConsole_f( void )
 {
 	if( !host.developer ) return;	// disabled
 
+	if( UI_CreditsActive( )) return; // diabled by final credits
+
 	// show console only in game or by special call from menu
 	if( cls.state != ca_active || cls.key_dest == key_menu )
 		return;

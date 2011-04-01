@@ -8,6 +8,7 @@
 #include "const.h"
 #include "gl_local.h"
 #include "library.h"
+#include "input.h"
 
 static MENUAPI	GetMenuAPI;
 
@@ -941,6 +942,8 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnHostEndGame,
 	Com_RandomFloat,
 	Com_RandomLong,
+	IN_SetCursor,
+	pfnIsMapValid,
 };
 
 void UI_UnloadProgs( void )

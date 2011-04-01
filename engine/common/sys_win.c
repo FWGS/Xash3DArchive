@@ -407,7 +407,10 @@ void Sys_Error( const char *error, ... )
 	SV_SysError( text );
 
 	if( host.type == HOST_NORMAL )
-		CL_Shutdown(); // kill video
+	{
+		if( host.hWnd ) ShowWindow( host.hWnd, SW_HIDE );
+		VID_RestoreGamma();
+	}
 
 	if( host.developer > 0 )
 	{

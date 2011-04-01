@@ -208,6 +208,9 @@ UI_MultiPlayer_Menu
 */
 void UI_MultiPlayer_Menu( void )
 {
+	if ( gMenu.m_gameinfo.gamemode == GAME_SINGLEPLAYER_ONLY )
+		return;
+
 	UI_MultiPlayer_Precache();
 	UI_MultiPlayer_Init();
 

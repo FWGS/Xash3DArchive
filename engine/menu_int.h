@@ -144,6 +144,9 @@ typedef struct ui_enginefuncs_s
 	// new functions starts here 
 	float	(*pfnRandomFloat)( float flLow, float flHigh );	
 	long	(*pfnRandomLong)( long lLow, long lHigh );
+
+	void	(*pfnSetCursor)( void *hCursor );			// change cursor
+	int	(*pfnIsMapValid)( char *filename );
 } ui_enginefuncs_t;
 
 typedef struct

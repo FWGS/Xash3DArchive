@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 // ui_menu.c -- main menu interface
+#define OEMRESOURCE		// for OCR_* cursor junk
 
 #include "extdll.h"
 #include "basemenu.h"
@@ -31,7 +32,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ui_title_anim.h"
 
 cvar_t		*ui_precache;
-cvar_t		*ui_sensitivity;
 
 uiStatic_t	uiStatic;
 
@@ -280,13 +280,10 @@ UI_DrawMouseCursor
 void UI_DrawMouseCursor( void )
 {
 	menuCommon_s	*item;
-	HIMAGE		hCursor = -1;
-	int		w = UI_CURSOR_SIZE;
-	int		h = UI_CURSOR_SIZE;
+	HICON		hCursor = NULL;
 	int		i;
 
 	if( uiStatic.hideCursor ) return;
-	UI_ScaleCoords( NULL, NULL, &w, &h );
 
 	for( i = 0; i < uiStatic.menuActive->numItems; i++ )
 	{
@@ -298,17 +295,21 @@ void UI_DrawMouseCursor( void )
 		if ( !UI_CursorInRect( item->x, item->y, item->width, item->height ))
 			continue;
 
-		if ( !(item->flags & QMF_GRAYED) && item->type == QMTYPE_FIELD )
+		if ( item->flags & QMF_GRAYED )
 		{
-			hCursor = PIC_Load( UI_CURSOR_TYPING, typing_tga, sizeof( typing_tga ));
+			hCursor = (HICON)LoadCursor( NULL, (LPCTSTR)OCR_NO );
+		}
+		else
+		{
+			if( item->type == QMTYPE_FIELD )
+				hCursor = (HICON)LoadCursor( NULL, (LPCTSTR)OCR_IBEAM );
 		}
 		break;
 	}
 
-	if( hCursor == -1 ) hCursor = PIC_Load( UI_CURSOR_NORMAL, cursor_tga, sizeof( cursor_tga ));
+	if( !hCursor ) hCursor = (HICON)LoadCursor( NULL, (LPCTSTR)OCR_NORMAL );
 
-	PIC_Set( hCursor, 255, 255, 255 );
-	PIC_DrawTrans( uiStatic.cursorX, uiStatic.cursorY, w, h );
+	SET_CURSOR( hCursor );
 }
 
 /*
@@ -873,6 +874,8 @@ void UI_UpdateMenu( float flTime )
 	if( !uiStatic.initialized )
 		return;
 
+	UI_DrawFinalCredits ();
+
 	if( !uiStatic.visible )
 		return;
 
@@ -901,7 +904,6 @@ void UI_UpdateMenu( float flTime )
 
 	if( uiStatic.firstDraw )
 	{
-		UI_MouseMove( 0, 0 );
 		uiStatic.firstDraw = false;
 		static int first = TRUE;
                     
@@ -1011,11 +1013,9 @@ void UI_MouseMove( int x, int y )
 	if( !uiStatic.menuActive )
 		return;
 
-	x *= ui_sensitivity->value;
-	y *= ui_sensitivity->value;
-
-	uiStatic.cursorX += x;
-	uiStatic.cursorY += y;
+	// now menu uses absolute coordinates
+	uiStatic.cursorX = x;
+	uiStatic.cursorY = y;
 
 	if( UI_CursorInRect( 1, 1, ScreenWidth - 1, ScreenHeight - 1 ))
 		uiStatic.mouseInRect = true;
@@ -1152,8 +1152,8 @@ void UI_GetCursorPos( int *pos_x, int *pos_y )
 
 void UI_SetCursorPos( int pos_x, int pos_y )
 {
-	uiStatic.cursorX = bound( 0, pos_x, ScreenWidth );
-	uiStatic.cursorY = bound( 0, pos_y, ScreenHeight );
+//	uiStatic.cursorX = bound( 0, pos_x, ScreenWidth );
+//	uiStatic.cursorY = bound( 0, pos_y, ScreenHeight );
 	uiStatic.mouseInRect = true;
 }
 
@@ -1378,7 +1378,6 @@ void UI_Init( void )
 {
 	// register our cvars and commands
 	ui_precache = CVAR_REGISTER( "ui_precache", "0", FCVAR_ARCHIVE );
-	ui_sensitivity = CVAR_REGISTER( "ui_sensitivity", "1", FCVAR_ARCHIVE );
 
 	Cmd_AddCommand( "menu_main", UI_Main_Menu );
 	Cmd_AddCommand( "menu_newgame", UI_NewGame_Menu );

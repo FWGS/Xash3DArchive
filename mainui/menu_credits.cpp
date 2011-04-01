@@ -115,6 +115,7 @@ UI_Credits_DrawFunc
 static void UI_Credits_DrawFunc( void )
 {
 	int	i, y;
+	float	speed = 40.0f;
 	int	w = UI_MED_CHAR_WIDTH;
 	int	h = UI_MED_CHAR_HEIGHT;
 	int	color = 0;
@@ -122,12 +123,14 @@ static void UI_Credits_DrawFunc( void )
 	// draw the background first
 	if( !uiCredits.finalCredits && !CVAR_GET_FLOAT( "sv_background" ))
 		UI_DrawPic( 0, 0, 1024 * uiStatic.scaleX, 768 * uiStatic.scaleY, uiColorWhite, ART_BACKGROUND );
+	else speed = 45.0f;	// syncronize with final background track :-)
+
 	// otherwise running on cutscene
 
 	// now draw the credits
 	UI_ScaleCoords( NULL, NULL, &w, &h );
 
-	y = ScreenHeight - (( uiStatic.realTime - uiCredits.startTime ) / 40.0f );
+	y = ScreenHeight - (((gpGlobals->time * 1000) - uiCredits.startTime ) / speed );
 
 	// draw the credits
 	for ( i = 0; i < uiCredits.numLines && uiCredits.credits[i]; i++, y += 20 )
@@ -137,7 +140,7 @@ static void UI_Credits_DrawFunc( void )
 
 		if(( y < ( ScreenHeight - h ) / 2 ) && i == uiCredits.numLines - 1 )
 		{
-			if( !uiCredits.fadeTime ) uiCredits.fadeTime = uiStatic.realTime;
+			if( !uiCredits.fadeTime ) uiCredits.fadeTime = (gpGlobals->time * 1000);
 			color = UI_FadeAlpha( uiCredits.fadeTime, uiCredits.showTime );
 			if( UnpackAlpha( color ))
 				UI_DrawString( 0, ( ScreenHeight - h ) / 2, 1024 * uiStatic.scaleX, h, uiCredits.credits[i], color, true, w, h, 1, true );
@@ -235,15 +238,21 @@ static void UI_Credits_Init( void )
 	}
 
 	// run credits
-	uiCredits.startTime = uiStatic.realTime + 500; // make half-seconds delay
-	uiCredits.showTime = bound( 100, strlen( uiCredits.credits[uiCredits.numLines - 1]) * 1000, 12000 );
+	uiCredits.startTime = (gpGlobals->time * 1000) + 500; // make half-seconds delay
+	uiCredits.showTime = bound( 1000, strlen( uiCredits.credits[uiCredits.numLines - 1]) * 1000, 10000 );
 	uiCredits.fadeTime = 0; // will be determined later
 	uiCredits.active = true;
 }
 
+void UI_DrawFinalCredits( void )
+{
+	if( uiCredits.finalCredits && uiCredits.active )
+		UI_Credits_DrawFunc ();
+}
+
 int UI_CreditsActive( void )
 {
-	return uiCredits.active;
+	return uiCredits.active && uiCredits.finalCredits;
 }
 
 /*
@@ -271,6 +280,6 @@ void UI_Credits_Menu( void )
 
 void UI_FinalCredits( void )
 {
-	UI_Credits_Menu();
 	uiCredits.finalCredits = true;
+	UI_Credits_Init();
 }

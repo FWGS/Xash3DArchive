@@ -71,6 +71,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define KEY_GetOverstrike	(*g_engfuncs.pfnKeyGetOverstrikeMode)
 #define KEY_SetOverstrike	(*g_engfuncs.pfnKeySetOverstrikeMode)
 #define Key_GetState	(*g_engfuncs.pfnKeyGetState)
+#define SET_CURSOR		(*g_engfuncs.pfnSetCursor)
 	
 #define Cmd_AddCommand	(*g_engfuncs.pfnAddCommand)
 #define Cmd_RemoveCommand	(*g_engfuncs.pfnDelCommand)
@@ -87,6 +88,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define HOST_ENDGAME	(*g_engfuncs.pfnHostEndGame)
 #define GET_CLIPBOARD	(*g_engfuncs.pfnGetClipboardData)
 #define FS_SEARCH		(*g_engfuncs.pfnGetFilesList)
+#define MAP_IS_VALID	(*g_engfuncs.pfnIsMapValid)
 
 #define GET_SAVE_COMMENT	(*g_engfuncs.pfnGetSaveComment)
 #define GET_DEMO_COMMENT	(*g_engfuncs.pfnGetDemoComment)

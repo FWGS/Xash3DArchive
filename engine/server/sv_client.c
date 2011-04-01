@@ -1503,6 +1503,8 @@ void SV_Pause_f( sv_client_t *cl )
 {
 	string	message;
 
+	if( UI_CreditsActive( )) return;
+
 	if( !sv_pausable->integer )
 	{
 		SV_ClientPrintf( cl, PRINT_HIGH, "Pause not allowed.\n" );
