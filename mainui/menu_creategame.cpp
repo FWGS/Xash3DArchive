@@ -89,8 +89,8 @@ static void UI_CreateGame_Begin( void )
 	if( !MAP_IS_VALID( uiCreateGame.mapName[uiCreateGame.mapsList.curItem] ))
 		return;	// bad map
 
-	if( CVAR_GET_FLOAT( "host_serverstate" ))
-		CLIENT_COMMAND( TRUE, "killserver\n" );
+	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "maxplayers" ) == 1 )
+		HOST_ENDGAME( "end of the game" );
 
 	CVAR_SET_FLOAT( "deathmatch", 1.0f );	// FIXME
 	CVAR_SET_FLOAT( "maxplayers", atoi( uiCreateGame.maxClients.buffer ));

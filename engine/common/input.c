@@ -171,7 +171,7 @@ void IN_ToggleClientMouse( int newstate, int oldstate )
 		clgame.dllFuncs.IN_ActivateMouse();
 	}
 
-	if( newstate == key_menu )
+	if( newstate == key_menu && !cl.background )
 	{
 		in_mouseactive = false;
 		ClipCursor( NULL );
@@ -402,7 +402,7 @@ void Host_InputFrame( void )
 		return;
 	}
 
-	if(( cl.refdef.paused && cls.key_dest == key_game ) || cls.key_dest == key_console )
+	if( cl.refdef.paused && cls.key_dest == key_game )
 		shutdownMouse = true; // release mouse during pause or console typeing
 	
 	if( shutdownMouse && !Cvar_VariableInteger( "fullscreen" ))

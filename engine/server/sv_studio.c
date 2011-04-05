@@ -79,19 +79,32 @@ static void SV_HullForHitbox( const vec3_t mins, const vec3_t maxs )
 */
 /*
 ====================
-StudioSetUpTransform
+StudioPlayerBlend
+
 ====================
 */
-static void SV_StudioSetUpTransform( edict_t *ent )
+void SV_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch )
 {
-	vec3_t	ang;
-	float	scale = 1.0f;
+	// calc up/down pointing
+	*pBlend = (*pPitch * 3);
 
-	VectorCopy( ent->v.angles, ang );
-	ang[PITCH] = -ang[PITCH]; // stupid Half-Life bug
-
-	if( ent->v.scale != 0.0f && sv_allow_studio_scaling->integer ) scale = ent->v.scale;
-	Matrix3x4_CreateFromEntity( sv_studiomatrix, ang, ent->v.origin, scale );
+	if( *pBlend < pseqdesc->blendstart[0] )
+	{
+		*pPitch -= pseqdesc->blendstart[0] / 3.0f;
+		*pBlend = 0;
+	}
+	else if( *pBlend > pseqdesc->blendend[0] )
+	{
+		*pPitch -= pseqdesc->blendend[0] / 3.0f;
+		*pBlend = 255;
+	}
+	else
+	{
+		if( pseqdesc->blendend[0] - pseqdesc->blendstart[0] < 0.1f ) // catch qc error
+			*pBlend = 127;
+		else *pBlend = 255.0f * (*pBlend - pseqdesc->blendstart[0]) / (pseqdesc->blendend[0] - pseqdesc->blendstart[0]);
+		*pPitch = 0;
+	}
 }
 
 /*
@@ -462,6 +475,7 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 {
 	int		i, j, numbones;
 	int		boneused[MAXSTUDIOBONES];
+	float		scale = 1.0f;
 	double		f;
 
 	mstudiobone_t	*pbones;
@@ -494,9 +508,7 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 	{
 		numbones = sv_studiohdr->numbones;
 		for( i = 0; i < sv_studiohdr->numbones; i++ )
-		{
 			boneused[(numbones - i) - 1] = i;
-		}
 	}
 	else
 	{
@@ -539,9 +551,17 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 		}
 	}
 
+	if( SV_IsValidEdict( pEdict ) && pEdict->v.scale != 0.0f && sv_allow_studio_scaling->integer )
+		scale = pEdict->v.scale;
+	else if( SV_IsValidEdict( pEdict ) && (pEdict->v.flags & FL_CLIENT) && sv_clienttrace->value != 0.0f )
+		scale = sv_clienttrace->value * 0.5f; 
+
+	Matrix3x4_CreateFromEntity( sv_studiomatrix, angles, origin, scale );
+
 	for( j = numbones - 1; j >= 0; j-- )
 	{
 		i = boneused[j];
+
 		Matrix3x4_FromOriginQuat( bonematrix, q[i], pos[i] );
 		if( pbones[i].parent == -1 ) 
 			Matrix3x4_ConcatTransforms( sv_studiobones[i], sv_studiomatrix, bonematrix );
@@ -555,17 +575,46 @@ StudioSetupModel
 
 ====================
 */
-static qboolean SV_StudioSetupModel( edict_t *ent, int iBone )
+static qboolean SV_StudioSetupModel( edict_t *ent, int iBone, qboolean bInversePitch )
 {
 	model_t	*mod = Mod_Handle( ent->v.modelindex );
 	void	*hdr = Mod_Extradata( mod );
-
+	vec3_t	angles;
+		
 	if( !hdr ) return false;
 
 	sv_studiohdr = (studiohdr_t *)hdr;
-	SV_StudioSetUpTransform( ent );
-	pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, ent->v.angles, ent->v.origin,
-		ent->v.controller, ent->v.blending, iBone, ent );
+	VectorCopy( ent->v.angles, angles );
+
+	if( bInversePitch )
+	{
+		angles[PITCH] = -angles[PITCH];
+	}		
+
+	// calc blending for player
+	if( ent->v.flags & FL_CLIENT )
+	{
+		mstudioseqdesc_t	*pseqdesc;
+		byte		controller[4];
+		byte		blending[2];
+		int		iBlend;
+
+		pseqdesc = (mstudioseqdesc_t *)((byte *)sv_studiohdr + sv_studiohdr->seqindex) + ent->v.sequence;
+
+		SV_StudioPlayerBlend( pseqdesc, &iBlend, &angles[PITCH] );
+
+		controller[0] = controller[1] = controller[2] = controller[3] = 0x7F;
+		blending[0] = (byte)iBlend;
+		blending[1] = 0;
+
+		pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin,
+			controller, blending, iBone, ent );
+          }
+          else
+          {
+		pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin,
+			ent->v.controller, ent->v.blending, iBone, ent );
+	}
 
 	return true;
 }
@@ -862,7 +911,7 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 	if( !SV_StudioIntersect( ent, start, mins, maxs, end ))
 		return trace;
 
-	if( !SV_StudioSetupModel( ent, -1 ))	// all bones used
+	if( !SV_StudioSetupModel( ent, -1, false ))	// all bones used
 		return trace;
 
 	if( VectorCompare( start, end ))
@@ -936,7 +985,7 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 	// calculate attachment origin and angles
 	pAtt = (mstudioattachment_t *)((byte *)sv_studiohdr + sv_studiohdr->attachmentindex);
 
-	SV_StudioSetupModel( e, pAtt[iAttachment].bone );
+	SV_StudioSetupModel( e, pAtt[iAttachment].bone, true );
 
 	// compute pos and angles
 	Matrix3x4_VectorTransform( sv_studiobones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
@@ -955,7 +1004,7 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 {
-	if( !SV_StudioSetupModel( e, iBone ) || sv_studiohdr->numbones <= 0 )
+	if( !SV_StudioSetupModel( e, iBone, false ) || sv_studiohdr->numbones <= 0 )
 		return;
 
 	iBone = bound( 0, iBone, sv_studiohdr->numbones );

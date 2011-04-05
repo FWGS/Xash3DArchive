@@ -102,8 +102,8 @@
 // sound flags
 #define SND_VOLUME			(1<<0)	// a scaled byte
 #define SND_ATTENUATION		(1<<1)	// a byte
-#define SND_PITCH			(1<<2)	// a byte
-#define SND_FIXED_ORIGIN		(1<<3)	// a vector
+#define SND_LARGE_INDEX		(1<<2)	// a send sound as short
+#define SND_PITCH			(1<<3)	// a byte
 #define SND_SENTENCE		(1<<4)	// set if sound num is actually a sentence num
 #define SND_STOP			(1<<5)	// stop the sound
 #define SND_CHANGE_VOL		(1<<6)	// change sound vol

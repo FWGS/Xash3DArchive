@@ -20,7 +20,6 @@
 
 //=============================================================================
 #define MAX_MASTERS		8 			// max recipients for heartbeat packets
-#define RATE_MESSAGES	10
 
 #define SV_UPDATE_MASK	(SV_UPDATE_BACKUP - 1)
 extern int SV_UPDATE_BACKUP;
@@ -36,19 +35,18 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_HAS_LANDMARK	BIT( 2 )
 #define MAP_INVALID_VERSION	BIT( 3 )
 
+#define SV_IsValidEdict( e )	( e && !e->free )
 #define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, edict_t, area )
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - svgame.edicts))
 #define EDICT_NUM( num )	SV_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	SV_GetString( offset )
-#define MAKE_STRING(str)	SV_AllocString( str )
-#define MAX_MULTICAST	2500
+#define ALLOC_STRING(str)	SV_AllocString( str )
+#define MAKE_STRING(str)	(int)(str - svgame.globals->pStringBase)
+
+#define MAX_PUSHED_ENTS	256
 
 #define DVIS_PVS		0
 #define DVIS_PHS		1
-
-// convert msecs to float time properly
-#define sv_time()		( sv.time )
-#define SV_IsValidEdict( e )	( e && !e->free )
 
 typedef enum
 {
@@ -120,10 +118,13 @@ typedef struct server_s
 
 	// the multicast buffer is used to send a message to a set of clients
 	sizebuf_t		multicast;
-	byte		multicast_buf[MAX_MSGLEN];
+	byte		multicast_buf[NET_MAX_PAYLOAD];
 
 	sizebuf_t		signon;
-	byte		signon_buf[MAX_MSGLEN];
+	byte		signon_buf[NET_MAX_PAYLOAD];
+
+	sizebuf_t		spectator_datagram;
+	byte		spectator_buf[NET_MAX_PAYLOAD];
 
 	model_t		*worldmodel;	// pointer to world
 	uint		checksum;		// for catching cheater maps
@@ -139,7 +140,7 @@ typedef struct
 	float		latency;
 
 	clientdata_t	clientdata;
-	weapon_data_t	weapondata[32];
+	weapon_data_t	weapondata[MAX_WEAPONS];
 	int  		num_entities;
 	int  		first_entity;		// into the circular sv_packet_entities[]
 } client_frame_t;
@@ -190,8 +191,6 @@ typedef struct sv_client_s
 
 	int		listeners;		// 32 bits == MAX_CLIENTS (voice listeners)
 
-	float		addangle;			// add angles to client position
-
 	edict_t		*edict;			// EDICT_NUM(clientnum+1)
 	edict_t		*pViewEntity;		// svc_setview member
 	char		name[32];			// extracted from userinfo, color string allowed
@@ -200,14 +199,10 @@ typedef struct sv_client_s
 	// the datagram is written to by sound calls, prints, temp ents, etc.
 	// it can be harmlessly overflowed.
 	sizebuf_t		datagram;
-	byte		datagram_buf[MAX_MSGLEN];
+	byte		datagram_buf[NET_MAX_PAYLOAD];
 
 	client_frame_t	*frames;			// updates can be delta'd from here
 	event_state_t	events;
-
-	byte		*download;		// file being downloaded
-	int		downloadsize;		// total bytes (can't use EOF because of paks)
-	int		downloadcount;		// bytes sent
 
 	double		lastmessage;		// time when packet was last received
 	double		lastconnect;
@@ -243,7 +238,7 @@ typedef struct
 
 typedef struct
 {
-	char		name[32];
+	char		name[32];	// in GoldSrc max name length is 12
 	int		number;	// svc_ number
 	int		size;	// if size == -1, size come from first byte after svcnum
 } sv_user_message_t;
@@ -303,7 +298,12 @@ typedef struct
 	playermove_t	*pmove;			// pmove state
 	sv_interp_t	interp[32];		// interpolate clients
 
-	sv_pushed_t	pushed[256];		// no reason to keep array for all edicts
+#ifdef BUILD_PUSH_LIST
+	int		numpushents;		// actual count. don't forget to reset it before
+						// call SV_BuildPushList
+	edict_t		*pushlist[MAX_PUSHED_ENTS];	// array of edicts that contacted with pusher
+#endif
+	sv_pushed_t	pushed[MAX_PUSHED_ENTS];	// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
 
 	vec3_t		player_mins[4];		// 4 hulls allowed
@@ -378,6 +378,8 @@ extern	convar_t		*sv_allow_upload;
 extern	convar_t		*sv_allow_download;
 extern	convar_t		*sv_allow_studio_scaling;
 extern	convar_t		*sv_allow_studio_attachment_angles;
+extern	convar_t		*sv_allow_rotate_pushables;
+extern	convar_t		*sv_clienttrace;
 extern	convar_t		*sv_send_resources;
 extern	convar_t		*sv_send_logos;
 extern	convar_t		*sv_sendvelocity;
@@ -425,6 +427,7 @@ void SV_FreeOldEntities( void );
 qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker );	// for EntityInSolid checks
 qboolean SV_TestPlayerPosition( edict_t *ent );	// for PlayerInSolid checks
 void SV_Impact( edict_t *e1, trace_t *trace );
+qboolean SV_CanPushed( edict_t *ent );
 void SV_CheckAllEnts( void );
 
 //
@@ -463,6 +466,7 @@ void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
 edict_t *SV_FakeConnect( const char *netname );
+ void SV_ExecuteClientCommand( sv_client_t *cl, char *s );
 void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_PostRunCmd( sv_client_t *cl );
@@ -481,7 +485,6 @@ void SV_Newgame_f( void );
 //
 void SV_WriteFrameToClient( sv_client_t *client, sizebuf_t *msg );
 void SV_BuildClientFrame( sv_client_t *client );
-void SV_ClearFrames( client_frame_t **frames );
 void SV_InactivateClients( void );
 void SV_SendMessagesToAll( void );
 void SV_SkipUpdates( void );
@@ -542,6 +545,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 const char *SV_GetLatestSave( void );
 int SV_LoadGameState( char const *level, qboolean createPlayers );
 void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
+void SV_InitSaveRestore( void );
 
 //
 // sv_studio.c

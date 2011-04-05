@@ -8,19 +8,22 @@
 #include "const.h"
 #include "pm_local.h"
 
+static qboolean has_update = false;
+
 void SV_CopyPmtraceToGlobal( pmtrace_t *trace )
 {
 	svgame.globals->trace_allsolid = trace->allsolid;
 	svgame.globals->trace_startsolid = trace->startsolid;
 	svgame.globals->trace_fraction = trace->fraction;
 	svgame.globals->trace_plane_dist = trace->plane.dist;
-	svgame.globals->trace_ent = EDICT_NUM( svgame.pmove->physents[trace->ent].info );
 	svgame.globals->trace_flags = 0;
 	svgame.globals->trace_inopen = trace->inopen;
 	svgame.globals->trace_inwater = trace->inwater;
 	VectorCopy( trace->endpos, svgame.globals->trace_endpos );
 	VectorCopy( trace->plane.normal, svgame.globals->trace_plane_normal );
 	svgame.globals->trace_hitgroup = trace->hitgroup;
+	if( trace->ent == -1 ) svgame.globals->trace_ent = svgame.edicts;
+	else svgame.globals->trace_ent = EDICT_NUM( svgame.pmove->physents[trace->ent].info );
 }
 
 qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
@@ -240,12 +243,8 @@ static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 
 	trace = PM_PlayerTrace( svgame.pmove, pos, pos, PM_NORMAL, svgame.pmove->usehull, -1, NULL );
 	if( ptrace ) *ptrace = trace; 
-	return trace.ent;
-}
 
-static double Sys_FloatTime( void )
-{
-	return Sys_DoubleTime();
+	return PM_TestPlayerPosition( svgame.pmove, pos, NULL );
 }
 
 static void pfnStuckTouch( int hitent, pmtrace_t *tr )
@@ -316,32 +315,9 @@ static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull
 	return &tr;
 }
 
-static int pfnGetModelType( model_t *mod )
-{
-	if( !mod ) return mod_bad;
-	return mod->type;
-}
-
-static void pfnGetModelBounds( model_t *mod, float *mins, float *maxs )
-{
-	if( mod )
-	{
-		if( mins ) VectorCopy( mod->mins, mins );
-		if( maxs ) VectorCopy( mod->maxs, maxs );
-	}
-	else
-	{
-		MsgDev( D_ERROR, "Mod_GetBounds: NULL model\n" );
-		if( mins ) VectorClear( mins );
-		if( maxs ) VectorClear( maxs );
-	}
-}
-
 static hull_t *pfnHullForBsp( physent_t *pe, float *offset )
 {
-	float *mins = svgame.pmove->player_mins[svgame.pmove->usehull];
-	float *maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
-	return PM_HullForBsp( pe, mins, maxs, offset );
+	return PM_HullForBsp( pe, svgame.pmove, offset );
 }
 
 static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *trace )
@@ -372,21 +348,6 @@ static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
 	pe = &svgame.pmove->physents[ground];
 	return PM_TraceTexture( pe, vstart, vend );
 }			
-
-static int pfnCOM_FileSize( const char *filename )
-{
-	return FS_FileSize( filename, false );
-}
-
-static byte *pfnCOM_LoadFile( const char *path, int usehunk, int *pLength )
-{
-	return FS_LoadFile( path, pLength, false );
-}
-
-static void pfnCOM_FreeFile( void *buffer )
-{
-	if( buffer ) Mem_Free( buffer );
-}
 
 static void pfnPlaySound( int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch )
 {
@@ -424,7 +385,8 @@ static int pfnTestPlayerPositionEx( float *pos, pmtrace_t *ptrace, pfnIgnore pmF
 
 	trace = PM_PlayerTrace( svgame.pmove, pos, pos, PM_STUDIO_BOX, svgame.pmove->usehull, -1, pmFilter );
 	if( ptrace ) *ptrace = trace; 
-	return trace.ent;
+
+	return PM_TestPlayerPosition( svgame.pmove, pos, pmFilter );
 }
 
 static pmtrace_t *pfnTraceLineEx( float *start, float *end, int flags, int usehull, pfnIgnore pmFilter )
@@ -472,7 +434,7 @@ void SV_InitClientMove( void )
 	svgame.pmove->Con_NPrintf = Con_NPrintf;
 	svgame.pmove->Con_DPrintf = Con_DPrintf;
 	svgame.pmove->Con_Printf = Con_Printf;
-	svgame.pmove->Sys_FloatTime = Sys_FloatTime;
+	svgame.pmove->Sys_FloatTime = Sys_DoubleTime;
 	svgame.pmove->PM_StuckTouch = pfnStuckTouch;
 	svgame.pmove->PM_PointContents = pfnPointContents;
 	svgame.pmove->PM_TruePointContents = pfnTruePointContents;
@@ -485,9 +447,9 @@ void SV_InitClientMove( void )
 	svgame.pmove->PM_GetModelBounds = pfnGetModelBounds;	
 	svgame.pmove->PM_HullForBsp = pfnHullForBsp;
 	svgame.pmove->PM_TraceModel = pfnTraceModel;
-	svgame.pmove->COM_FileSize = pfnCOM_FileSize;
-	svgame.pmove->COM_LoadFile = pfnCOM_LoadFile;
-	svgame.pmove->COM_FreeFile = pfnCOM_FreeFile;
+	svgame.pmove->COM_FileSize = COM_FileSize;
+	svgame.pmove->COM_LoadFile = COM_LoadFile;
+	svgame.pmove->COM_FreeFile = COM_FreeFile;
 	svgame.pmove->memfgets = pfnMemFgets;
 	svgame.pmove->PM_PlaySound = pfnPlaySound;
 	svgame.pmove->PM_TraceTexture = pfnTraceTexture;
@@ -626,21 +588,15 @@ static void SV_FinishPMove( playermove_t *pmove, edict_t *clent )
 	VectorCopy( pmove->vuser2, clent->v.vuser2 );
 	VectorCopy( pmove->vuser3, clent->v.vuser3 );
 	VectorCopy( pmove->vuser4, clent->v.vuser4 );
-#if 1
+
 	if( svgame.pmove->onground == -1 )
-	{
 		clent->v.flags &= ~FL_ONGROUND;
-	}
 	else if( pmove->onground >= 0 && pmove->onground < pmove->numphysent )
 	{
 		clent->v.flags |= FL_ONGROUND;
 		clent->v.groundentity = EDICT_NUM( svgame.pmove->physents[svgame.pmove->onground].info );
 	}
-#else
-	if( pmove->onground >= 0 && pmove->onground < pmove->numphysent )
-		clent->v.groundentity = EDICT_NUM( pmove->physents[pmove->onground].info );
-	else clent->v.groundentity = NULL;
-#endif
+
 	// angles
 	// show 1/3 the pitch angle and all the roll angle	
 	if( !clent->v.fixangle )
@@ -651,8 +607,6 @@ static void SV_FinishPMove( playermove_t *pmove, edict_t *clent )
 		clent->v.angles[YAW] = clent->v.v_angle[YAW];
 	}
 }
-
-int nofind = 0;
 
 entity_state_t *SV_FindEntInPack( int index, client_frame_t *frame )
 {
@@ -683,16 +637,17 @@ int SV_UnlagCheckTeleport( vec3_t old_pos, vec3_t new_pos )
 
 void SV_SetupMoveInterpolant( sv_client_t *cl )
 {
-	int		i, j, var_C_entindex;
-	float		finalpush, lerp_msec, latency, temp, lerpFrac;
-	client_frame_t	*frame, *var_24;
-	entity_state_t	*state, *var_38_FoundEntity;
+	int		i, j, clientnum;
+	float		finalpush, lerp_msec;
+	float		latency, temp, lerpFrac;
+	client_frame_t	*frame, *frame2;
+	entity_state_t	*state, *lerpstate;
+	vec3_t		tempvec, tempvec2;
 	sv_client_t	*check;
 	sv_interp_t	*lerp;
-	vec3_t		tempvec, tempvec2;
 
 	Q_memset( svgame.interp, 0, sizeof( svgame.interp ));
-	nofind = 1;
+	has_update = false;
 
 	// don't allow unlag in singleplayer
 	if( sv_maxclients->integer <= 1 ) return;
@@ -705,7 +660,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 	if( cl->state != cs_spawned || !cl->lag_compensation )
 		return;
 
-	nofind = 0;
+	has_update = true;
 
 	for( i = 0, check = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -742,7 +697,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 
 	frame = NULL;
 
-	for( var_24 = NULL, i = 0; i < SV_UPDATE_BACKUP; i++, var_24 = frame )
+	for( frame2 = NULL, i = 0; i < SV_UPDATE_BACKUP; i++, frame2 = frame )
 	{
 		frame = &cl->frames[(cl->netchan.outgoing_sequence - 1) & SV_UPDATE_MASK];
 
@@ -779,24 +734,24 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 	if( i == SV_UPDATE_BACKUP || finalpush - frame->senttime > 1.0 )
 	{
 		Q_memset( svgame.interp, 0, sizeof( svgame.interp ));
-		nofind = 1;
+		has_update = false;
 		return;
 	}
 
-	if( var_24 == NULL )
+	if( !frame2 )
 	{
-		var_24 = frame;
+		frame2 = frame;
 		lerpFrac = 0;
 	}
 	else
 	{
-		if( var_24->senttime - frame->senttime == 0.0 )
+		if( frame2->senttime - frame->senttime == 0.0 )
 		{
 			lerpFrac = 0;
 		}
 		else
 		{
-			lerpFrac = (finalpush - frame->senttime) / (var_24->senttime - frame->senttime);
+			lerpFrac = (finalpush - frame->senttime) / (frame2->senttime - frame->senttime);
 			lerpFrac = bound( 0.0f, lerpFrac, 1.0f );
 		}
 	}
@@ -808,20 +763,20 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 		if( state->number <= 0 || state->number >= sv_maxclients->integer )
 			continue;
 
-		var_C_entindex = state->number - 1;
-		check = &svs.clients[var_C_entindex];
+		clientnum = state->number - 1;
+		check = &svs.clients[clientnum];
 
 		if( check->state != cs_spawned || check == cl )
 			continue;
 
-		lerp = &svgame.interp[var_C_entindex];
+		lerp = &svgame.interp[clientnum];
 
 		if( !lerp->active || lerp->nointerp )
 			continue;
 
-		var_38_FoundEntity = SV_FindEntInPack( state->number, var_24 );
+		lerpstate = SV_FindEntInPack( state->number, frame2 );
 
-		if( var_38_FoundEntity == NULL )
+		if( !lerpstate )
 		{
 			tempvec[0] = state->origin[0];
 			tempvec[1] = state->origin[1];
@@ -829,9 +784,9 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 		}
 		else
 		{
-			tempvec2[0] = var_38_FoundEntity->origin[0] - state->origin[0];
-			tempvec2[1] = var_38_FoundEntity->origin[1] - state->origin[1];
-			tempvec2[2] = var_38_FoundEntity->origin[2] - state->origin[2];
+			tempvec2[0] = lerpstate->origin[0] - state->origin[0];
+			tempvec2[1] = lerpstate->origin[1] - state->origin[1];
+			tempvec2[2] = lerpstate->origin[2] - state->origin[2];
 
 			VectorMA( state->origin, lerpFrac, tempvec2, tempvec );
 		}

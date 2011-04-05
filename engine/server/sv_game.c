@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2008 ©
-//		        sv_game.c - server dlls interaction
+//		         sv_game.c - gamedll interaction
 //=======================================================================
 
 #include "common.h"
@@ -18,7 +18,7 @@ static byte *bitvector;
 static int fatbytes;
 
 // exports
-typedef void (*LINK_ENTITY_FUNC)( entvars_t *pev );
+typedef void (__cdecl *LINK_ENTITY_FUNC)( entvars_t *pev );
 typedef void (__stdcall *GIVEFNPTRSTODLL)( enginefuncs_t* engfuncs, globalvars_t *pGlobals );
 
 /*
@@ -103,13 +103,16 @@ void SV_CopyTraceToGlobal( trace_t *trace )
 	svgame.globals->trace_startsolid = trace->startsolid;
 	svgame.globals->trace_fraction = trace->fraction;
 	svgame.globals->trace_plane_dist = trace->plane.dist;
-	svgame.globals->trace_ent = trace->ent;
 	svgame.globals->trace_flags = 0;
 	svgame.globals->trace_inopen = trace->inopen;
 	svgame.globals->trace_inwater = trace->inwater;
 	VectorCopy( trace->endpos, svgame.globals->trace_endpos );
 	VectorCopy( trace->plane.normal, svgame.globals->trace_plane_normal );
 	svgame.globals->trace_hitgroup = trace->hitgroup;
+
+	if( SV_IsValidEdict( trace->ent ))
+		svgame.globals->trace_ent = trace->ent;
+	else svgame.globals->trace_ent = svgame.edicts;
 }
 
 void SV_SetModel( edict_t *ent, const char *name )
@@ -121,7 +124,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 	i = SV_ModelIndex( name );
 	if( i == 0 ) return;
 
-	ent->v.model = sv.model_precache[i] - svgame.globals->pStringBase;
+	ent->v.model = MAKE_STRING( sv.model_precache[i] );
 	ent->v.modelindex = i;
 
 	mod_type = Mod_GetType( ent->v.modelindex );
@@ -146,6 +149,7 @@ float SV_AngleMod( float ideal, float current, float speed )
 		return current; 
 
 	move = ideal - current;
+
 	if( ideal > current )
 	{
 		if( move >= 180 )
@@ -156,6 +160,7 @@ float SV_AngleMod( float ideal, float current, float speed )
 		if( move <= -180 )
 			move = move + 360;
 	}
+
 	if( move > 0 )
 	{
 		if( move > speed )
@@ -166,6 +171,7 @@ float SV_AngleMod( float ideal, float current, float speed )
 		if( move < -speed )
 			move = -speed;
 	}
+
 	return anglemod( current + move );
 }
 
@@ -221,7 +227,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 	case MSG_INIT:
 		if( sv.state == ss_loading )
 		{
-			// copy signon buffer
+			// copy to signon buffer
 			BF_WriteBits( &sv.signon, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 			BF_Clear( &sv.multicast );
 			return true;
@@ -276,11 +282,17 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 		if( cl->state != cs_spawned && !reliable )
 			continue;
 
-		if( specproxy && !( cl->edict->v.flags & FL_PROXY ))
+		if( specproxy && !cl->hltv_proxy )
 			continue;
 
 		if( !cl->edict || cl->fakeclient )
 			continue;
+
+		if( ent != NULL && ent->v.groupinfo && cl->edict->v.groupinfo )
+		{
+			if(( !svs.groupop && !( cl->edict->v.groupinfo & ent->v.groupinfo )) || (svs.groupop == 1 && ( cl->edict->v.groupinfo & ent->v.groupinfo ) != 0 ))
+				continue;
+		}
 
 		// simple PAS checking in singleplayer (QW legacy)
 		if( sv_maxclients->integer == 1 && ( dest == MSG_PAS_R || dest == MSG_PAS ))
@@ -310,7 +322,8 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 				continue;
 		}
 inrange:
-		if( reliable ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
+		if( specproxy ) BF_WriteBits( &sv.spectator_datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
+		else if( reliable ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		else BF_WriteBits( &cl->datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		numsends++;
 	}
@@ -320,6 +333,13 @@ inrange:
 	return numsends;	// debug
 }
 
+/*
+=======================
+SV_CreateDecal
+
+NOTE: static decals only accepted when game is loading
+=======================
+*/
 void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags )
 {
 	if( sv.state != ss_loading ) return;
@@ -440,6 +460,13 @@ static qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t
 	return true;
 }
 
+/*
+==============
+SV_WriteEntityPatch
+
+Create entity patch for selected map
+==============
+*/
 void SV_WriteEntityPatch( const char *filename )
 {
 	file_t		*f;
@@ -462,6 +489,7 @@ void SV_WriteEntityPatch( const char *filename )
 		header = (dheader_t *)buf;
 		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 		{
+			// Blue-Shift ordering
 			lumpofs = header->lumps[LUMP_PLANES].fileofs;
 			lumplen = header->lumps[LUMP_PLANES].filelen;
 		}
@@ -490,6 +518,13 @@ void SV_WriteEntityPatch( const char *filename )
 	FS_Close( f );
 }
 
+/*
+==============
+SV_ReadEntityScript
+
+pfnMapIsValid use this
+==============
+*/
 char *SV_ReadEntityScript( const char *filename, int *flags )
 {
 	file_t		*f;
@@ -518,6 +553,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 		header = (dheader_t *)buf;
 		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 		{
+			// Blue-Shift ordering
 			lumpofs = header->lumps[LUMP_PLANES].fileofs;
 			lumplen = header->lumps[LUMP_PLANES].filelen;
 		}
@@ -548,6 +584,13 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 	return ents;
 }
 
+/*
+==============
+SV_MapIsValid
+
+Validate map
+==============
+*/
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name )
 {
 	char	*ents = NULL;
@@ -566,7 +609,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 
 		if( !need_landmark && host.developer >= 2 )
 		{
-			// not transition, 
+			// not transition 
 			Mem_Free( ents );
 
 			// skip spawnpoint checks in devmode
@@ -617,6 +660,12 @@ void SV_InitEdict( edict_t *pEdict )
 
 	Q_memset( &pEdict->v, 0, sizeof( entvars_t ));
 
+	// g-cont. trying to setup controllers here...
+	pEdict->v.controller[0] = 0x7F;
+	pEdict->v.controller[1] = 0x7F;
+	pEdict->v.controller[2] = 0x7F;
+	pEdict->v.controller[3] = 0x7F;
+
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
 	pEdict->pvPrivateData = NULL;	// will be alloced later by pfnAllocPrivateData
 	pEdict->free = false;
@@ -651,11 +700,12 @@ void SV_FreeEdict( edict_t *pEdict )
 		pEdict->pvPrivateData = NULL;
 	}
 
-//	Q_memset( &pEdict->v, 0, sizeof( entvars_t ));
+	// NOTE: don't clear all edict fields on releasing
+	// because gamedll may trying to use edict pointers and crash game (e.g. Opposing Force)
 
 	// mark edict as freed
 	pEdict->freetime = sv.time;
-	pEdict->serialnumber++; // now EHANDLE is invalidate
+	pEdict->serialnumber++; // invalidate EHANDLE's
 	pEdict->v.solid = SOLID_NOT;
 	pEdict->v.flags = 0;
 	pEdict->v.model = 0;
@@ -701,7 +751,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 
 	if( !ent )
 	{
-		// allocate new one
+		// allocate a new one
 		ent = SV_AllocEdict();
 	}
 	else if( ent->free )
@@ -717,7 +767,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	SpawnEdict = (LINK_ENTITY_FUNC)Com_GetProcAddress( svgame.hInstance, pszClassName );
 	if( !SpawnEdict )
 	{
-		// attempt to create custom entity
+		// attempt to create custom entity (Xash3D extension)
 		if( svgame.dllFuncs2.pfnCreate && svgame.dllFuncs2.pfnCreate( ent, pszClassName ) != -1 )
 			return ent;
 
@@ -754,7 +804,7 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 
 	BF_WriteWord( msg, info->index );			// send event index
 	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
-	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// TODO: delta-compressing
+	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// FIXME: use delta-compressing
 }
 
 const char *SV_ClassName( const edict_t *e )
@@ -838,6 +888,7 @@ void SV_BaselineForEntity( edict_t *pEdict )
 	// take current state as baseline
 	Q_memset( &baseline, 0, sizeof( baseline )); 
 	baseline.number = NUM_FOR_EDICT( pEdict );
+
 	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
 
 	// set entity type
@@ -927,7 +978,7 @@ int pfnModelIndex( const char *m )
 
 	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 	{
-		if( !Q_strcmp( sv.model_precache[i], m ))
+		if( !Q_stricmp( sv.model_precache[i], m ))
 			return i;
 	}
 	MsgDev( D_ERROR, "SV_ModelIndex: %s not precached\n", m );
@@ -964,10 +1015,6 @@ void pfnSetSize( edict_t *e, const float *rgflMin, const float *rgflMax )
 		return;
 	}
 
-	// ignore world silently
-	if( e == EDICT_NUM( 0 ))
-		return;
-
 	SV_SetMinMaxSize( e, rgflMin, rgflMax );
 }
 
@@ -990,7 +1037,7 @@ void pfnChangeLevel( const char* s1, const char* s2 )
 
 	last_spawncount = svs.spawncount;
 
-	// make sure we don't issue two changelevels
+	// make sure we don't issue two changelevels at one time
 	if( svs.changelevel_next_time > host.realtime )
 		return;
 
@@ -1034,7 +1081,7 @@ pfnVecToYaw
 */
 float pfnVecToYaw( const float *rgflVector )
 {
-	if( !rgflVector ) return 0;
+	if( !rgflVector ) return 0.0f;
 	return SV_VecToYaw( rgflVector );
 }
 
@@ -1170,7 +1217,7 @@ pfnFindEntityInSphere
 return NULL instead of world
 =================
 */
-edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float flRadius )
+edict_t *pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float flRadius )
 {
 	edict_t	*ent;
 	float	distSquared;
@@ -1209,7 +1256,6 @@ edict_t* pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 =================
 pfnFindClientInPVS
 
-return NULL instead of world
 =================
 */
 edict_t* pfnFindClientInPVS( edict_t *pEdict )
@@ -1241,40 +1287,6 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 
 /*
 =================
-pfnFindClientInPHS
-
-return NULL instead of world
-=================
-*/
-edict_t* pfnFindClientInPHS( edict_t *pEdict )
-{
-	edict_t		*pClient;
-	sv_client_t	*cl;
-	const float	*org;
-	int		i;
-
-	if( !SV_IsValidEdict( pEdict ))
-		return svgame.edicts;
-
-	for( i = 0; i < svgame.globals->maxClients; i++ )
-	{
-		pClient = EDICT_NUM( i + 1 );
-		if(( cl = SV_ClientFromEdict( pClient, true )) == NULL )
-			continue;
-
-		// check for SET_VIEW
-		if( SV_IsValidEdict( cl->pViewEntity ))
-			org = cl->pViewEntity->v.origin;
-		else org = pClient->v.origin;
-
-		if( SV_OriginIn( DVIS_PHS, pEdict->v.origin, org ))
-			return pClient;
-	}
-	return svgame.edicts;
-}
-
-/*
-=================
 pfnEntitiesInPVS
 
 =================
@@ -1299,7 +1311,7 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 
 		if( pEdict->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pEdict->v.aiment ))
 		{
-			// HACKHACK to transfer weapons across the levels
+			// HACKHACK to transfer weapons across the levels (Retribution issues)
 			if( pEdict->v.aiment == EDICT_NUM( 1 ))
 			{
 				pEdict->v.chain = chain;
@@ -1323,6 +1335,9 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 	return chain;
 }
 
+// disable this when QNAN error in MakeVectors will be sucessfully reached
+#define TEMPORARY_FIX_QNAN_ERROR
+
 /*
 ==============
 pfnMakeVectors
@@ -1331,29 +1346,23 @@ pfnMakeVectors
 */
 void pfnMakeVectors( const float *rgflVector )
 {
-	int	i;
-	vec3_t	inVec;
+#ifdef TEMPORARY_FIX_QNAN_ERROR
+	char	charVec[128];
+	vec3_t	outVec;
 
-	ASSERT( rgflVector != NULL );
-	VectorCopy( rgflVector, inVec );
-
-	for( i = 0; i < 3; i++ )
-	{
-		if( IS_NAN( rgflVector[i] ))
-		{
-			MsgDev( D_INFO, "SV_MakeVectors: got a NaN angle\n" );
-			inVec[i] = 0.0f;
-		}
-	}
-
-	AngleVectors( inVec, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
+	Q_snprintf( charVec, sizeof( charVec ) - 1, "%f %f %f", rgflVector[0], rgflVector[1], rgflVector[2] );
+	Q_atov( outVec, charVec, 3 );
+	AngleVectors( outVec, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
+#else
+	AngleVectors( rgflVector, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
+#endif
 }
 
 /*
 ==============
 pfnCreateEntity
 
-just allocate new one
+just allocate a new one
 ==============
 */
 edict_t* pfnCreateEntity( void )
@@ -1401,7 +1410,7 @@ edict_t* pfnCreateNamedEntity( string_t className )
 =============
 pfnMakeStatic
 
-disable entity updates to client
+move entity to client (Q1 legacy)
 =============
 */
 static void pfnMakeStatic( edict_t *ent )
@@ -1625,9 +1634,16 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
 
+	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
+
+	// not sending (because this is out of range)
+	flags &= ~SND_SPAWNING;
+
 	BF_WriteByte( &sv.multicast, svc_sound );
 	BF_WriteWord( &sv.multicast, flags );
-	BF_WriteWord( &sv.multicast, sound_idx );
+	if( flags & SND_LARGE_INDEX )
+		BF_WriteWord( &sv.multicast, sound_idx );
+	else BF_WriteByte( &sv.multicast, sound_idx );
 	BF_WriteByte( &sv.multicast, chan );
 
 	if( flags & SND_VOLUME ) BF_WriteByte( &sv.multicast, vol );
@@ -1635,7 +1651,7 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 	if( flags & SND_PITCH ) BF_WriteByte( &sv.multicast, pitch );
 
 	BF_WriteWord( &sv.multicast, entityIndex );
-	if( flags & SND_FIXED_ORIGIN ) BF_WriteBitVec3Coord( &sv.multicast, pos );
+	BF_WriteBitVec3Coord( &sv.multicast, pos );
 
 	return 1;
 }
@@ -1675,9 +1691,6 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
 
-	// send origin for first spatialize
-	flags |= SND_FIXED_ORIGIN;
-
 	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( Mod_GetType( ent->v.modelindex ) == mod_brush )
 	{
@@ -1686,7 +1699,6 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		if( flags & SND_SPAWNING )
 		{
 			msg_dest = MSG_INIT;
-			flags |= SND_FIXED_ORIGIN;	// first-time spatialize
 		}
 		else
 		{
@@ -1703,7 +1715,6 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		if( flags & SND_SPAWNING )
 		{
 			msg_dest = MSG_INIT;
-			flags |= SND_FIXED_ORIGIN;	// first-time spatialize
 		}
 		else msg_dest = MSG_PAS_R;
 	}
@@ -1716,6 +1727,11 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		flags |= SND_SENTENCE;
 		sound_idx = Q_atoi( sample + 1 );
 	}
+	else if( sample[0] == '#' && Q_isdigit( sample + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		sound_idx = Q_atoi( sample + 1 ) + 1536;
+	}
 	else
 	{
 		// precache_sound can be used twice: cache sounds when loading
@@ -1727,9 +1743,16 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
 	else entityIndex = NUM_FOR_EDICT( ent );
 
+	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
+
+	// not sending (because this is out of range)
+	flags &= ~SND_SPAWNING;
+
 	BF_WriteByte( &sv.multicast, svc_sound );
 	BF_WriteWord( &sv.multicast, flags );
-	BF_WriteWord( &sv.multicast, sound_idx );
+	if( flags & SND_LARGE_INDEX )
+		BF_WriteWord( &sv.multicast, sound_idx );
+	else BF_WriteByte( &sv.multicast, sound_idx );
 	BF_WriteByte( &sv.multicast, chan );
 
 	if( flags & SND_VOLUME ) BF_WriteByte( &sv.multicast, vol * 255 );
@@ -1737,7 +1760,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( flags & SND_PITCH ) BF_WriteByte( &sv.multicast, pitch );
 
 	BF_WriteWord( &sv.multicast, entityIndex );
-	if( flags & SND_FIXED_ORIGIN ) BF_WriteBitVec3Coord( &sv.multicast, origin );
+	BF_WriteBitVec3Coord( &sv.multicast, origin );
 
 	SV_Send( msg_dest, origin, NULL );
 }
@@ -1796,12 +1819,16 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
-	flags |= SND_FIXED_ORIGIN;
 
 	if( sample[0] == '!' && Q_isdigit( sample + 1 ))
 	{
 		flags |= SND_SENTENCE;
 		sound_idx = Q_atoi( sample + 1 );
+	}
+	else if( sample[0] == '#' && Q_isdigit( sample + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		sound_idx = Q_atoi( sample + 1 ) + 1536;
 	}
 	else
 	{
@@ -1810,9 +1837,16 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 		sound_idx = SV_SoundIndex( sample );
 	}
 
+	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
+
+	// not sending (because this is out of range)
+	flags &= ~SND_SPAWNING;
+
 	BF_WriteByte( &sv.multicast, svc_ambientsound );
 	BF_WriteWord( &sv.multicast, flags );
-	BF_WriteWord( &sv.multicast, sound_idx );
+	if( flags & SND_LARGE_INDEX )
+		BF_WriteWord( &sv.multicast, sound_idx );
+	else BF_WriteByte( &sv.multicast, sound_idx );
 	BF_WriteByte( &sv.multicast, CHAN_STATIC );
 
 	if( flags & SND_VOLUME ) BF_WriteByte( &sv.multicast, vol * 255 );
@@ -1981,6 +2015,7 @@ void pfnTraceSphere( const float *v1, const float *v2, int fNoMonsters, float ra
 =============
 pfnBoxVisible
 
+unused but working
 =============
 */
 static int pfnBoxVisible( const float *mins, const float *maxs, const byte *pset )
@@ -1997,49 +2032,40 @@ NOTE: speed is unused
 */
 void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 {
-	edict_t		*check, *bestent;
+	edict_t		*check;
 	vec3_t		start, dir, end, bestdir;
 	float		dist, bestdist;
-	qboolean		fNoFriendlyFire;
 	int		i, j;
 	trace_t		tr;
 
-	// these vairable defined in game.dll	
-	fNoFriendlyFire = Cvar_VariableValue( "mp_friendlyfire" );
+	Msg( "GetAimVector for %s\n", SV_ClassName( ent ));
 	VectorCopy( svgame.globals->v_forward, rgflReturn );	// assume failure if it returns early
 
-	if( !SV_IsValidEdict( ent ))
-	{
-		MsgDev( D_WARN, "SV_GetAimVector: invalid entity %s\n", SV_ClassName( ent ));
+	if( !SV_IsValidEdict( ent ) || (ent->v.flags & FL_FAKECLIENT))
 		return;
-	}
 
 	VectorCopy( ent->v.origin, start );
-	start[2] += 20;
+	VectorAdd( start, ent->v.view_ofs, start );
 
 	// try sending a trace straight
 	VectorCopy( svgame.globals->v_forward, dir );
 	VectorMA( start, 2048, dir, end );
 	tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent );
 
-	if( tr.ent && (tr.ent->v.takedamage == DAMAGE_AIM && fNoFriendlyFire || ent->v.team <= 0 || ent->v.team != tr.ent->v.team ))
-	{
-		VectorCopy( svgame.globals->v_forward, rgflReturn );
+	if( tr.ent && (tr.ent->v.takedamage == DAMAGE_AIM || ent->v.team <= 0 || ent->v.team != tr.ent->v.team ))
 		return;
-	}
 
 	// try all possible entities
 	VectorCopy( dir, bestdir );
-	bestdist = 0.5f;
-	bestent = NULL;
+	bestdist = Cvar_VariableValue( "sv_aim" );
 
 	check = EDICT_NUM( 1 ); // start at first client
 	for( i = 1; i < svgame.numEntities; i++, check++ )
 	{
 		if( check->v.takedamage != DAMAGE_AIM ) continue;
+      		if( check->v.flags & FL_FAKECLIENT ) continue;
+		if( ent->v.team > 0 && ent->v.team == check->v.team ) continue;
 		if( check == ent ) continue;
-		if( fNoFriendlyFire && ent->v.team > 0 && ent->v.team == check->v.team )
-			continue;	// don't aim at teammate
 		for( j = 0; j < 3; j++ )
 			end[j] = check->v.origin[j] + 0.5f * (check->v.mins[j] + check->v.maxs[j]);
 		VectorSubtract( end, start, dir );
@@ -2049,22 +2075,12 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 		tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent );
 		if( tr.ent == check )
 		{	
-			// can shoot at this one
 			bestdist = dist;
-			bestent = check;
+			VectorCopy( dir, bestdir );
 		}
 	}
 
-	if( bestent )
-	{
-		VectorSubtract( bestent->v.origin, ent->v.origin, dir );
-		dist = DotProduct( dir, svgame.globals->v_forward );
-		VectorScale( svgame.globals->v_forward, dist, end );
-		end[2] = dir[2];
-		VectorNormalize( end );
-		VectorCopy( end, rgflReturn );
-	}
-	else VectorCopy( bestdir, rgflReturn );
+	VectorCopy( bestdir, rgflReturn );
 }
 
 /*
@@ -2197,7 +2213,7 @@ int pfnDecalIndex( const char *m )
 			return i;
 	}
 
-	// throw warning
+	// throw warning (this can happens if decal not present in decals.wad)
 	MsgDev( D_WARN, "Can't find decal %s\n", m );
 
 	return 0;	
@@ -2378,7 +2394,7 @@ pfnWriteByte
 void pfnWriteByte( int iValue )
 {
 	if( iValue == -1 ) iValue = 0xFF; // convert char to byte 
-	BF_WriteByte( &sv.multicast, iValue );
+	BF_WriteByte( &sv.multicast, (byte)iValue );
 	svgame.msg_realsize++;
 }
 
@@ -2390,7 +2406,7 @@ pfnWriteChar
 */
 void pfnWriteChar( int iValue )
 {
-	BF_WriteChar( &sv.multicast, iValue );
+	BF_WriteChar( &sv.multicast, (char)iValue );
 	svgame.msg_realsize++;
 }
 
@@ -2509,7 +2525,7 @@ void pfnWriteEntity( int iValue )
 {
 	if( iValue < 0 || iValue >= svgame.numEntities )
 		Host_Error( "BF_WriteEntity: invalid entnumber %i\n", iValue );
-	BF_WriteShort( &sv.multicast, iValue );
+	BF_WriteShort( &sv.multicast, (short)iValue );
 	svgame.msg_realsize += 2;
 }
 
@@ -2558,10 +2574,6 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	{
 		Sys_Print( buffer );
 	}
-	else if( level == at_aiconsole && host.developer >= D_AICONSOLE )
-	{
-		Sys_Print( buffer );
-	}
 	else if( level == at_warning && host.developer >= D_WARN )
 	{
 		Sys_Print( va( "^3Warning:^7 %s", buffer ));
@@ -2570,6 +2582,10 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	{
 		Sys_Print( va( "^1Error:^7 %s", buffer ));
 	} 
+	else if( level == at_aiconsole && host.developer >= D_AICONSOLE )
+	{
+		Sys_Print( buffer );
+	}
 }
 
 /*
@@ -2581,7 +2597,7 @@ legacy. probably was a part of early save\restore system
 */
 static void pfnEngineFprintf( FILE *pfile, char *szFmt, ... )
 {
-	char	buffer[2048];	// must support > 1k messages
+	char	buffer[2048];
 	va_list	args;
 
 	va_start( args, szFmt );
@@ -2595,6 +2611,7 @@ static void pfnEngineFprintf( FILE *pfile, char *szFmt, ... )
 =============
 pfnBuildSoundMsg
 
+Customizable sound message
 =============
 */
 void pfnBuildSoundMsg( edict_t *pSource, int chan, const char *samp, float fvol, float attn, int fFlags, int pitch, int msg_dest, int msg_type, const float *pOrigin, edict_t *pSend )
@@ -2615,8 +2632,10 @@ void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 	ASSERT( pEdict );
 	ASSERT( pEdict->free == false );
 
-	// to avoid multiple alloc
-	pEdict->pvPrivateData = (void *)Mem_Realloc( svgame.mempool, pEdict->pvPrivateData, cb );
+	if( Mem_IsAllocated( pEdict->pvPrivateData ))
+		Mem_Free( pEdict->pvPrivateData );
+
+	pEdict->pvPrivateData = Mem_Alloc( svgame.mempool, cb );
 
 	return pEdict->pvPrivateData;
 }
@@ -2625,6 +2644,7 @@ void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 =============
 pfnPvEntPrivateData
 
+we already have copy of this function in 'enginecallback.h' :-)
 =============
 */
 void *pfnPvEntPrivateData( edict_t *pEdict )
@@ -2652,6 +2672,7 @@ void pfnFreeEntPrivateData( edict_t *pEdict )
 =============
 SV_AllocString
 
+allocate new engine string
 =============
 */
 string_t SV_AllocString( const char *szValue )
@@ -2975,39 +2996,6 @@ static void pfnGetAttachment( const edict_t *pEdict, int iAttachment, float *rgf
 
 /*
 =============
-pfnCRC32_Init
-
-=============
-*/
-void pfnCRC32_Init( dword *pulCRC )
-{
-	CRC32_Init( pulCRC );
-}
-
-/*
-=============
-pfnCRC32_ProcessBuffer
-
-=============
-*/
-void pfnCRC32_ProcessBuffer( dword *pulCRC, void *p, int len )
-{
-	CRC32_ProcessBuffer( pulCRC, p, len );
-}
-
-/*
-=============
-pfnCRC32_ProcessByte
-
-=============
-*/
-void pfnCRC32_ProcessByte( dword *pulCRC, byte ch )
-{
-	CRC32_ProcessByte( pulCRC, ch );
-}
-
-/*
-=============
 pfnCRC32_Final
 
 =============
@@ -3081,7 +3069,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 	if( pClient == pViewent ) client->pViewEntity = NULL;
 	else client->pViewEntity = (edict_t *)pViewent;
 
-	// fakeclients ignore to send client message
+	// fakeclients ignore to send client message (but can see into the trigger_camera through the PVS)
 	if( client->fakeclient ) return;
 
 	BF_WriteByte( &client->netchan.message, svc_setview );
@@ -3175,9 +3163,7 @@ uint pfnGetPlayerWONId( edict_t *e )
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->edict == e && cl->authentication_method == 0 )
-		{
 			return cl->WonID;
-		}
 	}
 	return -1;
 }
@@ -3605,6 +3591,12 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		if( flags & FEV_HOSTONLY && cl->edict != pInvoker )
 			continue;	// sending only to invoker
 
+		if( SV_IsValidEdict( pInvoker ) && pInvoker->v.groupinfo && cl->edict->v.groupinfo )
+		{
+			if(( !svs.groupop && !(cl->edict->v.groupinfo & pInvoker->v.groupinfo)) || ( svs.groupop == 1 && ( cl->edict->v.groupinfo & pInvoker->v.groupinfo )))
+				continue;
+		}
+
 		if(!( flags & FEV_GLOBAL ))
 		{
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
@@ -3761,7 +3753,7 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	{
 		if( !Mod_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))
 			return 0;
-		result = 3;	// visible passed by BoxVisible
+		result = 3; // visible passed by BoxVisible
 	}
 #endif
 	return result;
@@ -3778,11 +3770,7 @@ int pfnCanSkipPlayer( const edict_t *player )
 	sv_client_t	*cl;
 
 	cl = SV_ClientFromEdict( player, false );
-	if( cl == NULL )
-	{
-		MsgDev( D_ERROR, "SV_CanSkip: client is not connected!\n" );
-		return false;
-	}
+	if( !cl ) return false;
 
 	return cl->local_weapons;
 }
@@ -3867,9 +3855,7 @@ int pfnGetPlayerUserId( edict_t *e )
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->edict == e )
-		{
 			return cl->userid;
-		}
 	}
 
 	// couldn't find it
@@ -3878,50 +3864,7 @@ int pfnGetPlayerUserId( edict_t *e )
 
 /*
 =============
-pfnSoundTrack
-
-empty trackname - stop previous
-=============
-*/
-void pfnSoundTrack( const char *trackname, int flags )
-{
-	sizebuf_t	*msg;
-
-	if( !trackname ) return;
-
-	if( sv.state == ss_loading )
-		msg = &sv.signon;
-	else msg = &sv.reliable_datagram;
-
-	// tell the client about new user message
-	BF_WriteByte( &sv.reliable_datagram, svc_cdtrack );
-	BF_WriteString( &sv.reliable_datagram, trackname );
-}
-
-/*
-=============
-pfnDropClient
-
-=============
-*/
-void pfnDropClient( int clientIndex )
-{
-	if( clientIndex < 0 || clientIndex >= svgame.globals->maxClients )
-	{
-		MsgDev( D_ERROR, "SV_DropClient: not a client\n" );
-		return;
-	}
-	if( svs.clients[clientIndex].state != cs_spawned )
-	{
-		MsgDev( D_ERROR, "SV_DropClient: that client slot is not connected\n" );
-		return;
-	}
-	SV_DropClient( svs.clients + clientIndex );
-}
-
-/*
-=============
-pfnGetPlayerPing
+pfnGetPlayerStats
 
 =============
 */
@@ -3952,9 +3895,7 @@ void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *
 	int		i;
 
 	if( !filename || !*filename )
-	{
 		Host_Error( "SV_ForceUnmodified: bad filename string.\n" );
-	}
 
 	if( sv.state == ss_loading )
 	{
@@ -3970,35 +3911,21 @@ void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *
 				return;
 			}
 			else if( !Q_strcmp( filename, pData->name ))
-			{
 				return;
-			}
 		}
+
 		Host_Error( "SV_ForceUnmodified: MAX_MODELS limit exceeded\n" );
 	}
 	else
 	{
 		for( i = 0, pData = sv.consistency_files; i < MAX_MODELS; i++, pData++ )
 		{
-			if( !pData->name || Q_strcmp( filename, pData->name ))
-				continue;
-
-			// if we are here' we found a match.
-			return;
+			if( pData->name && !Q_strcmp( filename, pData->name ))
+				return;
 		}
+
 		Host_Error( "SV_ForceUnmodified: can only be done during precache\n" );
 	}
-}
-
-/*
-=============
-pfnAddServerCommand
-
-=============
-*/
-void pfnAddServerCommand( const char *cmd_name, void (*function)(void) )
-{
-	Cmd_AddGameCommand( cmd_name, function );
 }
 
 /*
@@ -4185,9 +4112,9 @@ static enginefuncs_t gEngfuncs =
 	pfnCmd_Argv,
 	pfnCmd_Argc,
 	pfnGetAttachment,
-	pfnCRC32_Init,
-	pfnCRC32_ProcessBuffer,
-	pfnCRC32_ProcessByte,
+	CRC32_Init,
+	CRC32_ProcessBuffer,
+	CRC32_ProcessByte,
 	pfnCRC32_Final,
 	Com_RandomLong,
 	Com_RandomFloat,
@@ -4195,7 +4122,7 @@ static enginefuncs_t gEngfuncs =
 	pfnTime,
 	pfnCrosshairAngle,
 	pfnLoadFile,
-	pfnFreeFile,
+	COM_FreeFile,
 	pfnEndSection,
 	pfnCompareFileTime,
 	pfnGetGameDir,
@@ -4239,7 +4166,7 @@ static enginefuncs_t gEngfuncs =
 	pfnCvar_DirectSet,
 	pfnForceUnmodified,
 	pfnGetPlayerStats,
-	pfnAddServerCommand,
+	Cmd_AddGameCommand,
 	pfnVoice_GetClientListening,
 	pfnVoice_SetClientListening,
 	pfnGetPlayerAuthId,
@@ -4282,7 +4209,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 		// ignore attempts to set key ""
 		if( !keyname[0] ) continue;
 
-		// "wad" field is completely ignored
+		// "wad" field is completely ignored in Xash3D
 		if( !Q_strcmp( keyname, "wad" ))
 			continue;
 
@@ -4305,7 +4232,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 		if( ++numpairs >= 256 ) break;
 	}
 	
-	ent = SV_AllocPrivateData( ent, MAKE_STRING( classname ));
+	ent = SV_AllocPrivateData( ent, ALLOC_STRING( classname ));
 
 	if( ent->v.flags & FL_KILLME )
 	{
@@ -4467,7 +4394,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	ent = EDICT_NUM( 0 );
 	if( ent->free ) SV_InitEdict( ent );
 	ent->v.model = MAKE_STRING( sv.model_precache[1] );
-	ent->v.modelindex = 1;	// world model
+	ent->v.modelindex = 1; // world model
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
 
@@ -4479,8 +4406,10 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 
 	// spawn the rest of the entities on the map
 	SV_LoadFromFile( entities );
+
+	// free memory that allocated by entpatch only
 	if( !Mem_IsAllocatedExt( sv.worldmodel->mempool, entities ))
-		Mem_Free( entities ); // only free memory that allocated by entpatch
+		Mem_Free( entities );
 
 	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.numEntities );
 }
@@ -4602,6 +4531,9 @@ qboolean SV_LoadProgs( const char *name )
 		return false;
 	}
 
+	// grab function SV_SaveGameComment
+	SV_InitSaveRestore ();
+
 	svgame.globals->pStringBase = ""; // setup string base
 	svgame.force_retouch = 0.0f;
 
@@ -4619,7 +4551,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.stringspool = Mem_AllocPool( "Server Strings" );
 
 	// fire once
-	MsgDev( D_INFO, "Dll loaded for mod %s\n", svgame.dllFuncs.pfnGetGameDescription() );
+	MsgDev( D_INFO, "Dll loaded for mod %s\n", svgame.dllFuncs.pfnGetGameDescription( ));
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();

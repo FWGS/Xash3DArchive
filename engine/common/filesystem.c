@@ -85,6 +85,7 @@ searchpath_t	*fs_searchpaths = NULL;
 searchpath_t	fs_directpath; // static direct path
 char		fs_rootdir[MAX_SYSPATH]; // engine root directory
 char		fs_basedir[MAX_SYSPATH]; // base directory of game
+char		fs_falldir[MAX_SYSPATH]; // game current directory
 char		fs_gamedir[MAX_SYSPATH]; // game current directory
 char		gs_basedir[MAX_SYSPATH]; // initial dir before loading gameinfo.txt (used for compilers too)
 qboolean		fs_ext_path = false; // attempt to read\write from ./ or ../ pathes 
@@ -873,6 +874,8 @@ void FS_Rescan( void )
 
 	if( Q_stricmp( GI->basedir, GI->gamedir ))
 		FS_AddGameHierarchy( GI->basedir, 0 );
+	if( Q_stricmp( GI->basedir, GI->falldir ))
+		FS_AddGameHierarchy( GI->falldir, 0 );
 	FS_AddGameHierarchy( GI->gamedir, FS_GAMEDIR_PATH );
 }
 
@@ -948,6 +951,9 @@ static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 
 	if( Q_strlen( GameInfo->gamedir ))
 		FS_Printf( f, "gamedir\t\t\"%s\"\n", GameInfo->gamedir );
+
+	if( Q_strlen( GameInfo->falldir ))
+		FS_Printf( f, "fallback_dir\t\"%s\"\n", GameInfo->falldir );
 
 	if( Q_strlen( GameInfo->title ))
 		FS_Printf( f, "title\t\t\"%s\"\n", GameInfo->title );
@@ -1036,6 +1042,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	defGI.max_beams = 128;
 	defGI.max_particles = 4096;
 	defGI.version = 1.0;
+	defGI.falldir[0] = '\0';
 
 	Q_strncpy( defGI.title, "New Game", sizeof( defGI.title ));
 	Q_strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
@@ -1074,6 +1081,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	GameInfo->max_beams = 128;
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
+	GameInfo->falldir[0] = '\0';
 	
 	Q_strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	Q_strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
@@ -1104,6 +1112,10 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		if( !Q_stricmp( token, "gamedir" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->gamedir );
+		}
+		if( !Q_stricmp( token, "fallback_dir" ))
+		{
+			pfile = COM_ParseFile( pfile, GameInfo->falldir );
 		}
 		else if( !Q_stricmp( token, "startmap" ))
 		{
@@ -1220,6 +1232,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	GameInfo->max_beams = 128;
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
+	GameInfo->falldir[0] = '\0';
 	
 	Q_strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	Q_strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
@@ -1246,6 +1259,12 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 			pfile = COM_ParseFile( pfile, fs_path );
 			if( Q_stricmp( fs_path, GameInfo->basedir ) || Q_stricmp( fs_path, GameInfo->gamedir ))
 				Q_strncpy( GameInfo->basedir, fs_path, sizeof( GameInfo->basedir ));
+		}
+		else if( !Q_stricmp( token, "fallback_dir" ))
+		{
+			pfile = COM_ParseFile( pfile, fs_path );
+			if( Q_stricmp( fs_path, GameInfo->basedir ) || Q_stricmp( fs_path, GameInfo->falldir ))
+				Q_strncpy( GameInfo->falldir, fs_path, sizeof( GameInfo->falldir ));
 		}
 		else if( !Q_stricmp( token, "gamedir" ))
 		{
@@ -2226,7 +2245,7 @@ file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedi
 	return file;
 }
 
-void FS_FreeFile( void *buffer )
+void COM_FreeFile( void *buffer )
 {
 	if( buffer && Mem_IsAllocatedExt( fs_mempool, buffer ))
 		Mem_Free( buffer ); 
@@ -2521,12 +2540,15 @@ qboolean FS_Rename( const char *oldname, const char *newname )
 	if( !oldname || !newname || !*oldname || !*newname )
 		return false;
 
-	Q_snprintf( oldpath, sizeof( oldpath ), "%s/%s", fs_gamedir, oldname );
-	Q_snprintf( newpath, sizeof( newpath ), "%s/%s", fs_gamedir, newname );
+	Q_snprintf( oldpath, sizeof( oldpath ), "%s%s", fs_gamedir, oldname );
+	Q_snprintf( newpath, sizeof( newpath ), "%s%s", fs_gamedir, newname );
+
+	COM_FixSlashes( oldpath );
+	COM_FixSlashes( newpath );
 
 	iRet = rename( oldpath, newpath );
 
-	return iRet;
+	return (iRet == 0);
 }
 
 /*
@@ -2544,10 +2566,11 @@ qboolean FS_Delete( const char *path )
 	if( !path || !*path )
 		return false;
 
-	Q_snprintf( real_path, sizeof( real_path ), "%s/%s", fs_gamedir, path );
+	Q_snprintf( real_path, sizeof( real_path ), "%s%s", fs_gamedir, path );
+	COM_FixSlashes( real_path );
 	iRet = remove( real_path );
 
-	return iRet;
+	return (iRet == 0);
 }
 
 /*

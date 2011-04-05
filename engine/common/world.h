@@ -32,6 +32,7 @@ typedef enum
 	AREA_SOLID,		// find any solid edicts
 	AREA_TRIGGERS,		// find all SOLID_TRIGGER edicts
 	AREA_CUSTOM,		// find all edicts with custom contents - water, lava, fog, laders etc
+	AREA_PUSHMOVE,		// find all edicts which supposed to push with MOVETYPE_PUSH
 } AREA_TYPE;
 
 typedef struct areanode_s

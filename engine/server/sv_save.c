@@ -1,10 +1,11 @@
 //=======================================================================
 //			Copyright XashXT Group 2008 ©
-//		        sv_save.c - save\restore implementation
+//		      sv_save.c - save\restore implementation
 //=======================================================================
 
 #include "common.h"
 #include "server.h"
+#include "library.h"
 #include "const.h"
 
 /*
@@ -21,6 +22,8 @@ half-life implementation of saverestore system
 
 #define SAVE_AGED_COUNT		1
 #define SAVENAME_LENGTH		128	// matches with MAX_OSPATH
+
+void (__cdecl *pfnSaveGameComment)( char *buffer, int max_length ) = NULL;
 
 typedef struct
 {
@@ -130,6 +133,11 @@ int SumBytes( SaveFileSectionsInfo_t *section )
 	return ( section->nBytesSymbols + section->nBytesDataHeaders + section->nBytesData );
 }
 
+void SV_InitSaveRestore( void )
+{
+	pfnSaveGameComment = Com_GetProcAddress( svgame.hInstance, "SV_SaveGameComment" );
+}
+
 /*
 ----------------------------------------------------------
 		SaveRestore helpers
@@ -159,7 +167,7 @@ void SaveRestore_Rebase( SAVERESTOREDATA *pSaveData )
 
 void SaveRestore_Rewind( SAVERESTOREDATA *pSaveData, int nBytes )
 {
-	if( pSaveData->size < nBytes )
+	if( nBytes > pSaveData->size )
 		nBytes = pSaveData->size;
 
 	SaveRestore_MoveCurPos( pSaveData, -nBytes );
@@ -299,21 +307,30 @@ const char *SaveRestore_StringFromSymbol( SAVERESTOREDATA *pSaveData, int token 
 
 void SV_BuildSaveComment( char *text, int maxlength )
 {
-	const char	*pName;
-	edict_t		*pWorld = EDICT_NUM( 0 );
-	float		time = sv_time();
-
-	if( pWorld && pWorld->v.message )
+	if( pfnSaveGameComment != NULL )
 	{
-		// trying to extract message from world
-		pName = STRING( pWorld->v.message );
+		// get save comment from gamedll
+		pfnSaveGameComment( text, maxlength );
 	}
 	else
 	{
-		// or use mapname
-		pName = STRING( svgame.globals->mapname );
+		const char	*pName;
+		edict_t		*pWorld = EDICT_NUM( 0 );
+		float		time = sv.time;
+
+		if( pWorld && pWorld->v.message )
+		{
+			// trying to extract message from world
+			pName = STRING( pWorld->v.message );
+		}
+		else
+		{
+			// or use mapname
+			pName = STRING( svgame.globals->mapname );
+		}
+
+		Q_snprintf( text, maxlength, "%-64.64s %02d:%02d", pName, (int)(time / 60.0f ), (int)fmod( time, 60.0f ));
 	}
-	Q_snprintf( text, maxlength, "%-64.64s %02d:%02d", pName, (int)(time / 60.0f ), (int)fmod( time, 60.0f ));
 }
 
 int SV_MapCount( const char *pPath )
@@ -338,7 +355,7 @@ int EntryInTable( SAVERESTOREDATA *pSaveData, const char *pMapName, int index )
 
 	for( i = index; i < pSaveData->connectionCount; i++ )
 	{
-		if ( !Q_strcmp( pSaveData->levelList[i].mapName, pMapName ) )
+		if ( !Q_strcmp( pSaveData->levelList[i].mapName, pMapName ))
 			return i;
 	}
 	return -1;
@@ -404,6 +421,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 
 		tr = SV_Move( testspot, vec3_origin, vec3_origin, testend, MOVE_NOMONSTERS, NULL );
 
+		// FIXME: this code may does wrong result on moving brushes e.g. func_tracktrain
 		if( tr.fraction != 1.0f && !tr.allsolid )
 		{
 			// check impact plane normal
@@ -422,7 +440,6 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
 		if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
 		if( SV_IsValidEdict( pEdict )) entityIndex = NUM_FOR_EDICT( pEdict );
-
 		SV_CreateDecal( entry->position, decalIndex, entityIndex, modelIndex, flags );
 	}
 }
@@ -437,21 +454,23 @@ void SV_ClearSaveDir( void )
 	if( !t ) return; // already empty
 
 	for( i = 0; i < t->numfilenames; i++ )
-	{
 		FS_Delete( t->filenames[i] );
-	}
+
 	Mem_Free( t );
 }
 
 int SV_IsValidSave( void )
 {
-	if( !svs.initialized || sv.state != ss_active || sv.background )
+	if( sv.background )
+		return 0;
+
+	if( !svs.initialized || sv.state != ss_active )
 	{
 		Msg( "Not playing a local game.\n" );
 		return 0;
 	}
 
-	if( CL_Active() == false )
+	if( !CL_Active( ))
 	{
 		Msg( "Can't save if not active.\n" );
 		return 0;
@@ -517,7 +536,7 @@ void SV_AgeSaveList( const char *pName, int count )
 		Q_snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
 		Q_snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
 
-		// Scroll the name list down (rename quick04.sav to quick05.sav)
+		// scroll the name list down (rename quick04.sav to quick05.sav)
 		FS_Rename( oldName, newName );
 		FS_Rename( oldImage, newImage );
 		count--;
@@ -1379,7 +1398,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 
 			SV_EntityPatchRead( pSaveData, currentLevelData.levelList[i].mapName );
 
-			pSaveData->time = sv_time(); // - header.time;
+			pSaveData->time = sv.time; // - header.time;
 			pSaveData->fUseLandmark = true;
 
 			// calculate landmark offset
@@ -1534,7 +1553,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	Cbuf_AddText( va( "saveshot \"%s\"\n", pSaveName ));
 
 	// output to disk
-	if( Q_stricmp( pSaveName, "quick" ) || Q_stricmp( pSaveName, "autosave" ))
+	if( !Q_stricmp( pSaveName, "quick" ) || !Q_stricmp( pSaveName, "autosave" ))
 		SV_AgeSaveList( pSaveName, SAVE_AGED_COUNT );
 
 	pFile = FS_Open( name, "wb", false );
@@ -1651,7 +1670,7 @@ qboolean SV_LoadGame( const char *pName )
 	if( !FS_FileExists( name, true ))
 		return false;
 
-	SCR_BeginLoadingPlaque ();
+	SCR_BeginLoadingPlaque ( false );
 
 	MsgDev( D_INFO, "Loading game from %s...\n", name );
 	SV_ClearSaveDir();
@@ -1740,14 +1759,10 @@ void SV_SaveGame( const char *pName )
 	}
 	else Q_strncpy( savename, pName, sizeof( savename ));
 
-	// make sure what oldsave is removed
-	if( FS_FileExists( va( "save/%s.sav", savename ), false ))
-		FS_Delete( va( "save/%s.sav", savename ));
-	if( FS_FileExists( va( "save/%s.bmp", savename ), false ))
-		FS_Delete( va( "save/%s.bmp", savename ));
-
 	// HACKHACK: unload previous image from memory
 	GL_FreeImage( va( "save/%s.bmp", savename ));
+
+	comment[0] = '\0';
 
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );
@@ -1838,12 +1853,14 @@ qboolean SV_GetComment( const char *savename, char *comment )
 		FS_Close( f );
 		return 0;
 	}
+
 	if( tag < SAVEGAME_VERSION )
 	{
 		Q_strncpy( comment, "<old version>", MAX_STRING );
 		FS_Close( f );
 		return 0;
 	}
+
 	if( tag > SAVEGAME_VERSION )
 	{
 		// old xash version ?
@@ -1879,8 +1896,8 @@ qboolean SV_GetComment( const char *savename, char *comment )
 	FS_Read( f, pSaveData, size );
 	pData = pSaveData;
 
-	// Allocate a table for the strings, and parse the table
-	if ( tokenSize > 0 )
+	// allocate a table for the strings, and parse the table
+	if( tokenSize > 0 )
 	{
 		pTokenList = Mem_Alloc( host.mempool, tokenCount * sizeof( char* ));
 
@@ -1910,7 +1927,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 
 	// int (fieldcount)
 	pData += sizeof( short );
-	nNumberOfFields = ( int )*pData;
+	nNumberOfFields = (int)*pData;
 	pData += nFieldSize;
 
 	// each field is a short (size), short (index of name), binary string of "size" bytes (data)

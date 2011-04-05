@@ -110,11 +110,11 @@ public:
 	CEngineSurface( Panel *embeddedPanel );
 	~CEngineSurface();	
 public:
-	virtual void setTitle( const char *title );
 	virtual Panel *getEmbeddedPanel( void );
 	virtual bool setFullscreenMode( int wide, int tall, int bpp );
 	virtual void setWindowedMode( void );
-	virtual void createPopup( Panel* embeddedPanel );
+	virtual void setTitle( const char *title ) { }
+	virtual void createPopup( Panel* embeddedPanel ) { }
 	virtual bool isWithin( int x, int y ) { return true; }
 	virtual bool hasFocus( void );
 protected:

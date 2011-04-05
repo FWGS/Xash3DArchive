@@ -68,7 +68,7 @@ void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
 void CL_WriteDemoHeader( const char *name )
 {
 	int		i, j, len;
-	char		buf_data[MAX_MSGLEN];
+	char		buf_data[NET_MAX_PAYLOAD];
 	entity_state_t	*state, nullstate;
 	movevars_t	nullmovevars;
 	sizebuf_t		buf;
@@ -289,7 +289,7 @@ reads demo data and write it to client
 void CL_ReadDemoMessage( void )
 {
 	sizebuf_t	buf;
-	char	buf_data[MAX_MSGLEN];
+	char	buf_data[NET_MAX_PAYLOAD];
 	int	r, curSize;
 
 	if( !cls.demofile )
@@ -321,7 +321,7 @@ void CL_ReadDemoMessage( void )
 
 	if( curSize > sizeof( buf_data ))
 	{
-		Host_Error( "CL_ReadDemoMessage: demoMsglen > MAX_MSGLEN\n" );
+		Host_Error( "CL_ReadDemoMessage: demoMsglen > NET_MAX_PAYLOAD\n" );
 		return;
 	}
 
@@ -389,7 +389,7 @@ CL_GetComment
 qboolean CL_GetComment( const char *demoname, char *comment )
 {
 	file_t	*demfile;
-	char     	buf_data[MAX_MSGLEN];
+	char     	buf_data[2048];
 	int	r, maxClients, curSize;
 	string	maptitle;
 	sizebuf_t	buf;

@@ -280,7 +280,6 @@ long VGUI_SurfaceWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		break;
 	case WM_CHAR:
 	case WM_SYSCHAR:
-// FIXME
 //		pApp->internalKeyTyped( VGUI_MapKey( wParam ), surface );
 		break;
 	case WM_KEYUP:

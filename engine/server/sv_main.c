@@ -7,7 +7,7 @@
 #include "server.h"
 #include "net_encode.h"
 
-#define HEARTBEAT_SECONDS	300.0 		// 300 seconds
+#define HEARTBEAT_SECONDS	300.0f 		// 300 seconds
 
 netadr_t	master_adr[MAX_MASTERS];		// address of group servers
 
@@ -23,7 +23,6 @@ convar_t	*sv_wateramp;
 convar_t	*timeout;				// seconds without any message
 convar_t	*zombietime;			// seconds to sink messages after disconnect
 convar_t	*rcon_password;			// password for remote server commands
-convar_t	*allow_download;
 convar_t	*sv_airaccelerate;
 convar_t	*sv_wateraccelerate;
 convar_t	*sv_maxvelocity;
@@ -45,13 +44,15 @@ convar_t	*sv_lighting_modulate;
 convar_t	*sv_maxclients;
 convar_t	*sv_check_errors;
 convar_t	*sv_footsteps;
-convar_t	*public_server;		// should heartbeats be sent
-convar_t	*sv_reconnect_limit;	// minimum seconds between connect messages
+convar_t	*public_server;			// should heartbeats be sent
+convar_t	*sv_reconnect_limit;		// minimum seconds between connect messages
 convar_t	*sv_failuretime;
 convar_t	*sv_allow_upload;
 convar_t	*sv_allow_download;
 convar_t	*sv_allow_studio_scaling;
 convar_t	*sv_allow_studio_attachment_angles;
+convar_t	*sv_allow_rotate_pushables;
+convar_t	*sv_clienttrace;
 convar_t	*sv_send_resources;
 convar_t	*sv_send_logos;
 convar_t	*sv_sendvelocity;
@@ -252,7 +253,7 @@ void SV_CheckCmdTimes( void )
 	double		timewindow;
 	int		i;
 
-	if( 1.0 > host.realtime - lastreset )
+	if(( host.realtime - lastreset ) < 1.0 )
 		return;
 
 	lastreset = host.realtime;
@@ -312,10 +313,15 @@ void SV_ReadPackets( void )
 		// check for packets from connected clients
 		for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 		{
-			if( cl->state == cs_free ) continue;
-			if( cl->fakeclient ) continue;
-			if( !NET_CompareBaseAdr( net_from, cl->netchan.remote_address )) continue;
-			if( cl->netchan.qport != qport ) continue;
+			if( cl->state == cs_free || cl->fakeclient )
+				continue;
+
+			if( !NET_CompareBaseAdr( net_from, cl->netchan.remote_address ))
+				continue;
+
+			if( cl->netchan.qport != qport )
+				continue;
+
 			if( cl->netchan.remote_address.port != net_from.port )
 			{
 				MsgDev( D_INFO, "SV_ReadPackets: fixing up a translated port\n");
@@ -334,7 +340,7 @@ void SV_ReadPackets( void )
 				}
 			}
 
-			// Fragmentation/reassembly sending takes priority over all game messages, want this in the future?
+			// fragmentation/reassembly sending takes priority over all game messages, want this in the future?
 			if( Netchan_IncomingReady( &cl->netchan ))
 			{
 				if( Netchan_CopyNormalFragments( &cl->netchan, &net_message ))
@@ -411,7 +417,7 @@ void SV_CheckTimeouts( void )
 	if( sv.paused && !numclients )
 	{
 		// nobody left, unpause the server
-		SV_TogglePause( "Pause released since no players are left.\n" );
+		SV_TogglePause( "Pause released since no players are left." );
 	}
 }
 
@@ -448,12 +454,13 @@ SV_IsSimulating
 */
 qboolean SV_IsSimulating( void )
 {
-	if( sv.background && CL_Active( ))
+	if( sv.background && SV_Active() && CL_Active( ))
 	{
 		if( CL_IsInConsole( ))
 			return false;
 		return true; // force simulating for background map
 	}
+
 	if( sv.hostflags & SVF_PLAYERSONLY )
 		return false;
 	if( !SV_HasActivePlayers())
@@ -626,7 +633,7 @@ void SV_Init( void )
 	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "0", CVAR_PHYSICINFO, "sky direction x (hl1 compatibility)" );
 	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", CVAR_PHYSICINFO, "sky direction y (hl1 compatibility)" );
 	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "0", CVAR_PHYSICINFO, "sky direction z (hl1 compatibility)" );
-	sv_skyname = Cvar_Get ("sv_skyname", "2desert", CVAR_PHYSICINFO, "skybox name (can be dynamically changed in-game)" );
+	sv_skyname = Cvar_Get ("sv_skyname", "desert", CVAR_PHYSICINFO, "skybox name (can be dynamically changed in-game)" );
 	sv_footsteps = Cvar_Get ("mp_footsteps", "1", CVAR_PHYSICINFO, "can hear footsteps from other players" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
@@ -636,9 +643,10 @@ void SV_Init( void )
 	timeout = Cvar_Get( "timeout", "125", CVAR_SERVERNOTIFY, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", CVAR_SERVERNOTIFY, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", CVAR_SERVERNOTIFY, "allow players to pause or not" );
-	allow_download = Cvar_Get( "allow_download", "0", CVAR_ARCHIVE, "allow download resources" );
 	sv_allow_studio_scaling = Cvar_Get( "sv_allow_studio_scaling", "0", CVAR_ARCHIVE|CVAR_PHYSICINFO, "allow to apply scale for studio models" );
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", CVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
+	sv_allow_rotate_pushables = Cvar_Get( "sv_allow_rotate_pushables", "0", CVAR_ARCHIVE, "let the pushers rotate pushables with included origin-brush" );
+	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY, "scaling factor for client hitboxes" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );
 	sv_waterfriction = Cvar_Get( "sv_waterfriction", "1", CVAR_PHYSICINFO, "how fast you slow down in water" );
@@ -692,7 +700,7 @@ to totally exit after returning from this function.
 void SV_FinalMessage( char *message, qboolean reconnect )
 {
 	sv_client_t	*cl;
-	byte		msg_buf[MAX_MSGLEN];
+	byte		msg_buf[1024];
 	sizebuf_t		msg;
 	int		i;
 	

@@ -6,8 +6,10 @@
 #include "common.h"
 #include "sound.h"
 #include "client.h"
+#include "con_nprint.h"
 #include "ref_params.h"
 
+#define MAX_DUPLICATED_CHANNELS	4	// threshold for identical static channels (probably error)
 #define SND_CLIP_DISTANCE		1024.0f
 
 dma_t		dma;
@@ -236,10 +238,21 @@ we're trying to allocate a channel for a stream sound that is
 already playing.
 =====================
 */
-channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx )
+channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx, const vec3_t pos )
 {
 	channel_t	*ch = NULL;
-	int	i;
+	int	i, dupe = 0;
+
+	// check for dupliacte sounds
+	for( i = 0; i < total_channels; i++ )
+	{
+		if( channels[i].sfx == sfx && VectorCompare( channels[i].origin, pos ))
+			dupe++;
+	}
+
+	// check for duplicated static channels (same origin and same sfx)
+	if( dupe > MAX_DUPLICATED_CHANNELS )
+		return NULL;
 
 	// check for replacement sound, or find the best one to replace
  	for( i = MAX_DYNAMIC_CHANNELS; i < total_channels; i++ )
@@ -430,7 +443,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	if( !pos ) pos = vec3_origin;
 
 	// pick a channel to play on
-	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx );
+	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx, pos );
 	else target_chan = SND_PickDynamicChannel( ent, chan, sfx );
 
 	if( !target_chan )
@@ -564,7 +577,7 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 	if( ent != 0 ) CL_GetEntitySpatialization( ent, origin, NULL );
 
 	// pick a channel to play on from the static area
-	ch = SND_PickStaticChannel( ent, sfx );
+	ch = SND_PickStaticChannel( ent, sfx, pos );
 	if( !ch ) return;
 
 	if( S_TestSoundChar( sfx->name, '!' ))
@@ -776,8 +789,9 @@ Called once each time through the main loop
 */
 void S_RenderFrame( ref_params_t *fd )
 {
-	int	i, total;
-	channel_t	*ch;
+	int		i, total;
+	con_nprint_t	info;
+	channel_t		*ch;
 
 	if( !dma.initialized ) return;
 	if( !fd ) return;	// too early
@@ -811,15 +825,21 @@ void S_RenderFrame( ref_params_t *fd )
 	// debugging output
 	if( s_show->value )
 	{
-		for( i = total = 0, ch = channels; i < MAX_CHANNELS; i++, ch++ )
+		info.color[0] = 1.0f;
+		info.color[1] = 0.6f;
+		info.color[2] = 0.0f;
+		info.time_to_live = 0.5f;
+
+		for( i = 0, total = 1, ch = channels; i < MAX_CHANNELS; i++, ch++ )
 		{
 			if( ch->sfx && ( ch->leftvol || ch->rightvol ))
 			{
-				MsgDev( D_INFO, "%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name );
+				info.index = total;
+				Con_NXPrintf( &info, "%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name );
 				total++;
 			}
 		}
-		Msg( "----(%i)---- painted: %i\n", total, paintedtime );
+		Con_NPrintf( 0, "----(%i)---- painted: %i\n", total - 1, paintedtime );
 	}
 
 	S_StreamBackgroundTrack ();
@@ -938,7 +958,7 @@ qboolean S_Init( void )
 	s_volume = Cvar_Get( "volume", "0.7", CVAR_ARCHIVE, "sound volume" );
 	s_musicvolume = Cvar_Get( "musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
 	s_mixahead = Cvar_Get( "_snd_mixahead", "0.1", CVAR_ARCHIVE, "how much sound to mix ahead of time" );
-	s_show = Cvar_Get( "s_show", "0", 0, "show playing sounds" );
+	s_show = Cvar_Get( "s_show", "0", CVAR_ARCHIVE, "show playing sounds" );
 	s_check_errors = Cvar_Get( "s_check_errors", "1", CVAR_ARCHIVE, "ignore audio engine errors" );
 	s_lerping = Cvar_Get( "s_lerping", "0", CVAR_ARCHIVE, "apply interpolation to sound output" );
 	dsp_off = Cvar_Get( "dsp_off", "0", CVAR_ARCHIVE, "set to 1 to disable all dsp processing" );

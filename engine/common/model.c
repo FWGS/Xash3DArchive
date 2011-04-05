@@ -442,6 +442,12 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		out->firstface = in->firstface;
 		out->numfaces = in->numfaces;
 
+		if( VectorIsNull( out->origin ))
+		{
+			// NOTE: zero origin after recalculating is indicated included origin brush
+			VectorAverage( out->mins, out->maxs, out->origin );
+		}
+
 		if( i == 0 || !world.loading )
 			continue; // skip the world
 
@@ -748,13 +754,6 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 	int		i, j, e;
 	mtexinfo_t	*tex;
 	mvertex_t		*v;
-
-	if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
-	{
-		surf->extents[0] = surf->extents[1] = 16384;
-		surf->texturemins[0] = surf->texturemins[1] = -8192;
-		return;
-	}
 
 	tex = surf->texinfo;
 
@@ -1522,7 +1521,9 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 
 		mod->radius = RadiusFromBounds( mod->mins, mod->maxs );
 		mod->numleafs = bm->visleafs;
-		mod->flags = 0; // clear flags
+
+		// flag 1 is indicated model with origin brush!
+		mod->flags = VectorIsNull( bm->origin ) ? 1 : 0;
 
 		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
 		{

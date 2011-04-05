@@ -830,11 +830,11 @@ static void CL_DrawLoading( float percent )
 	float	xscale, yscale, step, s2;
 
 	R_GetTextureParms( &width, &height, cls.loadingBar );
-	x = ( 640 - width ) >> 1;
-	y = ( 480 - height) >> 1;
+	x = ( clgame.scrInfo.iWidth - width ) >> 1;
+	y = ( clgame.scrInfo.iHeight - height) >> 1;
 
-	xscale = scr_width->integer / 640.0f;
-	yscale = scr_height->integer / 480.0f;
+	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
 
 	x *= xscale;
 	y *= yscale;
@@ -869,11 +869,11 @@ static void CL_DrawPause( void )
 	float	xscale, yscale;
 
 	R_GetTextureParms( &width, &height, cls.pauseIcon );
-	x = ( 640 - width ) >> 1;
-	y = ( 480 - height) >> 1;
+	x = ( clgame.scrInfo.iWidth - width ) >> 1;
+	y = ( clgame.scrInfo.iHeight - height) >> 1;
 
-	xscale = scr_width->integer / 640.0f;
-	yscale = scr_height->integer / 480.0f;
+	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
 
 	x *= xscale;
 	y *= yscale;
@@ -1737,8 +1737,15 @@ pfnServerCmd
 */
 static int pfnServerCmd( const char *szCmdString )
 {
-	// server command adding in cmds queue
-	Cbuf_AddText( va( "cmd %s\n", szCmdString ));
+	string buf;
+
+	if( !szCmdString || !szCmdString[0] )
+		return 0;
+
+	// just like the client typed "cmd xxxxx" at the console
+	Q_snprintf( buf, sizeof( buf ) - 1, "cmd %s\n", szCmdString );
+	Cbuf_AddText( buf );
+
 	return 1;
 }
 
@@ -1750,8 +1757,11 @@ pfnClientCmd
 */
 static int pfnClientCmd( const char *szCmdString )
 {
-	// client command executes immediately
-	Cmd_ExecuteString( szCmdString );
+	if( !szCmdString || !szCmdString[0] )
+		return 0;
+
+	Cbuf_AddText( szCmdString );
+	Cbuf_AddText( "\n" );
 	return 1;
 }
 
@@ -2191,7 +2201,7 @@ pfnIsSpectateOnly
 */
 static int pfnIsSpectateOnly( void )
 {
-	// FIXME: check for proxie and dev_overview 2
+	// TODO: check for proxie and dev_overview 2
 	return 0;
 }
 
@@ -2565,12 +2575,14 @@ int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 =============
 pfnGetGameDirectory
 
-FIXME: use Info_ValueForKey( cl.serverinfo, "*gamedir" ) instead ?
 =============
 */
 const char *pfnGetGameDirectory( void )
 {
-	return GI->gamedir;
+	static char	szGetGameDir[MAX_SYSPATH];
+
+	Q_sprintf( szGetGameDir, "%s/%s", host.rootdir, GI->gamedir );
+	return szGetGameDir;
 }
 
 /*
@@ -3588,7 +3600,7 @@ static cl_enginefunc_t gEngfuncs =
 	VGui_ViewportPaintBackground,
 	COM_LoadFile,
 	COM_ParseFile,
-	pfnFreeFile,
+	COM_FreeFile,
 	&gTriApi,
 	&gEfxApi,
 	&gEventApi,

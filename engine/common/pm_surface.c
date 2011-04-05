@@ -69,8 +69,8 @@ msurface_t *PM_RecursiveSurfCheck( model_t *model, mnode_t *node, vec3_t p1, vec
 
 		if( ds >= surf->texturemins[0] && dt >= surf->texturemins[1] )
 		{
-			int	s = ds - surf->texturemins[0];
-			int	t = dt - surf->texturemins[1];
+			int s = ds - surf->texturemins[0];
+			int t = dt - surf->texturemins[1];
 
 			if( s <= surf->extents[0] && t <= surf->extents[1] )
 				return surf;
@@ -101,7 +101,9 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 	if( !bmodel || bmodel->type != mod_brush )
 		return NULL;
 
-	hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, offset );
+	hull = &pe->model->hulls[0];
+	VectorSubtract( hull->clip_mins, vec3_origin, offset );
+	VectorAdd( offset, pe->origin, offset );
 
 	VectorSubtract( start, offset, start_l );
 	VectorSubtract( end, offset, end_l );
@@ -111,7 +113,7 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 	{
 		matrix4x4	imatrix;
 
-		Matrix4x4_CreateFromEntity( matrix, pe->angles, pe->origin, 1.0f );
+		Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );

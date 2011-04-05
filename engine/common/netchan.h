@@ -180,7 +180,7 @@ typedef struct netchan_s
 
 extern netadr_t		net_from;
 extern sizebuf_t		net_message;
-extern byte		net_message_buffer[MAX_MSGLEN];
+extern byte		net_message_buffer[NET_MAX_PAYLOAD];
 extern convar_t		*net_speeds;
 extern int		net_drop;
 

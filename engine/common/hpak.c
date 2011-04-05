@@ -852,17 +852,17 @@ void HPAK_RemoveLump( const char *name, resource_t *resource )
 
 void HPAK_List_f( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 void HPAK_Extract_f( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 void HPAK_Remove_f( void )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 void HPAK_Validate_f( void )

@@ -157,54 +157,32 @@ PM_HullForBsp
 assume physent is valid
 ==================
 */
-hull_t *PM_HullForBsp( physent_t *pe, const vec3_t mins, const vec3_t maxs, float *offset )
+hull_t *PM_HullForBsp( physent_t *pe, playermove_t *pmove, float *offset )
 {
 	hull_t	*hull;
-	model_t	*model;
-	vec3_t	hullmins, hullmaxs;
-	vec3_t	size;
 
-	// decide which clipping hull to use, based on the size
-	model = pe->model;
+	ASSERT( pe && pe->model != NULL );
 
-	if( !model || model->type != mod_brush )
+	switch( pmove->usehull )
 	{
-		// studiomodel or pushable
-		// create a temp hull from bounding box sizes
-		VectorSubtract( pe->mins, maxs, hullmins );
-		VectorSubtract( pe->maxs, mins, hullmaxs );
-		hull = PM_HullForBox( hullmins, hullmaxs );
-		VectorCopy( pe->origin, offset );
-
-		MsgDev( D_ERROR, "Entity %i SOLID_BSP with a non bsp model %i\n", pe->info, model->type );
-
-		return hull;
-	}
-	VectorSubtract( maxs, mins, size );
-
-	if( size[0] <= 8.0f )
-	{
+	case 1:
+		hull = &pe->model->hulls[3];
+		break;
+	case 2:
 		hull = &pe->model->hulls[0];
-		VectorCopy( hull->clip_mins, offset ); 
-	}
-	else
-	{
-		if( size[0] <= 36.0f )
-		{
-			if( size[2] <= 36.0f )
-				hull = &pe->model->hulls[3];
-			else hull = &pe->model->hulls[1];
-		}
-		else hull = &pe->model->hulls[2];
-
-		VectorSubtract( hull->clip_mins, mins, offset );
+		break;
+	case 3:
+		hull = &pe->model->hulls[2];
+		break;
+	default:
+		hull = &pe->model->hulls[1];
+		break;
 	}
 
-	// calculate an offset value to center the origin
-	VectorAdd( offset, pe->origin, offset );
+	ASSERT( hull != NULL );
 
 	// calculate an offset value to center the origin
-	VectorSubtract( hull->clip_mins, mins, offset );
+	VectorSubtract( hull->clip_mins, pmove->player_mins[pmove->usehull], offset );
 	VectorAdd( offset, pe->origin, offset );
 
 	return hull;
@@ -366,7 +344,7 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 	{
 		matrix4x4	imatrix;
 
-		Matrix4x4_CreateFromEntity( matrix, pe->angles, pe->origin, 1.0f );
+		Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );
@@ -554,4 +532,47 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 
 	}
 	return total;
+}
+
+int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pfnIgnore pmFilter )
+{
+	physent_t	*pe;
+	hull_t	*hull;
+	float	*mins = pmove->player_mins[pmove->usehull];
+	float	*maxs = pmove->player_maxs[pmove->usehull];
+	vec3_t	offset, pos_l;
+	int	i;
+   
+	for( i = 0; i < pmove->numphysent; i++ )
+	{
+
+		pe = &pmove->physents[i];
+
+		if( pmFilter != NULL && pmFilter( pe ))
+			continue;
+
+		if( pe->model && pe->solid == SOLID_NOT && pe->skin != 0 )
+			continue;
+
+		// FIXME: check studiomodels with flag 512 by each hitbox ?
+		hull = PM_HullForEntity( pe, mins, maxs, offset );
+
+		// offset the test point appropriately for this hull.
+		VectorSubtract( pos, offset, pos_l );
+
+		// CM_TransformedPointContents :-)
+		if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
+		{
+			matrix4x4	matrix, imatrix;
+
+			Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+			Matrix4x4_Invert_Simple( imatrix, matrix );
+			Matrix4x4_VectorTransform( imatrix, pos, pos_l );
+		}
+
+		if( PM_HullPointContents( hull, hull->firstclipnode, pos_l ) == CONTENTS_SOLID )
+			return i;
+	}
+
+	return -1; // didn't hit anything
 }

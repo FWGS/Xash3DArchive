@@ -598,7 +598,7 @@ void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 		}
 	}
 
-	// ignore not solid bodies
+	// ignore not solid bodies (but pass allowed for push)
 	if( ent->v.solid == SOLID_NOT && ent->v.skin == CONTENTS_NONE )
 		return;
 
@@ -738,15 +738,13 @@ qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 	}
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent );
-#if 1
-	// FIXME: this is need to be detail testing
+
 	if( SV_IsValidEdict( blocker ) && SV_IsValidEdict( trace.ent ))
 	{
 		if( trace.ent->v.movetype == MOVETYPE_PUSH || trace.ent == blocker )
 			return trace.startsolid;
 		return false;
 	}
-#endif
 	return trace.startsolid;
 }
 
@@ -1063,7 +1061,7 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 	{
 		matrix4x4	imatrix;
 
-		Matrix4x4_CreateFromEntity( matrix, ent->v.angles, ent->v.origin, 1.0f );
+		Matrix4x4_CreateFromEntity( matrix, ent->v.angles, offset, 1.0f );
 		Matrix4x4_Invert_Simple( imatrix, matrix );
 
 		Matrix4x4_VectorTransform( imatrix, start, start_l );

@@ -92,8 +92,6 @@ typedef enum
 #define CS_TIME		16	// size of time string
 
 #define MAX_DECALS		512	// touching TE_DECAL messages, etc
-#define MAX_MSGLEN		32768	// max length of network message
-				// FIXME: replace with NET_MAX_PAYLOAD
 
 // filesystem flags
 #define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path
@@ -141,6 +139,7 @@ typedef struct gameinfo_s
 	char		gamefolder[64];	// used for change game '-game x'
 	char		basedir[64];	// main game directory (like 'id1' for Quake or 'valve' for Half-Life)
 	char		gamedir[64];	// game directory (can be match with basedir, used as primary dir and as write path
+	char		falldir[64];	// used as second basedir 
 	char		startmap[64];	// map to start singleplayer game
 	char		trainmap[64];	// map to start hazard course (if specified)
 	char		title[64];	// Game Main Title
@@ -263,6 +262,7 @@ typedef struct host_parm_s
 	qboolean		shutdown_issued;	// engine is shutting down
 	qboolean		decal_loading;	// nasty hack to tell imagelib about decal
 
+	char		rootdir[256];	// member root directory
 	char		gamefolder[64];	// it's a default gamefolder	
 	byte		*imagepool;	// imagelib mempool
 	byte		*soundpool;	// soundlib mempool
@@ -304,7 +304,9 @@ void W_Close( wfile_t *wad );
 file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
 byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
 qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len );
-void FS_FreeFile( void *buffer );
+int COM_FileSize( const char *filename );
+void COM_FixSlashes( char *pname );
+void COM_FreeFile( void *buffer );
 search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
 file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
 fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize );
@@ -564,7 +566,9 @@ int pfnAddClientCommand( const char *cmd_name, xcommand_t func );
 void pfnDelCommand( const char *cmd_name );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
+void pfnGetModelBounds( model_t *mod, float *mins, float *maxs );
 void pfnGetGameDir( char *szGetGameDir );
+int pfnGetModelType( model_t *mod );
 int pfnIsMapValid( char *filename );
 char *pfnCmd_Args( void );
 char *pfnCmd_Argv( int argc );
@@ -685,7 +689,7 @@ qboolean CL_NextDemo( void );
 void CL_Drop( void );
 void SCR_Init( void );
 void SCR_UpdateScreen( void );
-void SCR_BeginLoadingPlaque( void );
+void SCR_BeginLoadingPlaque( qboolean is_background );
 void SCR_CheckStartupVids( void );
 long SCR_GetAudioChunk( char *rawdata, long length );
 wavdata_t *SCR_GetMovieInfo( void );

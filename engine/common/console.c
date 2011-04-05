@@ -686,17 +686,16 @@ void Con_Print( const char *txt )
 
 void Con_NPrintf( int idx, char *fmt, ... )
 {
-	char	buffer[2048];	// must support > 1k messages
 	va_list	args;
 
 	if( idx < 0 || idx >= MAX_DBG_NOTIFY )
 		return;
 
-	va_start( args, fmt );
-	Q_vsnprintf( buffer, 2048, fmt, args );
-	va_end( args );
+	Q_memset( con.notify[idx].szNotify, 0, MAX_STRING );
 
-	Q_snprintf( con.notify[idx].szNotify, sizeof( con.notify[idx].szNotify ), buffer );
+	va_start( args, fmt );
+	Q_vsnprintf( con.notify[idx].szNotify, MAX_STRING, fmt, args );
+	va_end( args );
 
 	// reset values
 	con.notify[idx].expire = host.realtime + 4.0f;
@@ -706,7 +705,6 @@ void Con_NPrintf( int idx, char *fmt, ... )
 
 void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 {
-	char	buffer[2048];	// must support > 1k messages
 	va_list	args;
 
 	if( !info ) return;
@@ -714,15 +712,15 @@ void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 	if( info->index < 0 || info->index >= MAX_DBG_NOTIFY )
 		return;
 
-	va_start( args, fmt );
-	Q_vsnprintf( buffer, 2048, fmt, args );
-	va_end( args );
+	Q_memset( con.notify[info->index].szNotify, 0, MAX_STRING );
 
-	Q_snprintf( con.notify[info->index].szNotify, sizeof( con.notify[info->index].szNotify ), buffer );
+	va_start( args, fmt );
+	Q_vsnprintf( con.notify[info->index].szNotify, MAX_STRING, fmt, args );
+	va_end( args );
 
 	// setup values
 	con.notify[info->index].expire = host.realtime + info->time_to_live;
-	MakeRGBA( con.notify[info->index].color, info->color[0] * 255, info->color[1] * 255, info->color[2] * 255, 255 );
+	MakeRGBA( con.notify[info->index].color, (byte)(info->color[0] * 255), (byte)(info->color[1] * 255), (byte)(info->color[2] * 255), 255 );
 	con.draw_notify = true;
 }
 

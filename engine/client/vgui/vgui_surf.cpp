@@ -16,7 +16,6 @@ CEngineSurface :: CEngineSurface( Panel *embeddedPanel ):SurfaceBase( embeddedPa
 	_drawColor[0] = _drawColor[1] = _drawColor[2] = _drawColor[3] = 255;
 	_drawTextColor[0] = _drawTextColor[1] = _drawTextColor[2] = _drawTextColor[3] = 255;
 
-	// FIXME: this is right?
 	_surfaceExtents[0] = _surfaceExtents[1] = 0;
 	_surfaceExtents[2] = menu.globals->scrWidth;
 	_surfaceExtents[3] = menu.globals->scrHeight;
@@ -34,18 +33,6 @@ CEngineSurface :: ~CEngineSurface( void )
 Panel *CEngineSurface :: getEmbeddedPanel( void )
 {
 	return _embeddedPanel;
-}
-
-void CEngineSurface :: setTitle( const char *title )
-{
-	// TODO: implement
-	Msg( "SetTitle: %s\n", title );
-}
-
-void CEngineSurface :: createPopup( Panel* embeddedPanel )
-{
-	// TODO: implement
-	Msg( "CreatePopup()\n" );
 }
 
 bool CEngineSurface :: hasFocus( void )

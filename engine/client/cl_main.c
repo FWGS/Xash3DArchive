@@ -266,7 +266,7 @@ void Cmd_ForwardToServer( void )
 	}
 
 	cmd = Cmd_Argv( 0 );
-	if( cls.state <= ca_connected || *cmd == '-' || *cmd == '+' )
+	if( *cmd == '-' || *cmd == '+' )
 	{
 		MsgDev( D_INFO, "Unknown command \"%s\"\n", cmd );
 		return;

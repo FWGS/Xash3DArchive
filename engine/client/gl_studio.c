@@ -2004,10 +2004,12 @@ void R_StudioSetupTextureHeader( void )
 	if( !m_pStudioHeader->numtextures || !m_pStudioHeader->textureindex )
 	{
 		string	texturename;		
-		model_t	*textures;
+		model_t	*textures = NULL;
 
 		Q_strncpy( texturename, R_StudioTexName( RI.currentmodel ), sizeof( texturename ));
-		textures = Mod_ForName( texturename, false );
+
+		if( FS_FileExists( texturename, false ))
+			textures = Mod_ForName( texturename, false );
 
 		if( !textures )
 		{

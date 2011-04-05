@@ -225,7 +225,7 @@ void SCR_DrawPlaque( void )
 SCR_BeginLoadingPlaque
 ================
 */
-void SCR_BeginLoadingPlaque( void )
+void SCR_BeginLoadingPlaque( qboolean is_background )
 {
 	S_StopAllSounds();
 	cl.audio_prepped = false;	// don't play ambients
@@ -239,6 +239,7 @@ void SCR_BeginLoadingPlaque( void )
 	SCR_UpdateScreen();
 	cls.disable_screen = host.realtime;
 	cls.disable_servercount = cl.servercount;
+	cl.background = is_background;		// set right state before svc_serverdata
 }
 
 /*

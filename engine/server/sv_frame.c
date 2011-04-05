@@ -40,22 +40,6 @@ static int SV_EntityNumbers( const void *a, const void *b )
 }
 
 /*
-================
-SV_ClearFrames
-
-free client frames memory
-================
-*/
-void SV_ClearFrames( client_frame_t **frames )
-{
-	if( *frames == NULL )
-		return;
-
-	Mem_Free( *frames );
-	*frames = NULL;
-}
-
-/*
 =============
 SV_AddEntitiesToPacket
 
@@ -99,7 +83,8 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( ent->free ) continue;
 
 		// don't double add an entity through portals (already added)
-		if( ent->v.gamestate == sv.net_framenum )
+		// HACHACK: use pushmsec to keep net_framenum
+		if( ent->v.pushmsec == sv.net_framenum )
 			continue;
 
 		if( ent->v.effects & EF_REQUEST_PHS )
@@ -110,14 +95,14 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		netclient = SV_ClientFromEdict( ent, true );
 		player = ( netclient != NULL );
 
-		// clear modelindex if model is not set
+		// clear modelindex if model is not set (Opposing Force issues)
 		if( !ent->v.model ) ent->v.modelindex = 0; 
 
 		// add entity to the net packet
 		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, player, pset ))
 		{
 			// to prevent adds it twice through portals
-			ent->v.gamestate = sv.net_framenum;
+			ent->v.pushmsec = sv.net_framenum;
 
 			if( netclient && netclient->modelindex ) // apply custom model if present
 				state->modelindex = netclient->modelindex;
@@ -334,7 +319,8 @@ void SV_EmitPings( sizebuf_t *msg )
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
-		if( cl->state != cs_spawned ) continue;
+		if( cl->state != cs_spawned )
+			continue;
 
 		SV_GetPlayerStats( cl, &ping, &packet_loss );
 
@@ -391,13 +377,13 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 		break;
 	case 2:
 		BF_WriteByte( msg, svc_addangle );
-		BF_WriteBitAngle( msg, cl->addangle, 16 );
-		cl->addangle = 0;
+		BF_WriteBitAngle( msg, clent->v.avelocity[1], 16 );
+		clent->v.avelocity[1] = 0.0f;
 		break;
 	}
 
 	clent->v.fixangle = 0; // reset fixangle
-	clent->v.gamestate = 0; // reset gamestate
+	clent->v.pushmsec = 0; // reset net framenum
 	Q_memset( &frame->clientdata, 0, sizeof( frame->clientdata ));
 
 	// update clientdata_t
@@ -594,6 +580,13 @@ void SV_UpdateToReliableMessages( void )
 		BF_Clear( &sv.datagram );
 	}
 
+	// clear the server datagram if it overflowed.
+	if( BF_CheckOverflow( &sv.spectator_datagram ))
+	{
+		MsgDev( D_ERROR, "sv.spectator_datagram overflowed!\n" );
+		BF_Clear( &sv.spectator_datagram );
+	}
+
 	// now send the reliable and server datagrams to all clients.
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -602,9 +595,15 @@ void SV_UpdateToReliableMessages( void )
 
 		BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.reliable_datagram ), BF_GetNumBitsWritten( &sv.reliable_datagram ));
 		BF_WriteBits( &cl->datagram, BF_GetData( &sv.datagram ), BF_GetNumBitsWritten( &sv.datagram ));
+
+		if( cl->hltv_proxy )
+		{
+			BF_WriteBits( &cl->datagram, BF_GetData( &sv.spectator_datagram ), BF_GetNumBitsWritten( &sv.spectator_datagram ));
+		}
 	}
 
 	// now clear the reliable and datagram buffers.
+	BF_Clear( &sv.spectator_datagram );
 	BF_Clear( &sv.reliable_datagram );
 	BF_Clear( &sv.datagram );
 }
@@ -639,9 +638,7 @@ void SV_SendClientMessages( void )
 		}
 
 		if( !host_limitlocal->integer && NET_IsLocalAddress( cl->netchan.remote_address ))
-		{
 			cl->send_message = true;
-		}
 
 		if( cl->state == cs_spawned )
 		{
@@ -652,15 +649,11 @@ void SV_SendClientMessages( void )
 			float	time_unti_next_message = cl->next_messagetime - (host.realtime + host.frametime);
 
 			if( time_unti_next_message <= 0.0f )
-			{
 				cl->send_message = true;
-			}
 
 			// something got hosed
 			if( time_unti_next_message > 2.0f )
-			{
 				cl->send_message = true;
-			}
 		}
 
 		// if the reliable message overflowed, drop the client
@@ -680,9 +673,7 @@ void SV_SendClientMessages( void )
 			// until we get another packet in from the client. This prevents crash/drop and reconnect where they are
 			// being hosed with "sequenced packet without connection" packets.
 			if(( host.realtime - cl->netchan.last_received ) > sv_failuretime->value )
-			{
 				cl->send_message = false;
-			}
 		}
 
 		// only send messages if the client has sent one
@@ -707,6 +698,7 @@ void SV_SendClientMessages( void )
 		}
 		else
 		{
+			// jsut update reliable
 			Netchan_Transmit( &cl->netchan, 0, NULL );
 		}
 	}

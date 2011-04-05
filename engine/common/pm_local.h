@@ -14,9 +14,10 @@ typedef int (*pfnIgnore)( physent_t *pe );	// custom trace filter
 //
 void Pmove_Init( void );
 void PM_InitBoxHull( void );
-hull_t *PM_HullForBsp( physent_t *pe, const vec3_t mins, const vec3_t maxs, float *offset );
+hull_t *PM_HullForBsp( physent_t *pe, playermove_t *pmove, float *offset );
 qboolean PM_TraceModel( physent_t *pe, const vec3_t p1, vec3_t mins, vec3_t maxs, const vec3_t p2, pmtrace_t *tr, int flags );
 pmtrace_t PM_PlayerTrace( playermove_t *pm, vec3_t p1, vec3_t p2, int flags, int hull, int ignore_pe, pfnIgnore pfn );
+int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pfnIgnore pmFilter );
 int PM_HullPointContents( hull_t *hull, int num, const vec3_t p );
 
 //

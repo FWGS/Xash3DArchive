@@ -30,7 +30,8 @@ extern byte *sndpool;
 #define FIX_FRACTION(a,b)	(FIX(a)/(b))
 #define FIX_FRACPART(a)	((a) & FIX_MASK)
 
-#define CLIP( x )		(( x ) > 32767 ? 32767 : (( x ) < -32767 ? -32767 : ( x )))
+// NOTE: clipped sound at 32760 to avoid overload
+#define CLIP( x )		(( x ) > 32760 ? 32760 : (( x ) < -32760 ? -32760 : ( x )))
 #define SWAP( a, b, t )	{(t) = (a); (a) = (b); (b) = (t);}
 #define AVG( a, b )		(((a) + (b)) >> 1 )
 #define AVG4( a, b, c, d )	(((a) + (b) + (c) + (d)) >> 2 )
@@ -237,7 +238,7 @@ void S_SoundList_f( void );
 void S_SoundInfo_f( void );
 
 channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx );
-channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx );
+channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx, const vec3_t pos );
 int S_GetCurrentStaticSounds( soundlist_t *pout, int size );
 sfx_t *S_GetSfxByHandle( sound_t handle );
 void S_StopSound( int entnum, int channel, const char *soundname );

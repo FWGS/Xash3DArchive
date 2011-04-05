@@ -77,6 +77,36 @@ static void PM_HullForHitbox( const vec3_t mins, const vec3_t maxs )
 */
 /*
 ====================
+StudioPlayerBlend
+
+====================
+*/
+void PM_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch )
+{
+	// calc up/down pointing
+	*pBlend = (*pPitch * 3);
+
+	if( *pBlend < pseqdesc->blendstart[0] )
+	{
+		*pPitch -= pseqdesc->blendstart[0] / 3.0f;
+		*pBlend = 0;
+	}
+	else if( *pBlend > pseqdesc->blendend[0] )
+	{
+		*pPitch -= pseqdesc->blendend[0] / 3.0f;
+		*pBlend = 255;
+	}
+	else
+	{
+		if( pseqdesc->blendend[0] - pseqdesc->blendstart[0] < 0.1f ) // catch qc error
+			*pBlend = 127;
+		else *pBlend = 255.0f * (*pBlend - pseqdesc->blendstart[0]) / (pseqdesc->blendend[0] - pseqdesc->blendstart[0]);
+		*pPitch = 0;
+	}
+}
+
+/*
+====================
 StudioSetUpTransform
 ====================
 */

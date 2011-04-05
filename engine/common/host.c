@@ -519,6 +519,12 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	lpBuffer.dwLength = sizeof( MEMORYSTATUS );
 	GlobalMemoryStatus( &lpBuffer );
 
+	if( !GetCurrentDirectory( sizeof( host.rootdir ), host.rootdir ))
+		Sys_Error( "couldn't determine current directory" );
+
+	if( host.rootdir[Q_strlen( host.rootdir ) - 1] == '/' )
+		host.rootdir[Q_strlen( host.rootdir ) - 1] = 0;
+
 	host.oldFilter = SetUnhandledExceptionFilter( Sys_Crash );
 	host.hInst = GetModuleHandle( NULL );
 	host.change_game = bChangeGame;

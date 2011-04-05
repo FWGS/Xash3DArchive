@@ -120,6 +120,17 @@ skipwhite:
 
 /*
 =============
+COM_FileSize
+
+=============
+*/
+int COM_FileSize( const char *filename )
+{
+	return FS_FileSize( filename, false );
+}
+
+/*
+=============
 COM_AddAppDirectoryToSearchPath
 
 =============
@@ -149,7 +160,6 @@ This doesn't search in the pak file.
 int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBufferSize )
 {
 	const char	*path;
-	char		rootdir[MAX_SYSPATH];
 	char		result[MAX_SYSPATH];
 
 	if( !fileName || !*fileName || !nameOutBuffer || nameOutBufferSize <= 0 )
@@ -160,8 +170,7 @@ int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBu
 	// models\barney.mdl - D:\Xash3D\bshift\models\barney.mdl
 	if(( path = FS_GetDiskPath( fileName, false )) != NULL )
 	{
-		GetCurrentDirectory( MAX_SYSPATH, rootdir );
-		Q_sprintf( result, "%s/%s", rootdir, path );		
+		Q_sprintf( result, "%s/%s", host.rootdir, path );		
 
 		// check for enough room
 		if( Q_strlen( result ) > nameOutBufferSize )
@@ -171,6 +180,23 @@ int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBu
 		return 1;
 	}
 	return 0;
+}
+
+/*
+============
+COM_FixSlashes
+
+Changes all '/' characters into '\' characters, in place.
+============
+*/
+void COM_FixSlashes( char *pname )
+{
+	while( *pname )
+	{
+		if( *pname == '/' )
+			*pname = '\\';
+		pname++;
+	}
 }
 
 /*
@@ -261,11 +287,6 @@ byte* pfnLoadFile( const char *filename, int *pLength )
 	return FS_LoadFile( filename, pLength, false );
 }
 
-void pfnFreeFile( void *buffer )
-{
-	FS_FreeFile( buffer );
-}
-
 /*
 =============
 pfnFileExists
@@ -286,6 +307,39 @@ pfnTime
 float pfnTime( void )
 {
 	return Sys_DoubleTime();
+}
+
+/*
+=============
+pfnGetModelType
+
+=============
+*/
+int pfnGetModelType( model_t *mod )
+{
+	if( !mod ) return mod_bad;
+	return mod->type;
+}
+
+/*
+=============
+pfnGetModelBounds
+
+=============
+*/
+void pfnGetModelBounds( model_t *mod, float *mins, float *maxs )
+{
+	if( mod )
+	{
+		if( mins ) VectorCopy( mod->mins, mins );
+		if( maxs ) VectorCopy( mod->maxs, maxs );
+	}
+	else
+	{
+		MsgDev( D_ERROR, "Mod_GetBounds: NULL model\n" );
+		if( mins ) VectorClear( mins );
+		if( maxs ) VectorClear( maxs );
+	}
 }
 	
 /*
@@ -469,7 +523,7 @@ void Con_DPrintf( char *szFmt, ... )
 	char	buffer[2048];	// must support > 1k messages
 	va_list	args;
 
-	if( host.developer < D_AICONSOLE )
+	if( host.developer < D_INFO )
 		return;
 
 	va_start( args, szFmt );
@@ -520,9 +574,6 @@ pfnGetGameDir
 */
 void pfnGetGameDir( char *szGetGameDir )
 {
-	char	rootdir[MAX_SYSPATH];
-
 	if( !szGetGameDir ) return;
-	GetCurrentDirectory( MAX_SYSPATH, rootdir );
-	Q_sprintf( szGetGameDir, "%s/%s", rootdir, GI->gamedir );
+	Q_sprintf( szGetGameDir, "%s/%s", host.rootdir, GI->gamedir );
 }

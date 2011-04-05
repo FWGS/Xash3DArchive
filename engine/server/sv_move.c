@@ -41,6 +41,7 @@ qboolean SV_CheckBottom( edict_t *ent, int iMode )
 		{
 			start[0] = x ? maxs[0] : mins[0];
 			start[1] = y ? maxs[1] : mins[1];
+			svs.groupmask = ent->v.groupinfo;
 
 			if( SV_PointContents( start ) != CONTENTS_SOLID )
 				goto realcheck;
@@ -96,15 +97,12 @@ float SV_VecToYaw( const vec3_t src )
 {
 	float	yaw;
 
-	if( src[1] == 0 && src[0] == 0 )
-	{
-		yaw = 0;
-	}
-	else
-	{
-		yaw = (int)( atan2( src[1], src[0] ) * 180 / M_PI );
-		if( yaw < 0 ) yaw += 360;
-	}
+	if( src[1] == 0.0f && src[0] == 0.0f )
+		return 0.0f;
+
+	yaw = RAD2DEG( atan2( src[1], src[0] ));
+	if( yaw < 0 ) yaw += 360;
+
 	return yaw;
 }
 
@@ -147,21 +145,16 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 				// that move takes us out of the water.
 				// apparently though, it's okay to travel into solids, lava, sky, etc :)
 				if(( ent->v.flags & FL_SWIM ) && SV_PointContents( trace.endpos ) == CONTENTS_EMPTY )
-				{
 					return 0;
-				}
 
 				VectorCopy( trace.endpos, ent->v.origin );
+				if( relink ) SV_LinkEdict( ent, true );
 
-				if( relink != 0 )
-				{
-					SV_LinkEdict( ent, true );
-				}
 				return 1;
 			}
 			else
 			{
-				if( enemy == NULL )
+				if( !SV_IsValidEdict( enemy ))
 					break;
 			}
 		}
@@ -176,7 +169,7 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 		end[2] -= dz * 2.0f;
 
 		trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
-		if( trace.allsolid != 0 )
+		if( trace.allsolid )
 			return 0;
 
 		if( trace.startsolid != 0 )
@@ -193,10 +186,7 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 			if( ent->v.flags & FL_PARTIALGROUND )
 			{
 				VectorAdd( ent->v.origin, move, ent->v.origin );
-				if( relink != 0 )
-				{
-					SV_LinkEdict( ent, true );
-				}
+				if( relink ) SV_LinkEdict( ent, true );
 				ent->v.flags &= ~FL_ONGROUND;
 				return 1;
 			}
@@ -210,10 +200,7 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 			{
 				if( ent->v.flags & FL_PARTIALGROUND )
 				{
-					if( relink != 0 )
-					{
-						SV_LinkEdict( ent, true );
-					}
+					if( relink ) SV_LinkEdict( ent, true );
 					return 1;
 				}
 
@@ -222,15 +209,10 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 			}
 			else
 			{
-				if( ent->v.flags & FL_PARTIALGROUND )
-					ent->v.flags &= ~FL_PARTIALGROUND;
-
+				ent->v.flags &= ~FL_PARTIALGROUND;
 				ent->v.groundentity = trace.ent;
+				if( relink ) SV_LinkEdict( ent, true );
 
-				if( relink != 0 )
-				{
-					SV_LinkEdict( ent, true );
-				}
 				return 1;
 			}
 		}
@@ -271,10 +253,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 		if( ent->v.flags & FL_PARTIALGROUND )
 		{
 			VectorAdd( ent->v.origin, move, ent->v.origin );
-			if( relink != 0 )
-			{
-				SV_LinkEdict( ent, true );
-			}
+			if( relink ) SV_LinkEdict( ent, true );
 			ent->v.flags &= ~FL_ONGROUND;
 			return 1;
 		}
@@ -288,10 +267,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 		{
 			if( ent->v.flags & FL_PARTIALGROUND )
 			{
-				if( relink != 0 )
-				{
-					SV_LinkEdict( ent, true );
-				}
+				if( relink ) SV_LinkEdict( ent, true );
 				return 1;
 			}
 
@@ -300,15 +276,10 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 		}
 		else
 		{
-			if( ent->v.flags & FL_PARTIALGROUND )
-				ent->v.flags &= ~FL_PARTIALGROUND;
-
+			ent->v.flags &= ~FL_PARTIALGROUND;
 			ent->v.groundentity = trace.ent;
+			if( relink ) SV_LinkEdict( ent, true );
 
-			if( relink != 0 )
-			{
-				SV_LinkEdict( ent, true );
-			}
 			return 1;
 		}
 	}
@@ -344,7 +315,6 @@ void SV_NewChaseDir( edict_t *actor, vec3_t destination, float dist )
 	float	tempdir, olddir, turnaround;
 	vec3_t	d;
 
-	// so, we're shaving down some of the precision.  Ohkay.
 	olddir = anglemod(((int)( actor->v.ideal_yaw / 45.0f )) * 45.0f );
 	turnaround = anglemod( olddir - 180 );
 
@@ -410,7 +380,7 @@ void SV_NewChaseDir( edict_t *actor, vec3_t destination, float dist )
 		}
 	}
 
-	// we tried. Run backwards. THAT ought to work...
+	// we tried. run backwards. that ought to work...
 	if( turnaround != -1 && SV_StepDirection( actor, turnaround, dist ))
 		return;
 
@@ -419,7 +389,6 @@ void SV_NewChaseDir( edict_t *actor, vec3_t destination, float dist )
 
 	// if a bridge was pulled out from underneath a monster, it may not have
 	// a valid standing position at all.
-
 	if( !SV_CheckBottom( actor, MOVE_NORMAL ))
 	{
 		actor->v.flags |= FL_PARTIALGROUND;

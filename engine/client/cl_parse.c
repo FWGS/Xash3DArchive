@@ -277,7 +277,7 @@ A download message has been received from the server
 void CL_ParseDownload( sizebuf_t *msg )
 {
 	int	size, percent;
-	char	buffer[MAX_MSGLEN];
+	char	buffer[NET_MAX_PAYLOAD];
 	string	name;
 	int	r;
 
@@ -349,15 +349,16 @@ CL_ParseSoundPacket
 */
 void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 {
-	vec3_t	pos_;
-	float	*pos = NULL;
+	vec3_t	pos;
 	int 	chan, sound;
 	float 	volume, attn;  
 	int	flags, pitch, entnum;
 	sound_t	handle = 0;
 
 	flags = BF_ReadWord( msg );
-	sound = BF_ReadWord( msg );
+	if( flags & SND_LARGE_INDEX )
+		sound = BF_ReadWord( msg );
+	else sound = BF_ReadByte( msg );
 	chan = BF_ReadByte( msg );
 
 	if( flags & SND_VOLUME )
@@ -376,11 +377,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 	entnum = BF_ReadWord( msg ); 
 
 	// positioned in space
-	if( flags & SND_FIXED_ORIGIN )
-	{
-		pos = pos_;
-		BF_ReadBitVec3Coord( msg, pos );
-	}
+	BF_ReadBitVec3Coord( msg, pos );
 
 	if( flags & SND_SENTENCE )
 	{
@@ -1003,8 +1000,7 @@ change serverinfo
 */
 void CL_ServerInfo( sizebuf_t *msg )
 {
-	char	key[MAX_MSGLEN];
-	char	value[MAX_MSGLEN];
+	string	key, value;
 
 	Q_strncpy( key, BF_ReadString( msg ), sizeof( key ));
 	Q_strncpy( value, BF_ReadString( msg ), sizeof( value ));

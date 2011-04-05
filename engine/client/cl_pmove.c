@@ -190,12 +190,15 @@ CL_TruePointContents
 int CL_TruePointContents( const vec3_t p )
 {
 	int	i, contents;
+	int	oldhull;
 	hull_t	*hull;
 	vec3_t	test;
 	physent_t	*pe;
 
 	// sanity check
 	if( !p ) return CONTENTS_NONE;
+
+	oldhull = clgame.pmove->usehull;
 
 	// get base contents from world
 	contents = PM_HullPointContents( &cl.worldmodel->hulls[0], 0, p );
@@ -212,7 +215,9 @@ int CL_TruePointContents( const vec3_t p )
 			continue;
 
 		// check water brushes accuracy
-		hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, test );
+		clgame.pmove->usehull = 2;
+		hull = PM_HullForBsp( pe, clgame.pmove, test );
+		clgame.pmove->usehull = oldhull;
 
 		// offset the test point appropriately for this hull.
 		VectorSubtract( p, test, test );
@@ -240,9 +245,11 @@ int CL_WaterEntity( const float *rgflPos )
 	physent_t		*pe;
 	hull_t		*hull;
 	vec3_t		test;
-	int		i;
+	int		i, oldhull;
 
 	if( !rgflPos ) return -1;
+
+	oldhull = clgame.pmove->usehull;
 
 	for( i = 0; i < clgame.pmove->nummoveent; i++ )
 	{
@@ -256,7 +263,9 @@ int CL_WaterEntity( const float *rgflPos )
 			continue;
 
 		// check water brushes accuracy
-		hull = PM_HullForBsp( pe, vec3_origin, vec3_origin, test );
+		clgame.pmove->usehull = 2;
+		hull = PM_HullForBsp( pe, clgame.pmove, test );
+		clgame.pmove->usehull = oldhull;
 
 		// offset the test point appropriately for this hull.
 		VectorSubtract( rgflPos, test, test );
@@ -318,12 +327,8 @@ static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 
 	trace = PM_PlayerTrace( clgame.pmove, pos, pos, PM_NORMAL, clgame.pmove->usehull, -1, NULL );
 	if( ptrace ) *ptrace = trace; 
-	return trace.ent;
-}
 
-static double Sys_FloatTime( void )
-{
-	return Sys_DoubleTime();
+	return PM_TestPlayerPosition( clgame.pmove, pos, NULL );
 }
 
 static void pfnStuckTouch( int hitent, pmtrace_t *tr )
@@ -394,32 +399,9 @@ static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull
 	return &tr;
 }
 
-static int pfnGetModelType( model_t *mod )
-{
-	if( !mod ) return mod_bad;
-	return mod->type;
-}
-
-static void pfnGetModelBounds( model_t *mod, float *mins, float *maxs )
-{
-	if( mod )
-	{
-		if( mins ) VectorCopy( mod->mins, mins );
-		if( maxs ) VectorCopy( mod->maxs, maxs );
-	}
-	else
-	{
-		MsgDev( D_ERROR, "Mod_GetBounds: NULL model\n" );
-		if( mins ) VectorClear( mins );
-		if( maxs ) VectorClear( maxs );
-	}
-}
-
 static hull_t *pfnHullForBsp( physent_t *pe, float *offset )
 {
-	float *mins = clgame.pmove->player_mins[clgame.pmove->usehull];
-	float *maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
-	return PM_HullForBsp( pe, mins, maxs, offset );
+	return PM_HullForBsp( pe, clgame.pmove, offset );
 }
 
 static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *trace )
@@ -450,21 +432,6 @@ static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
 	pe = &clgame.pmove->physents[ground];
 	return PM_TraceTexture( pe, vstart, vend );
 }			
-
-static int pfnCOM_FileSize( const char *filename )
-{
-	return FS_FileSize( filename, false );
-}
-
-static byte *pfnCOM_LoadFile( const char *path, int usehunk, int *pLength )
-{
-	return FS_LoadFile( path, pLength, false );
-}
-
-static void pfnCOM_FreeFile( void *buffer )
-{
-	if( buffer ) Mem_Free( buffer );
-}
 
 static void pfnPlaySound( int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch )
 {
@@ -499,7 +466,8 @@ static int pfnTestPlayerPositionEx( float *pos, pmtrace_t *ptrace, pfnIgnore pmF
 
 	trace = PM_PlayerTrace( clgame.pmove, pos, pos, PM_STUDIO_BOX, clgame.pmove->usehull, -1, pmFilter );
 	if( ptrace ) *ptrace = trace; 
-	return trace.ent;
+
+	return PM_TestPlayerPosition( clgame.pmove, pos, pmFilter );
 }
 
 static pmtrace_t *pfnTraceLineEx( float *start, float *end, int flags, int usehull, pfnIgnore pmFilter )
@@ -547,7 +515,7 @@ void CL_InitClientMove( void )
 	clgame.pmove->Con_NPrintf = Con_NPrintf;
 	clgame.pmove->Con_DPrintf = Con_DPrintf;
 	clgame.pmove->Con_Printf = Con_Printf;
-	clgame.pmove->Sys_FloatTime = Sys_FloatTime;
+	clgame.pmove->Sys_FloatTime = Sys_DoubleTime;
 	clgame.pmove->PM_StuckTouch = pfnStuckTouch;
 	clgame.pmove->PM_PointContents = pfnPointContents;
 	clgame.pmove->PM_TruePointContents = pfnTruePointContents;
@@ -560,9 +528,9 @@ void CL_InitClientMove( void )
 	clgame.pmove->PM_GetModelBounds = pfnGetModelBounds;	
 	clgame.pmove->PM_HullForBsp = pfnHullForBsp;
 	clgame.pmove->PM_TraceModel = pfnTraceModel;
-	clgame.pmove->COM_FileSize = pfnCOM_FileSize;
-	clgame.pmove->COM_LoadFile = pfnCOM_LoadFile;
-	clgame.pmove->COM_FreeFile = pfnCOM_FreeFile;
+	clgame.pmove->COM_FileSize = COM_FileSize;
+	clgame.pmove->COM_LoadFile = COM_LoadFile;
+	clgame.pmove->COM_FreeFile = COM_FreeFile;
 	clgame.pmove->memfgets = pfnMemFgets;
 	clgame.pmove->PM_PlaySound = pfnPlaySound;
 	clgame.pmove->PM_TraceTexture = pfnTraceTexture;

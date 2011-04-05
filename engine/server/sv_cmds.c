@@ -20,10 +20,7 @@ void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
 	va_list	argptr;
 	char	string[MAX_SYSPATH];
 
-
-	if( level < cl->messagelevel )
-		return;
-	if( cl->fakeclient )
+	if( level < cl->messagelevel || cl->fakeclient )
 		return;
 	
 	va_start( argptr, fmt );
@@ -57,6 +54,7 @@ void SV_BroadcastPrintf( int level, char *fmt, ... )
 	
 	// echo to console
 	if( host.type == HOST_DEDICATED ) Msg( "%s", string );
+
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( level < cl->messagelevel ) continue;
@@ -150,7 +148,7 @@ qboolean SV_SetPlayer( void )
 
 	if( sv_maxclients->integer == 1 || Cmd_Argc() < 2 )
 	{
-		// sepcial case for local client
+		// special case for local client
 		sv_client = svs.clients;
 		return true;
 	}
@@ -166,6 +164,7 @@ qboolean SV_SetPlayer( void )
 			Msg( "Bad client slot: %i\n", idnum );
 			return false;
 		}
+
 		sv_client = &svs.clients[idnum];
 		if( !sv_client->state )
 		{
@@ -185,6 +184,7 @@ qboolean SV_SetPlayer( void )
 			return true;
 		}
 	}
+
 	Msg( "Userid %s is not on the server\n", s );
 	return false;
 }
@@ -237,7 +237,7 @@ void SV_Map_f( void )
 		return;
 	}
 
-	SCR_BeginLoadingPlaque();
+	SCR_BeginLoadingPlaque( false );
 
 	sv.background = false;
 	sv.loadgame = false; // set right state
@@ -300,7 +300,7 @@ void SV_MapBackground_f( void )
 	Cvar_FullSet( "deathmatch", "0",  CVAR_LATCH );
 	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
 
-	SCR_BeginLoadingPlaque();
+	SCR_BeginLoadingPlaque( true );
 
 	SV_SpawnServer( mapname, NULL );
 	SV_LevelInit( mapname, NULL, NULL, false );
@@ -478,7 +478,7 @@ void SV_ChangeLevel_f( void )
 		return;	
 	}
 
-	SCR_BeginLoadingPlaque();
+	SCR_BeginLoadingPlaque( false );
 
 	if( sv.state != ss_active || sv.background )
 	{
@@ -622,7 +622,7 @@ void SV_Status_f( void )
 
 	if( !svs.clients || sv.background )
 	{
-		Msg ( "^3no server running.\n" );
+		Msg( "^3no server running.\n" );
 		return;
 	}
 

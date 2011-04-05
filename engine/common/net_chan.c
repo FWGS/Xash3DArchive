@@ -86,7 +86,7 @@ int	net_drop;
 netadr_t	net_from;
 sizebuf_t	net_message;
 byte	*net_mempool;
-byte	net_message_buffer[MAX_MSGLEN];
+byte	net_message_buffer[NET_MAX_PAYLOAD];
 
 /*
 ===============
@@ -333,7 +333,7 @@ Sends an out-of-band datagram
 void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data )
 {
 	sizebuf_t	send;
-	byte	send_buf[MAX_MSGLEN];
+	byte	send_buf[NET_MAX_PAYLOAD];
 
 	// write the packet header
 	BF_Init( &send, "SequencePacket", send_buf, sizeof( send_buf ));

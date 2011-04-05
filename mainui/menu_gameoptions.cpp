@@ -78,7 +78,7 @@ static void UI_GameOptions_UpdateConfig( void )
 	uiGameOptions.maxFPS.generic.name = fpsText;
 
 	CVAR_SET_FLOAT( "hand", uiGameOptions.hand.enabled );
-	CVAR_SET_FLOAT( "allow_download", uiGameOptions.allowDownload.enabled );
+	CVAR_SET_FLOAT( "sv_allow_download", uiGameOptions.allowDownload.enabled );
 	CVAR_SET_FLOAT( "fps_max", uiGameOptions.maxFPS.curValue );
 	CVAR_SET_FLOAT( "cl_run", uiGameOptions.alwaysRun.enabled );
 }
@@ -91,7 +91,7 @@ UI_GameOptions_DiscardChanges
 static void UI_GameOptions_DiscardChanges( void )
 {
 	CVAR_SET_FLOAT( "hand", uiGameInitial.hand );
-	CVAR_SET_FLOAT( "allow_download", uiGameInitial.allowDownload );
+	CVAR_SET_FLOAT( "sv_allow_download", uiGameInitial.allowDownload );
 	CVAR_SET_FLOAT( "fps_max", uiGameInitial.maxFPS );
 	CVAR_SET_FLOAT( "cl_run", uiGameInitial.alwaysRun );
 }
@@ -123,7 +123,7 @@ static void UI_GameOptions_GetConfig( void )
 	if( CVAR_GET_FLOAT( "cl_run" ))
 		uiGameInitial.alwaysRun = uiGameOptions.alwaysRun.enabled = 1;
 
-	if( CVAR_GET_FLOAT( "allow_download" ))
+	if( CVAR_GET_FLOAT( "sv_allow_download" ))
 		uiGameInitial.allowDownload = uiGameOptions.allowDownload.enabled = 1;
 
 	UI_GameOptions_UpdateConfig ();

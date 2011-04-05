@@ -237,7 +237,7 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
 	if( !value || !Q_strlen( value ))
 		return true;	// just clear variable
 
-	Q_sprintf( newi, "\\%s\\%s", key, value );
+	Q_snprintf( newi, sizeof( newi ) - 1, "\\%s\\%s", key, value );
 	if( Q_strlen( newi ) + Q_strlen( s ) > maxsize )
 	{
 		MsgDev( D_ERROR, "SetValueForKey: info string length exceeded\n" );

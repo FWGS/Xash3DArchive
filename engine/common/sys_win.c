@@ -449,7 +449,10 @@ void Sys_Break( const char *error, ... )
 	va_end( argptr );
 
 	if( host.type == HOST_NORMAL )
-		CL_Shutdown(); // kill video
+	{
+		if( host.hWnd ) ShowWindow( host.hWnd, SW_HIDE );
+		VID_RestoreGamma();
+	}
 
 	if( host.type != HOST_NORMAL || host.developer > 0 )
 	{

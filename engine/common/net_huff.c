@@ -503,14 +503,14 @@ beginning from specified offset
 void Huff_CompressPacket( sizebuf_t *msg, int offset )
 {
 	tree_t	tree;
-	byte	buffer[MAX_MSGLEN];
+	byte	buffer[NET_MAX_PAYLOAD];
 	byte	*data;
 	int	outLen;
 	int	i, inLen;
 
 	data = BF_GetData( msg ) + offset;
 	inLen = BF_GetNumBytesWritten( msg ) - offset;	
-	if( inLen <= 0 || inLen >= MAX_MSGLEN )
+	if( inLen <= 0 || inLen >= NET_MAX_PAYLOAD )
 		return;
 
 	Huff_PrepareTree( tree );
@@ -541,7 +541,7 @@ beginning from specified offset
 void Huff_DecompressPacket( sizebuf_t *msg, int offset )
 {
 	tree_t	tree;
-	byte	buffer[MAX_MSGLEN];
+	byte	buffer[NET_MAX_PAYLOAD];
 	byte	*data;
 	int	outLen;
 	int	inLen;
@@ -556,8 +556,8 @@ void Huff_DecompressPacket( sizebuf_t *msg, int offset )
 	outLen = ( data[0] << 8 ) + data[1];
 	huffBitPos = 16;
 	
-	if( outLen > MAX_MSGLEN - offset )
-		outLen = MAX_MSGLEN - offset;
+	if( outLen > NET_MAX_PAYLOAD - offset )
+		outLen = NET_MAX_PAYLOAD - offset;
 
 	for( i = 0; i < outLen; i++ )
 	{

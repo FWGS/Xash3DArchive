@@ -12,12 +12,23 @@ server_static_t	svs;	// persistant server info
 svgame_static_t	svgame;	// persistant game info
 server_t		sv;	// local server
 
-int SV_ModelIndex( const char *name )
+int SV_ModelIndex( const char *filename )
 {
-	int	i;
+	char	name[64];
+	int	i, j;
 
-	if( !name || !name[0] )
+	if( !filename || !filename[0] )
 		return 0;
+
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '!' ) continue;
+		else if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = filename[i];
+		j++;
+	}
+	name[j] = '\0';
 
 	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 	{
@@ -45,12 +56,22 @@ int SV_ModelIndex( const char *name )
 	return i;
 }
 
-int SV_SoundIndex( const char *name )
+int SV_SoundIndex( const char *filename )
 {
-	int	i;
+	char	name[64];
+	int	i, j;
 
-	if( !name || !name[0] )
+	// don't precache sentence names
+	if( !filename || !filename[0] || filename[0] == '!' )
 		return 0;
+
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = filename[i];
+		j++;
+	}
+	name[j] = '\0';
 
 	for( i = 1; i < MAX_SOUNDS && sv.sound_precache[i][0]; i++ )
 	{
@@ -78,12 +99,23 @@ int SV_SoundIndex( const char *name )
 	return i;
 }
 
-int SV_EventIndex( const char *name )
+int SV_EventIndex( const char *filename )
 {
-	int	i;
+	char	name[64];
+	int	i, j;
 
-	if( !name || !name[0] )
+	if( !filename || !filename[0] )
 		return 0;
+
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '!' ) continue;
+		else if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = filename[i];
+		j++;
+	}
+	name[j] = '\0';
 
 	for( i = 1; i < MAX_EVENTS && sv.event_precache[i][0]; i++ )
 	{
@@ -111,12 +143,23 @@ int SV_EventIndex( const char *name )
 	return i;
 }
 
-int SV_GenericIndex( const char *name )
+int SV_GenericIndex( const char *filename )
 {
-	int	i;
+	char	name[64];
+	int	i, j;
 
-	if( !name || !name[0] )
+	if( !filename || !filename[0] )
 		return 0;
+
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '!' ) continue;
+		else if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = filename[i];
+		j++;
+	}
+	name[j] = '\0';
 
 	for( i = 1; i < MAX_CUSTOM && sv.files_precache[i][0]; i++ )
 	{
@@ -221,7 +264,7 @@ void SV_FreeOldEntities( void )
 	}
 
 	// decrement svgame.numEntities if the highest number entities died
-	for( ; EDICT_NUM( svgame.numEntities - 1)->free; svgame.numEntities-- );
+	for( ; EDICT_NUM( svgame.numEntities - 1 )->free; svgame.numEntities-- );
 }
 
 /*
@@ -256,7 +299,7 @@ void SV_ActivateServer( void )
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
-	// Send serverinfo to all connected clients
+	// send serverinfo to all connected clients
 	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
 		if( svs.clients[i].state >= cs_connected )
@@ -300,7 +343,9 @@ void SV_ActivateServer( void )
 	}
 
 	if( host.type == HOST_DEDICATED )
+	{
 		Mod_FreeUnused ();
+	}
 
 	sv.state = ss_active;
 	physinfo->modified = true;
@@ -334,12 +379,15 @@ void SV_DeactivateServer( void )
 	for( i = 0; i < svgame.globals->maxClients; i++ )
 	{
 		// release client frames
-		SV_ClearFrames( &svs.clients[i].frames );
+		if( svs.clients[i].frames )
+			Mem_Free( svs.clients[i].frames );
+		svs.clients[i].frames = NULL;
 	}
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = sv_maxclients->integer;
 	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
+	svgame.globals->startspot = 0;
 	svgame.globals->mapname = 0;
 }
 
@@ -394,7 +442,6 @@ SV_SpawnServer
 
 Change the server to a new map, taking all connected
 clients along with it.
-
 ================
 */
 qboolean SV_SpawnServer( const char *mapname, const char *startspot )
@@ -416,7 +463,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	if( !svs.initialized )
 		return false;
 
-	svgame.globals->changelevel = false;	// will be restored later if needed
+	svgame.globals->changelevel = false; // will be restored later if needed
 	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
 
@@ -445,6 +492,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	BF_Init( &sv.reliable_datagram, "Datagram R", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
 	BF_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
 	BF_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
+	BF_Init( &sv.spectator_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
 
 	// leave slots at start for clients only
 	for( i = 0; i < sv_maxclients->integer; i++ )
@@ -586,7 +634,7 @@ void SV_InitGame( void )
 
 	// heartbeats will always be sent to the id master
 	svs.last_heartbeat = MAX_HEARTBEAT; // send immediately
-	Q_sprintf( idmaster, "192.246.40.37:%i", PORT_MASTER );
+	Q_sprintf( idmaster, "192.246.40.37:%i", PORT_MASTER );	// TODO: parse woncomm.lst
 	NET_StringToAdr( idmaster, &master_adr[0] );
 
 	// set client fields on player ents
@@ -626,7 +674,7 @@ void SV_FreeGameProgs( void )
 {
 	if( svs.initialized ) return;	// server is active
 
-	// unload progs (and free cvars and commands)
+	// unload progs (free cvars and commands)
 	SV_UnloadProgs();
 }
 
@@ -635,7 +683,7 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 	if( !loadGame )
 	{
 		if( !SV_MapIsValid( mapName, GI->sp_entity, NULL ))
-		return false;
+			return false;
 	}
 
 	S_StopAllSounds ();

@@ -40,7 +40,7 @@ void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
 {
 	local_state_t	*from, *to;
 
-	// FIXME: write real predicting code
+	// TODO: write real predicting code
 
 	from = &cl.predict[cl.predictcount & CL_UPDATE_MASK];
 	to = &cl.predict[(cl.predictcount + 1) & CL_UPDATE_MASK];

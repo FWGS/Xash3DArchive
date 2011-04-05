@@ -78,6 +78,7 @@ static void UI_NewGame_StartGame( float skill )
 	CVAR_SET_FLOAT( "deathmatch", 0.0f );
 	CVAR_SET_FLOAT( "teamplay", 0.0f );
 	CVAR_SET_FLOAT( "pausable", 1.0f ); // singleplayer is always allowing pause
+	CVAR_SET_FLOAT( "maxplayers", 1.0f );
 	CVAR_SET_FLOAT( "coop", 0.0f );
 
 	CLIENT_COMMAND( FALSE, "newgame\n" );
