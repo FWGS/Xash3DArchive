@@ -242,7 +242,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 			{
 				if( format->loadfunc( path, f, filesize ))
 				{
-					Mem_Free(f); // release buffer
+					Mem_Free( f ); // release buffer
 					return ImagePack(); // loaded
 				}
 				else Mem_Free(f); // release buffer 
@@ -287,7 +287,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 				// first side not found, probably it's not cubemap
 				// it contain info about image_type and dimensions, don't generate black cubemaps 
 				if( !image.cubemap ) break;
-				MsgDev( D_ERROR, "FS_LoadImage: couldn't load (%s%s.%s), create black image\n", loadname, cmap->type[i].suf );
+				MsgDev( D_ERROR, "FS_LoadImage: couldn't load (%s%s), create black image\n", loadname, cmap->type[i].suf );
 
 				// Mem_Alloc already filled memblock with 0x00, no need to do it again
 				image.cubemap = Mem_Realloc( host.imagepool, image.cubemap, image.ptr + image.size );
@@ -306,6 +306,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 		}
 		else break;
 	}
+
 	if( image.cubemap )
 		return ImagePack(); // all done
 

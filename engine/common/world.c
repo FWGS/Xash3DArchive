@@ -6,7 +6,7 @@
 #include "common.h"
 #include "world.h"
 #include "pm_defs.h"
-#include "cm_local.h"
+#include "mod_local.h"
 #include "mathlib.h"
 #include "studio.h"
 
@@ -17,9 +17,6 @@ const char *et_name[] =
 	"tempentity",
 	"beam",
 	"fragmented",
-	"viewentity",
-	"portal",
-	"skyportal",
 };
 
 /*

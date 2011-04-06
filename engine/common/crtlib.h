@@ -1,17 +1,9 @@
 //=======================================================================
 //			Copyright XashXT Group 2011 ©
-//			 stdlib.h - internal stdlib
+//			 crtlib.h - internal stdlib
 //=======================================================================
 #ifndef STDLIB_H
 #define STDLIB_H
-
-// command buffer modes
-enum
-{
-	EXEC_NOW	= 0,
-	EXEC_INSERT,
-	EXEC_APPEND,
-};
 
 // timestamp modes
 enum
@@ -26,6 +18,15 @@ enum
 
 typedef void (*setpair_t)( const char *key, const char *value, void *buffer, void *numpairs );
 typedef void (*xcommand_t)( void );
+
+typedef enum
+{
+	src_client,	// came in over a net connection as a clc_stringcmd
+			// host_client will be valid during this state.
+	src_command	// from the command buffer
+} cmd_source_t;
+
+extern cmd_source_t		cmd_source;
 
 // NOTE: if this is changed, it must be changed in cvardef.h too
 typedef struct convar_s
@@ -101,23 +102,23 @@ void Cvar_Unlink( void );
 void Cbuf_Init( void );
 void Cbuf_AddText( const char *text );
 void Cbuf_InsertText( const char *text );
-void Cbuf_ExecuteText( int exec_when, const char *text );
 void Cbuf_Execute (void);
 uint Cmd_Argc( void );
 char *Cmd_Args( void );
-char *Cmd_Argv( uint arg );
+char *Cmd_Argv( int arg );
 void Cmd_Init( void );
 void Cmd_Unlink( void );
 void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_desc );
 void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function );
+void Cmd_AddClientCommand( const char *cmd_name, xcommand_t function );
 void Cmd_RemoveCommand( const char *cmd_name );
 qboolean Cmd_Exists( const char *cmd_name );
 void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback );
 qboolean Cmd_GetMapList( const char *s, char *completedname, int length );
 qboolean Cmd_GetDemoList( const char *s, char *completedname, int length );
 qboolean Cmd_GetMovieList( const char *s, char *completedname, int length );
-void Cmd_TokenizeString( const char *text );
-void Cmd_ExecuteString( const char *text );
+void Cmd_TokenizeString( char *text );
+void Cmd_ExecuteString( char *text, cmd_source_t src );
 void Cmd_ForwardToServer( void );
 
 //

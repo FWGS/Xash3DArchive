@@ -9,7 +9,7 @@
 #include "mathlib.h"
 #include "edict.h"
 #include "eiface.h"
-#include "cm_local.h"
+#include "mod_local.h"
 #include "pm_defs.h"
 #include "pm_movevars.h"
 #include "entity_state.h"

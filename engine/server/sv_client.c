@@ -674,7 +674,7 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 			Q_strcat( remaining, Cmd_Argv( i ));
 			Q_strcat( remaining, " " );
 		}
-		Cmd_ExecuteString( remaining );
+		Cmd_ExecuteString( remaining, src_command );
 	}
 	SV_EndRedirect();
 }
@@ -1690,6 +1690,7 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 {
 	ucmd_t	*u;
 
+	svs.currentPlayer = cl;
 	Cmd_TokenizeString( s );
 
 	for( u = ucmds; u->name; u++ )

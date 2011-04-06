@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//		         world.h - shared world trace
+//		           world.h - shared world trace
 //=======================================================================
 #ifndef WORLD_H
 #define WORLD_H

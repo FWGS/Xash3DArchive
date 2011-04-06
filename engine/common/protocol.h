@@ -24,7 +24,7 @@
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
 #define svc_deltatable		14	// [table header][...]
 #define svc_clientdata		15	// [...]
-#define svc_download		16	// [short] size [size bytes]
+#define svc_download		16	// <OBSOLETE>
 #define svc_updatepings		17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
 #define svc_frame			19	// <OBSOLETE>

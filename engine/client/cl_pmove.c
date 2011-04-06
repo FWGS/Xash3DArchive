@@ -47,7 +47,7 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 		pe->model = mod;
 	}
 
-	pe->info = NUM_FOR_EDICT( ent );
+	pe->info = (int)(ent - clgame.entities);
 	VectorCopy( ent->curstate.origin, pe->origin );
 	VectorCopy( ent->curstate.angles, pe->angles );
 	VectorCopy( ent->curstate.mins, pe->mins );
@@ -531,7 +531,7 @@ void CL_InitClientMove( void )
 	clgame.pmove->COM_FileSize = COM_FileSize;
 	clgame.pmove->COM_LoadFile = COM_LoadFile;
 	clgame.pmove->COM_FreeFile = COM_FreeFile;
-	clgame.pmove->memfgets = pfnMemFgets;
+	clgame.pmove->memfgets = COM_MemFgets;
 	clgame.pmove->PM_PlaySound = pfnPlaySound;
 	clgame.pmove->PM_TraceTexture = pfnTraceTexture;
 	clgame.pmove->PM_PlaybackEventFull = pfnPlaybackEventFull;

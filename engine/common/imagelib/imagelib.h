@@ -95,21 +95,21 @@ typedef struct imglib_s
 #pragma pack( 1 )
 typedef struct
 {
-	char	id[2];		//bmfh.bfType
-	dword	fileSize;		//bmfh.bfSize
-	dword	reserved0;	//bmfh.bfReserved1 + bmfh.bfReserved2
-	dword	bitmapDataOffset;	//bmfh.bfOffBits
-	dword	bitmapHeaderSize;	//bmih.biSize
-	int	width;		//bmih.biWidth
-	int	height;		//bmih.biHeight
-	word	planes;		//bmih.biPlanes
-	word	bitsPerPixel;	//bmih.biBitCount
-	dword	compression;	//bmih.biCompression
-	dword	bitmapDataSize;	//bmih.biSizeImage
-	dword	hRes;		//bmih.biXPelsPerMeter
-	dword	vRes;		//bmih.biYPelsPerMeter
-	dword	colors;		//bmih.biClrUsed
-	dword	importantColors;	//bmih.biClrImportant
+	char	id[2];		// bmfh.bfType
+	dword	fileSize;		// bmfh.bfSize
+	dword	reserved0;	// bmfh.bfReserved1 + bmfh.bfReserved2
+	dword	bitmapDataOffset;	// bmfh.bfOffBits
+	dword	bitmapHeaderSize;	// bmih.biSize
+	int	width;		// bmih.biWidth
+	int	height;		// bmih.biHeight
+	word	planes;		// bmih.biPlanes
+	word	bitsPerPixel;	// bmih.biBitCount
+	dword	compression;	// bmih.biCompression
+	dword	bitmapDataSize;	// bmih.biSizeImage
+	dword	hRes;		// bmih.biXPelsPerMeter
+	dword	vRes;		// bmih.biYPelsPerMeter
+	dword	colors;		// bmih.biClrUsed
+	dword	importantColors;	// bmih.biClrImportant
 } bmp_t;
 #pragma pack( )
 
@@ -220,7 +220,6 @@ enum
 };
 
 extern imglib_t image;
-extern byte *fs_mempool;
 
 void Image_RoundDimensions( int *scaled_width, int *scaled_height );
 byte *Image_ResampleInternal( const void *indata, int in_w, int in_h, int out_w, int out_h, int intype, qboolean *done );

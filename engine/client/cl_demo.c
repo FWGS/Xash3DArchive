@@ -197,7 +197,7 @@ void CL_WriteDemoHeader( const char *name )
 	FS_Write( cls.demofile, BF_GetData( &buf ), len );
 
 	// force client.dll update
-	Cmd_ExecuteString( "cmd fullupdate\n" );
+	Cmd_ExecuteString( "cmd fullupdate\n", src_command );
 	if( clgame.hInstance ) clgame.dllFuncs.pfnReset();
 }
 

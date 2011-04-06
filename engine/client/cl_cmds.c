@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "client.h"
+#include "gl_local.h"
 
 /*
 ====================

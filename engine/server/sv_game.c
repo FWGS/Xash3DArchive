@@ -11,6 +11,9 @@
 #include "pm_defs.h"
 #include "const.h"
 
+// disable this when QNAN error in MakeVectors will be sucessfully reached
+#define TEMPORARY_FIX_QNAN_ERROR
+
 // fatpvs stuff
 static byte fatpvs[MAX_MAP_LEAFS/8];
 static byte fatphs[MAX_MAP_LEAFS/8];
@@ -931,17 +934,6 @@ int pfnPrecacheModel( const char *s )
 }
 
 /*
-=========
-pfnPrecacheSound
-
-=========
-*/
-int pfnPrecacheSound( const char *s )
-{
-	return SV_SoundIndex( s );
-}
-
-/*
 =================
 pfnSetModel
 
@@ -1335,9 +1327,6 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 	return chain;
 }
 
-// disable this when QNAN error in MakeVectors will be sucessfully reached
-#define TEMPORARY_FIX_QNAN_ERROR
-
 /*
 ==============
 pfnMakeVectors
@@ -1356,18 +1345,6 @@ void pfnMakeVectors( const float *rgflVector )
 #else
 	AngleVectors( rgflVector, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
 #endif
-}
-
-/*
-==============
-pfnCreateEntity
-
-just allocate a new one
-==============
-*/
-edict_t* pfnCreateEntity( void )
-{
-	return SV_AllocEdict();
 }
 
 /*
@@ -2038,7 +2015,6 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 	int		i, j;
 	trace_t		tr;
 
-	Msg( "GetAimVector for %s\n", SV_ClassName( ent ));
 	VectorCopy( svgame.globals->v_forward, rgflReturn );	// assume failure if it returns early
 
 	if( !SV_IsValidEdict( ent ) || (ent->v.flags & FL_FAKECLIENT))
@@ -2093,17 +2069,6 @@ void pfnServerCommand( const char* str )
 {
 	if( SV_IsValidCmd( str )) Cbuf_AddText( str );
 	else MsgDev( D_ERROR, "bad server command %s\n", str );
-}
-
-/*
-=========
-pfnServerExecute
-
-=========
-*/
-void pfnServerExecute( void )
-{
-	Cbuf_Execute();
 }
 
 /*
@@ -2227,6 +2192,7 @@ pfnPointContents
 */
 static int pfnPointContents( const float *rgflVector )
 {
+	if( !rgflVector ) return CONTENTS_NONE;
 	return SV_PointContents( rgflVector );
 }
 
@@ -2527,28 +2493,6 @@ void pfnWriteEntity( int iValue )
 		Host_Error( "BF_WriteEntity: invalid entnumber %i\n", iValue );
 	BF_WriteShort( &sv.multicast, (short)iValue );
 	svgame.msg_realsize += 2;
-}
-
-/*
-=============
-pfnCVarRegister
-
-=============
-*/
-void pfnCVarRegister( cvar_t *pCvar )
-{
-	Cvar_RegisterVariable( pCvar );
-}
-
-/*
-=============
-pfnCvar_DirectSet
-
-=============
-*/
-void pfnCvar_DirectSet( cvar_t *var, char *value )
-{
-	Cvar_DirectSet( var, value );
 }
 
 /*
@@ -3078,6 +3022,17 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 
 /*
 =============
+pfnTime
+
+=============
+*/
+float pfnTime( void )
+{
+	return (float)Sys_DoubleTime();
+}
+
+/*
+=============
 pfnCompareFileTime
 
 =============
@@ -3118,18 +3073,6 @@ void pfnStaticDecal( const float *origin, int decalIndex, int entityIndex, int m
 	}
 
 	SV_CreateDecal( origin, decalIndex, entityIndex, modelIndex, FDECAL_PERMANENT );
-}
-
-/*
-=============
-pfnPrecacheGeneric
-
-can be used for precache scripts
-=============
-*/
-int pfnPrecacheGeneric( const char *s )
-{
-	return SV_GenericIndex( s );
 }
 
 /*
@@ -3241,17 +3184,6 @@ void pfnSetClientMaxspeed( const edict_t *pEdict, float fNewMaxspeed )
 
 /*
 =============
-pfnCreateFakeClient
-
-=============
-*/
-edict_t *pfnCreateFakeClient( const char *netname )
-{
-	return SV_FakeConnect( netname );
-}
-
-/*
-=============
 pfnRunPlayerMove
 
 =============
@@ -3311,39 +3243,6 @@ int pfnNumberOfEntities( void )
 	}
 
 	return total;
-}
-	
-/*
-=============
-pfnInfo_RemoveKey
-
-=============
-*/
-void pfnInfo_RemoveKey( char *s, const char *key )
-{
-	Info_RemoveKey( s, key );
-}
-
-/*
-=============
-pfnInfoKeyValue
-
-=============
-*/
-char *pfnInfoKeyValue( char *infobuffer, char *key )
-{
-	return Info_ValueForKey( infobuffer, key );
-}
-
-/*
-=============
-pfnSetKeyValue
-
-=============
-*/
-void pfnSetKeyValue( char *infobuffer, char *key, char *value )
-{
-	Info_SetValueForKey( infobuffer, key, value );
 }
 
 /*
@@ -4027,7 +3926,7 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 static enginefuncs_t gEngfuncs = 
 {
 	pfnPrecacheModel,
-	pfnPrecacheSound,	
+	SV_SoundIndex,	
 	pfnSetModel,
 	pfnModelIndex,
 	pfnModelFrames,
@@ -4047,7 +3946,7 @@ static enginefuncs_t gEngfuncs =
 	pfnEntitiesInPVS,
 	pfnMakeVectors,
 	AngleVectors,
-	pfnCreateEntity,
+	SV_AllocEdict,
 	pfnRemoveEntity,
 	pfnCreateNamedEntity,
 	pfnMakeStatic,
@@ -4066,7 +3965,7 @@ static enginefuncs_t gEngfuncs =
 	pfnTraceSphere,
 	pfnGetAimVector,
 	pfnServerCommand,
-	pfnServerExecute,
+	Cbuf_Execute,
 	pfnClientCommand,
 	pfnParticleEffect,
 	pfnLightStyle,
@@ -4082,11 +3981,11 @@ static enginefuncs_t gEngfuncs =
 	pfnWriteCoord,
 	pfnWriteString,
 	pfnWriteEntity,
-	pfnCVarRegister,
-	pfnCVarGetValue,
-	pfnCVarGetString,
-	pfnCVarSetValue,
-	pfnCVarSetString,
+	Cvar_RegisterVariable,
+	Cvar_VariableValue,
+	Cvar_VariableString,
+	Cvar_SetFloat,
+	Cvar_Set,
 	pfnAlertMessage,
 	pfnEngineFprintf,
 	pfnPvAllocEntPrivateData,
@@ -4108,9 +4007,9 @@ static enginefuncs_t gEngfuncs =
 	pfnNameForFunction,	
 	pfnClientPrintf,
 	pfnServerPrint,	
-	pfnCmd_Args,
-	pfnCmd_Argv,
-	pfnCmd_Argc,
+	Cmd_Args,
+	Cmd_Argv,
+	Cmd_Argc,
 	pfnGetAttachment,
 	CRC32_Init,
 	CRC32_ProcessBuffer,
@@ -4121,30 +4020,30 @@ static enginefuncs_t gEngfuncs =
 	pfnSetView,
 	pfnTime,
 	pfnCrosshairAngle,
-	pfnLoadFile,
+	COM_LoadFileForMe,
 	COM_FreeFile,
 	pfnEndSection,
 	pfnCompareFileTime,
 	pfnGetGameDir,
-	pfnCVarRegister,
+	Cvar_RegisterVariable,
 	pfnFadeClientVolume,
 	pfnSetClientMaxspeed,
-	pfnCreateFakeClient,
+	SV_FakeConnect,
 	pfnRunPlayerMove,
 	pfnNumberOfEntities,
 	pfnGetInfoKeyBuffer,
-	pfnInfoKeyValue,
-	pfnSetKeyValue,
+	Info_ValueForKey,
+	Info_SetValueForKey,
 	pfnSetClientKeyValue,
 	pfnIsMapValid,
 	pfnStaticDecal,
-	pfnPrecacheGeneric,
+	SV_GenericIndex,
 	pfnGetPlayerUserId,
 	pfnBuildSoundMsg,
 	pfnIsDedicatedServer,
 	pfnCVarGetPointer,
 	pfnGetPlayerWONId,
-	pfnInfo_RemoveKey,
+	Info_RemoveKey,
 	pfnGetPhysicsKeyValue,
 	pfnSetPhysicsKeyValue,
 	pfnGetPhysicsInfoString,
@@ -4163,7 +4062,7 @@ static enginefuncs_t gEngfuncs =
 	Delta_UnsetFieldByIndex,
 	pfnSetGroupMask,	
 	pfnCreateInstancedBaseline,
-	pfnCvar_DirectSet,
+	Cvar_DirectSet,
 	pfnForceUnmodified,
 	pfnGetPlayerStats,
 	Cmd_AddGameCommand,
@@ -4432,7 +4331,7 @@ void SV_UnloadProgs( void )
 
 	// must unlink all game cvars,
 	// before pointers on them will be lost...
-	Cmd_ExecuteString( "@unlink\n" );
+	Cmd_ExecuteString( "@unlink\n", src_command );
 
 	Com_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );

@@ -62,7 +62,6 @@ typedef enum
 
 #include "system.h"
 #include "ref_params.h"
-#include "com_export.h"
 #include "com_model.h"
 #include "crtlib.h"
 
@@ -113,7 +112,6 @@ extern convar_t	*scr_width;
 extern convar_t	*scr_height;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
-extern convar_t	*allow_download;
 extern convar_t	*cl_allow_levelshots;
 extern convar_t	*host_limitlocal;
 extern convar_t	*host_maxfps;
@@ -191,6 +189,14 @@ typedef enum
 	HOST_CRASHED	// an exception handler called
 } host_state;
 
+// MD5 Hash
+typedef struct
+{
+	uint	buf[4];
+	uint	bits[2];
+	byte	in[64];
+} MD5Context_t;
+
 typedef enum
 {
 	RD_NONE = 0,
@@ -223,6 +229,31 @@ typedef struct host_redirect_s
 	netadr_t		address;
 	void		(*flush)( netadr_t adr, rdtype_t target, char *buffer );
 } host_redirect_t;
+
+typedef struct
+{
+	vec3_t		position;
+	char		name[64];
+	short		entityIndex;
+	byte		depth;
+	byte		flags;
+
+	// this is the surface plane that we hit so that
+	// we can move certain decals across
+	// transitions if they hit similar geometry
+	vec3_t		impactPlaneNormal;
+} decallist_t;
+
+typedef struct
+{
+	string		name;
+	int		entnum;
+	vec3_t		origin;
+	float		volume;
+	float		attenuation;
+	qboolean		looping;
+	int		pitch;
+} soundlist_t;
 
 typedef struct host_parm_s
 {
@@ -499,7 +530,7 @@ qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
 //
 // build.c
 //
-int com_buildnum( void );
+int Q_buildnum( void );
 
 //
 // host.c
@@ -549,34 +580,19 @@ qboolean SV_Active( void );
 ==============================================================
 */
 cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags );
-char *pfnMemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
-byte* pfnLoadFile( const char *filename, int *pLength );
-void pfnCVarSetString( const char *szName, const char *szValue );
-void pfnCVarSetValue( const char *szName, float flValue );
-float pfnCVarGetValue( const char *szName );
-char* pfnCVarGetString( const char *szName );
+char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
+byte* COM_LoadFileForMe( const char *filename, int *pLength );
 cvar_t *pfnCVarGetPointer( const char *szVarName );
-void pfnFreeFile( void *buffer );
-int pfnFileExists( const char *filename, int gamedironly );
-void *pfnLoadLibrary( const char *name );
-void *pfnGetProcAddress( void *hInstance, const char *name );
-void pfnFreeLibrary( void *hInstance );
-int pfnAddCommand( const char *cmd_name, xcommand_t func );
 int pfnAddClientCommand( const char *cmd_name, xcommand_t func );
-void pfnDelCommand( const char *cmd_name );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 void pfnGetModelBounds( model_t *mod, float *mins, float *maxs );
 void pfnGetGameDir( char *szGetGameDir );
 int pfnGetModelType( model_t *mod );
 int pfnIsMapValid( char *filename );
-char *pfnCmd_Args( void );
-char *pfnCmd_Argv( int argc );
 void Con_DPrintf( char *fmt, ... );
 void Con_Printf( char *szFmt, ... );
-int pfnCmd_Argc( void );
 int pfnIsInGame( void );
-float pfnTime( void );
 
 /*
 ==============================================================
@@ -707,11 +723,12 @@ char *Cvar_Userinfo( void );
 char *Cvar_Serverinfo( void );
 void Cmd_WriteVariables( file_t *f );
 qboolean Cmd_CheckMapsList( qboolean fRefresh );
-void Cmd_ForwardToServer( void );
 void Cmd_AutoComplete( char *complete_string );
 long Com_RandomLong( long lMin, long lMax );
 float Com_RandomFloat( float fMin, float fMax );
 void TrimSpace( const char *source, char *dest );
+void GL_FreeImage( const char *name );
+void VID_RestoreGamma( void );
 
 typedef struct autocomplete_list_s
 {

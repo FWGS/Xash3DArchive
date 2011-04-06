@@ -10,7 +10,7 @@ static char *mon[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
 static char mond[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 // returns days since Feb 13 2007
-int com_buildnum( void )
+int Q_buildnum( void )
 {
 	int m = 0, d = 0, y = 0;
 	static int b = 0;
@@ -23,6 +23,7 @@ int com_buildnum( void )
 			break;
 		d += mond[m];
 	}
+
 	d += Q_atoi( &date[4] ) - 1;
 	y = Q_atoi( &date[7] ) - 1900;
 	b = d + (int)((y - 1) * 365.25f );

@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "mathlib.h"
-#include "cm_local.h"
+#include "mod_local.h"
 #include "pm_local.h"
 #include "pm_movevars.h"
 #include "studio.h"

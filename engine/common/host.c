@@ -6,7 +6,7 @@
 #include "common.h"
 #include "netchan.h"
 #include "protocol.h"
-#include "cm_local.h"
+#include "mod_local.h"
 #include "mathlib.h"
 #include "input.h"
 
@@ -734,10 +734,12 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		Con_ShowConsole( false ); // hide console
 		// execute startup config and cmdline
 		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));
+		// intentional fallthrough
 	case HOST_DEDICATED:
-		Cbuf_Execute();
 		// if stuffcmds wasn't run, then init.rc is probably missing, use default
-		if( !host.stuffcmdsrun ) Cbuf_ExecuteText( EXEC_NOW, "stuffcmds\n" );
+		if( !host.stuffcmdsrun ) Cbuf_AddText( "stuffcmds\n" );
+
+		Cbuf_Execute();
 		break;
 	}
 
@@ -746,7 +748,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	Cmd_RemoveCommand( "setgl" );
 
 	// we need to execute it again here
-	Cmd_ExecuteString( "exec config.cfg\n" );
+	Cmd_ExecuteString( "exec config.cfg\n", src_command );
 	oldtime = Sys_DoubleTime();
 
 	// main window message loop

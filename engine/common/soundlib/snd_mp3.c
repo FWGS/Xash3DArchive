@@ -255,7 +255,6 @@ static int mpeg_size( mp3_frame_t *frame, long bytes )
 
 =================================================================
 */
-
 qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize )
 {
 	mpegfile_t	mpeg;

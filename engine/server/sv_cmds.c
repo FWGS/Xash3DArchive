@@ -358,7 +358,7 @@ SV_QuickLoad_f
 */
 void SV_QuickLoad_f( void )
 {
-	Cbuf_ExecuteText( EXEC_APPEND, "echo Quick Loading...; wait; load quick" );
+	Cbuf_AddText( "echo Quick Loading...; wait; load quick" );
 }
 
 /*
@@ -391,7 +391,7 @@ SV_QuickSave_f
 */
 void SV_QuickSave_f( void )
 {
-	Cbuf_ExecuteText( EXEC_APPEND, "echo Quick Saving...; wait; save quick" );
+	Cbuf_AddText( "echo Quick Saving...; wait; save quick" );
 }
 
 /*
@@ -773,6 +773,12 @@ void SV_PlayersOnly_f( void )
 void SV_EdictsInfo_f( void )
 {
 	int	active;
+
+	if( sv.state != ss_active )
+	{
+		Msg( "^3no server running.\n" );
+		return;
+	}
 
 	active = pfnNumberOfEntities(); 
 	Msg( "%5i edicts is used\n", active );

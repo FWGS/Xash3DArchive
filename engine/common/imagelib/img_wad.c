@@ -390,7 +390,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		{
 			int	pal_type;
 
-			// NOTE: we can have luma-pixels if quake1/2 texture
+			// NOTE: we can have luma-pixels if quake1 texture
 			// converted into the hl texture but palette leave unchanged
 			// this is a good reason for using fullbright pixels
 			pal_type = Image_ComparePalette( pal );

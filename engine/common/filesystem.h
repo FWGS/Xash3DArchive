@@ -1,8 +1,8 @@
 //=======================================================================
-//			Copyright (C) XashXT Group 2006
-//			     All Rights Reserved
-//			zip32.h - zlib custom build
+//			Copyright XashXT Group 2007 ©
+//			  filesystem.h - engine FS
 //=======================================================================
+
 #ifndef FILESYSTEM_H
 #define FILESYSTEM_H
 

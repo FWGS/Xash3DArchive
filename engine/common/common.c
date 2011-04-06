@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2008 ©
-//		engfuncs.c - misc functions used by dlls'
+//		      common.c - misc functions used by dlls'
 //=======================================================================
 
 #include "common.h"
@@ -42,7 +42,7 @@ byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
 ==============
 COM_ParseFile
 
-simple dlls version
+text parser
 ==============
 */
 char *COM_ParseFile( char *data, char *token )
@@ -201,11 +201,11 @@ void COM_FixSlashes( char *pname )
 
 /*
 =============
-pfnMemFgets
+COM_MemFgets
 
 =============
 */
-char *pfnMemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize )
+char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize )
 {
 	int	i, last, stop;
 
@@ -272,41 +272,30 @@ void *Cache_Check( byte *mempool, cache_user_t *c )
 
 /*
 =============
-pfnLoadFile
+COM_LoadFileForMe
 
 =============
 */
-byte* pfnLoadFile( const char *filename, int *pLength )
+byte* COM_LoadFileForMe( const char *filename, int *pLength )
 {
+	string	name;
+	int	i;
+
 	if( !filename || !*filename )
 	{
 		if( pLength ) *pLength = 0;
 		return NULL;
 	}
 
-	return FS_LoadFile( filename, pLength, false );
-}
+	// replace all backward slashes
+	for( i = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '\\' ) name[i] = '/';
+		else name[i] = Q_tolower( filename[i] );
+	}
+	name[i] = '\0';
 
-/*
-=============
-pfnFileExists
-
-=============
-*/
-int pfnFileExists( const char *filename, int gamedironly )
-{
-	return FS_FileExists( filename, gamedironly );
-}
-
-/*
-=============
-pfnTime
-
-=============
-*/
-float pfnTime( void )
-{
-	return Sys_DoubleTime();
+	return FS_LoadFile( name, pLength, false );
 }
 
 /*
@@ -355,50 +344,6 @@ cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int f
 
 /*
 =============
-pfnCVarSetString
-
-=============
-*/
-void pfnCVarSetString( const char *szName, const char *szValue )
-{
-	Cvar_Set( szName, szValue );
-}
-
-/*
-=============
-pfnCVarSetValue
-
-=============
-*/
-void pfnCVarSetValue( const char *szName, float flValue )
-{
-	Cvar_SetFloat( szName, flValue );
-}
-
-/*
-=============
-pfnCVarGetString
-
-=============
-*/
-char* pfnCVarGetString( const char *szName )
-{
-	return Cvar_VariableString( szName );
-}
-
-/*
-=============
-pfnCVarGetValue
-
-=============
-*/
-float pfnCVarGetValue( const char *szName )
-{
-	return Cvar_VariableValue( szName );
-}
-
-/*
-=============
 pfnCVarGetPointer
 
 can return NULL
@@ -407,23 +352,6 @@ can return NULL
 cvar_t *pfnCVarGetPointer( const char *szVarName )
 {
 	return (cvar_t *)Cvar_FindVar( szVarName );
-}
-	
-/*
-=============
-pfnAddCommand
-
-=============
-*/
-int pfnAddCommand( const char *cmd_name, xcommand_t func )
-{
-	if( !cmd_name || !*cmd_name )
-		return 0;
-
-	// NOTE: if( func == NULL ) cmd will be forwarded to a server
-	Cmd_AddCommand( cmd_name, func, "game command" );
-
-	return 1;
 }
 
 /*
@@ -438,57 +366,9 @@ int pfnAddClientCommand( const char *cmd_name, xcommand_t func )
 		return 0;
 
 	// NOTE: if( func == NULL ) cmd will be forwarded to a server
-	Cmd_AddGameCommand( cmd_name, func );
+	Cmd_AddClientCommand( cmd_name, func );
 
 	return 1;
-}
-
-/*
-=============
-pfnDelCommand
-
-=============
-*/
-void pfnDelCommand( const char *cmd_name )
-{
-	if( !cmd_name || !*cmd_name ) return;
-
-	Cmd_RemoveCommand( cmd_name );
-}
-
-/*
-=============
-pfnCmd_Args
-
-=============
-*/
-char *pfnCmd_Args( void )
-{
-	return Cmd_Args();
-}
-
-/*
-=============
-pfnCmd_Argv
-
-=============
-*/
-char *pfnCmd_Argv( int argc )
-{
-	if( argc >= 0 && argc < Cmd_Argc())
-		return Cmd_Argv( argc );
-	return "";
-}
-
-/*
-=============
-pfnCmd_Argc
-
-=============
-*/
-int pfnCmd_Argc( void )
-{
-	return Cmd_Argc();
 }
 
 /*
@@ -531,39 +411,6 @@ void Con_DPrintf( char *szFmt, ... )
 	va_end( args );
 
 	Sys_Print( buffer );
-}
-
-/*
-=============
-pfnLoadLibrary
-
-=============
-*/
-void *pfnLoadLibrary( const char *name )
-{
-	return Com_LoadLibrary( name, false );
-}
-
-/*
-=============
-pfnGetProcAddress
-
-=============
-*/
-void *pfnGetProcAddress( void *hInstance, const char *name )
-{
-	return Com_GetProcAddress( hInstance, name );
-}
-
-/*
-=============
-pfnFreeLibrary
-
-=============
-*/
-void pfnFreeLibrary( void *hInstance )
-{
-	Com_FreeLibrary( hInstance );
 }
 
 /*

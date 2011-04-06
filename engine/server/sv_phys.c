@@ -624,8 +624,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
-	// NOTE: this condition may doing wrong results with spawn repels from osprey in SvenCoop 4.5. revisit
-	if( !trace.allsolid && trace.fraction != 0.0f )
+	if( trace.fraction != 0.0f )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 
@@ -1093,7 +1092,7 @@ void SV_Physics_Follow( edict_t *ent )
 	parent = ent->v.aiment;
 	if( !SV_IsValidEdict( parent )) return;
 
-	VectorCopy( parent->v.origin, ent->v.origin );
+	VectorAdd( parent->v.origin, parent->v.view_ofs, ent->v.origin );
 	VectorCopy( parent->v.angles, ent->v.angles );
 
 	// noclip ents never touch triggers
@@ -1341,11 +1340,11 @@ void SV_Physics_Toss( edict_t *ent )
 
 		vel = DotProduct( ent->v.velocity, ent->v.velocity );
 
-		if( vel < 900 || ( ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE ))
+		if( vel < 900.0f || ( ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE ))
 		{
 			ent->v.flags |= FL_ONGROUND;
 			ent->v.groundentity = trace.ent;
-			VectorClear( ent->v.velocity ); // avelocity clearing in server.dll
+			VectorClear( ent->v.velocity ); // avelocity will be clearing in game.dll
 		}
 		else
 		{

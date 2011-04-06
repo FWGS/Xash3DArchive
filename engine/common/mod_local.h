@@ -1,9 +1,9 @@
 //=======================================================================
 //			Copyright XashXT Group 2007 ©
-//			    cm_local.h - main struct
+//			  mod_local.h - model loader
 //=======================================================================
-#ifndef CM_LOCAL_H
-#define CM_LOCAL_H
+#ifndef MOD_LOCAL_H
+#define MOD_LOCAL_H
 
 #include "common.h"
 #include "bspfile.h"
@@ -44,7 +44,7 @@ typedef struct
 	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 	size_t		visdatasize;	// actual size of the visdata
-	qboolean		loading;		// true is worldmodel is loading
+	qboolean		loading;		// true if worldmodel is loading
 } world_static_t;
 
 extern world_static_t	world;
@@ -82,4 +82,4 @@ byte *Mod_DecompressVis( const byte *in );
 modtype_t Mod_GetType( int handle );
 model_t *Mod_Handle( int handle );
 
-#endif//CM_LOCAL_H
+#endif//MOD_LOCAL_H

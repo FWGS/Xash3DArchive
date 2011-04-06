@@ -402,6 +402,13 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 			continue;			
 		}
 #endif
+		if( touch->v.groupinfo && ent->v.groupinfo )
+		{
+			if(( !svs.groupop && !(touch->v.groupinfo & ent->v.groupinfo)) ||
+			(svs.groupop == 1 && (touch->v.groupinfo & ent->v.groupinfo)))
+				continue;
+		}
+
 		if( touch == ent || touch->v.solid != SOLID_TRIGGER ) // disabled ?
 			continue;
 
@@ -648,6 +655,13 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 		if( touch->v.solid != SOLID_NOT ) // disabled ?
 			continue;
 
+		if( touch->v.groupinfo )
+		{
+			if(( !svs.groupop && !(touch->v.groupinfo & svs.groupmask)) ||
+			(svs.groupop == 1 && (touch->v.groupinfo & svs.groupmask)))
+				continue;
+		}
+
 		// only brushes can have special contents
 		if( Mod_GetType( touch->v.modelindex ) != mod_brush )
 			continue;
@@ -728,7 +742,8 @@ returns true if the entity is in solid currently
 qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 {
 	trace_t	trace;
-
+#if 0
+	// g-cont. probably not needs
 	if( ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
 	{
 		// to avoid falling through tracktrain update client mins\maxs here
@@ -736,7 +751,7 @@ qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 			SV_SetMinMaxSize( ent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
 		else SV_SetMinMaxSize( ent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );
 	}
-
+#endif
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent );
 
 	if( SV_IsValidEdict( blocker ) && SV_IsValidEdict( trace.ent ))
@@ -1522,8 +1537,8 @@ int SV_LightForEntity( edict_t *pEdict )
 
 	if( pEdict->v.flags & FL_CLIENT )
 	{
-		// client has more precision light level
-		// that come from client
+		// player has more precision light level
+		// that come from client-side
 		return pEdict->v.light_level;
 	}
 

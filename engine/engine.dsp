@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Oy /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/vgui" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/vgui" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -178,6 +178,10 @@ SOURCE=.\common\cmd.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\common.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\con_utils.c
 # End Source File
 # Begin Source File
@@ -195,10 +199,6 @@ SOURCE=.\common\crtlib.c
 # Begin Source File
 
 SOURCE=.\common\cvar.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\engfuncs.c
 # End Source File
 # Begin Source File
 
@@ -530,10 +530,6 @@ SOURCE=.\client\client.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\cm_local.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\common\common.h
 # End Source File
 # Begin Source File
@@ -566,15 +562,15 @@ SOURCE=.\common\mathlib.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\mod_local.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\net_buffer.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\common\net_encode.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\net_msg.h
 # End Source File
 # Begin Source File
 

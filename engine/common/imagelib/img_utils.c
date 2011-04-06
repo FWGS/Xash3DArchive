@@ -289,7 +289,7 @@ void Image_GetPaletteQ1( void )
 {
 	image.d_rendermode = LUMP_NORMAL;
 
-	if(!q1palette_init)
+	if( !q1palette_init )
 	{
 		Image_SetPalette( palette_q1, d_8toQ1table );
 		d_8toQ1table[255] = 0; // 255 is transparent
@@ -391,6 +391,7 @@ void Image_CopyParms( rgbdata_t *src )
 	image.flags = src->flags;
 	image.size = src->size;
 	image.palette = src->palette;	// may be NULL
+
 	Q_memcpy( image.fogParams, src->fogParams, sizeof( image.fogParams ));
 }
 
@@ -413,6 +414,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 		MsgDev( D_ERROR, "Image_Copy8bitRGBA: no palette set\n" );
 		return false;
 	}
+
 	if( !in )
 	{
 		MsgDev( D_ERROR, "Image_Copy8bitRGBA: no input image\n" );
@@ -445,6 +447,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 		iout += 8;
 		pixels -= 8;
 	}
+
 	if( pixels & 4 )
 	{
 		iout[0] = image.d_currentpal[in[0]];
@@ -454,6 +457,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 		in += 4;
 		iout += 4;
 	}
+
 	if( pixels & 2 )
 	{
 		iout[0] = image.d_currentpal[in[0]];
@@ -461,6 +465,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 		in += 2;
 		iout += 2;
 	}
+
 	if( pixels & 1 ) // last byte
 		iout[0] = image.d_currentpal[in[0]];
 
@@ -468,11 +473,11 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 	return true;
 }
 
-static void Image_Resample32LerpLine (const byte *in, byte *out, int inwidth, int outwidth)
+static void Image_Resample32LerpLine( const byte *in, byte *out, int inwidth, int outwidth )
 {
 	int	j, xi, oldx = 0, f, fstep, endx, lerp;
 
-	fstep = (int)(inwidth * 65536.0f/outwidth);
+	fstep = (int)(inwidth * 65536.0f / outwidth);
 	endx = (inwidth-1);
 
 	for( j = 0, f = 0; j < outwidth; j++, f += fstep )
@@ -505,7 +510,7 @@ static void Image_Resample24LerpLine( const byte *in, byte *out, int inwidth, in
 {
 	int	j, xi, oldx = 0, f, fstep, endx, lerp;
 
-	fstep = (int)(inwidth * 65536.0f/outwidth);
+	fstep = (int)(inwidth * 65536.0f / outwidth);
 	endx = (inwidth-1);
 
 	for( j = 0, f = 0; j < outwidth; j++, f += fstep )
@@ -532,7 +537,7 @@ static void Image_Resample24LerpLine( const byte *in, byte *out, int inwidth, in
 	}
 }
 
-void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
+void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight )
 {
 	int	i, j, r, yi, oldy = 0, f, fstep, lerp, endy = (inheight - 1);
 	int	inwidth4 = inwidth * 4;
@@ -776,11 +781,11 @@ void Image_Resample24Nolerp( const void *indata, int inwidth, int inheight, void
 	uint	frac, fracstep;
 	byte	*inrow, *out = (byte *)outdata;
 
-	fracstep = inwidth * 0x10000/outwidth;
+	fracstep = inwidth * 0x10000 / outwidth;
 
 	for( i = 0; i < outheight; i++)
 	{
-		inrow = (byte *)indata + inwidth3 * (i * inheight/outheight);
+		inrow = (byte *)indata + inwidth3 * (i * inheight / outheight);
 		frac = fracstep>>1;
 		j = outwidth - 4;
 
@@ -938,13 +943,21 @@ byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int ou
 	}
 
 	if( samples == 1 ) Q_memset( out, 0xFF, newsize );	// last palette color
-	else Q_memset( out, 0x00808080, newsize );	// gray (alpha leaved 0x00)
+	else Q_memset( out, 0x00808080, newsize );		// gray (alpha leaved 0x00)
 
 	for( y = 0; y < outheight; y++ )
+	{
 		for( x = 0; y < inheight && x < outwidth; x++ )
+		{
 			for( i = 0; i < samples; i++ )
-				if( x < inwidth ) *out++ = *in++;
+			{
+				if( x < inwidth )
+					*out++ = *in++;
 				else *out++;
+			}
+		}
+	}
+
 	*resampled = true;
 	return image.tempbuffer;
 }
@@ -983,7 +996,7 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 		image.tempbuffer = Mem_Realloc( host.imagepool, image.tempbuffer, width * height * samples );
 		break;
 	default:
-		// we can flip DXT without expanding to RGBA ? hmmm...
+		// we can flip DXT without expanding to RGBA? hmmm...
 		MsgDev( D_WARN, "Image_Flip: unsupported format %s\n", PFDesc[type].name );
 		return (byte *)in;	
 	}

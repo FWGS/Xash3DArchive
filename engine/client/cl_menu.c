@@ -527,16 +527,12 @@ pfnClientCmd
 
 =============
 */
-static void pfnClientCmd( int execute_now, const char *szCmdString )
+static void pfnClientCmd( int exec_now, const char *szCmdString )
 {
-	int	when;
-
-	if( execute_now )
-		when = EXEC_NOW;
-	else when = EXEC_APPEND;
-
 	// client command executes immediately
-	Cbuf_ExecuteText( when, szCmdString );
+	Cbuf_AddText( szCmdString );
+
+	if( exec_now ) Cbuf_Execute();
 }
 
 /*
@@ -666,7 +662,7 @@ send client connect
 */
 static void pfnClientJoin( const netadr_t adr )
 {
-	Cbuf_ExecuteText( EXEC_APPEND, va( "connect %s\n", NET_AdrToString( adr )));
+	Cbuf_AddText( va( "connect %s\n", NET_AdrToString( adr )));
 }
 
 /*
@@ -876,18 +872,20 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnPIC_DisableScissor,
 	pfnFillRGBA,
 	pfnCvar_RegisterVariable,
-	pfnCVarGetValue,
-	pfnCVarGetString,
-	pfnCVarSetString,
-	pfnCVarSetValue,
-	pfnAddCommand,
+	Cvar_VariableValue,
+	Cvar_VariableString,
+	Cvar_Set,
+	Cvar_SetFloat,
+	pfnAddClientCommand,
 	pfnClientCmd,
-	pfnDelCommand,
-	pfnCmd_Argc,
-	pfnCmd_Argv,
-	pfnCmd_Args,
+	Cmd_RemoveCommand,
+	Cmd_Argc,
+	Cmd_Argv,
+	Cmd_Args,
 	Con_Printf,
 	Con_DPrintf,
+	Con_NPrintf,
+	Con_NXPrintf,
 	pfnPlaySound,
 	UI_DrawLogo,
 	UI_GetLogoWidth,
@@ -903,18 +901,13 @@ static ui_enginefuncs_t gEngfuncs =
 	V_ClearScene,	
 	pfnRenderScene,
 	CL_AddEntity,
-	pfnLoadLibrary,
-	pfnGetProcAddress,
-	pfnFreeLibrary,
 	Host_Error,
-	pfnFileExists,
+	FS_FileExists,
 	pfnGetGameDir,
-	VGui_GetPanel,
-	VGui_ViewportPaintBackground,
 	Cmd_CheckMapsList,
 	CL_Active,
 	pfnClientJoin,
-	pfnLoadFile,
+	COM_LoadFileForMe,
 	COM_ParseFile,
 	COM_FreeFile,
 	Key_ClearStates,

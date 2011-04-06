@@ -7,6 +7,7 @@
 #include "client.h"
 #include "net_encode.h"
 #include "entity_types.h"
+#include "gl_local.h"
 #include "pm_local.h"
 #include "cl_tent.h"
 #include "studio.h"
@@ -352,7 +353,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	qboolean		newent = (old) ? false : true;
 	qboolean		result = true;
 
-	ent = EDICT_NUM( newnum );
+	ent = CL_EDICT_NUM( newnum );
 	state = &cls.packet_entities[cls.next_client_entities % cls.num_client_entities];
 	ent->index = newnum;
 

@@ -109,8 +109,8 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 			clgame.dllFuncs.IN_ActivateMouse();
 
 		// restore mlook state
-		if( mlook_active ) Cmd_ExecuteString( "+mlook\n" );
-		if( jlook_active ) Cmd_ExecuteString( "+jlook\n" );
+		if( mlook_active ) Cmd_ExecuteString( "+mlook\n", src_command );
+		if( jlook_active ) Cmd_ExecuteString( "+jlook\n", src_command );
 		return true;
 	}
 	return false;
@@ -193,90 +193,6 @@ void CL_ComputePacketLoss( void )
 
 	if( count <= 0 ) cls.packet_loss = 0.0f;
 	else cls.packet_loss = ( 100.0f * (float)lost ) / (float)count;
-}
-
-/*
-=======================================================================
-
-CLIENT RELIABLE COMMAND COMMUNICATION
-
-=======================================================================
-*/
-/*
-===================
-Cmd_ForwardToServer
-
-adds the current command line as a clc_stringcmd to the client message.
-things like godmode, noclip, etc, are commands directed to the server,
-so when they are typed in at the console, they will need to be forwarded.
-===================
-*/
-/*
-==================
-CL_ForwardToServer_f
-==================
-*/
-void CL_ForwardToServer_f( void )
-{
-	char	*cmd;
-
-	if( cls.demoplayback )
-	{
-		if( !Q_stricmp( Cmd_Argv( 1 ), "pause" ))
-			cl.refdef.paused ^= 1;
-		return;
-	}
-
-	if( cls.state != ca_connected && cls.state != ca_active )
-		return; // not connected
-
-	cmd = Cmd_Argv( 0 );
-	if( *cmd == '-' || *cmd == '+' )
-	{
-		MsgDev( D_INFO, "Unknown command \"%s\"\n", cmd );
-		return;
-	}	
-
-	// don't forward the first argument
-	if( Cmd_Argc() > 1 )
-	{
-		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-		BF_WriteString( &cls.netchan.message, Cmd_Args( ));
-	}
-}
-
-/*
-===================
-Cmd_ForwardToServer
-
-adds the current command line as a clc_stringcmd to the client message.
-things like godmode, noclip, etc, are commands directed to the server,
-so when they are typed in at the console, they will need to be forwarded.
-===================
-*/
-void Cmd_ForwardToServer( void )
-{
-	char	*cmd;
-
-	if( cls.demoplayback )
-	{
-		if( !Q_stricmp( Cmd_Argv( 1 ), "pause" ))
-			cl.refdef.paused ^= 1;
-		return;
-	}
-
-	cmd = Cmd_Argv( 0 );
-	if( *cmd == '-' || *cmd == '+' )
-	{
-		MsgDev( D_INFO, "Unknown command \"%s\"\n", cmd );
-		return;
-	}
-
-	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-
-	if( Cmd_Argc() > 1 )
-		BF_WriteString( &cls.netchan.message, va( "%s %s", cmd, Cmd_Args( )));
-	else BF_WriteString( &cls.netchan.message, cmd );
 }
 
 /*
@@ -1525,7 +1441,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("fov", NULL, "set client field of view" );
 		
 	// register our commands
-	Cmd_AddCommand ("cmd", CL_ForwardToServer_f, "send a console commandline to the server" );
 	Cmd_AddCommand ("pause", NULL, "pause the game (if the server allows pausing)" );
 	Cmd_AddCommand ("localservers", CL_LocalServers_f, "collect info about local servers" );
 	Cmd_AddCommand ("cd", CL_PlayCDTrack_f, "Play cd-track (not real cd-player of course)" );

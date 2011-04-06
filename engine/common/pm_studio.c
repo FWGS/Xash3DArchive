@@ -6,7 +6,7 @@
 #include "common.h"
 #include "studio.h"
 #include "mathlib.h"
-#include "cm_local.h"
+#include "mod_local.h"
 #include "pm_local.h"
 #include "world.h"
 

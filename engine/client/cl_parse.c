@@ -8,6 +8,7 @@
 #include "net_encode.h"
 #include "event_flags.h"
 #include "particledef.h"
+#include "gl_local.h"
 #include "cl_tent.h"
 #include "shake.h"
 
@@ -771,7 +772,7 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
 	if( newnum > clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
 
-	ent = EDICT_NUM( newnum );
+	ent = CL_EDICT_NUM( newnum );
 	Q_memset( &ent->prevstate, 0, sizeof( ent->prevstate ));
 	ent->index = newnum;
 

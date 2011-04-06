@@ -19,7 +19,7 @@ int jpeg_read_byte( void )
 int jpeg_read_word( void )
 {
 	// read word
-	word	i = (jpg_file.buffer[1]<<8)|jpg_file.buffer[0];
+	word i = (jpg_file.buffer[1]<<8)|jpg_file.buffer[0];
 	i = ((i << 8) & 0xFF00) + ((i >> 8) & 0x00FF);
 	jpg_file.buffer += 2;
 	
@@ -307,7 +307,6 @@ int jpeg_readmarkers( void )
 		}
 	}
 }
-
 
 void jpeg_decompress( void )
 {

@@ -60,9 +60,11 @@ typedef struct ui_enginefuncs_s
 	char*	(*pfnCmdArgv)( int argc );
 	char*	(*pfnCmd_Args)( void );
 
-	// debug messages (im-menu shows only notify)	
+	// debug messages (in-menu shows only notify)	
 	void	(*Con_Printf)( char *fmt, ... );
 	void	(*Con_DPrintf)( char *fmt, ... );
+	void	(*Con_NPrintf)( int pos, char *fmt, ... );
+	void	(*Con_NXPrintf)( struct con_nprint_s *info, char *fmt, ... );
 
 	// sound handlers
 	void	(*pfnPlayLocalSound)( const char *szSound );
@@ -87,17 +89,10 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnRenderScene)( const struct ref_params_s *fd );
 	int	(*CL_CreateVisibleEntity)( int type, struct cl_entity_s *ent );
 
-	// dlls managemenet
-	void*	(*pfnLoadLibrary)( const char *name );
-	void*	(*pfnGetProcAddress)( void *hInstance, const char *name );
-	void	(*pfnFreeLibrary)( void *hInstance );
+	// misc handlers
 	void	(*pfnHostError)( const char *szFmt, ... );
 	int	(*pfnFileExists)( const char *filename, int gamedironly );
 	void	(*pfnGetGameDir)( char *szGetGameDir );
-
-	// vgui handlers
-	void*	(*VGui_GetPanel)( void );				// UNDONE: wait for version 0.75
-	void	(*VGui_ViewportPaintBackground)( int extents[4] );
 
 	// gameinfo handlers
 	int	(*pfnCreateMapsList)( int fRefresh );

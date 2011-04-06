@@ -93,7 +93,7 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	if( index >= clgame.maxEntities )
 		return NULL;
 
-	return EDICT_NUM( index );
+	return CL_EDICT_NUM( index );
 }
 
 /*
@@ -750,7 +750,7 @@ cl_entity_t *CL_GetLocalPlayer( void )
 	{
 		cl_entity_t *player;
 
-		player = EDICT_NUM( cl.playernum + 1 );
+		player = CL_EDICT_NUM( cl.playernum + 1 );
 		ASSERT( player != NULL );
 		return player;
 	}
@@ -1273,12 +1273,12 @@ void CL_ClearWorld( void )
 {
 	cl_entity_t	*ent;
 
-	ent = EDICT_NUM( 0 );
-	ent->index = NUM_FOR_EDICT( ent );
+	ent = clgame.entities;
 	ent->curstate.modelindex = 1;	// world model
 	ent->curstate.solid = SOLID_BSP;
 	ent->curstate.movetype = MOVETYPE_PUSH;
 	ent->model = cl.worldmodel;
+	ent->index = 0;
 }
 
 void CL_InitEdicts( void )
@@ -2105,7 +2105,7 @@ static cl_entity_t *pfnGetEntityByIndex( int index )
 	if( index >= clgame.maxEntities )
 		return NULL;
 
-	return EDICT_NUM( index );
+	return CL_EDICT_NUM( index );
 }
 
 /*
@@ -3534,8 +3534,8 @@ static cl_enginefunc_t gEngfuncs =
 	pfnGetScreenInfo,
 	pfnSetCrosshair,
 	pfnCvar_RegisterVariable,
-	pfnCVarGetValue,
-	pfnCVarGetString,
+	Cvar_VariableValue,
+	Cvar_VariableString,
 	pfnAddClientCommand,
 	pfnHookUserMsg,
 	pfnServerCmd,
@@ -3556,9 +3556,9 @@ static cl_enginefunc_t gEngfuncs =
 	pfnGetViewAngles,
 	pfnSetViewAngles,
 	CL_GetMaxClients,
-	pfnCVarSetValue,
-	pfnCmd_Argc,
-	pfnCmd_Argv,
+	Cvar_SetFloat,
+	Cmd_Argc,
+	Cmd_Argv,
 	Con_Printf,
 	Con_DPrintf,
 	Con_NPrintf,

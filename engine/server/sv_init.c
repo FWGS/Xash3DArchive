@@ -450,7 +450,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	qboolean	loadgame, paused;
 	qboolean	background;
 
-	Cmd_ExecuteString( "latch\n" );
+	Cmd_ExecuteString( "latch\n", src_command );
 
 	// save state
 	loadgame = sv.loadgame;

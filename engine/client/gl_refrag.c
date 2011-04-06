@@ -6,7 +6,7 @@
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
-#include "cm_local.h"
+#include "mod_local.h"
 #include "entity_types.h"
 
 /*

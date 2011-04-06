@@ -459,7 +459,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		GetWindowRect( host.hWnd, &real_rect );
 		break;
 	case WM_CLOSE:
-		Cbuf_ExecuteText( EXEC_APPEND, "quit" );
+		Sys_Quit();
 		break;
 	case WM_ACTIVATE:
 		if( host.state == HOST_SHUTDOWN )

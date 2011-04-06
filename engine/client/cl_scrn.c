@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "client.h"
+#include "gl_local.h"
 #include "qfont.h"
 
 convar_t *scr_viewsize;

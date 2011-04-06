@@ -11,7 +11,7 @@
 #include "menu_int.h"
 #include "cl_entity.h"
 #include "com_model.h"
-#include "cm_local.h"
+#include "mod_local.h"
 #include "pm_defs.h"
 #include "pm_movevars.h"
 #include "screenfade.h"
@@ -30,9 +30,6 @@
 #define VID_LEVELSHOT	1
 #define VID_MINISHOT	2
 
-#define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, cl_entity_t, area )
-#define NUM_FOR_EDICT(e)	((int)((cl_entity_t *)(e) - clgame.entities))
-#define EDICT_NUM( num )	CL_EDICT_NUM( num, __FILE__, __LINE__ )
 #define cl_time()		( cl.time )
 #define sv_time()		( cl.mtime[0] )
 
@@ -578,11 +575,12 @@ int pfnIndexFromTrace( struct pmtrace_s *pTrace );
 int CL_FindModelIndex( const char *m );
 HSPRITE pfnSPR_Load( const char *szPicName );
 
-_inline cl_entity_t *CL_EDICT_NUM( int n, const char *file, const int line )
+_inline cl_entity_t *CL_EDICT_NUM( int n )
 {
 	if(( n >= 0 ) && ( n < clgame.maxEntities ))
 		return clgame.entities + n;
-	Host_Error( "CL_EDICT_NUM: bad number %i (called at %s:%i)\n", n, file, line );
+
+	Host_Error( "CL_EDICT_NUM: bad number %i\n", n );
 	return NULL;	
 }
 

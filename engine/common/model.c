@@ -3,7 +3,7 @@
 //			    model.c - modelloader
 //=======================================================================
 
-#include "cm_local.h"
+#include "mod_local.h"
 #include "sprite.h"
 #include "mathlib.h"
 #include "studio.h"
