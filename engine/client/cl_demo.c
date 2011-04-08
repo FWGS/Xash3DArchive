@@ -154,7 +154,7 @@ void CL_WriteDemoHeader( const char *name )
 			continue;
 
 		BF_WriteByte( &buf, svc_spawnbaseline );		
-		MSG_WriteDeltaEntity( &nullstate, state, &buf, true, CL_IsPlayerIndex( state->number ), sv_time( ));
+		MSG_WriteDeltaEntity( &nullstate, state, &buf, true, CL_IsPlayerIndex( state->number ), cl.mtime[0] );
 
 		if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 		{	

@@ -102,109 +102,6 @@ qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipf
 }
 
 /*
-===================
-R_VisCullBox
-===================
-*/
-qboolean R_VisCullBox( const vec3_t mins, const vec3_t maxs )
-{
-	int	s, stackdepth = 0;
-	vec3_t	extmins, extmaxs;
-	mnode_t	*node, *localstack[4096];
-
-	if( !cl.worldmodel || !RI.drawWorld )
-		return false;
-
-	if( r_novis->integer )
-		return false;
-
-	for( s = 0; s < 3; s++ )
-	{
-		extmins[s] = mins[s] - 4;
-		extmaxs[s] = maxs[s] + 4;
-	}
-
-	for( node = cl.worldmodel->nodes; node; )
-	{
-		if( node->visframe != tr.visframecount )
-		{
-			if( !stackdepth )
-				return true;
-			node = localstack[--stackdepth];
-			continue;
-		}
-
-		if( node->contents < 0 )
-			return false;
-
-		s = BOX_ON_PLANE_SIDE( extmins, extmaxs, node->plane ) - 1;
-
-		if( s < 2 )
-		{
-			node = node->children[s];
-			continue;
-		}
-
-		// go down both sides
-		if( stackdepth < sizeof( localstack ) / sizeof( mnode_t* ))
-			localstack[stackdepth++] = node->children[0];
-		node = node->children[1];
-	}
-
-	return true;
-}
-
-/*
-===================
-R_VisCullSphere
-===================
-*/
-qboolean R_VisCullSphere( const vec3_t origin, float radius )
-{
-	float	dist;
-	int	stackdepth = 0;
-	mnode_t	*node, *localstack[4096];
-
-	if( !cl.worldmodel || !RI.drawWorld )
-		return false;
-	if( r_novis->integer )
-		return false;
-
-	radius += 4;
-	for( node = cl.worldmodel->nodes; ; )
-	{
-		if( node->visframe != tr.visframecount )
-		{
-			if( !stackdepth )
-				return true;
-			node = localstack[--stackdepth];
-			continue;
-		}
-
-		if( node->contents < 0 )
-			return false;
-
-		dist = PlaneDiff( origin, node->plane );
-		if( dist > radius )
-		{
-			node = node->children[0];
-			continue;
-		}
-		else if( dist < -radius )
-		{
-			node = node->children[1];
-			continue;
-		}
-
-		// go down both sides
-		if( stackdepth < sizeof( localstack ) / sizeof( mnode_t* ))
-			localstack[stackdepth++] = node->children[0];
-		node = node->children[1];
-	}
-	return true;
-}
-
-/*
 =============
 R_CullModel
 =============
@@ -228,18 +125,12 @@ int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float 
 
 	if( RP_LOCALCLIENT( e ) && !RI.thirdPerson && cl.refdef.viewentity == ( cl.playernum + 1 ))
 	{
-		if(!( RI.params & ( RP_MIRRORVIEW|RP_SHADOWMAPVIEW )))
+		if(!( RI.params & RP_MIRRORVIEW ))
 			return 1;
 	}
 
 	if( R_CullSphere( origin, radius, RI.clipFlags ))
 		return 1;
-
-	if( RI.rdflags & ( RDF_PORTALINVIEW|RDF_SKYPORTALINVIEW ) || ( RI.params & RP_SKYPORTALVIEW ))
-	{
-		if( R_VisCullSphere( origin, radius ))
-			return 2;
-	}
 
 	return 0;
 }

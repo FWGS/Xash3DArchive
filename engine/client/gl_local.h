@@ -22,23 +22,15 @@ extern byte	*r_temppool;
 #define MAX_LIGHTMAPS	64
 #define SUBDIVIDE_SIZE	64
 
-// renderer flags
-#define RDF_PORTALINVIEW	BIT( 0 )	// draw portal pass
-#define RDF_SKYPORTALINVIEW	BIT( 1 )	// draw skyportal instead of regular sky
-
 // refparams
 #define RP_NONE		0
 #define RP_MIRRORVIEW	BIT( 0 )	// lock pvs at vieworg
-#define RP_PORTALVIEW	BIT( 1 )
-#define RP_ENVVIEW		BIT( 2 )	// used for cubemapshot
-#define RP_OLDVIEWLEAF	BIT( 3 )
-#define RP_CLIPPLANE	BIT( 4 )
-#define RP_FLIPFRONTFACE	BIT( 5 )	// e.g. for mirrors drawing
-#define RP_SHADOWMAPVIEW	BIT( 6 )
-#define RP_SKYPORTALVIEW	BIT( 7 )
-#define RP_NOSKY		BIT( 8 )
+#define RP_ENVVIEW		BIT( 1 )	// used for cubemapshot
+#define RP_OLDVIEWLEAF	BIT( 2 )
+#define RP_CLIPPLANE	BIT( 3 )	// mirrors used
+#define RP_FLIPFRONTFACE	BIT( 4 )	// e.g. for mirrors drawing
 
-#define RP_NONVIEWERREF	(RP_PORTALVIEW|RP_MIRRORVIEW|RP_ENVVIEW|RP_SKYPORTALVIEW|RP_SHADOWMAPVIEW)
+#define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
 #define RP_LOCALCLIENT( e )	(CL_GetLocalPlayer() && ((e)->index == CL_GetLocalPlayer()->index && e->player ))
 
 #define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
@@ -114,12 +106,10 @@ typedef struct mextrasurf_s
 typedef struct
 {
 	int		params;		// rendering parameters
-	int		rdflags;		// actual rendering flags
 
 	qboolean		drawWorld;	// ignore world for drawing PlayerModel
 	qboolean		thirdPerson;	// thirdperson camera is enabled
 	qboolean		isSkyVisible;	// sky is visible
-	float		lerpFrac;		// lerpfraction
 
 	ref_params_t	refdef;		// actual refdef
 
@@ -150,12 +140,11 @@ typedef struct
 	float		waveHeight;	// global waveHeight
 	float		currentWaveHeight;	// current entity waveHeight
 
-	vec3_t		visMins, visMaxs;
 	float		skyMins[2][6];
 	float		skyMaxs[2][6];
 
-	matrix4x4		objectMatrix;
-	matrix4x4		worldviewMatrix;
+	matrix4x4		objectMatrix;		// currententity matrix
+	matrix4x4		worldviewMatrix;		// modelview for world
 	matrix4x4		modelviewMatrix;		// worldviewMatrix * objectMatrix
 
 	matrix4x4		projectionMatrix;
@@ -188,13 +177,7 @@ typedef struct
 	uint		num_static_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
-
-	uint		numColors;	// vertex array num colors
-	uint		numVertex;	// vertex array num vertex
-	rgb_t		colorsArray[4096];	// MAXSTUDIOVERTS
-	vec3_t		normalArray[4096];
-	vec3_t		vertexArray[4096];
-          
+         
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
 	
@@ -258,8 +241,6 @@ void R_ShowTextures( void );
 int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float radius );
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
 qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
-qboolean R_VisCullBox( const vec3_t mins, const vec3_t maxs );
-qboolean R_VisCullSphere( const vec3_t origin, float radius );
 
 //
 // gl_decals.c

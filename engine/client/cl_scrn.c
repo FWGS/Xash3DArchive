@@ -1,11 +1,12 @@
 //=======================================================================
 //			Copyright XashXT Group 2007 ©
-//			cl_scrn.c - build client frame
+//			 cl_scrn.c - refresh screen
 //=======================================================================
 
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
+#include "vgui_draw.h"
 #include "qfont.h"
 
 convar_t *scr_viewsize;
@@ -73,7 +74,7 @@ void SCR_NetSpeeds( void )
 	static char	msg[MAX_SYSPATH];
 	int		x, y, height;
 	char		*p, *start, *end;
-	float		time = sv_time();
+	float		time = cl.mtime[0];
 	rgba_t		color;
 
 	if( !net_speeds->integer ) return;

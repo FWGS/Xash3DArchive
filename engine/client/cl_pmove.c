@@ -342,7 +342,7 @@ static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 	mins = clgame.pmove->player_mins[clgame.pmove->usehull];
 	maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
 
-	if( !PM_TraceModel( pe, clgame.pmove->origin, mins, maxs, clgame.pmove->origin, tr, 0 ))
+	if( !PM_TraceModel( clgame.pmove, pe, clgame.pmove->origin, mins, maxs, clgame.pmove->origin, tr, 0 ))
 		return;	// not stuck
 
 	tr->ent = hitent;
@@ -408,7 +408,7 @@ static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *
 {
 	pmtrace_t	pmtrace;
 
-	PM_TraceModel( pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
+	PM_TraceModel( clgame.pmove, pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
 
 	// copy pmtrace_t to trace_t
 	if( trace )

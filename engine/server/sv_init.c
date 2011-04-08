@@ -560,7 +560,7 @@ void SV_InitGame( void )
 	if( svs.initialized )
 	{
 		// cause any connected clients to reconnect
-		Q_strncpy( host.finalmsg, "Server restarted\n", MAX_STRING );
+		Q_strncpy( host.finalmsg, "Server restarted", MAX_STRING );
 		SV_Shutdown( true );
 	}
 	else

@@ -2589,6 +2589,9 @@ void R_DrawStudioModel( cl_entity_t *e )
 {
 	int	flags, result;
 
+	if( RI.params & RP_ENVVIEW )
+		return;
+
 	ASSERT( pStudioDraw != NULL );
 
 	if( e == &clgame.viewent )
@@ -2624,7 +2627,7 @@ R_RunViewmodelEvents
 */
 void R_RunViewmodelEvents( void )
 {
-	if( cl.refdef.nextView || cl.thirdperson )
+	if( cl.refdef.nextView || cl.thirdperson || RI.params & RP_ENVVIEW )
 		return;
 
 	RI.currententity = &clgame.viewent;
@@ -2649,6 +2652,9 @@ void R_DrawViewModel( void )
 
 	// ignore in thirdperson, camera view or client is died
 	if( cl.thirdperson || cl.refdef.health <= 0 || cl.refdef.viewentity != ( cl.playernum + 1 ))
+		return;
+
+	if( RI.params & RP_ENVVIEW )
 		return;
 
 	RI.currententity = &clgame.viewent;

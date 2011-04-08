@@ -19,6 +19,7 @@
 #include "sprite.h"
 #include "gl_local.h"
 #include "library.h"
+#include "vgui_draw.h"
 
 #define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channel)
 #define TEXT_MSGNAME	"TextMessage%i"
@@ -105,7 +106,7 @@ don't clamped time that come from server
 */
 float CL_GetServerTime( void )
 {
-	return sv_time();
+	return cl.mtime[0];
 }
 
 /*
@@ -899,13 +900,13 @@ void CL_DrawHUD( int state )
 		CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
-		clgame.dllFuncs.pfnRedraw( cl_time(), false );
+		clgame.dllFuncs.pfnRedraw( cl.time, false );
 		break;
 	case CL_PAUSED:
 		CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
-		clgame.dllFuncs.pfnRedraw( cl_time(), false );
+		clgame.dllFuncs.pfnRedraw( cl.time, false );
 		CL_DrawPause();
 		break;
 	case CL_LOADING:
@@ -1929,8 +1930,8 @@ prints dirctly into console (can skip notify)
 static void pfnConsolePrint( const char *string )
 {
 	if( !string || !*string ) return;
-	if( *string != 1 ) Msg( string ); // show notify
-	else Msg( string + 1 ); // skip notify
+	if( *string != 1 ) Con_Print( (char *)string ); // show notify
+	else Con_NPrintf( 0, (char *)string + 1 ); // skip notify
 }
 
 /*
@@ -2116,7 +2117,7 @@ pfnGetClientTime
 */
 static float pfnGetClientTime( void )
 {
-	return cl_time();
+	return cl.time;
 }
 
 /*
@@ -2780,11 +2781,11 @@ pfnServerCmdUnreliable
 */
 int pfnServerCmdUnreliable( char *szCmdString )
 {
-	if( !szCmdString || !*szCmdString )
+	if( !szCmdString || !szCmdString[0] )
 		return 0;
 
-	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-	BF_WriteString( &cls.netchan.message, szCmdString );
+	BF_WriteByte( &cls.datagram, clc_stringcmd );
+	BF_WriteString( &cls.datagram, szCmdString );
 
 	return 1;
 }

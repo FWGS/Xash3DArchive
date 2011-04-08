@@ -195,7 +195,7 @@ gotnewcl:
 	if( sv_maxclients->integer == 1 ) // restore physinfo for singleplayer
 		Q_strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
 
-	sv_client = newcl;
+	svs.currentPlayer = newcl;
 	edictnum = (newcl - svs.clients) + 1;
 
 	ent = EDICT_NUM( edictnum );
@@ -203,6 +203,7 @@ gotnewcl:
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
 	newcl->userid = g_userid++;	// create unique userid
+	newcl->authentication_method = 2;
 
 // FIXME: g-cont. i'm don't know how spectators interact with server
 //	newcl->spectator = spectator;
@@ -290,7 +291,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	// accept the new client
 	// this is the only place a sv_client_t is ever initialized
 	*newcl = temp;
-	sv_client = newcl;
+	svs.currentPlayer = newcl;
 	edictnum = (newcl - svs.clients) + 1;
 
 	if( newcl->frames )
@@ -446,7 +447,7 @@ void SV_BeginRedirect( netadr_t adr, int target, char *buffer, int buffersize, v
 
 void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 {
-	if( sv_client->fakeclient )
+	if( svs.currentPlayer && svs.currentPlayer->fakeclient )
 		return;
 
 	switch( dest )
@@ -455,10 +456,10 @@ void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 		Netchan_OutOfBandPrint( NS_SERVER, adr, "print\n%s", buf );
 		break;
 	case RD_CLIENT:
-		if( !sv_client ) return; // client not set
-		BF_WriteByte( &sv_client->netchan.message, svc_print );
-		BF_WriteByte( &sv_client->netchan.message, PRINT_HIGH );
-		BF_WriteString( &sv_client->netchan.message, buf );
+		if( !svs.currentPlayer ) return; // client not set
+		BF_WriteByte( &svs.currentPlayer->netchan.message, svc_print );
+		BF_WriteByte( &svs.currentPlayer->netchan.message, PRINT_HIGH );
+		BF_WriteString( &svs.currentPlayer->netchan.message, buf );
 		break;
 	case RD_NONE:
 		MsgDev( D_ERROR, "SV_FlushRedirect: %s: invalid destination\n", NET_AdrToString( adr ));
@@ -638,7 +639,7 @@ qboolean Rcon_Validate( void )
 {
 	if( !Q_strlen( rcon_password->string ))
 		return false;
-	if( !Q_strcmp( Cmd_Argv( 1 ), rcon_password->string ))
+	if( Q_strcmp( Cmd_Argv( 1 ), rcon_password->string ))
 		return false;
 	return true;
 }
@@ -658,15 +659,10 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 	static char	outputbuf[2048];
 	int		i;
 
-	if(!Rcon_Validate()) MsgDev(D_INFO, "Bad rcon from %s:\n%s\n", NET_AdrToString( from ), BF_GetData( msg ) + 4 );
-	else MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), BF_GetData( msg ) + 4 );
+	MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), BF_GetData( msg ) + 4 );
 	SV_BeginRedirect( from, RD_PACKET, outputbuf, sizeof( outputbuf ) - 16, SV_FlushRedirect );
 
-	if( !Rcon_Validate( ))
-	{
-		MsgDev( D_WARN, "Bad rcon_password.\n" );
-	}
-	else
+	if( Rcon_Validate( ))
 	{
 		remaining[0] = 0;
 		for( i = 2; i < Cmd_Argc(); i++ )
@@ -676,6 +672,8 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 		}
 		Cmd_ExecuteString( remaining, src_command );
 	}
+	else MsgDev( D_ERROR, "Bad rcon_password.\n" );
+
 	SV_EndRedirect();
 }
 
@@ -887,6 +885,7 @@ void SV_PutClientInServer( edict_t *ent )
 	{	
 		if( client->hltv_proxy )
 			ent->v.flags |= FL_PROXY;			
+		else ent->v.flags = 0;
 
 		if( client->spectator )
 		{

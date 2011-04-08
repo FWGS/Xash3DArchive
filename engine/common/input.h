@@ -6,10 +6,6 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*
 ==============================================================
 
@@ -42,7 +38,4 @@ void IN_ToggleClientMouse( int newstate, int oldstate );
 long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam );
 void IN_SetCursor( HICON hCursor );
 
-#ifdef __cplusplus
-}
-#endif
 #endif//INPUT_H

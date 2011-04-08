@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//		      com_world.c - common worldtrace routines
+//		       world.c - common worldtrace routines
 //=======================================================================
 
 #include "common.h"
@@ -10,6 +10,7 @@
 #include "mathlib.h"
 #include "studio.h"
 
+// just for debug
 const char *et_name[] =
 {
 	"normal",

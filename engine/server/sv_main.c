@@ -87,6 +87,8 @@ void SV_CalcPings( void )
 	sv_client_t	*cl;
 	int		total, count;
 
+	if( !svs.clients ) return;
+
 	// clamp fps counter
 	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
@@ -213,6 +215,7 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skyvec_y = sv_skyvec_y->value;
 	svgame.movevars.skyvec_z = sv_skyvec_z->value;
 	svgame.movevars.studio_scale = sv_allow_studio_scaling->integer;
+	svgame.movevars.clienttrace = sv_clienttrace->value;
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
 		Q_memcpy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
@@ -623,6 +626,8 @@ void SV_Init( void )
 	Cvar_Get ("suitvolume", "0.25", CVAR_ARCHIVE, "HEV suit volume" );
 	Cvar_Get ("sv_background", "0", CVAR_READ_ONLY, "indicate what background map is running" );
 	Cvar_Get( "gamedir", GI->gamefolder, CVAR_SERVERINFO|CVAR_SERVERNOTIFY|CVAR_INIT, "game folder" );
+	Cvar_Get( "sv_alltalk", "1", 0, "allow to talking for all players (legacy, unused)" );
+	Cvar_Get( "mp_autocrosshair", "0", 0, "allow auto crosshair in multiplayer (legacy, unused)" );
 		
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "4096", CVAR_PHYSICINFO, "zfar server value" );
@@ -646,7 +651,7 @@ void SV_Init( void )
 	sv_allow_studio_scaling = Cvar_Get( "sv_allow_studio_scaling", "0", CVAR_ARCHIVE|CVAR_PHYSICINFO, "allow to apply scale for studio models" );
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", CVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
 	sv_allow_rotate_pushables = Cvar_Get( "sv_allow_rotate_pushables", "0", CVAR_ARCHIVE, "let the pushers rotate pushables with included origin-brush" );
-	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY, "scaling factor for client hitboxes" );
+	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY|CVAR_PHYSICINFO, "scaling factor for client hitboxes" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );
 	sv_waterfriction = Cvar_Get( "sv_waterfriction", "1", CVAR_PHYSICINFO, "how fast you slow down in water" );

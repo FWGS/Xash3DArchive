@@ -23,7 +23,8 @@
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
 
 // model flags (stored in model_t->flags)
-#define MODEL_CONVEYOR	BIT( 0 )
+#define MODEL_CONVEYOR		BIT( 0 )
+#define MODEL_HAS_ORIGIN	BIT( 1 )
 
 typedef struct leaflist_s
 {

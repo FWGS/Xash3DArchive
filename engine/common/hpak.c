@@ -1,5 +1,5 @@
 //=======================================================================
-//			Copyright XashXT Group 2007 ©
+//			Copyright XashXT Group 2010 ©
 //		hpak.c - custom user package to send other clients
 //=======================================================================
 

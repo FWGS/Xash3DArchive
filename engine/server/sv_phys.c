@@ -152,7 +152,7 @@ qboolean SV_RunThink( edict_t *ent )
 	float	thinktime;
 
 	if(!( ent->v.flags & FL_SPECTATOR ))
-	{ 
+	{
 		thinktime = ent->v.nextthink;
 		if( thinktime <= 0.0f || thinktime > sv.time + host.frametime )
 			return true;
@@ -166,8 +166,8 @@ qboolean SV_RunThink( edict_t *ent )
 		svgame.dllFuncs.pfnThink( ent );
 	}
 
-	if( ent->v.flags & FL_SPECTATOR )
-		SV_FreeEdict( ent );
+//	if( ent->v.flags & FL_SPECTATOR )
+//		SV_FreeEdict( ent );
 
 	return !ent->free;
 }
@@ -597,7 +597,7 @@ qboolean SV_AllowPushRotate( edict_t *ent )
 	if( !sv_allow_rotate_pushables->integer )
 		return false;
 
-	return (mod->flags & 1) ? true : false;
+	return (mod->flags & MODEL_HAS_ORIGIN) ? true : false;
 }
 
 /*

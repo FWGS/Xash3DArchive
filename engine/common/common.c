@@ -351,7 +351,13 @@ can return NULL
 */
 cvar_t *pfnCVarGetPointer( const char *szVarName )
 {
-	return (cvar_t *)Cvar_FindVar( szVarName );
+	cvar_t	*cvPtr;
+
+	cvPtr = (cvar_t *)Cvar_FindVar( szVarName );
+
+	Msg( "GetCVarPointer: %s - %s\n", szVarName, cvPtr != NULL ? "done" : "fail" );
+
+	return cvPtr;
 }
 
 /*

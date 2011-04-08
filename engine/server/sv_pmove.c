@@ -258,7 +258,7 @@ static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
 	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
 
-	if( !PM_TraceModel( pe, svgame.pmove->origin, mins, maxs, svgame.pmove->origin, tr, 0 ))
+	if( !PM_TraceModel( svgame.pmove, pe, svgame.pmove->origin, mins, maxs, svgame.pmove->origin, tr, 0 ))
 		return;	// not stuck
 
 	tr->ent = hitent;
@@ -324,7 +324,7 @@ static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *
 {
 	pmtrace_t	pmtrace;
 
-	PM_TraceModel( pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
+	PM_TraceModel( svgame.pmove, pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
 
 	// copy pmtrace_t to trace_t
 	if( trace )

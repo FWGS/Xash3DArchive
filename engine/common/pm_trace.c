@@ -112,9 +112,6 @@ hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset
 	{
 		vec3_t	size;
 
-		if( pe->movetype != MOVETYPE_PUSH )
-			MsgDev( D_ERROR, "SOLID_BSP without MOVETYPE_PUSH\n" );
-
 		VectorSubtract( maxs, mins, size );
 
 		if( size[0] <= 8.0f )
@@ -217,7 +214,7 @@ loc0:
 	}
 
 	if( num < hull->firstclipnode || num > hull->lastclipnode )
-		Host_Error( "PM_RecursiveHullCheck: bad node number\n" );
+		Sys_Error( "PM_RecursiveHullCheck: bad node number\n" );
 		
 	// find the point distances
 	node = hull->clipnodes + num;
@@ -382,11 +379,10 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 	return false;
 }
 
-qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, int flags )
+qboolean PM_TraceModel( playermove_t *pmove, physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, int flags )
 {
 	qboolean	hitEnt = false;
 	qboolean	bSimpleBox = false;
-	qboolean	bAllowScale = false;
 
 	// assume we didn't hit anything
 	Q_memset( ptr, 0, sizeof( pmtrace_t ));
@@ -398,10 +394,6 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 	// completely ignore studiomodels (same as MOVE_NOMONSTERS)
 	if( pe->studiomodel && ( flags & PM_STUDIO_IGNORE ))
 		return hitEnt;
-
-	// apply scale to studio models
-	if( pe->studiomodel && ( flags & PM_STUDIO_SCALE ))
-		bAllowScale = true;
 
 	if( pe->movetype == MOVETYPE_PUSH || pe->solid == SOLID_BSP )
 	{
@@ -419,46 +411,18 @@ qboolean PM_TraceModel( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t m
 			}
 		}
 
-		if( pe->solid == SOLID_BSP && pe->movetype != MOVETYPE_PUSH )
-			Host_Error( "Entity #%i [%s] SOLID_BSP without MOVETYPE_PUSH\n", pe->info, pe->name );
 		if( !pe->model )
-		{
-			MsgDev( D_ERROR, "Entity #%i [%s] SOLID_BSP with a non bsp model\n", pe->info, pe->name );
 			return hitEnt;
-		}
 		hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
 	}
-#if 1
 	else
 	{
 		bSimpleBox = ( flags & PM_STUDIO_BOX ) ? true : false;
 		bSimpleBox = World_UseSimpleBox( bSimpleBox, pe->solid, VectorCompare( mins, maxs ), pe->studiomodel );
 
 		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr, bAllowScale );
+		else hitEnt = PM_StudioTrace( pmove, pe, start, mins, maxs, end, ptr );
 	}
-#else
-	else if( pe->solid == SOLID_SLIDEBOX )
-	{
-		if( flags & PM_STUDIO_BOX || !VectorCompare( mins, maxs ) || !pe->studiomodel )
-			bSimpleBox = true;
-
-		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr, bAllowScale );
-	}
-	else if( pe->solid == SOLID_BBOX )
-	{
-		if( flags & PM_STUDIO_BOX || !pe->studiomodel || !(pe->studiomodel->flags & STUDIO_TRACE_HITBOX))
-			bSimpleBox = true;
-
-		// but pointtrace is always traces hull
-		if( VectorCompare( mins, maxs ) && pe->studiomodel && !( flags & PM_STUDIO_BOX ))
-			bSimpleBox = false;
-
-		if( bSimpleBox ) hitEnt = PM_BmodelTrace( pe, start, mins, maxs, end, ptr );
-		else hitEnt = PM_StudioTrace( pe, start, mins, maxs, end, ptr, bAllowScale );
-	}
-#endif
 	return hitEnt;
 }
 
@@ -482,10 +446,6 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 	total.hitgroup = -1;
 	total.ent = -1;
 
-	// apply scale to studiomodels
-	if( pmove->movevars->studio_scale )
-		flags |= PM_STUDIO_SCALE;
-
 	for( i = 0; i < pmove->numphysent; i++ )
 	{
 		// run simple trace filter
@@ -503,14 +463,13 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 		// might intersect, so do an exact clip
 		if( total.allsolid ) return total;
 
-		if( PM_TraceModel( pe, start, mins, maxs, end, &trace, flags ))
+		if( PM_TraceModel( pmove, pe, start, mins, maxs, end, &trace, flags ))
 		{
 			// set entity
 			trace.ent = i;
 		}
 
-		// g-cont. needs for global test!!!
-		if( trace.allsolid || /*trace.startsolid ||*/ trace.fraction < total.fraction )
+		if( trace.allsolid || trace.fraction < total.fraction )
 		{
 			trace.ent = i;
 

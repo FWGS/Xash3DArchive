@@ -5,7 +5,7 @@
 
 #include "common.h"
 
-convar_t	*cvar_vars;	// head of list
+convar_t	*cvar_vars; // head of list
 convar_t	*userinfo, *physinfo, *serverinfo, *renderinfo;
 
 /*
@@ -100,7 +100,10 @@ void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback 
 	for( cvar = cvar_vars; cvar; cvar = cvar->next )
 	{
 		if( checkbit && !( cvar->flags & checkbit )) continue;
-		if( buffer ) callback( cvar->name, cvar->string, buffer, ptr );
+		if( buffer )
+		{
+			callback( cvar->name, cvar->string, buffer, ptr );
+		}
 		else
 		{
 			// NOTE: dlls cvars doesn't have description
@@ -331,8 +334,9 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 	if( !var )
 	{
 		// create it
-		if( !force ) return Cvar_Get( var_name, value, CVAR_USER_CREATED, NULL );
-		else return Cvar_Get( var_name, value, 0, NULL );
+		if( force ) return Cvar_Get( var_name, value, 0, NULL );
+		return Cvar_Get( var_name, value, CVAR_USER_CREATED, NULL );
+
 	}
 
 	// use this check to prevent acessing for unexisting fields
@@ -1139,7 +1143,7 @@ void Cvar_Unlink_f( void )
 
 	if( Cvar_VariableInteger( "host_gameloaded" ))
 	{
-		Msg( "can't unlink cvars while game is loaded\n" );
+		MsgDev( D_NOTE, "can't unlink cvars while game is loaded\n" );
 		return;
 	}
 

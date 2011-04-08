@@ -12,7 +12,7 @@
 #define svc_nop			1	// does nothing
 #define svc_disconnect		2	// kick client from server
 #define svc_changing		3	// changelevel by server request
-
+#define svc_version			4	// [long] server version
 #define svc_setview			5	// [short] entity number
 #define svc_sound			6	// <see code>
 #define svc_time			7	// [float] server time
@@ -24,7 +24,7 @@
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
 #define svc_deltatable		14	// [table header][...]
 #define svc_clientdata		15	// [...]
-#define svc_download		16	// <OBSOLETE>
+#define svc_stopsound		16	// <see code>
 #define svc_updatepings		17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
 #define svc_frame			19	// <OBSOLETE>
@@ -33,7 +33,7 @@
 #define svc_spawnbaseline		22	// <see code>
 #define svc_temp_entity		23	// <variable sized>
 #define svc_setpause		24	// [byte] 0 = unpaused, 1 = paused
-
+#define svc_signonnum		25	// [byte] used for the signon sequence
 #define svc_centerprint		26	// [string] to put in center of the screen
 #define svc_event			27	// playback event queue
 #define svc_soundindex		28	// [index][soundpath]

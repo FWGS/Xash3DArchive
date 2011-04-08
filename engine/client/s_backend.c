@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//		        s_direct.c - sound hardware output
+//		        s_backend.c - sound hardware output
 //=======================================================================
 
 #include <dsound.h>

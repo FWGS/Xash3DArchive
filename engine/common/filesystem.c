@@ -302,7 +302,6 @@ static packfile_t* FS_AddFileToPack( const char* name, pack_t* pack, fs_offset_t
 	return pfile;
 }
 
-
 /*
 ============
 FS_CreatePath
@@ -326,7 +325,6 @@ void FS_CreatePath( char *path )
 		}
 	}
 }
-
 
 /*
 ============
@@ -1973,7 +1971,7 @@ fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
 
 			// copy the requested data in "buffer" (as much as we can)
 			count = (fs_offset_t)buffersize > file->buff_len ? file->buff_len : (fs_offset_t)buffersize;
-			Q_memcpy (&((byte *)buffer)[done], file->buff, count );
+			Q_memcpy( &((byte *)buffer)[done], file->buff, count );
 			file->buff_ind = count;
 			done += count;
 		}
@@ -2119,16 +2117,16 @@ int FS_Seek( file_t *file, fs_offset_t offset, int whence )
 	// compute the file offset
 	switch( whence )
 	{
-		case SEEK_CUR:
-			offset += file->position - file->buff_len + file->buff_ind;
-			break;
-		case SEEK_SET:
-			break;
-		case SEEK_END:
-			offset += file->real_length;
-			break;
-		default: 
-			return -1;
+	case SEEK_CUR:
+		offset += file->position - file->buff_len + file->buff_ind;
+		break;
+	case SEEK_SET:
+		break;
+	case SEEK_END:
+		offset += file->real_length;
+		break;
+	default: 
+		return -1;
 	}
 	
 	if( offset < 0 || offset > (long)file->real_length )
@@ -2692,7 +2690,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 			wad = searchpath->wad;
 			for( i = 0; i < wad->numlumps; i++ )
 			{
-				// if type not matching, we already no chance ...
+				// if type not matching, we already have no chance ...
 				if( type != TYP_ANY && wad->lumps[i].type != type )
 					continue;
 

@@ -81,7 +81,7 @@ static _inline void Huff_PrepareTree( tree_t tree )
 {
 	void	**node;
 	
-	memset( tree, 0, sizeof( tree_t ));
+	Q_memset( tree, 0, sizeof( tree_t ));
 	
 	// create first node
 	node = &tree[263];
@@ -462,8 +462,8 @@ Emit one byte using dynamic tree
 */
 static void Huff_EmitByteDynamic( void **tree, int value, byte *buffer )
 {
-	void **subtree;
-	int i;
+	void	**subtree;
+	int	i;
 
 	// if byte was already referenced, emit path to it
 	subtree = tree[value + 5];
@@ -491,7 +491,6 @@ static void Huff_EmitByteDynamic( void **tree, int value, byte *buffer )
 
 =======================================================================================
 */
-
 /*
 ============
 Huff_CompressPacket

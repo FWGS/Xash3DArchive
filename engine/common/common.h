@@ -713,6 +713,8 @@ void SCR_Shutdown( void );
 void Con_Print( const char *txt );
 void Con_NPrintf( int idx, char *fmt, ... );
 void Con_NXPrintf( struct con_nprint_s *info, char *fmt, ... );
+void UI_NPrintf( int idx, char *fmt, ... );
+void UI_NXPrintf( struct con_nprint_s *info, char *fmt, ... );
 char *Info_ValueForKey( const char *s, const char *key );
 void Info_RemovePrefixedKeys( char *start, char prefix );
 qboolean Info_RemoveKey( char *s, const char *key );

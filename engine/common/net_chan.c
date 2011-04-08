@@ -695,7 +695,7 @@ void Netchan_CheckForCompletion( netchan_t *chan, int stream, int intotalbuffers
 	if( c == intotalbuffers )
 	{
 		chan->incomingready[stream] = true;
-		Msg( "\nincoming is complete %i bytes waiting\n", size );
+		MsgDev( D_NOTE, "\nincoming is complete %i bytes waiting\n", size );
 	}
 }
 
@@ -705,7 +705,7 @@ Netchan_CreateFileFragmentsFromBuffer
 
 ==============================
 */
-void Netchan_CreateFileFragmentsFromBuffer ( qboolean server, netchan_t *chan, char *filename, byte *pbuf, int size )
+void Netchan_CreateFileFragmentsFromBuffer( qboolean server, netchan_t *chan, char *filename, byte *pbuf, int size )
 {
 	int		chunksize;
 	int		send, pos;
@@ -1265,8 +1265,8 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 			{
 				fragment_size = BF_GetNumBytesWritten( &pbuf->frag_message );
 				
-				// Files set size a bit differently.
-				if ( pbuf->isfile && !pbuf->isbuffer )
+				// files set size a bit differently.
+				if( pbuf->isfile && !pbuf->isbuffer )
 				{
 					fragment_size = pbuf->size;
 				}

@@ -1395,7 +1395,7 @@ void Mod_CalcPHS( void )
 
 	// NOTE: we don't need to store off pointer to compressed pas-data
 	// because this is will be automatiaclly frees by mempool internal pointer
-	// and we not use this pointer any time after this point
+	// and we never use this pointer after this point
 	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
 	MsgDev( D_NOTE, "PAS building time: %g secs\n", Sys_DoubleTime() - timestart );
 }
@@ -1523,7 +1523,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 		mod->numleafs = bm->visleafs;
 
 		// flag 1 is indicated model with origin brush!
-		mod->flags = VectorIsNull( bm->origin ) ? 1 : 0;
+		mod->flags = VectorIsNull( bm->origin ) ? MODEL_HAS_ORIGIN : 0;
 
 		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
 		{
@@ -1863,27 +1863,27 @@ Mod_LoadCacheFile
 
 ===============
 */
-void Mod_LoadCacheFile( const char *path, cache_user_t *cu )
+void Mod_LoadCacheFile( const char *filename, cache_user_t *cu )
 {
 	byte	*buf;
-	string	filepath;
-	size_t	i, size;
+	string	name;
+	size_t	i, j, size;
 
 	ASSERT( cu != NULL );
 
-	if( !path || !path[0] ) return;
+	if( !filename || !filename[0] ) return;
 
-	// replace all '\' with '/'
-	for( i = ( path[0] == '/' ||path[0] == '\\' ), size = 0; path[i] && ( size < sizeof( filepath )-1 ); i++ )
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
 	{
-		if( path[i] == '\\' ) filepath[size++] = '/';
-		else filepath[size++] = path[i];
+		if( filename[i] == '!' ) continue;
+		else if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = Q_tolower( filename[i] );
+		j++;
 	}
+	name[j] = '\0';
 
-	if( !size ) return;
-	filepath[size] = 0;
-
-	buf = FS_LoadFile( filepath, &size, false );
+	buf = FS_LoadFile( name, &size, false );
 	cu->data = Mem_Alloc( com_studiocache, size );
 	Q_memcpy( cu->data, buf, size );
 	Mem_Free( buf );

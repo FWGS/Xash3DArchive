@@ -26,8 +26,6 @@
 #define PM_GLASS_IGNORE	0x00000004	// Ignore entities with non-normal rendermode
 #define PM_WORLD_ONLY	0x00000008	// Only trace against the world
 
-#define PM_STUDIO_SCALE	0x10000000	// engine flag. don't set it manually
-
 // Values for flags parameter of PM_TraceLine
 #define PM_TRACELINE_PHYSENTSONLY	0
 #define PM_TRACELINE_ANYVISIBLE	1

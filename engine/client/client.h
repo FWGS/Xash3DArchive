@@ -1,8 +1,7 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//		      client.h -- primary header for client
+//		      client.h - primary header for client
 //=======================================================================
-
 #ifndef CLIENT_H
 #define CLIENT_H
 
@@ -29,9 +28,6 @@
 #define VID_SCREENSHOT	0
 #define VID_LEVELSHOT	1
 #define VID_MINISHOT	2
-
-#define cl_time()		( cl.time )
-#define sv_time()		( cl.mtime[0] )
 
 typedef int		sound_t;
 
@@ -69,7 +65,6 @@ typedef struct
 						// render a frame yet
 	int		parsecount;		// server message counter
 	int		parsecountmod;		// modulo with network window
-	double		parsecounttime;		// timestamp of parse
 									
 	qboolean		video_prepped;		// false if on new level or new ref dll
 	qboolean		audio_prepped;		// false if on new level or new snd dll
@@ -160,14 +155,6 @@ typedef enum
 	key_game,
 	key_menu
 } keydest_t;
-
-typedef enum
-{
-	dl_none,
-	dl_model,
-	dl_sound,
-	dl_generic,
-} dltype_t;		// download type
 
 typedef enum
 {
@@ -354,7 +341,7 @@ typedef struct
 	screen_shake_t	shake;			// screen shake
 	center_print_t	centerPrint;		// centerprint variables
 	SCREENINFO	scrInfo;			// actual screen info
-	rgb_t		palette[256];		// Quake1 palette used for particle colors
+	rgb_t		palette[256];		// palette used for particle colors
 
 	client_textmessage_t *titles;			// title messages, not network messages
 	int		numTitles;
@@ -405,9 +392,14 @@ typedef struct
 	int		framecount;
 	int		quakePort;		// a 16 bit value that allows quake servers
 						// to work around address translating routers
+						// g-cont. this port allow many copies of engine in multiplayer game
 	// connection information
 	string		servername;		// name of server from original connect
-	int		connect_time;		// for connection retransmits
+	double		connect_time;		// for connection retransmits
+
+
+	sizebuf_t		datagram;			// unreliable stuff. gets sent in CL_Move about cl_cmdrate times per second.
+	byte		datagram_buf[NET_MAX_PAYLOAD];
 
 	netchan_t		netchan;
 	int		serverProtocol;		// in case we are doing some kind of version hack
@@ -431,12 +423,6 @@ typedef struct
 	int		num_client_entities;	// cl.maxclients * CL_UPDATE_BACKUP * MAX_PACKET_ENTITIES
 	int		next_client_entities;	// next client_entity to use
 	entity_state_t	*packet_entities;		// [num_client_entities]
-	
-	file_t		*download;		// file transfer from server
-	string		downloadname;
-	string		downloadtempname;
-	int		downloadnumber;
-	dltype_t		downloadtype;
 
 	scrshot_t		scrshot_request;		// request for screen shot
 	scrshot_t		scrshot_action;		// in-action
@@ -500,7 +486,6 @@ extern convar_t	*userinfo;
 
 //=============================================================================
 
-qboolean CL_CheckOrDownloadFile( const char *filename );
 void CL_SetLightstyle( int style, const char* s );
 void CL_RunLightStyles( void );
 
@@ -535,7 +520,6 @@ void CL_SendCommand( void );
 void CL_Disconnect_f( void );
 void CL_GetChallengePacket( void );
 void CL_PingServers_f( void );
-void CL_RequestNextDownload( void );
 void CL_ClearState( void );
 
 //
@@ -591,7 +575,6 @@ extern const char *svc_strings[256];
 void CL_ParseServerMessage( sizebuf_t *msg );
 void CL_ParseTempEntity( sizebuf_t *msg );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
-void CL_Download_f( void );
 
 //
 // cl_scrn.c
@@ -685,6 +668,7 @@ void Con_Init( void );
 void Con_VidInit( void );
 void Con_ToggleConsole_f( void );
 void Con_ClearNotify( void );
+void Con_DrawDebug( void );
 void Con_RunConsole( void );
 void Con_DrawConsole( void );
 void Con_DrawVersion( void );
@@ -696,7 +680,7 @@ void Key_Console( int key );
 void Con_Close( void );
 
 //
-// sound.c
+// s_main.c
 //
 void S_StreamRawSamples( int samples, int rate, int width, int channels, const byte *data );
 void S_StartBackgroundTrack( const char *intro, const char *loop );
@@ -747,23 +731,5 @@ qboolean SCR_DrawCinematic( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
 void CL_PlayVideo_f( void );
-
-//
-// vgui_int.cpp
-//
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void VGui_Startup( void );
-void VGui_Shutdown( void );
-void *VGui_GetPanel( void );
-void VGui_Paint( void );
-void VGui_RunFrame( void );
-void VGui_ViewportPaintBackground( int extents[4] );
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif//CLIENT_H

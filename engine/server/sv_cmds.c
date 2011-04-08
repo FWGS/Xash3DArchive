@@ -6,8 +6,6 @@
 #include "common.h"
 #include "server.h"
 
-sv_client_t *sv_client; // current client
-
 /*
 =================
 SV_ClientPrintf
@@ -149,7 +147,7 @@ qboolean SV_SetPlayer( void )
 	if( sv_maxclients->integer == 1 || Cmd_Argc() < 2 )
 	{
 		// special case for local client
-		sv_client = svs.clients;
+		svs.currentPlayer = svs.clients;
 		return true;
 	}
 
@@ -158,15 +156,15 @@ qboolean SV_SetPlayer( void )
 	// numeric values are just slot numbers
 	if( s[0] >= '0' && s[0] <= '9' )
 	{
-		idnum = Q_atoi( Cmd_Argv( 1 ));
+		idnum = Q_atoi( s );
 		if( idnum < 0 || idnum >= sv_maxclients->integer )
 		{
 			Msg( "Bad client slot: %i\n", idnum );
 			return false;
 		}
 
-		sv_client = &svs.clients[idnum];
-		if( !sv_client->state )
+		svs.currentPlayer = &svs.clients[idnum];
+		if( !svs.currentPlayer->state )
 		{
 			Msg( "Client %i is not active\n", idnum );
 			return false;
@@ -180,12 +178,14 @@ qboolean SV_SetPlayer( void )
 		if( !cl->state ) continue;
 		if( !Q_strcmp( cl->name, s ))
 		{
-			sv_client = cl;
+			svs.currentPlayer = cl;
 			return true;
 		}
 	}
 
 	Msg( "Userid %s is not on the server\n", s );
+	svs.currentPlayer = NULL;
+
 	return false;
 }
 
@@ -557,12 +557,12 @@ void SV_Kick_f( void )
 
 	if( !SV_SetPlayer( )) return;
 
-	SV_BroadcastPrintf( PRINT_HIGH, "%s was kicked\n", sv_client->name );
-	SV_ClientPrintf( sv_client, PRINT_HIGH, "You were kicked from the game\n" );
-	SV_DropClient( sv_client );
+	SV_BroadcastPrintf( PRINT_HIGH, "%s was kicked\n", svs.currentPlayer->name );
+	SV_ClientPrintf( svs.currentPlayer, PRINT_HIGH, "You were kicked from the game\n" );
+	SV_DropClient( svs.currentPlayer );
 
 	// min case there is a funny zombie
-	sv_client->lastmessage = host.realtime;
+	svs.currentPlayer->lastmessage = host.realtime;
 }
 
 /*
@@ -575,13 +575,17 @@ void SV_Kill_f( void )
 	if( !Cvar_VariableInteger( "sv_cheats" )) return;
 	if( !SV_SetPlayer() || sv.background ) return;
 
-	if( sv_client->edict->v.health <= 0.0f )
+	// NOTE: the CS 1.5 want to kill local player. i'm don't know why :(
+	if( !svs.currentPlayer || !SV_IsValidEdict( svs.currentPlayer->edict ))
+		return;
+
+	if( svs.currentPlayer->edict->v.health <= 0.0f )
 	{
-		SV_ClientPrintf( sv_client, PRINT_HIGH, "Can't suicide -- allready dead!\n");
+		SV_ClientPrintf( svs.currentPlayer, PRINT_HIGH, "Can't suicide -- allready dead!\n");
 		return;
 	}
 
-	svgame.dllFuncs.pfnClientKill( sv_client->edict );	
+	svgame.dllFuncs.pfnClientKill( svs.currentPlayer->edict );	
 }
 
 /*
@@ -734,7 +738,7 @@ void SV_ClientInfo_f( void )
 	if( !SV_SetPlayer( )) return;
 	Msg( "userinfo\n" );
 	Msg( "--------\n" );
-	Info_Print( sv_client->userinfo );
+	Info_Print( svs.currentPlayer->userinfo );
 
 }
 
@@ -748,7 +752,7 @@ Kick everyone off, possibly in preparation for a new game
 void SV_KillServer_f( void )
 {
 	if( !svs.initialized ) return;
-	Q_strncpy( host.finalmsg, "Server was killed\n", MAX_STRING );
+	Q_strncpy( host.finalmsg, "Server was killed", MAX_STRING );
 	SV_Shutdown( false );
 	NET_Config ( false ); // close network sockets
 }
@@ -816,6 +820,7 @@ void SV_InitOperatorCommands( void )
 	{
 		Cmd_AddCommand( "say", SV_ConSay_f, "send a chat message to everyone on the server" );
 		Cmd_AddCommand( "setmaster", SV_SetMaster_f, "set ip address for dedicated server" );
+		Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
 	}
 
 	Cmd_AddCommand( "save", SV_Save_f, "save the game to a file" );
@@ -824,8 +829,6 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "loadquick", SV_QuickLoad_f, "load a quick-saved game file" );
 	Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
 	Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
-	Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
-
 }
 
 void SV_KillOperatorCommands( void )
@@ -853,6 +856,7 @@ void SV_KillOperatorCommands( void )
 	{
 		Cmd_RemoveCommand( "say" );
 		Cmd_RemoveCommand( "setmaster" );
+		Cmd_RemoveCommand( "killserver" );
 	}
 
 	Cmd_RemoveCommand( "save" );
@@ -861,5 +865,4 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "loadquick" );
 	Cmd_RemoveCommand( "killsave" );
 	Cmd_RemoveCommand( "autosave" );
-	Cmd_RemoveCommand( "killserver" );
 }

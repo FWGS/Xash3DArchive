@@ -52,6 +52,16 @@ qboolean ClipRect( const vpoint_t &inUL, const vpoint_t &inLR, vpoint_t *pOutUL,
 //
 qboolean R_DescribeVIDMode( int width, int height );
 
+//
+// vgui_int.c
+//
+void VGui_Startup( void );
+void VGui_Shutdown( void );
+void *VGui_GetPanel( void );
+void VGui_Paint( void );
+void VGui_RunFrame( void );
+void VGui_ViewportPaintBackground( int extents[4] );
+
 #ifdef __cplusplus
 }
 #endif

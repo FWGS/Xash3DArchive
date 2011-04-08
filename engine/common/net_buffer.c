@@ -204,7 +204,6 @@ void BF_WriteSBitLong( sizebuf_t *bf, int data, int numbits )
 		}
 	}
 #endif
-
 		BF_WriteUBitLongExt( bf, (uint)( 0x80000000 + data ), numbits - 1, false );
 		BF_WriteOneBit( bf, 1 );
 	}
@@ -514,7 +513,6 @@ qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
 {
 	byte	*pOut = (byte *)pOutData;
 	int	nBitsLeft = nBits;
-
 	
 	// get output dword-aligned.
 	while((( dword )pOut & 3) != 0 && nBitsLeft >= 8 )
@@ -576,7 +574,7 @@ int BF_ReadSBitLong( sizebuf_t *bf, int numbits )
 	// NOTE: it does this wierdness here so it's bit-compatible with regular integer data in the buffer.
 	// (Some old code writes direct integers right into the buffer).
 	sign = BF_ReadOneBit( bf );
-	if( sign ) r = -(( 1 << ( numbits - 1 )) - r);
+	if( sign ) r = -( BIT( numbits - 1 ) - r );
 
 	return r;
 }
@@ -740,6 +738,7 @@ char *BF_ReadStringExt( sizebuf_t *bf, qboolean bLine )
 			break;
 
 		// translate all fmt spec to avoid crash bugs
+		// NOTE: but game strings leave unchanged. see pfnWriteString for details
 		if( c == '%' ) c = '.';
 
 		string[l] = c;

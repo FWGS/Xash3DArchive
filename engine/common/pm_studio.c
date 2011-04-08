@@ -8,6 +8,7 @@
 #include "mathlib.h"
 #include "mod_local.h"
 #include "pm_local.h"
+#include "pm_movevars.h"
 #include "world.h"
 
 static studiohdr_t	*pm_studiohdr;
@@ -103,25 +104,6 @@ void PM_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitc
 		else *pBlend = 255.0f * (*pBlend - pseqdesc->blendstart[0]) / (pseqdesc->blendend[0] - pseqdesc->blendstart[0]);
 		*pPitch = 0;
 	}
-}
-
-/*
-====================
-StudioSetUpTransform
-====================
-*/
-static void PM_StudioSetUpTransform( physent_t *pe, qboolean allow_scale )
-{
-	vec3_t	ang;
-	float	scale = 1.0f;
-
-	VectorCopy( pe->angles, ang );
-	ang[PITCH] = -ang[PITCH]; // stupid Half-Life bug
-
-	if( allow_scale && pe->fuser1 > 0.0f )
-		scale = pe->fuser1;
-
-	Matrix3x4_CreateFromEntity( pm_studiomatrix, ang, pe->origin, scale );
 }
 
 /*
@@ -337,7 +319,7 @@ StudioCalcRotations
 
 ====================
 */
-static void PM_StudioCalcRotations( physent_t *pe, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f )
+static void PM_StudioCalcRotations( physent_t *pe, const byte *pcontroller, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f )
 {
 	int		i, frame;
 	mstudiobone_t	*pbone;
@@ -355,7 +337,7 @@ static void PM_StudioCalcRotations( physent_t *pe, float pos[][3], vec4_t *q, ms
 	// add in programtic controllers
 	pbone = (mstudiobone_t *)((byte *)pm_studiohdr + pm_studiohdr->boneindex);
 
-	PM_StudioCalcBoneAdj( adj, pe->controller );
+	PM_StudioCalcBoneAdj( adj, pcontroller );
 
 	for( i = 0; i < pm_studiohdr->numbones; i++, pbone++, panim++ ) 
 	{
@@ -484,9 +466,10 @@ static mstudioanim_t *PM_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *
 PM_StudioSetupBones
 ====================
 */
-static void PM_StudioSetupBones( physent_t *pe )
+static void PM_StudioSetupBones( playermove_t *pmove, physent_t *pe, const vec3_t angles, const vec3_t origin, const byte *pcontroller, const byte *pblending )
 {
 	int		i, oldseq;
+	float		scale = 1.0f;
 	double		f;
 
 	mstudiobone_t	*pbones;
@@ -512,14 +495,14 @@ static void PM_StudioSetupBones( physent_t *pe )
 	f = PM_StudioEstimateFrame( pe, pseqdesc );
 
 	panim = PM_StudioGetAnim( pe->studiomodel, pseqdesc );
-	PM_StudioCalcRotations( pe, pos, q, pseqdesc, panim, f );
+	PM_StudioCalcRotations( pe, pcontroller, pos, q, pseqdesc, panim, f );
 
 	if( pseqdesc->numblends > 1 )
 	{
 		float	s;
 
 		panim += pm_studiohdr->numbones;
-		PM_StudioCalcRotations( pe, pos2, q2, pseqdesc, panim, f );
+		PM_StudioCalcRotations( pe, pcontroller, pos2, q2, pseqdesc, panim, f );
 
 		s = (float)pe->blending[0] / 255.0f;
 
@@ -528,10 +511,10 @@ static void PM_StudioSetupBones( physent_t *pe )
 		if( pseqdesc->numblends == 4 )
 		{
 			panim += pm_studiohdr->numbones;
-			PM_StudioCalcRotations( pe, pos3, q3, pseqdesc, panim, f );
+			PM_StudioCalcRotations( pe, pcontroller, pos3, q3, pseqdesc, panim, f );
 
 			panim += pm_studiohdr->numbones;
-			PM_StudioCalcRotations( pe, pos4, q4, pseqdesc, panim, f );
+			PM_StudioCalcRotations( pe, pcontroller, pos4, q4, pseqdesc, panim, f );
 
 			s = (float)pe->blending[0] / 255.0f;
 			PM_StudioSlerpBones( q3, pos3, q4, pos4, s );
@@ -540,6 +523,13 @@ static void PM_StudioSetupBones( physent_t *pe )
 			PM_StudioSlerpBones( q, pos, q3, pos3, s );
 		}
 	}
+
+	if( pmove->movevars->studio_scale && pe->fuser1 > 0.0f )
+		scale = pe->fuser1;
+	else if( pe->player && pmove->movevars->clienttrace != 0.0f )
+		scale = pmove->movevars->clienttrace * 0.5f; 
+
+	Matrix3x4_CreateFromEntity( pm_studiomatrix, angles, origin, scale );
 
 	pbones = (mstudiobone_t *)((byte *)pm_studiohdr + pm_studiohdr->boneindex);
 
@@ -554,16 +544,39 @@ static void PM_StudioSetupBones( physent_t *pe )
 	pe->sequence = oldseq; // restore original value
 }
 
-static qboolean PM_StudioSetupModel( physent_t *pe, qboolean allow_scale )
+static qboolean PM_StudioSetupModel( playermove_t *pmove, physent_t *pe )
 {
 	model_t	*mod = pe->studiomodel;
+	vec3_t	angles;
 
 	if( !mod || !mod->cache.data )
 		return false;
 
 	pm_studiohdr = (studiohdr_t *)mod->cache.data;
-	PM_StudioSetUpTransform( pe, allow_scale );
-	PM_StudioSetupBones( pe );
+
+	// calc blending for player
+	if( pe->player )
+	{
+		mstudioseqdesc_t	*pseqdesc;
+		byte		controller[4];
+		byte		blending[2];
+		int		iBlend;
+
+		pseqdesc = (mstudioseqdesc_t *)((byte *)pm_studiohdr + pm_studiohdr->seqindex) + pe->sequence;
+
+		PM_StudioPlayerBlend( pseqdesc, &iBlend, &angles[PITCH] );
+
+		controller[0] = controller[1] = controller[2] = controller[3] = 0x7F;
+		blending[0] = (byte)iBlend;
+		blending[1] = 0;
+
+		PM_StudioSetupBones( pmove, pe, angles, pe->origin, controller, blending );
+          }
+          else
+          {
+		PM_StudioSetupBones( pmove, pe, angles, pe->origin, pe->controller, pe->blending );
+	}
+
 	return true;
 }
 
@@ -842,7 +855,7 @@ static qboolean PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mi
 	return BoundsIntersect( trace_mins, trace_maxs, anim_mins, anim_maxs );
 }
 
-qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr, qboolean allow_scale )
+qboolean PM_StudioTrace( playermove_t *pmove, physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr )
 {
 	vec3_t	start_l, end_l;
 	int	i, outBone = -1;
@@ -858,7 +871,7 @@ qboolean PM_StudioTrace( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t 
 	if( !PM_StudioIntersect( pe, start, mins, maxs, end ))
 		return false;
 
-	if( !PM_StudioSetupModel( pe, allow_scale ))
+	if( !PM_StudioSetupModel( pmove, pe ))
 		return false;
 
 	if( VectorCompare( start, end ))

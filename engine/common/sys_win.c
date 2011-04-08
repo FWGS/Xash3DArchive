@@ -111,14 +111,14 @@ Sys_ParseCommandLine
 void Sys_ParseCommandLine( LPSTR lpCmdLine )
 {
 	const char	*blank = "censored";
-	static char	commandline[1024];
+	static char	commandline[MAX_SYSPATH];
 	int		i;
 
 	host.argc = 1;
 	host.argv[0] = "exe";
 
 	Q_strncpy( commandline, lpCmdLine, Q_strlen( lpCmdLine ) + 1 );
-	lpCmdLine = commandline; // prevent to modify original commandline
+	lpCmdLine = commandline; // to prevent modify original commandline
 
 	while( *lpCmdLine && ( host.argc < MAX_NUM_ARGVS ))
 	{

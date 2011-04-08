@@ -46,7 +46,7 @@ void CL_PlayVideo_f( void )
 ===============
 CL_PlayCDTrack_f
 
-Emulate cd-audio system
+Emulate audio-cd system
 ===============
 */
 void CL_PlayCDTrack_f( void )
@@ -109,23 +109,6 @@ void CL_PlayCDTrack_f( void )
 	else Msg( "cd: unknown command %s\n", command );
 }
 
-/*
-===============
-CL_Download_f
-
-Request a download from the server
-===============
-*/
-void CL_Download_f( void )
-{
-	if( Cmd_Argc() != 2 )
-	{
-		Msg( "Usage: download <filename>\n" );
-		return;
-	}
-	CL_CheckOrDownloadFile( Cmd_Argv( 1 ));
-}
-
 /* 
 ================== 
 CL_ScreenshotGetName
@@ -157,7 +140,7 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 /* 
 ============================================================================== 
  
-						SCREEN SHOTS 
+			SCREEN SHOTS 
  
 ============================================================================== 
 */
@@ -167,14 +150,14 @@ CL_ScreenShot_f
 
 normal screenshot
 ================== 
-*/  
+*/
 void CL_ScreenShot_f( void ) 
 {
 	int	i;
 	string	checkname;
 
 	// scan for a free filename
-	for( i = 0; i <= 9999; i++ )
+	for( i = 0; i < 9999; i++ )
 	{
 		CL_ScreenshotGetName( i, checkname );
 		if( !FS_FileExists( checkname, false ))
@@ -186,6 +169,13 @@ void CL_ScreenShot_f( void )
 	cls.envshot_vieworg = NULL; // no custom view
 }
 
+/* 
+================== 
+CL_EnvShot_f
+
+cubemap view
+================== 
+*/
 void CL_EnvShot_f( void )
 {
 	if( Cmd_Argc() < 2 )
@@ -199,6 +189,13 @@ void CL_EnvShot_f( void )
 	cls.envshot_vieworg = NULL; // no custom view
 }
 
+/* 
+================== 
+CL_SkyShot_f
+
+skybox view
+================== 
+*/
 void CL_SkyShot_f( void )
 {
 	if( Cmd_Argc() < 2 )
@@ -298,7 +295,7 @@ void CL_DeleteDemo_f( void )
 =================
 CL_SetSky_f
 
-Set a specific sky and rotation speed
+Set a specified skybox (only for local clients)
 =================
 */
 void CL_SetSky_f( void )
@@ -362,7 +359,7 @@ void SCR_TimeRefresh_f( void )
 =============
 SCR_Viewpos_f
 
-viewpos
+viewpos (level-designer helper)
 =============
 */
 void SCR_Viewpos_f( void )

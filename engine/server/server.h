@@ -385,7 +385,6 @@ extern	convar_t		*sv_send_logos;
 extern	convar_t		*sv_sendvelocity;
 extern	convar_t		*mp_consistency;
 extern	convar_t		*physinfo;
-extern	sv_client_t	*sv_client;
 
 //===========================================================
 //

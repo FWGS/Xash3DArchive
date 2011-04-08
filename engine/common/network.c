@@ -107,7 +107,7 @@ NET_ErrorString
 */
 char *NET_ErrorString( void )
 {
-	switch(pWSAGetLastError( ))
+	switch( pWSAGetLastError( ))
 	{
 	case WSAEINTR: return "WSAEINTR";
 	case WSAEBADF: return "WSAEBADF";
@@ -185,7 +185,6 @@ static void NET_SockadrToNetadr( struct sockaddr *s, netadr_t *a )
 		a->port = ((struct sockaddr_in *)s)->sin_port;
 	}
 }
-
 
 /*
 =============
@@ -356,7 +355,6 @@ static qboolean NET_GetLoopPacket( netsrc_t sock, netadr_t *from, byte *data, si
 	from->type = NA_LOOPBACK;
 
 	return true;
-
 }
 
 static qboolean NET_SendLoopPacket( netsrc_t sock, size_t length, const void *data, netadr_t to )
@@ -532,7 +530,6 @@ static int NET_IPSocket( const char *netInterface, int port )
 	return net_socket;
 }
 
-
 /*
 ====================
 NET_OpenIP
@@ -600,7 +597,8 @@ void NET_Config( qboolean multiplayer )
 		}
 	}
 	else
-	{	// open sockets
+	{	
+		// open sockets
 		NET_OpenIP ();
 	}
 

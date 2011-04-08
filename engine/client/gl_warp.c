@@ -274,7 +274,6 @@ void R_ClearSkyBox( void )
 {
 	int	i;
 
-	RI.params |= RP_NOSKY;
 	for( i = 0; i < 6; i++ )
 	{
 		RI.skyMins[0][i] = RI.skyMins[1][i] = 9999999;

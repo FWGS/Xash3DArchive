@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2009 ©
-//	      cl_parse.c  -- parse a message received from the server
+//	        cl_parse.c - parse a message received from the server
 //=======================================================================
 
 #include "common.h"
@@ -23,7 +23,7 @@ const char *svc_strings[256] =
 	"svc_nop",
 	"svc_disconnect",
 	"svc_changing",
-	"svc_unused4",
+	"svc_version",
 	"svc_setview",
 	"svc_sound",
 	"svc_time",
@@ -35,7 +35,7 @@ const char *svc_strings[256] =
 	"svc_updateuserinfo",
 	"svc_deltatable",
 	"svc_clientdata",
-	"svc_download",
+	"svc_stopsound",
 	"svc_updatepings",
 	"svc_particle",
 	"svc_frame",
@@ -44,7 +44,7 @@ const char *svc_strings[256] =
 	"svc_spawnbaseline",
 	"svc_temp_entity",
 	"svc_setpause",
-	"svc_unused25",
+	"svc_signonnum",
 	"svc_centerprint",
 	"svc_event",
 	"svc_soundindex",
@@ -195,7 +195,6 @@ void CL_WriteMessageHistory( void )
 	}
 
 	failcommand = &cls_message_debug.oldcmd[thecmd];
-
 	MsgDev( D_INFO, "BAD:  %3i:%s\n", BF_GetNumBytesRead( msg ) - 1, CL_MsgInfo( failcommand->command ));
 
 	if( host.developer >= 3 )
@@ -215,131 +214,6 @@ Default stub for missed callbacks
 int CL_UserMsgStub( const char *pszName, int iSize, void *pbuf )
 {
 	return 1;
-}
-
-/*
-===============
-CL_CheckOrDownloadFile
-
-Returns true if the file exists, otherwise it attempts
-to start a download from the server.
-===============
-*/
-qboolean CL_CheckOrDownloadFile( const char *filename )
-{
-	string	name;
-	file_t	*f;
-
-	if( FS_FileExists( filename, false ))
-	{
-		// it exists, no need to download
-		return true;
-	}
-
-	Q_strncpy( cls.downloadname, filename, MAX_STRING );
-	Q_strncpy( cls.downloadtempname, filename, MAX_STRING );
-
-	// download to a temp name, and only rename to the real name when done,
-	// so if interrupted a runt file won't be left
-	FS_StripExtension( cls.downloadtempname );
-	FS_DefaultExtension( cls.downloadtempname, ".tmp" );
-	Q_strncpy( name, cls.downloadtempname, MAX_STRING );
-
-	f = FS_Open( name, "a+b", false );
-	if( f )
-	{
-		// it exists
-		size_t	len = FS_Tell( f );
-
-		cls.download = f;
-		// give the server an offset to start the download
-		MsgDev( D_INFO, "Resume download %s at %i\n", cls.downloadname, len );
-		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-		BF_WriteString( &cls.netchan.message, va("download %s %i", cls.downloadname, len ));
-	}
-	else
-	{
-		MsgDev( D_INFO, "Start download %s\n", cls.downloadname );
-		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-		BF_WriteString( &cls.netchan.message, va("download %s", cls.downloadname ));
-	}
-
-	cls.downloadnumber++;
-	return false;
-}
-
-/*
-=====================
-CL_ParseDownload
-
-A download message has been received from the server
-=====================
-*/
-void CL_ParseDownload( sizebuf_t *msg )
-{
-	int	size, percent;
-	char	buffer[NET_MAX_PAYLOAD];
-	string	name;
-	int	r;
-
-	// read the data
-	size = BF_ReadShort( msg );
-	percent = BF_ReadByte( msg );
-
-	if( size == -1 )
-	{
-		Msg( "Server does not have this file.\n" );
-		if( cls.download )
-		{
-			// if here, we tried to resume a file but the server said no
-			FS_Close( cls.download );
-			cls.download = NULL;
-		}
-		CL_RequestNextDownload();
-		return;
-	}
-
-	// open the file if not opened yet
-	if( !cls.download )
-	{
-		Q_strncpy( name, cls.downloadtempname, MAX_STRING );
-		cls.download = FS_Open ( name, "wb", false );
-
-		if( !cls.download )
-		{
-			msg->iCurBit += size << 3;
-			MsgDev( D_ERROR, "failed to open %s\n", cls.downloadtempname );
-			CL_RequestNextDownload();
-			return;
-		}
-	}
-
-	ASSERT( size <= sizeof( buffer ));
-
-	BF_ReadBytes( msg, buffer, size );
-	FS_Write( cls.download, buffer, size );
-
-	if( percent != 100 )
-	{
-		// request next block
-		Cvar_SetFloat("scr_download", percent );
-		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
-		BF_WriteString( &cls.netchan.message, "nextdl" );
-	}
-	else
-	{
-		FS_Close( cls.download );
-
-		// rename the temp file to it's final name
-		r = FS_Rename( cls.downloadtempname, cls.downloadname );
-		if( r ) MsgDev( D_ERROR, "failed to rename.\n" );
-
-		cls.download = NULL;
-		Cvar_SetFloat( "scr_download", 0.0f );
-
-		// get another file if needed
-		CL_RequestNextDownload();
-	}
 }
 
 /*
@@ -363,11 +237,11 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 	chan = BF_ReadByte( msg );
 
 	if( flags & SND_VOLUME )
-		volume = BF_ReadByte( msg ) / 255.0f;
+		volume = (float)BF_ReadByte( msg ) / 255.0f;
 	else volume = VOL_NORM;
 
 	if( flags & SND_ATTENUATION )
-		attn = BF_ReadByte( msg ) / 64.0f;
+		attn = (float)BF_ReadByte( msg ) / 64.0f;
 	else attn = ATTN_NONE;	
 
 	if( flags & SND_PITCH )
@@ -547,7 +421,7 @@ void CL_ParseReliableEvent( sizebuf_t *msg, int flags )
 
 	Q_memset( &nullargs, 0, sizeof( nullargs ));
 	event_index = BF_ReadWord( msg );		// read event index
-	delay = BF_ReadWord( msg ) / 100.0f;		// read event delay
+	delay = (float)BF_ReadWord( msg ) / 100.0f;	// read event delay
 	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// TODO: delta-compressing
 
 	CL_QueueEvent( flags, event_index, delay, &args );
@@ -600,7 +474,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.checksum = BF_ReadLong( msg );
 	cl.playernum = BF_ReadByte( msg );
 	cl.maxclients = BF_ReadByte( msg );
-	clgame.maxEntities = BF_ReadWord( msg );
+	clgame.maxEntities = bound( 600, BF_ReadWord( msg ), 4096 );
 	Q_strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 	cl.background = BF_ReadOneBit( msg );
@@ -740,7 +614,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 		from_wd = cl.frames[delta_sequence & CL_UPDATE_MASK].local.weapondata;
 	}
 
-	MSG_ReadClientData( msg, from_cd, to_cd, sv_time( ));
+	MSG_ReadClientData( msg, from_cd, to_cd, cl.mtime[0] );
 
 	for( i = 0; i < MAX_WEAPONS; i++ )
 	{
@@ -750,7 +624,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 		// read the weapon idx
 		idx = BF_ReadUBitLong( msg, MAX_WEAPON_BITS );
 
-		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], sv_time( ));
+		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], cl.mtime[0] );
 	}
 }
 
@@ -770,14 +644,14 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	newnum = BF_ReadWord( msg );
 
 	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
-	if( newnum > clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
+	if( newnum >= clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
 
 	ent = CL_EDICT_NUM( newnum );
 	Q_memset( &ent->prevstate, 0, sizeof( ent->prevstate ));
 	ent->index = newnum;
 
 	if( cls.state == ca_active )
-		timebase = sv_time();
+		timebase = cl.mtime[0];
 	else timebase = 1.0f; // sv.state == ss_loading
 
 	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, CL_IsPlayerIndex( newnum ), timebase );
@@ -1012,7 +886,7 @@ void CL_ServerInfo( sizebuf_t *msg )
 ==============
 CL_ParseDirector
 
-hltv is handled in the client.dll
+spectator message (hltv)
 ==============
 */
 void CL_ParseDirector( sizebuf_t *msg )
@@ -1038,7 +912,7 @@ void CL_ParseScreenShake( sizebuf_t *msg )
 	clgame.shake.duration = (float)(word)BF_ReadShort( msg ) * (1.0f / (float)(1<<12));
 	clgame.shake.frequency = (float)(word)BF_ReadShort( msg ) * (1.0f / (float)(1<<8));
 	clgame.shake.time = cl.time + max( clgame.shake.duration, 0.01f );
-	clgame.shake.next_shake = 0.0f;	// apply immediately
+	clgame.shake.next_shake = 0.0f; // apply immediately
 }
 
 /*
@@ -1157,7 +1031,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 			break;
 	}
 
-	if( i == MAX_USER_MESSAGES )
+	if( i == MAX_USER_MESSAGES ) // probably unregistered
 		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
 
 	// NOTE: some user messages handled into engine
@@ -1227,7 +1101,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 	{
 		if( BF_CheckOverflow( msg ))
 		{
-			Host_Error( "CL_ParseServerMessage: bad server message\n" );
+			Host_Error( "CL_ParseServerMessage: overflow!\n" );
 			return;
 		}
 
@@ -1250,10 +1124,11 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			Host_Error( "svc_bad\n" );
 			break;
 		case svc_nop:
+			// this does nothing
 			break;
 		case svc_disconnect:
 			CL_Drop ();
-			Host_AbortCurrentFrame();
+			Host_AbortCurrentFrame ();
 			break;
 		case svc_changing:
 			if( BF_ReadOneBit( msg ))
@@ -1263,11 +1138,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			}
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 
-			if( cls.download )
-			{
-				FS_Close( cls.download );
-				cls.download = NULL;
-			}
 			cls.state = ca_connecting;
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;
@@ -1278,14 +1148,14 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseSoundPacket( msg, false );
 			break;
 		case svc_time:
+			// shuffle timestamps
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = BF_ReadFloat( msg );			
 			break;
 		case svc_print:
 			i = BF_ReadByte( msg );
-			if( i == PRINT_CHAT ) // chat
-				S_StartLocalSound( "common/menu2.wav" );
 			MsgDev( D_INFO, "^6%s\n", BF_ReadString( msg ));
+			if( i == PRINT_CHAT ) S_StartLocalSound( "common/menu2.wav" );
 			break;
 		case svc_stufftext:
 			s = BF_ReadString( msg );
@@ -1313,9 +1183,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_deltapacketentities:
 			CL_ParsePacketEntities( msg, true );
 			break;
-		case svc_download:
-			CL_ParseDownload( msg );
-			break;
 		case svc_updatepings:
 			CL_UpdateUserPings( msg );
 			break;
@@ -1341,7 +1208,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseTempEntity( msg );
 			break;
 		case svc_setpause:
-			cl.refdef.paused = (BF_ReadOneBit( msg ) != 0 );
+			cl.refdef.paused = ( BF_ReadOneBit( msg ) != 0 );
 			break;
 		case svc_deltamovevars:
 			CL_ParseMovevars( msg );
@@ -1371,8 +1238,8 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseSoundFade( msg );
 			break;
 		case svc_cdtrack:
-			param1 = bound( 1, BF_ReadByte( msg ), 32 );	// tracknum
-			param2 = bound( 1, BF_ReadByte( msg ), 32 );	// loopnum
+			param1 = bound( 1, BF_ReadByte( msg ), 32 ); // tracknum
+			param2 = bound( 1, BF_ReadByte( msg ), 32 ); // loopnum
 			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1] );
 			break;
 		case svc_serverinfo:

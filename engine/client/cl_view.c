@@ -8,6 +8,7 @@
 #include "const.h"
 #include "entity_types.h"
 #include "gl_local.h"
+#include "vgui_draw.h"
 
 /*
 ====================
@@ -47,7 +48,7 @@ void V_SetupRefDef( void )
 	cl.refdef.playernum = cl.playernum;
 	cl.refdef.max_entities = clgame.maxEntities;
 	cl.refdef.maxclients = cl.maxclients;
-	cl.refdef.time = cl_time();
+	cl.refdef.time = cl.time;
 	cl.refdef.frametime = cl.time - cl.oldtime;
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
@@ -191,6 +192,7 @@ void V_PostRender( void )
 		CL_DrawHUD( CL_CHANGELEVEL );
 		Con_DrawConsole();
 		UI_UpdateMenu( host.realtime );
+		Con_DrawDebug(); // must be last
 		S_ExtraUpdate();
 	}
 

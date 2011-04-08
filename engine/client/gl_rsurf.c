@@ -1273,7 +1273,6 @@ void R_DrawWorld( void )
 	RI.currentWaveHeight = RI.waveHeight;
 	GL_SetRenderMode( kRenderNormal );
 
-	ClearBounds( RI.visMins, RI.visMaxs );
 	R_ClearSkyBox ();
 
 	// draw the world fog

@@ -40,7 +40,8 @@ struct movevars_s
 	float	skyvec_x;			// Sky vector
 	float	skyvec_y;			// 
 	float	skyvec_z;			// 
-	qboolean	studio_scale;	// allow engine to scale visible and physic hull of studiomodels
+	qboolean	studio_scale;	// Allow engine to scale visible and physic hull of studiomodels
+	float	clienttrace;	// Studiomodels scale that applied for the clients (visual effect only) 
 };
 
 extern movevars_t movevars;

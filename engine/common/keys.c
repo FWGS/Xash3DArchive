@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2007 ©
-//			con_keys.c - console key events
+//			 keys.c - console key events
 //=======================================================================
 
 #include "common.h"
@@ -482,6 +482,7 @@ void Key_AddKeyUpCommands( int key, const char *kb )
 			while(( kb[i] <= ' ' || kb[i] == ';' ) && kb[i] != 0 )
 				i++;
 		}
+
 		*buttonPtr++ = kb[i];
 		if( !kb[i] ) break;
 	}

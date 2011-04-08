@@ -571,8 +571,6 @@ static void R_SetupFrame( void )
 		mleaf_t	*leaf;
 		vec3_t	tmp;
 
-		VectorCopy( cl.worldmodel->mins, RI.visMins );
-		VectorCopy( cl.worldmodel->maxs, RI.visMaxs );
 		RI.waveHeight = RI.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
 		RI.isSkyVisible = false; // unknown at this moment
 
@@ -952,10 +950,8 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 
 	RI.params = RP_NONE;
 	RI.farClip = 0;
-	RI.rdflags = 0;
 	RI.clipFlags = 15;
 	RI.drawWorld = drawWorld;
-	RI.lerpFrac = cl.lerpFrac;
 	RI.thirdPerson = cl.thirdperson;
 
 	// adjust field of view for widescreen
@@ -1012,4 +1008,35 @@ R_DrawCubemapView
 */
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 {
+	ref_params_t *fd;
+
+	fd = &RI.refdef;
+	*fd = r_lastRefdef;
+	fd->time = 0;
+	fd->viewport[0] = RI.refdef.viewport[1] = 0;
+	fd->viewport[2] = size;
+	fd->viewport[3] = size;
+	fd->fov_x = 90;
+	fd->fov_y = 90;
+	VectorCopy( origin, fd->vieworg );
+	VectorCopy( angles, fd->viewangles );
+	VectorCopy( fd->vieworg, RI.pvsorigin );
+
+	R_Set2DMode( false );
+		
+	// setup scissor
+	RI.scissor[0] = fd->viewport[0];
+	RI.scissor[1] = glState.height - fd->viewport[3] - fd->viewport[1];
+	RI.scissor[2] = fd->viewport[2];
+	RI.scissor[3] = fd->viewport[3];
+
+	// setup viewport
+	RI.viewport[0] = fd->viewport[0];
+	RI.viewport[1] = glState.height - fd->viewport[3] - fd->viewport[1];
+	RI.viewport[2] = fd->viewport[2];
+	RI.viewport[3] = fd->viewport[3];
+
+	R_RenderScene( fd );
+
+	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
 }

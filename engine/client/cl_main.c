@@ -10,6 +10,7 @@
 #include "gl_local.h"
 #include "input.h"
 #include "../cl_dll/kbutton.h"
+#include "vgui_draw.h"
 
 #define MAX_TOTAL_CMDS		16
 #define MIN_CMD_RATE		10.0
@@ -76,6 +77,13 @@ qboolean CL_IsPlaybackDemo( void )
 	return cls.demoplayback;
 }
 
+/*
+===============
+CL_ChangeGame
+
+This is experiment. Use with precaution
+===============
+*/
 qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 {
 	if( host.type == HOST_DEDICATED )
@@ -245,7 +253,7 @@ usercmd_t CL_CreateCmd( void )
 		active = 1;
 		break;
 	case ca_active:
-		active = 2;
+		active = 2; // GoldSrc rules
 		break;
 	default:
 		active = 0;
@@ -300,13 +308,6 @@ CL_WritePacket
 
 Create and send the command packet to the server
 Including both the reliable commands and the usercmds
-
-During normal gameplay, a client packet will contain something like:
-
-1 clc_move
-<usercmd[-2]>
-<usercmd[-1]>
-<usercmd[-0]>
 ===================
 */
 void CL_WritePacket( void )
@@ -335,7 +336,6 @@ void CL_WritePacket( void )
 		Cvar_SetFloat( "cl_cmdrate", MIN_CMD_RATE );
 	}
 #endif
-
 	BF_Init( &buf, "ClientData", data, sizeof( data ));
 
 	// Determine number of backup commands to send along
@@ -458,6 +458,11 @@ void CL_WritePacket( void )
 
 		// remember outgoing command that we are sending
 		cls.lastoutgoingcommand = cls.netchan.outgoing_sequence;
+
+		// composite the rest of the datagram..
+		if( BF_GetNumBitsWritten( &cls.datagram ) <= BF_GetNumBitsLeft( &buf ))
+			BF_WriteBits( &buf, BF_GetData( &cls.datagram ), BF_GetNumBitsWritten( &cls.datagram ));
+		BF_Clear( &cls.datagram );
 
 		// deliver the message (or update reliable)
 		Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
@@ -586,7 +591,6 @@ void CL_CheckForResend( void )
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
 }
 
-
 /*
 ================
 CL_Connect_f
@@ -606,7 +610,7 @@ void CL_Connect_f( void )
 	if( Host_ServerState())
 	{	
 		// if running a local server, kill it and reissue
-		Q_strncpy( host.finalmsg, "Server quit\n", MAX_STRING );
+		Q_strncpy( host.finalmsg, "Server quit", MAX_STRING );
 		SV_Shutdown( false );
 	}
 
@@ -638,7 +642,7 @@ void CL_Rcon_f( void )
 
 	if( !rcon_client_password->string )
 	{
-		Msg( "You must set 'rcon_password' before\n" "issuing an rcon command.\n" );
+		Msg( "You must set 'rcon_password' before issuing an rcon command.\n" );
 		return;
 	}
 
@@ -668,7 +672,7 @@ void CL_Rcon_f( void )
 	{
 		if( !Q_strlen( rcon_address->string ))
 		{
-			Msg( "You must either be connected,\n" "or set the 'rcon_address' cvar\n" "to issue rcon commands\n" );
+			Msg( "You must either be connected or set the 'rcon_address' cvar to issue rcon commands\n" );
 			return;
 		}
 
@@ -758,13 +762,6 @@ void CL_Disconnect( void )
 	// clear the network channel, too.
 	Netchan_Clear( &cls.netchan );
 
-	// stop download
-	if( cls.download )
-	{
-		FS_Close( cls.download );
-		cls.download = NULL;
-	}
-
 	cls.state = ca_disconnected;
 
 	// restore gamefolder here (in case client was connected to another game)
@@ -794,14 +791,11 @@ void CL_Crashed( void )
 	// send a disconnect message to the server
 	CL_SendDisconnectMessage();
 
-	// stop any downloads
-	if( cls.download ) FS_Close( cls.download );
-
 	Host_WriteOpenGLConfig();
 	Host_WriteConfig();	// write config
+
 	// never write video.cfg here because reason to crash may be provoked
 	// with some renderer variables
-
 	VID_RestoreGamma();
 }
 
@@ -829,7 +823,6 @@ void CL_LocalServers_f( void )
 CL_Packet_f
 
 packet <destination> <contents>
-
 Contents allows \n escape character
 ====================
 */
@@ -840,9 +833,9 @@ void CL_Packet_f( void )
 	int	i, l;
 	netadr_t	adr;
 
-	if (Cmd_Argc() != 3)
+	if( Cmd_Argc() != 3 )
 	{
-		Msg ("packet <destination> <contents>\n");
+		Msg( "packet <destination> <contents>\n" );
 		return;
 	}
 
@@ -860,16 +853,16 @@ void CL_Packet_f( void )
 	out = send + 4;
 	send[0] = send[1] = send[2] = send[3] = (char)0xff;
 
-	l = Q_strlen (in);
-	for (i=0 ; i<l ; i++)
+	l = Q_strlen( in );
+
+	for( i = 0; i < l; i++ )
 	{
-		if (in[i] == '\\' && in[i+1] == 'n')
+		if( in[i] == '\\' && in[i+1] == 'n' )
 		{
 			*out++ = '\n';
 			i++;
 		}
-		else
-			*out++ = in[i];
+		else *out++ = in[i];
 	}
 	*out = 0;
 
@@ -885,15 +878,17 @@ The server is changing levels
 */
 void CL_Reconnect_f( void )
 {
-	// if we are downloading, we don't change!  This so we don't suddenly stop downloading a map
-	if( cls.download || cls.state == ca_disconnected )
+	if( cls.state == ca_disconnected )
 		return;
 
 	S_StopAllSounds ();
 
-	cls.changelevel = true;
-
-	if( cls.demoplayback ) return;
+	if( cls.demoplayback )
+	{
+		// demo issues changelevel
+		cls.changelevel = true;
+		return;
+	}
 
 	if( cls.state == ca_connected )
 	{
@@ -906,6 +901,11 @@ void CL_Reconnect_f( void )
 
 		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
 		BF_WriteString( &cls.netchan.message, "new" );
+
+		cl.validsequence = 0;		// haven't gotten a valid frame update yet
+		cl.delta_sequence = -1;		// we'll request a full delta from the baseline
+		cls.lastoutgoingcommand = -1;		// we don't have a backed up cmd history yet
+		cls.nextcmdtime = host.realtime;	// we can send a cmd right away
 		return;
 	}
 
@@ -1154,7 +1154,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		// remote command from gui front end
 		if( !NET_IsLocalAddress( from ))
 		{
-			Msg( "Command packet from remote host.  Ignored.\n" );
+			Msg( "Command packet from remote host. Ignored.\n" );
 			return;
 		}
 
@@ -1236,7 +1236,7 @@ void CL_ReadNetMessage( void )
 		// packet from server
 		if( !NET_CompareAdr( net_from, cls.netchan.remote_address ))
 		{
-			MsgDev( D_WARN, "CL_ReadPackets: %s:sequenced packet without connection\n", NET_AdrToString( net_from ));
+			MsgDev( D_ERROR, "CL_ReadPackets: %s:sequenced packet without connection\n", NET_AdrToString( net_from ));
 			continue;
 		}
 
@@ -1337,11 +1337,7 @@ void CL_Physinfo_f( void )
 {
 	Msg( "Phys info settings:\n" );
 	Info_Print( cl.frame.local.client.physinfo );
-}
-
-void CL_RequestNextDownload( void )
-{
-	Host_Error( "CL_RequestNextDownload: not implemented (yet)\n" );
+	Msg( "Total %i symbols\n", Q_strlen( cl.frame.local.client.physinfo ));
 }
 
 /*
@@ -1429,6 +1425,11 @@ void CL_InitLocal( void )
 	Cvar_Get( "spectator", "0", CVAR_USERINFO|CVAR_ARCHIVE, "1 is enable spectator mode" );
 	Cvar_Get( "cl_updaterate", "60", CVAR_USERINFO|CVAR_ARCHIVE, "refresh rate of server messages" );
 
+	// these two added to shut up CS 1.5 about 'unknown' commands
+	Cvar_Get( "lightgamma", "1", CVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );
+	Cvar_Get( "direct", "1", CVAR_ARCHIVE, "direct lighting level (legacy, unused)" );
+	Cvar_Get( "voice_serverdebug", "0", 0, "debug voice (legacy, unused)" );
+
 	// server commands
 	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );
 	Cmd_AddCommand ("notarget", NULL, "notarget mode (monsters do not see you)" );
@@ -1477,7 +1478,6 @@ void CL_InitLocal( void )
 // 	Cmd_AddCommand ("packet", CL_Packet_f, "send a packet with custom contents" );
 
 	Cmd_AddCommand ("precache", CL_Precache_f, "precache specified resource (by index)" );
-	Cmd_AddCommand ("download", CL_Download_f, "download specified resource (by name)" );
 }
 
 //============================================================================
@@ -1506,7 +1506,7 @@ Host_ClientFrame
 void Host_ClientFrame( void )
 {
 	// if client is not active, do nothing
-	if( !cls.initialized ) return;
+	if ( !cls.initialized ) return;
 
 	// decide the simulation time
 	cl.oldtime = cl.time;
@@ -1580,6 +1580,9 @@ void CL_Init( void )
 	R_Init();	// init renderer
 	S_Init();	// init sound
 
+	// unreliable buffer. unsed for unreliable commands and voice stream
+	BF_Init( &cls.datagram, "cls.datagram", cls.datagram_buf, sizeof( cls.datagram_buf ));
+
 	if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
 		Host_Error( "can't initialize client.dll\n" );
 
@@ -1600,7 +1603,7 @@ void CL_Shutdown( void )
 	if( host.state == HOST_ERROR ) return;
 	if( !cls.initialized ) return;
 
-	MsgDev( D_NOTE, "CL_Shutdown()\n" );
+	MsgDev( D_INFO, "CL_Shutdown()\n" );
 
 	Host_WriteOpenGLConfig ();
 	Host_WriteVideoConfig ();

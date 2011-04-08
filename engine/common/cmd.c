@@ -685,7 +685,7 @@ void Cmd_ExecuteString( char *text, cmd_source_t src )
 			return;
 		}
 	}
-	else if( text[0] != '@' )
+	else if( text[0] != '@' && host.type == HOST_NORMAL )
 	{
 		// commands with leading '@' are hidden system commands
 		MsgDev( D_INFO, "Unknown command \"%s\"\n", text );

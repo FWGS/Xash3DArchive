@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2011 ©
-//			 stdlib.c - internal stdlib
+//			 crtlib.c - internal stdlib
 //=======================================================================
 
 #include <math.h>
@@ -164,8 +164,10 @@ int Q_atoi( const char *str )
 	if( !str ) return 0;
 
 	// check for empty charachters in string
-	while( *str == ' ' && str )
+	while( str && *str == ' ' )
 		str++;
+
+	if( !str ) return 0;
 	
 	if( *str == '-' )
 	{
@@ -211,8 +213,10 @@ float Q_atof( const char *str )
 	if( !str ) return 0.0f;
 
 	// check for empty charachters in string
-	while( *str == ' ' && str )
+	while( str && *str == ' ' )
 		str++;
+
+	if( !str ) return 0.0f;
 	
 	if( *str == '-' )
 	{
@@ -299,7 +303,7 @@ char *Q_strchr( const char *s, char c )
 	while( len-- )
 	{
 		if( *++s == c )
-			return(char *)s;
+			return (char *)s;
 	}
 	return 0;
 }
@@ -327,7 +331,8 @@ int Q_strnicmp( const char *s1, const char *s2, int n )
 		if( s2 == NULL ) return 0;
 		else return -1;
 	}
-	else if( s2 == NULL ) return 1;
+	else if( s2 == NULL )
+		return 1;
 
 	do {
 		c1 = *s1++;
@@ -356,7 +361,8 @@ int Q_strncmp( const char *s1, const char *s2, int n )
 		if( s2 == NULL ) return 0;
 		else return -1;
 	}
-	else if( s2 == NULL ) return 1;
+	else if( s2 == NULL )
+		return 1;
 	
 	do {
 		c1 = *s1++;

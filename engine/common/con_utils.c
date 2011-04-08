@@ -144,6 +144,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 		Msg( "%16s (%s) ^3%s^7\n", matchbuf, buf, message );
 		nummaps++;
 	}
+
 	Msg( "\n^3 %i maps found.\n", nummaps );
 	Mem_Free( t );
 
@@ -185,6 +186,7 @@ qboolean Cmd_GetDemoList( const char *s, char *completedname, int length )
 		Msg( "%16s\n", matchbuf );
 		numdems++;
 	}
+
 	Msg( "\n^3 %i demos found.\n", numdems );
 	Mem_Free( t );
 
@@ -229,6 +231,7 @@ qboolean Cmd_GetMovieList( const char *s, char *completedname, int length )
 		Msg( "%16s\n", matchbuf );
 		nummovies++;
 	}
+
 	Msg( "\n^3 %i movies found.\n", nummovies );
 	Mem_Free( t );
 
@@ -276,6 +279,7 @@ qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 		Msg( "%16s\n", matchbuf );
 		numtracks++;
 	}
+
 	Msg( "\n^3 %i soundtracks found.\n", numtracks );
 	Mem_Free(t);
 
@@ -284,7 +288,7 @@ qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 	{
 		for( i = 0; matchbuf[i]; i++ )
 		{
-			if( Q_tolower( completedname[i]) != Q_tolower( matchbuf[i] ))
+			if( Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
 				completedname[i] = 0;
 		}
 	}
@@ -320,6 +324,7 @@ qboolean Cmd_GetSavesList( const char *s, char *completedname, int length )
 		Msg( "%16s\n", matchbuf );
 		numsaves++;
 	}
+
 	Msg( "\n^3 %i saves found.\n", numsaves );
 	Mem_Free( t );
 
@@ -365,6 +370,7 @@ qboolean Cmd_GetConfigList( const char *s, char *completedname, int length )
 		Msg( "%16s\n", matchbuf );
 		numconfigs++;
 	}
+
 	Msg( "\n^3 %i configs found.\n", numconfigs );
 	Mem_Free( t );
 
@@ -415,6 +421,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 		Msg( "%16s\n", matchbuf );
 		numsounds++;
 	}
+
 	Msg( "\n^3 %i sounds found.\n", numsounds );
 	Mem_Free( t );
 
@@ -423,7 +430,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 	{
 		for( i = 0; matchbuf[i]; i++ )
 		{
-			if(Q_tolower(completedname[i]) != Q_tolower(matchbuf[i]))
+			if( Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
 				completedname[i] = 0;
 		}
 	}
@@ -435,7 +442,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 =====================================
 Cmd_GetItemsList
 
-Prints or complete item classname
+Prints or complete item classname (weapons only)
 =====================================
 */
 qboolean Cmd_GetItemsList( const char *s, char *completedname, int length )
@@ -456,12 +463,13 @@ qboolean Cmd_GetItemsList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( Q_stricmp(ext, "txt" )) continue;
+		if( Q_stricmp( ext, "txt" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		numitems++;
 	}
-	Msg("\n^3 %i items found.\n", numitems );
+
+	Msg( "\n^3 %i items found.\n", numitems );
 	Mem_Free( t );
 
 	// cut shortestMatch to the amount common with s
@@ -469,7 +477,7 @@ qboolean Cmd_GetItemsList( const char *s, char *completedname, int length )
 	{
 		for( i = 0; matchbuf[i]; i++ )
 		{
-			if(Q_tolower(completedname[i]) != Q_tolower(matchbuf[i]))
+			if( Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
 				completedname[i] = 0;
 		}
 	}
@@ -489,7 +497,6 @@ qboolean Cmd_GetCustomList( const char *s, char *completedname, int length )
 	string		matchbuf;
 	int		i, numitems;
 
-	if( !clgame.itemspath[0] ) return false; // not in game yet
 	t = FS_Search( va( "%s*.hpk", s ), true, false );
 	if( !t ) return false;
 
@@ -562,7 +569,8 @@ qboolean Cmd_GetTexturemodes( const char *s, char *completedname, int length )
 		Q_strncpy( matchbuf, texturemodes[i], MAX_STRING ); 
 		Msg( "%16s\n", matchbuf );
 	}
-	Msg("\n^3 %i filters found.\n", numtexturemodes );
+
+	Msg( "\n^3 %i filters found.\n", numtexturemodes );
 
 	// cut shortestMatch to the amount common with s
 	if( completedname && length )
@@ -599,21 +607,22 @@ qboolean Cmd_GetGamesList( const char *s, char *completedname, int length )
 	if( !numgamedirs ) return false;
 	Q_strncpy( matchbuf, gamedirs[0], MAX_STRING ); 
 	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
-	if( numgamedirs == 1) return true;
+	if( numgamedirs == 1 ) return true;
 
 	for( i = 0; i < numgamedirs; i++ )
 	{
 		Q_strncpy( matchbuf, gamedirs[i], MAX_STRING ); 
-		Msg("%16s\n", matchbuf );
+		Msg( "%16s\n", matchbuf );
 	}
-	Msg("\n^3 %i games found.\n", numgamedirs );
+
+	Msg( "\n^3 %i games found.\n", numgamedirs );
 
 	// cut shortestMatch to the amount common with s
 	if( completedname && length )
 	{
 		for( i = 0; matchbuf[i]; i++ )
 		{
-			if(Q_tolower(completedname[i]) != Q_tolower(matchbuf[i]))
+			if( Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
 				completedname[i] = 0;
 		}
 	}
@@ -735,6 +744,12 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 		return Cmd_CheckMapsList_R( fRefresh, false );
 	}
 
+	if( !size )
+	{
+          	if( buffer ) Mem_Free( buffer );
+          	return false;
+	}
+
 	// write generated maps.lst
 	if( FS_WriteFile( "maps.lst", buffer, Q_strlen( buffer )))
 	{
@@ -777,17 +792,16 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to true.
 ============
 */
-
 static void Cmd_WriteCvar(const char *name, const char *string, const char *desc, void *f )
 {
 	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf(f, "seta %s \"%s\"\n", name, string );
+	FS_Printf( f, "%s \"%s\"\n", name, string );
 }
 
 static void Cmd_WriteServerCvar(const char *name, const char *string, const char *desc, void *f )
 {
 	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf(f, "set %s \"%s\"\n", name, string );
+	FS_Printf( f, "set %s \"%s\"\n", name, string );
 }
 
 static void Cmd_WriteOpenGLCvar( const char *name, const char *string, const char *desc, void *f )
@@ -839,8 +853,8 @@ Writes key bindings and archived cvars to config.cfg
 */
 void Host_WriteConfig( void )
 {
-	file_t	*f;
 	kbutton_t	*mlook, *jlook;
+	file_t	*f;
 
 	if( !cls.initialized ) return;
 

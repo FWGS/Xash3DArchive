@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2007 ©
-//			con_main.c - client console
+//			console.c - developer console
 //=======================================================================
 
 #include "common.h"
@@ -48,6 +48,7 @@ typedef struct
 	string		szNotify;
 	float		expire;
 	rgba_t		color;
+	int		key_dest;
 } notify_t;
 
 typedef struct
@@ -95,8 +96,7 @@ typedef struct
 	int		matchCount;
 } console_t;
 
-int g_console_field_width = 78;
-static console_t con;
+static console_t		con;
 
 void Field_CharEvent( field_t *edit, int ch );
 
@@ -172,7 +172,7 @@ Con_ClearTyping
 void Con_ClearTyping( void )
 {
 	Con_ClearField( &con.input );
-	con.input.widthInChars = g_console_field_width;
+	con.input.widthInChars = con.linewidth;
 }
 
 /*
@@ -244,10 +244,19 @@ If the line width has changed, reformat the buffer.
 */
 void Con_CheckResize( void )
 {
-	int	i, j, width, oldwidth, oldtotallines, numlines, numchars;
+	int	i, j, width, numlines, numchars;
+	int	oldwidth, oldtotallines;
 	short	tbuf[CON_TEXTSIZE];
+	int	charWidth = 8;
 
-	width = ( scr_width->integer / 8 ) - 2;
+	if( con.chars.hFontTexture )
+		charWidth = con.charWidths['M'];
+
+	width = ( scr_width->integer / charWidth ) - 2;
+
+	// FIXME: Con_CheckResize is totally wrong :-(
+	// g-cont. i've just used fixed width on all resolutions
+	width = 90;
 
 	if( width == con.linewidth )
 		return;
@@ -255,16 +264,16 @@ void Con_CheckResize( void )
 	if( !glw_state.initialized )
 	{
 		// video hasn't been initialized yet
-		width = g_console_field_width;
 		con.linewidth = width;
 		con.totallines = CON_TEXTSIZE / con.linewidth;
+
 		for( i = 0; i < CON_TEXTSIZE; i++ )
 			con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 	}
 	else
 	{
 		oldwidth = con.linewidth;
-		con.linewidth = g_console_field_width;
+		con.linewidth = width;
 		oldtotallines = con.totallines;
 		con.totallines = CON_TEXTSIZE / con.linewidth;
 		numlines = oldtotallines;
@@ -278,14 +287,17 @@ void Con_CheckResize( void )
 			numchars = con.linewidth;
 
 		Q_memcpy( tbuf, con.text, CON_TEXTSIZE * sizeof( short ));
+
 		for( i = 0; i < CON_TEXTSIZE; i++ )
 			con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 
+		// FIXME: should we consider '\n' when counting the actual lines?
 		for( i = 0; i < numlines; i++ )
 		{
 			for( j = 0; j < numchars; j++ )
 			{
-				con.text[(con.totallines - 1 - i) * con.linewidth + j] = tbuf[((con.current - i + oldtotallines) % oldtotallines) * oldwidth + j];
+				con.text[(con.totallines - 1 - i) * con.linewidth + j] =
+					tbuf[((con.current - i + oldtotallines) % oldtotallines) * oldwidth + j + con.x];
 			}
 		}
 		Con_ClearNotify ();
@@ -293,6 +305,11 @@ void Con_CheckResize( void )
 
 	con.current = con.totallines - 1;
 	con.display = con.current;
+
+	con.input.widthInChars = con.linewidth;
+
+	for( i = 0; i < CON_HISTORY; i++ )
+		con.historyLines[i].widthInChars = con.linewidth;
 }
 
 /*
@@ -351,7 +368,7 @@ Con_Visible
 */
 qboolean Con_Visible( void )
 {
-	return (con.finalFrac != 0.0f);
+	return (con.displayFrac != 0.0f);
 }
 
 /*
@@ -563,12 +580,12 @@ void Con_Init( void )
 	Con_CheckResize();
 
 	Con_ClearField( &con.input );
-	con.input.widthInChars = g_console_field_width;
+	con.input.widthInChars = con.linewidth;
 
 	for( i = 0; i < CON_HISTORY; i++ )
 	{
 		Con_ClearField( &con.historyLines[i] );
-		con.historyLines[i].widthInChars = g_console_field_width;
+		con.historyLines[i].widthInChars = con.linewidth;
 	}
 
 	Cmd_AddCommand( "toggleconsole", Con_ToggleConsole_f, "opens or closes the console" );
@@ -585,20 +602,20 @@ void Con_Init( void )
 Con_Linefeed
 ===============
 */
-void Con_Linefeed( qboolean skipnotify )
+void Con_Linefeed( void )
 {
 	int	i;
 
 	// mark time for transparent overlay
 	if( con.current >= 0 )
-	{
-		if( skipnotify ) con.times[con.current % CON_TIMES] = 0;
-		else con.times[con.current % CON_TIMES] = host.realtime;
-	}
+		con.times[con.current % CON_TIMES] = host.realtime;
 
 	con.x = 0;
-	if( con.display == con.current ) con.display++;
+	if( con.display == con.current )
+		con.display++;
+
 	con.current++;
+
 	for( i = 0; i < con.linewidth; i++ )
 		con.text[(con.current % con.totallines) * con.linewidth+i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 }
@@ -615,18 +632,10 @@ If no console is visible, the text will appear at the top of the game window
 void Con_Print( const char *txt )
 {
 	int	y, c, l, color;
-	qboolean	skipnotify = false;
-	int	prev;
 
 	// client not running
 	if( host.type == HOST_DEDICATED ) return;
           if( !con.initialized ) return;
-
-	if( !Q_strncmp( txt, "[skipnotify]", 12 ))
-	{
-		skipnotify = true;
-		txt += 12;
-	}
 	
 	color = ColorIndex( COLOR_DEFAULT );
 
@@ -634,7 +643,7 @@ void Con_Print( const char *txt )
 	{
 		if( IsColorString( txt ))
 		{
-			color = ColorIndex(*(txt+1));
+			color = ColorIndex( *( txt + 1 ));
 			txt += 2;
 			continue;
 		}
@@ -642,18 +651,19 @@ void Con_Print( const char *txt )
 		// count word length
 		for( l = 0; l < con.linewidth; l++ )
 		{
-			if( txt[l] <= ' ') break;
+			if( txt[l] <= ' ')
+				break;
 		}
 
 		// word wrap
 		if( l != con.linewidth && ( con.x + l >= con.linewidth ))
-			Con_Linefeed( skipnotify);
+			Con_Linefeed();
 		txt++;
 
 		switch( c )
 		{
 		case '\n':
-			Con_Linefeed( skipnotify );
+			Con_Linefeed();
 			break;
 		case '\r':
 			con.x = 0;
@@ -664,23 +674,11 @@ void Con_Print( const char *txt )
 			con.x++;
 			if( con.x >= con.linewidth )
 			{
-				Con_Linefeed( skipnotify );
+				Con_Linefeed();
 				con.x = 0;
 			}
 			break;
 		}
-	}
-
-	// mark time for transparent overlay
-	if( con.current >= 0 )
-	{
-		if( skipnotify )
-		{
-			prev = con.current % CON_TIMES - 1;
-			if( prev < 0 ) prev = CON_TIMES - 1;
-			con.times[prev] = 0;
-		}
-		else con.times[con.current % CON_TIMES] = host.realtime;
 	}
 }
 
@@ -698,6 +696,7 @@ void Con_NPrintf( int idx, char *fmt, ... )
 	va_end( args );
 
 	// reset values
+	con.notify[idx].key_dest = key_game;
 	con.notify[idx].expire = host.realtime + 4.0f;
 	MakeRGBA( con.notify[idx].color, 255, 255, 255, 255 );
 	con.draw_notify = true;
@@ -719,6 +718,49 @@ void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 	va_end( args );
 
 	// setup values
+	con.notify[info->index].key_dest = key_game;
+	con.notify[info->index].expire = host.realtime + info->time_to_live;
+	MakeRGBA( con.notify[info->index].color, (byte)(info->color[0] * 255), (byte)(info->color[1] * 255), (byte)(info->color[2] * 255), 255 );
+	con.draw_notify = true;
+}
+
+void UI_NPrintf( int idx, char *fmt, ... )
+{
+	va_list	args;
+
+	if( idx < 0 || idx >= MAX_DBG_NOTIFY )
+		return;
+
+	Q_memset( con.notify[idx].szNotify, 0, MAX_STRING );
+
+	va_start( args, fmt );
+	Q_vsnprintf( con.notify[idx].szNotify, MAX_STRING, fmt, args );
+	va_end( args );
+
+	// reset values
+	con.notify[idx].key_dest = key_menu;
+	con.notify[idx].expire = host.realtime + 4.0f;
+	MakeRGBA( con.notify[idx].color, 255, 255, 255, 255 );
+	con.draw_notify = true;
+}
+
+void UI_NXPrintf( con_nprint_t *info, char *fmt, ... )
+{
+	va_list	args;
+
+	if( !info ) return;
+
+	if( info->index < 0 || info->index >= MAX_DBG_NOTIFY )
+		return;
+
+	Q_memset( con.notify[info->index].szNotify, 0, MAX_STRING );
+
+	va_start( args, fmt );
+	Q_vsnprintf( con.notify[info->index].szNotify, MAX_STRING, fmt, args );
+	va_end( args );
+
+	// setup values
+	con.notify[info->index].key_dest = key_menu;
 	con.notify[info->index].expire = host.realtime + info->time_to_live;
 	MakeRGBA( con.notify[info->index].color, (byte)(info->color[0] * 255), (byte)(info->color[1] * 255), (byte)(info->color[2] * 255), 255 );
 	con.draw_notify = true;
@@ -1106,7 +1148,7 @@ void Key_Console( int key )
 		con.historyLine = con.nextHistoryLine;
 
 		Con_ClearField( &con.input );
-		con.input.widthInChars = g_console_field_width;
+		con.input.widthInChars = con.linewidth;
 
 		if( cls.state == ca_disconnected )
 		{
@@ -1247,7 +1289,7 @@ void Con_DrawInput( void )
 		drawLen = len - prestep;
 
 	// extract <drawLen> characters from the field at <prestep>
-	if( drawLen >= MAX_SYSPATH ) Host_Error("drawLen >= MAX_SYSPATH\n" );
+	ASSERT( drawLen < MAX_SYSPATH );
 
 	Q_memcpy( str, con.input.buffer + prestep, drawLen );
 	str[drawLen] = 0;
@@ -1292,7 +1334,7 @@ int Con_DrawDebugLines( void )
 	
 	for( i = 0; i < MAX_DBG_NOTIFY; i++ )
 	{
-		if( host.realtime < con.notify[i].expire )
+		if( host.realtime < con.notify[i].expire && con.notify[i].key_dest == cls.key_dest )
 		{
 			int	x, len;
 			int	fontTall;
@@ -1314,6 +1356,25 @@ int Con_DrawDebugLines( void )
 
 /*
 ================
+Con_DrawDebug
+
+Draws the debug messages (not passed to console history)
+================
+*/
+void Con_DrawDebug( void )
+{
+	if( !host.developer || Cvar_VariableInteger( "sv_background" ))
+		return;
+
+	if( con.draw_notify && !Con_Visible( ))
+	{
+		if( Con_DrawDebugLines() == 0 )
+			con.draw_notify = false;
+	}
+}
+
+/*
+================
 Con_DrawNotify
 
 Draws the last few lines of output transparently over the game top
@@ -1328,12 +1389,6 @@ void Con_DrawNotify( void )
 
 	if( !host.developer || Cvar_VariableInteger( "sv_background" ))
 		return;
-
-	if( con.draw_notify )
-	{
-		if( Con_DrawDebugLines () == 0 )
-			con.draw_notify = false;
-	}
 
 	currentColor = 7;
 	pglColor4ubv( g_color_table[currentColor] );
@@ -1521,7 +1576,8 @@ void Con_DrawConsole( void )
 		}
 		else
 		{
-			if( con.displayFrac ) Con_DrawSolidConsole( con.displayFrac );
+			if( con.displayFrac )
+				Con_DrawSolidConsole( con.displayFrac );
 			else if( cls.state == ca_active && cls.key_dest == key_game )
 				Con_DrawNotify(); // draw notify lines
 		}
@@ -1606,8 +1662,7 @@ void Con_CharEvent( int key )
 
 void Con_VidInit( void )
 {
-	g_console_field_width = ( scr_width->integer / 8 ) - 2;
-	con.input.widthInChars = g_console_field_width;
+	Con_CheckResize();
 
 	// loading console image
 	if( host.developer )

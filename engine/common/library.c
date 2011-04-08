@@ -73,7 +73,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 	SECTION_HEADER	section_header;
 	qboolean		rdata_found;
 	OPTIONAL_HEADER	optional_header;
-	long		edata_delta = 0;
+	long		rdata_delta = 0;
 	EXPORT_DIRECTORY	export_directory;
 	long		name_offset;
 	long		exports_offset;
@@ -159,22 +159,14 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 			rdata_found = true;
 			break;
 		}
-#if 0
-		if((( optional_header.DataDirectory[0].VirtualAddress >= section_header.VirtualAddress ) && 
-			(optional_header.DataDirectory[0].VirtualAddress < (section_header.VirtualAddress + section_header.Misc.VirtualSize))))
-		{
-			rdata_found = true;
-			break;
-		}
-#endif
 	}
 
 	if( rdata_found )
 	{
-		edata_delta = section_header.VirtualAddress - section_header.PointerToRawData; 
+		rdata_delta = section_header.VirtualAddress - section_header.PointerToRawData; 
 	}
 
-	exports_offset = optional_header.DataDirectory[0].VirtualAddress - edata_delta;
+	exports_offset = optional_header.DataDirectory[0].VirtualAddress - rdata_delta;
 
 	if( FS_Seek( f, exports_offset, SEEK_SET ) == -1 )
 	{
@@ -197,7 +189,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 		goto table_error;
 	}
 
-	ordinal_offset = export_directory.AddressOfNameOrdinals - edata_delta;
+	ordinal_offset = export_directory.AddressOfNameOrdinals - rdata_delta;
 
 	if( FS_Seek( f, ordinal_offset, SEEK_SET ) == -1 )
 	{
@@ -213,7 +205,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 		goto table_error;
 	}
 
-	function_offset = export_directory.AddressOfFunctions - edata_delta;
+	function_offset = export_directory.AddressOfFunctions - rdata_delta;
 
 	if( FS_Seek( f, function_offset, SEEK_SET ) == -1 )
 	{
@@ -229,7 +221,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 		goto table_error;
 	}
 
-	name_offset = export_directory.AddressOfNames - edata_delta;
+	name_offset = export_directory.AddressOfNames - rdata_delta;
 
 	if( FS_Seek( f, name_offset, SEEK_SET ) == -1 )
 	{
@@ -247,7 +239,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 
 	for( i = 0; i < hInst->num_ordinals; i++ )
 	{
-		name_offset = p_Names[i] - edata_delta;
+		name_offset = p_Names[i] - rdata_delta;
 
 		if( name_offset != 0 )
 		{

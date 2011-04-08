@@ -52,7 +52,7 @@ int Host_CompareFileTime( long ft1, long ft2 )
 void Host_ShutdownServer( void )
 {
 	if( !SV_Active()) return;
-	Q_strncpy( host.finalmsg, "Server was killed\n", MAX_STRING );
+	Q_strncpy( host.finalmsg, "Server was killed", MAX_STRING );
 	SV_Shutdown( false );
 }
 
@@ -87,7 +87,7 @@ void Host_EndGame( const char *message, ... )
 	
 	if( SV_Active())
 	{
-		Q_snprintf( host.finalmsg, sizeof( host.finalmsg ), "Host_EndGame: %s\n", string );
+		Q_snprintf( host.finalmsg, sizeof( host.finalmsg ), "Host_EndGame: %s", string );
 		SV_Shutdown( false );
 	}
 	
@@ -128,7 +128,7 @@ void Host_NewInstance( const char *name, const char *finalmsg )
 
 	host.change_game = true;
 	Q_strncpy( host.finalmsg, finalmsg, sizeof( host.finalmsg ));
-	pChangeGame( name );
+	pChangeGame( name ); // call from hl.exe
 }
 
 /*
@@ -184,6 +184,13 @@ void Host_Exec_f( void )
 	{
 		Msg( "Usage: exec <filename>\n" );
 		return;
+	}
+
+	// HACKHACK: don't execute listenserver.cfg in singleplayer
+	if( !Q_stricmp( Cvar_VariableString( "lservercfgfile" ),  Cmd_Argv( 1 )))
+	{
+		if( Cvar_VariableValue( "maxplayers" ) == 1.0f )
+			return;
 	}
 
 	Q_strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
@@ -468,7 +475,7 @@ void Host_Error( const char *error, ... )
 	recursive = true;
 	Q_strncpy( hosterror2, hosterror1, MAX_SYSPATH );
 	host.errorframe = host.framecount; // to avoid multply calls per frame
-	Q_sprintf( host.finalmsg, "Server crashed: %s\n", hosterror1 );
+	Q_sprintf( host.finalmsg, "Server crashed: %s", hosterror1 );
 
 	CL_Drop(); // drop clients
 	SV_Shutdown( false );
@@ -774,7 +781,7 @@ void EXPORT Host_Shutdown( void )
 	host.shutdown_issued = true;
 
 	if( host.state != HOST_ERR_FATAL ) host.state = HOST_SHUTDOWN; // prepare host to normal shutdown
-	if( !host.change_game ) Q_strncpy( host.finalmsg, "Server shutdown\n", sizeof( host.finalmsg ));
+	if( !host.change_game ) Q_strncpy( host.finalmsg, "Server shutdown", sizeof( host.finalmsg ));
 
 	if( host.type == HOST_NORMAL )
 		Host_WriteConfig();

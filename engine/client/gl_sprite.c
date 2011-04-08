@@ -846,6 +846,9 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	vec3_t		v_forward, v_right, v_up;
 	vec3_t		origin, color, color2;
 
+	if( RI.params & RP_ENVVIEW )
+		return;
+
 	model = e->model;
 	psprite = (msprite_t * )model->cache.data;
 	VectorSet( color, 255.0f, 255.0f, 255.0f );

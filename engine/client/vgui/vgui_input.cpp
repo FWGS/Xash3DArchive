@@ -287,6 +287,5 @@ long VGUI_SurfaceWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		pApp->internalKeyReleased( VGUI_MapKey( wParam ), surface );
 		break;
 	}
-
 	return 1;
 }

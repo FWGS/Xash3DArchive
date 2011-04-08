@@ -233,7 +233,10 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		dl->color.r = 255;
 		dl->color.g = 255;
 		dl->color.b = 255;
-		dl->radius = Com_RandomLong( 400, 430 );
+
+		if( entityType == ET_PLAYER )
+			dl->radius = 430;
+		else dl->radius = Com_RandomLong( 400, 430 );
 	}
 	return true;
 }
@@ -248,6 +251,9 @@ Set new weapon animation
 void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
+	static int	viewmodel = -1;
+
+	view->curstate.modelindex = cl.frame.local.client.viewmodel;
 
 	// anim is changed. update latchedvars
 	if( iAnim != view->curstate.sequence )
@@ -262,6 +268,22 @@ void CL_WeaponAnim( int iAnim, int body )
 		// save animtime
 		view->latched.prevanimtime = view->curstate.animtime;
 		view->syncbase = -0.01f; // back up to get 0'th frame animations
+#if 0
+		// lerping between viewmodel sequences.
+		// disabled because SVC_WEAPONANIM in some cases may come early than clientdata_t
+		// with new v_model index, so lerping between change weapons looks ugly
+		if( viewmodel == view->curstate.modelindex && viewmodel != 0 )
+		{
+			view->latched.sequencetime = view->curstate.animtime + 0.1f;
+		}
+		else
+		{
+			viewmodel = view->curstate.modelindex;
+			view->latched.sequencetime = 0.0f;
+		}
+#else
+		view->latched.sequencetime = 0.0f;
+#endif
 	}
 
 	view->curstate.animtime = cl.time;	// start immediately
@@ -411,6 +433,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	}
 	else if( Mod_GetType( state->modelindex ) == mod_brush )
 	{
+		// NOTE: store prevorigin for interpolate monsters on moving platforms
 		if( !VectorCompare( state->origin, ent->curstate.origin ))
 			VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
 		if( !VectorCompare( state->angles, ent->curstate.angles ))
@@ -422,25 +445,6 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	if( ent->player )
 	{
-		// update client vars
-		if(( ent->index - 1 ) == cl.playernum )
-		{
-			entity_state_t *ps, *pps;
-			clientdata_t *pcd, *ppcd;
-			weapon_data_t *wd, *pwd;
-
-			pps = state;
-			ppcd = &cl.frame.local.client;
-			pwd = cl.frame.local.weapondata;
-
-			ps = &cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK].playerstate;
-			pcd = &cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK].client;
-			wd = cl.predict[cls.lastoutgoingcommand & CL_UPDATE_MASK].weapondata;
-		
-			clgame.dllFuncs.pfnTxferPredictionData( ps, pps, pcd, ppcd, wd, pwd ); 
-			clgame.dllFuncs.pfnTxferLocalOverrides( &ent->curstate, pcd );
-		}
-
 		clgame.dllFuncs.pfnProcessPlayerState( &frame->playerstate[ent->index-1], &ent->curstate );
 		frame->playerstate[ent->index-1].number = ent->index;
 
@@ -475,7 +479,7 @@ void CL_FlushEntityPacket( sizebuf_t *msg )
 		if( BF_CheckOverflow( msg ))
 			Host_Error( "CL_FlushEntityPacket: read overflow\n" );
 
-		MSG_ReadDeltaEntity( msg, &from, &to, newnum, CL_IsPlayerIndex( newnum ), sv_time( ));
+		MSG_ReadDeltaEntity( msg, &from, &to, newnum, CL_IsPlayerIndex( newnum ), cl.mtime[0] );
 	}
 }
 
@@ -651,11 +655,10 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		// client entered the game
 		cls.state = ca_active;
 		cl.force_refdef = true;
-		cls.changelevel = false;	// changelevel is done
+		cls.changelevel = false;		// changelevel is done
 
-		SCR_MakeLevelShot();	// make levelshot if needs
-
-		Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar	
+		SCR_MakeLevelShot();		// make levelshot if needs
+		Cvar_SetFloat( "scr_loading", 0.0f );	// reset progress bar	
 
 		if( cls.disable_servercount != cl.servercount && cl.video_prepped )
 			SCR_EndLoadingPlaque(); // get rid of loading plaque
@@ -724,6 +727,7 @@ void CL_AddPacketEntities( frame_t *frame )
 	{
 		e = cls.packet_entities[(cl.frame.first_entity + i) % cls.num_client_entities].number;
 		ent = CL_GetEntityByIndex( e );
+
 		if( !ent || ent == clgame.entities )
 			continue;
 
@@ -752,13 +756,13 @@ void CL_AddEntities( void )
 
 	cl.num_custombeams = 0;
 
+	clgame.dllFuncs.CAM_Think();
+
 	CL_AddPacketEntities( &cl.frame );
 	clgame.dllFuncs.pfnCreateEntities();
 
 	CL_FireEvents();	// so tempents can be created immediately
 	CL_AddTempEnts();
-
-	clgame.dllFuncs.CAM_Think();
 
 	// perfomance test
 	CL_TestLights();

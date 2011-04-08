@@ -21,7 +21,6 @@ void EnableScissor( qboolean enable )
 	g_bScissor = enable;
 }
 
-
 void SetScissorRect( int left, int top, int right, int bottom )
 {
 	// Check for a valid rectangle...

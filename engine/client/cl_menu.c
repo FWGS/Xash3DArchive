@@ -19,8 +19,8 @@ static dllfunc_t menu_funcs[] =
 };
 
 dll_info_t menu_dll = { "menu.dll", menu_funcs, false };
-
 static void UI_UpdateUserinfo( void );
+
 menu_static_t	menu;
 
 void UI_UpdateMenu( float realtime )
@@ -137,7 +137,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 
 		if( FS_FileExists( path, false ) && !fullpath )
 		{
-			MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
+			MsgDev( D_ERROR, "Couldn't load %s from packfile. Please extract it\n", path );
 			menu.drawLogo = false;
 			return;
 		}
@@ -178,10 +178,6 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 		last_frame = cin_frame;
 		redraw = true;
 	}
-
-	pglDisable( GL_BLEND );
-	pglDisable( GL_ALPHA_TEST );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 
 	R_DrawStretchRaw( x, y, width, height, menu.logo_xres, menu.logo_yres, cin_data, redraw );
 }
@@ -364,17 +360,6 @@ static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long im
 
 /*
 =========
-pfnPIC_Free
-
-=========
-*/
-static void pfnPIC_Free( const char *szPicName )
-{
-	GL_FreeImage( szPicName );
-}
-
-/*
-=========
 pfnPIC_Width
 
 =========
@@ -529,9 +514,13 @@ pfnClientCmd
 */
 static void pfnClientCmd( int exec_now, const char *szCmdString )
 {
-	// client command executes immediately
-	Cbuf_AddText( szCmdString );
+	if( !szCmdString || !szCmdString[0] )
+		return;
 
+	Cbuf_AddText( szCmdString );
+	Cbuf_AddText( "\n" );
+
+	// client command executes immediately
 	if( exec_now ) Cbuf_Execute();
 }
 
@@ -594,7 +583,7 @@ static int pfnDrawConsoleString( int x, int y, const char *string )
 	drawLen = Con_DrawString( x, y, string, menu.ds.textColor );
 	MakeRGBA( menu.ds.textColor, 255, 255, 255, 255 );
 
-	return drawLen; // exclude color prexfixes
+	return (x + drawLen); // exclude color prexfixes
 }
 
 /*
@@ -648,6 +637,7 @@ for drawing playermodel previews
 */
 static void pfnRenderScene( const ref_params_t *fd )
 {
+	// to avoid division by zero
 	if( !fd || fd->fov_x <= 0.0f || fd->fov_y <= 0.0f )
 		return;
 	R_RenderFrame( fd, false );
@@ -809,17 +799,6 @@ int pfnCheckGameDll( void )
 
 /*
 =========
-pfnShellExecute
-
-=========
-*/
-static void pfnShellExecute( const char *name, const char *args, qboolean closeEngine )
-{
-	Sys_ShellExecute( name, args, closeEngine );
-}
-
-/*
-=========
 pfnChangeInstance
 
 =========
@@ -860,7 +839,7 @@ static void pfnHostEndGame( const char *szFinalMessage )
 static ui_enginefuncs_t gEngfuncs = 
 {
 	pfnPIC_Load,
-	pfnPIC_Free,
+	GL_FreeImage,
 	pfnPIC_Width,
 	pfnPIC_Height,
 	pfnPIC_Set,
@@ -884,8 +863,8 @@ static ui_enginefuncs_t gEngfuncs =
 	Cmd_Args,
 	Con_Printf,
 	Con_DPrintf,
-	Con_NPrintf,
-	Con_NXPrintf,
+	UI_NPrintf,
+	UI_NXPrintf,
 	pfnPlaySound,
 	UI_DrawLogo,
 	UI_GetLogoWidth,
@@ -928,7 +907,7 @@ static ui_enginefuncs_t gEngfuncs =
 	CL_GetComment,
 	pfnCheckGameDll,
 	pfnGetClipboardData,
-	pfnShellExecute,
+	Sys_ShellExecute,
 	Host_WriteServerConfig,
 	pfnChangeInstance,
 	S_StartBackgroundTrack,

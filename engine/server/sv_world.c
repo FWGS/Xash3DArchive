@@ -814,7 +814,7 @@ qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 	}
 
 	if( num < hull->firstclipnode || num > hull->lastclipnode )
-		Host_Error( "SV_RecursiveHullCheck: bad node number %i\n", num );
+		Sys_Error( "SV_RecursiveHullCheck: bad node number\n" );
 
 	// find the point distances
 	node = hull->clipnodes + num;

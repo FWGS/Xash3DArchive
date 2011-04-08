@@ -231,9 +231,9 @@ static int ParseDirective( const char *pText )
 
 void CL_TextMessageParse( byte *pMemFile, int fileSize )
 {
-	char			buf[512], trim[512];
+	char			buf[512], trim[512], currentName[512];
 	char			*pCurrentText = NULL, *pNameHeap;
-	char			currentName[512], nameHeap[32768];
+	char			nameHeap[32768]; // g-cont. i will scale up heap to handle all TFC messages
 	int			mode = MSGFILE_NAME; // searching for a message name	
 	int			lineNumber, filePos, lastLinePos;
 	client_textmessage_t	textMessages[MAX_MESSAGES];

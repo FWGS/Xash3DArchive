@@ -20,7 +20,7 @@ WIN32 CONSOLE
 #define INPUT_ID		109
 #define IDI_ICON1		101
 
-#define SYSCONSOLE		"SystemConsole"
+#define SYSCONSOLE		"XashConsole"
 #define COMMAND_HISTORY	64	// system console keep more commands than game console
 
 typedef struct

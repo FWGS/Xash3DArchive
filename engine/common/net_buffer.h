@@ -78,7 +78,7 @@ void BF_WriteWord( sizebuf_t *bf, int val );
 void BF_WriteLong( sizebuf_t *bf, long val );
 void BF_WriteFloat( sizebuf_t *bf, float val );
 qboolean BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes );	// same as MSG_WriteData
-qboolean BF_WriteString(  sizebuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.
+qboolean BF_WriteString( sizebuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.
 
 // delta-write functions
 qboolean BF_WriteDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );

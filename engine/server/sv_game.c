@@ -1648,7 +1648,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	if( attn < ATTN_NONE || attn > ATTN_IDLE )
 	{
-		MsgDev( D_ERROR, "SV_StartSound: attenuation must be in range 0-2\n" );
+		MsgDev( D_ERROR, "SV_StartSound: attenuation %g must be in range 0-2\n", attn );
 		return;
 	}
 
@@ -3892,33 +3892,25 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 	static string	result;
 	int		i;
 
+	result[0] = '\0';
+
 	if( sv.state != ss_active || !SV_IsValidEdict( e ))
-	{
-		result[0] = '\0';
 		return result;
-	}
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->edict == e )
 		{
 			if( cl->fakeclient )
-			{
 				Q_strncat( result, "BOT", sizeof( result ));
-			}
 			else if( cl->authentication_method == 0 )
-			{
 				Q_snprintf( result, sizeof( result ), "%u", (uint)cl->WonID );
-			}
-			else
-			{
-				Q_snprintf( result, sizeof( result ), "%s", SV_GetClientIDString( cl ));
-			}
+			else Q_snprintf( result, sizeof( result ), "%s", SV_GetClientIDString( cl ));
+
 			return result;
 		}
 	}
 
-	result[0] = '\0';
 	return result;
 }
 					

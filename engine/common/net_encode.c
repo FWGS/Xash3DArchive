@@ -1,6 +1,6 @@
 //=======================================================================
 //			Copyright XashXT Group 2010 ©
-//			net_encode.c - encode network messages
+//		     net_encode.c - encode network messages
 //=======================================================================
 
 #include "common.h"
@@ -69,6 +69,7 @@ static const delta_field_t pm_fields[] =
 { PHYS_DEF( skyvec_y )		},
 { PHYS_DEF( skyvec_z )		},
 { PHYS_DEF( studio_scale )		},
+{ PHYS_DEF( clienttrace )		},
 { NULL },
 };
 
@@ -515,7 +516,7 @@ void Delta_ParseTableField( sizebuf_t *msg )
 	if( BF_ReadOneBit( msg ))
 		post_mul = BF_ReadFloat( msg );
 
-	// delta encoders it's already initialized on this machine
+	// delta encoders it's already initialized on this machine (local game)
 	if( delta_init ) return;
 
 	// add field to table
@@ -757,7 +758,7 @@ void Delta_InitFields( void )
 	}
 	Mem_Free( afile );
 
-	// adding some requrid fields fields that use may forget or don't know how to specified
+	// adding some requrid fields fields that user may forget or don't know how to specified
 	Delta_AddField( "event_t", "flags", DT_INTEGER, 8, 1.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[0]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[1]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
@@ -779,7 +780,7 @@ void Delta_Init( void )
 	ASSERT( dt != NULL );
 	if( dt->bInitialized ) return;	// specified by user
 
-	// create movevars_t delta
+	// create movevars_t delta internal
 	Delta_AddField( "movevars_t", "gravity", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
 	Delta_AddField( "movevars_t", "stopspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
 	Delta_AddField( "movevars_t", "maxspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
@@ -806,6 +807,7 @@ void Delta_Init( void )
 	Delta_AddField( "movevars_t", "skyvec_y", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "skyvec_z", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "studio_scale", DT_INTEGER, 1, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "clienttrace", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 
 	// now done
 	dt->bInitialized = true;
@@ -1674,6 +1676,13 @@ qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state
 	return true;
 }
 
+/*
+=============================================================================
+
+	game.dll interface
+  
+=============================================================================
+*/
 void Delta_AddEncoder( char *name, pfnDeltaEncode encodeFunc )
 {
 	delta_info_t	*dt;

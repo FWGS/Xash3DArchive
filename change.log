@@ -4,6 +4,10 @@ FS: add "fallback_dir" option
 Server: fix func_pushable interaction with movers. Add new cvar "sv_allow_rotate_pushables"
 Server: added support for 'SV_SaveGameComment' export
 Server: fixed backup for quick.sav and autosave.save (quick01.sav and autosave01.sav) 
+Client: add commandline option "-nointro" to skip start movies
+Pmove: add sv_clienttrace that shared across network
+Render: implement "envshot" and "skyshot" commands for make cubemaps or skyboxes
+Server: fix remote connection (rcon)
 
 build 1516
 
