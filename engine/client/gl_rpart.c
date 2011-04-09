@@ -446,6 +446,8 @@ void CL_UpdateParticle( particle_t *p, float ft )
 
 	pglEnd();
 
+	r_stats.c_particle_count++;
+
 	if( p->type != pt_clientcustom )
 	{
 		// update position.

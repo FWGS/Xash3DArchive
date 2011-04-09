@@ -719,7 +719,7 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	model_t		*model = NULL;
 	int		width, height;
 
-	if( textureIndex <= 0 || textureIndex > MAX_TEXTURES )
+	if( textureIndex <= 0 || textureIndex >= MAX_TEXTURES )
 	{
 		MsgDev( D_ERROR, "Decal has invalid texture!\n" );
 		return;
@@ -731,17 +731,15 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 
 		if( modelIndex > 0 ) model = Mod_Handle( modelIndex );
 		else if( ent != NULL ) model = Mod_Handle( ent->curstate.modelindex );
-		else
-		{
-			Msg( "ent = NULL, model = NULL on entity %i, model %i\n", entityIndex, modelIndex );
-			return;
-		}
+		else return;
 	}
 	else if( modelIndex > 0 )
 		model = Mod_Handle( modelIndex );
 	else model = cl.worldmodel;
 
-	if( !model || model->type != mod_brush )
+	if( !model ) return;
+	
+	if( model->type != mod_brush )
 	{
 		MsgDev( D_ERROR, "Decals must hit mod_brush!\n" );
 		return;
@@ -866,7 +864,7 @@ void DrawSurfaceDecals( msurface_t *fa )
 
 	pglEnable( GL_POLYGON_OFFSET_FILL );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE ); // try to use GL_MODULATE ?
 
 	for( p = fa->pdecals; p; p = p->pnext )
 		DrawSingleDecal( p, fa );
@@ -1032,7 +1030,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 ===============
 R_DecalRemoveAll
 
-remove all decals with specified shader
+remove all decals with specified texture
 ===============
 */
 void R_DecalRemoveAll( int textureIndex )
@@ -1040,7 +1038,7 @@ void R_DecalRemoveAll( int textureIndex )
 	decal_t	*pdecal;
 	int	i;
 
-	if( !textureIndex <= 0 || textureIndex > MAX_TEXTURES )
+	if( textureIndex <= 0 || textureIndex >= MAX_TEXTURES )
 	{
 		MsgDev( D_ERROR, "Decal has invalid texture!\n" );
 		return;

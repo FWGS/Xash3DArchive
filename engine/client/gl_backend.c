@@ -47,17 +47,25 @@ void GL_BackendEndFrame( void )
 
 	switch( r_speeds->integer )
 	{
-	case 5:
+	case 1:
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i wpoly, %3i bpoly\n%3i epoly, %3i spoly",
+		r_stats.c_world_polys, r_stats.c_brush_polys, r_stats.c_studio_polys, r_stats.c_sprite_polys );
+		break;		
+	case 2:
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "visible leafs:\n%3i leafs",
+		r_stats.c_world_leafs );
+		break;
+	case 3:
 		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i studio models drawn\n%3i sprites drawn",
 		r_stats.c_studio_models_drawn, r_stats.c_sprite_models_drawn );
 		break;
-	case 6:
+	case 4:
 		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
 		r_numStatics, r_numEntities );
 		break;
-	case 7:
-		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i temp entities\n%3i view beams",
-		r_stats.c_active_tents_count, r_stats.c_view_beams_count );
+	case 5:
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i tempents\n%3i viewbeams\n%3i particles",
+		r_stats.c_active_tents_count, r_stats.c_view_beams_count, r_stats.c_particle_count );
 	}
 
 	Q_memset( &r_stats, 0, sizeof( r_stats ));
@@ -431,7 +439,7 @@ void VID_ImageAdjustGamma( byte *in, uint width, uint height )
 	for( i = 0; i < 256; i++ )
 	{
 		if ( g == 1.0f ) r_gammaTable[i] = i;
-		else r_gammaTable[i] = bound( 0, 255 * pow((i + 0.5)/255.5f, g ) + 0.5, 255 );
+		else r_gammaTable[i] = bound( 0, 255 * pow((i + 0.5) / 255.5f, g ) + 0.5f, 255 );
 	}
 
 	// adjust screenshots gamma

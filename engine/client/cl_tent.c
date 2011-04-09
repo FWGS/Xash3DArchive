@@ -69,9 +69,7 @@ void CL_ClearTempEnts( void )
 	if( !cl_tempents ) return;
 
 	for( i = 0; i < GI->max_tents - 1; i++ )
-	{
 		cl_tempents[i].next = &cl_tempents[i+1];
-	}
 
 	cl_tempents[GI->max_tents-1].next = NULL;
 	cl_free_tents = cl_tempents;
@@ -86,7 +84,8 @@ CL_FreeTempEnts
 */
 void CL_FreeTempEnts( void )
 {
-	if( cl_tempents ) Mem_Free( cl_tempents );
+	if( cl_tempents )
+		Mem_Free( cl_tempents );
 	cl_tempents = NULL;
 }
 
@@ -104,7 +103,7 @@ void CL_PrepareTEnt( TEMPENTITY *pTemp, model_t *pmodel )
 
 	Q_memset( pTemp, 0, sizeof( *pTemp ));
 
-	// Use these to set per-frame and termination conditions / actions
+	// use these to set per-frame and termination conditions / actions
 	pTemp->flags = FTENT_NONE;		
 	pTemp->die = cl.time + 0.75f;
 
@@ -444,7 +443,7 @@ void CL_FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 		xspeed *= speed;
 		yspeed *= speed;
 	}
-	else xspeed = yspeed = 0.0f;	// zonly
+	else xspeed = yspeed = 0.0f;	// z only
 
 	Mod_GetFrames( modelIndex, &frameCount );
 
@@ -516,7 +515,7 @@ void CL_Bubbles( const vec3_t mins, const vec3_t maxs, float height, int modelIn
 		// Set sprite scale
 		pTemp->entity.curstate.scale = 1.0f / Com_RandomFloat( 4.0f, 16.0f );
 		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
-		pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 192;	// g-cont. why difference with FizzEffect ???		
+		pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 192; // g-cont. why difference with FizzEffect ???		
 	}
 }
 
@@ -576,9 +575,9 @@ void CL_AttachTentToPlayer( int client, int modelIndex, float zoffset, float lif
 	vec3_t		position;
 	cl_entity_t	*pClient;
 
-	if ( client <= 0 || client > cl.maxclients )
+	if( client <= 0 || client > cl.maxclients )
 	{
-		MsgDev( D_INFO, "Bad client in AttachTentToPlayer()!\n" );
+		MsgDev( D_ERROR, "Bad client %i in AttachTentToPlayer()!\n", client );
 		return;
 	}
 
@@ -645,7 +644,7 @@ void CL_KillAttachedTents( int client )
 
 	if( client <= 0 || client > cl.maxclients )
 	{
-		MsgDev( D_INFO, "Bad client in KillAttachedTents()!\n" );
+		MsgDev( D_ERROR, "Bad client %i in KillAttachedTents()!\n", client );
 		return;
 	}
 
@@ -787,7 +786,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 	if( Mod_GetType( modelIndex ) == mod_bad )
 		return;
 
-	// Large, single blood sprite is a high-priority tent
+	// large, single blood sprite is a high-priority tent
 	if(( pTemp = CL_TempEntAllocHigh( org, Mod_Handle( modelIndex ))) != NULL )
 	{
 		int	i, frameCount;
@@ -823,7 +822,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			VectorMA( offset, Com_RandomFloat( -0.5f, 0.5f ) * size, right, offset ); 
 			VectorMA( offset, Com_RandomFloat( -0.5f, 0.5f ) * size, up, offset ); 
 
-			pTemp = CL_TempEntAllocHigh( org, Mod_Handle( modelIndex2 ));
+			pTemp = CL_TempEntAlloc( org, Mod_Handle( modelIndex2 ));
 			if( !pTemp ) return;
 
 			pTemp->flags = FTENT_SPRANIMATELOOP|FTENT_COLLIDEWORLD|FTENT_SLOWGRAVITY;
@@ -835,7 +834,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			pTemp->entity.curstate.rendercolor.g = clgame.palette[colorIndex][1];
 			pTemp->entity.curstate.rendercolor.b = clgame.palette[colorIndex][2];
 			pTemp->entity.curstate.framerate = frameCount * 4; // Finish in 0.250 seconds
-			pTemp->die = cl.time + Com_RandomFloat( 3.0f, 6.0f );
+			pTemp->die = cl.time + Com_RandomFloat( 1.0f, 3.0f );
 
 			pTemp->entity.angles[2] = Com_RandomLong( 0, 360 );
 			pTemp->bounceFactor = 0;
@@ -1065,9 +1064,6 @@ void CL_Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags )
 {
 	if( !pTemp ) return;
 
-	// NOTE: Xash3D doesn't needs this stuff, because sprites
-	// have right rendermodes already at loading point
-	// but i'm leave it for backward compatibility
 	if( flags & TE_EXPLFLAG_NOADDITIVE )
 	{
 		// solid sprite
@@ -1076,7 +1072,7 @@ void CL_Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags )
 	}
 	else if( flags & TE_EXPLFLAG_DRAWALPHA )
 	{
-		// alpha sprite
+		// alpha sprite (came from hl2)
 		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
 		pTemp->entity.curstate.renderamt = 180;
 	}
@@ -1089,6 +1085,7 @@ void CL_Sprite_Explode( TEMPENTITY *pTemp, float scale, int flags )
 
 	if( flags & TE_EXPLFLAG_ROTATE )
 	{
+		// came from hl2
 		pTemp->entity.angles[2] = Com_RandomLong( 0, 360 );
 	}
 
@@ -1213,7 +1210,7 @@ void CL_Sprite_Trail( int type, const vec3_t vecStart, const vec3_t vecEnd, int 
 	VectorSubtract( vecEnd, vecStart, vecDelta );
 	VectorNormalize2( vecDelta, vecDir );
 
-	flAmplitude /= 256.0;
+	flAmplitude /= 256.0f;
 
 	for( i = 0; i < nCount; i++ )
 	{
@@ -1226,7 +1223,7 @@ void CL_Sprite_Trail( int type, const vec3_t vecStart, const vec3_t vecEnd, int 
 		pTemp = CL_TempEntAlloc( vecPos, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
-		pTemp->flags |= FTENT_COLLIDEWORLD | FTENT_SPRCYCLE | FTENT_FADEOUT | FTENT_SLOWGRAVITY;
+		pTemp->flags = (FTENT_COLLIDEWORLD|FTENT_SPRCYCLE|FTENT_FADEOUT|FTENT_SLOWGRAVITY);
 
 		VectorScale( vecDir, flSpeed, vecVel );
 		vecVel[0] += Com_RandomFloat( -127.0f, 128.0f ) * flAmplitude;
@@ -1250,12 +1247,12 @@ void CL_Sprite_Trail( int type, const vec3_t vecStart, const vec3_t vecEnd, int 
 ===============
 CL_Large_Funnel
 
-Create a funnel effect
+Create a funnel effect (particles only)
 ===============
 */
 void CL_Large_Funnel( const vec3_t pos, int flags )
 {
-	CL_FunnelSprite( pos, CL_FindModelIndex( "sprites/flare6.spr" ), flags );
+	CL_FunnelSprite( pos, 0, flags );
 }
 
 /*
@@ -1280,7 +1277,7 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 	{
 		for( j = -256; j <= 256; j += 32 )
 		{
-			if( pTemp )
+			if( pTemp || !spriteIndex )
 			{
 				pPart = CL_AllocParticle( NULL );
 				pTemp = NULL;
@@ -1304,7 +1301,8 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 					// send particle heading to dest at a random speed
 					VectorSubtract( dest, m_vecPos, dir );
 
-					vel = dest[2] / 8;// velocity based on how far particle has to travel away from org
+					// velocity based on how far particle has to travel away from org
+					vel = dest[2] / 8;
 				}
 				else
 				{
@@ -1315,7 +1313,8 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 					// send particle heading to org at a random speed
 					VectorSubtract( pos, m_vecPos, dir );
 
-					vel = m_vecPos[2] / 8;// velocity based on how far particle starts from org
+					// velocity based on how far particle starts from org
+					vel = m_vecPos[2] / 8;
 				}
 
 				flDist = VectorNormalizeLength( dir );	// save the distance
@@ -1541,7 +1540,7 @@ void CL_Explosion( vec3_t pos, int model, float scale, float framerate, int flag
 			dl->radius = 200;
 			dl->color.r = dl->color.g = 250;
 			dl->color.b = 150;
-			dl->die = cl.time + 0.01f;
+			dl->die = cl.time + 0.25f;
 			dl->decay = 800;
 
 			// red glow
@@ -1567,6 +1566,60 @@ void CL_Explosion( vec3_t pos, int model, float scale, float framerate, int flag
 
 /*
 ==============
+CL_PlayerSprites
+
+Create a particle smoke around player
+==============
+*/
+void CL_PlayerSprites( int client, int modelIndex, int count, int size )
+{
+	TEMPENTITY	*pTemp;
+	cl_entity_t	*pEnt;
+	float		vel;
+	int		i;
+
+	pEnt = CL_GetEntityByIndex( client );
+
+	if( !pEnt || !pEnt->player )
+	{
+		MsgDev( D_INFO, "Bad ent %i in R_PlayerSprites()!\n", client );
+		return;
+	}
+
+	vel = 128;
+
+	for( i = 0; i < count; i++ )
+	{
+		pTemp = CL_DefaultSprite( pEnt->origin, modelIndex, 15 );
+		if( !pTemp ) return;
+
+		pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+		pTemp->entity.curstate.renderfx = kRenderFxNone;
+		pTemp->entity.baseline.origin[0] = Com_RandomFloat( -1.0f, 1.0f ) * vel;
+		pTemp->entity.baseline.origin[1] = Com_RandomFloat( -1.0f, 1.0f ) * vel;
+		pTemp->entity.baseline.origin[2] = Com_RandomFloat( 0.0f, 1.0f ) * vel;
+		pTemp->entity.curstate.rendercolor.r = 192;
+		pTemp->entity.curstate.rendercolor.g = 192;
+		pTemp->entity.curstate.rendercolor.b = 192;
+		pTemp->entity.curstate.renderamt = 64;
+		pTemp->entity.curstate.scale = size;
+	}
+}
+
+/*
+==============
+CL_Sprite_WallPuff
+
+Create a wallpuff
+==============
+*/
+void CL_Sprite_WallPuff( TEMPENTITY *pTemp, float scale )
+{
+	// TODO: implement
+}
+
+/*
+==============
 CL_MultiGunshot
 
 Client version of shotgun shot
@@ -1587,39 +1640,6 @@ Makes a field of fire
 void CL_FireField( float *org, int radius, int modelIndex, int count, int flags, float life )
 {
 	// TODO: implement
-}
-
-/*
-==============
-CL_Sprite_WallPuff
-
-Create a wallpuff
-==============
-*/
-void CL_Sprite_WallPuff( TEMPENTITY *pTemp, float scale )
-{
-	// TODO: implement
-}
-
-/*
-==============
-CL_PlayerSprites
-
-Unknown effect
-==============
-*/
-void CL_PlayerSprites( int client, int modelIndex, int count, int size )
-{
-#if 0
-	// TODO: implement
-	MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, g_vecZero, pev );
-		WRITE_BYTE( TE_PLAYERSPRITES );
-		WRITE_SHORT( ENTINDEX( ENT( pev ) ) );
-		WRITE_SHORT( g_sModelIndexFire );
-		WRITE_BYTE( 20 );
-		WRITE_BYTE( 10 );
-	MESSAGE_END( );
-#endif
 }
 
 /*
@@ -2036,7 +2056,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		CL_Projectile( pos, pos2, modelIndex, life, color, NULL );
 		break;
 	case TE_PLAYERSPRITES:
-		color = BF_ReadByte( &buf );	// playernum
+		color = BF_ReadShort( &buf );	// entitynum
 		modelIndex = BF_ReadShort( &buf );
 		count = BF_ReadByte( &buf );
 		random = (float)BF_ReadByte( &buf );
@@ -2100,12 +2120,12 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		CL_UserTracerParticle( pos, pos2, life, color, scale, 0, NULL );
 		break;
 	default:
-		MsgDev( D_ERROR, "ParseTempEntity: illegible te_message %i\n", type );
+		MsgDev( D_ERROR, "ParseTempEntity: illegible TE message %i\n", type );
 		break;
 	}
 
 	// throw warning
-	if( BF_CheckOverflow( &buf )) MsgDev( D_WARN, "ParseTempEntity: overflow te_message\n" );
+	if( BF_CheckOverflow( &buf )) MsgDev( D_WARN, "ParseTempEntity: overflow TE message\n" );
 }
 
 
@@ -2116,7 +2136,7 @@ LIGHT STYLE MANAGEMENT
 
 ==============================================================
 */
-#define STYLE_LERPING_THRESHOLD	3.0f // because we wan't interpolate fast sequences (e.g. on\off)
+#define STYLE_LERPING_THRESHOLD	3.0f // because we wan't interpolate fast sequences (like on\off)
 		
 /*
 ================
@@ -2213,7 +2233,7 @@ dlight_t *CL_AllocDlight( int key )
 	// then look for anything else
 	for( i = 0, dl = cl_dlights; i < MAX_DLIGHTS; i++, dl++ )
 	{
-		if( dl->die < cl.time )
+		if( dl->die < cl.time && dl->key == 0 )
 		{
 			Q_memset( dl, 0, sizeof( *dl ));
 			dl->key = key;
@@ -2258,7 +2278,7 @@ dlight_t *CL_AllocElight( int key )
 	// then look for anything else
 	for( i = 0, dl = cl_elights; i < MAX_ELIGHTS; i++, dl++ )
 	{
-		if( dl->die < cl.time )
+		if( dl->die < cl.time && dl->key == 0 )
 		{
 			Q_memset( dl, 0, sizeof( *dl ));
 			dl->key = key;

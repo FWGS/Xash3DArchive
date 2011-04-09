@@ -2401,7 +2401,7 @@ pfnLocalPlayerViewheight
 void pfnLocalPlayerViewheight( float *view_ofs )
 {
 	// predicted or smoothed
-	if( view_ofs ) VectorCopy( cl.predicted_viewofs, view_ofs );
+	if( view_ofs ) VectorCopy( cl.frame.local.client.view_ofs, view_ofs );
 }
 
 /*
@@ -3633,7 +3633,9 @@ void CL_UnloadProgs( void )
 	CL_FreeParticles();
 	VGui_Shutdown();
 
-	clgame.dllFuncs.pfnShutdown();
+	// NOTE: HLFX 0.5 has strange bug: hanging on exit if no map was loaded
+	if( !( !Q_stricmp( GI->gamedir, "hlfx" ) && GI->version == 0.5f ))
+		clgame.dllFuncs.pfnShutdown();
 
 	Com_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );

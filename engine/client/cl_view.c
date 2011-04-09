@@ -11,18 +11,6 @@
 #include "vgui_draw.h"
 
 /*
-====================
-V_ClearScene
-
-Specifies the model that will be used as the world
-====================
-*/
-void V_ClearScene( void )
-{
-	R_ClearScene();
-}
-
-/*
 ===============
 V_SetupRefDef
 
@@ -68,19 +56,11 @@ void V_SetupRefDef( void )
 	cl.refdef.fov_x = cl.data.fov; // this is a final fov value
 	cl.refdef.fov_y = V_CalcFov( &cl.refdef.fov_x, cl.refdef.viewport[2], cl.refdef.viewport[3] );
 
-	// calculate the origin
 	if( CL_IsPredicted( ) && !cl.refdef.demoplayback )
 	{	
-		// use predicted values
-		float	backlerp = 1.0f - cl.lerpFrac;
-		int	i;
-
-		for( i = 0; i < 3; i++ )
-		{
-			cl.refdef.simorg[i] = cl.predicted_origin[i] - backlerp * cl.prediction_error[i];
-			cl.refdef.viewheight[i] = cl.predicted_viewofs[i] - backlerp * cl.prediction_error[i];
-                    }
+		VectorCopy( cl.predicted_origin, cl.refdef.simorg );
 		VectorCopy( cl.predicted_velocity, cl.refdef.simvel );
+		VectorCopy( cl.predicted_viewofs, cl.refdef.viewheight );
 	}
 	else
 	{
@@ -124,7 +104,7 @@ void V_RenderView( void )
 	{
 		cl.force_refdef = false;
 
-		V_ClearScene ();
+		R_ClearScene ();
 		CL_AddEntities ();
 		V_SetupRefDef ();
 	}
@@ -153,7 +133,7 @@ qboolean V_PreRender( void )
 	// if the screen is disabled (loading plaque is up)
 	if( cls.disable_screen )
 	{
-		if(( host.realtime - cls.disable_screen ) > 60.0f )
+		if(( host.realtime - cls.disable_screen ) > cl_timeout->value )
 		{
 			MsgDev( D_NOTE, "V_PreRender: loading plaque timed out.\n" );
 			cls.disable_screen = 0.0f;
@@ -182,7 +162,7 @@ void V_PostRender( void )
 		VGui_Paint();
 	}
 
-	if( cls.scrshot_action == scrshot_inactive )
+	if( cls.scrshot_action == scrshot_inactive || cls.scrshot_action == scrshot_normal )
 	{
 		SCR_RSpeeds();
 		SCR_NetSpeeds();

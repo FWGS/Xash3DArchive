@@ -273,12 +273,12 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	VectorCopy( point, end );
 	if( invLight )
 	{
-		start[2] = point[2] - 64;
+		start[2] = point[2] - 1;
 		end[2] = point[2] + 8192;
 	}
 	else
 	{
-		start[2] = point[2] + 64;
+		start[2] = point[2] + 1;
 		end[2] = point[2] - 8192;
 	}
 
@@ -295,20 +295,41 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 
 	if( m_pGround && m_pGround->model )
 	{
+		matrix4x4	matrix;
+		hull_t	*hull;
+		vec3_t	start_l, end_l;
+		vec3_t	offset;
+
 		pmodel = m_pGround->model;
 		pnodes = &pmodel->nodes[pmodel->hulls[0].firstclipnode];
+
+		hull = &pmodel->hulls[0];
+		VectorSubtract( hull->clip_mins, vec3_origin, offset );
+		VectorAdd( offset, m_pGround->origin, offset );
+
+		VectorSubtract( start, offset, start_l );
+		VectorSubtract( end, offset, end_l );
+
+		// rotate start and end into the models frame of reference
+		if( !VectorIsNull( m_pGround->angles ))
+		{
+			matrix4x4	imatrix;
+
+			Matrix4x4_CreateFromEntity( matrix, m_pGround->angles, offset, 1.0f );
+			Matrix4x4_Invert_Simple( imatrix, matrix );
+
+			Matrix4x4_VectorTransform( imatrix, start, start_l );
+			Matrix4x4_VectorTransform( imatrix, end, end_l );
+		}
+
+		// copy transformed pos back
+		VectorCopy( start_l, start );
+		VectorCopy( end_l, end );
 	}
 
-	if( RI.isSkyVisible )
-	{
-		r_pointColor[0] = RI.refdef.movevars->skycolor_r;
-		r_pointColor[1] = RI.refdef.movevars->skycolor_g;
-		r_pointColor[2] = RI.refdef.movevars->skycolor_b;
-	}
-	else
-	{
-		VectorClear( r_pointColor );
-	}
+	r_pointColor[0] = RI.refdef.movevars->skycolor_r;
+	r_pointColor[1] = RI.refdef.movevars->skycolor_g;
+	r_pointColor[2] = RI.refdef.movevars->skycolor_b;
 
 	if( R_RecursiveLightPoint( pmodel, pnodes, start, end ))
 	{

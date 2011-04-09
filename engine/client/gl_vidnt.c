@@ -1434,6 +1434,9 @@ void GL_InitCommands( void )
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
 	gl_test = Cvar_Get( "gl_test", "0", 0, "engine developer cvar for quick testing new features" );
+
+	// these cvar not used by engine but some mods requires this
+	Cvar_Get( "gl_polyoffset", "-0.1", 0, "polygon offset for decals" );
  
 	// make sure r_swapinterval is checked after vid_restart
 	gl_swapInterval->modified = true;
@@ -1639,7 +1642,6 @@ qboolean R_Init( void )
 
 	GL_InitExtensions();
 	GL_SetDefaults();
-	R_InitMathlib();
 	R_InitImages();
 	R_SpriteInit();
 	R_StudioInit();

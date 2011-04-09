@@ -14,11 +14,24 @@
 #include "dlight.h"
 #include "input.h"
 
+#define MAX_FORWARD		6
+
 qboolean CL_IsPlayerIndex( int idx )
 {
 	if( idx > 0 && idx <= cl.maxclients )
 		return true;
 	return false;
+}
+
+qboolean CL_IsPredicted( void )
+{
+	if( !cl_predict->integer || !cl.frame.valid )
+		return false;
+
+	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_sequence ) >= ( CL_UPDATE_BACKUP - 1 ))
+		return false;
+
+	return true;
 }
 
 /*
@@ -442,16 +455,6 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	// set right current state
 	ent->curstate = *state;
-
-	if( ent->player )
-	{
-		clgame.dllFuncs.pfnProcessPlayerState( &frame->playerstate[ent->index-1], &ent->curstate );
-		frame->playerstate[ent->index-1].number = ent->index;
-
-		// fill private structure for local client
-		if(( ent->index - 1 ) == cl.playernum )
-			frame->local.playerstate = frame->playerstate[ent->index-1];
-	}
 }
 
 /*
@@ -662,10 +665,6 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 		if( cls.disable_servercount != cl.servercount && cl.video_prepped )
 			SCR_EndLoadingPlaque(); // get rid of loading plaque
-
-		// getting a valid frame message ends the connection process
-		VectorCopy( player->origin, cl.predicted_origin );
-		VectorCopy( player->angles, cl.predicted_angles );
 	}
 
 	// update local player states
@@ -698,8 +697,6 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 	cl.frame = *newframe;
 	cl.predict[cl.predictcount & CL_UPDATE_MASK] = cl.frame.local;
-
-	CL_CheckPredictionError();
 }
 
 /*
@@ -709,6 +706,71 @@ INTERPOLATE BETWEEN FRAMES TO GET RENDERING PARMS
 
 ==========================================================================
 */
+/*
+===============
+CL_SetIdealPitch
+===============
+*/
+void CL_SetIdealPitch( void )
+{
+	float	angleval, sinval, cosval;
+	vec3_t	top, bottom;
+	float	z[MAX_FORWARD];
+	int	i, j;
+	int	step, dir, steps;
+	pmtrace_t	tr;
+
+	if( !( cl.frame.local.client.flags & FL_ONGROUND ))
+		return;
+		
+	angleval = cl.frame.local.playerstate.angles[YAW] * M_PI * 2 / 360;
+	SinCos( angleval, &sinval, &cosval );
+
+	for( i = 0; i < MAX_FORWARD; i++ )
+	{
+		top[0] = cl.frame.local.client.origin[0] + cosval * (i + 3) * 12;
+		top[1] = cl.frame.local.client.origin[1] + sinval * (i + 3) * 12;
+		top[2] = cl.frame.local.client.origin[2] + cl.frame.local.client.view_ofs[2];
+		
+		bottom[0] = top[0];
+		bottom[1] = top[1];
+		bottom[2] = top[2] - 160;
+
+		// skip any monsters (only world and brush models)
+		tr = PM_PlayerTrace( clgame.pmove, top, bottom, PM_STUDIO_IGNORE, 2, -1, NULL );
+		if( tr.allsolid ) return; // looking at a wall, leave ideal the way is was
+
+		if( tr.fraction == 1.0f )
+			return;	// near a dropoff
+		
+		z[i] = top[2] + tr.fraction * (bottom[2] - top[2]);
+	}
+	
+	dir = 0;
+	steps = 0;
+	for( j = 1; j < i; j++ )
+	{
+		step = z[j] - z[j-1];
+		if( step > -ON_EPSILON && step < ON_EPSILON )
+			continue;
+
+		if( dir && ( step-dir > ON_EPSILON || step-dir < -ON_EPSILON ))
+			return; // mixed changes
+
+		steps++;	
+		dir = step;
+	}
+	
+	if( !dir )
+	{
+		cl.refdef.idealpitch = 0;
+		return;
+	}
+	
+	if( steps < 2 ) return;
+	cl.refdef.idealpitch = -dir * cl_idealpitchscale->value;
+}
+
 /*
 ===============
 CL_AddPacketEntities
@@ -756,7 +818,8 @@ void CL_AddEntities( void )
 
 	cl.num_custombeams = 0;
 
-	clgame.dllFuncs.CAM_Think();
+	CL_SetIdealPitch ();
+	clgame.dllFuncs.CAM_Think ();
 
 	CL_AddPacketEntities( &cl.frame );
 	clgame.dllFuncs.pfnCreateEntities();

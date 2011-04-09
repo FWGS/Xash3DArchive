@@ -154,10 +154,6 @@ SOURCE=.\client\cl_pmove.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_pred.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\cl_scrn.c
 # End Source File
 # Begin Source File

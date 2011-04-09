@@ -786,6 +786,8 @@ static void R_DrawSpriteQuad( mspriteframe_t *frame, vec3_t org, vec3_t v_right,
 {
 	vec3_t	point;
 
+	r_stats.c_sprite_polys++;
+
 	pglBegin( GL_QUADS );
 		pglTexCoord2f( 0.0f, 1.0f );
 		VectorMA( org, frame->down * scale, v_up, point );

@@ -32,7 +32,6 @@ void GL_Bind( GLenum tmu, GLenum texnum )
 
 	// missed texture ?
 	if( texnum <= 0 ) texnum = tr.defaultTexture;
-
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 
 	GL_SelectTexture( tmu );
@@ -59,7 +58,6 @@ void GL_MBind( GLenum texnum )
 
 	// missed texture ?
 	if( texnum <= 0 ) texnum = tr.defaultTexture;
-
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 
 	if( glState.mtexEnabled )

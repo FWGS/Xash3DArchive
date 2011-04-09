@@ -97,7 +97,7 @@ void CL_AddLinksToPmove( void )
 {
 	cl_entity_t	*check;
 	physent_t		*pe;
-	int		i, idx;
+	int		i, solid, idx;
 
 	for( i = 0; i < cl.frame.num_entities; i++ )
 	{
@@ -115,14 +115,16 @@ void CL_AddLinksToPmove( void )
 				clgame.pmove->numvisent++;
 		}
 
-		if( check->player )
-			continue;
+		// players will be added later
+		if( check->player ) continue;
 
 		// can't collide with zeroed hull
 		if( VectorIsNull( check->curstate.mins ) && VectorIsNull( check->curstate.maxs ))
 			continue;
 
-		if( check->curstate.solid == SOLID_BSP || check->curstate.solid == SOLID_BBOX || check->curstate.solid == SOLID_SLIDEBOX )
+		solid = check->curstate.solid;
+
+		if( solid == SOLID_BSP || solid == SOLID_BBOX || solid == SOLID_SLIDEBOX )
 		{
 			// reserve slots for all the clients
 			if( clgame.pmove->numphysent < ( MAX_PHYSENTS - cl.maxclients ))
@@ -132,7 +134,7 @@ void CL_AddLinksToPmove( void )
 					clgame.pmove->numphysent++;
 			}
 		}
-		else if( check->curstate.solid == SOLID_NOT && check->curstate.skin != CONTENTS_NONE )
+		else if( solid == SOLID_NOT && check->curstate.skin != CONTENTS_NONE )
 		{
 			if( clgame.pmove->nummoveent < MAX_MOVEENTS )
 			{
@@ -624,4 +626,108 @@ void CL_SetupPMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state
 	pmove->cmd = *ucmd;	// setup current cmds	
 
 	Q_strncpy( pmove->physinfo, cd->physinfo, MAX_INFO_STRING );
+}
+
+/*
+===========
+CL_PostRunCmd
+
+Done after running a player command.
+===========
+*/
+void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
+{
+	local_state_t	*from, *to;
+
+	// TODO: write real predicting code
+
+	from = &cl.predict[cl.predictcount & CL_UPDATE_MASK];
+	to = &cl.predict[(cl.predictcount + 1) & CL_UPDATE_MASK];
+
+	*to = *from;
+
+	clgame.dllFuncs.pfnPostRunCmd( from, to, ucmd, clgame.pmove->runfuncs, cl.time, random_seed );
+	cl.predictcount++;
+}
+
+/*
+=================
+CL_PredictMovement
+
+Sets cl.predicted_origin and cl.predicted_angles
+=================
+*/
+void CL_PredictMovement( void )
+{
+	int		frame = 1;
+	int		ack, outgoing_command;
+	int		current_command;
+	int		current_command_mod;
+	cl_entity_t	*player, *viewent;
+	clientdata_t	*cd;
+
+	if( cls.state != ca_active ) return;
+	if( cl.refdef.paused || cls.key_dest == key_menu ) return;
+
+	player = CL_GetLocalPlayer ();
+	viewent = CL_GetEntityByIndex( cl.refdef.viewentity );
+	cd = &cl.frame.local.client;
+
+	if( cls.demoplayback && viewent )
+	{
+		// restore viewangles from angles
+		cl.refdef.cl_viewangles[PITCH] = -viewent->angles[PITCH] * 3;
+		cl.refdef.cl_viewangles[YAW] = viewent->angles[YAW];
+		cl.refdef.cl_viewangles[ROLL] = 0; // roll will be computed in view.cpp
+	}
+
+	// unpredicted pure angled values converted into axis
+	AngleVectors( cl.refdef.cl_viewangles, cl.refdef.forward, cl.refdef.right, cl.refdef.up );
+
+	if( !CL_IsPredicted( ))
+	{	
+		// run commands even if client predicting is disabled - client expected it
+		clgame.pmove->runfuncs = true;
+		CL_PostRunCmd( cl.refdef.cmd, cls.lastoutgoingcommand );
+		return;
+	}
+
+	ack = cls.netchan.incoming_acknowledged;
+	outgoing_command = cls.netchan.outgoing_sequence;
+
+	ASSERT( cl.refdef.cmd != NULL );
+
+	// setup initial pmove state
+	CL_SetupPMove( clgame.pmove, cd, &player->curstate, cl.refdef.cmd );
+	clgame.pmove->runfuncs = false;
+
+	while( 1 )
+	{
+		// we've run too far forward
+		if( frame >= CL_UPDATE_BACKUP - 1 )
+			break;
+
+		// Incoming_acknowledged is the last usercmd the server acknowledged having acted upon
+		current_command = ack + frame;
+		current_command_mod = current_command & CL_UPDATE_MASK;
+
+		// we've caught up to the current command.
+		if( current_command > outgoing_command )
+			break;
+
+		clgame.pmove->cmd = cl.cmds[frame];
+
+		// motor!
+		clgame.dllFuncs.pfnPlayerMove( clgame.pmove, false ); // run frames
+		clgame.pmove->runfuncs = ( current_command > outgoing_command - 1 ) ? true : false;
+
+		frame++;
+	}
+
+	CL_PostRunCmd( cl.refdef.cmd, frame );
+		
+	// copy results out for rendering
+	VectorCopy( clgame.pmove->view_ofs, cl.predicted_viewofs );
+	VectorCopy( clgame.pmove->origin, cl.predicted_origin );
+	VectorCopy( clgame.pmove->velocity, cl.predicted_velocity );
 }

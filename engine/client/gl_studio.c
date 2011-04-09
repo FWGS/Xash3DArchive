@@ -1715,6 +1715,8 @@ static void R_StudioDrawPoints( void )
 				pglBegin( GL_TRIANGLE_STRIP );
 			}
 
+			r_stats.c_studio_polys++;
+
 			for( ; i > 0; i--, ptricmds += 4 )
 			{
 				if( flags & STUDIO_NF_CHROME || ( g_nFaceFlags & STUDIO_NF_CHROME ))

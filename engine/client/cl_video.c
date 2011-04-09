@@ -29,7 +29,7 @@ void SCR_RebuildGammaTable( void )
 
 	g = bound( 0.5f, vid_gamma->value, 2.3f );
 
-	// screenshots gamma	
+	// movie gamma	
 	for( i = 0; i < 256; i++ )
 	{
 		if( g == 1 ) clgame.ds.gammaTable[i] = i;
@@ -207,7 +207,7 @@ qboolean SCR_PlayCinematic( const char *arg )
 
 	if( FS_FileExists( arg, false ) && !fullpath )
 	{
-		MsgDev( D_ERROR, "couldn't load %s from packfile. Please extract it\n", path );
+		MsgDev( D_ERROR, "Couldn't load %s from packfile. Please extract it\n", path );
 		return false;
 	}
 
@@ -245,7 +245,7 @@ long SCR_GetAudioChunk( char *rawdata, long length )
 	int	r;
 
 	r = AVI_GetAudioChunk( cin_state, rawdata, cin_audio.loopStart, length );
-	cin_audio.loopStart += r;	// advance play position
+	cin_audio.loopStart += r; // advance play position
 
 	return r;
 }

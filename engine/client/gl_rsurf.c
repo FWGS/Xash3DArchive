@@ -645,7 +645,9 @@ void R_RenderBrushPoly( msurface_t *fa )
 {
 	texture_t	*t;
 
-	r_stats.c_brush_polys++;
+	if( RI.currententity == clgame.entities )
+		r_stats.c_world_polys++;
+	else r_stats.c_brush_polys++; 
 
 	if( fa->flags & SURF_DRAWSKY )
 	{	
@@ -758,6 +760,10 @@ void R_DrawTextureChains( void )
 	// make sure what color is reset
 	pglColor4ub( 255, 255, 255, 255 );
 	R_LoadIdentity();	// set identity matrix
+
+	// restore worldmodel
+	RI.currententity = clgame.entities;
+	RI.currentmodel = RI.currententity->model;
 
 	// clip skybox surfaces
 	for( s = skychain; s != NULL; s = s->texturechain )
@@ -1160,7 +1166,6 @@ void R_DrawStaticBrushes( void )
 
 =============================================================
 */
-
 /*
 ================
 R_RecursiveWorldNode

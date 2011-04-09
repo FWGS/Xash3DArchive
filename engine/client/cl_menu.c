@@ -877,7 +877,7 @@ static ui_enginefuncs_t gEngfuncs =
 	Con_DefaultColor,
 	pfnGetPlayerModel,
 	pfnSetPlayerModel,
-	V_ClearScene,	
+	R_ClearScene,	
 	pfnRenderScene,
 	CL_AddEntity,
 	Host_Error,
