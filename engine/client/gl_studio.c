@@ -33,8 +33,8 @@ static vec3_t hullcolor[8] =
 
 typedef struct studiolight_s
 {
-	vec3_t		lightvec;		// light vector
-	vec3_t		lightcolor;	// ambient light color
+	vec3_t		lightvec;			// light vector
+	vec3_t		lightcolor;		// ambient light color
 
 	vec3_t		blightvec[MAXSTUDIOBONES];	// ambient lightvectors per bone
 	vec3_t		dlightvec[MAX_DLIGHTS][MAXSTUDIOBONES];
@@ -99,6 +99,8 @@ void R_StudioInit( void )
 	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", CVAR_ARCHIVE, "enables studio animation lerping" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
+
+	// NOTE: some mods with custom studiomodel renderer may cause error when menu trying draw player model out of the loaded game
 	r_customdraw_playermodel = Cvar_Get( "r_customdraw_playermodel", "0", CVAR_ARCHIVE, "allow to drawing playermodel in menu with client renderer" );
 
 	// recalc software X and Y alias scale (this stuff is used only by HL software renderer but who knews...)
@@ -518,7 +520,7 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 
 	if( e == &clgame.viewent && r_lefthand->integer == 1 )
 	{
-		// inverse the right vector
+		// inverse the right vector (should work in Opposing Force)
 		g_rotationmatrix[0][1] = -g_rotationmatrix[0][1];
 		g_rotationmatrix[1][1] = -g_rotationmatrix[1][1];
 		g_rotationmatrix[2][1] = -g_rotationmatrix[2][1];
@@ -1573,6 +1575,41 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 
 /*
 ===============
+R_StudioSetupTextureHeader
+
+===============
+*/
+void R_StudioSetupTextureHeader( void )
+{
+#ifndef STUDIO_MERGE_TEXTURES
+	if( !m_pStudioHeader->numtextures || !m_pStudioHeader->textureindex )
+	{
+		string	texturename;		
+		model_t	*textures = NULL;
+
+		Q_strncpy( texturename, R_StudioTexName( RI.currentmodel ), sizeof( texturename ));
+		COM_FixSlashes( texturename );
+
+		if( FS_FileExists( texturename, false ))
+			textures = Mod_ForName( texturename, false );
+
+		if( !textures )
+		{
+			m_pTextureHeader = NULL;
+			return;
+		}
+
+		m_pTextureHeader = (studiohdr_t *)Mod_Extradata( textures );
+	}
+	else
+#endif
+	{
+		m_pTextureHeader = m_pStudioHeader;
+	}
+}
+
+/*
+===============
 R_StudioSetupSkin
 
 ===============
@@ -1581,6 +1618,8 @@ static void R_StudioSetupSkin( mstudiotexture_t *ptexture, int index )
 {
 	short	*pskinref;
 	int	m_skinnum;
+
+	R_StudioSetupTextureHeader ();
 
 	if( !m_pTextureHeader ) return;
 
@@ -1609,6 +1648,8 @@ static void R_StudioDrawPoints( void )
 	mstudiomesh_t	*pmesh;
 	short		*pskinref;
 	float		*av, *lv;
+
+	R_StudioSetupTextureHeader ();
 
 	if( !m_pTextureHeader ) return;
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
@@ -1659,6 +1700,7 @@ static void R_StudioDrawPoints( void )
 		s = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].width;
 		t = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].height;
 
+		// check bounds
 		if( ptexture[pskinref[pmesh->skinref]].index < 0 || ptexture[pskinref[pmesh->skinref]].index > MAX_TEXTURES )
 			ptexture[pskinref[pmesh->skinref]].index = tr.defaultTexture;
 
@@ -1758,7 +1800,96 @@ R_StudioDrawHulls
 */
 static void R_StudioDrawHulls( void )
 {
-	// TODO: implement
+	int	i, j;
+	float	alpha;
+
+	if( r_drawentities->integer == 4 )
+		alpha = 0.5f;
+	else alpha = 1.0f;
+
+	pglDisable( GL_TEXTURE_2D );
+
+	if( r_drawentities->integer == 4 )
+		pglDisable( GL_DEPTH_TEST );
+
+	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
+	{
+		mstudiobbox_t	*pbboxes = (mstudiobbox_t *)((byte *)m_pStudioHeader + m_pStudioHeader->hitboxindex);
+		vec3_t		v[8], v2[8], bbmin, bbmax;
+
+		VectorCopy( pbboxes[i].bbmin, bbmin );
+		VectorCopy( pbboxes[i].bbmax, bbmax );
+
+		v[0][0] = bbmin[0];
+		v[0][1] = bbmax[1];
+		v[0][2] = bbmin[2];
+
+		v[1][0] = bbmin[0];
+		v[1][1] = bbmin[1];
+		v[1][2] = bbmin[2];
+
+		v[2][0] = bbmax[0];
+		v[2][1] = bbmax[1];
+		v[2][2] = bbmin[2];
+
+		v[3][0] = bbmax[0];
+		v[3][1] = bbmin[1];
+		v[3][2] = bbmin[2];
+
+		v[4][0] = bbmax[0];
+		v[4][1] = bbmax[1];
+		v[4][2] = bbmax[2];
+
+		v[5][0] = bbmax[0];
+		v[5][1] = bbmin[1];
+		v[5][2] = bbmax[2];
+
+		v[6][0] = bbmin[0];
+		v[6][1] = bbmax[1];
+		v[6][2] = bbmax[2];
+
+		v[7][0] = bbmin[0];
+		v[7][1] = bbmin[1];
+		v[7][2] = bbmax[2];
+
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[0], v2[0] );
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[1], v2[1] );
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[2], v2[2] );
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[3], v2[3] );
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[4], v2[4] );
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[5], v2[5] );
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[6], v2[6] );
+		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[7], v2[7] );
+
+		j = (pbboxes[i].group % 8);
+
+		// set properly color for hull
+		pglColor4f( hullcolor[j][0], hullcolor[j][1], hullcolor[j][2], alpha );
+
+		pglBegin( GL_QUAD_STRIP );
+		for( j = 0; j < 10; j++ )
+			pglVertex3fv( v2[j & 7] );
+		pglEnd( );
+	
+		pglBegin( GL_QUAD_STRIP );
+		pglVertex3fv( v2[6] );
+		pglVertex3fv( v2[0] );
+		pglVertex3fv( v2[4] );
+		pglVertex3fv( v2[2] );
+		pglEnd( );
+
+		pglBegin( GL_QUAD_STRIP );
+		pglVertex3fv( v2[1] );
+		pglVertex3fv( v2[7] );
+		pglVertex3fv( v2[3] );
+		pglVertex3fv( v2[5] );
+		pglEnd( );			
+	}
+
+	pglEnable( GL_TEXTURE_2D );
+
+	if( r_drawentities->integer == 4 )
+		pglEnable( GL_DEPTH_TEST );
 }
 
 /*
@@ -1813,7 +1944,52 @@ R_StudioDrawBones
 */
 static void R_StudioDrawBones( void )
 {
-	// TODO: implement
+	mstudiobone_t	*pbones = (mstudiobone_t *) ((byte *)m_pStudioHeader + m_pStudioHeader->boneindex);
+	vec3_t		point;
+	int		i;
+
+	pglDisable( GL_TEXTURE_2D );
+
+	for( i = 0; i < m_pStudioHeader->numbones; i++ )
+	{
+		if( pbones[i].parent >= 0 )
+		{
+			pglPointSize( 3.0f );
+			pglColor3f( 1, 0.7f, 0 );
+			pglBegin( GL_LINES );
+			
+			Matrix3x4_OriginFromMatrix( g_bonestransform[pbones[i].parent], point );
+			pglVertex3fv( point );
+			Matrix3x4_OriginFromMatrix( g_bonestransform[i], point );
+			pglVertex3fv( point );
+			
+			pglEnd();
+
+			pglColor3f( 0, 0, 0.8f );
+			pglBegin( GL_POINTS );
+			if( pbones[pbones[i].parent].parent != -1 )
+			{
+				Matrix3x4_OriginFromMatrix( g_bonestransform[pbones[i].parent], point );
+				pglVertex3fv( point );
+			}
+			Matrix3x4_OriginFromMatrix( g_bonestransform[i], point );
+			pglVertex3fv( point );
+			pglEnd();
+		}
+		else
+		{
+			// draw parent bone node
+			pglPointSize( 5.0f );
+			pglColor3f( 0.8f, 0, 0 );
+			pglBegin( GL_POINTS );
+			Matrix3x4_OriginFromMatrix( g_bonestransform[i], point );
+			pglVertex3fv( point );
+			pglEnd();
+		}
+	}
+
+	pglPointSize( 1.0f );
+	pglEnable( GL_TEXTURE_2D );
 }
 
 static void R_StudioDrawAttachments( void )
@@ -1996,40 +2172,6 @@ void R_StudioSetForceFaceFlags( int flags )
 
 /*
 ===============
-R_StudioSetupTextureHeader
-
-===============
-*/
-void R_StudioSetupTextureHeader( void )
-{
-#ifndef STUDIO_MERGE_TEXTURES
-	if( !m_pStudioHeader->numtextures || !m_pStudioHeader->textureindex )
-	{
-		string	texturename;		
-		model_t	*textures = NULL;
-
-		Q_strncpy( texturename, R_StudioTexName( RI.currentmodel ), sizeof( texturename ));
-
-		if( FS_FileExists( texturename, false ))
-			textures = Mod_ForName( texturename, false );
-
-		if( !textures )
-		{
-			m_pTextureHeader = NULL;
-			return;
-		}
-
-		m_pTextureHeader = (studiohdr_t *)Mod_Extradata( textures );
-	}
-	else
-#endif
-	{
-		m_pTextureHeader = m_pStudioHeader;
-	}
-}
-
-/*
-===============
 pfnStudioSetHeader
 
 ===============
@@ -2037,8 +2179,6 @@ pfnStudioSetHeader
 void R_StudioSetHeader( studiohdr_t *pheader )
 {
 	m_pStudioHeader = pheader;
-
-	R_StudioSetupTextureHeader ();
 }
 
 /*
@@ -2116,7 +2256,6 @@ static void GL_StudioDrawShadow( void )
 	// this code is for HL compatibility.
 	return;
 
-	// TODO: implement
 	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
 }
 

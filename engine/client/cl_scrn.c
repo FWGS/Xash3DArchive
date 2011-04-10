@@ -14,6 +14,7 @@ convar_t *scr_loading;
 convar_t *scr_download;
 convar_t *scr_width;
 convar_t *scr_height;
+convar_t *scr_viewsize;
 convar_t *cl_testlights;
 convar_t *cl_allow_levelshots;
 convar_t *cl_levelshot_name;
@@ -424,6 +425,7 @@ void SCR_Init( void )
 	cl_testlights = Cvar_Get( "cl_testlights", "0", 0, "test dynamic lights" );
 	cl_envshot_size = Cvar_Get( "cl_envshot_size", "256", CVAR_ARCHIVE, "envshot size of cube side" );
 	scr_dark = Cvar_Get( "v_dark", "0", 0, "starts level from dark screen" );
+	scr_viewsize = Cvar_Get( "viewsize", "120", CVAR_ARCHIVE, "screen size" );
 	
 	// register our commands
 	Cmd_AddCommand( "timerefresh", SCR_TimeRefresh_f, "turn quickly and print rendering statistcs" );

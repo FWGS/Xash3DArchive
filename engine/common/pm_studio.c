@@ -553,6 +553,7 @@ static qboolean PM_StudioSetupModel( playermove_t *pmove, physent_t *pe )
 		return false;
 
 	pm_studiohdr = (studiohdr_t *)mod->cache.data;
+	VectorCopy( pe->angles, angles );
 
 	// calc blending for player
 	if( pe->player )

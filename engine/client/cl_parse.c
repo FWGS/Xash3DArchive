@@ -474,7 +474,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.checksum = BF_ReadLong( msg );
 	cl.playernum = BF_ReadByte( msg );
 	cl.maxclients = BF_ReadByte( msg );
-	clgame.maxEntities = bound( 600, BF_ReadWord( msg ), 4096 );
+	clgame.maxEntities = BF_ReadWord( msg );
+	clgame.maxEntities = bound( 600, clgame.maxEntities, 4096 );
 	Q_strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 	cl.background = BF_ReadOneBit( msg );
@@ -1135,6 +1136,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			{
 				cls.changelevel = true;
 				S_StopAllSounds();
+
+				if( cls.demoplayback )
+					SCR_BeginLoadingPlaque( cl.background );
 			}
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 
@@ -1238,8 +1242,10 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseSoundFade( msg );
 			break;
 		case svc_cdtrack:
-			param1 = bound( 1, BF_ReadByte( msg ), 32 ); // tracknum
-			param2 = bound( 1, BF_ReadByte( msg ), 32 ); // loopnum
+			param1 = BF_ReadByte( msg );
+			param1 = bound( 1, param1, MAX_CDTRACKS ); // tracknum
+			param2 = BF_ReadByte( msg );
+			param2 = bound( 1, param2, MAX_CDTRACKS ); // loopnum
 			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1] );
 			break;
 		case svc_serverinfo:

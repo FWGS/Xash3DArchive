@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_BACKGROUND 	0
 #define ID_BANNER	  	1
 #define ID_DONE	  	2
-#define ID_BLOOM_INTENSITY	3
+#define ID_SCREEN_SIZE	3
 #define ID_GAMMA		4
 #define ID_GLARE_REDUCTION	5 
 #define ID_SIMPLE_SKY	6
@@ -45,7 +45,7 @@ typedef struct
 
 	menuPicButton_s	done;
 
-	menuSlider_s	bloomIntensity;
+	menuSlider_s	screenSize;
 	menuSlider_s	gammaIntensity;
 	menuSlider_s	glareReduction;
 	menuCheckBox_s	fastSky;
@@ -61,9 +61,9 @@ UI_VidOptions_GetConfig
 */
 static void UI_VidOptions_GetConfig( void )
 {
-	uiVidOptions.bloomIntensity.curValue = CVAR_GET_FLOAT( "r_bloom_intensity" ) / 10.0f;
+	uiVidOptions.screenSize.curValue = (CVAR_GET_FLOAT( "viewsize" ) - 20.0f ) / 100.0f;
 	uiVidOptions.gammaIntensity.curValue = (CVAR_GET_FLOAT( "vid_gamma" ) - 0.5f) / 1.8f;
-	uiVidOptions.glareReduction.curValue = CVAR_GET_FLOAT( "r_flaresize" ) / 60.0f;
+	uiVidOptions.glareReduction.curValue = (CVAR_GET_FLOAT( "r_flaresize" ) - 100.0f ) / 200.0f;
 
 	if( CVAR_GET_FLOAT( "r_fastsky" ))
 		uiVidOptions.fastSky.enabled = 1;
@@ -79,9 +79,9 @@ UI_VidOptions_UpdateConfig
 */
 static void UI_VidOptions_UpdateConfig( void )
 {
-	CVAR_SET_FLOAT( "r_bloom_intensity", uiVidOptions.bloomIntensity.curValue * 10.0f );
+	CVAR_SET_FLOAT( "viewsize", (uiVidOptions.screenSize.curValue * 100.0f) + 20.0f );
 	CVAR_SET_FLOAT( "vid_gamma", (uiVidOptions.gammaIntensity.curValue * 1.8f) + 0.5f );
-	CVAR_SET_FLOAT( "r_flaresize", uiVidOptions.glareReduction.curValue * 60.0f );
+	CVAR_SET_FLOAT( "r_flaresize", (uiVidOptions.glareReduction.curValue * 200.0f ) + 100.0f );
 	CVAR_SET_FLOAT( "r_fastsky", uiVidOptions.fastSky.enabled );
 }
 
@@ -184,17 +184,17 @@ static void UI_VidOptions_Init( void )
 
 	UI_UtilSetupPicButton( &uiVidOptions.done, PC_DONE );
 
-	uiVidOptions.bloomIntensity.generic.id = ID_BLOOM_INTENSITY;
-	uiVidOptions.bloomIntensity.generic.type = QMTYPE_SLIDER;
-	uiVidOptions.bloomIntensity.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
-	uiVidOptions.bloomIntensity.generic.name = "Bloom intensity";
-	uiVidOptions.bloomIntensity.generic.x = 72;
-	uiVidOptions.bloomIntensity.generic.y = 280;
-	uiVidOptions.bloomIntensity.generic.callback = UI_VidOptions_Callback;
-	uiVidOptions.bloomIntensity.generic.statusText = "Set bloom intensity (0 value disables bloom)";
-	uiVidOptions.bloomIntensity.minValue = 0.0;
-	uiVidOptions.bloomIntensity.maxValue = 1.0;
-	uiVidOptions.bloomIntensity.range = 0.05f;
+	uiVidOptions.screenSize.generic.id = ID_SCREEN_SIZE;
+	uiVidOptions.screenSize.generic.type = QMTYPE_SLIDER;
+	uiVidOptions.screenSize.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
+	uiVidOptions.screenSize.generic.name = "Screen size";
+	uiVidOptions.screenSize.generic.x = 72;
+	uiVidOptions.screenSize.generic.y = 280;
+	uiVidOptions.screenSize.generic.callback = UI_VidOptions_Callback;
+	uiVidOptions.screenSize.generic.statusText = "Set the screen size";
+	uiVidOptions.screenSize.minValue = 0.0;
+	uiVidOptions.screenSize.maxValue = 1.0;
+	uiVidOptions.screenSize.range = 0.05f;
 
 	uiVidOptions.gammaIntensity.generic.id = ID_GAMMA;
 	uiVidOptions.gammaIntensity.generic.type = QMTYPE_SLIDER;
@@ -234,7 +234,7 @@ static void UI_VidOptions_Init( void )
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.background );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.banner );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.done );
-	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.bloomIntensity );
+	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.screenSize );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.gammaIntensity );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.glareReduction );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.fastSky );

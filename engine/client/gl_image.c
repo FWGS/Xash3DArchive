@@ -20,6 +20,17 @@ static rgbdata_t	r_image;			// generic pixelbuffer used for internal textures
 
 // internal tables
 static vec3_t	r_luminanceTable[256];	// RGB to luminance
+static byte	r_particleTexture[8][8] =
+{
+{0,0,0,0,0,0,0,0},
+{0,0,0,1,1,0,0,0},
+{0,0,0,1,1,0,0,0},
+{0,1,1,1,1,1,1,0},
+{0,1,1,1,1,1,1,0},
+{0,0,0,1,1,0,0,0},
+{0,0,0,1,1,0,0,0},
+{0,0,0,0,0,0,0,0},
+};
 
 /*
 =================
@@ -1169,6 +1180,37 @@ static rgbdata_t *R_InitParticleTexture( texFlags_t *flags )
 
 /*
 ==================
+R_InitParticleTexture2
+==================
+*/
+static rgbdata_t *R_InitParticleTexture2( texFlags_t *flags )
+{
+	int	x, y;
+
+	// particle texture
+	r_image.width = r_image.height = 8;
+	r_image.buffer = data2D;
+	r_image.flags = (IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA);
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * 4;
+
+	*flags = TF_NOPICMIP|TF_NOMIPMAP;
+
+	for( x = 0; x < 8; x++ )
+	{
+		for( y = 0; y < 8; y++ )
+		{
+			data2D[(y * 8 + x) * 4 + 0] = 255;
+			data2D[(y * 8 + x) * 4 + 1] = 255;
+			data2D[(y * 8 + x) * 4 + 2] = 255;
+			data2D[(y * 8 + x) * 4 + 3] = r_particleTexture[x][y] * 255;
+		}
+	}
+	return &r_image;
+}
+
+/*
+==================
 R_InitSkyTexture
 ==================
 */
@@ -1286,6 +1328,7 @@ static void R_InitBuiltinTextures( void )
 	{ "*white", &tr.whiteTexture, R_InitWhiteTexture },
 	{ "*black", &tr.blackTexture, R_InitBlackTexture },
 	{ "*particle", &tr.particleTexture, R_InitParticleTexture },
+	{ "*particle2", &tr.particleTexture2, R_InitParticleTexture2 },
 	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture },
 	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture },
 	{ "*sky", &tr.skyTexture, R_InitSkyTexture },

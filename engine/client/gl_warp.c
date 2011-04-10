@@ -67,7 +67,8 @@ static qboolean CheckSkybox( const char *name )
 		{         
 			// build side name
 			sidename = va( "%s%s.%s", name, r_skyBoxSuffix[j], skybox_ext[i] );
-			if( FS_FileExists( sidename, false )) num_checked_sides++;
+			if( FS_FileExists( sidename, false ))
+				num_checked_sides++;
 
 		}
 
@@ -78,7 +79,8 @@ static qboolean CheckSkybox( const char *name )
 		{         
 			// build side name
 			sidename = va( "%s_%s.%s", name, r_skyBoxSuffix[j], skybox_ext[i] );
-			if( FS_FileExists( sidename, false )) num_checked_sides++;
+			if( FS_FileExists( sidename, false ))
+				num_checked_sides++;
 		}
 
 		if( num_checked_sides == 6 )
@@ -382,6 +384,7 @@ void R_SetupSky( const char *skyboxname )
 	if( loadname[Q_strlen( loadname ) - 1] == '_' )
 		loadname[Q_strlen( loadname ) - 1] = '\0';
 
+	// to prevent infinite recursion if default skybox was missed
 	if( !CheckSkybox( loadname ) && Q_stricmp( loadname, "gfx/env/desert" ))
 	{
 		MsgDev( D_ERROR, "R_SetupSky: missed or incomplete skybox '%s'\n", skyboxname );
@@ -389,6 +392,7 @@ void R_SetupSky( const char *skyboxname )
 		return; 
 	}
 
+	// release old skybox
 	R_UnloadSkybox();
 
 	for( i = 0; i < 6; i++ )

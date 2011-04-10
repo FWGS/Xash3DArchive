@@ -162,6 +162,7 @@ typedef struct
 	int		blackTexture;
 	int		defaultTexture;   	// use for bad textures
 	int		particleTexture;	// particle texture
+	int		particleTexture2;	// unsmoothed particle texture
 	int		solidskyTexture;	// quake1 solid-sky layer
 	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
@@ -568,6 +569,7 @@ extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
 extern convar_t	*r_lefthand;
+extern convar_t	*r_flaresize;
 extern convar_t	*r_decals;
 extern convar_t	*r_novis;
 extern convar_t	*r_nocull;

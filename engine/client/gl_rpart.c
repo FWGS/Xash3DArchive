@@ -301,15 +301,82 @@ static void CL_TracerImplosion( particle_t *p, float frametime )
 
 static void CL_BulletTracerDraw( particle_t *p, float frametime )
 {
+	vec3_t	lineDir, viewDir, cross;
+	vec3_t	vecEnd, vecStart, vecDir;
+	float	sDistance, eDistance, totalDist;
+	float	dDistance, dTotal, fOffset;
 	int	alpha = (int)(traceralpha->value * 255);
-	vec3_t	delta;
+	float	width = 3.0f, life, frac, length;
+	vec3_t	tmp;
 
-	VectorScale( p->vel, p->ramp, delta );
+	// calculate distance
+	VectorCopy( p->vel, vecDir );
+	totalDist = VectorNormalizeLength( vecDir );
 
-	// bullet tracers used particle palette
-	CL_DrawTracer( p->org, delta, 3.5f, clgame.palette[p->color], alpha, 0.0f, 0.8f );
+	length = p->ramp; // ramp used as length
 
-	VectorMA( p->org, frametime, p->vel, p->org );
+	// calculate fraction
+	life = ( totalDist + length ) / ( max( 1.0f, tracerspeed->value ));
+	frac = life - ( p->die - cl.time ) + frametime;
+
+	// calculate our distance along our path
+	sDistance = tracerspeed->value * frac;
+	eDistance = sDistance - length;
+	
+	// clip to start
+	sDistance = max( 0.0f, sDistance );
+	eDistance = max( 0.0f, eDistance );
+
+	if(( sDistance == 0.0f ) && ( eDistance == 0.0f ))
+		return;
+
+	// clip it
+	if( totalDist != 0.0f )
+	{
+		sDistance = min( sDistance, totalDist );
+		eDistance = min( eDistance, totalDist );
+	}
+
+	// get our delta to calculate the tc offset
+	dDistance	= fabs( sDistance - eDistance );
+	dTotal = ( length != 0.0f ) ? length : 0.01f;
+	fOffset = ( dDistance / dTotal );
+
+	// find our points along our path
+	VectorMA( p->org, sDistance, vecDir, vecEnd );
+	VectorMA( p->org, eDistance, vecDir, vecStart );
+
+	// setup our info for drawing the line
+	VectorSubtract( vecEnd, vecStart, lineDir );
+	VectorSubtract( vecEnd, cl.refdef.vieworg, viewDir );
+	
+	CrossProduct( lineDir, viewDir, cross );
+	VectorNormalize( cross );
+
+	GL_SetRenderMode( kRenderTransTexture );
+
+	GL_Bind( GL_TEXTURE0, cls.particleImage );
+	pglBegin( GL_QUADS );
+
+	pglColor4ub( clgame.palette[p->color][0], clgame.palette[p->color][1], clgame.palette[p->color][2], alpha );
+
+	VectorMA( vecStart, -width, cross, tmp );	
+	pglTexCoord2f( 1.0f, 0.0f );
+	pglVertex3fv( tmp );
+
+	VectorMA( vecStart, width, cross, tmp );
+	pglTexCoord2f( 0.0f, 0.0f );
+	pglVertex3fv( tmp );
+
+	VectorMA( vecEnd, width, cross, tmp );
+	pglTexCoord2f( 0.0f, fOffset );
+	pglVertex3fv( tmp );
+
+	VectorMA( vecEnd, -width, cross, tmp );
+	pglTexCoord2f( 1.0f, fOffset );
+	pglVertex3fv( tmp );
+
+	pglEnd();
 }
 
 /*
@@ -330,6 +397,8 @@ void CL_UpdateParticle( particle_t *p, float ft )
 	int	i, iRamp, alpha = 255;
 	vec3_t	right, up;
 	rgb_t	color;
+
+	r_stats.c_particle_count++;
 
 	switch( p->type )
 	{
@@ -445,8 +514,6 @@ void CL_UpdateParticle( particle_t *p, float ft )
 	pglVertex3f( p->org[0] - right[0] - up[0], p->org[1] - right[1] - up[1], p->org[2] - right[2] - up[2] );
 
 	pglEnd();
-
-	r_stats.c_particle_count++;
 
 	if( p->type != pt_clientcustom )
 	{
@@ -1100,6 +1167,7 @@ void CL_BulletImpactParticles( const vec3_t org )
 {
 	particle_t	*p;
 	vec3_t		pos, dir;
+	float		vel;
 	int		i, j;
 
 	// do sparks
@@ -1114,8 +1182,9 @@ void CL_BulletImpactParticles( const vec3_t org )
 		dir[0] = Com_RandomFloat( -1.0f, 1.0f );
 		dir[1] = Com_RandomFloat( -1.0f, 1.0f );
 		dir[2] = Com_RandomFloat( -1.0f, 1.0f );
+		vel = Com_RandomFloat( SPARK_ELECTRIC_MINSPEED, SPARK_ELECTRIC_MAXSPEED );
 
-		CL_SparkleTracer( pos, dir );
+		CL_SparkleTracer( pos, dir, vel );
 	}
 
 	for( i = 0; i < 12; i++ )
@@ -1123,7 +1192,7 @@ void CL_BulletImpactParticles( const vec3_t org )
 		p = CL_AllocParticle( NULL );
 		if( !p ) return;
             
-		p->die += 2.0f;
+		p->die += 1.0f;
 		p->color = 0; // black
 
 		p->type = pt_grav;
@@ -1312,7 +1381,7 @@ CL_SparkleTracer
 
 ===============
 */
-void CL_SparkleTracer( const vec3_t pos, const vec3_t dir )
+void CL_SparkleTracer( const vec3_t pos, const vec3_t dir, float vel )
 {
 	particle_t	*p;
 	byte		*color;
@@ -1325,7 +1394,7 @@ void CL_SparkleTracer( const vec3_t pos, const vec3_t dir )
 	p->die += Com_RandomFloat( 0.45f, 0.7f );
 	p->color = CL_LookupColor( color[0], color[1], color[2] );
 	p->ramp = Com_RandomFloat( 0.07f, 0.08f );	// ramp used as tracer length
-	VectorScale( dir, Com_RandomFloat( SPARK_ELECTRIC_MINSPEED, SPARK_ELECTRIC_MAXSPEED ), p->vel );
+	VectorScale( dir, vel, p->vel );
 }
 
 /*
@@ -1367,22 +1436,30 @@ CL_TracerEffect
 void CL_TracerEffect( const vec3_t start, const vec3_t end )
 {
 	particle_t	*p;
-	vec3_t		dir;
 	byte		*color;
-	float		length;
+	vec3_t		dir;
+	float		life, dist;
 
 	p = CL_AllocParticle( CL_BulletTracerDraw );
 	if( !p ) return;
 
-	color = gTracerColors[4];
-
+	// get out shot direction and length
 	VectorSubtract( end, start, dir );
-	length = VectorNormalizeLength( dir );
-	VectorScale( dir, tracerspeed->value, p->vel );
-	VectorMA( start, traceroffset->value, dir, p->org ); // make some offset
+	VectorCopy( dir, p->vel );
+
+	dist = VectorNormalizeLength( dir );
+
+	// don't make small tracers
+	if( dist <= traceroffset->value )
+		return;
+
+	p->ramp = Com_RandomFloat( 200.0f, 256.0f ) * tracerlength->value;
+
+	color = gTracerColors[4];
+	life = ( dist + p->ramp ) / ( max( 1.0f, tracerspeed->value ));
 	p->color = CL_LookupColor( color[0], color[1], color[2] );
-	p->die += ( length / min( 100.0f, tracerspeed->value ));
-	p->ramp = tracerlength->value * 0.1f; // ramp used as length
+	VectorCopy( start, p->org );
+	p->die += life;
 }
 
 /*
@@ -1410,9 +1487,9 @@ void CL_UserTracerParticle( float *org, float *vel, float life, int colorIndex, 
 		p->color = CL_LookupColor( color[0], color[1], color[2] );
 	}
 
-	p->ramp = length; // ramp used as length
 	VectorCopy( org, p->org );
 	VectorCopy( vel, p->vel );
+	p->ramp = length; // ramp used as length
 	p->context = deathcontext;
 	p->deathfunc = deathfunc;
 	p->die += life;
@@ -1428,9 +1505,15 @@ allow more customization
 particle_t *CL_TracerParticles( float *org, float *vel, float life )
 {
 	particle_t	*p;
+	byte		*color;
 
 	p = CL_AllocParticle( CL_BulletTracerDraw );
 	if( !p ) return NULL;
+
+	p->ramp = Com_RandomFloat( 200.0f, 256.0f ) * tracerlength->value;
+
+	color = gTracerColors[4];
+	p->color = CL_LookupColor( color[0], color[1], color[2] );
 	VectorCopy( org, p->org );
 	VectorCopy( vel, p->vel );
 	p->die += life;
@@ -1449,6 +1532,7 @@ void CL_SparkShower( const vec3_t org )
 {
 	vec3_t	pos, dir;
 	model_t	*pmodel;
+	float	vel;
 	int	i;
 
 	// randomize position
@@ -1465,8 +1549,9 @@ void CL_SparkShower( const vec3_t org )
 		dir[0] = Com_RandomFloat( -1.0f, 1.0f );
 		dir[1] = Com_RandomFloat( -1.0f, 1.0f );
 		dir[2] = Com_RandomFloat( -1.0f, 1.0f );
+		vel = Com_RandomFloat( SPARK_ELECTRIC_MINSPEED, SPARK_ELECTRIC_MAXSPEED );
 
-		CL_SparkleTracer( pos, dir );
+		CL_SparkleTracer( pos, dir, vel );
 	}
 }
 

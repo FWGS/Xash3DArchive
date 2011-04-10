@@ -193,8 +193,8 @@ void COM_FixSlashes( char *pname )
 {
 	while( *pname )
 	{
-		if( *pname == '/' )
-			*pname = '\\';
+		if( *pname == '\\' )
+			*pname = '/';
 		pname++;
 	}
 }

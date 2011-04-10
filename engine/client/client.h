@@ -476,6 +476,7 @@ extern convar_t	*cl_draw_particles;
 extern convar_t	*cl_levelshot_name;
 extern convar_t	*cl_draw_beams;
 extern convar_t	*scr_centertime;
+extern convar_t	*scr_viewsize;
 extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_dark;	// start from dark

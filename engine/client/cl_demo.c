@@ -25,7 +25,7 @@ void CL_WriteDemoCmd( usercmd_t *pcmd )
 	usercmd_t cmd;
 	byte	c;
 
-	fl = ( float )host.realtime;
+	fl = (float)host.realtime;
 	FS_Write( cls.demofile, &fl, sizeof( fl ));
 
 	c = dem_cmd;
@@ -33,6 +33,7 @@ void CL_WriteDemoCmd( usercmd_t *pcmd )
 
 	// correct for byte order, bytes don't matter
 	cmd = *pcmd;
+
 	FS_Write( cls.demofile, &cmd, sizeof( cmd ));
 
 	for( i = 0; i < 3; i++ )
@@ -54,7 +55,7 @@ void CL_WriteDemoMessage( sizebuf_t *msg, int head_size )
 	int	swlen;
 
 	if( !cls.demofile ) return;
-	if( cl.refdef.paused || cls.key_dest == key_menu )
+	if( cl.refdef.paused || cls.key_dest != key_game )
 		return;
 
 	// the first eight bytes are just packet sequencing stuff
@@ -94,21 +95,23 @@ void CL_WriteDemoHeader( const char *name )
 	BF_WriteByte( &buf, svc_serverdata );
 	BF_WriteLong( &buf, PROTOCOL_VERSION );
 	BF_WriteLong( &buf, cl.servercount );
-	BF_WriteByte( &buf, cl.playernum );
+	BF_WriteLong( &buf, cl.checksum );
+	BF_WriteByte( &buf, cl.playernum|( cl.spectator ? 128 : 0 ));
 	BF_WriteByte( &buf, cl.maxclients );
 	BF_WriteWord( &buf, clgame.maxEntities );
 	BF_WriteString( &buf, clgame.mapname );
 	BF_WriteString( &buf, clgame.maptitle );
+	BF_WriteOneBit( &buf, cl.background );
+	BF_WriteString( &buf, GI->gamefolder );
 
-	// user messages
-	for( i = 0; i < MAX_USER_MESSAGES; i++ )
+	// write modellist
+	for( i = 0; i < MAX_MODELS; i++ )
 	{
-		if( clgame.msg[i].name[0] && clgame.msg[i].number >= svc_lastmsg )
+		if( cl.model_precache[i][0] )
 		{
-			BF_WriteByte( &buf, svc_usermessage );
-			BF_WriteString( &buf, clgame.msg[i].name );
-			BF_WriteByte( &buf, clgame.msg[i].number );
-			BF_WriteByte( &buf, (byte)clgame.msg[i].size );
+			BF_WriteByte( &buf, svc_modelindex );
+			BF_WriteUBitLong( &buf, i, MAX_MODEL_BITS );
+			BF_WriteString( &buf, cl.model_precache[i] );
 
 			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
 			{	
@@ -119,7 +122,87 @@ void CL_WriteDemoHeader( const char *name )
 				BF_Clear( &buf );
 			}
 		}
+	}
 
+	// write soundlist
+	for( i = 0; i < MAX_SOUNDS; i++ )
+	{
+		if( cl.sound_precache[i][0] )
+		{
+			BF_WriteByte( &buf, svc_soundindex );
+			BF_WriteUBitLong( &buf, i, MAX_SOUND_BITS );
+			BF_WriteString( &buf, cl.sound_precache[i] );
+
+			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
+			{	
+				// write it out
+				len = BF_GetNumBytesWritten( &buf );
+				FS_Write( cls.demofile, &len, 4 );
+				FS_Write( cls.demofile, BF_GetData( &buf ), len );
+				BF_Clear( &buf );
+			}
+		}
+	}
+
+	// write eventlist
+	for( i = 0; i < MAX_EVENTS; i++ )
+	{
+		if( cl.event_precache[i][0] )
+		{
+			BF_WriteByte( &buf, svc_eventindex );
+			BF_WriteUBitLong( &buf, i, MAX_EVENT_BITS );
+			BF_WriteString( &buf, cl.event_precache[i] );
+
+			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
+			{	
+				// write it out
+				len = BF_GetNumBytesWritten( &buf );
+				FS_Write( cls.demofile, &len, 4 );
+				FS_Write( cls.demofile, BF_GetData( &buf ), len );
+				BF_Clear( &buf );
+			}
+		}
+	}
+
+	// write lightstyles
+	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
+	{
+		if( cl.lightstyles[i].pattern[0] )
+		{
+			BF_WriteByte( &buf, svc_lightstyle );
+			BF_WriteByte( &buf, i );
+			BF_WriteString( &buf, cl.lightstyles[i].pattern );
+
+			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
+			{	
+				// write it out
+				len = BF_GetNumBytesWritten( &buf );
+				FS_Write( cls.demofile, &len, 4 );
+				FS_Write( cls.demofile, BF_GetData( &buf ), len );
+				BF_Clear( &buf );
+			}
+		}
+	}
+
+	// user messages
+	for( i = 0; i < MAX_USER_MESSAGES; i++ )
+	{
+		if( clgame.msg[i].name[0] && clgame.msg[i].number >= svc_lastmsg )
+		{
+			BF_WriteByte( &buf, svc_usermessage );
+			BF_WriteByte( &buf, clgame.msg[i].number );
+			BF_WriteByte( &buf, (byte)clgame.msg[i].size );
+			BF_WriteString( &buf, clgame.msg[i].name );
+
+			if( BF_GetNumBytesWritten( &buf ) > ( BF_GetMaxBytes( &buf ) / 2 ))
+			{	
+				// write it out
+				len = BF_GetNumBytesWritten( &buf );
+				FS_Write( cls.demofile, &len, 4 );
+				FS_Write( cls.demofile, BF_GetData( &buf ), len );
+				BF_Clear( &buf );
+			}
+		}
 	}
 
 	// delta tables
@@ -199,6 +282,15 @@ void CL_WriteDemoHeader( const char *name )
 	// force client.dll update
 	Cmd_ExecuteString( "cmd fullupdate\n", src_command );
 	if( clgame.hInstance ) clgame.dllFuncs.pfnReset();
+
+	cl.validsequence = 0;		// haven't gotten a valid frame update yet
+	cl.delta_sequence = -1;		// we'll request a full delta from the baseline
+	cls.lastoutgoingcommand = -1;		// we don't have a backed up cmd history yet
+	cls.nextcmdtime = host.realtime;	// we can send a cmd right away
+
+	// FIXME: current demo implementation is completely wrong
+	// it's support only uncompressed demos at he moment
+	Cvar_SetFloat( "cl_nodelta", 1.0f );
 }
 
 /*
@@ -379,6 +471,11 @@ void CL_StopRecord( void )
 	cls.demorecording = false;
 	cls.demoname[0] = '\0';
 	menu.globals->demoname[0] = '\0';
+
+	// FIXME: current demo implementation is completely wrong
+	// it's support only uncompressed demos at he moment
+	// enable delta-compression here at end of the demo record
+	Cvar_SetFloat( "cl_nodelta", 0.0f );
 }
 
 /* 
@@ -449,7 +546,8 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 	}
 
 	BF_ReadLong( &buf ); // server count
-	BF_ReadByte( &buf );// playernum
+	BF_ReadLong( &buf ); // checksum
+	BF_ReadByte( &buf ); // playernum
 	maxClients = BF_ReadByte( &buf );
 	if( BF_ReadWord( &buf ) > GI->max_edicts )
 	{
@@ -573,6 +671,7 @@ playdemo <demoname>
 void CL_PlayDemo_f( void )
 {
 	string	filename;
+	string	demoname;
 
 	if( Cmd_Argc() != 2 )
 	{
@@ -580,11 +679,13 @@ void CL_PlayDemo_f( void )
 		return;
 	}
 
+	Q_strncpy( demoname, Cmd_Argv( 1 ), sizeof( demoname ) - 1 );
+
 	// shutdown any game or cinematic server
 	CL_Disconnect();
 	Host_ShutdownServer();
 
-	Q_snprintf( filename, sizeof( filename ), "demos/%s.dem", Cmd_Argv( 1 ));
+	Q_snprintf( filename, sizeof( filename ), "demos/%s.dem", demoname );
 	if( !FS_FileExists( filename, true ))
 	{
 		MsgDev( D_ERROR, "couldn't open %s\n", filename );
@@ -593,15 +694,15 @@ void CL_PlayDemo_f( void )
 	}
 
 	cls.demofile = FS_Open( filename, "rb", true );
-	Q_strncpy( cls.demoname, Cmd_Argv( 1 ), sizeof( cls.demoname ));
-	Q_strncpy( menu.globals->demoname, Cmd_Argv( 1 ), sizeof( menu.globals->demoname ));
+	Q_strncpy( cls.demoname, demoname, sizeof( cls.demoname ));
+	Q_strncpy( menu.globals->demoname, demoname, sizeof( menu.globals->demoname ));
 
 	Con_Close();
 	UI_SetActiveMenu( false );
 
 	cls.demoplayback = true;
 	cls.state = ca_connected;
-	Q_strncpy( cls.servername, Cmd_Argv( 1 ), sizeof( cls.servername ));
+	Q_strncpy( cls.servername, demoname, sizeof( cls.servername ));
 
 	// begin a playback demo
 }

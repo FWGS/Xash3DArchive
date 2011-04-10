@@ -1360,6 +1360,7 @@ void CL_SparkEffect( const vec3_t pos, int count, int velocityMin, int velocityM
 {
 	vec3_t	m_vecDir;
 	model_t	*pmodel;
+	float	vel;
 	int	i;
 
 	pmodel = Mod_Handle( CL_FindModelIndex( "sprites/richo1.spr" ));
@@ -1370,9 +1371,9 @@ void CL_SparkEffect( const vec3_t pos, int count, int velocityMin, int velocityM
 		m_vecDir[0] = Com_RandomFloat( velocityMin, velocityMax );
 		m_vecDir[1] = Com_RandomFloat( velocityMin, velocityMax );
 		m_vecDir[2] = Com_RandomFloat( velocityMin, velocityMax );
-		VectorNormalize( m_vecDir );
+		vel = VectorNormalizeLength( m_vecDir );
 
-		CL_SparkleTracer( pos, m_vecDir );
+		CL_SparkleTracer( pos, m_vecDir, vel );
 	}
 }
 
@@ -1408,23 +1409,36 @@ Create a sparks like streaks
 */
 void CL_SparkStreaks( const vec3_t pos, int count, int velocityMin, int velocityMax )
 {
-	int	i;
-	vec3_t	dir;
-	float	speed = Com_RandomFloat( SPARK_ELECTRIC_MINSPEED, SPARK_ELECTRIC_MAXSPEED );
-
-	dir[0] = Com_RandomFloat( -1.0f, 1.0f );
-	dir[1] = Com_RandomFloat( -1.0f, 1.0f );
-	dir[2] = Com_RandomFloat( -1.0f, 1.0f );
+	particle_t	*p;
+	float		speed;
+	int		i, j;
 
 	for( i = 0; i < count; i++ )
 	{
 		vec3_t	vel;
 
-		vel[0] = (dir[0] * speed) + Com_RandomFloat( velocityMin, velocityMax );
-		vel[1] = (dir[1] * speed) + Com_RandomFloat( velocityMin, velocityMax );
-		vel[2] = (dir[2] * speed) + Com_RandomFloat( velocityMin, velocityMax );
+		vel[0] = Com_RandomFloat( velocityMin, velocityMax );
+		vel[1] = Com_RandomFloat( velocityMin, velocityMax );
+		vel[2] = Com_RandomFloat( velocityMin, velocityMax );
+		speed = VectorNormalizeLength( vel );
 
-		CL_SparkleTracer( pos, vel );
+		CL_SparkleTracer( pos, vel, speed );
+	}
+
+	for( i = 0; i < 12; i++ )
+	{
+		p = CL_AllocParticle( NULL );
+		if( !p ) return;
+            
+		p->die += 1.0f;
+		p->color = 0; // black
+
+		p->type = pt_grav;
+		for( j = 0; j < 3; j++ )
+		{
+			p->org[j] = pos[j] + Com_RandomFloat( -2.0f, 3.0f );
+			p->vel[j] = Com_RandomFloat( velocityMin, velocityMax );
+		}
 	}
 }
 
@@ -1979,6 +1993,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		decalIndex = BF_ReadByte( &buf );
 		pEnt = CL_GetEntityByIndex( entityIndex );
 		CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, 0, pos, 0 );
+		CL_BulletImpactParticles( pos );
 		CL_RicochetSound( pos );
 		break;
 	case TE_SPRAY:

@@ -8,6 +8,7 @@ Client: add commandline option "-nointro" to skip start movies
 Pmove: add sv_clienttrace that shared across network
 Render: implement "envshot" and "skyshot" commands for make cubemaps or skyboxes
 Server: fix remote connection (rcon)
+Render: add glare reduction option in menu
 
 build 1516
 

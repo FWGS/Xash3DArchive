@@ -268,7 +268,7 @@ usercmd_t CL_CreateCmd( void )
 	// because is potential backdoor for cheating
 	cmd.msec = ms;
 
-	if( cl.background || cl.refdef.intermission )
+	if( cl.background || cl.refdef.intermission || cls.demoplayback )
 	{
 		VectorCopy( angles, cl.refdef.cl_viewangles );
 		VectorCopy( angles, cmd.viewangles );
@@ -1016,7 +1016,7 @@ void CL_PrepVideo( void )
 	SCR_UpdateScreen();
 
 	// make sure what map is valid
-	if( map_checksum != cl.checksum )
+	if( !cls.demoplayback && map_checksum != cl.checksum )
 		Host_Error( "Local map version differs from server: %i != '%i'\n", map_checksum, cl.checksum );
 
 	for( i = 0, mdlcount = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )

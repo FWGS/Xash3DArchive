@@ -42,7 +42,7 @@ void V_SetupRefDef( void )
 	cl.refdef.smoothing = cl_smooth->integer;
 	cl.refdef.waterlevel = cl.frame.local.client.waterlevel;		
 	cl.refdef.onlyClientDraw = 0;	// reset clientdraw
-	cl.refdef.viewsize = 120;	// probably was 'scr_viewsize' or somewhat
+	cl.refdef.viewsize = scr_viewsize->integer;
 	cl.refdef.hardware = true;	// always true
 	cl.refdef.spectator = cl.spectator;
 	cl.refdef.nextView = 0;

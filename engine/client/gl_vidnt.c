@@ -52,6 +52,7 @@ convar_t	*r_lighting_ambient;
 convar_t	*r_faceplanecull;
 convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
+convar_t	*r_flaresize;
 convar_t	*r_lefthand;
 convar_t	*r_decals;
 convar_t	*r_novis;
@@ -69,7 +70,7 @@ convar_t	*vid_fullscreen;
 convar_t	*vid_gamma;
 convar_t	*vid_mode;
 
-byte	*r_temppool;
+byte		*r_temppool;
 
 ref_globals_t	tr;
 glconfig_t	glConfig;
@@ -956,7 +957,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	int		exstyle = WINDOW_EX_STYLE;
 	static string	wndname;
 	
-	Q_snprintf( wndname, sizeof( wndname ), "%s", GI->title );
+	Q_strncpy( wndname, GI->title, sizeof( wndname ) - 1 );
 
 	// register the frame class
 	wc.style         = CS_OWNDC|CS_NOCLOSE;
@@ -1029,8 +1030,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 	CreateWindowEx( exstyle, WINDOW_NAME, wndname, stylebits, x, y, w, h, NULL, NULL, host.hInst, NULL );
 
-	// host.hWnd will be filled in IN_WndProc
-
+	// host.hWnd must be filled in IN_WndProc
 	if( !host.hWnd ) 
 	{
 		MsgDev( D_ERROR, "VID_CreateWindow: couldn't create '%s'\n", wndname );
@@ -1408,6 +1408,7 @@ void GL_InitCommands( void )
 	r_shadows = Cvar_Get( "r_shadows", "0", CVAR_ARCHIVE, "enable model shadows" );
 	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
 	r_drawentities = Cvar_Get( "r_drawentities", "1", CVAR_CHEAT|CVAR_ARCHIVE, "render entities" );
+	r_flaresize = Cvar_Get( "r_flaresize", "200", CVAR_ARCHIVE, "set flares size" );
 	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
 	r_decals = Cvar_Get( "r_decals", "4096", CVAR_ARCHIVE, "sets the maximum number of decals" );
 	r_xpos = Cvar_Get( "r_xpos", "130", CVAR_GLCONFIG, "window position by horizontal" );
@@ -1437,6 +1438,7 @@ void GL_InitCommands( void )
 
 	// these cvar not used by engine but some mods requires this
 	Cvar_Get( "gl_polyoffset", "-0.1", 0, "polygon offset for decals" );
+	Cvar_Get( "gl_wireframe", "0", 0, "show wireframe overlay" );
  
 	// make sure r_swapinterval is checked after vid_restart
 	gl_swapInterval->modified = true;

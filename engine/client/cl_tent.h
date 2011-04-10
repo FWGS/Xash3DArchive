@@ -28,7 +28,7 @@ void CL_TeleportSplash( const vec3_t org );
 void CL_RocketTrail( vec3_t start, vec3_t end, int type );
 short CL_LookupColor( byte r, byte g, byte b );
 void CL_GetPackedColor( short *packed, short color );
-void CL_SparkleTracer( const vec3_t pos, const vec3_t dir );
+void CL_SparkleTracer( const vec3_t pos, const vec3_t dir, float vel );
 void CL_StreakTracer( const vec3_t pos, const vec3_t velocity, int colorIndex );
 void CL_TracerEffect( const vec3_t start, const vec3_t end );
 void CL_UserTracerParticle( float *org, float *vel, float life, int colorIndex, float length, byte deathcontext, void (*deathfunc)( struct particle_s* ));

@@ -501,7 +501,7 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pfnIgnore pmFilter )
 	float	*maxs = pmove->player_maxs[pmove->usehull];
 	vec3_t	offset, pos_l;
 	int	i;
-   
+
 	for( i = 0; i < pmove->numphysent; i++ )
 	{
 
@@ -514,6 +514,10 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pfnIgnore pmFilter )
 			continue;
 
 		// FIXME: check studiomodels with flag 512 by each hitbox ?
+		// we ignore it for now
+		if( pe->studiomodel && pe->studiomodel->flags & STUDIO_TRACE_HITBOX )
+			continue;
+
 		hull = PM_HullForEntity( pe, mins, maxs, offset );
 
 		// offset the test point appropriately for this hull.

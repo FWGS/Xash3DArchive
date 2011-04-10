@@ -209,7 +209,7 @@ float VOX_ModifyPitch( channel_t *ch, float pitch )
 {
 	if( ch->currentWord )
 	{
-		if ( ch->words[ch->wordIndex].pitch > 0 )
+		if( ch->words[ch->wordIndex].pitch > 0 )
 		{
 			pitch += ( ch->words[ch->wordIndex].pitch - PITCH_NORM ) * 0.01f;
 		}
@@ -369,8 +369,8 @@ void VOX_FreeWord( channel_t *pchan )
 	pchan->currentWord = NULL; // sentence is finished
 	Q_memset( &pchan->pMixer, 0, sizeof( pchan->pMixer ));
 
-// UNDONE: add references to sources
-return;
+	// UNDONE: release unused sounds ?
+#if 0
 	if( pchan->words[pchan->wordIndex].sfx )
 	{
 		// If this wave wasn't precached by the game code
@@ -379,6 +379,7 @@ return;
 			S_FreeSound( pchan->words[pchan->wordIndex].sfx );
 		}
 	}
+#endif
 }
 
 void VOX_LoadFirstWord( channel_t *pchan, voxword_t *pwords )

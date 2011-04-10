@@ -735,9 +735,9 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int
 	brightness = 19000.0 / ( dist * dist );
 	brightness = bound( 0.01f, brightness, 1.0f );
 
-	// Make the glow fixed size in screen space, taking into consideration the scale setting.
+	// make the glow fixed size in screen space, taking into consideration the scale setting.
 	if( *pscale == 0.0f ) *pscale = 1.0f;
-	*pscale *= dist * ( 1.0f / 200.0f );
+	*pscale *= dist * ( 1.0f / bound( 100.0f, r_flaresize->value, 300.0f ));
 
 	return brightness;
 }
@@ -936,6 +936,8 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 		if( glState.drawTrans )
 			pglDepthMask( GL_TRUE );
+
+		// NOTE: sprites with 'lightmap' looks ugly when alpha func is GL_GREATER 0.0
 		pglAlphaFunc( GL_GEQUAL, 0.5f );
 	}
 

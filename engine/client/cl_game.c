@@ -85,7 +85,7 @@ Render callback for studio models
 */
 cl_entity_t *CL_GetEntityByIndex( int index )
 {
-	if( !clgame.entities )
+	if( !clgame.entities ) // not in game yet
 		return NULL;
 
 	if( index < 0 )
@@ -277,6 +277,7 @@ void CL_FadeAlpha( int starttime, int endtime, byte *alpha )
 		return;
 	}
 
+	// FIXME: rewrite this code with float values
 	time = (cl.time * 1000) - starttime;
 
 	if( time >= endtime )
@@ -770,6 +771,13 @@ int CL_GetMaxClients( void )
 	return cl.maxclients;
 }
 
+/*
+====================
+CL_DrawCrosshair
+
+Render crosshair
+====================
+*/
 void CL_DrawCrosshair( void )
 {
 	int		x, y, width, height;
@@ -900,13 +908,13 @@ void CL_DrawHUD( int state )
 		CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
-		clgame.dllFuncs.pfnRedraw( cl.time, false );
+		clgame.dllFuncs.pfnRedraw( cl.time, cl.refdef.intermission );
 		break;
 	case CL_PAUSED:
 		CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
-		clgame.dllFuncs.pfnRedraw( cl.time, false );
+		clgame.dllFuncs.pfnRedraw( cl.time, cl.refdef.intermission );
 		CL_DrawPause();
 		break;
 	case CL_LOADING:
@@ -1023,8 +1031,10 @@ word CL_EventIndex( const char *name )
 		return 0;
 
 	for( i = 1; i < MAX_EVENTS && cl.event_precache[i][0]; i++ )
+	{
 		if( !Q_stricmp( cl.event_precache[i], name ))
 			return i;
+	}
 	return 0;
 }
 
@@ -1229,10 +1239,9 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	flags |= FEV_CLIENT; // it's a client event
 	flags &= ~(FEV_NOTHOST|FEV_HOSTONLY|FEV_GLOBAL);
 
-	if( delay < 0.0f )
-		delay = 0.0f; // fixup negative delays
+	if( delay < 0.0f ) delay = 0.0f; // fixup negative delays
 
-	invokerIndex = cl.playernum + 1;
+	invokerIndex = cl.playernum + 1; // only local client can issue client events
 
 	args.flags = 0;
 	args.entindex = invokerIndex;
@@ -1556,7 +1565,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 
 	if( piCount ) *piCount = 0;
 
-	if( !clgame.itemspath[0] )
+	if( !clgame.itemspath[0] )	// typically it's sprites\*.txt
 		FS_ExtractFilePath( psz, clgame.itemspath );
 
 	afile = FS_LoadFile( psz, NULL, false );
@@ -1566,8 +1575,8 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	pfile = COM_ParseFile( pfile, token );          
 	numSprites = Q_atoi( token );
 
-	if( !cl.video_prepped ) pool = cls.mempool;
-	else pool = com_studiocache; // temporary
+	if( !cl.video_prepped ) pool = cls.mempool;	// static memory
+	else pool = com_studiocache;			// temporary
 
 	// name, res, pic, x, y, w, h
 	// NOTE: we must use com_studiocache because it will be purge on next restart or change map
@@ -1683,7 +1692,7 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 =============
 pfnSetCrosshair
 
-setup auto-aim crosshair
+setup crosshair
 =============
 */
 static void pfnSetCrosshair( HSPRITE hspr, wrect_t rc, int r, int g, int b )
@@ -2051,6 +2060,7 @@ static int pfnCheckParm( char *parm, char **ppnext )
 =============
 pfnGetMousePosition
 
+FIXME: apply ScreenToClient here ?
 =============
 */
 static void pfnGetMousePosition( int *mx, int *my )
@@ -2086,27 +2096,6 @@ pfnGetViewModel
 static cl_entity_t* pfnGetViewModel( void )
 {
 	return &clgame.viewent;
-}
-
-/*
-=============
-pfnGetEntityByIndex
-
-Client.dll safe version
-=============
-*/
-static cl_entity_t *pfnGetEntityByIndex( int index )
-{
-	if( !clgame.entities )
-		return NULL;
-
-	if( index < 0 )
-		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
-
-	if( index >= clgame.maxEntities )
-		return NULL;
-
-	return CL_EDICT_NUM( index );
 }
 
 /*
@@ -2332,17 +2321,6 @@ void pfnPlaySound( int ent, float *org, int chan, const char *samp, float vol, f
 
 /*
 =============
-pfnStopSound
-
-=============
-*/
-void pfnStopSound( int ent, int channel, const char *sample )
-{
-	S_StopSound( ent, channel, sample );
-}
-
-/*
-=============
 CL_FindModelIndex
 
 =============
@@ -2538,17 +2516,6 @@ void pfnStopAllSounds( int ent, int entchannel )
 
 /*
 =============
-pfnBoxVisible
-
-=============
-*/
-static qboolean pfnBoxVisible( const vec3_t mins, const vec3_t maxs )
-{
-	return Mod_BoxVisible( mins, maxs, Mod_GetCurrentVis( ));
-}
-
-/*
-=============
 CL_LoadModel
 
 =============
@@ -2720,6 +2687,10 @@ PlayerInfo_SetValueForKey
 void PlayerInfo_SetValueForKey( const char *key, const char *value )
 {
 	// TODO: implement
+
+	// NOTE: Xash3D doesn't have local userinfo. It build when changed from cvars with flag CVAR_USERINFO.
+	// should we search for cvar here and change it?
+	MsgDev( D_INFO, "SetInfo: %s %s\n", key, value );
 }
 
 /*
@@ -2731,6 +2702,8 @@ pfnGetPlayerUniqueID
 qboolean pfnGetPlayerUniqueID( int iPlayer, char playerID[16] )
 {
 	// TODO: implement
+
+	playerID[0] = '\0';
 	return false;
 }
 
@@ -2836,8 +2809,9 @@ void pfnSetMouseEnable( qboolean fEnable )
 
 /*
 ===============================================================================
-	EffectsAPI Builtin Functions
+		EffectsAPI Builtin Functions
 
+	     this interface is legacy from old Xash3D ...
 ===============================================================================
 */
 /*
@@ -3464,7 +3438,7 @@ static event_api_t gEventApi =
 {
 	EVENT_API_VERSION,
 	pfnPlaySound,
-	pfnStopSound,
+	S_StopSound,
 	CL_FindModelIndex,
 	pfnIsLocal,
 	pfnLocalPlayerDucking,
@@ -3573,7 +3547,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnIsNoClipping,
 	CL_GetLocalPlayer,
 	pfnGetViewModel,
-	pfnGetEntityByIndex,
+	CL_GetEntityByIndex,
 	pfnGetClientTime,
 	pfnCalcShake,
 	pfnApplyShake,
@@ -3707,6 +3681,7 @@ qboolean CL_LoadProgs( const char *name )
 		return false;
 	}
 
+	Cvar_Get( "cl_nopred", "1", CVAR_ARCHIVE|CVAR_USERINFO, "disable client movement predicting" );
 	Cvar_Get( "cl_lw", "1", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 
 	clgame.maxEntities = GI->max_edicts; // merge during loading

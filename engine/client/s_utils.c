@@ -28,7 +28,6 @@ float S_SimpleSpline( float value )
 	return (3 * valueSquared - 2 * valueSquared * value);
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Search backward for a zero crossing starting at sample
 // Input  : sample - starting point
