@@ -897,6 +897,12 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 		return 0;
 	}
 
+	// get rid of black vertical line on a 'BlackMesa map'
+	if( !Q_strcmp( name, "#lab1_map1.mip" ) || !Q_strcmp( name, "#lab1_map2.mip" ))
+	{
+		flags |= TF_NEAREST;
+	}
+
 	// see if already loaded
 	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
 

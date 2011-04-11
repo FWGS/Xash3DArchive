@@ -355,8 +355,6 @@ cvar_t *pfnCVarGetPointer( const char *szVarName )
 
 	cvPtr = (cvar_t *)Cvar_FindVar( szVarName );
 
-	Msg( "GetCVarPointer: %s - %s\n", szVarName, cvPtr != NULL ? "^2done" : "^1fail" );
-
 	return cvPtr;
 }
 
