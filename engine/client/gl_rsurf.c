@@ -11,34 +11,23 @@
 
 typedef struct
 {
-	qboolean		lightmap_modified[MAX_LIGHTMAPS];
-	wrect_t		lightmap_rectchange[MAX_LIGHTMAPS];
-	uint		allocated[MAX_LIGHTMAPS][BLOCK_WIDTH];
-	byte		lightmaps[MAX_LIGHTMAPS*BLOCK_WIDTH*BLOCK_HEIGHT*4];
-} lightmap_state_t;
-
-typedef struct gl_light_s
-{
-	int	local[2];
-	int	minlight;	// rad - minlight
-	int	rad;
-} gl_light_t;
+	int		allocated[BLOCK_WIDTH];
+	int		current_lightmap_texture;
+	msurface_t	*dynamic_surfaces;
+	msurface_t	*lightmap_surfaces[MAX_LIGHTMAPS];
+	byte		lightmap_buffer[BLOCK_WIDTH*BLOCK_HEIGHT*4];
+} gllightmapstate_t;
 
 static vec3_t		modelorg;       // relative to viewpoint
 static vec3_t		modelmins;
 static vec3_t		modelmaxs;
 static byte		visbytes[MAX_MAP_LEAFS/8];
-static uint		r_blockLights[BLOCK_WIDTH*BLOCK_HEIGHT*3];
-static glpoly_t		*lightmap_polys[MAX_LIGHTMAPS];
+static uint		r_blocklights[BLOCK_WIDTH*BLOCK_HEIGHT*3];
 static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
-static lightmap_state_t	r_lmState;
+static gllightmapstate_t	gl_lms;
 static msurface_t		*skychain = NULL;
 
-static gl_light_t	r_dlights[MAX_DLIGHTS];
-static int	r_numdlights;
-
-static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride );
 static void LM_UploadBlock( int lightmapnum );
 
 byte *Mod_GetCurrentVis( void )
@@ -254,15 +243,15 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 		// lightmap texture coordinates
 		s = DotProduct( vec, fa->texinfo->vecs[0] ) + fa->texinfo->vecs[0][3];
 		s -= fa->texturemins[0];
-		s += fa->light_s * 16;
+		s += fa->light_s * LM_SAMPLE_SIZE;
 		s += 8;
-		s /= BLOCK_WIDTH * 16; //fa->texinfo->texture->width;
+		s /= BLOCK_WIDTH * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
 
 		t = DotProduct( vec, fa->texinfo->vecs[1] ) + fa->texinfo->vecs[1][3];
 		t -= fa->texturemins[1];
-		t += fa->light_t * 16;
+		t += fa->light_t * LM_SAMPLE_SIZE;
 		t += 8;
-		t /= BLOCK_HEIGHT * 16; //fa->texinfo->texture->height;
+		t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
 
 		poly->verts[i][5] = s;
 		poly->verts[i][6] = t;
@@ -305,6 +294,254 @@ texture_t *R_TextureAnimation( texture_t *base )
 		if( ++count > 100 ) Host_Error( "R_TextureAnimation: infinite loop\n" );
 	}
 	return base;
+}
+
+/*
+===============
+R_AddDynamicLights
+===============
+*/
+void R_AddDynamicLights( msurface_t *surf )
+{
+	float		dist, rad, minlight;
+	int		lnum, s, t, sd, td, smax, tmax;
+	float		sl, tl, sacc, tacc;
+	vec3_t		impact, origin_l;
+	mtexinfo_t	*tex;
+	dlight_t		*dl;
+	uint		*bl;
+
+	smax = (surf->extents[0] >> 4) + 1;
+	tmax = (surf->extents[1] >> 4) + 1;
+	tex = surf->texinfo;
+
+	for( lnum = 0; lnum < MAX_DLIGHTS; lnum++ )
+	{
+		if(!( surf->dlightbits & BIT( lnum )))
+			continue;	// not lit by this light
+
+		dl = &cl_dlights[lnum];
+
+		if( !tr.modelviewIdentity )
+		{
+			matrix4x4	imatrix;
+	
+			// transform light origin to local bmodel space
+			Matrix4x4_Invert_Simple( imatrix, RI.objectMatrix );
+			Matrix4x4_VectorTransform( imatrix, dl->origin, origin_l );
+		}
+		else VectorCopy( dl->origin, origin_l );
+
+		rad = dl->radius;
+		dist = PlaneDiff( origin_l, surf->plane );
+		rad -= fabs( dist );
+
+		// rad is now the highest intensity on the plane
+		minlight = dl->minlight;
+		if( rad < minlight )
+			continue;
+
+		minlight = rad - minlight;
+
+		if( surf->plane->type < 3 )
+		{
+			VectorCopy( origin_l, impact );
+			impact[surf->plane->type] -= dist;
+		}
+		else VectorMA( origin_l, -dist, surf->plane->normal, impact );
+
+		sl = DotProduct( impact, tex->vecs[0] ) + tex->vecs[0][3] - surf->texturemins[0];
+		tl = DotProduct( impact, tex->vecs[1] ) + tex->vecs[1][3] - surf->texturemins[1];
+
+		bl = r_blocklights;
+		for( t = 0, tacc = 0; t < tmax; t++, tacc += LM_SAMPLE_SIZE )
+		{
+			td = tl - tacc;
+			if( td < 0 ) td = -td;
+
+			for( s = 0, sacc = 0; s < smax; s++, sacc += LM_SAMPLE_SIZE, bl += 3 )
+			{
+				sd = sl - sacc;
+				if( sd < 0 ) sd = -sd;
+
+				if( sd > td ) dist = sd + (td >> 1);
+				else dist = td + (sd >> 1);
+
+				if( dist < minlight )
+				{
+					bl[0] += ( rad - dist ) * dl->color.r;
+					bl[1] += ( rad - dist ) * dl->color.g;
+					bl[2] += ( rad - dist ) * dl->color.b;
+				}
+			}
+		}
+	}
+}
+
+/*
+================
+R_SetCacheState
+================
+*/
+void R_SetCacheState( msurface_t *surf )
+{
+	int	maps;
+
+	for( maps = 0; maps < MAXLIGHTMAPS && surf->styles[maps] != 255; maps++ )
+	{
+		surf->cached_light[maps] = RI.lightstylevalue[surf->styles[maps]];
+	}
+}
+
+/*
+=============================================================================
+
+  LIGHTMAP ALLOCATION
+
+=============================================================================
+*/
+static void LM_InitBlock( void )
+{
+	Q_memset( gl_lms.allocated, 0, sizeof( gl_lms.allocated ));
+}
+
+static int LM_AllocBlock( int w, int h, int *x, int *y )
+{
+	int	i, j;
+	int	best, best2;
+
+	best = BLOCK_HEIGHT;
+
+	for( i = 0; i < BLOCK_WIDTH - w; i++ )
+	{
+		best2 = 0;
+
+		for( j = 0; j < w; j++ )
+		{
+			if( gl_lms.allocated[i+j] >= best )
+				break;
+			if( gl_lms.allocated[i+j] > best2 )
+				best2 = gl_lms.allocated[i+j];
+		}
+
+		if( j == w )
+		{	
+			// this is a valid spot
+			*x = i;
+			*y = best = best2;
+		}
+	}
+
+	if( best + h > BLOCK_HEIGHT )
+		return false;
+
+	for( i = 0; i < w; i++ )
+		gl_lms.allocated[*x + i] = best + h;
+
+	return true;
+}
+
+static void LM_UploadBlock( qboolean dynamic )
+{
+	int	i;
+
+	if( dynamic )
+	{
+		int	height = 0;
+
+		for( i = 0; i < BLOCK_WIDTH; i++ )
+		{
+			if( gl_lms.allocated[i] > height )
+				height = gl_lms.allocated[i];
+		}
+
+		GL_MBind( tr.dlightTexture );
+
+		pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_WIDTH, height, GL_RGBA, GL_UNSIGNED_BYTE,
+		gl_lms.lightmap_buffer );
+	}
+	else
+	{
+		rgbdata_t	r_lightmap;
+		char	lmName[16];
+
+		i = gl_lms.current_lightmap_texture;
+
+		// upload static lightmaps only during loading
+		Q_memset( &r_lightmap, 0, sizeof( r_lightmap ));
+		Q_snprintf( lmName, sizeof( lmName ), "*lightmap%i", i );
+
+		r_lightmap.width = BLOCK_WIDTH;
+		r_lightmap.height = BLOCK_HEIGHT;
+		r_lightmap.type = PF_RGBA_32;
+		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
+		r_lightmap.flags = ( world.version == Q1BSP_VERSION ) ? 0 : IMAGE_HAS_COLOR;
+		r_lightmap.buffer = gl_lms.lightmap_buffer;
+		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT|TF_LIGHTMAP, false );
+		GL_SetTextureType( tr.lightmapTextures[i], TEX_LIGHTMAP );
+
+		if( ++gl_lms.current_lightmap_texture == MAX_LIGHTMAPS )
+			Host_Error( "AllocBlock: full\n" );
+	}
+}
+
+/*
+=================
+R_BuildLightmap
+
+Combine and scale multiple lightmaps into the floating
+format in r_blocklights
+=================
+*/
+static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
+{
+	int	smax, tmax;
+	uint	*bl, scale;
+	int	i, map, size, s, t;
+	color24	*lm;
+
+	smax = ( surf->extents[0] >> 4 ) + 1;
+	tmax = ( surf->extents[1] >> 4 ) + 1;
+	size = smax * tmax;
+
+	lm = surf->samples;
+
+	Q_memset( r_blocklights, 0, sizeof( uint ) * size * 3 );
+
+	// add all the lightmaps
+	for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255 && lm; map++ )
+	{
+		scale = RI.lightstylevalue[surf->styles[map]];
+
+		for( i = 0, bl = r_blocklights; i < size; i++, bl += 3, lm++ )
+		{
+			bl[0] += lm->r * scale;
+			bl[1] += lm->g * scale;
+			bl[2] += lm->b * scale;
+		}
+	}
+
+	// add all the dynamic lights
+	if( surf->dlightframe == tr.framecount )
+		R_AddDynamicLights( surf );
+
+	// Put into texture format
+	stride -= (smax << 2);
+	bl = r_blocklights;
+
+	for( t = 0; t < tmax; t++, dest += stride )
+	{
+		for( s = 0; s < smax; s++ )
+		{
+			dest[0] = min((bl[0] >> 7), 255 );
+			dest[1] = min((bl[1] >> 7), 255 );
+			dest[2] = min((bl[2] >> 7), 255 );
+			dest[3] = 255;
+
+			bl += 3;
+			dest += 4;
+		}
+	}
 }
 
 /*
@@ -364,14 +601,46 @@ void DrawGLPoly( glpoly_t *p )
 
 /*
 ================
+DrawGLPolyChain
+
+Render lightmaps
+================
+*/
+void DrawGLPolyChain( glpoly_t *p, float soffset, float toffset )
+{
+	qboolean	dynamic = true;
+
+	if( soffset == 0.0f && toffset == 0.0f )
+		dynamic = false;
+
+	for( ; p != NULL; p = p->chain )
+	{
+		float	*v;
+		int	i;
+
+		pglBegin( GL_POLYGON );
+
+		v = p->verts[0];
+		for( i = 0; i < p->numverts; i++, v += VERTEXSIZE )
+		{
+			if( !dynamic ) pglTexCoord2f( v[5], v[6] );
+			else pglTexCoord2f( v[5] - soffset, v[6] - toffset );
+			pglVertex3fv( v );
+		}
+		pglEnd ();
+	}
+}
+
+/*
+================
 R_BlendLightmaps
 ================
 */
 void R_BlendLightmaps( void )
 {
-	int	i, j;
-	glpoly_t	*p;
-	float	*v;
+	msurface_t	*surf, *newsurf = NULL;
+	mextrasurf_t	*info;
+	int		i;
 
 	if( r_fullbright->integer || !cl.worldmodel->lightdata )
 		return;
@@ -400,26 +669,96 @@ void R_BlendLightmaps( void )
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	}
 
+	// render static lightmaps first
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
 	{
-		p = lightmap_polys[i];
-		if( !p ) continue;
-
-		GL_Bind( GL_TEXTURE0, tr.lightmapTextures[i] );
-		if( r_lmState.lightmap_modified[i] )
-			LM_UploadBlock( i );
-
-		for( ; p; p = p->chain )
+		if( gl_lms.lightmap_surfaces[i] )
 		{
-			pglBegin( GL_POLYGON );
+			GL_MBind( tr.lightmapTextures[i] );
 
-			v = p->verts[0];
-			for( j = 0; j < p->numverts; j++, v += VERTEXSIZE )
+			for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->lightmapchain )
 			{
-				pglTexCoord2f( v[5], v[6] );
-				pglVertex3fv( v );
+				if( surf->polys ) DrawGLPolyChain( surf->polys, 0.0f, 0.0f );
 			}
-			pglEnd();
+		}
+	}
+
+	// render dynamic lightmaps
+	if( r_dynamic->integer )
+	{
+		LM_InitBlock();
+
+		GL_MBind( tr.dlightTexture );
+
+		newsurf = gl_lms.dynamic_surfaces;
+
+		for( surf = gl_lms.dynamic_surfaces; surf != NULL; surf = surf->lightmapchain )
+		{
+			int	smax, tmax;
+			byte	*base;
+
+			smax = ( surf->extents[0] >> 4 ) + 1;
+			tmax = ( surf->extents[1] >> 4 ) + 1;
+			info = SURF_INFO( surf, RI.currentmodel );
+
+			if( LM_AllocBlock( smax, tmax, &info->dlight_s, &info->dlight_t ))
+			{
+				base = gl_lms.lightmap_buffer;
+				base += ( info->dlight_t * BLOCK_WIDTH + info->dlight_s ) * 4;
+
+				R_BuildLightMap( surf, base, BLOCK_WIDTH * 4 );
+			}
+			else
+			{
+				msurface_t	*drawsurf;
+
+				// upload what we have so far
+				LM_UploadBlock( true );
+
+				// draw all surfaces that use this lightmap
+				for( drawsurf = newsurf; drawsurf != surf; drawsurf = drawsurf->lightmapchain )
+				{
+					if( drawsurf->polys )
+					{
+						info = SURF_INFO( drawsurf, RI.currentmodel );
+
+						DrawGLPolyChain( drawsurf->polys,
+						( drawsurf->light_s - info->dlight_s ) * ( 1.0f / 128.0f ), 
+						( drawsurf->light_t - info->dlight_t ) * ( 1.0f / 128.0f ));
+					}
+				}
+
+				newsurf = drawsurf;
+
+				// clear the block
+				LM_InitBlock();
+
+				info = SURF_INFO( surf, RI.currentmodel );
+
+				// try uploading the block now
+				if( !LM_AllocBlock( smax, tmax, &info->dlight_s, &info->dlight_t ) )
+					Host_Error( "AllocBlock: full\n" );
+
+				base = gl_lms.lightmap_buffer;
+				base += ( info->dlight_t * BLOCK_WIDTH + info->dlight_s ) * 4;
+
+				R_BuildLightMap( surf, base, BLOCK_WIDTH * 4 );
+			}
+		}
+
+		// draw remainder of dynamic lightmaps that haven't been uploaded yet
+		if( newsurf ) LM_UploadBlock( true );
+
+		for( surf = newsurf; surf != NULL; surf = surf->lightmapchain )
+		{
+			if( surf->polys )
+			{
+				info = SURF_INFO( surf, RI.currentmodel );
+
+				DrawGLPolyChain( surf->polys,
+				( surf->light_s - info->dlight_s ) * ( 1.0f / 128.0f ),
+				( surf->light_t - info->dlight_t ) * ( 1.0f / 128.0f ));
+			}
 		}
 	}
 
@@ -477,166 +816,6 @@ void R_RenderFullbrights( void )
 }
 
 /*
-===============
-R_BuildDlights
-===============
-*/
-void R_BuildDlights( msurface_t *surf )
-{
-	float		dist;
-	vec3_t		impact;
-	int		lnum, smax, tmax;
-	int		tdmin, sdmin, distmin;
-	int		irad, iminlight, local[2];
-	vec3_t		origin_l;
-	matrix4x4		imatrix;
-	gl_light_t	*light;
-	mtexinfo_t	*tex;
-	dlight_t		*dl;
-
-	r_numdlights = 0;
-
-	smax = ( surf->extents[0] >> 4 ) + 1;
-	tmax = ( surf->extents[1] >> 4 ) + 1;
-	tex = surf->texinfo;
-
-	for( lnum = 0; lnum < MAX_DLIGHTS; lnum++ )
-	{
-		if(!( surf->dlightbits & ( 1<<lnum )))
-			continue;	// not lit by this light
-
-		dl = &cl_dlights[lnum];
-
-		if( !tr.modelviewIdentity )
-		{
-			// transform light origin to local bmodel space
-			Matrix4x4_Invert_Simple( imatrix, RI.objectMatrix );
-			Matrix4x4_VectorTransform( imatrix, dl->origin, origin_l );
-		}
-		else VectorCopy( dl->origin, origin_l );
-
-		dist = PlaneDiff( origin_l, surf->plane );
-		irad = ( dl->radius - fabs( dist )) * 256;
-		iminlight = dl->minlight * 256;
-		if( irad < iminlight ) continue;
-
-		iminlight = irad - iminlight;
-
-		VectorMA( origin_l, -dist, surf->plane->normal, impact );
-                    
-		local[0] = DotProduct( impact, tex->vecs[0] ) + tex->vecs[0][3] - surf->texturemins[0];
-		local[1] = DotProduct( impact, tex->vecs[1] ) + tex->vecs[1][3] - surf->texturemins[1];
-
-		// check if this dlight will touch the surface
-		if( local[1] > 0 )
-		{
-			tdmin = local[1] - (tmax << 4);
-			if( tdmin < 0 ) tdmin = 0;
-		}
-		else
-		{
-			tdmin = -local[1];
-		}
-
-		if( local[0] > 0 )
-		{
-			sdmin = local[0] - (smax << 4);
-			if( sdmin < 0 ) sdmin = 0;
-		}
-		else
-		{
-			sdmin = -local[0];
-		}
-
-		distmin = (sdmin > tdmin) ? (sdmin << 8) + (tdmin << 7) : (tdmin << 8) + (sdmin << 7);
-
-		if( distmin < iminlight )
-		{
-			// save dlight info
-			light = &r_dlights[r_numdlights];
-			light->minlight = iminlight;
-			light->local[0] = local[0];
-			light->local[1] = local[1];
-			light->rad = irad;
-			r_numdlights++;
-		}
-	}
-}
-
-/*
-================
-R_RenderDynamicLightmaps
-================
-*/
-void R_RenderDynamicLightmaps( msurface_t *fa )
-{
-	byte	*base;
-	wrect_t	*rect;
-	uint	scale;
-	qboolean	lightstyle_modified = false;
-	int	maps, smax, tmax;
-
-	if( !cl.worldmodel->lightdata ) return;
-	if( fa->flags & SURF_DRAWTILED )
-		return;
-		
-	fa->polys->chain = lightmap_polys[fa->lightmaptexturenum];
-	lightmap_polys[fa->lightmaptexturenum] = fa->polys;
-
-	if( !r_dynamic->integer )
-		return;
-
-	// check for lightmap modification
-	for( maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++ )
-	{
-		scale = RI.lightstylevalue[fa->styles[maps]];
-
-		if( scale != fa->cached_light[maps] )
-		{
-			lightstyle_modified = true;
-			break;
-		}
-	}
-
-	if( fa->dlightframe == tr.framecount )
-		R_BuildDlights( fa );
-	else r_numdlights = 0;
-
-	if( !r_numdlights && !fa->cached_dlight && !lightstyle_modified )
-		return;
-
-	r_lmState.lightmap_modified[fa->lightmaptexturenum] = true;
-	rect = &r_lmState.lightmap_rectchange[fa->lightmaptexturenum];
-
-	if( fa->light_t < rect->right )
-	{
-		if( rect->bottom )
-			rect->bottom += rect->right - fa->light_t;
-		rect->right = fa->light_t;
-	}
-
-	if( fa->light_s < rect->left )
-	{
-		if( rect->top )
-			rect->top += rect->left - fa->light_s;
-		rect->left = fa->light_s;
-	}
-
-	smax = ( fa->extents[0] >> 4 ) + 1;
-	tmax = ( fa->extents[1] >> 4 ) + 1;
-
-	if(( rect->top + rect->left ) < ( fa->light_s + smax ))
-		rect->top = ( fa->light_s - rect->left ) + smax;
-
-	if(( rect->bottom + rect->right ) < ( fa->light_t + tmax ))
-		rect->bottom = ( fa->light_t - rect->right ) + tmax;
-
-	base = r_lmState.lightmaps + fa->lightmaptexturenum * BLOCK_WIDTH * BLOCK_HEIGHT * 4;
-	base += fa->light_t * BLOCK_WIDTH * 4 + fa->light_s * 4;
-	R_BuildLightMap( fa, base, BLOCK_WIDTH * 4 );
-}
-
-/*
 ================
 R_RenderBrushPoly
 ================
@@ -644,7 +823,9 @@ R_RenderBrushPoly
 void R_RenderBrushPoly( msurface_t *fa )
 {
 	texture_t	*t;
-
+	int	maps;
+	qboolean	is_dynamic = false;
+	
 	if( RI.currententity == clgame.entities )
 		r_stats.c_world_polys++;
 	else r_stats.c_brush_polys++; 
@@ -660,7 +841,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	}
 		
 	t = R_TextureAnimation( fa->texinfo->texture );
-	GL_Bind( GL_TEXTURE0, t->gl_texturenum );
+	GL_MBind( t->gl_texturenum );
 
 	if( fa->flags & SURF_DRAWTURB )
 	{	
@@ -680,69 +861,52 @@ void R_RenderBrushPoly( msurface_t *fa )
 	DrawGLPoly( fa->polys );
 	DrawSurfaceDecals( fa );
 
-	// add the poly to the proper lightmap chain
-	R_RenderDynamicLightmaps( fa );
-}
-
-/*
-===============
-R_AddDynamicLights
-===============
-*/
-void R_AddDynamicLights( msurface_t *surf )
-{
-	color24		color;
-	int		local[2];
-	int		i, sd, td, s, t, val;
-	int		irad, idist, iminlight;
-	int		smax, tmax, tmp;
-	gl_light_t	*light;
-	uint		*bl;
-
-	smax = (surf->extents[0] >> 4) + 1;
-	tmax = (surf->extents[1] >> 4) + 1;
-
-	for( i = 0, light = r_dlights; i < r_numdlights; i++, light++ )
+	// check for lightmap modification
+	for( maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++ )
 	{
-		color = cl_dlights[i].color;
-		iminlight = light->minlight;
-		irad = light->rad;
+		if( RI.lightstylevalue[fa->styles[maps]] != fa->cached_light[maps] )
+			goto dynamic;
+	}
 
-		local[1] = light->local[1];
-		bl = r_blockLights;
+	// dynamic this frame or dynamic previously
+	if(( fa->dlightframe == tr.framecount ))
+	{
+dynamic:
+		// NOTE: at this point we have only valid textures
+		if( r_dynamic->integer ) is_dynamic = true;
+	}
 
-		for( t = 0; t < tmax; t++ )
+	if( is_dynamic )
+	{
+		if(( fa->styles[maps] >= 32 || fa->styles[maps] == 0 ) && ( fa->dlightframe != tr.framecount ))
 		{
-			td = (local[1] < 0) ? -local[1] : local[1];
-			local[1] -= LM_SAMPLE_SIZE;
-			local[0] = light->local[0];
+			byte	temp[34*34*4];
+			int	smax, tmax;
 
-			for( s = 0; s < smax; s++ )
-			{
-				sd = (local[0] < 0) ? -local[0] : local[0];
-				local[0] -= LM_SAMPLE_SIZE;
-				idist = (sd > td) ? (sd << 8) + (td << 7) : (td << 8) + (sd << 7);
+			smax = ( fa->extents[0] >> 4 ) + 1;
+			tmax = ( fa->extents[1] >> 4 ) + 1;
 
-				if( idist < iminlight )
-				{
-					// g-cont. probably GoldSrc not used 'dark' mode
-					if( 0 )//cl_dlights[i].dark )
-						tmp = (idist - irad) >> 7;
-					else tmp = (irad - idist) >> 7;
+			R_BuildLightMap( fa, temp, smax * 4 );
+			R_SetCacheState( fa );
+                              
+			GL_MBind( tr.lightmapTextures[fa->lightmaptexturenum] );
 
-					// catch negative lights (for dark mode)
-					val = bl[0] + tmp * color.r;
-					bl[0] = max( 0, val );
+			pglTexSubImage2D( GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax,
+			GL_RGBA, GL_UNSIGNED_BYTE, temp );
 
-					val = bl[1] + tmp * color.g;
-					bl[1] = max( 0, val );
-
-					val = bl[2] + tmp * color.b;
-					bl[2] = max( 0, val );
-				}
-				bl += 3;
-			}
+			fa->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
+			gl_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
 		}
+		else
+		{
+			fa->lightmapchain = gl_lms.dynamic_surfaces;
+			gl_lms.dynamic_surfaces = fa;
+		}
+	}
+	else
+	{
+		fa->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
+		gl_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
 	}
 }
 
@@ -985,7 +1149,8 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( R_CullBox( mins, maxs, RI.clipFlags ))
 		return;
 
-	Q_memset( lightmap_polys, 0, sizeof( lightmap_polys ));
+	Q_memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
+	gl_lms.dynamic_surfaces = NULL;
 
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
@@ -1273,10 +1438,11 @@ void R_DrawWorld( void )
 	RI.currentmodel = RI.currententity->model;
 
 	VectorCopy( RI.cullorigin, modelorg );
-	Q_memset( lightmap_polys, 0, sizeof( lightmap_polys ));
+	Q_memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
 	Q_memset( fullbright_polys, 0, sizeof( fullbright_polys ));
 	RI.currentWaveHeight = RI.waveHeight;
 	GL_SetRenderMode( kRenderNormal );
+	gl_lms.dynamic_surfaces = NULL;
 
 	R_ClearSkyBox ();
 
@@ -1364,138 +1530,6 @@ void R_MarkLeaves( void )
 }
 
 /*
-=============================================================================
-
-  LIGHTMAP ALLOCATION
-
-=============================================================================
-*/
-static void LM_InitBlock( void )
-{
-	Q_memset( r_lmState.allocated, 0, sizeof( r_lmState.allocated ));
-}
-
-static int LM_AllocBlock( int w, int h, int *x, int *y )
-{
-	int	i, j, best, best2, texnum;
-
-	for( texnum = 0; texnum < MAX_LIGHTMAPS; texnum++ )
-	{
-		best = BLOCK_HEIGHT;
-
-		for( i = 0; i < BLOCK_WIDTH - w; i++ )
-		{
-			best2 = 0;
-
-			for( j = 0; j < w; j++ )
-			{
-				if( r_lmState.allocated[texnum][i+j] >= best )
-					break;
-				if( r_lmState.allocated[texnum][i+j] > best2 )
-					best2 = r_lmState.allocated[texnum][i+j];
-			}
-			if( j == w )
-			{	
-				// this is a valid spot
-				*x = i;
-				*y = best = best2;
-			}
-		}
-
-		if( best + h > BLOCK_HEIGHT )
-			continue;
-
-		for( i = 0; i < w; i++ )
-			r_lmState.allocated[texnum][*x+i] = best + h;
-
-		return texnum;
-	}
-
-	Host_Error( "AllocBlock: full\n" );
-
-	return 0;
-}
-
-/*
-===============
-R_BuildLightMap
-
-Combine and scale multiple lightmaps into the 8.8 format in blocklights
-===============
-*/
-static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
-{
-	int	smax, tmax, t, s, i;
-	int	size, map, blocksize;
-	uint	scale;
-	uint	*bl;
-	color24	*lm;
-
-	surf->cached_dlight = (r_numdlights > 0) ? true : false;
-
-	smax = (surf->extents[0] >> 4) + 1;
-	tmax = (surf->extents[1] >> 4) + 1;
-	size = smax * tmax;
-	blocksize = size * 3;
-	lm = surf->samples;
-
-	Q_memset( r_blockLights, 0, sizeof( uint ) * blocksize );
-
-	// add all the lightmaps
-	for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255 && lm; map++ )
-	{
-		scale = RI.lightstylevalue[surf->styles[map]];
-		surf->cached_light[map] = scale;
-		
-		for( i = 0, bl = r_blockLights; i < size; i++, bl += 3, lm++ )
-		{
-			bl[0] += lm->r * scale;
-			bl[1] += lm->g * scale;
-			bl[2] += lm->b * scale;
-		}
-	}
-
-	// add all the dynamic lights
-	if( r_numdlights )
-		R_AddDynamicLights( surf );
-
-	// put into texture format
-	stride -= (smax << 2);
-	bl = r_blockLights;
-
-	for( t = 0; t < tmax; t++, dest += stride )
-	{
-		for( s = 0; s < smax; s++ )
-		{
-			dest[0] = min((bl[0] >> 7), 255 );
-			dest[1] = min((bl[1] >> 7), 255 );
-			dest[2] = min((bl[2] >> 7), 255 );
-			dest[3] = 255;
-
-			bl += 3;
-			dest += 4;
-		}
-	}
-}
-
-static void LM_UploadBlock( int lightmapnum )
-{
-	wrect_t	*rect;
-
-	r_lmState.lightmap_modified[lightmapnum] = false;
-	rect = &r_lmState.lightmap_rectchange[lightmapnum];
-
-	pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, rect->right, BLOCK_WIDTH, rect->bottom, GL_RGBA, GL_UNSIGNED_BYTE,
-	&r_lmState.lightmaps[(lightmapnum * BLOCK_HEIGHT + rect->right) * BLOCK_WIDTH * 4] );
-
-	// reset rectangle
-	rect->left = BLOCK_WIDTH;
-	rect->right = BLOCK_HEIGHT;
-	rect->top = 0;
-	rect->bottom = 0;
-}
-
-/*
 ========================
 GL_CreateSurfaceLightmap
 ========================
@@ -1504,7 +1538,6 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 {
 	int	smax, tmax;
 	byte	*base;
-	texture_t	*tex;
 
 	if( !cl.worldmodel->lightdata ) return;
 	if( surf->flags & SURF_DRAWTILED )
@@ -1512,20 +1545,22 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 
 	smax = ( surf->extents[0] >> 4 ) + 1;
 	tmax = ( surf->extents[1] >> 4 ) + 1;
-	tex = surf->texinfo->texture;
 
-	if( smax > BLOCK_WIDTH )
-		Host_Error( "GL_CreateLightmap: lightmap width %d > %d, %s\n", smax, BLOCK_WIDTH, tex->name );
-	if( tmax > BLOCK_HEIGHT )
-		Host_Error( "GL_CreateLightmap: lightmap height %d > %d, %s\n", tmax, BLOCK_HEIGHT, tex->name );
-	if( smax * tmax > BLOCK_WIDTH * BLOCK_HEIGHT )
-		Host_Error( "GL_CreateLightmap: lightmap size too big\n" );
+	if( !LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t ))
+	{
+		LM_UploadBlock( false );
+		LM_InitBlock();
 
-	surf->lightmaptexturenum = LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t );
-	base = r_lmState.lightmaps + surf->lightmaptexturenum * BLOCK_WIDTH * BLOCK_HEIGHT * 4;
-	base += (surf->light_t * BLOCK_WIDTH + surf->light_s) * 4;
-	r_numdlights = 0;
+		if( !LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t ))
+			Host_Error( "AllocBlock: full\n" );
+	}
 
+	surf->lightmaptexturenum = gl_lms.current_lightmap_texture;
+
+	base = gl_lms.lightmap_buffer;
+	base += ( surf->light_t * BLOCK_WIDTH + surf->light_s ) * 4;
+
+	R_SetCacheState( surf );
 	R_BuildLightMap( surf, base, BLOCK_WIDTH * 4 );
 }
 
@@ -1540,8 +1575,6 @@ with all the surfaces from all brush models
 void GL_BuildLightmaps( void )
 {
 	int	i, j;
-	rgbdata_t	r_lightmap;
-	char	lmName[16];
 	model_t	*m;
 
 	// release old lightmaps
@@ -1553,9 +1586,13 @@ void GL_BuildLightmaps( void )
 
 	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	Q_memset( visbytes, 0x00, sizeof( visbytes ));
-	Q_memset( &r_lmState, 0, sizeof( r_lmState ));
-
+	
 	skychain = NULL;
+
+	tr.framecount = 1;	// no dlight cache
+	gl_lms.current_lightmap_texture = 0;
+
+//	GL_EnableMultitexture();
 
 	// setup all the lightstyles
 	R_AnimateLight();
@@ -1591,26 +1628,6 @@ void GL_BuildLightmaps( void )
 
 	loadmodel = NULL;
 
-	// upload all lightmaps that were filled
-	for( i = 0; i < MAX_LIGHTMAPS; i++ )
-	{
-		if( !r_lmState.allocated[i][0] ) break; // no more used
-		r_lmState.lightmap_modified[i] = false;
-		r_lmState.lightmap_rectchange[i].left = BLOCK_WIDTH;
-		r_lmState.lightmap_rectchange[i].right = BLOCK_HEIGHT;
-		r_lmState.lightmap_rectchange[i].top = 0;
-		r_lmState.lightmap_rectchange[i].bottom = 0;
-
-		Q_memset( &r_lightmap, 0, sizeof( r_lightmap ));
-
-		Q_snprintf( lmName, sizeof( lmName ), "*lightmap%i", i );
-		r_lightmap.width = BLOCK_WIDTH;
-		r_lightmap.height = BLOCK_HEIGHT;
-		r_lightmap.type = PF_RGBA_32;
-		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
-		r_lightmap.flags = ( world.version == Q1BSP_VERSION ) ? 0 : IMAGE_HAS_COLOR;
-		r_lightmap.buffer = (byte *)&r_lmState.lightmaps[r_lightmap.size*i];
-		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT|TF_LIGHTMAP, false );
-		GL_SetTextureType( tr.lightmapTextures[i], TEX_LIGHTMAP );
-	}
+	LM_UploadBlock( false );
+//	GL_DisableMultitexture();
 }

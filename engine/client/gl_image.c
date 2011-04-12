@@ -257,7 +257,7 @@ void R_SetTextureParameters( void )
 	for( i = 0, texture = r_textures; i < r_numTextures; i++, texture++ )
 	{
 		if( !texture->texnum ) continue;	// free slot
-		GL_Bind( GL_TEXTURE0, texture->texnum );
+		GL_MBind( texture->texnum );
 		GL_TexFilter( texture, true );
 	}
 }
@@ -832,7 +832,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		}
 	}
 
-	GL_Bind( GL_TEXTURE0, tex->texnum );
+	GL_MBind( tex->texnum );
 
 	buf = pic->buffer;
 	bufend = pic->buffer + pic->size;

@@ -27,10 +27,13 @@ void R_AnimateLight( void )
 {
 	int		i, k, flight, clight;
 	float		l, c, lerpfrac, backlerp;
+	float		scale;
 	lightstyle_t	*ls;
 
 	if( !RI.drawWorld || !cl.worldmodel )
 		return;
+
+	scale = r_lighting_modulate->value;
 
 	// light animations
 	// 'm' is normal light, 'a' is no light, 'z' is double bright
@@ -44,38 +47,43 @@ void R_AnimateLight( void )
 		if( r_fullbright->integer || !cl.worldmodel->lightdata )
 		{
 			RI.lightstylevalue[i] = 256 * 256;
+			RI.lightcache[i] = 3.0f;
 			continue;
 		}
 
 		if( !ls->length )
 		{
-			RI.lightstylevalue[i] = 256 * r_lighting_modulate->value;
+			RI.lightstylevalue[i] = 256 * scale;
+			RI.lightcache[i] = 3.0f * scale;
 			continue;
 		}
 		else if( ls->length == 1 )
 		{
 			// single length style so don't bother interpolating
-			RI.lightstylevalue[i] = ls->map[0] * 22 * r_lighting_modulate->value;
+			RI.lightstylevalue[i] = ls->map[0] * 22 * scale;
+			RI.lightcache[i] = ( ls->map[0] / 12.0f ) * 3.0f * scale;
 			continue;
 		}
 		else if( !ls->interp || !cl_lightstyle_lerping->integer )
 		{
-			RI.lightstylevalue[i] = ls->map[flight%ls->length] * 22 * r_lighting_modulate->value;
+			RI.lightstylevalue[i] = ls->map[flight%ls->length] * 22 * scale;
+			RI.lightcache[i] = ( ls->map[flight%ls->length] / 12.0f ) * 3.0f * scale;
 			continue;
 		}
 
 		// interpolate animating light
 		// frame just gone
 		k = ls->map[flight % ls->length];
-		l = (float)( k * 22 ) * backlerp;
-		c = (float)( k / 12 ) * backlerp;
+		l = (float)( k * 22.0f ) * backlerp;
+		c = (float)( k / 12.0f ) * backlerp;
 
 		// upcoming frame
 		k = ls->map[clight % ls->length];
-		l += (float)( k * 22 ) * lerpfrac;
-		c += (float)( k / 12 ) * lerpfrac;
+		l += (float)( k * 22.0f ) * lerpfrac;
+		c += (float)( k / 12.0f ) * lerpfrac;
 
-		RI.lightstylevalue[i] = (int)l * r_lighting_modulate->value;
+		RI.lightstylevalue[i] = (int)l * scale;
+		RI.lightcache[i] = c * 3.0f * scale;
 	}
 }
 
@@ -111,6 +119,11 @@ void R_MarkLights( dlight_t *light, int bit, mnode_t *node )
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
+		mextrasurf_t	*info = SURF_INFO( surf, cl.worldmodel );
+
+		if( !BoundsAndSphereIntersect( info->mins, info->maxs, light->origin, light->radius ))
+			continue;	// no intersection
+
 		if( surf->dlightframe != tr.dlightframecount )
 		{
 			surf->dlightbits = 0;
@@ -141,6 +154,10 @@ void R_PushDlights( void )
 	{
 		if( l->die < cl.time || !l->radius )
 			continue;
+
+		if( R_CullSphere( l->origin, l->radius, 15 ))
+			continue;
+
 		R_MarkLights( l, 1<<i, cl.worldmodel->nodes );
 	}
 }

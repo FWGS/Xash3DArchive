@@ -150,6 +150,7 @@ typedef struct
 	matrix4x4		projectionMatrix;
 	matrix4x4		worldviewProjectionMatrix;	// worldviewMatrix * projectionMatrix
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
+	float		lightcache[MAX_LIGHTSTYLES];
 
 	mplane_t		clipPlane;
 } ref_instance_t;
