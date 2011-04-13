@@ -110,8 +110,7 @@ int SV_EventIndex( const char *filename )
 	// eliminate '!' symbol (i'm doesn't know what this doing)
 	for( i = j = 0; i < Q_strlen( filename ); i++ )
 	{
-		if( filename[i] == '!' ) continue;
-		else if( filename[i] == '\\' ) name[j] = '/';
+		if( filename[i] == '\\' ) name[j] = '/';
 		else name[j] = filename[i];
 		j++;
 	}

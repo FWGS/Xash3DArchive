@@ -1167,6 +1167,10 @@ edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 		ed = EDICT_NUM( e );
 		if( !SV_IsValidEdict( ed )) continue;
 
+		// ignore clients that not in a game
+		if( e <= sv_maxclients->integer && !SV_ClientFromEdict( ed, true ))
+			continue;
+
 		switch( desc->fieldType )
 		{
 		case FIELD_STRING:
@@ -1224,9 +1228,15 @@ edict_t *pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 	for( e++; e < svgame.numEntities; e++ )
 	{
 		ent = EDICT_NUM( e );
-		if( !SV_IsValidEdict( ent )) continue;
 
-		distSquared = 0;
+		if( !SV_IsValidEdict( ent ))
+			continue;
+
+		// ignore clients that not in a game
+		if( e <= sv_maxclients->integer && !SV_ClientFromEdict( ent, true ))
+			continue;
+
+		distSquared = 0.0f;
 		for( j = 0; j < 3 && distSquared <= flRadius; j++ )
 		{
 			if( org[j] < ent->v.absmin[j] )
@@ -1237,6 +1247,7 @@ edict_t *pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 
 			distSquared += eorg * eorg;
 		}
+
 		if( distSquared > flRadius )
 			continue;
 		return ent;
@@ -1295,11 +1306,12 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 
 	VectorAdd( pplayer->v.origin, pplayer->v.view_ofs, viewpoint );
 
-	for( chain = EDICT_NUM( 0 ), i = 1; i < svgame.numEntities; i++ )
+	for( chain = EDICT_NUM( 0 ), i = svgame.globals->maxClients; i < svgame.numEntities; i++ )
 	{
 		pEdict = EDICT_NUM( i );
 
-		if( !SV_IsValidEdict( pEdict )) continue;
+		if( !SV_IsValidEdict( pEdict ))
+			continue;
 
 		if( pEdict->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pEdict->v.aiment ))
 		{

@@ -1592,8 +1592,6 @@ void GL_BuildLightmaps( void )
 	tr.framecount = 1;	// no dlight cache
 	gl_lms.current_lightmap_texture = 0;
 
-//	GL_EnableMultitexture();
-
 	// setup all the lightstyles
 	R_AnimateLight();
 
@@ -1629,5 +1627,4 @@ void GL_BuildLightmaps( void )
 	loadmodel = NULL;
 
 	LM_UploadBlock( false );
-//	GL_DisableMultitexture();
 }

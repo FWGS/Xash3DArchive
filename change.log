@@ -9,6 +9,7 @@ Pmove: add sv_clienttrace that shared across network
 Render: implement "envshot" and "skyshot" commands for make cubemaps or skyboxes
 Server: fix remote connection (rcon)
 Render: add glare reduction option in menu
+Server: fix FindEntityInSphere bug (satchel issues in multiplayer)
 
 build 1516
 

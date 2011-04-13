@@ -998,7 +998,7 @@ void CL_SetEventIndex( const char *szEvName, int ev_index )
 		ev = clgame.events[i];
 		if( !ev ) break;
 
-		if( !Q_strcmp( ev->name, szEvName ))
+		if( !Q_stricmp( ev->name, szEvName ))
 		{
 			ev->index = ev_index;
 			return;
@@ -2250,14 +2250,26 @@ pfnHookEvent
 
 =============
 */
-static void pfnHookEvent( const char *name, pfnEventHook pfn )
+static void pfnHookEvent( const char *filename, pfnEventHook pfn )
 {
-	word		event_index = CL_EventIndex( name );
+	word		event_index;
+	char		name[64];
 	user_event_t	*ev;
-	int		i;
+	int		i, j;
 
 	// ignore blank names
-	if( !name || !*name ) return;	
+	if( !filename || !*filename ) return;	
+
+	// eliminate '!' symbol (i'm doesn't know what this doing)
+	for( i = j = 0; i < Q_strlen( filename ); i++ )
+	{
+		if( filename[i] == '\\' ) name[j] = '/';
+		else name[j] = filename[i];
+		j++;
+	}
+	name[j] = '\0';
+
+	event_index = CL_EventIndex( name );
 
 	// second call can change EventFunc
 	for( i = 0; i < MAX_EVENTS; i++ )
@@ -2265,7 +2277,7 @@ static void pfnHookEvent( const char *name, pfnEventHook pfn )
 		ev = clgame.events[i];		
 		if( !ev ) break;
 
-		if( !Q_strcmp( name, ev->name ))
+		if( !Q_stricmp( name, ev->name ))
 		{
 			if( ev->func != pfn )
 				ev->func = pfn;

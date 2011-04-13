@@ -341,7 +341,11 @@ const char *UI_ScrollList_Key( menuScrollList_s *sl, int key, int down )
 	int		arrowWidth, arrowHeight, upX, upY, downX, downY;
 	int		i, y;
 
-	if( !down ) return uiSoundNull;
+	if( !down ) 
+	{
+		sl->scrollBarSliding = false;
+		return uiSoundNull;
+	}
 
 	switch( key )
 	{
@@ -360,6 +364,14 @@ const char *UI_ScrollList_Key( menuScrollList_s *sl, int key, int down )
 		upY = sl->generic.y2 + UI_OUTLINE_WIDTH;
 		downX = sl->generic.x2 + sl->generic.width2 - arrowWidth;
 		downY = sl->generic.y2 + (sl->generic.height2 - arrowHeight) - UI_OUTLINE_WIDTH;
+
+		// ADAMIX
+		if( UI_CursorInRect( sl->scrollBarX, sl->scrollBarY, sl->scrollBarWidth, sl->scrollBarHeight ))
+		{
+			sl->scrollBarSliding = true;
+			break;
+		}
+		// ADAMIX END
 
 		// Now see if either up or down has focus
 		if( UI_CursorInRect( upX, upY, arrowWidth, arrowHeight ))
@@ -450,7 +462,7 @@ const char *UI_ScrollList_Key( menuScrollList_s *sl, int key, int down )
 		break;
 	case K_DOWNARROW:
 	case K_MWHEELDOWN:
-		if( sl->curItem != sl->numItems - 1 )
+		if( sl->numItems > 0 && sl->curItem != sl->numItems - 1 )
 		{
 			sl->curItem++;
 			sound = uiSoundMove;
@@ -487,7 +499,7 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 	int	i, x, y, w, h;
 	int	selColor = 0xFF503818; // Red 80, Green 56, Blue 24, Alpha 255
 	int	arrowWidth, arrowHeight, upX, upY, downX, downY;
-	int	upFocus, downFocus;
+	int	upFocus, downFocus, scrollbarFocus;
 
 	if( sl->generic.flags & QMF_LEFT_JUSTIFY )
 		justify = 0;
@@ -581,6 +593,46 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 	// draw the arrows base
 	UI_FillRect( upX, upY + arrowHeight, arrowWidth, downY - upY - arrowHeight, uiInputFgColor );
 
+	// ADAMIX
+	sl->scrollBarX = upX + sl->generic.charHeight/4;
+	sl->scrollBarWidth = arrowWidth - sl->generic.charHeight/4;
+	sl->scrollBarHeight = downY - upY - arrowHeight - (((sl->numItems-1)*sl->generic.charHeight)/2);
+
+	sl->scrollBarY = upY + arrowHeight + (((sl->curItem)*sl->generic.charHeight)/2);
+
+	if( sl->scrollBarSliding )
+	{
+		int dist = uiStatic.cursorY - sl->scrollBarY - (sl->scrollBarHeight>>2);
+
+		if((((dist / 2) > (sl->generic.charHeight / 2)) || ((dist / 2) < (sl->generic.charHeight / 2))) && sl->curItem <= (sl->numItems - 1) && sl->curItem >= 0)
+		{
+			if(sl->generic.callback)
+				sl->generic.callback( sl, QM_CHANGED );
+
+			if((dist / 2) > ( sl->generic.charHeight / 2 ) && sl->curItem < ( sl->numItems - 1 ))
+			{
+				sl->curItem++;
+			}
+			
+			if((dist / 2) < -(sl->generic.charHeight / 2) && sl->curItem > 0 )
+			{
+				sl->curItem--;
+			}
+		}
+
+		sl->topItem = sl->curItem - sl->numRows + 1;
+		if( sl->topItem < 0 ) sl->topItem = 0;
+		if( sl->topItem > ( sl->numItems - sl->numRows ))
+			sl->topItem = sl->numItems - sl->numRows;
+	}
+
+	if( sl->scrollBarSliding )
+	{
+		// Draw scrollbar background
+		UI_FillRect ( sl->scrollBarX, upY + arrowHeight, sl->scrollBarWidth, downY - upY - arrowHeight, uiColorBlack);
+	}
+
+	// ADAMIX END
 	// draw the arrows
 	if( sl->generic.flags & QMF_GRAYED )
 	{
@@ -589,6 +641,14 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 	}
 	else
 	{
+		scrollbarFocus = UI_CursorInRect( sl->scrollBarX, sl->scrollBarY, sl->scrollBarWidth, sl->scrollBarHeight );
+
+		// special case if we sliding but lost focus
+		if( sl->scrollBarSliding ) scrollbarFocus = true;
+
+		// Draw scrollbar itself
+		UI_FillRect( sl->scrollBarX, sl->scrollBarY, sl->scrollBarWidth, sl->scrollBarHeight, scrollbarFocus ? uiInputTextColor : uiColorBlack );
+	
 		if((menuCommon_s *)sl != (menuCommon_s *)UI_ItemAtCursor(sl->generic.parent))
 		{
 			UI_DrawPic( upX, upY, arrowWidth, arrowHeight, uiColorWhite, sl->upArrow );

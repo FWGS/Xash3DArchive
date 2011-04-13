@@ -246,19 +246,7 @@ usercmd_t CL_CreateCmd( void )
 	if( ++cl.movemessages <= 10 )
 		return cmd;
 
-	switch( cls.state )
-	{
-	case ca_connected:
-		active = 1;
-		break;
-	case ca_active:
-		active = 2; // GoldSrc rules
-		break;
-	default:
-		active = 0;
-		break;
-	}
-
+	active = ( cls.state == ca_active && !cl.refdef.paused && !cl.refdef.intermission );
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, active );
 
 	R_LightForPoint( cl.frame.local.client.origin, &color, false, 128.0f );

@@ -832,7 +832,8 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		}
 	}
 
-	GL_MBind( tex->texnum );
+	// critical stuff!!!
+	GL_MBind( tex - r_textures );
 
 	buf = pic->buffer;
 	bufend = pic->buffer + pic->size;
@@ -935,8 +936,11 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 
 	tex = &r_textures[i];
 	Q_strncpy( tex->name, name, sizeof( tex->name ));
-	tex->texnum = i;	// texnum is used for fast acess into r_textures array too
 	tex->flags = flags;
+
+	if( flags & TF_SKYSIDE )
+		tex->texnum = tr.skyboxbasenum++;
+	else tex->texnum = i; // texnum is used for fast acess into r_textures array too
 
 	GL_UploadTexture( pic, tex, false );
 	GL_TexFilter( tex, false ); // update texture filter, wrap etc
@@ -947,7 +951,8 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 	tex->nextHash = r_texturesHashTable[hash];
 	r_texturesHashTable[hash] = tex;
 
-	return tex->texnum;
+	// NOTE: always return texnum as index in array or engine will stop work !!!!
+	return i;
 }
 
 /*
@@ -1060,7 +1065,7 @@ void GL_FreeImage( const char *name )
 
 		if( !Q_stricmp( tex->name, name ))
 		{
-			GL_FreeTexture( tex->texnum );
+			GL_FreeTexture( tex - r_textures );
 			return;
 		}
 	}
@@ -1417,7 +1422,7 @@ void R_ShutdownImages( void )
 	for( i = 0, image = r_textures; i < r_numTextures; i++, image++ )
 	{
 		if( !image->texnum ) continue;
-		GL_FreeTexture( image->texnum );
+		GL_FreeTexture( i );
 	}
 
 	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));

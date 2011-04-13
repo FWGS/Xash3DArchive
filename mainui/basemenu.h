@@ -190,6 +190,12 @@ typedef struct
 	int		curItem;
 	int		topItem;
 	int		numRows;
+// scrollbar stuff // ADAMIX
+	int		scrollBarX;
+	int		scrollBarY;
+	int		scrollBarWidth;
+	int		scrollBarHeight;
+	int		scrollBarSliding;
 } menuScrollList_s;
 
 typedef struct

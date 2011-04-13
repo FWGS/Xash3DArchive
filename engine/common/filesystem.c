@@ -1344,7 +1344,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		else if( !Q_stricmp( token, "max_particles" ))
 		{
 			pfile = COM_ParseFile( pfile, token );
-			GameInfo->max_particles = bound( 1024, Q_atoi( token ), 8192 );
+			GameInfo->max_particles = bound( 1024, Q_atoi( token ), 32768 );
 		}
 		else if( !Q_stricmp( token, "gamemode" ))
 		{

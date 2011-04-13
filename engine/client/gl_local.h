@@ -172,6 +172,8 @@ typedef struct
 
 	int		skytexturenum;	// this not a gl_texturenum!
 
+	int		skyboxbasenum;	// start with 5800
+
 	// entity lists
 	cl_entity_t	*static_entities[MAX_VISIBLE_PACKET];	// opaque non-moved brushes
 	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes

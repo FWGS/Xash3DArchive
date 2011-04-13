@@ -7,7 +7,7 @@
 #include "client.h"
 #include "server.h"
 
-#define MAX_CMD_BUFFER	8192
+#define MAX_CMD_BUFFER	16384
 #define MAX_CMD_LINE	1024
 #define MAX_ALIAS_NAME	32
 

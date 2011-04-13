@@ -324,6 +324,8 @@ void R_UnloadSkybox( void )
 		GL_FreeTexture( tr.skyboxTextures[i] );
 	}
 
+	tr.skyboxbasenum = 5800;	// set skybox base (to let some mods load hi-res skyboxes)
+
 	Q_memset( tr.skyboxTextures, 0, sizeof( tr.skyboxTextures ));
 }
 
@@ -398,7 +400,7 @@ void R_SetupSky( const char *skyboxname )
 	for( i = 0; i < 6; i++ )
 	{
 		Q_snprintf( sidename, sizeof( sidename ), "%s%s", loadname, r_skyBoxSuffix[i] );
-		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKYSIDE );
+		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY );
 		GL_SetTextureType( tr.skyboxTextures[i], TEX_CUBEMAP );
 		if( !tr.skyboxTextures[i] ) break;
 	}
@@ -411,7 +413,7 @@ void R_SetupSky( const char *skyboxname )
 	for( i = 0; i < 6; i++ )
 	{
 		Q_snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
-		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKYSIDE );
+		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY );
 		GL_SetTextureType( tr.skyboxTextures[i], TEX_CUBEMAP );
 		if( !tr.skyboxTextures[i] ) break;
 	}
@@ -494,7 +496,7 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 	r_temp.size = r_temp.width * r_temp.height * 4;
 
 	// load it in
-	tr.solidskyTexture = GL_LoadTextureInternal( "solid_sky", &r_temp, TF_SKY, false );
+	tr.solidskyTexture = GL_LoadTextureInternal( "solid_sky", &r_temp, TF_UNCOMPRESSED|TF_NOMIPMAP, false );
 
 	for( i = 0; i < r_sky->width >> 1; i++ )
 	{
@@ -516,7 +518,7 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 	r_temp.flags = IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA;
 
 	// load it in
-	tr.alphaskyTexture = GL_LoadTextureInternal( "alpha_sky", &r_temp, TF_SKY, false );
+	tr.alphaskyTexture = GL_LoadTextureInternal( "alpha_sky", &r_temp, TF_UNCOMPRESSED|TF_NOMIPMAP, false );
 
 	GL_SetTextureType( tr.solidskyTexture, TEX_BRUSH );
 	GL_SetTextureType( tr.alphaskyTexture, TEX_BRUSH );
