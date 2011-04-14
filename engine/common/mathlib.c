@@ -200,6 +200,38 @@ void VectorAngles( const float *forward, float *angles )
 	VectorSet( angles, pitch, yaw, 0 ); 
 }
 
+/*
+=================
+VectorsAngles
+
+=================
+*/
+void VectorsAngles( const vec3_t forward, const vec3_t right, const vec3_t up, vec3_t angles )
+{
+	float	pitch, cpitch, yaw, roll;
+
+	pitch = -asin( forward[2] );
+	cpitch = cos( pitch );
+
+	if( fabs( cpitch ) > EQUAL_EPSILON )	// gimball lock?
+	{
+		cpitch = 1.0f / cpitch;
+		pitch = RAD2DEG( pitch );
+		yaw = RAD2DEG( atan2( forward[1] * cpitch, forward[0] * cpitch ));
+		roll = RAD2DEG( atan2( -right[2] * cpitch, up[2] * cpitch ));
+	}
+	else
+	{
+		pitch = forward[2] > 0 ? -90.0f : 90.0f;
+		yaw = RAD2DEG( atan2( right[0], -right[1] ));
+		roll = 180.0f;
+	}
+
+	angles[PITCH] = pitch;
+	angles[YAW] = yaw;
+	angles[ROLL] = roll;
+}
+
 //
 // bounds operations
 //

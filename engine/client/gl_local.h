@@ -22,6 +22,8 @@ extern byte	*r_temppool;
 #define MAX_LIGHTMAPS	64
 #define SUBDIVIDE_SIZE	64
 
+//#define MIRROR_TEST
+
 // refparams
 #define RP_NONE		0
 #define RP_MIRRORVIEW	BIT( 0 )	// lock pvs at vieworg
@@ -32,6 +34,7 @@ extern byte	*r_temppool;
 
 #define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
 #define RP_LOCALCLIENT( e )	(CL_GetLocalPlayer() && ((e)->index == CL_GetLocalPlayer()->index && e->player ))
+#define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
 
 #define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
 #define TF_FONT		(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
@@ -102,6 +105,13 @@ typedef struct mextrasurf_s
 
 	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
 } mextrasurf_t;
+
+// mirror entity
+typedef struct gl_entity_s
+{
+	cl_entity_t	*ent;
+	msurface_t	*chain;
+} gl_entity_t;
 
 typedef struct
 {
@@ -176,9 +186,11 @@ typedef struct
 
 	// entity lists
 	cl_entity_t	*static_entities[MAX_VISIBLE_PACKET];	// opaque non-moved brushes
+	gl_entity_t	mirror_entities[MAX_VISIBLE_PACKET];	// an entities that has mirror
 	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
 	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
 	uint		num_static_entities;
+	uint		num_mirror_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
          
@@ -294,6 +306,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 //
 void R_ClearScene( void );
 void R_LoadIdentity( void );
+void R_RenderScene( const ref_params_t *fd );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 qboolean R_WorldToScreen2( const vec3_t in, vec3_t out );
 void R_TranslateForEntity( cl_entity_t *e );
@@ -322,6 +335,7 @@ void Matrix4x4_CreateModelview( matrix4x4 out );
 //
 void R_MarkLeaves( void );
 void R_DrawWorld( void );
+void R_DrawMirrors( void );
 void R_DrawWaterSurfaces( void );
 void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );

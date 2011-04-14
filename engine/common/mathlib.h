@@ -94,6 +94,7 @@ float VectorNormalizeLength2( const vec3_t v, vec3_t out );
 void VectorVectors( vec3_t forward, vec3_t right, vec3_t up );
 void VectorAngles( const float *forward, float *angles );
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up );
+void VectorsAngles( const vec3_t forward, const vec3_t right, const vec3_t up, vec3_t angles );
 void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
 
 void ClearBounds( vec3_t mins, vec3_t maxs );

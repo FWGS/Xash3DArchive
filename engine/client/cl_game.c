@@ -88,6 +88,9 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	if( !clgame.entities ) // not in game yet
 		return NULL;
 
+	if( index == 0 && !cl.video_prepped )
+		return NULL; // not in game yet
+
 	if( index < 0 )
 		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
 
@@ -1363,11 +1366,9 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		return 0;
 	}
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
 	for( i = j = 0; i < Q_strlen( szPicName ); i++ )
 	{
-		if( szPicName[i] == '!' ) continue;
-		else if( szPicName[i] == '\\' ) name[j] = '/';
+		if( szPicName[i] == '\\' ) name[j] = '/';
 		else name[j] = Q_tolower( szPicName[i] );
 		j++;
 	}
@@ -2260,7 +2261,6 @@ static void pfnHookEvent( const char *filename, pfnEventHook pfn )
 	// ignore blank names
 	if( !filename || !*filename ) return;	
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
 	for( i = j = 0; i < Q_strlen( filename ); i++ )
 	{
 		if( filename[i] == '\\' ) name[j] = '/';
@@ -2632,11 +2632,9 @@ model_t *pfnLoadMapSprite( const char *filename )
 		return NULL;
 	}
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
 	for( i = j = 0; i < Q_strlen( filename ); i++ )
 	{
-		if( filename[i] == '!' ) continue;
-		else if( filename[i] == '\\' ) name[j] = '/';
+		if( filename[i] == '\\' ) name[j] = '/';
 		else name[j] = Q_tolower( filename[i] );
 		j++;
 	}

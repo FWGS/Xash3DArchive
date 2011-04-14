@@ -866,7 +866,10 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		if( !Q_strnicmp( tex->name, "scroll", 6 ))
 			out->flags |= SURF_CONVEYOR;
-
+#ifdef MIRROR_TEST
+		if( !Q_strnicmp( tex->name, "glassblue1", 10 ))
+			out->flags |= SURF_MIRROR;
+#endif
 		if( tex->name[0] == '{' )
 			out->flags |= SURF_TRANSPARENT;
 

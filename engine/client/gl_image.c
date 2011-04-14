@@ -1310,7 +1310,9 @@ static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
-	r_image.buffer = NULL; // empty for now
+	r_image.buffer = data2D;
+
+	Q_memset( data2D, 0x00, r_image.size );
 
 	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
 
@@ -1373,7 +1375,6 @@ void R_InitImages( void )
 	r_numTextures = 0;
 	scaledImage = NULL;
 	Q_memset( r_textures, 0, sizeof( r_textures ));
-	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	Q_memset( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
 
 	// create unused 0-entry

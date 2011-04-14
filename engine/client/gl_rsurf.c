@@ -929,6 +929,13 @@ void R_DrawTextureChains( void )
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
 
+	// world has mirrors!
+	if( RP_NORMALPASS() && tr.mirror_entities[0].chain != NULL )
+	{
+		tr.mirror_entities[0].ent = clgame.entities;
+		tr.num_mirror_entities++;
+	}
+
 	// clip skybox surfaces
 	for( s = skychain; s != NULL; s = s->texturechain )
 		R_AddSkyBoxSurface( s );
@@ -1220,7 +1227,12 @@ void R_DrawBrushModel( cl_entity_t *e )
 		if( R_CullSurface( psurf, 0 ))
 			continue;
 
-		if( need_sort )
+		if( RP_NORMALPASS() && psurf->flags & SURF_MIRROR )
+		{
+			psurf->texturechain = tr.mirror_entities[tr.num_mirror_entities].chain;
+			tr.mirror_entities[tr.num_mirror_entities].chain = psurf;
+		}
+		else if( need_sort )
 		{
 			world.draw_surfaces[num_sorted] = psurf;
 			num_sorted++;
@@ -1231,6 +1243,13 @@ void R_DrawBrushModel( cl_entity_t *e )
 			// render unsorted (solid)
 			R_RenderBrushPoly( psurf );
 		}
+	}
+
+	// store new mirror entity
+	if( RP_NORMALPASS() && tr.mirror_entities[tr.num_mirror_entities].chain != NULL )
+	{
+		tr.mirror_entities[tr.num_mirror_entities].ent = RI.currententity;
+		tr.num_mirror_entities++;
 	}
 
 	if( need_sort )
@@ -1284,8 +1303,16 @@ void R_DrawStaticModel( cl_entity_t *e )
 		if( R_CullSurface( psurf, 0 ))
 			continue;
 
-		psurf->texturechain = psurf->texinfo->texture->texturechain;
-		psurf->texinfo->texture->texturechain = psurf;
+		if( RP_NORMALPASS() && psurf->flags & SURF_MIRROR )
+		{
+			psurf->texturechain = tr.mirror_entities[0].chain;
+			tr.mirror_entities[0].chain = psurf;
+		}
+		else
+		{
+			psurf->texturechain = psurf->texinfo->texture->texturechain;
+			psurf->texinfo->texture->texturechain = psurf;
+		}
 	}
 }
 
@@ -1322,6 +1349,124 @@ void R_DrawStaticBrushes( void )
 			break;
 		}
 	}
+}
+
+/*
+=============================================================
+
+	MIRROR RENDERING
+
+=============================================================
+*/
+void R_PlaneForMirror( msurface_t *surf, mplane_t *out )
+{
+	cl_entity_t	*ent;
+
+	ASSERT( out != NULL );
+
+	ent = RI.currententity;
+
+	// setup mirror plane
+	*out = *surf->plane;
+
+	if( surf->flags & SURF_PLANEBACK )
+	{
+		VectorNegate( out->normal, out->normal );
+	}
+
+	if( !VectorIsNull( ent->angles ))
+		R_RotateForEntity( ent );
+	else R_TranslateForEntity( ent );
+
+	// tranform mirror plane by entity matrix
+	if( !tr.modelviewIdentity )
+	{
+		mplane_t	tmp;
+
+		tmp = *out;
+
+		Matrix4x4_TransformPositivePlane( RI.objectMatrix, tmp.normal, tmp.dist, out->normal, &out->dist );
+	}
+}
+
+void R_DrawMirrors( void )
+{
+	ref_instance_t	oldRI;
+	mplane_t		plane;
+	msurface_t	*surf, *mirrorchain;
+	vec3_t		forward, right, up;
+	vec3_t		origin, angles;
+	int		i;
+	float		d;
+
+	if( !tr.num_mirror_entities ) return; // mo mirrors for this frame
+
+	oldRI = RI; // make refinst backup
+
+	for( i = 0; i < tr.num_mirror_entities; i++ )
+	{
+		mirrorchain = tr.mirror_entities[i].chain;
+
+		for( surf = mirrorchain; surf != NULL; surf = surf->texturechain )
+		{
+			RI.currententity = tr.mirror_entities[i].ent;
+			RI.currentmodel = RI.currententity->model;
+
+			ASSERT( RI.currententity != NULL );
+			ASSERT( RI.currentmodel != NULL );
+
+			R_PlaneForMirror( surf, &plane );
+
+			d = -2.0f * ( DotProduct( RI.vieworg, plane.normal ) - plane.dist );
+			VectorMA( RI.vieworg, d, plane.normal, origin );
+
+			d = -2.0f * DotProduct( RI.vforward, plane.normal );
+			VectorMA( RI.vforward, d, plane.normal, forward );
+			VectorNormalize( forward );
+
+			d = -2.0f * DotProduct( RI.vright, plane.normal );
+			VectorMA( RI.vright, d, plane.normal, right );
+			VectorNormalize( right );
+
+			d = -2.0f * DotProduct( RI.vup, plane.normal );
+			VectorMA( RI.vup, d, plane.normal, up );
+			VectorNormalize( up );
+
+			VectorsAngles( forward, right, up, angles );
+			angles[ROLL] = -angles[ROLL];
+
+			RI.params = RP_MIRRORVIEW|RP_FLIPFRONTFACE|RP_CLIPPLANE;
+			if( r_viewleaf ) RI.params |= RP_OLDVIEWLEAF;
+
+			RI.clipPlane = plane;
+			RI.clipFlags |= ( 1<<5 );
+
+			RI.frustum[5] = plane;
+			RI.frustum[5].signbits = SignbitsForPlane( RI.frustum[5].normal );
+			RI.frustum[5].type = PLANE_NONAXIAL;
+
+			RI.refdef.viewangles[0] = anglemod( angles[0] );
+			RI.refdef.viewangles[1] = anglemod( angles[1] );
+			RI.refdef.viewangles[2] = anglemod( angles[2] );
+			VectorCopy( origin, RI.refdef.vieworg );
+			VectorCopy( origin, RI.pvsorigin );
+			VectorCopy( origin, RI.cullorigin );
+
+			R_RenderScene( &RI.refdef );
+
+			if( !( RI.params & RP_OLDVIEWLEAF ))
+				r_oldviewleaf = r_viewleaf = NULL; // force markleafs next frame
+
+			RI = oldRI; // restore ref instance
+
+			// FIXME: draw mirror surface here
+		}
+
+		tr.mirror_entities[i].chain = NULL; // done
+		tr.mirror_entities[i].ent = NULL;
+	}
+
+	tr.num_mirror_entities = 0;
 }
 
 /*
@@ -1410,13 +1555,15 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 			surf->texturechain = skychain;
 			skychain = surf;
 		}
+		else if( RP_NORMALPASS() && surf->flags & SURF_MIRROR )
+		{
+			surf->texturechain = tr.mirror_entities[0].chain;
+			tr.mirror_entities[0].chain = surf;
+		}
 		else
 		{ 
-			if( surf->texinfo && surf->texinfo->texture )
-			{
-				surf->texturechain = surf->texinfo->texture->texturechain;
-				surf->texinfo->texture->texturechain = surf;
-			}
+			surf->texturechain = surf->texinfo->texture->texturechain;
+			surf->texinfo->texture->texturechain = surf;
 		}
 	}
 
@@ -1585,6 +1732,7 @@ void GL_BuildLightmaps( void )
 	}
 
 	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	Q_memset( tr.mirror_entities, 0, sizeof( tr.mirror_entities ));
 	Q_memset( visbytes, 0x00, sizeof( visbytes ));
 	
 	skychain = NULL;

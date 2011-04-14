@@ -25,18 +25,16 @@ BRUSH MODELS
 // bmodel limits
 #define MAX_MAP_HULLS		4		// MAX_HULLS
 
-#define SURF_PLANEBACK		BIT( 1 )		// a bit who indicated backplane
+#define SURF_MIRROR			BIT( 0 )		// mirror test
+#define SURF_PLANEBACK		BIT( 1 )		// there
 #define SURF_DRAWSKY		BIT( 2 )		// sky surface
-#define SURF_DRAWSPRITE		BIT( 3 )		// legacy (unused)
+#define SURF_WATERCSG		BIT( 3 )		// culled by csg
 #define SURF_DRAWTURB		BIT( 4 )		// warp surface
 #define SURF_DRAWTILED		BIT( 5 )		// face without lighmap
-#define SURF_DRAWBACKGROUND		BIT( 6 )		// legacy (unused)
+#define SURF_CONVEYOR		BIT( 6 )		// scrolled texture
 #define SURF_UNDERWATER		BIT( 7 )		// caustics
-#define SURF_DONTWARP		BIT( 8 )		// legacy (unused)
+#define SURF_TRANSPARENT		BIT( 8 )		// it's a transparent texture
 
-#define SURF_TRANSPARENT		BIT( 28 )		// it's a transparent surface
-#define SURF_WATERCSG		BIT( 29 )		// culled by csg
-#define SURF_CONVEYOR		BIT( 30 )		// scrolled texture
 #define SURF_NOCULL			BIT( 31 )		// two-sided polygon (e.g. 'water4b')
 
 // lightstyle management

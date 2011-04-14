@@ -299,7 +299,7 @@ R_ClearScene
 void R_ClearScene( void )
 {
 	tr.num_solid_entities = tr.num_trans_entities = 0;
-	tr.num_static_entities = 0;
+	tr.num_static_entities = tr.num_mirror_entities = 0;
 }
 
 /*
@@ -978,9 +978,9 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 		pglFinish();
 
 	R_RenderScene( fd );
-
-//	R_BloomBlend( fd );
-
+#ifdef MIRROR_TEST
+	R_DrawMirrors ();
+#endif
 	GL_BackendEndFrame();
 
 	// go into 2D mode (in case we draw PlayerSetup between two 2d calls)

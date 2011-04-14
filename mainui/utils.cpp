@@ -596,9 +596,19 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 	// ADAMIX
 	sl->scrollBarX = upX + sl->generic.charHeight/4;
 	sl->scrollBarWidth = arrowWidth - sl->generic.charHeight/4;
-	sl->scrollBarHeight = downY - upY - arrowHeight - (((sl->numItems-1)*sl->generic.charHeight)/2);
+	
+	int step = (sl->numItems <= 1 ) ? 1 : (downY - upY - arrowHeight) / (sl->numItems - 1);
 
-	sl->scrollBarY = upY + arrowHeight + (((sl->curItem)*sl->generic.charHeight)/2);
+	if(((downY - upY - arrowHeight) - (((sl->numItems-1)*sl->generic.charHeight)/2)) < 2)
+	{
+		sl->scrollBarHeight = (downY - upY - arrowHeight) - (step*(sl->numItems-1));
+		sl->scrollBarY = upY + arrowHeight + (step*sl->curItem);
+	}
+	else
+	{
+		sl->scrollBarHeight = downY - upY - arrowHeight - (((sl->numItems-1)*sl->generic.charHeight)/2);
+		sl->scrollBarY = upY + arrowHeight + (((sl->curItem)*sl->generic.charHeight)/2);
+	}
 
 	if( sl->scrollBarSliding )
 	{
