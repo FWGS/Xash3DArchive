@@ -2075,6 +2075,9 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	if( !Q_stricmp( info->model, "player" )) Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
 	else Q_snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
 
+	if( !FS_FileExists( modelpath, false ))
+		return NULL;
+
 	return Mod_ForName( modelpath, false );
 }
 

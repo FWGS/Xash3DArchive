@@ -611,6 +611,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 {
 	trace_t		trace;
 	sv_client_t	*cl;
+	qboolean		push = false;
 	int		type;
 	vec3_t		end;
 
@@ -624,7 +625,11 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
-	if( trace.fraction != 0.0f )
+	if( sv_fix_pushents->integer )
+		push = ( trace.fraction != 0.0f && !trace.allsolid ) ? true : false;
+	else push = ( trace.fraction != 0.0f ) ? true : false;
+
+	if( push )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 
@@ -801,6 +806,10 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;
 
+	// non-solid pushers can't push anything
+	if( pusher->v.solid == SOLID_NOT )
+		return NULL;
+
 	// see if any solid entities are inside the final position
 	num_moved = 0;
 
@@ -921,6 +930,10 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	SV_LinkEdict( pusher, false );
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;
+
+	// non-solid pushers can't push anything
+	if( pusher->v.solid == SOLID_NOT )
+		return NULL;
 
 	// create pusher final position
 	Matrix4x4_CreateFromEntity( end_l, pusher->v.angles, pusher->v.origin, 1.0f );

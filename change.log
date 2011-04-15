@@ -1,4 +1,4 @@
-build ????
+build 1529
 
 FS: add "fallback_dir" option
 Server: fix func_pushable interaction with movers. Add new cvar "sv_allow_rotate_pushables"
@@ -10,6 +10,7 @@ Render: implement "envshot" and "skyshot" commands for make cubemaps or skyboxes
 Server: fix remote connection (rcon)
 Render: add glare reduction option in menu
 Server: fix FindEntityInSphere bug (satchel issues in multiplayer)
+GameUI: added to scrollbar in srcoll lists (thx ADAMIX)
 
 build 1516
 

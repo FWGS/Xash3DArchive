@@ -1573,6 +1573,48 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 
 /*
 =============
+R_DrawTriangleOutlines
+=============
+*/
+void R_DrawTriangleOutlines( void )
+{
+	int	i, j;
+	glpoly_t	*p;
+
+	if( !gl_wireframe->integer )
+		return;
+
+	pglDisable( GL_TEXTURE_2D );
+	pglDisable( GL_DEPTH_TEST );
+	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+	pglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+	for( i = 0; i < MAX_LIGHTMAPS; i++ )
+	{
+		msurface_t	*surf;
+		float		*v;
+
+		for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->lightmapchain )
+		{
+			p = surf->polys;
+			for( ; p != NULL; p = p->chain )
+			{
+				pglBegin( GL_POLYGON );
+				v = p->verts[0];
+				for( j = 0; j < p->numverts; j++, v += VERTEXSIZE )
+					pglVertex3fv( v );
+				pglEnd ();
+			}
+		}
+	}
+
+	pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	pglEnable( GL_DEPTH_TEST );
+	pglEnable( GL_TEXTURE_2D );
+}
+
+/*
+=============
 R_DrawWorld
 =============
 */
@@ -1607,6 +1649,8 @@ void R_DrawWorld( void )
 	if( skychain )
 		R_DrawSkyBox();
 	skychain = NULL;
+
+	R_DrawTriangleOutlines ();
 }
 
 /*

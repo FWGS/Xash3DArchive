@@ -139,7 +139,6 @@ static void IN_ActivateCursor( void )
 {
 	if( cls.key_dest == key_menu )
 	{
-		while( ShowCursor( true ) < 0 );
 		SetCursor( in_mousecursor );
 	}
 }

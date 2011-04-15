@@ -40,6 +40,7 @@ convar_t	*sv_waterfriction;
 convar_t	*sv_synchthink;
 convar_t	*sv_stopspeed;
 convar_t	*hostname;
+convar_t	*sv_fix_pushents;
 convar_t	*sv_lighting_modulate;
 convar_t	*sv_maxclients;
 convar_t	*sv_check_errors;
@@ -687,6 +688,7 @@ void SV_Init( void )
 	mp_consistency = Cvar_Get( "mp_consistency", "1", CVAR_SERVERNOTIFY, "enbale consistency check in multiplayer" );
 	clockwindow = Cvar_Get( "clockwindow", "0.5", 0, "timewindow to execute client moves" );
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
+	sv_fix_pushents = Cvar_Get( "sv_fix_pushents", "1", CVAR_ARCHIVE, "prevent toss entities from falling through level" );
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 	BF_Init( &net_message, "NetMessage", net_message_buffer, sizeof( net_message_buffer ));

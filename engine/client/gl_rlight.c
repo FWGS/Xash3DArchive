@@ -290,12 +290,12 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	VectorCopy( point, end );
 	if( invLight )
 	{
-		start[2] = point[2] - 1;
+		start[2] = point[2] - 64;
 		end[2] = point[2] + 8192;
 	}
 	else
 	{
-		start[2] = point[2] + 1;
+		start[2] = point[2] + 64;
 		end[2] = point[2] - 8192;
 	}
 
@@ -344,9 +344,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 		VectorCopy( end_l, end );
 	}
 
-	r_pointColor[0] = RI.refdef.movevars->skycolor_r;
-	r_pointColor[1] = RI.refdef.movevars->skycolor_g;
-	r_pointColor[2] = RI.refdef.movevars->skycolor_b;
+	VectorClear( r_pointColor );
 
 	if( R_RecursiveLightPoint( pmodel, pnodes, start, end ))
 	{

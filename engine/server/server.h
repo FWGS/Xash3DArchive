@@ -359,6 +359,7 @@ extern	convar_t		*sv_stopspeed;
 extern	convar_t		*sv_check_errors;
 extern	convar_t		*sv_reconnect_limit;
 extern	convar_t		*sv_lighting_modulate;
+extern	convar_t		*sv_fix_pushents;
 extern	convar_t		*rcon_password;
 extern	convar_t		*hostname;
 extern	convar_t		*sv_stepsize;
