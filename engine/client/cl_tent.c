@@ -2350,12 +2350,12 @@ void CL_DecayLights( void )
 
 /*
 ================
-CL_UpadteFlashlight
+CL_UpdateFlashlight
 
 update client flashlight
 ================
 */
-void CL_UpadteFlashlight( cl_entity_t *pEnt )
+void CL_UpdateFlashlight( cl_entity_t *pEnt )
 {
 	vec3_t	vecSrc, vecEnd;
 	vec3_t	forward, view_ofs;
@@ -2388,7 +2388,7 @@ void CL_UpadteFlashlight( cl_entity_t *pEnt )
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
 
-	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_GLASS_IGNORE, 2, -1, NULL );
+	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_GLASS_IGNORE|PM_STUDIO_BOX, 2, -1, NULL );
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 
 	if( falloff < 250.0f ) falloff = 1.0f;

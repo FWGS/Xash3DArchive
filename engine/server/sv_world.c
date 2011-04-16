@@ -742,8 +742,7 @@ returns true if the entity is in solid currently
 qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 {
 	trace_t	trace;
-#if 0
-	// g-cont. probably not needs
+#if 1
 	if( ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
 	{
 		// to avoid falling through tracktrain update client mins\maxs here

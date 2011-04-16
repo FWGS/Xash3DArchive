@@ -228,7 +228,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	{
 		if( entityType == ET_PLAYER )
 		{
-			CL_UpadteFlashlight( ent );
+			CL_UpdateFlashlight( ent );
 		}
 		else
 		{

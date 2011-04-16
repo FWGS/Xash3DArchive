@@ -98,11 +98,14 @@ float SV_VecToYaw( const vec3_t src )
 	float	yaw;
 
 	if( src[1] == 0.0f && src[0] == 0.0f )
-		return 0.0f;
-
-	yaw = RAD2DEG( atan2( src[1], src[0] ));
-	if( yaw < 0 ) yaw += 360;
-
+	{
+		yaw = 0;
+	}
+	else
+	{
+		yaw = (int)( atan2( src[1], src[0] ) * 180 / M_PI );
+		if( yaw < 0 ) yaw += 360;
+	}
 	return yaw;
 }
 

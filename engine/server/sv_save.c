@@ -167,7 +167,7 @@ void SaveRestore_Rebase( SAVERESTOREDATA *pSaveData )
 
 void SaveRestore_Rewind( SAVERESTOREDATA *pSaveData, int nBytes )
 {
-	if( nBytes > pSaveData->size )
+	if( pSaveData->size < nBytes )
 		nBytes = pSaveData->size;
 
 	SaveRestore_MoveCurPos( pSaveData, -nBytes );

@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "PLATFORM_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "../common" /I "../pm_shared" /I "../engine" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /W3 /GX /O2 /I "./" /I "../common" /I "../pm_shared" /I "../engine" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -53,9 +53,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386 /opt:nowin98
-# ADD LINK32 msvcrt.lib user32.lib /nologo /dll /pdb:none /machine:I386 /nodefaultlib:"libc.lib" /def:".\mainui.def" /out:"..\temp\mainui\!release/menu.dll" /opt:nowin98
-# SUBTRACT LINK32 /profile /nodefaultlib
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
+# ADD LINK32 kernel32.lib user32.lib /nologo /dll /pdb:none /machine:I386 /def:".\mainui.def" /out:"..\temp\mainui\!release/menu.dll"
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\mainui\!release
 InputPath=\Xash3D\src_main\temp\mainui\!release\menu.dll
@@ -91,7 +90,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /def:".\mainui.def" /pdbtype:sept
-# ADD LINK32 msvcrtd.lib user32.lib /nologo /dll /debug /machine:I386 /nodefaultlib:"msvcrt.lib" /def:".\mainui.def" /out:"..\temp\mainui\!debug/menu.dll" /pdbtype:sept
+# ADD LINK32 kernel32.lib user32.lib /nologo /dll /debug /machine:I386 /def:".\mainui.def" /out:"..\temp\mainui\!debug/menu.dll" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no /nodefaultlib
 # Begin Custom Build
 TargetDir=\Xash3D\src_main\temp\mainui\!debug

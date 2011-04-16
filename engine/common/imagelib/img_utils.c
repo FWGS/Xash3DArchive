@@ -184,7 +184,10 @@ void Image_RoundDimensions( int *width, int *height )
 qboolean Image_ValidSize( const char *name )
 {
 	if( image.width > IMAGE_MAXWIDTH || image.height > IMAGE_MAXHEIGHT || image.width <= 0 || image.height <= 0 )
+	{
+		MsgDev( D_ERROR, "Image: %s has invalid sizes %i x %i\n", name, image.width, image.height );
 		return false;
+	}
 	return true;
 }
 

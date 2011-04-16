@@ -1697,7 +1697,7 @@ void Con_VidInit( void )
 	}
 
 	// missed console image will be replaced as white (GoldSrc rules)
-	if( con.background == tr.defaultTexture )
+	if( con.background == tr.defaultTexture || con.background == 0 )
 		con.background = tr.whiteTexture;
 
 	Con_LoadConchars();

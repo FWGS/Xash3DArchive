@@ -75,7 +75,7 @@ void CL_DebugParticle( const vec3_t pos, byte r, byte g, byte b );
 void CL_RicochetSound( const vec3_t pos );
 struct dlight_s *CL_AllocDlight( int key );
 struct dlight_s *CL_AllocElight( int key );
-void CL_UpadteFlashlight( cl_entity_t *pEnt );
+void CL_UpdateFlashlight( cl_entity_t *pEnt );
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_DecalRemoveAll( int textureIndex );
 int CL_DecalIndexFromName( const char *name );
