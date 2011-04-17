@@ -861,7 +861,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		if( tex->name[0] == '*' || tex->name[0] == '!' )
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
-		if( !Q_strnicmp( tex->name, "water", 5 ))
+		if( !Q_strnicmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
 
 		if( !Q_strnicmp( tex->name, "scroll", 6 ))
@@ -1583,20 +1583,14 @@ model_t *Mod_FindName( const char *filename, qboolean create )
 {
 	model_t	*mod;
 	char	name[64];
-	int	i, j;
+	int	i;
 	
 	if( !filename || !filename[0] )
 		return NULL;
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '!' ) continue;
-		else if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = Q_tolower( filename[i] );
-		j++;
-	}
-	name[j] = '\0';
+	if( *filename == '!' ) filename++;
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 		
 	// search the currently loaded models
 	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )

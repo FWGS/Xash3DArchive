@@ -1810,6 +1810,7 @@ BEAM *CL_BeamEntPoint( int startEnt, const vec3_t end, int modelIndex, float lif
 	pBeam->type = TE_BEAMPOINTS;
 	pBeam->flags = FBEAM_STARTENTITY;
 	pBeam->modelIndex = modelIndex;
+	pBeam->pFollowModel = Mod_Handle( modelIndex );
 	pBeam->startEntity = startEnt;
 	VectorCopy( end, pBeam->target );
 	pBeam->frame = startFrame;
@@ -1910,6 +1911,7 @@ BEAM *CL_BeamFollow( int startEnt, int modelIndex, float life, float width, floa
 	pBeam->type = TE_BEAMFOLLOW;
 	pBeam->flags = FBEAM_STARTENTITY;
 	pBeam->modelIndex = modelIndex;
+	pBeam->pFollowModel = Mod_Handle( modelIndex );
 	pBeam->startEntity = startEnt;
 	pBeam->frame = 0;
 	pBeam->frameRate = 1.0f;

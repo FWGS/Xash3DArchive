@@ -146,9 +146,6 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 		if((( check->v.flags & FL_CLIENT ) && check->v.health <= 0 ) || check->v.deadflag == DEAD_DEAD )
 			continue;	// dead body
 
-		if( check->v.mins[2] == 0 && check->v.maxs[2] == 1 )
-			continue;
-
 		if( VectorIsNull( check->v.size )) continue;
 
 		if( !BoundsIntersect( pmove_mins, pmove_maxs, check->v.absmin, check->v.absmax ))

@@ -19,7 +19,6 @@ COM_LoadFile
 byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
 {
 	string	name;
-	int	i;
 
 	if( !filename || !*filename )
 	{
@@ -27,13 +26,8 @@ byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
 		return NULL;
 	}
 
-	// replace all backward slashes (VGUI issues)
-	for( i = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '\\' ) name[i] = '/';
-		else name[i] = Q_tolower( filename[i] );
-	}
-	name[i] = '\0';
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
 	return FS_LoadFile( name, pLength, false );
 }

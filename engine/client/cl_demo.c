@@ -229,6 +229,8 @@ void CL_WriteDemoHeader( const char *name )
 	Q_memset( &nullstate, 0, sizeof( nullstate ));
 	Q_memset( &nullmovevars, 0, sizeof( nullmovevars ));
 
+	MSG_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
+
 	for( i = 0; i < clgame.maxEntities; i++ )
 	{
 		state = &clgame.entities[i].baseline;
@@ -271,8 +273,6 @@ void CL_WriteDemoHeader( const char *name )
 		}
 		else BF_WriteOneBit( &buf, 0 );
 	}
-
-	MSG_WriteDeltaMovevars( &buf, &nullmovevars, &clgame.movevars );
 
 	// write it to the demo file
 	len = BF_GetNumBytesWritten( &buf );

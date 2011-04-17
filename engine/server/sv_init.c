@@ -15,20 +15,14 @@ server_t		sv;	// local server
 int SV_ModelIndex( const char *filename )
 {
 	char	name[64];
-	int	i, j;
+	int	i;
 
 	if( !filename || !filename[0] )
 		return 0;
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '!' ) continue;
-		else if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = filename[i];
-		j++;
-	}
-	name[j] = '\0';
+	if( *filename == '!' ) filename++;
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
 	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 	{
@@ -59,19 +53,14 @@ int SV_ModelIndex( const char *filename )
 int SV_SoundIndex( const char *filename )
 {
 	char	name[64];
-	int	i, j;
+	int	i;
 
-	// don't precache sentence names
+	// don't precache sentence names!
 	if( !filename || !filename[0] || filename[0] == '!' )
 		return 0;
 
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = filename[i];
-		j++;
-	}
-	name[j] = '\0';
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
 	for( i = 1; i < MAX_SOUNDS && sv.sound_precache[i][0]; i++ )
 	{
@@ -102,19 +91,13 @@ int SV_SoundIndex( const char *filename )
 int SV_EventIndex( const char *filename )
 {
 	char	name[64];
-	int	i, j;
+	int	i;
 
 	if( !filename || !filename[0] )
 		return 0;
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = filename[i];
-		j++;
-	}
-	name[j] = '\0';
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
 	for( i = 1; i < MAX_EVENTS && sv.event_precache[i][0]; i++ )
 	{
@@ -145,20 +128,13 @@ int SV_EventIndex( const char *filename )
 int SV_GenericIndex( const char *filename )
 {
 	char	name[64];
-	int	i, j;
+	int	i;
 
 	if( !filename || !filename[0] )
 		return 0;
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '!' ) continue;
-		else if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = filename[i];
-		j++;
-	}
-	name[j] = '\0';
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
 	for( i = 1; i < MAX_CUSTOM && sv.files_precache[i][0]; i++ )
 	{

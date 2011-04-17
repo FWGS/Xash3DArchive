@@ -102,6 +102,7 @@ Just for debug (r_showtextures uses it)
 */
 void GL_SetTextureType( GLenum texnum, GLenum type )
 {
+	if( texnum <= 0 ) return;
 	ASSERT( texnum >= 0 && texnum < MAX_TEXTURES );
 	r_textures[texnum].texType = type;
 }

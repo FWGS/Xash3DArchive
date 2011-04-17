@@ -1334,7 +1334,12 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 		}
 	}
 
-	if( tableIndex == Delta_NumTables() ) Q_snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
+	if( tableIndex == Delta_NumTables() )
+	{
+		// send movevars here because we need loading skybox early than HLFX may override him
+		SV_FullUpdateMovevars( cl, &cl->netchan.message );
+		Q_snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
+	}
 	else Q_snprintf( cmd, MAX_STRING, "cmd deltainfo %i %i %i\n", svs.spawncount, tableIndex, fieldIndex );
 
 	// send next command
@@ -1412,8 +1417,6 @@ void SV_Begin_f( sv_client_t *cl )
 		return;
 	}
 
-	// don't send movevars before svc_deltatable
-	cl->sendmovevars = true;
 	cl->state = cs_spawned;
 	SV_PutClientInServer( cl->edict );
 

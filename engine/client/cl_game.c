@@ -88,8 +88,8 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	if( !clgame.entities ) // not in game yet
 		return NULL;
 
-	if( index == 0 && !cl.video_prepped )
-		return NULL; // not in game yet
+	if( index == 0 )
+		return cl.world;
 
 	if( index < 0 )
 		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
@@ -1284,14 +1284,12 @@ void CL_FreeEntity( cl_entity_t *pEdict )
 
 void CL_ClearWorld( void )
 {
-	cl_entity_t	*ent;
-
-	ent = clgame.entities;
-	ent->curstate.modelindex = 1;	// world model
-	ent->curstate.solid = SOLID_BSP;
-	ent->curstate.movetype = MOVETYPE_PUSH;
-	ent->model = cl.worldmodel;
-	ent->index = 0;
+	cl.world = clgame.entities;
+	cl.world->curstate.modelindex = 1;	// world model
+	cl.world->curstate.solid = SOLID_BSP;
+	cl.world->curstate.movetype = MOVETYPE_PUSH;
+	cl.world->model = cl.worldmodel;
+	cl.world->index = 0;
 }
 
 void CL_InitEdicts( void )
@@ -1357,8 +1355,8 @@ pfnSPR_Load
 */
 HSPRITE pfnSPR_Load( const char *szPicName )
 {
-	int	i, j;
 	char	name[64];
+	int	i;
 
 	if( !szPicName || !*szPicName )
 	{
@@ -1366,18 +1364,13 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 		return 0;
 	}
 
-	for( i = j = 0; i < Q_strlen( szPicName ); i++ )
-	{
-		if( szPicName[i] == '\\' ) name[j] = '/';
-		else name[j] = Q_tolower( szPicName[i] );
-		j++;
-	}
-	name[j] = '\0';
+	Q_strncpy( name, szPicName, sizeof( name ));
+	COM_FixSlashes( name );
 
 	// slot 0 isn't used
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
-		if( !Q_strcmp( clgame.sprites[i].name, name ))
+		if( !Q_stricmp( clgame.sprites[i].name, name ))
 		{
 			// prolonge registration
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -1387,7 +1380,10 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 
 	// find a free model slot spot
 	for( i = 1; i < MAX_IMAGES; i++ )
-		if( !clgame.sprites[i].name[0] ) break; // this is a valid spot
+	{
+		if( !clgame.sprites[i].name[0] )
+			break; // this is a valid spot
+	}
 
 	if( i == MAX_IMAGES ) 
 	{
@@ -2346,7 +2342,7 @@ int CL_FindModelIndex( const char *m )
 
 	for( i = 1; i < MAX_MODELS && cl.model_precache[i][0]; i++ )
 	{
-		if( !Q_strcmp( cl.model_precache[i], m ))
+		if( !Q_stricmp( cl.model_precache[i], m ))
 			return i;
 	}
 
@@ -2623,8 +2619,8 @@ pfnLoadMapSprite
 */
 model_t *pfnLoadMapSprite( const char *filename )
 {
-	int	i, j;
 	char	name[64];
+	int	i;
 
 	if( !filename || !*filename )
 	{
@@ -2632,18 +2628,13 @@ model_t *pfnLoadMapSprite( const char *filename )
 		return NULL;
 	}
 
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = Q_tolower( filename[i] );
-		j++;
-	}
-	name[j] = '\0';
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
 	// slot 0 isn't used
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
-		if( !Q_strcmp( clgame.sprites[i].name, name ))
+		if( !Q_stricmp( clgame.sprites[i].name, name ))
 		{
 			// prolonge registration
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -2653,7 +2644,10 @@ model_t *pfnLoadMapSprite( const char *filename )
 
 	// find a free model slot spot
 	for( i = 1; i < MAX_IMAGES; i++ )
-		if( !clgame.sprites[i].name[0] ) break; // this is a valid spot
+	{
+		if( !clgame.sprites[i].name[0] )
+			break; // this is a valid spot
+	}
 
 	if( i == MAX_IMAGES ) 
 	{
@@ -3693,6 +3687,7 @@ qboolean CL_LoadProgs( const char *name )
 
 	Cvar_Get( "cl_nopred", "1", CVAR_ARCHIVE|CVAR_USERINFO, "disable client movement predicting" );
 	Cvar_Get( "cl_lw", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
+	Cvar_Get( "cl_lc", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable lag compensation" );
 
 	clgame.maxEntities = GI->max_edicts; // merge during loading
 	CL_InitCDAudio( "media/cdaudio.txt" );

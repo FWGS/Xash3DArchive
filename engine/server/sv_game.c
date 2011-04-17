@@ -13,6 +13,7 @@
 
 // disable this when QNAN error in MakeVectors will be sucessfully reached
 #define TEMPORARY_FIX_QNAN_ERROR
+#define DEBUG_NEW_CLIENTPVS_CHECK
 
 // fatpvs stuff
 static byte fatpvs[MAX_MAP_LEAFS/8];
@@ -1265,11 +1266,13 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 {
 	edict_t		*pClient;
 	sv_client_t	*cl;
-	const float	*org;
+	vec3_t		view1, view2;
 	int		i;
 
 	if( !SV_IsValidEdict( pEdict ))
 		return svgame.edicts;
+
+	VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view1 );
 
 	for( i = 0; i < svgame.globals->maxClients; i++ )
 	{
@@ -1279,11 +1282,38 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 
 		// check for SET_VIEW
 		if( SV_IsValidEdict( cl->pViewEntity ))
-			org = cl->pViewEntity->v.origin;
-		else org = pClient->v.origin;
+			VectorAdd( cl->pViewEntity->v.origin, cl->pViewEntity->v.view_ofs, view2 );
+		else VectorAdd( pClient->v.origin, pClient->v.view_ofs, view2 );
 
-		if( SV_OriginIn( DVIS_PVS, pEdict->v.origin, org ))
-			return pClient;
+		if( pEdict->v.modelindex )
+		{
+			// can use entity leafs or headnode for fast testing
+			// FIXME: this is need to be detail tested!
+			mleaf_t	*leaf = Mod_PointInLeaf( view2, sv.worldmodel->nodes );
+			byte	*mask = Mod_LeafPVS( leaf, sv.worldmodel );
+
+			if( pfnCheckVisibility( pEdict, mask ))
+			{
+				return pClient;
+			}
+#ifdef DEBUG_NEW_CLIENTPVS_CHECK
+			else if( sv_check_errors->integer )
+			{
+				trace_t	tr;
+				tr = SV_Move( view1, vec3_origin, vec3_origin, view2, MOVE_WORLDONLY, NULL );
+
+				if( tr.fraction == 1.0f && !tr.allsolid )
+				{
+					MsgDev( D_ERROR, "CHECK_CLIENT_PVS: fail to see %s, probably client is underwater\n", SV_ClassName( pEdict )); 
+				}
+			}
+#endif
+		}
+		else
+		{
+			if( SV_OriginIn( DVIS_PVS, view1, view2 ))
+				return pClient;
+		}
 	}
 	return svgame.edicts;
 }

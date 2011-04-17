@@ -281,6 +281,8 @@ CL_ParseMovevars
 */
 void CL_ParseMovevars( sizebuf_t *msg )
 {
+	Delta_InitClient ();	// finalize client delta's
+
 	MSG_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
 
 	// update sky if changed
@@ -486,12 +488,10 @@ void CL_ParseServerData( sizebuf_t *msg )
 		// continue playing if we are changing level
 		S_StopBackgroundTrack ();
 	}
-
-	if( !CL_ChangeGame( gamefolder, false ))
-	{
-		clgame.dllFuncs.pfnVidInit();
-	}
-
+#if 0
+	// NOTE: this is not tested as well. Use with precaution
+	CL_ChangeGame( gamefolder, false );
+#endif
 	UI_SetActiveMenu( cl.background );
 
 	if( cl.playernum & 128 )

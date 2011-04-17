@@ -291,10 +291,10 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	bmih.biPlanes = 1;
 	bmih.biBitCount = (pixel_size == 3) ? 24 : 32;
 	bmih.biCompression = BI_RGB;
-	bmih.biSizeImage = 0;
+	bmih.biSizeImage = cbBmpBits;
 	bmih.biXPelsPerMeter = 0;
 	bmih.biYPelsPerMeter = 0;
-	bmih.biClrUsed = 256;
+	bmih.biClrUsed = 0;
 	bmih.biClrImportant = 0;
 	
 	// Write info header

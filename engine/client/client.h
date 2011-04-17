@@ -87,10 +87,10 @@ typedef struct
 	client_data_t	data;			// some clientdata holds
 
 	frame_t		frame;			// received from server
+	int		predictcount;		// advances with next clientdata
 	frame_t		frames[MULTIPLAYER_BACKUP];	// alloced on svc_serverdata
 	usercmd_t		cmds[MULTIPLAYER_BACKUP];	// each mesage will send several old cmds
 	local_state_t	predict[MULTIPLAYER_BACKUP];	// local client state
-	int		predictcount;		// advances with next clientdata
 
 	double		time;			// this is the time value that the client
 						// is rendering at.  always <= cls.realtime
@@ -124,6 +124,7 @@ typedef struct
 	int		sound_index[MAX_SOUNDS];
 	int		decal_index[MAX_DECALS];
 
+	cl_entity_t	*world;
 	model_t		*worldmodel;			// pointer to world
 	efrag_t		*free_efrags;
 } client_t;

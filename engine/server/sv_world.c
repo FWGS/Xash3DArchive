@@ -444,40 +444,6 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 
 /*
 ===============
-SV_CheckForOutside
-
-Remove entity out of the level
-===============
-*/
-void SV_CheckForOutside( edict_t *ent )
-{
-	const float	*org;
-
-	// not solid edicts can be fly through walls
-	if( ent->v.solid == SOLID_NOT ) return;
-
-	// other ents probably may travels across the void
-	if( ent->v.movetype != MOVETYPE_NONE ) return;
-
-	// clients can flying outside
-	if( ent->v.flags & ( FL_CLIENT|FL_FAKECLIENT )) return;
-	
-	// sprites and brushes can be stucks in the walls normally
-	if( Mod_GetType( ent->v.modelindex ) != mod_studio )
-		return;
-
-	org = ent->v.origin;
-
-	if( SV_PointContents( org ) != CONTENTS_SOLID )
-		return;
-
-	MsgDev( D_ERROR, "%s outside of the world at %g %g %g\n", SV_ClassName( ent ), org[0], org[1], org[2] );
-
-	ent->v.flags |= FL_KILLME;
-}
-
-/*
-===============
 SV_FindTouchedLeafs
 
 ===============
@@ -589,15 +555,6 @@ void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 		{
 			ent->headnode = -1;
 			SV_FindTouchedLeafs( ent, sv.worldmodel->nodes );
-
-			// if none of the leafs were inside the map, the
-			// entity is outside the world and can be considered unlinked
-			if( !ent->num_leafs )
-			{
-				SV_CheckForOutside( ent );
-				ent->headnode = -1;
-				return;
-			}
 
 			if( ent->num_leafs > MAX_ENT_LEAFS )
 				ent->num_leafs = 0;		// so we use headnode instead
