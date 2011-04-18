@@ -269,8 +269,8 @@ void BF_WriteBitAngle( sizebuf_t *bf, float fAngle, int numbits )
 	int	d;
 
 	// clamp the angle before receiving
-	if( fAngle > 360 ) fAngle -= 360; 
-	else if( fAngle < 0 ) fAngle += 360;
+	if( fAngle > 360.0f ) fAngle -= 360.0f; 
+	else if( fAngle < 0 ) fAngle += 360.0f;
 
 	shift = ( 1 << numbits );
 	mask = shift - 1;
@@ -555,11 +555,11 @@ float BF_ReadBitAngle( sizebuf_t *bf, int numbits )
 	shift = (float)( 1 << numbits );
 
 	i = BF_ReadUBitLong( bf, numbits );
-	fReturn = (float)i * ( 360.0 / shift );
+	fReturn = (float)i * ( 360.0f / shift );
 
 	// clamp the finale angle
-	if( fReturn < -180 ) fReturn += 360; 
-	else if( fReturn > 180 ) fReturn -= 360;
+	if( fReturn < -180.0f ) fReturn += 360.0f; 
+	else if( fReturn > 180.0f ) fReturn -= 360.0f;
 
 	return fReturn;
 }

@@ -48,6 +48,7 @@ static const char *uiVideoModes[] =
 	"1280 x 1024",
 	"1600 x 1200",
 	"2048 x 1536",
+	"800 x 480 (wide)",
 	"856 x 480 (wide)",
 	"1024 x 576 (wide)",
 	"1024 x 600 (wide)",

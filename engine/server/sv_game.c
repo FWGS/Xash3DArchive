@@ -11,8 +11,6 @@
 #include "pm_defs.h"
 #include "const.h"
 
-// disable this when QNAN error in MakeVectors will be sucessfully reached
-#define TEMPORARY_FIX_QNAN_ERROR
 #define DEBUG_NEW_CLIENTPVS_CHECK
 
 // fatpvs stuff
@@ -1377,16 +1375,7 @@ pfnMakeVectors
 */
 void pfnMakeVectors( const float *rgflVector )
 {
-#ifdef TEMPORARY_FIX_QNAN_ERROR
-	char	charVec[128];
-	vec3_t	outVec;
-
-	Q_snprintf( charVec, sizeof( charVec ) - 1, "%f %f %f", rgflVector[0], rgflVector[1], rgflVector[2] );
-	Q_atov( outVec, charVec, 3 );
-	AngleVectors( outVec, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
-#else
 	AngleVectors( rgflVector, svgame.globals->v_forward, svgame.globals->v_right, svgame.globals->v_up );
-#endif
 }
 
 /*

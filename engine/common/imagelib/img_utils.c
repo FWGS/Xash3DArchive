@@ -235,16 +235,6 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 			d_table[i] = *(uint *)rgba;
 		}
 		break;
-	case LUMP_INDEXALPHA:
-		for( i = 0; i < 256; i++ )
-		{
-			rgba[0] = pal[i*3+0];
-			rgba[1] = pal[i*3+1];
-			rgba[2] = pal[i*3+2];
-			rgba[3] = i;
-			d_table[i] = *(uint *)rgba;
-		}
-		break;	
 	case LUMP_TRANSPARENT:
 		for( i = 0; i < 256; i++ )
 		{
@@ -256,7 +246,7 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 		}
 		break;
 	case LUMP_QFONT:
-		for( i = 1; i < 256; i++ )
+		for( i = 0; i < 256; i++ )
 		{
 			rgba[0] = pal[i*3+0];
 			rgba[1] = pal[i*3+1];
@@ -332,7 +322,8 @@ void Image_GetPaletteLMP( const byte *pal, int rendermode )
 	if( pal )
 	{
 		Image_SetPalette( pal, d_8to24table );
-		d_8to24table[255] &= 0xFFFFFF;
+		if( rendermode != LUMP_DECAL )
+			d_8to24table[255] &= 0xFFFFFF;
 		image.d_currentpal = d_8to24table;
 	}
 	else if( rendermode == LUMP_QFONT )

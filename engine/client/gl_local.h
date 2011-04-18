@@ -246,7 +246,6 @@ void GL_DisableMultitexture( void );
 void GL_EnableMultitexture( void );
 void GL_LoadIdentityTexMatrix( void );
 void GL_SetRenderMode( int mode );
-void GL_SetSpriteRenderMode( int mode );
 void GL_FrontFace( GLenum front );
 void GL_MBind( GLenum texnum );
 void GL_Cull( GLenum cull );

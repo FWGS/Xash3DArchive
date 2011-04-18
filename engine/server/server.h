@@ -579,5 +579,6 @@ int SV_PointContents( const vec3_t p );
 void SV_RunLightStyles( void );
 void SV_SetLightStyle( int style, const char* s );
 int SV_LightForEntity( edict_t *pEdict );
+void SV_ClearPhysEnts( void );
 
 #endif//SERVER_H

@@ -1142,6 +1142,8 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			}
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 
+			CL_ClearState ();
+
 			cls.state = ca_connecting;
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;

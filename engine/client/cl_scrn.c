@@ -337,7 +337,9 @@ static void SCR_InstallParticlePalette( void )
 	rgbdata_t	*pic;
 	int	i;
 
-	pic = FS_LoadImage( "gfx/palette.pal", NULL, 0 );
+	// first check 'palette.lmp' then 'palette.pal'
+	pic = FS_LoadImage( "gfx/palette.lmp", NULL, 0 );
+	if( !pic ) pic = FS_LoadImage( "gfx/palette.pal", NULL, 0 );
 
 	// NOTE: imagelib required this fakebuffer for loading internal palette
 	if( !pic ) pic = FS_LoadImage( "#valve.pal", ((byte *)&i), 768 );

@@ -1710,14 +1710,14 @@ Mod_LoadWorld
 Loads in the map and all submodels
 ==================
 */
-void Mod_LoadWorld( const char *name, uint *checksum )
+void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
 {
 	int	i;
 
 	// now replacement table is invalidate
 	Q_memset( com_models, 0, sizeof( com_models ));
 
-	if( !Q_stricmp( cm_models[0].name, name ))
+	if( !Q_stricmp( cm_models[0].name, name ) && !force )
 	{
 		// singleplayer mode: server already loading map
 		com_models[1] = cm_models; // make link to world

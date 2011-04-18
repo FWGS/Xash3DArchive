@@ -213,6 +213,7 @@ typedef struct
 	// holds text color
 	rgba_t		textColor;
 	rgba_t		spriteColor;
+	rgba_t		triColor;
 
 	// crosshair members
 	const model_t	*pCrosshair;
@@ -612,6 +613,7 @@ int CL_PointContents( const vec3_t p );
 int CL_WaterEntity( const float *rgflPos );
 model_t *CL_GetWaterModel( const float *rgflPos );
 void CL_SetupPMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd );
+void CL_ClearPhysEnts( void );
 
 //
 // cl_studio.c

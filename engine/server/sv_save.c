@@ -518,6 +518,8 @@ void SV_AgeSaveList( const char *pName, int count )
 	FS_Delete( newName );
 	FS_Delete( newImage );
 
+	GL_FreeImage( newImage );
+
 	while( count > 0 )
 	{
 		if( count == 1 )
@@ -535,6 +537,8 @@ void SV_AgeSaveList( const char *pName, int count )
 
 		Q_snprintf( newName, sizeof( newName ), "save/%s%02d.sav", pName, count );
 		Q_snprintf( newImage, sizeof( newImage ), "save/%s%02d.bmp", pName, count );
+
+		GL_FreeImage( oldImage );
 
 		// scroll the name list down (rename quick04.sav to quick05.sav)
 		FS_Rename( oldName, newName );

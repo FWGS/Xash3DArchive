@@ -559,7 +559,8 @@ static void PM_CheckMovingGround( clientdata_t *cd, entity_state_t *state, float
 void CL_SetSolidEntities( void )
 {
 	// world not initialized
-	if( !cl.frame.valid ) return;
+	if( cls.state != ca_active || !cl.frame.valid )
+		return;
 
 	// setup physents
 	clgame.pmove->numvisent = 0;
@@ -665,6 +666,9 @@ void CL_PredictMovement( void )
 	int		current_command_mod;
 	cl_entity_t	*player, *viewent;
 	clientdata_t	*cd;
+
+	// build list of all solid entities per next frame (exclude clients)
+	CL_SetSolidEntities ();
 
 	if( cls.state != ca_active ) return;
 	if( cl.refdef.paused || cls.key_dest == key_menu ) return;

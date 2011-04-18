@@ -10,6 +10,14 @@
 
 static qboolean has_update = false;
 
+void SV_ClearPhysEnts( void )
+{
+	svgame.pmove->numtouch = 0;
+	svgame.pmove->numvisent = 0;
+	svgame.pmove->nummoveent = 0;
+	svgame.pmove->numphysent = 0;
+}
+
 void SV_CopyPmtraceToGlobal( pmtrace_t *trace )
 {
 	svgame.globals->trace_allsolid = trace->allsolid;
@@ -599,7 +607,7 @@ static void SV_FinishPMove( playermove_t *pmove, edict_t *clent )
 	if( !clent->v.fixangle )
 	{
 		VectorCopy( pmove->angles, clent->v.v_angle );
-		clent->v.angles[PITCH] = -clent->v.v_angle[PITCH] / 3;
+		clent->v.angles[PITCH] = -( clent->v.v_angle[PITCH] / 3.0f );
 		clent->v.angles[ROLL] = clent->v.v_angle[ROLL];
 		clent->v.angles[YAW] = clent->v.v_angle[YAW];
 	}

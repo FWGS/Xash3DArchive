@@ -15,7 +15,7 @@
 
 // NOTE: enable this if you want merge both 'model' and 'modelT' files into one model slot.
 // otherwise it's uses two slots in models[] array for models with external textures
-// #define STUDIO_MERGE_TEXTURES
+#define STUDIO_MERGE_TEXTURES
 
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
 

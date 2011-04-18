@@ -775,6 +775,42 @@ int CL_GetMaxClients( void )
 }
 
 /*
+=========
+SPR_EnableScissor
+
+=========
+*/
+static void SPR_EnableScissor( int x, int y, int width, int height )
+{
+	// check bounds
+	x = bound( 0, x, clgame.scrInfo.iWidth );
+	y = bound( 0, y, clgame.scrInfo.iHeight );
+	width = bound( 0, width, clgame.scrInfo.iWidth - x );
+	height = bound( 0, height, clgame.scrInfo.iHeight - y );
+
+	clgame.ds.scissor_x = x;
+	clgame.ds.scissor_width = width;
+	clgame.ds.scissor_y = y;
+	clgame.ds.scissor_height = height;
+	clgame.ds.scissor_test = true;
+}
+
+/*
+=========
+SPR_DisableScissor
+
+=========
+*/
+static void SPR_DisableScissor( void )
+{
+	clgame.ds.scissor_x = 0;
+	clgame.ds.scissor_width = 0;
+	clgame.ds.scissor_y = 0;
+	clgame.ds.scissor_height = 0;
+	clgame.ds.scissor_test = false;
+}
+
+/*
 ====================
 CL_DrawCrosshair
 
@@ -826,7 +862,10 @@ void CL_DrawCrosshair( void )
 
 	GL_SetRenderMode( kRenderTransAlpha );
 	*(int *)clgame.ds.spriteColor = *(int *)clgame.ds.rgbaCrosshair;
+
+	SPR_EnableScissor( x - 0.5f * width, y - 0.5f * height, width, height );
 	SPR_DrawGeneric( 0, x - 0.5f * width, y - 0.5f * height, -1, -1, &clgame.ds.rcCrosshair );
+	SPR_DisableScissor();
 }
 
 /*
@@ -1332,7 +1371,6 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	if( !buf ) return false;
 
 	Q_strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
-	m_pSprite->flags |= SPRITE_HUD;
 
 	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
 	else Mod_LoadSpriteModel( m_pSprite, buf );		
@@ -1507,42 +1545,6 @@ static void pfnSPR_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
 {
 	GL_SetRenderMode( kRenderTransAdd );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
-}
-
-/*
-=========
-pfnSPR_EnableScissor
-
-=========
-*/
-static void pfnSPR_EnableScissor( int x, int y, int width, int height )
-{
-	// check bounds
-	x = bound( 0, x, clgame.scrInfo.iWidth );
-	y = bound( 0, y, clgame.scrInfo.iHeight );
-	width = bound( 0, width, clgame.scrInfo.iWidth - x );
-	height = bound( 0, height, clgame.scrInfo.iHeight - y );
-
-	clgame.ds.scissor_x = x;
-	clgame.ds.scissor_width = width;
-	clgame.ds.scissor_y = y;
-	clgame.ds.scissor_height = height;
-	clgame.ds.scissor_test = true;
-}
-
-/*
-=========
-pfnSPR_DisableScissor
-
-=========
-*/
-static void pfnSPR_DisableScissor( void )
-{
-	clgame.ds.scissor_x = 0;
-	clgame.ds.scissor_width = 0;
-	clgame.ds.scissor_y = 0;
-	clgame.ds.scissor_height = 0;
-	clgame.ds.scissor_test = false;
 }
 
 /*
@@ -2920,13 +2922,11 @@ TriColor4f
 */
 void TriColor4f( float r, float g, float b, float a )
 {
-	rgba_t	rgba;
-
-	rgba[0] = (byte)bound( 0, (r * 255.0f), 255 );
-	rgba[1] = (byte)bound( 0, (g * 255.0f), 255 );
-	rgba[2] = (byte)bound( 0, (b * 255.0f), 255 );
-	rgba[3] = (byte)bound( 0, (a * 255.0f), 255 );
-	pglColor4ub( rgba[0], rgba[1], rgba[2], rgba[3] );
+	clgame.ds.triColor[0] = (byte)bound( 0, (r * 255.0f), 255 );
+	clgame.ds.triColor[1] = (byte)bound( 0, (g * 255.0f), 255 );
+	clgame.ds.triColor[2] = (byte)bound( 0, (b * 255.0f), 255 );
+	clgame.ds.triColor[3] = (byte)bound( 0, (a * 255.0f), 255 );
+	pglColor4ub( clgame.ds.triColor[0], clgame.ds.triColor[1], clgame.ds.triColor[2], clgame.ds.triColor[3] );
 }
 
 /*
@@ -2937,6 +2937,10 @@ TriColor4ub
 */
 void TriColor4ub( byte r, byte g, byte b, byte a )
 {
+	clgame.ds.triColor[0] = r;
+	clgame.ds.triColor[1] = g;
+	clgame.ds.triColor[2] = b;
+	clgame.ds.triColor[3] = a;
 	pglColor4ub( r, g, b, a );
 }
 
@@ -2981,10 +2985,14 @@ TriBrightness
 */
 void TriBrightness( float brightness )
 {
-	int	color;
+	rgba_t	rgba;
 
-	color = brightness * 255;
-	pglColor4ub( color, color, color, 255 );
+	brightness = max( 0.0f, brightness );
+	rgba[0] = clgame.ds.triColor[0] * brightness;
+	rgba[1] = clgame.ds.triColor[1] * brightness;
+	rgba[2] = clgame.ds.triColor[2] * brightness;
+
+	pglColor3ub( rgba[0], rgba[1], rgba[2] );
 }
 
 /*
@@ -3017,17 +3025,9 @@ bind current texture
 int TriSpriteTexture( model_t *pSpriteModel, int frame )
 {
 	int	gl_texturenum;
-	msprite_t	*psprite;
 
 	if(( gl_texturenum = R_GetSpriteTexture( pSpriteModel, frame )) == 0 )
 		return 0;
-
-	psprite = pSpriteModel->cache.data;
-	if( psprite->texFormat == SPR_ALPHTEST )
-	{
-		pglEnable( GL_ALPHA_TEST );
-		pglAlphaFunc( GL_GREATER, 0.0f );
-	}
 
 	GL_Bind( GL_TEXTURE0, gl_texturenum );
 
@@ -3345,7 +3345,7 @@ float Voice_GetControlFloat( VoiceTweakControl iControl )
 static triangleapi_t gTriApi =
 {
 	TRI_API_VERSION,	
-	GL_SetSpriteRenderMode,
+	GL_SetRenderMode,
 	TriBegin,
 	TriEnd,
 	TriColor4f,
@@ -3506,8 +3506,8 @@ static cl_enginefunc_t gEngfuncs =
 	pfnSPR_Draw,
 	pfnSPR_DrawHoles,
 	pfnSPR_DrawAdditive,
-	pfnSPR_EnableScissor,
-	pfnSPR_DisableScissor,
+	SPR_EnableScissor,
+	SPR_DisableScissor,
 	pfnSPR_GetList,
 	pfnFillRGBA,
 	pfnGetScreenInfo,

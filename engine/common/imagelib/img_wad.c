@@ -33,8 +33,6 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 			rendermode = LUMP_TRANSPARENT;
 		else if( Q_stristr( name, "decal" ))
 			rendermode = LUMP_DECAL;
-		else if( Q_stristr( name, "indexalpha" ))
-			rendermode = LUMP_INDEXALPHA;
 		else if( Q_stristr( name, "qfont" ))
 			rendermode = LUMP_QFONT;
 		else if( Q_stristr( name, "valve" ))
@@ -227,7 +225,6 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	switch( image.d_rendermode )
 	{
 	case LUMP_DECAL:
-	case LUMP_INDEXALPHA:
 	case LUMP_TRANSPARENT:
 		image.flags |= IMAGE_HAS_ALPHA;
 		break;

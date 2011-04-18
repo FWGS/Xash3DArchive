@@ -683,6 +683,8 @@ void CL_ClearState( void )
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
 
+	CL_ClearPhysEnts ();
+
 	// wipe the entire cl structure
 	Q_memset( &cl, 0, sizeof( cl ));
 	BF_Clear( &cls.netchan.message );
@@ -998,7 +1000,7 @@ void CL_PrepVideo( void )
 
 	// let the render dll load the map
 	Q_strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
-	Mod_LoadWorld( mapname, &map_checksum );
+	Mod_LoadWorld( mapname, &map_checksum, false );
 	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
 	Cvar_SetFloat( "scr_loading", 25.0f );
 
@@ -1281,9 +1283,6 @@ void CL_ReadPackets( void )
 
 	cl.lerpFrac = CL_LerpPoint();
 	cl.thirdperson = clgame.dllFuncs.CL_IsThirdPerson();
-
-	// build list of all solid entities per frame (exclude clients)
-	CL_SetSolidEntities ();
 
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))

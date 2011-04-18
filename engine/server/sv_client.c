@@ -1778,6 +1778,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];
 	Q_memset( &nullcmd, 0, sizeof( usercmd_t ));
+	Q_memset( cmds, 0, sizeof( cmds ));
 
 	key = BF_GetRealBytesRead( msg );
 	checksum1 = BF_ReadByte( msg );

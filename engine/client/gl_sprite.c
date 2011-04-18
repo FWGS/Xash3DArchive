@@ -181,9 +181,7 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
 			break;
                     case SPR_INDEXALPHA:
-			if( mod->flags & SPRITE_HUD )
-				pal = FS_LoadImage( "#indexalpha.pal", src, 768 );
-			else pal = FS_LoadImage( "#decal.pal", src, 768 ); 
+			pal = FS_LoadImage( "#decal.pal", src, 768 ); 
 			break;
 		case SPR_ALPHTEST:		
 			pal = FS_LoadImage( "#transparent.pal", src, 768 );
