@@ -99,9 +99,9 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 
 	// now sort by rendermode
 	if( R_RankForRenderMode( ent1 ) > R_RankForRenderMode( ent2 ))
-		return -1;
-	if( R_RankForRenderMode( ent1 ) < R_RankForRenderMode( ent2 ))
 		return 1;
+	if( R_RankForRenderMode( ent1 ) < R_RankForRenderMode( ent2 ))
+		return -1;
 
 	// then by distance
 	if( ent1->model->type == mod_brush )
@@ -369,7 +369,7 @@ static void R_Clear( int bitMask )
 
 	if( RI.drawWorld && r_fastsky->integer )
 		bits |= GL_COLOR_BUFFER_BIT;
-	if( glState.stencilEnabled && r_shadows->integer )
+	if( glState.stencilEnabled )
 		bits |= GL_STENCIL_BUFFER_BIT;
 
 	bits &= bitMask;

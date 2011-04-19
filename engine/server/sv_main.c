@@ -37,7 +37,6 @@ convar_t	*sv_accelerate;
 convar_t	*sv_friction;
 convar_t	*sv_edgefriction;
 convar_t	*sv_waterfriction;
-convar_t	*sv_synchthink;
 convar_t	*sv_stopspeed;
 convar_t	*hostname;
 convar_t	*sv_fix_pushents;
@@ -669,7 +668,6 @@ void SV_Init( void )
 	sv_stopspeed = Cvar_Get( "sv_stopspeed", "100", CVAR_PHYSICINFO, "how fast you come to a complete stop" );
 	sv_maxclients = Cvar_Get( "maxplayers", "1", CVAR_LATCH|CVAR_SERVERNOTIFY, "server clients limit" );
 	sv_check_errors = Cvar_Get( "sv_check_errors", "0", CVAR_ARCHIVE, "check edicts for errors" );
-	sv_synchthink = Cvar_Get( "sv_fast_think", "0", CVAR_ARCHIVE, "allows entities to think more often than the server framerate" );
 	physinfo = Cvar_Get( "@physinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	serverinfo = Cvar_Get( "@serverinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
 	public_server = Cvar_Get ("public", "0", 0, "change server type from private to public" );

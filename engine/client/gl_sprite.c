@@ -16,7 +16,6 @@
 #define MAPSPRITE_SIZE	128
 
 convar_t		*r_sprite_lerping;
-char		sprite_name[64];
 char		group_suffix[8];
 static vec3_t	sprite_mins, sprite_maxs;
 static float	sprite_radius;
@@ -43,11 +42,12 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 {
 	dspriteframe_t	*pinframe;
 	mspriteframe_t	*pspriteframe;
-	char		texname[64];
+	char		texname[128];
 
 	// build uinque frame name
-	if( !sprite_name[0] ) FS_FileBase( mod->name, sprite_name );
-	Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", sprite_name, group_suffix, num / 10, num % 10 );
+	if( mod->flags & 256 ) // it's a HUD sprite
+		Q_snprintf( texname, sizeof( texname ), "#HUD/%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
+	else Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
 	
 	pinframe = (dspriteframe_t *)pin;
 
@@ -209,9 +209,6 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 		return;
 	}
 
-	// reset the sprite name
-	sprite_name[0] = '\0';
-
 	for( i = 0; i < pin->numframes; i++ )
 	{
 		frametype_t frametype = pframetype->type;
@@ -250,7 +247,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 {
 	byte		*src, *dst;
 	rgbdata_t		*pix, temp;
-	char		texname[64];
+	char		texname[128];
 	int		i, j, x, y, w, h;
 	int		xl, yl, xh, yh;
 	int		linedelta, numframes;
@@ -306,9 +303,6 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	temp.buffer = Mem_Alloc( r_temppool, temp.size );
 	temp.palette = NULL;
 
-	// reset the sprite name
-	sprite_name[0] = '\0';
-
 	// chop the image and upload into video memory
 	for( i = xl = yl = 0; i < numframes; i++ )
 	{
@@ -329,8 +323,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 		}
 
 		// build uinque frame name
-		if( !sprite_name[0] ) FS_FileBase( mod->name, sprite_name );
-		Q_snprintf( texname, sizeof( texname ), "#%s_%i%i.spr", sprite_name, i / 10, i % 10 );
+		Q_snprintf( texname, sizeof( texname ), "#MAP/%s_%i%i.spr", mod->name, i / 10, i % 10 );
 
 		psprite->frames[i].frameptr = Mem_Alloc( mod->mempool, sizeof( mspriteframe_t ));
 		pspriteframe = psprite->frames[i].frameptr;
@@ -851,8 +844,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	model = e->model;
 	psprite = (msprite_t * )model->cache.data;
-	VectorSet( color, 255.0f, 255.0f, 255.0f );
-
 	VectorCopy( e->origin, origin );	// set render origin
 
 	// do movewith
@@ -909,7 +900,12 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	case kRenderNormal:
 	default:
-		pglDisable( GL_BLEND );
+		if( psprite->texFormat == SPR_INDEXALPHA )
+		{
+			pglEnable( GL_BLEND );
+			pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		}
+		else pglDisable( GL_BLEND );
 		break;
 	}
 

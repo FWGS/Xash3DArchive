@@ -945,47 +945,43 @@ prevent data to out of range
 */
 int Delta_ClampIntegerField( int iValue, qboolean bSigned, int bits )
 {
-	uint	uValue;
-
-	uValue = (uint)iValue;
-
 	switch( bits )
 	{
 	case 8:
-		if( bSigned ) iValue = bound( -127, iValue, 128 );
-		else iValue = bound( 0, uValue, 255 );
+		if( bSigned ) iValue = bound( -127, (short)iValue, 128 );
+		else iValue = bound( 0, (word)iValue, 255 );
 		break;
 	case 9:
-		if( bSigned ) iValue = bound( -255, iValue, 256 );
-		else iValue = bound( 0, uValue, 511 );
+		if( bSigned ) iValue = bound( -255, (short)iValue, 256 );
+		else iValue = bound( 0, (word)iValue, 511 );
 		break;
 	case 10:
-		if( bSigned ) iValue = bound( -511, iValue, 511 );
-		else iValue = bound( 0, uValue, 1023 );
+		if( bSigned ) iValue = bound( -511, (short)iValue, 511 );
+		else iValue = bound( 0, (word)iValue, 1023 );
 		break;
 	case 11:
-		if( bSigned ) iValue = bound( -1023, iValue, 1023 );
-		else iValue = bound( 0, uValue, 2047 );
+		if( bSigned ) iValue = bound( -1023, (short)iValue, 1023 );
+		else iValue = bound( 0, (word)iValue, 2047 );
 		break;
 	case 12:
-		if( bSigned ) iValue = bound( -2047, iValue, 2047 );
-		else iValue = bound( 0, uValue, 4095 );
+		if( bSigned ) iValue = bound( -2047, (short)iValue, 2047 );
+		else iValue = bound( 0, (word)iValue, 4095 );
 		break;
 	case 13:
-		if( bSigned ) iValue = bound( -4095, iValue, 4095 );
-		else iValue = bound( 0, uValue, 8191 );
+		if( bSigned ) iValue = bound( -4095, (short)iValue, 4095 );
+		else iValue = bound( 0, (word)iValue, 8191 );
 		break;
 	case 14:
-		if( bSigned ) iValue = bound( -8191, iValue, 8191 );
-		else iValue = bound( 0, uValue, 16383 );
+		if( bSigned ) iValue = bound( -8191, (short)iValue, 8191 );
+		else iValue = bound( 0, (word)iValue, 16383 );
 		break;
 	case 15:
-		if( bSigned ) iValue = bound( -16383, iValue, 16383 );
-		else iValue = bound( 0, uValue, 32767 );
+		if( bSigned ) iValue = bound( -16383, (short)iValue, 16383 );
+		else iValue = bound( 0, (word)iValue, 32767 );
 		break;
 	case 16:
-		if( bSigned ) iValue = bound( -32767, iValue, 32767 );
-		else iValue = bound( 0, uValue, 65535 );
+		if( bSigned ) iValue = bound( -32767, (short)iValue, 32767 );
+		else iValue = bound( 0, (word)iValue, 65535 );
 		break;
 	}
 	return iValue; // clamped;

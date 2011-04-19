@@ -50,7 +50,7 @@ convar_t			*r_studio_lambert;
 convar_t			*r_drawviewmodel;
 convar_t			*r_customdraw_playermodel;
 convar_t			*cl_himodels;
-char			model_name[64];
+cvar_t			r_shadows = { "r_shadows", "0", 0, 0 };
 static r_studio_interface_t	*pStudioDraw;
 static float		aliasXscale, aliasYscale;	// software renderer scale
 static matrix3x4		g_aliastransform;		// software renderer transform
@@ -1352,7 +1352,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	plight = &g_studiolight;
 	plight->numdlights = 0;	// clear previous dlights
 
-	if( r_lighting_extended->integer )
+	if( r_lighting_extended->integer == 2 )
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
@@ -1441,7 +1441,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 	plight = &g_studiolight;
 	plight->numelights = 0;	// clear previous elights
 
-	if( r_lighting_extended->integer )
+	if( r_lighting_extended->integer == 2 )
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
@@ -2205,6 +2205,7 @@ static void R_StudioSetupRenderer( int rendermode )
 {
 	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse );
 	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
+	GL_Cull( GL_FRONT );
 }
 
 /*
@@ -2245,6 +2246,14 @@ static int pfnIsHardware( void )
 {
 	return true;
 }
+
+static void StudioDrawShadow( studiohdr_t *pstudiohdr, matrix3x4 transform[MAXSTUDIOBONES] )
+{
+	// in GoldSrc shadow call is dsiabled with 'return' at start of the function
+	// some mods used a hack with calling DrawShadow ahead of 'return'
+	// this code is for HL compatibility.
+	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
+}
 	
 /*
 ===============
@@ -2254,12 +2263,10 @@ GL_StudioDrawShadow
 */
 static void GL_StudioDrawShadow( void )
 {
-	// in GoldSrc shadow call is dsiabled with 'return' at start of the function
-	// some mods used a hack with calling DrawShadow ahead of 'return'
-	// this code is for HL compatibility.
-	return;
-
-	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
+	if( r_shadows.value )
+	{
+		StudioDrawShadow( m_pStudioHeader, g_bonestransform );
+	}
 }
 
 /*
@@ -2836,7 +2843,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 {
 	size_t	size;
 	int	flags = 0;
-	char	texname[64], name[64];
+	char	texname[128], name[128];
 
 	if( ptexture->flags & STUDIO_NF_TRANSPARENT )
 		flags |= (TF_CLAMP|TF_NOMIPMAP);
@@ -2847,11 +2854,10 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
 	ptexture->index = (int)((byte *)phdr) + ptexture->index;
 	size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
-	if( !model_name[0] ) FS_FileBase( mod->name, model_name );
 	FS_FileBase( ptexture->name, name );
 
 	// build the texname
-	Q_snprintf( texname, sizeof( texname ), "%s/%s.mdl", model_name, name );
+	Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mod->name, name );
 	ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags );
 
 	if( !ptexture->index )
@@ -2888,8 +2894,6 @@ studiohdr_t *R_StudioLoadHeader( model_t *mod, const void *buffer )
 		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)\n", mod->name, i, STUDIO_VERSION );
 		return NULL;
 	}	
-
-	model_name[0] = '\0';
 
 	if( host.type != HOST_DEDICATED )
 	{

@@ -1371,6 +1371,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	if( !buf ) return false;
 
 	Q_strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
+	m_pSprite->flags = 256; // it's hud sprite, make difference names to prevent free shared textures
 
 	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
 	else Mod_LoadSpriteModel( m_pSprite, buf );		
@@ -2866,6 +2867,58 @@ TriApi implementation
 */
 /*
 =============
+TriRenderMode
+
+set rendermode
+=============
+*/
+void TriRenderMode( int mode )
+{
+	switch( mode )
+	{
+	case kRenderNormal:
+	default:
+		pglDisable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransColor:
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransAlpha:
+	case kRenderTransTexture:
+		// NOTE: TriAPI doesn't have 'solid' mode
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderGlow:
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransAdd:
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	case kRenderTransInverse:
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		break;
+	}
+}
+
+/*
+=============
 TriBegin
 
 begin triangle sequence
@@ -3025,9 +3078,17 @@ bind current texture
 int TriSpriteTexture( model_t *pSpriteModel, int frame )
 {
 	int	gl_texturenum;
+	msprite_t	*psprite;
 
 	if(( gl_texturenum = R_GetSpriteTexture( pSpriteModel, frame )) == 0 )
 		return 0;
+
+	psprite = pSpriteModel->cache.data;
+	if( psprite->texFormat == SPR_ALPHTEST )
+	{
+		pglEnable( GL_ALPHA_TEST );
+		pglAlphaFunc( GL_GREATER, 0.0f );
+	}
 
 	GL_Bind( GL_TEXTURE0, gl_texturenum );
 
@@ -3345,7 +3406,7 @@ float Voice_GetControlFloat( VoiceTweakControl iControl )
 static triangleapi_t gTriApi =
 {
 	TRI_API_VERSION,	
-	GL_SetRenderMode,
+	TriRenderMode,
 	TriBegin,
 	TriEnd,
 	TriColor4f,

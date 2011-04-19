@@ -732,8 +732,6 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	host.errorframe = 0;
 	Cbuf_Execute();
 
-	SCR_CheckStartupVids();	// must be last
-
 	// post initializations
 	switch( host.type )
 	{
@@ -749,6 +747,8 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		Cbuf_Execute();
 		break;
 	}
+
+	SCR_CheckStartupVids();	// must be last
 
 	host.change_game = false;	// done
 	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings

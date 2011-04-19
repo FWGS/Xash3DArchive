@@ -486,6 +486,9 @@ pmtrace_t PM_PlayerTrace( playermove_t *pmove, vec3_t start, vec3_t end, int fla
 			total.ent = i;
 		}
 
+		if( total.startsolid )
+			total.fraction = 0.0f;
+
 		if( i == 0 && ( flags & PM_WORLD_ONLY ))
 			break; // done
 

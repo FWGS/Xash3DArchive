@@ -271,9 +271,6 @@ GL_Cull
 */
 void GL_Cull( GLenum cull )
 {
-	if( glState.faceCull == cull )
-		return;
-
 	if( !cull )
 	{
 		pglDisable( GL_CULL_FACE );
@@ -281,8 +278,7 @@ void GL_Cull( GLenum cull )
 		return;
 	}
 
-	if( !glState.faceCull )
-		pglEnable( GL_CULL_FACE );
+	pglEnable( GL_CULL_FACE );
 	pglCullFace( cull );
 	glState.faceCull = cull;
 }

@@ -19,7 +19,7 @@ extern byte	*r_temppool;
 #define BLOCK_HEIGHT	128	// lightmap block height
 
 #define MAX_TEXTURES	4096
-#define MAX_LIGHTMAPS	64
+#define MAX_LIGHTMAPS	128
 #define SUBDIVIDE_SIZE	64
 
 //#define MIRROR_TEST
@@ -76,7 +76,7 @@ typedef enum
 
 typedef struct gltexture_s
 {
-	char		name[64];		// game path, including extension
+	char		name[128];	// game path, including extension
 	word		srcWidth;		// keep unscaled sizes
 	word		srcHeight;
 	word		width;		// upload width\height
@@ -595,7 +595,6 @@ extern convar_t	*r_lockcull;
 extern convar_t	*r_wateralpha;
 extern convar_t	*r_dynamic;
 extern convar_t	*r_lightmap;
-extern convar_t	*r_shadows;
 extern convar_t	*r_fastsky;
 
 extern convar_t	*vid_displayfrequency;

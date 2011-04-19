@@ -408,6 +408,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		}
 
 		Image_GetPaletteLMP( pal, rendermode );
+		image.d_currentpal[255] &= 0xFFFFFF;
 	}
 	else if( image.hint != IL_HINT_HL && filesize >= (int)sizeof(mip) + ((pixels * 85)>>6))
 	{

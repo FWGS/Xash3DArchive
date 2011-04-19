@@ -544,6 +544,9 @@ static void Mod_LoadTextures( const dlump_t *l )
 			tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0 );
 		}
 
+		// set the emo-texture for missed
+		if( !tx->gl_texturenum ) tx->gl_texturenum = tr.defaultTexture;
+
 		// check for luma texture
 		if( R_GetTexture( tx->gl_texturenum )->flags & TF_HAS_LUMA )
 		{
@@ -564,9 +567,12 @@ static void Mod_LoadTextures( const dlump_t *l )
 			}
 		}
 
-		// apply texture type (just for debug)
-		GL_SetTextureType( tx->gl_texturenum, TEX_BRUSH );
-		GL_SetTextureType( tx->fb_texturenum, TEX_BRUSH );
+		if( tx->gl_texturenum != tr.defaultTexture )
+		{
+			// apply texture type (just for debug)
+			GL_SetTextureType( tx->gl_texturenum, TEX_BRUSH );
+			GL_SetTextureType( tx->fb_texturenum, TEX_BRUSH );
+		}
 	}
 
 	// sequence the animations

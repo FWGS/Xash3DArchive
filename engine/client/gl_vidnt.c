@@ -63,7 +63,6 @@ convar_t	*r_lockcull;
 convar_t	*r_wateralpha;
 convar_t	*r_dynamic;
 convar_t	*r_lightmap;
-convar_t	*r_shadows;
 convar_t	*r_fastsky;
 
 convar_t	*vid_displayfrequency;
@@ -1408,7 +1407,6 @@ void GL_InitCommands( void )
 	r_wateralpha = Cvar_Get( "r_wateralpha", "1", CVAR_ARCHIVE, "world water transparency factor" );
 	r_dynamic = Cvar_Get( "r_dynamic", "1", CVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
 	r_lightmap = Cvar_Get( "r_lightmap", "0", CVAR_CHEAT, "lightmap debugging tool" );
-	r_shadows = Cvar_Get( "r_shadows", "0", CVAR_ARCHIVE, "enable model shadows" );
 	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
 	r_drawentities = Cvar_Get( "r_drawentities", "1", CVAR_CHEAT|CVAR_ARCHIVE, "render entities" );
 	r_flaresize = Cvar_Get( "r_flaresize", "200", CVAR_ARCHIVE, "set flares size" );

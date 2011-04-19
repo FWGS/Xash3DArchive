@@ -572,10 +572,8 @@ SV_Kill_f
 */
 void SV_Kill_f( void )
 {
-	if( !Cvar_VariableInteger( "sv_cheats" )) return;
 	if( !SV_SetPlayer() || sv.background ) return;
 
-	// NOTE: the CS 1.5 want to kill local player. i'm don't know why :(
 	if( !svs.currentPlayer || !SV_IsValidEdict( svs.currentPlayer->edict ))
 		return;
 
