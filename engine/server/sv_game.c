@@ -14,8 +14,8 @@
 #define DEBUG_NEW_CLIENTPVS_CHECK
 
 // fatpvs stuff
-static byte fatpvs[MAX_MAP_LEAFS/8];
-static byte fatphs[MAX_MAP_LEAFS/8];
+static byte fatpvs[MAX_CLIENTS][MAX_MAP_LEAFS/8];
+static byte fatphs[MAX_CLIENTS][MAX_MAP_LEAFS/8];
 static byte *bitvector;
 static int fatbytes;
 
@@ -215,14 +215,12 @@ MSG_PHS	send to clients potentially hearable from org
 */
 qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 {
-	byte		*mask = NULL;
 	int		j, numclients = sv_maxclients->integer;
 	sv_client_t	*cl, *current = svs.clients;
 	qboolean		reliable = false;
 	qboolean		specproxy = false;
-	float		*viewOrg = NULL;
+	qboolean		use_mask = false;
 	int		numsends = 0;
-	mleaf_t		*leaf;
 
 	switch( dest )
 	{
@@ -246,16 +244,14 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 		// intentional fallthrough
 	case MSG_PAS:
 		if( origin == NULL ) return false;
-		leaf = Mod_PointInLeaf( origin, sv.worldmodel->nodes );
-		mask = Mod_LeafPHS( leaf, sv.worldmodel );
+		use_mask = true;
 		break;
 	case MSG_PVS_R:
 		reliable = true;
 		// intentional fallthrough
 	case MSG_PVS:
 		if( origin == NULL ) return false;
-		leaf = Mod_PointInLeaf( origin, sv.worldmodel->nodes );
-		mask = Mod_LeafPVS( leaf, sv.worldmodel );
+		use_mask = true;
 		break;
 	case MSG_ONE:
 		reliable = true;
@@ -296,34 +292,24 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 				continue;
 		}
 
-		// simple PAS checking in singleplayer (QW legacy)
-		if( sv_maxclients->integer == 1 && ( dest == MSG_PAS_R || dest == MSG_PAS ))
+		if( use_mask )
 		{
-			vec3_t	delta;
-
-			if( SV_IsValidEdict( cl->pViewEntity ))
-				viewOrg = cl->pViewEntity->v.origin;
-			else viewOrg = cl->edict->v.origin;
-
-			VectorSubtract( origin, viewOrg, delta );
-			if( VectorLength( delta ) <= 1534.0f )
-				goto inrange;
-		}
-
-		if( mask )
-		{
-			int	leafnum;
-
-			if( SV_IsValidEdict( cl->pViewEntity ))
-				viewOrg = cl->pViewEntity->v.origin;
-			else viewOrg = cl->edict->v.origin;
-
+			int	leafnum, clientnum;
+			byte	*mask;
+	
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
-			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
-			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+			leafnum = Mod_PointLeafnum( origin ) - 1;
+			clientnum = cl - svs.clients;
+
+			if( dest == MSG_PAS_R || dest == MSG_PAS )
+				mask = fatphs[clientnum];
+			else if( dest == MSG_PVS_R || dest == MSG_PVS )
+				mask = fatpvs[clientnum];
+
+			if( !(mask[leafnum>>3] & (1<<( leafnum & 7 ))))
 				continue;
 		}
-inrange:
+
 		if( specproxy ) BF_WriteBits( &sv.spectator_datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		else if( reliable ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		else BF_WriteBits( &cl->datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
@@ -3595,7 +3581,9 @@ byte *pfnSetFatPVS( const float *org )
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
 		return Mod_DecompressVis( NULL );
 
-	bitvector = fatpvs;
+	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
+
+	bitvector = fatpvs[svs.currentPlayerNum];
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 		Q_memset( bitvector, 0, fatbytes );
@@ -3617,7 +3605,9 @@ byte *pfnSetFatPAS( const float *org )
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
 		return Mod_DecompressVis( NULL );
 
-	bitvector = fatphs;
+	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
+
+	bitvector = fatphs[svs.currentPlayerNum];
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 		Q_memset( bitvector, 0, fatbytes );

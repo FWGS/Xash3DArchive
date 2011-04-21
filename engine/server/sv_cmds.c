@@ -148,6 +148,7 @@ qboolean SV_SetPlayer( void )
 	{
 		// special case for local client
 		svs.currentPlayer = svs.clients;
+		svs.currentPlayerNum = 0;
 		return true;
 	}
 
@@ -164,6 +165,8 @@ qboolean SV_SetPlayer( void )
 		}
 
 		svs.currentPlayer = &svs.clients[idnum];
+		svs.currentPlayerNum = idnum;
+
 		if( !svs.currentPlayer->state )
 		{
 			Msg( "Client %i is not active\n", idnum );
@@ -179,12 +182,14 @@ qboolean SV_SetPlayer( void )
 		if( !Q_strcmp( cl->name, s ))
 		{
 			svs.currentPlayer = cl;
+			svs.currentPlayerNum = (cl - svs.clients);
 			return true;
 		}
 	}
 
 	Msg( "Userid %s is not on the server\n", s );
 	svs.currentPlayer = NULL;
+	svs.currentPlayerNum = 0;
 
 	return false;
 }

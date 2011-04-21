@@ -331,6 +331,7 @@ typedef struct
 						// used to check late spawns
 	sv_client_t	*clients;			// [sv_maxclients->integer]
 	sv_client_t	*currentPlayer;		// current client who network message sending on
+	int		currentPlayerNum;		// for esay acess to some global arrays
 	int		num_client_entities;	// sv_maxclients->integer*UPDATE_BACKUP*MAX_PACKET_ENTITIES
 	int		next_client_entities;	// next client_entity to use
 	entity_state_t	*packet_entities;		// [num_client_entities]

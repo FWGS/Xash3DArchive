@@ -1865,7 +1865,7 @@ client_textmessage_t *CL_TextMessageGet( const char *pName )
 	// find desired message
 	for( i = 0; i < clgame.numTitles; i++ )
 	{
-		if( !Q_strcmp( pName, clgame.titles[i].pName ))
+		if( !Q_stricmp( pName, clgame.titles[i].pName ))
 			return clgame.titles + i;
 	}
 	return NULL; // found nothing

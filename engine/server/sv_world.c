@@ -1119,7 +1119,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 			// never collide items and player (because call "give" always stuck item in player
 			// and total trace returns fail (old half-life bug)
 			// items touch should be done in SV_TouchLinks not here
-			if( touch->v.flags & ( FL_CLIENT|FL_FAKECLIENT|FL_MONSTER ))
+			if( touch->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
 				continue;
 		}
 
@@ -1247,7 +1247,7 @@ trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int t
 	clip.type = (type & 0xFF);
 	clip.flags = (type & 0xFF00);
 	clip.passedict = e;
-	clip.hull = hullNumber = bound( 0, hullNumber, 3 );
+	clip.hull = bound( 0, hullNumber, 3 );
 	clip.mins = sv.worldmodel->hulls[clip.hull].clip_mins;
 	clip.maxs = sv.worldmodel->hulls[clip.hull].clip_maxs;
 	clip.flags |= FMOVE_SIMPLEBOX; // completely ignore hitboxes, trace hulls only

@@ -196,7 +196,8 @@ gotnewcl:
 		Q_strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
 
 	svs.currentPlayer = newcl;
-	edictnum = (newcl - svs.clients) + 1;
+	svs.currentPlayerNum = (newcl - svs.clients);
+	edictnum = svs.currentPlayerNum + 1;
 
 	ent = EDICT_NUM( edictnum );
 	newcl->edict = ent;
@@ -292,7 +293,8 @@ edict_t *SV_FakeConnect( const char *netname )
 	// this is the only place a sv_client_t is ever initialized
 	*newcl = temp;
 	svs.currentPlayer = newcl;
-	edictnum = (newcl - svs.clients) + 1;
+	svs.currentPlayerNum = (newcl - svs.clients);
+	edictnum = svs.currentPlayerNum + 1;
 
 	if( newcl->frames )
 		Mem_Free( newcl->frames );	// fakeclients doesn't have frames
@@ -1693,6 +1695,8 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 	ucmd_t	*u;
 
 	svs.currentPlayer = cl;
+	svs.currentPlayerNum = (cl - svs.clients);
+
 	Cmd_TokenizeString( s );
 
 	for( u = ucmds; u->name; u++ )

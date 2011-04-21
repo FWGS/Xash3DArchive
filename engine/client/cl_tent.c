@@ -2397,9 +2397,9 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	falloff *= falloff;
 
 	// update flashlight endpos
-	dl = CL_AllocDlight( cl.playernum + 1 );
+	dl = CL_AllocDlight( pEnt->index );
 	VectorCopy( trace.endpos, dl->origin );
-	dl->die = cl.time; // die on next frame
+	dl->die = cl.time + 0.01f; // die on next frame
 	dl->color.r = 255 * falloff;
 	dl->color.g = 255 * falloff;
 	dl->color.b = 255 * falloff;

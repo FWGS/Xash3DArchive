@@ -418,6 +418,8 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	channel_t	*target_chan, *check;
 	int	vol, ch_idx;
 
+	if( pitch <= 1 ) pitch = PITCH_NORM; // Invasion issues
+
 	if( !dma.initialized ) return;
 	sfx = S_GetSfxByHandle( handle );
 	if( !sfx ) return;

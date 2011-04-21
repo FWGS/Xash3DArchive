@@ -503,6 +503,7 @@ void SV_SendClientDatagram( sv_client_t *cl )
 	sizebuf_t	msg;
 
 	svs.currentPlayer = cl;
+	svs.currentPlayerNum = (cl - svs.clients);
 
 	BF_Init( &msg, "Datagram", msg_buf, sizeof( msg_buf ));
 
@@ -617,6 +618,7 @@ void SV_SendClientMessages( void )
 	int		i;
 
 	svs.currentPlayer = NULL;
+	svs.currentPlayerNum = 0;
 
 	if( sv.state == ss_dead )
 		return;
@@ -703,6 +705,7 @@ void SV_SendClientMessages( void )
 
 	// reset current client
 	svs.currentPlayer = NULL;
+	svs.currentPlayerNum = 0;
 }
 
 /*
