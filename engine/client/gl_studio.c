@@ -1707,13 +1707,11 @@ static void R_StudioDrawPoints( void )
 		if( flags & STUDIO_NF_TRANSPARENT )
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
-			if( glState.drawTrans ) pglDepthMask( GL_TRUE );
 			alpha = 1.0f;
 		}
 		else if(( flags & STUDIO_NF_ADDITIVE ) || ( g_nFaceFlags & STUDIO_NF_CHROME ))
 		{
 			GL_SetRenderMode( kRenderTransAdd );
-			if( !glState.drawTrans ) pglDepthMask( GL_FALSE );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 
 			if( g_nFaceFlags & STUDIO_NF_CHROME )
@@ -1735,9 +1733,8 @@ static void R_StudioDrawPoints( void )
 				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 				alpha = 1.0f;
 			}
-			if( !glState.drawTrans )
-				pglDepthMask( GL_TRUE );
-			else pglDepthMask( GL_FALSE );
+
+
 		}
 
 		if(!( g_nFaceFlags & STUDIO_NF_CHROME ))
@@ -2206,6 +2203,9 @@ static void R_StudioSetupRenderer( int rendermode )
 	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse );
 	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
 	GL_Cull( GL_FRONT );
+
+	// enable depthmask on studiomodels
+	if( glState.drawTrans ) pglDepthMask( GL_TRUE );
 }
 
 /*
@@ -2219,9 +2219,8 @@ static void R_StudioRestoreRenderer( void )
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglShadeModel( GL_FLAT );
 
-	if( !glState.drawTrans )
-		pglDepthMask( GL_TRUE );
-	else pglDepthMask( GL_FALSE );
+	// restore depthmask state for sprites etc
+	if( glState.drawTrans ) pglDepthMask( GL_FALSE );
 }
 
 /*

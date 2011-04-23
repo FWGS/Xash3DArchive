@@ -1207,6 +1207,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		pglColor4ub( 255, 255, 255, e->curstate.renderamt );
 		break;
 	case kRenderTransColor:
+		pglDisable( GL_TEXTURE_2D );
 		pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g,
 			e->curstate.rendercolor.b, e->curstate.renderamt );
 		break;
@@ -1257,6 +1258,9 @@ void R_DrawBrushModel( cl_entity_t *e )
 	// draw sorted translucent surfaces
 	for( i = 0; i < num_sorted; i++ )
 		R_RenderBrushPoly( world.draw_surfaces[i] );
+
+	if( e->curstate.rendermode == kRenderTransColor )
+		pglEnable( GL_TEXTURE_2D );
 
 	R_BlendLightmaps();
 	R_RenderFullbrights();

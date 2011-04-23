@@ -885,6 +885,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	switch( e->curstate.rendermode )
 	{
 	case kRenderTransAlpha:
+	case kRenderTransColor:
 	case kRenderTransTexture:
 		pglEnable( GL_BLEND );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -912,7 +913,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	// all sprites can have color
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
-	// add basecolor
+	// add basecolor (any rendermode can colored sprite)
 	color[0] = (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
 	color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
 	color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );

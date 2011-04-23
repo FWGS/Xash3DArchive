@@ -1637,7 +1637,7 @@ static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int 
 
 	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
 
-	GL_SetRenderMode( kRenderTransTexture );
+	GL_SetRenderMode( kRenderTransAdd );
 	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
 	pglColor4ub( 255, 255, 255, 255 );
 }

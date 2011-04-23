@@ -278,9 +278,12 @@ int R_ComputeFxBlend( cl_entity_t *e )
 		break;	
 	}
 
-	// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
-	if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
-		e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
+	if( RI.currentmodel->type != mod_brush )
+	{
+		// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
+		if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
+			e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
+	}
 
 	// apply scale to studiomodels and sprites only
 	if( e->model && e->model->type != mod_brush && !e->curstate.scale )
@@ -393,7 +396,7 @@ R_GetFarClip
 static float R_GetFarClip( void )
 {
 	if( cl.worldmodel && RI.drawWorld )
-		return RI.refdef.movevars->zmax + 1024.0f;
+		return RI.refdef.movevars->zmax * 1.5f;
 	return 2048.0f;
 }
 
