@@ -329,11 +329,13 @@ void GL_SetRenderMode( int mode )
 		break;
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransInverse:
 		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
