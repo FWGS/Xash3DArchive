@@ -65,7 +65,7 @@ typedef enum
 #include "com_model.h"
 #include "crtlib.h"
 
-#define XASH_VERSION	0.8f		// engine current version
+#define XASH_VERSION	0.85f		// engine current version
 
 // PERFORMANCE INFO
 #define MIN_FPS         	0.1		// host minimum fps value for maxfps.

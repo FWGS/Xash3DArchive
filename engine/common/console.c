@@ -1314,7 +1314,10 @@ void Con_DrawInput( void )
 	if( host.key_overstrike && cursorChar )
 	{
 		// overstrike cursor
-		GL_SetRenderMode( kRenderTransInverse );
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		Con_DrawGenericChar( x + curPos, y, cursorChar, colorDefault );
 	}
 	else Con_DrawCharacter( x + curPos, y, '_', colorDefault );

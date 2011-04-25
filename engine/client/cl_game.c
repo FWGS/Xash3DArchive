@@ -1329,6 +1329,8 @@ void CL_ClearWorld( void )
 	cl.world->curstate.movetype = MOVETYPE_PUSH;
 	cl.world->model = cl.worldmodel;
 	cl.world->index = 0;
+
+	clgame.ds.cullMode = GL_FRONT;
 }
 
 void CL_InitEdicts( void )
@@ -2908,12 +2910,6 @@ void TriRenderMode( int mode )
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
-	case kRenderTransInverse:
-		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		break;
 	}
 }
 
@@ -3059,13 +3055,13 @@ void TriCullFace( TRICULLSTYLE mode )
 	switch( mode )
 	{
 	case TRI_FRONT:
-		mode = GL_FRONT;
+		clgame.ds.cullMode = GL_FRONT;
 		break;
 	default:
-		mode = GL_NONE;
+		clgame.ds.cullMode = GL_NONE;
 		break;
 	}
-	GL_Cull( mode );
+	GL_Cull( clgame.ds.cullMode );
 }
 
 /*

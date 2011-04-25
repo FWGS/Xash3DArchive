@@ -2362,6 +2362,7 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	float	falloff;
 	pmtrace_t	trace;
 	dlight_t	*dl;
+	int	key;
 
 	if(( pEnt->index - 1 ) == cl.playernum )
 	{
@@ -2396,8 +2397,12 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 
 	falloff *= falloff;
 
+	if( cl.maxclients == 1 )
+		key = cl.playernum + 1;
+	else key = pEnt->index;
+
 	// update flashlight endpos
-	dl = CL_AllocDlight( pEnt->index );
+	dl = CL_AllocDlight( key );
 	VectorCopy( trace.endpos, dl->origin );
 	dl->die = cl.time + 0.01f; // die on next frame
 	dl->color.r = 255 * falloff;

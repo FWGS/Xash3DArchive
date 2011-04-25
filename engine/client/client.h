@@ -210,6 +210,8 @@ typedef struct
 	int		scissor_height;
 	qboolean		scissor_test;
 
+	int		cullMode;			// override CULL FACE from TriAPI
+
 	// holds text color
 	rgba_t		textColor;
 	rgba_t		spriteColor;

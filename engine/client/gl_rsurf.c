@@ -651,7 +651,6 @@ void R_BlendLightmaps( void )
 		switch( RI.currententity->curstate.rendermode )
 		{
 		case kRenderTransTexture:
-		case kRenderTransInverse:
 		case kRenderTransColor:
 		case kRenderTransAdd:
 		case kRenderGlow:
@@ -1201,7 +1200,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 	{
 	case kRenderTransAdd:
 	case kRenderTransTexture:
-	case kRenderTransInverse:
 		need_sort = true;
 	case kRenderGlow:
 		pglColor4ub( 255, 255, 255, e->curstate.renderamt );

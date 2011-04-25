@@ -2200,9 +2200,9 @@ R_StudioSetupRenderer
 */
 static void R_StudioSetupRenderer( int rendermode )
 {
-	g_iRenderMode = bound( 0, rendermode, kRenderTransInverse );
+	g_iRenderMode = bound( 0, rendermode, kRenderTransAdd );
 	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
-	GL_Cull( GL_FRONT );
+	if( clgame.ds.cullMode != GL_NONE ) GL_Cull( GL_FRONT );
 
 	// enable depthmask on studiomodels
 	if( glState.drawTrans ) pglDepthMask( GL_TRUE );

@@ -1,3 +1,7 @@
+build 1540
+
+Fixed many-many small and large bugs before final release
+
 build 1529
 
 FS: add "fallback_dir" option

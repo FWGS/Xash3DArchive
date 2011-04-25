@@ -1243,6 +1243,7 @@ edict_t *pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 =================
 pfnFindClientInPVS
 
+FIXME: this code is totally wrong. Get PF_checkclient from QW.
 =================
 */
 edict_t* pfnFindClientInPVS( edict_t *pEdict )

@@ -697,8 +697,7 @@ enum
 	kRenderTransTexture,	// src*a+dest*(1-a)
 	kRenderGlow,		// src*a+dest -- No Z buffer checks
 	kRenderTransAlpha,		// src*srca+dest*(1-srca)
-	kRenderTransAdd,		// src*a+dest
-	kRenderTransInverse		// src*(1-a)+dest*a
+	kRenderTransAdd		// src*a+dest
 };
 
 enum 

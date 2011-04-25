@@ -890,10 +890,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglEnable( GL_BLEND );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 		break;
-	case kRenderTransInverse:
-		pglEnable( GL_BLEND );
-		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
-		break;
 	case kRenderGlow:
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );

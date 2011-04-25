@@ -22,7 +22,6 @@ static int R_RankForRenderMode( cl_entity_t *ent )
 	switch( ent->curstate.rendermode )
 	{
 	case kRenderTransTexture:
-	case kRenderTransInverse:
 		return 1;	// draw second
 	case kRenderTransAdd:
 		return 2;	// draw third
