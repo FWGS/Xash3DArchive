@@ -1,7 +1,18 @@
-//=======================================================================
-//			Copyright XashXT Group 2010 ©
-//		       com_model.h - cient model structures
-//=======================================================================
+/*
+com_model.h - cient model structures
+Copyright (C) 2010 Uncle Mike
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+*/
+
 #ifndef COM_MODEL_H
 #define COM_MODEL_H
 

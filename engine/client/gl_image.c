@@ -1,7 +1,17 @@
-//=======================================================================
-//			Copyright XashXT Group 2010 ©
-//		  gl_image.c - texture uploading and processing
-//=======================================================================
+/*
+gl_image.c - texture uploading and processing
+Copyright (C) 2010 Uncle Mike
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+*/
 
 #include "common.h"
 #include "client.h"
@@ -132,8 +142,8 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 		}
 		else
 		{
-			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, r_textureMagFilter );
+			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, r_textureMagFilter );
 		}
 	}
 	else
@@ -258,7 +268,7 @@ void R_SetTextureParameters( void )
 	for( i = 0, texture = r_textures; i < r_numTextures; i++, texture++ )
 	{
 		if( !texture->texnum ) continue;	// free slot
-		GL_MBind( texture->texnum );
+		GL_MBind( i );
 		GL_TexFilter( texture, true );
 	}
 }

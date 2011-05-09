@@ -1,7 +1,17 @@
-//=======================================================================
-//			Copyright XashXT Group 2010 ©
-//		       gl_studio.c - studio model renderer
-//=======================================================================
+/*
+gl_studio.c - studio model renderer
+Copyright (C) 2010 Uncle Mike
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+*/
 
 #include "common.h"
 #include "client.h"
@@ -51,6 +61,7 @@ convar_t			*r_drawviewmodel;
 convar_t			*r_customdraw_playermodel;
 convar_t			*cl_himodels;
 cvar_t			r_shadows = { "r_shadows", "0", 0, 0 };
+cvar_t			r_shadowalpha = { "r_shadowalpha", "0.5", 0, 0 };
 static r_studio_interface_t	*pStudioDraw;
 static float		aliasXscale, aliasYscale;	// software renderer scale
 static matrix3x4		g_aliastransform;		// software renderer transform
@@ -2260,11 +2271,55 @@ GL_StudioDrawShadow
 
 ===============
 */
-static void GL_StudioDrawShadow( void )
+void _cdecl GL_StudioDrawShadow( void )
 {
-	if( r_shadows.value )
+	int	rendermode; // ecx@3
+	float	shadow_alpha; // ST18_4@4
+	float	shadow_alpha2; // ST14_4@4
+	GLenum	depthmode; // [sp+14h] [bp-8h]@6
+	GLenum	depthmode2; // [sp+14h] [bp-8h]@10
+
+	pglDepthMask( GL_TRUE );
+
+	if( r_shadows.value != 0.0f )
 	{
-		StudioDrawShadow( m_pStudioHeader, g_bonestransform );
+		if( RI.currententity->curstate.movetype != MOVETYPE_FLY )
+		{
+			rendermode = RI.currententity->baseline.rendermode;
+
+			if( rendermode == kRenderNormal )
+			{
+				shadow_alpha = 1.0 - r_shadowalpha.value * 0.5f;
+				pglDisable( GL_TEXTURE_2D );
+				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+				pglEnable( GL_BLEND );
+				shadow_alpha2 = 1.0 - shadow_alpha;
+
+				pglColor4f( 0.0f, 0.0f, 0.0f, shadow_alpha2 );
+
+//				if( flt_100DB994 == 0.0 || flt_107BA8A8 < 0.5 )
+//					depthmode = GL_LESS;
+//				else
+					depthmode = GL_GREATER;
+				pglDepthFunc( depthmode );
+
+				MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
+
+//				if( flt_100DB994 == 0.0 || flt_107BA8A8 < 0.5 )
+					depthmode2 = GL_LEQUAL;
+//				else
+//					depthmode2 = GL_GEQUAL;
+
+				pglDepthFunc( depthmode2 );
+				pglEnable( GL_TEXTURE_2D );
+				pglDisable( GL_BLEND );
+
+				pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+
+//				if( flt_100DAF14 != 0.0 )
+					pglShadeModel( GL_SMOOTH );
+			}
+		}
 	}
 }
 

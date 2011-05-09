@@ -1,7 +1,17 @@
-//=======================================================================
-//			Copyright XashXT Group 2007 ©
-//			    model.c - modelloader
-//=======================================================================
+/*
+model.c - modelloader
+Copyright (C) 2007 Uncle Mike
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+*/
 
 #include "mod_local.h"
 #include "sprite.h"
@@ -1314,8 +1324,8 @@ void Mod_CalcPHS( void )
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
 
-	// typycally PHS enough more room because RLE fails on multiple 1 not 0
-	phsdatasize = world.visdatasize * 4;
+	// typycally PHS reqiured more room because RLE fails on multiple 1 not 0
+	phsdatasize = world.visdatasize * 4; // empirically determined
 
 	// allocate pvs and phs data single array
 	visofs = Mem_Alloc( worldmodel->mempool, num * sizeof( int ));

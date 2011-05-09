@@ -1,7 +1,17 @@
-//=======================================================================
-//			Copyright XashXT Group 2009 ©
-//			   s_main.c - sound engine
-//=======================================================================
+/*
+s_main.c - sound engine
+Copyright (C) 2009 Uncle Mike
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+*/
 
 #include "common.h"
 #include "sound.h"
@@ -813,9 +823,7 @@ void S_RenderFrame( ref_params_t *fd )
 
 	VectorCopy( fd->vieworg, s_listener.origin );
 	VectorCopy( fd->simvel, s_listener.velocity );
-	VectorCopy( fd->forward, s_listener.forward );
-	VectorCopy( fd->right, s_listener.right );
-	VectorCopy( fd->up, s_listener.up );
+	AngleVectors( fd->viewangles, s_listener.forward, s_listener.right, s_listener.up );
 
 	// update spatialization for static and dynamic sounds	
 	for( i = 0, ch = channels; i < total_channels; i++, ch++ )

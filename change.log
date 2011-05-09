@@ -1,3 +1,9 @@
+build ????
+
+Fixed wrong sound angles whe client see in the camera
+Fix crash on change gl_texturemode.
+Change relationsip for GetLocalPlayer. Now it's always valid.
+
 build 1540
 
 Fixed many-many small and large bugs before final release

@@ -1,7 +1,17 @@
-//=======================================================================
-//			Copyright XashXT Group 2008 ©
-//		        cl_game.c - client dlls interaction
-//=======================================================================
+/*
+cl_game.c - client dll interaction
+Copyright (C) 2008 Uncle Mike
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+*/
 
 #include "common.h"
 #include "client.h"
@@ -751,15 +761,12 @@ Render callback for studio models
 */
 cl_entity_t *CL_GetLocalPlayer( void )
 {
-	if( cls.state >= ca_connected )
-	{
-		cl_entity_t *player;
+	cl_entity_t	*player;
 
-		player = CL_EDICT_NUM( cl.playernum + 1 );
-		ASSERT( player != NULL );
-		return player;
-	}
-	return NULL;
+	player = CL_EDICT_NUM( cl.playernum + 1 );
+	ASSERT( player != NULL );
+
+	return player;
 }
 
 /*
@@ -3746,12 +3753,13 @@ qboolean CL_LoadProgs( const char *name )
 	Cvar_Get( "cl_lw", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 	Cvar_Get( "cl_lc", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable lag compensation" );
 
-	clgame.maxEntities = GI->max_edicts; // merge during loading
+	clgame.maxEntities = 2; // world + localclient (have valid entities not in game)
 	CL_InitCDAudio( "media/cdaudio.txt" );
 	CL_InitTitles( "titles.txt" );
 	CL_InitParticles ();
 	CL_InitViewBeams ();
 	CL_InitTempEnts ();
+	CL_InitEdicts ();	// initailize local player and world
 	CL_InitClientMove(); // initialize pm_shared
 
 	// initialize game
