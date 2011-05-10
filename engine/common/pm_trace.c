@@ -208,7 +208,7 @@ qboolean PM_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 	float		frac, midf;
 	int		side;
 	vec3_t		mid;
-loc0:
+
 	// check for empty
 	if( num < 0 )
 	{
@@ -242,16 +242,9 @@ loc0:
 	}
 
 	if( t1 >= 0 && t2 >= 0 )
-	{
-		num = node->children[0];
-		goto loc0;
-	}
-
+		return PM_RecursiveHullCheck( hull, node->children[0], p1f, p2f, p1, p2, trace );
 	if( t1 < 0 && t2 < 0 )
-	{
-		num = node->children[1];
-		goto loc0;
-	}
+		return PM_RecursiveHullCheck( hull, node->children[1], p1f, p2f, p1, p2, trace );
 
 	// put the crosspoint DIST_EPSILON pixels on the near side
 	side = (t1 < 0);

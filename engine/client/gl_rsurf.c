@@ -67,9 +67,9 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 {
 	int	i, j, k, f, b;
 	vec3_t	mins, maxs;
-	float	m, frac, s, t, *v;
+	float	m, frac, s, t, *v, vertsDiv;
 	vec3_t	front[SUBDIVIDE_SIZE], back[SUBDIVIDE_SIZE], total;
-	float	dist[SUBDIVIDE_SIZE], total_s, total_t;
+	float	dist[SUBDIVIDE_SIZE], total_s, total_t, total_ls, total_lt;
 	glpoly_t	*poly;
 
 	if( numverts > ( SUBDIVIDE_SIZE - 4 ))
@@ -136,26 +136,63 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 	warpface->polys = poly;
 	poly->numverts = numverts + 2;
 	VectorClear( total );
-	total_s = 0;
-	total_t = 0;
+	total_s = total_ls = 0.0f;
+	total_t = total_lt = 0.0f;
 
 	for( i = 0; i < numverts; i++, verts += 3 )
 	{
 		VectorCopy( verts, poly->verts[i+1] );
-		s = DotProduct( verts, warpface->texinfo->vecs[0] );
-		t = DotProduct( verts, warpface->texinfo->vecs[1] );
-
-		total_s += s;
-		total_t += t;
 		VectorAdd( total, verts, total );
+
+		if( warpface->flags & SURF_DRAWTURB )
+		{
+			s = DotProduct( verts, warpface->texinfo->vecs[0] );
+			t = DotProduct( verts, warpface->texinfo->vecs[1] );
+		}
+		else
+		{
+			s = DotProduct( verts, warpface->texinfo->vecs[0] ) + warpface->texinfo->vecs[0][3];
+			t = DotProduct( verts, warpface->texinfo->vecs[1] ) + warpface->texinfo->vecs[1][3];
+			s /= warpface->texinfo->texture->width; 
+			t /= warpface->texinfo->texture->height; 
+		}
 
 		poly->verts[i+1][3] = s;
 		poly->verts[i+1][4] = t;
+
+		total_s += s;
+		total_t += t;
+
+		if(!( warpface->flags & SURF_DRAWTURB ))
+		{
+			// lightmap texture coordinates
+			s = DotProduct( verts, warpface->texinfo->vecs[0] ) + warpface->texinfo->vecs[0][3];
+			s -= warpface->texturemins[0];
+			s += warpface->light_s * LM_SAMPLE_SIZE;
+			s += 8;
+			s /= BLOCK_WIDTH * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
+
+			t = DotProduct( verts, warpface->texinfo->vecs[1] ) + warpface->texinfo->vecs[1][3];
+			t -= warpface->texturemins[1];
+			t += warpface->light_t * LM_SAMPLE_SIZE;
+			t += 8;
+			t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
+
+			poly->verts[i+1][5] = s;
+			poly->verts[i+1][6] = t;
+
+			total_ls += s;
+			total_lt += t;
+		}
 	}
 
-	VectorScale( total, ( 1.0f / numverts ), poly->verts[0] );
-	poly->verts[0][3] = total_s / numverts;
-	poly->verts[0][4] = total_t / numverts;
+	vertsDiv = ( 1.0f / (float)numverts );
+
+	VectorScale( total, vertsDiv, poly->verts[0] );
+	poly->verts[0][3] = total_s * vertsDiv;
+	poly->verts[0][4] = total_t * vertsDiv;
+	poly->verts[0][5] = total_ls * vertsDiv;
+	poly->verts[0][6] = total_lt * vertsDiv;
 
 	// copy first vertex to last
 	Q_memcpy( poly->verts[i+1], poly->verts[1], sizeof( poly->verts[0] ));
@@ -185,7 +222,7 @@ void GL_SubdivideSurface( msurface_t *fa )
 
 		if( lindex > 0 ) vec = loadmodel->vertexes[loadmodel->edges[lindex].v[0]].position;
 		else vec = loadmodel->vertexes[loadmodel->edges[-lindex].v[1]].position;
-		VectorCopy (vec, verts[numverts]);
+		VectorCopy( vec, verts[numverts] );
 		numverts++;
 	}
 
@@ -212,6 +249,13 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 
 	if( !fa->texinfo || !fa->texinfo->texture )
 		return; // bad polygon ?
+
+	if( fa->texinfo->texture->anim_total < 0 )
+	{
+		// random tileing. subdivide the polygon
+		GL_SubdivideSurface( fa );
+		return;
+	}
 
 	// reconstruct the polygon
 	pedges = loadmodel->edges;
@@ -275,10 +319,25 @@ R_TextureAnimation
 Returns the proper texture for a given time and base texture
 ===============
 */
-texture_t *R_TextureAnimation( texture_t *base )
+texture_t *R_TextureAnimation( texture_t *base, int surfacenum )
 {
 	int	reletive;
 	int	count, speed;
+
+	// random tileng textures
+	if( base->anim_total < 0 )
+	{
+		reletive = surfacenum % abs( base->anim_total );
+
+		count = 0;
+		while( base->anim_min > reletive || base->anim_max <= reletive )
+		{
+			base = base->anim_next;
+			if( !base ) Host_Error( "R_TextureAnimation: broken loop\n" );
+			if( ++count > 100 ) Host_Error( "R_TextureAnimation: infinite loop\n" );
+		}
+		return base;
+	}
 
 	if( RI.currententity->curstate.frame )
 	{
@@ -559,13 +618,14 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
 DrawGLPoly
 ================
 */
-void DrawGLPoly( glpoly_t *p )
+void DrawGLPoly( glpoly_t *p, texture_t *tex )
 {
-	float		*v;
 	float		sOffset, sy;
 	float		tOffset, cy;
 	cl_entity_t	*e = RI.currententity;
-	int		i;
+	qboolean		random_tiles = false;
+	texture_t		*t;
+	glpoly_t		*base;
 
 	if( p->flags & SURF_CONVEYOR )
 	{
@@ -597,16 +657,29 @@ void DrawGLPoly( glpoly_t *p )
 		sOffset = tOffset = 0.0f;
 	}
 
-	pglBegin( GL_POLYGON );
+	if( p && p->next ) random_tiles = true;
 
-	v = p->verts[0];
-	for( i = 0; i < p->numverts; i++, v += VERTEXSIZE )
+	for( base = p; p != NULL; p = p->next )
 	{
-		pglTexCoord2f( v[3] + sOffset, v[4] + tOffset );
-		pglVertex3fv( v );
-	}
+		float	*v;
+		int	i;
 
-	pglEnd();
+		if( random_tiles && tex )
+		{
+			t = R_TextureAnimation( tex, base - p );
+			GL_MBind( t->gl_texturenum );
+		}
+
+		pglBegin( GL_POLYGON );
+
+		for( i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE )
+		{
+			pglTexCoord2f( v[3] + sOffset, v[4] + tOffset );
+			pglVertex3fv( v );
+		}
+
+		pglEnd();
+	}
 }
 
 /*
@@ -625,19 +698,23 @@ void DrawGLPolyChain( glpoly_t *p, float soffset, float toffset )
 
 	for( ; p != NULL; p = p->chain )
 	{
+		glpoly_t	*p2;
 		float	*v;
 		int	i;
 
-		pglBegin( GL_POLYGON );
-
-		v = p->verts[0];
-		for( i = 0; i < p->numverts; i++, v += VERTEXSIZE )
+		for( p2 = p; p2 != NULL; p2 = p2->next )
 		{
-			if( !dynamic ) pglTexCoord2f( v[5], v[6] );
-			else pglTexCoord2f( v[5] - soffset, v[6] - toffset );
-			pglVertex3fv( v );
+			pglBegin( GL_POLYGON );
+
+			v = p2->verts[0];
+			for( i = 0; i < p2->numverts; i++, v += VERTEXSIZE )
+			{
+				if( !dynamic ) pglTexCoord2f( v[5], v[6] );
+				else pglTexCoord2f( v[5] - soffset, v[6] - toffset );
+				pglVertex3fv( v );
+			}
+			pglEnd ();
 		}
-		pglEnd ();
 	}
 }
 
@@ -810,7 +887,7 @@ void R_RenderFullbrights( void )
 		{
 			if( p->flags & SURF_DRAWTURB )
 				EmitWaterPolys( p, ( p->flags & SURF_NOCULL ));
-			else DrawGLPoly( p );
+			else DrawGLPoly( p, NULL );	// disable random tiling (chain is already used)
 		}
 
 		fullbright_polys[i] = NULL;		
@@ -849,7 +926,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 		return;
 	}
 		
-	t = R_TextureAnimation( fa->texinfo->texture );
+	t = R_TextureAnimation( fa->texinfo->texture, 0 );
 	GL_MBind( t->gl_texturenum );
 
 	if( fa->flags & SURF_DRAWTURB )
@@ -867,7 +944,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 		draw_fullbrights = true;
 	}
 
-	DrawGLPoly( fa->polys );
+	DrawGLPoly( fa->polys, fa->texinfo->texture );
 	DrawSurfaceDecals( fa );
 
 	// check for lightmap modification
@@ -1587,7 +1664,7 @@ R_DrawTriangleOutlines
 void R_DrawTriangleOutlines( void )
 {
 	int	i, j;
-	glpoly_t	*p;
+	glpoly_t	*p, *p2;
 
 	if( !gl_wireframe->integer )
 		return;
@@ -1605,13 +1682,18 @@ void R_DrawTriangleOutlines( void )
 		for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->lightmapchain )
 		{
 			p = surf->polys;
-			for( ; p != NULL; p = p->chain )
+
+//			for( ; p != NULL; p = p->chain )
 			{
-				pglBegin( GL_POLYGON );
-				v = p->verts[0];
-				for( j = 0; j < p->numverts; j++, v += VERTEXSIZE )
-					pglVertex3fv( v );
-				pglEnd ();
+				p2 = p;
+
+				for( p2 = p; p2; p2 = p2->next )
+				{
+					pglBegin( GL_POLYGON );
+					for( j = 0, v = p2->verts[0]; j < p2->numverts; j++, v += VERTEXSIZE )
+						pglVertex3fv( v );
+					pglEnd ();
+				}
 			}
 		}
 	}
