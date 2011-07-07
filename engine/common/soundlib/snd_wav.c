@@ -146,7 +146,7 @@ qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 	iff_data = buffer;
 	iff_end = buffer + filesize;
 
-	// dind "RIFF" chunk
+	// find "RIFF" chunk
 	FindChunk( "RIFF" );
 	if( !( iff_dataPtr && !Q_strncmp( iff_dataPtr + 8, "WAVE", 4 )))
 	{

@@ -566,6 +566,8 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 	if( count < MAX_OVERLAP_DECALS ) pold = NULL;
 
 	pdecal = R_DecalAlloc( pold );
+	if( !pdecal ) return; // r_decals == 0 ???
+
 	pdecal->flags = decalinfo->m_Flags;
 
 	VectorCopy( decalinfo->m_Position, pdecal->position );

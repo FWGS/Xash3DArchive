@@ -201,7 +201,9 @@ typedef float GLmatrix[16];
 #define GL_LUMINANCE8_ALPHA8              	0x8045
 #define GL_LUMINANCE12_ALPHA4             	0x8046
 #define GL_LUMINANCE12_ALPHA12            	0x8047
-#define GL_LUMINANCE16_ALPHA16            	0x8048
+#define GL_LUMINANCE16_ALPHA16		0x8048
+#define GL_LUMINANCE			0x1909
+#define GL_LUMINANCE_ALPHA			0x190A
 #define GL_DEPTH_COMPONENT			0x1902
 #define GL_INTENSITY                      	0x8049
 #define GL_INTENSITY4                     	0x804A

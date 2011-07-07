@@ -867,7 +867,7 @@ void CL_DrawCrosshair( void )
 
 	clgame.ds.pSprite = clgame.ds.pCrosshair;
 
-	GL_SetRenderMode( kRenderTransAlpha );
+	GL_SetRenderMode( kRenderTransTexture );
 	*(int *)clgame.ds.spriteColor = *(int *)clgame.ds.rgbaCrosshair;
 
 	SPR_EnableScissor( x - 0.5f * width, y - 0.5f * height, width, height );
@@ -3685,7 +3685,7 @@ void CL_UnloadProgs( void )
 	Q_memset( &clgame, 0, sizeof( clgame ));
 
 	Cvar_Unlink();
-	Cmd_Unlink();
+	Cmd_Unlink( CMD_CLIENTDLL );
 }
 
 qboolean CL_LoadProgs( const char *name )

@@ -64,7 +64,7 @@ char *COM_ParseFile( char *data, char *token )
 		
 // skip whitespace
 skipwhite:
-	while(( c = *data ) <= ' ' )
+	while(( c = ((byte)*data)) <= ' ' )
 	{
 		if( c == 0 )
 			return NULL;	// end of file;
@@ -85,7 +85,7 @@ skipwhite:
 		data++;
 		while( 1 )
 		{
-			c = *data++;
+			c = (byte)*data++;
 			if( c == '\"' || !c )
 			{
 				token[len] = 0;
@@ -111,7 +111,7 @@ skipwhite:
 		token[len] = c;
 		data++;
 		len++;
-		c = *data;
+		c = ((byte)*data);
 
 		if( c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ',' )
 			break;

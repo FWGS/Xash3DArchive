@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "mathlib.h"
 #include "edict.h"
 #include "eiface.h"
+#include "physint.h"	// physics interface
 #include "mod_local.h"
 #include "pm_defs.h"
 #include "pm_movevars.h"
@@ -29,7 +30,6 @@ GNU General Public License for more details.
 #include "world.h"
 
 //=============================================================================
-#define MAX_MASTERS		8 			// max recipients for heartbeat packets
 
 #define SV_UPDATE_MASK	(SV_UPDATE_BACKUP - 1)
 extern int SV_UPDATE_BACKUP;
@@ -104,6 +104,9 @@ typedef struct server_s
 
 	string		name;		// map name
 	string		startspot;	// player_start name on nextmap
+
+	double		lastchecktime;
+	int		lastcheck;	// number of last checked client
 
 	char		model_precache[MAX_MODELS][CS_SIZE];
 	char		sound_precache[MAX_SOUNDS][CS_SIZE];
@@ -322,6 +325,7 @@ typedef struct
 	globalvars_t	*globals;			// server globals
 	DLL_FUNCTIONS	dllFuncs;			// dll exported funcs
 	NEW_DLL_FUNCTIONS	dllFuncs2;		// new dll exported funcs (can be NULL)
+	physics_interface_t	physFuncs;		// physics interface functions (Xash3D extension)
 	byte		*mempool;			// server premamnent pool: edicts etc
 	byte		*stringspool;		// for shared strings
 
@@ -353,7 +357,6 @@ typedef struct
 
 //=============================================================================
 
-extern	netadr_t		master_adr[MAX_MASTERS];	// address of the master server
 extern	server_static_t	svs;			// persistant server info
 extern	server_t		sv;			// local server
 extern	svgame_static_t	svgame;			// persistant game info
@@ -396,6 +399,7 @@ extern	convar_t		*sv_send_resources;
 extern	convar_t		*sv_send_logos;
 extern	convar_t		*sv_sendvelocity;
 extern	convar_t		*mp_consistency;
+extern	convar_t		*public_server;
 extern	convar_t		*physinfo;
 
 //===========================================================
@@ -415,6 +419,9 @@ void SV_InitOperatorCommands( void );
 void SV_KillOperatorCommands( void );
 void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo );
 void SV_PrepWorldFrame( void );
+void SV_ProcessFile( sv_client_t *cl, char *filename );
+void SV_SendResourceList( sv_client_t *cl );
+void Master_Add( void );
 void Master_Heartbeat( void );
 void Master_Packet( void );
 
@@ -431,6 +438,7 @@ qboolean SV_SpawnServer( const char *server, const char *startspot );
 // sv_phys.c
 //
 void SV_Physics( void );
+qboolean SV_InitPhysicsAPI( void );
 void SV_CheckVelocity( edict_t *ent );
 qboolean SV_CheckWater( edict_t *ent );
 qboolean SV_RunThink( edict_t *ent );

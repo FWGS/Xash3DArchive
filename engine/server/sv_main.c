@@ -19,8 +19,6 @@ GNU General Public License for more details.
 
 #define HEARTBEAT_SECONDS	300.0f 		// 300 seconds
 
-netadr_t	master_adr[MAX_MASTERS];		// address of group servers
-
 convar_t	*sv_zmax;
 convar_t	*sv_novis;			// disable server culling entities by vis
 convar_t	*sv_unlag;
@@ -364,7 +362,7 @@ void SV_ReadPackets( void )
 
 				if( Netchan_CopyFileFragments( &cl->netchan, &net_message ))
 				{
-//					SV_ProcessFile( cl, cl->netchan.incomingfilename );
+					SV_ProcessFile( cl, cl->netchan.incomingfilename );
 				}
 			}
 
@@ -462,6 +460,17 @@ void SV_PrepWorldFrame( void )
 
 /*
 =================
+SV_ProcessFile
+=================
+*/
+void SV_ProcessFile( sv_client_t *cl, char *filename )
+{
+	// some other file...
+	MsgDev( D_INFO, "Received file %s from %s\n", filename, cl->name );
+}
+
+/*
+=================
 SV_IsSimulating
 =================
 */
@@ -544,6 +553,23 @@ void Host_ServerFrame( void )
 //============================================================================
 
 /*
+=================
+Master_Add
+=================
+*/
+void Master_Add( void )
+{
+	netadr_t	adr;
+
+	NET_Config( true ); // allow remote
+
+	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ))
+		MsgDev( D_INFO, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
+
+	NET_SendPacket( NS_SERVER, 2, "\x4D\xFF", adr );
+}
+
+/*
 ================
 Master_Heartbeat
 
@@ -553,11 +579,8 @@ let it know we are alive, and log information
 */
 void Master_Heartbeat( void )
 {
-	char	*string;
-	int	i;
-
-	if( host.type != HOST_DEDICATED || !public_server->integer )
-		return;	// only dedicated servers send heartbeats
+	if( !public_server->integer || sv_maxclients->integer == 1 )
+		return; // only public servers send heartbeats
 
 	// check for time wraparound
 	if( svs.last_heartbeat > host.realtime )
@@ -568,18 +591,7 @@ void Master_Heartbeat( void )
 
 	svs.last_heartbeat = host.realtime;
 
-	// send the same string that we would give for a status OOB command
-	string = SV_StatusString( );
-
-	// send to group master
-	for( i = 0; i < MAX_MASTERS; i++ )
-	{
-		if( master_adr[i].port )
-		{
-			MsgDev( D_INFO, "Sending heartbeat to %s\n", NET_AdrToString( master_adr[i] ));
-			Netchan_OutOfBandPrint( NS_SERVER, master_adr[i], "heartbeat\n%s", string );
-		}
-	}
+	Master_Add();
 }
 
 /*
@@ -591,20 +603,6 @@ Informs all masters that this server is going down
 */
 void Master_Shutdown( void )
 {
-	int	i;
-
-	if( host.type != HOST_DEDICATED || !public_server->integer )
-		return; // only dedicated servers send heartbeats
-
-	// send to group master
-	for( i = 0; i < MAX_MASTERS; i++ )
-	{
-		if( master_adr[i].port )
-		{
-			if( i ) MsgDev( D_INFO, "Sending heartbeat to %s\n", NET_AdrToString( master_adr[i] ));
-			Netchan_OutOfBandPrint( NS_SERVER, master_adr[i], "shutdown" );
-		}
-	}
 }
 
 //============================================================================

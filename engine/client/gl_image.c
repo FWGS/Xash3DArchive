@@ -124,6 +124,19 @@ GL_TexFilter
 */
 void GL_TexFilter( gltexture_t *tex, qboolean update )
 {
+	qboolean	allowNearest;
+
+	switch( tex->texType )
+	{
+	case TEX_NOMIP:
+	case TEX_LIGHTMAP:
+		allowNearest = false;
+		break;
+	default:
+		allowNearest = true;
+		break;
+	}
+
 	// set texture filter
 	if( tex->flags & TF_DEPTHMAP )
 	{
@@ -142,8 +155,16 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 		}
 		else
 		{
-			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, r_textureMagFilter );
-			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, r_textureMagFilter );
+			if( r_textureMagFilter == GL_NEAREST && allowNearest )
+			{
+				pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, r_textureMagFilter );
+				pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, r_textureMagFilter );
+			}
+			else
+			{
+				pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+				pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+			}
 		}
 	}
 	else
@@ -345,9 +366,17 @@ void R_TextureList_f( void )
 		case GL_RGB5:
 			Msg( "RGB5  " );
 			break;
+		case GL_LUMINANCE4_ALPHA4:
+			Msg( "L4A4  " );
+			break;
+		case GL_LUMINANCE_ALPHA:
 		case GL_LUMINANCE8_ALPHA8:
 			Msg( "L8A8  " );
 			break;
+		case GL_LUMINANCE4:
+			Msg( "L4    " );
+			break;
+		case GL_LUMINANCE:
 		case GL_LUMINANCE8:
 			Msg( "L8    " );
 			break;
@@ -469,7 +498,7 @@ void GL_RoundImageDimensions( word *width, word *height, texFlags_t flags, qbool
 GL_TextureFormat
 ===============
 */
-static GLenum GL_TextureFormat( gltexture_t *tex, int samples )
+static GLenum GL_TextureFormat( gltexture_t *tex, int *samples )
 {
 	qboolean	compress;
 	GLenum	format;
@@ -487,7 +516,7 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int samples )
 	}
 	else if( compress )
 	{
-		switch( samples )
+		switch( *samples )
 		{
 		case 1: format = GL_COMPRESSED_LUMINANCE_ARB; break;
 		case 2: format = GL_COMPRESSED_LUMINANCE_ALPHA_ARB; break;
@@ -503,25 +532,51 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int samples )
 	{
 		int	bits = gl_texturebits->integer;
 
-		switch( samples )
+		switch( *samples )
 		{
 		case 1: format = GL_LUMINANCE8; break;
 		case 2: format = GL_LUMINANCE8_ALPHA8; break;
 		case 3:
-			switch( bits )
+			if( gl_luminance_textures->integer )
 			{
-			case 16: format = GL_RGB5; break;
-			case 32: format = GL_RGB8; break;
-			default: format = GL_RGB; break;
+				switch( bits )
+				{
+				case 16: format = GL_LUMINANCE4; break;
+				case 32: format = GL_LUMINANCE8; break;
+				default: format = GL_LUMINANCE; break;
+				}
+				*samples = 1;	// merge for right calc statistics
+			}
+			else
+			{
+				switch( bits )
+				{
+				case 16: format = GL_RGB5; break;
+				case 32: format = GL_RGB8; break;
+				default: format = GL_RGB; break;
+				}
 			}
 			break;		
 		case 4:
 		default:
-			switch( bits )
+			if( gl_luminance_textures->integer )
 			{
-			case 16: format = GL_RGBA4; break;
-			case 32: format = GL_RGBA8; break;
-			default: format = GL_RGBA; break;
+				switch( bits )
+				{
+				case 16: format = GL_LUMINANCE4_ALPHA4; break;
+				case 32: format = GL_LUMINANCE8_ALPHA8; break;
+				default: format = GL_LUMINANCE_ALPHA; break;
+				}
+				*samples = 2;	// merge for right calc statistics
+			}
+			else
+			{
+				switch( bits )
+				{
+				case 16: format = GL_RGBA4; break;
+				case 32: format = GL_RGBA8; break;
+				default: format = GL_RGBA; break;
+				}
 			}
 			break;
 		}
@@ -809,7 +864,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 
 	// determine format
 	inFormat = PFDesc[pic->type].glFormat;
-	outFormat = GL_TextureFormat( tex, samples );
+	outFormat = GL_TextureFormat( tex, &samples );
 	tex->format = outFormat;
 
 	// determine target
@@ -930,6 +985,9 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 	pic = FS_LoadImage( name, buf, size );
 	if( !pic ) return 0; // couldn't loading image
 
+	// force upload texture as RGB or RGBA (detail textures requires this)
+	if( flags & TF_FORCE_COLOR ) pic->flags |= IMAGE_HAS_COLOR;
+
 	// find a free texture slot
 	if( r_numTextures == MAX_TEXTURES )
 		Host_Error( "GL_LoadTexture: MAX_TEXTURES limit exceeds\n" );
@@ -1002,6 +1060,9 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	{
 		Host_Error( "Couldn't find texture %s for update\n", name );
 	}
+
+	// force upload texture as RGB or RGBA (detail textures requires this)
+	if( flags & TF_FORCE_COLOR ) pic->flags |= IMAGE_HAS_COLOR;
 
 	// find a free texture slot
 	if( r_numTextures == MAX_TEXTURES )
@@ -1345,17 +1406,18 @@ static void R_InitBuiltinTextures( void )
 		char	*name;
 		int	*texnum;
 		rgbdata_t	*(*init)( texFlags_t *flags );
+		int	texType;
 	}
 	textures[] =
 	{
-	{ "*default", &tr.defaultTexture, R_InitDefaultTexture },
-	{ "*white", &tr.whiteTexture, R_InitWhiteTexture },
-	{ "*black", &tr.blackTexture, R_InitBlackTexture },
-	{ "*particle", &tr.particleTexture, R_InitParticleTexture },
-	{ "*particle2", &tr.particleTexture2, R_InitParticleTexture2 },
-	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture },
-	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture },
-	{ "*sky", &tr.skyTexture, R_InitSkyTexture },
+	{ "*default", &tr.defaultTexture, R_InitDefaultTexture, TEX_SYSTEM },
+	{ "*white", &tr.whiteTexture, R_InitWhiteTexture, TEX_SYSTEM },
+	{ "*black", &tr.blackTexture, R_InitBlackTexture, TEX_SYSTEM },
+	{ "*particle", &tr.particleTexture, R_InitParticleTexture, TEX_SYSTEM },
+	{ "*particle2", &tr.particleTexture2, R_InitParticleTexture2, TEX_SYSTEM },
+	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture, TEX_NOMIP },	// force linear filter
+	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture, TEX_LIGHTMAP },
+	{ "*sky", &tr.skyTexture, R_InitSkyTexture, TEX_SYSTEM },
 	{ NULL, NULL, NULL }
 	};
 	size_t	i, num_builtin_textures = sizeof( textures ) / sizeof( textures[0] ) - 1;
@@ -1369,7 +1431,7 @@ static void R_InitBuiltinTextures( void )
 		if( pic == NULL ) continue;
 		*textures[i].texnum = GL_LoadTextureInternal( textures[i].name, pic, flags, false );
 
-		GL_SetTextureType( *textures[i].texnum, TEX_SYSTEM );
+		GL_SetTextureType( *textures[i].texnum, textures[i].texType );
 	}
 }
 
@@ -1428,7 +1490,9 @@ void R_ShutdownImages( void )
 
 		GL_SelectTexture( i );
 		pglBindTexture( GL_TEXTURE_2D, 0 );
-		pglBindTexture( GL_TEXTURE_CUBE_MAP_ARB, 0 );
+
+		if( GL_Support( GL_TEXTURECUBEMAP_EXT ))
+			pglBindTexture( GL_TEXTURE_CUBE_MAP_ARB, 0 );
 	}
 
 	for( i = 0, image = r_textures; i < r_numTextures; i++, image++ )

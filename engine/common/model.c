@@ -29,6 +29,7 @@ static model_t	*com_models[MAX_MODELS];	// shared replacement modeltable
 static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels = 0;
 static byte	visdata[MAX_MAP_LEAFS/8];	// intermediate buffer
+int		bmodel_version;		// global stuff to detect bsp version
 	
 model_t		*loadmodel;
 model_t		*worldmodel;
@@ -484,10 +485,13 @@ static void Mod_LoadTextures( const dlump_t *l )
 	mip_t		*mt;
 	int 		i, j; 
 
-	// release old sky layers first
-	GL_FreeTexture( tr.solidskyTexture );
-	GL_FreeTexture( tr.alphaskyTexture );
-	tr.solidskyTexture = tr.alphaskyTexture = 0;
+	if( world.loading )
+	{
+		// release old sky layers first
+		GL_FreeTexture( tr.solidskyTexture );
+		GL_FreeTexture( tr.alphaskyTexture );
+		tr.solidskyTexture = tr.alphaskyTexture = 0;
+	}
 
 	if( !l->filelen )
 	{
@@ -535,7 +539,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		tx->height = mt->height;
 
 		// check for sky texture (quake1 only!)
-		if( world.version == Q1BSP_VERSION && !Q_strncmp( mt->name, "sky", 3 ))
+		if( world.loading && world.version == Q1BSP_VERSION && !Q_strncmp( mt->name, "sky", 3 ))
 		{	
 			R_InitSky( mt, tx );
 		}
@@ -544,7 +548,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 			// NOTE: imagelib detect miptex version by size
 			// 770 additional bytes is indicated custom palette
 			int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-			if( world.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+			if( bmodel_version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 			tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0 );
 		}
@@ -566,7 +570,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-				if( world.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+				if( bmodel_version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
 				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA|TF_NOMIPMAP );
 			}
@@ -789,7 +793,7 @@ static void Mod_LoadLighting( const dlump_t *l )
 	if( !l->filelen ) return;
 	in = (void *)(mod_base + l->fileofs);
 
-	switch( world.version )
+	switch( bmodel_version )
 	{
 	case Q1BSP_VERSION:
 		// expand the white lighting data
@@ -953,7 +957,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		if( loadmodel->lightdata && in->lightofs != -1 )
 		{
-			if( world.version == HLBSP_VERSION )
+			if( bmodel_version == HLBSP_VERSION )
 				out->samples = loadmodel->lightdata + (in->lightofs / 3);
 			else out->samples = loadmodel->lightdata + in->lightofs;
 		}
@@ -961,7 +965,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		for( j = 0; j < MAXLIGHTMAPS; j++ )
 			out->styles[j] = in->styles[j];
 
-		if( out->flags & SURF_DRAWSKY && world.version == Q1BSP_VERSION )
+		if( world.loading && out->flags & SURF_DRAWSKY && world.version == Q1BSP_VERSION )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
 
 		if( out->flags & SURF_DRAWTURB )
@@ -1222,6 +1226,9 @@ Mod_LoadVisibility
 */
 static void Mod_LoadVisibility( const dlump_t *l )
 {
+	// bmodels has no visibility
+	if( !world.loading ) return;
+
 	if( !l->filelen )
 	{
 		MsgDev( D_WARN, "map ^2%s^7 has no visibility\n", loadmodel->name );
@@ -1367,7 +1374,7 @@ void Mod_CalcPHS( void )
 	size_t	phsdatasize;
 
 	// no worldmodel or no visdata
-	if( !worldmodel || !worldmodel->visdata )
+	if( !world.loading || !worldmodel || !worldmodel->visdata )
 		return;
 
 	MsgDev( D_NOTE, "Building PAS...\n" );
@@ -1539,6 +1546,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 	// will be merged later
 	loadmodel->type = mod_brush;
 	if( world.loading ) world.version = i;
+	bmodel_version = i;	// share it
 
 	// swap all the lumps
 	mod_base = (byte *)header;
@@ -1705,6 +1713,7 @@ Loads a model into the cache
 model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 {
 	byte	*buf;
+	char	tempname[64];
 
 	if( !mod )
 	{
@@ -1717,12 +1726,17 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	if( mod->mempool || mod->name[0] == '*' )
 		return mod;
 
+	// store modelname to show error
+	Q_strncpy( tempname, mod->name, sizeof( tempname ));
+
 	buf = COM_LoadFile( mod->name, 0, NULL );
 	if( !buf )
 	{
-		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", mod->name );
-		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", mod->name );
 		Q_memset( mod, 0, sizeof( model_t ));
+
+		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", tempname );
+		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", tempname );
+
 		return NULL;
 	}
 
@@ -1753,8 +1767,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		Mod_FreeModel( mod );
 
 		// check for loading problems
-		if( crash ) Host_Error( "Mod_ForName: %s unknown format\n", mod->name );
-		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", mod->name );
+		if( crash ) Host_Error( "Mod_ForName: %s unknown format\n", tempname );
+		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", tempname );
 		return NULL;
 	}
 	return mod;
@@ -1800,11 +1814,13 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
 	}
 
 	// clear all studio submodels on restart
-	for( i = 0; i < cm_nummodels; i++ )
+	// HACKHACK: throw all external BSP-models to refresh their lightmaps properly
+	for( i = 1; i < cm_nummodels; i++ )
 	{
-		if( cm_models[i].type != mod_studio )
-			continue;
-		cm_models[i].submodels = NULL;
+		if( cm_models[i].type == mod_studio )
+			cm_models[i].submodels = NULL;
+		else if( cm_models[i].type == mod_brush )
+			Mod_FreeModel( cm_models + i );
 	}
 
 	// purge all submodels

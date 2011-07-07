@@ -29,6 +29,7 @@ extern byte	*r_temppool;
 #define BLOCK_HEIGHT	128	// lightmap block height
 
 #define MAX_TEXTURES	4096
+#define MAX_DETAIL_TEXTURES	256
 #define MAX_LIGHTMAPS	128
 #define SUBDIVIDE_SIZE	64
 
@@ -62,7 +63,8 @@ typedef enum
 	TEX_LIGHTMAP,	// lightmap textures
 	TEX_DECAL,	// decals
 	TEX_VGUI,		// vgui fonts or images
-	TEX_CUBEMAP	// cubemap textures (sky)
+	TEX_CUBEMAP,	// cubemap textures (sky)
+	TEX_DETAIL	// detail textures
 } texType_t;
 
 typedef enum
@@ -82,6 +84,7 @@ typedef enum
 	TF_MAKELUMA	= BIT(12),	// create luma from quake texture
 	TF_NORMALMAP	= BIT(13),	// is a normalmap
 	TF_LIGHTMAP	= BIT(14),	// is a lightmap
+	TF_FORCE_COLOR	= BIT(15),	// force upload monochrome textures as RGB (detail textures)
 } texFlags_t;
 
 typedef struct gltexture_s
@@ -102,6 +105,10 @@ typedef struct gltexture_s
 	// debug info
 	byte		texType;		// used for gl_showtextures
 	size_t		size;		// upload size for debug targets
+
+	// detail textures stuff
+	float		xscale;
+	float		yscale;
 
 	struct gltexture_s	*nextHash;
 } gltexture_t;
@@ -308,7 +315,7 @@ void R_PushDlights( void );
 void R_AnimateLight( void );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius );
-void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius );
+void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, qboolean useAmbient, float radius );
 
 //
 // gl_rmain.c
@@ -425,7 +432,6 @@ void GL_SetRenderMode( int mode );
 void R_RunViewmodelEvents( void );
 void R_DrawViewModel( void );
 int R_GetSpriteTexture( const struct model_s *m_pSpriteModel, int frame );
-void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius );
 void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos, int flags, vec3_t saxis );
 void R_RemoveEfrags( struct cl_entity_s *ent );
 void R_AddEfrags( struct cl_entity_s *ent );
@@ -444,6 +450,7 @@ enum
 {
 	GL_OPENGL_110 = 0,		// base
 	GL_WGL_SWAPCONTROL,		
+	GL_WGL_PROCADDRESS,
 	GL_HARDWARE_GAMMA_CONTROL,
 	GL_ARB_VERTEX_BUFFER_OBJECT_EXT,
 	GL_ENV_COMBINE_EXT,
@@ -576,6 +583,7 @@ extern convar_t	*gl_texturemode;
 extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_showtextures;
 extern convar_t	*gl_compress_textures;
+extern convar_t	*gl_luminance_textures;
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;
 extern convar_t	*gl_picmip;
@@ -592,6 +600,7 @@ extern convar_t	*r_norefresh;
 extern convar_t	*r_lighting_extended;
 extern convar_t	*r_lighting_modulate;
 extern convar_t	*r_lighting_ambient;
+extern convar_t	*r_detailtextures;
 extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;

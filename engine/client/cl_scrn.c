@@ -47,6 +47,7 @@ void SCR_DrawFPS( void )
 	static int	framecount = 0;
 	double		newtime;
 	char		fpsstring[32];
+	int		offset;
 
 	if( cls.state != ca_active ) return; 
 	if( !cl_showfps->integer || cl.background ) return;
@@ -75,7 +76,9 @@ void SCR_DrawFPS( void )
 		Q_snprintf( fpsstring, sizeof( fpsstring ), "%4i fps", (int)(calc + 0.5));
 		MakeRGBA( color, 255, 255, 255, 255 );
           }
-	Con_DrawString( scr_width->integer - 68, 4, fpsstring, color );
+
+	Con_DrawStringLen( fpsstring, &offset, NULL );
+	Con_DrawString( scr_width->integer - offset - 2, 4, fpsstring, color );
 }
 
 /*
@@ -446,7 +449,7 @@ void SCR_Init( void )
 
 	if( host.state != HOST_RESTART && !UI_LoadProgs( ))
 	{
-		Msg( "^1Error: ^7can't initialize MainUI.dll\n" ); // there is non fatal for us
+		Msg( "^1Error: ^7can't initialize menu.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
 	}
 

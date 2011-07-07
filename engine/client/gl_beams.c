@@ -1412,7 +1412,7 @@ void CL_DrawBeam( BEAM *pbeam )
 	}
 
 	frame = ((int)( pbeam->frame + cl.time * pbeam->frameRate ) % pbeam->frameCount );
-	rendermode = ( pbeam->flags & FBEAM_SOLID ) ? kRenderNormal : kRenderTransAdd;
+	rendermode = ( pbeam->flags & FBEAM_SOLID ) ? kRenderTransColor : kRenderTransAdd;
 
 	// set color
 	VectorSet( srcColor, pbeam->r, pbeam->g, pbeam->b );

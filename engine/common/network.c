@@ -553,7 +553,7 @@ static void NET_OpenIP( void )
 
 	if( !ip_sockets[NS_SERVER] )
 	{
-		port = Cvar_Get("ip_hostport", "0", CVAR_INIT, "network server port" )->integer;
+		port = Cvar_Get( "ip_hostport", "0", CVAR_INIT, "network server port" )->integer;
 		if( !port ) port = Cvar_Get( "port", va( "%i", PORT_SERVER ), CVAR_INIT, "network default port" )->integer;
 
 		ip_sockets[NS_SERVER] = NET_IPSocket( net_ip->string, port );

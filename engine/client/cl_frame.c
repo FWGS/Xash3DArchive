@@ -110,15 +110,9 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 
 			if( m_pGround && m_pGround->curstate.movetype == MOVETYPE_PUSH )
 			{
-				studiohdr_t	*phdr;
-				mstudioseqdesc_t	*pseqdesc;
-				qboolean		applyVel, applyAvel;
+				qboolean	applyVel, applyAvel;
 
 				d = 1.0f - cl.lerpFrac; // use backlerp to interpolate pusher position
-				phdr = (studiohdr_t *)Mod_Extradata( ent->model );		
-				ASSERT( phdr != NULL );
-				pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex) + ent->curstate.sequence;
-
 				d = d - 1.0f;
 
 				applyVel = !VectorCompare( m_pGround->curstate.origin, m_pGround->prevstate.origin );

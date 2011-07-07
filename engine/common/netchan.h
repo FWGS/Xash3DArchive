@@ -59,6 +59,7 @@ GNU General Public License for more details.
 //  bytes will be stripped by the networking channel layer
 #define NET_MAX_MESSAGE		PAD_NUMBER(( NET_MAX_PAYLOAD + HEADER_BYTES ), 16 )
 
+#define MASTERSERVER_ADR		"hl1master.steampowered.com:27010"
 #define PORT_MASTER			27010
 #define PORT_CLIENT			27005
 #define PORT_SERVER			27015
@@ -201,6 +202,7 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport );
 qboolean Netchan_CopyNormalFragments( netchan_t *chan, sizebuf_t *msg );
 qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg );
 void Netchan_CreateFragments( qboolean server, netchan_t *chan, sizebuf_t *msg );
+int Netchan_CreateFileFragments( qboolean server, netchan_t *chan, const char *filename );
 void Netchan_Transmit( netchan_t *chan, int lengthInBytes, byte *data );
 void Netchan_TransmitBits( netchan_t *chan, int lengthInBits, byte *data );
 void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data );
@@ -209,6 +211,7 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg );
 void Netchan_UpdateProgress( netchan_t *chan );
 qboolean Netchan_IncomingReady( netchan_t *chan );
 qboolean Netchan_CanPacket( netchan_t *chan );
+void Netchan_FragSend( netchan_t *chan );
 void Netchan_Clear( netchan_t *chan );
 
 // huffman compression

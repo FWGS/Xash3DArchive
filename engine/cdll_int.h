@@ -250,6 +250,96 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnSetMousePos)( int x, int y );
 	void	(*pfnSetMouseEnable)( qboolean fEnable );
 
+	// Returns pointer to start of registered cvar linked list. Added for VGUI console autocomplete?
+	void*	(*pfnGetCvarList)( void );
+
+	// Returns pointer to start of registered command linked list. Added for VGUI console autocomplete?
+	void*	(*pfnGetCmdList)( void );
+
+	// Not sure about this - convert cvar_t pointer to cvar name? Why?
+	char*	(*pfnCvarNameFromPointer)( void *pointer );
+
+	// Not sure abput this - convert cmd_function_t pointer to command name? Why?
+	char*	(*pfnCmdNameFromPointer)( void *pointer );
+
+	// Returns current time for this client? Why is this needed when GetClientTime() already exists?
+	float	(*pfnGetCurrentTime)( void );
+
+	// Unsure - always seems to return 800.0f (no, it's not horizontal resolution)
+	float	(*pfnGetGravityFactor)( void );
+
+	// Appears to be identical to function in IEngineStudio
+	void*	(*pfnGetModelByIndex)( int index );
+
+	// Appears to modifies hidden cvar gl_texsort.
+	void	(*pfnSetGL_TexSort)( int value );
+
+	// Colour scaling values for screen.  Only works when gl_texsort is active.
+	void	(*pfnSetGL_TexSort_Colour)( float red, float green, float blue );
+
+	// Final scaling factor for screen.  Only works when gl_texsort is active.
+	void	(*pfnSetGL_TexSort_Scale)( float scale );
+
+	// Seems to be a client entry point to the pfnSequenceGet function introduced for CS:CZ
+	void*	(*pfnSequenceGet)( const char *fileName, const char *entryName );
+
+	// Draws a sprite on the screen - parameters are likely incorrect.
+	void	(*pfnDrawSpriteGeneric)( int frame, int x, int y, const wrect_t *prc, int u1, int u2, int u3, int u4 );
+
+	// Seems to be a client entry point to the pfnSequencePickSentence function introduced for CS:CZ
+	void*	(*pfnSequencePickSentence)( const char *groupName, int pickMethod, int *picked );
+
+	// Unknown (deals with wchar_t's)
+	void	(*pfnUnknownFunction6)( void *u1, void *u2, void *u3, void *u4, void *u5, void *u6 );
+
+	// Unknown (deals with wchar_t's)
+	void	(*pfnUnknownFunction7)( void *u1, void *u2 );
+
+	// Unknown (something to do with players infostring?)
+	char*	(*pfnUnknownFunction8)( char *u1 );
+
+	// Completely unknown
+	void	(*pfnUnknownFunction9)( void *u1, void *u2 );
+
+	// Completely unknown
+	void	(*pfnUnknownFunction10)( void *u1, void *u2, void *u3, void *u4, void *u5 );
+
+	// Seems to be a client entry point to the pfnGetApproxWavePlayLen function introduced for CS:CZ
+	unsigned int (*pfnGetApproxWavePlayLen)( char *filename );
+
+	// Completely unknown
+	int	(*pfnUnknownFunction11)( void );
+
+	// Sets cvar value - why is this needed when Cvar_SetValue already exists?
+	void	(*Cvar_Set)( char *name, char *value );
+
+	// Seems to be a client entry point to the pfnIsCareerMatch function introduced for CS:CZ
+	int	(*pfnIsCareerMatch)( void );
+
+	// Starts a local sound - why is this needed?
+	void	(*pfnStartDynamicSound)( char *filename, float volume, float pitch );
+
+	// MP3 interface - unsure what int parameter is. Just queues the sound up - have to issue command "mp3 play" to start it. */
+	void	(*pfnMP3_InitStream)( char *filename, int i1 );
+
+	// Returns unknown, constantly increasing float.  Timing? (calls QueryPerformanceCounters)
+	float	(*pfnUnknownFunction12)( void );
+
+	// Seems to be a client entry point to the pfnProcessTutorMessageDecayBuffer function introduced for CS:CZ
+	void	(*pfnProcessTutorMessageDecayBuffer)( int *buffer, int buflen );
+
+	// Seems to be a client entry point to the pfnConstructTutorMessageDecayBuffer function introduced for CS:CZ
+	void	(*pfnConstructTutorMessageDecayBuffer)( int *buffer, int buflen );
+
+	// Seems to be a client entry point to the pfnResetTutorMessageDecayData function introduced for CS:CZ
+	void	(*pfnResetTutorMessageDecayData)( void );
+
+	// Seems to be an exact copy of the previous StartDynamicSound function???
+	void	(*pfnStartDynamicSound2)( char *filename, float volume, float pitch );
+
+	// Seems to be an exact copy of the previous FillRGBA function???
+	void	(*pfnFillRGBA2)( int x, int y, int width, int height, int r, int g, int b, int a );
+
 } cl_enginefunc_t;
 
 #define CLDLL_INTERFACE_VERSION	7

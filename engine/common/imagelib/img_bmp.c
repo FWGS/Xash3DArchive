@@ -26,6 +26,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	byte	palette[256][4];
 	int	i, columns, column, rows, row, bpp = 1;
 	int	cbPalBytes = 0, padSize = 0, bps = 0;
+	qboolean	load_qfont = false;
 	bmp_t	bhdr;
 
 	if( filesize < sizeof( bhdr )) return false; 
@@ -81,8 +82,20 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	image.width = columns = bhdr.width;
 	image.height = rows = abs( bhdr.height );
 
-	if(!Image_ValidSize( name ))
+	if( !Image_ValidSize( name ))
 		return false;          
+
+	// special hack for loading qfont
+	if( !Q_strcmp( "#XASH_SYSTEMFONT_001", name ))
+	{
+		// NOTE: same as system font we can use 4-bit bmps only
+		// step1: move main layer into alpha-channel (give grayscale from RED channel)
+		// step2: fill main layer with 255 255 255 color (white)
+		// step3: ????
+		// step4: PROFIT!!! (economy up to 150 kb for menu.dll final size)
+		image.flags |= IMAGE_HAS_ALPHA;
+		load_qfont = true;
+	}
 
 	if( bhdr.bitsPerPixel <= 8 )
 	{
@@ -170,16 +183,36 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 			case 4:
 				alpha = *buf_p++;
 				palIndex = alpha >> 4;
-				*pixbuf++ = palette[palIndex][2];
-				*pixbuf++ = palette[palIndex][1];
-				*pixbuf++ = palette[palIndex][0];
-				*pixbuf++ = palette[palIndex][3];
+				if( load_qfont )
+				{
+					*pixbuf++ = red = 255;
+					*pixbuf++ = green = 255;
+					*pixbuf++ = blue = 255;
+					*pixbuf++ = palette[palIndex][2];
+				}
+				else
+				{
+					*pixbuf++ = red = palette[palIndex][2];
+					*pixbuf++ = green = palette[palIndex][1];
+					*pixbuf++ = blue = palette[palIndex][0];
+					*pixbuf++ = palette[palIndex][3];
+				}
 				if( ++column == columns ) break;
 				palIndex = alpha & 0x0F;
-				*pixbuf++ = palette[palIndex][2];
-				*pixbuf++ = palette[palIndex][1];
-				*pixbuf++ = palette[palIndex][0];
-				*pixbuf++ = palette[palIndex][3];
+				if( load_qfont )
+				{
+					*pixbuf++ = red = 255;
+					*pixbuf++ = green = 255;
+					*pixbuf++ = blue = 255;
+					*pixbuf++ = palette[palIndex][2];
+				}
+				else
+				{
+					*pixbuf++ = red = palette[palIndex][2];
+					*pixbuf++ = green = palette[palIndex][1];
+					*pixbuf++ = blue = palette[palIndex][0];
+					*pixbuf++ = palette[palIndex][3];
+				}
 				break;
 			case 8:
 				palIndex = *buf_p++;

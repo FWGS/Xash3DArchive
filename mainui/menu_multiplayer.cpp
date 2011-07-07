@@ -67,6 +67,8 @@ static void UI_MultiPlayer_Callback( void *self, int event )
 	switch( item->id )
 	{
 	case ID_INTERNETGAMES:
+		UI_InternetGames_Menu();
+		break;
 	case ID_SPECTATEGAMES:
 		// UNDONE: write menus
 		break;
@@ -116,7 +118,7 @@ static void UI_MultiPlayer_Init( void )
 
 	uiMultiPlayer.internetGames.generic.id = ID_INTERNETGAMES;
 	uiMultiPlayer.internetGames.generic.type = QMTYPE_BM_BUTTON;
-	uiMultiPlayer.internetGames.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY|QMF_GRAYED;
+	uiMultiPlayer.internetGames.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_NOTIFY;
 	uiMultiPlayer.internetGames.generic.x = 72;
 	uiMultiPlayer.internetGames.generic.y = 230;
 	uiMultiPlayer.internetGames.generic.name = "Internet games";

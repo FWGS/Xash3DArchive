@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #define MAPSPRITE_SIZE	128
 
 convar_t		*r_sprite_lerping;
+convar_t		*r_sprite_lighting;
 char		group_suffix[8];
 static vec3_t	sprite_mins, sprite_maxs;
 static float	sprite_radius;
@@ -39,6 +40,7 @@ R_SpriteInit
 void R_SpriteInit( void )
 {
 	r_sprite_lerping = Cvar_Get( "r_sprite_lerping", "1", CVAR_ARCHIVE, "enables sprite animation lerping" );
+	r_sprite_lighting = Cvar_Get( "r_sprite_lighting", "1", CVAR_ARCHIVE, "enables sprite lighting (blood etc)" );
 }
 
 /*
@@ -459,7 +461,7 @@ mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 	}
 	else if( psprite->frames[frame].type == FRAME_ANGLED )
 	{
-		int	angleframe = (int)(( RI.refdef.viewangles[1] - yaw ) / 360 * 8 + 0.5 - 4) & 7;
+		int	angleframe = (int)(Q_rint(( RI.refdef.viewangles[1] - yaw + 45.0f ) / 360 * 8) - 4) & 7;
 
 		// e.g. doom-style sprite monsters
 		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
@@ -590,7 +592,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 	{
 		// e.g. doom-style sprite monsters
 		float	yaw = ent->angles[YAW];
-		int	angleframe = (int)(( RI.refdef.viewangles[1] - yaw ) / 360 * 8 + 0.5 - 4) & 7;
+		int	angleframe = (int)(Q_rint(( RI.refdef.viewangles[1] - yaw + 45.0f ) / 360 * 8) - 4) & 7;
 
 		if( m_fDoInterp )
 		{
@@ -732,6 +734,8 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int
 	if( renderfx == kRenderFxNoDissipation )
 		return (float)alpha * (1.0f / 255.0f);
 
+	*pscale = 0.0f; // variable sized glow
+
 	// UNDONE: Tweak these magic numbers (19000 - falloff & 200 - sprite size)
 	brightness = 19000.0 / ( dist * dist );
 	brightness = bound( 0.01f, brightness, 1.0f );
@@ -811,7 +815,7 @@ static void R_DrawSpriteQuad( mspriteframe_t *frame, vec3_t org, vec3_t v_right,
 
 static _inline qboolean R_SpriteHasLightmap( cl_entity_t *e, int texFormat )
 {
-	if( !r_lighting_extended->integer )
+	if( !r_sprite_lighting->integer )
 		return false;
 	
 	if( texFormat != SPR_ALPHTEST )
@@ -930,7 +934,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		qboolean	invLight;
 
 		invLight = (e->curstate.effects & EF_INVLIGHT) ? true : false;
-		R_LightForPoint( origin, &lightColor, invLight, sprite_radius );
+		R_LightForPoint( origin, &lightColor, invLight, true, sprite_radius );
 		color2[0] = (float)lightColor.r * ( 1.0f / 255.0f );
 		color2[1] = (float)lightColor.g * ( 1.0f / 255.0f );
 		color2[2] = (float)lightColor.b * ( 1.0f / 255.0f );
@@ -1013,7 +1017,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		if( ilerp != 0 )
 		{
 			pglColor4f( color[0], color[1], color[2], flAlpha * ilerp );
-			GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
+			GL_Bind( GL_TEXTURE0, oldframe->gl_texturenum );
 			R_DrawSpriteQuad( oldframe, origin, v_right, v_up, scale );
 		}
 

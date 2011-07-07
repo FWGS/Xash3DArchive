@@ -381,6 +381,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 		BF_WriteByte( msg, svc_setangle );
 		BF_WriteBitAngle( msg, clent->v.angles[0], 16 );
 		BF_WriteBitAngle( msg, clent->v.angles[1], 16 );
+		BF_WriteBitAngle( msg, clent->v.angles[2], 16 );
 		clent->v.effects |= EF_NOINTERP;
 		break;
 	case 2:

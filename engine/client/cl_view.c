@@ -182,6 +182,7 @@ void V_PostRender( void )
 		CL_DrawHUD( CL_CHANGELEVEL );
 		Con_DrawConsole();
 		UI_UpdateMenu( host.realtime );
+		Con_DrawVersion();
 		Con_DrawDebug(); // must be last
 		S_ExtraUpdate();
 	}

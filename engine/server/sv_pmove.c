@@ -831,9 +831,9 @@ SV_RunCmd
 */
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 {
+	usercmd_t cmd;
 	edict_t	*clent;
 	vec3_t	oldvel;
-	usercmd_t cmd;
 	int	oldmsec;
    
 	clent = cl->edict;

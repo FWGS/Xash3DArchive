@@ -78,10 +78,11 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 
 	if( filesize < sizeof( font ))
 		return false;
+
 	Q_memcpy( &font, buffer, sizeof( font ));
 	
 	// last sixty four bytes - what the hell ????
-	size = sizeof( qfont_t ) - 4 + ( 128 * font.width * QCHAR_WIDTH ) + sizeof( short ) + 768 + 64;
+	size = sizeof( qfont_t ) - 4 + ( font.height * font.width * QCHAR_WIDTH ) + sizeof( short ) + 768 + 64;
 
 	if( size != filesize )
 	{
@@ -96,21 +97,22 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 		image.height = font.height;
 	}
 
-	if(!Image_LumpValidSize( name )) return false;
-	fin = buffer + sizeof( font ) - 4;
+	if( !Image_LumpValidSize( name ))
+		return false;
 
+	fin = buffer + sizeof( font ) - 4;
 	pal = fin + (image.width * image.height);
 	numcolors = *(short *)pal, pal += sizeof( short );
-	image.flags |= IMAGE_HAS_ALPHA; // fonts always have transparency
 
 	if( numcolors == 768 )
 	{
 		// newstyle font
 		Image_GetPaletteLMP( pal, LUMP_QFONT );
+		image.flags |= IMAGE_HAS_ALPHA; // fonts always have transparency
 	}
 	else if( numcolors == 256 )
 	{
-		// oldstyle font
+		// oldstyle font (no transparency)
 		Image_GetPaletteLMP( pal, LUMP_TRANSPARENT );
 	}
 	else 

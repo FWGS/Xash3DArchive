@@ -97,51 +97,6 @@ void SV_BroadcastCommand( char *fmt, ... )
 }
 
 /*
-====================
-SV_SetMaster_f
-
-Specify a list of master servers
-====================
-*/
-void SV_SetMaster_f( void )
-{
-	int	i, slot;
-
-	// only dedicated servers send heartbeats
-	if( host.type != HOST_DEDICATED )
-	{
-		Msg( "Only dedicated servers use masters.\n" );
-		return;
-	}
-
-	// make sure the server is listed public
-	Cvar_Set( "public", "1" );
-
-	for( i = 1; i < MAX_MASTERS; i++ )
-	{ 
-		Q_memset( &master_adr[i], 0, sizeof( master_adr[i] ));
-	}
-
-	// slot 0 will always contain the id master
-	for( i = 1, slot = 1; i < Cmd_Argc(); i++ )
-	{
-		if( slot == MAX_MASTERS ) break;
-		if( !NET_StringToAdr( Cmd_Argv( i ), &master_adr[i] ))
-		{
-			Msg( "Bad address: %s\n", Cmd_Argv( i ));
-			continue;
-		}
-
-		if( !master_adr[slot].port ) master_adr[slot].port = BF_BigShort( PORT_MASTER );
-		Msg( "Master server at %s\n", NET_AdrToString( master_adr[slot] ));
-		Msg( "Sending a ping.\n" );
-		Netchan_OutOfBandPrint( NS_SERVER, master_adr[slot], "ping" );
-		slot++;
-	}
-	svs.last_heartbeat = MAX_HEARTBEAT;
-}
-
-/*
 ==================
 SV_SetPlayer
 
@@ -832,7 +787,6 @@ void SV_InitOperatorCommands( void )
 	if( host.type == HOST_DEDICATED )
 	{
 		Cmd_AddCommand( "say", SV_ConSay_f, "send a chat message to everyone on the server" );
-		Cmd_AddCommand( "setmaster", SV_SetMaster_f, "set ip address for dedicated server" );
 		Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
 	}
 

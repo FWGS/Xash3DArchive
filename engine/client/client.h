@@ -162,7 +162,8 @@ typedef enum
 {
 	key_console = 0,
 	key_game,
-	key_menu
+	key_menu,
+	key_message
 } keydest_t;
 
 typedef enum
@@ -441,6 +442,10 @@ typedef struct
 	const float	*envshot_vieworg;		// envshot position
 	string		shotname;
 
+	// download info
+	int		downloadcount;
+	int		downloadfileid;
+
 	// demo loop control
 	int		demonum;			// -1 = don't play demos
 	string		demos[MAX_DEMOS];		// when not playing
@@ -531,6 +536,7 @@ void SCR_TimeRefresh_f( void );
 void CL_Init( void );
 void CL_SendCommand( void );
 void CL_Disconnect_f( void );
+void CL_ProcessFile( qboolean successfully_received, const char *filename );
 void CL_GetChallengePacket( void );
 void CL_PingServers_f( void );
 void CL_ClearState( void );
@@ -690,6 +696,7 @@ int Con_DrawString( int x, int y, const char *string, rgba_t setColor );
 void Con_DefaultColor( int r, int g, int b );
 void Con_CharEvent( int key );
 void Key_Console( int key );
+void Key_Message( int key );
 void Con_Close( void );
 
 //

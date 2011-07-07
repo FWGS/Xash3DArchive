@@ -49,7 +49,7 @@ qboolean Image_LoadTGA( const char *name, const byte *buffer, size_t filesize )
 	if( targa_header.id_length != 0 ) buf_p += targa_header.id_length;	// skip TARGA image comment
 
 	// check for tga file
-	if(!Image_ValidSize( name )) return false;
+	if( !Image_ValidSize( name )) return false;
 
 	image.type = PF_RGBA_32; // always exctracted to 32-bit buffer
 

@@ -97,6 +97,16 @@ void StringConcat( char *dst, const char *src, size_t size )
 	return;
 }
 
+char *StringCopy( const char *input )
+{
+	if( !input ) return NULL;
+
+	char *out = (char *)MALLOC( strlen( input ) + 1 );
+	strcpy( out, input );
+
+	return out;
+}
+
 /*
 ============
 COM_FileBase

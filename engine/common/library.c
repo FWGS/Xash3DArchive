@@ -164,7 +164,8 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 			goto table_error;
 		}
 
-		if( !Q_strcmp( section_header.Name, ".rdata" ))
+		if((( optional_header.DataDirectory[0].VirtualAddress >= section_header.VirtualAddress ) && 
+			(optional_header.DataDirectory[0].VirtualAddress < (section_header.VirtualAddress + section_header.Misc.VirtualSize))))
 		{
 			rdata_found = true;
 			break;

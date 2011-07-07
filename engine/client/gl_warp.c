@@ -65,7 +65,7 @@ float r_turbsin[] =
 
 static qboolean CheckSkybox( const char *name )
 {
-	const char	*skybox_ext[3] = { "tga", "bmp", "jpg" };
+	const char	*skybox_ext[3] = { "jpg", "tga", "bmp" };
 	int		i, j, num_checked_sides;
 	const char	*sidename;
 
@@ -448,6 +448,9 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 	uint	transpix;
 	int	r, g, b;
 	int	i, j, p;
+	char	texname[32];
+
+	Q_snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", tx->name );
 
 	if( mt->offsets[0] > 0 )
 	{
@@ -456,12 +459,12 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 		int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 		if( world.version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
-		r_sky = FS_LoadImage( tx->name, (byte *)mt, size );
+		r_sky = FS_LoadImage( texname, (byte *)mt, size );
 	}
 	else
 	{
 		// okay, loading it from wad
-		r_sky = FS_LoadImage( tx->name, NULL, 0 );
+		r_sky = FS_LoadImage( texname, NULL, 0 );
 	}
 
 	// make sure what sky image is valid

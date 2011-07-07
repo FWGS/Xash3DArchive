@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define ART_BUTTONS_MAIN		"gfx/shell/btns_main.bmp"	// we support bmp only
 
-const char *MenuStrings[PC_BUTTONCOUNT] =
+const char *MenuButtons[PC_BUTTONCOUNT] =
 {
 	"New game",
 	"Resume Game",
@@ -143,21 +143,21 @@ void UI_LoadBmpButtons( void )
 
 	int pallete_sz = pHdr->bmp_offset - sizeof( bmphdr_t ) - pInfoHdr->biSize;
 
-	uiStatic.buttons_height = 78;
+	uiStatic.buttons_height = ( pInfoHdr->biBitCount == 4 ) ? 80 : 78; // bugstompers issues
 	uiStatic.buttons_width = pInfoHdr->biWidth - 3; // make some offset
 
 	int cutted_img_sz = pInfoHdr->biWidth * uiStatic.buttons_height * pInfoHdr->biBitCount / 8;
 	int CuttedBmpSize = sizeof( bmphdr_t ) + pInfoHdr->biSize + pallete_sz + cutted_img_sz;
 	byte *img_data = &bmp_buffer[bmp_len_holder-cutted_img_sz];
 
-	if ( pInfoHdr->biBitCount == 8 )
+	if ( pInfoHdr->biBitCount <= 8 )
 	{
-		byte*pallete=&bmp_buffer[sizeof( bmphdr_t ) + pInfoHdr->biSize];
-		byte*firstpixel_col=&pallete[img_data[0]*4];
+		byte* pallete=&bmp_buffer[sizeof( bmphdr_t ) + pInfoHdr->biSize];
+		byte* firstpixel_col=&pallete[img_data[0]*4];
 		firstpixel_col[0]=firstpixel_col[1]=firstpixel_col[2]=0;
 	}
 
-	CuttedDibHdr.biHeight = uiStatic.buttons_height;
+	CuttedDibHdr.biHeight = 78;	//uiStatic.buttons_height;
 	CuttedHdr.filesz = CuttedBmpSize;
 	CuttedDibHdr.biSizeImage = CuttedBmpSize - CuttedHdr.bmp_offset;
 
@@ -178,7 +178,7 @@ void UI_LoadBmpButtons( void )
 		memcpy( &raw_img_buff[offset], &CuttedDibHdr, CuttedDibHdr.biSize );
 		offset += CuttedDibHdr.biSize;
 
-		if( CuttedDibHdr.biBitCount == 8 )
+		if( CuttedDibHdr.biBitCount <= 8 )
 		{
  			memcpy( &raw_img_buff[offset], &bmp_buffer[offset], pallete_sz );
  			offset += pallete_sz;

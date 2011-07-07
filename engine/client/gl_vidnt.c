@@ -35,6 +35,7 @@ convar_t	*gl_texturebits;
 convar_t	*gl_ignorehwgamma;
 convar_t	*gl_texture_anisotropy;
 convar_t	*gl_compress_textures;
+convar_t	*gl_luminance_textures;
 convar_t	*gl_texture_lodbias;
 convar_t	*gl_showtextures;
 convar_t	*gl_swapInterval;
@@ -60,6 +61,7 @@ convar_t	*r_norefresh;
 convar_t	*r_lighting_extended;
 convar_t	*r_lighting_modulate;
 convar_t	*r_lighting_ambient;
+convar_t	*r_detailtextures;
 convar_t	*r_faceplanecull;
 convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
@@ -121,10 +123,11 @@ vidmode_t vidmode[] =
 { "Mode 13: 16x9",	1024,	600,	true	},
 { "Mode 14: 16x9",	1280,	720,	true	},
 { "Mode 15: 16x9",	1360,	768,	true	},
-{ "Mode 16: 16x9",	1440,	900,	true	},
-{ "Mode 17: 16x9",	1680,	1050,	true	},
-{ "Mode 18: 16x9",	1920,	1200,	true	},
-{ "Mode 19: 16x9",	2560,	1600,	true	},
+{ "Mode 16: 16x9",	1366,	768,	true	},
+{ "Mode 17: 16x9",	1440,	900,	true	},
+{ "Mode 18: 16x9",	1680,	1050,	true	},
+{ "Mode 19: 16x9",	1920,	1200,	true	},
+{ "Mode 20: 16x9",	2560,	1600,	true	},
 { NULL,		0,	0,	0	},
 };
 
@@ -432,10 +435,15 @@ static dllfunc_t wgl_funcs[] =
 { "wglSwapBuffers"         , (void **)&pwglSwapBuffers },
 { "wglCreateContext"       , (void **)&pwglCreateContext },
 { "wglDeleteContext"       , (void **)&pwglDeleteContext },
-{ "wglGetProcAddress"      , (void **)&pwglGetProcAddress },
 { "wglMakeCurrent"         , (void **)&pwglMakeCurrent },
 { "wglGetCurrentContext"   , (void **)&pwglGetCurrentContext },
 { "wglGetCurrentDC"        , (void **)&pwglGetCurrentDC },
+{ NULL, NULL }
+};
+
+static dllfunc_t wglproc_funcs[] =
+{
+{ "wglGetProcAddress"  , (void **)&pwglGetProcAddress },
 { NULL, NULL }
 };
 
@@ -524,7 +532,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	if(( name[2] == '_' || name[3] == '_' ) && !Q_strstr( glConfig.extensions_string, name ))
 	{
 		GL_SetExtension( r_ext, false );	// update render info
-		MsgDev( D_NOTE, "- failed\n" );
+		MsgDev( D_NOTE, "- ^1failed\n" );
 		return;
 	}
 
@@ -541,7 +549,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	}
 
 	if( GL_Support( r_ext ))
-		MsgDev( D_NOTE, "- enabled\n" );
+		MsgDev( D_NOTE, "- ^2enabled\n" );
 }
 
 /*
@@ -1405,13 +1413,14 @@ void GL_InitCommands( void )
 	r_speeds = Cvar_Get( "r_speeds", "0", CVAR_ARCHIVE, "shows renderer speeds" );
 	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
 	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable 3D rendering (use with caution)" );
-	r_lighting_extended = Cvar_Get( "r_lighting_extended", "1", CVAR_ARCHIVE, "allow to get lighting from bmodels" );
+	r_lighting_extended = Cvar_Get( "r_lighting_extended", "1", CVAR_ARCHIVE, "allow to get lighting from world and bmodels" );
 	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", CVAR_ARCHIVE, "lightstyles modulate scale" );
 	r_lighting_ambient = Cvar_Get( "r_lighting_ambient", "0.3", 0, "map ambient lighting scale" );
 	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", CVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
 	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
 	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
 	r_faceplanecull = Cvar_Get( "r_faceplanecull", "1", 0, "ignore face plane culling (perfomance test)" );
+	r_detailtextures = Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE, "enable detail textures support, use \"2\" for auto-generate mapname_detail.txt" );
 	r_lockpvs = Cvar_Get( "r_lockpvs", "0", CVAR_CHEAT, "lockpvs area at current point (pvs test)" );
 	r_lockcull = Cvar_Get( "r_lockcull", "0", CVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 	r_wateralpha = Cvar_Get( "r_wateralpha", "1", CVAR_ARCHIVE, "world water transparency factor" );
@@ -1440,7 +1449,8 @@ void GL_InitCommands( void )
 	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_GLCONFIG, "allow gl_extensions" );
 	gl_texture_anisotropy = Cvar_Get( "r_anisotropy", "2.0", CVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
-	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "compress textures to safe video memory" ); 
+	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_GLCONFIG, "compress textures to safe video memory" ); 
+	gl_luminance_textures = Cvar_Get( "gl_luminance_textures", "0", CVAR_GLCONFIG, "force all textures to luminance" ); 
 	gl_allow_static = Cvar_Get( "gl_allow_static", "1", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 9)" );
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
@@ -1480,9 +1490,13 @@ void GL_InitExtensions( void )
 	glConfig.version_string = pglGetString( GL_VERSION );
 	glConfig.extensions_string = pglGetString( GL_EXTENSIONS );
 	MsgDev( D_INFO, "Video: %s\n", glConfig.renderer_string );
-	
+
+	// initalize until base opengl functions loaded
+	GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
+
 	GL_CheckExtension( "WGL_3DFX_gamma_control", wgl3DFXgammacontrolfuncs, NULL, GL_WGL_3DFX_GAMMA_CONTROL );
 	GL_CheckExtension( "WGL_EXT_swap_control", wglswapintervalfuncs, NULL, GL_WGL_SWAPCONTROL );
+
 	GL_CheckExtension( "glDrawRangeElements", drawrangeelementsfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );
 
 	if( !GL_Support( GL_DRAW_RANGEELEMENTS_EXT ))

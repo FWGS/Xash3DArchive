@@ -259,7 +259,7 @@ usercmd_t CL_CreateCmd( void )
 	active = ( cls.state == ca_active && !cl.refdef.paused && !cl.refdef.intermission );
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, active );
 
-	R_LightForPoint( cl.frame.local.client.origin, &color, false, 128.0f );
+	R_LightForPoint( cl.frame.local.client.origin, &color, false, false, 128.0f );
 	cmd.lightlevel = (color.r + color.g + color.b) / 3;
 
 	// never let client.dll calc frametime for player
@@ -819,6 +819,33 @@ void CL_LocalServers_f( void )
 }
 
 /*
+=================
+CL_InternetServers_f
+=================
+*/
+void CL_InternetServers_f( void )
+{
+	netadr_t	adr;
+	char	part1query[12];
+	char	part2query[128];
+	string	fullquery;
+
+	MsgDev( D_INFO, "Scanning for servers on the internet area...\n" );
+	NET_Config( true ); // allow remote
+
+	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ) )
+		MsgDev( D_INFO, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
+
+	Q_snprintf( part1query, sizeof( part1query ), "%c%c0.0.0.0:0", 0x31, 0xFF );
+	Q_snprintf( part2query, sizeof( part2query ), "\\gamedir\\%s_xash\\nap\\%d", GI->gamedir, 70 );
+
+	Q_memcpy( fullquery, part1query, sizeof( part1query ));
+	Q_memcpy( fullquery + sizeof( part1query ), part2query, Q_strlen( part2query ));
+
+	NET_SendPacket( NS_CLIENT, sizeof( part1query ) + Q_strlen( part2query ) + 1, fullquery, adr );
+}
+
+/*
 ====================
 CL_Packet_f
 
@@ -1116,6 +1143,8 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	char	*args;
 	char	*c, buf[MAX_SYSPATH];
 	int	len = sizeof( buf );
+	int	dataoffset = 0;
+	netadr_t	servadr;
 	
 	BF_Clear( msg );
 	BF_ReadLong( msg ); // skip the -1
@@ -1202,6 +1231,33 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		// user out of band message (must be handled in CL_ConnectionlessPacket)
 		if( len > 0 ) Netchan_OutOfBand( NS_SERVER, from, len, buf );
 	}
+	else if( msg->pData[0] == 0xFF && msg->pData[1] == 0xFF && msg->pData[2] == 0xFF && msg->pData[3] == 0xFF && msg->pData[4] == 0x66 && msg->pData[5] == 0x0A )
+	{
+		dataoffset = 6;
+
+		while( 1 )
+		{
+			servadr.type = NA_IP;
+			servadr.ip[0] = msg->pData[dataoffset + 0];
+			servadr.ip[1] = msg->pData[dataoffset + 1];
+			servadr.ip[2] = msg->pData[dataoffset + 2];
+			servadr.ip[3] = msg->pData[dataoffset + 3];
+
+			servadr.port = *(word *)&msg->pData[dataoffset + 4];
+
+			if( !servadr.port )
+				break;
+
+			MsgDev( D_INFO, "Found server: %s\n", NET_AdrToString( servadr ));
+
+			NET_Config( true ); // allow remote
+
+			Netchan_OutOfBandPrint( NS_CLIENT, servadr, "info %i", PROTOCOL_VERSION );
+
+			dataoffset += 6;
+
+		}
+	}
 	else MsgDev( D_ERROR, "bad connectionless packet from %s:\n%s\n", NET_AdrToString( from ), args );
 }
 
@@ -1277,8 +1333,8 @@ void CL_ReadNetMessage( void )
 		
 		if( Netchan_CopyFileFragments( &cls.netchan, &net_message ))
 		{
-			// Remove from resource request stuff.
-//			CL_ProcessFile( true, cls.netchan.incomingfilename );
+			// remove from resource request stuff.
+			CL_ProcessFile( true, cls.netchan.incomingfilename );
 		}
 	}
 
@@ -1315,6 +1371,28 @@ void CL_ReadPackets( void )
 	
 }
 
+/*
+====================
+CL_ProcessFile
+
+A file has been received via the fragmentation/reassembly layer, put it in the right spot and
+ see if we have finished downloading files.
+====================
+*/
+void CL_ProcessFile( BOOL successfully_received, const char *filename )
+{
+	MsgDev( D_INFO, "Received %s, but file processing is not hooked up!!!\n", filename );
+
+	if( cls.downloadfileid == cls.downloadcount - 1 )
+	{
+		MsgDev( D_INFO,"All Files downloaded\n" );
+
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, "continueloading" );
+	}
+
+	cls.downloadfileid++;
+}
 
 //=============================================================================
 /*
@@ -1443,6 +1521,7 @@ void CL_InitLocal( void )
 	// register our commands
 	Cmd_AddCommand ("pause", NULL, "pause the game (if the server allows pausing)" );
 	Cmd_AddCommand ("localservers", CL_LocalServers_f, "collect info about local servers" );
+	Cmd_AddCommand ("internetservers", CL_InternetServers_f, "collect info about internet servers" );
 	Cmd_AddCommand ("cd", CL_PlayCDTrack_f, "Play cd-track (not real cd-player of course)" );
 
 	Cmd_AddCommand ("userinfo", CL_Userinfo_f, "print current client userinfo" );

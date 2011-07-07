@@ -21,11 +21,10 @@ GNU General Public License for more details.
 #include "pm_defs.h"
 #include "const.h"
 
-#define DEBUG_NEW_CLIENTPVS_CHECK
-
 // fatpvs stuff
 static byte fatpvs[MAX_MAP_LEAFS/8];
 static byte fatphs[MAX_MAP_LEAFS/8];
+static byte clientpvs[MAX_MAP_LEAFS/8];	// for find client in PVS
 static vec3_t viewPoint[MAX_CLIENTS];
 static byte *bitvector;
 static int fatbytes;
@@ -313,6 +312,10 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 
 			clientnum = cl - svs.clients;
 			viewOrg = viewPoint[clientnum];
+
+			// Invasion issues: wrong camera position received in ENGINE_SET_PVS
+			if( cl->pViewEntity && !VectorCompare( viewOrg, cl->pViewEntity->v.origin ))
+				viewOrg = cl->pViewEntity->v.origin;
 
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
 			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
@@ -766,7 +769,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	if( !SpawnEdict )
 	{
 		// attempt to create custom entity (Xash3D extension)
-		if( svgame.dllFuncs2.pfnCreate && svgame.dllFuncs2.pfnCreate( ent, pszClassName ) != -1 )
+		if( svgame.physFuncs.SV_CreateEntity && svgame.physFuncs.SV_CreateEntity( ent, pszClassName ) != -1 )
 			return ent;
 
 		ent->v.flags |= FL_KILLME;
@@ -1251,71 +1254,96 @@ edict_t *pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 
 /*
 =================
+SV_CheckClientPVS
+
+build the new client PVS
+=================
+*/
+int SV_CheckClientPVS( int check )
+{
+	byte	*pvs;
+	edict_t	*ent;
+	mleaf_t	*leaf;
+	vec3_t	view;
+	int	i;
+
+	// cycle to the next one
+	check = bound( 1, check, svgame.globals->maxClients );
+
+	if( check == svgame.globals->maxClients )
+		i = 1;
+	else i = check + 1;
+
+	for( ;; i++ )
+	{
+		if( i == svgame.globals->maxClients + 1 )
+			i = 1;
+
+		ent = EDICT_NUM( i );
+
+		if( i == check ) break; // didn't find anything else
+
+		if( ent->free ) continue;
+		if( !ent->pvPrivateData ) continue;
+		if( ent->v.flags & FL_NOTARGET ) continue;
+
+		// anything that is a client, or has a client as an enemy
+		break;
+	}
+
+	// get the PVS for the entity
+	VectorAdd( ent->v.origin, ent->v.view_ofs, view );
+	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
+	pvs = Mod_LeafPVS( leaf, sv.worldmodel );
+	memcpy( clientpvs, pvs, (sv.worldmodel->numleafs + 7) >> 3 );
+
+	return i;
+}
+
+/*
+=================
 pfnFindClientInPVS
 
-FIXME: this code is totally wrong. Get PF_checkclient from QW.
 =================
 */
 edict_t* pfnFindClientInPVS( edict_t *pEdict )
 {
-	edict_t		*pClient;
-	sv_client_t	*cl;
-	vec3_t		view1, view2;
-	int		i;
+	edict_t	*pClient;
+	mleaf_t	*leaf;
+	vec3_t	view;
+	int	i;
 
 	if( !SV_IsValidEdict( pEdict ))
 		return svgame.edicts;
 
-	VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view1 );
-
-	for( i = 0; i < svgame.globals->maxClients; i++ )
+	// find a new check if on a new frame
+	if(( sv.time - sv.lastchecktime ) >= 0.1 )
 	{
-		pClient = EDICT_NUM( i + 1 );
-		if(( cl = SV_ClientFromEdict( pClient, true )) == NULL )
-			continue;
-
-		// check for SET_VIEW
-		if( SV_IsValidEdict( cl->pViewEntity ))
-			VectorAdd( cl->pViewEntity->v.origin, cl->pViewEntity->v.view_ofs, view2 );
-		else VectorAdd( pClient->v.origin, pClient->v.view_ofs, view2 );
-
-		if( pEdict->v.modelindex )
-		{
-			// can use entity leafs or headnode for fast testing
-			// FIXME: this is need to be detail tested!
-			mleaf_t	*leaf = Mod_PointInLeaf( view2, sv.worldmodel->nodes );
-			byte	*mask = Mod_LeafPVS( leaf, sv.worldmodel );
-
-			if( pfnCheckVisibility( pEdict, mask ))
-			{
-				return pClient;
-			}
-#ifdef DEBUG_NEW_CLIENTPVS_CHECK
-			else if( sv_check_errors->integer )
-			{
-				trace_t	tr;
-				tr = SV_Move( view1, vec3_origin, vec3_origin, view2, MOVE_WORLDONLY, NULL );
-
-				if( tr.fraction == 1.0f && !tr.allsolid )
-				{
-					MsgDev( D_ERROR, "CHECK_CLIENT_PVS: fail to see %s, probably client is underwater\n", SV_ClassName( pEdict )); 
-				}
-			}
-#endif
-		}
-		else
-		{
-			if( SV_OriginIn( DVIS_PVS, view1, view2 ))
-				return pClient;
-		}
+		sv.lastcheck = SV_CheckClientPVS( sv.lastcheck );
+		sv.lastchecktime = sv.time;
 	}
-	return svgame.edicts;
+
+	// return check if it might be visible	
+	pClient = EDICT_NUM( sv.lastcheck );
+	if( !SV_ClientFromEdict( pClient, true ))
+		return svgame.edicts;
+
+	VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view );
+	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
+	i = (leaf - sv.worldmodel->leafs) - 1;
+
+	if( i < 0 || !((clientpvs[i>>3]) & (1 << (i & 7))))
+		return svgame.edicts;
+
+	// client which currently in PVS
+	return pClient;
 }
 
 /*
 =================
 pfnEntitiesInPVS
 
+FIXME: rewrite this code. get rid of hack
 =================
 */
 edict_t *pfnEntitiesInPVS( edict_t *pplayer )
@@ -1673,6 +1701,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	int	msg_dest;
 	vec3_t	origin;
 
+	if( !sample ) return;
+
 	if( attn < ATTN_NONE || attn > ATTN_IDLE )
 	{
 		MsgDev( D_ERROR, "SV_StartSound: attenuation %g must be in range 0-2\n", attn );
@@ -1780,6 +1810,8 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	int 	number = 0, sound_idx;
 	int	msg_dest = MSG_PAS_R;
 	vec3_t	origin;
+
+	if( !sample ) return;
 
 	if( attn < ATTN_NONE || attn > ATTN_IDLE )
 	{
@@ -3282,6 +3314,9 @@ char *pfnGetInfoKeyBuffer( edict_t *e )
 {
 	sv_client_t	*cl;
 
+	if( !SV_IsValidEdict( e ))
+		return Cvar_Serverinfo(); // otherwise return ServerInfo
+
 	cl = SV_ClientFromEdict( e, false ); // pfnUserInfoChanged passed
 	if( cl == NULL )
 	{
@@ -3947,6 +3982,150 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 
 	return result;
 }
+
+/*
+=============
+pfnSequenceGet
+
+used by CS:CZ
+=============
+*/
+void *pfnSequenceGet( const char *fileName, const char *entryName )
+{
+	return NULL;
+}
+
+/*
+=============
+pfnSequencePickSentence
+
+used by CS:CZ
+=============
+*/
+void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked )
+{
+	return NULL;
+}
+
+/*
+=============
+pfnGetFileSize
+
+returns the filesize in bytes
+=============
+*/
+int pfnGetFileSize( char *filename )
+{
+	return FS_FileSize( filename, false );
+}
+
+/*
+=============
+pfnGetApproxWavePlayLen
+
+returns the wave length in samples
+=============
+*/
+uint pfnGetApproxWavePlayLen( const char *filepath )
+{
+	return 0;
+}
+
+/*
+=============
+pfnIsCareerMatch
+
+used by CS:CZ
+=============
+*/
+int pfnIsCareerMatch( void )
+{
+	return 0;
+}
+
+/*
+=============
+pfnGetLocalizedStringLength
+
+=============
+*/
+int pfnGetLocalizedStringLength( const char *label )
+{
+	return 0;
+}
+
+/*
+=============
+pfnRegisterTutorMessageShown
+
+=============
+*/
+void pfnRegisterTutorMessageShown( int mid )
+{
+}
+
+/*
+=============
+pfnGetTimesTutorMessageShown
+
+=============
+*/
+int pfnGetTimesTutorMessageShown( int mid )
+{
+	return 0;
+}
+
+/*
+=============
+pfnProcessTutorMessageDecayBuffer
+
+=============
+*/
+void pfnProcessTutorMessageDecayBuffer( int *buffer, int bufferLength )
+{
+}
+
+/*
+=============
+pfnConstructTutorMessageDecayBuffer
+
+=============
+*/
+void pfnConstructTutorMessageDecayBuffer( int *buffer, int bufferLength )
+{
+}
+
+/*
+=============
+pfnSequenceGet
+
+=============
+*/
+void pfnResetTutorMessageDecayData( void )
+{
+}
+
+/*
+=============
+pfnQueryClientCvarValue
+
+request client cvar value
+=============
+*/
+void pfnQueryClientCvarValue( const edict_t *player, const char *cvarName )
+{
+}
+
+/*
+=============
+pfnQueryClientCvarValue2
+
+request client cvar value (bugfixed)
+=============
+*/
+void pfnQueryClientCvarValue2( const edict_t *player, const char *cvarName, int requestID )
+{
+}
 					
 // engine callbacks
 static enginefuncs_t gEngfuncs = 
@@ -4095,6 +4274,19 @@ static enginefuncs_t gEngfuncs =
 	pfnVoice_GetClientListening,
 	pfnVoice_SetClientListening,
 	pfnGetPlayerAuthId,
+	pfnSequenceGet,
+	pfnSequencePickSentence,
+	pfnGetFileSize,
+	pfnGetApproxWavePlayLen,
+	pfnIsCareerMatch,
+	pfnGetLocalizedStringLength,
+	pfnRegisterTutorMessageShown,
+	pfnGetTimesTutorMessageShown,
+	pfnProcessTutorMessageDecayBuffer,
+	pfnConstructTutorMessageDecayBuffer,
+	pfnResetTutorMessageDecayData,
+	pfnQueryClientCvarValue,
+	pfnQueryClientCvarValue2,
 };
 
 /*
@@ -4388,6 +4580,9 @@ qboolean SV_LoadProgs( const char *name )
 	// make sure what new dll functions is cleared
 	Q_memset( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 
+	// make sure what physic functions is cleared
+	Q_memset( &svgame.physFuncs, 0, sizeof( svgame.physFuncs ));
+
 	// make local copy of engfuncs to prevent overwrite it with bots.dll
 	Q_memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
@@ -4395,7 +4590,7 @@ qboolean SV_LoadProgs( const char *name )
 	GetEntityAPI2 = (APIFUNCTION2)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
 	GiveNewDllFuncs = (NEW_DLL_FUNCTIONS_FN)Com_GetProcAddress( svgame.hInstance, "GetNewDLLFunctions" );
 
-	if( !GetEntityAPI )
+	if( !GetEntityAPI && !GetEntityAPI2 )
 	{
 		Com_FreeLibrary( svgame.hInstance );
          		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of GetEntityAPI proc\n" );
@@ -4430,22 +4625,29 @@ qboolean SV_LoadProgs( const char *name )
 
 	version = INTERFACE_VERSION;
 
-	if( !GetEntityAPI( &svgame.dllFuncs, version ))
+	if( GetEntityAPI2 )
 	{
-		if( !GetEntityAPI2 )
+		if( !GetEntityAPI2( &svgame.dllFuncs, &version ))
 		{
-			Com_FreeLibrary( svgame.hInstance );
-			MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
-			svgame.hInstance = NULL;
-			return false;
+			MsgDev( D_WARN, "SV_LoadProgs: interface version %i should be %i\n", INTERFACE_VERSION, version );
+
+			// fallback to old API
+			if( !GetEntityAPI( &svgame.dllFuncs, version ))
+			{
+				Com_FreeLibrary( svgame.hInstance );
+				MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
+				svgame.hInstance = NULL;
+				return false;
+			}
 		}
-		else if( !GetEntityAPI2( &svgame.dllFuncs, &version ))
-		{
-			Com_FreeLibrary( svgame.hInstance );
-			MsgDev( D_ERROR, "SV_LoadProgs: interface version %i should be %i\n", INTERFACE_VERSION, version );
-			svgame.hInstance = NULL;
-			return false;
-		}
+		else MsgDev( D_AICONSOLE, "SV_LoadProgs: ^2initailized extended EntityAPI ^7ver. %i\n", version );
+	}
+	else if( !GetEntityAPI( &svgame.dllFuncs, version ))
+	{
+		Com_FreeLibrary( svgame.hInstance );
+		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
+		svgame.hInstance = NULL;
+		return false;
 	}
 
 	if( !SV_InitStudioAPI( ))
@@ -4454,6 +4656,11 @@ qboolean SV_LoadProgs( const char *name )
 		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get studio API\n" );
 		svgame.hInstance = NULL;
 		return false;
+	}
+
+	if( !SV_InitPhysicsAPI( ))
+	{
+		MsgDev( D_WARN, "SV_LoadProgs: couldn't get physics API\n" );
 	}
 
 	// grab function SV_SaveGameComment

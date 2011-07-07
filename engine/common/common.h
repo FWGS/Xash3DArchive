@@ -79,8 +79,8 @@ typedef enum
 #define XASH_VERSION	0.85f		// engine current version
 
 // PERFORMANCE INFO
-#define MIN_FPS         	0.1		// host minimum fps value for maxfps.
-#define MAX_FPS         	1000.0		// upper limit for maxfps.
+#define MIN_FPS         	15.0		// host minimum fps value for maxfps.
+#define MAX_FPS         	500.0		// upper limit for maxfps.
 
 #define MAX_FRAMETIME	0.1
 #define MIN_FRAMETIME	0.001

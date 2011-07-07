@@ -143,8 +143,11 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 			float	lastdiff = 999;
 			int	i;
 
+#ifdef RANDOM_HULL_NULLIZATION
+			hullNumber = Com_RandomLong( 0, 0 );
+#else
 			hullNumber = 0;	// assume we fail
-
+#endif 
 			// select the hull automatically
 			for( i = 0; i < 4; i++ )
 			{

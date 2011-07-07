@@ -16,6 +16,9 @@ GNU General Public License for more details.
 #include "common.h"
 #include "server.h"
 #include "const.h"
+#include "library.h"
+
+typedef int (*PHYSICAPI)( int, server_physics_api_t*, physics_interface_t* );
 
 /*
 
@@ -311,7 +314,7 @@ qboolean SV_CheckWater( edict_t *ent )
 		ent->v.watertype = cont;
 		ent->v.waterlevel = 1;
 
-		point[2] = ent->v.origin[2] + (ent->v.mins[2] + ent->v.maxs[2]) * 0.5f;			
+		point[2] = ent->v.origin[2] + (ent->v.mins[2] + ent->v.maxs[2]) * 0.5f;
 
 		svs.groupmask = ent->v.groupinfo;
 		cont = SV_PointContents( point );
@@ -593,7 +596,7 @@ PUSHMOVE
 ============
 SV_AllowPushRotate
 
-Allows to chnage entity yaw?
+Allows to change entity yaw?
 ============
 */
 qboolean SV_AllowPushRotate( edict_t *ent )
@@ -1060,7 +1063,7 @@ void SV_Physics_Pusher( edict_t *ent )
 		{
 			if( VectorLength2( ent->v.velocity ) > STOP_EPSILON )
 			{
-				pBlocker = SV_PushRotate( ent, movetime );				
+				pBlocker = SV_PushRotate( ent, movetime );
 
 				if( !pBlocker )
 				{
@@ -1529,7 +1532,7 @@ void SV_Physics_Step( edict_t *ent )
 				point[0] = x ? maxs[0] : mins[0];
 				point[1] = y ? maxs[1] : mins[1];
 
-				trace = SV_Move( point, vec3_origin, vec3_origin, point, MOVE_NORMAL, ent );			
+				trace = SV_Move( point, vec3_origin, vec3_origin, point, MOVE_NORMAL, ent );
 
 				if( trace.startsolid )
 				{
@@ -1595,9 +1598,9 @@ static void SV_Physics_Entity( edict_t *ent )
 	}
 
 	// user dll can override movement type (Xash3D extension)
-	if( svgame.dllFuncs2.pfnPhysicsEntity )
+	if( svgame.physFuncs.SV_PhysicsEntity )
 	{
-		if( svgame.dllFuncs2.pfnPhysicsEntity( ent ))
+		if( svgame.physFuncs.SV_PhysicsEntity( ent ))
 		{
 			if( ent->v.flags & FL_KILLME )
 				SV_FreeEdict( ent );
@@ -1680,4 +1683,52 @@ void SV_Physics( void )
 
 	// decrement svgame.numEntities if the highest number entities died
 	for( ; EDICT_NUM( svgame.numEntities - 1 )->free; svgame.numEntities-- );
+}
+
+/*
+================
+SV_GetServerTime
+
+Inplementation for new physics interface
+================
+*/
+double SV_GetServerTime( void )
+{
+	return sv.time;
+}
+
+static server_physics_api_t gPhysicsAPI =
+{
+	SV_LinkEdict,
+	SV_GetServerTime,
+};
+
+/*
+===============
+SV_InitPhysicsAPI
+
+Initialize server external physics
+===============
+*/
+qboolean SV_InitPhysicsAPI( void )
+{
+	static PHYSICAPI	pPhysIface;
+
+	pPhysIface = (PHYSICAPI)Com_GetProcAddress( svgame.hInstance, "Server_GetPhysicsInterface" );
+	if( pPhysIface )
+	{
+		if( pPhysIface( SV_PHYSICS_INTERFACE_VERSION, &gPhysicsAPI, &svgame.physFuncs ))
+		{
+			MsgDev( D_AICONSOLE, "SV_LoadProgs: ^2initailized extended PhysicAPI ^7ver. %i\n", SV_PHYSICS_INTERFACE_VERSION );
+			return true;
+		}
+
+		// make sure what physic functions is cleared
+		Q_memset( &svgame.physFuncs, 0, sizeof( svgame.physFuncs ));
+
+		return false; // just tell user about problems
+	}
+
+	// physic interface is missed
+	return true;
 }

@@ -63,6 +63,9 @@ static qboolean R_StaticEntity( cl_entity_t *ent )
 	if( ent->curstate.frame || ent->model->flags & MODEL_CONVEYOR )
 		return false;
 
+	if( ent->curstate.scale ) // waveheight specified
+		return false;
+
 	if( !VectorIsNull( ent->origin ) || !VectorIsNull( ent->angles ))
 		return false;
 
@@ -375,7 +378,9 @@ R_Clear
 */
 static void R_Clear( int bitMask )
 {
-	int bits;
+	int	bits;
+
+	pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 
 	bits = GL_DEPTH_BUFFER_BIT;
 
@@ -570,8 +575,9 @@ static void R_SetupFrame( void )
 
 	R_AnimateLight();
 	R_RunViewmodelEvents();
-		
-	tr.framecount++;
+
+	// g-cont. keep actual frame for all viewpasses
+	if( !RI.refdef.nextView ) tr.framecount++;
 
 	// sort translucents entities by rendermode and distance
 	qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );
@@ -828,7 +834,7 @@ void R_DrawEntitiesOnList( void )
 	pglDepthMask( GL_FALSE );
 	glState.drawTrans = true;
 
-	// then draw translicent entities
+	// then draw translucent entities
 	for( i = 0; i < tr.num_trans_entities; i++ )
 	{
 		if( RI.refdef.onlyClientDraw )

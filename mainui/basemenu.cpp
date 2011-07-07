@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "extdll.h"
 #include "basemenu.h"
 #include "keydefs.h"
-#include "images.h"		// built-in resources
+#include "menufont.h"	// built-in menu font
 #include "utils.h"
 #include "menu_btnsbmp_table.h"
 //CR
@@ -56,6 +56,7 @@ int		uiInputFgColor	= 0xFF555555;	// 85,  85,  85,  255	// field, scrollist, che
 int		uiColorWhite	= 0xFFFFFFFF;	// 255, 255, 255, 255	// useful for bitmaps
 int		uiColorDkGrey	= 0xFF404040;	// 64,  64,  64,  255	// shadow and grayed items
 int		uiColorBlack	= 0xFF000000;	//  0,   0,   0,  255	// some controls background
+int		uiColorConsole	= 0xFFF0B418;	// just for reference 
 
 // color presets (this is nasty hack to allow color presets to part of text)
 const int g_iColorTable[8] =
@@ -204,9 +205,12 @@ void UI_DrawString( int x, int y, int w, int h, const char *string, const int co
 	if( !string || !string[0] )
 		return;
 
+#if 0	// g-cont. disabled 29/06/2011
+	// this code do a bad things with prompt dialogues
 	// vertically centered
 	if( !strchr( string, '\n' ))
 		y = y + (( h - charH ) / 2 );
+#endif
 
 	if( shadow )
 	{
@@ -729,6 +733,20 @@ void UI_RefreshServerList( void )
 
 /*
 =================
+UI_RefreshInternetServerList
+=================
+*/
+void UI_RefreshInternetServerList( void )
+{
+	uiStatic.numServers = 0;
+	memset( uiStatic.serverAddresses, 0, sizeof( uiStatic.serverAddresses ));
+	memset( uiStatic.serverNames, 0, sizeof( uiStatic.serverNames ));
+
+	CLIENT_COMMAND( FALSE, "internetservers\n" );
+}
+
+/*
+=================
 UI_StartBackGroundMap
 =================
 */
@@ -1201,6 +1219,7 @@ void UI_Precache( void )
 	UI_SaveLoad_Precache();
 	UI_MultiPlayer_Precache();
 	UI_Options_Precache();
+	UI_InternetGames_Precache();
 	UI_LanGame_Precache();
 	UI_PlayerSetup_Precache();
 	UI_Controls_Precache();
@@ -1275,11 +1294,15 @@ void UI_ApplyCustomColors( void )
 		{
 			UI_ParseColor( pfile, &uiInputFgColor );
 		}
+		else if( !stricmp( token, "CON_TEXT_COLOR" ))
+		{
+			UI_ParseColor( pfile, &uiColorConsole );
+		}
 	}
 
 	int	r, g, b;
 
-	UnpackRGB( r, g, b, uiPromptTextColor );
+	UnpackRGB( r, g, b, uiColorConsole );
 	ConsoleSetColor( r, g, b );
 
 	FREE_FILE( afile );
@@ -1323,9 +1346,6 @@ UI_VidInit
 int UI_VidInit( void )
 {
 	UI_Precache ();
-
-	// setup game info
-	GetGameInfo( &gMenu.m_gameinfo );
 		
 	uiStatic.scaleX = ScreenWidth / 1024.0f;
 	uiStatic.scaleY = ScreenHeight / 768.0f;
@@ -1350,8 +1370,17 @@ int UI_VidInit( void )
 	// trying to load chapterbackgrounds.txt
 	UI_LoadBackgroundMapList ();
 
-	// register ui font
-	uiStatic.hFont = PIC_Load( "menufont", font_tga, sizeof( font_tga ));
+	// register menu font
+	uiStatic.hFont = PIC_Load( "#XASH_SYSTEMFONT_001", menufont_bmp, sizeof( menufont_bmp ));
+
+#if 0
+	FILE *f;
+
+	// dump menufont onto disk
+	f = fopen( "menufont.bmp", "wb" );
+	fwrite( menufont_bmp, sizeof( menufont_bmp ), 1, f );
+	fclose( f );
+#endif
 
 	// reload all menu buttons
 	UI_LoadBmpButtons ();
@@ -1387,6 +1416,7 @@ void UI_Init( void )
 	Cmd_AddCommand( "menu_multiplayer", UI_MultiPlayer_Menu );
 	Cmd_AddCommand( "menu_options", UI_Options_Menu );
 	Cmd_AddCommand( "menu_langame", UI_LanGame_Menu );
+	Cmd_AddCommand( "menu_intenetgames", UI_InternetGames_Menu );
 	Cmd_AddCommand( "menu_playersetup", UI_PlayerSetup_Menu );
 	Cmd_AddCommand( "menu_controls", UI_Controls_Menu );
 	Cmd_AddCommand( "menu_advcontrols", UI_AdvControls_Menu );
@@ -1402,6 +1432,12 @@ void UI_Init( void )
 
 	memset( uiEmptyString, ' ', sizeof( uiEmptyString ));	// HACKHACK
 	uiStatic.initialized = true;
+
+	// setup game info
+	GetGameInfo( &gMenu.m_gameinfo );
+
+	// load custom strings
+	UI_LoadCustomStrings();
 
 	//CR
 	UI_InitTitleAnim();
@@ -1424,6 +1460,7 @@ void UI_Shutdown( void )
 	Cmd_RemoveCommand( "menu_saveload" );
 	Cmd_RemoveCommand( "menu_multiplayer" );
 	Cmd_RemoveCommand( "menu_options" );
+	Cmd_RemoveCommand( "menu_intenetgames" );
 	Cmd_RemoveCommand( "menu_langame" );
 	Cmd_RemoveCommand( "menu_playersetup" );
 	Cmd_RemoveCommand( "menu_controls" );

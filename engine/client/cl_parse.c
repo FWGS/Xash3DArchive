@@ -72,9 +72,9 @@ const char *svc_strings[256] =
 	"svc_packetentities",
 	"svc_deltapacketentities",
 	"svc_chokecount",
-	"svc_unused43",
+	"svc_resourcelist",
 	"svc_deltamovevars",
-	"svc_unused45",
+	"svc_customization",
 	"svc_unused46",
 	"svc_crosshairangle",
 	"svc_soundfade",
@@ -97,8 +97,9 @@ typedef struct
 	qboolean	parsing;
 } msg_debug_t;
 
-static msg_debug_t	cls_message_debug;
-static int	starting_count;
+static msg_debug_t		cls_message_debug;
+static int		starting_count;
+static resourcelist_t	reslist;
 
 const char *CL_MsgInfo( int cmd )
 {
@@ -450,6 +451,11 @@ void CL_ParseEvent( sizebuf_t *msg )
 		CL_ParseReliableEvent( msg, 0 );
 }
 
+void CL_ParseCustomization( sizebuf_t *msg )
+{
+	// FIXME: ???
+}
+
 /*
 =====================================================================
 
@@ -695,6 +701,7 @@ void CL_ParseSetAngle( sizebuf_t *msg )
 {
 	cl.refdef.cl_viewangles[0] = BF_ReadBitAngle( msg, 16 );
 	cl.refdef.cl_viewangles[1] = BF_ReadBitAngle( msg, 16 );
+	cl.refdef.cl_viewangles[2] = BF_ReadBitAngle( msg, 16 );
 }
 
 /*
@@ -891,6 +898,88 @@ void CL_ServerInfo( sizebuf_t *msg )
 	Q_strncpy( key, BF_ReadString( msg ), sizeof( key ));
 	Q_strncpy( value, BF_ReadString( msg ), sizeof( value ));
 	Info_SetValueForKey( cl.serverinfo, key, value );
+}
+
+/*
+==============
+CL_CheckingResFile
+
+==============
+*/
+void CL_CheckingResFile( char *pResFileName )
+{
+	sizebuf_t	buf;
+	byte	data[32];
+
+	if( FS_FileExists( pResFileName, false ))
+		return;	// already existing
+
+	cls.downloadcount++;
+
+	Msg( "Starting downloads file: %s\n", pResFileName );
+
+	if( cls.state == ca_disconnected ) return;
+
+	BF_Init( &buf, "ClientPacket", data, sizeof( data ));
+	BF_WriteByte( &buf, clc_resourcelist );
+	BF_WriteString( &buf, pResFileName );
+
+	if( !cls.netchan.remote_address.type )	// download in singleplayer ???
+		cls.netchan.remote_address.type = NA_LOOPBACK;
+
+	// make sure message will be delivered
+	Netchan_Transmit( &cls.netchan, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ));
+
+}
+
+/*
+==============
+CL_CheckingSoundResFile
+
+==============
+*/
+void CL_CheckingSoundResFile( char *pResFileName )
+{
+	string	filepath;
+
+	Q_snprintf( filepath, sizeof( filepath ), "sound/%s", pResFileName );
+	CL_CheckingResFile( filepath );
+}
+
+/*
+==============
+CL_ParseResourceList
+
+==============
+*/
+void CL_ParseResourceList( sizebuf_t *msg )
+{
+	int	i = 0;
+
+	Q_memset( &reslist, 0, sizeof( resourcelist_t ));
+
+	reslist.rescount = BF_ReadWord( msg ) - 1;
+
+	for( i = 0; i < reslist.rescount; i++ )
+	{
+		reslist.restype[i] = BF_ReadWord( msg );
+		Q_strncpy( reslist.resnames[i], BF_ReadString( msg ), CS_SIZE );
+	}
+
+	cls.downloadcount = 0;
+
+	for( i = 0; i < reslist.rescount; i++ )
+	{
+		if( reslist.restype[i] == t_sound )
+			CL_CheckingSoundResFile( reslist.resnames[i] );
+		else CL_CheckingResFile( reslist.resnames[i] );
+	}
+
+	if( !cls.downloadcount )
+	{
+		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
+		BF_WriteString( &cls.netchan.message, "continueloading" );
+	}
 }
 
 /*
@@ -1229,6 +1318,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_deltamovevars:
 			CL_ParseMovevars( msg );
 			break;
+		case svc_customization:
+			CL_ParseCustomization( msg );
+			break;
 		case svc_centerprint:
 			CL_CenterPrint( BF_ReadString( msg ), 0.35f );
 			break;
@@ -1292,6 +1384,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 					i--;
 				}
 			}
+			break;
+		case svc_resourcelist:
+			CL_ParseResourceList( msg );
 			break;
 		case svc_director:
 			CL_ParseDirector( msg );

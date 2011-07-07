@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "basemenu.h"
 #include "utils.h"
 #include "menu_btnsbmp_table.h"
+#include "menu_strings.h"
 
 #define ART_BANNER		"gfx/shell/head_vidmodes"
 
@@ -54,6 +55,7 @@ static const char *uiVideoModes[] =
 	"1024 x 600 (wide)",
 	"1280 x 720 (wide)",
 	"1360 x 768 (wide)",
+	"1366 x 768 (wide)",
 	"1440 x 900 (wide)",
 	"1680 x 1050 (wide)",
 	"1920 x 1200 (wide)",
@@ -216,7 +218,7 @@ static void UI_VidModes_Init( void )
 	uiVidModes.listCaption.generic.type = QMTYPE_BM_BUTTON;
 	uiVidModes.listCaption.generic.flags = QMF_INACTIVE|QMF_SMALLFONT;
 	uiVidModes.listCaption.generic.color = uiColorHelp;
-	uiVidModes.listCaption.generic.name = "Display mode";
+	uiVidModes.listCaption.generic.name = MenuStrings[HINT_DISPLAYMODE];
 	uiVidModes.listCaption.generic.x = 400;
 	uiVidModes.listCaption.generic.y = 270;
 

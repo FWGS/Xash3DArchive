@@ -91,6 +91,9 @@ typedef struct
 	// console input
 	field_t		input;
 
+	// chatfiled
+	field_t		chat;
+
 	// console history
 	field_t		historyLines[CON_HISTORY];
 	int		historyLine;	// the line being displayed from history buffer will be <= nextHistoryLine
@@ -107,6 +110,7 @@ typedef struct
 } console_t;
 
 static console_t		con;
+static qboolean		chat_team;	// say_team is active
 
 void Field_CharEvent( field_t *edit, int ch );
 
@@ -212,6 +216,52 @@ int Con_StringLength( const char *string )
 		len++;
 	}
 	return len;
+}
+
+/*
+================
+Con_MessageMode_f
+================
+*/
+void Con_MessageMode_f( void )
+{
+	chat_team = false;
+	Key_SetKeyDest( key_message );
+}
+
+/*
+================
+Con_MessageMode2_f
+================
+*/
+void Con_MessageMode2_f( void )
+{
+	chat_team = true;
+	Key_SetKeyDest( key_message );
+}
+
+/*
+================
+Con_ToggleChat_f
+================
+*/
+void Con_ToggleChat_f( void )
+{
+	Con_ClearTyping ();
+
+	if( cls.key_dest == key_console )
+	{
+		if( Cvar_VariableInteger( "sv_background" ))
+			UI_SetActiveMenu( true );
+		else UI_SetActiveMenu( false );
+	}
+	else
+	{
+		UI_SetActiveMenu( false );
+		Key_SetKeyDest( key_console );
+	}	
+
+	Con_ClearNotify();
 }
 
 /*
@@ -395,12 +445,12 @@ static void Con_LoadConchars( void )
 	if( con_fontsize->integer > 2 ) Cvar_SetFloat( "con_fontsize", 2 );
 
 	// select properly fontsize
-	if( scr_width->integer < 640 ) Cvar_SetFloat( "con_fontsize", 0 );
+	if( scr_width->integer <= 640 ) Cvar_SetFloat( "con_fontsize", 0 );
 	else if( scr_width->integer >= 1280 ) Cvar_SetFloat( "con_fontsize", 2 );
 	else Cvar_SetFloat( "con_fontsize", 1 );
 
 	// loading conchars
-	con.chars.hFontTexture = GL_LoadTexture( va( "fonts/font%i", con_fontsize->integer ), NULL, 0, TF_FONT );
+	con.chars.hFontTexture = GL_LoadTexture( va( "fonts/font%i", con_fontsize->integer ), NULL, 0, TF_FONT|TF_NEAREST );
 
 	if( !con_fontsize->modified ) return; // font not changed
 
@@ -592,6 +642,9 @@ void Con_Init( void )
 	Con_ClearField( &con.input );
 	con.input.widthInChars = con.linewidth;
 
+	Con_ClearField( &con.chat );
+	con.chat.widthInChars = con.linewidth;
+
 	for( i = 0; i < CON_HISTORY; i++ )
 	{
 		Con_ClearField( &con.historyLines[i] );
@@ -601,6 +654,9 @@ void Con_Init( void )
 	Cmd_AddCommand( "toggleconsole", Con_ToggleConsole_f, "opens or closes the console" );
 	Cmd_AddCommand( "con_color", Con_SetColor_f, "set a custom console color" );
 	Cmd_AddCommand( "clear", Con_Clear_f, "clear console history" );
+	Cmd_AddCommand( "togglechat", Con_ToggleChat_f, "toggle console chat" );
+	Cmd_AddCommand( "messagemode", Con_MessageMode_f, "enable message mode \"say\"" );
+	Cmd_AddCommand( "messagemode2", Con_MessageMode2_f, "enable message mode \"say_team\"" );
 
 	MsgDev( D_NOTE, "Console initialized.\n" );
 	con.initialized = true;
@@ -692,6 +748,13 @@ void Con_Print( const char *txt )
 	}
 }
 
+/*
+================
+Con_NPrint
+
+Draw a single debug line with specified height
+================
+*/
 void Con_NPrintf( int idx, char *fmt, ... )
 {
 	va_list	args;
@@ -712,6 +775,13 @@ void Con_NPrintf( int idx, char *fmt, ... )
 	con.draw_notify = true;
 }
 
+/*
+================
+Con_NXPrint
+
+Draw a single debug line with specified height, color and time to live
+================
+*/
 void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 {
 	va_list	args;
@@ -734,6 +804,13 @@ void Con_NXPrintf( con_nprint_t *info, char *fmt, ... )
 	con.draw_notify = true;
 }
 
+/*
+================
+UI_NPrint
+
+Draw a single debug line with specified height (menu version)
+================
+*/
 void UI_NPrintf( int idx, char *fmt, ... )
 {
 	va_list	args;
@@ -754,6 +831,13 @@ void UI_NPrintf( int idx, char *fmt, ... )
 	con.draw_notify = true;
 }
 
+/*
+================
+UI_NXPrint
+
+Draw a single debug line with specified height, color and time to live (menu version)
+================
+*/
 void UI_NXPrintf( con_nprint_t *info, char *fmt, ... )
 {
 	va_list	args;
@@ -986,7 +1070,7 @@ Key events are used for non-printable characters, others are gotten from char ev
 */
 void Field_KeyDownEvent( field_t *edit, int key )
 {
-	int		len;
+	int	len;
 
 	// shift-insert is paste
 	if((( key == K_INS ) || ( key == K_KP_INS )) && Key_IsDown( K_SHIFT ))
@@ -997,48 +1081,52 @@ void Field_KeyDownEvent( field_t *edit, int key )
 
 	len = Q_strlen( edit->buffer );
 
-	if ( key == K_DEL )
+	if( key == K_DEL )
 	{
-		if ( edit->cursor < len )
-		{
+		if( edit->cursor < len )
 			memmove( edit->buffer + edit->cursor, edit->buffer + edit->cursor + 1, len - edit->cursor );
-		}
 		return;
 	}
-	if ( key == K_BACKSPACE )
+
+	if( key == K_BACKSPACE )
 	{
-		if ( edit->cursor > 0 )
+		if( edit->cursor > 0 )
 		{
 			memmove( edit->buffer + edit->cursor - 1, edit->buffer + edit->cursor, len - edit->cursor + 1 );
 			edit->cursor--;
-			if ( edit->scroll ) edit->scroll--;
+			if( edit->scroll ) edit->scroll--;
 		}
 		return;
 	}
-	if ( key == K_RIGHTARROW ) 
+
+	if( key == K_RIGHTARROW ) 
 	{
-		if ( edit->cursor < len ) edit->cursor++;
-		if ( edit->cursor >= edit->scroll + edit->widthInChars && edit->cursor <= len )
+		if( edit->cursor < len ) edit->cursor++;
+		if( edit->cursor >= edit->scroll + edit->widthInChars && edit->cursor <= len )
 			edit->scroll++;
 		return;
 	}
-	if ( key == K_LEFTARROW ) 
+
+	if( key == K_LEFTARROW ) 
 	{
-		if ( edit->cursor > 0 ) edit->cursor--;
-		if ( edit->cursor < edit->scroll ) edit->scroll--;
+		if( edit->cursor > 0 ) edit->cursor--;
+		if( edit->cursor < edit->scroll ) edit->scroll--;
 		return;
 	}
-	if ( key == K_HOME || ( Q_tolower(key) == 'a' && Key_IsDown( K_CTRL )))
+
+	if( key == K_HOME || ( Q_tolower(key) == 'a' && Key_IsDown( K_CTRL )))
 	{
 		edit->cursor = 0;
 		return;
 	}
-	if ( key == K_END || ( Q_tolower(key) == 'e' && Key_IsDown( K_CTRL )))
+
+	if( key == K_END || ( Q_tolower(key) == 'e' && Key_IsDown( K_CTRL )))
 	{
 		edit->cursor = len;
 		return;
 	}
-	if ( key == K_INS )
+
+	if( key == K_INS )
 	{
 		host.key_overstrike = !host.key_overstrike;
 		return;
@@ -1052,7 +1140,7 @@ Field_CharEvent
 */
 void Field_CharEvent( field_t *edit, int ch )
 {
-	int		len;
+	int	len;
 
 	if( ch == 'v' - 'a' + 1 )
 	{
@@ -1060,6 +1148,7 @@ void Field_CharEvent( field_t *edit, int ch )
 		Field_Paste( edit );
 		return;
 	}
+
 	if( ch == 'c' - 'a' + 1 )
 	{
 		// ctrl-c clears the field
@@ -1076,6 +1165,7 @@ void Field_CharEvent( field_t *edit, int ch )
 		edit->scroll = 0;
 		return;
 	}
+
 	if( ch == 'e' - 'a' + 1 )
 	{
 		// ctrl-e is end
@@ -1085,9 +1175,9 @@ void Field_CharEvent( field_t *edit, int ch )
 	}
 
 	// ignore any other non printable chars
-	if ( ch < 32 ) return;
+	if( ch < 32 ) return;
 
-	if ( host.key_overstrike )
+	if( host.key_overstrike )
 	{	
 		if ( edit->cursor == MAX_STRING - 1 ) return;
 		edit->buffer[edit->cursor] = ch;
@@ -1104,6 +1194,76 @@ void Field_CharEvent( field_t *edit, int ch )
 
 	if( edit->cursor >= edit->widthInChars ) edit->scroll++;
 	if( edit->cursor == len + 1) edit->buffer[edit->cursor] = 0;
+}
+
+/*
+==================
+Field_DrawInputLine
+==================
+*/
+void Field_DrawInputLine( int x, int y, field_t *edit )
+{
+	int	len, cursorChar;
+	int	drawLen, hideChar = -1;
+	int	prestep, curPos;
+	char	str[MAX_SYSPATH];
+	byte	*colorDefault;
+
+	drawLen = edit->widthInChars;
+	len = Q_strlen( edit->buffer ) + 1;
+	colorDefault = g_color_table[ColorIndex( COLOR_DEFAULT )];
+
+	// guarantee that cursor will be visible
+	if( len <= drawLen )
+	{
+		prestep = 0;
+	}
+	else
+	{
+		if( edit->scroll + drawLen > len )
+		{
+			edit->scroll = len - drawLen;
+			if( edit->scroll < 0 ) edit->scroll = 0;
+		}
+
+		prestep = edit->scroll;
+	}
+
+	if( prestep + drawLen > len )
+		drawLen = len - prestep;
+
+	// extract <drawLen> characters from the field at <prestep>
+	ASSERT( drawLen < MAX_SYSPATH );
+
+	Q_memcpy( str, edit->buffer + prestep, drawLen );
+	str[drawLen] = 0;
+
+	// save char for overstrike
+	cursorChar = str[edit->cursor - prestep];
+
+	if( host.key_overstrike && cursorChar && !((int)( host.realtime * 4 ) & 1 ))
+		hideChar = edit->cursor - prestep; // skip this char
+	
+	// draw it
+	Con_DrawGenericString( x, y, str, colorDefault, false, hideChar );
+
+	// draw the cursor
+	if((int)( host.realtime * 4 ) & 1 ) return; // off blink
+
+	// calc cursor position
+	str[edit->cursor - prestep] = 0;
+	Con_DrawStringLen( str, &curPos, NULL );
+
+	if( host.key_overstrike && cursorChar )
+	{
+		// overstrike cursor
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		Con_DrawGenericChar( x + curPos, y, cursorChar, colorDefault );
+	}
+	else Con_DrawCharacter( x + curPos, y, '_', colorDefault );
 }
 
 /*
@@ -1248,6 +1408,42 @@ void Key_Console( int key )
 }
 
 /*
+================
+Key_Message
+
+In game talk message
+================
+*/
+void Key_Message( int key )
+{
+	char	buffer[MAX_SYSPATH];
+
+	if( key == K_ESCAPE )
+	{
+		Key_SetKeyDest( key_game );
+		Con_ClearField( &con.chat );
+		return;
+	}
+
+	if( key == K_ENTER || key == K_KP_ENTER )
+	{
+		if( con.chat.buffer[0] && cls.state == ca_active )
+		{
+			if( chat_team ) Q_snprintf( buffer, sizeof( buffer ), "say_team \"%s\"\n", con.chat.buffer );
+			else Q_snprintf( buffer, sizeof( buffer ), "say \"%s\"\n", con.chat.buffer );
+
+			Cbuf_AddText( buffer );
+		}
+
+		Key_SetKeyDest( key_game );
+		Con_ClearField( &con.chat );
+		return;
+	}
+
+	Field_KeyDownEvent( &con.chat, key );
+}
+
+/*
 ==============================================================================
 
 DRAWING
@@ -1263,74 +1459,18 @@ The input line scrolls horizontally if typing goes beyond the right edge
 */
 void Con_DrawInput( void )
 {
-	int	len;
-	int	drawLen, hideChar = -1;
-	int	prestep, curPos;
-	int	x, y, cursorChar;
-	char	str[MAX_SYSPATH];
 	byte	*colorDefault;
+	int	x, y;
 
 	// don't draw anything (always draw if not active)
 	if( cls.key_dest != key_console ) return;
 
 	x = QCHAR_WIDTH; // room for ']'
 	y = con.vislines - ( con.charHeight * 2 );
-	drawLen = con.input.widthInChars;
-	len = Q_strlen( con.input.buffer ) + 1;
 	colorDefault = g_color_table[ColorIndex( COLOR_DEFAULT )];
 
-	// guarantee that cursor will be visible
-	if( len <= drawLen )
-	{
-		prestep = 0;
-	}
-	else
-	{
-		if( con.input.scroll + drawLen > len )
-		{
-			con.input.scroll = len - drawLen;
-			if( con.input.scroll < 0 )
-				con.input.scroll = 0;
-		}
-		prestep = con.input.scroll;
-	}
-
-	if( prestep + drawLen > len )
-		drawLen = len - prestep;
-
-	// extract <drawLen> characters from the field at <prestep>
-	ASSERT( drawLen < MAX_SYSPATH );
-
-	Q_memcpy( str, con.input.buffer + prestep, drawLen );
-	str[drawLen] = 0;
-
-	// save char for overstrike
-	cursorChar = str[con.input.cursor - prestep];
-
-	if( host.key_overstrike && cursorChar && !((int)( host.realtime * 4 ) & 1 ))
-		hideChar = con.input.cursor - prestep;	// skip this char
-	
-	// draw it
-	Con_DrawGenericString( x, y, str, colorDefault, false, hideChar );
 	Con_DrawCharacter( QCHAR_WIDTH >> 1, y, ']', colorDefault );
-
-	// draw the cursor
-	if((int)( host.realtime * 4 ) & 1 ) return; // off blink
-
-	// calc cursor position
-	str[con.input.cursor - prestep] = 0;
-	Con_DrawStringLen( str, &curPos, NULL );
-
-	if( host.key_overstrike && cursorChar )
-	{
-		// overstrike cursor
-		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		Con_DrawGenericChar( x + curPos, y, cursorChar, colorDefault );
-	}
-	else Con_DrawCharacter( x + curPos, y, '_', colorDefault );
+	Field_DrawInputLine( x, y, &con.input );
 }
 
 /*
@@ -1400,33 +1540,53 @@ void Con_DrawNotify( void )
 	short	*text;
 	float	time;
 
-	if( !host.developer || Cvar_VariableInteger( "sv_background" ))
-		return;
-
-	currentColor = 7;
-	pglColor4ubv( g_color_table[currentColor] );
-
-	for( i = con.current - CON_TIMES + 1; i <= con.current; i++ )
+	if( host.developer && !Cvar_VariableInteger( "sv_background" ))
 	{
-		if( i < 0 ) continue;
-		time = con.times[i % CON_TIMES];
-		if( time == 0 ) continue;
-		time = host.realtime - time;
+		currentColor = 7;
+		pglColor4ubv( g_color_table[currentColor] );
 
-		if( time > con_notifytime->value )
-			continue;	// expired
+		for( i = con.current - CON_TIMES + 1; i <= con.current; i++ )
+		{
+			if( i < 0 ) continue;
+			time = con.times[i % CON_TIMES];
+			if( time == 0 ) continue;
+			time = host.realtime - time;
 
-		text = con.text + (i % con.totallines) * con.linewidth;
+			if( time > con_notifytime->value )
+				continue;	// expired
+
+			text = con.text + (i % con.totallines) * con.linewidth;
+			start = con.charWidths[' ']; // offset one space at left screen side
+
+			for( x = 0; x < con.linewidth; x++ )
+			{
+				if((( text[x] >> 8 ) & 7 ) != currentColor )
+					currentColor = ( text[x] >> 8 ) & 7;
+				start += Con_DrawCharacter( start, v, text[x] & 0xFF, g_color_table[currentColor] );
+			}
+			v += con.charHeight;
+		}
+	}
+	
+	if( cls.key_dest == key_message )
+	{
+		char	buf[16];
+		int	len;
+
+		currentColor = 7;
+		pglColor4ubv( g_color_table[currentColor] );
+
 		start = con.charWidths[' ']; // offset one space at left screen side
 
-		for( x = 0; x < con.linewidth; x++ )
-		{
-			if((( text[x] >> 8 ) & 7 ) != currentColor )
-				currentColor = ( text[x] >> 8 ) & 7;
-			start += Con_DrawCharacter( start, v, text[x] & 0xFF, g_color_table[currentColor] );
-		}
-		v += con.charHeight;
+		if( chat_team ) Q_strncpy( buf, "say_team: ", sizeof( buf ));
+		else Q_strncpy( buf, "say: ", sizeof( buf ));
+
+		Con_DrawStringLen( buf, &len, NULL );
+		Con_DrawString( start, v, buf, g_color_table[7] );
+
+		Field_DrawInputLine( start + len, v, &con.chat );
 	}
+
 	pglColor4ub( 255, 255, 255, 255 );
 }
 
@@ -1591,7 +1751,7 @@ void Con_DrawConsole( void )
 		{
 			if( con.displayFrac )
 				Con_DrawSolidConsole( con.displayFrac );
-			else if( cls.state == ca_active && cls.key_dest == key_game )
+			else if( cls.state == ca_active && ( cls.key_dest == key_game || cls.key_dest == key_message ))
 				Con_DrawNotify(); // draw notify lines
 		}
 		break;
@@ -1613,9 +1773,11 @@ void Con_DrawVersion( void )
 	int	start, height = scr_height->integer;
 	string	curbuild;
 
-	if( cls.key_dest != key_menu ) return;
+	if( cls.key_dest != key_menu && cls.scrshot_action != scrshot_normal ) return;
 
-	Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( ));
+	if( cls.scrshot_action == scrshot_normal )
+		Q_snprintf( curbuild, MAX_STRING, "Xash3D v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( ));
+	else Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( )); 
 	Con_DrawStringLen( curbuild, &stringLen, &charH );
 	start = scr_width->integer - stringLen * 1.05f;
 	stringLen = Con_StringLength( curbuild );
@@ -1668,9 +1830,24 @@ CONSOLE INTERFACE
 
 ==============================================================================
 */
+/*
+================
+Con_CharEvent
+
+Console input
+================
+*/
 void Con_CharEvent( int key )
 {
-	Field_CharEvent( &con.input, key );
+	// distribute the key down event to the apropriate handler
+	if( cls.key_dest == key_console )
+	{
+		Field_CharEvent( &con.input, key );
+	}
+	else if( cls.key_dest == key_message )
+	{
+		Field_CharEvent( &con.chat, key );
+	}
 }
 
 void Con_VidInit( void )

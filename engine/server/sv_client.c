@@ -933,7 +933,7 @@ void SV_PutClientInServer( edict_t *ent )
 			return;
 		}
 
-		// enable dev-mode to prevent crash cheat-protecting from invasion
+		// enable dev-mode to prevent crash cheat-protecting from Invasion mod
 		if( ent->v.flags & (FL_GODMODE|FL_NOTARGET) && !Q_stricmp( GI->gamefolder, "invasion" ))
 			SV_ExecuteClientCommand( client, "test\n" );
 
@@ -943,6 +943,7 @@ void SV_PutClientInServer( edict_t *ent )
 			BF_WriteByte( &client->netchan.message, svc_setangle );
 			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[0], 16 );
 			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[1], 16 );
+			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[2], 16 );
 			ent->v.fixangle = 0;
 		}
 		ent->v.effects |= EF_NOINTERP;
@@ -1054,12 +1055,109 @@ void SV_New_f( sv_client_t *cl )
 		// set up the entity for the client
 		ent = EDICT_NUM( playernum + 1 );
 		cl->edict = ent;
-		Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
-		// begin fetching modellist
-		BF_WriteByte( &cl->netchan.message, svc_stufftext );
-		BF_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
+		if( sv_maxclients->integer == 1 )
+		{
+			Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
+
+			// begin fetching modellist
+			BF_WriteByte( &cl->netchan.message, svc_stufftext );
+			BF_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
+		}
+		else
+		{
+			// request resource list
+			BF_WriteByte( &cl->netchan.message, svc_stufftext );
+			BF_WriteString( &cl->netchan.message, va( "cmd getresourelist\n" ));
+		}
 	}
+}
+
+/*
+==================
+SV_ContinueLoading_f
+==================
+*/
+void SV_ContinueLoading_f( sv_client_t *cl )
+{
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "continueloading is not valid from the console\n" );
+		return;
+	}
+
+	Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
+
+	// begin fetching modellist
+	BF_WriteByte( &cl->netchan.message, svc_stufftext );
+	BF_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
+}
+
+/*
+=======================
+SV_SendResourceList
+
+NOTE: Sending the list of cached resources.
+g-cont. this is fucking big message!!! i've rewriting this code
+=======================
+*/
+void SV_SendResourceList_f( sv_client_t *cl )
+{
+	int		index = 0;
+	int		rescount = 0;
+	resourcelist_t	reslist;
+	size_t		msg_size;
+
+	Q_memset( &reslist, 0, sizeof( resourcelist_t ));
+
+	reslist.restype[rescount] = t_world; // terminator
+	Q_strcpy( reslist.resnames[rescount], "NULL" );
+	rescount++;
+
+	for( index = 1; index < MAX_MODELS && sv.model_precache[index][0]; index++ )
+	{
+		if( sv.model_precache[index][0] == '*' ) // internal bmodel
+			continue;
+
+		reslist.restype[rescount] = t_model;
+		Q_strcpy( reslist.resnames[rescount], sv.model_precache[index] );
+		rescount++;
+	}
+
+	for( index = 1; index < MAX_SOUNDS && sv.sound_precache[index][0]; index++ )
+	{
+		reslist.restype[rescount] = t_sound;
+		Q_strcpy( reslist.resnames[rescount], sv.sound_precache[index] );
+		rescount++;
+	}
+
+	for( index = 1; index < MAX_EVENTS && sv.event_precache[index][0]; index++ )
+	{
+		reslist.restype[rescount] = t_eventscript;
+		Q_strcpy( reslist.resnames[rescount], sv.event_precache[index] );
+		rescount++;
+	}
+
+	for( index = 1; index < MAX_CUSTOM && sv.files_precache[index][0]; index++ )
+	{
+		reslist.restype[rescount] = t_generic;
+		Q_strcpy( reslist.resnames[rescount], sv.files_precache[index] );
+		rescount++;
+	}
+
+	msg_size = BF_GetRealBytesWritten( &cl->netchan.message ); // start
+
+	BF_WriteByte( &cl->netchan.message, svc_resourcelist );
+	BF_WriteWord( &cl->netchan.message, rescount );
+
+	for( index = 1; index < rescount; index++ )
+	{
+		BF_WriteWord( &cl->netchan.message, reslist.restype[index] );
+		BF_WriteString( &cl->netchan.message, reslist.resnames[index] );
+	}
+
+	Msg( "Count res: %d\n", rescount );
+	Msg( "ResList size: %s\n", Q_memprint( BF_GetRealBytesWritten( &cl->netchan.message ) - msg_size ));
 }
 
 /*
@@ -1692,6 +1790,8 @@ ucmd_t ucmds[] =
 { "usermsgs", SV_UserMessages_f },
 { "userinfo", SV_UpdateUserinfo_f },
 { "lightstyles", SV_WriteLightstyles_f },
+{ "getresourelist", SV_SendResourceList_f },
+{ "continueloading", SV_ContinueLoading_f },
 { NULL, NULL }
 };
 
@@ -1741,6 +1841,10 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	char	*args;
 	char	*c, buf[MAX_SYSPATH];
 	int	len = sizeof( buf );
+	dword	challenge;
+	int	index, count = 0;
+	char	query[512];
+	word	port;
 
 	BF_Clear( msg );
 	BF_ReadLong( msg );// skip the -1 marker
@@ -1758,6 +1862,25 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "getchallenge" )) SV_GetChallenge( from );
 	else if( !Q_strcmp( c, "connect" )) SV_DirectConnect( from );
 	else if( !Q_strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
+	else if( msg->pData[0] == 0xFF && msg->pData[1] == 0xFF && msg->pData[2] == 0xFF && msg->pData[3] == 0xFF && msg->pData[4] == 0x4E && msg->pData[5] == 0x0A )
+	{
+		challenge = *(dword *)&msg->pData[6];
+
+		port = Cvar_Get( "ip_hostport", "0", CVAR_INIT, "network server port" )->integer;
+		if( !port ) port = Cvar_Get( "port", va( "%i", PORT_SERVER ), CVAR_INIT, "network default port" )->integer;
+
+		for( index = 0; index < sv_maxclients->integer; index++ )
+		{
+			if( svs.clients[index].state >= cs_connected )
+				count++;
+		}
+
+		Q_snprintf( query, sizeof( query ),
+		"0\n\\protocol\\7\\challenge\\%ld\\players\\%d\\max\\%d\\bots\\0\\gamedir\\%s_xash\\map\\%s\\password\\0\\os\\w\\lan\\0\\region\\255\\gameport\\%d\\specport\\27015\\dedicated\\1\\appid\\70\\type\\d\\secure\\0\\version\\1.1.2.1\\product\\valve\n",
+		challenge, count, sv_maxclients->integer, GI->gamefolder, sv.name, port );
+
+		NET_SendPacket( NS_SERVER, Q_strlen( query ), query, from );
+	}
 	else if( svgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
 	{
 		// user out of band message (must be handled in CL_ConnectionlessPacket)
@@ -1905,6 +2028,19 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 /*
 ===================
+SV_ParseResourceList
+
+Parse resource list
+===================
+*/
+void SV_ParseResourceList( sv_client_t *cl, sizebuf_t *msg )
+{
+	Netchan_CreateFileFragments( true, &cl->netchan, BF_ReadString( msg ));
+	Netchan_FragSend( &cl->netchan );
+}
+
+/*
+===================
 SV_ExecuteClientMessage
 
 Parse a client packet
@@ -1975,6 +2111,9 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			// malicious users may try using too many string commands
 			if( ++stringCmdCount < 8 ) SV_ExecuteClientCommand( cl, s );
 			if( cl->state == cs_zombie ) return; // disconnect command
+			break;
+		case clc_resourcelist:
+			SV_ParseResourceList( cl, msg );
 			break;
 		default:
 			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );

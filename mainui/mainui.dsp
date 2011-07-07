@@ -154,6 +154,10 @@ SOURCE=.\menu_gameoptions.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\menu_internetgames.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\menu_langame.cpp
 # End Source File
 # Begin Source File
@@ -183,6 +187,10 @@ SOURCE=.\menu_savegame.cpp
 # Begin Source File
 
 SOURCE=.\menu_saveload.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\menu_strings.cpp
 # End Source File
 # Begin Source File
 
@@ -226,11 +234,15 @@ SOURCE=.\extdll.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\images.h
+SOURCE=.\menu_btnsbmp_table.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\menu_btnsbmp_table.h
+SOURCE=.\menu_strings.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\menufont.H
 # End Source File
 # Begin Source File
 

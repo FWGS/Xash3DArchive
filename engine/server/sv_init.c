@@ -337,6 +337,12 @@ void SV_ActivateServer( void )
 	sv.paused = false;
 
 	Host_SetServerState( sv.state );
+
+	if( sv_maxclients->integer > 1 && public_server->integer )
+	{
+		MsgDev( D_INFO, "Add your server, to master server list\n" );
+		Master_Add( );
+	}
 }
 
 /*
@@ -540,7 +546,6 @@ A brand new game has been started
 */
 void SV_InitGame( void )
 {
-	string	idmaster;
 	edict_t	*ent;
 	int	i;
 	
@@ -621,8 +626,6 @@ void SV_InitGame( void )
 
 	// heartbeats will always be sent to the id master
 	svs.last_heartbeat = MAX_HEARTBEAT; // send immediately
-	Q_sprintf( idmaster, "192.246.40.37:%i", PORT_MASTER );	// TODO: parse woncomm.lst
-	NET_StringToAdr( idmaster, &master_adr[0] );
 
 	// set client fields on player ents
 	for( i = 0; i < svgame.globals->maxClients; i++ )

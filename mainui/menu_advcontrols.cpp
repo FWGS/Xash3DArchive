@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "utils.h"
 #include "../cl_dll/kbutton.h"
 #include "menu_btnsbmp_table.h"
+#include "menu_strings.h"
 
 #define ART_BANNER			"gfx/shell/head_advanced"
 
@@ -233,7 +234,7 @@ static void UI_AdvControls_Init( void )
 	uiAdvControls.invertMouse.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_NOTIFY|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
 	uiAdvControls.invertMouse.generic.x = 72;
 	uiAdvControls.invertMouse.generic.y = 280;
-	uiAdvControls.invertMouse.generic.name = "Reverse mouse";
+	uiAdvControls.invertMouse.generic.name = MenuStrings[HINT_REVERSE_MOUSE];
 	uiAdvControls.invertMouse.generic.callback = UI_AdvControls_Callback;
 	uiAdvControls.invertMouse.generic.statusText = "Reverse mouse up/down axis";
 
@@ -285,7 +286,7 @@ static void UI_AdvControls_Init( void )
 	uiAdvControls.sensitivity.generic.id = ID_SENSITIVITY;
 	uiAdvControls.sensitivity.generic.type = QMTYPE_SLIDER;
 	uiAdvControls.sensitivity.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
-	uiAdvControls.sensitivity.generic.name = "Mouse sensitivity";
+	uiAdvControls.sensitivity.generic.name = MenuStrings[HINT_MOUSE_SENSE];
 	uiAdvControls.sensitivity.generic.x = 72;
 	uiAdvControls.sensitivity.generic.y = 625;
 	uiAdvControls.sensitivity.generic.callback = UI_AdvControls_Callback;

@@ -28,6 +28,7 @@ extern byte *sndpool;
 #define SOUND_DMA_SPEED	44100	// hardware playback rate
 #define SOUND_11k		11025	// 11khz sample rate
 #define SOUND_22k		22050	// 22khz sample rate
+#define SOUND_32k		32000	// 32khz sample rate
 #define SOUND_44k		44100	// 44khz sample rate
 
 // fixed point stuff for real-time resampling

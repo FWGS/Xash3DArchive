@@ -96,14 +96,14 @@ enum
 #define BUTTON_FOCUS	1
 #define BUTTON_PRESSED	2
 
-extern const char *MenuStrings[PC_BUTTONCOUNT];
+extern const char *MenuButtons[PC_BUTTONCOUNT];
 
 inline int PicButtonWidth( int pic_id )
 {
 	if( pic_id < 0 || pic_id > PC_BUTTONCOUNT )
 		return 0;
 	
-	return strlen( MenuStrings[pic_id] );
+	return strlen( MenuButtons[pic_id] );
 }
 
 #endif//MENU_BTNSBMP_TABLE_H

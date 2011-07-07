@@ -22,6 +22,11 @@
 #ifndef ENGINECALLBACK_H
 #include "enginecallback.h"
 #endif
+
+#ifndef PHYSCALLBACK_H
+#include "physcallback.h"
+#endif
+
 inline void MESSAGE_BEGIN( int msg_dest, int msg_type, const float *pOrigin, entvars_t *ent );  // implementation later in this file
 
 extern globalvars_t				*gpGlobals;

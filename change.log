@@ -1,8 +1,35 @@
 build ????
 
-Fixed wrong sound angles whe client see in the camera
-Fix crash on change gl_texturemode.
-Change relationsip for GetLocalPlayer. Now it's always valid.
+Client: fix drawing beams for 'solid' mode
+Image: fix BMP loader for 4-bit color bmp's
+Client: fix lightlevel calculating for local client (remove 'ambient' base from final value)
+GameUI: first implementation of custom strings and support 'strings.lst' parsing
+GameUI: replace unneeded button 'credits' with button 'previews'
+Render: fix sprite interpolation
+Render: fix angled sprites offset
+Render: implement detail textures like in Steam Half-Life (thx n00b)
+Client: rework env_funnel effect
+
+build 1598
+
+Client: fix crosshair drawing
+Sound: change libmad mp3 decoder on a mpg123
+Client: fix gibs randomization for TE_BREAKMODEL
+Engine: fix modelloader bug (engine crash after not found map)
+Video: add resolution 1366x768
+GameUI: fix skill select
+Network: change 'svc_setangle' message, include rollangle
+Render: fix chrome rendering on a studiomodels
+Render: added video memory economy mode - cvar 'gl_luminance_textures'
+GameDLL: first implementation of extended engineinterface. Metamod is supported now
+
+build 1557
+
+Sound: fixed wrong sound angles when client see in the camera
+Render: fix crash on change gl_texturemode and gl_anisotropy.
+Client: change relationsip for GetLocalPlayer. Now it's always valid.
+Server: rewrite SV_Multicast for correct work with custom user cameras
+Server: rewrite FIND_CLIENT_IN_PVS like in QW 
 
 build 1540
 

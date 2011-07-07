@@ -560,19 +560,25 @@ void R_ShowTextures( void )
 		R_Set2DMode( true );
 	}
 
+	if( gl_showtextures->integer == TEX_DETAIL )
+		pglClearColor( 1.0f, 0.0f, 0.5f, 1.0f );
+
 	pglClear( GL_COLOR_BUFFER_BIT );
 	pglFinish();
 
-	if( gl_showtextures->integer == TEX_LIGHTMAP || gl_showtextures->integer == TEX_VGUI )
+	switch( gl_showtextures->integer )
 	{
+	case TEX_LIGHTMAP:
+	case TEX_VGUI:
+	case TEX_DETAIL:
 		// draw lightmaps as big images
 		base_w = 5;
 		base_h = 4;
-	}
-	else
-	{
+		break;
+	default:
 		base_w = 16;
 		base_h = 12;
+		break;	
 	}
 
 	for( i = j = 0; i < MAX_TEXTURES; i++ )

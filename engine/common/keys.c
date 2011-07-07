@@ -548,6 +548,9 @@ void Key_Event( int key, qboolean down )
 			if( host.mouse_visible && cls.state != ca_cinematic )
 				return; // handled in client.dll
 			break;
+		case key_message:
+			Key_Message( key );
+			return;
 		case key_console:
 			if( cls.state == ca_active && !cl.background )
 				Key_SetKeyDest( key_game );
@@ -636,6 +639,10 @@ void Key_Event( int key, qboolean down )
 	{
 		Key_Console( key );
 	}
+	else if( cls.key_dest == key_message )
+	{
+		Key_Message( key );
+	}
 }
 
 /*
@@ -657,6 +664,9 @@ void Key_SetKeyDest( int key_dest )
 		break;
 	case key_console:
 		cls.key_dest = key_console;
+		break;
+	case key_message:
+		cls.key_dest = key_message;
 		break;
 	default:
 		Host_Error( "Key_SetKeyDest: wrong destination (%i)\n", key_dest );
@@ -701,7 +711,7 @@ void CL_CharEvent( int key )
 	if( key == '`' || key == '~' ) return;
 
 	// distribute the key down event to the apropriate handler
-	if( cls.key_dest == key_console )
+	if( cls.key_dest == key_console || cls.key_dest == key_message )
 	{
 		Con_CharEvent( key );
 	}

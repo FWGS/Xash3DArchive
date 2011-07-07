@@ -240,6 +240,7 @@ static void UI_LanGame_Callback( void *self, int event )
 		else UI_LanGame_JoinGame();
 		break;
 	case ID_CREATEGAME:
+		CVAR_SET_FLOAT( "public", 0.0f );
 		UI_CreateGame_Menu();
 		break;
 	case ID_GAMEINFO:

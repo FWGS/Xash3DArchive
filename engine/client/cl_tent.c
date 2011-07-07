@@ -866,11 +866,12 @@ CL_BreakModel
 Create a shards
 ==============
 */
-void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t dir, float random, float life, int count, int modelIndex, char flags )
+void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t direction, float random, float life, int count, int modelIndex, char flags )
 {
 	int		i, frameCount;
 	TEMPENTITY	*pTemp;
 	char		type;
+	vec3_t		dir;
 
 	if( !modelIndex ) return;
 	type = flags & BREAK_TYPEMASK;
@@ -886,12 +887,27 @@ void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t dir, float
 		count = (size[0] * size[1] + size[1] * size[2] + size[2] * size[0]) / (3 * SHARD_VOLUME * SHARD_VOLUME);
 	}
 
+	VectorCopy( direction, dir );
+
 	// limit to 100 pieces
 	if( count > 100 ) count = 100;
+
+	if( VectorIsNull( direction ))
+		random *= 10;
 
 	for( i = 0; i < count; i++ ) 
 	{
 		vec3_t	vecSpot;
+
+		if( VectorIsNull( direction ))
+		{
+			// random direction for each piece
+			dir[0] = Com_RandomFloat( -1.0f, 1.0f );
+			dir[1] = Com_RandomFloat( -1.0f, 1.0f );
+			dir[2] = Com_RandomFloat( -1.0f, 1.0f );
+
+			VectorNormalize( dir );
+		}
 
 		// fill up the box with stuff
 		vecSpot[0] = pos[0] + Com_RandomFloat( -0.5f, 0.5f ) * size[0];
@@ -1287,46 +1303,46 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 	{
 		for( j = -256; j <= 256; j += 32 )
 		{
-			if( pTemp || !spriteIndex )
+			if( flags & SF_FUNNEL_REVERSE )
 			{
-				pPart = CL_AllocParticle( NULL );
-				pTemp = NULL;
+				VectorCopy( pos, m_vecPos );
+
+				dest[0] = pos[0] + i;
+				dest[1] = pos[1] + j;
+				dest[2] = pos[2] + Com_RandomFloat( 100, 800 );
+
+				// send particle heading to dest at a random speed
+				VectorSubtract( dest, m_vecPos, dir );
+
+				// velocity based on how far particle has to travel away from org
+				vel = dest[2] / 8;
 			}
 			else
+			{
+				m_vecPos[0] = pos[0] + i;
+				m_vecPos[1] = pos[1] + j;
+				m_vecPos[2] = pos[2] + Com_RandomFloat( 100, 800 );
+
+				// send particle heading to org at a random speed
+				VectorSubtract( pos, m_vecPos, dir );
+
+				// velocity based on how far particle starts from org
+				vel = m_vecPos[2] / 8;
+			}
+
+			if( pPart && spriteIndex && CL_PointContents( m_vecPos ) == CONTENTS_EMPTY )
 			{
 				pTemp = CL_TempEntAlloc( pos, Mod_Handle( spriteIndex ));
 				pPart = NULL;
 			}
+			else
+			{
+				pPart = CL_AllocParticle( NULL );
+				pTemp = NULL;
+			}
 
 			if( pTemp || pPart )
 			{
-				if( flags & SF_FUNNEL_REVERSE )
-				{
-					VectorCopy( pos, m_vecPos );
-
-					dest[0] = pos[0] + i;
-					dest[1] = pos[1] + j;
-					dest[2] = pos[2] + Com_RandomFloat( 100, 800 );
-
-					// send particle heading to dest at a random speed
-					VectorSubtract( dest, m_vecPos, dir );
-
-					// velocity based on how far particle has to travel away from org
-					vel = dest[2] / 8;
-				}
-				else
-				{
-					m_vecPos[0] = pos[0] + i;
-					m_vecPos[1] = pos[1] + j;
-					m_vecPos[2] = pos[2] + Com_RandomFloat( 100, 800 );
-
-					// send particle heading to org at a random speed
-					VectorSubtract( pos, m_vecPos, dir );
-
-					// velocity based on how far particle starts from org
-					vel = m_vecPos[2] / 8;
-				}
-
 				flDist = VectorNormalizeLength( dir );	// save the distance
 				if( vel < 64 ) vel = 64;
 				
@@ -1339,9 +1355,10 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 					VectorScale( dir, vel, pTemp->entity.baseline.origin );
 					pTemp->entity.curstate.rendermode = kRenderTransAdd;
 					pTemp->flags |= FTENT_FADEOUT;
-					pTemp->fadeSpeed = 2.0f;
-					pTemp->die = cl.time + Com_RandomFloat( life * 0.5, life );
+					pTemp->fadeSpeed = 3.0f;
+					pTemp->die = cl.time + life - Com_RandomFloat( 0.5f, 0.6f );
 					pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 255;
+					pTemp->entity.curstate.scale = 0.75f;
 				}
 				
 				if( pPart )
@@ -1352,7 +1369,7 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 
 					VectorScale( dir, vel, pPart->vel );
 					// die right when you get there
-					pPart->die += Com_RandomFloat( life * 0.5f, life );
+					pPart->die += life;
 				}
 			}
 		}
@@ -2394,7 +2411,7 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	VectorClear( view_ofs );
 
 	if(( pEnt->index - 1 ) == cl.playernum )
-		VectorCopy( cl.predicted_viewofs, view_ofs );
+		VectorCopy( cl.refdef.viewheight, view_ofs );
 
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );

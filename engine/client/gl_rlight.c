@@ -125,11 +125,11 @@ void R_MarkLights( dlight_t *light, int bit, mnode_t *node )
 	}
 		
 	// mark the polygons
-	surf = cl.worldmodel->surfaces + node->firstsurface;
+	surf = RI.currentmodel->surfaces + node->firstsurface;
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
-		mextrasurf_t	*info = SURF_INFO( surf, cl.worldmodel );
+		mextrasurf_t	*info = SURF_INFO( surf, RI.currentmodel );
 
 		if( !BoundsAndSphereIntersect( info->mins, info->maxs, light->origin, light->radius ))
 			continue;	// no intersection
@@ -160,6 +160,9 @@ void R_PushDlights( void )
 						// advanced yet for this frame
 	l = cl_dlights;
 
+	RI.currententity = clgame.entities;
+	RI.currentmodel = RI.currententity->model;
+
 	for( i = 0; i < MAX_DLIGHTS; i++, l++ )
 	{
 		if( l->die < cl.time || !l->radius )
@@ -168,7 +171,7 @@ void R_PushDlights( void )
 		if( R_CullSphere( l->origin, l->radius, 15 ))
 			continue;
 
-		R_MarkLights( l, 1<<i, cl.worldmodel->nodes );
+		R_MarkLights( l, 1<<i, RI.currentmodel->nodes );
 	}
 }
 
@@ -268,7 +271,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 R_LightForPoint
 =================
 */
-void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, float radius )
+void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, qboolean useAmbient, float radius )
 {
 	dlight_t		*dl;
 	pmtrace_t		trace;
@@ -368,6 +371,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 
 		// R_RecursiveLightPoint didn't hit anything, so use default value
 		ambient = bound( 0.1f, r_lighting_ambient->value, 1.0f );
+		if( !useAmbient ) ambient = 0.0f; // clear ambient
 		ambientLight->r = 255 * ambient;
 		ambientLight->g = 255 * ambient;
 		ambientLight->b = 255 * ambient;

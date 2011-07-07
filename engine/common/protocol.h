@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define PROTOCOL_VERSION		41
+#define PROTOCOL_VERSION		42
 
 // server to client
 #define svc_bad			0	// immediately crash client when received
@@ -29,7 +29,7 @@ GNU General Public License for more details.
 #define svc_time			7	// [float] server time
 #define svc_print			8	// [byte] id [string] null terminated string
 #define svc_stufftext		9	// [string] stuffed into client's console buffer
-#define svc_setangle		10	// [angle angle] set the view angle to this absolute value
+#define svc_setangle		10	// [angle angle angle] set the view angle to this absolute value
 #define svc_serverdata		11	// [long] protocol ...
 #define svc_lightstyle		12	// [index][pattern]
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
@@ -62,9 +62,9 @@ GNU General Public License for more details.
 #define svc_packetentities		40	// [short][...]
 #define svc_deltapacketentities	41	// [short][byte][...] 
 #define svc_chokecount		42	// [byte]
-
+#define svc_resourcelist		43	// [short][...]
 #define svc_deltamovevars		44	// [movevars_t]
-
+#define svc_customization		45
 #define svc_crosshairangle		47	// [byte][byte]
 #define svc_soundfade		48	// [float*4] sound fade parms
 
@@ -153,5 +153,14 @@ GNU General Public License for more details.
 #if( MAX_COORD_INTEGER != ( 1 << COORD_INTEGER_BITS ))
 #error MAX_COORD_INTEGER does not match COORD_INTEGER_BITS
 #endif
+
+#define MAX_RESOURCES	(MAX_MODELS+MAX_SOUNDS+MAX_CUSTOM+MAX_EVENTS)
+
+typedef struct
+{
+	int	rescount;
+	int	restype[MAX_RESOURCES];
+	char	resnames[MAX_RESOURCES][CS_SIZE];
+} resourcelist_t;
 
 #endif//PROTOCOL_H

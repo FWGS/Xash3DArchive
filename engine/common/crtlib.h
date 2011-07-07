@@ -27,6 +27,9 @@ enum
 	TIME_FILENAME,
 };
 
+#define CMD_EXTDLL		BIT( 0 )		// added by game.dll
+#define CMD_CLIENTDLL	BIT( 1 )		// added by client.dll
+
 typedef void (*setpair_t)( const char *key, const char *value, void *buffer, void *numpairs );
 typedef void (*xcommand_t)( void );
 
@@ -118,7 +121,7 @@ uint Cmd_Argc( void );
 char *Cmd_Args( void );
 char *Cmd_Argv( int arg );
 void Cmd_Init( void );
-void Cmd_Unlink( void );
+void Cmd_Unlink( int group );
 void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_desc );
 void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function );
 void Cmd_AddClientCommand( const char *cmd_name, xcommand_t function );

@@ -57,10 +57,11 @@ typedef struct studiolight_s
 
 convar_t			*r_studio_lerping;
 convar_t			*r_studio_lambert;
+convar_t			*r_studio_lighting;
 convar_t			*r_drawviewmodel;
 convar_t			*r_customdraw_playermodel;
 convar_t			*cl_himodels;
-cvar_t			r_shadows = { "r_shadows", "0", 0, 0 };
+cvar_t			r_shadows = { "r_shadows", "0", 0, 0 };	// dead cvar. especially disabled
 cvar_t			r_shadowalpha = { "r_shadowalpha", "0.5", 0, 0 };
 static r_studio_interface_t	*pStudioDraw;
 static float		aliasXscale, aliasYscale;	// software renderer scale
@@ -110,6 +111,7 @@ void R_StudioInit( void )
 	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", CVAR_ARCHIVE, "enables studio animation lerping" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
+	r_studio_lighting = Cvar_Get( "r_studio_lighting", "1", CVAR_ARCHIVE, "studio lighting models ( 0 - normal, 1 - extended, 2 - experimental )" );
 
 	// NOTE: some mods with custom studiomodel renderer may cause error when menu trying draw player model out of the loaded game
 	r_customdraw_playermodel = Cvar_Get( "r_customdraw_playermodel", "0", CVAR_ARCHIVE, "allow to drawing playermodel in menu with client renderer" );
@@ -1230,7 +1232,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		vec3_t	chromerightvec;	// g_chrome s vector in world reference frame
 		vec3_t	tmp;		// vector pointing at bone in world reference frame
 
-		VectorScale( RI.currententity->origin, -1.0f, tmp );
+		VectorScale( cl.refdef.vieworg, -1.0f, tmp );
 		tmp[0] += g_bonestransform[bone][0][3];
 		tmp[1] += g_bonestransform[bone][1][3];
 		tmp[2] += g_bonestransform[bone][2][3];
@@ -1363,7 +1365,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	plight = &g_studiolight;
 	plight->numdlights = 0;	// clear previous dlights
 
-	if( r_lighting_extended->integer == 2 )
+	if( r_studio_lighting->integer == 2 )
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
@@ -1373,7 +1375,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 
 	// setup ambient lighting
 	invLight = (ent->curstate.effects & EF_INVLIGHT) ? true : false;
-	R_LightForPoint( origin, &ambient, invLight, 0.0f ); // ignore dlights
+	R_LightForPoint( origin, &ambient, invLight, true, 0.0f ); // ignore dlights
 
 	plight->lightcolor[0] = ambient.r * (1.0f / 255.0f);
 	plight->lightcolor[1] = ambient.g * (1.0f / 255.0f);
@@ -1452,7 +1454,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 	plight = &g_studiolight;
 	plight->numelights = 0;	// clear previous elights
 
-	if( r_lighting_extended->integer == 2 )
+	if( r_studio_lighting->integer == 2 )
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
@@ -2257,12 +2259,12 @@ static int pfnIsHardware( void )
 	return true;
 }
 
-static void StudioDrawShadow( studiohdr_t *pstudiohdr, matrix3x4 transform[MAXSTUDIOBONES] )
+static void StudioDrawShadow( void )
 {
 	// in GoldSrc shadow call is dsiabled with 'return' at start of the function
 	// some mods used a hack with calling DrawShadow ahead of 'return'
 	// this code is for HL compatibility.
-	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
+//	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
 }
 	
 /*
@@ -2273,11 +2275,11 @@ GL_StudioDrawShadow
 */
 void _cdecl GL_StudioDrawShadow( void )
 {
-	int	rendermode; // ecx@3
-	float	shadow_alpha; // ST18_4@4
-	float	shadow_alpha2; // ST14_4@4
-	GLenum	depthmode; // [sp+14h] [bp-8h]@6
-	GLenum	depthmode2; // [sp+14h] [bp-8h]@10
+	int	rendermode;
+	float	shadow_alpha;
+	float	shadow_alpha2;
+	GLenum	depthmode;
+	GLenum	depthmode2;
 
 	pglDepthMask( GL_TRUE );
 
@@ -2303,7 +2305,7 @@ void _cdecl GL_StudioDrawShadow( void )
 					depthmode = GL_GREATER;
 				pglDepthFunc( depthmode );
 
-				MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
+				StudioDrawShadow();
 
 //				if( flt_100DB994 == 0.0 || flt_107BA8A8 < 0.5 )
 					depthmode2 = GL_LEQUAL;

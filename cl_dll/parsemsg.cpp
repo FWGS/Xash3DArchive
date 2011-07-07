@@ -137,7 +137,7 @@ char* READ_STRING( void )
 		if ( giRead+1 > giSize )
 			break; // no more characters
 
-		c = READ_CHAR();
+		c = READ_BYTE();
 		if (c == -1 || c == 0)
 			break;
 		string[l] = c;
