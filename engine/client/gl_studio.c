@@ -61,7 +61,7 @@ convar_t			*r_studio_lighting;
 convar_t			*r_drawviewmodel;
 convar_t			*r_customdraw_playermodel;
 convar_t			*cl_himodels;
-cvar_t			r_shadows = { "r_shadows", "0", 0, 0 };	// dead cvar. especially disabled
+cvar_t			r_shadows = { "r_shadows", "0", 0, 1 };	// dead cvar. especially disabled
 cvar_t			r_shadowalpha = { "r_shadowalpha", "0.5", 0, 0 };
 static r_studio_interface_t	*pStudioDraw;
 static float		aliasXscale, aliasYscale;	// software renderer scale
@@ -77,6 +77,11 @@ static vec3_t		g_chromeup[MAXSTUDIOBONES];	// chrome vector "up" in bone referen
 static int		g_chromeage[MAXSTUDIOBONES];	// last time chrome vectors were updated
 static vec3_t		g_xformverts[MAXSTUDIOVERTS];
 static vec3_t		g_xformnorms[MAXSTUDIOVERTS];
+static vec3_t		g_xarrayverts[MAXSTUDIOVERTS];
+static vec3_t		g_xarraynorms[MAXSTUDIOVERTS];
+static uint		g_xarrayelems[MAXSTUDIOVERTS*6];
+static uint		g_nNumArrayVerts;
+static uint		g_nNumArrayElems;
 static vec3_t		g_lightvalues[MAXSTUDIOVERTS];
 static studiolight_t	g_studiolight;
 char			g_nCachedBoneNames[MAXSTUDIOBONES][32];
@@ -88,6 +93,7 @@ float			studio_radius;
 
 // global variables
 qboolean			m_fDoInterp;
+qboolean			m_fDoRemap;
 mstudiomodel_t		*m_pSubModel;
 mstudiobodyparts_t		*m_pBodyPart;
 player_info_t		*m_pPlayerInfo;
@@ -129,6 +135,7 @@ void R_StudioInit( void )
 	Matrix3x4_LoadIdentity( g_rotationmatrix );
 
 	g_nStudioCount = 0;
+	m_fDoRemap = false;
 }
 
 /*
@@ -272,6 +279,9 @@ pfnPlayerInfo
 */
 static player_info_t *pfnPlayerInfo( int index )
 {
+	if( cls.key_dest == key_menu && !index )
+		return &menu.playerinfo;
+
 	if( index < 0 || index > cl.maxclients )
 		return NULL;
 	return &cl.players[index];
@@ -1230,7 +1240,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		// calculate vectors from the viewer to the bone. This roughly adjusts for position
 		vec3_t	chromeupvec;	// g_chrome t vector in world reference frame
 		vec3_t	chromerightvec;	// g_chrome s vector in world reference frame
-		vec3_t	tmp;		// vector pointing at bone in world reference frame
+		vec3_t	tmp, v_left;	// vector pointing at bone in world reference frame
 
 		VectorScale( cl.refdef.vieworg, -1.0f, tmp );
 		tmp[0] += g_bonestransform[bone][0][3];
@@ -1238,16 +1248,17 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		tmp[2] += g_bonestransform[bone][2][3];
 
 		VectorNormalize( tmp );
+		VectorNegate( RI.vright, v_left );
 
 		if( g_nFaceFlags & STUDIO_NF_CHROME )
 		{
 			float	angle = anglemod( RI.refdef.time * 40 );
-			RotatePointAroundVector( chromeupvec, tmp, RI.vright, angle - 180 );
-			RotatePointAroundVector( chromerightvec, chromeupvec, RI.vright, 180 + angle );
+			RotatePointAroundVector( chromeupvec, tmp, v_left, angle - 180 );
+			RotatePointAroundVector( chromerightvec, chromeupvec, v_left, 180 + angle );
 		}
 		else
 		{
-			CrossProduct( tmp, RI.vright, chromeupvec );
+			CrossProduct( tmp, v_left, chromeupvec );
 			VectorNormalize( chromeupvec );
 			CrossProduct( tmp, chromeupvec, chromerightvec );
 			VectorNormalize( chromerightvec );
@@ -1636,6 +1647,9 @@ static void R_StudioSetupSkin( mstudiotexture_t *ptexture, int index )
 
 	if( !m_pTextureHeader ) return;
 
+	// NOTE: user can comment call StudioRemapColors and remap_info will be unavailable
+	if( m_fDoRemap ) ptexture = CL_GetRemapInfoForEntity( RI.currententity )->ptexture;
+
 	m_skinnum = RI.currententity->curstate.skin;
 	pskinref = (short *)((byte *)m_pTextureHeader + m_pTextureHeader->skinindex);
 	if( m_skinnum != 0 && m_skinnum < m_pTextureHeader->numskinfamilies )
@@ -1664,6 +1678,8 @@ static void R_StudioDrawPoints( void )
 
 	R_StudioSetupTextureHeader ();
 
+	g_nNumArrayVerts = g_nNumArrayElems = 0;
+
 	if( !m_pTextureHeader ) return;
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
 		g_nStudioCount++;
@@ -1671,7 +1687,12 @@ static void R_StudioDrawPoints( void )
 	m_skinnum = RI.currententity->curstate.skin;	    
 	pvertbone = ((byte *)m_pStudioHeader + m_pSubModel->vertinfoindex);
 	pnormbone = ((byte *)m_pStudioHeader + m_pSubModel->norminfoindex);
-	ptexture = (mstudiotexture_t *)((byte *)m_pTextureHeader + m_pTextureHeader->textureindex);
+
+	// NOTE: user can comment call StudioRemapColors and remap_info will be unavailable
+	if( m_fDoRemap ) ptexture = CL_GetRemapInfoForEntity( RI.currententity )->ptexture;
+	else ptexture = (mstudiotexture_t *)((byte *)m_pTextureHeader + m_pTextureHeader->textureindex);
+
+	ASSERT( ptexture != NULL );
 
 	pmesh = (mstudiomesh_t *)((byte *)m_pStudioHeader + m_pSubModel->meshindex);
 	pstudioverts = (vec3_t *)((byte *)m_pStudioHeader + m_pSubModel->vertindex);
@@ -1757,20 +1778,56 @@ static void R_StudioDrawPoints( void )
 
 		while( i = *( ptricmds++ ))
 		{
+			int	vertexState = 0;
+			qboolean	tri_strip;
+
 			if( i < 0 )
 			{
 				pglBegin( GL_TRIANGLE_FAN );
+				tri_strip = false;
 				i = -i;
 			}
 			else
 			{
 				pglBegin( GL_TRIANGLE_STRIP );
+				tri_strip = true;
 			}
 
 			r_stats.c_studio_polys++;
 
 			for( ; i > 0; i--, ptricmds += 4 )
 			{
+				// build in indices
+				if( vertexState++ < 3 )
+				{
+					g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts;
+				}
+				else if( tri_strip )
+				{
+					// flip triangles between clockwise and counter clockwise
+					if( vertexState & 1 )
+					{
+						// draw triangle [n-2 n-1 n]
+						g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts - 2;
+						g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts - 1;
+						g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts;
+					}
+					else
+					{
+						// draw triangle [n-1 n-2 n]
+						g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts - 1;
+						g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts - 2;
+						g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts;
+					}
+				}
+				else
+				{
+					// draw triangle fan [0 n-1 n]
+					g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts - ( vertexState - 1 );
+					g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts - 1;
+					g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts;
+				}
+
 				if( flags & STUDIO_NF_CHROME || ( g_nFaceFlags & STUDIO_NF_CHROME ))
 					pglTexCoord2f( g_chrome[ptricmds[1]][0] * s, g_chrome[ptricmds[1]][1] * t );
 				else pglTexCoord2f( ptricmds[2] * s, ptricmds[3] * t );
@@ -1796,6 +1853,8 @@ static void R_StudioDrawPoints( void )
 
 				av = g_xformverts[ptricmds[0]];
 				pglVertex3f( av[0], av[1], av[2] );
+				VectorCopy( av, g_xarrayverts[g_nNumArrayVerts] ); // store off vertex
+				g_nNumArrayVerts++;
 			}
 			pglEnd();
 		}
@@ -2053,9 +2112,28 @@ R_StudioSetRemapColors
 
 ===============
 */
-void R_StudioSetRemapColors( int top, int bottom )
+void R_StudioSetRemapColors( int newTop, int newBottom )
 {
-	// TODO: implement
+	// update colors for viewentity
+	if( RI.currententity == &clgame.viewent )
+	{
+		player_info_t	*pLocalPlayer;
+
+		// copy top and bottom colors for viewmodel
+		if(( pLocalPlayer = pfnPlayerInfo( clgame.viewent.curstate.number - 1 )) != NULL )
+		{
+			newTop = bound( 0, pLocalPlayer->topcolor, 360 );
+			newBottom = bound( 0, pLocalPlayer->bottomcolor, 360 );
+		}
+	}
+
+	CL_AllocRemapInfo( newTop, newBottom );
+
+	if( CL_GetRemapInfoForEntity( RI.currententity ))
+	{
+		CL_UpdateRemapInfo( newTop, newBottom );
+		m_fDoRemap = true;
+	}
 }
 
 /*
@@ -2192,6 +2270,7 @@ pfnStudioSetHeader
 void R_StudioSetHeader( studiohdr_t *pheader )
 {
 	m_pStudioHeader = pheader;
+	m_fDoRemap = false;
 }
 
 /*
@@ -2234,6 +2313,8 @@ static void R_StudioRestoreRenderer( void )
 
 	// restore depthmask state for sprites etc
 	if( glState.drawTrans ) pglDepthMask( GL_FALSE );
+
+	m_fDoRemap = false;
 }
 
 /*
@@ -2256,15 +2337,85 @@ Xash3D is always works in hadrware mode
 */
 static int pfnIsHardware( void )
 {
-	return true;
+	return 1;	// 0 is Software, 1 is OpenGL, 2 is Direct3D
 }
 
-static void StudioDrawShadow( void )
+/*
+===============
+R_StudioGetShadowImpactAndDir
+===============
+*/
+void R_StudioGetShadowImpactAndDir( pmtrace_t *ptr, vec3_t lightdir )
 {
-	// in GoldSrc shadow call is dsiabled with 'return' at start of the function
-	// some mods used a hack with calling DrawShadow ahead of 'return'
-	// this code is for HL compatibility.
-//	MsgDev( D_INFO, "GL_StudioDrawShadow()\n" );	// just a debug
+	vec3_t		start, end;
+	studiolight_t	*plight;
+
+	plight = &g_studiolight;
+
+	VectorSet( lightdir, -0.5, -0.2, -1.0f );
+	VectorNormalizeFast( lightdir );
+	VectorCopy( RI.currententity->origin, start );
+	start[2] += 78;
+	VectorMA( start, 1024.0f, lightdir, end );
+
+	*ptr = PM_PlayerTrace( clgame.pmove, start, end, PM_STUDIO_IGNORE, 2, -1, NULL );
+}
+
+/*
+===============
+R_StudioDeformShadow
+
+Deform vertices by specified lightdir
+===============
+*/
+void R_StudioDeformShadow( void )
+{
+	float		*verts, planedist, dist;
+	vec3_t		planenormal, lightdir, lightdir2, point;
+	int		numVerts;
+	pmtrace_t		tr;
+
+	R_StudioGetShadowImpactAndDir( &tr, lightdir );
+
+	Matrix3x4_VectorIRotate( g_rotationmatrix, lightdir, lightdir2 );
+	Matrix3x4_VectorIRotate( g_rotationmatrix, tr.plane.normal, planenormal );
+//	VectorScale( planenormal, RI.currententity->curstate.scale, planenormal );
+
+	VectorSubtract( tr.endpos, RI.currententity->origin, point );
+	planedist = DotProduct( point, tr.plane.normal ) + 1;
+	dist = -1.0f / DotProduct( lightdir2, planenormal );
+	VectorScale( lightdir2, dist, lightdir2 );
+
+	verts = g_xarrayverts[0];
+	numVerts = g_nNumArrayVerts;
+
+	for( ; numVerts > 0; numVerts--, verts += 3 )
+	{
+		dist = DotProduct( verts, tr.plane.normal ) - planedist;
+		if( dist > 0 ) VectorMA( verts, dist, lightdir, verts );
+	}
+}
+
+static void R_StudioDrawPlanarShadow( void )
+{
+	R_StudioDeformShadow ();
+
+//	if( glState.stencilEnabled )
+//		pglEnable( GL_STENCIL_TEST );
+
+	pglEnableClientState( GL_VERTEX_ARRAY );
+	pglVertexPointer( 3, GL_FLOAT, 12, g_xarrayverts );
+
+	Msg( "DrawShadow( %i %i )\n", g_nNumArrayVerts, g_nNumArrayElems );
+
+	if( GL_Support( GL_DRAW_RANGEELEMENTS_EXT ))
+		pglDrawRangeElementsEXT( GL_TRIANGLES, 0, g_nNumArrayVerts, g_nNumArrayElems, GL_UNSIGNED_INT, g_xarrayelems );
+	else pglDrawElements( GL_TRIANGLES, g_nNumArrayElems, GL_UNSIGNED_INT, g_xarrayelems );
+
+//	if( glState.stencilEnabled )
+//		pglDisable( GL_STENCIL_TEST );
+
+	pglDisableClientState( GL_VERTEX_ARRAY );
 }
 	
 /*
@@ -2293,7 +2444,7 @@ void _cdecl GL_StudioDrawShadow( void )
 			{
 				shadow_alpha = 1.0 - r_shadowalpha.value * 0.5f;
 				pglDisable( GL_TEXTURE_2D );
-				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+//				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 				pglEnable( GL_BLEND );
 				shadow_alpha2 = 1.0 - shadow_alpha;
 
@@ -2303,16 +2454,16 @@ void _cdecl GL_StudioDrawShadow( void )
 //					depthmode = GL_LESS;
 //				else
 					depthmode = GL_GREATER;
-				pglDepthFunc( depthmode );
+//				pglDepthFunc( depthmode );
 
-				StudioDrawShadow();
+				R_StudioDrawPlanarShadow();
 
 //				if( flt_100DB994 == 0.0 || flt_107BA8A8 < 0.5 )
 					depthmode2 = GL_LEQUAL;
 //				else
 //					depthmode2 = GL_GEQUAL;
 
-				pglDepthFunc( depthmode2 );
+//				pglDepthFunc( depthmode2 );
 				pglEnable( GL_TEXTURE_2D );
 				pglDisable( GL_BLEND );
 
@@ -2792,9 +2943,9 @@ static int R_StudioDrawModel( int flags )
 R_DrawStudioModel
 =================
 */
-void R_DrawStudioModel( cl_entity_t *e )
+void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 {
-	int	flags, result;
+	int	i, flags, result;
 
 	if( RI.params & RP_ENVVIEW )
 		return;
@@ -2825,6 +2976,34 @@ void R_DrawStudioModel( cl_entity_t *e )
 			result = pStudioDraw->StudioDrawPlayer( flags, &e->curstate );
 		else result = pStudioDraw->StudioDrawModel( flags );
 	}
+
+	if( !result || follow_entity ) return;
+
+	// NOTE: we must draw all followed entities
+	// immediately after drawing parent when cached bones is valid
+	for( i = 0; i < tr.num_child_entities; i++ )
+	{
+		if( CL_GetEntityByIndex( tr.child_entities[i]->curstate.aiment ) == e )
+		{
+			// copy the parent origin for right frustum culling
+			// FIXME: we really need to cull follow entities?
+			VectorCopy( e->origin, tr.child_entities[i]->origin );
+
+			RI.currententity = tr.child_entities[i];
+			RI.currentmodel = RI.currententity->model;
+			R_DrawStudioModelInternal( RI.currententity, true );
+		}
+	} 
+}
+
+/*
+=================
+R_DrawStudioModel
+=================
+*/
+void R_DrawStudioModel( cl_entity_t *e )
+{
+	R_DrawStudioModelInternal( e, false );
 }
 
 /*
@@ -2900,12 +3079,61 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	size_t	size;
 	int	flags = 0;
 	char	texname[128], name[128];
-
+	texture_t	*tx = NULL;
+	
 	if( ptexture->flags & STUDIO_NF_TRANSPARENT )
 		flags |= (TF_CLAMP|TF_NOMIPMAP);
 
 	if( ptexture->flags & ( STUDIO_NF_NORMALMAP|STUDIO_NF_HEIGHTMAP ))
 		flags |= TF_NORMALMAP;
+
+	// store some textures for remapping
+	if( !Q_strnicmp( ptexture->name, "DM_Base", 7 ) || !Q_strnicmp( ptexture->name, "remap", 5 ))
+	{
+		int	i, size;
+		char	val[6];
+		byte	*pixels;
+
+		i = mod->numtextures;
+		mod->textures = (texture_t **)Mem_Realloc( mod->mempool, mod->textures, ( i + 1 ) * sizeof( texture_t* ));
+		size = ptexture->width * ptexture->height + 768;
+		tx = Mem_Alloc( mod->mempool, sizeof( *tx ) + size );
+		mod->textures[i] = tx;
+
+		// parse ranges and store it
+		// HACKHACK: store ranges into anim_min, anim_max etc
+		if( !Q_strnicmp( ptexture->name, "DM_Base", 7 ))
+		{
+			Q_strncpy( tx->name, "DM_Base", sizeof( tx->name ));
+			tx->anim_min = PLATE_HUE_START; // topcolor start
+			tx->anim_max = PLATE_HUE_END; // topcolor end
+			// bottomcolor start always equal is (topcolor end + 1)
+			tx->anim_total = SUIT_HUE_END;// bottomcolor end 
+		}
+		else
+		{
+			Q_strncpy( tx->name, "DM_User", sizeof( tx->name ));	// custom remapped
+			Q_strncpy( val, ptexture->name + 7, 4 );  
+			tx->anim_min = bound( 0, Q_atoi( val ), 255 );	// topcolor start
+			Q_strncpy( val, ptexture->name + 11, 4 ); 
+			tx->anim_max = bound( 0, Q_atoi( val ), 255 );	// topcolor end
+			// bottomcolor start always equal is (topcolor end + 1)
+			Q_strncpy( val, ptexture->name + 15, 4 ); 
+			tx->anim_total = bound( 0, Q_atoi( val ), 255 );	// bottomcolor end
+		}
+
+		tx->width = ptexture->width;
+		tx->height = ptexture->height;
+
+		// the pixels immediately follow the structures
+		pixels = (byte *)phdr + ptexture->index;
+		Q_memcpy( tx+1, pixels, size );
+
+		ptexture->flags |= STUDIO_NF_COLORMAP;	// yes, this is colormap image
+		flags |= TF_FORCE_COLOR;
+
+		mod->numtextures++;	// done
+	}
 
 	// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
 	ptexture->index = (int)((byte *)phdr) + ptexture->index;
@@ -2923,6 +3151,8 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	}
 	else
 	{
+		// duplicate texnum for easy acess 
+		if( tx ) tx->gl_texturenum = ptexture->index;
 		GL_SetTextureType( ptexture->index, TEX_STUDIO );
 	}
 }
@@ -2968,14 +3198,17 @@ studiohdr_t *R_StudioLoadHeader( model_t *mod, const void *buffer )
 Mod_LoadStudioModel
 =================
 */
-void Mod_LoadStudioModel( model_t *mod, const void *buffer )
+void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 {
 	studiohdr_t	*phdr;
+
+	if( loaded ) *loaded = false;
+	loadmodel->mempool = Mem_AllocPool( va( "^2%s^7", loadmodel->name ));
+	loadmodel->type = mod_studio;
 
 	phdr = R_StudioLoadHeader( mod, buffer );
 	if( !phdr ) return;	// bad model
 
-	loadmodel->mempool = Mem_AllocPool( va("^2%s^7", loadmodel->name ));
 #ifdef STUDIO_MERGE_TEXTURES
 	if( phdr->numtextures == 0 )
 	{
@@ -3027,11 +3260,12 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer )
 	// setup bounding box
 	VectorCopy( phdr->bbmin, loadmodel->mins );
 	VectorCopy( phdr->bbmax, loadmodel->maxs );
-	loadmodel->type = mod_studio;	// all done
 
 	loadmodel->numframes = R_StudioBodyVariations( loadmodel );
 	loadmodel->radius = RadiusFromBounds( loadmodel->mins, loadmodel->maxs );
 	loadmodel->flags = phdr->flags; // copy header flags
+
+	if( loaded ) *loaded = true;
 }
 
 /*

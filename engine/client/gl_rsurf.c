@@ -1915,7 +1915,7 @@ void GL_BuildLightmaps( void )
 	
 	skychain = NULL;
 
-	tr.framecount = 1;	// no dlight cache
+	tr.framecount = tr.visframecount = 1;	// no dlight cache
 	gl_lms.current_lightmap_texture = 0;
 
 	// setup all the lightstyles
@@ -1937,6 +1937,7 @@ void GL_BuildLightmaps( void )
 		{
 			// clearing all decal chains
 			m->surfaces[j].pdecals = NULL;
+			m->surfaces[j].visframe = 0;
 
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 

@@ -167,8 +167,8 @@ static void UI_PlayerSetup_SetConfig( void )
 {
 	CVAR_SET_STRING( "name", uiPlayerSetup.name.buffer );
 	CVAR_SET_STRING( "model", uiPlayerSetup.currentModel );
-	CVAR_SET_FLOAT( "topcolor", uiPlayerSetup.topColor.curValue * 255 );
-	CVAR_SET_FLOAT( "bottomcolor", uiPlayerSetup.bottomColor.curValue * 255 );
+	CVAR_SET_FLOAT( "topcolor", (int)(uiPlayerSetup.topColor.curValue * 255 ));
+	CVAR_SET_FLOAT( "bottomcolor", (int)(uiPlayerSetup.bottomColor.curValue * 255 ));
 	CVAR_SET_FLOAT( "cl_himodels", uiPlayerSetup.hiModels.enabled );
 	CVAR_SET_FLOAT( "spectator", uiPlayerSetup.spectator.enabled );
 }
@@ -198,6 +198,8 @@ static void UI_PlayerSetup_UpdateConfig( void )
 	CVAR_SET_STRING( "model", uiPlayerSetup.currentModel );
 	CVAR_SET_FLOAT( "cl_himodels", uiPlayerSetup.hiModels.enabled );
 	CVAR_SET_FLOAT( "spectator", uiPlayerSetup.spectator.enabled );
+	CVAR_SET_FLOAT( "topcolor", (int)(uiPlayerSetup.topColor.curValue * 255 ));
+	CVAR_SET_FLOAT( "bottomcolor", (int)(uiPlayerSetup.bottomColor.curValue * 255 ));
 
 	// IMPORTANT: always set default model becuase we need to have something valid here
 	// if you wish draw your playermodel as normal studiomodel please change "models/player.mdl" to path
@@ -367,8 +369,9 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.topColor.generic.type = QMTYPE_SLIDER;
 	uiPlayerSetup.topColor.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
 	uiPlayerSetup.topColor.generic.name = "Top color";
-	uiPlayerSetup.topColor.generic.x = 350;
+	uiPlayerSetup.topColor.generic.x = 250;
 	uiPlayerSetup.topColor.generic.y = 550;
+	uiPlayerSetup.topColor.generic.width = 300;
 	uiPlayerSetup.topColor.generic.callback = UI_PlayerSetup_Callback;
 	uiPlayerSetup.topColor.generic.statusText = "Set a player model top color";
 	uiPlayerSetup.topColor.minValue = 0.0;
@@ -379,8 +382,9 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.bottomColor.generic.type = QMTYPE_SLIDER;
 	uiPlayerSetup.bottomColor.generic.flags = QMF_PULSEIFFOCUS|QMF_DROPSHADOW;
 	uiPlayerSetup.bottomColor.generic.name = "Bottom color";
-	uiPlayerSetup.bottomColor.generic.x = 350;
+	uiPlayerSetup.bottomColor.generic.x = 250;
 	uiPlayerSetup.bottomColor.generic.y = 620;
+	uiPlayerSetup.bottomColor.generic.width = 300;
 	uiPlayerSetup.bottomColor.generic.callback = UI_PlayerSetup_Callback;
 	uiPlayerSetup.bottomColor.generic.statusText = "Set a player model bottom color";
 	uiPlayerSetup.bottomColor.minValue = 0.0;

@@ -10,6 +10,7 @@ if not exist D:\Xash3D\src_main\xash_sdk\common/ mkdir D:\Xash3D\src_main\xash_s
 if not exist D:\Xash3D\src_main\xash_sdk\mainui/ mkdir D:\Xash3D\src_main\xash_sdk\mainui\
 if not exist D:\Xash3D\src_main\xash_sdk\mainui\legacy/ mkdir D:\Xash3D\src_main\xash_sdk\mainui\legacy
 if not exist D:\Xash3D\src_main\xash_sdk\utils/ mkdir D:\Xash3D\src_main\xash_sdk\utils\
+if not exist D:\Xash3D\src_main\xash_sdk\utils\makefont/ mkdir D:\Xash3D\src_main\xash_sdk\utils\makefont
 if not exist D:\Xash3D\src_main\xash_sdk\utils\vgui/ mkdir D:\Xash3D\src_main\xash_sdk\utils\vgui
 if not exist D:\Xash3D\src_main\xash_sdk\utils\vgui\include/ mkdir D:\Xash3D\src_main\xash_sdk\utils\vgui\include
 if not exist D:\Xash3D\src_main\xash_sdk\utils\vgui\lib/ mkdir D:\Xash3D\src_main\xash_sdk\utils\vgui\lib
@@ -30,6 +31,7 @@ if not exist D:\Xash3D\src_main\xash_sdk\pm_shared/ mkdir D:\Xash3D\src_main\xas
 @copy /Y cl_dll\hl\*.* xash_sdk\cl_dll\hl\*.*
 @copy /Y dlls\*.* xash_sdk\dlls\*.*
 @copy /Y dlls\wpn_shared\*.* xash_sdk\dlls\wpn_shared\*.*
+@copy /Y utils\makefont\*.* xash_sdk\utils\makefont\*.*
 @copy /Y utils\vgui\include\*.* xash_sdk\utils\vgui\include\*.*
 @copy /Y utils\vgui\lib\win32_vc6\*.* xash_sdk\utils\vgui\lib\win32_vc6\*.*
 @copy /Y game_shared\*.* xash_sdk\game_shared\*.*

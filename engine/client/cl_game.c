@@ -78,11 +78,12 @@ static dllfunc_t cdll_exports[] =
 { NULL, NULL }
 };
 
-static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3
+static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 {
 { "HUD_GetStudioModelInterface", (void **)&clgame.dllFuncs.pfnGetStudioModelInterface },
 { "HUD_DirectorMessage", (void **)&clgame.dllFuncs.pfnDirectorMessage },
 { "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
+{ "HUD_ChatInputPosition", (void **)&clgame.dllFuncs.pfnChatInputPosition },
 { NULL, NULL }
 };
 
@@ -1348,6 +1349,13 @@ void CL_InitEdicts( void )
 	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
+
+	if(( clgame.maxRemapInfos - 1 ) != clgame.maxEntities )
+	{
+		CL_ClearAllRemaps (); // purge old remap info
+		clgame.maxRemapInfos = clgame.maxEntities + 1; 
+		clgame.remap_info = (remap_info_t **)Mem_Alloc( clgame.mempool, sizeof( remap_info_t* ) * clgame.maxRemapInfos );
+	}
 }
 
 void CL_FreeEdicts( void )
@@ -1373,6 +1381,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 {
 	byte	*buf;
 	size_t	size;
+	qboolean	loaded;
 
 	ASSERT( m_pSprite != NULL );
 
@@ -1382,14 +1391,14 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	Q_strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
 	m_pSprite->flags = 256; // it's hud sprite, make difference names to prevent free shared textures
 
-	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size );
-	else Mod_LoadSpriteModel( m_pSprite, buf );		
+	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size, &loaded );
+	else Mod_LoadSpriteModel( m_pSprite, buf, &loaded );		
 
 	Mem_Free( buf );
 
-	if( m_pSprite->type != mod_sprite )
+	if( !loaded )
 	{
-		Q_memset( m_pSprite, 0, sizeof( *m_pSprite ));
+		Mod_UnloadSpriteModel( m_pSprite );
 		return false;
 	}
 	return true;
@@ -3673,12 +3682,14 @@ void CL_UnloadProgs( void )
 	CL_FreeTempEnts();
 	CL_FreeViewBeams();
 	CL_FreeParticles();
+	CL_ClearAllRemaps();
 	VGui_Shutdown();
 
 	// NOTE: HLFX 0.5 has strange bug: hanging on exit if no map was loaded
 	if( !( !Q_stricmp( GI->gamedir, "hlfx" ) && GI->version == 0.5f ))
 		clgame.dllFuncs.pfnShutdown();
 
+	Cvar_FullSet( "host_clientloaded", "0", CVAR_INIT );
 	Com_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
@@ -3752,7 +3763,9 @@ qboolean CL_LoadProgs( const char *name )
 	Cvar_Get( "cl_nopred", "1", CVAR_ARCHIVE|CVAR_USERINFO, "disable client movement predicting" );
 	Cvar_Get( "cl_lw", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 	Cvar_Get( "cl_lc", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable lag compensation" );
+	Cvar_FullSet( "host_clientloaded", "1", CVAR_INIT );
 
+	clgame.maxRemapInfos = 0; // will be alloc on first call CL_InitEdicts();
 	clgame.maxEntities = 2; // world + localclient (have valid entities not in game)
 	CL_InitCDAudio( "media/cdaudio.txt" );
 	CL_InitTitles( "titles.txt" );

@@ -775,7 +775,7 @@ void SV_InitOperatorCommands( void )
 
 	Cmd_AddCommand( "map", SV_Map_f, "start new level" );
 	Cmd_AddCommand( "newgame", SV_Newgame_f, "begin new game" );
-	Cmd_AddCommand( "endgame", SV_Endgame_f, "end current game" );
+	Cmd_AddCommand( "killgame", SV_Endgame_f, "end current game" );
 	Cmd_AddCommand( "hazardcourse", SV_HazardCourse_f, "starting a Hazard Course" );
 	Cmd_AddCommand( "changelevel", SV_ChangeLevel_f, "changing level" );
 	Cmd_AddCommand( "restart", SV_Restart_f, "restarting current level" );

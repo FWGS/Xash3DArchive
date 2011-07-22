@@ -32,6 +32,7 @@ sysinfo_t		SI;
 
 convar_t	*host_serverstate;
 convar_t	*host_gameloaded;
+convar_t	*host_clientloaded;
 convar_t	*host_limitlocal;
 convar_t	*host_cheats;
 convar_t	*host_maxfps;
@@ -688,6 +689,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
 	host_serverstate = Cvar_Get( "host_serverstate", "0", CVAR_INIT, "displays current server state" );
 	host_gameloaded = Cvar_Get( "host_gameloaded", "0", CVAR_INIT, "inidcates a loaded game.dll" );
+	host_clientloaded = Cvar_Get( "host_clientloaded", "0", CVAR_INIT, "inidcates a loaded client.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
 	con_gamemaps = Cvar_Get( "con_gamemaps", "1", CVAR_ARCHIVE, "when true show only maps in game folder" );
 

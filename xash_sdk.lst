@@ -17,6 +17,7 @@ xash_sdk\pm_shared\
 xash_sdk\mainui\
 xash_dsk\mainui\legacy
 xash_sdk\utils\
+xash_sdk\makefont\
 xash_sdk\utils\vgui\
 xash_sdk\utils\vgui\include\
 xash_sdk\utils\vgui\lib\win32_vc6\

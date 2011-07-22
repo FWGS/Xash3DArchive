@@ -29,6 +29,7 @@ convar_t	*con_fontsize;
 #define COLOR_DEFAULT	'7'
 #define CON_HISTORY		64
 #define MAX_DBG_NOTIFY	128
+#define CON_MAXCMDS		4096	// auto-complete intermediate list
 
 #define CON_TEXTSIZE	131072	// 128 kb buffer
 
@@ -93,6 +94,7 @@ typedef struct
 
 	// chatfiled
 	field_t		chat;
+	string		chat_cmd;		// can be overrieded by user
 
 	// console history
 	field_t		historyLines[CON_HISTORY];
@@ -103,14 +105,14 @@ typedef struct
 	qboolean		draw_notify;	// true if we have NXPrint message
 
 	// console auto-complete
-	field_t		*completionField;
-	char		*completionString;
 	string		shortestMatch;
+	field_t		*completionField;	// con.input or dedicated server fake field-line
+	char		*completionString;
+	char		*cmds[CON_MAXCMDS];
 	int		matchCount;
 } console_t;
 
 static console_t		con;
-static qboolean		chat_team;	// say_team is active
 
 void Field_CharEvent( field_t *edit, int ch );
 
@@ -185,8 +187,22 @@ Con_ClearTyping
 */
 void Con_ClearTyping( void )
 {
+	int	i;
+
 	Con_ClearField( &con.input );
 	con.input.widthInChars = con.linewidth;
+
+	// free the old autocomplete list
+	for( i = 0; i < con.matchCount; i++ )
+	{
+		if( con.cmds[i] != NULL )
+		{
+			Mem_Free( con.cmds[i] );
+			con.cmds[i] = NULL;
+		}
+	}
+
+	con.matchCount = 0;
 }
 
 /*
@@ -225,7 +241,10 @@ Con_MessageMode_f
 */
 void Con_MessageMode_f( void )
 {
-	chat_team = false;
+	if( Cmd_Argc() == 2 )
+		Q_strncpy( con.chat_cmd, Cmd_Argv( 1 ), sizeof( con.chat_cmd ));
+	else  Q_strncpy( con.chat_cmd, "say", sizeof( con.chat_cmd ));
+
 	Key_SetKeyDest( key_message );
 }
 
@@ -236,32 +255,8 @@ Con_MessageMode2_f
 */
 void Con_MessageMode2_f( void )
 {
-	chat_team = true;
+	Q_strncpy( con.chat_cmd, "say_team", sizeof( con.chat_cmd ));
 	Key_SetKeyDest( key_message );
-}
-
-/*
-================
-Con_ToggleChat_f
-================
-*/
-void Con_ToggleChat_f( void )
-{
-	Con_ClearTyping ();
-
-	if( cls.key_dest == key_console )
-	{
-		if( Cvar_VariableInteger( "sv_background" ))
-			UI_SetActiveMenu( true );
-		else UI_SetActiveMenu( false );
-	}
-	else
-	{
-		UI_SetActiveMenu( false );
-		Key_SetKeyDest( key_console );
-	}	
-
-	Con_ClearNotify();
 }
 
 /*
@@ -654,7 +649,6 @@ void Con_Init( void )
 	Cmd_AddCommand( "toggleconsole", Con_ToggleConsole_f, "opens or closes the console" );
 	Cmd_AddCommand( "con_color", Con_SetColor_f, "set a custom console color" );
 	Cmd_AddCommand( "clear", Con_Clear_f, "clear console history" );
-	Cmd_AddCommand( "togglechat", Con_ToggleChat_f, "toggle console chat" );
 	Cmd_AddCommand( "messagemode", Con_MessageMode_f, "enable message mode \"say\"" );
 	Cmd_AddCommand( "messagemode2", Con_MessageMode2_f, "enable message mode \"say_team\"" );
 
@@ -885,32 +879,29 @@ static qboolean Cmd_CheckName( const char *name )
 
 /*
 ===============
-pfnFindMatches
+Con_AddCommandToList
 
 ===============
 */
-static void pfnFindMatches( const char *s, const char *unused1, const char *unused2, void *unused3 )
+static void Con_AddCommandToList( const char *s, const char *unused1, const char *unused2, void *unused3 )
 {
-	int		i;
-
 	if( *s == '@' ) return; // never show system cvars or cmds
+	if( con.matchCount >= CON_MAXCMDS ) return; // list is full
+
 	if( Q_strnicmp( s, con.completionString, Q_strlen( con.completionString )))
-		return;
+		return; // no match
 
-	con.matchCount++;
+	con.cmds[con.matchCount++] = copystring( s );
+}
 
-	if( con.matchCount == 1 )
-	{
-		Q_strncpy( con.shortestMatch, s, sizeof( con.shortestMatch ));
-		return;
-	}
-
-	// cut shortestMatch to the amount common with s
-	for( i = 0; s[i]; i++ )
-	{
-		if( Q_tolower( con.shortestMatch[i] ) != Q_tolower( s[i] ))
-			con.shortestMatch[i] = 0;
-	}
+/*
+=================
+Con_SortCmds
+=================
+*/
+static int Con_SortCmds( const char **arg1, const char **arg2 )
+{
+	return Q_stricmp( *arg1, *arg2 );
 }
 
 /*
@@ -918,7 +909,7 @@ static void pfnFindMatches( const char *s, const char *unused1, const char *unus
 pfnPrintMatches
 ===============
 */
-static void pfnPrintMatches( const char *s, const char *unused1, const char *m, void *unused2 )
+static void Con_PrintMatches( const char *s, const char *unused1, const char *m, void *unused2 )
 {
 	if( !Q_strnicmp( s, con.shortestMatch, Q_strlen( con.shortestMatch )))
 	{
@@ -972,38 +963,54 @@ void Con_CompleteCommand( field_t *field )
 	field_t		temp;
 	string		filename;
 	autocomplete_list_t	*list;
+	int		i;
 
+	// setup the completion field
 	con.completionField = field;
 
 	// only look at the first token for completion purposes
 	Cmd_TokenizeString( con.completionField->buffer );
 
 	con.completionString = Cmd_Argv( 0 );
-	if( con.completionString[0] == '\\' || con.completionString[0] == '/' )
+
+	// skip backslash
+	while( *con.completionString && ( *con.completionString == '\\' || *con.completionString == '/' ))
 		con.completionString++;
-	
-	con.matchCount = 0;
-	con.shortestMatch[0] = 0;
 
 	if( !Q_strlen( con.completionString ))
 		return;
 
-	Cmd_LookupCmds( NULL, NULL, pfnFindMatches );
-	Cvar_LookupVars( 0, NULL, NULL, pfnFindMatches );
+	// free the old autocomplete list
+	for( i = 0; i < con.matchCount; i++ )
+	{
+		if( con.cmds[i] != NULL )
+		{
+			Mem_Free( con.cmds[i] );
+			con.cmds[i] = NULL;
+		}
+	}
 
-	if( con.matchCount == 0 ) return; // no matches
+	con.matchCount = 0;
+	con.shortestMatch[0] = 0;
+
+	// find matching commands and variables
+	Cmd_LookupCmds( NULL, NULL, Con_AddCommandToList );
+	Cvar_LookupVars( 0, NULL, NULL, Con_AddCommandToList );
+
+	if( !con.matchCount ) return; // no matches
+
 	Q_memcpy( &temp, con.completionField, sizeof( field_t ));
 
 	if( Cmd_Argc() == 2 )
 	{
-		qboolean result = false;
+		qboolean	result = false;
 
 		// autocomplete second arg
 		for( list = cmd_list; list->name; list++ )
 		{
 			if( Cmd_CheckName( list->name ))
 			{
-				result = list->func( Cmd_Argv(1), filename, MAX_STRING ); 
+				result = list->func( Cmd_Argv( 1 ), filename, MAX_STRING ); 
 				break;
 			}
 		}
@@ -1018,24 +1025,44 @@ void Con_CompleteCommand( field_t *field )
 
 	if( con.matchCount == 1 )
 	{
-		Q_sprintf( con.completionField->buffer, "\\%s", con.shortestMatch );
-		if( Cmd_Argc() == 1 )
-			Q_strncat( con.completionField->buffer, " ", sizeof( con.completionField->buffer ));
+		Q_sprintf( con.completionField->buffer, "\\%s", con.cmds[0] );
+		if( Cmd_Argc() == 1 ) Q_strncat( con.completionField->buffer, " ", sizeof( con.completionField->buffer ));
 		else ConcatRemaining( temp.buffer, con.completionString );
 		con.completionField->cursor = Q_strlen( con.completionField->buffer );
-		return;
 	}
+	else
+	{
+		char	*first, *last;
+		int	len = 0;
 
-	// multiple matches, complete to shortest
-	Q_sprintf( con.completionField->buffer, "\\%s", con.shortestMatch );
-	con.completionField->cursor = Q_strlen( con.completionField->buffer );
-	ConcatRemaining( temp.buffer, con.completionString );
+		qsort( con.cmds, con.matchCount, sizeof( char* ), Con_SortCmds );
 
-	Msg( "]%s\n", con.completionField->buffer );
+		// find the number of matching characters between the first and
+		// the last element in the list and copy it
+		first = con.cmds[0];
+		last = con.cmds[con.matchCount-1];
 
-	// run through again, printing matches
-	Cmd_LookupCmds( NULL, NULL, pfnPrintMatches );
-	Cvar_LookupVars( 0, NULL, NULL, pfnPrintMatches );
+		while( *first && *last && Q_tolower( *first ) == Q_tolower( *last ))
+		{
+			first++;
+			last++;
+
+			con.shortestMatch[len] = con.cmds[0][len];
+			len++;
+		}
+		con.shortestMatch[len] = 0;
+
+		// multiple matches, complete to shortest
+		Q_sprintf( con.completionField->buffer, "\\%s", con.shortestMatch );
+		con.completionField->cursor = Q_strlen( con.completionField->buffer );
+		ConcatRemaining( temp.buffer, con.completionString );
+
+		Msg( "]%s\n", con.completionField->buffer );
+
+		// run through again, printing matches
+		Cmd_LookupCmds( NULL, NULL, Con_PrintMatches );
+		Cvar_LookupVars( 0, NULL, NULL, Con_PrintMatches );
+	}
 }
 
 /*
@@ -1429,9 +1456,7 @@ void Key_Message( int key )
 	{
 		if( con.chat.buffer[0] && cls.state == ca_active )
 		{
-			if( chat_team ) Q_snprintf( buffer, sizeof( buffer ), "say_team \"%s\"\n", con.chat.buffer );
-			else Q_snprintf( buffer, sizeof( buffer ), "say \"%s\"\n", con.chat.buffer );
-
+			Q_snprintf( buffer, sizeof( buffer ), "%s \"%s\"\n", con.chat_cmd, con.chat.buffer );
 			Cbuf_AddText( buffer );
 		}
 
@@ -1570,7 +1595,7 @@ void Con_DrawNotify( void )
 	
 	if( cls.key_dest == key_message )
 	{
-		char	buf[16];
+		string	buf;
 		int	len;
 
 		currentColor = 7;
@@ -1578,8 +1603,11 @@ void Con_DrawNotify( void )
 
 		start = con.charWidths[' ']; // offset one space at left screen side
 
-		if( chat_team ) Q_strncpy( buf, "say_team: ", sizeof( buf ));
-		else Q_strncpy( buf, "say: ", sizeof( buf ));
+		// update chatline position from client.dll
+		if( clgame.dllFuncs.pfnChatInputPosition )
+			clgame.dllFuncs.pfnChatInputPosition( &start, &v );
+
+		Q_snprintf( buf, sizeof( buf ), "%s: ", con.chat_cmd );
 
 		Con_DrawStringLen( buf, &len, NULL );
 		Con_DrawString( start, v, buf, g_color_table[7] );

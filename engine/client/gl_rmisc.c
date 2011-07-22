@@ -170,7 +170,7 @@ void R_CreateDetailTexturesList( const char *filename )
 		// detailtexture detected
 		if( detail_name )
 		{
-			if( !detail_txt ) detail_txt = FS_Open( filename, "wb", false ); 
+			if( !detail_txt ) detail_txt = FS_Open( filename, "w", false ); 
 			if( !detail_txt )
 			{
 				MsgDev( D_ERROR, "Can't write %s\n", filename );
@@ -272,7 +272,13 @@ void R_NewMap( void )
 
 	// clear out efrags in case the level hasn't been reloaded
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
+	{
 		cl.worldmodel->leafs[i].efrags = NULL;
+		cl.worldmodel->leafs[i].visframe = 0;
+	}
+
+	for( i = 0; i < cl.worldmodel->numnodes; i++ )
+		cl.worldmodel->nodes[i].visframe = 0;
 
 	tr.skytexturenum = -1;
 	r_viewleaf = r_oldviewleaf = NULL;

@@ -609,6 +609,7 @@ Cmd_LookupCmds
 void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback )
 {
 	cmd_function_t	*cmd;
+	cmdalias_t	*alias;
 
 	// nothing to process ?
 	if( !callback ) return;
@@ -618,6 +619,10 @@ void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback )
 		if( !buffer ) callback( cmd->name, (char *)cmd->function, cmd->desc, ptr );
 		else callback( cmd->name, (char *)cmd->function, buffer, ptr );
 	}
+
+	// lookup an aliases too
+	for( alias = cmd_alias; alias; alias = alias->next )
+		callback( alias->name, alias->value, buffer, ptr );
 }
 
 /*
@@ -777,9 +782,15 @@ void Cmd_Unlink( int group )
 	cmd_function_t	**prev;
 	int		count = 0;
 
-	if( Cvar_VariableInteger( "host_gameloaded" ))
+	if( Cvar_VariableInteger( "host_gameloaded" ) && ( group & CMD_EXTDLL ))
 	{
 		Msg( "can't unlink cvars while game is loaded\n" );
+		return;
+	}
+
+	if( Cvar_VariableInteger( "host_clientloaded" ) && ( group & CMD_CLIENTDLL ))
+	{
+		Msg( "can't unlink cvars while client is loaded\n" );
 		return;
 	}
 

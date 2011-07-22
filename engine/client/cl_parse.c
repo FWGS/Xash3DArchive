@@ -478,7 +478,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.load_sequence++; // now all hud sprites are invalid
 
 	// wipe the client_t struct
-	CL_ClearState();
+	if( !cls.changelevel ) CL_ClearState();
 	cls.state = ca_connected;
 
 	// parse protocol version number
@@ -522,7 +522,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	menu.globals->maxClients = cl.maxclients;
 	Q_strncpy( menu.globals->maptitle, clgame.maptitle, sizeof( menu.globals->maptitle ));
 
-	CL_InitEdicts (); // re-arrange edicts
+	if( !cls.changelevel ) CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
 	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", clgame.mapname ));
@@ -782,6 +782,9 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 		Q_strncpy( player->userinfo, BF_ReadString( msg ), sizeof( player->userinfo ));
 		Q_strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
 		Q_strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
+		player->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
+		player->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
+
 		if( slot == cl.playernum ) Q_memcpy( &menu.playerinfo, player, sizeof( player_info_t ));
 	}
 	else Q_memset( player, 0, sizeof( *player ));
@@ -1242,6 +1245,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 
 			CL_ClearState ();
+			CL_InitEdicts (); // re-arrange edicts
 
 			cls.state = ca_connecting;
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately

@@ -898,8 +898,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		}
 	}
 
-	// critical stuff!!!
-	GL_MBind( tex - r_textures );
+	pglBindTexture( tex->target, tex->texnum );
 
 	buf = pic->buffer;
 	bufend = pic->buffer + pic->size;
@@ -960,7 +959,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name, sizeof( r_textures->name ));
+		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name );
 		return 0;
 	}
 
@@ -1039,7 +1038,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name, sizeof( r_textures->name ));
+		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name );
 		return 0;
 	}
 
@@ -1051,8 +1050,11 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 		if( tex->flags & TF_CUBEMAP )
 			continue;
 
-		if( !Q_stricmp( tex->name, name ) && !update )
-			return tex->texnum;
+		if( !Q_stricmp( tex->name, name ))
+		{
+			 if( update ) break;
+			 return tex->texnum;
+		}
 	}
 
 	if( !pic ) return 0; // couldn't loading image
@@ -1104,6 +1106,40 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	}
 
 	return tex->texnum;
+}
+
+/*
+================
+GL_LoadTexture
+================
+*/
+int GL_FindTexture( const char *name )
+{
+	gltexture_t	*tex;
+	uint		hash;
+
+	if( !name || !name[0] || !glw_state.initialized )
+		return 0;
+
+	if( Q_strlen( name ) >= sizeof( r_textures->name ))
+	{
+		MsgDev( D_ERROR, "GL_FindTexture: too long name %s\n", name );
+		return 0;
+	}
+
+	// see if already loaded
+	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+
+	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
+	{
+		if( tex->flags & TF_CUBEMAP )
+			continue;
+
+		if( !Q_stricmp( tex->name, name ))
+			return tex->texnum;
+	}
+
+	return 0;
 }
 
 /*

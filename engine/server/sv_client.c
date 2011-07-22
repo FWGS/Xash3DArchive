@@ -773,9 +773,9 @@ Writes all update values to a bitbuf
 */
 void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 {
-	int	i;
 	char	info[MAX_INFO_STRING];
-	
+	int	i;	
+
 	i = cl - svs.clients;
 
 	BF_WriteByte( msg, svc_updateuserinfo );
@@ -1635,6 +1635,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 		{
 			if( current == cl || current->state != cs_spawned )
 				continue;
+
 			if( !Q_stricmp( current->name, val ))
 				break;
 		}

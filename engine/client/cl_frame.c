@@ -146,10 +146,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 {
-	model_t	*mod;
-
-	mod = Mod_Handle( ent->curstate.modelindex );
-	if( !mod ) return false;
+	if( !ent->model ) return false;
 
 	// if entity is beam add it here
 	// because render doesn't know how to draw beams
@@ -179,7 +176,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	else
 	{
 		// check for adding this entity
-		if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, mod->name ))
+		if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
 			return false;
 
 		if( !R_AddEntity( ent, entityType ))

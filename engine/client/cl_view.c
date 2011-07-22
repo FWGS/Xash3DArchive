@@ -37,6 +37,7 @@ void V_SetupRefDef( void )
 	VectorCopy( cl.frame.local.client.punchangle, cl.refdef.punchangle );
 	clgame.viewent.curstate.modelindex = cl.frame.local.client.viewmodel;
 	clgame.viewent.model = Mod_Handle( clgame.viewent.curstate.modelindex );
+	clgame.viewent.curstate.number = cl.playernum + 1;
 	clgame.viewent.curstate.entityType = ET_NORMAL;
 	clgame.viewent.index = cl.playernum + 1;
 

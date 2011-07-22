@@ -216,6 +216,8 @@ static void UI_UpdateUserinfo( void )
 	Q_strncpy( player->userinfo, Cvar_Userinfo(), sizeof( player->userinfo ));
 	Q_strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
 	Q_strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
+	player->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
+	player->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
 }
 	
 void Host_Credits( void )

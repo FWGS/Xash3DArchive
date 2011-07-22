@@ -276,6 +276,15 @@ typedef struct
 
 typedef struct
 {
+	struct mstudiotex_s	*ptexture;	// array of textures with local copy of remapped textures
+	short		numtextures;	// textures count
+	short		topcolor;		// cached value
+	short		bottomcolor;	// cached value
+	model_t		*model;		// for catch model changes
+} remap_info_t;
+
+typedef struct
+{
 	int	(*pfnInitialize)( cl_enginefunc_t *pEnginefuncs, int iVersion );
 	int	(*pfnVidInit)( void );
 	void	(*pfnInit)( void );
@@ -302,6 +311,7 @@ typedef struct
 	void	(*pfnTxferPredictionData)( entity_state_t *ps, const entity_state_t *pps, clientdata_t *pcd, const clientdata_t *ppcd, weapon_data_t *wd, const weapon_data_t *pwd );
 	void	(*pfnTempEntUpdate)( double frametime, double client_time, double cl_gravity, struct tempent_s **ppTempEntFree, struct tempent_s **ppTempEntActive, int ( *Callback_AddVisibleEntity )( cl_entity_t *pEntity ), void ( *Callback_TempEntPlaySound )( struct tempent_s *pTemp, float damp ));
 	int	(*pfnGetStudioModelInterface)( int version, struct r_studio_interface_s **ppinterface, struct engine_studio_api_s *pstudio );
+	void	(*pfnChatInputPosition)( int *x, int *y );
 	void	(*pfnDrawNormalTriangles)( void );
 	void	(*pfnDrawTransparentTriangles)( void );
 	cl_entity_t *(*pfnGetUserEntity)( int index );
@@ -327,8 +337,10 @@ typedef struct
 	string		itemspath;		// path to items description for auto-complete func
 
 	cl_entity_t	*entities;		// dynamically allocated entity array
+	remap_info_t	**remap_info;		// store local copy of all remap textures for each entity
 
 	int		maxEntities;
+	int		maxRemapInfos;		// maxEntities + cl.viewEnt; also used for catch entcount
 
 	// movement values from server
 	movevars_t	movevars;
@@ -646,6 +658,16 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
 qboolean CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 qboolean CL_IsPlayerIndex( int idx );
+
+//
+// cl_remap.c
+//
+remap_info_t *CL_GetRemapInfoForEntity( cl_entity_t *e );
+void CL_AllocRemapInfo( int topcolor, int bottomcolor );
+void CL_FreeRemapInfo( remap_info_t *info );
+void R_StudioSetRemapColors( int top, int bottom );
+void CL_UpdateRemapInfo( int topcolor, int bottomcolor );
+void CL_ClearAllRemaps( void );
 
 //
 // cl_tent.c

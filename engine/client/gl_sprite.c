@@ -132,7 +132,7 @@ Mod_LoadSpriteModel
 load sprite model
 ====================
 */
-void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
+void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded )
 {
 	dsprite_t		*pin;
 	short		*numi;
@@ -140,7 +140,9 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 	dframetype_t	*pframetype;
 	int		i, size;
 
+	if( loaded ) *loaded = false;
 	pin = (dsprite_t *)buffer;
+	mod->type = mod_sprite;
 	i = pin->version;
 
 	if( pin->ident != IDSPRITEHEADER )
@@ -176,7 +178,7 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 	if( host.type == HOST_DEDICATED )
 	{
 		// skip frames loading
-		mod->type = mod_sprite;
+		if( loaded ) *loaded = true;	// done
 		psprite->numframes = 0;
 		return;
 	}
@@ -210,14 +212,12 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 	else 
 	{
 		MsgDev( D_ERROR, "%s has wrong number of palette colors %i (should be 256)\n", mod->name, numi );
-		Mem_FreePool( &mod->mempool );
 		return;
 	}
 
 	if( pin->numframes < 1 )
 	{
 		MsgDev( D_ERROR, "%s has invalid # of frames: %d\n", mod->name, pin->numframes );
-		Mem_FreePool( &mod->mempool );
 		return;
 	}
 
@@ -244,7 +244,7 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer )
 		if( pframetype == NULL ) break; // technically an error
 	}
 
-	mod->type = mod_sprite; // done
+	if( loaded ) *loaded = true;	// done
 }
 
 /*
@@ -255,7 +255,7 @@ Loading a bitmap image as sprite with multiple frames
 as pieces of input image
 ====================
 */
-void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
+void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean *loaded )
 {
 	byte		*src, *dst;
 	rgbdata_t		*pix, temp;
@@ -266,9 +266,12 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 	mspriteframe_t	*pspriteframe;
 	msprite_t		*psprite;
 
+	if( loaded ) *loaded = false;
 	Q_snprintf( texname, sizeof( texname ), "#%s", mod->name );
 	pix = FS_LoadImage( texname, buffer, size );
 	if( !pix ) return;	// bad image or something else
+
+	mod->type = mod_sprite;
 
 	if( pix->width % MAPSPRITE_SIZE )
 		w = pix->width - ( pix->width % MAPSPRITE_SIZE );
@@ -358,7 +361,8 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size )
 
 	FS_FreeImage( pix );
 	Mem_Free( temp.buffer );
-	mod->type = mod_sprite; // done
+
+	if( loaded ) *loaded = true;
 }
 
 /*

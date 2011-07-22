@@ -31,6 +31,12 @@ GNU General Public License for more details.
 #define DVIS_PHS		1
 #define ANIM_CYCLE		2
 
+// remapping info
+#define SUIT_HUE_START	192
+#define SUIT_HUE_END	223
+#define PLATE_HUE_START	160
+#define PLATE_HUE_END	191
+
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
 
 // model flags (stored in model_t->flags)

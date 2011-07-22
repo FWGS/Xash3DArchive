@@ -74,6 +74,28 @@ static qboolean R_StaticEntity( cl_entity_t *ent )
 
 /*
 ===============
+R_FollowEntity
+
+Follow entity is attached to another studiomodel and used last cached bones
+from parent
+===============
+*/
+static qboolean R_FollowEntity( cl_entity_t *ent )
+{
+	if( ent->model->type != mod_studio )
+		return false;
+
+	if( ent->curstate.movetype != MOVETYPE_FOLLOW )
+		return false;
+
+	if( ent->curstate.aiment <= 0 )
+		return false;
+
+	return true;
+}
+
+/*
+===============
 R_OpaqueEntity
 
 Opaque entity can be brush or studio model but sprite
@@ -315,6 +337,7 @@ void R_ClearScene( void )
 {
 	tr.num_solid_entities = tr.num_trans_entities = 0;
 	tr.num_static_entities = tr.num_mirror_entities = 0;
+	tr.num_child_entities = 0;
 }
 
 /*
@@ -337,6 +360,18 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 		return true; // done
 
 	clent->curstate.entityType = entityType;
+
+	if( R_FollowEntity( clent ))
+	{
+		// follow entity
+		if( tr.num_child_entities >= MAX_VISIBLE_PACKET )
+			return false;
+
+		tr.child_entities[tr.num_child_entities] = clent;
+		tr.num_child_entities++;
+
+		return true;
+	}
 
 	if( R_OpaqueEntity( clent ))
 	{

@@ -31,6 +31,7 @@ pm_shared\
 mainui\
 mainui\legacy
 utils\
+utils\makefont\
 utils\vgui\
 utils\vgui\include\
 utils\vgui\lib\win32_vc6\

@@ -1191,6 +1191,12 @@ void Cvar_Unlink( void )
 	convar_t	**prev;
 	int	count = 0;
 
+	if( Cvar_VariableInteger( "host_clientloaded" ))
+	{
+		MsgDev( D_NOTE, "can't unlink cvars while client is loaded\n" );
+		return;
+	}
+
 	prev = &cvar_vars;
 
 	while( 1 )

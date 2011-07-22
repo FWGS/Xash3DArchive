@@ -934,7 +934,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		if( !Q_strncmp( tex->name, "sky", 3 ))
 			out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
-		if( tex->name[0] == '*' || tex->name[0] == '!' )
+		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
 		if( !Q_strnicmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
@@ -1521,13 +1521,15 @@ void Mod_UnloadBrushModel( model_t *mod )
 Mod_LoadBrushModel
 =================
 */
-static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
+static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *loaded )
 {
 	int	i, j;
 	dheader_t	*header;
 	dmodel_t 	*bm;
-	
+
+	if( loaded ) *loaded = false;	
 	header = (dheader_t *)buffer;
+	loadmodel->type = mod_brush;
 	i = header->version;
 
 	switch( i )
@@ -1544,7 +1546,6 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 	}
 
 	// will be merged later
-	loadmodel->type = mod_brush;
 	if( world.loading ) world.version = i;
 	bmodel_version = i;	// share it
 
@@ -1651,6 +1652,8 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer )
 			mod = loadmodel;
 		}
 	}
+
+	if( loaded ) *loaded = true;	// all done
 }
 
 /*
@@ -1714,6 +1717,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 {
 	byte	*buf;
 	char	tempname[64];
+	qboolean	loaded;
 
 	if( !mod )
 	{
@@ -1749,20 +1753,20 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	switch( *(uint *)buf )
 	{
 	case IDSTUDIOHEADER:
-		Mod_LoadStudioModel( mod, buf );
+		Mod_LoadStudioModel( mod, buf, &loaded );
 		break;
 	case IDSPRITEHEADER:
-		Mod_LoadSpriteModel( mod, buf );
+		Mod_LoadSpriteModel( mod, buf, &loaded );
 		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
-		Mod_LoadBrushModel( mod, buf );
+		Mod_LoadBrushModel( mod, buf, &loaded );
 		break;
 	}
 
 	Mem_Free( buf ); 
 
-	if( mod->type == mod_bad )
+	if( !loaded )
 	{
 		Mod_FreeModel( mod );
 

@@ -64,12 +64,13 @@ typedef enum
 	TEX_DECAL,	// decals
 	TEX_VGUI,		// vgui fonts or images
 	TEX_CUBEMAP,	// cubemap textures (sky)
-	TEX_DETAIL	// detail textures
+	TEX_DETAIL,	// detail textures
+	TEX_REMAP		// local copy of remap texture
 } texType_t;
 
 typedef enum
 {
-	TF_STATIC		= BIT(0),		// don't free until Shader_FreeUnused()
+	TF_STATIC		= BIT(0),		// don't free until Image_FreeUnused()
 	TF_NOPICMIP	= BIT(1),		// ignore r_picmip resample rules
 	TF_UNCOMPRESSED	= BIT(2),		// don't compress texture in video memory
 	TF_CUBEMAP	= BIT(3),		// it's cubemap texture
@@ -206,10 +207,12 @@ typedef struct
 	gl_entity_t	mirror_entities[MAX_VISIBLE_PACKET];	// an entities that has mirror
 	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
 	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
+	cl_entity_t	*child_entities[MAX_VISIBLE_PACKET];	// entities with MOVETYPE_FOLLOW
 	uint		num_static_entities;
 	uint		num_mirror_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
+	uint		num_child_entities;
          
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
@@ -244,7 +247,7 @@ extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
 extern dlight_t		cl_elights[MAX_ELIGHTS];
-#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities)
+#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities)
 #define r_numStatics	(tr.num_static_entities)
 
 //
@@ -297,6 +300,7 @@ void GL_SetTextureType( GLenum texnum, GLenum type );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
 int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
 byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int out_h, qboolean isNormalMap );
+int GL_FindTexture( const char *name );
 void GL_FreeTexture( GLenum texnum );
 void GL_FreeImage( const char *name );
 void R_TextureList_f( void );
@@ -362,7 +366,7 @@ void GL_BuildLightmaps( void );
 // gl_sprite.c
 //
 void R_SpriteInit( void );
-void Mod_LoadSpriteModel( model_t *mod, const void *buffer );
+void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
 void R_DrawSpriteModel( cl_entity_t *e );
 
@@ -370,7 +374,7 @@ void R_DrawSpriteModel( cl_entity_t *e );
 // gl_studio.c
 //
 void R_StudioInit( void );
-void Mod_LoadStudioModel( model_t *mod, const void *buffer );
+void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded );
 void R_DrawStudioModel( cl_entity_t *e );
 
 //
@@ -423,8 +427,7 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen );
 void R_ScreenToWorld( const vec3_t screen, vec3_t point );
 qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType );
-void Mod_LoadSpriteModel( struct model_s *mod, const void *buffer );
-void Mod_LoadMapSprite( struct model_s *mod, const void *buffer, size_t size );
+void Mod_LoadMapSprite( struct model_s *mod, const void *buffer, size_t size, qboolean *loaded );
 void Mod_UnloadSpriteModel( struct model_s *mod );
 void Mod_UnloadStudioModel( struct model_s *mod );
 void Mod_UnloadBrushModel( struct model_s *mod );

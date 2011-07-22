@@ -307,7 +307,7 @@ typedef struct
 } mstudiobodyparts_t;
 
 // skin info
-typedef struct
+typedef struct mstudiotex_s
 {
 	char		name[64];
 	int		flags;

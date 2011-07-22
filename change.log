@@ -1,4 +1,4 @@
-build ????
+build 1613
 
 Client: fix drawing beams for 'solid' mode
 Image: fix BMP loader for 4-bit color bmp's
@@ -9,6 +9,10 @@ Render: fix sprite interpolation
 Render: fix angled sprites offset
 Render: implement detail textures like in Steam Half-Life (thx n00b)
 Client: rework env_funnel effect
+Engine: get full support for input, processing and drawing russian letters
+Console: add console commands 'messagemode' and 'messagemode2'
+Console: fix bug with autocomplete (enable sort for found cmds)
+Client: added HUD_ChatInputPosition for CS 1.6
 
 build 1598
 

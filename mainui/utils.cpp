@@ -611,13 +611,13 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 
 	if(((downY - upY - arrowHeight) - (((sl->numItems-1)*sl->generic.charHeight)/2)) < 2)
 	{
-		sl->scrollBarHeight = (downY - upY - arrowHeight) - (step*(sl->numItems-1));
+		sl->scrollBarHeight = (downY - upY - arrowHeight) - (step * (sl->numItems-1));
 		sl->scrollBarY = upY + arrowHeight + (step*sl->curItem);
 	}
 	else
 	{
-		sl->scrollBarHeight = downY - upY - arrowHeight - (((sl->numItems-1)*sl->generic.charHeight)/2);
-		sl->scrollBarY = upY + arrowHeight + (((sl->curItem)*sl->generic.charHeight)/2);
+		sl->scrollBarHeight = downY - upY - arrowHeight - (((sl->numItems-1) * sl->generic.charHeight) / 2);
+		sl->scrollBarY = upY + arrowHeight + (((sl->curItem) * sl->generic.charHeight)/2);
 	}
 
 	if( sl->scrollBarSliding )
@@ -714,6 +714,7 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 	w = sl->generic.width2;
 	h = sl->generic.charHeight;
 	y = sl->generic.y2 + sl->generic.charHeight;
+
 	for( i = sl->topItem; i < sl->topItem + sl->numRows; i++, y += sl->generic.charHeight )
 	{
 		if( !sl->itemNames[i] )

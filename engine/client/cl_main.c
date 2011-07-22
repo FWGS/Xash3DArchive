@@ -472,9 +472,6 @@ void CL_WritePacket( void )
 
 	// update download/upload slider.
 	Netchan_UpdateProgress( &cls.netchan );
-
-	// make sure what menu and CL_WritePacket catch changes
-	userinfo->modified = false;
 }
 
 /*
@@ -492,6 +489,9 @@ void CL_SendCmd( void )
 
 	// clc_move, userinfo etc
 	CL_WritePacket();
+
+	// make sure what menu and CL_WritePacket catch changes
+	userinfo->modified = false;
 }
 
 /*
