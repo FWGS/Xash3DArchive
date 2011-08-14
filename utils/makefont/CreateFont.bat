@@ -1,2 +1,2 @@
-makefont.exe -font "Arial" fonts.wad
+makefont.exe -font "Terminal" fonts.wad
 pause

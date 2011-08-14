@@ -1,3 +1,9 @@
+build ????
+
+Client: implement StudioRemapColors function
+Client: add simple shadows for stduiomodels (disabled like in GoldSrc)
+Client: fix some Paranoia bugs when custom renderer is disabled
+
 build 1613
 
 Client: fix drawing beams for 'solid' mode

@@ -156,8 +156,7 @@ void R_PushDlights( void )
 	dlight_t	*l;
 	int	i;
 
-	tr.dlightframecount = tr.framecount + 1;	// because the count hasn't
-						// advanced yet for this frame
+	tr.dlightframecount = tr.framecount;
 	l = cl_dlights;
 
 	RI.currententity = clgame.entities;
@@ -183,7 +182,7 @@ void R_PushDlights( void )
 =======================================================================
 */
 static uint	r_pointColor[3];
-static vec3_t	r_lightColors[MAXSTUDIOVERTS];
+static vec3_t	r_lightSpot;
 
 /*
 =================
@@ -221,6 +220,8 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 
 	if(( back < 0 ) == side )
 		return false;// didn't hit anything
+
+	VectorCopy( mid, r_lightSpot );
 
 	// check for impact on this node
 	surf = model->surfaces + node->firstsurface;
@@ -421,6 +422,18 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 
 /*
 =================
+R_GetLightSpot
+
+NOTE: must call R_LightForPoint first
+=================
+*/
+void R_GetLightSpot( vec3_t lightspot )
+{
+	if( lightspot ) VectorCopy( r_lightSpot, lightspot );
+}
+
+/*
+=================
 R_LightDir
 =================
 */
@@ -430,18 +443,6 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 	vec3_t	dir;
 	float	dist;
 	int	lnum;
-
-	if( RI.refdef.movevars )
-	{
-		// pre-defined light vector
-		lightDir[0] = RI.refdef.movevars->skyvec_x;
-		lightDir[1] = RI.refdef.movevars->skyvec_y;
-		lightDir[2] = RI.refdef.movevars->skyvec_z;
-	}
-	else
-	{
-		VectorSet( lightDir, 0.0f, 0.0f, -1.0f );
-	}
 
 	// add dynamic lights
 	if( radius > 0.0f && r_dynamic->integer )
@@ -472,7 +473,4 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 			VectorAdd( lightDir, dir, lightDir );
 		}
 	}
-
-	// normalize final direction
-	VectorNormalize( lightDir );
 }

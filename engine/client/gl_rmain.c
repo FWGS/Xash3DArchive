@@ -117,6 +117,28 @@ static qboolean R_OpaqueEntity( cl_entity_t *ent )
 
 /*
 ===============
+R_SolidEntityCompare
+
+Sorting opaque entities by model type
+===============
+*/
+static int R_SolidEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
+{
+	cl_entity_t	*ent1, *ent2;
+
+	ent1 = (cl_entity_t *)*a;
+	ent2 = (cl_entity_t *)*b;
+
+	if( ent1->model->type > ent2->model->type )
+		return 1;
+	if( ent1->model->type < ent2->model->type )
+		return -1;
+
+	return 0;
+}
+
+/*
+===============
 R_TransEntityCompare
 
 Sorting translucent entities by rendermode then by distance
@@ -167,8 +189,11 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 {
 	matrix4x4	worldToScreen;
-	qboolean behind;
-	float w;
+	qboolean	behind;
+	float	w;
+
+	if( !point || !screen )
+		return false;
 
 	Matrix4x4_Copy( worldToScreen, RI.worldviewProjectionMatrix );
 	screen[0] = worldToScreen[0][0] * point[0] + worldToScreen[0][1] * point[1] + worldToScreen[0][2] * point[2] + worldToScreen[0][3];
@@ -426,9 +451,6 @@ static void R_Clear( int bitMask )
 
 	bits &= bitMask;
 
-	if( bits & GL_STENCIL_BUFFER_BIT )
-		pglClearStencil( 128 );
-
 	pglClear( bits );
 
 	gldepthmin = 0.0f;
@@ -611,8 +633,8 @@ static void R_SetupFrame( void )
 	R_AnimateLight();
 	R_RunViewmodelEvents();
 
-	// g-cont. keep actual frame for all viewpasses
-	if( !RI.refdef.nextView ) tr.framecount++;
+	// sort opaque entities by model type to avoid drawing model shadows under alpha-surfaces
+	qsort( tr.solid_entities, tr.num_solid_entities, sizeof( cl_entity_t* ), R_SolidEntityCompare );
 
 	// sort translucents entities by rendermode and distance
 	qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );

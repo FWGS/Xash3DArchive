@@ -994,6 +994,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		pushed_p->ent = check;
 		VectorCopy( check->v.origin, pushed_p->origin );
 		VectorCopy( check->v.angles, pushed_p->angles );
+		pushed_p->fixangle = check->v.fixangle;
 		pushed_p++;
 
 		// calculate destination position
@@ -1026,7 +1027,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 				VectorCopy( p->origin, p->ent->v.origin );
 				VectorCopy( p->angles, p->ent->v.angles );
 				SV_LinkEdict( p->ent, (p->ent == check) ? true : false );
-				p->ent->v.fixangle = 0; // FIXME: save old fixangle state into pushed array ?
+				p->ent->v.fixangle = pushed_p->fixangle;
 			}
 			return check;
 		}

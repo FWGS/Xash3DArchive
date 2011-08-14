@@ -453,7 +453,7 @@ void CL_ParseEvent( sizebuf_t *msg )
 
 void CL_ParseCustomization( sizebuf_t *msg )
 {
-	// FIXME: ???
+	// TODO: ???
 }
 
 /*

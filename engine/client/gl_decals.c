@@ -1050,7 +1050,7 @@ void R_DecalRemoveAll( int textureIndex )
 	decal_t	*pdecal;
 	int	i;
 
-	if( textureIndex <= 0 || textureIndex >= MAX_TEXTURES )
+	if( textureIndex < 0 || textureIndex >= MAX_TEXTURES )
 	{
 		MsgDev( D_ERROR, "Decal has invalid texture!\n" );
 		return;
@@ -1060,7 +1060,7 @@ void R_DecalRemoveAll( int textureIndex )
 	{
 		pdecal = &gDecalPool[i];
 
-		if( pdecal->texture == textureIndex )
+		if( !textureIndex || pdecal->texture == textureIndex )
 			R_DecalUnlink( pdecal );
 	}
 }

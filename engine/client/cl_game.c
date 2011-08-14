@@ -511,7 +511,7 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 
 		rc = *prc;
 
-		// Sigh! some stupid modmakers set wrong rectangels in hud.txt 
+		// Sigh! some stupid modmakers set wrong rectangles in hud.txt 
 		if( rc.left <= 0 || rc.left > width ) rc.left = 0;
 		if( rc.top <= 0 || rc.top > height ) rc.top = 0;
 		if( rc.right <= 0 || rc.right > width ) rc.right = width;
@@ -2078,7 +2078,6 @@ static int pfnCheckParm( char *parm, char **ppnext )
 =============
 pfnGetMousePosition
 
-FIXME: apply ScreenToClient here ?
 =============
 */
 static void pfnGetMousePosition( int *mx, int *my )
@@ -2086,6 +2085,8 @@ static void pfnGetMousePosition( int *mx, int *my )
 	POINT	curpos;
 
 	GetCursorPos( &curpos );
+	ScreenToClient( host.hWnd, &curpos );
+
 	if( mx ) *mx = curpos.x;
 	if( my ) *my = curpos.y;
 }
@@ -2563,6 +2564,9 @@ model_t *CL_LoadModel( const char *modelname, int *index )
 int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 {
 	if( !pEnt ) return false;
+
+	// clear effects for all temp entities
+	if( !pEnt->index ) pEnt->curstate.effects = 0;
 
 	// let the render reject entity without model
 	return CL_AddVisibleEntity( pEnt, entityType );
@@ -3116,10 +3120,7 @@ convert world coordinates (x,y,z) into screen (x, y)
 */
 int TriWorldToScreen( float *world, float *screen )
 {
-	int	retval = 0;
-
-	if( !world || !screen )
-		return retval;
+	int	retval;
 
 	retval = R_WorldToScreen( world, screen );
 
@@ -3170,18 +3171,6 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 	pglFogfv( GL_FOG_COLOR, RI.fogColor );
 	pglHint( GL_FOG_HINT, GL_NICEST );
 }
-
-/*
-=============
-TriScreenToWorld
-
-convert screen coordinates (x,y) into world (x, y, z)
-=============
-*/
-void TriScreenToWorld( float *screen, float *world )
-{
-	R_ScreenToWorld( screen, world );
-} 
 
 /*
 =================
@@ -3429,7 +3418,7 @@ static triangleapi_t gTriApi =
 	TriBrightness,
 	TriCullFace,
 	TriSpriteTexture,
-	TriWorldToScreen,
+	R_WorldToScreen,	// NOTE: XPROJECT, YPROJECT should be done in client.dll
 	TriFog,
 	R_ScreenToWorld,
 };

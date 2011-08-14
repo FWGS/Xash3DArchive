@@ -510,7 +510,6 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pfnIgnore pmFilter )
 
 	for( i = 0; i < pmove->numphysent; i++ )
 	{
-
 		pe = &pmove->physents[i];
 
 		if( pmFilter != NULL && pmFilter( pe ))
@@ -519,8 +518,7 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pfnIgnore pmFilter )
 		if( pe->model && pe->solid == SOLID_NOT && pe->skin != 0 )
 			continue;
 
-		// FIXME: check studiomodels with flag 512 by each hitbox ?
-		// we ignore it for now
+		// ignore hitboxes because they hasn't contents
 		if( pe->studiomodel && pe->studiomodel->flags & STUDIO_TRACE_HITBOX )
 			continue;
 

@@ -281,6 +281,7 @@ typedef struct
 	short		topcolor;		// cached value
 	short		bottomcolor;	// cached value
 	model_t		*model;		// for catch model changes
+	int		modelindex;
 } remap_info_t;
 
 typedef struct

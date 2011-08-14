@@ -64,6 +64,7 @@ convar_t	*sv_clienttrace;
 convar_t	*sv_send_resources;
 convar_t	*sv_send_logos;
 convar_t	*sv_sendvelocity;
+convar_t	*sv_airmove;
 convar_t	*mp_consistency;
 convar_t	*serverinfo;
 convar_t	*physinfo;
@@ -635,6 +636,7 @@ void SV_Init( void )
 	Cvar_Get ("sv_background", "0", CVAR_READ_ONLY, "indicate what background map is running" );
 	Cvar_Get( "gamedir", GI->gamefolder, CVAR_SERVERINFO|CVAR_SERVERNOTIFY|CVAR_INIT, "game folder" );
 	Cvar_Get( "sv_alltalk", "1", 0, "allow to talking for all players (legacy, unused)" );
+	Cvar_Get( "sv_airmove", "1", CVAR_SERVERNOTIFY, "enable airmovement (legacy, unused)" );
 	Cvar_Get( "mp_autocrosshair", "0", 0, "allow auto crosshair in multiplayer (legacy, unused)" );
 		
 	// half-life shared variables

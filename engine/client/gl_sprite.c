@@ -825,6 +825,9 @@ static _inline qboolean R_SpriteHasLightmap( cl_entity_t *e, int texFormat )
 	if( texFormat != SPR_ALPHTEST )
 		return false;
 
+	if( e->curstate.effects & EF_FULLBRIGHT )
+		return false;
+
 	if( e->curstate.renderamt != 255 )
 		return false;
 

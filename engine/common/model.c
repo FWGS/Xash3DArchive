@@ -1504,7 +1504,8 @@ void Mod_UnloadBrushModel( model_t *mod )
 		for( i = 0; i < mod->numtextures; i++ )
 		{
 			tx = mod->textures[i];
-			if( !tx ) continue;	// free slot
+			if( !tx || tx->gl_texturenum == tr.defaultTexture )
+				continue;	// free slot
 
 			GL_FreeTexture( tx->gl_texturenum );	// main texture
 			GL_FreeTexture( tx->fb_texturenum );	// luma texture

@@ -237,6 +237,9 @@ usercmd_t CL_CreateCmd( void )
 
 	Q_memset( &cmd, 0, sizeof( cmd ));
 
+	// build list of all solid entities per next frame (exclude clients)
+	CL_SetSolidEntities ();
+
 	VectorCopy( cl.refdef.cl_viewangles, angles );
 	VectorCopy( cl.frame.local.client.origin, cl.data.origin );
 	VectorCopy( cl.refdef.cl_viewangles, cl.data.viewangles );
@@ -1506,6 +1509,10 @@ void CL_InitLocal( void )
 	Cvar_Get( "lightgamma", "1", CVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );
 	Cvar_Get( "direct", "1", CVAR_ARCHIVE, "direct lighting level (legacy, unused)" );
 	Cvar_Get( "voice_serverdebug", "0", 0, "debug voice (legacy, unused)" );
+
+	// interpolation cvars
+	Cvar_Get( "ex_interp", "0", 0, "" );
+	Cvar_Get( "ex_maxerrordistance", "0", 0, "" );
 
 	// server commands
 	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );

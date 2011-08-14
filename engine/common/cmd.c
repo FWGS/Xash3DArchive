@@ -59,6 +59,11 @@ void Cbuf_Init( void )
 	cmd_text.cursize = 0;
 }
 
+/*
+============
+Cbuf_GetSpace
+============
+*/
 void *Cbuf_GetSpace( cmdbuf_t *buf, int length )
 {
 	void    *data;
@@ -103,7 +108,6 @@ Cbuf_InsertText
 
 Adds command text immediately after the current command
 Adds a \n to the text
-FIXME: actually change the command buffer to do less copying
 ============
 */
 void Cbuf_InsertText( const char *text )
@@ -205,8 +209,8 @@ Cmd_StuffCmds_f
 
 Adds command line parameters as script statements
 Commands lead with a +, and continue until a - or another +
-xash +prog jctest.qp +cmd amlev1
-xash -nosound +cmd amlev1
+xash -dev 3 +map c1a0d
+xash -nosound -game bshift
 ===============
 */
 void Cmd_StuffCmds_f( void )

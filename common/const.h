@@ -112,7 +112,7 @@
 #define EF_NOREFLECT		256	// Entity won't reflecting in mirrors
 #define EF_REFLECTONLY		512	// Entity will be drawing only in mirrors
 #define EF_NOWATERCSG		1024	// Do not remove sides for func_water entity
-#define EF_MINLIGHT			2048	// Allways have some light (e.g. viewentity)
+					// Reserved bit
 #define EF_FULLBRIGHT		4096	// Just get fullbright
 #define EF_NOSHADOW			8192	// ignore shadow for this entity
 #define EF_MERGE_VISIBILITY		16384	// this entity allowed to merge vis (e.g. env_sky or portal camera)

@@ -261,6 +261,7 @@ typedef struct
 	edict_t		*ent;
 	vec3_t		origin;
 	vec3_t		angles;
+	int		fixangle;
 } sv_pushed_t;
 
 typedef struct

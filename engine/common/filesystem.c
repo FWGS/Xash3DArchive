@@ -1146,6 +1146,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		else if( !Q_stricmp( token, "gamedll" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->game_dll );
+			COM_FixSlashes( GameInfo->game_dll );
 		}
 		else if( !Q_stricmp( token, "type" ))
 		{

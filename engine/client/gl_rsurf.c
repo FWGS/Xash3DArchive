@@ -730,6 +730,9 @@ void R_BlendLightmaps( void )
 		case kRenderGlow:
 			return; // no lightmaps
 		}
+
+		if( RI.currententity->curstate.effects & EF_FULLBRIGHT )
+			return;	// disabled by user
 	}
 
 	if( !r_lightmap->integer )
@@ -1575,7 +1578,7 @@ void R_DrawMirrors( void )
 
 			RI = oldRI; // restore ref instance
 
-			// FIXME: draw mirror surface here
+			// TODO: draw mirror surface here
 		}
 
 		tr.mirror_entities[i].chain = NULL; // done
@@ -1751,11 +1754,13 @@ R_DrawWorld
 */
 void R_DrawWorld( void )
 {
-	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
-		return;
-
+	// paranoia issues: when gl_renderer is "0" we need have something valid for currententity
+	// to prevent crashing until HeadShield drawing.
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
+
+	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
+		return;
 
 	VectorCopy( RI.cullorigin, modelorg );
 	Q_memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));

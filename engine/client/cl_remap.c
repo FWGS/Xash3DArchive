@@ -151,7 +151,8 @@ void CL_DuplicateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomco
 	texture_t		*tx = NULL;
 	char		texname[128];
 	int		i, size, index;
-	byte		*raw;
+	byte		paletteBackup[768];
+	byte		*raw, *pal;
 
 	// save of the real texture index
 	index = ptexture->index;
@@ -168,9 +169,16 @@ void CL_DuplicateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomco
 
 	ASSERT( tx != NULL );
 
+	// backup original palette
+	pal = (byte *)(tx + 1) + (tx->width * tx->height);
+	Q_memcpy( paletteBackup, pal, 768 );
+
 	raw = CL_CreateRawTextureFromPixels( tx, &size, topcolor, bottomcolor );
 	ptexture->index = GL_LoadTexture( texname, raw, size, TF_FORCE_COLOR ); // do copy
 	GL_SetTextureType( ptexture->index, TEX_REMAP );
+
+	// restore original palette
+	Q_memcpy( pal, paletteBackup, 768 );
 }
 
 /*
@@ -274,7 +282,7 @@ void CL_AllocRemapInfo( int topcolor, int bottomcolor )
 	if( !phdr ) return;	// missed header ???
 
 	// NOTE: we must copy all the structures 'mstudiotexture_t' for easy acces when model is rendering
-	if( !clgame.remap_info[i] || clgame.remap_info[i]->model != RI.currentmodel )
+	if( !clgame.remap_info[i] || clgame.remap_info[i]->modelindex != RI.currententity->curstate.modelindex || clgame.remap_info[i]->model != RI.currentmodel )
 	{
 		// this code catches studiomodel change with another studiomodel with remap textures
 		// e.g. playermodel 'barney' with playermodel 'gordon'
@@ -290,6 +298,7 @@ void CL_AllocRemapInfo( int topcolor, int bottomcolor )
 	}
 
 	info->numtextures = phdr->numtextures;
+	info->modelindex = RI.currententity->curstate.modelindex;
 	info->model = RI.currentmodel;
 	info->topcolor = topcolor;
 	info->bottomcolor = bottomcolor;

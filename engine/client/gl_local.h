@@ -33,6 +33,9 @@ extern byte	*r_temppool;
 #define MAX_LIGHTMAPS	128
 #define SUBDIVIDE_SIZE	64
 
+#define NUMVERTEXNORMALS	162
+#define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
+
 //#define MIRROR_TEST
 
 // refparams
@@ -320,6 +323,7 @@ void R_AnimateLight( void );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius );
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, qboolean useAmbient, float radius );
+void R_GetLightSpot( vec3_t lightspot );
 
 //
 // gl_rmain.c

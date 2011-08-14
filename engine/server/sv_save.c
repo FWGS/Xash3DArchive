@@ -431,7 +431,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 
 		tr = SV_Move( testspot, vec3_origin, vec3_origin, testend, MOVE_NOMONSTERS, NULL );
 
-		// FIXME: this code may does wrong result on moving brushes e.g. func_tracktrain
+		// NOTE: this code may does wrong result on moving brushes e.g. func_tracktrain
 		if( tr.fraction != 1.0f && !tr.allsolid )
 		{
 			// check impact plane normal

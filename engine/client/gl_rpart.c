@@ -30,8 +30,6 @@ PARTICLES MANAGEMENT
 
 ==============================================================
 */
-
-#define NUMVERTEXNORMALS	162
 #define SPARK_COLORCOUNT	9
 #define TRACER_WIDTH	0.5f
 #define SIMSHIFT		10

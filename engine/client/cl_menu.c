@@ -21,14 +21,6 @@ GNU General Public License for more details.
 #include "input.h"
 
 static MENUAPI	GetMenuAPI;
-
-static dllfunc_t menu_funcs[] =
-{
-{ "GetMenuAPI", (void **) &GetMenuAPI },
-{ NULL, NULL }
-};
-
-dll_info_t menu_dll = { "menu.dll", menu_funcs, false };
 static void UI_UpdateUserinfo( void );
 
 menu_static_t	menu;
@@ -936,7 +928,7 @@ void UI_UnloadProgs( void )
 	// deinitialize game
 	menu.dllFuncs.pfnShutdown();
 
-	Sys_FreeLibrary( &menu_dll );
+	Com_FreeLibrary( menu.hInstance );
 	Mem_FreePool( &menu.mempool );
 	Q_memset( &menu, 0, sizeof( menu ));
 }
@@ -952,17 +944,37 @@ qboolean UI_LoadProgs( void )
 	// setup globals
 	menu.globals = &gpGlobals;
 
-	if( !Sys_LoadLibrary( &menu_dll )) return false;
-	menu.mempool = Mem_AllocPool( "Menu Pool" );
-	menu.hInstance = menu_dll.link;
+	if(!( menu.hInstance = Com_LoadLibrary( va( "%s/menu.dll", GI->dll_path ), false )))
+	{
+		FS_AllowDirectPaths( true );
+
+		if(!( menu.hInstance = Com_LoadLibrary( "../menu.dll", false )))
+		{
+			FS_AllowDirectPaths( false );
+			return false;
+		}
+
+		FS_AllowDirectPaths( false );
+	}
+
+	if(!( GetMenuAPI = (MENUAPI)Com_GetProcAddress( menu.hInstance, "GetMenuAPI" )))
+	{
+		Com_FreeLibrary( menu.hInstance );
+		MsgDev( D_NOTE, "UI_LoadProgs: can't init menu API\n" );
+		menu.hInstance = NULL;
+		return false;
+	}
 
 	// make local copy of engfuncs to prevent overwrite it with user dll
 	Q_memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
+
+	menu.mempool = Mem_AllocPool( "Menu Pool" );
 
 	if( !GetMenuAPI( &menu.dllFuncs, &gpEngfuncs, menu.globals ))
 	{
 		Com_FreeLibrary( menu.hInstance );
 		MsgDev( D_NOTE, "UI_LoadProgs: can't init menu API\n" );
+		Mem_FreePool( &menu.mempool );
 		menu.hInstance = NULL;
 		return false;
 	}

@@ -90,12 +90,19 @@ sets cl.refdef view values
 */
 void V_CalcRefDef( void )
 {
+	int	passcount = 0;
+
+	// g-cont. keep actual frame for all viewpasses
+	tr.framecount++;
+
 	do
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
 		R_RenderFrame( &cl.refdef, true );
 		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );
+
+
 }
 
 //============================================================================

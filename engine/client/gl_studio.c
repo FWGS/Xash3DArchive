@@ -22,12 +22,14 @@ GNU General Public License for more details.
 #include "pm_local.h"
 #include "gl_local.h"
 #include "cl_tent.h"
+#include "cl_tent.h"
 
 // NOTE: enable this if you want merge both 'model' and 'modelT' files into one model slot.
 // otherwise it's uses two slots in models[] array for models with external textures
 #define STUDIO_MERGE_TEXTURES
 
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
+#define MAXARRAYVERTS	6144	// used for draw shadows
 
 static vec3_t hullcolor[8] = 
 {
@@ -45,6 +47,7 @@ typedef struct studiolight_s
 {
 	vec3_t		lightvec;			// light vector
 	vec3_t		lightcolor;		// ambient light color
+	vec3_t		lightspot;		// potential coords where placed lightsource
 
 	vec3_t		blightvec[MAXSTUDIOBONES];	// ambient lightvectors per bone
 	vec3_t		dlightvec[MAX_DLIGHTS][MAXSTUDIOBONES];
@@ -61,8 +64,8 @@ convar_t			*r_studio_lighting;
 convar_t			*r_drawviewmodel;
 convar_t			*r_customdraw_playermodel;
 convar_t			*cl_himodels;
-cvar_t			r_shadows = { "r_shadows", "0", 0, 1 };	// dead cvar. especially disabled
-cvar_t			r_shadowalpha = { "r_shadowalpha", "0.5", 0, 0 };
+cvar_t			r_shadows = { "r_shadows", "0", 0, 0 };	// dead cvar. especially disabled
+cvar_t			r_shadowalpha = { "r_shadowalpha", "0.5", 0, 0.8f };
 static r_studio_interface_t	*pStudioDraw;
 static float		aliasXscale, aliasYscale;	// software renderer scale
 static matrix3x4		g_aliastransform;		// software renderer transform
@@ -77,9 +80,8 @@ static vec3_t		g_chromeup[MAXSTUDIOBONES];	// chrome vector "up" in bone referen
 static int		g_chromeage[MAXSTUDIOBONES];	// last time chrome vectors were updated
 static vec3_t		g_xformverts[MAXSTUDIOVERTS];
 static vec3_t		g_xformnorms[MAXSTUDIOVERTS];
-static vec3_t		g_xarrayverts[MAXSTUDIOVERTS];
-static vec3_t		g_xarraynorms[MAXSTUDIOVERTS];
-static uint		g_xarrayelems[MAXSTUDIOVERTS*6];
+static vec3_t		g_xarrayverts[MAXARRAYVERTS];
+static uint		g_xarrayelems[MAXARRAYVERTS*6];
 static uint		g_nNumArrayVerts;
 static uint		g_nNumArrayElems;
 static vec3_t		g_lightvalues[MAXSTUDIOVERTS];
@@ -100,8 +102,10 @@ player_info_t		*m_pPlayerInfo;
 studiohdr_t		*m_pStudioHeader;
 studiohdr_t		*m_pTextureHeader;
 float			m_flGaitMovement;
+pmtrace_t			g_shadowTrace;
+vec3_t			g_mvShadowVec;
 int			g_nTopColor, g_nBottomColor;	// remap colors
-int			g_nFaceFlags;
+int			g_nFaceFlags, g_nForceFaceFlags;
 
 /*
 ====================
@@ -1250,7 +1254,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		VectorNormalize( tmp );
 		VectorNegate( RI.vright, v_left );
 
-		if( g_nFaceFlags & STUDIO_NF_CHROME )
+		if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 		{
 			float	angle = anglemod( RI.refdef.time * 40 );
 			RotatePointAroundVector( chromeupvec, tmp, v_left, angle - 180 );
@@ -1357,6 +1361,36 @@ static int R_StudioCheckBBox( void )
 
 /*
 ===============
+R_StudioGetShadowImpactAndDir
+===============
+*/
+void R_StudioGetShadowImpactAndDir( void )
+{
+	float		angle;
+	vec3_t		skyAngles, origin, end;
+
+	if( !RI.refdef.movevars ) return; // e.g. in menu
+
+	// convert skyvec into angles then back into vector to avoid 0 0 0 direction
+	VectorAngles( (float *)&RI.refdef.movevars->skyvec_x, skyAngles );
+	angle = skyAngles[YAW] / 180 * M_PI;
+
+	Matrix3x4_OriginFromMatrix( g_bonestransform[0], origin );
+	SinCos( angle, &g_mvShadowVec[1], &g_mvShadowVec[0] );
+
+// g-cont. looks ugly. disabled
+//	R_LightDir( origin, g_mvShadowVec, 256.0f );
+
+	VectorSet( g_mvShadowVec, -g_mvShadowVec[0], -g_mvShadowVec[1], -1.0f );
+	VectorNormalizeFast( g_mvShadowVec );
+
+	VectorMA( origin, 256.0f, g_mvShadowVec, end );
+
+	g_shadowTrace = PM_PlayerTrace( clgame.pmove, origin, end, PM_STUDIO_IGNORE, 2, -1, NULL );
+}
+
+/*
+===============
 R_StudioDynamicLight
 
 ===============
@@ -1381,12 +1415,22 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
 	// setup light dir
-	R_LightDir( origin, plight->lightvec, ent->model->radius );
+	if( RI.refdef.movevars )
+	{
+		// pre-defined light vector
+		plight->lightvec[0] = RI.refdef.movevars->skyvec_x;
+		plight->lightvec[1] = RI.refdef.movevars->skyvec_y;
+		plight->lightvec[2] = RI.refdef.movevars->skyvec_z;
+	}
+	else VectorSet( plight->lightvec, 0.0f, 0.0f, -1.0f );
+
 	VectorCopy( plight->lightvec, lightinfo->plightvec );
 
 	// setup ambient lighting
 	invLight = (ent->curstate.effects & EF_INVLIGHT) ? true : false;
 	R_LightForPoint( origin, &ambient, invLight, true, 0.0f ); // ignore dlights
+
+	R_GetLightSpot( plight->lightspot );	// shadow stuff
 
 	plight->lightcolor[0] = ambient.r * (1.0f / 255.0f);
 	plight->lightcolor[1] = ambient.g * (1.0f / 255.0f);
@@ -1394,7 +1438,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 
 	VectorCopy( plight->lightcolor, lightinfo->color );
 	lightinfo->shadelight = (ambient.r + ambient.g + ambient.b) / 3;
-	lightinfo->ambientlight = lightinfo->shadelight * 0.1f;
+	lightinfo->ambientlight = lightinfo->shadelight;
 
 	if( !ent || !ent->model || !r_dynamic->integer )
 		return;
@@ -1429,6 +1473,8 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 			{
 				dist = 1.0f / dist;
 				VectorScale( vec, dist, vec );
+				lightinfo->ambientlight += atten;
+				lightinfo->shadelight += atten;
 			}
                                         
 			Matrix3x4_VectorIRotate( g_lighttransform[i], vec, plight->dlightvec[plight->numdlights][i] );
@@ -1440,6 +1486,13 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 		plight->dlightcolor[plight->numdlights][2] = dl->color.b * (1.0f / 255.0f);
 		plight->numdlights++;
 	}
+
+	// clamp lighting so it doesn't overbright as much
+	if( lightinfo->ambientlight > 128 )
+		lightinfo->ambientlight = 128;
+
+	if( lightinfo->ambientlight + lightinfo->shadelight > 192 )
+		lightinfo->shadelight = 192 - lightinfo->ambientlight;
 }
 
 /*
@@ -1499,6 +1552,8 @@ void R_StudioEntityLight( alight_t *lightinfo )
 			{
 				dist = 1.0f / dist;
 				VectorScale( vec, dist, vec );
+				lightinfo->ambientlight += atten;
+				lightinfo->shadelight += atten;
 			}
                                         
 			Matrix3x4_VectorIRotate( g_lighttransform[i], vec, plight->elightvec[plight->numelights][i] );
@@ -1510,6 +1565,13 @@ void R_StudioEntityLight( alight_t *lightinfo )
 		plight->elightcolor[plight->numelights][2] = el->color.b * (1.0f / 255.0f);
 		plight->numelights++;
 	}
+
+	// clamp lighting so it doesn't overbright as much
+	if( lightinfo->ambientlight > 128 )
+		lightinfo->ambientlight = 128;
+
+	if( lightinfo->ambientlight + lightinfo->shadelight > 192 )
+		lightinfo->shadelight = 192 - lightinfo->ambientlight;
 }
 
 /*
@@ -1527,6 +1589,8 @@ void R_StudioSetupLighting( alight_t *lightinfo )
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
 		Matrix3x4_VectorIRotate( g_lighttransform[i], lightinfo->plightvec, plight->blightvec[i] );
+
+	R_StudioGetShadowImpactAndDir();
 }
 
 /*
@@ -1666,7 +1730,7 @@ R_StudioDrawPoints
 */
 static void R_StudioDrawPoints( void )
 {
-	int		i, j, flags, m_skinnum;
+	int		i, j, m_skinnum;
 	byte		*pvertbone;
 	byte		*pnormbone;
 	vec3_t		*pstudioverts;
@@ -1711,13 +1775,13 @@ static void R_StudioDrawPoints( void )
 	lv = (float *)g_lightvalues;
 	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
 	{
-		flags = ptexture[pskinref[pmesh[j].skinref]].flags;
+		g_nFaceFlags = ptexture[pskinref[pmesh[j].skinref]].flags;
 
 		for( i = 0; i < pmesh[j].numnorms; i++, lv += 3, pstudionorms++, pnormbone++ )
 		{
-			R_StudioLighting( lv, *pnormbone, flags, (float *)pstudionorms );
+			R_StudioLighting( lv, *pnormbone, g_nFaceFlags, (float *)pstudionorms );
 
-			if(( flags & STUDIO_NF_CHROME ) || ( g_nFaceFlags & STUDIO_NF_CHROME ))
+			if(( g_nFaceFlags & STUDIO_NF_CHROME ) || ( g_nForceFaceFlags & STUDIO_NF_CHROME ))
 				R_StudioSetupChrome( g_chrome[(float (*)[3])lv - g_lightvalues], *pnormbone, (float *)pstudionorms );
 		}
 	}
@@ -1730,7 +1794,7 @@ static void R_StudioDrawPoints( void )
 		pmesh = (mstudiomesh_t *)((byte *)m_pStudioHeader + m_pSubModel->meshindex) + j;
 		ptricmds = (short *)((byte *)m_pStudioHeader + pmesh->triindex);
 
-		flags = ptexture[pskinref[pmesh->skinref]].flags;
+		g_nFaceFlags = ptexture[pskinref[pmesh->skinref]].flags;
 		s = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].width;
 		t = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].height;
 
@@ -1738,17 +1802,17 @@ static void R_StudioDrawPoints( void )
 		if( ptexture[pskinref[pmesh->skinref]].index < 0 || ptexture[pskinref[pmesh->skinref]].index > MAX_TEXTURES )
 			ptexture[pskinref[pmesh->skinref]].index = tr.defaultTexture;
 
-		if( flags & STUDIO_NF_TRANSPARENT )
+		if( g_nFaceFlags & STUDIO_NF_TRANSPARENT )
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
 			alpha = 1.0f;
 		}
-		else if(( flags & STUDIO_NF_ADDITIVE ) || ( g_nFaceFlags & STUDIO_NF_CHROME ))
+		else if(( g_nFaceFlags & STUDIO_NF_ADDITIVE ) || ( g_nForceFaceFlags & STUDIO_NF_CHROME ))
 		{
 			GL_SetRenderMode( kRenderTransAdd );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 
-			if( g_nFaceFlags & STUDIO_NF_CHROME )
+			if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 			{
 				color24	*clr;
 				float	scale;
@@ -1761,17 +1825,16 @@ static void R_StudioDrawPoints( void )
 		else
 		{
 			GL_SetRenderMode( g_iRenderMode );
-			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
+
 			if( g_iRenderMode == kRenderNormal )
 			{
 				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 				alpha = 1.0f;
 			}
-
-
+			else alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 		}
 
-		if(!( g_nFaceFlags & STUDIO_NF_CHROME ))
+		if(!( g_nForceFaceFlags & STUDIO_NF_CHROME ))
 		{
 			GL_Bind( GL_TEXTURE0, ptexture[pskinref[pmesh->skinref]].index );
 		}
@@ -1828,11 +1891,11 @@ static void R_StudioDrawPoints( void )
 					g_xarrayelems[g_nNumArrayElems++] = g_nNumArrayVerts;
 				}
 
-				if( flags & STUDIO_NF_CHROME || ( g_nFaceFlags & STUDIO_NF_CHROME ))
+				if( g_nFaceFlags & STUDIO_NF_CHROME || ( g_nForceFaceFlags & STUDIO_NF_CHROME ))
 					pglTexCoord2f( g_chrome[ptricmds[1]][0] * s, g_chrome[ptricmds[1]][1] * t );
 				else pglTexCoord2f( ptricmds[2] * s, ptricmds[3] * t );
 
-				if(!( g_nFaceFlags & STUDIO_NF_CHROME ))
+				if(!( g_nForceFaceFlags & STUDIO_NF_CHROME ))
                                         {
 					if( g_iRenderMode == kRenderTransAdd )
 					{
@@ -1853,6 +1916,8 @@ static void R_StudioDrawPoints( void )
 
 				av = g_xformverts[ptricmds[0]];
 				pglVertex3f( av[0], av[1], av[2] );
+
+				ASSERT( g_nNumArrayVerts < MAXARRAYVERTS ); 
 				VectorCopy( av, g_xarrayverts[g_nNumArrayVerts] ); // store off vertex
 				g_nNumArrayVerts++;
 			}
@@ -2247,7 +2312,7 @@ R_StudioGetForceFaceFlags
 */
 int R_StudioGetForceFaceFlags( void )
 {
-	return g_nFaceFlags;
+	return g_nForceFaceFlags;
 }
 
 /*
@@ -2258,7 +2323,7 @@ R_StudioSetForceFaceFlags
 */
 void R_StudioSetForceFaceFlags( int flags )
 {
-	g_nFaceFlags = flags;
+	g_nForceFaceFlags = flags;
 }
 
 /*
@@ -2342,27 +2407,6 @@ static int pfnIsHardware( void )
 
 /*
 ===============
-R_StudioGetShadowImpactAndDir
-===============
-*/
-void R_StudioGetShadowImpactAndDir( pmtrace_t *ptr, vec3_t lightdir )
-{
-	vec3_t		start, end;
-	studiolight_t	*plight;
-
-	plight = &g_studiolight;
-
-	VectorSet( lightdir, -0.5, -0.2, -1.0f );
-	VectorNormalizeFast( lightdir );
-	VectorCopy( RI.currententity->origin, start );
-	start[2] += 78;
-	VectorMA( start, 1024.0f, lightdir, end );
-
-	*ptr = PM_PlayerTrace( clgame.pmove, start, end, PM_STUDIO_IGNORE, 2, -1, NULL );
-}
-
-/*
-===============
 R_StudioDeformShadow
 
 Deform vertices by specified lightdir
@@ -2370,50 +2414,42 @@ Deform vertices by specified lightdir
 */
 void R_StudioDeformShadow( void )
 {
-	float		*verts, planedist, dist;
-	vec3_t		planenormal, lightdir, lightdir2, point;
+	float		*verts, dist, dist2;
 	int		numVerts;
-	pmtrace_t		tr;
 
-	R_StudioGetShadowImpactAndDir( &tr, lightdir );
-
-	Matrix3x4_VectorIRotate( g_rotationmatrix, lightdir, lightdir2 );
-	Matrix3x4_VectorIRotate( g_rotationmatrix, tr.plane.normal, planenormal );
-//	VectorScale( planenormal, RI.currententity->curstate.scale, planenormal );
-
-	VectorSubtract( tr.endpos, RI.currententity->origin, point );
-	planedist = DotProduct( point, tr.plane.normal ) + 1;
-	dist = -1.0f / DotProduct( lightdir2, planenormal );
-	VectorScale( lightdir2, dist, lightdir2 );
+	dist = g_shadowTrace.plane.dist + 1.0f;
+	dist2 = -1.0f / DotProduct( g_mvShadowVec, g_shadowTrace.plane.normal );
+	VectorScale( g_mvShadowVec, dist2, g_mvShadowVec );
 
 	verts = g_xarrayverts[0];
 	numVerts = g_nNumArrayVerts;
 
-	for( ; numVerts > 0; numVerts--, verts += 3 )
+	for( numVerts = 0; numVerts < g_nNumArrayVerts; numVerts++, verts += 3 )
 	{
-		dist = DotProduct( verts, tr.plane.normal ) - planedist;
-		if( dist > 0 ) VectorMA( verts, dist, lightdir, verts );
+		dist2 = DotProduct( verts, g_shadowTrace.plane.normal ) - dist;
+		if( dist2 > 0 ) VectorMA( verts, dist2, g_mvShadowVec, verts );
 	}
 }
 
 static void R_StudioDrawPlanarShadow( void )
 {
+	if( RI.currententity->curstate.effects & EF_NOSHADOW )
+		return;
+
 	R_StudioDeformShadow ();
 
-//	if( glState.stencilEnabled )
-//		pglEnable( GL_STENCIL_TEST );
+	if( glState.stencilEnabled )
+		pglEnable( GL_STENCIL_TEST );
 
 	pglEnableClientState( GL_VERTEX_ARRAY );
 	pglVertexPointer( 3, GL_FLOAT, 12, g_xarrayverts );
-
-	Msg( "DrawShadow( %i %i )\n", g_nNumArrayVerts, g_nNumArrayElems );
 
 	if( GL_Support( GL_DRAW_RANGEELEMENTS_EXT ))
 		pglDrawRangeElementsEXT( GL_TRIANGLES, 0, g_nNumArrayVerts, g_nNumArrayElems, GL_UNSIGNED_INT, g_xarrayelems );
 	else pglDrawElements( GL_TRIANGLES, g_nNumArrayElems, GL_UNSIGNED_INT, g_xarrayelems );
 
-//	if( glState.stencilEnabled )
-//		pglDisable( GL_STENCIL_TEST );
+	if( glState.stencilEnabled )
+		pglDisable( GL_STENCIL_TEST );
 
 	pglDisableClientState( GL_VERTEX_ARRAY );
 }
@@ -2422,9 +2458,10 @@ static void R_StudioDrawPlanarShadow( void )
 ===============
 GL_StudioDrawShadow
 
+NOTE: this code sucessfully working with ShadowHack only in Release build
 ===============
 */
-void _cdecl GL_StudioDrawShadow( void )
+static void GL_StudioDrawShadow( void )
 {
 	int	rendermode;
 	float	shadow_alpha;
@@ -2436,41 +2473,34 @@ void _cdecl GL_StudioDrawShadow( void )
 
 	if( r_shadows.value != 0.0f )
 	{
-		if( RI.currententity->curstate.movetype != MOVETYPE_FLY )
+		if( RI.currententity->baseline.movetype != MOVETYPE_FLY )
 		{
 			rendermode = RI.currententity->baseline.rendermode;
 
-			if( rendermode == kRenderNormal )
+			if( rendermode == kRenderNormal && RI.currententity != &clgame.viewent )
 			{
-				shadow_alpha = 1.0 - r_shadowalpha.value * 0.5f;
+				shadow_alpha = 1.0f - r_shadowalpha.value * 0.5f;
 				pglDisable( GL_TEXTURE_2D );
-//				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 				pglEnable( GL_BLEND );
+				pglShadeModel( GL_FLAT );
 				shadow_alpha2 = 1.0 - shadow_alpha;
 
 				pglColor4f( 0.0f, 0.0f, 0.0f, shadow_alpha2 );
 
-//				if( flt_100DB994 == 0.0 || flt_107BA8A8 < 0.5 )
-//					depthmode = GL_LESS;
-//				else
-					depthmode = GL_GREATER;
-//				pglDepthFunc( depthmode );
+				depthmode = GL_LESS;
+				pglDepthFunc( depthmode );
 
 				R_StudioDrawPlanarShadow();
 
-//				if( flt_100DB994 == 0.0 || flt_107BA8A8 < 0.5 )
-					depthmode2 = GL_LEQUAL;
-//				else
-//					depthmode2 = GL_GEQUAL;
+				depthmode2 = GL_LEQUAL;
+				pglDepthFunc( depthmode2 );
 
-//				pglDepthFunc( depthmode2 );
 				pglEnable( GL_TEXTURE_2D );
 				pglDisable( GL_BLEND );
 
 				pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-
-//				if( flt_100DAF14 != 0.0 )
-					pglShadeModel( GL_SMOOTH );
+				pglShadeModel( GL_SMOOTH );
 			}
 		}
 	}
@@ -2986,7 +3016,6 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 		if( CL_GetEntityByIndex( tr.child_entities[i]->curstate.aiment ) == e )
 		{
 			// copy the parent origin for right frustum culling
-			// FIXME: we really need to cull follow entities?
 			VectorCopy( e->origin, tr.child_entities[i]->origin );
 
 			RI.currententity = tr.child_entities[i];

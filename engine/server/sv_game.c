@@ -1343,7 +1343,6 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 =================
 pfnEntitiesInPVS
 
-FIXME: rewrite this code. get rid of hack
 =================
 */
 edict_t *pfnEntitiesInPVS( edict_t *pplayer )
@@ -1367,7 +1366,7 @@ edict_t *pfnEntitiesInPVS( edict_t *pplayer )
 
 		if( pEdict->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pEdict->v.aiment ))
 		{
-			// HACKHACK to transfer weapons across the levels (Retribution issues)
+			// force all items across level even it is not visible
 			if( pEdict->v.aiment == EDICT_NUM( 1 ))
 			{
 				pEdict->v.chain = chain;
@@ -1524,6 +1523,10 @@ int pfnDropToFloor( edict_t* e )
 	end[2] -= 256;
 
 	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
+
+	// HACKHACK: to prevent falling stiiting_scientist from 'c1a0'
+	if( trace.startsolid && SV_IsValidEdict( trace.ent ) && trace.ent->v.movetype == MOVETYPE_PUSHSTEP )
+		return -1;
 
 	if( trace.allsolid )
 		return -1;

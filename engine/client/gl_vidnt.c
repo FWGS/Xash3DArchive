@@ -1327,8 +1327,8 @@ static void GL_SetDefaults( void )
 	{
 		pglDisable( GL_STENCIL_TEST );
 		pglStencilMask( ( GLuint ) ~0 );
-		pglStencilFunc( GL_EQUAL, 128, 0xFF );
-		pglStencilOp( GL_KEEP, GL_KEEP, GL_INCR );
+		pglStencilFunc( GL_EQUAL, 0, ~0 );
+		pglStencilOp( GL_KEEP, GL_INCR, GL_INCR );
 	}
 
 	pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );

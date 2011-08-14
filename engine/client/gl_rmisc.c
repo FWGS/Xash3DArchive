@@ -28,7 +28,7 @@ typedef struct
 } dmaterial_t;
 
 // default rules for apply detail textures.
-// move this to external script ?
+// maybe move this to external script?
 static const dmaterial_t detail_table[] =
 {
 { "crt",		"dt_conc",	'C', 0, 0 },	// concrete
@@ -54,7 +54,7 @@ static const dmaterial_t detail_table[] =
 { "drt",		"dt_ground%i",	'D', 1, 5 },
 { "out",		"dt_ground%i",	'D', 1, 5 },
 { "grass",	"dt_grass1",	'D', 0, 0 },
-{ "mud",		"dt_carpet1",	'D', 0, 0 },	// FIXME
+{ "mud",		"dt_carpet1",	'D', 0, 0 },
 { "vent",		"dt_ssteel1",	'V', 1, 4 },	// vent
 { "duct",		"dt_ssteel1",	'V', 1, 4 },
 { "tile",		"dt_smooth%i",	'T', 1, 2 },
@@ -134,7 +134,7 @@ static const char *R_DetailTextureForName( const char *name )
 		return NULL;
 	if( !Q_strnicmp( name, "translucent", 11 ))
 		return NULL;
-	if( !Q_strnicmp( name, "3dsky", 5 ))
+	if( !Q_strnicmp( name, "3dsky", 5 ))	// xash-mod support :-)
 		return NULL;
 	if( name[0] == '@' )
 		return NULL;
@@ -152,7 +152,8 @@ static const char *R_DetailTextureForName( const char *name )
 			return table->detail;
 		}
 	}
-	return "dt_smooth1"; // default
+
+	return NULL;
 }
 
 void R_CreateDetailTexturesList( const char *filename )
@@ -272,13 +273,7 @@ void R_NewMap( void )
 
 	// clear out efrags in case the level hasn't been reloaded
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
-	{
 		cl.worldmodel->leafs[i].efrags = NULL;
-		cl.worldmodel->leafs[i].visframe = 0;
-	}
-
-	for( i = 0; i < cl.worldmodel->numnodes; i++ )
-		cl.worldmodel->nodes[i].visframe = 0;
 
 	tr.skytexturenum = -1;
 	r_viewleaf = r_oldviewleaf = NULL;
