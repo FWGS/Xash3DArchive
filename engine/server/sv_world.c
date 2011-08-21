@@ -1114,9 +1114,14 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		}
 
 		// completely ignore all edicts but brushes
+#if 0
+		// this causes problems in HLFX 0.6 with link nodes through physics brushes. Dsiabled.
 		if( clip->type == MOVE_NOMONSTERS && modType != mod_brush )
 			continue;
-
+#else
+		if( clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP )
+			continue;
+#endif
 		if( clip->type == MOVE_WORLDONLY )
 		{
 			// accept only real bsp models with FL_WORLDBRUSH set

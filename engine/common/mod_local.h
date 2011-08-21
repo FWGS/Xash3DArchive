@@ -63,6 +63,10 @@ typedef struct
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 	size_t		visdatasize;	// actual size of the visdata
 	qboolean		loading;		// true if worldmodel is loading
+
+	vec3_t		mins;		// real accuracy world bounds
+	vec3_t		maxs;
+	vec3_t		size;
 } world_static_t;
 
 extern world_static_t	world;

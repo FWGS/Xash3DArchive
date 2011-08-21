@@ -270,11 +270,17 @@ qboolean Image_SaveTGA( const char *name, rgbdata_t *pix );
 qboolean Image_SaveBMP( const char *name, rgbdata_t *pix );
 
 //
+// img_quant.c
+//
+rgbdata_t *Image_Quantize( rgbdata_t *pic );
+
+//
 // img_utils.c
 //
 void Image_Reset( void );
 rgbdata_t *ImagePack( void );
 byte *Image_Copy( size_t size );
+void Image_CopyParms( rgbdata_t *src );
 qboolean Image_ValidSize( const char *name );
 qboolean Image_LumpValidSize( const char *name );
 

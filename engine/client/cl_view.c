@@ -83,6 +83,160 @@ void V_SetupRefDef( void )
 
 /*
 ===============
+V_SetupOverviewState
+
+Get initial overview values
+===============
+*/
+void V_SetupOverviewState( void )
+{
+	ref_overview_t	*ov = &clgame.overView;
+	float		mapAspect, screenAspect, aspect;
+
+	ov->rotated = ( world.size[1] <= world.size[0] ) ? true : false;
+
+	// calculate nearest aspect
+	mapAspect = world.size[!ov->rotated] / world.size[ov->rotated];
+	screenAspect = (float)glState.width / (float)glState.height;
+	aspect = max( mapAspect, screenAspect );
+
+	ov->zNear = world.maxs[2];
+	ov->zFar = world.mins[2];
+	ov->flZoom = ( 8192.0f / world.size[ov->rotated] ) / aspect;
+
+	VectorAverage( world.mins, world.maxs, ov->origin );
+}
+
+/*
+===============
+V_WriteOverviewScript
+
+Create overview scrip file
+===============
+*/
+void V_WriteOverviewScript( void )
+{
+	ref_overview_t	*ov = &clgame.overView;
+	string		filename;
+	file_t		*f;
+
+	Q_snprintf( filename, sizeof( filename ), "overviews/%s.txt", clgame.mapname );
+
+	f = FS_Open( filename, "w", false );
+	if( !f ) return;
+
+	FS_Printf( f, "// overview description file for %s.bsp\n\n", clgame.mapname );
+	FS_Print( f, "global\n{\n" );
+	FS_Printf( f, "\tZOOM\t%.2f\n", ov->flZoom );
+	FS_Printf( f, "\tORIGIN\t%.f\t%.f\t%.f\n", ov->origin[0], ov->origin[1], ov->zFar + 1 );
+	FS_Printf( f, "\tROTATED\t%i\n", ov->rotated ? 1 : 0 );
+	FS_Print( f, "}\n\nlayer\n{\n" );
+	FS_Printf( f, "\tIMAGE\t\"overviews/%s.bmp\"\n", clgame.mapname );
+	FS_Printf( f, "\tHEIGHT\t%.f\n", ov->zFar + 1 );	// ???
+	FS_Print( f, "}\n" );
+
+	FS_Close( f );
+}
+
+/*
+===============
+V_ProcessOverviewCmds
+
+Transform user movement into overview adjust
+===============
+*/
+void V_ProcessOverviewCmds( usercmd_t *cmd )
+{
+	ref_overview_t	*ov = &clgame.overView;
+	int		sign = 1;
+
+	if( !gl_overview->integer ) return;
+
+	if( ov->flZoom < 0.0f ) sign = -1;
+
+	if( cmd->upmove > 0.0f ) ov->zNear += 1.0f;
+	else if( cmd->upmove < 0.0f ) ov->zNear -= 1.0f;
+
+	if( cmd->buttons & IN_JUMP ) ov->zFar += 1.0f;
+	else if( cmd->buttons & IN_DUCK ) ov->zFar -= 1.0f;
+
+	if( cmd->buttons & IN_FORWARD ) ov->origin[ov->rotated] -= sign * 1.0f;
+	else if( cmd->buttons & IN_BACK ) ov->origin[ov->rotated] += sign * 1.0f;
+
+	if( ov->rotated )
+	{
+		if( cmd->buttons & ( IN_RIGHT|IN_MOVERIGHT ))
+			ov->origin[0] -= sign * 1.0f;
+		else if( cmd->buttons & ( IN_LEFT|IN_MOVELEFT ))
+			ov->origin[0] += sign * 1.0f;
+	}
+	else
+	{
+		if( cmd->buttons & ( IN_RIGHT|IN_MOVERIGHT ))
+			ov->origin[1] += sign * 1.0f;
+		else if( cmd->buttons & ( IN_LEFT|IN_MOVELEFT ))
+			ov->origin[1] -= sign * 1.0f;
+	}
+
+	if( cmd->buttons & IN_ATTACK ) ov->flZoom += 0.01f;
+	else if( cmd->buttons & IN_ATTACK2 ) ov->flZoom -= 0.01f;
+
+	if( ov->flZoom == 0.0f ) ov->flZoom = 0.0001f; // to prevent disivion by zero
+}
+
+/*
+===============
+V_MergeOverviewRefdef
+
+merge refdef with overview settings
+===============
+*/
+void V_MergeOverviewRefdef( ref_params_t *fd )
+{
+	ref_overview_t	*ov = &clgame.overView;
+	float		aspect;
+	float		size_x, size_y;
+	vec2_t		mins, maxs;
+
+	if( !gl_overview->integer ) return;
+
+	// NOTE: Xash3D may use 16:9 or 16:10 aspects
+	aspect = (float)glState.width / (float)glState.height;
+
+	size_x = fabs( 8192.0f / ov->flZoom );
+	size_y = fabs( 8192.0f / (ov->flZoom * aspect ));
+
+	// compute rectangle
+	ov->xLeft = -(size_x / 2);
+	ov->xRight = (size_x / 2);
+	ov->xTop = -(size_y / 2);
+	ov->xBottom = (size_y / 2);
+
+	if( gl_overview->integer == 1 )
+	{
+		Con_NPrintf( 0, " Overview: Zoom %.2f, Map Origin (%.2f, %.2f, %.2f), Z Min %.2f, Z Max %.2f, Rotated %i\n",
+		ov->flZoom, ov->origin[0], ov->origin[1], ov->origin[2], ov->zNear, ov->zFar, ov->rotated );
+	}
+
+	VectorCopy( ov->origin, fd->vieworg );
+	fd->vieworg[2] = ov->zFar + ov->zNear;
+	Vector2Copy( fd->vieworg, mins );
+	Vector2Copy( fd->vieworg, maxs );
+
+	mins[!ov->rotated] += ov->xLeft;
+	maxs[!ov->rotated] += ov->xRight;
+	mins[ov->rotated] += ov->xTop;
+	maxs[ov->rotated] += ov->xBottom;
+
+	fd->viewangles[0] = 90.0f;
+	fd->viewangles[1] = 90.0f;
+	fd->viewangles[2] = (ov->rotated) ? (ov->flZoom < 0.0f) ? 180.0f : 0.0f : (ov->flZoom < 0.0f) ? -90.0f : 90.0f;
+
+	Mod_SetOrthoBounds( mins, maxs );
+}
+
+/*
+===============
 V_CalcRefDef
 
 sets cl.refdef view values
@@ -98,6 +252,7 @@ void V_CalcRefDef( void )
 	do
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
+		V_MergeOverviewRefdef( &cl.refdef );
 		R_RenderFrame( &cl.refdef, true );
 		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );

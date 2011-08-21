@@ -294,6 +294,10 @@ SOURCE=.\common\imagelib\img_main.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\imagelib\img_quant.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\imagelib\img_tga.c
 # End Source File
 # Begin Source File

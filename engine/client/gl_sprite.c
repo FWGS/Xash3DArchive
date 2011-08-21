@@ -268,7 +268,9 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean 
 
 	if( loaded ) *loaded = false;
 	Q_snprintf( texname, sizeof( texname ), "#%s", mod->name );
+	host.overview_loading = true;
 	pix = FS_LoadImage( texname, buffer, size );
+	host.overview_loading = false;
 	if( !pix ) return;	// bad image or something else
 
 	mod->type = mod_sprite;

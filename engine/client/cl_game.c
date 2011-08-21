@@ -2210,7 +2210,7 @@ pfnIsSpectateOnly
 */
 static int pfnIsSpectateOnly( void )
 {
-	// TODO: check for proxie and dev_overview 2
+	// TODO: check for proxie
 	return 0;
 }
 

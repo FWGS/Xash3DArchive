@@ -992,9 +992,23 @@ static void Mod_LoadVertexes( const dlump_t *l )
 	loadmodel->numvertexes = count;
 	out = loadmodel->vertexes = Mem_Alloc( loadmodel->mempool, count * sizeof( mvertex_t ));
 
+	if( world.loading ) ClearBounds( world.mins, world.maxs );
+
 	for( i = 0; i < count; i++, in++, out++ )
 	{
 		VectorCopy( in->point, out->position );
+		if( world.loading ) AddPointToBounds( in->point, world.mins, world.maxs );
+	}
+
+	if( !world.loading ) return;
+
+	VectorSubtract( world.maxs, world.mins, world.size );
+
+	for( i = 0; i < 3; i++ )
+	{
+		// spread the mins / maxs by a pixel
+		world.mins[i] -= 1;
+		world.maxs[i] += 1;
 	}
 }
 
@@ -1974,6 +1988,7 @@ void Mod_LoadCacheFile( const char *filename, cache_user_t *cu )
 	name[j] = '\0';
 
 	buf = FS_LoadFile( name, &size, false );
+	if( !buf || !size ) Host_Error( "LoadCacheFile: ^1can't load %s^7\n", filename );
 	cu->data = Mem_Alloc( com_studiocache, size );
 	Q_memcpy( cu->data, buf, size );
 	Mem_Free( buf );

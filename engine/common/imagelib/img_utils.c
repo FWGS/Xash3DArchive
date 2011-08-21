@@ -1176,7 +1176,7 @@ rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 
 	pic->buffer = Mem_Realloc( host.imagepool, pic->buffer, image.size );
 	Q_memcpy( pic->buffer, image.tempbuffer, image.size );
-	Mem_Free( pic->palette );
+	if( pic->palette ) Mem_Free( pic->palette );
 	pic->flags = image.flags;
 	pic->palette = NULL;
 
@@ -1207,6 +1207,9 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 
 	// update format to RGBA if any
 	if( flags & IMAGE_FORCE_RGBA ) pic = Image_DecompressInternal( pic );
+
+	// quantize image
+	if( flags & IMAGE_QUANTIZE ) pic = Image_Quantize( pic );
 
 	// NOTE: flip and resample algorythms can't difference palette size
 	if( flags & IMAGE_PALTO24 ) Image_ConvertPalTo24bit( pic );

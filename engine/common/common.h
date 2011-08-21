@@ -303,6 +303,7 @@ typedef struct host_parm_s
 	qboolean		input_enabled;	// vgui override mouse & keyboard input
 	qboolean		shutdown_issued;	// engine is shutting down
 	qboolean		decal_loading;	// nasty hack to tell imagelib about decal
+	qboolean		overview_loading;	// another nasty hackk to tell imagelib about ovierview
 
 	char		rootdir[256];	// member root directory
 	char		gamefolder[64];	// it's a default gamefolder	
@@ -451,6 +452,7 @@ typedef enum
 	IMAGE_ROUNDFILLER	= BIT(22),	// round image to Pow2 and fill unused entries with single color	
 	IMAGE_FORCE_RGBA	= BIT(23),	// force image to RGBA buffer
 	IMAGE_MAKE_LUMA	= BIT(24),	// create luma texture from indexed
+	IMAGE_QUANTIZE	= BIT(25),	// make indexed image from 24 or 32- bit image
 } imgFlags_t;
 
 typedef struct rgbdata_s

@@ -269,7 +269,9 @@ usercmd_t CL_CreateCmd( void )
 	// because is potential backdoor for cheating
 	cmd.msec = ms;
 
-	if( cl.background || cl.refdef.intermission || cls.demoplayback )
+	V_ProcessOverviewCmds( &cmd );
+
+	if( cl.background || cl.refdef.intermission || cls.demoplayback || gl_overview->integer )
 	{
 		VectorCopy( angles, cl.refdef.cl_viewangles );
 		VectorCopy( angles, cmd.viewangles );
@@ -1071,6 +1073,8 @@ void CL_PrepVideo( void )
 	CL_ClearWorld ();
 
 	R_NewMap(); // tell the render about new map
+
+	V_SetupOverviewState(); // set overview bounds
 
 	// must be called after lightmap loading!
 	clgame.dllFuncs.pfnVidInit();

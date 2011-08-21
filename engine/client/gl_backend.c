@@ -62,8 +62,8 @@ void GL_BackendEndFrame( void )
 		r_stats.c_world_polys, r_stats.c_brush_polys, r_stats.c_studio_polys, r_stats.c_sprite_polys );
 		break;		
 	case 2:
-		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "visible leafs:\n%3i leafs",
-		r_stats.c_world_leafs );
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "visible leafs:\n%3i leafs\ncurrent leaf %3i",
+		r_stats.c_world_leafs, r_viewleaf - cl.worldmodel->leafs );
 		break;
 	case 3:
 		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i studio models drawn\n%3i sprites drawn",
@@ -441,6 +441,12 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 		flags |= IMAGE_RESAMPLE;
 		height = 200;
 		width = 320;
+		break;
+	case VID_MAPSHOT:
+		V_WriteOverviewScript();		// store overview script too
+		flags |= IMAGE_RESAMPLE|IMAGE_QUANTIZE;	// GoldSrc request overviews in 8-bit format
+		height = 768;
+		width = 1024;
 		break;
 	}
 

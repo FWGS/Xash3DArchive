@@ -3431,6 +3431,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	event_state_t	*es;
 	event_args_t	args;
 	event_info_t	*ei = NULL;
+	float		*viewOrg = NULL;
 	int		j, leafnum, slot, bestslot;
 	int		invokerIndex = 0;
 	byte		*mask = NULL;
@@ -3563,8 +3564,17 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 		if(!( flags & FEV_GLOBAL ))
 		{
+			int	clientnum;
+
+			clientnum = cl - svs.clients;
+			viewOrg = viewPoint[clientnum];
+
+			// Invasion issues: wrong camera position received in ENGINE_SET_PVS
+			if( cl->pViewEntity && !VectorCompare( viewOrg, cl->pViewEntity->v.origin ))
+				viewOrg = cl->pViewEntity->v.origin;
+
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
-			leafnum = Mod_PointLeafnum( cl->edict->v.origin ) - 1;
+			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
 			if( mask && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}

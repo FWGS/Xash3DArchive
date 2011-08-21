@@ -141,6 +141,7 @@ typedef struct
 	qboolean		drawWorld;	// ignore world for drawing PlayerModel
 	qboolean		thirdPerson;	// thirdperson camera is enabled
 	qboolean		isSkyVisible;	// sky is visible
+	qboolean		drawOrtho;	// draw world as orthogonal projection	
 
 	ref_params_t	refdef;		// actual refdef
 
@@ -348,9 +349,14 @@ void Matrix4x4_FromArrayFloatGL( matrix4x4 out, const float in[16] );
 void Matrix4x4_Concat( matrix4x4 out, const matrix4x4 in1, const matrix4x4 in2 );
 void Matrix4x4_ConcatTranslate( matrix4x4 out, float x, float y, float z );
 void Matrix4x4_ConcatRotate( matrix4x4 out, float angle, float x, float y, float z );
+void Matrix4x4_ConcatScale( matrix4x4 out, float x );
+void Matrix4x4_ConcatScale3( matrix4x4 out, float x, float y, float z );
 void Matrix4x4_CreateTranslate( matrix4x4 out, float x, float y, float z );
 void Matrix4x4_CreateRotate( matrix4x4 out, float angle, float x, float y, float z );
+void Matrix4x4_CreateScale( matrix4x4 out, float x );
+void Matrix4x4_CreateScale3( matrix4x4 out, float x, float y, float z );
 void Matrix4x4_CreateProjection(matrix4x4 out, float xMax, float xMin, float yMax, float yMin, float zNear, float zFar);
+void Matrix4x4_CreateOrtho(matrix4x4 m, float xLeft, float xRight, float yBottom, float yTop, float zNear, float zFar);
 void Matrix4x4_CreateModelview( matrix4x4 out );
 
 
@@ -444,6 +450,7 @@ void R_RemoveEfrags( struct cl_entity_s *ent );
 void R_AddEfrags( struct cl_entity_s *ent );
 void R_DecalRemoveAll( int texture );
 byte *Mod_GetCurrentVis( void );
+void Mod_SetOrthoBounds( float *mins, float *maxs );
 void R_NewMap( void );
 
 /*
@@ -591,6 +598,7 @@ extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_showtextures;
 extern convar_t	*gl_compress_textures;
 extern convar_t	*gl_luminance_textures;
+extern convar_t	*gl_overview;	// draw map in overview mode
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;
 extern convar_t	*gl_picmip;

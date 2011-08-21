@@ -110,6 +110,20 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	Q_memcpy( palette, buf_p, cbPalBytes );
 
+	if( host.overview_loading && bhdr.bitsPerPixel == 8 )
+	{
+		// convert green background into alpha-layer, make opacity for all other entries
+		for( i = 0; i < bhdr.colors; i++ )
+		{
+			if( palette[i][0] == 0 && palette[i][1] == 255 && palette[i][2] == 0 )
+			{
+				palette[i][0] = palette[i][1] = palette[i][2] = palette[i][3] = 0;
+				image.flags |= IMAGE_HAS_ALPHA;
+			}
+			else palette[i][3] = 255;
+		}
+	}
+
 	if( image.cmd_flags & IL_KEEP_8BIT && bhdr.bitsPerPixel == 8 )
 	{
 		pixbuf = image.palette = Mem_Alloc( host.imagepool, 1024 );
@@ -282,8 +296,10 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	file_t		*pfile = NULL;
 	BITMAPFILEHEADER	bmfh;
 	BITMAPINFOHEADER	bmih;
+	RGBQUAD		rgrgbPalette[256];
 	dword		cbBmpBits;
 	byte		*pb, *pbBmpBits;
+	dword		cbPalBytes = 0;
 	dword		biTrueWidth;
 	int		pixel_size;
 	int		i, x, y;
@@ -298,6 +314,10 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	// get image description
 	switch( pix->type )
 	{
+	case PF_INDEXED_24:
+	case PF_INDEXED_32:
+		pixel_size = 1;
+		break;
 	case PF_RGB_24:
 		pixel_size = 3;
 		break;
@@ -316,34 +336,57 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	// after create sprite or lump image, it's just standard requiriments 
 	biTrueWidth = ((pix->width + 3) & ~3);
 	cbBmpBits = biTrueWidth * pix->height * pixel_size;
+	if( pixel_size == 1 ) cbPalBytes = 256 * sizeof( RGBQUAD );
 
 	// Bogus file header check
 	bmfh.bfType = MAKEWORD( 'B', 'M' );
-	bmfh.bfSize = sizeof(bmfh) + sizeof(bmih) + cbBmpBits;
+	bmfh.bfSize = sizeof( bmfh ) + sizeof( bmih ) + cbBmpBits + cbPalBytes;
 	bmfh.bfReserved1 = 0;
 	bmfh.bfReserved2 = 0;
-	bmfh.bfOffBits = sizeof(bmfh) + sizeof(bmih);
+	bmfh.bfOffBits = sizeof( bmfh ) + sizeof( bmih ) + cbPalBytes;
 
 	// write header
-	FS_Write( pfile, &bmfh, sizeof(bmfh));
+	FS_Write( pfile, &bmfh, sizeof( bmfh ));
 
 	// size of structure
-	bmih.biSize = sizeof(bmih);
+	bmih.biSize = sizeof( bmih );
 	bmih.biWidth = biTrueWidth;
 	bmih.biHeight = pix->height;
 	bmih.biPlanes = 1;
-	bmih.biBitCount = (pixel_size == 3) ? 24 : 32;
+	bmih.biBitCount = pixel_size * 8;
 	bmih.biCompression = BI_RGB;
 	bmih.biSizeImage = cbBmpBits;
 	bmih.biXPelsPerMeter = 0;
 	bmih.biYPelsPerMeter = 0;
-	bmih.biClrUsed = 0;
+	bmih.biClrUsed = ( pixel_size == 1 ) ? 256 : 0;
 	bmih.biClrImportant = 0;
 	
 	// Write info header
-	FS_Write( pfile, &bmih, sizeof(bmih));
+	FS_Write( pfile, &bmih, sizeof( bmih ));
 
 	pbBmpBits = Mem_Alloc( host.imagepool, cbBmpBits );
+
+	if( pixel_size == 1 )
+	{
+		pb = pix->palette;
+
+		// copy over used entries
+		for( i = 0; i < (int)bmih.biClrUsed; i++ )
+		{
+			rgrgbPalette[i].rgbRed = *pb++;
+			rgrgbPalette[i].rgbGreen = *pb++;
+			rgrgbPalette[i].rgbBlue = *pb++;
+
+			// bmp feature - can store 32-bit palette if present
+			// some viewers e.g. fimg.exe can show alpha-chanell for it
+			if( pix->type == PF_INDEXED_32 )
+				rgrgbPalette[i].rgbReserved = *pb++;
+			else rgrgbPalette[i].rgbReserved = 0;
+		}
+
+		// write palette
+		FS_Write( pfile, rgrgbPalette, cbPalBytes );
+	}
 
 	pb = pix->buffer;
 
@@ -353,14 +396,24 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 
 		for( x = 0; x < bmih.biWidth; x++ )
 		{
-			pbBmpBits[i*pixel_size+0] = pb[x*pixel_size+2];
-			pbBmpBits[i*pixel_size+1] = pb[x*pixel_size+1];
-			pbBmpBits[i*pixel_size+2] = pb[x*pixel_size+0];
+			if( pixel_size == 1 )
+			{
+				// 8-bit
+				pbBmpBits[i] = pb[x];
+			}
+			else
+			{
+				// 24 bit
+				pbBmpBits[i*pixel_size+0] = pb[x*pixel_size+2];
+				pbBmpBits[i*pixel_size+1] = pb[x*pixel_size+1];
+				pbBmpBits[i*pixel_size+2] = pb[x*pixel_size+0];
+			}
 
 			if( pixel_size == 4 ) // write alpha channel
 				pbBmpBits[i*pixel_size+3] = pb[x*pixel_size+3];
 			i++;
 		}
+
 		pb += bmih.biWidth * pixel_size;
 	}
 

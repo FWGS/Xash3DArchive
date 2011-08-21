@@ -440,7 +440,9 @@ static void R_Clear( int bitMask )
 {
 	int	bits;
 
-	pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+	if( gl_overview->integer )
+		pglClearColor( 0.0f, 1.0f, 0.0f, 1.0f ); // green background (Valve rules)
+	else pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 
 	bits = GL_DEPTH_BUFFER_BIT;
 
@@ -453,8 +455,17 @@ static void R_Clear( int bitMask )
 
 	pglClear( bits );
 
-	gldepthmin = 0.0f;
-	gldepthmax = 1.0f;
+	// change ordering for overview
+	if( RI.drawOrtho )
+	{
+		gldepthmin = 1.0f;
+		gldepthmax = 0.0f;
+	}
+	else
+	{
+		gldepthmin = 0.0f;
+		gldepthmax = 1.0f;
+	}
 	pglDepthRange( gldepthmin, gldepthmax );
 }
 
@@ -473,6 +484,55 @@ static float R_GetFarClip( void )
 
 /*
 ===============
+R_SetupFrustumOrtho
+===============
+*/
+static void R_SetupFrustumOrtho( void )
+{
+	ref_overview_t	*ov = &clgame.overView;
+	float		orgOffset;
+	int		i;
+
+	// 0 - left
+	// 1 - right
+	// 2 - down
+	// 3 - up
+	// 4 - farclip
+	// 5 - nearclip
+
+	// setup the near and far planes.
+	orgOffset = DotProduct( RI.vieworg, RI.vforward );
+	VectorNegate( RI.vforward, RI.frustum[4].normal );
+	RI.frustum[4].dist = -ov->zFar - orgOffset;
+
+	VectorCopy( RI.vforward, RI.frustum[5].normal );
+	RI.frustum[5].dist = ov->zNear + orgOffset;
+
+	// left and right planes...
+	orgOffset = DotProduct( RI.vieworg, RI.vright );
+	VectorCopy( RI.vright, RI.frustum[0].normal );
+	RI.frustum[0].dist = ov->xLeft + orgOffset;
+
+	VectorNegate( RI.vright, RI.frustum[1].normal );
+	RI.frustum[1].dist = -ov->xRight - orgOffset;
+
+	// top and buttom planes...
+	orgOffset = DotProduct( RI.vieworg, RI.vup );
+	VectorCopy( RI.vup, RI.frustum[3].normal );
+	RI.frustum[3].dist = ov->xTop + orgOffset;
+
+	VectorNegate( RI.vup, RI.frustum[2].normal );
+	RI.frustum[2].dist = -ov->xBottom - orgOffset;
+
+	for( i = 0; i < 6; i++ )
+	{
+		RI.frustum[i].type = PLANE_NONAXIAL;
+		RI.frustum[i].signbits = SignbitsForPlane( RI.frustum[i].normal );
+	}
+}
+
+/*
+===============
 R_SetupFrustum
 ===============
 */
@@ -486,6 +546,13 @@ static void R_SetupFrustum( void )
 	// 2 - down
 	// 3 - up
 	// 4 - farclip
+	// 5 - nearclip
+
+	if( RI.drawOrtho )
+	{
+		R_SetupFrustumOrtho();
+		return;
+	}
 
 	// rotate RI.vforward right by FOV_X/2 degrees
 	RotatePointAroundVector( RI.frustum[0].normal, RI.vup, RI.vforward, -( 90 - RI.refdef.fov_x / 2 ));
@@ -519,6 +586,26 @@ R_SetupProjectionMatrix
 static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
 {
 	GLdouble	xMin, xMax, yMin, yMax, zNear, zFar;
+
+	if( RI.drawOrtho )
+	{
+		ref_overview_t	*ov = &clgame.overView;
+		float		zNear, zFar;
+
+		if( gl_test->integer )
+		{
+			zNear = -8192.0f;
+			zFar = 8192.0f;
+		}
+		else
+		{
+			zNear = ov->zNear;
+			zFar = ov->zFar;
+		}
+
+		Matrix4x4_CreateOrtho( m, ov->xLeft, ov->xRight, ov->xTop, ov->xBottom, zNear, zFar );
+		return;
+	}
 
 	RI.farClip = R_GetFarClip();
 
@@ -979,7 +1066,7 @@ R_BeginFrame
 */
 void R_BeginFrame( qboolean clearScene )
 {
-	if( gl_clear->integer && clearScene && cls.state != ca_cinematic )
+	if(( gl_clear->integer || gl_overview->integer ) && clearScene && cls.state != ca_cinematic )
 	{
 		pglClear( GL_COLOR_BUFFER_BIT );
 	}
@@ -1028,6 +1115,7 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.clipFlags = 15;
 	RI.drawWorld = drawWorld;
 	RI.thirdPerson = cl.thirdperson;
+	RI.drawOrtho = gl_overview->integer;
 
 	// adjust field of view for widescreen
 	if( glState.wideScreen && r_adjust_fov->integer )

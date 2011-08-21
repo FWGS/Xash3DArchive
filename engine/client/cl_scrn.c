@@ -216,7 +216,11 @@ void SCR_MakeScreenShot( void )
 	case scrshot_skyshot:
 		iRet = VID_CubemapShot( cls.shotname, cl_envshot_size->integer, cls.envshot_vieworg, true );
 		break;
-	default: return; // does nothing
+	case scrshot_mapshot:
+		iRet = VID_ScreenShot( cls.shotname, VID_MAPSHOT );
+		break;
+	case scrshot_inactive:
+		return;
 	}
 
 	// report

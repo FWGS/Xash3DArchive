@@ -109,6 +109,30 @@ remap_info_t *CL_GetRemapInfoForEntity( cl_entity_t *e )
 
 /*
 ====================
+CL_CmpStudioTextures
+
+return true if equal
+====================
+*/
+qboolean CL_CmpStudioTextures( int numtexs, mstudiotexture_t *p1, mstudiotexture_t *p2 )
+{
+	int	i;
+
+	if( !p1 || !p2 ) return false;
+
+	for( i = 0; i < numtexs; i++, p1++, p2++ )
+	{
+		if( p1->flags & STUDIO_NF_COLORMAP )
+			continue;	// colormaps always has different indexes
+
+		if( p1->index != p2->index )
+			return false;
+	} 
+	return true;
+}
+
+/*
+====================
 CL_CreateRawTextureFromPixels
 
 Convert texture_t struct into mstudiotexture_t prototype
@@ -281,8 +305,11 @@ void CL_AllocRemapInfo( int topcolor, int bottomcolor )
 	phdr = (studiohdr_t *)Mod_Extradata( RI.currentmodel );
 	if( !phdr ) return;	// missed header ???
 
+	src = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
+	dst = (clgame.remap_info[i] ? clgame.remap_info[i]->ptexture : NULL); 
+
 	// NOTE: we must copy all the structures 'mstudiotexture_t' for easy acces when model is rendering
-	if( !clgame.remap_info[i] || clgame.remap_info[i]->modelindex != RI.currententity->curstate.modelindex || clgame.remap_info[i]->model != RI.currentmodel )
+	if( !CL_CmpStudioTextures( phdr->numtextures, src, dst ) || clgame.remap_info[i]->model != RI.currentmodel )
 	{
 		// this code catches studiomodel change with another studiomodel with remap textures
 		// e.g. playermodel 'barney' with playermodel 'gordon'
@@ -298,7 +325,6 @@ void CL_AllocRemapInfo( int topcolor, int bottomcolor )
 	}
 
 	info->numtextures = phdr->numtextures;
-	info->modelindex = RI.currententity->curstate.modelindex;
 	info->model = RI.currentmodel;
 	info->topcolor = topcolor;
 	info->bottomcolor = bottomcolor;

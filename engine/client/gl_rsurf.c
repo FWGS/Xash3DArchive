@@ -31,6 +31,8 @@ typedef struct
 static vec3_t		modelorg;       // relative to viewpoint
 static vec3_t		modelmins;
 static vec3_t		modelmaxs;
+static vec2_t		world_orthocenter;
+static vec2_t		world_orthohalf;
 static byte		visbytes[MAX_MAP_LEAFS/8];
 static uint		r_blocklights[BLOCK_WIDTH*BLOCK_HEIGHT*3];
 static glpoly_t		*fullbright_polys[MAX_TEXTURES];
@@ -45,6 +47,12 @@ static void LM_UploadBlock( int lightmapnum );
 byte *Mod_GetCurrentVis( void )
 {
 	return Mod_LeafPVS( r_viewleaf, cl.worldmodel );
+}
+
+void Mod_SetOrthoBounds( float *mins, float *maxs )
+{
+	Vector2Average( maxs, mins, world_orthocenter );
+	Vector2Subtract( maxs, world_orthocenter, world_orthohalf );
 }
 
 static void BoundPoly( int numverts, float *verts, vec3_t mins, vec3_t maxs )
@@ -1182,6 +1190,13 @@ static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 	return 0;
 }
 
+/*
+=================
+R_CullSurface
+
+cull invisible surfaces
+=================
+*/
 static _inline qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 {
 	mextrasurf_t	*info;
@@ -1210,7 +1225,8 @@ static _inline qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 			{
 				float	dist;
 
-				dist = PlaneDiff( modelorg, surf->plane );
+				if( RI.drawOrtho ) dist = surf->plane->normal[2];
+				else dist = PlaneDiff( modelorg, surf->plane );
 
 				if( glState.faceCull == GL_FRONT || ( RI.params & RP_MIRRORVIEW ))
 				{
@@ -1691,6 +1707,135 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 }
 
 /*
+================
+R_CullNodeTopView
+
+cull node by user rectangle (simple scissor)
+================
+*/
+qboolean R_CullNodeTopView( mnode_t *node )
+{
+	vec2_t	delta, size;
+	vec3_t	center, half;
+
+	// build the node center and half-diagonal
+	VectorAverage( node->minmaxs, node->minmaxs + 3, center );
+	VectorSubtract( node->minmaxs + 3, center, half );
+
+	// cull against the screen frustum or the appropriate area's frustum.
+	Vector2Subtract( center, world_orthocenter, delta );
+	Vector2Add( half, world_orthohalf, size );
+
+	return ( fabs( delta[0] ) > size[0] ) || ( fabs( delta[1] ) > size[1] );
+}
+
+/*
+================
+R_DrawTopViewLeaf
+================
+*/
+static void R_DrawTopViewLeaf( mleaf_t *pleaf, uint clipflags )
+{
+	msurface_t	**mark, *surf;
+	int		i;
+
+	for( i = 0, mark = pleaf->firstmarksurface; i < pleaf->nummarksurfaces; i++, mark++ )
+	{
+		surf = *mark;
+
+		// don't process the same surface twice
+		if( surf->visframe == tr.framecount )
+			continue;
+
+		surf->visframe = tr.framecount;
+
+		if( R_CullSurface( surf, clipflags ))
+			continue;
+
+		if(!( surf->flags & SURF_DRAWSKY ))
+		{ 
+			surf->texturechain = surf->texinfo->texture->texturechain;
+			surf->texinfo->texture->texturechain = surf;
+		}
+	}
+
+	// deal with model fragments in this leaf
+	if( pleaf->efrags )
+		R_StoreEfrags( &pleaf->efrags );
+
+	r_stats.c_world_leafs++;
+}
+
+/*
+================
+R_DrawWorldTopView
+================
+*/
+void R_DrawWorldTopView( mnode_t *node, uint clipflags )
+{
+	const mplane_t	*clipplane;
+	int		c, clipped;
+	msurface_t	*surf;
+
+	do
+	{
+		if( node->contents == CONTENTS_SOLID )
+			return;	// hit a solid leaf
+
+		if( node->visframe != tr.visframecount )
+			return;
+
+		if( clipflags )
+		{
+			for( c = 0, clipplane = RI.frustum; c < 6; c++, clipplane++ )
+			{
+				if(!( clipflags & ( 1<<c )))
+					continue;
+
+				clipped = BoxOnPlaneSide( node->minmaxs, node->minmaxs + 3, clipplane );
+				if( clipped == 2 ) return;
+				if( clipped == 1 ) clipflags &= ~(1<<c);
+			}
+		}
+
+		// cull against the screen frustum or the appropriate area's frustum.
+		if( R_CullNodeTopView( node ))
+			return;
+
+		// if a leaf node, draw stuff
+		if( node->contents < 0 )
+		{
+			R_DrawTopViewLeaf( (mleaf_t *)node, clipflags );
+			return;
+		}
+
+		// draw stuff
+		for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
+		{
+			// don't process the same surface twice
+			if( surf->visframe == tr.framecount )
+				continue;
+
+			surf->visframe = tr.framecount;
+
+			if( R_CullSurface( surf, clipflags ))
+				continue;
+
+			if(!( surf->flags & SURF_DRAWSKY ))
+			{ 
+				surf->texturechain = surf->texinfo->texture->texturechain;
+				surf->texinfo->texture->texturechain = surf;
+			}
+		}
+
+		// recurse down both children, we don't care the order...
+		R_DrawWorldTopView( node->children[0], clipflags );
+		node = node->children[1];
+
+	} while( node );
+}
+
+/*
 =============
 R_DrawTriangleOutlines
 =============
@@ -1776,7 +1921,14 @@ void R_DrawWorld( void )
 	// draw the world fog
 	R_DrawFog ();
 
-	R_RecursiveWorldNode( cl.worldmodel->nodes, RI.clipFlags );
+	if( RI.drawOrtho )
+	{
+		R_DrawWorldTopView( cl.worldmodel->nodes, RI.clipFlags );
+	}
+	else
+	{
+		R_RecursiveWorldNode( cl.worldmodel->nodes, RI.clipFlags );
+	}
 
 	R_DrawStaticBrushes();
 	R_DrawTextureChains();
@@ -1818,7 +1970,7 @@ void R_MarkLeaves( void )
 	r_oldviewleaf = r_viewleaf;
 	r_oldviewleaf2 = r_viewleaf2;
 			
-	if( r_novis->integer || r_viewleaf == NULL || !cl.worldmodel->visdata )
+	if( r_novis->integer || RI.drawOrtho || !r_viewleaf || !cl.worldmodel->visdata )
 	{
 		// force to get full visibility
 		vis = Mod_LeafPVS( NULL, NULL );

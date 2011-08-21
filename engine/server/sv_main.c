@@ -762,7 +762,7 @@ void SV_Shutdown( qboolean reconnect )
 	if( host.state == HOST_ERROR ) return;
 	if( !SV_Active()) return;
 
-	MsgDev( D_INFO, "SV_Shutdown: %s\n", host.finalmsg );
+	if( host.type == HOST_DEDICATED ) MsgDev( D_INFO, "SV_Shutdown: %s\n", host.finalmsg );
 	if( svs.clients ) SV_FinalMessage( host.finalmsg, reconnect );
 
 	Master_Shutdown();

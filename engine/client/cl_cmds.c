@@ -166,16 +166,26 @@ void CL_ScreenShot_f( void )
 	int	i;
 	string	checkname;
 
-	// scan for a free filename
-	for( i = 0; i < 9999; i++ )
+	if( gl_overview->integer == 1 )
 	{
-		CL_ScreenshotGetName( i, checkname );
-		if( !FS_FileExists( checkname, false ))
-			break;
+		// special case for write overview image and script file
+		Q_snprintf( cls.shotname, sizeof( cls.shotname ), "overviews/%s.bmp", clgame.mapname );
+		cls.scrshot_action = scrshot_mapshot; // build new frame for mapshot
+	}
+	else
+	{
+		// scan for a free filename
+		for( i = 0; i < 9999; i++ )
+		{
+			CL_ScreenshotGetName( i, checkname );
+			if( !FS_FileExists( checkname, false ))
+				break;
+		}
+
+		Q_strncpy( cls.shotname, checkname, sizeof( cls.shotname ));
+		cls.scrshot_action = scrshot_normal; // build new frame for screenshot
 	}
 
-	Q_strncpy( cls.shotname, checkname, sizeof( cls.shotname ));
-	cls.scrshot_action = scrshot_normal; // build new frame for screenshot
 	cls.envshot_vieworg = NULL; // no custom view
 }
 

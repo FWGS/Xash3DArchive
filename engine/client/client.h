@@ -39,6 +39,7 @@ GNU General Public License for more details.
 #define VID_SCREENSHOT	0
 #define VID_LEVELSHOT	1
 #define VID_MINISHOT	2
+#define VID_MAPSHOT		3	// special case for overview layer
 
 typedef int		sound_t;
 
@@ -174,7 +175,8 @@ typedef enum
 	scrshot_savegame,	// saveshot
 	scrshot_demoshot,	// for demos preview
 	scrshot_envshot,	// cubemap view
-	scrshot_skyshot	// skybox view
+	scrshot_skyshot,	// skybox view
+	scrshot_mapshot	// overview layer
 } scrshot_t;
 
 // client screen state
@@ -281,8 +283,22 @@ typedef struct
 	short		topcolor;		// cached value
 	short		bottomcolor;	// cached value
 	model_t		*model;		// for catch model changes
-	int		modelindex;
 } remap_info_t;
+
+// same as ref_params but for overview mode
+typedef struct
+{
+	vec3_t		origin;
+	qboolean		rotated;
+
+	float		xLeft;
+	float		xRight;
+	float		xTop;
+	float		xBottom;
+	float		zFar;
+	float		zNear;
+	float		flZoom;
+} ref_overview_t;
 
 typedef struct
 {
@@ -367,6 +383,7 @@ typedef struct
 	screen_shake_t	shake;			// screen shake
 	center_print_t	centerPrint;		// centerprint variables
 	SCREENINFO	scrInfo;			// actual screen info
+	ref_overview_t	overView;			// overView params
 	rgb_t		palette[256];		// palette used for particle colors
 
 	client_textmessage_t *titles;			// title messages, not network messages
@@ -630,6 +647,10 @@ void V_Shutdown( void );
 qboolean V_PreRender( void );
 void V_PostRender( void );
 void V_RenderView( void );
+void V_SetupOverviewState( void );
+void V_ProcessOverviewCmds( usercmd_t *cmd );
+void V_MergeOverviewRefdef( ref_params_t *fd );
+void V_WriteOverviewScript( void );
 
 //
 // cl_pmove.c

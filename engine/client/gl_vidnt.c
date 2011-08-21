@@ -44,6 +44,7 @@ convar_t	*gl_allow_static;
 convar_t	*gl_texturemode;
 convar_t	*gl_wireframe;
 convar_t	*gl_round_down;
+convar_t	*gl_overview;
 convar_t	*gl_max_size;
 convar_t	*gl_picmip;
 convar_t	*gl_skymip;
@@ -1457,6 +1458,7 @@ void GL_InitCommands( void )
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
 	gl_test = Cvar_Get( "gl_test", "0", 0, "engine developer cvar for quick testing new features" );
 	gl_wireframe = Cvar_Get( "gl_wireframe", "0", 0, "show wireframe overlay" );
+	gl_overview = Cvar_Get( "dev_overview", "0", 0, "show level overview" );
 
 	// these cvar not used by engine but some mods requires this
 	Cvar_Get( "gl_polyoffset", "-0.1", 0, "polygon offset for decals" );
