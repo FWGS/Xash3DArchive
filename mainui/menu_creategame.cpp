@@ -92,7 +92,7 @@ static void UI_CreateGame_Begin( void )
 	if( CVAR_GET_FLOAT( "host_serverstate" ) && CVAR_GET_FLOAT( "maxplayers" ) == 1 )
 		HOST_ENDGAME( "end of the game" );
 
-	CVAR_SET_FLOAT( "deathmatch", 1.0f );	// FIXME
+	CVAR_SET_FLOAT( "deathmatch", 1.0f );	// start deathmatch as default
 	CVAR_SET_FLOAT( "maxplayers", atoi( uiCreateGame.maxClients.buffer ));
 	CVAR_SET_STRING( "hostname", uiCreateGame.hostName.buffer );
 	CVAR_SET_STRING( "defaultmap", uiCreateGame.mapName[uiCreateGame.mapsList.curItem] );

@@ -1355,7 +1355,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		else if( !Q_stricmp( token, "max_particles" ))
 		{
 			pfile = COM_ParseFile( pfile, token );
-			GameInfo->max_particles = bound( 1024, Q_atoi( token ), 32768 );
+			GameInfo->max_particles = bound( 1024, Q_atoi( token ), 131072 );
 		}
 		else if( !Q_stricmp( token, "gamemode" ))
 		{
@@ -1377,6 +1377,19 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 			{
 				FS_ParseVector( &pfile, GameInfo->client_mins[hullNum], 3 );
 				FS_ParseVector( &pfile, GameInfo->client_maxs[hullNum], 3 );
+			}
+		}
+		else if( !Q_strnicmp( token, "ambient", 7 ))
+		{
+			int	ambientNum = Q_atoi( token + 7 );
+
+			if( ambientNum < 0 || ambientNum > ( NUM_AMBIENTS - 1 ))
+			{
+				MsgDev( D_ERROR, "FS_ParseGameInfo: Invalid ambient number %i. Ignored.\n", ambientNum );
+			}
+			else
+			{
+				pfile = COM_ParseFile( pfile, GameInfo->ambientsound[ambientNum] );
 			}
 		}
 	}

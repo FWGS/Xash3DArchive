@@ -430,7 +430,11 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	switch( shot_type )
 	{
 	case VID_SCREENSHOT:
-		VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // adjust brightness
+		if( !gl_overview->integer )
+			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
+		break;
+	case VID_SNAPSHOT:
+		FS_AllowDirectPaths( true );
 		break;
 	case VID_LEVELSHOT:
 		flags |= IMAGE_RESAMPLE;
@@ -454,6 +458,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 
 	// write image
 	result = FS_SaveImage( filename, r_shot );
+	FS_AllowDirectPaths( false );			// always reset after store screenshot
 	FS_FreeImage( r_shot );
 
 	return result;

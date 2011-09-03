@@ -65,9 +65,12 @@ void CL_PlayCDTrack_f( void )
 	static int	track = 0;
 	static qboolean	paused = false;
 	static qboolean	looped = false;
+	static qboolean	enabled = true;
 
 	if( Cmd_Argc() < 2 ) return;
 	command = Cmd_Argv( 1 );
+
+	if( !enabled && Q_stricmp( command, "on" )) return; // CD-player is disabled
 
 	if( !Q_stricmp( command, "play" ))
 	{
@@ -100,6 +103,14 @@ void CL_PlayCDTrack_f( void )
 		looped = false;
 		track = 0;
 	}
+	else if( !Q_stricmp( command, "on" ))
+	{
+		enabled = true;
+	}
+	else if( !Q_stricmp( command, "off" ))
+	{
+		enabled = false;
+	}
 	else if( !Q_stricmp( command, "info" ))
 	{
 		int	i, maxTrack;
@@ -128,7 +139,6 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 {
 	int	a, b, c, d;
 
-	if( !filename ) return;
 	if( lastnum < 0 || lastnum > 9999 )
 	{
 		// bound
@@ -145,6 +155,35 @@ void CL_ScreenshotGetName( int lastnum, char *filename )
 	d = lastnum;
 
 	Q_sprintf( filename, "scrshots/%s/shot%i%i%i%i.bmp", clgame.mapname, a, b, c, d );
+}
+
+/* 
+================== 
+CL_SnapshotGetName
+================== 
+*/  
+qboolean CL_SnapshotGetName( int lastnum, char *filename )
+{
+	int	a, b, c, d;
+
+	if( lastnum < 0 || lastnum > 9999 )
+	{
+		MsgDev( D_ERROR, "unable to write snapshot\n" );
+		FS_AllowDirectPaths( false );
+		return false;
+	}
+
+	a = lastnum / 1000;
+	lastnum -= a * 1000;
+	b = lastnum / 100;
+	lastnum -= b * 100;
+	c = lastnum / 10;
+	lastnum -= c * 10;
+	d = lastnum;
+
+	Q_sprintf( filename, "../%s%i%i%i%i.bmp", clgame.mapname, a, b, c, d );
+
+	return true;
 }
 
 /* 
@@ -184,6 +223,46 @@ void CL_ScreenShot_f( void )
 
 		Q_strncpy( cls.shotname, checkname, sizeof( cls.shotname ));
 		cls.scrshot_action = scrshot_normal; // build new frame for screenshot
+	}
+
+	cls.envshot_vieworg = NULL; // no custom view
+}
+
+/* 
+================== 
+CL_SnapShot_f
+
+save screenshots into root dir
+================== 
+*/
+void CL_SnapShot_f( void ) 
+{
+	int	i;
+	string	checkname;
+
+	if( gl_overview->integer == 1 )
+	{
+		// special case for write overview image and script file
+		Q_snprintf( cls.shotname, sizeof( cls.shotname ), "overviews/%s.bmp", clgame.mapname );
+		cls.scrshot_action = scrshot_mapshot; // build new frame for mapshot
+	}
+	else
+	{
+		FS_AllowDirectPaths( true );
+
+		// scan for a free filename
+		for( i = 0; i < 9999; i++ )
+		{
+			if( !CL_SnapshotGetName( i, checkname ))
+				return;	// no namespace
+
+			if( !FS_FileExists( checkname, false ))
+				break;
+		}
+
+		FS_AllowDirectPaths( false );
+		Q_strncpy( cls.shotname, checkname, sizeof( cls.shotname ));
+		cls.scrshot_action = scrshot_snapshot; // build new frame for screenshot
 	}
 
 	cls.envshot_vieworg = NULL; // no custom view

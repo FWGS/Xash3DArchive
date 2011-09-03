@@ -1547,11 +1547,14 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("stop", CL_Stop_f, "stop playing or recording a demo" );
 	Cmd_AddCommand ("info", NULL, "collect info about local servers with specified protocol" );
 	Cmd_AddCommand ("escape", CL_Escape_f, "escape from game to menu" );
+	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f, "show leaks on a map (if present of course)" );
+	Cmd_AddCommand ("linefile", CL_ReadLineFile_f, "show leaks on a map (if present of course)" );
 	
 	Cmd_AddCommand ("quit", CL_Quit_f, "quit from game" );
 	Cmd_AddCommand ("exit", CL_Quit_f, "quit from game" );
 
 	Cmd_AddCommand ("screenshot", CL_ScreenShot_f, "takes a screenshot of the next rendered frame" );
+	Cmd_AddCommand ("snapshot", CL_SnapShot_f, "takes a snapshot of the next rendered frame" );
 	Cmd_AddCommand ("envshot", CL_EnvShot_f, "takes a six-sides cubemap shot with specified name" );
 	Cmd_AddCommand ("skyshot", CL_SkyShot_f, "takes a six-sides envmap (skybox) shot with specified name" );
 	Cmd_AddCommand ("levelshot", CL_LevelShot_f, "same as \"screenshot\", used for create plaque images" );

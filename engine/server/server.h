@@ -395,6 +395,7 @@ extern	convar_t		*sv_allow_download;
 extern	convar_t		*sv_allow_studio_scaling;
 extern	convar_t		*sv_allow_studio_attachment_angles;
 extern	convar_t		*sv_allow_rotate_pushables;
+extern	convar_t		*sv_fix_pushstep;
 extern	convar_t		*sv_clienttrace;
 extern	convar_t		*sv_send_resources;
 extern	convar_t		*sv_send_logos;

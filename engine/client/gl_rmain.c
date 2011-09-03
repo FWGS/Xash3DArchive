@@ -18,6 +18,8 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "mathlib.h"
 
+#define IsLiquidContents( cnt )	( cnt == CONTENTS_WATER || cnt == CONTENTS_SLIME || cnt == CONTENTS_LAVA )
+
 msurface_t	*r_debug_surface;
 const char	*r_debug_hitbox;
 float		gldepthmin, gldepthmax;
@@ -840,65 +842,89 @@ static void R_EndGL( void )
 R_CheckFog
 
 check for underwater fog
+FIXME: this code is wrong, we need to compute fog volumes (as water volumes)
+and get fog params from texture water on a surface.
 =============
 */
 static void R_CheckFog( void )
 {
-	model_t		*model;
+	cl_entity_t	*ent;
 	gltexture_t	*tex;
-	int		i, count;
+	int		i, cnt, count;
 
 	RI.fogEnabled = false;
 
-	if( RI.refdef.waterlevel < 3 || !RI.drawWorld || !r_viewleaf )
+	if( RI.refdef.waterlevel < 2 || !RI.drawWorld || !r_viewleaf )
 		return;
 
-	model = CL_GetWaterModel( cl.refdef.vieworg );
-	tex = NULL;
+	ent = CL_GetWaterEntity( cl.refdef.vieworg );
+	if( ent && ent->model && ent->model->type == mod_brush && ent->curstate.skin < 0 )
+		cnt = ent->curstate.skin;
+	else cnt = r_viewleaf->contents;
 
-	// check for water texture
-	if( model && model->type == mod_brush )
+	if( IsLiquidContents( RI.cached_contents ) && !IsLiquidContents( cnt ))
 	{
-		msurface_t	*surf;
-	
-		count = model->nummodelsurfaces;
+		RI.cached_contents = CONTENTS_EMPTY;
+		return;
+	}
 
-		for( i = 0, surf = &model->surfaces[model->firstmodelsurface]; i < count; i++, surf++ )
+	if( RI.refdef.waterlevel < 3 ) return;
+
+	if( !IsLiquidContents( RI.cached_contents ) && IsLiquidContents( cnt ))
+	{
+		tex = NULL;
+
+		// check for water texture
+		if( ent && ent->model && ent->model->type == mod_brush )
 		{
-			if( surf->flags & SURF_DRAWTURB && surf->texinfo && surf->texinfo->texture )
+			msurface_t	*surf;
+	
+			count = ent->model->nummodelsurfaces;
+
+			for( i = 0, surf = &ent->model->surfaces[ent->model->firstmodelsurface]; i < count; i++, surf++ )
 			{
-				tex = R_GetTexture( surf->texinfo->texture->gl_texturenum );
-				break;
+				if( surf->flags & SURF_DRAWTURB && surf->texinfo && surf->texinfo->texture )
+				{
+					tex = R_GetTexture( surf->texinfo->texture->gl_texturenum );
+					RI.cached_contents = ent->curstate.skin;
+					break;
+				}
 			}
 		}
+		else
+		{
+			msurface_t	**surf;
+
+			count = r_viewleaf->nummarksurfaces;	
+
+			for( i = 0, surf = r_viewleaf->firstmarksurface; i < count; i++, surf++ )
+			{
+				if((*surf)->flags & SURF_DRAWTURB && (*surf)->texinfo && (*surf)->texinfo->texture )
+				{
+					tex = R_GetTexture( (*surf)->texinfo->texture->gl_texturenum );
+					RI.cached_contents = r_viewleaf->contents;
+					break;
+				}
+			}
+		}
+
+		if( i == count || !tex )
+			return;	// no valid fogs
+
+		// copy fog params
+		RI.fogColor[0] = tex->fogParams[0] / 255.0f;
+		RI.fogColor[1] = tex->fogParams[1] / 255.0f;
+		RI.fogColor[2] = tex->fogParams[2] / 255.0f;
+		RI.fogDensity = tex->fogParams[3] * 0.000025f;
+		RI.fogStart = RI.fogEnd = 0.0f;
+		RI.fogCustom = false;
+		RI.fogEnabled = true;
 	}
 	else
 	{
-		msurface_t	**surf;
-
-		count = r_viewleaf->nummarksurfaces;	
-
-		for( i = 0, surf = r_viewleaf->firstmarksurface; i < count; i++, surf++ )
-		{
-			if((*surf)->flags & SURF_DRAWTURB && (*surf)->texinfo && (*surf)->texinfo->texture )
-			{
-				tex = R_GetTexture( (*surf)->texinfo->texture->gl_texturenum );
-				break;
-			}
-		}
+		RI.fogCustom = false;
+		RI.fogEnabled = true;
 	}
-
-	if( i == count || !tex )
-		return;	// no valid fogs
-
-	// copy fog params
-	RI.fogColor[0] = tex->fogParams[0] / 255.0f;
-	RI.fogColor[1] = tex->fogParams[1] / 255.0f;
-	RI.fogColor[2] = tex->fogParams[2] / 255.0f;
-	RI.fogDensity = tex->fogParams[3] * 0.000025f;
-	RI.fogStart = RI.fogEnd = 0.0f;
-	RI.fogCustom = false;
-	RI.fogEnabled = true;
 }
 
 /*

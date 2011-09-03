@@ -27,6 +27,7 @@ extern byte *sndpool;
 // sound engine rate defines
 #define SOUND_DMA_SPEED	44100	// hardware playback rate
 #define SOUND_11k		11025	// 11khz sample rate
+#define SOUND_16k		16000	// 16khz sample rate
 #define SOUND_22k		22050	// 22khz sample rate
 #define SOUND_32k		32000	// 32khz sample rate
 #define SOUND_44k		44100	// 44khz sample rate
@@ -135,7 +136,6 @@ typedef struct
 	qboolean		use_loop;		// don't loop default and local sounds
 	qboolean		staticsound;	// use origin instead of fetching entnum's origin
 	qboolean		localsound;	// it's a local menu sound (not looped, not paused)
-	qboolean		bdry;		// if true, bypass all dsp processing for this sound (ie: music)
 	mixer_t		pMixer;
 
 	// sentence mixer
@@ -186,10 +186,12 @@ void SNDDMA_Submit( void );
 
 //====================================================================
 
-#define MAX_DYNAMIC_CHANNELS	28
+#define MAX_DYNAMIC_CHANNELS	(28 + NUM_AMBIENTS)
 #define MAX_CHANNELS	128
 #define MAX_RAW_SAMPLES	8192
 
+extern sound_t	ambient_sfx[NUM_AMBIENTS];
+extern qboolean	snd_ambient;
 extern channel_t	channels[MAX_CHANNELS];
 extern int	total_channels;
 extern int	paintedtime;
@@ -199,13 +201,13 @@ extern dma_t	dma;
 extern listener_t	s_listener;
 extern int	idsp_room;
 
-extern convar_t	*s_check_errors;
 extern convar_t	*s_volume;
 extern convar_t	*s_musicvolume;
 extern convar_t	*s_show;
 extern convar_t	*s_mixahead;
 extern convar_t	*s_lerping;
 extern convar_t	*dsp_off;
+extern convar_t	*s_test;
 
 extern portable_samplepair_t		s_rawsamples[MAX_RAW_SAMPLES];
 
@@ -232,6 +234,7 @@ void MIX_PaintChannels( int endtime );
 qboolean S_TestSoundChar( const char *pch, char c );
 char *S_SkipSoundChar( const char *pch );
 sfx_t *S_FindName( const char *name, int *pfInCache );
+sound_t S_RegisterSound( const char *name );
 void S_FreeSound( sfx_t *sfx );
 
 // s_dsp.c

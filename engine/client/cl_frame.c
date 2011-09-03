@@ -256,6 +256,38 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 			dl->radius = 430;
 		else dl->radius = Com_RandomLong( 400, 430 );
 	}
+
+	if( ent->model->type == mod_studio )
+	{
+		if (ent->model->flags & STUDIO_ROTATE)
+			ent->angles[1] = anglemod(100 * cl.time);
+
+		if (ent->model->flags & STUDIO_GIB)
+			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 2);
+		else if (ent->model->flags & STUDIO_ZOMGIB)
+			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 4);
+		else if (ent->model->flags & STUDIO_TRACER)
+			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 3);
+		else if (ent->model->flags & STUDIO_TRACER2)
+			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 5);
+		else if (ent->model->flags & STUDIO_ROCKET)
+		{
+			dlight_t	*dl = CL_AllocDlight (ent->curstate.number);
+			VectorCopy (ent->origin, dl->origin);
+			dl->color.r = 255;
+			dl->color.g = 255;
+			dl->color.b = 255;
+			dl->radius = 200;
+			dl->die = cl.time + 0.01;
+
+			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 0);
+		}
+		else if (ent->model->flags & STUDIO_GRENADE)
+			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 1);
+		else if (ent->model->flags & STUDIO_TRACER3)
+			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 6);
+	}
+
 	return true;
 }
 

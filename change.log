@@ -1,8 +1,20 @@
-build ????
+build 1662
 
 Client: implement StudioRemapColors function
 Client: add simple shadows for stduiomodels (disabled like in GoldSrc)
 Client: fix some Paranoia bugs when custom renderer is disabled
+Client: implement overview tool (dev_overview)
+Client: add debug commands linefile and pointfile
+Client: get support for full-color external textures (tga format) - world, studiomodels and decals
+Client: fixed some HLFX 0.6 bugs
+Client: fixed follow studiomodels (like flags in CTF)
+Server: add pfnGetApproxWavePlayLen
+Sound: get support for mp3's with wav header
+Server: fixed FIND_CLIENT_IN_PVS
+Server: fixed PlaybackEvent, use camera PVS point when client see in
+Render: enable lightmaps on a transparent surfaces like windows (r_lighting_extended 2)
+Server: func_pushable can push players which standing on (sv_fix_pushstep)
+Render: partially fix for underwater fog (temporary solution)
 
 build 1613
 

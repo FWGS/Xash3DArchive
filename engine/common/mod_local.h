@@ -63,6 +63,7 @@ typedef struct
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 	size_t		visdatasize;	// actual size of the visdata
 	qboolean		loading;		// true if worldmodel is loading
+	qboolean		sky_sphere;	// true when quake sky-sphere is used
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;

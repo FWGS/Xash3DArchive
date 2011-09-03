@@ -73,6 +73,8 @@ typedef struct
 	float	skyVec_y;
 	float	skyVec_z;
 	int	viewentity;	// Xash3D added
+	int	serverflags;	// converted to float and back
+	float	wateralpha;
 } SAVE_HEADER;
 
 typedef struct
@@ -104,6 +106,8 @@ static TYPEDESCRIPTION gSaveHeader[] =
 	DEFINE_FIELD( SAVE_HEADER, skyVec_y, FIELD_FLOAT ),
 	DEFINE_FIELD( SAVE_HEADER, skyVec_z, FIELD_FLOAT ),
 	DEFINE_FIELD( SAVE_HEADER, viewentity, FIELD_SHORT ),
+	DEFINE_FIELD( SAVE_HEADER, serverflags, FIELD_INTEGER ),
+	DEFINE_FIELD( SAVE_HEADER, wateralpha, FIELD_FLOAT ),
 };
 
 static TYPEDESCRIPTION gAdjacency[] =
@@ -703,6 +707,9 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 	}
 	else header.viewentity = 1;
 
+	header.serverflags = (int)svgame.globals->serverflags;
+	header.wateralpha = Cvar_VariableValue( "sv_wateralpha" );
+
 	pSaveData->time = 0; // prohibits rebase of header.time (why not just save time as a field_float and ditch this hack?)
 	svgame.dllFuncs.pfnSaveWriteFields( pSaveData, "Save Header", &header, gSaveHeader, ARRAYSIZE( gSaveHeader ));
 	pSaveData->time = header.time;
@@ -1174,6 +1181,11 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	Cvar_SetFloat( "sv_skyvec_x", header.skyVec_x );
 	Cvar_SetFloat( "sv_skyvec_y", header.skyVec_y );
 	Cvar_SetFloat( "sv_skyvec_z", header.skyVec_z );
+
+	// restore serverflags
+	svgame.globals->serverflags = header.serverflags;
+
+	Cvar_SetFloat( "sv_wateralpha", header.wateralpha );
 
 	// re-base the savedata since we re-ordered the entity/table / restore fields
 	SaveRestore_Rebase( pSaveData );

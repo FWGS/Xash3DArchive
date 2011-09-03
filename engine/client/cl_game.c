@@ -277,40 +277,6 @@ void CL_StudioEvent( struct mstudioevent_s *event, cl_entity_t *pEdict )
 }
 
 /*
-================
-CL_FadeAlpha
-================
-*/
-void CL_FadeAlpha( int starttime, int endtime, byte *alpha )
-{
-	int	time, fade_time;
-
-	if( !starttime )
-	{
-		*alpha = 255;
-		return;
-	}
-
-	// FIXME: rewrite this code with float values
-	time = (cl.time * 1000) - starttime;
-
-	if( time >= endtime )
-	{
-		*alpha = 0;
-		return;
-	}
-
-	// fade time is 1/4 of endtime
-	fade_time = endtime / 4;
-	fade_time = bound( 300, fade_time, 10000 );
-
-	// fade out
-	if(( endtime - time ) < fade_time )
-		*alpha = bound( 0, (( endtime - time ) * ( 1.0f / fade_time )) * 255, 255 );
-	else *alpha = 255;
-}
-
-/*
 =============
 CL_AdjustXPos
 
@@ -388,7 +354,7 @@ void CL_CenterPrint( const char *text, float y )
 
 	clgame.centerPrint.lines = 1;
 	clgame.centerPrint.totalWidth = 0;
-	clgame.centerPrint.time = cl.mtime[0] * 1000; // allow pause for centerprint
+	clgame.centerPrint.time = cl.mtime[0]; // allow pause for centerprint
 	Q_strncpy( clgame.centerPrint.message, text, sizeof( clgame.centerPrint.message ));
 	s = clgame.centerPrint.message;
 
@@ -554,23 +520,23 @@ static void CL_DrawCenterPrint( void )
 	char	*pText;
 	int	i, j, x, y;
 	int	width, lineLength;
-	byte	line[80];
-	byte	alpha;
+	byte	*colorDefault, line[80];
+	int	charWidth, charHeight;
 
 	if( !clgame.centerPrint.time )
 		return;
 
-	CL_FadeAlpha( clgame.centerPrint.time, scr_centertime->value * 1000, &alpha );
-
-	if( !alpha ) 
+	if(( cl.time - clgame.centerPrint.time ) >= scr_centertime->value )
 	{
-		// faded out
-		clgame.centerPrint.time = 0;
+		// time expired
+		clgame.centerPrint.time = 0.0f;
 		return;
 	}
 
-	pText = clgame.centerPrint.message;
 	y = clgame.centerPrint.y; // start y
+	colorDefault = g_color_table[7];
+	pText = clgame.centerPrint.message;
+	Con_DrawCharacterLen( 0, NULL, &charHeight );
 	
 	for( i = 0; i < clgame.centerPrint.lines; i++ )
 	{
@@ -581,10 +547,12 @@ static void CL_DrawCenterPrint( void )
 		{
 			byte c = *pText;
 			line[lineLength] = c;
-			width += clgame.scrInfo.charWidths[c];
+			Con_DrawCharacterLen( c, &charWidth, NULL );
+			width += charWidth;
 			lineLength++;
 			pText++;
 		}
+
 		pText++; // Skip LineFeed
 		line[lineLength] = 0;
 
@@ -592,17 +560,10 @@ static void CL_DrawCenterPrint( void )
 
 		for( j = 0; j < lineLength; j++ )
 		{
-			int ch = line[j];
-			int next = x + clgame.scrInfo.charWidths[ch];
-
-			if( x >= 0 && y >= 0 && next <= clgame.scrInfo.iWidth )
-			{
-				pfnPIC_Set( cls.creditsFont.hFontTexture, 255, 255, 255, alpha );
-				pfnPIC_DrawAdditive( x, y, -1, -1, &cls.creditsFont.fontRc[ch] );
-			}
-			x = next;
+			if( x >= 0 && y >= 0 && x <= clgame.scrInfo.iWidth )
+				x += Con_DrawCharacter( x, y, line[j], colorDefault );
 		}
-		y += clgame.scrInfo.iCharHeight;
+		y += charHeight;
 	}
 }
 
@@ -900,19 +861,28 @@ static void CL_DrawLoading( float percent )
 	width *= xscale;
 	height *= yscale;
 
-	pglColor4ub( 128, 128, 128, 255 );
-	GL_SetRenderMode( kRenderTransTexture );
-	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
+	if( cl_allow_levelshots->integer )
+          {
+		pglColor4ub( 128, 128, 128, 255 );
+		GL_SetRenderMode( kRenderTransTexture );
+		R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
 
-	step = (float)width / 100.0f;
-	right = (int)ceil( percent * step );
-	s2 = (float)right / width;
-	width = right;
+		step = (float)width / 100.0f;
+		right = (int)ceil( percent * step );
+		s2 = (float)right / width;
+		width = right;
 	
-	pglColor4ub( 208, 152, 0, 255 );
-	GL_SetRenderMode( kRenderTransTexture );
-	R_DrawStretchPic( x, y, width, height, 0, 0, s2, 1, cls.loadingBar );
-	pglColor4ub( 255, 255, 255, 255 );
+		pglColor4ub( 208, 152, 0, 255 );
+		GL_SetRenderMode( kRenderTransTexture );
+		R_DrawStretchPic( x, y, width, height, 0, 0, s2, 1, cls.loadingBar );
+		pglColor4ub( 255, 255, 255, 255 );
+	}
+	else
+	{
+		pglColor4ub( 255, 255, 255, 255 );
+		GL_SetRenderMode( kRenderTransTexture );
+		R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.loadingBar );
+	}
 }
 
 /*
@@ -1972,7 +1942,7 @@ like trigger_multiple message in q1
 static void pfnCenterPrint( const char *string )
 {
 	if( !string || !*string ) return; // someone stupid joke
-	CL_CenterPrint( string, -1 );
+	CL_CenterPrint( string, 0.25f );
 }
 
 /*

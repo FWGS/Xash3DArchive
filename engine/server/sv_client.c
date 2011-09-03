@@ -215,10 +215,10 @@ gotnewcl:
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
 	newcl->userid = g_userid++;	// create unique userid
 	newcl->authentication_method = 2;
-
-// FIXME: g-cont. i'm don't know how spectators interact with server
-//	newcl->spectator = spectator;
-		
+#if 0
+	// g-cont. i'm don't know how spectators interact with server. disabled
+	newcl->spectator = spectator;
+#endif		
 	// get the game a chance to reject this connection or modify the userinfo
 	if( !( SV_ClientConnect( ent, userinfo )))
 	{
@@ -1056,7 +1056,8 @@ void SV_New_f( sv_client_t *cl )
 		ent = EDICT_NUM( playernum + 1 );
 		cl->edict = ent;
 
-		if( sv_maxclients->integer == 1 )
+		// NOTE: custom resources download is disabled until is done
+		if( /*sv_maxclients->integer ==*/ 1 )
 		{
 			Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 

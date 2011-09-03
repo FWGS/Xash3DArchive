@@ -264,6 +264,7 @@ void R_ParseDetailTextures( const char *filename )
 
 void R_NewMap( void )
 {
+	texture_t	*tx;
 	int	i;
 
 	R_ClearDecals(); // clear all level decals
@@ -284,10 +285,12 @@ void R_NewMap( void )
 		if( !cl.worldmodel->textures[i] )
 			continue;
 
-		if( world.version == Q1BSP_VERSION && !Q_strncmp( cl.worldmodel->textures[i]->name, "sky", 3 ))
+		tx = cl.worldmodel->textures[i];
+
+		if( !Q_strncmp( tx->name, "sky", 3 ) && tx->width == 256 && tx->height == 128)
 			tr.skytexturenum = i;
 
- 		cl.worldmodel->textures[i]->texturechain = NULL;
+ 		tx->texturechain = NULL;
 	}
 
 	// upload detailtextures

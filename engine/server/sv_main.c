@@ -65,6 +65,7 @@ convar_t	*sv_send_resources;
 convar_t	*sv_send_logos;
 convar_t	*sv_sendvelocity;
 convar_t	*sv_airmove;
+convar_t	*sv_fix_pushstep;
 convar_t	*mp_consistency;
 convar_t	*serverinfo;
 convar_t	*physinfo;
@@ -78,6 +79,7 @@ convar_t	*sv_skyvec_x;
 convar_t	*sv_skyvec_y;
 convar_t	*sv_skyvec_z;
 convar_t	*sv_skyname;
+convar_t	*sv_wateralpha;
 
 void Master_Shutdown( void );
 
@@ -225,6 +227,7 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skyvec_z = sv_skyvec_z->value;
 	svgame.movevars.studio_scale = sv_allow_studio_scaling->integer;
 	svgame.movevars.clienttrace = sv_clienttrace->value;
+	svgame.movevars.wateralpha = sv_wateralpha->value;
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
 		Q_memcpy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
@@ -650,6 +653,7 @@ void SV_Init( void )
 	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "0", CVAR_PHYSICINFO, "sky direction z (hl1 compatibility)" );
 	sv_skyname = Cvar_Get ("sv_skyname", "desert", CVAR_PHYSICINFO, "skybox name (can be dynamically changed in-game)" );
 	sv_footsteps = Cvar_Get ("mp_footsteps", "1", CVAR_PHYSICINFO, "can hear footsteps from other players" );
+	sv_wateralpha = Cvar_Get ("sv_wateralpha", "1", CVAR_PHYSICINFO, "world surfaces water transparency factor. 1.0 - solid, 0.0 - fully transparent" );
 
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
 	sv_stepsize = Cvar_Get( "sv_stepsize", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
@@ -693,6 +697,7 @@ void SV_Init( void )
 	sv_send_logos = Cvar_Get( "sv_send_logos", "1", 0, "send custom player decals to other clients" );
 	sv_send_resources = Cvar_Get( "sv_send_resources", "1", 0, "send generic resources that specified in 'mapname.res'" );
 	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "1", CVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
+	sv_fix_pushstep = Cvar_Get( "sv_fix_pushstep", "0", CVAR_ARCHIVE, "allow the 'func_pushable' push the clients which standing on when the entity is floating in water" );
 	mp_consistency = Cvar_Get( "mp_consistency", "1", CVAR_SERVERNOTIFY, "enbale consistency check in multiplayer" );
 	clockwindow = Cvar_Get( "clockwindow", "0.5", 0, "timewindow to execute client moves" );
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );

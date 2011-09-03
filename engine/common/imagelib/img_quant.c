@@ -1,5 +1,5 @@
 /*
-img_quant.c - image quantizer. based on hl2 beta original code
+img_quant.c - image quantizer. based on Antony Dekker original code
 Copyright (C) 2011 Uncle Mike
 
 This program is free software: you can redistribute it and/or modify

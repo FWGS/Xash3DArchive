@@ -404,8 +404,8 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			// this is a good reason for using fullbright pixels
 			pal_type = Image_ComparePalette( pal );
 
-			// check for luma pixels
-			if( pal_type == PAL_QUAKE1 )
+			// check for luma pixels (but ignore liquid textures, this a Xash3D limitation)
+			if( mip.name[0] != '!' && pal_type == PAL_QUAKE1 )
 			{
 				for( i = 0; i < image.width * image.height; i++ )
 				{

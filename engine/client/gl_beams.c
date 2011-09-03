@@ -162,6 +162,19 @@ static void ComputeNormal( const vec3_t vStartPos, const vec3_t vNextPos, vec3_t
 	VectorNormalizeFast( pNormal );
 }
 
+static void SetBeamRenderMode( int rendermode )
+{
+	if( rendermode == kRenderTransAdd )
+	{
+		pglEnable( GL_BLEND );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+	}
+	else pglDisable( GL_BLEND );	// solid mode
+
+	pglDisable( GL_ALPHA_TEST );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+}
+
 /*
 ================
 CL_DrawSegs
@@ -250,7 +263,7 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 	segs_drawn = 0;
 	total_segs = segments;
 
-	GL_SetRenderMode( rendermode );
+	SetBeamRenderMode( rendermode );
 	GL_Bind( GL_TEXTURE0, m_hSprite );
 	pglBegin( GL_TRIANGLE_STRIP );
 
@@ -421,7 +434,7 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 
 	w = freq * delta[2];
 
-	GL_SetRenderMode( rendermode );
+	SetBeamRenderMode( rendermode );
 	GL_Bind( GL_TEXTURE0, m_hSprite );
 
 	pglBegin( GL_TRIANGLE_STRIP );
@@ -491,7 +504,7 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 	scale = scale * length;
 	
 	GL_Cull( GL_NONE );	// draw both sides
-	GL_SetRenderMode( rendermode );
+	SetBeamRenderMode( rendermode );
 	GL_Bind( GL_TEXTURE0, m_hSprite );
 
 	pglBegin( GL_TRIANGLE_STRIP );
@@ -606,7 +619,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 
 	j = segments / 8;
 
-	GL_SetRenderMode( rendermode );
+	SetBeamRenderMode( rendermode );
 	GL_Bind( GL_TEXTURE0, m_hSprite );
 
 	pglBegin( GL_TRIANGLE_STRIP );
@@ -780,7 +793,7 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	nColor[1] = (byte)bound( 0, (int)(scaledColor[1] * 255.0f), 255 );
 	nColor[2] = (byte)bound( 0, (int)(scaledColor[2] * 255.0f), 255 );
 
-	GL_SetRenderMode( rendermode );
+	SetBeamRenderMode( rendermode );
 	GL_Bind( GL_TEXTURE0, m_hSprite );
 
 	pglBegin( GL_QUADS );
@@ -1412,7 +1425,7 @@ void CL_DrawBeam( BEAM *pbeam )
 	}
 
 	frame = ((int)( pbeam->frame + cl.time * pbeam->frameRate ) % pbeam->frameCount );
-	rendermode = ( pbeam->flags & FBEAM_SOLID ) ? kRenderTransColor : kRenderTransAdd;
+	rendermode = ( pbeam->flags & FBEAM_SOLID ) ? kRenderNormal : kRenderTransAdd;
 
 	// set color
 	VectorSet( srcColor, pbeam->r, pbeam->g, pbeam->b );
@@ -1631,8 +1644,6 @@ void CL_BeamKill( int deadEntity )
 
 	CL_KillDeadBeams( pDeadEntity );
 }
-
-
 
 /*
 ==============
@@ -2114,4 +2125,85 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		CL_BeamKill( startEnt );
 		break;
 	}
+}
+
+/*
+===============
+CL_ReadLineFile_f
+
+Optimized version of pointfile - use beams instead of particles
+===============
+*/
+void CL_ReadLineFile_f( void )
+{
+	char		*afile, *pfile;
+	vec3_t		p1, p2;
+	int		count, modelIndex;
+	char		filename[64];
+	string		token;
+	
+	Q_snprintf( filename, sizeof( filename ), "maps/%s.lin", clgame.mapname );
+	afile = FS_LoadFile( filename, NULL, false );
+
+	if( !afile )
+	{
+		MsgDev( D_ERROR, "couldn't open %s\n", filename );
+		return;
+	}
+	
+	Msg( "Reading %s...\n", filename );
+
+	count = 0;
+	pfile = afile;
+	modelIndex = CL_FindModelIndex( "sprites/laserbeam.spr" );
+
+	while( 1 )
+	{
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		p1[0] = Q_atof( token );
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		p1[1] = Q_atof( token );
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		p1[2] = Q_atof( token );
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+
+		if( token[0] != '-' )
+		{
+			MsgDev( D_ERROR, "%s is corrupted\n" );
+			break;
+		}
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		p2[0] = Q_atof( token );
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		p2[1] = Q_atof( token );
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		p2[2] = Q_atof( token );
+
+		count++;
+		
+		if( !CL_BeamPoints( p1, p2, modelIndex, 99999, 2, 0, 255, 0, 0, 0, 255.0f, 0.0f, 0.0f ))
+		{
+			if( !modelIndex ) MsgDev( D_ERROR, "CL_ReadLineFile: no beam sprite!\n" );
+			else MsgDev( D_ERROR, "CL_ReadLineFile: not enough free beams!\n" );
+			break;
+		}
+	}
+
+	Mem_Free( afile );
+
+	if( count ) Msg( "%i lines read\n", count );
+	else Msg( "map %s has no leaks!\n", clgame.mapname );
 }

@@ -48,11 +48,15 @@ Studio models are position independent, so the cache manager can move them.
 #define MAXSTUDIOCONTROLLERS		8	// max controllers per model
 #define MAXSTUDIOATTACHMENTS		4	// max attachments per model
 
-// model global flags
-#define STUDIO_STATIC		0x0001	// model without anims
-#define STUDIO_RAGDOLL		0x0002	// ragdoll animation pose
-#define STUDIO_HAS_CHROME		0x0008	// if any of the textures have chrome on them
-
+// client-side model flags
+#define STUDIO_ROCKET		0x0001	// leave a trail
+#define STUDIO_GRENADE		0x0002	// leave a trail
+#define STUDIO_GIB			0x0004	// leave a trail
+#define STUDIO_ROTATE		0x0008	// rotate (bonus items)
+#define STUDIO_TRACER		0x0010	// green split trail
+#define STUDIO_ZOMGIB		0x0020	// small blood trail
+#define STUDIO_TRACER2		0x0040	// orange split trail + rotate
+#define STUDIO_TRACER3		0x0080	// purple trail
 #define STUDIO_DYNAMIC_LIGHT		0x0100	// dynamically get lighting from floor or ceil (flying monsters)
 #define STUDIO_TRACE_HITBOX		0x0200	// always use hitbox trace instead of bbox
 

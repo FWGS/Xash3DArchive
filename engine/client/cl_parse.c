@@ -405,12 +405,7 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	else modelIndex = 0;
 	flags = BF_ReadByte( msg );
 
-	host.decal_loading = true;
-	if( !cl.decal_index[decalIndex] )
-		cl.decal_index[decalIndex] = GL_LoadTexture( host.draw_decals[decalIndex], NULL, 0, TF_DECAL );
-	host.decal_loading = false;
-
-	CL_DecalShoot( cl.decal_index[decalIndex], entityIndex, modelIndex, origin, flags );
+	CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, origin, flags );
 }
 
 void CL_ParseSoundFade( sizebuf_t *msg )
@@ -1326,7 +1321,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseCustomization( msg );
 			break;
 		case svc_centerprint:
-			CL_CenterPrint( BF_ReadString( msg ), 0.35f );
+			CL_CenterPrint( BF_ReadString( msg ), 0.25f );
 			break;
 		case svc_event:
 			CL_ParseEvent( msg );

@@ -294,22 +294,19 @@ int CL_WaterEntity( const float *rgflPos )
 
 /*
 =============
-CL_GetWaterModel
+CL_GetWaterEntity
 
 returns water brush where inside pos
 =============
 */
-model_t *CL_GetWaterModel( const float *rgflPos )
+cl_entity_t *CL_GetWaterEntity( const float *rgflPos )
 {
-	int		entnum;
-	cl_entity_t	*clent;
+	int	entnum;
 
 	entnum = CL_WaterEntity( rgflPos );
 	if( entnum <= 0 ) return NULL; // world or not water
 
-	if(( clent = CL_GetEntityByIndex( entnum )) != NULL )
-		return clent->model;
-	return NULL;
+	return CL_GetEntityByIndex( entnum );
 }
 
 static void pfnParticle( float *origin, int color, float life, int zpos, int zvel )

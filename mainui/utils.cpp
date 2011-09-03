@@ -235,7 +235,7 @@ int UI_FadeAlpha( int starttime, int endtime )
 		return 0xFFFFFFFF;
 	}
 
-	time = ( gpGlobals->time * 1000 ) - starttime;	// FIXME; convert it to float properly
+	time = ( gpGlobals->time * 1000 ) - starttime;
 
 	if( time >= endtime )
 	{

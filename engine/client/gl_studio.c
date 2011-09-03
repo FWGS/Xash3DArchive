@@ -3108,7 +3108,8 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 {
 	size_t	size;
 	int	flags = 0;
-	char	texname[128], name[128];
+	qboolean	load_external = false;
+	char	texname[128], name[128], mdlname[128];
 	texture_t	*tx = NULL;
 	
 	if( ptexture->flags & STUDIO_NF_TRANSPARENT )
@@ -3165,15 +3166,38 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		mod->numtextures++;	// done
 	}
 
-	// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
-	ptexture->index = (int)((byte *)phdr) + ptexture->index;
-	size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
+	Q_strncpy( mdlname, mod->name, sizeof( mdlname ));
 	FS_FileBase( ptexture->name, name );
+	FS_StripExtension( mdlname );
 
-	// build the texname
-	Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mod->name, name );
-	ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags );
+	// NOTE: colormaps must have the palette for properly work. Ignore it.
+	if( host_allow_materials->integer && !( ptexture->flags & STUDIO_NF_COLORMAP ))
+	{
+		int	gl_texturenum = 0;
 
+		Q_snprintf( texname, sizeof( texname ), "materials/%s/%s.tga", mdlname, name );
+
+		if( FS_FileExists( texname, false ))
+			gl_texturenum = GL_LoadTexture( texname, NULL, 0, flags );
+
+		if( gl_texturenum )
+		{
+			ptexture->index = gl_texturenum;
+			load_external = true; // sucessfully loaded
+		}
+	}
+
+	if( !load_external )
+	{
+		// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
+		ptexture->index = (int)((byte *)phdr) + ptexture->index;
+		size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
+
+		// build the texname
+		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
+		ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags );
+          }
+  
 	if( !ptexture->index )
 	{
 		MsgDev( D_WARN, "%s has null texture %s\n", mod->name, ptexture->name );

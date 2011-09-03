@@ -319,7 +319,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
 			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
-			if( mask && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+			if( leafnum != -1 && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}
 
@@ -385,7 +385,7 @@ static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 	// -1 is because pvs rows are 1 based, not 0 based like leafs
 	leafnum = Mod_PointLeafnum( v2 ) - 1;
 
-	if( mask && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+	if( mask && leafnum != -1 && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 		return false;
 	return true;
 }
@@ -805,7 +805,7 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 
 	BF_WriteWord( msg, info->index );			// send event index
 	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
-	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// FIXME: use delta-compressing
+	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// TODO: use delta-compressing
 }
 
 const char *SV_ClassName( const edict_t *e )
@@ -1309,15 +1309,17 @@ pfnFindClientInPVS
 edict_t* pfnFindClientInPVS( edict_t *pEdict )
 {
 	edict_t	*pClient;
-	mleaf_t	*leaf;
 	vec3_t	view;
+	float	delta;
 	int	i;
 
 	if( !SV_IsValidEdict( pEdict ))
 		return svgame.edicts;
 
+	delta = ( sv.time - sv.lastchecktime );
+
 	// find a new check if on a new frame
-	if(( sv.time - sv.lastchecktime ) >= 0.1 )
+	if( delta < 0.0f || delta >= 0.1f )
 	{
 		sv.lastcheck = SV_CheckClientPVS( sv.lastcheck );
 		sv.lastchecktime = sv.time;
@@ -1329,8 +1331,11 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 		return svgame.edicts;
 
 	VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view );
-	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
-	i = (leaf - sv.worldmodel->leafs) - 1;
+
+	if( pEdict->v.effects & EF_INVLIGHT )
+		view[2] -= 1.0f; // HACK for barnacle
+
+	i = Mod_PointLeafnum( view ) - 1;
 
 	if( i < 0 || !((clientpvs[i>>3]) & (1 << (i & 7))))
 		return svgame.edicts;
@@ -3562,7 +3567,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 				continue;
 		}
 
-		if(!( flags & FEV_GLOBAL ))
+		if( mask && !( flags & FEV_GLOBAL ))
 		{
 			int	clientnum;
 
@@ -3575,7 +3580,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
 			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
-			if( mask && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+			if( leafnum != -1 && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
 				continue;
 		}
 
@@ -4034,18 +4039,6 @@ int pfnGetFileSize( char *filename )
 
 /*
 =============
-pfnGetApproxWavePlayLen
-
-returns the wave length in samples
-=============
-*/
-uint pfnGetApproxWavePlayLen( const char *filepath )
-{
-	return 0;
-}
-
-/*
-=============
 pfnIsCareerMatch
 
 used by CS:CZ
@@ -4290,7 +4283,7 @@ static enginefuncs_t gEngfuncs =
 	pfnSequenceGet,
 	pfnSequencePickSentence,
 	pfnGetFileSize,
-	pfnGetApproxWavePlayLen,
+	Sound_GetApproxWavePlayLen,
 	pfnIsCareerMatch,
 	pfnGetLocalizedStringLength,
 	pfnRegisterTutorMessageShown,
@@ -4428,10 +4421,7 @@ parsing textual entity definitions out of an ent file.
 void SV_LoadFromFile( char *entities )
 {
 	string	token;
-	int	inhibited, spawned, died;
-	int	current_skill = Cvar_VariableInteger( "skill" ); // lock skill level
-	qboolean	inhibits_ents = (world.version == Q1BSP_VERSION) ? true : false;
-	qboolean	deathmatch = Cvar_VariableInteger( "deathmatch" );
+	int	inhibited, spawned;
 	qboolean	create_world = true;
 	edict_t	*ent;
 
@@ -4439,7 +4429,6 @@ void SV_LoadFromFile( char *entities )
 
 	inhibited = 0;
 	spawned = 0;
-	died = 0;
 
 	// parse ents
 	while(( entities = COM_ParseFile( entities, token )) != NULL )
@@ -4457,41 +4446,23 @@ void SV_LoadFromFile( char *entities )
 		if( !SV_ParseEdict( &entities, ent ))
 			continue;
 
-		// remove things from different skill levels or deathmatch
-		if( inhibits_ents && deathmatch )
+		if( svgame.dllFuncs.pfnSpawn( ent ) == -1 )
 		{
-			if( ent->v.spawnflags & (1<<11))
+			// game rejected the spawn
+			if( !( ent->v.flags & FL_KILLME ))
 			{
 				SV_FreeEdict( ent );
 				inhibited++;
-				continue;
 			}
 		}
-		else if( inhibits_ents && current_skill == 0 && ent->v.spawnflags & (1<<8))
-		{
-			SV_FreeEdict( ent );
-			inhibited++;
-			continue;
-		}
-		else if( inhibits_ents && current_skill == 1 && ent->v.spawnflags & (1<<9))
-		{
-			SV_FreeEdict( ent );
-			inhibited++;
-			continue;
-		}
-		else if( inhibits_ents && current_skill >= 2 && ent->v.spawnflags & (1<<10))
-		{
-			SV_FreeEdict( ent );
-			inhibited++;
-			continue;
-		}
-
-		if( svgame.dllFuncs.pfnSpawn( ent ) == -1 )
-			died++;
 		else spawned++;
 	}
 
 	MsgDev( D_INFO, "\n%i entities inhibited\n", inhibited );
+
+	// reset world origin and angles
+	VectorClear( svgame.edicts->v.origin );
+	VectorClear( svgame.edicts->v.angles );
 }
 
 /*
@@ -4511,6 +4482,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	// reset misc parms
 	Cvar_Reset( "sv_zmax" );
 	Cvar_Reset( "sv_wateramp" );
+	Cvar_Reset( "sv_wateralpha" );
 
 	// reset sky parms	
 	Cvar_Reset( "sv_skycolor_r" );

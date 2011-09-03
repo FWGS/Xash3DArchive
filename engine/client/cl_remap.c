@@ -217,7 +217,7 @@ void CL_UpdateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomcolor
 	gltexture_t	*glt;
 	rgbdata_t		*pic;
 	texture_t		*tx = NULL;
-	char		texname[128], name[128];
+	char		texname[128], name[128], mdlname[128];
 	int		i, size, index;
 	byte		paletteBackup[768];
 	byte		*raw, *pal;
@@ -226,8 +226,11 @@ void CL_UpdateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomcolor
 	glt = R_GetTexture( ptexture->index );
 
 	// build name of original texture
+	Q_strncpy( mdlname, RI.currentmodel->name, sizeof( mdlname ));
 	FS_FileBase( ptexture->name, name );
-	Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", RI.currentmodel->name, name );
+	FS_StripExtension( mdlname );
+
+	Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
 	index = GL_FindTexture( texname );
 	if( !index ) return; // couldn't find texture
 

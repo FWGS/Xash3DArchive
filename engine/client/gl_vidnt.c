@@ -73,7 +73,6 @@ convar_t	*r_novis;
 convar_t	*r_nocull;
 convar_t	*r_lockpvs;
 convar_t	*r_lockcull;
-convar_t	*r_wateralpha;
 convar_t	*r_dynamic;
 convar_t	*r_lightmap;
 convar_t	*r_fastsky;
@@ -1254,6 +1253,13 @@ check vid modes and fullscreen
 */
 void VID_CheckChanges( void )
 {
+	if( cl_allow_levelshots->modified )
+          {
+		GL_FreeTexture( cls.loadingBar );
+		SCR_RegisterShaders(); // reload 'lambda' image
+		cl_allow_levelshots->modified = false;
+          }
+ 
 	if( renderinfo->modified )
 	{
 		if( !VID_SetMode())
@@ -1424,7 +1430,6 @@ void GL_InitCommands( void )
 	r_detailtextures = Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE, "enable detail textures support, use \"2\" for auto-generate mapname_detail.txt" );
 	r_lockpvs = Cvar_Get( "r_lockpvs", "0", CVAR_CHEAT, "lockpvs area at current point (pvs test)" );
 	r_lockcull = Cvar_Get( "r_lockcull", "0", CVAR_CHEAT, "lock frustrum area at current point (cull test)" );
-	r_wateralpha = Cvar_Get( "r_wateralpha", "1", CVAR_ARCHIVE, "world water transparency factor" );
 	r_dynamic = Cvar_Get( "r_dynamic", "1", CVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
 	r_lightmap = Cvar_Get( "r_lightmap", "0", CVAR_CHEAT, "lightmap debugging tool" );
 	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );

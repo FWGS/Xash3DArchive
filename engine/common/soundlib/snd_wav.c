@@ -139,7 +139,8 @@ Sound_LoadWAV
 */
 qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 {
-	int	samples;
+	int	samples, fmt;
+	qboolean	mpeg_stream = false;
 
 	if( !buffer || filesize <= 0 ) return false;
 
@@ -164,10 +165,15 @@ qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	iff_dataPtr += 8;
-	if( GetLittleShort() != 1 )
+	fmt = GetLittleShort();
+	if( fmt != 1 )
 	{
-		MsgDev( D_ERROR, "Sound_LoadWAV: %s not a microsoft PCM format\n", name );
-		return false;
+		if( fmt != 85 )
+		{
+			MsgDev( D_ERROR, "Sound_LoadWAV: %s not a microsoft PCM format\n", name );
+			return false;
+		}
+		else mpeg_stream = true;
 	}
 
 	sound.channels = GetLittleShort();
@@ -181,6 +187,8 @@ qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 	iff_dataPtr += 6;
 
 	sound.width = GetLittleShort() / 8;
+	if( mpeg_stream ) sound.width = 2; // mp3 always 16bit
+
 	if( sound.width != 1 && sound.width != 2 )
 	{
 		MsgDev( D_WARN, "Sound_LoadWAV: only 8 and 16 bit WAV files supported (%s)\n", name );
@@ -241,6 +249,22 @@ qboolean Sound_LoadWAV( const char *name, const byte *buffer, size_t filesize )
 
 	sound.type = WF_PCMDATA;
 	sound.samples /= sound.channels;
+
+	// g-cont. get support for mp3 streams packed in wav container
+	// e.g. CAd menu sounds
+	if( mpeg_stream )
+	{
+		int hdr_size = (iff_dataPtr - buffer);
+
+		if(( filesize - hdr_size ) < 16384 )
+		{
+			sound.tempbuffer = (byte *)Mem_Realloc( host.soundpool, sound.tempbuffer, 16384 );
+			Q_memcpy( sound.tempbuffer, buffer + (iff_dataPtr - buffer), filesize - hdr_size );
+			return Sound_LoadMPG( name, sound.tempbuffer, 16384 );
+		}
+
+		return Sound_LoadMPG( name, buffer + hdr_size, filesize - hdr_size );
+	}
 
 	// Load the data
 	sound.size = sound.samples * sound.width * sound.channels;

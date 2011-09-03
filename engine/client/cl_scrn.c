@@ -203,6 +203,9 @@ void SCR_MakeScreenShot( void )
 	case scrshot_normal:
 		iRet = VID_ScreenShot( cls.shotname, VID_SCREENSHOT );
 		break;
+	case scrshot_snapshot:
+		iRet = VID_ScreenShot( cls.shotname, VID_SNAPSHOT );
+		break;
 	case scrshot_plaque:
 		iRet = VID_ScreenShot( cls.shotname, VID_LEVELSHOT );
 		break;
@@ -224,7 +227,12 @@ void SCR_MakeScreenShot( void )
 	}
 
 	// report
-	if( iRet ) MsgDev( D_INFO, "Write %s\n", cls.shotname );
+	if( iRet )
+	{
+		// snapshots don't writes message about image		
+		if( cls.scrshot_action != scrshot_snapshot )
+			MsgDev( D_INFO, "Write %s\n", cls.shotname );
+	}
 	else MsgDev( D_ERROR, "Unable to write %s\n", cls.shotname );
 
 	cls.envshot_vieworg = NULL;
@@ -390,7 +398,9 @@ void SCR_RegisterShaders( void )
 
 	// register gfx.wad images
 	cls.pauseIcon = GL_LoadTexture( "gfx.wad/paused.lmp", NULL, 0, TF_IMAGE );
-	cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE );
+	if( cl_allow_levelshots->integer )
+		cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE );
+	else cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE ); 
 	cls.creditsFont.hFontTexture = GL_LoadTexture( "gfx.wad/creditsfont.fnt", NULL, 0, TF_IMAGE );
 	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
 

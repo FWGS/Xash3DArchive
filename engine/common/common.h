@@ -124,6 +124,7 @@ extern convar_t	*scr_height;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
 extern convar_t	*cl_allow_levelshots;
+extern convar_t	*host_allow_materials;
 extern convar_t	*host_limitlocal;
 extern convar_t	*host_maxfps;
 
@@ -172,6 +173,8 @@ typedef struct gameinfo_s
 
 	float		client_mins[4][3];	// 4 hulls allowed
 	float		client_maxs[4][3];	// 4 hulls allowed
+
+	char		ambientsound[NUM_AMBIENTS][64];// quake ambient sounds
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
 	int		max_tents;	// min temp ents is 300, max is 2048
@@ -304,6 +307,7 @@ typedef struct host_parm_s
 	qboolean		shutdown_issued;	// engine is shutting down
 	qboolean		decal_loading;	// nasty hack to tell imagelib about decal
 	qboolean		overview_loading;	// another nasty hackk to tell imagelib about ovierview
+	qboolean		force_draw_version;	// used when fraps is loaded
 
 	char		rootdir[256];	// member root directory
 	char		gamefolder[64];	// it's a default gamefolder	
@@ -539,6 +543,7 @@ wavdata_t *FS_StreamInfo( stream_t *stream );
 long FS_ReadStream( stream_t *stream, int bytes, void *buffer );
 void FS_FreeStream( stream_t *stream );
 qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
+uint Sound_GetApproxWavePlayLen( const char *filepath );
 
 //
 // build.c

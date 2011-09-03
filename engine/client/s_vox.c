@@ -114,7 +114,6 @@ char *VOX_LookupString( const char *pSentenceName, int *psentencenum )
 		return (g_Sentences[i].pName + Q_strlen( g_Sentences[i].pName ) + 1 );		
 	}
 
-
 	for( i = 0; i < g_numSentences; i++ )
 	{
 		if( !Q_stricmp( pSentenceName, g_Sentences[i].pName ))

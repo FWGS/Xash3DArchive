@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "pm_local.h"
 #include "gl_local.h"
 #include "studio.h"
+#include "wadfile.h"	// acess decal size
 
 /*
 ==============================================================
@@ -824,6 +825,8 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 		VectorSet( forward, 0.0f, 0.0f, 1.0f );	// up-vector
 		VectorVectors( forward, right, up );
 
+		Mod_GetFrames( modelIndex2, &frameCount );
+
 		// create blood drops
 		for( i = 0; i < 14; i++ )
 		{
@@ -835,7 +838,7 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			pTemp = CL_TempEntAlloc( org, Mod_Handle( modelIndex2 ));
 			if( !pTemp ) return;
 
-			pTemp->flags = FTENT_SPRANIMATELOOP|FTENT_COLLIDEWORLD|FTENT_SLOWGRAVITY;
+			pTemp->flags = FTENT_COLLIDEWORLD|FTENT_SLOWGRAVITY;
 
 			pTemp->entity.curstate.rendermode = kRenderTransTexture;
 			pTemp->entity.curstate.renderfx = kRenderFxClampMinScale; 
@@ -843,17 +846,17 @@ void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int model
 			pTemp->entity.curstate.rendercolor.r = clgame.palette[colorIndex][0];
 			pTemp->entity.curstate.rendercolor.g = clgame.palette[colorIndex][1];
 			pTemp->entity.curstate.rendercolor.b = clgame.palette[colorIndex][2];
-			pTemp->entity.curstate.framerate = frameCount * 4; // Finish in 0.250 seconds
+			pTemp->entity.curstate.frame = Com_RandomLong( 0, frameCount - 1 );
 			pTemp->die = cl.time + Com_RandomFloat( 1.0f, 3.0f );
 
 			pTemp->entity.angles[2] = Com_RandomLong( 0, 360 );
 			pTemp->bounceFactor = 0;
 
-			dir[0] = forward[0] + Com_RandomFloat( -0.3f, 0.3f );
-			dir[1] = forward[1] + Com_RandomFloat( -0.3f, 0.3f );
-			dir[2] = forward[2] + Com_RandomFloat( -0.3f, 0.3f );
+			dir[0] = forward[0] + Com_RandomFloat( -0.8f, 0.8f );
+			dir[1] = forward[1] + Com_RandomFloat( -0.8f, 0.8f );
+			dir[2] = forward[2];
 
-			VectorScale( dir, Com_RandomFloat( 4.0f * size, 16.0f * size ), pTemp->entity.baseline.origin );
+			VectorScale( dir, Com_RandomFloat( 8.0f * size, 20.0f * size ), pTemp->entity.baseline.origin );
 			pTemp->entity.baseline.origin[2] += Com_RandomFloat( 4.0f, 16.0f ) * size;
 		}
 	}
@@ -2384,12 +2387,12 @@ update client flashlight
 */
 void CL_UpdateFlashlight( cl_entity_t *pEnt )
 {
+	int	key, traceFlags;
 	vec3_t	vecSrc, vecEnd;
 	vec3_t	forward, view_ofs;
 	float	falloff;
 	pmtrace_t	trace;
 	dlight_t	*dl;
-	int	key;
 
 	if(( pEnt->index - 1 ) == cl.playernum )
 	{
@@ -2416,7 +2419,12 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
 
-	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_GLASS_IGNORE|PM_STUDIO_BOX, 2, -1, NULL );
+	traceFlags = PM_STUDIO_BOX;
+
+	if( r_lighting_extended->integer < 2 )
+		traceFlags |= PM_GLASS_IGNORE;
+
+	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, traceFlags, 2, -1, NULL );
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 
 	if( falloff < 250.0f ) falloff = 1.0f;
@@ -2538,7 +2546,40 @@ int CL_DecalIndex( int id )
 
 	host.decal_loading = true;
 	if( !cl.decal_index[id] )
-		cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL );
+	{
+		qboolean	load_external = false;
+
+		if( host_allow_materials->integer )
+		{
+			char	decalname[64];
+			int	gl_texturenum = 0;
+
+			Q_snprintf( decalname, sizeof( decalname ), "materials/decals/%s.tga", host.draw_decals[id] );
+
+			if( FS_FileExists( decalname, false ))
+				gl_texturenum = GL_LoadTexture( decalname, NULL, 0, TF_DECAL );
+
+			if( gl_texturenum )
+			{
+				byte	*fin;
+				mip_t	*mip;
+
+				// find real decal dimensions and store it into texture srcWidth\srcHeight
+				if(( fin = FS_LoadFile( va( "decals.wad/%s", host.draw_decals[id] ), NULL, false )) != NULL )
+				{
+					mip = (mip_t *)fin;
+					R_GetTexture( gl_texturenum )->srcWidth = mip->width;
+					R_GetTexture( gl_texturenum )->srcHeight = mip->height;
+					Mem_Free( fin ); // release low-quality decal
+				}
+
+				cl.decal_index[id] = gl_texturenum;
+				load_external = true; // sucessfully loaded
+			}
+		}
+
+		if( !load_external ) cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL );
+	}
 	host.decal_loading = false;
 
 	return cl.decal_index[id];

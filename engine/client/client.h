@@ -40,6 +40,7 @@ GNU General Public License for more details.
 #define VID_LEVELSHOT	1
 #define VID_MINISHOT	2
 #define VID_MAPSHOT		3	// special case for overview layer
+#define VID_SNAPSHOT	4	// save screenshot into root dir and no gamma correction
 
 typedef int		sound_t;
 
@@ -171,6 +172,7 @@ typedef enum
 {
 	scrshot_inactive,
 	scrshot_normal,	// in-game screenshot
+	scrshot_snapshot,	// in-game snapshot
 	scrshot_plaque,  	// levelshot
 	scrshot_savegame,	// saveshot
 	scrshot_demoshot,	// for demos preview
@@ -256,8 +258,8 @@ typedef struct
 typedef struct
 {
 	// centerprint stuff
-	int		lines;
-	int		y, time;
+	float		time;
+	int		y, lines;
 	char		message[2048];
 	int		totalWidth;
 	int		totalHeight;
@@ -550,6 +552,7 @@ void CL_PrepSound( void );
 //
 void CL_Quit_f( void );
 void CL_ScreenShot_f( void );
+void CL_SnapShot_f( void );
 void CL_PlayCDTrack_f( void );
 void CL_EnvShot_f( void );
 void CL_SkyShot_f( void );
@@ -664,7 +667,7 @@ qboolean CL_IsPredicted( void );
 int CL_TruePointContents( const vec3_t p );
 int CL_PointContents( const vec3_t p );
 int CL_WaterEntity( const float *rgflPos );
-model_t *CL_GetWaterModel( const float *rgflPos );
+cl_entity_t *CL_GetWaterEntity( const float *rgflPos );
 void CL_SetupPMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd );
 void CL_ClearPhysEnts( void );
 
@@ -722,6 +725,8 @@ void CL_AddCustomBeam( cl_entity_t *pEnvBeam );
 void CL_KillDeadBeams( cl_entity_t *pDeadEntity );
 void CL_ParseViewBeam( sizebuf_t *msg, int beamType );
 void CL_RegisterMuzzleFlashes( void );
+void CL_ReadPointFile_f( void );
+void CL_ReadLineFile_f( void );
 
 //
 // console.c
@@ -737,6 +742,8 @@ void Con_DrawConsole( void );
 void Con_DrawVersion( void );
 void Con_DrawStringLen( const char *pText, int *length, int *height );
 int Con_DrawString( int x, int y, const char *string, rgba_t setColor );
+int Con_DrawCharacter( int x, int y, int number, rgba_t color );
+void Con_DrawCharacterLen( int number, int *width, int *height );
 void Con_DefaultColor( int r, int g, int b );
 void Con_CharEvent( int key );
 void Key_Console( int key );

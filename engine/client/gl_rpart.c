@@ -1603,3 +1603,74 @@ void CL_Implosion( const vec3_t end, float radius, int count, float life )
 		p->die += ( life != 0.0f ) ? life : ( radius / vel );
 	}
 }
+
+/*
+===============
+CL_ReadPointFile_f
+
+===============
+*/
+void CL_ReadPointFile_f( void )
+{
+	char		*afile, *pfile;
+	vec3_t		org;
+	int		count;
+	particle_t	*p;
+	char		filename[64];
+	string		token;
+	
+	Q_snprintf( filename, sizeof( filename ), "maps/%s.pts", clgame.mapname );
+	afile = FS_LoadFile( filename, NULL, false );
+
+	if( !afile )
+	{
+		MsgDev( D_ERROR, "couldn't open %s\n", filename );
+		return;
+	}
+	
+	Msg( "Reading %s...\n", filename );
+
+	count = 0;
+	pfile = afile;
+
+	while( 1 )
+	{
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		org[0] = Q_atof( token );
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		org[1] = Q_atof( token );
+
+		pfile = COM_ParseFile( pfile, token );
+		if( !pfile ) break;
+		org[2] = Q_atof( token );
+
+		count++;
+		
+		if( !cl_free_particles )
+		{
+			MsgDev( D_ERROR, "CL_ReadPointFile: not enough free particles!\n" );
+			break;
+		}
+
+		// NOTE: can't use CL_AllocateParticles because running from the console
+		p = cl_free_particles;
+		cl_free_particles = p->next;
+		p->next = cl_active_particles;
+		cl_active_particles = p;
+
+		p->ramp = 0;		
+		p->die = 99999;
+		p->color = (-count) & 15;
+		p->type = pt_static;
+		VectorClear( p->vel );
+		VectorCopy( org, p->org );
+	}
+
+	Mem_Free( afile );
+
+	if( count ) Msg( "%i points read\n", count );
+	else Msg( "map %s has no leaks!\n", clgame.mapname );
+}

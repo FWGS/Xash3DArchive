@@ -1035,7 +1035,7 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 	return image.tempbuffer;
 }
 
-byte *Image_CreateLumaInternal( const byte *fin, int width, int height, int type, int flags )
+byte *Image_CreateLumaInternal( byte *fin, int width, int height, int type, int flags )
 {
 	byte	*out;
 	int	i;
@@ -1054,6 +1054,26 @@ byte *Image_CreateLumaInternal( const byte *fin, int width, int height, int type
 		for( i = 0; i < width * height; i++ )
 			*out++ = fin[i] >= 224 ? fin[i] : 0;
 		break;
+	case PF_RGB_24:
+	case PF_BGR_24:
+		// clearing any gray pixels
+		for( i = 0; i < width * height; i++ )
+		{
+			if( fin[i*3+0] < 32 ) fin[i*3+0] = 0;
+			if( fin[i*3+1] < 32 ) fin[i*3+1] = 0;
+			if( fin[i*3+2] < 32 ) fin[i*3+2] = 0;
+		}
+		return (byte *)fin;
+	case PF_RGBA_32:
+	case PF_BGRA_32:
+		// clearing any gray pixels
+		for( i = 0; i < width * height; i++ )
+		{
+			if( fin[i*4+0] < 32 ) fin[i*4+0] = 0;
+			if( fin[i*4+1] < 32 ) fin[i*4+1] = 0;
+			if( fin[i*4+2] < 32 ) fin[i*4+2] = 0;
+		}
+		return (byte *)fin;
 	default:
 		// another formats does ugly result :(
 		MsgDev( D_WARN, "Image_MakeLuma: unsupported format %s\n", PFDesc[type].name );

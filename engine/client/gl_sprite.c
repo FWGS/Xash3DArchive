@@ -830,7 +830,7 @@ static _inline qboolean R_SpriteHasLightmap( cl_entity_t *e, int texFormat )
 	if( e->curstate.effects & EF_FULLBRIGHT )
 		return false;
 
-	if( e->curstate.renderamt != 255 )
+	if( e->curstate.renderamt <= 127 )
 		return false;
 
 	switch( e->curstate.rendermode )
@@ -856,10 +856,10 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	mspriteframe_t	*frame, *oldframe;
 	msprite_t		*psprite;
 	model_t		*model;
-	int		i, alpha;
+	int		i, alpha, type;
 	float		angle, dot, sr, cr, flAlpha;
 	float		lerp = 1.0f, ilerp, scale;
-	vec3_t		v_forward, v_right, v_up;
+	vec3_t		v_forward, v_right, v_up, tmp;
 	vec3_t		origin, color, color2;
 
 	if( RI.params & RP_ENVVIEW )
@@ -959,16 +959,27 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		frame = oldframe = R_GetSpriteFrame( model, e->curstate.frame, e->angles[YAW] );
 	else lerp = R_GetSpriteFrameInterpolant( e, &oldframe, &frame );
 
-	switch( psprite->type )
+	type = psprite->type;
+
+	// automatically roll parallel sprites if requested
+	if( e->angles[ROLL] != 0.0f && type == SPR_FWD_PARALLEL )
+		type = SPR_FWD_PARALLEL_ORIENTED;
+
+	switch( type )
 	{
 	case SPR_ORIENTED:
 		AngleVectors( e->angles, v_forward, v_right, v_up );
-		VectorScale( v_forward, 0.01f, v_forward ); // to avoid z-fighting
+		VectorScale( v_forward, 0.01f, v_forward );	// to avoid z-fighting
 		VectorSubtract( origin, v_forward, origin );
 		break;
 	case SPR_FACING_UPRIGHT:
-		VectorSet( v_right, origin[1] - RI.vieworg[1], -(origin[0] - RI.vieworg[0]), 0.0f );
-		VectorSet( v_up, 0.0f, 0.0f, 1.0f );
+		VectorNegate( e->origin, tmp );
+		VectorNormalize( tmp );
+		dot = tmp[2];
+		if(( dot > 0.999848 ) || ( dot < -0.999848 ))	// cos(1 degree) = 0.999848
+			return; // invisible
+		VectorSet( v_up, 0.0f, 0.0f, 1.0f );		
+		VectorSet( v_right, tmp[1], -tmp[0], 0.0f );
 		VectorNormalize( v_right );
 		break;
 	case SPR_FWD_PARALLEL_UPRIGHT:
@@ -989,19 +1000,9 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		}
 		break;
 	case SPR_FWD_PARALLEL: // normal sprite
-	default:	// gold src support rotating sprites
-		angle = e->angles[ROLL];
-
-		if( angle != 0.0f )
-		{
-			RotatePointAroundVector( v_up, RI.vforward, RI.vright, angle-90.0f );	// make up
-			CrossProduct( RI.vforward, v_up, v_right );			// make right
-		}
-		else
-		{
-			VectorCopy( RI.vright, v_right ); 
-			VectorCopy( RI.vup, v_up );
-		}
+	default:
+		VectorCopy( RI.vright, v_right ); 
+		VectorCopy( RI.vup, v_up );
 		break;
 	}
 

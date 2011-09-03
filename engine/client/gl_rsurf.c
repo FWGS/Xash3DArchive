@@ -357,7 +357,7 @@ texture_t *R_TextureAnimation( texture_t *base, int surfacenum )
 		return base;
 
 	// GoldSrc and Quake1 has different animating speed
-	if( world.version == Q1BSP_VERSION )
+	if( world.sky_sphere || world.version == Q1BSP_VERSION )
 		speed = 10;
 	else speed = 20;
 
@@ -733,6 +733,8 @@ void R_BlendLightmaps( void )
 		switch( RI.currententity->curstate.rendermode )
 		{
 		case kRenderTransTexture:
+			if( r_lighting_extended->integer == 2 )
+				break;
 		case kRenderTransColor:
 		case kRenderTransAdd:
 		case kRenderGlow:
@@ -746,8 +748,14 @@ void R_BlendLightmaps( void )
 	if( !r_lightmap->integer )
 	{
 		pglEnable( GL_BLEND );
-		pglDepthMask( GL_FALSE );
-		pglDepthFunc( GL_EQUAL );
+
+		if( !glState.drawTrans )
+		{
+			// lightmapped solid surfaces
+			pglDepthMask( GL_FALSE );
+			pglDepthFunc( GL_EQUAL );
+		}
+
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
@@ -849,8 +857,14 @@ void R_BlendLightmaps( void )
 	if( !r_lightmap->integer )
 	{
 		pglDisable( GL_BLEND );
-		pglDepthMask( GL_TRUE );
-		pglDepthFunc( GL_LEQUAL );
+
+		if( !glState.drawTrans )
+		{
+			// restore depth state
+			pglDepthMask( GL_TRUE );
+			pglDepthFunc( GL_LEQUAL );
+		}
+
 		pglDisable( GL_ALPHA_TEST );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	}
@@ -960,7 +974,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 
 	if( fa->flags & SURF_DRAWSKY )
 	{	
-		if( world.version == Q1BSP_VERSION )
+		if( world.sky_sphere )
 		{
 			// warp texture, no lightmaps
 			EmitSkyLayers( fa );
@@ -1086,11 +1100,14 @@ void R_DrawTextureChains( void )
 
 		if( i == tr.skytexturenum )
 		{
-			if( world.version == Q1BSP_VERSION )
+			if( world.sky_sphere )
 				R_DrawSkyChain( s );
 		}
 		else
 		{
+			if(( s->flags & SURF_DRAWTURB ) && RI.refdef.movevars->wateralpha < 1.0f )
+				continue;	// draw translucent water later
+
 			for( ; s != NULL; s = s->texturechain )
 				R_RenderBrushPoly( s );
 		}
@@ -1113,7 +1130,7 @@ void R_DrawWaterSurfaces( void )
 		return;
 
 	// non-transparent water is already drawed
-	if( r_wateralpha->value >= 1.0f )
+	if( RI.refdef.movevars->wateralpha >= 1.0f )
 		return;
 
 	// go back to the world matrix
@@ -1125,7 +1142,7 @@ void R_DrawWaterSurfaces( void )
 	pglDisable( GL_ALPHA_TEST );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	pglColor4f( 1.0f, 1.0f, 1.0f, r_wateralpha->value );
+	pglColor4f( 1.0f, 1.0f, 1.0f, RI.refdef.movevars->wateralpha );
 
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{
@@ -1684,7 +1701,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 		if( R_CullSurface( surf, clipflags ))
 			continue;
 
-		if( surf->flags & SURF_DRAWSKY && world.version == HLBSP_VERSION )
+		if( surf->flags & SURF_DRAWSKY && !world.sky_sphere )
 		{
 			// make sky chain to right clip the skybox
 			surf->texturechain = skychain;
@@ -1958,41 +1975,50 @@ void R_MarkLeaves( void )
 	int	i;
 
 	if( !RI.drawWorld ) return;
+
+	if( r_novis->modified )
+	{
+		// force recalc viewleaf
+		r_novis->modified = false;
+		r_viewleaf = NULL;
+	}
+
 	if( r_viewleaf == r_oldviewleaf && r_viewleaf2 == r_oldviewleaf2 && !r_novis->integer && r_viewleaf != NULL )
 		return;
 
 	// development aid to let you run around
 	// and see exactly where the pvs ends
-	if( r_lockpvs->integer )
-		return;
+	if( r_lockpvs->integer ) return;
 
 	tr.visframecount++;
 	r_oldviewleaf = r_viewleaf;
 	r_oldviewleaf2 = r_viewleaf2;
-			
+		
 	if( r_novis->integer || RI.drawOrtho || !r_viewleaf || !cl.worldmodel->visdata )
 	{
-		// force to get full visibility
-		vis = Mod_LeafPVS( NULL, NULL );
+		// mark everything
+		for( i = 0; i < cl.worldmodel->numleafs; i++ )
+			cl.worldmodel->leafs[i+1].visframe = tr.visframecount;
+		for( i = 0; i < cl.worldmodel->numnodes; i++ )
+			cl.worldmodel->nodes[i].visframe = tr.visframecount;
+		return;
 	}
-	else
+
+	// may have to combine two clusters
+	// because of solid water boundaries
+	vis = Mod_LeafPVS( r_viewleaf, cl.worldmodel );
+
+	if( r_viewleaf != r_viewleaf2 )
 	{
-		// may have to combine two clusters
-		// because of solid water boundaries
-		vis = Mod_LeafPVS( r_viewleaf, cl.worldmodel );
+		int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
 
-		if( r_viewleaf != r_viewleaf2 )
-		{
-			int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
+		Q_memcpy( visbytes, vis, longs << 2 );
+		vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
 
-			Q_memcpy( visbytes, vis, longs << 2 );
-			vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
+		for( i = 0; i < longs; i++ )
+			((int *)visbytes)[i] |= ((int *)vis)[i];
 
-			for( i = 0; i < longs; i++ )
-				((int *)visbytes)[i] |= ((int *)vis)[i];
-
-			vis = visbytes;
-		}
+		vis = visbytes;
 	}
 
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
@@ -2098,14 +2124,20 @@ void GL_BuildLightmaps( void )
 
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 
-			if( m->surfaces[i].flags & SURF_DRAWTURB )
+			if( m->surfaces[j].flags & SURF_DRAWTURB )
 				continue;
 
-			if( m->surfaces[i].flags & SURF_DRAWSKY && world.version == Q1BSP_VERSION )
+			if( m->surfaces[j].flags & SURF_DRAWSKY && world.sky_sphere )
 				continue;
 
 			GL_BuildPolygonFromSurface( m->surfaces + j );
 		}
+
+		// clearing visframe
+		for( j = 0; j < m->numleafs; j++ )
+			m->leafs[j+1].visframe = 0;
+		for( j = 0; j < m->numnodes; j++ )
+			m->nodes[j].visframe = 0;
 	}
 
 	loadmodel = NULL;

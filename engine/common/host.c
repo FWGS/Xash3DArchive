@@ -33,6 +33,7 @@ sysinfo_t		SI;
 convar_t	*host_serverstate;
 convar_t	*host_gameloaded;
 convar_t	*host_clientloaded;
+convar_t	*host_allow_materials;
 convar_t	*host_limitlocal;
 convar_t	*host_cheats;
 convar_t	*host_maxfps;
@@ -691,6 +692,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	host_gameloaded = Cvar_Get( "host_gameloaded", "0", CVAR_INIT, "inidcates a loaded game.dll" );
 	host_clientloaded = Cvar_Get( "host_clientloaded", "0", CVAR_INIT, "inidcates a loaded client.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
+	host_allow_materials = Cvar_Get( "host_allow_materials", "1", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
 	con_gamemaps = Cvar_Get( "con_gamemaps", "1", CVAR_ARCHIVE, "when true show only maps in game folder" );
 
 	// content control

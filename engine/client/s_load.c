@@ -121,17 +121,32 @@ S_LoadSound
 */
 wavdata_t *S_LoadSound( sfx_t *sfx )
 {
-	wavdata_t	*sc;
+	wavdata_t	*sc = NULL;
 
 	if( !sfx ) return NULL;
 	if( sfx->cache ) return sfx->cache; // see if still in memory
 
-	// load it from disk
-	if( sfx->name[0] == '*' )
-		sc = FS_LoadSound( sfx->name + 1, NULL, 0 );
-	else sc = FS_LoadSound( sfx->name, NULL, 0 );
+	if( Q_stricmp( sfx->name, "*default" ))
+	{
+		// load it from disk
+		if( sfx->name[0] == '*' )
+			sc = FS_LoadSound( sfx->name + 1, NULL, 0 );
+		else sc = FS_LoadSound( sfx->name, NULL, 0 );
+	}
 
 	if( !sc ) sc = S_CreateDefaultSound();
+
+	if( sc->rate < SOUND_11k ) // some bad sounds
+		Sound_Process( &sc, SOUND_11k, sc->width, SOUND_RESAMPLE );
+#if SOUND_DMA_SPEED > SOUND_11k
+	else if( sc->rate > SOUND_11k && sc->rate < SOUND_22k ) // some bad sounds
+		Sound_Process( &sc, SOUND_22k, sc->width, SOUND_RESAMPLE );
+#endif
+
+#if SOUND_DMA_SPEED > SOUND_32k
+	else if( sc->rate > SOUND_22k && sc->rate <= SOUND_32k ) // some bad sounds
+		Sound_Process( &sc, SOUND_44k, sc->width, SOUND_RESAMPLE );
+#endif
 	sfx->cache = sc;
 
 	return sfx->cache;
@@ -247,8 +262,27 @@ S_BeginRegistration
 */
 void S_BeginRegistration( void )
 {
+	int	i;
+
 	s_registration_sequence++;
 	s_registering = true;
+
+	// create unused 0-entry
+	S_RegisterSound( "*default" );
+
+	snd_ambient = false;
+
+	// check for automatic ambient sounds
+	for( i = 0; i < NUM_AMBIENTS; i++ )
+	{
+		if( !GI->ambientsound[i][0] )
+			continue;	// empty slot
+
+		if( !ambient_sfx[i] )
+			MsgDev( D_NOTE, "Loading ambient[%i]: ^2%s^7\n", i, GI->ambientsound[i] );
+		ambient_sfx[i] = S_RegisterSound( GI->ambientsound[i] );
+		if( ambient_sfx[i] ) snd_ambient = true; // allow auto-ambients
+	}
 }
 
 /*

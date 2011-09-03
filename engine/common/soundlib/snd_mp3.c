@@ -113,10 +113,7 @@ qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize )
 		}
 
 		if( bytesWrite + mpeg.outsize > sound.size )
-		{
 			outsize = ( sound.size - bytesWrite );
-			Msg( "merge size from %i, to %i\n", mpeg.outsize, outsize );
-		}
 		else outsize = mpeg.outsize;
 
 		Q_memcpy( &sound.wav[bytesWrite], mpeg.out, outsize );

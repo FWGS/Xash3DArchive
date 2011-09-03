@@ -81,6 +81,7 @@ void SV_InitBoxHull( void )
 		
 		box_planes[i].type = i>>1;
 		box_planes[i].normal[i>>1] = 1;
+		box_planes[i].signbits = 0;
 	}
 	
 }
@@ -176,9 +177,9 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 			}
 			else
 			{
-				if( size[0] <= 36.0f )
+				if( size[0] <= world.hull_sizes[1][0] )
 				{
-					if( size[2] <= 36.0f )
+					if( size[2] <= world.hull_sizes[3][2] )
 						hull = &model->hulls[3];
 					else hull = &model->hulls[1];
 				}
@@ -920,8 +921,7 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 			VectorLerp( start, trace.fraction, end, trace.endpos );
 
 			VectorCopy( trace.plane.normal, temp );
-			Matrix4x4_TransformPositivePlane( matrix, temp, trace.plane.dist,
-				trace.plane.normal, &trace.plane.dist );
+			Matrix4x4_TransformPositivePlane( matrix, temp, trace.plane.dist, trace.plane.normal, &trace.plane.dist );
 		}
 	}
 	else

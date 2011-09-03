@@ -309,7 +309,7 @@ void Con_CheckResize( void )
 
 	width = ( scr_width->integer / charWidth ) - 2;
 
-	// FIXME: Con_CheckResize is totally wrong :-(
+	// NOTE: Con_CheckResize is totally wrong :-(
 	// g-cont. i've just used fixed width on all resolutions
 	width = 90;
 
@@ -346,7 +346,6 @@ void Con_CheckResize( void )
 		for( i = 0; i < CON_TEXTSIZE; i++ )
 			con.text[i] = ( ColorIndex( COLOR_DEFAULT ) << 8 ) | ' ';
 
-		// FIXME: should we consider '\n' when counting the actual lines?
 		for( i = 0; i < numlines; i++ )
 		{
 			for( j = 0; j < numchars; j++ )
@@ -517,10 +516,16 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 	return con.charWidths[number];
 }
 
-static int Con_DrawCharacter( int x, int y, int number, rgba_t color )
+int Con_DrawCharacter( int x, int y, int number, rgba_t color )
 {
 	GL_SetRenderMode( kRenderTransTexture );
 	return Con_DrawGenericChar( x, y, number, color );
+}
+
+void Con_DrawCharacterLen( int number, int *width, int *height )
+{
+	if( width ) *width = con.charWidths[number];
+	if( height ) *height = con.charHeight;
 }
 
 void Con_DrawStringLen( const char *pText, int *length, int *height )
@@ -1799,11 +1804,24 @@ void Con_DrawVersion( void )
 	byte	*color = g_color_table[7];
 	int	i, stringLen, width = 0, charH;
 	int	start, height = scr_height->integer;
+	qboolean	draw_version = false;
 	string	curbuild;
 
-	if( cls.key_dest != key_menu && cls.scrshot_action != scrshot_normal ) return;
+	switch( cls.scrshot_action )
+	{
+	case scrshot_normal:
+	case scrshot_snapshot:
+		draw_version = true;
+		break;
+	}
 
-	if( cls.scrshot_action == scrshot_normal )
+	if( !host.force_draw_version )
+	{
+		if(( cls.key_dest != key_menu && !draw_version ) || gl_overview->integer == 2 )
+			return;
+	}
+
+	if( host.force_draw_version || draw_version )
 		Q_snprintf( curbuild, MAX_STRING, "Xash3D v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( ));
 	else Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( )); 
 	Con_DrawStringLen( curbuild, &stringLen, &charH );

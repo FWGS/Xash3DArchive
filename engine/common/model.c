@@ -30,7 +30,8 @@ static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels = 0;
 static byte	visdata[MAX_MAP_LEAFS/8];	// intermediate buffer
 int		bmodel_version;		// global stuff to detect bsp version
-	
+char		modelname[64];		// short model name (without path and ext)
+		
 model_t		*loadmodel;
 model_t		*worldmodel;
 
@@ -326,7 +327,7 @@ qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbi
 	{
 		int	leafnum = leafList[i];
 
-		if( visbits[leafnum>>3] & (1<<( leafnum & 7 )))
+		if( leafnum != -1 && visbits[leafnum>>3] & (1<<( leafnum & 7 )))
 			return true;
 	}
 	return false;
@@ -456,7 +457,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		if( VectorIsNull( out->origin ))
 		{
 			// NOTE: zero origin after recalculating is indicated included origin brush
-			VectorAverage( out->mins, out->maxs, out->origin );
+//			VectorAverage( out->mins, out->maxs, out->origin );
 		}
 
 		if( i == 0 || !world.loading )
@@ -481,7 +482,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 	texture_t		*anims[10];
 	texture_t		*altanims[10];
 	int		num, max, altmax;
-	char		texname[32];
+	char		texname[64];
 	mip_t		*mt;
 	int 		i, j; 
 
@@ -491,6 +492,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		GL_FreeTexture( tr.solidskyTexture );
 		GL_FreeTexture( tr.alphaskyTexture );
 		tr.solidskyTexture = tr.alphaskyTexture = 0;
+		world.sky_sphere = false;
 	}
 
 	if( !l->filelen )
@@ -507,6 +509,9 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 	for( i = 0; i < loadmodel->numtextures; i++ )
 	{
+		qboolean	load_external = false;
+		qboolean	load_external_luma = false;
+
 		if( in->dataofs[i] == -1 )
 		{
 			// create default texture (some mods requires this)
@@ -533,51 +538,166 @@ static void Mod_LoadTextures( const dlump_t *l )
 		// convert to lowercase
 		Q_strnlwr( mt->name, mt->name, sizeof( mt->name ));
 		Q_strncpy( tx->name, mt->name, sizeof( tx->name ));
-		Q_snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", mt->name );
 
 		tx->width = mt->width;
 		tx->height = mt->height;
 
-		// check for sky texture (quake1 only!)
-		if( world.loading && world.version == Q1BSP_VERSION && !Q_strncmp( mt->name, "sky", 3 ))
+		// check for multi-layered sky texture
+		if( world.loading && !Q_strncmp( mt->name, "sky", 3 ) && mt->width == 256 && mt->height == 128 )
 		{	
-			R_InitSky( mt, tx );
-		}
-		else if( mt->offsets[0] > 0 )
-		{
-			// NOTE: imagelib detect miptex version by size
-			// 770 additional bytes is indicated custom palette
-			int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-			if( bmodel_version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+			if( host_allow_materials->integer )
+			{
+				// build standard path: "materials/mapname/texname_solid.tga"
+				Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_solid.tga", modelname, mt->name );
 
-			tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0 );
-		}
-		else
-		{
-			// okay, loading it from wad
-			tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0 );
-		}
+				if( !FS_FileExists( texname, false ))
+				{
+					// build common path: "materials/mapname/texname_solid.tga"
+					Q_snprintf( texname, sizeof( texname ), "materials/common/%s_solid.tga", mt->name );
 
-		// set the emo-texture for missed
-		if( !tx->gl_texturenum ) tx->gl_texturenum = tr.defaultTexture;
+					if( FS_FileExists( texname, false ))
+						load_external = true;
+				}
+				else load_external = true;
 
-		// check for luma texture
-		if( R_GetTexture( tx->gl_texturenum )->flags & TF_HAS_LUMA )
+				if( load_external )
+				{
+					tr.solidskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP );
+					GL_SetTextureType( tr.solidskyTexture, TEX_BRUSH );
+					load_external = false;
+				}
+
+				if( tr.solidskyTexture )
+				{
+					// build standard path: "materials/mapname/texname_alpha.tga"
+					Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_alpha.tga", modelname, mt->name );
+
+					if( !FS_FileExists( texname, false ))
+					{
+						// build common path: "materials/mapname/texname_alpha.tga"
+						Q_snprintf( texname, sizeof( texname ), "materials/common/%s_alpha.tga", mt->name );
+
+						if( FS_FileExists( texname, false ))
+							load_external = true;
+					}
+					else load_external = true;
+
+					if( load_external )
+					{
+						tr.alphaskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP );
+						GL_SetTextureType( tr.alphaskyTexture, TEX_BRUSH );
+						load_external = false;
+					}
+				}
+
+				if( !tr.solidskyTexture || !tr.alphaskyTexture )
+				{
+					// couldn't find one of layer
+					GL_FreeTexture( tr.solidskyTexture );
+					GL_FreeTexture( tr.alphaskyTexture );
+					tr.solidskyTexture = tr.alphaskyTexture = 0;
+				}
+			}
+
+			if( !tr.solidskyTexture && !tr.alphaskyTexture )
+				R_InitSky( mt, tx ); // fallback to standard sky
+
+			if( tr.solidskyTexture && tr.alphaskyTexture )
+				world.sky_sphere = true;
+		}
+		else 
 		{
-			Q_snprintf( texname, sizeof( texname ), "%s%s_luma.mip", mt->offsets[0] > 0 ? "#" : "", mt->name );
-			if( mt->offsets[0] > 0 )
+			if( host_allow_materials->integer )
+			{
+				if( mt->name[0] == '*' ) mt->name[0] = '!'; // replace unexpected symbol
+
+				// build standard path: "materials/mapname/texname.tga"
+				Q_snprintf( texname, sizeof( texname ), "materials/%s/%s.tga", modelname, mt->name );
+
+				if( !FS_FileExists( texname, false ))
+				{
+					// build common path: "materials/mapname/texname.tga"
+					Q_snprintf( texname, sizeof( texname ), "materials/common/%s.tga", mt->name );
+
+					if( FS_FileExists( texname, false ))
+						load_external = true;
+				}
+				else load_external = true;
+			}
+load_wad_textures:
+			if( !load_external )
+				Q_snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", mt->name );
+			else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
+
+			if( mt->offsets[0] > 0 && !load_external )
 			{
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 				if( bmodel_version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
-				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA|TF_NOMIPMAP );
+				tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0 );
 			}
 			else
 			{
 				// okay, loading it from wad
-				tx->fb_texturenum = GL_LoadTexture( texname, NULL, 0, TF_MAKELUMA|TF_NOMIPMAP );
+				tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0 );
+
+				if( !tx->gl_texturenum && load_external )
+				{
+					// in case we failed to loading 32-bit texture
+					MsgDev( D_ERROR, "Couldn't load %s\n", texname );
+					load_external = false;
+					goto load_wad_textures;
+				}
+			}
+		}
+
+		// set the emo-texture for missed
+		if( !tx->gl_texturenum ) tx->gl_texturenum = tr.defaultTexture;
+
+		if( load_external )
+		{
+			// build standard luma path: "materials/mapname/texname_luma.tga"
+			Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_luma.tga", modelname, mt->name );
+
+			if( !FS_FileExists( texname, false ))
+			{
+				// build common path: "materials/mapname/texname_luma.tga"
+				Q_snprintf( texname, sizeof( texname ), "materials/common/%s_luma.tga", mt->name );
+
+				if( FS_FileExists( texname, false ))
+					load_external_luma = true;
+			}
+			else load_external_luma = true;
+		}
+
+		// check for luma texture
+		if( R_GetTexture( tx->gl_texturenum )->flags & TF_HAS_LUMA || load_external_luma )
+		{
+			if( !load_external_luma )
+				Q_snprintf( texname, sizeof( texname ), "%s%s_luma.mip", mt->offsets[0] > 0 ? "#" : "", mt->name );
+			else MsgDev( D_NOTE, "loading luma HQ: %s\n", texname );
+
+			if( mt->offsets[0] > 0 && !load_external_luma )
+			{
+				// NOTE: imagelib detect miptex version by size
+				// 770 additional bytes is indicated custom palette
+				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
+				if( bmodel_version == HLBSP_VERSION ) size += sizeof( short ) + 768;
+
+				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_NOMIPMAP|TF_MAKELUMA );
+			}
+			else
+			{
+				// okay, loading it from wad
+				tx->fb_texturenum = GL_LoadTexture( texname, NULL, 0, TF_NOMIPMAP|TF_MAKELUMA );
+
+				if( !tx->fb_texturenum && load_external_luma )
+				{
+					// in case we failed to loading 32-bit luma texture
+					MsgDev( D_ERROR, "Couldn't load %s\n", texname );
+				} 
 			}
 		}
 
@@ -937,13 +1057,13 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
 
-		if( !Q_strnicmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
+		if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
 
-		if( !Q_strnicmp( tex->name, "scroll", 6 ))
+		if( !Q_strncmp( tex->name, "scroll", 6 ))
 			out->flags |= SURF_CONVEYOR;
 #ifdef MIRROR_TEST
-		if( !Q_strnicmp( tex->name, "glassblue1", 10 ))
+		if( !Q_strncmp( tex->name, "glassblue1", 10 ))
 			out->flags |= SURF_MIRROR;
 #endif
 		if( tex->name[0] == '{' )
@@ -965,7 +1085,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		for( j = 0; j < MAXLIGHTMAPS; j++ )
 			out->styles[j] = in->styles[j];
 
-		if( world.loading && out->flags & SURF_DRAWSKY && world.version == Q1BSP_VERSION )
+		if( out->flags & SURF_DRAWSKY && world.loading && world.sky_sphere )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
 
 		if( out->flags & SURF_DRAWTURB )
@@ -1758,6 +1878,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 
 		return NULL;
 	}
+
+	FS_FileBase( mod->name, modelname );
 
 	MsgDev( D_NOTE, "Mod_LoadModel: %s\n", mod->name );
 	mod->needload = world.load_sequence; // register mod

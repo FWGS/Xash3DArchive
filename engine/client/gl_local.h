@@ -168,6 +168,7 @@ typedef struct
 	float		fogDensity;
 	float		fogStart;
 	float		fogEnd;
+	int		cached_contents;	// in water
 
 	float		waveHeight;	// global waveHeight
 	float		currentWaveHeight;	// current entity waveHeight
@@ -626,7 +627,6 @@ extern convar_t	*r_novis;
 extern convar_t	*r_nocull;
 extern convar_t	*r_lockpvs;
 extern convar_t	*r_lockcull;
-extern convar_t	*r_wateralpha;
 extern convar_t	*r_dynamic;
 extern convar_t	*r_lightmap;
 extern convar_t	*r_fastsky;

@@ -327,6 +327,8 @@ V_PostRender
 */
 void V_PostRender( void )
 {
+	qboolean	draw_2d = false;
+
 	R_Set2DMode( true );
 
 	if( cls.state == ca_active )
@@ -335,7 +337,16 @@ void V_PostRender( void )
 		VGui_Paint();
 	}
 
-	if( cls.scrshot_action == scrshot_inactive || cls.scrshot_action == scrshot_normal )
+	switch( cls.scrshot_action )
+	{
+	case scrshot_inactive:
+	case scrshot_normal:
+	case scrshot_snapshot:
+		draw_2d = true;
+		break;
+	}
+
+	if( draw_2d )
 	{
 		SCR_RSpeeds();
 		SCR_NetSpeeds();

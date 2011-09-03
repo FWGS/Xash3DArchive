@@ -1119,11 +1119,10 @@ void SV_Physics_Follow( edict_t *ent )
 	parent = ent->v.aiment;
 	if( !SV_IsValidEdict( parent )) return;
 
-	VectorAdd( parent->v.origin, parent->v.view_ofs, ent->v.origin );
+	VectorAdd( parent->v.origin, parent->v.view_ofs, ent->v.v_angle );
 	VectorCopy( parent->v.angles, ent->v.angles );
 
-	// noclip ents never touch triggers
-	SV_LinkEdict( ent, false );
+	SV_LinkEdict( ent, true );
 }
 
 /*
@@ -1145,7 +1144,9 @@ void SV_Physics_Compound( edict_t *ent )
 
 	parent = ent->v.aiment;
 	if( !SV_IsValidEdict( parent )) return;
-	ent->v.solid = SOLID_NOT;
+
+	if( ent->v.solid != SOLID_TRIGGER )
+		ent->v.solid = SOLID_NOT;
 
 	switch( parent->v.movetype )
 	{
@@ -1185,8 +1186,8 @@ void SV_Physics_Compound( edict_t *ent )
 	VectorAdd( ent->v.angles, amove, ent->v.angles );
 	VectorAdd( ent->v.origin, lmove, ent->v.origin );
 
-	// noclip ents never touch triggers
-	SV_LinkEdict( ent, false );
+	// notsolid ents never touch triggers
+	SV_LinkEdict( ent, (ent->v.solid == SOLID_NOT) ? false : true );
 
 	// shuffle states
 	VectorCopy( parent->v.origin, ent->v.oldorigin );
@@ -1430,7 +1431,12 @@ void SV_Physics_Step( edict_t *ent )
 
 		if( inwater && ( ent->v.flags & FL_FLOAT ))
 		{
+			vec3_t	lmove;
+			int	e, block;
+			edict_t	*check;
+	
 			ent->v.flags |= FL_INWATER;
+			VectorClear( lmove );
 
 			// floating pushables
 			if( ent->v.waterlevel >= 2 )
@@ -1444,6 +1450,25 @@ void SV_Physics_Step( edict_t *ent )
 			else
 			{
 				ent->v.velocity[2] -= (ent->v.skin * host.frametime);
+			}
+
+			if( sv_fix_pushstep->integer )
+			{
+				lmove[2] = (ent->v.skin * host.frametime);
+
+				// push the clients to avoid sticking in float items
+				for( e = 1; e < svgame.globals->maxClients + 1; e++ )
+				{
+					check = EDICT_NUM( e );
+					if( !SV_IsValidEdict( check )) continue;
+
+					if(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == ent )
+					{
+						SV_PushEntity( check, lmove, vec3_origin, &block );
+						check->v.groundentity = NULL;
+						check->v.flags &= ~FL_ONGROUND;
+					}
+				}
 			}
 		}
 		else if( !wasonground )

@@ -601,7 +601,6 @@ void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate )
 		{
 		case SOUND_11k:
 		case SOUND_22k:
-		case SOUND_32k:
 		case SOUND_44k:
 			if( rate != pSource->rate )
 				continue;
@@ -1004,11 +1003,6 @@ void MIX_UpsampleAllPaintbuffers( int end, int count )
 	// only upsample roombuffer if dsp fx are on KDB: perf
 	MIX_SetCurrentPaintbuffer( IROOMBUFFER );
 	S_MixUpsample( count / ( SOUND_DMA_SPEED / SOUND_22k ), FILTERTYPE_LINEAR );
-#endif
-
-#if (SOUND_DMA_SPEED >= SOUND_32k)
-	// mix 32khz sounds: 
-	MIX_MixChannelsToPaintbuffer( end, SOUND_32k, SOUND_DMA_SPEED );
 #endif
 	// mix all 44khz sounds to all active paintbuffers
 	MIX_MixChannelsToPaintbuffer( end, SOUND_44k, SOUND_DMA_SPEED );
