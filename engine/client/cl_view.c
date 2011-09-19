@@ -30,6 +30,8 @@ update refdef values each frame
 void V_SetupRefDef( void )
 {
 	cl_entity_t	*clent;
+	int		size;
+	int		sb_lines;
 
 	clent = CL_GetLocalPlayer ();
 
@@ -51,17 +53,37 @@ void V_SetupRefDef( void )
 	cl.refdef.frametime = cl.time - cl.oldtime;
 	cl.refdef.demoplayback = cls.demoplayback;
 	cl.refdef.smoothing = cl_smooth->integer;
+	cl.refdef.viewsize = scr_viewsize->integer;
 	cl.refdef.waterlevel = cl.frame.local.client.waterlevel;		
 	cl.refdef.onlyClientDraw = 0;	// reset clientdraw
-	cl.refdef.viewsize = scr_viewsize->integer;
 	cl.refdef.hardware = true;	// always true
 	cl.refdef.spectator = cl.spectator;
 	cl.refdef.nextView = 0;
 
-	// setup default viewport
-	cl.refdef.viewport[0] = cl.refdef.viewport[1] = 0;
-	cl.refdef.viewport[2] = scr_width->integer;
-	cl.refdef.viewport[3] = scr_height->integer;
+	SCR_AddDirtyPoint( 0, 0 );
+	SCR_AddDirtyPoint( scr_width->integer - 1, scr_height->integer - 1 );
+
+	if( cl.refdef.viewsize >= 120 )
+		sb_lines = 0;		// no status bar at all
+	else if( cl.refdef.viewsize >= 110 )
+		sb_lines = 24;		// no inventory
+	else sb_lines = 48;
+
+	size = min( scr_viewsize->integer, 100 );
+
+	cl.refdef.viewport[2] = scr_width->integer * size / 100;
+	cl.refdef.viewport[3] = scr_height->integer * size / 100;
+
+	if( cl.refdef.viewport[3] > scr_height->integer - sb_lines )
+		cl.refdef.viewport[3] = scr_height->integer - sb_lines;
+	if( cl.refdef.viewport[3] > scr_height->integer )
+		cl.refdef.viewport[3] = scr_height->integer;
+
+	cl.refdef.viewport[2] &= ~7;
+	cl.refdef.viewport[3] &= ~1;
+
+	cl.refdef.viewport[0] = (scr_width->integer - cl.refdef.viewport[2]) / 2;
+	cl.refdef.viewport[1] = (scr_height->integer - sb_lines - cl.refdef.viewport[3]) / 2;
 
 	// calc FOV
 	cl.refdef.fov_x = cl.data.fov; // this is a final fov value
@@ -257,7 +279,8 @@ void V_CalcRefDef( void )
 		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );
 
-
+	SCR_AddDirtyPoint( cl.refdef.viewport[0], cl.refdef.viewport[1] );
+	SCR_AddDirtyPoint( cl.refdef.viewport[0] + cl.refdef.viewport[2] - 1, cl.refdef.viewport[1] + cl.refdef.viewport[3] - 1 );
 }
 
 //============================================================================
@@ -333,6 +356,7 @@ void V_PostRender( void )
 
 	if( cls.state == ca_active )
 	{
+		SCR_TileClear();
 		CL_DrawHUD( CL_ACTIVE );
 		VGui_Paint();
 	}

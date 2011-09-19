@@ -259,7 +259,7 @@ usercmd_t CL_CreateCmd( void )
 	if( ++cl.movemessages <= 10 )
 		return cmd;
 
-	active = ( cls.state == ca_active && !cl.refdef.paused && !cl.refdef.intermission );
+	active = ( cls.state == ca_active && !cl.refdef.paused );
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, active );
 
 	R_LightForPoint( cl.frame.local.client.origin, &color, false, false, 128.0f );
@@ -271,7 +271,7 @@ usercmd_t CL_CreateCmd( void )
 
 	V_ProcessOverviewCmds( &cmd );
 
-	if( cl.background || cl.refdef.intermission || cls.demoplayback || gl_overview->integer )
+	if( cl.background || cls.demoplayback || gl_overview->integer )
 	{
 		VectorCopy( angles, cl.refdef.cl_viewangles );
 		VectorCopy( angles, cmd.viewangles );
@@ -1524,7 +1524,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("fullupdate", NULL, "re-init HUD on start demo recording" );
 	Cmd_AddCommand ("give", NULL, "give specified item or weapon" );
 	Cmd_AddCommand ("drop", NULL, "drop current/specified item or weapon" );
-	Cmd_AddCommand ("intermission", NULL, "go to intermission" );
 	Cmd_AddCommand ("gametitle", NULL, "show game logo" );
 	Cmd_AddCommand ("god", NULL, "enable godmode" );
 	Cmd_AddCommand ("fov", NULL, "set client field of view" );
@@ -1692,8 +1691,8 @@ CL_Shutdown
 void CL_Shutdown( void )
 {
 	// already freed
-	if( host.state == HOST_ERROR ) return;
 	if( !cls.initialized ) return;
+	cls.initialized = false;
 
 	MsgDev( D_INFO, "CL_Shutdown()\n" );
 
@@ -1706,6 +1705,4 @@ void CL_Shutdown( void )
 
 	S_Shutdown ();
 	R_Shutdown ();
-
-	cls.initialized = false;
 }

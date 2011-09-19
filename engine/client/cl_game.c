@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "library.h"
 #include "vgui_draw.h"
+#include "sound.h"		// SND_STOP_LOOPING
 
 #define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channel)
 #define TEXT_MSGNAME	"TextMessage%i"
@@ -1807,7 +1808,7 @@ pfnPlaySoundByName
 static void pfnPlaySoundByName( const char *szSound, float volume )
 {
 	int hSound = S_RegisterSound( szSound );
-	S_StartSound( NULL, cl.refdef.viewentity, CHAN_AUTO, hSound, volume, ATTN_NORM, PITCH_NORM, 0 );
+	S_StartSound( NULL, cl.refdef.viewentity, CHAN_ITEM, hSound, volume, ATTN_NORM, PITCH_NORM, SND_STOP_LOOPING );
 }
 
 /*
@@ -1829,7 +1830,7 @@ static void pfnPlaySoundByIndex( int iSound, float volume )
 		MsgDev( D_ERROR, "CL_PlaySoundByIndex: invalid sound handle %i\n", iSound );
 		return;
 	}
-	S_StartSound( NULL, cl.refdef.viewentity, CHAN_AUTO, hSound, volume, ATTN_NORM, PITCH_NORM, 0 );
+	S_StartSound( NULL, cl.refdef.viewentity, CHAN_ITEM, hSound, volume, ATTN_NORM, PITCH_NORM, SND_STOP_LOOPING );
 }
 
 /*

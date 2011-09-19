@@ -277,7 +277,11 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 			dl->color.r = 255;
 			dl->color.g = 255;
 			dl->color.b = 255;
-			dl->radius = 200;
+
+			// HACKHACK: get radius from head entity
+			if( ent->curstate.rendermode != kRenderNormal )
+				dl->radius = max( 0, ent->curstate.renderamt - 55 );
+			else dl->radius = 200;
 			dl->die = cl.time + 0.01;
 
 			CL_RocketTrail (ent->prevstate.origin, ent->curstate.origin, 0);

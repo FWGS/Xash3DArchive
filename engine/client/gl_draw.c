@@ -85,6 +85,39 @@ void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, f
 
 /*
 =============
+Draw_TileClear
+
+This repeats a 64*64 tile graphic to fill the screen around a sized down
+refresh window.
+=============
+*/
+void R_DrawTileClear( int x, int y, int w, int h )
+{
+	float		tw, th;
+	gltexture_t	*glt;
+
+	GL_SetRenderMode( kRenderNormal );
+	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+	GL_Bind( GL_TEXTURE0, cls.tileImage );
+
+	glt = R_GetTexture( cls.tileImage );
+	tw = glt->srcWidth;
+	th = glt->srcHeight;
+
+	pglBegin( GL_QUADS );
+		pglTexCoord2f( x / tw, y / th );
+		pglVertex2f( x, y );
+		pglTexCoord2f((x + w) / tw, y / th );
+		pglVertex2f( x + w, y );
+		pglTexCoord2f((x + w) / tw, (y + h) / th );
+		pglVertex2f( x + w, y + h );
+		pglTexCoord2f( x / tw, (y + h) / th );
+		pglVertex2f( x, y + h );
+	pglEnd ();
+}
+
+/*
+=============
 R_DrawStretchRaw
 =============
 */

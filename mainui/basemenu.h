@@ -35,8 +35,6 @@ GNU General Public License for more details.
 #include "netadr.h"
 
 #define ART_BACKGROUND		"gfx/shell/splash"
-#define UI_CURSOR_NORMAL		"cursor"
-#define UI_CURSOR_TYPING		"typing"
 #define UI_SLIDER_MAIN		"gfx/shell/slider"
 #define UI_LEFTARROW		"gfx/shell/larrowdefault"
 #define UI_LEFTARROWFOCUS		"gfx/shell/larrowflyover"
@@ -91,6 +89,8 @@ GNU General Public License for more details.
 #define UI_BUTTONS_WIDTH		240
 #define UI_BUTTONS_HEIGHT		40
 #define UI_BUTTON_CHARWIDTH		14	// empirically determined value
+
+#define ID_BACKGROUND		0	// catch warning on change this
 
 // Generic types
 typedef enum
@@ -311,10 +311,17 @@ void UI_PicButton_Draw( menuPicButton_s *item );
 // =====================================================================
 // Main menu interface
 
-extern cvar_t	*ui_mainfont;
-extern cvar_t	*ui_namefont;
 extern cvar_t	*ui_precache;
-extern cvar_t	*ui_sensitivity;
+
+#define BACKGROUND_ROWS	3
+#define BACKGROUND_COLUMNS	4
+
+typedef struct
+{
+	HIMAGE	hImage;
+	int	width;
+	int	height;
+} bimage_t;
 
 typedef struct
 {
@@ -331,6 +338,12 @@ typedef struct
 	int		bgmapcount;
 
 	HIMAGE		hFont;		// mainfont
+
+	// handle steam background images
+	bimage_t		m_SteamBackground[BACKGROUND_ROWS][BACKGROUND_COLUMNS];
+	float		m_flTotalWidth;
+	float		m_flTotalHeight;
+	bool		m_fHaveSteamBackground;
 
 	float		scaleX;
 	float		scaleY;
@@ -356,6 +369,7 @@ typedef struct
 
 	int		buttons_draw_width;	// scaled image what we drawing
 	int		buttons_draw_height;
+	int		space_draw_width;	// scaled space width
 } uiStatic_t;
 
 extern uiStatic_t		uiStatic;
@@ -395,6 +409,7 @@ void UI_DrawString( int x, int y, int w, int h, const char *str, const int col, 
 void UI_StartSound( const char *sound );
 void UI_LoadBmpButtons( void );
 
+void UI_DrawBackground_Callback( void *self );
 void UI_AddItem ( menuFramework_s *menu, void *item );
 void UI_CursorMoved( menuFramework_s *menu );
 void UI_SetCursor( menuFramework_s *menu, int cursor );

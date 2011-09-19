@@ -1827,7 +1827,7 @@ void Con_DrawVersion( void )
 	Con_DrawStringLen( curbuild, &stringLen, &charH );
 	start = scr_width->integer - stringLen * 1.05f;
 	stringLen = Con_StringLength( curbuild );
-	height -= charH * 1.5f;
+	height -= charH * 1.05f;
 
 	for( i = 0; i < stringLen; i++ )
 		width += Con_DrawCharacter( start + width, height, curbuild[i], color );

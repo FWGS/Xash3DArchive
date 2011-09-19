@@ -318,6 +318,97 @@ void UI_DrawMouseCursor( void )
 
 /*
 =================
+UI_DrawBackground_Callback
+=================
+*/
+void UI_DrawBackground_Callback( void *self )
+{
+	if (!uiStatic.m_fHaveSteamBackground)
+	{
+		menuCommon_s *item = (menuCommon_s *)self;
+		UI_DrawPic( item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic );
+		return;
+	}
+
+	int xpos, ypos;
+	float xScale, yScale;
+
+	// work out scaling factors
+	xScale = ScreenWidth / uiStatic.m_flTotalWidth;
+	yScale = ScreenHeight / uiStatic.m_flTotalHeight;
+
+	// iterate and draw all the background pieces
+	ypos = 0;
+	for (int y = 0; y < BACKGROUND_ROWS; y++)
+	{
+		xpos = 0;
+		for (int x = 0; x < BACKGROUND_COLUMNS; x++)
+		{
+			bimage_t &bimage = uiStatic.m_SteamBackground[y][x];
+
+			int dx = (int)ceil(xpos * xScale);
+			int dy = (int)ceil(ypos * yScale);
+			int dw = (int)ceil(bimage.width * xScale);
+			int dt = (int)ceil(bimage.height * yScale);
+
+			if (x == 0) dx = 0;
+			if (y == 0) dy = 0;
+
+			PIC_Set( bimage.hImage, 255, 255, 255, 255 );
+			PIC_Draw( dx, dy, dw, dt );
+			xpos += bimage.width;
+		}
+		ypos += uiStatic.m_SteamBackground[y][0].height;
+	}
+}
+
+/*
+=================
+UI_LoadBackgroundImage
+=================
+*/
+void UI_LoadBackgroundImage( void )
+{
+	int num_background_images = 0;
+	char filename[512];
+
+	for( int y = 0; y < BACKGROUND_ROWS; y++ )
+	{
+		for( int x = 0; x < BACKGROUND_COLUMNS; x++ )
+		{
+			sprintf( filename, "resource/background/800_%d_%c_loading.tga", y + 1, 'a' + x );
+			if (g_engfuncs.pfnFileExists( filename, TRUE ))
+				num_background_images++;
+		}
+	}
+
+	if (num_background_images == (BACKGROUND_COLUMNS * BACKGROUND_ROWS))
+		uiStatic.m_fHaveSteamBackground = TRUE;
+	else uiStatic.m_fHaveSteamBackground = FALSE;
+
+	if (uiStatic.m_fHaveSteamBackground)
+	{
+		uiStatic.m_flTotalWidth = uiStatic.m_flTotalHeight = 0.0f;
+
+		for( int y = 0; y < BACKGROUND_ROWS; y++ )
+		{
+			for( int x = 0; x < BACKGROUND_COLUMNS; x++ )
+			{
+				bimage_t &bimage = uiStatic.m_SteamBackground[y][x];
+				sprintf(filename, "resource/background/800_%d_%c_loading.tga", y + 1, 'a' + x);
+				bimage.hImage = PIC_Load( filename );
+				bimage.width = PIC_Width( bimage.hImage );
+				bimage.height = PIC_Height( bimage.hImage );
+
+				if (y==0) uiStatic.m_flTotalWidth += bimage.width;
+				if (x==0) uiStatic.m_flTotalHeight += bimage.height;
+			}
+		}
+	}
+}
+
+/*
+=================
 UI_StartSound
 =================
 */
@@ -1198,8 +1289,6 @@ void UI_Precache( void )
 	if( !ui_precache->value )
 		return;
 
-	PIC_Load( UI_CURSOR_NORMAL );
-	PIC_Load( UI_CURSOR_TYPING );
 	PIC_Load( UI_LEFTARROW );
 	PIC_Load( UI_LEFTARROWFOCUS );
 	PIC_Load( UI_RIGHTARROW );
@@ -1355,6 +1444,7 @@ int UI_VidInit( void )
 	uiStatic.cursorY = ScreenHeight >> 1;
 	uiStatic.outlineWidth = 4;
 	uiStatic.sliderWidth = 6;
+	uiStatic.space_draw_width = 8;
 
 	// all menu buttons have the same view sizes
 	uiStatic.buttons_draw_width = UI_BUTTONS_WIDTH;
@@ -1363,6 +1453,7 @@ int UI_VidInit( void )
 	UI_ScaleCoords( NULL, NULL, &uiStatic.outlineWidth, NULL );
 	UI_ScaleCoords( NULL, NULL, &uiStatic.sliderWidth, NULL );
 	UI_ScaleCoords( NULL, NULL, &uiStatic.buttons_draw_width, &uiStatic.buttons_draw_height );
+	UI_ScaleCoords( NULL, NULL, &uiStatic.space_draw_width, NULL );
 
 	// trying to load colors.lst
 	UI_ApplyCustomColors ();
@@ -1373,6 +1464,7 @@ int UI_VidInit( void )
 	// register menu font
 	uiStatic.hFont = PIC_Load( "#XASH_SYSTEMFONT_001", menufont_bmp, sizeof( menufont_bmp ));
 
+	UI_LoadBackgroundImage ();
 #if 0
 	FILE *f;
 

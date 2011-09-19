@@ -883,6 +883,9 @@ void R_RenderFullbrights( void )
 	if( !draw_fullbrights )
 		return;
 
+	if( !RI.fogCustom ) 
+		pglDisable( GL_FOG );
+
 	pglEnable( GL_BLEND );
 	pglDepthMask( GL_FALSE );
 	pglDisable( GL_ALPHA_TEST );
@@ -911,6 +914,10 @@ void R_RenderFullbrights( void )
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 
 	draw_fullbrights = false;
+
+	// restore for here
+	if( RI.fogEnabled && !RI.refdef.onlyClientDraw )
+		pglEnable( GL_FOG );
 }
 
 /*

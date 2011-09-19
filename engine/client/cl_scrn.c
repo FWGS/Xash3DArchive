@@ -31,6 +31,12 @@ convar_t *cl_levelshot_name;
 convar_t *cl_envshot_size;
 convar_t *scr_dark;
 
+typedef struct
+{
+	int	x1, y1, x2, y2;
+} dirty_t;
+
+static dirty_t	scr_dirty, scr_old_dirty[2];
 static qboolean	scr_init = false;
 
 /*
@@ -51,9 +57,16 @@ void SCR_DrawFPS( void )
 
 	if( cls.state != ca_active ) return; 
 	if( !cl_showfps->integer || cl.background ) return;
-	if( cls.scrshot_action != scrshot_inactive )
-		return;
-	
+
+	switch( cls.scrshot_action )
+	{
+	case scrshot_normal:
+	case scrshot_snapshot:
+	case scrshot_inactive:
+		break;
+	default: return;
+	}
+
 	newtime = Sys_DoubleTime();
 	if( newtime >= nexttime )
 	{
@@ -287,6 +300,111 @@ void SCR_EndLoadingPlaque( void )
 }
 
 /*
+=================
+SCR_AddDirtyPoint
+=================
+*/
+void SCR_AddDirtyPoint( int x, int y )
+{
+	if (x < scr_dirty.x1)
+		scr_dirty.x1 = x;
+	if (x > scr_dirty.x2)
+		scr_dirty.x2 = x;
+	if (y < scr_dirty.y1)
+		scr_dirty.y1 = y;
+	if (y > scr_dirty.y2)
+		scr_dirty.y2 = y;
+}
+
+/*
+================
+SCR_DirtyScreen
+================
+*/
+void SCR_DirtyScreen( void )
+{
+	SCR_AddDirtyPoint( 0, 0 );
+	SCR_AddDirtyPoint( scr_width->integer - 1, scr_height->integer - 1 );
+}
+
+/*
+================
+SCR_TileClear
+================
+*/
+void SCR_TileClear( void )
+{
+	int	i, top, bottom, left, right;
+	dirty_t	clear;
+
+	if( scr_viewsize->integer >= 120 )
+		return; // full screen rendering
+
+	// erase rect will be the union of the past three frames
+	// so tripple buffering works properly
+	clear = scr_dirty;
+	for( i = 0; i < 2; i++ )
+	{
+		if( scr_old_dirty[i].x1 < clear.x1 )
+			clear.x1 = scr_old_dirty[i].x1;
+		if( scr_old_dirty[i].x2 > clear.x2 )
+			clear.x2 = scr_old_dirty[i].x2;
+		if( scr_old_dirty[i].y1 < clear.y1 )
+			clear.y1 = scr_old_dirty[i].y1;
+		if( scr_old_dirty[i].y2 > clear.y2 )
+			clear.y2 = scr_old_dirty[i].y2;
+	}
+
+	scr_old_dirty[1] = scr_old_dirty[0];
+	scr_old_dirty[0] = scr_dirty;
+
+	scr_dirty.x1 = 9999;
+	scr_dirty.x2 = -9999;
+	scr_dirty.y1 = 9999;
+	scr_dirty.y2 = -9999;
+
+	if( clear.y2 <= clear.y1 )
+		return; // nothing disturbed
+
+	top = cl.refdef.viewport[1];
+	bottom = top + cl.refdef.viewport[3] - 1;
+	left = cl.refdef.viewport[0];
+	right = left + cl.refdef.viewport[2] - 1;
+
+	if( clear.y1 < top )
+	{	
+		// clear above view screen
+		i = clear.y2 < top-1 ? clear.y2 : top - 1;
+		R_DrawTileClear( clear.x1, clear.y1, clear.x2 - clear.x1 + 1, i - clear.y1 + 1 );
+		clear.y1 = top;
+	}
+
+	if( clear.y2 > bottom )
+	{	
+		// clear below view screen
+		i = clear.y1 > bottom + 1 ? clear.y1 : bottom + 1;
+		R_DrawTileClear( clear.x1, i, clear.x2 - clear.x1 + 1, clear.y2 - i + 1 );
+		clear.y2 = bottom;
+	}
+
+	if( clear.x1 < left )
+	{
+		// clear left of view screen
+		i = clear.x2 < left - 1 ? clear.x2 : left - 1;
+		R_DrawTileClear( clear.x1, clear.y1, i - clear.x1 + 1, clear.y2 - clear.y1 + 1 );
+		clear.x1 = left;
+	}
+
+	if( clear.x2 > right )
+	{	
+		// clear left of view screen
+		i = clear.x1 > right + 1 ? clear.x1 : right + 1;
+		R_DrawTileClear( i, clear.y1, clear.x2 - i + 1, clear.y2 - clear.y1 + 1 );
+		clear.x2 = right;
+	}
+}
+
+/*
 ==================
 SCR_UpdateScreen
 
@@ -403,9 +521,35 @@ void SCR_RegisterShaders( void )
 	else cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE ); 
 	cls.creditsFont.hFontTexture = GL_LoadTexture( "gfx.wad/creditsfont.fnt", NULL, 0, TF_IMAGE );
 	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
+	cls.tileImage = GL_LoadTexture( "gfx.wad/backtile.lmp", NULL, 0, TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP );
 
 	SCR_LoadCreditsFont ();
 	SCR_InstallParticlePalette ();
+}
+
+/*
+=================
+SCR_SizeUp_f
+
+Keybinding command
+=================
+*/
+void SCR_SizeUp_f( void )
+{
+	Cvar_SetFloat( "viewsize", min( scr_viewsize->value + 10, 120 ));
+}
+
+
+/*
+=================
+SCR_SizeDown_f
+
+Keybinding command
+=================
+*/
+void SCR_SizeDown_f( void )
+{
+	Cvar_SetFloat( "viewsize", max( scr_viewsize->value - 10, 30 ));
 }
 
 /*
@@ -460,6 +604,8 @@ void SCR_Init( void )
 	Cmd_AddCommand( "timerefresh", SCR_TimeRefresh_f, "turn quickly and print rendering statistcs" );
 	Cmd_AddCommand( "skyname", CL_SetSky_f, "set new skybox by basename" );
 	Cmd_AddCommand( "viewpos", SCR_Viewpos_f, "prints current player origin" );
+	Cmd_AddCommand( "sizeup", SCR_SizeUp_f, "screen size up to 10 points" );
+	Cmd_AddCommand( "sizedown", SCR_SizeDown_f, "screen size down to 10 points" );
 
 	if( host.state != HOST_RESTART && !UI_LoadProgs( ))
 	{

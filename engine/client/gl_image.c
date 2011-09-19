@@ -530,7 +530,7 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int *samples )
 	}
 	else
 	{
-		int	bits = gl_texturebits->integer;
+		int	bits = glw_state.desktopBitsPixel;
 
 		switch( *samples )
 		{

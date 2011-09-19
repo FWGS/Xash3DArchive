@@ -764,7 +764,6 @@ before Sys_Quit or Sys_Error
 void SV_Shutdown( qboolean reconnect )
 {
 	// already freed
-	if( host.state == HOST_ERROR ) return;
 	if( !SV_Active()) return;
 
 	if( host.type == HOST_DEDICATED ) MsgDev( D_INFO, "SV_Shutdown: %s\n", host.finalmsg );

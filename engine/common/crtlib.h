@@ -114,6 +114,7 @@ void Cvar_Unlink( void );
 // cmd.c
 //
 void Cbuf_Init( void );
+void Cbuf_Clear( void );
 void Cbuf_AddText( const char *text );
 void Cbuf_InsertText( const char *text );
 void Cbuf_Execute (void);

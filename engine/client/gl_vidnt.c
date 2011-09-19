@@ -23,7 +23,6 @@ GNU General Public License for more details.
 #define num_vidmodes	((int)(sizeof(vidmode) / sizeof(vidmode[0])) - 1)
 #define WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
 #define WINDOW_EX_STYLE	(0)
-#define GL_DRIVER_OPENGL	"OpenGL32"
 #define WINDOW_NAME		"Xash Window" // Half-Life
 
 convar_t	*renderinfo;
@@ -31,7 +30,6 @@ convar_t	*gl_allow_software;
 convar_t	*gl_extensions;
 convar_t	*gl_alphabits;
 convar_t	*gl_stencilbits;
-convar_t	*gl_texturebits;
 convar_t	*gl_ignorehwgamma;
 convar_t	*gl_texture_anisotropy;
 convar_t	*gl_compress_textures;
@@ -429,15 +427,11 @@ static dllfunc_t texturecompressionfuncs[] =
 
 static dllfunc_t wgl_funcs[] =
 {
-{ "wglChoosePixelFormat"   , (void **)&pwglChoosePixelFormat },
-{ "wglDescribePixelFormat" , (void **)&pwglDescribePixelFormat },
-{ "wglSetPixelFormat"      , (void **)&pwglSetPixelFormat },
 { "wglSwapBuffers"         , (void **)&pwglSwapBuffers },
 { "wglCreateContext"       , (void **)&pwglCreateContext },
 { "wglDeleteContext"       , (void **)&pwglDeleteContext },
 { "wglMakeCurrent"         , (void **)&pwglMakeCurrent },
 { "wglGetCurrentContext"   , (void **)&pwglGetCurrentContext },
-{ "wglGetCurrentDC"        , (void **)&pwglGetCurrentDC },
 { NULL, NULL }
 };
 
@@ -450,13 +444,6 @@ static dllfunc_t wglproc_funcs[] =
 static dllfunc_t wglswapintervalfuncs[] =
 {
 { "wglSwapIntervalEXT" , (void **)&pwglSwapIntervalEXT },
-{ NULL, NULL }
-};
-
-static dllfunc_t wgl3DFXgammacontrolfuncs[] =
-{
-{ "wglGetDeviceGammaRamp3DFX" , (void **)&pwglGetDeviceGammaRamp3DFX },
-{ "wglSetDeviceGammaRamp3DFX" , (void **)&pwglSetDeviceGammaRamp3DFX },
 { NULL, NULL }
 };
 
@@ -588,9 +575,7 @@ void GL_UpdateGammaRamp( void )
 
 	GL_BuildGammaTable();
 
-	if( pwglGetDeviceGammaRamp3DFX )
-		pwglSetDeviceGammaRamp3DFX( glw_state.hDC, glState.gammaRamp );
-	else SetDeviceGammaRamp( glw_state.hDC, glState.gammaRamp );
+	SetDeviceGammaRamp( glw_state.hDC, glState.gammaRamp );
 }
 
 /*
@@ -736,9 +721,7 @@ static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBi
 	pfd->dwDamageMask = 0;
 
 	// count PFDs
-	if( glw_state.minidriver )
-		pixelFormat = pwglChoosePixelFormat( glw_state.hDC, pfd );
-	else pixelFormat = ChoosePixelFormat( glw_state.hDC, pfd );
+	pixelFormat = ChoosePixelFormat( glw_state.hDC, pfd );
 
 	if( !pixelFormat )
 	{
@@ -757,9 +740,7 @@ void VID_StartupGamma( void )
 	// init gamma ramp
 	Q_memset( glState.stateRamp, 0, sizeof( glState.stateRamp ));
 
-	if( pwglGetDeviceGammaRamp3DFX )
-		glConfig.deviceSupportsGamma = pwglGetDeviceGammaRamp3DFX( glw_state.hDC, glState.stateRamp );
-	else glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
+	glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
 
 	// share this extension so engine can grab them
 	GL_SetExtension( GL_HARDWARE_GAMMA_CONTROL, glConfig.deviceSupportsGamma );
@@ -846,28 +827,26 @@ qboolean GL_SetPixelformat( void )
 	int			stencilBits;
 	int			pixelFormat;
 
-	if( glw_state.minidriver )
-	{
-    		if(( glw_state.hDC = pwglGetCurrentDC()) == NULL )
-			return false;
-	}
-	else
-	{
-    		if(( glw_state.hDC = GetDC( host.hWnd )) == NULL )
-			return false;
-	}
+	if(( glw_state.hDC = GetDC( host.hWnd )) == NULL )
+		return false;
 
 	// set alpha/stencil
 	alphaBits = bound( 0, gl_alphabits->integer, 8 );
 	stencilBits = bound( 0, gl_stencilbits->integer, 8 );
 
+	if( glw_state.desktopBitsPixel < 32 )
+	{
+		// clear alphabits in case we in 16-bit mode
+		alphaBits = 0;
+	}
+
 	// choose a pixel format
-	pixelFormat = VID_ChoosePFD( &PFD, 32, alphaBits, 24, stencilBits );
+	pixelFormat = VID_ChoosePFD( &PFD, 24, alphaBits, 32, stencilBits );
 
 	if( !pixelFormat )
 	{
 		// try again with default color/depth/stencil
-		pixelFormat = VID_ChoosePFD( &PFD, 32, 0, 24, 0 );
+		pixelFormat = VID_ChoosePFD( &PFD, 24, 0, 32, 0 );
 
 		if( !pixelFormat )
 		{
@@ -877,26 +856,13 @@ qboolean GL_SetPixelformat( void )
 	}
 
 	// set the pixel format
-	if( glw_state.minidriver )
+	if( !SetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
 	{
-		if( !pwglSetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
-		{
-			MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
-			return false;
-		}
-
-		pwglDescribePixelFormat( glw_state.hDC, pixelFormat, sizeof( PIXELFORMATDESCRIPTOR ), &PFD );
+		MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
+		return false;
 	}
-	else
-	{
-		if( !SetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
-		{
-			MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
-			return false;
-		}
 
-		DescribePixelFormat( glw_state.hDC, pixelFormat, sizeof( PIXELFORMATDESCRIPTOR ), &PFD );
-	}
+	DescribePixelFormat( glw_state.hDC, pixelFormat, sizeof( PIXELFORMATDESCRIPTOR ), &PFD );
 
 	if( PFD.dwFlags & PFD_GENERIC_FORMAT )
 	{
@@ -976,6 +942,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	int		stylebits = WINDOW_STYLE;
 	int		exstyle = WINDOW_EX_STYLE;
 	static string	wndname;
+	HWND		window;
 	
 	Q_strncpy( wndname, GI->title, sizeof( wndname ) - 1 );
 
@@ -1048,7 +1015,13 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 		}
 	}
 
-	CreateWindowEx( exstyle, WINDOW_NAME, wndname, stylebits, x, y, w, h, NULL, NULL, host.hInst, NULL );
+	window = CreateWindowEx( exstyle, WINDOW_NAME, wndname, stylebits, x, y, w, h, NULL, NULL, host.hInst, NULL );
+
+	if( host.hWnd != window )
+	{
+		// probably never happens
+		MsgDev( D_WARN, "VID_CreateWindow: bad hWnd for '%s'\n", wndname );
+	}
 
 	// host.hWnd must be filled in IN_WndProc
 	if( !host.hWnd ) 
@@ -1283,10 +1256,9 @@ R_Init_OpenGL
 qboolean R_Init_OpenGL( void )
 {
 	Sys_LoadLibrary( &opengl_dll );	// load opengl32.dll
-	if( !opengl_dll.link ) return false;
 
-	// TODO: allow 3dfx drivers too
-	glw_state.minidriver = false;
+	if( !opengl_dll.link )
+		return false;
 
 	return VID_SetMode();
 }
@@ -1446,7 +1418,6 @@ void GL_InitCommands( void )
 	gl_allow_software = Cvar_Get( "gl_allow_software", "0", CVAR_ARCHIVE, "allow OpenGL software emulation" );
 	gl_alphabits = Cvar_Get( "gl_alphabits", "8", CVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
-	gl_texturebits = Cvar_Get( "gl_texturebits", "0", CVAR_GLCONFIG, "set texture upload format (0 - auto)" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_GLCONFIG, "down size non-power of two textures" );
 	gl_max_size = Cvar_Get( "gl_max_size", "512", CVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
 	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", CVAR_GLCONFIG, "pixelformat stencil bits (0 - auto)" );
@@ -1471,7 +1442,7 @@ void GL_InitCommands( void )
 	// make sure r_swapinterval is checked after vid_restart
 	gl_swapInterval->modified = true;
 
-	vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
+	vid_gamma = Cvar_Get( "gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
 	vid_mode = Cvar_Get( "vid_mode", VID_DEFAULTMODE, CVAR_RENDERINFO, "display resolution mode" );
 	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO, "fullscreen refresh rate" );
@@ -1500,8 +1471,6 @@ void GL_InitExtensions( void )
 
 	// initalize until base opengl functions loaded
 	GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
-
-	GL_CheckExtension( "WGL_3DFX_gamma_control", wgl3DFXgammacontrolfuncs, NULL, GL_WGL_3DFX_GAMMA_CONTROL );
 	GL_CheckExtension( "WGL_EXT_swap_control", wglswapintervalfuncs, NULL, GL_WGL_SWAPCONTROL );
 
 	GL_CheckExtension( "glDrawRangeElements", drawrangeelementsfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );

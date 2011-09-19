@@ -131,9 +131,9 @@ hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset
 		}
 		else
 		{
-			if( size[0] <= world.hull_sizes[1][0] )
+			if( size[0] <= 36.0f )
 			{
-				if( size[2] <= world.hull_sizes[3][2] )
+				if( size[2] <= 36.0f )
 					hull = &pe->model->hulls[3];
 				else hull = &pe->model->hulls[1];
 			}

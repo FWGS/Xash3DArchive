@@ -61,16 +61,9 @@ TargetDir=\Xash3D\src_main\temp\engine\!release
 InputPath=\Xash3D\src_main\temp\engine\!release\xash.dll
 SOURCE="$(InputPath)"
 
-BuildCmds= \
-	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
-	copy $(TargetDir)\xash.dll "D:\Area51\xash.dll" \
-	
-
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
+	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll"
 
-"D:\Area51\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "engine - Win32 Debug"
@@ -105,16 +98,9 @@ TargetDir=\Xash3D\src_main\temp\engine\!debug
 InputPath=\Xash3D\src_main\temp\engine\!debug\xash.dll
 SOURCE="$(InputPath)"
 
-BuildCmds= \
-	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
-	copy $(TargetDir)\xash.dll "D:\Area51\xash.dll" \
-	
-
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
+	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll"
 
-"D:\Area51\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
 # End Custom Build
 
 !ENDIF 

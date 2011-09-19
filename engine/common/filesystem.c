@@ -1006,6 +1006,9 @@ static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( Q_strlen( GameInfo->mp_entity ))
 		FS_Printf( f, "mp_entity\t\t\"%s\"\n", GameInfo->mp_entity );
 
+	if( GameInfo->secure )
+		FS_Printf( f, "secure\t\t\"%i\"\n", GameInfo->secure );
+
 	for( i = 0; i < 4; i++ )
 	{
 		float	*min, *max;
@@ -1182,6 +1185,11 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		else if( !Q_stricmp( token, "mpentity" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->mp_entity );
+		}
+		else if( !Q_stricmp( token, "secure" ))
+		{
+			pfile = COM_ParseFile( pfile, token );
+			GameInfo->secure = Q_atoi( token );
 		}
 	}
 
@@ -1364,6 +1372,11 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 				GameInfo->gamemode = 1;
 			else if( !Q_stricmp( token, "multiplayer_only" ))
 				GameInfo->gamemode = 2;
+		}
+		else if( !Q_stricmp( token, "secure" ))
+		{
+			pfile = COM_ParseFile( pfile, token );
+			GameInfo->secure = Q_atoi( token );
 		}
 		else if( !Q_strnicmp( token, "hull", 4 ))
 		{

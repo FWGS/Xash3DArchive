@@ -457,7 +457,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		if( VectorIsNull( out->origin ))
 		{
 			// NOTE: zero origin after recalculating is indicated included origin brush
-//			VectorAverage( out->mins, out->maxs, out->origin );
+			VectorAverage( out->mins, out->maxs, out->origin );
 		}
 
 		if( i == 0 || !world.loading )
@@ -1689,7 +1689,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	loadmodel->mempool = Mem_AllocPool( va( "sv: ^2%s^7", loadmodel->name ));
 
 	// load into heap
-	if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
+	if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
 	{
 		// blue-shift swapped lumps
 		Mod_LoadEntities( &header->lumps[LUMP_PLANES] );
@@ -1899,6 +1899,11 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	case HLBSP_VERSION:
 		Mod_LoadBrushModel( mod, buf, &loaded );
 		break;
+	default:
+		Mem_Free( buf );
+		if( crash ) Host_Error( "Mod_ForName: %s unknown format\n", tempname );
+		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", tempname );
+		return NULL;
 	}
 
 	Mem_Free( buf ); 
@@ -1907,9 +1912,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	{
 		Mod_FreeModel( mod );
 
-		// check for loading problems
-		if( crash ) Host_Error( "Mod_ForName: %s unknown format\n", tempname );
-		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", tempname );
+		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", tempname );
+		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", tempname );
 		return NULL;
 	}
 	return mod;

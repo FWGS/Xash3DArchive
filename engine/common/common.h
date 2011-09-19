@@ -76,7 +76,7 @@ typedef enum
 #include "com_model.h"
 #include "crtlib.h"
 
-#define XASH_VERSION	0.89f		// engine current version
+#define XASH_VERSION	0.9f		// engine current version
 
 // PERFORMANCE INFO
 #define MIN_FPS         	15.0		// host minimum fps value for maxfps.
@@ -167,6 +167,7 @@ typedef struct gameinfo_s
 	size_t		size;
 
 	int		gamemode;
+	qboolean		secure;		// prevent to console acess
 
 	char		sp_entity[32];	// e.g. info_player_start
 	char		mp_entity[32];	// e.g. info_player_deathmatch
@@ -195,13 +196,20 @@ typedef enum
 	HOST_INIT = 0,	// initalize operations
 	HOST_FRAME,	// host running
 	HOST_SHUTDOWN,	// shutdown operations	
-	HOST_ERROR,	// host stopped by error
 	HOST_ERR_FATAL,	// sys error
 	HOST_SLEEP,	// sleeped by different reason, e.g. minimize window
 	HOST_NOFOCUS,	// same as HOST_FRAME, but disable mouse
 	HOST_RESTART,	// during the changes video mode
 	HOST_CRASHED	// an exception handler called
 } host_state;
+
+typedef enum
+{
+	key_console = 0,
+	key_game,
+	key_menu,
+	key_message
+} keydest_t;
 
 // MD5 Hash
 typedef struct
@@ -749,6 +757,7 @@ float Com_RandomFloat( float fMin, float fMax );
 void TrimSpace( const char *source, char *dest );
 void GL_FreeImage( const char *name );
 void VID_RestoreGamma( void );
+void UI_SetActiveMenu( qboolean fActive );
 
 typedef struct autocomplete_list_s
 {

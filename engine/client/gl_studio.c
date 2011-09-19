@@ -29,7 +29,7 @@ GNU General Public License for more details.
 #define STUDIO_MERGE_TEXTURES
 
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
-#define MAXARRAYVERTS	6144	// used for draw shadows
+#define MAXARRAYVERTS	8192	// used for draw shadows
 
 static vec3_t hullcolor[8] = 
 {
@@ -70,6 +70,7 @@ static r_studio_interface_t	*pStudioDraw;
 static float		aliasXscale, aliasYscale;	// software renderer scale
 static matrix3x4		g_aliastransform;		// software renderer transform
 static matrix3x4		g_rotationmatrix;
+static vec3_t		g_chrome_origin;
 static vec2_t		g_chrome[MAXSTUDIOVERTS];	// texture coords for surface normals
 static matrix3x4		g_bonestransform[MAXSTUDIOBONES];
 static matrix3x4		g_lighttransform[MAXSTUDIOBONES];
@@ -1247,7 +1248,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		vec3_t	chromerightvec;	// g_chrome s vector in world reference frame
 		vec3_t	tmp, v_left;	// vector pointing at bone in world reference frame
 
-		VectorScale( cl.refdef.vieworg, -1.0f, tmp );
+		VectorCopy( g_chrome_origin, tmp );
 		tmp[0] += g_bonestransform[bone][0][3];
 		tmp[1] += g_bonestransform[bone][1][3];
 		tmp[2] += g_bonestransform[bone][2][3];
@@ -2336,6 +2337,8 @@ pfnStudioSetHeader
 void R_StudioSetHeader( studiohdr_t *pheader )
 {
 	m_pStudioHeader = pheader;
+
+	VectorClear( g_chrome_origin );
 	m_fDoRemap = false;
 }
 
@@ -2391,14 +2394,14 @@ R_StudioSetChromeOrigin
 */
 void R_StudioSetChromeOrigin( void )
 {
-	// TODO: implement
+	VectorNegate( cl.refdef.vieworg, g_chrome_origin );
 }
 
 /*
 ===============
 pfnIsHardware
 
-Xash3D is always works in hadrware mode
+Xash3D is always works in hardware mode
 ===============
 */
 static int pfnIsHardware( void )
@@ -2981,6 +2984,9 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 	if( RI.params & RP_ENVVIEW )
 		return;
 
+	if( !Mod_Extradata( e->model ))
+		return;
+
 	ASSERT( pStudioDraw != NULL );
 
 	if( e == &clgame.viewent )
@@ -3046,6 +3052,9 @@ void R_RunViewmodelEvents( void )
 	if( cl.refdef.nextView || cl.thirdperson || RI.params & RP_ENVVIEW )
 		return;
 
+	if( !Mod_Extradata( clgame.viewent.model ))
+		return;
+
 	RI.currententity = &clgame.viewent;
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
@@ -3071,6 +3080,9 @@ void R_DrawViewModel( void )
 		return;
 
 	if( RI.params & RP_ENVVIEW )
+		return;
+
+	if( !Mod_Extradata( clgame.viewent.model ))
 		return;
 
 	RI.currententity = &clgame.viewent;

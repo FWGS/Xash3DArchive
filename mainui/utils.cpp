@@ -1136,6 +1136,9 @@ void UI_Slider_Draw( menuSlider_s *sl )
 		if( sl->generic.callback ) sl->generic.callback( sl, QM_CHANGED );
 	}
 
+	// keep value in range
+	sl->curValue = bound( sl->minValue, sl->curValue, sl->maxValue );
+
 	// calc slider position
 	sliderX = sl->generic.x2 + (sl->drawStep * (sl->curValue * sl->numSteps));
 
@@ -1944,17 +1947,24 @@ UI_Bitmap_Draw
 */
 void UI_Bitmap_Draw( menuBitmap_s *b )
 {
-	if( CVAR_GET_FLOAT( "sv_background" ) && b->generic.id == 0 )
-		return;	// has background map disable images
+	if( b->generic.id == ID_BACKGROUND )	// background is always 0!
+	{
+		if( CVAR_GET_FLOAT( "sv_background" ))
+			return;	// has background map disable images
+
+		// UGLY HACK for replace all backgrounds
+		UI_DrawBackground_Callback( b );
+		return;
+	}
 
 	//CR
-	if (b->generic.id==1)
+	if( b->generic.id == 1 )
 	{
 		// don't draw banners until transition is done
 #ifdef TA_ALT_MODE
-		if ( UI_GetTitleTransFraction() != 10 ) return;
+		if( UI_GetTitleTransFraction() != 10 ) return;
 #else
-		if ( UI_GetTitleTransFraction() < 1.0f ) return;
+		if( UI_GetTitleTransFraction() < 1.0f ) return;
 #endif
 	}
 

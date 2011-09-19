@@ -270,7 +270,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	CRC32_Init( crcvalue );
 
 	// check for Blue-Shift maps
-	if( header.lumps[LUMP_ENTITIES].fileofs <= 1024 )
+	if( header.lumps[LUMP_ENTITIES].fileofs <= 1024 && (header.lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
 		blue_shift = true;
 
 	for( i = 0; i < HEADER_LUMPS; i++ )

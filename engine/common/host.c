@@ -109,6 +109,9 @@ void Host_EndGame( const char *message, ... )
 	if( CL_NextDemo( ));
 	else CL_Disconnect();
 
+	// release all models
+	Mod_ClearAll();
+
 	Host_AbortCurrentFrame ();
 }
 
@@ -447,9 +450,9 @@ void Host_Error( const char *error, ... )
 	static qboolean	recursive = false;
 	va_list		argptr;
 
-	if( host.mouse_visible )
+	if( host.mouse_visible && !CL_IsInMenu( ))
 	{
-		// hide mouse
+		// hide VGUI mouse
 		while( ShowCursor( false ) >= 0 );
 		host.mouse_visible = false;
 	}
@@ -471,7 +474,13 @@ void Host_Error( const char *error, ... )
 	}
 	else
 	{
-		Msg( "Host_Error: %s", hosterror1 );
+		if( host.developer > 0 )
+		{
+			UI_SetActiveMenu( false );
+			Key_SetKeyDest( key_console );
+			Msg( "Host_Error: %s", hosterror1 );
+		}
+		else MSGBOX2( hosterror1 );
 	}
 
 	// host is shutting down. don't invoke infinite loop
@@ -489,12 +498,17 @@ void Host_Error( const char *error, ... )
 	host.errorframe = host.framecount; // to avoid multply calls per frame
 	Q_sprintf( host.finalmsg, "Server crashed: %s", hosterror1 );
 
-	CL_Drop(); // drop clients
+	// clearing cmd buffer to prevent execute any commands
+	Cbuf_Clear();
+
 	SV_Shutdown( false );
+	CL_Drop(); // drop clients
+
+	// release all models
+	Mod_ClearAll();
 
 	recursive = false;
 	Host_AbortCurrentFrame();
-	host.state = HOST_ERROR;
 }
 
 void Host_Error_f( void )
@@ -534,6 +548,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	MEMORYSTATUS	lpBuffer;
 	char		dev_level[4];
 	char		szTemp[MAX_SYSPATH];
+	string		szRootPath;
 
 	lpBuffer.dwLength = sizeof( MEMORYSTATUS );
 	GlobalMemoryStatus( &lpBuffer );
@@ -579,6 +594,13 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	if( GetModuleFileName( NULL, szTemp, sizeof( szTemp )) && !host.change_game )
 		FS_FileBase( szTemp, SI.ModuleName );
 
+	FS_ExtractFilePath( szTemp, szRootPath );
+	if( Q_stricmp( host.rootdir, szRootPath ))
+	{
+		Q_strncpy( host.rootdir, szRootPath, sizeof( host.rootdir ));
+		SetCurrentDirectory( host.rootdir );
+	}
+
 	if( SI.ModuleName[0] == '#' ) host.type = HOST_DEDICATED; 
 
 	// determine host type
@@ -613,18 +635,6 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 		if( host.developer < D_WARN ) host.con_showalways = false;
 	}
 
-	if( GetModuleFileName( hCurrent, szTemp, sizeof( szTemp )))
-		FS_FileBase( szTemp, szTemp );
-
-	// protect to rename xash.dll
-	if( Q_stricmp( szTemp, "xash" ) && Com_RandomLong( 0, 1 ))
-	{
-		host.type = HOST_CREDITS;
-		host.con_showalways = true;
-		Con_CreateConsole();
-		Sys_Break( show_credits, Q_timestamp( TIME_YEAR_ONLY ));
-	}
-
 	Con_CreateConsole();
 
 	// first text message into console or log 
@@ -646,6 +656,14 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 
 	FS_LoadGameInfo( NULL );
 	Q_strncpy( host.gamefolder, GI->gamefolder, sizeof( host.gamefolder ));
+
+	if( GI->secure )
+	{
+		// clear all developer levels when game is protected
+		Cvar_FullSet( "developer", "0", CVAR_INIT );
+		host.con_showalways = false;
+		host.developer = 0;
+	}
 
 	HPAK_Init();
 
@@ -692,7 +710,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	host_gameloaded = Cvar_Get( "host_gameloaded", "0", CVAR_INIT, "inidcates a loaded game.dll" );
 	host_clientloaded = Cvar_Get( "host_clientloaded", "0", CVAR_INIT, "inidcates a loaded client.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
-	host_allow_materials = Cvar_Get( "host_allow_materials", "1", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
+	host_allow_materials = Cvar_Get( "host_allow_materials", "0", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
 	con_gamemaps = Cvar_Get( "con_gamemaps", "1", CVAR_ARCHIVE, "when true show only maps in game folder" );
 
 	// content control

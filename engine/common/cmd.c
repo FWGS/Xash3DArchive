@@ -61,6 +61,17 @@ void Cbuf_Init( void )
 
 /*
 ============
+Cbuf_Clear
+============
+*/
+void Cbuf_Clear( void )
+{
+	Q_memset( cmd_text.data, 0, sizeof( cmd_text_buf ));
+	cmd_text.cursize = 0;
+}
+
+/*
+============
 Cbuf_GetSpace
 ============
 */

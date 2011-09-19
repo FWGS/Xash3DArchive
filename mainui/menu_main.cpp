@@ -103,7 +103,10 @@ static void UI_Background_Ownerdraw( void *self )
 	// map has background
 	if( CVAR_GET_FLOAT( "sv_background" )) return;
 
-	UI_DrawPic( item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic );
+	UI_DrawBackground_Callback( self );
+
+	if (uiStatic.m_fHaveSteamBackground)
+		return; // no logos for steam background
 
 	if( GetLogoLength() <= 0.1 || GetLogoWidth() <= 32 )
 		return;	// don't draw stub logo (GoldSrc rules)

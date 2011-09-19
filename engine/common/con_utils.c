@@ -87,7 +87,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 				header = (dheader_t *)buf;
-				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
+				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && !(header->lumps[LUMP_ENTITIES].filelen % sizeof(dplane_t)))
 				{
 					lumpofs = header->lumps[LUMP_PLANES].fileofs;
 					lumplen = header->lumps[LUMP_PLANES].filelen;
@@ -781,6 +781,7 @@ autocomplete_list_t cmd_list[] =
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
 { "hpkval", Cmd_GetCustomList },
+{ "entpatch", Cmd_GetMapList },
 { "music", Cmd_GetMusicList, },
 { "movie", Cmd_GetMovieList },
 { "exec", Cmd_GetConfigList },
@@ -866,7 +867,7 @@ void Host_WriteConfig( void )
 	kbutton_t	*mlook, *jlook;
 	file_t	*f;
 
-	if( !cls.initialized ) return;
+	if( !clgame.hInstance ) return;
 
 	MsgDev( D_NOTE, "Host_WriteConfig()\n" );
 	f = FS_Open( "config.cfg", "w", false );

@@ -162,14 +162,6 @@ typedef enum
 
 typedef enum
 {
-	key_console = 0,
-	key_game,
-	key_menu,
-	key_message
-} keydest_t;
-
-typedef enum
-{
 	scrshot_inactive,
 	scrshot_normal,	// in-game screenshot
 	scrshot_snapshot,	// in-game snapshot
@@ -462,6 +454,7 @@ typedef struct
 	int		pauseIcon;		// draw 'paused' when game in-pause
 	int		loadingBar;		// 'loading' progress bar
 	int		glowShell;		// for renderFxGlowShell
+	int		tileImage;		// for draw any areas not covered by the refresh
 	HSPRITE		hChromeSprite;		// this is a really HudSprite handle, not texnum!
 	cl_font_t		creditsFont;		// shared creditsfont
 
@@ -632,6 +625,8 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
 // cl_scrn.c
 //
 void SCR_VidInit( void );
+void SCR_TileClear( void );
+void SCR_AddDirtyPoint( int x, int y );
 void SCR_EndLoadingPlaque( void );
 void SCR_RebuildGammaTable( void );
 void SCR_RegisterShaders( void );

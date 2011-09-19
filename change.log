@@ -1,3 +1,26 @@
+build ????
+
+Client: add command "on"-"off" for virtual CD-player
+Client: add command "snapshot" that save screenshots into root folder
+Client: add studiomodel missed flags like in Quake (EF_ROTATE, EF_ROCKET, EF_GIB etc)
+Sound: clear LOOP flag for engine funcs PlaySoundByIndex and PlaySoundAtLocation
+Render: fix r_wateralpha, move cvar to server and allow save-restore it
+Render: fix old bug with surface->flags
+Render: fix crash when studiomodel isn't loaded but trying to draw
+Render: remove cvar gl_texturebits
+Render: allow 16-bit color mode when decktop has same
+Render: rename "vid_gamma" to "gamma", make backward compatibility with GoldSource config
+Sound: get support for automatic ambient sounds like in Quake
+Sound: add cvar "s_combine" that trying to combine mutilpe channels with same sounds into one
+Engine: add "secure" option for both liblist.gam and gameinfo.txt
+Engine: fix bug determine current directory
+Server: fix bug when some sound messages can't be sended to client (e.g. not vised map)
+Render: allow to load hi-res quake sky (two layers called as sky_solid and sky_alpha)
+Physic: fix trace bug when bbox mins are 0 0 0 and bbox maxs are positive values (like quake boxes)
+GameUI: add checkbox "allow materials" in menu Video Options.
+Client: implement "viewsize" cvar
+
+
 build 1662
 
 Client: implement StudioRemapColors function

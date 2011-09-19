@@ -33,6 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_GAMMA		4
 #define ID_GLARE_REDUCTION	5 
 #define ID_SIMPLE_SKY	6
+#define ID_ALLOW_MATERIALS	7
 
 typedef struct
 {
@@ -49,6 +50,7 @@ typedef struct
 	menuSlider_s	gammaIntensity;
 	menuSlider_s	glareReduction;
 	menuCheckBox_s	fastSky;
+	menuCheckBox_s	hiTextures;
 } uiVidOptions_t;
 
 static uiVidOptions_t	uiVidOptions;
@@ -61,12 +63,15 @@ UI_VidOptions_GetConfig
 */
 static void UI_VidOptions_GetConfig( void )
 {
-	uiVidOptions.screenSize.curValue = (CVAR_GET_FLOAT( "viewsize" ) - 20.0f ) / 100.0f;
-	uiVidOptions.gammaIntensity.curValue = (CVAR_GET_FLOAT( "vid_gamma" ) - 0.5f) / 1.8f;
+	uiVidOptions.screenSize.curValue = RemapVal( CVAR_GET_FLOAT( "viewsize" ), 30.0f, 120.0f, 0.0f, 1.0f );
+	uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 0.5f, 2.3f, 0.0f, 1.0f );
 	uiVidOptions.glareReduction.curValue = (CVAR_GET_FLOAT( "r_flaresize" ) - 100.0f ) / 200.0f;
 
 	if( CVAR_GET_FLOAT( "r_fastsky" ))
 		uiVidOptions.fastSky.enabled = 1;
+
+	if( CVAR_GET_FLOAT( "host_allow_materials" ))
+		uiVidOptions.hiTextures.enabled = 1;
 
 	uiVidOptions.outlineWidth = 2;
 	UI_ScaleCoords( NULL, NULL, &uiVidOptions.outlineWidth, NULL );
@@ -79,10 +84,11 @@ UI_VidOptions_UpdateConfig
 */
 static void UI_VidOptions_UpdateConfig( void )
 {
-	CVAR_SET_FLOAT( "viewsize", (uiVidOptions.screenSize.curValue * 100.0f) + 20.0f );
-	CVAR_SET_FLOAT( "vid_gamma", (uiVidOptions.gammaIntensity.curValue * 1.8f) + 0.5f );
+	CVAR_SET_FLOAT( "viewsize", RemapVal( uiVidOptions.screenSize.curValue, 0.0f, 1.0f, 30.0f, 120.0f ));
+	CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 0.5f, 2.3f ));
 	CVAR_SET_FLOAT( "r_flaresize", (uiVidOptions.glareReduction.curValue * 200.0f ) + 100.0f );
 	CVAR_SET_FLOAT( "r_fastsky", uiVidOptions.fastSky.enabled );
+	CVAR_SET_FLOAT( "host_allow_materials", uiVidOptions.hiTextures.enabled );
 }
 
 /*
@@ -94,8 +100,34 @@ static void UI_VidOptions_Ownerdraw( void *self )
 {
 	menuCommon_s	*item = (menuCommon_s *)self;
 	int		color = 0xFFFF0000; // 255, 0, 0, 255
+	int		viewport[4];
+	int		viewsize, size, sb_lines;
 
-	UI_DrawPic( item->x, item->y, item->width, item->height, uiColorWhite, ((menuBitmap_s *)self)->pic );
+	viewsize = CVAR_GET_FLOAT( "viewsize" );
+
+	if( viewsize >= 120 )
+		sb_lines = 0;	// no status bar at all
+	else if( viewsize >= 110 )
+		sb_lines = 24;	// no inventory
+	else sb_lines = 48;
+
+	size = min( viewsize, 100 );
+
+	viewport[2] = item->width * size / 100;
+	viewport[3] = item->height * size / 100;
+
+	if( viewport[3] > item->height - sb_lines )
+		viewport[3] = item->height - sb_lines;
+	if( viewport[3] > item->height )
+		viewport[3] = item->height;
+
+	viewport[2] &= ~7;
+	viewport[3] &= ~1;
+
+	viewport[0] = (item->width - viewport[2]) / 2;
+	viewport[1] = (item->height - sb_lines - viewport[3]) / 2;
+
+	UI_DrawPic( item->x + viewport[0], item->y + viewport[1], viewport[2], viewport[3], uiColorWhite, ((menuBitmap_s *)self)->pic );
 	UI_DrawRectangleExt( item->x, item->y, item->width, item->height, color, uiVidOptions.outlineWidth );
 }
 
@@ -111,6 +143,7 @@ static void UI_VidOptions_Callback( void *self, int event )
 	switch( item->id )
 	{
 	case ID_SIMPLE_SKY:
+	case ID_ALLOW_MATERIALS:
 		if( event == QM_PRESSED )
 			((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_PRESSED;
 		else ((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_FOCUS;
@@ -168,7 +201,7 @@ static void UI_VidOptions_Init( void )
 	uiVidOptions.testImage.generic.flags = QMF_INACTIVE;
 	uiVidOptions.testImage.generic.x = 390;
 	uiVidOptions.testImage.generic.y = 225;
-	uiVidOptions.testImage.generic.width = 460;
+	uiVidOptions.testImage.generic.width = 480;
 	uiVidOptions.testImage.generic.height = 450;
 	uiVidOptions.testImage.pic = ART_GAMMA;
 	uiVidOptions.testImage.generic.ownerdraw = UI_VidOptions_Ownerdraw;
@@ -225,9 +258,18 @@ static void UI_VidOptions_Init( void )
 	uiVidOptions.fastSky.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
 	uiVidOptions.fastSky.generic.name = "Draw simple sky";
 	uiVidOptions.fastSky.generic.x = 72;
-	uiVidOptions.fastSky.generic.y = 685;
+	uiVidOptions.fastSky.generic.y = 615;
 	uiVidOptions.fastSky.generic.callback = UI_VidOptions_Callback;
 	uiVidOptions.fastSky.generic.statusText = "enable/disable fast sky rendering (for old computers)";
+
+	uiVidOptions.hiTextures.generic.id = ID_ALLOW_MATERIALS;
+	uiVidOptions.hiTextures.generic.type = QMTYPE_CHECKBOX;
+	uiVidOptions.hiTextures.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
+	uiVidOptions.hiTextures.generic.name = "Allow materials";
+	uiVidOptions.hiTextures.generic.x = 72;
+	uiVidOptions.hiTextures.generic.y = 665;
+	uiVidOptions.hiTextures.generic.callback = UI_VidOptions_Callback;
+	uiVidOptions.hiTextures.generic.statusText = "let engine replace 8-bit textures with full color hi-res prototypes (if present)";
 
 	UI_VidOptions_GetConfig();
 
@@ -238,6 +280,7 @@ static void UI_VidOptions_Init( void )
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.gammaIntensity );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.glareReduction );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.fastSky );
+	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.hiTextures );
 	UI_AddItem( &uiVidOptions.menu, (void *)&uiVidOptions.testImage );
 }
 

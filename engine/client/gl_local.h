@@ -295,6 +295,7 @@ void R_ClearDecals( void );
 // gl_draw.c
 //
 void R_Set2DMode( qboolean enable );
+void R_DrawTileClear( int x, int y, int w, int h );
 
 //
 // gl_image.c
@@ -477,7 +478,6 @@ enum
 	GL_OCCLUSION_QUERIES_EXT,
 	GL_TEXTURE_COMPRESSION_EXT,
 	GL_SHADER_GLSL100_EXT,
-	GL_WGL_3DFX_GAMMA_CONTROL,
 	GL_SGIS_MIPMAPS_EXT,
 	GL_DRAW_RANGEELEMENTS_EXT,
 	GL_LOCKARRAYS_EXT,
@@ -575,7 +575,6 @@ typedef struct
 
 	qboolean		software;		// OpenGL software emulation
 	qboolean		initialized;	// OpenGL subsystem started
-	qboolean		minidriver;	// 3dfx driver
 } glwstate_t;
 
 extern glconfig_t		glConfig;
@@ -589,7 +588,6 @@ extern convar_t	*gl_allow_software;
 extern convar_t	*gl_texture_anisotropy;
 extern convar_t	*gl_extensions;
 extern convar_t	*gl_stencilbits;
-extern convar_t	*gl_texturebits;
 extern convar_t	*gl_ignorehwgamma;
 extern convar_t	*gl_swapInterval;
 extern convar_t	*gl_check_errors;

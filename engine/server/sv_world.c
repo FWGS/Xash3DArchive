@@ -177,9 +177,9 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 			}
 			else
 			{
-				if( size[0] <= world.hull_sizes[1][0] )
+				if( size[0] <= 36.0f )
 				{
-					if( size[2] <= world.hull_sizes[3][2] )
+					if( size[2] <= 36.0f )
 						hull = &model->hulls[3];
 					else hull = &model->hulls[1];
 				}
@@ -1216,7 +1216,7 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 	clip.maxs = maxs;
 	clip.type = (type & 0xFF);
 	clip.flags = (type & 0xFF00);
-	clip.passedict = e;
+	clip.passedict = (e) ? e : EDICT_NUM( 0 );
 	clip.hull = -1;
 
 	// clip to world
@@ -1264,7 +1264,7 @@ trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int t
 	clip.end = end;
 	clip.type = (type & 0xFF);
 	clip.flags = (type & 0xFF00);
-	clip.passedict = e;
+	clip.passedict = (e) ? e : EDICT_NUM( 0 );
 	clip.hull = bound( 0, hullNumber, 3 );
 	clip.mins = sv.worldmodel->hulls[clip.hull].clip_mins;
 	clip.maxs = sv.worldmodel->hulls[clip.hull].clip_maxs;

@@ -41,8 +41,7 @@ void *CustomDecal_Validate( byte *data, int size )
 	return NULL;
 }
 
-int SV_CreateCustomization( customization_t *pListHead, resource_t *pResource, int playernumber, int flags,
-	customization_t **pCustomization, int *nLumps )
+int SV_CreateCustomization( customization_t *pListHead, resource_t *pResource, int playernumber, int flags, customization_t **pCust, int *nLumps )
 {
 	customization_t	*pRes;
 	cachewad_t	*pldecal;
@@ -52,8 +51,7 @@ int SV_CreateCustomization( customization_t *pListHead, resource_t *pResource, i
 
 	ASSERT( pResource != NULL );
 
-	if( pCustomization != NULL )
-		*pCustomization = NULL;
+	if( pCust != NULL ) *pCust = NULL;
 
 	pRes = Z_Malloc( sizeof( customization_t ));
 	pRes->resource = *pResource;
@@ -129,7 +127,7 @@ int SV_CreateCustomization( customization_t *pListHead, resource_t *pResource, i
 
 	if( !found_problem )
 	{
-		if( pCustomization ) *pCustomization = pRes;
+		if( pCust ) *pCust = pRes;
 
 		pRes->pNext = pListHead->pNext;
 		pListHead->pNext = pRes;

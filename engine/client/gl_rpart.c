@@ -478,7 +478,7 @@ void CL_UpdateParticle( particle_t *p, float ft )
 		p->vel[2] -= grav * 20;
 		break;
 	case pt_slowgrav:
-		p->vel[2] = grav;
+		p->vel[2] -= grav;
 		break;
 	case pt_vox_grav:
 		p->vel[2] -= grav * 8;
@@ -775,13 +775,13 @@ void CL_RunParticleEffect( const vec3_t org, const vec3_t dir, int color, int co
 		p = CL_AllocParticle( NULL );
 		if( !p ) return;
 
-		p->die += Com_RandomFloat( 0.1f, 0.5f );
+		p->die += Com_RandomFloat( 0.0f, 0.5f );
 		p->color = ( color & ~7 ) + Com_RandomLong( 0, 8 );
 		p->type = pt_slowgrav;
 
 		for( j = 0; j < 3; j++ )
 		{
-			p->org[j] = org[j] + Com_RandomFloat( -16, 16 );
+			p->org[j] = org[j] + Com_RandomFloat( -8, 8 );
 			p->vel[j] = dir[j] * 15;
 		}
 	}
@@ -810,7 +810,7 @@ void CL_Blood( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 
 		for( j = 0; j < 3; j++ )
 		{
-			p->org[j] = org[j] + Com_RandomFloat( -16.0f, 16.0f );
+			p->org[j] = org[j] + Com_RandomFloat( -8.0f, 8.0f );
 			p->vel[j] = dir[j] * speed;
 		}
 	}

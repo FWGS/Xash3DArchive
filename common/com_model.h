@@ -64,6 +64,13 @@ typedef struct
 	unsigned int	cachededgeoffset;
 } medge_t;
 
+// g-cont. for future expansions
+typedef struct
+{
+	int	planenum;
+	int	children[2];		// negative numbers are contents
+} mclipnode_t;
+
 typedef struct texture_s
 {
 	char		name[16];
