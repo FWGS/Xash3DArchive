@@ -635,6 +635,40 @@ void SV_Info( netadr_t from )
 	Netchan_OutOfBandPrint( NS_SERVER, from, "info\n%s", string );
 }
 
+const char *net_requests[5] =
+{
+	"serverlist",
+	"ping",
+	"rules",
+	"players",
+	"details",
+};
+
+/*
+================
+SV_BuildNetAnswer
+
+Responds with long info for local and broadcast requests
+================
+*/
+void SV_BuildNetAnswer( netadr_t from )
+{
+	char	string[MAX_INFO_STRING];
+	int	version, context, type;
+	int	i, count = 0;
+
+	// ignore in single player
+	if( sv_maxclients->integer == 1 )
+		return;
+
+	version = Q_atoi( Cmd_Argv( 1 ));
+	context = Q_atoi( Cmd_Argv( 2 ));
+	type = Q_atoi( Cmd_Argv( 3 ));
+
+	Msg( "Receive client request (protocol %i, context %i, type %s\n", version, context, net_requests[type] );
+	string[0] = '\0';
+}
+
 /*
 ================
 SV_Ping
@@ -1864,6 +1898,7 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "getchallenge" )) SV_GetChallenge( from );
 	else if( !Q_strcmp( c, "connect" )) SV_DirectConnect( from );
 	else if( !Q_strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
+	else if( !Q_strcmp( c, "netinfo" )) SV_BuildNetAnswer( from );
 	else if( msg->pData[0] == 0xFF && msg->pData[1] == 0xFF && msg->pData[2] == 0xFF && msg->pData[3] == 0xFF && msg->pData[4] == 0x4E && msg->pData[5] == 0x0A )
 	{
 		challenge = *(dword *)&msg->pData[6];

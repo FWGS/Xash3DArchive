@@ -159,6 +159,7 @@ static void UI_VidModes_Callback( void *self, int event )
 		break;
 	case ID_APPLY:
 		UI_VidOptions_SetConfig ();
+		UI_PopMenu();
 		break;
 	}
 }

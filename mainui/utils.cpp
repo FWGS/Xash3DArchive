@@ -1621,6 +1621,12 @@ void UI_Field_Draw( menuField_s *f )
 	memcpy( text, f->buffer + prestep, drawLen );
 	text[drawLen] = 0;
 
+	if( f->generic.flags & QMF_HIDEINPUT )
+	{
+		for( int i = 0; i < drawLen; i++ )
+			if( text[i] ) text[i] = '*';
+	}
+
 	// find cursor position
 	x = drawLen - (ColorStrlen( text ) + 1 );
 	if( x < 0 ) x = 0;

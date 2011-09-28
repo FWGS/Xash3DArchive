@@ -378,7 +378,7 @@ static void UI_CreateGame_Init( void )
 
 	uiCreateGame.password.generic.id = ID_PASSWORD;
 	uiCreateGame.password.generic.type = QMTYPE_FIELD;
-	uiCreateGame.password.generic.flags = QMF_CENTER_JUSTIFY|QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW;
+	uiCreateGame.password.generic.flags = QMF_CENTER_JUSTIFY|QMF_HIGHLIGHTIFFOCUS|QMF_DROPSHADOW|QMF_HIDEINPUT;
 	uiCreateGame.password.generic.name = "Password:";
 	uiCreateGame.password.generic.x = 350;
 	uiCreateGame.password.generic.y = 460;

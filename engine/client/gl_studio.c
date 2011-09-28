@@ -199,6 +199,8 @@ int R_StudioExtractBbox( studiohdr_t *phdr, int sequence, float *mins, float *ma
 {
 	mstudioseqdesc_t	*pseqdesc;
 
+	if( !phdr ) return 0;
+
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	if( sequence == -1 )
 		return 0;
@@ -1258,7 +1260,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 
 		if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 		{
-			float	angle = anglemod( RI.refdef.time * 40 );
+			float angle = anglemod( RI.refdef.time * 40 );
 			RotatePointAroundVector( chromeupvec, tmp, v_left, angle - 180 );
 			RotatePointAroundVector( chromerightvec, chromeupvec, v_left, 180 + angle );
 		}
@@ -1740,7 +1742,7 @@ static void R_StudioDrawPoints( void )
 	mstudiotexture_t	*ptexture;
 	mstudiomesh_t	*pmesh;
 	short		*pskinref;
-	float		*av, *lv;
+	float		*av, *lv, *nv, scale;
 
 	R_StudioSetupTextureHeader ();
 
@@ -1771,8 +1773,13 @@ static void R_StudioDrawPoints( void )
 	for( i = 0; i < m_pSubModel->numverts; i++ )
 		Matrix3x4_VectorTransform( g_bonestransform[pvertbone[i]], pstudioverts[i], g_xformverts[i] );
 
-//	for( i = 0; i < m_pSubModel->numnorms; i++ )
-//		Matrix3x4_VectorIRotate( g_bonestransform[pnormbone[i]], pstudionorms[i], g_xformnorms[i] );
+	if( g_nForceFaceFlags & STUDIO_NF_CHROME )
+	{
+		scale = RI.currententity->curstate.renderamt * (10.0f / 100.0f);
+
+		for( i = 0; i < m_pSubModel->numnorms; i++ )
+			Matrix3x4_VectorRotate( g_bonestransform[pnormbone[i]], pstudionorms[i], g_xformnorms[i] );
+	}
 
 	lv = (float *)g_lightvalues;
 	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
@@ -1804,25 +1811,22 @@ static void R_StudioDrawPoints( void )
 		if( ptexture[pskinref[pmesh->skinref]].index < 0 || ptexture[pskinref[pmesh->skinref]].index > MAX_TEXTURES )
 			ptexture[pskinref[pmesh->skinref]].index = tr.defaultTexture;
 
-		if( g_nFaceFlags & STUDIO_NF_TRANSPARENT )
+		if( g_nForceFaceFlags & STUDIO_NF_CHROME )
+		{
+			color24	*clr;
+			clr = &RI.currententity->curstate.rendercolor;
+			pglColor4ub( clr->r, clr->g, clr->b, 255 );
+			alpha = 1.0f;
+		}
+		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT )
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
 			alpha = 1.0f;
 		}
-		else if(( g_nFaceFlags & STUDIO_NF_ADDITIVE ) || ( g_nForceFaceFlags & STUDIO_NF_CHROME ))
+		else if( g_nFaceFlags & STUDIO_NF_ADDITIVE )
 		{
 			GL_SetRenderMode( kRenderTransAdd );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
-
-			if( g_nForceFaceFlags & STUDIO_NF_CHROME )
-			{
-				color24	*clr;
-				float	scale;
-
-				clr = &RI.currententity->curstate.rendercolor;
-				pglColor4ub( clr->r, clr->g, clr->b, 255 );
-				scale = 1.0f + RI.currententity->curstate.renderamt * (1.0f / 255.0f);
-			}
 		}
 		else
 		{
@@ -1917,11 +1921,21 @@ static void R_StudioDrawPoints( void )
 				}
 
 				av = g_xformverts[ptricmds[0]];
-				pglVertex3f( av[0], av[1], av[2] );
 
-				ASSERT( g_nNumArrayVerts < MAXARRAYVERTS ); 
-				VectorCopy( av, g_xarrayverts[g_nNumArrayVerts] ); // store off vertex
-				g_nNumArrayVerts++;
+				if( g_nForceFaceFlags & STUDIO_NF_CHROME )
+				{
+					vec3_t	scaled_vertex;
+					nv = (float *)g_xformnorms[ptricmds[1]];
+					VectorMA( av, scale, nv, scaled_vertex );
+					pglVertex3fv( scaled_vertex );
+				}
+				else
+				{
+					pglVertex3f( av[0], av[1], av[2] );
+					ASSERT( g_nNumArrayVerts < MAXARRAYVERTS ); 
+					VectorCopy( av, g_xarrayverts[g_nNumArrayVerts] ); // store off vertex
+					g_nNumArrayVerts++;
+				}
 			}
 			pglEnd();
 		}
@@ -3288,28 +3302,29 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 
 		if( !thdr )
 		{
-			MsgDev( D_ERROR, "Mod_LoadStudioModel: %s missing textures file\n", mod->name ); 
+			MsgDev( D_WARN, "Mod_LoadStudioModel: %s missing textures file\n", mod->name ); 
 			if( buffer2 ) Mem_Free( buffer2 );
-			return; // there were problems
 		}
+                    else
+                    {
+			// give space for textures and skinrefs
+			size1 = thdr->numtextures * sizeof( mstudiotexture_t );
+			size2 = thdr->numskinfamilies * thdr->numskinref * sizeof( short );
+			mod->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length + size1 + size2 );
+			Q_memcpy( loadmodel->cache.data, buffer, phdr->length ); // copy main mdl buffer
+			phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
+			phdr->numskinfamilies = thdr->numskinfamilies;
+			phdr->numtextures = thdr->numtextures;
+			phdr->numskinref = thdr->numskinref;
+			phdr->textureindex = phdr->length;
+			phdr->skinindex = phdr->textureindex + size1;
 
-		// give space for textures and skinrefs
-		size1 = thdr->numtextures * sizeof( mstudiotexture_t );
-		size2 = thdr->numskinfamilies * thdr->numskinref * sizeof( short );
-		mod->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length + size1 + size2 );
-		Q_memcpy( loadmodel->cache.data, buffer, phdr->length ); // copy main mdl buffer
-		phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
-		phdr->numskinfamilies = thdr->numskinfamilies;
-		phdr->numtextures = thdr->numtextures;
-		phdr->numskinref = thdr->numskinref;
-		phdr->textureindex = phdr->length;
-		phdr->skinindex = phdr->textureindex + size1;
-
-		in = (byte *)thdr + thdr->textureindex;
-		out = (byte *)phdr + phdr->textureindex;
-		Q_memcpy( out, in, size1 + size2 );	// copy textures + skinrefs
-		phdr->length += size1 + size2;
-		Mem_Free( buffer2 ); // release T.mdl
+			in = (byte *)thdr + thdr->textureindex;
+			out = (byte *)phdr + phdr->textureindex;
+			Q_memcpy( out, in, size1 + size2 );	// copy textures + skinrefs
+			phdr->length += size1 + size2;
+			Mem_Free( buffer2 ); // release T.mdl
+		}
 	}
 	else
 	{

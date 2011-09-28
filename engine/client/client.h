@@ -27,6 +27,7 @@ GNU General Public License for more details.
 #include "screenfade.h"
 #include "protocol.h"
 #include "netchan.h"
+#include "net_api.h"
 #include "world.h"
 
 #define MAX_DEMOS		32
@@ -34,6 +35,7 @@ GNU General Public License for more details.
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
 #define MAX_EFRAGS		640
+#define MAX_REQUESTS	32
 
 // screenshot types
 #define VID_SCREENSHOT	0
@@ -203,7 +205,9 @@ typedef struct
 {
 	int		hFontTexture;		// handle to texture
 	wrect_t		fontRc[256];		// rectangles
-	qboolean		valid;			// rectangles are valid
+	byte		charWidths[256];
+	int		charHeight;
+	qboolean		valid;			// all rectangles are valid
 } cl_font_t;
 
 typedef struct
@@ -217,6 +221,7 @@ typedef struct
 	int		scissor_width;
 	int		scissor_height;
 	qboolean		scissor_test;
+	qboolean		adjust_size;		// allow to adjust scale for fonts
 
 	int		cullMode;			// override CULL FACE from TriAPI
 
@@ -293,6 +298,15 @@ typedef struct
 	float		zNear;
 	float		flZoom;
 } ref_overview_t;
+
+typedef struct
+{
+	net_response_t		resp;
+	net_api_response_func_t	pfnFunc;
+	double			timeout;
+	double			timesend;	// time when request was sended
+	int			flags;	// FNETAPI_MULTIPLE_RESPONSE etc
+} net_request_t;
 
 typedef struct
 {
@@ -382,6 +396,8 @@ typedef struct
 
 	client_textmessage_t *titles;			// title messages, not network messages
 	int		numTitles;
+
+	net_request_t	net_requests[MAX_REQUESTS];	// no reason to keep more
 
 	cl_entity_t	viewent;			// viewmodel
 } clgame_static_t;
@@ -603,6 +619,8 @@ int pfnDecalIndexFromName( const char *szDecalName );
 int pfnIndexFromTrace( struct pmtrace_s *pTrace );
 int CL_FindModelIndex( const char *m );
 HSPRITE pfnSPR_Load( const char *szPicName );
+void TextAdjustSize( int *x, int *y, int *w, int *h );
+void PicAdjustSize( float *x, float *y, float *w, float *h );
 
 _inline cl_entity_t *CL_EDICT_NUM( int n )
 {
@@ -726,6 +744,7 @@ void CL_ReadLineFile_f( void );
 //
 // console.c
 //
+extern convar_t *con_fontsize;
 qboolean Con_Visible( void );
 void Con_Init( void );
 void Con_VidInit( void );
@@ -740,7 +759,9 @@ int Con_DrawString( int x, int y, const char *string, rgba_t setColor );
 int Con_DrawCharacter( int x, int y, int number, rgba_t color );
 void Con_DrawCharacterLen( int number, int *width, int *height );
 void Con_DefaultColor( int r, int g, int b );
+void Con_SetFont( int fontNum );
 void Con_CharEvent( int key );
+void Con_RestoreFont( void );
 void Key_Console( int key );
 void Key_Message( int key );
 void Con_Close( void );

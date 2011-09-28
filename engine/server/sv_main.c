@@ -727,7 +727,7 @@ void SV_FinalMessage( char *message, qboolean reconnect )
 	BF_Init( &msg, "FinalMessage", msg_buf, sizeof( msg_buf ));
 	BF_WriteByte( &msg, svc_print );
 	BF_WriteByte( &msg, PRINT_HIGH );
-	BF_WriteString( &msg, message );
+	BF_WriteString( &msg, va( "%s\n", message ));
 
 	if( reconnect )
 	{

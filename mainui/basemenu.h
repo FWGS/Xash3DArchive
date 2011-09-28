@@ -129,6 +129,7 @@ typedef enum
 #define QMF_NOTIFY			(1<<19)	// draw notify at right screen side
 #define QMF_ACT_ONRELEASE		(1<<20)	// call Key_Event when button is released
 #define QMF_ALLOW_COLORSTRINGS	(1<<21)	// allow colorstring in MENU_FIELD
+#define QMF_HIDEINPUT		(1<<22)	// used for "password" field
 
 // Callback notifications
 #define QM_GOTFOCUS			1

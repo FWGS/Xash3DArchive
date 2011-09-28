@@ -2072,8 +2072,13 @@ Mod_Calloc
 */
 void *Mod_Calloc( int number, size_t size )
 {
+	cache_user_t *cu;
+
 	if( number <= 0 || size <= 0 ) return NULL;
-	return Mem_Alloc( com_studiocache, number * size );
+	cu = (cache_user_t *)Mem_Alloc( com_studiocache, sizeof( cache_user_t ) + number * size );
+	cu->data = (void *)cu; // make sure what cu->data is not NULL
+
+	return cu;
 }
 
 /*

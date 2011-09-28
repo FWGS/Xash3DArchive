@@ -1258,7 +1258,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_print:
 			i = BF_ReadByte( msg );
-			MsgDev( D_INFO, "^6%s\n", BF_ReadString( msg ));
+			MsgDev( D_INFO, "^6%s", BF_ReadString( msg ));
 			if( i == PRINT_CHAT ) S_StartLocalSound( "common/menu2.wav" );
 			break;
 		case svc_stufftext:

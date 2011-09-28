@@ -327,8 +327,9 @@ int R_ComputeFxBlend( cl_entity_t *e )
 			blend += Com_RandomLong( -32, 31 );
 		}
 		break;
-	case kRenderFxDeadPlayer:
-		blend = renderAmt;	// safe current renderamt because it's player index!
+	case kRenderFxGlowShell:	// safe current renderamt because it's shell scale!
+	case kRenderFxDeadPlayer:	// safe current renderamt because it's player index!
+		blend = renderAmt;
 		break;
 	case kRenderFxNone:
 	case kRenderFxClampMinScale:
@@ -468,6 +469,8 @@ static void R_Clear( int bitMask )
 		gldepthmin = 0.0f;
 		gldepthmax = 1.0f;
 	}
+
+	pglDepthFunc( GL_LEQUAL );
 	pglDepthRange( gldepthmin, gldepthmax );
 }
 
@@ -591,21 +594,8 @@ static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
 
 	if( RI.drawOrtho )
 	{
-		ref_overview_t	*ov = &clgame.overView;
-		float		zNear, zFar;
-
-		if( gl_test->integer )
-		{
-			zNear = -8192.0f;
-			zFar = 8192.0f;
-		}
-		else
-		{
-			zNear = ov->zNear;
-			zFar = ov->zFar;
-		}
-
-		Matrix4x4_CreateOrtho( m, ov->xLeft, ov->xRight, ov->xTop, ov->xBottom, zNear, zFar );
+		ref_overview_t *ov = &clgame.overView;
+		Matrix4x4_CreateOrtho( m, ov->xLeft, ov->xRight, ov->xTop, ov->xBottom, ov->zNear, ov->zFar );
 		return;
 	}
 
@@ -1046,6 +1036,8 @@ void R_DrawEntitiesOnList( void )
 
 	glState.drawTrans = false;
 	pglDepthMask( GL_TRUE );
+	pglDisable( GL_BLEND );	// Trinity Render issues
+
 	R_DrawViewModel();
 
 	CL_ExtraUpdate();
@@ -1104,9 +1096,6 @@ void R_BeginFrame( qboolean clearScene )
 		GL_UpdateGammaRamp();
 	}
 
-	// go into 2D mode
-	R_Set2DMode( true );
-
 	// draw buffer stuff
 	pglDrawBuffer( GL_BACK );
 
@@ -1131,9 +1120,6 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	if( r_norefresh->integer )
 		return;
 
-	R_Set2DMode( false );
-	GL_BackendStartFrame();
-
 	if( drawWorld ) r_lastRefdef = *fd;
 
 	RI.params = RP_NONE;
@@ -1142,6 +1128,8 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.drawWorld = drawWorld;
 	RI.thirdPerson = cl.thirdperson;
 	RI.drawOrtho = gl_overview->integer;
+
+	GL_BackendStartFrame();
 
 	// adjust field of view for widescreen
 	if( glState.wideScreen && r_adjust_fov->integer )
@@ -1171,9 +1159,6 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	R_DrawMirrors ();
 #endif
 	GL_BackendEndFrame();
-
-	// go into 2D mode (in case we draw PlayerSetup between two 2d calls)
-	R_Set2DMode( true );
 }
 
 /*

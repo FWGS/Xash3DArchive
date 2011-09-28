@@ -43,6 +43,8 @@ GL_BackendStartFrame
 void GL_BackendStartFrame( void )
 {
 	r_speeds_msg[0] = '\0';
+
+	if( !RI.drawWorld ) R_Set2DMode( false );
 }
 
 /*
@@ -52,6 +54,9 @@ GL_BackendEndFrame
 */
 void GL_BackendEndFrame( void )
 {
+	// go into 2D mode (in case we draw PlayerSetup between two 2d calls)
+	if( !RI.drawWorld ) R_Set2DMode( true );
+
 	if( r_speeds->integer <= 0 || !RI.drawWorld )
 		return;
 
@@ -565,11 +570,6 @@ void R_ShowTextures( void )
 
 	if( !gl_showtextures->integer )
 		return;
-
-	if( !glState.in2DMode )
-	{
-		R_Set2DMode( true );
-	}
 
 	if( gl_showtextures->integer == TEX_DETAIL )
 		pglClearColor( 1.0f, 0.0f, 0.5f, 1.0f );

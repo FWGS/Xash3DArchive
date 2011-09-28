@@ -203,8 +203,8 @@ void R_Set2DMode( qboolean enable )
 		pglScissor( 0, 0, glState.width, glState.height );
 		pglViewport( 0, 0, glState.width, glState.height );
 		pglMatrixMode( GL_PROJECTION );
-		Matrix4x4_CreateOrtho( RI.projectionMatrix, 0, glState.width, glState.height, 0, -99999, 99999 );
-		GL_LoadMatrix( RI.projectionMatrix );
+		pglLoadIdentity();
+		pglOrtho( 0, glState.width, glState.height, 0, -99999, 99999 );
 		pglMatrixMode( GL_MODELVIEW );
 		pglLoadIdentity();
 
@@ -222,7 +222,13 @@ void R_Set2DMode( qboolean enable )
 	{
 		pglDepthMask( GL_TRUE );
 		pglEnable( GL_DEPTH_TEST );
-		pglMatrixMode( GL_MODELVIEW );
 		glState.in2DMode = false;
+
+		pglMatrixMode( GL_PROJECTION );
+		GL_LoadMatrix( RI.projectionMatrix );
+
+		pglMatrixMode( GL_MODELVIEW );
+		GL_LoadMatrix( RI.worldviewMatrix );
+
 	}
 }

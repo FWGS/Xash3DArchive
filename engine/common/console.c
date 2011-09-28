@@ -30,6 +30,7 @@ convar_t	*con_fontsize;
 #define CON_HISTORY		64
 #define MAX_DBG_NOTIFY	128
 #define CON_MAXCMDS		4096	// auto-complete intermediate list
+#define CON_NUMFONTS	3	// maxfonts
 
 #define CON_TEXTSIZE	131072	// 128 kb buffer
 
@@ -85,9 +86,8 @@ typedef struct
 	int		background;	// console background
 
 	// conchars
-	cl_font_t		chars;		// fonts.wad/font1.fnt
-	int		charHeight;
-	byte		charWidths[256];
+	cl_font_t		chars[CON_NUMFONTS];// fonts.wad/font1.fnt
+	cl_font_t		*curFont, *lastUsedFont;
 	
 	// console input
 	field_t		input;
@@ -304,8 +304,8 @@ void Con_CheckResize( void )
 	short	tbuf[CON_TEXTSIZE];
 	int	charWidth = 8;
 
-	if( con.chars.hFontTexture )
-		charWidth = con.charWidths['M'];
+	if( con.curFont && con.curFont->hFontTexture )
+		charWidth = con.curFont->charWidths['M'];
 
 	width = ( scr_width->integer / charWidth ) - 2;
 
@@ -427,59 +427,76 @@ qboolean Con_Visible( void )
 
 /*
 ================
-Con_LoadConchars
+Con_LoadConsoleFont
 ================
 */
-static void Con_LoadConchars( void )
+static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
 {
-	int	fontWidth, fontHeight;
+	int	fontWidth;
 
-	// make sure fontnum in-range
-	if( con_fontsize->integer < 0 ) Cvar_SetFloat( "con_fontsize", 0 );
-	if( con_fontsize->integer > 2 ) Cvar_SetFloat( "con_fontsize", 2 );
+	ASSERT( font != NULL );
 
-	// select properly fontsize
-	if( scr_width->integer <= 640 ) Cvar_SetFloat( "con_fontsize", 0 );
-	else if( scr_width->integer >= 1280 ) Cvar_SetFloat( "con_fontsize", 2 );
-	else Cvar_SetFloat( "con_fontsize", 1 );
+	if( font->valid ) return; // already loaded
 
 	// loading conchars
-	con.chars.hFontTexture = GL_LoadTexture( va( "fonts/font%i", con_fontsize->integer ), NULL, 0, TF_FONT|TF_NEAREST );
-
-	if( !con_fontsize->modified ) return; // font not changed
-
-	R_GetTextureParms( &fontWidth, &fontHeight, con.chars.hFontTexture );
+	font->hFontTexture = GL_LoadTexture( va( "fonts/font%i", fontNumber ), NULL, 0, TF_FONT|TF_NEAREST );
+	R_GetTextureParms( &fontWidth, NULL, font->hFontTexture );
 		
 	// setup creditsfont
-	if( FS_FileExists( va( "fonts/font%i.fnt", con_fontsize->integer ), false ))
+	if( FS_FileExists( va( "fonts/font%i.fnt", fontNumber ), false ))
 	{
 		byte	*buffer;
 		size_t	length;
 		qfont_t	*src;
 	
 		// half-life font with variable chars witdh
-		buffer = FS_LoadFile( va( "fonts/font%i", con_fontsize->integer ), &length, false );
+		buffer = FS_LoadFile( va( "fonts/font%i", fontNumber ), &length, false );
 
 		if( buffer && length >= sizeof( qfont_t ))
 		{
 			int	i;
 	
 			src = (qfont_t *)buffer;
-			con.charHeight = src->rowheight;
+			font->charHeight = src->rowheight;
 
 			// build rectangles
 			for( i = 0; i < 256; i++ )
 			{
-				con.chars.fontRc[i].left = (word)src->fontinfo[i].startoffset % fontWidth;
-				con.chars.fontRc[i].right = con.chars.fontRc[i].left + src->fontinfo[i].charwidth;
-				con.chars.fontRc[i].top = (word)src->fontinfo[i].startoffset / fontWidth;
-				con.chars.fontRc[i].bottom = con.chars.fontRc[i].top + src->rowheight;
-				con.charWidths[i] = src->fontinfo[i].charwidth;
+				font->fontRc[i].left = (word)src->fontinfo[i].startoffset % fontWidth;
+				font->fontRc[i].right = font->fontRc[i].left + src->fontinfo[i].charwidth;
+				font->fontRc[i].top = (word)src->fontinfo[i].startoffset / fontWidth;
+				font->fontRc[i].bottom = font->fontRc[i].top + src->rowheight;
+				font->charWidths[i] = src->fontinfo[i].charwidth;
 			}
-			con.chars.valid = true;
+			font->valid = true;
 		}
 		if( buffer ) Mem_Free( buffer );
 	}
+}
+
+/*
+================
+Con_LoadConchars
+================
+*/
+static void Con_LoadConchars( void )
+{
+	int	i, fontSize;
+
+	// load all the console fonts
+	for( i = 0; i < 3; i++ )
+		Con_LoadConsoleFont( i, con.chars + i );
+
+	// select properly fontsize
+	if( scr_width->integer <= 640 )
+		fontSize = 0;
+	else if( scr_width->integer >= 1280 )
+		fontSize = 2;
+	else fontSize = 1;
+
+	// sets the current font
+	con.lastUsedFont = con.curFont = &con.chars[fontSize];
+	
 }
 
 static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
@@ -490,17 +507,17 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 
 	number &= 255;
 
-	if( !con.chars.valid )
+	if( !con.curFont || !con.curFont->valid )
 		return 0;
 
 	if( number < 32 ) return 0;
-	if( y < -con.charHeight )
+	if( y < -con.curFont->charHeight )
 		return 0;
 
-	rc = &con.chars.fontRc[number];
+	rc = &con.curFont->fontRc[number];
 
 	pglColor4ubv( color );
-	R_GetTextureParms( &width, &height, con.chars.hFontTexture );
+	R_GetTextureParms( &width, &height, con.curFont->hFontTexture );
 
 	// calc rectangle
 	s1 = (float)rc->left / width;
@@ -510,10 +527,22 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 	width = rc->right - rc->left;
 	height = rc->bottom - rc->top;
 
-	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, con.chars.hFontTexture );		
+	TextAdjustSize( &x, &y, &width, &height );
+	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, con.curFont->hFontTexture );		
 	pglColor4ub( 255, 255, 255, 255 ); // don't forget reset color
 
-	return con.charWidths[number];
+	return con.curFont->charWidths[number];
+}
+
+void Con_SetFont( int fontNum )
+{
+	fontNum = bound( 0, fontNum, 2 ); 
+	con.curFont = &con.chars[fontNum];
+}
+
+void Con_RestoreFont( void )
+{
+	con.curFont = con.lastUsedFont;
 }
 
 int Con_DrawCharacter( int x, int y, int number, rgba_t color )
@@ -524,15 +553,17 @@ int Con_DrawCharacter( int x, int y, int number, rgba_t color )
 
 void Con_DrawCharacterLen( int number, int *width, int *height )
 {
-	if( width ) *width = con.charWidths[number];
-	if( height ) *height = con.charHeight;
+	if( width && con.curFont ) *width = con.curFont->charWidths[number];
+	if( height && con.curFont ) *height = con.curFont->charHeight;
 }
 
 void Con_DrawStringLen( const char *pText, int *length, int *height )
 {
 	int	curLength = 0;
 
-	if( height ) *height = con.charHeight;
+	if( !con.curFont ) return;
+
+	if( height ) *height = con.curFont->charHeight;
 	if( !length ) return;
 
 	*length = 0;
@@ -554,7 +585,7 @@ void Con_DrawStringLen( const char *pText, int *length, int *height )
 			continue;
 		}
 
-		curLength += con.charWidths[c];
+		curLength += con.curFont->charWidths[c];
 		pText++;
 
 		if( curLength > *length )
@@ -577,6 +608,8 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qb
 	int		numDraws = 0;
 	const char	*s;
 
+	if( !con.curFont ) return 0; // no font set
+
 	// draw the colored text
 	s = string;
 	*(uint *)color = *(uint *)setColor;
@@ -587,7 +620,7 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qb
 		{
 			s++;
 			drawLen = 0; // begin new row
-			y += con.charHeight;
+			y += con.curFont->charHeight;
 		}
 
 		if( IsColorString( s ))
@@ -605,7 +638,7 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qb
 
 		// hide char for overstrike mode
 		if( hideChar == numDraws )
-			drawLen += con.charWidths[*s];
+			drawLen += con.curFont->charWidths[*s];
 		else drawLen += Con_DrawCharacter( x + drawLen, y, *s, color );
 
 		numDraws++;
@@ -635,7 +668,7 @@ void Con_Init( void )
 	scr_height = Cvar_Get( "height", "480", 0, "screen height" );
 	scr_conspeed = Cvar_Get( "scr_conspeed", "600", 0, "console moving speed" );
 	con_notifytime = Cvar_Get( "con_notifytime", "3", 0, "notify time to live" );
-	con_fontsize = Cvar_Get( "con_fontsize", "1", CVAR_ARCHIVE|CVAR_LATCH, "console font number (0, 1 or 2)" );
+	con_fontsize = Cvar_Get( "con_fontsize", "1", CVAR_ARCHIVE, "console font number (0, 1 or 2)" );
 
 	Con_CheckResize();
 
@@ -1494,9 +1527,10 @@ void Con_DrawInput( void )
 
 	// don't draw anything (always draw if not active)
 	if( cls.key_dest != key_console ) return;
+	if( !con.curFont ) return;
 
 	x = QCHAR_WIDTH; // room for ']'
-	y = con.vislines - ( con.charHeight * 2 );
+	y = con.vislines - ( con.curFont->charHeight * 2 );
 	colorDefault = g_color_table[ColorIndex( COLOR_DEFAULT )];
 
 	Con_DrawCharacter( QCHAR_WIDTH >> 1, y, ']', colorDefault );
@@ -1570,6 +1604,8 @@ void Con_DrawNotify( void )
 	short	*text;
 	float	time;
 
+	if( !con.curFont ) return;
+
 	if( host.developer && !Cvar_VariableInteger( "sv_background" ))
 	{
 		currentColor = 7;
@@ -1586,7 +1622,7 @@ void Con_DrawNotify( void )
 				continue;	// expired
 
 			text = con.text + (i % con.totallines) * con.linewidth;
-			start = con.charWidths[' ']; // offset one space at left screen side
+			start = con.curFont->charWidths[' ']; // offset one space at left screen side
 
 			for( x = 0; x < con.linewidth; x++ )
 			{
@@ -1594,7 +1630,7 @@ void Con_DrawNotify( void )
 					currentColor = ( text[x] >> 8 ) & 7;
 				start += Con_DrawCharacter( start, v, text[x] & 0xFF, g_color_table[currentColor] );
 			}
-			v += con.charHeight;
+			v += con.curFont->charHeight;
 		}
 	}
 	
@@ -1606,7 +1642,7 @@ void Con_DrawNotify( void )
 		currentColor = 7;
 		pglColor4ubv( g_color_table[currentColor] );
 
-		start = con.charWidths[' ']; // offset one space at left screen side
+		start = con.curFont->charWidths[' ']; // offset one space at left screen side
 
 		// update chatline position from client.dll
 		if( clgame.dllFuncs.pfnChatInputPosition )
@@ -1655,6 +1691,8 @@ void Con_DrawSolidConsole( float frac )
 	}
 	else y = 0;
 
+	if( !con.curFont ) return; // nothing to draw
+
 	if( host.developer )
 	{
 		// draw current version
@@ -1673,17 +1711,17 @@ void Con_DrawSolidConsole( float frac )
 	// draw the text
 	con.vislines = lines;
 	rows = ( lines - QCHAR_WIDTH ) / QCHAR_WIDTH; // rows of text to draw
-	y = lines - ( con.charHeight * 3 );
+	y = lines - ( con.curFont->charHeight * 3 );
 
 	// draw from the bottom up
 	if( con.display != con.current )
 	{
-		start = con.charWidths[' ']; // offset one space at left screen side
+		start = con.curFont->charWidths[' ']; // offset one space at left screen side
 
 		// draw red arrows to show the buffer is backscrolled
 		for( x = 0; x < con.linewidth; x += 4 )
 			Con_DrawCharacter(( x + 1 ) * start, y, '^', g_color_table[1] );
-		y -= con.charHeight;
+		y -= con.curFont->charHeight;
 		rows--;
 	}
 	
@@ -1693,7 +1731,7 @@ void Con_DrawSolidConsole( float frac )
 	currentColor = 7;
 	pglColor4ubv( g_color_table[currentColor] );
 
-	for( i = 0; i < rows; i++, y -= con.charHeight, row-- )
+	for( i = 0; i < rows; i++, y -= con.curFont->charHeight, row-- )
 	{
 		if( row < 0 ) break;
 		if( con.current - row >= con.totallines )
@@ -1703,7 +1741,7 @@ void Con_DrawSolidConsole( float frac )
 		}
 
 		text = con.text + ( row % con.totallines ) * con.linewidth;
-		start = con.charWidths[' ']; // offset one space at left screen side
+		start = con.curFont->charWidths[' ']; // offset one space at left screen side
 
 		for( x = 0; x < con.linewidth; x++ )
 		{

@@ -268,8 +268,8 @@ void V_CalcRefDef( void )
 {
 	int	passcount = 0;
 
-	// g-cont. keep actual frame for all viewpasses
-	tr.framecount++;
+	R_Set2DMode( false );
+	tr.framecount++;	// g-cont. keep actual frame for all viewpasses
 
 	do
 	{

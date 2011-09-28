@@ -18,7 +18,6 @@ GNU General Public License for more details.
 #include "const.h"
 #include "triangleapi.h"
 #include "r_efx.h"
-#include "net_api.h"
 #include "demo_api.h"
 #include "event_flags.h"
 #include "ivoicetweak.h"
@@ -389,6 +388,54 @@ static void SPR_AdjustSize( float *x, float *y, float *w, float *h )
 {
 	float	xscale, yscale;
 
+	if( !x && !y && !w && !h ) return;
+
+	// scale for screen sizes
+	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
+
+	if( x ) *x *= xscale;
+	if( y ) *y *= yscale;
+	if( w ) *w *= xscale;
+	if( h ) *h *= yscale;
+}
+
+/*
+====================
+TextAdjustSize
+
+draw hudsprite routine
+====================
+*/
+void TextAdjustSize( int *x, int *y, int *w, int *h )
+{
+	float	xscale, yscale;
+
+	if( !clgame.ds.adjust_size ) return;
+	if( !x && !y && !w && !h ) return;
+
+	// scale for screen sizes
+	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
+
+	if( x ) *x *= xscale;
+	if( y ) *y *= yscale;
+	if( w ) *w *= xscale;
+	if( h ) *h *= yscale;
+}
+
+/*
+====================
+PictAdjustSize
+
+draw hudsprite routine
+====================
+*/
+void PicAdjustSize( float *x, float *y, float *w, float *h )
+{
+	float	xscale, yscale;
+
+	if( !clgame.ds.adjust_size ) return;
 	if( !x && !y && !w && !h ) return;
 
 	// scale for screen sizes
@@ -1499,6 +1546,11 @@ static void pfnSPR_Set( HSPRITE hPic, int r, int g, int b )
 	clgame.ds.spriteColor[1] = bound( 0, g, 255 );
 	clgame.ds.spriteColor[2] = bound( 0, b, 255 );
 	clgame.ds.spriteColor[3] = 255;
+
+	// set default state
+	pglDisable( GL_BLEND );
+	pglDisable( GL_ALPHA_TEST );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 }
 
 /*
@@ -1509,7 +1561,6 @@ pfnSPR_Draw
 */
 static void pfnSPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
-	GL_SetRenderMode( kRenderTransAdd );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 
@@ -1878,8 +1929,10 @@ static int pfnDrawCharacter( int x, int y, int number, int r, int g, int b )
 	if( y < -clgame.scrInfo.iCharHeight )
 		return 0;
 
+	clgame.ds.adjust_size = true;
 	pfnPIC_Set( cls.creditsFont.hFontTexture, r, g, b, 255 );
 	pfnPIC_DrawAdditive( x, y, -1, -1, &cls.creditsFont.fontRc[number] );
+	clgame.ds.adjust_size = false;
 
 	return clgame.scrInfo.charWidths[number];
 }
@@ -1896,8 +1949,12 @@ static int pfnDrawConsoleString( int x, int y, char *string )
 	int	drawLen;
 
 	if( !string || !*string ) return 0; // silent ignore
+	clgame.ds.adjust_size = true;
+	Con_SetFont( con_fontsize->integer );
 	drawLen = Con_DrawString( x, y, string, clgame.ds.textColor );
 	MakeRGBA( clgame.ds.textColor, 255, 255, 255, 255 );
+	clgame.ds.adjust_size = false;
+	Con_RestoreFont();
 
 	return (x + drawLen); // exclude color prexfixes
 }
@@ -1918,11 +1975,18 @@ static void pfnDrawSetTextColor( float r, float g, float b )
 	clgame.ds.textColor[3] = (byte)0xFF;
 }
 
+static void pfnDrawConsoleStringLen( const char *pText, int *length, int *height )
+{
+	Con_SetFont( con_fontsize->integer );
+	Con_DrawStringLen( pText, length, height );
+	Con_RestoreFont();
+}
+
 /*
 =============
 pfnConsolePrint
 
-prints dirctly into console (can skip notify)
+prints directly into console (can skip notify)
 =============
 */
 static void pfnConsolePrint( const char *string )
@@ -3207,7 +3271,7 @@ NetAPI_InitNetworking
 */
 void NetAPI_InitNetworking( void )
 {
-	// TODO: implement
+	NET_Config( true ); // allow remote
 }
 
 /*
@@ -3229,7 +3293,56 @@ NetAPI_SendRequest
 */
 void NetAPI_SendRequest( int context, int request, int flags, double timeout, netadr_t *remote_address, net_api_response_func_t response )
 {
-	// TODO: implement
+	net_request_t	*nr;
+	string		req;
+	int		i;
+
+	if( !response )
+	{
+		MsgDev( D_ERROR, "Net_SendRequest: no callbcak specified for request with context %i!\n", context );
+		return;
+	}
+
+	// find a free request
+	for( i = 0; i < MAX_REQUESTS; i++ )
+	{
+		nr = &clgame.net_requests[i];
+		if( !nr->pfnFunc || nr->timeout < host.realtime )
+			break;
+	}
+
+	if( i == MAX_REQUESTS )
+	{
+		double	max_timeout = 0;
+
+		// no free requests? use older
+		for( i = 0, nr = NULL; i < MAX_REQUESTS; i++ )
+		{
+			if(( host.realtime - clgame.net_requests[i].timesend ) > max_timeout )
+			{
+				max_timeout = host.realtime - clgame.net_requests[i].timesend;
+				nr = &clgame.net_requests[i];
+			}
+		}
+	}
+
+	ASSERT( nr != NULL );
+
+	// clear slot
+	Q_memset( nr, 0, sizeof( *nr ));
+
+	// create a new request
+	nr->timesend = host.realtime;
+	nr->timeout = nr->timesend + timeout;
+	nr->pfnFunc = response;
+	nr->resp.context = context;
+	nr->resp.type = request;	
+	nr->resp.remote_address = *remote_address; 
+	nr->flags = flags;
+
+	// send request over the net
+	Q_snprintf( req, sizeof( req ), "netinfo %i %i %i", PROTOCOL_VERSION, context, request );
+	Netchan_OutOfBandPrint( NS_CLIENT, nr->resp.remote_address, req );
 }
 
 /*
@@ -3240,7 +3353,18 @@ NetAPI_CancelRequest
 */
 void NetAPI_CancelRequest( int context )
 {
-	// TODO: implement
+	int	i;
+
+	// find a specified request
+	for( i = 0; i < MAX_REQUESTS; i++ )
+	{
+		if( clgame.net_requests[i].resp.context == context )
+		{
+			Msg( "Request with context %i cancelled\n", context );
+			Q_memset( &clgame.net_requests[i], 0, sizeof( net_request_t ));
+			break;
+		}
+	}
 }
 
 /*
@@ -3251,7 +3375,7 @@ NetAPI_CancelAllRequests
 */
 void NetAPI_CancelAllRequests( void )
 {
-	// TODO: implement
+	Q_memset( clgame.net_requests, 0, sizeof( clgame.net_requests ));
 }
 
 /*
@@ -3336,8 +3460,7 @@ Voice_StartVoiceTweakMode
 */
 int Voice_StartVoiceTweakMode( void )
 {
-	// UNDONE: wait for voice implementation in snd_dx.dll
-	// g-cont. may be move snd_dx.dll back into the engine ?
+	// UNDONE: wait for voice implementation
 	return 0;
 }
 
@@ -3560,7 +3683,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnDrawCharacter,
 	pfnDrawConsoleString,
 	pfnDrawSetTextColor,
-	Con_DrawStringLen,
+	pfnDrawConsoleStringLen,
 	pfnConsolePrint,
 	pfnCenterPrint,
 	pfnGetWindowCenterX,

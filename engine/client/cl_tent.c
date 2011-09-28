@@ -65,6 +65,9 @@ void CL_RegisterMuzzleFlashes( void )
 	cl_muzzleflash[1] = CL_FindModelIndex( "sprites/muzzleflash2.spr" );
 	cl_muzzleflash[2] = CL_FindModelIndex( "sprites/muzzleflash3.spr" );
 	cl_muzzleflash[3] = CL_FindModelIndex( "sprites/muzzleflash.spr" );
+
+	// update registration for shellchrome
+	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
 }
 
 /*

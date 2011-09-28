@@ -328,6 +328,7 @@ static void PIC_DrawGeneric( float x, float y, float width, float height, const 
 	if( menu.ds.scissor_test && !PIC_Scissor( &x, &y, &width, &height, &s1, &t1, &s2, &t2 ))
 		return;
 
+	PicAdjustSize( &x, &y, &width, &height );
 	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, menu.ds.gl_texturenum );
 	pglColor4ub( 255, 255, 255, 255 );
 }
