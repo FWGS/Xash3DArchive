@@ -1096,6 +1096,8 @@ void R_BeginFrame( qboolean clearScene )
 		GL_UpdateGammaRamp();
 	}
 
+	R_Set2DMode( true );
+
 	// draw buffer stuff
 	pglDrawBuffer( GL_BACK );
 
