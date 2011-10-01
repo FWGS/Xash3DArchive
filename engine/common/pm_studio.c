@@ -591,10 +591,11 @@ static qboolean PM_StudioSetupModel( playermove_t *pmove, physent_t *pe )
 	return true;
 }
 
-qboolean PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs )
+qboolean PM_StudioExtractBbox( playermove_t *pmove, physent_t *pe, model_t *mod, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
 	studiohdr_t	*phdr;
+	float		scale = 1.0f;
 
 	ASSERT( mod != NULL );
 
@@ -608,9 +609,12 @@ qboolean PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *m
 
 	if( sequence < 0 || sequence >= phdr->numseq )
 		return false;
+
+	if( pmove->movevars->studio_scale && pe->fuser1 > 0.0f )
+		scale = pe->fuser1;
 	
-	VectorCopy( pseqdesc[sequence].bbmin, mins );
-	VectorCopy( pseqdesc[sequence].bbmax, maxs );
+	VectorScale( pseqdesc[sequence].bbmin, scale, mins );
+	VectorScale( pseqdesc[sequence].bbmax, scale, maxs );
 
 	return true;
 }
@@ -825,7 +829,7 @@ PM_StudioIntersect
 testing for potentially intersection of trace and animation bboxes
 ================
 */
-static qboolean PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
+static qboolean PM_StudioIntersect( playermove_t *pmove, physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
 {
 	vec3_t	trace_mins, trace_maxs;
 	vec3_t	anim_mins, anim_maxs;
@@ -833,7 +837,7 @@ static qboolean PM_StudioIntersect( physent_t *pe, const vec3_t start, vec3_t mi
 	// create the bounding box of the entire move
 	World_MoveBounds( start, mins, maxs, end, trace_mins, trace_maxs );
 
-	if( !PM_StudioExtractBbox( pe->studiomodel, pe->sequence, anim_mins, anim_maxs ))
+	if( !PM_StudioExtractBbox( pmove, pe, pe->studiomodel, pe->sequence, anim_mins, anim_maxs ))
 		return false; // invalid sequence
 
 	if( !VectorIsNull( pe->angles ))
@@ -879,7 +883,7 @@ qboolean PM_StudioTrace( playermove_t *pmove, physent_t *pe, const vec3_t start,
 	ptr->hitgroup = -1;
 	ptr->ent = -1;
 
-	if( !PM_StudioIntersect( pe, start, mins, maxs, end ))
+	if( !PM_StudioIntersect( pmove, pe, start, mins, maxs, end ))
 		return false;
 
 	if( !PM_StudioSetupModel( pmove, pe ))

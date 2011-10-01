@@ -142,6 +142,7 @@ typedef struct server_s
 	model_t		*worldmodel;	// pointer to world
 	uint		checksum;		// for catching cheater maps
 
+	qboolean		droptofloor;	// 0 == normal mode, 1 == special mode
 	qboolean		write_bad_message;	// just for debug
 	qboolean		paused;
 } server_t;
@@ -574,7 +575,6 @@ void SV_InitSaveRestore( void );
 //
 void SV_InitStudioHull( void );
 qboolean SV_InitStudioAPI( void );
-qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
 void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
 trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );

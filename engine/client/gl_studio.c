@@ -195,18 +195,22 @@ R_StudioExtractBbox
 Extract bbox from current sequence
 ================
 */
-int R_StudioExtractBbox( studiohdr_t *phdr, int sequence, float *mins, float *maxs )
+int R_StudioExtractBbox( cl_entity_t *e, studiohdr_t *phdr, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
+	float		scale = 1.0f;
 
 	if( !phdr ) return 0;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	if( sequence == -1 )
 		return 0;
+
+	if( e->curstate.scale > 0.0f )
+		scale = e->curstate.scale;
 	
-	VectorCopy( pseqdesc[sequence].bbmin, mins );
-	VectorCopy( pseqdesc[sequence].bbmax, maxs );
+	VectorScale( pseqdesc[sequence].bbmin, scale, mins );
+	VectorScale( pseqdesc[sequence].bbmax, scale, maxs );
 
 	return 1;
 }
@@ -225,12 +229,15 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 	int		i, seq = e->curstate.sequence;
 	float		scale = 1.0f;
 
-	if( !R_StudioExtractBbox( m_pStudioHeader, seq, tmp_mins, tmp_maxs ))
+	if( !R_StudioExtractBbox( e, m_pStudioHeader, seq, tmp_mins, tmp_maxs ))
 		return false;
 
+	if( e->curstate.scale > 0.0f )
+		scale = e->curstate.scale;
+
 	// copy original bbox
-	VectorCopy( m_pStudioHeader->bbmin, studio_mins );
-	VectorCopy( m_pStudioHeader->bbmin, studio_mins );
+	VectorScale( m_pStudioHeader->bbmin, scale, studio_mins );
+	VectorScale( m_pStudioHeader->bbmin, scale, studio_mins );
 
 	// rotate the bounding box
 	VectorCopy( e->angles, angles );
@@ -259,10 +266,7 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
   		if( p2[2] > studio_maxs[2] ) studio_maxs[2] = p2[2];
 	}
 
-	if( e->curstate.scale > 0.0f )
-		scale = e->curstate.scale;
-
-	studio_radius = RadiusFromBounds( studio_mins, studio_maxs ) * scale;
+	studio_radius = RadiusFromBounds( studio_mins, studio_maxs );
 
 	return true;
 }
@@ -1775,7 +1779,7 @@ static void R_StudioDrawPoints( void )
 
 	if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 	{
-		scale = RI.currententity->curstate.renderamt * (10.0f / 100.0f);
+		scale = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 
 		for( i = 0; i < m_pSubModel->numnorms; i++ )
 			Matrix3x4_VectorRotate( g_bonestransform[pnormbone[i]], pstudionorms[i], g_xformnorms[i] );

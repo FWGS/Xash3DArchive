@@ -958,16 +958,16 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	wc.lpszMenuName  = 0;
 
 	// find the icon file in the filesystem
-	if( FS_FileExists( "game.ico", true ))
+	if( FS_FileExists( GI->iconpath, true ))
 	{
 		char	localPath[MAX_PATH];
 
-		Q_snprintf( localPath, sizeof( localPath ), "%s/game.ico", GI->gamedir );
+		Q_snprintf( localPath, sizeof( localPath ), "%s/%s", GI->gamedir, GI->iconpath );
 		wc.hIcon = LoadImage( NULL, localPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE );
 
 		if( !wc.hIcon )
 		{
-			MsgDev( D_INFO, "Extract game.ico from pak if you want to see it.\n" );
+			MsgDev( D_INFO, "Extract %s from pak if you want to see it.\n", GI->iconpath );
 			wc.hIcon = LoadIcon( host.hInst, MAKEINTRESOURCE( 101 ));
 		}
 	}

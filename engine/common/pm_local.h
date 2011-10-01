@@ -35,7 +35,6 @@ int PM_HullPointContents( hull_t *hull, int num, const vec3_t p );
 // pm_studio.c
 //
 void PM_InitStudioHull( void );
-qboolean PM_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs );
 qboolean PM_StudioTrace( playermove_t *pmove, physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *ptr );
 
 //

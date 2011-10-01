@@ -159,6 +159,9 @@ typedef struct gameinfo_s
 	char		dll_path[64];	// e.g. "bin" or "cl_dlls"
 	char		game_dll[64];	// custom path for game.dll
 
+	// .ico path
+	char		iconpath[64];	// "game.ico" by default
+
 	// about mod info
 	string		game_url;		// link to a developer's site
 	string		update_url;	// link to updates page

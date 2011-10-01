@@ -995,6 +995,9 @@ static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( Q_strlen( GameInfo->game_dll ))
 		FS_Printf( f, "gamedll\t\t\"%s\"\n", GameInfo->game_dll );
 
+	if( Q_strlen( GameInfo->iconpath ))
+		FS_Printf( f, "icon\t\t\"%s\"\n", GameInfo->iconpath );
+
 	switch( GameInfo->gamemode )
 	{
 	case 1: FS_Print( f, "gamemode\t\t\"singleplayer_only\"\n" ); break;
@@ -1063,6 +1066,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	Q_strncpy( defGI.dll_path, "cl_dlls", sizeof( defGI.dll_path ));
 	Q_strncpy( defGI.game_dll, "dlls/hl.dll", sizeof( defGI.game_dll ));
 	Q_strncpy( defGI.startmap, "newmap", sizeof( defGI.startmap ));
+	Q_strncpy( defGI.iconpath, "game.ico", sizeof( defGI.iconpath ));
 
 	VectorSet( defGI.client_mins[0],   0,   0,  0  );
 	VectorSet( defGI.client_maxs[0],   0,   0,  0  );
@@ -1102,6 +1106,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	Q_strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
 	Q_strncpy( GameInfo->startmap, "newmap", sizeof( GameInfo->startmap ));
 	Q_strncpy( GameInfo->dll_path, "cl_dlls", sizeof( GameInfo->dll_path ));
+	Q_strncpy( GameInfo->iconpath, "game.ico", sizeof( GameInfo->iconpath ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
 	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
@@ -1150,6 +1155,12 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->game_dll );
 			COM_FixSlashes( GameInfo->game_dll );
+		}
+		else if( !Q_stricmp( token, "icon" ))
+		{
+			pfile = COM_ParseFile( pfile, GameInfo->iconpath );
+			COM_FixSlashes( GameInfo->iconpath );
+			FS_DefaultExtension( GameInfo->iconpath, ".ico" );
 		}
 		else if( !Q_stricmp( token, "type" ))
 		{
@@ -1257,6 +1268,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	Q_strncpy( GameInfo->dll_path, "cl_dlls", sizeof( GameInfo->dll_path ));
 	Q_strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
 	Q_strncpy( GameInfo->startmap, "", sizeof( GameInfo->startmap ));
+	Q_strncpy( GameInfo->iconpath, "game.ico", sizeof( GameInfo->iconpath ));
 
 	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
 	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
@@ -1318,6 +1330,11 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->trainmap );
 			FS_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
+		}
+		else if( !Q_stricmp( token, "icon" ))
+		{
+			pfile = COM_ParseFile( pfile, GameInfo->iconpath );
+			FS_DefaultExtension( GameInfo->iconpath, ".ico" );
 		}
 		else if( !Q_stricmp( token, "url_info" ))
 		{

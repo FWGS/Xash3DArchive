@@ -483,7 +483,7 @@ NOTE: pEdict is unused
 static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, const vec3_t angles, const vec3_t origin,
 	const byte *pcontroller, const byte *pblending, int iBone, const edict_t *pEdict )
 {
-	int		i, j, numbones;
+	int		i, j, numbones = 0;
 	int		boneused[MAXSTUDIOBONES];
 	float		scale = 1.0f;
 	double		f;
@@ -503,16 +503,18 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 	static float	pos4[MAXSTUDIOBONES][3];
 	static vec4_t	q4[MAXSTUDIOBONES];
 
-	if( sequence >= sv_studiohdr->numseq ) sequence = 0;
-	pseqdesc = (mstudioseqdesc_t *)((byte *)sv_studiohdr + sv_studiohdr->seqindex) + sequence;
-	pbones = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
-
-	if( iBone < -1 || iBone >= sv_studiohdr->numbones )
+	if( sequence < 0 || sequence >= sv_studiohdr->numseq )
 	{
-		iBone = 0;
+		MsgDev( D_WARN, "SV_StudioSetupBones: sequence %i/%i out of range for model %s\n", sequence, sv_studiohdr->numseq, sv_studiohdr->name );
+		sequence = 0;
 	}
 
-	numbones = 0;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)sv_studiohdr + sv_studiohdr->seqindex) + sequence;
+	pbones = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
+	panim = SV_StudioGetAnim( pModel, pseqdesc );
+
+	if( iBone < -1 || iBone >= sv_studiohdr->numbones )
+		iBone = 0;
 
 	if( iBone == -1 )
 	{
@@ -522,16 +524,12 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 	}
 	else
 	{
+		// only the parent bones
 		for( i = iBone; i != -1; i = pbones[i].parent )
-		{
-			boneused[numbones] = i;
-			numbones++;
-		}
+			boneused[numbones++] = i;
 	}
 
 	f = SV_StudioEstimateFrame( frame, pseqdesc );
-
-	panim = SV_StudioGetAnim( pModel, pseqdesc );
 	SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos, q, pseqdesc, panim, f );
 
 	if( pseqdesc->numblends > 1 )
@@ -629,10 +627,11 @@ static qboolean SV_StudioSetupModel( edict_t *ent, int iBone, qboolean bInverseP
 	return true;
 }
 
-qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *maxs )
+qboolean SV_StudioExtractBbox( edict_t *e, model_t *mod, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
 	studiohdr_t	*phdr;
+	float		scale = 1.0f;
 
 	ASSERT( mod != NULL );
 
@@ -646,9 +645,12 @@ qboolean SV_StudioExtractBbox( model_t *mod, int sequence, float *mins, float *m
 
 	if( sequence < 0 || sequence >= phdr->numseq )
 		return false;
-	
-	VectorCopy( pseqdesc[sequence].bbmin, mins );
-	VectorCopy( pseqdesc[sequence].bbmax, maxs );
+
+	if( e->v.scale > 0.0f && sv_allow_studio_scaling->integer )
+		scale = e->v.scale;
+
+	VectorScale( pseqdesc[sequence].bbmin, scale, mins );
+	VectorScale( pseqdesc[sequence].bbmax, scale, maxs );
 
 	return true;
 }
@@ -872,7 +874,7 @@ static qboolean SV_StudioIntersect( edict_t *ent, const vec3_t start, vec3_t min
 	// create the bounding box of the entire move
 	World_MoveBounds( start, mins, maxs, end, trace_mins, trace_maxs );
 
-	if( !SV_StudioExtractBbox( mod, ent->v.sequence, anim_mins, anim_maxs ))
+	if( !SV_StudioExtractBbox( ent, mod, ent->v.sequence, anim_mins, anim_maxs ))
 		return false; // invalid sequence
 
 	if( !VectorIsNull( ent->v.angles ))
@@ -1014,12 +1016,15 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 {
+	iBone = bound( 0, iBone, sv_studiohdr->numbones );
+
 	if( !SV_StudioSetupModel( e, iBone, false ) || sv_studiohdr->numbones <= 0 )
 		return;
 
-	iBone = bound( 0, iBone, sv_studiohdr->numbones );
 	if( org ) Matrix3x4_OriginFromMatrix( sv_studiobones[iBone], org );
 	if( ang ) VectorAngles( sv_studiobones[iBone][0], ang ); // bone forward to angles
+
+	sv.droptofloor = true;
 }
 
 static sv_blending_interface_t gBlendAPI =
