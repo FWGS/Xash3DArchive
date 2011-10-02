@@ -280,6 +280,7 @@ void CL_AllocRemapInfo( int topcolor, int bottomcolor )
 	mstudiotexture_t	*src, *dst;
 	int		i, size;
 
+	if( !RI.currententity ) return;
 	i = ( RI.currententity == &clgame.viewent ) ? clgame.maxEntities : RI.currententity->curstate.number;
 
 	if( !RI.currentmodel || RI.currentmodel->type != mod_studio )

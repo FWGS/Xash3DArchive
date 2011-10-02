@@ -331,7 +331,7 @@ pfnGetEngineTimes
 static void pfnGetEngineTimes( int *framecount, double *current, double *old )
 {
 	if( framecount ) *framecount = tr.framecount;
-	if( current ) *current = RI.refdef.time;
+	if( current ) *current = cl.time;
 	if( old ) *old = cl.oldtime;
 }
 
