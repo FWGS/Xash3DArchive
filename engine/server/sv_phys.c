@@ -1707,6 +1707,14 @@ void SV_Physics( void )
 	// animate lightstyles (used for GetEntityIllum)
 	SV_RunLightStyles ();
 
+	if( sv_skyspeed->value )
+	{
+		// evaluate sky rotation.
+		// FIXME: ignore this feature in multiplayer to save traffic?
+		float skyAngle = sv_skyangle->value + sv_skyspeed->value * host.frametime;
+		Cvar_SetFloat( "sv_skyangle", anglemod( skyAngle ));
+	}
+
 	// decrement svgame.numEntities if the highest number entities died
 	for( ; EDICT_NUM( svgame.numEntities - 1 )->free; svgame.numEntities-- );
 }

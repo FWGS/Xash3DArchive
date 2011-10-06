@@ -34,8 +34,9 @@ GNU General Public License for more details.
 #define MAX_MOVIES		8
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
-#define MAX_EFRAGS		640
+#define MAX_EFRAGS		256	// g-cont. just no need more
 #define MAX_REQUESTS	32
+#define MAX_STATIC_ENTITIES	128	// same as in quake1
 
 // screenshot types
 #define VID_SCREENSHOT	0
@@ -141,7 +142,6 @@ typedef struct
 
 	cl_entity_t	*world;
 	model_t		*worldmodel;			// pointer to world
-	efrag_t		*free_efrags;
 } client_t;
 
 /*
@@ -362,10 +362,12 @@ typedef struct
 	string		itemspath;		// path to items description for auto-complete func
 
 	cl_entity_t	*entities;		// dynamically allocated entity array
+	cl_entity_t	*static_entities;		// dynamically allocated static entity array
 	remap_info_t	**remap_info;		// store local copy of all remap textures for each entity
 
 	int		maxEntities;
 	int		maxRemapInfos;		// maxEntities + cl.viewEnt; also used for catch entcount
+	int		numStatics;		// actual static entity count
 
 	// movement values from server
 	movevars_t	movevars;
@@ -399,6 +401,7 @@ typedef struct
 
 	net_request_t	net_requests[MAX_REQUESTS];	// no reason to keep more
 
+	efrag_t		*free_efrags;		// efrags
 	cl_entity_t	viewent;			// viewmodel
 } clgame_static_t;
 
@@ -695,6 +698,8 @@ qboolean CL_InitStudioAPI( void );
 void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
 qboolean CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
+void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean noInterp );
+void CL_UpdateEntityFields( cl_entity_t *ent );
 qboolean CL_IsPlayerIndex( int idx );
 
 //

@@ -432,6 +432,17 @@ void Matrix4x4_TransformPositivePlane( const matrix4x4 in, const vec3_t normal, 
 	*dist = d * scale + ( out[0] * in[0][3] + out[1] * in[1][3] + out[2] * in[2][3] );
 }
 
+void Matrix4x4_TransformStandardPlane( const matrix4x4 in, const vec3_t normal, float d, vec3_t out, float *dist )
+{
+	float scale = sqrt( in[0][0] * in[0][0] + in[0][1] * in[0][1] + in[0][2] * in[0][2] );
+	float iscale = 1.0f / scale;
+
+	out[0] = (normal[0] * in[0][0] + normal[1] * in[0][1] + normal[2] * in[0][2]) * iscale;
+	out[1] = (normal[0] * in[1][0] + normal[1] * in[1][1] + normal[2] * in[1][2]) * iscale;
+	out[2] = (normal[0] * in[2][0] + normal[1] * in[2][1] + normal[2] * in[2][2]) * iscale;
+	*dist = d * scale - ( out[0] * in[0][3] + out[1] * in[1][3] + out[2] * in[2][3] );
+}
+
 void Matrix4x4_Invert_Simple( matrix4x4 out, const matrix4x4 in1 )
 {
 	// we only support uniform scaling, so assume the first row is enough

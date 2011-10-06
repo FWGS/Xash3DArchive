@@ -963,11 +963,9 @@ static int DecalListAdd( decallist_t *pList, int count )
 		if( !Q_strcmp( pdecal->name, pList[i].name ) &&  pdecal->entityIndex == pList[i].entityIndex )
 		{
 			VectorSubtract( pdecal->position, pList[i].position, tmp );	// Merge
-			if( VectorLength( tmp ) < 2 )
-			{
-				// UNDONE: Tune this '2' constant
+
+			if( VectorLength( tmp ) < 2 ) // UNDONE: Tune this '2' constant
 				return count;
-			}
 		}
 	}
 

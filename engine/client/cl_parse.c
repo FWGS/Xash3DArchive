@@ -346,42 +346,70 @@ void CL_ParseParticles( sizebuf_t *msg )
 ==================
 CL_ParseStaticEntity
 
+UDNONE: we need a client implementation of save\restore for use it not in multiplayer only
+wait for XashXT when it should be done
 ==================
 */
 void CL_ParseStaticEntity( sizebuf_t *msg )
 {
-	entity_state_t	ent;
+	entity_state_t	state;
+	cl_entity_t	*ent;
 	int		i;
 
-	Q_memset( &ent, 0, sizeof( ent ));
+	Q_memset( &state, 0, sizeof( state ));
 
-	ent.modelindex = BF_ReadShort( msg );
-	ent.sequence = BF_ReadByte( msg );
-	ent.frame = BF_ReadByte( msg );
-	ent.colormap = BF_ReadWord( msg );
-	ent.skin = BF_ReadByte( msg );
+	state.modelindex = BF_ReadShort( msg );
+	state.sequence = BF_ReadByte( msg );
+	state.frame = BF_ReadByte( msg );
+	state.colormap = BF_ReadWord( msg );
+	state.skin = BF_ReadByte( msg );
 
 	for( i = 0; i < 3; i++ )
 	{
-		ent.origin[i] = BF_ReadBitCoord( msg );
-		ent.angles[i] = BF_ReadBitAngle( msg, 16 );
+		state.origin[i] = BF_ReadBitCoord( msg );
+		state.angles[i] = BF_ReadBitAngle( msg, 16 );
 	}
 
-	ent.rendermode = BF_ReadByte( msg );
+	state.rendermode = BF_ReadByte( msg );
 
-	if( ent.rendermode != kRenderNormal )
+	if( state.rendermode != kRenderNormal )
 	{
-		ent.renderamt = BF_ReadByte( msg );
-		ent.rendercolor.r = BF_ReadByte( msg );
-		ent.rendercolor.g = BF_ReadByte( msg );
-		ent.rendercolor.b = BF_ReadByte( msg );
-		ent.renderfx = BF_ReadByte( msg );
+		state.renderamt = BF_ReadByte( msg );
+		state.rendercolor.r = BF_ReadByte( msg );
+		state.rendercolor.g = BF_ReadByte( msg );
+		state.rendercolor.b = BF_ReadByte( msg );
+		state.renderfx = BF_ReadByte( msg );
 	}
 
-//	R_AddEfrags( ent );
+	i = clgame.numStatics;
+	if( i >= MAX_STATIC_ENTITIES )
+	{
+		MsgDev( D_ERROR, "CL_ParseStaticEntity: static entities limit exceeded!\n" );
+		return;
+	}
 
-	// TODO: allocate client entity, add new static...
-	MsgDev( D_ERROR, "Static entities are not implemented\n" );
+	ent = &clgame.static_entities[i];
+	clgame.numStatics++;
+
+	ent->index = 0; // ???
+	ent->baseline = state;
+	ent->curstate = state;
+	ent->prevstate = state;
+
+	// setup the new static entity
+	CL_UpdateEntityFields( ent );
+
+	if( Mod_GetType( state.modelindex ) == mod_studio )
+	{
+		CL_UpdateStudioVars( ent, &state, true );
+
+		// animate studio model
+		ent->curstate.animtime = cl.time;
+		ent->curstate.framerate = 1.0f;
+		ent->latched.prevframe = 0.0f;
+	}
+
+	R_AddEfrags( ent );	// add link
 }
 
 /*
@@ -430,7 +458,7 @@ void CL_ParseReliableEvent( sizebuf_t *msg, int flags )
 	Q_memset( &nullargs, 0, sizeof( nullargs ));
 	event_index = BF_ReadWord( msg );		// read event index
 	delay = (float)BF_ReadWord( msg ) / 100.0f;	// read event delay
-	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// TODO: delta-compressing
+	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// reliable events not use delta
 
 	CL_QueueEvent( flags, event_index, delay, &args );
 }

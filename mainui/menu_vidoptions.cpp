@@ -51,6 +51,8 @@ typedef struct
 	menuSlider_s	glareReduction;
 	menuCheckBox_s	fastSky;
 	menuCheckBox_s	hiTextures;
+
+	HIMAGE		hTestImage;
 } uiVidOptions_t;
 
 static uiVidOptions_t	uiVidOptions;
@@ -64,8 +66,14 @@ UI_VidOptions_GetConfig
 static void UI_VidOptions_GetConfig( void )
 {
 	uiVidOptions.screenSize.curValue = RemapVal( CVAR_GET_FLOAT( "viewsize" ), 30.0f, 120.0f, 0.0f, 1.0f );
-	uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 0.5f, 2.3f, 0.0f, 1.0f );
 	uiVidOptions.glareReduction.curValue = (CVAR_GET_FLOAT( "r_flaresize" ) - 100.0f ) / 200.0f;
+
+	if( CVAR_GET_FLOAT( "gl_ignorehwgamma" ))
+	{
+		uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 1.8f, 3.0f, 0.0f, 1.0f );
+		PIC_SetGamma( uiVidOptions.hTestImage, CVAR_GET_FLOAT( "gamma" ));
+	}
+	else uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 0.5f, 3.0f, 0.0f, 1.0f );
 
 	if( CVAR_GET_FLOAT( "r_fastsky" ))
 		uiVidOptions.fastSky.enabled = 1;
@@ -85,10 +93,25 @@ UI_VidOptions_UpdateConfig
 static void UI_VidOptions_UpdateConfig( void )
 {
 	CVAR_SET_FLOAT( "viewsize", RemapVal( uiVidOptions.screenSize.curValue, 0.0f, 1.0f, 30.0f, 120.0f ));
-	CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 0.5f, 2.3f ));
 	CVAR_SET_FLOAT( "r_flaresize", (uiVidOptions.glareReduction.curValue * 200.0f ) + 100.0f );
 	CVAR_SET_FLOAT( "r_fastsky", uiVidOptions.fastSky.enabled );
 	CVAR_SET_FLOAT( "host_allow_materials", uiVidOptions.hiTextures.enabled );
+
+	if( CVAR_GET_FLOAT( "gl_ignorehwgamma" ))
+		PIC_SetGamma( uiVidOptions.hTestImage, RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 1.8f, 3.0f ));
+	else CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 0.5f, 2.3f ));
+}
+
+static void UI_VidOptions_SetConfig( void )
+{
+	CVAR_SET_FLOAT( "viewsize", RemapVal( uiVidOptions.screenSize.curValue, 0.0f, 1.0f, 30.0f, 120.0f ));
+	CVAR_SET_FLOAT( "r_flaresize", (uiVidOptions.glareReduction.curValue * 200.0f ) + 100.0f );
+	CVAR_SET_FLOAT( "r_fastsky", uiVidOptions.fastSky.enabled );
+	CVAR_SET_FLOAT( "host_allow_materials", uiVidOptions.hiTextures.enabled );
+
+	if( CVAR_GET_FLOAT( "gl_ignorehwgamma" ))
+		CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 1.8f, 3.0f ));
+	else CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 0.5f, 2.3f ));
 }
 
 /*
@@ -162,6 +185,7 @@ static void UI_VidOptions_Callback( void *self, int event )
 	switch( item->id )
 	{
 	case ID_DONE:
+		UI_VidOptions_SetConfig();
 		UI_PopMenu();
 		break;
 	}
@@ -175,6 +199,8 @@ UI_VidOptions_Init
 static void UI_VidOptions_Init( void )
 {
 	memset( &uiVidOptions, 0, sizeof( uiVidOptions_t ));
+
+	uiVidOptions.hTestImage = PIC_Load( ART_GAMMA );
 
 	uiVidOptions.menu.vidInitFunc = UI_VidOptions_Init;
 
@@ -293,7 +319,6 @@ void UI_VidOptions_Precache( void )
 {
 	PIC_Load( ART_BACKGROUND );
 	PIC_Load( ART_BANNER );
-	PIC_Load( ART_GAMMA );
 }
 
 /*
@@ -306,6 +331,5 @@ void UI_VidOptions_Menu( void )
 	UI_VidOptions_Precache();
 	UI_VidOptions_Init();
 
-	UI_VidOptions_UpdateConfig();
 	UI_PushMenu( &uiVidOptions.menu );
 }

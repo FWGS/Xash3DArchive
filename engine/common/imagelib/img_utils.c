@@ -1203,7 +1203,37 @@ rgbdata_t *Image_DecompressInternal( rgbdata_t *pic )
 	return pic;
 }
 
-qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
+rgbdata_t *Image_LightGamma( rgbdata_t *pic, float texGamma )
+{
+	byte	*in = (byte *)pic->buffer;
+	byte	gammatable[256];
+	int	i, inf;
+	double	f;
+
+	if( pic->type != PF_RGBA_32 )
+		return pic;
+
+	texGamma = bound( 1.8f, texGamma, 3.0f );
+
+	// build the gamma table
+	for( i = 0; i < 256; i++ )
+	{
+		f = 255.0 * pow(( float )i / 255.0f, 2.2f / texGamma );
+		inf = (int)(f + 0.5f);
+		gammatable[i] = bound( 0, inf, 255 );
+	}
+
+	for( i = 0; i < pic->width * pic->height; i++, in += 4 )
+	{
+		in[0] = gammatable[in[0]];
+		in[1] = gammatable[in[1]];
+		in[2] = gammatable[in[2]];
+	}
+
+	return pic;
+}
+
+qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags )
 {
 	rgbdata_t	*pic = *pix;
 	qboolean	result = true;
@@ -1227,6 +1257,7 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags )
 
 	// update format to RGBA if any
 	if( flags & IMAGE_FORCE_RGBA ) pic = Image_DecompressInternal( pic );
+	if( flags & IMAGE_LIGHTGAMMA ) pic = Image_LightGamma( pic, gamma );
 
 	// quantize image
 	if( flags & IMAGE_QUANTIZE ) pic = Image_Quantize( pic );

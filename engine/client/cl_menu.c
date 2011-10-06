@@ -348,6 +348,7 @@ pfnPIC_Load
 static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long image_size )
 {
 	HIMAGE	tx;
+	int	flags = TF_IMAGE;
 
 	if( !szPicName || !*szPicName )
 	{
@@ -355,8 +356,12 @@ static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long im
 		return 0;
 	}
 
+	// HACKHACK: keep source for gfx\shell\gamma
+	if( !glConfig.deviceSupportsGamma && Q_stristr( szPicName, "gamma" ))
+		flags |= TF_KEEP_RGBDATA;
+
 	host.decal_loading = true;
-	tx = GL_LoadTexture( szPicName, image_buf, image_size, TF_IMAGE );
+	tx = GL_LoadTexture( szPicName, image_buf, image_size, flags );
 	host.decal_loading = false;
 
 	return tx;
@@ -920,6 +925,7 @@ static ui_enginefuncs_t gEngfuncs =
 	Com_RandomLong,
 	IN_SetCursor,
 	pfnIsMapValid,
+	GL_ProcessTexture,
 };
 
 void UI_UnloadProgs( void )

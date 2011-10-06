@@ -38,6 +38,7 @@ GNU General Public License for more details.
 #define PLATE_HUE_END	191
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
+#define INFO_SURF( surf, mod )	(mod->surfaces + (surf - (mextrasurf_t *)mod->cache.data)) 
 
 // model flags (stored in model_t->flags)
 #define MODEL_CONVEYOR	BIT( 0 )
@@ -64,6 +65,7 @@ typedef struct
 	size_t		visdatasize;	// actual size of the visdata
 	qboolean		loading;		// true if worldmodel is loading
 	qboolean		sky_sphere;	// true when quake sky-sphere is used
+	qboolean		has_mirrors;	// one or more brush models contain reflective textures
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;

@@ -80,6 +80,11 @@ convar_t	*sv_skyvec_y;
 convar_t	*sv_skyvec_z;
 convar_t	*sv_skyname;
 convar_t	*sv_wateralpha;
+convar_t	*sv_skydir_x;
+convar_t	*sv_skydir_y;
+convar_t	*sv_skydir_z;
+convar_t	*sv_skyangle;
+convar_t	*sv_skyspeed;
 
 void Master_Shutdown( void );
 
@@ -225,6 +230,10 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skyvec_x = sv_skyvec_x->value;
 	svgame.movevars.skyvec_y = sv_skyvec_y->value;
 	svgame.movevars.skyvec_z = sv_skyvec_z->value;
+	svgame.movevars.skydir_x = sv_skydir_x->value;
+	svgame.movevars.skydir_y = sv_skydir_y->value;
+	svgame.movevars.skydir_z = sv_skydir_z->value;
+	svgame.movevars.skyangle = sv_skyangle->value;
 	svgame.movevars.studio_scale = sv_allow_studio_scaling->integer;
 	svgame.movevars.clienttrace = sv_clienttrace->value;
 	svgame.movevars.wateralpha = sv_wateralpha->value;
@@ -645,13 +654,18 @@ void SV_Init( void )
 	// half-life shared variables
 	sv_zmax = Cvar_Get ("sv_zmax", "4096", CVAR_PHYSICINFO, "zfar server value" );
 	sv_wateramp = Cvar_Get ("sv_wateramp", "0", CVAR_PHYSICINFO, "global water wave height" );
-	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "255", CVAR_PHYSICINFO, "skycolor red (hl1 compatibility)" );
-	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "255", CVAR_PHYSICINFO, "skycolor green (hl1 compatibility)" );
-	sv_skycolor_b = Cvar_Get ("sv_skycolor_b", "255", CVAR_PHYSICINFO, "skycolor blue (hl1 compatibility)" );
-	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "0", CVAR_PHYSICINFO, "sky direction x (hl1 compatibility)" );
-	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", CVAR_PHYSICINFO, "sky direction y (hl1 compatibility)" );
-	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "0", CVAR_PHYSICINFO, "sky direction z (hl1 compatibility)" );
+	sv_skycolor_r = Cvar_Get ("sv_skycolor_r", "255", CVAR_PHYSICINFO, "skycolor red" );
+	sv_skycolor_g = Cvar_Get ("sv_skycolor_g", "255", CVAR_PHYSICINFO, "skycolor green" );
+	sv_skycolor_b = Cvar_Get ("sv_skycolor_b", "255", CVAR_PHYSICINFO, "skycolor blue" );
+	sv_skyvec_x = Cvar_Get ("sv_skyvec_x", "0", CVAR_PHYSICINFO, "skylight direction x" );
+	sv_skyvec_y = Cvar_Get ("sv_skyvec_y", "0", CVAR_PHYSICINFO, "skylight direction y" );
+	sv_skyvec_z = Cvar_Get ("sv_skyvec_z", "0", CVAR_PHYSICINFO, "skylight direction z" );
 	sv_skyname = Cvar_Get ("sv_skyname", "desert", CVAR_PHYSICINFO, "skybox name (can be dynamically changed in-game)" );
+	sv_skydir_x = Cvar_Get ("sv_skydir_x", "0", CVAR_PHYSICINFO, "sky rotation direction x" );
+	sv_skydir_y = Cvar_Get ("sv_skydir_y", "0", CVAR_PHYSICINFO, "sky rotation direction y" );
+	sv_skydir_z = Cvar_Get ("sv_skydir_z", "1", CVAR_PHYSICINFO, "sky rotation direction z" ); // g-cont. add default sky rotate direction
+	sv_skyangle = Cvar_Get ("sv_skyangle", "0", CVAR_PHYSICINFO, "skybox rotational angle (in degrees)" );
+	sv_skyspeed = Cvar_Get ("sv_skyspeed", "0", 0, "skybox rotational speed" );
 	sv_footsteps = Cvar_Get ("mp_footsteps", "1", CVAR_PHYSICINFO, "can hear footsteps from other players" );
 	sv_wateralpha = Cvar_Get ("sv_wateralpha", "1", CVAR_PHYSICINFO, "world surfaces water transparency factor. 1.0 - solid, 0.0 - fully transparent" );
 

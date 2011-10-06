@@ -468,6 +468,7 @@ typedef enum
 	IMAGE_FORCE_RGBA	= BIT(23),	// force image to RGBA buffer
 	IMAGE_MAKE_LUMA	= BIT(24),	// create luma texture from indexed
 	IMAGE_QUANTIZE	= BIT(25),	// make indexed image from 24 or 32- bit image
+	IMAGE_LIGHTGAMMA	= BIT(26),	// apply gamma for image
 } imgFlags_t;
 
 typedef struct rgbdata_s
@@ -491,7 +492,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 qboolean FS_SaveImage( const char *filename, rgbdata_t *pix );
 void FS_FreeImage( rgbdata_t *pack );
 extern const bpc_desc_t PFDesc[];	// image get pixelformat
-qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags );
+qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags );
 
 /*
 ========================================================================
@@ -777,6 +778,11 @@ void S_Activate( qboolean active, void *hInst );
 void S_StopSound( int entnum, int channel, const char *soundname );
 int S_GetCurrentStaticSounds( soundlist_t *pout, int size );
 void S_StopAllSounds( void );
+
+// gamma routines
+void BuildGammaTable( float gamma, float texGamma );
+byte TextureToTexGamma( byte b );
+byte TextureToGamma( byte b );
 
 #ifdef __cplusplus
 }

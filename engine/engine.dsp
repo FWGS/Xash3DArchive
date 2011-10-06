@@ -206,6 +206,10 @@ SOURCE=.\common\filesystem.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\gamma.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_backend.c
 # End Source File
 # Begin Source File
@@ -227,6 +231,10 @@ SOURCE=.\client\gl_draw.c
 # Begin Source File
 
 SOURCE=.\client\gl_image.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_mirror.c
 # End Source File
 # Begin Source File
 

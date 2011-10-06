@@ -32,11 +32,10 @@ extern byte	*r_temppool;
 #define MAX_DETAIL_TEXTURES	256
 #define MAX_LIGHTMAPS	128
 #define SUBDIVIDE_SIZE	64
+#define MAX_MIRRORS		32	// per one frame!
 
 #define NUMVERTEXNORMALS	162
 #define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
-
-//#define MIRROR_TEST
 
 // refparams
 #define RP_NONE		0
@@ -68,7 +67,8 @@ typedef enum
 	TEX_VGUI,		// vgui fonts or images
 	TEX_CUBEMAP,	// cubemap textures (sky)
 	TEX_DETAIL,	// detail textures
-	TEX_REMAP		// local copy of remap texture
+	TEX_REMAP,	// local copy of remap texture
+	TEX_SCREENCOPY	// keep screen copy e.g. for mirror
 } texType_t;
 
 typedef enum
@@ -89,6 +89,7 @@ typedef enum
 	TF_NORMALMAP	= BIT(13),	// is a normalmap
 	TF_LIGHTMAP	= BIT(14),	// is a lightmap
 	TF_FORCE_COLOR	= BIT(15),	// force upload monochrome textures as RGB (detail textures)
+	TF_KEEP_RGBDATA	= BIT(16),	// some images keep source
 } texFlags_t;
 
 typedef struct gltexture_s
@@ -106,6 +107,8 @@ typedef struct gltexture_s
 
 	rgba_t		fogParams;	// some water textures
 					// contain info about underwater fog
+	rgbdata_t		*original;	// keep original image
+
 	// debug info
 	byte		texType;		// used for gl_showtextures
 	size_t		size;		// upload size for debug targets
@@ -125,13 +128,17 @@ typedef struct mextrasurf_s
 	int		checkcount;	// for multi-check avoidance
 
 	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
+
+	int		mirrortexturenum;	// gl texnum
+	matrix4x4		mirrormatrix;
+	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
 } mextrasurf_t;
 
 // mirror entity
 typedef struct gl_entity_s
 {
 	cl_entity_t	*ent;
-	msurface_t	*chain;
+	mextrasurf_t	*chain;
 } gl_entity_t;
 
 typedef struct
@@ -202,6 +209,8 @@ typedef struct
 	int		lightmapTextures[MAX_LIGHTMAPS];
 	int		dlightTexture;	// custom dlight texture
 	int		skyboxTextures[6];	// skybox sides
+	int		mirrorTextures[MAX_MIRRORS];
+	int		num_mirrors_used;	// used mirror textures
 
 	int		skytexturenum;	// this not a gl_texturenum!
 
@@ -225,6 +234,9 @@ typedef struct
 	int		visframecount;	// PVS frame
 	int		dlightframecount;	// dynamic light frame
 	int		framecount;
+
+	// cull info
+	vec3_t		modelorg;		// relative to viewpoint
 } ref_globals_t;
 
 typedef struct
@@ -270,6 +282,7 @@ void GL_SelectTexture( GLenum texture );
 void GL_DisableMultitexture( void );
 void GL_EnableMultitexture( void );
 void GL_LoadIdentityTexMatrix( void );
+void GL_DisableAllTexGens( void );
 void GL_SetRenderMode( int mode );
 void GL_FrontFace( GLenum front );
 void GL_MBind( GLenum texnum );
@@ -282,6 +295,7 @@ void R_ShowTextures( void );
 int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float radius );
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
 qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
+qboolean R_CullSurface( msurface_t *surf, uint clipflags );
 
 //
 // gl_decals.c
@@ -306,12 +320,21 @@ void GL_SetTextureType( GLenum texnum, GLenum type );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
 int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
 byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int out_h, qboolean isNormalMap );
+void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor );
 int GL_FindTexture( const char *name );
 void GL_FreeTexture( GLenum texnum );
 void GL_FreeImage( const char *name );
 void R_TextureList_f( void );
 void R_InitImages( void );
 void R_ShutdownImages( void );
+
+//
+// gl_mirror.c
+//
+void R_BeginDrawMirror( msurface_t *fa );
+void R_EndDrawMirror( void );
+void R_DrawMirrors( void );
+void R_FindMirrors( const ref_params_t *fd );
 
 //
 // gl_refrag.c
@@ -339,6 +362,8 @@ qboolean R_WorldToScreen2( const vec3_t in, vec3_t out );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
 int R_ComputeFxBlend( cl_entity_t *e );
+void R_SetupFrustum( void );
+void R_FindViewLeaf( void );
 void R_DrawFog( void );
 
 //
@@ -372,6 +397,7 @@ void R_DrawWaterSurfaces( void );
 void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );
 void GL_BuildPolygonFromSurface( msurface_t *fa );
+void GL_RebuildLightmaps( void );
 void GL_BuildLightmaps( void );
 
 //
@@ -600,6 +626,7 @@ extern convar_t	*gl_luminance_textures;
 extern convar_t	*gl_overview;	// draw map in overview mode
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;
+extern convar_t	*gl_allow_mirrors;
 extern convar_t	*gl_picmip;
 extern convar_t	*gl_skymip;
 extern convar_t	*gl_finish;
@@ -632,6 +659,7 @@ extern convar_t	*r_fastsky;
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*vid_fullscreen;
 extern convar_t	*vid_gamma;
+extern convar_t	*vid_texgamma;
 extern convar_t	*vid_mode;
 
 #endif//GL_LOCAL_H

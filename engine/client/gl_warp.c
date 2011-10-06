@@ -307,6 +307,16 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 	if( r_fastsky->integer )
 		return;
 
+	if( clgame.movevars.skyangle )
+	{
+		// HACK: force full sky to draw when it has angle
+		for( i = 0; i < 6; i++ )
+		{
+			RI.skyMins[0][i] = RI.skyMins[1][i] = -1;
+			RI.skyMaxs[0][i] = RI.skyMaxs[1][i] = 1;
+		}
+	}
+
 	// calculate vertex values for sky box
 	for( p = fa->polys; p; p = p->next )
 	{
@@ -348,6 +358,18 @@ void R_DrawSkyBox( void )
 {
 	int	i;
 
+	if( clgame.movevars.skyangle )
+	{	
+		// check for no sky at all
+		for( i = 0; i < 6; i++ )
+		{
+			if( RI.skyMins[0][i] < RI.skyMaxs[0][i] && RI.skyMins[1][i] < RI.skyMaxs[1][i] )
+				break;
+		}
+
+		if( i == 6 ) return; // nothing visible
+	}
+
 	RI.isSkyVisible = true;
 
 	// don't fogging skybox (this fix old Half-Life bug)
@@ -356,6 +378,16 @@ void R_DrawSkyBox( void )
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+
+	if( clgame.movevars.skyangle && !VectorIsNull( (float *)&clgame.movevars.skydir_x ))
+	{
+		matrix4x4	m;
+		Matrix4x4_CreateRotate( m, clgame.movevars.skyangle, clgame.movevars.skydir_x, clgame.movevars.skydir_y, clgame.movevars.skydir_z );
+		Matrix4x4_ConcatTranslate( m, -RI.vieworg[0], -RI.vieworg[1], -RI.vieworg[2] );
+		Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, m );
+		GL_LoadMatrix( RI.modelviewMatrix );
+		tr.modelviewIdentity = false;
+	}
 
 	for( i = 0; i < 6; i++ )
 	{
@@ -371,6 +403,8 @@ void R_DrawSkyBox( void )
 		MakeSkyVec( RI.skyMaxs[0][i], RI.skyMins[1][i], i );
 		pglEnd();
 	}
+
+	R_LoadIdentity();
 }
 
 /*

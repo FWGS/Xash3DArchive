@@ -678,6 +678,34 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 
 /*
 =================
+GL_ResampleTexture
+
+Assume input buffer is RGBA
+=================
+*/
+byte *GL_ApplyGamma( const byte *source, int pixels, qboolean isNormalMap )
+{
+	byte	*in = (byte *)source;
+	byte	*out = (byte *)source;
+	int	i;
+
+	if( isNormalMap )
+	{
+	}
+	else
+	{
+		for( i = 0; i < pixels; i++, in += 4 )
+		{
+			in[0] = TextureToGamma( in[0] );
+			in[1] = TextureToGamma( in[1] );
+			in[2] = TextureToGamma( in[2] );
+		}
+	}
+	return out;
+}
+
+/*
+=================
 GL_BuildMipMap
 
 Operates in place, quartering the size of the texture
@@ -851,7 +879,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		img_flags |= IMAGE_FORCE_RGBA;
 
 	// processing image before uploading (force to rgba, make luma etc)
-	if( pic->buffer ) Image_Process( &pic, 0, 0, img_flags );
+	if( pic->buffer ) Image_Process( &pic, 0, 0, 0.0f, img_flags );
 
 	if( tex->flags & TF_LUMINANCE )
 	{
@@ -930,7 +958,13 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		{
 			data = GL_ResampleTexture( buf, tex->srcWidth, tex->srcHeight, tex->width, tex->height, ( tex->flags & TF_NORMALMAP ));
 		}
-		
+
+		if( !glConfig.deviceSupportsGamma )
+		{
+			if(!( tex->flags & TF_NOMIPMAP ) && !( tex->flags & TF_SKYSIDE ))
+				data = GL_ApplyGamma( data, tex->width * tex->height, ( tex->flags & TF_NORMALMAP ));
+		}		
+
 		if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 		if( subImage ) pglTexSubImage2D( tex->target + i, 0, 0, 0, tex->width, tex->height, inFormat, GL_UNSIGNED_BYTE, data );
 		else pglTexImage2D( tex->target + i, 0, outFormat, tex->width, tex->height, 0, inFormat, GL_UNSIGNED_BYTE, data );
@@ -1012,7 +1046,10 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 
 	GL_UploadTexture( pic, tex, false );
 	GL_TexFilter( tex, false ); // update texture filter, wrap etc
-	FS_FreeImage( pic ); // release source texture
+
+	if( flags & TF_KEEP_RGBDATA )
+		tex->original = pic;
+	else FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
 	hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
@@ -1106,6 +1143,41 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	}
 
 	return tex->texnum;
+}
+
+/*
+================
+GL_ProcessTexture
+================
+*/
+void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
+{
+	gltexture_t	*image;
+	rgbdata_t		*pic;
+	byte		*buf;
+
+	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
+	image = &r_textures[texnum];
+
+	if(!( image->flags & TF_KEEP_RGBDATA ) || !image->original )
+	{
+		MsgDev( D_ERROR, "GL_ProcessTexture: no input data for %s\n", image->name );
+		return;
+	}
+
+	pic = image->original;
+	buf = Mem_Alloc( r_temppool, pic->size );
+	Q_memcpy( buf, pic->buffer, pic->size );
+
+	// UNDONE: topColor and bottomColor just for future expansions
+	Image_Process( &pic, topColor, bottomColor, gamma, IMAGE_LIGHTGAMMA );
+
+	GL_UploadTexture( pic, image, true );
+	GL_TexFilter( image, true ); // update texture filter, wrap etc
+
+	// restore original image
+	Q_memcpy( pic->buffer, buf, pic->size );
+	Mem_Free( buf );
 }
 
 /*
@@ -1220,6 +1292,10 @@ void GL_FreeTexture( GLenum texnum )
 		}
 		prev = &cur->nextHash;
 	}
+
+	// release source
+	if( image->flags & TF_KEEP_RGBDATA && image->original )
+		FS_FreeImage( image->original );
 
 	pglDeleteTextures( 1, &image->texnum );
 	Q_memset( image, 0, sizeof( *image ));

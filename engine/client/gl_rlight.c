@@ -254,9 +254,9 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 		{
 			uint	scale = RI.lightstylevalue[surf->styles[map]];
 
-			r_pointColor[0] += lm->r * scale;
-			r_pointColor[1] += lm->g * scale;
-			r_pointColor[2] += lm->b * scale;
+			r_pointColor[0] += TextureToTexGamma( lm->r ) * scale;
+			r_pointColor[1] += TextureToTexGamma( lm->g ) * scale;
+			r_pointColor[2] += TextureToTexGamma( lm->b ) * scale;
 
 			lm += size; // skip to next lightmap
 		}
@@ -293,9 +293,9 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	// set to full bright if no light data
 	if( !cl.worldmodel || !cl.worldmodel->lightdata )
 	{
-		ambientLight->r = RI.refdef.movevars->skycolor_r;
-		ambientLight->g = RI.refdef.movevars->skycolor_g;
-		ambientLight->b = RI.refdef.movevars->skycolor_b;
+		ambientLight->r = TextureToTexGamma( RI.refdef.movevars->skycolor_r );
+		ambientLight->g = TextureToTexGamma( RI.refdef.movevars->skycolor_g );
+		ambientLight->b = TextureToTexGamma( RI.refdef.movevars->skycolor_b );
 		return;
 	}
 
@@ -398,9 +398,9 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 				continue;
 
 			add = 1.0f - (dist / ( dl->radius + radius ));
-			r_pointColor[0] += dl->color.r * add;
-			r_pointColor[1] += dl->color.g * add;
-			r_pointColor[2] += dl->color.b * add;
+			r_pointColor[0] += TextureToTexGamma( dl->color.r ) * add;
+			r_pointColor[1] += TextureToTexGamma( dl->color.g ) * add;
+			r_pointColor[2] += TextureToTexGamma( dl->color.b ) * add;
 			total++;
 		}
 

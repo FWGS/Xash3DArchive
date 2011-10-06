@@ -2622,10 +2622,10 @@ void CL_ClearEfrags( void )
 	Q_memset( cl_efrags, 0, sizeof( cl_efrags ));
 
 	// allocate the efrags and chain together into a free list
-	cl.free_efrags = cl_efrags;
+	clgame.free_efrags = cl_efrags;
 	for( i = 0; i < MAX_EFRAGS - 1; i++ )
-		cl.free_efrags[i].entnext = &cl.free_efrags[i+1];
-	cl.free_efrags[i].entnext = NULL;
+		clgame.free_efrags[i].entnext = &clgame.free_efrags[i+1];
+	clgame.free_efrags[i].entnext = NULL;
 }
 	
 /*

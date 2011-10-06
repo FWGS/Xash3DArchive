@@ -806,7 +806,7 @@ void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
 
 	BF_WriteWord( msg, info->index );			// send event index
 	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
-	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// TODO: use delta-compressing
+	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// reliable events not use delta
 }
 
 const char *SV_ClassName( const edict_t *e )
@@ -3533,18 +3533,17 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		}
 	}
 
-	flags |= FEV_SERVER; // it's a server event
+	flags |= FEV_SERVER; // it's a server event!
 
-	if( delay < 0.0f )
-		delay = 0.0f; // fixup negative delays
+	if( delay < 0.0f ) delay = 0.0f; // fixup negative delays
 
 	if( SV_IsValidEdict( pInvoker ))
 		invokerIndex = NUM_FOR_EDICT( pInvoker );
 
 	if( flags & FEV_RELIABLE )
 	{
-		args.ducking = 0;
 		VectorClear( args.velocity );
+		args.ducking = 0;
 	}
 	else if( invokerIndex )
 	{
@@ -4520,6 +4519,11 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	Cvar_Reset( "sv_skyvec_y" );
 	Cvar_Reset( "sv_skyvec_z" );
 	Cvar_Reset( "sv_skyname" );
+	Cvar_Reset( "sv_skydir_x" );
+	Cvar_Reset( "sv_skydir_y" );
+	Cvar_Reset( "sv_skydir_z" );
+	Cvar_Reset( "sv_skyangle" );
+	Cvar_Reset( "sv_skyspeed" );
 
 	ent = EDICT_NUM( 0 );
 	if( ent->free ) SV_InitEdict( ent );

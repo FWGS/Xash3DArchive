@@ -1357,6 +1357,7 @@ void CL_ClearWorld( void )
 	cl.world->index = 0;
 
 	clgame.ds.cullMode = GL_FRONT;
+	clgame.numStatics = 0;
 }
 
 void CL_InitEdicts( void )
@@ -1367,6 +1368,8 @@ void CL_InitEdicts( void )
 	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
+	clgame.static_entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * MAX_STATIC_ENTITIES );
+	clgame.numStatics = 0;
 
 	if(( clgame.maxRemapInfos - 1 ) != clgame.maxEntities )
 	{
@@ -1382,11 +1385,17 @@ void CL_FreeEdicts( void )
 		Mem_Free( clgame.entities );
 	clgame.entities = NULL;
 
+	if( clgame.static_entities )
+		Mem_Free( clgame.static_entities );
+	clgame.static_entities = NULL;
+
 	if( cls.packet_entities )
 		Z_Free( cls.packet_entities );
+
 	cls.packet_entities = NULL;
 	cls.num_client_entities = 0;
 	cls.next_client_entities = 0;
+	clgame.numStatics = 0;
 }
 
 /*
@@ -3460,7 +3469,7 @@ Voice_StartVoiceTweakMode
 */
 int Voice_StartVoiceTweakMode( void )
 {
-	// UNDONE: wait for voice implementation
+	// TODO: implement
 	return 0;
 }
 

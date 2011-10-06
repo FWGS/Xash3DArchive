@@ -356,7 +356,7 @@ static void CL_BulletTracerDraw( particle_t *p, float frametime )
 
 	// setup our info for drawing the line
 	VectorSubtract( vecEnd, vecStart, lineDir );
-	VectorSubtract( vecEnd, cl.refdef.vieworg, viewDir );
+	VectorSubtract( vecEnd, RI.vieworg, viewDir );
 	
 	CrossProduct( lineDir, viewDir, cross );
 	VectorNormalize( cross );
@@ -490,16 +490,16 @@ void CL_UpdateParticle( particle_t *p, float ft )
 
 #if 0
 	// HACKHACK a scale up to keep particles from disappearing
-	size += (p->org[0] - cl.refdef.vieworg[0]) * cl.refdef.forward[0];
-	size += (p->org[1] - cl.refdef.vieworg[1]) * cl.refdef.forward[1];
-	size += (p->org[2] - cl.refdef.vieworg[2]) * cl.refdef.forward[2];
+	size += (p->org[0] - RI.vieworg[0]) * RI.vforward[0];
+	size += (p->org[1] - RI.vieworg[1]) * RI.vforward[1];
+	size += (p->org[2] - RI.vieworg[2]) * RI.vforward[2];
 
 	if( size < 20.0f ) size = 1.0f;
 	else size = 1.0f + size * 0.004f;
 #endif
  	// scale the axes by radius
-	VectorScale( cl.refdef.right, size, right );
-	VectorScale( cl.refdef.up, size, up );
+	VectorScale( RI.vright, size, right );
+	VectorScale( RI.vup, size, up );
 
 	p->color = bound( 0, p->color, 255 );
 	VectorSet( color, clgame.palette[p->color][0], clgame.palette[p->color][1], clgame.palette[p->color][2] );
@@ -1328,8 +1328,8 @@ qboolean CL_TracerComputeVerts( const vec3_t start, const vec3_t delta, float wi
 	VectorNormalize( tmp );
 
 	// build point along noraml line (normal is -y, x)
-	VectorScale( cl.refdef.up, tmp[0], normal );
-	VectorScale( cl.refdef.right, -tmp[1], tmp2 );
+	VectorScale( RI.vup, tmp[0], normal );
+	VectorScale( RI.vright, -tmp[1], tmp2 );
 	VectorSubtract( normal, tmp2, normal );
 
 	// compute four vertexes

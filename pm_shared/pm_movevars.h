@@ -43,6 +43,10 @@ struct movevars_s
 	qboolean	studio_scale;	// Allow engine to scale visible and physic hull of studiomodels
 	float	clienttrace;	// Studiomodels scale that applied for the clients (visual effect only) 
 	float	wateralpha;	// World water alpha 1.0 - solid 0.0 - transparent
+	float	skydir_x;		// skybox rotate direction
+	float	skydir_y;		//
+	float	skydir_z;		//
+	float	skyangle;		// skybox rotate angle
 };
 
 extern movevars_t movevars;

@@ -142,7 +142,7 @@ static void ComputeBeamPerpendicular( const vec3_t vecBeamDelta, vec3_t pPerp )
 	vec3_t	vecBeamCenter;
 
 	VectorNormalize2( vecBeamDelta, vecBeamCenter );
-	CrossProduct( cl.refdef.forward, vecBeamCenter, pPerp );
+	CrossProduct( RI.vforward, vecBeamCenter, pPerp );
 	VectorNormalize( pPerp );
 }
 
@@ -154,7 +154,7 @@ static void ComputeNormal( const vec3_t vStartPos, const vec3_t vNextPos, vec3_t
 	VectorSubtract( vStartPos, vNextPos, vTangentY );
 
 	// vDirToBeam = vector from viewer origin to beam
-	VectorSubtract( vStartPos, cl.refdef.vieworg, vDirToBeam );
+	VectorSubtract( vStartPos, RI.vieworg, vDirToBeam );
 
 	// Get a vector that is perpendicular to us and perpendicular to the beam.
 	// This is used to fatten the beam.
@@ -212,18 +212,13 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 		if( segments < 2 ) segments = 2;
 	}
 
-	if( segments > NOISE_DIVISIONS )		// UNDONE: Allow more segments?
-	{
+	if( segments > NOISE_DIVISIONS )
 		segments = NOISE_DIVISIONS;
-	}
 
 	div = 1.0f / (segments - 1);
 	length *= 0.01f;
-
-	// UNDONE: Expose texture length scale factor to control "fuzziness"
 	vStep = length * div;	// Texture length texels per space pixel
 
-	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
 	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	vLast = fmod( freq * speed, 1 );
 
@@ -314,11 +309,11 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 				float	s, c;
 				SinCos( fraction * M_PI * length + freq, &s, &c );
 
-				VectorMA( nextSeg.pos, (factor * s), cl.refdef.up, nextSeg.pos );
+				VectorMA( nextSeg.pos, (factor * s), RI.vup, nextSeg.pos );
 
 				// rotate the noise along the perpendicluar axis a bit to keep the bolt
 				// from looking diagonal
-				VectorMA( nextSeg.pos, (factor * c), cl.refdef.right, nextSeg.pos );
+				VectorMA( nextSeg.pos, (factor * c), RI.vright, nextSeg.pos );
 			}
 			else
 			{
@@ -416,18 +411,15 @@ static void CL_DrawDisk( int modelIndex, float frame, int rendermode, const vec3
 	if( !m_hSprite || segments < 2 )
 		return;
 
-	if( segments > NOISE_DIVISIONS )	// UNDONE: Allow more segments?
+	if( segments > NOISE_DIVISIONS )
 		segments = NOISE_DIVISIONS;
 
 	length = VectorLength( delta ) * 0.01f;
 	if( length < 0.5f ) length = 0.5f;	// don't lose all of the noise/texture on short beams
 		
 	div = 1.0f / (segments - 1);
-
-	// UNDONE: Expose texture length scale factor to control "fuzziness"
 	vStep = length * div;		// Texture length texels per space pixel
 	
-	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
 	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	vLast = fmod( freq * speed, 1 );
 	scale = scale * length;
@@ -487,18 +479,15 @@ static void CL_DrawCylinder( int modelIndex, float frame, int rendermode, const 
 	if( !m_hSprite || segments < 2 )
 		return;
 
-	if( segments > NOISE_DIVISIONS )	// UNDONE: Allow more segments?
+	if( segments > NOISE_DIVISIONS )
 		segments = NOISE_DIVISIONS;
 
 	length = VectorLength( delta ) * 0.01f;
 	if( length < 0.5f ) length = 0.5f;	// Don't lose all of the noise/texture on short beams
 	
 	div = 1.0f / (segments - 1);
-
-	// UNDONE: Expose texture length scale factor to control "fuzziness"
 	vStep = length * div;		// Texture length texels per space pixel
 	
-	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
 	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	vLast = fmod( freq * speed, 1.0f );
 	scale = scale * length;
@@ -567,7 +556,7 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 	VectorClear( screenLast );
 	segments = segments * M_PI;
 	
-	if( segments > NOISE_DIVISIONS * 8 )		// UNDONE: Allow more segments?
+	if( segments > NOISE_DIVISIONS * 8 )
 		segments = NOISE_DIVISIONS * 8;
 
 	length = VectorLength( d ) * 0.01f * M_PI;
@@ -575,10 +564,8 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 		
 	div = 1.0 / ( segments - 1 );
 
-	// UNDONE: Expose texture length scale factor to control "fuzziness"
 	vStep = length * div / 8.0f;			// Texture length texels per space pixel
 	
-	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
 	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	vLast = fmod( freq * speed, 1.0f );
 	scale = amplitude * length / 8.0f;
@@ -633,12 +620,12 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 
 		// Distort using noise
 		factor = rgNoise[(noiseIndex >> 16) & (NOISE_DIVISIONS - 1)] * scale;
-		VectorMA( point, factor, cl.refdef.up, point );
+		VectorMA( point, factor, RI.vup, point );
 
 		// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
 		factor = rgNoise[(noiseIndex>>16) & (NOISE_DIVISIONS - 1)] * scale;
 		factor *= cos( fraction * M_PI * 24 + freq );
-		VectorMA( point, factor, cl.refdef.right, point );
+		VectorMA( point, factor, RI.vright, point );
 
 		// Transform point into screen space
 		TriWorldToScreen( point, screen );
@@ -653,8 +640,8 @@ void CL_DrawRing( int modelIndex, float frame, int rendermode, const vec3_t sour
 			VectorNormalize( tmp );
 
 			// Build point along normal line (normal is -y, x)
-			VectorScale( cl.refdef.up, tmp[0], normal );
-			VectorMA( normal, tmp[1], cl.refdef.right, normal );
+			VectorScale( RI.vup, tmp[0], normal );
+			VectorMA( normal, tmp[1], RI.vright, normal );
 			
 			// make a wide line
 			VectorMA( point, width, normal, last1 );
@@ -694,7 +681,6 @@ Helper to drawing laser
 void CL_DrawLaser( BEAM *pbeam, int frame, int rendermode, float *color, int spriteIndex )
 {
 	float	color2[3];
-	vec3_t	vecForward;
 	vec3_t	beamDir;
 	float	flDot;
 	
@@ -703,8 +689,7 @@ void CL_DrawLaser( BEAM *pbeam, int frame, int rendermode, float *color, int spr
 	VectorSubtract( pbeam->target, pbeam->source, beamDir );
 	VectorNormalize( beamDir );
 
-	AngleVectors( cl.refdef.viewangles, vecForward, NULL, NULL );
-	flDot = DotProduct( beamDir, vecForward );
+	flDot = DotProduct( beamDir, RI.vforward );
 
 	// abort if the player's looking along it away from the source
 	if( flDot > 0 )
@@ -719,7 +704,7 @@ void CL_DrawLaser( BEAM *pbeam, int frame, int rendermode, float *color, int spr
 		float	flDistance;
 
 		// Fade the beam based on the player's proximity to the beam
-		VectorSubtract( cl.refdef.vieworg, pbeam->source, localDir );
+		VectorSubtract( RI.vieworg, pbeam->source, localDir );
 		flDot = DotProduct( beamDir, localDir );
 		VectorScale( beamDir, flDot, vecProjection );
 		VectorSubtract( localDir, vecProjection, tmp );
@@ -764,9 +749,7 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	rgb_t	nColor;
 
 	m_hSprite = R_GetSpriteTexture( Mod_Handle( modelIndex ), frame );
-	
-	if( !m_hSprite )
-		return;
+	if( !m_hSprite ) return;
 
 	// UNDONE: This won't work, screen and screenLast must be extrapolated here to fix the
 	// first beam segment for this trail
@@ -778,8 +761,8 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 	VectorNormalize( tmp );
 
 	// Build point along noraml line (normal is -y, x)
-	VectorScale( cl.refdef.up, tmp[0], normal );	// Build point along normal line (normal is -y, x)
-	VectorMA( normal, tmp[1], cl.refdef.right, normal );
+	VectorScale( RI.vup, tmp[0], normal );	// Build point along normal line (normal is -y, x)
+	VectorMA( normal, tmp[1], RI.vright, normal );
 
 	// make a wide line
 	VectorMA( delta, width, normal, last1 );
@@ -818,8 +801,8 @@ static void DrawBeamFollow( int modelIndex, particle_t *pHead, int frame, int re
 		VectorNormalize( tmp );
 
 		// build point along normal line (normal is -y, x)
-		VectorScale( cl.refdef.up, tmp[0], normal );
-		VectorMA( normal, tmp[1], cl.refdef.right, normal );
+		VectorScale( RI.vup, tmp[0], normal );
+		VectorMA( normal, tmp[1], RI.vright, normal );
 
 		// Make a wide line
 		VectorMA( pHead->org,  width, normal, last1 );

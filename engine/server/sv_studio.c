@@ -1016,10 +1016,10 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 
 void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 {
-	iBone = bound( 0, iBone, sv_studiohdr->numbones );
-
 	if( !SV_StudioSetupModel( e, iBone, false ) || sv_studiohdr->numbones <= 0 )
 		return;
+
+	iBone = bound( 0, iBone, sv_studiohdr->numbones );
 
 	if( org ) Matrix3x4_OriginFromMatrix( sv_studiobones[iBone], org );
 	if( ang ) VectorAngles( sv_studiobones[iBone][0], ang ); // bone forward to angles

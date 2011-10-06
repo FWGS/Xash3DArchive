@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 #include "common.h"
 #include "client.h"
+#include "gl_local.h"
 #include <vfw.h> // video for windows
 
 // msvfw32.dll exports
@@ -294,7 +295,8 @@ byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame )
 	frame_raw = (char *)frame_info + frame_info->biSize + frame_info->biClrUsed * sizeof( RGBQUAD );
 	pDrawDibDraw( Avi->hDD, Avi->hDC, 0, 0, Avi->video_xres, Avi->video_yres, frame_info, frame_raw, 0, 0, Avi->video_xres, Avi->video_yres, 0 );
 
-	if( Avi->ignore_hwgamma )
+	// adjust gamma only if hardware gamma is enabled
+	if( Avi->ignore_hwgamma && glConfig.deviceSupportsGamma )
 	{
 		tmp = Avi->pframe_data;
 

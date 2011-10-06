@@ -401,6 +401,8 @@ extern	convar_t		*sv_clienttrace;
 extern	convar_t		*sv_send_resources;
 extern	convar_t		*sv_send_logos;
 extern	convar_t		*sv_sendvelocity;
+extern	convar_t		*sv_skyspeed;
+extern	convar_t		*sv_skyangle;
 extern	convar_t		*mp_consistency;
 extern	convar_t		*public_server;
 extern	convar_t		*physinfo;

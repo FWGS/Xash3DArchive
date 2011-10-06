@@ -12,14 +12,34 @@ Render: allow 16-bit color mode when decktop has same
 Render: rename "vid_gamma" to "gamma", make backward compatibility with GoldSource config
 Sound: get support for automatic ambient sounds like in Quake
 Sound: add cvar "s_combine" that trying to combine mutilpe channels with same sounds into one
-Engine: add "secure" option for both liblist.gam and gameinfo.txt
+Engine: add "secure" option support for both liblist.gam and gameinfo.txt
 Engine: fix bug determine current directory
 Server: fix bug when some sound messages can't be sended to client (e.g. not vised map)
 Render: allow to load hi-res quake sky (two layers called as sky_solid and sky_alpha)
 Physic: fix trace bug when bbox mins are 0 0 0 and bbox maxs are positive values (like quake boxes)
 GameUI: add checkbox "allow materials" in menu Video Options.
 Client: implement "viewsize" cvar
-
+GameUI: add new function to inteface called as pfnProcessImage
+Client: add support for default studiomodel flags like quake effects (light, smoke, blood etc)
+Render: add engine mirrors (can be set on map with texture "decals.wad\reflect1")
+Client: rewrite client font system to allow support for "hud_scale" feature
+Client: re-enable client static entities (see engine function MAKE_STATIC for details)
+Sound: clear "loop" flags for client engine functions PlaySoundByName and PlaySoundByIndex
+Client: fix potentially crash in StudioRemap code
+Client: finalize 'GlowShell' effect on StudioModels
+Render: implement software gamma control that based on lightmap adjusting (gl_ignorehwgamma 1)
+Render: restore projection and modelview matrices before call V_CalcRefdef to avoid errors on custom rendering (e.g. HLFX 0.5, Trinity Renderers)
+Render: remove all stuff for 3dfx gamma control
+Render: add missing function R_ScreenToWorld
+Engine: add "icon" option support for both liblist.gam and gameinfo.txt
+Render: get support for rotational skybox that can be saved and restored with current angle
+Engine: fix bug with incorrect detecting Blue-Shift maps in some rare cases
+Engine: add autocomplete for 'entpatch' command
+Engine: fix Host_Error issues
+Network: add IPX and IPX_BROADCAST for backward compatibility with GoldSrc
+Engine: do revision for 'allow_studio_scale' cvar in trace code
+GameUI: added support for Steam backgrounds
+GameUI: hide input symbols for "password" field in "create server" menu page 
 
 build 1662
 

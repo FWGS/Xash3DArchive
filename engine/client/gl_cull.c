@@ -144,3 +144,76 @@ int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float 
 
 	return 0;
 }
+
+/*
+=================
+R_CullSurface
+
+cull invisible surfaces
+=================
+*/
+qboolean R_CullSurface( msurface_t *surf, uint clipflags )
+{
+	mextrasurf_t	*info;
+
+	if( !surf || !surf->texinfo || !surf->texinfo->texture )
+		return true;
+
+	if( surf->flags & SURF_WATERCSG && !( RI.currententity->curstate.effects & EF_NOWATERCSG ))
+		return true;
+
+	if( surf->flags & SURF_NOCULL )
+		return false;
+
+	if( r_nocull->integer )
+		return false;
+
+	// world surfaces can be culled by vis frame too
+	if( RI.currententity == clgame.entities && surf->visframe != tr.framecount )
+		return true;
+
+	if( r_faceplanecull->integer && glState.faceCull != 0 )
+	{
+		if(!(surf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
+		{
+			if( !VectorIsNull( surf->plane->normal ))
+			{
+				float	dist;
+
+				if( RI.drawOrtho ) dist = surf->plane->normal[2];
+				else dist = PlaneDiff( tr.modelorg, surf->plane );
+
+				if( glState.faceCull == GL_FRONT || ( RI.params & RP_MIRRORVIEW ))
+				{
+					if( surf->flags & SURF_PLANEBACK )
+					{
+						if( dist >= -BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+					else
+					{
+						if( dist <= BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+				}
+				else if( glState.faceCull == GL_BACK )
+				{
+					if( surf->flags & SURF_PLANEBACK )
+					{
+						if( dist <= BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+					else
+					{
+						if( dist >= -BACKFACE_EPSILON )
+							return true; // wrong side
+					}
+				}
+			}
+		}
+	}
+
+	info = SURF_INFO( surf, RI.currentmodel );
+
+	return ( clipflags && R_CullBox( info->mins, info->maxs, clipflags ));
+}

@@ -168,10 +168,8 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	if(( ent->index - 1 ) == cl.playernum && ent != &clgame.viewent &&
 		cl.thirdperson == false && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
 	{
-#ifdef MIRROR_TEST
-		// will be drawn in mirror
-		R_AddEntity( ent, entityType );
-#endif
+		if( gl_allow_mirrors->integer && world.has_mirrors )
+			R_AddEntity( ent, entityType ); // will be drawn in mirror
 	}
 	else
 	{

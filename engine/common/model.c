@@ -492,6 +492,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		GL_FreeTexture( tr.solidskyTexture );
 		GL_FreeTexture( tr.alphaskyTexture );
 		tr.solidskyTexture = tr.alphaskyTexture = 0;
+		world.has_mirrors = false;
 		world.sky_sphere = false;
 	}
 
@@ -1062,10 +1063,14 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		if( !Q_strncmp( tex->name, "scroll", 6 ))
 			out->flags |= SURF_CONVEYOR;
-#ifdef MIRROR_TEST
-		if( !Q_strncmp( tex->name, "glassblue1", 10 ))
+
+		// g-cont this texture from decals.wad he-he
+		if( !Q_strncmp( tex->name, "reflect", 7 ))
+		{
 			out->flags |= SURF_MIRROR;
-#endif
+			world.has_mirrors = true;
+		}
+
 		if( tex->name[0] == '{' )
 			out->flags |= SURF_TRANSPARENT;
 

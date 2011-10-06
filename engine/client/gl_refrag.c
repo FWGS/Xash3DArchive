@@ -66,8 +66,8 @@ void R_RemoveEfrags( cl_entity_t *ent )
 		ef = ef->entnext;
 		
 		// put it on the free list
-		old->entnext = cl.free_efrags;
-		cl.free_efrags = old;
+		old->entnext = clgame.free_efrags;
+		clgame.free_efrags = old;
 	}
 	ent->efrag = NULL; 
 }
@@ -96,14 +96,14 @@ static void R_SplitEntityOnNode( mnode_t *node )
 		leaf = (mleaf_t *)node;
 
 		// grab an efrag off the free list
-		ef = cl.free_efrags;
+		ef = clgame.free_efrags;
 		if( !ef )
 		{
 			MsgDev( D_ERROR, "too many efrags!\n" );
 			return; // no free fragments...
 		}
 
-		cl.free_efrags = cl.free_efrags->entnext;
+		clgame.free_efrags = clgame.free_efrags->entnext;
 		ef->entity = r_addent;
 		
 		// add the entity link	
@@ -134,8 +134,6 @@ static void R_SplitEntityOnNode( mnode_t *node )
 	if( sides & 2 ) R_SplitEntityOnNode( node->children[1] );
 }
 
-
-
 /*
 ===========
 R_AddEfrags
@@ -161,7 +159,6 @@ void R_AddEfrags( cl_entity_t *ent )
 	R_SplitEntityOnNode( cl.worldmodel->nodes );
 	ent->topnode = r_pefragtopnode;
 }
-
 
 /*
 ================

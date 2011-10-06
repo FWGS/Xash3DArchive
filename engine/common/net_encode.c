@@ -81,6 +81,10 @@ static const delta_field_t pm_fields[] =
 { PHYS_DEF( studio_scale )		},
 { PHYS_DEF( clienttrace )		},
 { PHYS_DEF( wateralpha )		},
+{ PHYS_DEF( skydir_x )		},
+{ PHYS_DEF( skydir_y )		},
+{ PHYS_DEF( skydir_z )		},
+{ PHYS_DEF( skyangle )		},
 { NULL },
 };
 
@@ -817,6 +821,10 @@ void Delta_Init( void )
 	Delta_AddField( "movevars_t", "skyvec_x", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f ); // 0 - 1
 	Delta_AddField( "movevars_t", "skyvec_y", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "skyvec_z", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skydir_x", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f ); // 0 - 1
+	Delta_AddField( "movevars_t", "skydir_y", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skydir_z", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skyangle", DT_ANGLE, 16, 1.0f, 1.0f ); // 0 - 360
 	Delta_AddField( "movevars_t", "studio_scale", DT_INTEGER, 1, 1.0f, 1.0f );
 	Delta_AddField( "movevars_t", "clienttrace", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "wateralpha", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );

@@ -198,6 +198,7 @@ sfx_t *S_FindName( const char *name, int *pfInCache )
 	{
 		if( !sfx->name[0] ) break; // free spot
 	}
+
 	if( i == s_numSfx )
 	{
 		if( s_numSfx == MAX_SFX )

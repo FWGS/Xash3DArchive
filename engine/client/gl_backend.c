@@ -393,7 +393,7 @@ VID_ImageAdjustGamma
 void VID_ImageAdjustGamma( byte *in, uint width, uint height )
 {
 	int	i, c = width * height;
-	float	g = 1.0f / bound( 0.5f, vid_gamma->value, 3.0f );
+	float	g = 1.0f / bound( 0.5f, vid_gamma->value, 2.3f );
 	byte	r_gammaTable[256];	// adjust screenshot gamma
 	byte	*p = in;
 
@@ -459,7 +459,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 		break;
 	}
 
-	Image_Process( &r_shot, width, height, flags );
+	Image_Process( &r_shot, width, height, 0.0f, flags );
 
 	// write image
 	result = FS_SaveImage( filename, r_shot );
@@ -524,7 +524,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 		r_side->size = r_side->width * r_side->height * 3;
 		r_side->buffer = temp;
 
-		if( flags ) Image_Process( &r_side, 0, 0, flags );
+		if( flags ) Image_Process( &r_side, 0, 0, 0.0f, flags );
 		Q_memcpy( buffer + (size * size * 3 * i), r_side->buffer, size * size * 3 );
 	}
 

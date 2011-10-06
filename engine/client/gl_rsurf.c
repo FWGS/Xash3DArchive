@@ -28,9 +28,6 @@ typedef struct
 	byte		lightmap_buffer[BLOCK_WIDTH*BLOCK_HEIGHT*4];
 } gllightmapstate_t;
 
-static vec3_t		modelorg;       // relative to viewpoint
-static vec3_t		modelmins;
-static vec3_t		modelmaxs;
 static vec2_t		world_orthocenter;
 static vec2_t		world_orthohalf;
 static byte		visbytes[MAX_MAP_LEAFS/8];
@@ -446,9 +443,9 @@ void R_AddDynamicLights( msurface_t *surf )
 
 				if( dist < minlight )
 				{
-					bl[0] += ( rad - dist ) * dl->color.r;
-					bl[1] += ( rad - dist ) * dl->color.g;
-					bl[2] += ( rad - dist ) * dl->color.b;
+					bl[0] += ( rad - dist ) * TextureToTexGamma( dl->color.r );
+					bl[1] += ( rad - dist ) * TextureToTexGamma( dl->color.g );
+					bl[2] += ( rad - dist ) * TextureToTexGamma( dl->color.b );
 				}
 			}
 		}
@@ -592,9 +589,9 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
 
 		for( i = 0, bl = r_blocklights; i < size; i++, bl += 3, lm++ )
 		{
-			bl[0] += lm->r * scale;
-			bl[1] += lm->g * scale;
-			bl[2] += lm->b * scale;
+			bl[0] += TextureToTexGamma( lm->r ) * scale;
+			bl[1] += TextureToTexGamma( lm->g ) * scale;
+			bl[2] += TextureToTexGamma( lm->b ) * scale;
 		}
 	}
 
@@ -974,6 +971,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	texture_t	*t;
 	int	maps;
 	qboolean	is_dynamic = false;
+	qboolean	is_mirror = false;
 	
 	if( RI.currententity == clgame.entities )
 		r_stats.c_world_polys++;
@@ -990,7 +988,20 @@ void R_RenderBrushPoly( msurface_t *fa )
 	}
 		
 	t = R_TextureAnimation( fa->texinfo->texture, fa - RI.currententity->model->surfaces );
-	GL_MBind( t->gl_texturenum );
+
+	if( RP_NORMALPASS() && fa->flags & SURF_MIRROR )
+	{
+		if( SURF_INFO( fa, RI.currentmodel )->mirrortexturenum )
+		{
+			GL_MBind( SURF_INFO( fa, RI.currentmodel )->mirrortexturenum );
+			is_mirror = true;
+		}
+		else GL_MBind( t->gl_texturenum ); // dummy
+
+		// DEBUG: reset the mirror texture after drawing
+		SURF_INFO( fa, RI.currentmodel )->mirrortexturenum = 0;
+	}
+	else GL_MBind( t->gl_texturenum );
 
 	if( fa->flags & SURF_DRAWTURB )
 	{	
@@ -1015,8 +1026,14 @@ void R_RenderBrushPoly( msurface_t *fa )
 		draw_details = true;
 	}
 
+	if( is_mirror ) R_BeginDrawMirror( fa );
 	DrawGLPoly( fa->polys, 0.0f, 0.0f );
+	if( is_mirror ) R_EndDrawMirror();
 	DrawSurfaceDecals( fa );
+
+	// NOTE: draw mirror through in mirror show dummy lightmapped texture
+	if( fa->flags & SURF_MIRROR && RP_NORMALPASS() && r_lighting_extended->integer < 2 )
+		return; // no lightmaps for mirror
 
 	// check for lightmap modification
 	for( maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++ )
@@ -1086,13 +1103,6 @@ void R_DrawTextureChains( void )
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
 
-	// world has mirrors!
-	if( RP_NORMALPASS() && tr.mirror_entities[0].chain != NULL )
-	{
-		tr.mirror_entities[0].ent = clgame.entities;
-		tr.num_mirror_entities++;
-	}
-
 	// clip skybox surfaces
 	for( s = skychain; s != NULL; s = s->texturechain )
 		R_AddSkyBoxSurface( s );
@@ -1141,8 +1151,7 @@ void R_DrawWaterSurfaces( void )
 		return;
 
 	// go back to the world matrix
-	pglMatrixMode( GL_MODELVIEW );
-	GL_LoadMatrix( RI.worldviewMatrix );
+	R_LoadIdentity();
 
 	pglEnable( GL_BLEND );
 	pglDepthMask( GL_FALSE );
@@ -1216,79 +1225,6 @@ static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 
 /*
 =================
-R_CullSurface
-
-cull invisible surfaces
-=================
-*/
-static _inline qboolean R_CullSurface( msurface_t *surf, uint clipflags )
-{
-	mextrasurf_t	*info;
-
-	if( !surf || !surf->texinfo || !surf->texinfo->texture )
-		return true;
-
-	if( surf->flags & SURF_WATERCSG && !( RI.currententity->curstate.effects & EF_NOWATERCSG ))
-		return true;
-
-	if( surf->flags & SURF_NOCULL )
-		return false;
-
-	if( r_nocull->integer )
-		return false;
-
-	// world surfaces can be culled by vis frame too
-	if( RI.currententity == clgame.entities && surf->visframe != tr.framecount )
-		return true;
-
-	if( r_faceplanecull->integer && glState.faceCull != 0 )
-	{
-		if(!(surf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
-		{
-			if( !VectorIsNull( surf->plane->normal ))
-			{
-				float	dist;
-
-				if( RI.drawOrtho ) dist = surf->plane->normal[2];
-				else dist = PlaneDiff( modelorg, surf->plane );
-
-				if( glState.faceCull == GL_FRONT || ( RI.params & RP_MIRRORVIEW ))
-				{
-					if( surf->flags & SURF_PLANEBACK )
-					{
-						if( dist >= -BACKFACE_EPSILON )
-							return true; // wrong side
-					}
-					else
-					{
-						if( dist <= BACKFACE_EPSILON )
-							return true; // wrong side
-					}
-				}
-				else if( glState.faceCull == GL_BACK )
-				{
-					if( surf->flags & SURF_PLANEBACK )
-					{
-						if( dist <= BACKFACE_EPSILON )
-							return true; // wrong side
-					}
-					else
-					{
-						if( dist >= -BACKFACE_EPSILON )
-							return true; // wrong side
-					}
-				}
-			}
-		}
-	}
-
-	info = SURF_INFO( surf, RI.currentmodel );
-
-	return ( clipflags && R_CullBox( info->mins, info->maxs, clipflags ));
-}
-
-/*
-=================
 R_DrawBrushModel
 =================
 */
@@ -1332,14 +1268,14 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
 
-	VectorSubtract( RI.cullorigin, e->origin, modelorg );
+	VectorSubtract( RI.cullorigin, e->origin, tr.modelorg );
 	e->visframe = tr.framecount; // visible
 
 	if( rotated )
 	{
 		vec3_t	temp;
-		VectorCopy( modelorg, temp );
-		Matrix4x4_VectorITransform( RI.objectMatrix, temp, modelorg );
+		VectorCopy( tr.modelorg, temp );
+		Matrix4x4_VectorITransform( RI.objectMatrix, temp, tr.modelorg );
 	}
 
 	// calculate dynamic lighting for bmodel
@@ -1389,12 +1325,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		if( R_CullSurface( psurf, 0 ))
 			continue;
 
-		if( RP_NORMALPASS() && psurf->flags & SURF_MIRROR )
-		{
-			psurf->texturechain = tr.mirror_entities[tr.num_mirror_entities].chain;
-			tr.mirror_entities[tr.num_mirror_entities].chain = psurf;
-		}
-		else if( need_sort )
+		if( need_sort )
 		{
 			world.draw_surfaces[num_sorted] = psurf;
 			num_sorted++;
@@ -1405,13 +1336,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 			// render unsorted (solid)
 			R_RenderBrushPoly( psurf );
 		}
-	}
-
-	// store new mirror entity
-	if( RP_NORMALPASS() && tr.mirror_entities[tr.num_mirror_entities].chain != NULL )
-	{
-		tr.mirror_entities[tr.num_mirror_entities].ent = RI.currententity;
-		tr.num_mirror_entities++;
 	}
 
 	if( need_sort )
@@ -1460,16 +1384,17 @@ void R_DrawStaticModel( cl_entity_t *e )
 	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		if( R_CullSurface( psurf, 0 ))
+		if( R_CullSurface( psurf, RI.clipFlags ))
 			continue;
 
-		if( RP_NORMALPASS() && psurf->flags & SURF_MIRROR )
+		if( psurf->flags & SURF_DRAWSKY && !world.sky_sphere )
 		{
-			psurf->texturechain = tr.mirror_entities[0].chain;
-			tr.mirror_entities[0].chain = psurf;
+			// make sky chain to right clip the skybox
+			psurf->texturechain = skychain;
+			skychain = psurf;
 		}
 		else
-		{
+		{ 
 			psurf->texturechain = psurf->texinfo->texture->texturechain;
 			psurf->texinfo->texture->texturechain = psurf;
 		}
@@ -1490,9 +1415,6 @@ void R_DrawStaticBrushes( void )
 	// draw static entities
 	for( i = 0; i < tr.num_static_entities; i++ )
 	{
-		if( RI.refdef.onlyClientDraw )
-			break;
-
 		RI.currententity = tr.static_entities[i];
 		RI.currentmodel = RI.currententity->model;
 	
@@ -1509,123 +1431,6 @@ void R_DrawStaticBrushes( void )
 			break;
 		}
 	}
-}
-
-/*
-=============================================================
-
-	MIRROR RENDERING
-
-=============================================================
-*/
-void R_PlaneForMirror( msurface_t *surf, mplane_t *out )
-{
-	cl_entity_t	*ent;
-
-	ASSERT( out != NULL );
-
-	ent = RI.currententity;
-
-	// setup mirror plane
-	*out = *surf->plane;
-
-	if( surf->flags & SURF_PLANEBACK )
-	{
-		VectorNegate( out->normal, out->normal );
-	}
-
-	if( !VectorIsNull( ent->angles ))
-		R_RotateForEntity( ent );
-	else R_TranslateForEntity( ent );
-
-	// transform mirror plane by entity matrix
-	if( !tr.modelviewIdentity )
-	{
-		mplane_t	tmp;
-
-		tmp = *out;
-		Matrix4x4_TransformPositivePlane( RI.objectMatrix, tmp.normal, tmp.dist, out->normal, &out->dist );
-	}
-}
-
-void R_DrawMirrors( void )
-{
-	ref_instance_t	oldRI;
-	mplane_t		plane;
-	msurface_t	*surf, *mirrorchain;
-	vec3_t		forward, right, up;
-	vec3_t		origin, angles;
-	int		i;
-	float		d;
-
-	if( !tr.num_mirror_entities ) return; // mo mirrors for this frame
-
-	oldRI = RI; // make refinst backup
-
-	for( i = 0; i < tr.num_mirror_entities; i++ )
-	{
-		mirrorchain = tr.mirror_entities[i].chain;
-
-		for( surf = mirrorchain; surf != NULL; surf = surf->texturechain )
-		{
-			RI.currententity = tr.mirror_entities[i].ent;
-			RI.currentmodel = RI.currententity->model;
-
-			ASSERT( RI.currententity != NULL );
-			ASSERT( RI.currentmodel != NULL );
-
-			R_PlaneForMirror( surf, &plane );
-
-			d = -2.0f * ( DotProduct( RI.vieworg, plane.normal ) - plane.dist );
-			VectorMA( RI.vieworg, d, plane.normal, origin );
-
-			d = -2.0f * DotProduct( RI.vforward, plane.normal );
-			VectorMA( RI.vforward, d, plane.normal, forward );
-			VectorNormalize( forward );
-
-			d = -2.0f * DotProduct( RI.vright, plane.normal );
-			VectorMA( RI.vright, d, plane.normal, right );
-			VectorNormalize( right );
-
-			d = -2.0f * DotProduct( RI.vup, plane.normal );
-			VectorMA( RI.vup, d, plane.normal, up );
-			VectorNormalize( up );
-
-			VectorsAngles( forward, right, up, angles );
-			angles[ROLL] = -angles[ROLL];
-
-			RI.params = RP_MIRRORVIEW|RP_FLIPFRONTFACE|RP_CLIPPLANE;
-			if( r_viewleaf ) RI.params |= RP_OLDVIEWLEAF;
-
-			RI.clipPlane = plane;
-			RI.clipFlags |= ( 1<<5 );
-
-			RI.frustum[5] = plane;
-			RI.frustum[5].signbits = SignbitsForPlane( RI.frustum[5].normal );
-			RI.frustum[5].type = PLANE_NONAXIAL;
-
-			RI.refdef.viewangles[0] = anglemod( angles[0] );
-			RI.refdef.viewangles[1] = anglemod( angles[1] );
-			RI.refdef.viewangles[2] = anglemod( angles[2] );
-			VectorCopy( origin, RI.refdef.vieworg );
-			VectorCopy( origin, RI.pvsorigin );
-			VectorCopy( origin, RI.cullorigin );
-
-			R_RenderScene( &RI.refdef );
-
-			if( !( RI.params & RP_OLDVIEWLEAF ))
-				r_oldviewleaf = r_viewleaf = NULL; // force markleafs next frame
-
-			RI = oldRI; // restore ref instance
-
-			// TODO: draw mirror surface here
-		}
-
-		tr.mirror_entities[i].chain = NULL; // done
-		tr.mirror_entities[i].ent = NULL;
-	}
-
-	tr.num_mirror_entities = 0;
 }
 
 /*
@@ -1696,7 +1501,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	// node is just a decision point, so go down the apropriate sides
 
 	// find which side of the node we are on
-	dot = PlaneDiff( modelorg, node->plane );
+	dot = PlaneDiff( tr.modelorg, node->plane );
 	side = (dot >= 0) ? 0 : 1;
 
 	// recurse down the children, front side first
@@ -1713,11 +1518,6 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 			// make sky chain to right clip the skybox
 			surf->texturechain = skychain;
 			skychain = surf;
-		}
-		else if( RP_NORMALPASS() && surf->flags & SURF_MIRROR )
-		{
-			surf->texturechain = tr.mirror_entities[0].chain;
-			tr.mirror_entities[0].chain = surf;
 		}
 		else
 		{ 
@@ -1931,7 +1731,7 @@ void R_DrawWorld( void )
 	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
 		return;
 
-	VectorCopy( RI.cullorigin, modelorg );
+	VectorCopy( RI.cullorigin, tr.modelorg );
 	Q_memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
 	Q_memset( fullbright_polys, 0, sizeof( fullbright_polys ));
 	Q_memset( detail_polys, 0, sizeof( detail_polys ));
@@ -2081,6 +1881,51 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 
 /*
 ==================
+GL_RebuildLightmaps
+
+Rebuilds the lightmap texture
+when gamma is changed
+==================
+*/
+void GL_RebuildLightmaps( void )
+{
+	int	i, j;
+	model_t	*m;
+
+	if( !cl.worldmodel ) return;	// wait for worldmodel
+	vid_gamma->modified = false;
+
+	// release old lightmaps
+	for( i = 0; i < MAX_LIGHTMAPS; i++ )
+	{
+		if( !tr.lightmapTextures[i] ) break;
+		GL_FreeTexture( tr.lightmapTextures[i] );
+	}
+
+	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	gl_lms.current_lightmap_texture = 0;
+
+	// setup all the lightstyles
+	R_AnimateLight();
+
+	LM_InitBlock();	
+
+	for( i = 1; i < MAX_MODELS; i++ )
+	{
+		if(( m = Mod_Handle( i )) == NULL )
+			continue;
+
+		if( m->name[0] == '*' || m->type != mod_brush )
+			continue;
+
+		for( j = 0; j < m->numsurfaces; j++ )
+			GL_CreateSurfaceLightmap( m->surfaces + j );
+	}
+	LM_UploadBlock( false );
+}
+
+/*
+==================
 GL_BuildLightmaps
 
 Builds the lightmap texture
@@ -2099,14 +1944,24 @@ void GL_BuildLightmaps( void )
 		GL_FreeTexture( tr.lightmapTextures[i] );
 	}
 
+	// release old mirror textures
+	for( i = 0; i < MAX_MIRRORS; i++ )
+	{
+		if( !tr.mirrorTextures[i] ) break;
+		GL_FreeTexture( tr.mirrorTextures[i] );
+	}
+
 	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	Q_memset( tr.mirror_entities, 0, sizeof( tr.mirror_entities ));
+	Q_memset( tr.mirrorTextures, 0, sizeof( tr.mirrorTextures ));
 	Q_memset( visbytes, 0x00, sizeof( visbytes ));
 	
 	skychain = NULL;
 
 	tr.framecount = tr.visframecount = 1;	// no dlight cache
 	gl_lms.current_lightmap_texture = 0;
+	tr.num_mirror_entities = 0;
+	tr.num_mirrors_used = 0;
 
 	// setup all the lightstyles
 	R_AnimateLight();

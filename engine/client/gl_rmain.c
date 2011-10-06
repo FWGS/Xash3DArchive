@@ -202,9 +202,7 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 	screen[1] = worldToScreen[1][0] * point[0] + worldToScreen[1][1] * point[1] + worldToScreen[1][2] * point[2] + worldToScreen[1][3];
 //	z = worldToScreen[2][0] * point[0] + worldToScreen[2][1] * point[1] + worldToScreen[2][2] * point[2] + worldToScreen[2][3];
 	w = worldToScreen[3][0] * point[0] + worldToScreen[3][1] * point[1] + worldToScreen[3][2] * point[2] + worldToScreen[3][3];
-
-	// Just so we have something valid here
-	screen[2] = 0.0f;
+	screen[2] = 0.0f; // just so we have something valid here
 
 	if( w < 0.001f )
 	{
@@ -224,7 +222,24 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 
 void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 {
-	// TODO: implement
+	matrix4x4	screenToWorld;
+	vec3_t	temp;
+	float	w;
+
+	if( !point || !screen )
+		return;
+
+	// FIXME: does we need a full invert here?
+	Matrix4x4_Invert_Simple( screenToWorld, RI.worldviewProjectionMatrix );
+	temp[0] = 2.0f * (screen[0] - RI.viewport[0]) / RI.viewport[2] - 1;
+	temp[1] = -2.0f * (screen[1] - RI.viewport[1]) / RI.viewport[3] + 1;
+	temp[2] = 0.0f; // just so we have something valid here
+
+	point[0] = temp[0] * screenToWorld[0][0] + temp[1] * screenToWorld[0][1] + temp[2] * screenToWorld[0][2] + screenToWorld[0][3];
+	point[1] = temp[0] * screenToWorld[1][0] + temp[1] * screenToWorld[1][1] + temp[2] * screenToWorld[1][2] + screenToWorld[1][3];
+	point[2] = temp[0] * screenToWorld[2][0] + temp[1] * screenToWorld[2][1] + temp[2] * screenToWorld[2][2] + screenToWorld[2][3];
+	w = temp[0] * screenToWorld[3][0] + temp[1] * screenToWorld[3][1] + temp[2] * screenToWorld[3][2] + screenToWorld[3][3];
+	if( w ) VectorScale( point, ( 1.0f / w ), point );
 }
 
 /*
@@ -541,7 +556,7 @@ static void R_SetupFrustumOrtho( void )
 R_SetupFrustum
 ===============
 */
-static void R_SetupFrustum( void )
+void R_SetupFrustum( void )
 {
 	vec3_t	farPoint;
 	int	i;
@@ -644,6 +659,8 @@ void R_LoadIdentity( void )
 
 	Matrix4x4_LoadIdentity( RI.objectMatrix );
 	Matrix4x4_Copy( RI.modelviewMatrix, RI.worldviewMatrix );
+
+	pglMatrixMode( GL_MODELVIEW );
 	GL_LoadMatrix( RI.modelviewMatrix );
 	tr.modelviewIdentity = true;
 }
@@ -669,6 +686,7 @@ void R_RotateForEntity( cl_entity_t *e )
 	Matrix4x4_CreateFromEntity( RI.objectMatrix, e->angles, e->origin, scale );
 	Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, RI.objectMatrix );
 
+	pglMatrixMode( GL_MODELVIEW );
 	GL_LoadMatrix( RI.modelviewMatrix );
 	tr.modelviewIdentity = false;
 }
@@ -694,8 +712,47 @@ void R_TranslateForEntity( cl_entity_t *e )
 	Matrix4x4_CreateFromEntity( RI.objectMatrix, vec3_origin, e->origin, scale );
 	Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, RI.objectMatrix );
 
+	pglMatrixMode( GL_MODELVIEW );
 	GL_LoadMatrix( RI.modelviewMatrix );
 	tr.modelviewIdentity = false;
+}
+
+/*
+===============
+R_FindViewLeaf
+===============
+*/
+void R_FindViewLeaf( void )
+{
+	float	height;
+	mleaf_t	*leaf;
+	vec3_t	tmp;
+
+	r_oldviewleaf = r_viewleaf;
+	r_oldviewleaf2 = r_viewleaf2;
+	leaf = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
+	r_viewleaf2 = r_viewleaf = leaf;
+	height = RI.waveHeight ? RI.waveHeight : 16;
+
+	// check above and below so crossing solid water doesn't draw wrong
+	if( leaf->contents == CONTENTS_EMPTY )
+	{
+		// look down a bit
+		VectorCopy( RI.pvsorigin, tmp );
+		tmp[2] -= height;
+		leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
+		if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
+		r_viewleaf2 = leaf;
+	}
+	else
+	{
+		// look up a bit
+		VectorCopy( RI.pvsorigin, tmp );
+		tmp[2] += height;
+		leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
+		if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
+		r_viewleaf2 = leaf;
+	}
 }
 
 /*
@@ -721,41 +778,11 @@ static void R_SetupFrame( void )
 	// current viewleaf
 	if( RI.drawWorld )
 	{
-		float	height;
-		mleaf_t	*leaf;
-		vec3_t	tmp;
-
 		RI.waveHeight = RI.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
 		RI.isSkyVisible = false; // unknown at this moment
 
 		if(!( RI.params & RP_OLDVIEWLEAF ))
-		{
-			r_oldviewleaf = r_viewleaf;
-			r_oldviewleaf2 = r_viewleaf2;
-			leaf = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
-			r_viewleaf2 = r_viewleaf = leaf;
-			height = RI.waveHeight ? RI.waveHeight : 16;
-
-			// check above and below so crossing solid water doesn't draw wrong
-			if( leaf->contents == CONTENTS_EMPTY )
-			{
-				// look down a bit
-				VectorCopy( RI.pvsorigin, tmp );
-				tmp[2] -= height;
-				leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
-				if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
-					r_viewleaf2 = leaf;
-			}
-			else
-			{
-				// look up a bit
-				VectorCopy( RI.pvsorigin, tmp );
-				tmp[2] += height;
-				leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
-				if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
-					r_viewleaf2 = leaf;
-			}
-		}
+			R_FindViewLeaf();
 	}
 }
 
@@ -847,7 +874,7 @@ static void R_CheckFog( void )
 	if( RI.refdef.waterlevel < 2 || !RI.drawWorld || !r_viewleaf )
 		return;
 
-	ent = CL_GetWaterEntity( cl.refdef.vieworg );
+	ent = CL_GetWaterEntity( RI.vieworg );
 	if( ent && ent->model && ent->model->type == mod_brush && ent->curstate.skin < 0 )
 		cnt = ent->curstate.skin;
 	else cnt = r_viewleaf->contents;
@@ -1092,8 +1119,16 @@ void R_BeginFrame( qboolean clearScene )
 	// update gamma
 	if( vid_gamma->modified )
 	{
-		vid_gamma->modified = false;
-		GL_UpdateGammaRamp();
+		if( glConfig.deviceSupportsGamma )
+		{
+			GL_UpdateGammaRamp();
+			vid_gamma->modified = false;
+		}
+		else
+		{
+			BuildGammaTable( vid_gamma->value, vid_texgamma->value );
+			GL_RebuildLightmaps();
+		}
 	}
 
 	R_Set2DMode( true );
@@ -1123,6 +1158,7 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 		return;
 
 	if( drawWorld ) r_lastRefdef = *fd;
+	GL_BackendStartFrame();
 
 	RI.params = RP_NONE;
 	RI.farClip = 0;
@@ -1130,8 +1166,6 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.drawWorld = drawWorld;
 	RI.thirdPerson = cl.thirdperson;
 	RI.drawOrtho = gl_overview->integer;
-
-	GL_BackendStartFrame();
 
 	// adjust field of view for widescreen
 	if( glState.wideScreen && r_adjust_fov->integer )
@@ -1156,10 +1190,15 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	if( gl_finish->integer && drawWorld )
 		pglFinish();
 
+	if( gl_allow_mirrors->integer )
+	{
+		// render mirrors
+		R_FindMirrors( fd );
+		R_DrawMirrors ();
+	}
+
 	R_RenderScene( fd );
-#ifdef MIRROR_TEST
-	R_DrawMirrors ();
-#endif
+
 	GL_BackendEndFrame();
 }
 

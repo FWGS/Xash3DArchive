@@ -252,6 +252,7 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
   		p1[1] = ( i & 2 ) ? tmp_mins[1] : tmp_maxs[1];
   		p1[2] = ( i & 4 ) ? tmp_mins[2] : tmp_maxs[2];
 
+		// rotate by YAW
 		p2[0] = DotProduct( p1, vectors[0] );
 		p2[1] = DotProduct( p1, vectors[1] );
 		p2[2] = DotProduct( p1, vectors[2] );
@@ -2412,7 +2413,7 @@ R_StudioSetChromeOrigin
 */
 void R_StudioSetChromeOrigin( void )
 {
-	VectorNegate( cl.refdef.vieworg, g_chrome_origin );
+	VectorNegate( RI.vieworg, g_chrome_origin );
 }
 
 /*
@@ -2998,6 +2999,7 @@ R_DrawStudioModel
 void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 {
 	int	i, flags, result;
+	float	prevFrame;
 
 	if( RI.params & RP_ENVVIEW )
 		return;
@@ -3017,6 +3019,8 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 		m_fDoInterp = (e->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
+	prevFrame = e->latched.prevframe;
+
 	// prevent to crash some mods like HLFX in menu Customize
 	if( !RI.drawWorld && !r_customdraw_playermodel->integer )
 	{
@@ -3031,6 +3035,9 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 			result = pStudioDraw->StudioDrawPlayer( flags, &e->curstate );
 		else result = pStudioDraw->StudioDrawModel( flags );
 	}
+
+	// old frame must be restored
+	if( !RP_NORMALPASS( )) e->latched.prevframe = prevFrame;
 
 	if( !result || follow_entity ) return;
 
@@ -3067,7 +3074,7 @@ R_RunViewmodelEvents
 */
 void R_RunViewmodelEvents( void )
 {
-	if( cl.refdef.nextView || cl.thirdperson || RI.params & RP_ENVVIEW )
+	if( cl.refdef.nextView || cl.thirdperson || RI.params & RP_NONVIEWERREF )
 		return;
 
 	if( !Mod_Extradata( clgame.viewent.model ))
@@ -3097,7 +3104,7 @@ void R_DrawViewModel( void )
 	if( cl.thirdperson || cl.refdef.health <= 0 || cl.refdef.viewentity != ( cl.playernum + 1 ))
 		return;
 
-	if( RI.params & RP_ENVVIEW )
+	if( RI.params & RP_NONVIEWERREF )
 		return;
 
 	if( !Mod_Extradata( clgame.viewent.model ))

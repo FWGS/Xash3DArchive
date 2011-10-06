@@ -39,6 +39,7 @@ convar_t	*gl_showtextures;
 convar_t	*gl_swapInterval;
 convar_t	*gl_check_errors;
 convar_t	*gl_allow_static;
+convar_t	*gl_allow_mirrors;
 convar_t	*gl_texturemode;
 convar_t	*gl_wireframe;
 convar_t	*gl_round_down;
@@ -78,6 +79,7 @@ convar_t	*r_fastsky;
 convar_t	*vid_displayfrequency;
 convar_t	*vid_fullscreen;
 convar_t	*vid_gamma;
+convar_t	*vid_texgamma;
 convar_t	*vid_mode;
 
 byte		*r_temppool;
@@ -549,7 +551,7 @@ void GL_BuildGammaTable( void )
 	int	i, v;
 	double	invGamma, div;
 
-	invGamma = 1.0 / bound( 0.5, vid_gamma->value, 3.0 );
+	invGamma = 1.0 / bound( 0.5, vid_gamma->value, 2.3 );
 	div = (double) 1.0 / 255.5;
 
 	Q_memcpy( glState.gammaRamp, glState.stateRamp, sizeof( glState.gammaRamp ));
@@ -570,7 +572,6 @@ GL_UpdateGammaRamp
 */
 void GL_UpdateGammaRamp( void )
 {
-	if( gl_ignorehwgamma->integer ) return;
 	if( !glConfig.deviceSupportsGamma ) return;
 
 	GL_BuildGammaTable();
@@ -737,10 +738,24 @@ void VID_StartupGamma( void )
 	size_t	gamma_size;
 	byte	*savedGamma;
 
+	glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
+
+	if( !glConfig.deviceSupportsGamma )
+	{
+		// force to set cvar
+		Cvar_FullSet( "gl_ignorehwgamma", "1", CVAR_GLCONFIG );
+	}
+
+	if( gl_ignorehwgamma->integer )
+	{
+		glConfig.deviceSupportsGamma = false;	// even if supported!
+		BuildGammaTable( vid_gamma->value, vid_texgamma->value );
+		MsgDev( D_NOTE, "VID_StartupGamma: software gamma initialized\n" );
+		return;
+	}
+
 	// init gamma ramp
 	Q_memset( glState.stateRamp, 0, sizeof( glState.stateRamp ));
-
-	glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
 
 	// share this extension so engine can grab them
 	GL_SetExtension( GL_HARDWARE_GAMMA_CONTROL, glConfig.deviceSupportsGamma );
@@ -811,7 +826,7 @@ void VID_StartupGamma( void )
 
 void VID_RestoreGamma( void )
 {
-	if( !glw_state.hDC ) return;
+	if( !glw_state.hDC || !glConfig.deviceSupportsGamma ) return;
 	SetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
 }
 
@@ -1414,7 +1429,7 @@ void GL_InitCommands( void )
 			
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_GLCONFIG, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );
-	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", CVAR_ARCHIVE|CVAR_LATCH_VIDEO, "ignore hardware gamma (e.g. not support)" );
+	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", CVAR_GLCONFIG, "ignore hardware gamma" );
 	gl_allow_software = Cvar_Get( "gl_allow_software", "0", CVAR_ARCHIVE, "allow OpenGL software emulation" );
 	gl_alphabits = Cvar_Get( "gl_alphabits", "8", CVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
 	gl_texturemode = Cvar_Get( "gl_texturemode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, "texture filter" );
@@ -1429,6 +1444,7 @@ void GL_InitCommands( void )
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_GLCONFIG, "compress textures to safe video memory" ); 
 	gl_luminance_textures = Cvar_Get( "gl_luminance_textures", "0", CVAR_GLCONFIG, "force all textures to luminance" ); 
 	gl_allow_static = Cvar_Get( "gl_allow_static", "1", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
+	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", CVAR_ARCHIVE, "allow to draw mirror surfaces" );
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 9)" );
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
 	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
@@ -1443,6 +1459,7 @@ void GL_InitCommands( void )
 	gl_swapInterval->modified = true;
 
 	vid_gamma = Cvar_Get( "gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
+	vid_texgamma = Cvar_Get( "texgamma", "2.2", CVAR_GLCONFIG, "texgamma amount (default Half-Life artwork gamma)" );
 	vid_mode = Cvar_Get( "vid_mode", VID_DEFAULTMODE, CVAR_RENDERINFO, "display resolution mode" );
 	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO, "fullscreen refresh rate" );

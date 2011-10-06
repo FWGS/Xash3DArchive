@@ -287,7 +287,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean 
 	if( h < MAPSPRITE_SIZE ) h = MAPSPRITE_SIZE;
 
 	// resample image if needed
-	Image_Process( &pix, w, h, IMAGE_FORCE_RGBA|IMAGE_RESAMPLE );
+	Image_Process( &pix, w, h, 0.0f, IMAGE_FORCE_RGBA|IMAGE_RESAMPLE );
 
 	w = h = MAPSPRITE_SIZE;
 

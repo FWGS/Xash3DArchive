@@ -75,6 +75,11 @@ typedef struct
 	int	viewentity;	// Xash3D added
 	int	serverflags;	// converted to float and back
 	float	wateralpha;
+	float	skyDir_x;
+	float	skyDir_y;
+	float	skyDir_z;
+	float	skyAngle;
+	float	skySpeed;
 } SAVE_HEADER;
 
 typedef struct
@@ -108,6 +113,11 @@ static TYPEDESCRIPTION gSaveHeader[] =
 	DEFINE_FIELD( SAVE_HEADER, viewentity, FIELD_SHORT ),
 	DEFINE_FIELD( SAVE_HEADER, serverflags, FIELD_INTEGER ),
 	DEFINE_FIELD( SAVE_HEADER, wateralpha, FIELD_FLOAT ),
+	DEFINE_FIELD( SAVE_HEADER, skyDir_x, FIELD_FLOAT ),
+	DEFINE_FIELD( SAVE_HEADER, skyDir_y, FIELD_FLOAT ),
+	DEFINE_FIELD( SAVE_HEADER, skyDir_z, FIELD_FLOAT ),
+	DEFINE_FIELD( SAVE_HEADER, skyAngle, FIELD_FLOAT ),
+	DEFINE_FIELD( SAVE_HEADER, skySpeed, FIELD_FLOAT ),
 };
 
 static TYPEDESCRIPTION gAdjacency[] =
@@ -697,6 +707,11 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 	header.skyVec_x = Cvar_VariableValue( "sv_skyvec_x" );
 	header.skyVec_y = Cvar_VariableValue( "sv_skyvec_y" );
 	header.skyVec_z = Cvar_VariableValue( "sv_skyvec_z" );
+	header.skyDir_x = Cvar_VariableValue( "sv_skydir_x" );
+	header.skyDir_y = Cvar_VariableValue( "sv_skydir_y" );
+	header.skyDir_z = Cvar_VariableValue( "sv_skydir_z" );
+	header.skyAngle = Cvar_VariableValue( "sv_skyangle" );
+	header.skySpeed = Cvar_VariableValue( "sv_skyspeed" );
 
 	// save viewentity to allow camera works after save\restore
 	if(( cl = SV_ClientFromEdict( EDICT_NUM( 1 ), true )) != NULL )
@@ -1181,10 +1196,16 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	Cvar_SetFloat( "sv_skyvec_x", header.skyVec_x );
 	Cvar_SetFloat( "sv_skyvec_y", header.skyVec_y );
 	Cvar_SetFloat( "sv_skyvec_z", header.skyVec_z );
+	Cvar_SetFloat( "sv_skydir_x", header.skyDir_x );
+	Cvar_SetFloat( "sv_skydir_y", header.skyDir_y );
+	Cvar_SetFloat( "sv_skydir_z", header.skyDir_z );
+	Cvar_SetFloat( "sv_skyangle", header.skyAngle );
+	Cvar_SetFloat( "sv_skyspeed", header.skySpeed );
 
 	// restore serverflags
 	svgame.globals->serverflags = header.serverflags;
 
+	if( header.wateralpha <= 0.0f ) header.wateralpha = 1.0f; // make compatibility with old saves
 	Cvar_SetFloat( "sv_wateralpha", header.wateralpha );
 
 	// re-base the savedata since we re-ordered the entity/table / restore fields
