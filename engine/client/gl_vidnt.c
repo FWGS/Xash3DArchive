@@ -1665,7 +1665,7 @@ qboolean R_Init( void )
 	R_InitImages();
 	R_SpriteInit();
 	R_StudioInit();
-	R_InitDecals();
+	R_ClearDecals();
 	R_ClearScene();
 
 	// initialize screen
@@ -1696,7 +1696,6 @@ void R_Shutdown( void )
 
 	GL_RemoveCommands();
 	R_ShutdownImages();
-	R_ShutdownDecals();
 
 	Mem_FreePool( &r_temppool );
 

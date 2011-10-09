@@ -340,6 +340,13 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize )
 		textHeapSize += Q_strlen( textMessages[i].pMessage ) + 1;
 	messageSize = ( messageCount * sizeof( client_textmessage_t ));
 
+	if(( textHeapSize + nameHeapSize + messageSize ) <= 0 )
+	{
+		clgame.titles = NULL;
+		clgame.numTitles = 0;
+		return;
+	}
+
 	// must malloc because we need to be able to clear it after initialization
 	clgame.titles = (client_textmessage_t *)Mem_Alloc( cls.mempool, textHeapSize + nameHeapSize + messageSize );
 	

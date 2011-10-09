@@ -39,14 +39,14 @@ GNU General Public License for more details.
 #define GetLogoHeight	(*g_engfuncs.pfnGetLogoHeight)
 #define GetLogoLength	(*g_engfuncs.pfnGetLogoLength)
 
-inline HIMAGE PIC_Load( const char *szPicName )
+inline HIMAGE PIC_Load( const char *szPicName, long flags = 0 )
 {
-	return g_engfuncs.pfnPIC_Load( szPicName, NULL, 0 );
+	return g_engfuncs.pfnPIC_Load( szPicName, NULL, 0, flags );
 }
 
-inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRawImageSize )
+inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRawImageSize, long flags = 0 )
 {
-	return g_engfuncs.pfnPIC_Load( szPicName, ucRawImage, ulRawImageSize );
+	return g_engfuncs.pfnPIC_Load( szPicName, ucRawImage, ulRawImageSize, flags );
 }
 
 #define PIC_Free		(*g_engfuncs.pfnPIC_Free)
@@ -173,6 +173,7 @@ inline void TextMessageSetColor( int r, int g, int b, int alpha = 255 )
 #define DrawConsoleString	(*g_engfuncs.pfnDrawConsoleString)
 #define GetConsoleStringSize	(*g_engfuncs.pfnDrawConsoleStringLen)
 #define ConsoleSetColor	(*g_engfuncs.pfnSetConsoleDefaultColor)
+#define PIC_SetFlags	(*g_engfuncs.pfnPIC_SetFlags)
 
 #define RANDOM_LONG		(*g_engfuncs.pfnRandomLong)
 #define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)

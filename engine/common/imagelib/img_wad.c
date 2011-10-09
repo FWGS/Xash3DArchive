@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "imagelib.h"
+#include "mathlib.h"
 #include "wadfile.h"
 #include "studio.h"
 #include "sprite.h"
@@ -474,6 +475,16 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		// grab the fog density
 		image.fogParams[3] = pal[4*3+0];
           }
+          else if( host.decal_loading )
+          {
+		// grab the decal color
+		image.fogParams[0] = pal[255*3+0];
+		image.fogParams[1] = pal[255*3+1];
+		image.fogParams[2] = pal[255*3+2];
+
+		// calc the decal reflectivity
+		image.fogParams[3] = VectorAvg( image.fogParams );         
+	}
  
 	image.type = PF_INDEXED_32;	// 32-bit palete
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );

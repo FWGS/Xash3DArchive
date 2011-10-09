@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "const.h"
 #include "server.h"
 #include "net_encode.h"
+#include "net_api.h"
 
 const char *clc_strings[9] =
 {
@@ -635,15 +636,6 @@ void SV_Info( netadr_t from )
 	Netchan_OutOfBandPrint( NS_SERVER, from, "info\n%s", string );
 }
 
-const char *net_requests[5] =
-{
-	"serverlist",
-	"ping",
-	"rules",
-	"players",
-	"details",
-};
-
 /*
 ================
 SV_BuildNetAnswer
@@ -653,7 +645,7 @@ Responds with long info for local and broadcast requests
 */
 void SV_BuildNetAnswer( netadr_t from )
 {
-	char	string[MAX_INFO_STRING];
+	char	string[MAX_INFO_STRING], answer[512];
 	int	version, context, type;
 	int	i, count = 0;
 
@@ -665,8 +657,56 @@ void SV_BuildNetAnswer( netadr_t from )
 	context = Q_atoi( Cmd_Argv( 2 ));
 	type = Q_atoi( Cmd_Argv( 3 ));
 
-	Msg( "Receive client request (protocol %i, context %i, type %s\n", version, context, net_requests[type] );
-	string[0] = '\0';
+	if( version != PROTOCOL_VERSION )
+		return;
+
+	if( type == NETAPI_REQUEST_PING )
+	{
+		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i\n", context, type );
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+	}
+	else if( type == NETAPI_REQUEST_RULES )
+	{
+		// send serverinfo
+		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, Cvar_Serverinfo( ));
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+	}
+	else if( type == NETAPI_REQUEST_PLAYERS )
+	{
+		string[0] = '\0';
+
+		for( i = 0; i < sv_maxclients->integer; i++ )
+		{
+			if( svs.clients[i].state >= cs_connected )
+			{
+				edict_t *ed = svs.clients[i].edict;
+				float time = host.realtime - svs.clients[i].lastconnect;
+				Q_strncat( string, va( "%c\\%s\\%i\\%f\\", count, svs.clients[i].name, ed->v.frags, time ), sizeof( string )); 
+				count++;
+			}
+		}
+
+		// send playernames
+		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, string );
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+	}
+	else if( type == NETAPI_REQUEST_DETAILS )
+	{
+		for( i = 0; i < sv_maxclients->integer; i++ )
+			if( svs.clients[i].state >= cs_connected )
+				count++;
+
+		string[0] = '\0';
+		Info_SetValueForKey( string, "hostname", hostname->string );
+		Info_SetValueForKey( string, "gamedir", GI->gamefolder );
+		Info_SetValueForKey( string, "current", va( "%i", count ));
+		Info_SetValueForKey( string, "max", va( "%i", sv_maxclients->integer ));
+		Info_SetValueForKey( string, "map", sv.name );
+
+		// send serverinfo
+		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, string );
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+	}
 }
 
 /*
@@ -2111,6 +2151,10 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	}
 
 	cl->delta_sequence = -1; // no delta unless requested
+
+	// set the current client
+	svs.currentPlayer = cl;
+	svs.currentPlayerNum = (cl - svs.clients);
 				
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )

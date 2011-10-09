@@ -11,7 +11,7 @@ Render: remove cvar gl_texturebits
 Render: allow 16-bit color mode when decktop has same
 Render: rename "vid_gamma" to "gamma", make backward compatibility with GoldSource config
 Sound: get support for automatic ambient sounds like in Quake
-Sound: add cvar "s_combine" that trying to combine mutilpe channels with same sounds into one
+Sound: add cvar "s_combine_channels" that trying to combine mutilpe channels with same sounds into one
 Engine: add "secure" option support for both liblist.gam and gameinfo.txt
 Engine: fix bug determine current directory
 Server: fix bug when some sound messages can't be sended to client (e.g. not vised map)
@@ -39,7 +39,15 @@ Engine: fix Host_Error issues
 Network: add IPX and IPX_BROADCAST for backward compatibility with GoldSrc
 Engine: do revision for 'allow_studio_scale' cvar in trace code
 GameUI: added support for Steam backgrounds
-GameUI: hide input symbols for "password" field in "create server" menu page 
+GameUI: hide input symbols for "password" field in "create server" menu page
+Client: initial implementation of NetAPI
+Render: clear decals code. Add transparent rendering for 'glass' decals
+GameUI: added new function into menu interface called a pfnProcessImage, added new argument for pfnPIC_Load.
+GameUI: fix loading flipped Steam background images
+Client: remove gravity for R_Implosion effect
+Sound: add SND_MoveMouth16 for support 16-bit sounds lip-sync
+Engine: fix potentially crash during parsing titles.txt when file is empty
+Engine: increase MAX_VALUE field up to 2048 characters
 
 build 1662
 

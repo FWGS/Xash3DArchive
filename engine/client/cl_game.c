@@ -19,7 +19,6 @@ GNU General Public License for more details.
 #include "triangleapi.h"
 #include "r_efx.h"
 #include "demo_api.h"
-#include "event_flags.h"
 #include "ivoicetweak.h"
 #include "pm_local.h"
 #include "cl_tent.h"
@@ -1032,314 +1031,6 @@ void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 	clgame.msg[i].size = iSize;
 }
 
-static void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func )
-{
-	user_event_t	*ev;
-
-	if( lastnum == MAX_EVENTS )
-	{
-		MsgDev( D_ERROR, "CL_RegisterEvent: MAX_EVENTS hit!\n" );
-		return;
-	}
-
-	ev = clgame.events[lastnum];
-
-	// clear existing or allocate new one
-	if( ev ) Q_memset( ev, 0, sizeof( *ev ));
-	else ev = clgame.events[lastnum] = Mem_Alloc( cls.mempool, sizeof( *ev ));
-
-	Q_strncpy( ev->name, szEvName, CS_SIZE );
-	ev->func = func;
-	// ev->index will be set later
-}
-
-void CL_SetEventIndex( const char *szEvName, int ev_index )
-{
-	user_event_t	*ev;
-	int		i;
-
-	if( !szEvName || !*szEvName ) return; // ignore blank names
-
-	// search event by name to link with
-	for( i = 0; i < MAX_EVENTS; i++ )
-	{
-		ev = clgame.events[i];
-		if( !ev ) break;
-
-		if( !Q_stricmp( ev->name, szEvName ))
-		{
-			ev->index = ev_index;
-			return;
-		}
-	}
-}
-
-/*
-===============
-CL_ResetEvent
-
-===============
-*/
-void CL_ResetEvent( event_info_t *ei )
-{
-	Q_memset( ei, 0, sizeof( *ei ));
-}
-
-/*
-=============
-CL_EventIndex
-
-=============
-*/
-word CL_EventIndex( const char *name )
-{
-	int	i;
-	
-	if( !name || !name[0] )
-		return 0;
-
-	for( i = 1; i < MAX_EVENTS && cl.event_precache[i][0]; i++ )
-	{
-		if( !Q_stricmp( cl.event_precache[i], name ))
-			return i;
-	}
-	return 0;
-}
-
-/*
-=============
-CL_FireEvent
-
-=============
-*/
-qboolean CL_FireEvent( event_info_t *ei )
-{
-	user_event_t	*ev;
-	const char	*name;
-	int		i, idx;
-
-	if( !ei || !ei->index )
-		return false;
-
-	// get the func pointer
-	for( i = 0; i < MAX_EVENTS; i++ )
-	{
-		ev = clgame.events[i];		
-		if( !ev )
-		{
-			idx = bound( 1, ei->index, MAX_EVENTS );
-			MsgDev( D_ERROR, "CL_FireEvent: %s not precached\n", cl.event_precache[idx] );
-			break;
-		}
-
-		if( ev->index == ei->index )
-		{
-			if( ev->func )
-			{
-				ev->func( &ei->args );
-				return true;
-			}
-
-			name = cl.event_precache[ei->index];
-			MsgDev( D_ERROR, "CL_FireEvent: %s not hooked\n", name );
-			break;			
-		}
-	}
-	return false;
-}
-
-/*
-=============
-CL_FireEvents
-
-called right before draw frame
-=============
-*/
-void CL_FireEvents( void )
-{
-	int		i;
-	event_state_t	*es;
-	event_info_t	*ei;
-	qboolean		success;
-
-	es = &cl.events;
-
-	for( i = 0; i < MAX_EVENT_QUEUE; i++ )
-	{
-		ei = &es->ei[i];
-
-		if( ei->index == 0 )
-			continue;
-
-		if( cls.state == ca_disconnected )
-		{
-			CL_ResetEvent( ei );
-			continue;
-		}
-
-		// delayed event!
-		if( ei->fire_time && ( ei->fire_time > cl.time ))
-			continue;
-
-		success = CL_FireEvent( ei );
-
-		// zero out the remaining fields
-		CL_ResetEvent( ei );
-	}
-}
-
-/*
-=============
-CL_FindEvent
-
-find first empty event
-=============
-*/
-event_info_t *CL_FindEmptyEvent( void )
-{
-	int		i;
-	event_state_t	*es;
-	event_info_t	*ei;
-
-	es = &cl.events;
-
-	// look for first slot where index is != 0
-	for( i = 0; i < MAX_EVENT_QUEUE; i++ )
-	{
-		ei = &es->ei[i];
-		if( ei->index != 0 )
-			continue;
-		return ei;
-	}
-
-	// no slots available
-	return NULL;
-}
-
-/*
-=============
-CL_FindEvent
-
-replace only unreliable events
-=============
-*/
-event_info_t *CL_FindUnreliableEvent( void )
-{
-	int		i;
-	event_state_t	*es;
-	event_info_t	*ei;
-
-	es = &cl.events;
-	for ( i = 0; i < MAX_EVENT_QUEUE; i++ )
-	{
-		ei = &es->ei[i];
-		if( ei->index != 0 )
-		{
-			// it's reliable, so skip it
-			if( ei->flags & FEV_RELIABLE )
-				continue;
-		}
-		return ei;
-	}
-
-	// this should never happen
-	return NULL;
-}
-
-/*
-=============
-CL_QueueEvent
-
-=============
-*/
-void CL_QueueEvent( int flags, int index, float delay, event_args_t *args )
-{
-	qboolean		unreliable = (flags & FEV_RELIABLE) ? false : true;
-	event_info_t	*ei;
-
-	// find a normal slot
-	ei = CL_FindEmptyEvent();
-	if( !ei && unreliable )
-	{
-		return;
-	}
-
-	// okay, so find any old unreliable slot
-	if( !ei )
-	{
-		ei = CL_FindUnreliableEvent();
-		if( !ei ) return;
-	}
-
-	ei->index	= index;
-	ei->fire_time = delay ? (cl.time + delay) : 0.0f;
-	ei->flags	= flags;
-	
-	// copy in args event data
-	Q_memcpy( &ei->args, args, sizeof( ei->args ));
-}
-
-/*
-=============
-CL_PlaybackEvent
-
-=============
-*/
-void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
-	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
-{
-	event_args_t	args;
-	int		invokerIndex = 0;
-
-	// first check event for out of bounds
-	if( eventindex < 1 || eventindex > MAX_EVENTS )
-	{
-		MsgDev( D_ERROR, "CL_PlaybackEvent: invalid eventindex %i\n", eventindex );
-		return;
-	}
-	// check event for precached
-	if( !CL_EventIndex( cl.event_precache[eventindex] ))
-	{
-		MsgDev( D_ERROR, "CL_PlaybackEvent: event %i was not precached\n", eventindex );
-		return;		
-	}
-
-	flags |= FEV_CLIENT; // it's a client event
-	flags &= ~(FEV_NOTHOST|FEV_HOSTONLY|FEV_GLOBAL);
-
-	if( delay < 0.0f ) delay = 0.0f; // fixup negative delays
-
-	invokerIndex = cl.playernum + 1; // only local client can issue client events
-
-	args.flags = 0;
-	args.entindex = invokerIndex;
-	VectorCopy( origin, args.origin );
-	VectorCopy( angles, args.angles );
-
-	args.fparam1 = fparam1;
-	args.fparam2 = fparam2;
-	args.iparam1 = iparam1;
-	args.iparam2 = iparam2;
-	args.bparam1 = bparam1;
-	args.bparam2 = bparam2;
-
-	if( flags & FEV_RELIABLE )
-	{
-		args.ducking = 0;
-		VectorClear( args.velocity );
-	}
-	else if( invokerIndex )
-	{
-		// get up some info from invoker
-		VectorCopy( cl.data.origin, args.origin );
-		VectorCopy( cl.data.viewangles, args.angles );
-		VectorCopy( cl.frame.local.playerstate.velocity, args.velocity );
-		args.ducking = cl.frame.local.playerstate.usehull;
-	}
-
-	CL_QueueEvent( flags, eventindex, delay, &args );
-}
-
 void CL_FreeEntity( cl_entity_t *pEdict )
 {
 	ASSERT( pEdict );
@@ -2315,34 +2006,26 @@ pfnHookEvent
 */
 static void pfnHookEvent( const char *filename, pfnEventHook pfn )
 {
-	word		event_index;
 	char		name[64];
-	user_event_t	*ev;
-	int		i, j;
+	cl_user_event_t	*ev;
+	int		i;
 
 	// ignore blank names
-	if( !filename || !*filename ) return;	
+	if( !filename || !*filename )
+		return;	
 
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = filename[i];
-		j++;
-	}
-	name[j] = '\0';
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
-	event_index = CL_EventIndex( name );
-
-	// second call can change EventFunc
+	// find an empty slot
 	for( i = 0; i < MAX_EVENTS; i++ )
 	{
 		ev = clgame.events[i];		
 		if( !ev ) break;
 
-		if( !Q_stricmp( name, ev->name ))
+		if( !Q_stricmp( name, ev->name ) && ev->func != NULL )
 		{
-			if( ev->func != pfn )
-				ev->func = pfn;
+			MsgDev( D_WARN, "CL_HookEvent: %s already hooked!\n" );
 			return;
 		}
 	}
@@ -2376,9 +2059,11 @@ static void pfnKillEvents( int entnum, const char *eventname )
 	{
 		ei = &es->ei[i];
 
-		if( ei->index != eventIndex || ei->entity_index != entnum )
-			continue;
-		CL_ResetEvent( ei );
+		if( ei->index == eventIndex && ei->entity_index == entnum )
+		{
+			CL_ResetEvent( ei );
+			break;
+		}
 	}
 }
 
@@ -2759,11 +2444,13 @@ PlayerInfo_SetValueForKey
 */
 void PlayerInfo_SetValueForKey( const char *key, const char *value )
 {
-	// TODO: implement
+	cvar_t	*var;
 
-	// NOTE: Xash3D doesn't have local userinfo. It build when changed from cvars with flag CVAR_USERINFO.
-	// should we search for cvar here and change it?
-	MsgDev( D_INFO, "SetInfo: %s %s\n", key, value );
+	var = (cvar_t *)Cvar_FindVar( key );
+	if( !var || !(var->flags & CVAR_USERINFO ))
+		return;
+
+	Cvar_DirectSet( var, value );
 }
 
 /*
@@ -3291,7 +2978,15 @@ NetAPI_InitNetworking
 */
 void NetAPI_Status( net_status_t *status )
 {
-	// TODO: implement
+	ASSERT( status != NULL );
+
+	status->connected = NET_IsLocalAddress( cls.netchan.remote_address ) ? false : true;
+	status->local_address = cls.netchan.remote_address; // FIXME: get local address
+	status->remote_address = cls.netchan.remote_address;
+	status->packet_loss = cls.packet_loss / 100; // percent
+	status->latency = cl.frame.latency;
+	status->connection_time = cl.time;	// FIXME: replace with netchan.first_received
+	status->rate = cls.netchan.rate;
 }
 
 /*
@@ -3349,9 +3044,16 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 	nr->resp.remote_address = *remote_address; 
 	nr->flags = flags;
 
-	// send request over the net
-	Q_snprintf( req, sizeof( req ), "netinfo %i %i %i", PROTOCOL_VERSION, context, request );
-	Netchan_OutOfBandPrint( NS_CLIENT, nr->resp.remote_address, req );
+	if( request == NETAPI_REQUEST_SERVERLIST )
+	{
+		// UNDONE: build request for master-server
+	}
+	else
+	{
+		// send request over the net
+		Q_snprintf( req, sizeof( req ), "netinfo %i %i %i", PROTOCOL_VERSION, context, request );
+		Netchan_OutOfBandPrint( NS_CLIENT, nr->resp.remote_address, req );
+	}
 }
 
 /*
@@ -3450,8 +3152,8 @@ NetAPI_SetValueForKey
 */
 void NetAPI_SetValueForKey( char *s, const char *key, const char *value, int maxsize )
 {
-	if( maxsize > MAX_INFO_STRING ) return;
-	Info_SetValueForKey( s, key, value );
+	if( key[0] == '*' ) return;
+	Info_SetValueForStarKey( s, key, value, maxsize );
 }
 
 

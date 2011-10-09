@@ -298,7 +298,7 @@ void CL_WriteDemoHeader( const char *name )
 	cls.lastoutgoingcommand = -1;		// we don't have a backed up cmd history yet
 	cls.nextcmdtime = host.realtime;	// we can send a cmd right away
 
-	// FIXME: current demo implementation is completely wrong
+	// UNDONE: current demo implementation is completely wrong
 	// it's support only uncompressed demos at he moment
 	Cvar_SetFloat( "cl_nodelta", 1.0f );
 }
@@ -482,7 +482,6 @@ void CL_StopRecord( void )
 	cls.demoname[0] = '\0';
 	menu.globals->demoname[0] = '\0';
 
-	// FIXME: current demo implementation is completely wrong
 	// it's support only uncompressed demos at he moment
 	// enable delta-compression here at end of the demo record
 	Cvar_SetFloat( "cl_nodelta", 0.0f );

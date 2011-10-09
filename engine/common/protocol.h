@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define PROTOCOL_VERSION		42
+#define PROTOCOL_VERSION		43
 
 // server to client
 #define svc_bad			0	// immediately crash client when received
@@ -100,6 +100,9 @@ GNU General Public License for more details.
 #define MAX_SOUND_BITS		11
 #define MAX_SOUNDS			(1<<MAX_SOUND_BITS)	// 11 bits == 2048 sounds
 
+#define MAX_ENTITY_BITS		12
+#define MAX_EDICTS			(1<<MAX_ENTITY_BITS)// 12 bits = 4096 edicts
+
 #define MAX_CUSTOM			1024	// max custom resources per level
 
 #define MAX_USER_MESSAGES		191	// another 63 messages reserved for engine routines
@@ -107,7 +110,6 @@ GNU General Public License for more details.
 #define MAX_DLIGHTS			32	// dynamic lights (rendered per one frame)
 #define MAX_ELIGHTS			64	// entity only point lights
 #define MAX_LIGHTSTYLES		256	// a byte limit, don't modify
-#define MAX_EDICTS			4096	// absolute limit, should be enough. (can be up to 32768)
 #define MAX_RENDER_DECALS		4096	// max rendering decals per a level
 
 // sound flags

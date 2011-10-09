@@ -345,10 +345,9 @@ pfnPIC_Load
 
 =========
 */
-static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long image_size )
+static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long image_size, long flags )
 {
 	HIMAGE	tx;
-	int	flags = TF_IMAGE;
 
 	if( !szPicName || !*szPicName )
 	{
@@ -356,9 +355,8 @@ static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long im
 		return 0;
 	}
 
-	// HACKHACK: keep source for gfx\shell\gamma
-	if( !glConfig.deviceSupportsGamma && Q_stristr( szPicName, "gamma" ))
-		flags |= TF_KEEP_RGBDATA;
+	// add default parms to image
+	flags |= TF_IMAGE;
 
 	host.decal_loading = true;
 	tx = GL_LoadTexture( szPicName, image_buf, image_size, flags );

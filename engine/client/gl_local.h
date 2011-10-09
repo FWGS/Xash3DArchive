@@ -73,23 +73,24 @@ typedef enum
 
 typedef enum
 {
-	TF_STATIC		= BIT(0),		// don't free until Image_FreeUnused()
-	TF_NOPICMIP	= BIT(1),		// ignore r_picmip resample rules
-	TF_UNCOMPRESSED	= BIT(2),		// don't compress texture in video memory
-	TF_CUBEMAP	= BIT(3),		// it's cubemap texture
-	TF_DEPTHMAP	= BIT(4),		// custom texture filter used
-	TF_INTENSITY	= BIT(5),
-	TF_LUMINANCE	= BIT(6),		// force image to grayscale
-	TF_SKYSIDE	= BIT(7),
-	TF_CLAMP		= BIT(8),
-	TF_NOMIPMAP	= BIT(9),
-	TF_NEAREST	= BIT(10),	// disable texfilter
-	TF_HAS_LUMA	= BIT(11),	// sets by GL_UploadTexture
-	TF_MAKELUMA	= BIT(12),	// create luma from quake texture
-	TF_NORMALMAP	= BIT(13),	// is a normalmap
-	TF_LIGHTMAP	= BIT(14),	// is a lightmap
-	TF_FORCE_COLOR	= BIT(15),	// force upload monochrome textures as RGB (detail textures)
-	TF_KEEP_RGBDATA	= BIT(16),	// some images keep source
+	TF_NEAREST	= BIT(0),		// disable texfilter
+	TF_KEEP_RGBDATA	= BIT(1),		// some images keep source
+	TF_NOFLIP_TGA	= BIT(2),		// Steam background completely ignore tga attribute 0x20
+	TF_KEEP_8BIT	= BIT(3),		// keep original 8-bit image (if present)
+	TF_NOPICMIP	= BIT(4),		// ignore r_picmip resample rules
+	TF_UNCOMPRESSED	= BIT(5),		// don't compress texture in video memory
+	TF_CUBEMAP	= BIT(6),		// it's cubemap texture
+	TF_DEPTHMAP	= BIT(7),		// custom texture filter used
+	TF_INTENSITY	= BIT(8),
+	TF_LUMINANCE	= BIT(9),		// force image to grayscale
+	TF_SKYSIDE	= BIT(10),
+	TF_CLAMP		= BIT(11),
+	TF_NOMIPMAP	= BIT(12),
+	TF_HAS_LUMA	= BIT(13),	// sets by GL_UploadTexture
+	TF_MAKELUMA	= BIT(14),	// create luma from quake texture
+	TF_NORMALMAP	= BIT(15),	// is a normalmap
+	TF_LIGHTMAP	= BIT(16),	// is a lightmap
+	TF_FORCE_COLOR	= BIT(17),	// force upload monochrome textures as RGB (detail textures)
 } texFlags_t;
 
 typedef struct gltexture_s
@@ -300,8 +301,6 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags );
 //
 // gl_decals.c
 //
-void R_InitDecals( void );
-void R_ShutdownDecals( void );
 void DrawSurfaceDecals( msurface_t *fa );
 void R_ClearDecals( void );
 

@@ -118,6 +118,9 @@ rgbdata_t *ImagePack( void )
 {
 	rgbdata_t	*pack = Mem_Alloc( host.imagepool, sizeof( rgbdata_t ));
 
+	// clear any force flags
+	image.force_flags = 0;
+
 	if( image.cubemap && image.num_sides != 6 )
 	{
 		// this neved be happens, just in case
@@ -339,6 +342,9 @@ load_internal:
 	else if( filename[0] != '#' )
 		MsgDev( D_WARN, "FS_LoadImage: couldn't load \"%s\"\n", loadname );
 
+	// clear any force flags
+	image.force_flags = 0;
+
 	return NULL;
 }
 
@@ -356,7 +362,13 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 	string		path, savename;
 	const savepixformat_t *format;
 
-	if( !pix || !pix->buffer || anyformat ) return false;
+	if( !pix || !pix->buffer || anyformat )
+	{
+		// clear any force flags
+		image.force_flags = 0;
+		return false;
+	}
+
 	Q_strncpy( savename, filename, sizeof( savename ));
 	FS_StripExtension( savename ); // remove extension if needed
 
@@ -371,7 +383,12 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 			box = skybox_qv1;
 		else if( pix->flags & IMAGE_CUBEMAP )
 			box = cubemap_v2;
-		else return false;	// do not happens
+		else
+		{
+			// clear any force flags
+			image.force_flags = 0;
+			return false;	// do not happens
+		}
 
 		pix->size /= 6;	// now set as side size 
 		picBuffer = pix->buffer;
@@ -392,6 +409,9 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 				pix->size = realSize;
 				pix->buffer = picBuffer;
 
+				// clear any force flags
+				image.force_flags = 0;
+
 				return ( i == 6 );
 			}
 		}
@@ -403,10 +423,19 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 			if( !Q_stricmp( ext, format->ext ))
 			{
 				Q_sprintf( path, format->formatstring, savename, "", format->ext );
-				if( format->savefunc( path, pix )) return true; // saved
+				if( format->savefunc( path, pix ))
+				{
+					// clear any force flags
+					image.force_flags = 0;
+					return true; // saved
+				}
 			}
 		}
 	}
+
+	// clear any force flags
+	image.force_flags = 0;
+
 	return false;
 }
 
@@ -426,4 +455,46 @@ void FS_FreeImage( rgbdata_t *pack )
 		Mem_Free( pack );
 	}
 	else MsgDev( D_WARN, "FS_FreeImage: trying to free NULL image\n" );
+}
+
+/*
+================
+FS_CopyImage
+
+make an image copy
+================
+*/
+rgbdata_t *FS_CopyImage( rgbdata_t *in )
+{
+	rgbdata_t	*out;
+	int	palSize = 0;
+
+	if( !in ) return NULL;
+
+	out = Mem_Alloc( host.imagepool, sizeof( rgbdata_t ));
+	*out = *in;
+
+	switch( in->type )
+	{
+	case PF_INDEXED_24:
+		palSize = 768;
+		break;
+	case PF_INDEXED_32:
+		palSize = 1024;
+		break;
+	}
+
+	if( palSize )
+	{
+		out->palette = Mem_Alloc( host.imagepool, palSize );
+		Q_memcpy( out->palette, in->palette, palSize );
+	}
+
+	if( in->size )
+	{
+		out->buffer = Mem_Alloc( host.imagepool, in->size );
+		Q_memcpy( out->buffer, in->buffer, in->size );
+	}
+
+	return out;
 }

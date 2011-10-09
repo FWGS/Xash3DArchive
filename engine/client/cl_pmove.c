@@ -687,7 +687,7 @@ void CL_PredictMovement( void )
 	if( cls.demoplayback && viewent )
 	{
 		// restore viewangles from angles
-		cl.refdef.cl_viewangles[PITCH] = viewent->angles[PITCH] * 6; // FIXME...
+		cl.refdef.cl_viewangles[PITCH] = viewent->angles[PITCH] * 6;
 		cl.refdef.cl_viewangles[YAW] = viewent->angles[YAW];
 		cl.refdef.cl_viewangles[ROLL] = 0; // roll will be computed in view.cpp
 	}

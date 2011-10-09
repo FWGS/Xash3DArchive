@@ -94,6 +94,7 @@ typedef struct imglib_s
 	image_hint_t	hint;		// hint for some loaders
 	byte		*tempbuffer;	// for convert operations
 	int		cmd_flags;
+	int		force_flags;	// user-specified force flags
 } imglib_t;
 
 /*
@@ -283,5 +284,6 @@ byte *Image_Copy( size_t size );
 void Image_CopyParms( rgbdata_t *src );
 qboolean Image_ValidSize( const char *name );
 qboolean Image_LumpValidSize( const char *name );
+qboolean Image_CheckFlag( int bit );
 
 #endif//IMAGELIB_H

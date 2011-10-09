@@ -292,7 +292,6 @@ static void CL_SparkTracerDraw( particle_t *p, float frametime )
 static void CL_TracerImplosion( particle_t *p, float frametime )
 {
 	float	lifePerc = p->die - cl.time;
-	float	grav = frametime * clgame.movevars.gravity * 0.05f;
 	float	length;
 	int	alpha = 255;
 	vec3_t	delta;
@@ -301,7 +300,6 @@ static void CL_TracerImplosion( particle_t *p, float frametime )
 	length = VectorLength( delta );
 	if( lifePerc < 0.5f ) alpha = (lifePerc * 2) * 255;
 
-	p->vel[2] -= grav; // use slow gravity
 	CL_DrawTracer( p->org, delta, 1.5f, clgame.palette[p->color], alpha, 0.0f, 0.8f );
 
 	VectorMA( p->org, frametime, p->vel, p->org );
@@ -1572,7 +1570,7 @@ CL_Implosion
 void CL_Implosion( const vec3_t end, float radius, int count, float life )
 {
 	particle_t	*p;
-	float		vel;
+	float		vel, radius2;
 	vec3_t		dir, m_vecPos;
 	int		i, colorIndex;
 
@@ -1587,20 +1585,23 @@ void CL_Implosion( const vec3_t end, float radius, int count, float life )
 		dir[1] = Com_RandomFloat( -1.0f, 1.0f );
 		dir[2] = Com_RandomFloat( -1.0f, 1.0f );
 
+		radius2 = Com_RandomFloat( radius * 0.9f, radius * 1.1f );
+
 		VectorNormalize( dir );
-		VectorMA( end, -radius, dir, m_vecPos );
+		VectorMA( end, -radius2, dir, m_vecPos );
 
 		// velocity based on how far particle has to travel away from org
-		vel = Com_RandomFloat( radius * 0.5f, radius * 1.5f );
+		if( life ) vel = (radius2 / life);
+		else vel = Com_RandomFloat( radius2 * 0.5f, radius2 * 1.5f );
 
 		VectorCopy( m_vecPos, p->org );
 		p->color = colorIndex;
-		p->ramp = 0.15f; // length based on velocity
-
+		p->ramp = (vel / radius2) * 0.1f; // length based on velocity
+		p->ramp = bound( 0.1f, p->ramp, 1.0f );
 		VectorScale( dir, vel, p->vel );
 
 		// die right when you get there
-		p->die += ( life != 0.0f ) ? life : ( radius / vel );
+		p->die += ( life != 0.0f ) ? life : ( radius2 / vel );
 	}
 }
 

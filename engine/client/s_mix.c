@@ -615,8 +615,9 @@ void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate )
 
 		if( CL_GetEntityByIndex( ch->entnum ) && ( ch->entchannel == CHAN_VOICE ))
 		{
-			// UNDONE: implement SND_MoveMouth16 too
-			SND_MoveMouth8( ch, pSource, sampleCount );
+			if( pSource->width == 1 )
+				SND_MoveMouth8( ch, pSource, sampleCount );
+			else SND_MoveMouth16( ch, pSource, sampleCount );
 		}
 
 		// mix channel to all active paintbuffers.

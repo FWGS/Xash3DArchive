@@ -256,8 +256,6 @@ void R_DrawMirrors( void )
 			r_viewleaf = Mod_PointInLeaf( oldRI.pvsorigin, cl.worldmodel->nodes );
 			r_viewleaf2 = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
 
-			// FIXME: how to combine two cull origins ?
-
 			if( GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
 			{
 				// allow screen size

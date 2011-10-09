@@ -6,15 +6,6 @@
 --------------------Configuration: hl - Win32 Release--------------------
 </h3>
 <h3>Command Lines</h3>
-Creating temporary file "C:\DOCUME~1\╠╚╪└\LOCALS~1\Temp\RSP614.bat" with contents
-[
-@echo off
-copy \Xash3D\src_main\temp\dlls\!release\hl.dll "D:\Xash3D\valve\dlls\hl.dll"
-]
-Creating command line ""C:\DOCUME~1\╠╚╪└\LOCALS~1\Temp\RSP614.bat""
-<h3>Output Window</h3>
-Performing Custom Build Step on \Xash3D\src_main\temp\dlls\!release\hl.dll
-Скопировано файлов:         1.
 
 
 

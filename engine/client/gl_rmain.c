@@ -229,7 +229,7 @@ void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 	if( !point || !screen )
 		return;
 
-	// FIXME: does we need a full invert here?
+	// g-cont. does we need a full invert here?
 	Matrix4x4_Invert_Simple( screenToWorld, RI.worldviewProjectionMatrix );
 	temp[0] = 2.0f * (screen[0] - RI.viewport[0]) / RI.viewport[2] - 1;
 	temp[1] = -2.0f * (screen[1] - RI.viewport[1]) / RI.viewport[3] + 1;
@@ -859,7 +859,7 @@ static void R_EndGL( void )
 R_CheckFog
 
 check for underwater fog
-FIXME: this code is wrong, we need to compute fog volumes (as water volumes)
+UNDONE: this code is wrong, we need to compute fog volumes (as water volumes)
 and get fog params from texture water on a surface.
 =============
 */

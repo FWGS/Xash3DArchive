@@ -874,6 +874,12 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		tex->flags &= ~TF_MAKELUMA;
 	}
 
+	if( tex->flags & TF_KEEP_8BIT )
+		tex->original = FS_CopyImage( pic ); // because current pic will be expanded to rgba
+
+	if( tex->flags & TF_KEEP_RGBDATA )
+		tex->original = pic; // no need to copy
+
 	// we need to expand image into RGBA buffer
 	if( pic->type == PF_INDEXED_24 || pic->type == PF_INDEXED_32 )
 		img_flags |= IMAGE_FORCE_RGBA;
@@ -987,6 +993,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 	gltexture_t	*tex;
 	rgbdata_t		*pic;
 	uint		i, hash;
+	uint		picFlags = 0;
 
 	if( !name || !name[0] || !glw_state.initialized )
 		return 0;
@@ -1014,6 +1021,15 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 		if( !Q_stricmp( tex->name, name ))
 			return tex->texnum;
 	}
+
+	if( flags & TF_NOFLIP_TGA )
+		picFlags |= IL_DONTFLIP_TGA;
+
+	if( flags & TF_KEEP_8BIT )
+		picFlags |= IL_KEEP_8BIT;	
+
+	// set some image flags
+	Image_SetForceFlags( picFlags );
 
 	pic = FS_LoadImage( name, buf, size );
 	if( !pic ) return 0; // couldn't loading image
@@ -1047,16 +1063,15 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 	GL_UploadTexture( pic, tex, false );
 	GL_TexFilter( tex, false ); // update texture filter, wrap etc
 
-	if( flags & TF_KEEP_RGBDATA )
-		tex->original = pic;
-	else FS_FreeImage( pic ); // release source texture
+	if(!( flags & (TF_KEEP_8BIT|TF_KEEP_RGBDATA)))
+		FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
 	hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
 	tex->nextHash = r_texturesHashTable[hash];
 	r_texturesHashTable[hash] = tex;
 
-	// NOTE: always return texnum as index in array or engine will stop work !!!!
+	// NOTE: always return texnum as index in array or engine will stop work !!!
 	return i;
 }
 
@@ -1159,7 +1174,7 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
 
-	if(!( image->flags & TF_KEEP_RGBDATA ) || !image->original )
+	if(!( image->flags & (TF_KEEP_RGBDATA|TF_KEEP_8BIT)) || !image->original )
 	{
 		MsgDev( D_ERROR, "GL_ProcessTexture: no input data for %s\n", image->name );
 		return;
@@ -1294,7 +1309,7 @@ void GL_FreeTexture( GLenum texnum )
 	}
 
 	// release source
-	if( image->flags & TF_KEEP_RGBDATA && image->original )
+	if( image->flags & (TF_KEEP_RGBDATA|TF_KEEP_8BIT) && image->original )
 		FS_FreeImage( image->original );
 
 	pglDeleteTextures( 1, &image->texnum );

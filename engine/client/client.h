@@ -199,7 +199,7 @@ typedef struct
 	char		name[CS_SIZE];
 	word		index;	// event index
 	pfnEventHook	func;	// user-defined function
-} user_event_t;
+} cl_user_event_t;
 
 typedef struct
 {
@@ -239,7 +239,7 @@ typedef struct
 
 typedef struct
 {
-	int		gl_texturenum;		// this is a real texnum
+	int		gl_texturenum;	// this is a real texnum
 
 	// scissor test
 	int		scissor_x;
@@ -381,7 +381,7 @@ typedef struct
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
 	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
-	user_event_t	*events[MAX_EVENTS];
+	cl_user_event_t	*events[MAX_EVENTS];
 
 	string		cdtracks[MAX_CDTRACKS];	// 32 cd-tracks read from cdaudio.txt
 
@@ -602,6 +602,20 @@ void CL_Record_f( void );
 void CL_Stop_f( void );
 
 //
+// cl_events.c
+//
+void CL_ParseEvent( sizebuf_t *msg );
+void CL_ParseReliableEvent( sizebuf_t *msg );
+void CL_SetEventIndex( const char *szEvName, int ev_index );
+void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
+void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
+	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
+void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func );
+word CL_EventIndex( const char *name );
+void CL_ResetEvent( event_info_t *ei );
+void CL_FireEvents( void );
+
+//
 // cl_game.c
 //
 void CL_UnloadProgs( void );
@@ -615,7 +629,6 @@ void CL_FreeEdicts( void );
 void CL_ClearWorld( void );
 void CL_FreeEntity( cl_entity_t *pEdict );
 void CL_CenterPrint( const char *text, float y );
-void CL_SetEventIndex( const char *szEvName, int ev_index );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
 client_textmessage_t *CL_TextMessageGet( const char *pName );
 int pfnDecalIndexFromName( const char *szDecalName );
@@ -697,8 +710,8 @@ qboolean CL_InitStudioAPI( void );
 //
 void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
-qboolean CL_GetEntitySpatialization( int ent, vec3_t origin, vec3_t velocity );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean noInterp );
+qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin );
 void CL_UpdateEntityFields( cl_entity_t *ent );
 qboolean CL_IsPlayerIndex( int idx );
 
@@ -721,12 +734,6 @@ void CL_ClearEffects( void );
 void CL_TestLights( void );
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos );
-void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
-void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
-	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
-word CL_EventIndex( const char *name );
-void CL_ResetEvent( event_info_t *ei );
-void CL_FireEvents( void );
 void CL_InitParticles( void );
 void CL_ClearParticles( void );
 void CL_FreeParticles( void );

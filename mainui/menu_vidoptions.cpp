@@ -200,7 +200,7 @@ static void UI_VidOptions_Init( void )
 {
 	memset( &uiVidOptions, 0, sizeof( uiVidOptions_t ));
 
-	uiVidOptions.hTestImage = PIC_Load( ART_GAMMA );
+	uiVidOptions.hTestImage = PIC_Load( ART_GAMMA, PIC_KEEP_RGBDATA );
 
 	uiVidOptions.menu.vidInitFunc = UI_VidOptions_Init;
 

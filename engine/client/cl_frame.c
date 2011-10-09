@@ -881,28 +881,27 @@ void CL_AddEntities( void )
 //
 // sound engine implementation
 //
-qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity )
+qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin )
 {
 	cl_entity_t	*ent;
 	qboolean		valid_origin;
 
+	ASSERT( origin != NULL );
+
 	valid_origin = VectorIsNull( origin ) ? false : true;          
 	ent = CL_GetEntityByIndex( entnum );
+
+	// entity is not present on the client but has valid origin
 	if( !ent || !ent->index ) return valid_origin;
 
-	// setup origin and velocity
-	if( origin ) VectorCopy( ent->curstate.origin, origin );
-	if( velocity ) VectorCopy( ent->curstate.velocity, velocity );
+	// entity is present on the client but out of PVS
+	if( ent->curstate.messagenum != cl.parsecount )
+		return false;
 
-	// if a brush model, offset the origin
-	if( origin && Mod_GetType( ent->curstate.modelindex ) == mod_brush )
-	{
-		vec3_t	mins, maxs, midPoint;
+	// setup origin
+	VectorAverage( ent->curstate.mins, ent->curstate.maxs, origin );
+	VectorAdd( origin, ent->curstate.origin, origin );
 
-		Mod_GetBounds( ent->curstate.modelindex, mins, maxs );
-		VectorAverage( mins, maxs, midPoint );
-		VectorAdd( origin, midPoint, origin );
-	}
 	return true;
 }
 

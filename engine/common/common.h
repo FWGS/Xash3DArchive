@@ -440,6 +440,7 @@ typedef enum
 	IL_USE_LERPING	= BIT(0),	// lerping images during resample
 	IL_KEEP_8BIT	= BIT(1),	// don't expand paletted images
 	IL_ALLOW_OVERWRITE	= BIT(2),	// allow to overwrite stored images
+	IL_DONTFLIP_TGA	= BIT(3),	// Steam background completely ignore tga attribute 0x20 (stupid lammers!)
 } ilFlags_t;
 
 // rgbdata output flags
@@ -490,9 +491,11 @@ void Image_Init( void );
 void Image_Shutdown( void );
 rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size );
 qboolean FS_SaveImage( const char *filename, rgbdata_t *pix );
+rgbdata_t *FS_CopyImage( rgbdata_t *in );
 void FS_FreeImage( rgbdata_t *pack );
 extern const bpc_desc_t PFDesc[];	// image get pixelformat
 qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags );
+void Image_SetForceFlags( uint flags );	// set image force flags on loading
 
 /*
 ========================================================================
@@ -705,7 +708,6 @@ void CL_CharEvent( int key );
 int CL_PointContents( const vec3_t point );
 char *COM_ParseFile( char *data, char *token );
 byte *COM_LoadFile( const char *filename, int usehunk, int *pLength );
-qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, vec3_t velocity );
 void CL_StudioEvent( struct mstudioevent_s *event, struct cl_entity_s *ent );
 qboolean CL_GetComment( const char *demoname, char *comment );
 void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appName );
@@ -749,6 +751,7 @@ char *Info_ValueForKey( const char *s, const char *key );
 void Info_RemovePrefixedKeys( char *start, char prefix );
 qboolean Info_RemoveKey( char *s, const char *key );
 qboolean Info_SetValueForKey( char *s, const char *key, const char *value );
+qboolean Info_SetValueForStarKey( char *s, const char *key, const char *value, int maxsize );
 qboolean Info_Validate( const char *s );
 void Info_Print( const char *s );
 char *Cvar_Userinfo( void );

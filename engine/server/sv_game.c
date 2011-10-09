@@ -605,7 +605,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 	{
 		// if there are entities to parse, a missing message key just
 		// means there is no title, so clear the message string now
-		char	token[1024];
+		char	token[2048];
 		string	check_name;
 		qboolean	need_landmark = Q_strlen( landmark_name ) > 0 ? true : false;
 
@@ -795,18 +795,30 @@ void SV_FreeEdicts( void )
 	}
 }
 
-void SV_PlaybackEvent( sizebuf_t *msg, event_info_t *info )
+void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args )
 {
 	event_args_t	nullargs;
 
 	ASSERT( msg );
-	ASSERT( info );
+	ASSERT( args );
 
 	Q_memset( &nullargs, 0, sizeof( nullargs ));
 
-	BF_WriteWord( msg, info->index );			// send event index
-	BF_WriteWord( msg, (int)( info->fire_time * 100.0f ));	// send event delay
-	MSG_WriteDeltaEvent( msg, &nullargs, &info->args );	// reliable events not use delta
+	BF_WriteByte( msg, svc_event_reliable );
+
+	// send event index
+	BF_WriteUBitLong( msg, eventindex, MAX_EVENT_BITS );
+
+	if( delay )
+	{
+		// send event delay
+		BF_WriteOneBit( msg, 1 );
+		BF_WriteWord( msg, Q_rint( delay * 100.0f ));
+	}
+	else BF_WriteOneBit( msg, 0 );
+
+	// reliable events not use delta-compression just null-compression
+	MSG_WriteDeltaEvent( msg, &nullargs, args );
 }
 
 const char *SV_ClassName( const edict_t *e )
@@ -1761,33 +1773,14 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
 
-	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
-	if( Mod_GetType( ent->v.modelindex ) == mod_brush )
-	{
-		VectorAverage( ent->v.absmin, ent->v.absmax, origin );
+	VectorAverage( ent->v.mins, ent->v.maxs, origin );
+	VectorAdd( origin, ent->v.origin, origin );
 
-		if( flags & SND_SPAWNING )
-		{
-			msg_dest = MSG_INIT;
-		}
-		else
-		{
-			if( chan == CHAN_STATIC )
-				msg_dest = MSG_ALL;
-			else msg_dest = MSG_PAS_R;
-		}
-	}
-	else
-	{
-		VectorAverage( ent->v.mins, ent->v.maxs, origin );
-		VectorAdd( origin, ent->v.origin, origin );
-
-		if( flags & SND_SPAWNING )
-		{
-			msg_dest = MSG_INIT;
-		}
-		else msg_dest = MSG_PAS_R;
-	}
+	if( flags & SND_SPAWNING )
+		msg_dest = MSG_INIT;
+	else if( chan == CHAN_STATIC )
+		msg_dest = MSG_ALL;
+	else msg_dest = MSG_PAS_R;
 
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
@@ -1845,7 +1838,6 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 {
 	int 	number = 0, sound_idx;
 	int	msg_dest = MSG_PAS_R;
-	vec3_t	origin;
 
 	if( !sample ) return;
 
@@ -1870,24 +1862,8 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 		msg_dest = MSG_INIT;
 	else msg_dest = MSG_ALL;
 
-	// ultimate method for detect bsp models with invalid solidity (e.g. func_pushable)
 	if( SV_IsValidEdict( ent ))
-	{
-		if( Mod_GetType( ent->v.modelindex ) == mod_brush )
-		{
-			VectorAverage( ent->v.absmin, ent->v.absmax, origin );
-			number = NUM_FOR_EDICT( ent );
-		}
-		else
-		{
-			VectorAverage( ent->v.mins, ent->v.maxs, origin );
-			VectorAdd( origin, ent->v.origin, origin );
-		}
-	}
-	else
-	{
-		VectorCopy( pos, origin );
-	}
+		number = NUM_FOR_EDICT( ent );
 
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
@@ -1929,7 +1905,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	BF_WriteWord( &sv.multicast, number );
 	BF_WriteBitVec3Coord( &sv.multicast, pos );
 
-	SV_Send( msg_dest, origin, NULL );
+	SV_Send( msg_dest, pos, NULL );
 }
 
 /*
@@ -3285,7 +3261,7 @@ pfnRunPlayerMove
 */
 void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, float smove, float upmove, word buttons, byte impulse, byte msec )
 {
-	sv_client_t	*cl;
+	sv_client_t	*cl, *oldcl;
 	usercmd_t		cmd;
 	uint		seed;
 
@@ -3299,6 +3275,11 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 
 	if( !cl->fakeclient )
 		return;	// only fakeclients allows
+
+	oldcl = svs.currentPlayer;
+
+	svs.currentPlayer = SV_ClientFromEdict( pClient, true );
+	svs.currentPlayerNum = (svs.currentPlayer - svs.clients);
 
 	Q_memset( &cmd, 0, sizeof( cmd ));
 	if( v_angle ) VectorCopy( v_angle, cmd.viewangles );
@@ -3317,6 +3298,9 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 
 	cl->lastcmd = cmd;
 	cl->lastcmd.buttons = 0; // avoid multiple fires on lag
+
+	svs.currentPlayer = oldcl;
+	svs.currentPlayerNum = (svs.currentPlayer - svs.clients);
 }
 
 /*
@@ -3466,9 +3450,12 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	event_info_t	*ei = NULL;
 	float		*viewOrg = NULL;
 	int		j, leafnum, slot, bestslot;
-	int		invokerIndex = 0;
+	int		invokerIndex;
 	byte		*mask = NULL;
 	vec3_t		pvspoint;
+
+	if( flags & FEV_CLIENT )
+		return;	// someone stupid joke
 
 	// first check event for out of bounds
 	if( eventindex < 1 || eventindex > MAX_EVENTS )
@@ -3484,13 +3471,21 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		return;		
 	}
 
-	args.flags = 0;
-	if( SV_IsValidEdict( pInvoker ))
-		args.entindex = NUM_FOR_EDICT( pInvoker );
-	else args.entindex = 0;
-	VectorCopy( origin, args.origin );
-	VectorCopy( angles, args.angles );
+	Q_memset( &args, 0, sizeof( args ));
 
+	if( origin && !VectorIsNull( origin ))
+	{
+		VectorCopy( origin, args.origin );
+		args.flags |= FEVENT_ORIGIN;
+	}
+
+	if( angles && !VectorIsNull( angles ))
+	{
+		VectorCopy( angles, args.angles );
+		args.flags |= FEVENT_ORIGIN;
+	}
+
+	// copy other parms
 	args.fparam1 = fparam1;
 	args.fparam2 = fparam2;
 	args.iparam1 = iparam1;
@@ -3498,24 +3493,38 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	args.bparam1 = bparam1;
 	args.bparam2 = bparam2;
 
-	if(!( flags & FEV_GLOBAL ))
+	VectorClear( pvspoint );
+
+	if( SV_IsValidEdict( pInvoker ))
+	{
+		VectorCopy( pInvoker->v.origin, pvspoint );
+		args.entindex = invokerIndex = NUM_FOR_EDICT( pInvoker );
+
+		// g-cont. allow 'ducking' param for all entities
+		args.ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
+
+		// this will be send only for reliable event
+		if(!( args.flags & FEVENT_ORIGIN ))
+			VectorCopy( pInvoker->v.origin, args.origin );
+
+		// this will be send only for reliable event
+		if(!( args.flags & FEVENT_ANGLES ))
+			VectorCopy( pInvoker->v.angles, args.angles );
+
+		if( sv_sendvelocity->integer )
+			VectorCopy( pInvoker->v.velocity, args.velocity );
+	}
+	else
+	{
+		VectorCopy( args.origin, pvspoint );
+		args.entindex = 0;
+		invokerIndex = -1;
+	}
+
+	if(!( flags & FEV_GLOBAL ) && VectorIsNull( pvspoint ))
           {
-		// PVS message - trying to get a pvspoint
-		// args.origin always have higher priority than invoker->origin
-		if( !VectorIsNull( args.origin ))
-		{
-			VectorCopy( args.origin, pvspoint );
-		}
-		else if( SV_IsValidEdict( pInvoker ))
-		{
-			VectorCopy( pInvoker->v.origin, pvspoint );
-		}
-		else
-		{
-			const char *ev_name = sv.event_precache[eventindex];
-			MsgDev( D_ERROR, "%s: not a FEV_GLOBAL event missing origin. Ignored.\n", ev_name );
-			return;
-		}
+		MsgDev( D_ERROR, "%s: not a FEV_GLOBAL event missing origin. Ignored.\n", sv.event_precache[eventindex] );
+		return;
 	}
 
 	// check event for some user errors
@@ -3525,47 +3534,21 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		{
 			const char *ev_name = sv.event_precache[eventindex];
 			if( flags & FEV_NOTHOST )
+			{
 				MsgDev( D_WARN, "%s: specified FEV_NOTHOST when invoker not a client\n", ev_name );
+				flags &= ~FEV_NOTHOST;
+			}
+
 			if( flags & FEV_HOSTONLY )
+			{
 				MsgDev( D_WARN, "%s: specified FEV_HOSTONLY when invoker not a client\n", ev_name );
-			// pInvoker isn't a client
-			flags &= ~(FEV_NOTHOST|FEV_HOSTONLY);
+				flags &= ~FEV_HOSTONLY;
+			}
 		}
 	}
 
-	flags |= FEV_SERVER; // it's a server event!
-
-	if( delay < 0.0f ) delay = 0.0f; // fixup negative delays
-
-	if( SV_IsValidEdict( pInvoker ))
-		invokerIndex = NUM_FOR_EDICT( pInvoker );
-
-	if( flags & FEV_RELIABLE )
-	{
-		VectorClear( args.velocity );
-		args.ducking = 0;
-	}
-	else if( invokerIndex )
-	{
-		// get up some info from invoker
-		if( VectorIsNull( args.origin )) 
-			VectorCopy( pInvoker->v.origin, args.origin );
-		if( VectorIsNull( args.angles ))
-		{ 
-			if( SV_ClientFromEdict( pInvoker, true ))
-				VectorCopy( pInvoker->v.v_angle, args.angles );
-			else VectorCopy( pInvoker->v.angles, args.angles );
-		}
-		else if( SV_ClientFromEdict( pInvoker, true ) && VectorCompare( pInvoker->v.angles, args.angles ))
-		{
-			// NOTE: if user specified pPlayer->pev->angles
-			// silently replace it with viewangles, client expected this
-			VectorCopy( pInvoker->v.v_angle, args.angles );
-		}
-
-		if( sv_sendvelocity->integer ) VectorCopy( pInvoker->v.velocity, args.velocity );
-		args.ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
-	}
+	flags |= FEV_SERVER;		// it's a server event!
+	if( delay < 0.0f ) delay = 0.0f;	// fixup negative delays
 
 	if(!( flags & FEV_GLOBAL ))
 	{
@@ -3582,19 +3565,14 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		if( cl->state != cs_spawned || !cl->edict || cl->fakeclient )
 			continue;
 
-		if( flags & FEV_NOTHOST && cl->edict == pInvoker && cl->local_weapons )
-			continue;	// will be played on client side
-
-		if( flags & FEV_HOSTONLY && cl->edict != pInvoker )
-			continue;	// sending only to invoker
-
 		if( SV_IsValidEdict( pInvoker ) && pInvoker->v.groupinfo && cl->edict->v.groupinfo )
 		{
-			if(( !svs.groupop && !(cl->edict->v.groupinfo & pInvoker->v.groupinfo)) || ( svs.groupop == 1 && ( cl->edict->v.groupinfo & pInvoker->v.groupinfo )))
+			if(( svs.groupop == 0 && (cl->edict->v.groupinfo & pInvoker->v.groupinfo) == 0 )
+			|| ( svs.groupop == 1 && (cl->edict->v.groupinfo & pInvoker->v.groupinfo) == 1 ))
 				continue;
 		}
 
-		if( mask && !( flags & FEV_GLOBAL ))
+		if( mask && SV_IsValidEdict( pInvoker ))
 		{
 			int	clientnum;
 
@@ -3611,23 +3589,19 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 				continue;
 		}
 
+		if( flags & FEV_NOTHOST && cl == svs.currentPlayer && cl->local_weapons )
+			continue;	// will be played on client side
+
+		if( flags & FEV_HOSTONLY && cl->edict != pInvoker )
+			continue;	// sending only to invoker
+
 		// all checks passed, send the event
 
 		// reliable event
 		if( flags & FEV_RELIABLE )
 		{
-			event_info_t	info;
-
-			info.index = eventindex;
-			info.fire_time = delay;
-			info.args = args;
-			info.entity_index = invokerIndex;
-			info.packet_index = -1;
-			info.flags = 0; // server ignore flags
-
-			// skipping queue, write in reliable datagram
-			BF_WriteByte( &cl->netchan.message, svc_event_reliable );
-			SV_PlaybackEvent( &cl->netchan.message, &info );
+			// skipping queue, write direct into reliable datagram
+			SV_PlaybackReliableEvent( &cl->netchan.message, eventindex, delay, &args );
 			continue;
 		}
 
@@ -3635,27 +3609,50 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		es = &cl->events;
 		bestslot = -1;
 
-		for( j = 0; j < MAX_EVENT_QUEUE; j++ )
+		if( flags & FEV_UPDATE )
 		{
-			ei = &es->ei[j];
-		
-			if( ei->index == 0 )
+			for( j = 0; j < MAX_EVENT_QUEUE; j++ )
 			{
-				// found an empty slot
-				bestslot = j;
-				break;
+				ei = &es->ei[j];
+				if( ei->index == eventindex && invokerIndex != -1 && invokerIndex == ei->entity_index )
+				{
+					bestslot = j;
+					break;
+				}
+			}
+		}
+
+		if( bestslot == -1 )
+		{
+			for( j = 0; j < MAX_EVENT_QUEUE; j++ )
+			{
+				ei = &es->ei[j];
+		
+				if( ei->index == 0 )
+				{
+					// found an empty slot
+					bestslot = j;
+					break;
+				}
+			}
+
+			// g-cont. probably this code never calls (and not needs)
+			if( bestslot != -1 && j == MAX_EVENT_QUEUE )
+			{
+				ei = &es->ei[bestslot];
 			}
 		}
 				
 		// no slot found for this player, oh well
 		if( bestslot == -1 ) continue;
 
+		// add event to queue
 		ei->index = eventindex;
 		ei->fire_time = delay;
-		ei->args = args;
 		ei->entity_index = invokerIndex;
 		ei->packet_index = -1;
-		ei->flags = 0; // server ignore flags
+		ei->flags = flags;
+		ei->args = args;
 	}
 }
 
@@ -4335,7 +4332,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 	KeyValueData	pkvd[256]; // per one entity
 	int		i, numpairs = 0;
 	const char	*classname = NULL;
-	char		token[1024];
+	char		token[2048];
 
 	// go through all the dictionary pairs
 	while( 1 )
@@ -4447,7 +4444,7 @@ parsing textual entity definitions out of an ent file.
 */
 void SV_LoadFromFile( char *entities )
 {
-	string	token;
+	char	token[2048];
 	int	inhibited, spawned;
 	qboolean	create_world = true;
 	edict_t	*ent;

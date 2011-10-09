@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "server.h"
 #include "const.h"
 #include "pm_local.h"
+#include "event_flags.h"
 
 static qboolean has_update = false;
 
@@ -381,6 +382,9 @@ static void pfnPlaybackEventFull( int flags, int clientindex, word eventindex, f
 
 	ent = EDICT_NUM( clientindex + 1 );
 	if( !SV_IsValidEdict( ent )) return;
+
+	if( host.type == HOST_DEDICATED )
+		flags |= FEV_NOTHOST; // no local clients for dedicated server
 
 	SV_PlaybackEventFull( flags, ent, eventindex,
 		delay, origin, angles,
@@ -971,8 +975,6 @@ void SV_PostRunCmd( sv_client_t *cl )
 		svgame.dllFuncs.pfnSpectatorThink( clent );
 	else svgame.dllFuncs.pfnPlayerPostThink( clent );
 
-	// restore frametime
 	svgame.globals->time = sv.time + host.frametime;
-	svgame.globals->frametime = host.frametime;
 	svgame.dllFuncs.pfnCmdEnd( cl->edict );
 }                                                                   

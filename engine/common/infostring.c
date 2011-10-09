@@ -214,10 +214,10 @@ qboolean Info_Validate( const char *s )
 	return true;
 }
 
-qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
+qboolean Info_SetValueForStarKey( char *s, const char *key, const char *value, int maxsize )
 {
-	char	newi[MAX_INFO_STRING], *v;
-	int	c, maxsize = MAX_INFO_STRING;
+	char	new[1024], *v;
+	int	c;
 
 	if( Q_strstr( key, "\\" ) || Q_strstr( value, "\\" ))
 	{
@@ -243,12 +243,24 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
 		return false;
 	}
 
-	Info_RemoveKey( s, key );
-	if( !value || !Q_strlen( value ))
-		return true;	// just clear variable
+	// this next line is kinda trippy
+	if( *(v = Info_ValueForKey( s, key )))
+	{
+		// key exists, make sure we have enough room for new value, if we don't, don't change it!
+		if( Q_strlen( value ) - Q_strlen( v ) + Q_strlen( s ) > maxsize )
+		{
+			MsgDev( D_ERROR, "SetValueForKey: info string length exceeded\n" );
+			return false;
+		}
+	}
 
-	Q_snprintf( newi, sizeof( newi ) - 1, "\\%s\\%s", key, value );
-	if( Q_strlen( newi ) + Q_strlen( s ) > maxsize )
+	Info_RemoveKey( s, key );
+
+	if( !value || !Q_strlen( value ))
+		return true; // just clear variable
+
+	Q_snprintf( new, sizeof( new ) - 1, "\\%s\\%s", key, value );
+	if( Q_strlen( new ) + Q_strlen( s ) > maxsize )
 	{
 		MsgDev( D_ERROR, "SetValueForKey: info string length exceeded\n" );
 		return true; // info changed, new value can't saved
@@ -256,7 +268,7 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
 
 	// only copy ascii values
 	s += Q_strlen( s );
-	v = newi;
+	v = new;
 
 	while( *v )
 	{
@@ -269,6 +281,17 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
 
 	// all done
 	return true;
+}
+
+qboolean Info_SetValueForKey( char *s, const char *key, const char *value )
+{
+	if( key[0] == '*' )
+	{
+		MsgDev( D_ERROR, "Can't set *keys\n" );
+		return false;
+	}
+
+	return Info_SetValueForStarKey( s, key, value, MAX_INFO_STRING );
 }
 
 static void Cvar_LookupBitInfo( const char *name, const char *string, const char *info, void *unused )

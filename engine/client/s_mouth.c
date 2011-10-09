@@ -101,3 +101,52 @@ void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count )
 		pMouth->sndcount = 0;
 	}
 }
+
+void SND_MoveMouth16( channel_t *ch, wavdata_t *pSource, int count )
+{
+	cl_entity_t	*clientEntity;
+	short		*pdata = NULL;
+	mouth_t		*pMouth = NULL;
+	int		savg, data;
+	int		scount, pos = 0;
+	uint 		i;
+
+	clientEntity = CL_GetEntityByIndex( ch->entnum );
+	if( !clientEntity ) return;
+
+	pMouth = &clientEntity->mouth;
+
+	if( ch->isSentence )
+	{
+		if( ch->currentWord )
+			pos = ch->currentWord->sample;
+	}
+	else pos = ch->pMixer.sample;
+
+	count = S_GetOutputData( pSource, &pdata, pos, count, ch->use_loop );
+	if( pdata == NULL ) return;
+	
+	i = 0;
+	scount = pMouth->sndcount;
+	savg = 0;
+
+	while( i < count && scount < CAVGSAMPLES )
+	{
+		data = pdata[i];
+		data = (bound( -32767, data, 0x7ffe ) >> 8);
+		savg += abs( data );	
+
+		i += 80 + ((byte)data & 0x1F);
+		scount++;
+	}
+
+	pMouth->sndavg += savg;
+	pMouth->sndcount = (byte)scount;
+
+	if( pMouth->sndcount >= CAVGSAMPLES ) 
+	{
+		pMouth->mouthopen = pMouth->sndavg / CAVGSAMPLES;
+		pMouth->sndavg = 0;
+		pMouth->sndcount = 0;
+	}
+}

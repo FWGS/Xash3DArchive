@@ -396,7 +396,7 @@ void UI_LoadBackgroundImage( void )
 			{
 				bimage_t &bimage = uiStatic.m_SteamBackground[y][x];
 				sprintf(filename, "resource/background/800_%d_%c_loading.tga", y + 1, 'a' + x);
-				bimage.hImage = PIC_Load( filename );
+				bimage.hImage = PIC_Load( filename, PIC_NOFLIP_TGA );
 				bimage.width = PIC_Width( bimage.hImage );
 				bimage.height = PIC_Height( bimage.hImage );
 

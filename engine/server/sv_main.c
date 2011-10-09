@@ -361,6 +361,7 @@ void SV_ReadPackets( void )
 				{
 					cl->lastmessage = host.realtime; // don't timeout
 					SV_ExecuteClientMessage( cl, &net_message );
+					svgame.globals->frametime = host.frametime;
 				}
 			}
 
@@ -632,9 +633,9 @@ void SV_Init( void )
 	SV_InitOperatorCommands();
 
 	Cvar_Get ("skill", "1", CVAR_LATCH, "game skill level" );
-	Cvar_Get ("deathmatch", "0", CVAR_LATCH|CVAR_SERVERNOTIFY, "displays deathmatch state" );
-	Cvar_Get ("teamplay", "0", CVAR_LATCH|CVAR_SERVERNOTIFY, "displays teamplay state" );
-	Cvar_Get ("coop", "0", CVAR_LATCH|CVAR_SERVERNOTIFY, "displays cooperative state" );
+	Cvar_Get ("deathmatch", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays deathmatch state" );
+	Cvar_Get ("teamplay", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays teamplay state" );
+	Cvar_Get ("coop", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays cooperative state" );
 	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), CVAR_INIT, "displays server protocol version" );
 	Cvar_Get ("defaultmap", "", CVAR_SERVERNOTIFY, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
@@ -672,7 +673,7 @@ void SV_Init( void )
 	rcon_password = Cvar_Get( "rcon_password", "", 0, "remote connect password" );
 	sv_stepsize = Cvar_Get( "sv_stepsize", "18", CVAR_ARCHIVE|CVAR_PHYSICINFO, "how high you can step up" );
 	sv_newunit = Cvar_Get( "sv_newunit", "0", 0, "sets to 1 while new unit is loading" );
-	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERINFO|CVAR_SERVERNOTIFY|CVAR_ARCHIVE, "host name" );
+	hostname = Cvar_Get( "hostname", "unnamed", CVAR_SERVERNOTIFY|CVAR_SERVERNOTIFY|CVAR_ARCHIVE, "host name" );
 	timeout = Cvar_Get( "timeout", "125", CVAR_SERVERNOTIFY, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", CVAR_SERVERNOTIFY, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", CVAR_SERVERNOTIFY, "allow players to pause or not" );

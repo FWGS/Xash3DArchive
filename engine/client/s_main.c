@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "ref_params.h"
 
 #define MAX_DUPLICATED_CHANNELS	4	// threshold for identical static channels (probably error)
-#define SND_CLIP_DISTANCE		1024.0f
+#define SND_CLIP_DISTANCE		1000.0f
 
 dma_t		dma;
 byte		*sndpool;
@@ -188,9 +188,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
 		// Never override a streaming sound that is currently playing or
 		// voice over IP data that is playing or any sound on CHAN_VOICE( acting )
 		if( ch->sfx && ( ch->entchannel == CHAN_STREAM ))
-		{
 			continue;
-		}
 
 		if( channel != CHAN_AUTO && ch->entnum == entnum && ( ch->entchannel == channel || channel == -1 ))
 		{
@@ -371,7 +369,6 @@ void SND_Spatialize( channel_t *ch )
 	float	dist, dot;
 	float	lscale, rscale, scale;
 	vec3_t	source_vec;
-	sfx_t	*snd;
 
 	// anything coming from the view entity will allways be full volume
 	if( S_IsClient( ch->entnum ))
@@ -383,12 +380,15 @@ void SND_Spatialize( channel_t *ch )
 
 	if( !ch->staticsound )
 	{
-		if( !CL_GetEntitySpatialization( ch->entnum, ch->origin, NULL ))
-			return;	// entity not exist on client
+		if( !CL_GetEntitySpatialization( ch->entnum, ch->origin ))
+		{
+			// origin is null and entity not exist on client
+			ch->leftvol = ch->rightvol = 0;
+			return;
+		}
 	}
 
 	// calculate stereo seperation and distance attenuation
-	snd = ch->sfx;
 	VectorSubtract( ch->origin, s_listener.origin, source_vec );
 	
 	dist = VectorNormalizeLength( source_vec ) * ch->dist_mult;
@@ -400,11 +400,11 @@ void SND_Spatialize( channel_t *ch )
 	// add in distance effect
 	scale = ( 1.0f - dist ) * rscale;
 	ch->rightvol = (int)( ch->master_vol * scale );
-	if( ch->rightvol < 0 ) ch->rightvol = 0;
+	ch->rightvol = bound( 0, ch->rightvol, 255 );
 
 	scale = ( 1.0f - dist ) * lscale;
 	ch->leftvol = (int)( ch->master_vol * scale );
-	if( ch->leftvol < 0 ) ch->leftvol = 0;
+	ch->leftvol = bound( 0, ch->leftvol, 255 );
 
 	// if playing a word, set volume
 	VOX_SetChanVol( ch );
@@ -591,7 +591,7 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 
 	if( !pos ) pos = origin;
 
-	if( ent != 0 ) CL_GetEntitySpatialization( ent, origin, NULL );
+	if( ent != 0 ) CL_GetEntitySpatialization( ent, origin );
 
 	// pick a channel to play on from the static area
 	ch = SND_PickStaticChannel( ent, sfx, pos );
@@ -1103,7 +1103,7 @@ qboolean S_Init( void )
 	dsp_off = Cvar_Get( "dsp_off", "0", CVAR_ARCHIVE, "set to 1 to disable all dsp processing" );
 	s_ambient_level = Cvar_Get( "ambient_level", "0.3", 0, "volume of environment noises (water and wind)" );
 	s_ambient_fade = Cvar_Get( "ambient_fade", "100", 0, "rate of volume fading when client is moving" );
-	s_combine_sounds = Cvar_Get( "s_combine", "0", CVAR_ARCHIVE, "combine the channels with same sounds" ); 
+	s_combine_sounds = Cvar_Get( "s_combine_channels", "1", CVAR_ARCHIVE, "combine the channels with same sounds" ); 
 	s_test = Cvar_Get( "s_test", "0", 0, "engine developer cvar for quick testing new features" );
 
 	Cmd_AddCommand( "play", S_Play_f, "playing a specified sound file" );

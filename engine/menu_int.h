@@ -22,6 +22,12 @@ GNU General Public License for more details.
 
 typedef int		HIMAGE;		// handle to a graphic
 
+// flags for PIC_Load
+#define PIC_NEAREST		(1<<0)		// disable texfilter
+#define PIC_KEEP_RGBDATA	(1<<1)		// some images keep source
+#define PIC_NOFLIP_TGA	(1<<2)		// Steam background completely ignore tga attribute 0x20
+#define PIC_KEEP_8BIT	(1<<3)		// keep original 8-bit image (if present)
+
 typedef struct ui_globalvars_s
 {	
 	float		time;		// unclamped host.realtime
@@ -41,7 +47,7 @@ typedef struct ui_globalvars_s
 typedef struct ui_enginefuncs_s
 {
 	// image handlers
-	HIMAGE	(*pfnPIC_Load)( const char *szPicName, const byte *ucRawImage, long ulRawImageSize );
+	HIMAGE	(*pfnPIC_Load)( const char *szPicName, const byte *ucRawImage, long ulRawImageSize, long flags );
 	void	(*pfnPIC_Free)( const char *szPicName );
 	int	(*pfnPIC_Width)( HIMAGE hPic );
 	int	(*pfnPIC_Height)( HIMAGE hPic );

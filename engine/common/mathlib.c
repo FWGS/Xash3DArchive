@@ -119,23 +119,22 @@ float VectorNormalizeLength2( const vec3_t v, vec3_t out )
 		out[1] = v[1] * ilength;
 		out[2] = v[2] * ilength;
 	}
-	else out[0] = out[1] = out[2] = 0.0f;
 
 	return length;
 }
 
-void VectorVectors( vec3_t forward, vec3_t right, vec3_t up )
+void VectorVectors( const vec3_t forward, vec3_t right, vec3_t up )
 {
-	float d;
+	float	d;
 
 	right[0] = forward[2];
 	right[1] = -forward[0];
 	right[2] = forward[1];
 
-	d = DotProduct(forward, right);
-	VectorMA(right, -d, forward, right);
-	VectorNormalize(right);
-	CrossProduct(right, forward, up);
+	d = DotProduct( forward, right );
+	VectorMA( right, -d, forward, right );
+	VectorNormalize( right );
+	CrossProduct( right, forward, up );
 }
 
 /*

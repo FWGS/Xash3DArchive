@@ -738,8 +738,8 @@ void SV_PlayersOnly_f( void )
 	sv.hostflags = sv.hostflags ^ SVF_PLAYERSONLY;
 
 	if(!( sv.hostflags & SVF_PLAYERSONLY ))
-		SV_BroadcastPrintf( D_INFO, "Resume server physic" );
-	else SV_BroadcastPrintf( D_INFO, "Freeze server physic" );
+		SV_BroadcastPrintf( D_INFO, "Resume server physic\n" );
+	else SV_BroadcastPrintf( D_INFO, "Freeze server physic\n" );
 }
 
 void SV_EdictsInfo_f( void )

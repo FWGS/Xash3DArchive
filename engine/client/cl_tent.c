@@ -23,6 +23,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "studio.h"
 #include "wadfile.h"	// acess decal size
+#include "sound.h"
 
 /*
 ==============================================================
@@ -228,7 +229,7 @@ void CL_TEntPlaySound( TEMPENTITY *pTemp, float damp )
 		else pitch = PITCH_NORM;
 
 		handle = S_RegisterSound( soundname );
-		S_StartSound( pTemp->entity.origin, 0, CHAN_AUTO, handle, fvol, ATTN_NORM, pitch, 0 );
+		S_StartSound( pTemp->entity.origin, 0, CHAN_STATIC, handle, fvol, ATTN_NORM, pitch, SND_STOP_LOOPING );
 	}
 }
 
@@ -1169,7 +1170,6 @@ void CL_Spray( const vec3_t pos, const vec3_t dir, int modelIndex, int count, in
 
 	// more vertical displacement
 	znoise = noise * 1.5f;
-	
 	if( znoise > 1 ) znoise = 1;
 
 	if( Mod_GetType( modelIndex ) == mod_bad )
@@ -1191,6 +1191,7 @@ void CL_Spray( const vec3_t pos, const vec3_t dir, int modelIndex, int count, in
 		pTemp->entity.curstate.rendermode = renderMode;
 		pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
 		pTemp->entity.curstate.scale = 0.5f;
+		pTemp->entity.baseline.renderamt = 255;
 		pTemp->flags |= FTENT_FADEOUT|FTENT_SLOWGRAVITY;
 		pTemp->fadeSpeed = 2.0f;
 
@@ -1655,14 +1656,52 @@ void CL_PlayerSprites( int client, int modelIndex, int count, int size )
 
 /*
 ==============
-CL_Sprite_WallPuff
+CL_FireField
 
-Create a wallpuff
+Makes a field of fire
 ==============
 */
-void CL_Sprite_WallPuff( TEMPENTITY *pTemp, float scale )
+void CL_FireField( float *org, int radius, int modelIndex, int count, int flags, float life )
 {
-	// TODO: implement
+	TEMPENTITY	*pTemp;
+	float		radius2;
+	vec3_t		dir, m_vecPos;
+	int		i;
+
+	for( i = 0; i < count; i++ )
+	{
+		dir[0] = Com_RandomFloat( -1.0f, 1.0f );
+		dir[1] = Com_RandomFloat( -1.0f, 1.0f );
+
+		if( flags & TEFIRE_FLAG_PLANAR ) dir[2] = 0.0f;
+		else dir[2] = Com_RandomFloat( -1.0f, 1.0f );
+		VectorNormalize( dir );
+
+		radius2 = Com_RandomFloat( 0.0f, radius );
+		VectorMA( org, -radius2, dir, m_vecPos );
+
+		pTemp = CL_DefaultSprite( m_vecPos, modelIndex, 0 );
+		if( !pTemp ) return;
+
+		if( flags & TEFIRE_FLAG_ALLFLOAT )
+			pTemp->entity.baseline.origin[2] = 30; // drift sprite upward
+		else if( flags & TEFIRE_FLAG_SOMEFLOAT && Com_RandomLong( 0, 1 ))
+			pTemp->entity.baseline.origin[2] = 30; // drift sprite upward
+
+		if( flags & TEFIRE_FLAG_LOOP )
+		{
+			pTemp->entity.curstate.framerate = 15;
+			pTemp->flags |= FTENT_SPRANIMATELOOP;
+		}
+
+		if( flags & TEFIRE_FLAG_ALPHA )
+		{
+			pTemp->entity.curstate.rendermode = kRenderTransTexture;
+			pTemp->entity.curstate.renderamt = 128;
+		}
+
+		pTemp->die += life;
+	}
 }
 
 /*
@@ -1674,19 +1713,62 @@ Client version of shotgun shot
 */
 void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, int count, int decalCount, int *decalIndices )
 {
-	// TODO: implement
+	pmtrace_t	trace;
+	vec3_t	right, up;
+	vec3_t	vecSrc, vecDir, vecEnd;
+	int	i, j, decalIndex;
+
+	VectorVectors( dir, right, up );
+	VectorCopy( org, vecSrc );
+
+	for( i = 1; i <= count; i++ )
+	{
+		// get circular gaussian spread
+		float x, y, z;
+		do {
+			x = Com_RandomFloat( -0.5f, 0.5f ) + Com_RandomFloat( -0.5f, 0.5f );
+			y = Com_RandomFloat( -0.5f, 0.5f ) + Com_RandomFloat( -0.5f, 0.5f );
+			z = x * x + y * y;
+		} while( z > 1.0f );
+
+		for( j = 0; j < 3; j++ )
+		{
+			vecDir[j] = dir[i] + x * noise[0] * right[j] + y * noise[1] * up[j];
+			vecEnd[j] = vecSrc[j] + 2048.0f * vecDir[j];
+		}
+
+		trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_STUDIO_BOX, 2, -1, NULL );
+
+		// paint decals
+		if( trace.fraction != 1.0f )
+		{
+			physent_t		*pe;
+			cl_entity_t	*e;
+
+			if( trace.ent >= 0 && trace.ent < clgame.pmove->numphysent )
+				pe = &clgame.pmove->physents[trace.ent];
+
+			if( pe && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ))
+			{
+				e = CL_GetEntityByIndex( pe->info );
+				decalIndex = CL_DecalIndex( decalIndices[Com_RandomLong( 0, decalCount-1 )] );
+				CL_DecalShoot( decalIndex, e->index, 0, trace.endpos, 0 );
+			}
+		}
+	}
 }
 
 /*
 ==============
-CL_FireField
+CL_Sprite_WallPuff
 
-Makes a field of fire
+Create a wallpuff
 ==============
 */
-void CL_FireField( float *org, int radius, int modelIndex, int count, int flags, float life )
+void CL_Sprite_WallPuff( TEMPENTITY *pTemp, float scale )
 {
-	// TODO: implement
+	// UNDONE: g-cont. i'm dont know what this doing
+	Msg( "CL_Sprite_WallPuff: %g\n", scale );
 }
 
 /*
@@ -1706,6 +1788,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 	float		scale, life, frameRate, vel, random;
 	float		brightness, r, g, b;
 	vec3_t		pos, pos2, ang;
+	int		decalIndices[1];	// just stub
 	TEMPENTITY	*pTemp;
 	cl_entity_t	*pEnt;
 	dlight_t		*dl;
@@ -2152,8 +2235,8 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		ang[1] = BF_ReadCoord( &buf ) * 0.01f;
 		ang[2] = 0.0f;
 		count = BF_ReadByte( &buf );
-		decalIndex = BF_ReadByte( &buf );
-		CL_MultiGunshot( pos, pos2, ang, count, 1, &decalIndex );
+		decalIndices[0] = BF_ReadByte( &buf );
+		CL_MultiGunshot( pos, pos2, ang, count, 1, decalIndices );
 		break;
 	case TE_USERTRACER:
 		pos[0] = BF_ReadCoord( &buf );

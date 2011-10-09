@@ -1710,7 +1710,6 @@ void SV_Physics( void )
 	if( sv_skyspeed->value )
 	{
 		// evaluate sky rotation.
-		// FIXME: ignore this feature in multiplayer to save traffic?
 		float skyAngle = sv_skyangle->value + sv_skyspeed->value * host.frametime;
 		Cvar_SetFloat( "sv_skyangle", anglemod( skyAngle ));
 	}

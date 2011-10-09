@@ -130,6 +130,10 @@ SOURCE=.\client\cl_demo.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\cl_events.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\cl_frame.c
 # End Source File
 # Begin Source File

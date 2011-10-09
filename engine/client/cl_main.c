@@ -971,6 +971,49 @@ void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
 	UI_AddServerToList( from, s );
 }
 
+/*
+=================
+CL_ParseNETInfoMessage
+
+Handle a reply from a netinfo
+=================
+*/
+void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg )
+{
+	char		*s;
+	net_request_t	*nr;
+	int		context, type;
+	int		i, count = 0;
+
+	context = Q_atoi( Cmd_Argv( 1 ));
+	type = Q_atoi( Cmd_Argv( 2 ));
+	s = Cmd_Argv( 3 );
+
+	// find a request with specified context
+	for( i = 0; i < MAX_REQUESTS; i++ )
+	{
+		nr = &clgame.net_requests[i];
+
+		if( nr->resp.context == context && nr->resp.type == type )
+		{
+			if( nr->timeout > host.realtime )
+			{
+				// setup the answer
+				nr->resp.response = s;
+				nr->resp.remote_address = from;
+				nr->resp.error = NET_SUCCESS;
+				nr->resp.ping = host.realtime - nr->timesend;
+				nr->pfnFunc( &nr->resp );
+
+				if(!( nr->flags & FNETAPI_MULTIPLE_RESPONSE ))
+					Q_memset( nr, 0, sizeof( *nr )); // done
+			}
+			else Q_memset( nr, 0, sizeof( *nr )); 
+			return;
+		}
+	}
+}
+
 //===================================================================
 
 /*
@@ -1188,6 +1231,11 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	{
 		// server responding to a status broadcast
 		CL_ParseStatusMessage( from, msg );
+	}
+	else if( !Q_strcmp( c, "netinfo" ))
+	{
+		// server responding to a status broadcast
+		CL_ParseNETInfoMessage( from, msg );
 	}
 	else if( !Q_strcmp( c, "cmd" ))
 	{

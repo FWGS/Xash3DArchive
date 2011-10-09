@@ -167,28 +167,40 @@ byte *Image_Copy( size_t size )
 
 /*
 =================
-Image_NearestPOW
+Image_CheckFlag
 =================
 */
-int Image_NearestPOW( int value, qboolean roundDown )
+qboolean Image_CheckFlag( int bit )
 {
-	int	n = 1;
+	if( image.force_flags & bit )
+		return true;
 
-	if( value <= 0 ) return 1;
-	while( n < value ) n <<= 1;
+	if( image.cmd_flags & bit )
+		return true;
 
-	if( roundDown )
-	{
-		if( n > value ) n >>= 1;
-	}
-	return n;
+	return false;
 }
 
+/*
+=================
+Image_SetForceFlags
+=================
+*/
+void Image_SetForceFlags( uint flags )
+{
+	image.force_flags = flags;
+}
+
+/*
+=================
+Image_RoundDimensions
+=================
+*/
 void Image_RoundDimensions( int *width, int *height )
 {
 	// find nearest power of two, rounding down if desired
-	*width = Image_NearestPOW( *width, gl_round_down->integer );
-	*height = Image_NearestPOW( *height, gl_round_down->integer );
+	*width = NearestPOW( *width, gl_round_down->integer );
+	*height = NearestPOW( *height, gl_round_down->integer );
 }
 
 qboolean Image_ValidSize( const char *name )
@@ -871,7 +883,7 @@ Image_Resample
 */
 byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int outwidth, int outheight, int type, qboolean *resampled )
 {
-	qboolean	quality = (image.cmd_flags & IL_USE_LERPING);
+	qboolean	quality = Image_CheckFlag( IL_USE_LERPING );
 
 	// nothing to resample ?
 	if( inwidth == outwidth && inheight == outheight )
@@ -915,7 +927,7 @@ Image_Flood
 */
 byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int outwidth, int outheight, int type, qboolean *resampled )
 {
-	qboolean	quality = (image.cmd_flags & IL_USE_LERPING);
+	qboolean	quality = Image_CheckFlag( IL_USE_LERPING );
 	int	samples = PFDesc[type].bpp;
 	int	newsize, x, y, i;
 	byte	*in, *out;
@@ -1087,7 +1099,7 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 	int	mipsize = width * height;
 	qboolean	expand_to_rgba = true;
 
-	if( image.cmd_flags & IL_KEEP_8BIT )
+	if( Image_CheckFlag( IL_KEEP_8BIT ))
 		expand_to_rgba = false;
 	else if( host.type == HOST_NORMAL && ( image.flags & ( IMAGE_HAS_LUMA|IMAGE_QUAKESKY )))
 		expand_to_rgba = false;
@@ -1243,10 +1255,16 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 	if( !pic || !pic->buffer )
 	{
 		MsgDev( D_WARN, "Image_Process: NULL image\n" );
+		image.force_flags = 0;
 		return false;
 	}
 
-	if( !flags ) return false;	// no operation specfied
+	if( !flags )
+	{
+		// clear any force flags
+		image.force_flags = 0;
+		return false;	// no operation specfied
+	}
 
 	if( flags & IMAGE_MAKE_LUMA )
 	{
@@ -1282,8 +1300,8 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 			if( flags & IMAGE_ROUNDFILLER )
 			{
 				// roundfiller always must roundup
-				w = Image_NearestPOW( w, false );
-				h = Image_NearestPOW( h, false );
+				w = NearestPOW( w, false );
+				h = NearestPOW( h, false );
 			}
 			else Image_RoundDimensions( &w, &h );
 
@@ -1312,6 +1330,9 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 		else result = false; // not a resampled or filled
 	}
 	*pix = pic;
+
+	// clear any force flags
+	image.force_flags = 0;
 
 	return result;
 }

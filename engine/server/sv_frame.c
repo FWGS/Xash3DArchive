@@ -268,45 +268,116 @@ SV_EmitEvents
 */
 static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 {
-	int		i, ev;
 	event_state_t	*es;
 	event_info_t	*info;
+	entity_state_t	*state;
+	event_args_t	nullargs;
 	int		ev_count = 0;
-	int		c;
+	int		count, ent_index;
+	int		i, j, ev;
+
+	Q_memset( &nullargs, 0, sizeof( nullargs ));
 
 	es = &cl->events;
 
 	// count events
 	for( ev = 0; ev < MAX_EVENT_QUEUE; ev++ )
 	{
-		info = &es->ei[ev];
-		if( info->index == 0 )
-			continue;
-		ev_count++;
+		if( es->ei[ev].index ) ev_count++;
 	}
 
 	// nothing to send
-	if( !ev_count ) return;
+	if( !ev_count ) return; // nothing to send
 
-	if( ev_count >= MAX_EVENT_QUEUE )
-		ev_count = MAX_EVENT_QUEUE - 1;
+	if( ev_count >= 31 ) ev_count = 31;
+
+	for( i = 0; i < MAX_EVENT_QUEUE; i++ )
+	{
+		info = &es->ei[i];
+		if( info->index == 0 )
+			continue;
+
+		ent_index = info->entity_index;
+
+		for( j = 0; j < to->num_entities; j++ )
+		{
+			state = &svs.packet_entities[(to->first_entity+j)%svs.num_client_entities];
+			if( state->number == ent_index )
+				break;
+		}
+
+		if( j >= to->num_entities )
+		{
+			// couldn't find
+			info->packet_index = to->num_entities;
+			info->args.entindex = ent_index;
+		}
+		else
+		{
+			info->packet_index = j;
+			info->args.ducking = 0;
+
+			if(!( info->args.flags & FEVENT_ORIGIN ))
+				VectorClear( info->args.origin );
+
+			if(!( info->args.flags & FEVENT_ANGLES ))
+				VectorClear( info->args.angles );
+
+			VectorClear( info->args.velocity );
+		}
+	}
 
 	BF_WriteByte( msg, svc_event );	// create message
-	BF_WriteByte( msg, ev_count );	// Up to MAX_EVENT_QUEUE events
+	BF_WriteUBitLong( msg, ev_count, 5 );	// up to MAX_EVENT_QUEUE events
 
-	for( i = c = 0 ; i < MAX_EVENT_QUEUE; i++ )
+	for( count = i = 0; i < MAX_EVENT_QUEUE; i++ )
 	{
 		info = &es->ei[i];
 
 		if( info->index == 0 )
+		{
+			info->packet_index = -1;
+			info->entity_index = -1;
 			continue;
+		}
 
 		// only send if there's room
-		if ( c < ev_count )
-			SV_PlaybackEvent( msg, info );
+		if( count < ev_count )
+		{
+			BF_WriteUBitLong( msg, info->index, MAX_EVENT_BITS ); // 1024 events
+
+			if( info->packet_index == -1 )
+			{
+				BF_WriteOneBit( msg, 0 );
+			}
+			else
+			{
+				BF_WriteOneBit( msg, 1 );
+				BF_WriteUBitLong( msg, info->packet_index, MAX_ENTITY_BITS );
+
+				if( !memcmp( &nullargs, &info->args, sizeof( event_args_t )))
+				{
+					BF_WriteOneBit( msg, 0 );
+				}
+				else
+				{
+					BF_WriteOneBit( msg, 1 );
+					MSG_WriteDeltaEvent( msg, &nullargs, &info->args );
+				}
+			}
+
+			if( info->fire_time )
+			{
+				BF_WriteOneBit( msg, 1 );
+				BF_WriteWord( msg, Q_rint( info->fire_time * 100.0f ));
+			}
+			else BF_WriteOneBit( msg, 0 );
+		}
 
 		info->index = 0;
-		c++;
+		info->packet_index = -1;
+		info->entity_index = -1;
+		count++;
 	}
 }
 

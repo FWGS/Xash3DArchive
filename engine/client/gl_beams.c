@@ -1099,6 +1099,18 @@ qboolean CL_CullBeam( const vec3_t start, const vec3_t end, qboolean pvsOnly )
 	vec3_t	mins, maxs;
 	int	i;
 
+	// support for custom mirror management
+	if( RI.currententity != NULL )
+	{
+		// don't reflect this entity in mirrors
+		if( RI.currententity->curstate.effects & EF_NOREFLECT && RI.params & RP_MIRRORVIEW )
+			return true;
+
+		// draw only in mirrors
+		if( RI.currententity->curstate.effects & EF_REFLECTONLY && !( RI.params & RP_MIRRORVIEW ))
+			return true;
+	}
+
 	for( i = 0; i < 3; i++ )
 	{
 		if( start[i] < end[i] )
@@ -1561,7 +1573,10 @@ void CL_DrawBeams( int fTrans )
 	// all params are stored in cl_entity_t
 	for( i = 0; i < cl.num_custombeams; i++ )
 	{
-		cl_entity_t	*pBeam = cl_custombeams[i];
+		cl_entity_t	*pBeam;
+
+		RI.currententity = pBeam = cl_custombeams[i];
+		RI.currentmodel = RI.currententity->model;
 
 		if( fTrans && pBeam->curstate.renderfx & FBEAM_SOLID )
 			continue;
@@ -1572,6 +1587,9 @@ void CL_DrawBeams( int fTrans )
 		CL_DrawCustomBeam( pBeam );
 		r_stats.c_view_beams_count++;
 	}
+
+	RI.currententity = NULL;
+	RI.currentmodel = NULL;
 
 	if( !cl_active_beams )
 		return;

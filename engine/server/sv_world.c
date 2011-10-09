@@ -129,8 +129,8 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 	if( model && ( ent->v.solid == SOLID_BSP || ent->v.skin == CONTENTS_LADDER ))
 	{
 		// explicit hulls in the BSP model
-		if( ent->v.movetype != MOVETYPE_PUSH )
-			Host_Error( "SOLID_BSP without MOVETYPE_PUSH\n" );
+		if( ent->v.movetype != MOVETYPE_PUSH && ent->v.movetype != MOVETYPE_PUSHSTEP )
+			Host_Error( "SOLID_BSP without MOVETYPE_PUSH or MOVETYPE_PUSHSTEP\n" );
 
 		if( model->type != mod_brush )
 			Host_Error( "MOVETYPE_PUSH with a non bsp model\n" );

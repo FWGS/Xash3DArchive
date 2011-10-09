@@ -118,7 +118,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			{
 				// if there are entities to parse, a missing message key just
 				// means there is no title, so clear the message string now
-				char	token[1024];
+				char	token[2048];
 
 				message[0] = 0;
 				pfile = ents;
@@ -709,7 +709,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			{
 				// if there are entities to parse, a missing message key just
 				// means there is no title, so clear the message string now
-				char	token[1024];
+				char	token[2048];
 				qboolean	worldspawn = true;
 
 				Q_strncpy( message, "No Title", MAX_STRING );

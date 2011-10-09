@@ -206,7 +206,7 @@ int UTIL_FindEntityInMap(char * name, float * origin, float * angle)
 {
 	int				n,found = 0;
 	char			keyname[256];
-	char			token[1024];
+	char			token[2048];
 
 	cl_entity_t *	pEnt = gEngfuncs.GetEntityByIndex( 0 );	// get world model
 

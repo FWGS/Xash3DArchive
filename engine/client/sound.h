@@ -264,6 +264,7 @@ void S_FreeSounds( void );
 //
 void SND_InitMouth( int entnum, int entchannel );
 void SND_MoveMouth8( channel_t *ch, wavdata_t *pSource, int count );
+void SND_MoveMouth16( channel_t *ch, wavdata_t *pSource, int count );
 void SND_CloseMouth( channel_t *ch );
 
 //

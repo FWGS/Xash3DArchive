@@ -16,7 +16,6 @@ GNU General Public License for more details.
 #include "common.h"
 #include "client.h"
 #include "net_encode.h"
-#include "event_flags.h"
 #include "particledef.h"
 #include "gl_local.h"
 #include "cl_tent.h"
@@ -436,6 +435,12 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, origin, flags );
 }
 
+/*
+==================
+CL_ParseSoundFade
+
+==================
+*/
 void CL_ParseSoundFade( sizebuf_t *msg )
 {
 	float	fadePercent, fadeOutSeconds;
@@ -447,31 +452,6 @@ void CL_ParseSoundFade( sizebuf_t *msg )
 	fadeInSeconds = (float)BF_ReadByte( msg );
 
 	S_FadeClientVolume( fadePercent, fadeOutSeconds, holdTime, fadeInSeconds );
-}
-
-void CL_ParseReliableEvent( sizebuf_t *msg, int flags )
-{
-	int		event_index;
-	event_args_t	nullargs, args;
-	float		delay;
-
-	Q_memset( &nullargs, 0, sizeof( nullargs ));
-	event_index = BF_ReadWord( msg );		// read event index
-	delay = (float)BF_ReadWord( msg ) / 100.0f;	// read event delay
-	MSG_ReadDeltaEvent( msg, &nullargs, &args );	// reliable events not use delta
-
-	CL_QueueEvent( flags, event_index, delay, &args );
-}
-
-void CL_ParseEvent( sizebuf_t *msg )
-{
-	int	i, num_events;
-
-	num_events = BF_ReadByte( msg );
-
-	// parse events queue
-	for( i = 0 ; i < num_events; i++ )
-		CL_ParseReliableEvent( msg, 0 );
 }
 
 void CL_ParseCustomization( sizebuf_t *msg )
@@ -1355,7 +1335,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ParseEvent( msg );
 			break;
 		case svc_event_reliable:
-			CL_ParseReliableEvent( msg, FEV_RELIABLE );
+			CL_ParseReliableEvent( msg );
 			break;
 		case svc_updateuserinfo:
 			CL_UpdateUserinfo( msg );

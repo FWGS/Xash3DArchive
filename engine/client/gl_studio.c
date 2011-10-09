@@ -1265,9 +1265,17 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 
 		if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 		{
-			float angle = anglemod( RI.refdef.time * 40 );
-			RotatePointAroundVector( chromeupvec, tmp, v_left, angle - 180 );
-			RotatePointAroundVector( chromerightvec, chromeupvec, v_left, 180 + angle );
+			float angle, sr, cr;
+			int i;
+
+			angle = anglemod( RI.refdef.time * 40 ) * (M_PI * 2.0f / 360.0f);
+			SinCos( angle, &sr, &cr );
+
+			for( i = 0; i < 3; i++ )
+			{
+				chromerightvec[i] = (v_left[i] * cr + RI.vup[i] * sr);
+				chromeupvec[i] = v_left[i] * -sr + RI.vup[i] * cr;
+			}
 		}
 		else
 		{
@@ -1780,7 +1788,7 @@ static void R_StudioDrawPoints( void )
 
 	if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 	{
-		scale = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
+		scale = 1.0f + RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 
 		for( i = 0; i < m_pSubModel->numnorms; i++ )
 			Matrix3x4_VectorRotate( g_bonestransform[pnormbone[i]], pstudionorms[i], g_xformnorms[i] );

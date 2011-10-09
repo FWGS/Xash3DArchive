@@ -589,7 +589,7 @@ static int NET_IPSocket( const char *netInterface, int port )
 	struct sockaddr_in	addr;
 	dword		_true = 1;
 
-	MsgDev( D_INFO, "NET_UDPSocket( %s, %i )\n", netInterface, port );
+	MsgDev( D_NOTE, "NET_UDPSocket( %s, %i )\n", netInterface, port );
 	
 	if(( net_socket = pSocket( PF_INET, SOCK_DGRAM, IPPROTO_UDP )) == SOCKET_ERROR )
 	{
@@ -681,7 +681,7 @@ static int NET_IPXSocket( int port )
 	int		_true = 1;
 	int		err;
 
-	MsgDev( D_INFO, "NET_IPXSocket( %i )\n", port );
+	MsgDev( D_NOTE, "NET_IPXSocket( %i )\n", port );
 
 	if(( net_socket = pSocket( PF_IPX, SOCK_DGRAM, NSPROTO_IPX )) == SOCKET_ERROR )
 	{

@@ -774,7 +774,6 @@ void Delta_InitFields( void )
 	Mem_Free( afile );
 
 	// adding some requrid fields fields that user may forget or don't know how to specified
-	Delta_AddField( "event_t", "flags", DT_INTEGER, 8, 1.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[0]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[1]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[2]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );	
@@ -793,7 +792,7 @@ void Delta_Init( void )
 	dt = Delta_FindStruct( "movevars_t" );
 
 	ASSERT( dt != NULL );
-	if( dt->bInitialized ) return;	// specified by user
+	if( dt->bInitialized ) return;	// "movevars_t" already specified by user
 
 	// create movevars_t delta internal
 	Delta_AddField( "movevars_t", "gravity", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );

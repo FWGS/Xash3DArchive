@@ -124,7 +124,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		}
 	}
 
-	if( image.cmd_flags & IL_KEEP_8BIT && bhdr.bitsPerPixel == 8 )
+	if( Image_CheckFlag( IL_KEEP_8BIT ) && bhdr.bitsPerPixel == 8 )
 	{
 		pixbuf = image.palette = Mem_Alloc( host.imagepool, 1024 );
 		image.flags |= IMAGE_HAS_COLOR;
@@ -235,7 +235,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 				blue = palette[palIndex][0];
 				alpha = palette[palIndex][3];
 
-				if( image.cmd_flags & IL_KEEP_8BIT )
+				if( Image_CheckFlag( IL_KEEP_8BIT ))
 				{
 					*pixbuf++ = palIndex;
 				}
@@ -280,7 +280,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 				Mem_Free( image.rgba );
 				return false;
 			}
-			if(!( image.cmd_flags & IL_KEEP_8BIT ) && ( red != green || green != blue ))
+			if( !Image_CheckFlag( IL_KEEP_8BIT ) && ( red != green || green != blue ))
 				image.flags |= IMAGE_HAS_COLOR;
 		}
 		buf_p += padSize;	// actual only for 4-bit bmps
@@ -304,7 +304,7 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	int		pixel_size;
 	int		i, x, y;
 
-	if( FS_FileExists( name, false ) && !(image.cmd_flags & IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name, false ) && !Image_CheckFlag( IL_ALLOW_OVERWRITE ))
 		return false; // already existed
 
 	// bogus parameter check
