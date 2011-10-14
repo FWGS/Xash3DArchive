@@ -160,6 +160,7 @@ typedef struct ui_enginefuncs_s
 	void	(*pfnSetCursor)( void *hCursor );			// change cursor
 	int	(*pfnIsMapValid)( char *filename );
 	void	(*pfnProcessImage)( int texnum, float gamma, int topColor, int bottomColor );
+	int	(*pfnCompareFileTime)( char *filename1, char *filename2, int *iCompare );
 } ui_enginefuncs_t;
 
 typedef struct

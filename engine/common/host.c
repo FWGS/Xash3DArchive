@@ -711,7 +711,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	host_clientloaded = Cvar_Get( "host_clientloaded", "0", CVAR_INIT, "inidcates a loaded client.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
 	host_allow_materials = Cvar_Get( "host_allow_materials", "0", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
-	con_gamemaps = Cvar_Get( "con_gamemaps", "1", CVAR_ARCHIVE, "when true show only maps in game folder" );
+	con_gamemaps = Cvar_Get( "con_mapfilter", "1", CVAR_ARCHIVE, "when true show only maps in game folder" );
 
 	// content control
 	Cvar_Get( "violence_hgibs", "1", CVAR_ARCHIVE, "show human gib entities" );

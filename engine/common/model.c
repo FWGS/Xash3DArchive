@@ -1753,7 +1753,6 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		{
 			msurface_t	*surf = mod->surfaces + mod->firstmodelsurface + j;
 			mextrasurf_t	*info = SURF_INFO( surf, mod );
-			vec3_t		normal, vup = { 0, 0, 1 };
 
 			if( surf->flags & SURF_CONVEYOR )
 				mod->flags |= MODEL_CONVEYOR;
@@ -1761,10 +1760,6 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 			// kill water backplanes for submodels (half-life rules)
 			if( surf->flags & SURF_DRAWTURB )
 			{
-				if( surf->flags & SURF_PLANEBACK )
-					VectorNegate( surf->plane->normal, normal );
-				else VectorCopy( surf->plane->normal, normal );
-
 				if( surf->plane->type == PLANE_Z )
 				{
 					// kill bottom plane too
@@ -1872,8 +1867,10 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 
 	// store modelname to show error
 	Q_strncpy( tempname, mod->name, sizeof( tempname ));
+	COM_FixSlashes( tempname );
 
-	buf = COM_LoadFile( mod->name, 0, NULL );
+	buf = FS_LoadFile( tempname, NULL, false );
+
 	if( !buf )
 	{
 		Q_memset( mod, 0, sizeof( model_t ));

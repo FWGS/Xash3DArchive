@@ -109,6 +109,25 @@ char *StringCopy( const char *input )
 
 /*
 ============
+COM_CompareSaves
+============
+*/
+int COM_CompareSaves( const void **a, const void **b )
+{
+	char *file1, *file2;
+
+	file1 = (char *)*a;
+	file2 = (char *)*b;
+
+	int bResult;
+
+	COMPARE_FILE_TIME( file2, file1, &bResult );
+
+	return bResult;
+}
+
+/*
+============
 COM_FileBase
 ============
 */

@@ -1158,7 +1158,6 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 		return;
 
 	if( drawWorld ) r_lastRefdef = *fd;
-	GL_BackendStartFrame();
 
 	RI.params = RP_NONE;
 	RI.farClip = 0;
@@ -1166,6 +1165,8 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.drawWorld = drawWorld;
 	RI.thirdPerson = cl.thirdperson;
 	RI.drawOrtho = gl_overview->integer;
+
+	GL_BackendStartFrame();
 
 	// adjust field of view for widescreen
 	if( glState.wideScreen && r_adjust_fov->integer )

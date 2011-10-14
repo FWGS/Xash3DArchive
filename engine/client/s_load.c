@@ -161,20 +161,23 @@ S_FindName
 
 ==================
 */
-sfx_t *S_FindName( const char *name, int *pfInCache )
+sfx_t *S_FindName( const char *pname, int *pfInCache )
 {
-	int	i;
 	sfx_t	*sfx;
-	uint	hash;
+	uint	i, hash;
+	string	name;
 
-	if( !name || !name[0] || !dma.initialized )
+	if( !pname || !pname[0] || !dma.initialized )
 		return NULL;
 
-	if( Q_strlen( name ) >= MAX_STRING )
+	if( Q_strlen( pname ) >= MAX_STRING )
 	{
-		MsgDev( D_ERROR, "S_FindSound: sound name too long: %s", name );
+		MsgDev( D_ERROR, "S_FindSound: sound name too long: %s", pname );
 		return NULL;
 	}
+
+	Q_strncpy( name, pname, sizeof( name ));
+	COM_FixSlashes( name );
 
 	// see if already loaded
 	hash = Com_HashKey( name, MAX_SFX_HASH );

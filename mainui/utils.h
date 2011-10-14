@@ -123,6 +123,7 @@ extern void StringConcat( char *dst, const char *src, size_t size );	// strncat 
 extern char *Info_ValueForKey( const char *s, const char *key );
 extern int KEY_GetKey( const char *binding );			// ripped out from engine
 extern char *StringCopy( const char *input );			// copy string into new memory
+extern int COM_CompareSaves( const void **a, const void **b );
 
 extern void UI_LoadCustomStrings( void );
 

@@ -32,7 +32,7 @@ typedef struct
 static const dmaterial_t detail_table[] =
 {
 { "crt",		"dt_conc",	'C', 0, 0 },	// concrete
-{ "rock",		"dt_rock",	'C', 0, 0 },
+{ "rock",		"dt_rock1",	'C', 0, 0 },
 { "conc", 	"dt_conc",	'C', 0, 0 },
 { "wall", 	"dt_brick",	'C', 0, 0 },
 { "crete",	"dt_conc",	'C', 0, 0 },
@@ -136,6 +136,8 @@ static const char *R_DetailTextureForName( const char *name )
 	if( !Q_strnicmp( name, "translucent", 11 ))
 		return NULL;
 	if( !Q_strnicmp( name, "3dsky", 5 ))	// xash-mod support :-)
+		return NULL;
+	if( !Q_strnicmp( name, "scroll", 6 ))
 		return NULL;
 	if( name[0] == '@' )
 		return NULL;

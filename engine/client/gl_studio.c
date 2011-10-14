@@ -441,7 +441,7 @@ qboolean R_CullStudioModel( cl_entity_t *e )
 {
 	vec3_t	origin;
 
-	if( !e->model->cache.data )
+	if( !e || !e->model || !e->model->cache.data )
 		return true;
 
 	if( e == &clgame.viewent && r_lefthand->integer >= 2 )

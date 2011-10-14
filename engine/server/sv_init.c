@@ -182,6 +182,7 @@ char *SV_EntityScript( void )
 {
 	string	entfilename;
 	char	*ents;
+	size_t	ft1, ft2;
 
 	if( !sv.worldmodel )
 		return NULL;
@@ -191,10 +192,21 @@ char *SV_EntityScript( void )
 	FS_StripExtension( entfilename );
 	FS_DefaultExtension( entfilename, ".ent" );
 
-	if(( ents = FS_LoadFile( entfilename, NULL, true )))
+	// make sure what entity patch is never than bsp
+	ft1 = FS_FileTime( sv.worldmodel->name, false );
+	ft2 = FS_FileTime( entfilename, true );
+
+	if( ft2 != -1 )
 	{
-		MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
-		return ents;
+		if( ft1 > ft2 )
+		{
+			MsgDev( D_INFO, "^1Entity patch is older than bsp. Ignored.\n", entfilename );			
+		}
+		else if(( ents = FS_LoadFile( entfilename, NULL, true )))
+		{
+			MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
+			return ents;
+		}
 	}
 
 	// use internal entities

@@ -21,28 +21,6 @@ GNU General Public License for more details.
 #include "library.h"
 
 /*
-=============
-COM_LoadFile
-
-=============
-*/
-byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
-{
-	string	name;
-
-	if( !filename || !*filename )
-	{
-		if( pLength ) *pLength = 0;
-		return NULL;
-	}
-
-	Q_strncpy( name, filename, sizeof( name ));
-	COM_FixSlashes( name );
-
-	return FS_LoadFile( name, pLength, false );
-}
-
-/*
 ==============
 COM_ParseFile
 
@@ -283,7 +261,8 @@ COM_LoadFileForMe
 byte* COM_LoadFileForMe( const char *filename, int *pLength )
 {
 	string	name;
-	int	i;
+	byte	*file, *pfile;
+	int	iLength;
 
 	if( !filename || !*filename )
 	{
@@ -291,15 +270,71 @@ byte* COM_LoadFileForMe( const char *filename, int *pLength )
 		return NULL;
 	}
 
-	// replace all backward slashes
-	for( i = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '\\' ) name[i] = '/';
-		else name[i] = Q_tolower( filename[i] );
-	}
-	name[i] = '\0';
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
 
-	return FS_LoadFile( name, pLength, false );
+	pfile = FS_LoadFile( name, &iLength, false );
+	if( pLength ) *pLength = iLength;
+
+	if( pfile )
+	{
+		file = malloc( iLength + 1 );
+		Q_memcpy( file, pfile, iLength );
+		file[iLength] = '\0';
+		Mem_Free( pfile );
+		pfile = file;
+	}
+
+	return pfile;
+}
+
+/*
+=============
+COM_LoadFile
+
+=============
+*/
+byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
+{
+	string	name;
+	byte	*file, *pfile;
+	int	iLength;
+
+	ASSERT( usehunk == 5 );
+
+	if( !filename || !*filename )
+	{
+		if( pLength ) *pLength = 0;
+		return NULL;
+	}
+
+	Q_strncpy( name, filename, sizeof( name ));
+	COM_FixSlashes( name );
+
+	pfile = FS_LoadFile( name, &iLength, false );
+	if( pLength ) *pLength = iLength;
+
+	if( pfile )
+	{
+		file = malloc( iLength + 1 );
+		Q_memcpy( file, pfile, iLength );
+		file[iLength] = '\0';
+		Mem_Free( pfile );
+		pfile = file;
+	}
+
+	return pfile;
+}
+
+/*
+=============
+COM_FreeFile
+
+=============
+*/
+void COM_FreeFile( void *buffer )
+{
+	free( buffer ); 
 }
 
 /*
@@ -419,6 +454,33 @@ void Con_DPrintf( char *szFmt, ... )
 	va_end( args );
 
 	Sys_Print( buffer );
+}
+
+/*
+=============
+COM_CompareFileTime
+
+=============
+*/
+int COM_CompareFileTime( const char *filename1, const char *filename2, int *iCompare )
+{
+	int	bRet = 0;
+
+	*iCompare = 0;
+
+	if( filename1 && filename2 )
+	{
+		long ft1 = FS_FileTime( filename1, false );
+		long ft2 = FS_FileTime( filename2, false );
+
+		// one of files is missing
+		if( ft1 == -1 || ft2 == -1 )
+			return bRet;
+
+		*iCompare = Host_CompareFileTime( ft1,  ft2 );
+		bRet = 1;
+	}
+	return bRet;
 }
 
 /*

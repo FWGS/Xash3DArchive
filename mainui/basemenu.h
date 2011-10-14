@@ -370,7 +370,6 @@ typedef struct
 
 	int		buttons_draw_width;	// scaled image what we drawing
 	int		buttons_draw_height;
-	int		space_draw_width;	// scaled space width
 } uiStatic_t;
 
 extern uiStatic_t		uiStatic;

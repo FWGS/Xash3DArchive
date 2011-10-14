@@ -76,7 +76,7 @@ typedef enum
 #include "com_model.h"
 #include "crtlib.h"
 
-#define XASH_VERSION	0.9f		// engine current version
+#define XASH_VERSION	0.91f		// engine current version
 
 // PERFORMANCE INFO
 #define MIN_FPS         	15.0		// host minimum fps value for maxfps.
@@ -365,6 +365,7 @@ qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len )
 int COM_FileSize( const char *filename );
 void COM_FixSlashes( char *pname );
 void COM_FreeFile( void *buffer );
+int COM_CompareFileTime( const char *filename1, const char *filename2, int *iCompare );
 search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
 file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
 fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize );

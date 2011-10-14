@@ -1548,6 +1548,9 @@ int Con_DrawDebugLines( void )
 {
 	int	i, count = 0;
 	int	y = 20;
+	int	defaultX;
+
+	defaultX = glState.width / 4;
 	
 	for( i = 0; i < MAX_DBG_NOTIFY; i++ )
 	{
@@ -1557,7 +1560,7 @@ int Con_DrawDebugLines( void )
 			int	fontTall;
 
 			Con_DrawStringLen( con.notify[i].szNotify, &len, &fontTall );
-			x = scr_width->integer - 10 - len;
+			x = scr_width->integer - max( defaultX, len ) - 10;
 			fontTall += 1;
 
 			if( y + fontTall > (int)scr_height->integer - 20 )

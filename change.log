@@ -42,12 +42,15 @@ GameUI: added support for Steam backgrounds
 GameUI: hide input symbols for "password" field in "create server" menu page
 Client: initial implementation of NetAPI
 Render: clear decals code. Add transparent rendering for 'glass' decals
-GameUI: added new function into menu interface called a pfnProcessImage, added new argument for pfnPIC_Load.
+GameUI: added new argument for pfnPIC_Load.
 GameUI: fix loading flipped Steam background images
 Client: remove gravity for R_Implosion effect
 Sound: add SND_MoveMouth16 for support 16-bit sounds lip-sync
 Engine: fix potentially crash during parsing titles.txt when file is empty
 Engine: increase MAX_VALUE field up to 2048 characters
+Console: rename con_gamemaps to con_mapfilter
+Sound: add check by PVS for dynamic entity channels
+Sound: add sound culling by geometry (cvar 's_cull' for enable or disable) 
 
 build 1662
 

@@ -133,6 +133,9 @@ static void UI_LoadGame_GetGameList( void )
 
 	filenames = FS_SEARCH( "save/*.sav", &numFiles, TRUE );
 
+	// sort the saves in reverse order (oldest past at the end)
+	qsort( filenames, numFiles, sizeof( char* ), (cmpfunc)COM_CompareSaves );
+
 	for ( i = 0; i < numFiles; i++ )
 	{
 		if( i >= UI_MAXGAMES ) break;

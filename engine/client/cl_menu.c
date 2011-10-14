@@ -924,6 +924,7 @@ static ui_enginefuncs_t gEngfuncs =
 	IN_SetCursor,
 	pfnIsMapValid,
 	GL_ProcessTexture,
+	COM_CompareFileTime,
 };
 
 void UI_UnloadProgs( void )

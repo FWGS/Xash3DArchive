@@ -1444,7 +1444,6 @@ int UI_VidInit( void )
 	uiStatic.cursorY = ScreenHeight >> 1;
 	uiStatic.outlineWidth = 4;
 	uiStatic.sliderWidth = 6;
-	uiStatic.space_draw_width = 8;
 
 	// all menu buttons have the same view sizes
 	uiStatic.buttons_draw_width = UI_BUTTONS_WIDTH;
@@ -1453,7 +1452,6 @@ int UI_VidInit( void )
 	UI_ScaleCoords( NULL, NULL, &uiStatic.outlineWidth, NULL );
 	UI_ScaleCoords( NULL, NULL, &uiStatic.sliderWidth, NULL );
 	UI_ScaleCoords( NULL, NULL, &uiStatic.buttons_draw_width, &uiStatic.buttons_draw_height );
-	UI_ScaleCoords( NULL, NULL, &uiStatic.space_draw_width, NULL );
 
 	// trying to load colors.lst
 	UI_ApplyCustomColors ();

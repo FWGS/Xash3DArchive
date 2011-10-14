@@ -120,9 +120,9 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 
 				if( applyVel || applyAvel )
 				{
-					ent->origin[0] += ( m_pGround->curstate.origin[0] - m_pGround->latched.prevorigin[0] ) * d;
-					ent->origin[1] += ( m_pGround->curstate.origin[1] - m_pGround->latched.prevorigin[1] ) * d;
-					ent->origin[2] += ( m_pGround->curstate.origin[2] - m_pGround->latched.prevorigin[2] ) * d;
+					ent->origin[0] += ( m_pGround->curstate.origin[0] - m_pGround->prevstate.origin[0] ) * d;
+					ent->origin[1] += ( m_pGround->curstate.origin[1] - m_pGround->prevstate.origin[1] ) * d;
+					ent->origin[2] += ( m_pGround->curstate.origin[2] - m_pGround->prevstate.origin[2] ) * d;
 				}
 
 				if( applyAvel )
@@ -132,7 +132,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 						float	ang1, ang2;
 
 						ang1 = m_pGround->curstate.angles[i];
-						ang2 = m_pGround->latched.prevangles[i];
+						ang2 = m_pGround->prevstate.angles[i];
 						f = ang1 - ang2;
 						if( d > 180 ) f -= 360;
 						else if( d < -180 ) f += 360;
@@ -881,12 +881,14 @@ void CL_AddEntities( void )
 //
 // sound engine implementation
 //
-qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin )
+qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius )
 {
 	cl_entity_t	*ent;
 	qboolean		valid_origin;
 
 	ASSERT( origin != NULL );
+
+	if( entnum == 0 ) return true; // static sound
 
 	valid_origin = VectorIsNull( origin ) ? false : true;          
 	ent = CL_GetEntityByIndex( entnum );
@@ -901,6 +903,10 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin )
 	// setup origin
 	VectorAverage( ent->curstate.mins, ent->curstate.maxs, origin );
 	VectorAdd( origin, ent->curstate.origin, origin );
+
+	// setup radius
+	if( pradius && ent->model != NULL )
+		*pradius = ent->model->radius;
 
 	return true;
 }

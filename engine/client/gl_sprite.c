@@ -508,7 +508,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 	}          
 	else if( frame >= psprite->numframes )
 	{
-		MsgDev( D_WARN, "R_GetSpriteFrame: no such frame %d (%s)\n", frame, ent->model->name );
+		MsgDev( D_WARN, "R_GetSpriteFrameInterpolant: no such frame %d (%s)\n", frame, ent->model->name );
 		frame = psprite->numframes - 1;
 	}
 

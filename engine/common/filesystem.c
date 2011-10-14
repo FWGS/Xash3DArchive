@@ -2297,12 +2297,6 @@ file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedi
 	return file;
 }
 
-void COM_FreeFile( void *buffer )
-{
-	if( buffer && Mem_IsAllocatedExt( fs_mempool, buffer ))
-		Mem_Free( buffer ); 
-}
-
 /*
 ============
 FS_WriteFile

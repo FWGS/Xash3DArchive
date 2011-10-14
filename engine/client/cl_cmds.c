@@ -317,12 +317,20 @@ splash logo while map is loading
 */ 
 void CL_LevelShot_f( void )
 {
+	size_t	ft1, ft2;
+
 	if( cls.scrshot_request != scrshot_plaque ) return;
 	cls.scrshot_request = scrshot_inactive;
 
 	// check for exist
 	Q_sprintf( cls.shotname, "levelshots/%s.bmp", clgame.mapname );
-	if( !FS_FileExists( cls.shotname, true ))
+
+	// make sure what entity patch is never than bsp
+	ft1 = FS_FileTime( cl.worldmodel->name, false );
+	ft2 = FS_FileTime( cls.shotname, true );
+
+	// missing levelshot or level never than levelshot
+	if( ft2 == -1 || ft1 > ft2 )
 		cls.scrshot_action = scrshot_plaque;	// build new frame for levelshot
 	else cls.scrshot_action = scrshot_inactive;	// disable - not needs
 }

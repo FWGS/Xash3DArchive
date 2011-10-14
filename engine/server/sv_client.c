@@ -1661,8 +1661,8 @@ void SV_Pause_f( sv_client_t *cl )
 		return;
 	}
 
-	if( !sv.paused ) Q_snprintf( message, MAX_STRING, "^2%s^7 paused the game", cl->name );
-	else Q_snprintf( message, MAX_STRING, "^2%s^7 unpaused the game", cl->name );
+	if( !sv.paused ) Q_snprintf( message, MAX_STRING, "^2%s^7 paused the game\n", cl->name );
+	else Q_snprintf( message, MAX_STRING, "^2%s^7 unpaused the game\n", cl->name );
 
 	SV_TogglePause( message );
 }

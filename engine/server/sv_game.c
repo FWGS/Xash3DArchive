@@ -1034,17 +1034,17 @@ void pfnChangeLevel( const char* s1, const char* s2 )
 	if( !s1 || s1[0] <= ' ' || sv.background )
 		return;
 
+	// make sure we don't issue two changelevels at one time
+	if( svs.changelevel_next_time > host.realtime )
+		return;
+
+	svs.changelevel_next_time = host.realtime + 0.5f;		// rest 1 secs if failed
+
 	// make sure we don't issue two changelevels
 	if( svs.spawncount == last_spawncount )
 		return;
 
 	last_spawncount = svs.spawncount;
-
-	// make sure we don't issue two changelevels at one time
-	if( svs.changelevel_next_time > host.realtime )
-		return;
-
-	svs.changelevel_next_time = host.realtime + 1.0f;		// rest 1 secs if failed
 
 	SV_SkipUpdates ();
 
@@ -3104,33 +3104,6 @@ float pfnTime( void )
 
 /*
 =============
-pfnCompareFileTime
-
-=============
-*/
-int pfnCompareFileTime( const char *filename1, const char *filename2, int *iCompare )
-{
-	int	bRet = 0;
-
-	*iCompare = 0;
-
-	if( filename1 && filename2 )
-	{
-		long ft1 = FS_FileTime( filename1, false );
-		long ft2 = FS_FileTime( filename2, false );
-
-		// one of files is missing
-		if( ft1 == -1 || ft2 == -1 )
-			return bRet;
-
-		*iCompare = Host_CompareFileTime( ft1,  ft2 );
-		bRet = 1;
-	}
-	return bRet;
-}
-
-/*
-=============
 pfnStaticDecal
 
 =============
@@ -4258,7 +4231,7 @@ static enginefuncs_t gEngfuncs =
 	COM_LoadFileForMe,
 	COM_FreeFile,
 	pfnEndSection,
-	pfnCompareFileTime,
+	COM_CompareFileTime,
 	pfnGetGameDir,
 	Cvar_RegisterVariable,
 	pfnFadeClientVolume,
