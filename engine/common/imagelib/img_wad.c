@@ -73,6 +73,7 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	const byte	*pal, *fin;
 	size_t		size;
 	int		numcolors;
+	qboolean		newstyle = false;
 
 	if( image.hint == IL_HINT_Q1 )
 		return false;	// Quake1 doesn't have qfonts
@@ -96,6 +97,7 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 		// Half-Life 1.1.0.0 font style (qfont_t)
 		image.width = font.width * QCHAR_WIDTH;
 		image.height = font.height;
+		newstyle = true;
 	}
 
 	if( !Image_LumpValidSize( name ))
@@ -105,16 +107,11 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	pal = fin + (image.width * image.height);
 	numcolors = *(short *)pal, pal += sizeof( short );
 
-	if( numcolors == 768 )
+	if( numcolors == 768 || numcolors == 256 )
 	{
-		// newstyle font
+		// g-cont. make sure that is didn't hit anything
 		Image_GetPaletteLMP( pal, LUMP_QFONT );
 		image.flags |= IMAGE_HAS_ALPHA; // fonts always have transparency
-	}
-	else if( numcolors == 256 )
-	{
-		// oldstyle font (no transparency)
-		Image_GetPaletteLMP( pal, LUMP_TRANSPARENT );
 	}
 	else 
 	{

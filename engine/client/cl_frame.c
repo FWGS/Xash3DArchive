@@ -136,7 +136,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 						f = ang1 - ang2;
 						if( d > 180 ) f -= 360;
 						else if( d < -180 ) f += 360;
-						ent->curstate.angles[i] += d * f;
+						ent->angles[i] += d * f;
 					}
 				}
 			}

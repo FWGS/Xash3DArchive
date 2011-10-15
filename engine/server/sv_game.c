@@ -1536,41 +1536,15 @@ int pfnDropToFloor( edict_t* e )
 		MsgDev( D_ERROR, "SV_DropToFloor: invalid entity %s\n", SV_ClassName( e ));
 		return 0;
 	}
-#if 0
- 	if( sv.droptofloor )
- 	{
-		studiohdr_t	*hdr = Mod_Extradata( Mod_Handle( e->v.modelindex ));
-		mstudioseqdesc_t	*pseqdesc;
-		vec3_t		neworg, newang;
-		int		seq;
 
-		if( hdr )
-		{
-			seq = e->v.sequence;
-			if( seq < 0 || seq >= hdr->numseq ) seq = 0;
-			pseqdesc = (mstudioseqdesc_t *)((byte *)hdr + hdr->seqindex) + seq;
-
-			SV_GetBonePosition( e, 0, neworg, newang ); 
-			VectorSubtract( e->v.angles, newang, end );
-			if( anglemod( end[0] ) > 1.0f || anglemod( end[2] ) > 1.0f )
-				Msg( "%s, root bone is rotate %g %g\n", SV_ClassName( e ), anglemod( end[0] ), anglemod( end[2] ) );
-		}
-		sv.droptofloor = false;
-	}
-#endif
 	VectorCopy( e->v.origin, end );
 	end[2] -= 256;
 
 	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
-	VectorSubtract( e->v.origin, trace.endpos, end );
 
 	// HACKHACK: to prevent falling stiiting_scientist from 'c1a0'
 	if( trace.startsolid && SV_IsValidEdict( trace.ent ) && trace.ent->v.movetype == MOVETYPE_PUSHSTEP )
 		return -1;
-
-	// HACKHACK: another hack to prevent unexpected moving scripted entities
-//	if( e->v.flags & FL_ONGROUND && e->v.animtime && VectorLength( end ) == 1.0f )
-//		return -1;
 
 	if( trace.allsolid )
 		return -1;
@@ -1639,7 +1613,6 @@ void pfnSetOrigin( edict_t *e, const float *rgflOrigin )
 
 	VectorCopy( rgflOrigin, e->v.origin );
 	SV_LinkEdict( e, false );
-	sv.droptofloor = false; // any call of SET_ORIGIN must reset dropfloor
 }
 
 /*

@@ -1023,8 +1023,6 @@ void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
 
 	if( org ) Matrix3x4_OriginFromMatrix( sv_studiobones[iBone], org );
 	if( ang ) VectorAngles( sv_studiobones[iBone][0], ang ); // bone forward to angles
-
-	sv.droptofloor = true;
 }
 
 static sv_blending_interface_t gBlendAPI =

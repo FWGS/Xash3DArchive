@@ -142,7 +142,6 @@ typedef struct server_s
 	model_t		*worldmodel;	// pointer to world
 	uint		checksum;		// for catching cheater maps
 
-	qboolean		droptofloor;	// 0 == normal mode, 1 == special mode
 	qboolean		write_bad_message;	// just for debug
 	qboolean		paused;
 } server_t;
