@@ -24,6 +24,9 @@ extern "C" {
 #pragma warning(disable : 4244)	// MIPS
 #pragma warning(disable : 4018)	// signed/unsigned mismatch
 #pragma warning(disable : 4305)	// truncation from const double to float
+#pragma warning(disable : 4115)	// named type definition in parentheses
+#pragma warning(disable : 4100)	// unreferenced formal parameter
+#pragma warning(disable : 4127)	// conditional expression is constant
 
 #define MAX_STRING		256	// generic string
 #define MAX_INFO_STRING	256	// infostrings are transmitted across network

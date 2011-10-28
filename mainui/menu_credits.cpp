@@ -142,7 +142,7 @@ static void UI_Credits_Init( void )
 			{
 				char *tmp = (char *)MALLOC( count + 2 );
 				memcpy( tmp, uiCredits.buffer, count ); 
-				FREE( uiCredits.buffer );
+				FREE_FILE( uiCredits.buffer );
 				uiCredits.buffer = tmp; 
 				strncpy( uiCredits.buffer + count, "\r", 1 ); // add terminator
 				count += 2; // added "\r\0"

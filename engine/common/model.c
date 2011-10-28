@@ -863,7 +863,6 @@ static void Mod_LoadTexInfo( const dlump_t *l )
 	mtexinfo_t	*out;
 	int		miptex;
 	int		i, j, count;
-	uint		surfaceParm = 0;
 	float		len1, len2;
 	
 	in = (void *)(mod_base + l->fileofs);
@@ -1067,7 +1066,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		// g-cont this texture from decals.wad he-he
 		if( !Q_strncmp( tex->name, "reflect", 7 ))
 		{
-			out->flags |= SURF_MIRROR;
+			out->flags |= SURF_REFLECT;
 			world.has_mirrors = true;
 		}
 

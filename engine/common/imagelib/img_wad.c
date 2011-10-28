@@ -73,7 +73,6 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	const byte	*pal, *fin;
 	size_t		size;
 	int		numcolors;
-	qboolean		newstyle = false;
 
 	if( image.hint == IL_HINT_Q1 )
 		return false;	// Quake1 doesn't have qfonts
@@ -97,7 +96,6 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 		// Half-Life 1.1.0.0 font style (qfont_t)
 		image.width = font.width * QCHAR_WIDTH;
 		image.height = font.height;
-		newstyle = true;
 	}
 
 	if( !Image_LumpValidSize( name ))
@@ -472,7 +470,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		// grab the fog density
 		image.fogParams[3] = pal[4*3+0];
           }
-          else if( host.decal_loading )
+          else if( hl_texture && host.decal_loading )
           {
 		// grab the decal color
 		image.fogParams[0] = pal[255*3+0];

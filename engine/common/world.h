@@ -33,38 +33,9 @@ ENTITY AREA CHECKING
 
 ===============================================================================
 */
-#define STRUCT_FROM_LINK( l, t, m )	((t *)((byte *)l - (int)&(((t *)0)->m)))
 #define MAX_TOTAL_ENT_LEAFS		128
 #define AREA_NODES			32
 #define AREA_DEPTH			4
-
-typedef enum
-{
-	AREA_SOLID,		// find any solid edicts
-	AREA_TRIGGERS,		// find all SOLID_TRIGGER edicts
-	AREA_CUSTOM,		// find all edicts with custom contents - water, lava, fog, laders etc
-	AREA_PUSHMOVE,		// find all edicts which supposed to push with MOVETYPE_PUSH
-} AREA_TYPE;
-
-typedef struct areanode_s
-{
-	int		axis;		// -1 = leaf node
-	float		dist;
-	struct areanode_s	*children[2];
-	link_t		trigger_edicts;
-	link_t		solid_edicts;
-	link_t		water_edicts;	// func water
-} areanode_t;
-
-typedef struct area_s
-{
-	const float	*mins;
-	const float	*maxs;
-	void		**list;
-	int		count;
-	int		maxcount;
-	int		type;
-} area_t;
 
 typedef struct
 {

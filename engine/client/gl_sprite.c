@@ -427,7 +427,7 @@ mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 {
 	msprite_t		*psprite;
 	mspritegroup_t	*pspritegroup;
-	mspriteframe_t	*pspriteframe;
+	mspriteframe_t	*pspriteframe = NULL;
 	float		*pintervals, fullinterval;
 	float		targettime, time;
 	int		i, numframes;

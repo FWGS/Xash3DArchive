@@ -2255,7 +2255,6 @@ byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamediro
 	file_t		*file;
 	byte		*buf = NULL;
 	fs_offset_t	filesize = 0;
-	const char	*ext = FS_FileExtension( path );
 
 	file = FS_Open( path, "rb", gamedironly );
 

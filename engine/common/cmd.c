@@ -666,8 +666,6 @@ A complete command line has been parsed, so try to execute it
 */
 void Cmd_ExecuteString( char *text, cmd_source_t src )
 {	
-	qboolean		isServerCommand = false;
-	qboolean		isDLLCommand = false;
 	cmd_function_t	*cmd;
 	cmdalias_t	*a;
 

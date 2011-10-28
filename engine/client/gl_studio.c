@@ -1602,6 +1602,8 @@ void R_StudioSetupLighting( alight_t *lightinfo )
 	studiolight_t	*plight;
 	int		i;
 
+	if( !m_pStudioHeader ) return;
+
 	plight = &g_studiolight; 
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )

@@ -975,7 +975,6 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 	wavdata_t	*pSource = NULL;
 	sfx_t	*sfx = NULL;
 	int	vol, fvox = 0;
-	qboolean	looping = false;
 	float	radius = SND_RADIUS_MAX;
 	vec3_t	origin;		
 

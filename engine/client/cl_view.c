@@ -266,8 +266,6 @@ sets cl.refdef view values
 */
 void V_CalcRefDef( void )
 {
-	int	passcount = 0;
-
 	R_Set2DMode( false );
 	tr.framecount++;	// g-cont. keep actual frame for all viewpasses
 

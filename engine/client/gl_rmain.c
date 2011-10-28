@@ -521,27 +521,27 @@ static void R_SetupFrustumOrtho( void )
 	// 5 - nearclip
 
 	// setup the near and far planes.
-	orgOffset = DotProduct( RI.vieworg, RI.vforward );
-	VectorNegate( RI.vforward, RI.frustum[4].normal );
+	orgOffset = DotProduct( RI.cullorigin, RI.cull_vforward );
+	VectorNegate( RI.cull_vforward, RI.frustum[4].normal );
 	RI.frustum[4].dist = -ov->zFar - orgOffset;
 
-	VectorCopy( RI.vforward, RI.frustum[5].normal );
+	VectorCopy( RI.cull_vforward, RI.frustum[5].normal );
 	RI.frustum[5].dist = ov->zNear + orgOffset;
 
 	// left and right planes...
-	orgOffset = DotProduct( RI.vieworg, RI.vright );
-	VectorCopy( RI.vright, RI.frustum[0].normal );
+	orgOffset = DotProduct( RI.cullorigin, RI.cull_vright );
+	VectorCopy( RI.cull_vright, RI.frustum[0].normal );
 	RI.frustum[0].dist = ov->xLeft + orgOffset;
 
-	VectorNegate( RI.vright, RI.frustum[1].normal );
+	VectorNegate( RI.cull_vright, RI.frustum[1].normal );
 	RI.frustum[1].dist = -ov->xRight - orgOffset;
 
 	// top and buttom planes...
-	orgOffset = DotProduct( RI.vieworg, RI.vup );
-	VectorCopy( RI.vup, RI.frustum[3].normal );
+	orgOffset = DotProduct( RI.cullorigin, RI.cull_vup );
+	VectorCopy( RI.cull_vup, RI.frustum[3].normal );
 	RI.frustum[3].dist = ov->xTop + orgOffset;
 
-	VectorNegate( RI.vup, RI.frustum[2].normal );
+	VectorNegate( RI.cull_vup, RI.frustum[2].normal );
 	RI.frustum[2].dist = -ov->xBottom - orgOffset;
 
 	for( i = 0; i < 6; i++ )
@@ -575,24 +575,24 @@ void R_SetupFrustum( void )
 	}
 
 	// rotate RI.vforward right by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[0].normal, RI.vup, RI.vforward, -( 90 - RI.refdef.fov_x / 2 ));
+	RotatePointAroundVector( RI.frustum[0].normal, RI.cull_vup, RI.cull_vforward, -( 90 - RI.refdef.fov_x / 2 ));
 	// rotate RI.vforward left by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[1].normal, RI.vup, RI.vforward, 90 - RI.refdef.fov_x / 2 );
+	RotatePointAroundVector( RI.frustum[1].normal, RI.cull_vup, RI.cull_vforward, 90 - RI.refdef.fov_x / 2 );
 	// rotate RI.vforward up by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[2].normal, RI.vright, RI.vforward, 90 - RI.refdef.fov_y / 2 );
+	RotatePointAroundVector( RI.frustum[2].normal, RI.cull_vright, RI.cull_vforward, 90 - RI.refdef.fov_y / 2 );
 	// rotate RI.vforward down by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[3].normal, RI.vright, RI.vforward, -( 90 - RI.refdef.fov_y / 2 ));
+	RotatePointAroundVector( RI.frustum[3].normal, RI.cull_vright, RI.cull_vforward, -( 90 - RI.refdef.fov_y / 2 ));
 	// negate forward vector
-	VectorNegate( RI.vforward, RI.frustum[4].normal );
+	VectorNegate( RI.cull_vforward, RI.frustum[4].normal );
 
 	for( i = 0; i < 4; i++ )
 	{
 		RI.frustum[i].type = PLANE_NONAXIAL;
-		RI.frustum[i].dist = DotProduct( RI.vieworg, RI.frustum[i].normal );
+		RI.frustum[i].dist = DotProduct( RI.cullorigin, RI.frustum[i].normal );
 		RI.frustum[i].signbits = SignbitsForPlane( RI.frustum[i].normal );
 	}
 
-	VectorMA( RI.vieworg, R_GetFarClip(), RI.vforward, farPoint );
+	VectorMA( RI.cullorigin, R_GetFarClip(), RI.cull_vforward, farPoint );
 	RI.frustum[i].type = PLANE_NONAXIAL;
 	RI.frustum[i].dist = DotProduct( farPoint, RI.frustum[i].normal );
 	RI.frustum[i].signbits = SignbitsForPlane( RI.frustum[i].normal );
@@ -765,6 +765,13 @@ static void R_SetupFrame( void )
 	// build the transformation matrix for the given view angles
 	VectorCopy( RI.refdef.vieworg, RI.vieworg );
 	AngleVectors( RI.refdef.viewangles, RI.vforward, RI.vright, RI.vup );
+
+	if( !r_lockcull->integer )
+	{
+		VectorCopy( RI.vforward, RI.cull_vforward );
+		VectorCopy( RI.vright, RI.cull_vright );
+		VectorCopy( RI.vup, RI.cull_vup );
+	}
 
 	R_AnimateLight();
 	R_RunViewmodelEvents();

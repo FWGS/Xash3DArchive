@@ -46,7 +46,7 @@ extern byte	*r_temppool;
 #define RP_FLIPFRONTFACE	BIT( 4 )	// e.g. for mirrors drawing
 
 #define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
-#define RP_LOCALCLIENT( e )	(CL_GetLocalPlayer() && ((e)->index == CL_GetLocalPlayer()->index && e->player ))
+#define RP_LOCALCLIENT( e )	(CL_GetLocalPlayer() && ((e)->index == CL_GetLocalPlayer()->index && e->curstate.entityType == ET_PLAYER ))
 #define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
 
 #define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
@@ -155,17 +155,22 @@ typedef struct
 
 	cl_entity_t	*currententity;
 	model_t		*currentmodel;
+	cl_entity_t	*currentbeam;	// same as above but for beams
 
 	int		viewport[4];
 	int		scissor[4];
 	mplane_t		frustum[6];
 
 	vec3_t		pvsorigin;
-	vec3_t		cullorigin;
 	vec3_t		vieworg;		// locked vieworigin
 	vec3_t		vforward;
 	vec3_t		vright;
 	vec3_t		vup;
+
+	vec3_t		cullorigin;
+	vec3_t		cull_vforward;
+	vec3_t		cull_vright;
+	vec3_t		cull_vup;
 
 	float		farClip;
 	uint		clipFlags;

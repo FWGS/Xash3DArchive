@@ -1027,7 +1027,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 				VectorCopy( p->origin, p->ent->v.origin );
 				VectorCopy( p->angles, p->ent->v.angles );
 				SV_LinkEdict( p->ent, (p->ent == check) ? true : false );
-				p->ent->v.fixangle = pushed_p->fixangle;
+				p->ent->v.fixangle = p->fixangle;
 			}
 			return check;
 		}
@@ -1730,10 +1730,37 @@ double SV_GetServerTime( void )
 	return sv.time;
 }
 
+/*
+================
+SV_GetFrameTime
+
+Inplementation for new physics interface
+================
+*/
+double SV_GetFrameTime( void )
+{
+	return host.frametime;
+}
+
+/*
+================
+SV_GetHeadNode
+
+Inplementation for new physics interface
+================
+*/
+areanode_t *SV_GetHeadNode( void )
+{
+	return sv_areanodes;
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
 	SV_GetServerTime,
+	SV_GetFrameTime,
+	Mod_Handle,
+	SV_GetHeadNode,
 };
 
 /*

@@ -123,7 +123,7 @@ R_DrawStretchRaw
 */
 void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, const byte *data, qboolean dirty )
 {
-	byte		*raw;
+	byte		*raw = NULL;
 	gltexture_t	*tex;
 
 	if( !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))

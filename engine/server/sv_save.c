@@ -1723,6 +1723,7 @@ qboolean SV_LoadGame( const char *pName )
 	SV_ClearSaveDir();
 
 	if( !svs.initialized ) SV_InitGame ();
+	if( !svs.initialized ) return false;
 
 	pFile = FS_Open( name, "rb", true );
 

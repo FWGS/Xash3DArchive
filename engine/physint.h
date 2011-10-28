@@ -16,13 +16,29 @@ GNU General Public License for more details.
 #ifndef PHYSINT_H
 #define PHYSINT_H
 
-#define SV_PHYSICS_INTERFACE_VERSION	1
+#define SV_PHYSICS_INTERFACE_VERSION		3
+
+#define STRUCT_FROM_LINK( l, t, m )		((t *)((byte *)l - (int)&(((t *)0)->m)))
+#define EDICT_FROM_AREA( l )			STRUCT_FROM_LINK( l, edict_t, area )
+
+typedef struct areanode_s
+{
+	int		axis;		// -1 = leaf node
+	float		dist;
+	struct areanode_s	*children[2];
+	link_t		trigger_edicts;
+	link_t		solid_edicts;
+	link_t		water_edicts;	// func water
+} areanode_t;
 
 typedef struct server_physics_api_s
 {
 	// unlink edict from old position and link onto new
 	void		( *pfnLinkEdict) ( edict_t *ent, qboolean touch_triggers );
 	double		( *pfnGetServerTime )( void ); // unclamped
+	double		( *pfnGetFrameTime )( void );	// unclamped
+	void*		( *pfnGetModel)( int modelindex );
+	areanode_t*	( *pfnGetHeadnode)( void ); // BSP tree for all physic entities
 } server_physics_api_t;
 
 // physic callbacks

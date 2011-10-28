@@ -63,12 +63,11 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 
 	for( i = 0, nummaps = 0; i < t->numfilenames; i++ )
 	{
-		const char	*data = NULL;
 		char		entfilename[CS_SIZE];
 		int		ver = -1, lumpofs = 0, lumplen = 0;
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 		char		*ents = NULL, *pfile;
-		qboolean		gearbox;
+		qboolean		gearbox = false;
 			
 		if( Q_stricmp( ext, "bsp" )) continue;
 		Q_strncpy( message, "^1error^7", sizeof( message ));

@@ -185,10 +185,10 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 				column--;	// ingnore main iterations
 				for( c = 0, k = 128; c < 8; c++, k >>= 1 )
 				{
-					red = (!!(alpha & k) == 1 ? 0xFF : 0x00);
+					red = green = blue = (!!(alpha & k) == 1 ? 0xFF : 0x00);
 					*pixbuf++ = red;
-					*pixbuf++ = red;
-					*pixbuf++ = red;
+					*pixbuf++ = green;
+					*pixbuf++ = blue;
 					*pixbuf++ = 0x00;
 					if( ++column == columns )
 						break;

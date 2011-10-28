@@ -698,7 +698,9 @@ void SV_FreeEdict( edict_t *pEdict )
 		// NOTE: new interface can be missing
 		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
 			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
-		Mem_Free( pEdict->pvPrivateData );
+
+		if( Mem_IsAllocated( pEdict->pvPrivateData ))
+			Mem_Free( pEdict->pvPrivateData );
 		pEdict->pvPrivateData = NULL;
 	}
 
@@ -773,9 +775,12 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 		if( svgame.physFuncs.SV_CreateEntity && svgame.physFuncs.SV_CreateEntity( ent, pszClassName ) != -1 )
 			return ent;
 
-		ent->v.flags |= FL_KILLME;
 		MsgDev( D_ERROR, "No spawn function for %s\n", STRING( className ));
-		return ent; // this edict will be removed from map
+
+		// kill entity immediately
+		SV_FreeEdict( ent );
+
+		return NULL;
 	}
 	else SpawnEdict( &ent->v );
 
@@ -2550,27 +2555,42 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	char	buffer[2048];	// must support > 1k messages
 	va_list	args;
 
+	// check message for pass
+	switch( level )
+	{
+	case at_notice:
+		break;	// passed always
+	case at_console:
+		if( host.developer < D_INFO )
+			return;
+		break;
+	case at_aiconsole:
+		if( host.developer < D_AICONSOLE )
+			return;
+		break;
+	case at_warning:
+		if( host.developer < D_WARN )
+			return;
+		break;
+	case at_error:
+		if( host.developer < D_ERROR )
+			return;
+		break;
+	}
+
 	va_start( args, szFmt );
 	Q_vsnprintf( buffer, 2048, szFmt, args );
 	va_end( args );
 
-	if( level == at_notice )
-	{
-		Sys_Print( buffer ); // notice printing always
-	}
-	else if( level == at_console && host.developer >= D_INFO )
-	{
-		Sys_Print( buffer );
-	}
-	else if( level == at_warning && host.developer >= D_WARN )
+	if( level == at_warning )
 	{
 		Sys_Print( va( "^3Warning:^7 %s", buffer ));
 	}
-	else if( level == at_error && host.developer >= D_ERROR )
+	else if( level == at_error  )
 	{
 		Sys_Print( va( "^1Error:^7 %s", buffer ));
 	} 
-	else if( level == at_aiconsole && host.developer >= D_AICONSOLE )
+	else
 	{
 		Sys_Print( buffer );
 	}
@@ -2623,7 +2643,8 @@ void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 	if( Mem_IsAllocated( pEdict->pvPrivateData ))
 		Mem_Free( pEdict->pvPrivateData );
 
-	pEdict->pvPrivateData = Mem_Alloc( svgame.mempool, cb );
+	// a poke646 have memory corrupt in somewhere - this is trashed last four bytes :(
+	pEdict->pvPrivateData = Mem_Alloc( svgame.mempool, (cb + 15) & ~15 );
 
 	return pEdict->pvPrivateData;
 }
@@ -4327,7 +4348,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 	
 	ent = SV_AllocPrivateData( ent, ALLOC_STRING( classname ));
 
-	if( ent->v.flags & FL_KILLME )
+	if( !SV_IsValidEdict( ent ) || ent->v.flags & FL_KILLME )
 	{
 		// release allocated strings
 		for( i = 0; i < numpairs; i++ )

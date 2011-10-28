@@ -66,7 +66,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	if( ent->curstate.eflags & EFLAG_SLERP )
 	{
 		float		d, f = 0.0f;
-		cl_entity_t	*m_pGround;
+		cl_entity_t	*m_pGround = NULL;
 		int		i;
 
 		// don't do it if the goalstarttime hasn't updated in a while.
@@ -164,9 +164,11 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		VectorCopy( ent->angles, ent->curstate.angles );
 	}
 
+	// set actual entity type
+	ent->curstate.entityType = entityType;
+
 	// don't add himself on firstperson
-	if(( ent->index - 1 ) == cl.playernum && ent != &clgame.viewent &&
-		cl.thirdperson == false && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
+	if( RP_LOCALCLIENT( ent ) && !cl.thirdperson && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
 	{
 		if( gl_allow_mirrors->integer && world.has_mirrors )
 			R_AddEntity( ent, entityType ); // will be drawn in mirror

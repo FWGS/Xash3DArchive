@@ -1212,12 +1212,12 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 
 	clip.start = start;
 	clip.end = end;
-	clip.mins = mins;
-	clip.maxs = maxs;
 	clip.type = (type & 0xFF);
 	clip.flags = (type & 0xFF00);
 	clip.passedict = (e) ? e : EDICT_NUM( 0 );
 	clip.hull = -1;
+	clip.mins = mins;
+	clip.maxs = maxs;
 
 	// clip to world
 	clip.trace = SV_TraceHull( EDICT_NUM( 0 ), clip.hull, start, mins, maxs, end );

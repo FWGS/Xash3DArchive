@@ -1742,15 +1742,14 @@ void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, in
 		// paint decals
 		if( trace.fraction != 1.0f )
 		{
-			physent_t		*pe;
-			cl_entity_t	*e;
+			physent_t	*pe = NULL;
 
 			if( trace.ent >= 0 && trace.ent < clgame.pmove->numphysent )
 				pe = &clgame.pmove->physents[trace.ent];
 
 			if( pe && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ))
 			{
-				e = CL_GetEntityByIndex( pe->info );
+				cl_entity_t *e = CL_GetEntityByIndex( pe->info );
 				decalIndex = CL_DecalIndex( decalIndices[Com_RandomLong( 0, decalCount-1 )] );
 				CL_DecalShoot( decalIndex, e->index, 0, trace.endpos, 0 );
 			}
@@ -2462,7 +2461,7 @@ void CL_DecayLights( void )
 	}
 }
 
-#define FLASHLIGHT_DISTANCE		1024	// ~4.5 meter
+#define FLASHLIGHT_DISTANCE		2048	// in units
 
 /*
 ================
@@ -2526,10 +2525,10 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	dl = CL_AllocDlight( key );
 	VectorCopy( trace.endpos, dl->origin );
 	dl->die = cl.time + 0.01f; // die on next frame
-	dl->color.r = 255 * falloff;
-	dl->color.g = 255 * falloff;
-	dl->color.b = 255 * falloff;
-	dl->radius = 64;
+	dl->color.r = bound( 0, 255 * falloff, 255 );
+	dl->color.g = bound( 0, 255 * falloff, 255 );
+	dl->color.b = bound( 0, 255 * falloff, 255 );
+	dl->radius = 72;
 }
 
 /*

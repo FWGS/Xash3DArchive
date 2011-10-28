@@ -989,7 +989,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 		
 	t = R_TextureAnimation( fa->texinfo->texture, fa - RI.currententity->model->surfaces );
 
-	if( RP_NORMALPASS() && fa->flags & SURF_MIRROR )
+	if( RP_NORMALPASS() && fa->flags & SURF_REFLECT )
 	{
 		if( SURF_INFO( fa, RI.currentmodel )->mirrortexturenum )
 		{
@@ -1032,8 +1032,11 @@ void R_RenderBrushPoly( msurface_t *fa )
 	DrawSurfaceDecals( fa );
 
 	// NOTE: draw mirror through in mirror show dummy lightmapped texture
-	if( fa->flags & SURF_MIRROR && RP_NORMALPASS() && r_lighting_extended->integer < 2 )
+	if( fa->flags & SURF_REFLECT && RP_NORMALPASS() && r_lighting_extended->integer < 2 )
 		return; // no lightmaps for mirror
+
+	if( fa->flags & SURF_DRAWTILED )
+		return; // no lightmaps anyway
 
 	// check for lightmap modification
 	for( maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++ )

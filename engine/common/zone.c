@@ -257,7 +257,7 @@ void _Mem_Free( void *data, const char *filename, int fileline )
 void *_Mem_Realloc( byte *poolptr, void *memptr, size_t size, const char *filename, int fileline )
 {
 	char		*nb;
-	memheader_t	*memhdr;
+	memheader_t	*memhdr = NULL;
 
 	if( size <= 0 ) return memptr; // no need to reallocate
 

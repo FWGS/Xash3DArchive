@@ -46,7 +46,6 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_INVALID_VERSION	BIT( 3 )
 
 #define SV_IsValidEdict( e )	( e && !e->free )
-#define EDICT_FROM_AREA( l )	STRUCT_FROM_LINK( l, edict_t, area )
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - svgame.edicts))
 #define EDICT_NUM( num )	SV_EDICT_NUM( num, __FILE__, __LINE__ )
 #define STRING( offset )	SV_GetString( offset )

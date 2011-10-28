@@ -24,5 +24,8 @@ extern server_physics_api_t g_physfuncs;
 // The actual physic callbacks
 #define LINK_ENTITY		(*g_physfuncs.pfnLinkEdict)
 #define PHYSICS_TIME	(*g_physfuncs.pfnGetServerTime)
+#define HOST_FRAMETIME	(*g_physfuncs.pfnGetFrameTime)
+#define MODEL_HANDLE	(*g_physfuncs.pfnGetModel)
+#define GET_AREANODE	(*g_physfuncs.pfnGetHeadnode)
 
 #endif		//PHYSCALLBACK_H

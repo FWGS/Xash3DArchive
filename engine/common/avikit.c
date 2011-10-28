@@ -292,7 +292,7 @@ byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame )
 		frame = Avi->video_frames - 1;
 
 	frame_info = (LPBITMAPINFOHEADER)pAVIStreamGetFrame( Avi->video_getframe, frame );
-	frame_raw = (char *)frame_info + frame_info->biSize + frame_info->biClrUsed * sizeof( RGBQUAD );
+	frame_raw = (byte *)frame_info + frame_info->biSize + frame_info->biClrUsed * sizeof( RGBQUAD );
 	pDrawDibDraw( Avi->hDD, Avi->hDC, 0, 0, Avi->video_xres, Avi->video_yres, frame_info, frame_raw, 0, 0, Avi->video_xres, Avi->video_yres, 0 );
 
 	// adjust gamma only if hardware gamma is enabled

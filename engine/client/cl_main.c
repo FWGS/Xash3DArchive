@@ -982,8 +982,7 @@ void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg )
 {
 	char		*s;
 	net_request_t	*nr;
-	int		context, type;
-	int		i, count = 0;
+	int		i, context, type;
 
 	context = Q_atoi( Cmd_Argv( 1 ));
 	type = Q_atoi( Cmd_Argv( 2 ));

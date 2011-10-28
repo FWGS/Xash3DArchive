@@ -369,7 +369,7 @@ void R_RecursiveMirrorNode( mnode_t *node, uint clipflags )
 	// draw stuff
 	for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
 	{
-		if(!( surf->flags & SURF_MIRROR ))
+		if(!( surf->flags & SURF_REFLECT ))
 			continue;
 
 		if( R_CullSurface( surf, clipflags ))
@@ -456,7 +456,7 @@ void R_FindBmodelMirrors( cl_entity_t *e, qboolean static_entity )
 	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		if(!( psurf->flags & SURF_MIRROR ))
+		if(!( psurf->flags & SURF_REFLECT ))
 			continue;
 
 		if( R_CullSurface( psurf, clipFlags ))
