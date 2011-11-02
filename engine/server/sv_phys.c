@@ -1135,8 +1135,7 @@ a glue two entities together
 void SV_Physics_Compound( edict_t *ent )
 {
 	edict_t	*parent;
-	matrix4x4	start_l, end_l, temp_l;
-	vec3_t	temp, org, org2, amove, lmove;
+	matrix4x4	start_l, end_l, temp_l, child;
 	float	movetime;
 	
 	// regular thinking
@@ -1166,25 +1165,31 @@ void SV_Physics_Compound( edict_t *ent )
 	}
 
 	movetime = parent->v.ltime - ent->v.ltime;
-	VectorScale( parent->v.velocity, movetime, lmove );
-	VectorScale( parent->v.avelocity, movetime, amove );
 
-	// create parent old position
-	Matrix4x4_CreateFromEntity( temp_l, ent->v.avelocity, ent->v.oldorigin, 1.0f );
-	Matrix4x4_Invert_Simple( start_l, temp_l );
+	if( movetime )
+	{
+		// create parent old position
+		Matrix4x4_CreateFromEntity( temp_l, ent->v.avelocity, ent->v.oldorigin, 1.0f );
+		Matrix4x4_Invert_Simple( start_l, temp_l );
 
-	// create parent actual position
-	Matrix4x4_CreateFromEntity( end_l, parent->v.angles, parent->v.origin, 1.0f );
+		// create parent actual position
+		Matrix4x4_CreateFromEntity( end_l, parent->v.angles, parent->v.origin, 1.0f );
 
-	VectorCopy( ent->v.origin, org );
-	Matrix4x4_VectorTransform( start_l, org, temp );
-	Matrix4x4_VectorTransform( end_l, temp, org2 );
-	VectorSubtract( org2, org, lmove );
+		// stupid quake bug!!!
+		ent->v.angles[PITCH] = -ent->v.angles[PITCH];
 
-	amove[0] = 0.0f; // don't pitch rotate
+		// create child actual position
+		Matrix4x4_CreateFromEntity( child, ent->v.angles, ent->v.origin, 1.0f );
 
-	VectorAdd( ent->v.angles, amove, ent->v.angles );
-	VectorAdd( ent->v.origin, lmove, ent->v.origin );
+		// transform child from start to end
+		Matrix4x4_ConcatTransforms( temp_l, start_l, child );
+		Matrix4x4_ConcatTransforms( child, end_l, temp_l );
+
+		// create child final position
+		Matrix4x4_ConvertToEntity( child, ent->v.angles, ent->v.origin );
+
+		ent->v.angles[PITCH] = -ent->v.angles[PITCH];
+	}
 
 	// notsolid ents never touch triggers
 	SV_LinkEdict( ent, (ent->v.solid == SOLID_NOT) ? false : true );
@@ -1607,6 +1612,10 @@ void SV_Physics_None( edict_t *ent )
 //============================================================================
 static void SV_Physics_Entity( edict_t *ent )
 {
+	// user dll can override movement type (Xash3D extension)
+	if( svgame.physFuncs.SV_PhysicsEntity && svgame.physFuncs.SV_PhysicsEntity( ent ))
+		return; // overrided
+
 	SV_UpdateBaseVelocity( ent );
 
 	if(!( ent->v.flags & FL_BASEVELOCITY ) && !VectorIsNull( ent->v.basevelocity ))
@@ -1621,17 +1630,6 @@ static void SV_Physics_Entity( edict_t *ent )
 	{
 		// force retouch even for stationary
 		SV_LinkEdict( ent, true );
-	}
-
-	// user dll can override movement type (Xash3D extension)
-	if( svgame.physFuncs.SV_PhysicsEntity )
-	{
-		if( svgame.physFuncs.SV_PhysicsEntity( ent ))
-		{
-			if( ent->v.flags & FL_KILLME )
-				SV_FreeEdict( ent );
-			return; // overrided
-		}
 	}
 
 	switch( ent->v.movetype )
@@ -1754,6 +1752,18 @@ areanode_t *SV_GetHeadNode( void )
 	return sv_areanodes;
 }
 
+/*
+================
+SV_ServerState
+
+Inplementation for new physics interface
+================
+*/
+int SV_ServerState( void )
+{
+	return sv.state;
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
@@ -1761,6 +1771,7 @@ static server_physics_api_t gPhysicsAPI =
 	SV_GetFrameTime,
 	Mod_Handle,
 	SV_GetHeadNode,
+	SV_ServerState,
 };
 
 /*

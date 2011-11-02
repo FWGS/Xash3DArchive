@@ -350,10 +350,12 @@ void R_StoreEfrags( efrag_t **ppefrag );
 //
 void R_PushDlights( void );
 void R_AnimateLight( void );
+void R_GetLightSpot( vec3_t lightspot );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius );
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, qboolean useAmbient, float radius );
-void R_GetLightSpot( vec3_t lightspot );
+int R_CountSurfaceDlights( msurface_t *surf );
+int R_CountDlights( void );
 
 //
 // gl_rmain.c

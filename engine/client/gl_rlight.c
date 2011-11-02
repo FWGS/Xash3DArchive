@@ -175,6 +175,48 @@ void R_PushDlights( void )
 }
 
 /*
+=============
+R_CountDlights
+=============
+*/
+int R_CountDlights( void )
+{
+	dlight_t	*l;
+	int	i, numDlights = 0;
+
+	for( i = 0, l = cl_dlights; i < MAX_DLIGHTS; i++, l++ )
+	{
+		if( l->die < cl.time || !l->radius )
+			continue;
+
+		numDlights++;
+	}
+
+	return numDlights;
+}
+
+/*
+=============
+R_CountSurfaceDlights
+=============
+*/
+int R_CountSurfaceDlights( msurface_t *surf )
+{
+	dlight_t	*l;
+	int	i, numDlights = 0;
+
+	for( i = 0, l = cl_dlights; i < MAX_DLIGHTS; i++, l++ )
+	{
+		if(!( surf->dlightbits & BIT( i )))
+			continue;	// not lit by this light
+
+		numDlights++;
+	}
+
+	return numDlights;
+}
+
+/*
 =======================================================================
 
 	AMBIENT LIGHTING

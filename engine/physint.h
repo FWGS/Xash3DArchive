@@ -16,10 +16,15 @@ GNU General Public License for more details.
 #ifndef PHYSINT_H
 #define PHYSINT_H
 
-#define SV_PHYSICS_INTERFACE_VERSION		3
+#define SV_PHYSICS_INTERFACE_VERSION		4
 
 #define STRUCT_FROM_LINK( l, t, m )		((t *)((byte *)l - (int)&(((t *)0)->m)))
 #define EDICT_FROM_AREA( l )			STRUCT_FROM_LINK( l, edict_t, area )
+
+// values that can be returned with pfnServerState
+#define SERVER_DEAD		0
+#define SERVER_LOADING	1
+#define SERVER_ACTIVE	2
 
 typedef struct areanode_s
 {
@@ -39,6 +44,7 @@ typedef struct server_physics_api_s
 	double		( *pfnGetFrameTime )( void );	// unclamped
 	void*		( *pfnGetModel)( int modelindex );
 	areanode_t*	( *pfnGetHeadnode)( void ); // BSP tree for all physic entities
+	int		( *pfnServerState)( void );
 } server_physics_api_t;
 
 // physic callbacks

@@ -255,9 +255,9 @@ void Matrix4x4_VectorTransform( const matrix4x4 in, const float v[3], float out[
 
 void Matrix4x4_VectorITransform( const matrix4x4 in, const float v[3], float out[3] )
 {
-	out[0] = v[0] * in[0][0] + v[1] * in[1][0] + v[2] * in[2][0] + in[3][0];
-	out[1] = v[0] * in[0][1] + v[1] * in[1][1] + v[2] * in[2][1] + in[3][1];
-	out[2] = v[0] * in[0][2] + v[1] * in[1][2] + v[2] * in[2][2] + in[3][2];
+	out[0] = v[0] * in[0][0] + v[1] * in[1][0] + v[2] * in[2][0] - in[0][3];
+	out[1] = v[0] * in[0][1] + v[1] * in[1][1] + v[2] * in[2][1] - in[1][3];
+	out[2] = v[0] * in[0][2] + v[1] * in[1][2] + v[2] * in[2][2] - in[2][3];
 }
 
 void Matrix4x4_VectorRotate( const matrix4x4 in, const float v[3], float out[3] )
@@ -419,6 +419,29 @@ void Matrix4x4_CreateFromEntity( matrix4x4 out, const vec3_t angles, const vec3_
 		out[3][2] = 0;
 		out[3][3] = 1;
 	}
+}
+
+void Matrix4x4_ConvertToEntity( const matrix4x4 in, vec3_t angles, vec3_t origin )
+{
+	float xyDist = sqrt( in[0][0] * in[0][0] + in[1][0] * in[1][0] );
+
+	// enough here to get angles?
+	if( xyDist > 0.001f )
+	{
+		angles[0] = RAD2DEG( atan2( -in[2][0], xyDist ) );
+		angles[1] = RAD2DEG( atan2( in[1][0], in[0][0] ) );
+		angles[2] = RAD2DEG( atan2( in[2][1], in[2][2] ) );
+	}
+	else	// forward is mostly Z, gimbal lock
+	{
+		angles[0] = RAD2DEG( atan2( -in[2][0], xyDist ) );
+		angles[1] = RAD2DEG( atan2( -in[0][1], in[1][1] ) );
+		angles[2] = 0;
+	}
+
+	origin[0] = in[0][3];
+	origin[1] = in[1][3];
+	origin[2] = in[2][3];
 }
 
 void Matrix4x4_TransformPositivePlane( const matrix4x4 in, const vec3_t normal, float d, vec3_t out, float *dist )

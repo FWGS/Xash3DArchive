@@ -27,5 +27,6 @@ extern server_physics_api_t g_physfuncs;
 #define HOST_FRAMETIME	(*g_physfuncs.pfnGetFrameTime)
 #define MODEL_HANDLE	(*g_physfuncs.pfnGetModel)
 #define GET_AREANODE	(*g_physfuncs.pfnGetHeadnode)
+#define GET_SERVER_STATE	(*g_physfuncs.pfnServerState)
 
 #endif		//PHYSCALLBACK_H
