@@ -1772,6 +1772,7 @@ static server_physics_api_t gPhysicsAPI =
 	Mod_Handle,
 	SV_GetHeadNode,
 	SV_ServerState,
+	Host_Error,
 };
 
 /*

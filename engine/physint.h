@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef PHYSINT_H
 #define PHYSINT_H
 
-#define SV_PHYSICS_INTERFACE_VERSION		4
+#define SV_PHYSICS_INTERFACE_VERSION		5
 
 #define STRUCT_FROM_LINK( l, t, m )		((t *)((byte *)l - (int)&(((t *)0)->m)))
 #define EDICT_FROM_AREA( l )			STRUCT_FROM_LINK( l, edict_t, area )
@@ -45,6 +45,7 @@ typedef struct server_physics_api_s
 	void*		( *pfnGetModel)( int modelindex );
 	areanode_t*	( *pfnGetHeadnode)( void ); // BSP tree for all physic entities
 	int		( *pfnServerState)( void );
+	void		( *pfnHost_Error)( const char *error, ... );	// cause Host Error
 } server_physics_api_t;
 
 // physic callbacks
@@ -55,6 +56,8 @@ typedef struct physics_interface_s
 	int		( *SV_CreateEntity	)( edict_t *pent, const char *szName );
 	// run custom physics for each entity (return 0 to use built-in engine physic)
 	int		( *SV_PhysicsEntity	)( edict_t *pEntity );
+	// spawn entities with internal mod function e.g. for re-arrange spawn order (0 - use engine parser, 1 - use mod parser)
+	int		( *SV_LoadEntities )( const char *mapname, char *entities );
 } physics_interface_t;
 
 #endif//PHYSINT_H

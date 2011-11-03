@@ -4409,49 +4409,51 @@ Creates a server's entity / program execution context by
 parsing textual entity definitions out of an ent file.
 ================
 */
-void SV_LoadFromFile( char *entities )
+void SV_LoadFromFile( const char *mapname, char *entities )
 {
 	char	token[2048];
-	int	inhibited, spawned;
 	qboolean	create_world = true;
+	int	inhibited;
 	edict_t	*ent;
 
 	ASSERT( entities != NULL );
 
-	inhibited = 0;
-	spawned = 0;
-
-	// parse ents
-	while(( entities = COM_ParseFile( entities, token )) != NULL )
+	// user dll can override movement type (Xash3D extension)
+	if( !svgame.physFuncs.SV_LoadEntities || !svgame.physFuncs.SV_LoadEntities( mapname, entities ))
 	{
-		if( token[0] != '{' )
-			Host_Error( "ED_LoadFromFile: found %s when expecting {\n", token );
+		inhibited = 0;
 
-		if( create_world )
+		// parse ents
+		while(( entities = COM_ParseFile( entities, token )) != NULL )
 		{
-			create_world = false;
-			ent = EDICT_NUM( 0 ); // already initialized
-		}
-		else ent = SV_AllocEdict();
+			if( token[0] != '{' )
+				Host_Error( "ED_LoadFromFile: found %s when expecting {\n", token );
 
-		if( !SV_ParseEdict( &entities, ent ))
-			continue;
-
-		if( svgame.dllFuncs.pfnSpawn( ent ) == -1 )
-		{
-			// game rejected the spawn
-			if( !( ent->v.flags & FL_KILLME ))
+			if( create_world )
 			{
-				SV_FreeEdict( ent );
-				inhibited++;
+				create_world = false;
+				ent = EDICT_NUM( 0 ); // already initialized
+			}
+			else ent = SV_AllocEdict();
+
+			if( !SV_ParseEdict( &entities, ent ))
+				continue;
+
+			if( svgame.dllFuncs.pfnSpawn( ent ) == -1 )
+			{
+				// game rejected the spawn
+				if( !( ent->v.flags & FL_KILLME ))
+				{
+					SV_FreeEdict( ent );
+					inhibited++;
+				}
 			}
 		}
-		else spawned++;
+
+		MsgDev( D_INFO, "\n%i entities inhibited\n", inhibited );
 	}
 
-	MsgDev( D_INFO, "\n%i entities inhibited\n", inhibited );
-
-	// reset world origin and angles
+	// reset world origin and angles for some reason
 	VectorClear( svgame.edicts->v.origin );
 	VectorClear( svgame.edicts->v.angles );
 }
@@ -4503,7 +4505,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	svgame.globals->time = sv.time;
 
 	// spawn the rest of the entities on the map
-	SV_LoadFromFile( entities );
+	SV_LoadFromFile( mapname, entities );
 
 	// free memory that allocated by entpatch only
 	if( !Mem_IsAllocatedExt( sv.worldmodel->mempool, entities ))
