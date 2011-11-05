@@ -1369,6 +1369,10 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 				{
 					movedCount++;
 				}
+				else
+				{
+					pent->v.flags |= FL_KILLME;
+				}
 			}
 			else 
 			{

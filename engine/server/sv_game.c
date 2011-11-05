@@ -696,7 +696,7 @@ void SV_FreeEdict( edict_t *pEdict )
 	if( pEdict->pvPrivateData )
 	{
 		// NOTE: new interface can be missing
-		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
+		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData && sv.state != ss_dead )
 			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
 
 		if( Mem_IsAllocated( pEdict->pvPrivateData ))
