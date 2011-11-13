@@ -1279,7 +1279,9 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 
 	// restore camera view here
 	pent = pSaveData->pTable[bound( 0, (word)header.viewentity, pSaveData->tableCount )].pent;
-	if( SV_IsValidEdict( pent )) sv.viewentity = NUM_FOR_EDICT( pent );
+
+	if( SV_IsValidEdict( pent ))
+		sv.viewentity = NUM_FOR_EDICT( pent );
 	else sv.viewentity = 0;
 
 	// just use normal client view
@@ -1307,8 +1309,8 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 	// create entity list
 	for( i = 0; i < pSaveData->tableCount; i++ )
 	{
-		pent = NULL;
 		pEntInfo = &pSaveData->pTable[i];
+		pent = NULL;
 
 		if( pEntInfo->size && pEntInfo->id != 0 )
 		{

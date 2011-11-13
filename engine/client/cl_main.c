@@ -1117,10 +1117,10 @@ void CL_PrepVideo( void )
 	R_NewMap(); // tell the render about new map
 
 	V_SetupOverviewState(); // set overview bounds
-
+	Msg( "VidInit()\n" );
 	// must be called after lightmap loading!
 	clgame.dllFuncs.pfnVidInit();
-
+	Msg( "VidInit: end()\n" );
 	// release unused SpriteTextures
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
@@ -1178,6 +1178,8 @@ void CL_PrepVideo( void )
 
 	cl.video_prepped = true;
 	cl.force_refdef = true;
+
+	Msg( "PrepVideo: end()\n" );
 }
 
 /*

@@ -859,7 +859,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	int		i, alpha, type;
 	float		angle, dot, sr, cr, flAlpha;
 	float		lerp = 1.0f, ilerp, scale;
-	vec3_t		v_forward, v_right, v_up, tmp;
+	vec3_t		v_forward, v_right, v_up;
 	vec3_t		origin, color, color2;
 
 	if( RI.params & RP_ENVVIEW )
@@ -973,13 +973,8 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		VectorSubtract( origin, v_forward, origin );
 		break;
 	case SPR_FACING_UPRIGHT:
-		VectorNegate( e->origin, tmp );
-		VectorNormalize( tmp );
-		dot = tmp[2];
-		if(( dot > 0.999848 ) || ( dot < -0.999848 ))	// cos(1 degree) = 0.999848
-			return; // invisible
-		VectorSet( v_up, 0.0f, 0.0f, 1.0f );		
-		VectorSet( v_right, tmp[1], -tmp[0], 0.0f );
+		VectorSet( v_right, origin[1] - RI.vieworg[1], -(origin[0] - RI.vieworg[0]), 0.0f );
+		VectorSet( v_up, 0.0f, 0.0f, 1.0f );
 		VectorNormalize( v_right );
 		break;
 	case SPR_FWD_PARALLEL_UPRIGHT:

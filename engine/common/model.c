@@ -454,12 +454,6 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		out->firstface = in->firstface;
 		out->numfaces = in->numfaces;
 
-		if( VectorIsNull( out->origin ))
-		{
-			// NOTE: zero origin after recalculating is indicated included origin brush
-			VectorAverage( out->mins, out->maxs, out->origin );
-		}
-
 		if( i == 0 || !world.loading )
 			continue; // skip the world
 
@@ -1452,6 +1446,64 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 
 /*
 =================
+Mod_FindModelOrigin
+
+routine to detect bmodels with origin-brush
+=================
+*/
+static void Mod_FindModelOrigin( const char *entities, const char *modelname, vec3_t origin )
+{
+	char	*pfile;
+	string	keyname;
+	char	token[2048];
+	qboolean	model_found;
+	qboolean	origin_found;
+
+	if( !entities || !modelname || !*modelname || !origin )
+		return;
+
+	pfile = (char *)entities;
+
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
+	{
+		if( token[0] != '{' )
+			Host_Error( "Mod_FindModelOrigin: found %s when expecting {\n", token );
+
+		model_found = origin_found = false;
+		VectorClear( origin );
+
+		while( 1 )
+		{
+			// parse key
+			if(( pfile = COM_ParseFile( pfile, token )) == NULL )
+				Host_Error( "Mod_FindModelOrigin: EOF without closing brace\n" );
+			if( token[0] == '}' ) break; // end of desc
+
+			Q_strncpy( keyname, token, sizeof( keyname ));
+
+			// parse value	
+			if(( pfile = COM_ParseFile( pfile, token )) == NULL ) 
+				Host_Error( "Mod_FindModelOrigin: EOF without closing brace\n" );
+
+			if( token[0] == '}' )
+				Host_Error( "Mod_FindModelOrigin: closing brace without data\n" );
+
+			if( !Q_stricmp( keyname, "model" ) && !Q_stricmp( modelname, token ))
+				model_found = true;
+
+			if( !Q_stricmp( keyname, "origin" ))
+			{
+				Q_atov( origin, token, 3 );
+				origin_found = true;
+			}
+		}
+
+		if( model_found ) break;
+	}	
+}
+
+/*
+=================
 Mod_MakeHull0
 
 Duplicate the drawing hull structure as a clipping hull
@@ -1663,6 +1715,7 @@ Mod_LoadBrushModel
 static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *loaded )
 {
 	int	i, j;
+	char	*ents;
 	dheader_t	*header;
 	dmodel_t 	*bm;
 
@@ -1723,6 +1776,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	Mod_MakeHull0 ();
 	
 	loadmodel->numframes = 2;	// regular and alternate animation
+	ents = loadmodel->entities;
 	
 	// set up the submodels
 	for( i = 0; i < mod->numsubmodels; i++ )
@@ -1744,9 +1798,15 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 
 		mod->radius = RadiusFromBounds( mod->mins, mod->maxs );
 		mod->numleafs = bm->visleafs;
+		mod->flags = 0;
 
-		// flag 1 is indicated model with origin brush!
-		mod->flags = VectorIsNull( bm->origin ) ? MODEL_HAS_ORIGIN : 0;
+		if( i != 0 )
+		{
+			Mod_FindModelOrigin( ents, va( "*%i", i ), bm->origin );
+
+			// flag 2 is indicated model with origin brush!
+			if( !VectorIsNull( bm->origin )) mod->flags |= MODEL_HAS_ORIGIN;
+		}
 
 		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
 		{

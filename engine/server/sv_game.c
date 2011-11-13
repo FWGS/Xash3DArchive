@@ -531,15 +531,17 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 {
 	file_t		*f;
 	dheader_t		*header;
-	string		entfilename;
 	char		*ents = NULL;
+	string		bspfilename, entfilename;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	qboolean		result = false;
+	size_t		ft1, ft2;
 
 	ASSERT( flags != NULL );
-			
-	f = FS_Open( va( "maps/%s.bsp", filename ), "rb", false );
+
+	Q_strncpy( bspfilename, va( "maps/%s.bsp", filename ), sizeof( entfilename ));			
+	f = FS_Open( bspfilename, "rb", false );
 	if( !f ) return NULL;
 
 	*flags |= MAP_IS_EXIST;
@@ -573,7 +575,16 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 
 	// check for entfile too
 	Q_strncpy( entfilename, va( "maps/%s.ent", filename ), sizeof( entfilename ));
-	ents = FS_LoadFile( entfilename, NULL, true ); // grab .ent files only from gamedir
+
+	// make sure what entity patch is never than bsp
+	ft1 = FS_FileTime( bspfilename, false );
+	ft2 = FS_FileTime( entfilename, true );
+
+	if( ft2 != -1 && ft1 < ft2 )
+	{
+		// grab .ent files only from gamedir
+		ents = FS_LoadFile( entfilename, NULL, true ); 
+	}
 
 	if( !ents && lumplen >= 10 )
 	{
@@ -696,7 +707,7 @@ void SV_FreeEdict( edict_t *pEdict )
 	if( pEdict->pvPrivateData )
 	{
 		// NOTE: new interface can be missing
-		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData && sv.state != ss_dead )
+		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
 			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
 
 		if( Mem_IsAllocated( pEdict->pvPrivateData ))
@@ -4418,7 +4429,7 @@ void SV_LoadFromFile( const char *mapname, char *entities )
 
 	ASSERT( entities != NULL );
 
-	// user dll can override movement type (Xash3D extension)
+	// user dll can override spawn entities function (Xash3D extension)
 	if( !svgame.physFuncs.SV_LoadEntities || !svgame.physFuncs.SV_LoadEntities( mapname, entities ))
 	{
 		inhibited = 0;

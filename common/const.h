@@ -109,17 +109,17 @@
 #define EF_NOINTERP			32	// don't interpolate the next frame
 #define EF_LIGHT			64	// rocket flare glow sprite
 #define EF_NODRAW			128	// don't draw entity
-#define EF_NOREFLECT		256	// Entity won't reflecting in mirrors
-#define EF_REFLECTONLY		512	// Entity will be drawing only in mirrors
-#define EF_NOWATERCSG		1024	// Do not remove sides for func_water entity
-					// Reserved bit
-#define EF_FULLBRIGHT		4096	// Just get fullbright
-#define EF_NOSHADOW			8192	// ignore shadow for this entity
-#define EF_MERGE_VISIBILITY		16384	// this entity allowed to merge vis (e.g. env_sky or portal camera)
-#define EF_REQUEST_PHS		32768	// This entity requested phs bitvector instead of pvsbitvector in AddToFullPack calls
 
-// user-specified entity effects
-#define EF_LASERSPOT		65536	// tempentity laserspot at attachment #1 from player or npc
+
+
+#define EF_NOREFLECT		(1<<24)	// Entity won't reflecting in mirrors
+#define EF_REFLECTONLY		(1<<25)	// Entity will be drawing only in mirrors
+#define EF_NOWATERCSG		(1<<26)	// Do not remove sides for func_water entity
+#define EF_FULLBRIGHT		(1<<27)	// Just get fullbright
+#define EF_NOSHADOW			(1<<28)	// ignore shadow for this entity
+#define EF_MERGE_VISIBILITY		(1<<29)	// this entity allowed to merge vis (e.g. env_sky or portal camera)
+#define EF_REQUEST_PHS		(1<<30)	// This entity requested phs bitvector instead of pvsbitvector in AddToFullPack calls
+// g-cont. one reserved bit here for me
 
 // entity flags
 #define EFLAG_SLERP			1	// do studio interpolation of this entity

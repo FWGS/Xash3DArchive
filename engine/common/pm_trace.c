@@ -95,6 +95,9 @@ int PM_HullPointContents( hull_t *hull, int num, const vec3_t p )
 {
 	mplane_t		*plane;
 
+	if( !hull || !hull->planes )	// fantom bmodels?
+		return CONTENTS_NONE;
+
 	while( num >= 0 )
 	{
 		plane = &hull->planes[hull->clipnodes[num].planenum];

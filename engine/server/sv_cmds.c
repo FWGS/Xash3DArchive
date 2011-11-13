@@ -758,6 +758,43 @@ void SV_EdictsInfo_f( void )
 	Msg( "%5i total\n", svgame.globals->maxEntities );
 }
 
+void SV_EntityInfo_f( void )
+{
+	edict_t	*ent;
+	int	i;
+
+	if( sv.state != ss_active )
+	{
+		Msg( "^3no server running.\n" );
+		return;
+	}
+
+	for( i = 0; i < svgame.numEntities; i++ )
+	{
+		ent = EDICT_NUM( i );
+		if( !SV_IsValidEdict( ent )) continue;
+
+		Msg( "%5i origin: %.f %.f %.f", i, ent->v.origin[0], ent->v.origin[1], ent->v.origin[2] );
+
+		if( ent->v.classname )
+			Msg( ", class: %s", STRING( ent->v.classname ));
+
+		if( ent->v.globalname )
+			Msg( ", global: %s", STRING( ent->v.globalname ));
+
+		if( ent->v.targetname )
+			Msg( ", name: %s", STRING( ent->v.targetname ));
+
+		if( ent->v.target )
+			Msg( ", target: %s", STRING( ent->v.target ));
+
+		if( ent->v.model )
+			Msg( ", model: %s", STRING( ent->v.model ));
+
+		Msg( "\n" );
+	}
+}
+
 /*
 ==================
 SV_InitOperatorCommands
@@ -783,6 +820,7 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
 	Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
 	Cmd_AddCommand( "edicts_info", SV_EdictsInfo_f, "show info about edicts" );
+	Cmd_AddCommand( "entity_info", SV_EntityInfo_f, "show more info about edicts" );
 
 	if( host.type == HOST_DEDICATED )
 	{
@@ -818,6 +856,7 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "entpatch" );
 	Cmd_RemoveCommand( "map_background" );
 	Cmd_RemoveCommand( "edicts_info" );
+	Cmd_RemoveCommand( "entity_info" );
 
 	if( host.type == HOST_DEDICATED )
 	{

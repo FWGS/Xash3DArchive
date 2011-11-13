@@ -307,7 +307,6 @@ void SV_ActivateServer( void )
 	}
 
 	numFrames = (sv.loadgame) ? 1 : 2;
-	svgame.globals->force_retouch++;	// g-cont. this is correct ?
 	if( !sv.loadgame || svgame.globals->changelevel )
 		host.frametime = 0.1f;			
 

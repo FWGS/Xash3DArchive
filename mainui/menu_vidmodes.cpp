@@ -51,6 +51,7 @@ static const char *uiVideoModes[] =
 	"2048 x 1536",
 	"800 x 480 (wide)",
 	"856 x 480 (wide)",
+	"960 x 540 (wide)",
 	"1024 x 576 (wide)",
 	"1024 x 600 (wide)",
 	"1280 x 720 (wide)",
@@ -58,6 +59,7 @@ static const char *uiVideoModes[] =
 	"1366 x 768 (wide)",
 	"1440 x 900 (wide)",
 	"1680 x 1050 (wide)",
+	"1920 x 1080 (wide)",
 	"1920 x 1200 (wide)",
 	"2560 x 1600 (wide)",
 };
