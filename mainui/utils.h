@@ -61,13 +61,6 @@ extern int UI_IsVisible( void );
 extern int UI_CreditsActive( void );
 extern void UI_FinalCredits( void );
 
-typedef void* dllhandle_t;
-typedef struct dllfunction_s
-{
-	const char *name;
-	void **funcvariable;
-} dllfunction_t;
-
 #include "cvardef.h"
 
 // ScreenHeight returns the height of the screen, in pixels

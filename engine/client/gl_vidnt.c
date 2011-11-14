@@ -740,6 +740,9 @@ void VID_StartupGamma( void )
 	size_t	gamma_size;
 	byte	*savedGamma;
 
+	// init gamma ramp
+	Q_memset( glState.stateRamp, 0, sizeof( glState.stateRamp ));
+
 	glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
 
 	if( !glConfig.deviceSupportsGamma )
@@ -755,9 +758,6 @@ void VID_StartupGamma( void )
 		MsgDev( D_NOTE, "VID_StartupGamma: software gamma initialized\n" );
 		return;
 	}
-
-	// init gamma ramp
-	Q_memset( glState.stateRamp, 0, sizeof( glState.stateRamp ));
 
 	// share this extension so engine can grab them
 	GL_SetExtension( GL_HARDWARE_GAMMA_CONTROL, glConfig.deviceSupportsGamma );
@@ -1551,7 +1551,7 @@ void GL_InitExtensions( void )
 	GL_CheckExtension( "GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "gl_cva_support", GL_CUSTOM_VERTEX_ARRAY_EXT );
 
 	if( !GL_Support( GL_CUSTOM_VERTEX_ARRAY_EXT ))
-		GL_CheckExtension( "GL_SGI_compiled_vertex_array", compiledvertexarrayfuncs, "gl_cva_support", GL_CUSTOM_VERTEX_ARRAY_EXT );		
+		GL_CheckExtension( "GL_SGI_compiled_vertex_array", compiledvertexarrayfuncs, "gl_cva_support", GL_CUSTOM_VERTEX_ARRAY_EXT );
 
 	GL_CheckExtension( "GL_EXT_texture_edge_clamp", NULL, "gl_clamp_to_edge", GL_CLAMPTOEDGE_EXT );
 
