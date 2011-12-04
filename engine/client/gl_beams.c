@@ -854,7 +854,6 @@ BEAM		*cl_active_beams;
 BEAM		*cl_free_beams;
 BEAM		*cl_viewbeams = NULL;		// beams pool
 
-particle_t	*cl_active_trails;
 particle_t	*cl_free_trails;
 particle_t	*cl_beamtrails = NULL;		// trail partilces
 
@@ -894,7 +893,6 @@ void CL_ClearViewBeams( void )
 
 	// also clear any particles used by beams
 	cl_free_trails = cl_beamtrails;
-	cl_active_trails = NULL;
 
 	for( i = 0; i < ( GI->max_beams * BEAM_TRAILS ) - 1; i++ )
 		cl_beamtrails[i].next = &cl_beamtrails[i+1];
@@ -1565,9 +1563,6 @@ void CL_DrawBeams( int fTrans )
 	BEAM	*pBeam, *pNext;
 	BEAM	*pPrev = NULL;
 	int	i;
-
-	if( RI.refdef.onlyClientDraw )
-		return;
 	
 	// server beams don't allocate beam chains
 	// all params are stored in cl_entity_t

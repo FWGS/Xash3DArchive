@@ -89,6 +89,10 @@ void V_SetupRefDef( void )
 	cl.refdef.fov_x = cl.data.fov; // this is a final fov value
 	cl.refdef.fov_y = V_CalcFov( &cl.refdef.fov_x, cl.refdef.viewport[2], cl.refdef.viewport[3] );
 
+	// adjust FOV for widescreen
+	if( glState.wideScreen && r_adjust_fov->integer )
+		V_AdjustFov( &cl.refdef.fov_x, &cl.refdef.fov_y, cl.refdef.viewport[2], cl.refdef.viewport[3], false );
+
 	if( CL_IsPredicted( ) && !cl.refdef.demoplayback )
 	{	
 		VectorCopy( cl.predicted_origin, cl.refdef.simorg );

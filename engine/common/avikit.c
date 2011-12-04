@@ -625,14 +625,73 @@ void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audi
 
 qboolean AVI_IsActive( movie_state_t *Avi )
 {
-	ASSERT( Avi != NULL );
-
-	return Avi->active;
+	if( Avi != NULL )
+		return Avi->active;
+	return false;
 }
 
 movie_state_t *AVI_GetState( int num )
 {
 	return &avi[num];
+}
+
+/*
+=============
+AVIKit user interface
+
+=============
+*/
+movie_state_t *AVI_AllocState( void )
+{
+	return Mem_Alloc( cls.mempool, sizeof( movie_state_t ));
+}
+
+movie_state_t *AVI_LoadVideo( const char *filename, qboolean load_audio, qboolean ignore_hwgamma )
+{
+	movie_state_t	*Avi;
+	string		path;
+	const char	*fullpath;
+
+	// fast reject
+	if( !avi_initialized )
+	{
+		MsgDev( D_ERROR, "AVI_LoadVideo: movie support is disabled\n" );
+		return NULL;
+	}	
+
+	// open cinematic
+	Q_snprintf( path, sizeof( path ), "media/%s", filename );
+	FS_DefaultExtension( path, ".avi" );
+	fullpath = FS_GetDiskPath( path, false );
+
+	if( FS_FileExists( path, false ) && !fullpath )
+	{
+		MsgDev( D_ERROR, "AVI_LoadVideo: Couldn't load %s from packfile. Please extract it\n", path );
+		return NULL;
+	}
+
+	Avi = Mem_Alloc( cls.mempool, sizeof( movie_state_t ));
+	AVI_OpenVideo( Avi, fullpath, load_audio, ignore_hwgamma, false );
+
+	if( !AVI_IsActive( Avi ))
+	{
+		AVI_FreeVideo( Avi ); // something bad happens
+		return NULL;
+	}
+
+	// all done
+	return Avi;
+}
+
+void AVI_FreeVideo( movie_state_t *state )
+{
+	if( !state ) return;
+
+	if( Mem_IsAllocatedExt( cls.mempool, state ))
+	{
+		AVI_CloseVideo( state );
+		Mem_Free( state );
+	}
 }
 
 qboolean AVI_Initailize( void )

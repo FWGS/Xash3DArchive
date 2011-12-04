@@ -126,6 +126,8 @@ void CL_PrepareTEnt( TEMPENTITY *pTemp, model_t *pmodel )
 	{
 		modelIndex = CL_FindModelIndex( pmodel->name );
 		Mod_GetFrames( modelIndex, &frameCount );
+		VectorCopy( pmodel->mins, pTemp->entity.curstate.mins );
+		VectorCopy( pmodel->maxs, pTemp->entity.curstate.maxs );
 	}
 	else
 	{

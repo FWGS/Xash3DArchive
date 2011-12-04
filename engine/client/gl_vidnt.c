@@ -1204,6 +1204,7 @@ qboolean VID_SetMode( void )
 	qboolean	fullscreen;
 
 	fullscreen = vid_fullscreen->integer;
+	gl_swapInterval->modified = true;
 
 	if(( err = R_ChangeDisplaySettings( vid_mode->integer, fullscreen )) == rserr_ok )
 	{

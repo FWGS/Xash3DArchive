@@ -107,6 +107,9 @@ typedef struct engine_studio_api_s
 	// Only called by hardware interface
 	void		( *GL_StudioDrawShadow )( void );
 	void		( *GL_SetRenderMode )( int mode );
+
+	// Xash3D extension
+	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 } engine_studio_api_t;
 
 typedef struct server_studio_api_s

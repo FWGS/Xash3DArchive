@@ -782,7 +782,15 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	
 	if( model->type != mod_brush )
 	{
-		MsgDev( D_ERROR, "Decals must hit mod_brush!\n" );
+		if( clgame.drawFuncs.R_DecalShoot )
+		{
+			// fallback to client - e.g. for R_StudiodecalShoot
+			clgame.drawFuncs.R_DecalShoot( textureIndex, ent, model, pos, flags );
+		}
+		else
+		{
+			MsgDev( D_ERROR, "Decals must hit mod_brush!\n" );
+		}
 		return;
 	}
 

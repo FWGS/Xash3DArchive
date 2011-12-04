@@ -148,14 +148,6 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 {
 	if( !ent->model ) return false;
 
-	// if entity is beam add it here
-	// because render doesn't know how to draw beams
-	if( entityType == ET_BEAM )
-	{
-		CL_AddCustomBeam( ent );
-		return true;
-	}
-
 	if( entityType == ET_TEMPENTITY )
 	{
 		// copy actual origin and angles back to let StudioModelRenderer
@@ -171,7 +163,27 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	if( RP_LOCALCLIENT( ent ) && !cl.thirdperson && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
 	{
 		if( gl_allow_mirrors->integer && world.has_mirrors )
-			R_AddEntity( ent, entityType ); // will be drawn in mirror
+		{
+			// will be drawn in mirror
+			if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
+				return false;
+
+			if( entityType == ET_BEAM )
+			{
+				CL_AddCustomBeam( ent );
+				return true;
+			}
+			else if( !R_AddEntity( ent, entityType ))
+			{
+				return false;
+			}
+		}
+	}
+	else if( CL_IsInMenu( ))
+	{
+		// menu entities ignores client filter
+		if( !R_AddEntity( ent, entityType ))
+			return false;
 	}
 	else
 	{
@@ -179,8 +191,15 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
 			return false;
 
-		if( !R_AddEntity( ent, entityType ))
+		if( entityType == ET_BEAM )
+		{
+			CL_AddCustomBeam( ent );
+			return true;
+		}
+		else if( !R_AddEntity( ent, entityType ))
+		{
 			return false;
+		}
 	}
 
 	// apply effects
@@ -891,6 +910,12 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius )
 	ASSERT( origin != NULL );
 
 	if( entnum == 0 ) return true; // static sound
+
+	if(( entnum - 1 ) == cl.playernum )
+	{
+		VectorCopy( cl.frame.local.client.origin, origin );
+		return true;
+	}
 
 	valid_origin = VectorIsNull( origin ) ? false : true;          
 	ent = CL_GetEntityByIndex( entnum );

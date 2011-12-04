@@ -1162,6 +1162,32 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 
 /*
 ================
+GL_CreateTexture
+
+creates an empty 32-bit texture (just reserve slot)
+================
+*/
+int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags )
+{
+	rgbdata_t	r_empty;
+	int	texture;
+
+	Q_memset( &r_empty, 0, sizeof( r_empty ));
+	r_empty.width = width;
+	r_empty.height = height;
+	r_empty.type = PF_RGBA_32;
+	r_empty.size = r_empty.width * r_empty.height * 4;
+	r_empty.flags = IMAGE_HAS_COLOR | (( flags & TF_HAS_ALPHA ) ? IMAGE_HAS_ALPHA : 0 );
+	r_empty.buffer = (byte *)buffer;
+
+	texture = GL_LoadTextureInternal( name, &r_empty, flags, false );
+	GL_SetTextureType( texture, TEX_CUSTOM );
+
+	return texture;
+}
+
+/*
+================
 GL_ProcessTexture
 ================
 */

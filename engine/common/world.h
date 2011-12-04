@@ -37,14 +37,7 @@ ENTITY AREA CHECKING
 #define AREA_NODES			32
 #define AREA_DEPTH			4
 
-typedef struct
-{
-	char		pattern[MAX_STRING];
-	float		map[MAX_STRING];
-	int		length;
-	float		value;
-	qboolean		interp;		// allow to interpolate this lightstyle
-} lightstyle_t;
+#include "lightstyle.h"
 
 extern const char		*et_name[];
 

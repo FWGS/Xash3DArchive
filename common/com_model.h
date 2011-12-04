@@ -196,6 +196,20 @@ typedef struct msurface_s
 	decal_t		*pdecals;
 } msurface_t;
 
+// surface extradata stored in cache.data for all brushmodels
+typedef struct mextrasurf_s
+{
+	vec3_t		mins, maxs;
+	vec3_t		origin;		// surface origin
+	int		checkcount;	// for multi-check avoidance
+
+	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
+
+	int		mirrortexturenum;	// gl texnum
+	float		mirrormatrix[4][4];
+	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
+} mextrasurf_t;
+
 typedef struct hull_s
 {
 	dclipnode_t	*clipnodes;

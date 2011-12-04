@@ -77,12 +77,14 @@ static dllfunc_t cdll_exports[] =
 { NULL, NULL }
 };
 
+// optional exports
 static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 {
 { "HUD_GetStudioModelInterface", (void **)&clgame.dllFuncs.pfnGetStudioModelInterface },
 { "HUD_DirectorMessage", (void **)&clgame.dllFuncs.pfnDirectorMessage },
 { "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
 { "HUD_ChatInputPosition", (void **)&clgame.dllFuncs.pfnChatInputPosition },
+{ "HUD_GetRenderInterface", (void **)&clgame.dllFuncs.pfnGetRenderInterface },
 { NULL, NULL }
 };
 
@@ -2568,51 +2570,6 @@ void pfnSetMouseEnable( qboolean fEnable )
 }
 
 /*
-===============================================================================
-		EffectsAPI Builtin Functions
-
-	     this interface is legacy from old Xash3D ...
-===============================================================================
-*/
-/*
-=================
-pfnEnvShot
-
-=================
-*/
-static void pfnEnvShot( const float *vieworg, const char *name, int skyshot )
-{
-	static vec3_t viewPoint;
-
-	if( !name )
-	{
-		MsgDev( D_ERROR, "R_%sShot: bad name\n", skyshot ? "Sky" : "Env" );
-		return; 
-	}
-
-	if( cls.scrshot_action != scrshot_inactive )
-	{
-		if( cls.scrshot_action != scrshot_skyshot && cls.scrshot_action != scrshot_envshot )
-			MsgDev( D_ERROR, "R_%sShot: subsystem is busy, try later.\n", skyshot ? "Sky" : "Env" );
-		return;
-	}
-
-	cls.envshot_vieworg = NULL; // use client view
-	Q_strncpy( cls.shotname, name, sizeof( cls.shotname ));
-
-	if( vieworg )
-	{
-		// make sure what viewpoint don't temporare
-		VectorCopy( vieworg, viewPoint );
-		cls.envshot_vieworg = viewPoint;
-	}
-
-	// make request for envshot
-	if( skyshot ) cls.scrshot_action = scrshot_skyshot;
-	else cls.scrshot_action = scrshot_envshot;
-}
-
-/*
 =================
 TriApi implementation
 
@@ -3329,6 +3286,8 @@ static event_api_t gEventApi =
 	pfnTraceTexture,
 	pfnStopAllSounds,
 	pfnKillEvents,
+	CL_EventIndex,
+	CL_IndexEvent,
 };
 
 static demo_api_t gDemoApi =
@@ -3569,16 +3528,15 @@ qboolean CL_LoadProgs( const char *name )
 	CL_InitEdicts ();	// initailize local player and world
 	CL_InitClientMove(); // initialize pm_shared
 
+	if( !R_InitRenderAPI())	// Xash3D extension
+	{
+		MsgDev( D_WARN, "CL_LoadProgs: couldn't get render API\n" );
+	}
+
 	// initialize game
 	clgame.dllFuncs.pfnInit();
 
-	if( !CL_InitStudioAPI( ))
-	{
-		Com_FreeLibrary( clgame.hInstance );
-		MsgDev( D_NOTE, "CL_LoadProgs: can't init studio API\n" );
-		clgame.hInstance = NULL;
-		return false;
-	}
+	CL_InitStudioAPI( );
 
 	return true;
 }

@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include "com_model.h"
 #include "cl_entity.h"
 #include "ref_params.h"
+#include "render_api.h"
 #include "protocol.h"
 #include "dlight.h"
 
@@ -68,30 +69,9 @@ typedef enum
 	TEX_CUBEMAP,	// cubemap textures (sky)
 	TEX_DETAIL,	// detail textures
 	TEX_REMAP,	// local copy of remap texture
-	TEX_SCREENCOPY	// keep screen copy e.g. for mirror
+	TEX_SCREENCOPY,	// keep screen copy e.g. for mirror
+	TEX_CUSTOM	// user created texture
 } texType_t;
-
-typedef enum
-{
-	TF_NEAREST	= BIT(0),		// disable texfilter
-	TF_KEEP_RGBDATA	= BIT(1),		// some images keep source
-	TF_NOFLIP_TGA	= BIT(2),		// Steam background completely ignore tga attribute 0x20
-	TF_KEEP_8BIT	= BIT(3),		// keep original 8-bit image (if present)
-	TF_NOPICMIP	= BIT(4),		// ignore r_picmip resample rules
-	TF_UNCOMPRESSED	= BIT(5),		// don't compress texture in video memory
-	TF_CUBEMAP	= BIT(6),		// it's cubemap texture
-	TF_DEPTHMAP	= BIT(7),		// custom texture filter used
-	TF_INTENSITY	= BIT(8),
-	TF_LUMINANCE	= BIT(9),		// force image to grayscale
-	TF_SKYSIDE	= BIT(10),
-	TF_CLAMP		= BIT(11),
-	TF_NOMIPMAP	= BIT(12),
-	TF_HAS_LUMA	= BIT(13),	// sets by GL_UploadTexture
-	TF_MAKELUMA	= BIT(14),	// create luma from quake texture
-	TF_NORMALMAP	= BIT(15),	// is a normalmap
-	TF_LIGHTMAP	= BIT(16),	// is a lightmap
-	TF_FORCE_COLOR	= BIT(17),	// force upload monochrome textures as RGB (detail textures)
-} texFlags_t;
 
 typedef struct gltexture_s
 {
@@ -120,20 +100,6 @@ typedef struct gltexture_s
 
 	struct gltexture_s	*nextHash;
 } gltexture_t;
-
-// surface extradata stored in cache.data for all brushmodels
-typedef struct mextrasurf_s
-{
-	vec3_t		mins, maxs;
-	vec3_t		origin;		// surface origin
-	int		checkcount;	// for multi-check avoidance
-
-	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
-
-	int		mirrortexturenum;	// gl texnum
-	matrix4x4		mirrormatrix;
-	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
-} mextrasurf_t;
 
 // mirror entity
 typedef struct gl_entity_s
@@ -273,6 +239,10 @@ extern dlight_t		cl_elights[MAX_ELIGHTS];
 #define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities)
 #define r_numStatics	(tr.num_static_entities)
 
+extern struct beam_s	*cl_active_beams;
+extern struct beam_s	*cl_free_beams;
+extern struct particle_s	*cl_free_trails;
+
 //
 // gl_backend.c
 //
@@ -307,6 +277,7 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags );
 // gl_decals.c
 //
 void DrawSurfaceDecals( msurface_t *fa );
+void DrawSingleDecal( decal_t *pDecal, msurface_t *fa );
 void R_ClearDecals( void );
 
 //
@@ -314,6 +285,7 @@ void R_ClearDecals( void );
 //
 void R_Set2DMode( qboolean enable );
 void R_DrawTileClear( int x, int y, int w, int h );
+void R_UploadStretchRaw( int texture, int cols, int rows, const byte *data );
 
 //
 // gl_image.c
@@ -324,6 +296,7 @@ void GL_SetTextureType( GLenum texnum, GLenum type );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
 int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
 byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int out_h, qboolean isNormalMap );
+int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags );
 void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor );
 int GL_FindTexture( const char *name );
 void GL_FreeTexture( GLenum texnum );
@@ -364,10 +337,10 @@ void R_ClearScene( void );
 void R_LoadIdentity( void );
 void R_RenderScene( const ref_params_t *fd );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
-qboolean R_WorldToScreen2( const vec3_t in, vec3_t out );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
 int R_ComputeFxBlend( cl_entity_t *e );
+qboolean R_InitRenderAPI( void );
 void R_SetupFrustum( void );
 void R_FindViewLeaf( void );
 void R_DrawFog( void );
@@ -402,7 +375,7 @@ void R_DrawMirrors( void );
 void R_DrawWaterSurfaces( void );
 void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );
-void GL_BuildPolygonFromSurface( msurface_t *fa );
+void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa );
 void GL_RebuildLightmaps( void );
 void GL_BuildLightmaps( void );
 

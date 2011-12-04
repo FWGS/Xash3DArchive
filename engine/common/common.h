@@ -150,8 +150,8 @@ typedef struct gameinfo_s
 {
 	// filesystem info
 	char		gamefolder[64];	// used for change game '-game x'
-	char		basedir[64];	// main game directory (like 'id1' for Quake or 'valve' for Half-Life)
-	char		gamedir[64];	// game directory (can be match with basedir, used as primary dir and as write path
+	char		basedir[64];	// base game directory (like 'id1' for Quake or 'valve' for Half-Life)
+	char		gamedir[64];	// game directory (can be match with basedir, used as game dir and as write path)
 	char		falldir[64];	// used as second basedir 
 	char		startmap[64];	// map to start singleplayer game
 	char		trainmap[64];	// map to start hazard course (if specified)
@@ -695,8 +695,10 @@ qboolean AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *du
 qboolean AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info );
 fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length );
 void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, int quiet );
+movie_state_t *AVI_LoadVideo( const char *filename, qboolean load_audio, qboolean ignore_hwgamma );
 void AVI_CloseVideo( movie_state_t *Avi );
 qboolean AVI_IsActive( movie_state_t *Avi );
+void AVI_FreeVideo( movie_state_t *Avi );
 movie_state_t *AVI_GetState( int num );
 qboolean AVI_Initailize( void );
 void AVI_Shutdown( void );

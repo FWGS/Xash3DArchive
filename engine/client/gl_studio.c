@@ -237,7 +237,7 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 
 	// copy original bbox
 	VectorScale( m_pStudioHeader->bbmin, scale, studio_mins );
-	VectorScale( m_pStudioHeader->bbmin, scale, studio_mins );
+	VectorScale( m_pStudioHeader->bbmax, scale, studio_maxs );
 
 	// rotate the bounding box
 	VectorCopy( e->angles, angles );
@@ -1739,6 +1739,52 @@ static void R_StudioSetupSkin( mstudiotexture_t *ptexture, int index )
 		pskinref += (m_skinnum * m_pTextureHeader->numskinref);
 
 	GL_Bind( GL_TEXTURE0, ptexture[pskinref[index]].index );
+}
+
+/*
+===============
+R_StudioGetTexture
+
+Doesn't changes studio global state at all
+===============
+*/
+mstudiotexture_t *R_StudioGetTexture( cl_entity_t *e )
+{
+	mstudiotexture_t	*ptexture;
+	studiohdr_t	*phdr, *thdr;
+
+	if(( phdr = Mod_Extradata( e->model )) == NULL )
+		return NULL;
+
+#ifndef STUDIO_MERGE_TEXTURES
+	if( !m_pStudioHeader->numtextures || !m_pStudioHeader->textureindex )
+	{
+		string	texturename;		
+		model_t	*textures = NULL;
+
+		Q_strncpy( texturename, R_StudioTexName( RI.currentmodel ), sizeof( texturename ));
+		COM_FixSlashes( texturename );
+
+		if( FS_FileExists( texturename, false ))
+			textures = Mod_ForName( texturename, false );
+
+		if( !textures )
+			return NULL;
+
+		thdr = (studiohdr_t *)Mod_Extradata( textures );
+	}
+	else
+#endif
+	{
+		thdr = m_pStudioHeader;
+	}
+
+	if( !thdr ) return NULL;	
+
+	if( m_fDoRemap ) ptexture = CL_GetRemapInfoForEntity( e )->ptexture;
+	else ptexture = (mstudiotexture_t *)((byte *)thdr + thdr->textureindex);
+
+	return ptexture;
 }
 
 /*
@@ -3448,6 +3494,7 @@ static engine_studio_api_t gStudioAPI =
 	pfnIsHardware,
 	GL_StudioDrawShadow,
 	GL_SetRenderMode,
+	R_StudioGetTexture,	// Xash3D
 };
 
 static r_studio_interface_t gStudioDraw =
@@ -3464,21 +3511,19 @@ CL_InitStudioAPI
 Initialize client studio
 ===============
 */
-qboolean CL_InitStudioAPI( void )
+void CL_InitStudioAPI( void )
 {
 	pStudioDraw = &gStudioDraw;
 
 	// Xash will be used internal StudioModelRenderer
 	if( !clgame.dllFuncs.pfnGetStudioModelInterface )
-		return true;
+		return;
 
 	if( clgame.dllFuncs.pfnGetStudioModelInterface( STUDIO_INTERFACE_VERSION, &pStudioDraw, &gStudioAPI ))
-		return true;
+		return;
 
 	// NOTE: we always return true even if game interface was not correct
 	// because we need Draw our StudioModels
 	// just restore pointer to builtin function
 	pStudioDraw = &gStudioDraw;
-
-	return true;
 }

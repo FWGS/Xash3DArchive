@@ -24,6 +24,7 @@ GNU General Public License for more details.
 #include "mod_local.h"
 #include "pm_defs.h"
 #include "pm_movevars.h"
+#include "render_api.h"
 #include "screenfade.h"
 #include "protocol.h"
 #include "netchan.h"
@@ -350,12 +351,14 @@ typedef struct
 	void	(*IN_Accumulate)( void );
 	void	(*IN_ClearStates)( void );
 	void	(*pfnCalcRefdef)( ref_params_t *pparams );
+	int	(*pfnGetRenderInterface)( int version, render_api_t *renderfuncs, render_interface_t *callback );
 } HUD_FUNCTIONS;
 
 typedef struct
 {
 	void		*hInstance;		// pointer to client.dll
 	HUD_FUNCTIONS	dllFuncs;			// dll exported funcs
+	render_interface_t	drawFuncs;		// custom renderer support
 	byte		*mempool;			// client edicts pool
 	string		mapname;			// map name
 	string		maptitle;			// display map title
@@ -612,6 +615,7 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func );
 word CL_EventIndex( const char *name );
+const char *CL_IndexEvent( word index );
 void CL_ResetEvent( event_info_t *ei );
 void CL_FireEvents( void );
 
@@ -703,7 +707,7 @@ void CL_ClearPhysEnts( void );
 //
 // cl_studio.c
 //
-qboolean CL_InitStudioAPI( void );
+void CL_InitStudioAPI( void );
 
 //
 // cl_frame.c
@@ -732,6 +736,7 @@ int CL_AddEntity( int entityType, cl_entity_t *pEnt );
 void CL_WeaponAnim( int iAnim, int body );
 void CL_ClearEffects( void );
 void CL_TestLights( void );
+void CL_DrawParticlesExternal( const float *vieworg, const float *fwd, const float *rt, const float *up, uint clipFlags );
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos );
 void CL_InitParticles( void );

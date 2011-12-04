@@ -42,6 +42,10 @@ typedef struct event_api_s
 	const char *( *EV_TraceTexture )( int ground, float *vstart, float *vend );
 	void	( *EV_StopAllSounds )( int entnum, int entchannel );
 	void	( *EV_KillEvents )( int entnum, const char *eventname );
+
+	// Xash3D extension
+	unsigned short (*EV_IndexForEvent)( const char *name );
+	const char *(*EV_EventForIndex)( unsigned short index );
 } event_api_t;
 
 #endif//EVENT_API_H

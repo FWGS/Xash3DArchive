@@ -1534,7 +1534,7 @@ qboolean S_Init( void )
 	s_refdist = Cvar_Get( "s_refdist", "36", 0, "soundlevel reference distance" );
 	s_refdb = Cvar_Get( "s_refdb", "60", 0, "soundlevel refernce dB" );
 	snd_gain = Cvar_Get( "snd_gain", "1", 0, "sound default gain" );
-	s_cull = Cvar_Get( "s_cull", "1", CVAR_ARCHIVE, "engine developer cvar for quick testing new features" );
+	s_cull = Cvar_Get( "s_cull", "1", CVAR_ARCHIVE, "cull sounds by geometry" );
 	s_test = Cvar_Get( "s_test", "0", 0, "engine developer cvar for quick testing new features" );
 
 	Cmd_AddCommand( "play", S_Play_f, "playing a specified sound file" );

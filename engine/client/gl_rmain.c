@@ -17,6 +17,9 @@ GNU General Public License for more details.
 #include "client.h"
 #include "gl_local.h"
 #include "mathlib.h"
+#include "library.h"
+#include "beamdef.h"
+#include "particledef.h"
 
 #define IsLiquidContents( cnt )	( cnt == CONTENTS_WATER || cnt == CONTENTS_SLIME || cnt == CONTENTS_LAVA )
 
@@ -1013,7 +1016,10 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
-	CL_DrawBeams( false );
+	if( !RI.refdef.onlyClientDraw )
+          {
+		CL_DrawBeams( false );
+	}
 
 	if( RI.drawWorld )
 		clgame.dllFuncs.pfnDrawNormalTriangles();
@@ -1060,8 +1066,11 @@ void R_DrawEntitiesOnList( void )
 	if( RI.drawWorld )
 		clgame.dllFuncs.pfnDrawTransparentTriangles ();
 
-	CL_DrawBeams( true );
-	CL_DrawParticles();
+	if( !RI.refdef.onlyClientDraw )
+	{
+		CL_DrawBeams( true );
+		CL_DrawParticles();
+	}
 
 	// NOTE: some mods with custom renderer may generate glErrors
 	// so we clear it here
@@ -1122,7 +1131,7 @@ void R_BeginFrame( qboolean clearScene )
 		pglClear( GL_COLOR_BUFFER_BIT );
 	}
 
-	// update gamma
+	// update gamma (wait until game is fully initialized)
 	if( vid_gamma->modified )
 	{
 		if( glConfig.deviceSupportsGamma )
@@ -1163,6 +1172,13 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	if( r_norefresh->integer )
 		return;
 
+	// completely override rendering
+	if( clgame.drawFuncs.GL_RenderFrame != NULL )
+	{
+		if( clgame.drawFuncs.GL_RenderFrame( fd, drawWorld ))
+			return;
+	}
+
 	if( drawWorld ) r_lastRefdef = *fd;
 
 	RI.params = RP_NONE;
@@ -1173,10 +1189,6 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.drawOrtho = gl_overview->integer;
 
 	GL_BackendStartFrame();
-
-	// adjust field of view for widescreen
-	if( glState.wideScreen && r_adjust_fov->integer )
-		V_AdjustFov( &RI.refdef.fov_x, &RI.refdef.fov_y, glState.width, glState.height, false );
 
 	if( !r_lockcull->integer )
 		VectorCopy( fd->vieworg, RI.cullorigin );
@@ -1261,4 +1273,216 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 	R_RenderScene( fd );
 
 	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
+}
+
+static void R_GetDetailScaleForTexture( int texture, float *xScale, float *yScale )
+{
+	gltexture_t *glt = R_GetTexture( texture );
+
+	if( xScale ) *xScale = glt->xscale;
+	if( yScale ) *yScale = glt->yscale;
+}
+
+static void R_GetFogParamsForTexture( int texture, byte *red, byte *green, byte *blue, byte *density )
+{
+	gltexture_t *glt = R_GetTexture( texture );
+
+	if( red ) *red = glt->fogParams[0];
+	if( green ) *green = glt->fogParams[1];
+	if( blue ) *blue = glt->fogParams[2];
+	if( density ) *density = glt->fogParams[3];
+}
+
+static int GL_RenderGetParm( int parm, int arg )
+{
+	gltexture_t *glt;
+
+	switch( parm )
+	{
+	case PARM_TEX_WIDTH:
+		glt = R_GetTexture( arg );
+		return glt->width;
+	case PARM_TEX_HEIGHT:
+		glt = R_GetTexture( arg );
+		return glt->height;
+	case PARM_TEX_SRC_WIDTH:
+		glt = R_GetTexture( arg );
+		return glt->srcWidth;
+	case PARM_TEX_SRC_HEIGHT:
+		glt = R_GetTexture( arg );
+		return glt->srcHeight;
+	case PARM_TEX_SKYBOX:
+		ASSERT( arg >= 0 && arg < 6 );
+		return tr.skyboxTextures[arg];
+	case PARM_TEX_SKYTEXNUM:
+		return tr.skytexturenum;
+	case PARM_TEX_LIGHTMAP:
+		ASSERT( arg >= 0 && arg < MAX_LIGHTMAPS );
+		return tr.lightmapTextures[arg];
+	case PARM_SKY_SPHERE:
+		return world.sky_sphere;
+	case PARM_WORLD_VERSION:
+		return world.version;
+	case PARM_WIDESCREEN:
+		return glState.wideScreen;
+	case PARM_FULLSCREEN:
+		return glState.fullScreen;
+	case PARM_SCREEN_WIDTH:
+		return glState.width;
+	case PARM_SCREEN_HEIGHT:
+		return glState.height;
+	case PARM_MAP_HAS_MIRRORS:
+		return world.has_mirrors;
+	case PARM_CLIENT_INGAME:
+		return CL_IsInGame();
+	}
+	return 0;
+}
+
+/*
+=================
+R_EnvShot
+
+=================
+*/
+static void R_EnvShot( const float *vieworg, const char *name, int skyshot )
+{
+	static vec3_t viewPoint;
+
+	if( !name )
+	{
+		MsgDev( D_ERROR, "R_%sShot: bad name\n", skyshot ? "Sky" : "Env" );
+		return; 
+	}
+
+	if( cls.scrshot_action != scrshot_inactive )
+	{
+		if( cls.scrshot_action != scrshot_skyshot && cls.scrshot_action != scrshot_envshot )
+			MsgDev( D_ERROR, "R_%sShot: subsystem is busy, try later.\n", skyshot ? "Sky" : "Env" );
+		return;
+	}
+
+	cls.envshot_vieworg = NULL; // use client view
+	Q_strncpy( cls.shotname, name, sizeof( cls.shotname ));
+
+	if( vieworg )
+	{
+		// make sure what viewpoint don't temporare
+		VectorCopy( vieworg, viewPoint );
+		cls.envshot_vieworg = viewPoint;
+	}
+
+	// make request for envshot
+	if( skyshot ) cls.scrshot_action = scrshot_skyshot;
+	else cls.scrshot_action = scrshot_envshot;
+}
+
+static void R_SetCurrentEntity( cl_entity_t *ent )
+{
+	RI.currententity = ent;
+
+	// set model also
+	if( RI.currententity != NULL )
+	{
+		RI.currentmodel = RI.currententity->model;
+	}
+}
+
+static void R_SetCurrentModel( model_t *mod )
+{
+	RI.currentmodel = mod;
+}
+
+static lightstyle_t *CL_GetLightStyle( int number )
+{
+	ASSERT( number >= 0 && number < MAX_LIGHTSTYLES );
+	return &cl.lightstyles[number];
+}
+
+static dlight_t *CL_GetDynamicLight( int number )
+{
+	ASSERT( number >= 0 && number < MAX_DLIGHTS );
+	return &cl_dlights[number];
+}
+
+static dlight_t *CL_GetEntityLight( int number )
+{
+	ASSERT( number >= 0 && number < MAX_ELIGHTS );
+	return &cl_elights[number];
+}
+
+static void CL_GetBeamChains( BEAM ***active_beams, BEAM ***free_beams, particle_t ***free_trails )
+{
+	*active_beams = &cl_active_beams;
+	*free_beams = &cl_free_beams;
+	*free_trails = &cl_free_trails; 
+}
+
+static void GL_SetWorldviewProjectionMatrix( const float *glmatrix )
+{
+	if( !glmatrix ) return;
+
+	Matrix4x4_FromArrayFloatGL( RI.worldviewProjectionMatrix, glmatrix );
+}
+	
+static render_api_t gRenderAPI =
+{
+	DrawSingleDecal,
+	R_GetDetailScaleForTexture,
+	R_GetFogParamsForTexture,
+	GL_RenderGetParm,
+	R_EnvShot,
+	GL_LoadTexture,
+	GL_CreateTexture,
+	GL_FindTexture,
+	GL_FreeTexture,
+	R_SetCurrentEntity,
+	R_SetCurrentModel,
+	R_StoreEfrags,
+	Host_Error,
+	CL_GetLightStyle,
+	CL_GetDynamicLight,
+	CL_GetEntityLight,
+	GL_Bind,
+	TextureToTexGamma,
+	CL_GetBeamChains,
+	CL_DrawParticlesExternal,
+	GL_SetWorldviewProjectionMatrix,
+	COM_CompareFileTime,
+	AVI_LoadVideo,
+	AVI_GetVideoInfo,
+	AVI_GetAudioInfo,
+	AVI_GetAudioChunk,
+	AVI_GetVideoFrameNumber,
+	AVI_GetVideoFrame,
+	R_UploadStretchRaw,
+	AVI_FreeVideo,
+	AVI_IsActive,
+};
+
+/*
+===============
+R_InitRenderAPI
+
+Initialize client external rendering
+===============
+*/
+qboolean R_InitRenderAPI( void )
+{
+	if( clgame.dllFuncs.pfnGetRenderInterface )
+	{
+		if( clgame.dllFuncs.pfnGetRenderInterface( CL_RENDER_INTERFACE_VERSION, &gRenderAPI, &clgame.drawFuncs ))
+		{
+			MsgDev( D_AICONSOLE, "CL_LoadProgs: ^2initailized extended RenderAPI ^7ver. %i\n", CL_RENDER_INTERFACE_VERSION );
+			return true;
+		}
+
+		// make sure what render functions is cleared
+		Q_memset( &clgame.drawFuncs, 0, sizeof( clgame.drawFuncs ));
+
+		return false; // just tell user about problems
+	}
+
+	// render interface is missed
+	return true;
 }

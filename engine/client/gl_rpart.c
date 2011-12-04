@@ -216,9 +216,9 @@ move particle to freelist
 */
 void CL_FreeParticle( particle_t *p )
 {
-	if( p->type == pt_clientcustom && p->deathfunc )
+	if( p->deathfunc )
 	{
-		// call right the deathfunc func before die
+		// call right the deathfunc before die
 		p->deathfunc( p );
 	}
 
@@ -410,17 +410,14 @@ void CL_UpdateParticle( particle_t *p, float ft )
 	{
 	case pt_static:
 		break;
+	case pt_tracer:
 	case pt_clientcustom:
 		if( p->callback )
 		{
 			p->callback( p, ft );
-			if( p->callback == CL_BulletTracerDraw )
-				return;	// already drawed
-			else if( p->callback == CL_SparkTracerDraw )
-				return;	// already drawed
-			else if( p->callback == CL_TracerImplosion )
-				return;	// already drawed
 		}
+		if( p->type == pt_tracer )
+			return; // already drawed
 		break;
 	case pt_fire:
 		p->ramp += time1;
@@ -532,11 +529,19 @@ void CL_DrawParticles( void )
 {
 	particle_t	*p, *kill;
 	float		frametime;
+	static int	framecount = -1;
 
-	if( !cl_draw_particles->integer || RI.refdef.onlyClientDraw )
+	if( !cl_draw_particles->integer )
 		return;
 
-	frametime = cl.time - cl.oldtime;
+	// HACKHACK: don't evaluate particles when executes many times at same frame
+	// e.g. mirror rendering
+	if( framecount != tr.framecount )
+	{
+		frametime = cl.time - cl.oldtime;
+		framecount = tr.framecount;
+	}
+	else frametime = 0.0f;
 
 	if( tracerred->modified || tracergreen->modified || tracerblue->modified )
 	{
@@ -575,6 +580,18 @@ void CL_DrawParticles( void )
 
 		CL_UpdateParticle( p, frametime );
 	}
+}
+
+void CL_DrawParticlesExternal( const float *vieworg, const float *forward, const float *right, const float *up, uint clipFlags )
+{
+	if( vieworg ) VectorCopy( vieworg, RI.vieworg );
+	if( forward ) VectorCopy( forward, RI.vforward );
+	if( right ) VectorCopy( right, RI.vright );
+	if( up ) VectorCopy( up, RI.vup );
+
+	RI.clipFlags = clipFlags;
+
+	CL_DrawParticles ();
 }
 
 /*
@@ -1400,6 +1417,7 @@ void CL_SparkleTracer( const vec3_t pos, const vec3_t dir, float vel )
 	p->die += Com_RandomFloat( 0.45f, 0.7f );
 	p->color = CL_LookupColor( color[0], color[1], color[2] );
 	p->ramp = Com_RandomFloat( 0.07f, 0.08f );	// ramp used as tracer length
+	p->type = pt_tracer;
 	VectorScale( dir, vel, p->vel );
 }
 
@@ -1431,6 +1449,7 @@ void CL_StreakTracer( const vec3_t pos, const vec3_t velocity, int colorIndex )
 	VectorCopy( velocity, p->vel );
 	VectorCopy( pos, p->org );
 	p->ramp = Com_RandomFloat( 0.05f, 0.08f );
+	p->type = pt_tracer;
 }
 
 /*
@@ -1465,6 +1484,7 @@ void CL_TracerEffect( const vec3_t start, const vec3_t end )
 	life = ( dist + p->ramp ) / ( max( 1.0f, tracerspeed->value ));
 	p->color = CL_LookupColor( color[0], color[1], color[2] );
 	VectorCopy( start, p->org );
+	p->type = pt_tracer;
 	p->die += life;
 }
 
@@ -1498,6 +1518,7 @@ void CL_UserTracerParticle( float *org, float *vel, float life, int colorIndex, 
 	p->ramp = length; // ramp used as length
 	p->context = deathcontext;
 	p->deathfunc = deathfunc;
+	p->type = pt_tracer;
 	p->die += life;
 }
 
@@ -1522,6 +1543,7 @@ particle_t *CL_TracerParticles( float *org, float *vel, float life )
 	p->color = CL_LookupColor( color[0], color[1], color[2] );
 	VectorCopy( org, p->org );
 	VectorCopy( vel, p->vel );
+	p->type = pt_tracer;
 	p->die += life;
 
 	return p;
@@ -1598,6 +1620,7 @@ void CL_Implosion( const vec3_t end, float radius, int count, float life )
 		p->color = colorIndex;
 		p->ramp = (vel / radius2) * 0.1f; // length based on velocity
 		p->ramp = bound( 0.1f, p->ramp, 1.0f );
+		p->type = pt_tracer;
 		VectorScale( dir, vel, p->vel );
 
 		// die right when you get there

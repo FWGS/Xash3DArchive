@@ -80,6 +80,20 @@ word CL_EventIndex( const char *name )
 
 /*
 =============
+CL_EventIndex
+
+=============
+*/
+const char *CL_IndexEvent( word index )
+{
+	if( index < 0 || index >= MAX_EVENTS )
+		return 0;
+
+	return cl.event_precache[index];
+}
+
+/*
+=============
 CL_RegisterEvent
 
 =============

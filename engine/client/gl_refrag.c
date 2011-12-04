@@ -187,7 +187,7 @@ void R_StoreEfrags( efrag_t **ppefrag )
 
 			if( pent->visframe != tr.framecount )
 			{
-				if( R_AddEntity( pent, ET_FRAGMENTED ))
+				if( CL_AddVisibleEntity( pent, ET_FRAGMENTED ))
 				{
 					// mark that we've recorded this entity for this frame
 					pent->visframe = tr.framecount;

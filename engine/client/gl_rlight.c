@@ -202,10 +202,9 @@ R_CountSurfaceDlights
 */
 int R_CountSurfaceDlights( msurface_t *surf )
 {
-	dlight_t	*l;
 	int	i, numDlights = 0;
 
-	for( i = 0, l = cl_dlights; i < MAX_DLIGHTS; i++, l++ )
+	for( i = 0; i < MAX_DLIGHTS; i++ )
 	{
 		if(!( surf->dlightbits & BIT( i )))
 			continue;	// not lit by this light

@@ -48,6 +48,11 @@ byte *Mod_GetCurrentVis( void )
 
 void Mod_SetOrthoBounds( float *mins, float *maxs )
 {
+	if( clgame.drawFuncs.GL_OrthoBounds )
+	{
+		clgame.drawFuncs.GL_OrthoBounds( mins, maxs );
+	}
+
 	Vector2Average( maxs, mins, world_orthocenter );
 	Vector2Subtract( maxs, world_orthocenter, world_orthohalf );
 }
@@ -247,7 +252,7 @@ void GL_SubdivideSurface( msurface_t *fa )
 GL_BuildPolygonFromSurface
 ================
 */
-void GL_BuildPolygonFromSurface( msurface_t *fa )
+void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 {
 	int		i, lindex, lnumverts;
 	medge_t		*pedges, *r_pedge;
@@ -257,18 +262,18 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 	glpoly_t		*poly;
 
 	// already created
-	if( fa->polys ) return;
+	if( !mod || fa->polys ) return;
 
 	if( !fa->texinfo || !fa->texinfo->texture )
 		return; // bad polygon ?
 
 	// reconstruct the polygon
-	pedges = loadmodel->edges;
+	pedges = mod->edges;
 	lnumverts = fa->numedges;
 	vertpage = 0;
 
 	// draw texture
-	poly = Mem_Alloc( loadmodel->mempool, sizeof( glpoly_t ) + ( lnumverts - 4 ) * VERTEXSIZE * sizeof( float ));
+	poly = Mem_Alloc( mod->mempool, sizeof( glpoly_t ) + ( lnumverts - 4 ) * VERTEXSIZE * sizeof( float ));
 	poly->next = fa->polys;
 	poly->flags = fa->flags;
 	fa->polys = poly;
@@ -276,17 +281,17 @@ void GL_BuildPolygonFromSurface( msurface_t *fa )
 
 	for( i = 0; i < lnumverts; i++ )
 	{
-		lindex = loadmodel->surfedges[fa->firstedge + i];
+		lindex = mod->surfedges[fa->firstedge + i];
 
 		if( lindex > 0 )
 		{
 			r_pedge = &pedges[lindex];
-			vec = loadmodel->vertexes[r_pedge->v[0]].position;
+			vec = mod->vertexes[r_pedge->v[0]].position;
 		}
 		else
 		{
 			r_pedge = &pedges[-lindex];
-			vec = loadmodel->vertexes[r_pedge->v[1]].position;
+			vec = mod->vertexes[r_pedge->v[1]].position;
 		}
 
 		s = DotProduct( vec, fa->texinfo->vecs[0] ) + fa->texinfo->vecs[0][3];
@@ -552,7 +557,7 @@ static void LM_UploadBlock( qboolean dynamic )
 		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
 		r_lightmap.flags = ( world.version == Q1BSP_VERSION ) ? 0 : IMAGE_HAS_COLOR;
 		r_lightmap.buffer = gl_lms.lightmap_buffer;
-		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT|TF_LIGHTMAP, false );
+		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT, false );
 		GL_SetTextureType( tr.lightmapTextures[i], TEX_LIGHTMAP );
 
 		if( ++gl_lms.current_lightmap_texture == MAX_LIGHTMAPS )
@@ -1894,7 +1899,7 @@ void GL_RebuildLightmaps( void )
 	int	i, j;
 	model_t	*m;
 
-	if( !cl.worldmodel ) return;	// wait for worldmodel
+	if( !cl.world ) return;	// wait for worldmodel
 	vid_gamma->modified = false;
 
 	// release old lightmaps
@@ -1924,6 +1929,12 @@ void GL_RebuildLightmaps( void )
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 	}
 	LM_UploadBlock( false );
+
+	if( clgame.drawFuncs.GL_BuildLightmaps )
+	{
+		// build lightmaps on the client-side
+		clgame.drawFuncs.GL_BuildLightmaps( );
+	}
 }
 
 /*
@@ -1978,8 +1989,6 @@ void GL_BuildLightmaps( void )
 		if( m->name[0] == '*' || m->type != mod_brush )
 			continue;
 
-		loadmodel = m;
-
 		for( j = 0; j < m->numsurfaces; j++ )
 		{
 			// clearing all decal chains
@@ -1994,7 +2003,7 @@ void GL_BuildLightmaps( void )
 			if( m->surfaces[j].flags & SURF_DRAWSKY && world.sky_sphere )
 				continue;
 
-			GL_BuildPolygonFromSurface( m->surfaces + j );
+			GL_BuildPolygonFromSurface( m, m->surfaces + j );
 		}
 
 		// clearing visframe
@@ -2004,7 +2013,11 @@ void GL_BuildLightmaps( void )
 			m->nodes[j].visframe = 0;
 	}
 
-	loadmodel = NULL;
-
 	LM_UploadBlock( false );
+
+	if( clgame.drawFuncs.GL_BuildLightmaps )
+	{
+		// build lightmaps on the client-side
+		clgame.drawFuncs.GL_BuildLightmaps( );
+	}
 }
