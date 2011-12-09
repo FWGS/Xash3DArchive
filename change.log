@@ -1,4 +1,4 @@
-build ????
+build 1766
 
 Client: add command "on"-"off" for virtual CD-player
 Client: add command "snapshot" that save screenshots into root folder
@@ -50,7 +50,29 @@ Engine: fix potentially crash during parsing titles.txt when file is empty
 Engine: increase MAX_VALUE field up to 2048 characters
 Console: rename con_gamemaps to con_mapfilter
 Sound: add check by PVS for dynamic entity channels
-Sound: add sound culling by geometry (cvar 's_cull' for enable or disable) 
+Sound: add sound culling by geometry (cvar 's_cull' for enable or disable)
+Server: fix changelevel bug
+Engine: fix sound pathes with backward slash
+Engine: rewrite COM_LoadFile and LoadFileForMe for use malloc instead of engine Mem_Alloc
+Server: check date for entitypatch to avoid loading too old pathes (when map is never than path)
+Server: bug fixed in CreateNamedEntity (on create not existed entities).
+Server: rewrite engine func pfnAlertMessage to avoid crash in AM:Rebrith
+Server: align memory for edicts by 4 (this help to avoid crash in Poke646)
+Render: bugfixed with rotational brush culling (perfomance)
+Server: changelevel bug fixed (accumulate global entities)
+Server: changelevel bug when entitypath on new level is too old (new level is never than him entitypath)
+Server: physical inetrface for custom physic implementation is updated to version 5
+Physic: fix bug with MOVETYPE_COMPOUND
+Server: fix bug with force_retouch on start the level (to avoid crash in Todesangst2 on t2e1m10)
+Render: fix rendering for FACE_UPRIGHT sprite types (doom-like sprite monsters)
+Protocol: shifted up additional EF_ flags to avoid collisions with Trinity Renderers
+Render: now hardware gamma-control is fixed
+Client: implement new render interface for custom renderer implementation (current version is 12)
+Client: added two new funcstions into event API (IndexForEvent and EventForIndex)
+Client: added new function into IEngineStudio interface (StudioGetTexture) for custom rendering implementation
+Client: passed server beam entity through client function HUD_AddEntity, make force to add menu entity (player setup)
+Client: passed static client entities through client function HUD_AddEntity
+Physic: add support for rotational water and triggers
 
 build 1662
 

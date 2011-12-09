@@ -121,13 +121,9 @@ const char *PM_TraceTexture( physent_t *pe, vec3_t start, vec3_t end )
 	// rotate start and end into the models frame of reference
 	if( !VectorIsNull( pe->angles ))
 	{
-		matrix4x4	imatrix;
-
 		Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
-		Matrix4x4_Invert_Simple( imatrix, matrix );
-
-		Matrix4x4_VectorTransform( imatrix, start, start_l );
-		Matrix4x4_VectorTransform( imatrix, end, end_l );
+		Matrix4x4_VectorITransform( matrix, start, start_l );
+		Matrix4x4_VectorITransform( matrix, end, end_l );
 	}
 
 	surf = PM_RecursiveSurfCheck( bmodel, &bmodel->nodes[hull->firstclipnode], start_l, end_l );

@@ -192,25 +192,28 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 R_UploadStretchRaw
 =============
 */
-void R_UploadStretchRaw( int texture, int cols, int rows, const byte *data )
+void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height, const byte *data )
 {
 	byte		*raw = NULL;
 	gltexture_t	*tex;
 
 	if( !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
 	{
-		int	width = 1, height = 1;
-	
 		// check the dimensions
-		width = NearestPOW( cols, true );
-		height = NearestPOW( rows, false );
+		width = NearestPOW( width, true );
+		height = NearestPOW( height, false );
+	}
+	else
+	{
+		width = bound( 128, width, glConfig.max_2d_texture_size );
+		height = bound( 128, height, glConfig.max_2d_texture_size );
+	}
 
-		if( cols != width || rows != height )
-		{
-			raw = GL_ResampleTexture( data, cols, rows, width, height, false );
-			cols = width;
-			rows = height;
-		}
+	if( cols != width || rows != height )
+	{
+		raw = GL_ResampleTexture( data, cols, rows, width, height, false );
+		cols = width;
+		rows = height;
 	}
 	else
 	{

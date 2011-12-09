@@ -933,13 +933,11 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 	// go to check individual hitboxes		
 	for( i = 0; i < sv_studiohdr->numhitboxes; i++ )
 	{
-		mstudiobbox_t	*phitbox = (mstudiobbox_t *)((byte*)sv_studiohdr + sv_studiohdr->hitboxindex) + i;
-		matrix3x4		bonemat;
+		mstudiobbox_t *phitbox = (mstudiobbox_t *)((byte*)sv_studiohdr + sv_studiohdr->hitboxindex) + i;
 
 		// transform traceline into local bone space
-		Matrix3x4_Invert_Simple( bonemat, sv_studiobones[phitbox->bone] );
-		Matrix3x4_VectorTransform( bonemat, start, start_l );
-		Matrix3x4_VectorTransform( bonemat, end, end_l );
+		Matrix3x4_VectorITransform( sv_studiobones[phitbox->bone], start, start_l );
+		Matrix3x4_VectorITransform( sv_studiobones[phitbox->bone], end, end_l );
 
 		SV_HullForHitbox( phitbox->bbmin, phitbox->bbmax );
 

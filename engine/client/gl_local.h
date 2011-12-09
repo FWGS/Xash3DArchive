@@ -285,7 +285,7 @@ void R_ClearDecals( void );
 //
 void R_Set2DMode( qboolean enable );
 void R_DrawTileClear( int x, int y, int w, int h );
-void R_UploadStretchRaw( int texture, int cols, int rows, const byte *data );
+void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height, const byte *data );
 
 //
 // gl_image.c

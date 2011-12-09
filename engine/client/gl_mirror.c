@@ -399,7 +399,6 @@ void R_FindBmodelMirrors( cl_entity_t *e, qboolean static_entity )
 	model_t		*clmodel;
 	qboolean		rotated;
 	int		i, clipFlags;
-	matrix4x4		imatrix;
 
 	clmodel = e->model;
 
@@ -441,12 +440,9 @@ void R_FindBmodelMirrors( cl_entity_t *e, qboolean static_entity )
 		}
 		else Matrix4x4_LoadIdentity( RI.objectMatrix );
 
-		if( rotated ) Matrix4x4_Invert_Simple( imatrix, RI.objectMatrix );
-		else Matrix4x4_LoadIdentity( imatrix );	// just to have something valid here
-
 		e->visframe = tr.framecount; // visible
 
-		if( rotated ) Matrix4x4_VectorTransform( imatrix, RI.cullorigin, tr.modelorg );
+		if( rotated ) Matrix4x4_VectorITransform( RI.objectMatrix, RI.cullorigin, tr.modelorg );
 		else VectorSubtract( RI.cullorigin, e->origin, tr.modelorg );
 
 		clipFlags = 0;

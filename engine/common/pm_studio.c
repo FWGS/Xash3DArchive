@@ -896,13 +896,11 @@ qboolean PM_StudioTrace( playermove_t *pmove, physent_t *pe, const vec3_t start,
 	// go to check individual hitboxes		
 	for( i = 0; i < pm_studiohdr->numhitboxes; i++ )
 	{
-		mstudiobbox_t	*phitbox = (mstudiobbox_t *)((byte*)pm_studiohdr + pm_studiohdr->hitboxindex) + i;
-		matrix3x4		bonemat;
+		mstudiobbox_t *phitbox = (mstudiobbox_t *)((byte*)pm_studiohdr + pm_studiohdr->hitboxindex) + i;
 
 		// transform traceline into local bone space
-		Matrix3x4_Invert_Simple( bonemat, pm_studiobones[phitbox->bone] );
-		Matrix3x4_VectorTransform( bonemat, start, start_l );
-		Matrix3x4_VectorTransform( bonemat, end, end_l );
+		Matrix3x4_VectorITransform( pm_studiobones[phitbox->bone], start, start_l );
+		Matrix3x4_VectorITransform( pm_studiobones[phitbox->bone], end, end_l );
 
 		PM_HullForHitbox( phitbox->bbmin, phitbox->bbmax );
 

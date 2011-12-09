@@ -109,7 +109,7 @@ typedef struct render_api_s
 	long		(*AVI_GetAudioChunk)( void *Avi, char *audiodata, long offset, long length );
 	long		(*AVI_GetVideoFrameNumber)( void *Avi, float time );
 	byte		*(*AVI_GetVideoFrame)( void *Avi, long frame );
-	void		(*AVI_UploadRawFrame)( int texture, int cols, int rows, const byte *data );
+	void		(*AVI_UploadRawFrame)( int texture, int cols, int rows, int width, int height, const byte *data );
 	void		(*AVI_FreeVideo)( void *Avi );
 	int		(*AVI_IsActive)( void *Avi );
 } render_api_t;
@@ -126,6 +126,8 @@ typedef struct render_interface_s
 	void		(*GL_OrthoBounds)( const float *mins, const float *maxs );
 	// handle decals which hit mod_studio or mod_sprite
 	void		(*R_DecalShoot)( int decalTexture, struct cl_entity_s *ent, struct model_s *mod, const float *pos, int flags );
+	// detach all entity effects on remove
+	void		(*CL_EntityRemoved)( struct cl_entity_s *ent, qboolean removedFromServer );
 } render_interface_t;
 
 #endif//RENDER_API_H

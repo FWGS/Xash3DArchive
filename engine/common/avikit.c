@@ -641,11 +641,6 @@ AVIKit user interface
 
 =============
 */
-movie_state_t *AVI_AllocState( void )
-{
-	return Mem_Alloc( cls.mempool, sizeof( movie_state_t ));
-}
-
 movie_state_t *AVI_LoadVideo( const char *filename, qboolean load_audio, qboolean ignore_hwgamma )
 {
 	movie_state_t	*Avi;

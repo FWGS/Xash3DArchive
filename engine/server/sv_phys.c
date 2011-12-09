@@ -911,7 +911,7 @@ SV_PushRotate
 static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 {
 	int		i, e, block, oldsolid;
-	matrix4x4		start_l, end_l, temp_l;
+	matrix4x4		start_l, end_l;
 	vec3_t		lmove, amove;
 	sv_pushed_t	*p, *pushed_p;
 	vec3_t		org, org2, temp;
@@ -927,8 +927,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		amove[i] = pusher->v.avelocity[i] * movetime;
 
 	// create pusher initial position
-	Matrix4x4_CreateFromEntity( temp_l, pusher->v.angles, pusher->v.origin, 1.0f );
-	Matrix4x4_Invert_Simple( start_l, temp_l );
+	Matrix4x4_CreateFromEntity( start_l, pusher->v.angles, pusher->v.origin, 1.0f );
 
 	pushed_p = svgame.pushed;
 
@@ -1002,7 +1001,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 			VectorAverage( check->v.absmin, check->v.absmax, org );
 		else VectorCopy( check->v.origin, org );
 
-		Matrix4x4_VectorTransform( start_l, org, temp );
+		Matrix4x4_VectorITransform( start_l, org, temp );
 		Matrix4x4_VectorTransform( end_l, temp, org2 );
 		VectorSubtract( org2, org, lmove );
 

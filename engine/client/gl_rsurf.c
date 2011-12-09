@@ -386,7 +386,6 @@ void R_AddDynamicLights( msurface_t *surf )
 	int		lnum, s, t, sd, td, smax, tmax;
 	float		sl, tl, sacc, tacc;
 	vec3_t		impact, origin_l;
-	matrix4x4		imatrix;
 	mtexinfo_t	*tex;
 	dlight_t		*dl;
 	uint		*bl;
@@ -398,8 +397,6 @@ void R_AddDynamicLights( msurface_t *surf )
 	tmax = (surf->extents[1] >> 4) + 1;
 	tex = surf->texinfo;
 
-	Matrix4x4_Invert_Simple( imatrix, RI.objectMatrix );
-
 	for( lnum = 0; lnum < MAX_DLIGHTS; lnum++ )
 	{
 		if(!( surf->dlightbits & BIT( lnum )))
@@ -409,7 +406,7 @@ void R_AddDynamicLights( msurface_t *surf )
 
 		// transform light origin to local bmodel space
 		if( !tr.modelviewIdentity )
-			Matrix4x4_VectorTransform( imatrix, dl->origin, origin_l );
+			Matrix4x4_VectorITransform( RI.objectMatrix, dl->origin, origin_l );
 		else VectorCopy( dl->origin, origin_l );
 
 		rad = dl->radius;
@@ -1219,9 +1216,9 @@ static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 	VectorAdd( RI.currententity->origin, info1->origin, org1 );
 	VectorAdd( RI.currententity->origin, info2->origin, org2 );
 
-	VectorSubtract( RI.pvsorigin, org1, vecLength );
+	VectorSubtract( RI.vieworg, org1, vecLength );
 	len1 = VectorLength( vecLength );
-	VectorSubtract( RI.pvsorigin, org2, vecLength );
+	VectorSubtract( RI.vieworg, org2, vecLength );
 	len2 = VectorLength( vecLength );
 
 	if( len1 > len2 )
@@ -1246,7 +1243,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 	msurface_t	*psurf;
 	model_t		*clmodel;
 	qboolean		rotated;
-	matrix4x4		imatrix;
 	dlight_t		*l;
 
 	clmodel = e->model;
@@ -1277,13 +1273,9 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
 
-	if( R_CountDlights( ) || rotated )
-		Matrix4x4_Invert_Simple( imatrix, RI.objectMatrix );
-	else Matrix4x4_LoadIdentity( imatrix );	// just to have something valid here
-
 	e->visframe = tr.framecount; // visible
 
-	if( rotated ) Matrix4x4_VectorTransform( imatrix, RI.cullorigin, tr.modelorg );
+	if( rotated ) Matrix4x4_VectorITransform( RI.objectMatrix, RI.cullorigin, tr.modelorg );
 	else VectorSubtract( RI.cullorigin, e->origin, tr.modelorg );
 
 	// calculate dynamic lighting for bmodel
@@ -1293,7 +1285,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 			continue;
 
 		VectorCopy( l->origin, oldorigin ); // save lightorigin
-		Matrix4x4_VectorTransform( imatrix, l->origin, origin_l );
+		Matrix4x4_VectorITransform( RI.objectMatrix, l->origin, origin_l );
 		VectorCopy( origin_l, l->origin ); // move light in bmodel space
 		R_MarkLights( l, 1<<k, clmodel->nodes + clmodel->hulls[0].firstclipnode );
 		VectorCopy( oldorigin, l->origin ); // restore lightorigin

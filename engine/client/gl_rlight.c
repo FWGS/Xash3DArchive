@@ -385,13 +385,9 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 		// rotate start and end into the models frame of reference
 		if( !VectorIsNull( m_pGround->angles ))
 		{
-			matrix4x4	imatrix;
-
 			Matrix4x4_CreateFromEntity( matrix, m_pGround->angles, offset, 1.0f );
-			Matrix4x4_Invert_Simple( imatrix, matrix );
-
-			Matrix4x4_VectorTransform( imatrix, start, start_l );
-			Matrix4x4_VectorTransform( imatrix, end, end_l );
+			Matrix4x4_VectorITransform( matrix, start, start_l );
+			Matrix4x4_VectorITransform( matrix, end, end_l );
 		}
 
 		// copy transformed pos back

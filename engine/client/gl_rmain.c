@@ -169,18 +169,18 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 	{
 		VectorAverage( ent1->model->mins, ent1->model->maxs, org );
 		VectorAdd( ent1->origin, org, org );
-		VectorSubtract( RI.pvsorigin, org, vecLen );
+		VectorSubtract( RI.vieworg, org, vecLen );
 	}
-	else VectorSubtract( RI.pvsorigin, ent1->origin, vecLen );
+	else VectorSubtract( RI.vieworg, ent1->origin, vecLen );
 	len1 = VectorLength( vecLen );
 
 	if( ent2->model->type == mod_brush )
 	{
 		VectorAverage( ent2->model->mins, ent2->model->maxs, org );
 		VectorAdd( ent2->origin, org, org );
-		VectorSubtract( RI.pvsorigin, org, vecLen );
+		VectorSubtract( RI.vieworg, org, vecLen );
 	}
-	else VectorSubtract( RI.pvsorigin, ent2->origin, vecLen );
+	else VectorSubtract( RI.vieworg, ent2->origin, vecLen );
 	len2 = VectorLength( vecLen );
 
 	if( len1 > len2 )
@@ -1131,11 +1131,12 @@ void R_BeginFrame( qboolean clearScene )
 		pglClear( GL_COLOR_BUFFER_BIT );
 	}
 
-	// update gamma (wait until game is fully initialized)
+	// update gamma
 	if( vid_gamma->modified )
 	{
 		if( glConfig.deviceSupportsGamma )
 		{
+			SCR_RebuildGammaTable();
 			GL_UpdateGammaRamp();
 			vid_gamma->modified = false;
 		}

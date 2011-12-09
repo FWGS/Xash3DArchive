@@ -582,6 +582,7 @@ void R_ShowTextures( void )
 	case TEX_LIGHTMAP:
 	case TEX_VGUI:
 	case TEX_DETAIL:
+	case TEX_CUSTOM:
 		// draw lightmaps as big images
 		base_w = 5;
 		base_h = 4;

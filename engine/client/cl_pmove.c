@@ -204,7 +204,7 @@ int CL_TruePointContents( const vec3_t p )
 	int	i, contents;
 	int	oldhull;
 	hull_t	*hull;
-	vec3_t	test;
+	vec3_t	test, offset;
 	physent_t	*pe;
 
 	// sanity check
@@ -228,11 +228,19 @@ int CL_TruePointContents( const vec3_t p )
 
 		// check water brushes accuracy
 		clgame.pmove->usehull = 2;
-		hull = PM_HullForBsp( pe, clgame.pmove, test );
+		hull = PM_HullForBsp( pe, clgame.pmove, offset );
 		clgame.pmove->usehull = oldhull;
 
 		// offset the test point appropriately for this hull.
-		VectorSubtract( p, test, test );
+		VectorSubtract( p, offset, test );
+
+		if( (pe->model->flags & MODEL_HAS_ORIGIN) && !VectorIsNull( pe->angles ))
+		{
+			matrix4x4	matrix;
+	
+			Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+			Matrix4x4_VectorITransform( matrix, p, test );
+		}
 
 		// test hull for intersection with this model
 		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
@@ -256,7 +264,7 @@ int CL_WaterEntity( const float *rgflPos )
 {
 	physent_t		*pe;
 	hull_t		*hull;
-	vec3_t		test;
+	vec3_t		test, offset;
 	int		i, oldhull;
 
 	if( !rgflPos ) return -1;
@@ -276,11 +284,19 @@ int CL_WaterEntity( const float *rgflPos )
 
 		// check water brushes accuracy
 		clgame.pmove->usehull = 2;
-		hull = PM_HullForBsp( pe, clgame.pmove, test );
+		hull = PM_HullForBsp( pe, clgame.pmove, offset );
 		clgame.pmove->usehull = oldhull;
 
 		// offset the test point appropriately for this hull.
-		VectorSubtract( rgflPos, test, test );
+		VectorSubtract( rgflPos, offset, test );
+
+		if( (pe->model->flags & MODEL_HAS_ORIGIN) && !VectorIsNull( pe->angles ))
+		{
+			matrix4x4	matrix;
+	
+			Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+			Matrix4x4_VectorITransform( matrix, rgflPos, test );
+		}
 
 		// test hull for intersection with this model
 		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )

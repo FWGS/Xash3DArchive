@@ -671,7 +671,7 @@ load_wad_textures:
 		if( R_GetTexture( tx->gl_texturenum )->flags & TF_HAS_LUMA || load_external_luma )
 		{
 			if( !load_external_luma )
-				Q_snprintf( texname, sizeof( texname ), "%s%s_luma.mip", mt->offsets[0] > 0 ? "#" : "", mt->name );
+				Q_snprintf( texname, sizeof( texname ), "#%s_luma.mip", mt->name );
 			else MsgDev( D_NOTE, "loading luma HQ: %s\n", texname );
 
 			if( mt->offsets[0] > 0 && !load_external_luma )
@@ -685,8 +685,17 @@ load_wad_textures:
 			}
 			else
 			{
-				// okay, loading it from wad
-				tx->fb_texturenum = GL_LoadTexture( texname, NULL, 0, TF_NOMIPMAP|TF_MAKELUMA );
+				size_t srcSize = 0;
+				byte *src = NULL;
+
+				// NOTE: we can't loading it from wad as normal because _luma texture doesn't exist
+				// and not be loaded. But original texture is already loaded and can't be modified
+				// So load original texture manually and convert it to luma
+				if( !load_external_luma ) src = FS_LoadFile( va( "%s.mip", tx->name ), &srcSize, false );
+
+				// okay, loading it from wad or hi-res version
+				tx->fb_texturenum = GL_LoadTexture( texname, src, srcSize, TF_NOMIPMAP|TF_MAKELUMA );
+				if( src ) Mem_Free( src );
 
 				if( !tx->fb_texturenum && load_external_luma )
 				{

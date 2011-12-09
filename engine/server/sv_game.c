@@ -3460,7 +3460,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	if( angles && !VectorIsNull( angles ))
 	{
 		VectorCopy( angles, args.angles );
-		args.flags |= FEVENT_ORIGIN;
+		args.flags |= FEVENT_ANGLES;
 	}
 
 	// copy other parms
@@ -3564,7 +3564,10 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
 			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
 			if( leafnum != -1 && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+			{
+				Msg( "skipped()\n" );
 				continue;
+			}
 		}
 
 		if( flags & FEV_NOTHOST && cl == svs.currentPlayer && cl->local_weapons )
@@ -3649,8 +3652,12 @@ byte *pfnSetFatPVS( const float *org )
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
-	// save viewpoint in case this overrided by custom camera code 
-	VectorCopy( org, viewPoint[svs.currentPlayerNum] );
+	// portals can't change viewpoint!
+	if(!( sv.hostflags & SVF_PORTALPASS ))
+	{
+		// save viewpoint in case this overrided by custom camera code 
+		VectorCopy( org, viewPoint[svs.currentPlayerNum] );
+	}
 
 	bitvector = fatpvs;
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;

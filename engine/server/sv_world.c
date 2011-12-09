@@ -401,7 +401,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 	link_t	*l, *next;
 	edict_t	*touch;
 	hull_t	*hull;
-	vec3_t	test;
+	vec3_t	test, offset;
 
 	// touch linked edicts
 	for( l = node->trigger_edicts.next; l != &node->trigger_edicts; l = next )
@@ -432,11 +432,22 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 		// check brush triggers accuracy
 		if( Mod_GetType( touch->v.modelindex ) == mod_brush )
 		{
+			model_t *mod = Mod_Handle( touch->v.modelindex );
+
 			// force to select bsp-hull
-			hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, test );
+			hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, offset );
 
 			// offset the test point appropriately for this hull.
-			VectorSubtract( ent->v.origin, test, test );
+			VectorSubtract( ent->v.origin, offset, test );
+
+			// support for rotational triggers
+			if( (mod->flags & MODEL_HAS_ORIGIN) && !VectorIsNull( touch->v.angles ))
+			{
+				matrix4x4	matrix;
+	
+				Matrix4x4_CreateFromEntity( matrix, touch->v.angles, offset, 1.0f );
+				Matrix4x4_VectorITransform( matrix, ent->v.origin, test );
+			}
 
 			// test hull for intersection with this model
 			if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
@@ -615,7 +626,8 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 	link_t	*l, *next;
 	edict_t	*touch;
 	hull_t	*hull;
-	vec3_t	test;
+	vec3_t	test, offset;
+	model_t	*mod;
 
 	// get water edicts
 	for( l = node->water_edicts.next; l != &node->water_edicts; l = next )
@@ -640,11 +652,22 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 		if( !BoundsIntersect( origin, origin, touch->v.absmin, touch->v.absmax ))
 			continue;
 
+		mod = Mod_Handle( touch->v.modelindex );
+
 		// check water brushes accuracy
-		hull = SV_HullForBsp( touch, vec3_origin, vec3_origin, test );
+		hull = SV_HullForBsp( touch, vec3_origin, vec3_origin, offset );
 
 		// offset the test point appropriately for this hull.
-		VectorSubtract( origin, test, test );
+		VectorSubtract( origin, offset, test );
+
+		// support for rotational water
+		if( (mod->flags & MODEL_HAS_ORIGIN) && !VectorIsNull( touch->v.angles ))
+		{
+			matrix4x4	matrix;
+	
+			Matrix4x4_CreateFromEntity( matrix, touch->v.angles, offset, 1.0f );
+			Matrix4x4_VectorITransform( matrix, origin, test );
+		}
 
 		// test hull for intersection with this model
 		if( PM_HullPointContents( hull, hull->firstclipnode, test ) == CONTENTS_EMPTY )
@@ -900,13 +923,9 @@ trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins
 	// rotate start and end into the models frame of reference
 	if( ent->v.solid == SOLID_BSP && !VectorIsNull( ent->v.angles ))
 	{
-		matrix4x4		imatrix;
-	
 		Matrix4x4_CreateFromEntity( matrix, ent->v.angles, offset, 1.0f );
-		Matrix4x4_Invert_Simple( imatrix, matrix );
-
-		Matrix4x4_VectorTransform( imatrix, start, start_l );
-		Matrix4x4_VectorTransform( imatrix, end, end_l );
+		Matrix4x4_VectorITransform( matrix, start, start_l );
+		Matrix4x4_VectorITransform( matrix, end, end_l );
 	}
 
 	// trace a line through the apropriate clipping hull
@@ -1043,13 +1062,9 @@ const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end 
 	// rotate start and end into the models frame of reference
 	if( !VectorIsNull( ent->v.angles ))
 	{
-		matrix4x4	imatrix;
-
 		Matrix4x4_CreateFromEntity( matrix, ent->v.angles, offset, 1.0f );
-		Matrix4x4_Invert_Simple( imatrix, matrix );
-
-		Matrix4x4_VectorTransform( imatrix, start, start_l );
-		Matrix4x4_VectorTransform( imatrix, end, end_l );
+		Matrix4x4_VectorITransform( matrix, start, start_l );
+		Matrix4x4_VectorITransform( matrix, end, end_l );
 	}
 
 	surf = SV_RecursiveSurfCheck( bmodel, &bmodel->nodes[hull->firstclipnode], start_l, end_l );

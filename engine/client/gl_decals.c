@@ -804,12 +804,10 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 		// transform decal position in local bmodel space
 		if( !VectorIsNull( ent->angles ))
 		{
-			matrix4x4	matrix, imatrix;
+			matrix4x4	matrix;
 
 			Matrix4x4_CreateFromEntity( matrix, ent->angles, ent->origin, 1.0f );
-			Matrix4x4_Invert_Simple( imatrix, matrix );
-
-			Matrix4x4_VectorTransform( imatrix, pos, pos_l );
+			Matrix4x4_VectorITransform( matrix, pos, pos_l );
 		}
 		else
 		{

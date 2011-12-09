@@ -345,13 +345,9 @@ static qboolean PM_BmodelTrace( physent_t *pe, const vec3_t start, vec3_t mins, 
 	// rotate start and end into the models frame of reference
 	if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
 	{
-		matrix4x4	imatrix;
-
 		Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
-		Matrix4x4_Invert_Simple( imatrix, matrix );
-
-		Matrix4x4_VectorTransform( imatrix, start, start_l );
-		Matrix4x4_VectorTransform( imatrix, end, end_l );
+		Matrix4x4_VectorITransform( matrix, start, start_l );
+		Matrix4x4_VectorITransform( matrix, end, end_l );
 	}
 
 	// do trace
@@ -533,11 +529,9 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pfnIgnore pmFilter )
 		// CM_TransformedPointContents :-)
 		if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
 		{
-			matrix4x4	matrix, imatrix;
-
+			matrix4x4	matrix;
 			Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
-			Matrix4x4_Invert_Simple( imatrix, matrix );
-			Matrix4x4_VectorTransform( imatrix, pos, pos_l );
+			Matrix4x4_VectorITransform( matrix, pos, pos_l );
 		}
 
 		if( PM_HullPointContents( hull, hull->firstclipnode, pos_l ) == CONTENTS_SOLID )

@@ -476,12 +476,17 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 			Msg( "Entity %i was removed from server\n", newnum );
 		else Msg( "Entity %i was removed from delta-message\n", newnum );
 #endif
-
-#if 0
 		// waiting for static entity implimentation			
 		if( state->number == -1 )
 			R_RemoveEfrags( ent );
-#endif
+
+		// tell the client about removed entity
+		if( clgame.drawFuncs.CL_EntityRemoved )
+		{
+			// build lightmaps on the client-side
+			clgame.drawFuncs.CL_EntityRemoved( ent, ( state->number == - 1));
+		}
+
 		// entity was delta removed
 		return;
 	}
