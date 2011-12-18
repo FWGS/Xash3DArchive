@@ -297,7 +297,6 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 		brightness = bound( 0.0f, brightness, 1.0f );
 		VectorScale( color, brightness, nextSeg.color );
 
-		// UNDONE: Make this a spline instead of just a line?
 		VectorMA( source, fraction, delta, nextSeg.pos );
 
 		// distort using noise
@@ -1285,7 +1284,6 @@ void CL_UpdateBeam( BEAM *pbeam, float frametime )
 	switch( pbeam->type )
 	{
 	case TE_BEAMPOINTS:
-		// UNDONE: Build culling volumes for other types of beams
 		if( CL_CullBeam( pbeam->source, pbeam->target, false ))
 		{
 			pbeam->flags &= ~FBEAM_ISACTIVE; // force to ignore

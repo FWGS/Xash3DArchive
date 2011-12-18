@@ -740,7 +740,7 @@ edict_t *SV_AllocEdict( void )
 		pEdict = EDICT_NUM( i );
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if( pEdict->free && ( pEdict->freetime < 2.0f || sv.time - pEdict->freetime > 0.5f ))
+		if( pEdict->free && ( pEdict->freetime < 2.0f || ( sv.time - pEdict->freetime ) > 0.5f ))
 		{
 			SV_InitEdict( pEdict );
 			return pEdict;
@@ -3564,10 +3564,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 			// -1 is because pvs rows are 1 based, not 0 based like leafs
 			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
 			if( leafnum != -1 && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
-			{
-				Msg( "skipped()\n" );
 				continue;
-			}
 		}
 
 		if( flags & FEV_NOTHOST && cl == svs.currentPlayer && cl->local_weapons )

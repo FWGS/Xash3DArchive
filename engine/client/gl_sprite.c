@@ -24,6 +24,7 @@ GNU General Public License for more details.
 
 // it's a Valve default value for LoadMapSprite (probably must be power of two)
 #define MAPSPRITE_SIZE	128
+#define GLARE_FALLOFF	19000.0f
 
 convar_t		*r_sprite_lerping;
 convar_t		*r_sprite_lighting;
@@ -742,8 +743,7 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int
 
 	*pscale = 0.0f; // variable sized glow
 
-	// UNDONE: Tweak these magic numbers (19000 - falloff & 200 - sprite size)
-	brightness = 19000.0 / ( dist * dist );
+	brightness = GLARE_FALLOFF / ( dist * dist );
 	brightness = bound( 0.01f, brightness, 1.0f );
 
 	// make the glow fixed size in screen space, taking into consideration the scale setting.

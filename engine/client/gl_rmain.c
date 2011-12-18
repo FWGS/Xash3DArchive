@@ -1336,6 +1336,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return world.has_mirrors;
 	case PARM_CLIENT_INGAME:
 		return CL_IsInGame();
+	case PARM_MAX_ENTITIES:
+		return clgame.maxEntities;
 	}
 	return 0;
 }

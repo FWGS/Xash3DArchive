@@ -476,9 +476,12 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 			Msg( "Entity %i was removed from server\n", newnum );
 		else Msg( "Entity %i was removed from delta-message\n", newnum );
 #endif
-		// waiting for static entity implimentation			
 		if( state->number == -1 )
-			R_RemoveEfrags( ent );
+		{
+			ent->curstate.messagenum = 0;
+			ent->baseline.number = 0;
+//			R_RemoveEfrags( ent );
+		}
 
 		// tell the client about removed entity
 		if( clgame.drawFuncs.CL_EntityRemoved )
@@ -927,11 +930,21 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius )
 
 	// entity is not present on the client but has valid origin
 	if( !ent || !ent->index ) return valid_origin;
-
+#if 0
 	// entity is present on the client but out of PVS
 	if( ent->curstate.messagenum != cl.parsecount )
-		return false;
+	{
+		// created by map spawn. just of of PVS
+		if( ent->baseline.number != 0 )
+			return false;
 
+		// entity was created later than sound
+		// (e.g. EMIT_SOUND called from Spawn)
+		if( ent->curstate.messagenum == 0 )
+			return valid_origin;
+		return false;
+	}
+#endif
 	// setup origin
 	VectorAverage( ent->curstate.mins, ent->curstate.maxs, origin );
 	VectorAdd( origin, ent->curstate.origin, origin );

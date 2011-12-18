@@ -40,6 +40,7 @@ GNU General Public License for more details.
 #define PARM_SCREEN_HEIGHT	13
 #define PARM_MAP_HAS_MIRRORS	14	// current map has mirorrs
 #define PARM_CLIENT_INGAME	15
+#define PARM_MAX_ENTITIES	16
 
 enum
 {

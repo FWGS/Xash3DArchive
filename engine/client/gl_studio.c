@@ -2612,12 +2612,6 @@ void R_StudioRenderFinal( void )
 		{
 			R_StudioSetupModel( i, &m_pBodyPart, &m_pSubModel );
 
-			if( m_fDoInterp )
-			{
-				// interpolation messes up bounding boxes.
-				RI.currententity->trivial_accept = 0; 
-			}
-
 			GL_SetRenderMode( rendermode );
 			R_StudioDrawPoints();
 			GL_StudioDrawShadow();

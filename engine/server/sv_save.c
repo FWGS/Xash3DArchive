@@ -656,7 +656,7 @@ SAVERESTOREDATA *SV_SaveInit( int size )
 	const int		nTokens = 0xfff;	// Assume a maximum of 4K-1 symbol table entries(each of some length)
 	int		numents;
 
-	if( size <= 0 ) size = 0x80000;	// Reserve 512K for now, UNDONE: Shrink this after compressing strings
+	if( size <= 0 ) size = 0x80000;	// Reserve 512K for now
 	numents = svgame.numEntities;
 
 	pSaveData = Mem_Alloc( host.mempool, sizeof(SAVERESTOREDATA) + ( sizeof(ENTITYTABLE) * numents ) + size );

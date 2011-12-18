@@ -443,7 +443,7 @@ static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
 	R_GetTextureParms( &fontWidth, NULL, font->hFontTexture );
 		
 	// setup creditsfont
-	if( FS_FileExists( va( "fonts/font%i.fnt", fontNumber ), false ))
+	if( FS_FileExists( va( "fonts/font%i.fnt", fontNumber ), false ) && fontWidth != 0 )
 	{
 		byte	*buffer;
 		size_t	length;

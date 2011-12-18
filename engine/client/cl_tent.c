@@ -2674,7 +2674,7 @@ int CL_DecalIndex( int id )
 ===============
 CL_DecalRemoveAll
 
-remove all decals with specified shader
+remove all decals with specified texture
 ===============
 */
 void CL_DecalRemoveAll( int textureIndex )
