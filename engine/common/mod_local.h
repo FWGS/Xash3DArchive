@@ -43,6 +43,7 @@ GNU General Public License for more details.
 // model flags (stored in model_t->flags)
 #define MODEL_CONVEYOR	BIT( 0 )
 #define MODEL_HAS_ORIGIN	BIT( 1 )
+#define MODEL_LIQUID	BIT( 2 )	// model has only point hull
 
 typedef struct leaflist_s
 {

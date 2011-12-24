@@ -525,6 +525,8 @@ void SV_SetModel( edict_t *ent, const char *name );
 void SV_CopyTraceToGlobal( trace_t *trace );
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max );
 void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags );
+void SV_CreateStudioDecal( const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex,
+int flags, struct modelstate_s *state );
 void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args );

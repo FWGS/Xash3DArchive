@@ -127,7 +127,7 @@ hull_t *PM_HullForEntity( physent_t *pe, vec3_t mins, vec3_t maxs, vec3_t offset
 
 		VectorSubtract( maxs, mins, size );
 
-		if( size[0] <= 8.0f )
+		if( size[0] <= 8.0f || pe->model->flags & MODEL_LIQUID )
 		{
 			hull = &pe->model->hulls[0];
 			VectorCopy( hull->clip_mins, offset ); 
@@ -190,6 +190,10 @@ hull_t *PM_HullForBsp( physent_t *pe, playermove_t *pmove, float *offset )
 	}
 
 	ASSERT( hull != NULL );
+
+	// force to use hull0 because other hulls doesn't exist for water
+	if( pe->model->flags & MODEL_LIQUID )
+		hull = &pe->model->hulls[0];
 
 	// calculate an offset value to center the origin
 	VectorSubtract( hull->clip_mins, pmove->player_mins[pmove->usehull], offset );

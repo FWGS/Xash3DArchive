@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "pm_defs.h"
 #include "studio.h"
 #include "const.h"
+#include "render_api.h"	// modelstate_t
 
 // fatpvs stuff
 static byte fatpvs[MAX_MAP_LEAFS/8];
@@ -360,6 +361,54 @@ void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int m
 	if( entityIndex > 0 )
 		BF_WriteWord( &sv.signon, modelIndex );
 	BF_WriteByte( &sv.signon, flags );
+}
+
+/*
+=======================
+SV_CreateStudioDecal
+
+NOTE: static decals only accepted when game is loading
+=======================
+*/
+void SV_CreateStudioDecal( const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex, int flags, modelstate_t *state )
+{
+	if( sv.state != ss_loading ) return;
+
+	// bad model or bad entity (e.g. changelevel)
+	if( !entityIndex || !modelIndex )
+		return;
+
+	ASSERT( origin );
+	ASSERT( start );
+
+	// this can happens if serialized map contain 4096 static decals...
+	if(( BF_GetNumBytesWritten( &sv.signon ) + 28 ) >= BF_GetMaxBytes( &sv.signon ))
+		return;
+
+	// static decals are posters, it's always reliable
+	BF_WriteByte( &sv.signon, svc_studiodecal );
+	BF_WriteShort( &sv.signon, (int)( origin[0] * 8.0f ));
+	BF_WriteShort( &sv.signon, (int)( origin[1] * 8.0f ));
+	BF_WriteShort( &sv.signon, (int)( origin[2] * 8.0f ));
+	BF_WriteShort( &sv.signon, (int)( start[0] * 8.0f ));
+	BF_WriteShort( &sv.signon, (int)( start[1] * 8.0f ));
+	BF_WriteShort( &sv.signon, (int)( start[2] * 8.0f ));
+	BF_WriteWord( &sv.signon, decalIndex );
+	BF_WriteShort( &sv.signon, entityIndex );
+	BF_WriteByte( &sv.signon, flags );
+
+	// write model state
+	BF_WriteShort( &sv.signon, state->sequence );
+	BF_WriteShort( &sv.signon, state->frame );
+	BF_WriteByte( &sv.signon, state->blending[0] );
+	BF_WriteByte( &sv.signon, state->blending[1] );
+	BF_WriteByte( &sv.signon, state->controller[0] );
+	BF_WriteByte( &sv.signon, state->controller[1] );
+	BF_WriteByte( &sv.signon, state->controller[2] );
+	BF_WriteByte( &sv.signon, state->controller[3] );
+
+	// write additional data (excluded from the game message)
+	BF_WriteShort( &sv.signon, modelIndex );
 }
 
 static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )

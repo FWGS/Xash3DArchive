@@ -1,3 +1,7 @@
+build ????
+
+Physic: add check for liquid brushes that has only hull0
+
 build 1770
 
 Client: add command "on"-"off" for virtual CD-player

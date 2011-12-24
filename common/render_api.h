@@ -19,7 +19,8 @@ GNU General Public License for more details.
 #include "lightstyle.h"
 #include "dlight.h"
 
-#define CL_RENDER_INTERFACE_VERSION		12
+#define CL_RENDER_INTERFACE_VERSION		13
+#define MAX_STUDIO_DECALS			4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
 #define INFO_SURF( surf, mod )	(mod->surfaces + (surf - (mextrasurf_t *)mod->cache.data)) 
@@ -78,6 +79,31 @@ typedef enum
 typedef struct beam_s BEAM;
 typedef struct particle_s particle_t;
 
+// 10 bytes here
+typedef struct modelstate_s
+{
+	short		sequence;
+	short		frame;		// 10 bits multiple by 4, should be enough
+	byte		blending[2];
+	byte		controller[4];
+} modelstate_t;
+
+typedef struct decallist_s
+{
+	vec3_t		position;
+	char		name[16];
+	short		entityIndex;
+	byte		depth;
+	byte		flags;
+
+	// this is the surface plane that we hit so that
+	// we can move certain decals across
+	// transitions if they hit similar geometry
+	vec3_t		impactPlaneNormal;
+
+	modelstate_t	studio_state;	// studio decals only
+} decallist_t;
+
 typedef struct render_api_s
 {
 	void		(*DrawSingleDecal)( struct decal_s *pDecal, struct msurface_s *fa );
@@ -113,6 +139,8 @@ typedef struct render_api_s
 	void		(*AVI_UploadRawFrame)( int texture, int cols, int rows, int width, int height, const byte *data );
 	void		(*AVI_FreeVideo)( void *Avi );
 	int		(*AVI_IsActive)( void *Avi );
+
+	const char*	(*GL_TextureName)( unsigned int texnum );
 } render_api_t;
 
 // render callbacks
@@ -126,9 +154,9 @@ typedef struct render_interface_s
 	// setup map bounds for ortho-projection when we in dev_overview mode
 	void		(*GL_OrthoBounds)( const float *mins, const float *maxs );
 	// handle decals which hit mod_studio or mod_sprite
-	void		(*R_DecalShoot)( int decalTexture, struct cl_entity_s *ent, struct model_s *mod, const float *pos, int flags );
-	// detach all entity effects on remove
-	void		(*CL_EntityRemoved)( struct cl_entity_s *ent, qboolean removedFromServer );
+	void		(*R_StudioDecalShoot)( int decalTexture, struct cl_entity_s *ent, const float *start, const float *pos, int flags, modelstate_t *state );
+	// prepare studio decals for save
+	int		(*R_CreateStudioDecalList)( decallist_t *pList, int count, qboolean changelevel );
 } render_interface_t;
 
 #endif//RENDER_API_H

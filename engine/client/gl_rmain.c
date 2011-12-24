@@ -1427,7 +1427,12 @@ static void GL_SetWorldviewProjectionMatrix( const float *glmatrix )
 
 	Matrix4x4_FromArrayFloatGL( RI.worldviewProjectionMatrix, glmatrix );
 }
-	
+
+static const char *GL_TextureName( unsigned int texnum )
+{
+	return R_GetTexture( texnum )->name;	
+}
+
 static render_api_t gRenderAPI =
 {
 	DrawSingleDecal,
@@ -1461,6 +1466,7 @@ static render_api_t gRenderAPI =
 	R_UploadStretchRaw,
 	AVI_FreeVideo,
 	AVI_IsActive,
+	GL_TextureName,
 };
 
 /*

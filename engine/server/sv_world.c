@@ -168,9 +168,9 @@ hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs
 			// calculate an offset value to center the origin
 			// NOTE: never get offset of drawing hull
 			if( !hullNumber ) VectorCopy( hull->clip_mins, offset );
-			else  VectorSubtract( hull->clip_mins, mins, offset );
+			else VectorSubtract( hull->clip_mins, mins, offset );
 #else
-			if( size[0] <= 8.0f )
+			if( size[0] <= 8.0f || model->flags & MODEL_LIQUID )
 			{
 				hull = &model->hulls[0];
 				VectorCopy( hull->clip_mins, offset ); 
@@ -273,7 +273,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	if( !hullNumber ) VectorCopy( hull->clip_mins, offset );
 	else VectorSubtract( hull->clip_mins, mins, offset );
 #else
-	if( size[0] <= 8.0f )
+	if( size[0] <= 8.0f || model->flags & MODEL_LIQUID )
 	{
 		hull = &model->hulls[0];
 		VectorCopy( hull->clip_mins, offset ); 

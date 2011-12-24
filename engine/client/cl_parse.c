@@ -80,6 +80,7 @@ const char *svc_strings[256] =
 	"svc_unused49",
 	"svc_unused50",
 	"svc_director",
+	"svc_studiodecal",
 };
 
 typedef struct
@@ -1007,6 +1008,61 @@ void CL_ParseDirector( sizebuf_t *msg )
 
 /*
 ==============
+CL_ParseStudioDecal
+
+Studio Decal message. Used by engine in case
+we need save\restore decals
+==============
+*/
+void CL_ParseStudioDecal( sizebuf_t *msg )
+{
+	modelstate_t	state;
+	vec3_t		start, pos;
+	int		decalIndex, entityIndex;
+	int		modelIndex = 0;
+	int		flags;
+
+	pos[0] = BF_ReadCoord( msg );
+	pos[1] = BF_ReadCoord( msg );
+	pos[2] = BF_ReadCoord( msg );
+	start[0] = BF_ReadCoord( msg );
+	start[1] = BF_ReadCoord( msg );
+	start[2] = BF_ReadCoord( msg );
+	decalIndex = BF_ReadShort( msg );
+	entityIndex = BF_ReadShort( msg );
+	flags = BF_ReadByte( msg );
+
+	state.sequence = BF_ReadShort( msg );
+	state.frame = BF_ReadShort( msg );
+	state.blending[0] = BF_ReadByte( msg );
+	state.blending[1] = BF_ReadByte( msg );
+	state.controller[0] = BF_ReadByte( msg );
+	state.controller[1] = BF_ReadByte( msg );
+	state.controller[2] = BF_ReadByte( msg );
+	state.controller[3] = BF_ReadByte( msg );
+
+	if( cls.state == ca_connected )
+	{
+		// this message came on restore.
+		// read modelindex in case client models are not linked with entities
+		// because first client frame has not yet received
+		modelIndex = BF_ReadShort( msg );
+	}
+
+	if( clgame.drawFuncs.R_StudioDecalShoot )
+	{
+		int decalTexture = CL_DecalIndex( decalIndex );
+		cl_entity_t *ent = CL_GetEntityByIndex( entityIndex );
+
+		if( ent && !ent->model && modelIndex != 0 )
+			ent->model = Mod_Handle( modelIndex );
+
+		clgame.drawFuncs.R_StudioDecalShoot( decalTexture, ent, start, pos, flags, &state );
+	}
+}
+
+/*
+==============
 CL_ParseScreenShake
 
 Set screen shake
@@ -1397,6 +1453,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_director:
 			CL_ParseDirector( msg );
+			break;
+		case svc_studiodecal:
+			CL_ParseStudioDecal( msg );
 			break;
 		default:
 			CL_ParseUserMessage( msg, cmd );

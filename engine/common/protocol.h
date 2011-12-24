@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define PROTOCOL_VERSION		43
+#define PROTOCOL_VERSION		44
 
 // server to client
 #define svc_bad			0	// immediately crash client when received
@@ -69,6 +69,7 @@ GNU General Public License for more details.
 #define svc_soundfade		48	// [float*4] sound fade parms
 
 #define svc_director		51	// <variable sized>
+#define svc_studiodecal		52	// [float*3][float*3][short][short][byte]
 #define svc_lastmsg			64	// start user messages at this point
 
 // client to server
@@ -130,6 +131,7 @@ GNU General Public License for more details.
 #define FDECAL_CLIPTEST		0x08	// Decal needs to be clip-tested
 #define FDECAL_NOCLIP		0x10	// Decal is not clipped by containing polygon
 #define FDECAL_USESAXIS		0x20	// Uses the s axis field to determine orientation (footprints)
+#define FDECAL_STUDIO		0x40	// Indicates a studio decal
 
 // Max number of history commands to send ( 2 by default ) in case of dropped packets
 #define NUM_BACKUP_COMMAND_BITS	4

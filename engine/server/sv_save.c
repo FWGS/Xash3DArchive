@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "server.h"
 #include "library.h"
 #include "const.h"
+#include "render_api.h" // decallist_t
 
 /*
 ==============================================================================
@@ -25,10 +26,10 @@ SAVE FILE
 half-life implementation of saverestore system
 ==============================================================================
 */
-#define SAVEFILE_HEADER	(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
-#define SAVEGAME_HEADER	(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
-#define SAVEGAME_VERSION	0x0065				// Version 0.65
-
+#define SAVEFILE_HEADER		(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
+#define SAVEGAME_HEADER		(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
+#define SAVEGAME_VERSION		0x0065				// Version 0.65
+#define CLIENT_SAVEGAME_VERSION	0x0066				// Version 0.66
 
 #define SAVE_AGED_COUNT		1
 #define SAVENAME_LENGTH		128	// matches with MAX_OSPATH
@@ -422,10 +423,22 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	int	decalIndex, entityIndex = 0;
 	int	modelIndex = 0;
 
-	if( adjacent ) flags |= FDECAL_DONTSAVE;
-
 	// NOTE: at this point all decal indexes is valid
 	decalIndex = pfnDecalIndex( entry->name );
+
+	if( flags & FDECAL_STUDIO )
+	{
+		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
+		if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
+		if( SV_IsValidEdict( pEdict )) entityIndex = NUM_FOR_EDICT( pEdict );
+
+		// NOTE: studio decals is always applies in local space and doesn't need to landmark transformation
+		SV_CreateStudioDecal( entry->position, entry->impactPlaneNormal, decalIndex, entityIndex, modelIndex, flags, &entry->studio_state );
+		return;
+	}
+
+	// NOTE: not needs for studio decals
+	if( adjacent ) flags |= FDECAL_DONTSAVE;
 	
 	if( adjacent )
 	{
@@ -967,13 +980,14 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	if( !pFile ) return;
 
 	id = SAVEFILE_HEADER;
-	version = SAVEGAME_VERSION;
+	version = CLIENT_SAVEGAME_VERSION;
 
 	// write the header
 	FS_Write( pFile, &id, sizeof( int ));
 	FS_Write( pFile, &version, sizeof( int ));
 
-	decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS );
+	// g-cont. add space for studiodecals if present
+	decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS * 2 );
 	decalCount = R_CreateDecalList( decalList, svgame.globals->changelevel );
 
 	FS_Write( pFile, &decalCount, sizeof( int ));
@@ -987,7 +1001,8 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 		entry = &decalList[i];
 
-		if( pSaveData->fUseLandmark )
+		// NOTE: all the studio decals save transform into local space
+		if( pSaveData->fUseLandmark && !( entry->flags & FDECAL_STUDIO ))
 			VectorSubtract( entry->position, pSaveData->vecLandmarkOffset, localPos );
 		else VectorCopy( entry->position, localPos );
 
@@ -999,6 +1014,12 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 		FS_Write( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
 		FS_Write( pFile, &entry->flags, sizeof( entry->flags ));
 		FS_Write( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
+
+		if( entry->flags & FDECAL_STUDIO )
+		{
+			// write additional data for studio decals
+			FS_Write( pFile, &entry->studio_state, sizeof( entry->studio_state ));
+		}
 	}
 
 	Z_Free( decalList );
@@ -1033,7 +1054,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 	}
 		
 	FS_Read( pFile, &tag, sizeof( int ));
-	if( tag != SAVEGAME_VERSION )
+	if( tag != CLIENT_SAVEGAME_VERSION )
 	{
 		FS_Close( pFile );
 		return;
@@ -1055,16 +1076,22 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		entry = &decalList[i];
 
 		FS_Read( pFile, localPos, sizeof( localPos ));
-
-		if( pSaveData->fUseLandmark )
-			VectorAdd( localPos, pSaveData->vecLandmarkOffset, entry->position );
-		else VectorCopy( localPos, entry->position );
-
 		FS_Read( pFile, &nameSize, sizeof( nameSize ));
 		FS_Read( pFile, entry->name, nameSize ); 
 		FS_Read( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
 		FS_Read( pFile, &entry->flags, sizeof( entry->flags ));
 		FS_Read( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
+
+		// NOTE: studiodecals are reached in local space so we don't need use landmark offset
+		if( pSaveData->fUseLandmark && !( entry->flags & FDECAL_STUDIO ))
+			VectorAdd( localPos, pSaveData->vecLandmarkOffset, entry->position );
+		else VectorCopy( localPos, entry->position );
+
+		if( entry->flags & FDECAL_STUDIO )
+		{
+			// read additional data for studio decals
+			FS_Read( pFile, &entry->studio_state, sizeof( entry->studio_state ));
+		}
 
 		ReapplyDecal( pSaveData, entry, adjacent );
 	}
@@ -1977,7 +2004,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 		if( pSaveData ) Mem_Free( pSaveData );
 		FS_Close( f );
 		return 0;
-	};
+	}
 
 	// int (fieldcount)
 	pData += sizeof( short );
@@ -2035,9 +2062,11 @@ qboolean SV_GetComment( const char *savename, char *comment )
 		strftime( timestring, sizeof( timestring ), "%H:%M", file_tm );
 		Q_strncpy( comment + CS_SIZE + CS_TIME, timestring, CS_TIME );
 		Q_strncpy( comment + CS_SIZE + (CS_TIME * 2), description + CS_SIZE, CS_SIZE );
+
 		return 1;
 	}	
 
 	Q_strncpy( comment, "<unknown version>", MAX_STRING );
+
 	return 0;
 }

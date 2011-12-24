@@ -1828,6 +1828,8 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 			// kill water backplanes for submodels (half-life rules)
 			if( surf->flags & SURF_DRAWTURB )
 			{
+				mod->flags |= MODEL_LIQUID;
+
 				if( surf->plane->type == PLANE_Z )
 				{
 					// kill bottom plane too

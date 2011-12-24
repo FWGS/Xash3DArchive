@@ -782,15 +782,7 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	
 	if( model->type != mod_brush )
 	{
-		if( clgame.drawFuncs.R_DecalShoot )
-		{
-			// fallback to client - e.g. for R_StudiodecalShoot
-			clgame.drawFuncs.R_DecalShoot( textureIndex, ent, model, pos, flags );
-		}
-		else
-		{
-			MsgDev( D_ERROR, "Decals must hit mod_brush!\n" );
-		}
+		MsgDev( D_ERROR, "Decals must hit mod_brush!\n" );
 		return;
 	}
 
@@ -1040,7 +1032,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 	int	total = 0;
 	int	i, depth;
 
-	if( cl.worldmodel && RI.drawWorld )
+	if( cl.worldmodel )
 	{
 		for( i = 0; i < MAX_RENDER_DECALS; i++ )
 		{
@@ -1069,6 +1061,11 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 
 			// check to see if the decal should be added
 			total = DecalListAdd( pList, total );
+		}
+
+		if( clgame.drawFuncs.R_CreateStudioDecalList )
+		{
+			total += clgame.drawFuncs.R_CreateStudioDecalList( pList, total, changelevel );
 		}
 	}
 
