@@ -156,30 +156,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		VectorCopy( ent->angles, ent->curstate.angles );
 	}
 
-	// set actual entity type
-	ent->curstate.entityType = entityType;
-
-	// don't add himself on firstperson
-	if( RP_LOCALCLIENT( ent ) && !cl.thirdperson && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
-	{
-		if( gl_allow_mirrors->integer && world.has_mirrors )
-		{
-			// will be drawn in mirror
-			if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
-				return false;
-
-			if( entityType == ET_BEAM )
-			{
-				CL_AddCustomBeam( ent );
-				return true;
-			}
-			else if( !R_AddEntity( ent, entityType ))
-			{
-				return false;
-			}
-		}
-	}
-	else if( CL_IsInMenu( ))
+	if( CL_IsInMenu( ))
 	{
 		// menu entities ignores client filter
 		if( !R_AddEntity( ent, entityType ))
@@ -191,7 +168,17 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
 			return false;
 
-		if( entityType == ET_BEAM )
+		// don't add himself on firstperson
+		if( RP_LOCALCLIENT( ent ) && !cl.thirdperson && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
+		{
+			if( gl_allow_mirrors->integer && world.has_mirrors )
+			{
+				if( !R_AddEntity( ent, entityType ))
+					return false;
+			}
+			// otherwise just pass to player effects like flashlight, particles etc
+		}
+		else if( entityType == ET_BEAM )
 		{
 			CL_AddCustomBeam( ent );
 			return true;
@@ -201,6 +188,9 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 			return false;
 		}
 	}
+
+	// set actual entity type
+	ent->curstate.entityType = entityType;
 
 	// apply effects
 	if( ent->curstate.effects & EF_BRIGHTFIELD )

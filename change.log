@@ -1,6 +1,8 @@
 build ????
 
 Physic: add check for liquid brushes that has only hull0
+Render: draw decals without culling on the transparent surfaces
+Engine: fix decal transition bug on global entities
 
 build 1770
 

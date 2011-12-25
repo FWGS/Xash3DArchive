@@ -126,7 +126,7 @@ GNU General Public License for more details.
 
 // decal flags
 #define FDECAL_PERMANENT		0x01	// This decal should not be removed in favor of any new decals
-#define FDECAL_CUSTOM		0x02	// This is a custom clan logo and should not be saved/restored
+#define FDECAL_USE_LANDMARK		0x02	// This is a decal applied on a bmodel without origin-brush so we done in absoulute pos
 #define FDECAL_DONTSAVE		0x04	// Decal was loaded from adjacent level, don't save it for this level
 #define FDECAL_CLIPTEST		0x08	// Decal needs to be clip-tested
 #define FDECAL_NOCLIP		0x10	// Decal is not clipped by containing polygon

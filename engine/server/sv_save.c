@@ -153,6 +153,12 @@ static TYPEDESCRIPTION gDecalList[] =
 	DEFINE_FIELD( decallist_t, impactPlaneNormal, FIELD_VECTOR ),
 };
 
+TYPEDESCRIPTION gEntvarsDescription[] = 
+{
+	DEFINE_ENTITY_FIELD( classname, FIELD_STRING ),
+	DEFINE_ENTITY_GLOBAL_FIELD( globalname, FIELD_STRING ),
+};
+
 int SumBytes( SaveFileSectionsInfo_t *section )
 {
 	return ( section->nBytesSymbols + section->nBytesDataHeaders + section->nBytesData );
@@ -422,34 +428,37 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	int	flags = entry->flags;
 	int	decalIndex, entityIndex = 0;
 	int	modelIndex = 0;
+	edict_t	*pEdict;
+
+	// never transition permanent decals
+	if( adjacent && ( flags & FDECAL_PERMANENT ))
+		return;
 
 	// NOTE: at this point all decal indexes is valid
 	decalIndex = pfnDecalIndex( entry->name );
 
+	// restore entity and model index
+	pEdict = pSaveData->pTable[entry->entityIndex].pent;
+	if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
+	if( SV_IsValidEdict( pEdict )) entityIndex = NUM_FOR_EDICT( pEdict );
+
 	if( flags & FDECAL_STUDIO )
 	{
-		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
-		if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
-		if( SV_IsValidEdict( pEdict )) entityIndex = NUM_FOR_EDICT( pEdict );
-
-		// NOTE: studio decals is always applies in local space and doesn't need to landmark transformation
+		// NOTE: studio decal trace start saved into impactPlaneNormal
 		SV_CreateStudioDecal( entry->position, entry->impactPlaneNormal, decalIndex, entityIndex, modelIndex, flags, &entry->studio_state );
 		return;
 	}
-
-	// NOTE: not needs for studio decals
-	if( adjacent ) flags |= FDECAL_DONTSAVE;
-	
-	if( adjacent )
+	else if( adjacent && entityIndex != 0 && !SV_IsValidEdict( pEdict ))
 	{
-		// these entities might not exist over transitions,
-		// so we'll use the saved plane and do a traceline instead
 		vec3_t	testspot, testend;
 		trace_t	tr;
 
-		// never transition permanent decals
-		if( flags & FDECAL_PERMANENT ) return;
-	
+		// these entities might not exist over transitions,
+		// so we'll use the saved plane and do a traceline instead
+		flags |= FDECAL_DONTSAVE;
+
+		MsgDev( D_ERROR, "couldn't restore entity index %i, do trace for decal\n", entityIndex );
+
 		VectorCopy( entry->position, testspot );
 		VectorMA( testspot, 5.0f, entry->impactPlaneNormal, testspot );
 
@@ -474,9 +483,8 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	}
 	else
 	{
-		edict_t	*pEdict = pSaveData->pTable[entry->entityIndex].pent;
-		if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
-		if( SV_IsValidEdict( pEdict )) entityIndex = NUM_FOR_EDICT( pEdict );
+		// global entity is exist on new level so we can apply decal in local space
+		// NOTE: this case also used for transition world decals
 		SV_CreateDecal( entry->position, decalIndex, entityIndex, modelIndex, flags );
 	}
 }
@@ -1001,8 +1009,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 		entry = &decalList[i];
 
-		// NOTE: all the studio decals save transform into local space
-		if( pSaveData->fUseLandmark && !( entry->flags & FDECAL_STUDIO ))
+		if( pSaveData->fUseLandmark && ( entry->flags & FDECAL_USE_LANDMARK ))
 			VectorSubtract( entry->position, pSaveData->vecLandmarkOffset, localPos );
 		else VectorCopy( entry->position, localPos );
 
@@ -1082,8 +1089,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		FS_Read( pFile, &entry->flags, sizeof( entry->flags ));
 		FS_Read( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
 
-		// NOTE: studiodecals are reached in local space so we don't need use landmark offset
-		if( pSaveData->fUseLandmark && !( entry->flags & FDECAL_STUDIO ))
+		if( pSaveData->fUseLandmark && ( entry->flags & FDECAL_USE_LANDMARK ))
 			VectorAdd( localPos, pSaveData->vecLandmarkOffset, entry->position );
 		else VectorCopy( localPos, entry->position );
 
@@ -1324,6 +1330,23 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	return 1;
 }
 
+// ripped out from the hl.dll
+edict_t *SV_FindGlobalEntity( string_t classname, string_t globalname )
+{
+	edict_t *pent = SV_FindEntityByString( NULL,  "globalname", STRING( globalname ));
+
+	if( SV_IsValidEdict( pent ))
+	{
+		if( Q_strcmp( SV_ClassName( pent ), STRING( classname )))
+		{
+			MsgDev( D_ERROR, "Global entity found %s, wrong class %s\n", STRING( globalname ), SV_ClassName( pent ));
+			pent = NULL;
+		}
+	}
+
+	return pent;
+}
+
 //-----------------------------------------------------------------------------
 int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 {
@@ -1389,8 +1412,22 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 		{
 			if( pEntInfo->flags & FENTTABLE_GLOBAL )
 			{
+				entvars_t	tmpVars;
+				edict_t	*pNewEnt;
+
+				// NOTE: we need to update table pointer so decals on the global entities with brush models can be correctly moved
+				// found the classname and the globalname for our globalentity
+				svgame.dllFuncs.pfnSaveReadFields( pSaveData, "ENTVARS", &tmpVars, gEntvarsDescription, ARRAYSIZE( gEntvarsDescription ));
+
+				// reset the save pointers, so dll can read this too
+				pSaveData->size = pSaveData->pTable[pSaveData->currentIndex].location;
+				pSaveData->pCurrentData = pSaveData->pBaseData + pSaveData->size;
+
+				// IMPORTANT: we should find the already spawned or local restored global entity
+				pNewEnt = SV_FindGlobalEntity( tmpVars.classname, tmpVars.globalname );
+
 				MsgDev( D_INFO, "Merging changes for global: %s\n", STRING( pEntInfo->classname ));
-			
+
 				// -------------------------------------------------------------------------
 				// Pass the "global" flag to the DLL to indicate this entity should only override
 				// a matching entity, not be spawned
@@ -1400,6 +1437,8 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 				}
 				else
 				{
+					if( SV_IsValidEdict( pNewEnt )) // update the table so decals can find entity
+						pSaveData->pTable[pSaveData->currentIndex].pent = pNewEnt;
 					pent->v.flags |= FL_KILLME;
 				}
 			}

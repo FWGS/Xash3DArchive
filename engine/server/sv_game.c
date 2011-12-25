@@ -1212,11 +1212,11 @@ void pfnChangePitch( edict_t* ent )
 
 /*
 =========
-pfnFindEntityByString
+SV_FindEntityByString
 
 =========
 */
-edict_t* pfnFindEntityByString( edict_t *pStartEdict, const char *pszField, const char *pszValue )
+edict_t* SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, const char *pszValue )
 {
 	int		index = 0, e = 0;
 	TYPEDESCRIPTION	*desc = NULL;
@@ -4205,7 +4205,7 @@ static enginefuncs_t gEngfuncs =
 	pfnMoveToOrigin,
 	pfnChangeYaw,
 	pfnChangePitch,
-	pfnFindEntityByString,
+	SV_FindEntityByString,
 	pfnGetEntityIllum,
 	pfnFindEntityInSphere,
 	pfnFindClientInPVS,

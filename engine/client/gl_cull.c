@@ -156,14 +156,19 @@ cull invisible surfaces
 qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 {
 	mextrasurf_t	*info;
+	cl_entity_t	*e = RI.currententity;
 
 	if( !surf || !surf->texinfo || !surf->texinfo->texture )
 		return true;
 
-	if( surf->flags & SURF_WATERCSG && !( RI.currententity->curstate.effects & EF_NOWATERCSG ))
+	if( surf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
 		return true;
 
 	if( surf->flags & SURF_NOCULL )
+		return false;
+
+	// don't cull transparent surfaces because we shold be draw decals on them
+	if( surf->pdecals && ( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd ))
 		return false;
 
 	if( r_nocull->integer )

@@ -633,6 +633,20 @@ void R_DecalSurface( msurface_t *surf, decalinfo_t *decalinfo )
 	vec4_t		textureU, textureV;
 	float		*sAxis = NULL;
 	float		s, t, w, h;
+	decal_t		*decal = surf->pdecals;
+
+	// we in restore mode
+	if( cls.state == ca_connected )
+	{
+		// NOTE: we may has the decal on this surface that come from another level.
+		// check duplicate with same position and texture
+		while( decal != NULL )
+		{
+			if( VectorCompare( decal->position, decalinfo->m_Position ) && decal->texture == decalinfo->m_iTexture )
+				return; // decal already exists, don't place it again
+			decal = decal->pnext;
+		}
+	}
 
 	Vector4Copy( tex->vecs[0], textureU );
 	Vector4Copy( tex->vecs[1], textureV );
@@ -820,15 +834,16 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 		VectorCopy( saxis, decalInfo.m_SAxis );
 	}
 
+	// this decal must use landmark for correct transition
+	if(!( model->flags & MODEL_HAS_ORIGIN ))
+	{
+		flags |= FDECAL_USE_LANDMARK;
+	}
+
 	// more state used by R_DecalNode()
 	decalInfo.m_iTexture = textureIndex;
-
-	// don't optimize custom decals
-	if(!( flags & FDECAL_CUSTOM ))
-		flags |= FDECAL_CLIPTEST;
-	
-	decalInfo.m_Flags = flags;
 	decalInfo.m_Entity = entityIndex;
+	decalInfo.m_Flags = flags;
 
 	R_GetDecalDimensions( textureIndex, &width, &height );
 	decalInfo.m_Size = width >> 1;
@@ -907,7 +922,14 @@ void DrawSurfaceDecals( msurface_t *fa )
 	{
 		pglDepthMask( GL_FALSE );
 		pglEnable( GL_BLEND );
+
+		if( e->curstate.rendermode == kRenderTransAlpha )
+			pglDisable( GL_ALPHA_TEST );
 	}
+
+
+	if( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd )
+		GL_Cull( GL_NONE );
 
 	pglEnable( GL_POLYGON_OFFSET_FILL );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -919,9 +941,15 @@ void DrawSurfaceDecals( msurface_t *fa )
 	{
 		pglDepthMask( GL_TRUE );
 		pglDisable( GL_BLEND );
+
+		if( e->curstate.rendermode == kRenderTransAlpha )
+			pglEnable( GL_ALPHA_TEST );
 	}
 
 	pglDisable( GL_POLYGON_OFFSET_FILL );
+
+	if( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd )
+		GL_Cull( GL_FRONT );
 
 	// restore blendfunc here
 	if( e->curstate.rendermode == kRenderTransAdd || e->curstate.rendermode == kRenderGlow )
@@ -944,30 +972,7 @@ static qboolean R_DecalUnProject( decal_t *pdecal, decallist_t *entry )
 
 	ent = CL_GetEntityByIndex( pdecal->entityIndex );
 
-	if( ent && !VectorIsNull( ent->angles ))
-	{
-		// transform decal position back into world space
-		matrix4x4	decalMatrix, entityMatrix, world;
-
-		Matrix4x4_CreateFromEntity( decalMatrix, vec3_origin, pdecal->position, 1.0f );
-#if 1
-		// NOTE: we rotate the decal into identity pos of bmodel because svc_bspdecal
-		// from signon come early then first valid delta-frame, so all entities have
-		// identity origin and identity angles at this moment. If this releationship will be changed
-		// (e.g. signon will be sended after first valid delta-frame) please set #if 1 to 0. 
-		Matrix4x4_CreateFromEntity( entityMatrix, vec3_origin, vec3_origin, 1.0f );
-#else
-		Matrix4x4_CreateFromEntity( entityMatrix, ent->angles, ent->origin, 1.0f );
-#endif
-		Matrix4x4_Concat( world, entityMatrix, decalMatrix );
-		Matrix4x4_OriginFromMatrix( world, entry->position );
-	}
-	else
-	{
-		// give untransformed pos (world or static brushes)
-		VectorCopy( pdecal->position, entry->position );
-	}
-
+	VectorCopy( pdecal->position, entry->position );
 	entry->entityIndex = pdecal->entityIndex;
 
 	// Grab surface plane equation
