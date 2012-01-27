@@ -483,7 +483,14 @@ void SV_InitClientMove( void )
 
 static void PM_CheckMovingGround( edict_t *ent, float frametime )
 {
-	SV_UpdateBaseVelocity( ent );
+	if( svgame.physFuncs.SV_UpdatePlayerBaseVelocity != NULL )
+	{
+		svgame.physFuncs.SV_UpdatePlayerBaseVelocity( ent );
+	}
+	else
+	{
+		SV_UpdateBaseVelocity( ent );
+	}
 
 	if(!( ent->v.flags & FL_BASEVELOCITY ))
 	{

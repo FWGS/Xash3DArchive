@@ -892,11 +892,6 @@ void DrawSingleDecal( decal_t *pDecal, msurface_t *fa )
 	GL_Bind( GL_TEXTURE0, pDecal->texture );
 	glt = R_GetTexture( pDecal->texture );
 
-	// draw transparent decals with GL_MODULATE
-	if( glt->fogParams[3] > DECAL_TRANSPARENT_THRESHOLD )
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	else pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-
 	pglBegin( GL_POLYGON );
 
 	for( i = 0; i < numVerts; i++, v += VERTEXSIZE )
@@ -935,7 +930,19 @@ void DrawSurfaceDecals( msurface_t *fa )
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
 	for( p = fa->pdecals; p; p = p->pnext )
-		DrawSingleDecal( p, fa );
+	{
+		if( p->texture )
+		{
+			gltexture_t *glt = R_GetTexture( p->texture );
+
+			// draw transparent decals with GL_MODULATE
+			if( glt->fogParams[3] > DECAL_TRANSPARENT_THRESHOLD )
+				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+			else pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+
+			DrawSingleDecal( p, fa );
+		}
+	}
 
 	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
 	{
@@ -1062,7 +1069,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 			pList[total].flags = decal->flags;
 			
 			R_DecalUnProject( decal, &pList[total] );
-			Q_strncpy( pList[total].name, R_GetTexture( decal->texture )->name, sizeof( pList[total].name ));
+			FS_FileBase( R_GetTexture( decal->texture )->name, pList[total].name );
 
 			// check to see if the decal should be added
 			total = DecalListAdd( pList, total );

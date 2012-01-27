@@ -28,10 +28,18 @@ R_SpeedsMessage
 */
 qboolean R_SpeedsMessage( char *out, size_t size )
 {
+	if( clgame.drawFuncs.R_SpeedsMessage != NULL )
+	{
+		if( clgame.drawFuncs.R_SpeedsMessage( out, size ))
+			return true;
+		// otherwise pass to default handler
+	}
+
 	if( r_speeds->integer <= 0 ) return false;
 	if( !out || !size ) return false;
 
 	Q_strncpy( out, r_speeds_msg, size );
+
 	return true;
 }
 
@@ -100,6 +108,19 @@ void GL_LoadTexMatrix( const matrix4x4 m )
 
 /*
 =================
+GL_LoadTexMatrixExt
+=================
+*/
+void GL_LoadTexMatrixExt( const float *glmatrix )
+{
+	ASSERT( glmatrix != NULL );
+	pglMatrixMode( GL_TEXTURE );
+	pglLoadMatrixf( glmatrix );
+	glState.texIdentityMatrix[glState.activeTMU] = false;
+}
+
+/*
+=================
 GL_LoadMatrix
 =================
 */
@@ -153,36 +174,6 @@ void GL_SelectTexture( GLenum texture )
 }
 
 /*
-=================
-GL_DisableMultitexture
-=================
-*/
-void GL_DisableMultitexture( void ) 
-{
-	if( glState.mtexEnabled )
-	{
-		pglDisable( GL_TEXTURE_2D );
-		GL_SelectTexture( GL_TEXTURE0 );
-		glState.mtexEnabled = false;
-	}
-}
-
-/*
-=================
-GL_EnableMultitexture
-=================
-*/
-void GL_EnableMultitexture( void ) 
-{
-	if( GL_Support( GL_ARB_MULTITEXTURE ))
-	{
-		GL_SelectTexture( GL_TEXTURE1 );
-		pglEnable( GL_TEXTURE_2D );
-		glState.mtexEnabled = true;
-	}
-}
-
-/*
 ==============
 GL_DisableAllTexGens
 ==============
@@ -206,8 +197,17 @@ void GL_CleanUpTextureUnits( int last )
 
 	for( i = glState.activeTMU; i > last - 1; i-- )
 	{
+		if( glState.currentTextureTargets[i] != GL_TEXTURE_2D )
+		{
+			pglDisable( glState.currentTextureTargets[i] );
+			glState.currentTextureTargets[i] = GL_TEXTURE_2D;
+			pglEnable( glState.currentTextureTargets[i] );
+		}
+
+		GL_LoadIdentityTexMatrix();
 		GL_DisableAllTexGens();
-		pglDisable( GL_TEXTURE_2D );
+
+		if( i < 0 ) break;
 		GL_SelectTexture( i - 1 );
 	}
 }
@@ -463,6 +463,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 
 	// write image
 	result = FS_SaveImage( filename, r_shot );
+	host.write_to_clipboard = false;		// disable write to clipboard
 	FS_AllowDirectPaths( false );			// always reset after store screenshot
 	FS_FreeImage( r_shot );
 

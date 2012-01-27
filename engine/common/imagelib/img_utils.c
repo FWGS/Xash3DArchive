@@ -248,7 +248,7 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 	switch( image.d_rendermode )
 	{
 	case LUMP_DECAL:
-		for( i = 0; i < 256; i++ )
+		for( i = 0; i < 255; i++ )
 		{
 			rgba[0] = pal[765];
 			rgba[1] = pal[766];

@@ -689,6 +689,7 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 
 	S_StopAllSounds ();
 	SV_DeactivateServer ();
+	SV_ClearSaveDir ();
 
 	sv.loadgame = loadGame;
 	sv.background = false;

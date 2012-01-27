@@ -71,6 +71,34 @@ char *Sys_GetClipboardData( void )
 
 /*
 ================
+Sys_SetClipboardData
+
+write screenshot into clipboard
+================
+*/
+void Sys_SetClipboardData( const byte *buffer, size_t size )
+{
+	EmptyClipboard();
+
+	if( OpenClipboard( NULL ) != 0 )
+	{
+		HGLOBAL hResult = GlobalAlloc( GMEM_MOVEABLE, size ); 
+		byte *bufferCopy = (byte *)GlobalLock( hResult ); 
+
+		Q_memcpy( bufferCopy, buffer, size ); 
+		GlobalUnlock( hResult ); 
+
+		if( SetClipboardData( CF_DIB, hResult ) == NULL )
+		{
+			MsgDev( D_ERROR, "unable to write screenshot\n" );
+			GlobalFree( hResult );
+		}
+		CloseClipboard();
+	}
+}
+
+/*
+================
 Sys_Sleep
 
 freeze application for some time

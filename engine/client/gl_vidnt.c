@@ -216,6 +216,9 @@ static dllfunc_t opengl_110funcs[] =
 { "glStencilMask"        , (void **)&pglStencilMask },
 { "glStencilOp"          , (void **)&pglStencilOp },
 { "glClearStencil"       , (void **)&pglClearStencil },
+{ "glIsEnabled"          , (void **)&pglIsEnabled },
+{ "glIsList"             , (void **)&pglIsList },
+{ "glIsTexture"          , (void **)&pglIsTexture },
 { "glTexEnvf"            , (void **)&pglTexEnvf },
 { "glTexEnvfv"           , (void **)&pglTexEnvfv },
 { "glTexEnvi"            , (void **)&pglTexEnvi },
@@ -604,10 +607,16 @@ GL_SetDefaultTexState
 */
 static void GL_SetDefaultTexState( void )
 {
+	int i;
+
 	Q_memset( glState.currentTextures, -1, MAX_TEXTURE_UNITS * sizeof( *glState.currentTextures ));
-	Q_memset( glState.texIdentityMatrix, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texIdentityMatrix ));
 	Q_memset( glState.genSTEnabled, 0, MAX_TEXTURE_UNITS * sizeof( *glState.genSTEnabled ));
-	Q_memset( glState.texCoordArrayMode, 0, MAX_TEXTURE_UNITS * sizeof( *glState.texCoordArrayMode ));
+
+	for( i = 0; i < MAX_TEXTURE_UNITS; i++ )
+	{
+		glState.currentTextureTargets[i] = GL_TEXTURE_2D;
+		glState.texIdentityMatrix[i] = true;
+	}
 }
 
 /*
@@ -619,8 +628,6 @@ static void GL_SetDefaultState( void )
 {
 	Q_memset( &glState, 0, sizeof( glState ));
 	GL_SetDefaultTexState ();
-
-	glState.initializedMedia = false;
 }
 
 /*

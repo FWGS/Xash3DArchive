@@ -306,8 +306,9 @@ typedef struct host_parm_s
 	qboolean		input_enabled;	// vgui override mouse & keyboard input
 	qboolean		shutdown_issued;	// engine is shutting down
 	qboolean		decal_loading;	// nasty hack to tell imagelib about decal
-	qboolean		overview_loading;	// another nasty hackk to tell imagelib about ovierview
+	qboolean		overview_loading;	// another nasty hack to tell imagelib about ovierview
 	qboolean		force_draw_version;	// used when fraps is loaded
+	qboolean		write_to_clipboard;	// put image to clipboard instead of disk
 
 	char		rootdir[256];	// member root directory
 	char		gamefolder[64];	// it's a default gamefolder	
@@ -466,6 +467,7 @@ typedef struct rgbdata_s
 {
 	word	width;		// image width
 	word	height;		// image height
+	word	depth;		// image depth
 	uint	type;		// compression type
 	uint	flags;		// misc image flags
 	byte	*palette;		// palette if present

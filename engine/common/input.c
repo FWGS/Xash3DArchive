@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "client.h"
 #include "vgui_draw.h"
 
+#define PRINTSCREEN_ID	1
 #define WND_HEADSIZE	wnd_caption		// some offset
 #define WND_BORDER		3			// sentinel border in pixels
 
@@ -466,6 +467,7 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 	case WM_CREATE:
 		host.hWnd = hWnd;
 		GetWindowRect( host.hWnd, &real_rect );
+		RegisterHotKey( host.hWnd, PRINTSCREEN_ID, 0, VK_SNAPSHOT );
 		break;
 	case WM_CLOSE:
 		Sys_Quit();
@@ -557,6 +559,18 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		break;
 	case WM_CHAR:
 		CL_CharEvent( wParam );
+		break;
+	case WM_HOTKEY:
+		switch( LOWORD( wParam ))
+		{
+		case PRINTSCREEN_ID:
+			// anti FiEctro system: prevent to write snapshot without Xash version
+			Q_strncpy( cls.shotname, "clipboard.bmp", sizeof( cls.shotname ));
+			cls.scrshot_action = scrshot_snapshot; // build new frame for screenshot
+			host.write_to_clipboard = true;
+			cls.envshot_vieworg = NULL;
+			break;
+		}
 		break;
 	}
 	return DefWindowProc( hWnd, uMsg, wParam, lParam );

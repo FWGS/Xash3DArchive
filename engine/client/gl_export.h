@@ -96,6 +96,7 @@ typedef float GLmatrix[16];
 #define GL_TEXTURE_BINDING_1D			0x8068
 #define GL_TEXTURE_BINDING_2D			0x8069
 #define GL_CLAMP_TO_EDGE                  	0x812F
+#define GL_CLAMP_TO_BORDER                	0x812D
 #define GL_NEAREST				0x2600
 #define GL_LINEAR				0x2601
 #define GL_NEAREST_MIPMAP_NEAREST		0x2700
@@ -671,6 +672,9 @@ void ( APIENTRY *pglClearColor )(GLclampf red, GLclampf green, GLclampf blue, GL
 void ( APIENTRY *pglClearDepth )(GLclampd depth);
 void ( APIENTRY *pglClearIndex )(GLfloat c);
 void ( APIENTRY *pglClearStencil )(GLint s);
+GLboolean ( APIENTRY *pglIsEnabled )( GLenum cap );
+GLboolean ( APIENTRY *pglIsList )( GLuint list );
+GLboolean ( APIENTRY *pglIsTexture )( GLuint texture );
 void ( APIENTRY *pglClipPlane )(GLenum plane, const GLdouble *equation);
 void ( APIENTRY *pglColor3b )(GLbyte red, GLbyte green, GLbyte blue);
 void ( APIENTRY *pglColor3bv )(const GLbyte *v);

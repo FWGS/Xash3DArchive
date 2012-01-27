@@ -1965,7 +1965,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		Mod_LoadStudioModel( mod, buf, &loaded );
 		break;
 	case IDSPRITEHEADER:
-		Mod_LoadSpriteModel( mod, buf, &loaded );
+		Mod_LoadSpriteModel( mod, buf, &loaded, 0 );
 		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:

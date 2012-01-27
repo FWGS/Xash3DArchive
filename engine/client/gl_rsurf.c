@@ -532,7 +532,7 @@ static void LM_UploadBlock( qboolean dynamic )
 				height = gl_lms.allocated[i];
 		}
 
-		GL_MBind( tr.dlightTexture );
+		GL_Bind( GL_TEXTURE0, tr.dlightTexture );
 
 		pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_WIDTH, height, GL_RGBA, GL_UNSIGNED_BYTE,
 		gl_lms.lightmap_buffer );
@@ -766,7 +766,7 @@ void R_BlendLightmaps( void )
 	{
 		if( gl_lms.lightmap_surfaces[i] )
 		{
-			GL_MBind( tr.lightmapTextures[i] );
+			GL_Bind( GL_TEXTURE0, tr.lightmapTextures[i] );
 
 			for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->lightmapchain )
 			{
@@ -780,7 +780,7 @@ void R_BlendLightmaps( void )
 	{
 		LM_InitBlock();
 
-		GL_MBind( tr.dlightTexture );
+		GL_Bind( GL_TEXTURE0, tr.dlightTexture );
 
 		newsurf = gl_lms.dynamic_surfaces;
 
@@ -996,15 +996,15 @@ void R_RenderBrushPoly( msurface_t *fa )
 	{
 		if( SURF_INFO( fa, RI.currentmodel )->mirrortexturenum )
 		{
-			GL_MBind( SURF_INFO( fa, RI.currentmodel )->mirrortexturenum );
+			GL_Bind( GL_TEXTURE0, SURF_INFO( fa, RI.currentmodel )->mirrortexturenum );
 			is_mirror = true;
 		}
-		else GL_MBind( t->gl_texturenum ); // dummy
+		else GL_Bind( GL_TEXTURE0, t->gl_texturenum ); // dummy
 
 		// DEBUG: reset the mirror texture after drawing
 		SURF_INFO( fa, RI.currentmodel )->mirrortexturenum = 0;
 	}
-	else GL_MBind( t->gl_texturenum );
+	else GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
 	if( fa->flags & SURF_DRAWTURB )
 	{	
@@ -1069,7 +1069,7 @@ dynamic:
 			R_BuildLightMap( fa, temp, smax * 4 );
 			R_SetCacheState( fa );
                               
-			GL_MBind( tr.lightmapTextures[fa->lightmaptexturenum] );
+			GL_Bind( GL_TEXTURE0, tr.lightmapTextures[fa->lightmaptexturenum] );
 
 			pglTexSubImage2D( GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax,
 			GL_RGBA, GL_UNSIGNED_BYTE, temp );
@@ -1782,10 +1782,11 @@ void R_MarkLeaves( void )
 
 	if( !RI.drawWorld ) return;
 
-	if( r_novis->modified )
+	if( r_novis->modified || tr.fResetVis )
 	{
 		// force recalc viewleaf
 		r_novis->modified = false;
+		tr.fResetVis = false;
 		r_viewleaf = NULL;
 	}
 

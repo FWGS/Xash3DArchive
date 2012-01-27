@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef PHYSINT_H
 #define PHYSINT_H
 
-#define SV_PHYSICS_INTERFACE_VERSION		5
+#define SV_PHYSICS_INTERFACE_VERSION		6
 
 #define STRUCT_FROM_LINK( l, t, m )		((t *)((byte *)l - (int)&(((t *)0)->m)))
 #define EDICT_FROM_AREA( l )			STRUCT_FROM_LINK( l, edict_t, area )
@@ -58,6 +58,8 @@ typedef struct physics_interface_s
 	int		( *SV_PhysicsEntity	)( edict_t *pEntity );
 	// spawn entities with internal mod function e.g. for re-arrange spawn order (0 - use engine parser, 1 - use mod parser)
 	int		( *SV_LoadEntities )( const char *mapname, char *entities );
+	// update conveyor belt for clients
+	void		( *SV_UpdatePlayerBaseVelocity )( edict_t *ent );
 } physics_interface_t;
 
 #endif//PHYSINT_H

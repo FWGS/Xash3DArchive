@@ -230,7 +230,8 @@ void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height,
 	tex->width = cols;
 	tex->height = rows;
 
-	pglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, cols, rows, 0, GL_BGRA, GL_UNSIGNED_BYTE, raw );
+	pglTexImage2D( GL_TEXTURE_2D, 0, tex->format, cols, rows, 0, GL_BGRA, GL_UNSIGNED_BYTE, raw );
+	GL_TexFilter( tex, false );
 }
 
 /*

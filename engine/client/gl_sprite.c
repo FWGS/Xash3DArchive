@@ -31,6 +31,7 @@ convar_t		*r_sprite_lighting;
 char		group_suffix[8];
 static vec3_t	sprite_mins, sprite_maxs;
 static float	sprite_radius;
+static uint	r_texFlags = 0;
 
 /*
 ====================
@@ -72,7 +73,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	pspriteframe->left = pinframe->origin[0];
 	pspriteframe->down = pinframe->origin[1] - pinframe->height;
 	pspriteframe->right = pinframe->width + pinframe->origin[0];
-	pspriteframe->gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, 0 );
+	pspriteframe->gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags );
 	*ppframe = pspriteframe;
 
 	GL_SetTextureType( pspriteframe->gl_texturenum, TEX_SPRITE );
@@ -133,7 +134,7 @@ Mod_LoadSpriteModel
 load sprite model
 ====================
 */
-void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded )
+void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, uint texFlags )
 {
 	dsprite_t		*pin;
 	short		*numi;
@@ -144,6 +145,7 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded )
 	if( loaded ) *loaded = false;
 	pin = (dsprite_t *)buffer;
 	mod->type = mod_sprite;
+	r_texFlags = texFlags;
 	i = pin->version;
 
 	if( pin->ident != IDSPRITEHEADER )
@@ -275,6 +277,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean 
 	if( !pix ) return;	// bad image or something else
 
 	mod->type = mod_sprite;
+	r_texFlags = 0; // no custom flags for map sprites
 
 	if( pix->width % MAPSPRITE_SIZE )
 		w = pix->width - ( pix->width % MAPSPRITE_SIZE );

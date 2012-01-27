@@ -1097,7 +1097,7 @@ void CL_FreeEdicts( void )
 
 ===============================================================================
 */
-static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, qboolean mapSprite )
+static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, qboolean mapSprite, uint texFlags )
 {
 	byte	*buf;
 	size_t	size;
@@ -1112,7 +1112,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	m_pSprite->flags = 256; // it's hud sprite, make difference names to prevent free shared textures
 
 	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size, &loaded );
-	else Mod_LoadSpriteModel( m_pSprite, buf, &loaded );		
+	else Mod_LoadSpriteModel( m_pSprite, buf, &loaded, texFlags );		
 
 	Mem_Free( buf );
 
@@ -1126,11 +1126,11 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 
 /*
 =========
-pfnSPR_Load
+pfnSPR_LoadExt
 
 =========
 */
-HSPRITE pfnSPR_Load( const char *szPicName )
+HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags )
 {
 	char	name[64];
 	int	i;
@@ -1169,12 +1169,23 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 	}
 
 	// load new model
-	if( CL_LoadHudSprite( name, &clgame.sprites[i], false ))
+	if( CL_LoadHudSprite( name, &clgame.sprites[i], false, texFlags ))
 	{
 		clgame.sprites[i].needload = clgame.load_sequence;
 		return i;
 	}
 	return 0;
+}
+
+/*
+=========
+pfnSPR_Load
+
+=========
+*/
+HSPRITE pfnSPR_Load( const char *szPicName )
+{
+	return pfnSPR_LoadExt( szPicName, 0 );
 }
 
 /*
@@ -2412,7 +2423,7 @@ model_t *pfnLoadMapSprite( const char *filename )
 	}
 
 	// load new map sprite
-	if( CL_LoadHudSprite( name, &clgame.sprites[i], true ))
+	if( CL_LoadHudSprite( name, &clgame.sprites[i], true, 0 ))
 	{
 		clgame.sprites[i].needload = clgame.load_sequence;
 		return &clgame.sprites[i];

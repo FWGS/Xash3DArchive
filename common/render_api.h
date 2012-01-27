@@ -19,7 +19,7 @@ GNU General Public License for more details.
 #include "lightstyle.h"
 #include "dlight.h"
 
-#define CL_RENDER_INTERFACE_VERSION		13
+#define CL_RENDER_INTERFACE_VERSION		26
 #define MAX_STUDIO_DECALS			4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
@@ -42,6 +42,9 @@ GNU General Public License for more details.
 #define PARM_MAP_HAS_MIRRORS	14	// current map has mirorrs
 #define PARM_CLIENT_INGAME	15
 #define PARM_MAX_ENTITIES	16
+#define PARM_TEX_TARGET	17
+#define PARM_TEX_TEXNUM	18
+#define PARM_TEX_FLAGS	19
 
 enum
 {
@@ -74,6 +77,9 @@ typedef enum
 	TF_NORMALMAP	= (1<<15),	// is a normalmap
 	TF_HAS_ALPHA	= (1<<16),	// image has alpha (used only for GL_CreateTexture)
 	TF_FORCE_COLOR	= (1<<17),	// force upload monochrome textures as RGB (detail textures)
+	TF_TEXTURE_1D	= (1<<18),	// this is GL_TEXTURE_1D
+	TF_BORDER		= (1<<19),
+	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
 } texFlags_t;
 
 typedef struct beam_s BEAM;
@@ -91,7 +97,7 @@ typedef struct modelstate_s
 typedef struct decallist_s
 {
 	vec3_t		position;
-	char		name[16];
+	char		name[64];
 	short		entityIndex;
 	byte		depth;
 	byte		flags;
@@ -106,28 +112,38 @@ typedef struct decallist_s
 
 typedef struct render_api_s
 {
-	void		(*DrawSingleDecal)( struct decal_s *pDecal, struct msurface_s *fa );
+	// Get renderer info (doesn't changes engine state at all)
+	int		(*RenderGetParm)( int parm, int arg );	// generic
 	void		(*GetDetailScaleForTexture)( int texture, float *xScale, float *yScale );
-	void		(*GetFogParamsForTexture)( int texture, byte *red, byte *green, byte *blue, byte *density );
-	int		(*RenderGetParm)( int parm, int arg );
-	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot );
-	int		(*GL_LoadTexture)( const char *name, const byte *buf, size_t size, texFlags_t flags );
-	int		(*GL_CreateTexture)( const char *name, int width, int height, const void *buffer, int flags ); 
-	int		(*GL_FindTexture)( const char *name );
-	void		(*GL_FreeTexture)( unsigned int texnum );
-	void		(*R_SetCurrentEntity)( struct cl_entity_s *ent ); // tell engine about current entity
-	void		(*R_SetCurrentModel)( struct model_s *mod );
-	void		(*R_StoreEfrags)( struct efrag_s **ppefrag );
-	void		(*Host_Error)( const char *error, ... );		// cause Host Error
+	void		(*GetExtraParmsForTexture)( int texture, byte *red, byte *green, byte *blue, byte *alpha );
 	lightstyle_t*	(*GetLightStyle)( int number ); 
 	dlight_t*		(*GetDynamicLight)( int number );
 	dlight_t*		(*GetEntityLight)( int number );
-	void		(*GL_Bind)( unsigned int tmu, unsigned int texnum );
-	unsigned char	(*TextureToTexGamma)( unsigned char b );
+	byte		(*TextureToTexGamma)( byte color );	// software gamma support
 	void		(*GetBeamChains)( BEAM ***active_beams, BEAM ***free_beams, particle_t ***free_trails );
+
+	// Set renderer info (tell engine about changes)
+	void		(*R_SetCurrentEntity)( struct cl_entity_s *ent ); // tell engine about both currententity and currentmodel
+	void		(*R_SetCurrentModel)( struct model_s *mod );	// change currentmodel but leave currententity unchanged
+	void		(*GL_SetWorldviewProjectionMatrix)( const float *glmatrix ); // update viewprojection matrix (tracers uses it)
+	void		(*R_StoreEfrags)( struct efrag_s **ppefrag );	// store efrags for static entities
+
+	// Texture tools
+	int		(*GL_FindTexture)( const char *name );
+	const char*	(*GL_TextureName)( unsigned int texnum );
+	int		(*GL_LoadTexture)( const char *name, const byte *buf, size_t size, int flags );
+	int		(*GL_CreateTexture)( const char *name, int width, int height, const void *buffer, int flags ); 
+	void		(*GL_FreeTexture)( unsigned int texnum );
+
+	// Draw stuff (decals and particles are drawing by the engine)
+	void		(*DrawSingleDecal)( struct decal_s *pDecal, struct msurface_s *fa );
 	void		(*GL_DrawParticles)( const float *vieworg, const float *fwd, const float *rt, const float *up, unsigned int clipFlags );
-	void		(*GL_SetWorldviewProjectionMatrix)( const float *glmatrix );
+
+	// Misc renderer functions
+	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot );	// creates a cubemap or skybox into gfx\env folder
 	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
+	void		(*Host_Error)( const char *error, ... ); // cause Host Error
+	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
 
 	// AVIkit support
 	void		*(*AVI_LoadVideo)( const char *filename, int load_audio, int ignore_hwgamma );
@@ -140,7 +156,13 @@ typedef struct render_api_s
 	void		(*AVI_FreeVideo)( void *Avi );
 	int		(*AVI_IsActive)( void *Avi );
 
-	const char*	(*GL_TextureName)( unsigned int texnum );
+	// glState related calls (must use this instead of normal gl-calls to prevent de-synchornize local states between engine and the client)
+	void		(*GL_Bind)( unsigned int tmu, unsigned int texnum );
+	void		(*GL_SelectTexture)( unsigned int texture );
+	void		(*GL_LoadTextureMatrix)( const float *glmatrix );
+	void		(*GL_TexMatrixIdentity)( void );
+	void		(*GL_CleanUpTextureUnits)( int last );	// pass 0 for clear all the texture units
+	void		(*GL_TexGen)( unsigned int coord, unsigned int mode );
 } render_api_t;
 
 // render callbacks
@@ -157,6 +179,8 @@ typedef struct render_interface_s
 	void		(*R_StudioDecalShoot)( int decalTexture, struct cl_entity_s *ent, const float *start, const float *pos, int flags, modelstate_t *state );
 	// prepare studio decals for save
 	int		(*R_CreateStudioDecalList)( decallist_t *pList, int count, qboolean changelevel );
+	// grab r_speeds message
+	qboolean		(*R_SpeedsMessage)( char *out, size_t size );
 } render_interface_t;
 
 #endif//RENDER_API_H

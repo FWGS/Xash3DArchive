@@ -66,6 +66,7 @@ typedef struct imglib_s
 	// current 2d image state
 	word		width;
 	word		height;
+	word		depth;
 	uint		type;		// main type switcher
 	uint		flags;		// additional image flags
 	size_t		size;		// image rgba size (for bounds checking)

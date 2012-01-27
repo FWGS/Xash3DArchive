@@ -639,6 +639,7 @@ int pfnDecalIndexFromName( const char *szDecalName );
 int pfnIndexFromTrace( struct pmtrace_s *pTrace );
 int CL_FindModelIndex( const char *m );
 HSPRITE pfnSPR_Load( const char *szPicName );
+HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
 void TextAdjustSize( int *x, int *y, int *w, int *h );
 void PicAdjustSize( float *x, float *y, float *w, float *h );
 

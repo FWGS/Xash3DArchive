@@ -42,6 +42,22 @@ static byte	r_particleTexture[8][8] =
 {0,0,0,0,0,0,0,0},
 };
 
+const char *GL_Target( GLenum target )
+{
+	switch( target )
+	{
+	case GL_TEXTURE_1D:
+		return "1D";
+	case GL_TEXTURE_2D:
+		return "2D";
+	case GL_TEXTURE_3D:
+		return "3D";
+	case GL_TEXTURE_CUBE_MAP_ARB:
+		return "Cube";
+	}
+	return "??";
+}
+
 /*
 =================
 GL_Bind
@@ -58,33 +74,14 @@ void GL_Bind( GLenum tmu, GLenum texnum )
 	GL_SelectTexture( tmu );
 
 	texture = &r_textures[texnum];
-	if( glState.currentTextures[tmu] == texture->texnum )
-		return;
 
-	glState.currentTextures[tmu] = texture->texnum;
-	pglBindTexture( texture->target, texture->texnum );
-}
+	if( glState.currentTextureTargets[tmu] != texture->target )
+	{
+		pglDisable( glState.currentTextureTargets[tmu] );
+		glState.currentTextureTargets[tmu] = texture->target;
+		pglEnable( glState.currentTextureTargets[tmu] );
+	}
 
-/*
-=================
-GL_MBind
-
-version for two units
-=================
-*/
-void GL_MBind( GLenum texnum )
-{
-	gltexture_t	*texture;
-	int		tmu = 0;
-
-	// missed texture ?
-	if( texnum <= 0 ) texnum = tr.defaultTexture;
-	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
-
-	if( glState.mtexEnabled )
-		tmu = 1;
-
-	texture = &r_textures[texnum];
 	if( glState.currentTextures[tmu] == texture->texnum )
 		return;
 
@@ -129,6 +126,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	switch( tex->texType )
 	{
 	case TEX_NOMIP:
+	case TEX_CUBEMAP:
 	case TEX_LIGHTMAP:
 		allowNearest = false;
 		break;
@@ -190,28 +188,54 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 
 	if( update ) return;
 
+	if( tex->flags & TF_BORDER && !GL_Support( GL_CLAMP_TEXBORDER_EXT ))
+	{
+		// border is not support, use clamp instead
+		tex->flags &= ~TF_BORDER;
+		tex->flags |= TF_CLAMP;
+	}
+
 	// set texture wrap
 	if( tex->flags & TF_CLAMP )
 	{
 		if(GL_Support( GL_CLAMPTOEDGE_EXT ))
 		{
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+
+			if( tex->target == GL_TEXTURE_2D )
+				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+
 			if( tex->target == GL_TEXTURE_3D )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
 		}
 		else
 		{
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP );
-			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP );
+
+			if( tex->target == GL_TEXTURE_2D )
+				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP );
+
 			if( tex->target == GL_TEXTURE_3D )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_CLAMP );
 		}
 	}
+	else if( tex->flags & TF_BORDER )
+	{
+		pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
+
+		if( tex->target == GL_TEXTURE_2D )
+			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
+
+		if( tex->target == GL_TEXTURE_3D )
+			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER );
+	}
 	else
 	{
 		pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_REPEAT );
-		pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_REPEAT );
+
+		if( tex->target == GL_TEXTURE_2D )
+			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_REPEAT );
+
 		if( tex->target == GL_TEXTURE_3D )
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_REPEAT );
 	}
@@ -289,7 +313,7 @@ void R_SetTextureParameters( void )
 	for( i = 0, texture = r_textures; i < r_numTextures; i++, texture++ )
 	{
 		if( !texture->texnum ) continue;	// free slot
-		GL_MBind( i );
+		GL_Bind( GL_TEXTURE0, i );
 		GL_TexFilter( texture, true );
 	}
 }
@@ -393,6 +417,9 @@ void R_TextureList_f( void )
 
 		switch( image->target )
 		{
+		case GL_TEXTURE_1D:
+			Msg( " 1D  " );
+			break;
 		case GL_TEXTURE_2D:
 			Msg( " 2D  " );
 			break;
@@ -415,6 +442,8 @@ void R_TextureList_f( void )
 
 		if( image->flags & TF_CLAMP )
 			Msg( " clamp  " );
+		else if( image->flags & TF_BORDER )
+			Msg( " border " );
 		else Msg( " repeat " );
 		Msg( "  %s\n", image->name );
 	}
@@ -448,6 +477,8 @@ void GL_RoundImageDimensions( word *width, word *height, texFlags_t flags, qbool
 
 	scaledWidth = *width;
 	scaledHeight = *height;
+
+	if( flags & ( TF_TEXTURE_1D|TF_TEXTURE_3D )) return;
 
 	if( force || !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
 	{
@@ -909,20 +940,19 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	{
 		inFormat = GL_DEPTH_COMPONENT;
 	}
-	else if( tex->flags & TF_CUBEMAP )
+	else if( pic->flags & IMAGE_CUBEMAP )
 	{
 		if( GL_Support( GL_TEXTURECUBEMAP_EXT ))
 		{		
-			if( pic->flags & IMAGE_CUBEMAP )
+			numSides = 6;
+			tex->target = glTarget = GL_TEXTURE_CUBE_MAP_ARB;
+			tex->flags |= TF_CUBEMAP;
+
+			if( tex->flags & TF_BORDER )
 			{
-				numSides = 6;
-				glTarget = GL_TEXTURE_CUBE_MAP_ARB;
-				tex->target = GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB;
-			}
-			else
-			{
-				MsgDev( D_WARN, "GL_UploadTexture: %s it's not a cubemap image\n", tex->name );
-				tex->flags &= ~TF_CUBEMAP;
+				// don't use border for cubemaps
+				tex->flags &= ~TF_BORDER;
+				tex->flags |= TF_CLAMP;
 			}
 		}
 		else
@@ -930,6 +960,16 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 			MsgDev( D_WARN, "GL_UploadTexture: cubemaps isn't supported, %s ignored\n", tex->name );
 			tex->flags &= ~TF_CUBEMAP;
 		}
+	}
+	else if( tex->flags & TF_TEXTURE_1D )
+	{
+		// determine target
+		tex->target = glTarget = GL_TEXTURE_1D;
+	}
+	else if( tex->flags & TF_TEXTURE_3D )
+	{
+		// determine target
+		tex->target = glTarget = GL_TEXTURE_3D;
 	}
 
 	pglBindTexture( tex->target, tex->texnum );
@@ -971,10 +1011,31 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 				data = GL_ApplyGamma( data, tex->width * tex->height, ( tex->flags & TF_NORMALMAP ));
 		}		
 
-		if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
-		if( subImage ) pglTexSubImage2D( tex->target + i, 0, 0, 0, tex->width, tex->height, inFormat, GL_UNSIGNED_BYTE, data );
-		else pglTexImage2D( tex->target + i, 0, outFormat, tex->width, tex->height, 0, inFormat, GL_UNSIGNED_BYTE, data );
-		if( !GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+		if( glTarget == GL_TEXTURE_1D )
+		{
+			if( subImage ) pglTexSubImage1D( tex->target, 0, 0, tex->width, inFormat, GL_UNSIGNED_BYTE, data );
+			else pglTexImage1D( tex->target, 0, outFormat, tex->width, 0, inFormat, GL_UNSIGNED_BYTE, data );
+		}
+		else if( glTarget == GL_TEXTURE_CUBE_MAP_ARB )
+		{
+			if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+			if( subImage ) pglTexSubImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, 0, 0, tex->width, tex->height, inFormat, GL_UNSIGNED_BYTE, data );
+			else pglTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, outFormat, tex->width, tex->height, 0, inFormat, GL_UNSIGNED_BYTE, data );
+			if( !GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+		}
+		else if( glTarget == GL_TEXTURE_3D )
+		{
+			if( subImage ) pglTexSubImage3D( tex->target, 0, 0, 0, 0, tex->width, tex->height, pic->depth, inFormat, GL_UNSIGNED_BYTE, data );
+			else pglTexImage3D( tex->target, 0, outFormat, tex->width, tex->height, pic->depth, 0, inFormat, GL_UNSIGNED_BYTE, data );
+		}
+		else
+		{
+			if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+			if( subImage ) pglTexSubImage2D( tex->target, 0, 0, 0, tex->width, tex->height, inFormat, GL_UNSIGNED_BYTE, data );
+			else pglTexImage2D( tex->target, 0, outFormat, tex->width, tex->height, 0, inFormat, GL_UNSIGNED_BYTE, data );
+			if( !GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+		}
+
 		if( numSides > 1 ) buf += offset;
 		tex->size += texsize;
 
@@ -1015,9 +1076,6 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
-		if( tex->flags & TF_CUBEMAP )
-			continue;
-
 		if( !Q_stricmp( tex->name, name ))
 			return tex->texnum;
 	}
@@ -1099,9 +1157,6 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
-		if( tex->flags & TF_CUBEMAP )
-			continue;
-
 		if( !Q_stricmp( tex->name, name ))
 		{
 			 if( update ) break;
@@ -1245,9 +1300,6 @@ int GL_FindTexture( const char *name )
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
-		if( tex->flags & TF_CUBEMAP )
-			continue;
-
 		if( !Q_stricmp( tex->name, name ))
 			return tex->texnum;
 	}
@@ -1281,9 +1333,6 @@ void GL_FreeImage( const char *name )
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
-		if( tex->flags & TF_CUBEMAP )
-			continue;
-
 		if( !Q_stricmp( tex->name, name ))
 		{
 			GL_FreeTexture( tex - r_textures );
@@ -1519,12 +1568,127 @@ static rgbdata_t *R_InitWhiteTexture( texFlags_t *flags )
 
 /*
 ==================
+R_InitGrayTexture
+==================
+*/
+static rgbdata_t *R_InitGrayTexture( texFlags_t *flags )
+{
+	return R_InitSolidColorTexture( flags, 127 );
+}
+
+/*
+==================
 R_InitBlackTexture
 ==================
 */
 static rgbdata_t *R_InitBlackTexture( texFlags_t *flags )
 {
 	return R_InitSolidColorTexture( flags, 0 );
+}
+
+/*
+==================
+R_InitAttenuationTexture
+==================
+*/
+static rgbdata_t *R_InitAttenTextureGamma( texFlags_t *flags, float gamma )
+{
+	int	i;
+
+	// 1d attenuation texture
+	r_image.width = 256;
+	r_image.height = 1;
+	r_image.buffer = data2D;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * 4;
+
+	for( i = 0; i < r_image.width; i++ )
+	{
+		float atten = 255 - bound( 0, 255 * pow((i + 0.5f) / r_image.width, gamma ) + 0.5f, 255 );
+
+		// clear attenuation at ends to prevent light go outside
+		if( i == (r_image.width - 1) || i == 0 )
+			atten = 0.0f;
+
+		data2D[(i * 4) + 0] = (byte)atten;
+		data2D[(i * 4) + 1] = (byte)atten;
+		data2D[(i * 4) + 2] = (byte)atten;
+		data2D[(i * 4) + 3] = (byte)atten;
+	}
+
+	*flags = TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP|TF_TEXTURE_1D;
+
+	return &r_image;
+}
+
+static rgbdata_t *R_InitAttenuationTexture( texFlags_t *flags )
+{
+	return R_InitAttenTextureGamma( flags, 1.5f );
+}
+
+static rgbdata_t *R_InitAttenuationTexture2( texFlags_t *flags )
+{
+	return R_InitAttenTextureGamma( flags, 0.5f );
+}
+
+static rgbdata_t *R_InitAttenuationTexture3( texFlags_t *flags )
+{
+	return R_InitAttenTextureGamma( flags, 3.5f );
+}
+
+/*
+==================
+R_InitAttenuationTexture3D
+==================
+*/
+static rgbdata_t *R_InitAttenTexture3D( texFlags_t *flags )
+{
+	vec3_t	v = { 0, 0, 0 };
+	int	x, y, z, d, size, size2, halfsize;
+	float	intensity;
+
+	if( !GL_Support( GL_TEXTURE_3D_EXT ))
+		return NULL;
+
+	// 3d attenuation texture
+	r_image.width = 32;
+	r_image.height = 32;
+	r_image.depth = 32;
+	r_image.buffer = data2D;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * r_image.depth * 4;
+
+	size = 32;
+	halfsize = size / 2;
+	intensity = halfsize * halfsize;
+	size2 = size * size;
+
+	for( x = 0; x < r_image.width; x++ )
+	{
+		for( y = 0; y < r_image.height; y++ )
+		{
+			for( z = 0; z < r_image.depth; z++ )
+			{
+				v[0] = (( x + 0.5f ) * ( 2.0f / (float)size ) - 1.0f );
+				v[1] = (( y + 0.5f ) * ( 2.0f / (float)size ) - 1.0f );
+				if( r_image.depth > 1 ) v[2] = (( z + 0.5f ) * ( 2.0f / (float)size ) - 1.0f );
+
+				intensity = 1.0f - sqrt( DotProduct( v, v ) );
+				if( intensity > 0 ) intensity = intensity * intensity * 215.5f;
+				d = bound( 0, intensity, 255 );
+
+				data2D[((z * size + y) * size + x) * 4 + 0] = d;
+				data2D[((z * size + y) * size + x) * 4 + 1] = d;
+				data2D[((z * size + y) * size + x) * 4 + 2] = d;
+			}
+		}
+	}
+
+	*flags = TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP|TF_TEXTURE_3D;
+
+	return &r_image;
 }
 
 static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
@@ -1540,6 +1704,108 @@ static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
 	Q_memset( data2D, 0x00, r_image.size );
 
 	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
+
+	return &r_image;
+}
+
+/*
+==================
+R_InitNormalizeCubemap
+==================
+*/
+static rgbdata_t *R_InitNormalizeCubemap( texFlags_t *flags )
+{
+	int	i, x, y, size = 32;
+	byte	*dataCM = data2D;
+	float	s, t;
+	vec3_t	normal;
+
+	if( !GL_Support( GL_TEXTURECUBEMAP_EXT ))
+		return NULL;
+
+	// normal cube map texture
+	for( i = 0; i < 6; i++ )
+	{
+		for( y = 0; y < size; y++ )
+		{
+			for( x = 0; x < size; x++ )
+			{
+				s = (((float)x + 0.5f) * (2.0f / size )) - 1.0f;
+				t = (((float)y + 0.5f) * (2.0f / size )) - 1.0f;
+
+				switch( i )
+				{
+				case 0: VectorSet( normal, 1.0f, -t, -s ); break;
+				case 1: VectorSet( normal, -1.0f, -t, s ); break;
+				case 2: VectorSet( normal, s,  1.0f,  t ); break;
+				case 3: VectorSet( normal, s, -1.0f, -t ); break;
+				case 4: VectorSet( normal, s, -t, 1.0f  ); break;
+				case 5: VectorSet( normal, -s, -t, -1.0f); break;
+				}
+
+				VectorNormalize( normal );
+
+				dataCM[4*(y*size+x)+0] = (byte)(128 + 127 * normal[0]);
+				dataCM[4*(y*size+x)+1] = (byte)(128 + 127 * normal[1]);
+				dataCM[4*(y*size+x)+2] = (byte)(128 + 127 * normal[2]);
+				dataCM[4*(y*size+x)+3] = 255;
+			}
+		}
+		dataCM += (size*size*4); // move pointer
+	}
+
+	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+
+	r_image.width = r_image.height = size;
+	r_image.size = r_image.width * r_image.height * 4 * 6;
+	r_image.flags |= (IMAGE_CUBEMAP|IMAGE_HAS_COLOR); // yes it's cubemap
+	r_image.buffer = data2D;
+	r_image.type = PF_RGBA_32;
+
+	return &r_image;
+}
+
+/*
+==================
+R_InitDlightCubemap
+==================
+*/
+static rgbdata_t *R_InitDlightCubemap( texFlags_t *flags )
+{
+	int	i, x, y, size = 4;
+	byte	*dataCM = data2D;
+	int	dx2, dy, d;
+
+	if( !GL_Support( GL_TEXTURECUBEMAP_EXT ))
+		return NULL;
+
+	// normal cube map texture
+	for( i = 0; i < 6; i++ )
+	{
+		for( x = 0; x < size; x++ )
+		{
+			dx2 = x - size / 2;
+			dx2 = dx2 * dx2;
+
+			for( y = 0; y < size; y++ )
+			{
+				dy = y - size / 2;
+				d = 255 - 35 * sqrt( dx2 + dy * dy );
+				dataCM[( y * size + x ) * 4 + 0] = bound( 0, d, 255 );
+				dataCM[( y * size + x ) * 4 + 1] = bound( 0, d, 255 );
+				dataCM[( y * size + x ) * 4 + 2] = bound( 0, d, 255 );
+			}
+		}
+		dataCM += (size * size * 4); // move pointer
+	}
+
+	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+
+	r_image.width = r_image.height = size;
+	r_image.size = r_image.width * r_image.height * 4 * 6;
+	r_image.flags |= (IMAGE_CUBEMAP|IMAGE_HAS_COLOR); // yes it's cubemap
+	r_image.buffer = data2D;
+	r_image.type = PF_RGBA_32;
 
 	return &r_image;
 }
@@ -1565,11 +1831,18 @@ static void R_InitBuiltinTextures( void )
 	{
 	{ "*default", &tr.defaultTexture, R_InitDefaultTexture, TEX_SYSTEM },
 	{ "*white", &tr.whiteTexture, R_InitWhiteTexture, TEX_SYSTEM },
+	{ "*gray", &tr.grayTexture, R_InitGrayTexture, TEX_SYSTEM },
 	{ "*black", &tr.blackTexture, R_InitBlackTexture, TEX_SYSTEM },
 	{ "*particle", &tr.particleTexture, R_InitParticleTexture, TEX_SYSTEM },
 	{ "*particle2", &tr.particleTexture2, R_InitParticleTexture2, TEX_SYSTEM },
 	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture, TEX_NOMIP },	// force linear filter
 	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture, TEX_LIGHTMAP },
+	{ "*atten", &tr.attenuationTexture, R_InitAttenuationTexture, TEX_SYSTEM },
+	{ "*atten2", &tr.attenuationTexture2, R_InitAttenuationTexture2, TEX_SYSTEM },
+	{ "*atten3", &tr.attenuationTexture3, R_InitAttenuationTexture3, TEX_SYSTEM },
+	{ "*normalize", &tr.normalizeTexture, R_InitNormalizeCubemap, TEX_CUBEMAP },
+	{ "*lightCube", &tr.dlightCubeTexture, R_InitDlightCubemap, TEX_CUBEMAP },
+	{ "*atten3D", &tr.attenuationTexture3D, R_InitAttenTexture3D, TEX_SYSTEM },
 	{ "*sky", &tr.skyTexture, R_InitSkyTexture, TEX_SYSTEM },
 	{ NULL, NULL, NULL }
 	};

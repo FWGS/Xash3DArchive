@@ -95,7 +95,7 @@ const bpc_desc_t PFDesc[] =
 void Image_Reset( void )
 {
 	// reset global variables
-	image.width = image.height = 0;
+	image.width = image.height = image.depth = 0;
 	image.source_width = image.source_height = 0;
 	image.num_sides = image.flags = 0;
 	image.source_type = 0;
@@ -143,6 +143,7 @@ rgbdata_t *ImagePack( void )
 		pack->buffer = image.rgba;
 		pack->width = image.width;
 		pack->height = image.height;
+		pack->depth = image.depth;
 		pack->type = image.type;
 		pack->size = image.size;
 	}

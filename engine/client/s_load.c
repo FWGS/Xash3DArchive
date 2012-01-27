@@ -71,6 +71,9 @@ qboolean S_TestSoundChar( const char *pch, char c )
 	int	i;
 	char	*pcht = (char *)pch;
 
+	if( !pch || !*pch )
+		return false;
+
 	// check first 2 characters
 	for( i = 0; i < 2; i++ )
 	{

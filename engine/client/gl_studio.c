@@ -29,7 +29,7 @@ GNU General Public License for more details.
 #define STUDIO_MERGE_TEXTURES
 
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
-#define MAXARRAYVERTS	8192	// used for draw shadows
+#define MAXARRAYVERTS	16384	// used for draw shadows
 
 static vec3_t hullcolor[8] = 
 {
@@ -1923,7 +1923,7 @@ static void R_StudioDrawPoints( void )
 				tri_strip = true;
 			}
 
-			r_stats.c_studio_polys++;
+			r_stats.c_studio_polys += (i - 2);
 
 			for( ; i > 0; i--, ptricmds += 4 )
 			{

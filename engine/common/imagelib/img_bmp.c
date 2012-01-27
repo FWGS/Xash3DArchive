@@ -296,15 +296,17 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	file_t		*pfile = NULL;
 	BITMAPFILEHEADER	bmfh;
 	BITMAPINFOHEADER	bmih;
+	size_t		total_size, cur_size;
 	RGBQUAD		rgrgbPalette[256];
 	dword		cbBmpBits;
+	byte		*clipbuf = NULL;
 	byte		*pb, *pbBmpBits;
 	dword		cbPalBytes = 0;
 	dword		biTrueWidth;
 	int		pixel_size;
 	int		i, x, y;
 
-	if( FS_FileExists( name, false ) && !Image_CheckFlag( IL_ALLOW_OVERWRITE ))
+	if( FS_FileExists( name, false ) && !Image_CheckFlag( IL_ALLOW_OVERWRITE ) && !host.write_to_clipboard )
 		return false; // already existed
 
 	// bogus parameter check
@@ -329,8 +331,11 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 		return false;
 	}
 
-	pfile = FS_Open( name, "wb", false );
-	if( !pfile ) return false;
+	if( !host.write_to_clipboard )
+	{
+		pfile = FS_Open( name, "wb", false );
+		if( !pfile ) return false;
+	}
 
 	// NOTE: align transparency column will sucessfully removed
 	// after create sprite or lump image, it's just standard requiriments 
@@ -345,8 +350,18 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	bmfh.bfReserved2 = 0;
 	bmfh.bfOffBits = sizeof( bmfh ) + sizeof( bmih ) + cbPalBytes;
 
-	// write header
-	FS_Write( pfile, &bmfh, sizeof( bmfh ));
+	if( host.write_to_clipboard )
+	{
+		// NOTE: the cbPalyBytes may be 0
+		total_size = sizeof( bmih ) + cbPalBytes + cbBmpBits;
+		clipbuf = Z_Malloc( total_size );
+		cur_size = 0;
+	}
+	else
+	{
+		// write header
+		FS_Write( pfile, &bmfh, sizeof( bmfh ));
+	}
 
 	// size of structure
 	bmih.biSize = sizeof( bmih );
@@ -360,9 +375,17 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 	bmih.biYPelsPerMeter = 0;
 	bmih.biClrUsed = ( pixel_size == 1 ) ? 256 : 0;
 	bmih.biClrImportant = 0;
-	
-	// Write info header
-	FS_Write( pfile, &bmih, sizeof( bmih ));
+
+	if( host.write_to_clipboard )
+	{
+		Q_memcpy( clipbuf + cur_size, &bmih, sizeof( bmih ));
+		cur_size += sizeof( bmih );
+	}
+	else
+	{
+		// Write info header
+		FS_Write( pfile, &bmih, sizeof( bmih ));
+	}
 
 	pbBmpBits = Mem_Alloc( host.imagepool, cbBmpBits );
 
@@ -384,8 +407,16 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 			else rgrgbPalette[i].rgbReserved = 0;
 		}
 
-		// write palette
-		FS_Write( pfile, rgrgbPalette, cbPalBytes );
+		if( host.write_to_clipboard )
+		{
+			Q_memcpy( clipbuf + cur_size, rgrgbPalette, cbPalBytes );
+			cur_size += cbPalBytes;
+		}
+		else
+		{
+			// write palette
+			FS_Write( pfile, rgrgbPalette, cbPalBytes );
+		}
 	}
 
 	pb = pix->buffer;
@@ -417,9 +448,20 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 		pb += bmih.biWidth * pixel_size;
 	}
 
-	// write bitmap bits (remainder of file)
-	FS_Write( pfile, pbBmpBits, cbBmpBits );
-	FS_Close( pfile );
+	if( host.write_to_clipboard )
+	{
+		Q_memcpy( clipbuf + cur_size, pbBmpBits, cbBmpBits );
+		cur_size += cbBmpBits;
+		Sys_SetClipboardData( clipbuf, total_size );
+		Z_Free( clipbuf );
+	}
+	else
+	{
+		// write bitmap bits (remainder of file)
+		FS_Write( pfile, pbBmpBits, cbBmpBits );
+		FS_Close( pfile );
+	}
+
 	Mem_Free( pbBmpBits );
 
 	return true;

@@ -888,6 +888,8 @@ void Host_WriteConfig( void )
 		if( jlook && ( jlook->state & 1 ))
 			FS_Printf( f, "+jlook\n" );
 
+		FS_Printf( f, "exec userconfig.cfg" );
+
 		FS_Close( f );
 	}
 	else MsgDev( D_ERROR, "Couldn't write config.cfg.\n" );

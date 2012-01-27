@@ -758,7 +758,6 @@ void CL_Disconnect( void )
 
 	// send a disconnect message to the server
 	CL_SendDisconnectMessage();
-	CL_ClearEffects ();
 	CL_ClearState ();
 
 	S_StopBackgroundTrack ();

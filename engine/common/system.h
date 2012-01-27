@@ -81,6 +81,7 @@ qboolean Sys_FreeLibrary( dll_info_t *dll );
 void Sys_ParseCommandLine( LPSTR lpCmdLine );
 void Sys_MergeCommandLine( LPSTR lpCmdLine );
 long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo );
+void Sys_SetClipboardData( const byte *buffer, size_t size );
 #define Sys_GetParmFromCmdLine( parm, out ) _Sys_GetParmFromCmdLine( parm, out, sizeof( out ))
 qboolean _Sys_GetParmFromCmdLine( char *parm, char *out, size_t size );
 void Sys_ShellExecute( const char *path, const char *parms, qboolean exit );

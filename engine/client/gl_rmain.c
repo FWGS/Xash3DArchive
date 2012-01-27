@@ -1177,7 +1177,10 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	if( clgame.drawFuncs.GL_RenderFrame != NULL )
 	{
 		if( clgame.drawFuncs.GL_RenderFrame( fd, drawWorld ))
+		{
+			tr.fResetVis = true;
 			return;
+		}
 	}
 
 	if( drawWorld ) r_lastRefdef = *fd;
@@ -1276,24 +1279,6 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
 }
 
-static void R_GetDetailScaleForTexture( int texture, float *xScale, float *yScale )
-{
-	gltexture_t *glt = R_GetTexture( texture );
-
-	if( xScale ) *xScale = glt->xscale;
-	if( yScale ) *yScale = glt->yscale;
-}
-
-static void R_GetFogParamsForTexture( int texture, byte *red, byte *green, byte *blue, byte *density )
-{
-	gltexture_t *glt = R_GetTexture( texture );
-
-	if( red ) *red = glt->fogParams[0];
-	if( green ) *green = glt->fogParams[1];
-	if( blue ) *blue = glt->fogParams[2];
-	if( density ) *density = glt->fogParams[3];
-}
-
 static int GL_RenderGetParm( int parm, int arg )
 {
 	gltexture_t *glt;
@@ -1338,8 +1323,35 @@ static int GL_RenderGetParm( int parm, int arg )
 		return CL_IsInGame();
 	case PARM_MAX_ENTITIES:
 		return clgame.maxEntities;
+	case PARM_TEX_TARGET:
+		glt = R_GetTexture( arg );
+		return glt->target;
+	case PARM_TEX_TEXNUM:
+		glt = R_GetTexture( arg );
+		return glt->texnum;
+	case PARM_TEX_FLAGS:
+		glt = R_GetTexture( arg );
+		return glt->flags;
 	}
 	return 0;
+}
+
+static void R_GetDetailScaleForTexture( int texture, float *xScale, float *yScale )
+{
+	gltexture_t *glt = R_GetTexture( texture );
+
+	if( xScale ) *xScale = glt->xscale;
+	if( yScale ) *yScale = glt->yscale;
+}
+
+static void R_GetExtraParmsForTexture( int texture, byte *red, byte *green, byte *blue, byte *density )
+{
+	gltexture_t *glt = R_GetTexture( texture );
+
+	if( red ) *red = glt->fogParams[0];
+	if( green ) *green = glt->fogParams[1];
+	if( blue ) *blue = glt->fogParams[2];
+	if( density ) *density = glt->fogParams[3];
 }
 
 /*
@@ -1435,28 +1447,29 @@ static const char *GL_TextureName( unsigned int texnum )
 
 static render_api_t gRenderAPI =
 {
-	DrawSingleDecal,
-	R_GetDetailScaleForTexture,
-	R_GetFogParamsForTexture,
 	GL_RenderGetParm,
-	R_EnvShot,
-	GL_LoadTexture,
-	GL_CreateTexture,
-	GL_FindTexture,
-	GL_FreeTexture,
-	R_SetCurrentEntity,
-	R_SetCurrentModel,
-	R_StoreEfrags,
-	Host_Error,
+	R_GetDetailScaleForTexture,
+	R_GetExtraParmsForTexture,
 	CL_GetLightStyle,
 	CL_GetDynamicLight,
 	CL_GetEntityLight,
-	GL_Bind,
 	TextureToTexGamma,
 	CL_GetBeamChains,
-	CL_DrawParticlesExternal,
+	R_SetCurrentEntity,
+	R_SetCurrentModel,
 	GL_SetWorldviewProjectionMatrix,
+	R_StoreEfrags,
+	GL_FindTexture,
+	GL_TextureName,
+	GL_LoadTexture,
+	GL_CreateTexture,
+	GL_FreeTexture,
+	DrawSingleDecal,
+	CL_DrawParticlesExternal,
+	R_EnvShot,
 	COM_CompareFileTime,
+	Host_Error,
+	pfnSPR_LoadExt,
 	AVI_LoadVideo,
 	AVI_GetVideoInfo,
 	AVI_GetAudioInfo,
@@ -1466,7 +1479,12 @@ static render_api_t gRenderAPI =
 	R_UploadStretchRaw,
 	AVI_FreeVideo,
 	AVI_IsActive,
-	GL_TextureName,
+	GL_Bind,
+	GL_SelectTexture,
+	GL_LoadTexMatrixExt,
+	GL_LoadIdentityTexMatrix,
+	GL_CleanUpTextureUnits,
+	GL_TexGen,
 };
 
 /*

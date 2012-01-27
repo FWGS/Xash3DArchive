@@ -2932,10 +2932,11 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	if( sv.state == ss_active )
 	{
 		// tell the client about new user message
-		BF_WriteByte( &sv.reliable_datagram, svc_usermessage );
-		BF_WriteByte( &sv.reliable_datagram, svgame.msg[i].number );
-		BF_WriteByte( &sv.reliable_datagram, (byte)iSize );
-		BF_WriteString( &sv.reliable_datagram, svgame.msg[i].name );
+		BF_WriteByte( &sv.multicast, svc_usermessage );
+		BF_WriteByte( &sv.multicast, svgame.msg[i].number );
+		BF_WriteByte( &sv.multicast, (byte)iSize );
+		BF_WriteString( &sv.multicast, svgame.msg[i].name );
+		SV_Send( MSG_ALL, NULL, NULL );
 	}
 
 	return svgame.msg[i].number;

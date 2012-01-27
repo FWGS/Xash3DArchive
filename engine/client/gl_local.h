@@ -172,6 +172,7 @@ typedef struct
 	int		cinTexture;      	// cinematic texture
 	int		skyTexture;	// default sky texture
 	int		whiteTexture;
+	int		grayTexture;
 	int		blackTexture;
 	int		defaultTexture;   	// use for bad textures
 	int		particleTexture;	// particle texture
@@ -180,6 +181,12 @@ typedef struct
 	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
 	int		dlightTexture;	// custom dlight texture
+	int		attenuationTexture;	// normal attenuation
+	int		attenuationTexture2;// dark attenuation
+	int		attenuationTexture3;// bright attenuation
+	int		attenuationTexture3D;// 3D attenuation
+	int		normalizeTexture;
+	int		dlightCubeTexture;	// dynamic cubemap
 	int		skyboxTextures[6];	// skybox sides
 	int		mirrorTextures[MAX_MIRRORS];
 	int		num_mirrors_used;	// used mirror textures
@@ -202,6 +209,7 @@ typedef struct
          
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
+	qboolean		fResetVis;
 	
 	int		visframecount;	// PVS frame
 	int		dlightframecount;	// dynamic light frame
@@ -252,16 +260,14 @@ void GL_CleanUpTextureUnits( int last );
 void GL_Bind( GLenum tmu, GLenum texnum );
 void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t );
 void GL_LoadTexMatrix( const matrix4x4 m );
+void GL_LoadTexMatrixExt( const float *glmatrix );
 void GL_LoadMatrix( const matrix4x4 source );
 void GL_TexGen( GLenum coord, GLenum mode );
 void GL_SelectTexture( GLenum texture );
-void GL_DisableMultitexture( void );
-void GL_EnableMultitexture( void );
 void GL_LoadIdentityTexMatrix( void );
 void GL_DisableAllTexGens( void );
 void GL_SetRenderMode( int mode );
 void GL_FrontFace( GLenum front );
-void GL_MBind( GLenum texnum );
 void GL_Cull( GLenum cull );
 void R_ShowTextures( void );
 
@@ -298,9 +304,11 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int out_h, qboolean isNormalMap );
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags );
 void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor );
+void GL_TexFilter( gltexture_t *tex, qboolean update );
 int GL_FindTexture( const char *name );
 void GL_FreeTexture( GLenum texnum );
 void GL_FreeImage( const char *name );
+const char *GL_Target( GLenum target );
 void R_TextureList_f( void );
 void R_InitImages( void );
 void R_ShutdownImages( void );
@@ -383,7 +391,7 @@ void GL_BuildLightmaps( void );
 // gl_sprite.c
 //
 void R_SpriteInit( void );
-void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded );
+void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, uint texFlags );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
 void R_DrawSpriteModel( cl_entity_t *e );
 
@@ -552,19 +560,16 @@ typedef struct
 	qboolean		fullScreen;
 	qboolean		wideScreen;
 
-	qboolean		initializedMedia;
-
 	int		activeTMU;
 	GLuint		currentTextures[MAX_TEXTURE_UNITS];
+	GLuint		currentTextureTargets[MAX_TEXTURE_UNITS];
 	GLboolean		texIdentityMatrix[MAX_TEXTURE_UNITS];
 	GLint		genSTEnabled[MAX_TEXTURE_UNITS];	// 0 - disabled, OR 1 - S, OR 2 - T, OR 4 - R
-	GLint		texCoordArrayMode[MAX_TEXTURE_UNITS];	// 0 - disabled, 1 - enabled, 2 - cubemap
 
 	int		faceCull;
 	int		frontFace;
 
 	qboolean		drawTrans;
-	qboolean		mtexEnabled;	// classic Quake multi-texturing (2 units)
 	qboolean		stencilEnabled;
 	qboolean		in2DMode;
 } glstate_t;
