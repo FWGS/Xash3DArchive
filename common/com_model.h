@@ -208,8 +208,9 @@ typedef struct mextrasurf_s
 	int		mirrortexturenum;	// gl texnum
 	float		mirrormatrix[4][4];
 	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
+	struct mextrasurf_s	*detailchain;	// for detail textures drawing
 
-	int		reserved[8];	// just for future expansions or mod-makers
+	int		reserved[7];	// just for future expansions or mod-makers
 } mextrasurf_t;
 
 typedef struct hull_s

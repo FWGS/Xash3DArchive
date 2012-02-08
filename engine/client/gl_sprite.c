@@ -720,10 +720,13 @@ static float R_GlowSightDistance( vec3_t glowOrigin )
 	VectorSubtract( glowOrigin, RI.vieworg, glowDist );
 	dist = VectorLength( glowDist );
 
-	tr = PM_PlayerTrace( clgame.pmove, RI.vieworg, glowOrigin, PM_GLASS_IGNORE|PM_STUDIO_IGNORE, 2, -1, NULL );
+	if( RP_NORMALPASS( ))
+	{
+		tr = PM_PlayerTrace( clgame.pmove, RI.vieworg, glowOrigin, PM_GLASS_IGNORE|PM_STUDIO_IGNORE, 2, -1, NULL );
 
-	if(( 1.0f - tr.fraction ) * dist > 8 )
-		return -1;
+		if(( 1.0f - tr.fraction ) * dist > 8 )
+			return -1;
+	}
 	return dist;
 }
 

@@ -2953,7 +2953,7 @@ void NetAPI_Status( net_status_t *status )
 	status->remote_address = cls.netchan.remote_address;
 	status->packet_loss = cls.packet_loss / 100; // percent
 	status->latency = cl.frame.latency;
-	status->connection_time = cl.time;	// FIXME: replace with netchan.first_received
+	status->connection_time = cl.time;	// FIXME: replace with cl.time - netchan.first_received
 	status->rate = cls.netchan.rate;
 }
 

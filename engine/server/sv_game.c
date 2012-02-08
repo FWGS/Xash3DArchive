@@ -715,11 +715,25 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 	return flags;
 }
 
+void SV_FreePrivateData( edict_t *pEdict )
+{
+	if( !pEdict || !pEdict->pvPrivateData )
+		return;
+
+	// NOTE: new interface can be missing
+	if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
+		svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
+
+	if( Mem_IsAllocatedExt( svgame.mempool, pEdict->pvPrivateData ))
+		Mem_Free( pEdict->pvPrivateData );
+	pEdict->pvPrivateData = NULL;
+}
+
 void SV_InitEdict( edict_t *pEdict )
 {
 	ASSERT( pEdict );
-	ASSERT( pEdict->pvPrivateData == NULL );
 
+	SV_FreePrivateData( pEdict );
 	Q_memset( &pEdict->v, 0, sizeof( entvars_t ));
 
 	// g-cont. trying to setup controllers here...
@@ -729,7 +743,6 @@ void SV_InitEdict( edict_t *pEdict )
 	pEdict->v.controller[3] = 0x7F;
 
 	pEdict->v.pContainingEntity = pEdict; // make cross-links for consistency
-	pEdict->pvPrivateData = NULL;	// will be alloced later by pfnAllocPrivateData
 	pEdict->free = false;
 }
 
@@ -753,16 +766,7 @@ void SV_FreeEdict( edict_t *pEdict )
 		return;
 	}
 
-	if( pEdict->pvPrivateData )
-	{
-		// NOTE: new interface can be missing
-		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
-			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pEdict );
-
-		if( Mem_IsAllocated( pEdict->pvPrivateData ))
-			Mem_Free( pEdict->pvPrivateData );
-		pEdict->pvPrivateData = NULL;
-	}
+	SV_FreePrivateData( pEdict );
 
 	// NOTE: don't clear all edict fields on releasing
 	// because gamedll may trying to use edict pointers and crash game (e.g. Opposing Force)
@@ -862,10 +866,7 @@ void SV_FreeEdicts( void )
 
 void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args )
 {
-	event_args_t	nullargs;
-
-	ASSERT( msg );
-	ASSERT( args );
+	event_args_t nullargs;
 
 	Q_memset( &nullargs, 0, sizeof( nullargs ));
 
@@ -2698,13 +2699,14 @@ pfnPvAllocEntPrivateData
 void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 {
 	ASSERT( pEdict );
-	ASSERT( pEdict->free == false );
 
-	if( Mem_IsAllocated( pEdict->pvPrivateData ))
-		Mem_Free( pEdict->pvPrivateData );
+	SV_FreePrivateData( pEdict );
 
-	// a poke646 have memory corrupt in somewhere - this is trashed last four bytes :(
-	pEdict->pvPrivateData = Mem_Alloc( svgame.mempool, (cb + 15) & ~15 );
+	if( cb > 0 )
+	{
+		// a poke646 have memory corrupt in somewhere - this is trashed last four bytes :(
+		pEdict->pvPrivateData = Mem_Alloc( svgame.mempool, (cb + 15) & ~15 );
+	}
 
 	return pEdict->pvPrivateData;
 }
@@ -2731,10 +2733,7 @@ pfnFreeEntPrivateData
 */
 void pfnFreeEntPrivateData( edict_t *pEdict )
 {
-	if( !pEdict ) return;
-	if( pEdict->pvPrivateData )
-		Mem_Free( pEdict->pvPrivateData );
-	pEdict->pvPrivateData = NULL; // freed
+	SV_FreePrivateData( pEdict );
 }
 
 /*
@@ -2746,7 +2745,7 @@ allocate new engine string
 */
 string_t SV_AllocString( const char *szValue )
 {
-	const char	*newString;
+	const char *newString;
 
 	newString = _copystring( svgame.stringspool, szValue, __FILE__, __LINE__ );
 	return newString - svgame.globals->pStringBase;
@@ -4066,6 +4065,7 @@ used by CS:CZ
 */
 void *pfnSequenceGet( const char *fileName, const char *entryName )
 {
+	// UNDONE: no description
 	return NULL;
 }
 
@@ -4078,6 +4078,7 @@ used by CS:CZ
 */
 void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked )
 {
+	// UNDONE: no description
 	return NULL;
 }
 
@@ -4102,6 +4103,7 @@ used by CS:CZ
 */
 int pfnIsCareerMatch( void )
 {
+	// UNDONE: no description
 	return 0;
 }
 
@@ -4113,6 +4115,7 @@ pfnGetLocalizedStringLength
 */
 int pfnGetLocalizedStringLength( const char *label )
 {
+	// UNDONE: no description
 	return 0;
 }
 
@@ -4124,6 +4127,7 @@ pfnRegisterTutorMessageShown
 */
 void pfnRegisterTutorMessageShown( int mid )
 {
+	// UNDONE: no description
 }
 
 /*
@@ -4134,6 +4138,7 @@ pfnGetTimesTutorMessageShown
 */
 int pfnGetTimesTutorMessageShown( int mid )
 {
+	// UNDONE: no description
 	return 0;
 }
 
@@ -4145,6 +4150,7 @@ pfnProcessTutorMessageDecayBuffer
 */
 void pfnProcessTutorMessageDecayBuffer( int *buffer, int bufferLength )
 {
+	// UNDONE: no description
 }
 
 /*
@@ -4155,11 +4161,12 @@ pfnConstructTutorMessageDecayBuffer
 */
 void pfnConstructTutorMessageDecayBuffer( int *buffer, int bufferLength )
 {
+	// UNDONE: no description
 }
 
 /*
 =============
-pfnSequenceGet
+pfnResetTutorMessageDecayData
 
 =============
 */

@@ -19,7 +19,7 @@ GNU General Public License for more details.
 #include "r_studioint.h"
 #include "library.h"
 
-typedef int (*STUDIOAPI)( int, sv_blending_interface_t*, server_studio_api_t*, matrix3x4, matrix3x4[MAXSTUDIOBONES] );
+typedef int (*STUDIOAPI)( int, sv_blending_interface_t**, server_studio_api_t*,  float (*transform)[3][4], float (*bones)[MAXSTUDIOBONES][3][4] );
 
 static studiohdr_t			*sv_studiohdr;
 static mplane_t			sv_hitboxplanes[6];	// there a temp hitbox
@@ -1051,8 +1051,11 @@ qboolean SV_InitStudioAPI( void )
 	pBlendAPI = &gBlendAPI;
 
 	pBlendIface = (STUDIOAPI)Com_GetProcAddress( svgame.hInstance, "Server_GetBlendingInterface" );
-	if( pBlendIface && pBlendIface( SV_BLENDING_INTERFACE_VERSION, pBlendAPI, &gStudioAPI, sv_studiomatrix, sv_studiobones ))
+	if( pBlendIface && pBlendIface( SV_BLENDING_INTERFACE_VERSION, &pBlendAPI, &gStudioAPI, &sv_studiomatrix, &sv_studiobones ))
+	{
+		MsgDev( D_AICONSOLE, "SV_LoadProgs: ^2initailized Server Blending interface ^7ver. %i\n", SV_BLENDING_INTERFACE_VERSION );
 		return true;
+	}
 
 	// NOTE: we always return true even if game interface was not correct
 	// because SetupBones is used for hitbox tracing on the server-side

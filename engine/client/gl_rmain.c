@@ -813,7 +813,7 @@ static void R_SetupGL( void )
 
 	R_SetupModelviewMatrix( &RI.refdef, RI.worldviewMatrix );
 	R_SetupProjectionMatrix( &RI.refdef, RI.projectionMatrix );
-	if( RI.params & RP_MIRRORVIEW ) RI.projectionMatrix[0][0] = -RI.projectionMatrix[0][0];
+//	if( RI.params & RP_MIRRORVIEW ) RI.projectionMatrix[0][0] = -RI.projectionMatrix[0][0];
 
 	Matrix4x4_Concat( RI.worldviewProjectionMatrix, RI.projectionMatrix, RI.worldviewMatrix );
 
@@ -1172,6 +1172,8 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 {
 	if( r_norefresh->integer )
 		return;
+
+	tr.realframecount++;
 
 	// completely override rendering
 	if( clgame.drawFuncs.GL_RenderFrame != NULL )

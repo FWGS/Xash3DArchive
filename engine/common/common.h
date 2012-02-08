@@ -298,6 +298,7 @@ typedef struct host_parm_s
 
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
+	int		old_developer;	// keep real dev state (we need enable dev-mode in multiplayer)
 	qboolean		key_overstrike;	// key overstrike mode
 	qboolean		stuffcmdsrun;	// execute stuff commands
 	qboolean		con_showalways;	// show console always (developer and dedicated)

@@ -685,11 +685,12 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 	{
 		if( !SV_MapIsValid( mapName, GI->sp_entity, NULL ))
 			return false;
+
+		SV_ClearSaveDir ();
 	}
 
 	S_StopAllSounds ();
 	SV_DeactivateServer ();
-	SV_ClearSaveDir ();
 
 	sv.loadgame = loadGame;
 	sv.background = false;

@@ -536,10 +536,10 @@ void CL_DrawParticles( void )
 
 	// HACKHACK: don't evaluate particles when executes many times at same frame
 	// e.g. mirror rendering
-	if( framecount != tr.framecount )
+	if( framecount != tr.realframecount )
 	{
 		frametime = cl.time - cl.oldtime;
-		framecount = tr.framecount;
+		framecount = tr.realframecount;
 	}
 	else frametime = 0.0f;
 

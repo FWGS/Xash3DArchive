@@ -563,7 +563,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	host.hInst = GetModuleHandle( NULL );
 	host.change_game = bChangeGame;
 	host.state = HOST_INIT; // initialzation started
-	host.developer = 0;
+	host.developer = host.old_developer = 0;
 
 	CRT_Init(); // init some CRT functions
 
@@ -635,6 +635,8 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 		if( host.developer < D_WARN ) host.con_showalways = false;
 	}
 
+	host.old_developer = host.developer;
+
 	Con_CreateConsole();
 
 	// first text message into console or log 
@@ -661,8 +663,8 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	{
 		// clear all developer levels when game is protected
 		Cvar_FullSet( "developer", "0", CVAR_INIT );
+		host.developer = host.old_developer = 0;
 		host.con_showalways = false;
-		host.developer = 0;
 	}
 
 	HPAK_Init();

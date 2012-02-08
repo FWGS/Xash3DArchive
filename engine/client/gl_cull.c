@@ -167,7 +167,7 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 	if( surf->flags & SURF_NOCULL )
 		return false;
 
-	// don't cull transparent surfaces because we shold be draw decals on them
+	// don't cull transparent surfaces because we should be draw decals on them
 	if( surf->pdecals && ( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd ))
 		return false;
 

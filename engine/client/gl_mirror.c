@@ -232,7 +232,7 @@ void R_DrawMirrors( void )
 			VectorsAngles( forward, right, up, angles );
 			angles[ROLL] = -angles[ROLL];
 
-			RI.params = RP_MIRRORVIEW|RP_FLIPFRONTFACE|RP_CLIPPLANE|RP_OLDVIEWLEAF;
+			RI.params = RP_MIRRORVIEW|RP_CLIPPLANE|RP_OLDVIEWLEAF;
 
 			RI.clipPlane = plane;
 			RI.clipFlags |= ( 1<<5 );

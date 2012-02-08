@@ -213,6 +213,7 @@ typedef struct
 	
 	int		visframecount;	// PVS frame
 	int		dlightframecount;	// dynamic light frame
+	int		realframecount;	// not including passes
 	int		framecount;
 
 	// cull info

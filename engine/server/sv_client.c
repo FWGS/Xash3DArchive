@@ -398,11 +398,9 @@ void SV_DropClient( sv_client_t *drop )
 	drop->edict->v.modelindex = 0;
 	if( drop->edict->pvPrivateData )
 	{
+		// NOTE: new interface can be missing
 		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
-		{
-			// NOTE: new interface can be missing
 			svgame.dllFuncs2.pfnOnFreeEntPrivateData( drop->edict );
-		}
 
 		// clear any dlls data but keep engine data
 		Mem_Free( drop->edict->pvPrivateData );

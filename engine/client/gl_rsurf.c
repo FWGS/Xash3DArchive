@@ -34,7 +34,7 @@ static byte		visbytes[MAX_MAP_LEAFS/8];
 static uint		r_blocklights[BLOCK_WIDTH*BLOCK_HEIGHT*3];
 static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
-static glpoly_t		*detail_polys[MAX_TEXTURES];
+static mextrasurf_t		*detail_surfaces[MAX_TEXTURES];
 static qboolean		draw_details = false;
 static gllightmapstate_t	gl_lms;
 static msurface_t		*skychain = NULL;
@@ -928,7 +928,8 @@ R_RenderDetails
 void R_RenderDetails( void )
 {
 	gltexture_t	*glt;
-	glpoly_t		*p;
+	mextrasurf_t	*es, *p;
+	msurface_t	*fa;
 	int		i;
 
 	if( !draw_details )
@@ -943,16 +944,20 @@ void R_RenderDetails( void )
 
 	for( i = 1; i < MAX_TEXTURES; i++ )
 	{
-		if( !detail_polys[i] )
-			continue;
+		es = detail_surfaces[i];
+		if( !es ) continue;
 
 		GL_Bind( GL_TEXTURE0, i );
-		glt = R_GetTexture( i );
 
-		for( p = detail_polys[i]; p; p = p->next )
-			DrawGLPoly( p, glt->xscale, glt->yscale );
+		for( p = es; p; p = p->detailchain )
+		{
+			fa = INFO_SURF( p, RI.currentmodel );
+			glt = R_GetTexture( fa->texinfo->texture->gl_texturenum ); // get texture scale
+			DrawGLPoly( fa->polys, glt->xscale, glt->yscale );
+                    }
 
-		detail_polys[i] = NULL;		
+		detail_surfaces[i] = NULL;
+		es->detailchain = NULL;		
 	}
 
 	pglDisable( GL_BLEND );
@@ -1022,10 +1027,9 @@ void R_RenderBrushPoly( msurface_t *fa )
 	}
 	else if( r_detailtextures->integer && t->dt_texturenum )
 	{
-		// HACKHACK: store details in poly->next (only for non-water surfaces)
-		// can't rendering both luma and detail textures simultaneously 
-		fa->polys->next = detail_polys[t->dt_texturenum];
-		detail_polys[t->dt_texturenum] = fa->polys;
+		mextrasurf_t *es = SURF_INFO( fa, RI.currentmodel );
+		es->detailchain = detail_surfaces[t->dt_texturenum];
+		detail_surfaces[t->dt_texturenum] = es;
 		draw_details = true;
 	}
 
@@ -1733,7 +1737,7 @@ void R_DrawWorld( void )
 	VectorCopy( RI.cullorigin, tr.modelorg );
 	Q_memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
 	Q_memset( fullbright_polys, 0, sizeof( fullbright_polys ));
-	Q_memset( detail_polys, 0, sizeof( detail_polys ));
+	Q_memset( detail_surfaces, 0, sizeof( detail_surfaces ));
 
 	RI.currentWaveHeight = RI.waveHeight;
 	GL_SetRenderMode( kRenderNormal );

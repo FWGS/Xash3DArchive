@@ -710,6 +710,9 @@ void CL_ClearState( void )
 
 	Cvar_SetFloat( "scr_download", 0.0f );
 	Cvar_SetFloat( "scr_loading", 0.0f );
+
+	// restore real developer level
+	host.developer = host.old_developer;
 }
 
 /*

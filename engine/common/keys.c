@@ -534,6 +534,13 @@ void Key_Event( int key, qboolean down )
 	// console key is hardcoded, so the user can never unbind it
 	if( key == '`' || key == '~' )
 	{
+		// we are in typing mode. So don't switch to console
+		if( (word)GetKeyboardLayout( 0 ) == (word)0x419 )
+		{
+			if( cls.key_dest != key_game )
+				return;
+                    }
+
 		if( !down ) return;
     		Con_ToggleConsole_f();
 		return;
@@ -716,6 +723,12 @@ void CL_CharEvent( int key )
 {
 	// the console key should never be used as a char
 	if( key == '`' || key == '~' ) return;
+
+	if( cls.key_dest == key_console && !Con_Visible( ))
+	{
+		if((char)key == '¸' || (char)key == '¨' )
+			return; // don't pass '¸' when we open the console 
+	}
 
 	// distribute the key down event to the apropriate handler
 	if( cls.key_dest == key_console || cls.key_dest == key_message )
