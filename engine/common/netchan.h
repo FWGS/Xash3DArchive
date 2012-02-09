@@ -137,7 +137,8 @@ typedef struct netchan_s
 	double		last_sent;	// for retransmits		
 
 	double		rate;		// bandwidth choke. bytes per second
-	long		cleartime;	// if realtime > cleartime, free to send next packet
+	double		cleartime;	// if realtime > cleartime, free to send next packet
+	double		connect_time;	// Usage: host.realtime - netchan.connect_time
 
 	int		drop_count;	// dropped packets, cleared each level
 	int		good_count;	// cleared each level
@@ -191,6 +192,7 @@ typedef struct netchan_s
 } netchan_t;
 
 extern netadr_t		net_from;
+extern netadr_t		net_local;
 extern sizebuf_t		net_message;
 extern byte		net_message_buffer[NET_MAX_PAYLOAD];
 extern convar_t		*net_speeds;

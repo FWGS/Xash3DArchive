@@ -1132,6 +1132,45 @@ void CL_ParseScreenFade( sizebuf_t *msg )
 
 /*
 ==============
+CL_ParseCvarValue
+
+Find the client cvar value
+and sent it back to the server
+==============
+*/
+void CL_ParseCvarValue( sizebuf_t *msg )
+{
+	const char *cvarName = BF_ReadString( msg );
+	convar_t *cvar = Cvar_FindVar( cvarName );
+
+	// build the answer
+	BF_WriteByte( &cls.netchan.message, clc_requestcvarvalue );
+	BF_WriteString( &cls.netchan.message, cvar ? cvar->string : "Not Found" );
+}
+
+/*
+==============
+CL_ParseCvarValue2
+
+Find the client cvar value
+and sent it back to the server
+==============
+*/
+void CL_ParseCvarValue2( sizebuf_t *msg )
+{
+	int requestID = BF_ReadLong( msg );
+	const char *cvarName = BF_ReadString( msg );
+	convar_t *cvar = Cvar_FindVar( cvarName );
+
+	// build the answer
+	BF_WriteByte( &cls.netchan.message, clc_requestcvarvalue2 );
+	BF_WriteLong( &cls.netchan.message, requestID );
+	BF_WriteString( &cls.netchan.message, cvarName );
+	BF_WriteString( &cls.netchan.message, cvar ? cvar->string : "Not Found" );
+}
+
+/*
+==============
 CL_DispatchUserMessage
 
 Dispatch user message by engine request
@@ -1459,6 +1498,12 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_studiodecal:
 			CL_ParseStudioDecal( msg );
+			break;
+		case svc_querycvarvalue:
+			CL_ParseCvarValue( msg );
+			break;
+		case svc_querycvarvalue2:
+			CL_ParseCvarValue2( msg );
 			break;
 		default:
 			CL_ParseUserMessage( msg, cmd );

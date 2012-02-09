@@ -3,6 +3,26 @@ build ????
 Physic: add check for liquid brushes that has only hull0
 Render: draw decals without culling on the transparent surfaces
 Engine: fix decal transition bug on global entities
+Client: fix "r_drawentities 5" debug code in client.dll
+Render: rewrited detail texture code for using detail scale for each diffuse texture instead of each detail texture
+Render: custom render interface is changed to version 26
+Engine: added custom studio decals serializtaion
+Server: fixed check for russian letters in the commands "say" and "say_team"
+Server: physics interface is changed to version 6
+Client: allow console in multiplayer even while dev-mode is disabled
+Engine: added new message SVC_STUDIODECAL that passed through engine and call function in extended rendered interface
+Engine: hook PrintScreen and manually writing screenshot into clipboard
+Render: fix decals drawing when rendermode is TransColor
+Render: add support for cubemaps, 1D and 3D textures
+Render: added some new internal textures that using by Xash-Mod 0.5
+Render: fix reflection for Glow-Sprites and follow beams
+Studio: fix poly-counter for studio models
+Engine: add support for userconfig
+Engine: allow letter '¸' in console and chat-mode
+Engine: fix REG_USER_MSG for messages that registering in-game
+Server: clear savedir when new game is started
+GameUI: loading maps.lst from basedir while mod doesn't contain multiplayer maps
+Network: implemented QueryCvarValue and QueryCvarValue2
 
 build 1770
 

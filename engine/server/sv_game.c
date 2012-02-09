@@ -4183,6 +4183,25 @@ request client cvar value
 */
 void pfnQueryClientCvarValue( const edict_t *player, const char *cvarName )
 {
+	sv_client_t *cl;
+
+	if( !cvarName || !*cvarName )
+	{
+		MsgDev( D_ERROR, "QueryClientCvarValue: NULL cvar name!\n" );
+		return;
+	}
+
+	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
+	{
+		BF_WriteByte( &cl->netchan.message, svc_querycvarvalue );
+		BF_WriteString( &cl->netchan.message, cvarName );
+	}
+	else
+	{
+		if( svgame.dllFuncs2.pfnCvarValue )
+			svgame.dllFuncs2.pfnCvarValue( player, "Bad Player" );
+		MsgDev( D_ERROR, "QueryClientCvarValue: tried to send to a non-client!\n" );
+	}
 }
 
 /*
@@ -4194,6 +4213,26 @@ request client cvar value (bugfixed)
 */
 void pfnQueryClientCvarValue2( const edict_t *player, const char *cvarName, int requestID )
 {
+	sv_client_t *cl;
+
+	if( !cvarName || !*cvarName )
+	{
+		MsgDev( D_ERROR, "QueryClientCvarValue: NULL cvar name!\n" );
+		return;
+	}
+
+	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
+	{
+		BF_WriteByte( &cl->netchan.message, svc_querycvarvalue2 );
+		BF_WriteLong( &cl->netchan.message, requestID );
+		BF_WriteString( &cl->netchan.message, cvarName );
+	}
+	else
+	{
+		if( svgame.dllFuncs2.pfnCvarValue2 )
+			svgame.dllFuncs2.pfnCvarValue2( player, requestID, cvarName, "Bad Player" );
+		MsgDev( D_ERROR, "QueryClientCvarValue: tried to send to a non-client!\n" );
+	}
 }
 					
 // engine callbacks

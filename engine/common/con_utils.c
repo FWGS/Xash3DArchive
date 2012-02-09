@@ -648,10 +648,17 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 	file_t	*f;
 
 	if( FS_FileSize( "maps.lst", onlyingamedir ) > 0 && !fRefresh )
+	{
+		Msg( "maps.lst is exist: %s\n", onlyingamedir ? "basedir" : "gamedir" );
 		return true; // exist 
+	}
 
 	t = FS_Search( "maps/*.bsp", false, onlyingamedir );
-	if( !t ) return false;
+	if( !t && onlyingamedir )
+	{
+		// mod doesn't contain any maps (probably this is a bot)
+		return Cmd_CheckMapsList_R( fRefresh, false );
+	}
 
 	buffer = Mem_Alloc( host.mempool, t->numfilenames * 2 * sizeof( result ));
 	for( i = 0; i < t->numfilenames; i++ )
@@ -744,19 +751,17 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			}
 		}
 	}
-	if( t ) Mem_Free( t ); // free search result
 
+	if( t ) Mem_Free( t ); // free search result
 	size = Q_strlen( buffer );
-	if( !size && onlyingamedir )
-	{
-          	if( buffer ) Mem_Free( buffer );
-		return Cmd_CheckMapsList_R( fRefresh, false );
-	}
 
 	if( !size )
 	{
           	if( buffer ) Mem_Free( buffer );
-          	return false;
+
+		if( onlyingamedir )
+			return Cmd_CheckMapsList_R( fRefresh, false );
+		return false;
 	}
 
 	// write generated maps.lst

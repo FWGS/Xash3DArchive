@@ -2116,6 +2116,41 @@ void SV_ParseResourceList( sv_client_t *cl, sizebuf_t *msg )
 
 /*
 ===================
+SV_ParseCvarValue
+
+Parse a requested value from client cvar 
+===================
+*/
+void SV_ParseCvarValue( sv_client_t *cl, sizebuf_t *msg )
+{
+	const char *value = BF_ReadString( msg );
+
+	if( svgame.dllFuncs2.pfnCvarValue )
+		svgame.dllFuncs2.pfnCvarValue( cl->edict, value );
+	MsgDev( D_AICONSOLE, "Cvar query response: name:%s, value:%s\n", cl->name, value );
+}
+
+/*
+===================
+SV_ParseCvarValue2
+
+Parse a requested value from client cvar 
+===================
+*/
+void SV_ParseCvarValue2( sv_client_t *cl, sizebuf_t *msg )
+{
+	string name, value;
+	int requestID = BF_ReadLong( msg );
+	Q_strcpy( name, BF_ReadString( msg ));
+	Q_strcpy( value, BF_ReadString( msg ));
+
+	if( svgame.dllFuncs2.pfnCvarValue2 )
+		svgame.dllFuncs2.pfnCvarValue2( cl->edict, requestID, name, value );
+	MsgDev( D_AICONSOLE, "Cvar query response: name:%s, request ID %d, cvar:%s, value:%s\n", cl->name, requestID, name, value );
+}
+
+/*
+===================
 SV_ExecuteClientMessage
 
 Parse a client packet
@@ -2193,6 +2228,12 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			break;
 		case clc_resourcelist:
 			SV_ParseResourceList( cl, msg );
+			break;
+		case clc_requestcvarvalue:
+			SV_ParseCvarValue( cl, msg );
+			break;
+		case clc_requestcvarvalue2:
+			SV_ParseCvarValue2( cl, msg );
 			break;
 		default:
 			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );

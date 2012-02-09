@@ -40,6 +40,7 @@ static int (_stdcall *pRecvFrom)( SOCKET s, char* buf, int len, int flags, struc
 static int (_stdcall *pSendTo)( SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen );
 static int (_stdcall *pSelect)( int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, const struct timeval* timeout );
 static int (_stdcall *pConnect)( SOCKET s, const struct sockaddr *name, int namelen );
+static int (_stdcall *pGetSockName)( SOCKET s, struct sockaddr *name, int *namelen );
 static int (_stdcall *pSend)( SOCKET s, const char *buf, int len, int flags );
 static int (_stdcall *pRecv)( SOCKET s, char *buf, int len, int flags );
 static int (_stdcall *pGetHostName)( char *name, int namelen );
@@ -66,6 +67,7 @@ static dllfunc_t winsock_funcs[] =
 { "ioctlsocket", (void **) &pIoctlSocket },
 { "closesocket", (void **) &pCloseSocket },
 { "gethostname", (void **) &pGetHostName },
+{ "getsockname", (void **) &pGetSockName },
 { "gethostbyname", (void **) &pGetHostByName },
 { "WSAGetLastError", (void **) &pWSAGetLastError },
 { NULL, NULL }
@@ -92,6 +94,8 @@ static int	ipx_sockets[2];
 static WSADATA winsockdata;
 static qboolean winsockInitialized = false;
 static const char *net_src[2] = { "client", "server" };
+static qboolean noip = false;
+static qboolean noipx = false;
 static convar_t *net_ip;
 static convar_t *net_hostport;
 static convar_t *net_clientport;
@@ -759,6 +763,57 @@ void NET_OpenIPX( void )
 }
 
 /*
+================
+NET_GetLocalAddress
+
+Returns the servers' ip address as a string.
+================
+*/
+void NET_GetLocalAddress( void )
+{
+	char		buff[512];
+	struct sockaddr_in	address;
+	int		namelen;
+	int		net_error = 0;
+
+	Q_memset( &net_local, 0, sizeof( netadr_t ));
+
+	if( noip )
+	{
+		MsgDev( D_INFO, "TCP/IP Disabled.\n" );
+	}
+	else
+	{
+		// If we have changed the ip var from the command line, use that instead.
+		if( Q_strcmp( net_ip->string, "localhost" ))
+		{
+			Q_strcpy( buff, net_ip->string );
+		}
+		else
+		{
+			pGetHostName( buff, 512 );
+		}
+
+		// ensure that it doesn't overrun the buffer
+		buff[512-1] = 0;
+
+		NET_StringToAdr( buff, &net_local );
+		namelen = sizeof( address );
+
+		if( pGetSockName( ip_sockets[NS_SERVER], (struct sockaddr *)&address, &namelen ) != 0 )
+		{
+			MsgDev( D_ERROR, "Could not get TCP/IP address, TCP/IP disabled\nReason:  %s\n", NET_ErrorString( ));
+			noip = true;
+		}
+		else
+		{
+			net_local.port = address.sin_port;
+			Msg( "Server IP address %s\n", NET_AdrToString( net_local ));
+		}
+	}
+}
+
+/*
 ====================
 NET_Config
 
@@ -767,8 +822,8 @@ A single player game will only use the loopback code
 */
 void NET_Config( qboolean multiplayer )
 {
-	int		i;
-	static qboolean	old_config;
+	static qboolean old_config;
+	static qboolean bFirst = true;
 
 	if( old_config == multiplayer )
 		return;
@@ -777,6 +832,8 @@ void NET_Config( qboolean multiplayer )
 
 	if( !multiplayer )
 	{	
+		int	i;
+
 		// shut down any existing sockets
 		for( i = 0; i < 2; i++ )
 		{
@@ -796,8 +853,15 @@ void NET_Config( qboolean multiplayer )
 	else
 	{	
 		// open sockets
-		if( !Sys_CheckParm( "-noip" )) NET_OpenIP();
-		if( !Sys_CheckParm( "-noipx" )) NET_OpenIPX();
+		if( !noip ) NET_OpenIP();
+		if( !noipx ) NET_OpenIPX();
+
+		// Get our local address, if possible
+		if( bFirst )
+		{
+			bFirst = false;
+			NET_GetLocalAddress();
+		}
 	}
 
 	NET_ClearLoopback ();
@@ -885,6 +949,9 @@ void NET_Init( void )
 	net_showpackets = Cvar_Get( "net_showpackets", "0", 0, "show network packets" );
 	Cmd_AddCommand( "net_showip", NET_ShowIP_f,  "show hostname and ip's" );
 	Cmd_AddCommand( "net_restart", NET_Restart_f, "restart the network subsystem" );
+
+	if( Sys_CheckParm( "-noip" )) noip = true;
+	if( Sys_CheckParm( "-noipx" )) noipx = true;
 
 	winsockInitialized = true;
 	MsgDev( D_NOTE, "NET_Init()\n" );

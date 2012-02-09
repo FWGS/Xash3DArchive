@@ -2949,11 +2949,11 @@ void NetAPI_Status( net_status_t *status )
 	ASSERT( status != NULL );
 
 	status->connected = NET_IsLocalAddress( cls.netchan.remote_address ) ? false : true;
-	status->local_address = cls.netchan.remote_address; // FIXME: get local address
+	status->connection_time = host.realtime - cls.netchan.connect_time;
 	status->remote_address = cls.netchan.remote_address;
 	status->packet_loss = cls.packet_loss / 100; // percent
 	status->latency = cl.frame.latency;
-	status->connection_time = cl.time;	// FIXME: replace with cl.time - netchan.first_received
+	status->local_address = net_local;
 	status->rate = cls.netchan.rate;
 }
 

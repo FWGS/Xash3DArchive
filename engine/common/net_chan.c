@@ -94,6 +94,7 @@ convar_t	*net_qport;
 
 int	net_drop;
 netadr_t	net_from;
+netadr_t	net_local;
 sizebuf_t	net_message;
 byte	*net_mempool;
 byte	net_message_buffer[NET_MAX_PAYLOAD];
@@ -158,6 +159,7 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	chan->sock = sock;
 	chan->remote_address = adr;
 	chan->last_received = host.realtime;
+	chan->connect_time = host.realtime;
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
 	chan->rate = DEFAULT_RATE;

@@ -70,6 +70,9 @@ GNU General Public License for more details.
 
 #define svc_director		51	// <variable sized>
 #define svc_studiodecal		52	// [float*3][float*3][short][short][byte]
+
+#define svc_querycvarvalue		57	// [string]
+#define svc_querycvarvalue2		58	// [string][long] (context)
 #define svc_lastmsg			64	// start user messages at this point
 
 // client to server
@@ -82,6 +85,8 @@ GNU General Public License for more details.
 #define clc_userinfo		6	// [[userinfo string]
 #define clc_fileconsistency		7
 #define clc_voicedata		8
+#define clc_requestcvarvalue		9
+#define clc_requestcvarvalue2		10
 
 #define MAX_VISIBLE_PACKET		512	// 512 visible entities per frame (hl1 has 256)
 
