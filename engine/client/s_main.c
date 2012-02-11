@@ -554,7 +554,7 @@ float SND_GetGainObscured( channel_t *ch, qboolean fplayersound, qboolean floopi
 	// set up traceline from player eyes to sound emitting entity origin
 	VectorCopy( ch->origin, endpoint );
 
-	tr = PM_PlayerTrace( clgame.pmove, s_listener.origin, endpoint, PM_STUDIO_IGNORE, 2, -1, NULL );
+	tr = CL_TraceLine( s_listener.origin, endpoint, PM_STUDIO_IGNORE );
 
 	if(( tr.fraction < 1.0f || tr.allsolid || tr.startsolid ) && tr.fraction < 0.99f )
 	{
@@ -608,7 +608,7 @@ float SND_GetGainObscured( channel_t *ch, qboolean fplayersound, qboolean floopi
 		for( count = 0, i = 0; i < 4; i++ )
 		{
 			// UNDONE: some endpoints are in walls - in this case, trace from the wall hit location
-			tr = PM_PlayerTrace( clgame.pmove, s_listener.origin, endpoints[i], PM_STUDIO_IGNORE, 2, -1, NULL );
+			tr = CL_TraceLine( s_listener.origin, endpoints[i], PM_STUDIO_IGNORE );
 
 			if(( tr.fraction < 1.0f || tr.allsolid || tr.startsolid ) && tr.fraction < 0.99f && !tr.startsolid )
 			{

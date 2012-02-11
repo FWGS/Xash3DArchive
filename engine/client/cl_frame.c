@@ -44,6 +44,19 @@ qboolean CL_IsPredicted( void )
 	return true;
 }
 
+int CL_PushMoveFilter( physent_t *pe )
+{
+	if( !pe || pe->solid != SOLID_BSP || pe->movetype != MOVETYPE_PUSH )
+		return 1;
+
+	// optimization. Ignore world to avoid
+	// unneeded transformations
+	if( pe->info == 0 )
+		return 1;
+
+	return 0;
+}
+
 /*
 =========================================================================
 
@@ -102,9 +115,10 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 
 			if( ent->model )
 			{
+				CL_SetTraceHull( 0 ); // g-cont. player hull for better detect moving platforms
 				VectorSet( vecSrc, ent->origin[0], ent->origin[1], ent->origin[2] + ent->model->maxs[2] );
 				VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] );		
-				trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_STUDIO_IGNORE, 0, -1, NULL );
+				CL_PlayerTraceExt( vecSrc, vecEnd, PM_STUDIO_IGNORE, CL_PushMoveFilter, &trace );
 				m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
 			}
 
@@ -796,7 +810,7 @@ void CL_SetIdealPitch( void )
 		bottom[2] = top[2] - 160;
 
 		// skip any monsters (only world and brush models)
-		tr = PM_PlayerTrace( clgame.pmove, top, bottom, PM_STUDIO_IGNORE, 2, -1, NULL );
+		tr = CL_TraceLine( top, bottom, PM_STUDIO_IGNORE );
 		if( tr.allsolid ) return; // looking at a wall, leave ideal the way is was
 
 		if( tr.fraction == 1.0f )

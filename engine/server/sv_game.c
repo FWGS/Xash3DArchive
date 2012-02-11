@@ -82,7 +82,6 @@ void SV_SysError( const char *error_string )
 
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 {
-	float	scale = 1.0f;
 	int	i;
 
 	if( !SV_IsValidEdict( e ) || !min || !max )
@@ -98,14 +97,8 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 		}
 	}
 
-	if( sv_allow_studio_scaling->integer && e->v.scale != 0.0f )
-	{
-		if( Mod_GetType( e->v.modelindex ) == mod_studio )
-			scale = e->v.scale;
-	}
-
-	VectorScale( min, scale, e->v.mins );
-	VectorScale( max, scale, e->v.maxs );
+	VectorCopy( min, e->v.mins );
+	VectorCopy( max, e->v.maxs );
 	VectorSubtract( max, min, e->v.size );
 
 	SV_LinkEdict( e, false );
@@ -2967,7 +2960,7 @@ static void pfnGetBonePosition( const edict_t* pEdict, int iBone, float *rgflOri
 		return;
 	}
 
-	SV_GetBonePosition( (edict_t *)pEdict, iBone, rgflOrigin, rgflAngles );
+	Mod_GetBonePosition( pEdict, iBone, rgflOrigin, rgflAngles );
 }
 
 /*
@@ -3060,7 +3053,7 @@ static void pfnGetAttachment( const edict_t *pEdict, int iAttachment, float *rgf
 		MsgDev( D_WARN, "SV_GetAttachment: invalid entity %s\n", SV_ClassName( pEdict ));
 		return;
 	}
-	SV_StudioGetAttachment(( edict_t *)pEdict, iAttachment, rgflOrigin, rgflAngles );
+	Mod_StudioGetAttachment( pEdict, iAttachment, rgflOrigin, rgflAngles );
 }
 
 /*
@@ -4744,13 +4737,7 @@ qboolean SV_LoadProgs( const char *name )
 		return false;
 	}
 
-	if( !SV_InitStudioAPI( ))
-	{
-		Com_FreeLibrary( svgame.hInstance );
-		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get studio API\n" );
-		svgame.hInstance = NULL;
-		return false;
-	}
+	Mod_InitStudioAPI();
 
 	if( !SV_InitPhysicsAPI( ))
 	{

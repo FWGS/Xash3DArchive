@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "cl_tent.h"
 #include "pm_local.h"
 #include "particledef.h"
+#include "studio.h"
 
 void CL_ClearPhysEnts( void )
 {
@@ -33,12 +34,13 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	model_t	*mod = Mod_Handle( ent->curstate.modelindex );
 
 	if( !mod ) return false;
-	pe->player = ent->player;
+	pe->player = false;
 
 	if( pe->player )
 	{
 		// client or bot
 		Q_strncpy( pe->name, "player", sizeof( pe->name ));
+		pe->player = (int)(ent - clgame.entities);
 	}
 	else
 	{
@@ -46,22 +48,33 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 		Q_strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
-	if( mod->type == mod_studio )
+	switch( ent->curstate.solid )
 	{
-		pe->studiomodel = mod;
-		pe->model = NULL;
-	}
-	else
-	{
-		pe->studiomodel = NULL;
+	case SOLID_NOT:
+	case SOLID_BSP:
 		pe->model = mod;
+		pe->studiomodel = NULL;
+		VectorClear( pe->mins );
+		VectorClear( pe->maxs );
+		break;
+	case SOLID_BBOX:
+		pe->model = NULL;
+		if( mod && mod->flags & STUDIO_TRACE_HITBOX )
+			pe->studiomodel = mod;
+		VectorCopy( ent->curstate.mins, pe->mins );
+		VectorCopy( ent->curstate.maxs, pe->maxs );
+		break;
+	default:
+		pe->model = NULL;
+		pe->studiomodel = NULL;
+		VectorCopy( ent->curstate.mins, pe->mins );
+		VectorCopy( ent->curstate.maxs, pe->maxs );
+		break;
 	}
 
 	pe->info = (int)(ent - clgame.entities);
 	VectorCopy( ent->curstate.origin, pe->origin );
 	VectorCopy( ent->curstate.angles, pe->angles );
-	VectorCopy( ent->curstate.mins, pe->mins );
-	VectorCopy( ent->curstate.maxs, pe->maxs );
 
 	pe->solid = ent->curstate.solid;
 	pe->rendermode = ent->curstate.rendermode;
@@ -83,7 +96,7 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	pe->iuser2 = ent->curstate.iuser2;
 	pe->iuser3 = ent->curstate.iuser3;
 	pe->iuser4 = ent->curstate.iuser4;
-	pe->fuser1 = (clgame.movevars.studio_scale) ? ent->curstate.scale : ent->curstate.fuser1;
+	pe->fuser1 = ent->curstate.fuser1;
 	pe->fuser2 = ent->curstate.fuser2;
 	pe->fuser3 = ent->curstate.fuser3;
 	pe->fuser4 = ent->curstate.fuser4;
@@ -310,6 +323,26 @@ int CL_WaterEntity( const float *rgflPos )
 
 /*
 =============
+CL_TraceLine
+
+a simple engine traceline
+=============
+*/
+pmtrace_t CL_TraceLine( vec3_t start, vec3_t end, int flags )
+{
+	int	old_usehull;
+	pmtrace_t	tr;
+	
+	old_usehull = clgame.pmove->usehull;
+	clgame.pmove->usehull = 2;
+	tr = PM_PlayerTraceExt( clgame.pmove, start, end, flags, clgame.pmove->numphysent, clgame.pmove->physents, -1, NULL );
+	clgame.pmove->usehull = old_usehull;
+
+	return tr;
+}
+
+/*
+=============
 CL_GetWaterEntity
 
 returns water brush where inside pos
@@ -348,44 +381,29 @@ static void pfnParticle( float *origin, int color, float life, int zpos, int zve
 
 static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 {
-	pmtrace_t trace;
-
-	trace = PM_PlayerTrace( clgame.pmove, pos, pos, PM_NORMAL, clgame.pmove->usehull, -1, NULL );
-	if( ptrace ) *ptrace = trace; 
-
-	return PM_TestPlayerPosition( clgame.pmove, pos, NULL );
+	return PM_TestPlayerPosition( clgame.pmove, pos, ptrace, NULL );
 }
 
 static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 {
-	physent_t	*pe;
-	float	*mins, *maxs;
 	int	i;
-
-	ASSERT( hitent >= 0 && hitent < clgame.pmove->numphysent );
-	pe = &clgame.pmove->physents[hitent];
-	mins = clgame.pmove->player_mins[clgame.pmove->usehull];
-	maxs = clgame.pmove->player_maxs[clgame.pmove->usehull];
-
-	if( !PM_TraceModel( clgame.pmove, pe, clgame.pmove->origin, mins, maxs, clgame.pmove->origin, tr, 0 ))
-		return;	// not stuck
-
-	tr->ent = hitent;
 
 	for( i = 0; i < clgame.pmove->numtouch; i++ )
 	{
-		if( clgame.pmove->touchindex[i].ent == tr->ent )
+		if( clgame.pmove->touchindex[i].ent == hitent )
 			break;
 	}
 
 	if( i != clgame.pmove->numtouch ) return;
-	VectorCopy( clgame.pmove->velocity, tr->deltavelocity );
-
 	if( clgame.pmove->numtouch >= MAX_PHYSENTS )
 	{
 		MsgDev( D_ERROR, "PM_StuckTouch: MAX_TOUCHENTS limit exceeded\n" );
 		return;
 	}
+
+	VectorCopy( clgame.pmove->velocity, tr->deltavelocity );
+	tr->ent = hitent;
+
 	clgame.pmove->touchindex[clgame.pmove->numtouch++] = *tr;
 }
 
@@ -413,14 +431,29 @@ static int pfnHullPointContents( struct hull_s *hull, int num, float *p )
 
 static pmtrace_t pfnPlayerTrace( float *start, float *end, int traceFlags, int ignore_pe )
 {
-	return PM_PlayerTrace( clgame.pmove, start, end, traceFlags, clgame.pmove->usehull, ignore_pe, NULL );
+	return PM_PlayerTraceExt( clgame.pmove, start, end, traceFlags, clgame.pmove->numphysent, clgame.pmove->physents, ignore_pe, NULL );
 }
 
 static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull, int ignore_pe )
 {
 	static pmtrace_t	tr;
+	int		old_usehull;
 
-	tr = PM_PlayerTrace( clgame.pmove, start, end, flags, usehull, ignore_pe, NULL );
+	old_usehull = clgame.pmove->usehull;
+	clgame.pmove->usehull = usehull;	
+
+	switch( flags )
+	{
+	case PM_TRACELINE_PHYSENTSONLY:
+		tr = PM_PlayerTraceExt( clgame.pmove, start, end, 0, clgame.pmove->numphysent, clgame.pmove->physents, ignore_pe, NULL );
+		break;
+	case PM_TRACELINE_ANYVISIBLE:
+		tr = PM_PlayerTraceExt( clgame.pmove, start, end, 0, clgame.pmove->numvisent, clgame.pmove->visents, ignore_pe, NULL );
+		break;
+	}
+
+	clgame.pmove->usehull = old_usehull;
+
 	return &tr;
 }
 
@@ -429,22 +462,50 @@ static hull_t *pfnHullForBsp( physent_t *pe, float *offset )
 	return PM_HullForBsp( pe, clgame.pmove, offset );
 }
 
-static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *trace )
+static float pfnTraceModel( physent_t *pe, float *start, float *end, trace_t *trace )
 {
-	pmtrace_t	pmtrace;
+	int	old_usehull;
+	vec3_t	start_l, end_l;
+	vec3_t	offset, temp;
+	qboolean	rotated;
+	matrix4x4	matrix;
+	hull_t	*hull;
 
-	PM_TraceModel( clgame.pmove, pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
+	old_usehull = clgame.pmove->usehull;
+	clgame.pmove->usehull = 2;
 
-	// copy pmtrace_t to trace_t
-	if( trace )
+	hull = PM_HullForBsp( pe, clgame.pmove, offset );
+
+	clgame.pmove->usehull = old_usehull;
+
+	if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
+		rotated = true;
+	else rotated = false;
+
+ 	if( rotated )
+ 	{
+ 		Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+ 		Matrix4x4_VectorITransform( matrix, start, start_l );
+ 		Matrix4x4_VectorITransform( matrix, end, end_l );
+ 	}
+ 	else
+ 	{
+ 		VectorSubtract( start, offset, start_l );
+ 		VectorSubtract( end, offset, end_l );
+ 	}
+
+	SV_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, trace );
+	trace->ent = NULL;
+
+	if( rotated )
 	{
-		// NOTE: if pmtrace.h is changed is must be changed too
-		Q_memcpy( trace, &pmtrace, sizeof( *trace ));
-		trace->hitgroup = pmtrace.hitgroup;
-		trace->ent = NULL;
+		VectorCopy( trace->plane.normal, temp );
+		Matrix4x4_TransformPositivePlane( matrix, temp, trace->plane.dist, trace->plane.normal, &trace->plane.dist );
 	}
 
-	return pmtrace.fraction;
+	VectorLerp( start, trace->fraction, end, trace->endpos );
+
+	return trace->fraction;
 }
 
 static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
@@ -482,24 +543,34 @@ static void pfnPlaybackEventFull( int flags, int clientindex, word eventindex, f
 
 static pmtrace_t pfnPlayerTraceEx( float *start, float *end, int traceFlags, pfnIgnore pmFilter )
 {
-	return PM_PlayerTrace( clgame.pmove, start, end, traceFlags, clgame.pmove->usehull, -1, pmFilter );
+	return PM_PlayerTraceExt( clgame.pmove, start, end, traceFlags, clgame.pmove->numphysent, clgame.pmove->physents, -1, pmFilter );
 }
 
 static int pfnTestPlayerPositionEx( float *pos, pmtrace_t *ptrace, pfnIgnore pmFilter )
 {
-	pmtrace_t trace;
-
-	trace = PM_PlayerTrace( clgame.pmove, pos, pos, PM_STUDIO_BOX, clgame.pmove->usehull, -1, pmFilter );
-	if( ptrace ) *ptrace = trace; 
-
-	return PM_TestPlayerPosition( clgame.pmove, pos, pmFilter );
+	return PM_TestPlayerPosition( clgame.pmove, pos, ptrace, pmFilter );
 }
 
 static pmtrace_t *pfnTraceLineEx( float *start, float *end, int flags, int usehull, pfnIgnore pmFilter )
 {
 	static pmtrace_t	tr;
+	int		old_usehull;
 
-	tr = PM_PlayerTrace( clgame.pmove, start, end, flags, usehull, -1, pmFilter );
+	old_usehull = clgame.pmove->usehull;
+	clgame.pmove->usehull = usehull;	
+
+	switch( flags )
+	{
+	case PM_TRACELINE_PHYSENTSONLY:
+		tr = PM_PlayerTraceExt( clgame.pmove, start, end, 0, clgame.pmove->numphysent, clgame.pmove->physents, -1, pmFilter );
+		break;
+	case PM_TRACELINE_ANYVISIBLE:
+		tr = PM_PlayerTraceExt( clgame.pmove, start, end, 0, clgame.pmove->numvisent, clgame.pmove->visents, -1, pmFilter );
+		break;
+	}
+
+	clgame.pmove->usehull = old_usehull;
+
 	return &tr;
 }
 

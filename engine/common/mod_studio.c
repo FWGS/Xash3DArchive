@@ -21,63 +21,162 @@ GNU General Public License for more details.
 
 typedef int (*STUDIOAPI)( int, sv_blending_interface_t**, server_studio_api_t*,  float (*transform)[3][4], float (*bones)[MAXSTUDIOBONES][3][4] );
 
-static studiohdr_t			*sv_studiohdr;
+typedef struct mstudiocache_s
+{
+	float	frame;
+	int	sequence;
+	vec3_t	angles;
+	vec3_t	origin;
+	vec3_t	size;
+	byte	controler[4];
+	byte	blending[2];
+	model_t	*model;
+	uint	current_hull;
+	uint	current_plane;
+	uint	numhitboxes;
+} mstudiocache_t;
+
+#define STUDIO_CACHESIZE		16
+#define STUDIO_CACHEMASK		(STUDIO_CACHESIZE - 1)
+
+// trace global variables
+static sv_blending_interface_t	*pBlendAPI;
+static studiohdr_t			*mod_studiohdr;
+static matrix3x4			studio_transform;
+static hull_t			cache_hull[MAXSTUDIOBONES];
+static hull_t			studio_hull[MAXSTUDIOBONES];
+static matrix3x4			studio_bones[MAXSTUDIOBONES];
+static uint			studio_hull_hitgroup[MAXSTUDIOBONES];
+static uint			cache_hull_hitgroup[MAXSTUDIOBONES];
+static mstudiocache_t		cache_studio[STUDIO_CACHESIZE];
+static dclipnode_t			studio_clipnodes[6];
+static mplane_t			studio_planes[768];
+static mplane_t			cache_planes[768];
+
+// current cache state
+static int			cache_current;
+static int			cache_current_hull;
+static int			cache_current_plane;
+
+// old trace global variables
 static mplane_t			sv_hitboxplanes[6];	// there a temp hitbox
-static matrix3x4			sv_studiomatrix;
-static matrix3x4			sv_studiobones[MAXSTUDIOBONES];
 typedef qboolean 			(*pfnHitboxTrace)( trace_t *trace );
 static vec3_t			trace_startmins, trace_endmins;
 static vec3_t			trace_startmaxs, trace_endmaxs;
 static vec3_t			trace_absmins, trace_absmaxs;
 static float			trace_realfraction;
-static sv_blending_interface_t	*pBlendAPI;
 
 /*
 ====================
-SV_InitStudioHull
+Mod_InitStudioHull
 ====================
 */
-void SV_InitStudioHull( void )
+void Mod_InitStudioHull( void )
 {
 	int	i, side;
-	mplane_t	*p;
+
+	if( studio_hull[0].planes != NULL )
+		return;	// already initailized
 
 	for( i = 0; i < 6; i++ )
 	{
+		studio_clipnodes[i].planenum = i;
+
 		side = i & 1;
 
-		// planes
-		p = &sv_hitboxplanes[i];
-		VectorClear( p->normal );
+		studio_clipnodes[i].children[side] = CONTENTS_EMPTY;
+		if( i != 5 ) studio_clipnodes[i].children[side^1] = i + 1;
+		else studio_clipnodes[i].children[side^1] = CONTENTS_SOLID;
+	}
 
-		if( side )
-		{
-			p->type = PLANE_NONAXIAL;
-			p->normal[i>>1] = -1.0f;
-			p->signbits = (1<<(i>>1));
-		}
-		else
-		{
-			p->type = i>>1;
-			p->normal[i>>1] = 1.0f;
-			p->signbits = 0;
-		}
-	}    
+	for( i = 0; i < MAXSTUDIOBONES; i++ )
+	{
+		studio_hull[i].clipnodes = studio_clipnodes;
+		studio_hull[i].planes = &studio_planes[i*6];
+		studio_hull[i].firstclipnode = 0;
+		studio_hull[i].lastclipnode = 5;
+	}
+}
+
+/*
+===============================================================================
+
+	STUDIO MODELS CACHE
+
+===============================================================================
+*/
+/*
+====================
+ClearStudioCache
+====================
+*/
+void Mod_ClearStudioCache( void )
+{
+	Q_memset( cache_studio, 0, sizeof( cache_studio ));
+	cache_current_hull = cache_current_plane = 0;
+
+	cache_current = 0;
 }
 
 /*
 ====================
-SV_HullForHitbox
+AddToStudioCache
 ====================
 */
-static void SV_HullForHitbox( const vec3_t mins, const vec3_t maxs )
+void Mod_AddToStudioCache( float frame, int sequence, vec3_t angles, vec3_t origin, vec3_t size, byte *pcontroller, byte *pblending, model_t *model, hull_t *hull, int numhitboxes )
 {
-	sv_hitboxplanes[0].dist = maxs[0];
-	sv_hitboxplanes[1].dist = -mins[0];
-	sv_hitboxplanes[2].dist = maxs[1];
-	sv_hitboxplanes[3].dist = -mins[1];
-	sv_hitboxplanes[4].dist = maxs[2];
-	sv_hitboxplanes[5].dist = -mins[2];
+	mstudiocache_t *pCache;
+
+	if( numhitboxes + cache_current_hull >= MAXSTUDIOBONES )
+		Mod_ClearStudioCache();
+
+	cache_current++;
+	pCache = &cache_studio[cache_current & STUDIO_CACHEMASK];
+
+	pCache->frame = frame;
+	pCache->sequence = sequence;
+	VectorCopy( angles, pCache->angles );
+	VectorCopy( origin, pCache->origin );
+	VectorCopy( size, pCache->size );
+
+	Q_memcpy( pCache->controler, pcontroller, 4 );
+	Q_memcpy( pCache->blending, pblending, 2 );
+
+	pCache->model = model;
+	pCache->current_hull = cache_current_hull;
+	pCache->current_plane = cache_current_plane;
+
+	Q_memcpy( &cache_hull[cache_current_hull], hull, numhitboxes * sizeof( hull_t ));
+	Q_memcpy( &cache_planes[cache_current_plane], studio_planes, numhitboxes * sizeof( mplane_t ) * 6 );
+	Q_memcpy( &cache_hull_hitgroup[cache_current_hull], studio_hull_hitgroup, numhitboxes * sizeof( uint ));
+
+	cache_current_hull += numhitboxes;
+	cache_current_plane += numhitboxes * 6;
+	pCache->numhitboxes = numhitboxes;
+}
+
+/*
+====================
+CheckStudioCache
+====================
+*/
+mstudiocache_t *Mod_CheckStudioCache( model_t *model, float frame, int sequence, vec3_t angles, vec3_t origin, vec3_t size, byte *pcontroller, byte *pblending )
+{
+	mstudiocache_t	*pCache;
+	int		i;
+
+	for( i = 0; i < STUDIO_CACHESIZE; i++ )
+	{
+		pCache = &cache_studio[(cache_current - i) & STUDIO_CACHEMASK];
+
+		if( pCache->model == model && pCache->frame == frame && pCache->sequence == sequence &&
+		VectorCompare( angles, pCache->angles ) && VectorCompare( origin, pCache->origin ) && VectorCompare( size, pCache->size ) &&
+		!memcmp( pCache->controler, pcontroller, 4 ) && !memcmp( pCache->blending, pblending, 2 ))
+		{
+			return pCache;
+		}
+	}
+	return NULL;
 }
 
 /*
@@ -89,11 +188,105 @@ static void SV_HullForHitbox( const vec3_t mins, const vec3_t maxs )
 */
 /*
 ====================
+SetStudioHullPlane
+====================
+*/
+void Mod_SetStudioHullPlane( mplane_t *pl, int bone, int axis, float offset )
+{
+	pl->type = 5;
+
+	pl->normal[0] = studio_bones[bone][0][axis];
+	pl->normal[1] = studio_bones[bone][1][axis];
+	pl->normal[2] = studio_bones[bone][2][axis];
+
+	pl->dist = (pl->normal[0] * studio_bones[bone][0][3]) + (pl->normal[1] * studio_bones[bone][1][3]) + (pl->normal[2] * studio_bones[bone][2][3]) + offset;
+}
+
+/*
+====================
+HullForStudio
+====================
+*/
+hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t angles, vec3_t origin, vec3_t size, byte *pcontroller, byte *pblending, int *numhitboxes, edict_t *pEdict )
+{
+	vec3_t		angles2;
+	mstudiocache_t	*bonecache;
+	mstudiobbox_t	*phitbox;
+	int		i, j;
+
+	ASSERT( numhitboxes );
+
+	bonecache = NULL;
+	Mod_InitStudioHull(); // FIXME: move to Mod_Init
+
+	if( mod_studiocache->integer )
+	{
+		bonecache = Mod_CheckStudioCache( model, frame, sequence, angles, origin, size, pcontroller, pblending );
+
+		if( bonecache != NULL )
+		{
+			Q_memcpy( studio_planes, &cache_planes[bonecache->current_plane], bonecache->numhitboxes * sizeof( mplane_t ) * 6 );
+			Q_memcpy( studio_hull_hitgroup, &cache_hull_hitgroup[bonecache->current_hull], bonecache->numhitboxes * sizeof( uint ));
+			Q_memcpy( studio_hull, &cache_hull[bonecache->current_hull], bonecache->numhitboxes * sizeof( hull_t ));
+
+			*numhitboxes = bonecache->numhitboxes;
+			return studio_hull;
+		}
+	}
+
+	mod_studiohdr = Mod_Extradata( model );
+	if( !mod_studiohdr ) return NULL; // probably not a studiomodel
+
+	VectorCopy( angles, angles2 );
+	angles2[PITCH] = -angles2[PITCH]; // stupid quake bug
+
+	pBlendAPI->SV_StudioSetupBones( model, frame, sequence, angles2, origin, pcontroller, pblending, -1, pEdict );
+	phitbox = (mstudiobbox_t *)((byte *)mod_studiohdr + mod_studiohdr->hitboxindex);
+
+	for( i = j = 0; i < mod_studiohdr->numhitboxes; i++, j += 6 )
+	{
+		studio_hull_hitgroup[i] = phitbox[i].group;
+
+		Mod_SetStudioHullPlane( &studio_planes[j+0], phitbox[i].bone, 0, phitbox[i].bbmax[0] );
+		Mod_SetStudioHullPlane( &studio_planes[j+1], phitbox[i].bone, 0, phitbox[i].bbmin[0] );
+		Mod_SetStudioHullPlane( &studio_planes[j+2], phitbox[i].bone, 1, phitbox[i].bbmax[1] );
+		Mod_SetStudioHullPlane( &studio_planes[j+3], phitbox[i].bone, 1, phitbox[i].bbmin[1] );
+		Mod_SetStudioHullPlane( &studio_planes[j+4], phitbox[i].bone, 2, phitbox[i].bbmax[2] );
+		Mod_SetStudioHullPlane( &studio_planes[j+5], phitbox[i].bone, 2, phitbox[i].bbmin[2] );
+
+		studio_planes[j+0].dist += DotProductAbs( studio_planes[j+0].normal, size );
+		studio_planes[j+1].dist -= DotProductAbs( studio_planes[j+1].normal, size );
+		studio_planes[j+2].dist += DotProductAbs( studio_planes[j+2].normal, size );
+		studio_planes[j+3].dist -= DotProductAbs( studio_planes[j+3].normal, size );
+		studio_planes[j+4].dist += DotProductAbs( studio_planes[j+4].normal, size );
+		studio_planes[j+5].dist -= DotProductAbs( studio_planes[j+5].normal, size );
+	}
+
+	// tell trace code about hibox count
+	*numhitboxes = mod_studiohdr->numhitboxes;
+
+	if( mod_studiocache->integer )
+	{
+		Mod_AddToStudioCache( frame, sequence, angles, origin, size, pcontroller, pblending, model, studio_hull, *numhitboxes );
+	}
+
+	return studio_hull;
+}
+
+/*
+===============================================================================
+
+	STUDIO MODELS SETUP BONES
+
+===============================================================================
+*/
+/*
+====================
 StudioPlayerBlend
 
 ====================
 */
-void SV_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch )
+void Mod_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch )
 {
 	// calc up/down pointing
 	*pBlend = (*pPitch * 3);
@@ -123,15 +316,15 @@ StudioCalcBoneAdj
 
 ====================
 */
-static void SV_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
+static void Mod_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
 {
 	int			i, j;
 	float			value;
 	mstudiobonecontroller_t	*pbonecontroller;
 	
-	pbonecontroller = (mstudiobonecontroller_t *)((byte *)sv_studiohdr + sv_studiohdr->bonecontrollerindex);
+	pbonecontroller = (mstudiobonecontroller_t *)((byte *)mod_studiohdr + mod_studiohdr->bonecontrollerindex);
 
-	for( j = 0; j < sv_studiohdr->numbonecontrollers; j++ )
+	for( j = 0; j < mod_studiohdr->numbonecontrollers; j++ )
 	{
 		i = pbonecontroller[j].index;
 
@@ -146,8 +339,7 @@ static void SV_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
 			else 
 			{
 				value = pcontroller[i] / 255.0f;
-				if( value < 0.0f ) value = 0.0f;
-				if( value > 1.0f ) value = 1.0f;
+				value = bound( 0.0f, value, 1.0f );
 				value = (1.0f - value) * pbonecontroller[j].start + value * pbonecontroller[j].end;
 			}
 		}
@@ -174,7 +366,7 @@ StudioCalcBoneQuaterion
 
 ====================
 */
-static void SV_StudioCalcBoneQuaterion( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *q )
+static void Mod_StudioCalcBoneQuaterion( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *q )
 {
 	int		j, k;
 	vec4_t		q1, q2;
@@ -261,7 +453,7 @@ StudioCalcBonePosition
 
 ====================
 */
-static void SV_StudioCalcBonePosition( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *pos )
+static void Mod_StudioCalcBonePosition( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *pos )
 {
 	int		j, k;
 	mstudioanimvalue_t	*panimvalue;
@@ -330,7 +522,7 @@ StudioCalcRotations
 
 ====================
 */
-static void SV_StudioCalcRotations( const edict_t *ent, int boneused[], int numbones, const byte *pcontroller, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f )
+static void Mod_StudioCalcRotations( int boneused[], int numbones, const byte *pcontroller, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f )
 {
 	int		i, j, frame;
 	mstudiobone_t	*pbone;
@@ -346,26 +538,20 @@ static void SV_StudioCalcRotations( const edict_t *ent, int boneused[], int numb
 	s = (f - frame);
 
 	// add in programtic controllers
-	pbone = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
+	pbone = (mstudiobone_t *)((byte *)mod_studiohdr + mod_studiohdr->boneindex);
 
-	SV_StudioCalcBoneAdj( adj, pcontroller );
+	Mod_StudioCalcBoneAdj( adj, pcontroller );
 
 	for( j = numbones - 1; j >= 0; j-- )
 	{
 		i = boneused[j];
-		SV_StudioCalcBoneQuaterion( frame, s, &pbone[i], &panim[i], adj, q[i] );
-		SV_StudioCalcBonePosition( frame, s, &pbone[i], &panim[i], adj, pos[i] );
+		Mod_StudioCalcBoneQuaterion( frame, s, &pbone[i], &panim[i], adj, q[i] );
+		Mod_StudioCalcBonePosition( frame, s, &pbone[i], &panim[i], adj, pos[i] );
 	}
 
 	if( pseqdesc->motiontype & STUDIO_X ) pos[pseqdesc->motionbone][0] = 0.0f;
 	if( pseqdesc->motiontype & STUDIO_Y ) pos[pseqdesc->motionbone][1] = 0.0f;
 	if( pseqdesc->motiontype & STUDIO_Z ) pos[pseqdesc->motionbone][2] = 0.0f;
-
-	s = 0 * ((1.0f - (f - (int)(f))) / (pseqdesc->numframes)) * ent->v.framerate;
-
-	if( pseqdesc->motiontype & STUDIO_LX ) pos[pseqdesc->motionbone][0] += s * pseqdesc->linearmovement[0];
-	if( pseqdesc->motiontype & STUDIO_LY ) pos[pseqdesc->motionbone][1] += s * pseqdesc->linearmovement[1];
-	if( pseqdesc->motiontype & STUDIO_LZ ) pos[pseqdesc->motionbone][2] += s * pseqdesc->linearmovement[2];
 }
 
 /*
@@ -374,7 +560,7 @@ StudioEstimateFrame
 
 ====================
 */
-static float SV_StudioEstimateFrame( float frame, mstudioseqdesc_t *pseqdesc )
+static float Mod_StudioEstimateFrame( float frame, mstudioseqdesc_t *pseqdesc )
 {
 	double	f;
 	
@@ -403,7 +589,7 @@ StudioSlerpBones
 
 ====================
 */
-static void SV_StudioSlerpBones( vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s )
+static void Mod_StudioSlerpBones( vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s )
 {
 	int	i;
 	vec4_t	q3;
@@ -412,7 +598,7 @@ static void SV_StudioSlerpBones( vec4_t q1[], float pos1[][3], vec4_t q2[], floa
 	s = bound( 0.0f, s, 1.0f );
 	s1 = 1.0f - s;
 
-	for( i = 0; i < sv_studiohdr->numbones; i++ )
+	for( i = 0; i < mod_studiohdr->numbones; i++ )
 	{
 		QuaternionSlerp( q1[i], q2[i], s, q3 );
 		q1[i][0] = q3[0];
@@ -431,16 +617,16 @@ StudioGetAnim
 
 ====================
 */
-static mstudioanim_t *SV_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
+static mstudioanim_t *Mod_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
 {
 	mstudioseqgroup_t	*pseqgroup;
 	cache_user_t	*paSequences;
 	size_t		filesize;
           byte		*buf;
 
-	pseqgroup = (mstudioseqgroup_t *)((byte *)sv_studiohdr + sv_studiohdr->seqgroupindex) + pseqdesc->seqgroup;
+	pseqgroup = (mstudioseqgroup_t *)((byte *)mod_studiohdr + mod_studiohdr->seqgroupindex) + pseqdesc->seqgroup;
 	if( pseqdesc->seqgroup == 0 )
-		return (mstudioanim_t *)((byte *)sv_studiohdr + pseqgroup->data + pseqdesc->animindex);
+		return (mstudioanim_t *)((byte *)mod_studiohdr + pseqgroup->data + pseqdesc->animindex);
 
 	paSequences = (cache_user_t *)m_pSubModel->submodels;
 
@@ -485,7 +671,6 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 {
 	int		i, j, numbones = 0;
 	int		boneused[MAXSTUDIOBONES];
-	float		scale = 1.0f;
 	double		f;
 
 	mstudiobone_t	*pbones;
@@ -503,23 +688,23 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 	static float	pos4[MAXSTUDIOBONES][3];
 	static vec4_t	q4[MAXSTUDIOBONES];
 
-	if( sequence < 0 || sequence >= sv_studiohdr->numseq )
+	if( sequence < 0 || sequence >= mod_studiohdr->numseq )
 	{
-		MsgDev( D_WARN, "SV_StudioSetupBones: sequence %i/%i out of range for model %s\n", sequence, sv_studiohdr->numseq, sv_studiohdr->name );
+		MsgDev( D_WARN, "SV_StudioSetupBones: sequence %i/%i out of range for model %s\n", sequence, mod_studiohdr->numseq, mod_studiohdr->name );
 		sequence = 0;
 	}
 
-	pseqdesc = (mstudioseqdesc_t *)((byte *)sv_studiohdr + sv_studiohdr->seqindex) + sequence;
-	pbones = (mstudiobone_t *)((byte *)sv_studiohdr + sv_studiohdr->boneindex);
-	panim = SV_StudioGetAnim( pModel, pseqdesc );
+	pseqdesc = (mstudioseqdesc_t *)((byte *)mod_studiohdr + mod_studiohdr->seqindex) + sequence;
+	pbones = (mstudiobone_t *)((byte *)mod_studiohdr + mod_studiohdr->boneindex);
+	panim = Mod_StudioGetAnim( pModel, pseqdesc );
 
-	if( iBone < -1 || iBone >= sv_studiohdr->numbones )
+	if( iBone < -1 || iBone >= mod_studiohdr->numbones )
 		iBone = 0;
 
 	if( iBone == -1 )
 	{
-		numbones = sv_studiohdr->numbones;
-		for( i = 0; i < sv_studiohdr->numbones; i++ )
+		numbones = mod_studiohdr->numbones;
+		for( i = 0; i < mod_studiohdr->numbones; i++ )
 			boneused[(numbones - i) - 1] = i;
 	}
 	else
@@ -529,42 +714,37 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 			boneused[numbones++] = i;
 	}
 
-	f = SV_StudioEstimateFrame( frame, pseqdesc );
-	SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos, q, pseqdesc, panim, f );
+	f = Mod_StudioEstimateFrame( frame, pseqdesc );
+	Mod_StudioCalcRotations( boneused, numbones, pcontroller, pos, q, pseqdesc, panim, f );
 
 	if( pseqdesc->numblends > 1 )
 	{
 		float	s;
 
-		panim += sv_studiohdr->numbones;
-		SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos2, q2, pseqdesc, panim, f );
+		panim += mod_studiohdr->numbones;
+		Mod_StudioCalcRotations( boneused, numbones, pcontroller, pos2, q2, pseqdesc, panim, f );
 
 		s = (float)pblending[0] / 255.0f;
 
-		SV_StudioSlerpBones( q, pos, q2, pos2, s );
+		Mod_StudioSlerpBones( q, pos, q2, pos2, s );
 
 		if( pseqdesc->numblends == 4 )
 		{
-			panim += sv_studiohdr->numbones;
-			SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos3, q3, pseqdesc, panim, f );
+			panim += mod_studiohdr->numbones;
+			Mod_StudioCalcRotations( boneused, numbones, pcontroller, pos3, q3, pseqdesc, panim, f );
 
-			panim += sv_studiohdr->numbones;
-			SV_StudioCalcRotations( pEdict, boneused, numbones, pcontroller, pos4, q4, pseqdesc, panim, f );
+			panim += mod_studiohdr->numbones;
+			Mod_StudioCalcRotations( boneused, numbones, pcontroller, pos4, q4, pseqdesc, panim, f );
 
 			s = (float)pblending[0] / 255.0f;
-			SV_StudioSlerpBones( q3, pos3, q4, pos4, s );
+			Mod_StudioSlerpBones( q3, pos3, q4, pos4, s );
 
 			s = (float)pblending[1] / 255.0f;
-			SV_StudioSlerpBones( q, pos, q3, pos3, s );
+			Mod_StudioSlerpBones( q, pos, q3, pos3, s );
 		}
 	}
 
-	if( SV_IsValidEdict( pEdict ) && pEdict->v.scale != 0.0f && sv_allow_studio_scaling->integer )
-		scale = pEdict->v.scale;
-	else if( SV_IsValidEdict( pEdict ) && (pEdict->v.flags & FL_CLIENT) && sv_clienttrace->value != 0.0f )
-		scale = sv_clienttrace->value * 0.5f; 
-
-	Matrix3x4_CreateFromEntity( sv_studiomatrix, angles, origin, scale );
+	Matrix3x4_CreateFromEntity( studio_transform, angles, origin, 1.0f );
 
 	for( j = numbones - 1; j >= 0; j-- )
 	{
@@ -572,9 +752,84 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 
 		Matrix3x4_FromOriginQuat( bonematrix, q[i], pos[i] );
 		if( pbones[i].parent == -1 ) 
-			Matrix3x4_ConcatTransforms( sv_studiobones[i], sv_studiomatrix, bonematrix );
-		else Matrix3x4_ConcatTransforms( sv_studiobones[i], sv_studiobones[pbones[i].parent], bonematrix );
+			Matrix3x4_ConcatTransforms( studio_bones[i], studio_transform, bonematrix );
+		else Matrix3x4_ConcatTransforms( studio_bones[i], studio_bones[pbones[i].parent], bonematrix );
 	}
+}
+
+/*
+====================
+SV_HullForStudioModel
+
+====================
+*/
+hull_t *SV_HullForStudioModel( edict_t *ent, int hullNumber, int flags, vec3_t mins, vec3_t maxs, vec3_t offset, int *numhitboxes )
+{
+	int		isPointTrace;
+	float		scale = 0.5f;
+	vec3_t		size;
+	model_t		*mod;
+
+	if(( mod = Mod_Handle( ent->v.modelindex )) == NULL )
+	{
+		*numhitboxes = 1;
+		return SV_HullForEntity( ent, hullNumber, mins, maxs, offset );
+	}
+
+	VectorSubtract( maxs, mins, size );
+	isPointTrace = false;
+
+	if( VectorIsNull( size ) && !( flags & FMOVE_SIMPLEBOX ))
+	{
+		isPointTrace = true;
+
+		if( ent->v.flags & FL_CLIENT )
+		{
+			if( sv_clienttrace->value == 0.0f )
+			{
+				// so no way to trace studiomodels by hitboxes
+				// use bbox instead
+				isPointTrace = false;
+			}
+			else
+			{
+				scale = sv_clienttrace->value * 0.5f;
+				VectorSet( size, 1.0f, 1.0f, 1.0f );
+			}
+		}
+	}
+
+	if( mod->flags & STUDIO_TRACE_HITBOX || isPointTrace )
+	{
+		VectorScale( size, scale, size );
+		VectorClear( offset );
+
+		if( ent->v.flags & FL_CLIENT )
+		{
+			mstudioseqdesc_t	*pseqdesc;
+			byte		controller[4];
+			byte		blending[2];
+			vec3_t		angles;
+			int		iBlend;
+
+			mod_studiohdr = Mod_Extradata( mod );
+			pseqdesc = (mstudioseqdesc_t *)((byte *)mod_studiohdr + mod_studiohdr->seqindex) + ent->v.sequence;
+			VectorCopy( ent->v.angles, angles );
+
+			Mod_StudioPlayerBlend( pseqdesc, &iBlend, &angles[PITCH] );
+
+			controller[0] = controller[1] = controller[2] = controller[3] = 0x7F;
+			blending[0] = (byte)iBlend;
+			blending[1] = 0;
+
+			return Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin, size, controller, blending, numhitboxes, ent );
+		}
+
+		return Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, ent->v.angles, ent->v.origin, size, ent->v.controller, ent->v.blending, numhitboxes, ent );
+	}
+
+	*numhitboxes = 1;
+	return SV_HullForEntity( ent, hullNumber, mins, maxs, offset );
 }
 
 /*
@@ -583,7 +838,7 @@ StudioSetupModel
 
 ====================
 */
-static qboolean SV_StudioSetupModel( edict_t *ent, int iBone, qboolean bInversePitch )
+static qboolean SV_StudioSetupModel( const edict_t *ent, int iBone, qboolean bInversePitch )
 {
 	model_t	*mod = Mod_Handle( ent->v.modelindex );
 	void	*hdr = Mod_Extradata( mod );
@@ -591,7 +846,7 @@ static qboolean SV_StudioSetupModel( edict_t *ent, int iBone, qboolean bInverseP
 		
 	if( !hdr ) return false;
 
-	sv_studiohdr = (studiohdr_t *)hdr;
+	mod_studiohdr = (studiohdr_t *)hdr;
 	VectorCopy( ent->v.angles, angles );
 
 	if( bInversePitch )
@@ -607,9 +862,9 @@ static qboolean SV_StudioSetupModel( edict_t *ent, int iBone, qboolean bInverseP
 		byte		blending[2];
 		int		iBlend;
 
-		pseqdesc = (mstudioseqdesc_t *)((byte *)sv_studiohdr + sv_studiohdr->seqindex) + ent->v.sequence;
+		pseqdesc = (mstudioseqdesc_t *)((byte *)mod_studiohdr + mod_studiohdr->seqindex) + ent->v.sequence;
 
-		SV_StudioPlayerBlend( pseqdesc, &iBlend, &angles[PITCH] );
+		Mod_StudioPlayerBlend( pseqdesc, &iBlend, &angles[PITCH] );
 
 		controller[0] = controller[1] = controller[2] = controller[3] = 0x7F;
 		blending[0] = (byte)iBlend;
@@ -627,11 +882,65 @@ static qboolean SV_StudioSetupModel( edict_t *ent, int iBone, qboolean bInverseP
 	return true;
 }
 
+/*
+===============================================================================
+
+	OLD CODE STUDIO MODELS TRACING
+
+===============================================================================
+*/
+/*
+====================
+SV_InitStudioHull
+====================
+*/
+void SV_InitStudioHull( void )
+{
+	int	i, side;
+	mplane_t	*p;
+
+	for( i = 0; i < 6; i++ )
+	{
+		side = i & 1;
+
+		// planes
+		p = &sv_hitboxplanes[i];
+		VectorClear( p->normal );
+
+		if( side )
+		{
+			p->type = PLANE_NONAXIAL;
+			p->normal[i>>1] = -1.0f;
+			p->signbits = (1<<(i>>1));
+		}
+		else
+		{
+			p->type = i>>1;
+			p->normal[i>>1] = 1.0f;
+			p->signbits = 0;
+		}
+	}    
+}
+
+/*
+====================
+SV_HullForHitbox
+====================
+*/
+static void SV_HullForHitbox( const vec3_t mins, const vec3_t maxs )
+{
+	sv_hitboxplanes[0].dist = maxs[0];
+	sv_hitboxplanes[1].dist = -mins[0];
+	sv_hitboxplanes[2].dist = maxs[1];
+	sv_hitboxplanes[3].dist = -mins[1];
+	sv_hitboxplanes[4].dist = maxs[2];
+	sv_hitboxplanes[5].dist = -mins[2];
+}
+
 qboolean SV_StudioExtractBbox( edict_t *e, model_t *mod, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
 	studiohdr_t	*phdr;
-	float		scale = 1.0f;
 
 	ASSERT( mod != NULL );
 
@@ -646,11 +955,8 @@ qboolean SV_StudioExtractBbox( edict_t *e, model_t *mod, int sequence, float *mi
 	if( sequence < 0 || sequence >= phdr->numseq )
 		return false;
 
-	if( e->v.scale > 0.0f && sv_allow_studio_scaling->integer )
-		scale = e->v.scale;
-
-	VectorScale( pseqdesc[sequence].bbmin, scale, mins );
-	VectorScale( pseqdesc[sequence].bbmax, scale, maxs );
+	VectorCopy( pseqdesc[sequence].bbmin, mins );
+	VectorCopy( pseqdesc[sequence].bbmax, maxs );
 
 	return true;
 }
@@ -931,13 +1237,13 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 	else TraceHitbox = SV_StudioClipToHitbox;
 
 	// go to check individual hitboxes		
-	for( i = 0; i < sv_studiohdr->numhitboxes; i++ )
+	for( i = 0; i < mod_studiohdr->numhitboxes; i++ )
 	{
-		mstudiobbox_t *phitbox = (mstudiobbox_t *)((byte*)sv_studiohdr + sv_studiohdr->hitboxindex) + i;
+		mstudiobbox_t *phitbox = (mstudiobbox_t *)((byte*)mod_studiohdr + mod_studiohdr->hitboxindex) + i;
 
 		// transform traceline into local bone space
-		Matrix3x4_VectorITransform( sv_studiobones[phitbox->bone], start, start_l );
-		Matrix3x4_VectorITransform( sv_studiobones[phitbox->bone], end, end_l );
+		Matrix3x4_VectorITransform( studio_bones[phitbox->bone], start, start_l );
+		Matrix3x4_VectorITransform( studio_bones[phitbox->bone], end, end_l );
 
 		SV_HullForHitbox( phitbox->bbmin, phitbox->bbmax );
 
@@ -965,12 +1271,17 @@ trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t ma
 		VectorCopy( trace.plane.normal, temp );
 		trace.fraction = bound( 0, trace.fraction, 1.0f );
 		VectorLerp( start, trace.fraction, end, trace.endpos );
-		Matrix3x4_TransformPositivePlane( sv_studiobones[outBone], temp, trace.plane.dist, trace.plane.normal, &trace.plane.dist );
+		Matrix3x4_TransformPositivePlane( studio_bones[outBone], temp, trace.plane.dist, trace.plane.normal, &trace.plane.dist );
 	}
 	return trace;
 }
 
-void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang )
+/*
+====================
+StudioGetAttachment
+====================
+*/
+void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *org, float *ang )
 {
 	mstudioattachment_t		*pAtt;
 	vec3_t			forward, bonepos;
@@ -980,30 +1291,30 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 	hdr = Mod_Extradata( Mod_Handle( e->v.modelindex ));
 	if( !hdr ) return;
 
-	sv_studiohdr = (studiohdr_t *)hdr;
-	if( sv_studiohdr->numattachments <= 0 )
+	mod_studiohdr = (studiohdr_t *)hdr;
+	if( mod_studiohdr->numattachments <= 0 )
 		return;
 
-	if( sv_studiohdr->numattachments > MAXSTUDIOATTACHMENTS )
+	if( mod_studiohdr->numattachments > MAXSTUDIOATTACHMENTS )
 	{
-		sv_studiohdr->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
-		MsgDev( D_WARN, "SV_StudioGetAttahment: too many attachments on %s\n", sv_studiohdr->name );
+		mod_studiohdr->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
+		MsgDev( D_WARN, "SV_StudioGetAttahment: too many attachments on %s\n", mod_studiohdr->name );
 	}
 
-	iAttachment = bound( 0, iAttachment, sv_studiohdr->numattachments );
+	iAttachment = bound( 0, iAttachment, mod_studiohdr->numattachments );
 
 	// calculate attachment origin and angles
-	pAtt = (mstudioattachment_t *)((byte *)sv_studiohdr + sv_studiohdr->attachmentindex);
+	pAtt = (mstudioattachment_t *)((byte *)mod_studiohdr + mod_studiohdr->attachmentindex);
 
 	SV_StudioSetupModel( e, pAtt[iAttachment].bone, true );
 
 	// compute pos and angles
-	Matrix3x4_VectorTransform( sv_studiobones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
+	Matrix3x4_VectorTransform( studio_bones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
 	if( org ) VectorCopy( localOrg, org );
 
 	if( sv_allow_studio_attachment_angles->integer )
 	{
-		Matrix3x4_OriginFromMatrix( sv_studiobones[pAtt[iAttachment].bone], bonepos );
+		Matrix3x4_OriginFromMatrix( studio_bones[pAtt[iAttachment].bone], bonepos );
 		VectorSubtract( localOrg, bonepos, forward );	// make forward
 		VectorNormalizeFast( forward );
 		VectorAngles( forward, localAng );
@@ -1012,15 +1323,174 @@ void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang
 	}
 }
 
-void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang )
+/*
+====================
+GetBonePosition
+====================
+*/
+void Mod_GetBonePosition( const edict_t *e, int iBone, float *org, float *ang )
 {
-	if( !SV_StudioSetupModel( e, iBone, false ) || sv_studiohdr->numbones <= 0 )
+	if( !SV_StudioSetupModel( e, iBone, false ) || mod_studiohdr->numbones <= 0 )
 		return;
 
-	iBone = bound( 0, iBone, sv_studiohdr->numbones );
+	iBone = bound( 0, iBone, mod_studiohdr->numbones );
 
-	if( org ) Matrix3x4_OriginFromMatrix( sv_studiobones[iBone], org );
-	if( ang ) VectorAngles( sv_studiobones[iBone][0], ang ); // bone forward to angles
+	if( org ) Matrix3x4_OriginFromMatrix( studio_bones[iBone], org );
+	if( ang ) VectorAngles( studio_bones[iBone][0], ang ); // bone forward to angles
+}
+
+/*
+====================
+HitgroupForStudioHull
+====================
+*/
+int Mod_HitgroupForStudioHull( int index )
+{
+	return studio_hull_hitgroup[index];
+}
+
+/*
+====================
+StudioBoundVertex
+====================
+*/
+void Mod_StudioBoundVertex( vec3_t out_mins, vec3_t out_maxs, int *counter, const vec3_t vertex )
+{
+	if( *counter == 0 )
+	{
+		// init bounds
+		VectorCopy( vertex, out_mins );
+		VectorCopy( vertex, out_maxs );
+	}
+	else
+	{
+		AddPointToBounds( vertex, out_mins, out_maxs );
+	}
+
+	(*counter)++;
+}
+
+/*
+====================
+StudioAccumulateBoneVerts
+====================
+*/
+void Mod_StudioAccumulateBoneVerts( vec3_t mins1, vec3_t maxs1, int *counter1, vec3_t mins2, vec3_t maxs2, int *counter2 )
+{
+	vec3_t	midpoint;
+
+	if( *counter2 <= 0 )
+		return;
+
+	// calculate the midpoint of the second vertex,
+	VectorSubtract( maxs2, mins2, midpoint );
+	VectorScale( midpoint, 0.5f, midpoint );
+
+	Mod_StudioBoundVertex( mins1, maxs1, counter1, midpoint );
+
+	// negate the midpoint, for whatever reason, and bind it again
+	VectorNegate( midpoint, midpoint );
+	Mod_StudioBoundVertex( mins1, maxs1, counter1, midpoint );
+
+	VectorClear( mins2 );
+	VectorClear( maxs2 );
+	*counter2 = 0;
+}
+
+/*
+====================
+StudioComputeBounds
+====================
+*/
+void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs )
+{
+	int		i, j, k;
+	studiohdr_t	*pstudiohdr;
+	mstudiobodyparts_t	*pbodypart;
+	mstudiomodel_t	*m_pSubModel;
+	mstudioseqdesc_t	*pseqdesc;
+	mstudiobone_t	*pbones;
+	vec3_t		vecmins1, vecmaxs1;
+	vec3_t		vecmins2, vecmaxs2;
+	int		counter1, counter2;
+	int		bodyCount = 0;
+	vec3_t		pos;
+
+	counter1 = counter2 = 0;
+	VectorClear( vecmins1 );
+	VectorClear( vecmaxs1 );
+	VectorClear( vecmins2 );
+	VectorClear( vecmaxs2 );
+
+	// Get the body part portion of the model
+	pstudiohdr = (studiohdr_t *)buffer;
+	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
+
+	// each body part has nummodels variations so there are as many total variations as there
+	// are in a matrix of each part by each other part
+	for( i = 0; i < pstudiohdr->numbodyparts; i++ )
+		bodyCount += pbodypart[i].nummodels;
+
+	// The studio models we want are rvec3_t mins, vec3_t maxsight after the bodyparts (still need to
+	// find a detailed breakdown of the mdl format).  Move pointer there.
+	m_pSubModel = (mstudiomodel_t *)(&pbodypart[pstudiohdr->numbodyparts]);
+
+	for( i = 0; i < bodyCount; i++ )
+	{
+		float *vertIndex = (float *)((byte *)pstudiohdr + m_pSubModel[i].vertindex);
+
+		for( j = 0; j < m_pSubModel[i].numverts; j++ )
+			Mod_StudioBoundVertex( vecmins1, vecmaxs1, &counter1, vertIndex + (3 * j));
+	}
+
+	pbones = (mstudiobone_t *)((byte *)pstudiohdr + pstudiohdr->boneindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+
+	for( i = 0; i < pstudiohdr->numseq; i++ )
+	{
+		mstudioanim_t *panim = (mstudioanim_t *) (((byte *)buffer) + pseqdesc[i].animindex);
+
+		for( j = 0; j < pstudiohdr->numbones; j++ )
+		{
+			for( k = 0; k < pseqdesc[i].numframes; k++ )
+			{
+				Mod_StudioCalcBonePosition( k, 0, &pbones[j], panim, NULL, pos );
+				Mod_StudioBoundVertex( vecmins2, vecmaxs2, &counter2, pos );
+			}
+		}
+		Mod_StudioAccumulateBoneVerts( vecmins1, vecmaxs1, &counter1, vecmins2, vecmaxs2, &counter2 );
+	}
+
+	VectorCopy( vecmins1, mins );
+	VectorCopy( vecmaxs1, maxs );
+}
+
+/*
+====================
+Mod_GetStudioBounds
+====================
+*/
+qboolean Mod_GetStudioBounds( const char *name, vec3_t mins, vec3_t maxs )
+{
+	int	result = false;
+	byte	*f;
+
+	if( !Q_strstr( name, "models" ) || !Q_strstr( name, ".mdl" ))
+		return false;
+
+	f = FS_LoadFile( name, NULL, false );
+	if( !f ) return false;
+
+	if( *(uint *)f == IDSTUDIOHEADER )
+	{
+		VectorClear( mins );
+		VectorClear( maxs );
+		Mod_StudioComputeBounds( f, mins, maxs );
+		result = true;
+	}
+	Mem_Free( f );
+
+	return result;
 }
 
 static sv_blending_interface_t gBlendAPI =
@@ -1039,28 +1509,24 @@ static server_studio_api_t gStudioAPI =
    
 /*
 ===============
-SV_InitStudioAPI
+Mod_InitStudioAPI
 
 Initialize server studio (blending interface)
 ===============
 */
-qboolean SV_InitStudioAPI( void )
+void Mod_InitStudioAPI( void )
 {
 	static STUDIOAPI	pBlendIface;
 
 	pBlendAPI = &gBlendAPI;
 
 	pBlendIface = (STUDIOAPI)Com_GetProcAddress( svgame.hInstance, "Server_GetBlendingInterface" );
-	if( pBlendIface && pBlendIface( SV_BLENDING_INTERFACE_VERSION, &pBlendAPI, &gStudioAPI, &sv_studiomatrix, &sv_studiobones ))
+	if( pBlendIface && pBlendIface( SV_BLENDING_INTERFACE_VERSION, &pBlendAPI, &gStudioAPI, &studio_transform, &studio_bones ))
 	{
 		MsgDev( D_AICONSOLE, "SV_LoadProgs: ^2initailized Server Blending interface ^7ver. %i\n", SV_BLENDING_INTERFACE_VERSION );
-		return true;
+		return;
 	}
 
-	// NOTE: we always return true even if game interface was not correct
-	// because SetupBones is used for hitbox tracing on the server-side
 	// just restore pointer to builtin function
 	pBlendAPI = &gBlendAPI;
-
-	return true;
 }

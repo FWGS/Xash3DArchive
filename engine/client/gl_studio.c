@@ -195,10 +195,9 @@ R_StudioExtractBbox
 Extract bbox from current sequence
 ================
 */
-int R_StudioExtractBbox( cl_entity_t *e, studiohdr_t *phdr, int sequence, float *mins, float *maxs )
+int R_StudioExtractBbox( studiohdr_t *phdr, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
-	float		scale = 1.0f;
 
 	if( !phdr ) return 0;
 
@@ -206,11 +205,8 @@ int R_StudioExtractBbox( cl_entity_t *e, studiohdr_t *phdr, int sequence, float 
 	if( sequence == -1 )
 		return 0;
 
-	if( e->curstate.scale > 0.0f )
-		scale = e->curstate.scale;
-	
-	VectorScale( pseqdesc[sequence].bbmin, scale, mins );
-	VectorScale( pseqdesc[sequence].bbmax, scale, maxs );
+	VectorCopy( pseqdesc[sequence].bbmin, mins );
+	VectorCopy( pseqdesc[sequence].bbmax, maxs );
 
 	return 1;
 }
@@ -227,17 +223,13 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 	vec3_t		tmp_mins, tmp_maxs;
 	vec3_t		vectors[3], angles, p1, p2;
 	int		i, seq = e->curstate.sequence;
-	float		scale = 1.0f;
 
-	if( !R_StudioExtractBbox( e, m_pStudioHeader, seq, tmp_mins, tmp_maxs ))
+	if( !R_StudioExtractBbox( m_pStudioHeader, seq, tmp_mins, tmp_maxs ))
 		return false;
 
-	if( e->curstate.scale > 0.0f )
-		scale = e->curstate.scale;
-
 	// copy original bbox
-	VectorScale( m_pStudioHeader->bbmin, scale, studio_mins );
-	VectorScale( m_pStudioHeader->bbmax, scale, studio_maxs );
+	VectorCopy( m_pStudioHeader->bbmin, studio_mins );
+	VectorCopy( m_pStudioHeader->bbmax, studio_maxs );
 
 	// rotate the bounding box
 	VectorCopy( e->angles, angles );
@@ -495,7 +487,6 @@ StudioSetUpTransform
 void R_StudioSetUpTransform( cl_entity_t *e )
 {
 	vec3_t	origin, angles;
-	float	scale = 1.0f;
 
 	VectorCopy( e->origin, origin );
 	VectorCopy( e->angles, angles );
@@ -548,10 +539,7 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 	// don't rotate clients, only aim
 	if( e->player ) angles[PITCH] = 0;
 
-	if( clgame.movevars.studio_scale && e->curstate.scale > 0.0f )
-		scale = e->curstate.scale;
-
-	Matrix3x4_CreateFromEntity( g_rotationmatrix, angles, origin, scale );
+	Matrix3x4_CreateFromEntity( g_rotationmatrix, angles, origin, 1.0f );
 
 	if( e == &clgame.viewent && r_lefthand->integer == 1 )
 	{
@@ -1395,15 +1383,15 @@ void R_StudioGetShadowImpactAndDir( void )
 	Matrix3x4_OriginFromMatrix( g_bonestransform[0], origin );
 	SinCos( angle, &g_mvShadowVec[1], &g_mvShadowVec[0] );
 
-// g-cont. looks ugly. disabled
-//	R_LightDir( origin, g_mvShadowVec, 256.0f );
+	// g-cont. looks ugly. disabled
+	R_LightDir( origin, g_mvShadowVec, 256.0f );
 
 	VectorSet( g_mvShadowVec, -g_mvShadowVec[0], -g_mvShadowVec[1], -1.0f );
-	VectorNormalizeFast( g_mvShadowVec );
+	VectorNormalize( g_mvShadowVec );
 
 	VectorMA( origin, 256.0f, g_mvShadowVec, end );
 
-	g_shadowTrace = PM_PlayerTrace( clgame.pmove, origin, end, PM_STUDIO_IGNORE, 2, -1, NULL );
+	g_shadowTrace = CL_TraceLine( origin, end, PM_WORLD_ONLY );
 }
 
 /*
@@ -2020,9 +2008,6 @@ static void R_StudioDrawHulls( void )
 
 	pglDisable( GL_TEXTURE_2D );
 
-	if( r_drawentities->integer == 4 )
-		pglDisable( GL_DEPTH_TEST );
-
 	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
 	{
 		mstudiobbox_t	*pbboxes = (mstudiobbox_t *)((byte *)m_pStudioHeader + m_pStudioHeader->hitboxindex);
@@ -2098,9 +2083,6 @@ static void R_StudioDrawHulls( void )
 	}
 
 	pglEnable( GL_TEXTURE_2D );
-
-	if( r_drawentities->integer == 4 )
-		pglEnable( GL_DEPTH_TEST );
 }
 
 /*

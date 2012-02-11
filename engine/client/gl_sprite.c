@@ -722,7 +722,7 @@ static float R_GlowSightDistance( vec3_t glowOrigin )
 
 	if( RP_NORMALPASS( ))
 	{
-		tr = PM_PlayerTrace( clgame.pmove, RI.vieworg, glowOrigin, PM_GLASS_IGNORE|PM_STUDIO_IGNORE, 2, -1, NULL );
+		tr = CL_TraceLine( RI.vieworg, glowOrigin, PM_GLASS_IGNORE|PM_STUDIO_IGNORE );
 
 		if(( 1.0f - tr.fraction ) * dist > 8 )
 			return -1;

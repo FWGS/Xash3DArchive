@@ -31,6 +31,7 @@ static int	cm_nummodels = 0;
 static byte	visdata[MAX_MAP_LEAFS/8];	// intermediate buffer
 int		bmodel_version;		// global stuff to detect bsp version
 char		modelname[64];		// short model name (without path and ext)
+convar_t		*mod_studiocache;
 		
 model_t		*loadmodel;
 model_t		*worldmodel;
@@ -387,6 +388,9 @@ static void Mod_FreeModel( model_t *mod )
 void Mod_Init( void )
 {
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
+	mod_studiocache = Cvar_Get( "r_studiocache", "0", CVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
+
+	Mod_InitStudioHull ();
 }
 
 void Mod_ClearAll( void )

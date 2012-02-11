@@ -1737,7 +1737,7 @@ void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, in
 			vecEnd[j] = vecSrc[j] + 2048.0f * vecDir[j];
 		}
 
-		trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, PM_STUDIO_BOX, 2, -1, NULL );
+		trace = CL_TraceLine( vecSrc, vecEnd, PM_STUDIO_BOX );
 
 		// paint decals
 		if( trace.fraction != 1.0f )
@@ -2510,7 +2510,7 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	if( r_lighting_extended->integer < 2 )
 		traceFlags |= PM_GLASS_IGNORE;
 
-	trace = PM_PlayerTrace( clgame.pmove, vecSrc, vecEnd, traceFlags, 2, -1, NULL );
+	trace = CL_TraceLine( vecSrc, vecEnd, traceFlags );
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 
 	if( falloff < 250.0f ) falloff = 1.0f;

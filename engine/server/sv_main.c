@@ -57,7 +57,6 @@ convar_t	*sv_reconnect_limit;		// minimum seconds between connect messages
 convar_t	*sv_failuretime;
 convar_t	*sv_allow_upload;
 convar_t	*sv_allow_download;
-convar_t	*sv_allow_studio_scaling;
 convar_t	*sv_allow_studio_attachment_angles;
 convar_t	*sv_allow_rotate_pushables;
 convar_t	*sv_clienttrace;
@@ -234,7 +233,6 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skydir_y = sv_skydir_y->value;
 	svgame.movevars.skydir_z = sv_skydir_z->value;
 	svgame.movevars.skyangle = sv_skyangle->value;
-	svgame.movevars.studio_scale = sv_allow_studio_scaling->integer;
 	svgame.movevars.clienttrace = sv_clienttrace->value;
 	svgame.movevars.wateralpha = sv_wateralpha->value;
 
@@ -677,7 +675,6 @@ void SV_Init( void )
 	timeout = Cvar_Get( "timeout", "125", CVAR_SERVERNOTIFY, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", CVAR_SERVERNOTIFY, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", CVAR_SERVERNOTIFY, "allow players to pause or not" );
-	sv_allow_studio_scaling = Cvar_Get( "sv_allow_studio_scaling", "0", CVAR_ARCHIVE|CVAR_PHYSICINFO, "allow to apply scale for studio models" );
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", CVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
 	sv_allow_rotate_pushables = Cvar_Get( "sv_allow_rotate_pushables", "0", CVAR_ARCHIVE, "let the pushers rotate pushables with included origin-brush" );
 	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY|CVAR_PHYSICINFO, "scaling factor for client hitboxes" );

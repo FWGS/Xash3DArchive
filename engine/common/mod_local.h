@@ -76,6 +76,7 @@ typedef struct
 extern world_static_t	world;
 extern byte		*com_studiocache;
 extern model_t		*loadmodel;
+extern convar_t		*mod_studiocache;
 
 //
 // model.c
@@ -107,5 +108,17 @@ byte *Mod_CompressVis( const byte *in, size_t *size );
 byte *Mod_DecompressVis( const byte *in );
 modtype_t Mod_GetType( int handle );
 model_t *Mod_Handle( int handle );
+
+//
+// mod_studio.c
+//
+void Mod_InitStudioAPI( void );
+void Mod_InitStudioHull( void );
+qboolean Mod_GetStudioBounds( const char *name, vec3_t mins, vec3_t maxs );
+void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *org, float *ang );
+void Mod_GetBonePosition( const edict_t *e, int iBone, float *org, float *ang );
+hull_t *SV_HullForStudioModel( edict_t *ent, int hullNumber, int flags, vec3_t mins, vec3_t maxs, vec3_t offset, int *numhitboxes );
+hull_t *Mod_HullForStudio( model_t *m, float frame, int seq, vec3_t ang, vec3_t org, vec3_t size, byte *pcnt, byte *pbl, int *hitboxes, edict_t *ed );
+int Mod_HitgroupForStudioHull( int index );
 
 #endif//MOD_LOCAL_H

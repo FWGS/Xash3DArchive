@@ -308,6 +308,19 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 	return R_RecursiveLightPoint( model, node->children[!side], mid, end );
 }
 
+int R_LightTraceFilter( physent_t *pe )
+{
+	if( !pe || pe->solid != SOLID_BSP )
+		return 1;
+
+	// optimization. Ignore world to avoid
+	// unneeded transformations
+	if( pe->info == 0 )
+		return 1;
+
+	return 0;
+}
+
 /*
 =================
 R_LightForPoint
@@ -361,11 +374,12 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 
 	if( r_lighting_extended->integer )
 	{
-		trace = PM_PlayerTrace( clgame.pmove, start, end, PM_STUDIO_IGNORE, 0, -1, NULL );
+		CL_SetTraceHull( 2 );
+		CL_PlayerTraceExt( start, end, PM_STUDIO_IGNORE, R_LightTraceFilter, &trace );
 		m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
 	}
 
-	if( m_pGround && m_pGround->model )
+	if( m_pGround && m_pGround->model && m_pGround->model->type == mod_brush )
 	{
 		matrix4x4	matrix;
 		hull_t	*hull;
@@ -477,9 +491,11 @@ R_LightDir
 void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 {
 	dlight_t	*dl;
-	vec3_t	dir;
+	vec3_t	dir, local;
 	float	dist;
 	int	lnum;
+
+	VectorClear( local );
 
 	// add dynamic lights
 	if( radius > 0.0f && r_dynamic->integer )
@@ -494,7 +510,7 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 
 			if( !dist || dist > dl->radius + radius )
 				continue;
-			VectorAdd( lightDir, dir, lightDir );
+			VectorAdd( local, dir, local );
 		}
 
 		for( lnum = 0, dl = cl_elights; lnum < MAX_ELIGHTS; lnum++, dl++ )
@@ -507,7 +523,13 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 
 			if( !dist || dist > dl->radius + radius )
 				continue;
-			VectorAdd( lightDir, dir, lightDir );
+			VectorAdd( local, dir, local );
+		}
+
+		if( !VectorIsNull( local ))
+		{
+			VectorNormalize( local );
+			VectorCopy( local, lightDir );
 		}
 	}
 }

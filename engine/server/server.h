@@ -391,7 +391,6 @@ extern	convar_t		*sv_unlagpush;
 extern	convar_t		*sv_unlagsamples;
 extern	convar_t		*sv_allow_upload;
 extern	convar_t		*sv_allow_download;
-extern	convar_t		*sv_allow_studio_scaling;
 extern	convar_t		*sv_allow_studio_attachment_angles;
 extern	convar_t		*sv_allow_rotate_pushables;
 extern	convar_t		*sv_fix_pushstep;
@@ -577,10 +576,8 @@ void SV_InitSaveRestore( void );
 // sv_studio.c
 //
 void SV_InitStudioHull( void );
-qboolean SV_InitStudioAPI( void );
-void SV_StudioGetAttachment( edict_t *e, int iAttachment, float *org, float *ang );
 trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
-void SV_GetBonePosition( edict_t *e, int iBone, float *org, float *ang );
+
 
 //
 // sv_world.c
@@ -594,6 +591,7 @@ qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits );
 trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
 trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int type, edict_t *e );
+hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs, vec3_t offset );
 const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end );
 trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );
 void SV_LinkEdict( edict_t *ent, qboolean touch_triggers );

@@ -346,6 +346,10 @@ SOURCE=.\common\matrixlib.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\mod_studio.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\model.c
 # End Source File
 # Begin Source File
@@ -367,10 +371,6 @@ SOURCE=.\common\net_huff.c
 # Begin Source File
 
 SOURCE=.\common\network.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\common\pm_studio.c
 # End Source File
 # Begin Source File
 
@@ -479,10 +479,6 @@ SOURCE=.\server\sv_pmove.c
 # Begin Source File
 
 SOURCE=.\server\sv_save.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\server\sv_studio.c
 # End Source File
 # Begin Source File
 

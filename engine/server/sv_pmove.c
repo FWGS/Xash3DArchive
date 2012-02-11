@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "const.h"
 #include "pm_local.h"
 #include "event_flags.h"
+#include "studio.h"
 
 static qboolean has_update = false;
 
@@ -64,22 +65,34 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 		Q_strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
-	if( mod->type == mod_studio )
+	switch( ed->v.solid )
 	{
-		pe->studiomodel = mod;
-		pe->model = NULL;
-	}
-	else
-	{
-		pe->studiomodel = NULL;
+	case SOLID_NOT:
+	case SOLID_BSP:
 		pe->model = mod;
+		pe->studiomodel = NULL;
+		VectorClear( pe->mins );
+		VectorClear( pe->maxs );
+		break;
+	case SOLID_BBOX:
+		pe->model = NULL;
+		if( mod && mod->flags & STUDIO_TRACE_HITBOX )
+			pe->studiomodel = mod;
+		VectorCopy( ed->v.mins, pe->mins );
+		VectorCopy( ed->v.maxs, pe->maxs );
+		break;
+	default:
+		pe->model = NULL;
+		pe->studiomodel = NULL;
+		VectorCopy( ed->v.mins, pe->mins );
+		VectorCopy( ed->v.maxs, pe->maxs );
+		Q_strcpy( pe->name, SV_ClassName( ed ));
+		break;
 	}
 
 	pe->info = NUM_FOR_EDICT( ed );
 	VectorCopy( ed->v.origin, pe->origin );
 	VectorCopy( ed->v.angles, pe->angles );
-	VectorCopy( ed->v.mins, pe->mins );
-	VectorCopy( ed->v.maxs, pe->maxs );
 
 	pe->solid = ed->v.solid;
 	pe->rendermode = ed->v.rendermode;
@@ -101,7 +114,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	pe->iuser2 = ed->v.iuser2;
 	pe->iuser3 = ed->v.iuser3;
 	pe->iuser4 = ed->v.iuser4;
-	pe->fuser1 = (svgame.movevars.studio_scale) ? ed->v.scale : ed->v.fuser1;
+	pe->fuser1 = ed->v.fuser1;
 	pe->fuser2 = ed->v.fuser2;
 	pe->fuser3 = ed->v.fuser3;
 	pe->fuser4 = ed->v.fuser4;
@@ -255,44 +268,29 @@ static void pfnParticle( float *origin, int color, float life, int zpos, int zve
 
 static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 {
-	pmtrace_t trace;
-
-	trace = PM_PlayerTrace( svgame.pmove, pos, pos, PM_NORMAL, svgame.pmove->usehull, -1, NULL );
-	if( ptrace ) *ptrace = trace; 
-
-	return PM_TestPlayerPosition( svgame.pmove, pos, NULL );
+	return PM_TestPlayerPosition( svgame.pmove, pos, ptrace, NULL );
 }
 
 static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 {
-	physent_t	*pe;
-	float	*mins, *maxs;
 	int	i;
-
-	ASSERT( hitent >= 0 && hitent < svgame.pmove->numphysent );
-	pe = &svgame.pmove->physents[hitent];
-	mins = svgame.pmove->player_mins[svgame.pmove->usehull];
-	maxs = svgame.pmove->player_maxs[svgame.pmove->usehull];
-
-	if( !PM_TraceModel( svgame.pmove, pe, svgame.pmove->origin, mins, maxs, svgame.pmove->origin, tr, 0 ))
-		return;	// not stuck
-
-	tr->ent = hitent;
 
 	for( i = 0; i < svgame.pmove->numtouch; i++ )
 	{
-		if( svgame.pmove->touchindex[i].ent == tr->ent )
+		if( svgame.pmove->touchindex[i].ent == hitent )
 			break;
 	}
 
 	if( i != svgame.pmove->numtouch ) return;
-	VectorCopy( svgame.pmove->velocity, tr->deltavelocity );
-
 	if( svgame.pmove->numtouch >= MAX_PHYSENTS )
 	{
 		MsgDev( D_ERROR, "PM_StuckTouch: MAX_TOUCHENTS limit exceeded\n" );
 		return;
 	}
+
+	VectorCopy( svgame.pmove->velocity, tr->deltavelocity );
+	tr->ent = hitent;
+
 	svgame.pmove->touchindex[svgame.pmove->numtouch++] = *tr;
 }
 
@@ -320,14 +318,29 @@ static int pfnHullPointContents( struct hull_s *hull, int num, float *p )
 
 static pmtrace_t pfnPlayerTrace( float *start, float *end, int traceFlags, int ignore_pe )
 {
-	return PM_PlayerTrace( svgame.pmove, start, end, traceFlags, svgame.pmove->usehull, ignore_pe, NULL );
+	return PM_PlayerTraceExt( svgame.pmove, start, end, traceFlags, svgame.pmove->numphysent, svgame.pmove->physents, ignore_pe, NULL );
 }
 
 static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull, int ignore_pe )
 {
 	static pmtrace_t	tr;
+	int		old_usehull;
 
-	tr = PM_PlayerTrace( svgame.pmove, start, end, flags, usehull, ignore_pe, NULL );
+	old_usehull = svgame.pmove->usehull;
+	svgame.pmove->usehull = usehull;	
+
+	switch( flags )
+	{
+	case PM_TRACELINE_PHYSENTSONLY:
+		tr = PM_PlayerTraceExt( svgame.pmove, start, end, 0, svgame.pmove->numphysent, svgame.pmove->physents, ignore_pe, NULL );
+		break;
+	case PM_TRACELINE_ANYVISIBLE:
+		tr = PM_PlayerTraceExt( svgame.pmove, start, end, 0, svgame.pmove->numvisent, svgame.pmove->visents, ignore_pe, NULL );
+		break;
+	}
+
+	svgame.pmove->usehull = old_usehull;
+
 	return &tr;
 }
 
@@ -336,22 +349,50 @@ static hull_t *pfnHullForBsp( physent_t *pe, float *offset )
 	return PM_HullForBsp( pe, svgame.pmove, offset );
 }
 
-static float pfnTraceModel( physent_t *pEnt, float *start, float *end, trace_t *trace )
+static float pfnTraceModel( physent_t *pe, float *start, float *end, trace_t *trace )
 {
-	pmtrace_t	pmtrace;
+	int	old_usehull;
+	vec3_t	start_l, end_l;
+	vec3_t	offset, temp;
+	qboolean	rotated;
+	matrix4x4	matrix;
+	hull_t	*hull;
 
-	PM_TraceModel( svgame.pmove, pEnt, start, vec3_origin, vec3_origin, end, &pmtrace, PM_STUDIO_BOX );
+	old_usehull = svgame.pmove->usehull;
+	svgame.pmove->usehull = 2;
 
-	// copy pmtrace_t to trace_t
-	if( trace )
+	hull = PM_HullForBsp( pe, svgame.pmove, offset );
+
+	svgame.pmove->usehull = old_usehull;
+
+	if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
+		rotated = true;
+	else rotated = false;
+
+ 	if( rotated )
+ 	{
+ 		Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+ 		Matrix4x4_VectorITransform( matrix, start, start_l );
+ 		Matrix4x4_VectorITransform( matrix, end, end_l );
+ 	}
+ 	else
+ 	{
+ 		VectorSubtract( start, offset, start_l );
+ 		VectorSubtract( end, offset, end_l );
+ 	}
+
+	SV_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, trace );
+	trace->ent = NULL;
+
+	if( rotated )
 	{
-		// NOTE: if pmtrace.h is changed is must be changed too
-		Q_memcpy( trace, &pmtrace, sizeof( *trace ));
-		trace->hitgroup = pmtrace.hitgroup;
-		trace->ent = NULL;
+		VectorCopy( trace->plane.normal, temp );
+		Matrix4x4_TransformPositivePlane( matrix, temp, trace->plane.dist, trace->plane.normal, &trace->plane.dist );
 	}
 
-	return pmtrace.fraction;
+	VectorLerp( start, trace->fraction, end, trace->endpos );
+
+	return trace->fraction;
 }
 
 static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
@@ -395,24 +436,34 @@ static void pfnPlaybackEventFull( int flags, int clientindex, word eventindex, f
 
 static pmtrace_t pfnPlayerTraceEx( float *start, float *end, int traceFlags, pfnIgnore pmFilter )
 {
-	return PM_PlayerTrace( svgame.pmove, start, end, traceFlags, svgame.pmove->usehull, -1, pmFilter );
+	return PM_PlayerTraceExt( svgame.pmove, start, end, traceFlags, svgame.pmove->numphysent, svgame.pmove->physents, -1, pmFilter );
 }
 
 static int pfnTestPlayerPositionEx( float *pos, pmtrace_t *ptrace, pfnIgnore pmFilter )
 {
-	pmtrace_t trace;
-
-	trace = PM_PlayerTrace( svgame.pmove, pos, pos, PM_STUDIO_BOX, svgame.pmove->usehull, -1, pmFilter );
-	if( ptrace ) *ptrace = trace; 
-
-	return PM_TestPlayerPosition( svgame.pmove, pos, pmFilter );
+	return PM_TestPlayerPosition( svgame.pmove, pos, ptrace, pmFilter );
 }
 
 static pmtrace_t *pfnTraceLineEx( float *start, float *end, int flags, int usehull, pfnIgnore pmFilter )
 {
 	static pmtrace_t	tr;
+	int		old_usehull;
 
-	tr = PM_PlayerTrace( svgame.pmove, start, end, flags, usehull, -1, pmFilter );
+	old_usehull = svgame.pmove->usehull;
+	svgame.pmove->usehull = usehull;	
+
+	switch( flags )
+	{
+	case PM_TRACELINE_PHYSENTSONLY:
+		tr = PM_PlayerTraceExt( svgame.pmove, start, end, 0, svgame.pmove->numphysent, svgame.pmove->physents, -1, pmFilter );
+		break;
+	case PM_TRACELINE_ANYVISIBLE:
+		tr = PM_PlayerTraceExt( svgame.pmove, start, end, 0, svgame.pmove->numvisent, svgame.pmove->visents, -1, pmFilter );
+		break;
+	}
+
+	svgame.pmove->usehull = old_usehull;
+
 	return &tr;
 }
 

@@ -377,7 +377,7 @@ typedef struct
 	movevars_t	oldmovevars;
 	playermove_t	*pmove;			// pmove state
 
-	int		trace_hull;		// used by PM_SetTraceHull
+	int		old_trace_hull;		// used by PM_Push\Pop state
 	int		oldcount;			// used by PM_Push\Pop state
 
 	vec3_t		player_mins[4];		// 4 hulls allowed
@@ -642,6 +642,9 @@ HSPRITE pfnSPR_Load( const char *szPicName );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
 void TextAdjustSize( int *x, int *y, int *w, int *h );
 void PicAdjustSize( float *x, float *y, float *w, float *h );
+void CL_PlayerTrace( float *start, float *end, int traceFlags, int ignore_pe, pmtrace_t *tr );
+void CL_PlayerTraceExt( float *start, float *end, int traceFlags, int (*pfnIgnore)( physent_t *pe ), pmtrace_t *tr );
+void CL_SetTraceHull( int hull );
 
 _inline cl_entity_t *CL_EDICT_NUM( int n )
 {
@@ -703,6 +706,7 @@ int CL_PointContents( const vec3_t p );
 int CL_WaterEntity( const float *rgflPos );
 cl_entity_t *CL_GetWaterEntity( const float *rgflPos );
 void CL_SetupPMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state, usercmd_t *ucmd );
+pmtrace_t CL_TraceLine( vec3_t start, vec3_t end, int flags );
 void CL_ClearPhysEnts( void );
 
 //

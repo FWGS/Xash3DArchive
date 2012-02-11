@@ -1989,8 +1989,23 @@ pfnTraceLine
 static pmtrace_t *pfnTraceLine( float *start, float *end, int flags, int usehull, int ignore_pe )
 {
 	static pmtrace_t	tr;
+	int		old_usehull;
 
-	tr = PM_PlayerTrace( clgame.pmove, start, end, flags, usehull, ignore_pe, NULL );
+	old_usehull = clgame.pmove->usehull;
+	clgame.pmove->usehull = usehull;	
+
+	switch( flags )
+	{
+	case PM_TRACELINE_PHYSENTSONLY:
+		tr = PM_PlayerTraceExt( clgame.pmove, start, end, 0, clgame.pmove->numphysent, clgame.pmove->physents, ignore_pe, NULL );
+		break;
+	case PM_TRACELINE_ANYVISIBLE:
+		tr = PM_PlayerTraceExt( clgame.pmove, start, end, 0, clgame.pmove->numvisent, clgame.pmove->visents, ignore_pe, NULL );
+		break;
+	}
+
+	clgame.pmove->usehull = old_usehull;
+
 	return &tr;
 }
 
@@ -2240,9 +2255,11 @@ pfnSetTraceHull
 
 =============
 */
-void pfnSetTraceHull( int hull )
+void CL_SetTraceHull( int hull )
 {
-	clgame.trace_hull = bound( 0, hull, 3 );
+	clgame.old_trace_hull = clgame.pmove->usehull;
+	clgame.pmove->usehull = bound( 0, hull, 3 );
+
 }
 
 /*
@@ -2251,11 +2268,24 @@ pfnPlayerTrace
 
 =============
 */
-static void pfnPlayerTrace( float *start, float *end, int traceFlags, int ignore_pe, pmtrace_t *tr )
+void CL_PlayerTrace( float *start, float *end, int traceFlags, int ignore_pe, pmtrace_t *tr )
 {
 	if( !tr ) return;
+	*tr = PM_PlayerTraceExt( clgame.pmove, start, end, traceFlags, clgame.pmove->numphysent, clgame.pmove->physents, ignore_pe, NULL );
+	clgame.pmove->usehull = clgame.old_trace_hull;	// restore old trace hull 
+}
 
-	*tr = PM_PlayerTrace( clgame.pmove, start, end, traceFlags, clgame.trace_hull, ignore_pe, NULL );
+/*
+=============
+pfnPlayerTraceExt
+
+=============
+*/
+void CL_PlayerTraceExt( float *start, float *end, int traceFlags, int (*pfnIgnore)( physent_t *pe ), pmtrace_t *tr )
+{
+	if( !tr ) return;
+	*tr = PM_PlayerTraceExt( clgame.pmove, start, end, traceFlags, clgame.pmove->numphysent, clgame.pmove->physents, -1, pfnIgnore );
+	clgame.pmove->usehull = clgame.old_trace_hull;	// restore old trace hull 
 }
 
 /*
@@ -3289,8 +3319,8 @@ static event_api_t gEventApi =
 	pfnPushPMStates,
 	pfnPopPMStates,
 	CL_SetSolidPlayers,
-	pfnSetTraceHull,
-	pfnPlayerTrace,
+	CL_SetTraceHull,
+	CL_PlayerTrace,
 	CL_WeaponAnim,
 	pfnPrecacheEvent,
 	CL_PlaybackEvent,
@@ -3299,6 +3329,7 @@ static event_api_t gEventApi =
 	pfnKillEvents,
 	CL_EventIndex,
 	CL_IndexEvent,
+	CL_PlayerTraceExt,
 };
 
 static demo_api_t gDemoApi =
