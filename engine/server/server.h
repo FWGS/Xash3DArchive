@@ -311,14 +311,8 @@ typedef struct
 	playermove_t	*pmove;			// pmove state
 	sv_interp_t	interp[32];		// interpolate clients
 
-#ifdef BUILD_PUSH_LIST
-	int		numpushents;		// actual count. don't forget to reset it before
-						// call SV_BuildPushList
-	edict_t		*pushlist[MAX_PUSHED_ENTS];	// array of edicts that contacted with pusher
-#endif
 	sv_pushed_t	pushed[MAX_PUSHED_ENTS];	// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
-
 	vec3_t		player_mins[4];		// 4 hulls allowed
 	vec3_t		player_maxs[4];		// 4 hulls allowed
 
@@ -446,7 +440,6 @@ qboolean SV_CheckWater( edict_t *ent );
 qboolean SV_RunThink( edict_t *ent );
 void SV_FreeOldEntities( void );
 qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker );	// for EntityInSolid checks
-qboolean SV_TestPlayerPosition( edict_t *ent );	// for PlayerInSolid checks
 void SV_Impact( edict_t *e1, trace_t *trace );
 qboolean SV_CanPushed( edict_t *ent );
 void SV_CheckAllEnts( void );
@@ -542,7 +535,6 @@ const char *SV_GetString( string_t iString );
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed );
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
-int pfnCheckVisibility( const edict_t *ent, byte *pset );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
@@ -573,13 +565,6 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 void SV_InitSaveRestore( void );
 
 //
-// sv_studio.c
-//
-void SV_InitStudioHull( void );
-trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
-
-
-//
 // sv_world.c
 //
 
@@ -587,11 +572,11 @@ extern areanode_t	sv_areanodes[];
 
 void SV_ClearWorld( void );
 void SV_UnlinkEdict( edict_t *ent );
-qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits );
+qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits, int *lastleaf );
+void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, trace_t *trace );
 trace_t SV_TraceHull( edict_t *ent, int hullNum, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end );
 trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
-trace_t SV_MoveHull( const vec3_t start, int hullNumber, const vec3_t end, int type, edict_t *e );
-hull_t *SV_HullForEntity( edict_t *ent, int hullNumber, vec3_t mins, vec3_t maxs, vec3_t offset );
+trace_t SV_MoveNoEnts( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e );
 const char *SV_TraceTexture( edict_t *ent, const vec3_t start, const vec3_t end );
 trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore );
 void SV_LinkEdict( edict_t *ent, qboolean touch_triggers );

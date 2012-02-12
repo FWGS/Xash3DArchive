@@ -233,7 +233,6 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skydir_y = sv_skydir_y->value;
 	svgame.movevars.skydir_z = sv_skydir_z->value;
 	svgame.movevars.skyangle = sv_skyangle->value;
-	svgame.movevars.clienttrace = sv_clienttrace->value;
 	svgame.movevars.wateralpha = sv_wateralpha->value;
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
@@ -677,7 +676,7 @@ void SV_Init( void )
 	sv_pausable = Cvar_Get( "pausable", "1", CVAR_SERVERNOTIFY, "allow players to pause or not" );
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", CVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
 	sv_allow_rotate_pushables = Cvar_Get( "sv_allow_rotate_pushables", "0", CVAR_ARCHIVE, "let the pushers rotate pushables with included origin-brush" );
-	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY|CVAR_PHYSICINFO, "scaling factor for client hitboxes" );
+	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY, "scaling factor for client hitboxes" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );
 	sv_waterfriction = Cvar_Get( "sv_waterfriction", "1", CVAR_PHYSICINFO, "how fast you slow down in water" );

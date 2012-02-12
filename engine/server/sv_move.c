@@ -68,7 +68,7 @@ realcheck:
 	stop[2] = start[2] - 2 * svgame.movevars.stepsize;
 
 	if( iMode == WALKMOVE_WORLDONLY )
-		trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_WORLDONLY, ent );
+		trace = SV_MoveNoEnts( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
 	else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
 
 	if( trace.fraction == 1.0f )
@@ -84,7 +84,7 @@ realcheck:
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
 
 			if( iMode == WALKMOVE_WORLDONLY )
-				trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_WORLDONLY, ent );
+				trace = SV_MoveNoEnts( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
 			else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
 
 			if( trace.fraction != 1.0f && trace.endpos[2] > bottom )
@@ -209,7 +209,7 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 		{
 			VectorCopy( trace.endpos, ent->v.origin );
 
-			if( SV_CheckBottom( ent, MOVE_NORMAL ) == 0 )
+			if( SV_CheckBottom( ent, WALKMOVE_NORMAL ) == 0 )
 			{
 				if( ent->v.flags & FL_PARTIALGROUND )
 				{
@@ -247,7 +247,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 	VectorCopy( neworg, end );
 	end[2] -= temp * 2.0f;
 
-	trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_WORLDONLY, ent );
+	trace = SV_MoveNoEnts( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
 
 	if( trace.allsolid != 0 )
 		return 0;
@@ -255,7 +255,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 	if( trace.startsolid != 0 )
 	{
 		neworg[2] -= temp;
-		trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_WORLDONLY, ent );
+		trace = SV_MoveNoEnts( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
 
 		if( trace.allsolid != 0 || trace.startsolid != 0 )
 			return 0;
@@ -276,7 +276,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 
-		if( SV_CheckBottom( ent, MOVE_WORLDONLY ) == 0 )
+		if( SV_CheckBottom( ent, WALKMOVE_WORLDONLY ) == 0 )
 		{
 			if( ent->v.flags & FL_PARTIALGROUND )
 			{
@@ -301,10 +301,12 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink )
 qboolean SV_StepDirection( edict_t *ent, float yaw, float dist )
 {
 	int	ret;
+	float	cSin, cCos;
 	vec3_t	move;
 
 	yaw = yaw * M_PI * 2 / 360;
-	VectorSet( move, cos( yaw ) * dist, sin( yaw ) * dist, 0.0f );
+	SinCos( yaw, &cSin, &cCos );
+	VectorSet( move, cCos * dist, cSin * dist, 0.0f );
 
 	ret = SV_MoveStep( ent, move, 0 );
 	SV_LinkEdict( ent, true );
@@ -402,7 +404,7 @@ void SV_NewChaseDir( edict_t *actor, vec3_t destination, float dist )
 
 	// if a bridge was pulled out from underneath a monster, it may not have
 	// a valid standing position at all.
-	if( !SV_CheckBottom( actor, MOVE_NORMAL ))
+	if( !SV_CheckBottom( actor, WALKMOVE_NORMAL ))
 	{
 		actor->v.flags |= FL_PARTIALGROUND;
 	}

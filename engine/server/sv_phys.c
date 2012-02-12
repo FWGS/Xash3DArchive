@@ -714,72 +714,6 @@ static qboolean SV_CanBlock( edict_t *ent )
 
 /*
 ============
-SV_BuildPushList
-
-build the list of all entities which contacted with pusher
-NOTE: don't use this. This optimization is required personal linked-list in edict_t (edict->area2)
-and can't working correctly with node->solid_edicts only.
-============
-*/
-void SV_BuildPushList( areanode_t *node, edict_t *pusher, const vec3_t mins, const vec3_t maxs )
-{
-	link_t	*l, *next;
-	edict_t	*check;
-	int	oldsolid;
-	qboolean	block;
-
-	oldsolid = pusher->v.solid;
-
-	// touch linked edicts
-	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
-	{
-		next = l->next;
-		check = EDICT_FROM_AREA( l );
-
-		pusher->v.solid = SOLID_NOT;
-		block = SV_TestEntityPosition( check, pusher );
-		pusher->v.solid = oldsolid;
-		if( block ) continue;
-
-		// if the entity is standing on the pusher, it will definately be moved
-		if( !(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == pusher ))
-		{
-			if( check->v.absmin[0] >= maxs[0]
-			 || check->v.absmin[1] >= maxs[1]
-			 || check->v.absmin[2] >= maxs[2]
-			 || check->v.absmax[0] <= mins[0]
-			 || check->v.absmax[1] <= mins[1]
-			 || check->v.absmax[2] <= mins[2] )
-				continue;
-
-			// see if the ent's bbox is inside the pusher's final position
-			if( !SV_TestEntityPosition( check, NULL ))
-				continue;
-		}
-#ifdef BUILD_PUSH_LIST
-		if( svgame.numpushents >= MAX_PUSHED_ENTS )
-		{
-			MsgDev( D_ERROR, "SV_BuildPushList: overflow!\n" );
-			return;
-		}
-
-		// all tests passed. add entity to pushlist
-		svgame.pushlist[svgame.numpushents] = check;
-		svgame.numpushents++;
-#endif
-	}
-
-	// recurse down both sides
-	if( node->axis == -1 ) return;
-
-	if( maxs[node->axis] > node->dist )
-		SV_BuildPushList( node->children[0], pusher, mins, maxs );
-	if( mins[node->axis] < node->dist )
-		SV_BuildPushList( node->children[1], pusher, mins, maxs );
-}
-
-/*
-============
 SV_PushMove
 
 ============
@@ -826,14 +760,6 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	// see if any solid entities are inside the final position
 	num_moved = 0;
 
-#ifdef BUILD_PUSH_LIST
-	svgame.numpushents = 0;
-	SV_BuildPushList( sv_areanodes, pusher, mins, maxs );
-
-	for( e = 0; e < svgame.numpushents; e++ )
-	{
-		check = svgame.pushlist[e];
-#else
 	for( e = 1; e < svgame.numEntities; e++ )
 	{
 		check = EDICT_NUM( e );
@@ -863,7 +789,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 			if( !SV_TestEntityPosition( check, NULL ))
 				continue;
 		}
-#endif
+
 		// remove the onground flag for non-players
 		if( check->v.movetype != MOVETYPE_WALK )
 			check->v.flags &= ~FL_ONGROUND;
@@ -950,14 +876,6 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	// create pusher final position
 	Matrix4x4_CreateFromEntity( end_l, pusher->v.angles, pusher->v.origin, 1.0f );
 
-#ifdef BUILD_PUSH_LIST
-	svgame.numpushents = 0;
-	SV_BuildPushList( sv_areanodes, pusher, pusher->v.absmin, pusher->v.absmax );
-
-	for( e = 0; e < svgame.numpushents; e++ )
-	{
-		check = svgame.pushlist[e];
-#else
 	// see if any solid entities are inside the final position
 	for( e = 1; e < svgame.numEntities; e++ )
 	{
@@ -988,7 +906,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 			if( !SV_TestEntityPosition( check, NULL ))
 				continue;
 		}
-#endif		
+
 		// save original position of contacted entity
 		pushed_p->ent = check;
 		VectorCopy( check->v.origin, pushed_p->origin );

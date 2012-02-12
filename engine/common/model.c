@@ -388,7 +388,7 @@ static void Mod_FreeModel( model_t *mod )
 void Mod_Init( void )
 {
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
-	mod_studiocache = Cvar_Get( "r_studiocache", "0", CVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
+	mod_studiocache = Cvar_Get( "r_studiocache", "1", CVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
 
 	Mod_InitStudioHull ();
 }
@@ -460,6 +460,12 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 
 		if( i == 0 || !world.loading )
 			continue; // skip the world
+
+		if( VectorIsNull( out->origin ))
+		{
+			// NOTE: zero origin after recalculating is indicated included origin brush
+			VectorAverage( out->mins, out->maxs, out->origin );
+		}
 
 		world.max_surfaces = max( world.max_surfaces, out->numfaces ); 
 	}
@@ -1815,6 +1821,9 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 
 		if( i != 0 )
 		{
+			// HACKHACK: c2a1 issues
+			if( !bm->origin[0] && !bm->origin[1] ) mod->flags |= MODEL_HAS_ORIGIN;
+
 			Mod_FindModelOrigin( ents, va( "*%i", i ), bm->origin );
 
 			// flag 2 is indicated model with origin brush!

@@ -19,7 +19,6 @@ GNU General Public License for more details.
 #define MOVE_NORMAL		0	// normal trace
 #define MOVE_NOMONSTERS	1	// ignore monsters (edicts with flags (FL_MONSTER|FL_FAKECLIENT|FL_CLIENT) set)
 #define MOVE_MISSILE	2	// extra size for monsters
-#define MOVE_WORLDONLY	3	// clip only world
 
 #define FMOVE_IGNORE_GLASS	0x100
 #define FMOVE_SIMPLEBOX	0x200
@@ -48,7 +47,6 @@ void ClearLink( link_t *l );
 
 // trace common
 qboolean SV_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace );
-qboolean World_UseSimpleBox( qboolean simpleBox, int solid, qboolean isPointTrace, model_t *mod );
 void World_MoveBounds( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, vec3_t boxmins, vec3_t boxmaxs );
 trace_t World_CombineTraces( trace_t *cliptrace, trace_t *trace, edict_t *touch );
 int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const mplane_t *p );

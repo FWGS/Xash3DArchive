@@ -203,6 +203,9 @@ void SV_ConvertTrace( TraceResult *dst, trace_t *src )
 	VectorCopy( src->plane.normal, dst->vecPlaneNormal );
 	dst->pHit = src->ent;
 	dst->iHitgroup = src->hitgroup;
+
+	// reset trace flags
+	svgame.globals->trace_flags = 0;
 }
 
 /*
@@ -1601,10 +1604,6 @@ int pfnDropToFloor( edict_t* e )
 
 	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
 
-	// HACKHACK: to prevent falling stiiting_scientist from 'c1a0'
-	if( trace.startsolid && SV_IsValidEdict( trace.ent ) && trace.ent->v.movetype == MOVETYPE_PUSHSTEP )
-		return -1;
-
 	if( trace.allsolid )
 		return -1;
 
@@ -1950,17 +1949,7 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 {
 	trace_t	trace;
 
-	if( !ptr ) return;
-
-	if( svgame.globals->trace_flags & 1 )
-		fNoMonsters |= FMOVE_SIMPLEBOX;
-	svgame.globals->trace_flags = 0;
-
 	trace = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
-
-	// traceline in GoldSrc always have something valid in trace->pHit, many mods expected it
-	if( !SV_IsValidEdict( trace.ent )) svgame.globals->trace_ent = trace.ent = svgame.edicts;
-
 	SV_ConvertTrace( ptr, &trace );
 }
 
@@ -1973,8 +1962,6 @@ pfnTraceToss
 static void pfnTraceToss( edict_t* pent, edict_t* pentToIgnore, TraceResult *ptr )
 {
 	trace_t	trace;
-
-	if( !ptr ) return;
 
 	if( !SV_IsValidEdict( pent ))
 	{
@@ -1994,15 +1981,18 @@ pfnTraceHull
 */
 static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr )
 {
+	float	*mins, *maxs;
 	trace_t	trace;
 
 	if( !ptr ) return;
 
-	if( svgame.globals->trace_flags & 1 )
-		fNoMonsters |= FMOVE_SIMPLEBOX;
-	svgame.globals->trace_flags = 0;
+	if( hullNumber < 0 || hullNumber > 3 )
+		hullNumber = 0;
 
-	trace = SV_MoveHull( v1, hullNumber, v2, fNoMonsters, pentToSkip );
+	mins = sv.worldmodel->hulls[hullNumber].clip_mins;
+	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
+
+	trace = SV_Move( v1, mins, maxs, v2, fNoMonsters, pentToSkip );
 	SV_ConvertTrace( ptr, &trace );
 }
 
@@ -2021,10 +2011,6 @@ static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v
 		MsgDev( D_WARN, "SV_TraceMonsterHull: invalid entity %s\n", SV_ClassName( pEdict ));
 		return 1;
 	}
-
-	if( svgame.globals->trace_flags & 1 )
-		fNoMonsters |= FMOVE_SIMPLEBOX;
-	svgame.globals->trace_flags = 0;
 
 	trace = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip );
 	if( ptr ) SV_ConvertTrace( ptr, &trace );
@@ -2053,11 +2039,29 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 		return;
 	}
 
-	hullNumber = bound( 0, hullNumber, 3 );
+	if( hullNumber < 0 || hullNumber > 3 )
+		hullNumber = 0;
+
 	mins = sv.worldmodel->hulls[hullNumber].clip_mins;
 	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
 
-	trace = SV_TraceHull( pent, hullNumber, v1, mins, maxs, v2 );
+	if( Mod_GetType( pent->v.modelindex ) == mod_brush )
+	{
+		int oldmovetype = pent->v.movetype;
+		int oldsolid = pent->v.solid;
+		pent->v.movetype = MOVETYPE_PUSH;
+		pent->v.solid = SOLID_BSP;
+
+      		SV_ClipMoveToEntity( pent, v1, mins, maxs, v2, &trace );
+
+		pent->v.movetype = oldmovetype;
+		pent->v.solid = oldsolid;
+	}
+	else
+	{
+      		SV_ClipMoveToEntity( pent, v1, mins, maxs, v2, &trace );
+	}
+
 	SV_ConvertTrace( ptr, &trace );
 }
 
@@ -3739,7 +3743,7 @@ pfnCheckVisibility
 */
 int pfnCheckVisibility( const edict_t *ent, byte *pset )
 {
-	int	result = 0;
+	int	i;
 
 	if( !SV_IsValidEdict( ent ))
 	{
@@ -3750,47 +3754,37 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	// vis not set - fullvis enabled
 	if( !pset ) return 1;
 
-	if( ent->headnode == -1 )
+	if( ent->headnode < 0 )
 	{
-		int	i;
-
 		// check individual leafs
 		for( i = 0; i < ent->num_leafs; i++ )
 		{
 			if( pset[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i] & 7 )))
-				break;
+				return 1;	// visible passed by leaf
 		}
-
-		if( i == ent->num_leafs )
-			return 0;	// not visible
-
-		result = 1;	// visible passed by leafs
+		return 0;
 	}
 	else
 	{
-		mnode_t	*node;
+		int	leafnum;
 
-		if( ent->headnode < 0 )
-			node = (mnode_t *)(sv.worldmodel->leafs + (-1 - ent->headnode));			
-		else node = sv.worldmodel->nodes + ent->headnode;
+		for( i = 0; i < MAX_ENT_LEAFS; i++ )
+		{
+			leafnum = ent->leafnums[i];
+			if( leafnum == -1 ) break;
+			if( pset[leafnum >> 3] & (1 << ( leafnum & 7 )))
+				return 1;	// visible passed by leaf
+		}
 
 		// too many leafs for individual check, go by headnode
-		if( !SV_HeadnodeVisible( node, pset ))
+		if( !SV_HeadnodeVisible( &sv.worldmodel->nodes[ent->headnode], pset, &leafnum ))
 			return 0;
 
-		result = 2;	// visible passed by headnode
-	}
+		((edict_t *)ent)->leafnums[ent->num_leafs] = leafnum;
+		((edict_t *)ent)->num_leafs = (ent->num_leafs + 1) % MAX_ENT_LEAFS;
 
-#if 0
-	// NOTE: uncomment this if you want to get more accuracy culling on large brushes
-	if( Mod_GetType( ent->v.modelindex ) == mod_brush )
-	{
-		if( !Mod_BoxVisible( ent->v.absmin, ent->v.absmax, pset ))
-			return 0;
-		result = 3; // visible passed by BoxVisible
+		return 2;	// visible passed by headnode
 	}
-#endif
-	return result;
 }
 
 /*

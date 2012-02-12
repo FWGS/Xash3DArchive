@@ -58,14 +58,6 @@ static int			cache_current;
 static int			cache_current_hull;
 static int			cache_current_plane;
 
-// old trace global variables
-static mplane_t			sv_hitboxplanes[6];	// there a temp hitbox
-typedef qboolean 			(*pfnHitboxTrace)( trace_t *trace );
-static vec3_t			trace_startmins, trace_endmins;
-static vec3_t			trace_startmaxs, trace_endmaxs;
-static vec3_t			trace_absmins, trace_absmaxs;
-static float			trace_realfraction;
-
 /*
 ====================
 Mod_InitStudioHull
@@ -216,9 +208,6 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 
 	ASSERT( numhitboxes );
 
-	bonecache = NULL;
-	Mod_InitStudioHull(); // FIXME: move to Mod_Init
-
 	if( mod_studiocache->integer )
 	{
 		bonecache = Mod_CheckStudioCache( model, frame, sequence, angles, origin, size, pcontroller, pblending );
@@ -280,36 +269,6 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 
 ===============================================================================
 */
-/*
-====================
-StudioPlayerBlend
-
-====================
-*/
-void Mod_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch )
-{
-	// calc up/down pointing
-	*pBlend = (*pPitch * 3);
-
-	if( *pBlend < pseqdesc->blendstart[0] )
-	{
-		*pPitch -= pseqdesc->blendstart[0] / 3.0f;
-		*pBlend = 0;
-	}
-	else if( *pBlend > pseqdesc->blendend[0] )
-	{
-		*pPitch -= pseqdesc->blendend[0] / 3.0f;
-		*pBlend = 255;
-	}
-	else
-	{
-		if( pseqdesc->blendend[0] - pseqdesc->blendstart[0] < 0.1f ) // catch qc error
-			*pBlend = 127;
-		else *pBlend = 255.0f * (*pBlend - pseqdesc->blendstart[0]) / (pseqdesc->blendend[0] - pseqdesc->blendstart[0]);
-		*pPitch = 0;
-	}
-}
-
 /*
 ====================
 StudioCalcBoneAdj
@@ -759,539 +718,19 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 
 /*
 ====================
-SV_HullForStudioModel
-
-====================
-*/
-hull_t *SV_HullForStudioModel( edict_t *ent, int hullNumber, int flags, vec3_t mins, vec3_t maxs, vec3_t offset, int *numhitboxes )
-{
-	int		isPointTrace;
-	float		scale = 0.5f;
-	vec3_t		size;
-	model_t		*mod;
-
-	if(( mod = Mod_Handle( ent->v.modelindex )) == NULL )
-	{
-		*numhitboxes = 1;
-		return SV_HullForEntity( ent, hullNumber, mins, maxs, offset );
-	}
-
-	VectorSubtract( maxs, mins, size );
-	isPointTrace = false;
-
-	if( VectorIsNull( size ) && !( flags & FMOVE_SIMPLEBOX ))
-	{
-		isPointTrace = true;
-
-		if( ent->v.flags & FL_CLIENT )
-		{
-			if( sv_clienttrace->value == 0.0f )
-			{
-				// so no way to trace studiomodels by hitboxes
-				// use bbox instead
-				isPointTrace = false;
-			}
-			else
-			{
-				scale = sv_clienttrace->value * 0.5f;
-				VectorSet( size, 1.0f, 1.0f, 1.0f );
-			}
-		}
-	}
-
-	if( mod->flags & STUDIO_TRACE_HITBOX || isPointTrace )
-	{
-		VectorScale( size, scale, size );
-		VectorClear( offset );
-
-		if( ent->v.flags & FL_CLIENT )
-		{
-			mstudioseqdesc_t	*pseqdesc;
-			byte		controller[4];
-			byte		blending[2];
-			vec3_t		angles;
-			int		iBlend;
-
-			mod_studiohdr = Mod_Extradata( mod );
-			pseqdesc = (mstudioseqdesc_t *)((byte *)mod_studiohdr + mod_studiohdr->seqindex) + ent->v.sequence;
-			VectorCopy( ent->v.angles, angles );
-
-			Mod_StudioPlayerBlend( pseqdesc, &iBlend, &angles[PITCH] );
-
-			controller[0] = controller[1] = controller[2] = controller[3] = 0x7F;
-			blending[0] = (byte)iBlend;
-			blending[1] = 0;
-
-			return Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin, size, controller, blending, numhitboxes, ent );
-		}
-
-		return Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, ent->v.angles, ent->v.origin, size, ent->v.controller, ent->v.blending, numhitboxes, ent );
-	}
-
-	*numhitboxes = 1;
-	return SV_HullForEntity( ent, hullNumber, mins, maxs, offset );
-}
-
-/*
-====================
-StudioSetupModel
-
-====================
-*/
-static qboolean SV_StudioSetupModel( const edict_t *ent, int iBone, qboolean bInversePitch )
-{
-	model_t	*mod = Mod_Handle( ent->v.modelindex );
-	void	*hdr = Mod_Extradata( mod );
-	vec3_t	angles;
-		
-	if( !hdr ) return false;
-
-	mod_studiohdr = (studiohdr_t *)hdr;
-	VectorCopy( ent->v.angles, angles );
-
-	if( bInversePitch )
-	{
-		angles[PITCH] = -angles[PITCH];
-	}		
-
-	// calc blending for player
-	if( ent->v.flags & FL_CLIENT )
-	{
-		mstudioseqdesc_t	*pseqdesc;
-		byte		controller[4];
-		byte		blending[2];
-		int		iBlend;
-
-		pseqdesc = (mstudioseqdesc_t *)((byte *)mod_studiohdr + mod_studiohdr->seqindex) + ent->v.sequence;
-
-		Mod_StudioPlayerBlend( pseqdesc, &iBlend, &angles[PITCH] );
-
-		controller[0] = controller[1] = controller[2] = controller[3] = 0x7F;
-		blending[0] = (byte)iBlend;
-		blending[1] = 0;
-
-		pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin,
-			controller, blending, iBone, ent );
-          }
-          else
-          {
-		pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin,
-			ent->v.controller, ent->v.blending, iBone, ent );
-	}
-
-	return true;
-}
-
-/*
-===============================================================================
-
-	OLD CODE STUDIO MODELS TRACING
-
-===============================================================================
-*/
-/*
-====================
-SV_InitStudioHull
-====================
-*/
-void SV_InitStudioHull( void )
-{
-	int	i, side;
-	mplane_t	*p;
-
-	for( i = 0; i < 6; i++ )
-	{
-		side = i & 1;
-
-		// planes
-		p = &sv_hitboxplanes[i];
-		VectorClear( p->normal );
-
-		if( side )
-		{
-			p->type = PLANE_NONAXIAL;
-			p->normal[i>>1] = -1.0f;
-			p->signbits = (1<<(i>>1));
-		}
-		else
-		{
-			p->type = i>>1;
-			p->normal[i>>1] = 1.0f;
-			p->signbits = 0;
-		}
-	}    
-}
-
-/*
-====================
-SV_HullForHitbox
-====================
-*/
-static void SV_HullForHitbox( const vec3_t mins, const vec3_t maxs )
-{
-	sv_hitboxplanes[0].dist = maxs[0];
-	sv_hitboxplanes[1].dist = -mins[0];
-	sv_hitboxplanes[2].dist = maxs[1];
-	sv_hitboxplanes[3].dist = -mins[1];
-	sv_hitboxplanes[4].dist = maxs[2];
-	sv_hitboxplanes[5].dist = -mins[2];
-}
-
-qboolean SV_StudioExtractBbox( edict_t *e, model_t *mod, int sequence, float *mins, float *maxs )
-{
-	mstudioseqdesc_t	*pseqdesc;
-	studiohdr_t	*phdr;
-
-	ASSERT( mod != NULL );
-
-	if( mod->type != mod_studio || !mod->cache.data )
-		return false;
-
-	phdr = (studiohdr_t *)mod->cache.data;
-	if( !phdr->numhitboxes ) return false;
-
-	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
-
-	if( sequence < 0 || sequence >= phdr->numseq )
-		return false;
-
-	VectorCopy( pseqdesc[sequence].bbmin, mins );
-	VectorCopy( pseqdesc[sequence].bbmax, maxs );
-
-	return true;
-}
-
-/*
-================
-StudioTestToHitbox
-
-test point trace in hitbox
-================
-*/
-static qboolean SV_StudioTestToHitbox( trace_t *trace )
-{
-	int		i;
-	mplane_t		*p;
-
-	for( i = 0; i < 6; i++ )
-	{
-		p = &sv_hitboxplanes[i];
-
-		// push the plane out apropriately for mins/maxs
-		// if completely in front of face, no intersection
-		if( p->type < 3 )
-		{
-			if( trace_startmins[p->type] > p->dist )
-				return false;
-		}
-		else
-		{
-			switch( p->signbits )
-			{
-			case 0:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 1:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 2:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 3:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] > p->dist )
-					return false;
-				break;
-			case 4:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			case 5:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			case 6:
-				if( p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			case 7:
-				if( p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] > p->dist )
-					return false;
-				break;
-			default:
-				return false;
-			}
-		}
-	}
-
-	// inside this hitbox
-	trace->fraction = trace_realfraction = 0;
-	trace->startsolid = trace->allsolid = true;
-
-	return true;
-}
-
-/*
-================
-StudioClipToHitbox
-
-trace hitbox
-================
-*/
-static qboolean SV_StudioClipToHitbox( trace_t *trace )
-{
-	int	i;
-	mplane_t	*p, *clipplane;
-	float	enterfrac, leavefrac, distfrac;
-	float	d, d1, d2;
-	qboolean	getout, startout;
-	float	f;
-
-	enterfrac = -1.0f;
-	leavefrac = 1.0f;
-	clipplane = NULL;
-
-	getout = false;
-	startout = false;
-
-	for( i = 0; i < 6; i++ )
-	{
-		p = &sv_hitboxplanes[i];
-
-		// push the plane out apropriately for mins/maxs
-		if( p->type < 3 )
-		{
-			d1 = trace_startmins[p->type] - p->dist;
-			d2 = trace_endmins[p->type] - p->dist;
-		}
-		else
-		{
-			switch( p->signbits )
-			{
-			case 0:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 1:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 2:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 3:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmins[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmins[2] - p->dist;
-				break;
-			case 4:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			case 5:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmins[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmins[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			case 6:
-				d1 = p->normal[0]*trace_startmins[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmins[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			case 7:
-				d1 = p->normal[0]*trace_startmaxs[0] + p->normal[1]*trace_startmaxs[1] + p->normal[2]*trace_startmaxs[2] - p->dist;
-				d2 = p->normal[0]*trace_endmaxs[0] + p->normal[1]*trace_endmaxs[1] + p->normal[2]*trace_endmaxs[2] - p->dist;
-				break;
-			default:
-				d1 = d2 = 0;	// shut up compiler
-				break;
-			}
-		}
-
-		if( d2 > 0 ) getout = true;	// endpoint is not in solid
-		if( d1 > 0 ) startout = true;
-
-		// if completely in front of face, no intersection
-		if( d1 > 0 && d2 >= d1 )
-			return false;
-
-		if( d1 <= 0 && d2 <= 0 )
-			continue;
-
-		// crosses face
-		d = 1.0f / ( d1 - d2 );
-		f = d1 * d;
-
-		if( d > 0 )
-		{
-			// enter
-			if( f > enterfrac )
-			{
-				distfrac = d;
-				enterfrac = f;
-				clipplane = p;
-			}
-		}
-		else if( d < 0 )
-		{	
-			// leave
-			if( f < leavefrac )
-				leavefrac = f;
-		}
-	}
-
-	if( !startout )
-	{	
-		// original point was inside hitbox
-		trace->startsolid = true;
-		if( !getout ) trace->allsolid = true;
-		return true;
-	}
-
-	if( enterfrac - FRAC_EPSILON <= leavefrac )
-	{
-		if( enterfrac > -1.0f && enterfrac < trace_realfraction )
-		{
-			if( enterfrac < 0 )
-				enterfrac = 0;
-			trace_realfraction = enterfrac;
-			trace->fraction = enterfrac - DIST_EPSILON * distfrac;
-            		VectorCopy( clipplane->normal, trace->plane.normal );
-            		trace->plane.dist = clipplane->dist;
-			return true;
-		}
-	}
-	return false;
-}
-
-/*
-================
-SV_StudioIntersect
-
-testing for potentially intersection of trace and animation bboxes
-================
-*/
-static qboolean SV_StudioIntersect( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
-{
-	vec3_t	trace_mins, trace_maxs;
-	vec3_t	anim_mins, anim_maxs;
-	model_t	*mod = Mod_Handle( ent->v.modelindex );
-
-	// create the bounding box of the entire move
-	World_MoveBounds( start, mins, maxs, end, trace_mins, trace_maxs );
-
-	if( !SV_StudioExtractBbox( ent, mod, ent->v.sequence, anim_mins, anim_maxs ))
-		return false; // invalid sequence
-
-	if( !VectorIsNull( ent->v.angles ))
-	{
-		// expand for rotation
-		float	max, v;
-		int	i;
-
-		for( i = 0, max = 0.0f; i < 3; i++ )
-		{
-			v = fabs( anim_mins[i] );
-			if( v > max ) max = v;
-			v = fabs( anim_maxs[i] );
-			if( v > max ) max = v;
-		}
-
-		for( i = 0; i < 3; i++ )
-		{
-			anim_mins[i] = ent->v.origin[i] - max;
-			anim_maxs[i] = ent->v.origin[i] + max;
-		}
-	}
-	else
-	{
-		VectorAdd( anim_mins, ent->v.origin, anim_mins );
-		VectorAdd( anim_maxs, ent->v.origin, anim_maxs );
-	}
-
-	// check intersection with trace entire move and animation bbox
-	return BoundsIntersect( trace_mins, trace_maxs, anim_mins, anim_maxs );
-}
-
-trace_t SV_TraceHitbox( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end )
-{
-	vec3_t		start_l, end_l;
-	int		i, outBone = -1;
-	pfnHitboxTrace	TraceHitbox = NULL;
-	trace_t		trace;
-
-	// assume we didn't hit anything
-	Q_memset( &trace, 0, sizeof( trace_t ));
-	VectorCopy( end, trace.endpos );
-	trace.fraction = trace_realfraction = 1.0f;
-	trace.hitgroup = -1;
-
-	if( !SV_StudioIntersect( ent, start, mins, maxs, end ))
-		return trace;
-
-	if( !SV_StudioSetupModel( ent, -1, false ))	// all bones used
-		return trace;
-
-	if( VectorCompare( start, end ))
-		TraceHitbox = SV_StudioTestToHitbox;	// special case for test position
-	else TraceHitbox = SV_StudioClipToHitbox;
-
-	// go to check individual hitboxes		
-	for( i = 0; i < mod_studiohdr->numhitboxes; i++ )
-	{
-		mstudiobbox_t *phitbox = (mstudiobbox_t *)((byte*)mod_studiohdr + mod_studiohdr->hitboxindex) + i;
-
-		// transform traceline into local bone space
-		Matrix3x4_VectorITransform( studio_bones[phitbox->bone], start, start_l );
-		Matrix3x4_VectorITransform( studio_bones[phitbox->bone], end, end_l );
-
-		SV_HullForHitbox( phitbox->bbmin, phitbox->bbmax );
-
-		VectorAdd( start_l, mins, trace_startmins );
-		VectorAdd( start_l, maxs, trace_startmaxs );
-		VectorAdd( end_l, mins, trace_endmins );
-		VectorAdd( end_l, maxs, trace_endmaxs );
-
-		if( TraceHitbox( &trace ))
-		{
-			outBone = phitbox->bone;
-			trace.hitgroup = phitbox->group;
-		}
-
-		if( trace.allsolid )
-			break;
-	}
-
-	// all hitboxes were swept, get trace result
-	if( outBone >= 0 )
-	{
-		vec3_t	temp;
-
-		trace.ent = ent;
-		VectorCopy( trace.plane.normal, temp );
-		trace.fraction = bound( 0, trace.fraction, 1.0f );
-		VectorLerp( start, trace.fraction, end, trace.endpos );
-		Matrix3x4_TransformPositivePlane( studio_bones[outBone], temp, trace.plane.dist, trace.plane.normal, &trace.plane.dist );
-	}
-	return trace;
-}
-
-/*
-====================
 StudioGetAttachment
 ====================
 */
-void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *org, float *ang )
+void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *origin, float *angles )
 {
 	mstudioattachment_t		*pAtt;
-	vec3_t			forward, bonepos;
-	vec3_t			localOrg, localAng;
-	void			*hdr;
+	vec3_t			angles2;
+	model_t			*mod;
 
-	hdr = Mod_Extradata( Mod_Handle( e->v.modelindex ));
-	if( !hdr ) return;
+	mod = Mod_Handle( e->v.modelindex );
+	mod_studiohdr = (studiohdr_t *)Mod_Extradata( mod );
+	if( !mod_studiohdr ) return;
 
-	mod_studiohdr = (studiohdr_t *)hdr;
 	if( mod_studiohdr->numattachments <= 0 )
 		return;
 
@@ -1306,20 +745,24 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *org, flo
 	// calculate attachment origin and angles
 	pAtt = (mstudioattachment_t *)((byte *)mod_studiohdr + mod_studiohdr->attachmentindex);
 
-	SV_StudioSetupModel( e, pAtt[iAttachment].bone, true );
+	VectorCopy( e->v.angles, angles2 );
+	angles2[PITCH] = -angles2[PITCH];
+
+	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, angles2, e->v.origin,
+		e->v.controller, e->v.blending, pAtt[iAttachment].bone, e );
 
 	// compute pos and angles
-	Matrix3x4_VectorTransform( studio_bones[pAtt[iAttachment].bone], pAtt[iAttachment].org, localOrg );
-	if( org ) VectorCopy( localOrg, org );
+	if( origin != NULL )
+		Matrix3x4_VectorTransform( studio_bones[pAtt[iAttachment].bone], pAtt[iAttachment].org, origin );
 
-	if( sv_allow_studio_attachment_angles->integer )
+	if( sv_allow_studio_attachment_angles->integer && origin != NULL && angles != NULL )
 	{
-		Matrix3x4_OriginFromMatrix( studio_bones[pAtt[iAttachment].bone], bonepos );
-		VectorSubtract( localOrg, bonepos, forward );	// make forward
-		VectorNormalizeFast( forward );
-		VectorAngles( forward, localAng );
+		vec3_t	forward, bonepos;
 
-		if( ang ) VectorCopy( localAng, ang );
+		Matrix3x4_OriginFromMatrix( studio_bones[pAtt[iAttachment].bone], bonepos );
+		VectorSubtract( origin, bonepos, forward ); // make forward
+		VectorNormalizeFast( forward );
+		VectorAngles( forward, angles );
 	}
 }
 
@@ -1328,15 +771,19 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *org, flo
 GetBonePosition
 ====================
 */
-void Mod_GetBonePosition( const edict_t *e, int iBone, float *org, float *ang )
+void Mod_GetBonePosition( const edict_t *e, int iBone, float *origin, float *angles )
 {
-	if( !SV_StudioSetupModel( e, iBone, false ) || mod_studiohdr->numbones <= 0 )
-		return;
+	model_t	*mod;
 
-	iBone = bound( 0, iBone, mod_studiohdr->numbones );
+	mod = Mod_Handle( e->v.modelindex );
+	mod_studiohdr = (studiohdr_t *)Mod_Extradata( mod );
+	if( !mod_studiohdr ) return;
 
-	if( org ) Matrix3x4_OriginFromMatrix( studio_bones[iBone], org );
-	if( ang ) VectorAngles( studio_bones[iBone][0], ang ); // bone forward to angles
+	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, e->v.angles, e->v.origin,
+		e->v.controller, e->v.blending, iBone, e );
+
+	if( origin ) Matrix3x4_OriginFromMatrix( studio_bones[iBone], origin );
+	if( angles ) VectorAngles( studio_bones[iBone][0], angles ); // bone forward to angles
 }
 
 /*

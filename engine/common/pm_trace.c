@@ -435,12 +435,17 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 
 		if( !trace_bbox.startsolid )
 		{
+			VectorLerp( start, trace_bbox.fraction, end, trace_bbox.endpos );
+
 			if( rotated )
 			{
 				VectorCopy( trace_bbox.plane.normal, temp );
 				Matrix4x4_TransformPositivePlane( matrix, temp, trace_bbox.plane.dist, trace_bbox.plane.normal, &trace_bbox.plane.dist );
 			}
-			VectorLerp( start, trace_bbox.fraction, end, trace_bbox.endpos );
+			else
+			{
+				trace_bbox.plane.dist = DotProduct( trace_bbox.endpos, trace_bbox.plane.normal );
+			}
 		}
 
 		if( trace_bbox.fraction < trace_total.fraction )
