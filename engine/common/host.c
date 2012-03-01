@@ -319,6 +319,37 @@ void Host_InitDecals( void )
 }
 
 /*
+=================
+Host_RestartAmbientSounds
+
+Write ambient sounds into demo
+=================
+*/
+void Host_RestartAmbientSounds( void )
+{
+	soundlist_t	soundInfo[64];
+	int		i, nSounds;
+
+	if( !SV_Active( ))
+	{
+		return;
+	}
+
+	nSounds = S_GetCurrentStaticSounds( soundInfo, 64 );
+	
+	for( i = 0; i < nSounds; i++ )
+	{
+		if( !soundInfo[i].looping || soundInfo[i].entnum == -1 )
+			continue;
+
+		Msg( "Restarting sound %s...\n", soundInfo[i].name );
+		S_StopSound( soundInfo[i].entnum, soundInfo[i].channel, soundInfo[i].name );
+		SV_StartSound( pfnPEntityOfEntIndex( soundInfo[i].entnum ), CHAN_STATIC, soundInfo[i].name,
+		soundInfo[i].volume, soundInfo[i].attenuation, 0, soundInfo[i].pitch );
+	}
+}
+
+/*
 ===================
 Host_GetConsoleCommands
 
@@ -373,7 +404,7 @@ qboolean Host_FilterTime( float time )
 	host.realframetime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
 	oldtime = host.realtime;
 
-	if( host_framerate->value > 0 && ( Host_IsLocalGame() || CL_IsPlaybackDemo() ))
+	if( host_framerate->value > 0 && ( Host_IsLocalGame()/* || CL_IsPlaybackDemo() */))
 	{
 		float fps = host_framerate->value;
 		if( fps > 1 ) fps = 1.0f / fps;
@@ -782,8 +813,6 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		break;
 	}
 
-	SCR_CheckStartupVids();	// must be last
-
 	host.change_game = false;	// done
 	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
 	Cmd_RemoveCommand( "setgl" );
@@ -791,9 +820,10 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	// we need to execute it again here
 	Cmd_ExecuteString( "exec config.cfg\n", src_command );
 	oldtime = Sys_DoubleTime();
+	SCR_CheckStartupVids();	// must be last
 
 	// main window message loop
-	while( 1 )
+	while( !host.crashed )
 	{
 		newtime = Sys_DoubleTime ();
 		Host_Frame( newtime - oldtime );

@@ -1025,7 +1025,8 @@ void R_RenderBrushPoly( msurface_t *fa )
 		fullbright_polys[t->fb_texturenum] = fa->polys;
 		draw_fullbrights = true;
 	}
-	else if( r_detailtextures->integer && t->dt_texturenum )
+
+	if( r_detailtextures->integer && t->dt_texturenum )
 	{
 		mextrasurf_t *es = SURF_INFO( fa, RI.currentmodel );
 		es->detailchain = detail_surfaces[t->dt_texturenum];

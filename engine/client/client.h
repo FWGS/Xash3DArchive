@@ -509,6 +509,7 @@ typedef struct
 	string		demoname;			// for demo looping
 
 	file_t		*demofile;
+	file_t		*demoheader;		// contain demo startup info in case we record a demo on this level
 } client_static_t;
 
 #ifdef __cplusplus
@@ -579,12 +580,13 @@ void SCR_Viewpos_f( void );
 void SCR_TimeRefresh_f( void );
 
 //
-// cl_main
+// cl_main.c
 //
 void CL_Init( void );
 void CL_SendCommand( void );
 void CL_Disconnect_f( void );
 void CL_ProcessFile( qboolean successfully_received, const char *filename );
+void CL_WriteUsercmd( sizebuf_t *msg, int from, int to );
 void CL_GetChallengePacket( void );
 void CL_PingServers_f( void );
 void CL_ClearState( void );
@@ -592,9 +594,14 @@ void CL_ClearState( void );
 //
 // cl_demo.c
 //
+void CL_StartupDemoHeader( void );
 void CL_DrawDemoRecording( void );
-void CL_WriteDemoMessage( sizebuf_t *msg, int head_size );
-void CL_ReadDemoMessage( void );
+void CL_WriteDemoUserCmd( int cmdnumber );
+void CL_WriteDemoMessage( qboolean startup, int start, sizebuf_t *msg );
+void CL_WriteDemoUserMessage( const byte *buffer, size_t size );
+qboolean CL_DemoReadMessage( byte *buffer, size_t *length );
+void CL_WriteDemoJumpTime( void );
+void CL_CloseDemoHeader( void );
 void CL_StopPlayback( void );
 void CL_StopRecord( void );
 void CL_PlayDemo_f( void );

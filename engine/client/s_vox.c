@@ -378,7 +378,7 @@ void VOX_FreeWord( channel_t *pchan )
 	pchan->currentWord = NULL; // sentence is finished
 	Q_memset( &pchan->pMixer, 0, sizeof( pchan->pMixer ));
 
-	// UNDONE: release unused sounds ?
+	// release unused sounds ?
 #if 0
 	if( pchan->words[pchan->wordIndex].sfx )
 	{

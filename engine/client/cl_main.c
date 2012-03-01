@@ -224,7 +224,7 @@ CLIENT MOVEMENT COMMUNICATION
 CL_CreateCmd
 =================
 */
-usercmd_t CL_CreateCmd( void )
+void CL_CreateCmd( void )
 {
 	usercmd_t		cmd;
 	color24		color;
@@ -257,9 +257,16 @@ usercmd_t CL_CreateCmd( void )
 	// because it may contain leftover inputs
 	// from the last level
 	if( ++cl.movemessages <= 10 )
-		return cmd;
+	{
+		if( !cls.demoplayback )
+		{
+			cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CL_UPDATE_MASK];
+			*cl.refdef.cmd = cmd;
+		}
+		return;
+	}
 
-	active = ( cls.state == ca_active && !cl.refdef.paused );
+	active = ( cls.state == ca_active && !cl.refdef.paused && !cls.demoplayback );
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &cmd, active );
 
 	R_LightForPoint( cl.frame.local.client.origin, &color, false, false, 128.0f );
@@ -271,13 +278,20 @@ usercmd_t CL_CreateCmd( void )
 
 	V_ProcessOverviewCmds( &cmd );
 
-	if( cl.background || cls.demoplayback || gl_overview->integer )
+	if( cl.background || gl_overview->integer )
 	{
 		VectorCopy( angles, cl.refdef.cl_viewangles );
 		VectorCopy( angles, cmd.viewangles );
 		cmd.msec = 0;
 	}
-	return cmd;
+
+	// demo always have commands
+	// so don't overwrite them
+	if( !cls.demoplayback )
+	{
+		cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CL_UPDATE_MASK];
+		*cl.refdef.cmd = cmd;
+	}
 }
 
 void CL_WriteUsercmd( sizebuf_t *msg, int from, int to )
@@ -361,7 +375,7 @@ void CL_WritePacket( void )
 
 	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CL_UPDATE_MASK )
 	{
-		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME && !cls.demoplayback )
+		if(( host.realtime - cls.netchan.last_received ) > CONNECTION_PROBLEM_TIME )
 		{
 			Con_NPrintf( 1, "^3Warning:^1 Connection Problem^7\n" );
 			cl.validsequence = 0;
@@ -475,6 +489,13 @@ void CL_WritePacket( void )
 		cls.netchan.outgoing_sequence++;
 	}
 
+	if( cls.demorecording )
+	{
+		// Back up one because we've incremented outgoing_sequence each frame by 1 unit
+		cmdnumber = ( cls.netchan.outgoing_sequence - 1 ) & CL_UPDATE_MASK;
+		CL_WriteDemoUserCmd( cmdnumber );
+	}
+
 	// update download/upload slider.
 	Netchan_UpdateProgress( &cls.netchan );
 }
@@ -489,8 +510,7 @@ Called every frame to builds and sends a command packet to the server.
 void CL_SendCmd( void )
 {
 	// we create commands even if a demo is playing,
-	cl.refdef.cmd = &cl.cmds[cls.netchan.outgoing_sequence & CL_UPDATE_MASK];
-	*cl.refdef.cmd = CL_CreateCmd();
+	CL_CreateCmd();
 
 	// clc_move, userinfo etc
 	CL_WritePacket();
@@ -917,13 +937,6 @@ void CL_Reconnect_f( void )
 
 	S_StopAllSounds ();
 
-	if( cls.demoplayback )
-	{
-		// demo issues changelevel
-		cls.changelevel = true;
-		return;
-	}
-
 	if( cls.state == ca_connected )
 	{
 		cls.demonum = cls.movienum = -1;	// not in the demo loop now
@@ -940,6 +953,8 @@ void CL_Reconnect_f( void )
 		cl.delta_sequence = -1;		// we'll request a full delta from the baseline
 		cls.lastoutgoingcommand = -1;		// we don't have a backed up cmd history yet
 		cls.nextcmdtime = host.realtime;	// we can send a cmd right away
+
+		CL_StartupDemoHeader ();
 		return;
 	}
 
@@ -1226,6 +1241,8 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		cls.lastoutgoingcommand = -1;		// we don't have a backed up cmd history yet
 		cls.nextcmdtime = host.realtime;	// we can send a cmd right away
 
+		CL_StartupDemoHeader ();
+
 		UI_SetActiveMenu( false );
 	}
 	else if( !Q_strcmp( c, "info" ))
@@ -1318,19 +1335,37 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 }
 
 /*
+====================
+CL_GetMessage
+
+Handles recording and playback of demos, on top of NET_ code
+====================
+*/
+int CL_GetMessage( byte *data, size_t *length )
+{
+	if( cls.demoplayback )
+	{
+		if( CL_DemoReadMessage( data, length ))
+			return true;
+		return false;
+	}
+
+	if( NET_GetPacket( NS_CLIENT, &net_from, data, length ))
+		return true;
+	return false;
+}
+
+/*
 =================
 CL_ReadNetMessage
 =================
 */
 void CL_ReadNetMessage( void )
 {
-	int	curSize;
+	size_t	curSize;
 
-	while( NET_GetPacket( NS_CLIENT, &net_from, net_message_buffer, &curSize ))
+	while( CL_GetMessage( net_message_buffer, &curSize ))
 	{
-		if( host.type == HOST_DEDICATED || cls.demoplayback )
-			return;
-
 		BF_Init( &net_message, "ServerData", net_message_buffer, curSize );
 
 		// check for connectionless packet (0xffffffff) first
@@ -1350,24 +1385,16 @@ void CL_ReadNetMessage( void )
 		}
 
 		// packet from server
-		if( !NET_CompareAdr( net_from, cls.netchan.remote_address ))
+		if( !cls.demoplayback && !NET_CompareAdr( net_from, cls.netchan.remote_address ))
 		{
 			MsgDev( D_ERROR, "CL_ReadPackets: %s:sequenced packet without connection\n", NET_AdrToString( net_from ));
 			continue;
 		}
 
-		if( Netchan_Process( &cls.netchan, &net_message ))
-		{
-			// the header is different lengths for reliable and unreliable messages
-			int headerBytes = BF_GetNumBytesRead( &net_message );
+		if( !cls.demoplayback && !Netchan_Process( &cls.netchan, &net_message ))
+			continue;	// wasn't accepted for some reason
 
-			CL_ParseServerMessage( &net_message );
-
-			// we don't know if it is ok to save a demo message until
-			// after we have parsed the frame
-			if( cls.demorecording && !cls.demowaiting )
-				CL_WriteDemoMessage( &net_message, headerBytes );
-		}
+		CL_ParseServerMessage( &net_message );
 	}
 
 	// check for fragmentation/reassembly related packets.
@@ -1380,11 +1407,6 @@ void CL_ReadNetMessage( void )
 		if( Netchan_CopyNormalFragments( &cls.netchan, &net_message ))
 		{
 			CL_ParseServerMessage( &net_message );
-
-			// we don't know if it is ok to save a demo message until
-			// after we have parsed the frame
-			if( cls.demorecording && !cls.demowaiting )
-				CL_WriteDemoMessage( &net_message, headerBytes );
 		}
 		
 		if( Netchan_CopyFileFragments( &cls.netchan, &net_message ))
@@ -1399,9 +1421,7 @@ void CL_ReadNetMessage( void )
 
 void CL_ReadPackets( void )
 {
-	if( cls.demoplayback )
-		CL_ReadDemoMessage();
-	else CL_ReadNetMessage();
+	CL_ReadNetMessage();
 
 	cl.lerpFrac = CL_LerpPoint();
 	cl.thirdperson = clgame.dllFuncs.CL_IsThirdPerson();
@@ -1491,8 +1511,6 @@ void CL_Precache_f( void )
 
 	CL_PrepSound();
 	CL_PrepVideo();
-
-	if( cls.demoplayback ) return; // not really connected
 
 	BF_WriteByte( &cls.netchan.message, clc_stringcmd );
 	BF_WriteString( &cls.netchan.message, va( "begin %i\n", spawncount ));
@@ -1646,7 +1664,7 @@ Host_ClientFrame
 void Host_ClientFrame( void )
 {
 	// if client is not active, do nothing
-	if ( !cls.initialized ) return;
+	if( !cls.initialized ) return;
 
 	// decide the simulation time
 	cl.oldtime = cl.time;
@@ -1748,6 +1766,7 @@ void CL_Shutdown( void )
 	Host_WriteOpenGLConfig ();
 	Host_WriteVideoConfig ();
 
+	CL_CloseDemoHeader();
 	IN_Shutdown ();
 	SCR_Shutdown ();
 	CL_UnloadProgs ();

@@ -266,6 +266,7 @@ typedef struct
 	float		volume;
 	float		attenuation;
 	qboolean		looping;
+	int		channel;
 	int		pitch;
 } soundlist_t;
 
@@ -310,6 +311,7 @@ typedef struct host_parm_s
 	qboolean		overview_loading;	// another nasty hack to tell imagelib about ovierview
 	qboolean		force_draw_version;	// used when fraps is loaded
 	qboolean		write_to_clipboard;	// put image to clipboard instead of disk
+	qboolean		crashed;		// set to true if crashed
 
 	char		rootdir[256];	// member root directory
 	char		gamefolder[64];	// it's a default gamefolder	
@@ -370,6 +372,7 @@ fs_offset_t FS_FileTime( const char *filename, qboolean gamedironly );
 int FS_Print( file_t *file, const char *msg );
 qboolean FS_Rename( const char *oldname, const char *newname );
 qboolean FS_FileExists( const char *filename, qboolean gamedironly );
+void FS_FileCopy( file_t *pOutput, file_t *pInput, int fileSize );
 qboolean FS_Delete( const char *path );
 int FS_UnGetc( file_t *file, byte c );
 void FS_StripExtension( char *path );
@@ -569,6 +572,7 @@ void Host_NewInstance( const char *name, const char *finalmsg );
 qboolean Host_NewGame( const char *mapName, qboolean loadGame );
 void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
+void Host_RestartAmbientSounds( void );
 qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset );
 void Host_WriteServerConfig( const char *name );
 void Host_WriteOpenGLConfig( void );

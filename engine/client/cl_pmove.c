@@ -771,12 +771,10 @@ void CL_PredictMovement( void )
 	viewent = CL_GetEntityByIndex( cl.refdef.viewentity );
 	cd = &cl.frame.local.client;
 
-	if( cls.demoplayback && viewent )
+	if( cls.demoplayback && cl.refdef.cmd != NULL )
 	{
-		// restore viewangles from angles
-		cl.refdef.cl_viewangles[PITCH] = viewent->angles[PITCH] * 6;
-		cl.refdef.cl_viewangles[YAW] = viewent->angles[YAW];
-		cl.refdef.cl_viewangles[ROLL] = 0; // roll will be computed in view.cpp
+		// restore viewangles from cmd.angles
+		VectorCopy( cl.refdef.cmd->viewangles, cl.refdef.cl_viewangles );
 	}
 
 	// unpredicted pure angled values converted into axis

@@ -4110,22 +4110,22 @@ int pfnGetLocalizedStringLength( const char *label )
 =============
 pfnRegisterTutorMessageShown
 
+only exists in PlayStation version
 =============
 */
 void pfnRegisterTutorMessageShown( int mid )
 {
-	// UNDONE: no description
 }
 
 /*
 =============
 pfnGetTimesTutorMessageShown
 
+only exists in PlayStation version
 =============
 */
 int pfnGetTimesTutorMessageShown( int mid )
 {
-	// UNDONE: no description
 	return 0;
 }
 
@@ -4133,28 +4133,29 @@ int pfnGetTimesTutorMessageShown( int mid )
 =============
 pfnProcessTutorMessageDecayBuffer
 
+only exists in PlayStation version
 =============
 */
 void pfnProcessTutorMessageDecayBuffer( int *buffer, int bufferLength )
 {
-	// UNDONE: no description
 }
 
 /*
 =============
 pfnConstructTutorMessageDecayBuffer
 
+only exists in PlayStation version
 =============
 */
 void pfnConstructTutorMessageDecayBuffer( int *buffer, int bufferLength )
 {
-	// UNDONE: no description
 }
 
 /*
 =============
 pfnResetTutorMessageDecayData
 
+only exists in PlayStation version
 =============
 */
 void pfnResetTutorMessageDecayData( void )

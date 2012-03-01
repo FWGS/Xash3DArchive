@@ -2948,7 +2948,7 @@ Demo_WriteBuffer
 */
 static void Demo_WriteBuffer( int size, byte *buffer )
 {
-	// TODO: implement
+	CL_WriteDemoUserMessage( buffer, size );
 }
 
 /*

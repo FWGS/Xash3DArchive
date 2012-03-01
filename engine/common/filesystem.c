@@ -2008,7 +2008,7 @@ fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
 			done += nb;
 			file->position += nb;
 			// Purge cached data
-			FS_Purge (file);
+			FS_Purge( file );
 		}
 	}
 	else
@@ -2616,6 +2616,30 @@ qboolean FS_Delete( const char *path )
 	iRet = remove( real_path );
 
 	return (iRet == 0);
+}
+
+/*
+==================
+FS_FileCopy
+
+==================
+*/
+void FS_FileCopy( file_t *pOutput, file_t *pInput, int fileSize )
+{
+	char	buf[MAX_SYSPATH];	// A small buffer for the copy
+	int	size;
+
+	while( fileSize > 0 )
+	{
+		if( fileSize > MAX_SYSPATH )
+			size = MAX_SYSPATH;
+		else size = fileSize;
+
+		FS_Read( pInput, buf, size );
+		FS_Write( pOutput, buf, size );
+		
+		fileSize -= size;
+	}
 }
 
 /*

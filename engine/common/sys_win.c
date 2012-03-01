@@ -396,10 +396,13 @@ long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 	{
 		// check to avoid recursive call
 		error_on_exit = true;
+		host.crashed = true;
 
-		if( host.type == HOST_NORMAL ) CL_Crashed(); // tell client about crash
+		if( host.type == HOST_NORMAL )
+			CL_Crashed(); // tell client about crash
+		else host.state = HOST_CRASHED;
+
 		Msg( "Sys_Crash: call %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
-		host.state = HOST_CRASHED;
 
 		if( host.developer <= 0 )
 		{

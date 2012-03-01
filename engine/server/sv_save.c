@@ -509,6 +509,10 @@ int SV_IsValidSave( void )
 	if( sv.background )
 		return 0;
 
+	// don't parse autosave/transition save/restores during playback!
+	if( CL_IsPlaybackDemo( ))
+		return 0;
+
 	if( !svs.initialized || sv.state != ss_active )
 	{
 		Msg( "Not playing a local game.\n" );
@@ -592,24 +596,6 @@ void SV_AgeSaveList( const char *pName, int count )
 	}
 }
 
-void SV_FileCopy( file_t *pOutput, file_t *pInput, int fileSize )
-{
-	char	buf[MAX_SYSPATH];	// A small buffer for the copy
-	int	size;
-
-	while( fileSize > 0 )
-	{
-		if( fileSize > MAX_SYSPATH )
-			size = MAX_SYSPATH;
-		else size = fileSize;
-
-		FS_Read( pInput, buf, size );
-		FS_Write( pOutput, buf, size );
-		
-		fileSize -= size;
-	}
-}
-
 void SV_DirectoryCopy( const char *pPath, file_t *pFile )
 {
 	search_t		*t;
@@ -630,7 +616,7 @@ void SV_DirectoryCopy( const char *pPath, file_t *pFile )
 		Q_strncpy( szName, FS_FileWithoutPath( t->filenames[i] ), SAVENAME_LENGTH );		
 		FS_Write( pFile, szName, SAVENAME_LENGTH );
 		FS_Write( pFile, &fileSize, sizeof( int ));
-		SV_FileCopy( pFile, pCopy, fileSize );
+		FS_FileCopy( pFile, pCopy, fileSize );
 		FS_Close( pCopy );
 	}
 	Mem_Free( t );
@@ -650,7 +636,7 @@ void SV_DirectoryExtract( file_t *pFile, int fileCount )
 		Q_snprintf( szName, sizeof( szName ), "save/%s", fileName );
 
 		pCopy = FS_Open( szName, "wb", false );
-		SV_FileCopy( pCopy, pFile, fileSize );
+		FS_FileCopy( pCopy, pFile, fileSize );
 		FS_Close( pCopy );
 	}
 }

@@ -213,25 +213,19 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	// add in muzzleflash effect
 	if( ent->curstate.effects & EF_MUZZLEFLASH )
 	{
-		vec3_t	pos;
+		dlight_t	*dl;
 
 		if( ent == &clgame.viewent )
 			ent->curstate.effects &= ~EF_MUZZLEFLASH;
 
-		VectorCopy( ent->attachment[0], pos );
+		dl = CL_AllocElight( 0 );
 
-		// make sure what attachment is valid
-		if( !VectorCompare( pos, ent->origin ))
-                    {
-			dlight_t	*dl = CL_AllocElight( 0 );
-
-			VectorCopy( pos, dl->origin );
-			dl->die = cl.time + 0.05f;
-			dl->color.r = 255;
-			dl->color.g = 180;
-			dl->color.b = 64;
-			dl->radius = 100;
-                    }
+		VectorCopy( ent->attachment[0], dl->origin );
+		dl->die = cl.time + 0.05f;
+		dl->color.r = 255;
+		dl->color.g = 180;
+		dl->color.b = 64;
+		dl->radius = 100;
 	}
 
 	// add light effect
@@ -576,6 +570,10 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	entity_state_t	*oldent;
 	int		i, count;
 
+	// save first uncompressed packet as timestamp
+	if( cls.changelevel && !delta && cls.demorecording )
+		CL_WriteDemoJumpTime();
+
 	// first, allocate packet for new frame
 	count = BF_ReadWord( msg );
 
@@ -622,7 +620,7 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		// this is a full update that we can start delta compressing from now
 		oldframe = NULL;
 
-		oldpacket = -1;  // delta too old or is initial message
+		oldpacket = -1;		// delta too old or is initial message
 		cl.force_send_usercmd = true;	// send reply
 		cls.demowaiting = false;	// we can start recording now
 	}

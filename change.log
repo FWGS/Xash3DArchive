@@ -24,6 +24,8 @@ Server: clear savedir when new game is started
 GameUI: loading maps.lst from basedir while mod doesn't contain multiplayer maps
 Network: implemented QueryCvarValue and QueryCvarValue2
 Physic: new pm-trace code, new server trace code, new studio hitbox trace code
+Client: rewrite demo record and playback
+Render: add support for STUDIO_NF_FULLBRIGHT
 
 build 1770
 

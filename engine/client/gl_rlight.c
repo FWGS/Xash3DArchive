@@ -313,11 +313,6 @@ int R_LightTraceFilter( physent_t *pe )
 	if( !pe || pe->solid != SOLID_BSP )
 		return 1;
 
-	// optimization. Ignore world to avoid
-	// unneeded transformations
-	if( pe->info == 0 )
-		return 1;
-
 	return 0;
 }
 

@@ -479,7 +479,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
 
-	clgame.load_sequence++; // now all hud sprites are invalid
+	cls.demowaiting = false;	// server is changed
+	clgame.load_sequence++;	// now all hud sprites are invalid
 
 	// wipe the client_t struct
 	if( !cls.changelevel ) CL_ClearState();
@@ -1348,7 +1349,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_ClearState ();
 			CL_InitEdicts (); // re-arrange edicts
 
-			cls.state = ca_connecting;
+			if( cls.demoplayback )
+				cls.state = ca_connected;
+			else cls.state = ca_connecting;
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;
 		case svc_setview:
@@ -1512,4 +1515,18 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 	}
 
 	cls_message_debug.parsing = false;	// done
+
+	// we don't know if it is ok to save a demo message until
+	// after we have parsed the frame
+	if( !cls.demoplayback )
+	{
+		if( cls.demorecording && !cls.demowaiting )
+		{
+			CL_WriteDemoMessage( false, starting_count, msg );
+		}
+		else if( cls.state != ca_active )
+		{
+			CL_WriteDemoMessage( true, starting_count, msg );
+		}
+	}
 }

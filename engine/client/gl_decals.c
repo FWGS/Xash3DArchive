@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "cl_tent.h"
 
+#define DECAL_OVERLAP_DISTANCE	2
 #define DECAL_DISTANCE		4	// too big values produce more clipped polygons
 #define MAX_DECALCLIPVERT		32	// produced vertexes of fragmented decal
 #define DECAL_CACHEENTRY		256	// MUST BE POWER OF 2 or code below needs to change!
@@ -459,19 +460,7 @@ static float *R_DecalVertsNoclip( decal_t *pdecal, msurface_t *surf, int texture
 	return vlist;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Check for intersecting decals on this surface
-// Input  : *psurf - 
-//			*pcount - 
-//			x - 
-//			y - 
-// Output : static decal_t
-//-----------------------------------------------------------------------------
-// UNDONE: This probably doesn't work quite right any more
-// we should base overlap on the new decal basis matrix
-// decal basis is constant per plane, perhaps we should store it (unscaled) in the shared plane struct
-// BRJ: Note, decal basis is not constant when decals need to specify an s direction
-// but that certainly isn't the majority case
+// Check for intersecting decals on this surface
 static decal_t *R_DecalIntersect( decalinfo_t *decalinfo, msurface_t *surf, int *pcount )
 {
 	int		texture;
@@ -1015,7 +1004,7 @@ static int DecalListAdd( decallist_t *pList, int count )
 		{
 			VectorSubtract( pdecal->position, pList[i].position, tmp );	// Merge
 
-			if( VectorLength( tmp ) < 2 ) // UNDONE: Tune this '2' constant
+			if( VectorLength( tmp ) < DECAL_OVERLAP_DISTANCE )
 				return count;
 		}
 	}

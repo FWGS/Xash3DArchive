@@ -960,7 +960,6 @@ void R_StudioCalcRotations( cl_entity_t *e, float pos[][3], vec4_t *q, mstudiose
 	}
 	else if( f < -0.01f )
 	{
-		// BUGBUG ( somewhere else ) but this code should validate this data.
 		// this could cause a crash if the frame # is negative, so we'll go ahead
 		// and clamp it here
 		MsgDev( D_ERROR, "StudioCalcRotations: f = %g\n", f );
@@ -1429,6 +1428,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	}
 	else VectorSet( plight->lightvec, 0.0f, 0.0f, -1.0f );
 
+	if( VectorIsNull( plight->lightvec ))
+		VectorSet( plight->lightvec, 0.0f, 0.0f, -1.0f );
+
 	VectorCopy( plight->lightvec, lightinfo->plightvec );
 
 	// setup ambient lighting
@@ -1649,14 +1651,14 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 		for( i = 0; i < plight->numdlights; i++)
 		{
 			lightcos = -DotProduct( normal, plight->dlightvec[i][bone] );
-			if( lightcos > 0 ) VectorMA( illum, lightcos, plight->dlightcolor[i], illum );
+			if( lightcos > 0.0f ) VectorMA( illum, lightcos, plight->dlightcolor[i], illum );
 		}
 
 		// now add all entity lights
 		for( i = 0; i < plight->numelights; i++)
 		{
 			lightcos = -DotProduct( normal, plight->elightvec[i][bone] );
-			if( lightcos > 0 ) VectorMA( illum, lightcos, plight->elightcolor[i], illum );
+			if( lightcos > 0.0f ) VectorMA( illum, lightcos, plight->elightcolor[i], illum );
 		}
 	}
 	
@@ -1961,6 +1963,10 @@ static void R_StudioDrawPoints( void )
 						color24	*clr;
 						clr = &RI.currententity->curstate.rendercolor;
 						pglColor4ub( clr->r, clr->g, clr->b, alpha * 255 );
+					}
+					else if( g_nFaceFlags & STUDIO_NF_FULLBRIGHT )
+					{
+						pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 					}
 					else
 					{
