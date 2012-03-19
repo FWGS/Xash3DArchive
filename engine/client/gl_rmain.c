@@ -191,6 +191,13 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 	return 0;
 }
 
+/*
+===============
+R_WorldToScreen
+
+Convert a given point from world into screen space
+===============
+*/
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 {
 	matrix4x4	worldToScreen;
@@ -203,7 +210,6 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 	Matrix4x4_Copy( worldToScreen, RI.worldviewProjectionMatrix );
 	screen[0] = worldToScreen[0][0] * point[0] + worldToScreen[0][1] * point[1] + worldToScreen[0][2] * point[2] + worldToScreen[0][3];
 	screen[1] = worldToScreen[1][0] * point[0] + worldToScreen[1][1] * point[1] + worldToScreen[1][2] * point[2] + worldToScreen[1][3];
-//	z = worldToScreen[2][0] * point[0] + worldToScreen[2][1] * point[1] + worldToScreen[2][2] * point[2] + worldToScreen[2][3];
 	w = worldToScreen[3][0] * point[0] + worldToScreen[3][1] * point[1] + worldToScreen[3][2] * point[2] + worldToScreen[3][3];
 	screen[2] = 0.0f; // just so we have something valid here
 
@@ -223,26 +229,28 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 	return behind;
 }
 
+/*
+===============
+R_ScreenToWorld
+
+Convert a given point from screen into world space
+===============
+*/
 void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 {
 	matrix4x4	screenToWorld;
-	vec3_t	temp;
 	float	w;
 
 	if( !point || !screen )
 		return;
 
-	// g-cont. does we need a full invert here?
-	Matrix4x4_Invert_Simple( screenToWorld, RI.worldviewProjectionMatrix );
-	temp[0] = 2.0f * (screen[0] - RI.viewport[0]) / RI.viewport[2] - 1;
-	temp[1] = -2.0f * (screen[1] - RI.viewport[1]) / RI.viewport[3] + 1;
-	temp[2] = 0.0f; // just so we have something valid here
+	Matrix4x4_Invert_Full( screenToWorld, RI.worldviewProjectionMatrix );
 
-	point[0] = temp[0] * screenToWorld[0][0] + temp[1] * screenToWorld[0][1] + temp[2] * screenToWorld[0][2] + screenToWorld[0][3];
-	point[1] = temp[0] * screenToWorld[1][0] + temp[1] * screenToWorld[1][1] + temp[2] * screenToWorld[1][2] + screenToWorld[1][3];
-	point[2] = temp[0] * screenToWorld[2][0] + temp[1] * screenToWorld[2][1] + temp[2] * screenToWorld[2][2] + screenToWorld[2][3];
-	w = temp[0] * screenToWorld[3][0] + temp[1] * screenToWorld[3][1] + temp[2] * screenToWorld[3][2] + screenToWorld[3][3];
-	if( w ) VectorScale( point, ( 1.0f / w ), point );
+	point[0] = screen[0] * screenToWorld[0][0] + screen[1] * screenToWorld[0][1] + screen[2] * screenToWorld[0][2] + screenToWorld[0][3];
+	point[1] = screen[0] * screenToWorld[1][0] + screen[1] * screenToWorld[1][1] + screen[2] * screenToWorld[1][2] + screenToWorld[1][3];
+	point[2] = screen[0] * screenToWorld[2][0] + screen[1] * screenToWorld[2][1] + screen[2] * screenToWorld[2][2] + screenToWorld[2][3];
+	w = screen[0] * screenToWorld[3][0] + screen[1] * screenToWorld[3][1] + screen[2] * screenToWorld[3][2] + screenToWorld[3][3];
+	if( w != 0.0f ) VectorScale( point, ( 1.0f / w ), point );
 }
 
 /*

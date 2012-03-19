@@ -83,7 +83,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 		break;
 	default:
 		pe->model = NULL;
-		pe->studiomodel = NULL;
+		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
 		VectorCopy( ed->v.mins, pe->mins );
 		VectorCopy( ed->v.maxs, pe->maxs );
 		Q_strcpy( pe->name, SV_ClassName( ed ));

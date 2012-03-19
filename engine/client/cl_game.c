@@ -2828,6 +2828,12 @@ int TriSpriteTexture( model_t *pSpriteModel, int frame )
 	if(( gl_texturenum = R_GetSpriteTexture( pSpriteModel, frame )) == 0 )
 		return 0;
 
+	if( gl_texturenum <= 0 || gl_texturenum > MAX_TEXTURES )
+	{
+		MsgDev( D_ERROR, "TriSpriteTexture: bad index %i\n", gl_texturenum );
+		gl_texturenum = tr.defaultTexture;
+	}
+
 	psprite = pSpriteModel->cache.data;
 	if( psprite->texFormat == SPR_ALPHTEST )
 	{

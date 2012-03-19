@@ -76,6 +76,7 @@ struct
 	demodirectory_t	directory;
 	int		framecount;
 	float		starttime;
+	float		realstarttime;
 	int		entryIndex;
 } demo;
 
@@ -346,6 +347,7 @@ void CL_WriteDemoHeader( const char *name )
 	FS_Seek( cls.demoheader, savepos, SEEK_SET );
 
 	demo.starttime = CL_GetDemoRecordClock();	// setup the demo starttime
+	demo.realstarttime = demo.starttime;
 	demo.framecount = 0;
 
 	// now move on to entry # 1, the first data chunk.
@@ -397,7 +399,7 @@ void CL_StopRecord( void )
 
 	curpos = FS_Tell( cls.demofile );
 	demo.entry->length = curpos - demo.entry->offset;
-	demo.entry->playback_time = stoptime - demo.starttime;
+	demo.entry->playback_time = stoptime - demo.realstarttime;
 	demo.entry->playback_frames = demo.framecount;
 
 	//  Now write out the directory and free it and touch up the demo header.
@@ -422,7 +424,7 @@ void CL_StopRecord( void )
 	menu.globals->demoname[0] = '\0';
 
 	Msg( "Completed demo\n" );
-	MsgDev( D_INFO, "Recording time %.2f\n", stoptime - demo.starttime );
+	MsgDev( D_INFO, "Recording time %.2f\n", stoptime - demo.realstarttime );
 }
 
 /*
@@ -801,11 +803,12 @@ CL_GetComment
 */  
 qboolean CL_GetComment( const char *demoname, char *comment )
 {
-	file_t	*demfile;
-	char     	buf_data[2048];
-	int	r, maxClients, curSize;
-	string	maptitle;
-	sizebuf_t	buf;
+	file_t		*demfile;
+	demoheader_t	demohdr;
+	demodirectory_t	directory;
+	demoentry_t	entry;
+	float		playtime = 0.0f;
+	int		i;
 	
 	if( !comment ) return false;
 
@@ -816,68 +819,44 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 		return false;
           }
 
-	// read the first demo packet. extract info from it
-	// get the length
-	r = FS_Read( demfile, &curSize, 4 );
-	if( r != 4 )
+	// read in the m_DemoHeader
+	FS_Read( demfile, &demohdr, sizeof( demoheader_t ));
+
+	if( demohdr.id != IDEMOHEADER )
 	{
 		FS_Close( demfile );
 		Q_strncpy( comment, "<corrupted>", MAX_STRING );
 		return false;
 	}
 
-	if( curSize == -1 )
-	{
-		FS_Close( demfile );
-		Q_strncpy( comment, "<corrupted>", MAX_STRING );
-		return false;
-	}
-
-	if( curSize > sizeof( buf_data ))
-	{
-		FS_Close( demfile );
-		Q_strncpy( comment, "<not compatible>", MAX_STRING );
-		return false;
-	}
-
-	// init the message (set maxsize to cursize so overflow check will be working properly)
-	BF_Init( &buf, "DemoRead", buf_data, curSize );
-	r = FS_Read( demfile, buf.pData, curSize );
-
-	if( r != curSize )
-	{
-		FS_Close( demfile );
-		Q_strncpy( comment, "<truncated file>", MAX_STRING );
-		return false;
-	}
-
-	// skip server data ident
-	BF_ReadByte( &buf );
-
-	if( PROTOCOL_VERSION != BF_ReadLong( &buf ))
+	if( demohdr.net_protocol != PROTOCOL_VERSION || demohdr.dem_protocol != DEMO_PROTOCOL )
 	{
 		FS_Close( demfile );
 		Q_strncpy( comment, "<invalid protocol>", MAX_STRING );
 		return false;
 	}
 
-	BF_ReadLong( &buf ); // server count
-	BF_ReadLong( &buf ); // checksum
-	BF_ReadByte( &buf ); // playernum
-	maxClients = BF_ReadByte( &buf );
-	if( BF_ReadWord( &buf ) > GI->max_edicts )
+	// now read in the directory structure.
+	FS_Seek( demfile, demohdr.directory_offset, SEEK_SET );
+	FS_Read( demfile, &directory.numentries, sizeof( int ));
+
+	if( directory.numentries < 1 || directory.numentries > 1024 )
 	{
 		FS_Close( demfile );
-		Q_strncpy( comment, "<too many edicts>", MAX_STRING );
+		Q_strncpy( comment, "<corrupted>", MAX_STRING );
 		return false;
 	}
 
+	for( i = 0; i < directory.numentries; i++ )
+	{
+		FS_Read( demfile, &entry, sizeof( demoentry_t ));
+		playtime += entry.playback_time;
+	}
+
 	// split comment to sections
-	Q_strncpy( comment, BF_ReadString( &buf ), CS_SIZE );	// mapname
-	Q_strncpy( maptitle, BF_ReadString( &buf ), MAX_STRING );	// maptitle
-	if( !Q_strlen( maptitle )) Q_strncpy( maptitle, "<no title>", MAX_STRING );
-	Q_strncpy( comment + CS_SIZE, maptitle, CS_SIZE );
-	Q_strncpy( comment + CS_SIZE * 2, va( "%i", maxClients ), CS_TIME );
+	Q_strncpy( comment, demohdr.mapname, CS_SIZE );
+	Q_strncpy( comment + CS_SIZE, "<No Title>", CS_SIZE );	// FIXME: write titles or somewhat
+	Q_strncpy( comment + CS_SIZE * 2, va( "%g sec", playtime ), CS_TIME );
 
 	// all done
 	FS_Close( demfile );

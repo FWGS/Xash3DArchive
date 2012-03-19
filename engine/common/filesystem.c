@@ -1884,6 +1884,7 @@ file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly )
           {
 		// some stupid mappers used leading '/' or '\' in path to models or sounds
 		if( filepath[0] == '/' || filepath[0] == '\\' ) filepath++;
+		if( filepath[0] == '/' || filepath[0] == '\\' ) filepath++;
           }
 
 	if( FS_CheckNastyPath( filepath, false ))

@@ -1,4 +1,8 @@
 build ????
+Physic: fix trace bug when model is missing
+Client: implement function TriScreenToWorld
+
+build 1850
 
 Physic: add check for liquid brushes that has only hull0
 Render: draw decals without culling on the transparent surfaces
@@ -26,6 +30,7 @@ Network: implemented QueryCvarValue and QueryCvarValue2
 Physic: new pm-trace code, new server trace code, new studio hitbox trace code
 Client: rewrite demo record and playback
 Render: add support for STUDIO_NF_FULLBRIGHT
+Physic: fix pmove trace bug
 
 build 1770
 

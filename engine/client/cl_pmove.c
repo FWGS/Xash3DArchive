@@ -66,7 +66,7 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 		break;
 	default:
 		pe->model = NULL;
-		pe->studiomodel = NULL;
+		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
 		VectorCopy( ent->curstate.mins, pe->mins );
 		VectorCopy( ent->curstate.maxs, pe->maxs );
 		break;

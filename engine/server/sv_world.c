@@ -890,13 +890,11 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 	Q_memset( trace, 0, sizeof( trace_t ));
 	VectorCopy( end, trace->endpos );
 	trace->fraction = 1.0;
-	trace->hitgroup = -1;
 	trace->allsolid = 1;
 
 	model = Mod_Handle( ent->v.modelindex );
-	ASSERT( model );
 
-	if( model->type == mod_studio )
+	if( model && model->type == mod_studio )
 	{
 		hull = SV_HullForStudioModel( ent, mins, maxs, offset, &hullcount );
 	}
@@ -936,7 +934,6 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 			Q_memset( &trace_hitbox, 0, sizeof( trace_t ));
 			VectorCopy( end, trace_hitbox.endpos );
 			trace_hitbox.fraction = 1.0;
-			trace_hitbox.hitgroup = -1;
 			trace_hitbox.allsolid = 1;
 
 			SV_RecursiveHullCheck( &hull[i], hull[i].firstclipnode, 0.0f, 1.0f, start_l, end_l, &trace_hitbox );

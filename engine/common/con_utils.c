@@ -68,6 +68,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 		char		*ents = NULL, *pfile;
 		qboolean		gearbox = false;
+		qboolean		xash_ext = false;
 			
 		if( Q_stricmp( ext, "bsp" )) continue;
 		Q_strncpy( message, "^1error^7", sizeof( message ));
@@ -75,17 +76,18 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	
 		if( f )
 		{
-			dheader_t	*header;
+			dheader_t	*header, tmphdr;
+			int xash_ident;
 
-			Q_memset( buf, 0, MAX_SYSPATH );
-			FS_Read( f, buf, MAX_SYSPATH );
-			ver = *(uint *)buf;
+			Q_memset( &tmphdr, 0, sizeof( tmphdr ));
+			FS_Read( f, &tmphdr, sizeof( tmphdr ));
+			ver = tmphdr.version;
+			header = &tmphdr;
                               
 			switch( ver )
 			{
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
-				header = (dheader_t *)buf;
 				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && !(header->lumps[LUMP_ENTITIES].filelen % sizeof(dplane_t)))
 				{
 					lumpofs = header->lumps[LUMP_PLANES].fileofs;
@@ -98,6 +100,9 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 					lumplen = header->lumps[LUMP_ENTITIES].filelen;
 					gearbox = false;
 				}
+				FS_Read( f, &xash_ident, sizeof( xash_ident ));
+				if( xash_ident == (('H'<<24)+('S'<<16)+('A'<<8)+'X'))
+					xash_ext = true; // we found extra lumps!
 				break;
 			}
 
@@ -146,6 +151,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			break;
 		case HLBSP_VERSION:
 			if( gearbox ) Q_strncpy( buf, "Blue-Shift", sizeof( buf ));
+			else if( xash_ext ) Q_strncpy( buf, "Xash3D", sizeof( buf ));
 			else Q_strncpy( buf, "Half-Life", sizeof( buf ));
 			break;
 		default:	Q_strncpy( buf, "??", sizeof( buf )); break;

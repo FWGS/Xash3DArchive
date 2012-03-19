@@ -1253,6 +1253,14 @@ void R_DrawBrushModel( cl_entity_t *e )
 	clmodel = e->model;
 	RI.currentWaveHeight = RI.currententity->curstate.scale * 32.0f;
 
+	// don't reflect this entity in mirrors
+	if( e->curstate.effects & EF_NOREFLECT && RI.params & RP_MIRRORVIEW )
+		return;
+
+	// draw only in mirrors
+	if( e->curstate.effects & EF_REFLECTONLY && !( RI.params & RP_MIRRORVIEW ))
+		return;
+
 	if( !VectorIsNull( e->angles ))
 	{
 		for( i = 0; i < 3; i++ )

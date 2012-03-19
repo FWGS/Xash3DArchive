@@ -301,7 +301,6 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 	Q_memset( &trace_total, 0, sizeof( trace_total ));
 	VectorCopy( end, trace_total.endpos );
 	trace_total.fraction = 1.0f;
-	trace_total.hitgroup = -1;
 	trace_total.ent = -1;
 
 	for( i = 0; i < numents; i++ )
@@ -386,7 +385,6 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 		VectorCopy( end, trace_bbox.endpos );
 		trace_bbox.allsolid = true;
 		trace_bbox.fraction = 1.0f;
-		trace_bbox.hitgroup = -1;
 
 		if( hullcount < 1 )
 		{
@@ -407,7 +405,6 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 				VectorCopy( end, trace_hitbox.endpos );
 				trace_hitbox.allsolid = true;
 				trace_hitbox.fraction = 1.0f;
-				trace_hitbox.hitgroup = -1;
 
 				PM_RecursiveHullCheck( &hull[j], hull[j].firstclipnode, 0, 1, start_l, end_l, &trace_hitbox );
 

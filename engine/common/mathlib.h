@@ -158,6 +158,8 @@ void Matrix4x4_ConvertToEntity( const matrix4x4 in, vec3_t angles, vec3_t origin
 void Matrix4x4_SetOrigin( matrix4x4 out, float x, float y, float z );
 void Matrix4x4_Invert_Simple( matrix4x4 out, const matrix4x4 in1 );
 void Matrix4x4_OriginFromMatrix( const matrix4x4 in, float *out );
+void Matrix4x4_Transpose( matrix4x4 out, const matrix4x4 in1 );
+qboolean Matrix4x4_Invert_Full( matrix4x4 out, const matrix4x4 in1 );
 
 extern vec3_t		vec3_origin;
 extern const matrix3x4	matrix3x4_identity;
