@@ -73,7 +73,7 @@ static void UI_VidOptions_GetConfig( void )
 		uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 1.8f, 3.0f, 0.0f, 1.0f );
 		PIC_SetGamma( uiVidOptions.hTestImage, CVAR_GET_FLOAT( "gamma" ));
 	}
-	else uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 0.5f, 3.0f, 0.0f, 1.0f );
+	else uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 0.5f, 2.3f, 0.0f, 1.0f );
 
 	if( CVAR_GET_FLOAT( "r_fastsky" ))
 		uiVidOptions.fastSky.enabled = 1;

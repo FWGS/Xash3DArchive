@@ -179,8 +179,42 @@ qboolean SV_RunThink( edict_t *ent )
 		svgame.dllFuncs.pfnThink( ent );
 	}
 
-//	if( ent->v.flags & FL_SPECTATOR )
-//		SV_FreeEdict( ent );
+	if( ent->v.flags & FL_SPECTATOR )
+		SV_FreeEdict( ent );
+
+	return !ent->free;
+}
+
+/*
+=============
+SV_PlayerRunThink
+
+Runs thinking code if player time.  There is some play in the exact time the think
+function will be called, because it is called before any movement is done
+in a frame.  Not used for pushmove objects, because they must be exact.
+Returns false if the entity removed itself.
+=============
+*/
+qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time )
+{
+	float	thinktime;
+
+	if(!( ent->v.flags & (FL_KILLME|FL_DORMANT )))
+	{
+		thinktime = ent->v.nextthink;
+		if( thinktime <= 0.0f || thinktime > time + frametime )
+			return true;
+
+		if( thinktime > time )
+			thinktime = time;
+
+		ent->v.nextthink = 0.0f;
+		svgame.globals->time = thinktime;
+		svgame.dllFuncs.pfnThink( ent );
+	}
+
+	if( ent->v.flags & FL_KILLME )
+		SV_FreeEdict( ent );
 
 	return !ent->free;
 }
@@ -192,10 +226,8 @@ SV_Impact
 Two entities have touched, so run their touch functions
 ==================
 */
-void SV_Impact( edict_t *e1, trace_t *trace )
+void SV_Impact( edict_t *e1, edict_t *e2, trace_t *trace )
 {
-	edict_t	*e2 = trace->ent;
-
 	svgame.globals->time = sv.time;
 
 	if(( e1->v.flags|e2->v.flags ) & FL_SPECTATOR )
@@ -466,7 +498,7 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 		}
 
 		// run the impact function
-		SV_Impact( ent, &trace );
+		SV_Impact( ent, trace.ent, &trace );
 
 		// break if removed by the impact function
 		if( ent->free ) break;
@@ -662,7 +694,8 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	if( blocked ) *blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
 
 	// so we can run impact function afterwards.
-	if( SV_IsValidEdict( trace.ent )) SV_Impact( ent, &trace );
+	if( SV_IsValidEdict( trace.ent ))
+		SV_Impact( ent, trace.ent, &trace );
 
 	return trace;
 }
@@ -1500,7 +1533,7 @@ void SV_Physics_Step( edict_t *ent )
 		{
 			trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
 			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
-				SV_Impact( ent, &trace );
+				SV_Impact( ent, trace.ent, &trace );
 		}
 	}
 
@@ -1582,7 +1615,9 @@ static void SV_Physics_Entity( edict_t *ent )
 		break;
 	}
 
-	if( ent->v.flags & FL_KILLME )
+	// g-cont. don't alow free entities during loading because
+	// this produce a corrupted baselines
+	if( sv.state == ss_active && ent->v.flags & FL_KILLME )
 		SV_FreeEdict( ent );
 }
 

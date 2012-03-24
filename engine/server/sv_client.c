@@ -92,15 +92,14 @@ A connection request that did not come from the master
 */
 void SV_DirectConnect( netadr_t from )
 {
-	char		*s, physinfo[512];
+	char		physinfo[512];
 	char		userinfo[MAX_INFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
-	edict_t		*ent;
-	qboolean		spectator = false;
 	int		i, edictnum;
 	int		qport, version;
 	int		count = 0;
 	int		challenge;
+	edict_t		*ent;
 
 	version = Q_atoi( Cmd_Argv( 1 ));
 	if( version != PROTOCOL_VERSION )
@@ -158,12 +157,6 @@ void SV_DirectConnect( netadr_t from )
 	newcl = &temp;
 	Q_memset( newcl, 0, sizeof( sv_client_t ));
 
-	// check for spectators          
-	s = Info_ValueForKey( userinfo, "spectator" );
-
-	if( s && Q_strcmp( s, "0" ) && sv_maxclients->integer > 1 )
-		spectator = true;
-
 	// if there is already a slot for this ip, reuse it
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -216,10 +209,7 @@ gotnewcl:
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
 	newcl->userid = g_userid++;	// create unique userid
 	newcl->authentication_method = 2;
-#if 0
-	// g-cont. i'm don't know how spectators interact with server. disabled
-	newcl->spectator = spectator;
-#endif		
+
 	// get the game a chance to reject this connection or modify the userinfo
 	if( !( SV_ClientConnect( ent, userinfo )))
 	{
@@ -390,9 +380,7 @@ void SV_DropClient( sv_client_t *drop )
 	}
 
 	// let the game known about client state
-	if( drop->spectator )
-		svgame.dllFuncs.pfnSpectatorDisconnect( drop->edict );
-	else svgame.dllFuncs.pfnClientDisconnect( drop->edict );
+	svgame.dllFuncs.pfnClientDisconnect( drop->edict );
 
 	// don't send to other clients
 	drop->edict->v.modelindex = 0;
@@ -967,26 +955,20 @@ void SV_PutClientInServer( edict_t *ent )
 
 	if( !sv.loadgame )
 	{	
+		client->hltv_proxy = Q_atoi( Info_ValueForKey( client->userinfo, "hltv" )) ? true : false;
+
 		if( client->hltv_proxy )
-			ent->v.flags |= FL_PROXY;			
+			ent->v.flags |= FL_PROXY;
 		else ent->v.flags = 0;
 
-		if( client->spectator )
-		{
-      			svgame.globals->time = sv.time;
-			svgame.dllFuncs.pfnSpectatorConnect( ent );
-		}
-		else
-		{
-			ent->v.netname = MAKE_STRING( client->name );
+		ent->v.netname = MAKE_STRING( client->name );
 
-			// fisrt entering
-      			svgame.globals->time = sv.time;
-			svgame.dllFuncs.pfnClientPutInServer( ent );
+		// fisrt entering
+		svgame.globals->time = sv.time;
+		svgame.dllFuncs.pfnClientPutInServer( ent );
 
-			if( sv.background )	// don't attack player in background mode
-				ent->v.flags |= (FL_GODMODE|FL_NOTARGET);
-		}
+		if( sv.background )	// don't attack player in background mode
+			ent->v.flags |= (FL_GODMODE|FL_NOTARGET);
 
 		client->pViewEntity = NULL; // reset pViewEntity
 
@@ -999,12 +981,6 @@ void SV_PutClientInServer( edict_t *ent )
 	}
 	else
 	{
-		if( client->hltv_proxy )
-		{
-			MsgDev( D_ERROR, "spectator mode doesn't work with saved game\n" );
-			return;
-		}
-
 		// enable dev-mode to prevent crash cheat-protecting from Invasion mod
 		if( ent->v.flags & (FL_GODMODE|FL_NOTARGET) && !Q_stricmp( GI->gamefolder, "invasion" ))
 			SV_ExecuteClientCommand( client, "test\n" );
@@ -1110,7 +1086,7 @@ void SV_New_f( sv_client_t *cl )
 	BF_WriteLong( &cl->netchan.message, PROTOCOL_VERSION );
 	BF_WriteLong( &cl->netchan.message, svs.spawncount );
 	BF_WriteLong( &cl->netchan.message, sv.checksum );
-	BF_WriteByte( &cl->netchan.message, playernum|( cl->spectator ? 128 : 0 ));
+	BF_WriteByte( &cl->netchan.message, playernum );
 	BF_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
 	BF_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
 	BF_WriteString( &cl->netchan.message, sv.name );
@@ -1653,7 +1629,7 @@ void SV_Pause_f( sv_client_t *cl )
 		return;
 	}
 
-	if( cl->spectator )
+	if( cl->hltv_proxy )
 	{
 		SV_ClientPrintf( cl, PRINT_HIGH, "Spectators can not pause.\n" );
 		return;
@@ -1741,7 +1717,6 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 
 	cl->local_weapons = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) ? true : false;
 	cl->lag_compensation = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )) ? true : false;
-	cl->hltv_proxy = Q_atoi( Info_ValueForKey( cl->userinfo, "hltv" )) ? true : false; 
 
 	val = Info_ValueForKey( cl->userinfo, "cl_updaterate" );
 
@@ -2066,27 +2041,21 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	{
 		while( net_drop > numbackup )
 		{
-			SV_PreRunCmd( cl, &cl->lastcmd, 0 );
 			SV_RunCmd( cl, &cl->lastcmd, 0 );
-			SV_PostRunCmd( cl );
 			net_drop--;
 		}
 
 		while( net_drop > 0 )
 		{
 			i = net_drop + newcmds - 1;
-			SV_PreRunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
 			SV_RunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
-			SV_PostRunCmd( cl );
 			net_drop--;
 		}
 	}
 
 	for( i = newcmds - 1; i >= 0; i-- )
 	{
-		SV_PreRunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
 		SV_RunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
-		SV_PostRunCmd( cl );
 	}
 
 	cl->lastcmd = cmds[0];

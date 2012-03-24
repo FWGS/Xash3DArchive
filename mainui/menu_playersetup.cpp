@@ -41,7 +41,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ID_TOPCOLOR		7
 #define ID_BOTTOMCOLOR	8
 #define ID_HIMODELS		9
-#define ID_SPECTATOR	10
+#define ID_SHOWMODELS	10
 
 #define MAX_PLAYERMODELS	100
 
@@ -63,16 +63,18 @@ typedef struct
 	menuPicButton_s	AdvOptions;
 	menuBitmap_s	view;
 
+	menuCheckBox_s	showModels;
 	menuCheckBox_s	hiModels;
 	menuSlider_s	topColor;
 	menuSlider_s	bottomColor;
-	menuCheckBox_s	spectator;
 
 	menuField_s	name;
 	menuSpinControl_s	model;
 } uiPlayerSetup_t;
 
 static uiPlayerSetup_t	uiPlayerSetup;
+static HIMAGE		playerImage = 0;	// keep actual
+static char		lastImage[256];
 
 /*
 =================
@@ -154,8 +156,8 @@ static void UI_PlayerSetup_GetConfig( void )
 	if( CVAR_GET_FLOAT( "cl_himodels" ))
 		uiPlayerSetup.hiModels.enabled = 1;
 
-	if( CVAR_GET_FLOAT( "spectator" ))
-		uiPlayerSetup.spectator.enabled = 1;
+	if( CVAR_GET_FLOAT( "ui_showmodels" ))
+		uiPlayerSetup.showModels.enabled = 1;
 }
 
 /*
@@ -170,7 +172,7 @@ static void UI_PlayerSetup_SetConfig( void )
 	CVAR_SET_FLOAT( "topcolor", (int)(uiPlayerSetup.topColor.curValue * 255 ));
 	CVAR_SET_FLOAT( "bottomcolor", (int)(uiPlayerSetup.bottomColor.curValue * 255 ));
 	CVAR_SET_FLOAT( "cl_himodels", uiPlayerSetup.hiModels.enabled );
-	CVAR_SET_FLOAT( "spectator", uiPlayerSetup.spectator.enabled );
+	CVAR_SET_FLOAT( "ui_showmodels", uiPlayerSetup.showModels.enabled );
 }
 
 /*
@@ -181,6 +183,8 @@ UI_PlayerSetup_UpdateConfig
 static void UI_PlayerSetup_UpdateConfig( void )
 {
 	char	path[256], name[256];
+	char	newImage[256];
+	int	topColor, bottomColor;
 
 	// see if the model has changed
 	if( stricmp( uiPlayerSetup.currentModel, uiPlayerSetup.models[(int)uiPlayerSetup.model.curValue] ))
@@ -192,19 +196,62 @@ static void UI_PlayerSetup_UpdateConfig( void )
 	strcpy( name, uiPlayerSetup.models[(int)uiPlayerSetup.model.curValue] );
 
 	if( !stricmp( name, "player" ))
+	{
 		strcpy( path, "models/player.mdl" );
-	else sprintf( path, "models/player/%s/%s.mdl", name, name );
+		newImage[0] = '\0';
+	}
+	else
+	{
+		sprintf( path, "models/player/%s/%s.mdl", name, name );
+		sprintf( newImage, "models/player/%s/%s.bmp", name, name );
+	}
+
+	topColor = (int)(uiPlayerSetup.topColor.curValue * 255 );
+	bottomColor = (int)(uiPlayerSetup.bottomColor.curValue * 255 );
 
 	CVAR_SET_STRING( "model", uiPlayerSetup.currentModel );
 	CVAR_SET_FLOAT( "cl_himodels", uiPlayerSetup.hiModels.enabled );
-	CVAR_SET_FLOAT( "spectator", uiPlayerSetup.spectator.enabled );
-	CVAR_SET_FLOAT( "topcolor", (int)(uiPlayerSetup.topColor.curValue * 255 ));
-	CVAR_SET_FLOAT( "bottomcolor", (int)(uiPlayerSetup.bottomColor.curValue * 255 ));
+	CVAR_SET_FLOAT( "ui_showmodels", uiPlayerSetup.showModels.enabled );
+	CVAR_SET_FLOAT( "topcolor", topColor );
+	CVAR_SET_FLOAT( "bottomcolor", bottomColor );
 
 	// IMPORTANT: always set default model becuase we need to have something valid here
 	// if you wish draw your playermodel as normal studiomodel please change "models/player.mdl" to path
 	if( uiPlayerSetup.ent )
 		ENGINE_SET_MODEL( uiPlayerSetup.ent, "models/player.mdl" );
+
+	if( !ui_showmodels->value )
+	{
+		if( stricmp( lastImage, newImage ))
+		{
+			if( lastImage[0] && playerImage )
+			{
+				// release old image
+//				Con_NPrintf( 1, "release %s\n", lastImage );
+				PIC_Free( lastImage );
+				lastImage[0] = '\0';
+				playerImage = 0;
+			}
+
+			if( stricmp( name, "player" ))
+			{
+				sprintf( lastImage, "models/player/%s/%s.bmp", name, name );
+				playerImage = PIC_Load( lastImage, PIC_KEEP_8BIT ); // if present of course
+//				Con_NPrintf( 2, "loading %s[%i]\n", lastImage, playerImage );
+			}
+			else if( lastImage[0] && playerImage )
+			{
+//				Con_NPrintf( 1, "release %s\n", lastImage );
+				// release old image
+				PIC_Free( lastImage );
+				lastImage[0] = '\0';
+				playerImage = 0;
+			}
+		}
+
+		if( playerImage != 0 ) // update remap colors
+			PIC_Remap( playerImage, topColor, bottomColor );
+	}
 }
 
 /*
@@ -219,7 +266,7 @@ static void UI_PlayerSetup_Callback( void *self, int event )
 	switch( item->id )
 	{
 	case ID_HIMODELS:
-	case ID_SPECTATOR:
+	case ID_SHOWMODELS:
 		if( event == QM_PRESSED )
 			((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_PRESSED;
 		else ((menuCheckBox_s *)self)->focusPic = UI_CHECKBOX_FOCUS;
@@ -263,16 +310,24 @@ static void UI_PlayerSetup_Ownerdraw( void *self )
 	// draw the rectangle
 	UI_DrawRectangle( item->x, item->y, item->width, item->height, uiInputFgColor );
 
-	R_ClearScene ();
+	if( !ui_showmodels->value && playerImage != 0 )
+	{
+		PIC_Set( playerImage, 255, 255, 255, 255 );
+		PIC_Draw( item->x, item->y, item->width, item->height );
+	}
+	else
+	{
+		R_ClearScene ();
 
-	// update renderer timings
-	uiPlayerSetup.refdef.time = gpGlobals->time;
-	uiPlayerSetup.refdef.frametime = gpGlobals->frametime;
-	uiPlayerSetup.ent->curstate.body = 0; // clearing body each frame
+		// update renderer timings
+		uiPlayerSetup.refdef.time = gpGlobals->time;
+		uiPlayerSetup.refdef.frametime = gpGlobals->frametime;
+		uiPlayerSetup.ent->curstate.body = 0; // clearing body each frame
 
-	// draw the player model
-	R_AddEntity( ET_NORMAL, uiPlayerSetup.ent );
-	R_RenderFrame( &uiPlayerSetup.refdef );
+		// draw the player model
+		R_AddEntity( ET_NORMAL, uiPlayerSetup.ent );
+		R_RenderFrame( &uiPlayerSetup.refdef );
+	}
 }
 
 /*
@@ -391,23 +446,23 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.bottomColor.maxValue = 1.0;
 	uiPlayerSetup.bottomColor.range = 0.05f;
 
+	uiPlayerSetup.showModels.generic.id = ID_SHOWMODELS;
+	uiPlayerSetup.showModels.generic.type = QMTYPE_CHECKBOX;
+	uiPlayerSetup.showModels.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
+	uiPlayerSetup.showModels.generic.name = "Show Player Models";
+	uiPlayerSetup.showModels.generic.x = 72;
+	uiPlayerSetup.showModels.generic.y = 380;
+	uiPlayerSetup.showModels.generic.callback = UI_PlayerSetup_Callback;
+	uiPlayerSetup.showModels.generic.statusText = "show 3D player models instead of preview thumbnails";
+
 	uiPlayerSetup.hiModels.generic.id = ID_HIMODELS;
 	uiPlayerSetup.hiModels.generic.type = QMTYPE_CHECKBOX;
 	uiPlayerSetup.hiModels.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
 	uiPlayerSetup.hiModels.generic.name = "High quality models";
 	uiPlayerSetup.hiModels.generic.x = 72;
-	uiPlayerSetup.hiModels.generic.y = 380;
+	uiPlayerSetup.hiModels.generic.y = 430;
 	uiPlayerSetup.hiModels.generic.callback = UI_PlayerSetup_Callback;
 	uiPlayerSetup.hiModels.generic.statusText = "show hi-res models in multiplayer";
-
-	uiPlayerSetup.spectator.generic.id = ID_SPECTATOR;
-	uiPlayerSetup.spectator.generic.type = QMTYPE_CHECKBOX;
-	uiPlayerSetup.spectator.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW;
-	uiPlayerSetup.spectator.generic.name = "Play as a spectator";
-	uiPlayerSetup.spectator.generic.x = 72;
-	uiPlayerSetup.spectator.generic.y = 430;
-	uiPlayerSetup.spectator.generic.callback = UI_PlayerSetup_Callback;
-	uiPlayerSetup.spectator.generic.statusText = "enable spectator mode in multiplayer";
 
 	UI_PlayerSetup_GetConfig();
 
@@ -422,8 +477,8 @@ static void UI_PlayerSetup_Init( void )
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.model );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.topColor );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.bottomColor );
+	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.showModels );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.hiModels );
-	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.spectator );
 
 	// setup render and actor
 	uiPlayerSetup.refdef.fov_x = 40;

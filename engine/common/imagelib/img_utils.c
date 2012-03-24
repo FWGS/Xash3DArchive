@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 #include "imagelib.h"
 #include "mathlib.h"
+#include "mod_local.h"
 
 convar_t *gl_round_down;
 
@@ -395,6 +396,78 @@ void Image_CopyPalette32bit( void )
 	if( image.palette ) return; // already created ?
 	image.palette = Mem_Alloc( host.imagepool, 1024 );
 	Q_memcpy( image.palette, image.d_currentpal, 1024 );
+}
+
+void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end )
+{
+	float	r, g, b;
+	float	maxcol, mincol;
+	float	hue, val, sat;
+	int	i;
+
+	hue = (float)(newHue * ( 360.0f / 255 ));
+
+	for( i = start; i <= end; i++ )
+	{
+		r = palSrc[i*3+0];
+		g = palSrc[i*3+1];
+		b = palSrc[i*3+2];
+		
+		maxcol = max( max( r, g ), b ) / 255.0f;
+		mincol = min( min( r, g ), b ) / 255.0f;
+		
+		val = maxcol;
+		sat = (maxcol - mincol) / maxcol;
+
+		mincol = val * (1.0f - sat);
+
+		if( hue <= 120.0f )
+		{
+			b = mincol;
+			if( hue < 60 )
+			{
+				r = val;
+				g = mincol + hue * (val - mincol) / (120.0f - hue);
+			}
+			else
+			{
+				g = val;
+				r = mincol + (120.0f - hue) * (val - mincol) / hue;
+			}
+		}
+		else if( hue <= 240.0f )
+		{
+			r = mincol;
+			if( hue < 180.0f )
+			{
+				g = val;
+				b = mincol + (hue - 120.0f) * (val - mincol) / (240.0f - hue);
+			}
+			else
+			{
+				b = val;
+				g = mincol + (240.0f - hue) * (val - mincol) / (hue - 120.0f);
+			}
+		}
+		else
+		{
+			g = mincol;
+			if( hue < 300.0f )
+			{
+				b = val;
+				r = mincol + (hue - 240.0f) * (val - mincol) / (360.0f - hue);
+			}
+			else
+			{
+				r = val;
+				b = mincol + (360.0f - hue) * (val - mincol) / (hue - 240.0f);
+			}
+		}
+
+		palSrc[i*3+0] = (byte)(r * 255);
+		palSrc[i*3+1] = (byte)(g * 255);
+		palSrc[i*3+2] = (byte)(b * 255);
+	}
 }
 
 void Image_CopyParms( rgbdata_t *src )
@@ -1245,6 +1318,34 @@ rgbdata_t *Image_LightGamma( rgbdata_t *pic, float texGamma )
 	return pic;
 }
 
+qboolean Image_RemapInternal( rgbdata_t *pic, int topColor, int bottomColor )
+{
+	switch( pic->type )
+	{
+	case PF_INDEXED_24:
+		break;
+	case PF_INDEXED_32:
+		Image_ConvertPalTo24bit( pic );
+		break;
+	default:
+		MsgDev( D_ERROR, "Image_Remap: unsupported format %s\n", PFDesc[pic->type].name );
+		return false;
+	}
+
+	if( !pic->palette )
+	{
+		MsgDev( D_ERROR, "Image_Remap: palette is missed\n" );
+		return false;
+	}
+
+	// just change palette and decompress to RGBA buffer
+	// g-cont. preview images has a swapped top and bottom colors. I don't know why.
+	Image_PaletteHueReplace( pic->palette, topColor, SUIT_HUE_START, SUIT_HUE_END );
+	Image_PaletteHueReplace( pic->palette, bottomColor, PLATE_HUE_START, PLATE_HUE_END );
+
+	return true;
+}
+
 qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags )
 {
 	rgbdata_t	*pic = *pix;
@@ -1271,6 +1372,13 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 		out = Image_CreateLumaInternal( pic->buffer, pic->width, pic->height, pic->type, pic->flags );
 		if( pic->buffer != out ) Q_memcpy( pic->buffer, image.tempbuffer, pic->size );
 		pic->flags &= ~IMAGE_HAS_LUMA;
+	}
+
+	if( flags & IMAGE_REMAP )
+	{
+		// NOTE: user should keep copy of indexed image manually for new changes
+		if( Image_RemapInternal( pic, width, height ))
+			pic = Image_DecompressInternal( pic );
 	}
 
 	// update format to RGBA if any

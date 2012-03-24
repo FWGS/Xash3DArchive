@@ -96,7 +96,6 @@ typedef struct
 
 	qboolean		force_send_usercmd;
 	qboolean		thirdperson;
-	qboolean		spectator;		// true for spectators
 	qboolean		background;		// not real game, just a background
 
 	uint		checksum;			// for catching cheater maps
@@ -534,6 +533,7 @@ extern convar_t	*cl_showfps;
 extern convar_t	*cl_envshot_size;
 extern convar_t	*cl_timeout;
 extern convar_t	*cl_nodelta;
+extern convar_t	*cl_interp;
 extern convar_t	*cl_crosshair;
 extern convar_t	*cl_testlights;
 extern convar_t	*cl_solid_players;
@@ -549,6 +549,7 @@ extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_dark;	// start from dark
 extern convar_t	*userinfo;
+extern convar_t	*hltv;
 
 //=============================================================================
 

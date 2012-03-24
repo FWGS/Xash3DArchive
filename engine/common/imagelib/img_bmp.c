@@ -352,7 +352,7 @@ qboolean Image_SaveBMP( const char *name, rgbdata_t *pix )
 
 	if( host.write_to_clipboard )
 	{
-		// NOTE: the cbPalyBytes may be 0
+		// NOTE: the cbPalBytes may be 0
 		total_size = sizeof( bmih ) + cbPalBytes + cbBmpBits;
 		clipbuf = Z_Malloc( total_size );
 		cur_size = 0;

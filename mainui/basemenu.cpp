@@ -32,6 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ui_title_anim.h"
 
 cvar_t		*ui_precache;
+cvar_t		*ui_showmodels;
 
 uiStatic_t	uiStatic;
 
@@ -1497,6 +1498,7 @@ void UI_Init( void )
 {
 	// register our cvars and commands
 	ui_precache = CVAR_REGISTER( "ui_precache", "0", FCVAR_ARCHIVE );
+	ui_showmodels = CVAR_REGISTER( "ui_showmodels", "0", FCVAR_ARCHIVE );
 
 	Cmd_AddCommand( "menu_main", UI_Main_Menu );
 	Cmd_AddCommand( "menu_newgame", UI_NewGame_Menu );

@@ -1091,6 +1091,16 @@ void CL_FreeEdicts( void )
 	clgame.numStatics = 0;
 }
 
+void CL_ClearEdicts( void )
+{
+	if( clgame.entities != NULL )
+		return;
+
+	// in case we stopped with error
+	clgame.maxEntities = 2;
+	CL_InitEdicts();
+}
+
 /*
 ===============================================================================
 	CGame Builtin Functions
@@ -1958,8 +1968,8 @@ pfnIsSpectateOnly
 */
 static int pfnIsSpectateOnly( void )
 {
-	// TODO: check for proxie
-	return 0;
+	cl_entity_t *pPlayer = CL_GetLocalPlayer();
+	return (pPlayer->curstate.spectator != 0);
 }
 
 /*

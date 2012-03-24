@@ -518,13 +518,6 @@ void CL_ParseServerData( sizebuf_t *msg )
 #endif
 	UI_SetActiveMenu( cl.background );
 
-	if( cl.playernum & 128 )
-	{
-		cl.spectator = true;
-		cl.playernum &= ~128;
-	}
-	else cl.spectator = false;
-
 	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 
 	menu.globals->maxClients = cl.maxclients;
@@ -619,6 +612,8 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 	// do this after all packets read for this frame?
 	cl.last_incoming_sequence = cls.netchan.incoming_sequence;
+
+	if( hltv->integer ) return;	// clientdata for spectators ends here
 	
 	to_cd = &frame->local.client;
 	to_wd = frame->local.weapondata;

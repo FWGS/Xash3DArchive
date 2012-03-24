@@ -535,6 +535,9 @@ void Host_Error( const char *error, ... )
 	SV_Shutdown( false );
 	CL_Drop(); // drop clients
 
+	// recreate world if needs
+	CL_ClearEdicts ();
+
 	// release all models
 	Mod_ClearAll();
 

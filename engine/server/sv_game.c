@@ -1386,6 +1386,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	edict_t	*pClient;
 	vec3_t	view;
 	float	delta;
+	model_t	*mod;
 	int	i;
 
 	if( !SV_IsValidEdict( pEdict ))
@@ -1405,7 +1406,17 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	if( !SV_ClientFromEdict( pClient, true ))
 		return svgame.edicts;
 
-	VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view );
+	mod = Mod_Handle( pEdict->v.modelindex );
+	if( mod && mod->type == mod_brush && !( mod->flags & MODEL_HAS_ORIGIN ))
+	{
+		// handle PVS origin for bmodels
+		VectorAverage( pEdict->v.mins, pEdict->v.maxs, view );
+		VectorAdd( view, pEdict->v.origin, view );
+	}
+	else
+	{
+		VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view );
+	}
 
 	if( pEdict->v.effects & EF_INVLIGHT )
 		view[2] -= 1.0f; // HACK for barnacle
@@ -3304,6 +3315,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 
 	svs.currentPlayer = SV_ClientFromEdict( pClient, true );
 	svs.currentPlayerNum = (svs.currentPlayer - svs.clients);
+	svs.currentPlayer->timebase = (sv.time + host.frametime) - (msec / 1000.0f);
 
 	Q_memset( &cmd, 0, sizeof( cmd ));
 	if( v_angle ) VectorCopy( v_angle, cmd.viewangles );
@@ -3316,9 +3328,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 
 	seed = Com_RandomLong( 0, 0x7fffffff ); // full range
 
-	SV_PreRunCmd( cl, &cmd, seed );
 	SV_RunCmd( cl, &cmd, seed );
-	SV_PostRunCmd( cl );
 
 	cl->lastcmd = cmd;
 	cl->lastcmd.buttons = 0; // avoid multiple fires on lag
@@ -4047,12 +4057,11 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 =============
 pfnSequenceGet
 
-used by CS:CZ
+used by CS:CZ (client stub)
 =============
 */
 void *pfnSequenceGet( const char *fileName, const char *entryName )
 {
-	// UNDONE: no description
 	return NULL;
 }
 
@@ -4060,12 +4069,11 @@ void *pfnSequenceGet( const char *fileName, const char *entryName )
 =============
 pfnSequencePickSentence
 
-used by CS:CZ
+used by CS:CZ (client stub)
 =============
 */
 void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked )
 {
-	// UNDONE: no description
 	return NULL;
 }
 
@@ -4085,12 +4093,11 @@ int pfnGetFileSize( char *filename )
 =============
 pfnIsCareerMatch
 
-used by CS:CZ
+used by CS:CZ (client stub)
 =============
 */
 int pfnIsCareerMatch( void )
 {
-	// UNDONE: no description
 	return 0;
 }
 
@@ -4098,11 +4105,11 @@ int pfnIsCareerMatch( void )
 =============
 pfnGetLocalizedStringLength
 
+used by CS:CZ (client stub)
 =============
 */
 int pfnGetLocalizedStringLength( const char *label )
 {
-	// UNDONE: no description
 	return 0;
 }
 

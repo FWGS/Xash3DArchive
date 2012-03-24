@@ -457,7 +457,9 @@ StudioPlayerBlend
 void R_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch )
 {
 	// calc up/down pointing
-	*pBlend = (*pPitch * 3);
+	if( RI.params & RP_MIRRORVIEW )
+		*pBlend = (*pPitch * -6);
+	else *pBlend = (*pPitch * 3);
 
 	if( *pBlend < pseqdesc->blendstart[0] )
 	{
@@ -2795,8 +2797,9 @@ R_StudioDrawPlayer
 static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 {
 	int	m_nPlayerIndex;
+	float	gaitframe, gaityaw;
+	vec3_t	dir, prevgaitorigin;
 	alight_t	lighting;
-	vec3_t	dir;
 
 	m_nPlayerIndex = pplayer->number - 1;
 
@@ -2808,6 +2811,15 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		return 0;
 
 	R_StudioSetHeader((studiohdr_t *)Mod_Extradata( RI.currentmodel ));
+
+	if( !RP_NORMALPASS() )
+	{
+		m_pPlayerInfo = pfnPlayerInfo( m_nPlayerIndex );
+		VectorCopy( m_pPlayerInfo->prevgaitorigin, prevgaitorigin );
+		gaitframe = m_pPlayerInfo->gaitframe;
+		gaityaw = m_pPlayerInfo->gaityaw;
+		m_pPlayerInfo = NULL;
+	}
 
 	if( pplayer->gaitsequence )
 	{
@@ -2845,7 +2857,18 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	{
 		// see if the bounding box lets us trivially reject, also sets
 		if( !R_StudioCheckBBox( ))
+		{
+			if( !RP_NORMALPASS() )
+			{
+				m_pPlayerInfo = pfnPlayerInfo( m_nPlayerIndex );
+				VectorCopy( prevgaitorigin, m_pPlayerInfo->prevgaitorigin );
+				m_pPlayerInfo->gaitframe = gaitframe;
+				m_pPlayerInfo->gaityaw = gaityaw;
+				m_pPlayerInfo = NULL;
+			}
+
 			return 0;
+		}
 
 		r_stats.c_studio_models_drawn++;
 		g_nStudioCount++; // render data cache cookie
@@ -2926,6 +2949,16 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 			*RI.currententity = saveent;
 		}
 	}
+
+	if( !RP_NORMALPASS() )
+	{
+		m_pPlayerInfo = pfnPlayerInfo( m_nPlayerIndex );
+		VectorCopy( prevgaitorigin, m_pPlayerInfo->prevgaitorigin );
+		m_pPlayerInfo->gaitframe = gaitframe;
+		m_pPlayerInfo->gaityaw = gaityaw;
+		m_pPlayerInfo = NULL;
+	}
+
 	return 1;
 }
 

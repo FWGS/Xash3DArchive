@@ -31,7 +31,8 @@ GNU General Public License for more details.
 #define GetGameInfo		(*g_engfuncs.pfnGetGameInfo)
 #define CheckGameDll	(*g_engfuncs.pfnCheckGameDll)
 
-#define PIC_SetGamma( x, y )	(*g_engfuncs.pfnProcessImage)( x, y, 0, 0 )
+#define PIC_SetGamma( x, y )	(*g_engfuncs.pfnProcessImage)( x, y, -1, -1 )
+#define PIC_Remap( x, y, z )	(*g_engfuncs.pfnProcessImage)( x, -1.0f, y, z )
 
 #define DRAW_LOGO		(*g_engfuncs.pfnDrawLogo)
 #define PRECACHE_LOGO( x )	(*g_engfuncs.pfnDrawLogo)( x, 0, 0, 0, 0 )
@@ -87,6 +88,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define CMD_ARGC		(*g_engfuncs.pfnCmdArgc)
 #define CMD_ARGV		(*g_engfuncs.pfnCmdArgv)
 #define Con_Printf		(*g_engfuncs.Con_Printf)
+#define Con_NPrintf		(*g_engfuncs.Con_NPrintf)
 
 #define GET_GAMES_LIST	(*g_engfuncs.pfnGetGamesList)
 #define BACKGROUND_TRACK	(*g_engfuncs.pfnPlayBackgroundTrack)

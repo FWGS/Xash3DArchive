@@ -313,6 +313,7 @@ void UI_PicButton_Draw( menuPicButton_s *item );
 // Main menu interface
 
 extern cvar_t	*ui_precache;
+extern cvar_t	*ui_showmodels;
 
 #define BACKGROUND_ROWS	3
 #define BACKGROUND_COLUMNS	4

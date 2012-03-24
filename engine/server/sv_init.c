@@ -380,7 +380,7 @@ void SV_DeactivateServer( void )
 
 	svgame.dllFuncs.pfnServerDeactivate();
 
-	for( i = 0; i < svgame.globals->maxClients; i++ )
+	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
 		// release client frames
 		if( svs.clients[i].frames )

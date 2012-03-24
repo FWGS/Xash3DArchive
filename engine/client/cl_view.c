@@ -57,7 +57,7 @@ void V_SetupRefDef( void )
 	cl.refdef.waterlevel = cl.frame.local.client.waterlevel;		
 	cl.refdef.onlyClientDraw = 0;	// reset clientdraw
 	cl.refdef.hardware = true;	// always true
-	cl.refdef.spectator = cl.spectator;
+	cl.refdef.spectator = (clent->curstate.spectator != 0);
 	cl.refdef.nextView = 0;
 
 	SCR_AddDirtyPoint( 0, 0 );

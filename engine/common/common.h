@@ -465,6 +465,7 @@ typedef enum
 	IMAGE_MAKE_LUMA	= BIT(24),	// create luma texture from indexed
 	IMAGE_QUANTIZE	= BIT(25),	// make indexed image from 24 or 32- bit image
 	IMAGE_LIGHTGAMMA	= BIT(26),	// apply gamma for image
+	IMAGE_REMAP	= BIT(27),	// interpret width and height as top and bottom color
 } imgFlags_t;
 
 typedef struct rgbdata_s
@@ -491,6 +492,7 @@ rgbdata_t *FS_CopyImage( rgbdata_t *in );
 void FS_FreeImage( rgbdata_t *pack );
 extern const bpc_desc_t PFDesc[];	// image get pixelformat
 qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags );
+void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end );
 void Image_SetForceFlags( uint flags );	// set image force flags on loading
 
 /*
@@ -731,6 +733,7 @@ void SV_ForceError( void );
 void CL_WriteMessageHistory( void );
 void CL_SendCmd( void );
 void CL_Disconnect( void );
+void CL_ClearEdicts( void );
 void CL_Crashed( void );
 qboolean CL_NextDemo( void );
 void CL_Drop( void );

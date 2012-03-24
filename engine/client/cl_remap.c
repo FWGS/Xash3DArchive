@@ -18,78 +18,6 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "studio.h"
 
-static void CL_PaletteHueReplace( byte *palSrc, int newHue, int start, int end )
-{
-	float	r, g, b;
-	float	maxcol, mincol;
-	float	hue, val, sat;
-	int	i;
-
-	hue = (float)(newHue * ( 360.0f / 255 ));
-
-	for( i = start; i <= end; i++ )
-	{
-		r = palSrc[i*3+0];
-		g = palSrc[i*3+1];
-		b = palSrc[i*3+2];
-		
-		maxcol = max( max( r, g ), b ) / 255.0f;
-		mincol = min( min( r, g ), b ) / 255.0f;
-		
-		val = maxcol;
-		sat = (maxcol - mincol) / maxcol;
-
-		mincol = val * (1.0f - sat);
-
-		if( hue <= 120.0f )
-		{
-			b = mincol;
-			if( hue < 60 )
-			{
-				r = val;
-				g = mincol + hue * (val - mincol) / (120.0f - hue);
-			}
-			else
-			{
-				g = val;
-				r = mincol + (120.0f - hue) * (val - mincol) / hue;
-			}
-		}
-		else if( hue <= 240.0f )
-		{
-			r = mincol;
-			if( hue < 180.0f )
-			{
-				g = val;
-				b = mincol + (hue - 120.0f) * (val - mincol) / (240.0f - hue);
-			}
-			else
-			{
-				b = val;
-				g = mincol + (240.0f - hue) * (val - mincol) / (hue - 120.0f);
-			}
-		}
-		else
-		{
-			g = mincol;
-			if( hue < 300.0f )
-			{
-				b = val;
-				r = mincol + (hue - 240.0f) * (val - mincol) / (360.0f - hue);
-			}
-			else
-			{
-				r = val;
-				b = mincol + (360.0f - hue) * (val - mincol) / (hue - 240.0f);
-			}
-		}
-
-		palSrc[i*3+0] = (byte)(r * 255);
-		palSrc[i*3+1] = (byte)(g * 255);
-		palSrc[i*3+2] = (byte)(b * 255);
-	}
-}
-
 /*
 ====================
 CL_GetRemapInfoForEntity
@@ -156,8 +84,8 @@ byte *CL_CreateRawTextureFromPixels( texture_t *tx, size_t *size, int topcolor, 
 
 	// update palette
 	pal = (byte *)(tx + 1) + (tx->width * tx->height);
-	CL_PaletteHueReplace( pal, topcolor, tx->anim_min, tx->anim_max );
-	CL_PaletteHueReplace( pal, bottomcolor, tx->anim_max + 1, tx->anim_total );
+	Image_PaletteHueReplace( pal, topcolor, tx->anim_min, tx->anim_max );
+	Image_PaletteHueReplace( pal, bottomcolor, tx->anim_max + 1, tx->anim_total );
 
 	return (byte *)&pin;
 }

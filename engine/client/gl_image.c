@@ -905,10 +905,10 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		tex->flags &= ~TF_MAKELUMA;
 	}
 
-	if( tex->flags & TF_KEEP_8BIT )
+	if( !subImage && tex->flags & TF_KEEP_8BIT )
 		tex->original = FS_CopyImage( pic ); // because current pic will be expanded to rgba
 
-	if( tex->flags & TF_KEEP_RGBDATA )
+	if( !subImage && tex->flags & TF_KEEP_RGBDATA )
 		tex->original = pic; // no need to copy
 
 	// we need to expand image into RGBA buffer
@@ -1250,10 +1250,25 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 {
 	gltexture_t	*image;
 	rgbdata_t		*pic;
-	byte		*buf;
+	int		flags = 0;
 
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
+
+	// select mode
+	if( gamma != -1.0f )
+	{
+		flags = IMAGE_LIGHTGAMMA;
+	}
+	else if( topColor != -1 && bottomColor != -1 )
+	{
+		flags = IMAGE_REMAP;
+	}
+	else
+	{
+		MsgDev( D_ERROR, "GL_ProcessTexture: bad operation for %s\n", image->name );
+		return;
+	}
 
 	if(!( image->flags & (TF_KEEP_RGBDATA|TF_KEEP_8BIT)) || !image->original )
 	{
@@ -1261,19 +1276,14 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 		return;
 	}
 
-	pic = image->original;
-	buf = Mem_Alloc( r_temppool, pic->size );
-	Q_memcpy( buf, pic->buffer, pic->size );
-
-	// UNDONE: topColor and bottomColor just for future expansions
-	Image_Process( &pic, topColor, bottomColor, gamma, IMAGE_LIGHTGAMMA );
+	// all the operations makes over the image copy not an original
+	pic = FS_CopyImage( image->original );
+	Image_Process( &pic, topColor, bottomColor, gamma, flags );
 
 	GL_UploadTexture( pic, image, true );
 	GL_TexFilter( image, true ); // update texture filter, wrap etc
 
-	// restore original image
-	Q_memcpy( pic->buffer, buf, pic->size );
-	Mem_Free( buf );
+	FS_FreeImage( pic );
 }
 
 /*

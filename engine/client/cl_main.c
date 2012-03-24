@@ -43,6 +43,7 @@ convar_t	*cl_idealpitchscale;
 convar_t	*cl_solid_players;
 convar_t	*cl_draw_beams;
 convar_t	*cl_cmdrate;
+convar_t	*cl_interp;
 
 //
 // userinfo
@@ -52,6 +53,7 @@ convar_t	*model;
 convar_t	*topcolor;
 convar_t	*bottomcolor;
 convar_t	*rate;
+convar_t	*hltv;
 
 client_t		cl;
 client_static_t	cls;
@@ -275,6 +277,8 @@ void CL_CreateCmd( void )
 	// never let client.dll calc frametime for player
 	// because is potential backdoor for cheating
 	cmd.msec = ms;
+	cmd.lerp_msec = cl_interp->value * 1000;
+	cmd.lerp_msec = bound( 0, cmd.lerp_msec, 250 ); 
 
 	V_ProcessOverviewCmds( &cmd );
 
@@ -1551,6 +1555,7 @@ void CL_InitLocal( void )
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0, "disable delta-compression for usercommnds" );
 	cl_idealpitchscale = Cvar_Get( "cl_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
 	cl_solid_players = Cvar_Get( "cl_solid_players", "1", 0, "Make all players not solid (can't traceline them)" );
+	cl_interp = Cvar_Get( "ex_interp", "0.1", 0, "Interpolate object positions starting this many seconds in past" ); 
 	cl_timeout = Cvar_Get( "cl_timeout", "60", 0, "connect timeout (in-seconds)" );
 
 	rcon_client_password = Cvar_Get( "rcon_password", "", 0, "remote control client password" );
@@ -1563,6 +1568,7 @@ void CL_InitLocal( void )
 	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player top color" );
 	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player bottom color" );
 	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO|CVAR_ARCHIVE, "player network rate" );
+	hltv = Cvar_Get( "hltv", "0", CVAR_USERINFO|CVAR_LATCH, "HLTV mode" );
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
 	cl_smooth = Cvar_Get ("cl_smooth", "0", CVAR_ARCHIVE, "smooth up stair climbing and interpolate position in multiplayer" );
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", CVAR_ARCHIVE, "how many additional history commands are sent" );
@@ -1573,7 +1579,6 @@ void CL_InitLocal( void )
 
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
-	Cvar_Get( "spectator", "0", CVAR_USERINFO|CVAR_ARCHIVE, "1 is enable spectator mode" );
 	Cvar_Get( "cl_updaterate", "60", CVAR_USERINFO|CVAR_ARCHIVE, "refresh rate of server messages" );
 
 	// these two added to shut up CS 1.5 about 'unknown' commands

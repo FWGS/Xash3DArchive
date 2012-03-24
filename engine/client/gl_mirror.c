@@ -245,12 +245,20 @@ void R_DrawMirrors( void )
 			RI.refdef.viewangles[1] = anglemod( angles[1] );
 			RI.refdef.viewangles[2] = anglemod( angles[2] );
 			VectorCopy( origin, RI.refdef.vieworg );
-#if 0
-			// put pvsorigin before the mirror plane to avoid get full visibility on world mirrors
-			if( RI.currententity == clgame.entities ) VectorMA( es->origin, 5.0f, plane.normal, origin );
-#endif
-			VectorCopy( origin, RI.pvsorigin );
 			VectorCopy( origin, RI.cullorigin );
+
+			// put pvsorigin before the mirror plane to avoid get full visibility on world mirrors
+			if( RI.currententity == clgame.entities )
+			{
+				VectorMA( es->origin, 1.0f, plane.normal, origin );
+			}
+			else
+			{
+				Matrix4x4_VectorTransform( mirrormatrix, es->origin, origin );
+				VectorMA( origin, 1.0f, plane.normal, origin );
+			}
+
+			VectorCopy( origin, RI.pvsorigin );
 
 			// combine two leafs from client and mirror views
 			r_viewleaf = Mod_PointInLeaf( oldRI.pvsorigin, cl.worldmodel->nodes );

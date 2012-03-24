@@ -153,6 +153,7 @@ typedef struct
 
 	clientdata_t	clientdata;
 	weapon_data_t	weapondata[MAX_WEAPONS];
+	byte		sentinel[128];		// g-cont. The fucking Cry Of Fear a corrupt memory after the weapondata!!!
 	int  		num_entities;
 	int  		first_entity;		// into the circular sv_packet_entities[]
 } client_frame_t;
@@ -170,7 +171,6 @@ typedef struct sv_client_s
 	qboolean		local_weapons;		// enable weapon predicting
 	qboolean		lag_compensation;		// enable lag compensation
 	qboolean		hltv_proxy;		// this is spectator proxy (hltv)		
-	qboolean		spectator;		// this is spectator (not a real client)
 
 	netchan_t		netchan;
 	int		chokecount;         	// number of messages rate supressed
@@ -309,7 +309,7 @@ typedef struct
 	movevars_t	movevars;			// curstate
 	movevars_t	oldmovevars;		// oldstate
 	playermove_t	*pmove;			// pmove state
-	sv_interp_t	interp[32];		// interpolate clients
+	sv_interp_t	interp[MAX_CLIENTS];	// interpolate clients
 
 	sv_pushed_t	pushed[MAX_PUSHED_ENTS];	// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
@@ -438,10 +438,11 @@ qboolean SV_InitPhysicsAPI( void );
 void SV_CheckVelocity( edict_t *ent );
 qboolean SV_CheckWater( edict_t *ent );
 qboolean SV_RunThink( edict_t *ent );
-void SV_FreeOldEntities( void );
+qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time );
 qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker );	// for EntityInSolid checks
-void SV_Impact( edict_t *e1, trace_t *trace );
+void SV_Impact( edict_t *e1, edict_t *e2, trace_t *trace );
 qboolean SV_CanPushed( edict_t *ent );
+void SV_FreeOldEntities( void );
 void SV_CheckAllEnts( void );
 
 //
@@ -481,9 +482,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
 edict_t *SV_FakeConnect( const char *netname );
  void SV_ExecuteClientCommand( sv_client_t *cl, char *s );
-void SV_PreRunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
-void SV_PostRunCmd( sv_client_t *cl );
 qboolean SV_IsPlayerIndex( int idx );
 void SV_InitClientMove( void );
 void SV_UpdateServerInfo( void );
@@ -563,6 +562,12 @@ const char *SV_GetLatestSave( void );
 int SV_LoadGameState( char const *level, qboolean createPlayers );
 void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 void SV_InitSaveRestore( void );
+
+//
+// sv_pmove.c
+//
+void SV_GetTrueOrigin( sv_client_t *cl, int edictnum, vec3_t origin );
+void SV_GetTrueMinMax( sv_client_t *cl, int edictnum, vec3_t mins, vec3_t maxs );
 
 //
 // sv_world.c

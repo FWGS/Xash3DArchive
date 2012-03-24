@@ -1,6 +1,15 @@
 build ????
+
 Physic: fix trace bug when model is missing
 Client: implement function TriScreenToWorld
+Server: add local times for all the clients
+Server: implement unlag system
+Client: added ex_interp variable
+GameUI: added support for playermodel images (preview thumbnails)
+Engine: fix potentially crash in menu after calling Host_Error
+Engine: fix crash on Cry Of Fear modification (memory corrupts)
+Engine: first implementation of HLTV
+Render: fix a little bug with engine mirrors
 
 build 1850
 

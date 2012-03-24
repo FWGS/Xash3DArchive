@@ -702,7 +702,7 @@ void CL_SetupPMove( playermove_t *pmove, clientdata_t *cd, entity_state_t *state
 	pmove->waterjumptime = cd->waterjumptime;
 	pmove->dead = (cd->health <= 0.0f ) ? true : false;
 	pmove->deadflag = cd->deadflag;
-	pmove->spectator = cl.spectator;
+	pmove->spectator = (state->spectator != 0);
 	pmove->movetype = state->movetype;
 	pmove->onground = -1; // will be set by PM_ code
 	pmove->waterlevel = cd->waterlevel;

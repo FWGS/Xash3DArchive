@@ -1183,6 +1183,9 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 
 	tr.realframecount++;
 
+	if( RI.drawOrtho != gl_overview->integer )
+		tr.fResetVis = true;
+
 	// completely override rendering
 	if( clgame.drawFuncs.GL_RenderFrame != NULL )
 	{
