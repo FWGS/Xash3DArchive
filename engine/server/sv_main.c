@@ -359,6 +359,7 @@ void SV_ReadPackets( void )
 					cl->lastmessage = host.realtime; // don't timeout
 					SV_ExecuteClientMessage( cl, &net_message );
 					svgame.globals->frametime = host.frametime;
+					svgame.globals->time = sv.time;
 				}
 			}
 
@@ -461,11 +462,7 @@ void SV_PrepWorldFrame( void )
 		ent = EDICT_NUM( i );
 		if( ent->free ) continue;
 
-		ent->v.effects &= ~EF_MUZZLEFLASH;
-
-		// clear NOINTERP flag automatically only for alive creatures			
-		if( ent->v.flags & ( FL_MONSTER|FL_CLIENT|FL_FAKECLIENT ) && ent->v.deadflag < DEAD_DEAD )
-			ent->v.effects &= ~EF_NOINTERP;
+		ent->v.effects &= ~(EF_MUZZLEFLASH|EF_NOINTERP);
 	}
 }
 

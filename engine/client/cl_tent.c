@@ -766,9 +766,11 @@ void CL_MuzzleFlash( const vec3_t pos, int type )
 	if( !pTemp ) return;
 	pTemp->entity.curstate.rendermode = kRenderTransAdd;
 	pTemp->entity.curstate.renderamt = 255;
+	pTemp->entity.curstate.framerate = 10;
 	pTemp->entity.curstate.renderfx = 0;
 	pTemp->die = cl.time + 0.01; // die at next frame
 	pTemp->entity.curstate.frame = Com_RandomLong( 0, frameCount - 1 );
+	pTemp->flags |= FTENT_SPRANIMATE|FTENT_SPRANIMATELOOP;
 	pTemp->frameMax = frameCount - 1;
 
 	if( index == 0 )

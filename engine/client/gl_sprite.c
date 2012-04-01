@@ -773,6 +773,14 @@ qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *psc
 		float	blend = 1.0f;
 		vec3_t	v;
 
+		// don't reflect this entity in mirrors
+		if( e->curstate.effects & EF_NOREFLECT && RI.params & RP_MIRRORVIEW )
+			return true;
+
+		// draw only in mirrors
+		if( e->curstate.effects & EF_REFLECTONLY && !( RI.params & RP_MIRRORVIEW ))
+			return true;
+
 		TriWorldToScreen( origin, v );
 
 		if( v[0] < RI.refdef.viewport[0] || v[0] > RI.refdef.viewport[0] + RI.refdef.viewport[2] )

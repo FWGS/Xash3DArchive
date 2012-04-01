@@ -47,6 +47,7 @@ typedef struct server_physics_api_s
 	int		( *pfnServerState)( void );
 	void		( *pfnHost_Error)( const char *error, ... );	// cause Host Error
 } server_physics_api_t;
+// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 6
 
 // physic callbacks
 typedef struct physics_interface_s
@@ -60,6 +61,8 @@ typedef struct physics_interface_s
 	int		( *SV_LoadEntities )( const char *mapname, char *entities );
 	// update conveyor belt for clients
 	void		( *SV_UpdatePlayerBaseVelocity )( edict_t *ent );
+	// The game .dll should return 1 if save game should be allowed
+	int		( *SV_AllowSaveGame )( void );
 } physics_interface_t;
 
 #endif//PHYSINT_H

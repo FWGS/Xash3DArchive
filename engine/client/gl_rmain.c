@@ -65,6 +65,9 @@ static qboolean R_StaticEntity( cl_entity_t *ent )
 	if( ent->model->type != mod_brush )
 		return false;
 
+	if( ent->curstate.effects & ( EF_NOREFLECT|EF_REFLECTONLY ))
+		return false;
+
 	if( ent->curstate.frame || ent->model->flags & MODEL_CONVEYOR )
 		return false;
 

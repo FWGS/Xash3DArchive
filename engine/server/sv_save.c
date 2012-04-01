@@ -519,6 +519,15 @@ int SV_IsValidSave( void )
 		return 0;
 	}
 
+	if( svgame.physFuncs.SV_AllowSaveGame != NULL )
+	{
+		if( !svgame.physFuncs.SV_AllowSaveGame( ))
+		{
+			Msg( "Savegame is not allowed.\n" );
+			return 0;
+		}
+	}
+
 	if( !CL_Active( ))
 	{
 		Msg( "Can't save if not active.\n" );
