@@ -60,8 +60,8 @@ S_TransferPaintBuffer
 */
 void S_TransferPaintBuffer( int endtime )
 {
-	int	lpos, lpaintedtime, snd_vol;
 	int	*snd_p, snd_linear_count;
+	int	lpos, lpaintedtime;
 	int	i, val, sampleMask;
 	short	*snd_out;
 	dword	*pbuf;
@@ -70,8 +70,6 @@ void S_TransferPaintBuffer( int endtime )
 	snd_p = (int *)PAINTBUFFER;
 	lpaintedtime = paintedtime;
 	sampleMask = ((dma.samples >> 1) - 1);
-
-	snd_vol = S_GetMasterVolume() * 256;
 
 	while( lpaintedtime < endtime )
 	{
@@ -89,14 +87,14 @@ void S_TransferPaintBuffer( int endtime )
 		// write a linear blast of samples
 		for( i = 0; i < snd_linear_count; i += 2 )
 		{
-			val = (snd_p[i+0] * snd_vol) >> 8;
+			val = (snd_p[i+0] * 256) >> 8;
 
 			if( val > 0x7fff ) snd_out[i+0] = 0x7fff;
 			else if( val < (short)0x8000 )
 				snd_out[i+0] = (short)0x8000;
 			else snd_out[i+0] = val;
 
-			val = (snd_p[i+1] * snd_vol) >> 8;
+			val = (snd_p[i+1] * 256) >> 8;
 			if( val > 0x7fff ) snd_out[i+1] = 0x7fff;
 			else if( val < (short)0x8000 )
 				snd_out[i+1] = (short)0x8000;
@@ -1042,7 +1040,10 @@ void MIX_PaintChannels( int endtime )
 		DSP_Process( idsp_room, MIX_GetPFrontFromIPaint( IROOMBUFFER ), count );
 
 		// add music or soundtrack from movie (no dsp)
-		MIX_MixPaintbuffers( IROOMBUFFER, ISTREAMBUFFER, IPAINTBUFFER, count, s_musicvolume->value );	
+		MIX_MixPaintbuffers( IPAINTBUFFER, IROOMBUFFER, IPAINTBUFFER, count, S_GetMasterVolume() );
+
+		// add music or soundtrack from movie (no dsp)
+		MIX_MixPaintbuffers( IPAINTBUFFER, ISTREAMBUFFER, IPAINTBUFFER, count, s_musicvolume->value );	
 
 		// clip all values > 16 bit down to 16 bit
 		MIX_CompressPaintbuffer( IPAINTBUFFER, count );

@@ -1529,7 +1529,7 @@ void SV_Physics_Step( edict_t *ent )
 	}
 	else
 	{
-		if( svgame.force_retouch != 0.0f )
+		if( svgame.globals->force_retouch != 0.0f )
 		{
 			trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
 			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
@@ -1576,7 +1576,7 @@ static void SV_Physics_Entity( edict_t *ent )
 	}
 	ent->v.flags &= ~FL_BASEVELOCITY;
 
-	if( svgame.force_retouch != 0.0f )
+	if( svgame.globals->force_retouch != 0.0f )
 	{
 		// force retouch even for stationary
 		SV_LinkEdict( ent, true );
@@ -1635,9 +1635,6 @@ void SV_Physics( void )
 	SV_CheckAllEnts ();
 
 	svgame.globals->time = sv.time;
-	svgame.force_retouch = svgame.globals->force_retouch;
-	if( svgame.force_retouch != 0.0f )
-		svgame.globals->force_retouch = max( 0.0f, svgame.globals->force_retouch - 1.0f );
 
 	// let the progs know that a new frame has started
 	svgame.dllFuncs.pfnStartFrame();
@@ -1666,6 +1663,9 @@ void SV_Physics( void )
 
 	// decrement svgame.numEntities if the highest number entities died
 	for( ; EDICT_NUM( svgame.numEntities - 1 )->free; svgame.numEntities-- );
+
+	if( svgame.globals->force_retouch != 0.0f )
+		svgame.globals->force_retouch--;
 }
 
 /*

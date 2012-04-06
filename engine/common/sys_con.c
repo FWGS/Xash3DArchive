@@ -89,6 +89,14 @@ void Con_SetInputText( const char *inputText )
 	SendMessage( s_wcd.hwndInputLine, EM_SETSEL, Q_strlen( inputText ), -1 );
 }
 
+static void Con_Clear_f( void )
+{
+	if( host.type != HOST_DEDICATED ) return;
+	SendMessage( s_wcd.hwndBuffer, EM_SETSEL, 0, -1 );
+	SendMessage( s_wcd.hwndBuffer, EM_REPLACESEL, FALSE, (LPARAM)"" );
+	UpdateWindow( s_wcd.hwndBuffer );
+}
+
 static int Con_KeyEvent( int key, qboolean down )
 {
 	char	inputBuffer[1024];
@@ -378,6 +386,19 @@ void Con_CreateConsole( void )
 		s_wcd.status = true;
           }
 	else s_wcd.status = false;
+}
+
+/*
+================
+Con_InitConsoleCommands
+
+register console commands (dedicated only)
+================
+*/
+void Con_InitConsoleCommands( void )
+{
+	if( host.type != HOST_DEDICATED ) return;
+	Cmd_AddCommand( "clear", Con_Clear_f, "clear console history" );
 }
 
 /*

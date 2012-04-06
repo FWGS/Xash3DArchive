@@ -99,6 +99,7 @@ void Sys_Quit( void );
 //
 void Con_ShowConsole( qboolean show );
 void Con_WinPrint( const char *pMsg );
+void Con_InitConsoleCommands( void );
 void Con_CreateConsole( void );
 void Con_DestroyConsole( void );
 void Con_RegisterHotkeys( void );

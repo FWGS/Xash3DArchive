@@ -782,6 +782,8 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 
 	if( host.type == HOST_DEDICATED )
 	{
+		Con_InitConsoleCommands ();
+
 		Cmd_AddCommand( "quit", Sys_Quit, "quit the game" );
 		Cmd_AddCommand( "exit", Sys_Quit, "quit the game" );
 

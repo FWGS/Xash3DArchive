@@ -4750,7 +4750,6 @@ qboolean SV_LoadProgs( const char *name )
 	SV_InitSaveRestore ();
 
 	svgame.globals->pStringBase = ""; // setup string base
-	svgame.force_retouch = 0.0f;
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = sv_maxclients->integer;

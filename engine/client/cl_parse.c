@@ -483,7 +483,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.load_sequence++;	// now all hud sprites are invalid
 
 	// wipe the client_t struct
-	if( !cls.changelevel ) CL_ClearState();
+	if( !cls.changelevel )
+		CL_ClearState ();
 	cls.state = ca_connected;
 
 	// parse protocol version number

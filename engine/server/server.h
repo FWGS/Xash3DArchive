@@ -304,7 +304,6 @@ typedef struct
 		void	*vp;			// acess by offset in bytes
 	};
 	int		numEntities;		// actual entities count
-	float		force_retouch;		// always start at new frame to relink all ents
 
 	movevars_t	movevars;			// curstate
 	movevars_t	oldmovevars;		// oldstate
