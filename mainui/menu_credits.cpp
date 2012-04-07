@@ -69,6 +69,7 @@ static void UI_Credits_DrawFunc( void )
 	else speed = 45.0f;	// syncronize with final background track :-)
 
 	// otherwise running on cutscene
+	speed = 32.0f * (768.0f / ScreenHeight);
 
 	// now draw the credits
 	UI_ScaleCoords( NULL, NULL, &w, &h );
@@ -76,10 +77,10 @@ static void UI_Credits_DrawFunc( void )
 	y = ScreenHeight - (((gpGlobals->time * 1000) - uiCredits.startTime ) / speed );
 
 	// draw the credits
-	for ( i = 0; i < uiCredits.numLines && uiCredits.credits[i]; i++, y += 20 )
+	for ( i = 0; i < uiCredits.numLines && uiCredits.credits[i]; i++, y += h )
 	{
 		// skip not visible lines, but always draw end line
-		if( y <= -16 && i != uiCredits.numLines - 1 ) continue;
+		if( y <= -h && i != uiCredits.numLines - 1 ) continue;
 
 		if(( y < ( ScreenHeight - h ) / 2 ) && i == uiCredits.numLines - 1 )
 		{

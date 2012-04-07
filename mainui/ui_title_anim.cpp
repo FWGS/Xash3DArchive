@@ -138,3 +138,9 @@ void UI_InitTitleAnim()
 	ButtonStackDepth = 0;
 	memset( ButtonStack, 0, sizeof( ButtonStack ));
 }
+
+void UI_ClearButtonStack( void )
+{
+	ButtonStackDepth = 0;
+	memset( ButtonStack, 0, sizeof( ButtonStack ));
+}

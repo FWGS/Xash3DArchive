@@ -884,6 +884,8 @@ void UI_CloseMenu( void )
 	memset( uiStatic.serverAddresses, 0, sizeof( uiStatic.serverAddresses ));
 	memset( uiStatic.serverNames, 0, sizeof( uiStatic.serverNames ));
 
+	UI_ClearButtonStack ();
+
 //	KEY_ClearStates ();
 	KEY_SetDest ( KEY_GAME );
 }
