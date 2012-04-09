@@ -925,19 +925,18 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius )
 
 	// entity is not present on the client but has valid origin
 	if( !ent || !ent->index ) return valid_origin;
+
+	if( ent->curstate.messagenum == 0 )
+	{
+		// entity is never has updates on the client
+		// so we should use static origin instead
+		return valid_origin;
+	}
 #if 0
-	// entity is present on the client but out of PVS
+	// uncomment this if you want enable additional check by PVS
 	if( ent->curstate.messagenum != cl.parsecount )
 	{
-		// created by map spawn. just of of PVS
-		if( ent->baseline.number != 0 )
-			return false;
-
-		// entity was created later than sound
-		// (e.g. EMIT_SOUND called from Spawn)
-		if( ent->curstate.messagenum == 0 )
-			return valid_origin;
-		return false;
+		return valid_origin;
 	}
 #endif
 	// setup origin
@@ -945,8 +944,13 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius )
 	VectorAdd( origin, ent->curstate.origin, origin );
 
 	// setup radius
-	if( pradius && ent->model != NULL )
-		*pradius = ent->model->radius;
+	if( pradius )
+	{
+		if( ent->model != NULL )
+			*pradius = ent->model->radius;
+		else
+			*pradius = RadiusFromBounds( ent->curstate.mins, ent->curstate.maxs );
+	}
 
 	return true;
 }

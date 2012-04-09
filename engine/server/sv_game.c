@@ -1701,7 +1701,7 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 		return 0;
 	}
 
-	if( attn < ATTN_NONE || attn > ATTN_IDLE )
+	if( attn < 0.0f || attn > 4.0f )
 	{
 		MsgDev( D_ERROR, "SV_StartSound: attenuation = %g\n", attn );
 		return 0;
@@ -1746,11 +1746,7 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 		sound_idx = SV_SoundIndex( samp );
 	}
 
-	if( !ent->v.modelindex || !ent->v.model )
-		entityIndex = 0;
-	else if( SV_IsValidEdict( ent->v.aiment ))
-		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
-	else entityIndex = NUM_FOR_EDICT( ent );
+	entityIndex = NUM_FOR_EDICT( ent );
 
 	if( vol != 255 ) flags |= SND_VOLUME;
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
@@ -1793,9 +1789,9 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	if( !sample ) return;
 
-	if( attn < ATTN_NONE || attn > ATTN_IDLE )
+	if( attn < 0.0f || attn > 4.0f )
 	{
-		MsgDev( D_ERROR, "SV_StartSound: attenuation %g must be in range 0-2\n", attn );
+		MsgDev( D_ERROR, "SV_StartSound: attenuation %g must be in range 0-4\n", attn );
 		return;
 	}
 
@@ -1844,9 +1840,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( SV_IsValidEdict( ent->v.aiment ))
-		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
-	else entityIndex = NUM_FOR_EDICT( ent );
+	entityIndex = NUM_FOR_EDICT( ent );
 
 	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
 
@@ -1878,14 +1872,14 @@ pfnEmitAmbientSound
 */
 void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vol, float attn, int flags, int pitch )
 {
-	int 	number = 0, sound_idx;
+	int 	number, sound_idx;
 	int	msg_dest = MSG_PAS_R;
 
 	if( !sample ) return;
 
-	if( attn < ATTN_NONE || attn > ATTN_IDLE )
+	if( attn < 0.0f || attn > 4.0f )
 	{
-		MsgDev( D_ERROR, "SV_AmbientSound: attenuation must be in range 0-2\n" );
+		MsgDev( D_ERROR, "SV_AmbientSound: attenuation must be in range 0-4\n" );
 		return;
 	}
 
@@ -1904,8 +1898,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 		msg_dest = MSG_INIT;
 	else msg_dest = MSG_ALL;
 
-	if( SV_IsValidEdict( ent ))
-		number = NUM_FOR_EDICT( ent );
+	number = NUM_FOR_EDICT( ent );
 
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;

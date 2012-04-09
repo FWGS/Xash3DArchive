@@ -799,7 +799,7 @@ void SND_Spatialize( channel_t *ch )
 	}
 
 	// don't pan sounds with no attenuation
-	if( ch->dist_mult <= 0 ) dot = 0.0f;
+	if( ch->dist_mult <= 0.0f ) dot = 0.0f;
 
 	// fill out channel volumes for single location
 	S_SpatializeChannel( &ch->leftvol, &ch->rightvol, ch->master_vol, gain, dot, dist * ch->dist_mult );

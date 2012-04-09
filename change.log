@@ -11,6 +11,7 @@ Engine: fix crash on Cry Of Fear modification (memory corrupts)
 Engine: first implementation of HLTV
 Render: fix a little bug with engine mirrors
 Sound: implement separate volume controls for background track and game sounds
+Sound: fix wrong position for dynamic sounds in case parent entity never has updates on the client
 
 build 1850
 

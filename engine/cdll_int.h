@@ -250,65 +250,52 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnSetMousePos)( int x, int y );
 	void	(*pfnSetMouseEnable)( qboolean fEnable );
 
-	// Returns pointer to start of registered cvar linked list. Added for VGUI console autocomplete?
-	void*	(*pfnGetCvarList)( void );
+	struct cvar_s* (*pfnGetCvarList)( void );
+	struct cmd_s* (*pfnGetCmdList)( void );
+	char*	(*pfnCvarName)( struct cvar_s* cvar );
+	char*	(*pfnCmdName)( struct cmd_s* cmd );
 
-	// Returns pointer to start of registered command linked list. Added for VGUI console autocomplete?
-	void*	(*pfnGetCmdList)( void );
+	float	(*pfnGetServerTime)( void );
+	float	(*pfnGetGravity)( void );
 
-	// Not sure about this - convert cvar_t pointer to cvar name? Why?
-	char*	(*pfnCvarNameFromPointer)( void *pointer );
-
-	// Not sure abput this - convert cmd_function_t pointer to command name? Why?
-	char*	(*pfnCmdNameFromPointer)( void *pointer );
-
-	// Returns current time for this client? Why is this needed when GetClientTime() already exists?
-	float	(*pfnGetCurrentTime)( void );
-
-	// Unsure - always seems to return 800.0f (no, it's not horizontal resolution)
-	float	(*pfnGetGravityFactor)( void );
-
-	// Appears to be identical to function in IEngineStudio
-	void*	(*pfnGetModelByIndex)( int index );
+	const struct model_s* (*pfnPrecacheSprite)( HSPRITE spr );
 
 	// Appears to modifies hidden cvar gl_texsort.
-	void	(*pfnSetGL_TexSort)( int value );
+	void	(*pfnEnableTexSort)( int enable );
 
 	// Colour scaling values for screen.  Only works when gl_texsort is active.
-	void	(*pfnSetGL_TexSort_Colour)( float red, float green, float blue );
+	void	(*pfnSetLightmapColor)( float red, float green, float blue );
 
 	// Final scaling factor for screen.  Only works when gl_texsort is active.
-	void	(*pfnSetGL_TexSort_Scale)( float scale );
+	void	(*pfnSetLightmapScale)( float scale );
 
 	// Seems to be a client entry point to the pfnSequenceGet function introduced for CS:CZ
 	void*	(*pfnSequenceGet)( const char *fileName, const char *entryName );
 
 	// Draws a sprite on the screen - parameters are likely incorrect.
-	void	(*pfnDrawSpriteGeneric)( int frame, int x, int y, const wrect_t *prc, int u1, int u2, int u3, int u4 );
+	void	(*pfnSPR_DrawGeneric)( int frame, int x, int y, const wrect_t *prc, int blendsrc, int blenddst, int u3, int u4 );
 
 	// Seems to be a client entry point to the pfnSequencePickSentence function introduced for CS:CZ
 	void*	(*pfnSequencePickSentence)( const char *groupName, int pickMethod, int *picked );
 
-	// Unknown (deals with wchar_t's)
-	void	(*pfnUnknownFunction6)( void *u1, void *u2, void *u3, void *u4, void *u5, void *u6 );
+	// localizes hud string, uses Legacy font from skin def
+	// also supports unicode strings
+	int	(*pfnDrawLocalizedHudString)( int x, int y, const char* str, int r, int g, int b );
 
-	// Unknown (deals with wchar_t's)
-	void	(*pfnUnknownFunction7)( void *u1, void *u2 );
+	// i can't get this to work for some reason, don't use this
+	int	(*pfnDrawLocalizedConsoleString)( int x, int y, const char* str );
 
-	// Unknown (something to do with players infostring?)
-	char*	(*pfnUnknownFunction8)( char *u1 );
+	// gets keyvalue for local player, useful for querying vgui menus or autohelp
+	const char *(*LocalPlayerInfo_ValueForKey)( const char* key );
 
-	// Completely unknown
-	void	(*pfnUnknownFunction9)( void *u1, void *u2 );
-
-	// Completely unknown
-	void	(*pfnUnknownFunction10)( void *u1, void *u2, void *u3, void *u4, void *u5 );
+	void	(*pfnDrawText)( int x, int y, const char* text, unsigned long font );
+	int	(*pfnDrawUnicodeCharacter)( int x, int y, short number, int r, int g, int b, unsigned long hfont );
 
 	// Seems to be a client entry point to the pfnGetApproxWavePlayLen function introduced for CS:CZ
 	unsigned int (*pfnGetApproxWavePlayLen)( char *filename );
 
-	// Completely unknown
-	int	(*pfnUnknownFunction11)( void );
+	// for condition zero, returns interface from GameUI
+	void*	(*GetCareerGameInterface)( void );	// g-cont. !!!! potential crash-point!
 
 	// Sets cvar value - why is this needed when Cvar_SetValue already exists?
 	void	(*Cvar_Set)( char *name, char *value );
@@ -316,28 +303,20 @@ typedef struct cl_enginefuncs_s
 	// Seems to be a client entry point to the pfnIsCareerMatch function introduced for CS:CZ
 	int	(*pfnIsCareerMatch)( void );
 
-	// Starts a local sound - why is this needed?
+	// passes pitch as param
 	void	(*pfnStartDynamicSound)( char *filename, float volume, float pitch );
+	void	(*pfnMP3_InitStream)( char *filename, int flags );
 
-	// MP3 interface - unsure what int parameter is. Just queues the sound up - have to issue command "mp3 play" to start it. */
-	void	(*pfnMP3_InitStream)( char *filename, int i1 );
+	float	(*pfnSys_FloatTime)( void );
 
-	// Returns unknown, constantly increasing float.  Timing? (calls QueryPerformanceCounters)
-	float	(*pfnUnknownFunction12)( void );
-
-	// Seems to be a client entry point to the pfnProcessTutorMessageDecayBuffer function introduced for CS:CZ
 	void	(*pfnProcessTutorMessageDecayBuffer)( int *buffer, int buflen );
-
-	// Seems to be a client entry point to the pfnConstructTutorMessageDecayBuffer function introduced for CS:CZ
 	void	(*pfnConstructTutorMessageDecayBuffer)( int *buffer, int buflen );
-
-	// Seems to be a client entry point to the pfnResetTutorMessageDecayData function introduced for CS:CZ
 	void	(*pfnResetTutorMessageDecayData)( void );
 
 	// Seems to be an exact copy of the previous StartDynamicSound function???
 	void	(*pfnStartDynamicSound2)( char *filename, float volume, float pitch );
 
-	// Seems to be an exact copy of the previous FillRGBA function???
+	// Same like pfnFillRGBA - with other mode (substractive)
 	void	(*pfnFillRGBA2)( int x, int y, int width, int height, int r, int g, int b, int a );
 
 } cl_enginefunc_t;
@@ -348,7 +327,7 @@ extern void ClientDLL_Init( void ); // from cdll_int.c
 extern void ClientDLL_Shutdown( void );
 extern void ClientDLL_HudInit( void );
 extern void ClientDLL_HudVidInit( void );
-extern void	ClientDLL_UpdateClientData( void );
+extern void ClientDLL_UpdateClientData( void );
 extern void ClientDLL_Frame( double time );
 extern void ClientDLL_HudRedraw( int intermission );
 extern void ClientDLL_MoveClient( struct playermove_s *ppmove );
