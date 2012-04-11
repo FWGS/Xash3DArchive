@@ -626,6 +626,18 @@ void Con_DPrintf( char *fmt, ... );
 void Con_Printf( char *szFmt, ... );
 int pfnIsInGame( void );
 
+// CS:CS engfuncs (stubs)
+void *pfnSequenceGet( const char *fileName, const char *entryName );
+void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked );
+int pfnIsCareerMatch( void );
+
+// Decay engfuncs (stubs)
+int pfnGetTimesTutorMessageShown( int mid );
+void pfnRegisterTutorMessageShown( int mid );
+void pfnConstructTutorMessageDecayBuffer( int *buffer, int buflen );
+void pfnProcessTutorMessageDecayBuffer( int *buffer, int bufferLength );
+void pfnResetTutorMessageDecayData( void );
+
 /*
 ==============================================================
 
@@ -767,6 +779,10 @@ void TrimSpace( const char *source, char *dest );
 void GL_FreeImage( const char *name );
 void VID_RestoreGamma( void );
 void UI_SetActiveMenu( qboolean fActive );
+struct cmd_s *Cmd_GetList( void );
+char *Cmd_GetName( struct cmd_s *cmd );
+cvar_t *Cvar_GetList( void );
+char *Cvar_GetName( cvar_t *cvar );
 
 typedef struct autocomplete_list_s
 {

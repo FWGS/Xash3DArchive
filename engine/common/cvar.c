@@ -20,6 +20,26 @@ convar_t	*userinfo, *physinfo, *serverinfo, *renderinfo;
 
 /*
 ============
+Cvar_GetList
+============
+*/
+cvar_t *Cvar_GetList( void )
+{
+	return (cvar_t *)cvar_vars;
+}
+
+/*
+============
+Cvar_GetName
+============
+*/
+char *Cvar_GetName( cvar_t *cvar )
+{
+	return cvar->name;
+}
+
+/*
+============
 Cvar_InfoValidate
 ============
 */

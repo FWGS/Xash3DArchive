@@ -494,3 +494,95 @@ void pfnGetGameDir( char *szGetGameDir )
 	if( !szGetGameDir ) return;
 	Q_sprintf( szGetGameDir, "%s/%s", host.rootdir, GI->gamedir );
 }
+
+/*
+=============
+pfnSequenceGet
+
+used by CS:CZ
+=============
+*/
+void *pfnSequenceGet( const char *fileName, const char *entryName )
+{
+	return NULL;
+}
+
+/*
+=============
+pfnSequencePickSentence
+
+used by CS:CZ
+=============
+*/
+void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked )
+{
+	return NULL;
+}
+
+/*
+=============
+pfnIsCareerMatch
+
+used by CS:CZ (client stub)
+=============
+*/
+int pfnIsCareerMatch( void )
+{
+	return 0;
+}
+
+/*
+=============
+pfnRegisterTutorMessageShown
+
+only exists in PlayStation version
+=============
+*/
+void pfnRegisterTutorMessageShown( int mid )
+{
+}
+
+/*
+=============
+pfnGetTimesTutorMessageShown
+
+only exists in PlayStation version
+=============
+*/
+int pfnGetTimesTutorMessageShown( int mid )
+{
+	return 0;
+}
+
+/*
+=============
+pfnProcessTutorMessageDecayBuffer
+
+only exists in PlayStation version
+=============
+*/
+void pfnProcessTutorMessageDecayBuffer( int *buffer, int bufferLength )
+{
+}
+
+/*
+=============
+pfnConstructTutorMessageDecayBuffer
+
+only exists in PlayStation version
+=============
+*/
+void pfnConstructTutorMessageDecayBuffer( int *buffer, int bufferLength )
+{
+}
+
+/*
+=============
+pfnResetTutorMessageDecayData
+
+only exists in PlayStation version
+=============
+*/
+void pfnResetTutorMessageDecayData( void )
+{
+}

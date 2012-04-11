@@ -85,6 +85,7 @@ static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 { "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
 { "HUD_ChatInputPosition", (void **)&clgame.dllFuncs.pfnChatInputPosition },
 { "HUD_GetRenderInterface", (void **)&clgame.dllFuncs.pfnGetRenderInterface },
+{ "HUD_GetPlayerTeam", (void **)&clgame.dllFuncs.pfnGetPlayerTeam },
 { NULL, NULL }
 };
 
@@ -1207,7 +1208,7 @@ CL_GetSpritePointer
 const model_t *CL_GetSpritePointer( HSPRITE hSprite )
 {
 	if( hSprite <= 0 || hSprite > ( MAX_IMAGES - 1 ))
-		return 0;	// bad image
+		return NULL; // bad image
 	return &clgame.sprites[hSprite];
 }
 
@@ -2621,6 +2622,242 @@ void pfnSetMouseEnable( qboolean fEnable )
 }
 
 /*
+=============
+pfnGetServerTime
+
+=============
+*/
+float pfnGetServerTime( void )
+{
+	return cl.mtime[0];
+}
+
+/*
+=============
+pfnGetGravity
+
+=============
+*/
+float pfnGetGravity( void )
+{
+	return clgame.movevars.gravity;
+}
+
+/*
+=============
+pfnPrecacheSprite
+
+=============
+*/
+const model_t *pfnPrecacheSprite( HSPRITE hSprite )
+{
+	if( hSprite <= 0 || hSprite > ( MAX_IMAGES - 1 ))
+		return NULL; // bad image
+	return &clgame.sprites[hSprite];
+}
+
+/*
+=============
+pfnEnableTexSort
+
+FIXME: implement
+=============
+*/
+void pfnEnableTexSort( int enable )
+{
+}
+
+/*
+=============
+pfnSetLightmapColor
+
+FIXME: implement
+=============
+*/
+void pfnSetLightmapColor( float red, float green, float blue )
+{
+}
+
+/*
+=============
+pfnSetLightmapScale
+
+FIXME: implement
+=============
+*/
+void pfnSetLightmapScale( float scale )
+{
+}
+
+/*
+=============
+pfnSPR_DrawGeneric
+
+=============
+*/
+void pfnSPR_DrawGeneric( int frame, int x, int y, const wrect_t *prc, int blendsrc, int blenddst, int width, int height )
+{
+	pglEnable( GL_BLEND );
+	pglBlendFunc( blendsrc, blenddst ); // g-cont. are params is valid?
+	SPR_DrawGeneric( frame, x, y, width, height, prc );
+}
+
+/*
+=============
+pfnDrawLocalizedHudString
+
+FIXME: implement
+=============
+*/
+int pfnDrawLocalizedHudString( int x, int y, const char* str, int r, int g, int b )
+{
+	return 0;
+}
+
+/*
+=============
+pfnDrawLocalizedConsoleString
+
+FIXME: implement
+=============
+*/
+int pfnDrawLocalizedConsoleString( int x, int y, const char* str )
+{
+	return 0;
+}
+
+/*
+=============
+LocalPlayerInfo_ValueForKey
+
+=============
+*/
+const char *LocalPlayerInfo_ValueForKey( const char* key )
+{
+	return Info_ValueForKey( Cvar_Userinfo(), key );
+}
+
+/*
+=============
+pfnDrawText
+
+FIXME: implement
+=============
+*/
+void pfnDrawText( int x, int y, const char* text, unsigned long font )
+{
+}
+
+/*
+=============
+pfnDrawUnicodeCharacter
+
+FIXME: implement
+=============
+*/
+int pfnDrawUnicodeCharacter( int x, int y, short number, int r, int g, int b, unsigned long hfont )
+{
+	return 0;
+}
+
+/*
+=============
+GetCareerGameInterface
+
+=============
+*/
+void *GetCareerGameInterface( void )
+{
+	Msg( "^1Career GameInterface called!\n" );
+	return NULL;
+}
+
+/*
+=============
+pfnStartDynamicSound
+
+=============
+*/
+void pfnStartDynamicSound( char *filename, float volume, float pitch )
+{
+	int hSound = S_RegisterSound( filename );
+	S_StartSound( NULL, cl.refdef.viewentity, CHAN_AUTO, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
+}
+
+/*
+=============
+pfnMP3_InitStream
+
+=============
+*/
+void pfnMP3_InitStream( char *filename, int flags )
+{
+	if( !filename )
+	{
+		S_StopBackgroundTrack();
+		return;
+	}
+
+	// g-cont. flag 1 is probably 'LOOP'
+	if( flags & 1 )
+	{
+		S_StartBackgroundTrack( filename, filename );
+	}
+	else
+	{
+		S_StartBackgroundTrack( filename, NULL );
+	}
+}
+
+/*
+=============
+pfnSys_FloatTime
+
+=============
+*/
+float pfnSys_FloatTime( void )
+{
+	return (float)Sys_DoubleTime();
+}
+
+/*
+=============
+pfnStartDynamicSound2
+
+=============
+*/
+void pfnStartDynamicSound2( char *filename, float volume, float pitch )
+{
+	int hSound = S_RegisterSound( filename );
+	S_StartSound( NULL, cl.refdef.viewentity, CHAN_STATIC, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
+}
+
+/*
+=============
+pfnFillRGBA2
+
+=============
+*/
+void pfnFillRGBA2( int x, int y, int width, int height, int r, int g, int b, int a )
+{
+	r = bound( 0, r, 255 );
+	g = bound( 0, g, 255 );
+	b = bound( 0, b, 255 );
+	a = bound( 0, a, 255 );
+	pglColor4ub( r, g, b, a );
+
+	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
+
+	pglEnable( GL_BLEND );
+	pglDisable( GL_ALPHA_TEST );
+	pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_ONE );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
+	pglColor4ub( 255, 255, 255, 255 );
+}
+
+/*
 =================
 TriApi implementation
 
@@ -3483,6 +3720,36 @@ static cl_enginefunc_t gEngfuncs =
 	pfnGetMousePos,
 	pfnSetMousePos,
 	pfnSetMouseEnable,
+	Cvar_GetList,
+	Cmd_GetList,
+	Cvar_GetName,
+	Cmd_GetName,
+	pfnGetServerTime,
+	pfnGetGravity,
+	pfnPrecacheSprite,
+	pfnEnableTexSort,
+	pfnSetLightmapColor,
+	pfnSetLightmapScale,
+	pfnSequenceGet,
+	pfnSPR_DrawGeneric,
+	pfnSequencePickSentence,
+	pfnDrawLocalizedHudString,
+	pfnDrawLocalizedConsoleString,
+	LocalPlayerInfo_ValueForKey,
+	pfnDrawText,
+	pfnDrawUnicodeCharacter,
+	Sound_GetApproxWavePlayLen,
+	GetCareerGameInterface,
+	Cvar_Set,
+	pfnIsCareerMatch,
+	pfnStartDynamicSound,
+	pfnMP3_InitStream,
+	pfnSys_FloatTime,
+	pfnProcessTutorMessageDecayBuffer,
+	pfnConstructTutorMessageDecayBuffer,
+	pfnResetTutorMessageDecayData,
+	pfnStartDynamicSound2,
+	pfnFillRGBA2,
 };
 
 void CL_UnloadProgs( void )

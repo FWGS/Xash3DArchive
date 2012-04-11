@@ -380,20 +380,20 @@ void Cmd_Alias_f( void )
 
 =============================================================================
 */
-typedef struct cmd_function_s
+typedef struct cmd_s
 {
-	struct cmd_function_s	*next;
-	char			*name;
-	xcommand_t		function;
-	char			*desc;
-	int			flags;
-} cmd_function_t;
+	struct cmd_s	*next;
+	char		*name;
+	xcommand_t	function;
+	char		*desc;
+	int		flags;
+} cmd_t;
 
 static int		cmd_argc;
 static char		*cmd_args = NULL;
 static char		*cmd_argv[MAX_CMD_TOKENS];
 static char		cmd_tokenized[MAX_CMD_BUFFER];	// will have 0 bytes inserted
-static cmd_function_t	*cmd_functions;			// possible commands to execute
+static cmd_t	*cmd_functions;			// possible commands to execute
 cmd_source_t		cmd_source;
 
 /*
@@ -426,6 +426,26 @@ Cmd_Args
 char *Cmd_Args( void )
 {
 	return cmd_args;
+}
+
+/*
+============
+Cmd_GetList
+============
+*/
+cmd_t *Cmd_GetList( void )
+{
+	return cmd_functions;
+}
+
+/*
+============
+Cmd_GetName
+============
+*/
+char *Cmd_GetName( struct cmd_s *cmd )
+{
+	return cmd->name;
 }
 
 /*
@@ -490,7 +510,7 @@ Cmd_AddCommand
 */
 void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_desc )
 {
-	cmd_function_t	*cmd;
+	cmd_t	*cmd;
 
 	// fail if the command is a variable name
 	if( Cvar_FindVar( cmd_name ))
@@ -507,7 +527,7 @@ void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_
 	}
 
 	// use a small malloc to avoid zone fragmentation
-	cmd = Z_Malloc( sizeof( cmd_function_t ));
+	cmd = Z_Malloc( sizeof( cmd_t ));
 	cmd->name = copystring( cmd_name );
 	cmd->desc = copystring( cmd_desc );
 	cmd->function = function;
@@ -522,7 +542,7 @@ Cmd_AddGameCommand
 */
 void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function )
 {
-	cmd_function_t	*cmd;
+	cmd_t	*cmd;
 
 	// fail if the command is a variable name
 	if( Cvar_FindVar( cmd_name ))
@@ -539,7 +559,7 @@ void Cmd_AddGameCommand( const char *cmd_name, xcommand_t function )
 	}
 
 	// use a small malloc to avoid zone fragmentation
-	cmd = Z_Malloc( sizeof( cmd_function_t ));
+	cmd = Z_Malloc( sizeof( cmd_t ));
 	cmd->name = copystring( cmd_name );
 	cmd->desc = copystring( "game command" );
 	cmd->function = function;
@@ -555,7 +575,7 @@ Cmd_AddClientCommand
 */
 void Cmd_AddClientCommand( const char *cmd_name, xcommand_t function )
 {
-	cmd_function_t	*cmd;
+	cmd_t	*cmd;
 
 	// fail if the command is a variable name
 	if( Cvar_FindVar( cmd_name ))
@@ -572,7 +592,7 @@ void Cmd_AddClientCommand( const char *cmd_name, xcommand_t function )
 	}
 
 	// use a small malloc to avoid zone fragmentation
-	cmd = Z_Malloc( sizeof( cmd_function_t ));
+	cmd = Z_Malloc( sizeof( cmd_t ));
 	cmd->name = copystring( cmd_name );
 	cmd->desc = copystring( "client command" );
 	cmd->function = function;
@@ -588,7 +608,7 @@ Cmd_RemoveCommand
 */
 void Cmd_RemoveCommand( const char *cmd_name )
 {
-	cmd_function_t	*cmd, **back;
+	cmd_t	*cmd, **back;
 
 	if( !cmd_name || !*cmd_name )
 		return;
@@ -623,7 +643,7 @@ Cmd_LookupCmds
 */
 void Cmd_LookupCmds( char *buffer, void *ptr, setpair_t callback )
 {
-	cmd_function_t	*cmd;
+	cmd_t	*cmd;
 	cmdalias_t	*alias;
 
 	// nothing to process ?
@@ -647,7 +667,7 @@ Cmd_Exists
 */
 qboolean Cmd_Exists( const char *cmd_name )
 {
-	cmd_function_t	*cmd;
+	cmd_t	*cmd;
 
 	for( cmd = cmd_functions; cmd; cmd = cmd->next )
 	{
@@ -666,7 +686,7 @@ A complete command line has been parsed, so try to execute it
 */
 void Cmd_ExecuteString( char *text, cmd_source_t src )
 {	
-	cmd_function_t	*cmd;
+	cmd_t	*cmd;
 	cmdalias_t	*a;
 
 	// set cmd source
@@ -765,7 +785,7 @@ Cmd_List_f
 */
 void Cmd_List_f( void )
 {
-	cmd_function_t	*cmd;
+	cmd_t	*cmd;
 	int		i = 0;
 	char		*match;
 
@@ -791,8 +811,8 @@ unlink all commands with flag CVAR_EXTDLL
 */
 void Cmd_Unlink( int group )
 {
-	cmd_function_t	*cmd;
-	cmd_function_t	**prev;
+	cmd_t	*cmd;
+	cmd_t	**prev;
 	int		count = 0;
 
 	if( Cvar_VariableInteger( "host_gameloaded" ) && ( group & CMD_EXTDLL ))

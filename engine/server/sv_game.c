@@ -4048,30 +4048,6 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 
 /*
 =============
-pfnSequenceGet
-
-used by CS:CZ (client stub)
-=============
-*/
-void *pfnSequenceGet( const char *fileName, const char *entryName )
-{
-	return NULL;
-}
-
-/*
-=============
-pfnSequencePickSentence
-
-used by CS:CZ (client stub)
-=============
-*/
-void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked )
-{
-	return NULL;
-}
-
-/*
-=============
 pfnGetFileSize
 
 returns the filesize in bytes
@@ -4084,18 +4060,6 @@ int pfnGetFileSize( char *filename )
 
 /*
 =============
-pfnIsCareerMatch
-
-used by CS:CZ (client stub)
-=============
-*/
-int pfnIsCareerMatch( void )
-{
-	return 0;
-}
-
-/*
-=============
 pfnGetLocalizedStringLength
 
 used by CS:CZ (client stub)
@@ -4104,62 +4068,6 @@ used by CS:CZ (client stub)
 int pfnGetLocalizedStringLength( const char *label )
 {
 	return 0;
-}
-
-/*
-=============
-pfnRegisterTutorMessageShown
-
-only exists in PlayStation version
-=============
-*/
-void pfnRegisterTutorMessageShown( int mid )
-{
-}
-
-/*
-=============
-pfnGetTimesTutorMessageShown
-
-only exists in PlayStation version
-=============
-*/
-int pfnGetTimesTutorMessageShown( int mid )
-{
-	return 0;
-}
-
-/*
-=============
-pfnProcessTutorMessageDecayBuffer
-
-only exists in PlayStation version
-=============
-*/
-void pfnProcessTutorMessageDecayBuffer( int *buffer, int bufferLength )
-{
-}
-
-/*
-=============
-pfnConstructTutorMessageDecayBuffer
-
-only exists in PlayStation version
-=============
-*/
-void pfnConstructTutorMessageDecayBuffer( int *buffer, int bufferLength )
-{
-}
-
-/*
-=============
-pfnResetTutorMessageDecayData
-
-only exists in PlayStation version
-=============
-*/
-void pfnResetTutorMessageDecayData( void )
-{
 }
 
 /*

@@ -351,6 +351,7 @@ typedef struct
 	void	(*IN_ClearStates)( void );
 	void	(*pfnCalcRefdef)( ref_params_t *pparams );
 	int	(*pfnGetRenderInterface)( int version, render_api_t *renderfuncs, render_interface_t *callback );
+	int	(*pfnGetPlayerTeam)( int playerIndex );
 } HUD_FUNCTIONS;
 
 typedef struct

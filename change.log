@@ -12,6 +12,7 @@ Engine: first implementation of HLTV
 Render: fix a little bug with engine mirrors
 Sound: implement separate volume controls for background track and game sounds
 Sound: fix wrong position for dynamic sounds in case parent entity never has updates on the client
+Client: first implementation of extended engineinterface.
 
 build 1850
 
