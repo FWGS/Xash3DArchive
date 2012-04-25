@@ -647,6 +647,9 @@ void SV_InitGame( void )
 		svs.clients[i].edict = ent;
 	}
 
+	// get actual movevars
+	SV_UpdateMovevars( true );
+
 	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
 	svs.initialized = true;
 }

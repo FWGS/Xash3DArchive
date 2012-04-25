@@ -1372,7 +1372,8 @@ void GL_FreeTexture( GLenum texnum )
 
 	if( !image->name[0] )
 	{
-		Msg( "Trying to free unnamed texture with texnum %i\n", image->texnum );
+		if( image->texnum != 0 )
+			MsgDev( D_ERROR, "trying to free unnamed texture with texnum %i\n", image->texnum );
 		return;
 	}
 

@@ -1,4 +1,4 @@
-build ????
+build 1905
 
 Physic: fix trace bug when model is missing
 Client: implement function TriScreenToWorld
@@ -13,6 +13,10 @@ Render: fix a little bug with engine mirrors
 Sound: implement separate volume controls for background track and game sounds
 Sound: fix wrong position for dynamic sounds in case parent entity never has updates on the client
 Client: first implementation of extended engineinterface.
+Server: fix bug with update movevars after the server initialization.
+Input: cancel mouse movement while switches between menu\console and game
+Render: added function R_EntityRemoveDecals into RendererInterface
+Render: fixed bug with crash engine on custom resolutions while makes a screenshot (e.g. 1366x768)
 
 build 1850
 

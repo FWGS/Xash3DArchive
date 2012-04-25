@@ -285,6 +285,7 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags );
 //
 void DrawSurfaceDecals( msurface_t *fa );
 void DrawSingleDecal( decal_t *pDecal, msurface_t *fa );
+void R_EntityRemoveDecals( model_t *mod );
 void R_ClearDecals( void );
 
 //

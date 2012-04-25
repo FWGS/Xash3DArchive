@@ -421,8 +421,8 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	qboolean	result;
 
 	r_shot = Mem_Alloc( r_temppool, sizeof( rgbdata_t ));
-	r_shot->width = glState.width;
-	r_shot->height = glState.height;
+	r_shot->width = (glState.width + 3) & ~3;
+	r_shot->height = (glState.height + 3) & ~3;
 	r_shot->flags = IMAGE_HAS_COLOR;
 	r_shot->type = PF_RGB_24;
 	r_shot->size = r_shot->width * r_shot->height * PFDesc[r_shot->type].bpp;
@@ -430,7 +430,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	r_shot->buffer = Mem_Alloc( r_temppool, r_shot->size );
 
 	// get screen frame
-	pglReadPixels( 0, 0, glState.width, glState.height, GL_RGB, GL_UNSIGNED_BYTE, r_shot->buffer );
+	pglReadPixels( 0, 0, r_shot->width, r_shot->height, GL_RGB, GL_UNSIGNED_BYTE, r_shot->buffer );
 
 	switch( shot_type )
 	{

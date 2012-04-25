@@ -418,6 +418,9 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 		ent->syncbase = -0.01f; // back up to get 0'th frame animations
 	}
 
+	if( !ent->curstate.frame )
+		ent->syncbase = -0.01f; // back up to get 0'th frame animations
+
 	if( newstate->animtime != ent->curstate.animtime )
 	{
 		// client got new packet, shuffle animtimes

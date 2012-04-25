@@ -1107,3 +1107,27 @@ void R_DecalRemoveAll( int textureIndex )
 			R_DecalUnlink( pdecal );
 	}
 }
+
+/*
+===============
+R_EntityRemoveDecals
+
+remove all decals from specified entity
+===============
+*/
+void R_EntityRemoveDecals( model_t *mod )
+{
+	msurface_t	*psurf;
+	decal_t		*p;
+	int		i;
+
+	if( !mod || mod->type != mod_brush )
+		return;
+
+	psurf = &mod->surfaces[mod->firstmodelsurface];
+	for( i = 0; i < mod->nummodelsurfaces; i++, psurf++ )
+	{
+		for( p = psurf->pdecals; p; p = p->pnext )
+			R_DecalUnlink( p );
+	}
+}

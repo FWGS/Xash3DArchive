@@ -196,9 +196,10 @@ check movevars for changes every frame
 send updates to client if changed
 ===================
 */
-void SV_UpdateMovevars( void )
+void SV_UpdateMovevars( qboolean initialize )
 {
-	if( !physinfo->modified ) return;
+	if( !initialize && !physinfo->modified )
+		return;
 
 	// check range
 	if( sv_zmax->value < 256.0f ) Cvar_SetFloat( "sv_zmax", 256.0f );
@@ -234,6 +235,8 @@ void SV_UpdateMovevars( void )
 	svgame.movevars.skydir_z = sv_skydir_z->value;
 	svgame.movevars.skyangle = sv_skyangle->value;
 	svgame.movevars.wateralpha = sv_wateralpha->value;
+
+	if( initialize ) return;
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
 		Q_memcpy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
@@ -543,7 +546,7 @@ void Host_ServerFrame( void )
 	SV_UpdateServerInfo ();
 
 	// refresh physic movevars on the client side
-	SV_UpdateMovevars ();
+	SV_UpdateMovevars ( false );
 
 	// let everything in the world think and move
 	SV_RunGameFrame ();

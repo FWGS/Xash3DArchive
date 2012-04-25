@@ -403,7 +403,7 @@ extern	convar_t		*physinfo;
 //
 void SV_FinalMessage( char *message, qboolean reconnect );
 void SV_DropClient( sv_client_t *drop );
-
+void SV_UpdateMovevars( qboolean initialize );
 int SV_ModelIndex( const char *name );
 int SV_SoundIndex( const char *name );
 int SV_EventIndex( const char *name );

@@ -175,7 +175,6 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 	}
 	else
 	{
-
 		dz = svgame.movevars.stepsize;
 		neworg[2] += dz;
 		VectorCopy( neworg, end );

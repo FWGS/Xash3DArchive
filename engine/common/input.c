@@ -178,6 +178,8 @@ void IN_ToggleClientMouse( int newstate, int oldstate )
 	}
 	else if( newstate == key_game )
 	{
+		// reset mouse pos, so cancel effect in game
+		SetCursorPos( host.window_center_x, host.window_center_y );	
 		clgame.dllFuncs.IN_ActivateMouse();
 	}
 
