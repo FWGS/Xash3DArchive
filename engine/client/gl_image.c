@@ -177,6 +177,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, r_textureMinFilter );
 			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, r_textureMagFilter );
 		}
+
 		// set texture anisotropy if available
 		if( GL_Support( GL_ANISOTROPY_EXT ))
 			pglTexParameterf( tex->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_texture_anisotropy->value );
@@ -202,7 +203,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 		{
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
 
-			if( tex->target == GL_TEXTURE_2D )
+			if( tex->target != GL_TEXTURE_1D )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 
 			if( tex->target == GL_TEXTURE_3D )
@@ -212,7 +213,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 		{
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP );
 
-			if( tex->target == GL_TEXTURE_2D )
+			if( tex->target != GL_TEXTURE_1D )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
 			if( tex->target == GL_TEXTURE_3D )
@@ -223,7 +224,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	{
 		pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
 
-		if( tex->target == GL_TEXTURE_2D )
+		if( tex->target != GL_TEXTURE_1D )
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
 
 		if( tex->target == GL_TEXTURE_3D )
@@ -233,7 +234,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	{
 		pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_REPEAT );
 
-		if( tex->target == GL_TEXTURE_2D )
+		if( tex->target != GL_TEXTURE_1D )
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_REPEAT );
 
 		if( tex->target == GL_TEXTURE_3D )
@@ -1823,6 +1824,33 @@ static rgbdata_t *R_InitDlightCubemap( texFlags_t *flags )
 
 /*
 ==================
+R_InitGrayCubemap
+==================
+*/
+static rgbdata_t *R_InitGrayCubemap( texFlags_t *flags )
+{
+	int	size = 4;
+	byte	*dataCM = data2D;
+
+	if( !GL_Support( GL_TEXTURECUBEMAP_EXT ))
+		return NULL;
+
+	// gray cubemap - just stub for pointlights
+	Q_memset( dataCM, 0x7F, size * size * 6 * 4 );
+
+	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+
+	r_image.width = r_image.height = size;
+	r_image.size = r_image.width * r_image.height * 4 * 6;
+	r_image.flags |= (IMAGE_CUBEMAP|IMAGE_HAS_COLOR); // yes it's cubemap
+	r_image.buffer = data2D;
+	r_image.type = PF_RGBA_32;
+
+	return &r_image;
+}
+
+/*
+==================
 R_InitBuiltinTextures
 ==================
 */
@@ -1853,6 +1881,7 @@ static void R_InitBuiltinTextures( void )
 	{ "*atten3", &tr.attenuationTexture3, R_InitAttenuationTexture3, TEX_SYSTEM },
 	{ "*normalize", &tr.normalizeTexture, R_InitNormalizeCubemap, TEX_CUBEMAP },
 	{ "*lightCube", &tr.dlightCubeTexture, R_InitDlightCubemap, TEX_CUBEMAP },
+	{ "*grayCube", &tr.grayCubeTexture, R_InitGrayCubemap, TEX_CUBEMAP },
 	{ "*atten3D", &tr.attenuationTexture3D, R_InitAttenTexture3D, TEX_SYSTEM },
 	{ "*sky", &tr.skyTexture, R_InitSkyTexture, TEX_SYSTEM },
 	{ NULL, NULL, NULL }

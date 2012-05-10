@@ -63,6 +63,8 @@ typedef struct physics_interface_s
 	void		( *SV_UpdatePlayerBaseVelocity )( edict_t *ent );
 	// The game .dll should return 1 if save game should be allowed
 	int		( *SV_AllowSaveGame )( void );
+	// override trigger area checking and touching
+	int		( *SV_TriggerTouch )( edict_t *pent, edict_t *trigger );
 } physics_interface_t;
 
 #endif//PHYSINT_H

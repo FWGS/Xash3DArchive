@@ -340,6 +340,10 @@ sound_t S_RegisterSound( const char *name )
 		return SENTENCE_INDEX;
 	}
 
+	// some stupid mappers used leading '/' or '\' in path to models or sounds
+	if( name[0] == '/' || name[0] == '\\' ) name++;
+	if( name[0] == '/' || name[0] == '\\' ) name++;
+
 	sfx = S_FindName( name, NULL );
 	if( !sfx ) return -1;
 

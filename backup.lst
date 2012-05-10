@@ -30,6 +30,7 @@ engine\common\soundlib\
 pm_shared\
 mainui\
 mainui\legacy
+unused\
 utils\
 utils\makefont\
 utils\vgui\

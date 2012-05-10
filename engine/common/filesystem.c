@@ -2465,6 +2465,7 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 		else dllpath[i] = Q_tolower( dllname[i+start] );
 	}
 	dllpath[i] = '\0';
+
 	FS_DefaultExtension( dllpath, ".dll" );	// apply ext if forget
 	search = FS_FindFile( dllpath, &index, false );
 
@@ -2472,6 +2473,7 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	{
 		fs_ext_path = false;
 		if( directpath ) return NULL;	// direct paths fails here
+
 		// trying check also 'bin' folder for indirect paths
 		Q_strncpy( dllpath, dllname, sizeof( dllpath ));
 		search = FS_FindFile( dllpath, &index, false );

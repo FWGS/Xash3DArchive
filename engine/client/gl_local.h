@@ -187,6 +187,7 @@ typedef struct
 	int		attenuationTexture3D;// 3D attenuation
 	int		normalizeTexture;
 	int		dlightCubeTexture;	// dynamic cubemap
+	int		grayCubeTexture;
 	int		skyboxTextures[6];	// skybox sides
 	int		mirrorTextures[MAX_MIRRORS];
 	int		num_mirrors_used;	// used mirror textures

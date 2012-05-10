@@ -972,6 +972,10 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 	for( i = 0; i < surf->numedges; i++ )
 	{
 		e = loadmodel->surfedges[surf->firstedge + i];
+
+		if( e >= loadmodel->numedges || e <= -loadmodel->numedges )
+			Host_Error( "Mod_CalcSurfaceBounds: bad edge\n" );
+
 		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
 		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
 
@@ -1013,6 +1017,10 @@ static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
 	for( i = 0; i < surf->numedges; i++ )
 	{
 		e = loadmodel->surfedges[surf->firstedge + i];
+
+		if( e >= loadmodel->numedges || e <= -loadmodel->numedges )
+			Host_Error( "Mod_CalcSurfaceBounds: bad edge\n" );
+
 		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
 		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
 		AddPointToBounds( v->position, info->mins, info->maxs );

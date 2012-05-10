@@ -229,7 +229,7 @@ void CL_TEntPlaySound( TEMPENTITY *pTemp, float damp )
 		else pitch = PITCH_NORM;
 
 		handle = S_RegisterSound( soundname );
-		S_StartSound( pTemp->entity.origin, 0, CHAN_STATIC, handle, fvol, ATTN_NORM, pitch, SND_STOP_LOOPING );
+		S_StartSound( pTemp->entity.origin, -(pTemp - cl_tempents), CHAN_BODY, handle, fvol, ATTN_NORM, pitch, SND_STOP_LOOPING );
 	}
 }
 

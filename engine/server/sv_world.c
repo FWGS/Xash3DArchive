@@ -398,43 +398,52 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 		next = l->next;
 		touch = EDICT_FROM_AREA( l );
 
-		if( touch == ent || touch->v.solid != SOLID_TRIGGER ) // disabled ?
-			continue;
-
-		if( touch->v.groupinfo && ent->v.groupinfo )
+		if( svgame.physFuncs.SV_TriggerTouch != NULL )
 		{
-			if(( !svs.groupop && !(touch->v.groupinfo & ent->v.groupinfo)) ||
-			(svs.groupop == 1 && (touch->v.groupinfo & ent->v.groupinfo)))
+			// user dll can override trigger checking (Xash3D extension)
+			if( !svgame.physFuncs.SV_TriggerTouch( ent, touch ))
 				continue;
 		}
-
-		if( !BoundsIntersect( ent->v.absmin, ent->v.absmax, touch->v.absmin, touch->v.absmax ))
-			continue;
-
-		// check brush triggers accuracy
-		if( Mod_GetType( touch->v.modelindex ) == mod_brush )
+		else
 		{
-			model_t *mod = Mod_Handle( touch->v.modelindex );
-
-			// force to select bsp-hull
-			hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, offset );
-
-			// support for rotational triggers
-			if( (mod->flags & MODEL_HAS_ORIGIN) && !VectorIsNull( touch->v.angles ))
-			{
-				matrix4x4	matrix;
-				Matrix4x4_CreateFromEntity( matrix, touch->v.angles, offset, 1.0f );
-				Matrix4x4_VectorITransform( matrix, ent->v.origin, test );
-			}
-			else
-			{
-				// offset the test point appropriately for this hull.
-				VectorSubtract( ent->v.origin, offset, test );
-			}
-
-			// test hull for intersection with this model
-			if( PM_HullPointContents( hull, hull->firstclipnode, test ) != CONTENTS_SOLID )
+			if( touch == ent || touch->v.solid != SOLID_TRIGGER ) // disabled ?
 				continue;
+
+			if( touch->v.groupinfo && ent->v.groupinfo )
+			{
+				if(( !svs.groupop && !(touch->v.groupinfo & ent->v.groupinfo)) ||
+				(svs.groupop == 1 && (touch->v.groupinfo & ent->v.groupinfo)))
+					continue;
+			}
+
+			if( !BoundsIntersect( ent->v.absmin, ent->v.absmax, touch->v.absmin, touch->v.absmax ))
+				continue;
+
+			// check brush triggers accuracy
+			if( Mod_GetType( touch->v.modelindex ) == mod_brush )
+			{
+				model_t *mod = Mod_Handle( touch->v.modelindex );
+
+				// force to select bsp-hull
+				hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, offset );
+
+				// support for rotational triggers
+				if( (mod->flags & MODEL_HAS_ORIGIN) && !VectorIsNull( touch->v.angles ))
+				{
+					matrix4x4	matrix;
+					Matrix4x4_CreateFromEntity( matrix, touch->v.angles, offset, 1.0f );
+					Matrix4x4_VectorITransform( matrix, ent->v.origin, test );
+				}
+				else
+				{
+					// offset the test point appropriately for this hull.
+					VectorSubtract( ent->v.origin, offset, test );
+				}
+
+				// test hull for intersection with this model
+				if( PM_HullPointContents( hull, hull->firstclipnode, test ) != CONTENTS_SOLID )
+					continue;
+			}
 		}
 
       		svgame.globals->time = sv.time;
