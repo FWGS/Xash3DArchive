@@ -1059,7 +1059,9 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	// touch other objects
 	for( i = 0; i < svgame.pmove->numtouch; i++ )
 	{
-		if( i == MAX_PHYSENTS ) break;
+		// never touch the objects when "playersonly" is active
+		if( i == MAX_PHYSENTS || ( sv.hostflags & SVF_PLAYERSONLY ))
+			break;
 
 		pmtrace = &svgame.pmove->touchindex[i];
 		touch = EDICT_NUM( svgame.pmove->physents[pmtrace->ent].info );

@@ -446,8 +446,12 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 			}
 		}
 
-      		svgame.globals->time = sv.time;
-		svgame.dllFuncs.pfnTouch( touch, ent );
+		// never touch the triggers when "playersonly" is active
+		if(!( sv.hostflags & SVF_PLAYERSONLY ))
+		{
+			svgame.globals->time = sv.time;
+			svgame.dllFuncs.pfnTouch( touch, ent );
+		}
 	}
 	
 	// recurse down both sides

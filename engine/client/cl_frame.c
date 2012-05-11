@@ -117,7 +117,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 			{
 				CL_SetTraceHull( 0 ); // g-cont. player hull for better detect moving platforms
 				VectorSet( vecSrc, ent->origin[0], ent->origin[1], ent->origin[2] + ent->model->maxs[2] );
-				VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] );		
+				VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] - 32 );		
 				CL_PlayerTraceExt( vecSrc, vecEnd, PM_STUDIO_IGNORE, CL_PushMoveFilter, &trace );
 				m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
 			}
@@ -126,8 +126,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 			{
 				qboolean	applyVel, applyAvel;
 
-				d = 1.0f - cl.lerpFrac; // use backlerp to interpolate pusher position
-				d = d - 1.0f;
+				d = -1.0f;
 
 				applyVel = !VectorCompare( m_pGround->curstate.origin, m_pGround->prevstate.origin );
 				applyAvel = !VectorCompare( m_pGround->curstate.angles, m_pGround->prevstate.angles );
@@ -136,7 +135,8 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 				{
 					ent->origin[0] += ( m_pGround->curstate.origin[0] - m_pGround->prevstate.origin[0] ) * d;
 					ent->origin[1] += ( m_pGround->curstate.origin[1] - m_pGround->prevstate.origin[1] ) * d;
-					ent->origin[2] += ( m_pGround->curstate.origin[2] - m_pGround->prevstate.origin[2] ) * d;
+//					ent->origin[2] += ( m_pGround->curstate.origin[2] - m_pGround->prevstate.origin[2] ) * d;
+					ent->latched.prevorigin[2] = ent->origin[2];
 				}
 
 				if( applyAvel )
