@@ -407,6 +407,44 @@ void SV_CreateStudioDecal( const float *origin, const float *start, int decalInd
 	BF_WriteShort( &sv.signon, modelIndex );
 }
 
+/*
+=======================
+SV_CreateStaticEntity
+
+NOTE: static entities only accepted when game is loading
+=======================
+*/
+void SV_CreateStaticEntity( sv_static_entity_t *ent )
+{
+	int	index, i;
+
+	index = SV_ModelIndex( ent->model );
+
+	BF_WriteByte( &sv.signon, svc_spawnstatic );
+	BF_WriteShort(&sv.signon, index );
+	BF_WriteByte( &sv.signon, ent->sequence );
+	BF_WriteByte( &sv.signon, ent->frame );
+	BF_WriteWord( &sv.signon, ent->colormap );
+	BF_WriteByte( &sv.signon, ent->skin );
+
+	for( i = 0; i < 3; i++ )
+	{
+		BF_WriteBitCoord( &sv.signon, ent->origin[i] );
+		BF_WriteBitAngle( &sv.signon, ent->angles[i], 16 );
+	}
+
+	BF_WriteByte( &sv.signon, ent->rendermode );
+
+	if( ent->rendermode != kRenderNormal )
+	{
+		BF_WriteByte( &sv.signon, ent->renderamt );
+		BF_WriteByte( &sv.signon, ent->rendercolor.r );
+		BF_WriteByte( &sv.signon, ent->rendercolor.g );
+		BF_WriteByte( &sv.signon, ent->rendercolor.b );
+		BF_WriteByte( &sv.signon, ent->renderfx );
+	}
+}
+
 static qboolean SV_OriginIn( int mode, const vec3_t v1, const vec3_t v2 )
 {
 	int	leafnum;
@@ -1537,7 +1575,7 @@ move entity to client (Q1 legacy)
 */
 static void pfnMakeStatic( edict_t *ent )
 {
-	int	index, i;
+	sv_static_entity_t	*clent;
 
 	if( !SV_IsValidEdict( ent ))
 	{
@@ -1545,31 +1583,30 @@ static void pfnMakeStatic( edict_t *ent )
 		return;
 	}
 
-	index = SV_ModelIndex( STRING( ent->v.model ));
-
-	BF_WriteByte( &sv.signon, svc_spawnstatic );
-	BF_WriteShort(&sv.signon, index );
-	BF_WriteByte( &sv.signon, ent->v.sequence );
-	BF_WriteByte( &sv.signon, ent->v.frame );
-	BF_WriteWord( &sv.signon, ent->v.colormap );
-	BF_WriteByte( &sv.signon, ent->v.skin );
-
-	for(i = 0; i < 3; i++ )
+	if( sv.num_static_entities >= MAX_STATIC_ENTITIES )
 	{
-		BF_WriteBitCoord( &sv.signon, ent->v.origin[i] );
-		BF_WriteBitAngle( &sv.signon, ent->v.angles[i], 16 );
+		MsgDev( D_WARN, "SV_MakeStatic: too many static entities. Ignored\n" );
+		return;
 	}
 
-	BF_WriteByte( &sv.signon, ent->v.rendermode );
+	clent = &sv.static_entities[sv.num_static_entities++];
 
-	if( ent->v.rendermode != kRenderNormal )
-	{
-		BF_WriteByte( &sv.signon, ent->v.renderamt );
-		BF_WriteByte( &sv.signon, ent->v.rendercolor[0] );
-		BF_WriteByte( &sv.signon, ent->v.rendercolor[1] );
-		BF_WriteByte( &sv.signon, ent->v.rendercolor[2] );
-		BF_WriteByte( &sv.signon, ent->v.renderfx );
-	}
+	Q_strncpy( clent->model, STRING( ent->v.model ), sizeof( clent->model ));
+	VectorCopy( ent->v.origin, clent->origin );
+	VectorCopy( ent->v.angles, clent->angles );
+
+	clent->sequence = ent->v.sequence;
+	clent->frame = ent->v.frame;
+	clent->colormap = ent->v.colormap;
+	clent->skin = ent->v.skin;
+	clent->rendermode = ent->v.rendermode;
+	clent->renderamt = ent->v.renderamt;
+	clent->rendercolor.r = ent->v.rendercolor[0];
+	clent->rendercolor.g = ent->v.rendercolor[1];
+	clent->rendercolor.b = ent->v.rendercolor[2];
+	clent->renderfx = ent->v.renderfx;
+
+	SV_CreateStaticEntity( clent );
 
 	// remove at end of the frame
 	ent->v.flags |= FL_KILLME;

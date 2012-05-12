@@ -87,6 +87,22 @@ typedef struct
 	vec3_t		mins, maxs;
 } sv_consistency_t;
 
+// like as entity_state_t in Quake
+typedef struct
+{
+	char		model[64];	// name of static-entity model for right precache
+	vec3_t		origin;
+	vec3_t		angles;
+	byte		sequence;
+	byte		frame;
+	short		colormap;
+	byte		skin;		// can't set contents! only real skin!
+	byte		rendermode;
+	byte		renderamt;
+	color24		rendercolor;
+	byte		renderfx;
+} sv_static_entity_t;
+
 typedef struct server_s
 {
 	sv_state_t	state;		// precache commands are only valid during load
@@ -111,6 +127,9 @@ typedef struct server_s
 	char		sound_precache[MAX_SOUNDS][CS_SIZE];
 	char		files_precache[MAX_CUSTOM][CS_SIZE];
 	char		event_precache[MAX_EVENTS][CS_SIZE];
+
+	sv_static_entity_t	static_entities[MAX_STATIC_ENTITIES];
+	int		num_static_entities;
 
 	// run local lightstyles to let SV_LightPoint grab the actual information
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
@@ -533,6 +552,7 @@ const char *SV_GetString( string_t iString );
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed );
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
+void SV_CreateStaticEntity( sv_static_entity_t *ent );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );

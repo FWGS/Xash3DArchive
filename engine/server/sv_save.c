@@ -29,10 +29,16 @@ half-life implementation of saverestore system
 #define SAVEFILE_HEADER		(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
 #define SAVEGAME_HEADER		(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
 #define SAVEGAME_VERSION		0x0065				// Version 0.65
-#define CLIENT_SAVEGAME_VERSION	0x0066				// Version 0.66
+#define CLIENT_SAVEGAME_VERSION	0x0067				// Version 0.66
 
 #define SAVE_AGED_COUNT		1
 #define SAVENAME_LENGTH		128	// matches with MAX_OSPATH
+
+#define LUMP_DECALS_OFFSET		0
+#define LUMP_STATIC_OFFSET		1
+#define LUMP_SOUNDS_OFFSET		2
+#define LUMP_RESERVED		3	// g-cont. lump reserved for me
+#define NUM_CLIENT_OFFSETS		4
 
 void (__cdecl *pfnSaveGameComment)( char *buffer, int max_length ) = NULL;
 
@@ -43,6 +49,11 @@ typedef struct
 	int	nBytesDataHeaders;
 	int	nBytesData;
 } SaveFileSectionsInfo_t;
+
+typedef struct
+{
+	int	offsets[NUM_CLIENT_OFFSETS];
+} ClientSections_t;
 
 typedef struct
 {
@@ -142,15 +153,6 @@ static TYPEDESCRIPTION gEntityTable[] =
 	DEFINE_FIELD( ENTITYTABLE, size, FIELD_INTEGER ),
 	DEFINE_FIELD( ENTITYTABLE, flags, FIELD_INTEGER ),
 	DEFINE_FIELD( ENTITYTABLE, classname, FIELD_STRING ),
-};
-
-static TYPEDESCRIPTION gDecalList[] =
-{
-	DEFINE_FIELD( decallist_t, position, FIELD_POSITION_VECTOR ),
-	DEFINE_ARRAY( decallist_t, name, FIELD_CHARACTER, 64 ),
-	DEFINE_FIELD( decallist_t, entityIndex, FIELD_SHORT ),
-	DEFINE_FIELD( decallist_t, flags, FIELD_CHARACTER ),
-	DEFINE_FIELD( decallist_t, impactPlaneNormal, FIELD_VECTOR ),
 };
 
 TYPEDESCRIPTION gEntvarsDescription[] = 
@@ -974,8 +976,10 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	string		name;
 	file_t		*pFile;
 	decallist_t	*decalList;
+	ClientSections_t	sections;
 	int		i, decalCount;
 	int		id, version;
+	fs_offset_t	header_offset;
 
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
@@ -989,10 +993,18 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	FS_Write( pFile, &id, sizeof( int ));
 	FS_Write( pFile, &version, sizeof( int ));
 
+	Q_memset( &sections, -1, sizeof( sections ));
+	header_offset = FS_Tell( pFile );	// save header offset
+
+	// write offsets (will be merged later)
+	FS_Write( pFile, &sections, sizeof( sections ));
+
 	// g-cont. add space for studiodecals if present
 	decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS * 2 );
 	decalCount = R_CreateDecalList( decalList, svgame.globals->changelevel );
 
+	// DECALS SECTION
+	sections.offsets[LUMP_DECALS_OFFSET] = FS_Tell( pFile );
 	FS_Write( pFile, &decalCount, sizeof( int ));
 
 	// we can't use SaveRestore system here...
@@ -1025,6 +1037,46 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	}
 
 	Z_Free( decalList );
+
+	// STATIC ENTITIES SECTION
+	if( sv.num_static_entities != 0 )
+	{
+		sections.offsets[LUMP_STATIC_OFFSET] = FS_Tell( pFile );
+		FS_Write( pFile, &sv.num_static_entities, sizeof( int ));
+	}
+
+	for( i = 0; i < sv.num_static_entities; i++ )
+	{
+		sv_static_entity_t	*entry;
+		byte		nameSize;
+
+		entry = &sv.static_entities[i];
+
+		nameSize = Q_strlen( entry->model ) + 1;
+
+		FS_Write( pFile, &nameSize, sizeof( nameSize ));
+		FS_Write( pFile, entry->model, nameSize ); 
+		FS_Write( pFile, &entry->origin, sizeof( entry->origin ));
+		FS_Write( pFile, &entry->angles, sizeof( entry->angles ));
+		FS_Write( pFile, &entry->sequence, sizeof( entry->sequence ));
+		FS_Write( pFile, &entry->frame, sizeof( entry->frame ));
+		FS_Write( pFile, &entry->colormap, sizeof( entry->colormap ));
+		FS_Write( pFile, &entry->skin, sizeof( entry->skin ));
+		FS_Write( pFile, &entry->rendermode, sizeof( entry->rendermode ));
+
+		if( entry->rendermode != kRenderNormal )
+		{
+			// write additional render data
+			FS_Write( pFile, &entry->renderamt, sizeof( entry->renderamt ));
+			FS_Write( pFile, &entry->rendercolor, sizeof( entry->rendercolor ));
+			FS_Write( pFile, &entry->renderfx, sizeof( entry->renderfx ));
+		}
+	}
+
+	// AT END
+	FS_Seek( pFile, header_offset, SEEK_SET );
+	FS_Write( pFile, &sections, sizeof( sections ));	// write real sections info	
+
 	FS_Close( pFile );
 }
 
@@ -1042,6 +1094,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 	int		i, tag;
 	decallist_t	*decalList;
 	int		decalCount;
+	ClientSections_t	sections;
 	
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
@@ -1062,42 +1115,99 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		return;
 	}
 
+	// read offsets
+	FS_Read( pFile, &sections, sizeof( sections ));
+
 	if( adjacent ) MsgDev( D_INFO, "Loading decals from %s\n", level );
 
-	// read the decalCount
-	FS_Read( pFile, &decalCount, sizeof( int ));
-	decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * decalCount );
-
-	// we can't use SaveRestore system here...
-	for( i = 0; i < decalCount; i++ )
+	if( sections.offsets[LUMP_DECALS_OFFSET] != -1 )
 	{
-		vec3_t		localPos;
-		decallist_t	*entry;
-		byte		nameSize;
+		// jump to decals description
+		FS_Seek( pFile, sections.offsets[LUMP_DECALS_OFFSET], SEEK_SET );
 
-		entry = &decalList[i];
+		// read the decalCount
+		FS_Read( pFile, &decalCount, sizeof( int ));
+		decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * decalCount );
 
-		FS_Read( pFile, localPos, sizeof( localPos ));
-		FS_Read( pFile, &nameSize, sizeof( nameSize ));
-		FS_Read( pFile, entry->name, nameSize ); 
-		FS_Read( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
-		FS_Read( pFile, &entry->flags, sizeof( entry->flags ));
-		FS_Read( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
-
-		if( pSaveData->fUseLandmark && ( entry->flags & FDECAL_USE_LANDMARK ))
-			VectorAdd( localPos, pSaveData->vecLandmarkOffset, entry->position );
-		else VectorCopy( localPos, entry->position );
-
-		if( entry->flags & FDECAL_STUDIO )
+		// we can't use SaveRestore system here...
+		for( i = 0; i < decalCount; i++ )
 		{
-			// read additional data for studio decals
-			FS_Read( pFile, &entry->studio_state, sizeof( entry->studio_state ));
+			vec3_t		localPos;
+			decallist_t	*entry;
+			byte		nameSize;
+
+			entry = &decalList[i];
+
+			FS_Read( pFile, localPos, sizeof( localPos ));
+			FS_Read( pFile, &nameSize, sizeof( nameSize ));
+			FS_Read( pFile, entry->name, nameSize ); 
+			FS_Read( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
+			FS_Read( pFile, &entry->flags, sizeof( entry->flags ));
+			FS_Read( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
+
+			if( pSaveData->fUseLandmark && ( entry->flags & FDECAL_USE_LANDMARK ))
+				VectorAdd( localPos, pSaveData->vecLandmarkOffset, entry->position );
+			else VectorCopy( localPos, entry->position );
+
+			if( entry->flags & FDECAL_STUDIO )
+			{
+				// read additional data for studio decals
+				FS_Read( pFile, &entry->studio_state, sizeof( entry->studio_state ));
+			}
+
+			ReapplyDecal( pSaveData, entry, adjacent );
 		}
 
-		ReapplyDecal( pSaveData, entry, adjacent );
+		Z_Free( decalList );
 	}
 
-	Z_Free( decalList );
+	// NOTE: static entities can't be moved across the levels because they are static :-)
+	if( sections.offsets[LUMP_STATIC_OFFSET] != -1 && !adjacent )
+	{
+		// jump to static entities description
+		FS_Seek( pFile, sections.offsets[LUMP_STATIC_OFFSET], SEEK_SET );
+
+		// put static entities back to global array so we can save it again
+		FS_Read( pFile, &sv.num_static_entities, sizeof( int ));
+
+		// clear old entities
+		Q_memset( sv.static_entities, 0, sizeof( sv.static_entities ));
+
+		for( i = 0; i < sv.num_static_entities; i++ )
+		{
+			sv_static_entity_t	*entry;
+			byte		nameSize;
+
+			if( i >= MAX_STATIC_ENTITIES )
+			{
+				MsgDev( D_ERROR, "SV_LoadClientState: too many static entities %i\n", sv.num_static_entities );
+				break;
+			}
+
+			entry = &sv.static_entities[i];
+
+			FS_Read( pFile, &nameSize, sizeof( nameSize ));
+			FS_Read( pFile, entry->model, nameSize ); 
+			FS_Read( pFile, &entry->origin, sizeof( entry->origin ));
+			FS_Read( pFile, &entry->angles, sizeof( entry->angles ));
+			FS_Read( pFile, &entry->sequence, sizeof( entry->sequence ));
+			FS_Read( pFile, &entry->frame, sizeof( entry->frame ));
+			FS_Read( pFile, &entry->colormap, sizeof( entry->colormap ));
+			FS_Read( pFile, &entry->skin, sizeof( entry->skin ));
+			FS_Read( pFile, &entry->rendermode, sizeof( entry->rendermode ));
+
+			if( entry->rendermode != kRenderNormal )
+			{
+				// write additional render data
+				FS_Read( pFile, &entry->renderamt, sizeof( entry->renderamt ));
+				FS_Read( pFile, &entry->rendercolor, sizeof( entry->rendercolor ));
+				FS_Read( pFile, &entry->renderfx, sizeof( entry->renderfx ));
+			}
+
+			SV_CreateStaticEntity( entry );
+		}
+	}
+
 	FS_Close( pFile );
 }
 

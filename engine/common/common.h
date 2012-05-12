@@ -105,6 +105,7 @@ typedef enum
 #define CS_TIME		16	// size of time string
 
 #define MAX_DECALS		512	// touching TE_DECAL messages, etc
+#define MAX_STATIC_ENTITIES	512	// static entities that moved on the client when level is spawn
 
 // filesystem flags
 #define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path

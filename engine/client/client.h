@@ -35,9 +35,8 @@ GNU General Public License for more details.
 #define MAX_MOVIES		8
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
-#define MAX_EFRAGS		256	// g-cont. just no need more
+#define MAX_EFRAGS		1024
 #define MAX_REQUESTS	32
-#define MAX_STATIC_ENTITIES	128	// same as in quake1
 
 // screenshot types
 #define VID_SCREENSHOT	0
