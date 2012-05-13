@@ -38,7 +38,7 @@ GNU General Public License for more details.
 #define svc_stopsound		16	// <see code>
 #define svc_updatepings		17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
-#define svc_frame			19	// <OBSOLETE>
+#define svc_restoresound		19	// <see code>
 #define svc_spawnstatic		20	// creates a static client entity
 #define svc_event_reliable		21	// playback event directly from message, not queue
 #define svc_spawnbaseline		22	// <see code>

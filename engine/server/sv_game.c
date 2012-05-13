@@ -418,6 +418,10 @@ void SV_CreateStaticEntity( sv_static_entity_t *ent )
 {
 	int	index, i;
 
+	// this can happens if serialized map contain 4096 static decals...
+	if(( BF_GetNumBytesWritten( &sv.signon ) + 64 ) >= BF_GetMaxBytes( &sv.signon ))
+		return;
+
 	index = SV_ModelIndex( ent->model );
 
 	BF_WriteByte( &sv.signon, svc_spawnstatic );

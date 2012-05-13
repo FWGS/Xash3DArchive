@@ -128,7 +128,7 @@ extern convar_t	*scr_height;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
 extern convar_t	*cl_allow_levelshots;
-extern convar_t	*host_allow_materials;
+extern convar_t	*mod_allow_materials;
 extern convar_t	*host_limitlocal;
 extern convar_t	*host_maxfps;
 
@@ -261,14 +261,17 @@ typedef struct host_redirect_s
 
 typedef struct
 {
-	string		name;
-	int		entnum;
+	char		name[64];
+	short		entnum;
 	vec3_t		origin;
 	float		volume;
 	float		attenuation;
 	qboolean		looping;
-	int		channel;
-	int		pitch;
+	byte		channel;
+	byte		pitch;
+	byte		wordIndex;	// current playing word in sentence
+	double		samplePos;
+	double		forcedEnd;
 } soundlist_t;
 
 typedef struct host_parm_s
@@ -280,7 +283,7 @@ typedef struct host_parm_s
 	host_state	state;		// global host state
 	uint		type;		// running at
 	jmp_buf		abortframe;	// abort current frame
-	dword		errorframe;	// to avoid each-frame host error
+	dword		errorframe;	// to prevent multiple host error
 	byte		*mempool;		// static mempool for misc allocations
 	string		finalmsg;		// server shutdown final message
 	host_redirect_t	rd;		// remote console

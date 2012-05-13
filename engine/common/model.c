@@ -32,6 +32,7 @@ static byte	visdata[MAX_MAP_LEAFS/8];	// intermediate buffer
 int		bmodel_version;		// global stuff to detect bsp version
 char		modelname[64];		// short model name (without path and ext)
 convar_t		*mod_studiocache;
+convar_t		*mod_allow_materials;
 		
 model_t		*loadmodel;
 model_t		*worldmodel;
@@ -390,6 +391,10 @@ void Mod_Init( void )
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
 	mod_studiocache = Cvar_Get( "r_studiocache", "1", CVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
 
+	if( host.type == HOST_NORMAL )
+		mod_allow_materials = Cvar_Get( "host_allow_materials", "0", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
+	else mod_allow_materials = NULL; // no reason to load HD-textures for dedicated server
+
 	Mod_InitStudioHull ();
 }
 
@@ -550,7 +555,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		// check for multi-layered sky texture
 		if( world.loading && !Q_strncmp( mt->name, "sky", 3 ) && mt->width == 256 && mt->height == 128 )
 		{	
-			if( host_allow_materials->integer )
+			if( mod_allow_materials != NULL && mod_allow_materials->integer )
 			{
 				// build standard path: "materials/mapname/texname_solid.tga"
 				Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_solid.tga", modelname, mt->name );
@@ -612,7 +617,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		}
 		else 
 		{
-			if( host_allow_materials->integer )
+			if( mod_allow_materials != NULL && mod_allow_materials->integer )
 			{
 				if( mt->name[0] == '*' ) mt->name[0] = '!'; // replace unexpected symbol
 
@@ -1083,6 +1088,10 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		if( !Q_strncmp( tex->name, "scroll", 6 ))
 			out->flags |= SURF_CONVEYOR;
+
+		// g-cont. added a combined conveyor-transparent
+		if( !Q_strncmp( tex->name, "{scroll", 7 ))
+			out->flags |= SURF_CONVEYOR|SURF_TRANSPARENT;
 
 		// g-cont this texture from decals.wad he-he
 		if( !Q_strncmp( tex->name, "reflect", 7 ))

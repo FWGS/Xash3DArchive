@@ -626,7 +626,7 @@ void VOX_ReadSentenceFile( const char *psentenceFileName )
 		// skip entire line if first char is /
 		if( *pch != '/' )
 		{
-			sentence_t	*pSentence = &g_Sentences[g_numSentences++];
+			sentence_t *pSentence = &g_Sentences[g_numSentences++];
 
 			pSentence->pName = pch;
 			pSentence->length = 0;

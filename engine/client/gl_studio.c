@@ -3279,7 +3279,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	FS_StripExtension( mdlname );
 
 	// NOTE: colormaps must have the palette for properly work. Ignore it.
-	if( host_allow_materials->integer && !( ptexture->flags & STUDIO_NF_COLORMAP ))
+	if( mod_allow_materials != NULL && mod_allow_materials->integer && !( ptexture->flags & STUDIO_NF_COLORMAP ))
 	{
 		int	gl_texturenum = 0;
 

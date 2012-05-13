@@ -54,6 +54,7 @@ convar_t		*s_refdb;
 convar_t		*dsp_off;		// set to 1 to disable all dsp processing
 convar_t		*s_cull;		// cull sounds by geometry
 convar_t		*s_test;		// cvar for testing new effects
+convar_t		*s_phs;
 
 /*
 =============================================================================
@@ -699,6 +700,29 @@ float SND_GetGain( channel_t *ch, qboolean fplayersound, qboolean flooping, floa
 	return gain; 
 }
 
+qboolean SND_CheckPHS( channel_t *ch )
+{
+	mleaf_t	*leaf;
+	int	leafnum;
+	byte	*mask = NULL;
+
+	// cull sounds by PHS
+	if( !s_phs->integer )
+		return true;
+
+	leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );
+	mask = Mod_LeafPHS( leaf, cl.worldmodel );
+
+	if( mask )
+	{
+		leafnum = Mod_PointLeafnum( s_listener.origin ) - 1;
+
+		if( leafnum != -1 && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+			return false;
+	}
+	return true;
+}
+
 /*
 =================
 S_SpatializeChannel
@@ -758,7 +782,7 @@ void SND_Spatialize( channel_t *ch )
 
 	if( !ch->staticsound )
 	{
-		if( !CL_GetEntitySpatialization( ch->entnum, ch->origin, &ch->radius ))
+		if( !CL_GetEntitySpatialization( ch->entnum, ch->origin, &ch->radius ) || !SND_CheckPHS( ch ))
 		{
 			// origin is null and entity not exist on client
 			ch->leftvol = ch->rightvol = 0;
@@ -956,6 +980,103 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 }
 
 /*
+====================
+S_RestoreSound
+
+Restore a sound effect for the given entity on the given channel
+====================
+*/
+void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags, double sample, double end )
+{
+	wavdata_t	*pSource;
+	sfx_t	*sfx = NULL;
+	channel_t	*target_chan;
+	int	vol;
+
+	if( !dma.initialized ) return;
+	sfx = S_GetSfxByHandle( handle );
+	if( !sfx ) return;
+
+	vol = bound( 0, fvol * 255, 255 );
+	if( pitch <= 1 ) pitch = PITCH_NORM; // Invasion issues
+
+	if( pitch == 0 )
+	{
+		MsgDev( D_WARN, "S_RestoreSound: ( %s ) ignored, called with pitch 0\n", sfx->name );
+		return;
+	}
+
+	// pick a channel to play on
+	if( chan == CHAN_STATIC )
+		target_chan = SND_PickStaticChannel( ent, sfx, pos );
+	else target_chan = SND_PickDynamicChannel( ent, chan, sfx );
+
+	if( !target_chan )
+	{
+		MsgDev( D_ERROR, "S_RestoreSound: dropped sound \"sound/%s\"\n", sfx->name );
+		return;
+	}
+
+	// spatialize
+	Q_memset( target_chan, 0, sizeof( *target_chan ));
+
+	VectorCopy( pos, target_chan->origin );
+	target_chan->staticsound = ( ent == 0 ) ? true : false;
+	target_chan->use_loop = (flags & SND_STOP_LOOPING) ? false : true;
+	target_chan->localsound = (flags & SND_LOCALSOUND) ? true : false;
+	target_chan->dist_mult = (attn / SND_CLIP_DISTANCE);
+	target_chan->master_vol = vol;
+	target_chan->entnum = ent;
+	target_chan->entchannel = chan;
+	target_chan->basePitch = pitch;
+	target_chan->isSentence = false;
+	target_chan->radius = 0.0f;
+	target_chan->sfx = sfx;
+
+	// initialize gain due to obscured sound source
+	target_chan->bfirstpass = true;
+	target_chan->ob_gain = 0.0f;
+	target_chan->ob_gain_inc = 0.0f;
+	target_chan->ob_gain_target = 0.0f;
+	target_chan->bTraced = false;
+
+	// regular or streamed sound fx
+	pSource = S_LoadSound( sfx );
+
+	if( !pSource )
+	{
+		S_FreeChannel( target_chan );
+		return;
+	}
+
+	SND_Spatialize( target_chan );
+
+	// If a client can't hear a sound when they FIRST receive the StartSound message,
+	// the client will never be able to hear that sound. This is so that out of 
+	// range sounds don't fill the playback buffer. For streaming sounds, we bypass this optimization.
+	if( !target_chan->leftvol && !target_chan->rightvol )
+	{
+		// looping sounds don't use this optimization because they should stick around until they're killed.
+		if( !sfx->cache || sfx->cache->loopStart == -1 )
+		{
+			// if this is a streaming sound, play the whole thing.
+			if( chan != CHAN_STREAM )
+			{
+				S_FreeChannel( target_chan );
+				return; // not audible at all
+			}
+		}
+	}
+
+	// apply the sample offests
+	target_chan->pMixer.sample = sample;
+	target_chan->pMixer.forcedEndSample = end;	
+
+	// Init client entity mouth movement vars
+	SND_InitMouth( ent, chan );
+}
+
+/*
 =================
 S_AmbientSound
 
@@ -1089,7 +1210,7 @@ int S_GetCurrentStaticSounds( soundlist_t *pout, int size )
 
 	for( i = MAX_DYNAMIC_CHANNELS; i < total_channels && sounds_left; i++ )
 	{
-		if( channels[i].entchannel == CHAN_STATIC && channels[i].sfx )
+		if( channels[i].entchannel == CHAN_STATIC && channels[i].sfx && channels[i].sfx->name[0] )
 		{
 			Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
 			pout->entnum = channels[i].entnum;
@@ -1098,10 +1219,58 @@ int S_GetCurrentStaticSounds( soundlist_t *pout, int size )
 			pout->attenuation = channels[i].dist_mult * SND_CLIP_DISTANCE;
 			pout->looping = ( channels[i].use_loop && channels[i].sfx->cache->loopStart != -1 );
 			pout->pitch = channels[i].basePitch;
+			pout->channel = channels[i].entchannel;
+			pout->wordIndex = channels[i].wordIndex;
+			pout->samplePos = channels[i].pMixer.sample;
+			pout->forcedEnd = channels[i].pMixer.forcedEndSample;
 
 			sounds_left--;
 			pout++;
 		}
+	}
+
+	return ( size - sounds_left );
+}
+
+/*
+==================
+S_GetCurrentStaticSounds
+
+grab all static sounds playing at current channel
+==================
+*/
+int S_GetCurrentDynamicSounds( soundlist_t *pout, int size )
+{
+	int	sounds_left = size;
+	int	i, looped;
+
+	if( !dma.initialized )
+		return 0;
+
+	for( i = 0; i < MAX_CHANNELS && sounds_left; i++ )
+	{
+		if( !channels[i].sfx || !channels[i].sfx->name[0] || !Q_stricmp( channels[i].sfx->name, "*default" ))
+			continue;	// don't serialize default sounds
+
+		looped = ( channels[i].use_loop && channels[i].sfx->cache->loopStart != -1 );
+
+		if( channels[i].entchannel == CHAN_STATIC && looped )
+			continue;	// never serialize static looped sounds. It will be restoring in game code 
+
+		Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
+		pout->entnum = channels[i].entnum;
+		VectorCopy( channels[i].origin, pout->origin );
+		pout->volume = (float)channels[i].master_vol / 255.0f;
+		pout->attenuation = channels[i].dist_mult * SND_CLIP_DISTANCE;
+		pout->pitch = channels[i].basePitch;
+		pout->channel = channels[i].entchannel;
+		pout->wordIndex = channels[i].wordIndex;
+		pout->samplePos = channels[i].pMixer.sample;
+		pout->forcedEnd = channels[i].pMixer.forcedEndSample;
+		pout->looping = looped;
+
+		sounds_left--;
+		pout++;
 	}
 
 	return ( size - sounds_left );
@@ -1123,6 +1292,7 @@ void S_InitAmbientChannels( void )
 
 		chan->staticsound = true;
 		chan->use_loop = true;
+		chan->entchannel = CHAN_STATIC;
 		chan->dist_mult = (ATTN_NONE / SND_CLIP_DISTANCE);
 		chan->basePitch = PITCH_NORM;
 	}
@@ -1536,6 +1706,7 @@ qboolean S_Init( void )
 	snd_gain = Cvar_Get( "snd_gain", "1", 0, "sound default gain" );
 	s_cull = Cvar_Get( "s_cull", "1", CVAR_ARCHIVE, "cull sounds by geometry" );
 	s_test = Cvar_Get( "s_test", "0", 0, "engine developer cvar for quick testing new features" );
+	s_phs = Cvar_Get( "s_phs", "1", CVAR_ARCHIVE, "cull sounds by PHS" );
 
 	Cmd_AddCommand( "play", S_Play_f, "playing a specified sound file" );
 	Cmd_AddCommand( "stopsound", S_StopSound_f, "stop all sounds" );

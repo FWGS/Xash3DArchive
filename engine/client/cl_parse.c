@@ -47,7 +47,7 @@ const char *svc_strings[256] =
 	"svc_stopsound",
 	"svc_updatepings",
 	"svc_particle",
-	"svc_frame",
+	"svc_restoresound",
 	"svc_spawnstatic",
 	"svc_event_reliable",
 	"svc_spawnbaseline",
@@ -282,6 +282,55 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 	{
 		S_StartSound( pos, entnum, chan, handle, volume, attn, pitch, flags );
 	}
+}
+
+/*
+==================
+CL_ParseRestoreSoundPacket
+
+==================
+*/
+void CL_ParseRestoreSoundPacket( sizebuf_t *msg )
+{
+	vec3_t	pos;
+	int 	chan, sound;
+	float 	volume, attn;  
+	int	flags, pitch, entnum;
+	double	samplePos, forcedEnd;
+	int	wordIndex;
+	sound_t	handle = 0;
+
+	flags = BF_ReadWord( msg );
+	if( flags & SND_LARGE_INDEX )
+		sound = BF_ReadWord( msg );
+	else sound = BF_ReadByte( msg );
+	chan = BF_ReadByte( msg );
+
+	if( flags & SND_VOLUME )
+		volume = (float)BF_ReadByte( msg ) / 255.0f;
+	else volume = VOL_NORM;
+
+	if( flags & SND_ATTENUATION )
+		attn = (float)BF_ReadByte( msg ) / 64.0f;
+	else attn = ATTN_NONE;	
+
+	if( flags & SND_PITCH )
+		pitch = BF_ReadByte( msg );
+	else pitch = PITCH_NORM;
+
+	handle = cl.sound_index[sound]; // see precached sound
+
+	// entity reletive
+	entnum = BF_ReadWord( msg ); 
+
+	// positioned in space
+	BF_ReadBitVec3Coord( msg, pos );
+	wordIndex = BF_ReadByte( msg );
+
+	BF_ReadBytes( msg, &samplePos, sizeof( samplePos ));
+	BF_ReadBytes( msg, &forcedEnd, sizeof( forcedEnd ));
+
+	S_RestoreSound( pos, entnum, chan, handle, volume, attn, pitch, flags, samplePos, forcedEnd );
 }
 
 /*
@@ -1400,6 +1449,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_particle:
 			CL_ParseParticles( msg );
+			break;
+		case svc_restoresound:
+			CL_ParseRestoreSoundPacket( msg );
 			break;
 		case svc_spawnstatic:
 			CL_ParseStaticEntity( msg );

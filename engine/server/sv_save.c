@@ -17,7 +17,8 @@ GNU General Public License for more details.
 #include "server.h"
 #include "library.h"
 #include "const.h"
-#include "render_api.h" // decallist_t
+#include "render_api.h"	// decallist_t
+#include "sound.h"		// S_GetDynamicSounds
 
 /*
 ==============================================================================
@@ -489,6 +490,65 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 		// NOTE: this case also used for transition world decals
 		SV_CreateDecal( entry->position, decalIndex, entityIndex, modelIndex, flags );
 	}
+}
+
+void RestoreSound( soundlist_t *entry )
+{
+	int	soundIndex;
+	int	flags = 0;
+	edict_t	*ent;
+
+	// this can happens if serialized map contain 4096 static decals...
+	if(( BF_GetNumBytesWritten( &sv.signon ) + 20 ) >= BF_GetMaxBytes( &sv.signon ))
+		return;
+
+	// TODO: allow save\restore sententces too
+	soundIndex = SV_SoundIndex( entry->name );
+	ent = EDICT_NUM( entry->entnum );
+
+	if( entry->attenuation < 0.0f || entry->attenuation > 4.0f )
+	{
+		MsgDev( D_ERROR, "SV_RestoreSound: attenuation %g must be in range 0-4\n", entry->attenuation );
+		return;
+	}
+
+	if( entry->channel < 0 || entry->channel > 7 )
+	{
+		MsgDev( D_ERROR, "SV_RestoreSound: channel must be in range 0-7\n" );
+		return;
+	}
+
+	if( !SV_IsValidEdict( ent ))
+	{
+		MsgDev( D_ERROR, "SV_RestoreSound: edict == NULL\n" );
+		return;
+	}
+
+	if( entry->volume != VOL_NORM ) flags |= SND_VOLUME;
+	if( entry->attenuation != ATTN_NONE ) flags |= SND_ATTENUATION;
+	if( entry->pitch != PITCH_NORM ) flags |= SND_PITCH;
+	if( !entry->looping ) flags |= SND_STOP_LOOPING;	// just in case
+
+	if( soundIndex > 255 ) flags |= SND_LARGE_INDEX;
+
+	BF_WriteByte( &sv.signon, svc_restoresound );
+	BF_WriteWord( &sv.signon, flags );
+	if( flags & SND_LARGE_INDEX )
+		BF_WriteWord( &sv.signon, soundIndex );
+	else BF_WriteByte( &sv.signon, soundIndex );
+	BF_WriteByte( &sv.signon, entry->channel );
+
+	if( flags & SND_VOLUME ) BF_WriteByte( &sv.signon, entry->volume * 255 );
+	if( flags & SND_ATTENUATION ) BF_WriteByte( &sv.signon, entry->attenuation * 64 );
+	if( flags & SND_PITCH ) BF_WriteByte( &sv.signon, entry->pitch );
+
+	BF_WriteWord( &sv.signon, entry->entnum );
+	BF_WriteBitVec3Coord( &sv.signon, entry->origin );
+	BF_WriteByte( &sv.signon, entry->wordIndex );
+
+	// send two doubles as raw-data
+	BF_WriteBytes( &sv.signon, &entry->samplePos, sizeof( entry->samplePos ));
+	BF_WriteBytes( &sv.signon, &entry->forcedEnd, sizeof( entry->forcedEnd ));
 }
 
 void SV_ClearSaveDir( void )
@@ -980,6 +1040,8 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	int		i, decalCount;
 	int		id, version;
 	fs_offset_t	header_offset;
+	soundlist_t	soundInfo[MAX_CHANNELS];
+	int		soundCount;
 
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
@@ -1073,6 +1135,40 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 		}
 	}
 
+	soundCount = S_GetCurrentDynamicSounds( soundInfo, MAX_CHANNELS );
+
+	// DYNAMIC SOUNDS SECTION
+	if( soundCount != 0 )
+	{
+		sections.offsets[LUMP_SOUNDS_OFFSET] = FS_Tell( pFile );
+		FS_Write( pFile, &soundCount, sizeof( int ));
+	}
+
+	for( i = 0; i < soundCount; i++ )
+	{
+		soundlist_t	*entry;
+		byte		nameSize;
+int start = FS_Tell( pFile );
+		entry = &soundInfo[i];
+
+		nameSize = Q_strlen( entry->name ) + 1;
+
+		FS_Write( pFile, &nameSize, sizeof( nameSize ));
+		FS_Write( pFile, entry->name, nameSize ); 
+		FS_Write( pFile, &entry->origin, sizeof( entry->origin ));
+		FS_Write( pFile, &entry->entnum, sizeof( entry->entnum ));
+		FS_Write( pFile, &entry->volume, sizeof( entry->volume ));
+		FS_Write( pFile, &entry->attenuation, sizeof( entry->attenuation ));
+		FS_Write( pFile, &entry->looping, sizeof( entry->looping ));
+		FS_Write( pFile, &entry->channel, sizeof( entry->channel ));
+		FS_Write( pFile, &entry->pitch, sizeof( entry->pitch ));
+		FS_Write( pFile, &entry->wordIndex, sizeof( entry->wordIndex ));
+		FS_Write( pFile, &entry->samplePos, sizeof( entry->samplePos ));
+		FS_Write( pFile, &entry->forcedEnd, sizeof( entry->forcedEnd ));
+Msg( "Write sound %s, %d bytes\n", entry->name, FS_Tell( pFile ) - start );
+	}
+
+
 	// AT END
 	FS_Seek( pFile, header_offset, SEEK_SET );
 	FS_Write( pFile, &sections, sizeof( sections ));	// write real sections info	
@@ -1095,6 +1191,8 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 	decallist_t	*decalList;
 	int		decalCount;
 	ClientSections_t	sections;
+	soundlist_t	soundInfo[MAX_CHANNELS];
+	int		soundCount;
 	
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
@@ -1205,6 +1303,38 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 			}
 
 			SV_CreateStaticEntity( entry );
+		}
+	}
+
+	// NOTE: sounds can't be moved across level
+	if( sections.offsets[LUMP_SOUNDS_OFFSET] != -1 && !adjacent )
+	{
+		// jump to sounds description
+		FS_Seek( pFile, sections.offsets[LUMP_SOUNDS_OFFSET], SEEK_SET );
+
+		FS_Read( pFile, &soundCount, sizeof( int ));
+
+		for( i = 0; i < soundCount; i++ )
+		{
+			soundlist_t	*entry;
+			byte		nameSize;
+
+			entry = &soundInfo[i];
+
+			FS_Read( pFile, &nameSize, sizeof( nameSize ));
+			FS_Read( pFile, entry->name, nameSize ); 
+			FS_Read( pFile, &entry->origin, sizeof( entry->origin ));
+			FS_Read( pFile, &entry->entnum, sizeof( entry->entnum ));
+			FS_Read( pFile, &entry->volume, sizeof( entry->volume ));
+			FS_Read( pFile, &entry->attenuation, sizeof( entry->attenuation ));
+			FS_Read( pFile, &entry->looping, sizeof( entry->looping ));
+			FS_Read( pFile, &entry->channel, sizeof( entry->channel ));
+			FS_Read( pFile, &entry->pitch, sizeof( entry->pitch ));
+			FS_Read( pFile, &entry->wordIndex, sizeof( entry->wordIndex ));
+			FS_Read( pFile, &entry->samplePos, sizeof( entry->samplePos ));
+			FS_Read( pFile, &entry->forcedEnd, sizeof( entry->forcedEnd ));
+
+			RestoreSound( entry );
 		}
 	}
 

@@ -487,7 +487,7 @@ void Sys_InitLog( void )
 
 		fprintf( s_wcd.logfile, "=======================================================================\n" );
 		fprintf( s_wcd.logfile, "\t%s started at %s\n", s_wcd.title, Q_timestamp( TIME_FULL ));
-		fprintf( s_wcd.logfile, "=======================================================================\n");
+		fprintf( s_wcd.logfile, "=======================================================================\n" );
 	}
 }
 
@@ -515,7 +515,7 @@ void Sys_CloseLog( void )
 		fprintf( s_wcd.logfile, "\n");
 		fprintf( s_wcd.logfile, "=======================================================================");
 		fprintf( s_wcd.logfile, "\n\t%s %s at %s\n", s_wcd.title, event_name, Q_timestamp( TIME_FULL ));
-		fprintf( s_wcd.logfile, "=======================================================================\n");
+		fprintf( s_wcd.logfile, "=======================================================================");
 		if( host.change_game ) fprintf( s_wcd.logfile, "\n" ); // just for tabulate
 
 		fclose( s_wcd.logfile );

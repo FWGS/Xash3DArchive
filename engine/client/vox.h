@@ -38,8 +38,8 @@ typedef struct voxword_s
 
 typedef struct
 {
-	char		*pName;
-	float		length;
+	char	*pName;
+	float	length;
 } sentence_t;
 
 extern sentence_t		g_Sentences[MAX_SENTENCES];
