@@ -298,8 +298,9 @@ Stream_OpenWAV
 stream_t *Stream_OpenWAV( const char *filename )
 {
 	stream_t	*stream;
-	int 	iff_data, last_chunk;
+	int 	last_chunk = 0;
 	char	chunkName[4];
+	int	iff_data;
 	file_t	*file;
 	short	t;
 
@@ -374,6 +375,7 @@ stream_t *Stream_OpenWAV( const char *filename )
 	stream = Mem_Alloc( host.soundpool, sizeof( stream_t ));
 	stream->file = file;
 	stream->size = sound.samples * sound.width * sound.channels;
+	stream->buffsize = FS_Tell( file ); // header length
 	stream->channels = sound.channels;
 	stream->width = sound.width;
 	stream->rate = sound.rate;
@@ -404,6 +406,37 @@ long Stream_ReadWAV( stream_t *stream, long bytes, void *buffer )
 	FS_Read( stream->file, buffer, bytes );
 
 	return bytes;
+}
+
+/*
+=================
+Stream_SetPosWAV
+
+assume stream is valid
+=================
+*/
+long Stream_SetPosWAV( stream_t *stream, long newpos )
+{
+	// NOTE: stream->pos it's real file position without header size
+	if( FS_Seek( stream->file, stream->buffsize + newpos, SEEK_SET ) != -1 )
+	{
+		stream->pos = newpos;
+		return true;
+	}
+
+	return false;
+}
+
+/*
+=================
+Stream_GetPosWAV
+
+assume stream is valid
+=================
+*/
+long Stream_GetPosWAV( stream_t *stream )
+{
+	return stream->pos;
 }
 
 /*

@@ -141,8 +141,9 @@ typedef struct
 	qboolean		finished;
 } mixer_t;
 
-typedef struct
+typedef struct channel_s
 {
+	char		name[16];		// keept sentence name
 	sfx_t		*sfx;		// sfx number
 
 	int		leftvol;		// 0-255 left volume
@@ -196,7 +197,8 @@ typedef struct
 
 typedef struct
 {
-	string		loopName;
+	string		current;		// a currently playing track
+	string		loopName;		// may be empty
 	stream_t		*stream;
 	int		source;		// may be game, menu, etc
 } bg_track_t;
@@ -305,6 +307,7 @@ void SND_CloseMouth( channel_t *ch );
 //
 void S_StreamSoundTrack( void );
 void S_StreamBackgroundTrack( void );
+qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *position );
 
 //
 // s_utils.c

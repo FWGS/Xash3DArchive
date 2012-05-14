@@ -318,7 +318,14 @@ void CL_ParseRestoreSoundPacket( sizebuf_t *msg )
 		pitch = BF_ReadByte( msg );
 	else pitch = PITCH_NORM;
 
-	handle = cl.sound_index[sound]; // see precached sound
+	if( flags & SND_SENTENCE )
+	{
+		char	sentenceName[32];
+
+		Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
+		handle = S_RegisterSound( sentenceName );
+	}
+	else handle = cl.sound_index[sound]; // see precached sound
 
 	// entity reletive
 	entnum = BF_ReadWord( msg ); 
@@ -330,7 +337,7 @@ void CL_ParseRestoreSoundPacket( sizebuf_t *msg )
 	BF_ReadBytes( msg, &samplePos, sizeof( samplePos ));
 	BF_ReadBytes( msg, &forcedEnd, sizeof( forcedEnd ));
 
-	S_RestoreSound( pos, entnum, chan, handle, volume, attn, pitch, flags, samplePos, forcedEnd );
+	S_RestoreSound( pos, entnum, chan, handle, volume, attn, pitch, flags, samplePos, forcedEnd, wordIndex );
 }
 
 /*
@@ -1506,7 +1513,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			param1 = bound( 1, param1, MAX_CDTRACKS ); // tracknum
 			param2 = BF_ReadByte( msg );
 			param2 = bound( 1, param2, MAX_CDTRACKS ); // loopnum
-			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1] );
+			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1], 0 );
 			break;
 		case svc_serverinfo:
 			CL_ServerInfo( msg );

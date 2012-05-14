@@ -38,7 +38,7 @@ half-life implementation of saverestore system
 #define LUMP_DECALS_OFFSET		0
 #define LUMP_STATIC_OFFSET		1
 #define LUMP_SOUNDS_OFFSET		2
-#define LUMP_RESERVED		3	// g-cont. lump reserved for me
+#define LUMP_MUSIC_OFFSET		3
 #define NUM_CLIENT_OFFSETS		4
 
 void (__cdecl *pfnSaveGameComment)( char *buffer, int max_length ) = NULL;
@@ -502,8 +502,23 @@ void RestoreSound( soundlist_t *entry )
 	if(( BF_GetNumBytesWritten( &sv.signon ) + 20 ) >= BF_GetMaxBytes( &sv.signon ))
 		return;
 
-	// TODO: allow save\restore sententces too
-	soundIndex = SV_SoundIndex( entry->name );
+	if( entry->name[0] == '!' && Q_isdigit( entry->name + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		soundIndex = Q_atoi( entry->name + 1 );
+	}
+	else if( entry->name[0] == '#' && Q_isdigit( entry->name + 1 ))
+	{
+		flags |= SND_SENTENCE;
+		soundIndex = Q_atoi( entry->name + 1 ) + 1536;
+	}
+	else
+	{
+		// precache_sound can be used twice: cache sounds when loading
+		// and return sound index when server is active
+		soundIndex = SV_SoundIndex( entry->name );
+	}
+
 	ent = EDICT_NUM( entry->entnum );
 
 	if( entry->attenuation < 0.0f || entry->attenuation > 4.0f )
@@ -1039,8 +1054,9 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	ClientSections_t	sections;
 	int		i, decalCount;
 	int		id, version;
-	fs_offset_t	header_offset;
+	fs_offset_t	header_offset, position;
 	soundlist_t	soundInfo[MAX_CHANNELS];
+	string		curtrack, looptrack;
 	int		soundCount;
 
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
@@ -1135,10 +1151,8 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 		}
 	}
 
-	soundCount = S_GetCurrentDynamicSounds( soundInfo, MAX_CHANNELS );
-
-	// DYNAMIC SOUNDS SECTION
-	if( soundCount != 0 )
+	// DYNAMIC SOUNDS SECTION (don't go across transition)
+	if( !svgame.globals->changelevel && ( soundCount = S_GetCurrentDynamicSounds( soundInfo, MAX_CHANNELS )) != 0 )
 	{
 		sections.offsets[LUMP_SOUNDS_OFFSET] = FS_Tell( pFile );
 		FS_Write( pFile, &soundCount, sizeof( int ));
@@ -1148,7 +1162,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	{
 		soundlist_t	*entry;
 		byte		nameSize;
-int start = FS_Tell( pFile );
+
 		entry = &soundInfo[i];
 
 		nameSize = Q_strlen( entry->name ) + 1;
@@ -1165,9 +1179,28 @@ int start = FS_Tell( pFile );
 		FS_Write( pFile, &entry->wordIndex, sizeof( entry->wordIndex ));
 		FS_Write( pFile, &entry->samplePos, sizeof( entry->samplePos ));
 		FS_Write( pFile, &entry->forcedEnd, sizeof( entry->forcedEnd ));
-Msg( "Write sound %s, %d bytes\n", entry->name, FS_Tell( pFile ) - start );
 	}
 
+	// BACKGROUND MUSIC SECTION (don't go across transition)
+	if( !svgame.globals->changelevel && S_StreamGetCurrentState( curtrack, looptrack, &position ))
+	{
+		byte	nameSize;
+
+		sections.offsets[LUMP_MUSIC_OFFSET] = FS_Tell( pFile );
+
+		// write current track
+		nameSize = Q_strlen( curtrack ) + 1;
+		FS_Write( pFile, &nameSize, sizeof( nameSize ));
+		FS_Write( pFile, curtrack, nameSize );
+
+		// write loop track
+		nameSize = Q_strlen( looptrack ) + 1;
+		FS_Write( pFile, &nameSize, sizeof( nameSize ));
+		FS_Write( pFile, looptrack, nameSize );
+
+		// write current track position
+		FS_Write( pFile, &position, sizeof( position ));
+	}
 
 	// AT END
 	FS_Seek( pFile, header_offset, SEEK_SET );
@@ -1336,6 +1369,31 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 
 			RestoreSound( entry );
 		}
+	}
+
+	// NOTE: music automatically goes across transition, never restore it on changelevel
+	if( sections.offsets[LUMP_MUSIC_OFFSET] != -1 && !adjacent )
+	{
+		string	curtrack, looptrack;
+		int	position;
+		byte	nameSize;
+
+		// jump to music description
+		FS_Seek( pFile, sections.offsets[LUMP_MUSIC_OFFSET], SEEK_SET );
+
+		// read current track
+		FS_Read( pFile, &nameSize, sizeof( nameSize ));
+		FS_Read( pFile, curtrack, nameSize );
+
+		// read loop track
+		FS_Read( pFile, &nameSize, sizeof( nameSize ));
+		FS_Read( pFile, looptrack, nameSize );
+
+		// read current track position
+		FS_Read( pFile, &position, sizeof( position ));
+
+		BF_WriteByte( &sv.signon, svc_stufftext );
+		BF_WriteString( &sv.signon, va( "music %s %s %i\n", curtrack, looptrack, position ));
 	}
 
 	FS_Close( pFile );

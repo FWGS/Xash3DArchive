@@ -18,27 +18,29 @@ GNU General Public License for more details.
 
 #include "common.h"
 
-typedef struct loadwavformat_s
+typedef struct loadwavfmt_s
 {
 	const char *formatstring;
 	const char *ext;
 	qboolean (*loadfunc)( const char *name, const byte *buffer, size_t filesize );
-} loadwavformat_t;
+} loadwavfmt_t;
 
-typedef struct streamformat_s
+typedef struct streamfmt_s
 {
 	const char *formatstring;
 	const char *ext;
 
 	stream_t *(*openfunc)( const char *filename );
 	long (*readfunc)( stream_t *stream, long bytes, void *buffer );
+	long (*setposfunc)( stream_t *stream, long newpos );
+	long (*getposfunc)( stream_t *stream );
 	void (*freefunc)( stream_t *stream );
-} streamformat_t;
+} streamfmt_t;
 
 typedef struct sndlib_s
 {
-	const loadwavformat_t	*loadformats;
-	const streamformat_t	*streamformat;	// music stream
+	const loadwavfmt_t	*loadformats;
+	const streamfmt_t	*streamformat;	// music stream
 
 	// current sound state
 	int		type;		// sound type
@@ -57,17 +59,19 @@ typedef struct sndlib_s
 
 typedef struct stream_s
 {
-	const streamformat_t	*format;	// streamformat to operate
+	const streamfmt_t	*format;	// streamformat to operate
 
 	// current stream state
-	file_t			*file;	// stream file
-	int			width;	// resolution - num bits divided by 8 (8 bit is 1, 16 bit is 2)
-	int			rate;	// stream rate
-	int			channels;	// stream channels
-	int			type;	// wavtype
-	size_t			size;	// total stream size
-	int			pos;	// keep track wav position
-	void			*ptr;
+	file_t		*file;	// stream file
+	int		width;	// resolution - num bits divided by 8 (8 bit is 1, 16 bit is 2)
+	int		rate;	// stream rate
+	int		channels;	// stream channels
+	int		type;	// wavtype
+	size_t		size;	// total stream size
+	int		pos;	// actual track position
+	void		*ptr;	// internal decoder state
+	int		buffsize;	// cached buffer size
+	qboolean		timejump;	// true if position is changed
 };
 
 /*
@@ -116,9 +120,13 @@ qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize );
 //
 stream_t *Stream_OpenWAV( const char *filename );
 long Stream_ReadWAV( stream_t *stream, long bytes, void *buffer );
+long Stream_SetPosWAV( stream_t *stream, long newpos );
+long Stream_GetPosWAV( stream_t *stream );
 void Stream_FreeWAV( stream_t *stream );
 stream_t *Stream_OpenMPG( const char *filename );
 long Stream_ReadMPG( stream_t *stream, long bytes, void *buffer );
+long Stream_SetPosMPG( stream_t *stream, long newpos );
+long Stream_GetPosMPG( stream_t *stream );
 void Stream_FreeMPG( stream_t *stream );
 
 #endif//SOUNDLIB_H

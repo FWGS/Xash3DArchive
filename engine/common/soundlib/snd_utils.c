@@ -23,12 +23,12 @@ GNU General Public License for more details.
 =============================================================================
 */
 // stub
-static const loadwavformat_t load_null[] =
+static const loadwavfmt_t load_null[] =
 {
 { NULL, NULL, NULL }
 };
 
-static const loadwavformat_t load_game[] =
+static const loadwavfmt_t load_game[] =
 {
 { "sound/%s%s.%s", "wav", Sound_LoadWAV },
 { "%s%s.%s", "wav", Sound_LoadWAV },
@@ -45,16 +45,16 @@ static const loadwavformat_t load_game[] =
 =============================================================================
 */
 // stub
-static const streamformat_t stream_null[] =
+static const streamfmt_t stream_null[] =
 {
-{ NULL, NULL, NULL, NULL, NULL }
+{ NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
-static const streamformat_t stream_game[] =
+static const streamfmt_t stream_game[] =
 {
-{ "%s%s.%s", "mp3", Stream_OpenMPG, Stream_ReadMPG, Stream_FreeMPG },
-{ "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_FreeWAV },
-{ NULL, NULL, NULL, NULL, NULL }
+{ "%s%s.%s", "mp3", Stream_OpenMPG, Stream_ReadMPG, Stream_SetPosMPG, Stream_GetPosMPG, Stream_FreeMPG },
+{ "%s%s.%s", "wav", Stream_OpenWAV, Stream_ReadWAV, Stream_SetPosWAV, Stream_GetPosWAV, Stream_FreeWAV },
+{ NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
 void Sound_Init( void )
@@ -89,6 +89,7 @@ byte *Sound_Copy( size_t size )
 
 	out = Mem_Alloc( host.soundpool, size );
 	Q_memcpy( out, sound.tempbuffer, size );
+
 	return out; 
 }
 

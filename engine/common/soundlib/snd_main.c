@@ -60,7 +60,7 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 	string		path, loadname;
 	qboolean		anyformat = true;
 	int		filesize = 0;
-	const loadwavformat_t *format;
+	const loadwavfmt_t	*format;
 	byte		*f;
 
 	Sound_Reset(); // clear old sounddata
@@ -153,7 +153,7 @@ stream_t *FS_OpenStream( const char *filename )
           const char	*ext = FS_FileExtension( filename );
 	string		path, loadname;
 	qboolean		anyformat = true;
-	const streamformat_t *format;
+	const streamfmt_t	*format;
 	stream_t		*stream;
 
 	Sound_Reset(); // clear old streaminfo
@@ -238,6 +238,36 @@ long FS_ReadStream( stream_t *stream, int bytes, void *buffer )
 		return 0;
 
 	return stream->format->readfunc( stream, bytes, buffer );
+}
+
+/*
+================
+FS_GetStreamPos
+
+get stream position (in bytes)
+================
+*/
+long FS_GetStreamPos( stream_t *stream )
+{
+	if( !stream || !stream->format || !stream->format->getposfunc )
+		return -1;
+
+	return stream->format->getposfunc( stream );
+}
+
+/*
+================
+FS_SetStreamPos
+
+get stream position (in bytes)
+================
+*/
+long FS_SetStreamPos( stream_t *stream, long newpos )
+{
+	if( !stream || !stream->format || !stream->format->setposfunc )
+		return -1;
+
+	return stream->format->setposfunc( stream, newpos );
 }
 
 /*

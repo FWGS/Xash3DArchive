@@ -28,21 +28,24 @@ GNU General Public License for more details.
 
 typedef struct mpeg_s
 {
-	void	*state;	// hidden decoder state
-	void	*vbrtag;	// valid for VBR-encoded mpegs
+	void	*state;		// hidden decoder state
+	void	*vbrtag;		// valid for VBR-encoded mpegs
 
-	int	channels;	// num channels
-	int	samples;	// per one second
-	int	play_time;// stream size in milliseconds
-	int	rate;	// frequency
-	int	outsize;	// current data size
-	char	out[8192];// temporary buffer
+	int	channels;		// num channels
+	int	samples;		// per one second
+	int	play_time;	// stream size in milliseconds
+	int	rate;		// frequency
+	int	outsize;		// current data size
+	char	out[8192];	// temporary buffer
+	size_t	streamsize;	// size in bytes
 } mpeg_t;
 
 // mpg123 exports
 int create_decoder( mpeg_t *mpg );
 int read_mpeg_header( mpeg_t *mpg, const char *data, long bufsize, long streamsize );
 int read_mpeg_stream( mpeg_t *mpg, const char *data, long bufsize );
+extern int set_current_pos( mpeg_t *mpg, int newpos, int (*pfnSeek)( void*, long, int ), void *file );
+int get_current_pos( mpeg_t *mpg, int curpos );
 void close_decoder( mpeg_t *mpg );
 
 /*
@@ -153,6 +156,7 @@ stream_t *Stream_OpenMPG( const char *filename )
 	// at this point we have valid stream
 	stream = Mem_Alloc( host.soundpool, sizeof( stream_t ));
 	stream->file = file;
+	stream->pos = 0;
 
 	mpegFile = Mem_Alloc( host.soundpool, sizeof( mpeg_t ));
 
@@ -188,8 +192,9 @@ stream_t *Stream_OpenMPG( const char *filename )
 		return NULL;
 	}
 
-	stream->pos = 0;	// how many samples left from previous frame
+	stream->buffsize = 0; // how many samples left from previous frame
 	stream->channels = mpegFile->channels;
+	stream->pos += mpegFile->outsize;
 	stream->rate = mpegFile->rate;
 	stream->width = 2;	// always 16 bit
 	stream->ptr = mpegFile;
@@ -209,6 +214,7 @@ long Stream_ReadMPG( stream_t *stream, long needBytes, void *buffer )
 {
 	// buffer handling
 	int	bytesWritten = 0;
+	int	result;
 	mpeg_t	*mpg;
 
 	mpg = (mpeg_t *)stream->ptr;
@@ -220,13 +226,27 @@ long Stream_ReadMPG( stream_t *stream, long needBytes, void *buffer )
 		long	read_len, outsize;
 		byte	*data;
 
-		if( !stream->pos )
+		if( !stream->buffsize )
 		{
-			if( read_mpeg_stream( mpg, NULL, 0 ) != MP3_OK )
+			if( stream->timejump )
+			{
+				stream->timejump = false;
+				read_len = FS_Read( stream->file, tempbuff, sizeof( tempbuff ));
+				result = read_mpeg_stream( mpg, tempbuff, read_len );
+				bytesWritten = 0;
+			}
+			else result = read_mpeg_stream( mpg, NULL, 0 );
+
+			stream->pos += mpg->outsize;
+
+			if( result != MP3_OK )
 			{
 				// if there are no bytes remainig so we can decompress the new frame
 				read_len = FS_Read( stream->file, tempbuff, sizeof( tempbuff ));
-				if( read_mpeg_stream( mpg, tempbuff, read_len ) != MP3_OK )
+				result = read_mpeg_stream( mpg, tempbuff, read_len );
+				stream->pos += mpg->outsize;
+
+				if( result != MP3_OK )
 					break; // there was end of the stream
 			}
 		}
@@ -238,18 +258,54 @@ long Stream_ReadMPG( stream_t *stream, long needBytes, void *buffer )
 
 		// copy raw sample to output buffer
 		data = (byte *)buffer + bytesWritten;
-		Q_memcpy( data, &mpg->out[stream->pos], outsize );
+		Q_memcpy( data, &mpg->out[stream->buffsize], outsize );
 		bytesWritten += outsize;
 		mpg->outsize -= outsize;
-		stream->pos += outsize;
+		stream->buffsize += outsize;
 
 		// continue from this sample on a next call
 		if( bytesWritten >= needBytes )
 			return bytesWritten;
 
-		stream->pos = 0;	// no bytes remaining
+		stream->buffsize = 0; // no bytes remaining
 	}
 	return 0;
+}
+
+/*
+=================
+Stream_SetPosMPG
+
+assume stream is valid
+=================
+*/
+long Stream_SetPosMPG( stream_t *stream, long newpos )
+{
+	// update stream pos for right work GetPos function
+	int newPos = set_current_pos( stream->ptr, newpos, FS_Seek, stream->file );
+
+	if( newPos != -1 )
+	{
+		stream->pos = newPos;
+		stream->timejump = true;
+		stream->buffsize = 0;
+		return true;
+	}
+
+	// failed to seek for some reasons
+	return false;
+}
+
+/*
+=================
+Stream_GetPosMPG
+
+assume stream is valid
+=================
+*/
+long Stream_GetPosMPG( stream_t *stream )
+{
+	return get_current_pos( stream->ptr, stream->pos );
 }
 
 /*

@@ -345,8 +345,8 @@ void VOX_LoadWord( channel_t *pchan )
 
 		if( pSource )
 		{
-			int	start = pchan->words[pchan->wordIndex].start;
-			int	end = pchan->words[pchan->wordIndex].end;
+			int start = pchan->words[pchan->wordIndex].start;
+			int end = pchan->words[pchan->wordIndex].end;
 
 			// apply mixer
 			pchan->currentWord = &pchan->pMixer;
@@ -418,7 +418,7 @@ int VOX_MixDataToDevice( channel_t *pchan, int sampleCount, int outputRate, int 
 
 	while( sampleCount > 0 && pchan->currentWord )
 	{
-		int	outputCount = S_MixDataToDevice( pchan, sampleCount, outputRate, outputOffset );
+		int outputCount = S_MixDataToDevice( pchan, sampleCount, outputRate, outputOffset );
 
 		outputOffset += outputCount;
 		sampleCount -= outputCount;

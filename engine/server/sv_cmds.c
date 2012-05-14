@@ -818,7 +818,6 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "restart", SV_Restart_f, "restarting current level" );
 	Cmd_AddCommand( "reload", SV_Reload_f, "continue from latest save or restart level" );
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
-	Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
 	Cmd_AddCommand( "edicts_info", SV_EdictsInfo_f, "show info about edicts" );
 	Cmd_AddCommand( "entity_info", SV_EntityInfo_f, "show more info about edicts" );
 
@@ -827,13 +826,16 @@ void SV_InitOperatorCommands( void )
 		Cmd_AddCommand( "say", SV_ConSay_f, "send a chat message to everyone on the server" );
 		Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
 	}
-
-	Cmd_AddCommand( "save", SV_Save_f, "save the game to a file" );
-	Cmd_AddCommand( "load", SV_Load_f, "load a saved game file" );
-	Cmd_AddCommand( "savequick", SV_QuickSave_f, "save the game to the quicksave" );
-	Cmd_AddCommand( "loadquick", SV_QuickLoad_f, "load a quick-saved game file" );
-	Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
-	Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
+	else
+	{
+		Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
+		Cmd_AddCommand( "save", SV_Save_f, "save the game to a file" );
+		Cmd_AddCommand( "load", SV_Load_f, "load a saved game file" );
+		Cmd_AddCommand( "savequick", SV_QuickSave_f, "save the game to the quicksave" );
+		Cmd_AddCommand( "loadquick", SV_QuickLoad_f, "load a quick-saved game file" );
+		Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
+		Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
+	}
 }
 
 void SV_KillOperatorCommands( void )
@@ -854,7 +856,6 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "restart" );
 	Cmd_RemoveCommand( "reload" );
 	Cmd_RemoveCommand( "entpatch" );
-	Cmd_RemoveCommand( "map_background" );
 	Cmd_RemoveCommand( "edicts_info" );
 	Cmd_RemoveCommand( "entity_info" );
 
@@ -864,11 +865,14 @@ void SV_KillOperatorCommands( void )
 		Cmd_RemoveCommand( "setmaster" );
 		Cmd_RemoveCommand( "killserver" );
 	}
-
-	Cmd_RemoveCommand( "save" );
-	Cmd_RemoveCommand( "load" );
-	Cmd_RemoveCommand( "savequick" );
-	Cmd_RemoveCommand( "loadquick" );
-	Cmd_RemoveCommand( "killsave" );
-	Cmd_RemoveCommand( "autosave" );
+	else
+	{
+		Cmd_RemoveCommand( "map_background" );
+		Cmd_RemoveCommand( "save" );
+		Cmd_RemoveCommand( "load" );
+		Cmd_RemoveCommand( "savequick" );
+		Cmd_RemoveCommand( "loadquick" );
+		Cmd_RemoveCommand( "killsave" );
+		Cmd_RemoveCommand( "autosave" );
+	}
 }

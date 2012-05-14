@@ -515,7 +515,7 @@ typedef enum
 	WF_TOTALCOUNT,	// must be last
 } sndformat_t;
 
-// imagelib global settings
+// soundlib global settings
 typedef enum
 {
 	SL_USE_LERPING	= BIT(0),		// lerping sounds during resample
@@ -558,6 +558,8 @@ void FS_FreeSound( wavdata_t *pack );
 stream_t *FS_OpenStream( const char *filename );
 wavdata_t *FS_StreamInfo( stream_t *stream );
 long FS_ReadStream( stream_t *stream, int bytes, void *buffer );
+long FS_SetStreamPos( stream_t *stream, long newpos );
+long FS_GetStreamPos( stream_t *stream );
 void FS_FreeStream( stream_t *stream );
 qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
 uint Sound_GetApproxWavePlayLen( const char *filepath );

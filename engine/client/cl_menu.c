@@ -842,6 +842,17 @@ static void pfnHostEndGame( const char *szFinalMessage )
 	Host_EndGame( szFinalMessage );
 }
 
+/*
+=========
+pfnStartBackgroundTrack
+
+=========
+*/
+static void pfnStartBackgroundTrack( const char *introTrack, const char *mainTrack )
+{
+	S_StartBackgroundTrack( introTrack, mainTrack, 0 );
+}
+
 // engine callbacks
 static ui_enginefuncs_t gEngfuncs = 
 {
@@ -917,7 +928,7 @@ static ui_enginefuncs_t gEngfuncs =
 	Sys_ShellExecute,
 	Host_WriteServerConfig,
 	pfnChangeInstance,
-	S_StartBackgroundTrack,
+	pfnStartBackgroundTrack,
 	pfnHostEndGame,
 	Com_RandomFloat,
 	Com_RandomLong,

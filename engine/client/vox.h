@@ -42,6 +42,7 @@ typedef struct
 	float	length;
 } sentence_t;
 
-extern sentence_t		g_Sentences[MAX_SENTENCES];
+void VOX_LoadWord( struct channel_s *pchan );
+void VOX_FreeWord( struct channel_s *pchan );
 
 #endif

@@ -139,6 +139,7 @@ S_FreeChannel
 void S_FreeChannel( channel_t *ch )
 {
 	ch->sfx = NULL;
+	ch->name[0] = '\0';
 	ch->use_loop = false;
 	ch->isSentence = false;
 
@@ -926,14 +927,15 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		// prepended with a '!'.  Sentence names stored in the
 		// sentence file do not have a leading '!'. 
 		VOX_LoadSound( target_chan, S_SkipSoundChar( sfx->name ));
-
-		sfx = target_chan->sfx; // TEST
+		Q_strncpy( target_chan->name, sfx->name, sizeof( target_chan->name ));
+		sfx = target_chan->sfx;
 		pSource = sfx->cache;
 	}
 	else
 	{
 		// regular or streamed sound fx
 		pSource = S_LoadSound( sfx );
+		target_chan->name[0] = '\0';
 	}
 
 	if( !pSource )
@@ -986,7 +988,7 @@ S_RestoreSound
 Restore a sound effect for the given entity on the given channel
 ====================
 */
-void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags, double sample, double end )
+void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags, double sample, double end, int wordIndex )
 {
 	wavdata_t	*pSource;
 	sfx_t	*sfx = NULL;
@@ -1040,8 +1042,46 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	target_chan->ob_gain_target = 0.0f;
 	target_chan->bTraced = false;
 
-	// regular or streamed sound fx
-	pSource = S_LoadSound( sfx );
+	pSource = NULL;
+
+	if( S_TestSoundChar( sfx->name, '!' ))
+	{
+		// this is a sentence
+		// link all words and load the first word
+		// NOTE: sentence names stored in the cache lookup are
+		// prepended with a '!'.  Sentence names stored in the
+		// sentence file do not have a leading '!'. 
+		VOX_LoadSound( target_chan, S_SkipSoundChar( sfx->name ));
+
+		// save the sentencename for future save\restores
+		Q_strncpy( target_chan->name, sfx->name, sizeof( target_chan->name ));
+
+		// not a first word in sentence!
+		if( wordIndex != 0 )
+		{
+			VOX_FreeWord( target_chan );		// release first loaded word
+			target_chan->wordIndex = wordIndex;	// restore current word
+			VOX_LoadWord( target_chan );
+
+			if( target_chan->currentWord )
+			{
+				target_chan->sfx = target_chan->words[target_chan->wordIndex].sfx;
+				sfx = target_chan->sfx;
+				pSource = sfx->cache;
+			}
+		}
+		else
+		{
+			sfx = target_chan->sfx;
+			pSource = sfx->cache;
+		}
+	}
+	else
+	{
+		// regular or streamed sound fx
+		pSource = S_LoadSound( sfx );
+		target_chan->name[0] = '\0';
+	}
 
 	if( !pSource )
 	{
@@ -1062,6 +1102,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 			// if this is a streaming sound, play the whole thing.
 			if( chan != CHAN_STREAM )
 			{
+				MsgDev( D_ERROR, "S_RestoreSound: %s volume 0\n", sfx->name );
 				S_FreeChannel( target_chan );
 				return; // not audible at all
 			}
@@ -1137,6 +1178,7 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 
 		// link all words and load the first word
 		VOX_LoadSound( ch, S_SkipSoundChar( sfx->name ));
+		Q_strncpy( ch->name, sfx->name, sizeof( ch->name ));
 		sfx = ch->sfx;
 		pSource = sfx->cache;
 		fvox = 1;
@@ -1147,6 +1189,7 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 		pSource = S_LoadSound( sfx );
 		ch->sfx = sfx;
 		ch->isSentence = false;
+		ch->name[0] = '\0';
 	}
 
 	if( !pSource )
@@ -1212,7 +1255,9 @@ int S_GetCurrentStaticSounds( soundlist_t *pout, int size )
 	{
 		if( channels[i].entchannel == CHAN_STATIC && channels[i].sfx && channels[i].sfx->name[0] )
 		{
-			Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
+			if( channels[i].isSentence && channels[i].name[0] )
+				Q_strncpy( pout->name, channels[i].name, sizeof( pout->name ));
+			else Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
 			pout->entnum = channels[i].entnum;
 			VectorCopy( channels[i].origin, pout->origin );
 			pout->volume = (float)channels[i].master_vol / 255.0f;
@@ -1257,7 +1302,9 @@ int S_GetCurrentDynamicSounds( soundlist_t *pout, int size )
 		if( channels[i].entchannel == CHAN_STATIC && looped )
 			continue;	// never serialize static looped sounds. It will be restoring in game code 
 
-		Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
+		if( channels[i].isSentence && channels[i].name[0] )
+			Q_strncpy( pout->name, channels[i].name, sizeof( pout->name ));
+		else Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
 		pout->entnum = channels[i].entnum;
 		VectorCopy( channels[i].origin, pout->origin );
 		pout->volume = (float)channels[i].master_vol / 255.0f;
@@ -1631,13 +1678,13 @@ void S_Music_f( void )
 				&& FS_FileExists( va( "media/%s.%s", main, ext[i] ), false ))
 			{
 				// combined track with introduction and main loop theme
-				S_StartBackgroundTrack( intro, main );
+				S_StartBackgroundTrack( intro, main, 0 );
 				break;
 			}
 			else if( FS_FileExists( va( "media/%s.%s", track, ext[i] ), false ))
 			{
 				// single looped theme
-				S_StartBackgroundTrack( track, NULL );
+				S_StartBackgroundTrack( track, NULL, 0 );
 				break;
 			}
 		}
@@ -1645,7 +1692,12 @@ void S_Music_f( void )
 	}
 	else if( c == 3 )
 	{
-		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ));
+		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ), 0 );
+	}
+	else if( c == 4 && Q_atoi( Cmd_Argv( 3 )) != 0 )
+	{
+		// restore command for singleplayer: all arguments are valid
+		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ), Q_atoi( Cmd_Argv( 3 )));
 	}
 	else Msg( "Usage: music <musicfile> [loopfile]\n" );
 }

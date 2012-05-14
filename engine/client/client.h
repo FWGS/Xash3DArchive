@@ -800,7 +800,7 @@ void Con_Close( void );
 // s_main.c
 //
 void S_StreamRawSamples( int samples, int rate, int width, int channels, const byte *data );
-void S_StartBackgroundTrack( const char *intro, const char *loop );
+void S_StartBackgroundTrack( const char *intro, const char *loop, long position );
 void S_StopBackgroundTrack( void );
 void S_StreamSetPause( int pause );
 void S_StartStreaming( void );
@@ -808,7 +808,7 @@ void S_StopStreaming( void );
 void S_BeginRegistration( void );
 sound_t S_RegisterSound( const char *sample );
 void S_EndRegistration( void );
-void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags, double sample, double end );
+void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float fvol, float attn, int pitch, int flags, double sample, double end, int wordIndex );
 void S_StartSound( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, float attn, int pitch, int flags );
 void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, float attn, int pitch, int flags );
 void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );

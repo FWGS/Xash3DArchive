@@ -2801,11 +2801,11 @@ void pfnMP3_InitStream( char *filename, int flags )
 	// g-cont. flag 1 is probably 'LOOP'
 	if( flags & 1 )
 	{
-		S_StartBackgroundTrack( filename, filename );
+		S_StartBackgroundTrack( filename, filename, 0 );
 	}
 	else
 	{
-		S_StartBackgroundTrack( filename, NULL );
+		S_StartBackgroundTrack( filename, NULL, 0 );
 	}
 }
 

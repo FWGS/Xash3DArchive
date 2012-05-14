@@ -38,11 +38,19 @@ void S_CheckLerpingState( void )
 S_StartBackgroundTrack
 =================
 */
-void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
+void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack, long position )
 {
 	S_StopBackgroundTrack();
 
 	if( !dma.initialized ) return;
+
+	// check for special symbols
+	if( introTrack && *introTrack == '*' )
+		introTrack = NULL;
+
+	if( mainTrack && *mainTrack == '*' )
+		mainTrack = NULL;
+
 	if(( !introTrack || !*introTrack ) && ( !mainTrack || !*mainTrack ))
 		return;
 
@@ -54,7 +62,14 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack )
 
 	// open stream
 	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
+	Q_strncpy( s_bgTrack.current, introTrack, sizeof( s_bgTrack.current ));
 	s_bgTrack.source = cls.key_dest;
+
+	if( position != 0 )
+	{
+		// restore message, update song position
+		FS_SetStreamPos( s_bgTrack.stream, position );
+	}
 
 	S_CheckLerpingState();
 }
@@ -75,6 +90,38 @@ void S_StopBackgroundTrack( void )
 void S_StreamSetPause( int pause )
 {
 	s_listener.stream_paused = pause;
+}
+
+/*
+=================
+S_StreamGetCurrentState
+
+save\restore code
+=================
+*/
+qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *position )
+{
+	if( !s_bgTrack.stream )
+		return false; // not active
+
+	if( currentTrack )
+	{
+		if( s_bgTrack.current[0] )
+			Q_strncpy( currentTrack, s_bgTrack.current, MAX_STRING );
+		else Q_strncpy( currentTrack, "*", MAX_STRING ); // no track
+	}
+
+	if( loopTrack )
+	{
+		if( s_bgTrack.loopName[0] )
+			Q_strncpy( loopTrack, s_bgTrack.loopName, MAX_STRING );
+		else Q_strncpy( loopTrack, "*", MAX_STRING ); // no track
+	}
+
+	if( position )
+		*position = FS_GetStreamPos( s_bgTrack.stream );
+
+	return true;
 }
 
 /*
@@ -150,6 +197,7 @@ void S_StreamBackgroundTrack( void )
 			{
 				FS_FreeStream( s_bgTrack.stream );
 				s_bgTrack.stream = FS_OpenStream( va( "media/%s", s_bgTrack.loopName ));
+				Q_strncpy( s_bgTrack.current, s_bgTrack.loopName, sizeof( s_bgTrack.current ));
 
 				if( !s_bgTrack.stream ) return;
 				S_CheckLerpingState();

@@ -75,14 +75,14 @@ void CL_PlayCDTrack_f( void )
 	if( !Q_stricmp( command, "play" ))
 	{
 		track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
-		S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL );
+		S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL, 0 );
 		paused = false;
 		looped = false;
 	}
 	else if( !Q_stricmp( command, "loop" ))
 	{
 		track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
-		S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1] );
+		S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1], 0 );
 		paused = false;
 		looped = true;
 	}
