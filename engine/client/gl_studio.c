@@ -2431,7 +2431,8 @@ static void R_StudioSetupRenderer( int rendermode )
 	if( clgame.ds.cullMode != GL_NONE ) GL_Cull( GL_FRONT );
 
 	// enable depthmask on studiomodels
-	if( glState.drawTrans ) pglDepthMask( GL_TRUE );
+	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )
+		pglDepthMask( GL_TRUE );
 }
 
 /*
@@ -2446,7 +2447,8 @@ static void R_StudioRestoreRenderer( void )
 	pglShadeModel( GL_FLAT );
 
 	// restore depthmask state for sprites etc
-	if( glState.drawTrans ) pglDepthMask( GL_FALSE );
+	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )
+		pglDepthMask( GL_FALSE );
 
 	m_fDoRemap = false;
 }

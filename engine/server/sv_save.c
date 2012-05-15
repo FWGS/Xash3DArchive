@@ -1057,7 +1057,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	fs_offset_t	header_offset, position;
 	soundlist_t	soundInfo[MAX_CHANNELS];
 	string		curtrack, looptrack;
-	int		soundCount;
+	int		soundCount = 0;
 
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
@@ -1134,8 +1134,8 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 		FS_Write( pFile, &nameSize, sizeof( nameSize ));
 		FS_Write( pFile, entry->model, nameSize ); 
-		FS_Write( pFile, &entry->origin, sizeof( entry->origin ));
-		FS_Write( pFile, &entry->angles, sizeof( entry->angles ));
+		FS_Write( pFile, entry->origin, sizeof( entry->origin ));
+		FS_Write( pFile, entry->angles, sizeof( entry->angles ));
 		FS_Write( pFile, &entry->sequence, sizeof( entry->sequence ));
 		FS_Write( pFile, &entry->frame, sizeof( entry->frame ));
 		FS_Write( pFile, &entry->colormap, sizeof( entry->colormap ));
@@ -1169,7 +1169,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 		FS_Write( pFile, &nameSize, sizeof( nameSize ));
 		FS_Write( pFile, entry->name, nameSize ); 
-		FS_Write( pFile, &entry->origin, sizeof( entry->origin ));
+		FS_Write( pFile, entry->origin, sizeof( entry->origin ));
 		FS_Write( pFile, &entry->entnum, sizeof( entry->entnum ));
 		FS_Write( pFile, &entry->volume, sizeof( entry->volume ));
 		FS_Write( pFile, &entry->attenuation, sizeof( entry->attenuation ));
@@ -1319,8 +1319,8 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 
 			FS_Read( pFile, &nameSize, sizeof( nameSize ));
 			FS_Read( pFile, entry->model, nameSize ); 
-			FS_Read( pFile, &entry->origin, sizeof( entry->origin ));
-			FS_Read( pFile, &entry->angles, sizeof( entry->angles ));
+			FS_Read( pFile, entry->origin, sizeof( entry->origin ));
+			FS_Read( pFile, entry->angles, sizeof( entry->angles ));
 			FS_Read( pFile, &entry->sequence, sizeof( entry->sequence ));
 			FS_Read( pFile, &entry->frame, sizeof( entry->frame ));
 			FS_Read( pFile, &entry->colormap, sizeof( entry->colormap ));
@@ -1356,7 +1356,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 
 			FS_Read( pFile, &nameSize, sizeof( nameSize ));
 			FS_Read( pFile, entry->name, nameSize ); 
-			FS_Read( pFile, &entry->origin, sizeof( entry->origin ));
+			FS_Read( pFile, entry->origin, sizeof( entry->origin ));
 			FS_Read( pFile, &entry->entnum, sizeof( entry->entnum ));
 			FS_Read( pFile, &entry->volume, sizeof( entry->volume ));
 			FS_Read( pFile, &entry->attenuation, sizeof( entry->attenuation ));

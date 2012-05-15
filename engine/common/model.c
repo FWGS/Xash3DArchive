@@ -1613,7 +1613,7 @@ void Mod_CalcPHS( void )
 	rowwords = (num + 31)>>5;
 	rowbytes = rowwords * 4;
 
-	// typycally PHS reqiured more room because RLE fails on multiple 1 not 0
+	// typically PHS reqiured more room because RLE fails on multiple 1 not 0
 	phsdatasize = world.visdatasize * 4; // empirically determined
 
 	// allocate pvs and phs data single array
@@ -1674,8 +1674,7 @@ void Mod_CalcPHS( void )
 
 		if( total_size > phsdatasize )
 		{
-			Host_Error( "CalcPHS: vismap expansion overflow %s > %s\n",
-				Q_memprint( total_size ), Q_memprint( phsdatasize ));
+			Host_Error( "CalcPHS: vismap expansion overflow %s > %s\n", Q_memprint( total_size ), Q_memprint( phsdatasize ));
 		}
 
 		Q_memcpy( vismap_p, comp, rowsize );
@@ -1695,7 +1694,7 @@ void Mod_CalcPHS( void )
 
 	// apply leaf pointers
 	for( i = 0; i < worldmodel->numleafs; i++ )
-		worldmodel->leafs[i].compressed_pas = compressed_pas + visofs[i];
+		worldmodel->leafs[i+1].compressed_pas = compressed_pas + visofs[i];
 
 	// release uncompressed data
 	Mem_Free( uncompressed_vis );

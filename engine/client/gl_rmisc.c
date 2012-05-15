@@ -277,7 +277,7 @@ void R_NewMap( void )
 
 	// clear out efrags in case the level hasn't been reloaded
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
-		cl.worldmodel->leafs[i].efrags = NULL;
+		cl.worldmodel->leafs[i+1].efrags = NULL;
 
 	tr.skytexturenum = -1;
 	r_viewleaf = r_oldviewleaf = NULL;

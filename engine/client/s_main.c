@@ -1091,23 +1091,8 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 
 	SND_Spatialize( target_chan );
 
-	// If a client can't hear a sound when they FIRST receive the StartSound message,
-	// the client will never be able to hear that sound. This is so that out of 
-	// range sounds don't fill the playback buffer. For streaming sounds, we bypass this optimization.
-	if( !target_chan->leftvol && !target_chan->rightvol )
-	{
-		// looping sounds don't use this optimization because they should stick around until they're killed.
-		if( !sfx->cache || sfx->cache->loopStart == -1 )
-		{
-			// if this is a streaming sound, play the whole thing.
-			if( chan != CHAN_STREAM )
-			{
-				MsgDev( D_ERROR, "S_RestoreSound: %s volume 0\n", sfx->name );
-				S_FreeChannel( target_chan );
-				return; // not audible at all
-			}
-		}
-	}
+	// NOTE: first spatialization may be failed because listener position is invalid at this time
+	// so we should keep all sounds an actual and waiting for player spawn.
 
 	// apply the sample offests
 	target_chan->pMixer.sample = sample;
