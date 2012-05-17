@@ -1,6 +1,31 @@
 build ????
 
 Server: fix the sound problem with weapons
+Render: added rendermode kRenderWorldGlow (6) like in HL2
+Server: added new callback into PhysicsInterface that named SV_TriggerTouch
+Client: kill a little jitter for monsters that standing on elevators
+Client: fix very old bug (initially comes from Quake1) with efrags relinking on a static client entities
+Sound: got rid of message "S_PickChannel: no free channels" when breakble objects were broken.
+Engine: ignore to load HD-textures when dedicated server is running
+Client: count of static entities increased up to 512
+Render: fixed bug with wrong clamping on 3D textures
+Render: added a new one internal texture - gray cubemap that named as "*grayCube" without quotes
+Render: disable depth mask on studiomodels when render mode is "additive" (original HL rules)
+Sound: added a new untested feature for cull sounds by PAS on the client. Cvar "s_phs".
+Sound: add save\restore for all dynamic sounds in-game
+Sound: add save\restore for background track
+Engine: added two new cvars called "build" and "ver" for more info
+Engine: get support for loading game dlls from packfile
+Engine: get support for transparent conveyor belts. Texture name must starting from "{scroll"
+Sound: fix bug in wav-streaming code
+Server: add save\restore for client static entities (engine function MAKE_STATIC is now useful!)
+Server: remove command "map_backgound" in dedicated server mode
+Server: disable "Touch" function when playersonly-mode is active
+GameUI: don't draw logo.avi from root folder with user mods
+Client: added partially HD-textures support for sprites
+Server: now custom message code checck all the visible portals (Xash-mod feature)
+Server: add quake-style for BSP hulls selection (cvar sv_quakehulls set to 1)
+Engine: remove jpeg image support (just unneeded) 
 
 build 1905
 

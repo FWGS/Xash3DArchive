@@ -209,6 +209,50 @@ void SV_ConvertTrace( TraceResult *dst, trace_t *src )
 }
 
 /*
+=============
+SV_CheckClientVisiblity
+
+Check visibility through client camera, portal camera, etc
+=============
+*/
+qboolean SV_CheckClientVisiblity( sv_client_t *cl, const byte *mask )
+{
+	int	i, leafnum, clientnum;
+	float	*viewOrg = NULL;
+
+	if( !mask ) return true; // full visibility
+
+	clientnum = cl - svs.clients;
+	viewOrg = viewPoint[clientnum];
+
+	// Invasion issues: wrong camera position received in ENGINE_SET_PVS
+	if( cl->pViewEntity && !VectorCompare( viewOrg, cl->pViewEntity->v.origin ))
+		viewOrg = cl->pViewEntity->v.origin;
+
+	// -1 is because pvs rows are 1 based, not 0 based like leafs
+	leafnum = Mod_PointLeafnum( viewOrg ) - 1;
+	if( leafnum == -1 || (mask[leafnum>>3] & (1<<( leafnum & 7 ))))
+		return true; // visible from player view of camera view
+#if 1
+	// now check all the portal cameras
+	for( i = 0; i < cl->num_cameras; i++ )
+	{
+		edict_t *cam = cl->cameras[i];
+
+		if( !SV_IsValidEdict( cam ))
+			continue;
+
+		leafnum = Mod_PointLeafnum( cam->v.origin ) - 1;
+		// g-cont. probably camera in bad leaf... allow to send message here?
+		if( leafnum == -1 || (mask[leafnum>>3] & (1<<( leafnum & 7 ))))
+			return true;
+	}
+#endif
+	// not visible from any viewpoint
+	return false;
+}
+
+/*
 =================
 SV_Send
 
@@ -304,22 +348,8 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 				continue;
 		}
 
-		if( mask )
-		{
-			int	leafnum, clientnum;
-
-			clientnum = cl - svs.clients;
-			viewOrg = viewPoint[clientnum];
-
-			// Invasion issues: wrong camera position received in ENGINE_SET_PVS
-			if( cl->pViewEntity && !VectorCompare( viewOrg, cl->pViewEntity->v.origin ))
-				viewOrg = cl->pViewEntity->v.origin;
-
-			// -1 is because pvs rows are 1 based, not 0 based like leafs
-			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
-			if( leafnum != -1 && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
-				continue;
-		}
+		if( !SV_CheckClientVisiblity( cl, mask ))
+			continue;
 
 		if( specproxy ) BF_WriteBits( &sv.spectator_datagram, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));
 		else if( reliable ) BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.multicast ), BF_GetNumBitsWritten( &sv.multicast ));

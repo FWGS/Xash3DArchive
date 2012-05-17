@@ -56,14 +56,41 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 {
 	dspriteframe_t	*pinframe;
 	mspriteframe_t	*pspriteframe;
-	char		texname[128];
+	char		texname[128], sprname[128];
+	qboolean		load_external = false;
+	int		gl_texturenum = 0;
+
+	pinframe = (dspriteframe_t *)pin;
 
 	// build uinque frame name
 	if( mod->flags & 256 ) // it's a HUD sprite
+	{
 		Q_snprintf( texname, sizeof( texname ), "#HUD/%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
-	else Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
-	
-	pinframe = (dspriteframe_t *)pin;
+		gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags );
+	}
+	else
+	{
+		// partially HD-textures support
+		if( mod_allow_materials != NULL && mod_allow_materials->integer && !Q_strcmp( group_suffix, "one" ))
+		{
+			Q_strncpy( sprname, mod->name, sizeof( sprname ));
+			FS_StripExtension( sprname );
+
+			Q_snprintf( texname, sizeof( texname ), "materials/%s/frame%i%i.tga", sprname, num / 10, num % 10 );
+
+			if( FS_FileExists( texname, false ))
+				gl_texturenum = GL_LoadTexture( texname, NULL, 0, r_texFlags );
+
+			if( gl_texturenum )
+				load_external = true; // sucessfully loaded
+		}
+
+		if( !load_external )
+		{
+			Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
+			gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags );
+		}
+	}	
 
 	// setup frame description
 	pspriteframe = Mem_Alloc( mod->mempool, sizeof( mspriteframe_t ));
@@ -73,7 +100,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	pspriteframe->left = pinframe->origin[0];
 	pspriteframe->down = pinframe->origin[1] - pinframe->height;
 	pspriteframe->right = pinframe->width + pinframe->origin[0];
-	pspriteframe->gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags );
+	pspriteframe->gl_texturenum = gl_texturenum;
 	*ppframe = pspriteframe;
 
 	GL_SetTextureType( pspriteframe->gl_texturenum, TEX_SPRITE );
@@ -752,9 +779,12 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int
 	brightness = GLARE_FALLOFF / ( dist * dist );
 	brightness = bound( 0.01f, brightness, 1.0f );
 
-	// make the glow fixed size in screen space, taking into consideration the scale setting.
-	if( *pscale == 0.0f ) *pscale = 1.0f;
-	*pscale *= dist * ( 1.0f / bound( 100.0f, r_flaresize->value, 300.0f ));
+	if( rendermode != kRenderWorldGlow )
+	{
+		// make the glow fixed size in screen space, taking into consideration the scale setting.
+		if( *pscale == 0.0f ) *pscale = 1.0f;
+		*pscale *= dist * ( 1.0f / bound( 100.0f, r_flaresize->value, 300.0f ));
+	}
 
 	return brightness;
 }
@@ -768,7 +798,7 @@ Do occlusion test for glow-sprites
 */
 qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *pscale )
 {
-	if( e->curstate.rendermode == kRenderGlow )
+	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderWorldGlow )
 	{
 		float	blend = 1.0f;
 		vec3_t	v;

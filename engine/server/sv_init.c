@@ -332,9 +332,12 @@ void SV_ActivateServer( void )
 	if( svgame.globals->maxClients > 1 )
 	{
 		MsgDev( D_INFO, "%i player server started\n", svgame.globals->maxClients );
+		Cvar_Reset( "clockwindow" );
 	}
 	else
 	{
+		// clear the ugly moving delay in singleplayer
+		Cvar_SetFloat( "clockwindow", 0.0f );
 		MsgDev( D_INFO, "Game started\n" );
 	}
 

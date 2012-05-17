@@ -264,7 +264,6 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize );
 qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize );
-qboolean Image_LoadJPG( const char *name, const byte *buffer, size_t filesize );
 
 //
 // formats save

@@ -406,6 +406,15 @@ void UI_LoadBackgroundImage( void )
 			}
 		}
 	}
+	else
+	{
+		if( g_engfuncs.pfnFileExists( "gfx/shell/splash.bmp", TRUE ))
+		{
+			// if we doesn't have logo.avi in gamedir we don't want to draw it
+			if( !g_engfuncs.pfnFileExists( "media/logo.avi", TRUE ))
+				uiStatic.m_fDisableLogo = TRUE;
+		}
+	}
 }
 
 /*

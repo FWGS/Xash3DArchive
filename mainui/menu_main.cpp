@@ -105,7 +105,7 @@ static void UI_Background_Ownerdraw( void *self )
 
 	UI_DrawBackground_Callback( self );
 
-	if (uiStatic.m_fHaveSteamBackground)
+	if (uiStatic.m_fHaveSteamBackground || uiStatic.m_fDisableLogo)
 		return; // no logos for steam background
 
 	if( GetLogoLength() <= 0.1 || GetLogoWidth() <= 32 )

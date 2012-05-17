@@ -131,6 +131,44 @@ hull_t *SV_HullForBox( const vec3_t mins, const vec3_t maxs )
 
 /*
 ==================
+SV_HullAutoSelect
+
+select the apropriate hull automatically
+==================
+*/
+hull_t *SV_HullAutoSelect( model_t *model, const vec3_t mins, const vec3_t maxs, const vec3_t size, vec3_t offset )
+{
+	float	curdiff;
+	float	lastdiff = 999;
+	int	i, hullNumber = 0;	// assume we fail
+	hull_t	*hull;
+
+	// select the hull automatically
+	for( i = 0; i < 4; i++ )
+	{
+		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( world.hull_sizes[i] ));
+		curdiff = fabs( curdiff );
+
+		if( curdiff < lastdiff )
+		{
+			hullNumber = i;
+			lastdiff = curdiff;
+		}
+	}
+
+	// TraceHull stuff
+	hull = &model->hulls[hullNumber];
+
+	// calculate an offset value to center the origin
+	// NOTE: never get offset of drawing hull
+	if( !hullNumber ) VectorCopy( hull->clip_mins, offset );
+	else VectorSubtract( hull->clip_mins, mins, offset );
+
+	return hull;
+}
+
+/*
+==================
 SV_HullForBsp
 
 forcing to select BSP hull
@@ -154,22 +192,41 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	// author: The FiEctro
 	hull = &model->hulls[Com_RandomLong( 0, 0 )];
 #endif
-	if( size[0] <= 8.0f || model->flags & MODEL_LIQUID )
+	if( sv_quakehulls->integer == 1 )
 	{
-		hull = &model->hulls[0];
-		VectorCopy( hull->clip_mins, offset ); 
-	}
-	else
-	{
-		if( size[0] <= 36.0f )
-		{
-			if( size[2] <= 36.0f )
-				hull = &model->hulls[3];
-			else hull = &model->hulls[1];
-		}
+		// Using quake-style hull select for my Quake remake
+		if( size[0] < 3.0f || model->flags & MODEL_LIQUID )
+			hull = &model->hulls[0];
+		else if( size[0] <= 32.0f )
+			hull = &model->hulls[1];
 		else hull = &model->hulls[2];
 
 		VectorSubtract( hull->clip_mins, mins, offset );
+	}
+	else if( sv_quakehulls->integer == 2 )
+	{
+		// undocumented feature: auto hull select
+		hull = SV_HullAutoSelect( model, mins, maxs, size, offset );
+	}
+	else
+	{
+		if( size[0] <= 8.0f || model->flags & MODEL_LIQUID )
+		{
+			hull = &model->hulls[0];
+			VectorCopy( hull->clip_mins, offset ); 
+		}
+		else
+		{
+			if( size[0] <= 36.0f )
+			{
+				if( size[2] <= 36.0f )
+					hull = &model->hulls[3];
+				else hull = &model->hulls[1];
+			}
+			else hull = &model->hulls[2];
+
+			VectorSubtract( hull->clip_mins, mins, offset );
+		}
 	}
 
 	VectorAdd( offset, ent->v.origin, offset );

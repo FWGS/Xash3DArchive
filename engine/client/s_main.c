@@ -1290,7 +1290,7 @@ int S_GetCurrentDynamicSounds( soundlist_t *pout, int size )
 		if( channels[i].isSentence && channels[i].name[0] )
 			Q_strncpy( pout->name, channels[i].name, sizeof( pout->name ));
 		else Q_strncpy( pout->name, channels[i].sfx->name, sizeof( pout->name ));
-		pout->entnum = channels[i].entnum;
+		pout->entnum = (channels[i].entnum < 0) ? 0 : channels[i].entnum;
 		VectorCopy( channels[i].origin, pout->origin );
 		pout->volume = (float)channels[i].master_vol / 255.0f;
 		pout->attenuation = channels[i].dist_mult * SND_CLIP_DISTANCE;

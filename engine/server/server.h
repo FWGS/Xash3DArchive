@@ -53,6 +53,7 @@ extern int SV_UPDATE_BACKUP;
 #define MAKE_STRING(str)	(int)(str - svgame.globals->pStringBase)
 
 #define MAX_PUSHED_ENTS	256
+#define MAX_CAMERAS		32
 
 #define DVIS_PVS		0
 #define DVIS_PHS		1
@@ -226,6 +227,9 @@ typedef struct sv_client_s
 	edict_t		*pViewEntity;		// svc_setview member
 	char		name[32];			// extracted from userinfo, color string allowed
 	int		messagelevel;		// for filtering printed messages
+
+	edict_t		*cameras[MAX_CAMERAS];	// list of portal cameras in player PVS
+	int		num_cameras;		// num of portal cameras that can merge PVS
 
 	// the datagram is written to by sound calls, prints, temp ents, etc.
 	// it can be harmlessly overflowed.
@@ -412,6 +416,7 @@ extern	convar_t		*sv_send_logos;
 extern	convar_t		*sv_sendvelocity;
 extern	convar_t		*sv_skyspeed;
 extern	convar_t		*sv_skyangle;
+extern	convar_t		*sv_quakehulls;
 extern	convar_t		*mp_consistency;
 extern	convar_t		*public_server;
 extern	convar_t		*physinfo;

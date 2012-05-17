@@ -60,28 +60,32 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 	edict_t		*ent;
 	byte		*pset;
 	qboolean		fullvis = false;
-	sv_client_t	*cl, *netclient;
+	sv_client_t	*netclient;
+	sv_client_t	*cl = NULL;
 	entity_state_t	*state;
 	int		e, player;
 
 	// during an error shutdown message we may need to transmit
 	// the shutdown message after the server has shutdown, so
-	// specfically check for it
+	// specifically check for it
 	if( !sv.state ) return;
+
+	cl = SV_ClientFromEdict( pClient, true );
+	ASSERT( cl );
 
 	if( pClient && !( sv.hostflags & SVF_PORTALPASS ))
 	{
 		// portals can't change hostflags
 		sv.hostflags &= ~SVF_SKIPLOCALHOST;
 
-		cl = SV_ClientFromEdict( pClient, true );
-		ASSERT( cl );
-
 		// setup hostflags
 		if( cl->local_weapons )
 		{
 			sv.hostflags |= SVF_SKIPLOCALHOST;
 		}
+
+		// reset cameras each frame
+		cl->num_cameras = 0;
 	}
 
 	svgame.dllFuncs.pfnSetupVisibility( pViewEnt, pClient, &clientpvs, &clientphs );
@@ -113,6 +117,15 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 
 			if( netclient && netclient->modelindex ) // apply custom model if present
 				state->modelindex = netclient->modelindex;
+
+			if( SV_IsValidEdict( ent->v.aiment ) && ( ent->v.aiment->v.effects & EF_MERGE_VISIBILITY ))
+			{
+				if( cl != NULL && cl->num_cameras < MAX_CAMERAS )
+				{
+					cl->cameras[cl->num_cameras] = ent->v.aiment;
+					cl->num_cameras++;
+				}
+			}
 
 			// if we are full, silently discard entities
 			if( ents->num_entities < MAX_VISIBLE_PACKET )
