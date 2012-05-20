@@ -296,6 +296,9 @@ void SV_ActivateServer( void )
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
+	// check and count all files that marked by user as unmodified (typically is a player models etc)
+	sv.num_consistency_resources = SV_TransferConsistencyInfo();
+
 	// send serverinfo to all connected clients
 	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
@@ -311,7 +314,7 @@ void SV_ActivateServer( void )
 		host.frametime = 0.1f;			
 
 	// GoldSrc rules
-	// NOTE: this stuff is break sound from func_rotating in multiplayer
+	// NOTE: this stuff is breaking sound from func_rotating in multiplayer
 	// e.g. ambience\boomer.wav on snark_pit.bsp
 	numFrames *= sv_maxclients->integer;
 
@@ -323,7 +326,7 @@ void SV_ActivateServer( void )
 
 	// invoke to refresh all movevars
 	Q_memset( &svgame.oldmovevars, 0, sizeof( movevars_t ));
-	svgame.globals->changelevel = false;	// changelevel ends here
+	svgame.globals->changelevel = false; // changelevel ends here
 
 	// setup hostflags
 	sv.hostflags = 0;

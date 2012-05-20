@@ -76,7 +76,36 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 		ent->angles[PITCH] = -ent->angles[PITCH] / 3;
 
 	// make me lerp
-	if( ent->curstate.eflags & EFLAG_SLERP )
+	if( ent->model->type == mod_brush && ent->curstate.animtime != 0.0f )
+	{
+		float		d, f = 0.0f;
+		int		i;
+
+		// don't do it if the goalstarttime hasn't updated in a while.
+		// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
+		// was increased to 1.0 s., which is 2x the max lag we are accounting for.
+		if(( cl.time < ent->curstate.animtime + 1.0f ) && ( ent->curstate.animtime != ent->latched.prevanimtime ))
+			f = ( cl.time - ent->curstate.animtime ) / ( ent->curstate.animtime - ent->latched.prevanimtime );
+
+		f = f - 1.0f;
+
+		ent->origin[0] += ( ent->origin[0] - ent->latched.prevorigin[0] ) * f;
+		ent->origin[1] += ( ent->origin[1] - ent->latched.prevorigin[1] ) * f;
+		ent->origin[2] += ( ent->origin[2] - ent->latched.prevorigin[2] ) * f;
+
+		for( i = 0; i < 3; i++ )
+		{
+			float	ang1, ang2;
+
+			ang1 = ent->angles[i];
+			ang2 = ent->latched.prevangles[i];
+			d = ang1 - ang2;
+			if( d > 180 ) d -= 360;
+			else if( d < -180 ) d += 360;
+			ent->angles[i] += d * f;
+		}
+	}
+	else if( ent->curstate.eflags & EFLAG_SLERP )
 	{
 		float		d, f = 0.0f;
 		cl_entity_t	*m_pGround = NULL;
@@ -155,7 +184,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 				}
 			}
 		}
-	} 
+	}
 }
 
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
@@ -450,6 +479,39 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 		VectorCopy( ent->curstate.angles, ent->latched.prevangles );
 }
 
+/*
+==================
+CL_UpdateBmodelVars
+
+Using studio latched vars for interpolate bmodels
+==================
+*/
+void CL_UpdateBmodelVars( cl_entity_t *ent, entity_state_t *newstate, qboolean noInterp )
+{
+	if( newstate->effects & EF_NOINTERP || noInterp )
+	{
+		ent->latched.prevanimtime = newstate->animtime;
+
+		VectorCopy( newstate->origin, ent->latched.prevorigin );
+		VectorCopy( newstate->angles, ent->latched.prevangles );
+		return;
+	}
+
+	if( newstate->animtime != ent->curstate.animtime )
+	{
+		// client got new packet, shuffle animtimes
+		ent->latched.prevanimtime = ent->curstate.animtime;
+		VectorCopy( newstate->origin, ent->latched.prevorigin );
+		VectorCopy( newstate->angles, ent->latched.prevangles );
+	}
+
+	// NOTE: store prevorigin for interpolate monsters on moving platforms
+	if( !VectorCompare( newstate->origin, ent->curstate.origin ))
+		VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
+	if( !VectorCompare( newstate->angles, ent->curstate.angles ))
+		VectorCopy( ent->curstate.angles, ent->latched.prevangles );
+}
+
 void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t *old, qboolean unchanged )
 {
 	cl_entity_t	*ent;
@@ -516,11 +578,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	}
 	else if( Mod_GetType( state->modelindex ) == mod_brush )
 	{
-		// NOTE: store prevorigin for interpolate monsters on moving platforms
-		if( !VectorCompare( state->origin, ent->curstate.origin ))
-			VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
-		if( !VectorCompare( state->angles, ent->curstate.angles ))
-			VectorCopy( ent->curstate.angles, ent->latched.prevangles );
+		CL_UpdateBmodelVars( ent, state, newent );
 	}
 
 	// set right current state

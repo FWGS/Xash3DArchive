@@ -1821,6 +1821,29 @@ static void SV_Notarget_f( sv_client_t *cl )
 	else SV_ClientPrintf( cl, PRINT_HIGH, "notarget ON\n" );
 }
 
+/*
+==================
+SV_SendRes_f
+==================
+*/
+void SV_SendRes_f( sv_client_t *cl )
+{
+	sizebuf_t	msg;
+	byte	buffer[65535];
+
+	if( cl->state != cs_connected )
+	{
+		MsgDev( D_INFO, "sendres is not valid from the console\n" );
+		return;
+	}
+
+	BF_Init( &msg, "SendResources", buffer, sizeof( buffer ));
+
+	SV_SendResources( &msg );
+	Netchan_CreateFragments( 1, &cl->netchan, &msg );
+	Netchan_FragSend( &cl->netchan );
+}
+
 ucmd_t ucmds[] =
 {
 { "new", SV_New_f },
@@ -1828,6 +1851,7 @@ ucmd_t ucmds[] =
 { "begin", SV_Begin_f },
 { "pause", SV_Pause_f },
 { "noclip", SV_Noclip_f },
+{ "sendres", SV_SendRes_f },
 { "notarget", SV_Notarget_f },
 { "baselines", SV_Baselines_f },
 { "deltainfo", SV_DeltaInfo_f },

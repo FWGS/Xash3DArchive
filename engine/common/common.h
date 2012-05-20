@@ -668,6 +668,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename );
 void MD5Init( MD5Context_t *ctx );
 void MD5Update( MD5Context_t *ctx, const byte *buf, uint len );
 void MD5Final( byte digest[16], MD5Context_t *ctx );
+qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] );
 uint Com_HashKey( const char *string, uint hashSize );
 
 //

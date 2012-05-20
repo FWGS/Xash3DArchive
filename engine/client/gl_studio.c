@@ -514,15 +514,15 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 			f = f - 1.0f;
 		}
 
-		origin[0] += ( e->curstate.origin[0] - e->latched.prevorigin[0] ) * f;
-		origin[1] += ( e->curstate.origin[1] - e->latched.prevorigin[1] ) * f;
-		origin[2] += ( e->curstate.origin[2] - e->latched.prevorigin[2] ) * f;
+		origin[0] += ( e->origin[0] - e->latched.prevorigin[0] ) * f;
+		origin[1] += ( e->origin[1] - e->latched.prevorigin[1] ) * f;
+		origin[2] += ( e->origin[2] - e->latched.prevorigin[2] ) * f;
 
 		for( i = 0; i < 3; i++ )
 		{
 			float	ang1, ang2;
 
-			ang1 = e->curstate.angles[i];
+			ang1 = e->angles[i];
 			ang2 = e->latched.prevangles[i];
 
 			d = ang1 - ang2;
@@ -1724,7 +1724,8 @@ static void R_StudioSetupSkin( mstudiotexture_t *ptexture, int index )
 	// NOTE: user can comment call StudioRemapColors and remap_info will be unavailable
 	if( m_fDoRemap ) ptexture = CL_GetRemapInfoForEntity( RI.currententity )->ptexture;
 
-	m_skinnum = RI.currententity->curstate.skin;
+	// safety bounding the skinnum
+	m_skinnum = bound( 0, RI.currententity->curstate.skin, ( m_pTextureHeader->numskinfamilies - 1 ));
 	pskinref = (short *)((byte *)m_pTextureHeader + m_pTextureHeader->skinindex);
 	if( m_skinnum != 0 && m_skinnum < m_pTextureHeader->numskinfamilies )
 		pskinref += (m_skinnum * m_pTextureHeader->numskinref);
@@ -1804,7 +1805,8 @@ static void R_StudioDrawPoints( void )
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
 		g_nStudioCount++;
 
-	m_skinnum = RI.currententity->curstate.skin;	    
+	// safety bounding the skinnum
+	m_skinnum = bound( 0, RI.currententity->curstate.skin, ( m_pTextureHeader->numskinfamilies - 1 ));	    
 	pvertbone = ((byte *)m_pStudioHeader + m_pSubModel->vertinfoindex);
 	pnormbone = ((byte *)m_pStudioHeader + m_pSubModel->norminfoindex);
 

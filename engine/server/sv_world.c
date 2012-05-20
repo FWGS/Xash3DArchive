@@ -951,8 +951,8 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 	vec3_t	offset, temp;
 	int	last_hitgroup;
 	trace_t	trace_hitbox;
-	int	i, hullcount;
-	qboolean	rotated;
+	int	i, j, hullcount;
+	qboolean	rotated, transform_bbox;
 	matrix4x4	matrix;
 
 	ASSERT( trace );
@@ -979,11 +979,37 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 		rotated = true;
 	else rotated = false;
 
+	// keep untransformed bbox less than 45 degress or train on subtransit.bsp will stop working
+	if(( check_angles( ent->v.angles[0] ) || check_angles( ent->v.angles[2] )) && !VectorIsNull( mins ))
+		transform_bbox = true;
+	else transform_bbox = false;
+
 	if( rotated )
 	{
-		Matrix4x4_CreateFromEntity( matrix, ent->v.angles, offset, 1.0f );
+		vec3_t	out_mins, out_maxs;
+
+		if( transform_bbox )
+			Matrix4x4_CreateFromEntity( matrix, ent->v.angles, ent->v.origin, 1.0f );
+		else Matrix4x4_CreateFromEntity( matrix, ent->v.angles, offset, 1.0f );
+
 		Matrix4x4_VectorITransform( matrix, start, start_l );
 		Matrix4x4_VectorITransform( matrix, end, end_l );
+                              
+		if( transform_bbox )
+		{
+			World_TransformAABB( matrix, mins, maxs, out_mins, out_maxs );
+			VectorSubtract( hull->clip_mins, out_mins, offset ); // calc new local offset
+
+			for( j = 0; j < 3; j++ )
+			{
+				if( start_l[j] >= 0.0f )
+					start_l[j] -= offset[j];
+				else start_l[j] += offset[j];
+				if( end_l[j] >= 0.0f )
+					end_l[j] -= offset[j];
+				else end_l[j] += offset[j];
+			}
+		}
 	}
 	else
 	{

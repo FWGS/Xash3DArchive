@@ -295,7 +295,7 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 	vec3_t	offset, start_l, end_l;
 	vec3_t	temp, mins, maxs;
 	int	i, j, hullcount;
-	qboolean	rotated;
+	qboolean	rotated, transform_bbox;
 	hull_t	*hull;
 
 	Q_memset( &trace_total, 0, sizeof( trace_total ));
@@ -369,11 +369,34 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 			rotated = true;
 		else rotated = false;
 
+		if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
+			transform_bbox = true;
+		else transform_bbox = false;
+
 		if( rotated )
 		{
-			Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+			if( transform_bbox )
+				Matrix4x4_CreateFromEntity( matrix, pe->angles, pe->origin, 1.0f );
+			else Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+
 			Matrix4x4_VectorITransform( matrix, start, start_l );
 			Matrix4x4_VectorITransform( matrix, end, end_l );
+                              
+			if( transform_bbox )
+			{
+				World_TransformAABB( matrix, pmove->player_mins[pmove->usehull], pmove->player_maxs[pmove->usehull], mins, maxs );
+				VectorSubtract( hull->clip_mins, mins, offset );	// calc new local offset
+
+				for( j = 0; j < 3; j++ )
+				{
+					if( start_l[j] >= 0.0f )
+						start_l[j] -= offset[j];
+					else start_l[j] += offset[j];
+					if( end_l[j] >= 0.0f )
+						end_l[j] -= offset[j];
+					else end_l[j] += offset[j];
+				}
+			}
 		}
 		else
 		{
@@ -504,9 +527,30 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pmtrace_t *ptrace, p
 		// CM_TransformedPointContents :-)
 		if( pe->solid == SOLID_BSP && !VectorIsNull( pe->angles ))
 		{
+			qboolean	transform_bbox = false;
 			matrix4x4	matrix;
-			Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+
+			if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
+				transform_bbox = true;
+
+			if( transform_bbox )
+				Matrix4x4_CreateFromEntity( matrix, pe->angles, pe->origin, 1.0f );
+			else Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+
 			Matrix4x4_VectorITransform( matrix, pos, pos_l );
+                              
+			if( transform_bbox )
+			{
+				World_TransformAABB( matrix, pmove->player_mins[pmove->usehull], pmove->player_maxs[pmove->usehull], mins, maxs );
+				VectorSubtract( hull->clip_mins, mins, offset );	// calc new local offset
+
+				for( j = 0; j < 3; j++ )
+				{
+					if( pos_l[j] >= 0.0f )
+						pos_l[j] -= offset[j];
+					else pos_l[j] += offset[j];
+				}
+			}
 		}
 		else
 		{

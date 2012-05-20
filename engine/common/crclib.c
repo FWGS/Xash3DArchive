@@ -524,6 +524,42 @@ void MD5Transform( uint buf[4], const uint in[16] )
 	buf[3] += d;
 }
 
+qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] )
+{
+	file_t		*file;
+	char		buffer[1024];
+	MD5Context_t	MD5_Hash;
+	int		bytes;
+ 
+	if(( file = FS_Open( pszFileName, "rb", false )) == NULL )
+		return false;
+
+	Q_memset( &MD5_Hash, 0, sizeof( MD5Context_t ));
+
+	MD5Init( &MD5_Hash );
+
+	if( seed )
+	{
+		MD5Update( &MD5_Hash, (const byte *)seed, 16 );
+	}
+
+	while( 1 )
+	{
+		bytes = FS_Read( file, buffer, sizeof( buffer ));
+
+		if( bytes > 0 )
+			MD5Update( &MD5_Hash, buffer, bytes );
+
+		if( FS_Eof( file ))
+			break;
+	}
+
+	FS_Close( file );
+	MD5Final( digest, &MD5_Hash );
+
+	return true;
+}
+
 /*
 =================
 Com_HashKey

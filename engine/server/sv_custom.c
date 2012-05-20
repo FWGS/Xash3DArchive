@@ -16,6 +16,8 @@ GNU General Public License for more details.
 #include "common.h"
 #include "server.h"
 
+#define RES_CHECK_CONSISTENCY		(1<<7)	// check consistency for this resource
+
 //=======================================================================
 //
 //			UNDER CONSTRUCTION
@@ -47,7 +49,7 @@ int SV_CreateCustomization( customization_t *pListHead, resource_t *pResource, i
 	cachewad_t	*pldecal;
 	qboolean		found_problem;
 
-	found_problem = 0;
+	found_problem = false;
 
 	ASSERT( pResource != NULL );
 
@@ -217,4 +219,149 @@ void SV_ClearCustomizationList( customization_t *pHead )
 	} while( pCur != NULL );
 
 	pCur->pNext = NULL;
+}
+
+qboolean SV_FileInConsistencyList( resource_t *resource, sv_consistency_t **out )
+{
+	int i = 0;
+
+	while( 1 )
+	{
+		if( !sv.consistency_files[i].name )
+			return false; // end of consistency res
+
+		if( !Q_stricmp( sv.consistency_files[i].name, resource->szFileName ))
+			break;
+		i++;
+	}
+
+	// get pointer on a matched record
+	if( out ) *out = &sv.consistency_files[i];
+
+	return true;
+}
+
+int SV_TransferConsistencyInfo( void )
+{
+	sv_consistency_t	*check;
+	string		filepath;
+	vec3_t		mins, maxs;
+	int		i, total = 0;
+	resource_t	*res;
+
+	for( i = 0; i < sv.num_resources; i++ )
+	{
+		res = &sv.resources[i];
+
+		if( res->ucFlags & RES_CHECK_CONSISTENCY )
+			continue;	// already checked?
+
+		if( !SV_FileInConsistencyList( res, &check ))
+			continue;
+
+		res->ucFlags |= RES_CHECK_CONSISTENCY;
+
+		if( res->type == t_sound )
+			Q_snprintf( filepath, sizeof( filepath ), "sound/%s", res->szFileName );
+		else Q_strncpy( filepath, res->szFileName, sizeof( filepath ));
+
+		MD5_HashFile( res->rgucMD5_hash, filepath, NULL );
+
+		if( res->type == t_model )
+		{
+			switch( check->force_state )
+			{
+			case force_exactfile:
+				// only MD5 hash compare
+				break;
+			case force_model_samebounds:
+				if( !Mod_GetStudioBounds( filepath, mins, maxs ))
+					Host_Error( "Mod_GetStudioBounds: couldn't get bounds for %s\n", filepath );
+
+				res->rguc_reserved[0x00] = check->force_state;
+				Q_memcpy( &res->rguc_reserved[0x01], mins, sizeof( mins ));
+				Q_memcpy( &res->rguc_reserved[0x0D], maxs, sizeof( maxs ));
+				break;
+			case force_model_specifybounds:
+				res->rguc_reserved[0x00] = check->force_state;
+				Q_memcpy( &res->rguc_reserved[0x01], check->mins, sizeof( check->mins ));
+				Q_memcpy( &res->rguc_reserved[0x0D], check->maxs, sizeof( check->maxs ));
+				break;
+			}
+		}
+		total++;
+	}
+
+	return total;
+}
+
+void SV_SendConsistencyList( sizebuf_t *msg )
+{
+	resource_t	*res;
+	int		resIndex;
+	int		lastIndex;
+	int		i;
+
+	if( mp_consistency->integer && ( sv.num_consistency_resources > 0 ) && !svs.currentPlayer->hltv_proxy )
+	{
+		lastIndex = 0;
+		BF_WriteOneBit( msg, 1 );
+
+		for( i = 0; i < sv.num_resources; i++ )
+		{
+			res = &sv.resources[i];
+
+			if(!( res->ucFlags & RES_CHECK_CONSISTENCY ))
+				continue;
+
+			resIndex = (i - lastIndex);
+			BF_WriteOneBit( msg, 1 );
+			BF_WriteSBitLong( msg, resIndex, MAX_MODEL_BITS );
+			lastIndex = i;
+		}
+	}
+
+	// write end of the list
+	BF_WriteOneBit( msg, 0 );
+}
+   
+void SV_SendResources( sizebuf_t *msg )
+{
+	byte	nullrguc[32];
+	int	i;
+
+	Q_memset( nullrguc, 0, sizeof( nullrguc ));
+
+	BF_WriteByte( msg, svc_customization );
+	BF_WriteLong( msg, svs.spawncount );
+
+	// g-cont. This is more than HL limit but unmatched with GoldSrc protocol
+	BF_WriteSBitLong( msg, sv.num_resources, MAX_MODEL_BITS );
+
+	for( i = 0; i < sv.num_resources; i++ )
+	{
+		BF_WriteSBitLong( msg, sv.resources[i].type, 4 );
+		BF_WriteString( msg, sv.resources[i].szFileName );
+		BF_WriteSBitLong( msg, sv.resources[i].nIndex, MAX_MODEL_BITS );
+		BF_WriteSBitLong( msg, sv.resources[i].nDownloadSize, 24 );	// prevent to download a very big files?
+		BF_WriteSBitLong( msg, sv.resources[i].ucFlags, 3 );	// g-cont. why only first three flags?
+
+		if( sv.resources[i].ucFlags & RES_CUSTOM )
+		{
+			BF_WriteBits( msg, sv.resources[i].rgucMD5_hash, sizeof( sv.resources[i].rgucMD5_hash ));
+		}
+
+		if( memcmp( nullrguc, sv.resources[i].rguc_reserved, sizeof( nullrguc )))
+		{
+			BF_WriteOneBit( msg, 1 );
+			BF_WriteBits( msg, sv.resources[i].rguc_reserved, sizeof( sv.resources[i].rguc_reserved ));
+
+		}
+		else
+		{
+			BF_WriteOneBit( msg, 0 );
+		}
+	}
+
+	SV_SendConsistencyList( msg );
 }

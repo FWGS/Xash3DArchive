@@ -136,7 +136,9 @@ typedef struct server_s
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 
 	sv_consistency_t	consistency_files[MAX_MODELS];
-	int		num_consistency_files;
+	resource_t	resources[MAX_MODELS];
+	int		num_consistency_resources;	// typically check model bounds on this
+	int		num_resources;
 
 	sv_baselines_t	instanced;	// instanced baselines
 
@@ -515,6 +517,12 @@ void SV_UpdateServerInfo( void );
 //
 void SV_Status_f( void );
 void SV_Newgame_f( void );
+
+//
+// sv_custom.c
+//
+void SV_SendResources( sizebuf_t *msg );
+int SV_TransferConsistencyInfo( void );
 
 //
 // sv_frame.c

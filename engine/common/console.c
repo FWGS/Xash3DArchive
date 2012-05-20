@@ -1898,13 +1898,13 @@ void Con_RunConsole( void )
 
 	if( con.finalFrac < con.displayFrac )
 	{
-		con.displayFrac -= scr_conspeed->value * 0.002 * host.realframetime;
+		con.displayFrac -= fabs( scr_conspeed->value ) * 0.002 * host.realframetime;
 		if( con.finalFrac > con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
 	else if( con.finalFrac > con.displayFrac )
 	{
-		con.displayFrac += scr_conspeed->value * 0.002 * host.realframetime;
+		con.displayFrac += fabs( scr_conspeed->value ) * 0.002 * host.realframetime;
 		if( con.finalFrac < con.displayFrac )
 			con.displayFrac = con.finalFrac;
 	}
