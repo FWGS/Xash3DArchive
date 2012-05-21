@@ -165,7 +165,7 @@ typedef struct render_api_s
 	void		(*GL_TexGen)( unsigned int coord, unsigned int mode );
 
 // ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 26
-	void		(*R_EntityRemoveDecals)( model_t *mod ); // remove all the decals from specified entity (BSP only)
+	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 } render_api_t;
 
 // render callbacks

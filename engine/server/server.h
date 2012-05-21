@@ -175,7 +175,8 @@ typedef struct
 
 	clientdata_t	clientdata;
 	weapon_data_t	weapondata[MAX_WEAPONS];
-	byte		sentinel[128];		// g-cont. The fucking Cry Of Fear a corrupt memory after the weapondata!!!
+	weapon_data_t	oldweapondata[MAX_WEAPONS];	// g-cont. The fucking Cry Of Fear a corrupt memory after the weapondata!!!
+
 	int  		num_entities;
 	int  		first_entity;		// into the circular sv_packet_entities[]
 } client_frame_t;

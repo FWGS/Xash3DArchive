@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define PROTOCOL_VERSION		45
+#define PROTOCOL_VERSION		46
 
 // server to client
 #define svc_bad			0	// immediately crash client when received

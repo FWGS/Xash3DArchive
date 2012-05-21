@@ -1093,6 +1093,7 @@ void SV_New_f( sv_client_t *cl )
 	BF_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message )); // Map Message
 	BF_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map
 	BF_WriteString( &cl->netchan.message, GI->gamefolder );
+	BF_WriteLong( &cl->netchan.message, host.features );
 
 	// refresh userinfo on spawn
 	SV_RefreshUserinfo();
@@ -1495,7 +1496,7 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 
 	if( tableIndex == Delta_NumTables() )
 	{
-		// send movevars here because we need loading skybox early than HLFX may override him
+		// send movevars here because we need loading skybox early than HLFX 0.6 may override him
 		SV_FullUpdateMovevars( cl, &cl->netchan.message );
 		Q_snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, 0 );
 	}

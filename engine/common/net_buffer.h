@@ -16,6 +16,8 @@ GNU General Public License for more details.
 #ifndef NET_BUFFER_H
 #define NET_BUFFER_H
 
+#include "features.h"
+
 /*
 ==============================================================================
 
@@ -51,7 +53,6 @@ typedef struct
 #define BF_ReadBitAngles			BF_ReadBitVec3Coord
 #define BF_ReadString( bf )			BF_ReadStringExt( bf, false )
 #define BF_ReadStringLine( bf )		BF_ReadStringExt( bf, true )
-#define BF_ReadCoord( bf )			(float)(BF_ReadShort( bf ) * ( 1.0f / 8.0f ))
 #define BF_ReadAngle( bf )			(float)(BF_ReadChar( bf ) * ( 360.0f / 256.0f ))
 #define BF_Init( bf, name, data, bytes )	BF_InitExt( bf, name, data, bytes, -1 )
 
@@ -123,6 +124,7 @@ int BF_ReadByte( sizebuf_t *bf );
 int BF_ReadShort( sizebuf_t *bf );
 int BF_ReadWord( sizebuf_t *bf );
 long BF_ReadLong( sizebuf_t *bf );
+float BF_ReadCoord( sizebuf_t *bf );
 float BF_ReadFloat( sizebuf_t *bf );
 qboolean BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes );
 char *BF_ReadStringExt( sizebuf_t *bf, qboolean bLine );

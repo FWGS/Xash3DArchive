@@ -1744,6 +1744,13 @@ qboolean SV_InitPhysicsAPI( void )
 		if( pPhysIface( SV_PHYSICS_INTERFACE_VERSION, &gPhysicsAPI, &svgame.physFuncs ))
 		{
 			MsgDev( D_AICONSOLE, "SV_LoadProgs: ^2initailized extended PhysicAPI ^7ver. %i\n", SV_PHYSICS_INTERFACE_VERSION );
+
+			if( svgame.physFuncs.SV_CheckFeatures != NULL )
+			{
+				// grab common engine features (it will be shared across the network)
+				host.features = svgame.physFuncs.SV_CheckFeatures();
+				Host_PrintEngineFeatures ();
+			}
 			return true;
 		}
 

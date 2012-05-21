@@ -30,6 +30,10 @@ Server: remove ugly movement delay after map loaging in singleplayer
 Render: check studio skins for negative values to prevent possible crashes 
 Console: fixup negative values for "scr_conspeed" variable
 Render: fix interpolation bug for studiomodels on internal studio renderer
+Physic: transform trace BBox into local space of bmodel
+Engine: implement new system of engine features that can be enabled by Mod-Maker request
+Engine: build BSP surface meshes for Mod-Makers. e.g. for build collision tree of VBO\VA custom rendering
+Engine: allow support of large maps up to +\- 16384 units (need to edit delta.lst and enable feature in the engine)
 
 build 1905
 

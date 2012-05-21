@@ -2612,7 +2612,10 @@ pfnWriteCoord
 */
 void pfnWriteCoord( float flValue )
 {
-	BF_WriteShort( &sv.multicast, (int)( flValue * 8.0f ));
+	// g-cont. we loose precision here but keep old size of coord variable!
+	if( host.features & ENGINE_WRITE_LARGE_COORD )
+		BF_WriteShort( &sv.multicast, (int)( flValue * 2.0f ));
+	else BF_WriteShort( &sv.multicast, (int)( flValue * 8.0f ));
 	svgame.msg_realsize += 2;
 }
 
@@ -3554,7 +3557,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	event_args_t	args;
 	event_info_t	*ei = NULL;
 	float		*viewOrg = NULL;
-	int		j, leafnum, slot, bestslot;
+	int		j, slot, bestslot;
 	int		invokerIndex;
 	byte		*mask = NULL;
 	vec3_t		pvspoint;
@@ -3677,20 +3680,9 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 				continue;
 		}
 
-		if( mask && SV_IsValidEdict( pInvoker ))
+		if( SV_IsValidEdict( pInvoker ))
 		{
-			int	clientnum;
-
-			clientnum = cl - svs.clients;
-			viewOrg = viewPoint[clientnum];
-
-			// Invasion issues: wrong camera position received in ENGINE_SET_PVS
-			if( cl->pViewEntity && !VectorCompare( viewOrg, cl->pViewEntity->v.origin ))
-				viewOrg = cl->pViewEntity->v.origin;
-
-			// -1 is because pvs rows are 1 based, not 0 based like leafs
-			leafnum = Mod_PointLeafnum( viewOrg ) - 1;
-			if( leafnum != -1 && (!( mask[leafnum>>3] & (1<<( leafnum & 7 )))))
+			if( !SV_CheckClientVisiblity( cl, mask ))
 				continue;
 		}
 

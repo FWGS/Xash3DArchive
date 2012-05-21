@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "mod_local.h"
 #include "mathlib.h"
 #include "input.h"
+#include "features.h"
 
 static const char *show_credits = "\n\n\n\n\tCopyright XashXT Group %s ©\n\t\
           All Rights Reserved\n\n\t           Visit www.xash.ru\n";
@@ -66,6 +67,25 @@ void Host_ShutdownServer( void )
 	if( !SV_Active()) return;
 	Q_strncpy( host.finalmsg, "Server was killed", MAX_STRING );
 	SV_Shutdown( false );
+}
+
+/*
+================
+Host_PrintEngineFeatures
+================
+*/
+void Host_PrintEngineFeatures( void )
+{
+	if( host.features & ENGINE_WRITE_LARGE_COORD )
+		MsgDev( D_AICONSOLE, "^3EXT:^7 big world support enabled\n" );
+
+	if( host.features & ENGINE_BUILD_SURFMESHES )
+	{
+		MsgDev( D_AICONSOLE, "^3EXT:^7 surfmeshes enabled\n" );
+
+		if( host.features & ENGINE_BUILD_STVECTORS )
+			MsgDev( D_AICONSOLE, "^3EXT:^7 ST-vectors generate enabled\n" );
+	}
 }
 
 /*

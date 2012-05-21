@@ -40,7 +40,7 @@ struct movevars_s
 	float	skyvec_x;			// Sky vector
 	float	skyvec_y;			// 
 	float	skyvec_z;			// 
-	qboolean	studio_scale;	// Allow engine to scale visible and physic hull of studiomodels
+	int	features;		// engine features that shared across network
 	float	clienttrace;	// Studiomodels scale that applied for the clients (visual effect only) 
 	float	wateralpha;	// World water alpha 1.0 - solid 0.0 - transparent
 	float	skydir_x;		// skybox rotate direction

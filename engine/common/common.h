@@ -322,6 +322,8 @@ typedef struct host_parm_s
 	byte		*imagepool;	// imagelib mempool
 	byte		*soundpool;	// soundlib mempool
 
+	uint		features;		// custom features that enables by mod-maker request
+
 	// for IN_MouseMove() easy access
 	int		window_center_x;
 	int		window_center_y;
@@ -590,6 +592,7 @@ qboolean Host_IsLocalGame( void );
 void Host_ShutdownServer( void );
 void Host_Print( const char *txt );
 void Host_Error( const char *error, ... );
+void Host_PrintEngineFeatures( void );
 void Host_InitDecals( void );
 void Host_Credits( void );
 

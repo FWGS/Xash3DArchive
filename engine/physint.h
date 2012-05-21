@@ -65,6 +65,8 @@ typedef struct physics_interface_s
 	int		( *SV_AllowSaveGame )( void );
 	// override trigger area checking and touching
 	int		( *SV_TriggerTouch )( edict_t *pent, edict_t *trigger );
+	// some engine features can be enabled only through this function
+	unsigned int	( *SV_CheckFeatures )( void );
 } physics_interface_t;
 
 #endif//PHYSINT_H

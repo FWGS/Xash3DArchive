@@ -357,6 +357,8 @@ void CL_ParseMovevars( sizebuf_t *msg )
 		R_SetupSky( clgame.movevars.skyName );
 
 	Q_memcpy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
+	// keep features an actual!
+	clgame.oldmovevars.features = clgame.movevars.features = host.features;
 }
 
 /*
@@ -560,6 +562,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Q_strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
 	cl.background = BF_ReadOneBit( msg );
 	Q_strncpy( gamefolder, BF_ReadString( msg ), MAX_STRING );
+	host.features = (uint)BF_ReadLong( msg );
 
 	if( cl.maxclients > 1 && host.developer < 1 )
 		host.developer++;

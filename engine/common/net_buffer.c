@@ -713,6 +713,14 @@ int BF_ReadWord( sizebuf_t *bf )
 	return BF_ReadUBitLong( bf, sizeof( word ) << 3 );
 }
 
+float BF_ReadCoord( sizebuf_t *bf )
+{
+	// g-cont. we loose precision here but keep old size of coord variable!
+	if( host.features & ENGINE_WRITE_LARGE_COORD )
+		return (float)(BF_ReadShort( bf ) * ( 1.0f / 2.0f ));
+	return (float)(BF_ReadShort( bf ) * ( 1.0f / 8.0f ));
+}
+
 long BF_ReadLong( sizebuf_t *bf )
 {
 	return BF_ReadSBitLong( bf, sizeof( long ) << 3 );

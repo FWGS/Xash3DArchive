@@ -64,13 +64,6 @@ typedef struct
 	unsigned int	cachededgeoffset;
 } medge_t;
 
-// g-cont. for future expansions
-typedef struct
-{
-	int	planenum;
-	int	children[2];		// negative numbers are contents
-} mclipnode_t;
-
 typedef struct texture_s
 {
 	char		name[16];
@@ -80,7 +73,7 @@ typedef struct texture_s
 	int		anim_total;	// total tenths in sequence ( 0 = no)
 	int		anim_min, anim_max;	// time for this frame min <=time< max
 	struct texture_s	*anim_next;	// in the animation sequence
-	struct texture_s	*alternate_anims;	// bmodels in frmae 1 use these
+	struct texture_s	*alternate_anims;	// bmodels in frame 1 use these
 	int		fb_texturenum;	// auto-luma texturenum
 	int		dt_texturenum;	// detail-texture binding
 	unsigned int	unused[2];	// reserved 
@@ -196,12 +189,29 @@ typedef struct msurface_s
 	decal_t		*pdecals;
 } msurface_t;
 
+typedef struct msurfmesh_s
+{
+	unsigned short	numVerts;
+	unsigned short	numElems;		// ~ 20 000 vertex per one surface. Should be enough
+
+	vec3_t		*vertices;	// vertexes array
+	vec2_t		*stcoords;	// s\t coords array
+	vec2_t		*lmcoords;	// l\m coords array
+	vec3_t		*normals;		// normals array
+	vec4_t		*svectors;	// s-component, may be null (fourth component keep polarity of T vector)
+	byte		*colors;		// colors array for vertex lighting (filling 0xFF by default)
+	unsigned int	*indices;		// indices		
+
+	struct msurface_s	*surf;		// pointer to parent surface. Just for consistency
+	struct msurfmesh_s	*next;		// temporary chain of subdivided surfaces
+} msurfmesh_t;
+
 // surface extradata stored in cache.data for all brushmodels
 typedef struct mextrasurf_s
 {
 	vec3_t		mins, maxs;
 	vec3_t		origin;		// surface origin
-	int		checkcount;	// for multi-check avoidance
+	msurfmesh_t	*mesh;		// VBO\VA ready surface mesh. Not used by engine but can be used by mod-makers
 
 	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
 

@@ -16,8 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../common/nowin.h"
-
 typedef int BOOL;
 #define TRUE	 1	
 #define FALSE	0

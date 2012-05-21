@@ -76,7 +76,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 		ent->angles[PITCH] = -ent->angles[PITCH] / 3;
 
 	// make me lerp
-	if( ent->model->type == mod_brush && ent->curstate.animtime != 0.0f )
+	if( ent->model && ent->model->type == mod_brush && ent->curstate.animtime != 0.0f )
 	{
 		float		d, f = 0.0f;
 		int		i;

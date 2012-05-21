@@ -20,6 +20,9 @@ GNU General Public License for more details.
 #include "wadfile.h"
 #include "world.h"
 #include "gl_local.h"
+#include "features.h"
+
+#define MAX_SIDE_VERTS		512	// per one polygon
 
 world_static_t	world;
 
@@ -49,7 +52,7 @@ static vec3_t cm_hullmins[4] =
 { -32, -32, -32 },
 };
 
-// defualt hummaxs
+// defualt hullmaxs
 static vec3_t cm_hullmaxs[4] =
 {
 {  16,  16,  36 },
@@ -1034,6 +1037,565 @@ static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
 }
 
 /*
+===============
+Mod_BuildTangentVectors
+
+borrowed from QFusion
+===============
+*/
+void Mod_BuildTangentVectors( msurfmesh_t *mesh )
+{
+	int	i, j, numVertexes;
+	float	d, *v[3], *tc[3];
+	vec3_t	stvec[3], cross;
+	vec3_t	stackTVectorsArray[128];
+	vec3_t	*vertexArray, *normalsArray;
+	vec4_t	*sVectorsArray = mesh->svectors;
+	vec2_t	*stArray = mesh->stcoords;
+	vec3_t	*tVectorsArray;
+	float	*s, *t, *n;
+	uint	*indices;
+	int	numTris;
+
+	numVertexes = mesh->numVerts;
+	vertexArray = mesh->vertices;
+	normalsArray = mesh->normals;
+	numTris = mesh->numElems / 3;
+	indices = mesh->indices;
+
+	if( numVertexes > sizeof( stackTVectorsArray ) / sizeof( stackTVectorsArray[0] ))
+		tVectorsArray = Z_Malloc( sizeof( vec3_t ) * numVertexes );
+	else tVectorsArray = stackTVectorsArray;
+
+	// assuming arrays have already been allocated
+	// this also does some nice precaching
+	Q_memset( sVectorsArray, 0, numVertexes * sizeof( *sVectorsArray ));
+	Q_memset( tVectorsArray, 0, numVertexes * sizeof( *tVectorsArray ));
+
+	for( i = 0; i < numTris; i++, indices += 3 )
+	{
+		for( j = 0; j < 3; j++ )
+		{
+			v[j] = (float *)( vertexArray + indices[j] );
+			tc[j] = (float *)( stArray + indices[j] );
+		}
+
+		// calculate two mostly perpendicular edge directions
+		VectorSubtract( v[1], v[0], stvec[0] );
+		VectorSubtract( v[2], v[0], stvec[1] );
+
+		// we have two edge directions, we can calculate the normal then
+		CrossProduct( stvec[1], stvec[0], cross );
+
+		for( j = 0; j < 3; j++ )
+		{
+			stvec[0][j] = (( tc[1][1] - tc[0][1] ) * ( v[2][j] - v[0][j] ) - ( tc[2][1] - tc[0][1] ) * ( v[1][j] - v[0][j] ));
+			stvec[1][j] = (( tc[1][0] - tc[0][0] ) * ( v[2][j] - v[0][j] ) - ( tc[2][0] - tc[0][0] ) * ( v[1][j] - v[0][j] ));
+		}
+
+		// inverse tangent vectors if their cross product goes in the opposite
+		// direction to triangle normal
+		CrossProduct( stvec[1], stvec[0], stvec[2] );
+
+		if( DotProduct( stvec[2], cross ) < 0 )
+		{
+			VectorNegate( stvec[0], stvec[0] );
+			VectorNegate( stvec[1], stvec[1] );
+		}
+
+		for( j = 0; j < 3; j++ )
+		{
+			VectorAdd( sVectorsArray[indices[j]], stvec[0], sVectorsArray[indices[j]] );
+			VectorAdd( tVectorsArray[indices[j]], stvec[1], tVectorsArray[indices[j]] );
+		}
+	}
+
+	// normalize
+	for( i = 0, s = *sVectorsArray, t = *tVectorsArray, n = *normalsArray; i < numVertexes; i++, s += 4, t += 3, n += 3 )
+	{
+		// keep s\t vectors perpendicular
+		d = -DotProduct( s, n );
+		VectorMA( s, d, n, s );
+		VectorNormalize( s );
+
+		d = -DotProduct( t, n );
+		VectorMA( t, d, n, t );
+
+		// store polarity of t-vector in the 4-th coordinate of s-vector
+		CrossProduct( n, s, cross );
+		if( DotProduct( cross, t ) < 0 )
+			s[3] = -1.0f;
+		else s[3] = 1.0f;
+	}
+
+	if( tVectorsArray != stackTVectorsArray )
+		Mem_Free( tVectorsArray );
+}
+
+/*
+=================
+Mod_BuildPolygon
+=================
+*/
+static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, const float *verts )
+{
+	float		s, t;
+	uint		index, bufSize;
+	mtexinfo_t	*texinfo = surf->texinfo;
+	qboolean		createSTverts = false;
+	int		i, numElems;
+	byte		*buffer;
+	vec3_t		normal;
+	msurfmesh_t	*mesh;
+
+	// allocate mesh
+	numElems = (numVerts - 2) * 3;
+
+	if( host.features & ENGINE_BUILD_STVECTORS )
+		createSTverts = true;
+
+	// mesh + ( vertex, normal, (st + lmst) ) * numVerts + elem * numElems;
+	bufSize = sizeof( msurfmesh_t ) + numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t )) + numElems * sizeof( uint );
+	if( createSTverts ) bufSize += numVerts * sizeof( vec4_t );
+	bufSize += numVerts * sizeof( rgba_t );	// color array
+
+	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
+
+	mesh = (msurfmesh_t *)buffer;
+	buffer += sizeof( msurfmesh_t );
+	mesh->numVerts = numVerts;
+	mesh->numElems = numElems;
+
+	// setup pointers
+	mesh->vertices = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->stcoords = (vec2_t *)buffer;
+	buffer += numVerts * sizeof( vec2_t );
+	mesh->lmcoords = (vec2_t *)buffer;
+	buffer += numVerts * sizeof( vec2_t );
+	mesh->normals = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->colors = (byte *)buffer;
+	buffer += numVerts * sizeof( rgba_t );
+
+	mesh->indices = (uint *)buffer;
+	buffer += numElems * sizeof( uint );
+
+	mesh->next = info->mesh;
+	mesh->surf = surf;	// NOTE: meshchains can be linked with one surface
+	info->mesh = mesh;
+
+	// create indices
+	for( i = 0, index = 2; i < mesh->numElems; i += 3, index++ )
+	{
+		mesh->indices[i+0] = 0;
+		mesh->indices[i+1] = index - 1;
+		mesh->indices[i+2] = index;
+	}
+
+	// setup normal
+	if( surf->flags & SURF_PLANEBACK )
+		VectorNegate( surf->plane->normal, normal );
+	else VectorCopy( surf->plane->normal, normal );
+
+	VectorNormalize( normal ); // g-cont. this is even needed?
+
+	// create vertices
+	mesh->numVerts = numVerts;
+
+	// clear colors (it can be used for pushable vertex lighting)
+	Q_memset( mesh->colors, 0xFF, numVerts * sizeof( rgba_t ));
+	
+	for( i = 0; i < numVerts; i++, verts += 3 )
+	{
+		// vertex
+		VectorCopy( verts, mesh->vertices[i] );
+		VectorCopy( normal, mesh->normals[i] );
+
+		// texture coordinates
+		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3];
+		s /= texinfo->texture->width;
+
+		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3];
+		t /= texinfo->texture->height;
+
+		mesh->stcoords[i][0] = s;
+		mesh->stcoords[i][1] = t;
+
+		// lightmap texture coordinates
+		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
+		s += surf->light_s * LM_SAMPLE_SIZE;
+		s += LM_SAMPLE_SIZE >> 1;
+		s /= BLOCK_WIDTH * LM_SAMPLE_SIZE;
+
+		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
+		t += surf->light_t * LM_SAMPLE_SIZE;
+		t += LM_SAMPLE_SIZE >> 1;
+		t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE;
+
+		mesh->lmcoords[i][0] = s;
+		mesh->lmcoords[i][1] = t;
+	}
+
+	if( createSTverts )
+	{
+		mesh->svectors = (vec4_t *)buffer;
+		buffer += mesh->numVerts * sizeof( vec4_t );
+		Mod_BuildTangentVectors( mesh );
+	}
+}
+
+/*
+=================
+Mod_SubdividePolygon
+=================
+*/
+static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, float *verts )
+{
+	int		i, j, f, b, subdivideSize;
+	vec3_t		vTotal, nTotal, mins, maxs;
+	mtexinfo_t	*texinfo = surf->texinfo;
+	vec3_t		front[MAX_SIDE_VERTS], back[MAX_SIDE_VERTS];
+	float		*v, m, oneDivVerts, dist, dists[MAX_SIDE_VERTS];
+	vec2_t		totalST, totalLM;
+	uint		bufSize;
+	byte		*buffer;
+	float		s, t;
+	msurfmesh_t	*mesh;
+
+	subdivideSize = 64.0f; // standard Q1 value
+
+	ClearBounds( mins, maxs );
+
+	for( i = 0, v = verts; i < numVerts; i++, v += 3 )
+		AddPointToBounds( v, mins, maxs );
+
+	for( i = 0; i < 3; i++ )
+	{
+		m = subdivideSize * floor((( mins[i] + maxs[i] ) * 0.5f ) / subdivideSize + 0.5f );
+
+		if( maxs[i] - m < 8 ) continue;
+		if( m - mins[i] < 8 ) continue;
+
+		// cut it
+		for( j = 0, v = verts + i; j < numVerts; j++, v += 3 )
+			dists[j] = *v - m;
+
+		// wrap cases
+		dists[j] = dists[0];
+		v -= i;
+
+		VectorCopy( verts, v );
+
+		for( f = j = b = 0, v = verts; j < numVerts; j++, v += 3 )
+		{
+			if( dists[j] >= 0.0f )
+			{
+				VectorCopy( v, front[f] );
+				f++;
+			}
+
+			if( dists[j] <= 0.0f )
+			{
+				VectorCopy( v, back[b] );
+				b++;
+			}
+			
+			if( dists[j] == 0 || dists[j+1] == 0 )
+				continue;
+			
+			if(( dists[j] > 0 ) != ( dists[j+1] > 0 ))
+			{
+				// clip point
+				dist = dists[j] / (dists[j] - dists[j+1]);
+				front[f][0] = back[b][0] = v[0] + (v[3] - v[0]) * dist;
+				front[f][1] = back[b][1] = v[1] + (v[4] - v[1]) * dist;
+				front[f][2] = back[b][2] = v[2] + (v[5] - v[2]) * dist;
+				f++, b++;
+			}
+		}
+
+		Mod_SubdividePolygon( info, surf, f, front[0] );
+		Mod_SubdividePolygon( info, surf, b, back[0] );
+		return;
+	}
+
+	// mesh + ( vertex, normal, (st + lmst) ) * ( numVerts + 2 );
+	bufSize = sizeof( msurfmesh_t ) + (( numVerts + 2 ) * (( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t ))));
+	bufSize += ( numVerts + 2 ) * sizeof( rgba_t );	// color array
+
+	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
+
+	mesh = (msurfmesh_t *)buffer;
+	buffer += sizeof( msurfmesh_t );
+
+	// create vertices
+	mesh->numVerts = numVerts + 2;
+	mesh->numElems = numVerts * 3;
+
+	// setup pointers
+	mesh->vertices = (vec3_t *)buffer;
+	buffer += mesh->numVerts * sizeof( vec3_t );
+	mesh->stcoords = (vec2_t *)buffer;
+	buffer += mesh->numVerts * sizeof( vec2_t );
+	mesh->lmcoords = (vec2_t *)buffer;
+	buffer += mesh->numVerts * sizeof( vec2_t );
+	mesh->normals = (vec3_t *)buffer;
+	buffer += mesh->numVerts * sizeof( vec3_t );
+	mesh->colors = (byte *)buffer;
+	buffer += mesh->numVerts * sizeof( rgba_t );
+
+	VectorClear( vTotal );
+	VectorClear( nTotal );
+
+	totalST[0] = totalST[1] = 0;
+	totalLM[0] = totalLM[1] = 0;
+
+	// clear colors (it can be used for pushable vertex lighting)
+	Q_memset( mesh->colors, 0xFF, mesh->numVerts * sizeof( rgba_t ));
+
+	for( i = 0; i < numVerts; i++, verts += 3 )
+	{
+		// vertex
+		VectorCopy( verts, mesh->vertices[i+1] );
+
+		// setup normal
+		if( surf->flags & SURF_PLANEBACK )
+			VectorNegate( surf->plane->normal, mesh->normals[i+1] );
+		else VectorCopy( surf->plane->normal, mesh->normals[i+1] );
+
+		VectorAdd( vTotal, mesh->vertices[i+1], vTotal );
+ 		VectorAdd( nTotal, mesh->normals[i+1], nTotal );
+
+		// texture coordinates
+		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3];
+		s /= texinfo->texture->width;
+
+		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3];
+		t /= texinfo->texture->height;
+
+		mesh->stcoords[i+1][0] = s;
+		mesh->stcoords[i+1][1] = t;
+
+		totalST[0] += s;
+		totalST[1] += t;
+
+		// lightmap texture coordinates
+		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
+		s += surf->light_s * LM_SAMPLE_SIZE;
+		s += LM_SAMPLE_SIZE >> 1;
+		s /= BLOCK_WIDTH * LM_SAMPLE_SIZE;
+
+		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
+		t += surf->light_t * LM_SAMPLE_SIZE;
+		t += LM_SAMPLE_SIZE >> 1;
+		t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE;
+
+		mesh->lmcoords[i+1][0] = s;
+		mesh->lmcoords[i+1][1] = t;
+
+		totalLM[0] += s;
+		totalLM[1] += t;
+	}
+
+	// vertex
+	oneDivVerts = ( 1.0f / (float)numVerts );
+
+	VectorScale( vTotal, oneDivVerts, mesh->vertices[0] );
+	VectorScale( nTotal, oneDivVerts, mesh->normals[0] );
+	VectorNormalize( mesh->normals[0] );
+
+	// texture coordinates
+	mesh->stcoords[0][0] = totalST[0] * oneDivVerts;
+	mesh->stcoords[0][1] = totalST[1] * oneDivVerts;
+
+	// lightmap texture coordinates
+	mesh->lmcoords[0][0] = totalLM[0] * oneDivVerts;
+	mesh->lmcoords[0][1] = totalLM[1] * oneDivVerts;
+
+	// copy first vertex to last
+	VectorCopy( mesh->vertices[1], mesh->vertices[i+1] );
+	VectorCopy( mesh->normals[1], mesh->normals[i+1] );
+	Vector2Copy( mesh->stcoords[1], mesh->stcoords[i+1] );
+	Vector2Copy( mesh->lmcoords[1], mesh->lmcoords[i+1] );
+
+	mesh->next = info->mesh;
+	mesh->surf = surf;	// NOTE: meshchains can be linked with one surface
+	info->mesh = mesh;
+}
+
+/*
+================
+Mod_ConvertSurface
+================
+*/
+static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
+{
+	msurfmesh_t	*poly, *next, *mesh;
+	qboolean		createSTverts = false;
+	float		*outSTcoords, *outLMcoords;
+	float		*outVerts, *outNorms;
+	uint		numElems, numVerts;
+	uint		*outIndexes;
+	int		i, bufSize;
+	byte		*buffer;
+
+	// find the total vertex count and index count
+	numElems = numVerts = 0;
+
+	// determine count of indices and vertices
+	for( poly = info->mesh; poly; poly = poly->next )
+	{
+		numElems += ( poly->numVerts - 2 ) * 3;
+		numVerts += poly->numVerts;
+	}
+
+	if( host.features & ENGINE_BUILD_STVECTORS )
+		createSTverts = true;
+
+	// mesh + ( vertex, normal, (st + lmst) ) * numVerts + elem * numElems;
+	bufSize = sizeof( msurfmesh_t ) + numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t )) + numElems * sizeof( uint );
+	if( createSTverts ) bufSize += numVerts * sizeof( vec4_t );
+	bufSize += numVerts * sizeof( rgba_t );	// color array
+
+	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
+
+	mesh = (msurfmesh_t *)buffer;
+	buffer += sizeof( msurfmesh_t );
+	mesh->numVerts = numVerts;
+	mesh->numElems = numElems;
+
+	// setup pointers
+	mesh->vertices = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->stcoords = (vec2_t *)buffer;
+	buffer += numVerts * sizeof( vec2_t );
+	mesh->lmcoords = (vec2_t *)buffer;
+	buffer += numVerts * sizeof( vec2_t );
+	mesh->normals = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->colors = (byte *)buffer;
+	buffer += numVerts * sizeof( rgba_t );
+	mesh->indices = (uint *)buffer;
+	buffer += numElems * sizeof( uint );
+
+	// setup moving pointers
+	outVerts = (float *)mesh->vertices;
+	outNorms = (float *)mesh->normals;
+	outSTcoords = (float *)mesh->stcoords;
+	outLMcoords = (float *)mesh->lmcoords;
+	outIndexes = (uint *)mesh->indices;
+
+	// store vertex data
+	numElems = numVerts = 0;
+
+	// clear colors (it can be used for pushable vertex lighting)
+	Q_memset( mesh->colors, 0xFF, numVerts * sizeof( rgba_t ));
+
+	for( poly = info->mesh; poly; poly = poly->next )
+	{
+		// indexes
+		outIndexes = mesh->indices + numElems;
+		numElems += (poly->numVerts - 2) * 3;
+
+		for( i = 2; i < poly->numVerts; i++ )
+		{
+			outIndexes[0] = numVerts;
+			outIndexes[1] = numVerts + i - 1;
+			outIndexes[2] = numVerts + i;
+			outIndexes += 3;
+		}
+
+		for( i = 0; i < poly->numVerts; i++ )
+		{
+			// vertices
+			VectorCopy( poly->vertices[i], outVerts );
+			VectorCopy( poly->normals[i], outNorms );
+
+			outSTcoords[0] = poly->stcoords[i][0];
+			outSTcoords[1] = poly->stcoords[i][1];
+			outLMcoords[0] = poly->lmcoords[i][0];
+			outLMcoords[1] = poly->lmcoords[i][1];
+
+			outVerts += 3;
+			outNorms += 3;
+			outSTcoords += 2;
+			outLMcoords += 2;
+		}
+
+		numVerts += poly->numVerts;
+	}
+
+	// release the old q2_polys crap
+	for( poly = info->mesh; poly; poly = next )
+	{
+		next = poly->next;
+		Mem_Free( poly );
+	}
+
+	ASSERT( mesh->numVerts == numVerts );
+	ASSERT( mesh->numElems == numElems );
+
+	mesh->next = info->mesh;
+	mesh->surf = surf;	// NOTE: meshchains can be linked with one surface
+	info->mesh = mesh;
+
+	if( createSTverts )
+	{
+		mesh->svectors = (vec4_t *)buffer;
+		buffer += mesh->numVerts * sizeof( vec4_t );
+		Mod_BuildTangentVectors( mesh );
+	}
+}
+
+/*
+=================
+Mod_BuildSurfacePolygons
+=================
+*/
+static void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info )
+{
+	vec3_t	verts[MAX_SIDE_VERTS];
+	char	*texname;
+	int	i, e;
+	mvertex_t	*v;
+
+	// convert edges back to a normal polygon
+	for( i = 0; i < surf->numedges; i++ )
+	{
+		if( i == MAX_SIDE_VERTS )
+		{
+			MsgDev( D_ERROR, "BuildSurfMesh: poly %i exceeded %i vertexes!\n", surf - loadmodel->surfaces, MAX_SIDE_VERTS );
+			break; // too big polygon ?
+		}
+
+		e = loadmodel->surfedges[surf->firstedge + i];
+		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
+		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
+		VectorCopy( v->position, verts[i] );
+	}
+
+	// subdivide water or sky sphere for Quake1 maps
+	if(( surf->flags & SURF_DRAWTURB ) || ( surf->flags & SURF_DRAWSKY && world.loading && world.sky_sphere ))
+	{
+		Mod_SubdividePolygon( info, surf, surf->numedges, verts[0] );
+		Mod_ConvertSurface( info, surf );
+	}
+	else
+	{
+		Mod_BuildPolygon( info, surf, surf->numedges, verts[0] );
+	}
+
+	if( info->mesh ) return;	// all done
+
+	if( surf->texinfo && surf->texinfo->texture )
+		texname = surf->texinfo->texture->name;
+	else texname = "notexture";
+
+	MsgDev( D_ERROR, "BuildSurfMesh: surface %i (%s) failed to build surfmesh\n", surf - loadmodel->surfaces, texname );
+}
+
+/*
 =================
 Mod_LoadSurfaces
 =================
@@ -1118,6 +1680,9 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		for( j = 0; j < MAXLIGHTMAPS; j++ )
 			out->styles[j] = in->styles[j];
+
+		if( host.features & ENGINE_BUILD_SURFMESHES )
+			Mod_BuildSurfacePolygons( out, info );
 
 		if( out->flags & SURF_DRAWSKY && world.loading && world.sky_sphere )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
