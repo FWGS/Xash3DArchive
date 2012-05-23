@@ -322,6 +322,14 @@ void BF_WriteBitCoord( sizebuf_t *bf, const float f )
 	}
 }
 
+void BF_WriteCoord( sizebuf_t *bf, float val )
+{
+	// g-cont. we loose precision here but keep old size of coord variable!
+	if( host.features & ENGINE_WRITE_LARGE_COORD )
+		BF_WriteShort( bf, (int)( val * 2.0f ));
+	else BF_WriteShort( bf, (int)( val * 8.0f ));
+}
+
 void BF_WriteBitFloat( sizebuf_t *bf, float val )
 {
 	long	intVal;

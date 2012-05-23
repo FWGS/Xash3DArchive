@@ -1285,6 +1285,7 @@ pfnSPR_Draw
 */
 static void pfnSPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
+	pglEnable( GL_ALPHA_TEST );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 
@@ -3297,7 +3298,7 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 
 	if( request == NETAPI_REQUEST_SERVERLIST )
 	{
-		// UNDONE: build request for master-server
+		// FIXME: build request for master-server
 	}
 	else
 	{

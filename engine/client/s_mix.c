@@ -647,7 +647,7 @@ _inline portable_samplepair_t *S_GetNextpFilter( int i, portable_samplepair_t *p
 // pass forward over passed in buffer and cubic interpolate all odd samples
 // pbuffer: buffer to filter (in place)
 // prevfilter:  filter memory. NOTE: this must match the filtertype ie: filtercubic[] for FILTERTYPE_CUBIC
-// if NULL then perform no filtering. UNDONE: should have a filter memory array type
+// if NULL then perform no filtering.
 // count: how many samples to upsample. will become count*2 samples in buffer, in place.
 
 void S_Interpolate2xCubic( portable_samplepair_t *pbuffer, portable_samplepair_t *pfiltermem, int cfltmem, int count )

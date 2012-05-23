@@ -413,12 +413,12 @@ void SV_CreateStudioDecal( const float *origin, const float *start, int decalInd
 
 	// static decals are posters, it's always reliable
 	BF_WriteByte( &sv.signon, svc_studiodecal );
-	BF_WriteShort( &sv.signon, (int)( origin[0] * 8.0f ));
-	BF_WriteShort( &sv.signon, (int)( origin[1] * 8.0f ));
-	BF_WriteShort( &sv.signon, (int)( origin[2] * 8.0f ));
-	BF_WriteShort( &sv.signon, (int)( start[0] * 8.0f ));
-	BF_WriteShort( &sv.signon, (int)( start[1] * 8.0f ));
-	BF_WriteShort( &sv.signon, (int)( start[2] * 8.0f ));
+	BF_WriteCoord( &sv.signon, origin[0] );
+	BF_WriteCoord( &sv.signon, origin[1] );
+	BF_WriteCoord( &sv.signon, origin[2] );
+	BF_WriteCoord( &sv.signon, start[0] );
+	BF_WriteCoord( &sv.signon, start[1] );
+	BF_WriteCoord( &sv.signon, start[2] );
 	BF_WriteWord( &sv.signon, decalIndex );
 	BF_WriteShort( &sv.signon, entityIndex );
 	BF_WriteByte( &sv.signon, flags );
@@ -2612,10 +2612,7 @@ pfnWriteCoord
 */
 void pfnWriteCoord( float flValue )
 {
-	// g-cont. we loose precision here but keep old size of coord variable!
-	if( host.features & ENGINE_WRITE_LARGE_COORD )
-		BF_WriteShort( &sv.multicast, (int)( flValue * 2.0f ));
-	else BF_WriteShort( &sv.multicast, (int)( flValue * 8.0f ));
+	BF_WriteCoord( &sv.multicast, flValue );
 	svgame.msg_realsize += 2;
 }
 

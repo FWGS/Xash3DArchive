@@ -4039,14 +4039,6 @@ qboolean PRC_InitAll( prc_t *prcs, int count )
 	{
 		switch (prcs[i].type)
 		{
-		default:
-		case PRC_NULL:
-			pfnFree		= &(prc_Free_t)NULL_Free;
-			pfnGetNext	= &(prc_GetNext_t)NULL_GetNext;
-			pfnGetNextN	= &(prc_GetNextN_t)NULL_GetNextN;
-			pfnParam		= &NULL_VParams;
-			pfnMod		= &(prc_Mod_t)NULL_Mod;
-			break;
 		case PRC_DLY:
 			pfnFree		= &(prc_Free_t)DLY_Free;
 			pfnGetNext	= &(prc_GetNext_t)DLY_GetNext;
@@ -4123,6 +4115,14 @@ qboolean PRC_InitAll( prc_t *prcs, int count )
 			pfnGetNextN	= &(prc_GetNextN_t)AMP_GetNextN;
 			pfnParam		= &AMP_VParams;
 			pfnMod		= &(prc_Mod_t)AMP_Mod;
+			break;
+		case PRC_NULL:
+		default:
+			pfnFree		= &(prc_Free_t)NULL_Free;
+			pfnGetNext	= &(prc_GetNext_t)NULL_GetNext;
+			pfnGetNextN	= &(prc_GetNextN_t)NULL_GetNextN;
+			pfnParam		= &NULL_VParams;
+			pfnMod		= &(prc_Mod_t)NULL_Mod;
 			break;
 		}
 

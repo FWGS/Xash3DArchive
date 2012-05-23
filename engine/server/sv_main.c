@@ -59,6 +59,7 @@ convar_t	*sv_allow_upload;
 convar_t	*sv_allow_download;
 convar_t	*sv_allow_studio_attachment_angles;
 convar_t	*sv_allow_rotate_pushables;
+convar_t	*sv_validate_changelevel;
 convar_t	*sv_clienttrace;
 convar_t	*sv_send_resources;
 convar_t	*sv_send_logos;
@@ -678,6 +679,7 @@ void SV_Init( void )
 	sv_pausable = Cvar_Get( "pausable", "1", CVAR_SERVERNOTIFY, "allow players to pause or not" );
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", CVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
 	sv_allow_rotate_pushables = Cvar_Get( "sv_allow_rotate_pushables", "0", CVAR_ARCHIVE, "let the pushers rotate pushables with included origin-brush" );
+	sv_validate_changelevel = Cvar_Get( "sv_validate_changelevel", "1", CVAR_ARCHIVE, "test change level for level-designer errors" );
 	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY, "scaling factor for client hitboxes" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );

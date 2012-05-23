@@ -429,11 +429,14 @@ void SV_ChangeLevel_f( void )
 
 	if( c == 3 && !( flags & MAP_HAS_LANDMARK ))
 	{
-		// NOTE: we find valid map but specified landmark it's doesn't exist
-		// run simple changelevel like in q1, throw warning
-		MsgDev( D_INFO, "SV_ChangeLevel: map %s is exist but doesn't contain\n", mapname );
-		MsgDev( D_INFO, "landmark with name %s. Run classic quake changelevel\n", Cmd_Argv( 2 ));
-		c = 2; // reduce args
+		if( sv_validate_changelevel->integer )
+		{
+			// NOTE: we find valid map but specified landmark it's doesn't exist
+			// run simple changelevel like in q1, throw warning
+			MsgDev( D_INFO, "SV_ChangeLevel: map %s is exist but doesn't contain\n", mapname );
+			MsgDev( D_INFO, "landmark with name %s. Run classic quake changelevel\n", Cmd_Argv( 2 ));
+			c = 2; // reduce args
+		}
 	}
 
 	if( c == 3 && !Q_stricmp( sv.name, Cmd_Argv( 1 )))
@@ -444,8 +447,11 @@ void SV_ChangeLevel_f( void )
 
 	if( c == 2 && !( flags & MAP_HAS_SPAWNPOINT ))
 	{
-		MsgDev( D_INFO, "SV_ChangeLevel: map %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
-		return;	
+		if( sv_validate_changelevel->integer )
+		{
+			MsgDev( D_INFO, "SV_ChangeLevel: map %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
+			return;	
+		}
 	}
 
 	SCR_BeginLoadingPlaque( false );

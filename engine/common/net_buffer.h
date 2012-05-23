@@ -88,6 +88,7 @@ void BF_WriteByte( sizebuf_t *bf, int val );
 void BF_WriteShort( sizebuf_t *bf, int val );
 void BF_WriteWord( sizebuf_t *bf, int val );
 void BF_WriteLong( sizebuf_t *bf, long val );
+void BF_WriteCoord( sizebuf_t *bf, float val );
 void BF_WriteFloat( sizebuf_t *bf, float val );
 qboolean BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes );	// same as MSG_WriteData
 qboolean BF_WriteString( sizebuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.

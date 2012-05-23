@@ -1881,6 +1881,7 @@ static void R_StudioDrawPoints( void )
 		{
 			GL_SetRenderMode( kRenderTransAdd );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
+			pglBlendFunc( GL_ONE, GL_ONE );
 		}
 		else
 		{

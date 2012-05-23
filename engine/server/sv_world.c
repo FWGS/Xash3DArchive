@@ -1091,7 +1091,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		touch = EDICT_FROM_AREA( l );
 
-		if( touch->v.groupinfo != 0 && clip->passedict != NULL && clip->passedict->v.groupinfo != 0 )
+		if( touch->v.groupinfo != 0 && SV_IsValidEdict( clip->passedict ) && clip->passedict->v.groupinfo != 0 )
 		{
 			if(( svs.groupop == 0 && ( touch->v.groupinfo & clip->passedict->v.groupinfo ) == 0) ||
 			( svs.groupop == 1 && (touch->v.groupinfo & clip->passedict->v.groupinfo ) != 0 ))
