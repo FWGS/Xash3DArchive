@@ -39,6 +39,16 @@ solid_edge items only clip against bsp models.
 #define MOVE_EPSILON	0.01f
 #define MAX_CLIP_PLANES	5
 
+static const vec3_t current_table[] =
+{
+{ 1,  0, 0 },
+{ 0,  1, 0 },
+{-1,  0, 0 },
+{ 0, -1, 0 },
+{ 0,  0, 1 },
+{ 0,  0, -1}
+};
+
 /*
 ===============================================================================
 
@@ -108,6 +118,7 @@ void SV_CheckVelocity( edict_t *ent )
 			MsgDev( D_INFO, "Got a NaN velocity on %s\n", STRING( ent->v.classname ));
 			ent->v.velocity[i] = 0.0f;
 		}
+
 		if( IS_NAN( ent->v.origin[i] ))
 		{
 			MsgDev( D_INFO, "Got a NaN origin on %s\n", STRING( ent->v.classname ));
@@ -115,9 +126,15 @@ void SV_CheckVelocity( edict_t *ent )
 		}
 
 		if( ent->v.velocity[i] > sv_maxvelocity->value )
+		{
+			MsgDev( D_INFO, "Got a velocity too high on %s\n", STRING( ent->v.classname ));
 			ent->v.velocity[i] = sv_maxvelocity->value;
+		}
 		else if( ent->v.velocity[i] < -sv_maxvelocity->value )
+		{
+			MsgDev( D_INFO, "Got a velocity too low on %s\n", STRING( ent->v.classname ));
 			ent->v.velocity[i] = -sv_maxvelocity->value;
+		}
 	}
 }
 
@@ -321,6 +338,64 @@ void SV_LinearMove( edict_t *ent, float frametime, float friction )
 
 /*
 =============
+SV_RecursiveWaterLevel
+
+recursively recalculating the middle
+=============
+*/
+float SV_RecursiveWaterLevel( vec3_t origin, float mins, float maxs, int depth )
+{
+	vec3_t	point;
+	float	waterlevel;
+
+	waterlevel = ((mins - maxs) * 0.5f) + maxs;
+	if( ++depth > 5 ) return waterlevel;
+
+	VectorSet( point, origin[0], origin[1], origin[2] + waterlevel );
+
+	if( SV_PointContents( point ) == CONTENTS_WATER )
+		return SV_RecursiveWaterLevel( origin, mins, waterlevel, depth );
+	return SV_RecursiveWaterLevel( origin, waterlevel, maxs, depth );
+}
+
+/*
+=============
+SV_Submerged
+
+determine how deep the entity is
+=============
+*/
+float SV_Submerged( edict_t *ent )
+{
+	vec3_t	halfmax;
+	vec3_t	point;
+	float	waterlevel;
+
+	VectorAverage( ent->v.absmin, ent->v.absmax, halfmax );
+	waterlevel = ent->v.absmin[2] - halfmax[2];
+
+	switch( ent->v.waterlevel )
+	{
+	case 1:
+		return SV_RecursiveWaterLevel( halfmax, 0.0f, waterlevel, 0 ) - waterlevel;
+	case 3:
+		VectorSet( point, halfmax[0], halfmax[1], ent->v.absmax[2] );
+		svs.groupmask = ent->v.groupinfo;
+
+		if( SV_PointContents( point ) == CONTENTS_WATER )
+		{
+			return (ent->v.maxs[2] - ent->v.mins[2]);
+		}
+		// intentionally fallthrough
+	case 2:
+		return SV_RecursiveWaterLevel( halfmax, ent->v.absmax[2] - halfmax[2], 0.0f, 0 ) - waterlevel;
+	default:
+		return 0.0f;
+	}
+}
+
+/*
+=============
 SV_CheckWater
 =============
 */
@@ -329,12 +404,13 @@ qboolean SV_CheckWater( edict_t *ent )
 	int	cont, truecont;
 	vec3_t	point;
 
-	point[0] = ent->v.origin[0] + (ent->v.mins[0] + ent->v.maxs[0]) * 0.5f;
-	point[1] = ent->v.origin[1] + (ent->v.mins[1] + ent->v.maxs[1]) * 0.5f;
-	point[2] = ent->v.origin[2] + ent->v.mins[2] + 1;	
+	point[0] = (ent->v.absmax[0] + ent->v.absmin[0]) * 0.5f;
+	point[1] = (ent->v.absmax[1] + ent->v.absmin[1]) * 0.5f;
+	point[2] =  ent->v.absmin[2] + 1.0f;
 
 	ent->v.waterlevel = 0;
 	ent->v.watertype = CONTENTS_EMPTY;
+
 	svs.groupmask = ent->v.groupinfo;
 	cont = SV_PointContents( point );
 
@@ -346,40 +422,43 @@ qboolean SV_CheckWater( edict_t *ent )
 		ent->v.watertype = cont;
 		ent->v.waterlevel = 1;
 
-		point[2] = ent->v.origin[2] + (ent->v.mins[2] + ent->v.maxs[2]) * 0.5f;
-
-		svs.groupmask = ent->v.groupinfo;
-		cont = SV_PointContents( point );
-		if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
+		if( ent->v.absmin[2] == ent->v.absmax[2] )
 		{
-			ent->v.waterlevel = 2;
-			point[2] = ent->v.origin[2] + ent->v.view_ofs[2];
+			// a point entity
+			ent->v.waterlevel = 3;
+		}
+		else
+		{
+			point[2] = (ent->v.absmin[2] + ent->v.absmax[2]) * 0.5f;
+
 			svs.groupmask = ent->v.groupinfo;
 			cont = SV_PointContents( point );
-			if( cont <= CONTENTS_WATER )
-				ent->v.waterlevel = 3;
+
+			if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
+			{
+				ent->v.waterlevel = 2;
+
+				VectorAdd( point, ent->v.view_ofs, point );
+
+				svs.groupmask = ent->v.groupinfo;
+				cont = SV_PointContents( point );
+
+				if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
+					ent->v.waterlevel = 3;
+			}
 		}
 
+		// Quake2 feature. Probably never was used in Half-Life...
 		if( truecont <= CONTENTS_CURRENT_0 && truecont >= CONTENTS_CURRENT_DOWN )
 		{
-			static vec3_t current_table[] =
-			{
-			{ 1,  0, 0 },
-			{ 0,  1, 0 },
-			{-1,  0, 0 },
-			{ 0, -1, 0 },
-			{ 0,  0, 1 },
-			{ 0,  0, -1}
-			};
-
 			float speed = 50.0f * ent->v.waterlevel;
-			float *dir = current_table[CONTENTS_CURRENT_0 - truecont];
+			const float *dir = current_table[CONTENTS_CURRENT_0 - truecont];
 
 			VectorMA( ent->v.basevelocity, speed, dir, ent->v.basevelocity );
 		}
 	}
 
-	return ent->v.waterlevel > 1;
+	return (ent->v.waterlevel > 1);
 }
 
 /*
@@ -406,7 +485,7 @@ int SV_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce )
 		change = normal[i] * backoff;
 		out[i] = in[i] - change;
 
-		if( out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON )
+		if( out[i] > -1.0f && out[i] < 1.0f )
 			out[i] = 0.0f;
 	}
 
@@ -576,11 +655,6 @@ void SV_AddGravity( edict_t *ent )
 {
 	float	ent_gravity;
 
-#if 0
-	if( ent->v.flags & FL_ONGROUND )
-		return; // already onground
-#endif
-
 	if( ent->v.gravity )
 		ent_gravity = ent->v.gravity;
 	else ent_gravity = 1.0f;
@@ -656,7 +730,6 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 {
 	trace_t		trace;
 	sv_client_t	*cl;
-	qboolean		push = false;
 	int		type;
 	vec3_t		end;
 
@@ -670,11 +743,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
 
-	if( sv_fix_pushents->integer )
-		push = ( trace.fraction != 0.0f && !trace.allsolid ) ? true : false;
-	else push = ( trace.fraction != 0.0f ) ? true : false;
-
-	if( push )
+	if( trace.fraction != 0.0f )
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 
@@ -1067,9 +1136,14 @@ void SV_Physics_Follow( edict_t *ent )
 	if( !SV_RunThink( ent )) return;
 
 	parent = ent->v.aiment;
-	if( !SV_IsValidEdict( parent )) return;
+	if( !SV_IsValidEdict( parent ))
+	{
+		MsgDev( D_ERROR, "%s have MOVETYPE_FOLLOW with no corresponding ent!", SV_ClassName( ent ));
+		ent->v.movetype = MOVETYPE_NONE;
+		return;
+	}
 
-	VectorAdd( parent->v.origin, parent->v.view_ofs, ent->v.v_angle );
+	VectorAdd( parent->v.origin, ent->v.v_angle, ent->v.origin );
 	VectorCopy( parent->v.angles, ent->v.angles );
 
 	SV_LinkEdict( ent, true );
@@ -1085,14 +1159,18 @@ a glue two entities together
 void SV_Physics_Compound( edict_t *ent )
 {
 	edict_t	*parent;
-	matrix4x4	start_l, end_l, temp_l, child;
 	float	movetime;
 	
 	// regular thinking
 	if( !SV_RunThink( ent )) return;
 
 	parent = ent->v.aiment;
-	if( !SV_IsValidEdict( parent )) return;
+	if( !SV_IsValidEdict( parent ))
+	{
+		MsgDev( D_ERROR, "%s have MOVETYPE_COMPOUND with no corresponding ent!", SV_ClassName( ent ));
+		ent->v.movetype = MOVETYPE_NONE;
+		return;
+	}
 
 	if( ent->v.solid != SOLID_TRIGGER )
 		ent->v.solid = SOLID_NOT;
@@ -1118,6 +1196,8 @@ void SV_Physics_Compound( edict_t *ent )
 
 	if( movetime )
 	{
+		matrix4x4	start_l, end_l, temp_l, child;
+
 		// create parent old position
 		Matrix4x4_CreateFromEntity( temp_l, ent->v.avelocity, ent->v.oldorigin, 1.0f );
 		Matrix4x4_Invert_Simple( start_l, temp_l );
@@ -1187,9 +1267,14 @@ SV_CheckWaterTransition
 void SV_CheckWaterTransition( edict_t *ent )
 {
 	int	cont;
+	vec3_t	halfmax;
+
+	halfmax[0] = (ent->v.absmax[0] + ent->v.absmin[0]) * 0.5f;
+	halfmax[1] = (ent->v.absmax[1] + ent->v.absmin[1]) * 0.5f;
+	halfmax[2] =  ent->v.absmin[2] + 1.0f;
 
 	svs.groupmask = ent->v.groupinfo;
-	cont = SV_PointContents( ent->v.origin );
+	cont = SV_PointContents( halfmax );
 
 	if( !ent->v.watertype )
 	{
@@ -1199,17 +1284,51 @@ void SV_CheckWaterTransition( edict_t *ent )
 		return;
 	}
 
-	// check if the entity crossed into or out of water
-	if( ent->v.watertype <= CONTENTS_WATER ) 
+	if( cont > CONTENTS_WATER || cont <= CONTENTS_TRANSLUCENT )
 	{
-		ent->v.watertype = cont;
-		ent->v.waterlevel = 1;
-	}
-	else
-	{
+		if( ent->v.watertype != CONTENTS_EMPTY )
+		{
+			SV_StartSound( ent, CHAN_AUTO, "player/pl_wade2.wav", 1.0f, ATTN_NORM, 0, 100 );
+		}
+
 		ent->v.watertype = CONTENTS_EMPTY;
 		ent->v.waterlevel = 0;
+		return;
 	}
+
+	if( ent->v.watertype == CONTENTS_EMPTY )
+	{
+		SV_StartSound( ent, CHAN_AUTO, "player/pl_wade1.wav", 1.0f, ATTN_NORM, 0, 100 );
+		ent->v.velocity[2] *= 0.5f;
+	}
+
+	ent->v.watertype = cont;
+	ent->v.waterlevel = 1;
+
+	if( ent->v.absmin[2] == ent->v.absmax[2] )
+	{
+		// a point entity
+		ent->v.waterlevel = 3;
+	}
+
+	halfmax[2] = (ent->v.absmin[2] + ent->v.absmax[2]) * 0.5f;
+
+	svs.groupmask = ent->v.groupinfo;
+	cont = SV_PointContents( halfmax );
+
+	if( cont > CONTENTS_WATER || cont <= CONTENTS_TRANSLUCENT )
+		return;
+
+	ent->v.waterlevel = 2;
+	VectorAdd( halfmax, ent->v.view_ofs, halfmax );
+
+	svs.groupmask = ent->v.groupinfo;
+	cont = SV_PointContents( halfmax );
+
+	if( cont > CONTENTS_WATER || cont <= CONTENTS_TRANSLUCENT )
+		return;
+
+	ent->v.waterlevel = 3;
 }
 
 /*
@@ -1224,24 +1343,27 @@ void SV_Physics_Toss( edict_t *ent )
 	trace_t	trace;
 	vec3_t	move;
 	float	backoff;
+	edict_t	*ground;
+
+	SV_CheckWater( ent );
 
 	// regular thinking
 	if( !SV_RunThink( ent )) return;
 
-	SV_CheckWaterTransition( ent );
-	SV_CheckWater( ent );
+	ground = ent->v.groundentity;
 
-	if( ent->v.velocity[2] > DIST_EPSILON || svgame.globals->changelevel )
+	if( ent->v.velocity[2] > 0.0f || !SV_IsValidEdict( ground ) || ground->v.flags & (FL_MONSTER|FL_CLIENT) || svgame.globals->changelevel )
 	{
 		ent->v.flags &= ~FL_ONGROUND;
-		ent->v.groundentity = NULL;
           }
 
 	// if on ground and not moving, return.
-	if( ent->v.flags & FL_ONGROUND && SV_IsValidEdict( ent->v.groundentity ))
+	if( ent->v.flags & FL_ONGROUND && VectorIsNull( ent->v.velocity ))
 	{
-		if( VectorIsNull( ent->v.basevelocity ) && VectorIsNull( ent->v.velocity ))
-			return;
+		VectorClear( ent->v.avelocity );
+
+		if( VectorIsNull( ent->v.basevelocity ))
+			return;	// at rest
 	}
 
 	SV_CheckVelocity( ent );
@@ -1277,27 +1399,29 @@ void SV_Physics_Toss( edict_t *ent )
 
 	SV_CheckVelocity( ent );
 	VectorScale( ent->v.velocity, host.frametime, move );
+
 	VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 
 	trace = SV_PushEntity( ent, move, vec3_origin, NULL );
 	if( ent->free ) return;
 
 	SV_CheckVelocity( ent );
-#if 0
+
 	if( trace.allsolid )
 	{
 		// entity is trapped in another solid
-		ent->v.groundentity = trace.ent;
-		ent->v.flags |= FL_ONGROUND;
+		VectorClear( ent->v.avelocity );
 		VectorClear( ent->v.velocity );
 		return;
 	}
-#endif
+
 	if( trace.fraction == 1.0f )
 	{
-		SV_CheckWater( ent );
+		SV_CheckWaterTransition( ent );
 		return;
 	}
+
+	if( ent->free ) return;
 
 	if( ent->v.movetype == MOVETYPE_BOUNCE )
 		backoff = 2.0f - ent->v.friction;
@@ -1312,7 +1436,9 @@ void SV_Physics_Toss( edict_t *ent )
 	{		
 		float	vel;
 
-		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
+		VectorAdd( ent->v.velocity, ent->v.basevelocity, move );
+		vel = DotProduct( move, move );
+
 		if( ent->v.velocity[2] < sv_gravity->value * host.frametime )
 		{
 			// we're rolling on the ground, add static friction.
@@ -1321,25 +1447,23 @@ void SV_Physics_Toss( edict_t *ent )
 			ent->v.velocity[2] = 0.0f;
 		}
 
-		vel = DotProduct( ent->v.velocity, ent->v.velocity );
-
 		if( vel < 900.0f || ( ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE ))
 		{
 			ent->v.flags |= FL_ONGROUND;
 			ent->v.groundentity = trace.ent;
+			VectorClear( ent->v.avelocity );
 			VectorClear( ent->v.velocity ); // avelocity will be clearing in game.dll
 		}
 		else
 		{
 			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * host.frametime * 0.9f, move );
+			VectorMA( move, (1.0f - trace.fraction) * host.frametime * 0.9f, ent->v.basevelocity, move );
 			trace = SV_PushEntity( ent, move, vec3_origin, NULL );
-			if( ent->free ) return;
 		}
-		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 	}
 	
 	// check for in water
-	SV_CheckWater( ent );
+	SV_CheckWaterTransition( ent );
 }
 
 /*
@@ -1360,6 +1484,121 @@ This is also used for objects that have become still on the ground, but
 will fall if the floor is pulled out from under them.
 =============
 */
+#if 1
+void SV_Physics_Step( edict_t *ent )
+{
+	qboolean	inwater;
+	qboolean	wasonground;
+	vec3_t	mins, maxs;
+	vec3_t	point;
+	trace_t	trace;
+	int	x, y;
+
+	SV_WaterMove( ent );
+	SV_CheckVelocity( ent );
+
+	wasonground = (ent->v.flags & FL_ONGROUND);
+	inwater = SV_CheckWater( ent );
+
+	if( ent->v.flags & FL_FLOAT && ent->v.waterlevel > 0 )
+	{
+		float	buoyancy = SV_Submerged( ent ) * ent->v.skin * host.frametime;
+
+		SV_AddGravity( ent );
+		ent->v.velocity[2] += buoyancy;
+	}
+
+	if( !wasonground && !( ent->v.flags & FL_FLY ) && (!( ent->v.flags & FL_SWIM ) || ent->v.waterlevel <= 0 ))
+	{
+		if( !inwater )
+			SV_AddGravity( ent );
+	}
+
+	if( !VectorIsNull( ent->v.velocity ) || !VectorIsNull( ent->v.basevelocity ))
+	{
+		ent->v.flags &= ~FL_ONGROUND;
+
+		if( wasonground && ( ent->v.health > 0 || SV_CheckBottom( ent, MOVE_NORMAL )))
+		{
+			float	*vel = ent->v.velocity;
+			float	control, speed, newspeed;
+			float	friction;
+
+			speed = sqrt(( vel[0] * vel[0] ) + ( vel[1] * vel[1] ));	// DotProduct2D
+
+			if( speed )
+			{
+				friction = sv_friction->value * ent->v.friction;	// factor
+				ent->v.friction = 1.0f; // g-cont. ???
+
+				control = (speed < sv_stopspeed->value) ? sv_stopspeed->value : speed;
+				newspeed = speed - (host.frametime * control * friction);
+
+				if( newspeed < 0 )
+					newspeed = 0;
+				newspeed /= speed;
+
+				vel[0] = vel[0] * newspeed;
+				vel[1] = vel[1] * newspeed;
+			}
+		}
+
+		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
+		SV_CheckVelocity( ent );
+
+		SV_FlyMove( ent, host.frametime, NULL );
+
+		SV_CheckVelocity( ent );
+		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
+
+		SV_CheckVelocity( ent );
+
+		VectorAdd( ent->v.origin, ent->v.mins, mins );
+		VectorAdd( ent->v.origin, ent->v.maxs, maxs );
+
+		point[2] = mins[2] - 1.0f;
+
+		for( x = 0; x <= 1; x++ )
+		{
+			if( ent->v.flags & FL_ONGROUND )
+				break;
+
+			for( y = 0; y <= 1; y++ )
+			{
+				point[0] = x ? maxs[0] : mins[0];
+				point[1] = y ? maxs[1] : mins[1];
+
+				trace = SV_Move( point, vec3_origin, vec3_origin, point, MOVE_NORMAL, ent );
+
+				if( trace.startsolid )
+				{
+					ent->v.flags |= FL_ONGROUND;
+					ent->v.groundentity = trace.ent;
+					ent->v.friction = 1.0f;
+					break;
+				}
+			}
+		}
+
+		SV_LinkEdict( ent, true );
+	}
+	else
+	{
+		if( svgame.globals->force_retouch != 0 )
+		{
+			trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+
+			// hentacle impact code
+			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
+				SV_Impact( ent, trace.ent, &trace );
+		}
+	}
+
+	if( !SV_RunThink( ent )) return;
+	SV_CheckWaterTransition( ent );
+
+}
+#else
 void SV_Physics_Step( edict_t *ent )
 {
 	qboolean	wasonground;
@@ -1546,6 +1785,7 @@ void SV_Physics_Step( edict_t *ent )
 
 	SV_CheckWaterTransition( ent );
 }
+#endif
 
 /*
 =============

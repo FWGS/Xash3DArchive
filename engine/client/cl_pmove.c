@@ -48,24 +48,28 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 		Q_strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
+	pe->model = pe->studiomodel = NULL;
+
 	switch( ent->curstate.solid )
 	{
 	case SOLID_NOT:
 	case SOLID_BSP:
 		pe->model = mod;
-		pe->studiomodel = NULL;
 		VectorClear( pe->mins );
 		VectorClear( pe->maxs );
 		break;
 	case SOLID_BBOX:
-		pe->model = NULL;
-		if( mod && mod->flags & STUDIO_TRACE_HITBOX )
-			pe->studiomodel = mod;
+		if( mod )
+		{
+			if( mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
+				pe->studiomodel = mod;
+			else if(( host.features & ENGINE_FORCE_BRUSH_COLLISION ) && mod->type == mod_brush )
+				pe->model = mod;
+		}
 		VectorCopy( ent->curstate.mins, pe->mins );
 		VectorCopy( ent->curstate.maxs, pe->maxs );
 		break;
 	default:
-		pe->model = NULL;
 		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
 		VectorCopy( ent->curstate.mins, pe->mins );
 		VectorCopy( ent->curstate.maxs, pe->maxs );

@@ -392,7 +392,6 @@ extern	convar_t		*sv_stopspeed;
 extern	convar_t		*sv_check_errors;
 extern	convar_t		*sv_reconnect_limit;
 extern	convar_t		*sv_lighting_modulate;
-extern	convar_t		*sv_fix_pushents;
 extern	convar_t		*rcon_password;
 extern	convar_t		*hostname;
 extern	convar_t		*sv_stepsize;
@@ -480,6 +479,7 @@ qboolean SV_MoveTest( edict_t *ent, vec3_t move, qboolean relink );
 void SV_MoveToOrigin( edict_t *ed, const vec3_t goal, float dist, int iMode );
 qboolean SV_CheckBottom( edict_t *ent, int iMode );
 float SV_VecToYaw( const vec3_t src );
+void SV_WaterMove( edict_t *ent );
 
 //
 // sv_send.c

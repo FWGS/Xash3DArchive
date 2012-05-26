@@ -44,7 +44,8 @@ qboolean SV_CheckBottom( edict_t *ent, int iMode )
 	// if all of the points under the corners are solid world, don't bother
 	// with the tougher checks
 	// the corners must be within 16 of the midpoint
-	start[2] = mins[2] - 1;
+	start[2] = mins[2] - 1.0f;
+
 	for( x = 0; x <= 1; x++ )
 	{
 		for( y = 0; y <= 1; y++ )
@@ -94,6 +95,127 @@ realcheck:
 		}
 	}
 	return true;
+}
+
+void SV_WaterMove( edict_t *ent )
+{
+	float	drownlevel;
+	int	waterlevel;
+	int	watertype;
+	int	flags;
+
+	if( ent->v.movetype == MOVETYPE_NOCLIP )
+	{
+		ent->v.air_finished = sv.time + 12.0f;
+		return;
+	}
+
+	if( ent->v.health <= 0.0f )
+		return;
+
+	drownlevel = (ent->v.deadflag == DEAD_NO) ? 3.0 : 1.0;
+	waterlevel = ent->v.waterlevel;
+	watertype = ent->v.watertype;
+	flags = ent->v.flags;
+
+	if( !( flags & ( FL_IMMUNE_WATER|FL_GODMODE )))
+	{
+		if((( flags & FL_SWIM ) && waterlevel > drownlevel ) || waterlevel <= drownlevel )
+		{
+			if( ent->v.air_finished > sv.time && ent->v.pain_finished > sv.time )
+			{
+				ent->v.dmg += 2;
+
+				if( ent->v.dmg < 15 )
+					ent->v.dmg = 10; // quake1 original code
+				ent->v.pain_finished = sv.time + 1.0f;
+			}
+		}
+		else
+		{
+			ent->v.air_finished = sv.time + 12.0f;
+			ent->v.dmg = 2;
+		}
+	}
+
+	if( !waterlevel )
+	{
+		if( flags & FL_INWATER )
+		{
+			// leave the water.
+			switch( Com_RandomLong( 0, 3 ))
+			{
+			case 0:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade1.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			case 1:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade2.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			case 2:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade3.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			case 3:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade4.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			}
+
+			ent->v.flags = flags & ~FL_INWATER;
+		}
+
+		ent->v.air_finished = sv.time + 12.0f;
+		return;
+	}
+
+	if( watertype == CONTENTS_LAVA )
+	{
+
+		if((!( flags & ( FL_IMMUNE_LAVA|FL_GODMODE ))) && ent->v.dmgtime < sv.time )
+		{
+			if( ent->v.radsuit_finished < sv.time )
+				ent->v.dmgtime = sv.time + 0.2f;
+			else ent->v.dmgtime = sv.time + 1.0f;
+		}
+	}
+	else if( watertype == CONTENTS_SLIME )
+	{
+		if((!( flags & ( FL_IMMUNE_SLIME|FL_GODMODE ))) && ent->v.dmgtime < sv.time )
+		{
+			if( ent->v.radsuit_finished < sv.time )
+				ent->v.dmgtime = sv.time + 1.0;
+			// otherwise radsuit is fully protect entity from slime
+		}
+	}
+
+	if(!( flags & FL_INWATER ))
+	{
+		if( watertype == CONTENTS_WATER )
+		{
+			// entering the water
+			switch( Com_RandomLong( 0, 3 ))
+			{
+			case 0:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade1.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			case 1:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade2.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			case 2:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade3.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			case 3:
+				SV_StartSound( ent, CHAN_BODY, "player/pl_wade4.wav", 1.0f, ATTN_NORM, 0, 100 );
+				break;
+			}
+		}
+
+		ent->v.flags = flags | FL_INWATER;
+		ent->v.dmgtime = 0.0f;
+	}
+
+	if(!( flags & FL_WATERJUMP ))
+	{
+		VectorMA( ent->v.velocity, ( ent->v.waterlevel * -0.8f * host.frametime ), ent->v.velocity, ent->v.velocity );
+	}
 }
 
 /*

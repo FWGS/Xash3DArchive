@@ -61,24 +61,31 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 		Q_strncpy( pe->name, mod->name, sizeof( pe->name ));
 	}
 
+	pe->model = pe->studiomodel = NULL;
+
 	switch( ed->v.solid )
 	{
 	case SOLID_NOT:
 	case SOLID_BSP:
 		pe->model = mod;
-		pe->studiomodel = NULL;
 		VectorClear( pe->mins );
 		VectorClear( pe->maxs );
 		break;
 	case SOLID_BBOX:
 		pe->model = NULL;
-		if( mod && mod->flags & STUDIO_TRACE_HITBOX )
-			pe->studiomodel = mod;
+
+		if( mod )
+		{
+			if( mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
+				pe->studiomodel = mod;
+			else if(( host.features & ENGINE_FORCE_BRUSH_COLLISION ) && mod->type == mod_brush )
+				pe->model = mod;
+		}
+
 		VectorCopy( ed->v.mins, pe->mins );
 		VectorCopy( ed->v.maxs, pe->maxs );
 		break;
 	default:
-		pe->model = NULL;
 		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
 		VectorCopy( ed->v.mins, pe->mins );
 		VectorCopy( ed->v.maxs, pe->maxs );
