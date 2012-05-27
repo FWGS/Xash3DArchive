@@ -72,16 +72,8 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 		VectorClear( pe->maxs );
 		break;
 	case SOLID_BBOX:
-		pe->model = NULL;
-
-		if( mod )
-		{
-			if( mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
-				pe->studiomodel = mod;
-			else if(( host.features & ENGINE_FORCE_BRUSH_COLLISION ) && mod->type == mod_brush )
-				pe->model = mod;
-		}
-
+		if( mod && mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
+			pe->studiomodel = mod;
 		VectorCopy( ed->v.mins, pe->mins );
 		VectorCopy( ed->v.maxs, pe->maxs );
 		break;
@@ -89,7 +81,6 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
 		VectorCopy( ed->v.mins, pe->mins );
 		VectorCopy( ed->v.maxs, pe->maxs );
-		Q_strcpy( pe->name, SV_ClassName( ed ));
 		break;
 	}
 

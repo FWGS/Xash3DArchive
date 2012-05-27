@@ -36,7 +36,7 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	if( !mod ) return false;
 	pe->player = false;
 
-	if( pe->player )
+	if( ent->player )
 	{
 		// client or bot
 		Q_strncpy( pe->name, "player", sizeof( pe->name ));
@@ -59,13 +59,8 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 		VectorClear( pe->maxs );
 		break;
 	case SOLID_BBOX:
-		if( mod )
-		{
-			if( mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
-				pe->studiomodel = mod;
-			else if(( host.features & ENGINE_FORCE_BRUSH_COLLISION ) && mod->type == mod_brush )
-				pe->model = mod;
-		}
+		if( mod && mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
+			pe->studiomodel = mod;
 		VectorCopy( ent->curstate.mins, pe->mins );
 		VectorCopy( ent->curstate.maxs, pe->maxs );
 		break;

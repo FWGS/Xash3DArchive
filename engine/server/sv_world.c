@@ -255,11 +255,6 @@ hull_t *SV_HullForEntity( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset 
 			Host_Error( "'%s' has SOLID_BSP without MOVETYPE_PUSH or MOVETYPE_PUSHSTEP\n", SV_ClassName( ent ));
 		hull = SV_HullForBsp( ent, mins, maxs, offset );
 	}
-	else if(( host.features & ENGINE_FORCE_BRUSH_COLLISION ) && Mod_GetType( ent->v.modelindex ) == mod_brush )
-	{
-		// no more check here. All brushes have collision tree
-		hull = SV_HullForBsp( ent, mins, maxs, offset );
-	}
 	else
 	{
 		// create a temp hull from bounding box sizes
@@ -1113,7 +1108,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( svgame.dllFuncs2.pfnShouldCollide )
 		{
 			if( !svgame.dllFuncs2.pfnShouldCollide( touch, clip->passedict ))
-				return;
+				continue;	// originally this was 'return' but is completely wrong!
 		}
 
 		// monsterclip filter
