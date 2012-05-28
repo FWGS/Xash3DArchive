@@ -1063,6 +1063,7 @@ void CL_InitEdicts( void )
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
 	clgame.static_entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * MAX_STATIC_ENTITIES );
+	clgame.efrags = Mem_Alloc( clgame.mempool, sizeof( efrag_t ) * MAX_EFRAGS );
 	clgame.numStatics = 0;
 
 	if(( clgame.maxRemapInfos - 1 ) != clgame.maxEntities )
@@ -1082,6 +1083,10 @@ void CL_FreeEdicts( void )
 	if( clgame.static_entities )
 		Mem_Free( clgame.static_entities );
 	clgame.static_entities = NULL;
+
+	if( clgame.efrags )
+		Mem_Free( clgame.efrags );
+	clgame.efrags = NULL;
 
 	if( cls.packet_entities )
 		Z_Free( cls.packet_entities );
@@ -3460,8 +3465,9 @@ float Voice_GetControlFloat( VoiceTweakControl iControl )
 	// TODO: implement
 	return 1.0f;
 }
-			
-static triangleapi_t gTriApi =
+
+// shared between client and server			
+triangleapi_t gTriApi =
 {
 	TRI_API_VERSION,	
 	TriRenderMode,
@@ -3769,6 +3775,7 @@ void CL_UnloadProgs( void )
 		clgame.dllFuncs.pfnShutdown();
 
 	Cvar_FullSet( "host_clientloaded", "0", CVAR_INIT );
+
 	Com_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
@@ -3846,6 +3853,7 @@ qboolean CL_LoadProgs( const char *name )
 
 	clgame.maxRemapInfos = 0; // will be alloc on first call CL_InitEdicts();
 	clgame.maxEntities = 2; // world + localclient (have valid entities not in game)
+
 	CL_InitCDAudio( "media/cdaudio.txt" );
 	CL_InitTitles( "titles.txt" );
 	CL_InitParticles ();

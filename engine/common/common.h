@@ -741,6 +741,7 @@ int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
+void SV_DrawDebugTriangles( void );
 qboolean UI_CreditsActive( void );
 void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );

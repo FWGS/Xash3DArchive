@@ -403,7 +403,8 @@ typedef struct
 
 	net_request_t	net_requests[MAX_REQUESTS];	// no reason to keep more
 
-	efrag_t		*free_efrags;		// efrags
+	efrag_t		*efrags;			// efrags pool
+	efrag_t		*free_efrags;		// linked efrags
 	cl_entity_t	viewent;			// viewmodel
 } clgame_static_t;
 

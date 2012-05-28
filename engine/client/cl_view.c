@@ -281,6 +281,9 @@ void V_CalcRefDef( void )
 		cl.refdef.onlyClientDraw = false;
 	} while( cl.refdef.nextView );
 
+	// Xash3D extension. draw debug triangles on a server
+	SV_DrawDebugTriangles ();
+
 	SCR_AddDirtyPoint( cl.refdef.viewport[0], cl.refdef.viewport[1] );
 	SCR_AddDirtyPoint( cl.refdef.viewport[0] + cl.refdef.viewport[2] - 1, cl.refdef.viewport[1] + cl.refdef.viewport[3] - 1 );
 }

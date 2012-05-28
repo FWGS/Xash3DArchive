@@ -17,8 +17,11 @@ GNU General Public License for more details.
 #include "server.h"
 #include "const.h"
 #include "library.h"
+#include "triangleapi.h"
+#include "gl_export.h"
 
 typedef int (*PHYSICAPI)( int, server_physics_api_t*, physics_interface_t* );
+extern triangleapi_t gTriApi;
 
 /*
 
@@ -1421,8 +1424,6 @@ void SV_Physics_Toss( edict_t *ent )
 		return;
 	}
 
-	if( ent->free ) return;
-
 	if( ent->v.movetype == MOVETYPE_BOUNCE )
 		backoff = 2.0f - ent->v.friction;
 	else if( ent->v.movetype == MOVETYPE_BOUNCEMISSILE )
@@ -1459,6 +1460,7 @@ void SV_Physics_Toss( edict_t *ent )
 			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * host.frametime * 0.9f, move );
 			VectorMA( move, (1.0f - trace.fraction) * host.frametime * 0.9f, ent->v.basevelocity, move );
 			trace = SV_PushEntity( ent, move, vec3_origin, NULL );
+			if( ent->free ) return;
 		}
 	}
 	
@@ -1547,6 +1549,7 @@ void SV_Physics_Step( edict_t *ent )
 		SV_CheckVelocity( ent );
 
 		SV_FlyMove( ent, host.frametime, NULL );
+		if( ent->free ) return;
 
 		SV_CheckVelocity( ent );
 		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
@@ -1590,7 +1593,10 @@ void SV_Physics_Step( edict_t *ent )
 
 			// hentacle impact code
 			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
+			{
 				SV_Impact( ent, trace.ent, &trace );
+				if( ent->free ) return;
+			}
 		}
 	}
 
@@ -1956,6 +1962,38 @@ int SV_ServerState( void )
 	return sv.state;
 }
 
+/*
+================
+SV_DrawDebugTriangles
+
+Called from renderer for debug purposes
+================
+*/
+void SV_DrawDebugTriangles( void )
+{
+	if( host.type != HOST_NORMAL )
+		return;
+
+	if( svgame.physFuncs.DrawNormalTriangles != NULL )
+	{
+		// draw solid overlay
+		svgame.physFuncs.DrawNormalTriangles ();
+	}
+
+	if( svgame.physFuncs.DrawDebugTriangles != NULL )
+	{
+		// debug draws only
+		pglDepthMask( GL_FALSE );
+		pglDisable( GL_TEXTURE_2D );
+
+		// draw wireframe overlay
+		svgame.physFuncs.DrawDebugTriangles ();
+
+		pglEnable( GL_TEXTURE_2D );
+		pglDepthMask( GL_TRUE );
+	}
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
@@ -1965,6 +2003,7 @@ static server_physics_api_t gPhysicsAPI =
 	SV_GetHeadNode,
 	SV_ServerState,
 	Host_Error,
+	&gTriApi,	// ouch!
 };
 
 /*

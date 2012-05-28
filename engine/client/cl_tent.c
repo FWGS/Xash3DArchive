@@ -2693,8 +2693,6 @@ EFRAGS MANAGEMENT
 
 ==============================================================
 */
-efrag_t	cl_efrags[MAX_EFRAGS];
-
 /*
 ==============
 CL_ClearEfrags
@@ -2704,10 +2702,10 @@ void CL_ClearEfrags( void )
 {
 	int	i;
 
-	Q_memset( cl_efrags, 0, sizeof( cl_efrags ));
+	Q_memset( clgame.efrags, 0, sizeof( clgame.efrags ));
 
 	// allocate the efrags and chain together into a free list
-	clgame.free_efrags = cl_efrags;
+	clgame.free_efrags = clgame.efrags;
 	for( i = 0; i < MAX_EFRAGS - 1; i++ )
 		clgame.free_efrags[i].entnext = &clgame.free_efrags[i+1];
 	clgame.free_efrags[i].entnext = NULL;

@@ -46,6 +46,9 @@ typedef struct server_physics_api_s
 	areanode_t*	( *pfnGetHeadnode)( void ); // BSP tree for all physic entities
 	int		( *pfnServerState)( void );
 	void		( *pfnHost_Error)( const char *error, ... );	// cause Host Error
+
+	struct triangleapi_s *pTriAPI;	// draw coliisions etc. Only for local system
+
 } server_physics_api_t;
 // ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 6
 
@@ -67,6 +70,10 @@ typedef struct physics_interface_s
 	int		( *SV_TriggerTouch )( edict_t *pent, edict_t *trigger );
 	// some engine features can be enabled only through this function
 	unsigned int	( *SV_CheckFeatures )( void );
+	// used for draw debug collisions for custom physic engine etc
+	void		( *DrawDebugTriangles)( void );
+	// used for draw debug overlay (textured)
+	void		( *DrawNormalTriangles)( void );
 } physics_interface_t;
 
 #endif//PHYSINT_H
