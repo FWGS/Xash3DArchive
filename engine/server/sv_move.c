@@ -110,7 +110,8 @@ void SV_WaterMove( edict_t *ent )
 		return;
 	}
 
-	if( ent->v.health <= 0.0f )
+	// no watermove for monsters but pushables
+	if(( ent->v.flags & FL_MONSTER ) && ent->v.health <= 0.0f )
 		return;
 
 	drownlevel = (ent->v.deadflag == DEAD_NO) ? 3.0 : 1.0;

@@ -734,6 +734,9 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 	h = sl->generic.charHeight;
 	y = sl->generic.y2 + sl->generic.charHeight;
 
+	// prevent the columns out of rectangle bounds
+	PIC_EnableScissor( x, y, sl->generic.width - arrowWidth - uiStatic.outlineWidth, sl->generic.height );
+
 	for( i = sl->topItem; i < sl->topItem + sl->numRows; i++, y += sl->generic.charHeight )
 	{
 		if( !sl->itemNames[i] )
@@ -768,6 +771,8 @@ void UI_ScrollList_Draw( menuScrollList_s *sl )
 		if( sl->generic.flags & QMF_FOCUSBEHIND )
 			UI_DrawString( x, y, w, h, sl->itemNames[i], sl->generic.color, false, sl->generic.charWidth, sl->generic.charHeight, justify, shadow );
 	}
+
+	PIC_DisableScissor();
 }
 
 /*
@@ -2092,7 +2097,6 @@ const char *UI_PicButton_Key( menuPicButton_s *b, int key, int down )
 		break;
 	case K_ENTER:
 	case K_KP_ENTER:
-		if( !down ) return sound;
 		if( b->generic.flags & QMF_MOUSEONLY )
 			break;
 		sound = uiSoundLaunch;

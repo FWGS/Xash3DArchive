@@ -57,6 +57,12 @@ typedef struct studiolight_s
 	int		numelights;
 } studiolight_t;
 
+typedef struct sortedmesh_s
+{
+	mstudiomesh_t	*mesh;
+	int		flags;			// face flags
+} sortedmesh_t;
+
 convar_t			*r_studio_lerping;
 convar_t			*r_studio_lambert;
 convar_t			*r_studio_lighting;
@@ -71,6 +77,7 @@ static matrix3x4		g_aliastransform;		// software renderer transform
 static matrix3x4		g_rotationmatrix;
 static vec3_t		g_chrome_origin;
 static vec2_t		g_chrome[MAXSTUDIOVERTS];	// texture coords for surface normals
+static sortedmesh_t		g_sortedMeshes[MAXSTUDIOMESHES];
 static matrix3x4		g_bonestransform[MAXSTUDIOBONES];
 static matrix3x4		g_lighttransform[MAXSTUDIOBONES];
 static matrix3x4		g_rgCachedBonesTransform[MAXSTUDIOBONES];
@@ -1416,7 +1423,14 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	plight->numdlights = 0;	// clear previous dlights
 
 	if( r_studio_lighting->integer == 2 )
+	{
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
+
+		// NOTE: in some cases bone origin may be stuck in the geometry
+		// and produced completely black model. Run additional check for this case
+		if( CL_PointContents( origin ) == CONTENTS_SOLID )
+			Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+	}
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
 	// setup light dir
@@ -1527,7 +1541,14 @@ void R_StudioEntityLight( alight_t *lightinfo )
 	plight->numelights = 0;	// clear previous elights
 
 	if( r_studio_lighting->integer == 2 )
+	{
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
+
+		// NOTE: in some cases bone origin may be stuck in the geometry
+		// and produced completely black model. Run additional check for this case
+		if( CL_PointContents( origin ) == CONTENTS_SOLID )
+			Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+	}
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
 	for( lnum = 0, el = cl_elights; lnum < MAX_ELIGHTS; lnum++, el++ )
@@ -1781,6 +1802,24 @@ mstudiotexture_t *R_StudioGetTexture( cl_entity_t *e )
 
 /*
 ===============
+R_SolidEntityCompare
+
+Sorting opaque entities by model type
+===============
+*/
+static int R_StudioMeshCompare( const sortedmesh_t *a, const sortedmesh_t *b )
+{
+	if( a->flags & STUDIO_NF_ADDITIVE )
+		return 1;
+
+	if( a->flags & STUDIO_NF_TRANSPARENT )
+		return -1;
+
+	return 0;
+}
+
+/*
+===============
 R_StudioDrawPoints
 
 ===============
@@ -1840,6 +1879,10 @@ static void R_StudioDrawPoints( void )
 	{
 		g_nFaceFlags = ptexture[pskinref[pmesh[j].skinref]].flags;
 
+		// fill in sortedmesh info
+		g_sortedMeshes[j].mesh = &pmesh[j];
+		g_sortedMeshes[j].flags = g_nFaceFlags;
+
 		for( i = 0; i < pmesh[j].numnorms; i++, lv += 3, pstudionorms++, pnormbone++ )
 		{
 			R_StudioLighting( lv, *pnormbone, g_nFaceFlags, (float *)pstudionorms );
@@ -1849,17 +1892,24 @@ static void R_StudioDrawPoints( void )
 		}
 	}
 
+	// sort opaque and translucent for right results
+	qsort( g_sortedMeshes, m_pSubModel->nummesh, sizeof( sortedmesh_t ), R_StudioMeshCompare );
+
 	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
 	{
 		float	s, t, alpha;
 		short	*ptricmds;
 
-		pmesh = (mstudiomesh_t *)((byte *)m_pStudioHeader + m_pSubModel->meshindex) + j;
+		pmesh = g_sortedMeshes[j].mesh;
 		ptricmds = (short *)((byte *)m_pStudioHeader + pmesh->triindex);
 
 		g_nFaceFlags = ptexture[pskinref[pmesh->skinref]].flags;
 		s = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].width;
 		t = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].height;
+
+		if( g_iRenderMode != kRenderTransAdd )
+			pglDepthMask( GL_TRUE );
+		else pglDepthMask( GL_FALSE );
 
 		// check bounds
 		if( ptexture[pskinref[pmesh->skinref]].index < 0 || ptexture[pskinref[pmesh->skinref]].index > MAX_TEXTURES )
@@ -1881,7 +1931,8 @@ static void R_StudioDrawPoints( void )
 		{
 			GL_SetRenderMode( kRenderTransAdd );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
-			pglBlendFunc( GL_ONE, GL_ONE );
+			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+			pglDepthMask( GL_FALSE );
 		}
 		else
 		{
@@ -1999,6 +2050,10 @@ static void R_StudioDrawPoints( void )
 			pglEnd();
 		}
 	}
+
+	// restore depthmask for next call StudioDrawPoints
+	if( g_iRenderMode != kRenderTransAdd )
+		pglDepthMask( GL_TRUE );
 }
 
 /*
@@ -2449,8 +2504,9 @@ static void R_StudioRestoreRenderer( void )
 	pglShadeModel( GL_FLAT );
 
 	// restore depthmask state for sprites etc
-	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )
+	if( glState.drawTrans )
 		pglDepthMask( GL_FALSE );
+	else pglDepthMask( GL_TRUE );
 
 	m_fDoRemap = false;
 }

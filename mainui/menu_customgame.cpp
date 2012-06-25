@@ -41,8 +41,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_MODS		512	// engine limit
 
 #define TYPE_LENGTH		16
+#define NAME_SPACE		4
 #define NAME_LENGTH		32+TYPE_LENGTH
-#define VER_LENGTH		10+NAME_LENGTH
+#define VER_LENGTH		6+NAME_LENGTH
 #define SIZE_LENGTH		10+VER_LENGTH
 
 typedef struct
@@ -136,7 +137,14 @@ static void UI_CustomGame_GetModList( void )
 		if( strlen( games[i]->type ))
 			StringConcat( uiCustomGame.modsDescription[i], games[i]->type, TYPE_LENGTH );
 		StringConcat( uiCustomGame.modsDescription[i], uiEmptyString, TYPE_LENGTH );
-		StringConcat( uiCustomGame.modsDescription[i], games[i]->title, NAME_LENGTH );
+
+		if( ColorStrlen( games[i]->title ) > 31 ) // NAME_LENGTH
+		{
+			StringConcat( uiCustomGame.modsDescription[i], games[i]->title, ( NAME_LENGTH - NAME_SPACE ));
+			StringConcat( uiCustomGame.modsDescription[i], "...", NAME_LENGTH );
+		}
+		else StringConcat( uiCustomGame.modsDescription[i], games[i]->title, NAME_LENGTH );
+
 		StringConcat( uiCustomGame.modsDescription[i], uiEmptyString, NAME_LENGTH );
 		StringConcat( uiCustomGame.modsDescription[i], games[i]->version, VER_LENGTH );
 		StringConcat( uiCustomGame.modsDescription[i], uiEmptyString, VER_LENGTH );

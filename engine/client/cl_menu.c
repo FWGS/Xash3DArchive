@@ -550,10 +550,14 @@ pfnDrawCharacter
 quakefont draw character
 =============
 */
-static void pfnDrawCharacter( int x, int y, int width, int height, int ch, int ulRGBA, HIMAGE hFont )
+static void pfnDrawCharacter( int ix, int iy, int iwidth, int iheight, int ch, int ulRGBA, HIMAGE hFont )
 {
 	rgba_t	color;
 	float	row, col, size;
+	float	s1, t1, s2, t2;
+	float	x = ix, y = iy;
+	float	width = iwidth;
+	float	height = iheight;
 
 	ch &= 255;
 
@@ -566,23 +570,32 @@ static void pfnDrawCharacter( int x, int y, int width, int height, int ch, int u
 	color[2] = (ulRGBA & 0xFF) >> 0;
 	pglColor4ubv( color );
 
-	col = (ch & 15) * 0.0625 + (0.5f / 256.0f);
-	row = (ch >> 4) * 0.0625 + (0.5f / 256.0f);
+	col = (ch & 15) * 0.0625f + (0.5f / 256.0f);
+	row = (ch >> 4) * 0.0625f + (0.5f / 256.0f);
 	size = 0.0625f - (1.0f / 256.0f);
 
+	s1 = col;
+	t1 = row;
+	s2 = s1 + size;
+	t2 = t1 + size;
+
+	// pass scissor test if supposed
+	if( menu.ds.scissor_test && !PIC_Scissor( &x, &y, &width, &height, &s1, &t1, &s2, &t2 ))
+		return;
+
 	GL_SetRenderMode( kRenderTransTexture );
-	R_DrawStretchPic( x, y, width, height, col, row, col + size, row + size, hFont );
+	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, hFont );
 	pglColor4ub( 255, 255, 255, 255 );
 }
 
 /*
 =============
-pfnDrawConsoleString
+UI_DrawConsoleString
 
 drawing string like a console string 
 =============
 */
-static int pfnDrawConsoleString( int x, int y, const char *string )
+static int UI_DrawConsoleString( int x, int y, const char *string )
 {
 	int	drawLen;
 
@@ -600,7 +613,7 @@ pfnDrawSetTextColor
 set color for anything
 =============
 */
-static void pfnDrawSetTextColor( int r, int g, int b, int alpha )
+static void UI_DrawSetTextColor( int r, int g, int b, int alpha )
 {
 	// bound color and convert to byte
 	menu.ds.textColor[0] = r;
@@ -889,8 +902,8 @@ static ui_enginefuncs_t gEngfuncs =
 	UI_GetLogoHeight,
 	UI_GetLogoLength,
 	pfnDrawCharacter,
-	pfnDrawConsoleString,
-	pfnDrawSetTextColor,
+	UI_DrawConsoleString,
+	UI_DrawSetTextColor,
 	Con_DrawStringLen,
 	Con_DefaultColor,
 	pfnGetPlayerModel,

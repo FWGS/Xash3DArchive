@@ -387,8 +387,10 @@ void R_DrawWaterSurfaces( void );
 void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );
 void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa );
+void GL_SetupFogColorForSurfaces( void );
 void GL_RebuildLightmaps( void );
 void GL_BuildLightmaps( void );
+void GL_ResetFogColor( void );
 
 //
 // gl_sprite.c

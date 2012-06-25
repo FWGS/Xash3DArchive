@@ -146,7 +146,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 			{
 				CL_SetTraceHull( 0 ); // g-cont. player hull for better detect moving platforms
 				VectorSet( vecSrc, ent->origin[0], ent->origin[1], ent->origin[2] + ent->model->maxs[2] );
-				VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] - 32 );		
+				VectorSet( vecEnd, vecSrc[0], vecSrc[1], vecSrc[2] - ent->model->mins[2] - 8 );		
 				CL_PlayerTraceExt( vecSrc, vecEnd, PM_STUDIO_IGNORE, CL_PushMoveFilter, &trace );
 				m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
 			}
@@ -428,7 +428,7 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 			ent->latched.prevcontroller[i] = newstate->controller[i];
 
 		// copy blends
-		for( i = 0; i < 4; i++ )
+		for( i = 0; i < 2; i++ )
 			ent->latched.prevblending[i] = newstate->blending[i];
 		return;
 	}
@@ -441,7 +441,7 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 		else ent->latched.sequencetime = ent->curstate.animtime + 0.1f;
 			
 		// save current blends to right lerping from last sequence
-		for( i = 0; i < 4; i++ )
+		for( i = 0; i < 2; i++ )
 			ent->latched.prevseqblending[i] = ent->curstate.blending[i];
 		ent->latched.prevsequence = ent->curstate.sequence;	// save old sequence	
 		ent->syncbase = -0.01f; // back up to get 0'th frame animations
@@ -469,7 +469,7 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 	}
 
 	// copy blends
-	for( i = 0; i < 4; i++ )
+	for( i = 0; i < 2; i++ )
 		ent->latched.prevblending[i] = ent->curstate.blending[i];
 
 	if( !VectorCompare( newstate->origin, ent->curstate.origin ))

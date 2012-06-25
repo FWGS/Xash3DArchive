@@ -215,6 +215,35 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 	Q_memcpy( poly->verts[i+1], poly->verts[1], sizeof( poly->verts[0] ));
 }
 
+void GL_SetupFogColorForSurfaces( void )
+{
+	vec3_t	fogColor;
+	float	factor, div;
+
+	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.refdef.onlyClientDraw )
+		return;
+
+	if( RI.currententity->curstate.rendermode == kRenderTransTexture )
+          {
+		pglFogfv( GL_FOG_COLOR, RI.fogColor );
+		return;
+	}
+
+	div = (r_detailtextures->integer) ? 2.0f : 1.0f;
+	factor = (r_detailtextures->integer) ? 3.0f : 2.0f;
+	fogColor[0] = pow( RI.fogColor[0] / div, ( 1.0f / factor ));
+	fogColor[1] = pow( RI.fogColor[1] / div, ( 1.0f / factor ));
+	fogColor[2] = pow( RI.fogColor[2] / div, ( 1.0f / factor ));
+	pglFogfv( GL_FOG_COLOR, fogColor );
+}
+
+void GL_ResetFogColor( void )
+{
+	// restore fog here
+	if(( RI.fogEnabled || RI.fogCustom ) && !RI.refdef.onlyClientDraw )
+		pglFogfv( GL_FOG_COLOR, RI.fogColor );
+}
+
 /*
 ================
 GL_SubdivideSurface
@@ -257,6 +286,8 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	int		i, lindex, lnumverts;
 	medge_t		*pedges, *r_pedge;
 	int		vertpage;
+	texture_t		*tex;
+	gltexture_t	*glt;
 	float		*vec;
 	float		s, t;
 	glpoly_t		*poly;
@@ -266,6 +297,20 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 
 	if( !fa->texinfo || !fa->texinfo->texture )
 		return; // bad polygon ?
+
+	if( fa->flags & SURF_CONVEYOR && fa->texinfo->texture->gl_texturenum != 0 )
+	{
+		glt = R_GetTexture( fa->texinfo->texture->gl_texturenum );
+		tex = fa->texinfo->texture;
+		ASSERT( glt != NULL && tex != NULL );
+// DEBUG
+		if( glt->srcWidth != tex->width )
+			Msg( "Texture %s updates conveyor width from %i to %i\n", tex->name, glt->srcWidth, tex->width );
+
+		// update conveyor widths for properly scrolling speed
+		glt->srcWidth = tex->width;
+		glt->srcHeight = tex->height;
+	}
 
 	// reconstruct the polygon
 	pedges = mod->edges;
@@ -634,6 +679,10 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 	cl_entity_t	*e = RI.currententity;
 	int		i, hasScale = false;
 
+	// special hack for non-lightmapped surfaces
+	if( p->flags & SURF_DRAWTILED )
+		GL_ResetFogColor();
+
 	if( p->flags & SURF_CONVEYOR )
 	{
 		gltexture_t	*texture;
@@ -679,6 +728,10 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 	}
 
 	pglEnd();
+
+	// special hack for non-lightmapped surfaces
+	if( p->flags & SURF_DRAWTILED )
+		GL_SetupFogColorForSurfaces();
 }
 
 /*
@@ -726,6 +779,8 @@ void R_BlendLightmaps( void )
 
 	if( r_fullbright->integer || !cl.worldmodel->lightdata )
 		return;
+
+	GL_SetupFogColorForSurfaces ();
 
 	if( RI.currententity )
 	{
@@ -868,6 +923,9 @@ void R_BlendLightmaps( void )
 		pglDisable( GL_ALPHA_TEST );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	}
+
+	// restore fog here
+	GL_ResetFogColor();
 }
 
 /*
@@ -883,7 +941,7 @@ void R_RenderFullbrights( void )
 	if( !draw_fullbrights )
 		return;
 
-	if( !RI.fogCustom ) 
+	if( RI.fogEnabled && !RI.refdef.onlyClientDraw )
 		pglDisable( GL_FOG );
 
 	pglEnable( GL_BLEND );
@@ -935,6 +993,8 @@ void R_RenderDetails( void )
 	if( !draw_details )
 		return;
 
+	GL_SetupFogColorForSurfaces();
+
 	pglEnable( GL_BLEND );
 	pglBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
@@ -967,6 +1027,9 @@ void R_RenderDetails( void )
 		pglDepthFunc( GL_LEQUAL );
 
 	draw_details = false;
+
+	// restore fog here
+	GL_ResetFogColor();
 }
 
 /*
@@ -1026,12 +1089,35 @@ void R_RenderBrushPoly( msurface_t *fa )
 		draw_fullbrights = true;
 	}
 
-	if( r_detailtextures->integer && t->dt_texturenum )
+	if( r_detailtextures->integer )
 	{
 		mextrasurf_t *es = SURF_INFO( fa, RI.currentmodel );
-		es->detailchain = detail_surfaces[t->dt_texturenum];
-		detail_surfaces[t->dt_texturenum] = es;
-		draw_details = true;
+
+		if( RI.fogEnabled || RI.fogCustom )
+		{
+			// don't apply detail textures for windows in the fog
+			if( RI.currententity->curstate.rendermode != kRenderTransTexture )
+			{
+				if( t->dt_texturenum )
+				{
+					es->detailchain = detail_surfaces[t->dt_texturenum];
+					detail_surfaces[t->dt_texturenum] = es;
+				}
+				else
+				{
+					// draw stub detail texture for underwater surfaces
+					es->detailchain = detail_surfaces[tr.grayTexture];
+					detail_surfaces[tr.grayTexture] = es;
+				}
+				draw_details = true;
+			}
+		}
+		else if( t->dt_texturenum )
+		{
+			es->detailchain = detail_surfaces[t->dt_texturenum];
+			detail_surfaces[t->dt_texturenum] = es;
+			draw_details = true;
+		}
 	}
 
 	if( is_mirror ) R_BeginDrawMirror( fa );
@@ -1110,6 +1196,8 @@ void R_DrawTextureChains( void )
 	pglColor4ub( 255, 255, 255, 255 );
 	R_LoadIdentity();	// set identity matrix
 
+	GL_SetupFogColorForSurfaces();
+
 	// restore worldmodel
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
@@ -1141,6 +1229,8 @@ void R_DrawTextureChains( void )
 		}
 		t->texturechain = NULL;
 	}
+
+	GL_ResetFogColor();
 }
 
 /*
@@ -1306,6 +1396,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 	// setup the rendermode
 	GL_SetRenderMode( e->curstate.rendermode );
+	GL_SetupFogColorForSurfaces ();
 
 	// setup the color and alpha
 	switch( e->curstate.rendermode )
@@ -1360,6 +1451,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderTransColor )
 		pglEnable( GL_TEXTURE_2D );
 
+	GL_ResetFogColor();
 	R_BlendLightmaps();
 	R_RenderFullbrights();
 	R_RenderDetails();

@@ -48,11 +48,22 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 
 	float m_flAltitude;
+	float m_flCachedLength;	// tongue cached length
 	float m_flKillVictimTime;
-	int	  m_cGibs;// barnacle loads up on gibs each time it kills something.
+	int   m_cGibs;		// barnacle loads up on gibs each time it kills something.
 	BOOL  m_fTongueExtended;
 	BOOL  m_fLiftingPrey;
 	float m_flTongueAdj;
+
+	// FIXME: need a custom barnacle model with non-generic hitgroup
+	// otherwise we can apply to damage to tongue instead of body
+#ifdef BARNACLE_FIX_VISIBILITY
+	void SetObjectCollisionBox( void )
+	{
+		pev->absmin = pev->origin + Vector( -16, -16, -m_flCachedLength );
+		pev->absmax = pev->origin + Vector( 16, 16, 0 );
+	}
+#endif
 };
 LINK_ENTITY_TO_CLASS( monster_barnacle, CBarnacle );
 
@@ -64,6 +75,7 @@ TYPEDESCRIPTION	CBarnacle::m_SaveData[] =
 	DEFINE_FIELD( CBarnacle, m_fTongueExtended, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBarnacle, m_fLiftingPrey, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBarnacle, m_flTongueAdj, FIELD_FLOAT ),
+	DEFINE_FIELD( CBarnacle, m_flCachedLength, FIELD_FLOAT ),
 };
 
 IMPLEMENT_SAVERESTORE( CBarnacle, CBaseMonster );
@@ -116,7 +128,8 @@ void CBarnacle :: Spawn()
 	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
 	m_flKillVictimTime	= 0;
-	m_cGibs				= 0;
+	m_flCachedLength = 32;	// mins.z
+	m_cGibs			= 0;
 	m_fLiftingPrey		= FALSE;
 	m_flTongueAdj		= -100;
 
@@ -148,6 +161,14 @@ void CBarnacle :: BarnacleThink ( void )
 	CBaseMonster *pVictim;
 	float flLength;
 
+#ifdef BARNACLE_FIX_VISIBILITY
+	if( m_flCachedLength != ( m_flAltitude + m_flTongueAdj ) || ( pev->absmin.z != pev->origin.z + -m_flCachedLength ))
+	{
+		// recalc collision box here to avoid barnacle disappears bug
+		m_flCachedLength = (m_flAltitude + m_flTongueAdj);
+		UTIL_SetOrigin( pev, pev->origin );
+	}
+#endif
 	pev->nextthink = gpGlobals->time + 0.1;
 
 	if ( m_hEnemy != NULL )

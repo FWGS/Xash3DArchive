@@ -2161,7 +2161,7 @@ void SV_SaveGame( const char *pName )
 		for( n = 0; n < 999; n++ )
 		{
 			SV_SaveGetName( n, savename );
-			if( !FS_FileExists( va( "save/%s.sav", savename ), false ))
+			if( !FS_FileExists( va( "save/%s.sav", savename ), true ))
 				break;
 		}
 		if( n == 1000 )
@@ -2213,7 +2213,7 @@ const char *SV_GetLatestSave( void )
 
 	for( i = 0; i < f->numfilenames; i++ )
 	{
-		ft = FS_FileTime( f->filenames[i], false );
+		ft = FS_FileTime( f->filenames[i], true );
 		
 		// found a match?
 		if( ft > 0 )

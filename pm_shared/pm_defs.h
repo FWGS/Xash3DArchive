@@ -25,6 +25,7 @@
 #define PM_STUDIO_BOX	0x00000002	// Use boxes for non-complex studio models (even in traceline)
 #define PM_GLASS_IGNORE	0x00000004	// Ignore entities with non-normal rendermode
 #define PM_WORLD_ONLY	0x00000008	// Only trace against the world
+#define PM_CUSTOM_IGNORE	0x00000010	// Ignore entities with SOLID_CUSTOM mode
 
 // Values for flags parameter of PM_TraceLine
 #define PM_TRACELINE_PHYSENTSONLY	0

@@ -42,15 +42,20 @@ typedef struct server_physics_api_s
 	void		( *pfnLinkEdict) ( edict_t *ent, qboolean touch_triggers );
 	double		( *pfnGetServerTime )( void ); // unclamped
 	double		( *pfnGetFrameTime )( void );	// unclamped
-	void*		( *pfnGetModel)( int modelindex );
-	areanode_t*	( *pfnGetHeadnode)( void ); // BSP tree for all physic entities
-	int		( *pfnServerState)( void );
-	void		( *pfnHost_Error)( const char *error, ... );	// cause Host Error
-
+	void*		( *pfnGetModel )( int modelindex );
+	areanode_t*	( *pfnGetHeadnode )( void ); // BSP tree for all physic entities
+	int		( *pfnServerState )( void );
+	void		( *pfnHost_Error )( const char *error, ... );	// cause Host Error
+// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 6
 	struct triangleapi_s *pTriAPI;	// draw coliisions etc. Only for local system
 
+	// draw debug messages (must be called from DrawOrthoTriangles). Only for local system
+	int		( *pfnDrawConsoleString )( int x, int y, char *string );
+	void		( *pfnDrawSetTextColor )( float r, float g, float b );
+	void		( *pfnDrawConsoleStringLen )( const char *string, int *length, int *height );
+	void		( *Con_NPrintf )( int pos, char *fmt, ... );
+	void		( *Con_NXPrintf )( struct con_nprint_s *info, char *fmt, ... );
 } server_physics_api_t;
-// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 6
 
 // physic callbacks
 typedef struct physics_interface_s
@@ -66,14 +71,21 @@ typedef struct physics_interface_s
 	void		( *SV_UpdatePlayerBaseVelocity )( edict_t *ent );
 	// The game .dll should return 1 if save game should be allowed
 	int		( *SV_AllowSaveGame )( void );
+// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 6
 	// override trigger area checking and touching
 	int		( *SV_TriggerTouch )( edict_t *pent, edict_t *trigger );
 	// some engine features can be enabled only through this function
 	unsigned int	( *SV_CheckFeatures )( void );
 	// used for draw debug collisions for custom physic engine etc
-	void		( *DrawDebugTriangles)( void );
+	void		( *DrawDebugTriangles )( void );
 	// used for draw debug overlay (textured)
-	void		( *DrawNormalTriangles)( void );
+	void		( *DrawNormalTriangles )( void );
+	// used for draw debug messages (2d mode)
+	void		( *DrawOrthoTriangles )( void );
+	// tracing entities with SOLID_CUSTOM mode on a server (not used by pmove code)
+	void		( *ClipMoveToEntity)( edict_t *ent, const float *start, float *mins, float *maxs, const float *end, trace_t *trace );
+	// tracing entities with SOLID_CUSTOM mode on a server (only used by pmove code)
+	void		( *ClipPMoveToEntity)( struct physent_s *pe, const float *start, float *mins, float *maxs, const float *end, struct pmtrace_s *tr );
 } physics_interface_t;
 
 #endif//PHYSINT_H

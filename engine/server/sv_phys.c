@@ -540,7 +540,7 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 
 		allFraction += trace.fraction;
 
-		if( trace.allsolid )
+		if( trace.startsolid )
 		{	
 			// entity is trapped in another solid
 			VectorClear( ent->v.velocity );
@@ -663,7 +663,7 @@ void SV_AddGravity( edict_t *ent )
 	else ent_gravity = 1.0f;
 
 	// add gravity incorrectly
-	ent->v.velocity[2] -= (ent_gravity * sv_gravity->value * host.frametime );
+	ent->v.velocity[2] -= ( ent_gravity * sv_gravity->value * host.frametime );
 	ent->v.velocity[2] += ent->v.basevelocity[2] * host.frametime;
 	ent->v.basevelocity[2] = 0.0f;
 
@@ -731,10 +731,9 @@ Does not change the entities velocity at all
 */
 trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int *blocked )
 {
-	trace_t		trace;
-	sv_client_t	*cl;
-	int		type;
-	vec3_t		end;
+	trace_t	trace;
+	int	type;
+	vec3_t	end;
 
 	VectorAdd( ent->v.origin, lpush, end );
 
@@ -750,7 +749,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 
-		if( apush[YAW] && ent->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( ent, true )) != NULL )
+		if( apush[YAW] && ( ent->v.flags & FL_CLIENT ))
 		{
 			ent->v.avelocity[1] += apush[1];
 			ent->v.fixangle = 2;
@@ -803,17 +802,25 @@ allow entity to block pusher?
 */
 static qboolean SV_CanBlock( edict_t *ent )
 {
-	if( ent->v.solid == SOLID_NOT || ent->v.solid == SOLID_TRIGGER )
-		return false;
+	if( ent->v.mins[0] == ent->v.maxs[0] )
+      		return false;
 
-	// deadbody
+	if( ent->v.solid == SOLID_NOT || ent->v.solid == SOLID_TRIGGER )
+	{
+		ent->v.mins[0] = ent->v.mins[1] = 0;
+		ent->v.maxs[0] = ent->v.maxs[1] = 0;
+		ent->v.maxs[2] = ent->v.mins[2];
+		return false;
+          }
+
+#if 0	// deadbody
 	if( ent->v.deadflag >= DEAD_DEAD )
 		return false;
 
 	// point entities never block push
 	if( VectorCompare( ent->v.mins, ent->v.maxs ))
 		return false;
-
+#endif
 	return true;
 }
 
@@ -1486,7 +1493,6 @@ This is also used for objects that have become still on the ground, but
 will fall if the floor is pulled out from under them.
 =============
 */
-#if 1
 void SV_Physics_Step( edict_t *ent )
 {
 	qboolean	inwater;
@@ -1504,7 +1510,7 @@ void SV_Physics_Step( edict_t *ent )
 
 	if( ent->v.flags & FL_FLOAT && ent->v.waterlevel > 0 )
 	{
-		float	buoyancy = SV_Submerged( ent ) * ent->v.skin * host.frametime;
+		float buoyancy = SV_Submerged( ent ) * ent->v.skin * host.frametime;
 
 		SV_AddGravity( ent );
 		ent->v.velocity[2] += buoyancy;
@@ -1535,9 +1541,7 @@ void SV_Physics_Step( edict_t *ent )
 
 				control = (speed < sv_stopspeed->value) ? sv_stopspeed->value : speed;
 				newspeed = speed - (host.frametime * control * friction);
-
-				if( newspeed < 0 )
-					newspeed = 0;
+				if( newspeed < 0 ) newspeed = 0;
 				newspeed /= speed;
 
 				vel[0] = vel[0] * newspeed;
@@ -1604,194 +1608,6 @@ void SV_Physics_Step( edict_t *ent )
 	SV_CheckWaterTransition( ent );
 
 }
-#else
-void SV_Physics_Step( edict_t *ent )
-{
-	qboolean	wasonground;
-	qboolean	wasinwater;
-	qboolean	inwater;
-	qboolean	isfalling = false;
-	trace_t	trace;
-
-	SV_CheckVelocity( ent );
-
-	wasonground = (ent->v.flags & FL_ONGROUND) ? true : false;
-	wasinwater = (ent->v.flags & FL_INWATER) ? true : false;
-
-	// add gravity except:
-	// flying monsters
-	// swimming monsters who are in the water
-	// pushables
-	inwater = SV_CheckWater( ent );
-
-	if( ent->v.movetype == MOVETYPE_PUSHSTEP )
-	{
-		if( wasinwater && !inwater )
-			ent->v.velocity[2] = 0.0f;
-
-		if( inwater && ( ent->v.flags & FL_FLOAT ))
-		{
-			vec3_t	lmove;
-			int	e, block;
-			edict_t	*check;
-	
-			ent->v.flags |= FL_INWATER;
-			VectorClear( lmove );
-
-			// floating pushables
-			if( ent->v.waterlevel >= 2 )
-			{
-				VectorScale( ent->v.velocity, 1.0f - (host.frametime * 0.5f), ent->v.velocity );
-				ent->v.velocity[2] += (ent->v.skin * host.frametime );
-			}
-			else if( ent->v.waterlevel == 0 )
-			{
-			}
-			else
-			{
-				ent->v.velocity[2] -= (ent->v.skin * host.frametime);
-			}
-
-			if( sv_fix_pushstep->integer )
-			{
-				lmove[2] = (ent->v.skin * host.frametime);
-
-				// push the clients to avoid sticking in float items
-				for( e = 1; e < svgame.globals->maxClients + 1; e++ )
-				{
-					check = EDICT_NUM( e );
-					if( !SV_IsValidEdict( check )) continue;
-
-					if(( check->v.flags & FL_ONGROUND ) && check->v.groundentity == ent )
-					{
-						SV_PushEntity( check, lmove, vec3_origin, &block );
-						check->v.groundentity = NULL;
-						check->v.flags &= ~FL_ONGROUND;
-					}
-				}
-			}
-		}
-		else if( !wasonground )
-		{
-			ent->v.flags &= ~FL_INWATER;
-			SV_AddGravity( ent );
-		}
-	}
-	else 
-	{
-		// monster gravity
-		if( !wasonground )
-		{
-			if(!( ent->v.flags & FL_FLY ))
-			{
-				if(!( ent->v.flags & FL_SWIM && ent->v.waterlevel > 0 ))
-				{
-					if( !inwater )
-					{
-						SV_AddHalfGravity( ent, host.frametime );
-						isfalling = true;
-					}
-				}
-			}
-		}
-	}
-
-	if( !VectorIsNull( ent->v.velocity ) || !VectorIsNull( ent->v.basevelocity ))
-	{
-		vec3_t	mins, maxs, point;
-		float	friction = sv_friction->value;
-		int	x, y;
-
-		friction *= ent->v.friction;
-		ent->v.flags &= ~FL_ONGROUND;
-			
-		// apply friction
-		// let dead monsters who aren't completely onground slide
-		if( wasonground )
-		{
-			float	speed, newspeed;
-			float	*vel, control;
-
-			vel = ent->v.velocity;
-			speed = sqrt( vel[0] * vel[0] + vel[1] * vel[1] );	
-
-			// add ground speed
-			if( ent->v.groundentity )
-			{
-				if( ent->v.groundentity->v.flags & FL_CONVEYOR )
-					speed += ent->v.groundentity->v.speed;
-
-			}
-
-			if( speed )
-			{
-				control = speed < sv_stopspeed->value ? sv_stopspeed->value : speed;
-				newspeed = speed - host.frametime * control * friction;
-
-				if( newspeed < 0.0f )
-					newspeed = 0.0f;
-				newspeed /= speed;
-
-				ent->v.velocity[0] *= newspeed;
-				ent->v.velocity[1] *= newspeed;
-			}
-		}
-
-		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
-		SV_FlyMove( ent, host.frametime, NULL );
-		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
-
-		SV_CheckVelocity( ent );
-
-		// determine if it's on solid ground at all
-		VectorAdd( ent->v.origin, ent->v.mins, mins );
-		VectorAdd( ent->v.origin, ent->v.maxs, maxs );
-
-		point[2] = mins[2] - 1;
-		for( x = 0; x <= 1; x++ )
-		{
-			if( ent->v.flags & FL_ONGROUND )
-				break;
-
-			for( y = 0; y <= 1; y++ )
-			{
-				point[0] = x ? maxs[0] : mins[0];
-				point[1] = y ? maxs[1] : mins[1];
-
-				trace = SV_Move( point, vec3_origin, vec3_origin, point, MOVE_NORMAL, ent );
-
-				if( trace.startsolid )
-				{
-					ent->v.flags |= FL_ONGROUND;
-					ent->v.groundentity = trace.ent;
-					ent->v.friction = 1.0f;
-					break;
-				}
-			}
-
-		}
-		SV_LinkEdict( ent, true );
-	}
-	else
-	{
-		if( svgame.globals->force_retouch != 0.0f )
-		{
-			trace = SV_Move(ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
-			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
-				SV_Impact( ent, trace.ent, &trace );
-		}
-	}
-
-	if(!( ent->v.flags & FL_ONGROUND ) && isfalling )
-	{
-		SV_AddHalfGravity( ent, host.frametime );
-	}
-
-	if( !SV_RunThink( ent )) return;
-
-	SV_CheckWaterTransition( ent );
-}
-#endif
 
 /*
 =============
@@ -1983,6 +1799,7 @@ void SV_DrawDebugTriangles( void )
 	if( svgame.physFuncs.DrawDebugTriangles != NULL )
 	{
 		// debug draws only
+		pglDisable( GL_BLEND );
 		pglDepthMask( GL_FALSE );
 		pglDisable( GL_TEXTURE_2D );
 
@@ -1991,6 +1808,26 @@ void SV_DrawDebugTriangles( void )
 
 		pglEnable( GL_TEXTURE_2D );
 		pglDepthMask( GL_TRUE );
+		pglEnable( GL_BLEND );
+	}
+}
+
+/*
+================
+SV_DrawOrthoTriangles
+
+Called from renderer for debug purposes
+================
+*/
+void SV_DrawOrthoTriangles( void )
+{
+	if( host.type != HOST_NORMAL )
+		return;
+
+	if( svgame.physFuncs.DrawOrthoTriangles != NULL )
+	{
+		// draw solid overlay
+		svgame.physFuncs.DrawOrthoTriangles ();
 	}
 }
 
@@ -2004,6 +1841,11 @@ static server_physics_api_t gPhysicsAPI =
 	SV_ServerState,
 	Host_Error,
 	&gTriApi,	// ouch!
+	pfnDrawConsoleString,
+	pfnDrawSetTextColor,
+	pfnDrawConsoleStringLen,
+	Con_NPrintf,
+	Con_NXPrintf,
 };
 
 /*

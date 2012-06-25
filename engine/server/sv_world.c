@@ -485,7 +485,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 				hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, offset );
 
 				// support for rotational triggers
-				if( (mod->flags & MODEL_HAS_ORIGIN) && !VectorIsNull( touch->v.angles ))
+				if(( mod->flags & MODEL_HAS_ORIGIN ) && !VectorIsNull( touch->v.angles ))
 				{
 					matrix4x4	matrix;
 					Matrix4x4_CreateFromEntity( matrix, touch->v.angles, offset, 1.0f );
@@ -1072,6 +1072,33 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 }
 
 /*
+==================
+SV_CustomClipMoveToEntity
+
+A part of physics engine implementation
+or custom physics implementation
+==================
+*/
+void SV_CustomClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, trace_t *trace )
+{
+	Q_memset( trace, 0, sizeof( trace_t ));
+	VectorCopy( end, trace->endpos );
+	trace->allsolid = true;
+	trace->fraction = 1.0f;
+
+	if( svgame.physFuncs.ClipMoveToEntity != NULL )
+	{
+		// do custom sweep test
+		svgame.physFuncs.ClipMoveToEntity( ent, start, mins, maxs, end, trace );
+	}
+	else
+	{
+		// function is missed, so we didn't hit anything
+		trace->allsolid = false;
+	}
+}
+
+/*
 ====================
 SV_ClipToLinks
 
@@ -1169,6 +1196,8 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		if( touch->v.flags & FL_MONSTER )
 			SV_ClipMoveToEntity( touch, clip->start, clip->mins2, clip->maxs2, clip->end, &trace );
+		else if( touch->v.solid == SOLID_CUSTOM )
+			SV_CustomClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
 		else SV_ClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
 
 		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );

@@ -1297,6 +1297,8 @@ void R_Free_OpenGL( void )
 {
 	VID_RestoreGamma ();
 
+	GL_DeleteContext ();
+
 	VID_DestroyWindow ();
 
 	Sys_FreeLibrary( &opengl_dll );
@@ -1354,6 +1356,9 @@ static void GL_SetDefaults( void )
 	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglEnable( GL_TEXTURE_2D );
 	pglShadeModel( GL_FLAT );
+
+	pglPointSize( 1.2f );
+	pglLineWidth( 1.2f );
 
 	GL_Cull( 0 );
 	GL_FrontFace( 0 );
@@ -1453,7 +1458,7 @@ void GL_InitCommands( void )
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_GLCONFIG, "compress textures to safe video memory" ); 
 	gl_luminance_textures = Cvar_Get( "gl_luminance_textures", "0", CVAR_GLCONFIG, "force all textures to luminance" ); 
-	gl_allow_static = Cvar_Get( "gl_allow_static", "1", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
+	gl_allow_static = Cvar_Get( "gl_allow_static", "0", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
 	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", CVAR_ARCHIVE, "allow to draw mirror surfaces" );
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 13)" );
 	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );

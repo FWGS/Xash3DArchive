@@ -247,6 +247,32 @@ gotnewcl:
 
 /*
 ==================
+SV_DisconnectClient
+
+Disconnect client callback
+==================
+*/
+void SV_DisconnectClient( edict_t *pClient )
+{
+	if( !pClient ) return;
+
+	// don't send to other clients
+	pClient->v.modelindex = 0;
+
+	if( pClient->pvPrivateData != NULL )
+	{
+		// NOTE: new interface can be missing
+		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData != NULL )
+			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pClient );
+
+		// clear any dlls data but keep engine data
+		Mem_Free( pClient->pvPrivateData );
+		pClient->pvPrivateData = NULL;
+	}
+}
+
+/*
+==================
 SV_FakeConnect
 
 A connection request that came from the game module
@@ -380,20 +406,7 @@ void SV_DropClient( sv_client_t *drop )
 	}
 
 	// let the game known about client state
-	svgame.dllFuncs.pfnClientDisconnect( drop->edict );
-
-	// don't send to other clients
-	drop->edict->v.modelindex = 0;
-	if( drop->edict->pvPrivateData )
-	{
-		// NOTE: new interface can be missing
-		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData )
-			svgame.dllFuncs2.pfnOnFreeEntPrivateData( drop->edict );
-
-		// clear any dlls data but keep engine data
-		Mem_Free( drop->edict->pvPrivateData );
-		drop->edict->pvPrivateData = NULL;
-	}
+	SV_DisconnectClient( drop->edict );
 
 	drop->fakeclient = false;
 	drop->hltv_proxy = false;
@@ -2054,7 +2067,8 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	}
 	else
 	{
-		VectorCopy( cmds[0].viewangles, player->v.v_angle );
+		if( !player->v.fixangle )
+			VectorCopy( cmds[0].viewangles, player->v.v_angle );
 	}
 
 	player->v.button = cmds[0].buttons;

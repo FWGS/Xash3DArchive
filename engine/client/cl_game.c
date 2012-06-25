@@ -86,6 +86,7 @@ static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 { "HUD_ChatInputPosition", (void **)&clgame.dllFuncs.pfnChatInputPosition },
 { "HUD_GetRenderInterface", (void **)&clgame.dllFuncs.pfnGetRenderInterface },
 { "HUD_GetPlayerTeam", (void **)&clgame.dllFuncs.pfnGetPlayerTeam },
+{ "HUD_ClipMoveToEntity", (void **)&clgame.dllFuncs.pfnClipMoveToEntity },
 { NULL, NULL }
 };
 
@@ -1063,7 +1064,6 @@ void CL_InitEdicts( void )
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
 	clgame.static_entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * MAX_STATIC_ENTITIES );
-	clgame.efrags = Mem_Alloc( clgame.mempool, sizeof( efrag_t ) * MAX_EFRAGS );
 	clgame.numStatics = 0;
 
 	if(( clgame.maxRemapInfos - 1 ) != clgame.maxEntities )
@@ -1083,10 +1083,6 @@ void CL_FreeEdicts( void )
 	if( clgame.static_entities )
 		Mem_Free( clgame.static_entities );
 	clgame.static_entities = NULL;
-
-	if( clgame.efrags )
-		Mem_Free( clgame.efrags );
-	clgame.efrags = NULL;
 
 	if( cls.packet_entities )
 		Z_Free( cls.packet_entities );
@@ -1674,7 +1670,7 @@ pfnDrawConsoleString
 drawing string like a console string 
 =============
 */
-static int pfnDrawConsoleString( int x, int y, char *string )
+int pfnDrawConsoleString( int x, int y, char *string )
 {
 	int	drawLen;
 
@@ -1696,7 +1692,7 @@ pfnDrawSetTextColor
 set color for anything
 =============
 */
-static void pfnDrawSetTextColor( float r, float g, float b )
+void pfnDrawSetTextColor( float r, float g, float b )
 {
 	// bound color and convert to byte
 	clgame.ds.textColor[0] = (byte)bound( 0, r * 255, 255 );
@@ -1705,7 +1701,7 @@ static void pfnDrawSetTextColor( float r, float g, float b )
 	clgame.ds.textColor[3] = (byte)0xFF;
 }
 
-static void pfnDrawConsoleStringLen( const char *pText, int *length, int *height )
+void pfnDrawConsoleStringLen( const char *pText, int *length, int *height )
 {
 	Con_SetFont( con_fontsize->integer );
 	Con_DrawStringLen( pText, length, height );
@@ -2926,6 +2922,9 @@ void TriBegin( int mode )
 {
 	switch( mode )
 	{
+	case TRI_POINTS:
+		mode = GL_POINTS;
+		break;
 	case TRI_TRIANGLES:
 		mode = GL_TRIANGLES;
 		break;

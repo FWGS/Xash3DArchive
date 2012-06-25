@@ -594,6 +594,9 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 	// set the current waveheight
 	waveHeight = RI.currentWaveHeight;
 
+	// reset fog color for nonlightmapped water
+	GL_ResetFogColor();
+
 	for( p = polys; p; p = p->next )
 	{
 		pglBegin( GL_POLYGON );
@@ -625,6 +628,8 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 
 	// restore culling
 	if( noCull ) pglEnable( GL_CULL_FACE );
+
+	GL_SetupFogColorForSurfaces();
 }
 
 /*

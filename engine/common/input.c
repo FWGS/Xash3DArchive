@@ -554,6 +554,8 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		// intentional fallthrough
 	case WM_KEYDOWN:
 		Key_Event( Host_MapKey( lParam ), true );
+		if( Host_MapKey( lParam ) == K_ALT )
+			return 0;	// prevent WC_SYSMENU call
 		break;
 	case WM_SYSKEYUP:
 	case WM_KEYUP:

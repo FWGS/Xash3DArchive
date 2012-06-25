@@ -1698,9 +1698,7 @@ int PM_CheckStuck (void)
 
 		PM_ResetStuckOffsets( pmove->player_index, pmove->server );
 
-		if (i >= 27)
-			VectorCopy ( test, pmove->origin );
-
+		VectorCopy ( test, pmove->origin );
 		return 0;
 	}
 

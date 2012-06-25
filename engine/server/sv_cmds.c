@@ -454,9 +454,26 @@ void SV_ChangeLevel_f( void )
 		}
 	}
 
+	// bad changelevel position invoke enables in one-way transtion
+	if( sv.net_framenum < 15 )
+	{
+		if( sv_validate_changelevel->integer )
+		{
+			MsgDev( D_INFO, "SV_ChangeLevel: a infinite changelevel detected.\n" );
+			MsgDev( D_INFO, "Changelevel will be disabled until a next save\\restore.\n" );
+			return; // lock with svs.spawncount here
+		}
+	}
+
+	if( sv.state != ss_active )
+	{
+		MsgDev( D_INFO, "Only the server may changelevel\n" );
+		return;
+	}
+
 	SCR_BeginLoadingPlaque( false );
 
-	if( sv.state != ss_active || sv.background )
+	if( sv.background )
 	{
 		// just load map
 		Cbuf_AddText( va( "map %s\n", mapname ));

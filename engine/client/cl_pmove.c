@@ -29,6 +29,22 @@ void CL_ClearPhysEnts( void )
 	clgame.pmove->numphysent = 0;
 }
 
+void CL_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *tr )
+{
+	ASSERT( tr != NULL );
+
+	if( clgame.dllFuncs.pfnClipMoveToEntity != NULL )
+	{
+		// do custom sweep test
+		clgame.dllFuncs.pfnClipMoveToEntity( pe, start, mins, maxs, end, tr );
+	}
+	else
+	{
+		// function is missed, so we didn't hit anything
+		tr->allsolid = false;
+	}
+}
+
 qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 {
 	model_t	*mod = Mod_Handle( ent->curstate.modelindex );
@@ -61,6 +77,12 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	case SOLID_BBOX:
 		if( mod && mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
 			pe->studiomodel = mod;
+		VectorCopy( ent->curstate.mins, pe->mins );
+		VectorCopy( ent->curstate.maxs, pe->maxs );
+		break;
+	case SOLID_CUSTOM:
+		pe->model = (mod->type == mod_brush) ? mod : NULL;
+		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
 		VectorCopy( ent->curstate.mins, pe->mins );
 		VectorCopy( ent->curstate.maxs, pe->maxs );
 		break;

@@ -18,6 +18,9 @@ GNU General Public License for more details.
 
 #include "bspfile.h"	// we need some declarations from it
 
+typedef vec_t		vec2_t[2];
+typedef vec_t		vec4_t[4];
+
 /*
 ==============================================================================
 
@@ -309,8 +312,6 @@ typedef struct model_s
 //
 	cache_user_t	cache;		// only access through Mod_Extradata
 } model_t;
-
-typedef vec_t		vec4_t[4];
 
 typedef struct alight_s
 {

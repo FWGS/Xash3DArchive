@@ -923,6 +923,9 @@ void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t direction,
 		vecSpot[1] = pos[1] + Com_RandomFloat( -0.5f, 0.5f ) * size[1];
 		vecSpot[2] = pos[2] + Com_RandomFloat( -0.5f, 0.5f ) * size[2];
 
+		if( CL_PointContents( vecSpot ) == CONTENTS_SOLID )
+			continue;	// a piece stuck in the wall, ignore it
+
 		pTemp = CL_TempEntAlloc( vecSpot, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;
 
@@ -2693,6 +2696,8 @@ EFRAGS MANAGEMENT
 
 ==============================================================
 */
+efrag_t	cl_efrags[MAX_EFRAGS];
+
 /*
 ==============
 CL_ClearEfrags
@@ -2702,10 +2707,10 @@ void CL_ClearEfrags( void )
 {
 	int	i;
 
-	Q_memset( clgame.efrags, 0, sizeof( clgame.efrags ));
+	Q_memset( cl_efrags, 0, sizeof( cl_efrags ));
 
 	// allocate the efrags and chain together into a free list
-	clgame.free_efrags = clgame.efrags;
+	clgame.free_efrags = cl_efrags;
 	for( i = 0; i < MAX_EFRAGS - 1; i++ )
 		clgame.free_efrags[i].entnext = &clgame.free_efrags[i+1];
 	clgame.free_efrags[i].entnext = NULL;

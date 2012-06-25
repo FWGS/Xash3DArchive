@@ -310,7 +310,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 
 int R_LightTraceFilter( physent_t *pe )
 {
-	if( !pe || pe->solid != SOLID_BSP )
+	if( !pe || pe->solid != SOLID_BSP || pe->info == 0 )
 		return 1;
 
 	return 0;
@@ -327,6 +327,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	pmtrace_t		trace;
 	cl_entity_t	*m_pGround;
 	vec3_t		start, end, dir;
+	qboolean		secondpass = false;
 	float		dist, add;
 	model_t		*pmodel;
 	mnode_t		*pnodes;
@@ -348,6 +349,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 		return;
 	}
 
+get_light:
 	// Get lighting at this point
 	VectorCopy( point, start );
 	VectorCopy( point, end );
@@ -367,11 +369,12 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	pnodes = pmodel->nodes;
 	m_pGround = NULL;
 
-	if( r_lighting_extended->integer )
+	if( r_lighting_extended->integer && !secondpass )
 	{
 		CL_SetTraceHull( 2 );
 		CL_PlayerTraceExt( start, end, PM_STUDIO_IGNORE, R_LightTraceFilter, &trace );
 		m_pGround = CL_GetEntityByIndex( pfnIndexFromTrace( &trace ));
+		if( trace.startsolid || trace.allsolid ) m_pGround = NULL; // trace in solid
 	}
 
 	if( m_pGround && m_pGround->model && m_pGround->model->type == mod_brush )
@@ -422,6 +425,14 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 		ambientLight->r = 255 * ambient;
 		ambientLight->g = 255 * ambient;
 		ambientLight->b = 255 * ambient;
+	}
+
+	if( ambientLight->r == 0 && ambientLight->g == 0 && ambientLight->b == 0 && !secondpass )
+	{
+		// in some cases r_lighting_extended 1 does a wrong results
+		// make another pass and try to get lighting info from world
+		secondpass = true;
+		goto get_light;
 	}
 
 	// add dynamic lights

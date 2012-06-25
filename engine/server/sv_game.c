@@ -1172,7 +1172,7 @@ void pfnChangeLevel( const char* s1, const char* s2 )
 	if( svs.changelevel_next_time > host.realtime )
 		return;
 
-	svs.changelevel_next_time = host.realtime + 0.5f;		// rest 1 secs if failed
+	svs.changelevel_next_time = host.realtime + 0.5f;		// rest 0.5f secs if failed
 
 	// make sure we don't issue two changelevels
 	if( svs.spawncount == last_spawncount )
@@ -2127,7 +2127,13 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 	mins = sv.worldmodel->hulls[hullNumber].clip_mins;
 	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
 
-	if( Mod_GetType( pent->v.modelindex ) == mod_brush )
+	if( pent->v.solid == SOLID_CUSTOM )
+	{
+		// NOTE: always goes through custom clipping move
+		// even if our callbacks is not initialized
+		SV_CustomClipMoveToEntity( pent, v1, mins, maxs, v2, &trace );
+	}
+	else if( Mod_GetType( pent->v.modelindex ) == mod_brush )
 	{
 		int oldmovetype = pent->v.movetype;
 		int oldsolid = pent->v.solid;
@@ -3602,7 +3608,8 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 	if( SV_IsValidEdict( pInvoker ))
 	{
-		VectorCopy( pInvoker->v.origin, pvspoint );
+		// add the view_ofs to avoid problems with crossed contents line
+		VectorAdd( pInvoker->v.origin, pInvoker->v.view_ofs, pvspoint );
 		args.entindex = invokerIndex = NUM_FOR_EDICT( pInvoker );
 
 		// g-cont. allow 'ducking' param for all entities

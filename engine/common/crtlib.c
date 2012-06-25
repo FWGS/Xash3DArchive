@@ -673,6 +673,13 @@ void _Q_memset( void *dest, int set, size_t count, const char *filename, int fil
 	memset( dest, set, count );
 }
 
+int _Q_memcmp( const void *src0, const void *src1, size_t count, const char *filename, int fileline )
+{
+	if( src0 == NULL ) Sys_Error( "memcmp: src1 == NULL (called at %s:%i)\n", filename, fileline );
+	if( src1 == NULL ) Sys_Error( "memcmp: src2 == NULL (called at %s:%i)\n", filename, fileline );
+	return memcmp( src0, src1, count );
+}
+
 void CRT_Init( void )
 {
 	Memory_Init();

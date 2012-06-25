@@ -37,6 +37,22 @@ void SV_ConvertPMTrace( trace_t *out, pmtrace_t *in, edict_t *ent )
 	out->ent = ent;
 }
 
+void SV_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *tr )
+{
+	ASSERT( tr != NULL );
+
+	if( svgame.physFuncs.ClipPMoveToEntity != NULL )
+	{
+		// do custom sweep test
+		svgame.physFuncs.ClipPMoveToEntity( pe, start, mins, maxs, end, tr );
+	}
+	else
+	{
+		// function is missed, so we didn't hit anything
+		tr->allsolid = false;
+	}
+}
+
 qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 {
 	model_t	*mod = Mod_Handle( ed->v.modelindex );
@@ -74,6 +90,12 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	case SOLID_BBOX:
 		if( mod && mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
 			pe->studiomodel = mod;
+		VectorCopy( ed->v.mins, pe->mins );
+		VectorCopy( ed->v.maxs, pe->maxs );
+		break;
+	case SOLID_CUSTOM:
+		pe->model = (mod->type == mod_brush) ? mod : NULL;
+		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
 		VectorCopy( ed->v.mins, pe->mins );
 		VectorCopy( ed->v.maxs, pe->maxs );
 		break;
@@ -192,7 +214,7 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 				svgame.pmove->numvisent++;
 		}
 
-		if( check->v.solid == SOLID_NOT && ( check->v.skin == 0 || check->v.modelindex == 0 ))
+		if( check->v.solid == SOLID_NOT && ( check->v.skin == CONTENTS_NONE || check->v.modelindex == 0 ))
 			continue;
 
 		// ignore monsterclip brushes
@@ -204,13 +226,17 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 		if((( check->v.flags & FL_CLIENT ) && check->v.health <= 0 ) || check->v.deadflag == DEAD_DEAD )
 			continue;	// dead body
 
-		if( VectorIsNull( check->v.size )) continue;
+		if( VectorIsNull( check->v.size ))
+			continue;
 
 		VectorCopy( check->v.absmin, mins );
 		VectorCopy( check->v.absmax, maxs );
 
 		if( check->v.flags & FL_CLIENT )
-			SV_GetTrueMinMax( svs.currentPlayer, ( NUM_FOR_EDICT( check ) - 1), mins, maxs ); // try to get interpolated values
+		{
+			// trying to get interpolated values
+			SV_GetTrueMinMax( svs.currentPlayer, ( NUM_FOR_EDICT( check ) - 1), mins, maxs );
+		}
 
 		if( !BoundsIntersect( pmove_mins, pmove_maxs, mins, maxs ))
 			continue;

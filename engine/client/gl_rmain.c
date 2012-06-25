@@ -1040,7 +1040,8 @@ void R_DrawEntitiesOnList( void )
 	while( pglGetError() != GL_NO_ERROR );
 
 	// don't fogging translucent surfaces
-	pglDisable( GL_FOG );
+	if( !RI.fogCustom )
+		pglDisable( GL_FOG );
 	pglDepthMask( GL_FALSE );
 	glState.drawTrans = true;
 

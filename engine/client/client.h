@@ -351,6 +351,7 @@ typedef struct
 	void	(*pfnCalcRefdef)( ref_params_t *pparams );
 	int	(*pfnGetRenderInterface)( int version, render_api_t *renderfuncs, render_interface_t *callback );
 	int	(*pfnGetPlayerTeam)( int playerIndex );
+	void	(*pfnClipMoveToEntity)( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *tr );
 } HUD_FUNCTIONS;
 
 typedef struct
@@ -403,7 +404,6 @@ typedef struct
 
 	net_request_t	net_requests[MAX_REQUESTS];	// no reason to keep more
 
-	efrag_t		*efrags;			// efrags pool
 	efrag_t		*free_efrags;		// linked efrags
 	cl_entity_t	viewent;			// viewmodel
 } clgame_static_t;

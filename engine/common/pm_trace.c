@@ -328,9 +328,18 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 		if(( flags & PM_GLASS_IGNORE ) && pe->rendermode != kRenderNormal )
 			continue;
 
+		if(( flags & PM_CUSTOM_IGNORE ) && pe->solid == SOLID_CUSTOM )
+			continue;
+
 		hullcount = 1;
 
-		if( !pe->model )
+		if( pe->solid == SOLID_CUSTOM )
+		{
+			VectorCopy( pmove->player_mins[pmove->usehull], mins );
+			VectorCopy( pmove->player_maxs[pmove->usehull], maxs );
+			VectorClear( offset );
+		}
+		else if( !pe->model )
 		{
 			if( !pe->studiomodel )
 			{
@@ -414,6 +423,13 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 			// g-cont. probably this never happens
 			trace_bbox.allsolid = false;
 		}
+		else if( pe->solid == SOLID_CUSTOM )
+		{
+			// run custom sweep callback
+			if( pmove->server )
+				SV_ClipPMoveToEntity( pe, start, mins, maxs, end, &trace_bbox );
+			else CL_ClipPMoveToEntity( pe, start, mins, maxs, end, &trace_bbox );
+		}
 		else if( hullcount == 1 )
 		{
 			PM_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, &trace_bbox );
@@ -424,7 +440,7 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 
 			for( last_hitgroup = 0, j = 0; j < hullcount; j++ )
 			{
-				Q_memset(&trace_hitbox, 0, sizeof( trace_hitbox ));
+				Q_memset( &trace_hitbox, 0, sizeof( trace_hitbox ));
 				VectorCopy( end, trace_hitbox.endpos );
 				trace_hitbox.allsolid = true;
 				trace_hitbox.fraction = 1.0f;
@@ -506,7 +522,13 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pmtrace_t *ptrace, p
 
 		hullcount = 1;
 
-		if( pe->model )
+		if( pe->solid == SOLID_CUSTOM )
+		{
+			VectorCopy( pmove->player_mins[pmove->usehull], mins );
+			VectorCopy( pmove->player_maxs[pmove->usehull], maxs );
+			VectorClear( offset );
+		}
+		else if( pe->model )
 		{
 			hull = PM_HullForBsp( pe, pmove, offset );
 		}
@@ -558,7 +580,25 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pmtrace_t *ptrace, p
 			VectorSubtract( pos, offset, pos_l );
 		}
 
-		if( hullcount == 1 )
+		if( pe->solid == SOLID_CUSTOM )
+		{
+			pmtrace_t	trace;
+
+			Q_memset( &trace, 0, sizeof( trace ));
+			VectorCopy( pos, trace.endpos );
+			trace.allsolid = true;
+			trace.fraction = 1.0f;
+
+			// run custom sweep callback
+			if( pmove->server )
+				SV_ClipPMoveToEntity( pe, pos, mins, maxs, pos, &trace );
+			else CL_ClipPMoveToEntity( pe, pos, mins, maxs, pos, &trace );
+
+			// if we inside the custom hull
+			if( trace.allsolid )
+				return i;
+		}
+		else if( hullcount == 1 )
 		{
 			if( PM_HullPointContents( hull, hull->firstclipnode, pos_l ) == CONTENTS_SOLID )
 				return i;

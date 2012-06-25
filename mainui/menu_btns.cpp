@@ -146,7 +146,8 @@ void UI_LoadBmpButtons( void )
 	uiStatic.buttons_height = ( pInfoHdr->biBitCount == 4 ) ? 80 : 78; // bugstompers issues
 	uiStatic.buttons_width = pInfoHdr->biWidth - 3; // make some offset
 
-	int cutted_img_sz = pInfoHdr->biWidth * uiStatic.buttons_height * pInfoHdr->biBitCount / 8;
+	int stride = (pInfoHdr->biWidth * pInfoHdr->biBitCount / 8);
+	int cutted_img_sz = ((stride + 3 ) & ~3) * uiStatic.buttons_height;
 	int CuttedBmpSize = sizeof( bmphdr_t ) + pInfoHdr->biSize + pallete_sz + cutted_img_sz;
 	byte *img_data = &bmp_buffer[bmp_len_holder-cutted_img_sz];
 
