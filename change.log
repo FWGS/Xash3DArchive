@@ -35,6 +35,38 @@ Engine: implement new system of engine features that can be enabled by Mod-Maker
 Engine: build BSP surface meshes for Mod-Makers. e.g. for build collision tree of VBO\VA custom rendering
 Engine: allow support of large maps up to +\- 16384 units (need to edit delta.lst and enable feature in the engine)
 Engine: rewrite MOVETYPE_TOSS, MOVETYPE_BOUNCE etc
+Client: implement new draw type TRI_POINTS for TriAPI
+Client: changed snapshot name from mapnameXXXX.bmp to mapname_XXXX.bmp (by Qwertyus request)
+Client: write experimental code for interpolate bmodels movement (pev->animtime must not equal 0 for enable)
+GameUI: allow scissor for enginefunc pfnDrawCharacter
+Network: protocol changed. replace obsolete message svc_frame with message svc_restoresound
+Client: remove pieces that stuck in the walls for TE_BREAKMODEL message
+Render: added new internal texture that called a "*grayCube" without quotes
+Render: fix mode r_lighting_extended 1 for prevent permanently black lighting in some cases
+Render: global fog update. get the uniform color for all the underwater objects
+Render: fix issues with conveyor HD-textures (it can moves slower than physical conveyor speed)
+Render: added support for HD-textures for normal sprite frames (non-HUD sprites)
+Render: sorting meshes for studiomodel surfaces (draw "adiitive" surfaces at end of the list)
+Render: release GL-context when engine is shutting down
+Render: set gl_allow_static to zero as default
+Sound: set s_cull to zero as default
+Input: fix problems with call WC_SYSMENU instead of user-defined command when ALT is pressed
+Console: add a new command that called "mapstats" and works like bspinfo.exe
+Physic: added new meta-type SOLID_CUSTOM that could be traced in game dlls with physic API
+Pmove: get to work PM_CheckStuck on a servder-sdie
+Server: added a new cvar that called a "sv_validate_changelevel" for skip any checks with changelevel problems
+Server: make check for recursive changelevel (and ignore it)
+Server: fix the problem with non-sended events when a player sight cross-line contents
+Server: rewrite MOVETYPE_STEP and MOVETYPE_PUSHSTEP physics
+Server: allow to MOVETYEP_PUSH blocking by dead bodies
+Server: fix bug with MOVETYPE_FOLLOW
+Server: added TriAPI through Server_PhysicsInterface for debug purposes
+GameUI: replace broken letter '¸' with 'å'
+GameUI: don't draw logo.avi for mods without this file in gamedir
+GameUI: fix buttons loader bug
+GameUI: enable scissor for all ScrollList menus
+GameUI: restore the menu buttons control from keyboard
+
 
 build 1905
 

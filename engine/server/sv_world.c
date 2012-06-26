@@ -1194,10 +1194,10 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				continue;	// don't clip against owner
 		}
 
-		if( touch->v.flags & FL_MONSTER )
-			SV_ClipMoveToEntity( touch, clip->start, clip->mins2, clip->maxs2, clip->end, &trace );
-		else if( touch->v.solid == SOLID_CUSTOM )
+		if( touch->v.solid == SOLID_CUSTOM )
 			SV_CustomClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
+		else if( touch->v.flags & FL_MONSTER )
+			SV_ClipMoveToEntity( touch, clip->start, clip->mins2, clip->maxs2, clip->end, &trace );
 		else SV_ClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
 
 		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );

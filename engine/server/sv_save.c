@@ -30,7 +30,7 @@ half-life implementation of saverestore system
 #define SAVEFILE_HEADER		(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
 #define SAVEGAME_HEADER		(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
 #define SAVEGAME_VERSION		0x0065				// Version 0.65
-#define CLIENT_SAVEGAME_VERSION	0x0067				// Version 0.66
+#define CLIENT_SAVEGAME_VERSION	0x0067				// Version 0.67
 
 #define SAVE_AGED_COUNT		1
 #define SAVENAME_LENGTH		128	// matches with MAX_OSPATH

@@ -855,7 +855,7 @@ qboolean CL_GetComment( const char *demoname, char *comment )
 
 	// split comment to sections
 	Q_strncpy( comment, demohdr.mapname, CS_SIZE );
-	Q_strncpy( comment + CS_SIZE, "<No Title>", CS_SIZE );	// FIXME: write titles or somewhat
+	Q_strncpy( comment + CS_SIZE, "<No Title>", CS_SIZE );	// TODO: write titles or somewhat
 	Q_strncpy( comment + CS_SIZE * 2, va( "%g sec", playtime ), CS_TIME );
 
 	// all done

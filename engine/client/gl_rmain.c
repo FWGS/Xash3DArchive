@@ -880,7 +880,7 @@ static void R_EndGL( void )
 R_CheckFog
 
 check for underwater fog
-UNDONE: this code is wrong, we need to compute fog volumes (as water volumes)
+FIXME: this code is wrong, we need to compute fog volumes (as water volumes)
 and get fog params from texture water on a surface.
 =============
 */

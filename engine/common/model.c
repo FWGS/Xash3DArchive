@@ -73,6 +73,92 @@ static vec3_t cm_hullmaxs[4] =
 Mod_SetupHulls
 ================
 */
+int Mod_ArrayUsage( const char *szItem, int items, int maxitems, int itemsize )
+{
+	float	percentage = maxitems ? (items * 100.0f / maxitems) : 0.0f;
+
+	Msg( "%-12s  %7i/%-7i  %7i/%-7i  (%4.1f%%)", szItem, items, maxitems, items * itemsize, maxitems * itemsize, percentage );
+
+	if( percentage > 99.9f )
+		Msg( "^1SIZE OVERFLOW!!!^7\n" );
+	else if( percentage > 95.0f )
+		Msg( "^3SIZE DANGER!^7\n" );
+	else if( percentage > 80.0f )
+		Msg( "^2VERY FULL!^7\n" );
+	else Msg( "\n" );
+
+	return items * itemsize;
+}
+
+/*
+================
+Mod_SetupHulls
+================
+*/
+int Mod_GlobUsage( const char *szItem, int itemstorage, int maxstorage )
+{
+	float	percentage = maxstorage ? (itemstorage * 100.0f / maxstorage) : 0.0f;
+
+	Msg( "%-12s     [variable]    %7i/%-7i  (%4.1f%%)", szItem, itemstorage, maxstorage, percentage );
+
+	if( percentage > 99.9f )
+		Msg( "^1SIZE OVERFLOW!!!^7\n" );
+	else if( percentage > 95.0f )
+		Msg( "^3SIZE DANGER!^7\n" );
+	else if( percentage > 80.0f )
+		Msg( "^2VERY FULL!^7\n" );
+	else Msg( "\n" );
+
+	return itemstorage;
+}
+
+/*
+=============
+Mod_PrintBSPFileSizes
+
+Dumps info about current file
+=============
+*/
+void Mod_PrintBSPFileSizes( void )
+{
+	int	totalmemory = 0;
+	model_t	*w = worldmodel;
+
+	if( !w || !w->numsubmodels )
+	{
+		Msg( "No map loaded\n" );
+		return;
+	}
+
+	Msg( "\n" );
+	Msg( "Object names  Objects/Maxobjs  Memory / Maxmem  Fullness\n" );
+	Msg( "------------  ---------------  ---------------  --------\n" );
+
+	totalmemory += Mod_ArrayUsage( "models",	w->numsubmodels,	MAX_MAP_MODELS,		sizeof( dmodel_t ));
+	totalmemory += Mod_ArrayUsage( "planes",	w->numplanes,	MAX_MAP_PLANES,		sizeof( dplane_t ));
+	totalmemory += Mod_ArrayUsage( "vertexes",	w->numvertexes,	MAX_MAP_VERTS,		sizeof( dvertex_t ));
+	totalmemory += Mod_ArrayUsage( "nodes",		w->numnodes,	MAX_MAP_NODES,		sizeof( dnode_t ));
+	totalmemory += Mod_ArrayUsage( "texinfos",	w->numtexinfo,	MAX_MAP_TEXINFO,		sizeof( dtexinfo_t ));
+	totalmemory += Mod_ArrayUsage( "faces",		w->numsurfaces,	MAX_MAP_FACES,		sizeof( dface_t ));
+	totalmemory += Mod_ArrayUsage( "clipnodes",	w->numclipnodes,	MAX_MAP_CLIPNODES,		sizeof( dclipnode_t ));
+	totalmemory += Mod_ArrayUsage( "leaves",	w->numleafs,	MAX_MAP_LEAFS,		sizeof( dleaf_t ));
+	totalmemory += Mod_ArrayUsage( "marksurfaces",	w->nummarksurfaces,	MAX_MAP_MARKSURFACES,	sizeof( dmarkface_t ));
+	totalmemory += Mod_ArrayUsage( "surfedges",	w->numsurfedges,	MAX_MAP_SURFEDGES,		sizeof( dsurfedge_t ));
+	totalmemory += Mod_ArrayUsage( "edges",		w->numedges,	MAX_MAP_EDGES,		sizeof( dedge_t ));
+
+	totalmemory += Mod_GlobUsage( "texdata",	world.texdatasize,	MAX_MAP_MIPTEX );
+	totalmemory += Mod_GlobUsage( "lightdata",	world.litdatasize,	MAX_MAP_LIGHTING );
+	totalmemory += Mod_GlobUsage( "visdata",	world.visdatasize,	MAX_MAP_VISIBILITY );
+	totalmemory += Mod_GlobUsage( "entdata",	world.entdatasize,	MAX_MAP_ENTSTRING );
+
+	Msg( "=== Total BSP file data space used: %s ===\n", Q_memprint( totalmemory ));
+}
+
+/*
+================
+Mod_SetupHulls
+================
+*/
 void Mod_SetupHulls( float mins[4][3], float maxs[4][3] )
 {
 	Q_memcpy( mins, cm_hullmins, sizeof( cm_hullmins ));
@@ -398,6 +484,8 @@ void Mod_Init( void )
 		mod_allow_materials = Cvar_Get( "host_allow_materials", "0", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
 	else mod_allow_materials = NULL; // no reason to load HD-textures for dedicated server
 
+	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes, "show stats for currently loaded map" );
+
 	Mod_InitStudioHull ();
 }
 
@@ -504,6 +592,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		GL_FreeTexture( tr.solidskyTexture );
 		GL_FreeTexture( tr.alphaskyTexture );
 		tr.solidskyTexture = tr.alphaskyTexture = 0;
+		world.texdatasize = l->filelen;
 		world.has_mirrors = false;
 		world.sky_sphere = false;
 	}
@@ -931,8 +1020,18 @@ static void Mod_LoadLighting( const dlump_t *l )
 	color24	*out;
 	int	i;
 
-	if( !l->filelen ) return;
+	if( !l->filelen )
+	{
+		if( world.loading )
+		{
+			MsgDev( D_WARN, "map ^2%s^7 has no lighting\n", loadmodel->name );
+			loadmodel->lightdata = NULL;
+			world.litdatasize = 0;
+		}
+		return;
+	}
 	in = (void *)(mod_base + l->fileofs);
+	if( world.loading ) world.litdatasize = l->filelen;
 
 	switch( bmodel_version )
 	{
@@ -1987,6 +2086,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 	in = (void *)(mod_base + l->fileofs);
 	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen );	
 	Q_memcpy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
+	if( world.loading ) world.entdatasize = l->filelen;
 }
 
 /*

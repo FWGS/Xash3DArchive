@@ -2662,7 +2662,7 @@ const model_t *pfnPrecacheSprite( HSPRITE hSprite )
 =============
 pfnEnableTexSort
 
-FIXME: implement
+TODO: implement
 =============
 */
 void pfnEnableTexSort( int enable )
@@ -2673,7 +2673,7 @@ void pfnEnableTexSort( int enable )
 =============
 pfnSetLightmapColor
 
-FIXME: implement
+TODO: implement
 =============
 */
 void pfnSetLightmapColor( float red, float green, float blue )
@@ -2684,7 +2684,7 @@ void pfnSetLightmapColor( float red, float green, float blue )
 =============
 pfnSetLightmapScale
 
-FIXME: implement
+TODO: implement
 =============
 */
 void pfnSetLightmapScale( float scale )
@@ -2708,7 +2708,7 @@ void pfnSPR_DrawGeneric( int frame, int x, int y, const wrect_t *prc, int blends
 =============
 pfnDrawLocalizedHudString
 
-FIXME: implement
+TODO: implement
 =============
 */
 int pfnDrawLocalizedHudString( int x, int y, const char* str, int r, int g, int b )
@@ -2720,7 +2720,7 @@ int pfnDrawLocalizedHudString( int x, int y, const char* str, int r, int g, int 
 =============
 pfnDrawLocalizedConsoleString
 
-FIXME: implement
+TODO: implement
 =============
 */
 int pfnDrawLocalizedConsoleString( int x, int y, const char* str )
@@ -2743,7 +2743,7 @@ const char *LocalPlayerInfo_ValueForKey( const char* key )
 =============
 pfnDrawText
 
-FIXME: implement
+TODO: implement
 =============
 */
 void pfnDrawText( int x, int y, const char* text, unsigned long font )
@@ -2754,7 +2754,7 @@ void pfnDrawText( int x, int y, const char* text, unsigned long font )
 =============
 pfnDrawUnicodeCharacter
 
-FIXME: implement
+TODO: implement
 =============
 */
 int pfnDrawUnicodeCharacter( int x, int y, short number, int r, int g, int b, unsigned long hfont )
@@ -3302,7 +3302,7 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 
 	if( request == NETAPI_REQUEST_SERVERLIST )
 	{
-		// FIXME: build request for master-server
+		// UNDONE: build request for master-server
 	}
 	else
 	{

@@ -70,7 +70,7 @@ static void UI_MultiPlayer_Callback( void *self, int event )
 		UI_InternetGames_Menu();
 		break;
 	case ID_SPECTATEGAMES:
-		// UNDONE: write menus
+		// UNDONE: not implemented
 		break;
 	case ID_LANGAME:
 		UI_LanGame_Menu();

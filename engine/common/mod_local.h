@@ -64,6 +64,9 @@ typedef struct
 	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 	size_t		visdatasize;	// actual size of the visdata
+	size_t		litdatasize;	// actual size of the lightdata
+	size_t		entdatasize;	// actual size of the entity string
+	size_t		texdatasize;	// actual size of the textures lump
 	qboolean		loading;		// true if worldmodel is loading
 	qboolean		sky_sphere;	// true when quake sky-sphere is used
 	qboolean		has_mirrors;	// one or more brush models contain reflective textures
@@ -84,6 +87,7 @@ extern convar_t		*mod_studiocache;
 void Mod_Init( void );
 void Mod_ClearAll( void );
 void Mod_Shutdown( void );
+void Mod_PrintBSPFileSizes( void );
 void Mod_SetupHulls( float mins[4][3], float maxs[4][3] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );

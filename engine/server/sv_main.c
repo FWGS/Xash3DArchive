@@ -235,7 +235,7 @@ void SV_UpdateMovevars( qboolean initialize )
 	svgame.movevars.skydir_z = sv_skydir_z->value;
 	svgame.movevars.skyangle = sv_skyangle->value;
 	svgame.movevars.wateralpha = sv_wateralpha->value;
-	svgame.movevars.features = host.features; // just in case. no really need
+	svgame.movevars.features = host.features; // just in case. not really need
 
 	if( initialize ) return;
 
