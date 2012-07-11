@@ -1713,6 +1713,9 @@ void SV_Physics( void )
 		SV_Physics_Entity( ent );
 	}
 
+	if( svgame.physFuncs.SV_EndFrame != NULL )
+		svgame.physFuncs.SV_EndFrame();
+
 	// animate lightstyles (used for GetEntityIllum)
 	SV_RunLightStyles ();
 

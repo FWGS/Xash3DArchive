@@ -86,6 +86,8 @@ typedef struct physics_interface_s
 	void		( *ClipMoveToEntity)( edict_t *ent, const float *start, float *mins, float *maxs, const float *end, trace_t *trace );
 	// tracing entities with SOLID_CUSTOM mode on a server (only used by pmove code)
 	void		( *ClipPMoveToEntity)( struct physent_s *pe, const float *start, float *mins, float *maxs, const float *end, struct pmtrace_s *tr );
+	// called at end the frame of SV_Physics call
+	void		( *SV_EndFrame )( void );
 } physics_interface_t;
 
 #endif//PHYSINT_H

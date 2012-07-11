@@ -1253,6 +1253,7 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 	rgbdata_t		*pic;
 	int		flags = 0;
 
+	if( texnum <= 0 ) return; // missed image
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
 

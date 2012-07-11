@@ -878,6 +878,7 @@ Create a shards
 void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t direction, float random, float life, int count, int modelIndex, char flags )
 {
 	int		i, frameCount;
+	int		numtries = 0;
 	TEMPENTITY	*pTemp;
 	char		type;
 	vec3_t		dir;
@@ -917,14 +918,19 @@ void CL_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t direction,
 
 			VectorNormalize( dir );
 		}
-
+		numtries = 0;
+tryagain:
 		// fill up the box with stuff
 		vecSpot[0] = pos[0] + Com_RandomFloat( -0.5f, 0.5f ) * size[0];
 		vecSpot[1] = pos[1] + Com_RandomFloat( -0.5f, 0.5f ) * size[1];
 		vecSpot[2] = pos[2] + Com_RandomFloat( -0.5f, 0.5f ) * size[2];
 
 		if( CL_PointContents( vecSpot ) == CONTENTS_SOLID )
-			continue;	// a piece stuck in the wall, ignore it
+		{
+			if( ++numtries < 32 )
+				goto tryagain;
+			continue;	// a piece completely stuck in the wall, ignore it
+                    }
 
 		pTemp = CL_TempEntAlloc( vecSpot, Mod_Handle( modelIndex ));
 		if( !pTemp ) return;

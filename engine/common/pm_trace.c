@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "mod_local.h"
 #include "pm_local.h"
 #include "pm_movevars.h"
+#include "features.h"
 #include "studio.h"
 #include "world.h"
 
@@ -378,8 +379,12 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 			rotated = true;
 		else rotated = false;
 
-		if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
-			transform_bbox = true;
+		if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
+		{
+			if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
+				transform_bbox = true;
+			else transform_bbox = false;
+		}
 		else transform_bbox = false;
 
 		if( rotated )
@@ -552,8 +557,11 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pmtrace_t *ptrace, p
 			qboolean	transform_bbox = false;
 			matrix4x4	matrix;
 
-			if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
-				transform_bbox = true;
+			if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
+			{
+				if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
+					transform_bbox = true;
+                              }
 
 			if( transform_bbox )
 				Matrix4x4_CreateFromEntity( matrix, pe->angles, pe->origin, 1.0f );

@@ -959,7 +959,7 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 
 	Q_memset( trace, 0, sizeof( trace_t ));
 	VectorCopy( end, trace->endpos );
-	trace->fraction = 1.0;
+	trace->fraction = 1.0f;
 	trace->allsolid = 1;
 
 	model = Mod_Handle( ent->v.modelindex );
@@ -979,9 +979,13 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 		rotated = true;
 	else rotated = false;
 
-	// keep untransformed bbox less than 45 degress or train on subtransit.bsp will stop working
-	if(( check_angles( ent->v.angles[0] ) || check_angles( ent->v.angles[2] )) && !VectorIsNull( mins ))
-		transform_bbox = true;
+	if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
+	{
+		// keep untransformed bbox less than 45 degress or train on subtransit.bsp will stop working
+		if(( check_angles( ent->v.angles[0] ) || check_angles( ent->v.angles[2] )) && !VectorIsNull( mins ))
+			transform_bbox = true;
+		else transform_bbox = false;
+	}
 	else transform_bbox = false;
 
 	if( rotated )

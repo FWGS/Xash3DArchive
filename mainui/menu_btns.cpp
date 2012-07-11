@@ -166,7 +166,8 @@ void UI_LoadBmpButtons( void )
 	byte *raw_img_buff = (byte *)MALLOC( sizeof( bmphdr_t ) + pInfoHdr->biSize + pallete_sz + cutted_img_sz );
 
 	// determine buttons count by image height...
-	int pic_count = ( pInfoHdr->biHeight == 5538 ) ? PC_BUTTONCOUNT : PC_BUTTONCOUNT - 2;
+//	int pic_count = ( pInfoHdr->biHeight == 5538 ) ? PC_BUTTONCOUNT : PC_BUTTONCOUNT - 2;
+	int pic_count = ( pInfoHdr->biHeight / 78 );
 	
 	for( int i = 0; i < pic_count; i++ )
 	{

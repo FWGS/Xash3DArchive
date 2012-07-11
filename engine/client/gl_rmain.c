@@ -1349,6 +1349,8 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_TEX_FLAGS:
 		glt = R_GetTexture( arg );
 		return glt->flags;
+	case PARM_FEATURES:
+		return host.features;
 	}
 	return 0;
 }

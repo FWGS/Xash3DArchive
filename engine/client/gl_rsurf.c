@@ -1402,6 +1402,8 @@ void R_DrawBrushModel( cl_entity_t *e )
 	switch( e->curstate.rendermode )
 	{
 	case kRenderTransAdd:
+		if( RI.fogCustom )
+			pglDisable( GL_FOG );
 	case kRenderTransTexture:
 		need_sort = true;
 	case kRenderGlow:
@@ -1455,6 +1457,13 @@ void R_DrawBrushModel( cl_entity_t *e )
 	R_BlendLightmaps();
 	R_RenderFullbrights();
 	R_RenderDetails();
+
+	// restore fog here
+	if( e->curstate.rendermode == kRenderTransAdd )
+	{
+		if( RI.fogCustom )
+			pglEnable( GL_FOG );
+	}
 
 	R_LoadIdentity();	// restore worldmatrix
 }

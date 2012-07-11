@@ -66,6 +66,7 @@ typedef struct sortedmesh_s
 convar_t			*r_studio_lerping;
 convar_t			*r_studio_lambert;
 convar_t			*r_studio_lighting;
+convar_t			*r_studio_sort_textures;
 convar_t			*r_drawviewmodel;
 convar_t			*r_customdraw_playermodel;
 convar_t			*cl_himodels;
@@ -129,6 +130,7 @@ void R_StudioInit( void )
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
 	r_studio_lighting = Cvar_Get( "r_studio_lighting", "1", CVAR_ARCHIVE, "studio lighting models ( 0 - normal, 1 - extended, 2 - experimental )" );
+	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", CVAR_ARCHIVE, "sort additive and normal textures for right drawing" );
 
 	// NOTE: some mods with custom studiomodel renderer may cause error when menu trying draw player model out of the loaded game
 	r_customdraw_playermodel = Cvar_Get( "r_customdraw_playermodel", "0", CVAR_ARCHIVE, "allow to drawing playermodel in menu with client renderer" );
@@ -1892,8 +1894,11 @@ static void R_StudioDrawPoints( void )
 		}
 	}
 
-	// sort opaque and translucent for right results
-	qsort( g_sortedMeshes, m_pSubModel->nummesh, sizeof( sortedmesh_t ), R_StudioMeshCompare );
+	if( r_studio_sort_textures->integer )
+	{
+		// sort opaque and translucent for right results
+		qsort( g_sortedMeshes, m_pSubModel->nummesh, sizeof( sortedmesh_t ), R_StudioMeshCompare );
+	}
 
 	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
 	{
@@ -2504,7 +2509,7 @@ static void R_StudioRestoreRenderer( void )
 	pglShadeModel( GL_FLAT );
 
 	// restore depthmask state for sprites etc
-	if( glState.drawTrans )
+	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )
 		pglDepthMask( GL_FALSE );
 	else pglDepthMask( GL_TRUE );
 

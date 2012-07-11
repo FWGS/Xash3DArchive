@@ -45,6 +45,7 @@ GNU General Public License for more details.
 #define PARM_TEX_TARGET	17
 #define PARM_TEX_TEXNUM	18
 #define PARM_TEX_FLAGS	19
+#define PARM_FEATURES	20	// same as movevars->features
 
 enum
 {
