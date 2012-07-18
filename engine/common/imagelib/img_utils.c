@@ -96,8 +96,8 @@ static const loadpixformat_t load_null[] =
 
 static const loadpixformat_t load_game[] =
 {
-{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// WON menu images
 { "%s%s.%s", "tga", Image_LoadTGA, IL_HINT_NO },	// hl vgui menus
+{ "%s%s.%s", "bmp", Image_LoadBMP, IL_HINT_NO },	// WON menu images
 { "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures from wad or buffer
 { "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_HL },	// hl studio model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames

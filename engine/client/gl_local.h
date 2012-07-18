@@ -70,7 +70,8 @@ typedef enum
 	TEX_DETAIL,	// detail textures
 	TEX_REMAP,	// local copy of remap texture
 	TEX_SCREENCOPY,	// keep screen copy e.g. for mirror
-	TEX_CUSTOM	// user created texture
+	TEX_CUSTOM,	// user created texture
+	TEX_DEPTHMAP	// shadowmap texture
 } texType_t;
 
 typedef struct gltexture_s

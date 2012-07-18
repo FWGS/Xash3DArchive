@@ -29,6 +29,7 @@ GNU General Public License for more details.
 
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
 #define MAXARRAYVERTS	16384	// used for draw shadows
+#define LEGS_BONES_COUNT	8
 
 static vec3_t hullcolor[8] = 
 {
@@ -40,6 +41,19 @@ static vec3_t hullcolor[8] =
 { 1.0f, 0.5f, 1.0f },
 { 0.5f, 1.0f, 1.0f },
 { 1.0f, 1.0f, 1.0f },
+};
+
+// enumerate all the bones that used for gait animation
+const char *legs_bones[] =
+{
+{ "Bip01" },
+{ "Bip01 Pelvis" },
+{ "Bip01 L Leg" },
+{ "Bip01 L Leg1" },
+{ "Bip01 L Foot" },
+{ "Bip01 R Leg" },
+{ "Bip01 R Leg1" },
+{ "Bip01 R Foot" },
 };
 
 typedef struct studiolight_s
@@ -1083,7 +1097,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 	static vec4_t	q3[MAXSTUDIOBONES];
 	static vec3_t	pos4[MAXSTUDIOBONES];
 	static vec4_t	q4[MAXSTUDIOBONES];
-	int		i;
+	int		i, j;
 
 	if( e->curstate.sequence >= m_pStudioHeader->numseq )
 		e->curstate.sequence = 0;
@@ -1185,8 +1199,15 @@ void R_StudioSetupBones( cl_entity_t *e )
 
 		for( i = 0; i < m_pStudioHeader->numbones; i++ )
 		{
-			if( !Q_strcmp( pbones[i].name, "Bip01 Spine" ))
-				break;
+			for( j = 0; j < LEGS_BONES_COUNT; j++ )
+			{
+				if( !Q_strcmp( pbones[i].name, legs_bones[j] ))
+					break;
+			}
+
+			if( j == LEGS_BONES_COUNT )
+				continue;	// not used for legs
+
 			VectorCopy( pos2[i], pos[i] );
 			Vector4Copy( q2[i], q[i] );
 		}
@@ -3370,6 +3391,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
 		ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags );
           }
+          else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
   
 	if( !ptexture->index )
 	{

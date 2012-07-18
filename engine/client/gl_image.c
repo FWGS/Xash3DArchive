@@ -77,7 +77,8 @@ void GL_Bind( GLenum tmu, GLenum texnum )
 
 	if( glState.currentTextureTargets[tmu] != texture->target )
 	{
-		pglDisable( glState.currentTextureTargets[tmu] );
+		if( glState.currentTextureTargets[tmu] != GL_NONE )
+			pglDisable( glState.currentTextureTargets[tmu] );
 		glState.currentTextureTargets[tmu] = texture->target;
 		pglEnable( glState.currentTextureTargets[tmu] );
 	}
@@ -140,7 +141,10 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	{
 		pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-
+		pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB );
+		pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL );
+		pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
+	
 		if( GL_Support( GL_ANISOTROPY_EXT ))
 			pglTexParameterf( tex->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f );
 	}
@@ -199,7 +203,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	// set texture wrap
 	if( tex->flags & TF_CLAMP )
 	{
-		if(GL_Support( GL_CLAMPTOEDGE_EXT ))
+		if( GL_Support( GL_CLAMPTOEDGE_EXT ))
 		{
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
 
@@ -411,6 +415,9 @@ void R_TextureList_f( void )
 		case GL_INTENSITY8:
 			Msg( "I8    " );
 			break;
+		case GL_DEPTH_COMPONENT:
+			Msg( "DEPTH " );
+			break;			
 		default:
 			Msg( "????? " );
 			break;
@@ -875,6 +882,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	GLenum		outFormat, inFormat, glTarget;
 	uint		i, s, numSides, offset = 0;
 	int		texsize = 0, img_flags = 0, samples;
+	GLint		dataType = GL_UNSIGNED_BYTE;
 
 	ASSERT( pic != NULL && tex != NULL );
 
@@ -940,6 +948,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	if( tex->flags & TF_DEPTHMAP )
 	{
 		inFormat = GL_DEPTH_COMPONENT;
+		dataType = GL_UNSIGNED_BYTE;
 	}
 	else if( pic->flags & IMAGE_CUBEMAP )
 	{
@@ -1014,26 +1023,26 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 
 		if( glTarget == GL_TEXTURE_1D )
 		{
-			if( subImage ) pglTexSubImage1D( tex->target, 0, 0, tex->width, inFormat, GL_UNSIGNED_BYTE, data );
-			else pglTexImage1D( tex->target, 0, outFormat, tex->width, 0, inFormat, GL_UNSIGNED_BYTE, data );
+			if( subImage ) pglTexSubImage1D( tex->target, 0, 0, tex->width, inFormat, dataType, data );
+			else pglTexImage1D( tex->target, 0, outFormat, tex->width, 0, inFormat, dataType, data );
 		}
 		else if( glTarget == GL_TEXTURE_CUBE_MAP_ARB )
 		{
 			if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
-			if( subImage ) pglTexSubImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, 0, 0, tex->width, tex->height, inFormat, GL_UNSIGNED_BYTE, data );
-			else pglTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, outFormat, tex->width, tex->height, 0, inFormat, GL_UNSIGNED_BYTE, data );
+			if( subImage ) pglTexSubImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, 0, 0, tex->width, tex->height, inFormat, dataType, data );
+			else pglTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, outFormat, tex->width, tex->height, 0, inFormat, dataType, data );
 			if( !GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 		}
 		else if( glTarget == GL_TEXTURE_3D )
 		{
-			if( subImage ) pglTexSubImage3D( tex->target, 0, 0, 0, 0, tex->width, tex->height, pic->depth, inFormat, GL_UNSIGNED_BYTE, data );
-			else pglTexImage3D( tex->target, 0, outFormat, tex->width, tex->height, pic->depth, 0, inFormat, GL_UNSIGNED_BYTE, data );
+			if( subImage ) pglTexSubImage3D( tex->target, 0, 0, 0, 0, tex->width, tex->height, pic->depth, inFormat, dataType, data );
+			else pglTexImage3D( tex->target, 0, outFormat, tex->width, tex->height, pic->depth, 0, inFormat, dataType, data );
 		}
 		else
 		{
 			if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
-			if( subImage ) pglTexSubImage2D( tex->target, 0, 0, 0, tex->width, tex->height, inFormat, GL_UNSIGNED_BYTE, data );
-			else pglTexImage2D( tex->target, 0, outFormat, tex->width, tex->height, 0, inFormat, GL_UNSIGNED_BYTE, data );
+			if( subImage ) pglTexSubImage2D( tex->target, 0, 0, 0, tex->width, tex->height, inFormat, dataType, data );
+			else pglTexImage2D( tex->target, 0, outFormat, tex->width, tex->height, 0, inFormat, dataType, data );
 			if( !GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 		}
 
@@ -1237,7 +1246,10 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 	r_empty.buffer = (byte *)buffer;
 
 	texture = GL_LoadTextureInternal( name, &r_empty, flags, false );
-	GL_SetTextureType( texture, TEX_CUSTOM );
+
+	if( flags & TF_DEPTHMAP )
+		GL_SetTextureType( texture, TEX_DEPTHMAP );
+	else GL_SetTextureType( texture, TEX_CUSTOM );
 
 	return texture;
 }

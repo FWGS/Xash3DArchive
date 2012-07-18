@@ -157,6 +157,8 @@ void GL_SelectTexture( GLenum texture )
 	if( !GL_Support( GL_ARB_MULTITEXTURE ))
 		return;
 
+	// don't allow negative texture units
+	if((GLint)texture < 0 ) texture = 0;
 	if( glState.activeTMU == texture )
 		return;
 
@@ -195,19 +197,18 @@ void GL_CleanUpTextureUnits( int last )
 {
 	int	i;
 
-	for( i = glState.activeTMU; i > last - 1; i-- )
+	for( i = glState.activeTMU; i > (last - 1); i-- )
 	{
-		if( glState.currentTextureTargets[i] != GL_TEXTURE_2D )
+		// disable upper units
+		if( glState.currentTextureTargets[i] != GL_NONE )
 		{
 			pglDisable( glState.currentTextureTargets[i] );
-			glState.currentTextureTargets[i] = GL_TEXTURE_2D;
-			pglEnable( glState.currentTextureTargets[i] );
+			glState.currentTextureTargets[i] = GL_NONE;
+			glState.currentTextures[i] = -1; // unbind texture
 		}
 
 		GL_LoadIdentityTexMatrix();
 		GL_DisableAllTexGens();
-
-		if( i < 0 ) break;
 		GL_SelectTexture( i - 1 );
 	}
 }
@@ -584,6 +585,7 @@ void R_ShowTextures( void )
 	case TEX_VGUI:
 	case TEX_DETAIL:
 	case TEX_CUSTOM:
+	case TEX_DEPTHMAP:
 		// draw lightmaps as big images
 		base_w = 5;
 		base_h = 4;
@@ -610,6 +612,12 @@ void R_ShowTextures( void )
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 		GL_Bind( GL_TEXTURE0, i );
 
+		if( image->texType == TEX_DEPTHMAP )
+		{
+			pglTexParameteri( image->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE );
+			pglTexParameteri( image->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE );
+                    }
+
 		pglBegin( GL_QUADS );
 		pglTexCoord2f( 0, 0 );
 		pglVertex2f( x, y );
@@ -620,6 +628,13 @@ void R_ShowTextures( void )
 		pglTexCoord2f( 0, 1 );
 		pglVertex2f( x, y + h );
 		pglEnd();
+
+		if( image->texType == TEX_DEPTHMAP )
+		{
+			pglTexParameteri( image->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB );
+			pglTexParameteri( image->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
+                    }
+
 		j++;
 	}
 	pglFinish();

@@ -700,7 +700,10 @@ static void R_DecalNodeSurfaces( model_t *model, mnode_t *node, decalinfo_t *dec
 	for( i = 0; i < node->numsurfaces; i++, surf++ ) 
 	{
 		// never apply decals on the water or sky surfaces
-		if( surf->flags & (SURF_DRAWTURB|SURF_DRAWSKY|SURF_TRANSPARENT|SURF_CONVEYOR))
+		if( surf->flags & (SURF_DRAWTURB|SURF_DRAWSKY|SURF_CONVEYOR))
+			continue;
+
+		if( surf->flags & SURF_TRANSPARENT && !glState.stencilEnabled )
 			continue;
 
 		R_DecalSurface( surf, decalinfo );
@@ -920,6 +923,56 @@ void DrawSurfaceDecals( msurface_t *fa )
 	pglEnable( GL_POLYGON_OFFSET_FILL );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
+	if( fa->flags & SURF_TRANSPARENT && glState.stencilEnabled )
+	{
+		mtexinfo_t	*tex = fa->texinfo;
+
+		for( p = fa->pdecals; p; p = p->pnext )
+		{
+			if( p->texture )
+			{
+				float *o, *v;
+				int i, numVerts;
+				o = R_DecalSetupVerts( p, fa, p->texture, &numVerts );
+
+				pglEnable( GL_STENCIL_TEST );
+				pglStencilFunc( GL_ALWAYS, 1, 0xFFFFFFFF );
+				pglColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
+
+				pglStencilOp( GL_KEEP, GL_KEEP, GL_REPLACE );
+				pglBegin( GL_POLYGON );
+
+				for( i = 0, v = o; i < numVerts; i++, v += VERTEXSIZE )
+				{
+					v[5] = ( DotProduct( v, tex->vecs[0] ) + tex->vecs[0][3] ) / tex->texture->width;
+					v[6] = ( DotProduct( v, tex->vecs[1] ) + tex->vecs[1][3] ) / tex->texture->height;
+
+					pglTexCoord2f( v[5], v[6] );
+					pglVertex3fv( v );
+				}
+
+				pglEnd();
+				pglStencilOp( GL_KEEP, GL_KEEP, GL_DECR );
+
+				pglEnable( GL_ALPHA_TEST );
+				pglBegin( GL_POLYGON );
+
+				for( i = 0, v = o; i < numVerts; i++, v += VERTEXSIZE )
+				{
+					pglTexCoord2f( v[5], v[6] );
+					pglVertex3fv( v );
+				}
+
+				pglEnd();
+				pglDisable( GL_ALPHA_TEST );
+
+				pglColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+				pglStencilFunc( GL_EQUAL, 0, 0xFFFFFFFF );
+				pglStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
+			}
+		}
+	}
+
 	for( p = fa->pdecals; p; p = p->pnext )
 	{
 		if( p->texture )
@@ -934,6 +987,9 @@ void DrawSurfaceDecals( msurface_t *fa )
 			DrawSingleDecal( p, fa );
 		}
 	}
+
+	if( fa->flags & SURF_TRANSPARENT && glState.stencilEnabled )
+		pglDisable( GL_STENCIL_TEST );
 
 	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
 	{

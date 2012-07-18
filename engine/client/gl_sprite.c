@@ -90,6 +90,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 			Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
 			gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags );
 		}
+		else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
 	}	
 
 	// setup frame description

@@ -34,6 +34,20 @@ engine_studio_api_t IEngineStudio;
 
 /////////////////////
 // Implementation of CStudioModelRenderer.h
+#define LEGS_BONES_COUNT	8
+
+// enumerate all the bones that used for gait animation
+const char *legs_bones[] =
+{
+{ "Bip01" },
+{ "Bip01 Pelvis" },
+{ "Bip01 L Leg" },
+{ "Bip01 L Leg1" },
+{ "Bip01 L Foot" },
+{ "Bip01 R Leg" },
+{ "Bip01 R Leg1" },
+{ "Bip01 R Foot" },
+};
 
 /*
 ====================
@@ -897,8 +911,15 @@ void CStudioModelRenderer::StudioSetupBones ( void )
 
 		for (i = 0; i < m_pStudioHeader->numbones; i++)
 		{
-			if (strcmp( pbones[i].name, "Bip01 Spine") == 0)
-				break;
+			for( int j = 0; j < LEGS_BONES_COUNT; j++ )
+			{
+				if( !strcmp( pbones[i].name, legs_bones[j] ))
+					break;
+			}
+
+			if( j == LEGS_BONES_COUNT )
+				continue;	// not used for legs
+
 			memcpy( pos[i], pos2[i], sizeof( pos[i] ));
 			memcpy( q[i], q2[i], sizeof( q[i] ));
 		}

@@ -1476,7 +1476,7 @@ int UI_VidInit( void )
 	UI_LoadBackgroundMapList ();
 
 	// register menu font
-	uiStatic.hFont = PIC_Load( "#XASH_SYSTEMFONT_001", menufont_bmp, sizeof( menufont_bmp ));
+	uiStatic.hFont = PIC_Load( "#XASH_SYSTEMFONT_001.bmp", menufont_bmp, sizeof( menufont_bmp ));
 
 	UI_LoadBackgroundImage ();
 #if 0

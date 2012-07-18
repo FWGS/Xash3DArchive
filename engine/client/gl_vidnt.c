@@ -614,7 +614,7 @@ static void GL_SetDefaultTexState( void )
 
 	for( i = 0; i < MAX_TEXTURE_UNITS; i++ )
 	{
-		glState.currentTextureTargets[i] = GL_TEXTURE_2D;
+		glState.currentTextureTargets[i] = GL_NONE;
 		glState.texIdentityMatrix[i] = true;
 	}
 }

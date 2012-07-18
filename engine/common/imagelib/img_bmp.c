@@ -86,7 +86,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		return false;          
 
 	// special hack for loading qfont
-	if( !Q_strcmp( "#XASH_SYSTEMFONT_001", name ))
+	if( !Q_strncmp( "#XASH_SYSTEMFONT_001", name, 20 ))
 	{
 		// NOTE: same as system font we can use 4-bit bmps only
 		// step1: move main layer into alpha-channel (give grayscale from RED channel)
