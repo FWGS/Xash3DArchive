@@ -1505,6 +1505,7 @@ static render_api_t gRenderAPI =
 	GL_CleanUpTextureUnits,
 	GL_TexGen,
 	R_EntityRemoveDecals,
+	R_DecalSetupVerts,
 };
 
 /*

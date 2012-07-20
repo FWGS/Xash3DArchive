@@ -2484,12 +2484,12 @@ update client flashlight
 */
 void CL_UpdateFlashlight( cl_entity_t *pEnt )
 {
-	int	key, traceFlags;
 	vec3_t	vecSrc, vecEnd;
 	vec3_t	forward, view_ofs;
 	float	falloff;
 	pmtrace_t	trace;
 	dlight_t	*dl;
+	int	key;
 
 	if(( pEnt->index - 1 ) == cl.playernum )
 	{
@@ -2516,12 +2516,7 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
 
-	traceFlags = PM_STUDIO_BOX;
-
-	if( r_lighting_extended->integer < 2 )
-		traceFlags |= PM_GLASS_IGNORE;
-
-	trace = CL_TraceLine( vecSrc, vecEnd, traceFlags );
+	trace = CL_TraceLine( vecSrc, vecEnd, PM_STUDIO_BOX );
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 
 	if( falloff < 250.0f ) falloff = 1.0f;

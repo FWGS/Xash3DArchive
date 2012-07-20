@@ -788,8 +788,6 @@ void R_BlendLightmaps( void )
 		switch( RI.currententity->curstate.rendermode )
 		{
 		case kRenderTransTexture:
-			if( r_lighting_extended->integer == 2 )
-				break;
 		case kRenderTransColor:
 		case kRenderTransAdd:
 		case kRenderGlow:
@@ -1126,7 +1124,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	DrawSurfaceDecals( fa );
 
 	// NOTE: draw mirror through in mirror show dummy lightmapped texture
-	if( fa->flags & SURF_REFLECT && RP_NORMALPASS() && r_lighting_extended->integer < 2 )
+	if( fa->flags & SURF_REFLECT && RP_NORMALPASS() && r_lighting_extended->integer )
 		return; // no lightmaps for mirror
 
 	if( fa->flags & SURF_DRAWTILED )

@@ -186,6 +186,7 @@ typedef struct
 	int		attenuationTexture2;// dark attenuation
 	int		attenuationTexture3;// bright attenuation
 	int		attenuationTexture3D;// 3D attenuation
+	int		attenuationStubTexture;
 	int		normalizeTexture;
 	int		dlightCubeTexture;	// dynamic cubemap
 	int		grayCubeTexture;
@@ -286,6 +287,7 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags );
 // gl_decals.c
 //
 void DrawSurfaceDecals( msurface_t *fa );
+float *R_DecalSetupVerts( decal_t *pDecal, msurface_t *surf, int texture, int *outCount );
 void DrawSingleDecal( decal_t *pDecal, msurface_t *fa );
 void R_EntityRemoveDecals( model_t *mod );
 void R_ClearDecals( void );

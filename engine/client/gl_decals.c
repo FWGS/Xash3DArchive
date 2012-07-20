@@ -979,10 +979,21 @@ void DrawSurfaceDecals( msurface_t *fa )
 		{
 			gltexture_t *glt = R_GetTexture( p->texture );
 
-			// draw transparent decals with GL_MODULATE
-			if( glt->fogParams[3] > DECAL_TRANSPARENT_THRESHOLD )
-				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-			else pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+			// normal HL decal with alpha-channel
+			if( glt->flags & TF_HAS_ALPHA )
+			{
+				// draw transparent decals with GL_MODULATE
+				if( glt->fogParams[3] > DECAL_TRANSPARENT_THRESHOLD )
+					pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+				else pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+			}
+			else
+			{
+				// color decal like detail texture. Base color is 127 127 127
+				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+				pglBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
+                              }
 
 			DrawSingleDecal( p, fa );
 		}

@@ -936,6 +936,9 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 
 	samples = GL_CalcTextureSamples( pic->flags );
 
+	if( pic->flags & IMAGE_HAS_ALPHA )
+		tex->flags |= TF_HAS_ALPHA;
+
 	// determine format
 	inFormat = PFDesc[pic->type].glFormat;
 	outFormat = GL_TextureFormat( tex, &samples );
@@ -1662,6 +1665,22 @@ static rgbdata_t *R_InitAttenuationTexture3( texFlags_t *flags )
 	return R_InitAttenTextureGamma( flags, 3.5f );
 }
 
+static rgbdata_t *R_InitAttenuationTextureNoAtten( texFlags_t *flags )
+{
+	// 1d attenuation texture
+	r_image.width = 256;
+	r_image.height = 1;
+	r_image.buffer = data2D;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * 4;
+
+	Q_memset( data2D, 0xFF, r_image.size );
+	*flags = TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP|TF_TEXTURE_1D;
+
+	return &r_image;
+}
+
 /*
 ==================
 R_InitAttenuationTexture3D
@@ -1892,6 +1911,7 @@ static void R_InitBuiltinTextures( void )
 	{ "*atten", &tr.attenuationTexture, R_InitAttenuationTexture, TEX_SYSTEM },
 	{ "*atten2", &tr.attenuationTexture2, R_InitAttenuationTexture2, TEX_SYSTEM },
 	{ "*atten3", &tr.attenuationTexture3, R_InitAttenuationTexture3, TEX_SYSTEM },
+	{ "*attnno", &tr.attenuationStubTexture, R_InitAttenuationTextureNoAtten, TEX_SYSTEM },
 	{ "*normalize", &tr.normalizeTexture, R_InitNormalizeCubemap, TEX_CUBEMAP },
 	{ "*lightCube", &tr.dlightCubeTexture, R_InitDlightCubemap, TEX_CUBEMAP },
 	{ "*grayCube", &tr.grayCubeTexture, R_InitGrayCubemap, TEX_CUBEMAP },

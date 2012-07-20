@@ -143,7 +143,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 	pixels = image.width * image.height;
 	fin = (byte *)pin->index;	// setup buffer
 
-	if(!Image_LumpValidSize( name )) return false;
+	if( !Image_ValidSize( name )) return false;
 
 	if( image.hint != IL_HINT_Q1 && !( flags & STUDIO_NF_QUAKESKIN ))
 	{
