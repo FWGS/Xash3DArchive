@@ -678,7 +678,7 @@ void SV_Init( void )
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", CVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
 	sv_allow_rotate_pushables = Cvar_Get( "sv_allow_rotate_pushables", "0", CVAR_ARCHIVE, "let the pushers rotate pushables with included origin-brush" );
 	sv_validate_changelevel = Cvar_Get( "sv_validate_changelevel", "1", CVAR_ARCHIVE, "test change level for level-designer errors" );
-	sv_clienttrace = Cvar_Get( "sv_clienttrace", "0", CVAR_SERVERNOTIFY, "scaling factor for client hitboxes" );
+	sv_clienttrace = Cvar_Get( "sv_clienttrace", "1", CVAR_SERVERNOTIFY, "scaling factor for client hitboxes" );
 	sv_wallbounce = Cvar_Get( "sv_wallbounce", "1.0", CVAR_PHYSICINFO, "bounce factor for client with MOVETYPE_BOUNCE" );
 	sv_spectatormaxspeed = Cvar_Get( "sv_spectatormaxspeed", "500", CVAR_PHYSICINFO, "spectator maxspeed" );
 	sv_waterfriction = Cvar_Get( "sv_waterfriction", "1", CVAR_PHYSICINFO, "how fast you slow down in water" );

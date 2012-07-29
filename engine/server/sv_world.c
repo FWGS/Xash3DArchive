@@ -1557,7 +1557,7 @@ void SV_RunLightStyles( void )
 
 /*
 ==================
-SV_AddLightStyle
+SV_SetLightStyle
 
 needs to get correct working SV_LightPoint
 ==================
@@ -1583,6 +1583,19 @@ void SV_SetLightStyle( int style, const char* s )
 	BF_WriteByte( &sv.reliable_datagram, svc_lightstyle );
 	BF_WriteByte( &sv.reliable_datagram, style );
 	BF_WriteString( &sv.reliable_datagram, sv.lightstyles[style].pattern );
+}
+
+/*
+==================
+SV_GetLightStyle
+
+needs to get correct working SV_LightPoint
+==================
+*/
+const char *SV_GetLightStyle( int style )
+{
+	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
+	return sv.lightstyles[style].pattern;
 }
 
 /*

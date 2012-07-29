@@ -1849,6 +1849,7 @@ static server_physics_api_t gPhysicsAPI =
 	pfnDrawConsoleStringLen,
 	Con_NPrintf,
 	Con_NXPrintf,
+	SV_GetLightStyle,
 };
 
 /*

@@ -1406,13 +1406,15 @@ SV_CheckClientPVS
 build the new client PVS
 =================
 */
-int SV_CheckClientPVS( int check )
+int SV_CheckClientPVS( int check, qboolean bMergePVS )
 {
-	byte	*pvs;
-	edict_t	*ent;
-	mleaf_t	*leaf;
-	vec3_t	view;
-	int	i;
+	byte		*pvs;
+	edict_t		*ent;
+	mleaf_t		*leaf;
+	vec3_t		view;
+	sv_client_t	*cl;
+	int		i, j, k;
+	int		pvsbytes;
 
 	// cycle to the next one
 	check = bound( 1, check, svgame.globals->maxClients );
@@ -1438,11 +1440,31 @@ int SV_CheckClientPVS( int check )
 		break;
 	}
 
+	cl = SV_ClientFromEdict( ent, true );
+	pvsbytes = (sv.worldmodel->numleafs + 7) >> 3;
+
 	// get the PVS for the entity
 	VectorAdd( ent->v.origin, ent->v.view_ofs, view );
 	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
 	pvs = Mod_LeafPVS( leaf, sv.worldmodel );
-	memcpy( clientpvs, pvs, (sv.worldmodel->numleafs + 7) >> 3 );
+	memcpy( clientpvs, pvs, pvsbytes );
+
+	// now merge PVS with all portal cameras
+	for( k = 0; k < cl->num_cameras && bMergePVS; k++ )
+	{
+		edict_t *cam = cl->cameras[k];
+
+		if( !SV_IsValidEdict( cam ))
+			continue;
+
+		VectorAdd( cam->v.origin, cam->v.view_ofs, view );
+		leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
+		if( leaf == NULL ) continue; // skip outside cameras
+		pvs = Mod_LeafPVS( leaf, sv.worldmodel );
+
+		for( j = 0; j < pvsbytes; j++ )
+			clientpvs[j] |= pvs[j];
+	}
 
 	return i;
 }
@@ -1459,6 +1481,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	vec3_t	view;
 	float	delta;
 	model_t	*mod;
+	qboolean	bMergePVS;
 	int	i;
 
 	if( !SV_IsValidEdict( pEdict ))
@@ -1466,10 +1489,13 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 
 	delta = ( sv.time - sv.lastchecktime );
 
+	// don't merge visibility for portal entity, only for monsters
+	bMergePVS = (pEdict->v.flags & FL_MONSTER) ? true : false;
+
 	// find a new check if on a new frame
 	if( delta < 0.0f || delta >= 0.1f )
 	{
-		sv.lastcheck = SV_CheckClientPVS( sv.lastcheck );
+		sv.lastcheck = SV_CheckClientPVS( sv.lastcheck, bMergePVS );
 		sv.lastchecktime = sv.time;
 	}
 
@@ -1508,19 +1534,19 @@ pfnEntitiesInPVS
 
 =================
 */
-edict_t *pfnEntitiesInPVS( edict_t *pplayer )
+edict_t *pfnEntitiesInPVS( edict_t *pview )
 {
 	edict_t	*chain;
 	edict_t	*pEdict, *pEdict2;
 	vec3_t	viewpoint;
 	int	i;
 
-	if( !SV_IsValidEdict( pplayer ))
+	if( !SV_IsValidEdict( pview ))
 		return NULL;
 
-	VectorAdd( pplayer->v.origin, pplayer->v.view_ofs, viewpoint );
+	VectorAdd( pview->v.origin, pview->v.view_ofs, viewpoint );
 
-	for( chain = EDICT_NUM( 0 ), i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
+	for( chain = EDICT_NUM( 0 ), i = 1; i < svgame.numEntities; i++ )
 	{
 		pEdict = EDICT_NUM( i );
 

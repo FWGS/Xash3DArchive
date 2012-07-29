@@ -1396,6 +1396,9 @@ void R_DrawBrushModel( cl_entity_t *e )
 	GL_SetRenderMode( e->curstate.rendermode );
 	GL_SetupFogColorForSurfaces ();
 
+	if( e->curstate.rendermode == kRenderTransTexture && r_lighting_extended->value >= 2.0f )
+		pglBlendFunc( GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA );
+
 	// setup the color and alpha
 	switch( e->curstate.rendermode )
 	{

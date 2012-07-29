@@ -624,6 +624,7 @@ int SV_TruePointContents( const vec3_t p );
 int SV_PointContents( const vec3_t p );
 void SV_RunLightStyles( void );
 void SV_SetLightStyle( int style, const char* s );
+const char *SV_GetLightStyle( int style );
 int SV_LightForEntity( edict_t *pEdict );
 void SV_ClearPhysEnts( void );
 
