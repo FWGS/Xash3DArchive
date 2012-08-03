@@ -1449,6 +1449,9 @@ int SV_CheckClientPVS( int check, qboolean bMergePVS )
 	pvs = Mod_LeafPVS( leaf, sv.worldmodel );
 	memcpy( clientpvs, pvs, pvsbytes );
 
+	// transition in progress
+	if( !cl ) return i;
+
 	// now merge PVS with all portal cameras
 	for( k = 0; k < cl->num_cameras && bMergePVS; k++ )
 	{

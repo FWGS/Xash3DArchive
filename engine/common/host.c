@@ -86,6 +86,9 @@ void Host_PrintEngineFeatures( void )
 		if( host.features & ENGINE_BUILD_STVECTORS )
 			MsgDev( D_AICONSOLE, "^3EXT:^7 ST-vectors generate enabled\n" );
 	}
+
+	if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
+		MsgDev( D_AICONSOLE, "^3EXT:^7 Transform trace AABB enabled\n" );
 }
 
 /*

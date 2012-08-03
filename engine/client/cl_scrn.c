@@ -244,7 +244,7 @@ void SCR_MakeScreenShot( void )
 	{
 		// snapshots don't writes message about image		
 		if( cls.scrshot_action != scrshot_snapshot )
-			MsgDev( D_INFO, "Write %s\n", cls.shotname );
+			MsgDev( D_AICONSOLE, "Write %s\n", cls.shotname );
 	}
 	else MsgDev( D_ERROR, "Unable to write %s\n", cls.shotname );
 

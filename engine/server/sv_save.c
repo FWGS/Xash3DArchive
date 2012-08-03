@@ -372,7 +372,7 @@ int SV_MapCount( const char *pPath )
 	search_t	*t;
 	int	count = 0;
 	
-	t = FS_Search( pPath, true, false );
+	t = FS_Search( pPath, true, true );	// lookup only in gamedir
 	if( !t ) return count; // empty
 
 	count = t->numfilenames;
@@ -690,13 +690,13 @@ void SV_DirectoryCopy( const char *pPath, file_t *pFile )
 	file_t		*pCopy;
 	char		szName[SAVENAME_LENGTH];
 
-	t = FS_Search( pPath, true, false );
+	t = FS_Search( pPath, true, true );
 	if( !t ) return;
 
 	for( i = 0; i < t->numfilenames; i++ )
 	{
-		fileSize = FS_FileSize( t->filenames[i], false );
-		pCopy = FS_Open( t->filenames[i], "rb", false );
+		fileSize = FS_FileSize( t->filenames[i], true );
+		pCopy = FS_Open( t->filenames[i], "rb", true );
 
 		// filename can only be as long as a map name + extension
 		Q_strncpy( szName, FS_FileWithoutPath( t->filenames[i] ), SAVENAME_LENGTH );		
@@ -721,7 +721,7 @@ void SV_DirectoryExtract( file_t *pFile, int fileCount )
 		FS_Read( pFile, &fileSize, sizeof( int ));
 		Q_snprintf( szName, sizeof( szName ), "save/%s", fileName );
 
-		pCopy = FS_Open( szName, "wb", false );
+		pCopy = FS_Open( szName, "wb", true );
 		FS_FileCopy( pCopy, pFile, fileSize );
 		FS_Close( pCopy );
 	}
@@ -987,7 +987,7 @@ void SV_EntityPatchWrite( SAVERESTOREDATA *pSaveData, const char *level )
 
 	Q_snprintf( name, sizeof( name ), "save/%s.HL3", level );
 
-	pFile = FS_Open( name, "wb", false );
+	pFile = FS_Open( name, "wb", true );
 	if( !pFile ) return;
 
 	for( i = size = 0; i < pSaveData->tableCount; i++ )
@@ -1061,7 +1061,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
-	pFile = FS_Open( name, "wb", false );
+	pFile = FS_Open( name, "wb", true );
 	if( !pFile ) return;
 
 	id = SAVEFILE_HEADER;
@@ -1472,7 +1472,7 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 	version = SAVEGAME_VERSION;
 
 	// output to disk
-	pFile = FS_Open( va( "save/%s.HL1", sv.name ), "wb", false );
+	pFile = FS_Open( va( "save/%s.HL1", sv.name ), "wb", true );
 	if( !pFile ) return NULL;
 
 	// write the header
@@ -1968,7 +1968,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	if( !Q_stricmp( pSaveName, "quick" ) || !Q_stricmp( pSaveName, "autosave" ))
 		SV_AgeSaveList( pSaveName, SAVE_AGED_COUNT );
 
-	pFile = FS_Open( name, "wb", false );
+	pFile = FS_Open( name, "wb", true );
 
 	tag = SAVEGAME_HEADER;
 	FS_Write( pFile, &tag, sizeof( int ));
@@ -2241,7 +2241,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 	string	name, description;
 	file_t	*f;
 
-	f = FS_Open( savename, "rb", false );
+	f = FS_Open( savename, "rb", true );
 	if( !f )
 	{
 		// just not exist - clear comment
@@ -2380,7 +2380,7 @@ qboolean SV_GetComment( const char *savename, char *comment )
 		const struct tm	*file_tm;
 		string		timestring;
 	
-		fileTime = FS_FileTime( savename, false );
+		fileTime = FS_FileTime( savename, true );
 		file_tm = localtime( &fileTime );
 
 		// split comment to sections

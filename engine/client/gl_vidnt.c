@@ -544,6 +544,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 
 	if( GL_Support( r_ext ))
 		MsgDev( D_NOTE, "- ^2enabled\n" );
+	else MsgDev( D_NOTE, "- ^1failed\n" );
 }
 
 /*
