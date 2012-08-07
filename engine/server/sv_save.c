@@ -2076,6 +2076,9 @@ qboolean SV_LoadGame( const char *pName )
 		return false;
 
 	Q_snprintf( name, sizeof( name ), "save/%s.sav", pName );
+
+	if( sv.background )
+		SV_Shutdown( true );
 	sv.background = false;
 
 	// silently ignore if missed

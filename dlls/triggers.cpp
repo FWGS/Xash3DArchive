@@ -1813,6 +1813,10 @@ void CTriggerPush :: Spawn( )
 	if (pev->speed == 0)
 		pev->speed = 100;
 
+	// this flag was changed and flying barrels on c2a5 stay broken
+	if ( FStrEq( STRING( gpGlobals->mapname ), "c2a5" ) && pev->spawnflags & 4)
+		pev->spawnflags |= SF_TRIG_PUSH_ONCE;
+
 	if ( FBitSet (pev->spawnflags, SF_TRIGGER_PUSH_START_OFF) )// if flagged to Start Turned Off, make trigger nonsolid.
 		pev->solid = SOLID_NOT;
 

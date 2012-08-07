@@ -180,7 +180,7 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 
 	if( r_faceplanecull->integer && glState.faceCull != 0 )
 	{
-		if(!(surf->flags & SURF_DRAWTURB) || !RI.currentWaveHeight )
+		if( RI.currentWaveHeight == 0.0f )
 		{
 			if( !VectorIsNull( surf->plane->normal ))
 			{

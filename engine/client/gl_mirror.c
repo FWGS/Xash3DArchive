@@ -74,8 +74,7 @@ Restore identity texmatrix
 */
 void R_EndDrawMirror( void )
 {
-	GL_DisableAllTexGens();
-	GL_LoadIdentityTexMatrix();
+	GL_CleanUpTextureUnits( 0 );
 	pglMatrixMode( GL_MODELVIEW );
 }
 
@@ -183,7 +182,7 @@ void R_DrawMirrors( void )
 {
 	ref_instance_t	oldRI;
 	mplane_t		plane;
-	msurface_t	*surf;
+	msurface_t	*surf, *surf2;
 	int		i, oldframecount;
 	mextrasurf_t	*es, *tmp, *mirrorchain;
 	vec3_t		forward, right, up;
@@ -202,7 +201,7 @@ void R_DrawMirrors( void )
 	{
 		mirrorchain = tr.mirror_entities[i].chain;
 
-		for( es = mirrorchain; es != NULL; )
+		for( es = mirrorchain; es != NULL; es = es->mirrorchain )
 		{
 			RI.currententity = e = tr.mirror_entities[i].ent;
 			RI.currentmodel = m = RI.currententity->model;
@@ -211,6 +210,38 @@ void R_DrawMirrors( void )
 
 			ASSERT( RI.currententity != NULL );
 			ASSERT( RI.currentmodel != NULL );
+
+			// NOTE: copy mirrortexture and mirrormatrix from another surfaces
+			// from this entity\world that has same planes and reduce number of viewpasses
+
+			// make sure what we have one pass at least
+			if( es != mirrorchain )
+			{
+				for( tmp = mirrorchain; tmp != es; tmp = tmp->mirrorchain )
+				{
+					surf2 = INFO_SURF( tmp, m );
+
+					if( !tmp->mirrortexturenum )
+						continue;	// not filled?
+
+					if( surf->plane->dist != surf2->plane->dist )
+						continue;
+
+					if( !VectorCompare( surf->plane->normal, surf2->plane->normal ))
+						continue;
+
+					// found surface with same plane!
+					break;
+				}
+
+				if( tmp != es && tmp && tmp->mirrortexturenum )
+				{
+					// just copy reflection texture from surface with same plane
+					Matrix4x4_Copy( es->mirrormatrix, tmp->mirrormatrix );
+					es->mirrortexturenum = tmp->mirrortexturenum;
+					continue;	// pass skiped
+				}
+			} 
 
 			R_PlaneForMirror( surf, &plane, mirrormatrix );
 
@@ -280,6 +311,7 @@ void R_DrawMirrors( void )
 
 			tr.framecount++;
 			R_RenderScene( &RI.refdef );
+			r_stats.c_mirror_passes++;
 
 			es->mirrortexturenum = R_AllocateMirrorTexture();
 
@@ -294,17 +326,20 @@ void R_DrawMirrors( void )
 				Matrix4x4_Concat( es->mirrormatrix, RI.projectionMatrix, RI.modelviewMatrix );
 			}			
 
+			RI = oldRI; // restore ref instance
+		}
+
+		// clear chain for this entity
+		for( es = mirrorchain; es != NULL; )
+		{
 			tmp = es->mirrorchain;
 			es->mirrorchain = NULL;
 			es = tmp;
-
-			RI = oldRI; // restore ref instance
 		}
 
 		tr.mirror_entities[i].chain = NULL; // done
 		tr.mirror_entities[i].ent = NULL;
 	}
-
 
 	r_oldviewleaf = r_viewleaf = NULL;	// force markleafs next frame
 	tr.framecount = oldframecount;	// restore real framecount

@@ -804,6 +804,7 @@ sgis generate mipmap
 void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum glTarget, GLenum inFormat, int side, qboolean subImage )
 {
 	int	mipLevel;
+	int	dataType = GL_UNSIGNED_BYTE;
 	int	w, h;
 
 	// not needs
@@ -817,6 +818,9 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 		pglGetError(); // clear error queue on mips generate
 		return; 
 	}
+
+	if( tex->flags & TF_FLOAT )
+		dataType = GL_FLOAT;
 
 	mipLevel = 0;
 	w = tex->width;
@@ -832,8 +836,8 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 		h = (h+1)>>1;
 		mipLevel++;
 
-		if( subImage ) pglTexSubImage2D( tex->target + side, mipLevel, 0, 0, w, h, inFormat, GL_UNSIGNED_BYTE, buffer );
-		else pglTexImage2D( tex->target + side, mipLevel, tex->format, w, h, 0, inFormat, GL_UNSIGNED_BYTE, buffer );
+		if( subImage ) pglTexSubImage2D( tex->target + side, mipLevel, 0, 0, w, h, inFormat, dataType, buffer );
+		else pglTexImage2D( tex->target + side, mipLevel, tex->format, w, h, 0, inFormat, dataType, buffer );
 		if( pglGetError( )) break; // can't create mip levels
 	}
 }
@@ -985,6 +989,9 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		tex->target = glTarget = GL_TEXTURE_3D;
 	}
 
+	if( tex->flags & TF_FLOAT )
+		dataType = GL_FLOAT;
+
 	pglBindTexture( tex->target, tex->texnum );
 
 	buf = pic->buffer;
@@ -1009,7 +1016,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 			Host_Error( "GL_UploadTexture: %s image buffer overflow\n", tex->name );
 
 		// copy or resample the texture
-		if( tex->width == tex->srcWidth && tex->height == tex->srcHeight )
+		if(( tex->width == tex->srcWidth && tex->height == tex->srcHeight ) || ( tex->flags & TF_TEXTURE_3D ))
 		{
 			data = buf;
 		}
@@ -1020,7 +1027,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 
 		if( !glConfig.deviceSupportsGamma )
 		{
-			if(!( tex->flags & TF_NOMIPMAP ) && !( tex->flags & TF_SKYSIDE ))
+			if(!( tex->flags & TF_NOMIPMAP ) && !( tex->flags & TF_SKYSIDE ) && !( tex->flags & TF_TEXTURE_3D ))
 				data = GL_ApplyGamma( data, tex->width * tex->height, ( tex->flags & TF_NORMALMAP ));
 		}		
 
@@ -1247,6 +1254,23 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 	r_empty.size = r_empty.width * r_empty.height * 4;
 	r_empty.flags = IMAGE_HAS_COLOR | (( flags & TF_HAS_ALPHA ) ? IMAGE_HAS_ALPHA : 0 );
 	r_empty.buffer = (byte *)buffer;
+
+	if( flags & TF_TEXTURE_1D )
+	{
+		r_empty.height = 1;
+		r_empty.size = r_empty.width * 4;
+	}
+	else if( flags & TF_TEXTURE_3D )
+	{
+		if( !GL_Support( GL_TEXTURE_3D_EXT ))
+			return 0;
+
+		r_empty.depth = r_empty.width;
+		r_empty.size = r_empty.width * r_empty.height * r_empty.depth * 4;
+	}
+
+	if( flags & TF_FLOAT )
+		r_empty.size *= 4;
 
 	texture = GL_LoadTextureInternal( name, &r_empty, flags, false );
 

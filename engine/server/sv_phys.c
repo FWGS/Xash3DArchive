@@ -1834,6 +1834,12 @@ void SV_DrawOrthoTriangles( void )
 	}
 }
 
+void SV_UpdateFogSettings( unsigned int packed_fog )
+{
+	svgame.movevars.fog_settings = packed_fog;
+	physinfo->modified = true; // force to transmit
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
@@ -1850,6 +1856,7 @@ static server_physics_api_t gPhysicsAPI =
 	Con_NPrintf,
 	Con_NXPrintf,
 	SV_GetLightStyle,
+	SV_UpdateFogSettings,
 };
 
 /*

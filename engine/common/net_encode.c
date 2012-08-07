@@ -78,6 +78,7 @@ static const delta_field_t pm_fields[] =
 { PHYS_DEF( skyvec_x )		},
 { PHYS_DEF( skyvec_y )		},
 { PHYS_DEF( skyvec_z )		},
+{ PHYS_DEF( fog_settings )		},
 { PHYS_DEF( wateralpha )		},
 { PHYS_DEF( skydir_x )		},
 { PHYS_DEF( skydir_y )		},
@@ -823,6 +824,7 @@ void Delta_Init( void )
 	Delta_AddField( "movevars_t", "skydir_z", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "skyangle", DT_ANGLE, 16, 1.0f, 1.0f ); // 0 - 360
 	Delta_AddField( "movevars_t", "wateralpha", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
+	Delta_AddField( "movevars_t", "fog_settings", DT_INTEGER, 32, 1.0f, 1.0f );
 	// now done
 	dt->bInitialized = true;
 }

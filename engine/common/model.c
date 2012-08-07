@@ -1675,7 +1675,7 @@ static void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info )
 	}
 
 	// subdivide water or sky sphere for Quake1 maps
-	if(( surf->flags & SURF_DRAWTURB ) || ( surf->flags & SURF_DRAWSKY && world.loading && world.sky_sphere ))
+	if(( surf->flags & SURF_DRAWTURB && !( surf->flags & SURF_REFLECT )) || ( surf->flags & SURF_DRAWSKY && world.loading && world.sky_sphere ))
 	{
 		Mod_SubdividePolygon( info, surf, surf->numedges, verts[0] );
 		Mod_ConvertSurface( info, surf );
@@ -1755,7 +1755,8 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			out->flags |= SURF_CONVEYOR|SURF_TRANSPARENT;
 
 		// g-cont this texture from decals.wad he-he
-		if( !Q_strncmp( tex->name, "reflect", 7 ))
+		// support !reflect for reflected water
+		if( !Q_strncmp( tex->name, "reflect", 7 ) || !Q_strncmp( tex->name, "!reflect", 8 ))
 		{
 			out->flags |= SURF_REFLECT;
 			world.has_mirrors = true;
@@ -2008,7 +2009,11 @@ static void Mod_LoadLeafs( const dlump_t *l )
 		if( out->contents != CONTENTS_EMPTY )
 		{
 			for( j = 0; j < out->nummarksurfaces; j++ )
+			{
+				// underwater surfaces can't have reflection (perfomance)
 				out->firstmarksurface[j]->flags |= SURF_UNDERWATER;
+				out->firstmarksurface[j]->flags &= ~SURF_REFLECT;
+			}
 		}
 	}
 

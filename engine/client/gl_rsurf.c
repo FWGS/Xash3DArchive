@@ -1064,6 +1064,14 @@ void R_RenderBrushPoly( msurface_t *fa )
 		{
 			GL_Bind( GL_TEXTURE0, SURF_INFO( fa, RI.currentmodel )->mirrortexturenum );
 			is_mirror = true;
+
+			// BEGIN WATER STUFF
+			if( fa->flags & SURF_DRAWTURB )
+			{
+				R_BeginDrawMirror( fa );
+				GL_Bind( GL_TEXTURE1, t->gl_texturenum );
+				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+			}
 		}
 		else GL_Bind( GL_TEXTURE0, t->gl_texturenum ); // dummy
 
@@ -1076,6 +1084,8 @@ void R_RenderBrushPoly( msurface_t *fa )
 	{	
 		// warp texture, no lightmaps
 		EmitWaterPolys( fa->polys, ( fa->flags & SURF_NOCULL ));
+		if( is_mirror ) R_EndDrawMirror();
+		// END WATER STUFF
 		return;
 	}
 

@@ -620,7 +620,9 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 			t = ot + r_turbsin[(int)((os * 0.125f + cl.time ) * TURBSCALE) & 255];
 			t *= ( 1.0f / SUBDIVIDE_SIZE );
 
-			pglTexCoord2f( s, t );
+			if( glState.activeTMU != 0 )
+				GL_MultiTexCoord2f( glState.activeTMU, s, t );
+			else pglTexCoord2f( s, t );
 			pglVertex3f( v[0], v[1], nv );
 		}
 		pglEnd();

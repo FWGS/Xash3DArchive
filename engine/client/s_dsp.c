@@ -5106,7 +5106,7 @@ void DSP_SetPreset( int idsp, int ipsetnew )
 
 		if( !ppsetnew[i] )
 		{
-			MsgDev( D_WARN, "DSP preset failed to allocate.\n" );
+			MsgDev( D_NOTE, "DSP preset failed to allocate.\n" );
 			return;
 		}
 	}
@@ -5430,6 +5430,9 @@ void CheckNewDspPresets( void )
 {
 	int	iroomtype = dsp_room_type->integer;
 	int	iroom;
+
+	if( dsp_off->integer )
+		return;
 
 	if( s_listener.waterlevel > 2 )
 		iroom = 15;

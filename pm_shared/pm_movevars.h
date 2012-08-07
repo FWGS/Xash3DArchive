@@ -41,7 +41,7 @@ struct movevars_s
 	float	skyvec_y;			// 
 	float	skyvec_z;			// 
 	int	features;		// engine features that shared across network
-	float	clienttrace;	// Studiomodels scale that applied for the clients (visual effect only) 
+	int	fog_settings;	// Global fog settings (packed color+density) 
 	float	wateralpha;	// World water alpha 1.0 - solid 0.0 - transparent
 	float	skydir_x;		// skybox rotate direction
 	float	skydir_y;		//

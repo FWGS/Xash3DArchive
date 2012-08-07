@@ -236,6 +236,8 @@ typedef struct
 	uint		c_studio_models_drawn;
 	uint		c_sprite_models_drawn;
 	uint		c_particle_count;
+
+	uint		c_mirror_passes;
 } ref_speeds_t;
 
 extern ref_speeds_t		r_stats;

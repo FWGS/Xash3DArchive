@@ -4607,6 +4607,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	ent->v.modelindex = 1; // world model
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
+	svgame.movevars.fog_settings = 0;
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = sv_maxclients->integer;

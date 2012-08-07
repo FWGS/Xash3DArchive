@@ -1142,8 +1142,8 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 				continue;	// originally this was 'return' but is completely wrong!
 		}
 
-		// monsterclip filter
-		if( touch->v.solid == SOLID_BSP )
+		// monsterclip filter (solid custom is a static or dynamic bodies)
+		if( touch->v.solid == SOLID_BSP || touch->v.solid == SOLID_CUSTOM )
 		{
 			if( touch->v.flags & FL_MONSTERCLIP )
 			{

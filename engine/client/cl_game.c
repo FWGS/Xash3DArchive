@@ -3134,6 +3134,7 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 	if( !bOn )
 	{
 		pglDisable( GL_FOG );
+		RI.fogCustom = false;
 		return;
 	}
 

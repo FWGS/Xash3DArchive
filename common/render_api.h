@@ -81,6 +81,7 @@ typedef enum
 	TF_TEXTURE_1D	= (1<<18),	// this is GL_TEXTURE_1D
 	TF_BORDER		= (1<<19),
 	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
+	TF_FLOAT		= (1<<21),	// use GL_FLOAT instead of GL_UNSIGNED_BYTE
 } texFlags_t;
 
 typedef struct beam_s BEAM;
